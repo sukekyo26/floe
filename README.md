@@ -23,6 +23,7 @@ release's `SHA256SUMS`.
 ## Quick start
 
 ```sh
+floe guide                   # how an agent writes, checks and publishes a page
 floe template list          # floe's templates (report, design, handoff, adr, postmortem, runbook, slides) and your own
 floe template show report   # report's files, what a data file holds first
 floe template show report example.yaml   # an example to start from
@@ -40,10 +41,28 @@ The server starts on the first publish and keeps running until `floe stop`.
 Open `http://127.0.0.1:7325` for the management page.
 Read the pages in a recent Chrome, Safari (26 or later) or Firefox (147 or later).
 
+## For agents
+
+`floe guide` prints the guide an agent follows to write, check and publish a
+page. `floe skill install <agent>` writes a skill that points the agent to it,
+where the agent reads the skills of all your projects; `floe skill install --help`
+lists the agents and their places. If you use Cursor, it reads both
+`~/.claude/skills` and `~/.agents/skills`, and shows the skill twice when it is
+in both; that does no harm. To remove the skill, remove the `floe` directory
+it was written to.
+
+For an agent not listed, put this line in its instructions (AGENTS.md or the
+like):
+
+```markdown
+To show the user a page, use floe: run `floe guide` first and follow it. It is the guide of the floe installed, so read it each time rather than from memory.
+```
+
 ## Documentation
 
 | To | Read | 日本語 |
 |---|---|---|
+| What an agent reads first (`floe guide`) | [guide.md](docs/guide.md) | [guide.ja.md](docs/guide.ja.md) |
 | Write pages (data files) | [pages.md](docs/pages.md) | [pages.ja.md](docs/pages.ja.md) |
 | Make a template of your own | [templates.md](docs/templates.md) | [templates.ja.md](docs/templates.ja.md) |
 | Make a part or theme of your own | [parts.md](docs/parts.md) | [parts.ja.md](docs/parts.ja.md) |

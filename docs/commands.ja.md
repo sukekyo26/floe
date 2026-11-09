@@ -6,6 +6,8 @@
 
 | コマンド | すること |
 |---|---|
+| `floe guide` | エージェント向けの手引き（ページの書き方・検査・出し方）を出す |
+| `floe skill install <agent>` | 名指したエージェントに、`floe guide` を指すスキルを書く |
 | `floe publish <data.yaml>` | データファイルから描いたページを保存し（または `--link` でファイルかフォルダをその場で登録し）、URL を出す |
 | `floe check <data.yaml>...` | データファイルを、ページを描くとおりに確かめる。何も書かない |
 | `floe render <data.yaml>...` | 各データファイルのページを、リポジトリに置く HTML のファイルに書く |
@@ -38,6 +40,14 @@
 | `floe help [コマンド]` | ヘルプを出す（Cobra の組み込み） |
 
 ---
+
+## `floe guide`
+
+エージェント向けの手引き [guide.ja.md](guide.ja.md)（英語の guide.md を出す）を出します。ページの書き方・検査・出し方、テンプレートと部品の選び方、floe が書いたとおりに読む YAML、誤りの読み方です。この docs の要約で、エージェントがページを書く前に読みます。引数は取りません。
+
+## `floe skill install <agent>`
+
+floe のスキル `floe/SKILL.md` を、名指したエージェントが全部のプロジェクトのスキルを読む所に書きます。エージェントと置き場所は `floe skill install --help` が並べます。スキルはエージェントに `floe guide` を走らせるよう言うだけなので、floe を上げても古くなりません。書いたパスを、リンクをたどった後の形で出します。この floe の `SKILL.md` があればそのままにし、別のものは残して、`--force` のときだけ上書きします。リンク `floe` は `floe` という名前のディレクトリへ、リンク `SKILL.md` は `SKILL.md` という名前のファイルへだけたどります（`floe render` がページのリンクを `.html` のファイルへだけたどるのと同じ）。`CLAUDE_CONFIG_DIR` を設定していると、`claude` はその下に書きます。そこのディレクトリが使えなければ設定の誤りとして、その下のファイルの誤りはそのパスで言います。
 
 ## `floe publish <data.yaml>` / `floe publish --link <file|folder>`
 

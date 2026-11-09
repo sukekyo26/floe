@@ -84,3 +84,4 @@ case ":$PATH:" in
   *:"$INSTALL_DIR":*) ;;
   *) printf 'floe-install: note: %s is not in PATH; add it to ~/.profile or ~/.zshrc\n' "$INSTALL_DIR" >&2 ;;
 esac
+printf 'floe-install: for your agent: run floe skill install <agent> (floe skill install --help lists them)\n' >&2
