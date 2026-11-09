@@ -5,6 +5,7 @@ runs:
   steps:
     # LIMIT: just is pinned and raised by hand: change the number below. The cache keeps CI off GitHub's release
     # downloads, which failed with 504; a miss (a new number, or the cache gone after 7 unused days) downloads again.
+    # Caches are scoped by branch: release.yml on main cannot see develop's, so a release downloads just and golangci-lint.
     - id: version
       shell: bash
       run: echo "just=1.59.0" >> "$GITHUB_OUTPUT"
