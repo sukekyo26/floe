@@ -1864,6 +1864,8 @@
   // Whether the next read told is of a page a person opened: the toast says so of no other
   let opening = true;
   function markUnread(slug) {
+    // Archived, it is never unseen: from a toast shown before it was archived too
+    if (items.find((a) => a.slug === slug)?.archived) return;
     if (slug === shownSlug()) {
       keptUnread = slug;
       clearNotice();
@@ -3194,7 +3196,7 @@
 
   // The row gone from under the pointer, or moved, or left dimmed on a task's page: the way back is at hand, long enough to read and reach.
   // From the keys it has the focus, as #toasts is the far end of the page from a row; it stays while it does, and Escape leaves it on the
-  // row drawn archived, else on the one after it. A row not drawn anew yet is one about to go
+  // row on a task's page, which keeps it dimmed (drawn anew, it keeps its key), else on the one after it
   function archivedDone(a, focus) {
     const after = rowAfter(a)?.dataset.key;
     const button = tagged('button', 'btn undo', t('ui_unarchive'));
@@ -3206,8 +3208,7 @@
       if (e.key !== 'Escape') return;
       e.stopPropagation();
       button.closest('.toast').remove();
-      const kept = entryRow(a);
-      ((kept?.classList.contains('archived') ? kept : null) ?? rowAt(after) ?? lastRow([...($('list')?.children ?? [])]))?.querySelector('.title')?.focus();
+      ((TASK_PAGE ? entryRow(a) : null) ?? rowAt(after) ?? lastRow([...($('list')?.children ?? [])]))?.querySelector('.title')?.focus();
     });
     toast(t('ui_archive_done', a.title), { ms: 8000, button });
     if (focus) button.focus();
@@ -3384,6 +3385,8 @@
     $('to-tasks').href = `${TASKS_PATH}${savedTasks()}`;
   }
 
+  // A task's pages, archived or not
+  const everyPage = (task) => [...task.pages, ...task.archived];
   // Each task of tasks.json and of the pages that name it. A page whose project changed may
   // name a task with no row: it shows in the state of a new one, from its last page's time, and nothing is written.
   function tasksOf() {
@@ -3403,7 +3406,7 @@
       task[a.archived ? 'archived' : 'pages'].push(a);
     }
     for (const task of tasks.values()) {
-      if (!task.at) task.at = [...task.pages, ...task.archived].map((a) => a.updatedAt).sort().at(-1);
+      if (!task.at) task.at = everyPage(task).map((a) => a.updatedAt).sort().at(-1);
     }
     // A child, as the store's childrenOfTask says: of a parent with a row of the same project and no parent itself. The rows are
     // looked at, as tasks holds tasks of pages alone too
@@ -3646,7 +3649,7 @@
   function taskGroups(task) {
     const steps = new Map();
     const none = [];
-    for (const a of [...task.pages, ...task.archived].sort((x, y) => Boolean(x.archived) - Boolean(y.archived) || madeAt(x) - madeAt(y))) {
+    for (const a of everyPage(task).sort((x, y) => Boolean(x.archived) - Boolean(y.archived) || madeAt(x) - madeAt(y))) {
       if (!a.work.step) none.push(a);
       else steps.set(a.work.step, [...(steps.get(a.work.step) ?? []), a]);
     }
@@ -3660,7 +3663,7 @@
   function stepOrder(task) {
     const written = task.steps ?? [];
     const rest = [];
-    for (const a of [...task.pages, ...task.archived].sort((x, y) => madeAt(x) - madeAt(y))) {
+    for (const a of everyPage(task).sort((x, y) => madeAt(x) - madeAt(y))) {
       if (a.work.step && !written.includes(a.work.step) && !rest.includes(a.work.step)) rest.push(a.work.step);
     }
     return [...written, ...rest];
@@ -4109,7 +4112,7 @@
 
   function renderList() {
     const state = current();
-    if (view === 'new') for (const a of items) if (a.news && !a.archived) newSeen.add(a.slug);
+    if (view === 'new') for (const a of items) if (unseen(a)) newSeen.add(a.slug);
     const list = items.filter((a) => inView(a, state));
     const ranks = projectOrder();
     renderChips(list, ranks);
@@ -4212,7 +4215,7 @@
     const li = focusRow(at.file ? `page:${openKey(at.slug, at.file)}` : `entry:${at.slug}`);
     if (!li) return;
     const a = items.find((x) => x.slug === at.slug);
-    if (rowOpens(li, a) && !a.news) pickRow(at);
+    if (rowOpens(li, a) && !unseen(a)) pickRow(at);
     if (!li.offsetParent) $('list-show').focus();
   }
   // Where a page whole goes back to: the screen that opened it, or the page list
@@ -5268,7 +5271,7 @@
     $('edit-task-dialog').showModal();
   }
   // The steps as rows, each with its name, whether no page is under it, and its buttons up, down and to remove it; the grip drags it
-  const pagedOf = (task) => new Set([...task.pages, ...task.archived].map((a) => a.work.step).filter(Boolean));
+  const pagedOf = (task) => new Set(everyPage(task).map((a) => a.work.step).filter(Boolean));
   function drawEditSteps(task, order) {
     const paged = pagedOf(task);
     $('edit-steps').replaceChildren(...order.map((name) => stepRow(name, paged.has(name))));

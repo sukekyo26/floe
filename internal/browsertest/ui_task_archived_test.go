@@ -110,12 +110,19 @@ func TestUITaskArchivedInStep(t *testing.T) { //nolint:paralleltest // the brows
 	b.until("closed", "!document.getElementById('set-dialog').open && document.activeElement.tagName === 'SUMMARY'")
 	b.eval("document.querySelector('#list li[data-slug=n1] .more').open = false")
 
-	// Archived from the keys and left dimmed: Escape on the way back goes back to its row.
+	// Archived from the keys and left dimmed: Escape on the way back goes back to its row, before the list is read again too.
+	b.eval("window.realLoad = load; load = async () => {}")
 	b.eval("const a = document.querySelector('#list li[data-slug=a1] .actions > .archive'); a.focus(); a.dispatchEvent(new MouseEvent('click', { bubbles: true, detail: 0 }))")
-	b.until("archived", "document.querySelector('#list li[data-slug=a1]')?.classList.contains('archived') && document.activeElement.classList.contains('undo')")
+	b.until("the way back", "document.activeElement.classList.contains('undo')")
 	b.pressKey(kb.Escape)
 	say("escape", "document.activeElement.closest('li')?.dataset.slug + ' ' + document.activeElement.className")
+	b.eval("load = window.realLoad; load()")
+	b.until("archived", "document.querySelector('#list li[data-slug=a1]')?.classList.contains('archived') && document.activeElement.closest('li')?.dataset.slug === 'a1'")
 	say("archived a1", groups)
+	// Archived by a pointer and staying where it was, v1 keeps the focus on its button.
+	b.eval("const a = document.querySelector('#list li[data-slug=v1] .actions > .archive'); a.focus(); a.dispatchEvent(new MouseEvent('click', { bubbles: true, detail: 1 }))")
+	b.until("v1 archived", "document.querySelector('#list li[data-slug=v1]').classList.contains('archived')")
+	say("stayed", groups+" + ' / ' + document.activeElement.closest('li')?.dataset.slug + ' ' + document.activeElement.matches('.actions > .archive')")
 	// Given back by a pointer, a0 moves to the top of its step: the focus goes to the row that was after it.
 	b.eval("const a = document.querySelector('#list li[data-slug=a0] .actions > .archive'); a.focus(); a.dispatchEvent(new MouseEvent('click', { bubbles: true, detail: 1 }))")
 	b.until("given back", "!document.querySelector('#list li[data-slug=a0]').classList.contains('archived')")
@@ -128,11 +135,22 @@ func TestUITaskArchivedInStep(t *testing.T) { //nolint:paralleltest // the brows
 	say("shelf", marks("#list li[data-slug=v0]")+" + ' ' + document.querySelector('#list li[data-slug=v0]').classList.contains('archived')")
 
 	// Opened whole, an archived page is read with no way back to unread; its changes are told all the same. One not archived has both.
+	if _, err := st.Edit("v1", store.Edit{Archived: new(bool)}); err != nil {
+		t.Fatal(err)
+	}
 	for _, slug := range []string{"v1", "v0"} {
 		b.navigate("/a/" + slug + "/")
 		b.until(slug+" told", "document.querySelector('.dnote.page-note')")
 		say("opened "+slug, "Boolean(document.querySelector('.toast.page'))")
 	}
+	// The toast's way back to unread, pressed once the page is archived, does nothing.
+	b.navigate("/a/a2/")
+	b.until("the toast", "document.querySelector('.toast.page .btn')")
+	b.eval("window.deleted = 0; const was = window.fetch; window.fetch = (url, init) => { if (init?.method === 'DELETE') deleted += 1; return was(url, init); }")
+	b.eval("document.querySelector('#frame-actions > .archive').click()")
+	b.until("archived whole", "items.find((a) => a.slug === 'a2')?.archived")
+	b.eval("document.querySelector('.toast.page .btn').click()")
+	say("unread after archived", "deleted + ' ' + Boolean(items.find((a) => a.slug === 'a2').news)")
 
 	check(t, "task archived in step", out, strings.Join([]string{
 		"groups: fold* [案] a1 a2 a0* [設計] v1 v0* [旧] o1* [新] n1",
@@ -148,10 +166,12 @@ func TestUITaskArchivedInStep(t *testing.T) { //nolint:paralleltest // the brows
 		"set steps: 案, 設計, 旧, 新",
 		"escape: a1 title",
 		"archived a1: fold* [案] a2 a1* a0* [設計] v1 v0* [旧] o1* [新] n1",
-		"given back: fold* [案] a0 a2 a1* [設計] v1 v0* [旧] o1* [新] n1",
+		"stayed: fold* [案] a2 a1* a0* [設計] v1* v0* [旧] o1* [新] n1 / v1 true",
+		"given back: fold* [案] a0 a2 a1* [設計] v1* v0* [旧] o1* [新] n1",
 		"given back, focus: v1 title",
 		"shelf: ring false 500 false false",
 		"opened v1: true",
 		"opened v0: false",
+		"unread after archived: 0 false",
 	}, "|"))
 }
