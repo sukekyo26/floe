@@ -339,7 +339,7 @@ func TestUITaskSet(t *testing.T) { //nolint:paralleltest // the browser tests sh
 
 // taskSetWant is what TestUITaskSet reads, in the order it does things.
 const taskSetWant = `tags: Task #2 /tasks?project=proj&task=%232, Task #1 /tasks?project=proj&task=%231
-items of a page on a task: fav-item select tag-item pin-item task-set task-open edit open download archive delete
+items of a page on a task: fav-item select tag-item pin-item task-set task-out task-open edit open download archive delete
 items of a page on none: fav-item select tag-item pin-item task-set edit open download archive delete
 open the task: Open task #1 /tasks?project=proj&task=%231
 the items' looks: 1

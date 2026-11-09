@@ -247,7 +247,7 @@ func TestUITaskEdit(t *testing.T) { //nolint:paralleltest // the browser tests s
 		`sent the title: {"new":false,"rev":5,"title":"New title"}`,
 		"order: 7 New title https://example.com/489 [案,設計,レビュー,実装,リリース]",
 		`sent the order: {"new":false,"rev":6,"steps":["案","設計","レビュー","実装","リリース"]}`,
-		"groups: 案,設計,レビュー,実装",
+		"groups: 案Add a page,設計Add a page,レビューAdd a page,実装Add a page,リリースAdd a pageNo pages yet",
 		"dragged: リリース no page^,設計,レビュー,実装,案v",
 		"let go: false",
 		"words dragged: 0 / リリース no page^,設計,レビュー,実装,案v",

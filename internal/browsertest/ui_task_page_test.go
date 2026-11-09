@@ -309,7 +309,7 @@ func ptrTo[T any](v T) *T {
 
 // taskPageWant is what TestUITaskPage reads, in the order it reads it.
 const taskPageWant = `list j j: #130
-rows: T n1 | [design] | T d1 | [build] | T i1 | [review] | T r1
+rows: T n1 | [designAdd a page] | T d1 | [buildAdd a page] | T i1 | [reviewAdd a page] | T r1 | [nothingAdd a pageNo pages yet]
 nothing open: none / none
 url: /tasks?project=proj&task=%23130
 the list's keys:  ?project=proj

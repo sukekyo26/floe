@@ -3,6 +3,7 @@ package cli
 import (
 	"context"
 	"errors"
+	"fmt"
 	"net/http"
 	"net/url"
 	"slices"
@@ -36,9 +37,13 @@ func (a *app) workCmd() *cobra.Command {
 --project (the project of the working directory when left out; "" for none).
 
 The tasks are written first, once for each different task the pages are on, and the pages then, in order, stopping at
-the first failure. The same command given again finishes what a failure left.
+the first failure. The same command given again finishes what a failure left. Each task and page written is told on a
+line of its own, as the store left it: a task made, changed or unchanged with the fields given, a page with its task,
+step and pin.
 
   floe work design-notes --task "#130" --step design --state waiting
+    task #130 in project floe: changed; state waiting, step "design"
+    page design-notes: task #130 in project floe, step "design"
   floe work --task "#130" --url https://example.com/issues/482
   floe work --task "#130" --steps design,build,review
   floe work --task "#130" --parent "#123"
@@ -124,29 +129,117 @@ func (a *app) workTask(cmd *cobra.Command, f workFlags) error {
 	if onPages := changed(cmd, "step", "pin", "unpin", "clear"); len(onPages) > 0 {
 		return usageOf(usererr.New("cli_work_needs_pages", onPages[0]))
 	}
+	t, err := a.namedTask(ctx, cmd, f)
+	if err != nil {
+		return err
+	}
 	c, err := a.client(ctx, true)
 	if err != nil {
 		return err
 	}
-	t := a.namedTask(ctx, cmd, f)
+	ed := taskEdit(cmd, f)
+	var written store.TaskWritten
 	if f.forget {
 		err = c.do(ctx, http.MethodDelete, taskQuery(t), nil, nil)
 	} else {
-		err = c.do(ctx, http.MethodPatch, taskQuery(t), taskEdit(cmd, f), nil)
+		err = c.do(ctx, http.MethodPatch, taskQuery(t), ed, &written)
 	}
 	if re, ok := errors.AsType[*remoteError](err); ok && re.status == http.StatusNotFound {
 		return usererr.New("cli_work_no_row", t.name, t.project)
 	}
-	return err
+	if err != nil {
+		return err
+	}
+	if f.forget {
+		a.print("%s", english.Msg("cli_work_forgotten", t.name, projectOf(t.project)))
+		return nil
+	}
+	a.tellTask(written, ed)
+	return nil
 }
 
-// namedTask is the task of --task and --project, whose project is the working directory's when left out.
-func (a *app) namedTask(ctx context.Context, cmd *cobra.Command, f workFlags) taskOf {
-	name := f.project
-	if !cmd.Flags().Changed("project") {
-		name = project.Name(ctx, a.env.Dir)
+// tellTask says the task written: made, changed or as it was, and the fields ed asked for as the store left them.
+func (a *app) tellTask(w store.TaskWritten, ed server.TaskEdit) {
+	key := "cli_work_unchanged"
+	switch {
+	case w.Made:
+		key = "cli_work_made"
+	case w.Wrote:
+		key = "cli_work_changed"
 	}
-	return taskOf{project: store.ProjectKey(name), name: f.task}
+	line := english.Msg(key, w.Task, projectOf(w.Project))
+	if fields := taskFields(w.Row, ed); fields != "" {
+		line += "; " + fields
+	}
+	a.print("%s", line)
+}
+
+// taskFields is the fields of row that ed asked for, in one order, the text ones quoted.
+func taskFields(row store.Task, ed server.TaskEdit) string {
+	var fields []string
+	if ed.Title != nil {
+		fields = append(fields, fmt.Sprintf("title %q", row.Title))
+	}
+	if ed.State != nil {
+		fields = append(fields, "state "+row.State)
+	}
+	if ed.Step != nil {
+		fields = append(fields, fmt.Sprintf("step %q", row.Step))
+	}
+	if ed.URL != nil {
+		fields = append(fields, fmt.Sprintf("url %q", row.URL))
+	}
+	if ed.Steps != nil {
+		fields = append(fields, fmt.Sprintf("steps %q", strings.Join(row.Steps, ",")))
+	}
+	if ed.Parent != nil {
+		parent := "no parent"
+		if row.Parent != "" {
+			parent = fmt.Sprintf("parent %q", row.Parent)
+		}
+		fields = append(fields, parent)
+	}
+	return strings.Join(fields, ", ")
+}
+
+// projectOf is a project of tasks.json (ProjectKey) as floe work says it.
+func projectOf(key string) string {
+	if key == store.ProjectKey("") {
+		return english.Msg("cli_work_no_project")
+	}
+	return english.Msg("cli_work_project", key)
+}
+
+// tellPage says the page as it was written: its task and project, step and pin.
+func (a *app) tellPage(page store.Edited) {
+	work := page.Work
+	var parts []string
+	if work == nil || work.Task == "" {
+		parts = append(parts, english.Msg("cli_work_page_off"))
+	} else {
+		parts = append(parts, english.Msg("cli_work_page_task", work.Task, projectOf(page.TaskProject)))
+	}
+	if work != nil && work.Step != "" {
+		parts = append(parts, fmt.Sprintf("step %q", work.Step))
+	}
+	if work != nil && work.Pin {
+		parts = append(parts, "pinned")
+	}
+	a.print("%s", english.Msg("cli_work_page", page.Slug, strings.Join(parts, ", ")))
+}
+
+// namedTask is the task of --task and --project, whose project is the working directory's when left out, its name
+// as the store keeps it.
+func (a *app) namedTask(ctx context.Context, cmd *cobra.Command, f workFlags) (taskOf, error) {
+	name, err := store.TaskName(f.task)
+	if err != nil {
+		return taskOf{}, err //nolint:wrapcheck // the store's words
+	}
+	projectName := f.project
+	if !cmd.Flags().Changed("project") {
+		projectName = project.Name(ctx, a.env.Dir)
+	}
+	return taskOf{project: store.ProjectKey(projectName), name: name}, nil
 }
 
 // workPages puts the pages slugs on a task and changes it: what the CLI can check (the pages listed, on a task, of one
@@ -177,13 +270,13 @@ func (a *app) workPages(cmd *cobra.Command, f workFlags, slugs []string) error {
 		// --task names one task, so that tasks differ by their projects alone
 		return usageOf(usererr.New("cli_work_parent_projects"))
 	}
-	if err = writeTasks(ctx, c, tasks, taskEdit(cmd, f)); err != nil {
+	if err = a.writeTasks(ctx, c, tasks, taskEdit(cmd, f)); err != nil {
 		return err
 	}
 	if len(onPages) == 0 {
 		return nil
 	}
-	return a.eachPage(cmd, slugs, http.MethodPatch, pageWorkEdit(cmd, f))
+	return a.eachPage(cmd, slugs, http.MethodPatch, pageWorkEdit(cmd, f), a.tellPage)
 }
 
 // pageFlags refuses the flags of a floe work with slugs that cannot go together, and returns those that change the
@@ -215,19 +308,21 @@ func pageFlags(cmd *cobra.Command, f workFlags) (onPages, onTask []string, name 
 
 // writeTasks writes ed to each of tasks in turn, stopping at the first failure. One case of not found is passed: ed
 // taking the parent off alone, of a task of no row, which has no parent to take off and is made by the pages going on.
-func writeTasks(ctx context.Context, c client, tasks []taskOf, ed server.TaskEdit) error {
+func (a *app) writeTasks(ctx context.Context, c client, tasks []taskOf, ed server.TaskEdit) error {
 	var none server.TaskEdit
 	rest := ed
 	rest.Parent = nil
 	parentOff := ed.Parent != nil && *ed.Parent == "" && rest == none
 	for _, t := range tasks {
-		err := c.do(ctx, http.MethodPatch, taskQuery(t), ed, nil)
+		var written store.TaskWritten
+		err := c.do(ctx, http.MethodPatch, taskQuery(t), ed, &written)
 		if re, ok := errors.AsType[*remoteError](err); ok && re.status == http.StatusNotFound && parentOff {
 			continue
 		}
 		if err != nil {
 			return err
 		}
+		a.tellTask(written, ed)
 	}
 	return nil
 }

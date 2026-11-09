@@ -530,8 +530,8 @@ func TestReadsFollow(t *testing.T) {
 
 	// reads.json that cannot be read: the rename and the removal are done all the same.
 	writeReads(t, root, `{`)
-	if to, err := s.Edit("pv-old", store.Edit{Slug: ptr("pv3")}); err != nil || to != "pv3" {
-		t.Errorf("renamed to %s: %v", to, err)
+	if to, err := s.Edit("pv-old", store.Edit{Slug: ptr("pv3")}); err != nil || to.Slug != "pv3" {
+		t.Errorf("renamed to %s: %v", to.Slug, err)
 	}
 	if err := s.Remove("pv3"); err != nil {
 		t.Error(err)
