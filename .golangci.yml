@@ -178,6 +178,8 @@ linters:
           deny:
             - pkg: "github.com/yuin/goldmark"
               desc: "write Markdown as HTML through internal/kit's markdown, which draws raw HTML as the text written"
+            - pkg: "github.com/tats-u/goldmark-cjk-friendly"
+              desc: "write Markdown as HTML through internal/kit's markdown, which reads emphasis beside CJK letters"
     wrapcheck:
       ignore-sigs:
         - .Errorf(
