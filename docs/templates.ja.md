@@ -75,7 +75,7 @@ memo/
 | `.Lang` | ページの言語。データファイルの `lang:` |
 | `.Data` | データファイルの項目。floe が自分で読む `lang`・`template`・`theme`・`title` は除く。schema が宣言し、データが省いた項目は nil。`{{with .Data.lead}}`・`{{range}}`・`{{if}}` は空として読むが、`len`・`index`・`slice` は断る（`len of nil pointer`）ので、`with` の中で書く：`{{with .Data.done}}{{len .}}{{else}}0{{end}}`。部品は描いた形で来る（[テンプレートの中の部品](#テンプレートの中の部品)）。`"format": "markdown"` の項目は HTML、`"format": "image"` の項目は data URI で来る |
 | `.Calc` | `computed.yaml` の値。名前で引く |
-| `markdown` | Markdown の文を HTML に（`{{markdown .text}}`）。中の生の HTML は除く。`page.html` ではテンプレート自身の Markdown の包みに（下）、部品の `part.html` では text の外枠に包む（[parts.ja.md](parts.ja.md)） |
+| `markdown` | Markdown の文を HTML に（`{{markdown .text}}`）。中の HTML は書いたとおりの字で描く。`page.html` ではテンプレート自身の Markdown の包みに（下）、部品の `part.html` では text の外枠に包む（[parts.ja.md](parts.ja.md)） |
 | `markdownLine` | 表のセルのような Markdown の 1 行を、段落で囲まない HTML に |
 | `markdownLabel` | `markdownLine` と同じ Markdown の 1 行を、リンク（書いたもの、URL のように見つけたもの）を字にして。テンプレート自身のリンクの中に置く字に |
 | `contents` | すぐ前の目次（`<nav data-floe-look="toc">…</nav>{{contents}}`）で、今読んでいる所へのリンクに `aria-current="location"` を付ける script |

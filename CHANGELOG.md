@@ -353,6 +353,7 @@ adheres to [Semantic Versioning](https://semver.org/).
 
 ### Changed
 
+- Change raw HTML in Markdown to be drawn as the text written, everywhere floe draws Markdown: what looks like a tag (`/logs/<prefix>`, `Vec<u8>`, a heading `<T>`) is no longer dropped without a word, and a block of HTML shows as a paragraph of its lines. HTML in Markdown is still not drawn as HTML: write a tag as text in backticks, and a line break in Markdown.
 - Change the refusals of a slug in use (by another project's page, another file's link, a page or link of the other kind, or on a rename) to say what uses it and to choose another slug, no longer suggesting `--force` or `floe rm`, which drop that page and its versions; `floe publish --help` and the docs tell an owner how to replace or remove theirs. The warning of a changed title says from what to what, and no longer suggests another `--slug`.
 - Change Markdown's strikethrough to two tildes alone, everywhere floe draws Markdown: `~~text~~` is struck through as before, while a single `~` stays text, so that a range (`2026-11-01~11-08`) or a path (`~/work`) is no longer struck through unasked.
 - Change `report`'s `eyebrow` to a line of Markdown, as `lead` and the section headings are: code in backticks, bold and links are drawn, and a bare URL or email address becomes a link, but not a URL of an IP address or localhost. What looks like a tag (`<prefix>`, `Vec<u8>`) is left out and marks such as `*` and `_` are read, so write those as text in backticks.
