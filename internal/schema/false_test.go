@@ -18,7 +18,10 @@ func TestNoFalseSchema(t *testing.T) {
 	}
 	reached := map[string]bool{}
 	for _, e := range k.Templates() {
-		tm, ok := k.Template(e.Name)
+		tm, ok, takeErr := k.Template(e.Name)
+		if takeErr != nil {
+			t.Fatal(takeErr)
+		}
 		if !ok || tm.Schema() == nil {
 			continue
 		}
