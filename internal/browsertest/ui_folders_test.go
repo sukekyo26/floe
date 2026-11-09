@@ -10,6 +10,7 @@ import (
 	"github.com/chromedp/chromedp"
 	"github.com/chromedp/chromedp/kb"
 
+	"github.com/sukekyo26/floe/internal/i18n"
 	"github.com/sukekyo26/floe/internal/link"
 )
 
@@ -102,11 +103,15 @@ func TestUIFolders(t *testing.T) { //nolint:paralleltest // the browser tests sh
 	click("assets")
 	b.until("assets open", rows+".includes('(No HTML')")
 	// A folder shows no time, nor do its directories and notes, also after the times are advanced: only a page's row has one.
+	// Nor does its title say when it was linked or updated, nor its row in the search.
+	label := func(key string) string { return strings.Fields(i18n.New(i18n.English).Msg(key, ""))[0] }
 	check(t, "times", []string{
 		b.eval(`refreshTimes(); [...new Set([...document.querySelectorAll('#list > li.folder, #list li.tree')].map((li) => (li.querySelector('time').textContent === '' ? '-' : '+') +
 			(li.classList.contains('folder') ? 'folder' : ['dir', 'note'].find((k) => li.classList.contains(k)) ?? 'page')))].sort().join()`),
-		b.eval(`/Registered|Updated/.test(document.querySelector('#list > li.folder .title').title)`),
-	}, "+page,-dir,-folder,-note|false")
+		b.eval(`new RegExp(` + js(label("ui_registered_at")+"|"+label("ui_updated_at")) + `).test(document.querySelector('#list > li.folder .title').title)`),
+		b.eval(`(openFind(), [...document.querySelectorAll('#find-list li')].filter((li) => li.querySelector('.title').textContent === 'docs').map((li) => 'folder in the search:' + li.querySelector('time').textContent).join())`),
+	}, "+page,-dir,-folder,-note|false|folder in the search:")
+	b.eval("document.getElementById('find').close()")
 	b.eval(`[...document.querySelectorAll('#list li.tree button.title')].find((x) => x.textContent === 'assets').focus()`)
 	if err := chromedp.Do(b.ctx, chromedp.KeyEvent(kb.ArrowDown)); err != nil {
 		t.Fatal(err)

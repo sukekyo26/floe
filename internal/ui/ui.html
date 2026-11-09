@@ -1778,8 +1778,9 @@
 
   // A value that is no time (a row that has none, as a folder's) gives nothing, not "just now"
   function ago(iso) {
-    if (Number.isNaN(Date.parse(iso))) return '';
-    const s = (new Date(iso) - Date.now()) / 1000;
+    const ms = Date.parse(iso);
+    if (Number.isNaN(ms)) return '';
+    const s = (ms - Date.now()) / 1000;
     const [unit, sec] = UNITS.find(([, n]) => Math.abs(s) >= n) ?? [];
     return unit ? rtf.format(Math.round(s / sec), unit) : t('ui_just_now');
   }
@@ -3073,11 +3074,9 @@
         return b;
       }));
     });
-    if (!a.folder) {
-      const time = li.querySelector('time');
-      time.dateTime = a.updatedAt;
-      time.textContent = ago(a.updatedAt);
-    }
+    const time = li.querySelector('time');
+    time.dateTime = a.folder ? '' : a.updatedAt;
+    time.textContent = ago(time.dateTime);
     const star = li.querySelector('.star');
     toggle(star, a.favorite, t('ui_favorite'), t('ui_favorite_named', a.title));
     star.addEventListener('click', () => toggleFavorite(a));
@@ -4264,6 +4263,7 @@
     $('nomatch').hidden = empty || shown.length > 0;
     const days = [];
     for (const a of shown) {
+      // LIMIT: a folder is placed by the time it was linked, under that day's heading, as it shows no time: what changes inside does not show
       if (dayOf(a.updatedAt) !== days.at(-1)?.heading) days.push({ heading: dayOf(a.updatedAt), entries: [] });
       days.at(-1).entries.push(a);
     }
@@ -5868,11 +5868,9 @@
     title.textContent = a.title;
     title.title = a.title;
     if (a.favorite) li.querySelector('.time').insertAdjacentHTML('afterbegin', STAR_MARK);
-    if (!a.folder) {
-      const time = li.querySelector('time');
-      time.dateTime = a.updatedAt;
-      time.textContent = ago(a.updatedAt);
-    }
+    const time = li.querySelector('time');
+    time.dateTime = a.folder ? '' : a.updatedAt;
+    time.textContent = ago(time.dateTime);
     drawSub(li.querySelector('.sub'), a, ranks, middle);
     return li;
   }
