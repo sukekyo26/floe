@@ -1,9 +1,10 @@
-.a { border-radius: 4px; } /* want "border-radius: 4px; read --radius, --radius-small or --radius-pill, or write a shape (0, 50%, 999px)" */
-.b { border-radius: var(--a, 1px); } /* want "border-radius: var(--a, 1px); read --radius, --radius-small or --radius-pill, or write a shape (0, 50%, 999px)" */
-.c { border-radius: max(var(--radius), var(--radius)); } /* want "border-radius: max(var(--radius), var(--radius)); read --radius, --radius-small or --radius-pill, or write a shape (0, 50%, 999px)" */
+.a { border-radius: 4px; } /* want "border-radius: 4px; read --radius, --radius-small or --radius-pill, in calc() or min() too with no length, number nor percentage but 0 (a gap subtracted a variable too), or write a shape (0, 50%, 999px)" */
+.b { border-radius: var(--a, 1px); } /* want "border-radius: var(--a, 1px); read --radius, --radius-small or --radius-pill, in calc() or min() too with no length, number nor percentage but 0 (a gap subtracted a variable too), or write a shape (0, 50%, 999px)" */
+.c { border-radius: max(var(--radius), var(--radius)); } /* want "border-radius: max(var(--radius), var(--radius)); read --radius, --radius-small or --radius-pill, in calc() or min() too with no length, number nor percentage but 0 (a gap subtracted a variable too), or write a shape (0, 50%, 999px)" */
 .d { border-radius: var(--set-off); --set-off: 2px; } /* want "border-radius: var(--set-off); --set-off is set in no palette nor the root of a base: set it there" */
 .e { border-radius: var(--both); } /* want "border-radius: var(--both); --both is set in parts/box/part.css .f too, and a corner reads a variable set in a palette or the root of a base alone" */
 .f { --radius-small: 3px; --both: 1px; } /* want "--radius-small: 3px; the palette sets it to one length" */
-.g { border-radius/**/: 3px; } /* want "border-radius: 3px; read --radius, --radius-small or --radius-pill, or write a shape (0, 50%, 999px)" */
+.g { border-radius/**/: 3px; } /* want "border-radius: 3px; read --radius, --radius-small or --radius-pill, in calc() or min() too with no length, number nor percentage but 0 (a gap subtracted a variable too), or write a shape (0, 50%, 999px)" */
 .h { border-radius: var(--c2); } /* want "border-radius: var(--c2); --c2 is set in no palette nor the root of a base: set it there" */
 .i { border-radius: var(--nest); } /* want "border-radius: var(--nest); --nest is set in no palette nor the root of a base: set it there" */
+.j { border-radius: calc(var(--radius) - 1px); } /* want "border-radius: calc(var(--radius) - 1px); read --radius, --radius-small or --radius-pill, in calc() or min() too with no length, number nor percentage but 0 (a gap subtracted a variable too), or write a shape (0, 50%, 999px)" */
