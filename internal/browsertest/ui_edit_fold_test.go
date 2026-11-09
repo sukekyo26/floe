@@ -66,6 +66,7 @@ func TestUIEditFold(t *testing.T) { //nolint:paralleltest // the browser tests s
 	say("invalid", state+" + ' / ' + document.getElementById('edit-dialog').open")
 
 	open()
+	say("reopened after one opened", fold)
 	field("edit-slug", "b")
 	save("taken")
 	say("taken", state)
@@ -107,6 +108,7 @@ func TestUIEditFold(t *testing.T) { //nolint:paralleltest // the browser tests s
 		"no project: false / a-new · Not set",
 		"again: false / a · proj",
 		"invalid: true / edit-slug / - / true",
+		"reopened after one opened: false / a · proj",
 		`taken: true / edit-slug / Failed to save: HTTP 409: slug "b" is already in use: choose another slug`,
 		`project refused: true / edit-project / Failed to save: HTTP 400: a project name cannot be just "/"`,
 		"not reached: true / edit-slug / Failed to save: Failed to fetch",
