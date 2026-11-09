@@ -174,7 +174,7 @@ section > h2 { border-top: var(--rule); padding-top: 1.3rem; }
 | `--tone`・`--tone-soft`・`--tone-fill` | 読む要素の tone（`data-floe-tone`、[parts.ja.md](parts.ja.md#css-の層と-scope)）の色。上の変数から floe が置き、tone の外では accent の色。テンプレートも tone をこの属性で付ける |
 | `--shadow` | 影の色の候補。影は、テーマが箱に `--floe-shadow-color` を置いたときだけ描かれる（[parts.ja.md](parts.ja.md#テーマ)） |
 | `--floe-shadow-x`・`--floe-shadow-y`・`--floe-shadow-blur`・`--floe-shadow-spread` | テーマの 1 組の影。px か rem（既定は無し） |
-| `--radius`・`--radius-small`・`--radius-pill` | 角の丸さ。どれも 1 つの長さ。箱（panel・note・code・引用）、箱の中の小さな升（キー・棒・画像・行の中の code）、札（cell・タブの名前。折り返した cell は floe の `--floe-pill-end` までしか丸くならない）。箱の縁から間だけ内にあって縁に沿う箱は `calc(var(--radius) - var(--pad))`。間も変数で、余白が読むものと同じ |
+| `--radius`・`--radius-small`・`--radius-pill` | 角の丸さ。どれも 1 つの長さ。箱（panel・note・code・引用）、箱の中の小さな升（キー・棒・画像・行の中の code）、札（cell・タブの名前。折り返した cell は floe の `--floe-pill-end` までしか丸くならない）。箱の縁から間だけ内にあって縁に沿う箱は 間の変数を引く。余白もその変数を読む（default は `--default-pad` を置き、`padding` と `calc(var(--radius) - var(--default-pad))` の両方が読む） |
 | `--font`・`--display`・`--mono` | 本文・見出し・等幅の書体。`--mono` は `monospace` の前に書体の名前を置く（ページは字の大きさを決めないので、ブラウザは `monospace` だけの字を 13px から測る） |
 | `--code-bg`・`--code-fg`・`--code-prompt` | コードとターミナルの地（いつも暗い）、その文字、プロンプト |
 | `--code-add`・`--code-del` | diff の足した行と消した行 |
