@@ -5,7 +5,6 @@ import (
 	"slices"
 	"strings"
 
-	"github.com/sukekyo26/floe/internal/draw"
 	"github.com/sukekyo26/floe/internal/i18n"
 	"github.com/sukekyo26/floe/internal/tmpl"
 	"github.com/sukekyo26/floe/internal/ui"
@@ -33,16 +32,6 @@ type Themes struct {
 	Default  string          `json:"default"`
 	Drawing  *usererr.Report `json:"drawing,omitzero"`
 	Settings *usererr.Report `json:"settings,omitzero"`
-}
-
-// settings answers settings.json, or its mistake.
-func (s *Server) settings(w http.ResponseWriter, r *http.Request) {
-	set, err := s.cfg.Store.ReadSettings()
-	if err != nil {
-		refuse(w, r, err)
-		return
-	}
-	sendJSON(w, http.StatusOK, SettingsPut{Theme: set.Theme})
 }
 
 // putSettings writes the default theme SettingsPut names, a theme of the drawing of now, to settings.json. Pages
@@ -127,8 +116,6 @@ func (s *Server) themeSample(w http.ResponseWriter, r *http.Request) {
 		refuse(w, r, err)
 		return
 	}
-	h := w.Header()
-	h.Set("Content-Security-Policy", pageCSP+"; "+draw.CutOff("http://"+r.Host+"/api/changed/"))
-	h.Set("X-Content-Type-Options", "nosniff")
+	pageHeaders(w, r, true)
 	sendBytes(w, http.StatusOK, htmlType, page)
 }

@@ -20,13 +20,12 @@ const report = "lang: en\ntemplate: report\ntitle: T\nsections:\n  - heading: h\
 // inkAccent is in a page drawn in ink and no other.
 const inkAccent = "--accent: #2b3a67"
 
-// The default theme is read and written by name, a theme of the drawing of now; one written draws the pages stored from
+// The default theme is written by name, a theme of the drawing of now; one written draws the pages stored from
 // then on, not the ones there.
 func TestAPISettings(t *testing.T) {
 	t.Parallel()
 
 	e := newEnv(t)
-	want(t, e.do(t, http.MethodGet, "/api/settings", ""), http.StatusOK, `{"theme":""}`)
 	want(t, e.publish(t, "before", report, nil), http.StatusCreated, `"slug":"before"`)
 	m := store.New(e.root).ReadMeta("before")
 	page := filepath.Join(e.root, "before", m.Source, "page.html")
@@ -39,7 +38,9 @@ func TestAPISettings(t *testing.T) {
 	unknown := e.do(t, http.MethodPut, "/api/settings", `{"theme": "ink", "x": 1}`, "Origin", origin, "Content-Type", "application/json")
 	want(t, unknown, http.StatusBadRequest, `unknown object member name "x"`)
 	want(t, e.write(t, http.MethodPut, "/api/settings", server.SettingsPut{Theme: "ink"}), http.StatusOK, `{"theme":"ink"}`)
-	want(t, e.do(t, http.MethodGet, "/api/settings", ""), http.StatusOK, `{"theme":"ink"}`)
+	if set, err := store.New(e.root).ReadSettings(); err != nil || set.Theme != "ink" {
+		t.Errorf("settings.json: %+v, %v", set, err)
+	}
 	if now, err := os.ReadFile(page); err != nil || string(now) != string(was) {
 		t.Errorf("the page there changed: %v", err)
 	}
