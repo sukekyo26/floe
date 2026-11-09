@@ -5952,7 +5952,7 @@
     $('theme-now').textContent = '';
     $('theme-choose').disabled = true;
     $('settings').showModal();
-    // The theme a page shows in without its own setting, told on its first card: none when it cannot be read
+    // The theme a page shows in without its own theme, told on its first card: none when it cannot be read
     const own = a ? api(`/api/artifacts/${encodeURIComponent(a.slug)}/theme`).then((r) => (r.ok ? r.json() : {})).then((o) => o.own ?? '', () => '') : '';
     let got;
     try {
@@ -6008,7 +6008,7 @@
     shrinkShots();
   }
 
-  // A page's themes: first the card that removes its setting, checked when it has none; the one chosen checked, or told
+  // A page's themes: first the card that removes its theme, checked when it has none; the one chosen checked, or told
   // gone
   function drawPageThemes(got) {
     const chosen = themesPage.pickedTheme || '';
@@ -6037,7 +6037,7 @@
     const nm = document.createElement('span');
     nm.className = 'nm';
     if (th.name === '') {
-      // Removing the page's setting: no sample, what it shows in its place
+      // Removing the page's theme: no sample, what it shows in its place
       shot.classList.add('none');
       shot.textContent = th.about;
       nm.append(t('ui_theme_unset'));
