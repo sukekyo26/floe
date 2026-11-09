@@ -1,0 +1,8 @@
+template: report
+lang: en
+title: T
+sections:
+  - colour: red
+    heading: H
+    parts:
+      - note: { tone: x, text: hi }

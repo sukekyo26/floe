@@ -123,8 +123,12 @@ const named = "floe: "
 // newRoot returns the command tree, writing to out, and the app its commands run in, which holds their warnings.
 func newRoot(env Env, out io.Writer) (*cobra.Command, *app) {
 	root := &cobra.Command{
-		Use:           "floe",
-		Short:         "Serve agent-written HTML pages on a local server",
+		Use:   "floe",
+		Short: "Serve agent-written HTML pages on a local server",
+		Long: `Serve agent-written HTML pages on a local server.
+
+Agents: run floe guide first: how to write, check and publish a page. floe skill install <agent> makes a skill
+that points your agent to it (floe skill install --help lists the agents).`,
 		Version:       version.Version,
 		Args:          cobra.NoArgs,
 		SilenceErrors: true,
@@ -145,8 +149,9 @@ func newRoot(env Env, out io.Writer) (*cobra.Command, *app) {
 	})
 	a := &app{env: env, out: out, warnings: nil, told: nil}
 	root.AddCommand(
-		a.archiveCmd(), a.checkCmd(), a.diagramCmd(), a.iconsCmd(), a.listCmd(), a.partCmd(), a.publishCmd(), a.rebuildCmd(),
-		a.renderCmd(), a.rmCmd(), a.serveCmd(), a.stopCmd(), a.tagCmd(), a.templateCmd(), a.themeCmd(), a.workCmd(),
+		a.archiveCmd(), a.checkCmd(), a.diagramCmd(), a.guideCmd(), a.iconsCmd(), a.listCmd(), a.partCmd(), a.publishCmd(),
+		a.rebuildCmd(), a.renderCmd(), a.rmCmd(), a.serveCmd(), a.skillCmd(), a.stopCmd(), a.tagCmd(), a.templateCmd(),
+		a.themeCmd(), a.workCmd(),
 	)
 	// cobra adds these as it runs: here, so that readable finds them, and their arguments are wrapped below.
 	root.InitDefaultHelpCmd()
