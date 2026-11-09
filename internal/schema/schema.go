@@ -55,6 +55,28 @@ func NewResource(u, file string, src []byte, k Kind) (Resource, error) {
 	return Resource{doc: doc, made: true, Kind: k, File: file, URL: u}, nil
 }
 
+// AnyWith returns a copy of r, floe's shared schema any, whose properties name the parts too, each by its $ref
+// (floe:///parts/<name>.json), so that a section of floe's templates takes one's own parts. It reads the doc's
+// properties alone and writes only the copy (kit.md: the exception to taking the schema's shape from the compiled
+// tree). A doc without properties of an object is floe's failure.
+func AnyWith(r Resource, parts []string) (Resource, error) {
+	root, ok := r.doc.(map[string]any)
+	if !ok {
+		return Resource{}, fmt.Errorf("schema: %s is no object", r.File) //nolint:err113 // floe's failure
+	}
+	props, ok := root["properties"].(map[string]any)
+	if !ok {
+		return Resource{}, fmt.Errorf("schema: %s has no properties of an object", r.File) //nolint:err113 // floe's failure
+	}
+	root, props = maps.Clone(root), maps.Clone(props)
+	for _, name := range parts {
+		props[name] = map[string]any{"$ref": "floe:///parts/" + name + ".json"}
+	}
+	root["properties"] = props
+	r.doc = root
+	return r, nil
+}
+
 // read reads src, the JSON of file, as RFC 8259 does, past a byte order mark at its start, and as jsonschema
 // reads it (numbers as json.Number): the only place a schema's bytes are read. Its syntax is read once, by
 // jsontext (misread), whose mistake is told in its words at its byte; a file of nothing is told in floe's words.

@@ -794,8 +794,11 @@ func TestSectionParts(t *testing.T) {
 	if err != nil {
 		t.Fatal(told(err))
 	}
-	if over, err := own.SectionParts(); err != nil || !reflect.DeepEqual(over, got) {
-		t.Errorf("SectionParts over one's own part = %+v, %v; want floe's", over, err)
+	// One's own part joins floe's, as a section of floe's templates takes it too.
+	mine := slices.IndexFunc(own.Parts(), func(p kit.Entry) bool { return p.Name == "mine" })
+	more := kit.Listed(append(slices.Clone(got), own.Parts()[mine]))
+	if over, err := own.SectionParts(); err != nil || !reflect.DeepEqual(over, more) {
+		t.Errorf("SectionParts over one's own part = %+v, %v; want floe's and mine", over, err)
 	}
 }
 

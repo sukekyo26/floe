@@ -32,6 +32,7 @@ type Kit struct {
 	looks     map[string]*Look
 	themes    map[string]*Theme
 	templates map[string]*Template
+	rebuilt   map[string]*Template // the base's templates compiled again with its own parts in any, read by Template alone
 	shared    map[string]*shared
 	resources map[string]schema.Resource // by URL, those of base too
 }
@@ -129,7 +130,8 @@ const toneSchema = "tone"
 func read(base *Kit, src Sources) (*Kit, error) {
 	k := &Kit{
 		base: base, baseCSS: nil, parts: map[string]*Part{}, looks: map[string]*Look{}, themes: map[string]*Theme{},
-		templates: map[string]*Template{}, shared: map[string]*shared{}, resources: map[string]schema.Resource{},
+		templates: map[string]*Template{}, rebuilt: nil, shared: map[string]*shared{},
+		resources: map[string]schema.Resource{},
 	}
 	if base != nil {
 		maps.Copy(k.resources, base.resources)
@@ -138,7 +140,17 @@ func read(base *Kit, src Sources) (*Kit, error) {
 	if failed := found.Add(k.readParts(src.Parts)); failed != nil {
 		return nil, failed
 	}
-	// A template's schema is compiled with every part's: one that could not be read would be told missing.
+	// any takes one's own parts before they are compiled, so that a part of one's own holding any holds them too.
+	// None is put in any when one could not be read: readPart may hold its resource before it refuses it.
+	if found == nil {
+		if err := k.ownInAny(); err != nil {
+			return nil, err
+		}
+		if failed := found.Add(k.compileParts()); failed != nil {
+			return nil, failed
+		}
+	}
+	// A template's schema is compiled with every part's: one that could not be compiled would be told missing.
 	partsRead := found == nil
 	if failed := found.Add(k.readThemes(src.Themes)); failed != nil {
 		return nil, failed
@@ -149,7 +161,74 @@ func read(base *Kit, src Sources) (*Kit, error) {
 	if found != nil {
 		return nil, found.Sorted().Err()
 	}
+	if err := k.rebuild(); err != nil {
+		return nil, err
+	}
 	return k, nil
+}
+
+// ownsParts reports whether k puts parts of its own in any: over a base, with a part of its own.
+func (k *Kit) ownsParts() bool { return k.base != nil && len(k.parts) > 0 }
+
+// ownInAny puts in k's resources a copy of the base's shared schema any naming k's own parts too, so that a section
+// of floe's templates takes them. Its looks and shared schemas are not put in. stack is left as it is: a part of
+// one's own may hold a form or HTML, which its sections would break on (stack's $comment).
+// LIMIT: every part of one's own goes in, one made to be held by another alone too; mark the ones to place if that
+// misleads.
+// LIMIT: a part of one's own holding any holds tabs, columns, html and parts of one's own with a form too, as stack
+// refuses; give such a part a list of its own if a page breaks so.
+func (k *Kit) ownInAny() error {
+	if !k.ownsParts() {
+		return nil
+	}
+	u := partURL("any")
+	r, ok := k.resources[u]
+	if !ok {
+		return errors.New("kit: the base holds no shared schema any") //nolint:err113 // floe's failure
+	}
+	copied, err := schema.AnyWith(r, slices.Sorted(maps.Keys(k.parts)))
+	if err != nil {
+		return err //nolint:wrapcheck // floe's failure, which says what failed
+	}
+	k.resources[u] = copied
+	return nil
+}
+
+// rebuild compiles the base's templates with a schema again with k's resources, its any naming k's own parts, but
+// those k has its own of, into k.rebuilt; what else they hold is shared with the base's. It runs when every own thing
+// was read without a mistake, so that a mistake left is floe's.
+// LIMIT: a Kit that draws nothing (floe part list) compiles them too; compile a template when first taken if that
+// comes to be slow.
+func (k *Kit) rebuild() error {
+	if !k.ownsParts() {
+		return nil
+	}
+	k.rebuilt = map[string]*Template{}
+	for at := k.base; at != nil; at = at.base {
+		for _, name := range slices.Sorted(maps.Keys(at.templates)) {
+			t := at.templates[name]
+			_, own := k.templates[name]
+			_, done := k.rebuilt[name]
+			if t.schemaSrc == nil || own || done {
+				continue
+			}
+			c, err := k.compileSchema(t, t.schemaSrc)
+			if err != nil {
+				return floeFailure(name, err)
+			}
+			again := *t
+			again.schema = c
+			k.rebuilt[name] = &again
+		}
+	}
+	return nil
+}
+
+// floeFailure is floe's failure to compile its template name again with one's own parts: err's mistakes, at floe's
+// files, worded as text, as the user can mend none of them.
+func floeFailure(name string, err error) error {
+	//nolint:err113 // floe's failure
+	return fmt.Errorf("kit: floe's template %s does not compile with your own parts: %s", name, err.Error())
 }
 
 // Part returns the part of k named so, its own or its base's. Parts and looks share their names, and read
@@ -168,9 +247,18 @@ func (k *Kit) Theme(name string) (*Theme, bool) {
 	return lookUp(k, name, func(k *Kit) map[string]*Theme { return k.themes })
 }
 
-// Template returns the template of k named so, its own or its base's.
+// Template returns the template of k named so: its own, else the base's compiled again with its own parts, else the
+// base's. It is the only place k.rebuilt is read.
 func (k *Kit) Template(name string) (*Template, bool) {
-	return lookUp(k, name, func(k *Kit) map[string]*Template { return k.templates })
+	for at := k; at != nil; at = at.base {
+		if t, ok := at.templates[name]; ok {
+			return t, true
+		}
+		if t, ok := at.rebuilt[name]; ok {
+			return t, true
+		}
+	}
+	return nil, false
 }
 
 // Resources returns the schemas of the parts and of what they share by URL, its own and its base's, a copy.

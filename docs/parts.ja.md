@@ -35,6 +35,7 @@ quote/
 ```
 
 - schema は、floe の部品と同じく `"$ref": "floe:///parts/quote.json"` で名指します。部品の schema も、floe の部品と共有の schema をこう名指します。
+- 自分の部品は `any.json` に加わります。floe のテンプレートの節（report の `parts`）は floe の部品と同じく自分の部品を取り、`any.json` を名指す自分の schema も同じです。`stack`（`details`・`tabs`・`columns`・`options`・`entries`・`checks` の中）には加わりません。自分の部品は form や HTML を持てて、それらの中では崩れるためです。`floe part list` は floe の部品と一緒に並べ、`floe part show any any.json` は書いてあるとおりの floe の `any.json` を出します。
 - 部品の要素は箱で、`data-floe-part="quote"` で自分を名乗ります。
 - 見出し（`<h1>`〜`<h6>`）は描きません。部品は、テンプレートの節・`details`・ほかの部品の中など、自分が置かれる段を知らないからです。題は `class="title"` の要素（`<div class="title">`）で書き、見た目 `cards` がカードの題として描きます。見出しは、テンプレートと、その Markdown が描くものです。floe は確かめません。
 - `part.html` は項目を `.` で見て、テンプレートの `page.html` と同じ関数を使えます（`asset` は除く。[templates.ja.md](templates.ja.md#pagehtml)）。`part.html` の `markdown` は、部品の値の中の format `markdown` の項目と同じく、Markdown を text の外枠（`<div data-floe-text>`）に描きます。外枠の中のブロックの間は floe が `--floe-room` にし、部品は外枠だけを置いて、ブロックの間を書きません（`:scope p` は外枠の中に届き、`:scope > p` は届きません。上の quote では、blockquote が外枠を持ちます）。空の Markdown は、外枠を描きません。schema が宣言し、値が省いた項目は、`page.html` の `.Data` と同じく nil で来ます。`part.html` を走らせた誤り（schema が宣言していない鍵、range できない値）は、それを持ち込んだ値でなく、`part.html` の行と列で言います。値の形を部品の schema で決めておくと、違う形の値はその値の位置で言われます。

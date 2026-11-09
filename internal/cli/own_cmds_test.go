@@ -168,9 +168,9 @@ func TestListShow(t *testing.T) {
 		errs string
 	}{
 		{[]string{"part", "list"}, 0, func(out string) bool {
-			// The whole list is TestSectionParts's; here, that it is the one floe part list prints.
+			// The whole list is TestSectionParts's; here, that it is the one floe part list prints, one's own part in it.
 			return strings.Contains(out, "\nhtml\tfloe\thtml\tHTML that goes in as it is\n") &&
-				!strings.Contains(out, "\nmine\t") && !strings.Contains(out, "\ncards\t") && !strings.Contains(out, "\ntone\t")
+				strings.Contains(out, "\nmine\t") && !strings.Contains(out, "\ncards\t") && !strings.Contains(out, "\ntone\t")
 		}, ""},
 		{[]string{"part", "list", "--all"}, 0, func(out string) bool {
 			return strings.HasPrefix(out, "any\tfloe\tone of asks,bars,") && strings.Contains(out, ",tree\tOne key naming the kind of the part\n") &&
