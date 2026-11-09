@@ -1041,7 +1041,8 @@ func TestUIBarActions(t *testing.T) { //nolint:paralleltest // the browser tests
 	// The whole page: an archived one tells what a press does in its button, and is black while it is.
 	b.navigate("/a/kept/")
 	b.until("the bar", "!document.getElementById('frame-actions').hidden && document.querySelector('#frame-actions .star')")
-	b.until("read", "!document.querySelector('#frame-actions .mark-unread').hidden")
+	// Archived, it has no way back to unread, read or not
+	b.until("read", "!items.find((a) => a.slug === 'kept').news")
 	out = append(out, shown("#frame-actions"))
 	const archive = "(() => { const a = document.querySelector('#frame-actions > .archive'); return [a.title, a.getAttribute('aria-label'), a.getAttribute('aria-pressed'), a.classList.contains('on'), getComputedStyle(a).backgroundColor === 'rgba(0, 0, 0, 0)'].join(' / '); })()"
 	out = append(out, b.eval(archive))
@@ -1133,7 +1134,7 @@ func TestUIBarActions(t *testing.T) { //nolint:paralleltest // the browser tests
 		"mark-unread select tag-item pin-item task-set edit open download delete",
 		"archive star more | tag-item pin-item task-set edit copy delete",
 		"diff-open download open archive star more | mark-unread tag-item pin-item task-set edit delete",
-		"download open archive star more | mark-unread tag-item task-set edit delete",
+		"download open archive star more | tag-item task-set edit delete",
 		"Restore / Restore Kept to the list /  / true / false",
 		"Archive / Archive Kept /  / false / true", "true",
 		"/api/artifacts/two/download ",
@@ -1150,7 +1151,7 @@ func TestUIBarActions(t *testing.T) { //nolint:paralleltest // the browser tests
 		"true", "true",
 		"more | fav-item mark-unread tag-item pin-item task-set edit open download archive delete",
 		"more | fav-item tag-item pin-item task-set edit copy open download archive delete",
-		"more | fav-item mark-unread tag-item task-set edit open download archive delete",
+		"more | fav-item tag-item task-set edit open download archive delete",
 		"on the menu",
 		"copy open | ",
 		"true true",
