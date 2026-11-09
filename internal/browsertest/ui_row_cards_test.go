@@ -22,6 +22,8 @@ func TestUIRowCards(t *testing.T) { //nolint:paralleltest // the browser tests s
 	// The folder first, so that the step's card made after it follows its rows
 	s.write(t, "fold/one.html", "<title>one</title><p>one</p>")
 	s.write(t, "fold/sub/two.html", "<title>two</title><p>two</p>")
+	// A file after the one chosen, so that the one chosen is not the card's last row
+	s.write(t, "fold/zz.html", "<title>zz</title><p>zz</p>")
 	s.floe(t, "publish", "--link", filepath.Join(s.Env["HOME"], "fold"), "--slug", "fold")
 	if _, err := st.Edit("fold", store.Edit{Project: ptrTo("demo"), Work: &store.WorkEdit{Task: ptrTo("S1"), Step: ptrTo("one")}}); err != nil {
 		t.Fatal(err)
@@ -63,7 +65,7 @@ func TestUIRowCards(t *testing.T) { //nolint:paralleltest // the browser tests s
 	// pointed at within it.
 	b.eval("localStorage.setItem('list.open', JSON.stringify(['fold']))")
 	b.navigate("/tasks?project=demo&task=S1")
-	b.until("the folder's rows", "document.querySelectorAll('#list li.tree').length === 2")
+	b.until("the folder's rows", "document.querySelectorAll('#list li.tree').length === 3")
 	b.still()
 	say("gaps", gaps)
 	say("headings", `(() => { const r = (e) => e.getBoundingClientRect(), head = document.querySelector('#list li.group.adds'), first = document.querySelector('#list li[data-slug=plan]');
@@ -100,7 +102,7 @@ func TestUIRowCards(t *testing.T) { //nolint:paralleltest // the browser tests s
 		"card: 1px true true",
 		"chosen: true false",
 		"ground: true",
-		"gaps: C0 T0 T0 C6 G0 C0 C6",
+		"gaps: C0 T0 T0 T0 C6 G0 C0 C6",
 		"headings: true true 0px none",
 		"folder: 0px 0px 1px 0px 1px true 0 0 0",
 		"within: true true true false",
