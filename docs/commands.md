@@ -20,6 +20,7 @@ Reference for every command of the `floe` binary. How to write a data file is in
 | `floe part check` | Check the parts, looks, shared schemas and themes of your own |
 | `floe theme list` | List the themes |
 | `floe theme show <name> [file]` | Show a theme and the files it reads, or one of them as written |
+| `floe theme default` | Print the default theme chosen in the management page's settings |
 | `floe list` | List pages, newest first |
 | `floe rm <slug>...` | Delete pages |
 | `floe archive <slug>...` | Take pages off the lists, keeping them (`--undo` gives them back) |
@@ -44,7 +45,7 @@ Draw the page of a data file with the template it names, store the page as it wa
 
 Pages are drawn from data files (`.yaml`, `.yml`); [pages.md](pages.md) tells how to write one. The data file is copied to `<slug>/source-<id>/data.yaml` under `FLOE_DIR`, with the images it shows at the paths it names them by; take it back from there if the original is lost. Each publish writes a new copy and then removes the one before, so a publish that fails leaves the page as it was. A relative path is resolved against the working directory.
 
-The stored page stays as it was drawn: changing the template, a part or a theme changes it only when `floe rebuild` draws it again. Another file, such as an HTML file, is not stored: link it with `--link` to show it as it is.
+The stored page stays as it was drawn: changing the template, a part or a theme changes it only when `floe rebuild` draws it again. A page that names no theme takes the default theme chosen in the management page's settings when it is first stored, and keeps it: choosing another default changes the pages stored from then on only. Another file, such as an HTML file, is not stored: link it with `--link` to show it as it is.
 
 ### Flags
 
@@ -54,7 +55,7 @@ The stored page stays as it was drawn: changing the template, a part or a theme 
 | `--slug <name>` | The URL name: 1 to 64 lowercase letters, digits and hyphens, starting and ending with a letter or digit. Defaults to the file name; a linked `index.html` takes the name of its directory. |
 | `--title <text>` | The title in the list. Defaults to the data file's `title:`, or a linked file's `<title>`, else its first `<h1>`, else the slug. |
 | `--description <text>` | A description shown in the list. |
-| `--theme <name>` | The theme to draw the page with, its palette and the parts' shape, over the data file's `theme:`. Defaults to `theme:`, else `default`. Refused with `--link` of an HTML file or a folder, which are shown as they are. |
+| `--theme <name>` | The theme to draw the page with, its palette and the parts' shape, over the data file's `theme:`. Defaults to `theme:`, else the default theme the page took when first stored, else `default`. Refused with `--link` of an HTML file or a folder, which are shown as they are. |
 | `--force` | Replace a page published from another project or another file, or a link to another file, keeping nothing of the old one, not even a page's earlier versions. |
 
 ### Projects and overwriting
@@ -81,7 +82,7 @@ Each page belongs to the project it is published from. The project is the reposi
 
 ## `floe check <data.yaml>...`
 
-Check each data file as its page is drawn: its YAML, its template and theme, the template's schema, its checks and computed values, and the page drawn. A relative path is resolved against the working directory.
+Check each data file as its page is drawn: its YAML, its template and theme, the template's schema, its checks and computed values, and the page drawn. A page that names no theme is drawn in `default`, not in the default theme of the store's settings. A relative path is resolved against the working directory.
 
 - The mistakes of every file are printed as `file:line:column: message` (`file: message` for one of the whole file), in the order the files were given (exit code 1): every mistake of a stage of the checks at once, a stage running only when the one before it has none. [pages.md](pages.md#reading-mistakes) tells how to read them.
 - The warnings of the pages drawn, advice on a better way to write them, are printed after the mistakes as `file:line:column: warning: message`; they leave the exit code as it is. [pages.md](pages.md#warnings) tells them.
@@ -166,6 +167,10 @@ Read the parts, looks and shared schemas in `FLOE_PARTS_DIR` and the themes in `
 ## `floe theme list`
 
 Print the themes, floe's and your own, one per line in the same four tab-separated columns as `floe part list`: the name, where it is (`floe`, or the directory of a theme of your own), its shape, `-`, as nothing is written as a theme's value, and its description, its `theme.yaml`'s `description:`, empty without one.
+
+## `floe theme default`
+
+Print the name of the default theme chosen in the management page's settings, which a page that names no theme takes when it is first stored, or nothing when none is chosen (`default` then). Choosing `default` prints `default`. It reads `settings.json` of the store (`FLOE_DIR`) without starting the server, the store the other commands send to.
 
 ## `floe template show <name> [file]` / `floe part show <name> [file]` / `floe theme show <name> [file]`
 
@@ -343,6 +348,7 @@ List the fetched icons whose name contains every word (case does not matter), on
 - The scripts of a page drawn from a data file cannot send what it holds out with `fetch`, XHR, images from elsewhere or forms, its download included. Linked HTML loads what it loads.
 - A page opens at the part its URL names (`/a/<slug>/#part`), and a move to a part inside it is kept in the URL, so that a copy of the URL or a reload opens that part.
 - The management page downloads a page as one file: the stored page, or a linked file, with its CSP in a `<meta>`.
+- The management page's settings (the gear in its bar, on a window wider than 40rem) choose the default theme, from a card of a sample page drawn in each theme, floe's and your own. A page that names no theme takes it when it is first stored; the pages stored already do not change. The store keeps it in `settings.json`; a `settings.json` that cannot be read refuses a new page drawn from a data file until a theme is chosen again, which writes it whole.
 - A stored page of two versions or more shows what changed between any two of them, by their words under their headings: side by side, all together or the changes alone. It opens from `Diff` over the page, and a page newly at another version says what changed since the one read. Opening it reads nothing; closing it opens the page, which reads it. A link and a folder have no versions. Bold, a link's target and CSS do not show; a diagram or image whose words are the same is told as changed in shape.
 - Printed from its frame, a page comes out one screen long, with a note to open it alone and print it there.
 - The management page takes keys, and `?` lists those that work where you are. `Ctrl+K` (`⌘K`) searches the pages. In the list: `j` `k` or `↑` `↓` move over the rows, `Enter` opens a row whole, `x` selects (as does Select in a row's menu), `f` stars, `/` goes to the search; pressing a row whose page is open beside the list, as a double press does, opens it whole; `d` opens what changed in the page open. On a page open whole: `j` `k` go on through the rows that opened it, `h` goes where its back button goes, `f` stars, `d` opens what changed since the version read, whose `n` `p` go to the next and previous change and `d` closes, `/` searches the pages. After a press inside a page, `j` `k` `h` `d` `?` `/` `Ctrl+K` still work on a page floe drew, and `Ctrl+K` alone on a linked HTML file, which may use the letters itself.

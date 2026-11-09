@@ -22,6 +22,7 @@ import (
 // Options are what a caller gives a drawing besides the data.
 type Options struct {
 	Theme     string        // drawn with instead of the data's theme:, "" for none
+	Default   string        // drawn with when neither Theme nor the data's theme: names one, "" for floe's default
 	Untitled  string        // the title of a page whose data names none
 	Images    fs.FS         // the data's images, nil for none; its maker closes it
 	ImagesDir string        // the directory mistakes name the images under, "" for the data file's
@@ -34,7 +35,7 @@ type Options struct {
 // its checks, its parts' checks for each item they draw, and its computed values; then drawn (draw.Page), with
 // the warnings of the page drawn.
 func Draw(k *kit.Kit, file string, src []byte, o Options) ([]byte, []*usererr.Error, error) {
-	d, t, theme, err := checked(k, file, src, o.Theme)
+	d, t, theme, err := checked(k, file, src, o.Theme, o.Default)
 	if err != nil {
 		return nil, nil, err
 	}
@@ -52,7 +53,7 @@ func Draw(k *kit.Kit, file string, src []byte, o Options) ([]byte, []*usererr.Er
 // LIMIT: only the part diagram: a part of one's own whose part.html calls {{diagram}} is not among them. Collect them
 // while drawing the parts' values if one comes to need it.
 func Diagrams(k *kit.Kit, file string, src []byte) (*doc.Data, []schema.Item, error) {
-	d, t, _, err := checked(k, file, src, "")
+	d, t, _, err := checked(k, file, src, "", "")
 	if err != nil {
 		return nil, nil, err
 	}
@@ -73,9 +74,9 @@ func Diagrams(k *kit.Kit, file string, src []byte) (*doc.Data, []schema.Item, er
 	return d, items, nil
 }
 
-// checked is the first stages of a drawing: the data file read, with its template and theme, in the theme given or
-// else its own, and checked against the template's schema; or their mistakes.
-func checked(k *kit.Kit, file string, src []byte, given string) (*doc.Data, *kit.Template, string, error) {
+// checked is the first stages of a drawing: the data file read, with its template and theme, in the theme given,
+// else its own, else def, and checked against the template's schema; or their mistakes.
+func checked(k *kit.Kit, file string, src []byte, given, def string) (*doc.Data, *kit.Template, string, error) {
 	d, err := doc.Read(file, src, given)
 	var found usererr.List
 	if failed := found.Add(err); failed != nil {
@@ -84,7 +85,7 @@ func checked(k *kit.Kit, file string, src []byte, given string) (*doc.Data, *kit
 	if d == nil {
 		return nil, nil, "", err //nolint:wrapcheck // mistakes of the YAML
 	}
-	t, theme, err := pick(k, d, &found)
+	t, theme, err := pick(k, d, def, &found)
 	if err != nil {
 		return nil, nil, "", err
 	}
@@ -104,15 +105,16 @@ func checked(k *kit.Kit, file string, src []byte, given string) (*doc.Data, *kit
 }
 
 // pick returns the template of k that d names and the name of the theme it is drawn with, as doc.Read read
-// them: the theme given or written, else the default. It adds to found a template left out, empty or naming
-// none, but one doc.Read refused, which it told; and a theme that is none: at d's theme:, or, given, at no
-// place, as no line of d names it. The template is nil when it is none; the error is floe's failure to compile it.
-func pick(k *kit.Kit, d *doc.Data, found *usererr.List) (*kit.Template, string, error) {
+// them: the theme given or written, else def, else floe's default. It adds to found a template left out, empty or
+// naming none, but one doc.Read refused, which it told; and a theme that is none: at d's theme: when written there,
+// else, given or def, at no place, as no line of d names it. The template is nil when it is none; the error is floe's
+// failure to compile it.
+func pick(k *kit.Kit, d *doc.Data, def string, found *usererr.List) (*kit.Template, string, error) {
 	_, _, themes, templates := k.Names()
-	theme := cmp.Or(d.Theme, kit.DefaultTheme)
+	theme := cmp.Or(d.Theme, def, kit.DefaultTheme)
 	if _, ok := k.Theme(theme); !ok {
 		bad := usererr.New("tmpl_unknown_theme", theme, strings.Join(themes, ", "))
-		if !d.ThemeGiven {
+		if d.Theme != "" && !d.ThemeGiven {
 			bad = yamlpos.New(d.File, d.Where["theme"], "tmpl_unknown_theme", theme, strings.Join(themes, ", "))
 		}
 		*found = append(*found, bad)

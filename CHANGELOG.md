@@ -8,6 +8,7 @@ adheres to [Semantic Versioning](https://semver.org/).
 
 ### Added
 
+- Add the management page's settings (the gear in its bar), to choose the default theme from cards of a sample page drawn in each theme, floe's and your own, each described (floe's in the page's language). A page that names no theme takes the default when it is first stored and keeps it: choosing another changes the pages stored from then on only. `floe theme default` prints the default chosen, nothing for none. `floe check` and `floe render` still draw in `default`.
 - Add cards for the rows of the page list, a task's page and the task list: each row a card with an edge, round corners and a light shadow, apart on the list's ground, a card chosen edged in blue; a folder open is one card with its files. The rows are lower too: less room above and below each, and their buttons 26px (the room between the title and the line under it is kept, for the ring of a button reached by the keys).
 - Add your own parts to what a section of floe's templates takes: a part in `FLOE_PARTS_DIR` joins `any`, so report's `parts` (and those of every template of floe's, and a schema of your own naming `any.json`) take it as they take floe's, and `floe part list` lists it with them. It does not join what `details`, `tabs`, `columns`, `options`, `entries` and `checks` hold, as a part of your own may hold a form or HTML, which those would break on.
 - Add a description to a theme: `description:` in a `theme.yaml` in its directory, which `floe theme list` and `floe theme show` print. Each of floe's themes has one.

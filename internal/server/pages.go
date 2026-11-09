@@ -178,10 +178,25 @@ func drawLink(slug string, m *store.Meta, file string, drawing store.Drawing, cu
 	}
 	images := files.NewRoot(filepath.Dir(file))
 	defer images.Close() //nolint:errcheck // only read from
-	o := tmpl.Options{Theme: m.Theme, Untitled: slug, Images: images, ImagesDir: "", Icons: drawing.Icons, CutOff: cut}
+	o := tmpl.Options{
+		Theme: m.Theme, Default: m.CreatedTheme, Untitled: slug, Images: images, ImagesDir: "", Icons: drawing.Icons,
+		CutOff: cut,
+	}
 	// Its warnings are the writer's, whom publish and check tell; one who opens the page cannot mend them.
 	page, _, err := tmpl.Draw(drawing.Kit, file, src, o)
 	return page, err //nolint:wrapcheck // its mistakes, or what failed
+}
+
+// pageHeaders sets the headers of what a page serves, in the sandbox: of a page floe drew (drawn), cut off but the
+// reload script's asking, under the name the page was opened by, as the management API is on the same port.
+func pageHeaders(w http.ResponseWriter, r *http.Request, drawn bool) {
+	h := w.Header()
+	csp := pageCSP
+	if drawn {
+		csp += "; " + draw.CutOff("http://"+r.Host+"/api/changed/")
+	}
+	h.Set("Content-Security-Policy", csp)
+	h.Set("X-Content-Type-Options", "nosniff")
 }
 
 // servePage answers /a/{slug}/{rest...}. The page URL itself is the frame (the management page with the page's
@@ -229,15 +244,7 @@ func (s *Server) servePage(w http.ResponseWriter, r *http.Request) {
 	}
 	defer got.body.Close() //nolint:errcheck // read-only
 	// Assets are sandboxed too: an SVG or HTML opened directly must not run in this origin.
-	h := w.Header()
-	csp := pageCSP
-	if got.drawn {
-		// The reload script's asking only, under the name the page was opened by: the management API is
-		// on the same port.
-		csp += "; " + draw.CutOff("http://"+r.Host+"/api/changed/")
-	}
-	h.Set("Content-Security-Policy", csp)
-	h.Set("X-Content-Type-Options", "nosniff")
+	pageHeaders(w, r, got.drawn)
 	tail := ""
 	if got.typ == htmlType {
 		tail = servedScript(slug, rest, version, v, read, got.drawn)

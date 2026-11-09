@@ -66,6 +66,7 @@ func TestUIButtons(t *testing.T) { //nolint:paralleltest // the browser tests sh
 	modal("set-dialog", menu("b", "task-set"))
 	modal("find", "openFind()")
 	modal("keys", "openKeys()")
+	modal("settings", "document.getElementById('settings-open').click()")
 	b.eval("for (const s of [...document.querySelectorAll('#list li:not(.group) .sel')].slice(0, 2)) s.click()")
 	b.until("the bar", "!document.getElementById('bulk').hidden")
 	check("the bar of the selected")

@@ -45,7 +45,7 @@ Every data file holds these keys, which floe reads itself:
 | `template` | The template that draws the page (one of floe's below, or one of your own). Required. |
 | `lang` | The page's language (`<html lang>`), as a tag such as `en`, `ja` or `pt-BR`. Required. The words floe and the parts draw (`required` in `fields`, the zoom buttons of a diagram, the copy button of code) and the text of a diagram follow it, English for a language they have no words of. |
 | `title` | The page's title. |
-| `theme` | The theme the page is drawn in (default `default`): its colours, faces and the shape of the parts. `floe template show <template>` lists the themes on its `themes:` line: `default`, `soft`, `editorial`, `ink`, `brutal`, `blueprint`, `notebook`, `retro`, `swiss`, `washi`, `aurora` and `app`. |
+| `theme` | The theme the page is drawn in: its colours, faces and the shape of the parts. `floe template show <template>` lists the themes on its `themes:` line: `default`, `soft`, `editorial`, `ink`, `brutal`, `blueprint`, `notebook`, `retro`, `swiss`, `washi`, `aurora` and `app`. Without it, a stored page is drawn in the default theme chosen in the management page's settings when it was first stored, else `default`; `floe check` and `floe render` draw it in `default`. |
 
 The rest is the template's. floe's templates:
 

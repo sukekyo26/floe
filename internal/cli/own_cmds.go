@@ -8,6 +8,7 @@ import (
 
 	"github.com/sukekyo26/floe/internal/files"
 	"github.com/sukekyo26/floe/internal/kit"
+	"github.com/sukekyo26/floe/internal/store"
 	"github.com/sukekyo26/floe/internal/tmpl"
 	"github.com/sukekyo26/floe/internal/usererr"
 )
@@ -202,6 +203,28 @@ print that file alone, as written but the byte order mark at its start: floe the
 			}
 			return a.show(k.Themes(), args, "tmpl_unknown_theme", nil)
 		},
+	}, &cobra.Command{
+		Use:   "default",
+		Short: "Print the default theme chosen in the management page's settings, or nothing when none is",
+		Long: `Print the name of the default theme chosen in the management page's settings, which a page takes when
+it is first stored and names no theme, or nothing when none is chosen (floe's default then). It reads the store
+the other commands send to (FLOE_DIR) without starting the server.`,
+		Args: cobra.NoArgs,
+		RunE: func(_ *cobra.Command, _ []string) error {
+			root, err := a.storeDir()
+			if err != nil {
+				return err
+			}
+			// The store a server for these commands holds: daemon refuses one of another (daemon_other_root).
+			set, err := store.New(root.dir).ReadSettings()
+			if err != nil {
+				return err //nolint:wrapcheck // mistakes for the user as they are
+			}
+			if set.Theme != "" {
+				a.print("%s", set.Theme)
+			}
+			return nil
+		},
 	})
 	return cmd
 }
@@ -222,7 +245,7 @@ func (a *app) checkTemplates() error {
 		}
 		file := t.File("example.yaml")
 		images := files.NewRoot(t.File("."))
-		o := tmpl.Options{Theme: "", Untitled: name, Images: images, ImagesDir: "", Icons: store, CutOff: false}
+		o := tmpl.Options{Theme: "", Default: "", Untitled: name, Images: images, ImagesDir: "", Icons: store, CutOff: false}
 		_, warnings, err := tmpl.Draw(k, file, t.Example(), o)
 		a.warnings = append(a.warnings, warnings...)
 		_ = images.Close() //nolint:errcheck // only read from
