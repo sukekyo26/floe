@@ -79,7 +79,7 @@ var png = []byte("\x89PNG\r\n\x1a\n0000")
 func publish(t *testing.T, s *store.Store, dw store.Drawing, file, src string, images map[string][]byte, o store.Options) *store.Entry {
 	t.Helper()
 
-	e, err := s.PrepareData(dw, store.Upload{File: file, Source: []byte(src), Images: images, Project: "p", Repo: "p"}, o)
+	e, err := s.PrepareData(dw, store.Upload{File: file, Source: []byte(src), Images: images, Project: "p", Repo: "p", Place: file}, o)
 	if err != nil {
 		t.Fatalf("PrepareData: %v", err)
 	}
@@ -191,26 +191,26 @@ func TestNeedImages(t *testing.T) {
 	s, root := newStore(t)
 	dw := picKit(t, "", "")
 	two := "lang: en\ntemplate: pic\ni: [img/a.png, img/b.png, img/a.png]\n"
-	_, err := s.PrepareData(dw, store.Upload{File: "d.yaml", Source: []byte(two), Images: nil, Project: "p", Repo: "p"}, store.Options{})
+	_, err := s.PrepareData(dw, store.Upload{File: "d.yaml", Source: []byte(two), Images: nil, Project: "p", Repo: "p", Place: "d.yaml"}, store.Options{})
 	if need, ok := errors.AsType[*store.NeedImages](err); !ok || !slices.Equal(need.Names, []string{"img/a.png", "img/b.png"}) {
 		t.Errorf("PrepareData = %v, want NeedImages of img/a.png and img/b.png", err)
 	}
 	schema := "lang: en\ntemplate: pic\ni: [img/a.png]\nx: 1\nj: 2\n"
 	_, err = s.PrepareData(picKit(t, "", `{"$schema": "https://json-schema.org/draft/2020-12/schema", "type": "object",
 "properties": {"i": {"type": "array", "items": {"type": "string", "format": "image"}}}, "additionalProperties": false}`),
-		store.Upload{File: "d.yaml", Source: []byte(schema), Images: nil, Project: "p", Repo: "p"}, store.Options{})
+		store.Upload{File: "d.yaml", Source: []byte(schema), Images: nil, Project: "p", Repo: "p", Place: "d.yaml"}, store.Options{})
 	if _, ok := errors.AsType[*store.NeedImages](err); ok || err == nil {
 		t.Errorf("a mistake of the schema: PrepareData = %v", err)
 	}
 	for _, sent := range []map[string][]byte{{"img/a.png": png}, {}} {
-		_, err = s.PrepareData(dw, store.Upload{File: "d.yaml", Source: []byte(two), Images: sent, Project: "p", Repo: "p"}, store.Options{})
+		_, err = s.PrepareData(dw, store.Upload{File: "d.yaml", Source: []byte(two), Images: sent, Project: "p", Repo: "p", Place: "d.yaml"}, store.Options{})
 		if got := told(err, root); !strings.Contains(got, "img/b.png: file does not exist") {
 			t.Errorf("sent %v: told\n%s", sent, got)
 		}
 	}
 	publish(t, s, dw, "d.yaml", "lang: en\ntemplate: pic\n", nil, store.Options{})
-	_, err = s.PrepareData(dw, store.Upload{File: "d.yaml", Source: []byte(two), Images: nil, Project: "q", Repo: "q"}, store.Options{})
-	if got, want := told(err, root), `floe: slug "d" was published from project p: choose another slug`; got != want {
+	_, err = s.PrepareData(dw, store.Upload{File: "d.yaml", Source: []byte(two), Images: nil, Project: "q", Repo: "q", Place: "d.yaml"}, store.Options{})
+	if got, want := told(err, root), `floe: slug "d" was published from d.yaml in repository p: choose another slug`; got != want {
 		t.Errorf("told\n%s\nwant\n%s", got, want)
 	}
 }
@@ -224,7 +224,7 @@ func TestImagePartPublished(t *testing.T) {
 	dw := picKit(t, "", "")
 	src := "lang: en\ntemplate: report\nsections:\n  - parts:\n      - image: { file: img/a.png, alt: a }\n" +
 		"      - tabs:\n          - { title: b, parts: [{ image: { file: img/b.png, alt: b } }] }\n          - { title: c, parts: [{ text: c }] }\n"
-	_, err := s.PrepareData(dw, store.Upload{File: "d.yaml", Source: []byte(src), Images: nil, Project: "p", Repo: "p"}, store.Options{})
+	_, err := s.PrepareData(dw, store.Upload{File: "d.yaml", Source: []byte(src), Images: nil, Project: "p", Repo: "p", Place: "d.yaml"}, store.Options{})
 	if need, ok := errors.AsType[*store.NeedImages](err); !ok || !slices.Equal(need.Names, []string{"img/a.png", "img/b.png"}) {
 		t.Fatalf("PrepareData = %v, want NeedImages of img/a.png and img/b.png", err)
 	}
@@ -389,7 +389,7 @@ func TestArchive(t *testing.T) {
 	if m := s.ReadMeta("e"); m == nil || !m.Archived {
 		t.Errorf("renamed: %+v", m)
 	}
-	publish(t, s, dw, "e.yaml", "lang: en\ntemplate: pic\n", nil, store.Options{})
+	publish(t, s, dw, "d.yaml", "lang: en\ntemplate: pic\n", nil, store.Options{})
 	if m := s.ReadMeta("e"); m.Archived || !m.Favorite {
 		t.Errorf("published again: %+v", m)
 	}
@@ -515,7 +515,8 @@ func TestPrepareLink(t *testing.T) {
 	}
 }
 
-// Owners: a page of another project, or a link of another file, is refused without --force; a page and a link
+// Owners: a page of another file (of another repository, at the same path), or a link of another file, is refused
+// without --force; a page and a link
 // do not take each other's slug.
 func TestOwners(t *testing.T) {
 	t.Parallel()
@@ -526,11 +527,11 @@ func TestOwners(t *testing.T) {
 	if _, err := s.Edit("same", store.Edit{Tags: &store.TagsEdit{Add: []string{"a"}}}); err != nil {
 		t.Fatal(err)
 	}
-	_, err := s.PrepareData(dw, store.Upload{File: "same.yaml", Source: []byte("lang: en\ntemplate: pic\n"), Images: map[string][]byte{}, Project: "q", Repo: "q"}, store.Options{})
-	if got := told(err, root); got != `floe: slug "same" was published from project p: choose another slug` {
+	_, err := s.PrepareData(dw, store.Upload{File: "same.yaml", Source: []byte("lang: en\ntemplate: pic\n"), Images: map[string][]byte{}, Project: "q", Repo: "q", Place: "same.yaml"}, store.Options{})
+	if got := told(err, root); got != `floe: slug "same" was published from same.yaml in repository p: choose another slug` {
 		t.Errorf("told %s", got)
 	}
-	up := store.Upload{File: "same.yaml", Source: []byte("lang: en\ntemplate: pic\n"), Images: map[string][]byte{}, Project: "q", Repo: "q"}
+	up := store.Upload{File: "same.yaml", Source: []byte("lang: en\ntemplate: pic\n"), Images: map[string][]byte{}, Project: "q", Repo: "q", Place: "same.yaml"}
 	e, err := s.PrepareData(dw, up, store.Options{Force: true})
 	if err != nil {
 		t.Fatalf("--force: %v", err)
@@ -585,7 +586,7 @@ func TestSlugRefusals(t *testing.T) {
 		t.Fatal(err)
 	}
 	data := func(slug, project string, force bool) error {
-		up := store.Upload{File: slug + ".yaml", Source: []byte("lang: en\ntemplate: pic\n"), Images: map[string][]byte{}, Project: project, Repo: project}
+		up := store.Upload{File: slug + ".yaml", Source: []byte("lang: en\ntemplate: pic\n"), Images: map[string][]byte{}, Project: project, Repo: project, Place: slug + ".yaml"}
 		_, err := s.PrepareData(dw, up, store.Options{Force: force})
 		return err
 	}
@@ -609,6 +610,13 @@ func TestSlugRefusals(t *testing.T) {
 			t.Fatal(err)
 		}
 	}
+	// A page that kept no file, as pages published before keys were the file's: compared by the project published from.
+	old := store.Upload{File: "old.yaml", Source: []byte("lang: en\ntemplate: pic\n"), Images: map[string][]byte{}, Project: "p", Repo: "p", Place: ""}
+	if e, err := s.PrepareData(dw, old, store.Options{}); err != nil {
+		t.Fatal(err)
+	} else if err = s.Save(e); err != nil {
+		t.Fatal(err)
+	}
 	_, taken := s.Edit("lk", store.Edit{Slug: ptr("pg")})
 	ja := i18n.New("ja")
 	for _, tt := range []struct {
@@ -617,14 +625,14 @@ func TestSlugRefusals(t *testing.T) {
 		en, ja string
 	}{
 		{
-			"owned", data("pg", "q", false),
-			`slug "pg" was published from project p: choose another slug`,
-			`URL 名「pg」はプロジェクト p から公開されています。別の URL 名にしてください`,
+			"owned, a page that kept no file", data("old", "q", false),
+			`slug "old" was published from project p: choose another slug`,
+			`URL 名「old」はプロジェクト p から公開されています。別の URL 名にしてください`,
 		},
 		{
 			"placed, by the file's repository, not the project published from", keyed("rel", "a", "s", "docs/x.yaml"),
-			`slug "rel" was published from docs/x.yaml in project r: choose another slug`,
-			`URL 名「rel」はプロジェクト r の docs/x.yaml から公開されています。別の URL 名にしてください`,
+			`slug "rel" was published from docs/x.yaml in repository r: choose another slug`,
+			`URL 名「rel」はリポジトリ r の docs/x.yaml から公開されています。別の URL 名にしてください`,
 		},
 		{
 			"placed alone, by a real path", keyed("ab", "a", "", filepath.Join(home, "y.yaml")),
@@ -661,45 +669,39 @@ func TestSlugRefusals(t *testing.T) {
 	}
 }
 
-// A stored page is its file's too: another file of the same project is refused unless --force, in each language, an
-// empty place too, before the images are asked for; the same file passes. A page that kept no file takes the next.
+// A stored page is its file's: another file of the same repository is refused unless --force, in each language, by
+// its path and repository, before the images are asked for; the same file passes. A file outside a repository is
+// named by its real path alone.
 func TestPagePlace(t *testing.T) {
 	t.Parallel()
 
 	s, root := newStore(t)
 	dw := picKit(t, "", "")
 	const src = "lang: en\ntemplate: pic\n"
-	put := func(project, place string, force bool, data string) error {
-		e, err := s.PrepareData(dw, store.Upload{File: "plan.yaml", Source: []byte(data), Images: map[string][]byte{}, Project: project, Repo: project, Place: place}, store.Options{Slug: ptr("plan"), Force: force})
+	put := func(repo, place string, force bool, data string) error {
+		up := store.Upload{File: "plan.yaml", Source: []byte(data), Images: map[string][]byte{}, Project: "w", Repo: repo, Place: place}
+		e, err := s.PrepareData(dw, up, store.Options{Slug: ptr("plan"), Force: force})
 		if err != nil {
 			return err
 		}
 		return s.Save(e)
 	}
 	ja := i18n.New("ja")
-	if err := put("p", "", false, src); err != nil {
+	if err := put("p", "docs/plan.yaml", false, src); err != nil {
 		t.Fatal(told(err, root))
 	}
-	if err := put("p", "docs/plan.yaml", false, src); err != nil {
-		t.Errorf("a page that kept no file: %s", told(err, root))
+	err := put("p", "notes/plan.yaml", false, src)
+	if got, want := told(err, root), `floe: slug "plan" was published from docs/plan.yaml in repository p: choose another slug`; got != want {
+		t.Errorf("another file: told %s, want %s", got, want)
 	}
-	if got := s.ReadMeta("plan").PublishedFile; got != "docs/plan.yaml" {
-		t.Errorf("kept %q, want docs/plan.yaml", got)
+	if got, want := usererr.Tell(ja, err).Render(""), "URL 名「plan」はリポジトリ p の docs/plan.yaml から公開されています。別の URL 名にしてください"; got != want {
+		t.Errorf("another file in ja: told %s, want %s", got, want)
 	}
-	for _, place := range []string{"notes/plan.yaml", ""} {
-		err := put("p", place, false, src)
-		if got, want := told(err, root), `floe: slug "plan" was published from docs/plan.yaml in project p: choose another slug`; got != want {
-			t.Errorf("from %q: told %s, want %s", place, got, want)
-		}
-		if got, want := usererr.Tell(ja, err).Render(""), "URL 名「plan」はプロジェクト p の docs/plan.yaml から公開されています。別の URL 名にしてください"; got != want {
-			t.Errorf("from %q in ja: told %s, want %s", place, got, want)
-		}
-	}
-	_, err := s.PrepareData(dw, store.Upload{File: "plan.yaml", Source: []byte(src + "i: [a.png]\n"), Images: nil, Project: "p", Repo: "p", Place: "notes/plan.yaml"}, store.Options{Slug: ptr("plan")})
+	_, err = s.PrepareData(dw, store.Upload{File: "plan.yaml", Source: []byte(src + "i: [a.png]\n"), Images: nil, Project: "w", Repo: "p", Place: "notes/plan.yaml"}, store.Options{Slug: ptr("plan")})
 	if _, asked := errors.AsType[*store.NeedImages](err); asked || !strings.Contains(told(err, root), "was published from docs/plan.yaml") {
 		t.Errorf("before the images: %v, want the refusal", err)
 	}
-	_, err = s.PrepareData(dw, store.Upload{File: "plan.yaml", Source: []byte(src + "i: [a.png]\n"), Images: nil, Project: "p", Repo: "p", Place: "docs/plan.yaml"}, store.Options{Slug: ptr("plan")})
+	_, err = s.PrepareData(dw, store.Upload{File: "plan.yaml", Source: []byte(src + "i: [a.png]\n"), Images: nil, Project: "w", Repo: "p", Place: "docs/plan.yaml"}, store.Options{Slug: ptr("plan")})
 	if _, asked := errors.AsType[*store.NeedImages](err); !asked {
 		t.Errorf("the same file before the images: %v, want them asked for", err)
 	}
@@ -712,16 +714,18 @@ func TestPagePlace(t *testing.T) {
 	if got := s.ReadMeta("plan").PublishedFile; got != "notes/plan.yaml" {
 		t.Errorf("--force kept %q, want notes/plan.yaml", got)
 	}
-	// Of no project, the place is compared all the same.
-	if err = put("", "x.yaml", true, src); err != nil {
+	// Outside a repository, by the real path alone.
+	x, y := filepath.Join(filepath.Dir(root), "x.yaml"), filepath.Join(filepath.Dir(root), "y.yaml")
+	if err = put("", x, true, src); err != nil {
 		t.Fatal(told(err, root))
 	}
-	err = put("", "y.yaml", false, src)
-	if got, want := told(err, root), `floe: slug "plan" was published from x.yaml: choose another slug`; got != want {
-		t.Errorf("a page of no project from another file: told %s, want %s", got, want)
+	err = put("", y, false, src)
+	home := filepath.Dir(root)
+	if got, want := strings.ReplaceAll(told(err, root), home, "H"), `floe: slug "plan" was published from H/x.yaml: choose another slug`; got != want {
+		t.Errorf("another real path: told %s, want %s", got, want)
 	}
-	if got, want := usererr.Tell(ja, err).Render(""), "URL 名「plan」は x.yaml から公開されています。別の URL 名にしてください"; got != want {
-		t.Errorf("a page of no project in ja: told %s, want %s", got, want)
+	if got, want := strings.ReplaceAll(usererr.Tell(ja, err).Render(""), home, "H"), "URL 名「plan」は H/x.yaml から公開されています。別の URL 名にしてください"; got != want {
+		t.Errorf("another real path in ja: told %s, want %s", got, want)
 	}
 }
 
@@ -731,7 +735,7 @@ func TestImageUnderImage(t *testing.T) {
 
 	s, root := newStore(t)
 	src := "lang: en\ntemplate: pic\ni: [a.png, a.png/b.png]\n"
-	_, err := s.PrepareData(picKit(t, "", ""), store.Upload{File: "d.yaml", Source: []byte(src), Images: map[string][]byte{"a.png": png, "a.png/b.png": png}, Project: "p"}, store.Options{})
+	_, err := s.PrepareData(picKit(t, "", ""), store.Upload{File: "d.yaml", Source: []byte(src), Images: map[string][]byte{"a.png": png, "a.png/b.png": png}, Project: "p", Repo: "p", Place: "d.yaml"}, store.Options{})
 	want := `d.yaml: the image "a.png/b.png" is under "a.png", which is an image too, and a stored page cannot keep both: rename one of them`
 	if got := told(err, root); got != want {
 		t.Errorf("told\n%s\nwant\n%s", got, want)
@@ -746,7 +750,7 @@ func TestFailureBeforeNeedImages(t *testing.T) {
 	dw := picKit(t, "", "")
 	dw.Icons = failing{}
 	src := "lang: en\ntemplate: pic\ni: [a.png]\nd: {width: 300, height: 100, title: i, parts: [{icon: {icon: aws/res/aws-lambda, x: 10, y: 10}}]}\n"
-	_, err := s.PrepareData(dw, store.Upload{File: "d.yaml", Source: []byte(src), Images: nil, Project: "p", Repo: "p"}, store.Options{})
+	_, err := s.PrepareData(dw, store.Upload{File: "d.yaml", Source: []byte(src), Images: nil, Project: "p", Repo: "p", Place: "d.yaml"}, store.Options{})
 	var found usererr.List
 	if _, ok := errors.AsType[*store.NeedImages](err); ok || found.Add(err) == nil {
 		t.Errorf("PrepareData = %v, want floe's failure", err)
@@ -805,14 +809,14 @@ func TestConflict(t *testing.T) {
 	s, root := newStore(t)
 	dw := picKit(t, "", "")
 	publish(t, s, dw, "same.yaml", "lang: en\ntemplate: pic\n", nil, store.Options{})
-	_, err := s.PrepareData(dw, store.Upload{File: "same.yaml", Source: []byte("lang: en\ntemplate: pic\n"), Images: nil, Project: "q", Repo: "q"}, store.Options{})
+	_, err := s.PrepareData(dw, store.Upload{File: "same.yaml", Source: []byte("lang: en\ntemplate: pic\n"), Images: nil, Project: "q", Repo: "q", Place: "same.yaml"}, store.Options{})
 	if _, ok := errors.AsType[*store.Conflict](err); !ok {
 		t.Errorf("PrepareData = %v, want a Conflict", err)
 	}
-	if got := told(err, root); got != `floe: slug "same" was published from project p: choose another slug` {
+	if got := told(err, root); got != `floe: slug "same" was published from same.yaml in repository p: choose another slug` {
 		t.Errorf("told %s", got)
 	}
-	_, err = s.PrepareData(dw, store.Upload{File: "same.yaml", Source: []byte("lang: en\ntemplate: nope\n"), Images: nil, Project: "p", Repo: "p"}, store.Options{})
+	_, err = s.PrepareData(dw, store.Upload{File: "same.yaml", Source: []byte("lang: en\ntemplate: nope\n"), Images: nil, Project: "p", Repo: "p", Place: "same.yaml"}, store.Options{})
 	if _, ok := errors.AsType[*store.Conflict](err); ok {
 		t.Errorf("a mistake of the data is a Conflict: %v", err)
 	}

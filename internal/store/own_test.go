@@ -100,23 +100,23 @@ func TestPublishRenamedInBetween(t *testing.T) {
 }
 
 // Without a slug, a publish writes to its file's page: the one at its name if the file's, else the first of the file's
-// by slug, else its name. Pages of other projects, other places and of no place are not the file's.
+// by slug, else its name. Pages of other repositories, other places and of no place are not the file's.
 func TestOwnSlugOrder(t *testing.T) {
 	t.Parallel()
 
 	for _, c := range []struct {
 		name string
-		// pages are published first, each as slug from place, of project p unless other
-		pages []struct{ slug, place, project string }
+		// pages are published first, each as slug from place, of repository p unless other
+		pages []struct{ slug, place, repo string }
 		file  string
 		want  string // the slug written to, "" for the name refused as no slug
 	}{
-		{"its name's", []struct{ slug, place, project string }{{"aa", "plan.yaml", "p"}, {"plan", "plan.yaml", "p"}}, "plan.yaml", "plan"},
-		{"the first of its own", []struct{ slug, place, project string }{{"plan", "docs/plan.yaml", "p"}, {"plan-c", "plan.yaml", "p"}, {"plan-b", "plan.yaml", "p"}}, "plan.yaml", "plan-b"},
-		{"another project's", []struct{ slug, place, project string }{{"other", "plan.yaml", "q"}}, "plan.yaml", "plan"},
-		{"another place's", []struct{ slug, place, project string }{{"other", "docs/plan.yaml", "p"}}, "plan.yaml", "plan"},
-		{"of no place", []struct{ slug, place, project string }{{"other", "", "p"}}, "plan.yaml", "plan"},
-		{"a name of no slug, its page", []struct{ slug, place, project string }{{"notes", "日本語.yaml", "p"}}, "日本語.yaml", "notes"},
+		{"its name's", []struct{ slug, place, repo string }{{"aa", "plan.yaml", "p"}, {"plan", "plan.yaml", "p"}}, "plan.yaml", "plan"},
+		{"the first of its own", []struct{ slug, place, repo string }{{"plan", "docs/plan.yaml", "p"}, {"plan-c", "plan.yaml", "p"}, {"plan-b", "plan.yaml", "p"}}, "plan.yaml", "plan-b"},
+		{"another repository's", []struct{ slug, place, repo string }{{"other", "plan.yaml", "q"}}, "plan.yaml", "plan"},
+		{"another place's", []struct{ slug, place, repo string }{{"other", "docs/plan.yaml", "p"}}, "plan.yaml", "plan"},
+		{"of no place", []struct{ slug, place, repo string }{{"other", "", "p"}}, "plan.yaml", "plan"},
+		{"a name of no slug, its page", []struct{ slug, place, repo string }{{"notes", "日本語.yaml", "p"}}, "日本語.yaml", "notes"},
 		{"a name of no slug, no page", nil, "日本語.yaml", ""},
 	} {
 		t.Run(c.name, func(t *testing.T) {
@@ -125,7 +125,7 @@ func TestOwnSlugOrder(t *testing.T) {
 			s, root := newStore(t)
 			dw := picKit(t, "", "")
 			for _, p := range c.pages {
-				up := store.Upload{File: "x.yaml", Source: []byte(ownSrc), Images: map[string][]byte{}, Project: p.project, Repo: p.project, Place: p.place}
+				up := store.Upload{File: "x.yaml", Source: []byte(ownSrc), Images: map[string][]byte{}, Project: "p", Repo: p.repo, Place: p.place}
 				e, err := s.PrepareData(dw, up, store.Options{Slug: ptr(p.slug)})
 				if err == nil {
 					err = s.Save(e)

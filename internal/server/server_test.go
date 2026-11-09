@@ -3,6 +3,7 @@ package server_test
 import (
 	"encoding/json"
 	"io"
+	"maps"
 	"net/http"
 	"net/http/httptest"
 	"os"
@@ -166,12 +167,19 @@ func TestProtocol(t *testing.T) {
 	want(t, e.write(t, http.MethodPost, "/api/artifacts", map[string]any{"path": "/x", "bogus": 1}), http.StatusBadRequest,
 		`unknown object member name "bogus"`)
 	want(t, e.write(t, http.MethodPost, "/api/artifacts/data", map[string]any{
-		"file": "x.yaml", "source": []byte("a"), "place": "x.yaml",
+		"file": "x.yaml", "source": []byte("a"), "place": "x.yaml", "repo": "r",
 		"images": map[string][]byte{"../e.png": nil},
 	}), http.StatusBadRequest, "send each image by a slash-separated path")
+	// A place from a repository's root comes with its repository, and a real path with none.
+	for _, key := range []map[string]any{{"place": "docs/x.yaml", "repo": ""}, {"place": "/home/x.yaml", "repo": "r"}} {
+		body := map[string]any{"file": "x.yaml", "source": []byte("a")}
+		maps.Copy(body, key)
+		want(t, e.write(t, http.MethodPost, "/api/artifacts/data", body), http.StatusBadRequest,
+			"send the repository with a place from its root, and none with a real path")
+	}
 }
 
-// A publish is 201, again 200, of another project 409, its mistakes 400; a report as JSON only for an Accept of JSON
+// A publish is 201, again 200, of another file 409, its mistakes 400; a report as JSON only for an Accept of JSON
 // exactly.
 func TestPublish(t *testing.T) {
 	t.Parallel()
@@ -180,7 +188,7 @@ func TestPublish(t *testing.T) {
 	want(t, e.publish(t, "d", "lang: en\ntemplate: pic\ntitle: T\n", nil), http.StatusCreated, `"slug":"d"`)
 	want(t, e.publish(t, "d", "lang: en\ntemplate: pic\ntitle: T\n", nil), http.StatusOK, `"prev":{"title":"T"`)
 	other := e.write(t, http.MethodPost, "/api/artifacts/data", server.Upload{File: "d.yaml", Source: []byte("lang: en\ntemplate: pic\n"), Project: "q", Repo: "q", Place: "d.yaml"}) //nolint:exhaustruct // the rest not given
-	want(t, other, http.StatusConflict, `{"mistakes":[{"text":"slug \"d\" was published from d.yaml in project p: choose another slug"}]}`)
+	want(t, other, http.StatusConflict, `{"mistakes":[{"text":"slug \"d\" was published from d.yaml in repository p: choose another slug"}]}`)
 	want(t, e.publish(t, "e", "lang: en\ntemplate: nope\n", nil), http.StatusBadRequest, `unknown template \"nope\"`)
 	asText := e.do(t, http.MethodPost, "/api/artifacts", `{"path": "rel.html"}`, "Origin", origin, "Content-Type", "application/json",
 		"Accept", "application/json, text/plain")

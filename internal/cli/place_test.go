@@ -48,7 +48,7 @@ func TestPublishPlace(t *testing.T) {
 	}{
 		{repo, "docs/plan.yaml", 0, url, ""},
 		{filepath.Join(repo, "docs"), "plan.yaml", 0, url, ""},
-		{repo, "notes/plan.yaml", 1, "", `floe: slug "plan" was published from docs/plan.yaml in project r: choose another slug` + "\n"},
+		{repo, "notes/plan.yaml", 1, "", `floe: slug "plan" was published from docs/plan.yaml in repository r: choose another slug` + "\n"},
 		{outside, filepath.Join(repo, "docs", "plan.yaml"), 0, url, ""},
 		{outside, "notes.yaml", 0, notesURL, ""},
 		{other, notes, 0, notesURL, ""},

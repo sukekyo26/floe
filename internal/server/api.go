@@ -9,6 +9,7 @@ import (
 	"mime"
 	"net/http"
 	"os"
+	"path/filepath"
 
 	"github.com/sukekyo26/floe/internal/store"
 	"github.com/sukekyo26/floe/internal/usererr"
@@ -199,6 +200,11 @@ func (s *Server) save(w http.ResponseWriter, r *http.Request) {
 	}
 	if in.File == "" || in.Source == nil || in.Place == "" {
 		send(w, http.StatusBadRequest, "send file, source and place")
+		return
+	}
+	// A place from a repository's root names the file with its repository alone, and a real path with none.
+	if filepath.IsAbs(in.Place) == (in.Repo != "") {
+		send(w, http.StatusBadRequest, "send the repository with a place from its root, and none with a real path")
 		return
 	}
 	for name := range in.Images {

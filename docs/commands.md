@@ -76,7 +76,7 @@ A new page is in the project it is first published from: the repository name in 
 
 - Only a regular `.html` or `.htm` file, a data file (`.yaml`, `.yml`) or a folder can be linked. A data file is checked as `floe check` checks it, and refused with its mistakes.
 - Refused: a hidden directory right under your home (settings and keys live there), and a file or folder in one; a file directly under `/` or under your home itself, and those two as folders, as the whole directory would be served; `--theme` with an HTML file or a folder.
-- A link without `--slug` reuses the slug of the same file (the one at its name first), else takes the first free one of `name`, `name-2`, `name-3` …; a folder in a repository is named by its project and its place in it (`api-docs-docs`), so that folders of one name in several repositories differ by their URL, and a folder outside one by its name (`handbook`). The same slug for another file is refused unless `--force`.
+- A link without `--slug` reuses the slug of the same file (the one at its name first), else takes the first free one of `name`, `name-2`, `name-3` …; a folder in a repository is named by its project and its place in it (`api-docs-docs`), so that folders of one name in several repositories differ by their URL, and a folder outside one by its name (`handbook`). The same slug for another file is refused unless `--force`. Linking the same file again, from any directory, keeps the link's project, as a page's.
 
 ---
 

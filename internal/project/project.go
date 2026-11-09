@@ -19,28 +19,31 @@ func Name(ctx context.Context, dir string) string {
 	if dir == "" {
 		return ""
 	}
-	common, err := git(ctx, dir, "rev-parse", "--path-format=absolute", "--git-common-dir")
-	if err != nil {
-		common = ""
-	}
-	return named(ctx, dir, common)
+	return named(ctx, dir, func() string {
+		common, err := git(ctx, dir, "rev-parse", "--path-format=absolute", "--git-common-dir")
+		if err != nil {
+			return ""
+		}
+		return common
+	})
 }
 
-// named is Name of dir, whose repository's common .git is common ("" outside one).
-func named(ctx context.Context, dir, common string) string {
-	if common == "" {
-		return base(dir)
-	}
+// named is Name of dir, common giving its repository's common .git ("" outside one), asked only when origin names
+// none.
+func named(ctx context.Context, dir string, common func() string) string {
 	if url, err := git(ctx, dir, "remote", "get-url", "origin"); err == nil {
 		parts := separatorRe.Split(strings.TrimRight(url, "/"), -1)
 		if name := strings.TrimSuffix(parts[len(parts)-1], ".git"); name != "" {
 			return name
 		}
 	}
-	if filepath.Base(common) == ".git" {
-		common = filepath.Dir(common)
+	if c := common(); c != "" {
+		if filepath.Base(c) == ".git" {
+			c = filepath.Dir(c)
+		}
+		return base(c)
 	}
-	return base(common)
+	return base(dir)
 }
 
 // Within returns where dir is in its repository, slash-separated from the repository's root ("docs", "docs/v1"): "" at
@@ -83,7 +86,7 @@ func Place(ctx context.Context, file string) (repo, place string) {
 	if err != nil || rel == ".." || strings.HasPrefix(rel, ".."+string(filepath.Separator)) {
 		return "", actual
 	}
-	return named(ctx, at, lines[1]), filepath.ToSlash(rel)
+	return named(ctx, at, func() string { return lines[1] }), filepath.ToSlash(rel)
 }
 
 // resolved returns path with its symlinks resolved, path itself when that fails.
