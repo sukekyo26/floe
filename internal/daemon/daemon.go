@@ -80,11 +80,13 @@ func Probe(ctx context.Context, base string) Status {
 	return Status{State: Ours, Health: h}
 }
 
-// waitWhile probes every 20 ms while cond holds, for 3 s in all; starting and stopping take well under
-// 100 ms. The deadline bounds the probes too, so a program that accepts and never answers cannot
-// stretch the wait.
+// waitWhile probes every 20 ms while cond holds, for 10 s in all. Starting and stopping take well under
+// 100 ms, but a race build that shares the CPUs with other tests took over 3 s to start. The deadline
+// bounds the probes too, so a program that accepts and never answers cannot stretch the wait.
+// LIMIT: a server that fails to start is told only to run "floe serve"; if CI still fails to start one in 10 s, keep
+// the started serve's output to tell slow from failing.
 func waitWhile(ctx context.Context, base string, p Status, cond func(Status) bool) Status {
-	ctx, cancel := context.WithTimeout(ctx, 3*time.Second)
+	ctx, cancel := context.WithTimeout(ctx, 10*time.Second)
 	defer cancel()
 	for cond(p) {
 		select {
