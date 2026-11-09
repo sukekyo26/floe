@@ -30,7 +30,7 @@ func TestUITaskEditSteps(t *testing.T) { //nolint:paralleltest // the browser te
 	}
 	s.floe(t, "work", "--project", "proj", "--task", "S300", "--title", "Edit the task", "--steps", "案,設計,実装,リリース")
 	s.floe(t, "work", "none-a", "--task", "N1")
-	// 実装's one page archived: a page all the same, so 実装 cannot be removed
+	// 実装's one page archived: a page all the same, so 実装 cannot be deleted
 	yes := true
 	if _, err := st.Edit("build-a", store.Edit{Archived: &yes}); err != nil {
 		t.Fatal(err)
