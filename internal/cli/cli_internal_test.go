@@ -38,8 +38,14 @@ func TestEncode(t *testing.T) {
 	if err != nil || !strings.Contains(string(b), `"images":null`) {
 		t.Errorf("encoded %s, %v", b, err)
 	}
-	// Every text a command line gives, a string or strings, by its JSON pointer: the bodies of publish and link, and the
-	// tags of floe tag, down through their JSON names.
+	// Every text a command line gives, a string or strings, by its JSON pointer: the bodies of publish and link, the
+	// tags of floe tag, and the task's and the page's of floe work, down through their JSON names. These never reach
+	// encode with a text no UTF-8, each for its reason.
+	unreached := map[string]string{
+		"/parentTitle": "the management page alone sends it",
+		"/work/task":   "pageFlags refuses --task first, with store.TaskName",
+		"/work/step":   "the task's body refuses --step first, as /step",
+	}
 	var texts func(typ reflect.Type, at string)
 	texts = func(typ reflect.Type, at string) {
 		if typ.Kind() == reflect.Pointer {
@@ -47,7 +53,7 @@ func TestEncode(t *testing.T) {
 		}
 		switch {
 		case typ.Kind() == reflect.String || typ.Kind() == reflect.Slice && typ.Elem().Kind() == reflect.String:
-			if sentAt[at] == "" {
+			if sentAt[at] == "" && unreached[at] == "" {
 				t.Errorf("%s: no place in sentAt", at)
 			}
 		case typ.Kind() == reflect.Struct:
@@ -62,6 +68,10 @@ func TestEncode(t *testing.T) {
 	tags, _ := reflect.TypeFor[server.Edit]().FieldByName("Tags")
 	name, _, _ := strings.Cut(tags.Tag.Get("json"), ",")
 	texts(tags.Type, "/"+name)
+	texts(reflect.TypeFor[server.TaskEdit](), "")
+	work, _ := reflect.TypeFor[server.Edit]().FieldByName("Work")
+	name, _, _ = strings.Cut(work.Tag.Get("json"), ",")
+	texts(work.Type, "/"+name)
 	// v2 still tells bytes no UTF-8 as notUTF8 matches them.
 	if _, err := jsonv2.Marshal("a\xffb"); !notUTF8(err) {
 		t.Errorf("encoding/json/v2 tells bytes no UTF-8 by %v, which notUTF8 does not match", err)
