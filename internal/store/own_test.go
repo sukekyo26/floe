@@ -85,7 +85,7 @@ func TestPublishRenamedInBetween(t *testing.T) {
 			}
 			rename(t, s, c.slug, c.slug+"-b")
 			if c.taken {
-				if _, err := put(t, s, dw, "x.yaml", "docs/x.yaml", ownSrc, store.Options{Slug: ptr(c.slug)}); err != nil {
+				if _, err = put(t, s, dw, "x.yaml", "docs/x.yaml", ownSrc, store.Options{Slug: ptr(c.slug)}); err != nil {
 					t.Fatal(told(err, root))
 				}
 			}

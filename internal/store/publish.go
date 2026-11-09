@@ -657,18 +657,8 @@ func (s *Store) commit(e *Entry, mark string, pre *pressed) error {
 		return err
 	}
 	defer unlock()
-	// A slug not given is kept as Prepare picked it while it holds what it held then: nothing, or the file's entry. Else
-	// it is picked again, as another publish may have taken it, or the file's own been renamed, since. A save picking
-	// another stored page gets its version before gzipped under the lock (nextVersion).
-	if e.opts.Slug == nil {
-		own := owns(e.Meta.Path, e.from, e.place)
-		m := s.ReadMeta(e.Slug)
-		kept := (e.Prev == nil && m == nil) || (e.Prev != nil && own(e.Prev) && m != nil && own(m))
-		if !kept {
-			if e.Slug, err = s.ownSlug(e.named, own, e.Meta.IsLink()); err != nil {
-				return err
-			}
-		}
+	if err = s.pickAgain(e); err != nil {
+		return err
 	}
 	if err = e.settle(s.ReadMeta(e.Slug)); err != nil {
 		return err
@@ -692,6 +682,26 @@ func (s *Store) commit(e *Entry, mark string, pre *pressed) error {
 		_ = os.RemoveAll(dir) //nolint:errcheck // the error is the save's
 	}
 	return err
+}
+
+// pickAgain picks the slug of e, a publish without --slug, again under the lock, unless it holds what it held at
+// Prepare: nothing, or the file's entry. Another publish may have taken it, or the file's own been renamed, since. A
+// save picking another stored page gets its version before gzipped under the lock (nextVersion).
+func (s *Store) pickAgain(e *Entry) error {
+	if e.opts.Slug != nil {
+		return nil
+	}
+	own := owns(e.Meta.Path, e.from, e.place)
+	m := s.ReadMeta(e.Slug)
+	if (e.Prev == nil && m == nil) || (e.Prev != nil && own(e.Prev) && m != nil && own(m)) {
+		return nil
+	}
+	slug, err := s.ownSlug(e.named, own, e.Meta.IsLink())
+	if err != nil {
+		return err
+	}
+	e.Slug = slug
+	return nil
 }
 
 // nextVersion adds to e.Meta, settled under the lock, the version the save of a stored page of content mark makes,
