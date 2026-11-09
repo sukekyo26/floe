@@ -66,14 +66,14 @@ a dot), each shown as a linked HTML file is. The same slug for another file is r
 	f := cmd.Flags()
 	f.BoolVar(&link, "link", false,
 		"register the file or folder in place: HTML shown as it is, a data file drawn when opened, a folder's HTML listed")
-	f.StringVar(&slug, "slug", "", "the URL name (default: from the file name)")
+	f.StringVar(&slug, "slug", "", "the URL name (default: the slug of the file's own page, else from the file name; a linked index.html takes its directory's name, a folder its project and place)")
 	f.StringVar(&title, "title", "",
 		"the title in the list (default: the data file's title:, or a link's <title> or <h1>)")
 	f.StringVar(&description, "description", "", "a description shown in the list")
 	f.StringVar(&theme, "theme", "",
 		"the theme to draw with: its palette and the parts' shape (default: the data file's theme:, else default)")
 	f.BoolVar(&opts.Force, "force", false, "replace a page published from another project or another file, or a link to "+
-		"another file, keeping nothing of the old one, not even a page's earlier versions")
+		"another file, keeping nothing of the old one, not even a page's earlier versions; without --slug, only when the file has no page of its own")
 	return cmd
 }
 
