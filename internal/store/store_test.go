@@ -673,6 +673,10 @@ func TestPagePlace(t *testing.T) {
 	if _, asked := errors.AsType[*store.NeedImages](err); asked || !strings.Contains(told(err, root), "was published from docs/plan.yaml") {
 		t.Errorf("before the images: %v, want the refusal", err)
 	}
+	_, err = s.PrepareData(dw, store.Upload{File: "plan.yaml", Source: []byte(src + "i: [a.png]\n"), Images: nil, Project: "p", Place: "docs/plan.yaml"}, store.Options{Slug: ptr("plan")})
+	if _, asked := errors.AsType[*store.NeedImages](err); !asked {
+		t.Errorf("the same file before the images: %v, want them asked for", err)
+	}
 	if err := put("p", "docs/plan.yaml", false, src+"title: again\n"); err != nil {
 		t.Errorf("the same file: %s", told(err, root))
 	}
