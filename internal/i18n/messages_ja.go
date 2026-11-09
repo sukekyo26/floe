@@ -148,6 +148,15 @@ var messagesJA = map[string]string{
 
 	// cli: コマンド行（言うのは英語だけ。ほかの言語も、どの目録とも同じく鍵を持つ）
 	"cli_usage":                "%s: floe --help を見てください",
+	"cli_work_made":            "%[2]s のタスク %[1]s：作った",
+	"cli_work_changed":         "%[2]s のタスク %[1]s：変えた",
+	"cli_work_unchanged":       "%[2]s のタスク %[1]s：変わらない",
+	"cli_work_forgotten":       "%[2]s のタスク %[1]s：消した",
+	"cli_work_project":         "プロジェクト %s",
+	"cli_work_no_project":      "プロジェクト無し",
+	"cli_work_page":            "ページ %[1]s：%[2]s",
+	"cli_work_page_task":       "%[2]s のタスク %[1]s",
+	"cli_work_page_off":        "タスク無し",
 	"cli_work_no_task":         "--task でタスクを、または slug でページを名指してください",
 	"cli_work_needs_pages":     "--%s はページを変えます。slug で名指してください",
 	"cli_work_no_pages":        "--%s はタスクだけを名指すので、slug を付けずに使ってください",

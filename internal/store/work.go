@@ -335,13 +335,9 @@ func (s *Store) checkThere(project string, rows map[string]Task, name string, ta
 	if taken == nil {
 		return nil
 	}
-	_, there := rows[name]
-	if !there {
-		count, _, err := s.pagesOfTask(project, name)
-		if err != nil {
-			return err
-		}
-		there = count > 0
+	there, err := s.taskThere(project, rows, name)
+	if err != nil {
+		return err
 	}
 	switch {
 	case *taken && there:
@@ -350,6 +346,16 @@ func (s *Store) checkThere(project string, rows map[string]Task, name string, ta
 		return conflict(usererr.New("store_task_gone", name))
 	}
 	return nil
+}
+
+// taskThere reports whether the task name is there, rows being its project's: of a row, or of pages alone, as the task
+// list shows it.
+func (s *Store) taskThere(project string, rows map[string]Task, name string) (bool, error) {
+	if _, ok := rows[name]; ok {
+		return true, nil
+	}
+	count, _, err := s.pagesOfTask(project, name)
+	return count > 0, err
 }
 
 // checkSeen refuses, before checkParent, what ed says the screen saw that is no longer so: the task's row written since
@@ -412,11 +418,15 @@ func pastedURL(raw *string) *string {
 }
 
 // TaskWritten is a task's row as EditTask left it, under the project (ProjectKey) and name tasks.json keys it by,
-// which a screen puts in place of the row it read.
+// which a screen puts in place of the row it read. Made is whether the task was not there before this write (no row
+// and no page, as checkThere has it), and Wrote
+// whether tasks.json was written: not when the row came out as it was, unless a parent was made with it.
 type TaskWritten struct {
 	Project string `json:"project"`
 	Task    string `json:"task"`
 	Row     Task   `json:"row"`
+	Made    bool   `json:"made"`
+	Wrote   bool   `json:"wrote"`
 }
 
 // EditTask applies ed to the row of the task (project, name), making it of the state of a new one when there is none,
@@ -464,8 +474,8 @@ func (s *Store) EditTask(project, name string, ed TaskEdit) (TaskWritten, error)
 // screen.
 func (s *Store) writeRow(all Tasks, project, name string, ed TaskEdit) (TaskWritten, error) {
 	rows := all[project]
-	made := ed.ParentNew != nil && *ed.ParentNew
-	if made {
+	parentMade := ed.ParentNew != nil && *ed.ParentNew
+	if parentMade {
 		up := newTaskRow()
 		up.Title = strings.TrimSpace(*ed.ParentTitle)
 		up.Rev = 1
@@ -476,15 +486,20 @@ func (s *Store) writeRow(all Tasks, project, name string, ed TaskEdit) (TaskWrit
 		was = newTaskRow()
 	}
 	t := was.edited(ed)
-	if had && !made && reflect.DeepEqual(t, was) {
-		return TaskWritten{Project: project, Task: name, Row: was}, nil
+	if had && !parentMade && reflect.DeepEqual(t, was) {
+		return TaskWritten{Project: project, Task: name, Row: was, Made: false, Wrote: false}, nil
+	}
+	// Made is of the task, not the row: one of pages alone was there, as the task list shows it.
+	there, err := s.taskThere(project, rows, name)
+	if err != nil {
+		return TaskWritten{}, err
 	}
 	t.Rev++
 	rows[name] = t
 	if err := s.writeTasks(all); err != nil {
 		return TaskWritten{}, err
 	}
-	return TaskWritten{Project: project, Task: name, Row: t}, nil
+	return TaskWritten{Project: project, Task: name, Row: t, Made: !there, Wrote: true}, nil
 }
 
 // checkWrite refuses ed of the task name, rows being the project's now: whether it is there as said, what the screen
