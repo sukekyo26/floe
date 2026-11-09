@@ -157,7 +157,7 @@ func TestUIRowActions(t *testing.T) { //nolint:paralleltest // the browser tests
 	b.eval(undo("d") + ".focus(); " + undo("d") + ".click()")
 	out = append(out, "whole: "+b.until("the bar's button", undo("d")+" === null && document.activeElement.matches('#frame-actions > .archive') && document.activeElement.title"))
 
-	// A task's page: the row moves under the archived, keeping its key, and the focus goes on.
+	// A task's page: the row stays under its step, dimmed, keeping its key, and the focus on its button.
 	for _, slug := range []string{"a", "e"} {
 		b.eval(`fetch('/api/artifacts/` + slug + `', { method: 'PATCH', headers: { 'Content-Type': 'application/json' }, body: '{"archived":false}' })`)
 	}
@@ -167,7 +167,7 @@ func TestUIRowActions(t *testing.T) { //nolint:paralleltest // the browser tests
 	b.until("the task's page", there("a")+" && "+there("b")+" && document.querySelector('#task-project .proj-name')")
 	say("the task's head", "document.querySelector('#task-project').textContent + ' ' + (getComputedStyle(document.querySelector('#task-project')).backgroundColor !== 'rgba(0, 0, 0, 0)')")
 	mouse(archive("a"))
-	out = append(out, "a task's row: "+b.until("moved", row("a")+".querySelector('.actions > .archive').classList.contains('on') && "+focus))
+	out = append(out, "a task's row: "+b.until("archived", row("a")+".querySelector('.actions > .archive').classList.contains('on') && "+focus))
 
 	// The task list: the filter button and the head with the column folded; the page list's stay words.
 	b.navigate("/tasks?project=one")
@@ -188,4 +188,4 @@ const rowActionsWant = "the rows: fedcba|a pill's dot in its chip's color: true|
 	"the row's buttons: archive star more|the menu leaves it out: none|its words: Archive / Archive T a|pressed: d title|the last: b title|by the keys: undo|" +
 	"its words: Restore / Restore T c to the list|given back: c title|no way back then: true|left: b title|left, the last: c title|failed, it stays: true|" +
 	`the list held: {"archived":true},{"archived":false}|an archived row's button: true Restore|given back, no way back: true|the star: true|` +
-	"the modal's pill: true|the modal: find-q|whole: Archive|the task's head: one true|a task's row: b title|the filter button: one true|the folded head: one true|no project, no head: true|the page list's are words: false false"
+	"the modal's pill: true|the modal: find-q|whole: Archive|the task's head: one true|a task's row: a icon-btn archive on|the filter button: one true|the folded head: one true|no project, no head: true|the page list's are words: false false"
