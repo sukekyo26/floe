@@ -60,13 +60,16 @@ func TestUIRowCards(t *testing.T) { //nolint:paralleltest // the browser tests s
 	b.until("chosen", "document.querySelector('#list li[data-slug=read].picked')")
 	say("chosen", "(() => { const st = getComputedStyle(document.querySelector('#list li[data-slug=read]')); return [st.borderTopColor === "+as+"('borderTopColor', 'var(--new)'), st.boxShadow.includes('inset')].join(' '); })()")
 	say("ground", ground)
-	// A page published meanwhile: its card rises in, as a new row does.
+	// A page published meanwhile: its card rises in, as a new row does, and those there do not (heard once they have risen in).
+	b.still()
 	b.eval("window.rose = []; document.getElementById('list').addEventListener('animationstart', (e) => rose.push(e.target.dataset.key))")
 	s.floe(t, "publish", s.page(t, "late.yaml", "T late", "<p>x</p>"), "--slug", "late")
 	if _, err := st.Edit("late", store.Edit{Project: ptrTo("demo")}); err != nil {
 		t.Fatal(err)
 	}
-	out = append(out, "rose: "+b.until("the new card risen", "rose.includes('entry:late') && 'entry:late'"))
+	b.until("the new card risen", "rose.includes('entry:late')")
+	b.still()
+	say("rose", "rose.join(',')")
 
 	// A task's page with its folder open: the margins, the headings' words and add buttons, the folder one card, its row chosen and
 	// pointed at within it.
