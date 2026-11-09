@@ -89,9 +89,9 @@ func (k *Kit) partEntry(p *Part) Entry {
 }
 
 // SectionParts returns what a section of floe's templates takes, by name: a key of floe's shared schema any, each
-// the part it names or, for one of a format (html), the key itself, described by any.json. They are floe's, read
-// from floe's Kit under k, so that a part of one's own named as a key does not stand for it. A key that is
-// neither is floe's failure.
+// the part it names or, for one of a format (html), the key itself, described by any.json, and the parts of one's own
+// over it, which any takes too. floe's are read from floe's Kit under k, so that a part of one's own named as a key
+// does not stand for it. A key that is neither is floe's failure.
 func (k *Kit) SectionParts() ([]Entry, error) {
 	floe := k
 	for floe.base != nil {
@@ -117,6 +117,11 @@ func (k *Kit) SectionParts() ([]Entry, error) {
 		default:
 			//nolint:err113 // floe's failure
 			return nil, fmt.Errorf("kit: the key %s of any.json is neither a part of floe nor a format", name)
+		}
+	}
+	for at := k; at != floe; at = at.base {
+		for _, p := range at.parts {
+			all = append(all, at.partEntry(p))
 		}
 	}
 	return Listed(all), nil

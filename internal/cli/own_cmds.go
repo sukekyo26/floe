@@ -21,12 +21,13 @@ func (a *app) partCmd() *cobra.Command {
 	var all bool
 	list := &cobra.Command{
 		Use:   "list",
-		Short: "List the parts a section of floe's templates takes (name, where, shape, description; tab-separated)",
-		Long: `List the parts a section of floe's templates takes, one per line: its name, where it is (floe),
-its shape and its description, tab-separated. html takes HTML as text and has no schema.json: floe part show
-html any.json prints any.json, which holds the key html. With --all, list every part, look and shared schema,
-floe's and your own, that a schema of your own can name with $ref, where it is (floe, or its
-directory of your own).
+		Short: "List the parts a section of floe's templates takes, yours too (name, where, shape, description)",
+		Long: `List the parts a section of floe's templates takes, your own parts too, one per line: its name, where it
+is (floe, or its directory of your own), its shape and its description, tab-separated. html takes HTML as
+text and has no schema.json: floe part show html any.json prints any.json, which holds the key html. Your
+own parts join any, but floe part show any any.json prints floe's any.json as it is written. With --all,
+list every part, look and shared schema, floe's and your own, that a schema of your own can name with
+$ref, where it is (floe, or its directory of your own).
 
 ` + shapeHelp,
 		Args: cobra.NoArgs,
@@ -54,8 +55,9 @@ directory of your own).
 		Long: `Show a part, a look or a shared schema: its description, where it is, the looks it takes and the
 files it reads (files:): schema.json, checks.yaml, part.yaml, part.html, part.css and words.yaml of a
 part, part.yaml and part.css of a look, <name>.json of a shared schema. html, which has no part of its
-own, names any.json, which holds the key html. With a file named after, print that file alone, as
-written but the byte order mark at its start: floe part show code part.html.`,
+own, names any.json, which holds the key html. Your own parts join any, but floe part show any any.json
+prints floe's any.json as it is written. With a file named after, print that file alone, as written but
+the byte order mark at its start: floe part show code part.html.`,
 		Args: cobra.RangeArgs(1, 2),
 		RunE: func(_ *cobra.Command, args []string) error {
 			k, err := a.kit(false)

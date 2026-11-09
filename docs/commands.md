@@ -143,7 +143,7 @@ Read the templates in `FLOE_TEMPLATES_DIR` with the parts and themes of your own
 
 ## `floe part list`
 
-Print the parts a section of floe's templates takes (the keys of floe's `any.json`), one per line in four tab-separated columns: the name, where it is (`floe`), its shape and its description. `html` takes HTML as text and has no `schema.json`: `floe part show html any.json` prints `any.json`, which holds the key `html`.
+Print the parts a section of floe's templates takes (the keys of floe's `any.json`, and your own parts, which join it), one per line in four tab-separated columns: the name, where it is (`floe`, or the directory of one of your own), its shape and its description. `html` takes HTML as text and has no `schema.json`: `floe part show html any.json` prints `any.json`, which holds the key `html`. Your own parts join `any`, but `floe part show any any.json` prints floe's `any.json` as it is written.
 
 The shape is what a value of it is written as: its keys, by name; `[] ` before those of a list's items; `one of ` before keys of which exactly one is written; the name of the format (`markdown`, `html`) or of the floe part it is; or `-`, which the list does not tell: `floe part show <name>` (`template show`, `theme show`) names in its `files:` line what to read, and `floe diagram example <kind>` prints an example. A template's shape holds `template`, `lang`, `theme` and `title`, which every data file may write.
 
