@@ -418,7 +418,7 @@ func TestStopKeptAnswering(t *testing.T) {
 	for _, c := range []struct {
 		name string
 		fake servetest.Fake
-		// at once: one that does not take the request is not waited for, which takes 3 s.
+		// at once: one that does not take the request is not waited for, which takes 10 s.
 		atOnce bool
 		want   func(port string) string
 	}{
