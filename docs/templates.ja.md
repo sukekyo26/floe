@@ -190,7 +190,7 @@ floe の土台は、ページの根にこれらで地・色・書体を描きま
 
 ## schema.json
 
-データファイルの項目の [JSON Schema](https://json-schema.org/)（2020-12）です。書き損じた鍵を断るように `"additionalProperties": false` を書きます。`floe template new` が作る `schema.json` には無いので、自分で足します。
+データファイルの項目の [JSON Schema](https://json-schema.org/)（2020-12）です。書き損じた鍵を断るように `"additionalProperties": false` を書きます。`floe template new` が作る `schema.json` には無いので、自分で足します。これを書き、鍵を `properties` だけで書くとき、ある条件で鍵を書けなくするなら、その鍵に `false` を書かず（誤りが `false schema` とだけ出る）、`then` に書ける鍵を `true` で並べて `"additionalProperties": false` と書きます（誤りが鍵を名指す）。並べた鍵は `properties` の写しなので、鍵を足すときは両方に足します。
 
 - `lang`・`template`・`theme`・`title` は floe が読むので、宣言せず、必須にもしません。
 - floe に文の描き方を伝える `format` は `markdown`・`html`・`image` です。floe が辿る `properties`・`additionalProperties`・`items` の下で宣言します。根の `additionalProperties` には置けません（floe が自分で読む `lang` や `title` まで描くことになるため）。

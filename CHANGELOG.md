@@ -355,6 +355,7 @@ adheres to [Semantic Versioning](https://semver.org/).
 
 ### Changed
 
+- Change the mistake of `min` on a bar chart and of `nodes` beside `lanes` in a graph from `false schema` to `additional properties 'min' not allowed` (and `'nodes'`), naming the key, at the chart or graph that has it.
 - Change Markdown to read `**`, `*` and `~~` beside Japanese, Chinese or Korean letters across a mark too, as markdown-cjk-friendly reads them, everywhere floe draws Markdown: `**「題」**に` is bold, where CommonMark left the marks as text. Fullwidth letters and marks count as such letters too, and `_` is read so as well, though in a sentence as before. A `*` meant as a mark beside such a letter (`*.yaml`) is written as `\*` or in backticks.
 - Change raw HTML in Markdown to be drawn as the text written, everywhere floe draws Markdown: what looks like a tag (`/logs/<prefix>`, `Vec<u8>`, a heading `<T>`) is no longer dropped without a word, and a block of HTML shows as a paragraph of its lines. HTML in Markdown is still not drawn as HTML: write a tag as text in backticks, and a line break in Markdown.
 - Change the refusals of a slug in use (by another project's page, another file's link, a page or link of the other kind, or on a rename) to say what uses it and to choose another slug, no longer suggesting `--force` or `floe rm`, which drop that page and its versions; `floe publish --help` and the docs tell an owner how to replace or remove theirs. The warning of a changed title says from what to what, and no longer suggests another `--slug`.
