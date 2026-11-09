@@ -169,7 +169,7 @@ func TestUIList(t *testing.T) { //nolint:paralleltest // the browser tests share
 	// A dialog's words are a paragraph, not a row's first column: above the next field, however long.
 	b.navigate("/")
 	b.size(400, 860, true)
-	b.eval("document.getElementById('add-open').click()")
+	b.eval("document.getElementById('add-link').click()")
 	out = append(out, b.eval("(() => { const l = document.querySelector('#add .lead').getBoundingClientRect(), f = document.querySelector('#add .field').getBoundingClientRect(); const e = document.querySelector('#add .lead'); return [l.bottom <= f.top && e.scrollHeight <= e.clientHeight + 1, getComputedStyle(e).display].join(' '); })()"))
 	b.eval("document.getElementById('add-cancel').click()")
 	// In the dialog of the rest of the shelf, its headings are the shelf's, under the dialog's own.
@@ -736,6 +736,17 @@ func TestUIColumns(t *testing.T) { //nolint:paralleltest // the browser tests sh
 	// Both folded, both buttons over the page, told apart by their words; the page whole.
 	b.eval("document.getElementById('shelf-hide').click()")
 	out = append(out, b.eval("[...document.querySelectorAll('#manage > .side-show')].filter((e) => e.getClientRects().length).map((e) => e.id + ':' + (e.title === e.getAttribute('aria-label'))).join(' ') + ' ' + document.activeElement.id + ' ' + Math.round(document.getElementById('reader').getBoundingClientRect().left)"))
+	// Words of the filters in the page's head, however long, leave its buttons in it. The page list's words are a view and a
+	// count of picks, short: long ones are set here, in the same task as the measure (a render puts them back).
+	b.eval("filter({ tag: 'x' }); render()")
+	b.until("the words in the page's head", "document.getElementById('shelf-what').parentElement.id === 'read-head' && document.getElementById('shelf-what').getClientRects().length")
+	check(t, "the page's head", []string{b.eval(`(() => {
+		document.getElementById('shelf-what').textContent = 'x'.repeat(300);
+		const head = document.getElementById('read-head').getBoundingClientRect();
+		const within = (e) => { const r = e.getBoundingClientRect(); return r.width > 0 && r.left >= head.left && r.right <= head.right + 0.5; };
+		return [...document.querySelectorAll('#read-actions > *')].filter((e) => e.getClientRects().length).every(within) + '';
+	})()`)}, "true")
+	b.eval("filter({ tag: '' }); render()")
 	// Kept across a reload.
 	b.navigate("/")
 	b.until("the rows", "document.querySelector('#list li[data-slug=a1]')")

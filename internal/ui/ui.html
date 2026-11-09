@@ -322,8 +322,9 @@
     .shell.shelf-closed .shelf, .shell.list-closed .listcol { display: none; }
   }
   /* What the filters narrow the list to. That must be read: the words beside it give way, and it is cut only past
-     the room the button leaves (not shrunk with it: a sliver of a pixel off its width would cut its last words) */
-  #shelf-what { flex: none; max-width: calc(100% - 11rem); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; color: var(--fg); font-weight: 600; }
+     the room the page's title and buttons need beside it, with the list folded (not shrunk with it: a sliver of a pixel off its
+     width would cut its last words) */
+  #shelf-what { flex: none; max-width: 100%; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; color: var(--fg); font-weight: 600; }
   /* The 4px of room round a button are its focus ring's (1px off, 2px wide) and 1px of ground */
   /* Each column draws the line on its right, so that what is left of them keeps one line between two faces and none at the window's edge */
   .shelf { min-height: 0; display: flex; flex-direction: column; border-right: 1px solid var(--line); }
@@ -336,23 +337,27 @@
     .shelf-body { scrollbar-width: thin; }
     .shelf-body:not(:hover, :focus-within) { scrollbar-color: transparent transparent; }
   }
+  .rhead > #shelf-what { max-width: calc(100% - 11rem); }
   .shelf-more { display: grid; grid-template-columns: minmax(0, 1fr); gap: 1.1rem; }
   #shelf-more h2 { margin: 0 0 0.3rem 0.65rem; font: 600 var(--text-label)/1.2 var(--body); color: var(--muted); letter-spacing: 0.08em; }
   /* minmax(0, …): no wider than the shelf, so that a long name is cut off rather than widening it */
   /* 4px apart, so that the ring of one does not reach the one filled beside it */
-  .views, .chips { display: grid; grid-template-columns: minmax(0, 1fr); gap: 4px; }
-  .views button, .chip {
+  .views, .chips, .shelf-add { display: grid; grid-template-columns: minmax(0, 1fr); gap: 4px; }
+  /* As one more row of the group above it, when one shows */
+  #shelf-more > div:not([hidden]) ~ .shelf-add { margin-top: calc(4px - 1.1rem); }
+  .views button, .chip, .shelf-add > button {
     display: flex; align-items: center; gap: 0.55rem; width: 100%; padding: 0.42rem 0.65rem; border: 0; border-radius: var(--corner-menu);
     background: none; color: var(--fg); font-weight: 500; text-align: left; overflow-wrap: anywhere;
   }
   /* The marks of the views, the projects and the kinds take one column, so that their words start at one x */
-  .views svg, .chip svg { width: var(--shelf-mark); height: var(--shelf-mark); flex: none; color: var(--muted); }
+  .views svg, .chip svg, .shelf-add svg { width: var(--shelf-mark); height: var(--shelf-mark); flex: none; color: var(--muted); }
   .views [data-view="fav"] svg { color: var(--star); }
   /* A row with none left stays where it is, quieter */
   .views .none:not([aria-pressed="true"]) .label, .chip.none:not([aria-pressed="true"]) .name { color: var(--muted); }
   .views .dot, .views .ring, .chip.project::before { margin-inline: calc((var(--shelf-mark) - 8px) / 2); }
   .views .n, .chip .n { margin-left: auto; font: var(--text-label)/1 var(--mono); color: var(--muted); font-variant-numeric: tabular-nums; }
-  .views button:hover, .chip:hover { background: var(--subtle); }
+  .shelf-add > button { color: var(--muted); font-size: var(--text-label); }
+  .views button:hover, .chip:hover, .shelf-add > button:hover { background: var(--subtle); }
   .views button[aria-pressed="true"], .chip[aria-pressed="true"] { font-weight: 700; background: var(--panel); box-shadow: 0 1px 0 var(--line); }
   /* Under the shelf's views on a narrow screen alone: the rest of the shelf opens in its dialog */
   #narrow-filter { display: none; }
@@ -906,7 +911,7 @@
   .screens a[aria-current] { color: var(--fg); background: var(--panel); box-shadow: var(--shadow-sm); font-weight: 700; }
   /* No search on the bar: the way to the search modal stands there */
   #find-open.shown { display: inline-flex; }
-  .shell.tasks .reader, .shell.tasks #list-grip, .shell.tasks #list-show, .shell.tasks #list-hide, .shell.tasks #add-open { display: none; }
+  .shell.tasks .reader, .shell.tasks #list-grip, .shell.tasks #list-show, .shell.tasks #list-hide { display: none; }
   .shell.tasks { grid-template-columns: minmax(0, 1fr); }
   .shell.tasks .listcol { border-right: 0; }
   @media not (max-width: 70rem) {
@@ -1102,6 +1107,12 @@
           <h2>{{.Msg "ui_kind"}}</h2>
           <div class="chips" id="kinds" role="group" aria-label="{{.Msg "ui_kind"}}"></div>
         </div>
+        <!-- Under what it adds: the kinds, or on the task list, which has none, the projects. Shown even with the kinds hidden.
+             Its words short, what it adds, for the shelf's narrowest; its name the whole of what it does, which holds those words -->
+        <div class="shelf-add" id="shelf-add">
+          <button type="button" id="add-link" aria-label="{{.Msg "ui_add_link"}}" title="{{.Msg "ui_add_link"}}" hidden><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true"><path d="M12 5v14M5 12h14"/></svg>{{.Msg "ui_add_link_short"}}</button>
+          <button type="button" id="add-task" aria-label="{{.Msg "ui_task_add"}}" title="{{.Msg "ui_task_add"}}" hidden><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true"><path d="M12 5v14M5 12h14"/></svg>{{.Msg "ui_task_add_short"}}</button>
+        </div>
         <div id="shelf-templates">
           <h2>{{.Msg "ui_template"}}</h2>
           <div class="chips" id="templates" role="group" aria-label="{{.Msg "ui_template"}}"></div>
@@ -1151,8 +1162,6 @@
         <!-- What the filters narrow the list to, in the head of the list, or of the page beside it with the list folded too -->
         <button type="button" class="link-btn" id="shelf-what" title="{{.Msg "ui_shelf_show"}}" hidden></button>
         <span class="count" id="count"></span>
-        <button type="button" class="btn add-open" id="add-open"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" aria-hidden="true"><path d="M12 5v14M5 12h14"/></svg>{{.Msg "ui_add_link"}}</button>
-        <button type="button" class="btn add-open" id="task-add" hidden><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" aria-hidden="true"><path d="M12 5v14M5 12h14"/></svg>{{.Msg "ui_task_add"}}</button>
       
         <!-- Each button's words in .label, which a narrow bar hides from sight but not from screen readers -->
         <div class="bulk" id="bulk" role="region" aria-label="{{.Msg "ui_bulk_region"}}" hidden>
@@ -2504,6 +2513,24 @@
   }
 
   const VIEW_WORDS = { new: 'ui_view_new', fav: 'ui_view_favorites', ...Object.fromEntries(STATE_NAMES.map((name) => [name, `ui_state_${name}`])) };
+  // The shelf's add button of the list shown. None on the archived list, which what it adds does not go on, nor where the list
+  // is not there to add to or has its own button, empty
+  function showAdd(none) {
+    $('add-link').hidden = TASKS || view === 'archived' || none;
+    $('add-task').hidden = !TASK_LIST || view === 'archived' || none;
+    $('shelf-add').hidden = $('add-link').hidden && $('add-task').hidden;
+  }
+  // Pressed in the filter dialog, which holds the rest of the shelf on a narrow screen: that closes first, and the focus goes to its
+  // button, for the dialog opened to give it back there rather than to the button hidden with the shelf
+  function fromShelf(open) {
+    return () => {
+      if ($('filter-dialog').open) {
+        $('filter-dialog').close();
+        $('narrow-filter').focus();
+      }
+      open();
+    };
+  }
   // The shelf's views, with their counts
   function renderShelf() {
     // Each view with the picks and the search on it. All is what pressing it leaves, the search alone; the new ones are those as
@@ -2517,8 +2544,6 @@
     };
     $('count').textContent = t('ui_list_head', counts.new);
     drawViews(counts);
-    // A link added is not archived, so it is added from the lists it goes on
-    $('add-open').hidden = view === 'archived';
   }
   // The shelf's views as counts has them, and what is narrowed
   function drawViews(counts) {
@@ -3734,8 +3759,8 @@
     const none = !nothing && !failed && shown.length === 0;
     $('tasks-none').hidden = !none;
     const gone = !there.has(project);
-    // A task made goes to the states of work, which the archived list is not; and a project not on the list may be a name mistyped in the URL
-    $('task-add').hidden = view === 'archived' || gone;
+    // A project not on the list may be a name mistyped in the URL
+    showAdd(nothing || failed || gone);
     $('tasks-other').hidden = !gone;
     $('tasks-none').querySelector('strong').textContent = gone ? t('ui_task_none', projectWord(project)) : t('ui_task_none_state', t(VIEW_WORDS[view]));
     drawRows([{ entries: shown }], (task, i, rows) => rows.push(taskRow(task, i)));
@@ -4231,6 +4256,7 @@
     // Empty: at all (how to add one), with all of it archived (the way to them), or of the view
     const empty = list.length === 0;
     $('empty').hidden = !(empty && view === 'all' && !archivedCount);
+    showAdd(!$('empty').hidden);
     $('all-archived').hidden = !(empty && view === 'all' && archivedCount);
     $('all-archived').querySelector('strong').textContent = t('ui_all_archived', archivedCount);
     $('empty-new').hidden = !(empty && view === 'new');
@@ -6344,7 +6370,7 @@
     kinOf.task = { project: e.target.value };
     kinNameChanged();
   });
-  $('task-add').addEventListener('click', openTaskAdd);
+  $('add-task').addEventListener('click', fromShelf(openTaskAdd));
   $('task-add-empty').addEventListener('click', openTaskAdd);
   suggestOne($('set-step'), () => {
     const task = setTaskOf($('set-task').value);
@@ -6491,7 +6517,7 @@
       $('add-error').hidden = true;
       $('add-dialog').showModal();
     };
-    $('add-open').addEventListener('click', openAdd);
+    $('add-link').addEventListener('click', fromShelf(openAdd));
     $('add-empty').addEventListener('click', openAdd);
     for (const b of document.querySelectorAll('.views button[data-view]')) b.addEventListener('click', () => pressView(b.dataset.view));
     $('show-archived').addEventListener('click', () => setView('archived'));
@@ -6520,8 +6546,10 @@
     $('narrow-filter').addEventListener('click', () => {
       $('filter-box').lastElementChild.before($('shelf-more'));
       $('filter-dialog').showModal();
-      // The first row, not the box of rows the browser takes first where it scrolls
-      [...$('shelf-more').querySelectorAll('button')].find((b) => b.offsetParent)?.focus();
+      // The first row, not the box of rows the browser takes first where it scrolls, nor the add button, which Enter would
+      // open: with no row, the closing
+      const first = [...$('shelf-more').querySelectorAll('button')].find((b) => b.offsetParent && !b.closest('.shelf-add'));
+      (first ?? $('filter-box').querySelector('[data-close]')).focus();
     });
     $('filter-dialog').addEventListener('close', () => $('shelf-body').append($('shelf-more')));
     $('bulk-page').addEventListener('click', () => {

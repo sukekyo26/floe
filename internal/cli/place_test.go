@@ -7,8 +7,9 @@ import (
 	"testing"
 )
 
-// floe publish places a data file from its repository's root, wherever in it the command runs: the same file
-// overwrites its page from another directory, and another file of the same name is refused.
+// floe publish keys a data file by its repository and its path from the repository's root, else by its real path,
+// wherever the command runs, in the repository or outside it: the same file overwrites its page from another directory
+// or project, and another file of the same name is refused.
 func TestPublishPlace(t *testing.T) {
 	t.Parallel()
 
@@ -28,7 +29,18 @@ func TestPublishPlace(t *testing.T) {
 	if out, err := git.CombinedOutput(); err != nil {
 		t.Fatalf("git init: %v\n%s", err, out)
 	}
+	outside, other := filepath.Join(filepath.Dir(home), "a"), filepath.Join(filepath.Dir(home), "b")
+	for _, dir := range []string{outside, other} {
+		if err := os.MkdirAll(dir, 0o750); err != nil {
+			t.Fatal(err)
+		}
+	}
+	notes := filepath.Join(outside, "notes.yaml")
+	if err := os.WriteFile(notes, []byte("lang: en\ntemplate: pic\ntitle: Notes\n"), 0o600); err != nil {
+		t.Fatal(err)
+	}
 	url := "http://127.0.0.1:" + env["FLOE_PORT"] + "/a/plan/\n"
+	notesURL := "http://127.0.0.1:" + env["FLOE_PORT"] + "/a/notes/\n"
 	for _, step := range []struct {
 		dir, file string
 		code      int
@@ -36,7 +48,10 @@ func TestPublishPlace(t *testing.T) {
 	}{
 		{repo, "docs/plan.yaml", 0, url, ""},
 		{filepath.Join(repo, "docs"), "plan.yaml", 0, url, ""},
-		{repo, "notes/plan.yaml", 1, "", `floe: slug "plan" was published from docs/plan.yaml in project r: choose another slug` + "\n"},
+		{repo, "notes/plan.yaml", 1, "", `floe: slug "plan" was published from docs/plan.yaml in repository r: choose another slug` + "\n"},
+		{outside, filepath.Join(repo, "docs", "plan.yaml"), 0, url, ""},
+		{outside, "notes.yaml", 0, notesURL, ""},
+		{other, notes, 0, notesURL, ""},
 	} {
 		code, out, errs := runIn(step.dir, env, "publish", step.file)
 		if code != step.code || out != step.out || (step.errs != "" && errs != step.errs) {

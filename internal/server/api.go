@@ -9,6 +9,7 @@ import (
 	"mime"
 	"net/http"
 	"os"
+	"path/filepath"
 
 	"github.com/sukekyo26/floe/internal/store"
 	"github.com/sukekyo26/floe/internal/usererr"
@@ -140,6 +141,7 @@ type Upload struct {
 	Source      []byte            `json:"source"`
 	Images      map[string][]byte `json:"images"`
 	Project     string            `json:"project"`
+	Repo        string            `json:"repo"`
 	Place       string            `json:"place"`
 	Slug        *string           `json:"slug,omitzero"`
 	Title       *string           `json:"title"`
@@ -200,6 +202,11 @@ func (s *Server) save(w http.ResponseWriter, r *http.Request) {
 		send(w, http.StatusBadRequest, "send file, source and place")
 		return
 	}
+	// A place from a repository's root names the file with its repository alone, and a real path with none.
+	if filepath.IsAbs(in.Place) == (in.Repo != "") {
+		send(w, http.StatusBadRequest, "send the repository with a place from its root, and none with a real path")
+		return
+	}
 	for name := range in.Images {
 		if !fs.ValidPath(name) || name == "." {
 			send(w, http.StatusBadRequest, "send each image by a slash-separated path under the data file's directory")
@@ -207,7 +214,9 @@ func (s *Server) save(w http.ResponseWriter, r *http.Request) {
 		}
 	}
 	// A slug not given is the store's to pick, the page of the file sent if it has one.
-	up := store.Upload{File: in.File, Source: in.Source, Images: in.Images, Project: in.Project, Place: in.Place}
+	up := store.Upload{
+		File: in.File, Source: in.Source, Images: in.Images, Project: in.Project, Repo: in.Repo, Place: in.Place,
+	}
 	opts := store.Options{Slug: in.Slug, Title: in.Title, Description: in.Description, Theme: in.Theme, Force: in.Force}
 	drawing := s.latest()
 	entry, err := s.cfg.Store.PrepareData(drawing, up, opts)

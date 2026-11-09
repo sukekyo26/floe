@@ -206,7 +206,7 @@ func TestVersionTabMark(t *testing.T) {
 	one = since(1)
 	// d, renamed from o, is o.yaml's: published again from it without a slug, it is found.
 	for i := range 20 {
-		up := server.Upload{File: "o.yaml", Source: []byte(noted("n" + strconv.Itoa(i))), Project: "p", Place: "o.yaml"} //nolint:exhaustruct // the rest not given
+		up := server.Upload{File: "o.yaml", Source: []byte(noted("n" + strconv.Itoa(i))), Project: "p", Repo: "p", Place: "o.yaml"} //nolint:exhaustruct // the rest not given
 		want(t, e.write(t, http.MethodPost, "/api/artifacts/data", up), http.StatusOK, `"slug":"d"`)
 	}
 	got = append(got, ask("/api/changed/d?since="+one+"&v=1"))

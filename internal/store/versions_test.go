@@ -194,7 +194,7 @@ func TestVersionsNumbers(t *testing.T) {
 	dw := picKit(t, "", "")
 	publish(t, s, dw, "d.yaml", titled("A"), map[string][]byte{"a.png": png}, store.Options{})
 	publish(t, s, dw, "d.yaml", titled("B"), map[string][]byte{"a.png": png}, store.Options{})
-	up := store.Upload{File: "d.yaml", Source: []byte(titled("B")), Images: map[string][]byte{"a.png": png}, Project: "q"}
+	up := store.Upload{File: "d.yaml", Source: []byte(titled("B")), Images: map[string][]byte{"a.png": png}, Project: "q", Repo: "q", Place: "d.yaml"}
 	e, err := s.PrepareData(dw, up, store.Options{Force: true})
 	if err != nil {
 		t.Fatal(err)
@@ -259,7 +259,7 @@ func TestSaveVersionFails(t *testing.T) {
 		t.Helper()
 
 		before, meta := names(t, dir), read(t, filepath.Join(dir, "meta.json"))
-		up := store.Upload{File: "d.yaml", Source: []byte(titled(name)), Images: map[string][]byte{"a.png": png}, Project: "p"}
+		up := store.Upload{File: "d.yaml", Source: []byte(titled(name)), Images: map[string][]byte{"a.png": png}, Project: "p", Repo: "p", Place: "d.yaml"}
 		e, err := s.PrepareData(dw, up, store.Options{})
 		if err != nil {
 			t.Fatal(err)

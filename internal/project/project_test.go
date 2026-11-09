@@ -97,8 +97,9 @@ func TestNameOfNoDir(t *testing.T) {
 	}
 }
 
-// A file's place is its path from its repository's root when that repository is the one dir is in, a worktree
-// under the main checkout too, wherever in it dir is; else its actual path, through a symlink too.
+// A file's key is its repository's name and its path from the repository's root, a worktree's file keyed as its main
+// checkout's, through a symlink too; outside a repository, "" and its actual path. No directory it is published from
+// takes part.
 func TestPlace(t *testing.T) {
 	t.Parallel()
 
@@ -128,21 +129,21 @@ func TestPlace(t *testing.T) {
 	if err := os.Symlink(filepath.Join(a, "docs"), filepath.Join(out, "linked")); err != nil {
 		t.Fatal(err)
 	}
-	actual := filepath.Join(a, "docs", "plan.yaml")
-	for _, tt := range []struct{ dir, file, want string }{
-		{a, "a/docs/plan.yaml", "docs/plan.yaml"},
-		{filepath.Join(a, "docs"), "a/docs/plan.yaml", "docs/plan.yaml"},
-		{a, "a/plan.yaml", "plan.yaml"},
-		{wt, "a/.claude/worktrees/w/plan.yaml", "plan.yaml"},
-		{wt, "a/.claude/worktrees/w/docs/plan.yaml", "docs/plan.yaml"},
-		{a, "a/.claude/worktrees/w/docs/plan.yaml", "docs/plan.yaml"},
-		{a, "b/docs/plan.yaml", filepath.Join(b, "docs", "plan.yaml")},
-		{a, "out/linked/plan.yaml", "docs/plan.yaml"},
-		{out, "out/linked/plan.yaml", actual},
-		{out, "a/docs/plan.yaml", actual},
+	if err := os.WriteFile(filepath.Join(out, "notes.yaml"), []byte("x"), 0o600); err != nil {
+		t.Fatal(err)
+	}
+	for _, tt := range []struct{ file, repo, place string }{
+		{"a/docs/plan.yaml", "a", "docs/plan.yaml"},
+		{"a/plan.yaml", "a", "plan.yaml"},
+		{"a/.claude/worktrees/w/plan.yaml", "a", "plan.yaml"},
+		{"a/.claude/worktrees/w/docs/plan.yaml", "a", "docs/plan.yaml"},
+		{"b/docs/plan.yaml", "b", "docs/plan.yaml"},
+		{"out/linked/plan.yaml", "a", "docs/plan.yaml"},
+		{"out/notes.yaml", "", filepath.Join(out, "notes.yaml")},
 	} {
-		if got := project.Place(t.Context(), tt.dir, filepath.Join(tmp, tt.file)); got != tt.want {
-			t.Errorf("Place(%s, %s) = %q, want %q", tt.dir, tt.file, got, tt.want)
+		repo, place := project.Place(t.Context(), filepath.Join(tmp, tt.file))
+		if repo != tt.repo || place != tt.place {
+			t.Errorf("Place(%s) = %q, %q, want %q, %q", tt.file, repo, place, tt.repo, tt.place)
 		}
 	}
 }

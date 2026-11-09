@@ -138,12 +138,12 @@ func TestUIFocusRing(t *testing.T) { //nolint:paralleltest // the browser tests 
 		t.Fatalf("Tab does not reach %s", sel)
 		return ""
 	}
-	// The bulk delete is filled with danger: the ring stays off it. A row selected puts the bulk bar in the place of the head's
-	// add button, so it is selected last.
+	// The bulk delete is filled with danger: the ring stays off it. The bulk bar shows with a row selected, so it is selected
+	// last.
 	b.eval("document.getElementById('bulk-clear').click()")
 	out = out[:0]
 	for _, sel := range []string{
-		".views button[data-view=all]", ".views button[data-view=fav]", "#q", "#add-open",
+		".views button[data-view=all]", ".views button[data-view=fav]", "#q",
 		"#list li:not(.group) a.title",
 	} {
 		out = append(out, tabTo(sel))
@@ -168,7 +168,7 @@ func TestUIFocusRing(t *testing.T) { //nolint:paralleltest // the browser tests 
 	ring := "solid 2px rgb(107, 105, 100) 1px seen"
 	check(t, "reached", out, strings.Join([]string{
 		".views button[data-view=all]: " + ring, ".views button[data-view=fav]: " + ring,
-		"#q: " + ring, "#add-open: " + ring, "#list li:not(.group) a.title: solid 2px rgb(107, 105, 100) -2px seen",
+		"#q: " + ring, "#list li:not(.group) a.title: solid 2px rgb(107, 105, 100) -2px seen",
 		"#list li:not(.group) .sel: " + ring, "#bulk-clear: " + ring, "#bulk-delete: " + ring, "#bulk-delete.armed: " + ring,
 		".tag-box input: " + ring, "#find-actions .star: " + ring,
 	}, "|"))
@@ -179,6 +179,8 @@ func TestUIFocusRing(t *testing.T) { //nolint:paralleltest // the browser tests 
 	b.size(1440, 900, false)
 	defer b.unsize()
 	b.until("the wide window", "!matchMedia('(max-width: 70rem)').matches")
+	// The shelf's add button, in the shelf beside the list, ringed as its rows.
+	check(t, "the shelf's add button", []string{tabTo("#add-link")}, "#add-link: "+ring)
 	out = out[:0]
 	out = append(out, tabTo("#shelf-hide"), tabTo("#list-hide"))
 	b.eval("document.querySelector('#list li:not(.group) .title').click(); document.getElementById('shelf-hide').click()")

@@ -32,11 +32,13 @@ func (a *app) publishCmd() *cobra.Command {
 		Use:   "publish <data.yaml> | --link <file.html|folder>",
 		Short: "Store a page drawn from a data file (or --link an HTML file or a folder in place) and print its URL",
 		Long: `Draw a page from a data file (.yaml, .yml) with the template it names (template: report),
-store it as drawn and print its URL. The same slug from the same file of the same project overwrites it
-(the file's place: from its repository's root, else its real path), and a slug published from another
-project or another file is refused unless --force, which drops its history (versions, pinned title, tags,
-favourite). A page renamed on the management page is its file's still: publishing that file again without --slug
-writes to its new slug. A page is in the language its data names
+store it as drawn and print its URL. A page is its data file's: publishing the same file again, from any
+directory, overwrites it and keeps the page's project (a file is named by its repository and its path from
+the repository's root, else by its real path), and the slug of another file's page is refused unless
+--force, which drops its history (versions, pinned title, tags, favourite). A new page is in the project
+of the directory floe publish runs in: its git repository's name (origin's, else the repository's
+directory), else the directory's name. A page renamed on the management page is its file's still:
+publishing that file again without --slug writes to its new slug. A page is in the language its data names
 (lang:), and in the theme its data names (theme:, else default), unless --theme names another. A new
 slug is also opened in the browser ($BROWSER, open, wslview, xdg-open). The page stays as it was
 drawn: floe rebuild draws the stored pages again with the templates of now. The warnings of the page
@@ -73,7 +75,7 @@ a dot), each shown as a linked HTML file is. The same slug for another file is r
 	f.StringVar(&description, "description", "", "a description shown in the list")
 	f.StringVar(&theme, "theme", "",
 		"the theme to draw with: its palette and the parts' shape (default: the data file's theme:, else default)")
-	f.BoolVar(&opts.Force, "force", false, "replace a page published from another project or another file, or a link to "+
+	f.BoolVar(&opts.Force, "force", false, "replace another file's page, or a link to "+
 		"another file, keeping nothing of the old one, not even a page's earlier versions; without --slug, only when "+
 		"the file has no page of its own")
 	return cmd
@@ -148,7 +150,7 @@ func (a *app) sent(ctx context.Context, p arg, link bool, opts store.Options) (s
 		}
 	} else {
 		up = server.Upload{
-			File: p.name, Source: nil, Images: nil, Project: "", Place: "", Slug: opts.Slug, Title: opts.Title,
+			File: p.name, Source: nil, Images: nil, Project: "", Repo: "", Place: "", Slug: opts.Slug, Title: opts.Title,
 			Description: opts.Description, Theme: opts.Theme, Force: opts.Force,
 		}
 		if p.err == nil && files.IsDataFile(p.name) {
@@ -158,7 +160,7 @@ func (a *app) sent(ctx context.Context, p arg, link bool, opts store.Options) (s
 			up.Source, err = p.read()
 			// Placed once read, so that a file not there is told once, by the read.
 			if err == nil {
-				up.Place = project.Place(ctx, a.env.Dir, p.abs)
+				up.Repo, up.Place = project.Place(ctx, p.abs)
 			}
 		}
 		body = up

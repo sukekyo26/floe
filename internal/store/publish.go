@@ -41,15 +41,20 @@ func linkName(file, cwd string) string {
 	return files.Slug(filepath.Base(filepath.Dir(filepath.Clean(file))))
 }
 
-// owns tells the entries of the file a publish is of: a link's of the same path, a stored page's of the same project
-// and place in it. newMeta gives a place to stored pages alone.
-func owns(path, from, place string) func(*Meta) bool {
+// owns tells the entries of the file a publish is of: a link's of the same path, a stored page's of the same file
+// (sameFile). newMeta gives a file to stored pages alone.
+func owns(path, repo, place string) func(*Meta) bool {
 	if path != "" {
 		return func(m *Meta) bool { return m.Path == path }
 	}
-	return func(m *Meta) bool {
-		return m.PublishedFile != "" && m.PublishedFrom == from && m.PublishedFile == place
-	}
+	return func(m *Meta) bool { return sameFile(m, repo, place) }
+}
+
+// sameFile is whether the stored page m is the data file of the key repo and place (project.Place): of the same place,
+// and of the same repository unless the place is a real path, which names the file alone (a page published before
+// keys were the file's alone holds the project it was published from in PublishedFrom).
+func sameFile(m *Meta, repo, place string) bool {
+	return m.PublishedFile != "" && m.PublishedFile == place && (filepath.IsAbs(place) || m.PublishedFrom == repo)
 }
 
 // ownSlug is the slug of a publish without --slug, of the file whose entries own tells, named base: base when its entry
@@ -152,10 +157,12 @@ type Entry struct {
 	Warnings []*usererr.Error
 
 	// What settle builds Meta from, with the link's path, the data's title: and the theme of the Meta
-	// it replaces: the publish's options and the project published from.
-	opts  Options
-	from  string
-	place string // the place of a stored page's data file in from, "" for a link
+	// it replaces: the publish's options, the project published from (a new page's, and what a page with no file is
+	// compared by), and the key of a stored page's data file ("" for a link).
+	opts    Options
+	project string
+	repo    string
+	place   string
 	// named is what a publish without --slug is named after, for Save to pick its slug again ("" for a name that makes
 	// none).
 	named string
@@ -172,8 +179,11 @@ type Upload struct {
 	// Images are the images sent with it, by the path the data names them by; nil for none sent, which asks
 	// which images the data reads (NeedImages). An empty one is sent.
 	Images  map[string][]byte
-	Project string // the project it is published from, which owns the page
-	Place   string // the place of the file in it, which owns the page too: from its repository's root, else its real path
+	Project string // the project it is published from, a new page's
+	// Repo and Place are the file's key, which owns the page from whatever directory it is published (project.Place):
+	// its repository and its path from the repository's root, else "" and its real path.
+	Repo  string
+	Place string
 }
 
 // NeedImages answers an Upload without images whose data reads some: Names, as it writes them.
@@ -232,7 +242,7 @@ func (s *Store) PrepareData(dw Drawing, up Upload, opts Options) (*Entry, error)
 		sent[name] = &fstest.MapFile{Data: b, Mode: 0, ModTime: time.Time{}, Sys: nil}
 	}
 	images := &recorder{fsys: sent, names: nil, seen: map[string]bool{}}
-	picked, created, err := s.themesFor(slug, "", up.Project, up.Place, opts.Force)
+	picked, created, err := s.themesFor(slug, "", up.Project, up.Repo, up.Place, opts.Force)
 	if err != nil {
 		return nil, err
 	}
@@ -282,7 +292,7 @@ func (s *Store) dataSlug(up Upload, opts Options) (slug, named string, err error
 		return *opts.Slug, "", nil
 	}
 	named = files.SlugFromFile(up.File)
-	slug, err = s.ownSlug(named, owns("", up.Project, up.Place), false)
+	slug, err = s.ownSlug(named, owns("", up.Repo, up.Place), false)
 	return slug, named, err
 }
 
@@ -308,7 +318,7 @@ func imagesApart(file string, images map[string][]byte) error {
 func (s *Store) storedPage(slug, named string, up Upload, src []byte, opts Options) (*Entry, error) {
 	e := &Entry{
 		Slug: slug, Meta: seedMeta("", up.File, src, opts.theme()), Source: src, Page: nil, Images: nil,
-		Prev: nil, Warnings: nil, opts: opts, from: up.Project, place: up.Place, named: named, created: "",
+		Prev: nil, Warnings: nil, opts: opts, project: up.Project, repo: up.Repo, place: up.Place, named: named, created: "",
 	}
 	if err := e.settle(s.ReadMeta(e.Slug)); err != nil {
 		return nil, err
@@ -358,7 +368,7 @@ func (s *Store) PrepareLink(
 		if dw.Err != nil {
 			return nil, dw.Err
 		}
-		if picked, created, err = s.themesFor(slug, path, from, "", opts.Force); err != nil {
+		if picked, created, err = s.themesFor(slug, path, from, "", "", opts.Force); err != nil {
 			return nil, err
 		}
 		data = src
@@ -378,7 +388,7 @@ func (s *Store) PrepareLink(
 	}
 	e := &Entry{
 		Slug: slug, Meta: seedMeta(path, path, data, opts.theme()), Source: nil, Page: nil, Images: nil, Prev: nil,
-		Warnings: warnings, opts: opts, from: from, place: "", named: named, created: created,
+		Warnings: warnings, opts: opts, project: from, repo: "", place: "", named: named, created: created,
 	}
 	e.Meta.Folder = folder
 	// A folder's own title, as a data file's title: is: where it is in its repository, its repository's name at its
@@ -414,7 +424,7 @@ func seedMeta(path, file string, data []byte, theme string) Meta {
 // it. A replaced page or link keeps nothing of the old one.
 func (e *Entry) settle(prev *Meta) error {
 	was := e.Meta
-	replacing, err := checkOwner(e.Slug, prev, was.Path, e.from, e.place, e.opts.Force)
+	replacing, err := checkOwner(e.Slug, prev, was.Path, e.project, e.repo, e.place, e.opts.Force)
 	if err != nil {
 		return err
 	}
@@ -423,7 +433,7 @@ func (e *Entry) settle(prev *Meta) error {
 		var none Meta
 		base = &none
 	}
-	e.Meta = newMeta(e.opts, was.Path, e.from, e.place, base, was.DataTitle, e.Slug)
+	e.Meta = newMeta(e.opts, was.Path, e.project, e.repo, e.place, base, was.DataTitle, e.Slug)
 	if replacing || prev == nil {
 		e.Meta.CreatedTheme = e.created
 	}
@@ -483,9 +493,9 @@ func readLink(file string, opts Options, cwd, home string) (string, []byte, bool
 // LIMIT: a slug Save picks again (pickAgain: the file's page renamed, or the slug taken, meanwhile) is drawn in the
 // themes of the one looked at here, its meta.json taking those of the page picked, as the title in storedPage's LIMIT.
 // Publish again if that shows.
-func (s *Store) themesFor(slug, path, from, place string, force bool) (picked, created string, err error) {
+func (s *Store) themesFor(slug, path, project, repo, place string, force bool) (picked, created string, err error) {
 	prev := s.ReadMeta(slug)
-	replacing, _ := checkOwner(slug, prev, path, from, place, force) //nolint:errcheck // told by settle, as above
+	replacing, _ := checkOwner(slug, prev, path, project, repo, place, force) //nolint:errcheck // told by settle, as above
 	if prev != nil && !replacing {
 		return prev.PickedTheme, prev.CreatedTheme, nil
 	}
@@ -493,10 +503,11 @@ func (s *Store) themesFor(slug, path, from, place string, force bool) (picked, c
 	return "", set.Theme, err
 }
 
-// newMeta keeps what was set on the management page (favourite, title, project, tags), the description and
-// createdAt from base, but not archived: a page published again comes back to the list. --title and
-// --description win. A stored page is owned by from and the file at place in it; an empty place keeps base's.
-func newMeta(opts Options, path, from, place string, base *Meta, own, slug string) Meta {
+// newMeta keeps what was set on the management page (favourite, title, tags), the description, createdAt and the
+// project from base, but not archived: a page published again comes back to the list. --title and --description
+// win. A new page, or one replacing another file's, is in project, and a page emptied of its project comes back to
+// it. A stored page is owned by the file of the key repo and place; an empty place keeps base's.
+func newMeta(opts Options, path, project, repo, place string, base *Meta, own, slug string) Meta {
 	keepTitle := opts.Title == nil && base.TitleEdited
 	// One reading of the clock, so that a new page's createdAt equals its updatedAt.
 	now := Now()
@@ -511,8 +522,7 @@ func newMeta(opts Options, path, from, place string, base *Meta, own, slug strin
 		DataTitle:     own,
 		Template:      "",
 		Source:        "",
-		Project:       from,
-		ProjectEdited: base.ProjectEdited,
+		Project:       cmp.Or(base.Project, project),
 		PublishedFrom: "",
 		PublishedFile: "",
 		Favorite:      base.Favorite,
@@ -527,11 +537,8 @@ func newMeta(opts Options, path, from, place string, base *Meta, own, slug strin
 	if opts.Description != nil {
 		m.Description = *opts.Description
 	}
-	if base.ProjectEdited {
-		m.Project = base.Project
-	}
 	if path == "" {
-		m.PublishedFrom = from
+		m.PublishedFrom = repo
 		m.PublishedFile = cmp.Or(place, base.PublishedFile)
 	}
 	return m
@@ -556,9 +563,13 @@ func slugMistake(slug string) *usererr.Error {
 }
 
 // checkOwner refuses to overwrite another's entry without force, and reports whether the publish
-// replaces one. A stored page belongs to the project it was published from and to the file at place in it, as a
-// link belongs to its path: the same slug for another file certainly means another page.
-func checkOwner(slug string, prev *Meta, path, from, place string, force bool) (bool, error) {
+// replaces one. A stored page belongs to its data file, of the key repo and place (sameFile), from whatever project
+// it is published, as a link belongs to its path: the same slug for another file certainly means another page.
+// LIMIT: a page whose file is in a repository but was published from outside it, before keys were the file's alone,
+// holds its real path: published again, its key is the repository's path, which differs, so it is refused as another
+// file's, or, renamed, its slug is left and a second page written at the file's name. None is in the store of now;
+// publish it with --force if one comes.
+func checkOwner(slug string, prev *Meta, path, project, repo, place string, force bool) (bool, error) {
 	if prev == nil {
 		return false, nil
 	}
@@ -578,23 +589,27 @@ func checkOwner(slug string, prev *Meta, path, from, place string, force bool) (
 		}
 		return false, conflict(usererr.New("store_slug_linked", slug, prev.Path))
 	}
-	if owner := prev.PublishedFrom; owner != "" && owner != from {
-		if force {
-			return true, nil
+	// LIMIT: a page published before pages kept their file has none, and is compared by the project it was published
+	// from: it takes the file of the next publish from that project, another file too, once, which keys it from then
+	// on; remove this before floe is released, or once every page was published again.
+	if prev.PublishedFile == "" {
+		if owner := prev.PublishedFrom; owner != "" && owner != project {
+			if force {
+				return true, nil
+			}
+			return false, conflict(usererr.New("store_slug_owned", slug, owner))
 		}
-		return false, conflict(usererr.New("store_slug_owned", slug, owner))
+		return false, nil
 	}
-	// The place is compared whatever the project: an empty place (a store's test sending none) differs from one.
-	// LIMIT: a page published before pages kept their file has none, and takes the place of the next publish from its
-	// project, another file too, once; remove this before floe is released, or once every page was published again.
-	if prev.PublishedFile == "" || prev.PublishedFile == place {
+	if sameFile(prev, repo, place) {
 		return false, nil
 	}
 	if force {
 		return true, nil
 	}
-	if project := cmp.Or(prev.PublishedFrom, from); project != "" {
-		return false, conflict(usererr.New("store_slug_placed", slug, prev.PublishedFile, project))
+	// A path in a repository is told with the repository it is from, the page's file's and not the list's project.
+	if !filepath.IsAbs(prev.PublishedFile) && prev.PublishedFrom != "" {
+		return false, conflict(usererr.New("store_slug_placed", slug, prev.PublishedFile, prev.PublishedFrom))
 	}
 	return false, conflict(usererr.New("store_slug_placed_alone", slug, prev.PublishedFile))
 }
@@ -700,7 +715,7 @@ func (s *Store) pickAgain(e *Entry) error {
 	if e.opts.Slug != nil {
 		return nil
 	}
-	own := owns(e.Meta.Path, e.from, e.place)
+	own := owns(e.Meta.Path, e.repo, e.place)
 	m := s.ReadMeta(e.Slug)
 	if (e.Prev == nil && m == nil) || (e.Prev != nil && own(e.Prev) && m != nil && own(m)) {
 		return nil
@@ -1047,7 +1062,6 @@ func (s *Store) Edit(slug string, ed Edit) (Edited, error) {
 			return Edited{}, usererr.New("store_project_slash")
 		}
 		m.Project = strings.TrimSpace(*ed.Project)
-		m.ProjectEdited = m.Project != ""
 	}
 	to, err := s.renameTo(slug, ed.Slug)
 	if err != nil {
