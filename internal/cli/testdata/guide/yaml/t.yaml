@@ -1,0 +1,10 @@
+template: report
+lang: en
+title: T
+sections:
+  - heading: H
+    parts:
+      - table:
+          columns: [A]
+          rows:
+            - [42]

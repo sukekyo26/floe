@@ -6,6 +6,8 @@ Reference for every command of the `floe` binary. How to write a data file is in
 
 | Command | Purpose |
 |---|---|
+| `floe guide` | Print the guide for agents: how to write, check and publish a page |
+| `floe skill install <agent>` | Write a skill that points the agent named to `floe guide` |
 | `floe publish <data.yaml>` | Store the page drawn from a data file (or `--link` a file or a folder in place) and print its URL |
 | `floe check <data.yaml>...` | Check data files as their pages are drawn, without writing them |
 | `floe render <data.yaml>...` | Write the page of each data file to an HTML file, to keep in a repository |
@@ -38,6 +40,14 @@ Reference for every command of the `floe` binary. How to write a data file is in
 | `floe help [command]` | Print help (Cobra builtin) |
 
 ---
+
+## `floe guide`
+
+Print the guide for agents, [guide.md](guide.md): how to write, check and publish a page, pick the template and the parts, write YAML that floe reads as meant, and read its mistakes. It is a summary of these docs, for an agent to read before it writes a page. It takes no arguments.
+
+## `floe skill install <agent>`
+
+Write floe's skill, `floe/SKILL.md`, where the agent named reads the skills of all your projects; `floe skill install --help` lists the agents and their places. The skill only tells the agent to run `floe guide`, so it stays right when floe is upgraded. It prints the path written to, links followed. A `SKILL.md` that is this floe's is left as it is; another is kept, and `--force` writes this floe's over it. A link named `floe` is followed only to a directory named `floe`, and one named `SKILL.md` only to a file named `SKILL.md`, as `floe render` follows a page's link only to a `.html` file. With `CLAUDE_CONFIG_DIR` set, `claude` writes under it; a directory there that cannot be used is told for the setting, a file under it at its own path.
 
 ## `floe publish <data.yaml>` / `floe publish --link <file|folder>`
 

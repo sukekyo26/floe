@@ -22,6 +22,7 @@ curl -fsSL https://raw.githubusercontent.com/sukekyo26/floe/main/install.sh | sh
 ## はじめる
 
 ```sh
+floe guide                   # エージェントがページを書き、検査し、出す手引き
 floe template list          # floe のテンプレート（report・design・handoff・adr・postmortem・runbook・slides）と自分のもの
 floe template show report   # report のファイルの並び。データファイルに書けるものが先
 floe template show report example.yaml   # 書き始めの見本
@@ -39,10 +40,21 @@ floe stop                   # 裏で動くサーバーを止める
 `http://127.0.0.1:7325` を開くと管理ページです。
 ページは、新しい版の Chrome・Safari（26 以降）・Firefox（147 以降）で見るのを勧めます。
 
+## エージェントのために
+
+`floe guide` は、エージェントがページを書き、検査し、出すための手引きを出します。`floe skill install <agent>` は、そのエージェントが全部のプロジェクトのスキルを読む所に、手引きを指すスキルを書きます。エージェントの名前と置き場所は `floe skill install --help` が並べます。Cursor を使うなら、Cursor は `~/.claude/skills` と `~/.agents/skills` の両方を読み、両方にあるとスキルが 2 つ並びますが、害はありません。スキルを消すには、書いた `floe` のディレクトリを消します。
+
+並んでいないエージェントには、次の 1 行を指示（AGENTS.md など）に書きます：
+
+```markdown
+To show the user a page, use floe: run `floe guide` first and follow it. It is the guide of the floe installed, so read it each time rather than from memory.
+```
+
 ## ドキュメント
 
 | したいこと | 読む | English |
 |---|---|---|
+| エージェントが最初に読む（`floe guide`） | [guide.ja.md](guide.ja.md) | [guide.md](guide.md) |
 | ページを作る（データファイルを書く） | [pages.ja.md](pages.ja.md) | [pages.md](pages.md) |
 | 自分のテンプレートを作る | [templates.ja.md](templates.ja.md) | [templates.md](templates.md) |
 | 自分の部品・テーマを作る | [parts.ja.md](parts.ja.md) | [parts.md](parts.md) |

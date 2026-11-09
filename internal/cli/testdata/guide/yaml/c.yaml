@@ -1,0 +1,8 @@
+template: report
+lang: en
+title: T
+lead: PR #100
+sections:
+  - heading: H
+    parts:
+      - text: x

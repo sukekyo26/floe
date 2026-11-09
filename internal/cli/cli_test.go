@@ -40,7 +40,7 @@ func TestRun(t *testing.T) {
 	}
 }
 
-// floe with no arguments prints its help, which lists the version command.
+// floe with no arguments prints its help, which points agents to floe guide and lists the commands.
 func TestRunHelp(t *testing.T) {
 	t.Parallel()
 
@@ -48,7 +48,8 @@ func TestRunHelp(t *testing.T) {
 	if code := cli.Run(nil, cli.Env{Stdout: &stdout, Stderr: &stderr, Dir: "", Getenv: nil}); code != 0 || stderr.Len() != 0 {
 		t.Fatalf("floe = %d, stderr %q", code, stderr.String())
 	}
-	if out := stdout.String(); !strings.HasPrefix(out, "Serve agent-written HTML pages on a local server\n") ||
+	if out := stdout.String(); !strings.HasPrefix(out, "Serve agent-written HTML pages on a local server.\n") ||
+		!strings.Contains(out, "Agents: run floe guide first") || !strings.Contains(out, "  guide       ") ||
 		!strings.Contains(out, "  version     Print the floe version\n") {
 		t.Errorf("floe printed %q", out)
 	}
@@ -133,6 +134,7 @@ func TestHelp(t *testing.T) {
 		"check\tCheck data files as their pages are drawn, without writing them\n" +
 		"completion\tGenerate the autocompletion script for the specified shell\n" +
 		"diagram\tDraw diagrams from specs of parts on a canvas\n" +
+		"guide\tPrint the guide for agents: how to write, check and publish a page\n" +
 		"help\tHelp about any command\n" +
 		"icons\tKeep icon sets for the icon parts of diagrams, and search them\n" +
 		"list\tList pages, newest first (updated, slug, title, linked path; tab-separated), archived ones left out\n" +
@@ -142,6 +144,7 @@ func TestHelp(t *testing.T) {
 		"render\tWrite the page of each data file to an HTML file beside it, or in --out-dir\n" +
 		"rm\tDelete pages in order, stopping at the first failure (a linked file itself is left alone)\n" +
 		"serve\tRun the server in the foreground\n" +
+		"skill\tInstall a skill that points your agent to floe guide\n" +
 		"stop\tStop the background server\n" +
 		"tag\tAdd tags to pages and remove tags from them, in order, stopping at the first failure\n" +
 		"template\tList the templates, show one, make one of your own, and check yours\n" +
