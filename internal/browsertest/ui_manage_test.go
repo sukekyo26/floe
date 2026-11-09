@@ -288,10 +288,21 @@ func uiExtras(t *testing.T, lang i18n.Lang, msg func(string, ...any) string) {
 	b.stub(`[{ slug: 'l', title: 'Linked', description: '', path: '/tmp/x/l.html', createdAt: at(1), updatedAt: at(1) }]`)
 	// A link is added from the lists it goes on, not from the archived.
 	out = append(out, b.eval(empties)+" "+b.eval("document.getElementById('add-link').hidden"))
+	// Its group goes with it, not to leave its room between the others.
+	check(t, "archived", []string{b.eval("document.getElementById('shelf-add').hidden + ''")}, "true")
 	b.eval("document.querySelector('.views [data-view=all]').click()")
 	out = append(out, b.eval("document.getElementById('add-link').hidden"))
 	// One kind, its group hidden: the button stays, under the group before it.
 	check(t, "one kind", []string{b.eval("[document.getElementById('shelf-kinds').hidden, document.getElementById('add-link').closest('[hidden]') === null].join(' ')")}, "true true")
+	// No group above it, one project and one kind, in the filter dialog of a narrow window: none of it cut off at the top of
+	// the box of rows, and not the first one the dialog reaches, which Enter would open.
+	b.eval("document.getElementById('narrow-filter').click()")
+	b.until("the filter dialog", "document.getElementById('filter-dialog').open")
+	check(t, "first in the dialog", []string{b.eval(`(() => {
+		const box = document.getElementById('shelf-more').getBoundingClientRect(), r = document.getElementById('add-link').getBoundingClientRect();
+		return [document.getElementById('shelf-projects').hidden, r.height > 0 && r.top >= box.top, document.activeElement.id !== 'add-link'].join(' ');
+	})()`)}, "true true true")
+	b.eval("document.getElementById('filter-dialog').close()")
 	// A change that succeeds clears the error of one that failed before, a favourite's as an archive's.
 	b.eval("window.failWrites = true; document.querySelector('#list li:not(.group) .star').click()")
 	out = append(out, b.until("the favourite to fail", "!document.getElementById('error').hidden && document.getElementById('error').textContent"))
@@ -309,6 +320,25 @@ func uiExtras(t *testing.T, lang i18n.Lang, msg func(string, ...any) string) {
 	// Nothing at all: the middle's button alone, not the shelf's too.
 	check(t, "nothing at all", []string{b.eval("document.getElementById('add-link').hidden + ''")}, "true")
 
+	// The shelf at its narrowest holds each add button's words on one line, within it. Shown for the measure alone, in the
+	// same task: this list is empty, and the task list's is the other screen's.
+	b.size(1440, 800, false)
+	b.eval("setColumn('shelf', 0)")
+	check(t, "narrowest shelf", []string{b.eval(`(() => {
+		const shelf = Math.round(document.getElementById('shelf').getBoundingClientRect().width);
+		const lines = ['add-link', 'add-task'].map((id) => {
+			const e = document.getElementById(id), was = [e.hidden, e.parentElement.hidden];
+			e.hidden = e.parentElement.hidden = false;
+			const words = [...e.childNodes].find((n) => n.nodeType === Node.TEXT_NODE), r = document.createRange();
+			r.selectNodeContents(words);
+			const n = r.getClientRects().length, inside = r.getBoundingClientRect().right <= e.getBoundingClientRect().right;
+			[e.hidden, e.parentElement.hidden] = was;
+			return id + ' ' + n + ' ' + inside;
+		});
+		return [shelf, ...lines].join(' | ');
+	})()`)}, "160 | add-link 1 true | add-task 1 true")
+	b.unsize()
+	b.eval("setColumn('shelf', 200)")
 	// The time's tooltip lines start with the label of their format ("Created %s").
 	label := func(key string) string { return strings.Fields(msg(key, ""))[0] }
 	check(t, "extras", out, strings.Join([]string{

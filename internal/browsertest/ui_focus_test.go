@@ -179,6 +179,8 @@ func TestUIFocusRing(t *testing.T) { //nolint:paralleltest // the browser tests 
 	b.size(1440, 900, false)
 	defer b.unsize()
 	b.until("the wide window", "!matchMedia('(max-width: 70rem)').matches")
+	// The shelf's add button, in the shelf beside the list, ringed as its rows.
+	check(t, "the shelf's add button", []string{tabTo("#add-link")}, "#add-link: "+ring)
 	out = out[:0]
 	out = append(out, tabTo("#shelf-hide"), tabTo("#list-hide"))
 	b.eval("document.querySelector('#list li:not(.group) .title').click(); document.getElementById('shelf-hide').click()")

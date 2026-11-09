@@ -71,7 +71,7 @@ func TestUITaskAdd(t *testing.T) { //nolint:paralleltest // the browser tests sh
 	want("the words", "document.querySelector('#tasks-empty strong').textContent + ' | ' + document.querySelector('#tasks-empty p').textContent",
 		"No tasks yet | Make one with Add task.")
 	want("no command on the screens", "document.querySelectorAll('.state code').length + ''", "0")
-	want("the head's button with no task", shown("add-task"), "false")
+	want("the shelf's button with no task", shown("add-task"), "false")
 	want("the icon, the size of the others", "document.querySelector('#task-add-empty svg').getBoundingClientRect().width + ''", "13")
 
 	// The screen of no task has the whole width, wide and narrow, the shelf folded or not, its words at the middle.
