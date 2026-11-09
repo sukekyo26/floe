@@ -123,8 +123,8 @@ func (e env) write(t *testing.T, method, path string, body any) *httptest.Respon
 func (e env) publish(t *testing.T, slug, src string, images map[string][]byte) *httptest.ResponseRecorder {
 	t.Helper()
 
-	return e.write(t, http.MethodPut, "/api/artifacts/"+slug,
-		server.Upload{File: slug + ".yaml", Source: []byte(src), Images: images, Project: "p", Place: slug + ".yaml"}) //nolint:exhaustruct // the rest not given
+	return e.write(t, http.MethodPost, "/api/artifacts/data",
+		server.Upload{File: slug + ".yaml", Source: []byte(src), Images: images, Project: "p", Place: slug + ".yaml", Slug: &slug}) //nolint:exhaustruct // the rest not given
 }
 
 func want(t *testing.T, w *httptest.ResponseRecorder, status int, body string) {
@@ -165,7 +165,7 @@ func TestProtocol(t *testing.T) {
 	want(t, e.do(t, http.MethodGet, "/a/x/%2e%2e/y", ""), http.StatusNotFound, "not found")
 	want(t, e.write(t, http.MethodPost, "/api/artifacts", map[string]any{"path": "/x", "bogus": 1}), http.StatusBadRequest,
 		`unknown object member name "bogus"`)
-	want(t, e.write(t, http.MethodPut, "/api/artifacts/x", map[string]any{
+	want(t, e.write(t, http.MethodPost, "/api/artifacts/data", map[string]any{
 		"file": "x.yaml", "source": []byte("a"), "place": "x.yaml",
 		"images": map[string][]byte{"../e.png": nil},
 	}), http.StatusBadRequest, "send each image by a slash-separated path")
@@ -179,7 +179,7 @@ func TestPublish(t *testing.T) {
 	e := newEnv(t)
 	want(t, e.publish(t, "d", "lang: en\ntemplate: pic\ntitle: T\n", nil), http.StatusCreated, `"slug":"d"`)
 	want(t, e.publish(t, "d", "lang: en\ntemplate: pic\ntitle: T\n", nil), http.StatusOK, `"prev":{"title":"T"`)
-	other := e.write(t, http.MethodPut, "/api/artifacts/d", server.Upload{File: "d.yaml", Source: []byte("lang: en\ntemplate: pic\n"), Project: "q", Place: "d.yaml"}) //nolint:exhaustruct // the rest not given
+	other := e.write(t, http.MethodPost, "/api/artifacts/data", server.Upload{File: "d.yaml", Source: []byte("lang: en\ntemplate: pic\n"), Project: "q", Place: "d.yaml"}) //nolint:exhaustruct // the rest not given
 	want(t, other, http.StatusConflict, `{"mistakes":[{"text":"slug \"d\" was published from project p: choose another slug"}]}`)
 	want(t, e.publish(t, "e", "lang: en\ntemplate: nope\n", nil), http.StatusBadRequest, `unknown template \"nope\"`)
 	asText := e.do(t, http.MethodPost, "/api/artifacts", `{"path": "rel.html"}`, "Origin", origin, "Content-Type", "application/json",
@@ -192,6 +192,13 @@ func TestPublish(t *testing.T) {
 	want(t, need, http.StatusUnprocessableEntity, `{"images":["img/a.png","img/b.png"]}`)
 	png := []byte("\x89PNG\r\n\x1a\n0000")
 	want(t, e.publish(t, "f", "lang: en\ntemplate: pic\ni: [img/a.png]\n", map[string][]byte{"img/a.png": png}), http.StatusCreated, `"slug":"f"`)
+	// Renamed, f.yaml's page is found without a slug, the images asked for and sent again.
+	want(t, e.write(t, http.MethodPatch, "/api/artifacts/f", map[string]any{"slug": "f-b"}), http.StatusOK, `"slug":"f-b"`)
+	up := server.Upload{File: "f.yaml", Source: []byte("lang: en\ntemplate: pic\ni: [img/a.png]\ntitle: two\n"), Project: "p", Place: "f.yaml"} //nolint:exhaustruct // the rest not given
+	want(t, e.write(t, http.MethodPost, "/api/artifacts/data", up), http.StatusUnprocessableEntity, `{"images":["img/a.png"]}`)
+	up.Images = map[string][]byte{"img/a.png": png}
+	want(t, e.write(t, http.MethodPost, "/api/artifacts/data", up), http.StatusOK, `"slug":"f-b"`)
+	want(t, e.write(t, http.MethodPut, "/api/artifacts/f-b", up), http.StatusNotFound, "not found")
 }
 
 // A stored page is the page drawn when published, its bytes as kept, in the sandbox and cut off, with the script
@@ -526,7 +533,7 @@ func TestNotObject(t *testing.T) {
 	e.publish(t, "d", "lang: en\ntemplate: pic\n", nil)
 	for _, to := range []struct{ method, path string }{
 		{http.MethodPost, "/api/artifacts"},
-		{http.MethodPut, "/api/artifacts/d"},
+		{http.MethodPost, "/api/artifacts/data"},
 		{http.MethodPatch, "/api/artifacts/d"},
 		{http.MethodPost, "/api/rebuild"},
 	} {
@@ -555,33 +562,33 @@ func TestStrictKeys(t *testing.T) {
 	src := `"bGFuZzogZW4KdGVtcGxhdGU6IHBpYwo="` // lang: en, template: pic
 	for _, c := range []struct{ method, path, body, told string }{
 		{http.MethodPost, "/api/artifacts", `{"Path":"/x"}`, `unknown object member name "Path"`},
-		{http.MethodPut, "/api/artifacts/e", `{"File":"e.yaml","source":` + src + `}`, `unknown object member name "File"`},
+		{http.MethodPost, "/api/artifacts/data", `{"File":"e.yaml","source":` + src + `}`, `unknown object member name "File"`},
 		{http.MethodPatch, "/api/artifacts/d", `{"Archived":true}`, `unknown object member name "Archived"`},
 		{http.MethodPost, "/api/artifacts", `{"path":"/a","path":"/b"}`, `duplicate object member name "path"`},
 		{
-			http.MethodPut, "/api/artifacts/e", `{"file":"e.yaml","file":"f.yaml","source":` + src + `}`,
+			http.MethodPost, "/api/artifacts/data", `{"file":"e.yaml","file":"f.yaml","source":` + src + `}`,
 			`duplicate object member name "file"`,
 		},
 		{
-			http.MethodPut, "/api/artifacts/e", `{"file":"e.yaml","source":` + src + `,"images":{"x.png":"YQ==","x.png":"Yg=="}}`,
+			http.MethodPost, "/api/artifacts/data", `{"file":"e.yaml","source":` + src + `,"images":{"x.png":"YQ==","x.png":"Yg=="}}`,
 			`duplicate object member name "x.png" within "/images"`,
 		},
 		{http.MethodPatch, "/api/artifacts/d", `{"title":"a","title":"b"}`, `duplicate object member name "title"`},
 		// rebuild has no field: the first x is unknown before the second is seen.
 		{http.MethodPost, "/api/rebuild", `{"x":1,"x":1}`, `unknown object member name "x"`},
 		{http.MethodPost, "/api/artifacts", `{"path":"/a\ud800"}`, "invalid surrogate pair"},
-		{http.MethodPut, "/api/artifacts/e", `{"file":"e\ud800.yaml","source":` + src + `}`, "invalid surrogate pair"},
+		{http.MethodPost, "/api/artifacts/data", `{"file":"e\ud800.yaml","source":` + src + `}`, "invalid surrogate pair"},
 		{http.MethodPatch, "/api/artifacts/d", `{"title":"\ud800"}`, "invalid surrogate pair"},
 		{http.MethodPost, "/api/rebuild", `{"\ud800":1}`, "invalid surrogate pair"},
 		{http.MethodPost, "/api/artifacts", "{\"path\":\"/a\xff\"}", "invalid UTF-8"},
-		{http.MethodPut, "/api/artifacts/e", "{\"file\":\"e\xff.yaml\",\"source\":" + src + "}", "invalid UTF-8"},
+		{http.MethodPost, "/api/artifacts/data", "{\"file\":\"e\xff.yaml\",\"source\":" + src + "}", "invalid UTF-8"},
 		{
-			http.MethodPut, "/api/artifacts/e", "{\"file\":\"e.yaml\",\"source\":" + src + ",\"images\":{\"a\xff.png\":\"YQ==\"}}",
+			http.MethodPost, "/api/artifacts/data", "{\"file\":\"e.yaml\",\"source\":" + src + ",\"images\":{\"a\xff.png\":\"YQ==\"}}",
 			"invalid UTF-8",
 		},
 		{http.MethodPatch, "/api/artifacts/d", "{\"title\":\"a\xffb\"}", "invalid UTF-8"},
 		{http.MethodPost, "/api/rebuild", "{\"a\xff\":1}", "invalid UTF-8"},
-		{http.MethodPut, "/api/artifacts/e", `{"file":"e.yaml","source":"bGFuZzogZW4KdGVtcGxhdGU6IHBpYwo=\n"}`, `within "/source"`},
+		{http.MethodPost, "/api/artifacts/data", `{"file":"e.yaml","source":"bGFuZzogZW4KdGVtcGxhdGU6IHBpYwo=\n"}`, `within "/source"`},
 	} {
 		w := e.do(t, c.method, c.path, c.body, "Origin", origin, "Content-Type", "application/json")
 		if w.Code != http.StatusBadRequest || !strings.HasPrefix(w.Body.String(), "cannot read the request: ") ||

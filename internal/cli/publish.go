@@ -93,7 +93,7 @@ func (a *app) publish(ctx context.Context, file string, link bool, opts store.Op
 		if link {
 			saved, err = a.publishLink(ctx, b)
 		} else {
-			saved, err = a.publishData(ctx, p, up, b, *opts.Slug)
+			saved, err = a.publishData(ctx, p, up, b)
 		}
 	}
 	if err != nil {
@@ -146,8 +146,8 @@ func (a *app) sent(ctx context.Context, p arg, link bool, opts store.Options) (s
 		}
 	} else {
 		up = server.Upload{
-			File: p.name, Source: nil, Images: nil, Project: "", Place: "", Title: opts.Title, Description: opts.Description,
-			Theme: opts.Theme, Force: opts.Force,
+			File: p.name, Source: nil, Images: nil, Project: "", Place: "", Slug: opts.Slug, Title: opts.Title,
+			Description: opts.Description, Theme: opts.Theme, Force: opts.Force,
 		}
 		if p.err == nil && files.IsDataFile(p.name) {
 			up.Project = project.Name(ctx, a.env.Dir)
@@ -176,18 +176,16 @@ func (a *app) publishLink(ctx context.Context, b jsontext.Value) (server.Saved, 
 	return saved, err
 }
 
-// publishData sends the data file p, up as sent encoded it in b, under slug. The images the server asks for are
-// read under the data file's directory and sent with it again, once.
-func (a *app) publishData(
-	ctx context.Context, p arg, up server.Upload, b jsontext.Value, slug string,
-) (server.Saved, error) {
+// publishData sends the data file p, up as sent encoded it in b. The images the server asks for are read under the data
+// file's directory and sent with it again, once.
+func (a *app) publishData(ctx context.Context, p arg, up server.Upload, b jsontext.Value) (server.Saved, error) {
 	var saved server.Saved
 	c, err := a.client(ctx, false)
 	if err != nil {
 		return saved, err
 	}
-	path := "/api/artifacts/" + slug
-	err = c.do(ctx, http.MethodPut, path, b, &saved)
+	const path = "/api/artifacts/data"
+	err = c.do(ctx, http.MethodPost, path, b, &saved)
 	if re, ok := errors.AsType[*remoteError](err); ok && re.status == http.StatusUnprocessableEntity {
 		var need server.ImagesNeeded
 		if err = json.Unmarshal(re.body, &need); err != nil {
@@ -197,7 +195,7 @@ func (a *app) publishData(
 			return saved, err
 		}
 		// Sent with its images, it is not asked again: a second ask is floe's failure, as a remoteError.
-		err = c.do(ctx, http.MethodPut, path, up, &saved)
+		err = c.do(ctx, http.MethodPost, path, up, &saved)
 	}
 	return saved, err
 }

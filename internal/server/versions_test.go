@@ -204,10 +204,10 @@ func TestVersionTabMark(t *testing.T) {
 	want(t, e.write(t, http.MethodPatch, "/api/artifacts/o", map[string]any{"slug": "d"}), http.StatusOK, `"slug":"d"`)
 	got = append(got, ask("/api/changed/d?since="+one+"&v=1"))
 	one = since(1)
-	// d, renamed from o, is o.yaml's: published again from it.
+	// d, renamed from o, is o.yaml's: published again from it without a slug, it is found.
 	for i := range 20 {
 		up := server.Upload{File: "o.yaml", Source: []byte(noted("n" + strconv.Itoa(i))), Project: "p", Place: "o.yaml"} //nolint:exhaustruct // the rest not given
-		want(t, e.write(t, http.MethodPut, "/api/artifacts/d", up), http.StatusOK, `"slug":"d"`)
+		want(t, e.write(t, http.MethodPost, "/api/artifacts/data", up), http.StatusOK, `"slug":"d"`)
 	}
 	got = append(got, ask("/api/changed/d?since="+one+"&v=1"))
 	want := "same same same changed same changed changed changed changed changed changed"
