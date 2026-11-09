@@ -687,6 +687,8 @@ func (s *Store) commit(e *Entry, mark string, pre *pressed) error {
 // pickAgain picks the slug of e, a publish without --slug, again under the lock, unless it holds what it held at
 // Prepare: nothing, or the file's entry. Another publish may have taken it, or the file's own been renamed, since. A
 // save picking another stored page gets its version before gzipped under the lock (nextVersion).
+// LIMIT: a slug free at Prepare and free still is kept: when another publish of the file made it and the management
+// page renamed it meanwhile, a second page is made at it. Look for the file's page under the lock if that shows.
 func (s *Store) pickAgain(e *Entry) error {
 	if e.opts.Slug != nil {
 		return nil
