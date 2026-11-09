@@ -228,8 +228,8 @@ func TestFailureWords(t *testing.T) {
 	}
 	old := map[i18n.Lang]*regexp.Regexp{"ja": regexp.MustCompile(`ませんでした|めません`), "en": regexp.MustCompile(`(?i)could not|cannot`)}
 	shape := map[i18n.Lang]*regexp.Regexp{
-		"ja": regexp.MustCompile(`に失敗しました(：%[^%]*|（%[^）]*）。.+)$`),
-		"en": regexp.MustCompile(`^Failed to .*(: %[^ ]*| \(%[^)]*\)\. .+)$`),
+		"ja": regexp.MustCompile(`に失敗しました(：%[0-9\[\]]*[a-z]|（%[0-9\[\]]*[a-z]）。.+)$`),
+		"en": regexp.MustCompile(`^Failed to .*(: %[0-9\[\]]*[a-z]| \(%[0-9\[\]]*[a-z]\)\. .+)$`),
 	}
 	for _, lang := range i18n.Langs() {
 		formats := i18n.New(lang).Formats("ui_")
