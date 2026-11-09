@@ -393,10 +393,11 @@ blockquote { border: 0; border-left: 6px solid var(--on-face, var(--accent)); pa
   /* A num column's heading wraps as long as it needs, but not a character a line */
   :scope th.num { min-width: 6em; }
 }
-:scope thead th {
-  font-size: var(--floe-text-small); font-weight: 600; color: var(--table-head-fg, var(--muted));
-  background: var(--table-head-bg, var(--quiet));
-}
+:scope thead th { font-size: var(--floe-text-small); font-weight: 600; color: var(--table-head-fg, var(--muted)); }
+/* The head's ground is its row's, so that a gradient runs once across it, not once in each cell */
+/* LIMIT: Safari is not seen to paint a row's background once across it; if it paints it in each cell, a gradient starts
+   again in each column there (aurora's line). Measure it on darwin when a head comes to rely on it more */
+:scope thead tr { background: var(--table-head-bg, var(--quiet)); }
 /* A theme sets the head's ground and colour by --table-head-bg and --table-head-fg, and the rule between rows by
    --table-rule (none for no rule) */
 :scope tbody tr + tr td { border-top: var(--table-rule, 1px solid var(--line)); }
@@ -664,17 +665,17 @@ blockquote { border: 0; border-left: 6px solid var(--on-face, var(--accent)); pa
 <style>
 @layer floe.parts.depth0 {
 @scope ([data-floe-part="findings"]:where(:not(:is([data-floe-part], [data-floe-look]) *)), [data-floe-part="table"]:where(:not(:is([data-floe-part], [data-floe-look]) *))) to (:scope [data-floe-part] > *) {
-:scope { border: 0; --table-rule: none; --table-head-bg: none; --table-head-fg: var(--on-face, var(--fg)); }
-:scope thead th { border-bottom: 2px solid var(--on-face, var(--fg)); font-weight: 800; }
-:scope tbody td { border-bottom: 1px solid var(--on-face, var(--fg)); }
-:scope :is(th, td):first-child { padding-left: 0; }
+/* A frame of black, the head black with white text, black rules between rows; in a face, the face's text colour in
+   place of the black and its ground in place of the white. The frame and the rules take the head's ground, so that a
+   band sets the two colours alone */
+:scope { --table-head-bg: var(--on-face, var(--fg)); --table-head-fg: var(--face, var(--surface)); border: 2px solid var(--table-head-bg); --table-rule: 1px solid var(--table-head-bg); }
+:scope thead th { font-weight: 800; --face: var(--table-head-bg); --on-face: var(--table-head-fg); }
 :scope td.num { font-size: 1.35rem; font-weight: 300; }
-/* In a band (band.css) the table is on the surface (panel.css), its root still in the band's face, read here, and its
-   first column leaves the part's room (its cells' 0.8rem) at the edge of the ground.
+/* In a band (band.css) the table is on the surface (panel.css), its root still in the band's face, read here: its frame,
+   rules and head are the page's black again.
    LIMIT: a browser that reads no container style query draws it in a band as in any face */
 @container style(--swiss-band: on) {
-  :scope { --table-head-fg: var(--fg); }
-  :scope :is(th, td):first-child { padding-left: 0.8rem; }
+  :scope { --table-head-bg: var(--fg); --table-head-fg: var(--surface); }
 }
 }
 }

@@ -166,9 +166,9 @@ const measureChart = `(() => {
     if (svg.querySelector('.name') && (narrow ? names !== 0 : names === 0)) out.add('names shown ' + names + ' at ' + c.clientWidth);
   }
   if ([...document.querySelectorAll('[data-floe-part=chart] svg *')].some((e) => [...e.attributes].some((a) => /NaN|Inf/.test(a.value)))) out.add('a place not a number');
-  const look = (e) => { if (!e) return 'none'; const s = getComputedStyle(e); return [s.backgroundColor, s.borderBottom, s.borderLeft, s.borderRadius, s.padding, s.fontWeight, s.color].join('/'); };
+  const look = (e) => { if (!e) return 'none'; const s = getComputedStyle(e); return [s.backgroundColor, s.backgroundImage, s.borderBottom, s.borderLeft, s.borderRadius, s.padding, s.fontWeight, s.color].join('/'); };
   const mine = charts[1].querySelector('table'), real = [...document.querySelectorAll('[data-floe-part=table] table')].find((t) => !t.closest('[data-floe-part=chart]'));
-  for (const q of ['thead th:first-child', 'thead th:last-child', 'tbody tr:nth-child(1) td:first-child', 'tbody tr:nth-child(2) td:first-child', 'tbody tr:nth-child(4) td:first-child', 'tbody tr:nth-child(4) td:last-child']) {
+  for (const q of ['thead tr', 'thead th:first-child', 'thead th:last-child', 'tbody tr:nth-child(1) td:first-child', 'tbody tr:nth-child(2) td:first-child', 'tbody tr:nth-child(4) td:first-child', 'tbody tr:nth-child(4) td:last-child']) {
     if (look(mine.querySelector(q)) !== look(real.querySelector(q))) out.add('table ' + q + ': ' + look(mine.querySelector(q)) + ' != ' + look(real.querySelector(q))); }
   return [...out].join('\n');
 })`

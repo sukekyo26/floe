@@ -384,10 +384,11 @@ blockquote { color: var(--muted); border: 0; padding: 0.9rem 1.25rem; border-rad
   /* A num column's heading wraps as long as it needs, but not a character a line */
   :scope th.num { min-width: 6em; }
 }
-:scope thead th {
-  font-size: var(--floe-text-small); font-weight: 600; color: var(--table-head-fg, var(--muted));
-  background: var(--table-head-bg, var(--quiet));
-}
+:scope thead th { font-size: var(--floe-text-small); font-weight: 600; color: var(--table-head-fg, var(--muted)); }
+/* The head's ground is its row's, so that a gradient runs once across it, not once in each cell */
+/* LIMIT: Safari is not seen to paint a row's background once across it; if it paints it in each cell, a gradient starts
+   again in each column there (aurora's line). Measure it on darwin when a head comes to rely on it more */
+:scope thead tr { background: var(--table-head-bg, var(--quiet)); }
 /* A theme sets the head's ground and colour by --table-head-bg and --table-head-fg, and the rule between rows by
    --table-rule (none for no rule) */
 :scope tbody tr + tr td { border-top: var(--table-rule, 1px solid var(--line)); }
@@ -588,6 +589,16 @@ blockquote { color: var(--muted); border: 0; padding: 0.9rem 1.25rem; border-rad
 :scope.powershell .run::before { content: "PS> "; content: "PS> " / ""; }
 :scope.cmd .run::before { content: "> "; content: "> " / ""; }
 :scope .out { color: var(--floe-code-faint); }
+}
+}
+</style>
+<style>
+@layer floe.parts.depth0 {
+@scope ([data-floe-part="findings"]:where(:not(:is([data-floe-part], [data-floe-look]) *)), [data-floe-part="table"]:where(:not(:is([data-floe-part], [data-floe-look]) *))) to (:scope [data-floe-part] > *) {
+/* Soft stripes: no rules between rows, every other row tinted faintly with the accent, the head more so */
+:scope { --table-rule: none; --table-head-bg: color-mix(in srgb, var(--accent-soft) 70%, var(--surface)); --table-head-fg: var(--accent); border-color: color-mix(in srgb, var(--line) 60%, var(--surface)); }
+:scope thead th { --face: var(--table-head-bg); --on-face: var(--table-head-fg); }
+:scope tbody tr:nth-child(even) td { background: color-mix(in srgb, var(--accent-soft) 30%, var(--surface)); }
 }
 }
 </style>
