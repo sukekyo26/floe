@@ -351,9 +351,9 @@ offered: Make #3 a new task
 new task: {"task":"#3","step":"first","pin":true}
 #1 todo design https://example.com/a/one; #2 todo build ; #3 todo first 
 a page of a task: #1 / design / out true
-written meanwhile: Could not save: task #1 has changed since it was read: the tasks are read again, so check and save again
+written meanwhile: Failed to save: task #1 has changed since it was read; the tasks are read again, so check and save again
 written meanwhile, saved: #1 todo design https://example.com/later; #2 todo build ; #3 todo first 
-refused: true Could not save: no
+refused: true Failed to save: no
 an empty name: true true 0
 a name of spaces: true Write more than spaces 3 0
 the page refused: #1 todo design https://example.com/later; #2 todo review ; #3 todo first  | {"task":"#2","step":"build"}
@@ -378,7 +378,7 @@ nothing changed: #1 todo later https://example.com/a/one; #2 todo review https:/
 typed while saving: {"task":"#1","step":"design"}
 an archived page: true 0
 pinned, told: Pinned “T b” to the task list
-refused, told: Could not save: HTTP 500: no
+refused, told: Failed to save: HTTP 500: no
 whole: #1 / whole / out true
 on its own task: true 0
 #1· To do, #2· To do, #3 a title· To do, #5 A very long title A very long title A very long title A very long title A very long title A very long title· Done

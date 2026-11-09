@@ -340,7 +340,7 @@ func TestUILoadOrder(t *testing.T) { //nolint:paralleltest // the browser tests 
 
 		// A read mark's mistake covers the load's, is taken back when a mark comes right (gone's, 404), and the load's is said again
 		const mark = () => tellRead('gone', { read: { n: 1, at: 'x' }, say: false });
-		const marked = t('ui_http_error', 'marks broken', 500);
+		const marked = t('ui_read_failed', t('ui_http_error', 'marks broken', 500));
 		markBroken = true;
 		await mark();
 		say('a mark over the load', marked);

@@ -137,7 +137,7 @@ func TestUIRead(t *testing.T) { //nolint:paralleltest // the browser tests share
 	b.navigate("/a/bad/")
 	shown := "document.getElementById('error').hidden ? '' : document.getElementById('error').textContent"
 	got := b.until("the refusal", shown)
-	if want := "HTTP 400: " + reads + ": is missing, broken or has no since: run floe stop, then floe serve, which writes it anew"; got != want {
+	if want := "Failed to mark as read: HTTP 400: " + reads + ": is missing, broken or has no since: run floe stop, then floe serve, which writes it anew"; got != want {
 		t.Errorf("shown %q, want %q", got, want)
 	}
 	if got := b.eval("document.querySelectorAll('.toast').length"); got != "0" {

@@ -142,19 +142,19 @@ func TestUITaskRev(t *testing.T) { //nolint:paralleltest // the browser tests sh
 	say("whole, again", setSave)
 
 	check(t, "task revs", out, strings.Join([]string{
-		`written since: /api/tasks {"new":false,"rev":1,"state":"waiting"} | done | done | The state could not be changed: task #130 has changed since it was read`,
+		`written since: /api/tasks {"new":false,"rev":1,"state":"waiting"} | done | done | Failed to change the state: task #130 has changed since it was read`,
 		`archived: /api/tasks {"new":false,"rev":2,"state":"archived"} | archived | pa as it was`,
 		`given back: /api/tasks {"new":false,"rev":3,"state":"done"} | done | pa as it was`,
-		`no rev: none | The state could not be changed: the task shown could not be read; load the page again`,
+		`no rev: none | Failed to change the state: the version of the task shown is not known; load the page again`,
 		`then off its parent: /api/tasks {"new":false,"rev":2,"parent":""} | no parent | no error`,
 		`reads failing, the state twice: /api/tasks {"new":false,"rev":4,"state":"done"} ; /api/tasks {"new":false,"rev":5,"state":"doing"} | doing`,
 		`reads failing, off, back, off: /api/tasks {"new":false,"rev":6,"parent":""} ; /api/tasks {"new":false,"rev":7,"parent":"#up","parentNew":false} ; /api/tasks {"new":false,"rev":8,"parent":""} | no parent`,
-		`off, the state, back: Could not save: task #kid has changed since it was read`,
-		`the list, the page refused: Could not save: HTTP 500: no`,
-		`the list, written since: Could not save: task #130 has changed since it was read: the tasks are read again, so check and save again`,
-		`a new task, the page refused: Could not save: HTTP 500: no`,
+		`off, the state, back: Failed to save: task #kid has changed since it was read`,
+		`the list, the page refused: Failed to save: HTTP 500: no`,
+		`the list, written since: Failed to save: task #130 has changed since it was read; the tasks are read again, so check and save again`,
+		`a new task, the page refused: Failed to save: HTTP 500: no`,
 		`a new task, again: saved`,
-		`whole, the page refused: Could not save: HTTP 500: no`,
+		`whole, the page refused: Failed to save: HTTP 500: no`,
 		`whole, again: saved`,
 	}, "|"))
 }

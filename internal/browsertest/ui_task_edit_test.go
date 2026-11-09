@@ -177,6 +177,11 @@ func TestUITaskEdit(t *testing.T) { //nolint:paralleltest // the browser tests s
 	field("edit-task-url", "ftp://x")
 	save("refused")
 	say("refused", errorText+" + ' / ' + document.getElementById('edit-task-dialog').open")
+	// Not reached: said as a save that failed, not as the browser's words alone.
+	b.eval("window.cutFetch = window.fetch; window.fetch = (url, init) => (String(url).startsWith('/api/tasks') && init?.method === 'PATCH' ? Promise.reject(new TypeError('Failed to fetch')) : window.cutFetch(url, init))")
+	save("not reached")
+	say("not reached", errorText+" + ' / ' + document.getElementById('edit-task-dialog').open")
+	b.eval("window.fetch = window.cutFetch")
 	field("edit-task-url", "")
 	field("edit-task-title", "")
 	save("saved empty")
@@ -253,10 +258,11 @@ func TestUITaskEdit(t *testing.T) { //nolint:paralleltest // the browser tests s
 		"words dragged: 0 / リリース no page^,設計,レビュー,実装,案v",
 		"drag: 8 New title https://example.com/489 [リリース,設計,レビュー,実装,案]",
 		"no grip without hover: true",
-		`refused: Could not save: "ftp://x" is not an http or https URL / true`,
+		`refused: Failed to save: "ftp://x" is not an http or https URL / true`,
+		"not reached: Failed to save: Failed to fetch / true",
 		"emptied: 9   [リリース,設計,レビュー,実装,案]",
 		"opened over the drawn task: Later / 10",
-		"stale: Typed / https://example.com/new / リリース no page^,設計,レビュー,実装,案v / task S300 has changed since it was read: the tasks are read again, so check and save again",
+		"stale: Typed / https://example.com/new / リリース no page^,設計,レビュー,実装,案v / Failed to save: task S300 has changed since it was read; the tasks are read again, so check and save again",
 		"again: 12 Typed https://example.com/new [リリース,設計,レビュー,実装,案]",
 		`sent stale and again: {"new":false,"rev":10,"title":"Typed"} ; {"new":false,"rev":11,"title":"Typed"}`,
 		"stale order: 設計^,レビュー,案,実装v",

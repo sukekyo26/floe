@@ -183,7 +183,7 @@ Space: p5,p4,p3,p2 | p5 pin unseen
 a double press: p4,p3,p2 | p4 icon-btn pin-off
 from the search: p3,p2 |  find-q
 refused: p3,p2 | p3 icon-btn pin-off
-said: Could not save: HTTP 404: no such page alert
+said: Failed to save: HTTP 404: no such page alert
 nothing of the pins changed: true
 a pin changed: p3,p2 | p3 icon-btn pin-off
 drawn anew: true

@@ -139,6 +139,17 @@ func TestUIRowAgainUnread(t *testing.T) { //nolint:paralleltest // the browser t
 	b.until("its toast whole", "document.querySelector('.toast.page .btn')")
 }
 
+// TestUIReadRefused says a read the server refuses as a failure to mark the page read, the server's answer its reason.
+func TestUIReadRefused(t *testing.T) { //nolint:paralleltest // the browser tests share one Chrome, one at a time
+	s := unreadSite(t)
+	b := s.b
+	unreadList(b)
+	b.eval("window.plan.POST = [500]")
+	pickUnread(b, "p1")
+	b.until("refused", "document.getElementById('error').textContent !== ''")
+	check(t, "refused", []string{b.eval("document.getElementById('error').textContent")}, "Failed to mark as read: HTTP 500: no")
+}
+
 // TestUIUnreadKept keeps a page marked unread as it draws itself anew, whatever else goes on, until another page is opened; and a
 // page read as it draws itself anew says nothing.
 func TestUIUnreadKept(t *testing.T) { //nolint:paralleltest // the browser tests share one Chrome, one at a time
@@ -171,7 +182,7 @@ func TestUIUnreadKept(t *testing.T) { //nolint:paralleltest // the browser tests
 	out = append(out, posts("p1"))
 	b.eval("window.plan.DELETE = [500]; markUnread('p3')")
 	sentAll(b)
-	out = append(out, b.eval("document.getElementById('error').textContent.includes('Could not mark as unread') + ' ' + keptUnread"))
+	out = append(out, b.eval("(document.getElementById('error').textContent === 'Failed to mark as unread: HTTP 500: no') + ' ' + keptUnread"))
 	anew()
 	out = append(out, posts("p1"))
 	isUnseen(b, "p1", true)

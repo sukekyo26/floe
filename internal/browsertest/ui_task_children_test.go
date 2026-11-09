@@ -284,7 +284,7 @@ func TestUITaskChildren(t *testing.T) { //nolint:paralleltest // the browser tes
 	open("#99")
 	write("#20", "")
 	b.until("refused", "!document.getElementById('kin-error').hidden")
-	want := "Could not save: task #20 has child tasks, such as #21, so it cannot have a parent: tasks have one level of children | #20 |  | true"
+	want := "Failed to save: task #20 has child tasks, such as #21, so it cannot have a parent: tasks have one level of children | #20 |  | true"
 	if got := b.eval("[document.getElementById('kin-error').textContent, document.getElementById('kin-task').value, document.getElementById('kin-title').value, document.getElementById('kin-dialog').open].join(' | ')"); got != want {
 		t.Errorf("a task with children: %q", got)
 	}
@@ -313,7 +313,7 @@ func TestUITaskChildren(t *testing.T) { //nolint:paralleltest // the browser tes
 	task("proj", "#106", "--parent", "#1")
 	press("kin-submit")
 	b.until("refused", "!document.getElementById('kin-error').hidden")
-	if got := b.eval("document.getElementById('kin-error').textContent + '|' + document.getElementById('kin-note').textContent + '|' + document.getElementById('kin-title').closest('label').hidden"); got != "Could not save: task #106 is there already: the tasks are read again, so check and save again|#106 becomes a child, moving from its parent #1|true" {
+	if got := b.eval("document.getElementById('kin-error').textContent + '|' + document.getElementById('kin-note').textContent + '|' + document.getElementById('kin-title').closest('label').hidden"); got != "Failed to save: task #106 is there already; the tasks are read again, so check and save again|#106 becomes a child, moving from its parent #1|true" {
 		t.Errorf("made meanwhile: %q", got)
 	}
 	press("kin-submit")
@@ -338,7 +338,7 @@ func TestUITaskChildren(t *testing.T) { //nolint:paralleltest // the browser tes
 	b.until("#107 gone", "!tasksOf().some((x) => x.name === '#107')")
 	press("kin-submit")
 	b.until("refused", "!document.getElementById('kin-error').hidden")
-	if got := b.eval("document.getElementById('kin-error').textContent + '|' + document.getElementById('kin-title').closest('label').hidden"); got != "Could not save: task #107 is no longer there: the tasks are read again, so check and save again|false" {
+	if got := b.eval("document.getElementById('kin-error').textContent + '|' + document.getElementById('kin-title').closest('label').hidden"); got != "Failed to save: task #107 is no longer there; the tasks are read again, so check and save again|false" {
 		t.Errorf("gone meanwhile: %q", got)
 	}
 	b.eval("document.getElementById('kin-dialog').close()")
@@ -358,7 +358,7 @@ func TestUITaskChildren(t *testing.T) { //nolint:paralleltest // the browser tes
 	b.eval("window.realFetch = window.fetch; window.fetch = (url, init) => (init?.method === 'DELETE' ? Promise.resolve(new Response('it has a page', { status: 400 })) : window.realFetch(url, init))")
 	pressForget()
 	b.until("refused", "!document.getElementById('task-delete-error').hidden")
-	if got := b.eval("document.getElementById('task-delete-error').textContent + ' | ' + document.getElementById('task-delete').textContent"); got != "Could not remove it: it has a page | Remove the task" {
+	if got := b.eval("document.getElementById('task-delete-error').textContent + ' | ' + document.getElementById('task-delete').textContent"); got != "Failed to remove the task: it has a page | Remove the task" {
 		t.Errorf("refused: %q", got)
 	}
 	// The connection lost says so too, and the next press takes the words off.
@@ -559,13 +559,13 @@ func TestUITaskSetTitle(t *testing.T) { //nolint:paralleltest // the browser tes
 		}
 		save()
 	}
-	stale("c", "#90", "mine", "task #90 is there already: the tasks are read again", func() {
+	stale("c", "#90", "mine", "task #90 is there already; the tasks are read again", func() {
 		s.floe(t, "work", "--project", project, "--task", "#90", "--title", "theirs")
 	})
 	s.floe(t, "work", "--project", project, "--task", "#91")
 	b.eval("load()")
 	b.until("#91 read", "tasksOf().some((x) => x.name === '#91')")
-	stale("c", "#91", "", "task #91 is no longer there: the tasks are read again", func() {
+	stale("c", "#91", "", "task #91 is no longer there; the tasks are read again", func() {
 		s.floe(t, "work", "--project", project, "--task", "#91", "--forget")
 	})
 	all, err := st.ReadTasks()
