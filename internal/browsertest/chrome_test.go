@@ -542,7 +542,10 @@ func (s *site) floePages(t *testing.T, visit func(what string)) {
 		visit(name)
 	}
 	for _, tmpl := range templates {
-		tpl, _ := k.Template(tmpl)
+		tpl, _, err := k.Template(tmpl)
+		if err != nil {
+			t.Fatal(err)
+		}
 		example := s.write(t, tmpl+".yaml", string(tpl.Example()))
 		for _, name := range themes {
 			slug := "template-" + tmpl + "-" + name

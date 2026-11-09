@@ -176,7 +176,10 @@ func lookTemplateMarkdown(t *testing.T, s *site) measured {
 	}
 	var m measured
 	for _, name := range templates {
-		tpl, ok := k.Template(name)
+		tpl, ok, err := k.Template(name)
+		if err != nil {
+			t.Fatal(err)
+		}
 		if !ok {
 			t.Fatalf("floe has no template %s, though it names it", name)
 		}
