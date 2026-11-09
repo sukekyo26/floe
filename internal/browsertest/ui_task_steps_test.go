@@ -46,7 +46,7 @@ func TestUITaskSteps(t *testing.T) { //nolint:paralleltest // the browser tests 
 	if _, err := st.Edit("old-a", store.Edit{Archived: &yes}); err != nil {
 		t.Fatal(err)
 	}
-	s.floe(t, "work", "--project", "proj", "--task", "S300", "--title", "Steps", "--steps", "案,実装,リリース,Archive")
+	s.floe(t, "work", "--project", "proj", "--task", "S300", "--title", "Steps", "--steps", "案,実装,リリース")
 	// G2 has no row: its one page alone makes it, written to the page alone
 	g2, x := "G2", "x"
 	if _, err := st.Edit("g-a", store.Edit{Work: &store.WorkEdit{Task: &g2, Step: &x}}); err != nil {
@@ -109,7 +109,8 @@ func TestUITaskSteps(t *testing.T) { //nolint:paralleltest // the browser tests 
 		b.eval("const m = document.querySelector('#list li[data-slug=" + slug + "] .more'); m.open = true; m.querySelector('.menu ." + item + "').dispatchEvent(new MouseEvent('click', { bubbles: true, detail: " + detail + " }))")
 	}
 
-	// Every step a heading with its add button, one of no page saying so; neither the steps' none nor the archived have one.
+	// Every step a heading with its add button, one of no page saying so; the steps' none has none. The archived page is under its step,
+	// after the rest.
 	open("S300")
 	say("groups", groups)
 	say("keys apart", "(() => { const keys = [...document.querySelectorAll('#list li')].map((li) => li.dataset.key); return new Set(keys).size === keys.length; })()")
@@ -189,7 +190,7 @@ func TestUITaskSteps(t *testing.T) { //nolint:paralleltest // the browser tests 
 	b.pressKey(kb.Escape)
 	b.size(1400, 900, false)
 
-	// Off its task by a pointer: the page alone written; its step of pages alone goes with it, the focus on the row after; the way back
+	// Off its task by a pointer: the page alone written; its step of pages alone goes with it, the focus on the row after, or before; the way back
 	// writes the page's work back alone, the task's row as it was.
 	open("S300")
 	menu("review-a", "task-out", false)
@@ -236,7 +237,7 @@ func TestUITaskSteps(t *testing.T) { //nolint:paralleltest // the browser tests 
 	out = append(out, "dialog, written: "+work("build-a"))
 
 	check(t, "task steps", out, strings.Join([]string{
-		"groups: note-a [案+] plan-a [実装+] build-a [リリース+ none] [Archive+ none] [レビュー+] review-a [Archive] old-a",
+		"groups: note-a [案+] plan-a old-a [実装+] build-a [リリース+ none] [レビュー+] review-a",
 		"keys apart: true",
 		"named: Add a page to リリース",
 		"opened: Add a page to リリース / S300 Steps / add-page-q / null",
@@ -248,7 +249,7 @@ func TestUITaskSteps(t *testing.T) { //nolint:paralleltest // the browser tests 
 		"put, told: Put T check-a under リリース",
 		"put, focus: Add a page to リリース",
 		"put, written: 6 リリース / S300/リリース",
-		"put, groups: note-a [案+] plan-a [実装+] build-a [リリース+] check-a [Archive+ none] [レビュー+] review-a [Archive] old-a",
+		"put, groups: note-a [案+] plan-a old-a [実装+] build-a [リリース+] check-a [レビュー+] review-a",
 		"stale: task S300 has changed since it was read: the tasks are read again, so check and save again / true / memo-a",
 		"stale, typed: true",
 		`stale, then: /api/tasks {"new":false,"rev":6,"step":"リリース"} ; /api/tasks {"new":false,"rev":7,"step":"リリース"} ; /api/artifacts/memo-a {"work":{"task":"S300","step":"リリース"}}`,
@@ -258,12 +259,12 @@ func TestUITaskSteps(t *testing.T) { //nolint:paralleltest // the browser tests 
 		"page refused, written: 8 案 / S300/案",
 		"moved from a task: Moved T other-a from S301's 設計 to 案",
 		"moved from a step: Moved T build-a from 実装 to リリース",
-		"moved, groups: [案+] plan-a note-a other-a [実装+ none] [リリース+] build-a memo-a check-a [Archive+ none] [レビュー+] review-a [Archive] old-a",
+		"moved, groups: [案+] plan-a note-a other-a old-a [実装+ none] [リリース+] build-a memo-a check-a [レビュー+] review-a",
 		"narrow: true",
 		`off: /api/artifacts/review-a {"work":{"task":"","step":""}}`,
 		"off, told: Took T review-a off task S300Undo",
-		"off, focus: old-a",
-		"off, groups: [案+] plan-a note-a other-a [実装+ none] [リリース+] build-a memo-a check-a [Archive+ none] [Archive] old-a",
+		"off, focus: check-a",
+		"off, groups: [案+] plan-a note-a other-a old-a [実装+ none] [リリース+] build-a memo-a check-a",
 		`back: /api/artifacts/review-a {"work":{"task":"S300","step":"レビュー"}}`,
 		"back, written: 9 リリース / S300/レビュー",
 		"keys, focus: btn undo",
