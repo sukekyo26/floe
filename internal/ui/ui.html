@@ -5935,8 +5935,9 @@
     $('settings-title').textContent = t(a ? 'ui_theme_page' : 'ui_settings');
     $('theme-page').hidden = !a;
     $('theme-page').textContent = a?.title ?? '';
-    $('settings').querySelector('.page-icon').hidden = !a;
-    $('settings').querySelector('.settings-icon').hidden = Boolean(a);
+    // An svg has no hidden property: the attribute
+    $('settings').querySelector('.page-icon').toggleAttribute('hidden', !a);
+    $('settings').querySelector('.settings-icon').toggleAttribute('hidden', Boolean(a));
     // A page's modal is headed by its own title, which labels the cards
     $('theme-title').hidden = Boolean(a);
     $('theme-grid').setAttribute('aria-labelledby', a ? 'settings-title' : 'theme-title');

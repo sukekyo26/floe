@@ -69,12 +69,15 @@ func TestUIPageTheme(t *testing.T) { //nolint:paralleltest // the browser tests 
 		b.eval("document.querySelector('#list li[data-slug=p] .more').open = true; document.querySelector('#list li[data-slug=p] .theme-item').click()")
 		b.until("the cards", "document.getElementById('settings').open && document.querySelectorAll('#theme-grid .theme-card').length >= 13")
 	}
+	// The icon seen at the head of the modal
+	const icon = "[...document.querySelectorAll('#settings .modal-head svg')].filter((e) => e.getClientRects().length).map((e) => e.getAttribute('class')).join()"
 	open()
-	out := make([]string, 0, 13)
+	out := make([]string, 0, 16)
 	out = append(out,
 		b.eval("[document.getElementById('settings-title').textContent, document.getElementById('theme-page').textContent, document.getElementById('theme-now').textContent].join(' / ')"),
 		b.eval("[...document.querySelector('#theme-grid .theme-card').querySelectorAll('.theme-shot, .nm')].map((e) => e.textContent).join(' / ')"),
 		b.eval("JSON.stringify(document.querySelector('#theme-grid input:checked').value)"),
+		b.eval(icon),
 	)
 	b.eval("document.querySelector('#theme-grid input[value=ink]').click(); document.getElementById('theme-choose').click()")
 	b.until("the toast", "[...document.querySelectorAll('.toast')].some((e) => e.textContent.includes(\"Changed this page's theme to ink\"))")
@@ -99,14 +102,19 @@ func TestUIPageTheme(t *testing.T) { //nolint:paralleltest // the browser tests 
 	b.eval("openThemes({ ...items.find((a) => a.slug === 'p'), pickedTheme: 'acme' })")
 	b.until("the cards", "document.querySelectorAll('#theme-grid .theme-card').length >= 13")
 	out = append(out, b.eval("document.getElementById('theme-now').textContent"), b.eval("String(document.querySelector('#theme-grid input:checked'))"))
+	// The settings again, after a page's: of their own head
+	b.eval("document.getElementById('settings').close(); openThemes()")
+	b.until("the settings", "document.getElementById('settings').open")
+	out = append(out, b.eval("[document.getElementById('settings-title').textContent, document.getElementById('theme-page').hidden, document.getElementById('theme-title').hidden].join(' / ')"), b.eval(icon))
 	check(t, "page theme", out, strings.Join([]string{
 		"This page's theme / P / Choosing draws this page alone again. The theme chosen stays when the page is updated.",
 		"The theme written in the page, or the default theme when it was first stored / None chosen",
-		`""`,
+		`""`, "page-icon",
 		"false", "true", "true",
 		"ink",
 		"Failed to change this page's theme: the page changed meanwhile. Choose again", "true",
 		"Failed to change this page's theme: the page is not drawn in this theme, and keeps its look", "true",
 		"Chosen: acme (not found). Choose another theme.", "null",
+		"Settings / true / false", "settings-icon",
 	}, "|"))
 }
