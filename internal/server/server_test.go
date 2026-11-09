@@ -412,7 +412,7 @@ func TestEditArchived(t *testing.T) {
 
 	e := newEnv(t)
 	e.publish(t, "d", "lang: en\ntemplate: pic\n", nil)
-	want(t, e.write(t, http.MethodPatch, "/api/artifacts/d", map[string]any{"archived": true}), http.StatusOK, `{"slug":"d"}`)
+	want(t, e.write(t, http.MethodPatch, "/api/artifacts/d", map[string]any{"archived": true}), http.StatusOK, `{"slug":"d",`)
 	want(t, e.do(t, http.MethodGet, "/api/artifacts", ""), http.StatusOK, `"archived":true`)
 	// encoding/json/v2 says "cannot" or "unable to" as the process falls: what follows the verb is told.
 	for body, told := range map[string]string{
@@ -425,7 +425,7 @@ func TestEditArchived(t *testing.T) {
 			t.Errorf("%s: answered %d %q, want %q", body, w.Code, w.Body.String(), told)
 		}
 	}
-	want(t, e.write(t, http.MethodPatch, "/api/artifacts/d", map[string]any{"archived": false}), http.StatusOK, `{"slug":"d"}`)
+	want(t, e.write(t, http.MethodPatch, "/api/artifacts/d", map[string]any{"archived": false}), http.StatusOK, `{"slug":"d",`)
 	if w := e.do(t, http.MethodGet, "/api/artifacts", ""); strings.Contains(w.Body.String(), "archived") {
 		t.Errorf("given back, still listed archived: %s", w.Body.String())
 	}
@@ -477,7 +477,7 @@ func TestEditKeys(t *testing.T) {
 		// Kept on, for the rename below to keep.
 		{`{"tags":{"add":["k"]}}`, func(f *fields) { f.tags = "k" }},
 	} {
-		want(t, e.write(t, http.MethodPatch, "/api/artifacts/d", json.RawMessage(c.body)), http.StatusOK, `{"slug":"d"}`)
+		want(t, e.write(t, http.MethodPatch, "/api/artifacts/d", json.RawMessage(c.body)), http.StatusOK, `{"slug":"d",`)
 		c.change(&now)
 		if got := look("d"); got != now {
 			t.Errorf("%s: %+v, want %+v", c.body, got, now)
@@ -500,7 +500,7 @@ func TestEditKeys(t *testing.T) {
 	}
 	want(t, e.write(t, http.MethodPatch, "/api/artifacts/none", json.RawMessage(`{"x":1}`)), http.StatusBadRequest,
 		`unknown object member name "x"`)
-	want(t, e.write(t, http.MethodPatch, "/api/artifacts/d", json.RawMessage(`{"slug":"e"}`)), http.StatusOK, `{"slug":"e"}`)
+	want(t, e.write(t, http.MethodPatch, "/api/artifacts/d", json.RawMessage(`{"slug":"e"}`)), http.StatusOK, `{"slug":"e",`)
 	if got := look("e"); got != now {
 		t.Errorf("renamed: %+v, want %+v", got, now)
 	}
