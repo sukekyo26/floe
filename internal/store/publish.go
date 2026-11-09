@@ -142,6 +142,9 @@ type Entry struct {
 	place string // the place of a stored page's data file in from, "" for a link
 	// named is what a link without --slug is named after, for Save to pick its slug again: "" else.
 	named string
+	// created is the default theme the page was drawn with, which settle keeps for a new page, or one replacing
+	// another file's, as its CreatedTheme: read before the drawing, not at Save, so that the two agree.
+	created string
 }
 
 // Upload is a data file sent for a publish: what PrepareData checks and builds a stored page of, without
@@ -208,8 +211,13 @@ func (s *Store) PrepareData(dw Drawing, up Upload, opts Options) (*Entry, error)
 		sent[name] = &fstest.MapFile{Data: b, Mode: 0, ModTime: time.Time{}, Sys: nil}
 	}
 	images := &recorder{fsys: sent, names: nil, seen: map[string]bool{}}
+	created, err := s.createdFor(*opts.Slug, "", up.Project, up.Place, opts.Force)
+	if err != nil {
+		return nil, err
+	}
 	o := tmpl.Options{
-		Theme: opts.theme(), Untitled: *opts.Slug, Images: images, ImagesDir: "", Icons: dw.Icons, CutOff: false,
+		Theme: opts.theme(), Default: created, Untitled: *opts.Slug, Images: images, ImagesDir: "", Icons: dw.Icons,
+		CutOff: false,
 	}
 	page, warnings, drawErr := tmpl.Draw(dw.Kit, up.File, up.Source, o)
 	var mistakes usererr.List
@@ -233,6 +241,7 @@ func (s *Store) PrepareData(dw Drawing, up Upload, opts Options) (*Entry, error)
 	}
 	e.Page = page
 	e.Warnings = warnings
+	e.created = created
 	e.Images = map[string][]byte{}
 	for _, name := range images.names {
 		if b, ok := up.Images[name]; ok {
@@ -266,7 +275,7 @@ func imagesApart(file string, images map[string][]byte) error {
 func (s *Store) storedPage(file string, src []byte, opts Options, from, place string) (*Entry, error) {
 	e := &Entry{
 		Slug: *opts.Slug, Meta: seedMeta("", file, src, opts.theme()), Source: src, Page: nil, Images: nil,
-		Prev: nil, Warnings: nil, opts: opts, from: from, place: place, named: "",
+		Prev: nil, Warnings: nil, opts: opts, from: from, place: place, named: "", created: "",
 	}
 	if err := e.settle(s.ReadMeta(e.Slug)); err != nil {
 		return nil, err
@@ -311,13 +320,20 @@ func (s *Store) PrepareLink(
 	}
 	var data []byte
 	var warnings []*usererr.Error
+	created := ""
 	if !folder && files.IsDataFile(path) {
 		if dw.Err != nil {
 			return nil, dw.Err
 		}
+		if created, err = s.createdFor(slug, path, from, "", opts.Force); err != nil {
+			return nil, err
+		}
 		data = src
 		images := files.NewRoot(filepath.Dir(path))
-		o := tmpl.Options{Theme: opts.theme(), Untitled: slug, Images: images, ImagesDir: "", Icons: dw.Icons, CutOff: false}
+		o := tmpl.Options{
+			Theme: opts.theme(), Default: created, Untitled: slug, Images: images, ImagesDir: "", Icons: dw.Icons,
+			CutOff: false,
+		}
 		_, warnings, err = tmpl.Draw(dw.Kit, path, src, o)
 		_ = images.Close() //nolint:errcheck // only read from
 		if err != nil {
@@ -329,7 +345,7 @@ func (s *Store) PrepareLink(
 	}
 	e := &Entry{
 		Slug: slug, Meta: seedMeta(path, path, data, opts.theme()), Source: nil, Page: nil, Images: nil, Prev: nil,
-		Warnings: warnings, opts: opts, from: from, place: "", named: named,
+		Warnings: warnings, opts: opts, from: from, place: "", named: named, created: created,
 	}
 	e.Meta.Folder = folder
 	// A folder's own title, as a data file's title: is: where it is in its repository, its repository's name at its
@@ -375,6 +391,9 @@ func (e *Entry) settle(prev *Meta) error {
 		base = &none
 	}
 	e.Meta = newMeta(e.opts, was.Path, e.from, e.place, base, was.DataTitle, e.Slug)
+	if replacing || prev == nil {
+		e.Meta.CreatedTheme = e.created
+	}
 	e.Meta.Theme = was.Theme
 	e.Meta.Template = was.Template
 	// A folder's link lost its folder would serve its parent's files.
@@ -419,6 +438,22 @@ func readLink(file string, opts Options, cwd, home string) (string, []byte, bool
 	return path, b, false, nil
 }
 
+// createdFor returns the default theme a page drawn from a data file at slug is drawn with: the one settings.json
+// chooses for a new page, or one replacing another file's (checkOwner), else the one the page has. It looks at
+// meta.json without the lock, before the drawing: settle keeps the value returned (Entry.created), so that the page
+// drawn and its meta.json agree. A mistake of the owner is told by settle, after the drawing, as without it.
+// LIMIT: a page there when it is read, but replaced by another publish before Save, is kept as replacing with the
+// default it had, the one it was drawn with; refuse it at Save if that comes to matter.
+func (s *Store) createdFor(slug, path, from, place string, force bool) (string, error) {
+	prev := s.ReadMeta(slug)
+	replacing, _ := checkOwner(slug, prev, path, from, place, force) //nolint:errcheck // told by settle, as above
+	if prev != nil && !replacing {
+		return prev.CreatedTheme, nil
+	}
+	set, err := s.ReadSettings()
+	return set.Theme, err
+}
+
 // newMeta keeps what was set on the management page (favourite, title, project, tags), the description and
 // createdAt from base, but not archived: a page published again comes back to the list. --title and
 // --description win. A stored page is owned by from and the file at place in it; an empty place keeps base's.
@@ -432,6 +467,7 @@ func newMeta(opts Options, path, from, place string, base *Meta, own, slug strin
 		TitleEdited:   keepTitle,
 		Description:   base.Description,
 		Theme:         "",
+		CreatedTheme:  base.CreatedTheme,
 		DataTitle:     own,
 		Template:      "",
 		Source:        "",

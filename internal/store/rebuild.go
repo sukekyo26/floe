@@ -130,7 +130,10 @@ func redraw(dw Drawing, slug string, m *Meta, dir string) (*drawn, error) {
 	// while the list keeps the title it had. Keep the title drawn under in meta.json if that comes to matter.
 	// LIMIT: kit_image_path names the directory of data, not images/, for a name floe no longer reads, which
 	// a publish checked by the same rule. Have draw name it by ImagesDir too if the rule comes to change.
-	o := tmpl.Options{Theme: m.Theme, Untitled: slug, Images: images, ImagesDir: imagesDir, Icons: dw.Icons, CutOff: false}
+	o := tmpl.Options{
+		Theme: m.Theme, Default: m.CreatedTheme, Untitled: slug, Images: images, ImagesDir: imagesDir, Icons: dw.Icons,
+		CutOff: false,
+	}
 	// Its warnings are of the copy, which no one mends: a publish of the data file tells them.
 	page, _, err := tmpl.Draw(dw.Kit, data, src, o)
 	if err != nil {

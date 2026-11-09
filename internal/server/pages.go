@@ -178,7 +178,10 @@ func drawLink(slug string, m *store.Meta, file string, drawing store.Drawing, cu
 	}
 	images := files.NewRoot(filepath.Dir(file))
 	defer images.Close() //nolint:errcheck // only read from
-	o := tmpl.Options{Theme: m.Theme, Untitled: slug, Images: images, ImagesDir: "", Icons: drawing.Icons, CutOff: cut}
+	o := tmpl.Options{
+		Theme: m.Theme, Default: m.CreatedTheme, Untitled: slug, Images: images, ImagesDir: "", Icons: drawing.Icons,
+		CutOff: cut,
+	}
 	// Its warnings are the writer's, whom publish and check tell; one who opens the page cannot mend them.
 	page, _, err := tmpl.Draw(drawing.Kit, file, src, o)
 	return page, err //nolint:wrapcheck // its mistakes, or what failed

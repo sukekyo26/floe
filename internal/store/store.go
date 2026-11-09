@@ -69,6 +69,9 @@ type Meta struct {
 	// in its repository when linked (docs/v1), else its name.
 	Theme     string `json:"theme,omitempty"`
 	DataTitle string `json:"dataTitle,omitempty"`
+	// CreatedTheme is the default theme of settings.json when a page drawn from a data file was first stored, or
+	// replaced by another file's: the default it is drawn with for good, under --theme and the data's theme:.
+	CreatedTheme string `json:"createdTheme,omitempty"`
 	// Template is the template a stored page is drawn with, read from its data file at each publish and rebuild.
 	Template string `json:"template,omitempty"`
 	// Source is the directory of a stored page's copy, under its own; a new one each publish and rebuild.
