@@ -7,6 +7,7 @@ import (
 	"html/template"
 	"strings"
 
+	cjkfriendly "github.com/tats-u/goldmark-cjk-friendly/v2"
 	"github.com/yuin/goldmark"
 	"github.com/yuin/goldmark/ast"
 	"github.com/yuin/goldmark/extension"
@@ -47,17 +48,24 @@ func line(md goldmark.Markdown, name, text string) (template.HTML, error) {
 	return template.HTML(html), nil //nolint:gosec // G203: raw HTML is escaped (newMarkdown)
 }
 
-// markdown is GFM, as extension.GFM lists its extensions, but its strikethrough of two tildes alone.
+// markdown is GFM, as extension.GFM lists its extensions, but its strikethrough of two tildes alone, and its * and ~~
+// beside CJK letters read by markdown-cjk-friendly (newMarkdown).
 // LIMIT: GFM's extensions are listed by hand; TestMarkdownIsGFM fails when goldmark adds one to extension.GFM.
 var markdown = newMarkdown(
 	goldmark.WithExtensions(extension.Linkify, extension.Table, strikethrough, extension.TaskList),
 )
 
-// newMarkdown is a goldmark of opts that writes raw HTML as the text written (rawAsText): every Markdown of floe is
-// made here, so that no tag written in it reaches the page.
+// newMarkdown is a goldmark of opts that writes raw HTML as the text written (rawAsText), and reads * and _ beside CJK
+// letters by markdown-cjk-friendly: every Markdown of floe is made here, so that no tag written in it reaches the page
+// and a Japanese sentence reads its emphasis.
+// LIMIT: * and ~~ beside a CJK letter are read by markdown-cjk-friendly, so that a * written as a mark beside a CJK
+// letter or a CJK mark (設定は*.yamlと*.json, L*、b*, 案*（…）) can pair up and draw italics where CommonMark draws the
+// marks: plain on the page; write \* or code there.
+// goldmark-cjk-friendly copies goldmark's ScanDelimiter: TestCJKFriendlyKeepsCommonMark watches that it reads as
+// goldmark beside letters of no CJK.
 func newMarkdown(opts ...goldmark.Option) goldmark.Markdown {
 	raw := goldmark.WithRendererOptions(renderer.WithNodeRenderers(util.Prioritized(rawAsText{}, 0)))
-	return goldmark.New(append(opts, raw)...)
+	return goldmark.New(append(opts, raw, goldmark.WithExtensions(cjkfriendly.CJKFriendlyEmphasis))...)
 }
 
 // rawAsText writes raw HTML as the text it was written as: an HTML block as a paragraph of its lines.

@@ -30,7 +30,7 @@ floe が入力を断る検査は、次の 4 つのどれかに当たるものだ
 - **render が書くのはページだけ**：書くページのリンクはたどり、たどった先の名前が .html（`files.IsPage`）でなければ、何も書かずに断る。データファイルやリポジトリの外のファイルを書き換えない
 - **YAML は yamlpos だけが読む**：YAML のバイト列を goccy に渡すのは `yamlpos` だけ。`yamlpos` の外（テストを除く）から import できる goccy のパッケージは `ast` だけ（depguard の規則 `goccy-in-yamlpos`）。値にするのも `yamlpos.Decode`
 - **schema の JSON は schema だけが読む**：schema.json などのバイト列を読むのは `schema` の `read` だけで、外からは `Compile`・`NewResource` に渡す。構文の誤りと黙った読み違いは、`read` が値にする前に断る（ライブラリは後の値や U+FFFD で読む）。jsonschema を import できるのは `internal/schema` だけ（depguard の規則 `jsonschema-in-schema`）
-- **Markdown は kit だけが読む**：goldmark を import できるのは `internal/kit` だけ（depguard の規則 `goldmark-in-kit`）。生の HTML を出さない `markdown` を、どこも通る
+- **Markdown は kit だけが読む**：goldmark と goldmark-cjk-friendly を import できるのは `internal/kit` だけ（depguard の規則 `goldmark-in-kit`）。生の HTML を出さない `markdown` を、どこも通る
 - **floe の script は `page.Script` 1 つで組み立てる**：ページに入れる floe の script（図の拡大、写すボタン、目次の今の節）は、`page.Script` が関数と JSON の引数から組み立て、コメントだけの行を落とす
 - **CSS は字句と括弧の入れ子だけで読む**：CSS は tdewolff の字句と、CSS Syntax の括弧の入れ子（`{`・`(`・関数・`[`）だけで読み、セレクタや値の意味を自前で読まない（`css.Parser` も使わない）。文字列・url・コメントの外のエスケープ（`\`）は断り、解かない。tdewolff を import できるのは `internal/css` だけ（depguard の規則 `tdewolff-in-css`）
 - **保存先を書くのはサーバーだけ**：CLI は API で頼む。publish・link・rm・rebuild・管理ページの変更はどれも API
