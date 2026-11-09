@@ -8,6 +8,7 @@ import (
 	"testing"
 
 	"github.com/sukekyo26/floe/internal/store"
+	"github.com/sukekyo26/floe/internal/usererr"
 )
 
 // A theme picked for a page draws it over the data's theme: and --theme, kept across publishes and rebuilds, dropped
@@ -39,8 +40,8 @@ func TestPickTheme(t *testing.T) {
 	at("rebuilt", "ink", "ink")
 	// A theme that cannot be drawn: nothing written.
 	err := s.PickTheme(dw, "a", "gone")
-	if got := told(err, root); !strings.HasPrefix(got, `floe: there is no theme "gone"; use app, aurora,`) {
-		t.Errorf("a theme gone: told %s", got)
+	if keyOf(err) != "tmpl_unknown_theme" {
+		t.Errorf("a theme gone: told %s", told(err, root))
 	}
 	at("a theme gone", "ink", "ink")
 	if err = s.PickTheme(dw, "a", ""); err != nil {
@@ -75,6 +76,19 @@ func TestPickTheme(t *testing.T) {
 	}
 }
 
+// keyOf is the key of the one mistake err holds, alone or in a list, "" for none.
+func keyOf(err error) string {
+	var e *usererr.Error
+	var l usererr.List
+	switch {
+	case errors.As(err, &e):
+		return e.Key
+	case errors.As(err, &l) && len(l) == 1:
+		return l[0].Key
+	}
+	return ""
+}
+
 // A page published, or a link put on another file, while it is drawn in the theme picked is refused, nothing written.
 func TestPickThemeMeanwhile(t *testing.T) {
 	t.Parallel()
@@ -89,7 +103,7 @@ func TestPickThemeMeanwhile(t *testing.T) {
 	}
 	err := s.PickTheme(dw, "d", "ink")
 	var conflict *store.Conflict
-	if !errors.As(err, &conflict) || told(err, root) != "floe: page d has changed while it was drawn in the theme picked: pick it again" {
+	if !errors.As(err, &conflict) || keyOf(err) != "store_theme_changed" {
 		t.Errorf("published meanwhile: told %s", told(err, root))
 	}
 	if m := s.ReadMeta("d"); m.PickedTheme != "" || m.Title != "Again" {
@@ -156,7 +170,7 @@ func TestPickThemeLinks(t *testing.T) {
 		slugs[filepath.Base(path)] = e.Slug
 	}
 	for _, name := range []string{"z.html", "proj"} {
-		if err := s.PickTheme(dw, slugs[name], "ink"); told(err, root) != "floe: --theme picks the theme of a page drawn from a data file: a linked file is shown as it is" {
+		if err := s.PickTheme(dw, slugs[name], "ink"); keyOf(err) != "store_theme_link" {
 			t.Errorf("%s: told %s", name, told(err, root))
 		}
 	}
@@ -170,7 +184,7 @@ func TestPickThemeLinks(t *testing.T) {
 		}
 	}
 	data := slugs["page.yaml"]
-	if err = s.PickTheme(dw, data, "gone"); !strings.HasPrefix(told(err, root), `floe: there is no theme "gone"`) {
+	if err = s.PickTheme(dw, data, "gone"); keyOf(err) != "tmpl_unknown_theme" {
 		t.Errorf("a theme gone: told %s", told(err, root))
 	}
 	if err = s.PickTheme(dw, data, "ink"); err != nil {
