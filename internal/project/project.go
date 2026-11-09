@@ -50,6 +50,8 @@ func Within(ctx context.Context, dir string) string {
 // Place returns where the file file is, which owns a page published from dir's project with it: its path from its
 // repository's root when that repository is dir's (one common .git, any worktree of it), else its real path. A
 // root is taken on the file's side, so that a file of a worktree under the main checkout is placed alike from both.
+// LIMIT: --path-format came in git 2.31; with an older git there are not two lines, and every file is placed by its
+// real path, a worktree's apart from its main checkout's. Ask for git 2.31 or later if that comes to matter.
 // LIMIT: places are compared as text, so a file named in another case on a filesystem that ignores case (darwin)
 // is another place: a place is kept across machines and worktrees, where no inode can compare it.
 func Place(ctx context.Context, dir, file string) string {
@@ -57,10 +59,13 @@ func Place(ctx context.Context, dir, file string) string {
 	if err != nil {
 		actual = file
 	}
+	if dir == "" {
+		return actual
+	}
 	at := filepath.Dir(actual)
 	got, err := git(ctx, at, "rev-parse", "--path-format=absolute", "--show-toplevel", "--git-common-dir")
 	lines := strings.Split(got, "\n")
-	if err != nil || len(lines) != 2 || dir == "" {
+	if err != nil || len(lines) != 2 {
 		return actual
 	}
 	mine, err := git(ctx, dir, "rev-parse", "--path-format=absolute", "--git-common-dir")

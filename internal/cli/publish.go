@@ -34,7 +34,9 @@ func (a *app) publishCmd() *cobra.Command {
 		Long: `Draw a page from a data file (.yaml, .yml) with the template it names (template: report),
 store it as drawn and print its URL. The same slug from the same file of the same project overwrites it
 (the file's place: from its repository's root, else its real path), and a slug published from another
-project or another file is refused unless --force. A page is in the language its data names
+project or another file is refused unless --force, which drops its history (versions, pinned title, tags,
+favourite). A page renamed on the management page is its file's still: publish that file with --slug to keep
+its history (floe publish o.yaml --slug d). A page is in the language its data names
 (lang:), and in the theme its data names (theme:, else default), unless --theme names another. A new
 slug is also opened in the browser ($BROWSER, open, wslview, xdg-open). The page stays as it was
 drawn: floe rebuild draws the stored pages again with the templates of now. The warnings of the page
@@ -209,8 +211,9 @@ func (a *app) noticeUpdate(saved server.Saved) {
 		return
 	}
 	a.warn("cli_updated_titled", saved.Slug, localTime(prev.UpdatedAt), prev.Title)
-	// Another file is refused before, so this tells the same file of another title. LIMIT: the titles of the list are
-	// compared, so the same file republished with its title pinned on the management page is told nothing.
+	// Another file is refused before, but over a page that kept no file yet (store's LIMIT), so this tells the same file
+	// of another title. LIMIT: the titles of the list are compared, so the same file republished with its title pinned on
+	// the management page is told nothing.
 	if saved.Title != prev.Title {
 		a.warn("cli_title_changed", prev.Title, saved.Title)
 	}

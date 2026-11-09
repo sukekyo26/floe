@@ -677,21 +677,25 @@ func TestPagePlace(t *testing.T) {
 	if _, asked := errors.AsType[*store.NeedImages](err); !asked {
 		t.Errorf("the same file before the images: %v, want them asked for", err)
 	}
-	if err := put("p", "docs/plan.yaml", false, src+"title: again\n"); err != nil {
+	if err = put("p", "docs/plan.yaml", false, src+"title: again\n"); err != nil {
 		t.Errorf("the same file: %s", told(err, root))
 	}
-	if err := put("p", "notes/plan.yaml", true, src); err != nil {
+	if err = put("p", "notes/plan.yaml", true, src); err != nil {
 		t.Errorf("--force: %s", told(err, root))
 	}
 	if got := s.ReadMeta("plan").PublishedFile; got != "notes/plan.yaml" {
 		t.Errorf("--force kept %q, want notes/plan.yaml", got)
 	}
 	// Of no project, the place is compared all the same.
-	if err := put("", "x.yaml", true, src); err != nil {
+	if err = put("", "x.yaml", true, src); err != nil {
 		t.Fatal(told(err, root))
 	}
-	if err := put("", "y.yaml", false, src); !strings.Contains(told(err, root), "was published from x.yaml") {
-		t.Errorf("a page of no project from another file: %s, want the refusal", told(err, root))
+	err = put("", "y.yaml", false, src)
+	if got, want := told(err, root), `floe: slug "plan" was published from x.yaml: choose another slug`; got != want {
+		t.Errorf("a page of no project from another file: told %s, want %s", got, want)
+	}
+	if got, want := usererr.Tell(ja, err).Render(""), "URL 名「plan」は x.yaml から公開されています。別の URL 名にしてください"; got != want {
+		t.Errorf("a page of no project in ja: told %s, want %s", got, want)
 	}
 }
 

@@ -521,7 +521,10 @@ func checkOwner(slug string, prev *Meta, path, from, place string, force bool) (
 	if force {
 		return true, nil
 	}
-	return false, conflict(usererr.New("store_slug_placed", slug, prev.PublishedFile, cmp.Or(prev.PublishedFrom, from)))
+	if project := cmp.Or(prev.PublishedFrom, from); project != "" {
+		return false, conflict(usererr.New("store_slug_placed", slug, prev.PublishedFile, project))
+	}
+	return false, conflict(usererr.New("store_slug_placed_alone", slug, prev.PublishedFile))
 }
 
 // title is --title, else the title pinned on the management page, else (for a stored page) the data's
