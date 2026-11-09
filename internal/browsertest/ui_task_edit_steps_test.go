@@ -51,7 +51,7 @@ func TestUITaskEditSteps(t *testing.T) { //nolint:paralleltest // the browser te
 		return strconv.Itoa(r.Rev) + " [" + strings.Join(r.Steps, ",") + "]"
 	}
 	// Each step, d when its remove button may be pressed, x when not
-	const steps = "[...document.querySelectorAll('#edit-steps li')].map((li) => li.dataset.step + (li.querySelector('.step-drop').disabled ? 'x' : 'd')).join(',')"
+	const steps = "[...document.querySelectorAll('#edit-steps li')].map((li) => li.dataset.step + (li.querySelector('.step-drop').getAttribute('aria-disabled') === 'true' ? 'x' : 'd')).join(',')"
 	const said = "document.getElementById('edit-step-said').textContent"
 	const errorText = "(document.getElementById('edit-task-error').hidden ? '-' : document.getElementById('edit-task-error').textContent)"
 	const last = "(document.getElementById('edit-step-plus').hidden ? 'field' : 'plus') + ' / ' + document.activeElement.id"
@@ -94,6 +94,11 @@ func TestUITaskEditSteps(t *testing.T) { //nolint:paralleltest // the browser te
 	say("opened", steps+" + ' / ' + "+last)
 	say("plus", "document.getElementById('edit-step-plus').getAttribute('aria-label') + ' / ' + document.getElementById('edit-step-plus').title + ' / ' + document.getElementById('edit-steps-head').textContent")
 	say("names", "[...document.querySelectorAll('#edit-steps .step-drop')].map((b) => b.getAttribute('aria-label') + '=' + b.title).join(', ')")
+	// The remove button of a step with pages is reached by the keys; pressed, it says why under the rows and removes nothing.
+	b.eval("document.querySelector('#edit-steps li .step-down').focus()")
+	b.pressKey(kb.Tab)
+	b.pressKey(kb.Enter)
+	say("paged pressed", "document.activeElement.getAttribute('aria-label') + ' / ' + "+steps+" + ' / ' + "+said)
 	// The plus turns into the field, which has the focus; Enter adds, and the field stays, empty, for the next.
 	b.eval("document.getElementById('edit-step-plus').click()")
 	say("pressed", last)
@@ -176,6 +181,7 @@ func TestUITaskEditSteps(t *testing.T) { //nolint:paralleltest // the browser te
 		"opened: 案x,設計x,実装x,リリースd,レビューx / plus / edit-task-title",
 		"plus: Add a step / Add a step / Steps",
 		"names: 案 has pages, so it cannot be removed=案 has pages, so it cannot be removed, 設計 has pages, so it cannot be removed=設計 has pages, so it cannot be removed, 実装 has pages, so it cannot be removed=実装 has pages, so it cannot be removed, Remove リリース=Remove リリース, レビュー has pages, so it cannot be removed=レビュー has pages, so it cannot be removed",
+		"paged pressed: 案 has pages, so it cannot be removed / 案x,設計x,実装x,リリースd,レビューx / 案 has pages, so it cannot be removed",
 		"pressed: field / edit-step-new",
 		"added: 案x,設計x,実装x,リリースd,レビューx,公開d / field / edit-step-new /  / Added 公開 at 6 of 6 / true",
 		"there: 案x,設計x,実装x,リリースd,レビューx,公開d / 設計 is already among the steps / edit-step-said",

@@ -569,7 +569,7 @@
   }
   .icon-btn svg { width: 16px; height: 16px; }
   .icon-btn:hover { background: var(--subtle); color: var(--fg); }
-  .icon-btn:disabled { opacity: 0.35; cursor: default; background: transparent; color: var(--muted); }
+  .icon-btn:is(:disabled, [aria-disabled="true"]) { opacity: 0.35; cursor: default; background: transparent; color: var(--muted); }
   /* What the bar or the row shows, its menu leaves out, so that nothing is in both */
   .frame-actions .menu :is(.open, .download), .menu :is(.fav-item, .archive) { display: none; }
   /* What opens a column folded, where the button that folded it stood in the foot, on a ground of its own: any page may lie under it.
@@ -747,7 +747,7 @@
   .step-order .step-moves { display: flex; gap: 0.15rem; }
   .step-order .step-grip { display: inline-flex; color: var(--faint); cursor: grab; touch-action: none; }
   .step-order .step-grip svg { width: 14px; height: 14px; }
-  .step-order .icon-btn:disabled { opacity: 0.35; }
+  .step-order .icon-btn:is(:disabled, [aria-disabled="true"]) { opacity: 0.35; }
   .step-order li.drop-before { box-shadow: inset 0 2px 0 var(--ink); }
   .step-order li.drop-after { box-shadow: inset 0 -2px 0 var(--ink); }
   @media (hover: none) { .step-order .step-grip { display: none; } }
@@ -5266,7 +5266,8 @@
     $('edit-steps').replaceChildren(...order.map((name) => stepRow(name, paged.has(name))));
     showSteps();
   }
-  // A step with pages is not removed, as stepOrder would bring it back from them: its button is there, not pressed, and says why
+  // A step with pages is not removed, as stepOrder would bring it back from them: its button is there, not pressed, and says why. It is
+  // aria-disabled, not disabled, so that the keys reach it and pressing it says why
   function stepRow(name, paged) {
     const li = document.createElement('li');
     li.dataset.step = name;
@@ -5283,7 +5284,7 @@
       return b;
     };
     const drop = button('step-drop', t(paged ? 'ui_step_drop_paged' : 'ui_step_drop_named', name), '<path d="M4 7h16M10 11v6m4-6v6M6 7l1 12h10l1-12M9 7V4h6v3"/>');
-    drop.disabled = paged;
+    if (paged) drop.setAttribute('aria-disabled', 'true');
     li.append(grip, word, tagged('span', 'step-moves'));
     li.lastChild.append(
       button('step-up', t('ui_step_up_named', name), '<path d="M12 19V5"/><path d="m5 12 7-7 7 7"/>'),
@@ -5323,6 +5324,7 @@
     const n = $('edit-steps').children.length;
     $('edit-steps-said').textContent = t('ui_step_added', name, n, n);
   }
+  const pressable = (b) => !b.disabled && b.getAttribute('aria-disabled') !== 'true';
   // The row goes at once: nothing is sent until saving. The focus goes to a button that can be pressed of the row after it, or before
   // it, else to the last row
   function dropStep(li) {
@@ -5332,7 +5334,7 @@
     showSteps();
     $('edit-steps-said').textContent = t('ui_step_dropped', li.dataset.step);
     const near = rows[at + 1] ?? rows[at - 1];
-    const to = near && ['.step-drop', '.step-up', '.step-down'].map((on) => near.querySelector(on)).find((b) => !b.disabled);
+    const to = near && ['.step-drop', '.step-up', '.step-down'].map((on) => near.querySelector(on)).find(pressable);
     (to ?? ($('edit-step-new').hidden ? $('edit-step-plus') : $('edit-step-new'))).focus();
   }
   // The steps of the dialog as the task is read again (now): unchanged, as read; else as the person left them (mine), without those another
@@ -5937,8 +5939,9 @@
   });
   $('edit-steps').addEventListener('click', (e) => {
     const drop = e.target.closest('.step-drop');
-    if (drop && !drop.disabled) {
-      dropStep(drop.closest('li'));
+    if (drop) {
+      if (pressable(drop)) dropStep(drop.closest('li'));
+      else $('edit-step-said').textContent = drop.getAttribute('aria-label');
       return;
     }
     const btn = e.target.closest('.step-up, .step-down');
