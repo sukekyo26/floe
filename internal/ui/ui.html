@@ -429,6 +429,9 @@
   li.fresh, li.fresh:hover { background: var(--sel); }
   /* A day's heading: no row, and not pressed */
   li.group { display: block; padding: 0.7rem 1rem 0.25rem; font: 700 var(--text-small)/1.2 var(--body); color: var(--muted); border-bottom: 0; animation: none; }
+  /* A step's heading on a task's page: its way to add a page on the right, and under it, when it has none, that it has none */
+  li.group.adds { display: grid; grid-template: none / minmax(0, 1fr) auto; align-items: center; gap: 0.25rem 0.5rem; }
+  li.group .step-empty { grid-column: 1 / -1; margin: 0; padding-bottom: 0.5rem; font-weight: 400; }
   /* The first column holds what the row is: a dot, a ring, a link's or a folder's mark; while rows are selected, the check box */
   li > .lead { grid-area: lead; display: grid; place-items: center; height: 1.4em; color: var(--muted); }
   li > .lead svg { width: 14px; height: 14px; }
@@ -566,7 +569,7 @@
   }
   .icon-btn svg { width: 16px; height: 16px; }
   .icon-btn:hover { background: var(--subtle); color: var(--fg); }
-  .icon-btn:disabled { opacity: 0.35; cursor: default; background: transparent; color: var(--muted); }
+  .icon-btn:is(:disabled, [aria-disabled="true"]) { opacity: 0.35; cursor: default; background: transparent; color: var(--muted); }
   /* What the bar or the row shows, its menu leaves out, so that nothing is in both */
   .frame-actions .menu :is(.open, .download), .menu :is(.fav-item, .archive) { display: none; }
   /* What opens a column folded, where the button that folded it stood in the foot, on a ground of its own: any page may lie under it.
@@ -641,13 +644,13 @@
   }
 
   /* The search modal, of the shape of the others. Its box of results keeps its height, so that the field stays where it is as the rows go */
-  #find-q::-webkit-search-cancel-button { display: none; }
+  :is(#find-q, #add-page-q)::-webkit-search-cancel-button { display: none; }
   #find #error { margin: 0; }
   .find-lead { display: flex; flex-wrap: wrap; align-items: center; gap: 0.2rem 0.5rem; }
   .find-lead .k { display: inline-flex; align-items: center; gap: 0.25rem; white-space: nowrap; }
   /* Without rows the arrows have nothing to move over; the line keeps its height */
   .find-lead.none .k { visibility: hidden; }
-  #find kbd, #keys kbd {
+  :is(#find, #keys, #add-page-dialog) kbd {
     font: var(--text-label)/1 var(--mono); color: var(--muted); background: var(--subtle);
     border: 1px solid var(--line); border-radius: var(--corner-small); padding: 0.2rem 0.4rem; white-space: nowrap;
   }
@@ -735,7 +738,8 @@
   .field small { font-weight: 400; color: var(--faint); }
   .field .path { font-family: var(--mono); }
   /* The steps of the task edit dialog, reordered by their buttons, or by a drag from the grip where there is a pointer that hovers */
-  .step-order { display: grid; margin: 0; padding: 0; list-style: none; border: 1px solid var(--line); border-radius: var(--corner-small); overflow: hidden; }
+  .step-box { border: 1px solid var(--line); border-radius: var(--corner-small); overflow: hidden; }
+  .step-order { display: grid; margin: 0; padding: 0; list-style: none; }
   .step-order li { display: flex; align-items: center; gap: 0.5rem; padding: 0.2rem 0.4rem 0.2rem 0.6rem; font-weight: 600; background: var(--panel); }
   .step-order li + li { border-top: 1px solid var(--line); }
   .step-order .step-name { flex: 1; min-width: 0; overflow-wrap: anywhere; }
@@ -743,11 +747,21 @@
   .step-order .step-moves { display: flex; gap: 0.15rem; }
   .step-order .step-grip { display: inline-flex; color: var(--faint); cursor: grab; touch-action: none; }
   .step-order .step-grip svg { width: 14px; height: 14px; }
-  .step-order .icon-btn:disabled { opacity: 0.35; }
+  .step-order .icon-btn:is(:disabled, [aria-disabled="true"]) { opacity: 0.35; }
   .step-order li.drop-before { box-shadow: inset 0 2px 0 var(--ink); }
   .step-order li.drop-after { box-shadow: inset 0 -2px 0 var(--ink); }
   @media (hover: none) { .step-order .step-grip { display: none; } }
   .step-none { margin: 0; font-weight: 400; color: var(--muted); }
+  /* The last row of the steps adds one: a button the height of a row, which turns into the field the name is typed in */
+  .step-plus-row { display: flex; min-height: calc(var(--icon-btn) + 0.4rem); background: var(--panel); }
+  .step-order:not([hidden]) + .step-plus-row { border-top: 1px solid var(--line); }
+  .step-plus { display: flex; flex: 1; align-items: center; gap: 0.5rem; padding: 0 0.6rem; font: inherit; font-weight: 400; color: var(--muted); background: transparent; border: 0; cursor: pointer; }
+  .step-plus:hover { color: var(--fg); background: var(--subtle); }
+  .step-plus:focus-visible { outline-offset: -2px; }
+  .step-plus svg { width: 14px; height: 14px; }
+  .step-plus-row .text { flex: 1; height: auto; border: 0; border-radius: 0; box-shadow: none; padding-inline: 0.6rem; }
+  .step-plus-row .text:focus-visible { outline-offset: -2px; }
+  .step-said { margin: 0; font-weight: 400; color: var(--danger); }
   .dialog-actions { display: flex; justify-content: flex-end; gap: 0.5rem; padding-top: 1rem; margin-top: 0.25rem; border-top: 1px solid var(--line); }
   /* Only the rows of the filters scroll, their foot in sight: the height a dialog may have, of its own rule in the browser */
   #filter-box { grid-template-rows: auto minmax(0, 1fr) auto; max-height: calc(100dvh - 6px - 2rem); }
@@ -1188,6 +1202,18 @@
   </div>
 </dialog>
 <template id="find-row"><li role="option"><span class="lead"></span><a class="title" tabindex="-1"></a><span class="time"><time></time></span><span class="sub"></span></li></template>
+<dialog id="add-page-dialog" aria-labelledby="add-page-title">
+  <div class="modal-body">
+    <div class="modal-head"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true"><path d="M12 5v14M5 12h14"/></svg><div><h2 id="add-page-title"></h2><p class="lead find-lead" id="add-page-lead"><span id="add-page-target"></span><span class="k"><kbd>↑</kbd><kbd>↓</kbd> {{.Msg "ui_find_pick"}}</span><span class="k"><kbd>Enter</kbd> {{.Msg "ui_page_add_put"}}</span></p></div></div>
+    <input class="text" type="search" id="add-page-q" role="combobox" aria-expanded="true" aria-autocomplete="list" aria-controls="add-page-list" placeholder="{{.Msg "ui_find_placeholder"}}" aria-labelledby="add-page-title" autocomplete="off">
+    <ul class="find-list" id="add-page-list" tabindex="-1" role="listbox" aria-labelledby="add-page-title"></ul>
+    <div class="find-none" id="add-page-none" hidden><strong id="add-page-none-words"></strong></div>
+    <p class="error" id="add-page-error" role="alert" hidden></p>
+    <div class="dialog-actions"><button type="button" class="btn" data-close>{{.Msg "ui_close"}}</button></div>
+  </div>
+</dialog>
+<!-- A page to add: an option, no link, as choosing it adds it -->
+<template id="add-page-row"><li role="option"><span class="lead"></span><span class="title"></span><span class="time"><time></time></span><span class="sub"></span></li></template>
 <dialog id="keys" aria-labelledby="keys-title">
   <div class="modal-body keys-body">
     <div class="modal-head"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="3" y="6" width="18" height="12" rx="2"/><path d="M7 10h.01M11 10h.01M15 10h.01M7 14h10"/></svg><div><h2 id="keys-title">{{.Msg "ui_keys"}}</h2><p class="lead keys-note" id="keys-note-list">{{.Msg "ui_keys_note_list"}}</p><p class="lead keys-note" id="keys-note-frame">{{.Msg "ui_keys_note_frame"}}</p></div></div>
@@ -1305,8 +1331,15 @@
     </label>
     <div class="field">
       <span id="edit-steps-head">{{.Msg "ui_task_steps"}}</span>
-      <ol class="step-order" id="edit-steps" aria-labelledby="edit-steps-head" aria-describedby="edit-steps-hint"></ol>
       <p class="step-none" id="edit-steps-none" hidden>{{.Msg "ui_task_steps_none"}}</p>
+      <div class="step-box">
+        <ol class="step-order" id="edit-steps" aria-labelledby="edit-steps-head" aria-describedby="edit-steps-hint"></ol>
+        <div class="step-plus-row">
+          <button type="button" class="step-plus" id="edit-step-plus" aria-label="{{.Msg "ui_step_add"}}" title="{{.Msg "ui_step_add"}}"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true"><path d="M12 5v14M5 12h14"/></svg>{{.Msg "ui_step_add"}}</button>
+          <input class="text" id="edit-step-new" hidden autocomplete="off" aria-label="{{.Msg "ui_step_name"}}" placeholder="{{.Msg "ui_step_name_hint"}}" aria-describedby="edit-step-said">
+        </div>
+      </div>
+      <p class="step-said" id="edit-step-said" aria-live="polite"></p>
       <small id="edit-steps-hint">{{.Msg "ui_task_steps_hint"}}</small>
       <p class="sr-only" id="edit-steps-said" aria-live="polite"></p>
     </div>
@@ -1398,6 +1431,7 @@
           <button type="button" class="icon-btn tag-item"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M3 12V4h8l9 9-8 8-9-9Z"/><circle cx="7.5" cy="8.5" r="1.2"/></svg>{{.Msg "ui_tags"}}</button>
           <button type="button" class="icon-btn pin-item"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M9 3h6l-1 7 4 4v2H6v-2l4-4zM12 16v5"/></svg><span class="label"></span></button>
           <button type="button" class="icon-btn task-set"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M9 6h11M9 12h11M9 18h11M4 6h.01M4 12h.01M4 18h.01"/></svg>{{.Msg "ui_task_set"}}</button>
+          <button type="button" class="icon-btn task-out" hidden><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M9 6h11M9 12h11M4 6h.01M4 12h.01M14 18h6"/></svg>{{.Msg "ui_task_out"}}</button>
           <a class="icon-btn task-open" hidden><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M5 12h14m-6-6 6 6-6 6"/></svg><span class="label"></span></a>
           <button type="button" class="icon-btn edit"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4 20h4L19 9a2.8 2.8 0 0 0-4-4L4 16v4Zm9.5-13.5 4 4"/></svg>{{.Msg "ui_edit"}}</button>
           <button type="button" class="icon-btn copy" hidden><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M9 9h10v11H9zM5 15V4h10"/></svg><span class="done"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m5 12.5 4.5 4.5L19 7.5"/></svg></span>{{.Msg "ui_copy_path"}}</button>
@@ -2472,6 +2506,23 @@
       setBack = menuBack(box, () => a.slug);
       openTaskSet(a);
     });
+    // Off its task at once, with the way back in the toast. The focus first on the menu's button, for the redraw to keep it, or move it
+    // where a row gone leaves it; from the keys, to the way back
+    const taskOut = box.querySelector('.task-out');
+    taskOut.hidden = !a.work?.task;
+    taskOut.setAttribute('aria-label', t('ui_task_out_named', a.title));
+    taskOut.addEventListener('click', async (e) => {
+      const back = box.closest('#find') ? () => $('find-actions').querySelector('summary') : menuBack(box, () => a.slug);
+      box.open = false;
+      box.querySelector('summary').focus();
+      const res = await takePageOff(a, back);
+      if (res.reason) {
+        showError(t('ui_save_failed', res.reason));
+        return;
+      }
+      if (e.detail === 0) res.button.focus();
+      await load();
+    });
     // Of its task, unless this is that task's page
     const taskOpen = box.querySelector('.task-open');
     const name = a.work?.task;
@@ -3268,7 +3319,7 @@
     const byKey = new Map(rows.map((li) => [li.dataset.key, li]));
     const row = byKey.get(key);
     const place = (keys, kept) => keys.filter((k) => kept.has(k)).indexOf(key);
-    const stayed = row && (on === '.title' || on === 'summary' || place(was, byKey) === place([...byKey.keys()], new Set(was)));
+    const stayed = row && (on === '.title' || on === 'summary' || on === '.step-add' || place(was, byKey) === place([...byKey.keys()], new Set(was)));
     const to = stayed ? row.querySelector(on) : (was.slice(was.indexOf(key) + 1).map((k) => byKey.get(k)).find((li) => li?.querySelector('.title'))
       ?? lastRow(rows))?.querySelector('.title');
     to?.focus({ preventScroll: true });
@@ -3278,20 +3329,33 @@
     // Rows drawn already are drawn anew in place, without rising in again: only a row new to the list rises in
     const had = new Set([...$('list').children].map((li) => li.dataset.key));
     // The row with the focus has it again once drawn anew: a page read redraws the list as the keys go through it
-    const focusedOn = $('list').contains(document.activeElement) ? ['.title', 'summary', '.star', '.actions > .archive'].find((on) => document.activeElement.matches(on)) : null;
+    const focusedOn = $('list').contains(document.activeElement) ? ['.title', 'summary', '.star', '.actions > .archive', '.step-add'].find((on) => document.activeElement.matches(on)) : null;
     const focused = focusedOn ? document.activeElement.closest('li').dataset.key : null;
     let i = 0;
-    for (const { heading, entries } of groups) {
+    for (const { heading, key, entries, add } of groups) {
       if (heading) {
         const li = document.createElement('li');
         li.className = 'group';
-        li.dataset.key = `group:${heading}`;
+        li.dataset.key = key ?? `group:${heading}`;
         li.setAttribute('role', 'none');
         const words = document.createElement('div');
         words.setAttribute('role', 'heading');
         words.setAttribute('aria-level', '2');
         words.textContent = heading;
         li.append(words);
+        // A group may add an entry to itself (a step's pages), and says when it has none
+        if (add) {
+          li.classList.add('adds');
+          const button = tagged('button', 'btn step-add');
+          button.type = 'button';
+          button.innerHTML = PLUS_MARK;
+          button.append(t('ui_page_add'));
+          button.setAttribute('aria-label', t('ui_page_add_named', heading));
+          button.title = button.getAttribute('aria-label');
+          button.addEventListener('click', add);
+          li.append(button);
+          if (entries.length === 0) li.append(tagged('p', 'step-empty', t('ui_step_empty')));
+        }
         rows.push(li);
       }
       for (const x of entries) rowOf(x, i++, rows);
@@ -3566,8 +3630,8 @@
   }
   let cameBack = false;
 
-  // The rows of a task's page, under their steps: the steps written, then those not, as they first came; before them what has no step,
-  // and last what is archived. Within each, as first published
+  // The rows of a task's page, under their steps: every step, those of no page too, with its way to add one; the steps written, then those
+  // not, as they first came; before them what has no step, and last what is archived. Within each, as first published
   // LIMIT: when a step first came is not kept: a step's oldest page says it, so that a new step on an old page comes earlier. --steps orders it
   function taskGroups(task) {
     const steps = new Map();
@@ -3577,8 +3641,9 @@
       else steps.set(a.work.step, [...(steps.get(a.work.step) ?? []), a]);
     }
     const groups = [{ entries: none }];
-    for (const heading of stepOrder(task).filter((step) => steps.has(step))) groups.push({ heading, entries: steps.get(heading) });
-    if (task.archived.length > 0) groups.push({ heading: t('ui_state_archived'), entries: [...task.archived].sort((x, y) => madeAt(x) - madeAt(y)) });
+    for (const heading of stepOrder(task)) groups.push({ heading, entries: steps.get(heading) ?? [], add: () => openAddPage(task, heading) });
+    // Its key apart from a step's, which may have the same name
+    if (task.archived.length > 0) groups.push({ heading: t('ui_state_archived'), key: 'archived', entries: [...task.archived].sort((x, y) => madeAt(x) - madeAt(y)) });
     return groups;
   }
   const madeAt = (a) => Date.parse(a.createdAt || a.updatedAt);
@@ -3692,6 +3757,7 @@
     line.append(link, off);
     return line;
   }
+  const PLUS_MARK = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true"><path d="M12 5v14M5 12h14"/></svg>';
   const UNLINK_MARK = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m18.84 12.25 1.72-1.71a5 5 0 0 0-7.07-7.07l-1.72 1.71"/><path d="m5.17 11.75-1.71 1.71a5 5 0 0 0 7.07 7.07l1.71-1.71"/><path d="M8 2v3M2 8h3M16 22v-3M22 16h-3"/></svg>';
 
   // Where the focus goes once a row is gone from under it, or a dialog is done: the button of its part, the parent's (up) or the children's,
@@ -3709,23 +3775,23 @@
         showError(t('ui_save_failed', res.text));
         return;
       }
-      undoToast(t('ui_task_unlinked', child.name, parent), { project: child.project, name: child.name, parent, rev: res.rev }, fromKeys);
+      const undo = undoToast(t('ui_task_unlinked', child.name, parent), parentBack({ project: child.project, name: child.name, parent, rev: res.rev }));
+      if (fromKeys) undo.focus();
       await load();
       if (!fromKeys && !document.activeElement?.closest('#task-family')) partButton(child.name === TASK_NAME)?.focus();
     } finally {
       unlinking.delete(child.name);
     }
   }
-  // The toast of a change to a parent, and its way back: the parent before written again, over the one written now, of the rev that write
-  // answered, as it is decided over what the screen showed then. Pressed, a refusal (written meanwhile, or the parent before has come to be a
-  // child, say) is said as the store says it
-  // LIMIT: a write of the screen's own since, its state say, refuses it too. Take back the screen's own writes too if that comes to trouble someone
-  function undoToast(said, back, fromKeys) {
+  // A toast with a way back: how.undo writes what was there before (of the rev it holds, if a task's row) and answers { ok, text }; how.done is where
+  // the focus goes once it is back, how.away where Escape on it leaves the focus. Pressed, a refusal (written meanwhile, say) is said as the
+  // store says it. The button, for the caller to focus when the change was made from the keys
+  function undoToast(said, how) {
     const button = tagged('button', 'btn undo', t('ui_undo'));
     button.type = 'button';
     button.addEventListener('click', async () => {
       button.disabled = true;
-      const res = await writeTask(back.project, back.name, { new: false, rev: back.rev, parent: back.parent, parentNew: false });
+      const res = await how.undo();
       button.closest('.toast')?.remove();
       if (!res.ok) {
         showError(t('ui_save_failed', res.text));
@@ -3733,17 +3799,25 @@
       }
       toast(t('ui_undone'));
       await load();
-      $('task-family').querySelector(`.unlink[data-task="${CSS.escape(back.name === TASK_NAME ? back.parent : back.name)}"]`)?.focus();
+      how.done()?.focus();
     });
     button.addEventListener('keydown', (e) => {
       if (e.key !== 'Escape') return;
       e.stopPropagation();
       button.closest('.toast').remove();
-      partButton(back.name === TASK_NAME)?.focus();
+      how.away()?.focus();
     });
     toast(said, { ms: 8000, button });
-    if (fromKeys) button.focus();
+    return button;
   }
+  // The way back of a change to a parent: the parent before written again, over the one written now, of the rev that write answered, as it
+  // is decided over what the screen showed then
+  // LIMIT: a write of the screen's own since, its state say, refuses it too. Take back the screen's own writes too if that comes to trouble someone
+  const parentBack = (back) => ({
+    undo: () => writeTask(back.project, back.name, { new: false, rev: back.rev, parent: back.parent, parentNew: false }),
+    done: () => $('task-family').querySelector(`.unlink[data-task="${CSS.escape(back.name === TASK_NAME ? back.parent : back.name)}"]`),
+    away: () => partButton(back.name === TASK_NAME),
+  });
 
   // The dialog of a task's family: a child of the task of the page, or its parent, of one form of fields; KIN_FORMS says what differs.
   // Each write says what the dialog showed (new, rev, parentNew): what has changed since is refused, and read again. A task named that
@@ -3793,7 +3867,7 @@
       // Changed, the way back is offered while the parent before makes a family: one written by hand that makes none the store would refuse
       done: (task, name, x, res) => {
         if (task.parent) {
-          if (task.parentTask?.name === task.parent) undoToast(t('ui_task_parent_moved', task.parent, name), { project: task.project, name: task.name, parent: task.parent, rev: res.rev }, false);
+          if (task.parentTask?.name === task.parent) undoToast(t('ui_task_parent_moved', task.parent, name), parentBack({ project: task.project, name: task.name, parent: task.parent, rev: res.rev }));
           else toast(t('ui_task_parent_moved', task.parent, name), { ms: 8000 });
           return;
         }
@@ -5112,9 +5186,17 @@
     $('set-error').textContent = t('ui_save_failed', reason);
     $('set-error').hidden = false;
   };
-  // The task first and the page then, as floe work writes them. The task's own fields are its page's to write (openTaskEdit): this writes the
-  // page's step on it, and a new name's title.
-  // LIMIT: the page refused, the dialog closed, what was written of the task stays: a new name's row of no page, which --forget removes
+  // A page put on a step of a task, as floe work writes it: the task first, its step (body), which moves its rev on, so that a dialog
+  // showing the task is refused and reads it again; and the page then. The answer is writeTask's, not ok with the page's reason when the
+  // page is refused
+  // LIMIT: the page refused, what was written of the task stays: its step, or a new name's row of no page, which --forget removes
+  async function putPageOn(page, project, task, body, step) {
+    const res = await writeTask(project, task, body);
+    if (!res.ok) return res;
+    const reason = await patchOne(page.slug, { work: { task, step } });
+    return reason ? { ...res, ok: false, status: 0, text: reason } : res;
+  }
+  // The task's own fields are its page's to write (openTaskEdit): this writes the page's step on it, and a new name's title
   async function saveTaskSet(e) {
     e.preventDefault();
     const btn = $('set-submit');
@@ -5134,19 +5216,13 @@
     };
     try {
       if (!taskFormReady($('set'), $('set-error'))) return;
-      const res = await writeTask(page.taskProject, task, body);
-      // Whether the name is of a task there, as read again: a title asked of a new one alone
-      if (res.status === 409) {
-        setTaskKnown();
-        throw new Error(res.stale);
-      }
-      if (!res.ok) throw new Error(res.text);
-      const reason = await patchOne(page.slug, { work: { task, step } });
-      // The task written: the dialog shows it as written, from the tasks read, which hold it and no read since, as a load waits for the
-      // page's write (a new one is there), so that saving again writes the page, and is refused when another wrote it since
-      if (reason) {
-        setTaskKnown();
-        throw new Error(reason);
+      const res = await putPageOn(page, page.taskProject, task, body, step);
+      // Whether the name is of a task there, as read again, a title asked of a new one alone; or, the task written and the page refused, as
+      // written, from the tasks read, which hold it and no read since, as a load waits for the page's write, so that saving again writes the
+      // page, and is refused when another wrote it since
+      if (!res.ok) {
+        if (res.status === 409 || res.rev !== null) setTaskKnown();
+        throw new Error(res.status === 409 ? res.stale : res.text);
       }
       if (task.trim() === setOpened.task) toast(t('ui_saved'));
       else {
@@ -5177,39 +5253,100 @@
     $('edit-task-title').value = taskEditing.base.title;
     $('edit-task-url').value = taskEditing.base.url;
     drawEditSteps(task, taskEditing.base.steps);
+    plusField(false);
     $('edit-task-error').hidden = true;
     $('edit-task-submit').disabled = false;
     $('edit-steps-said').textContent = '';
     $('edit-task-dialog').showModal();
   }
-  // The steps as rows, each with its name, whether no page is under it, and its buttons up and down; the grip drags it
+  // The steps as rows, each with its name, whether no page is under it, and its buttons up, down and to remove it; the grip drags it
+  const pagedOf = (task) => new Set(task.pages.map((a) => a.work.step).filter(Boolean));
   function drawEditSteps(task, order) {
-    const paged = new Set(task.pages.map((a) => a.work.step).filter(Boolean));
-    $('edit-steps').replaceChildren(...order.map((name) => {
-      const li = document.createElement('li');
-      li.dataset.step = name;
-      const grip = tagged('span', 'step-grip');
-      grip.innerHTML = '<svg viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><circle cx="9" cy="6" r="1.5"/><circle cx="15" cy="6" r="1.5"/><circle cx="9" cy="12" r="1.5"/><circle cx="15" cy="12" r="1.5"/><circle cx="9" cy="18" r="1.5"/><circle cx="15" cy="18" r="1.5"/></svg>';
-      const word = tagged('span', 'step-name', name);
-      if (!paged.has(name)) word.append(' ', tagged('small', '', t('ui_step_no_pages')));
-      const upBtn = tagged('button', 'icon-btn step-up');
-      upBtn.type = 'button';
-      upBtn.innerHTML = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 19V5"/><path d="m5 12 7-7 7 7"/></svg>';
-      upBtn.setAttribute('aria-label', t('ui_step_up_named', name));
-      upBtn.title = upBtn.getAttribute('aria-label');
-      const downBtn = tagged('button', 'icon-btn step-down');
-      downBtn.type = 'button';
-      downBtn.innerHTML = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 5v14"/><path d="m19 12-7 7-7-7"/></svg>';
-      downBtn.setAttribute('aria-label', t('ui_step_down_named', name));
-      downBtn.title = downBtn.getAttribute('aria-label');
-      li.append(grip, word, tagged('span', 'step-moves'));
-      li.lastChild.append(upBtn, downBtn);
-      return li;
-    }));
-    $('edit-steps').hidden = order.length === 0;
-    $('edit-steps-none').hidden = order.length > 0;
-    $('edit-steps-hint').hidden = order.length === 0;
+    const paged = pagedOf(task);
+    $('edit-steps').replaceChildren(...order.map((name) => stepRow(name, paged.has(name))));
+    showSteps();
+  }
+  // A step with pages is not removed, as stepOrder would bring it back from them: its button is there, not pressed, and says why. It is
+  // aria-disabled, not disabled, so that the keys reach it and pressing it says why
+  function stepRow(name, paged) {
+    const li = document.createElement('li');
+    li.dataset.step = name;
+    const grip = tagged('span', 'step-grip');
+    grip.innerHTML = '<svg viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><circle cx="9" cy="6" r="1.5"/><circle cx="15" cy="6" r="1.5"/><circle cx="9" cy="12" r="1.5"/><circle cx="15" cy="12" r="1.5"/><circle cx="9" cy="18" r="1.5"/><circle cx="15" cy="18" r="1.5"/></svg>';
+    const word = tagged('span', 'step-name', name);
+    if (!paged) word.append(' ', tagged('small', '', t('ui_step_no_pages')));
+    const button = (cls, label, path) => {
+      const b = tagged('button', `icon-btn ${cls}`);
+      b.type = 'button';
+      b.innerHTML = `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">${path}</svg>`;
+      b.setAttribute('aria-label', label);
+      b.title = label;
+      return b;
+    };
+    const drop = button('step-drop', t(paged ? 'ui_step_drop_paged' : 'ui_step_drop_named', name), '<path d="M4 7h16M10 11v6m4-6v6M6 7l1 12h10l1-12M9 7V4h6v3"/>');
+    if (paged) drop.setAttribute('aria-disabled', 'true');
+    li.append(grip, word, tagged('span', 'step-moves'));
+    li.lastChild.append(
+      button('step-up', t('ui_step_up_named', name), '<path d="M12 19V5"/><path d="m5 12 7-7 7 7"/>'),
+      button('step-down', t('ui_step_down_named', name), '<path d="M12 5v14"/><path d="m19 12-7 7-7-7"/>'),
+      drop,
+    );
+    return li;
+  }
+  function showSteps() {
+    const none = $('edit-steps').children.length === 0;
+    $('edit-steps').hidden = none;
+    $('edit-steps-none').hidden = !none;
+    $('edit-steps-hint').hidden = none;
     markStepEnds();
+  }
+  // The last row: the button that adds a step, or the field it turns into, empty as it turns back
+  function plusField(on) {
+    $('edit-step-plus').hidden = on;
+    $('edit-step-new').hidden = !on;
+    if (on) return;
+    $('edit-step-new').value = '';
+    $('edit-step-new').setCustomValidity('');
+    $('edit-step-said').textContent = '';
+  }
+  // The name typed goes last, a row of no page, and the field stays, empty, for the next. The names are compared as the store's stepsOf has them
+  // LIMIT: trim and Go's TrimSpace drop a few spaces apart (U+0085, U+FEFF): two names this takes to differ by them, stepsOf makes one
+  function addStep() {
+    const input = $('edit-step-new');
+    const name = input.value.trim();
+    input.setCustomValidity('');
+    const why = !name ? t('ui_step_blank') : editStepsNow().includes(name) ? t('ui_step_there', name) : '';
+    $('edit-step-said').textContent = why;
+    if (why) return;
+    $('edit-steps').append(stepRow(name, false));
+    showSteps();
+    input.value = '';
+    const n = $('edit-steps').children.length;
+    $('edit-steps-said').textContent = t('ui_step_added', name, n, n);
+  }
+  const pressable = (b) => !b.disabled && b.getAttribute('aria-disabled') !== 'true';
+  // The row goes at once: nothing is sent until saving. The focus goes to a button that can be pressed of the row after it, or before
+  // it, else to the last row
+  function dropStep(li) {
+    const rows = [...$('edit-steps').children];
+    const at = rows.indexOf(li);
+    li.remove();
+    showSteps();
+    $('edit-steps-said').textContent = t('ui_step_dropped', li.dataset.step);
+    const near = rows[at + 1] ?? rows[at - 1];
+    const to = near && ['.step-drop', '.step-up', '.step-down'].map((on) => near.querySelector(on)).find(pressable);
+    (to ?? ($('edit-step-new').hidden ? $('edit-step-plus') : $('edit-step-new'))).focus();
+  }
+  // The steps of the dialog as the task is read again (now): unchanged, as read; else as the person left them (mine), without those another
+  // removed and with those another added, after them. One the person removed stays out, unless it has come to have pages, as one with
+  // pages cannot be removed
+  function mergeSteps(mine, was, now, paged) {
+    if (sameSteps(mine, was)) return now;
+    return [
+      ...mine.filter((x) => !was.includes(x) || now.includes(x)),
+      ...was.filter((x) => !mine.includes(x) && paged.has(x) && now.includes(x)),
+      ...now.filter((x) => !was.includes(x) && !mine.includes(x)),
+    ];
   }
   // The first row's up and the last row's down move nothing
   function markStepEnds() {
@@ -5231,8 +5368,8 @@
     const on = li.querySelector(pressed);
     (on.disabled ? li.querySelector(pressed === '.step-up' ? '.step-down' : '.step-up') : on).focus();
   }
-  // The dialog over the task as read again: refused as stale, what was changed in it stays, and the rest is as read now. The steps reordered
-  // keep their order, without those gone and with those come after. A row removed meanwhile is not made again: the dialog says so
+  // The dialog over the task as read again: refused as stale, what was changed in it stays, and the rest is as read now (mergeSteps). A row
+  // removed meanwhile is not made again: the dialog says so
   function refillTaskEdit() {
     const task = tasksOf().find((x) => x.project === taskEditing.project && x.name === taskEditing.name);
     if (!task || (taskEditing.had && !hasRow(task))) {
@@ -5246,15 +5383,21 @@
     const now = editBase(task);
     if ($('edit-task-title').value.trim() === was.title) $('edit-task-title').value = now.title;
     if ($('edit-task-url').value.trim() === was.url) $('edit-task-url').value = now.url;
-    const order = editStepsNow();
-    const steps = sameSteps(order, was.steps) ? now.steps : [...order.filter((x) => now.steps.includes(x)), ...now.steps.filter((x) => !order.includes(x))];
-    drawEditSteps(task, steps);
+    drawEditSteps(task, mergeSteps(editStepsNow(), was.steps, now.steps, pagedOf(task)));
     taskEditing = { ...taskEditing, rev: readRev(task.project, task.name), had: hasRow(task), base: now };
     return true;
   }
   // Sends what was changed since it opened, nothing when nothing was, with the rev it showed
   async function saveTaskEdit(e) {
     e.preventDefault();
+    // A name typed and not added is not dropped unsaid
+    const left = $('edit-step-new');
+    const leftName = left.value.trim();
+    if (!left.hidden && leftName) {
+      left.setCustomValidity(t(editStepsNow().includes(leftName) ? 'ui_step_there' : 'ui_step_unadded', leftName));
+      left.reportValidity();
+      return;
+    }
     if (!taskFormReady($('edit-task'), $('edit-task-error'))) return;
     const { base } = taskEditing;
     const title = $('edit-task-title').value.trim();
@@ -5288,16 +5431,124 @@
     }
   }
 
-  // The page alone: its pin stays, and the task's row
-  async function takeOffTask() {
-    const reason = await patchOne(setPage.slug, { work: { task: '', step: '' } });
-    if (reason) {
-      setFailed(reason);
+  // The dialog's way off the task: the dialog closed, its focus back on the menu (setBack), and from the keys then on the way back
+  async function takeOffTask(e) {
+    const res = await takePageOff(setPage, setBack);
+    if (res.reason) {
+      setFailed(res.reason);
       return;
     }
-    toast(t('ui_saved'));
     await load();
+    // After the listener of setBack, which runs first as it was added first
+    if (e.detail === 0) $('set-dialog').addEventListener('close', () => res.button.focus(), { once: true });
     $('set-dialog').close();
+  }
+  // The add button of a step's heading, as drawn now
+  const stepAdd = (step) => [...$('list').children].find((li) => li.dataset.key === `group:${step}`)?.querySelector('.step-add');
+  // The page alone off its task: its pin stays, and the task's row, which nothing here writes. Its way back writes the page's work back as it
+  // was, and nothing else, so that a task of pages alone is back as it was; Escape on it leaves the focus on back (the menu it came from),
+  // the row after it, its step's add button, or the task's edit button
+  // LIMIT: a page's write has no rev, so the way back writes over what was written to the page since, as the archive's does. Give page writes a rev if that comes to trouble someone
+  async function takePageOff(a, back) {
+    const name = a.work.task;
+    const step = a.work.step ?? '';
+    const rows = [...$('list').children].filter((li) => !li.classList.contains('group') && li.querySelector('.title'));
+    const at = rows.findIndex((li) => li.dataset.key === `entry:${a.slug}`);
+    const next = at === -1 ? null : (rows[at + 1] ?? rows[at - 1])?.dataset.key;
+    const reason = await patchOne(a.slug, { work: { task: '', step: '' } });
+    if (reason) return { reason };
+    const rowOf = (key) => [...$('list').children].find((li) => li.dataset.key === key)?.querySelector('.title');
+    const edit = () => ($('task-edit').closest('[hidden]') ? null : $('task-edit'));
+    const button = undoToast(t('ui_task_out_done', a.title, name), {
+      undo: async () => {
+        const reason = await patchOne(a.slug, { work: { task: name, step } });
+        return { ok: !reason, text: reason };
+      },
+      done: () => rowOf(`entry:${a.slug}`) ?? back?.(),
+      away: () => back?.() ?? rowOf(next) ?? stepAdd(step) ?? edit(),
+    });
+    return { reason: '', button };
+  }
+
+  // The modal that puts a page of the task's project on one of its steps. It shows the task as it opened, and sends the rev it opened at;
+  // refused as stale, it shows the task as read again. Nothing is reached as it opens, so that no Enter puts a page by itself
+  let addTo = null;
+  let addShown = [];
+  let addSlug = null;
+  const addHits = () => {
+    const all = items.filter((a) => a.taskProject === addTo.project && !a.archived && !(a.work?.task === addTo.name && (a.work?.step ?? '') === addTo.step));
+    return { all, hits: searched($('add-page-q'), all) };
+  };
+  // Where a page comes from, as said of it: this task's other step, another task's, or none
+  const pageFrom = (a) => {
+    const { task, step } = a.work ?? {};
+    if (!task) return '';
+    if (task === addTo.name) return step ? t('ui_page_from_step', step) : t('ui_page_from_no_step');
+    return step ? t('ui_page_from_task_step', task, step) : task;
+  };
+  function drawAddPage() {
+    const { all, hits } = addHits();
+    const ranks = projectOrder();
+    addShown = hits.slice(0, FIND_ROWS);
+    $('add-page-list').replaceChildren(...addShown.map((a, i) => hitRow($('add-page-row'), `add-page-${i}`, a, ranks, (put) => {
+      if (!a.work?.task) return;
+      put('badge', a.work.task === addTo.name ? t('ui_page_here_step', a.work.step || t('ui_page_from_no_step')) : [a.work.task, a.work.step].filter(Boolean).join(' · '));
+    })));
+    const none = hits.length === 0;
+    $('add-page-list').hidden = none;
+    $('add-page-none').hidden = !none;
+    $('add-page-none-words').textContent = t(all.length === 0 ? 'ui_page_add_none' : 'ui_nomatch');
+    $('add-page-lead').classList.toggle('none', none);
+    addMark(addShown.findIndex((a) => a.slug === addSlug));
+  }
+  const addMark = listKeys($('add-page-q'), {
+    options: () => [...$('add-page-list').children],
+    choose: (i) => addPageTo(addShown[i]),
+    close: () => $('add-page-dialog').close(),
+    open: () => {},
+    shown: () => true,
+    tab: () => {},
+    moved: (i) => { addSlug = addShown[i]?.slug ?? null; },
+  });
+  function openAddPage(drawn, step) {
+    if (document.querySelector('dialog[open]')) return;
+    const task = tasksOf().find((x) => x.project === drawn.project && x.name === drawn.name) ?? drawn;
+    addTo = { project: task.project, name: task.name, step, rev: readRev(task.project, task.name) };
+    $('add-page-title').textContent = t('ui_page_add_named', step);
+    $('add-page-target').textContent = named(task);
+    $('add-page-q').value = '';
+    addSlug = null;
+    $('add-page-error').hidden = true;
+    drawAddPage();
+    $('add-page-dialog').showModal();
+    $('add-page-q').focus();
+  }
+  // One page, and the modal closes; its focus goes back to the step's add button, as drawn again
+  let adding = false;
+  async function addPageTo(a) {
+    if (!a || adding) return;
+    adding = true;
+    const to = addTo;
+    const from = pageFrom(a);
+    try {
+      const res = await putPageOn(a, to.project, to.name, { new: false, rev: to.rev, step: to.step }, to.step);
+      // The task's row written, the page refused, the row's rev is the one written; refused as stale, the one read again
+      if (res.rev !== null) to.rev = res.rev;
+      if (!res.ok) {
+        if (res.status === 409) {
+          to.rev = readRev(to.project, to.name);
+          drawAddPage();
+        }
+        $('add-page-error').textContent = res.status === 409 ? res.stale : t('ui_save_failed', res.text);
+        $('add-page-error').hidden = false;
+        return;
+      }
+      toast(from ? t('ui_page_moved', a.title, from, to.step) : t('ui_page_added', a.title, to.step));
+      await load();
+      $('add-page-dialog').close();
+    } finally {
+      adding = false;
+    }
   }
 
   // The list response last drawn, or '' for one to draw again at the next look: a draw that threw, or one that left a part for later. An
@@ -5418,6 +5669,7 @@
         backToRow();
       }
       if ($('find').open) drawFind();
+      if ($('add-page-dialog').open) drawAddPage();
     } catch (e) {
       // Said, not thrown, so that await load() goes on as after a read that failed; drawn again at each look until it draws
       // LIMIT: a draw that always throws is tried and said again at every look, every POLL_MS
@@ -5437,10 +5689,31 @@
   // LIMIT: the first FIND_ROWS rows only, which it says. Words narrow them; show more if a search comes to need them
   // LIMIT: the files in a folder are not searched, as what is in a folder is read only where it is open
   const FIND_ROWS = 50;
-  const findHits = () => {
-    const q = $('find-q').value.trim().toLowerCase();
-    return items.filter((a) => matches(a, q)).sort((x, y) => Boolean(x.archived) - Boolean(y.archived));
+  const findHits = () => searched($('find-q'), items).sort((x, y) => Boolean(x.archived) - Boolean(y.archived));
+  // The entries of among the words of a search field match
+  const searched = (input, among) => {
+    const q = input.value.trim().toLowerCase();
+    return among.filter((a) => matches(a, q));
   };
+  // A row of entry a in a search modal's list, of its template's: its title a link to it where the template's is one, and middle what drawSub
+  // puts after its kind
+  function hitRow(template, id, a, ranks, middle) {
+    const li = template.content.firstElementChild.cloneNode(true);
+    li.id = id;
+    li.classList.toggle('unseen', Boolean(a.news));
+    li.classList.toggle('archived', Boolean(a.archived));
+    li.querySelector('.lead').innerHTML = leadOf(a);
+    const title = li.querySelector('.title');
+    if (title instanceof HTMLAnchorElement) title.href = pageHref(a);
+    title.textContent = a.title;
+    title.title = a.title;
+    if (a.favorite) li.querySelector('.time').insertAdjacentHTML('afterbegin', STAR_MARK);
+    const time = li.querySelector('time');
+    time.dateTime = a.updatedAt;
+    time.textContent = ago(a.updatedAt);
+    drawSub(li.querySelector('.sub'), a, ranks, middle);
+    return li;
+  }
   // The row reached, by slug as the rows are drawn anew, and by its place for when it is gone
   let findSlug = null;
   let findAt = 0;
@@ -5490,23 +5763,7 @@
     const hits = findHits();
     const ranks = projectOrder();
     findShown = hits.slice(0, FIND_ROWS);
-    $('find-list').replaceChildren(...findShown.map((a, i) => {
-      const li = $('find-row').content.firstElementChild.cloneNode(true);
-      li.id = `find-${i}`;
-      li.classList.toggle('unseen', Boolean(a.news));
-      li.classList.toggle('archived', Boolean(a.archived));
-      li.querySelector('.lead').innerHTML = leadOf(a);
-      const link = li.querySelector('.title');
-      link.href = pageHref(a);
-      link.textContent = a.title;
-      link.title = a.title;
-      if (a.favorite) li.querySelector('.time').insertAdjacentHTML('afterbegin', STAR_MARK);
-      const time = li.querySelector('time');
-      time.dateTime = a.updatedAt;
-      time.textContent = ago(a.updatedAt);
-      drawSub(li.querySelector('.sub'), a, ranks, (put) => { if (a.archived) put('badge', t('ui_archived_badge')); });
-      return li;
-    }));
+    $('find-list').replaceChildren(...findShown.map((a, i) => hitRow($('find-row'), `find-${i}`, a, ranks, (put) => { if (a.archived) put('badge', t('ui_archived_badge')); })));
     const none = hits.length === 0;
     $('find-list').hidden = none;
     $('find-none').hidden = !none;
@@ -5639,15 +5896,54 @@
   $('edit-dialog').addEventListener('close', () => editBack?.()?.focus());
   $('set').addEventListener('submit', saveTaskSet);
   // A field marked blank is free again as it is typed in
-  for (const form of [$('set'), $('kin')]) form.addEventListener('input', (e) => e.target.setCustomValidity?.(''));
+  for (const form of [$('set'), $('kin'), $('edit-task')]) form.addEventListener('input', (e) => e.target.setCustomValidity?.(''));
   $('kin').addEventListener('submit', saveKin);
   $('task-delete').addEventListener('blur', disarmForget);
   $('set-out').addEventListener('click', takeOffTask);
+  $('add-page-q').addEventListener('input', () => {
+    $('add-page-error').hidden = true;
+    drawAddPage();
+  });
+  $('add-page-list').addEventListener('click', (e) => {
+    const li = e.target.closest('#add-page-list > li');
+    if (li) addPageTo(addShown[[...$('add-page-list').children].indexOf(li)]);
+  });
+  // The button it was opened from may have been drawn anew meanwhile
+  $('add-page-dialog').addEventListener('close', () => {
+    if ($('add-page-dialog').contains(document.activeElement) || document.activeElement === document.body) stepAdd(addTo.step)?.focus();
+  });
   $('set-dialog').addEventListener('close', () => setBack?.()?.focus());
   $('edit-task').addEventListener('submit', saveTaskEdit);
   // Typing again lets a refusal go, but not that the task is gone, which no typing changes
   $('edit-task').addEventListener('input', () => { if (!taskEditing?.gone) $('edit-task-error').hidden = true; });
+  $('edit-step-plus').addEventListener('click', () => {
+    plusField(true);
+    $('edit-step-new').focus();
+  });
+  // Enter adds, and Escape turns it back to the button, the dialog staying open; neither while the input method has the key
+  $('edit-step-new').addEventListener('keydown', (e) => {
+    if (composing(e)) return;
+    if (e.key === 'Enter') {
+      e.preventDefault();
+      addStep();
+    } else if (e.key === 'Escape') {
+      e.preventDefault();
+      e.stopPropagation();
+      plusField(false);
+      $('edit-step-plus').focus();
+    }
+  });
+  // Left empty, the field is the button again; with words in it, it stays, for saving to say so
+  $('edit-step-new').addEventListener('focusout', () => {
+    if (!$('edit-step-new').value.trim()) plusField(false);
+  });
   $('edit-steps').addEventListener('click', (e) => {
+    const drop = e.target.closest('.step-drop');
+    if (drop) {
+      if (pressable(drop)) dropStep(drop.closest('li'));
+      else $('edit-step-said').textContent = drop.getAttribute('aria-label');
+      return;
+    }
     const btn = e.target.closest('.step-up, .step-down');
     if (!btn || btn.disabled) return;
     const li = btn.closest('li');
