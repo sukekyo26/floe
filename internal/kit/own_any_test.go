@@ -110,7 +110,11 @@ func TestOwnPartRebuilt(t *testing.T) {
 	if err != nil {
 		t.Fatal(told(err))
 	}
-	if r, ok, err := mine.Template("report"); err != nil || !ok || r.File("schema.json") != "own/templates/report/schema.json" {
+	r, ok, err := mine.Template("report")
+	if err != nil || !ok {
+		t.Fatalf("report: %v, %v", ok, err)
+	}
+	if r.File("schema.json") != "own/templates/report/schema.json" {
 		t.Errorf("report is %v, want one's own", r.File("schema.json"))
 	}
 }
