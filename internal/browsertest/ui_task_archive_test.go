@@ -257,10 +257,10 @@ a child added: #kid3 To do,#kid In progress,#kid2 Archive
 the child: doing
 its parent, from the child: #up
 with the parent in the archive: done #forgot,#none,#pages,#refused | archive #double,#kid2,#marked,#still,#up
-forgotten: Could not save: task #forgot is no longer there
-refused: Could not save: no
+forgotten: Failed to save: task #forgot is no longer there
+refused: Failed to save: no
 refused, as it was: Archive the task | done | no word | rows f1 | 
-not reached: Could not save: no server | done
+not reached: Failed to save: no server | done
 archived elsewhere, open: false true
 closed: true false
 the focus on the choices: task-archive
@@ -292,7 +292,7 @@ func TestUITaskStateGone(t *testing.T) { //nolint:paralleltest // the browser te
 	b.eval(change)
 	b.until("the refusal", "!document.getElementById('error').hidden")
 	b.until("read again", "!document.getElementById('task-missing').hidden")
-	if got, want := b.eval("document.getElementById('error').textContent"), "The state could not be changed: task #gone is no longer there"; got != want {
+	if got, want := b.eval("document.getElementById('error').textContent"), "Failed to change the state: task #gone is no longer there"; got != want {
 		t.Errorf("forgotten: %q, want %q", got, want)
 	}
 	tasks, err := st.ReadTasks()
@@ -314,7 +314,7 @@ func TestUITaskStateGone(t *testing.T) { //nolint:paralleltest // the browser te
 	s.floe(t, "work", "--project", project, "--task", "#other", "--state", "waiting")
 	b.eval(change)
 	b.until("the refusal", "!document.getElementById('error').hidden")
-	if got, want := b.eval("document.getElementById('task-state').value + ' | ' + document.getElementById('error').textContent"), "waiting | The state could not be changed: no"; got != want {
+	if got, want := b.eval("document.getElementById('task-state').value + ' | ' + document.getElementById('error').textContent"), "waiting | Failed to change the state: no"; got != want {
 		t.Errorf("refused by another reason: %q, want %q", got, want)
 	}
 	b.eval(free)
@@ -327,7 +327,7 @@ func TestUITaskStateGone(t *testing.T) { //nolint:paralleltest // the browser te
 	s.floe(t, "work", "--project", project, "--task", "#other", "--state", "waiting")
 	b.eval("document.getElementById('task-archive').click()")
 	b.until("the refusal", "!archivingTask && !document.getElementById('error').hidden")
-	if got, want := b.eval("document.getElementById('task-archive').hidden + ' | ' + document.getElementById('error').textContent"), "true | Could not save: no"; got != want {
+	if got, want := b.eval("document.getElementById('task-archive').hidden + ' | ' + document.getElementById('error').textContent"), "true | Failed to save: no"; got != want {
 		t.Errorf("the button refused by another reason: %q, want %q", got, want)
 	}
 	b.eval(free)

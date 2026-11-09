@@ -1328,7 +1328,7 @@
     <p class="error" id="set-error" hidden></p>
     <div class="dialog-actions set-foot">
       <button type="button" class="btn set-out" id="set-out">{{.Msg "ui_task_out"}}</button>
-      <button type="button" class="btn" data-close>{{.Msg "ui_close"}}</button>
+      <button type="button" class="btn" data-close>{{.Msg "ui_cancel"}}</button>
       <button type="submit" class="btn primary" id="set-submit">{{.Msg "ui_save"}}</button>
     </div>
   </form>
@@ -1364,7 +1364,7 @@
     </div>
     <p class="error" id="edit-task-error" role="alert" hidden></p>
     <div class="dialog-actions">
-      <button type="button" class="btn" data-close>{{.Msg "ui_close"}}</button>
+      <button type="button" class="btn" data-close>{{.Msg "ui_cancel"}}</button>
       <button type="submit" class="btn primary" id="edit-task-submit">{{.Msg "ui_save"}}</button>
     </div>
   </form>
@@ -1390,7 +1390,7 @@
     <p id="kin-note" hidden></p>
     <p class="error" id="kin-error" hidden></p>
     <div class="dialog-actions">
-      <button type="button" class="btn" data-close>{{.Msg "ui_close"}}</button>
+      <button type="button" class="btn" data-close>{{.Msg "ui_cancel"}}</button>
       <button type="submit" class="btn primary" id="kin-submit"></button>
     </div>
   </form>
@@ -1576,7 +1576,7 @@
           : { method: 'DELETE', signal });
         if (!res.ok && res.status !== 404) {
           const why = await res.text();
-          fail(value ? t('ui_http_error', why, res.status) : t('ui_unread_failed', why));
+          fail(value ? t('ui_read_failed', t('ui_http_error', why, res.status)) : t('ui_unread_failed', why));
           continue;
         }
         showError('', 'read');
@@ -4085,7 +4085,7 @@
       if (!res.ok && res.status !== 404) throw new Error(await res.text());
       location.href = taskListHref(task);
     } catch (e) {
-      $('task-delete-error').textContent = t('ui_task_forget_fail', e.message);
+      $('task-delete-error').textContent = t('ui_task_forget_failed', e.message);
       $('task-delete-error').hidden = false;
       disarmForget();
     }
@@ -5440,21 +5440,31 @@
     }
     const btn = $('edit-task-submit');
     btn.disabled = true;
+    const failed = (reason) => {
+      $('edit-task-error').textContent = t('ui_save_failed', reason);
+      $('edit-task-error').hidden = false;
+    };
     let gone = false;
     try {
-      const res = await writeTask(taskEditing.project, taskEditing.name, body);
-      if (res.status === 409) {
-        gone = !refillTaskEdit();
-        if (!gone) throw new Error(res.stale);
+      let res;
+      try {
+        res = await writeTask(taskEditing.project, taskEditing.name, body);
+      } catch (err) {
+        failed(err.message);
         return;
       }
-      if (!res.ok) throw new Error(t('ui_save_failed', res.text));
+      if (res.status === 409) {
+        gone = !refillTaskEdit();
+        if (!gone) failed(res.stale);
+        return;
+      }
+      if (!res.ok) {
+        failed(res.text);
+        return;
+      }
       toast(t('ui_saved'));
       await load();
       $('edit-task-dialog').close();
-    } catch (err) {
-      $('edit-task-error').textContent = err.message;
-      $('edit-task-error').hidden = false;
     } finally {
       if (!gone) btn.disabled = false;
     }
@@ -5559,8 +5569,18 @@
     adding = true;
     const to = addTo;
     const from = pageFrom(a);
+    const failed = (reason) => {
+      $('add-page-error').textContent = t('ui_save_failed', reason);
+      $('add-page-error').hidden = false;
+    };
     try {
-      const res = await putPageOn(a, to.project, to.name, { new: false, rev: to.rev, step: to.step }, to.step);
+      let res;
+      try {
+        res = await putPageOn(a, to.project, to.name, { new: false, rev: to.rev, step: to.step }, to.step);
+      } catch (err) {
+        failed(err.message);
+        return;
+      }
       // The task's row written, the page refused, the row's rev is the one written; refused as stale, the one read again
       if (res.rev !== null) to.rev = res.rev;
       if (!res.ok) {
@@ -5568,8 +5588,7 @@
           to.rev = readRev(to.project, to.name);
           drawAddPage();
         }
-        $('add-page-error').textContent = res.status === 409 ? res.stale : t('ui_save_failed', res.text);
-        $('add-page-error').hidden = false;
+        failed(res.status === 409 ? res.stale : res.text);
         return;
       }
       toast(from ? t('ui_page_moved', a.title, from, to.step) : t('ui_page_added', a.title, to.step));

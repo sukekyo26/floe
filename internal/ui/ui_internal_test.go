@@ -10,6 +10,8 @@ import (
 	"testing"
 
 	"github.com/goccy/go-yaml/ast"
+	"golang.org/x/net/html"
+	"golang.org/x/net/html/atom"
 
 	"github.com/sukekyo26/floe/internal/files"
 	"github.com/sukekyo26/floe/internal/i18n"
@@ -213,6 +215,117 @@ func TestPageMessages(t *testing.T) {
 	if !slices.Contains(i18n.Langs(), "ja") {
 		t.Error("the Japanese catalog is not registered")
 	}
+}
+
+// A failure says what failed in one shape: "…に失敗しました：reason" and "Failed to …: reason", the reason in brackets when words follow it.
+// The words of an old shape are left to the states named, which tell how things are and no try that failed.
+func TestFailureWords(t *testing.T) {
+	t.Parallel()
+
+	states := []string{
+		"ui_server_down", "ui_server_down_host", "ui_load_slow", "ui_version_gone", "ui_diff_bad_url", "ui_tasks_unreadable",
+		"ui_task_none_kids", "ui_step_drop_paged",
+	}
+	old := map[i18n.Lang]*regexp.Regexp{"ja": regexp.MustCompile(`ませんでした|めません`), "en": regexp.MustCompile(`(?i)could not|cannot`)}
+	shape := map[i18n.Lang]*regexp.Regexp{
+		"ja": regexp.MustCompile(`に失敗しました(：%[^%]*|（%[^）]*）。.+)$`),
+		"en": regexp.MustCompile(`^Failed to .*(: %[^ ]*| \(%[^)]*\)\. .+)$`),
+	}
+	for _, lang := range i18n.Langs() {
+		formats := i18n.New(lang).Formats("ui_")
+		for _, key := range states {
+			if _, ok := formats[key]; !ok {
+				t.Errorf("%s: the state %s is not in the catalog", lang, key)
+			}
+		}
+		for key, format := range formats {
+			if old[lang].MatchString(format) && !slices.Contains(states, key) {
+				t.Errorf("%s %s: %q tells a failure in an old shape", lang, key, format)
+			}
+			if strings.HasSuffix(key, "_fail") {
+				t.Errorf("%s %s: a failure's key ends in _failed", lang, key)
+			}
+			if strings.HasSuffix(key, "_failed") && !shape[lang].MatchString(format) {
+				t.Errorf("%s %s: %q is not of the shape %s", lang, key, format, shape[lang])
+			}
+		}
+	}
+}
+
+// A dialog's close button says Cancel where a submit button saves what is typed, which closing throws away, and Close where nothing is.
+// The page is read as the server renders it, in each language.
+func TestDialogCloseWords(t *testing.T) {
+	t.Parallel()
+
+	want := []string{
+		"filter-dialog", "find", "add-page-dialog", "keys", "add-dialog", "edit-dialog", "set-dialog", "edit-task-dialog", "kin-dialog",
+		"tag-dialog",
+	}
+	for _, lang := range i18n.Langs() {
+		c := i18n.New(lang)
+		b, err := Page(c, "", false, "")
+		if err != nil {
+			t.Fatal(err)
+		}
+		doc, err := html.Parse(strings.NewReader(string(b)))
+		if err != nil {
+			t.Fatal(err)
+		}
+		var ids []string
+		for n := range doc.Descendants() {
+			if n.Type != html.ElementNode || n.DataAtom != atom.Dialog {
+				continue
+			}
+			id := attr(n, "id")
+			ids = append(ids, id)
+			submit := false
+			var closers []string
+			for d := range n.Descendants() {
+				if d.Type != html.ElementNode || d.DataAtom != atom.Button {
+					continue
+				}
+				if attr(d, "type") == "submit" {
+					submit = true
+				}
+				if hasAttr(d, "data-close") {
+					closers = append(closers, strings.TrimSpace(text(d)))
+				}
+			}
+			word := c.Msg("ui_close")
+			if submit {
+				word = c.Msg("ui_cancel")
+			}
+			if !slices.Equal(closers, []string{word}) {
+				t.Errorf("%s %s: close buttons %q, want one %q", lang, id, closers, word)
+			}
+		}
+		if !slices.Equal(ids, want) {
+			t.Errorf("%s: dialogs %q, want %q: tell a new one's close word here", lang, ids, want)
+		}
+	}
+}
+
+func attr(n *html.Node, key string) string {
+	for _, a := range n.Attr {
+		if a.Key == key {
+			return a.Val
+		}
+	}
+	return ""
+}
+
+func hasAttr(n *html.Node, key string) bool {
+	return slices.ContainsFunc(n.Attr, func(a html.Attribute) bool { return a.Key == key })
+}
+
+func text(n *html.Node) string {
+	var b strings.Builder
+	for d := range n.Descendants() {
+		if d.Type == html.TextNode {
+			b.WriteString(d.Data)
+		}
+	}
+	return b.String()
 }
 
 // The tasks' rows are asked of the server in one place each: read by readTasks, written by writeTask (as every screen's write of a task goes,

@@ -204,7 +204,7 @@ func TestUITaskEditSteps(t *testing.T) { //nolint:paralleltest // the browser te
 		"saved: 6 [案,設計,実装,レビュー]",
 		`sent: {"new":false,"rev":5,"steps":["案","設計","実装","レビュー"]}`,
 		"unchanged: 0",
-		"stale, paged: 案x,設計x,実装x,レビューx,リリースx / task S300 has changed since it was read: the tasks are read again, so check and save again",
+		"stale, paged: 案x,設計x,実装x,レビューx,リリースx / Failed to save: task S300 has changed since it was read: the tasks are read again, so check and save again",
 		"stale, added: 案x,設計x,実装x,リリースx,レビューx,公開d",
 		"saved again: 11 [案,設計,実装,リリース,レビュー,公開]",
 		"no steps: true / false / plus / edit-task-title",

@@ -169,6 +169,18 @@ func TestUITaskSteps(t *testing.T) { //nolint:paralleltest // the browser tests 
 	say("page refused, then", "sent.join(' ; ')")
 	out = append(out, "page refused, written: "+row("S300")+" / "+work("note-a"))
 
+	// Not reached: said in the modal, which stays open.
+	b.eval("window.cutFetch = window.fetch; window.fetch = (url, init) => (String(url).startsWith('/api/tasks') && init?.method === 'PATCH' ? Promise.reject(new TypeError('Failed to fetch')) : window.cutFetch(url, init))")
+	add("案")
+	query("other")
+	b.pressKey(kb.ArrowDown)
+	b.pressKey(kb.Enter)
+	b.until("not reached", "!document.getElementById('add-page-error').hidden")
+	say("not reached", "document.getElementById('add-page-error').textContent + ' / ' + document.getElementById('add-page-dialog').open")
+	b.eval("window.fetch = window.cutFetch")
+	b.pressKey(kb.Escape)
+	b.until("closed", "!document.getElementById('add-page-dialog').open")
+
 	// From another task, and from another step of this one: said where it came from.
 	add("案")
 	query("other")
@@ -250,13 +262,14 @@ func TestUITaskSteps(t *testing.T) { //nolint:paralleltest // the browser tests 
 		"put, focus: Add a page to リリース",
 		"put, written: 6 リリース / S300/リリース",
 		"put, groups: note-a [案+] plan-a old-a [実装+] build-a [リリース+] check-a [レビュー+] review-a",
-		"stale: task S300 has changed since it was read: the tasks are read again, so check and save again / true / memo-a",
+		"stale: Failed to save: task S300 has changed since it was read: the tasks are read again, so check and save again / true / memo-a",
 		"stale, typed: true",
 		`stale, then: /api/tasks {"new":false,"rev":6,"step":"リリース"} ; /api/tasks {"new":false,"rev":7,"step":"リリース"} ; /api/artifacts/memo-a {"work":{"task":"S300","step":"リリース"}}`,
 		"stale, written: 7 リリース / S300/リリース",
-		"page refused: Could not save: HTTP 500: no / true",
+		"page refused: Failed to save: HTTP 500: no / true",
 		`page refused, then: /api/tasks {"new":false,"rev":7,"step":"案"} ; /api/tasks {"new":false,"rev":8,"step":"案"} ; /api/artifacts/note-a {"work":{"task":"S300","step":"案"}}`,
 		"page refused, written: 8 案 / S300/案",
+		"not reached: Failed to save: Failed to fetch / true",
 		"moved from a task: Moved T other-a from S301's 設計 to 案",
 		"moved from a step: Moved T build-a from 実装 to リリース",
 		"moved, groups: [案+] plan-a note-a other-a old-a [実装+ none] [リリース+] build-a memo-a check-a [レビュー+] review-a",
