@@ -14,7 +14,8 @@ import (
 // strikethrough is markdown-cjk-friendly's strikethrough (goldmark's, with CJK letters read) of two tildes alone, as
 // cmark-gfm's CMARK_OPT_STRIKETHROUGH_DOUBLE_TILDE reads it: the GFM spec takes one too, which strikes through a range
 // (2026-11-01~11-08) or a path (~/work) unasked.
-// LIMIT: when goldmark has a setting of two tildes alone, take it for this.
+// LIMIT: when goldmark-cjk-friendly has a setting of two tildes alone, or one that this can wrap, take it for this:
+// goldmark's own would read ~~ beside CJK letters no longer.
 // LIMIT: two tildes beside an escaped one (\~~~a~~) stay text, as in goldmark, which reads the escaped one as a tilde.
 var strikethrough goldmark.Extender = tildesExtension{}
 

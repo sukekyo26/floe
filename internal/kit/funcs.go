@@ -55,14 +55,14 @@ var markdown = newMarkdown(
 	goldmark.WithExtensions(extension.Linkify, extension.Table, strikethrough, extension.TaskList),
 )
 
-// newMarkdown is a goldmark of opts that writes raw HTML as the text written (rawAsText), and reads * beside CJK
+// newMarkdown is a goldmark of opts that writes raw HTML as the text written (rawAsText), and reads * and _ beside CJK
 // letters by markdown-cjk-friendly: every Markdown of floe is made here, so that no tag written in it reaches the page
 // and a Japanese sentence reads its emphasis.
 // LIMIT: * and ~~ beside a CJK letter are read by markdown-cjk-friendly, so that a * written as a mark beside a CJK
 // letter or a CJK mark (設定は*.yamlと*.json, L*、b*, 案*（…）) can pair up and draw italics where CommonMark draws the
 // marks: plain on the page; write \* or code there.
-// LIMIT: goldmark-cjk-friendly copies goldmark's ScanDelimiter; when goldmark is upgraded, read the change of its
-// parser/delimiter.go.
+// goldmark-cjk-friendly copies goldmark's ScanDelimiter: TestCJKFriendlyKeepsCommonMark watches that it reads as
+// goldmark beside letters of no CJK.
 func newMarkdown(opts ...goldmark.Option) goldmark.Markdown {
 	raw := goldmark.WithRendererOptions(renderer.WithNodeRenderers(util.Prioritized(rawAsText{}, 0)))
 	return goldmark.New(append(opts, raw, goldmark.WithExtensions(cjkfriendly.CJKFriendlyEmphasis))...)
