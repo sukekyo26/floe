@@ -182,7 +182,12 @@ parts:
 		{"from a lane to a box it holds", lane("{ from: dev, to: build }"), `s.yaml:16:28: edge "dev"→"build": both ends are group "dev" or inside it; end the edge at a box or another group outside "dev"`},
 		{"a box among the lanes", strings.Replace(lanes, "      lanes:\n", "      lanes:\n        - box: { name: z, rows: [Z] }\n", 1), "s.yaml:7:11: additional properties 'box' not allowed\ns.yaml:7:11: missing property 'nodes'"},
 		{"to a group in a lane", lane("{ from: ask, to: tools }"), ""},
-		{"nodes beside lanes", strings.Replace(lanes, "      edges:\n", "      nodes:\n        - box: { name: z, rows: [Z] }\n      edges:\n", 1), `s.yaml:15:9: false schema`},
+		{"nodes beside lanes", strings.Replace(lanes, "      edges:\n", "      nodes:\n        - box: { name: z, rows: [Z] }\n      edges:\n", 1), `s.yaml:4:7: additional properties 'nodes' not allowed`},
+		{
+			"nodes beside lanes in the second graph", "title: T\nparts:\n  - graph:\n      x: 10\n      y: 10\n      nodes: [{ box: { name: c, rows: [c] } }]\n" +
+				"  - graph:\n      x: 10\n      y: 200\n      lanes: [{ name: team, nodes: [{ box: { name: a, rows: [a] } }] }]\n      nodes: [{ box: { name: b, rows: [b] } }]\n",
+			`s.yaml:8:7: additional properties 'nodes' not allowed`,
+		},
 	} {
 		if _, got := draw(t, c.src, inspect); got != c.want {
 			t.Errorf("%s:\n  told %q\n  want %q", c.name, got, c.want)
