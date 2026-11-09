@@ -124,7 +124,7 @@ A part draws an item of the data: `floe part list --all` lists every part, look 
 
 The part `text` is Markdown that stands among other parts, where `code` and `terminal` can stand beside it: floe warns of a fenced block of code in it, to be written in `code`. It draws its Markdown in a box of no part (`data-floe-text`), with no ground or tone of its own, so that it takes the face and tone around it; `page.css` and the theme's `base.css` stop at it, and the theme's `markdown.css` draws it as Markdown anywhere. Its headings are in Markdown's sizes (1.2em and 1.1em), as in a template's own Markdown. A field of plain Markdown, where no code part stands, is `{"type": "string", "format": "markdown"}` instead.
 
-A part of any kind, one key naming its kind, refers to `any.json`; a list of them, as report's sections do, refers to it as its items. In a template's root schema:
+A part of any kind, one key naming its kind, refers to `any.json`; a list of them, as report's sections do, refers to it as its items. Your own parts join it ([parts.md](parts.md)). In a template's root schema:
 
 ```json
 "part":  { "$ref": "floe:///parts/any.json" },

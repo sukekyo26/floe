@@ -84,7 +84,7 @@ floe render plan.yaml           # floe 無しで開ける plan.html を隣に書
 - ページの頭の、短い値の数個：`facts`。
 - 行でも列でも見比べる、升の短い並び：`table`。
 
-`report` が節の中に取る部品：
+`report` が節の中に取る部品。自分の部品も取り（[parts.ja.md](parts.ja.md)）、`floe part list` がこれらと一緒に並べます：
 
 | 部品 | 描くもの |
 |---|---|

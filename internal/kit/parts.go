@@ -4,6 +4,7 @@ import (
 	"bytes"
 	"errors"
 	"html/template"
+	"maps"
 	"path"
 	"regexp"
 	"slices"
@@ -147,31 +148,29 @@ func (k *Kit) readParts(d Dir) error {
 			}
 		}
 	}
-	if found != nil {
-		return found.Sorted().Err()
-	}
-	return k.compileParts(dirs, shared)
+	return found.Sorted().Err()
 }
 
-// compileParts compiles each part and shared schema of k read from the names dirs and shared, all read without
-// a mistake (a $ref to one not read would be told missing), at its own file: a template compiled with it would
-// tell a mistake of it at the template. Each keeps its schema compiled, for check.
-func (k *Kit) compileParts(dirs, shared []string) error {
+// compileParts compiles each part and shared schema of k's own, all read without a mistake (a $ref to one not read
+// would be told missing), at its own file: a template compiled with it would tell a mistake of it at the template.
+// Each keeps its schema compiled, for check.
+func (k *Kit) compileParts() error {
 	var found usererr.List
-	for _, name := range slices.Concat(dirs, shared) {
-		p, part := k.parts[name]
-		if !part && !slices.Contains(shared, name) {
-			continue // a look, which has no schema
-		}
+	for _, name := range slices.Sorted(maps.Keys(k.parts)) {
 		c, err := schema.CompilePart(partURL(name), k.resources)
 		if failed := found.Add(err); failed != nil {
 			return failed
 		}
-		switch {
-		case err != nil:
-		case part:
-			p.schema = c
-		default:
+		if err == nil {
+			k.parts[name].schema = c
+		}
+	}
+	for _, name := range slices.Sorted(maps.Keys(k.shared)) {
+		c, err := schema.CompilePart(partURL(name), k.resources)
+		if failed := found.Add(err); failed != nil {
+			return failed
+		}
+		if err == nil {
 			k.shared[name].schema = c
 		}
 	}

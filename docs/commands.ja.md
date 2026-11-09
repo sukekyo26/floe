@@ -143,7 +143,7 @@ floe と自分のテンプレートを 1 行ずつ、タブで区切った 4 列
 
 ## `floe part list`
 
-floe のテンプレートの節に書ける部品（floe の `any.json` の鍵）を 1 行ずつ、タブで区切った 4 列で出します。名前、場所（`floe`）、形、説明です。`html` は HTML を字で取り、`schema.json` はありません。`floe part show html any.json` が、鍵 `html` を持つ `any.json` の全体を出します。
+floe のテンプレートの節に書ける部品（floe の `any.json` の鍵と、そこに加わる自分の部品）を 1 行ずつ、タブで区切った 4 列で出します。名前、場所（`floe` か、自分の部品のディレクトリ）、形、説明です。`html` は HTML を字で取り、`schema.json` はありません。`floe part show html any.json` が、鍵 `html` を持つ `any.json` の全体を出します。自分の部品は `any` に加わりますが、`floe part show any any.json` が出すのは、書いてあるとおりの floe の `any.json` です。
 
 形は、その値の書き方です。鍵を名前の順に並べ、項目の並びなら頭に `[] `、どれか 1 つだけを書く鍵なら頭に `one of ` を付けます。字なら format の名前（`markdown`・`html`）、floe の部品そのものなら部品の名前です。`-` は、一覧が言わない形です。`floe part show <名前>`（`template show`・`theme show`）の `files:` の行が読むファイルを名指し、`floe diagram example <種類>` が見本を出します。テンプレートの形には、どのデータファイルにも書ける `template`・`lang`・`theme`・`title` も入ります。
 

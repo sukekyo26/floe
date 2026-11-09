@@ -5,7 +5,7 @@ paths:
 
 # 部品・テンプレート・kit・描く所
 
-- **schema の形はコンパイルした木から**：floe が要る形（どの項目がどの部品・format か）は、コンパイルした `*jsonschema.Schema` から取り、schema の JSON を自前で辿らない。生の JSON を見るのは、`$schema`（2020-12・2019-09 だけを受ける）と `$id` の確かめと、`read` の字句の確かめだけで、schema の鍵の意味は読まない。例外：「埋めて呼び直す」ときは、写しに名前を足すために、生の JSON の根と `$defs` の直下を読んで書いてよい（書くのは写しだけ。`holes.fill`）
+- **schema の形はコンパイルした木から**：floe が要る形（どの項目がどの部品・format か）は、コンパイルした `*jsonschema.Schema` から取り、schema の JSON を自前で辿らない。生の JSON を見るのは、`$schema`（2020-12・2019-09 だけを受ける）と `$id` の確かめと、`read` の字句の確かめだけで、schema の鍵の意味は読まない。例外：名前の並び（根・`$defs` の直下・`properties`）に名前を足すだけの写しは、生の JSON のその所だけを読んで書いてよい（書くのは写しだけで、ほかの鍵は読まない）。今は `holes.fill` と `AnyWith`
 - **木は Follow で歩く**：schema の木は、全部の欄を辿る `every` か、`schema.Follow` の繰り返しで歩き、検査ごとに歩き方を書き分けない。例外は、`$schema` と `$id` を見る生の JSON の歩きと、`sharedKeys`
 - **項目の検査は checkNode 1 つ**：schema の 1 つずつの検査は `checkNode` 1 つで、テンプレートも部品も共有の schema も `checkOwn` の同じ歩きで走らせる。共有の schema は、指す側の歩きでなく、その根から確かめる（指す側は根しか指せない）。指す側の `$ref` が辿られない所（辿らない場所にある、横の format で止まる）は、指す側で言う。テンプレートに足す検査は `checkNode` に足し、部品に写さない
 - **値を歩くのは Walk だけ**：データの値を schema に沿って歩くのは `schema.(*Compiled).Walk` だけで、値ごとに `Follow` を 1 回呼び、部品の値はその部品の schema の根から歩き続ける。描く値も、確かめる項目（部品の check を走らせる所）も、Walk から取る
@@ -17,7 +17,7 @@ paths:
 - **段 1 は読むと確かめるに分ける**：kit の `read` は値を作るのに要ることだけをし、値の後の決まりは `check` が持つ。kit の外で Kit を作れるのは `Load` と `Floe()` だけ。実行のときは floe のものに `check` を走らせず、テストで走らせる。例外：後で一緒にコンパイルするものの読み方を変える入力は `read` で断る（今は部品と共有の schema の `$schema` と `$id`）
 - **読んだ Kit は変えない**：`Kit` は欄を外へ出さず、`[]byte` も写しを返す。自分のものを重ねるときは、土台を書き換えずに新しい `Kit` を作る（`Floe()` の値をプロセス全体で共有するため）。描くときは、`Template.Page`・`Part.Page` が返す写しを Execute する（Execute は html/template にエスケープの結果を書き込み、その後は写しを作れない）
 - **show が出すのは読んだファイル**：`floe part show` などが出すファイルは、読み手が読んだもの（`readFile` が書き留めたもの）だけで、順は種類ごとの並び 1 つ（`unreadIn` も同じ並びを使う）。show のために別に選ばない
-- **stack は書いた部品を全部描く**：stack の part.html は部品の種類を書き並べず、report の page.html と同じ繰り返しで描く。置ける部品は stack の schema 1 か所で決める。置けるのは any.json から tabs・columns・html を除いた全部。`TestEveryPartDrawsEveryPart`・`TestStackTakesAny`
+- **stack は書いた部品を全部描く**：stack の part.html は部品の種類を書き並べず、report の page.html と同じ繰り返しで描く。置ける部品は stack の schema 1 か所で決める。置けるのは any.json から tabs・columns・html を除いた全部。`TestEveryPartDrawsEveryPart`・`TestStackTakesAny`。自分の部品は stack に入らず、any の写しにだけ入る（`AnyWith`）
 - **部品 text はコードの部品と並ぶ Markdown**：部品の並びの Markdown は部品 text で、Go の名前は `kit.TextPart` 1 つ。テンプレートや部品の自分の Markdown の欄は部品 text にしない。例外：同じ項目に部品の並びを持つ欄は部品 text にする。text は部品の箱でない外枠 `data-floe-text` に描き、外の面と tone を継ぐ。page.css とテーマの base.css は外枠で止まる
 - **組み込みのテンプレートは汎用**：floe の組み込みのテンプレートは、どのプロジェクトでも使う一般的な文書の形にする。floe の開発の流れだけの段は決まった段にせず、任意の節に書かせる。見本（example.yaml）の中身も一般的な題材にする。必須は、その文書が成り立たない段だけにする
 - **組み込みは schema だけで断る**：組み込みのテンプレートは checks.yaml を持たず、断るのは schema（必須・型・知らない鍵・空の字）だけ。見れば分かる誤り（判断に推しが 2 つ、など）は `LIMIT:` にする
