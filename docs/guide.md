@@ -27,7 +27,7 @@ floe shows the user a page you write as a YAML file: it checks the file, draws i
 
 ## Publishing again
 
-- Publish the same file again, from any directory, without `--slug`: it replaces its page, even after the user renamed the page on the management page.
+- floe knows a page by its file, not by where you run floe: publish the same file again, from any directory, without `--slug`, and it replaces its page, even after the user renamed the page on the management page.
 - If floe refuses the name, a page of another file has it: rename your file (`db-choice-2.yaml`) or pass another `--slug`, and publish it again.
 
 ## Themes
@@ -37,7 +37,7 @@ floe shows the user a page you write as a YAML file: it checks the file, draws i
 
 ## Picking parts
 
-Each item of `parts` is one key naming the part. `floe part list` lists each part's keys and what it is for; where it names no keys (`chart`, `stats`, `diagram`, …), read `floe part show <part> schema.json`, which also gives the keys' types and details. For a template of your own, read its `schema.json` too (`floe template show <template> schema.json`): it says which parts a section takes.
+Each item of `parts` is one key naming the part. `floe part list` lists each part's keys and what it is for. For parts whose keys are not listed (`chart`, `stats`, `diagram`, …), read `floe part show <part> schema.json` to see their keys, types and details. For a template of your own, read its `schema.json` too (`floe template show <template> schema.json`): it says which parts a section takes.
 
 Pick the part by what the content is:
 
@@ -45,11 +45,11 @@ Pick the part by what the content is:
 |---|---|
 | Prose, or a short list | `text` (Markdown) |
 | Steps in order, to do or done | `steps`; floe numbers them, so write no number in a title |
-| Items with longer explanations, such as risks, requirements or terms | `entries`; a short state or label of each goes in its `tags` (`tags: [done]`) |
+| Items with longer explanations, such as risks, requirements or terms | `entries`; short states or labels go in its `tags` (`tags: [done]`) |
 | Options weighed with pros and cons | `options` |
 | One decision with its reasons | `decision` |
 | Questions for the reader to decide | `asks` |
-| Results of checks or tests | `checks`, each with `result: ok`, `ng` or `unchecked`, counted on top; not the conditions of a choice (`table`, `options`) nor what is still to do (`checklist`) |
+| Results of checks or tests | `checks`, each with `result: ok`, `ng` or `unchecked`; floe counts the results at the top; not the conditions of a choice (`table`, `options`) nor what is still to do (`checklist`) |
 | Events at dates | `timeline`; stages without dates are `steps` |
 | Rows compared along and across, each cell short | `table` |
 | A few key values at the top | `facts` |

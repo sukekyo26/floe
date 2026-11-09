@@ -29,7 +29,7 @@ floe は、あなたが YAML のファイルで書いたページをユーザー
 
 ## 出し直す
 
-- 同じファイルを、どのディレクトリからでも、`--slug` を付けずに publish し直す。ユーザーが管理ページで改名した後でも、そのページを置き換えます。
+- floe はページを、floe を走らせた場所でなくファイルで見分けます。同じファイルを、どのディレクトリからでも、`--slug` を付けずに publish し直す。ユーザーが管理ページで改名した後でも、そのページを置き換えます。
 - 名前を断られたら、別のファイルのページがその名前を使っています。ファイルの名前を変えるか（`db-choice-2.yaml`）、別の `--slug` を付けて出し直す。
 
 ## テーマ
@@ -39,7 +39,7 @@ floe は、あなたが YAML のファイルで書いたページをユーザー
 
 ## 部品を選ぶ
 
-`parts` の各項目は、部品を名指す鍵 1 つです。`floe part list` が各部品の鍵と使い道を出します。鍵を名指さない部品（`chart`・`stats`・`diagram` など）は `floe part show <part> schema.json` を読む。鍵の型と詳しいことも、そこにあります。自分のテンプレートなら、その `schema.json` も読む（`floe template show <template> schema.json`）。節が取る部品はそこに書いてあります。
+`parts` の各項目は、部品を名指す鍵 1 つです。`floe part list` が各部品の鍵と使い道を出します。鍵が並ばない部品（`chart`・`stats`・`diagram` など）は、`floe part show <part> schema.json` を読んで、鍵と型と詳しいことを見る。自分のテンプレートなら、その `schema.json` も読む（`floe template show <template> schema.json`）。節が取る部品はそこに書いてあります。
 
 中身で部品を選ぶ：
 
@@ -47,11 +47,11 @@ floe は、あなたが YAML のファイルで書いたページをユーザー
 |---|---|
 | 文、または短い並び | `text`（Markdown） |
 | 順にすること、したこと | `steps`。floe が番号を振るので、題に番号を書かない |
-| 長めの説明の付く項目（リスク、要件、用語など） | `entries`。各項目の短い状態や印は `tags` に書く（`tags: [done]`） |
+| 長めの説明の付く項目（リスク、要件、用語など） | `entries`。短い状態や印は `tags` に書く（`tags: [done]`、いくつでも） |
 | 長所と短所を比べる案 | `options` |
 | 理由の付いた 1 つの決定 | `decision` |
 | 読み手に決めてほしい問い | `asks` |
-| 確かめた結果、テストの結果 | `checks`（各項目に `result: ok`・`ng`・`unchecked`。上に数を出す）。選ぶ条件（`table`・`options`）やまだすること（`checklist`）には使わない |
+| 確かめた結果、テストの結果 | `checks`（各項目に `result: ok`・`ng`・`unchecked`。floe が結果の数を上に出す）。選ぶ条件（`table`・`options`）やまだすること（`checklist`）には使わない |
 | 日付のある出来事 | `timeline`。日付の無い段は `steps` |
 | 縦にも横にも比べる行、短い升 | `table` |
 | 頭に置く少しの値 | `facts` |
