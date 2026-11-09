@@ -789,8 +789,9 @@ main > .body, .body > .sections { display: grid; gap: 2.5rem; grid-template-colu
 }
 /* With contents the page takes the whole window, the contents and the sections side by side; the lead and the title
    take the window's width with them, as the sections do.
-   LIMIT: with no top on the width, a lead of a very wide window runs to over 110 characters a line (about 112 at 1920px,
-   150 at 2560px). Stop it at --page-width, as a page without contents is, if that comes to be hard to read */
+   LIMIT: with no top on the width, a lead of a very wide window runs long: about 112 full-width characters a line at
+   1920px, 150 at 2560px, and twice that of English. Stop it at --page-width, as a page without contents is, if that comes
+   to be hard to read */
 @media screen {
   main:has(> .body) { --column-width: 100%; }
 }
