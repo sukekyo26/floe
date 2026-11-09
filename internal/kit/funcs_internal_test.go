@@ -37,6 +37,22 @@ func TestMarkdown(t *testing.T) {
 			t.Errorf("markdown(%q) = %q, %v; want %q", src, got, err, want)
 		}
 	}
+	// * beside CJK letters pairs across a mark (markdown-cjk-friendly), a * meant as a mark there too (LIMIT); _ and
+	// Markdown of no CJK letter read as CommonMark.
+	for src, want := range map[string]template.HTML{
+		"**「ページ一覧」**に変える\n":  "<p><strong>「ページ一覧」</strong>に変える</p>",
+		"先に言う。**ロゴ。**画像は後\n": "<p>先に言う。<strong>ロゴ。</strong>画像は後</p>",
+		"あ**()**あ\n":                "<p>あ<strong>()</strong>あ</p>",
+		"*「斜め」*です\n":                "<p><em>「斜め」</em>です</p>",
+		"a**(b)**c\n":               "<p>a**(b)**c</p>",
+		"__「題」__に\n":                "<p>__「題」__に</p>",
+		"設定は*.yamlと*.jsonを読む\n":     "<p>設定は<em>.yamlと</em>.jsonを読む</p>",
+		"設定は\\*.yamlと\\*.jsonを読む\n": "<p>設定は*.yamlと*.jsonを読む</p>",
+	} {
+		if got, err := markdownHTML(src); err != nil || got != want {
+			t.Errorf("markdown(%q) = %q, %v; want %q", src, got, err, want)
+		}
+	}
 	line, ok := funcs["markdownLine"].(func(string) (template.HTML, error))
 	if !ok {
 		t.Fatal("markdownLine is not a func(string) (template.HTML, error)")
@@ -44,6 +60,7 @@ func TestMarkdown(t *testing.T) {
 	for src, want := range map[string]template.HTML{
 		"-": "-", "1. x": "1. x", "# x": "# x", "**a**\n  b": "<strong>a</strong>\nb",
 		"/logs/<prefix>": "/logs/&lt;prefix&gt;", "a <script>alert(1)</script>": "a &lt;script&gt;alert(1)&lt;/script&gt;",
+		"タブを**「ページ一覧」**に変える。": "タブを<strong>「ページ一覧」</strong>に変える。",
 	} {
 		if got, err := line(src); err != nil || got != want {
 			t.Errorf("markdownLine(%q) = %q, %v; want %q", src, got, err, want)
@@ -67,6 +84,7 @@ func TestMarkdownLabel(t *testing.T) {
 		"**bold** and `code`":                    "<strong>bold</strong> and <code>code</code>",
 		"Vec<u8> parsing":                        "Vec&lt;u8&gt; parsing",
 		"<T>":                                    "&lt;T&gt;",
+		"見出しの**「題」**の後":                          "見出しの<strong>「題」</strong>の後",
 	} {
 		if got, err := label(src); err != nil || got != want {
 			t.Errorf("markdownLabel(%q) = %q, %v; want %q", src, got, err, want)
@@ -87,6 +105,8 @@ func TestStrikethrough(t *testing.T) {
 		"2026-11-01~11-08 · 見積 2~3 日":      "2026-11-01~11-08 · 見積 2~3 日",
 		"コメント「~/work・Docker・~/.gitconfig」": "コメント「~/work・Docker・~/.gitconfig」",
 		"~~消す~~ と ~消さない~":                  "<del>消す</del> と ~消さない~",
+		"~~「消す」~~に":                        "<del>「消す」</del>に",
+		"~「消さない」~に":                        "~「消さない」~に",
 		"~~a~ b~":                          "~~a~ b~",
 		"~a~~":                             "~a~~",
 		"x ~~~three~~~":                    "x ~~~three~~~",
@@ -123,8 +143,9 @@ func TestStrikethrough(t *testing.T) {
 	}
 }
 
-// markdown is goldmark's GFM but its strikethrough: Markdown with no tilde draws the same, so that an extension goldmark
-// adds to extension.GFM is missed here no longer.
+// markdown is goldmark's GFM but its strikethrough and markdown-cjk-friendly: Markdown of English letters alone, with no
+// tilde, draws the same, so that an extension goldmark adds to extension.GFM is missed here no longer. The samples hold
+// no CJK letter, which markdown-cjk-friendly reads otherwise.
 func TestMarkdownIsGFM(t *testing.T) {
 	t.Parallel()
 
