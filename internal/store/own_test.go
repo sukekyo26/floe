@@ -5,6 +5,7 @@ import (
 	"os"
 	"path/filepath"
 	"slices"
+	"strconv"
 	"testing"
 
 	"github.com/sukekyo26/floe/internal/store"
@@ -60,12 +61,16 @@ func TestPublishFindsRenamedPage(t *testing.T) {
 	}
 }
 
-// Renamed between Prepare and Save, the page is written under its new slug, that of a file whose name makes no slug too.
+// Renamed between Prepare and Save, the page is written under its new slug, that of a file whose name makes no slug too,
+// and when another file took the old slug meanwhile.
 func TestPublishRenamedInBetween(t *testing.T) {
 	t.Parallel()
 
-	for _, c := range []struct{ file, slug string }{{"plan.yaml", "plan"}, {"日本語.yaml", "notes"}} {
-		t.Run(c.slug, func(t *testing.T) {
+	for _, c := range []struct {
+		file, slug string
+		taken      bool
+	}{{"plan.yaml", "plan", false}, {"日本語.yaml", "notes", false}, {"plan.yaml", "plan", true}} {
+		t.Run(c.slug+strconv.FormatBool(c.taken), func(t *testing.T) {
 			t.Parallel()
 
 			s, root := newStore(t)
@@ -79,10 +84,15 @@ func TestPublishRenamedInBetween(t *testing.T) {
 				t.Fatal(told(err, root))
 			}
 			rename(t, s, c.slug, c.slug+"-b")
+			if c.taken {
+				if _, err := put(t, s, dw, "x.yaml", "docs/x.yaml", ownSrc, store.Options{Slug: ptr(c.slug)}); err != nil {
+					t.Fatal(told(err, root))
+				}
+			}
 			if err = s.Save(e); err != nil || e.Slug != c.slug+"-b" {
 				t.Fatalf("saved to %s, %v; want %s-b", e.Slug, told(err, root), c.slug)
 			}
-			if m := s.ReadMeta(c.slug + "-b"); len(m.Versions) != 2 || s.ReadMeta(c.slug) != nil {
+			if m := s.ReadMeta(c.slug + "-b"); len(m.Versions) != 2 || (s.ReadMeta(c.slug) != nil) != c.taken {
 				t.Errorf("%s-b has %d versions, %s %v; want 2, none", c.slug, len(m.Versions), c.slug, s.ReadMeta(c.slug))
 			}
 		})
