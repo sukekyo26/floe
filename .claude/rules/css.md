@@ -57,7 +57,7 @@ paths:
 - **箱の外へ出る飾りは `--floe-room` 以下** [shadows]：箱の外へ描く飾りは四方とも `--floe-room` 以下で、傾きや拡大を使わず、場所を空けない。中に部品を持つ行の左の線を枠で描かない（行が箱になり、中の部品の影が外へ出る）。`TestLookRule/shadows`
 - **影は base.css の 1 つの規則が描く** [shadow-cast]：部品の箱・見た目の要素・引用の `box-shadow` は base.css の 1 つの規則だけが書き（ほかで書くと影が黙って消える）、テーマはパレットの `--floe-shadow-*` と箱の `--floe-shadow-color`・`--floe-inset` で描く。`TestLookRule/shadow-cast`
 - **テンプレートの見出しは包みの外の形で指す** [template-markdown]：page.css は自分の見出しの規則を包みの外の形（`header h1`・`section > h2`）で指し、テンプレートの Markdown の見出しは text の中と同じに描く。`TestLookRule/template-markdown`
-- **角の丸さはパレットの 3 つの変数** [radius]：角は `--radius`・`--radius-small`・`--radius-pill` を読むか、形（`0`・`50%`・`999px`）だけを書く。縁に沿う内の箱は `calc(var(--radius) - 間)`。3 つの値はどれもパレットが置く 1 つの長さで、4 つの角が違う形はテーマの自分の変数に置く。角が読むほかの変数はパレットか base.css の根だけが置く。`TestLintRule/radius`
+- **角の丸さはパレットの 3 つの変数** [radius]：角は `--radius`・`--radius-small`・`--radius-pill` を読むか、形（`0`・`50%`・`999px`）だけを書く。縁に沿う内の箱は、余白の変数を引く（`calc(var(--radius) - var(--pad))`）。3 つの値はどれもパレットが置く 1 つの長さで、4 つの角が違う形はテーマの自分の変数に置く。角が読むほかの変数はパレットか base.css の根だけが置く。`TestLintRule/radius`
 - **静かな地は `--quiet`** [quiet]：箱の中の静かな地はパレットの `--quiet` を読み、部品が割合を混ぜない。テーマだけの変数はパレットか base.css の `:scope` に置く（default の palette.css はどのテーマの下にも入るので、default だけのものは base.css に）。（判断）
 - **テーマの飾りは場所を取らない** [room-free]：padding を広げず、地の色や透明の枠で場所を作らず、今ある余白の上に重ねて描く（地、`--floe-inset`、`::before`）。部品が輪や印を outline で描く箱に、飾りの outline を書かない（輪に置き換わって消える）。（判断）
 - **テーマの飾りは傾けず、言葉を書かない** [theme-marks]：テーマの CSS は受ける形だけを書く：変形は `translate` の類と `none` だけ、文字列は記号だけで、字は書体の名前にだけ（CSS の字は words.yaml を通らない）、数え方は decimal の類と形だけ。`TestLintRule/theme-marks`

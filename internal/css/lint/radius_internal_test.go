@@ -54,7 +54,7 @@ var radiusRule = Rule{Name: "radius", Check: func(in *Input) []Finding {
 				file, line := s.at(d.at)
 				if !lengthless(d.value) {
 					found = append(found, Finding{file, line, "radius", fmt.Sprintf(
-						"%s: %s; read --radius, --radius-small or --radius-pill, or write a shape (%s)", prop, v, strings.Join(cornerShapes, ", "))})
+						"%s: %s; write var() of a variable, calc() or min() of those, with no length nor number but 0 (a gap in calc() too), or a shape (%s)", prop, v, strings.Join(cornerShapes, ", "))})
 					continue
 				}
 				c := corner{file: file, line: line, text: prop + ": " + v}
