@@ -13,8 +13,7 @@
 <p class="eyebrow">{{markdownLine .}}</p>
 {{- end}}
 <h1>{{.Title}}</h1>
-{{- /* LIMIT: a lead is a line of Markdown, so that, with no mistake, what looks like a tag (<prefix>, Vec<u8>) is left out
-   as raw HTML, marks pair up ("*" and "*", __init__), a backslash
+{{- /* LIMIT: a lead is a line of Markdown, so that, with no mistake, marks pair up ("*" and "*", __init__), a backslash
    before a mark goes (C:\_x), a bare URL or email address becomes a link (not one of an IP address or localhost) and
    an image file named in it is not shown, only a data URI. Tell of it where Markdown is read if writers keep losing
    words */}}
@@ -25,8 +24,7 @@
 {{- /* The contents link to ids of the sections' elements, of a dot no heading's id holds, so that the ids floe makes of
    the headings' text stay as they were.
    LIMIT: a heading is a line of Markdown and its id is made of the words drawn, so a tag, a mark, a backslash, a
-   character reference or a link's address in it changes the id it had, and a heading of a tag alone draws empty, left
-   out of the contents (S235), its subsections standing in its place. On a narrow screen the contents hold the
+   character reference or a link's address in it changes the id it had. On a narrow screen the contents hold the
    sections alone, a long list on a page of very many sections. toc: true on a page of no heading draws an empty list
    in an empty column: the writer asked for it, and nothing refuses it */}}
 {{- if .Calc.contents}}

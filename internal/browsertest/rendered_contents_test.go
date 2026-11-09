@@ -10,7 +10,7 @@ import (
 )
 
 // contentsPage is a report of 9 sections, the first with subsections, the last two short, which the contents list,
-// and one headed by a tag alone, which they leave out;
+// and one headed by a tag alone, which they list as written, its subsection under it;
 // a link to another page among the words of a heading, which the contents write as its words.
 var contentsPage = func() string {
 	long := strings.TrimSpace(strings.Repeat("A paragraph that goes on for a while to fill the page. ", 40))
@@ -42,7 +42,8 @@ const measureContents = `(() => {
   probe.remove();
   if (nav.querySelector('a a, a[href^=http]')) out.push('a link of another page in the contents');
   if ([...nav.querySelectorAll('a')].some((a) => a.textContent.trim() === '')) out.push('a link of no words in the contents');
-  if (![...nav.querySelectorAll('a')].some((a) => a.textContent === 'Under a tag')) out.push('the subsection under a heading of no words left out');
+  const under = [...nav.querySelectorAll('a')].find((a) => a.textContent === 'Under a tag');
+  if (under?.parentElement.parentElement.parentElement.firstElementChild.textContent !== '<T>') out.push('the heading of a tag alone, or its subsection under it, left out');
   if (nav.querySelector('ol:empty')) out.push('an empty list in the contents');
   return out.join('\n');
 })()`

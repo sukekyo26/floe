@@ -44,18 +44,69 @@ func line(md goldmark.Markdown, name, text string) (template.HTML, error) {
 		return "", err
 	}
 	html = strings.TrimSuffix(strings.TrimPrefix(html, "<p>"), "</p>\n")
-	return template.HTML(html), nil //nolint:gosec // G203: goldmark leaves raw HTML out
+	return template.HTML(html), nil //nolint:gosec // G203: raw HTML is escaped (newMarkdown)
 }
 
 // markdown is GFM, as extension.GFM lists its extensions, but its strikethrough of two tildes alone.
 // LIMIT: GFM's extensions are listed by hand; TestMarkdownIsGFM fails when goldmark adds one to extension.GFM.
-var markdown = goldmark.New(
+var markdown = newMarkdown(
 	goldmark.WithExtensions(extension.Linkify, extension.Table, strikethrough, extension.TaskList),
 )
 
+// newMarkdown is a goldmark of opts that writes raw HTML as the text written (rawAsText): every Markdown of floe is
+// made here, so that no tag written in it reaches the page.
+func newMarkdown(opts ...goldmark.Option) goldmark.Markdown {
+	raw := goldmark.WithRendererOptions(renderer.WithNodeRenderers(util.Prioritized(rawAsText{}, 0)))
+	return goldmark.New(append(opts, raw)...)
+}
+
+// rawAsText writes raw HTML as the text it was written as: an HTML block as a paragraph of its lines.
+// LIMIT: an HTML block runs as CommonMark reads it: one of a tag alone or of <div> and the like to a blank line, and
+// one of <style>, <script>, <pre>, <textarea>, <!--, <?, <!X or <![CDATA[ to its closing mark, or to the end of the
+// text when it has none; the Markdown in it shows as written. Write the tag in backticks, or a blank line after it, if
+// writers trip on it.
+// LIMIT: an HTML block in an item of a tight list is a paragraph there, spaced apart unlike the other items: plain on
+// the page.
+// LIMIT: an HTML block is one paragraph, so its line breaks and indents fold into spaces on the page: plain there.
+type rawAsText struct{}
+
+func (rawAsText) RegisterFuncs(r renderer.NodeRendererFuncRegisterer) {
+	r.Register(ast.KindRawHTML, func(w util.BufWriter, src []byte, n ast.Node, entering bool) (ast.WalkStatus, error) {
+		raw, ok := n.(*ast.RawHTML)
+		if !ok || !entering {
+			return ast.WalkSkipChildren, nil
+		}
+		return ast.WalkSkipChildren, writeText(w, raw.Segments.Value(src))
+	})
+	r.Register(ast.KindHTMLBlock, func(w util.BufWriter, src []byte, n ast.Node, entering bool) (ast.WalkStatus, error) {
+		block, ok := n.(*ast.HTMLBlock)
+		if !ok || !entering {
+			return ast.WalkContinue, nil
+		}
+		b := block.Lines().Value(src)
+		if block.HasClosure() {
+			b = append(b, block.ClosureLine.Value(src)...)
+		}
+		if _, err := w.WriteString("<p>"); err != nil {
+			return ast.WalkStop, err //nolint:wrapcheck // convert says which function failed
+		}
+		if err := writeText(w, bytes.TrimRight(b, "\r\n")); err != nil {
+			return ast.WalkStop, err
+		}
+		_, err := w.WriteString("</p>\n")
+		return ast.WalkContinue, err //nolint:wrapcheck // convert says which function failed
+	})
+}
+
+// writeText writes b as text, escaped: util.EscapeHTML makes a NUL U+FFFD too.
+func writeText(w util.BufWriter, b []byte) error {
+	_, err := w.Write(util.EscapeHTML(b))
+	return err //nolint:wrapcheck // convert says which function failed
+}
+
 // markdownLine reads paragraphs alone, without the paragraph transformers that make a line a table or a link
 // reference definition, so that a line like "-", "1." or "# x" stays text.
-var markdownLine = goldmark.New(
+var markdownLine = newMarkdown(
 	goldmark.WithParser(parser.NewParser(
 		parser.WithBlockParsers(util.Prioritized(parser.NewParagraphParser(), 1000)),
 		parser.WithInlineParsers(parser.DefaultInlineParsers()...),
@@ -64,8 +115,8 @@ var markdownLine = goldmark.New(
 )
 
 // markdownLabel reads as markdownLine does and writes a link, one written or one Linkify finds, as its words alone, and
-// raw HTML as nothing, not even the comment markdownLine leaves: a label of a tag alone is empty.
-var markdownLabel = goldmark.New(
+// raw HTML as the text written, as markdownLine does.
+var markdownLabel = newMarkdown(
 	goldmark.WithParser(parser.NewParser(
 		parser.WithBlockParsers(util.Prioritized(parser.NewParagraphParser(), 1000)),
 		parser.WithInlineParsers(parser.DefaultInlineParsers()...),
@@ -74,15 +125,12 @@ var markdownLabel = goldmark.New(
 	goldmark.WithRendererOptions(renderer.WithNodeRenderers(util.Prioritized(wordsOfLinks{}, 0))),
 )
 
-// wordsOfLinks renders a link as what it holds, an autolink as its text and raw HTML as nothing.
+// wordsOfLinks renders a link as what it holds and an autolink as its text.
 type wordsOfLinks struct{}
 
 func (wordsOfLinks) RegisterFuncs(r renderer.NodeRendererFuncRegisterer) {
 	r.Register(ast.KindLink, func(util.BufWriter, []byte, ast.Node, bool) (ast.WalkStatus, error) {
 		return ast.WalkContinue, nil
-	})
-	r.Register(ast.KindRawHTML, func(util.BufWriter, []byte, ast.Node, bool) (ast.WalkStatus, error) {
-		return ast.WalkSkipChildren, nil
 	})
 	r.Register(ast.KindAutoLink, func(w util.BufWriter, src []byte, n ast.Node, entering bool) (ast.WalkStatus, error) {
 		if link, ok := n.(*ast.AutoLink); ok && entering {
@@ -97,18 +145,17 @@ func (wordsOfLinks) RegisterFuncs(r renderer.NodeRendererFuncRegisterer) {
 // markdownPart is the part whose look Markdown's tables take, the one part Markdown names.
 const markdownPart = "table"
 
-// markdownHTML writes Markdown text as HTML, a table in the table part's look. Raw HTML in it is left out:
-// a data item takes HTML only when its schema says format: html.
+// markdownHTML writes Markdown text as HTML, a table in the table part's look. Raw HTML in it is drawn as the text
+// written: a data item takes HTML only when its schema says format: html.
 func markdownHTML(text string) (template.HTML, error) {
 	html, err := convert(markdown, "markdown", text)
 	if err != nil {
 		return "", err
 	}
-	// With raw HTML left out, every <table> in the output is one goldmark drew.
+	// With raw HTML escaped, every <table> in the output is one goldmark drew.
 	html = strings.ReplaceAll(html, "<table>", `<div data-floe-part="`+markdownPart+`"><table>`)
 	html = strings.ReplaceAll(html, "</table>", "</table></div>")
-	// No space at its ends: a text of raw HTML alone leaves its box a comment alone, which :empty takes (base.css).
-	return template.HTML(strings.TrimSpace(html)), nil //nolint:gosec // G203: goldmark leaves raw HTML out
+	return template.HTML(strings.TrimSpace(html)), nil //nolint:gosec // G203: raw HTML is escaped (newMarkdown)
 }
 
 // MarkdownFlow writes Markdown text as markdownHTML does, in a text's box (data-floe-text): a flow of blocks base.css
@@ -119,25 +166,14 @@ func MarkdownFlow(text string) (template.HTML, error) {
 	return flow(text, "data-floe-text")
 }
 
-// flow writes Markdown text as markdownHTML does, in floe's box marked by the attribute mark. Markdown that draws no
-// block, empty or raw HTML alone (which markdown leaves out), is drawn as it is, with no box.
+// flow writes Markdown text as markdownHTML does, in floe's box marked by the attribute mark. Empty Markdown, which
+// draws nothing, has no box.
 func flow(text, mark string) (template.HTML, error) {
 	html, err := markdownHTML(text)
-	if drawsBlock(text) {
-		html = template.HTML("<div "+mark+">") + html + "</div>" //nolint:gosec // G203: markdownHTML's own output
+	if html != "" {
+		html = template.HTML("<div "+mark+">") + html + "</div>" //nolint:gosec // G203: raw HTML is escaped (newMarkdown)
 	}
 	return html, err
-}
-
-// drawsBlock reports whether goldmark reads in text a block other than raw HTML, which markdown leaves out.
-func drawsBlock(text string) bool {
-	doc := markdown.Parser().Parse(gmtext.NewReader([]byte(text)))
-	for n := doc.FirstChild(); n != nil; n = n.NextSibling() {
-		if n.Kind() != ast.KindHTMLBlock {
-			return true
-		}
-	}
-	return false
 }
 
 // Markdown writes a template's own Markdown, an item of format markdown or what page.html's markdown draws, as
