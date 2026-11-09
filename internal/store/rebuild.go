@@ -73,9 +73,10 @@ func (s *Store) rebuildPage(dw Drawing, slug string) error {
 		return lockErr
 	}
 	defer unlock()
-	// Published again, removed, renamed or its theme picked since it was read: what it is now is not what was drawn.
+	// Published again, removed or renamed since it was read: what it is now is not what was drawn. A theme picked
+	// meanwhile is in a new copy, or the pick alone where the page drawn in it is the one it has, as this one is then.
 	now := s.ReadMeta(slug)
-	if now == nil || now.Source != m.Source || now.PickedTheme != m.PickedTheme {
+	if now == nil || now.Source != m.Source {
 		return nil
 	}
 	err = s.keepDrawn(slug, now, got, err)
