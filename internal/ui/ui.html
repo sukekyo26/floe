@@ -6007,7 +6007,7 @@
     else {
       const b = Object.assign(document.createElement('b'), { textContent: chosen });
       const gone = Object.assign(document.createElement('span'), { className: 'gone', textContent: t('ui_theme_gone') });
-      now.replaceChildren(t('ui_theme_picked_label'), b, ' ', gone, t('ui_theme_picked_gone_more'));
+      now.replaceChildren(t('ui_theme_picked_label'), b, ' ', gone, t('ui_theme_picked_more'));
     }
     const none = themeCard({ name: '', about: t('ui_theme_none_about'), dir: '' }, false);
     $('theme-grid').replaceChildren(none, ...got.themes.map((th) => themeCard(th, false)));
