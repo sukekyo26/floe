@@ -69,7 +69,7 @@ func TestUITaskAdd(t *testing.T) { //nolint:paralleltest // the browser tests sh
 	press("#to-tasks")
 	b.until("the words", "!document.getElementById('tasks-empty').hidden")
 	want("the words", "document.querySelector('#tasks-empty strong').textContent + ' | ' + document.querySelector('#tasks-empty p').textContent",
-		"No tasks yet | Make one with Add task.")
+		"No tasks yet | Create one with Create task.")
 	want("no command on the screens", "document.querySelectorAll('.state code').length + ''", "0")
 	want("the shelf's button with no task", shown("add-task"), "false")
 	want("the icon, the size of the others", "document.querySelector('#task-add-empty svg').getBoundingClientRect().width + ''", "13")
@@ -95,11 +95,11 @@ func TestUITaskAdd(t *testing.T) { //nolint:paralleltest // the browser tests sh
 	// With no project on a page, the one choice is none, and what comes of it is in no project.
 	open("task-add-empty")
 	want("no task, no page: the project field", "[...document.getElementById('kin-project').options].map((o) => o.value + '=' + o.textContent).join(', ')", "/=Not set")
-	want("no task: the words", said, "Add task | - | - | - | title true | Make")
+	want("no task: the words", said, "Create task | - | - | - | title true | Create")
 	name("#0", "first")
 	saved()
 	b.until("the row", "document.querySelector('#list li.fresh')")
-	want("no task: after", list, `?view=todo&project=%2F #0 true Task #0 made /tasks?project=%2F&task=%230`)
+	want("no task: after", list, `?view=todo&project=%2F #0 true Created task #0 /tasks?project=%2F&task=%230`)
 	if _, ok := rows()["/"]["#0"]; !ok {
 		t.Errorf("the row of no project: %v", rows())
 	}
@@ -130,7 +130,7 @@ func TestUITaskAdd(t *testing.T) { //nolint:paralleltest // the browser tests sh
 	name("#1", "one")
 	saved()
 	b.until("the row", "document.querySelector('#list li.fresh')")
-	want("a project chosen: after", list, `?view=todo&project=beta #1 true Task #1 made /tasks?project=beta&task=%231`)
+	want("a project chosen: after", list, `?view=todo&project=beta #1 true Created task #1 /tasks?project=beta&task=%231`)
 	if _, ok := rows()["beta"]["#1"]; !ok {
 		t.Errorf("the row in the project chosen: %v", rows())
 	}
@@ -156,14 +156,14 @@ func TestUITaskAdd(t *testing.T) { //nolint:paralleltest // the browser tests sh
 	defer b.unsize()
 	b.navigate("/tasks?project=beta&view=doing")
 	open("add-task")
-	want("the dialog", said, "Add task | Project: beta | - | - | title true | Make")
+	want("the dialog", said, "Create task | Project: beta | - | - | title true | Create")
 	want("the project field hidden", shown("kin-project"), "false")
 	name("#2", "two")
 
 	// Made from another state's list: the list goes to the state it is in, the row marked until the rows are drawn anew.
 	saved()
 	b.until("the row", "document.querySelector('#list li.fresh')")
-	want("from another state: after", list, `?view=todo&project=beta #2 true Task #2 made /tasks?project=beta&task=%232`)
+	want("from another state: after", list, `?view=todo&project=beta #2 true Created task #2 /tasks?project=beta&task=%232`)
 	want("the old row is not marked", "document.querySelectorAll('#list li.fresh').length + ''", "1")
 	press(".views button[data-view=doing]")
 	b.until("another state", "!document.querySelector('#list li.fresh')")
@@ -177,7 +177,7 @@ func TestUITaskAdd(t *testing.T) { //nolint:paralleltest // the browser tests sh
 	name("#", "")
 	want("nothing suggested", "document.querySelectorAll('.suggest:popover-open').length + ''", "0")
 	name("#1", "")
-	want("an ID there", said, "Add task | Project: beta | #1 one is already there (To do) | - | title false | Open the task")
+	want("an ID there", said, "Create task | Project: beta | #1 one is already there (To do) | - | title false | Open the task")
 	b.eval("document.getElementById('kin').requestSubmit()")
 	b.until("the task's page", "location.search.includes('task=%231')")
 	b.until("the head", "!document.getElementById('task-none').hidden || !document.getElementById('task-head').hidden")
@@ -200,7 +200,7 @@ func TestUITaskAdd(t *testing.T) { //nolint:paralleltest // the browser tests sh
 	b.navigate("/tasks?project=alpha")
 	open("add-task")
 	name("#1", "alpha's one")
-	want("the same ID in another project", said, "Add task | Project: alpha | - | - | title true | Make")
+	want("the same ID in another project", said, "Create task | Project: alpha | - | - | title true | Create")
 	saved()
 	b.until("the row", "document.querySelector('#list li.fresh')")
 	if _, ok := rows()["alpha"]["#1"]; !ok {
@@ -246,7 +246,7 @@ func TestUITaskAdd(t *testing.T) { //nolint:paralleltest // the browser tests sh
 	want("a poll waits", "new Promise((done) => setTimeout(done, 300)).then(() => window.polled + ' ' + (document.querySelector('.views button[data-view=todo] .n')?.textContent === '1'))", "false false")
 	b.eval("window.letWrite()")
 	b.until("saved", "!"+dialog+".open && window.polled")
-	want("a poll first: after", list, `?view=todo&project=delta #51 true Task #51 made /tasks?project=delta&task=%2351`)
+	want("a poll first: after", list, `?view=todo&project=delta #51 true Created task #51 /tasks?project=delta&task=%2351`)
 
 	// A poll asked before the write and answered after it is of the tasks before: it draws neither the words of a list with none nor over the row.
 	// The save's load waits for it, so it is let go once the write is answered.
@@ -265,7 +265,7 @@ func TestUITaskAdd(t *testing.T) { //nolint:paralleltest // the browser tests sh
 	b.eval("window.held.forEach((go) => go()); true")
 	b.until("saved", "!"+dialog+".open")
 	b.until("the row", "document.querySelector('#list li.fresh')")
-	want("a poll late: the row and its mark stay", list, `?view=todo&project=epsilon #61 true Task #61 made /tasks?project=epsilon&task=%2361`)
+	want("a poll late: the row and its mark stay", list, `?view=todo&project=epsilon #61 true Created task #61 /tasks?project=epsilon&task=%2361`)
 	want("a poll late: never none", "window.noneShown + ''", "false")
 
 	// A project that is on the list by a pin alone has its button; one not on the list has none: the name may be a mistake.

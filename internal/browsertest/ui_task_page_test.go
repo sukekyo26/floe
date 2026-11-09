@@ -333,7 +333,7 @@ folded, none chosen: true true
 while open: doing
 a tag: SPAN t
 doing has no archive button: none
-no pages: This task has no pages Remove the task true
+no pages: This task has no pages Delete the task true
 unreadable, drawn: false false true
 unreadable, first: true true true
 unreadable, done: Archive the task

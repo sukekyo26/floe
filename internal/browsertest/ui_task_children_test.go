@@ -149,7 +149,7 @@ func TestUITaskChildren(t *testing.T) { //nolint:paralleltest // the browser tes
 	child(" #100 ", "made here")
 	b.until("saved", "!document.getElementById('kin-dialog').open")
 	b.until("its row", "document.querySelector('#task-family .kin-row[data-task=\"#100\"]')")
-	if got := b.eval("new URLSearchParams(location.search).get('task') + ' ' + document.querySelector('.toast-link').textContent + ' ' + document.querySelector('.toast-link').getAttribute('href')"); got != "#99 Made the child task #100 /tasks?project=proj&task=%23100" {
+	if got := b.eval("new URLSearchParams(location.search).get('task') + ' ' + document.querySelector('.toast-link').textContent + ' ' + document.querySelector('.toast-link').getAttribute('href')"); got != "#99 Created the child task #100 /tasks?project=proj&task=%23100" {
 		t.Errorf("after making: %q", got)
 	}
 	made, err := st.ReadTasks()
@@ -209,7 +209,7 @@ func TestUITaskChildren(t *testing.T) { //nolint:paralleltest // the browser tes
 	// state and its title with none written. One with children, typed, is refused with the dialog as written.
 	press("task-child")
 	b.until("the dialog", "document.getElementById('kin-dialog').open")
-	if got := b.eval("document.getElementById('kin-submit').textContent"); got != "Make" {
+	if got := b.eval("document.getElementById('kin-submit').textContent"); got != "Create" {
 		t.Errorf("the button of no name: %q", got)
 	}
 	field := func(value string) {
@@ -245,7 +245,7 @@ func TestUITaskChildren(t *testing.T) { //nolint:paralleltest // the browser tes
 		t.Errorf("itself: %q", got)
 	}
 	field("#777")
-	if got := b.eval(said); got != "false |  | Make | false" {
+	if got := b.eval(said); got != "false |  | Create | false" {
 		t.Errorf("a new name: %q", got)
 	}
 	// Chosen by a press, as typed.
@@ -357,7 +357,7 @@ func TestUITaskChildren(t *testing.T) { //nolint:paralleltest // the browser tes
 	b.eval("window.realFetch = window.fetch; window.fetch = (url, init) => (init?.method === 'DELETE' ? Promise.resolve(new Response('it has a page', { status: 400 })) : window.realFetch(url, init))")
 	pressForget()
 	b.until("refused", "!document.getElementById('task-delete-error').hidden")
-	if got := b.eval("document.getElementById('task-delete-error').textContent + ' | ' + document.getElementById('task-delete').textContent"); got != "Failed to remove the task: it has a page | Remove the task" {
+	if got := b.eval("document.getElementById('task-delete-error').textContent + ' | ' + document.getElementById('task-delete').textContent"); got != "Failed to delete the task: it has a page | Delete the task" {
 		t.Errorf("refused: %q", got)
 	}
 	// The connection lost says so too, and the next press takes the words off.

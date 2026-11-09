@@ -5402,7 +5402,7 @@
     $('edit-steps').replaceChildren(...order.map((name) => stepRow(name, paged.has(name))));
     showSteps();
   }
-  // A step with pages is not removed, as stepOrder would bring it back from them: its button is there, not pressed, and says why. It is
+  // A step with pages is not deleted, as stepOrder would bring it back from them: its button is there, not pressed, and says why. It is
   // aria-disabled, not disabled, so that the keys reach it and pressing it says why
   function stepRow(name, paged) {
     const li = document.createElement('li');
@@ -5474,8 +5474,8 @@
     (to ?? ($('edit-step-new').hidden ? $('edit-step-plus') : $('edit-step-new'))).focus();
   }
   // The steps of the dialog as the task is read again (now): unchanged, as read; else as the person left them (mine), without those another
-  // removed and with those another added, after them. One the person removed stays out, unless it has come to have pages, as one with
-  // pages cannot be removed
+  // deleted and with those another added, after them. One the person deleted stays out, unless it has come to have pages, as one with
+  // pages cannot be deleted
   function mergeSteps(mine, was, now, paged) {
     if (sameSteps(mine, was)) return now;
     return [
