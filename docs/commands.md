@@ -66,7 +66,7 @@ Each page belongs to the project it is published from. The project is the reposi
 - A slug published from another project or another file is refused unless `--force`. `--force` starts the page afresh: nothing of the old one is kept. `--force` drops the page's history: its versions, its pinned title, tags and favourite. To move a data file or rename it and keep its page's URL, publish it with `--force`.
 - A page renamed on the management page (`o` to `d`) is its file's still: publish that file under the new name to keep its history (`floe publish o.yaml --slug d`). Another file publishing to `d` is refused unless `--force`.
 - A page and a link cannot take each other's slug, even with `--force`: `floe rm` it first.
-- A republish keeps what was set on the management page (title, project, favourite, tags), the description and the creation time. `--title` and `--description` override them. An archived page comes back to the lists.
+- A republish keeps what was set on the management page (title, project, favourite, tags), the description and the creation time. `--title` and `--description` override them. A project emptied on the management page comes back to the one published from. An archived page comes back to the lists.
 - A republish of the same content, with another theme or not, draws the page again, but its update time and its place in the list stay; other content moves them up. A linked file is listed at the later of the file's time and when it was linked, so that linking it again brings it up.
 
 ### Linked files

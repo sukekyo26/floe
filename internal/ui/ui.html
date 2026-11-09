@@ -756,6 +756,18 @@
   .field { display: grid; gap: 0.35rem; font-size: var(--text-small); font-weight: 600; }
   .field small { font-weight: 400; color: var(--faint); }
   .field .path { font-family: var(--mono); }
+  .edit-more { border: 1px solid var(--line); border-radius: var(--corner-small); padding-inline: 0.75rem; }
+  /* A flex summary draws no marker of Chrome's: the arrow is its own */
+  .edit-more > summary { display: flex; align-items: center; gap: 0.4rem; margin-inline: -0.75rem; padding: 0.55rem 0.75rem; cursor: pointer; font-size: var(--text-small); font-weight: 600; list-style: none; }
+  .edit-more > summary::-webkit-details-marker { display: none; }
+  .edit-more > summary > svg { flex: none; width: 14px; height: 14px; transition: transform 0.15s; }
+  .edit-more[open] > summary > svg { transform: rotate(90deg); }
+  .edit-more > summary > span { flex: none; }
+  .edit-more > summary > small { min-width: 0; overflow: hidden; white-space: nowrap; text-overflow: ellipsis; font-weight: 400; color: var(--faint); font-family: var(--mono); }
+  /* A details' content sits in its slot, which the gap of a grid does not reach */
+  .edit-more > .field { margin-top: 0.4rem; }
+  .edit-more > .field + .field { margin-top: 0.9rem; }
+  .edit-more > .field:last-child { margin-bottom: 0.85rem; }
   /* The steps of the task edit dialog, reordered by their buttons, or by a drag from the grip where there is a pointer that hovers */
   .step-box { border: 1px solid var(--line); border-radius: var(--corner-small); overflow: hidden; }
   .step-order { display: grid; margin: 0; padding: 0; list-style: none; }
@@ -1289,18 +1301,23 @@
     <label class="field">{{.Msg "ui_title"}}
       <input class="text" id="edit-name" autocomplete="off">
     </label>
-    <label class="field">{{.Msg "ui_slug"}}
-      <input class="text path" id="edit-slug" required autocomplete="off" spellcheck="false" pattern="[a-z0-9]([a-z0-9\-]{0,62}[a-z0-9])?"
-        title="{{.Msg "ui_slug_rule"}}">
-      <small>{{.Msg "ui_edit_slug_hint"}}</small>
-    </label>
-    <label class="field"><span>{{.Msg "ui_project"}} <small>{{.Msg "ui_project_blank"}}</small></span>
-      <input class="text" id="edit-project" autocomplete="off" spellcheck="false">
-    </label>
+    <!-- What changes more than the page's own words, folded, shown with what it is now -->
+    <details class="edit-more" id="edit-more">
+      <summary><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m9 6 6 6-6 6"/></svg><span>{{.Msg "ui_edit_more"}}</span><small id="edit-more-now"></small></summary>
+      <label class="field">{{.Msg "ui_slug"}}
+        <input class="text path" id="edit-slug" required autocomplete="off" spellcheck="false" pattern="[a-z0-9]([a-z0-9\-]{0,62}[a-z0-9])?"
+          title="{{.Msg "ui_slug_rule"}}">
+        <small>{{.Msg "ui_edit_slug_hint"}}</small>
+      </label>
+      <label class="field">{{.Msg "ui_project"}}
+        <input class="text" id="edit-project" autocomplete="off" spellcheck="false">
+        <small>{{.Msg "ui_project_hint"}}</small>
+      </label>
+    </details>
     <label class="field"><span>{{.Msg "ui_description"}} <small>{{.Msg "ui_optional"}}</small></span>
       <input class="text" id="edit-desc" autocomplete="off">
     </label>
-    <p class="error" id="edit-error" hidden></p>
+    <p class="error" id="edit-error" role="alert" hidden></p>
     <div class="dialog-actions">
       <button type="button" class="btn" data-close>{{.Msg "ui_cancel"}}</button>
       <button type="submit" class="btn primary" id="edit-submit">{{.Msg "ui_save"}}</button>
@@ -3296,7 +3313,13 @@
     for (const [key, id] of Object.entries(EDIT_FIELDS)) $(id).value = a[key] ?? '';
     $('edit-name').placeholder = t(a.path ? 'ui_title_from_file' : 'ui_title_from_html');
     $('edit-error').hidden = true;
+    $('edit-more').open = false;
+    editNow();
     $('edit-dialog').showModal();
+  }
+  // The folded row's words of what the slug and the project are, as typed
+  function editNow() {
+    $('edit-more-now').textContent = `${$('edit-slug').value.trim()} · ${$('edit-project').value.trim() || t('ui_no_project')}`;
   }
 
   async function saveEdit(e) {
@@ -3311,6 +3334,13 @@
     if (reason) {
       $('edit-error').textContent = t('ui_save_failed', reason);
       $('edit-error').hidden = false;
+      // LIMIT: the server refuses in words, not keys, so which field it was is not known here: the slug's is chosen when both were sent,
+      // and a connection lost goes to a field sent too. Put it on the field refused once a refusal names its key
+      const field = 'slug' in changes ? 'edit-slug' : 'project' in changes ? 'edit-project' : '';
+      if (field) {
+        $('edit-more').open = true;
+        $(field).focus();
+      }
       return;
     }
     if (changes.slug) {
@@ -5923,6 +5953,13 @@
   document.addEventListener('keydown', (e) => { if (e.key === 'Escape') closeMenus(null); });
   addEventListener('blur', () => closeMenus(null));
   $('edit').addEventListener('submit', saveEdit);
+  // A field refused by the browser's check in a closed fold is opened before the browser goes to it, or it blocks the save unsaid.
+  // invalid does not bubble: it is heard on its way down
+  $('edit').addEventListener('invalid', (e) => {
+    const fold = e.target.closest('details');
+    if (fold) fold.open = true;
+  }, true);
+  for (const id of ['edit-slug', 'edit-project']) $(id).addEventListener('input', editNow);
   $('tag-form').addEventListener('submit', (e) => {
     e.preventDefault();
     applyTags();
