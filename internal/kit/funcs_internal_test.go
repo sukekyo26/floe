@@ -10,33 +10,48 @@ import (
 	"github.com/yuin/goldmark/extension"
 )
 
-// markdown leaves raw HTML out and puts each table in the table part's box; markdownLine draws one line
-// without a paragraph, leaving "-" and "1." as text.
+// markdown draws raw HTML as the text written and puts each table in the table part's box; markdownLine draws one
+// line without a paragraph, leaving "-" and "1." as text, and raw HTML as written too.
 func TestMarkdown(t *testing.T) {
 	t.Parallel()
 
 	html, err := markdownHTML("a <b>x</b>\n\n| h |\n| - |\n| c |\n")
-	want := "<p>a <!-- raw HTML omitted -->x<!-- raw HTML omitted --></p>\n" +
+	want := "<p>a &lt;b&gt;x&lt;/b&gt;</p>\n" +
 		"<div data-floe-part=\"table\"><table>\n<thead>\n<tr>\n<th>h</th>\n</tr>\n</thead>\n<tbody>\n<tr>\n<td>c</td>\n</tr>\n</tbody>\n</table></div>"
 	if err != nil || string(html) != want {
 		t.Errorf("markdown = %q, %v; want %q", html, err, want)
 	}
-	// Raw HTML alone leaves a comment alone, no space at its end, which :empty takes.
-	if html, err := markdownHTML("<div>x</div>\n"); err != nil || html != "<!-- raw HTML omitted -->" {
-		t.Errorf("markdown of raw HTML alone = %q, %v", html, err)
+	// An HTML block is a paragraph of its lines as written, its last line break dropped (a CR too): one of a tag alone
+	// or <div> runs to a blank line, one of <style> to its closing tag or the end; in a tight list's item too.
+	for src, want := range map[string]template.HTML{
+		"<div>x</div>\n":                     "<p>&lt;div&gt;x&lt;/div&gt;</p>",
+		"<prefix>\n**b**\n\n**c**\n":         "<p>&lt;prefix&gt;\n**b**</p>\n<p><strong>c</strong></p>",
+		"<style>\np {}\n</style>\n\n**c**\n": "<p>&lt;style&gt;\np {}\n&lt;/style&gt;</p>\n<p><strong>c</strong></p>",
+		"<style>\np {}\n\n**c**\n":           "<p>&lt;style&gt;\np {}\n\n**c**</p>",
+		"- a\n- <div>b</div>\n":              "<ul>\n<li>a</li>\n<li>\n<p>&lt;div&gt;b&lt;/div&gt;</p>\n</li>\n</ul>",
+		"<div>\r\nx\r\n":                     "<p>&lt;div&gt;\r\nx</p>",
+		"<script>alert(1)</script>\n":        "<p>&lt;script&gt;alert(1)&lt;/script&gt;</p>",
+		"a <img src=x onerror=alert(1)> b\n": "<p>a &lt;img src=x onerror=alert(1)&gt; b</p>",
+	} {
+		if got, err := markdownHTML(src); err != nil || got != want {
+			t.Errorf("markdown(%q) = %q, %v; want %q", src, got, err, want)
+		}
 	}
 	line, ok := funcs["markdownLine"].(func(string) (template.HTML, error))
 	if !ok {
 		t.Fatal("markdownLine is not a func(string) (template.HTML, error)")
 	}
-	for src, want := range map[string]template.HTML{"-": "-", "1. x": "1. x", "# x": "# x", "**a**\n  b": "<strong>a</strong>\nb"} {
+	for src, want := range map[string]template.HTML{
+		"-": "-", "1. x": "1. x", "# x": "# x", "**a**\n  b": "<strong>a</strong>\nb",
+		"/logs/<prefix>": "/logs/&lt;prefix&gt;", "a <script>alert(1)</script>": "a &lt;script&gt;alert(1)&lt;/script&gt;",
+	} {
 		if got, err := line(src); err != nil || got != want {
 			t.Errorf("markdownLine(%q) = %q, %v; want %q", src, got, err, want)
 		}
 	}
 }
 
-// markdownLabel draws a line as markdownLine does, a link written or found as its words, and raw HTML as nothing.
+// markdownLabel draws a line as markdownLine does, a link written or found as its words, and raw HTML as written.
 func TestMarkdownLabel(t *testing.T) {
 	t.Parallel()
 
@@ -50,8 +65,8 @@ func TestMarkdownLabel(t *testing.T) {
 		"<https://x>":                            "https://x",
 		"a@example.com":                          "a@example.com",
 		"**bold** and `code`":                    "<strong>bold</strong> and <code>code</code>",
-		"Vec<u8> parsing":                        "Vec parsing",
-		"<T>":                                    "",
+		"Vec<u8> parsing":                        "Vec&lt;u8&gt; parsing",
+		"<T>":                                    "&lt;T&gt;",
 	} {
 		if got, err := label(src); err != nil || got != want {
 			t.Errorf("markdownLabel(%q) = %q, %v; want %q", src, got, err, want)
@@ -135,16 +150,15 @@ func TestMarkdownIsGFM(t *testing.T) {
 	}
 }
 
-// MarkdownFlow draws Markdown in a text's box and Markdown in the box of a template's own Markdown, and what draws no
-// block (empty, raw HTML alone, once or twice) as it is, with no box; part.html's markdown is MarkdownFlow, page.html's
-// Markdown.
+// MarkdownFlow draws Markdown in a text's box and Markdown in the box of a template's own Markdown, raw HTML alone too
+// (once or twice), and empty Markdown as it is, with no box; part.html's markdown is MarkdownFlow, page.html's Markdown.
 func TestMarkdownFlow(t *testing.T) {
 	t.Parallel()
 
 	for src, want := range map[string]string{
 		"":                               "",
-		"<div>x</div>\n":                 "<!-- raw HTML omitted -->",
-		"<div>x</div>\n\n<div>y</div>\n": "<!-- raw HTML omitted -->\n<!-- raw HTML omitted -->",
+		"<div>x</div>\n":                 "<div MARK><p>&lt;div&gt;x&lt;/div&gt;</p></div>",
+		"<div>x</div>\n\n<div>y</div>\n": "<div MARK><p>&lt;div&gt;x&lt;/div&gt;</p>\n<p>&lt;div&gt;y&lt;/div&gt;</p></div>",
 		"a\n\nb":                         "<div MARK><p>a</p>\n<p>b</p></div>",
 	} {
 		for name, draw := range map[string]func(string) (template.HTML, error){"data-floe-text": MarkdownFlow, "data-floe-markdown": Markdown} {

@@ -4,9 +4,9 @@
   "description": "A page of sections, each a heading over parts: Markdown text, records of a name and longer text, code, commands at a terminal, images, notes, numbers and how they changed, steps, checklists, things before and after, options, facts, tables of rows compared both ways, diffs, file trees, links, review findings, what was checked and what came of it, folded parts, decisions, questions to decide, fields, timelines, bars of values or of how far things have gone, charts of lines or upright bars, keys, tabs, columns, scripts, diagrams, or HTML for what they cannot say.",
   "type": "object",
   "properties": {
-    "eyebrow": { "type": "string", "description": "A short line above the title, such as the kind of page and its date; a line of Markdown, as lead is. What looks like a tag (<prefix>, Vec<u8>) is left out and marks such as * and _ are read, ~~text~~ is struck through and a single ~ stays text: write marks as text in backticks" },
+    "eyebrow": { "type": "string", "description": "A short line above the title, such as the kind of page and its date; a line of Markdown, as lead is. Marks such as * and _ are read, ~~text~~ is struck through and a single ~ stays text: write marks as text in backticks" },
     "toc": { "type": "boolean", "description": "Whether the page holds its contents, its sections and subsections beside it on a wide screen. Left out, a page of 4 sections with a heading or more holds them" },
-    "lead": { "type": "string", "description": "A sentence or two under the title that sums the page up; a line of Markdown. What looks like a tag (<prefix>, Vec<u8>) is left out and marks such as * and _ are read, ~~text~~ is struck through and a single ~ stays text: write marks as text in backticks" },
+    "lead": { "type": "string", "description": "A sentence or two under the title that sums the page up; a line of Markdown. Marks such as * and _ are read, ~~text~~ is struck through and a single ~ stays text: write marks as text in backticks" },
     "sections": {
       "type": "array",
       "items": {

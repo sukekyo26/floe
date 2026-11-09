@@ -47,7 +47,7 @@ ul, ol { padding-left: 1.3rem; display: grid; gap: 0.3rem; }
 :where([data-floe-part]) > * { --face: initial; --on-face: initial; --floe-pill-wrap: initial; }
 /* Markdown a part holds, a text's too, in a box of no part (MarkdownFlow), and a template's own Markdown in a box of
    its own (Markdown): its blocks stand --floe-room apart, as parts do, and what places the box spaces it alone, not
-   its blocks; Markdown of raw HTML alone draws no box. page.css reaches in a template's box, to arrange it, not in a
+   its blocks; empty Markdown draws no box. page.css reaches in a template's box, to arrange it, not in a
    text's. What a quote or a list holds is spaced below.
    LIMIT: a template's Markdown placed in a part's box (a note of its own) is spaced so too, not as the part spaces
    what it holds, and page.css stops at the part's box there; floe's templates place none so */

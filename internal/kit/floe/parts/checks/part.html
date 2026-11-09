@@ -2,7 +2,7 @@
 {{- $ok := ""}}{{$ng := ""}}{{$unchecked := ""}}{{range .}}{{if eq .result "ok"}}{{$ok = print $ok "."}}{{else if eq .result "ng"}}{{$ng = print $ng "."}}{{else}}{{$unchecked = print $unchecked "."}}{{end}}{{end -}}
 <div data-floe-part="checks">
 <p class="total"><span data-floe-tone="good"><b>{{len $ok}}</b> {{word "ok"}}</span> <span data-floe-tone="bad"><b>{{len $ng}}</b> {{word "ng"}}</span> <span data-floe-tone="muted"><b>{{len $unchecked}}</b> {{word "unchecked"}}</span></p>
-{{- /* LIMIT: a title, an actual or a how that draws nothing (a blank, raw HTML alone) passes minLength, and its check is counted over an empty line: plain on the page, it is not checked */}}
+{{- /* LIMIT: a title, an actual or a how that draws nothing (blanks alone) passes minLength, and its check is counted over an empty line: plain on the page, it is not checked */}}
 {{- /* role="list" keeps it a list to Safari and VoiceOver, which drop a list without its marks */}}
 <ul role="list">
 {{- range .}}{{$tone := "muted"}}{{if eq .result "ok"}}{{$tone = "good"}}{{else if eq .result "ng"}}{{$tone = "bad"}}{{end}}
