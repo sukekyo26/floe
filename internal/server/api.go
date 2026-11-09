@@ -141,6 +141,7 @@ type Upload struct {
 	Images      map[string][]byte `json:"images"`
 	Project     string            `json:"project"`
 	Place       string            `json:"place"`
+	Slug        *string           `json:"slug,omitzero"`
 	Title       *string           `json:"title"`
 	Description *string           `json:"description"`
 	Theme       *string           `json:"theme"`
@@ -184,8 +185,8 @@ func sendSaved(w http.ResponseWriter, r *http.Request, entry *store.Entry) {
 	})
 }
 
-// save stores the data file the CLI sends as the page slug: 201 for a new slug, 200 for one replaced,
-// and 422 with the images to send when it reads some and sent none.
+// save stores the data file the CLI sends as a page, at the slug sent or the one the store picks: 201 for a new slug,
+// 200 for one replaced, and 422 with the images to send when it reads some and sent none.
 func (s *Server) save(w http.ResponseWriter, r *http.Request) {
 	body, ok := s.readBody(w, r, MaxUpload)
 	if !ok {
@@ -205,11 +206,9 @@ func (s *Server) save(w http.ResponseWriter, r *http.Request) {
 			return
 		}
 	}
-	// The only slug of the publish, which PrepareData checks with the rest: one not to be is the publisher's
-	// mistake, not a page not found.
-	slug := r.PathValue("slug")
+	// A slug not given is the store's to pick, the page of the file sent if it has one.
 	up := store.Upload{File: in.File, Source: in.Source, Images: in.Images, Project: in.Project, Place: in.Place}
-	opts := store.Options{Slug: &slug, Title: in.Title, Description: in.Description, Theme: in.Theme, Force: in.Force}
+	opts := store.Options{Slug: in.Slug, Title: in.Title, Description: in.Description, Theme: in.Theme, Force: in.Force}
 	drawing := s.latest()
 	entry, err := s.cfg.Store.PrepareData(drawing, up, opts)
 	if need, ok := errors.AsType[*store.NeedImages](err); ok {

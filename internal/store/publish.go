@@ -41,26 +41,47 @@ func linkName(file, cwd string) string {
 	return files.Slug(filepath.Base(filepath.Dir(filepath.Clean(file))))
 }
 
-// freeSlug names a link registered without a slug: the entry of the same path whatever its slug,
-// else base, else base-2, base-3 … so that two index.html files never take over each other.
-func (s *Store) freeSlug(base, path string) string {
-	if slugs, err := s.slugs(); err == nil {
-		for _, slug := range slugs {
-			if m := s.ReadMeta(slug); m != nil && m.Path == path {
-				return slug
-			}
+// owns tells the entries of the file a publish is of: a link's of the same path, a stored page's of the same project
+// and place in it. newMeta gives a place to stored pages alone.
+func owns(path, from, place string) func(*Meta) bool {
+	if path != "" {
+		return func(m *Meta) bool { return m.Path == path }
+	}
+	return func(m *Meta) bool {
+		return m.PublishedFile != "" && m.PublishedFrom == from && m.PublishedFile == place
+	}
+}
+
+// ownSlug is the slug of a publish without --slug, of the file whose entries own tells, named base: base when its entry
+// is the file's, else the first of the file's entries by slug, else base, which a link takes when free, else base-2,
+// base-3 … so that two index.html files never take over each other. base is checked only then: a file whose name
+// makes no slug still finds its page.
+// LIMIT: unless base is the file's, every meta.json is read, under the store's lock too when Save picks again. Keep the
+// slugs of the files apart if publishing slows.
+// LIMIT: of two pages of one file (a publish with --slug, or one before publishes found the file's page), base's is
+// written and the other is left as it was, to be floe rm'd.
+func (s *Store) ownSlug(base string, own func(*Meta) bool, link bool) (string, error) {
+	if m := s.ReadMeta(base); m != nil && own(m) {
+		return base, nil
+	}
+	slugs, err := s.slugs()
+	if err != nil {
+		return "", err
+	}
+	for _, slug := range slugs {
+		if m := s.ReadMeta(slug); m != nil && own(m) {
+			return slug, nil
 		}
 	}
-	for n := 1; ; n++ {
-		suffix := ""
-		if n > 1 {
-			suffix = "-" + strconv.Itoa(n)
-		}
-		slug := strings.TrimRight(base[:min(len(base), files.MaxSlugLen-len(suffix))], "-") + suffix
-		if s.ReadMeta(slug) == nil {
-			return slug
-		}
+	slug := base
+	for n := 2; link && s.ReadMeta(slug) != nil; n++ {
+		suffix := "-" + strconv.Itoa(n)
+		slug = strings.TrimRight(base[:min(len(base), files.MaxSlugLen-len(suffix))], "-") + suffix
 	}
+	if mistake := slugMistake(slug); mistake != nil {
+		return "", mistake
+	}
+	return slug, nil
 }
 
 // Options are the choices of a publish. A nil string is not given; an empty one is.
@@ -73,8 +94,8 @@ type Options struct {
 }
 
 // Accept checks a publish of file, a link or a data file, for what needs neither the store nor the disk,
-// and returns o with each text given trimmed, whoever gave it, and a data file's slug made of its name
-// when none is given. A slug is a name, checked as given: trimmed, it would not be the one a URL names.
+// and returns o with each text given trimmed, whoever gave it. A slug not given is the store's to pick (ownSlug).
+// A slug is a name, checked as given: trimmed, it would not be the one a URL names.
 // A title or a theme given empty is not given: the data's, or the one kept, is taken. Its mistakes: a data
 // file empty or that is not one, and a slug that cannot be one. The command line checks with it before it
 // sends, and the server again.
@@ -97,11 +118,6 @@ func Accept(file string, link bool, o Options) (Options, error) {
 		found = append(found, usererr.New("store_file_empty"))
 	case !files.IsDataFile(file):
 		found = append(found, usererr.New("store_not_data", file))
-	}
-	// Made of the name of a data file only: a stored page is drawn from one.
-	if o.Slug == nil && !link && len(found) == 0 {
-		slug := files.SlugFromFile(file)
-		o.Slug = &slug
 	}
 	if o.Slug != nil {
 		if mistake := slugMistake(*o.Slug); mistake != nil {
@@ -140,7 +156,8 @@ type Entry struct {
 	opts  Options
 	from  string
 	place string // the place of a stored page's data file in from, "" for a link
-	// named is what a link without --slug is named after, for Save to pick its slug again: "" else.
+	// named is what a publish without --slug is named after, for Save to pick its slug again ("" for a name that makes
+	// none).
 	named string
 	// created is the default theme the page was drawn with, which settle keeps for a new page, or one replacing
 	// another file's, as its CreatedTheme: read before the drawing, not at Save, so that the two agree.
@@ -206,17 +223,21 @@ func (s *Store) PrepareData(dw Drawing, up Upload, opts Options) (*Entry, error)
 	if dw.Err != nil {
 		return nil, dw.Err
 	}
+	slug, named, err := s.dataSlug(up, opts)
+	if err != nil {
+		return nil, err
+	}
 	sent := fstest.MapFS{}
 	for name, b := range up.Images {
 		sent[name] = &fstest.MapFile{Data: b, Mode: 0, ModTime: time.Time{}, Sys: nil}
 	}
 	images := &recorder{fsys: sent, names: nil, seen: map[string]bool{}}
-	picked, created, err := s.themesFor(*opts.Slug, "", up.Project, up.Place, opts.Force)
+	picked, created, err := s.themesFor(slug, "", up.Project, up.Place, opts.Force)
 	if err != nil {
 		return nil, err
 	}
 	o := tmpl.Options{
-		Theme: cmp.Or(picked, opts.theme()), Default: created, Untitled: *opts.Slug, Images: images, ImagesDir: "",
+		Theme: cmp.Or(picked, opts.theme()), Default: created, Untitled: slug, Images: images, ImagesDir: "",
 		Icons: dw.Icons, CutOff: false,
 	}
 	page, warnings, drawErr := tmpl.Draw(dw.Kit, up.File, up.Source, o)
@@ -227,7 +248,7 @@ func (s *Store) PrepareData(dw Drawing, up Upload, opts Options) (*Entry, error)
 	// LIMIT: a template changed between the two puts to read another image too is told that image is not there,
 	// for this put sends the images the first asked (a map, not nil): publish again. Ask again if that comes to matter.
 	if up.Images == nil && len(images.names) > 0 {
-		if _, refused := s.storedPage(up.File, nil, opts, up.Project, up.Place); refused != nil {
+		if _, refused := s.storedPage(slug, named, up, nil, opts); refused != nil {
 			return nil, usererr.WithWarnings(refused, warnings) //nolint:wrapcheck // its mistakes, with the page's warnings
 		}
 		return nil, &NeedImages{Names: images.names}
@@ -235,7 +256,7 @@ func (s *Store) PrepareData(dw Drawing, up Upload, opts Options) (*Entry, error)
 	if drawErr != nil {
 		return nil, drawErr //nolint:wrapcheck // mistakes at their places, for the caller to show
 	}
-	e, err := s.storedPage(up.File, up.Source, opts, up.Project, up.Place)
+	e, err := s.storedPage(slug, named, up, up.Source, opts)
 	if err != nil {
 		return nil, usererr.WithWarnings(err, warnings) //nolint:wrapcheck // its mistakes, with the page's warnings
 	}
@@ -254,6 +275,17 @@ func (s *Store) PrepareData(dw Drawing, up Upload, opts Options) (*Entry, error)
 	return e, nil
 }
 
+// dataSlug is the slug a publish of up writes to: the one given, else its file's (ownSlug), with the name it is
+// picked by ("" for one given).
+func (s *Store) dataSlug(up Upload, opts Options) (slug, named string, err error) {
+	if opts.Slug != nil {
+		return *opts.Slug, "", nil
+	}
+	named = files.SlugFromFile(up.File)
+	slug, err = s.ownSlug(named, owns("", up.Project, up.Place), false)
+	return slug, named, err
+}
+
 // imagesApart refuses images of the data file file one of which is under another, as a.png and a.png/b.png:
 // images sent are read as they are named, which a disk, where the copy goes, cannot hold. Its mistakes are at
 // file, by the names.
@@ -269,13 +301,14 @@ func imagesApart(file string, images map[string][]byte) error {
 	return found.Sorted().Err()
 }
 
-// storedPage builds the entry of the data file file as a stored page of content src (nil checks its owner
-// only), published from the project from, the file at place in it. opts are those Accept returned without a mistake,
-// whose Slug is set.
-func (s *Store) storedPage(file string, src []byte, opts Options, from, place string) (*Entry, error) {
+// storedPage builds the entry of the data file up as the stored page slug of content src (nil checks its owner only),
+// named after named when no slug was given ("" else). opts are those Accept returned without a mistake.
+// LIMIT: renamed between the drawing and Save, an untitled page keeps the slug it was drawn with as its title in the
+// page, not in the list; a link's too. Publish it again if that shows.
+func (s *Store) storedPage(slug, named string, up Upload, src []byte, opts Options) (*Entry, error) {
 	e := &Entry{
-		Slug: *opts.Slug, Meta: seedMeta("", file, src, opts.theme()), Source: src, Page: nil, Images: nil,
-		Prev: nil, Warnings: nil, opts: opts, from: from, place: place, named: "", created: "",
+		Slug: slug, Meta: seedMeta("", up.File, src, opts.theme()), Source: src, Page: nil, Images: nil,
+		Prev: nil, Warnings: nil, opts: opts, from: up.Project, place: up.Place, named: named, created: "",
 	}
 	if err := e.settle(s.ReadMeta(e.Slug)); err != nil {
 		return nil, err
@@ -508,11 +541,7 @@ func (s *Store) linkSlug(named, path string, opts Options) (string, error) {
 		return *opts.Slug, nil
 	}
 	// Named after the given file, not the symlink's target.
-	slug := s.freeSlug(named, path)
-	if mistake := slugMistake(slug); mistake != nil {
-		return "", mistake
-	}
-	return slug, nil
+	return s.ownSlug(named, owns(path, "", ""), true)
 }
 
 // slugMistake is the mistake of slug if it cannot be one, nil else.
@@ -632,9 +661,8 @@ func (s *Store) commit(e *Entry, mark string, pre *pressed) error {
 		return err
 	}
 	defer unlock()
-	// Picked again, as another link may have taken the slug, or the file's own been renamed, since.
-	if e.named != "" {
-		e.Slug = s.freeSlug(e.named, e.Meta.Path)
+	if err = s.pickAgain(e); err != nil {
+		return err
 	}
 	if err = e.settle(s.ReadMeta(e.Slug)); err != nil {
 		return err
@@ -658,6 +686,28 @@ func (s *Store) commit(e *Entry, mark string, pre *pressed) error {
 		_ = os.RemoveAll(dir) //nolint:errcheck // the error is the save's
 	}
 	return err
+}
+
+// pickAgain picks the slug of e, a publish without --slug, again under the lock, unless it holds what it held at
+// Prepare: nothing, or the file's entry. Another publish may have taken it, or the file's own been renamed, since. A
+// save picking another stored page gets its version before gzipped under the lock (nextVersion).
+// LIMIT: a slug free at Prepare and free still is kept: when another publish of the file made it and the management
+// page renamed it meanwhile, a second page is made at it. Look for the file's page under the lock if that shows.
+func (s *Store) pickAgain(e *Entry) error {
+	if e.opts.Slug != nil {
+		return nil
+	}
+	own := owns(e.Meta.Path, e.from, e.place)
+	m := s.ReadMeta(e.Slug)
+	if (e.Prev == nil && m == nil) || (e.Prev != nil && own(e.Prev) && m != nil && own(m)) {
+		return nil
+	}
+	slug, err := s.ownSlug(e.named, own, e.Meta.IsLink())
+	if err != nil {
+		return err
+	}
+	e.Slug = slug
+	return nil
 }
 
 // nextVersion adds to e.Meta, settled under the lock, the version the save of a stored page of content mark makes,
@@ -1000,9 +1050,7 @@ func (s *Store) Edit(slug string, ed Edit) (Edited, error) {
 	if err != nil {
 		return Edited{}, err
 	}
-	if ed.Title != nil {
-		setTitle(to, m, *ed.Title)
-	}
+	editTitle(slug, to, m, ed.Title)
 	if err := s.WriteMeta(slug, m); err != nil {
 		return Edited{}, err
 	}
@@ -1053,6 +1101,18 @@ func tagged(tags []string) []string {
 		}
 	}
 	return kept
+}
+
+// editTitle sets the title of m, renamed from slug to to, as t says (nil for none given). A title made of the slug
+// follows it, as publishing the page again makes it: else that publish would tell the title changed. A --title equal to
+// the old slug, of a page without title:, is followed too.
+func editTitle(slug, to string, m *Meta, t *string) {
+	switch {
+	case t != nil:
+		setTitle(to, m, *t)
+	case to != slug && !m.TitleEdited && m.DataTitle == "" && m.Title == slug:
+		m.Title = to
+	}
 }
 
 // setTitle sets the title of m, whose slug the edit renames to: an empty one gives back the page's

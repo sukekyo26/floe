@@ -52,7 +52,7 @@ The stored page stays as it was drawn: changing the template, a part or a theme 
 | Flag | Description |
 |---|---|
 | `--link` | Register the file or folder in place: an HTML file is shown as it is, a data file is drawn each time its page is opened, a folder lists the HTML files under it (see [links.md](links.md)). |
-| `--slug <name>` | The URL name: 1 to 64 lowercase letters, digits and hyphens, starting and ending with a letter or digit. Defaults to the file name; a linked `index.html` takes the name of its directory. |
+| `--slug <name>` | The URL name: 1 to 64 lowercase letters, digits and hyphens, starting and ending with a letter or digit. Defaults to the slug of the file's own page, else the file name; a linked `index.html` takes the name of its directory. |
 | `--title <text>` | The title in the list. Defaults to the data file's `title:`, or a linked file's `<title>`, else its first `<h1>`, else the slug. |
 | `--description <text>` | A description shown in the list. |
 | `--theme <name>` | The theme to draw the page with, its palette and the parts' shape, over the data file's `theme:`; a theme picked for the page on the management page wins over it. Defaults to `theme:`, else the default theme the page took when first stored, else `default`. Refused with `--link` of an HTML file or a folder, which are shown as they are. |
@@ -64,8 +64,8 @@ Each page belongs to the project it is published from. The project is the reposi
 
 - A page belongs to the file it is published from: its project, and its place in it, the path from its repository's root when the file is in the repository of the working directory (a worktree of it too), else its real path. `docs/plan.yaml` is one place whether it is published from the repository's root, from `docs`, or from another worktree.
 - The same slug from the same file overwrites the page. stderr says so (`updated "plan" (last updated …, title "…")`). If the title changed, a warning says from what to what. The exit code stays 0.
-- A slug published from another project or another file is refused unless `--force`. `--force` starts the page afresh: nothing of the old one is kept. `--force` drops the page's history: its versions, its pinned title, tags and favourite. To move a data file or rename it and keep its page's URL, publish it with `--force`.
-- A page renamed on the management page (`o` to `d`) is its file's still: publish that file under the new name to keep its history (`floe publish o.yaml --slug d`). Another file publishing to `d` is refused unless `--force`.
+- A slug published from another project or another file is refused unless `--force`. `--force` starts the page afresh: nothing of the old one is kept. `--force` drops the page's history: its versions, its pinned title, tags and favourite. To move a data file or rename it and keep its page's URL, publish it with `--force`. Without `--slug`, `--force` replaces only the page at the file's name, when the file has no page of its own.
+- A page renamed on the management page (`o` to `d`) is its file's still: publishing that file again without `--slug` writes to `d`. Another file publishing to `d` is refused unless `--force`. Of two pages of one file, which publishing it with another `--slug` makes, the one at the file's name is written to, else the first by slug: `floe rm` the one you do not want.
 - A page and a link cannot take each other's slug, even with `--force`: `floe rm` it first.
 - A republish keeps what was set on the management page (title, project, favourite, tags), the description and the creation time. `--title` and `--description` override them. A project emptied on the management page comes back to the one published from. An archived page comes back to the lists.
 - A republish of the same content, with another theme or not, draws the page again, but its update time and its place in the list stay; other content moves them up. A linked file is listed at the later of the file's time and when it was linked, so that linking it again brings it up.
@@ -76,7 +76,7 @@ Each page belongs to the project it is published from. The project is the reposi
 
 - Only a regular `.html` or `.htm` file, a data file (`.yaml`, `.yml`) or a folder can be linked. A data file is checked as `floe check` checks it, and refused with its mistakes.
 - Refused: a hidden directory right under your home (settings and keys live there), and a file or folder in one; a file directly under `/` or under your home itself, and those two as folders, as the whole directory would be served; `--theme` with an HTML file or a folder.
-- A link without `--slug` reuses the slug of the same file, else takes the first free one of `name`, `name-2`, `name-3` …; a folder in a repository is named by its project and its place in it (`api-docs-docs`), so that folders of one name in several repositories differ by their URL, and a folder outside one by its name (`handbook`). The same slug for another file is refused unless `--force`.
+- A link without `--slug` reuses the slug of the same file (the one at its name first), else takes the first free one of `name`, `name-2`, `name-3` …; a folder in a repository is named by its project and its place in it (`api-docs-docs`), so that folders of one name in several repositories differ by their URL, and a folder outside one by its name (`handbook`). The same slug for another file is refused unless `--force`.
 
 ---
 

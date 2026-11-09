@@ -250,7 +250,7 @@ func TestAccept(t *testing.T) {
 	t.Parallel()
 
 	o, err := store.Accept("a.yaml", false, store.Options{Title: ptr(" "), Theme: ptr(""), Description: ptr(" ")})
-	if err != nil || o.Title != nil || o.Theme != nil || o.Description == nil || *o.Description != "" || *o.Slug != "a" {
+	if err != nil || o.Title != nil || o.Theme != nil || o.Description == nil || *o.Description != "" || o.Slug != nil {
 		t.Errorf("Accept = %+v, %v", o, err)
 	}
 	for _, slug := range []string{"Foo", "foo ", "-a", strings.Repeat("a", 65)} {
