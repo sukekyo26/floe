@@ -135,7 +135,7 @@ func (a *app) workTask(cmd *cobra.Command, f workFlags) error {
 		return err
 	}
 	ed := taskEdit(cmd, f)
-	sent, err := encodeTask(ed)
+	sent, err := encodeSent(ed)
 	if err != nil {
 		return err
 	}
@@ -260,16 +260,6 @@ func flagOf(err error, from string) error {
 	return err //nolint:wrapcheck // the store's words
 }
 
-// encodeTask is ed encoded once, before the server is asked or started, as eachPage encodes a page's edit: a text
-// given that is no UTF-8 is refused first, by its flag.
-func encodeTask(ed server.TaskEdit) (jsontext.Value, error) {
-	b, err := encode(ed, sentAt)
-	if err != nil {
-		return nil, err
-	}
-	return jsontext.Value(b), nil
-}
-
 // workPages puts the pages slugs on a task and changes it: what the CLI can check (the pages listed, on a task, of one
 // project for a parent) is checked before anything is written, so that a page of no task, or none at all, leaves the
 // rest as they were; the store checks a parent as it writes the task. Flags of the pages alone ask nothing of
@@ -283,7 +273,7 @@ func (a *app) workPages(cmd *cobra.Command, f workFlags, slugs []string) error {
 		return err
 	}
 	ed := taskEdit(cmd, f)
-	sent, err := encodeTask(ed)
+	sent, err := encodeSent(ed)
 	if err != nil {
 		return err
 	}
@@ -339,7 +329,7 @@ func pageFlags(cmd *cobra.Command, f workFlags) (onPages, onTask []string, name 
 	return onPages, onTask, name, nil
 }
 
-// writeTasks writes ed, sent as encodeTask made it, to each of tasks in turn, stopping at the first failure. One case
+// writeTasks writes ed, sent as encodeSent made it, to each of tasks in turn, stopping at the first failure. One case
 // of not found is passed: ed taking the parent off alone, of a task of no row, which has no parent to take off and is
 // made by the pages going on.
 func (a *app) writeTasks(ctx context.Context, c client, tasks []taskOf, ed server.TaskEdit, sent jsontext.Value) error {

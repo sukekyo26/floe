@@ -4,6 +4,7 @@ import (
 	"encoding/json"
 	"os"
 	"path/filepath"
+	"runtime"
 	"slices"
 	"strings"
 	"testing"
@@ -405,9 +406,12 @@ func TestWorkNotUTF8(t *testing.T) {
 		t.Fatalf("publish = %d, %q, %q", code, out, errs)
 	}
 	bad := "a\xffb"
-	// Where no file can be named so (darwin's APFS), the project of the working directory is not tried.
+	// darwin's APFS names no file so, and the project of the working directory is not tried there.
 	elsewhere := filepath.Join(filepath.Dir(dir), bad)
 	if err := os.Mkdir(elsewhere, 0o700); err != nil {
+		if runtime.GOOS != "darwin" {
+			t.Fatal(err)
+		}
 		elsewhere = ""
 	}
 	for _, c := range []struct {

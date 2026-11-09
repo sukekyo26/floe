@@ -133,6 +133,16 @@ func notUTF8(err error) bool {
 	return known && syntax && errors.Is(got.Err, want.Err)
 }
 
+// encodeSent is body encoded once, before the server is asked or started, for c.do to send as it is: a text given
+// that is no UTF-8 is refused first, by where it was given (sentAt).
+func encodeSent(body any) (jsontext.Value, error) {
+	b, err := encode(body, sentAt)
+	if err != nil {
+		return nil, err
+	}
+	return jsontext.Value(b), nil
+}
+
 // encode is body as the server reads it, with encoding/json/v2: nil maps as null (a jsontext.Value as it is). A
 // text in it that is no UTF-8 is the user's mistake, named by where it was given (at, the longest pointer that holds
 // it), else by its field at the top.
