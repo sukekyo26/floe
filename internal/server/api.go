@@ -140,6 +140,7 @@ type Upload struct {
 	Source      []byte            `json:"source"`
 	Images      map[string][]byte `json:"images"`
 	Project     string            `json:"project"`
+	Place       string            `json:"place"`
 	Title       *string           `json:"title"`
 	Description *string           `json:"description"`
 	Theme       *string           `json:"theme"`
@@ -194,8 +195,8 @@ func (s *Server) save(w http.ResponseWriter, r *http.Request) {
 	if in == nil {
 		return
 	}
-	if in.File == "" || in.Source == nil {
-		send(w, http.StatusBadRequest, "send file and source")
+	if in.File == "" || in.Source == nil || in.Place == "" {
+		send(w, http.StatusBadRequest, "send file, source and place")
 		return
 	}
 	for name := range in.Images {
@@ -207,7 +208,7 @@ func (s *Server) save(w http.ResponseWriter, r *http.Request) {
 	// The only slug of the publish, which PrepareData checks with the rest: one not to be is the publisher's
 	// mistake, not a page not found.
 	slug := r.PathValue("slug")
-	up := store.Upload{File: in.File, Source: in.Source, Images: in.Images, Project: in.Project}
+	up := store.Upload{File: in.File, Source: in.Source, Images: in.Images, Project: in.Project, Place: in.Place}
 	opts := store.Options{Slug: &slug, Title: in.Title, Description: in.Description, Theme: in.Theme, Force: in.Force}
 	drawing := s.latest()
 	entry, err := s.cfg.Store.PrepareData(drawing, up, opts)

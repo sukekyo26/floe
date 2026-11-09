@@ -204,6 +204,7 @@ var messagesEN = map[string]string{
 	"store_slug_is_link":      `slug "%s" is used by a linked file: choose another slug`,
 	"store_slug_linked":       `slug "%s" is linked to %s: choose another slug`,
 	"store_slug_owned":        `slug "%s" was published from project %s: choose another slug`,
+	"store_slug_placed":       `slug "%s" was published from %s in project %s: choose another slug`,
 	"store_slug_taken":        `slug "%s" is already in use: choose another slug`,
 	"store_reads_unset":       "is missing, broken or has no since: run floe stop, then floe serve, which writes it anew",
 	"store_project_slash":     `a project name cannot be just "/"`,

@@ -47,6 +47,41 @@ func Within(ctx context.Context, dir string) string {
 	return strings.TrimSuffix(prefix, "/")
 }
 
+// Place returns where the file file is, which owns a page published from dir's project with it: its path from its
+// repository's root when that repository is dir's (one common .git, any worktree of it), else its real path. A
+// root is taken on the file's side, so that a file of a worktree under the main checkout is placed alike from both.
+// LIMIT: places are compared as text, so a file named in another case on a filesystem that ignores case (darwin)
+// is another place: a place is kept across machines and worktrees, where no inode can compare it.
+func Place(ctx context.Context, dir, file string) string {
+	actual, err := filepath.EvalSymlinks(file)
+	if err != nil {
+		actual = file
+	}
+	at := filepath.Dir(actual)
+	got, err := git(ctx, at, "rev-parse", "--path-format=absolute", "--show-toplevel", "--git-common-dir")
+	lines := strings.Split(got, "\n")
+	if err != nil || len(lines) != 2 || dir == "" {
+		return actual
+	}
+	mine, err := git(ctx, dir, "rev-parse", "--path-format=absolute", "--git-common-dir")
+	if err != nil || resolved(mine) != resolved(lines[1]) {
+		return actual
+	}
+	rel, err := filepath.Rel(resolved(lines[0]), actual)
+	if err != nil || rel == ".." || strings.HasPrefix(rel, ".."+string(filepath.Separator)) {
+		return actual
+	}
+	return filepath.ToSlash(rel)
+}
+
+// resolved returns path with its symlinks resolved, path itself when that fails.
+func resolved(path string) string {
+	if actual, err := filepath.EvalSymlinks(path); err == nil {
+		return actual
+	}
+	return path
+}
+
 func base(dir string) string {
 	if name := filepath.Base(dir); name != string(filepath.Separator) && name != "." {
 		return name

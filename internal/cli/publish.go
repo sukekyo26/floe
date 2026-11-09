@@ -32,8 +32,9 @@ func (a *app) publishCmd() *cobra.Command {
 		Use:   "publish <data.yaml> | --link <file.html|folder>",
 		Short: "Store a page drawn from a data file (or --link an HTML file or a folder in place) and print its URL",
 		Long: `Draw a page from a data file (.yaml, .yml) with the template it names (template: report),
-store it as drawn and print its URL. The same slug from the same project overwrites it, and a slug
-published from another project is refused unless --force. A page is in the language its data names
+store it as drawn and print its URL. The same slug from the same file of the same project overwrites it
+(the file's place: from its repository's root, else its real path), and a slug published from another
+project or another file is refused unless --force. A page is in the language its data names
 (lang:), and in the theme its data names (theme:, else default), unless --theme names another. A new
 slug is also opened in the browser ($BROWSER, open, wslview, xdg-open). The page stays as it was
 drawn: floe rebuild draws the stored pages again with the templates of now. The warnings of the page
@@ -69,8 +70,8 @@ a dot), each shown as a linked HTML file is. The same slug for another file is r
 	f.StringVar(&description, "description", "", "a description shown in the list")
 	f.StringVar(&theme, "theme", "",
 		"the theme to draw with: its palette and the parts' shape (default: the data file's theme:, else default)")
-	f.BoolVar(&opts.Force, "force", false, "replace a page published from another project, or a link to another file, "+
-		"keeping nothing of the old one, not even a page's earlier versions")
+	f.BoolVar(&opts.Force, "force", false, "replace a page published from another project or another file, or a link to "+
+		"another file, keeping nothing of the old one, not even a page's earlier versions")
 	return cmd
 }
 
@@ -143,7 +144,7 @@ func (a *app) sent(ctx context.Context, p arg, link bool, opts store.Options) (s
 		}
 	} else {
 		up = server.Upload{
-			File: p.name, Source: nil, Images: nil, Project: "", Title: opts.Title, Description: opts.Description,
+			File: p.name, Source: nil, Images: nil, Project: "", Place: "", Title: opts.Title, Description: opts.Description,
 			Theme: opts.Theme, Force: opts.Force,
 		}
 		if p.err == nil && files.IsDataFile(p.name) {
@@ -151,6 +152,10 @@ func (a *app) sent(ctx context.Context, p arg, link bool, opts store.Options) (s
 		}
 		if readable {
 			up.Source, err = p.read()
+			// Placed once read, so that a file not there is told once, by the read.
+			if err == nil {
+				up.Place = project.Place(ctx, a.env.Dir, p.abs)
+			}
 		}
 		body = up
 	}
@@ -204,8 +209,8 @@ func (a *app) noticeUpdate(saved server.Saved) {
 		return
 	}
 	a.warn("cli_updated_titled", saved.Slug, localTime(prev.UpdatedAt), prev.Title)
-	// LIMIT: the titles of the list are compared, so a page whose title was pinned on the management page, or of the
-	// same title, is overwritten without the warning; compare the data files' title: if that comes to matter (S291).
+	// Another file is refused before, so this tells the same file of another title. LIMIT: the titles of the list are
+	// compared, so the same file republished with its title pinned on the management page is told nothing.
 	if saved.Title != prev.Title {
 		a.warn("cli_title_changed", prev.Title, saved.Title)
 	}

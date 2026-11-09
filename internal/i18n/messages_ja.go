@@ -195,6 +195,7 @@ var messagesJA = map[string]string{
 	"store_slug_is_link":      "URL 名「%s」はリンクで使われています。別の URL 名にしてください",
 	"store_slug_linked":       "URL 名「%s」は %s のリンクで使われています。別の URL 名にしてください",
 	"store_slug_owned":        "URL 名「%s」はプロジェクト %s から公開されています。別の URL 名にしてください",
+	"store_slug_placed":       "URL 名「%[1]s」はプロジェクト %[3]s の %[2]s から公開されています。別の URL 名にしてください",
 	"store_slug_taken":        "URL 名「%s」は使われています。別の URL 名にしてください",
 	"store_reads_unset":       "無いか、壊れているか、since がありません。floe stop の後に floe serve を起こすと書き直します",
 	"store_project_slash":     "プロジェクト名に / だけは使えません",
