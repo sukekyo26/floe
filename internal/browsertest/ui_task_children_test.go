@@ -33,7 +33,7 @@ func TestUITaskChildren(t *testing.T) { //nolint:paralleltest // the browser tes
 	}
 	page("proj", "p1", "--task", "#1", "--state", "doing", "--title", "the parent")
 	page("proj", "p1b", "--task", "#1")
-	page("proj", "c2", "--task", "#2", "--state", "waiting", "--title", "waiting child")
+	page("proj", "c2", "--task", "#2", "--state", "doing", "--title", "earlier doing child")
 	page("proj", "c3", "--task", "#3", "--state", "done", "--title", "archived child")
 	page("proj", "c4", "--task", "#4", "--state", "doing", "--title", "doing child")
 	for _, child := range []string{"#2", "#3", "#4"} {
@@ -65,8 +65,7 @@ func TestUITaskChildren(t *testing.T) { //nolint:paralleltest // the browser tes
 		return b.eval("[...document.querySelectorAll('#list > li')].map((li) => li.querySelector('.tname').textContent + [...li.querySelectorAll('.kin, .task-pages')].filter((e) => e.matches('.kin') || /child/.test(e.textContent)).map((e) => ' (' + e.textContent + ')').join('')).sort().join(', ')")
 	}
 	for _, c := range []struct{ view, want string }{
-		{"waiting", "#2 (Parent#1the parent)"},
-		{"doing", "#1 (3 child task(s)), #21 (Parent#20kept by its child), #31 (Parent#30), #4 (Parent#1the parent)"},
+		{"doing", "#1 (3 child task(s)), #2 (Parent#1the parent), #21 (Parent#20kept by its child), #31 (Parent#30), #4 (Parent#1the parent)"},
 		{"done", "#20 (1 child task(s))"},
 		{"archived", "#10 (1 child task(s)), #11 (Parent#10gone by its child), #3 (Parent#1the parent), #30 (1 child task(s))"},
 	} {
@@ -82,9 +81,9 @@ func TestUITaskChildren(t *testing.T) { //nolint:paralleltest // the browser tes
 	}
 	const kids = "[...document.querySelectorAll('#task-family .kin-row')].map((e) => e.dataset.task + ' ' + e.querySelector('.kid-state').textContent).join(', ')"
 
-	// The children by view; j and k stay on the pages, and a press goes to the child's page.
+	// The children by view, the latest changed first within one; j and k stay on the pages, and a press goes to the child's page.
 	open("#1")
-	if got := b.eval(kids); got != "#4 In progress, #2 Waiting, #3 Archive" {
+	if got := b.eval(kids); got != "#4 In progress, #2 In progress, #3 Archive" {
 		t.Errorf("the children: %q", got)
 	}
 	b.eval("document.querySelector('#list a.title').focus()")
@@ -350,7 +349,7 @@ func TestUITaskChildren(t *testing.T) { //nolint:paralleltest // the browser tes
 		b.until("armed", "document.getElementById('task-delete').classList.contains('armed')")
 		press("task-delete")
 	}
-	task("proj", "#104", "--title", "to remove", "--state", "waiting")
+	task("proj", "#104", "--title", "to remove", "--state", "doing")
 	open("#104")
 	if got := b.eval("getComputedStyle(document.getElementById('task-delete')).color === getComputedStyle(document.getElementById('bulk-delete')).color"); got != "true" {
 		t.Error("the button is not of a delete's color")
@@ -392,9 +391,9 @@ func TestUITaskChildren(t *testing.T) { //nolint:paralleltest // the browser tes
 	for name, parent := range map[string]string{
 		"lost": "gone", "self": "self", "gp": "", "pa": "gp", "ch": "pa", "x": "y", "y": "x", "pagesonly": "t-pages",
 	} {
-		all["proj"][name] = store.Task{Title: "", State: "waiting", Step: "", At: at, URL: "", Steps: nil, Parent: parent, Rev: 0}
+		all["proj"][name] = store.Task{Title: "", State: "done", Step: "", At: at, URL: "", Steps: nil, Parent: parent, Rev: 0}
 	}
-	all["proj"]["proto"] = store.Task{Title: "", State: "waiting", Step: "", At: at, URL: "", Steps: nil, Parent: "constructor", Rev: 0}
+	all["proj"]["proto"] = store.Task{Title: "", State: "done", Step: "", At: at, URL: "", Steps: nil, Parent: "constructor", Rev: 0}
 	text, err = json.Marshal(all)
 	if err != nil {
 		t.Fatal(err)
@@ -406,7 +405,7 @@ func TestUITaskChildren(t *testing.T) { //nolint:paralleltest // the browser tes
 	if err = os.WriteFile(file, text, 0o600); err != nil { //nolint:gosec // G703: a path the test names
 		t.Fatal(err)
 	}
-	got := rows("waiting")
+	got := rows("done")
 	for _, want := range []string{"ch, ", "gp (1 child task(s))", "lost, ", "pa (Parentgp), ", "pagesonly, ", "proto, ", "self, ", "x, y"} {
 		if !strings.Contains(got, want) {
 			t.Errorf("by hand: %q lacks %q", got, want)

@@ -17,8 +17,6 @@
     --ink: #22211f; --on-ink: #fbfaf8; --good: #16a36a; --star: #d99a00;
     /* What is new to the viewer, and a link whose file is gone */
     --new: #2558c4; --new-soft: #eaf1fd; --chg: #8a6100; --chg-soft: #fdf3d6;
-    /* A task waiting for its reader */
-    --wait: #b4441a; --wait-soft: #fbece4;
     /* Words gone and added between two versions: on their line's ground, and marked within it */
     --del: #a32820; --del-soft: #fbeae8; --del-mark: #f6d3cf;
     --ins: #0f6b45; --ins-soft: #e6f6ed; --ins-mark: #c9ebd8;
@@ -946,7 +944,6 @@
   .tstate time { font: var(--text-label) var(--mono); }
   .tstate .proj { margin-left: auto; font-size: var(--text-label); }
   select.ver-pick.st { flex: none; font-weight: 700; }
-  select.st.waiting { color: var(--wait); background: var(--wait-soft); border-color: var(--wait); }
   select.st.doing { color: var(--chg); background: var(--chg-soft); border-color: var(--chg); }
   select.st.todo { color: var(--muted); background: var(--subtle); border-color: var(--line); }
   select.st.done { color: var(--ins); background: var(--ins-soft); border-color: var(--ins); }
@@ -958,7 +955,6 @@
   .toast-link { color: inherit; pointer-events: auto; }
   .shell.tasks-failed .lhead, .shell.tasks-failed .views .n, .shell.tasks-failed .chip .n { display: none; }
   .sdot { flex: none; width: 8px; height: 8px; margin-inline: calc((var(--shelf-mark) - 8px) / 2); border-radius: 50%; }
-  .sdot.waiting { background: var(--wait); }
   .sdot.doing { background: var(--chg); }
   .sdot.todo { background: var(--faint); }
   .sdot.done { background: var(--ins); }
@@ -1001,7 +997,6 @@
   /* The state heads the row, as a page's row is headed by its dot */
   .kin-row .kid-state { text-align: center; }
   .kid-state { flex: none; padding: 0 0.4rem; font-weight: 700; font-size: var(--text-label); white-space: nowrap; color: var(--muted); background: var(--subtle); border-radius: var(--corner-small); }
-  .kid-state.waiting { color: var(--wait); background: var(--wait-soft); }
   .kid-state.doing { color: var(--chg); background: var(--chg-soft); }
   .kid-state.done { color: var(--ins); background: var(--ins-soft); }
   .tname { margin-right: 0.45rem; font: 600 var(--text-small) var(--mono); color: var(--muted); }
@@ -3685,8 +3680,8 @@
     drawChips(pinned, pins);
   }
 
-  // Tasks by when their state last changed, the longest first or the latest, then by name
-  const taskOrder = (oldest) => (x, y) => (oldest ? Date.parse(x.at) - Date.parse(y.at) : Date.parse(y.at) - Date.parse(x.at)) || x.name.localeCompare(y.name, LANG);
+  // Tasks by when their state last changed, the latest first, then by name
+  const taskOrder = (x, y) => Date.parse(y.at) - Date.parse(x.at) || x.name.localeCompare(y.name, LANG);
 
   // The projects there are for the task list: of its tasks, and of the pages pinned
   function taskProjects(tasks) {
@@ -3711,14 +3706,14 @@
   }
   let projectKept = false;
   let borrowed = false;
-  // The project the task list opens with no project named: the one kept while it is there, or where a task has waited longest, or the
+  // The project the task list opens with no project named: the one kept while it is there, or where a task in progress changed last, or the
   // shelf's first. Unreadable, tasks are not known, so that only what was kept can be said
   function openingProject(tasks, there, ranks) {
     const kept = keptProject();
     if (tasksRead.error) return kept ?? '';
     if (there.has(kept)) return kept;
-    const waiting = tasks.filter((task) => task.state === FIRST_VIEW).sort(taskOrder(true));
-    return waiting[0]?.project ?? [...ranks.keys(), NONE].find((name) => there.has(name)) ?? '';
+    const first = tasks.filter((task) => task.state === FIRST_VIEW).sort(taskOrder);
+    return first[0]?.project ?? [...ranks.keys(), NONE].find((name) => there.has(name)) ?? '';
   }
 
   // The task list's list. Nothing of the shelf's but the view and the project narrows it
@@ -3744,8 +3739,7 @@
     const inProject = (task) => task.project === project;
     const ofView = tasks.filter((task) => task.state === view);
     const shown = ofView.filter(inProject);
-    const oldest = STATES.find((s) => s.name === view)?.oldest;
-    shown.sort(taskOrder(oldest));
+    shown.sort(taskOrder);
     renderChips(ofView, ranks, there);
     const counts = Object.fromEntries(VIEWS.map((value) => [value, tasks.filter((task) => task.state === value && inProject(task)).length]));
     drawViews(counts);
@@ -3753,7 +3747,7 @@
     $('manage').classList.toggle('tasks-empty', nothing);
     $('manage').classList.toggle('tasks-failed', failed);
     drawPins();
-    $('count').textContent = oldest ? t('ui_tasks_head_oldest', shown.length, t(VIEW_WORDS[view])) : t('ui_tasks_head_newest', shown.length);
+    $('count').textContent = t('ui_tasks_head_newest', shown.length);
     $('tasks-empty').hidden = !nothing;
     $('tasks-failed').hidden = !failed;
     const none = !nothing && !failed && shown.length === 0;
@@ -3848,7 +3842,7 @@
   let familyDrawn = '';
   function drawTaskFamily(task) {
     const viewAt = (x) => VIEWS.indexOf(x.state);
-    const kids = [...task.children].sort((x, y) => viewAt(x) - viewAt(y) || taskOrder(STATES.find((s) => s.name === x.state)?.oldest)(x, y));
+    const kids = [...task.children].sort((x, y) => viewAt(x) - viewAt(y) || taskOrder(x, y));
     // What the store's checkParent would refuse is not offered. The parent as written, one that makes no family too, is changed, not added to
     const ups = task.children.length === 0;
     const adds = !task.parent && hasRow(task);

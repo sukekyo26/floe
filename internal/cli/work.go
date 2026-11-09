@@ -42,8 +42,8 @@ the first failure. The same command given again finishes what a failure left. Ea
 line of its own, as the store left it: a task made, changed or unchanged with the fields given, a page with its task,
 step and pin.
 
-  floe work design-notes --task "#130" --step design --state waiting
-    task #130 in project floe: changed; state waiting, step "design"
+  floe work design-notes --task "#130" --step design --state doing
+    task #130 in project floe: changed; state doing, step "design"
     page design-notes: task #130 in project floe, step "design"
   floe work --task "#130" --url https://example.com/issues/482
   floe work --task "#130" --steps design,build,review

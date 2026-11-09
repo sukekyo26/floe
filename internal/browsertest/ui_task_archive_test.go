@@ -311,10 +311,10 @@ func TestUITaskStateGone(t *testing.T) { //nolint:paralleltest // the browser te
 	b.navigate("/tasks?project=proj&task=%23other")
 	b.until("the state", "document.getElementById('task-state').value === 'done'")
 	b.eval(refuse)
-	s.floe(t, "work", "--project", project, "--task", "#other", "--state", "waiting")
+	s.floe(t, "work", "--project", project, "--task", "#other", "--state", "todo")
 	b.eval(change)
 	b.until("the refusal", "!document.getElementById('error').hidden")
-	if got, want := b.eval("document.getElementById('task-state').value + ' | ' + document.getElementById('error').textContent"), "waiting | Failed to change the state: no"; got != want {
+	if got, want := b.eval("document.getElementById('task-state').value + ' | ' + document.getElementById('error').textContent"), "todo | Failed to change the state: no"; got != want {
 		t.Errorf("refused by another reason: %q, want %q", got, want)
 	}
 	b.eval(free)
@@ -324,7 +324,7 @@ func TestUITaskStateGone(t *testing.T) { //nolint:paralleltest // the browser te
 	b.navigate("/tasks?project=proj&task=%23other")
 	b.until("the button", "!document.getElementById('task-archive').hidden")
 	b.eval(refuse)
-	s.floe(t, "work", "--project", project, "--task", "#other", "--state", "waiting")
+	s.floe(t, "work", "--project", project, "--task", "#other", "--state", "todo")
 	b.eval("document.getElementById('task-archive').click()")
 	b.until("the refusal", "!archivingTask && !document.getElementById('error').hidden")
 	if got, want := b.eval("document.getElementById('task-archive').hidden + ' | ' + document.getElementById('error').textContent"), "true | Failed to save: no"; got != want {

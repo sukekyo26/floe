@@ -43,7 +43,7 @@ func TestUITaskRev(t *testing.T) { //nolint:paralleltest // the browser tests sh
 		t.Helper()
 		out = append(out, what+": "+b.eval(expr))
 	}
-	const state = `(async () => { const sel = document.getElementById('task-state'); sel.value = 'waiting'; await changeTaskState();
+	const state = `(async () => { const sel = document.getElementById('task-state'); sel.value = 'todo'; await changeTaskState();
 		return [sent.join(' ; ') || 'none', tasksOf().find((x) => x.name === '#130').state, document.getElementById('task-state').hidden ? 'archived' : document.getElementById('task-state').value,
 			document.getElementById('error').hidden ? 'no error' : document.getElementById('error').textContent].join(' | '); })()`
 
@@ -62,13 +62,13 @@ func TestUITaskRev(t *testing.T) { //nolint:paralleltest // the browser tests sh
 	say("given back", press)
 
 	// A rev not drawn: not sent
-	say("no rev", `(async () => { sent.length = 0; showError(''); delete document.getElementById('task-state').dataset.rev; const sel = document.getElementById('task-state'); sel.value = 'waiting'; await changeTaskState();
+	say("no rev", `(async () => { sent.length = 0; showError(''); delete document.getElementById('task-state').dataset.rev; const sel = document.getElementById('task-state'); sel.value = 'todo'; await changeTaskState();
 		return [sent.join(' ; ') || 'none', document.getElementById('error').textContent].join(' | '); })()`)
 
 	// The state changed, then the child taken off its parent: the row drawn again, of the rev written
 	open("#kid")
 	b.until("the parent's row", "document.querySelector('#task-up-rows .unlink')")
-	say("then off its parent", `(async () => { const sel = document.getElementById('task-state'); sel.value = 'waiting'; await changeTaskState(); sent.length = 0;
+	say("then off its parent", `(async () => { const sel = document.getElementById('task-state'); sel.value = 'todo'; await changeTaskState(); sent.length = 0;
 		document.querySelector('#task-up-rows .unlink').click();
 		await new Promise((r) => { const look = () => (unlinking.size ? setTimeout(look, 10) : r()); setTimeout(look, 10); });
 		return [sent.join(' ; '), tasksOf().find((x) => x.name === '#kid').parent || 'no parent', document.getElementById('error').hidden ? 'no error' : document.getElementById('error').textContent].join(' | '); })()`)
@@ -101,7 +101,7 @@ func TestUITaskRev(t *testing.T) { //nolint:paralleltest // the browser tests sh
 	open("#kid")
 	say("off, the state, back", `(async () => { sent.length = 0; showError('');
 		await unlinkTask(tasksOf().find((x) => x.name === '#kid'), '#up', false);
-		const sel = document.getElementById('task-state'); sel.value = 'waiting'; await changeTaskState();
+		const sel = document.getElementById('task-state'); sel.value = 'todo'; await changeTaskState();
 		document.querySelector('#toasts .undo').click();
 		await new Promise((r) => { const look = () => (document.getElementById('error').hidden ? setTimeout(look, 10) : r()); look(); });
 		return document.getElementById('error').textContent; })()`)
@@ -142,7 +142,7 @@ func TestUITaskRev(t *testing.T) { //nolint:paralleltest // the browser tests sh
 	say("whole, again", setSave)
 
 	check(t, "task revs", out, strings.Join([]string{
-		`written since: /api/tasks {"new":false,"rev":1,"state":"waiting"} | done | done | Failed to change the state: task #130 has changed since it was read`,
+		`written since: /api/tasks {"new":false,"rev":1,"state":"todo"} | done | done | Failed to change the state: task #130 has changed since it was read`,
 		`archived: /api/tasks {"new":false,"rev":2,"state":"archived"} | archived | pa as it was`,
 		`given back: /api/tasks {"new":false,"rev":3,"state":"done"} | done | pa as it was`,
 		`no rev: none | Failed to change the state: the version of the task shown is not known; load the page again`,

@@ -49,12 +49,12 @@ func TestUITaskPage(t *testing.T) { //nolint:paralleltest // the browser tests s
 		}
 		s.floe(t, append([]string{"work", slug}, args...)...)
 	}
-	page("c1", "--task", "#128", "--state", "waiting")
-	page("n1", "--task", "#130", "--state", "waiting")
+	page("c1", "--task", "#128", "--state", "doing")
+	page("n1", "--task", "#130", "--state", "doing")
 	page("d1", "--task", "#130", "--step", "design")
 	page("r1", "--task", "#130", "--step", "review")
 	page("i1", "--task", "#130", "--step", "build")
-	page("y1", "--task", "#142", "--state", "waiting")
+	page("y1", "--task", "#142", "--state", "doing")
 	page("x1", "--task", "#120", "--state", "done")
 	page("p1", "--pin")
 	page("p2", "--pin")
@@ -131,8 +131,8 @@ func TestUITaskPage(t *testing.T) { //nolint:paralleltest // the browser tests s
 	b.until("the task's page again", "location.search === '?project=proj&task=%23130' && "+taskPageShown)
 
 	// The state changed: back to the list of that state, the task's row with the focus.
-	b.eval("document.getElementById('task-state').focus(); document.getElementById('task-state').value = 'doing'; document.getElementById('task-state').dispatchEvent(new Event('change'))")
-	b.until("the state", "document.getElementById('task-state').className.includes('doing')")
+	b.eval("document.getElementById('task-state').focus(); document.getElementById('task-state').value = 'todo'; document.getElementById('task-state').dispatchEvent(new Event('change'))")
+	b.until("the state", "document.getElementById('task-state').className.includes('todo')")
 	// By the keyboard, whose keys a select keeps: the focus has left it.
 	realKey(b, "h", 0)
 	b.until("the list", "location.pathname === '/tasks' && document.querySelector('#list > li') && document.activeElement.closest('#list')")
@@ -140,7 +140,7 @@ func TestUITaskPage(t *testing.T) { //nolint:paralleltest // the browser tests s
 	// A task of the same state, its row has the focus.
 	b.navigate("/tasks?project=proj")
 	b.until("the rows", "document.querySelector('#list > li')")
-	b.eval("[...document.querySelectorAll('#list .title')].at(-1).focus()")
+	b.eval("document.querySelector('#list .title').focus()")
 	enter()
 	b.until("#142's page", "location.search === '?project=proj&task=%23142' && "+taskPageShown)
 	key("h")
@@ -148,14 +148,14 @@ func TestUITaskPage(t *testing.T) { //nolint:paralleltest // the browser tests s
 	say("the row come back to", "document.activeElement.querySelector('.tname').textContent")
 
 	// A pin: through the pins, back to the list with its filter.
-	b.navigate("/tasks?view=doing&project=proj")
+	b.navigate("/tasks?view=todo&project=proj")
 	b.until("the rows", "document.querySelector('#list > li')")
 	say("the list kept", "sessionStorage.getItem('artifacts.tasks')")
 	b.moving("document.querySelector('.pin').click()")
 	b.until("the pin whole", "location.pathname.startsWith('/a/p') && document.getElementById('frame-title').textContent")
 	say("pin", "location.pathname + ' ' + "+whole)
 	key("h")
-	b.until("the filtered list", "location.pathname + location.search === '/tasks?view=doing&project=proj'")
+	b.until("the filtered list", "location.pathname + location.search === '/tasks?view=todo&project=proj'")
 	b.until("the rows", "document.querySelector('#list > li')")
 	b.moving("[...document.querySelectorAll('#list .title')].find((a) => a.textContent.startsWith('#130')).click()")
 	b.until("the task's page", "location.search.includes('task=') && "+taskPageShown)
@@ -214,7 +214,7 @@ func TestUITaskPage(t *testing.T) { //nolint:paralleltest // the browser tests s
 	b.pressKey("\x1b")
 	b.until("the choices closed", "!document.getElementById('task-state').matches(':open')")
 	b.until("the state drawn", "document.getElementById('task-state').value === 'done'")
-	s.floe(t, "work", "--task", "#142", "--project", "proj", "--state", "waiting")
+	s.floe(t, "work", "--task", "#142", "--project", "proj", "--state", "doing")
 
 	// A task of no pages is removed by two presses, its name and project whatever they hold.
 	s.floe(t, "work", "--task", "it's $(touch made)", "--project", "")
@@ -239,7 +239,7 @@ func TestUITaskPage(t *testing.T) { //nolint:paralleltest // the browser tests s
 
 	// What is not there, and what cannot be written.
 	opened("#128", "/tasks?project=proj&task=%23128")
-	say("waiting has no archive button", archive)
+	say("doing has no archive button", archive)
 	b.navigate("/tasks?project=proj&task=%2399")
 	b.until("no pages", "!document.getElementById('task-none').hidden")
 	say("no pages", "document.querySelector('#task-none strong').textContent + ' ' + document.getElementById('task-delete').textContent + ' ' + document.getElementById('task-archive').hidden")
@@ -313,16 +313,16 @@ rows: T n1 | [designAdd a page] | T d1 | [buildAdd a page] | T i1 | [reviewAdd a
 nothing open: none / none
 url: /tasks?project=proj&task=%23130
 the list's keys:  ?project=proj
-head: #130 / waiting / ver-pick st waiting / proj / true / /tasks?project=proj
+head: #130 / doing / ver-pick st doing / proj / true / /tasks?project=proj
 nothing to select: 0 true
 j: T n1 / n1, T d1 / d1, T i1 / i1, T r1 / r1
 whole: /tasks?project=proj&task=%23130 / {"order":["n1","d1","i1","r1"],"shown":["n1","d1","i1","r1"],"back":"/tasks?project=proj&task=%23130","at":{"slug":"r1","file":"","v":0}}
 k: /tasks?project=proj&task=%23130 / {"order":["n1","d1","i1","r1"],"shown":["n1","d1","i1","r1"],"back":"/tasks?project=proj&task=%23130","at":{"slug":"i1","file":"","v":0}}
-after the state changed: ?view=doing&project=proj #130 focus #130
+after the state changed: ?view=todo&project=proj #130 | #99 focus #130
 the row come back to: #142
-the list kept: ?view=doing&project=proj
-pin: /a/p2/ /tasks?view=doing&project=proj / {"order":["p2","p1"],"shown":["p2","p1"],"back":"/tasks?view=doing&project=proj","at":{"slug":"p2","file":"","v":0}}
-up goes to the task's state: /tasks?project=proj&view=doing
+the list kept: ?view=todo&project=proj
+pin: /a/p2/ /tasks?view=todo&project=proj / {"order":["p2","p1"],"shown":["p2","p1"],"back":"/tasks?view=todo&project=proj","at":{"slug":"p2","file":"","v":0}}
+up goes to the task's state: /tasks?project=proj&view=todo
 in the folder: /tasks?project=proj&task=%231 / {"order":[],"shown":["fold"],"back":"/tasks?project=proj&task=%231","at":{"slug":"fold","file":"one.html","v":0}}
 renamed whole: /tasks?project=proj&task=%23128 / {"order":["c2"],"shown":["c2"],"back":"/tasks?project=proj&task=%23128","at":{"slug":"c2","file":"","v":0}}
 of no rows: / / null
@@ -330,15 +330,15 @@ done: Archive the task
 archived: T x1
 the shelf's archive: #120
 folded, none chosen: true true
-while open: waiting
+while open: doing
 a tag: SPAN t
-waiting has no archive button: none
+doing has no archive button: none
 no pages: This task has no pages Remove the task true
 unreadable, drawn: false false true
 unreadable, first: true true true
 unreadable, done: Archive the task
 no task: No task #999 true 0
-refused: waiting false true`
+refused: doing false true`
 
 // The way up of a task's page is its project's list at the state the task is in now, whatever way it was come to; a state changed on
 // the page takes it along, and the row the list opens with the focus on is the task's. The tab's list is left as it was.
@@ -353,7 +353,7 @@ func TestUITaskUp(t *testing.T) { //nolint:paralleltest // the browser tests sha
 			t.Fatal(err)
 		}
 	}
-	s.floe(t, "work", "a", "b", "--task", "#1", "--state", "doing")
+	s.floe(t, "work", "a", "b", "--task", "#1", "--state", "todo")
 	s.floe(t, "work", "c", "--task", "#2", "--state", "done")
 	b.size(1400, 800, false)
 	defer b.unsize()
@@ -373,7 +373,7 @@ func TestUITaskUp(t *testing.T) { //nolint:paralleltest // the browser tests sha
 	const task2 = "location.search === '?project=proj&task=%232' && " + taskPageShown
 
 	// By a row of the list, at that state: through a reload, j and k, and a page whole and back.
-	b.navigate("/tasks?view=doing&project=proj")
+	b.navigate("/tasks?view=todo&project=proj")
 	b.until("the rows", "document.querySelector('#list > li .title')")
 	press("document.querySelector('#list > li .title')")
 	b.until("the task's page", task1)
@@ -394,7 +394,7 @@ func TestUITaskUp(t *testing.T) { //nolint:paralleltest // the browser tests sha
 	say("back from it")
 
 	// The state changed there: to the list it has come to be on, its row with the focus; the tab's list stays what was last seen.
-	b.navigate("/tasks?view=doing&project=proj")
+	b.navigate("/tasks?view=todo&project=proj")
 	b.until("the rows", "document.querySelector('#list > li .title')")
 	press("document.querySelector('#list > li .title')")
 	b.until("the task's page", task1)
@@ -407,11 +407,11 @@ func TestUITaskUp(t *testing.T) { //nolint:paralleltest // the browser tests sha
 	b.until("the focus", "document.activeElement.closest('#list')")
 	out = append(out, "on it: "+b.eval("location.search + ' ' + document.activeElement.querySelector('.tname').textContent"))
 	// Changed elsewhere, as it is read.
-	s.floe(t, "work", "--task", "#1", "--project", "proj", "--state", "doing")
+	s.floe(t, "work", "--task", "#1", "--project", "proj", "--state", "todo")
 	b.navigate("/tasks?project=proj&task=%231")
 	b.until("the task's page", task1)
 	say("changed elsewhere")
-	s.floe(t, "work", "--task", "#1", "--project", "proj", "--state", "waiting")
+	s.floe(t, "work", "--task", "#1", "--project", "proj", "--state", "doing")
 	b.until("read again", up+" === '/tasks?project=proj'")
 	say("changed elsewhere, while open")
 
@@ -421,7 +421,7 @@ func TestUITaskUp(t *testing.T) { //nolint:paralleltest // the browser tests sha
 	say("the URL, of a task done")
 
 	// By a badge on the page list, and by the way in a page's menu.
-	s.floe(t, "work", "--task", "#1", "--project", "proj", "--state", "doing")
+	s.floe(t, "work", "--task", "#1", "--project", "proj", "--state", "todo")
 	b.navigate("/?project=proj")
 	b.until("the page list", "document.querySelector('#list li[data-slug=a] .task-tag')")
 	press("document.querySelector('#list li[data-slug=a] .task-tag')")
@@ -446,18 +446,18 @@ func TestUITaskUp(t *testing.T) { //nolint:paralleltest // the browser tests sha
 }
 
 //nolint:gosec // G101: where the way up goes, not a secret
-const taskUpWant = `a row: /tasks?project=proj&view=doing
-reloaded: /tasks?project=proj&view=doing
-j j: /tasks?project=proj&view=doing
+const taskUpWant = `a row: /tasks?project=proj&view=todo
+reloaded: /tasks?project=proj&view=todo
+j j: /tasks?project=proj&view=todo
 the page whole: /tasks?project=proj&task=%231
-back from it: /tasks?project=proj&view=doing
+back from it: /tasks?project=proj&view=todo
 the state changed: /tasks?project=proj&view=done
-the tab's list: /tasks?view=doing&project=proj
+the tab's list: /tasks?view=todo&project=proj
 on it: ?view=done&project=proj #1
-changed elsewhere: /tasks?project=proj&view=doing
+changed elsewhere: /tasks?project=proj&view=todo
 changed elsewhere, while open: /tasks?project=proj
 the URL, of a task done: /tasks?project=proj&view=done
-a badge: /tasks?project=proj&view=doing
-up from there: ?view=doing&project=proj #1 /tasks?view=doing&project=proj
+a badge: /tasks?project=proj&view=todo
+up from there: ?view=todo&project=proj #1 /tasks?view=todo&project=proj
 no focus opened otherwise: false
 the menu: /tasks?project=proj&view=done`

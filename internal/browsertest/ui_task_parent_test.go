@@ -387,7 +387,7 @@ func TestUITaskFamilyCard(t *testing.T) { //nolint:paralleltest // the browser t
 	}
 	task("#1", "--title", "up")
 	task("#2", "--title", "two", "--state", "doing", "--parent", "#1")
-	task(long, "--title", longTitle, "--state", "waiting", "--parent", "#1")
+	task(long, "--title", longTitle, "--state", "done", "--parent", "#1")
 	task("#4", "--title", "four", "--parent", "#1")
 	touch := func(on bool) {
 		t.Helper()
@@ -417,7 +417,7 @@ func TestUITaskFamilyCard(t *testing.T) { //nolint:paralleltest // the browser t
   const cut = name.scrollWidth > name.clientWidth && name.getBoundingClientRect().width <= document.getElementById('task-family-rows').getBoundingClientRect().width / 5 + 0.5;
   return [rows.length, wide, names, cut, row.querySelector('.kin-title').getBoundingClientRect().width > 20,
     row.closest('.kin-line').getBoundingClientRect().right <= document.getElementById('task-family').getBoundingClientRect().right,
-    row.title === ` + js(long+"\n"+longTitle) + `, row.getAttribute('aria-label') === ` + js(long+" "+longTitle+", Waiting") + `].join(' ')
+    row.title === ` + js(long+"\n"+longTitle) + `, row.getAttribute('aria-label') === ` + js(long+" "+longTitle+", Done") + `].join(' ')
 })()`
 	defer b.unsize()
 	out := make([]string, 0, 4)
