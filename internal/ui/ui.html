@@ -3334,11 +3334,12 @@
     if (reason) {
       $('edit-error').textContent = t('ui_save_failed', reason);
       $('edit-error').hidden = false;
-      // LIMIT: the server refuses in words, not keys, so which field it was is not known here: the slug's is chosen when both were sent,
-      // and a connection lost goes to a field sent too. Put it on the field refused once a refusal names its key
+      // LIMIT: the server refuses in words, not keys, so which field it was is not known here: the field is chosen from what was sent,
+      // not from the reason, the slug's before the project's. A refusal of the title or the description, or a connection lost, goes to
+      // the slug or the project sent with it. Put it on the field refused once a refusal names its key
       const field = 'slug' in changes ? 'edit-slug' : 'project' in changes ? 'edit-project' : '';
       if (field) {
-        $('edit-more').open = true;
+        $(field).closest('details').open = true;
         $(field).focus();
       }
       return;
