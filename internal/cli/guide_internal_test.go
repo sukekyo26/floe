@@ -2,6 +2,7 @@ package cli
 
 import (
 	"bytes"
+	"encoding/json"
 	"errors"
 	"io"
 	"os"
@@ -31,8 +32,9 @@ func readGuide(t *testing.T, path string) string {
 
 // fences is the text of each fenced block of lang in guide, its indentation taken off.
 func fences(guide, lang string) []string {
-	var found []string
-	for _, m := range regexp.MustCompile("(?ms)^( *)```"+lang+"\n(.*?)^ *```").FindAllStringSubmatch(guide, -1) {
+	blocks := regexp.MustCompile("(?ms)^( *)```"+lang+"\n(.*?)^ *```").FindAllStringSubmatch(guide, -1)
+	found := make([]string, 0, len(blocks))
+	for _, m := range blocks {
 		var lines []string
 		for line := range strings.Lines(m[2]) {
 			lines = append(lines, strings.TrimPrefix(line, m[1]))
@@ -49,11 +51,11 @@ func guideEnv(t *testing.T, dir string) Env {
 	tmp := t.TempDir()
 	vars := map[string]string{"HOME": tmp, "FLOE_DIR": filepath.Join(tmp, "store"), "FLOE_PORT": "1"}
 	for _, kind := range []string{"TEMPLATES", "PARTS", "THEMES", "ICONS"} {
-		dir := filepath.Join(tmp, strings.ToLower(kind))
-		if err := os.Mkdir(dir, 0o700); err != nil {
+		own := filepath.Join(tmp, strings.ToLower(kind))
+		if err := os.Mkdir(own, 0o700); err != nil {
 			t.Fatal(err)
 		}
-		vars["FLOE_"+kind+"_DIR"] = dir
+		vars["FLOE_"+kind+"_DIR"] = own
 	}
 	return Env{Stdout: nil, Stderr: nil, Dir: dir, Getenv: func(key string) string { return vars[key] }}
 }
@@ -210,6 +212,36 @@ func TestGuideQuotes(t *testing.T) {
 	}
 }
 
+// The values of checks' result the guide names are those its schema takes.
+func TestGuideCheckResults(t *testing.T) {
+	t.Parallel()
+
+	code, out, errs := runIn(guideEnv(t, t.TempDir()), "part", "show", "checks", "schema.json")
+	if code != 0 {
+		t.Fatalf("floe part show checks schema.json = %d, %s", code, errs)
+	}
+	var schema struct {
+		Items struct {
+			Properties struct {
+				Result struct {
+					Enum []string `json:"enum"`
+				} `json:"result"`
+			} `json:"properties"`
+		} `json:"items"`
+	}
+	if err := json.Unmarshal([]byte(out), &schema); err != nil {
+		t.Fatal(err)
+	}
+	if got := schema.Items.Properties.Result.Enum; !slices.Equal(got, []string{"ok", "ng", "unchecked"}) {
+		t.Errorf("checks takes result %v; the guide says ok, ng and unchecked (fix docs/guide.md and docs/guide.ja.md)", got)
+	}
+	for path, says := range map[string]string{guides[0]: "`result: ok`, `ng` or `unchecked`", guides[1]: "`result: ok`・`ng`・`unchecked`"} {
+		if !strings.Contains(readGuide(t, path), says) {
+			t.Errorf("%s does not say %s", path, says)
+		}
+	}
+}
+
 // The guide's "read floe part show <part> schema.json" holds for every part floe part list names but html.
 func TestGuidePartShow(t *testing.T) {
 	t.Parallel()
@@ -242,8 +274,8 @@ func TestSkillFile(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	desc, _ := values["description"].(string)
-	if values["name"] != "floe" || len([]rune(desc)) < 1 || len([]rune(desc)) > 1024 {
+	desc, ok := values["description"].(string)
+	if !ok || values["name"] != "floe" || len([]rune(desc)) < 1 || len([]rune(desc)) > 1024 {
 		t.Errorf("head %v", values)
 	}
 }

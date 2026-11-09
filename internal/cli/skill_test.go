@@ -58,90 +58,162 @@ func TestSkillInstall(t *testing.T) {
 		want  check
 		after func(t *testing.T, home string)
 	}{
-		{name: "none", agent: "claude", want: check{0, []string{"made ", ".claude/skills/floe/SKILL.md"}, nil},
+		{
+			name: "none", agent: "claude", want: check{0, []string{"made ", ".claude/skills/floe/SKILL.md"}, nil},
 			after: func(t *testing.T, home string) {
 				t.Helper()
 				if !strings.HasPrefix(readFile(t, home+"/.claude/skills/floe/SKILL.md"), skillBody) {
 					t.Error("not floe's skill")
 				}
-			}},
+			},
+		},
 		{name: "none codex", agent: "codex", want: check{0, []string{"made ", ".agents/skills/floe/SKILL.md"}, nil}},
-		{name: "same", agent: "claude", setup: installed(".claude"),
-			want: check{0, []string{"is this floe's skill already"}, nil}},
-		{name: "same force", agent: "gemini", force: true, setup: installed(".agents"),
-			want: check{0, []string{"is this floe's skill already"}, nil}},
-		{name: "other", agent: "claude", setup: written(".claude/skills/floe/SKILL.md", "mine\n"),
+		{
+			name: "same", agent: "claude", setup: installed(".claude"),
+			want: check{0, []string{"is this floe's skill already"}, nil},
+		},
+		{
+			name: "same force", agent: "gemini", force: true, setup: installed(".agents"),
+			want: check{0, []string{"is this floe's skill already"}, nil},
+		},
+		{
+			name: "other", agent: "claude", setup: written(".claude/skills/floe/SKILL.md", "mine\n"),
 			want:  check{1, []string{".claude/skills/floe/SKILL.md: ", "--force"}, nil},
-			after: content(".claude/skills/floe/SKILL.md", "mine\n")},
-		{name: "other force", agent: "codex", force: true, setup: written(".agents/skills/floe/SKILL.md", "mine\n"),
-			want: check{0, []string{"replaced ", ".agents/skills/floe/SKILL.md"}, nil}},
-		{name: "big", agent: "claude", setup: written(".claude/skills/floe/SKILL.md", strings.Repeat("x", 1<<20)),
-			want: check{1, []string{"--force"}, nil}},
-		{name: "big force", agent: "claude", force: true, setup: written(".claude/skills/floe/SKILL.md", strings.Repeat("x", 1<<20)),
-			want: check{0, []string{"replaced "}, nil}},
-		{name: "other files kept", agent: "claude", setup: written(".claude/skills/floe/notes.txt", "n\n"),
-			want: check{0, []string{"made "}, nil}, after: content(".claude/skills/floe/notes.txt", "n\n")},
-		{name: "floe links to a floe", agent: "claude", setup: linked("dot/floe", true, ".claude/skills/floe"),
-			want: check{0, []string{"made ", "/dot/floe/SKILL.md"}, nil}, after: isLink(".claude/skills/floe")},
-		{name: "floe links to another name", agent: "claude", setup: linked("dot/floe-skill", true, ".claude/skills/floe"),
-			want: check{1, []string{".claude/skills/floe: ", "dot/floe-skill", "not named floe"}, nil}},
-		{name: "floe links nowhere", agent: "codex", setup: linked("gone", false, ".agents/skills/floe"),
-			want: check{1, []string{".agents/skills/floe: cannot be written"}, nil}},
-		{name: "floe links to another floe", agent: "claude", setup: linked("work/floe", true, ".claude/skills/floe"),
-			want: check{0, []string{"made ", "/work/floe/SKILL.md"}, nil}},
-		{name: "SKILL.md links outside floe", agent: "claude", force: true, setup: linkedFile("dot/x/SKILL.md", ".claude/skills/floe/SKILL.md"),
-			want: check{0, []string{"replaced ", "/dot/x/SKILL.md"}, nil}, after: isLink(".claude/skills/floe/SKILL.md")},
-		{name: "SKILL.md links to .bashrc", agent: "claude", force: true, setup: linkedFile(".bashrc", ".claude/skills/floe/SKILL.md"),
-			want: check{1, []string{"floe/SKILL.md: ", "/.bashrc", "not named SKILL.md"}, nil}, after: content(".bashrc", "mine\n")},
-		{name: "SKILL.md links to another skill", agent: "claude", setup: linkedFile("other/SKILL.md", ".claude/skills/floe/SKILL.md"),
-			want: check{1, []string{"/other/SKILL.md: ", "--force"}, nil}},
-		{name: "SKILL.md links nowhere", agent: "claude", setup: linked("gone/SKILL.md", false, ".claude/skills/floe/SKILL.md"),
-			want: check{1, []string{"floe/SKILL.md: cannot be written"}, nil}},
-		{name: "SKILL.md is a directory", agent: "claude", setup: dirAt(".claude/skills/floe/SKILL.md"),
-			want: check{1, []string{"floe/SKILL.md: is a directory"}, nil}},
-		{name: "SKILL.md is a FIFO", agent: "claude", setup: fifoAt(".claude/skills/floe/SKILL.md"),
-			want: check{1, []string{"floe/SKILL.md: ", "FIFO"}, nil}},
-		{name: "floe is a file", agent: "claude", setup: written(".claude/skills/floe", "x"),
-			want: check{1, []string{"floe/SKILL.md: not a directory"}, nil}},
-		{name: ".claude is a file", agent: "claude", setup: written(".claude", "x"),
-			want: check{1, []string{"/.claude: cannot be written (not a directory)"}, nil}},
-		{name: ".agents is a file", agent: "codex", setup: written(".agents", "x"),
-			want: check{1, []string{"/.agents: cannot be written (not a directory)"}, nil}},
-		{name: "skills is a file", agent: "cursor", setup: written(".agents/skills", "x"),
-			want: check{1, []string{"/.agents/skills: cannot be written (not a directory)"}, nil}},
-		{name: ".agents links nowhere", agent: "codex", setup: linked("gone", false, ".agents"),
-			want: check{1, []string{"/.agents: cannot be written (file exists)"}, nil}},
-		{name: ".agents links to itself", agent: "copilot", setup: linked(".agents", false, ".agents"),
-			want: check{1, []string{"/.agents: cannot be written"}, nil}},
-		{name: "skills links nowhere", agent: "claude", setup: linked("gone", false, ".claude/skills"),
-			want: check{1, []string{"/.claude/skills: cannot be written (file exists)"}, nil}},
-		{name: ".claude links, no skills yet", agent: "claude", setup: linked("dot/claude", true, ".claude"),
-			want: check{0, []string{"made ", "/dot/claude/skills/floe/SKILL.md"}, nil}},
-		{name: "CLAUDE_CONFIG_DIR is a file", agent: "claude", setup: config("cfg", "file"),
-			want: check{1, []string{"floe: CLAUDE_CONFIG_DIR is ", "not a directory"}, nil}},
-		{name: "skills under CLAUDE_CONFIG_DIR is a file", agent: "claude", setup: config("cfg", "skills file"),
-			want: check{1, []string{"/cfg/skills: cannot be written (not a directory)"}, []string{"CLAUDE_CONFIG_DIR is"}}},
-		{name: "skills under CLAUDE_CONFIG_DIR links nowhere", agent: "claude", setup: config("cfg", "skills gone"),
-			want: check{1, []string{"/cfg/skills: cannot be written (file exists)"}, []string{"CLAUDE_CONFIG_DIR is"}}},
-		{name: "SKILL.md under CLAUDE_CONFIG_DIR is a FIFO", agent: "claude", setup: config("cfg", "fifo"),
-			want: check{1, []string{"/cfg/skills/floe/SKILL.md: ", "FIFO"}, []string{"CLAUDE_CONFIG_DIR is"}}},
-		{name: "CLAUDE_CONFIG_DIR", agent: "claude", setup: config("cfg", ""),
-			want: check{0, []string{"made ", "/cfg/skills/floe/SKILL.md"}, nil}},
-		{name: "CLAUDE_CONFIG_DIR relative", agent: "claude",
+			after: content(".claude/skills/floe/SKILL.md", "mine\n"),
+		},
+		{
+			name: "other force", agent: "codex", force: true, setup: written(".agents/skills/floe/SKILL.md", "mine\n"),
+			want: check{0, []string{"replaced ", ".agents/skills/floe/SKILL.md"}, nil},
+		},
+		{
+			name: "big", agent: "claude", setup: written(".claude/skills/floe/SKILL.md", strings.Repeat("x", 1<<20)),
+			want: check{1, []string{"--force"}, nil},
+		},
+		{
+			name: "big force", agent: "claude", force: true, setup: written(".claude/skills/floe/SKILL.md", strings.Repeat("x", 1<<20)),
+			want: check{0, []string{"replaced "}, nil},
+		},
+		{
+			name: "other files kept", agent: "claude", setup: written(".claude/skills/floe/notes.txt", "n\n"),
+			want: check{0, []string{"made "}, nil}, after: content(".claude/skills/floe/notes.txt", "n\n"),
+		},
+		{
+			name: "floe links to a floe", agent: "claude", setup: linked("dot/floe", true, ".claude/skills/floe"),
+			want: check{0, []string{"made ", "/dot/floe/SKILL.md"}, nil}, after: isLink(".claude/skills/floe"),
+		},
+		{
+			name: "floe links to another name", agent: "claude", setup: linked("dot/floe-skill", true, ".claude/skills/floe"),
+			want: check{1, []string{".claude/skills/floe: ", "dot/floe-skill", "not named floe"}, nil},
+		},
+		{
+			name: "floe links nowhere", agent: "codex", setup: linked("gone", false, ".agents/skills/floe"),
+			want: check{1, []string{".agents/skills/floe: cannot be written"}, nil},
+		},
+		{
+			name: "floe links to another floe", agent: "claude", setup: linked("work/floe", true, ".claude/skills/floe"),
+			want: check{0, []string{"made ", "/work/floe/SKILL.md"}, nil},
+		},
+		{
+			name: "SKILL.md links outside floe", agent: "claude", force: true, setup: linkedFile("dot/x/SKILL.md", ".claude/skills/floe/SKILL.md"),
+			want: check{0, []string{"replaced ", "/dot/x/SKILL.md"}, nil}, after: isLink(".claude/skills/floe/SKILL.md"),
+		},
+		{
+			name: "SKILL.md links to .bashrc", agent: "claude", force: true, setup: linkedFile(".bashrc", ".claude/skills/floe/SKILL.md"),
+			want: check{1, []string{"floe/SKILL.md: ", "/.bashrc", "not named SKILL.md"}, nil}, after: content(".bashrc", "mine\n"),
+		},
+		{
+			name: "SKILL.md links to another skill", agent: "claude", setup: linkedFile("other/SKILL.md", ".claude/skills/floe/SKILL.md"),
+			want: check{1, []string{"/other/SKILL.md: ", "--force"}, nil},
+		},
+		{
+			name: "SKILL.md links nowhere", agent: "claude", setup: linked("gone/SKILL.md", false, ".claude/skills/floe/SKILL.md"),
+			want: check{1, []string{"floe/SKILL.md: cannot be written"}, nil},
+		},
+		{
+			name: "SKILL.md is a directory", agent: "claude", setup: dirAt(".claude/skills/floe/SKILL.md"),
+			want: check{1, []string{"floe/SKILL.md: is a directory"}, nil},
+		},
+		{
+			name: "SKILL.md is a FIFO", agent: "claude", setup: fifoAt(".claude/skills/floe/SKILL.md"),
+			want: check{1, []string{"floe/SKILL.md: ", "FIFO"}, nil},
+		},
+		{
+			name: "floe is a file", agent: "claude", setup: written(".claude/skills/floe", "x"),
+			want: check{1, []string{"floe/SKILL.md: not a directory"}, nil},
+		},
+		{
+			name: ".claude is a file", agent: "claude", setup: written(".claude", "x"),
+			want: check{1, []string{"/.claude: cannot be written (not a directory)"}, nil},
+		},
+		{
+			name: ".agents is a file", agent: "codex", setup: written(".agents", "x"),
+			want: check{1, []string{"/.agents: cannot be written (not a directory)"}, nil},
+		},
+		{
+			name: "skills is a file", agent: "cursor", setup: written(".agents/skills", "x"),
+			want: check{1, []string{"/.agents/skills: cannot be written (not a directory)"}, nil},
+		},
+		{
+			name: ".agents links nowhere", agent: "codex", setup: linked("gone", false, ".agents"),
+			want: check{1, []string{"/.agents: cannot be written (file exists)"}, nil},
+		},
+		{
+			name: ".agents links to itself", agent: "copilot", setup: linked(".agents", false, ".agents"),
+			want: check{1, []string{"/.agents: cannot be written"}, nil},
+		},
+		{
+			name: "skills links nowhere", agent: "claude", setup: linked("gone", false, ".claude/skills"),
+			want: check{1, []string{"/.claude/skills: cannot be written (file exists)"}, nil},
+		},
+		{
+			name: ".claude links, no skills yet", agent: "claude", setup: linked("dot/claude", true, ".claude"),
+			want: check{0, []string{"made ", "/dot/claude/skills/floe/SKILL.md"}, nil},
+		},
+		{
+			name: "CLAUDE_CONFIG_DIR is a file", agent: "claude", setup: config("file"),
+			want: check{1, []string{"floe: CLAUDE_CONFIG_DIR is ", "not a directory"}, nil},
+		},
+		{
+			name: "skills under CLAUDE_CONFIG_DIR is a file", agent: "claude", setup: config("skills file"),
+			want: check{1, []string{"/cfg/skills: cannot be written (not a directory)"}, []string{"CLAUDE_CONFIG_DIR is"}},
+		},
+		{
+			name: "skills under CLAUDE_CONFIG_DIR links nowhere", agent: "claude", setup: config("skills gone"),
+			want: check{1, []string{"/cfg/skills: cannot be written (file exists)"}, []string{"CLAUDE_CONFIG_DIR is"}},
+		},
+		{
+			name: "SKILL.md under CLAUDE_CONFIG_DIR is a FIFO", agent: "claude", setup: config("fifo"),
+			want: check{1, []string{"/cfg/skills/floe/SKILL.md: ", "FIFO"}, []string{"CLAUDE_CONFIG_DIR is"}},
+		},
+		{
+			name: "CLAUDE_CONFIG_DIR", agent: "claude", setup: config(""),
+			want: check{0, []string{"made ", "/cfg/skills/floe/SKILL.md"}, nil},
+		},
+		{
+			name: "CLAUDE_CONFIG_DIR relative", agent: "claude",
 			setup: func(*testing.T, string) map[string]string { return map[string]string{"CLAUDE_CONFIG_DIR": "x"} },
-			want:  check{1, []string{"CLAUDE_CONFIG_DIR is x, a relative path"}, nil}},
-		{name: "no HOME", agent: "claude",
+			want:  check{1, []string{"CLAUDE_CONFIG_DIR is x, a relative path"}, nil},
+		},
+		{
+			name: "no HOME", agent: "claude",
 			setup: func(*testing.T, string) map[string]string { return map[string]string{"HOME": ""} },
-			want:  check{1, []string{"set HOME to an absolute path"}, []string{"CLAUDE_CONFIG_DIR"}}},
-		{name: "no HOME codex", agent: "codex",
+			want:  check{1, []string{"set HOME to an absolute path"}, []string{"CLAUDE_CONFIG_DIR"}},
+		},
+		{
+			name: "no HOME codex", agent: "codex",
 			setup: func(*testing.T, string) map[string]string { return map[string]string{"HOME": ""} },
-			want:  check{1, []string{"set HOME to an absolute path"}, nil}},
-		{name: "HOME is a file", agent: "claude",
+			want:  check{1, []string{"set HOME to an absolute path"}, nil},
+		},
+		{
+			name: "HOME is a file", agent: "claude",
 			setup: func(*testing.T, string) map[string]string { return map[string]string{"HOME": "/dev/null"} },
-			want:  check{1, []string{"/dev/null/.claude: cannot be written (not a directory)"}, nil}},
-		{name: "HOME is a file codex", agent: "codex",
+			want:  check{1, []string{"/dev/null/.claude: cannot be written (not a directory)"}, nil},
+		},
+		{
+			name: "HOME is a file codex", agent: "codex",
 			setup: func(*testing.T, string) map[string]string { return map[string]string{"HOME": "/dev/null"} },
-			want:  check{1, []string{"/dev/null/.agents: cannot be written (not a directory)"}, nil}},
+			want:  check{1, []string{"/dev/null/.agents: cannot be written (not a directory)"}, nil},
+		},
 	} {
 		t.Run(c.name, func(t *testing.T) {
 			t.Parallel()
@@ -256,9 +328,10 @@ func fifoAt(rel string) func(t *testing.T, home string) map[string]string {
 	}
 }
 
-// config sets CLAUDE_CONFIG_DIR to rel under home, which is: a file, holds a file skills or a link skills to
+// config sets CLAUDE_CONFIG_DIR to cfg under home, which is: a file, holds a file skills or a link skills to
 // nothing, or a FIFO SKILL.md, or is not there ("").
-func config(rel, is string) func(t *testing.T, home string) map[string]string {
+func config(is string) func(t *testing.T, home string) map[string]string {
+	const rel = "cfg"
 	return func(t *testing.T, home string) map[string]string {
 		t.Helper()
 		switch is {
@@ -286,7 +359,7 @@ func TestSkillInstallPermissions(t *testing.T) {
 	env := map[string]string{"HOME": home}
 	skills := filepath.Join(home, ".claude", "skills")
 	mustDo(t, os.MkdirAll(skills, 0o700), os.Chmod(skills, 0o500))
-	t.Cleanup(func() { _ = os.Chmod(skills, 0o700) })
+	t.Cleanup(func() { mustDo(t, os.Chmod(skills, 0o700)) })
 	if code, out, errs := runEnv(home, env, "skill", "install", "claude"); code != 1 ||
 		!strings.Contains(errs, "/.claude/skills/floe: cannot be written (permission denied)") {
 		t.Errorf("unwritable skills: %d %q %q", code, out, errs)
@@ -294,7 +367,7 @@ func TestSkillInstallPermissions(t *testing.T) {
 
 	cfg := filepath.Join(home, "ro", "cfg")
 	mustDo(t, os.MkdirAll(filepath.Dir(cfg), 0o500))
-	t.Cleanup(func() { _ = os.Chmod(filepath.Dir(cfg), 0o700) })
+	t.Cleanup(func() { mustDo(t, os.Chmod(filepath.Dir(cfg), 0o700)) })
 	env["CLAUDE_CONFIG_DIR"] = cfg
 	if code, out, errs := runEnv(home, env, "skill", "install", "claude"); code != 1 ||
 		!strings.Contains(errs, "floe: CLAUDE_CONFIG_DIR is "+cfg) || !strings.Contains(errs, "permission denied") {

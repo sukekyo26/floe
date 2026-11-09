@@ -8,7 +8,7 @@ floe shows the user a page you write as a YAML file: it checks the file, draws i
    - the one made for the page's purpose, if there is one (`design` for a design document, `handoff`, `runbook`, …);
    - else `report`;
    - before writing, read its example and schema: `floe template show <template> example.yaml` and `floe template show <template> schema.json`.
-2. Name the file for the page, as `db-choice.yaml`: its name, without `.yaml`, names the page in its URL. Leave `theme` out ([Themes](#themes)).
+2. Name the file for the page, as `db-choice.yaml`: its name, without `.yaml`, names the page in its URL. Every data file needs `template` and `lang`; `title` names the page, and a `report`'s `lead` sums it up under the title. Leave `theme` out ([Themes](#themes)).
 
    ```yaml
    template: report
@@ -21,7 +21,7 @@ floe shows the user a page you write as a YAML file: it checks the file, draws i
          - text: Freeze edits on **Friday evening**, then copy the pages.
    ```
 
-3. Pick the parts by the table in [Picking parts](#picking-parts), and look up the keys of each part the example does not show in `floe part list` before writing it: a guessed key is refused.
+3. Pick the parts by the table in [Picking parts](#picking-parts). For each part the example does not show, look up its keys in `floe part list` before writing it: a guessed key is refused.
 4. Run `floe check db-choice.yaml`, fix every mistake, and run it again until it prints no mistake; when only `warning:` lines are left, you are done (they are advice).
 5. Run `floe publish db-choice.yaml` and give the user the URL it prints. You need not fetch the page.
 
@@ -38,7 +38,7 @@ floe shows the user a page you write as a YAML file: it checks the file, draws i
 
 ## Picking parts
 
-Each item of `parts` is one key naming the part. `floe part list` gives each part's keys (a part takes no other); where it names none, read `floe part show <part> schema.json`. A template of your own: its `schema.json`.
+Each item of `parts` is one key naming the part. `floe part list` lists each part's keys and what it is for; a part takes no other key. Read `floe part show <part> schema.json` for the keys' types and details. A template of your own: its `schema.json`.
 
 Pick the part by what the content is:
 
@@ -50,7 +50,7 @@ Pick the part by what the content is:
 | Options weighed with pros and cons | `options` |
 | One decision with its reasons | `decision` |
 | Questions for the reader to decide | `asks` |
-| Results of checks or tests | `checks`, each passed, failed or not checked, counted on top; not the conditions of a choice (`table`, `options`) nor what is still to do (`checklist`) |
+| Results of checks or tests | `checks`, each with `result: ok`, `ng` or `unchecked`, counted on top; not the conditions of a choice (`table`, `options`) nor what is still to do (`checklist`) |
 | Events at dates | `timeline`; stages without dates are `steps` |
 | Rows compared along and across, each cell short | `table` |
 | A few key values at the top | `facts` |
@@ -83,7 +83,7 @@ For anything else (review findings, large numbers, files, fields, links, …) re
 
 ## Diagrams
 
-Write a `graph`: the boxes and what joins what. floe places the boxes; give only where the graph starts (`x`, `y`).
+Write a `graph`: the boxes and what joins what. floe places the boxes; do not work out their positions. `x` and `y` only say where the graph starts.
 
 ```yaml
 - diagram:
@@ -109,7 +109,7 @@ Write a `graph`: the boxes and what joins what. floe places the boxes; give only
 First:
 
 - Quote text that holds `: ` or ` #`, and, in `{ }` or `[ ]`, a `,`: `heading: "Step 1: plan"`. Unquoted, YAML reads them as a key, a comment or the end of the text. floe refuses most of these, but a `,` in `[ ]` silently splits the item: `tags: [Tokyo, Osaka office]` is two tags.
-- Write a comment on a line of its own, no deeper than its key, and never in `{ }` or `[ ]`.
+- Write a comment on a line of its own, no deeper than the key of the value above it (or the `-` of a list item), and never in `{ }` or `[ ]`.
 - In a `|` or `>` text, indent the first line as the lines after it. A deeper first line ends the text early, and floe refuses a line after it.
 - Write a number where text is wanted, such as a table's cell, in quotes: `"42"`.
 - Write one document: no `---`, anchors, aliases, merge keys (`<<`) or tags.

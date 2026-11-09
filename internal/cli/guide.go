@@ -21,15 +21,15 @@ import (
 
 // skill is the SKILL.md floe skill install writes: it points the agent to floe guide, so that it stays right
 // when floe is upgraded.
-const skill = `---
-name: floe
-description: Show the user a page with floe, the local page server - a report, design document or similar page, with tables, code and diagrams, drawn from a YAML data file. Use when the user asks to show, publish or write up something as a page, or names floe.
----
-
-` + skillLine + "\n"
+const skill = "---\nname: floe\ndescription: " +
+	"Show the user a page with floe, the local page server - a report, design document or similar page, " +
+	"with tables, code and diagrams, drawn from a YAML data file. " +
+	"Use when the user asks to show, publish or write up something as a page, or names floe.\n---\n\n" +
+	skillLine + "\n"
 
 // skillLine is the body of the skill, the line README gives for AGENTS.md.
-const skillLine = "To show the user a page, use floe: run `floe guide` first and follow it. It is the guide of the floe installed, so read it each time rather than from memory."
+const skillLine = "To show the user a page, use floe: run `floe guide` first and follow it. " +
+	"It is the guide of the floe installed, so read it each time rather than from memory."
 
 // agent is an agent floe skill install writes the skill for: its name, the setting that moves its directory
 // (CLAUDE_CONFIG_DIR, "" for none), the directory under HOME skills go under, and how --help names the place.
@@ -40,7 +40,10 @@ type agent struct {
 // LIMIT: only claude is run in trials; the others write where their docs say (~/.agents/skills), unchecked by
 // running them.
 var agents = []agent{
-	{name: "claude", key: "CLAUDE_CONFIG_DIR", home: ".claude", place: "$CLAUDE_CONFIG_DIR/skills if it is set, else ~/.claude/skills"},
+	{
+		name: "claude", key: "CLAUDE_CONFIG_DIR", home: ".claude",
+		place: "$CLAUDE_CONFIG_DIR/skills if it is set, else ~/.claude/skills",
+	},
 	{name: "codex", key: "", home: ".agents", place: "~/.agents/skills"},
 	{name: "copilot", key: "", home: ".agents", place: "~/.agents/skills"},
 	{name: "cursor", key: "", home: ".agents", place: "~/.agents/skills"},
@@ -124,41 +127,21 @@ directory.`,
 }
 
 // installSkill writes the skill for ag: made when none is there, nothing when this floe's is, and over another
-// only with force. Links are followed by the rule render follows: a link named floe leads to a directory named
-// floe, one named SKILL.md to a file named SKILL.md, or neither is written. Only the directory a setting names is
-// told for the setting; what is under it is told at its own path.
+// only with force.
 func (a *app) installSkill(ag agent, force bool) error {
-	p, err := a.dataDir(ag.key, "", ag.home, "")
-	switch {
-	case err != nil:
+	p, dir, err := a.skillDir(ag)
+	if err != nil {
 		return err
-	case p.unusable != nil:
-		return p.unusable
-	case p.dir == "":
-		return usererr.New("cli_new_no_dir", "HOME")
-	}
-	dir := filepath.Join(p.dir, "skills")
-	if err := statDir(p.dir); err != nil {
-		return usererr.SettingDir(p.setting(), p.dir, err, usererr.CannotWrite(p.dir, err))
-	}
-	if err := statDir(dir); err != nil {
-		return usererr.CannotWrite(dir, err)
 	}
 	floeAt := filepath.Join(dir, "floe")
-	realFloe, err := realPath(floeAt, floeAt)
+	realFloe, err := followNamed(floeAt, "floe")
 	if err != nil {
 		return err
-	}
-	if filepath.Base(realFloe) != "floe" {
-		return usererr.NewAt(floeAt, 0, 0, "cli_skill_link", realFloe, "floe")
 	}
 	skillAt := filepath.Join(realFloe, "SKILL.md")
-	realSkill, err := realPath(skillAt, skillAt)
+	realSkill, err := followNamed(skillAt, "SKILL.md")
 	if err != nil {
 		return err
-	}
-	if filepath.Base(realSkill) != "SKILL.md" {
-		return usererr.NewAt(skillAt, 0, 0, "cli_skill_link", realSkill, "SKILL.md")
 	}
 	there, same, info, err := readSkill(realSkill)
 	switch {
@@ -170,20 +153,20 @@ func (a *app) installSkill(ag agent, force bool) error {
 	case there && !force:
 		return usererr.NewAt(realSkill, 0, 0, "cli_skill_kept")
 	}
-	if err := os.MkdirAll(p.dir, 0o755); err != nil { //nolint:gosec // G301: the agent's own directory, as it makes it
+	if err = os.MkdirAll(p.dir, 0o755); err != nil { //nolint:gosec // G301: the agent's own directory, as it makes it
 		return usererr.SettingDir(p.setting(), p.dir, err, usererr.CannotWrite(p.dir, err))
 	}
 	for _, d := range []string{dir, realFloe} {
-		if err := os.MkdirAll(d, 0o755); err != nil { //nolint:gosec // G301: as above
+		if err = os.MkdirAll(d, 0o755); err != nil { //nolint:gosec // G301: as above
 			return usererr.CannotWrite(d, err)
 		}
 	}
-	if err := files.WriteAtomic(realSkill, []byte(skill), 0o644, info); err != nil {
+	if err = files.WriteAtomic(realSkill, []byte(skill), 0o644, info); err != nil {
 		return usererr.CannotWrite(skillAt, err)
 	}
 	// Followed again: a directory on the way made just now may be a link's, which realPath could not follow
 	// before it was there.
-	if written, err := filepath.EvalSymlinks(skillAt); err == nil {
+	if written, werr := filepath.EvalSymlinks(skillAt); werr == nil {
 		realSkill = written
 	}
 	key := "cli_skill_made"
@@ -192,6 +175,43 @@ func (a *app) installSkill(ag agent, force bool) error {
 	}
 	a.print("%s", english.Msg(key, realSkill))
 	return nil
+}
+
+// skillDir is the place of ag (p) and the directory of skills in it, which neither is made yet. Only the
+// directory a setting names is told for the setting; what is under it is told at its own path.
+func (a *app) skillDir(ag agent) (dataPlace, string, error) {
+	p, err := a.dataDir(ag.key, "", ag.home, "")
+	switch {
+	case err != nil:
+		return p, "", err
+	case p.unusable != nil:
+		return p, "", p.unusable
+	case p.dir == "":
+		return p, "", usererr.New("cli_new_no_dir", "HOME")
+	}
+	dir := filepath.Join(p.dir, "skills")
+	if err = statDir(p.dir); err != nil {
+		return p, "", usererr.SettingDir(p.setting(), p.dir, err, usererr.CannotWrite(p.dir, err))
+	}
+	if err = statDir(dir); err != nil {
+		return p, "", usererr.CannotWrite(dir, err)
+	}
+	return p, dir, nil
+}
+
+// followNamed is at with its links followed, by the rule render follows: a link leads only to one of the name
+// at has (a directory floe, a file SKILL.md), or nothing is written. A link to the same name elsewhere is
+// followed. LIMIT: a link named floe to another floe (~/work/floe) is written in, but a SKILL.md there is kept
+// without --force, and the path printed says where.
+func followNamed(at, name string) (string, error) {
+	followed, err := realPath(at, at)
+	if err != nil {
+		return "", err
+	}
+	if filepath.Base(followed) != name {
+		return "", usererr.NewAt(at, 0, 0, "cli_skill_link", followed, name)
+	}
+	return followed, nil
 }
 
 // statDir is why path cannot be a directory to write in: nil when it is one or is not there (it is made then),
@@ -209,7 +229,7 @@ func statDir(path string) error {
 
 // readSkill reads the SKILL.md at path: whether one is there, whether it is this floe's, and its information,
 // for the one written over it to keep its permissions.
-func readSkill(path string) (bool, bool, fs.FileInfo, error) {
+func readSkill(path string) (there, same bool, info fs.FileInfo, err error) {
 	f, info, err := files.Open(path)
 	if errors.Is(err, fs.ErrNotExist) {
 		return false, false, nil, nil
@@ -218,7 +238,7 @@ func readSkill(path string) (bool, bool, fs.FileInfo, error) {
 		return false, false, nil, err //nolint:wrapcheck // told by the caller
 	}
 	defer f.Close() //nolint:errcheck // read only
-	same, err := sameSkill(f)
+	same, err = sameSkill(f)
 	if err != nil {
 		return false, false, nil, err
 	}
