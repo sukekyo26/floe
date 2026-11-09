@@ -87,8 +87,8 @@ func TestUITaskSteps(t *testing.T) { //nolint:paralleltest // the browser tests 
 		t.Helper()
 		b.navigate("/tasks?project=proj&task=" + task)
 		b.until("the task's rows", "document.querySelector('#list li[data-slug]') && document.getElementById('task-title').textContent.includes("+js(task)+")")
-		// The writes, as sent
-		b.eval("window.sent = []; window.realFetch ??= window.fetch; window.fetch = (url, init) => { if (init?.method === 'PATCH') sent.push(new URL(url, location).pathname + ' ' + init.body); return window.realFetch(url, init); }")
+		// The writes, as sent, and how many the server has answered: one sent may not be written yet
+		b.eval("window.sent = []; window.answered = 0; window.realFetch ??= window.fetch; window.fetch = (url, init) => { if (init?.method !== 'PATCH') return window.realFetch(url, init); sent.push(new URL(url, location).pathname + ' ' + init.body); return window.realFetch(url, init).finally(() => { answered += 1; }); }")
 	}
 	add := func(step string) {
 		t.Helper()
@@ -217,7 +217,7 @@ func TestUITaskSteps(t *testing.T) { //nolint:paralleltest // the browser tests 
 	menu("g-a", "task-out", false)
 	b.until("the way back", "document.querySelector('#toasts .undo')")
 	b.eval("document.querySelector('#toasts .undo').click()")
-	b.until("written back", "sent.length === 2")
+	b.until("written back", "answered === 2")
 	b.eval("load = window.realLoad")
 	say("back as it was", "sent.join(' ; ')")
 	out = append(out, "back as it was, written: "+row("G2")+" / "+work("g-a"))
