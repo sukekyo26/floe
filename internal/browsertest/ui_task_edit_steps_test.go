@@ -122,6 +122,11 @@ func TestUITaskEditSteps(t *testing.T) { //nolint:paralleltest // the browser te
 	say("words left", "document.getElementById('edit-step-new').validationMessage + ' / ' + document.getElementById('edit-task-dialog').open + ' / ' + sent.length")
 	b.eval("const f = document.getElementById('edit-step-new'); f.value = ''; f.dispatchEvent(new Event('input', { bubbles: true }))")
 	say("typed again", "document.getElementById('edit-step-new').validationMessage === ''")
+	// A name there already, left in the field, stops the save saying it is there, not to press Enter.
+	b.eval("const f = document.getElementById('edit-step-new'); f.value = '設計'; f.dispatchEvent(new Event('input', { bubbles: true }))")
+	save("there left")
+	say("there left", "document.getElementById('edit-step-new').validationMessage + ' / ' + sent.length")
+	b.eval("const f = document.getElementById('edit-step-new'); f.value = ''; f.dispatchEvent(new Event('input', { bubbles: true }))")
 	// Removed: the focus on a button of the row after that can be pressed, or of the row before; said.
 	drop("リリース")
 	say("dropped", steps+" + ' / ' + document.activeElement.getAttribute('aria-label') + ' / ' + document.getElementById('edit-steps-said').textContent")
@@ -182,6 +187,7 @@ func TestUITaskEditSteps(t *testing.T) { //nolint:paralleltest // the browser te
 		"left with words: field / edit-task-title",
 		"words left: 検証 is not added yet: press Enter to add it, or empty the field / true / 0",
 		"typed again: true",
+		"there left: 設計 is already among the steps / 0",
 		"dropped: 案x,設計x,実装x,レビューx,公開d / Move レビュー up / Removed リリース",
 		"dropped last: 案x,設計x,実装x,レビューx / Move レビュー up",
 		"saved: 6 [案,設計,実装,レビュー]",

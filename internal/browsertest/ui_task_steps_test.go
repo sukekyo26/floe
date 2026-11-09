@@ -146,6 +146,10 @@ func TestUITaskSteps(t *testing.T) { //nolint:paralleltest // the browser tests 
 	b.pressKey(kb.Enter)
 	b.until("refused", "!document.getElementById('add-page-error').hidden")
 	say("stale", "document.getElementById('add-page-error').textContent + ' / ' + document.getElementById('add-page-dialog').open + ' / ' + "+options)
+	// Typed again, the refusal goes; Enter picks again
+	query("memo")
+	say("stale, typed", "document.getElementById('add-page-error').hidden")
+	b.pressKey(kb.ArrowDown)
 	b.pressKey(kb.Enter)
 	b.until("closed", "!document.getElementById('add-page-dialog').open")
 	say("stale, then", "sent.join(' ; ')")
@@ -246,6 +250,7 @@ func TestUITaskSteps(t *testing.T) { //nolint:paralleltest // the browser tests 
 		"put, written: 6 リリース / S300/リリース",
 		"put, groups: note-a [案+] plan-a [実装+] build-a [リリース+] check-a [Archive+ none] [レビュー+] review-a [Archive] old-a",
 		"stale: task S300 has changed since it was read: the tasks are read again, so check and save again / true / memo-a",
+		"stale, typed: true",
 		`stale, then: /api/tasks {"new":false,"rev":6,"step":"リリース"} ; /api/tasks {"new":false,"rev":7,"step":"リリース"} ; /api/artifacts/memo-a {"work":{"task":"S300","step":"リリース"}}`,
 		"stale, written: 7 リリース / S300/リリース",
 		"page refused: Could not save: HTTP 500: no / true",

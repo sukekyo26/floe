@@ -5390,8 +5390,9 @@
     e.preventDefault();
     // A name typed and not added is not dropped unsaid
     const left = $('edit-step-new');
-    if (!left.hidden && left.value.trim()) {
-      left.setCustomValidity(t('ui_step_unadded', left.value.trim()));
+    const leftName = left.value.trim();
+    if (!left.hidden && leftName) {
+      left.setCustomValidity(t(editStepsNow().includes(leftName) ? 'ui_step_there' : 'ui_step_unadded', leftName));
       left.reportValidity();
       return;
     }
@@ -5445,6 +5446,7 @@
   // The page alone off its task: its pin stays, and the task's row, which nothing here writes. Its way back writes the page's work back as it
   // was, and nothing else, so that a task of pages alone is back as it was; Escape on it leaves the focus on back (the menu it came from),
   // the row after it, its step's add button, or the task's edit button
+  // LIMIT: a page's write has no rev, so the way back writes over what was written to the page since, as the archive's does. Give page writes a rev if that comes to trouble someone
   async function takePageOff(a, back) {
     const name = a.work.task;
     const step = a.work.step ?? '';
@@ -5896,7 +5898,10 @@
   $('kin').addEventListener('submit', saveKin);
   $('task-delete').addEventListener('blur', disarmForget);
   $('set-out').addEventListener('click', takeOffTask);
-  $('add-page-q').addEventListener('input', drawAddPage);
+  $('add-page-q').addEventListener('input', () => {
+    $('add-page-error').hidden = true;
+    drawAddPage();
+  });
   $('add-page-list').addEventListener('click', (e) => {
     const li = e.target.closest('#add-page-list > li');
     if (li) addPageTo(addShown[[...$('add-page-list').children].indexOf(li)]);
