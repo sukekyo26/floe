@@ -7,8 +7,8 @@ import (
 	"testing"
 )
 
-// TestUISettings opens the settings from the bar's button, at the width of a desk and of a phone without the bar
-// running over, shows a card of each theme with its sample drawn in the sandbox, and writes the default theme chosen
+// TestUISettings opens the settings from the bar's button, shown at the width of a desk, not of a phone, the bar within
+// the window at both, shows a card of each theme with its sample drawn in the sandbox, and writes the default theme chosen
 // from them, which a new page is then drawn in; a settings.json that cannot be read is said, and choosing mends it.
 func TestUISettings(t *testing.T) { //nolint:paralleltest // the browser tests share one Chrome, one at a time
 	s := newSite(t)
@@ -17,9 +17,10 @@ func TestUISettings(t *testing.T) { //nolint:paralleltest // the browser tests s
 	for _, width := range []int64{1440, 390} {
 		b.navigate("/")
 		b.size(width, 900, width < 600)
+		// Shown where the bar has room for it, hidden at 40rem or less; the bar within the window either way
 		out = append(out, b.eval(`(() => {
 			const r = document.getElementById('settings-open').getBoundingClientRect();
-			return r.width > 0 && r.right <= innerWidth && document.documentElement.scrollWidth <= innerWidth;
+			return [r.width > 0 && r.right <= innerWidth, document.documentElement.scrollWidth <= innerWidth].join(' ');
 		})()`))
 	}
 	b.size(1440, 900, false)
@@ -49,5 +50,5 @@ func TestUISettings(t *testing.T) { //nolint:paralleltest // the browser tests s
 	b.eval("document.querySelector('#theme-grid input[value=washi]').click(); document.getElementById('theme-choose').click()")
 	b.until("mended", "!document.getElementById('settings').open")
 	out = append(out, strings.TrimSpace(s.floe(t, "theme", "default")))
-	check(t, "settings", out, "true|true|true|Default now: default. Pages stored from now on are drawn in this theme. The pages there are now do not change.|default|true|Ink on paper: near black, an indigo ink for emphasis, its sections ruled in the ink|false|ink|true|Failed to read the settings. Choosing a theme writes them again|washi")
+	check(t, "settings", out, "true true|false true|true|Default now: default. Pages stored from now on are drawn in this theme. The pages there are now do not change.|default|true|Ink on paper: near black, an indigo ink for emphasis, its sections ruled in the ink|false|ink|true|Failed to read the settings. Choosing a theme writes them again|washi")
 }
