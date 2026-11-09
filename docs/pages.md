@@ -84,7 +84,7 @@ To list things, pick the part by what the rows are:
 - A few short values at the top of a page: `facts`.
 - Rows compared both along and across, each cell short: `table`.
 
-The parts `report` takes in a section:
+The parts `report` takes in a section, with your own parts too ([parts.md](parts.md)), which `floe part list` lists with these:
 
 | Part | What it draws |
 |---|---|

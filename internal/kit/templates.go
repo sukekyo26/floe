@@ -176,6 +176,7 @@ type Template struct {
 	words     words
 	pages     pages // nil without a page.html
 	pageSrc   []byte
+	schemaSrc []byte // the schema.json read, nil for none: compiled again over one's own parts
 	example   []byte
 	hasSchema bool
 	unread    []string
@@ -253,7 +254,7 @@ func (k *Kit) readTemplate(d Dir, name string, partsRead bool) error {
 	d = d.recording()
 	t := &Template{
 		name: name, dir: path.Join(d.Name, name), schema: nil, css: nil, checks: nil, computed: nil, words: nil, pages: nil,
-		pageSrc: nil, example: nil, hasSchema: false, unread: nil, assets: nil, files: nil,
+		pageSrc: nil, schemaSrc: nil, example: nil, hasSchema: false, unread: nil, assets: nil, files: nil,
 	}
 	var found usererr.List
 	var err error
@@ -306,7 +307,8 @@ func (k *Kit) compileTemplate(d Dir, t *Template) error {
 		return err
 	}
 	t.hasSchema = true
-	c, err := schema.Compile(templatesURL+t.name+"/schema.json", path.Join(t.dir, "schema.json"), src, k.Resources())
+	t.schemaSrc = src
+	c, err := k.compileSchema(t, src)
 	if err != nil {
 		return err //nolint:wrapcheck // its mistakes, or floe's failure
 	}
@@ -318,6 +320,13 @@ func (k *Kit) compileTemplate(d Dir, t *Template) error {
 	names := slices.Sorted(maps.Keys(c.Follow(c.Root).Props))
 	t.computed, err = rules.ReadComputed(path.Join(t.dir, "computed.yaml"), computed, names)
 	return err //nolint:wrapcheck // its mistakes, or floe's failure
+}
+
+// compileSchema compiles src, the schema.json of t, with the resources of k: when t is read, and when it is
+// compiled again over one's own parts.
+func (k *Kit) compileSchema(t *Template, src []byte) (*schema.Compiled, error) {
+	//nolint:wrapcheck // its mistakes, or floe's failure
+	return schema.Compile(templatesURL+t.name+"/schema.json", t.File("schema.json"), src, k.Resources())
 }
 
 // asset returns the image of the assets of t at the path name under assets/, as a data URI, read the first
