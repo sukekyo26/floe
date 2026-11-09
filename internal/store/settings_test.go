@@ -121,10 +121,10 @@ func TestPublishCreatedTheme(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	if err := s.SetTheme("ink"); err != nil {
+	if err = s.SetTheme("ink"); err != nil {
 		t.Fatal(err)
 	}
-	if err := s.Save(e); err != nil {
+	if err = s.Save(e); err != nil {
 		t.Fatal(err)
 	}
 	// Replacing another project's page with --force: new, in the default of now.
@@ -132,7 +132,7 @@ func TestPublishCreatedTheme(t *testing.T) {
 	if e, err = s.PrepareData(dw, up, store.Options{Force: true}); err != nil {
 		t.Fatal(err)
 	}
-	if err := s.Save(e); err != nil {
+	if err = s.Save(e); err != nil {
 		t.Fatal(err)
 	}
 	for slug, want := range map[string][2]string{
@@ -142,7 +142,7 @@ func TestPublishCreatedTheme(t *testing.T) {
 			t.Errorf("%s: created %q, drawn in %q; want %q, %q", slug, m.CreatedTheme, drawnIn(t, s, root, slug), want[0], want[1])
 		}
 	}
-	if err := s.SetTheme("gone"); err != nil {
+	if err = s.SetTheme("gone"); err != nil {
 		t.Fatal(err)
 	}
 	_, err = s.PrepareData(dw, store.Upload{File: "d.yaml", Source: []byte(report("")), Images: nil, Project: "p"}, store.Options{})
@@ -151,7 +151,7 @@ func TestPublishCreatedTheme(t *testing.T) {
 	}
 	publish(t, s, dw, "d.yaml", report("washi"), nil, store.Options{})
 	publish(t, s, dw, "a.yaml", report(""), nil, store.Options{})
-	if err := s.Rebuild(dw); err != nil {
+	if err = s.Rebuild(dw); err != nil {
 		t.Errorf("Rebuild: %s", told(err, root))
 	}
 }
@@ -174,34 +174,34 @@ func TestSettingsBrokenLinks(t *testing.T) {
 	publish(t, s, dw, "a.yaml", report(""), nil, store.Options{})
 	home := filepath.Dir(root)
 	dir := filepath.Join(home, "proj", "site")
-	if err := os.MkdirAll(dir, 0o700); err != nil {
+	if err = os.MkdirAll(dir, 0o700); err != nil {
 		t.Fatal(err)
 	}
 	html := filepath.Join(dir, "z.html")
-	if err := os.WriteFile(html, []byte("<title>z</title>"), 0o600); err != nil {
+	if err = os.WriteFile(html, []byte("<title>z</title>"), 0o600); err != nil {
 		t.Fatal(err)
 	}
 	for _, path := range []string{html, dir} {
-		e, err := s.PrepareLink(t.Context(), dw, path, store.Options{}, "", home)
-		if err != nil {
-			t.Fatalf("link %s: %s", path, told(err, root))
+		linked, linkErr := s.PrepareLink(t.Context(), dw, path, store.Options{}, "", home)
+		if linkErr != nil {
+			t.Fatalf("link %s: %s", path, told(linkErr, root))
 		}
-		if err := s.Save(e); err != nil {
+		if err = s.Save(linked); err != nil {
 			t.Fatal(err)
 		}
-		if e.Meta.CreatedTheme != "" {
-			t.Errorf("link %s took %q", path, e.Meta.CreatedTheme)
+		if linked.Meta.CreatedTheme != "" {
+			t.Errorf("link %s took %q", path, linked.Meta.CreatedTheme)
 		}
 	}
 	// A data file linked is drawn from a data file: it reads the default as a stored page does.
 	data := filepath.Join(home, "proj", "page.yaml")
-	if err := os.WriteFile(data, []byte(report("")), 0o600); err != nil {
+	if err = os.WriteFile(data, []byte(report("")), 0o600); err != nil {
 		t.Fatal(err)
 	}
-	if _, err := s.PrepareLink(t.Context(), dw, data, store.Options{}, "", home); !strings.HasPrefix(told(err, root), "S/settings.json: ") {
+	if _, err = s.PrepareLink(t.Context(), dw, data, store.Options{}, "", home); !strings.HasPrefix(told(err, root), "S/settings.json: ") {
 		t.Errorf("a data file linked: told %s", told(err, root))
 	}
-	if err := s.SetTheme("ink"); err != nil {
+	if err = s.SetTheme("ink"); err != nil {
 		t.Fatal(err)
 	}
 	e, err := s.PrepareLink(t.Context(), dw, data, store.Options{}, "", home)
