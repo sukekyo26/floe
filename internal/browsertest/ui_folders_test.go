@@ -101,6 +101,12 @@ func TestUIFolders(t *testing.T) { //nolint:paralleltest // the browser tests sh
 	// ↓ passes over a note, which has nothing to focus, to the row after it.
 	click("assets")
 	b.until("assets open", rows+".includes('(No HTML')")
+	// A folder shows no time, nor do its directories and notes, also after the times are advanced: only a page's row has one.
+	check(t, "times", []string{
+		b.eval(`refreshTimes(); [...new Set([...document.querySelectorAll('#list > li.folder, #list li.tree')].map((li) => (li.querySelector('time').textContent === '' ? '-' : '+') +
+			(li.classList.contains('folder') ? 'folder' : ['dir', 'note'].find((k) => li.classList.contains(k)) ?? 'page')))].sort().join()`),
+		b.eval(`/Registered|Updated/.test(document.querySelector('#list > li.folder .title').title)`),
+	}, "+page,-dir,-folder,-note|false")
 	b.eval(`[...document.querySelectorAll('#list li.tree button.title')].find((x) => x.textContent === 'assets').focus()`)
 	if err := chromedp.Do(b.ctx, chromedp.KeyEvent(kb.ArrowDown)); err != nil {
 		t.Fatal(err)

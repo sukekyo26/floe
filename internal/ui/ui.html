@@ -1776,7 +1776,9 @@
   const rtf = new Intl.RelativeTimeFormat(LANG, { numeric: 'auto' });
   const UNITS = [['year', 31536000], ['month', 2592000], ['day', 86400], ['hour', 3600], ['minute', 60]];
 
+  // A value that is no time (a row that has none, as a folder's) gives nothing, not "just now"
   function ago(iso) {
+    if (Number.isNaN(Date.parse(iso))) return '';
     const s = (new Date(iso) - Date.now()) / 1000;
     const [unit, sec] = UNITS.find(([, n]) => Math.abs(s) >= n) ?? [];
     return unit ? rtf.format(Math.round(s / sec), unit) : t('ui_just_now');
@@ -3048,7 +3050,8 @@
     link.href = pageHref({ slug: a.slug });
     link.textContent = a.title;
     // All the row's words that it may cut or leave out: the title's hit area covers the row, so that no title of what lies under it shows
-    link.title = [a.title, a.description, a.project, a.path, a.createdAt && t(a.path ? 'ui_registered_at' : 'ui_created_at', fmt(a.createdAt)), t('ui_updated_at', fmt(a.updatedAt))]
+    // A folder's times are its link's (what its place in the list is made of), which say nothing of what is in it
+    link.title = [a.title, a.description, a.project, a.path, !a.folder && a.createdAt && t(a.path ? 'ui_registered_at' : 'ui_created_at', fmt(a.createdAt)), !a.folder && t('ui_updated_at', fmt(a.updatedAt))]
       .filter(Boolean).join('\n');
     const sub = li.querySelector('.sub');
     drawSub(sub, a, ranks, (put) => {
@@ -3070,9 +3073,11 @@
         return b;
       }));
     });
-    const time = li.querySelector('time');
-    time.dateTime = a.updatedAt;
-    time.textContent = ago(a.updatedAt);
+    if (!a.folder) {
+      const time = li.querySelector('time');
+      time.dateTime = a.updatedAt;
+      time.textContent = ago(a.updatedAt);
+    }
     const star = li.querySelector('.star');
     toggle(star, a.favorite, t('ui_favorite'), t('ui_favorite_named', a.title));
     star.addEventListener('click', () => toggleFavorite(a));
@@ -5863,9 +5868,11 @@
     title.textContent = a.title;
     title.title = a.title;
     if (a.favorite) li.querySelector('.time').insertAdjacentHTML('afterbegin', STAR_MARK);
-    const time = li.querySelector('time');
-    time.dateTime = a.updatedAt;
-    time.textContent = ago(a.updatedAt);
+    if (!a.folder) {
+      const time = li.querySelector('time');
+      time.dateTime = a.updatedAt;
+      time.textContent = ago(a.updatedAt);
+    }
     drawSub(li.querySelector('.sub'), a, ranks, middle);
     return li;
   }

@@ -78,7 +78,7 @@ A new page is in the project it is first published from: the repository name in 
 - A page renamed on the management page (`o` to `d`) is its file's still: publishing that file again without `--slug` writes to `d`. Another file publishing to `d` is refused unless `--force`. Of two pages of one file, which publishing it with another `--slug` makes, the one at the file's name is written to, else the first by slug: `floe rm` the one you do not want.
 - A page and a link cannot take each other's slug, even with `--force`: `floe rm` it first.
 - A republish keeps the page's project, what was set on the management page (title, favourite, tags), the description and the creation time. `--title` and `--description` override them. A project emptied on the management page comes back to the one published from. An archived page comes back to the lists.
-- A republish of the same content, with another theme or not, draws the page again, but its update time and its place in the list stay; other content moves them up. A linked file is listed at the later of the file's time and when it was linked, so that linking it again brings it up.
+- A republish of the same content, with another theme or not, draws the page again, but its update time and its place in the list stay; other content moves them up. A linked file is listed at the later of the file's time and when it was linked, so that linking it again brings it up. A folder's row shows no time; its place in the list is by the time it was linked, linking it again included.
 
 ### Linked files
 
