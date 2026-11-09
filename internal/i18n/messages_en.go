@@ -337,7 +337,6 @@ var messagesEN = map[string]string{
 	"cli_new_no_dir":             "there is no default directory, as HOME is not an absolute path; set %s to an absolute path",
 	"cli_made":                   "made %s",
 	"cli_skill_agent":            "name one agent to install floe's skill for: %s",
-	"cli_skill_made":             "made %s",
 	"cli_skill_same":             "%s is this floe's skill already",
 	"cli_skill_kept":             "this is not this floe's skill, so it is kept: pass --force to write this floe's skill over it",
 	"cli_skill_replaced":         "replaced %s with this floe's skill",

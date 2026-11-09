@@ -169,7 +169,7 @@ func (a *app) installSkill(ag agent, force bool) error {
 	if written, werr := filepath.EvalSymlinks(skillAt); werr == nil {
 		realSkill = written
 	}
-	key := "cli_skill_made"
+	key := "cli_made"
 	if there {
 		key = "cli_skill_replaced"
 	}

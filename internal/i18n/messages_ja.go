@@ -326,7 +326,6 @@ var messagesJA = map[string]string{
 	"cli_new_no_dir":             "HOME が絶対パスでないので、既定のディレクトリがありません。%s に絶対パスを設定してください",
 	"cli_made":                   "%s を作りました",
 	"cli_skill_agent":            "floe のスキルを入れるエージェントを 1 つ名指してください：%s",
-	"cli_skill_made":             "%s を作りました",
 	"cli_skill_same":             "%s はもうこの floe のスキルです",
 	"cli_skill_kept":             "この floe のスキルではないので残しました。上書きするなら --force を付けてください",
 	"cli_skill_replaced":         "%s をこの floe のスキルで置き換えました",
