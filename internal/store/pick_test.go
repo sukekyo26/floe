@@ -219,6 +219,7 @@ func TestOwnTheme(t *testing.T) {
 		t.Fatal(err)
 	}
 	publish(t, s, dw, "created.yaml", report(""), nil, store.Options{})
+	publish(t, s, dw, "both.yaml", report("washi"), nil, store.Options{})
 	if err := s.PickTheme(dw, "data", "brutal"); err != nil {
 		t.Fatal(told(err, root))
 	}
@@ -240,9 +241,9 @@ func TestOwnTheme(t *testing.T) {
 			t.Fatal(err)
 		}
 	}
-	got := []string{own("none"), own("data"), own("given"), own("created"), own("linked"), own("z"), own("gone")}
+	got := []string{own("none"), own("data"), own("given"), own("created"), own("both"), own("linked"), own("z"), own("gone")}
 	_, err := s.OwnTheme("z")
-	if want := "default washi app ink retro error floe: no such page error floe: no such page"; strings.Join(got, " ") != want || !errors.Is(err, store.ErrNotFound) {
+	if want := "default washi app ink washi retro error floe: no such page error floe: no such page"; strings.Join(got, " ") != want || !errors.Is(err, store.ErrNotFound) {
 		t.Errorf("own themes %q, want %q", strings.Join(got, " "), want)
 	}
 }
