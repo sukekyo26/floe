@@ -45,7 +45,7 @@ floe render plan.yaml           # floe 無しで開ける plan.html を隣に書
 | `template` | ページを描くテンプレート（下の floe のもの、または自分のもの）。必須。 |
 | `lang` | ページの言語（`<html lang>`）。`en`・`ja`・`pt-BR` のようなタグ。必須。floe と部品が描く言葉（`fields` の「必須」、図の拡大のボタン、コードのコピーのボタン）と図の文はこれに従い、その言語の言葉が無ければ英語になる。 |
 | `title` | ページの題。 |
-| `theme` | ページを描くテーマ。色・書体・部品の形を決める。`floe template show <テンプレート>` が `themes:` の行に並べる：`default`・`soft`・`editorial`・`ink`・`brutal`・`blueprint`・`notebook`・`retro`・`swiss`・`washi`・`aurora`・`app`。書かないと、保存したページは、初めて保存したときに管理ページの設定で選ばれていた既定のテーマで描く（無ければ `default`）。`floe check` と `floe render` は `default` で描く。 |
+| `theme` | ページを描くテーマ。色・書体・部品の形を決める。`floe template show <テンプレート>` が `themes:` の行に並べる：`default`・`soft`・`editorial`・`ink`・`brutal`・`blueprint`・`notebook`・`retro`・`swiss`・`washi`・`aurora`・`app`。管理ページでページの「…」の「テーマ」から選んだテーマは、これより強い。書かないと、保存したページは、初めて保存したときに管理ページの設定で選ばれていた既定のテーマで描く（無ければ `default`）。`floe check` と `floe render` は `default` で描く。 |
 
 ほかはテンプレートのものです。floe のテンプレート:
 
