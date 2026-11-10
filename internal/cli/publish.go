@@ -33,20 +33,21 @@ func (a *app) publishCmd() *cobra.Command {
 		Short: "Store a page drawn from a data file (or --link an HTML file or a folder in place) and print its URL",
 		Long: `Draw a page from a data file (.yaml, .yml) with the template it names (template: report),
 store it as drawn and print its URL. A page is its data file's: publishing the same file again, from any
-directory (a file is named by its repository and its path from the repository's root, else by its real path),
-overwrites it and keeps the page's project, unless --move-project, and the slug of another file's page is refused unless
---force, which drops its history (versions, pinned title, tags, favourite). A new page is in the project
-of the directory floe publish runs in: its git repository's name (origin's, else the repository's
-directory), else the directory's name. floe publish says it on stderr after the URL (page in project floe, or
-page in no project) when the page is new or its project changed. --move-project puts the page in the project of the
-directory floe publish runs in, though it is in another (not with --link, nor where there is no project): publish
-again with it from the repository the page is about, to mend a page that went into the wrong project.
-A page renamed on the management page is its file's still:
-publishing that file again without --slug writes to its new slug. A page is in the language its data names
-(lang:), and in the theme its data names (theme:, else default), unless --theme names another. A new
-slug is also opened in the browser ($BROWSER, open, wslview, xdg-open). The page stays as it was
-drawn: floe rebuild draws the stored pages again with the templates of now. The warnings of the page
-drawn, advice on a better way to write it, are printed as file:line:column: warning: message.
+directory (a file is named by its repository and its path from the repository's root, else by its real
+path), overwrites it and keeps the page's project, unless --move-project, and the slug of another file's
+page is refused unless --force, which drops its history (versions, pinned title, tags, favourite). A new
+page is in the project of the directory floe publish runs in: its git repository's name (origin's, else
+the repository's directory), else the directory's name. floe publish says it on stderr after the URL
+(page in project floe, or page in no project) when the page is new or its project changed.
+--move-project puts the page in the project of the directory floe publish runs in, though it is in
+another (not with --link, nor where there is no project): publish again with it from the repository the
+page is about, to mend a page that went into the wrong project. A page renamed on the management page is
+its file's still: publishing that file again without --slug writes to its new slug. A page is in the
+language its data names (lang:), and in the theme its data names (theme:, else default), unless --theme
+names another. A new slug is also opened in the browser ($BROWSER, open, wslview, xdg-open). The page
+stays as it was drawn: floe rebuild draws the stored pages again with the templates of now. The warnings
+of the page drawn, advice on a better way to write it, are printed as file:line:column: warning:
+message.
 
 --link registers a file in place instead of storing a page. An HTML file is shown as it is, and the
 files under its directory are served for its relative references. A data file is drawn each time

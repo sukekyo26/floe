@@ -68,6 +68,7 @@ The stored page stays as it was drawn: changing the template, a part or a theme 
 | `--description <text>` | A description shown in the list. |
 | `--theme <name>` | The theme to draw the page with, its palette and the parts' shape, over the data file's `theme:`; a theme picked for the page on the management page wins over it. Defaults to `theme:`, else the default theme the page took when first stored, else `default`. Refused with `--link` of an HTML file or a folder, which are shown as they are. |
 | `--force` | Replace another file's page, or a link to another file, keeping nothing of the old one, not even a page's earlier versions. |
+| `--move-project` | Put the page in the project of the directory `floe publish` runs in, though it is in another; without it a page keeps its project. Refused with `--link` (flags that exclude each other), and where that directory has no project (the mistake says to run it in the repository the page is about); the project is not set from a name. |
 
 ### Projects and overwriting
 
