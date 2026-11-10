@@ -126,16 +126,16 @@ In an AWS architecture, represent each service with an AWS icon, not a box. Do n
 
 First:
 
-- Write a text value in `'…'`, or over several lines as a `|` block, whatever it holds, without judging whether it needs quotes: `heading: 'Step 1: plan'`, ``text: '`algorithms` fixes the methods.'``. Only a number, `true` or `false`, and a name or word of letters, digits, `_`, `.`, `/` and `-` (`template: report`, `tone: warn`) stay bare; write a text that reads `null` or `~` as `'null'`, for a bare one is no text. In `'…'` write a `'` as `''`; nothing else is special, a `\` and a `"` included. Do not use `"…"`: a `\` in it is read as an escape, mostly with no mistake (`\_` is a no-break space). Unquoted, YAML reads a `: ` as a key, a ` #` as a comment and, in `{ }` or `[ ]`, a `,` as the end of the text, and refuses a text that starts with a backtick. floe refuses most of these, but a `,` in `[ ]` silently splits the item: `tags: [Tokyo, Osaka office]` is two tags.
+- Write a text value in `'…'`, or over several lines as a `|` block, whatever it holds, without judging whether it needs quotes: `heading: 'Step 1: plan'`, ``text: '`algorithms` fixes the methods.'``. Only a number, `true` or `false`, and a name or word of letters, digits, `_`, `.`, `/` and `-` (`template: report`, `tone: warn`) stay bare. Write a text that reads as a number, `null` or `~` (`'1.10'`, `'0x1F'`, `'null'`) in quotes: bare, it is a number, or no text. In `'…'` write a `'` as `''`; nothing else is special, a `\` and a `"` included. Do not use `"…"`: a `\` in it is read as an escape, mostly with no mistake (`\_` is a no-break space). Unquoted, YAML reads a `: ` as a key, a ` #` as a comment and, in `{ }` or `[ ]`, a `,` as the end of the text, and refuses a text that starts with a backtick. floe refuses most of these, but a `,` in `[ ]` silently splits the item: `tags: [Tokyo, Osaka office]` is two tags.
 - Write a comment on a line of its own, no deeper than the key of the value above it (or the `-` of a list item), and never in `{ }` or `[ ]`.
-- In a `|` or `>` text, indent the first line as the lines after it. A deeper first line ends the text early, and floe refuses a line after it.
+- In a `|` text, indent the first line as the lines after it. A deeper first line ends the text early, and floe refuses a line after it.
 - Write a number where text is wanted, such as a table's cell, in quotes: `'42'`.
 - Write one document: no `---`, anchors, aliases, merge keys (`<<`) or tags.
 
 Then:
 
 - Beside Japanese, Chinese or Korean letters, `**`, `*` and `~~` are read across a mark too (`**「題」**に` is bold): write a `*` meant as a mark there as `\*` or in backticks.
-- In a `|` or `>` text, indent with spaces only: a tab right after the spaces of its first line is refused.
+- In a `|` text, indent with spaces only: a tab right after the spaces of its first line is refused.
 
 `heading: Step 1: plan`, `lead: PR #100` and `42` in a table's cell are refused so:
 

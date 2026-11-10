@@ -365,11 +365,17 @@ var identifier = regexp.MustCompile(`^[A-Za-z0-9_./-]+$`)
 type unquoted struct {
 	file  string
 	skip  map[ast.Node]bool
+	told  map[yamlpos.Pos]bool
 	found []string
 }
 
+// report tells what is wrong at n, once for each place.
 func (u *unquoted) report(n ast.Node, what string) {
 	at := yamlpos.Of(n)
+	if u.told[at] {
+		return
+	}
+	u.told[at] = true
 	u.found = append(u.found, fmt.Sprintf("%s:%d:%d: %s", u.file, at.Line, at.Column, what))
 }
 
@@ -377,11 +383,13 @@ func (u *unquoted) Visit(n ast.Node) ast.Visitor {
 	switch v := n.(type) {
 	case *ast.MappingValueNode:
 		u.skip[v.Key] = true
+	case *ast.MappingKeyNode:
+		u.skip[v.Value] = true
 	case *ast.LiteralNode:
 		u.skip[v.Value] = true
 		if !strings.HasPrefix(v.GetToken().Value, "|") {
 			u.report(v, "write a text of several lines as a | block, not >")
-		} else if !strings.Contains(strings.TrimRight(v.Value.GetToken().Value, "\n"), "\n") {
+		} else if !strings.Contains(strings.TrimSpace(v.Value.GetToken().Value), "\n") {
 			u.report(v, "write a text of one line in '...', not as a | block")
 		}
 	case *ast.NullNode:
@@ -415,7 +423,7 @@ func notQuoted(name string, src []byte) ([]string, error) {
 	if err != nil {
 		return nil, fmt.Errorf("%s: %w", name, err)
 	}
-	u := &unquoted{file: name, skip: map[ast.Node]bool{}, found: nil}
+	u := &unquoted{file: name, skip: map[ast.Node]bool{}, told: map[yamlpos.Pos]bool{}, found: nil}
 	ast.Walk(u, body)
 	return u.found, nil
 }
@@ -513,6 +521,9 @@ func TestNotQuoted(t *testing.T) {
 		{"a: null\nb: Null\nc: ~\n", 3},
 		{"a: [x y, 'z']\n", 1},
 		{"a: 'one\n  two'\n", 1},
+		{"a: |\n\n  one\n", 1},
+		{"? x y\n: v\n", 0},
+		{"a: \"one\n  two\"\n", 1},
 	} {
 		found, err := notQuoted("c.yaml", []byte(c.src))
 		if err != nil {
