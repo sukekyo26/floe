@@ -108,7 +108,7 @@ func guideEnv(t *testing.T, stdout, stderr *bytes.Buffer) cli.Env {
 func TestDiagramGuideExamples(t *testing.T) {
 	t.Parallel()
 
-	var shapes [][]string
+	shapes := make([][]string, 0, len(diagramGuides))
 	for _, path := range diagramGuides {
 		blocks, _, bad := readGuideDoc(t, path)
 		for _, b := range bad {
