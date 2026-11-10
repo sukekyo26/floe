@@ -33,8 +33,8 @@ func (a *app) publishCmd() *cobra.Command {
 		Short: "Store a page drawn from a data file (or --link an HTML file or a folder in place) and print its URL",
 		Long: `Draw a page from a data file (.yaml, .yml) with the template it names (template: report),
 store it as drawn and print its URL. A page is its data file's: publishing the same file again, from any
-directory, overwrites it and keeps the page's project, unless --move-project (a file is named by its repository
-and its path from the repository's root, else by its real path), and the slug of another file's page is refused unless
+directory (a file is named by its repository and its path from the repository's root, else by its real path),
+overwrites it and keeps the page's project, unless --move-project, and the slug of another file's page is refused unless
 --force, which drops its history (versions, pinned title, tags, favourite). A new page is in the project
 of the directory floe publish runs in: its git repository's name (origin's, else the repository's
 directory), else the directory's name. floe publish says it on stderr after the URL (page in project floe, or
@@ -66,9 +66,6 @@ a dot), each shown as a linked HTML file is. The same slug for another file is r
 					*to = &v
 				}
 			}
-			if link && opts.MoveProject {
-				return usageOf(usererr.New("cli_publish_move_link"))
-			}
 			return a.publish(cmd.Context(), args[0], link, opts)
 		},
 	}
@@ -83,7 +80,8 @@ a dot), each shown as a linked HTML file is. The same slug for another file is r
 	f.StringVar(&theme, "theme", "",
 		"the theme to draw with: its palette and the parts' shape (default: the data file's theme:, else default)")
 	f.BoolVar(&opts.MoveProject, "move-project", false, "put the page in the project of the directory floe runs in, "+
-		"though it is in another: a page keeps its project otherwise (not with --link)")
+		"though it is in another; a page keeps its project otherwise (not with --link, nor where there is no project)")
+	cmd.MarkFlagsMutuallyExclusive("link", "move-project")
 	f.BoolVar(&opts.Force, "force", false, "replace another file's page, or a link to "+
 		"another file, keeping nothing of the old one, not even a page's earlier versions; without --slug, only when "+
 		"the file has no page of its own")
@@ -101,10 +99,6 @@ func (a *app) publish(ctx context.Context, file string, link bool, opts store.Op
 		err = usererr.Collect(err, p.err)
 	}
 	up, b, sentErr := a.sent(ctx, p, link, opts)
-	// A place with no project would empty the page's, which the next publish from another place would fill again.
-	if err == nil && sentErr == nil && opts.MoveProject && up.Project == "" {
-		return usageOf(usererr.New("cli_publish_move_none"))
-	}
 	var saved server.Saved
 	if err = usererr.Collect(err, sentErr); err == nil {
 		if link {

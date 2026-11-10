@@ -242,6 +242,8 @@ func TestPublishMoveProject(t *testing.T) {
 	want(t, send("q", true), http.StatusOK, `"taskProject":"p"},"taskProject":"q"}`)
 	want(t, send("q", true), http.StatusOK, `"taskProject":"q"},"taskProject":"q"}`)
 	want(t, send("q", false), http.StatusOK, `"taskProject":"q"},"taskProject":"q"}`)
+	// From a place with no project the page would be emptied of its project, which a publish from another place fills again.
+	want(t, send("", true), http.StatusBadRequest, "run it in the repository the page is about")
 	want(t, e.do(t, http.MethodPost, "/api/artifacts", `{"path": "/x.html", "moveProject": true}`, "Origin", origin, "Content-Type", "application/json",
 		"Accept", "application/json"), http.StatusBadRequest, "moveProject")
 }

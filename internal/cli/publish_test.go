@@ -511,15 +511,19 @@ func TestPublishMoveProject(t *testing.T) {
 		args     []string
 		want     string
 	}{
-		{"a place with no project", "/", []string{"--move-project", file}, "this directory has none"},
-		{"a link", dir, []string{"--link", "h.html", "--move-project"}, "a linked file is in its target's directory's"},
+		{"a place with no project", "/", []string{"--move-project", file}, "has no project, which --move-project puts the page in"},
+		{"a link", dir, []string{"--link", "h.html", "--move-project"}, "none of the others can be"},
 	} {
 		code, out, errs := runIn(step.at, env, append([]string{"publish"}, step.args...)...)
-		if code != 2 || out != "" || !strings.Contains(errs, step.want) {
-			t.Errorf("%s: floe publish %v = %d, %q, %q; want 2, nothing and %q", step.what, step.args, code, out, errs, step.want)
+		if code != 1 || out != "" || !strings.Contains(errs, step.want) {
+			t.Errorf("%s: floe publish %v = %d, %q, %q; want 1, nothing and %q", step.what, step.args, code, out, errs, step.want)
 		}
 	}
 	if projectOfPage() != "p" || s.ReadMeta("h") != nil {
 		t.Errorf("refused, the page is in %q and h is %v, want p and none", projectOfPage(), s.ReadMeta("h"))
+	}
+	// Replacing another file's page (--force) puts the page in the place's project, with the flag as without it.
+	if got := publishedTogether(t, other, env, "w.yaml", "--slug", "n", "--force", "--move-project"); !strings.Contains(got, "\npage in project q\n") || projectOfPage() != "q" {
+		t.Errorf("another file's page replaced with the flag wrote %q and is in %q, want it in q", got, projectOfPage())
 	}
 }
