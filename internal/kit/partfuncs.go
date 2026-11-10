@@ -118,10 +118,10 @@ func diagramOf() (template.HTML, error) {
 // bar is an item of a bars part, and the width of its bar, a percentage of its whole: of when written, else the
 // largest value of the bars without of. Now and Max are its value and of in plain digits, for aria.
 type bar struct {
-	Label, Tone string
-	Value, Of   any
-	Now, Max    string
-	Width       float64
+	Label, Tone, Unit string
+	Value, Of         any
+	Now, Max          string
+	Width             float64
 }
 
 // barsOf gives each of the items of a bars part, each written as keys and values, a label, a value no less than 0
@@ -131,6 +131,9 @@ type bar struct {
 // and its label: bars knows not where in the part's value the list is. Place them at the item if that misleads.
 // LIMIT: an item with of and no label, which floe's bars refuses by its schema, is a progressbar of no name; refuse
 // it here if a part of one's own comes to draw one.
+// LIMIT: a unit is a bar's own, so a bar without of, whose width is a share of the longest value, is not refused for a
+// unit its neighbours do not share: bars of different units compared by length mean nothing. Bars with of, each its own
+// whole, may mix them (pages and minutes). Refuse the mix if a comparison that misleads comes to be written.
 func barsOf(items []any) ([]bar, error) {
 	bars := make([]bar, 0, len(items))
 	var found usererr.List
@@ -166,9 +169,14 @@ func barOf(i int, item any) (bar, error) {
 		return bar{}, usererr.New("kit_bar_item", "bars", i+1)
 	}
 	b := bar{
-		Label: stringOf(m["label"]), Tone: stringOf(m["tone"]), Value: m["value"], Of: m["of"], Now: "", Max: "", Width: 0,
+		Label: stringOf(m["label"]), Tone: stringOf(m["tone"]), Unit: stringOf(m["unit"]),
+		Value: m["value"], Of: m["of"], Now: "", Max: "", Width: 0,
 	}
 	name := fmt.Sprintf("bars: bar %d %q", i+1, b.Label)
+	// A unit of a part of one's own, whose schema does not say it is text, would be read as none by stringOf.
+	if _, text := m["unit"].(string); !text && m["unit"] != nil {
+		return bar{}, usererr.New("kit_not_text", name+"'s unit", fmt.Sprint(m["unit"]))
+	}
 	n, err := float(name+"'s value", b.Value)
 	if err != nil {
 		return bar{}, err

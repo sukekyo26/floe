@@ -826,7 +826,7 @@ func TestShapes(t *testing.T) {
 		"part any":            "one of asks,bars,chart,checklist,checks,code,columns,decision,details,diagram,diff,entries,facts,fields,html,image,keys,links,note,options,script,stats,steps,table,tabs,terminal,text,timeline,tree",
 		"part asks":           "[] by,decided,options,question,recommend,why",
 		"part band":           "-",
-		"part bars":           "[] label,of,tone,value",
+		"part bars":           "[] label,of,tone,unit,value",
 		"part cards":          "-",
 		"part cell":           "-",
 		"part chart":          "-",
