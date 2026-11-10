@@ -29,4 +29,4 @@ more:
   - heading: 'Related records'
     parts:
       - links:
-          - { title: 'ADR 0003', url: /a/adr-0003/, text: 'Run two web servers behind the load balancer' }
+          - { title: 'ADR 0003', url: '/a/adr-0003/', text: 'Run two web servers behind the load balancer' }

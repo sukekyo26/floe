@@ -58,4 +58,4 @@ more:
   - heading: Related
     parts:
       - links:
-          - { title: 'Postmortem: checkout failed for 47 minutes', url: /a/postmortem-certs/, text: 'The incident that led to this runbook' }
+          - { title: 'Postmortem: checkout failed for 47 minutes', url: '/a/postmortem-certs/', text: 'The incident that led to this runbook' }

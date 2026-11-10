@@ -7,7 +7,6 @@ import (
 	"fmt"
 	"io"
 	"io/fs"
-	"maps"
 	"os"
 	"path/filepath"
 	"regexp"
@@ -357,7 +356,7 @@ func TestSameSkill(t *testing.T) {
 
 // identifier is what a value may be while it stands bare: a word of floe (template: report, tone: warn), a name, a path
 // or a date.
-var identifier = regexp.MustCompile(`^[A-Za-z0-9_./-]+$`)
+var identifier = regexp.MustCompile(`^[A-Za-z0-9][A-Za-z0-9_./-]*$`)
 
 // unquoted is a walk of a YAML document that collects the text values not written as the guide teaches: in '...' on
 // one line, or in a | block of two lines or more; or bare, as an identifier. A key is not a value; a | block's body is
@@ -481,7 +480,11 @@ func TestGuideSentencesQuoted(t *testing.T) {
 		}
 	}
 	for _, dir := range []string{"kit/floe/templates/", "kit/floe/parts/", "kit/floe/themes/", "diagram/examples/"} {
-		if !slices.ContainsFunc(slices.Collect(maps.Keys(sources)), func(name string) bool { return strings.HasPrefix(name, dir) }) {
+		found := false
+		for name := range sources {
+			found = found || strings.HasPrefix(name, dir)
+		}
+		if !found {
 			t.Errorf("no YAML file of %s: the test reads none of it", dir)
 		}
 	}
@@ -506,6 +509,7 @@ func TestNotQuoted(t *testing.T) {
 	}{
 		{"a: 'x y'\nb: 'it''s \\* \"q\"'\n", 0},
 		{"a: |\n  one\n  two\n", 0},
+		{"a: -x\n", 1},
 		{"a: report\nb: 12\nc: true\nd: 2030-04-12\ne: a/b_c.d-e\nf: Steps\n", 0},
 		{"- { a: 'x', b: ['y z', warn] }\n", 0},
 		{"'a key with spaces': v\n", 0},

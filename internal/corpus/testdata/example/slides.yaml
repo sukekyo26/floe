@@ -29,4 +29,4 @@ slides:
   - heading: 'Next time: the `runbook-certs` runbook'
     parts:
       - links:
-          - { title: 'Issue and deploy a new certificate', url: /a/runbook-certs/, text: 'Twenty minutes; checkout keeps working throughout' }
+          - { title: 'Issue and deploy a new certificate', url: '/a/runbook-certs/', text: 'Twenty minutes; checkout keeps working throughout' }

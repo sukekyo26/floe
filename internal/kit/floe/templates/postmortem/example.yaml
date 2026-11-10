@@ -36,4 +36,4 @@ more:
   - heading: Related
     parts:
       - links:
-          - { title: 'Certificate runbook', url: /a/runbook-certs/, text: 'How to issue and deploy a certificate' }
+          - { title: 'Certificate runbook', url: '/a/runbook-certs/', text: 'How to issue and deploy a certificate' }
