@@ -360,6 +360,7 @@ adheres to [Semantic Versioning](https://semver.org/).
 
 ### Changed
 
+- Change the management page to show the project column at the left even with one project to choose, or only "no project", and to put a project's pill on each row of the page list and of the search with one project too; a task's page, with its project in its head, still has none on its rows. It showed them with two or more projects only, so that a store of one project told nowhere which it was in.
 - Change `floe guide` to tell an agent to quote a text that starts with a backtick (YAML refuses it unquoted), and to run `floe publish` in the repository it works in: a page's project is set by where it is first published from, whatever directory holds the data file.
 - Change `report`'s example (`floe template show report example.yaml`) to a short one of the parts used most (text, terminal, code, entries, table, note, columns), 63 lines from 104: `floe part list` lists the others. `floe guide` now has agents run `floe part list` to pick from the parts the template takes, and its table of parts sends short values before and after to `table` and a screen or code before and after to `columns`, as the descriptions of both parts now say.
 - Change the part `tree` to start the notes of all its rows at one edge, whatever the depth or the length of the names, as a column of its own. A note keeps 6rem (or its longest word) at least, so that in a tree of long names the notes narrow and fold line by line, and on a phone scroll sideways to be reached.

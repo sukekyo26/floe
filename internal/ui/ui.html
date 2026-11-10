@@ -2459,8 +2459,8 @@
     const chips = names.map((name) => projectChip(name, name));
     if ((there ?? rows).has(NONE) || (there && project === NONE)) chips.push(projectChip(projectWord(NONE), NONE));
     $('chips').replaceChildren(...chips);
-    // Projects to choose between, or one chosen
-    $('shelf-projects').hidden = !there && chips.length < 2 && !project;
+    // Any project (or none) to choose, or one chosen
+    $('shelf-projects').hidden = !there && chips.length === 0 && !project;
   }
 
   const KIND_WORDS = { page: 'ui_kind_page', link: 'ui_kind_link', folder: 'ui_kind_folder' };
@@ -3010,7 +3010,7 @@
     if (a.folder) put('kindof', t('ui_kind_folder'));
     else if (a.path) put('kindof', t('ui_kind_of_link', a.template ?? 'HTML'));
     else if (a.template) put('kindof', a.template);
-    if (a.project && ranks.size > 1) drawProject(put('proj', ''), a.project, projectColor(a.project, ranks));
+    if (ranks.has(a.project)) drawProject(put('proj', ''), a.project, projectColor(a.project, ranks));
     middle(put);
     // A link shows the file where it was registered; if the file is gone, the row says so
     if (a.missing) put('miss', t('ui_file_missing'));
