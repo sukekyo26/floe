@@ -8,19 +8,19 @@
 # bottom side ends under its label.
 width: 1000
 height: 330
-title: { en: How an agent calls Claude through Amazon Bedrock, ja: "エージェントが Amazon Bedrock を通して Claude を呼ぶ構成" }
+title: { en: 'How an agent calls Claude through Amazon Bedrock', ja: 'エージェントが Amazon Bedrock を通して Claude を呼ぶ構成' }
 parts:
-  - frame: { x: 16, y: 60, w: 260, h: 200, label: { en: Developer machine, ja: "開発マシン" }, square: true }
-  - frame: { x: 316, y: 16, w: 668, h: 300, label: AWS Cloud, icon: aws/group/aws-cloud-logo }
-  - frame: { x: 340, y: 72, w: 240, h: 220, label: { en: Region (AWS_REGION), ja: "リージョン（AWS_REGION）" }, icon: aws/group/region }
-  - frame: { x: 620, y: 72, w: 344, h: 220, label: { en: Global inference profile, ja: "global 推論プロファイル" }, square: true }
-  - icon: { x: 76, y: 116, icon: aws/res/client, label: Claude Code }
-  - label: { text: { en: writes floe pages, ja: "floe のページを書く" }, x: 100, y: 198 }
-  - icon: { x: 436, y: 116, icon: aws/amazon-bedrock, label: Amazon Bedrock }
-  - box: { x: 632, y: 114, w: 320, h: 52, rows: [Opus 5.5, [global.anthropic.claude-opus-5-5, sub code]] }
-  - box: { x: 632, y: 176, w: 320, h: 52, rows: [Sonnet 5.5, [global.anthropic.claude-sonnet-5-5, sub code]] }
-  - box: { x: 632, y: 238, w: 320, h: 52, rows: [Haiku 5.5, [global.anthropic.claude-haiku-5-5, sub code]] }
-  - edge: { from: [124, 140], to: [436, 140], label: { en: Inference request, ja: "推論リクエスト" }, at: [200, 140] }
+  - frame: { x: 16, y: 60, w: 260, h: 200, label: { en: 'Developer machine', ja: '開発マシン' }, square: true }
+  - frame: { x: 316, y: 16, w: 668, h: 300, label: 'AWS Cloud', icon: aws/group/aws-cloud-logo }
+  - frame: { x: 340, y: 72, w: 240, h: 220, label: { en: 'Region (AWS_REGION)', ja: 'リージョン（AWS_REGION）' }, icon: aws/group/region }
+  - frame: { x: 620, y: 72, w: 344, h: 220, label: { en: 'Global inference profile', ja: 'global 推論プロファイル' }, square: true }
+  - icon: { x: 76, y: 116, icon: aws/res/client, label: 'Claude Code' }
+  - label: { text: { en: 'writes floe pages', ja: 'floe のページを書く' }, x: 100, y: 198 }
+  - icon: { x: 436, y: 116, icon: aws/amazon-bedrock, label: 'Amazon Bedrock' }
+  - box: { x: 632, y: 114, w: 320, h: 52, rows: ['Opus 5.5', [global.anthropic.claude-opus-5-5, 'sub code']] }
+  - box: { x: 632, y: 176, w: 320, h: 52, rows: ['Sonnet 5.5', [global.anthropic.claude-sonnet-5-5, 'sub code']] }
+  - box: { x: 632, y: 238, w: 320, h: 52, rows: ['Haiku 5.5', [global.anthropic.claude-haiku-5-5, 'sub code']] }
+  - edge: { from: [124, 140], to: [436, 140], label: { en: 'Inference request', ja: '推論リクエスト' }, at: [200, 140] }
   - edge: { from: [484, 140], to: [632, 140] }
   - edge: { from: [484, 140], via: [[600, 202]], to: [632, 202] }
   - edge: { from: [484, 140], via: [[600, 264]], to: [632, 264] }

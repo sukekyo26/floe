@@ -7,11 +7,11 @@
     width: 640
     height: 200
     # スクリーンリーダーが読み上げる
-    title: API の配置
+    title: 'API の配置'
     parts:
       - frame: { x: 16, y: 16, w: 608, h: 168, label: VPC }
-      - box: { name: alb, x: 40, y: 72, tone: accent, rows: [[ALB, main code], 公開の入口] }
-      - box: { name: api, x: 400, y: 72, rows: [API サーバー, ECS] }
+      - box: { name: alb, x: 40, y: 72, tone: accent, rows: [[ALB, 'main code'], '公開の入口'] }
+      - box: { name: api, x: 400, y: 72, rows: ['API サーバー', ECS] }
       - edge: { from: alb, to: api, label: HTTPS }
 ```
 
@@ -78,7 +78,7 @@ AWS の構成図では、サービスを箱でなく AWS のアイコンで描�
 
 ```yaml
 - diagram:
-    title: AWS の Web アプリ
+    title: 'AWS の Web アプリ'
     parts:
       - icon: { name: alb, x: 40, y: 40, icon: aws/res/elastic-load-balancing-application-load-balancer, label: ALB }
       - icon: { name: api, x: 240, y: 40, icon: aws/amazon-elastic-container-service, label: ECS }
@@ -112,19 +112,19 @@ AWS の構成図では、サービスを箱でなく AWS のアイコンで描�
 
 ```yaml
 - diagram:
-    title: ページが公開されるまで
+    title: 'ページが公開されるまで'
     parts:
       - graph:
           x: 20
           y: 20
           nodes:
-            - box: { name: write, rows: [データを書く] }
-            - box: { name: check, shape: hex, rows: ["検査を通る？"] }
-            - box: { name: show, rows: [ページを出す] }
+            - box: { name: write, rows: ['データを書く'] }
+            - box: { name: check, shape: hex, rows: ['検査を通る？'] }
+            - box: { name: show, rows: ['ページを出す'] }
           edges:
             - { from: write, to: check }
-            - { from: check, to: show, label: "はい" }
-            - { from: check, to: write, label: "いいえ" }
+            - { from: check, to: show, label: 'はい' }
+            - { from: check, to: write, label: 'いいえ' }
 ```
 
 ### 段
@@ -134,7 +134,7 @@ AWS の構成図では、サービスを箱でなく AWS のアイコンで描�
 
   ```yaml
   - diagram:
-      title: サービスを使うサーバーの下でなく、ロードバランサーの隣に置く NAT ゲートウェイ
+      title: 'サービスを使うサーバーの下でなく、ロードバランサーの隣に置く NAT ゲートウェイ'
       parts:
         - graph:
             x: 20
@@ -185,7 +185,7 @@ AWS の構成図では、サービスを箱でなく AWS のアイコンで描�
 
   ```yaml
   - diagram:
-      title: 2 つのゾーンの間の複製。graph の隣に手で書いた線
+      title: '2 つのゾーンの間の複製。graph の隣に手で書いた線'
       parts:
         - graph:
             x: 20
@@ -193,17 +193,17 @@ AWS の構成図では、サービスを箱でなく AWS のアイコンで描�
             nodes:
               - group:
                   name: zone-a
-                  label: ゾーン A
+                  label: 'ゾーン A'
                   nodes:
-                    - box: { name: writer, rows: [書き手] }
+                    - box: { name: writer, rows: ['書き手'] }
               - group:
                   name: zone-b
-                  label: ゾーン B
+                  label: 'ゾーン B'
                   nodes:
-                    - box: { name: reader, rows: [読み手] }
+                    - box: { name: reader, rows: ['読み手'] }
             edges:
               - { from: zone-a, to: zone-b }
-        - edge: { from: writer, to: reader, label: 複製, fromSide: right, toSide: right, via: [{ x: 190 }] }
+        - edge: { from: writer, to: reader, label: '複製', fromSide: right, toSide: right, via: [{ x: 190 }] }
   ```
 - graph の箱とアイコンと、まとまり・帯の枠は、手で書いた線の端にもできます。その線は、ほかの手で書いた線と同じく辺の上で終わります（下）。`fromSide`・`toSide` を書かないと、`via` の有る無しによらず、graph の線が残した辺のうち、隣の via（無ければ相手の端）がその外にある辺を、左右、上下の順に使います。残す辺は、箱とアイコンでは graph の線の端も輪も level の線も無い辺、まとまりと帯の枠では graph の線が端を置かず横切りもしない辺です。via がその外にある残す辺が無いときは、選んだ辺のままで、graph の線の上を走ることがあるので、graph の線が使わない辺を `fromSide`・`toSide` で書きます。輪や level の線のある辺は、それらのものなので、手で書いた線の端にしないでください。
 - graph や tree が置いた部品と手で書いた部品の間の誤り（重なり、線が箱を通る、交差）は、動かせる、手で書いた方の行と列に言います。手で書いた部品どうしの誤りは、後に書いた方（`parts` の後ろの項目。同じ項目の中なら、比べた順で前のもの）の行と列に言います。tree の部品どうしと、tree の部品と graph の部品の間の誤りは、tree の部品のうち後に書いた方の行と列に言います。後から足したり動かしたりした部品が起こすことが多いためです。graph の部品だけが起こす誤り（2 つの graph の重なりや交差、キャンバスからはみ出す graph）は、graph の場所に、その `x`・`y` を動かすよう言います（キャンバスからはみ出すときは、キャンバスを広げることも）。
@@ -220,10 +220,10 @@ AWS の構成図では、サービスを箱でなく AWS のアイコンで描�
 
 ```yaml
 - diagram:
-    title: 指定した所で曲がる線
+    title: '指定した所で曲がる線'
     parts:
-      - box: { name: api-a, x: 40, y: 300, rows: [API A] }
-      - box: { name: api-c, x: 40, y: 400, rows: [API C] }
+      - box: { name: api-a, x: 40, y: 300, rows: ['API A'] }
+      - box: { name: api-c, x: 40, y: 400, rows: ['API C'] }
       - box: { name: queue, x: 400, y: 300, rows: [Queue] }
       - box: { name: writer, x: 400, y: 340, rows: [Writer] }
       - edge: { from: api-a, to: queue, fromSide: top, toSide: left, via: [{ y: 240 }, { x: 300 }] } # M80,300 V240 H300 V314.5 H400
