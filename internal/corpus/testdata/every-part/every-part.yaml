@@ -17,13 +17,6 @@ sections:
           - { label: Owners left, value: '3', tone: warn }
           - { label: Lost pages, value: '1', tone: bad }
           - { label: Skipped, value: '2', note: left for later, tone: muted }
-      - compare:
-          before: Now
-          after: After the move
-          rows:
-            - { what: Host, before: The old server, after: The new host }
-            - { what: Search, before: Built in, after: Rebuilt on `Sunday` }
-            - { what: Address, before: wiki.example.com, after: wiki.example.com }
   - heading: Steps
     parts:
       - text: |
@@ -239,8 +232,6 @@ sections:
               - terminal: { shell: bash, steps: [{ run: wiki freeze }] }
               - links:
                   - { title: The freeze, url: 'https://example.com/freeze', text: What it stops }
-              - findings:
-                  - { level: should, at: wiki.conf:1, text: The mode is not said in the banner }
               - details:
                   title: The whole command
                   parts:
@@ -260,10 +251,6 @@ sections:
       - links:
           - { title: Migration guide, url: 'https://example.com/guide', text: How the copy works }
           - { title: Old wiki, url: 'https://wiki.example.com/' }
-      - findings:
-          - { level: must, at: wiki.conf:3, text: The banner names the old host, status: { pill: fixed, tone: good } }
-          - { level: should, text: The search index is rebuilt by hand }
-          - { level: nit, text: Two pages have the same title, why: Left as the owners asked }
       - tree:
           - { path: pages/, note: what export writes }
           - { path: pages/home.md, change: changed }
@@ -376,11 +363,6 @@ sections:
               - table:
                   columns: [Shell, { title: Lines, num: true }]
                   rows: [[PowerShell, '1']]
-              - compare:
-                  before: bash
-                  after: PowerShell
-                  rows:
-                    - { what: Variable, before: export, after: $env }
               - facts:
                   - { name: Shell, value: PowerShell 7 }
               - tree:
