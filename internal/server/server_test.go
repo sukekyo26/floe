@@ -209,6 +209,22 @@ func TestPublish(t *testing.T) {
 	want(t, e.write(t, http.MethodPut, "/api/artifacts/f-b", up), http.StatusNotFound, "not found")
 }
 
+// A publish answers the project the page was kept in, and the one of the page it replaced, as tasks.json says it: one
+// of no project is "/", and a project emptied on the management page is replaced by the project published from.
+func TestPublishTaskProject(t *testing.T) {
+	t.Parallel()
+
+	e := newEnv(t)
+	const src = "lang: en\ntemplate: pic\ntitle: T\n"
+	want(t, e.publish(t, "d", src, nil), http.StatusCreated, `"prev":null,"taskProject":"p"}`)
+	none := e.write(t, http.MethodPost, "/api/artifacts/data", server.Upload{File: "n.yaml", Source: []byte(src), Project: "", Repo: "n", Place: "n.yaml"}) //nolint:exhaustruct // the rest not given
+	want(t, none, http.StatusCreated, `"prev":null,"taskProject":"/"}`)
+	want(t, e.write(t, http.MethodPatch, "/api/artifacts/d", map[string]any{"project": "moved"}), http.StatusOK, `"taskProject":"moved"`)
+	want(t, e.publish(t, "d", src, nil), http.StatusOK, `"taskProject":"moved"},"taskProject":"moved"}`)
+	want(t, e.write(t, http.MethodPatch, "/api/artifacts/d", map[string]any{"project": ""}), http.StatusOK, `"taskProject":"/"`)
+	want(t, e.publish(t, "d", src, nil), http.StatusOK, `"taskProject":"/"},"taskProject":"p"}`)
+}
+
 // A stored page is the page drawn when published, its bytes as kept, in the sandbox and cut off, with the script
 // that reloads it; a template changed since draws it no other, until a rebuild.
 func TestStoredPage(t *testing.T) {
@@ -375,7 +391,7 @@ func TestFolder(t *testing.T) {
 		"docs/index.html": "<title>i</title>", "docs/guide/setup.html": "<p>s</p>", "docs/s.css": "p{}", "docs/.git/config": "x",
 		"sibling.html": "beside",
 	})
-	want(t, e.write(t, http.MethodPost, "/api/artifacts", server.Link{Path: docs}), http.StatusCreated, `"slug":"docs","title":"","prev":null,"folder":true}`) //nolint:exhaustruct // the rest not given
+	want(t, e.write(t, http.MethodPost, "/api/artifacts", server.Link{Path: docs}), http.StatusCreated, `"slug":"docs","title":"","prev":null,"folder":true,"taskProject":"docs"}`) //nolint:exhaustruct // the rest not given
 	if w := e.do(t, http.MethodGet, "/a/docs/", ""); w.Code != http.StatusSeeOther || w.Header().Get("Location") != "/?kind=folder&open=docs" {
 		t.Errorf("GET /a/docs/ = %d to %q, want 303 to the list with it open", w.Code, w.Header().Get("Location"))
 	}

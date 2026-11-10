@@ -265,6 +265,7 @@ floe の主要な変更を記録します。フォーマットは
 ### 変更
 
 - 変更：`floe guide` と docs で、データファイルの字の値は、引用符が要るか考えず、`'…'`（何行もなら `|` の文）で書くことにした。`"…"` は使わない。中の `\` が、多くの場合に断られず別の字になる（`\_` は改行しない空白）ため。数、`true`・`false`、英数字と `_ . / -` だけの語は引用符なし。エージェントがまねる例も同じに書いた：floe の 7 つのテンプレートの見本（`floe template show <template> example.yaml`）、`floe template new` が作る見本、テーマの `theme.yaml`、図の見本（`floe diagram example`）、手引きと pages・diagrams の docs の YAML。言っていることは変わらない。
+- 変更：`floe publish` が、ページが入ったプロジェクトを、URL の後に標準エラー出力で言う（`page in project floe`、無ければ `page in no project`）。言うのは、ページが新しいとき、またはプロジェクトが変わったとき（`--force` でほかのファイルのページを置き換えたとき、プロジェクトを空にしたページを publish し直したとき）。プロジェクトが変わらない publish と `--link` は何も言わず、標準出力は今までどおり URL だけ。publish へのサーバーの答えに、ページの `taskProject` と、置き換えたページの `taskProject` が入る。
 - 変更：管理ページの左の「プロジェクト」欄を、選ぶ project が 1 つだけ（「プロジェクトなし」だけの場合も）でも出し、ページ一覧と検索の行の project の札も、project が 1 つでも出すようにした。タスクのページの行（頭にそのタスクの project が出る）は今までどおり札が無い。今までは project が 2 つ以上のときだけ出していたので、project が 1 つの保存先では、今どの project にいるのかが画面のどこにも出なかった。
 - 変更：`floe guide` に、バッククォートで始まる文は引用符で包むこと（包まないと YAML が断る）と、`floe publish` は作業中のリポジトリで走らせること（ページの project は、データファイルのある場所でなく、最初に publish した場所で決まる）を足した。
 - 変更：`report` の見本（`floe template show report example.yaml`）を、よく使う部品（text・terminal・code・entries・table・note・columns）だけの短いものにした（104 行から 63 行）。ほかの部品は `floe part list` が並べる。`floe guide` は、エージェントに `floe part list` を走らせて、テンプレートが置ける部品から選ばせる。部品の表は、短い値の前と後を `table` に、画面やコードの前と後を `columns` に分け、両方の部品の説明もそう言う。

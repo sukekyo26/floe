@@ -241,6 +241,9 @@ func (e *denv) stop(t *testing.T) {
 	}
 }
 
+// projectLine is what floe publish says of a new page; its name is of a directory made for the test, which changes.
+const projectLine = "page in project "
+
 func wantRun(t *testing.T, what string, got result, code int, stdout, stderr string) {
 	t.Helper()
 
@@ -266,7 +269,7 @@ func TestRestartOnAnotherBuild(t *testing.T) {
 
 	e := newDenv(t)
 	url := e.base() + "/a/page/\n"
-	wantRun(t, "publish", e.run("publish", "page.yaml"), 0, url, "")
+	wantRun(t, "publish", e.run("publish", "page.yaml"), 0, url, projectLine)
 	first, _ := e.health(t.Context())
 	wantRun(t, "publish from another build", e.exe(t, otherBuild, "publish", "page.yaml"), 0, url, "updated")
 	second, _ := e.health(t.Context())
@@ -297,7 +300,7 @@ func TestPublishOtherDirs(t *testing.T) {
 	t.Parallel()
 
 	e := newDenv(t)
-	wantRun(t, "publish", e.run("publish", "page.yaml"), 0, e.base()+"/a/page/\n", "")
+	wantRun(t, "publish", e.run("publish", "page.yaml"), 0, e.base()+"/a/page/\n", projectLine)
 	first, _ := e.health(t.Context())
 	refused := "floe: the server on port " + e.port + " draws pages with the templates of " + first.Templates
 	again := `; move yours where the server reads them, or run "floe stop" and run this command again` + "\n"
@@ -325,7 +328,7 @@ func TestPublishOtherDirs(t *testing.T) {
 
 	n := newDenv(t)
 	n.vars["HOME"] = "rel"
-	wantRun(t, "publish with no place for the icons", n.run("publish", "page.yaml"), 0, n.base()+"/a/page/\n", "")
+	wantRun(t, "publish with no place for the icons", n.run("publish", "page.yaml"), 0, n.base()+"/a/page/\n", projectLine)
 	if h, _ := n.health(t.Context()); h.Icons != "" {
 		t.Errorf("the server's icons are %q, want none", h.Icons)
 	}
@@ -337,7 +340,7 @@ func TestPublishToAnotherServer(t *testing.T) {
 	t.Parallel()
 
 	e := newDenv(t)
-	wantRun(t, "publish", e.run("publish", "page.yaml"), 0, e.base()+"/a/page/\n", "")
+	wantRun(t, "publish", e.run("publish", "page.yaml"), 0, e.base()+"/a/page/\n", projectLine)
 	e.vars["FLOE_DIR"] = filepath.Join(e.tmp, "other")
 	otherStore := "floe: the server on port " + e.port + " serves " + filepath.Join(e.tmp, "store") +
 		`; to run a server of your own beside it, set FLOE_PORT to another port in the shell's environment, where` +
