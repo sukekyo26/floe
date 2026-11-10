@@ -122,7 +122,7 @@ floe は diagram の部品を 1 つずつ検証します。字のはみ出し、
 
 AWS の構成図では、サービスを箱でなく AWS のアイコンで描きます。アイコンを箱で囲みません。アイコンのセットがまだ無ければ、先に `floe icons fetch aws` で取り、そのあと `floe icons search <語>` で名前を探します（`alb` のような短い名前でも引けます）。
 
-`floe diagram guide` は、2 つの書き方を、部品・鍵・配置の決まり・検査まで詳しく説明します。大きい図を書く前に読みます。`floe diagram example <kind>` は、種類ごと（構成、シーケンス、ER など）の完全な spec を写せる形で出します。見本は、格子の上で箱の大きさを決めて揃えるために `w` と `h` を書いています。箱の字を変えたら、その箱の `w` を消すか、floe が言う最小の幅以上に広げます（`needs w: 174 or more`）。
+`floe diagram guide` は、2 つの書き方を、部品・鍵・配置の決まり・検査まで詳しく説明します。大きい図を書く前に読みます。`floe diagram example <kind>` は、種類ごと（構成、シーケンス、ER など）の完全な spec を写せる形で出します。`floe diagram inspect`・`render` に渡すファイルの spec は、`diagram:` の項目の中身で、`title`・`parts` などをファイルの先頭に書き、`diagram:` の鍵も `template`・`lang` も書きません。見本は、格子の上で箱の大きさを決めて揃えるために `w` と `h` を書いています。箱の字を変えたら、その箱の `w` を消すか、floe が言う最小の幅以上に広げます（`needs w: 174 or more`）。
 
 ## floe が書いたとおりに読む YAML
 

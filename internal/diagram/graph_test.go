@@ -190,7 +190,7 @@ parts:
 		{"a group named as a box before it", strings.Replace(gg, "name: server", "name: cli", 1), `s.yaml:9:13: the name "cli" is given before: give each part, row and node its own name`},
 		{"a box named as a group before it", strings.Replace(gg, "name: x,", "name: server,", 1), `s.yaml:17:18: the name "server" is given before: give each part, row and node its own name`},
 		{"200 boxes and 2 groups", many.String(), `s.yaml:4:7: graph: 202 boxes, icons, groups and lanes, past 200; split it into graphs`},
-		{"201 icons and a group", icons.String(), `s.yaml:4:7: graph: 201 boxes, icons, groups and lanes, past 200; split it into graphs`},
+		{"200 icons and a group", icons.String(), `s.yaml:4:7: graph: 201 boxes, icons, groups and lanes, past 200; split it into graphs`},
 		{"101 lanes and 101 boxes", laneful.String(), `s.yaml:4:7: graph: 202 boxes, icons, groups and lanes, past 200; split it into graphs`},
 		{"from a lane", lane("{ from: user, to: build }"), `s.yaml:16:19: edge "user"→"build": "user" is a lane, from end to end of the graph; end the edge at a box or a group in it`},
 		{"to a lane", lane("{ from: ask, to: dev }"), `s.yaml:16:28: edge "ask"→"dev": "dev" is a lane, from end to end of the graph; end the edge at a box or a group in it`},
