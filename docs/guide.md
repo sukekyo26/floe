@@ -21,7 +21,7 @@ floe turns a YAML file you write into a page for the user: it checks the file, r
          - text: Freeze edits on **Friday evening**, then copy the pages.
    ```
 
-3. Run `floe part list` and pick, from the parts the template takes there (its schema says), those that fit the content; where the choice is easily mistaken, follow the table in [Picking parts](#picking-parts). For each part the example does not show, look up its keys before writing it, as that section says: a guessed key is refused.
+3. Run `floe part list` and pick, from the parts the template's schema (read in step 1) takes there, those that fit the content; where the choice is easily mistaken, follow the table in [Picking parts](#picking-parts). For each part the example does not show, look up its keys before writing it, as that section says: a guessed key is refused.
 4. Run `floe check db-choice.yaml`, fix every mistake, and run it again until it prints no mistake; when only `warning:` lines are left, you are done (they are advice).
 5. Run `floe publish db-choice.yaml` and give the user the URL it prints. You need not fetch the page.
 
@@ -37,7 +37,7 @@ floe turns a YAML file you write into a page for the user: it checks the file, r
 
 ## Picking parts
 
-Each item of `parts` is one key naming the part. `floe part list` lists each part's keys and what it is for. For parts whose keys are not listed (`chart`, `stats`, `diagram`, …), read `floe part show <part> schema.json` to see their keys, types and details. For a template of your own, read its `schema.json` too (`floe template show <template> schema.json`): it says which parts a section takes.
+Each item of `parts` is one key naming the part. `floe part list` lists each part's keys and what it is for. For parts whose keys are not listed (`chart`, `stats`, `diagram`, …), read `floe part show <part> schema.json` to see their keys, types and details. The template's `schema.json`, read in step 1, says which parts each place takes.
 
 Where the choice is easily mistaken, pick the part by what the content is:
 

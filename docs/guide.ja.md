@@ -23,7 +23,7 @@ floe は、あなたが YAML のファイルで書いたページをユーザー
          - text: Freeze edits on **Friday evening**, then copy the pages.
    ```
 
-3. `floe part list` を走らせ、テンプレートがその場所に置ける部品（schema に書いてある）から、中身に合うものを選ぶ。迷いやすい選び方は[部品を選ぶ](#部品を選ぶ)の表に従う。見本に無い部品は、書く前に、その節のとおりに鍵を調べる。推した鍵は断られます。
+3. `floe part list` を走らせ、手順 1 で読んだテンプレートの schema がその場所に置ける部品から、中身に合うものを選ぶ。迷いやすい選び方は[部品を選ぶ](#部品を選ぶ)の表に従う。見本に無い部品は、書く前に、その節のとおりに鍵を調べる。推した鍵は断られます。
 4. `floe check db-choice.yaml` を走らせ、誤りを全部直して、誤りを出さなくなるまで走らせ直す。`warning:` の行だけが残ったら済みです（勧めなので）。
 5. `floe publish db-choice.yaml` を走らせ、出た URL をユーザーに渡す。ページを自分で取りに行かなくてよい。
 
@@ -39,7 +39,7 @@ floe は、あなたが YAML のファイルで書いたページをユーザー
 
 ## 部品を選ぶ
 
-`parts` の各項目は、部品を名指す鍵 1 つです。`floe part list` が各部品の鍵と使い道を出します。鍵が並ばない部品（`chart`・`stats`・`diagram` など）は、`floe part show <part> schema.json` を読んで、鍵と型と詳しいことを見る。自分のテンプレートなら、その `schema.json` も読む（`floe template show <template> schema.json`）。節が取る部品はそこに書いてあります。
+`parts` の各項目は、部品を名指す鍵 1 つです。`floe part list` が各部品の鍵と使い道を出します。鍵が並ばない部品（`chart`・`stats`・`diagram` など）は、`floe part show <part> schema.json` を読んで、鍵と型と詳しいことを見る。手順 1 で読んだテンプレートの `schema.json` に、それぞれの場所に置ける部品が書いてあります。
 
 迷いやすい所は、中身で部品を選ぶ：
 
