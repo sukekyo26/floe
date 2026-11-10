@@ -728,6 +728,8 @@
   #settings-open svg { width: 16px; height: 16px; }
   /* LIMIT: no room for it in a bar of 40rem or less, as the shortcuts' button above 56rem: the settings open from a wider window. Give them a way there if they come to be needed on a phone */
   @media (max-width: 40rem) { #settings-open { display: none; } }
+  /* A page whole shows neither: they are of the list, and beside the page's own buttons they read as the page's. ? still opens the shortcuts */
+  .framed :is(#settings-open, #keys-open) { display: none; }
   #settings { width: min(64rem, calc(100% - 32px)); max-height: calc(100dvh - 32px); }
   /* Only the cards scroll, the head and the buttons in sight: a column, so that a line hidden (the default's title in a page's
      modal) moves no row */
