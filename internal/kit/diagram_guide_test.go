@@ -239,15 +239,24 @@ func TestDiagramGuidePalette(t *testing.T) {
 			row = line
 		}
 	}
+	if strings.Contains(row, "`-soft`") {
+		t.Errorf("the raw row writes \"their `-soft`\": only some colours have one, name each")
+	}
 	named := regexp.MustCompile("--[a-z]+(?:-[a-z]+)*").FindAllString(row, -1)
-	if len(named) < 8 {
+	if len(named) < 16 {
 		t.Fatalf("the raw row names %d variables: %q", len(named), row)
 	}
 	for _, v := range named {
-		if strings.HasPrefix(v, "--tone") || strings.HasSuffix(v, "-fill") {
-			continue
-		}
-		if !strings.Contains(string(palette), "  "+v+":") && !strings.Contains(string(palette), " "+v+":") {
+		defined := strings.Contains(string(palette), " "+v+":")
+		switch {
+		case strings.HasPrefix(v, "--tone"):
+			// The colours of a tone are made by floe from tone.json, not set in palette.css.
+		case strings.HasSuffix(v, "-fill") && v != "--on-fill":
+			// A theme's own fill, named to be left: palette.css does not define it.
+			if defined {
+				t.Errorf("the raw row says %s is not in default's palette.css, which defines it", v)
+			}
+		case !defined:
 			t.Errorf("the raw row names %s, which default's palette.css does not define", v)
 		}
 	}

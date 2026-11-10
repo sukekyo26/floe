@@ -72,7 +72,7 @@ AWS のサービスは、箱でなく AWS のアイコンで描き、アイコ�
 | `line` | `x1` `y1` `x2` `y2`、`kind`（`line`。`lifeline`・`divider`）。ほかの部品と交わってよいが、キャンバスから出ない。 |
 | `tree` | `x` `y`（根の中心と上）、`root`：節。節は `box` と同じ `rows`・`name`・`tone`・`shape` と、子の節を並べた `children` を持つ。floe が各節を親の下に置き（子は横に並べ、深さごとに 1 段にそろえる）、親から子へ線を引く。節の `name` は、手で書いた線の端にできる。辺を書かないと、graph の箱と同じく、tree の線が端を置く辺（根でない節の上、子のある節の下）を避ける。 |
 | `graph` | `x` `y`（全体の左上）、`nodes`、`edges`、`direction`（`down`。`right`）、`nodes` の代わりの `lanes`。節は `box: { name, with, rows, tone, shape }`（`box` と同じ鍵を持ち、`name` は要る）か、`icon: { name, with, icon, label }`（下に名前を持つ、枠なしのアイコン）か、`group: { name, label, accent, icon, nodes }`（箱とアイコンとまとまりを枠で囲むまとまり。`icon` は枠の角のアイコンで、AWS のグループの形）。線は `{ from, to }`（その graph の箱かアイコンかまとまりの名前 2 つ）で、`label`・`dashed`・`bold`・`tone`・`start`・`end`（`arrow` か `none`）を持てる。floe が箱を段に分けて並べ、箱の間に線を引く（下）。 |
-| `raw` | `svg`：どの部品でも描けない SVG。SVG の要素だけで（script や `foreignObject` は無し）、配置も確かめもしない。色は `floe theme show default palette.css` が定義する変数（パレットの CSS）で、属性にも書ける（`fill="var(--accent-soft)" stroke="var(--accent)"`）。その中の色（`--bg`・`--surface`・`--fg`・`--muted`・`--line`・`--accent`・`--good`・`--warn`・`--bad` と、それぞれの `-soft`）を使い、書体・大きさ・影の変数は使いません。テーマだけが置く変数（`--accent-fill` などの `--*-fill`。palette.css には定義がありません）にも頼りません。tone は、その要素か、raw の中でそれを囲む `<g>` に `data-floe-tone` を付け、`var(--tone)`・`var(--tone-soft)`、塗りなら `var(--tone-fill)` で読みます（図の根が、図の外の tone を消す）。字には色と大きさを書く。部品の字は 12〜13（`<text fill="currentColor" font-size="12">`）。`currentColor` は `--fg`。部品の class と `data-floe-look`・`data-floe-part` は floe のもので、raw には使わない。無い変数や tone、tone の無い `var(--tone)`、fill の無い字は黒になり（字はページの大きさ）、誤りは出ない。 |
+| `raw` | `svg`：どの部品でも描けない SVG。SVG の要素だけで（script や `foreignObject` は無し）、配置も確かめもしない。色は `floe theme show default palette.css` が定義する変数（パレットの CSS）で、属性にも書ける（`fill="var(--accent-soft)" stroke="var(--accent)"`）。その中の色を使います：`--bg`・`--surface`・`--fg`・`--muted`・`--muted-soft`・`--quiet`・`--line`・`--accent`・`--accent-soft`・`--good`・`--good-soft`・`--warn`・`--warn-soft`・`--bad`・`--bad-soft`・`--on-fill`（薄い色があるのはこれだけです。無い変数は黒で描かれます）。書体・大きさ・影の変数は使いません。テーマだけが置く変数（`--accent-fill` などの `--*-fill`。palette.css には定義がありません）にも頼りません。tone は、その要素か、raw の中でそれを囲む `<g>` に `data-floe-tone` を付け、`var(--tone)`・`var(--tone-soft)`、塗りなら `var(--tone-fill)` で読みます（図の根が、図の外の tone を消す）。字には色と大きさを書く。部品の字は 12〜13（`<text fill="currentColor" font-size="12">`）。`currentColor` は `--fg`。部品の class と `data-floe-look`・`data-floe-part` は floe のもので、raw には使わない。無い変数や tone、tone の無い `var(--tone)`、fill の無い字は黒になり（字はページの大きさ）、誤りは出ない。 |
 
 ## graph
 
@@ -193,9 +193,9 @@ AWS のサービスは、箱でなく AWS のアイコンで描き、アイコ�
       - box: { name: api-a, x: 40, y: 300, rows: [API A] }
       - box: { name: api-c, x: 40, y: 400, rows: [API C] }
       - box: { name: queue, x: 400, y: 300, rows: [Queue] }
-      - box: { name: writer, x: 400, y: 400, rows: [Writer] }
-      - edge: { from: api-a, to: queue, fromSide: top, toSide: top, via: [[200, 240]] }   # M80,300 V240 H200 H440 V300
-      - edge: { from: api-c, to: writer, fromSide: right, toSide: left, via: [{ x: 300 }] } # M120,414.5 H300 H400
+      - box: { name: writer, x: 400, y: 340, rows: [Writer] }
+      - edge: { from: api-a, to: queue, fromSide: top, toSide: left, via: [{ y: 240 }, { x: 300 }] } # M80,300 V240 H300 V314.5 H400
+      - edge: { from: api-c, to: writer, fromSide: right, toSide: left, via: [{ x: 300 }] }          # M120,414.5 H300 V354.5 H400
 ```
 
 最初の点は、線が出る向きの軸で書きます。上下の辺からは `{ y }`、左右の辺からは `{ x }` です。`fromSide: top, via: [{ x: 150 }]` は箱の中心の高さを取り、箱を通るので断られます。`via: [{ y: 10 }, { x: 150 }]` なら上へ出てから横へ走ります。
