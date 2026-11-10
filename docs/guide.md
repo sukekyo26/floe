@@ -8,7 +8,7 @@ floe turns a YAML file you write into a page for the user: it checks the file, r
    - the one made for the page's purpose, if there is one (`design` for a design document, `handoff`, `runbook`, …);
    - else `report`;
    - before writing, read its example and schema: `floe template show <template> example.yaml` and `floe template show <template> schema.json`. The example shows the file's structure; do not treat its parts as a fixed set. Pick parts in step 3.
-2. Name the file for the page, as `db-choice.yaml`: its name, without `.yaml`, names the page in its URL. Every data file needs `template` and `lang`; `title` names the page, and a `report`'s `lead` sums it up under the title. Leave `theme` out ([Themes](#themes)).
+2. Name the file for the page, as `db-choice.yaml`. The file's name without `.yaml` becomes the page's slug in its URL. Every data file needs `template` and `lang`; `title` names the page, and a `report`'s `lead` sums it up under the title. Leave `theme` out ([Themes](#themes)).
 
    ```yaml
    template: report
@@ -22,7 +22,7 @@ floe turns a YAML file you write into a page for the user: it checks the file, r
    ```
 
 3. Run `floe part list` and choose parts that fit the content from those allowed by the template's schema (read in step 1). Where the choice is easily mistaken, use the table in [Picking parts](#picking-parts). For each part the example does not show, look up its keys before writing it, as that section says: a guessed key is refused.
-4. Run `floe check db-choice.yaml`, fix every mistake, and run it again until it prints no mistake; when only `warning:` lines are left, you are done (they are advice).
+4. Run `floe check db-choice.yaml`, fix every mistake, and run it again until none is left. When only `warning:` lines are left, you are done; they are advice.
 5. Run `floe publish db-choice.yaml` and give the user the URL it prints. You need not fetch the page.
 
 ## Publishing again
@@ -128,9 +128,9 @@ t.yaml:10:16: got number, want string or object
 
 ## Reading mistakes
 
-`floe check` prints one mistake to a line, at `file:line:column:` (one of the whole file at `file:` alone), and exits 1. It checks in stages, so fixing the mistakes may bring out those of the next stage.
+`floe check` prints one mistake per line, starting with `file:line:column:` (or `file:` alone for a mistake in the whole file), and exits with code 1. It checks in stages, so fixing the mistakes may bring out those of the next stage.
 
-- A key a part does not take, a key it lacks, or a value of another type is the schema refusing it: read the schema, as [Picking parts](#picking-parts) says.
+- The schema refuses a key a part does not take, a missing required key, and a value of the wrong type: read the schema, as [Picking parts](#picking-parts) explains.
 - A mistake of YAML: see the section above.
 
 ```text

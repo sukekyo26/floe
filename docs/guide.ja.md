@@ -10,7 +10,7 @@ floe は、あなたが YAML のファイルで書いたページをユーザー
    - ページの目的のために作られたものがあれば、それ（設計書なら `design`、`handoff`、`runbook` など）
    - 無ければ `report`
    - 書く前に、見本と schema を読む：`floe template show <template> example.yaml` と `floe template show <template> schema.json`。見本はファイルの組み立て（項目と節の組み方）を見せるもので、その部品を決まった組と思わない。部品は手順 3 で選ぶ
-2. ファイルにはページの名前を付ける（`db-choice.yaml` など）。`.yaml` を除いた名前が、ページの URL の名前になります。データファイルには必ず `template` と `lang` を書く。`title` はページの題、`report` の `lead` は題の下の要約です。`theme` は書かない（[テーマ](#テーマ)）。
+2. ファイルにはページの名前を付ける（`db-choice.yaml` など）。`.yaml` を除いたファイルの名前が、ページの URL の名前（slug）になります。データファイルには必ず `template` と `lang` を書く。`title` はページの題、`report` の `lead` は題の下の要約です。`theme` は書かない（[テーマ](#テーマ)）。
 
    ```yaml
    template: report
@@ -24,7 +24,7 @@ floe は、あなたが YAML のファイルで書いたページをユーザー
    ```
 
 3. `floe part list` を走らせ、手順 1 で読んだテンプレートの schema が許す部品から、中身に合うものを選ぶ。迷いやすいときは[部品を選ぶ](#部品を選ぶ)の表を使う。見本に無い部品は、書く前に、その節のとおりに鍵を調べる。推した鍵は断られます。
-4. `floe check db-choice.yaml` を走らせ、誤りを全部直して、誤りを出さなくなるまで走らせ直す。`warning:` の行だけが残ったら済みです（勧めなので）。
+4. `floe check db-choice.yaml` を走らせ、誤りを全部直して、誤りが無くなるまで走らせ直す。`warning:` の行だけが残ったら済みです。これは勧めです。
 5. `floe publish db-choice.yaml` を走らせ、出た URL をユーザーに渡す。ページを自分で取りに行かなくてよい。
 
 ## 出し直す
@@ -130,9 +130,9 @@ t.yaml:10:16: got number, want string or object
 
 ## 誤りを読む
 
-`floe check` は誤りを 1 行に 1 つ、`file:line:column:` の所に（ファイル全体の誤りは `file:` だけで）出し、1 で終わります。検査は段ごとなので、誤りを直すと、次の段の誤りが出ることがあります。
+`floe check` は誤りを 1 行に 1 つ、`file:line:column:` で始めて（ファイル全体の誤りは `file:` だけで）出し、終了コード 1 で終わります。検査は段ごとなので、誤りを直すと、次の段の誤りが出ることがあります。
 
-- 部品が取らない鍵、足りない鍵、型の違う値は、schema が断ったもの：[部品を選ぶ](#部品を選ぶ)のとおりに schema を読む。
+- 部品が取らない鍵、足りない必須の鍵、型の違う値は、schema が断る：[部品を選ぶ](#部品を選ぶ)のとおりに schema を読む。
 - YAML の誤り：上の節を見る。
 
 ```text
