@@ -2149,12 +2149,11 @@ blockquote::before { content: "“"; content: "“" / ""; display: block; font: 
 /* The date at the left of a dot on a line that runs down to the next, each item a row (marks: joined) that floe lays
    out, over the title where the part is narrow (its own width, as in details or a card). Where it is wide the list holds
    the three columns (date, dot, text) and each row borrows them by subgrid, so the date's column is as wide as the
-   longest date and the dots stand in one line; the rows hold the names of the row lines.
-   (LIMIT: an older browser that reads no anchor positioning misplaces the line alone)
-   LIMIT: a date up to 14rem (about 29 characters of the mono, a Japanese one with its weekday too) stays on one line;
-   a longer one folds within 14rem, and one with no space in it, as an ISO 8601 with milliseconds and an offset,
-   breaks anywhere (base.css's overflow-wrap). To give a date more, raise max-width, which narrows the text where the part
-   is just wide (20rem at 36rem) */
+   longest date and the dots stand in one line; the rows hold the names of the row lines. */
+/* LIMIT: a date up to 14rem (about 29 mono characters) stays on one line, a longer one folds within 14rem (one with no
+   space breaks anywhere), and one long date widens the column of every row, narrowing the text (20rem at a width of 36rem) */
+/* LIMIT: a browser with no anchor positioning misplaces the line alone; one with no subgrid leaves a row in floe.marks's
+   two columns, and the date, placed by the names of lines it has not, goes right of the text */
 :scope {
   container-type: inline-size; --floe-mark: 0.7rem; --floe-mark-gap: 0.65rem; padding: var(--floe-pad-block) var(--floe-pad-inline);
   grid-template-columns: [date-start] auto [date-end mark-start] auto [mark-end text-start] minmax(0, 1fr) [text-end];
@@ -2192,12 +2191,11 @@ blockquote::before { content: "“"; content: "“" / ""; display: block; font: 
 /* The date at the left of a dot on a line that runs down to the next, each item a row (marks: joined) that floe lays
    out, over the title where the part is narrow (its own width, as in details or a card). Where it is wide the list holds
    the three columns (date, dot, text) and each row borrows them by subgrid, so the date's column is as wide as the
-   longest date and the dots stand in one line; the rows hold the names of the row lines.
-   (LIMIT: an older browser that reads no anchor positioning misplaces the line alone)
-   LIMIT: a date up to 14rem (about 29 characters of the mono, a Japanese one with its weekday too) stays on one line;
-   a longer one folds within 14rem, and one with no space in it, as an ISO 8601 with milliseconds and an offset,
-   breaks anywhere (base.css's overflow-wrap). To give a date more, raise max-width, which narrows the text where the part
-   is just wide (20rem at 36rem) */
+   longest date and the dots stand in one line; the rows hold the names of the row lines. */
+/* LIMIT: a date up to 14rem (about 29 mono characters) stays on one line, a longer one folds within 14rem (one with no
+   space breaks anywhere), and one long date widens the column of every row, narrowing the text (20rem at a width of 36rem) */
+/* LIMIT: a browser with no anchor positioning misplaces the line alone; one with no subgrid leaves a row in floe.marks's
+   two columns, and the date, placed by the names of lines it has not, goes right of the text */
 :scope {
   container-type: inline-size; --floe-mark: 0.7rem; --floe-mark-gap: 0.65rem; padding: var(--floe-pad-block) var(--floe-pad-inline);
   grid-template-columns: [date-start] auto [date-end mark-start] auto [mark-end text-start] minmax(0, 1fr) [text-end];
