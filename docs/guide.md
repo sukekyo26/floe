@@ -84,7 +84,7 @@ Draw no table or diagram with characters in `text` or `code`. Values look like t
 
 floe validates each diagram part: it refuses text that overflows, overlapping parts, and edges that pass through boxes, reporting the line to change. Choose how to write the diagram based on what it needs to show.
 
-A `graph` for a flow, a state machine, a draft, a diagram that often changes or joins many things: write the boxes and what joins what, and floe places them. `x` and `y` (required) only say where the graph starts.
+A `graph` for a flow, a state machine, or a diagram that changes often or joins many things: write the boxes and what joins what, and floe places them. `x` and `y` (required) only say where the graph starts.
 
 ```yaml
 - diagram:
@@ -118,7 +118,7 @@ Use manually positioned parts for diagrams read as pictures, such as architectur
 
 In an AWS architecture, represent each service with an AWS icon, not a box. Do not draw a box around the icon. First run `floe icons fetch aws` if the icon set is not kept yet, then `floe icons search <word>` finds a name (a short one such as `alb` works).
 
-`floe diagram guide` says more on each way (the parts and keys, how to size and space boxes and labels so that floe does not refuse them): read it before you write a larger diagram. `floe diagram example <kind>` prints a complete spec of each kind (architecture, sequence, ER, …) to copy. The examples set `w` and `h` to align boxes. If you change a box's text, omit its `w` or increase it to at least the minimum floe reports (`needs w: 174 or more`).
+`floe diagram guide` explains both ways in detail, including their parts, keys, layout rules and checks. Read it before writing a larger diagram. `floe diagram example <kind>` prints a complete spec of each kind (architecture, sequence, ER, …) to copy. The examples set `w` and `h` to fix box sizes on their grid, so that boxes align. If you change a box's text, omit its `w` or increase it to at least the minimum floe reports (`needs w: 174 or more`).
 
 ## Writing YAML that floe reads as you meant
 

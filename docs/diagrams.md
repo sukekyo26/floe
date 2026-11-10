@@ -1,6 +1,6 @@
 # Diagrams
 
-A `diagram` part, in a section or in `details`, `tabs`, `columns` and the `parts` of an item of `entries`, `checks` or `options`, is a spec written in place: a canvas and the parts placed on it at absolute coordinates (the top left is 0, 0), each within a million either way (a size within a million, a canvas within ten million). It is checked before the page is drawn, its mistakes at the data file's lines and columns, and drawn as inline SVG, which zooms where it is drawn smaller than its actual size. `floe diagram render` draws a spec of a file of its own the same way (`floe diagram render --help`).
+A `diagram` part, in a section or in `details`, `tabs`, `columns` and the `parts` of an item of `entries`, `checks` or `options`, is a spec written in place: a canvas and the parts drawn on it. Parts written by hand use absolute coordinates (the top left is 0, 0), each within a million either way (a size within a million, a canvas within ten million); a graph is placed by floe. It is checked before the page is drawn, its mistakes at the data file's lines and columns, and drawn as inline SVG, which zooms where it is drawn smaller than its actual size. `floe diagram render` draws a spec of a file of its own the same way (`floe diagram render --help`).
 
 ```yaml
 - diagram:
@@ -26,11 +26,11 @@ A `diagram` part, in a section or in `details`, `tabs`, `columns` and the `parts
 Pick by what the diagram is for:
 
 - **By hand** for diagrams read as pictures, such as architecture or layout diagrams, where spatial arrangement matters. You decide where each part goes, so you can keep flows straight, align related parts, and place each label on its edge. The example above is written this way.
-- **A `graph`** for a flow, a state machine, a draft, or a diagram that changes often or joins many things. You write what joins what, and adding to it takes no coordinates. floe decides where everything stands.
+- **A `graph`** for a flow, a state machine, or a diagram that changes often or joins many things. You write what joins what, and adding to it takes no coordinates. floe decides where everything stands.
 
-A hand-placed diagram is the most to write. Moving a part means moving what copies where it stands: the frame round it, and the `via` or `at` of its edges. Writing only the turns you choose avoids copying them in an edge (see [Edges written by hand](#edges-written-by-hand)); a frame is moved by hand.
+A hand-placed diagram takes more work to write. Moving a part means moving what copies where it stands: the frame round it, and the `via` or `at` of its edges. Writing only the turns you choose avoids copying them in an edge (see [Edges written by hand](#edges-written-by-hand)); a frame is moved by hand.
 
-A graph takes more room than a hand would. A diagram wider than the page shrinks to fit, until it is zoomed. Try both `direction`s: one often comes out far better than the other for the same spec. See [Graph](#graph) for an example.
+A graph usually takes more space than a hand-placed diagram. A diagram wider than the page shrinks to fit, until it is zoomed. Try both `direction`s: one often comes out far better than the other for the same spec. See [Graph](#graph) for an example.
 
 ### Writing by hand so that floe does not refuse it
 
