@@ -37,6 +37,7 @@ const measureTreeNotes = `(() => {
   const trees = document.querySelectorAll('[data-floe-part=tree]');
   if (trees.length !== 2) return 'trees: ' + trees.length;
   const least = parseFloat(getComputedStyle(document.documentElement).fontSize) * 6;
+  const ctx = document.createElement('canvas').getContext('2d');
   let notes = 0, left;
   for (const li of trees[1].querySelectorAll('li > .note')) {
     const w = li.getBoundingClientRect().width;
@@ -51,6 +52,14 @@ const measureTreeNotes = `(() => {
       continue;
     }
     notes++;
+    const base = (e) => {
+      const t = e.firstChild, r = document.createRange(), c = getComputedStyle(e);
+      r.selectNodeContents(t);
+      ctx.font = c.fontStyle + ' ' + c.fontWeight + ' ' + c.fontSize + ' ' + c.fontFamily;
+      return r.getClientRects()[0].top + ctx.measureText('x').fontBoundingBoxAscent;
+    };
+    const dy = base(note) - base(name);
+    if (Math.abs(dy) > 1) out.push(label + ': the baseline of its note is ' + dy + ' px lower than its name');
     const x = note.getBoundingClientRect().left;
     if (left === undefined) left = x;
     else if (Math.abs(x - left) > 1) out.push(label + ': its note starts at ' + x + ', not ' + left);
