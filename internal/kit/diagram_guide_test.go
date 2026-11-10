@@ -225,11 +225,20 @@ func guideBlockFile(body string) (kind, file string) {
 func TestDiagramGuidePalette(t *testing.T) {
 	t.Parallel()
 
-	doc, err := os.ReadFile(diagramGuides[0])
+	palette, err := os.ReadFile("floe/themes/default/palette.css")
 	if err != nil {
 		t.Fatal(err)
 	}
-	palette, err := os.ReadFile("floe/themes/default/palette.css")
+	for _, path := range diagramGuides {
+		checkRawRow(t, path, string(palette))
+	}
+}
+
+// checkRawRow checks the row of the part raw in the doc at path.
+func checkRawRow(t *testing.T, path, palette string) {
+	t.Helper()
+
+	doc, err := os.ReadFile(path)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -240,24 +249,24 @@ func TestDiagramGuidePalette(t *testing.T) {
 		}
 	}
 	if strings.Contains(row, "`-soft`") {
-		t.Errorf("the raw row writes \"their `-soft`\": only some colours have one, name each")
+		t.Errorf("%s: the raw row writes \"their `-soft`\": only some colours have one, name each", path)
 	}
 	named := regexp.MustCompile("--[a-z]+(?:-[a-z]+)*").FindAllString(row, -1)
 	if len(named) < 16 {
-		t.Fatalf("the raw row names %d variables: %q", len(named), row)
+		t.Fatalf("%s: the raw row names %d variables: %q", path, len(named), row)
 	}
 	for _, v := range named {
-		defined := strings.Contains(string(palette), " "+v+":")
+		defined := strings.Contains(palette, " "+v+":")
 		switch {
 		case strings.HasPrefix(v, "--tone"):
 			// The colours of a tone are made by floe from tone.json, not set in palette.css.
 		case strings.HasSuffix(v, "-fill") && v != "--on-fill":
 			// A theme's own fill, named to be left: palette.css does not define it.
 			if defined {
-				t.Errorf("the raw row says %s is not in default's palette.css, which defines it", v)
+				t.Errorf("%s: the raw row says %s is not in default's palette.css, which defines it", path, v)
 			}
 		case !defined:
-			t.Errorf("the raw row names %s, which default's palette.css does not define", v)
+			t.Errorf("%s: the raw row names %s, which default's palette.css does not define", path, v)
 		}
 	}
 }
