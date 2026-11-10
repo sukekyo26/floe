@@ -218,9 +218,10 @@ func TestGuideQuotes(t *testing.T) {
 		usererr.NewAt("f.yaml", 1, 2, "cli_skill_kept"),
 	})}.Render(named)
 	for quote, ok := range map[string]bool{
-		"`warning:`":          strings.HasPrefix(warned, "f.yaml:1:2: warning: "),
-		"`file:line:column:`": strings.HasPrefix(placed, "f.yaml:1:2: "),
-		"`file:`":             strings.HasPrefix(whole, "f.yaml: "),
+		"`warning:`":             strings.HasPrefix(warned, "f.yaml:1:2: warning: "),
+		"`file:line:column:`":    strings.HasPrefix(placed, "f.yaml:1:2: "),
+		"`file:`":                strings.HasPrefix(whole, "f.yaml: "),
+		"`page in project floe`": english.Msg("cli_page_project", inProject("floe")) == "page in project floe",
 	} {
 		if !ok {
 			t.Errorf("floe no longer prints %s as the guide says: %q %q %q", quote, placed, whole, warned)

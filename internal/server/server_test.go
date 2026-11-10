@@ -181,22 +181,6 @@ func TestProtocol(t *testing.T) {
 
 // A publish is 201, again 200, of another file 409, its mistakes 400; a report as JSON only for an Accept of JSON
 // exactly.
-// A publish answers the project the page was kept in, and the one of the page it replaced, as tasks.json says it: one
-// of no project is "/", and a project emptied on the management page is replaced by the project published from.
-func TestPublishTaskProject(t *testing.T) {
-	t.Parallel()
-
-	e := newEnv(t)
-	const src = "lang: en\ntemplate: pic\ntitle: T\n"
-	want(t, e.publish(t, "d", src, nil), http.StatusCreated, `"prev":null,"taskProject":"p"}`)
-	none := e.write(t, http.MethodPost, "/api/artifacts/data", server.Upload{File: "n.yaml", Source: []byte(src), Project: "", Repo: "n", Place: "n.yaml"}) //nolint:exhaustruct // the rest not given
-	want(t, none, http.StatusCreated, `"prev":null,"taskProject":"/"}`)
-	want(t, e.write(t, http.MethodPatch, "/api/artifacts/d", map[string]any{"project": "moved"}), http.StatusOK, `"taskProject":"moved"`)
-	want(t, e.publish(t, "d", src, nil), http.StatusOK, `"taskProject":"moved"},"taskProject":"moved"}`)
-	want(t, e.write(t, http.MethodPatch, "/api/artifacts/d", map[string]any{"project": ""}), http.StatusOK, `"taskProject":"/"`)
-	want(t, e.publish(t, "d", src, nil), http.StatusOK, `"taskProject":"/"},"taskProject":"p"}`)
-}
-
 func TestPublish(t *testing.T) {
 	t.Parallel()
 
@@ -223,6 +207,22 @@ func TestPublish(t *testing.T) {
 	up.Images = map[string][]byte{"img/a.png": png}
 	want(t, e.write(t, http.MethodPost, "/api/artifacts/data", up), http.StatusOK, `"slug":"f-b"`)
 	want(t, e.write(t, http.MethodPut, "/api/artifacts/f-b", up), http.StatusNotFound, "not found")
+}
+
+// A publish answers the project the page was kept in, and the one of the page it replaced, as tasks.json says it: one
+// of no project is "/", and a project emptied on the management page is replaced by the project published from.
+func TestPublishTaskProject(t *testing.T) {
+	t.Parallel()
+
+	e := newEnv(t)
+	const src = "lang: en\ntemplate: pic\ntitle: T\n"
+	want(t, e.publish(t, "d", src, nil), http.StatusCreated, `"prev":null,"taskProject":"p"}`)
+	none := e.write(t, http.MethodPost, "/api/artifacts/data", server.Upload{File: "n.yaml", Source: []byte(src), Project: "", Repo: "n", Place: "n.yaml"}) //nolint:exhaustruct // the rest not given
+	want(t, none, http.StatusCreated, `"prev":null,"taskProject":"/"}`)
+	want(t, e.write(t, http.MethodPatch, "/api/artifacts/d", map[string]any{"project": "moved"}), http.StatusOK, `"taskProject":"moved"`)
+	want(t, e.publish(t, "d", src, nil), http.StatusOK, `"taskProject":"moved"},"taskProject":"moved"}`)
+	want(t, e.write(t, http.MethodPatch, "/api/artifacts/d", map[string]any{"project": ""}), http.StatusOK, `"taskProject":"/"`)
+	want(t, e.publish(t, "d", src, nil), http.StatusOK, `"taskProject":"/"},"taskProject":"p"}`)
 }
 
 // A stored page is the page drawn when published, its bytes as kept, in the sandbox and cut off, with the script
