@@ -37,8 +37,8 @@ directory, overwrites it and keeps the page's project (a file is named by its re
 the repository's root, else by its real path), and the slug of another file's page is refused unless
 --force, which drops its history (versions, pinned title, tags, favourite). A new page is in the project
 of the directory floe publish runs in: its git repository's name (origin's, else the repository's
-directory), else the directory's name. floe publish says it on stderr after the URL (page in project floe) when
-the page is new or its project changed. A page renamed on the management page is its file's still:
+directory), else the directory's name. floe publish says it on stderr after the URL (page in project floe, or page in
+no project) when the page is new or its project changed. A page renamed on the management page is its file's still:
 publishing that file again without --slug writes to its new slug. A page is in the language its data names
 (lang:), and in the theme its data names (theme:, else default), unless --theme names another. A new
 slug is also opened in the browser ($BROWSER, open, wslview, xdg-open). The page stays as it was
