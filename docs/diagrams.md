@@ -25,10 +25,10 @@ A `diagram` part, in a section or in `details`, `tabs`, `columns` and the `parts
 
 Pick by what the diagram is for:
 
-- **By hand** for diagrams read as pictures, such as architecture or layout diagrams, where spatial arrangement matters. You decide where each part goes, so you can keep flows straight, align related parts, and place labels where they belong. The example above is written this way.
+- **By hand** for diagrams read as pictures, such as architecture or layout diagrams, where spatial arrangement matters. You decide where each part goes, so you can keep flows straight, align related parts, and place each label on its edge. The example above is written this way.
 - **A `graph`** for a flow, a state machine, a draft, or a diagram that changes often or joins many things. You write what joins what, and adding to it takes no coordinates. floe decides where everything stands.
 
-A hand-placed diagram is the most to write. Moving a part means moving what copies where it stands; see [Edges written by hand](#edges-written-by-hand) for how to avoid that.
+A hand-placed diagram is the most to write. Moving a part means moving what copies where it stands: the frame round it, and the `via` or `at` of its edges. Writing only the turns you choose avoids copying them in an edge (see [Edges written by hand](#edges-written-by-hand)); a frame is moved by hand.
 
 A graph takes more room than a hand would. A diagram wider than the page shrinks to fit, until it is zoomed. Try both `direction`s: one often comes out far better than the other for the same spec. See [Graph](#graph) for an example.
 
@@ -59,7 +59,7 @@ Frames:
 Edges:
 
 - Write an edge as `{ from, to }` and let floe route it.
-- Use `via` or the side keys when you need to control its path; see [Edges written by hand](#edges-written-by-hand).
+- Use `via`, `fromSide` or `toSide` when you need to control its path; see [Edges written by hand](#edges-written-by-hand).
 - An edge with a box between its ends is refused: `edge "a"→"c" runs through box "b"; move one of them, or go round it by via`.
 - To fix it, move a box or write `via`.
 
