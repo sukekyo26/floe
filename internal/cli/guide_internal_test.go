@@ -470,6 +470,7 @@ func TestUnquoted(t *testing.T) {
 		{"a: |\n  one\n", 1},
 		{"a: |-\n  one\n", 1},
 		{"a: >\n  one\n  two\n", 1},
+		{"a: >\n  one\n\n  two\n", 1},
 		{"a: null\nb: Null\nc: ~\n", 3},
 		{"a: [x y, 'z']\n", 1},
 	} {
