@@ -108,7 +108,7 @@ In an AWS architecture, represent each service with an AWS icon, not a box. Do n
 
 ## Graph
 
-A `graph` holds only how its boxes, icons and groups are joined; floe places them:
+A `graph` specifies only how its boxes, icons and groups are joined; floe places them:
 
 ```yaml
 - diagram:
@@ -133,7 +133,7 @@ A `graph` holds only how its boxes, icons and groups are joined; floe places the
 - A group has no rank of its own: its frame spans the ranks of what it holds. An edge to or from a group puts the end it enters at least a rank below the end it leaves, and a group counts as its whole span: `x → group` puts the group below `x`, and `group → y` puts `y` below the whole group.
 - Where that would make a cycle, the edge is drawn up instead, the end it leaves standing at least a rank below the end it enters. Where that would make one too, the edge is refused (see Groups and lanes).
 - The boxes and icons of a rank are ordered to cross fewer edges, as written when none cross. The same spec is always laid out the same way.
-- `with: <name>` on a box or an icon stands it in the rank of the box or icon named, with no edge drawn, of another group too. Write it for a box or icon that should not go below what reaches it (a gateway that servers use, say), or that should not start a group's frame in the first rank. Edges keep the way they mean: `api → nat`, with `with: alb` on `nat`, runs up from `api`.
+- `with: <name>` on a box or an icon stands it in the rank of the box or icon named, without drawing an edge. The two may be in different groups. Write it for a box or icon that should not go below what reaches it (a gateway that servers use, say), or that should not start a group's frame in the first rank. Edges keep the way they mean: `api → nat`, with `with: alb` on `nat`, runs up from `api`.
 
   ```yaml
   - diagram:
