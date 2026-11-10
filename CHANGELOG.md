@@ -360,6 +360,7 @@ adheres to [Semantic Versioning](https://semver.org/).
 
 ### Changed
 
+- Change `floe guide` to tell an agent to quote a text that starts with a backtick (YAML refuses it unquoted), and to run `floe publish` in the repository it works in: a page's project is set by where it is first published from, whatever directory holds the data file.
 - Change `report`'s example (`floe template show report example.yaml`) to a short one of the parts used most (text, terminal, code, entries, table, note, columns), 63 lines from 104: `floe part list` lists the others. `floe guide` now has agents run `floe part list` to pick from the parts the template takes, and its table of parts sends short values before and after to `table` and a screen or code before and after to `columns`, as the descriptions of both parts now say.
 - Change the part `tree` to start the notes of all its rows at one edge, whatever the depth or the length of the names, as a column of its own. A note keeps 6rem (or its longest word) at least, so that in a tree of long names the notes narrow and fold line by line, and on a phone scroll sideways to be reached.
 - Change the management page's folder row to show no time (nor in its tooltip or the search): the time was when the link was added, which never moves when a file in the folder is written, unlike a linked file's time. The folder keeps its place in the list, by that time. The rows of a folder's directories, and the note of an empty one, no longer show "just now" a minute after they are drawn.
