@@ -8,7 +8,7 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/sukekyo26/floe/internal/kit"
+	"floe/internal/kit"
 )
 
 // rowParts are the parts drawn as rows, a row each that is a line: a table with a number column, a Markdown table,

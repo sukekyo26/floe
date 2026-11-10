@@ -23,10 +23,10 @@ import (
 	"sync"
 	"syscall"
 
-	"github.com/sukekyo26/floe/internal/dirs"
-	"github.com/sukekyo26/floe/internal/files"
-	"github.com/sukekyo26/floe/internal/textpos"
-	"github.com/sukekyo26/floe/internal/usererr"
+	"floe/internal/dirs"
+	"floe/internal/files"
+	"floe/internal/textpos"
+	"floe/internal/usererr"
 )
 
 // kit is what differs between icon sets: where their package is and which of its files are icons.

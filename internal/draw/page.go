@@ -7,11 +7,11 @@ import (
 
 	"golang.org/x/net/html"
 
-	"github.com/sukekyo26/floe/internal/doc"
-	"github.com/sukekyo26/floe/internal/kit"
-	"github.com/sukekyo26/floe/internal/page"
-	"github.com/sukekyo26/floe/internal/usererr"
-	"github.com/sukekyo26/floe/internal/yamlpos"
+	"floe/internal/doc"
+	"floe/internal/kit"
+	"floe/internal/page"
+	"floe/internal/usererr"
+	"floe/internal/yamlpos"
 )
 
 // named is what the elements of a page drawn name: the boxes of parts (data-floe-part) and the looks they

@@ -7,7 +7,7 @@ import (
 	"golang.org/x/net/html"
 	"golang.org/x/net/html/atom"
 
-	"github.com/sukekyo26/floe/internal/page"
+	"floe/internal/page"
 )
 
 // rawElements are the elements raw SVG may not hold, by their names, in the order they are written.

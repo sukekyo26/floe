@@ -6,11 +6,11 @@ import (
 	"slices"
 	"strings"
 
-	"github.com/sukekyo26/floe/internal/i18n"
-	"github.com/sukekyo26/floe/internal/store"
-	"github.com/sukekyo26/floe/internal/tmpl"
-	"github.com/sukekyo26/floe/internal/ui"
-	"github.com/sukekyo26/floe/internal/usererr"
+	"floe/internal/i18n"
+	"floe/internal/store"
+	"floe/internal/tmpl"
+	"floe/internal/ui"
+	"floe/internal/usererr"
 )
 
 // SettingsPut is a change of settings.json, as the management page's settings send it: the default theme of the pages

@@ -10,7 +10,7 @@ import (
 	"github.com/goccy/go-yaml/ast"
 	"github.com/goccy/go-yaml/parser"
 
-	"github.com/sukekyo26/floe/internal/usererr"
+	"floe/internal/usererr"
 )
 
 // read12 reads a plain scalar by the rows of the Core Schema, each matching a whole value.

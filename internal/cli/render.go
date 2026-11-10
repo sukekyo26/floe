@@ -11,11 +11,11 @@ import (
 
 	"github.com/spf13/cobra"
 
-	"github.com/sukekyo26/floe/internal/diagram"
-	"github.com/sukekyo26/floe/internal/dirs"
-	"github.com/sukekyo26/floe/internal/files"
-	"github.com/sukekyo26/floe/internal/kit"
-	"github.com/sukekyo26/floe/internal/usererr"
+	"floe/internal/diagram"
+	"floe/internal/dirs"
+	"floe/internal/files"
+	"floe/internal/kit"
+	"floe/internal/usererr"
 )
 
 func (a *app) renderCmd() *cobra.Command {

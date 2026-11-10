@@ -7,8 +7,8 @@ import (
 	"path/filepath"
 	"testing"
 
-	"github.com/sukekyo26/floe/internal/i18n"
-	"github.com/sukekyo26/floe/internal/usererr"
+	"floe/internal/i18n"
+	"floe/internal/usererr"
 )
 
 // A path that cannot be read or written is told at the name given, in the system's words without the paths it

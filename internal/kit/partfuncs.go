@@ -15,10 +15,10 @@ import (
 
 	"golang.org/x/net/html"
 
-	"github.com/sukekyo26/floe/internal/i18n"
-	"github.com/sukekyo26/floe/internal/page"
-	"github.com/sukekyo26/floe/internal/usererr"
-	"github.com/sukekyo26/floe/internal/zoom"
+	"floe/internal/i18n"
+	"floe/internal/page"
+	"floe/internal/usererr"
+	"floe/internal/zoom"
 )
 
 // partFuncs are the functions floe's parts draw with, besides those of page.html and over them: markdown draws in a

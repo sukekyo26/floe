@@ -14,7 +14,7 @@ import (
 
 	"golang.org/x/net/html"
 
-	"github.com/sukekyo26/floe/internal/usererr"
+	"floe/internal/usererr"
 )
 
 // The limits of fetching a set. A download gives up when no response comes in headerTimeout or no data for

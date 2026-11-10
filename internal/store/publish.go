@@ -18,13 +18,13 @@ import (
 
 	"golang.org/x/sys/unix"
 
-	"github.com/sukekyo26/floe/internal/dirs"
-	"github.com/sukekyo26/floe/internal/doc"
-	"github.com/sukekyo26/floe/internal/files"
-	"github.com/sukekyo26/floe/internal/link"
-	"github.com/sukekyo26/floe/internal/project"
-	"github.com/sukekyo26/floe/internal/tmpl"
-	"github.com/sukekyo26/floe/internal/usererr"
+	"floe/internal/dirs"
+	"floe/internal/doc"
+	"floe/internal/files"
+	"floe/internal/link"
+	"floe/internal/project"
+	"floe/internal/tmpl"
+	"floe/internal/usererr"
 )
 
 var indexRe = regexp.MustCompile(`(?i)^index\.html?$`)

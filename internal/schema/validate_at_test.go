@@ -3,9 +3,9 @@ package schema_test
 import (
 	"testing"
 
-	"github.com/sukekyo26/floe/internal/i18n"
-	"github.com/sukekyo26/floe/internal/schema"
-	"github.com/sukekyo26/floe/internal/usererr"
+	"floe/internal/i18n"
+	"floe/internal/schema"
+	"floe/internal/usererr"
 )
 
 // A part compiled alone checks a value against it, each mistake in the library's words at the JSON pointer of

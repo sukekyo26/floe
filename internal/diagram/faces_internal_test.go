@@ -7,8 +7,8 @@ import (
 	"slices"
 	"testing"
 
-	"github.com/sukekyo26/floe/internal/kit"
-	"github.com/sukekyo26/floe/internal/schema"
+	"floe/internal/kit"
+	"floe/internal/schema"
 )
 
 // rowStyles is where the diagram's schema lists the styles a row may be written in.

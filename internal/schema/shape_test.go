@@ -8,7 +8,7 @@ import (
 
 	"github.com/santhosh-tekuri/jsonschema/v6"
 
-	"github.com/sukekyo26/floe/internal/schema"
+	"floe/internal/schema"
 )
 
 // Shape tells the keys, the items, a format or a part only when it can tell them right, else "-".

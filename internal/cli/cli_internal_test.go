@@ -9,9 +9,9 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/sukekyo26/floe/internal/server"
-	"github.com/sukekyo26/floe/internal/store"
-	"github.com/sukekyo26/floe/internal/usererr"
+	"floe/internal/server"
+	"floe/internal/store"
+	"floe/internal/usererr"
 )
 
 // A command line floe cannot read is the user's mistake, told in cobra's words, not floe's failure.

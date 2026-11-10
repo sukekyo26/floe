@@ -12,7 +12,7 @@ import (
 	"github.com/chromedp/cdproto/dom"
 	"github.com/chromedp/chromedp"
 
-	"github.com/sukekyo26/floe/internal/kit"
+	"floe/internal/kit"
 )
 
 // marksPage draws every part whose rows have a mark, a letter's (decision, options, checklist) too, and the look

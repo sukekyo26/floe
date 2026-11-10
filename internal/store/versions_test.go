@@ -10,7 +10,7 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/sukekyo26/floe/internal/store"
+	"floe/internal/store"
 )
 
 // numbers are the numbers of the versions of the page d.

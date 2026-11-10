@@ -9,7 +9,7 @@ import (
 	"syscall"
 	"testing"
 
-	"github.com/sukekyo26/floe/internal/kit"
+	"floe/internal/kit"
 )
 
 // floe part new and template new write a part and a template to fill in, which part check and template check take,

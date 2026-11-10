@@ -3,7 +3,7 @@ package browsertest_test
 import (
 	"testing"
 
-	"github.com/sukekyo26/floe/internal/store"
+	"floe/internal/store"
 )
 
 // TestUIProjectPills opens the page list of a store of no page, of pages of no project and of pages of one project, and

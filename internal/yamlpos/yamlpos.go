@@ -18,9 +18,9 @@ import (
 	"github.com/goccy/go-yaml/parser"
 	"github.com/goccy/go-yaml/token"
 
-	"github.com/sukekyo26/floe/internal/bom"
-	"github.com/sukekyo26/floe/internal/textpos"
-	"github.com/sukekyo26/floe/internal/usererr"
+	"floe/internal/bom"
+	"floe/internal/textpos"
+	"floe/internal/usererr"
 )
 
 // Pos is a line and column of a YAML file, both from 1.

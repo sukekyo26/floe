@@ -7,10 +7,10 @@ import (
 	"strconv"
 	"testing"
 
-	"github.com/sukekyo26/floe/internal/doc"
-	"github.com/sukekyo26/floe/internal/i18n"
-	"github.com/sukekyo26/floe/internal/usererr"
-	"github.com/sukekyo26/floe/internal/yamlpos"
+	"floe/internal/doc"
+	"floe/internal/i18n"
+	"floe/internal/usererr"
+	"floe/internal/yamlpos"
 )
 
 const noLang = "name the language of the page at the top level, like lang: en (a BCP 47 tag such as en, ja or pt-BR)"

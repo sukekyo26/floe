@@ -10,7 +10,7 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/sukekyo26/floe/internal/store"
+	"floe/internal/store"
 )
 
 // taskIn is the row of the task #1, failing the test when there is none.

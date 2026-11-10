@@ -7,8 +7,8 @@ import (
 	"io"
 	"strconv"
 
-	"github.com/sukekyo26/floe/internal/textpos"
-	"github.com/sukekyo26/floe/internal/usererr"
+	"floe/internal/textpos"
+	"floe/internal/usererr"
 )
 
 // stopFunc names the function the copy of a page calls first, before the page, which it stops.

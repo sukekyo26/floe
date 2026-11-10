@@ -6,10 +6,10 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/sukekyo26/floe/internal/icons"
-	"github.com/sukekyo26/floe/internal/kit"
-	"github.com/sukekyo26/floe/internal/tmpl"
-	"github.com/sukekyo26/floe/internal/usererr"
+	"floe/internal/icons"
+	"floe/internal/kit"
+	"floe/internal/tmpl"
+	"floe/internal/usererr"
 )
 
 // someIcons are the icons of a set kept: aws/res/aws-lambda alone, or, with failed, a set that cannot be read.

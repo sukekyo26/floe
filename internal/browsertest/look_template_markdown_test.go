@@ -8,9 +8,9 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/sukekyo26/floe/internal/kit"
-	"github.com/sukekyo26/floe/internal/schema"
-	"github.com/sukekyo26/floe/internal/yamlpos"
+	"floe/internal/kit"
+	"floe/internal/schema"
+	"floe/internal/yamlpos"
 )
 
 // headingsMarkdown is the Markdown put before each of a template's own fields of format markdown, and in a text.

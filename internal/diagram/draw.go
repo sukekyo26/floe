@@ -11,10 +11,10 @@ import (
 	"slices"
 	"strings"
 
-	"github.com/sukekyo26/floe/internal/i18n"
-	"github.com/sukekyo26/floe/internal/schema"
-	"github.com/sukekyo26/floe/internal/usererr"
-	"github.com/sukekyo26/floe/internal/zoom"
+	"floe/internal/i18n"
+	"floe/internal/schema"
+	"floe/internal/usererr"
+	"floe/internal/zoom"
 )
 
 //go:embed diagram.svg.tmpl

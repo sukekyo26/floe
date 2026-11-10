@@ -14,8 +14,8 @@ import (
 	"testing"
 	"time"
 
-	"github.com/sukekyo26/floe/internal/kit"
-	"github.com/sukekyo26/floe/internal/store"
+	"floe/internal/kit"
+	"floe/internal/store"
 )
 
 // watched is a server whose own templates are under tpl (a symlink to the directory dir when link), with one

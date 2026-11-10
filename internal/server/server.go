@@ -17,11 +17,11 @@ import (
 	"sync"
 	"time"
 
-	"github.com/sukekyo26/floe/internal/i18n"
-	"github.com/sukekyo26/floe/internal/pagediff"
-	"github.com/sukekyo26/floe/internal/store"
-	"github.com/sukekyo26/floe/internal/ui"
-	"github.com/sukekyo26/floe/internal/usererr"
+	"floe/internal/i18n"
+	"floe/internal/pagediff"
+	"floe/internal/store"
+	"floe/internal/ui"
+	"floe/internal/usererr"
 )
 
 // App is the name /api/health answers with, so that a client can tell floe from another program.

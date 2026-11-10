@@ -12,7 +12,7 @@ import (
 	"github.com/chromedp/chromedp"
 	"github.com/chromedp/chromedp/kb"
 
-	"github.com/sukekyo26/floe/internal/store"
+	"floe/internal/store"
 )
 
 // A task's parent from its page: added, a task there or one made with it; changed, with a way back while the one before

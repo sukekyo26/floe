@@ -7,7 +7,7 @@ import (
 
 	"github.com/chromedp/cdproto/input"
 
-	"github.com/sukekyo26/floe/internal/store"
+	"floe/internal/store"
 )
 
 // frameBack says the back button of a page whole: where it goes, its word, what it says in full, the key's words.

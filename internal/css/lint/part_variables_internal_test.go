@@ -11,8 +11,8 @@ import (
 	"github.com/tdewolff/parse/v2/css"
 	"golang.org/x/net/html"
 
-	floecss "github.com/sukekyo26/floe/internal/css"
-	"github.com/sukekyo26/floe/internal/kit"
+	floecss "floe/internal/css"
+	"floe/internal/kit"
 )
 
 // floesOwnWays are the variables of floe's own ways, set by rules of their own and out of this rule, that floe's base.css

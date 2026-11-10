@@ -3,7 +3,7 @@ package browsertest_test
 import (
 	"testing"
 
-	"github.com/sukekyo26/floe/internal/kit"
+	"floe/internal/kit"
 )
 
 // nestingPage draws a card of stats and the cards HTML nests so: in cards, in a panel, in an element of an empty

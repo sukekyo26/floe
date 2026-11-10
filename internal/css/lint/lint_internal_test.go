@@ -17,8 +17,8 @@ import (
 
 	"github.com/tdewolff/parse/v2/css"
 
-	floecss "github.com/sukekyo26/floe/internal/css"
-	"github.com/sukekyo26/floe/internal/kit"
+	floecss "floe/internal/css"
+	"floe/internal/kit"
 )
 
 // floeInput returns floe's own files as a rule reads them: its kit and base.css, its docs, every-part as floe draws it,

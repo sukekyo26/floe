@@ -8,8 +8,8 @@ import (
 	"syscall"
 	"testing"
 
-	"github.com/sukekyo26/floe/internal/i18n"
-	"github.com/sukekyo26/floe/internal/usererr"
+	"floe/internal/i18n"
+	"floe/internal/usererr"
 )
 
 // A page made a FIFO after drawPages looked at it is refused unopened as it is written or checked, and left as it is.

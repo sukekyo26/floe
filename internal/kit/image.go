@@ -10,9 +10,9 @@ import (
 	"strconv"
 	"strings"
 
-	"github.com/sukekyo26/floe/internal/dirs"
-	"github.com/sukekyo26/floe/internal/files"
-	"github.com/sukekyo26/floe/internal/usererr"
+	"floe/internal/dirs"
+	"floe/internal/files"
+	"floe/internal/usererr"
 )
 
 // maxImage is the size an image may be.

@@ -9,9 +9,9 @@ import (
 	"syscall"
 	"testing"
 
-	"github.com/sukekyo26/floe/internal/files"
-	"github.com/sukekyo26/floe/internal/kit"
-	"github.com/sukekyo26/floe/internal/tmpl"
+	"floe/internal/files"
+	"floe/internal/kit"
+	"floe/internal/tmpl"
 )
 
 // htmlSchema is a template's schema of an item h of format html, and t of plain text.

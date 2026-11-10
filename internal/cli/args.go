@@ -7,9 +7,9 @@ import (
 	"path/filepath"
 	"strings"
 
-	"github.com/sukekyo26/floe/internal/dirs"
-	"github.com/sukekyo26/floe/internal/files"
-	"github.com/sukekyo26/floe/internal/usererr"
+	"floe/internal/dirs"
+	"floe/internal/files"
+	"floe/internal/usererr"
 )
 
 // app is what the commands share: the process's environment, and where they write.

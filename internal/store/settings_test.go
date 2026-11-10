@@ -8,10 +8,10 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/sukekyo26/floe/internal/i18n"
-	"github.com/sukekyo26/floe/internal/kit"
-	"github.com/sukekyo26/floe/internal/store"
-	"github.com/sukekyo26/floe/internal/usererr"
+	"floe/internal/i18n"
+	"floe/internal/kit"
+	"floe/internal/store"
+	"floe/internal/usererr"
 )
 
 // floeDrawing is floe's own templates, parts and themes, none of one's own.

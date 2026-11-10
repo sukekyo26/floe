@@ -6,7 +6,7 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/sukekyo26/floe/internal/server"
+	"floe/internal/server"
 )
 
 const tooDeep = "html: open stack of elements exceeds 512 nodes"

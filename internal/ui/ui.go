@@ -7,8 +7,8 @@ import (
 	"fmt"
 	"html/template"
 
-	"github.com/sukekyo26/floe/internal/i18n"
-	"github.com/sukekyo26/floe/internal/store"
+	"floe/internal/i18n"
+	"floe/internal/store"
 )
 
 //go:embed ui.html

@@ -4,8 +4,8 @@ import (
 	"io"
 	"testing"
 
-	"github.com/sukekyo26/floe/internal/i18n"
-	"github.com/sukekyo26/floe/internal/usererr"
+	"floe/internal/i18n"
+	"floe/internal/usererr"
 )
 
 // with is an app whose environment is env.

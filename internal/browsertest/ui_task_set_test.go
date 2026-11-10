@@ -7,7 +7,7 @@ import (
 
 	"github.com/chromedp/chromedp/kb"
 
-	"github.com/sukekyo26/floe/internal/store"
+	"floe/internal/store"
 )
 
 // A page's menu pins it and sets its task and step, in the order floe work writes; the task's own fields are its page's (TestUITaskEdit), so

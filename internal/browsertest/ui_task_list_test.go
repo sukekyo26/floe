@@ -8,8 +8,8 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/sukekyo26/floe/internal/i18n"
-	"github.com/sukekyo26/floe/internal/store"
+	"floe/internal/i18n"
+	"floe/internal/store"
 )
 
 // taskWork is tasks.json of TestUITaskList: each state's order by its times, tasks of no page, one project of no page, and

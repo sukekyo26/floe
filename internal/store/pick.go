@@ -6,11 +6,11 @@ import (
 	"io/fs"
 	"path/filepath"
 
-	"github.com/sukekyo26/floe/internal/doc"
-	"github.com/sukekyo26/floe/internal/files"
-	"github.com/sukekyo26/floe/internal/kit"
-	"github.com/sukekyo26/floe/internal/tmpl"
-	"github.com/sukekyo26/floe/internal/usererr"
+	"floe/internal/doc"
+	"floe/internal/files"
+	"floe/internal/kit"
+	"floe/internal/tmpl"
+	"floe/internal/usererr"
 )
 
 // PickTheme picks theme, one of dw's, for the page slug drawn from a data file ("" takes the pick off), as the

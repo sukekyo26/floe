@@ -7,7 +7,7 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/sukekyo26/floe/internal/store"
+	"floe/internal/store"
 )
 
 // A task's family on the screens: a row says its parent or how many children, which change neither the rows nor their

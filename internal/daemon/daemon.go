@@ -20,10 +20,10 @@ import (
 	"syscall"
 	"time"
 
-	"github.com/sukekyo26/floe/internal/i18n"
-	"github.com/sukekyo26/floe/internal/server"
-	"github.com/sukekyo26/floe/internal/usererr"
-	"github.com/sukekyo26/floe/internal/version"
+	"floe/internal/i18n"
+	"floe/internal/server"
+	"floe/internal/usererr"
+	"floe/internal/version"
 )
 
 // State is what is listening on the port.

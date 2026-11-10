@@ -8,7 +8,7 @@ import (
 	"syscall"
 	"testing"
 
-	"github.com/sukekyo26/floe/internal/store"
+	"floe/internal/store"
 )
 
 // A page drawn again the same keeps its copy; one drawn otherwise gets a new copy, every image of the old one

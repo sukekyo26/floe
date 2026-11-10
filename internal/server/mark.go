@@ -6,7 +6,7 @@ import (
 	"path/filepath"
 	"strings"
 
-	"github.com/sukekyo26/floe/internal/files"
+	"floe/internal/files"
 )
 
 // marks is what the directories of the drawing are now: those of one's own parts, themes and templates, each

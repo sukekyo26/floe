@@ -9,10 +9,10 @@ import (
 	"testing"
 	"time"
 
-	"github.com/sukekyo26/floe/internal/daemon"
-	"github.com/sukekyo26/floe/internal/server"
-	"github.com/sukekyo26/floe/internal/servetest"
-	"github.com/sukekyo26/floe/internal/usererr"
+	"floe/internal/daemon"
+	"floe/internal/server"
+	"floe/internal/servetest"
+	"floe/internal/usererr"
 )
 
 // A server takes the listener handed down only when it is on its port; none handed down binds itself.

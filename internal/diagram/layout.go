@@ -14,9 +14,9 @@ import (
 	"strconv"
 	"strings"
 
-	"github.com/sukekyo26/floe/internal/i18n"
-	"github.com/sukekyo26/floe/internal/icons"
-	"github.com/sukekyo26/floe/internal/usererr"
+	"floe/internal/i18n"
+	"floe/internal/icons"
+	"floe/internal/usererr"
 )
 
 // Text sizes and box metrics.

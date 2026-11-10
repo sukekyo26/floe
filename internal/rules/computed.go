@@ -17,11 +17,11 @@ import (
 	"github.com/expr-lang/expr/vm"
 	"github.com/goccy/go-yaml/ast"
 
-	"github.com/sukekyo26/floe/internal/cycle"
-	"github.com/sukekyo26/floe/internal/doc"
-	"github.com/sukekyo26/floe/internal/textpos"
-	"github.com/sukekyo26/floe/internal/usererr"
-	"github.com/sukekyo26/floe/internal/yamlpos"
+	"floe/internal/cycle"
+	"floe/internal/doc"
+	"floe/internal/textpos"
+	"floe/internal/usererr"
+	"floe/internal/yamlpos"
 )
 
 // Computed is a computed.yaml read: each expression compiled, in the order to compute them, each after the

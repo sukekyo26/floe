@@ -7,9 +7,9 @@ import (
 	"strings"
 	"sync"
 
-	"github.com/sukekyo26/floe/internal/doc"
-	"github.com/sukekyo26/floe/internal/usererr"
-	"github.com/sukekyo26/floe/internal/yamlpos"
+	"floe/internal/doc"
+	"floe/internal/usererr"
+	"floe/internal/yamlpos"
 )
 
 // examples holds a spec (.yaml) per kind of diagram, its text in English and Japanese.

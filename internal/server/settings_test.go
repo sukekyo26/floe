@@ -9,10 +9,10 @@ import (
 	"testing"
 	"testing/fstest"
 
-	"github.com/sukekyo26/floe/internal/i18n"
-	"github.com/sukekyo26/floe/internal/kit"
-	"github.com/sukekyo26/floe/internal/server"
-	"github.com/sukekyo26/floe/internal/store"
+	"floe/internal/i18n"
+	"floe/internal/kit"
+	"floe/internal/server"
+	"floe/internal/store"
 )
 
 const report = "lang: en\ntemplate: report\ntitle: T\nsections:\n  - heading: h\n    parts:\n      - text: x\n"

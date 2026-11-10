@@ -8,9 +8,9 @@ import (
 
 	"github.com/goccy/go-yaml/ast"
 
-	"github.com/sukekyo26/floe/internal/i18n"
-	"github.com/sukekyo26/floe/internal/usererr"
-	"github.com/sukekyo26/floe/internal/yamlpos"
+	"floe/internal/i18n"
+	"floe/internal/usererr"
+	"floe/internal/yamlpos"
 )
 
 // Data is a data file read: its values as written, and the keys every template shares read from them.

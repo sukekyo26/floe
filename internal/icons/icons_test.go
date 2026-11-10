@@ -18,9 +18,9 @@ import (
 	"syscall"
 	"testing"
 
-	"github.com/sukekyo26/floe/internal/i18n"
-	"github.com/sukekyo26/floe/internal/icons"
-	"github.com/sukekyo26/floe/internal/usererr"
+	"floe/internal/i18n"
+	"floe/internal/icons"
+	"floe/internal/usererr"
 )
 
 // packageFiles stand in for the Icon package: what is kept, a service in two categories, sizes and

@@ -7,7 +7,7 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/sukekyo26/floe/internal/store"
+	"floe/internal/store"
 )
 
 // taskPageRows says the rows of a task's page: a step's heading in brackets, a page by its title.

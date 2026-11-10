@@ -7,8 +7,8 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/sukekyo26/floe/internal/i18n"
-	"github.com/sukekyo26/floe/internal/usererr"
+	"floe/internal/i18n"
+	"floe/internal/usererr"
 )
 
 // A diff's lines take their kind from their first characters: --- and +++ name the files only outside

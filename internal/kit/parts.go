@@ -12,11 +12,11 @@ import (
 
 	"github.com/goccy/go-yaml/ast"
 
-	"github.com/sukekyo26/floe/internal/bom"
-	"github.com/sukekyo26/floe/internal/rules"
-	"github.com/sukekyo26/floe/internal/schema"
-	"github.com/sukekyo26/floe/internal/usererr"
-	"github.com/sukekyo26/floe/internal/yamlpos"
+	"floe/internal/bom"
+	"floe/internal/rules"
+	"floe/internal/schema"
+	"floe/internal/usererr"
+	"floe/internal/yamlpos"
 )
 
 // Part is a part read: what draws an item of its schema.

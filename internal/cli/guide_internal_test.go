@@ -18,10 +18,10 @@ import (
 	"github.com/goccy/go-yaml/ast"
 	"github.com/goccy/go-yaml/token"
 
-	"github.com/sukekyo26/floe/docs"
-	"github.com/sukekyo26/floe/internal/kit"
-	"github.com/sukekyo26/floe/internal/usererr"
-	"github.com/sukekyo26/floe/internal/yamlpos"
+	"floe/docs"
+	"floe/internal/kit"
+	"floe/internal/usererr"
+	"floe/internal/yamlpos"
 )
 
 // guides are the guide for agents and its translation; a test of them failing means: fix docs/guide.md and

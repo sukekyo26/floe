@@ -12,10 +12,10 @@ import (
 
 	"github.com/spf13/cobra"
 
-	"github.com/sukekyo26/floe/internal/project"
-	"github.com/sukekyo26/floe/internal/server"
-	"github.com/sukekyo26/floe/internal/store"
-	"github.com/sukekyo26/floe/internal/usererr"
+	"floe/internal/project"
+	"floe/internal/server"
+	"floe/internal/store"
+	"floe/internal/usererr"
 )
 
 // workFlags are the flags of floe work.

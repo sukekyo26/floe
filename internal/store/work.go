@@ -12,8 +12,8 @@ import (
 	"strings"
 	"unicode/utf8"
 
-	"github.com/sukekyo26/floe/internal/files"
-	"github.com/sukekyo26/floe/internal/usererr"
+	"floe/internal/files"
+	"floe/internal/usererr"
 )
 
 // tasksName is the file of the tasks in the store, the one thing that holds a task's state: its pages name it, and it

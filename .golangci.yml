@@ -127,7 +127,7 @@ linters:
         internal-from-cmd:
           list-mode: lax
           deny:
-            - pkg: "github.com/sukekyo26/floe/cmd"
+            - pkg: "floe/cmd"
               desc: "internal packages must not import the cmd binary"
         no-stdlog:
           list-mode: lax
@@ -252,8 +252,11 @@ formatters:
       sections:
         - standard
         - default
-        - prefix(github.com/sukekyo26/floe)
+        - prefix(floe)
     gofumpt:
+      # The module is `floe`, a path with no dot, which gofumpt reads as the standard library and wants grouped with it,
+      # against gci's own group: without this, every file that imports a package of floe fails gofumpt.
+      module-path: floe
       extra:
         group-params: true
 

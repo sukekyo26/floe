@@ -7,10 +7,10 @@ import (
 	"os"
 	"path/filepath"
 
-	"github.com/sukekyo26/floe/internal/doc"
-	"github.com/sukekyo26/floe/internal/files"
-	"github.com/sukekyo26/floe/internal/tmpl"
-	"github.com/sukekyo26/floe/internal/usererr"
+	"floe/internal/doc"
+	"floe/internal/files"
+	"floe/internal/tmpl"
+	"floe/internal/usererr"
 )
 
 // Rebuild draws every stored page again, with dw, from its copy, and keeps the page drawn where it changed: in a

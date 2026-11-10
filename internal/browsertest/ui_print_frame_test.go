@@ -3,7 +3,7 @@ package browsertest_test
 import (
 	"testing"
 
-	"github.com/sukekyo26/floe/internal/i18n"
+	"floe/internal/i18n"
 )
 
 // printed returns, read with the page drawn for print or for the screen, which of the frame's parts show (the bar,

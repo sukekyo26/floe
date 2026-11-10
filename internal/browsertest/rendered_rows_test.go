@@ -5,7 +5,7 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/sukekyo26/floe/internal/kit"
+	"floe/internal/kit"
 )
 
 // measureRowsLook returns a line for each row (rowsSel) not in the page's line height, and for each box of a part or

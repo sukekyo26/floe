@@ -17,8 +17,8 @@ import (
 	"github.com/expr-lang/expr/vm/runtime"
 	"github.com/goccy/go-yaml/ast"
 
-	"github.com/sukekyo26/floe/internal/usererr"
-	"github.com/sukekyo26/floe/internal/yamlpos"
+	"floe/internal/usererr"
+	"floe/internal/yamlpos"
 )
 
 // arithmetic makes / and ** (^) fail where expr would give NaN or ±Inf, a division by zero above all, so that

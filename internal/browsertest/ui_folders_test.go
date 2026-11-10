@@ -10,8 +10,8 @@ import (
 	"github.com/chromedp/chromedp"
 	"github.com/chromedp/chromedp/kb"
 
-	"github.com/sukekyo26/floe/internal/i18n"
-	"github.com/sukekyo26/floe/internal/link"
+	"floe/internal/i18n"
+	"floe/internal/link"
 )
 
 // TestUIFolders opens a linked folder's tree in the list: its URL leads to the list with it open, a directory is read

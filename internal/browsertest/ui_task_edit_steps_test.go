@@ -7,7 +7,7 @@ import (
 
 	"github.com/chromedp/chromedp/kb"
 
-	"github.com/sukekyo26/floe/internal/store"
+	"floe/internal/store"
 )
 
 // The task edit dialog adds steps by its last row, which turns into a field, and removes those of no page: the button of a step with pages

@@ -6,8 +6,8 @@ import (
 	"github.com/santhosh-tekuri/jsonschema/v6"
 	"github.com/santhosh-tekuri/jsonschema/v6/kind"
 
-	"github.com/sukekyo26/floe/internal/doc"
-	"github.com/sukekyo26/floe/internal/yamlpos"
+	"floe/internal/doc"
+	"floe/internal/yamlpos"
 )
 
 // A property name refused in a Data without a node is placed at the file alone, without walking a root of nil.

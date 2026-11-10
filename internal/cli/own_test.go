@@ -10,7 +10,7 @@ import (
 	"syscall"
 	"testing"
 
-	"github.com/sukekyo26/floe/internal/cli"
+	"floe/internal/cli"
 )
 
 // runEnv runs floe with args in dir, with the environment env alone, and returns its exit code, stdout and

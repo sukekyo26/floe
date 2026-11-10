@@ -7,7 +7,7 @@ import (
 	"slices"
 	"strconv"
 
-	"github.com/sukekyo26/floe/internal/usererr"
+	"floe/internal/usererr"
 )
 
 // A level edge stands its two boxes in one rank and runs straight between their facing sides. The boxes level edges

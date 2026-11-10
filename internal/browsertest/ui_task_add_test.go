@@ -7,7 +7,7 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/sukekyo26/floe/internal/store"
+	"floe/internal/store"
 )
 
 // A task from the task list: its button where the add button of the page list is and not where a task made would not show, the dialog's words

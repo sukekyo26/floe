@@ -3,8 +3,8 @@ package schema_test
 import (
 	"testing"
 
-	"github.com/sukekyo26/floe/internal/kit"
-	"github.com/sukekyo26/floe/internal/schema"
+	"floe/internal/kit"
+	"floe/internal/schema"
 )
 
 // floe's own schemas say "this key not here" by then's keys and additionalProperties false, never by a schema false:

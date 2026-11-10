@@ -8,8 +8,8 @@ import (
 	"github.com/tdewolff/parse/v2"
 	"github.com/tdewolff/parse/v2/css"
 
-	"github.com/sukekyo26/floe/internal/textpos"
-	"github.com/sukekyo26/floe/internal/usererr"
+	"floe/internal/textpos"
+	"floe/internal/usererr"
 )
 
 // Preprocess makes each line break of src a LF, as CSS Syntax reads them before its tokens: CRLF, CR and FF.

@@ -7,7 +7,7 @@ import (
 
 	"github.com/chromedp/chromedp/kb"
 
-	"github.com/sukekyo26/floe/internal/store"
+	"floe/internal/store"
 )
 
 // A task's page edits the task's own fields in one dialog: its title, URL and the order of its steps, sending what was changed alone,

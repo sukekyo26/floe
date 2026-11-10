@@ -4,7 +4,7 @@ package main
 import (
 	"os"
 
-	"github.com/sukekyo26/floe/internal/cli"
+	"floe/internal/cli"
 )
 
 func main() {

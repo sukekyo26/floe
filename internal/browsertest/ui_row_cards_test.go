@@ -8,7 +8,7 @@ import (
 	"github.com/chromedp/cdproto/input"
 	"github.com/chromedp/chromedp"
 
-	"github.com/sukekyo26/floe/internal/store"
+	"floe/internal/store"
 )
 
 // TestUIRowCards lays the list's rows out as cards on the list's ground, on the page list, a task's page and the task list: an edge,

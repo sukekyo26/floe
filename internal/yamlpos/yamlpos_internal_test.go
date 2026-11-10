@@ -11,8 +11,8 @@ import (
 	"github.com/goccy/go-yaml"
 	"github.com/goccy/go-yaml/lexer"
 
-	"github.com/sukekyo26/floe/internal/i18n"
-	"github.com/sukekyo26/floe/internal/usererr"
+	"floe/internal/i18n"
+	"floe/internal/usererr"
 )
 
 // starts finds each token at the byte its text begins at, and gives up on the file when a token's text is not

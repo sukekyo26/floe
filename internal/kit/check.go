@@ -6,13 +6,13 @@ import (
 	"slices"
 	"strings"
 
-	"github.com/sukekyo26/floe/internal/css"
-	"github.com/sukekyo26/floe/internal/cycle"
-	"github.com/sukekyo26/floe/internal/doc"
-	"github.com/sukekyo26/floe/internal/rules"
-	"github.com/sukekyo26/floe/internal/schema"
-	"github.com/sukekyo26/floe/internal/usererr"
-	"github.com/sukekyo26/floe/internal/yamlpos"
+	"floe/internal/css"
+	"floe/internal/cycle"
+	"floe/internal/doc"
+	"floe/internal/rules"
+	"floe/internal/schema"
+	"floe/internal/usererr"
+	"floe/internal/yamlpos"
 )
 
 // check checks what k read itself, not its base: the rules over the values read made. A part holds

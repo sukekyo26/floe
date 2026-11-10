@@ -11,9 +11,9 @@ import (
 	"github.com/santhosh-tekuri/jsonschema/v6"
 	"github.com/santhosh-tekuri/jsonschema/v6/kind"
 
-	"github.com/sukekyo26/floe/internal/doc"
-	"github.com/sukekyo26/floe/internal/usererr"
-	"github.com/sukekyo26/floe/internal/yamlpos"
+	"floe/internal/doc"
+	"floe/internal/usererr"
+	"floe/internal/yamlpos"
 )
 
 // Validate checks the values of d against c, the keys floe reads itself (doc.Shared) left out: each leaf of the

@@ -25,13 +25,13 @@ import (
 	"sync"
 	"time"
 
-	"github.com/sukekyo26/floe/internal/diagram"
-	"github.com/sukekyo26/floe/internal/doc"
-	"github.com/sukekyo26/floe/internal/files"
-	"github.com/sukekyo26/floe/internal/kit"
-	"github.com/sukekyo26/floe/internal/link"
-	"github.com/sukekyo26/floe/internal/page"
-	"github.com/sukekyo26/floe/internal/usererr"
+	"floe/internal/diagram"
+	"floe/internal/doc"
+	"floe/internal/files"
+	"floe/internal/kit"
+	"floe/internal/link"
+	"floe/internal/page"
+	"floe/internal/usererr"
 )
 
 const (

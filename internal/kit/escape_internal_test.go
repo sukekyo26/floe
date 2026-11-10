@@ -6,7 +6,7 @@ import (
 	"io"
 	"testing"
 
-	"github.com/sukekyo26/floe/internal/usererr"
+	"floe/internal/usererr"
 )
 
 // escapeMistake places a mistake at the line html/template says, counted as lineAt counts, and runs none of

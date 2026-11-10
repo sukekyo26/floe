@@ -7,11 +7,11 @@ import (
 	"testing"
 	"testing/fstest"
 
-	"github.com/sukekyo26/floe/internal/doc"
-	"github.com/sukekyo26/floe/internal/i18n"
-	"github.com/sukekyo26/floe/internal/kit"
-	"github.com/sukekyo26/floe/internal/tmpl"
-	"github.com/sukekyo26/floe/internal/usererr"
+	"floe/internal/doc"
+	"floe/internal/i18n"
+	"floe/internal/kit"
+	"floe/internal/tmpl"
+	"floe/internal/usererr"
 )
 
 const (

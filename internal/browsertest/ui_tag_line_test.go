@@ -8,9 +8,9 @@ import (
 
 	"github.com/chromedp/chromedp/kb"
 
-	"github.com/sukekyo26/floe/internal/i18n"
-	"github.com/sukekyo26/floe/internal/servetest"
-	"github.com/sukekyo26/floe/internal/store"
+	"floe/internal/i18n"
+	"floe/internal/servetest"
+	"floe/internal/store"
 )
 
 // TestUITagLine: the tags of a page open, under its bar beside the list, in the frame and on a task's page, and the one tag

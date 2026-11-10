@@ -6,7 +6,7 @@ import (
 	"golang.org/x/net/html"
 	"golang.org/x/net/html/atom"
 
-	"github.com/sukekyo26/floe/internal/page"
+	"floe/internal/page"
 )
 
 // cdns are where a page drawn from a data file may load libraries from, with their styles and fonts.

@@ -3,9 +3,9 @@ package cli
 import (
 	"github.com/spf13/cobra"
 
-	"github.com/sukekyo26/floe/internal/diagram"
-	"github.com/sukekyo26/floe/internal/icons"
-	"github.com/sukekyo26/floe/internal/usererr"
+	"floe/internal/diagram"
+	"floe/internal/icons"
+	"floe/internal/usererr"
 )
 
 func (a *app) iconsCmd() *cobra.Command {

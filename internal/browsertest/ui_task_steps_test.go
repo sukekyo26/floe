@@ -7,7 +7,7 @@ import (
 
 	"github.com/chromedp/chromedp/kb"
 
-	"github.com/sukekyo26/floe/internal/store"
+	"floe/internal/store"
 )
 
 // A task's page heads every step, those of no page too, each with a way to add a page of the task's project: the task's step is written

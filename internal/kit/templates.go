@@ -11,10 +11,10 @@ import (
 	"strings"
 	"sync"
 
-	"github.com/sukekyo26/floe/internal/rules"
-	"github.com/sukekyo26/floe/internal/schema"
-	"github.com/sukekyo26/floe/internal/usererr"
-	"github.com/sukekyo26/floe/internal/yamlpos"
+	"floe/internal/rules"
+	"floe/internal/schema"
+	"floe/internal/usererr"
+	"floe/internal/yamlpos"
 )
 
 // DefaultTheme is the theme of a page whose data names none, whose palette defines every variable, under any

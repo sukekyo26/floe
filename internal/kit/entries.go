@@ -8,9 +8,9 @@ import (
 	"slices"
 	"strings"
 
-	"github.com/sukekyo26/floe/internal/bom"
-	"github.com/sukekyo26/floe/internal/doc"
-	"github.com/sukekyo26/floe/internal/schema"
+	"floe/internal/bom"
+	"floe/internal/doc"
+	"floe/internal/schema"
 )
 
 // Source is a file as it was read: its name in its directory, and its text without a byte order mark at its start.

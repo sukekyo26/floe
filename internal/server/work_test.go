@@ -10,7 +10,7 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/sukekyo26/floe/internal/store"
+	"floe/internal/store"
 )
 
 // The tasks are asked by the query, whose name and "no project" are the "/" a path could not hold; what cannot be a row

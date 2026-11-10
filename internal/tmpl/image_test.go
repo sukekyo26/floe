@@ -11,8 +11,8 @@ import (
 	"testing"
 	"testing/fstest"
 
-	"github.com/sukekyo26/floe/internal/files"
-	"github.com/sukekyo26/floe/internal/tmpl"
+	"floe/internal/files"
+	"floe/internal/tmpl"
 )
 
 // imagesIn returns the root of a new directory holding files, by their paths, closed at the end of the test.

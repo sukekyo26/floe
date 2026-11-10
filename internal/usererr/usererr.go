@@ -11,7 +11,7 @@ import (
 	"strings"
 	"unicode/utf8"
 
-	"github.com/sukekyo26/floe/internal/i18n"
+	"floe/internal/i18n"
 )
 
 // Error is a mistake the user can fix: what (a message key and its arguments) and where, each part of

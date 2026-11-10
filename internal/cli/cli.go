@@ -9,10 +9,10 @@ import (
 
 	"github.com/spf13/cobra"
 
-	"github.com/sukekyo26/floe/internal/i18n"
-	"github.com/sukekyo26/floe/internal/store"
-	"github.com/sukekyo26/floe/internal/usererr"
-	"github.com/sukekyo26/floe/internal/version"
+	"floe/internal/i18n"
+	"floe/internal/store"
+	"floe/internal/usererr"
+	"floe/internal/version"
 )
 
 // Exit codes.

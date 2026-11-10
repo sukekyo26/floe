@@ -8,7 +8,7 @@ import (
 	"github.com/chromedp/cdproto/accessibility"
 	"github.com/chromedp/chromedp"
 
-	"github.com/sukekyo26/floe/internal/kit"
+	"floe/internal/kit"
 )
 
 // TestRenderedAsksHead reads the count of questions at the head of a handoff: of those still to decide, in the warning's colour

@@ -8,8 +8,8 @@ import (
 	"strconv"
 	"testing"
 
-	"github.com/sukekyo26/floe/internal/store"
-	"github.com/sukekyo26/floe/internal/usererr"
+	"floe/internal/store"
+	"floe/internal/usererr"
 )
 
 const ownSrc = "lang: en\ntemplate: pic\n"
