@@ -166,6 +166,8 @@ var messagesEN = map[string]string{
 	"cli_project":              "project %s",
 	"cli_no_project":           "no project",
 	"cli_page_project":         "page in %s",
+	"cli_publish_move_link":    "--move-project puts a page in the project of the directory floe runs in: a linked file is in its target's directory's",
+	"cli_publish_move_none":    "--move-project puts a page in the project of the directory floe runs in, and this directory has none: run it in the repository the page is about",
 	"cli_work_page":            "page %[1]s: %[2]s",
 	"cli_work_page_task":       "task %[1]s in %[2]s",
 	"cli_work_page_off":        "no task",

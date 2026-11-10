@@ -225,6 +225,27 @@ func TestPublishTaskProject(t *testing.T) {
 	want(t, e.publish(t, "d", src, nil), http.StatusOK, `"taskProject":"/"},"taskProject":"p"}`)
 }
 
+// A publish with moveProject puts the page in the project it sends, though it is in another; one without keeps the project
+// the page is in. A link takes no such key.
+func TestPublishMoveProject(t *testing.T) {
+	t.Parallel()
+
+	e := newEnv(t)
+	const src = "lang: en\ntemplate: pic\ntitle: T\n"
+	send := func(project string, move bool) *httptest.ResponseRecorder {
+		slug := "d"
+		return e.write(t, http.MethodPost, "/api/artifacts/data",
+			server.Upload{File: "d.yaml", Source: []byte(src), Project: project, Repo: "p", Place: "d.yaml", Slug: &slug, MoveProject: move}) //nolint:exhaustruct // the rest not given
+	}
+	want(t, send("p", false), http.StatusCreated, `"taskProject":"p"}`)
+	want(t, send("q", false), http.StatusOK, `"taskProject":"p"},"taskProject":"p"}`)
+	want(t, send("q", true), http.StatusOK, `"taskProject":"p"},"taskProject":"q"}`)
+	want(t, send("q", true), http.StatusOK, `"taskProject":"q"},"taskProject":"q"}`)
+	want(t, send("q", false), http.StatusOK, `"taskProject":"q"},"taskProject":"q"}`)
+	want(t, e.do(t, http.MethodPost, "/api/artifacts", `{"path": "/x.html", "moveProject": true}`, "Origin", origin, "Content-Type", "application/json",
+		"Accept", "application/json"), http.StatusBadRequest, "moveProject")
+}
+
 // A stored page is the page drawn when published, its bytes as kept, in the sandbox and cut off, with the script
 // that reloads it; a template changed since draws it no other, until a rebuild.
 func TestStoredPage(t *testing.T) {

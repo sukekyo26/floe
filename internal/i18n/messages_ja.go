@@ -159,6 +159,8 @@ var messagesJA = map[string]string{
 	"cli_project":              "プロジェクト %s",
 	"cli_no_project":           "プロジェクト無し",
 	"cli_page_project":         "%s のページ",
+	"cli_publish_move_link":    "--move-project は、floe を走らせたディレクトリのプロジェクトにページを入れます。リンクは、リンク先のディレクトリのプロジェクトに入ります",
+	"cli_publish_move_none":    "--move-project は、floe を走らせたディレクトリのプロジェクトにページを入れますが、このディレクトリにはプロジェクトがありません。ページが扱うリポジトリで走らせてください",
 	"cli_work_page":            "ページ %[1]s：%[2]s",
 	"cli_work_page_task":       "%[2]s のタスク %[1]s",
 	"cli_work_page_off":        "タスク無し",

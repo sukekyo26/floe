@@ -63,6 +63,9 @@ a dot), each shown as a linked HTML file is. The same slug for another file is r
 					*to = &v
 				}
 			}
+			if link && opts.MoveProject {
+				return usageOf(usererr.New("cli_publish_move_link"))
+			}
 			return a.publish(cmd.Context(), args[0], link, opts)
 		},
 	}
@@ -76,6 +79,8 @@ a dot), each shown as a linked HTML file is. The same slug for another file is r
 	f.StringVar(&description, "description", "", "a description shown in the list")
 	f.StringVar(&theme, "theme", "",
 		"the theme to draw with: its palette and the parts' shape (default: the data file's theme:, else default)")
+	f.BoolVar(&opts.MoveProject, "move-project", false, "put the page in the project of the directory floe runs in, "+
+		"though it is in another: a page keeps its project otherwise (not with --link)")
 	f.BoolVar(&opts.Force, "force", false, "replace another file's page, or a link to "+
 		"another file, keeping nothing of the old one, not even a page's earlier versions; without --slug, only when "+
 		"the file has no page of its own")
@@ -93,6 +98,10 @@ func (a *app) publish(ctx context.Context, file string, link bool, opts store.Op
 		err = usererr.Collect(err, p.err)
 	}
 	up, b, sentErr := a.sent(ctx, p, link, opts)
+	// A place with no project would empty the page's, which the next publish from another place would fill again.
+	if err == nil && sentErr == nil && opts.MoveProject && up.Project == "" {
+		return usageOf(usererr.New("cli_publish_move_none"))
+	}
 	var saved server.Saved
 	if err = usererr.Collect(err, sentErr); err == nil {
 		if link {
@@ -157,7 +166,7 @@ func (a *app) sent(ctx context.Context, p arg, link bool, opts store.Options) (s
 	} else {
 		up = server.Upload{
 			File: p.name, Source: nil, Images: nil, Project: "", Repo: "", Place: "", Slug: opts.Slug, Title: opts.Title,
-			Description: opts.Description, Theme: opts.Theme, Force: opts.Force,
+			Description: opts.Description, Theme: opts.Theme, Force: opts.Force, MoveProject: opts.MoveProject,
 		}
 		if p.err == nil && files.IsDataFile(p.name) {
 			up.Project = project.Name(ctx, a.env.Dir)
