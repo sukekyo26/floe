@@ -128,7 +128,7 @@ t.yaml:10:16: got number, want string or object
 
 ## Reading mistakes
 
-A mistake is in what you wrote, and you fix it; a failure is floe's own, not yours: tell the user what it printed.
+A mistake is in what you wrote, so you fix it. A failure is in floe itself, so tell the user what it printed.
 
 `floe check` prints one mistake per line, prefixed with `file:line:column:` (or just `file:` for a mistake in the whole file), and exits with code 1. It checks in stages, so fixing the mistakes may bring out those of the next stage.
 
