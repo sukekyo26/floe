@@ -25,8 +25,8 @@ const everyPart = "testdata/every-part"
 // floeParts are floe's parts, as kit embeds them.
 const floeParts = "../kit/floe/parts"
 
-// The sample of every part draws every part of floe's but a look (one of no schema), one of no style and the
-// diagram, each part that takes a tone in every tone and in none (an element of the same kind as one drawn in a tone, without
+// The sample of every part draws every part of floe's but a look (one of no schema) and one of no style, a diagram
+// among them (not in every tone), each part that takes a tone in every tone and in none (an element of the same kind as one drawn in a tone, without
 // one), and every value of each enum of a part's schema (steps' state) in its data, and every part
 // stack takes in a stack. No part draws a heading, as a part knows not the level it is put at.
 func TestEveryPartDrawsEveryPart(t *testing.T) {
@@ -120,9 +120,16 @@ func TestEveryPartDrawsEveryPart(t *testing.T) {
 	}
 	for _, name := range slices.Sorted(maps.Keys(parts)) {
 		p := parts[name]
-		if p.schema == nil || p.css == "" || name == "diagram" {
-			// A look draws nothing of its own, and a part of no style (script) no colour. The diagram has samples of
-			// its own (diagram/, examples/), and its text, in SVG, is not measured.
+		if name == "diagram" {
+			// One diagram is drawn, so that the browser's looks see one in every theme. Its tones and kinds are not
+			// asked for here: its samples are its own (diagram/, examples/), and its text, in SVG, is not measured.
+			if drawn[name] == nil {
+				t.Error("every-part draws no diagram")
+			}
+			continue
+		}
+		if p.schema == nil || p.css == "" {
+			// A look draws nothing of its own, and a part of no style (script) no colour.
 			continue
 		}
 		if drawn[name] == nil {

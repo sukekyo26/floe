@@ -355,110 +355,133 @@ blockquote::before { content: "“"; content: "“" / ""; display: block; font: 
 }
 </style>
 <style>
-@layer floe.parts.depth0 {
-@scope ([data-floe-part="diagram"]:where(:not(:is([data-floe-part], [data-floe-look]) *))) to (:scope [data-floe-part] > *) {
-/* The frame clips what it zooms. It takes a finger's pan and pinch only while it may zoom (can-zoom): one that may
-   not leaves the page to pinch */
-.floe-zoom { position: relative; overflow: hidden; }
-.floe-zoom.can-zoom { touch-action: pan-y; }
-.floe-zoom:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
-.floe-zoom.zoomed { cursor: grab; touch-action: none; user-select: none; }
-.floe-zoom.zoomed:active { cursor: grabbing; }
-/* How it is used, under the frame while the keyboard is on it: over the frame it would hide what is moved there, and a low
-   frame would clip it.
-   LIMIT: what is under the frame moves down while it shows, not the frame. Lay it over them if that comes to mislead.
-   LIMIT: in a fragment of floe diagram render, without base.css's steps of small text, the line and the toolbar take the
-   size of the page around, larger than here: under the frame, it still reads whole. Give the fragment the steps if one is too large */
-.floe-zoom-hint { display: none; margin-top: 0.4rem; font-size: var(--floe-text-small); line-height: 1.4; color: var(--muted); }
-@media screen { .floe-zoom.can-zoom:focus-visible + .floe-zoom-hint { display: block; } }
-/* An img is laid out shrunk to the frame, as the whole, and scaled from its top left, as the script's sums take it */
-.floe-zoom > img { display: block; max-width: 100%; height: auto; transform-origin: 0 0; }
-.floe-zoom-tools { display: flex; flex-wrap: wrap; align-items: center; justify-content: flex-end; gap: 4px; margin-bottom: 0.4rem; font-size: var(--floe-text-small); line-height: 1.4; }
-/* display: flex above wins over the browser's [hidden] */
-.floe-zoom-tools[hidden] { display: none; }
-/* Buttons do nothing on paper */
-@media print { .floe-zoom-tools { display: none; } }
-/* Its colours once, each faded by --floe-tool-alpha, which a disabled button sets alone */
-.floe-zoom-tools button {
-  --floe-tool-alpha: 100%; min-width: 2.2rem; padding: 2px 8px; font: inherit; border-radius: var(--radius-small); cursor: pointer;
-  color: color-mix(in srgb, var(--fg) var(--floe-tool-alpha), transparent); background: color-mix(in srgb, var(--surface) var(--floe-tool-alpha), transparent);
-  border: 1px solid color-mix(in srgb, var(--line) var(--floe-tool-alpha), transparent);
+@layer floe.parts.depth2 {
+@scope ([data-floe-part="code"]:where(:is([data-floe-part], [data-floe-look]) :is([data-floe-part], [data-floe-look]) *):where(:not(:is([data-floe-part], [data-floe-look]) :is([data-floe-part], [data-floe-look]) :is([data-floe-part], [data-floe-look]) *))) to (:scope [data-floe-part] > *) {
+/* Always dark, as code in an editor is; the language stands at the right of the heading. A face (base.css) whose
+   root is the part's, set on what it holds too, which base.css starts afresh: a scrolling block's ring in its colour */
+:scope, :scope > * { --face: var(--code-bg); --on-face: var(--code-fg); }
+/* What a part that takes code's look reads, set here with their values rather than read with a fallback, so that it
+   copies no number: the room at a line's sides (and the copy button's after it), and the colour of faint text, a
+   line's of the colour it is in (currentColor is resolved where the variable is read).
+   LIMIT: the heading's faint colour is made at the root from --code-head-fg there, so the file name does not follow
+   a colour a theme gives the heading itself, by a rule or by --code-head-fg on figcaption; make it in the heading
+   from currentColor if a theme comes to do so. */
+:scope {
+  --floe-code-pad: 1.1rem; --floe-code-room: var(--floe-code-pad);
+  --floe-code-faint: color-mix(in srgb, currentColor 70%, transparent);
+  --floe-code-head-faint: color-mix(in srgb, var(--code-head-fg, var(--code-fg)) 85%, transparent);
+  display: grid; grid-template-columns: minmax(0, 1fr); position: relative; isolation: isolate;
+  border-radius: var(--radius); overflow: hidden; color-scheme: dark;
+  background: var(--face); color: var(--on-face);
+  font-family: var(--mono);
 }
-.floe-zoom-tools button:hover:not(:disabled) { border-color: var(--accent); color: var(--accent); }
-.floe-zoom-tools button:disabled { --floe-tool-alpha: 40%; cursor: default; }
+/* A theme sets the heading's ground and colour by --code-head-bg and --code-head-fg, and the colours of a diff's
+   counts on it by --code-head-add and --code-head-del */
+:scope figcaption {
+  display: flex; align-items: center; gap: 0.75rem; padding: 0.5rem var(--floe-code-pad); font-size: var(--floe-text-small);
+  background: var(--code-head-bg, color-mix(in srgb, var(--code-fg) 5%, transparent)); color: var(--code-head-fg, var(--code-fg));
+  border-bottom: 1px solid color-mix(in srgb, var(--code-fg) 8%, transparent);
+}
+/* On screen it scrolls sideways, telling nothing of its width outside (base.css's pre has the LIMIT); on paper its lines
+   fold (base.css's pre), each as wide as the box. Its lines hold the room at its sides */
+:scope pre {
+  margin: 0; padding: 0.95rem 0; background: none; border: 0; border-radius: 0; color: inherit;
+  font-family: inherit; font-size: 0.875rem; line-height: 1.65; tab-size: 4;
+}
+@media screen { :scope pre { overflow-x: auto; contain: inline-size; } }
+:scope .file { color: var(--floe-code-head-faint); }
+/* The title and the file fold under each other, the language staying at the right: it has a shape of its own, which a
+   row that folds may not draw by place.
+   LIMIT: .names, .file, .lang, .lines, .mark and .numbered reach a part that takes this look too, its text of those names
+   drawn so unsaid; name them for code alone if one comes to use them for its own. */
+:scope .names { display: flex; flex-wrap: wrap; gap: 0.25rem 0.75rem; min-width: 0; }
+:scope .names > .title { font-family: var(--font); font-size: var(--floe-text-aside); font-weight: 700; }
+:scope .lang {
+  flex: none; margin-left: auto; font-size: var(--floe-text-small); font-weight: 700; padding: 0.05rem 0.5rem; border-radius: var(--radius-small);
+  background: var(--code-prompt); color: var(--code-bg);
+}
+/* A block, so that the code's last line break draws no empty line; no padding at its sides, which its line's rule sets */
+:scope pre > code { display: block; font: inherit; color: inherit; background: none; padding-block: 0; border-radius: 0; }
+/* Each line (an element pre holds) is as wide as the longest line, with the room at its sides: scrolled to the end, a
+   line keeps it after it.
+   LIMIT: a part that takes this look and writes a line's padding drops this room, its rule written after this one;
+   text pre holds outside an element has no room, and one inline among it has room around it. Lines are elements, and
+   a part whose lines differ takes the rule of class lines below, as diff does, or moves the room onto them by these variables; nothing checks it. Make this
+   rule outweigh a part's if one comes to write a line's padding by mistake. */
+:scope pre > * { width: max-content; min-width: 100%; padding-inline: var(--floe-code-pad) var(--floe-code-room); }
+@media print { :scope pre > * { width: auto; } }
+/* Lines each an element in one code of class lines (code's and diff's): each paints its ground to the end of the longest
+   line, so the room moves from the code onto each. An element beside them is a hidden word, left out of a selection
+   as it is of what the button copies.
+   LIMIT: Safari takes only -webkit-user-select, and the browser tests run in Chrome alone, so nothing measures it there. */
+:scope pre > .lines { padding-inline: 0; }
+:scope .lines { --floe-code-gutter: 0px; }
+:scope .lines > :not(.floe-hidden) { display: block; padding-inline: calc(var(--floe-code-pad) + var(--floe-code-gutter)) var(--floe-code-room); }
+:scope .lines > .floe-hidden { -webkit-user-select: none; user-select: none; }
+/* A border, which no setting of print or forced colours takes off as it does a ground; its width comes off the room, so
+   that a marked line's text stays in line */
+:scope .lines > .mark {
+  border-inline-start: 3px solid var(--code-prompt); padding-inline-start: calc(var(--floe-code-pad) + var(--floe-code-gutter) - 3px);
+  background: color-mix(in srgb, var(--code-prompt) 16%, transparent);
+}
+/* A number is a counter, in no text copied or selected. --digits and the count's start are the part.html's. It hangs in
+   the room left of the line, whose width it takes off by its margin: a tab counts from the line's start, and what a
+   line folds to on paper stands right of the number. Same weight as .lines and after it, which sets the room to 0.
+   LIMIT: the number scrolls with the code; keep it at the left if readers come to lose it, on a ground of its own.
+   LIMIT: floe's page diff (preLines) reads no CSS, and tells nothing of a page whose start alone changes.
+   LIMIT: on paper, a line that starts with a long word with no space (a URL, minified code) leaves its number alone on
+   the first row, as the number is inline-block; all of it reads. Print is seldom used: hang the number if it matters. */
+:scope .numbered { --floe-code-gutter: calc((var(--digits) + 2) * 1ch); }
+:scope .numbered > :not(.floe-hidden) { counter-increment: line; }
+:scope .numbered > :not(.floe-hidden)::before {
+  content: counter(line); content: counter(line) / counter(line);
+  display: inline-block; width: calc(var(--digits) * 1ch); margin-inline: calc(-1 * var(--floe-code-gutter)) 2ch; text-align: end;
+  color: var(--floe-code-faint);
+}
+:scope .numbered > .mark::before { color: inherit; font-weight: 700; }
+/* The copy button (its look is floe's base) lies over the top right of the code, whether or not a heading is above
+   it, wherever its script puts it in the part; the part's isolation keeps it from drawing over the page outside.
+   Where it draws the button, a line keeps the button's room after it: scrolled to the end, a line ends left of the
+   button; a short one fills the code as before. Printed, with the button hidden, the room is the code's own padding.
+   LIMIT: before it is scrolled to the end, a long first line runs under the button; scroll it to read that part. Leaving
+   it clear would push the code down by a line, short code too.
+   LIMIT: the room is kept after the longest line, though the button covers the first line alone: code whose longest
+   line comes within it (about 43px) of the width scrolls though no line would run under the button, as CSS cannot pad
+   the first line alone. If that comes to matter, give the button a line of its own above the code. */
+:scope > figcaption { grid-row: 1; }
+:scope > pre, :scope > .floe-copy { grid-row: 2; grid-column: 1; }
+:scope > .floe-copy { justify-self: end; align-self: start; margin: var(--floe-copy-gap); }
+:scope:has(> .floe-copy) { --floe-code-room: max(var(--floe-code-pad), var(--floe-copy-room)); }
+/* A scrolling block's ring on the part's root, inside its edge: the root, round, clips what lies outside the block, and
+   the root's own ring lies over the block, its edges and its scrollbar, round at the root's corners. A copy button lies
+   inside the root by --floe-copy-gap, clear of it.
+   LIMIT: what was faded by opacity, which Chrome could paint over the ring, is faded by its colour now; that nothing
+   draws over the ring is not measured. */
+:scope > pre:focus-visible { outline: none; }
+:scope:has(> pre:focus-visible) { outline: 2px solid var(--on-face); outline-offset: -2px; }
 }
 }
 </style>
 <style>
 @layer floe.parts.depth0 {
-@scope ([data-floe-part="diagram"]:where(:not(:is([data-floe-part], [data-floe-look]) *))) to (:scope [data-floe-part] > *) {
-/* Diagrams take the colours of the page's CSS variables, so they follow the theme. text-anchor is
-   set as an attribute: in CSS it would win over the attribute and undo each text's own anchor */
-/* The frame spans the body's width. Its height follows the diagram's aspect ratio, capped by the
-   screen's height and by max-height (how far it may grow), with the diagram centred in it. It paints its own ground,
-   --bg, the one what hides the lines under it (a label's box, a hollow end or dot) is painted: CSS cannot read the
-   ground outside it. Its colour is --fg, for raw's currentColor */
-/* LIMIT: the ground is flat, so a theme's pattern on the page (aurora's, notebook's, blueprint's) does not run through a
-   diagram, and a fragment of floe diagram render on another page paints default's --bg, a light box on a dark page
-   (its docs tell to set --bg on the roots); to let the ground through, cut the lines under what hides them (a mask)
-   instead of painting one */
-.floe-zoom { width: 100%; color: var(--fg); background: var(--bg); border: 1px solid var(--line); border-radius: var(--radius-small); }
-/* What has no tone draws in its shape's own colours, written after var(): the diagram's root holds no tone, unlike
-   a part's box, and what has one (data-floe-tone) takes its colours */
-.dg { --tone: initial; --tone-soft: initial; position: absolute; inset: 0; display: block; width: 100%; height: 100%; font-family: var(--font); }
-.dg text { dominant-baseline: central; }
-.dg .main { fill: var(--fg); font-size: 13px; font-weight: 700; }
-.dg .sub { fill: var(--muted); font-size: 12px; }
-.dg .code { font-family: var(--mono); font-size: 12px; }
-.dg .box rect, .dg .box path { fill: var(--tone-soft, var(--surface)); stroke: var(--tone, var(--line)); stroke-width: 1.2; }
-.dg .box[data-floe-tone=bad] text { fill: var(--tone); }
-.dg .table .bg { fill: var(--surface); }
-.dg .table .head { fill: var(--tone-soft, var(--surface)); }
-.dg .table .outline { fill: none; stroke: var(--tone, var(--line)); stroke-width: 1.2; }
-.dg .table .sep { stroke: var(--line); }
-.dg .cell { fill: var(--fg); }
-.dg .type { fill: var(--muted); font-size: 12px; }
-/* A frame's dashes are a little darker than the secondary text. Without color-mix, --muted stays */
-.dg .frame rect { fill: none; stroke: var(--muted); stroke: color-mix(in srgb, var(--muted) 75%, var(--fg)); stroke-width: 1.2; stroke-dasharray: 5 4; }
-.dg .frame.accent rect { stroke: var(--accent); }
-.dg .frame text { fill: var(--muted); font-size: 12px; font-weight: 700; }
-.dg .frame.grouped text { fill: var(--fg); font-size: 13px; }
-.dg .edge { fill: none; stroke: var(--tone, var(--muted)); stroke-width: 1.5; }
-.dg .line { fill: none; stroke: var(--muted); stroke-width: 1.5; }
-.dg .edge.dashed { stroke-dasharray: 5 4; }
-.dg .edge.bold { stroke-width: 3; }
-/* An edge's ends take its colour (context-stroke). Without it, --muted stays */
-.dg .mk-fill { fill: var(--muted); fill: context-stroke; }
-.dg .mk-hollow { fill: var(--bg); stroke: var(--muted); stroke: context-stroke; stroke-width: 1.2; }
-.dg .mk-line { fill: none; stroke: var(--muted); stroke: context-stroke; stroke-width: 1.5; }
-.dg .dot { fill: var(--tone, var(--muted)); stroke: var(--tone, var(--muted)); }
-.dg .dot.hollow { fill: var(--bg); stroke-width: 2; }
-.dg .bar { fill: var(--tone, var(--muted)); }
-.dg .axis { stroke: var(--muted); stroke-width: 1.2; }
-.dg .grid { stroke: var(--line); }
-.dg .venn { fill: var(--tone-soft, var(--accent-soft)); fill-opacity: 0.6; stroke: var(--tone, var(--accent)); stroke-width: 1.5; }
-.dg .label-bg { fill: var(--bg); }
-.dg .label { fill: var(--fg); font-size: 12px; }
-.dg .label.strong { font-size: 13px; font-weight: 700; }
-.dg .lifeline { stroke: var(--muted); stroke-width: 1.2; stroke-dasharray: 6 4; }
-.dg .divider { stroke: var(--muted); stroke-width: 1.2; stroke-dasharray: 12 6; }
+@scope ([data-floe-part="columns"]:where(:not(:is([data-floe-part], [data-floe-look]) *))) to (:scope [data-floe-part] > *) {
+/* As many as fit, of one width each so that they compare, one under another where they don't. The tracks' least width is
+   definite, so that a wide thing in a column takes no width from the others; min() keeps a column inside a box or a
+   screen narrower than it. Where any column has a title, each stands on two of the root's rows, title and parts, so that
+   the parts start level whatever the titles' lines, a column with no title leaving the first empty.
+   LIMIT: such a column under another, where they don't fit, stands the empty row's room further down; a title on each,
+   or on none, is level either way */
+:scope { display: grid; grid-template-columns: repeat(auto-fit, minmax(min(100%, 16rem), 1fr)); gap: var(--floe-room); align-items: start; }
+:scope > div { display: grid; gap: var(--floe-room); align-items: start; }
+:scope:has(> div > .title) > div { grid-row: span 2; grid-template-rows: subgrid; }
+:scope:has(> div > .title) > div > [data-floe-part] { grid-row: 2; }
+:scope > div > .title { font-size: var(--floe-text-aside); font-weight: 600; }
 }
 }
 </style>
 <style>
 @layer floe.parts.depth0 {
-@scope ([data-floe-part="entries"]:where(:not(:is([data-floe-part], [data-floe-look]) *)), [data-floe-part="steps"]:where(:not(:is([data-floe-part], [data-floe-look]) *)), [data-floe-part="table"]:where(:not(:is([data-floe-part], [data-floe-look]) *))) to (:scope [data-floe-part] > *) {
-/* A panel: a face of the surface in a thin frame, its corners round, lifted a little. On its ground it sets its text's
-   colour and takes no face from around it (a band's); on a part's box base.css does that for what the box holds, the
-   box's ring staying in the face around it */
-:scope { background: var(--surface); color: var(--fg); border: 1px solid var(--line); border-radius: var(--radius); }
-:scope:where(:not([data-floe-part])) { --face: initial; --on-face: initial; }
-}
-}
-</style>
-<style>
-@layer floe.looks.depth1 {
-@scope ([data-floe-look~="panel"]:where(:is([data-floe-part], [data-floe-look]) *):where(:not(:is([data-floe-part], [data-floe-look]) :is([data-floe-part], [data-floe-look]) *))) to (:scope [data-floe-part] > *) {
+@scope ([data-floe-part="entries"]:where(:not(:is([data-floe-part], [data-floe-look]) *)), [data-floe-part="table"]:where(:not(:is([data-floe-part], [data-floe-look]) *))) to (:scope [data-floe-part] > *) {
 /* A panel: a face of the surface in a thin frame, its corners round, lifted a little. On its ground it sets its text's
    colour and takes no face from around it (a band's); on a part's box base.css does that for what the box holds, the
    box's ring staying in the face around it */
@@ -531,91 +554,14 @@ blockquote::before { content: "“"; content: "“" / ""; display: block; font: 
 }
 </style>
 <style>
-@layer floe.parts.depth0 {
-@scope ([data-floe-part="stats"]:where(:not(:is([data-floe-part], [data-floe-look]) *))) to (:scope [data-floe-part] > *) {
-/* Each card is numbered by its place, as the steps of a plan are. The room between cards is --floe-room, as between
-   any parts.
-   LIMIT: a theme's cards.css that writes a gap on its root wins over it unseen; a theme writes no room between parts */
-/* --cards-gap is the room between what a card holds, which a part laying out its cards' rows (options) reads too; a
-   theme sets it on the :scope of its cards.css */
-:scope { --cards-gap: 0.4rem; display: grid; grid-template-columns: repeat(auto-fit, minmax(min(100%, 15rem), 1fr)); gap: var(--floe-room); counter-reset: floe-card; }
-.card {
-  padding: var(--floe-pad-block) var(--floe-pad-inline); display: grid; gap: var(--cards-gap); align-content: start; min-width: 0;
-}
-/* A card draws on a ground of its own, as a part does, off a face around it (a band's) */
-.card { --face: initial; --on-face: initial; }
-/* The number keeps the terms of a row's mark: sized by --floe-mark, hidden by content: none; a theme drawing it as text
-   sets --floe-mark: auto on :scope.numbered and no background. A theme's decoration of a card lies over its padding and takes no room.
-   LIMIT: whether a decoration keeps off the text is seen, not measured
-   LIMIT: the number's --floe-mark on the root reaches what a card holds, a theme's auto too: a mark of one's own that
-   reads it, not set on its own root, draws at no size there. floe's marks set their own; docs/parts.md asks it */
-:scope.numbered { --floe-mark: 1.75rem; }
-:scope.numbered > .card::before {
-  counter-increment: floe-card; content: counter(floe-card); content: counter(floe-card) / counter(floe-card);
-  display: grid; place-items: center; justify-self: start; box-sizing: border-box; width: var(--floe-mark); height: var(--floe-mark); border-radius: var(--radius-small);
-  background: var(--accent-soft); color: var(--accent); font-size: var(--floe-text-small); font-weight: 700;
-}
-/* A card's title is no heading, as a part knows not the level it is put at; it takes the face of an h3 */
-.card .title { margin: 0; font-family: var(--display); font-weight: 700; font-size: 1.05rem; line-height: 1.35; text-wrap: balance; }
-.card :is(p, ul, ol) { margin: 0; color: var(--on-face, var(--muted)); font-size: var(--floe-text-aside); }
-}
-}
-</style>
-<style>
-@layer floe.parts.depth0 {
-@scope ([data-floe-part="stats"]:where(:not(:is([data-floe-part], [data-floe-look]) *))) to (:scope [data-floe-part] > *) {
-/* In the faces of cards, unnumbered; a card without a tone notes in --muted */
-:scope { grid-template-columns: repeat(auto-fit, minmax(min(100%, 11rem), 1fr)); --tone: var(--muted); --tone-soft: var(--muted-soft); }
-.stat dt { font-size: var(--floe-text-small); color: var(--muted); }
-.stat dd { margin: 0; }
-.stat .value {
-  font-family: var(--mono);
-  font-size: 1.9rem; font-weight: 700; line-height: 1.25; font-variant-numeric: tabular-nums;
-}
-.stat .unit { margin-left: 0.3em; font-size: var(--floe-text-aside); font-weight: 400; color: var(--muted); }
-.stat .moved { display: flex; flex-wrap: wrap; align-items: baseline; column-gap: 0.35rem; }
-.stat .from { font-size: 1.15rem; font-weight: 400; color: var(--muted); }
-.stat .arrow { font-size: 1rem; font-weight: 400; color: var(--muted); }
-.stat .note { font-size: var(--floe-text-small); font-weight: 600; color: var(--tone); }
-}
-}
-</style>
-<style>
-@layer floe.parts.depth0 {
-@scope ([data-floe-part="steps"]:where(:not(:is([data-floe-part], [data-floe-look]) *))) to (:scope [data-floe-part] > *) {
-/* Items of a list numbered in rings, a line joining each to the next: each item is a row (marks: joined), which floe
-   lays out. An item's ring takes one of three forms: by default a ring of the line's colour; data-floe-mark="ring"
-   rings it in its tone, its own or around it; data-floe-mark="solid" fills it and the line from it in that tone.
-   LIMIT: text written straight in an item breaks into a grid item a run, as an element of it does: write an item's
-   text in an element. An item whose first child has no baseline (an image, an empty block) has its ring at that
-   child's bottom.
-   LIMIT: an older browser that reads no anchor positioning misplaces the line alone; the ring and the text stand.
-   LIMIT: what takes the look and sets its rings' colours over ::before or ::after, rather than by the tone and
-   data-floe-mark, is not refused: told apart from writing a ring's content (a tick) it is not, by the CSS's words */
-:scope { --floe-mark: 2rem; --floe-mark-gap: 1rem; counter-reset: floe-step; }
-:scope > li { counter-increment: floe-step; padding: 0.2rem 0 1.3rem; }
-:scope > li:last-child { padding-bottom: 0.2rem; }
-:scope > li > * + * { margin-top: 0.15rem; }
-:scope > li::before {
-  content: counter(floe-step); content: counter(floe-step) / counter(floe-step); border-radius: 50%; font-size: var(--floe-text-small); font-weight: 700; line-height: 1;
-  background: var(--surface); color: var(--muted); box-shadow: inset 0 0 0 1.5px var(--line);
-}
-:scope > li::after { border-radius: 999px; background: var(--line); }
-:scope > li:where([data-floe-mark="ring"])::before { background: var(--tone-soft); color: var(--tone); box-shadow: inset 0 0 0 1.5px var(--tone); }
-:scope > li:where([data-floe-mark="solid"])::before { background: var(--tone); color: var(--on-fill); box-shadow: none; }
-:scope > li:where([data-floe-mark="solid"])::after { background: var(--tone); }
-}
-}
-</style>
-<style>
-@layer floe.parts.depth0 {
-@scope ([data-floe-part="steps"]:where(:not(:is([data-floe-part], [data-floe-look]) *))) to (:scope [data-floe-part] > *) {
-/* The number and the line to the next are the look numbered's; a step done takes a tick, filled in good, and one
-   being done a ring in accent (data-floe-mark) */
-:scope { padding: var(--floe-pad-block) var(--floe-pad-inline); }
-:scope > li.done::before { content: "✓"; content: "✓" / ""; }
-:scope > li > strong { line-height: 1.6; }
-:scope > li > [data-floe-text] { color: var(--on-face, var(--muted)); font-size: var(--floe-text-aside); }
+@layer floe.parts.depth1 {
+@scope ([data-floe-part="stack"]:where(:is([data-floe-part], [data-floe-look]) *):where(:not(:is([data-floe-part], [data-floe-look]) :is([data-floe-part], [data-floe-look]) *))) to (:scope [data-floe-part] > *) {
+/* What details, tabs, columns and an item of entries, checks or options hold.
+   LIMIT: kept within its place one stack deep and two (an option of options in an option), but for options and bars
+   two deep; deeper, a part comes to want more room than it has, and overflows. Measure it in wrapPage if it comes to matter */
+:scope { display: grid; gap: var(--floe-room); }
+/* A word kept whole (a table's on paper) overflows the stack's column instead of widening it */
+:scope > * { min-width: 0; }
 }
 }
 </style>
@@ -728,16 +674,17 @@ blockquote::before { content: "“"; content: "“" / ""; display: block; font: 
 }
 </style>
 <style>
-@layer floe.parts.depth0 {
-@scope ([data-floe-part="entries"]:where(:not(:is([data-floe-part], [data-floe-look]) *)), [data-floe-part="steps"]:where(:not(:is([data-floe-part], [data-floe-look]) *)), [data-floe-part="table"]:where(:not(:is([data-floe-part], [data-floe-look]) *))) to (:scope [data-floe-part] > *) {
-/* A face of the panel's ground, on which what is quiet is of the surface */
-:scope { background: var(--default-panel); border: 0; --quiet: var(--surface); --default-quote: var(--surface); --default-quote-quiet: var(--default-panel); }
+@layer floe.parts.depth2 {
+@scope ([data-floe-part="code"]:where(:is([data-floe-part], [data-floe-look]) :is([data-floe-part], [data-floe-look]) *):where(:not(:is([data-floe-part], [data-floe-look]) :is([data-floe-part], [data-floe-look]) :is([data-floe-part], [data-floe-look]) *))) to (:scope [data-floe-part] > *) {
+:scope { padding: var(--default-pad); --code-ground: color-mix(in srgb, var(--code-fg) 4%, var(--code-bg)); --code-head-bg: none; }
+:scope figcaption { border: 0; padding: 0.3rem 0.6rem 0.5rem; }
+:scope pre { background: var(--code-ground); border-radius: var(--default-inner); }
 }
 }
 </style>
 <style>
-@layer floe.looks.depth1 {
-@scope ([data-floe-look~="panel"]:where(:is([data-floe-part], [data-floe-look]) *):where(:not(:is([data-floe-part], [data-floe-look]) :is([data-floe-part], [data-floe-look]) *))) to (:scope [data-floe-part] > *) {
+@layer floe.parts.depth0 {
+@scope ([data-floe-part="entries"]:where(:not(:is([data-floe-part], [data-floe-look]) *)), [data-floe-part="table"]:where(:not(:is([data-floe-part], [data-floe-look]) *))) to (:scope [data-floe-part] > *) {
 /* A face of the panel's ground, on which what is quiet is of the surface */
 :scope { background: var(--default-panel); border: 0; --quiet: var(--surface); --default-quote: var(--surface); --default-quote-quiet: var(--default-panel); }
 }
@@ -769,23 +716,6 @@ blockquote::before { content: "“"; content: "“" / ""; display: block; font: 
 </style>
 <style>
 @layer floe.parts.depth0 {
-@scope ([data-floe-part="stats"]:where(:not(:is([data-floe-part], [data-floe-look]) *))) to (:scope [data-floe-part] > *) {
-/* The grey panel around the cards: a ground, so it takes no face from around it (a band's), for what it holds */
-:scope { background: var(--default-panel); color: var(--fg); --face: initial; --on-face: initial; --quiet: var(--surface); border-radius: var(--radius); padding: var(--floe-room); }
-/* A tile of the surface on the panel of the cards */
-.card {
-  background: var(--surface); --quiet: var(--default-panel); --default-quote: var(--default-panel);
-  --default-quote-quiet: var(--surface); border-radius: calc(var(--radius) - var(--floe-room)); }
-:scope.numbered { --floe-mark: auto; }
-:scope.numbered > .card::before {
-  content: counter(floe-card, decimal-leading-zero); content: counter(floe-card, decimal-leading-zero) / counter(floe-card, decimal-leading-zero); background: none;
-  font-family: var(--mono); font-size: var(--floe-text-small); font-weight: 400;
-}
-}
-}
-</style>
-<style>
-@layer floe.parts.depth0 {
 @scope ([data-floe-part="table"]:where(:not(:is([data-floe-part], [data-floe-look]) *))) to (:scope [data-floe-part] > *) {
 :scope { padding: var(--default-pad); --table-head-bg: none; }
 :scope table { border-collapse: separate; border-spacing: 0; }
@@ -799,18 +729,14 @@ blockquote::before { content: "“"; content: "“" / ""; display: block; font: 
 </style>
 <style>
 @layer floe.marks {
-:where([data-floe-part="note"], [data-floe-part="steps"] > li) {
+:where([data-floe-part="note"]) {
   position: relative; anchor-scope: --floe-mark; display: grid; gap: 0;
   grid-template: [mark-start] auto [mark-end] / [mark-start] auto [mark-end text-start] minmax(0, 1fr) [text-end];
 }
-:where([data-floe-part="note"], [data-floe-part="steps"] > li) > * { grid-column: text; align-self: first baseline; }
-:where([data-floe-part="note"], [data-floe-part="steps"] > li)::before {
+:where([data-floe-part="note"]) > * { grid-column: text; align-self: first baseline; }
+:where([data-floe-part="note"])::before {
   anchor-name: --floe-mark; grid-area: mark; align-self: first baseline; display: grid; place-items: center;
   box-sizing: border-box; width: var(--floe-mark); height: var(--floe-mark); margin-inline-end: var(--floe-mark-gap);
-}
-:where([data-floe-part="steps"] > li):not(:last-child)::after {
-  content: ""; position: absolute; top: calc(anchor(--floe-mark bottom) + 0.35rem); bottom: 0.35rem;
-  left: calc(anchor(--floe-mark center) - 1px); width: 2px;
 }
 }
 </style>
@@ -877,12 +803,10 @@ main > .body, .body > .sections { display: grid; gap: 2.5rem; grid-template-colu
 <div class="body">
 <nav data-floe-look="toc" aria-label="Contents"><p class="title" aria-hidden="true">Contents</p>
 <ol>
-<li><a href="#section.0">At a glance</a></li>
-<li><a href="#section.1">Steps</a><ol><li><a href="#section.1.0">The old wiki</a></li></ol></li>
-<li><a href="#section.2">Who does what</a></li>
-<li><a href="#section.3">How long the copy takes</a></li>
-<li><a href="#section.4">Where the pages go</a></li>
-<li><a href="#section.5">Risks</a></li>
+<li><a href="#section.0">The move</a><ol><li><a href="#section.0.0">The old wiki</a></li></ol></li>
+<li><a href="#section.1">Who does what</a></li>
+<li><a href="#section.2">Risks</a></li>
+<li><a href="#section.3">What changes for whom</a></li>
 </ol>
 </nav><script>(function contents() {
   const nav = document.currentScript.previousElementSibling;
@@ -941,29 +865,8 @@ main > .body, .body > .sections { display: grid; gap: 2.5rem; grid-template-colu
 })(null);</script>
 <div class="sections">
 <section id="section.0">
-<h2 id="at-a-glance">At a glance</h2>
-<dl data-floe-part="stats">
-<div class="card stat" data-floe-look="panel"><dt>Pages</dt><dd class="value">1,840</dd></div>
-<div class="card stat" data-floe-tone="good" data-floe-look="panel"><dt>Broken links</dt><dd class="value">120</dd><dd class="note">-35 since the last check</dd></div>
-<div class="card stat" data-floe-look="panel"><dt>Downtime</dt><dd class="value">0<span class="unit">hours</span></dd></div>
-</dl>
-<div data-floe-part="table"><table>
-<thead><tr><th scope="col"></th><th scope="col">Now</th><th scope="col">After the move</th></tr></thead>
-<tbody>
-<tr><td>Host</td><td>The old server</td><td>The new host</td></tr>
-<tr><td>Search</td><td>Built in</td><td>Rebuilt on <code>Sunday</code></td></tr>
-<tr><td>Address</td><td>wiki.example.com</td><td>wiki.example.com</td></tr>
-</tbody>
-</table></div>
-</section>
-<section id="section.1">
-<h2 id="steps">Steps</h2>
-<div data-floe-text=""><p>The pages move over <strong>one weekend</strong>; the old wiki stays readable until the new one opens.</p></div>
-<ol data-floe-part="steps">
-<li class="done" data-floe-mark="solid" data-floe-tone="good"><strong><span class="floe-hidden">Done: </span>Freeze edits on the old wiki</strong><div data-floe-text=""><p>On <strong>Friday evening</strong>.</p></div></li>
-<li class="doing" data-floe-mark="ring" aria-current="step"><strong>Copy the pages and check the links</strong></li>
-<li class="todo"><strong>Point the team&#39;s bookmarks at the new host</strong></li>
-</ol>
+<h2 id="the-move">The move</h2>
+<div data-floe-text=""><p>The pages move over <strong>two weekends</strong>; the old wiki stays readable until the new one opens.</p></div>
 <figure class="bash" data-floe-part="terminal"><figcaption>bash</figcaption><pre><span class="floe-hidden">Command: </span><span class="run" data-floe-copy="">wiki export --all --out pages/</span><span class="out">1840 pages written to pages/</span><span class="floe-hidden">Command: </span><span class="run" data-floe-copy="">linkcheck pages/</span></pre><script>(function copyButton(words) {
   const part = document.currentScript.closest('[data-floe-part]');
   const icon = (d) =>
@@ -1028,10 +931,10 @@ main > .body, .body > .sections { display: grid; gap: 2.5rem; grid-template-colu
   show(words.copy, false);
   document.currentScript.after(button, status);
 })({"copied":"Copied","copy":"Copy","failed":"Could not copy"});</script></figure>
-<section class="sub" id="section.1.0">
+<section class="sub" id="section.0.0">
 <h3 id="the-old-wiki">The old wiki</h3>
 <div data-floe-text=""><p>It answers until the new one opens, with edits turned off.</p></div>
-<figure data-floe-part="code"><figcaption><span class="names"><span class="file">old-wiki.conf</span></span></figcaption><pre><code class="lines"><span data-floe-copy=""># Read-only from Friday evening
+<figure data-floe-part="code"><figcaption><span class="names"><span class="file">old-wiki.conf</span></span></figcaption><pre><code class="lines"><span data-floe-copy=""># Read-only from the first Friday evening
 </span><span data-floe-copy="">read_only = true
 </span><span data-floe-copy="">banner = &#34;This wiki has moved to the new host.&#34;
 </span></code></pre><script>(function copyButton(words) {
@@ -1100,236 +1003,94 @@ main > .body, .body > .sections { display: grid; gap: 2.5rem; grid-template-colu
 })({"copied":"Copied","copy":"Copy","failed":"Could not copy"});</script></figure>
 </section>
 </section>
-<section id="section.2">
+<section id="section.1">
 <h2 id="who-does-what">Who does what</h2>
 <dl data-floe-part="entries">
-<div><dt>Copy</dt><dd data-floe-look="tags"><span>Saturday</span><span><span data-floe-tone="good" data-floe-part="cell">ready</span></span></dd><dd class="text"><div data-floe-text=""><p>Copies the pages and keeps a list of what failed.</p></div></dd></div>
-<div><dt>Links</dt><dd data-floe-look="tags"><span>Sunday</span><span><span data-floe-tone="warn" data-floe-part="cell">waits on the copy</span></span></dd><dd class="text"><div data-floe-text=""><p>Runs the link check and fixes what it finds.</p></div></dd></div>
-<div><dt>Bookmarks</dt><dd data-floe-look="tags"><span>Monday morning</span></dd><dd class="text"><div data-floe-text=""><p>Sends the new address to the team.</p></div></dd></div>
+<div><dt>Copy</dt><dd data-floe-look="tags"><span>First weekend</span><span><span data-floe-tone="good" data-floe-part="cell">ready</span></span></dd><dd class="text"><div data-floe-text=""><p>Copies the pages and keeps a list of what failed.</p></div></dd></div>
+<div><dt>Links</dt><dd data-floe-look="tags"><span>Second weekend</span><span><span data-floe-tone="warn" data-floe-part="cell">waits on the copy</span></span></dd><dd class="text"><div data-floe-text=""><p>Runs the link check and fixes what it finds.</p></div></dd></div>
 </dl>
 </section>
-<section id="section.3">
-<h2 id="how-long-the-copy-takes">How long the copy takes</h2>
-<div></div><script>{const floeScript = function (el, data) {
-  el.innerHTML = '<label>Pages an hour <input type="range" min="100" max="1000" step="50" value="300"></label> <output></output>';
-  const input = el.querySelector('input'), out = el.querySelector('output');
-  const update = () => { out.textContent = `${Math.ceil(data.pages / input.value)} hours`; };
-  input.addEventListener('input', update);
-  update();
-}
-
-;floeScript(document.currentScript.previousElementSibling, JSON.parse("{\"pages\":1840}"));}</script>
-</section>
-<section id="section.4">
-<h2 id="where-the-pages-go">Where the pages go</h2>
-<div data-floe-part="diagram"><script>(function zoomable({ words, frame: frameClass, tools: toolsClass }) {
-  const MAX = 4;
-  const lang = (document.documentElement.lang || 'en').toLowerCase().replace(/_/g, '-');
-  const msg = words[lang] || words[lang.split('-')[0]] || words.en;
-  const setup = (wrap) => {
-    if (wrap.dataset.zoomable) return;
-    const first = wrap.firstElementChild;
-    const svg = first?.localName === 'svg' ? first : null;
-    const img = first?.localName === 'img' ? first : null;
-    if (!svg && !img) return;
-    if (img && !img.complete) {
-      wrap.dataset.zoomable = 'pending';
-      const again = () => {
-        delete wrap.dataset.zoomable;
-        setup(wrap);
-      };
-      img.addEventListener('load', again, { once: true });
-      img.addEventListener('error', again, { once: true });
-      return;
-    }
-    const [W, H] = svg ? (svg.getAttribute('viewBox') ?? '').split(/[\s,]+/).map(Number).slice(2) : [img.naturalWidth, img.naturalHeight];
-    if (!(W > 0 && H > 0)) return;
-    wrap.dataset.zoomable = 'on';
-    if (img) img.draggable = false;
-    let s = 1, cx = W / 2, cy = H / 2, fitted = true;
-    let printing = false;
-    let offered;
-    const fit = () => (svg ? Math.min(wrap.clientWidth / W, wrap.clientHeight / H) : img.clientWidth / W);
-    const min = () => Math.min(fit(), 1);
-    const shrunk = () => (svg ? Math.min(wrap.offsetWidth / W, wrap.offsetHeight / H) : fit()) < 1;
-    const tools = document.createElement('div');
-    tools.className = toolsClass;
-    tools.hidden = true;
-    for (const [k, text, label] of [
-      ['in', '+', msg.zoom_in], ['out', '−', msg.zoom_out],
-      ['fit', msg.zoom_fit, msg.zoom_fit_label], ['one', msg.zoom_one, msg.zoom_one_label],
-    ]) {
-      const b = document.createElement('button');
-      b.type = 'button';
-      b.dataset.zoom = k;
-      b.title = label;
-      b.setAttribute('aria-label', label);
-      b.textContent = text;
-      tools.append(b);
-    }
-    wrap.before(tools);
-    const button = (k) => tools.querySelector(`[data-zoom="${k}"]`);
-    const title = wrap.hasAttribute('title'), described = wrap.hasAttribute('aria-describedby');
-    const hint = document.createElement('div');
-    hint.className = `${frameClass}-hint`;
-    hint.id = `${frameClass}-hint-${document.querySelectorAll(`.${hint.className}`).length}`;
-    hint.textContent = msg.zoom_hint;
-    wrap.after(hint);
-
-    const offer = (can) => {
-      if (can === offered) return;
-      offered = can;
-      const focused = wrap.contains(document.activeElement) || tools.contains(document.activeElement);
-      tools.hidden = !can;
-      wrap.classList.toggle('can-zoom', can);
-      wrap.tabIndex = can ? 0 : -1;
-      if (can) {
-        wrap.setAttribute('role', 'group');
-        wrap.setAttribute('aria-label', msg.zoom_frame);
-        if (!described) wrap.setAttribute('aria-describedby', hint.id);
-        if (!title) wrap.title = msg.zoom_hint;
-      } else {
-        wrap.removeAttribute('role');
-        wrap.removeAttribute('aria-label');
-        if (!described) wrap.removeAttribute('aria-describedby');
-        if (!title) wrap.removeAttribute('title');
-        if (focused) wrap.focus();
-      }
-    };
-    const show = (x, y, w, h) => {
-      if (svg) {
-        svg.setAttribute('viewBox', `${x} ${y} ${w} ${h}`);
-        return;
-      }
-      if (fitted || printing) {
-        img.style.transform = '';
-        img.style.borderColor = '';
-        return;
-      }
-      const k = s / fit(), ox = img.clientLeft, oy = img.clientTop;
-      img.style.borderColor = 'transparent';
-      img.style.transform = `translate(${ox * (1 - k) - x * s}px, ${oy * (1 - k) - y * s}px) scale(${k})`;
-    };
-
-    const render = () => {
-      if (printing) {
-        show(0, 0, W, H);
-        wrap.classList.remove('zoomed');
-        return;
-      }
-      const w = wrap.clientWidth, h = wrap.clientHeight;
-      if (!w || !h) return;
-      if (fitted) [s, cx, cy] = [fit(), W / 2, H / 2];
-      s = Math.min(Math.max(s, min()), MAX);
-      const vw = w / s, vh = h / s;
-      const clamp = (c, v, size) => (v >= size ? (svg ? size / 2 : v / 2) : Math.min(Math.max(c, v / 2), size - v / 2));
-      cx = clamp(cx, vw, W);
-      cy = clamp(cy, vh, H);
-      show(cx - vw / 2, cy - vh / 2, vw, vh);
-      wrap.classList.toggle('zoomed', vw < W - 0.5 || vh < H - 0.5);
-      offer(!fitted || shrunk());
-      button('in').disabled = s >= MAX;
-      button('out').disabled = s <= min();
-      button('fit').disabled = fitted;
-      button('one').disabled = Math.abs(s - 1) < 1e-3;
-    };
-    const local = (x, y) => {
-      const r = wrap.getBoundingClientRect();
-      return [x - r.left - wrap.clientLeft, y - r.top - wrap.clientTop];
-    };
-    const zoomAt = (k, ax = wrap.clientWidth / 2, ay = wrap.clientHeight / 2) => {
-      const ns = Math.min(Math.max(s * k, min()), MAX);
-      const dx = ax - wrap.clientWidth / 2, dy = ay - wrap.clientHeight / 2;
-      cx += dx / s - dx / ns;
-      cy += dy / s - dy / ns;
-      s = ns;
-      fitted = Math.abs(ns / fit() - 1) < 1e-9;
-      render();
-    };
-
-    tools.addEventListener('click', (e) => {
-      const k = e.target.closest('button')?.dataset.zoom;
-      if (k === 'in') zoomAt(1.25);
-      if (k === 'out') zoomAt(0.8);
-      if (k === 'one') zoomAt(1 / s);
-      if (k === 'fit') {
-        fitted = true;
-        render();
-      }
-    });
-    wrap.addEventListener('wheel', (e) => {
-      if (!offered || (!e.ctrlKey && !e.metaKey)) return;
-      e.preventDefault();
-      const dy = e.deltaY * [1, 16, wrap.clientHeight][e.deltaMode];
-      zoomAt(Math.exp(-dy * 0.002), ...local(e.clientX, e.clientY));
-    }, { passive: false });
-
-    const points = new Map();
-    const gesture = () => {
-      const [a, b = a] = [...points.values()];
-      return { x: (a.x + b.x) / 2, y: (a.y + b.y) / 2, d: Math.hypot(a.x - b.x, a.y - b.y) };
-    };
-    wrap.addEventListener('pointerdown', (e) => {
-      if (!offered || e.button !== 0 || (e.pointerType === 'mouse' && !wrap.classList.contains('zoomed'))) return;
-      e.preventDefault();
-      wrap.setPointerCapture(e.pointerId);
-      points.set(e.pointerId, { x: e.clientX, y: e.clientY });
-    });
-    wrap.addEventListener('pointermove', (e) => {
-      if (!points.has(e.pointerId)) return;
-      const before = gesture();
-      points.set(e.pointerId, { x: e.clientX, y: e.clientY });
-      const after = gesture();
-      cx -= (after.x - before.x) / s;
-      cy -= (after.y - before.y) / s;
-      if (before.d && after.d) zoomAt(after.d / before.d, ...local(after.x, after.y));
-      else render();
-    });
-    for (const type of ['pointerup', 'pointercancel', 'lostpointercapture']) wrap.addEventListener(type, (e) => points.delete(e.pointerId));
-
-    wrap.addEventListener('keydown', (e) => {
-      if (!offered || e.ctrlKey || e.metaKey || e.altKey) return;
-      const zoom = { '+': 'in', '=': 'in', '-': 'out', 0: 'fit' }[e.key];
-      if (zoom) {
-        e.preventDefault();
-        button(zoom).click();
-        return;
-      }
-      const step = { ArrowLeft: [-1, 0], ArrowRight: [1, 0], ArrowUp: [0, -1], ArrowDown: [0, 1] }[e.key];
-      if (!step || !wrap.classList.contains('zoomed')) return;
-      e.preventDefault();
-      cx += (step[0] * 40) / s;
-      cy += (step[1] * 40) / s;
-      render();
-    });
-    render();
-    new ResizeObserver(render).observe(wrap);
-    addEventListener('beforeprint', () => {
-      printing = true;
-      render();
-    });
-    addEventListener('afterprint', () => {
-      printing = false;
-      render();
-    });
-  };
-  const init = () => document.querySelectorAll('.' + frameClass).forEach(setup);
-  if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', init);
-  else init();
-})({"frame":"floe-zoom","tools":"floe-zoom-tools","words":{"en":{"zoom_fit":"Fit","zoom_fit_label":"Show the whole figure","zoom_frame":"Zoomable figure","zoom_hint":"Ctrl / ⌘ + wheel or pinch to zoom. Click or Tab to the figure, then + - 0 to zoom in, out and fit. Drag or use the arrow keys to move while zoomed","zoom_in":"Zoom in","zoom_one":"1:1","zoom_one_label":"Show at actual size","zoom_out":"Zoom out"},"ja":{"zoom_fit":"全体","zoom_fit_label":"全体を表示","zoom_frame":"拡大できる図","zoom_hint":"Ctrl / ⌘ + ホイール・ピンチで拡大。クリックか Tab で図を選ぶと + - 0 で拡大・縮小・全体。拡大中はドラッグか矢印キーで移動","zoom_in":"拡大","zoom_one":"原寸","zoom_one_label":"原寸で表示","zoom_out":"縮小"}}});</script><div class="floe-zoom" style="aspect-ratio: 640 / 112; max-height: min(85vh, 138px)"><svg viewBox="0 0 640 112" class="dg" role="img" aria-label="The pages from the old server to the new host"><defs><marker id="dg1-c76e86_arrow" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="10" markerHeight="10" markerUnits="userSpaceOnUse" orient="auto-start-reverse"><path d="M0,0 L10,5 L0,10 z" class="mk-fill"></path></marker></defs><path d="M200,56 H230" class="edge" marker-end="url(#dg1-c76e86_arrow)"></path><path d="M410,56 H440" class="edge" marker-end="url(#dg1-c76e86_arrow)"></path><g class="box"><rect x="20" y="30" width="180" height="52" rx="8"></rect><text x="110" y="47.5" text-anchor="middle" class="main">Old server</text><text x="110" y="64.5" text-anchor="middle" class="sub">read-only</text></g><g class="box" data-floe-tone="accent"><rect x="230" y="30" width="180" height="52" rx="8"></rect><text x="320" y="47.5" text-anchor="middle" class="main">Copy the pages</text><text x="320" y="64.5" text-anchor="middle" class="sub">and check the links</text></g><g class="box" data-floe-tone="good"><rect x="440" y="30" width="180" height="52" rx="8"></rect><text x="530" y="56" text-anchor="middle" class="main">New host</text></g></svg></div></div>
-</section>
-<section id="section.5">
+<section id="section.2">
 <h2 id="risks">Risks</h2>
 <div data-floe-part="table"><table>
-<thead><tr><th scope="col">Risk</th><th scope="col">Likelihood</th><th scope="col" class="num">Pages</th><th scope="col">What we do</th><th scope="col">State</th></tr></thead>
+<thead><tr><th scope="col">Risk</th><th scope="col" class="num">Pages</th><th scope="col">What we do</th><th scope="col">State</th></tr></thead>
 <tbody>
-<tr><td>Broken links</td><td>High</td><td class="num">120</td><td>A link check after the copy</td><td><span data-floe-tone="warn" data-floe-part="cell">watching</span></td></tr>
-<tr><td>Lost attachments</td><td>Low</td><td class="num">8</td><td>Keep the old host for <strong>a month</strong></td><td><span data-floe-tone="good" data-floe-part="cell">covered</span></td></tr>
-<tr><td>Slow search</td><td>Unknown</td><td class="num">-</td><td>Rebuild the index on <code>Sunday</code></td><td><span data-floe-tone="accent" data-floe-part="cell">open</span></td></tr>
+<tr><td>Broken links</td><td class="num">120</td><td>A link check after the copy</td><td><span data-floe-tone="warn" data-floe-part="cell">watching</span></td></tr>
+<tr><td>Lost attachments</td><td class="num">8</td><td>Keep the old host for <strong>a month</strong></td><td><span data-floe-tone="good" data-floe-part="cell">covered</span></td></tr>
+<tr><td>Slow search</td><td class="num">-</td><td>Rebuild the index with <code>wiki reindex</code></td><td><span data-floe-tone="accent" data-floe-part="cell">open</span></td></tr>
 </tbody>
 </table></div>
 <div data-floe-tone="warn" data-floe-part="note"><span class="floe-hidden">Warning: </span><strong class="title">Heads up</strong><div data-floe-text=""><p>Anyone editing during the freeze loses their changes.</p></div></div>
-<details><summary>What the freeze covers</summary><p>Edits, comments and uploads.</p></details>
+</section>
+<section id="section.3">
+<h2 id="what-changes-for-whom">What changes for whom</h2>
+<div data-floe-part="columns">
+<div role="group" aria-label="Readers"><div class="title" aria-hidden="true">Readers</div><div data-floe-part="stack"><div data-floe-text=""><p>Nothing to do. Bookmarks still work, as the old address <strong>redirects</strong> to the new host.</p></div></div></div>
+<div role="group" aria-label="Scripts"><div class="title" aria-hidden="true">Scripts</div><div data-floe-part="stack"><div data-floe-text=""><p>Point the wiki&#39;s API at the new host.</p></div><figure data-floe-part="code"><figcaption><span class="names"><span class="file">wiki.env</span></span></figcaption><pre><code class="lines"><span data-floe-copy="">WIKI_HOST=new.example.com</span></code></pre><script>(function copyButton(words) {
+  const part = document.currentScript.closest('[data-floe-part]');
+  const icon = (d) =>
+    '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" ' +
+    `stroke-linejoin="round" aria-hidden="true"><path d="${d}"/></svg>`;
+  const button = document.createElement('button');
+  button.type = 'button';
+  button.className = 'floe-copy';
+  button.innerHTML = icon('M9 9h10v11H9zM5 15V4h10') + icon('m5 12.5 4.5 4.5L19 7.5');
+  const status = document.createElement('span');
+  status.className = 'floe-copy-status';
+  status.setAttribute('role', 'status');
+  let timer;
+  let presses = 0;
+  const show = (label, copied) => {
+    button.classList.toggle('copied', copied);
+    button.title = label;
+    button.setAttribute('aria-label', label);
+  };
+  const text = () =>
+    [...part.querySelectorAll('[data-floe-copy]')]
+      .map((e) => (e.textContent.endsWith('\n') ? e.textContent : e.textContent + '\n'))
+      .join('');
+  const command = (s) => {
+    const put = (e) => {
+      e.clipboardData.setData('text/plain', s);
+      e.preventDefault();
+    };
+    document.addEventListener('copy', put);
+    try {
+      return document.execCommand('copy');
+    } catch {
+      return false;
+    } finally {
+      document.removeEventListener('copy', put);
+    }
+  };
+  button.addEventListener('click', async () => {
+    const press = ++presses;
+    clearTimeout(timer);
+    show(words.copy, false);
+    status.textContent = '';
+    const s = text();
+    let ok;
+    try {
+      await navigator.clipboard.writeText(s);
+      ok = true;
+    } catch {
+      ok = command(s);
+    }
+    if (press !== presses) return;
+    const label = ok ? words.copied : words.failed;
+    show(label, ok);
+    setTimeout(() => {
+      status.textContent = label;
+    }, 0);
+    timer = setTimeout(() => {
+      show(words.copy, false);
+      status.textContent = '';
+    }, 1500);
+  });
+  show(words.copy, false);
+  document.currentScript.after(button, status);
+})({"copied":"Copied","copy":"Copy","failed":"Could not copy"});</script></figure></div></div>
+</div>
 </section>
 </div>
 </div>

@@ -9,8 +9,8 @@ floe は、あなたが YAML のファイルで書いたページをユーザー
 1. `floe template list` からテンプレートを選ぶ：
    - ページの目的のために作られたものがあれば、それ（設計書なら `design`、`handoff`、`runbook` など）
    - 無ければ `report`
-   - 書く前に、見本と schema を読む：`floe template show <template> example.yaml` と `floe template show <template> schema.json`
-2. ファイルにはページの名前を付ける（`db-choice.yaml` など）。`.yaml` を除いた名前が、ページの URL の名前になります。データファイルには必ず `template` と `lang` を書く。`title` はページの題、`report` の `lead` は題の下の要約です。`theme` は書かない（[テーマ](#テーマ)）。
+   - 書く前に、見本と schema を読む：`floe template show <template> example.yaml` と `floe template show <template> schema.json`。見本はファイルの組み立て（項目と節の組み方）を見せるもので、その部品を決まった組と思わない。部品は手順 3 で選ぶ
+2. ファイルにはページの名前を付ける（`db-choice.yaml` など）。`.yaml` を除いたファイルの名前が、ページの URL の名前（slug）になります。データファイルには必ず `template` と `lang` を書く。`title` はページの題、`report` の `lead` は題の下の要約です。`theme` は書かない（[テーマ](#テーマ)）。
 
    ```yaml
    template: report
@@ -23,8 +23,8 @@ floe は、あなたが YAML のファイルで書いたページをユーザー
          - text: Freeze edits on **Friday evening**, then copy the pages.
    ```
 
-3. [部品を選ぶ](#部品を選ぶ)の表で部品を選ぶ。見本に無い部品は、書く前に、その節のとおりに鍵を調べる。推した鍵は断られます。
-4. `floe check db-choice.yaml` を走らせ、誤りを全部直して、誤りを出さなくなるまで走らせ直す。`warning:` の行だけが残ったら済みです（勧めなので）。
+3. `floe part list` を走らせ、手順 1 で読んだテンプレートの schema が許す部品から、中身に合うものを選ぶ。迷いやすいときは[部品を選ぶ](#部品を選ぶ)の表を使う。見本に無い部品は、書く前に、その節のとおりに鍵を調べる。推した鍵は断られます。
+4. `floe check db-choice.yaml` を走らせ、誤りを全部直して、誤りが無くなるまで走らせ直す。`warning:` の行だけが残ったら済みです。これは勧めです。
 5. `floe publish db-choice.yaml` を走らせ、出た URL をユーザーに渡す。ページを自分で取りに行かなくてよい。
 
 ## 出し直す
@@ -39,9 +39,9 @@ floe は、あなたが YAML のファイルで書いたページをユーザー
 
 ## 部品を選ぶ
 
-`parts` の各項目は、部品を名指す鍵 1 つです。`floe part list` が各部品の鍵と使い道を出します。鍵が並ばない部品（`chart`・`stats`・`diagram` など）は、`floe part show <part> schema.json` を読んで、鍵と型と詳しいことを見る。自分のテンプレートなら、その `schema.json` も読む（`floe template show <template> schema.json`）。節が取る部品はそこに書いてあります。
+`parts` の各項目は、部品を名指す鍵 1 つです。`floe part list` が各部品の鍵と使い道を出します。鍵が並ばない部品（`chart`・`stats`・`diagram` など）は、`floe part show <part> schema.json` を読んで、鍵と型と詳しいことを見る。手順 1 で読んだテンプレートの `schema.json` に、節や欄ごとに置ける部品が書いてあります。
 
-中身で部品を選ぶ：
+合う部品が分かりにくいときは、この表を使う：
 
 | 中身 | 部品 |
 |---|---|
@@ -53,13 +53,14 @@ floe は、あなたが YAML のファイルで書いたページをユーザー
 | 読み手に決めてほしい問い | `asks` |
 | 確かめた結果、テストの結果 | `checks`（各項目に `result: ok`・`ng`・`unchecked`。floe が結果の数を上に出す）。選ぶ条件（`table`・`options`）やまだすること（`checklist`）には使わない |
 | 日付のある出来事 | `timeline`。日付の無い段は `steps` |
-| 縦にも横にも比べる行、短い升（前と後は 1 列ずつ） | `table` |
+| 行と列で比べる短い値。前と後の値は別々の列に（先頭の列の見出しは空にする） | `table` |
+| 横に並べて見る、互いに独立したまとまり。それぞれに部品（画面やコードの前と後に） | `columns` |
 | 頭に置く少しの値 | `facts` |
 | 数の動き、数の比べ | `chart` |
 | 構成や流れ：箱と矢印 | `diagram`（[図](#図)） |
 | コード、コマンドと出力 | `code`、`terminal`（`$ ` は書かない） |
 
-ほか（大きな数、ファイル、設定の項目、リンクなど）は、`floe part list` の説明を読む。表や図を `text`・`code` の中に字で描かない。値はこう書きます：
+表や図を `text`・`code` の中に字で描かない。値はこう書きます：
 
 ```yaml
 - text: |
@@ -146,9 +147,11 @@ t.yaml:10:16: got number, want string or object
 
 ## 誤りを読む
 
-`floe check` は誤りを 1 行に 1 つ、`file:line:column:` の所に（ファイル全体の誤りは `file:` だけで）出し、1 で終わります。検査は段ごとなので、誤りを直すと、次の段の誤りが出ることがあります。
+誤り（mistake）は書いたものの中にあるので、書き手が直す。失敗（failure）は floe 自身の中にあるので、出た文をユーザーに伝える。
 
-- 部品が取らない鍵、足りない鍵、型の違う値は、schema が断ったもの：[部品を選ぶ](#部品を選ぶ)のとおりに schema を読む。
+`floe check` は誤りを 1 行に 1 つ、頭に `file:line:column:` を付けて（ファイル全体の誤りは `file:` だけを付けて）出し、終了コード 1 で終わります。検査は段ごとなので、誤りを直すと、次の段の誤りが出ることがあります。
+
+- schema の誤りには、部品が受けない鍵、足りない必須の鍵、型の違う値がある：[部品を選ぶ](#部品を選ぶ)のとおりに schema を読む。
 - YAML の誤り：上の節を見る。
 
 ```text

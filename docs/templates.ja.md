@@ -249,7 +249,7 @@ storage_gb: item_bytes * records.in_1_year / 1e9
 
 ## example.yaml
 
-書き始めのデータファイルです。`floe template show <名前> example.yaml` が出し、`floe template check` が `floe check` と同じに描きます。`page.html` の全部に届くように、テンプレートが取る項目を全部書きます。
+書き始めのデータファイルです。`floe template show <名前> example.yaml` が出し、`floe template check` が `floe check` と同じに描きます。自分のテンプレートでは、`page.html` の全部に届くように、テンプレートが取る項目を全部書きます。floe の組み込みの見本は、エージェントが読むために短くしてあり、report の見本は `toc` を書かず、見出しの無い節の小節を目次に並べる所も描きません。
 
 ## 画像
 
