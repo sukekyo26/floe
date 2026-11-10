@@ -89,30 +89,30 @@ floe は、あなたが YAML のファイルで書いたページをユーザー
 
 ```yaml
 - diagram:
-    title: How a page is published
+    title: ページが公開されるまで
     parts:
       - graph:
           x: 20
           y: 20
           nodes:
-            - box: { name: write, rows: [Write the data] }
-            - box: { name: check, shape: hex, rows: ["Checks pass?"] }
-            - box: { name: show, rows: [Show the page] }
+            - box: { name: write, rows: [データを書く] }
+            - box: { name: check, shape: hex, rows: ["検査を通る？"] }
+            - box: { name: show, rows: [ページを出す] }
           edges:
             - { from: write, to: check }
-            - { from: check, to: show, label: "yes" }
-            - { from: check, to: write, label: "no" }
+            - { from: check, to: show, label: "はい" }
+            - { from: check, to: write, label: "いいえ" }
 ```
 
 部品を手で書く：絵として読む図（構成図など）で、置き場所が大事なとき。箱に `x` と `y` を書き（大きさは字から決まります。箱を揃えたいときだけ `w` と `h` を書きます）、線は両端の名前を書きます。
 
 ```yaml
 - diagram:
-    title: How a request flows
+    title: リクエストの流れ
     parts:
-      - box: { name: user, x: 20, y: 40, rows: [User] }
-      - box: { name: api, x: 220, y: 40, rows: [API server] }
-      - box: { name: db, x: 220, y: 160, rows: [Database] }
+      - box: { name: user, x: 20, y: 40, rows: [利用者] }
+      - box: { name: api, x: 220, y: 40, rows: [API サーバー] }
+      - box: { name: db, x: 220, y: 160, rows: [データベース] }
       - edge: { from: user, to: api, label: HTTPS }
       - edge: { from: api, to: db }
 ```

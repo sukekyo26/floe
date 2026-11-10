@@ -5,11 +5,14 @@ import (
 	"fmt"
 	"os"
 	"path/filepath"
+	"slices"
 	"strings"
 	"testing"
 
+	"github.com/goccy/go-yaml"
 	"github.com/yuin/goldmark"
 	"github.com/yuin/goldmark/ast"
+	"github.com/yuin/goldmark/parser"
 	"github.com/yuin/goldmark/text"
 
 	"github.com/sukekyo26/floe/internal/cli"
@@ -25,14 +28,14 @@ type guideBlock struct{ lang, text string }
 // readGuideDoc reads the Markdown of path into its tree, as floe reads Markdown, and returns its fenced blocks, its
 // destinations of links and images, and what no doc for agents may hold: code indented rather than fenced, and raw
 // HTML (which can hide a link).
-func readGuideDoc(t *testing.T, path string) (blocks []guideBlock, dests, bad []string) {
+func readGuideDoc(t *testing.T, path string) (blocks []guideBlock, dests, headings, bad []string) {
 	t.Helper()
 
 	src, err := os.ReadFile(path)
 	if err != nil {
 		t.Fatal(err)
 	}
-	doc := goldmark.New().Parser().Parse(text.NewReader(src))
+	doc := goldmark.New(goldmark.WithParserOptions(parser.WithAutoHeadingID())).Parser().Parse(text.NewReader(src))
 	err = ast.Walk(doc, func(n ast.Node, entering bool) (ast.WalkStatus, error) {
 		if !entering {
 			return ast.WalkContinue, nil
@@ -45,6 +48,10 @@ func readGuideDoc(t *testing.T, path string) (blocks []guideBlock, dests, bad []
 				body.Write(seg.Value(src))
 			}
 			blocks = append(blocks, guideBlock{lang: string(n.Language(src)), text: body.String()})
+		case *ast.Heading:
+			if id, ok := n.AttributeString("id"); ok {
+				headings = append(headings, "#"+string(id.([]byte)))
+			}
 		case *ast.CodeBlock:
 			bad = append(bad, "an indented block of code")
 		case *ast.Link:
@@ -61,7 +68,7 @@ func readGuideDoc(t *testing.T, path string) (blocks []guideBlock, dests, bad []
 	if err != nil {
 		t.Fatal(err)
 	}
-	return blocks, dests, bad
+	return blocks, dests, headings, bad
 }
 
 // floe diagram guide prints docs/diagrams.md as it is to an agent, which cannot open another doc: no link leaves it
@@ -70,13 +77,15 @@ func readGuideDoc(t *testing.T, path string) (blocks []guideBlock, dests, bad []
 func TestDiagramGuideLinks(t *testing.T) {
 	t.Parallel()
 
-	_, dests, bad := readGuideDoc(t, diagramGuides[0])
+	_, dests, headings, bad := readGuideDoc(t, diagramGuides[0])
 	if len(dests) == 0 {
 		t.Fatal("no link found: the doc links its headings")
 	}
 	for _, d := range dests {
 		if !strings.HasPrefix(d, "#") {
 			t.Errorf("%s links %q: floe diagram guide prints it, and an agent cannot open another doc (write what it says, or a command that prints it)", diagramGuides[0], d)
+		} else if !slices.Contains(headings, d) {
+			t.Errorf("%s links %q, which no heading of it has (its headings: %v)", diagramGuides[0], d, headings)
 		}
 	}
 	for _, b := range bad {
@@ -85,6 +94,8 @@ func TestDiagramGuideLinks(t *testing.T) {
 }
 
 // guideEnv runs floe with a store and places of one's own that are empty, so that no command reads the developer's.
+// LIMIT: a copy of guideEnv of internal/cli's tests. A helper both use would live where internal/cli's own tests
+// cannot import it (a package that imports cli, a cycle), and in a file that is not a test, for a test alone.
 func guideEnv(t *testing.T, stdout, stderr *bytes.Buffer) cli.Env {
 	t.Helper()
 
@@ -138,7 +149,7 @@ func TestDiagramGuideExamples(t *testing.T) {
 
 	shapes := make([][]string, 0, len(diagramGuides))
 	for _, path := range diagramGuides {
-		blocks, _, bad := readGuideDoc(t, path)
+		blocks, _, _, bad := readGuideDoc(t, path)
 		for _, b := range bad {
 			t.Errorf("%s holds %s: write fenced code, and no HTML", path, b)
 		}
@@ -151,8 +162,11 @@ func TestDiagramGuideExamples(t *testing.T) {
 				continue
 			}
 			kind, file := guideBlockFile(b.text)
-			shape = append(shape, kind)
 			if kind == "fragment" {
+				kind += ":" + fragmentKeys(t, where, b.text)
+			}
+			shape = append(shape, kind)
+			if strings.HasPrefix(kind, "fragment") {
 				continue
 			}
 			if kind == "unknown" {
@@ -168,7 +182,13 @@ func TestDiagramGuideExamples(t *testing.T) {
 				t.Errorf("%s: floe diagram inspect = %d, %s", where, code, errs.String())
 			}
 		}
-		if complete := len(shape) - strings.Count(strings.Join(shape, " "), "fragment"); complete < 2 {
+		complete := 0
+		for _, k := range shape {
+			if !strings.HasPrefix(k, "fragment") {
+				complete++
+			}
+		}
+		if complete < 2 {
 			t.Errorf("%s: %d complete examples, want 2 or more (the blocks may not all be fragments)", path, complete)
 		}
 		shapes = append(shapes, shape)
@@ -176,6 +196,35 @@ func TestDiagramGuideExamples(t *testing.T) {
 	if strings.Join(shapes[0], " ") != strings.Join(shapes[1], " ") {
 		t.Errorf("the blocks of %s are %v, of %s %v: write the same in both", diagramGuides[0], shapes[0], diagramGuides[1], shapes[1])
 	}
+}
+
+// fragmentKeys reads a fragment as YAML, which it must be, and tells the keys it holds: of its mapping, or of each
+// item of its list. Both languages' fragment of one place holds the same keys.
+func fragmentKeys(t *testing.T, where, body string) string {
+	t.Helper()
+
+	var v any
+	if err := yaml.Unmarshal([]byte(body), &v); err != nil {
+		t.Errorf("%s is a fragment that YAML cannot read: %v", where, err)
+		return "unreadable"
+	}
+	keys := func(m any) string {
+		mm, _ := m.(map[string]any)
+		names := make([]string, 0, len(mm))
+		for k := range mm {
+			names = append(names, k)
+		}
+		slices.Sort(names)
+		return strings.Join(names, ",")
+	}
+	if list, ok := v.([]any); ok {
+		parts := make([]string, 0, len(list))
+		for _, item := range list {
+			parts = append(parts, keys(item))
+		}
+		return "list[" + strings.Join(parts, ";") + "]"
+	}
+	return "map[" + keys(v) + "]"
 }
 
 // guideBlockFile tells what a block of YAML is (fragment, page or spec, else unknown) and the file to inspect: a

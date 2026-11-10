@@ -31,8 +31,8 @@
 ### 手書きで、floe に断られずに書く
 
 - 箱には `x` と `y` を書きます。`w` と `h` を省くと、箱は字に必要な大きさになります。箱を揃えたいときに書きます。`w` が小さすぎると、要る幅を言って断られます：`box "a": "A long title here" needs w: 174 or more`。`floe diagram inspect` は floe が決めた箱の大きさ（`box "alb" 240,90 144x29`）を出すので、次の箱はそれを見て置きます。
-- ラベルのある線の箱の間は、ラベルの幅以上にします。幅は `floe diagram inspect` の `label` の行が言います（`label "HTTPS" 80,5.5 46x18` の 46）。足りないと `box "a" overlaps label "HTTPS"` と断られます。
-- 箱は、枠の中にまるごと、または外にまるごと置きます（`box "a" straddles the edge of frame "F" at x 100, spanning 80 to 160`）。枠の見出しの下の端より下に置きます（`box "a" overlaps the heading of frame "Frame label"`）。
+- ラベルのある線の箱の間は、横の線ならラベルの幅以上にします。幅は `floe diagram inspect` の `label` の行が言います（`label "HTTPS" 80,5.5 46x18` の 46）。足りないと `box "a" overlaps label "HTTPS"` と断られます。縦の線なら高さ（18）以上です。ラベルは縦の線をまたいで中央に立つので、長いと線の両側に出ます：線からキャンバスの左端までに、ラベルの幅の半分を残します（線が左から 60 のとき `label "HTTPS-LONG-LABEL" sticks out of the 142.6x169 canvas`）。または `width` を書きます。
+- 箱は、枠の中にまるごと、または外にまるごと置きます（`box "a" straddles the edge of frame "F" at x 100, spanning 80 to 160`）。枠の見出しの下の端と、アイコンがあればその下の端より下に置きます（`box "a" overlaps the heading of frame "Frame label"`、`the icon of frame "Group" overlaps box "a"`）。
 - 線は、両端の名前を `{ from, to }` で書くと、floe が通します。間に箱がある線は断られます（`edge "a"→"c" runs through box "b"; move one of them, or go round it by via`）：箱を動かすか、`via` を書きます（[手で書く線](#手で書く線)）。
 - 部品を数個書くごとに、データファイルに `floe diagram inspect` を実行します。各部品の置き場所と、断った所を、直す行つきで出します。
 
@@ -59,7 +59,7 @@ AWS のサービスは、箱でなく AWS のアイコンで描き、アイコ�
 
 | 部品 | 鍵 |
 |---|---|
-| `frame` | `x` `y` `w` `h`、`label`、`name`、`accent`、`square`（角を丸めない）、`icon`（`aws/group/region` のようなアイコン。AWS のグループの形で、角にアイコン）。ラベルは左上の内側に置くので、中身は見出しの下の端以下に置く：`floe diagram inspect` の `the heading of frame` の行が y と高さを言う（1 行の見出しは枠の上から 9 下にあり高さ 18 なので 27。アイコンのある枠は見出しが高い）。 |
+| `frame` | `x` `y` `w` `h`、`label`、`name`、`accent`、`square`（角を丸めない）、`icon`（`aws/group/region` のようなアイコン。AWS のグループの形で、角にアイコン）。ラベルは左上の内側に置くので、中身は見出しとアイコンの下の端以下に置く：`floe diagram inspect` の `the heading of frame` と `the icon of frame` の行が置き場所を言う（1 行の見出しは枠の上から 9 下にあり高さ 18 なので 27。`icon` があれば、アイコンは角の 31 角で、見出しは 6 下にあるので 31）。 |
 | `box` | `x` `y`、`rows`、`w` `h`（省けば行に要る大きさ）、`name`、`origin`（`left`。`x` を真ん中にするなら `centre`）、`tone`、`shape`（`rect`。`pill`、判断の `hex`、`state`）。行は文か `[文, 形]` で、形は `main`・`sub`・`main code`・`sub code`。形が無ければ最初の行が `main`、残りが `sub`。 |
 | `table` | `x` `y`、`title`、`rows`、`w`、`name`、`origin`、`tone`。行は `[名前]`、`[名前, 型]`、区切りの `---`、または線が行に着く `{ name, cells: [名前, 型] }`。 |
 | `icon` | `x` `y`（左上）、`icon`、`label`（アイコンの真ん中の下で、アイコンから 3 下、高さ 18。アイコンの下の辺に着く線は、ラベルの下の縁に着く）、`size`（48）、`name`。`icon` はセットとその中の名前で `aws/amazon-ec2` のように書く（`floe icons search` で探す）。 |
@@ -142,7 +142,8 @@ AWS のサービスは、箱でなく AWS のアイコンで描き、アイコ�
 
   ```yaml
   # fragment
-  parts: { x: 20, y: 20, nodes: [...], edges: [...] }
+  parts:
+    - graph: { x: 20, y: 20, nodes: [...], edges: [...] }
     - edge: { from: writer, to: reader, label: 複製 }
   ```
 - graph の箱とアイコンと、まとまり・帯の枠は、手で書いた線の端にもできます。その線は、ほかの手で書いた線と同じく辺の上で終わります（下）。`fromSide`・`toSide` を書かないと、`via` の有る無しによらず、graph の線が残した辺のうち、隣の via（無ければ相手の端）がその外にある辺を、左右、上下の順に使います。残す辺は、箱とアイコンでは graph の線の端も輪も level の線も無い辺、まとまりと帯の枠では graph の線が端を置かず横切りもしない辺です。via がその外にある残す辺が無いときは、選んだ辺のままで、graph の線の上を走ることがあるので、graph の線が使わない辺を `fromSide`・`toSide` で書きます。輪や level の線のある辺は、それらのものなので、手で書いた線の端にしないでください。
