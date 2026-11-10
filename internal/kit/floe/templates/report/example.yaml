@@ -1,4 +1,4 @@
-# The parts used most. floe part list lists every part, and floe part show <part> schema.json prints a part's keys.
+# An example of the shape: pick the parts from floe part list, and floe part show <part> schema.json prints a part's keys.
 template: report
 lang: en
 title: Moving the team wiki

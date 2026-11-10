@@ -9,7 +9,7 @@ floe は、あなたが YAML のファイルで書いたページをユーザー
 1. `floe template list` からテンプレートを選ぶ：
    - ページの目的のために作られたものがあれば、それ（設計書なら `design`、`handoff`、`runbook` など）
    - 無ければ `report`
-   - 書く前に、見本と schema を読む：`floe template show <template> example.yaml` と `floe template show <template> schema.json`
+   - 書く前に、見本と schema を読む：`floe template show <template> example.yaml` と `floe template show <template> schema.json`。見本はファイルの形（項目と節の組み方）を見るためのもので、使う部品の一覧ではない。部品は手順 3 で選ぶ
 2. ファイルにはページの名前を付ける（`db-choice.yaml` など）。`.yaml` を除いた名前が、ページの URL の名前になります。データファイルには必ず `template` と `lang` を書く。`title` はページの題、`report` の `lead` は題の下の要約です。`theme` は書かない（[テーマ](#テーマ)）。
 
    ```yaml

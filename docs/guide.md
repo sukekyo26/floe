@@ -7,7 +7,7 @@ floe turns a YAML file you write into a page for the user: it checks the file, r
 1. Pick a template from `floe template list`:
    - the one made for the page's purpose, if there is one (`design` for a design document, `handoff`, `runbook`, …);
    - else `report`;
-   - before writing, read its example and schema: `floe template show <template> example.yaml` and `floe template show <template> schema.json`.
+   - before writing, read its example and schema: `floe template show <template> example.yaml` and `floe template show <template> schema.json`. The example shows the shape of the file, not the parts to use: pick the parts in step 3.
 2. Name the file for the page, as `db-choice.yaml`: its name, without `.yaml`, names the page in its URL. Every data file needs `template` and `lang`; `title` names the page, and a `report`'s `lead` sums it up under the title. Leave `theme` out ([Themes](#themes)).
 
    ```yaml
