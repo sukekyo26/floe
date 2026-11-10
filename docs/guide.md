@@ -23,7 +23,7 @@ floe turns a YAML file you write into a page for the user: it checks the file, r
 
 3. Run `floe part list` and choose parts that fit the content from those allowed by the template's schema (read in step 1). Where the choice is easily mistaken, use the table in [Picking parts](#picking-parts). For each part the example does not show, look up its keys before writing it, as that section says: a guessed key is refused.
 4. Run `floe check db-choice.yaml`, fix every mistake, and run it again until none is left. When only `warning:` lines are left, you are done; they are advice.
-5. Run `floe publish db-choice.yaml` from the repository the page is about (`cd ~/work/app && floe publish ~/notes/db-choice.yaml`), and give the user the URL it prints. A new page goes in a project, which groups pages on the management page and the task list. floe names the project after the git repository `floe publish` runs in: its `origin`'s name if it has one, else the repository's directory name. Outside a git repository, it uses the name of the directory it runs in. Where the data file is does not matter. `floe publish` says it on stderr after the URL (`page in project app`): if that is where you happened to be (`tmp`) and not the repository the page is about, move to that repository and publish again with `--move-project`, which puts the page in the project of the directory it runs in (then check the page's task with `floe work`, and set it again if it is not the one you mean). The user can also change the project in the page's Edit on the management page (Slug and project). You need not fetch the page.
+5. Run `floe publish db-choice.yaml` from the repository the page is about (`cd ~/work/app && floe publish ~/notes/db-choice.yaml`), and give the user the URL it prints. A new page goes in a project, which groups pages on the management page and the task list. floe names the project after the git repository `floe publish` runs in: its `origin`'s name if it has one, or the repository's directory name otherwise. Outside a git repository, it uses the name of the directory it runs in. Where the data file is does not matter. `floe publish` says it on stderr after the URL (`page in project app`): if that is where you happened to be (`tmp`) and not the repository the page is about, move to that repository and publish again with `--move-project`, which puts the page in the project of the directory it runs in (then check the page's task with `floe work`, and set it again if it is not the one you mean). The user can also change the project in the page's Edit on the management page (Slug and project). You need not fetch the page.
 
 ## Publishing again
 
@@ -145,7 +145,7 @@ t.yaml:10:16: got number, want string or object
 
 ## Reading mistakes
 
-A mistake is in what you wrote, so you fix it. A failure is in floe itself, so tell the user what it printed.
+A mistake names a place in what you wrote (`file:line:column:` or `file:`), so you fix it. Anything else is a failure, of floe or of the machine (a port in use, …): tell the user what it printed.
 
 `floe check` prints one mistake per line, prefixed with `file:line:column:` (or just `file:` for a mistake in the whole file), and exits with code 1. It checks in stages, so fixing the mistakes may bring out those of the next stage.
 
