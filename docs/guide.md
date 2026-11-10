@@ -128,9 +128,9 @@ t.yaml:10:16: got number, want string or object
 
 ## Reading mistakes
 
-`floe check` prints one mistake per line, starting with `file:line:column:` (or `file:` alone for a mistake in the whole file), and exits with code 1. It checks in stages, so fixing the mistakes may bring out those of the next stage.
+`floe check` prints one mistake per line, prefixed with `file:line:column:` (or just `file:` for a mistake in the whole file), and exits with code 1. It checks in stages, so fixing the mistakes may bring out those of the next stage.
 
-- The schema refuses a key a part does not take, a missing required key, and a value of the wrong type: read the schema, as [Picking parts](#picking-parts) explains.
+- Schema mistakes include keys a part does not accept, missing required keys, and values of the wrong type: read the schema, as [Picking parts](#picking-parts) explains.
 - A mistake of YAML: see the section above.
 
 ```text
