@@ -1,6 +1,6 @@
 # 図
 
-`diagram` の部品は、節にも `details`・`tabs`・`columns`・`entries`・`checks`・`options` の項目の `parts` の中にも置ける、その場に書く spec です。キャンバスと、その上に描く部品から成ります。手で書く部品は絶対座標（左上が 0, 0。どの座標も ± 100 万まで、大きさは 100 万まで、キャンバスは 1,000 万まで）で置き、graph は floe が置きます。ページを描く前に確かめ（誤りはデータファイルの行と列で言う）、inline SVG で描き、原寸より小さく描かれた図は拡大できます。`floe diagram render` は、ファイルに書いた spec を同じように描きます（`floe diagram render --help`）。
+`diagram` の部品は、節にも `details`・`tabs`・`columns`・`entries`・`checks`・`options` の項目の `parts` の中にも置ける、その場に書く spec です。キャンバスと、その上に描く部品から成ります。手で書く部品は絶対座標（左上が 0, 0。どの座標も ± 100 万まで、大きさは 100 万まで、キャンバスは 1,000 万まで）で置き、graph は floe が置きます。ページを描く前に確かめ、誤りはデータファイルの行と列で言います。図は inline SVG で描き、原寸より小さく描かれた図は拡大できます。`floe diagram render` は、ファイルに書いた spec を同じように描きます（`floe diagram render --help`）。
 
 ```yaml
 - diagram:
