@@ -52,7 +52,7 @@ Write floe's skill, `floe/SKILL.md`, where the agent named reads the skills of a
 
 ## `floe publish <data.yaml>` / `floe publish --link <file|folder>`
 
-Draw the page of a data file with the template it names, store the page as it was drawn, and print its URL (`http://127.0.0.1:7325/a/<slug>/`) on stdout, and the warnings of the page drawn on stderr, as `floe check` prints them. If the server is not running, it is started in the background first. A new slug is also opened in the browser (`$BROWSER`, else `open`, `wslview` or `xdg-open`); a republished one is not, because the open tab reloads itself.
+Draw the page of a data file with the template it names, store the page as it was drawn, and print its URL (`http://127.0.0.1:7325/a/<slug>/`) on stdout, and the warnings of the page drawn on stderr, as `floe check` prints them, then, when the directory it runs in has put the page in a project (the page is new, or its project changed), a line of stderr that says it: `page in project floe`, or `page in no project`. If the server is not running, it is started in the background first. A new slug is also opened in the browser (`$BROWSER`, else `open`, `wslview` or `xdg-open`); a republished one is not, because the open tab reloads itself.
 
 Pages are drawn from data files (`.yaml`, `.yml`); [pages.md](pages.md) tells how to write one. The data file is copied to `<slug>/source-<id>/data.yaml` under `FLOE_DIR`, with the images it shows at the paths it names them by; take it back from there if the original is lost. Each publish writes a new copy and then removes the one before, so a publish that fails leaves the page as it was. A relative path is resolved against the working directory.
 
@@ -71,7 +71,7 @@ The stored page stays as it was drawn: changing the template, a part or a theme 
 
 ### Projects and overwriting
 
-A new page is in the project it is first published from: the repository name in git's `origin` URL, else the repository's directory (a worktree joins its main checkout), else the working directory's name.
+A new page is in the project it is first published from: the repository name in git's `origin` URL, else the repository's directory (a worktree joins its main checkout), else the working directory's name. `floe publish` says the project the page is in after its URL, on stderr (`page in project floe`; `page in no project`), when the page is new, replaces another file's with `--force` or was emptied of its project, and its project is not what it was; a republish that keeps the project says nothing, and nor does `--link`, whose project is its target's directory's.
 
 - A page belongs to its data file: the file's repository and its path from the repository's root, else its real path, whatever directory it is published from. `docs/plan.yaml` is one file whether it is published from the repository's root, from `docs`, from another worktree or from outside the repository, and publishing it again keeps the page's project. Repositories are told apart by name: two clones of one `origin` share a page, and so do two repositories of one name.
 - The same slug from the same file overwrites the page. stderr says so (`updated "plan" (last updated …, title "…")`). If the title changed, a warning says from what to what. The exit code stays 0.

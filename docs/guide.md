@@ -23,7 +23,7 @@ floe turns a YAML file you write into a page for the user: it checks the file, r
 
 3. Run `floe part list` and choose parts that fit the content from those allowed by the template's schema (read in step 1). Where the choice is easily mistaken, use the table in [Picking parts](#picking-parts). For each part the example does not show, look up its keys before writing it, as that section says: a guessed key is refused.
 4. Run `floe check db-choice.yaml`, fix every mistake, and run it again until none is left. When only `warning:` lines are left, you are done; they are advice.
-5. Run `floe publish db-choice.yaml` in the repository you are working in, and give the user the URL it prints. The page's project is set by where you first publish it from; the data file may be anywhere. You need not fetch the page.
+5. Run `floe publish db-choice.yaml` in the repository you are working in, and give the user the URL it prints. The page's project is set by where you first publish it from; the data file may be anywhere. `floe publish` says it on stderr after the URL (`page in project floe`): if that is not the project you work in, tell the user, who can change it in the page's Edit on the management page (Slug and project), and it stays when you publish again. You need not fetch the page.
 
 ## Publishing again
 
