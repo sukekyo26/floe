@@ -23,7 +23,7 @@ floe turns a YAML file you write into a page for the user: it checks the file, r
 
 3. Run `floe part list` and choose parts that fit the content from those allowed by the template's schema (read in step 1). Where the choice is easily mistaken, use the table in [Picking parts](#picking-parts). For each part the example does not show, look up its keys before writing it, as that section says: a guessed key is refused.
 4. Run `floe check db-choice.yaml`, fix every mistake, and run it again until none is left. When only `warning:` lines are left, you are done; they are advice.
-5. Run `floe publish db-choice.yaml` and give the user the URL it prints. You need not fetch the page.
+5. Run `floe publish db-choice.yaml` in the repository you are working in, and give the user the URL it prints. The page's project is set by where you first publish it from; the data file may be anywhere. You need not fetch the page.
 
 ## Publishing again
 
@@ -124,7 +124,7 @@ In an AWS architecture, represent each service with an AWS icon, not a box. Do n
 
 First:
 
-- Quote text that holds `: ` or ` #`, and, in `{ }` or `[ ]`, a `,`: `heading: "Step 1: plan"`. Unquoted, YAML reads them as a key, a comment or the end of the text. floe refuses most of these, but a `,` in `[ ]` silently splits the item: `tags: [Tokyo, Osaka office]` is two tags.
+- Quote text that holds `: ` or ` #`, that starts with a backtick, and, in `{ }` or `[ ]`, a `,`: `heading: "Step 1: plan"`, ``text: "`algorithms` fixes the methods."``. Unquoted, YAML reads them as a key, a comment or the end of the text, and refuses a text that starts with a backtick. floe refuses most of these, but a `,` in `[ ]` silently splits the item: `tags: [Tokyo, Osaka office]` is two tags.
 - Write a comment on a line of its own, no deeper than the key of the value above it (or the `-` of a list item), and never in `{ }` or `[ ]`.
 - In a `|` or `>` text, indent the first line as the lines after it. A deeper first line ends the text early, and floe refuses a line after it.
 - Write a number where text is wanted, such as a table's cell, in quotes: `"42"`.
