@@ -7,25 +7,25 @@
 # alone; give a node a name to end an edge of your own at it.
 width: 960
 height: 300
-title: { en: "The departments of a company", ja: "ある会社の部署" }
+title: { en: 'The departments of a company', ja: 'ある会社の部署' }
 parts:
   - tree:
       x: 480
       y: 20
       root:
-        rows: [{ en: Chief executive, ja: "社長" }]
+        rows: [{ en: 'Chief executive', ja: '社長' }]
         tone: accent
         children:
-          - rows: [{ en: Engineering, ja: "開発部" }]
+          - rows: [{ en: Engineering, ja: '開発部' }]
             children:
-              - rows: [{ en: Apps, ja: "アプリ" }]
-              - rows: [{ en: Servers, ja: "サーバー" }]
-              - rows: [{ en: Quality, ja: "品質" }]
-          - rows: [{ en: Sales, ja: "営業部" }]
+              - rows: [{ en: Apps, ja: 'アプリ' }]
+              - rows: [{ en: Servers, ja: 'サーバー' }]
+              - rows: [{ en: Quality, ja: '品質' }]
+          - rows: [{ en: Sales, ja: '営業部' }]
             children:
-              - rows: [{ en: Home market, ja: "国内" }]
-              - rows: [{ en: Overseas, ja: "海外" }]
-          - rows: [{ en: Administration, ja: "管理部" }]
+              - rows: [{ en: 'Home market', ja: '国内' }]
+              - rows: [{ en: Overseas, ja: '海外' }]
+          - rows: [{ en: Administration, ja: '管理部' }]
             children:
-              - rows: [{ en: People, ja: "人事" }]
-              - rows: [{ en: Accounts, ja: "経理" }]
+              - rows: [{ en: People, ja: '人事' }]
+              - rows: [{ en: Accounts, ja: '経理' }]

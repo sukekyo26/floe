@@ -1,2 +1,2 @@
-en: { done: "Done: ", todo: "Not done: " }
-ja: { done: "済み：", todo: "未完了：" }
+en: { done: 'Done: ', todo: 'Not done: ' }
+ja: { done: '済み：', todo: '未完了：' }

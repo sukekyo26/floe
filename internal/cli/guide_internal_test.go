@@ -4,15 +4,22 @@ import (
 	"bytes"
 	"encoding/json"
 	"errors"
+	"fmt"
 	"io"
+	"io/fs"
 	"os"
 	"path/filepath"
 	"regexp"
 	"slices"
+	"strconv"
 	"strings"
 	"testing"
 
+	"github.com/goccy/go-yaml/ast"
+	"github.com/goccy/go-yaml/token"
+
 	"github.com/sukekyo26/floe/docs"
+	"github.com/sukekyo26/floe/internal/kit"
 	"github.com/sukekyo26/floe/internal/usererr"
 	"github.com/sukekyo26/floe/internal/yamlpos"
 )
@@ -343,6 +350,192 @@ func TestSameSkill(t *testing.T) {
 		got, err := sameSkill(&overReader{r: strings.NewReader(text), n: len(skill) + 1, i: 0})
 		if err != nil || got != want {
 			t.Errorf("%d bytes: %t, %v; want %t", len(text), got, err, want)
+		}
+	}
+}
+
+// identifier is what a value may be while it stands bare: a word of floe (template: report, tone: warn), a name, a path
+// or a date.
+var identifier = regexp.MustCompile(`^[A-Za-z0-9][A-Za-z0-9_./-]*$`)
+
+// unquoted is a walk of a YAML document that collects the text values not written as the guide teaches: in '...' on
+// one line, or in a | block of two lines or more; or bare, as an identifier. A key is not a value; a | block's body is
+// read as the block, not as a text; a value left out is no text.
+type unquoted struct {
+	file  string
+	skip  map[ast.Node]bool
+	told  map[yamlpos.Pos]bool
+	found []string
+}
+
+// report tells what is wrong at n, once for each place.
+func (u *unquoted) report(n ast.Node, what string) {
+	at := yamlpos.Of(n)
+	if u.told[at] {
+		return
+	}
+	u.told[at] = true
+	u.found = append(u.found, fmt.Sprintf("%s:%d:%d: %s", u.file, at.Line, at.Column, what))
+}
+
+func (u *unquoted) Visit(n ast.Node) ast.Visitor {
+	switch v := n.(type) {
+	case *ast.MappingValueNode:
+		u.skip[v.Key] = true
+	case *ast.MappingKeyNode:
+		u.skip[v.Value] = true
+	case *ast.LiteralNode:
+		u.skip[v.Value] = true
+		if !strings.HasPrefix(v.GetToken().Value, "|") {
+			u.report(v, "write a text of several lines as a | block, not >")
+		} else if !strings.Contains(strings.TrimSpace(v.Value.GetToken().Value), "\n") {
+			u.report(v, "write a text of one line in '...', not as a | block")
+		}
+	case *ast.NullNode:
+		if tok := v.GetToken(); tok.Type != token.ImplicitNullType {
+			u.report(v, "write '"+tok.Value+"' in quotes, or leave the value out: a bare "+tok.Value+" is no text")
+		}
+	case *ast.StringNode:
+		if u.skip[v] {
+			break
+		}
+		tok := v.GetToken()
+		if strings.Contains(strings.TrimSpace(tok.Origin), "\n") {
+			u.report(v, "write a text on one line in '...', or over lines as a | block")
+		}
+		switch yamlpos.QuoteOf(v) {
+		case yamlpos.Double:
+			u.report(v, "write the text in '...', not in double quotes: a \\ in them is read as an escape, mostly with no mistake")
+		case yamlpos.Plain:
+			if !identifier.MatchString(tok.Value) {
+				u.report(v, "write the text "+strconv.Quote(tok.Value)+" in '...'")
+			}
+		case yamlpos.Single:
+		}
+	}
+	return u
+}
+
+// notQuoted returns what is not written as the guide teaches in src, a YAML document, each at name's line and column.
+func notQuoted(name string, src []byte) ([]string, error) {
+	body, err := yamlpos.Parse(name, src)
+	if err != nil {
+		return nil, fmt.Errorf("%s: %w", name, err)
+	}
+	u := &unquoted{file: name, skip: map[ast.Node]bool{}, told: map[yamlpos.Pos]bool{}, found: nil}
+	ast.Walk(u, body)
+	return u.found, nil
+}
+
+// copied is every YAML that floe shows an agent, which copies it: the blocks of the docs, the files of floe's templates,
+// parts and themes (floe template show, part show, theme show), the diagrams' examples (floe diagram example) and the
+// example a new template starts from.
+func copied(t *testing.T) map[string][]byte {
+	t.Helper()
+
+	sources := map[string][]byte{}
+	docs, err := filepath.Glob("../../docs/*.md")
+	if err != nil || len(docs) == 0 {
+		t.Fatalf("docs: %v, %d files", err, len(docs))
+	}
+	for _, path := range docs {
+		if strings.HasPrefix(filepath.Base(path), "CHANGELOG") {
+			continue
+		}
+		for i, block := range fences(readGuide(t, path), "yaml") {
+			sources[fmt.Sprintf("docs/%s block %d", filepath.Base(path), i+1)] = []byte(block)
+		}
+	}
+	for _, root := range []string{"../kit/floe", "../diagram/examples"} {
+		err := filepath.WalkDir(root, func(path string, d fs.DirEntry, err error) error {
+			if err != nil || d.IsDir() || filepath.Ext(path) != ".yaml" {
+				return err
+			}
+			b, err := os.ReadFile(path) //nolint:gosec // G304: a file of floe's own, found by the walk
+			sources[strings.TrimPrefix(path, "../")] = b
+			return err
+		})
+		if err != nil {
+			t.Fatal(err)
+		}
+	}
+	sources["the example of floe template new"] = kit.Skeleton(kit.KindTemplate, "memo")["example.yaml"]
+	return sources
+}
+
+// Every YAML a reader of the guide would copy writes its text values as the guide says: in '...', as a | block of
+// several lines, or bare as an identifier or a number.
+// LIMIT: a text of one word (title: Steps) is an identifier and passes; telling it from a name would take the keys of
+// every part, which would fall out of step as parts come. The guide teaches the rule in words, so that the words that
+// pass are what an identifier is.
+func TestGuideSentencesQuoted(t *testing.T) {
+	t.Parallel()
+
+	sources := copied(t)
+	// A doc that holds a YAML block, and each of floe's kinds of file, is read: that none is left unread is the test's
+	// own check.
+	for _, name := range []string{"guide.md", "guide.ja.md", "pages.md", "pages.ja.md", "templates.md", "templates.ja.md", "diagrams.md", "diagrams.ja.md"} {
+		if _, ok := sources["docs/"+name+" block 1"]; !ok {
+			t.Errorf("docs/%s holds no YAML block: the test reads none of it", name)
+		}
+	}
+	for _, dir := range []string{"kit/floe/templates/", "kit/floe/parts/", "kit/floe/themes/", "diagram/examples/"} {
+		found := false
+		for name := range sources {
+			found = found || strings.HasPrefix(name, dir)
+		}
+		if !found {
+			t.Errorf("no YAML file of %s: the test reads none of it", dir)
+		}
+	}
+	for name, src := range sources {
+		found, err := notQuoted(name, src)
+		if err != nil {
+			t.Error(err)
+		}
+		for _, f := range found {
+			t.Error(f)
+		}
+	}
+}
+
+// The test of the sources stands on what notQuoted lets through and refuses.
+func TestNotQuoted(t *testing.T) {
+	t.Parallel()
+
+	for _, c := range []struct {
+		src  string
+		want int
+	}{
+		{"a: 'x y'\nb: 'it''s \\* \"q\"'\n", 0},
+		{"a: |\n  one\n  two\n", 0},
+		{"a: -x\n", 1},
+		{"a: report\nb: 12\nc: true\nd: 2030-04-12\ne: a/b_c.d-e\nf: Steps\n", 0},
+		{"- { a: 'x', b: ['y z', warn] }\n", 0},
+		{"'a key with spaces': v\n", 0},
+		{"a:\nb: { c: }\n", 0},
+		{"a: x y\n", 1},
+		{"a: \"x\"\n", 1},
+		{"a: \"x\"\nb: PR 1\nc: 日本\n", 3},
+		{"a: |\n  one\n", 1},
+		{"a: |-\n  one\n", 1},
+		{"a: |+\n  one\n\n", 1},
+		{"a: >\n  one\n  two\n", 1},
+		{"a: >\n  one\n\n  two\n", 1},
+		{"a: null\nb: Null\nc: ~\n", 3},
+		{"a: [x y, 'z']\n", 1},
+		{"a: 'one\n  two'\n", 1},
+		{"a: |\n\n  one\n", 1},
+		{"? x y\n: v\n", 0},
+		{"a: \"one\n  two\"\n", 1},
+	} {
+		found, err := notQuoted("c.yaml", []byte(c.src))
+		if err != nil {
+			t.Errorf("%q: %v", c.src, err)
+			continue
+		}
+		if len(found) != c.want {
+			t.Errorf("%q: %d found %q, want %d", c.src, len(found), found, c.want)
 		}
 	}
 }

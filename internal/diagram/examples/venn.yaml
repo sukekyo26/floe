@@ -6,20 +6,20 @@
 # The names of the circles stand outside them, at coordinates.
 width: 760
 height: 520
-title: { en: The packages each floe command runs through, ja: "コマンドごとに通るパッケージ" }
+title: { en: 'The packages each floe command runs through', ja: 'コマンドごとに通るパッケージ' }
 parts:
   - circle: { name: publish, cx: 300, cy: 200, r: 170, tone: accent }
   - circle: { name: serve, cx: 460, cy: 200, r: 170, tone: good }
   - circle: { name: render, cx: 380, cy: 335, r: 170, tone: warn }
-  - label: { text: floe publish, x: 170, y: 30, plain: true, strong: true }
-  - label: { text: floe serve, x: 590, y: 30, plain: true, strong: true }
-  - label: { text: floe diagram render, x: 600, y: 490, plain: true, strong: true }
-  - label: { text: { en: "cli, i18n", ja: "cli・i18n" }, in: [publish, serve, render] }
-  - label: { text: { en: "usererr, yamlpos", ja: "usererr・yamlpos" }, in: [publish, serve, render] }
-  - label: { text: { en: "diagram, icons", ja: "diagram・icons" }, in: [publish, serve, render] }
+  - label: { text: 'floe publish', x: 170, y: 30, plain: true, strong: true }
+  - label: { text: 'floe serve', x: 590, y: 30, plain: true, strong: true }
+  - label: { text: 'floe diagram render', x: 600, y: 490, plain: true, strong: true }
+  - label: { text: { en: 'cli, i18n', ja: 'cli・i18n' }, in: [publish, serve, render] }
+  - label: { text: { en: 'usererr, yamlpos', ja: 'usererr・yamlpos' }, in: [publish, serve, render] }
+  - label: { text: { en: 'diagram, icons', ja: 'diagram・icons' }, in: [publish, serve, render] }
   - label: { text: go-yaml, in: [publish, serve, render] }
-  - label: { text: { en: "store, link", ja: "store・link" }, in: [publish, serve] }
-  - label: { text: { en: "tmpl, daemon", ja: "tmpl・daemon" }, in: [publish, serve] }
+  - label: { text: { en: 'store, link', ja: 'store・link' }, in: [publish, serve] }
+  - label: { text: { en: 'tmpl, daemon', ja: 'tmpl・daemon' }, in: [publish, serve] }
   - label: { text: project, in: [publish] }
   - label: { text: server, in: [serve] }
-  - label: { text: { en: "page, ui", ja: "page・ui" }, in: [serve] }
+  - label: { text: { en: 'page, ui', ja: 'page・ui' }, in: [serve] }

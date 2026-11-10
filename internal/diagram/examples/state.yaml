@@ -3,22 +3,22 @@
 #
 # The start is a dot, its line written by hand into the top of the first state: a graph laid out right leaves the
 # tops of its boxes to edges written by hand (the bottoms too, but where a box has loops).
-title: { en: "The states of floe's server", ja: "floe のサーバーの状態" }
+title: { en: 'The states of floe''s server', ja: 'floe のサーバーの状態' }
 parts:
   - graph:
       x: 20
       y: 20
       direction: right
       nodes:
-        - box: { name: stopped, shape: state, rows: [{ en: Stopped, ja: "停止中" }, { en: no process, ja: "プロセスなし" }] }
-        - box: { name: running, tone: accent, shape: state, rows: [{ en: Running, ja: "稼働中" }, { en: "on 127.0.0.1:7325", ja: "127.0.0.1:7325 で配信" }] }
-        - box: { name: outdated, tone: warn, shape: state, rows: [{ en: Outdated, ja: "古い版" }, { en: floe was reinstalled, ja: "floe を入れ直した" }] }
+        - box: { name: stopped, shape: state, rows: [{ en: Stopped, ja: '停止中' }, { en: 'no process', ja: 'プロセスなし' }] }
+        - box: { name: running, tone: accent, shape: state, rows: [{ en: Running, ja: '稼働中' }, { en: 'on 127.0.0.1:7325', ja: '127.0.0.1:7325 で配信' }] }
+        - box: { name: outdated, tone: warn, shape: state, rows: [{ en: Outdated, ja: '古い版' }, { en: 'floe was reinstalled', ja: 'floe を入れ直した' }] }
       edges:
-        - { from: stopped, to: stopped, label: { en: start fails (port in use), ja: "起動失敗（ポート使用中）" } }
-        - { from: stopped, to: running, label: { en: publish or serve, ja: "publish・serve" } }
-        - { from: running, to: outdated, label: { en: floe reinstalled, ja: "floe を入れ直す" } }
-        - { from: outdated, to: running, label: { en: next publish replaces it, ja: "次の publish が入れ替え" } }
-        - { from: running, to: stopped, label: { en: "floe stop, logout or reboot", ja: "floe stop・ログアウト・再起動" } }
-        - { from: outdated, to: stopped, label: { en: "floe stop, logout or reboot", ja: "floe stop・ログアウト・再起動" } }
+        - { from: stopped, to: stopped, label: { en: 'start fails (port in use)', ja: '起動失敗（ポート使用中）' } }
+        - { from: stopped, to: running, label: { en: 'publish or serve', ja: 'publish・serve' } }
+        - { from: running, to: outdated, label: { en: 'floe reinstalled', ja: 'floe を入れ直す' } }
+        - { from: outdated, to: running, label: { en: 'next publish replaces it', ja: '次の publish が入れ替え' } }
+        - { from: running, to: stopped, label: { en: 'floe stop, logout or reboot', ja: 'floe stop・ログアウト・再起動' } }
+        - { from: outdated, to: stopped, label: { en: 'floe stop, logout or reboot', ja: 'floe stop・ログアウト・再起動' } }
   - dot: { cx: 120, cy: 22 }
   - edge: { from: [120, 29], to: stopped }

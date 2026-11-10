@@ -15,12 +15,12 @@ floe は、あなたが YAML のファイルで書いたページをユーザー
    ```yaml
    template: report
    lang: en
-   title: Moving the team wiki
-   lead: The wiki moves in two weekends.
+   title: 'Moving the team wiki'
+   lead: 'The wiki moves in two weekends.'
    sections:
      - heading: Steps
        parts:
-         - text: Freeze edits on **Friday evening**, then copy the pages.
+         - text: 'Freeze edits on **Friday evening**, then copy the pages.'
    ```
 
 3. `floe part list` を走らせ、手順 1 で読んだテンプレートの schema が許す部品から、中身に合うものを選ぶ。迷いやすいときは[部品を選ぶ](#部品を選ぶ)の表を使う。見本に無い部品は、書く前に、その節のとおりに鍵を調べる。推した鍵は断られます。
@@ -65,21 +65,23 @@ floe は、あなたが YAML のファイルで書いたページをユーザー
 ```yaml
 - text: |
     One paragraph of **Markdown**.
-- note: { tone: warn, text: Edits during the freeze are lost. }
+
+    A second paragraph, with a `code` word.
+- note: { tone: warn, text: 'Edits during the freeze are lost.' }
 - facts:
     - { name: Owner, value: Ana }
 - steps:
-    - { title: Freeze edits, state: done }
+    - { title: 'Freeze edits', state: done }
 - entries:
-    - { title: Broken links, tags: [120 pages], text: A link check runs after the copy. }
+    - { title: 'Broken links', tags: ['120 pages'], text: 'A link check runs after the copy.' }
 - checks:
-    - { title: Pages copied, result: ok, actual: All 1840 pages. }
-    - { title: Search, result: ng, actual: The index is empty. }
-    - { title: Old links, result: unchecked, actual: Waits for the copy. }
+    - { title: 'Pages copied', result: ok, actual: 'All 1840 pages.' }
+    - { title: Search, result: ng, actual: 'The index is empty.' }
+    - { title: 'Old links', result: unchecked, actual: 'Waits for the copy.' }
 - table:
     columns: [Page, { title: Links, num: true }]
     rows:
-      - [Home, "12"]
+      - [Home, '12']
 ```
 
 ## 図
@@ -90,30 +92,30 @@ floe は diagram の部品を 1 つずつ検証します。字のはみ出し、
 
 ```yaml
 - diagram:
-    title: ページが公開されるまで
+    title: 'ページが公開されるまで'
     parts:
       - graph:
           x: 20
           y: 20
           nodes:
-            - box: { name: write, rows: [データを書く] }
-            - box: { name: check, shape: hex, rows: ["検査を通る？"] }
-            - box: { name: show, rows: [ページを出す] }
+            - box: { name: write, rows: ['データを書く'] }
+            - box: { name: check, shape: hex, rows: ['検査を通る？'] }
+            - box: { name: show, rows: ['ページを出す'] }
           edges:
             - { from: write, to: check }
-            - { from: check, to: show, label: "はい" }
-            - { from: check, to: write, label: "いいえ" }
+            - { from: check, to: show, label: 'はい' }
+            - { from: check, to: write, label: 'いいえ' }
 ```
 
 部品を座標で置く書き方は、絵として読む図（構成図・配置図など）で、置き場所が意味を持つときに使います。箱に `x` と `y` を書きます。`w` と `h` を省くと、floe が箱を字に合わせた大きさにします。箱を揃えたいときは書きます。線は両端の名前を書きます。
 
 ```yaml
 - diagram:
-    title: リクエストの流れ
+    title: 'リクエストの流れ'
     parts:
-      - box: { name: user, x: 20, y: 40, rows: [利用者] }
-      - box: { name: api, x: 220, y: 40, rows: [API サーバー] }
-      - box: { name: db, x: 220, y: 160, rows: [データベース] }
+      - box: { name: user, x: 20, y: 40, rows: ['利用者'] }
+      - box: { name: api, x: 220, y: 40, rows: ['API サーバー'] }
+      - box: { name: db, x: 220, y: 160, rows: ['データベース'] }
       - edge: { from: user, to: api, label: HTTPS }
       - edge: { from: api, to: db }
 ```
@@ -126,16 +128,15 @@ AWS の構成図では、サービスを箱でなく AWS のアイコンで描�
 
 まず：
 
-- `: `・` #` を含む文、バッククォートで始まる文、`{ }`・`[ ]` の中で `,` を含む文は引用符で包む：`heading: "Step 1: plan"`、``text: "`algorithms` で方式を固定する。"``。包まないと、YAML は鍵、コメント、文の終わりと読み、バッククォートで始まる文は断ります。floe はほとんどを断りますが、`[ ]` の中の `,` は黙って項目を分けます：`tags: [Tokyo, Osaka office]` はタグ 2 つです。
+- 字の値は、引用符が要るか考えず、1 行なら `'…'`、何行もの文なら `|` の文で書く：`heading: 'Step 1: plan'`、``text: '`algorithms` で方式を固定する。'``。`|` の中は本文そのままで、引用符もエスケープも要りません。引用符なしのままにしてよいのは、数、`true`・`false`、英数字で始まり、英数字と `_ . / -` だけの名前や語（`template: report`、`tone: warn`）だけです。数、`null`、`~` と読める文（表の升の `'42'`、`'1.10'`・`'0x1F'`・`'null'`・`'-'`）は引用符で囲みます。引用符なしでは、数になる（`1.10` は 1.1、`0x1F` は 31）か、値が無いことになります（`- -` は空の項目）。`'…'` の中は `'` を `''` と書くだけで、`\` も `"` もただの字です。`"…"` は使いません。中の `\` が、多くの場合に断られず別の字になるからです（`\_` は改行しない空白）。包まないと、YAML は `: ` を鍵、` #` をコメント、`{ }`・`[ ]` の中の `,` を文の終わりと読み、バッククォートで始まる文は断ります。floe はほとんどを断りますが、`[ ]` の中の `,` は黙って項目を分けます：`tags: [Tokyo, Osaka office]` はタグ 2 つです。
 - コメントは、それだけの行に、上の値の鍵（リストの項目なら `-`）より深くなく書き、`{ }`・`[ ]` の中には書かない。
-- `|`・`>` の文は、1 行目を後の行と同じ深さに字下げする。1 行目が深いと文がそこで終わり、後の行が断られます。
-- 表の升のような文を取る所の数は、引用符で包む：`"42"`。
+- `|` の文は、1 行目を後の行と同じ深さに字下げする。1 行目が深いと文がそこで終わり、後の行が断られます。
 - 文書は 1 つ：`---`、アンカー、エイリアス、マージの鍵（`<<`）、タグは書かない。
 
 次に：
 
 - 日本語・中国語・韓国語の字の隣では、`**`・`*`・`~~` は約物をまたいでも読まれます（`**「題」**に` は太字）。記号のつもりの `*` は、そこでは `\*` か backtick で書く。
-- `|`・`>` の文は、空白だけで字下げする。1 行目の空白のすぐ後のタブは断られます。
+- `|` の文は、空白だけで字下げする。1 行目の空白のすぐ後のタブは断られます。
 
 `heading: Step 1: plan`、`lead: PR #100`、表の升の `42` は、こう断られます：
 

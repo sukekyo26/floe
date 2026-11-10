@@ -208,9 +208,9 @@ The words the template draws itself, such as the name of a status, by language:
 
 ```yaml
 en:
-  status_doing: In progress
+  status_doing: 'In progress'
 ja:
-  status_doing: 進行中
+  status_doing: '進行中'
 ```
 
 Each key is a language tag. `{{word "status_doing"}}` draws the word in the page's `lang:` (`ja-JP` taking `ja`), and in `en` for a language the file has no words of. A word the language does not have stops the drawing, naming `words.yaml`.
@@ -224,8 +224,8 @@ Relations between items that a schema cannot say, each checked on every item of 
 - for: sections
   # the item's key to point at when it fails (optional)
   field: heading
-  expr: item.heading != nil || len(item.parts ?? []) < 2
-  message: give a section of more than one part a heading
+  expr: 'item.heading != nil || len(item.parts ?? []) < 2'
+  message: 'give a section of more than one part a heading'
 ```
 
 - A list on the way of `for` is gone through item by item: `sections.parts` checks the parts of every section, and a failure is reported at its item.
@@ -239,8 +239,8 @@ Relations between items that a schema cannot say, each checked on every item of 
 Values computed from the data, for `page.html` to show as `.Calc.<name>`:
 
 ```yaml
-item_bytes: sum(attributes, .avg_bytes)
-storage_gb: item_bytes * records.in_1_year / 1e9
+item_bytes: 'sum(attributes, .avg_bytes)'
+storage_gb: 'item_bytes * records.in_1_year / 1e9'
 ```
 
 - An expression sees the data file's items that the schema declares, and the other computed values, by name, whatever order they are written in.

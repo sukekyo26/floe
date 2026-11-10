@@ -7,11 +7,11 @@ A `diagram` part, in a section or in `details`, `tabs`, `columns` and the `parts
     width: 640
     height: 200
     # read aloud by screen readers
-    title: How the API is laid out
+    title: 'How the API is laid out'
     parts:
       - frame: { x: 16, y: 16, w: 608, h: 168, label: VPC }
-      - box: { name: alb, x: 40, y: 72, tone: accent, rows: [[ALB, main code], public entry] }
-      - box: { name: api, x: 400, y: 72, rows: [API server, ECS] }
+      - box: { name: alb, x: 40, y: 72, tone: accent, rows: [[ALB, 'main code'], 'public entry'] }
+      - box: { name: api, x: 400, y: 72, rows: ['API server', ECS] }
       - edge: { from: alb, to: api, label: HTTPS }
 ```
 
@@ -78,7 +78,7 @@ In an AWS architecture, represent each service with an AWS icon, not a box. Do n
 
 ```yaml
 - diagram:
-    title: A web app on AWS
+    title: 'A web app on AWS'
     parts:
       - icon: { name: alb, x: 40, y: 40, icon: aws/res/elastic-load-balancing-application-load-balancer, label: ALB }
       - icon: { name: api, x: 240, y: 40, icon: aws/amazon-elastic-container-service, label: ECS }
@@ -112,19 +112,19 @@ A `graph` holds only how its boxes are joined; floe places them:
 
 ```yaml
 - diagram:
-    title: How a page is published
+    title: 'How a page is published'
     parts:
       - graph:
           x: 20
           y: 20
           nodes:
-            - box: { name: write, rows: [Write the data] }
-            - box: { name: check, shape: hex, rows: ["Checks pass?"] }
-            - box: { name: show, rows: [Show the page] }
+            - box: { name: write, rows: ['Write the data'] }
+            - box: { name: check, shape: hex, rows: ['Checks pass?'] }
+            - box: { name: show, rows: ['Show the page'] }
           edges:
             - { from: write, to: check }
-            - { from: check, to: show, label: "yes" }
-            - { from: check, to: write, label: "no" }
+            - { from: check, to: show, label: 'yes' }
+            - { from: check, to: write, label: 'no' }
 ```
 
 ### Ranks
@@ -134,7 +134,7 @@ A `graph` holds only how its boxes are joined; floe places them:
 
   ```yaml
   - diagram:
-      title: A NAT gateway beside the load balancer, below the servers that use it
+      title: 'A NAT gateway beside the load balancer, below the servers that use it'
       parts:
         - graph:
             x: 20
@@ -185,7 +185,7 @@ A `graph` holds only how its boxes are joined; floe places them:
 
   ```yaml
   - diagram:
-      title: A copy between two zones, an edge written by hand beside the graph
+      title: 'A copy between two zones, an edge written by hand beside the graph'
       parts:
         - graph:
             x: 20
@@ -193,12 +193,12 @@ A `graph` holds only how its boxes are joined; floe places them:
             nodes:
               - group:
                   name: zone-a
-                  label: Zone A
+                  label: 'Zone A'
                   nodes:
                     - box: { name: writer, rows: [Writer] }
               - group:
                   name: zone-b
-                  label: Zone B
+                  label: 'Zone B'
                   nodes:
                     - box: { name: reader, rows: [Reader] }
             edges:
@@ -220,10 +220,10 @@ Write in `via` only what you choose of an edge's way, and `at` only when the mid
 
 ```yaml
 - diagram:
-    title: Edges that turn where they are told
+    title: 'Edges that turn where they are told'
     parts:
-      - box: { name: api-a, x: 40, y: 300, rows: [API A] }
-      - box: { name: api-c, x: 40, y: 400, rows: [API C] }
+      - box: { name: api-a, x: 40, y: 300, rows: ['API A'] }
+      - box: { name: api-c, x: 40, y: 400, rows: ['API C'] }
       - box: { name: queue, x: 400, y: 300, rows: [Queue] }
       - box: { name: writer, x: 400, y: 340, rows: [Writer] }
       - edge: { from: api-a, to: queue, fromSide: top, toSide: left, via: [{ y: 240 }, { x: 300 }] } # M80,300 V240 H300 V314.5 H400
