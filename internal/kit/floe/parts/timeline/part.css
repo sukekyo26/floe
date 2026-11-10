@@ -1,10 +1,18 @@
 /* The date at the left of a dot on a line that runs down to the next, each item a row (marks: joined) that floe lays
-   out, the date in a column of its own, over the title where the part is narrow (its own width, as in details or a card)
-   (LIMIT: an older browser that reads no anchor positioning misplaces the line alone) */
-:scope { container-type: inline-size; --floe-mark: 0.7rem; --floe-mark-gap: 0.65rem; padding: var(--floe-pad-block) var(--floe-pad-inline); }
+   out, over the title where the part is narrow (its own width, as in details or a card). Where it is wide the list holds
+   the three columns (date, dot, text) and each row borrows them by subgrid, so the date's column is as wide as the
+   longest date and the dots stand in one line; the rows hold the names of the row lines.
+   (LIMIT: an older browser that reads no anchor positioning misplaces the line alone)
+   LIMIT: a date up to 14rem (about 29 characters of the mono, a Japanese one with its weekday too) stays on one line;
+   a longer one folds within 14rem, and one with no space in it, as an ISO 8601 with milliseconds and an offset,
+   breaks anywhere (base.css's overflow-wrap). To give a date more, raise max-width, which narrows the text where the part
+   is just wide (20rem at 36rem) */
+:scope {
+  container-type: inline-size; --floe-mark: 0.7rem; --floe-mark-gap: 0.65rem; padding: var(--floe-pad-block) var(--floe-pad-inline);
+  grid-template-columns: [date-start] auto [date-end mark-start] auto [mark-end text-start] minmax(0, 1fr) [text-end];
+}
 :scope > li {
-  grid-template:
-    [mark-start] auto [mark-end] / [date-start] auto [date-end mark-start] auto [mark-end text-start] minmax(0, 1fr) [text-end];
+  grid-column: 1 / -1; grid-template-columns: subgrid; grid-template-rows: [mark-start] auto [mark-end];
   padding-bottom: 1.1rem;
 }
 :scope > li:last-child { padding-bottom: 0; }
@@ -16,7 +24,7 @@
   content: "\200b"; content: "\200b" / ""; overflow: hidden; border-radius: 50%; background: var(--tone);
 }
 :scope .date {
-  grid-area: mark / date; align-self: first baseline; width: 7rem; margin-inline-end: 0.65rem; text-align: right;
+  grid-area: mark / date; align-self: first baseline; max-width: 14rem; margin-inline-end: 0.65rem; text-align: right;
   font-size: var(--floe-text-small); line-height: 1.9; color: var(--muted); font-variant-numeric: tabular-nums; font-family: var(--mono);
 }
 :scope > li::after { background: var(--line); }
@@ -25,5 +33,5 @@
   :scope > li {
     grid-template: auto [mark-start] auto [mark-end] / [mark-start] auto [mark-end text-start] minmax(0, 1fr) [text-end];
   }
-  :scope .date { grid-area: 1 / text; width: auto; margin-inline-end: 0; text-align: left; }
+  :scope .date { grid-area: 1 / text; max-width: none; margin-inline-end: 0; text-align: left; }
 }
