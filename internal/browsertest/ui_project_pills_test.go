@@ -58,5 +58,10 @@ func TestUIProjectPills(t *testing.T) { //nolint:paralleltest // the browser tes
 	b.until("the task's page", "document.querySelector('#list li[data-slug=a]') && document.querySelector('#task-project .proj-name')")
 	say("on a task's page", "document.querySelector('#task-project .proj-name').textContent+' '+document.querySelectorAll('#list li[data-slug] .proj').length")
 
-	check(t, "project pills", out, "no page: true 0|no project: false 1 -,-,-|one project: false 1 floe,floe,floe floe|in the search: floe,floe,floe|on a task's page: floe 0")
+	// The pages to add to it are of its project too: none has a pill.
+	b.eval("openAddPage(tasksOf().find((x) => x.name === '#1'), 'one')")
+	b.until("the candidates", "document.querySelectorAll('#add-page-list li').length === 2")
+	say("to add", "document.querySelectorAll('#add-page-list .proj').length")
+
+	check(t, "project pills", out, "no page: true 0|no project: false 1 -,-,-|one project: false 1 floe,floe,floe floe|in the search: floe,floe,floe|on a task's page: floe 0|to add: 0")
 }
