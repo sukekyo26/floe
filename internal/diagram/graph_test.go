@@ -57,16 +57,16 @@ func TestGraphMistakes(t *testing.T) {
 	for _, c := range []struct {
 		name, src, want string
 	}{
-		{"a name no box has", strings.Replace(g1, "to: show", "to: shwo", 1), `s.yaml:12:30: edge: no box or group of this graph named "shwo"`},
+		{"a name no box has", strings.Replace(g1, "to: show", "to: shwo", 1), `s.yaml:12:30: edge: no box, icon or group of this graph named "shwo"`},
 		{
 			"a name no box has, and an edge by hand to a box laid out",
 			strings.Replace(g1, "to: show", "to: shwo", 1) + "  - edge: { from: show, to: [400, 200] }\n",
-			`s.yaml:12:30: edge: no box or group of this graph named "shwo"`,
+			`s.yaml:12:30: edge: no box, icon or group of this graph named "shwo"`,
 		},
 		{
 			"a box outside the graph",
 			strings.Replace(g1, "to: show", "to: note", 1) + "  - box: { name: note, x: 400, y: 20, rows: [N] }\n",
-			`s.yaml:12:30: edge: no box or group of this graph named "note"`,
+			`s.yaml:12:30: edge: no box, icon or group of this graph named "note"`,
 		},
 		{
 			"a name given twice",
@@ -179,23 +179,23 @@ parts:
 		name, src, want string
 	}{
 		{"an empty group", strings.Replace(strings.Replace(gg, "                  nodes:\n                    - box: { name: store, rows: [Store] }\n", "                  nodes: []\n", 1), "        - { from: api, to: store }\n", "", 1), `s.yaml:15:26: minItems: got 0, want 1`},
-		{"a name of none", edge("{ from: cli, to: servr }"), `s.yaml:21:28: edge: no box or group of this graph named "servr"`},
-		{"from a box the group holds", edge("{ from: api, to: server }"), `s.yaml:21:19: edge "api"→"server": both ends are group "server" or inside it; end the edge at a box or another group outside "server"`},
-		{"to a box the group holds", edge("{ from: server, to: store }"), `s.yaml:21:31: edge "server"→"store": both ends are group "server" or inside it; end the edge at a box or another group outside "server"`},
-		{"from a group to itself", edge("{ from: server, to: server }"), `s.yaml:21:31: edge "server"→"server": both ends are group "server" or inside it; end the edge at a box or another group outside "server"`},
-		{"to a group nested in it", edge("{ from: server, to: data }"), `s.yaml:21:31: edge "server"→"data": both ends are group "server" or inside it; end the edge at a box or another group outside "server"`},
-		{"a box among the group's ranks", edge("{ from: api, to: x }\n        - { from: x, to: store }\n        - { from: x, to: server }"), `s.yaml:23:19: edge "x"→"server": "x" can stand neither above group "server" nor below it, as "api" stands no lower than it and "store" no higher; end the edge at a box in "server"`},
-		{"to a box among the group's ranks", edge("{ from: api, to: x }\n        - { from: x, to: store }\n        - { from: server, to: x }"), `s.yaml:23:31: edge "server"→"x": "x" can stand neither above group "server" nor below it, as "api" stands no lower than it and "store" no higher; end the edge at a box in "server"`},
-		{"a group among another's ranks", tangled, `s.yaml:12:19: edge "h"→"g": "h" can stand neither above group "g" nor below it, as "g1" stands no lower than it and "g2" no higher; end the edge at a box in "g"`},
+		{"a name of none", edge("{ from: cli, to: servr }"), `s.yaml:21:28: edge: no box, icon or group of this graph named "servr"`},
+		{"from a box the group holds", edge("{ from: api, to: server }"), `s.yaml:21:19: edge "api"→"server": both ends are group "server" or inside it; end the edge at a box, an icon or another group outside "server"`},
+		{"to a box the group holds", edge("{ from: server, to: store }"), `s.yaml:21:31: edge "server"→"store": both ends are group "server" or inside it; end the edge at a box, an icon or another group outside "server"`},
+		{"from a group to itself", edge("{ from: server, to: server }"), `s.yaml:21:31: edge "server"→"server": both ends are group "server" or inside it; end the edge at a box, an icon or another group outside "server"`},
+		{"to a group nested in it", edge("{ from: server, to: data }"), `s.yaml:21:31: edge "server"→"data": both ends are group "server" or inside it; end the edge at a box, an icon or another group outside "server"`},
+		{"a box among the group's ranks", edge("{ from: api, to: x }\n        - { from: x, to: store }\n        - { from: x, to: server }"), `s.yaml:23:19: edge "x"→"server": "x" can stand neither above group "server" nor below it, as "api" stands no lower than it and "store" no higher; end the edge at a box or an icon in "server"`},
+		{"to a box among the group's ranks", edge("{ from: api, to: x }\n        - { from: x, to: store }\n        - { from: server, to: x }"), `s.yaml:23:31: edge "server"→"x": "x" can stand neither above group "server" nor below it, as "api" stands no lower than it and "store" no higher; end the edge at a box or an icon in "server"`},
+		{"a group among another's ranks", tangled, `s.yaml:12:19: edge "h"→"g": "h" can stand neither above group "g" nor below it, as "g1" stands no lower than it and "g2" no higher; end the edge at a box or an icon in "g"`},
 		{"a group named as a box before it", strings.Replace(gg, "name: server", "name: cli", 1), `s.yaml:9:13: the name "cli" is given before: give each part, row and node its own name`},
 		{"a box named as a group before it", strings.Replace(gg, "name: x,", "name: server,", 1), `s.yaml:17:18: the name "server" is given before: give each part, row and node its own name`},
 		{"200 boxes and 2 groups", many.String(), `s.yaml:4:7: graph: 202 boxes, icons, groups and lanes, past 200; split it into graphs`},
 		{"200 icons and a group", icons.String(), `s.yaml:4:7: graph: 201 boxes, icons, groups and lanes, past 200; split it into graphs`},
 		{"101 lanes and 101 boxes", laneful.String(), `s.yaml:4:7: graph: 202 boxes, icons, groups and lanes, past 200; split it into graphs`},
-		{"from a lane", lane("{ from: user, to: build }"), `s.yaml:16:19: edge "user"→"build": "user" is a lane, from end to end of the graph; end the edge at a box or a group in it`},
-		{"to a lane", lane("{ from: ask, to: dev }"), `s.yaml:16:28: edge "ask"→"dev": "dev" is a lane, from end to end of the graph; end the edge at a box or a group in it`},
-		{"from a lane to a lane", lane("{ from: user, to: dev }"), `s.yaml:16:19: edge "user"→"dev": "user" is a lane, from end to end of the graph; end the edge at a box or a group in it`},
-		{"from a lane to a box it holds", lane("{ from: dev, to: build }"), `s.yaml:16:28: edge "dev"→"build": both ends are group "dev" or inside it; end the edge at a box or another group outside "dev"`},
+		{"from a lane", lane("{ from: user, to: build }"), `s.yaml:16:19: edge "user"→"build": "user" is a lane, from end to end of the graph; end the edge at a box, an icon or a group in it`},
+		{"to a lane", lane("{ from: ask, to: dev }"), `s.yaml:16:28: edge "ask"→"dev": "dev" is a lane, from end to end of the graph; end the edge at a box, an icon or a group in it`},
+		{"from a lane to a lane", lane("{ from: user, to: dev }"), `s.yaml:16:19: edge "user"→"dev": "user" is a lane, from end to end of the graph; end the edge at a box, an icon or a group in it`},
+		{"from a lane to a box it holds", lane("{ from: dev, to: build }"), `s.yaml:16:28: edge "dev"→"build": both ends are group "dev" or inside it; end the edge at a box, an icon or another group outside "dev"`},
 		{"a box among the lanes", strings.Replace(lanes, "      lanes:\n", "      lanes:\n        - box: { name: z, rows: [Z] }\n", 1), "s.yaml:7:11: additional properties 'box' not allowed\ns.yaml:7:11: missing property 'nodes'"},
 		{"to a group in a lane", lane("{ from: ask, to: tools }"), ""},
 		{"nodes beside lanes", strings.Replace(lanes, "      edges:\n", "      nodes:\n        - box: { name: z, rows: [Z] }\n      edges:\n", 1), `s.yaml:4:7: additional properties 'nodes' not allowed`},
@@ -212,7 +212,7 @@ parts:
 
 	// The Japanese words number their arguments, and take each name where its English does.
 	among := edge("{ from: api, to: x }\n        - { from: x, to: store }\n        - { from: x, to: server }")
-	const amongJa = `s.yaml:23:19: edge "x"→"server": "x" はまとまり「server」の上にも下にも立てません（"api" が "x" と同じ段か上に、"store" が同じ段か下に立ちます）。「server」の中の箱で終えてください`
+	const amongJa = `s.yaml:23:19: edge "x"→"server": "x" はまとまり「server」の上にも下にも立てません（"api" が "x" と同じ段か上に、"store" が同じ段か下に立ちます）。「server」の中の箱かアイコンで終えてください`
 	if got := toldInJapanese(t, among); got != amongJa {
 		t.Errorf("told %q\n  want %q", got, amongJa)
 	}
@@ -471,7 +471,7 @@ edge "a"→"b" M176,49 V74
 }
 
 // A level edge is refused at a group, between boxes of no one group nor right in two lanes, when an edge joins two
-// boxes of its row, when something stands between its boxes in their rank, when it takes the side of its box's
+// boxes of its row, when something stands between its boxes or icons in their rank, when it takes the side of its box's
 // loops, and when it runs through a lane's heading laid out right; a box among a group's ranks is told by ranks.
 // A level edge refused for loops makes no row, so an edge between its boxes is not told too. The rest lay out: a
 // row of one lane however it faces, level on a loop (a loop), loops on the other side, a cycle through a row, three
@@ -492,7 +492,7 @@ parts:
         - group: { name: g, nodes: [{ box: { name: b, rows: [B] } }] }
       edges:
         - { from: a, to: g, level: true }
-`, `s.yaml:10:26: edge "a"→"g": "g" is a group, and level stands two boxes in one rank; end the edge at a box, or drop level`},
+`, `s.yaml:10:26: edge "a"→"g": "g" is a group, and level stands two boxes or icons in one rank; end the edge at a box or an icon, or drop level`},
 		{"a level edge between a group's box and one outside", `title: T
 parts:
   - graph:
@@ -503,7 +503,7 @@ parts:
         - group: { name: g, nodes: [{ box: { name: b, rows: [B] } }] }
       edges:
         - { from: a, to: b, level: true }
-`, `s.yaml:10:36: edge "a"→"b": level joins two boxes of one group, or two boxes directly in two lanes; move one of them, or drop level`},
+`, `s.yaml:10:36: edge "a"→"b": level joins two boxes or icons of one group, or two boxes or icons directly in two lanes; move one of them, or drop level`},
 		{"an edge across a row", `title: T
 parts:
   - graph:
@@ -528,7 +528,7 @@ parts:
       edges:
         - { from: a, to: c, level: true }
         - { from: a, to: b, level: true }
-`, `s.yaml:11:36: edge "a"→"c": box "b" stands between its boxes in their rank; drop level, or move it out of the way`},
+`, `s.yaml:11:36: edge "a"→"c": box "b" stands between its boxes or icons in their rank; drop level, or move it out of the way`},
 		{"a box of the block on the side it faces", `title: T
 parts:
   - graph:
@@ -540,7 +540,7 @@ parts:
       edges:
         - { from: a, to: b, level: true }
         - { from: b, to: c, level: true }
-`, `s.yaml:10:36: edge "a"→"b": box "c" stands between its boxes in their rank; drop level, or move it out of the way`},
+`, `s.yaml:10:36: edge "a"→"b": box "c" stands between its boxes or icons in their rank; drop level, or move it out of the way`},
 		{"a group of a lane whose block faces both ways", `title: T
 parts:
   - graph:
@@ -556,7 +556,7 @@ parts:
         - { from: x, to: m2 }
         - { from: a, to: b, level: true }
         - { from: b, to: c, level: true }
-`, `s.yaml:15:36: edge "b"→"c": group "h" stands between its boxes in their rank; drop level, or move it out of the way`},
+`, `s.yaml:15:36: edge "b"→"c": group "h" stands between its boxes or icons in their rank; drop level, or move it out of the way`},
 		{"a box of a lane between", `title: T
 parts:
   - graph:
@@ -568,7 +568,7 @@ parts:
         - { name: e, nodes: [{ box: { name: b, rows: [B] } }] }
       edges:
         - { from: a, to: b, level: true }
-`, `s.yaml:11:36: edge "a"→"b": box "m" stands between its boxes in their rank; drop level, or move it out of the way`},
+`, `s.yaml:11:36: edge "a"→"b": box "m" stands between its boxes or icons in their rank; drop level, or move it out of the way`},
 		{"a group's frame in a lane between", `title: T
 parts:
   - graph:
@@ -584,7 +584,7 @@ parts:
         - { from: m1, to: x }
         - { from: x, to: m2 }
         - { from: a, to: b, level: true }
-`, `s.yaml:15:36: edge "a"→"b": group "h" stands between its boxes in their rank; drop level, or move it out of the way`},
+`, `s.yaml:15:36: edge "a"→"b": group "h" stands between its boxes or icons in their rank; drop level, or move it out of the way`},
 		{"two handoffs between two lanes in a rank", `title: T
 parts:
   - graph:
@@ -596,8 +596,8 @@ parts:
       edges:
         - { from: p, to: r, level: true }
         - { from: q, to: s, level: true }
-`, `s.yaml:10:36: edge "p"→"r": box "q" stands between its boxes in their rank; drop level, or move it out of the way
-s.yaml:11:36: edge "q"→"s": box "p" stands between its boxes in their rank; drop level, or move it out of the way`},
+`, `s.yaml:10:36: edge "p"→"r": box "q" stands between its boxes or icons in their rank; drop level, or move it out of the way
+s.yaml:11:36: edge "q"→"s": box "p" stands between its boxes or icons in their rank; drop level, or move it out of the way`},
 		{"loops on the side the edge takes, from", `title: T
 parts:
   - graph:
@@ -664,7 +664,7 @@ parts:
         - { from: y, to: p }
         - { from: q, to: x }
         - { from: x, to: g }
-`, `s.yaml:14:19: edge "x"→"g": "x" can stand neither above group "g" nor below it, as "q" stands no lower than it and "p" no higher; end the edge at a box in "g"`},
+`, `s.yaml:14:19: edge "x"→"g": "x" can stand neither above group "g" nor below it, as "q" stands no lower than it and "p" no higher; end the edge at a box or an icon in "g"`},
 		{"loops, and an edge across the row of the level edge refused", `title: T
 parts:
   - graph:

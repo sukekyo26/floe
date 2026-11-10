@@ -9,11 +9,11 @@ far.yaml:19:15: circle "a" sticks out of the 400x300 canvas
 far.yaml:20:15: label "A" sticks out of the 400x300 canvas
 far.yaml:26:15: circle "a" sticks out of the 400x300 canvas
 far.yaml:27:15: label "A" finds no room inside a and outside the other circles: make that area larger, or the text shorter
-groups.yaml:24:29: edge "api"→"server": both ends are group "server" or inside it; end the edge at a box or another group outside "server"
-groups.yaml:25:29: edge "x"→"server": "x" can stand neither above group "server" nor below it, as "api" stands no lower than it and "store" no higher; end the edge at a box in "server"
+groups.yaml:24:29: edge "api"→"server": both ends are group "server" or inside it; end the edge at a box, an icon or another group outside "server"
+groups.yaml:25:29: edge "x"→"server": "x" can stand neither above group "server" nor below it, as "api" stands no lower than it and "store" no higher; end the edge at a box or an icon in "server"
 lanes-placed.yaml:17:21: the name "l1" is given before: give each part, row and node its own name
 lanes-placed.yaml:19:32: the name "a" is given before: give each part, row and node its own name
-lanes-placed.yaml:22:36: edge "c"→"l1": "l1" is a lane, from end to end of the graph; end the edge at a box or a group in it
+lanes-placed.yaml:22:36: edge "c"→"l1": "l1" is a lane, from end to end of the graph; end the edge at a box, an icon or a group in it
 lanes.yaml:14:21: additional properties 'box' not allowed
 lanes.yaml:14:21: missing property 'nodes'
 lanes.yaml:20:17: additional properties 'nodes' not allowed
@@ -44,14 +44,14 @@ far.yaml:27:15: label "A" finds no room inside a and outside the other circles: 
 $ floe render --out-dir $TMP/pages/groups.yaml groups.yaml
 exit 1
 --- stderr
-groups.yaml:24:29: edge "api"→"server": both ends are group "server" or inside it; end the edge at a box or another group outside "server"
-groups.yaml:25:29: edge "x"→"server": "x" can stand neither above group "server" nor below it, as "api" stands no lower than it and "store" no higher; end the edge at a box in "server"
+groups.yaml:24:29: edge "api"→"server": both ends are group "server" or inside it; end the edge at a box, an icon or another group outside "server"
+groups.yaml:25:29: edge "x"→"server": "x" can stand neither above group "server" nor below it, as "api" stands no lower than it and "store" no higher; end the edge at a box or an icon in "server"
 $ floe render --out-dir $TMP/pages/lanes-placed.yaml lanes-placed.yaml
 exit 1
 --- stderr
 lanes-placed.yaml:17:21: the name "l1" is given before: give each part, row and node its own name
 lanes-placed.yaml:19:32: the name "a" is given before: give each part, row and node its own name
-lanes-placed.yaml:22:36: edge "c"→"l1": "l1" is a lane, from end to end of the graph; end the edge at a box or a group in it
+lanes-placed.yaml:22:36: edge "c"→"l1": "l1" is a lane, from end to end of the graph; end the edge at a box, an icon or a group in it
 $ floe render --out-dir $TMP/pages/lanes.yaml lanes.yaml
 exit 1
 --- stderr
@@ -94,11 +94,11 @@ far.yaml:19:15: circle "a" sticks out of the 400x300 canvas
 far.yaml:20:15: label "A" sticks out of the 400x300 canvas
 far.yaml:26:15: circle "a" sticks out of the 400x300 canvas
 far.yaml:27:15: label "A" finds no room inside a and outside the other circles: make that area larger, or the text shorter
-groups.yaml:24:29: edge "api"→"server": both ends are group "server" or inside it; end the edge at a box or another group outside "server"
-groups.yaml:25:29: edge "x"→"server": "x" can stand neither above group "server" nor below it, as "api" stands no lower than it and "store" no higher; end the edge at a box in "server"
+groups.yaml:24:29: edge "api"→"server": both ends are group "server" or inside it; end the edge at a box, an icon or another group outside "server"
+groups.yaml:25:29: edge "x"→"server": "x" can stand neither above group "server" nor below it, as "api" stands no lower than it and "store" no higher; end the edge at a box or an icon in "server"
 lanes-placed.yaml:17:21: the name "l1" is given before: give each part, row and node its own name
 lanes-placed.yaml:19:32: the name "a" is given before: give each part, row and node its own name
-lanes-placed.yaml:22:36: edge "c"→"l1": "l1" is a lane, from end to end of the graph; end the edge at a box or a group in it
+lanes-placed.yaml:22:36: edge "c"→"l1": "l1" is a lane, from end to end of the graph; end the edge at a box, an icon or a group in it
 lanes.yaml:14:21: additional properties 'box' not allowed
 lanes.yaml:14:21: missing property 'nodes'
 lanes.yaml:20:17: additional properties 'nodes' not allowed
