@@ -28,8 +28,13 @@ func TestUIProjectPills(t *testing.T) { //nolint:paralleltest // the browser tes
 	b.until("the empty list", "document.getElementById('empty') && !document.getElementById('empty').hidden")
 	say("no page", shelf)
 
+	// A page is published into the project of the directory it is published from: taken out of it, it has none.
+	none := ""
 	for _, slug := range []string{"a", "b", "c"} {
 		s.floe(t, "publish", s.page(t, slug+".yaml", "T "+slug, ""), "--slug", slug)
+		if _, err := st.Edit(slug, store.Edit{Project: &none}); err != nil {
+			t.Fatal(err)
+		}
 	}
 	b.navigate("/")
 	b.until("the rows", "document.querySelectorAll('#list li[data-slug]').length === 3")

@@ -294,14 +294,14 @@ func uiExtras(t *testing.T, lang i18n.Lang, msg func(string, ...any) string) {
 	out = append(out, b.eval("document.getElementById('add-link').hidden"))
 	// One kind, its group hidden: the button stays, under the group before it.
 	check(t, "one kind", []string{b.eval("[document.getElementById('shelf-kinds').hidden, document.getElementById('add-link').closest('[hidden]') === null].join(' ')")}, "true true")
-	// No group above it, one project and one kind, in the filter dialog of a narrow window: none of it cut off at the top of
-	// the box of rows, and not the first one the dialog reaches, which Enter would open.
+	// The group of the one project ("no project") above it, and one kind, in the filter dialog of a narrow window: none of it
+	// cut off at the top of the box of rows, and not the first one the dialog reaches, which Enter would open.
 	b.eval("document.getElementById('narrow-filter').click()")
 	b.until("the filter dialog", "document.getElementById('filter-dialog').open")
 	check(t, "first in the dialog", []string{b.eval(`(() => {
 		const box = document.getElementById('shelf-more').getBoundingClientRect(), r = document.getElementById('add-link').getBoundingClientRect();
 		return [document.getElementById('shelf-projects').hidden, r.height > 0 && r.top >= box.top, document.activeElement.id !== 'add-link'].join(' ');
-	})()`)}, "true true true")
+	})()`)}, "false true true")
 	b.eval("document.getElementById('filter-dialog').close()")
 	// A change that succeeds clears the error of one that failed before, a favourite's as an archive's.
 	b.eval("window.failWrites = true; document.querySelector('#list li:not(.group) .star').click()")
@@ -348,7 +348,7 @@ func uiExtras(t *testing.T, lang i18n.Lang, msg func(string, ...any) string) {
 		"DELETE /api/artifacts/a,DELETE /api/artifacts/b", "none", msg("ui_unlink"),
 		"true old", `PATCH /api/artifacts/a {"description":"new"}`, "true", "true",
 		"copy /tmp/x/l.html", "true", "Missing", `POST /api/artifacts {"path":"/tmp/x/n.html","description":"a link"}`,
-		"3 2 " + msg("ui_no_project") + "5 true 0 5 1 3 " + msg("ui_list_head", 0) + " Beta,Alpha,Gamma,Linked,Missing ",
+		"3 2 " + msg("ui_no_project") + "5 false 0 5 1 3 " + msg("ui_list_head", 0) + " Beta,Alpha,Gamma,Linked,Missing ",
 		msg("ui_archive") + " / " + msg("ui_archive_named", "Beta") + " / " + msg("ui_archive"),
 		`PATCH /api/artifacts/b {"archived":true}`, "0", "true",
 		// The archived, by project: p's Zeta and those of none; two projects, so the shelf shows them.
@@ -473,7 +473,7 @@ func uiShelf(t *testing.T, lang i18n.Lang, msg func(string, ...any) string) {
 	b.eval("calls.length = 0; document.querySelector('#list > li:last-child .delete').click(); document.querySelector('#list > li:last-child .delete').click()")
 	out = append(out, b.until("the delete", "calls.join(',')"))
 	b.unsize()
-	// The kinds show with two to choose between, the projects with two or one chosen; the templates with one.
+	// The kinds show with two to choose between or one chosen, the projects and the templates with one.
 	b.stub(`[{ slug: 'a', title: 'Alpha', description: '', project: 'p', createdAt: at(1), updatedAt: at(8) }]`)
 	const shelves = "['shelf-projects', 'shelf-kinds', 'shelf-templates', 'shelf-tags'].map((id) => document.getElementById(id).hidden).join(' ')"
 	out = append(out, b.eval(shelves))
@@ -497,7 +497,7 @@ func uiShelf(t *testing.T, lang i18n.Lang, msg func(string, ...any) string) {
 	b.stub(`[{ slug: 'a', title: 'Alpha', description: '', project: 'p', createdAt: at(1), updatedAt: at(8) },
 		{ slug: 'b', title: 'Beta', description: '', project: 'floe', createdAt: at(1), updatedAt: at(7) }]`)
 	out = append(out, b.eval("[...document.querySelectorAll('#chips .chip')].map((c) => c.dataset.project + ':' + c.style.getPropertyValue('--c')).join(',')"))
-	// The favourites count their own projects, and none shown when there are none.
+	// The favourites count their own projects, and one is shown: a single one is chosen from, as on the whole list.
 	b.stub(`[{ slug: 'c', title: 'Gamma', description: '', project: 'p', createdAt: at(1), updatedAt: at(9), favorite: true },
 		{ slug: 'b', title: 'Beta', description: '', project: 'q', createdAt: at(1), updatedAt: at(8) }]`)
 	b.eval("document.querySelector('.views [data-view=fav]').click()")
@@ -586,9 +586,9 @@ func uiShelf(t *testing.T, lang i18n.Lang, msg func(string, ...any) string) {
 		msg("ui_more_named", "Beta"), msg("ui_mark_unread") + " / " + msg("ui_select") + " / " + msg("ui_tags") + " / " + msg("ui_pin") + " / " + msg("ui_task_set") + " / " + msg("ui_edit") + " / " + msg("ui_open_raw") + " / " + msg("ui_download") + " / " + msg("ui_delete"),
 		"false true", "Alpha", "false true", "1", "false true", "true", "true",
 		"true", "DELETE /api/artifacts/a",
-		"true true true true", "false true true true", "false false false true", "report2,design1",
+		"false true true true", "false true true true", "false false false true", "report2,design1",
 		"Hal ?template=report", "Hl ?kind=link&template=report", "fav link report", "Hald ",
-		"floe:var(--pc0),p:var(--pc1)", "true", "empty-favorites", "all-archived", "archived ?view=archived",
+		"floe:var(--pc0),p:var(--pc1)", "false", "empty-favorites", "all-archived", "archived ?view=archived",
 		"false", "true 1 New,Alpha", "true", "true",
 		"Zeta / false / true / " + msg("ui_favorite_named", "Zeta") + " / /a/z/?raw / " + msg("ui_unarchive"), `PATCH /api/artifacts/z {"archived":false}`,
 		"Zeta / true / true / " + msg("ui_favorite_named", "Zeta") + " / /a/z/?raw / " + msg("ui_archive"),
