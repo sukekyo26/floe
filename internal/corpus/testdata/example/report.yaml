@@ -1,7 +1,8 @@
 # A report: a heading and parts per section, and subsections of a heading and parts after them. Text is
 # Markdown; code and commands go in code and terminal, which draws the prompt; numbers, steps and what
 # changes go in stats, steps and table; a name and its longer text goes in entries, its state in a
-# tag, and a table is for rows compared both along and across;
+# tag, and a table is for rows compared both along and across, a thing before and after too (the first
+# heading empty, a column for each state);
 # a table's cells are lines of Markdown, numbers in quotes, or pills; html goes in as it is; a script is a
 # function the page calls with an element to draw in and its data; a diagram is checked for overlaps
 # and overflowing text (frames may cross, and a frame's label is held to the frame's width, not its
