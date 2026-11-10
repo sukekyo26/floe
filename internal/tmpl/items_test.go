@@ -579,7 +579,7 @@ func TestPartBarsRefused(t *testing.T) {
 		{"{label: b, value: 1, of: 0}", `d.yaml:4:3: bars: bar 2 "b"'s of takes a number above 0, not 0`},
 		{"{label: b, value: 1, of: x}", `d.yaml:4:3: bars: bar 2 "b"'s of takes a number, not "x"`},
 		{"{label: b, value: 5, of: 3}", `d.yaml:4:3: bars: bar 2 "b": 5 is over its of 3; write a value no greater than of, the whole`},
-		{"3", "d.yaml:4:3: bars takes items written as keys and values (label, value, of, tone); item 2 is not"},
+		{"3", "d.yaml:4:3: bars takes items written as keys and values (label, value, of, unit, tone); item 2 is not"},
 	} {
 		data := "lang: en\ntemplate: mine\nb:\n  items:\n    - {label: a, value: 3}\n    - " + tt.item + "\n"
 		if got := drawn(t, k, data, none); got != tt.want {

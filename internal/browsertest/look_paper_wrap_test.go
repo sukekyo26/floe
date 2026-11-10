@@ -65,6 +65,8 @@ sections:
           steps:
             - run: floe render --out-dir internal/kit/floe/parts/findings/testdata/golden internal/kit/floe/parts/findings/example.yaml
               out: wrote internal/kit/floe/parts/findings/testdata/golden/example.html internal/kit/floe/parts/findings/testdata/golden/second.html
+      - bars:
+          - { label: Pages copied to the new host, value: 1200, of: 1840, unit: pages per hour for each team }
       - tree:
           - { path: internal/kit/floe/parts/findings/testdata/golden/a/b/c/d/e/f/g/h/a-very-long-file-name-of-a-test-on-paper.go }
       - table:

@@ -159,7 +159,7 @@ func TestBarsOf(t *testing.T) {
 
 	item := func(v any) any { return map[string]any{"label": "x", "value": v} }
 	of := func(label string, v, of any) any { return map[string]any{"label": label, "value": v, "of": of} }
-	notItem := "bars takes items written as keys and values (label, value, of, tone); item 2 is not"
+	notItem := "bars takes items written as keys and values (label, value, of, unit, tone); item 2 is not"
 	for _, c := range []struct {
 		items []any
 		want  string
@@ -205,6 +205,25 @@ func TestBarsOf(t *testing.T) {
 		}
 		if got != c.want {
 			t.Errorf("barsOf(%v) = %q; want %q", c.items, got, c.want)
+		}
+	}
+}
+
+// A bar's unit is the text written as unit, and none when it is not written or not text.
+func TestBarsUnit(t *testing.T) {
+	t.Parallel()
+
+	for _, c := range []struct {
+		unit any
+		want string
+	}{{"pages per hour", "pages per hour"}, {"%", "%"}, {nil, ""}, {3, ""}} {
+		item := map[string]any{"label": "x", "value": 1, "unit": c.unit}
+		bars, err := barsOf([]any{item})
+		if err != nil {
+			t.Fatal(err)
+		}
+		if bars[0].Unit != c.want {
+			t.Errorf("unit %v read as %q; want %q", c.unit, bars[0].Unit, c.want)
 		}
 	}
 }

@@ -467,6 +467,8 @@ blockquote::before { content: "“"; content: "“" / ""; display: block; font: 
   text-align: right; font-size: var(--floe-text-small); color: var(--fg); font-variant-numeric: tabular-nums;
   font-family: var(--mono);
 }
+/* keep-all, not nowrap: a Japanese unit is not broken in a word, and one of several words wraps without widening the column */
+:scope .unit { color: var(--muted); font-family: var(--font); word-break: keep-all; }
 }
 }
 </style>
@@ -488,6 +490,8 @@ blockquote::before { content: "“"; content: "“" / ""; display: block; font: 
   text-align: right; font-size: var(--floe-text-small); color: var(--fg); font-variant-numeric: tabular-nums;
   font-family: var(--mono);
 }
+/* keep-all, not nowrap: a Japanese unit is not broken in a word, and one of several words wraps without widening the column */
+:scope .unit { color: var(--muted); font-family: var(--font); word-break: keep-all; }
 }
 }
 </style>
@@ -3411,7 +3415,7 @@ main > .body, .body > .sections { display: grid; gap: 2.5rem; grid-template-colu
 <section id="section.3">
 <h2 id="progress">Progress</h2>
 <div data-floe-part="bars">
-<div data-floe-tone="good"><span class="label">Copied</span><span class="track"><span style="width: 100%"></span></span><span class="value">1,840</span></div>
+<div data-floe-tone="good"><span class="label">Copied</span><span class="track"><span style="width: 100%"></span></span><span class="value">1,840<span class="unit"> pages</span></span></div>
 <div><span class="label">Checked</span><span class="track"><span style="width: 65.21739130434783%"></span></span><span class="value">1,200</span></div>
 <div data-floe-tone="accent"><span class="label">Moved</span><span class="track"><span style="width: 48.91304347826087%"></span></span><span class="value">900</span></div>
 <div data-floe-tone="warn"><span class="label">Pending</span><span class="track"><span style="width: 21.73913043478261%"></span></span><span class="value">400</span></div>
@@ -3425,12 +3429,12 @@ main > .body, .body > .sections { display: grid; gap: 2.5rem; grid-template-colu
 <div data-floe-tone="warn"><span class="label">Owners</span><span class="track" role="progressbar" aria-label="Owners" aria-valuemin="0" aria-valuenow="1" aria-valuemax="4" aria-valuetext="1 / 4"><span style="width: 25%"></span></span><span class="value">1 / 4</span></div>
 <div data-floe-tone="bad"><span class="label">Links</span><span class="track" role="progressbar" aria-label="Links" aria-valuemin="0" aria-valuenow="10" aria-valuemax="120" aria-valuetext="10 / 120"><span style="width: 8.333333333333332%"></span></span><span class="value">10 / 120</span></div>
 <div data-floe-tone="muted"><span class="label">Drafts</span><span class="track" role="progressbar" aria-label="Drafts" aria-valuemin="0" aria-valuenow="2" aria-valuemax="6" aria-valuetext="2 / 6"><span style="width: 33.33333333333333%"></span></span><span class="value">2 / 6</span></div>
-<div><span class="label">Words</span><span class="track" role="progressbar" aria-label="Words" aria-valuemin="0" aria-valuenow="1500000" aria-valuemax="2000000" aria-valuetext="1,500,000 / 2,000,000"><span style="width: 75%"></span></span><span class="value">1,500,000 / 2,000,000</span></div>
+<div><span class="label">Words</span><span class="track" role="progressbar" aria-label="Words" aria-valuemin="0" aria-valuenow="1500000" aria-valuemax="2000000" aria-valuetext="1,500,000 / 2,000,000 words"><span style="width: 75%"></span></span><span class="value">1,500,000 / 2,000,000<span class="unit"> words</span></span></div>
 </div>
 <div data-floe-part="bars">
 <div><span class="label">Kept</span><span class="track"><span style="width: 50%"></span></span><span class="value">2</span></div>
 <div><span class="label">Moved</span><span class="track"><span style="width: 100%"></span></span><span class="value">4</span></div>
-<div data-floe-tone="good"><span class="label">Copied</span><span class="track" role="progressbar" aria-label="Copied" aria-valuemin="0" aria-valuenow="30" aria-valuemax="40" aria-valuetext="30 / 40"><span style="width: 75%"></span></span><span class="value">30 / 40</span></div>
+<div data-floe-tone="good"><span class="label">Copied</span><span class="track" role="progressbar" aria-label="Copied" aria-valuemin="0" aria-valuenow="30" aria-valuemax="40" aria-valuetext="30 / 40 pages per day"><span style="width: 75%"></span></span><span class="value">30 / 40<span class="unit"> pages per day</span></span></div>
 </div>
 <figure data-floe-part="chart">
 <figcaption class="head"><span class="title">Pages copied</span><span class="unit">pages</span>

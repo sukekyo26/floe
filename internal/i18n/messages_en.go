@@ -85,7 +85,7 @@ var messagesEN = map[string]string{
 	"kit_below_zero":             "%s takes a number of 0 or more, not %s",
 	"kit_stat_change":            "stats: item %d %q: with from, write from and value as digits in quotes, and better as lower or higher; %s is not so",
 	"kit_stat_item":              "stats takes items written as keys and values (label, value and the like); item %d is not",
-	"kit_bar_item":               "%s takes items written as keys and values (label, value, of, tone); item %d is not",
+	"kit_bar_item":               "%s takes items written as keys and values (label, value, of, unit, tone); item %d is not",
 	"kit_bar_of":                 "%s takes a number above 0, not %s",
 	"kit_code_line":              "code's %s takes a whole number, not %s",
 	"kit_code_mark":              "code's mark takes a list of line numbers, not %s",

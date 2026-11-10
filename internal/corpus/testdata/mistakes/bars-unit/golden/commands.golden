@@ -1,0 +1,10 @@
+$ floe check bars.yaml
+exit 1
+--- stderr
+bars.yaml:9:41: minLength: got 0, want 1
+bars.yaml:10:41: got number, want string
+$ floe render --out-dir $TMP/pages/bars.yaml bars.yaml
+exit 1
+--- stderr
+bars.yaml:9:41: minLength: got 0, want 1
+bars.yaml:10:41: got number, want string

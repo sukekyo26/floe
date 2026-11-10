@@ -128,7 +128,7 @@ sections:
   - heading: Progress
     parts:
       - bars:
-          - { label: Copied, value: 1840, tone: good }
+          - { label: Copied, value: 1840, unit: pages, tone: good }
           - { label: Checked, value: 1200 }
           - { label: Moved, value: 900, tone: accent }
           - { label: Pending, value: 400, tone: warn }
@@ -141,11 +141,11 @@ sections:
           - { label: Owners, value: 1, of: 4, tone: warn }
           - { label: Links, value: 10, of: 120, tone: bad }
           - { label: Drafts, value: 2, of: 6, tone: muted }
-          - { label: Words, value: 1500000, of: 2000000 }
+          - { label: Words, value: 1500000, of: 2000000, unit: words }
       - bars:
           - { label: Kept, value: 2 }
           - { label: Moved, value: 4 }
-          - { label: Copied, value: 30, of: 40, tone: good }
+          - { label: Copied, value: 30, of: 40, unit: pages per day, tone: good }
       - chart:
           kind: line
           title: Pages copied

@@ -79,7 +79,7 @@ var messagesJA = map[string]string{
 	"kit_below_zero":             "%s は 0 以上の数を取ります。%s は 0 より小さい数です",
 	"kit_stat_change":            "部品 stats の %d 番目 %q：from を書くときは、from と value を引用符で囲んだ数字で、better を lower か higher で書きます。%s がそうなっていません",
 	"kit_stat_item":              "部品 stats の項目はキーと値で書きます（label、value など）。%d 番目はそうなっていません",
-	"kit_bar_item":               "%s は、キーと値で書いた項目（label・value・of・tone）を取ります。%d 番目の項目が、キーと値で書かれていません",
+	"kit_bar_item":               "%s は、キーと値で書いた項目（label・value・of・unit・tone）を取ります。%d 番目の項目が、キーと値で書かれていません",
 	"kit_bar_of":                 "%s は 0 より大きい数を取ります。%s は 0 以下です",
 	"kit_code_line":              "code の %s は整数を取ります。%s は違います",
 	"kit_code_mark":              "code の mark は行の番号の並びを取ります。%s は違います",

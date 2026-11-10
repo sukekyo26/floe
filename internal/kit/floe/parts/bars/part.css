@@ -13,3 +13,5 @@
   text-align: right; font-size: var(--floe-text-small); color: var(--fg); font-variant-numeric: tabular-nums;
   font-family: var(--mono);
 }
+/* keep-all, not nowrap: a Japanese unit is not broken in a word, and one of several words wraps without widening the column */
+:scope .unit { color: var(--muted); font-family: var(--font); word-break: keep-all; }
