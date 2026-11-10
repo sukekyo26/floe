@@ -25,24 +25,56 @@
 
 図が何のためかで選びます：
 
-- **手書き**：絵として読む図（構成図・配置図など）で、置き場所が大事なとき。何をどこに置くかを決められるので、主な流れをまっすぐ通し、同じ仲間を揃え、ラベルを線の上に置けます。書く量はいちばん多く、部品を動かすと、その部品の位置を写したもの（囲む枠、位置を写した線の `via` と `at`）も動かします。線の写しは、選んだ曲がり角だけを書けば避けられます（[手で書く線](#手で書く線)）。上の例はこの書き方です。
-- **`graph`**：流れ、状態の遷移、下書き、よく変わる図、つながりの多い図。何と何がつながるかを書くだけで、足すときも座標は要りません。置き場所は floe が決め、手で置くより場所を取ります。ページより広い図は、拡大するまで縮んで見えます。同じ spec でも、片方の `direction` がずっと良くなることがあるので、両方を試します。例は [graph](#graph) にあります。
+- **手書き**：絵として読む図（構成図・配置図など）で、置き場所が大事なとき。どの部品をどこに置くかを決められるので、流れをまっすぐ通し、同じ仲間を揃え、ラベルを置きたい所に置けます。上の例はこの書き方です。
+- **`graph`**：流れ、状態の遷移、下書き、よく変わる図、つながりの多い図。何と何がつながるかを書くだけで、足すときも座標は要りません。置き場所は floe が決めます。
+
+手書きは書く量がいちばん多くなります。部品を動かすと、その部品の位置を写したものも動かすことになります。避け方は [手で書く線](#手で書く線) にあります。
+
+graph は、手で置くより場所を取ります。ページより広い図は、拡大するまで縮んで見えます。同じ spec でも、片方の `direction` がずっと良くなることがあるので、両方を試します。例は [graph](#graph) にあります。
 
 ### 手書きで、floe に断られずに書く
 
-- 箱には `x` と `y` を書きます。`w` と `h` を省くと、floe が箱を字に合わせた大きさにします。箱を揃えたいときは書きます。`w` が小さすぎると、要る幅を言って断られます：`box "a": "A long title here" needs w: 174 or more`。`floe diagram inspect` は floe が決めた箱の大きさ（`box "alb" 240,90 144x29`）を出すので、次の箱はそれを見て置きます。
-- ラベルのある線の箱の間は、横の線ならラベルの幅以上にします。幅は `floe diagram inspect` の `label` の行が言います（`label "HTTPS" 80,5.5 46x18` の 46）。足りないと `box "a" overlaps label "HTTPS"` と断られます。縦の線なら高さ（18）以上です。ラベルは縦の線をまたいで中央に立つので、長いと線の両側に出ます：線からキャンバスの左端までに、ラベルの幅の半分を残します（線が左から 60 のとき `label "HTTPS-LONG-LABEL" sticks out of the 142.6x169 canvas`）。線を右へ動かすか、ラベルを短くします（`width` はキャンバスを右にしか広げず、左へはみ出したラベルは直りません）。
-- 箱は、枠の中にまるごと、または外にまるごと置きます（`box "a" straddles the edge of frame "F" at x 100, spanning 80 to 160`）。枠の見出しの下の端と、アイコンがあればその下の端より下に置きます（`box "a" overlaps the heading of frame "Frame label"`、`the icon of frame "Group" overlaps box "a"`）。
-- 線は、両端の名前を `{ from, to }` で書くと、floe が通します。間に箱がある線は断られます（`edge "a"→"c" runs through box "b"; move one of them, or go round it by via`）：箱を動かすか、`via` を書きます（[手で書く線](#手で書く線)）。
-- 部品を数個書くごとに、データファイルに `floe diagram inspect` を実行します。各部品の置き場所と、断った所を、直す行つきで出します。
+箱の大きさ：
+
+- 箱には `x` と `y` を書きます。
+- `w` と `h` を省くと、floe が箱を字に合わせた大きさにします。箱を揃えたいときは書きます。
+- `w` が小さすぎると、要る幅を言って断られます：`box "a": "A long title here" needs w: 174 or more`。
+- `floe diagram inspect` は floe が決めた箱の大きさ（`box "alb" 240,90 144x29`）を出します。次の箱はそれを見て置きます。
+
+線のラベル：
+
+- ラベルのある横の線の箱の間は、ラベルの幅以上にします。足りないと `box "a" overlaps label "HTTPS"` と断られます。
+- 幅は `floe diagram inspect` の `label` の行が言います（`label "HTTPS" 80,5.5 46x18` の 46）。
+- ラベルのある縦の線の箱の間は、ラベルの高さ（18）以上にします。
+- ラベルは縦の線をまたいで中央に立つので、長いと線の両側に出ます。
+- 線からキャンバスの左端までに、ラベルの幅の半分を残します。残さないと `label "HTTPS-LONG-LABEL" sticks out of the 142.6x169 canvas` と断られます（線が左から 60 のとき）。
+- 直すには、線を右へ動かすか、ラベルを短くします。`width` はキャンバスを右にしか広げません。
+
+枠：
+
+- 箱は、枠の中にまるごと、または外にまるごと置きます。またぐと `box "a" straddles the edge of frame "F" at x 100, spanning 80 to 160` と断られます。
+- 箱は、枠の見出しの下の端より下に置きます。重なると `box "a" overlaps the heading of frame "Frame label"` と断られます。
+- 枠にアイコンがあれば、その下の端より下にも置きます。重なると `the icon of frame "Group" overlaps box "a"` と断られます。
+
+線：
+
+- 線は、両端の名前を `{ from, to }` で書くと、floe が通します。
+- 通る道を決めたいときは、`via` か辺の鍵を使います（[手で書く線](#手で書く線)）。
+- 間に箱がある線は断られます：`edge "a"→"c" runs through box "b"; move one of them, or go round it by via`。
+- 直すには、箱を動かすか、`via` を書きます。
+
+確かめる：
+
+- 部品を数個書くごとに、データファイルに `floe diagram inspect` を実行します。
+- 各部品の置き場所と、断った所を、直す行つきで出します。
 
 ### AWS の構成図：サービスをアイコンで描く
 
 AWS の構成図では、サービスを箱でなく AWS のアイコンで描きます。アイコンを箱で囲みません。floe はアイコンを持っていません。セットは AWS のものだけで、マシンごとに 1 回取ります：
 
-1. `floe icons fetch aws` でセットを取ります（約 14MB、aws.amazon.com から）。無いと、アイコンのある図を `floe check`・`floe diagram render`・`floe diagram inspect` は断ります（`inspect` は部品の置き場所を出した後に）：`floe: AWS icons are not in <dir>/aws; run "floe icons fetch aws" (downloads about 14MB from aws.amazon.com) and try again`。
-2. `floe icons search <語>` は、その語を含むアイコンの名前を、グループつきで並べます：`floe icons search alb` は `aws/res/elastic-load-balancing-application-load-balancer` を出します（`alb` のような短い名前でも引けます。`floe icons search rds` は `aws/amazon-rds`）。名前は出たとおりに使います。
-3. アイコンは、`icon` の部品（`x`・`y` と、名前を `icon` に）で書き、線は `name` を指して結びます。または `graph` の `icon` の node で書くと、floe が置きます（`floe diagram example aws-graph`）。AWS のグループの形の枠には、枠自身の `icon` を付けられます（`aws/group/region`）。
+1. `floe icons fetch aws` でセットを取ります（約 14MB、aws.amazon.com から）。無いと、アイコンのある図を `floe check`・`floe diagram render`・`floe diagram inspect` は断ります（`inspect` は部品の置き場所を先に出します）。断りの文は `floe: AWS icons are not in <dir>/aws; run "floe icons fetch aws" (downloads about 14MB from aws.amazon.com) and try again` です。
+2. `floe icons search <語>` は、その語を含むアイコンの名前を、グループつきで並べます。`floe icons search alb` は `aws/res/elastic-load-balancing-application-load-balancer` を、`floe icons search rds` は `aws/amazon-rds` を出します。`alb` のような短い名前でも引けます。名前は出たとおりに使います。
+3. アイコンは、`icon` の部品（`x`・`y` と、名前を `icon` に）で書きます。線は `name` を指して結びます。または `graph` の `icon` の node で書くと、floe が置きます（`floe diagram example aws-graph`）。AWS のグループの形の枠には、枠自身の `icon` を付けられます（`aws/group/region`）。
 
 ```yaml
 - diagram:

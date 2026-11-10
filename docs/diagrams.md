@@ -25,24 +25,56 @@ A `diagram` part, in a section or in `details`, `tabs`, `columns` and the `parts
 
 Pick by what the diagram is for:
 
-- **By hand** for a diagram read as a picture, such as an architecture or a layout, where where things stand matters: you decide where everything stands, so the main flow runs straight, what belongs together lines up, and a label stands on its edge. It is the most to write, and moving a part means moving what copies where it stands: the frames round it, and a `via` or `at` of its edges that copies it, which writing only the turns you choose avoids (see [Edges written by hand](#edges-written-by-hand)). The example above is written this way.
-- **A `graph`** for a flow, a state machine, a draft, a diagram that often changes or joins many things: you write what joins what, and adding to it takes no coordinates. floe decides where everything stands, and takes more room than a hand would; a diagram wider than the page shrinks to fit, until it is zoomed. Try both `direction`s, as one often comes out far better than the other for the same spec. See [Graph](#graph) for an example.
+- **By hand** for diagrams read as pictures, such as architecture or layout diagrams, where spatial arrangement matters. You decide where each part goes, so you can keep flows straight, align related parts, and place labels where they belong. The example above is written this way.
+- **A `graph`** for a flow, a state machine, a draft, or a diagram that changes often or joins many things. You write what joins what, and adding to it takes no coordinates. floe decides where everything stands.
+
+A hand-placed diagram is the most to write. Moving a part means moving what copies where it stands; see [Edges written by hand](#edges-written-by-hand) for how to avoid that.
+
+A graph takes more room than a hand would. A diagram wider than the page shrinks to fit, until it is zoomed. Try both `direction`s: one often comes out far better than the other for the same spec. See [Graph](#graph) for an example.
 
 ### Writing by hand so that floe does not refuse it
 
-- Give each box an `x` and `y`. Leave `w` and `h` out to let floe size the box to its text; specify them when you need to align boxes. A `w` too small is refused with the one it needs: `box "a": "A long title here" needs w: 174 or more`. `floe diagram inspect` prints the size floe gave each box (`box "alb" 240,90 144x29`): place the next box by it.
-- Leave between the boxes of an edge with a label at least the label's width for a horizontal edge, which the `label` row of `floe diagram inspect` gives (`label "HTTPS" 80,5.5 46x18`: 46), else `box "a" overlaps label "HTTPS"`; for a vertical edge, at least its height (18). A label stands across a vertical edge, centred on it, so a long one reaches to both sides of the line: keep half its width between the line and the left of the canvas (`label "HTTPS-LONG-LABEL" sticks out of the 142.6x169 canvas` for a line 60 from the left): move the line to the right or shorten the label (a `width` only widens the canvas to the right, and the label sticks out of its left).
-- Put a box whole inside a frame or whole outside it (`box "a" straddles the edge of frame "F" at x 100, spanning 80 to 160`), and below the bottom edge of the frame's heading, and of its icon if it has one (`box "a" overlaps the heading of frame "Frame label"`, `the icon of frame "Group" overlaps box "a"`).
-- Write an edge as `{ from, to }`, the names of its two ends, and floe routes it. An edge with a box between its ends is refused (`edge "a"→"c" runs through box "b"; move one of them, or go round it by via`): move a box, or write `via` ([Edges written by hand](#edges-written-by-hand)).
-- Run `floe diagram inspect` on the data file after every few parts: it prints where each part went, and each refusal at the line to change.
+Box sizes:
+
+- Give each box an `x` and `y`.
+- Leave `w` and `h` out to let floe size the box to its text; specify them when you need to align boxes.
+- A `w` that is too small is refused with the one it needs: `box "a": "A long title here" needs w: 174 or more`.
+- `floe diagram inspect` prints the size floe gave each box (`box "alb" 240,90 144x29`). Place the next box by it.
+
+Labels on edges:
+
+- Between the boxes of a horizontal edge with a label, leave at least the label's width, else `box "a" overlaps label "HTTPS"`.
+- The `label` row of `floe diagram inspect` gives the width (`label "HTTPS" 80,5.5 46x18`: 46).
+- Between the boxes of a vertical edge, leave at least the label's height (18).
+- A label stands across a vertical edge, centred on it, so a long one reaches both sides of the line.
+- Keep half the label's width between the line and the left of the canvas, else `label "HTTPS-LONG-LABEL" sticks out of the 142.6x169 canvas` (for a line 60 from the left).
+- To fix it, move the line to the right or shorten the label. A `width` only widens the canvas to the right.
+
+Frames:
+
+- Put a box whole inside a frame or whole outside it, else `box "a" straddles the edge of frame "F" at x 100, spanning 80 to 160`.
+- Put a box below the bottom edge of the frame's heading, else `box "a" overlaps the heading of frame "Frame label"`.
+- Put it below the frame's icon too, if the frame has one, else `the icon of frame "Group" overlaps box "a"`.
+
+Edges:
+
+- Write an edge as `{ from, to }` and let floe route it.
+- Use `via` or the side keys when you need to control its path; see [Edges written by hand](#edges-written-by-hand).
+- An edge with a box between its ends is refused: `edge "a"→"c" runs through box "b"; move one of them, or go round it by via`.
+- To fix it, move a box or write `via`.
+
+Checking:
+
+- Run `floe diagram inspect` on the data file after every few parts.
+- It prints where each part went, and each refusal at the line to change.
 
 ### An AWS architecture: draw the services as icons
 
-In an AWS architecture, represent each service with an AWS icon, not a box. Do not draw a box around the icon. floe ships no icons; the one set is AWS's, kept once on each machine:
+In an AWS architecture, represent each service with an AWS icon, not a box. Do not draw a box around the icon. floe ships no icons. The one set is AWS's, kept once on each machine:
 
-1. `floe icons fetch aws` keeps the set (about 14MB, from aws.amazon.com). Without it, `floe check`, `floe diagram render` and `floe diagram inspect` refuse a diagram that holds an icon (`inspect` after printing where the parts went): `floe: AWS icons are not in <dir>/aws; run "floe icons fetch aws" (downloads about 14MB from aws.amazon.com) and try again`.
-2. `floe icons search <word>` lists the names of icons that hold the word, each with its group: `floe icons search alb` lists `aws/res/elastic-load-balancing-application-load-balancer` (a short name such as `alb` works; `floe icons search rds` lists `aws/amazon-rds`). Take the name as it is printed.
-3. Write the icon as an `icon` part with `x` and `y` and its name in `icon`, and join icons by edges naming their `name`s; or write it as an `icon` node of a `graph`, which floe places (`floe diagram example aws-graph` is one). A frame of the AWS group style takes an `icon` of its own (`aws/group/region`).
+1. `floe icons fetch aws` keeps the set (about 14MB, from aws.amazon.com). Without it, `floe check`, `floe diagram render` and `floe diagram inspect` refuse a diagram that holds an icon (`inspect` prints where the parts went first). The refusal reads `floe: AWS icons are not in <dir>/aws; run "floe icons fetch aws" (downloads about 14MB from aws.amazon.com) and try again`.
+2. `floe icons search <word>` lists the names of icons that hold the word, each with its group. `floe icons search alb` lists `aws/res/elastic-load-balancing-application-load-balancer`, and `floe icons search rds` lists `aws/amazon-rds`. A short name such as `alb` works. Take the name as it is printed.
+3. Write the icon as an `icon` part with `x`, `y` and its name in `icon`. Join icons by edges naming their `name`s. Or write it as an `icon` node of a `graph`, which floe places (`floe diagram example aws-graph` is one). A frame of the AWS group style takes an `icon` of its own (`aws/group/region`).
 
 ```yaml
 - diagram:
