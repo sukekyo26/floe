@@ -5639,9 +5639,9 @@
   };
   function drawAddPage() {
     const { all, hits } = addHits();
-    const ranks = projectOrder();
     addShown = hits.slice(0, FIND_ROWS);
-    $('add-page-list').replaceChildren(...addShown.map((a, i) => hitRow($('add-page-row'), `add-page-${i}`, a, ranks, (put) => {
+    // Of one project, the task's: no pill, as on the task's page
+    $('add-page-list').replaceChildren(...addShown.map((a, i) => hitRow($('add-page-row'), `add-page-${i}`, a, new Map(), (put) => {
       if (!a.work?.task) return;
       put('badge', a.work.task === addTo.name ? t('ui_page_here_step', a.work.step || t('ui_page_from_no_step')) : [a.work.task, a.work.step].filter(Boolean).join(' · '));
     })));
