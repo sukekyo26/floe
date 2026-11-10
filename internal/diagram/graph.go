@@ -60,8 +60,8 @@ type group struct {
 	levels   []int              // its level edges, by their indexes in edges, but those told
 }
 
-// graphOut is a graph read and ranked: its boxes and groups read flat, its groups of connected boxes, and the ranks
-// its edges pass between their ends.
+// graphOut is a graph read and ranked: its boxes, icons, groups and lanes read flat, its groups of connected boxes,
+// and the ranks its edges pass between their ends.
 type graphOut struct {
 	way      graphWay // what moves the ends once all is placed, and whether edges go round frames
 	g        *graph
@@ -84,9 +84,9 @@ type graphOut struct {
 	stayed   map[int]string // the edges left through a frame that holds neither end, and why (detours)
 }
 
-// readGraph reads g's boxes and groups, resolves the names of its edges against them, and splits it into groups of
-// connected boxes, each ranked. An edge naming nothing of it, or between a group and what the group holds, is dropped
-// and told; one from a box to itself is a loop, kept out of the groups (drawLoops).
+// readGraph reads g's boxes, icons, groups and lanes, resolves the names of its edges against them, and splits it
+// into groups of connected boxes, each ranked. An edge naming nothing of it, or between a group and what the group
+// holds, is dropped and told; one from a box to itself is a loop, kept out of the groups (drawLoops).
 func readGraph(g *graph, at string, way graphWay) (*graphOut, usererr.List) {
 	out := &graphOut{
 		g: g, at: at, boxes: nil, clusters: nil, top: nil, ends: map[int][2]gref{}, groups: nil, passed: 0,

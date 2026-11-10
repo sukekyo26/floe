@@ -103,9 +103,9 @@ adheres to [Semantic Versioning](https://semver.org/).
   sides: two boxes of one group, side by side as written, or directly in two
   lanes, each at its lane's end towards the other; floe refuses one whose
   boxes something stands between, or that takes the side of a box's loops.
-  A graph holds 200
-  boxes and groups and 400 edges, and the edges of all the graphs of a diagram
-  may pass 4000 ranks between their ends, all told. The diagram examples
+  A graph holds 200 boxes, icons, groups and lanes together and 400 edges,
+  and the edges of all the graphs of a diagram may pass 4000 ranks between
+  their ends, all told. The diagram examples
   `flow`, `state` and `swimlane` are drawn with it.
 - Add `marks:` to a part's or look's `part.yaml`, which of its elements are
   rows with a mark at their left: `box`, `items` (each `li`) or `joined`

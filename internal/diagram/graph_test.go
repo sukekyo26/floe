@@ -148,6 +148,20 @@ func TestGraphGroupMistakes(t *testing.T) {
 			fmt.Fprintf(&many, "              - box: { name: b%d_%d, rows: [B] }\n", g, i)
 		}
 	}
+	// 200 icons and the group holding 100 of them, and 101 lanes of a box each: both are counted, past 200.
+	var icons, laneful strings.Builder
+	icons.WriteString("title: T\nparts:\n  - graph:\n      x: 0\n      y: 0\n      nodes:\n")
+	for i := range 100 {
+		fmt.Fprintf(&icons, "        - icon: { name: i%d, icon: aws/amazon-rds, label: R }\n", i)
+	}
+	icons.WriteString("        - group:\n            nodes:\n")
+	for i := range 100 {
+		fmt.Fprintf(&icons, "              - icon: { name: j%d, icon: aws/amazon-rds, label: R }\n", i)
+	}
+	laneful.WriteString("title: T\nparts:\n  - graph:\n      x: 0\n      y: 0\n      lanes:\n")
+	for i := range 101 {
+		fmt.Fprintf(&laneful, "        - nodes:\n            - box: { name: b%d, rows: [B] }\n", i)
+	}
 	tangled := `title: T
 parts:
   - graph:
@@ -175,7 +189,9 @@ parts:
 		{"a group among another's ranks", tangled, `s.yaml:12:19: edge "h"→"g": "h" can stand neither above group "g" nor below it, as "g1" stands no lower than it and "g2" no higher; end the edge at a box in "g"`},
 		{"a group named as a box before it", strings.Replace(gg, "name: server", "name: cli", 1), `s.yaml:9:13: the name "cli" is given before: give each part, row and node its own name`},
 		{"a box named as a group before it", strings.Replace(gg, "name: x,", "name: server,", 1), `s.yaml:17:18: the name "server" is given before: give each part, row and node its own name`},
-		{"202 boxes and groups", many.String(), `s.yaml:4:7: graph: 202 boxes and groups, past 200; split it into graphs`},
+		{"200 boxes and 2 groups", many.String(), `s.yaml:4:7: graph: 202 boxes, icons, groups and lanes, past 200; split it into graphs`},
+		{"201 icons and a group", icons.String(), `s.yaml:4:7: graph: 201 boxes, icons, groups and lanes, past 200; split it into graphs`},
+		{"101 lanes and 101 boxes", laneful.String(), `s.yaml:4:7: graph: 202 boxes, icons, groups and lanes, past 200; split it into graphs`},
 		{"from a lane", lane("{ from: user, to: build }"), `s.yaml:16:19: edge "user"→"build": "user" is a lane, from end to end of the graph; end the edge at a box or a group in it`},
 		{"to a lane", lane("{ from: ask, to: dev }"), `s.yaml:16:28: edge "ask"→"dev": "dev" is a lane, from end to end of the graph; end the edge at a box or a group in it`},
 		{"from a lane to a lane", lane("{ from: user, to: dev }"), `s.yaml:16:19: edge "user"→"dev": "user" is a lane, from end to end of the graph; end the edge at a box or a group in it`},

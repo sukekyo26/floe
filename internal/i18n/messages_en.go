@@ -297,7 +297,7 @@ var messagesEN = map[string]string{
 	"diagram_graph_with_rank":    "edge %s→%s: with stands its two ends in one rank, where a graph's edge cannot run; drop with, or write the edge by hand beside the graph",
 	"diagram_graph_unknown":      `edge: no box or group of this graph named "%s"`,
 	"diagram_graph_lane":         `edge %s→%s: %s is a lane, from end to end of the graph; end the edge at a box or a group in it`,
-	"diagram_graph_many":         "graph: %d boxes and groups, past %d; split it into graphs",
+	"diagram_graph_many":         "graph: %d boxes, icons, groups and lanes, past %d; split it into graphs",
 	"diagram_graph_inside":       `edge %s→%s: both ends are group "%s" or inside it; end the edge at a box or another group outside "%s"`,
 	"diagram_graph_among":        `edge %s→%s: %s can stand neither above group "%s" nor below it, as %s stands no lower than it and %s no higher; end the edge at a box in "%s"`,
 	"diagram_graph_long":         "graph: the edges of this diagram's graphs pass %d ranks between their ends, more than %d: split the diagram",

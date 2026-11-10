@@ -286,7 +286,7 @@ var messagesJA = map[string]string{
 	"diagram_graph_with_rank":    "edge %s→%s: with で両端が同じ段に立つので、graph の線は引けません。with を外すか、線を graph の横に手で書いてください",
 	"diagram_graph_unknown":      "edge: この graph に「%s」という名前の箱もまとまりもありません",
 	"diagram_graph_lane":         "edge %s→%s: %s は graph の端から端までの帯です。帯の中の箱かまとまりで終えてください",
-	"diagram_graph_many":         "graph: 箱とまとまりが %d 個あり、%d を超えています。graph を分けてください",
+	"diagram_graph_many":         "graph: 箱・アイコン・まとまり・帯が %d 個あり、%d を超えています。graph を分けてください",
 	"diagram_graph_inside":       "edge %s→%s: 両端がまとまり「%s」かその中にあります。「%s」の外の箱か、ほかのまとまりで終えてください",
 	"diagram_graph_among":        "edge %[1]s→%[2]s: %[3]s はまとまり「%[4]s」の上にも下にも立てません（%[5]s が %[3]s と同じ段か上に、%[6]s が同じ段か下に立ちます）。「%[7]s」の中の箱で終えてください",
 	"diagram_graph_long":         "graph: 図の graph の線が端と端の間で越える段が合わせて %d あり、%d を超えています。図を分けてください",
