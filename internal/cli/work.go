@@ -156,7 +156,7 @@ func (a *app) workTask(cmd *cobra.Command, f workFlags) error {
 		return err
 	}
 	if f.forget {
-		a.print("%s", english.Msg("cli_work_forgotten", t.name, projectOf(t.project)))
+		a.print("%s", english.Msg("cli_work_forgotten", t.name, inProject(t.project)))
 		return nil
 	}
 	a.tellTask(written, ed)
@@ -172,7 +172,7 @@ func (a *app) tellTask(w store.TaskWritten, ed server.TaskEdit) {
 	case w.Wrote:
 		key = "cli_work_changed"
 	}
-	line := english.Msg(key, w.Task, projectOf(w.Project))
+	line := english.Msg(key, w.Task, inProject(w.Project))
 	if fields := taskFields(w.Row, ed); fields != "" {
 		line += "; " + fields
 	}
@@ -207,14 +207,6 @@ func taskFields(row store.Task, ed server.TaskEdit) string {
 	return strings.Join(fields, ", ")
 }
 
-// projectOf is a project of tasks.json (ProjectKey) as floe work says it.
-func projectOf(key string) string {
-	if key == store.ProjectKey("") {
-		return english.Msg("cli_work_no_project")
-	}
-	return english.Msg("cli_work_project", key)
-}
-
 // tellPage says the page as it was written: its task and project, step and pin.
 func (a *app) tellPage(page store.Edited) {
 	work := page.Work
@@ -222,7 +214,7 @@ func (a *app) tellPage(page store.Edited) {
 	if work == nil || work.Task == "" {
 		parts = append(parts, english.Msg("cli_work_page_off"))
 	} else {
-		parts = append(parts, english.Msg("cli_work_page_task", work.Task, projectOf(page.TaskProject)))
+		parts = append(parts, english.Msg("cli_work_page_task", work.Task, inProject(page.TaskProject)))
 	}
 	if work != nil && work.Step != "" {
 		parts = append(parts, fmt.Sprintf("step %q", work.Step))

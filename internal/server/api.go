@@ -159,12 +159,16 @@ type Saved struct {
 	// Folder tells a folder's link, which the management page opens once added.
 	Folder   bool           `json:"folder,omitempty"`
 	Warnings []usererr.Told `json:"warnings,omitempty"`
+	// TaskProject is the page's project as tasks.json has it (store.ProjectKey), as the store kept it.
+	TaskProject string `json:"taskProject"`
 }
 
 // SavedPrev is the page a publish replaced.
 type SavedPrev struct {
 	Title     string `json:"title"`
 	UpdatedAt string `json:"updatedAt"`
+	// TaskProject is the project the replaced page was in, as Saved's is.
+	TaskProject string `json:"taskProject"`
 }
 
 // ImagesNeeded answers a publish without images whose data reads some: the images to send.
@@ -179,11 +183,14 @@ func sendSaved(w http.ResponseWriter, r *http.Request, entry *store.Entry) {
 	if entry.Prev == nil {
 		status = http.StatusCreated
 	} else {
-		prev = &SavedPrev{Title: entry.Prev.Title, UpdatedAt: entry.Prev.UpdatedAt}
+		prev = &SavedPrev{
+			Title: entry.Prev.Title, UpdatedAt: entry.Prev.UpdatedAt, TaskProject: store.ProjectKey(entry.Prev.Project),
+		}
 	}
 	warnings := usererr.Warn(catalog(r), entry.Warnings)
 	sendJSON(w, status, Saved{
 		Slug: entry.Slug, Title: entry.Meta.Title, Prev: prev, Folder: entry.Meta.Folder, Warnings: warnings,
+		TaskProject: store.ProjectKey(entry.Meta.Project),
 	})
 }
 

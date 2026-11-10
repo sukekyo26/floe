@@ -1,6 +1,7 @@
 package cli_test
 
 import (
+	"bytes"
 	"errors"
 	"io"
 	"io/fs"
@@ -12,6 +13,7 @@ import (
 	"strings"
 	"testing"
 
+	"github.com/sukekyo26/floe/internal/cli"
 	"github.com/sukekyo26/floe/internal/i18n"
 	"github.com/sukekyo26/floe/internal/servetest"
 	"github.com/sukekyo26/floe/internal/store"
@@ -375,4 +377,72 @@ func get(t *testing.T, u string) string {
 		t.Fatal(err)
 	}
 	return string(b)
+}
+
+// publishedTogether is what floe publish writes to stdout and stderr into one buffer, in the order written.
+func publishedTogether(t *testing.T, dir string, env map[string]string, args ...string) string {
+	t.Helper()
+
+	var both bytes.Buffer
+	code := cli.Run(append([]string{"publish"}, args...), cli.Env{Stdout: &both, Stderr: &both, Dir: dir, Getenv: func(key string) string { return env[key] }})
+	if code != 0 {
+		t.Fatalf("floe publish %v = %d, %q", args, code, both.String())
+	}
+	return both.String()
+}
+
+// A page the directory floe publish runs in gives its project is told after its URL, on stderr: when it is new, when
+// it replaces another file's (--force) and when it was emptied of its project; not when it keeps its project, nor for a
+// link, which is in its target's directory's project.
+func TestPublishSaysProject(t *testing.T) {
+	t.Parallel()
+
+	env, dir := served(t)
+	url := "http://127.0.0.1:" + env["FLOE_PORT"] + "/a/"
+	other := filepath.Join(filepath.Dir(dir), "q")
+	const page = "lang: en\ntemplate: report\n"
+	for _, name := range []string{"n.yaml", "m.yaml"} {
+		if err := os.WriteFile(filepath.Join(dir, name), []byte(page), 0o600); err != nil {
+			t.Fatal(err)
+		}
+	}
+	if err := os.WriteFile(filepath.Join(other, "v.yaml"), []byte(page), 0o600); err != nil {
+		t.Fatal(err)
+	}
+	s := store.New(env["FLOE_DIR"])
+	for _, step := range []struct {
+		what string
+		dir  string
+		args []string
+		told string // what ends the output, after the URL; "" for none
+	}{
+		{"a new page", dir, []string{"n.yaml"}, "\npage in project p\n"},
+		{"a new page of no project", "/", []string{filepath.Join(dir, "m.yaml")}, "\npage in no project\n"},
+		{"a page keeping its project", dir, []string{"n.yaml"}, ""},
+		{"a link", dir, []string{"--link", "h.html"}, ""},
+		{"another file's page, of another project (--force)", other, []string{"v.yaml", "--slug", "n", "--force"}, "\npage in project q\n"},
+		{"another file's page, of the same project (--force)", other, []string{"w.yaml", "--slug", "n", "--force"}, ""},
+	} {
+		got := publishedTogether(t, step.dir, env, step.args...)
+		if !strings.HasPrefix(got, url) || strings.Contains(got, "page in ") != (step.told != "") || !strings.HasSuffix(got, step.told) {
+			t.Errorf("%s: floe publish %v wrote %q, want the URL first and then %q", step.what, step.args, got, step.told)
+		}
+	}
+	// Emptied of its project, a page takes the one published from again; from where there is none, it has none still.
+	if _, err := s.Edit("m", store.Edit{Project: ptr("")}); err != nil {
+		t.Fatal(err)
+	}
+	if got := publishedTogether(t, "/", env, filepath.Join(dir, "m.yaml")); strings.Contains(got, "page in ") {
+		t.Errorf("a page of no project, published from where there is none, wrote %q", got)
+	}
+	if got := publishedTogether(t, dir, env, "m.yaml"); !strings.Contains(got, "\npage in project p\n") {
+		t.Errorf("a page emptied of its project wrote %q, want its project told", got)
+	}
+	// Moved on the management page, a page keeps its project.
+	if _, err := s.Edit("m", store.Edit{Project: ptr("moved")}); err != nil {
+		t.Fatal(err)
+	}
+	if got := publishedTogether(t, dir, env, "m.yaml"); strings.Contains(got, "page in ") {
+		t.Errorf("a page moved to another project wrote %q, want its project kept and not told", got)
+	}
 }
