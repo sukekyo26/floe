@@ -97,7 +97,35 @@ func guideEnv(t *testing.T, stdout, stderr *bytes.Buffer) cli.Env {
 		}
 		vars["FLOE_"+kind+"_DIR"] = own
 	}
+	fakeAWSIcons(t, vars["FLOE_ICONS_DIR"])
 	return cli.Env{Stdout: stdout, Stderr: stderr, Dir: tmp, Getenv: func(key string) string { return vars[key] }}
+}
+
+// fakeAWSIcons keeps in dir an AWS icon set of the icons the docs name, empty drawings: the set floe icons fetch
+// would keep, which no test downloads. A doc naming another icon fails its example, to be added here.
+func fakeAWSIcons(t *testing.T, dir string) {
+	t.Helper()
+
+	names := map[string]string{
+		"res/elastic-load-balancing-application-load-balancer": "Networking-Content-Delivery",
+		"amazon-elastic-container-service":                     "Containers",
+		"amazon-rds":                                           "Databases",
+	}
+	index := make([]string, 0, len(names))
+	for name, category := range names {
+		file := filepath.Join(dir, "aws", filepath.FromSlash(name)+".svg")
+		if err := os.MkdirAll(filepath.Dir(file), 0o700); err != nil {
+			t.Fatal(err)
+		}
+		if err := os.WriteFile(file, []byte(`<svg xmlns="http://www.w3.org/2000/svg"/>`), 0o600); err != nil {
+			t.Fatal(err)
+		}
+		index = append(index, fmt.Sprintf("%q:{\"category\":%q}", name, category))
+	}
+	body := `{"version":"01012030","source":"https://example.invalid/icons.zip","icons":{` + strings.Join(index, ",") + `}}`
+	if err := os.WriteFile(filepath.Join(dir, "aws", "index.json"), []byte(body), 0o600); err != nil {
+		t.Fatal(err)
+	}
 }
 
 // Every block of code in the docs of how to write a diagram is a YAML block that is one of: a complete diagram of a

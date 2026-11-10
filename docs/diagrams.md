@@ -36,6 +36,25 @@ Pick by what the diagram is for:
 - Write an edge as `{ from, to }`, the names of its two ends, and floe routes it. An edge with a box between its ends is refused (`edge "a"→"c" runs through box "b"; move one of them, or go round it by via`): move a box, or write `via` ([Edges written by hand](#edges-written-by-hand)).
 - Run `floe diagram inspect` on the data file after every few parts: it prints where each part went, and each refusal at the line to change.
 
+### An AWS architecture: draw the services as icons
+
+Draw each AWS service as its AWS icon, not as a box, and put no box round an icon. floe ships no icons; the one set is AWS's, kept once on each machine:
+
+1. `floe icons fetch aws` keeps the set (about 14MB, from aws.amazon.com). Without it, `floe check`, `floe diagram render` and `floe diagram inspect` refuse a diagram that holds an icon (`inspect` after printing where the parts went): `floe: AWS icons are not in <dir>/aws; run "floe icons fetch aws" (downloads about 14MB from aws.amazon.com) and try again`.
+2. `floe icons search <word>` lists the names of icons that hold the word, each with its group: `floe icons search alb` lists `aws/res/elastic-load-balancing-application-load-balancer` (a short name such as `alb` works; `floe icons search rds` lists `aws/amazon-rds`). Take the name as it is printed.
+3. Write the icon as an `icon` part with `x` and `y` and its name in `icon`, and join icons by edges naming their `name`s; or write it as an `icon` node of a `graph`, which floe places (`floe diagram example aws-graph` is one). A frame of the AWS group style takes an `icon` of its own (`aws/group/region`).
+
+```yaml
+- diagram:
+    title: A web app on AWS
+    parts:
+      - icon: { name: alb, x: 40, y: 40, icon: aws/res/elastic-load-balancing-application-load-balancer, label: ALB }
+      - icon: { name: api, x: 240, y: 40, icon: aws/amazon-elastic-container-service, label: ECS }
+      - icon: { name: db, x: 440, y: 40, icon: aws/amazon-rds, label: RDS }
+      - edge: { from: alb, to: api, label: HTTPS }
+      - edge: { from: api, to: db, label: SQL }
+```
+
 ## The parts
 
 | Part | Keys |

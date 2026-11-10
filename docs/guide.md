@@ -115,6 +115,8 @@ Write the parts by hand for a diagram read as a picture, such as an architecture
       - edge: { from: api, to: db }
 ```
 
+An AWS architecture draws each service as an AWS icon, not as a box, and puts no box round it: `floe icons search <word>` finds the name (a short one such as `alb` works), after `floe icons fetch aws` if the set is not kept yet.
+
 `floe diagram guide` says more on each way (the parts and keys, how to size and space boxes and labels so that floe does not refuse them): read it before you write a larger diagram. `floe diagram example <kind>` prints a complete spec of each kind (architecture, sequence, ER, …) to copy: it writes `w` and `h` to line its boxes up, so if you change a text in it, leave that box's `w` out or widen it to the number the refusal gives (`needs w: 174 or more`).
 
 ## Writing YAML that floe reads as you meant

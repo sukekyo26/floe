@@ -36,6 +36,25 @@
 - 線は、両端の名前を `{ from, to }` で書くと、floe が通します。間に箱がある線は断られます（`edge "a"→"c" runs through box "b"; move one of them, or go round it by via`）：箱を動かすか、`via` を書きます（[手で書く線](#手で書く線)）。
 - 部品を数個書くごとに、データファイルに `floe diagram inspect` を実行します。各部品の置き場所と、断った所を、直す行つきで出します。
 
+### AWS の構成図：サービスをアイコンで描く
+
+AWS のサービスは、箱でなく AWS のアイコンで描き、アイコンを箱で囲みません。floe はアイコンを持っていません。セットは AWS のものだけで、マシンごとに 1 回取ります：
+
+1. `floe icons fetch aws` でセットを取ります（約 14MB、aws.amazon.com から）。無いと、アイコンのある図を `floe check`・`floe diagram render`・`floe diagram inspect` は断ります（`inspect` は部品の置き場所を出した後に）：`floe: AWS icons are not in <dir>/aws; run "floe icons fetch aws" (downloads about 14MB from aws.amazon.com) and try again`。
+2. `floe icons search <語>` は、その語を含むアイコンの名前を、グループつきで並べます：`floe icons search alb` は `aws/res/elastic-load-balancing-application-load-balancer` を出します（`alb` のような短い名前でも引けます。`floe icons search rds` は `aws/amazon-rds`）。名前は出たとおりに使います。
+3. アイコンは、`icon` の部品（`x`・`y` と、名前を `icon` に）で書き、線は `name` を指して結びます。または `graph` の `icon` の node で書くと、floe が置きます（`floe diagram example aws-graph`）。AWS のグループの形の枠には、枠自身の `icon` を付けられます（`aws/group/region`）。
+
+```yaml
+- diagram:
+    title: AWS の Web アプリ
+    parts:
+      - icon: { name: alb, x: 40, y: 40, icon: aws/res/elastic-load-balancing-application-load-balancer, label: ALB }
+      - icon: { name: api, x: 240, y: 40, icon: aws/amazon-elastic-container-service, label: ECS }
+      - icon: { name: db, x: 440, y: 40, icon: aws/amazon-rds, label: RDS }
+      - edge: { from: alb, to: api, label: HTTPS }
+      - edge: { from: api, to: db, label: SQL }
+```
+
 ## 部品
 
 | 部品 | 鍵 |
