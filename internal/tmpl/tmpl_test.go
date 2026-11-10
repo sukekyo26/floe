@@ -341,27 +341,34 @@ func TestDrawExamples(t *testing.T) {
 	}
 }
 
-// A page drawn twice from one input is the same bytes, its items of format html, diagrams and scripts too: no
-// mark of a drawing is left in it, so that drawing a stored page again keeps it when nothing changed.
+// A page drawn twice from one input is the same bytes, report's example and items of format html, diagrams and
+// scripts too: no mark of a drawing is left in it, so that drawing a stored page again keeps it when nothing changed.
 func TestDrawTwiceSame(t *testing.T) {
 	t.Parallel()
 
 	k := floeKit(t)
+	tpl, _, err := k.Template("report")
+	if err != nil {
+		t.Fatal(err)
+	}
 	o := tmpl.Options{Theme: "", Untitled: "", Images: nil, ImagesDir: ""}
-	first, _, err := tmpl.Draw(k, "twice.yaml", []byte(drawnTwice), o)
-	if err != nil {
-		t.Fatal(told(err))
-	}
-	second, _, err := tmpl.Draw(k, "twice.yaml", []byte(drawnTwice), o)
-	if err != nil {
-		t.Fatal(told(err))
-	}
-	if !bytes.Equal(first, second) {
-		t.Error("two drawings of one page differ")
+	for name, data := range map[string][]byte{"report's example": tpl.Example(), "drawnTwice": []byte(drawnTwice)} {
+		first, _, err := tmpl.Draw(k, "report.yaml", data, o)
+		if err != nil {
+			t.Fatal(told(err))
+		}
+		second, _, err := tmpl.Draw(k, "report.yaml", data, o)
+		if err != nil {
+			t.Fatal(told(err))
+		}
+		if !bytes.Equal(first, second) {
+			t.Errorf("two drawings of %s differ", name)
+		}
 	}
 }
 
-// drawnTwice is a report of an html part, a diagram and a script, which TestDrawTwiceSame draws twice.
+// drawnTwice is a report of an html part, a diagram and a script, which report's example has not, for
+// TestDrawTwiceSame; the example brings the contents, their ids, subsections, copy buttons and pills.
 const drawnTwice = `template: report
 lang: en
 sections:
