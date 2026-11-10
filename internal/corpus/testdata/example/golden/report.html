@@ -934,7 +934,7 @@ main > .body, .body > .sections { display: grid; gap: 2.5rem; grid-template-colu
 <section class="sub" id="section.0.0">
 <h3 id="the-old-wiki">The old wiki</h3>
 <div data-floe-text=""><p>It answers until the new one opens, with edits turned off.</p></div>
-<figure data-floe-part="code"><figcaption><span class="names"><span class="file">old-wiki.conf</span></span></figcaption><pre><code class="lines"><span data-floe-copy=""># Read-only from Friday evening
+<figure data-floe-part="code"><figcaption><span class="names"><span class="file">old-wiki.conf</span></span></figcaption><pre><code class="lines"><span data-floe-copy=""># Read-only from the first Friday evening
 </span><span data-floe-copy="">read_only = true
 </span><span data-floe-copy="">banner = &#34;This wiki has moved to the new host.&#34;
 </span></code></pre><script>(function copyButton(words) {
@@ -1006,8 +1006,8 @@ main > .body, .body > .sections { display: grid; gap: 2.5rem; grid-template-colu
 <section id="section.1">
 <h2 id="who-does-what">Who does what</h2>
 <dl data-floe-part="entries">
-<div><dt>Copy</dt><dd data-floe-look="tags"><span>Saturday</span><span><span data-floe-tone="good" data-floe-part="cell">ready</span></span></dd><dd class="text"><div data-floe-text=""><p>Copies the pages and keeps a list of what failed.</p></div></dd></div>
-<div><dt>Links</dt><dd data-floe-look="tags"><span>Sunday</span><span><span data-floe-tone="warn" data-floe-part="cell">waits on the copy</span></span></dd><dd class="text"><div data-floe-text=""><p>Runs the link check and fixes what it finds.</p></div></dd></div>
+<div><dt>Copy</dt><dd data-floe-look="tags"><span>First weekend</span><span><span data-floe-tone="good" data-floe-part="cell">ready</span></span></dd><dd class="text"><div data-floe-text=""><p>Copies the pages and keeps a list of what failed.</p></div></dd></div>
+<div><dt>Links</dt><dd data-floe-look="tags"><span>Second weekend</span><span><span data-floe-tone="warn" data-floe-part="cell">waits on the copy</span></span></dd><dd class="text"><div data-floe-text=""><p>Runs the link check and fixes what it finds.</p></div></dd></div>
 </dl>
 </section>
 <section id="section.2">
@@ -1017,7 +1017,7 @@ main > .body, .body > .sections { display: grid; gap: 2.5rem; grid-template-colu
 <tbody>
 <tr><td>Broken links</td><td class="num">120</td><td>A link check after the copy</td><td><span data-floe-tone="warn" data-floe-part="cell">watching</span></td></tr>
 <tr><td>Lost attachments</td><td class="num">8</td><td>Keep the old host for <strong>a month</strong></td><td><span data-floe-tone="good" data-floe-part="cell">covered</span></td></tr>
-<tr><td>Slow search</td><td class="num">-</td><td>Rebuild the index on <code>Sunday</code></td><td><span data-floe-tone="accent" data-floe-part="cell">open</span></td></tr>
+<tr><td>Slow search</td><td class="num">-</td><td>Rebuild the index with <code>wiki reindex</code></td><td><span data-floe-tone="accent" data-floe-part="cell">open</span></td></tr>
 </tbody>
 </table></div>
 <div data-floe-tone="warn" data-floe-part="note"><span class="floe-hidden">Warning: </span><strong class="title">Heads up</strong><div data-floe-text=""><p>Anyone editing during the freeze loses their changes.</p></div></div>

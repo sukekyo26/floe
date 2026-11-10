@@ -21,17 +21,17 @@ sections:
           - code:
               file: old-wiki.conf
               text: |
-                # Read-only from Friday evening
+                # Read-only from the first Friday evening
                 read_only = true
                 banner = "This wiki has moved to the new host."
   - heading: Who does what
     parts:
       - entries:
           - title: Copy
-            tags: [Saturday, { pill: ready, tone: good }]
+            tags: [First weekend, { pill: ready, tone: good }]
             text: Copies the pages and keeps a list of what failed.
           - title: Links
-            tags: [Sunday, { pill: waits on the copy, tone: warn }]
+            tags: [Second weekend, { pill: waits on the copy, tone: warn }]
             text: Runs the link check and fixes what it finds.
   - heading: Risks
     parts:
@@ -44,7 +44,7 @@ sections:
           rows:
             - [Broken links, '120', A link check after the copy, watching]
             - [Lost attachments, '8', Keep the old host for **a month**, covered]
-            - [Slow search, "-", Rebuild the index on `Sunday`, open]
+            - [Slow search, "-", Rebuild the index with `wiki reindex`, open]
       - note:
           tone: warn
           title: Heads up

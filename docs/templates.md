@@ -249,7 +249,7 @@ storage_gb: item_bytes * records.in_1_year / 1e9
 
 ## example.yaml
 
-A data file of the template, to start one from: `floe template show <name> example.yaml` prints it, and `floe template check` draws it as `floe check` draws a data file. Write every item the template takes, so that the check reaches every part of `page.html`.
+A data file of the template, to start one from: `floe template show <name> example.yaml` prints it, and `floe template check` draws it as `floe check` draws a data file. In a template of your own, write every item the template takes, so that the check reaches every part of `page.html`. floe's own examples are kept short for agents to read: report's leaves out `toc`, and draws no subsection of a section without a heading in its contents.
 
 ## Images
 
