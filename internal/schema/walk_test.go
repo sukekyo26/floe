@@ -7,7 +7,7 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/sukekyo26/floe/internal/schema"
+	"floe/internal/schema"
 )
 
 // Walk draws by additionalProperties the keys its schema does not leave to properties or to a patternProperties beside

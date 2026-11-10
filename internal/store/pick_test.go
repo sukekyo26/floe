@@ -7,8 +7,8 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/sukekyo26/floe/internal/store"
-	"github.com/sukekyo26/floe/internal/usererr"
+	"floe/internal/store"
+	"floe/internal/usererr"
 )
 
 // A theme picked for a page draws it over the data's theme: and --theme, kept across publishes and rebuilds, dropped

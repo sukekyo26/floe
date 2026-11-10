@@ -6,11 +6,11 @@ import (
 
 	"github.com/spf13/cobra"
 
-	"github.com/sukekyo26/floe/internal/files"
-	"github.com/sukekyo26/floe/internal/kit"
-	"github.com/sukekyo26/floe/internal/store"
-	"github.com/sukekyo26/floe/internal/tmpl"
-	"github.com/sukekyo26/floe/internal/usererr"
+	"floe/internal/files"
+	"floe/internal/kit"
+	"floe/internal/store"
+	"floe/internal/tmpl"
+	"floe/internal/usererr"
 )
 
 func (a *app) partCmd() *cobra.Command {

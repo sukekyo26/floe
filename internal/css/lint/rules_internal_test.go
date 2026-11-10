@@ -10,7 +10,7 @@ import (
 	"maps"
 	"slices"
 
-	"github.com/sukekyo26/floe/internal/kit"
+	"floe/internal/kit"
 )
 
 // Rule is a rule of floe's CSS, read in its text.

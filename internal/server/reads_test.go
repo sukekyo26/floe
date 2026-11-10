@@ -10,8 +10,8 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/sukekyo26/floe/internal/server"
-	"github.com/sukekyo26/floe/internal/store"
+	"floe/internal/server"
+	"floe/internal/store"
 )
 
 const jsonType = "application/json"

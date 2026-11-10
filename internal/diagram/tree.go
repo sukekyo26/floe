@@ -3,7 +3,7 @@ package diagram
 import (
 	"strconv"
 
-	"github.com/sukekyo26/floe/internal/usererr"
+	"floe/internal/usererr"
 )
 
 // item is a part to lay out, at its JSON pointer in the spec; a tree's nodes and edges are items of their own.

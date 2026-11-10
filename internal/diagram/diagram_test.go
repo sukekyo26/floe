@@ -11,14 +11,14 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/sukekyo26/floe/internal/diagram"
-	"github.com/sukekyo26/floe/internal/doc"
-	"github.com/sukekyo26/floe/internal/i18n"
-	"github.com/sukekyo26/floe/internal/icons"
-	"github.com/sukekyo26/floe/internal/kit"
-	"github.com/sukekyo26/floe/internal/schema"
-	"github.com/sukekyo26/floe/internal/usererr"
-	"github.com/sukekyo26/floe/internal/yamlpos"
+	"floe/internal/diagram"
+	"floe/internal/doc"
+	"floe/internal/i18n"
+	"floe/internal/icons"
+	"floe/internal/kit"
+	"floe/internal/schema"
+	"floe/internal/usererr"
+	"floe/internal/yamlpos"
 )
 
 var update = flag.Bool("update", false, "write the golden files of the examples anew")

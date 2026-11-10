@@ -6,8 +6,8 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/sukekyo26/floe/internal/cli"
-	"github.com/sukekyo26/floe/internal/version"
+	"floe/internal/cli"
+	"floe/internal/version"
 )
 
 // A command line floe cannot read exits 2 with floe's name before cobra's words; a failure to write exits 1.

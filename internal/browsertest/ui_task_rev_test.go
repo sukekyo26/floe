@@ -4,7 +4,7 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/sukekyo26/floe/internal/store"
+	"floe/internal/store"
 )
 
 // A task's page writes the task as it drew it (rev): a write over a row written since is refused and the tasks read again, the archive button

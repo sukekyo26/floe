@@ -8,7 +8,7 @@ import (
 	"syscall"
 	"testing"
 
-	"github.com/sukekyo26/floe/internal/usererr"
+	"floe/internal/usererr"
 )
 
 // swapped is an Opener that runs swap on the file between looking at it and opening it.

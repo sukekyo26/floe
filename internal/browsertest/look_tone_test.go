@@ -3,7 +3,7 @@ package browsertest_test
 import (
 	"testing"
 
-	"github.com/sukekyo26/floe/internal/kit"
+	"floe/internal/kit"
 )
 
 // toneExtra is a section added to every-part: a pill without a tone in a note of one, and a diagram's boxes with a

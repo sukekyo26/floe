@@ -3,9 +3,9 @@ package css_test
 import (
 	"testing"
 
-	"github.com/sukekyo26/floe/internal/css"
-	"github.com/sukekyo26/floe/internal/i18n"
-	"github.com/sukekyo26/floe/internal/usererr"
+	"floe/internal/css"
+	"floe/internal/i18n"
+	"floe/internal/usererr"
 )
 
 func told(err error) string {

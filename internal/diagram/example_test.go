@@ -5,9 +5,9 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/sukekyo26/floe/internal/diagram"
-	"github.com/sukekyo26/floe/internal/i18n"
-	"github.com/sukekyo26/floe/internal/usererr"
+	"floe/internal/diagram"
+	"floe/internal/i18n"
+	"floe/internal/usererr"
 )
 
 // awsIcons are the icons the examples aws and aws-graph name, as a set fetched holds them.

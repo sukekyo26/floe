@@ -14,8 +14,8 @@ import (
 	"testing"
 	"time"
 
-	"github.com/sukekyo26/floe/internal/i18n"
-	"github.com/sukekyo26/floe/internal/yamlpos"
+	"floe/internal/i18n"
+	"floe/internal/yamlpos"
 )
 
 // graphOf is a graph of boxes named names, with edges written "a>b".

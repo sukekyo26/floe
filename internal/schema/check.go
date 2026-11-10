@@ -9,8 +9,8 @@ import (
 
 	"github.com/santhosh-tekuri/jsonschema/v6"
 
-	"github.com/sukekyo26/floe/internal/doc"
-	"github.com/sukekyo26/floe/internal/usererr"
+	"floe/internal/doc"
+	"floe/internal/usererr"
 )
 
 // drafts are the drafts floe takes. Before 2019-09 the library leaves out every key beside a $ref.

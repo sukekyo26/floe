@@ -10,8 +10,8 @@ import (
 	"slices"
 	"time"
 
-	"github.com/sukekyo26/floe/internal/files"
-	"github.com/sukekyo26/floe/internal/usererr"
+	"floe/internal/files"
+	"floe/internal/usererr"
 )
 
 const (

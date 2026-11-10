@@ -5,8 +5,8 @@ package bom
 import (
 	"bytes"
 
-	"github.com/sukekyo26/floe/internal/textpos"
-	"github.com/sukekyo26/floe/internal/usererr"
+	"floe/internal/textpos"
+	"floe/internal/usererr"
 )
 
 var utf8BOM = []byte("\xef\xbb\xbf")

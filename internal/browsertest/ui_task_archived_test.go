@@ -7,7 +7,7 @@ import (
 
 	"github.com/chromedp/chromedp/kb"
 
-	"github.com/sukekyo26/floe/internal/store"
+	"floe/internal/store"
 )
 
 // TestUITaskArchivedInStep keeps a task's archived pages under their steps, after the rest of each, dimmed and marked: a step of

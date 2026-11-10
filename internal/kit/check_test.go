@@ -6,7 +6,7 @@ import (
 	"testing"
 	"testing/fstest"
 
-	"github.com/sukekyo26/floe/internal/kit"
+	"floe/internal/kit"
 )
 
 // floe's own pass every check: the test that stands for checking them at every run (judgement 1).

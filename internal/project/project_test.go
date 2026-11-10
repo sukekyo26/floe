@@ -6,7 +6,7 @@ import (
 	"path/filepath"
 	"testing"
 
-	"github.com/sukekyo26/floe/internal/project"
+	"floe/internal/project"
 )
 
 func run(t *testing.T, dir string, args ...string) {

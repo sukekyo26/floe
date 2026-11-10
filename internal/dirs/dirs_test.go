@@ -3,7 +3,7 @@ package dirs_test
 import (
 	"testing"
 
-	"github.com/sukekyo26/floe/internal/dirs"
+	"floe/internal/dirs"
 )
 
 func TestUnder(t *testing.T) {

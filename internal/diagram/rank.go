@@ -4,7 +4,7 @@ import (
 	"slices"
 	"strconv"
 
-	"github.com/sukekyo26/floe/internal/usererr"
+	"floe/internal/usererr"
 )
 
 // rank makes a group of the boxes members (their indexes among the boxes read, as written), its edges between boxes

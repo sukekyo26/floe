@@ -8,7 +8,7 @@ import (
 	"strconv"
 	"testing"
 
-	"github.com/sukekyo26/floe/internal/kit"
+	"floe/internal/kit"
 )
 
 // rollbackIn measures the runbook open and returns what is amiss in it: a ring or a line of the rollback's first step

@@ -6,7 +6,7 @@ import (
 
 	"golang.org/x/net/html"
 
-	"github.com/sukekyo26/floe/internal/page"
+	"floe/internal/page"
 )
 
 func TestTitle(t *testing.T) {

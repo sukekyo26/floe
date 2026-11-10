@@ -11,7 +11,7 @@ import (
 
 	"golang.org/x/net/html"
 
-	"github.com/sukekyo26/floe/internal/usererr"
+	"floe/internal/usererr"
 )
 
 // block is what a page holds in one place: a paragraph, an item, a row, a line of code, a diagram or an image.

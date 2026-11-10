@@ -13,9 +13,9 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/sukekyo26/floe/internal/pagediff"
-	"github.com/sukekyo26/floe/internal/server"
-	"github.com/sukekyo26/floe/internal/store"
+	"floe/internal/pagediff"
+	"floe/internal/server"
+	"floe/internal/store"
 )
 
 func noted(note string) string {

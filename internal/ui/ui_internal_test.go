@@ -13,10 +13,10 @@ import (
 	"golang.org/x/net/html"
 	"golang.org/x/net/html/atom"
 
-	"github.com/sukekyo26/floe/internal/files"
-	"github.com/sukekyo26/floe/internal/i18n"
-	"github.com/sukekyo26/floe/internal/store"
-	"github.com/sukekyo26/floe/internal/yamlpos"
+	"floe/internal/files"
+	"floe/internal/i18n"
+	"floe/internal/store"
+	"floe/internal/yamlpos"
 )
 
 func TestPageRendersInTheReadersLanguage(t *testing.T) {

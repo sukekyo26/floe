@@ -6,7 +6,7 @@ import (
 
 	"github.com/goccy/go-yaml/ast"
 
-	"github.com/sukekyo26/floe/internal/usererr"
+	"floe/internal/usererr"
 )
 
 // Place returns err with each mistake of no file at a JSON pointer (usererr.Error's At) placed in file instead: at

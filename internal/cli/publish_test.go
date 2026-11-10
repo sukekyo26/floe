@@ -14,10 +14,10 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/sukekyo26/floe/internal/cli"
-	"github.com/sukekyo26/floe/internal/i18n"
-	"github.com/sukekyo26/floe/internal/servetest"
-	"github.com/sukekyo26/floe/internal/store"
+	"floe/internal/cli"
+	"floe/internal/i18n"
+	"floe/internal/servetest"
+	"floe/internal/store"
 )
 
 // served is a server of floe with a template of its own that reads images, and data files in home/p for it:

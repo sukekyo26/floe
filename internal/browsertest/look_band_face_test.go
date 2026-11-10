@@ -4,7 +4,7 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/sukekyo26/floe/internal/kit"
+	"floe/internal/kit"
 )
 
 // bandPillsHTML is the part cell in each tone and in none, as a template places it.

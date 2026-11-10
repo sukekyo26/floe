@@ -3,7 +3,7 @@ package browsertest_test
 import (
 	"testing"
 
-	"github.com/sukekyo26/floe/internal/kit"
+	"floe/internal/kit"
 )
 
 // optionsPage holds options with parts (a tall picture, a small one under a title of two lines, a card without

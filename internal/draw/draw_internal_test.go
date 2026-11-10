@@ -13,12 +13,12 @@ import (
 
 	"golang.org/x/net/html"
 
-	"github.com/sukekyo26/floe/internal/doc"
-	"github.com/sukekyo26/floe/internal/i18n"
-	"github.com/sukekyo26/floe/internal/kit"
-	"github.com/sukekyo26/floe/internal/page"
-	"github.com/sukekyo26/floe/internal/schema"
-	"github.com/sukekyo26/floe/internal/usererr"
+	"floe/internal/doc"
+	"floe/internal/i18n"
+	"floe/internal/kit"
+	"floe/internal/page"
+	"floe/internal/schema"
+	"floe/internal/usererr"
 )
 
 // Where text/template says a template failed is the place textpos counts in the template's text.

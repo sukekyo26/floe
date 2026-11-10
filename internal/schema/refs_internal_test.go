@@ -5,8 +5,8 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/sukekyo26/floe/internal/i18n"
-	"github.com/sukekyo26/floe/internal/usererr"
+	"floe/internal/i18n"
+	"floe/internal/usererr"
 )
 
 // Filling a URL refused tells no mistake, so compile stops at mostCompiles, not at mostMistakes, and tells the URL

@@ -6,9 +6,9 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/sukekyo26/floe/internal/i18n"
-	"github.com/sukekyo26/floe/internal/tmpl"
-	"github.com/sukekyo26/floe/internal/usererr"
+	"floe/internal/i18n"
+	"floe/internal/tmpl"
+	"floe/internal/usererr"
 )
 
 // A fence in a text part is warned of at the value, in a section, in the stack of details and tabs, and in an item of

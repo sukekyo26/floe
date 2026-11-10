@@ -9,7 +9,7 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/sukekyo26/floe/internal/store"
+	"floe/internal/store"
 )
 
 func ptr[T any](v T) *T {

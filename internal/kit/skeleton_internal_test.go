@@ -11,7 +11,7 @@ import (
 	"golang.org/x/net/html"
 	"golang.org/x/net/html/atom"
 
-	"github.com/sukekyo26/floe/internal/page"
+	"floe/internal/page"
 )
 
 // The page template new writes and each of floe's templates' holds a viewport in its head: without it, a phone

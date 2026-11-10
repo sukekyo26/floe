@@ -15,8 +15,8 @@ import (
 	"github.com/yuin/goldmark/parser"
 	"github.com/yuin/goldmark/text"
 
-	"github.com/sukekyo26/floe/internal/cli"
-	"github.com/sukekyo26/floe/internal/kit"
+	"floe/internal/cli"
+	"floe/internal/kit"
 )
 
 // diagramGuides are the docs of how to write a diagram: the English one is what floe diagram guide prints, whole,

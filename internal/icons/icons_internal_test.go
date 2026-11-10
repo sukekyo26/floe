@@ -16,9 +16,9 @@ import (
 	"testing"
 	"time"
 
-	"github.com/sukekyo26/floe/internal/files"
-	"github.com/sukekyo26/floe/internal/i18n"
-	"github.com/sukekyo26/floe/internal/usererr"
+	"floe/internal/files"
+	"floe/internal/i18n"
+	"floe/internal/usererr"
 )
 
 func told(err error) string {

@@ -5,13 +5,13 @@ import (
 	"html/template"
 	"sync"
 
-	"github.com/sukekyo26/floe/internal/diagram"
-	"github.com/sukekyo26/floe/internal/doc"
-	"github.com/sukekyo26/floe/internal/i18n"
-	"github.com/sukekyo26/floe/internal/kit"
-	"github.com/sukekyo26/floe/internal/schema"
-	"github.com/sukekyo26/floe/internal/usererr"
-	"github.com/sukekyo26/floe/internal/zoom"
+	"floe/internal/diagram"
+	"floe/internal/doc"
+	"floe/internal/i18n"
+	"floe/internal/kit"
+	"floe/internal/schema"
+	"floe/internal/usererr"
+	"floe/internal/zoom"
 )
 
 // Diagrams is the drawer of the diagrams of pages and of floe diagram: floe's part diagram's schema, compiled

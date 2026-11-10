@@ -12,12 +12,12 @@ import (
 
 	"golang.org/x/net/html"
 
-	"github.com/sukekyo26/floe/internal/diagram"
-	"github.com/sukekyo26/floe/internal/dirs"
-	"github.com/sukekyo26/floe/internal/doc"
-	"github.com/sukekyo26/floe/internal/kit"
-	"github.com/sukekyo26/floe/internal/usererr"
-	"github.com/sukekyo26/floe/internal/yamlpos"
+	"floe/internal/diagram"
+	"floe/internal/dirs"
+	"floe/internal/doc"
+	"floe/internal/kit"
+	"floe/internal/usererr"
+	"floe/internal/yamlpos"
 )
 
 // probe is the white space drawn around the item n of format html, its spaces counting it, so that it tells the

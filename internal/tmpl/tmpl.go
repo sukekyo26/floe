@@ -10,13 +10,13 @@ import (
 	"slices"
 	"strings"
 
-	"github.com/sukekyo26/floe/internal/diagram"
-	"github.com/sukekyo26/floe/internal/doc"
-	"github.com/sukekyo26/floe/internal/draw"
-	"github.com/sukekyo26/floe/internal/kit"
-	"github.com/sukekyo26/floe/internal/schema"
-	"github.com/sukekyo26/floe/internal/usererr"
-	"github.com/sukekyo26/floe/internal/yamlpos"
+	"floe/internal/diagram"
+	"floe/internal/doc"
+	"floe/internal/draw"
+	"floe/internal/kit"
+	"floe/internal/schema"
+	"floe/internal/usererr"
+	"floe/internal/yamlpos"
 )
 
 // Options are what a caller gives a drawing besides the data.

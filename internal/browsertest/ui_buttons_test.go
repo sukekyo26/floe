@@ -5,7 +5,7 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/sukekyo26/floe/internal/store"
+	"floe/internal/store"
 )
 
 // Every button of words is of one form, as drawn: 2rem high, 2.25rem at a modal's foot, its corners --corner-small. They

@@ -6,8 +6,8 @@ import (
 	"maps"
 	"path"
 
-	"github.com/sukekyo26/floe/internal/textpos"
-	"github.com/sukekyo26/floe/internal/usererr"
+	"floe/internal/textpos"
+	"floe/internal/usererr"
 )
 
 // pages are the HTML of a part or a template parsed, a page for each language of its words, and one, "", for

@@ -12,9 +12,9 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/sukekyo26/floe/internal/cli"
-	"github.com/sukekyo26/floe/internal/files"
-	"github.com/sukekyo26/floe/internal/kit"
+	"floe/internal/cli"
+	"floe/internal/files"
+	"floe/internal/kit"
 )
 
 var update = flag.Bool("update", false, "write the golden files of each sample anew")

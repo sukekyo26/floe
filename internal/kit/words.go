@@ -6,9 +6,9 @@ import (
 
 	"github.com/goccy/go-yaml/ast"
 
-	"github.com/sukekyo26/floe/internal/i18n"
-	"github.com/sukekyo26/floe/internal/usererr"
-	"github.com/sukekyo26/floe/internal/yamlpos"
+	"floe/internal/i18n"
+	"floe/internal/usererr"
+	"floe/internal/yamlpos"
 )
 
 // words are the words a part or a template writes in the page's language (fields' required), by the

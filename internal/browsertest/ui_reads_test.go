@@ -10,7 +10,7 @@ import (
 
 	"golang.org/x/sys/unix"
 
-	"github.com/sukekyo26/floe/internal/store"
+	"floe/internal/store"
 )
 
 // A page opened in its frame is read: the frame sends the version the page told it. Not in a tab of its own, nor one

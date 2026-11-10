@@ -7,7 +7,7 @@ import (
 	"slices"
 	"strings"
 
-	"github.com/sukekyo26/floe/internal/kit"
+	"floe/internal/kit"
 )
 
 // pageStyle returns the CSS of each <style> of a page drawn in the theme named so, whose elements name what n

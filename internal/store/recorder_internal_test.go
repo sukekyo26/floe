@@ -6,9 +6,9 @@ import (
 	"testing"
 	"testing/fstest"
 
-	"github.com/sukekyo26/floe/internal/i18n"
-	"github.com/sukekyo26/floe/internal/kit"
-	"github.com/sukekyo26/floe/internal/usererr"
+	"floe/internal/i18n"
+	"floe/internal/kit"
+	"floe/internal/usererr"
 )
 
 // The recorder notes an image that is not there, which kit.ReadImage stats before it opens, and one that is a

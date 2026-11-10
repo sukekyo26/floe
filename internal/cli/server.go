@@ -14,10 +14,10 @@ import (
 
 	"github.com/spf13/cobra"
 
-	"github.com/sukekyo26/floe/internal/daemon"
-	"github.com/sukekyo26/floe/internal/server"
-	"github.com/sukekyo26/floe/internal/store"
-	"github.com/sukekyo26/floe/internal/usererr"
+	"floe/internal/daemon"
+	"floe/internal/server"
+	"floe/internal/store"
+	"floe/internal/usererr"
 )
 
 const defaultPort = 7325

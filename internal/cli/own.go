@@ -9,9 +9,9 @@ import (
 	"strings"
 	"syscall"
 
-	"github.com/sukekyo26/floe/internal/dirs"
-	"github.com/sukekyo26/floe/internal/kit"
-	"github.com/sukekyo26/floe/internal/usererr"
+	"floe/internal/dirs"
+	"floe/internal/kit"
+	"floe/internal/usererr"
 )
 
 // dataPlace is a directory of floe's (dataDir): dir, "" for none; key, the setting that may name it, which a

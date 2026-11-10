@@ -4,7 +4,7 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/sukekyo26/floe/internal/kit"
+	"floe/internal/kit"
 )
 
 // measurePaper finds, read with the page drawn for print, each element that scrolls sideways (paper shows no scrolled

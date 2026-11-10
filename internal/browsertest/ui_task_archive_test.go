@@ -10,7 +10,7 @@ import (
 
 	"github.com/chromedp/cdproto/input"
 
-	"github.com/sukekyo26/floe/internal/store"
+	"floe/internal/store"
 )
 
 // A task archived by its own button, of no page, of pages or of pages archived already: its state moves it, whatever its pages, and the same

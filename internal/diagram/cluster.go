@@ -7,7 +7,7 @@ import (
 	"slices"
 	"strconv"
 
-	"github.com/sukekyo26/floe/internal/usererr"
+	"floe/internal/usererr"
 )
 
 // maxNodes is how many boxes, icons, groups and lanes a graph holds, counted through its groups and lanes: the

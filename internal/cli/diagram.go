@@ -9,16 +9,16 @@ import (
 	"github.com/goccy/go-yaml/ast"
 	"github.com/spf13/cobra"
 
-	"github.com/sukekyo26/floe/docs"
-	"github.com/sukekyo26/floe/internal/diagram"
-	"github.com/sukekyo26/floe/internal/doc"
-	"github.com/sukekyo26/floe/internal/draw"
-	"github.com/sukekyo26/floe/internal/i18n"
-	"github.com/sukekyo26/floe/internal/kit"
-	"github.com/sukekyo26/floe/internal/tmpl"
-	"github.com/sukekyo26/floe/internal/usererr"
-	"github.com/sukekyo26/floe/internal/yamlpos"
-	"github.com/sukekyo26/floe/internal/zoom"
+	"floe/docs"
+	"floe/internal/diagram"
+	"floe/internal/doc"
+	"floe/internal/draw"
+	"floe/internal/i18n"
+	"floe/internal/kit"
+	"floe/internal/tmpl"
+	"floe/internal/usererr"
+	"floe/internal/yamlpos"
+	"floe/internal/zoom"
 )
 
 func (a *app) diagramCmd() *cobra.Command {

@@ -12,7 +12,7 @@ import (
 	"github.com/chromedp/chromedp"
 	"github.com/chromedp/chromedp/kb"
 
-	"github.com/sukekyo26/floe/internal/i18n"
+	"floe/internal/i18n"
 )
 
 // zoomHintPage is two frames that zoom at any width, an image that zooms only on a narrow screen, one that never does, and

@@ -4,10 +4,10 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/sukekyo26/floe/internal/doc"
-	"github.com/sukekyo26/floe/internal/i18n"
-	"github.com/sukekyo26/floe/internal/rules"
-	"github.com/sukekyo26/floe/internal/usererr"
+	"floe/internal/doc"
+	"floe/internal/i18n"
+	"floe/internal/rules"
+	"floe/internal/usererr"
 )
 
 func told(err error) string {

@@ -6,7 +6,7 @@ import (
 
 	"github.com/chromedp/chromedp/kb"
 
-	"github.com/sukekyo26/floe/internal/store"
+	"floe/internal/store"
 )
 
 // TestUIEditFold: a page's "Edit" folds its slug and project under a row that says what they are, as typed, and opens closed. A field

@@ -16,14 +16,14 @@ import (
 	"golang.org/x/net/html"
 	"golang.org/x/net/html/atom"
 
-	"github.com/sukekyo26/floe/internal/diagram"
-	"github.com/sukekyo26/floe/internal/doc"
-	"github.com/sukekyo26/floe/internal/kit"
-	"github.com/sukekyo26/floe/internal/page"
-	"github.com/sukekyo26/floe/internal/schema"
-	"github.com/sukekyo26/floe/internal/textpos"
-	"github.com/sukekyo26/floe/internal/usererr"
-	"github.com/sukekyo26/floe/internal/yamlpos"
+	"floe/internal/diagram"
+	"floe/internal/doc"
+	"floe/internal/kit"
+	"floe/internal/page"
+	"floe/internal/schema"
+	"floe/internal/textpos"
+	"floe/internal/usererr"
+	"floe/internal/yamlpos"
 )
 
 // Page draws d, checked, with t of k in the theme named so, as a page titled title, calc the values of t's

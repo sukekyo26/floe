@@ -13,9 +13,9 @@ import (
 	"github.com/goccy/go-yaml"
 	"golang.org/x/net/html"
 
-	"github.com/sukekyo26/floe/internal/cli"
-	"github.com/sukekyo26/floe/internal/draw"
-	"github.com/sukekyo26/floe/internal/kit"
+	"floe/internal/cli"
+	"floe/internal/draw"
+	"floe/internal/kit"
 )
 
 // everyPart is the sample of every part, which the browser's test of the colours draws in every theme: what it

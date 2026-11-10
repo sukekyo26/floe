@@ -8,7 +8,7 @@ import (
 	"testing"
 	"time"
 
-	"github.com/sukekyo26/floe/internal/rules"
+	"floe/internal/rules"
 )
 
 // names are the items the schema of the tests declares at its top.

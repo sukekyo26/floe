@@ -13,11 +13,11 @@ import (
 	"strings"
 	"time"
 
-	"github.com/sukekyo26/floe/internal/draw"
-	"github.com/sukekyo26/floe/internal/files"
-	"github.com/sukekyo26/floe/internal/i18n"
-	"github.com/sukekyo26/floe/internal/store"
-	"github.com/sukekyo26/floe/internal/usererr"
+	"floe/internal/draw"
+	"floe/internal/files"
+	"floe/internal/i18n"
+	"floe/internal/store"
+	"floe/internal/usererr"
 )
 
 const (

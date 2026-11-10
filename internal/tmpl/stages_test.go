@@ -7,8 +7,8 @@ import (
 	"testing"
 	"testing/fstest"
 
-	"github.com/sukekyo26/floe/internal/kit"
-	"github.com/sukekyo26/floe/internal/tmpl"
+	"floe/internal/kit"
+	"floe/internal/tmpl"
 )
 
 // mapFS is files, by their paths, as an fs.FS.

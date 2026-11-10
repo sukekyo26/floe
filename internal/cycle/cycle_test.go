@@ -4,7 +4,7 @@ import (
 	"fmt"
 	"testing"
 
-	"github.com/sukekyo26/floe/internal/cycle"
+	"floe/internal/cycle"
 )
 
 // Of tells a cycle of each tangle, from its least name back to it, and none of names that use no cycle.

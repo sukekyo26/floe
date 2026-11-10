@@ -5,7 +5,7 @@ import (
 	"strconv"
 	"testing"
 
-	"github.com/sukekyo26/floe/internal/kit"
+	"floe/internal/kit"
 )
 
 // A save that another of the slug comes between, after it gzipped the page before outside the lock, keeps the page of

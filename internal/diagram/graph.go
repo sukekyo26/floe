@@ -8,7 +8,7 @@ import (
 	"slices"
 	"strconv"
 
-	"github.com/sukekyo26/floe/internal/usererr"
+	"floe/internal/usererr"
 )
 
 // maxPassed is how many ranks the edges of all the graphs of a diagram may pass between their ends, all told: the

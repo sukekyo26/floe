@@ -3,7 +3,7 @@ package diagram
 import (
 	"testing"
 
-	"github.com/sukekyo26/floe/internal/usererr"
+	"floe/internal/usererr"
 )
 
 // Of an example's mistakes, those of icons are the user's: an icon's name at the diagram's root, one of the icons'

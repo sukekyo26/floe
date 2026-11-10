@@ -4,7 +4,7 @@ import (
 	"errors"
 	"net/http"
 
-	"github.com/sukekyo26/floe/internal/store"
+	"floe/internal/store"
 )
 
 // TaskEdit is what PATCH /api/tasks sends: each nil is left as it is.

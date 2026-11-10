@@ -7,7 +7,7 @@ import (
 
 	"github.com/chromedp/cdproto/input"
 
-	"github.com/sukekyo26/floe/internal/store"
+	"floe/internal/store"
 )
 
 // The × on a pin of the task list takes the pin off where it is, by a press, Enter or Space. The focus goes to the title of the pin in its

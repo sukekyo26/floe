@@ -7,9 +7,9 @@ import (
 	"fmt"
 	"io"
 
-	"github.com/sukekyo26/floe/internal/bom"
-	"github.com/sukekyo26/floe/internal/textpos"
-	"github.com/sukekyo26/floe/internal/usererr"
+	"floe/internal/bom"
+	"floe/internal/textpos"
+	"floe/internal/usererr"
 )
 
 // LIMIT: encoding/json/jsontext is in Go 1.27 by default, under goexperiment.jsonv2, outside the Go 1

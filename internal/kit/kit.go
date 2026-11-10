@@ -16,12 +16,12 @@ import (
 	"sync"
 	"sync/atomic"
 
-	"github.com/sukekyo26/floe/internal/bom"
-	"github.com/sukekyo26/floe/internal/css"
-	"github.com/sukekyo26/floe/internal/files"
-	"github.com/sukekyo26/floe/internal/rules"
-	"github.com/sukekyo26/floe/internal/schema"
-	"github.com/sukekyo26/floe/internal/usererr"
+	"floe/internal/bom"
+	"floe/internal/css"
+	"floe/internal/files"
+	"floe/internal/rules"
+	"floe/internal/schema"
+	"floe/internal/usererr"
 )
 
 // Kit is the parts, looks, themes and templates read at stage 1, over those of a base. It is not changed

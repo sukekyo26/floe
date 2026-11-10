@@ -7,7 +7,7 @@ import (
 
 	"github.com/chromedp/cdproto/emulation"
 
-	"github.com/sukekyo26/floe/internal/i18n"
+	"floe/internal/i18n"
 )
 
 // barsList is the list the stub answers for the bars: pages enough to scroll, and links.

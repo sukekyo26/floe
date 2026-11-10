@@ -5,7 +5,7 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/sukekyo26/floe/internal/version"
+	"floe/internal/version"
 )
 
 // `go install` builds skip the justfile's ldflags, so the literal must match VERSION.

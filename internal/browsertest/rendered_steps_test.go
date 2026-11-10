@@ -4,7 +4,7 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/sukekyo26/floe/internal/kit"
+	"floe/internal/kit"
 )
 
 // stepsTagsPage holds steps in each state with tags of every kind (a link, words, code, a pill of no tone and one of

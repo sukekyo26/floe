@@ -14,9 +14,9 @@ import (
 
 	"github.com/spf13/cobra"
 
-	"github.com/sukekyo26/floe/docs"
-	"github.com/sukekyo26/floe/internal/files"
-	"github.com/sukekyo26/floe/internal/usererr"
+	"floe/docs"
+	"floe/internal/files"
+	"floe/internal/usererr"
 )
 
 // skill is the SKILL.md floe skill install writes: it points the agent to floe guide, so that it stays right

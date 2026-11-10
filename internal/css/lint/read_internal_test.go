@@ -9,7 +9,7 @@ import (
 
 	"github.com/tdewolff/parse/v2/css"
 
-	floecss "github.com/sukekyo26/floe/internal/css"
+	floecss "floe/internal/css"
 )
 
 // token is a token of floecss.Tokens, which every rule reads by: it reads no CSS of its own.

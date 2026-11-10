@@ -10,7 +10,7 @@ import (
 	"github.com/chromedp/cdproto/accessibility"
 	"github.com/chromedp/chromedp"
 
-	"github.com/sukekyo26/floe/internal/kit"
+	"floe/internal/kit"
 )
 
 // checksPage holds of each result another count, with what cannot fold in each place a check holds it: a title and a how

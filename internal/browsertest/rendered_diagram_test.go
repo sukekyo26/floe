@@ -10,7 +10,7 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/sukekyo26/floe/internal/kit"
+	"floe/internal/kit"
 )
 
 // diagramKit is a part of one's own, pic, that draws its value as a diagram in its box, and a template that

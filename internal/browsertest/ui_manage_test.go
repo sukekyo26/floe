@@ -13,8 +13,8 @@ import (
 	"github.com/chromedp/chromedp"
 	"github.com/chromedp/chromedp/kb"
 
-	"github.com/sukekyo26/floe/internal/i18n"
-	"github.com/sukekyo26/floe/internal/servetest"
+	"floe/internal/i18n"
+	"floe/internal/servetest"
 )
 
 // inEveryLanguage runs scenario once for each language with a catalog, with that language's messages, so that a

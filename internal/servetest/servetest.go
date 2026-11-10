@@ -11,10 +11,10 @@ import (
 	"strconv"
 	"testing"
 
-	"github.com/sukekyo26/floe/internal/daemon"
-	"github.com/sukekyo26/floe/internal/kit"
-	"github.com/sukekyo26/floe/internal/server"
-	"github.com/sukekyo26/floe/internal/store"
+	"floe/internal/daemon"
+	"floe/internal/kit"
+	"floe/internal/server"
+	"floe/internal/store"
 )
 
 // Site is a server Start started.

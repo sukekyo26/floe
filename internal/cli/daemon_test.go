@@ -18,10 +18,10 @@ import (
 
 	"golang.org/x/sys/unix"
 
-	"github.com/sukekyo26/floe/internal/cli"
-	"github.com/sukekyo26/floe/internal/daemon"
-	"github.com/sukekyo26/floe/internal/server"
-	"github.com/sukekyo26/floe/internal/servetest"
+	"floe/internal/cli"
+	"floe/internal/daemon"
+	"floe/internal/server"
+	"floe/internal/servetest"
 )
 
 // asCLI makes the test binary run as floe, so that the server a publish starts (os.Executable() serve) is this

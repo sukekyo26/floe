@@ -10,8 +10,8 @@ import (
 	"syscall"
 	"testing"
 
-	"github.com/sukekyo26/floe/internal/link"
-	"github.com/sukekyo26/floe/internal/usererr"
+	"floe/internal/link"
+	"floe/internal/usererr"
 )
 
 // realTemp returns a temporary directory by its real path; on macOS t.TempDir is under the /var symlink.

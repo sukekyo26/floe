@@ -10,9 +10,9 @@ import (
 	"github.com/expr-lang/expr/vm"
 	"github.com/goccy/go-yaml/ast"
 
-	"github.com/sukekyo26/floe/internal/doc"
-	"github.com/sukekyo26/floe/internal/usererr"
-	"github.com/sukekyo26/floe/internal/yamlpos"
+	"floe/internal/doc"
+	"floe/internal/usererr"
+	"floe/internal/yamlpos"
 )
 
 // Checks is a checks.yaml read, each expression compiled.

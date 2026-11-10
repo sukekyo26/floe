@@ -11,7 +11,7 @@ import (
 	"strings"
 	"time"
 
-	"github.com/sukekyo26/floe/internal/usererr"
+	"floe/internal/usererr"
 )
 
 // linkable are the files a link can register: a page, or a data file drawn each time it is opened.

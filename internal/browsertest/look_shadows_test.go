@@ -7,7 +7,7 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/sukekyo26/floe/internal/kit"
+	"floe/internal/kit"
 )
 
 // shadowsExtra is a section added to every-part: panels one after another in a note's box, between its text, cards

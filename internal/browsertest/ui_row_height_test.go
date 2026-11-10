@@ -5,7 +5,7 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/sukekyo26/floe/internal/store"
+	"floe/internal/store"
 )
 
 // TestUIRowHeight holds a page's row to one rule on the page list and a task's page: of one height on both, its buttons 26px, the

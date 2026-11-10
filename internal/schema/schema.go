@@ -18,8 +18,8 @@ import (
 	"golang.org/x/text/language"
 	"golang.org/x/text/message"
 
-	"github.com/sukekyo26/floe/internal/bom"
-	"github.com/sukekyo26/floe/internal/usererr"
+	"floe/internal/bom"
+	"floe/internal/usererr"
 )
 
 // Kind is what a schema floe holds by URL is to the template: a part, drawn by its part.html, or a schema

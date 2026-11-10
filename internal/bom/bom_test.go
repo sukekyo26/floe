@@ -5,7 +5,7 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/sukekyo26/floe/internal/bom"
+	"floe/internal/bom"
 )
 
 // Trim leaves out one mark at the start, and changes no other byte.

@@ -6,7 +6,7 @@ import (
 
 	"github.com/chromedp/chromedp/kb"
 
-	"github.com/sukekyo26/floe/internal/store"
+	"floe/internal/store"
 )
 
 // A row's project as a pill in its chip's color, in the list, the search modal and the task screens, and the row's button that archives

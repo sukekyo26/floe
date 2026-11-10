@@ -10,7 +10,7 @@ import (
 	"testing"
 	"time"
 
-	"github.com/sukekyo26/floe/internal/server"
+	"floe/internal/server"
 )
 
 // Fake answers as a server of floe of PID, running no floe, so that a command's waiting is seen whatever a real

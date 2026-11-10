@@ -7,7 +7,7 @@ import (
 	"text/template"
 	"unicode/utf8"
 
-	"github.com/sukekyo26/floe/internal/textpos"
+	"floe/internal/textpos"
 )
 
 // Of counts LF, CRLF and CR as one line break each, and runes for the column, a byte no UTF-8 as one.

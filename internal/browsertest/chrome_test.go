@@ -31,10 +31,10 @@ import (
 	"github.com/chromedp/chromedp"
 	"github.com/chromedp/chromedp/kb"
 
-	"github.com/sukekyo26/floe/internal/cli"
-	"github.com/sukekyo26/floe/internal/i18n"
-	"github.com/sukekyo26/floe/internal/kit"
-	"github.com/sukekyo26/floe/internal/servetest"
+	"floe/internal/cli"
+	"floe/internal/i18n"
+	"floe/internal/kit"
+	"floe/internal/servetest"
 )
 
 // errNoChrome is a Chrome that is not there where FLOE_CHROME says, or not found on CI.

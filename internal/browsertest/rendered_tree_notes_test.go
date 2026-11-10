@@ -3,7 +3,7 @@ package browsertest_test
 import (
 	"testing"
 
-	"github.com/sukekyo26/floe/internal/kit"
+	"floe/internal/kit"
 )
 
 // treeNotesPage holds rows of every depth, a name long and short, a mark (+ ± −) and none, a note and none, a folder

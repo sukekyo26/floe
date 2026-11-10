@@ -6,8 +6,8 @@ import (
 	"html/template"
 	"sync"
 
-	"github.com/sukekyo26/floe/internal/i18n"
-	"github.com/sukekyo26/floe/internal/page"
+	"floe/internal/i18n"
+	"floe/internal/page"
 )
 
 //go:embed zoom.js

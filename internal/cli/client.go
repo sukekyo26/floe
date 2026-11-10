@@ -13,12 +13,12 @@ import (
 	"strconv"
 	"strings"
 
-	"github.com/sukekyo26/floe/internal/daemon"
-	"github.com/sukekyo26/floe/internal/dirs"
-	"github.com/sukekyo26/floe/internal/files"
-	"github.com/sukekyo26/floe/internal/kit"
-	"github.com/sukekyo26/floe/internal/server"
-	"github.com/sukekyo26/floe/internal/usererr"
+	"floe/internal/daemon"
+	"floe/internal/dirs"
+	"floe/internal/files"
+	"floe/internal/kit"
+	"floe/internal/server"
+	"floe/internal/usererr"
 )
 
 // client calls the API of the server at base, in English as the command line speaks. The server is the

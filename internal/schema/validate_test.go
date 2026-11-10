@@ -3,7 +3,7 @@ package schema_test
 import (
 	"testing"
 
-	"github.com/sukekyo26/floe/internal/doc"
+	"floe/internal/doc"
 )
 
 // validate compiles schema and validates data (a data file of template t), telling what Validate says.

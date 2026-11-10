@@ -1,4 +1,4 @@
-module github.com/sukekyo26/floe
+module floe
 
 go 1.27.3
 

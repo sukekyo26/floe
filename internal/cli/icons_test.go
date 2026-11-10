@@ -7,7 +7,7 @@ import (
 	"path/filepath"
 	"testing"
 
-	"github.com/sukekyo26/floe/internal/cli"
+	"floe/internal/cli"
 )
 
 // runIn runs floe with args in dir under the environment env, and returns its exit code, stdout and stderr.

@@ -11,8 +11,8 @@ import (
 	"os"
 	"path/filepath"
 
-	"github.com/sukekyo26/floe/internal/store"
-	"github.com/sukekyo26/floe/internal/usererr"
+	"floe/internal/store"
+	"floe/internal/usererr"
 )
 
 // LIMIT: json/v2 and jsontext are outside the Go 1 promise; if a release drops them, use go-json-experiment/json.

@@ -5,7 +5,7 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/sukekyo26/floe/internal/kit"
+	"floe/internal/kit"
 )
 
 // measureOptionsLook returns a line for each thing options draws wrong in its cards on a line: their words or their

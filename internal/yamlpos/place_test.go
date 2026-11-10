@@ -6,9 +6,9 @@ import (
 
 	"github.com/goccy/go-yaml/ast"
 
-	"github.com/sukekyo26/floe/internal/i18n"
-	"github.com/sukekyo26/floe/internal/usererr"
-	"github.com/sukekyo26/floe/internal/yamlpos"
+	"floe/internal/i18n"
+	"floe/internal/usererr"
+	"floe/internal/yamlpos"
 )
 
 // Place puts each mistake of no file at a JSON pointer at its line and column under prefix; one with a file of

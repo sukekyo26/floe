@@ -16,10 +16,10 @@ import (
 
 	"golang.org/x/sys/unix"
 
-	"github.com/sukekyo26/floe/internal/kit"
-	"github.com/sukekyo26/floe/internal/link"
-	"github.com/sukekyo26/floe/internal/server"
-	"github.com/sukekyo26/floe/internal/store"
+	"floe/internal/kit"
+	"floe/internal/link"
+	"floe/internal/server"
+	"floe/internal/store"
 )
 
 const (

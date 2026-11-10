@@ -8,7 +8,7 @@ import (
 	"strconv"
 	"strings"
 
-	"github.com/sukekyo26/floe/internal/usererr"
+	"floe/internal/usererr"
 )
 
 // formatNum, num in page.html, writes a number with its digits grouped by three, as it is or rounded
