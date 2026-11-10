@@ -211,6 +211,7 @@ var messagesEN = map[string]string{
 	"store_slug_taken":        `slug "%s" is already in use: choose another slug`,
 	"store_reads_unset":       "is missing, broken or has no since: run floe stop, then floe serve, which writes it anew",
 	"store_project_slash":     `a project name cannot be just "/"`,
+	"store_move_no_project":   "the place floe publish ran in has no project, which --move-project puts the page in: run it in the repository the page is about",
 	"store_tasks_broken":      "%s: mend it by hand, as floe does not write over it",
 	"store_task_project":      `a task needs its project: "/" for none`,
 	"store_task_name":         "a task needs an ID",

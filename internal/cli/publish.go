@@ -33,17 +33,21 @@ func (a *app) publishCmd() *cobra.Command {
 		Short: "Store a page drawn from a data file (or --link an HTML file or a folder in place) and print its URL",
 		Long: `Draw a page from a data file (.yaml, .yml) with the template it names (template: report),
 store it as drawn and print its URL. A page is its data file's: publishing the same file again, from any
-directory, overwrites it and keeps the page's project (a file is named by its repository and its path from
-the repository's root, else by its real path), and the slug of another file's page is refused unless
---force, which drops its history (versions, pinned title, tags, favourite). A new page is in the project
-of the directory floe publish runs in: its git repository's name (origin's, else the repository's
-directory), else the directory's name. floe publish says it on stderr after the URL (page in project floe, or page in
-no project) when the page is new or its project changed. A page renamed on the management page is its file's still:
-publishing that file again without --slug writes to its new slug. A page is in the language its data names
-(lang:), and in the theme its data names (theme:, else default), unless --theme names another. A new
-slug is also opened in the browser ($BROWSER, open, wslview, xdg-open). The page stays as it was
-drawn: floe rebuild draws the stored pages again with the templates of now. The warnings of the page
-drawn, advice on a better way to write it, are printed as file:line:column: warning: message.
+directory (a file is named by its repository and its path from the repository's root, else by its real
+path), overwrites it and keeps the page's project, unless --move-project, and the slug of another file's
+page is refused unless --force, which drops its history (versions, pinned title, tags, favourite). A new
+page is in the project of the directory floe publish runs in: its git repository's name (origin's, else
+the repository's directory), else the directory's name. floe publish says it on stderr after the URL
+(page in project floe, or page in no project) when the page is new or its project changed.
+--move-project puts the page in the project of the directory floe publish runs in, though it is in
+another (not with --link, nor where there is no project): publish again with it from the repository the
+page is about, to mend a page that went into the wrong project. A page renamed on the management page is
+its file's still: publishing that file again without --slug writes to its new slug. A page is in the
+language its data names (lang:), and in the theme its data names (theme:, else default), unless --theme
+names another. A new slug is also opened in the browser ($BROWSER, open, wslview, xdg-open). The page
+stays as it was drawn: floe rebuild draws the stored pages again with the templates of now. The warnings
+of the page drawn, advice on a better way to write it, are printed as file:line:column: warning:
+message.
 
 --link registers a file in place instead of storing a page. An HTML file is shown as it is, and the
 files under its directory are served for its relative references. A data file is drawn each time
@@ -76,6 +80,9 @@ a dot), each shown as a linked HTML file is. The same slug for another file is r
 	f.StringVar(&description, "description", "", "a description shown in the list")
 	f.StringVar(&theme, "theme", "",
 		"the theme to draw with: its palette and the parts' shape (default: the data file's theme:, else default)")
+	f.BoolVar(&opts.MoveProject, "move-project", false, "put the page in the project of the directory floe runs in, "+
+		"though it is in another; a page keeps its project otherwise (not with --link, nor where there is no project)")
+	cmd.MarkFlagsMutuallyExclusive("link", "move-project")
 	f.BoolVar(&opts.Force, "force", false, "replace another file's page, or a link to "+
 		"another file, keeping nothing of the old one, not even a page's earlier versions; without --slug, only when "+
 		"the file has no page of its own")
@@ -109,7 +116,13 @@ func (a *app) publish(ctx context.Context, file string, link bool, opts store.Op
 	if err != nil {
 		return err
 	}
-	u := daemon.Base(port) + "/a/" + saved.Slug + "/"
+	a.tellSaved(ctx, daemon.Base(port)+"/a/"+saved.Slug+"/", saved, link)
+	return nil
+}
+
+// tellSaved prints the URL u of the page saved, and what a publish tells of it: that it replaced one, and the
+// project it is in.
+func (a *app) tellSaved(ctx context.Context, u string, saved server.Saved, link bool) {
 	// A republish does not open another tab; the open one reloads itself.
 	if saved.Prev == nil {
 		daemon.OpenBrowser(ctx, a.getenv("BROWSER"), u)
@@ -119,11 +132,10 @@ func (a *app) publish(ctx context.Context, file string, link bool, opts store.Op
 		a.noticeUpdate(saved)
 	}
 	// The directory floe publish runs in sets the project of a data file's page when the page is new, replaces another
-	// file's, or had none; a link's is its target's. Told after the URL, as the update is.
+	// file's, had none, or is moved; a link's is its target's. Told after the URL, as the update is.
 	if !link && (saved.Prev == nil || saved.Prev.TaskProject != saved.TaskProject) {
 		a.warn("cli_page_project", inProject(saved.TaskProject))
 	}
-	return nil
 }
 
 // sent is what a publish of p sends, with opts Accept returned: the link, or the data file with what it reads (up),
@@ -157,7 +169,7 @@ func (a *app) sent(ctx context.Context, p arg, link bool, opts store.Options) (s
 	} else {
 		up = server.Upload{
 			File: p.name, Source: nil, Images: nil, Project: "", Repo: "", Place: "", Slug: opts.Slug, Title: opts.Title,
-			Description: opts.Description, Theme: opts.Theme, Force: opts.Force,
+			Description: opts.Description, Theme: opts.Theme, Force: opts.Force, MoveProject: opts.MoveProject,
 		}
 		if p.err == nil && files.IsDataFile(p.name) {
 			up.Project = project.Name(ctx, a.env.Dir)

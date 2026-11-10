@@ -202,6 +202,7 @@ var messagesJA = map[string]string{
 	"store_slug_taken":        "URL 名「%s」は使われています。別の URL 名にしてください",
 	"store_reads_unset":       "無いか、壊れているか、since がありません。floe stop の後に floe serve を起こすと書き直します",
 	"store_project_slash":     "プロジェクト名に / だけは使えません",
+	"store_move_no_project":   "floe publish を走らせた場所にはプロジェクトが無いので、--move-project でページを入れられません。ページが扱うリポジトリで走らせてください",
 	"store_tasks_broken":      "%s。floe は上書きしないので、手で直してください",
 	"store_task_project":      "タスクにはプロジェクトが要ります（無しは /）",
 	"store_task_name":         "タスクには ID が要ります",

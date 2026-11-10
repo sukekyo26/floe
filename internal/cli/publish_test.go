@@ -8,6 +8,7 @@ import (
 	"net/http"
 	"os"
 	"path/filepath"
+	"reflect"
 	"slices"
 	"strconv"
 	"strings"
@@ -444,5 +445,85 @@ func TestPublishSaysProject(t *testing.T) {
 	}
 	if got := publishedTogether(t, dir, env, "m.yaml"); strings.Contains(got, "page in ") {
 		t.Errorf("a page moved to another project wrote %q, want its project kept and not told", got)
+	}
+}
+
+// --move-project puts a page in the project of the directory floe publish runs in, though it is in another; no other
+// publish moves it, and it moves none of the page's task. Not with a link, nor from a place with no project.
+func TestPublishMoveProject(t *testing.T) {
+	t.Parallel()
+
+	env, dir := served(t)
+	other := filepath.Join(filepath.Dir(dir), "q")
+	file := filepath.Join(dir, "n.yaml")
+	if err := os.WriteFile(file, []byte("lang: en\ntemplate: report\n"), 0o600); err != nil {
+		t.Fatal(err)
+	}
+	s := store.New(env["FLOE_DIR"])
+	projectOfPage := func() string {
+		t.Helper()
+		m := s.ReadMeta("n")
+		if m == nil {
+			t.Fatal("no page n")
+		}
+		return m.Project
+	}
+	said := func(at string, args ...string) string {
+		t.Helper()
+		return publishedTogether(t, at, env, append([]string{file}, args...)...)
+	}
+	if got := said(dir); !strings.HasSuffix(got, "\npage in project p\n") {
+		t.Fatalf("a new page wrote %q", got)
+	}
+	if _, err := s.Edit("n", store.Edit{Work: &store.WorkEdit{Task: ptr("t1")}}); err != nil {
+		t.Fatal(err)
+	}
+	tasks, err := s.ReadTasks()
+	if err != nil {
+		t.Fatal(err)
+	}
+	for _, step := range []struct {
+		what string
+		at   string
+		args []string
+		told string // what ends the output after the URL; "" for none
+		in   string // the project of the page after it
+	}{
+		{"another place, without the flag", other, nil, "", "p"},
+		{"another place, with the flag", other, []string{"--move-project"}, "\npage in project q\n", "q"},
+		{"the same place again", other, []string{"--move-project"}, "", "q"},
+		{"the first place, without the flag", dir, nil, "", "q"},
+		{"the first place, with the flag", dir, []string{"--move-project"}, "\npage in project p\n", "p"},
+	} {
+		got := said(step.at, step.args...)
+		if strings.Contains(got, "page in ") != (step.told != "") || !strings.HasSuffix(got, step.told) || projectOfPage() != step.in {
+			t.Errorf("%s: wrote %q, the page is in %q; want it to end with %q and be in %q", step.what, got, projectOfPage(), step.told, step.in)
+		}
+	}
+	if m := s.ReadMeta("n"); m == nil || m.Work == nil || m.Work.Task != "t1" {
+		t.Errorf("moved, the page's work is %+v, want its task t1 kept", m)
+	}
+	if got, err := s.ReadTasks(); err != nil || !reflect.DeepEqual(got, tasks) {
+		t.Errorf("moved, the tasks are %v (%v), want them as they were, %v", got, err, tasks)
+	}
+	for _, step := range []struct {
+		what, at string
+		args     []string
+		want     string
+	}{
+		{"a place with no project", "/", []string{"--move-project", file}, "has no project, which --move-project puts the page in"},
+		{"a link", dir, []string{"--link", "h.html", "--move-project"}, "none of the others can be"},
+	} {
+		code, out, errs := runIn(step.at, env, append([]string{"publish"}, step.args...)...)
+		if code != 1 || out != "" || !strings.Contains(errs, step.want) {
+			t.Errorf("%s: floe publish %v = %d, %q, %q; want 1, nothing and %q", step.what, step.args, code, out, errs, step.want)
+		}
+	}
+	if projectOfPage() != "p" || s.ReadMeta("h") != nil {
+		t.Errorf("refused, the page is in %q and h is %v, want p and none", projectOfPage(), s.ReadMeta("h"))
+	}
+	// Replacing another file's page (--force) puts the page in the place's project, with the flag as without it.
+	if got := publishedTogether(t, other, env, "w.yaml", "--slug", "n", "--force", "--move-project"); !strings.Contains(got, "\npage in project q\n") || projectOfPage() != "q" {
+		t.Errorf("another file's page replaced with the flag wrote %q and is in %q, want it in q", got, projectOfPage())
 	}
 }

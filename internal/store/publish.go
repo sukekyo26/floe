@@ -96,6 +96,8 @@ type Options struct {
 	Description *string
 	Theme       *string
 	Force       bool
+	// MoveProject puts the page in the project of the place it is published from (Upload's), though it is in another.
+	MoveProject bool
 }
 
 // Accept checks a publish of file, a link or a data file, for what needs neither the store nor the disk,
@@ -220,13 +222,23 @@ func (r *recorder) Stat(name string) (fs.FileInfo, error) {
 	return fs.Stat(r.fsys, name) //nolint:wrapcheck // as fsys says
 }
 
+// acceptData is Accept of the data file of up, which --move-project refuses to put in the project of a place with
+// none: it would empty the page's, which the next publish from another place would fill again.
+func acceptData(up Upload, opts Options) (Options, error) {
+	opts, err := Accept(up.File, false, opts)
+	if err == nil && opts.MoveProject && up.Project == "" {
+		err = usererr.New("store_move_no_project")
+	}
+	return opts, err
+}
+
 // PrepareData checks a publish of the data file up as a stored page, drawn with dw, and builds what Save
 // writes, without writing anything or reading the publisher's disk. Without up.Images, a data file that reads
 // images is answered NeedImages, once nothing that needs no image refuses the publish (the slug, the page's
 // owner) and before the mistakes of its drawing, which may be of the images not sent; a mistake before its
 // drawing (of the YAML, the schema, the checks) is told without asking.
 func (s *Store) PrepareData(dw Drawing, up Upload, opts Options) (*Entry, error) {
-	opts, err := Accept(up.File, false, opts)
+	opts, err := acceptData(up, opts)
 	if err != nil {
 		return nil, err
 	}
@@ -503,6 +515,15 @@ func (s *Store) themesFor(slug, path, project, repo, place string, force bool) (
 	return "", set.Theme, err
 }
 
+// projectOf is the project of a page published from project: the one it was in, unless it is new, replaces another
+// file's or was emptied of its project, or opts moves it.
+func projectOf(opts Options, base *Meta, project string) string {
+	if opts.MoveProject {
+		return project
+	}
+	return cmp.Or(base.Project, project)
+}
+
 // newMeta keeps what was set on the management page (favourite, title, tags), the description, createdAt and the
 // project from base, but not archived: a page published again comes back to the list. --title and --description
 // win. A new page, or one replacing another file's, is in project, and a page emptied of its project comes back to
@@ -522,7 +543,7 @@ func newMeta(opts Options, path, project, repo, place string, base *Meta, own, s
 		DataTitle:     own,
 		Template:      "",
 		Source:        "",
-		Project:       cmp.Or(base.Project, project),
+		Project:       projectOf(opts, base, project),
 		PublishedFrom: "",
 		PublishedFile: "",
 		Favorite:      base.Favorite,

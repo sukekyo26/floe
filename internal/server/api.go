@@ -99,7 +99,9 @@ func (s *Server) addLink(w http.ResponseWriter, r *http.Request) {
 	if in == nil {
 		return
 	}
-	opts := store.Options{Slug: in.Slug, Title: in.Title, Description: in.Description, Theme: in.Theme, Force: in.Force}
+	opts := store.Options{
+		Slug: in.Slug, Title: in.Title, Description: in.Description, Theme: in.Theme, Force: in.Force, MoveProject: false,
+	}
 	drawing := s.latest()
 	// The path as sent: the CLI sends it as given, where a file name may start or end with a space (the
 	// management page trims it). There is no directory to read a relative one in, which PrepareLink refuses
@@ -148,6 +150,8 @@ type Upload struct {
 	Description *string           `json:"description"`
 	Theme       *string           `json:"theme"`
 	Force       bool              `json:"force"`
+	// MoveProject puts the page in Project, though it is in another.
+	MoveProject bool `json:"moveProject,omitzero"`
 }
 
 // Saved is a page a publish or an added link stored, what it replaced (nil for a new slug), and the warnings of
@@ -224,7 +228,10 @@ func (s *Server) save(w http.ResponseWriter, r *http.Request) {
 	up := store.Upload{
 		File: in.File, Source: in.Source, Images: in.Images, Project: in.Project, Repo: in.Repo, Place: in.Place,
 	}
-	opts := store.Options{Slug: in.Slug, Title: in.Title, Description: in.Description, Theme: in.Theme, Force: in.Force}
+	opts := store.Options{
+		Slug: in.Slug, Title: in.Title, Description: in.Description, Theme: in.Theme, Force: in.Force,
+		MoveProject: in.MoveProject,
+	}
 	drawing := s.latest()
 	entry, err := s.cfg.Store.PrepareData(drawing, up, opts)
 	if need, ok := errors.AsType[*store.NeedImages](err); ok {
