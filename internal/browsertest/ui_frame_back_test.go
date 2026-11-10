@@ -115,7 +115,7 @@ func TestUIFrameBack(t *testing.T) { //nolint:paralleltest // the browser tests 
 	b.until("the bar", "document.getElementById('frame-title').textContent")
 	b.size(360, 800, true)
 	b.until("the narrow bar", "innerWidth === 360")
-	out = append(out, "phone: "+b.eval("(document.querySelector('.brand').offsetParent !== null) + ' ' + document.querySelector('.brand').getAttribute('href') + ' ' + (document.querySelector('.brand svg').getBoundingClientRect().width === 26) + ' ' + (document.getElementById('server').getBoundingClientRect().right <= innerWidth) + ' ' + (document.documentElement.scrollWidth <= innerWidth)"))
+	out = append(out, "phone: "+b.eval("(document.querySelector('.brand').offsetParent !== null) + ' ' + document.querySelector('.brand').getAttribute('href') + ' ' + (document.querySelector('.brand svg').getBoundingClientRect().width === 26) + ' ' + (document.getElementById('frame-actions').getBoundingClientRect().right <= innerWidth) + ' ' + (document.documentElement.scrollWidth <= innerWidth)"))
 	b.size(800, 800, false)
 	out = append(out, "narrow: "+b.eval("(document.getElementById('back').offsetParent !== null) + ' ' + (document.getElementById('back-word').offsetParent === null) + ' ' + document.getElementById('back').getAttribute('aria-label')"))
 	b.size(1400, 800, false)
@@ -186,7 +186,7 @@ func TestUIFrameBack(t *testing.T) { //nolint:paralleltest // the browser tests 
 	b.until("the page whole", "location.pathname === '/a/a/' && document.getElementById('frame-title').textContent")
 	for _, width := range []int64{1400, 1100, 900} {
 		b.size(width, 800, false)
-		last := b.rect("document.getElementById('server')")
+		last := b.rect("document.getElementById('frame-actions')")
 		word := b.rect("document.getElementById('back-word')")
 		if last.X+last.Width > float64(width) || word.Width > 12*16+1 || word.Width < 1 {
 			t.Errorf("width %d: the bar ends at %v, the word is %v wide", width, last.X+last.Width, word.Width)
