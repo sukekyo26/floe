@@ -1,2 +1,2 @@
-en: { numbers: The numbers, line: Line chart, bar: Bar chart, name: Name }
-ja: { numbers: 数の表, line: 折れ線グラフ, bar: 棒グラフ, name: 名前 }
+en: { numbers: 'The numbers', line: 'Line chart', bar: 'Bar chart', name: Name }
+ja: { numbers: '数の表', line: '折れ線グラフ', bar: '棒グラフ', name: '名前' }

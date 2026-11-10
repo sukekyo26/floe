@@ -16,7 +16,7 @@ floe turns a YAML file you write into a page for the user: it checks the file, r
    title: 'Moving the team wiki'
    lead: 'The wiki moves in two weekends.'
    sections:
-     - heading: 'Steps'
+     - heading: Steps
        parts:
          - text: 'Freeze edits on **Friday evening**, then copy the pages.'
    ```
@@ -67,19 +67,19 @@ Draw no table or diagram with characters in `text` or `code`. Values look like t
     A second paragraph, with a `code` word.
 - note: { tone: warn, text: 'Edits during the freeze are lost.' }
 - facts:
-    - { name: 'Owner', value: 'Ana' }
+    - { name: Owner, value: Ana }
 - steps:
     - { title: 'Freeze edits', state: done }
 - entries:
     - { title: 'Broken links', tags: ['120 pages'], text: 'A link check runs after the copy.' }
 - checks:
     - { title: 'Pages copied', result: ok, actual: 'All 1840 pages.' }
-    - { title: 'Search', result: ng, actual: 'The index is empty.' }
+    - { title: Search, result: ng, actual: 'The index is empty.' }
     - { title: 'Old links', result: unchecked, actual: 'Waits for the copy.' }
 - table:
-    columns: ['Page', { title: 'Links', num: true }]
+    columns: [Page, { title: Links, num: true }]
     rows:
-      - ['Home', '12']
+      - [Home, '12']
 ```
 
 ## Diagrams
@@ -111,10 +111,10 @@ Use manually positioned parts for diagrams read as pictures, such as architectur
 - diagram:
     title: 'How a request flows'
     parts:
-      - box: { name: user, x: 20, y: 40, rows: ['User'] }
+      - box: { name: user, x: 20, y: 40, rows: [User] }
       - box: { name: api, x: 220, y: 40, rows: ['API server'] }
-      - box: { name: db, x: 220, y: 160, rows: ['Database'] }
-      - edge: { from: user, to: api, label: 'HTTPS' }
+      - box: { name: db, x: 220, y: 160, rows: [Database] }
+      - edge: { from: user, to: api, label: HTTPS }
       - edge: { from: api, to: db }
 ```
 
@@ -126,7 +126,7 @@ In an AWS architecture, represent each service with an AWS icon, not a box. Do n
 
 First:
 
-- Write a text value in `'…'`, or over several lines as a `|` block, whatever it holds, without judging whether it needs quotes: `heading: 'Step 1: plan'`, ``text: '`algorithms` fixes the methods.'``. Only a number, `true` or `false`, and a name or word of letters, digits, `_`, `.`, `/` and `-` (`template: report`, `tone: warn`) stay bare. In `'…'` write a `'` as `''`; nothing else is special, a `\` and a `"` included. Do not use `"…"`: a `\` in it is read as an escape, mostly with no mistake (`\_` is a no-break space). Unquoted, YAML reads a `: ` as a key, a ` #` as a comment and, in `{ }` or `[ ]`, a `,` as the end of the text, and refuses a text that starts with a backtick. floe refuses most of these, but a `,` in `[ ]` silently splits the item: `tags: [Tokyo, Osaka office]` is two tags.
+- Write a text value in `'…'`, or over several lines as a `|` block, whatever it holds, without judging whether it needs quotes: `heading: 'Step 1: plan'`, ``text: '`algorithms` fixes the methods.'``. Only a number, `true` or `false`, and a name or word of letters, digits, `_`, `.`, `/` and `-` (`template: report`, `tone: warn`) stay bare; write a text that reads `null` or `~` as `'null'`, for a bare one is no text. In `'…'` write a `'` as `''`; nothing else is special, a `\` and a `"` included. Do not use `"…"`: a `\` in it is read as an escape, mostly with no mistake (`\_` is a no-break space). Unquoted, YAML reads a `: ` as a key, a ` #` as a comment and, in `{ }` or `[ ]`, a `,` as the end of the text, and refuses a text that starts with a backtick. floe refuses most of these, but a `,` in `[ ]` silently splits the item: `tags: [Tokyo, Osaka office]` is two tags.
 - Write a comment on a line of its own, no deeper than the key of the value above it (or the `-` of a list item), and never in `{ }` or `[ ]`.
 - In a `|` or `>` text, indent the first line as the lines after it. A deeper first line ends the text early, and floe refuses a line after it.
 - Write a number where text is wanted, such as a table's cell, in quotes: `'42'`.

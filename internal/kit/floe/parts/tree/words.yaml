@@ -1,2 +1,2 @@
-en: { added: " (added)", removed: " (removed)", changed: " (changed)" }
-ja: { added: "（追加）", removed: "（削除）", changed: "（変更）" }
+en: { added: ' (added)', removed: ' (removed)', changed: ' (changed)' }
+ja: { added: '（追加）', removed: '（削除）', changed: '（変更）' }

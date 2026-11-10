@@ -3,5 +3,5 @@
 # LIMIT: the first word of the first line alone is looked at: Mac:~ me$ passes, x.exe> out is refused; look further if they are met.
 - for: steps
   field: run
-  expr: not (item.run matches "^\\s*(\\([^)\\s]+\\)\\s+)?(\\[[^\\]\\n]*\\][$#%]|PS( [^>\\n]*)?>|\\S*[$❯]|([^\\s%]\\S*)?%|\\S*[^\\s#]#|\\S*[^\\s\\d&>]>) ")
-  message: write the command without its prompt, which floe draws from the shell
+  expr: 'not (item.run matches "^\\s*(\\([^)\\s]+\\)\\s+)?(\\[[^\\]\\n]*\\][$#%]|PS( [^>\\n]*)?>|\\S*[$❯]|([^\\s%]\\S*)?%|\\S*[^\\s#]#|\\S*[^\\s\\d&>]>) ")'
+  message: 'write the command without its prompt, which floe draws from the shell'

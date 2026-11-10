@@ -18,7 +18,7 @@ floe は、あなたが YAML のファイルで書いたページをユーザー
    title: 'Moving the team wiki'
    lead: 'The wiki moves in two weekends.'
    sections:
-     - heading: 'Steps'
+     - heading: Steps
        parts:
          - text: 'Freeze edits on **Friday evening**, then copy the pages.'
    ```
@@ -69,19 +69,19 @@ floe は、あなたが YAML のファイルで書いたページをユーザー
     A second paragraph, with a `code` word.
 - note: { tone: warn, text: 'Edits during the freeze are lost.' }
 - facts:
-    - { name: 'Owner', value: 'Ana' }
+    - { name: Owner, value: Ana }
 - steps:
     - { title: 'Freeze edits', state: done }
 - entries:
     - { title: 'Broken links', tags: ['120 pages'], text: 'A link check runs after the copy.' }
 - checks:
     - { title: 'Pages copied', result: ok, actual: 'All 1840 pages.' }
-    - { title: 'Search', result: ng, actual: 'The index is empty.' }
+    - { title: Search, result: ng, actual: 'The index is empty.' }
     - { title: 'Old links', result: unchecked, actual: 'Waits for the copy.' }
 - table:
-    columns: ['Page', { title: 'Links', num: true }]
+    columns: [Page, { title: Links, num: true }]
     rows:
-      - ['Home', '12']
+      - [Home, '12']
 ```
 
 ## 図
@@ -116,7 +116,7 @@ floe は diagram の部品を 1 つずつ検証します。字のはみ出し、
       - box: { name: user, x: 20, y: 40, rows: ['利用者'] }
       - box: { name: api, x: 220, y: 40, rows: ['API サーバー'] }
       - box: { name: db, x: 220, y: 160, rows: ['データベース'] }
-      - edge: { from: user, to: api, label: 'HTTPS' }
+      - edge: { from: user, to: api, label: HTTPS }
       - edge: { from: api, to: db }
 ```
 
@@ -128,7 +128,7 @@ AWS の構成図では、サービスを箱でなく AWS のアイコンで描�
 
 まず：
 
-- 字の値は、引用符が要るか考えず、1 行なら `'…'`、何行もの文なら `|` の文で書く：`heading: 'Step 1: plan'`、``text: '`algorithms` で方式を固定する。'``。引用符なしのままにしてよいのは、数、`true`・`false`、英数字と `_ . / -` だけの名前や語（`template: report`、`tone: warn`）だけです。`'…'` の中は `'` を `''` と書くだけで、`\` も `"` もただの字です。`"…"` は使いません。中の `\` が、多くの場合に断られず別の字になるからです（`\_` は改行しない空白）。包まないと、YAML は `: ` を鍵、` #` をコメント、`{ }`・`[ ]` の中の `,` を文の終わりと読み、バッククォートで始まる文は断ります。floe はほとんどを断りますが、`[ ]` の中の `,` は黙って項目を分けます：`tags: [Tokyo, Osaka office]` はタグ 2 つです。
+- 字の値は、引用符が要るか考えず、1 行なら `'…'`、何行もの文なら `|` の文で書く：`heading: 'Step 1: plan'`、``text: '`algorithms` で方式を固定する。'``。引用符なしのままにしてよいのは、数、`true`・`false`、英数字と `_ . / -` だけの名前や語（`template: report`、`tone: warn`）だけです。`null` や `~` と読める文は `'null'` と書きます（引用符なしでは文でなく、値が無いことになる）。`'…'` の中は `'` を `''` と書くだけで、`\` も `"` もただの字です。`"…"` は使いません。中の `\` が、多くの場合に断られず別の字になるからです（`\_` は改行しない空白）。包まないと、YAML は `: ` を鍵、` #` をコメント、`{ }`・`[ ]` の中の `,` を文の終わりと読み、バッククォートで始まる文は断ります。floe はほとんどを断りますが、`[ ]` の中の `,` は黙って項目を分けます：`tags: [Tokyo, Osaka office]` はタグ 2 つです。
 - コメントは、それだけの行に、上の値の鍵（リストの項目なら `-`）より深くなく書き、`{ }`・`[ ]` の中には書かない。
 - `|`・`>` の文は、1 行目を後の行と同じ深さに字下げする。1 行目が深いと文がそこで終わり、後の行が断られます。
 - 表の升のような文を取る所の数は、引用符で包む：`'42'`。
