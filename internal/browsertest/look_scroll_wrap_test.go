@@ -158,7 +158,7 @@ sections:
           open: true
           parts:
             - bars:
-                - { label: Pages copied to the new host, value: 1200, of: 1840 }
+                - { label: Pages copied to the new host, value: 1200, of: 1840, unit: pages per hour for each team }
       - options:
           - title: An option holding options
             parts:

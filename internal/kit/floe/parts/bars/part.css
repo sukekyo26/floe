@@ -13,3 +13,6 @@
   text-align: right; font-size: var(--floe-text-small); color: var(--fg); font-variant-numeric: tabular-nums;
   font-family: var(--mono);
 }
+/* As stats' unit: apart by a margin, in the text face the mono value is taken back from. A short unit in Japanese is kept
+   whole by keep-all; anywhere lets a long one wrap in its column instead of widening it (the least width counts) */
+:scope .unit { margin-left: 0.3em; color: var(--muted); font-family: var(--font); word-break: keep-all; overflow-wrap: anywhere; }

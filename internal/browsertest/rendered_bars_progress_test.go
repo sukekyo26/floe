@@ -17,7 +17,7 @@ sections:
   - heading: Bars
     parts:
       - bars:
-          - { label: Pages, value: 5, of: 8 }
+          - { label: Pages, value: 5, of: 8, unit: pages }
           - { label: Words, value: 1500000, of: 2000000, tone: good }
           - { label: Kept, value: 2 }
 `
@@ -64,7 +64,7 @@ func TestRenderedBarsProgress(t *testing.T) { //nolint:paralleltest // the brows
 	// LIMIT: Chrome gives a progressbar's aria-valuetext to no screen reader (its AX tree has it empty), so the text is
 	// read from the page; read it from the AX tree if Chrome comes to give it.
 	texts := b.eval(`[...document.querySelectorAll('[role=progressbar]')].map((e) => e.getAttribute('aria-valuetext')).join('|')`)
-	if want := "5 / 8|1,500,000 / 2,000,000"; texts != want {
+	if want := "5 / 8 pages|1,500,000 / 2,000,000"; texts != want {
 		t.Errorf("aria-valuetext %q, want %q", texts, want)
 	}
 }

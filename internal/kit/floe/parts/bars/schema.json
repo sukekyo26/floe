@@ -1,7 +1,7 @@
 {
   "$schema": "https://json-schema.org/draft/2020-12/schema",
   "title": "bars",
-  "description": "Values side by side as bars, each a label and a value: a bar with of is filled as far as its value goes of that whole and reads value / of, as how far a piece of work has gone; the others are shares of the largest value among them",
+  "description": "Values side by side as bars, each a label and a value, with its unit after it when written: a bar with of is filled as far as its value goes of that whole and reads value / of, as how far a piece of work has gone; the others are shares of the largest value among them",
   "type": "array",
   "minItems": 1,
   "items": {
@@ -10,6 +10,7 @@
       "label": { "type": "string", "minLength": 1 },
       "value": { "type": "number", "minimum": 0 },
       "of": { "type": "number", "exclusiveMinimum": 0, "description": "The whole the value is of, no less than value" },
+      "unit": { "type": "string", "minLength": 1, "description": "Drawn after the value, such as items or %" },
       "tone": { "$ref": "floe:///parts/tone.json", "description": "The bar's colour, accent when left out" }
     },
     "required": ["label", "value"],
