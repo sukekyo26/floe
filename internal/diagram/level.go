@@ -225,10 +225,19 @@ func (gr *group) between(first, second int, rankOf map[int]int) string {
 	}
 	for m := first + 1; m < second; m++ {
 		if o.inBlock(m, first) {
-			return "box " + strconv.Quote(o.boxes[m].box.Name)
+			return o.kindName(m)
 		}
 	}
 	return ""
+}
+
+// kindName is how a mistake names the box or icon m by what it is: `box "x"` or `icon "x"`.
+func (o *graphOut) kindName(m int) string {
+	b := o.boxes[m].box
+	if b.icon != nil {
+		return "icon " + strconv.Quote(b.Name)
+	}
+	return "box " + strconv.Quote(b.Name)
 }
 
 // laneBetween is what stands between first and second, boxes right in two lanes, in their rank r: a box of first's
@@ -240,7 +249,7 @@ func (gr *group) laneBetween(first, second int, rankOf map[int]int) string {
 	r := rankOf[first]
 	for _, m := range slices.Sorted(maps.Keys(rankOf)) {
 		if rankOf[m] == r && m != first && m != second && o.inWay(m, first, second) {
-			return "box " + strconv.Quote(o.boxes[m].box.Name)
+			return o.kindName(m)
 		}
 	}
 	return gr.laneFrame(first, second, rankOf)

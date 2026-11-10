@@ -912,3 +912,40 @@ func TestGraphHeadRoomByHand(t *testing.T) {
 		t.Errorf("by via: told %q", told)
 	}
 }
+
+// An icon that stands between a level edge's boxes is named as an icon, not as a box.
+func TestGraphLevelBetweenIcon(t *testing.T) {
+	t.Parallel()
+
+	for _, c := range []struct{ name, src, want string }{
+		{"an icon of their row between them", `title: T
+parts:
+  - graph:
+      x: 20
+      y: 20
+      nodes:
+        - box: { name: a, rows: [A] }
+        - icon: { name: b, icon: aws/aws-lambda, label: B }
+        - box: { name: c, rows: [C] }
+      edges:
+        - { from: a, to: c, level: true }
+        - { from: a, to: b, level: true }
+`, `s.yaml:11:36: edge "a"→"c": icon "b" stands between its boxes or icons in their rank; drop level, or move it out of the way`},
+		{"an icon of the block on the side it faces", `title: T
+parts:
+  - graph:
+      x: 20
+      y: 20
+      lanes:
+        - { name: u, nodes: [{ box: { name: a, rows: [A] } }] }
+        - { name: v, nodes: [{ icon: { name: c, icon: aws/aws-lambda, label: C } }, { box: { name: b, rows: [B] } }] }
+      edges:
+        - { from: a, to: b, level: true }
+        - { from: b, to: c, level: true }
+`, `s.yaml:10:36: edge "a"→"b": icon "c" stands between its boxes or icons in their rank; drop level, or move it out of the way`},
+	} {
+		if _, got := draw(t, c.src, drawWith("en", lambda)); got != c.want {
+			t.Errorf("%s:\n  told %q\n  want %q", c.name, got, c.want)
+		}
+	}
+}
