@@ -30,8 +30,9 @@ sections:
 // measureTimelineDates returns a line for what stands amiss, given the form the page should be in: "wide" (the date
 // at the left of the dot) or "narrow" (over the title), or "" where either will do (paper). A date up to 14rem is in
 // one line; where wide, none is wider than 14rem (narrow, its box is the text's column), the dates of a timeline end at
-// one edge, its titles start at one, no date reaches its title, and a date over 14rem is folded; where narrow, the dates
-// and the titles start at one edge and the date is over its title.
+// one edge, its titles start at one (so do its dots, which stand a fixed width left of them), no date is nearer its dot
+// than 0.5rem, and a date over 14rem is folded; where narrow, the dates and the titles start at one edge and the date is
+// over its title.
 const measureTimelineDates = `((want) => {
   const out = [], rem = parseFloat(getComputedStyle(document.documentElement).fontSize);
   const lines = (el) => {
@@ -43,7 +44,7 @@ const measureTimelineDates = `((want) => {
   if (lists.length !== 3) return 'timelines: ' + lists.length;
   lists.forEach((ol, i) => {
     const cs = getComputedStyle(ol);
-    const wide = ol.clientWidth - parseFloat(cs.paddingLeft) - parseFloat(cs.paddingRight) >= 36 * rem;
+    const wide = ol.clientWidth - parseFloat(cs.paddingLeft) - parseFloat(cs.paddingRight) > 36 * rem;
     const form = wide ? 'wide' : 'narrow', name = 'timeline ' + i + ' (' + form + ')';
     if (want && form !== want) out.push(name + ' is not ' + want);
     const edges = {};
@@ -58,9 +59,12 @@ const measureTimelineDates = `((want) => {
       if (wide && d.width > 14 * rem + 0.5) out.push(label + ' is ' + d.width + ' px wide, over 14rem');
       if (i === 2 && wide && date.textContent.length > 20 && n < 2) out.push(label + ' is over 14rem and in one line');
       same('title start', label, t.left);
+      // The dot stands its width and its gap left of the title, so that the dots of a timeline are in one line when its titles are.
+      const dot = getComputedStyle(li, '::before'), dotLeft = t.left - parseFloat(dot.width) - parseFloat(dot.marginRight);
+      same('dot start', label, dotLeft);
       if (wide) {
         same('date end', label, d.right);
-        if (d.right > t.left) out.push(label + ' reaches its title');
+        if (dotLeft - d.right < 0.5 * rem) out.push(label + ' is ' + (dotLeft - d.right) + ' px from its dot, less than 0.5rem');
       } else {
         same('date start', label, d.left);
         if (d.bottom > t.top + 1) out.push(label + ' is not over its title');
