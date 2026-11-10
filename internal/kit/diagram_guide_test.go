@@ -79,7 +79,9 @@ func headingIDs(src []byte) []string {
 	_ = ast.Walk(doc, func(n ast.Node, entering bool) (ast.WalkStatus, error) { //nolint:errcheck // the walk fails only as its func does
 		if h, ok := n.(*ast.Heading); ok && entering {
 			if id, found := h.AttributeString("id"); found {
-				ids = append(ids, "#"+string(id.([]byte)))
+				if raw, isBytes := id.([]byte); isBytes {
+					ids = append(ids, "#"+string(raw))
+				}
 			}
 		}
 		return ast.WalkContinue, nil
