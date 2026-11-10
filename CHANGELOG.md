@@ -341,7 +341,7 @@ adheres to [Semantic Versioning](https://semver.org/).
   checked for overflowing text, overlaps, edges through boxes and crossings
   in every language before they are drawn: a `diagram` part in a data file,
   in a section and in `details` and `tabs` too, or `floe diagram render`,
-  `inspect` and `example`.
+  `inspect`, `example` and `guide`.
 - Add `floe icons fetch` and `floe icons search`, which keep the AWS
   Architecture Icons for the `icon` parts of diagrams. Icons not fetched, or a
   directory for them that cannot be used, are told once, at no place in a

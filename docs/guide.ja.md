@@ -83,7 +83,9 @@ floe は、あなたが YAML のファイルで書いたページをユーザー
 
 ## 図
 
-`graph` を書く：箱と、何が何につながるか。箱は floe が置くので、箱の位置は考えない。`x` と `y`（必須）は graph の始まりの位置だけを言います。
+`diagram` の部品は、floe が確かめる spec から描かれます。字がはみ出す図、部品が重なる図、箱を通る線は、直す行で断られます。何のための図かで書き方を選びます。
+
+`graph`：流れ、状態の遷移、下書き、よく変わる図、つながりの多い図。箱と、何が何につながるかを書くと、floe が置きます。`x` と `y`（必須）は graph の始まりの位置だけを言います。
 
 ```yaml
 - diagram:
@@ -102,7 +104,20 @@ floe は、あなたが YAML のファイルで書いたページをユーザー
             - { from: check, to: write, label: "no" }
 ```
 
-`floe diagram example` が種類ごとの見本（構成、シーケンス、ER など）を並べ、`floe diagram example <kind>` が 1 つを写せる形で出します。字がはみ出す図、部品が重なる図は、直す行で断られます。
+部品を手で書く：絵として読む図（構成図など）で、置き場所が大事なとき。箱に `x` と `y` を書き（大きさは字から決まります。箱を揃えたいときだけ `w` と `h` を書きます）、線は両端の名前を書きます。
+
+```yaml
+- diagram:
+    title: How a request flows
+    parts:
+      - box: { name: user, x: 20, y: 40, rows: [User] }
+      - box: { name: api, x: 220, y: 40, rows: [API server] }
+      - box: { name: db, x: 220, y: 160, rows: [Database] }
+      - edge: { from: user, to: api, label: HTTPS }
+      - edge: { from: api, to: db }
+```
+
+`floe diagram guide` が、それぞれの書き方の詳細（部品と鍵、floe に断られないように箱とラベルの大きさと間をとる方法）を出します。大きい図を書く前に読みます。`floe diagram example <kind>` は、種類ごと（構成、シーケンス、ER など）の完全な spec を写せる形で出します。見本は箱を揃えるために `w` と `h` を書いているので、字を変えたら、その箱の `w` を消すか、断りの文が言う幅（`needs w: 174 or more`）に広げます。
 
 ## floe が書いたとおりに読む YAML
 

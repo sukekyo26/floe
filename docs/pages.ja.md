@@ -1,6 +1,6 @@
 # ページを書く
 
-floe がページを描く元の YAML、データファイルの書き方です。floe のテンプレートでも自分のテンプレートでも同じです。部品 `diagram` の spec は [diagrams.ja.md](diagrams.ja.md)、HTML のファイルやフォルダをそのまま見せるには [links.ja.md](links.ja.md) を見てください。自分のテンプレートの作り方は [templates.ja.md](templates.ja.md)、コマンドとフラグは全部 [commands.ja.md](commands.ja.md) にあります。エージェントには、この短い手引き [guide.ja.md](guide.ja.md) を `floe guide` が出します。
+floe がページを描く元の YAML、データファイルの書き方です。floe のテンプレートでも自分のテンプレートでも同じです。部品 `diagram` の spec は [diagrams.ja.md](diagrams.ja.md)、HTML のファイルやフォルダをそのまま見せるには [links.ja.md](links.ja.md) を見てください。自分のテンプレートの作り方は [templates.ja.md](templates.ja.md)、コマンドとフラグは全部 [commands.ja.md](commands.ja.md) にあります。エージェントには、この短い手引き [guide.ja.md](guide.ja.md) を `floe guide` が、図の書き方 [diagrams.ja.md](diagrams.ja.md) を `floe diagram guide` が出します。
 
 ## データファイル
 

@@ -1,6 +1,6 @@
 # Writing pages
 
-How to write a data file, the YAML that floe draws a page from with one of floe's templates or one of your own. A `diagram` part's spec is in [diagrams.md](diagrams.md), and showing an HTML file or a folder as it is in [links.md](links.md); [templates.md](templates.md) tells how to make a template of your own, and [commands.md](commands.md) every command and flag. Agents get a short guide of this, [guide.md](guide.md), from `floe guide`.
+How to write a data file, the YAML that floe draws a page from with one of floe's templates or one of your own. A `diagram` part's spec is in [diagrams.md](diagrams.md), and showing an HTML file or a folder as it is in [links.md](links.md); [templates.md](templates.md) tells how to make a template of your own, and [commands.md](commands.md) every command and flag. Agents get a short guide of this, [guide.md](guide.md), from `floe guide`, and how to write a diagram, [diagrams.md](diagrams.md), from `floe diagram guide`.
 
 ## A data file
 

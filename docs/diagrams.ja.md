@@ -1,6 +1,6 @@
 # 図
 
-`diagram` の部品は、節にも `details`・`tabs`・`columns`・`entries`・`checks`・`options` の項目の `parts` の中にも置ける、その場に書く spec です。キャンバスと、その上に絶対座標（左上が 0, 0。どの座標も ± 100 万まで、大きさは 100 万まで、キャンバスは 1,000 万まで）で置く部品から成ります。ページを描く前に確かめ（誤りはデータファイルの行と列で言う）、inline SVG で描き、原寸より小さく描かれた図は拡大できます。`floe diagram render` は、ファイルに書いた spec を同じように描きます（[commands.ja.md](commands.ja.md#floe-diagram-render-specyaml)）。
+`diagram` の部品は、節にも `details`・`tabs`・`columns`・`entries`・`checks`・`options` の項目の `parts` の中にも置ける、その場に書く spec です。キャンバスと、その上に絶対座標（左上が 0, 0。どの座標も ± 100 万まで、大きさは 100 万まで、キャンバスは 1,000 万まで）で置く部品から成ります。ページを描く前に確かめ（誤りはデータファイルの行と列で言う）、inline SVG で描き、原寸より小さく描かれた図は拡大できます。`floe diagram render` は、ファイルに書いた spec を同じように描きます（`floe diagram render --help`）。
 
 ```yaml
 - diagram:
@@ -10,8 +10,8 @@
     title: API の配置
     parts:
       - frame: { x: 16, y: 16, w: 608, h: 168, label: VPC }
-      - box: { name: alb, x: 40, y: 72, w: 200, h: 56, tone: accent, rows: [[ALB, main code], 公開の入口] }
-      - box: { name: api, x: 400, y: 72, w: 200, h: 56, rows: [API サーバー, ECS] }
+      - box: { name: alb, x: 40, y: 72, tone: accent, rows: [[ALB, main code], 公開の入口] }
+      - box: { name: api, x: 400, y: 72, rows: [API サーバー, ECS] }
       - edge: { from: alb, to: api, label: HTTPS }
 ```
 
@@ -21,9 +21,26 @@
 - 図は、枠の中にページの地 `--bg` を塗ります。下の線を隠すもの（ラベルの下の四角、白抜きの端と点）も、その地で塗ります。白い面や、模様のあるテーマのページの上では、図はページの地の色の箱になります。
 - 部品は、種類を名指す鍵 1 つで書きます。`floe part show diagram schema.json` がすべての鍵を出し、`floe diagram example <種類>` が種類ごとの spec を、格子を説明するコメント付きで出します。
 
+## 図の 2 つの書き方
+
+図が何のためかで選びます：
+
+- **手書き**：絵として読む図（構成図・配置図など）で、置き場所が大事なとき。何をどこに置くかを決められるので、主な流れをまっすぐ通し、同じ仲間を揃え、ラベルを線の上に置けます。書く量はいちばん多く、部品を動かすと、その部品の位置を写したもの（囲む枠、位置を写した線の `via` と `at`）も動かします。線の写しは、選んだ曲がり角だけを書けば避けられます（[手で書く線](#手で書く線)）。上の例はこの書き方です。
+- **`graph`**：流れ、状態の遷移、下書き、よく変わる図、つながりの多い図。何と何がつながるかを書くだけで、足すときも座標は要りません。置き場所は floe が決め、手で置くより場所を取ります。ページより広い図は、拡大するまで縮んで見えます。同じ spec でも、片方の `direction` がずっと良くなることがあるので、両方を試します。例は [graph](#graph) にあります。
+
+### 手書きで、floe に断られずに書く
+
+- 箱には `x` と `y` を書きます。`w` と `h` を省くと、箱は字に必要な大きさになります。箱を揃えたいときに書きます。`w` が小さすぎると、要る幅を言って断られます：`box "a": "A long title here" needs w: 174 or more`。`floe diagram inspect` は floe が決めた箱の大きさ（`box "alb" 240,90 144x29`）を出すので、次の箱はそれを見て置きます。
+- ラベルのある線の箱の間は、ラベルの幅以上にします。幅は `floe diagram inspect` の `label` の行が言います（`label "HTTPS" 80,5.5 46x18` の 46）。足りないと `box "a" overlaps label "HTTPS"` と断られます。
+- 箱は、枠の中にまるごと、または外にまるごと置きます（`box "a" straddles the edge of frame "F" at x 100, spanning 80 to 160`）。枠の見出しの下の端より下に置きます（`box "a" overlaps the heading of frame "Frame label"`）。
+- 線は、両端の名前を `{ from, to }` で書くと、floe が通します。間に箱がある線は断られます（`edge "a"→"c" runs through box "b"; move one of them, or go round it by via`）：箱を動かすか、`via` を書きます（[手で書く線](#手で書く線)）。
+- 部品を数個書くごとに、データファイルに `floe diagram inspect` を実行します。各部品の置き場所と、断った所を、直す行つきで出します。
+
+## 部品
+
 | 部品 | 鍵 |
 |---|---|
-| `frame` | `x` `y` `w` `h`、`label`、`name`、`accent`、`square`（角を丸めない）、`icon`（`aws/group/region` のようなアイコン。AWS のグループの形で、角にアイコン）。ラベルは左上の内側に置くので、中身は上から 32 以上（アイコンがあれば 40）下に置く。 |
+| `frame` | `x` `y` `w` `h`、`label`、`name`、`accent`、`square`（角を丸めない）、`icon`（`aws/group/region` のようなアイコン。AWS のグループの形で、角にアイコン）。ラベルは左上の内側に置くので、中身は見出しの下の端以下に置く：`floe diagram inspect` の `the heading of frame` の行が y と高さを言う（1 行の見出しは枠の上から 9 下にあり高さ 18 なので 27。アイコンのある枠は見出しが高い）。 |
 | `box` | `x` `y`、`rows`、`w` `h`（省けば行に要る大きさ）、`name`、`origin`（`left`。`x` を真ん中にするなら `centre`）、`tone`、`shape`（`rect`。`pill`、判断の `hex`、`state`）。行は文か `[文, 形]` で、形は `main`・`sub`・`main code`・`sub code`。形が無ければ最初の行が `main`、残りが `sub`。 |
 | `table` | `x` `y`、`title`、`rows`、`w`、`name`、`origin`、`tone`。行は `[名前]`、`[名前, 型]`、区切りの `---`、または線が行に着く `{ name, cells: [名前, 型] }`。 |
 | `icon` | `x` `y`（左上）、`icon`、`label`（アイコンの真ん中の下で、アイコンから 3 下、高さ 18。アイコンの下の辺に着く線は、ラベルの下の縁に着く）、`size`（48）、`name`。`icon` はセットとその中の名前で `aws/amazon-ec2` のように書く（`floe icons search` で探す）。 |
@@ -36,30 +53,27 @@
 | `line` | `x1` `y1` `x2` `y2`、`kind`（`line`。`lifeline`・`divider`）。ほかの部品と交わってよいが、キャンバスから出ない。 |
 | `tree` | `x` `y`（根の中心と上）、`root`：節。節は `box` と同じ `rows`・`name`・`tone`・`shape` と、子の節を並べた `children` を持つ。floe が各節を親の下に置き（子は横に並べ、深さごとに 1 段にそろえる）、親から子へ線を引く。節の `name` は、手で書いた線の端にできる。辺を書かないと、graph の箱と同じく、tree の線が端を置く辺（根でない節の上、子のある節の下）を避ける。 |
 | `graph` | `x` `y`（全体の左上）、`nodes`、`edges`、`direction`（`down`。`right`）、`nodes` の代わりの `lanes`。節は `box: { name, with, rows, tone, shape }`（`box` と同じ鍵を持ち、`name` は要る）か、`icon: { name, with, icon, label }`（下に名前を持つ、枠なしのアイコン）か、`group: { name, label, accent, icon, nodes }`（箱とアイコンとまとまりを枠で囲むまとまり。`icon` は枠の角のアイコンで、AWS のグループの形）。線は `{ from, to }`（その graph の箱かアイコンかまとまりの名前 2 つ）で、`label`・`dashed`・`bold`・`tone`・`start`・`end`（`arrow` か `none`）を持てる。floe が箱を段に分けて並べ、箱の間に線を引く（下）。 |
-| `raw` | `svg`：どの部品でも描けない SVG。SVG の要素だけで（script や `foreignObject` は無し）、配置も確かめもしない。色は[パレット](templates.ja.md#パレット)の表の変数で、属性にも書ける（`fill="var(--accent-soft)" stroke="var(--accent)"`）。テーマだけが置く変数には頼らない。tone は、その要素か、raw の中でそれを囲む `<g>` に `data-floe-tone` を付け、`var(--tone)`・`var(--tone-soft)` で読む（図の根が、図の外の tone を消す）。字には色と大きさを書く。部品の字は 12〜13（`<text fill="currentColor" font-size="12">`）。`currentColor` は `--fg`。部品の class と `data-floe-look`・`data-floe-part` は floe のもので、raw には使わない。無い変数や tone、tone の無い `var(--tone)`、fill の無い字は黒になり（字はページの大きさ）、誤りは出ない。 |
-
-## 手書きか graph か
-
-絵として読む図は、部品を手で書きます。何をどこに置くかを決められるので、主な流れをまっすぐ通し、同じ仲間を揃え、ラベルを線の上に置けます。書く量はいちばん多く、部品を動かすと、その部品の位置を写したもの（囲む枠、位置を写した線の `via` と `at`）も動かします。線の写しは、選んだ曲がり角だけを書けば避けられます（[手で書く線](#手で書く線)）。
-
-下書き、よく変わる図、つながりの多い図は `graph` で書きます。何と何がつながるかを書くだけで、足すときも座標は要りません。置き場所は floe が決め、手で置くより場所を取ります（線 25 本の AWS の図で、手書きの 1400×1005 に対して、効く所に `with` を書いて 1704×1407、`right` で 1378×1416）。ページより広い図は、拡大するまで縮んで見えます。同じ spec でも、片方の `direction` がずっと良くなることがあるので、両方を試します。
+| `raw` | `svg`：どの部品でも描けない SVG。SVG の要素だけで（script や `foreignObject` は無し）、配置も確かめもしない。色は `floe theme show default palette.css` が定義する変数（パレットの CSS）で、属性にも書ける（`fill="var(--accent-soft)" stroke="var(--accent)"`）。テーマだけが置く変数には頼らない。tone は、その要素か、raw の中でそれを囲む `<g>` に `data-floe-tone` を付け、`var(--tone)`・`var(--tone-soft)` で読む（図の根が、図の外の tone を消す）。字には色と大きさを書く。部品の字は 12〜13（`<text fill="currentColor" font-size="12">`）。`currentColor` は `--fg`。部品の class と `data-floe-look`・`data-floe-part` は floe のもので、raw には使わない。無い変数や tone、tone の無い `var(--tone)`、fill の無い字は黒になり（字はページの大きさ）、誤りは出ない。 |
 
 ## graph
 
 `graph` には、箱のつながりだけを書きます。置き場所は floe が決めます：
 
 ```yaml
-- graph:
-    x: 20
-    y: 20
-    nodes:
-      - box: { name: write, rows: [Write the data] }
-      - box: { name: check, shape: hex, rows: ["Checks pass?"] }
-      - box: { name: show, rows: [Show the page] }
-    edges:
-      - { from: write, to: check }
-      - { from: check, to: show, label: "yes" }
-      - { from: check, to: write, label: "no" }
+- diagram:
+    title: ページが公開されるまで
+    parts:
+      - graph:
+          x: 20
+          y: 20
+          nodes:
+            - box: { name: write, rows: [データを書く] }
+            - box: { name: check, shape: hex, rows: ["検査を通る？"] }
+            - box: { name: show, rows: [ページを出す] }
+          edges:
+            - { from: write, to: check }
+            - { from: check, to: show, label: "はい" }
+            - { from: check, to: write, label: "いいえ" }
 ```
 
 ### 段
@@ -68,6 +82,7 @@
 - 箱とアイコンの `with: <名前>` は、線を描かずに、名前の箱かアイコンと同じ段に立てます。別のまとまりの箱とも書けます。線が来る箱より下に置きたくない箱（使うサーバーより下へ行くゲートウェイなど）や、まとまりの枠を最初の段から始めさせたくない箱に書きます。線は図の意味のまま書きます。`nat` に `with: alb` と書けば、`api → nat` は `api` から上へ引かれます。
 
   ```yaml
+  # fragment
   - icon: { name: nat, with: alb, icon: aws/res/amazon-vpc-nat-gateway, label: NAT }
   ```
 
@@ -107,8 +122,8 @@
 - `level` にできない線（別々のまとまりにした 2 つのゾーンの間など）と、`with` で同じ段に立つ 2 つの箱の間の線は、graph の横に手で書けます。graph のものを動かさないので、線の端は、ほかの線が決めた段のままです：
 
   ```yaml
-  parts:
-    - graph: { x: 20, y: 20, nodes: [...], edges: [...] }
+  # fragment
+  parts: { x: 20, y: 20, nodes: [...], edges: [...] }
     - edge: { from: writer, to: reader, label: 複製 }
   ```
 - graph の箱とアイコンと、まとまり・帯の枠は、手で書いた線の端にもできます。その線は、ほかの手で書いた線と同じく辺の上で終わります（下）。`fromSide`・`toSide` を書かないと、`via` の有る無しによらず、graph の線が残した辺のうち、隣の via（無ければ相手の端）がその外にある辺を、左右、上下の順に使います。残す辺は、箱とアイコンでは graph の線の端も輪も level の線も無い辺、まとまりと帯の枠では graph の線が端を置かず横切りもしない辺です。via がその外にある残す辺が無いときは、選んだ辺のままで、graph の線の上を走ることがあるので、graph の線が使わない辺を `fromSide`・`toSide` で書きます。輪や level の線のある辺は、それらのものなので、手で書いた線の端にしないでください。
@@ -125,6 +140,7 @@
 `via` には線の道のうち選んだ所だけを書き、`at` は、ラベルが立つ線のいちばん長い区間の真ん中では困るときだけ書きます。`at` の無いラベルは、線が枠をまたげるので、枠の縁との検査を受けません。floe は、x も y も違う点の間に角を足し、最後の辺へ直角に入ります。足される角は書かなくてよく、部品の位置を写した数は、部品を動かすと書き直すことになります。点は片方の軸だけ `{ x: 710 }`・`{ y: 218 }` でも書けます。もう片方は前の点の値で、最初の点は線の始まりの中心の値です（点ならその点、dot はその中心、部品と行はその真ん中）。`{ x: 710, y: 218 }` は `[710, 218]` と同じです。
 
 ```yaml
+# fragment
 - edge: { from: api-a, to: queue, fromSide: top, toSide: left, via: [[965, 218]] }   # M640,350 V218 H965 V510 H990
 - edge: { from: api-c, to: writer, fromSide: right, toSide: left, via: [{ x: 710 }] } # M664,646 H710 V374 H790
 ```

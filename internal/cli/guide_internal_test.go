@@ -67,6 +67,23 @@ func runIn(env Env, args ...string) (int, string, string) {
 	return code, stdout.String(), stderr.String()
 }
 
+// floe diagram guide prints docs/diagrams.md as it is, the file and the embedded text alike.
+func TestDiagramGuide(t *testing.T) {
+	t.Parallel()
+
+	file, err := os.ReadFile("../../docs/diagrams.md")
+	if err != nil {
+		t.Fatal(err)
+	}
+	code, out, errs := runIn(guideEnv(t, t.TempDir()), "diagram", "guide")
+	if code != 0 || errs != "" || out != string(file) || out != string(docs.DiagramGuide) || len(file) < 10000 {
+		t.Errorf("floe diagram guide = %d, stderr %q, stdout the doc: %t (%d bytes)", code, errs, out == string(file), len(out))
+	}
+	if code, _, errs := runIn(guideEnv(t, t.TempDir()), "diagram", "guide", "x"); code == 0 || errs == "" {
+		t.Errorf("floe diagram guide x = %d, %q: it takes no argument", code, errs)
+	}
+}
+
 // floe guide prints guide.md as it is.
 func TestGuide(t *testing.T) {
 	t.Parallel()
@@ -132,14 +149,15 @@ func TestGuideCommands(t *testing.T) {
 	}
 }
 
-// Each YAML block of the guide passes floe check: a data file as it is, parts in a section of report.
+// Each YAML block of the guide passes floe check and floe diagram inspect: a data file as it is, parts in a section of
+// report.
 func TestGuideExamples(t *testing.T) {
 	t.Parallel()
 
 	for _, path := range guides {
 		blocks := fences(readGuide(t, path), "yaml")
-		if len(blocks) != 3 {
-			t.Fatalf("%s: %d YAML blocks, want 3", path, len(blocks))
+		if len(blocks) != 4 {
+			t.Fatalf("%s: %d YAML blocks, want 4", path, len(blocks))
 		}
 		dir := t.TempDir()
 		for i, b := range blocks {
@@ -156,6 +174,9 @@ func TestGuideExamples(t *testing.T) {
 			}
 			if code, out, errs := runIn(guideEnv(t, dir), "check", name); code != 0 || out != "" || errs != "" {
 				t.Errorf("%s: block %d: %d %q %q (fix docs/guide.md and docs/guide.ja.md)", path, i+1, code, out, errs)
+			}
+			if code, _, errs := runIn(guideEnv(t, dir), "diagram", "inspect", name); code != 0 || errs != "" {
+				t.Errorf("%s: block %d: floe diagram inspect = %d, %q (fix docs/guide.md and docs/guide.ja.md)", path, i+1, code, errs)
 			}
 		}
 	}

@@ -81,7 +81,9 @@ For anything else (large numbers, files, fields, links, …) read the descriptio
 
 ## Diagrams
 
-Write a `graph`: the boxes and what joins what. floe places the boxes; do not work out their positions. `x` and `y` (required) only say where the graph starts.
+A `diagram` part is drawn from a spec floe checks: text that overflows, parts that overlap or an edge through a box are refused, at the line to change. Pick how to write it by what the diagram is for.
+
+A `graph` for a flow, a state machine, a draft, a diagram that often changes or joins many things: write the boxes and what joins what, and floe places them. `x` and `y` (required) only say where the graph starts.
 
 ```yaml
 - diagram:
@@ -100,7 +102,20 @@ Write a `graph`: the boxes and what joins what. floe places the boxes; do not wo
             - { from: check, to: write, label: "no" }
 ```
 
-`floe diagram example` lists examples of each kind (architecture, sequence, ER, …); `floe diagram example <kind>` prints one to copy. A diagram whose text overflows or whose parts overlap is refused at the line to change.
+Write the parts by hand for a diagram read as a picture, such as an architecture, where the placing matters: give each box an `x` and `y` (its size is worked out from its text; write `w` and `h` only to line boxes up), and name the ends of each edge.
+
+```yaml
+- diagram:
+    title: How a request flows
+    parts:
+      - box: { name: user, x: 20, y: 40, rows: [User] }
+      - box: { name: api, x: 220, y: 40, rows: [API server] }
+      - box: { name: db, x: 220, y: 160, rows: [Database] }
+      - edge: { from: user, to: api, label: HTTPS }
+      - edge: { from: api, to: db }
+```
+
+`floe diagram guide` says more on each way (the parts and keys, how to size and space boxes and labels so that floe does not refuse them): read it before you write a larger diagram. `floe diagram example <kind>` prints a complete spec of each kind (architecture, sequence, ER, …) to copy: it writes `w` and `h` to line its boxes up, so if you change a text in it, leave that box's `w` out or widen it to the number the refusal gives (`needs w: 174 or more`).
 
 ## Writing YAML that floe reads as you meant
 

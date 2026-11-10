@@ -9,6 +9,7 @@ import (
 	"github.com/goccy/go-yaml/ast"
 	"github.com/spf13/cobra"
 
+	"github.com/sukekyo26/floe/docs"
 	"github.com/sukekyo26/floe/internal/diagram"
 	"github.com/sukekyo26/floe/internal/doc"
 	"github.com/sukekyo26/floe/internal/draw"
@@ -26,7 +27,7 @@ func (a *app) diagramCmd() *cobra.Command {
 		Short: "Draw diagrams from specs of parts on a canvas",
 		Args:  cobra.NoArgs,
 	}
-	cmd.AddCommand(a.diagramRenderCmd(), a.diagramInspectCmd(), a.diagramExampleCmd())
+	cmd.AddCommand(a.diagramRenderCmd(), a.diagramInspectCmd(), a.diagramExampleCmd(), a.diagramGuideCmd())
 	return cmd
 }
 
@@ -47,7 +48,8 @@ what is drawn reaches, and 20 more; raw SVG is not measured, so write both with 
 An icon part takes the icons that floe icons fetch <set> keeps.
 
 The fragment starts with the diagrams' style and the script that zooms them (once per page is
-enough; more does no harm). --no-assets leaves them out.`,
+enough; more does no harm). --no-assets leaves them out. floe diagram guide says how to write a
+spec.`,
 		Args: cobra.MinimumNArgs(1),
 		RunE: func(_ *cobra.Command, args []string) error {
 			svgs, err := a.diagrams(args, lang, "cli_wants_spec", diagramOf)
@@ -90,7 +92,7 @@ their areas, without seeing the drawing.
 Where is printed on stdout and mistakes on stderr, and the exit code is 1 when there is one. A
 diagram refused by the checks is printed too, as a guide: fixing it may move its parts and edges. A
 diagram that does not get as far as its layout (a mistake of its YAML or schema, an example there
-is none of) prints no line.`,
+is none of) prints no line. floe diagram guide says how to write a spec.`,
 		Args: cobra.MinimumNArgs(1),
 		RunE: func(_ *cobra.Command, args []string) error {
 			own := sync.OnceValues(func() (*kit.Kit, error) { return a.kit(true) })
@@ -237,6 +239,18 @@ func placedAt(file string, pos yamlpos.Pos, got string) string {
 		return ""
 	}
 	return usererr.Where(file, pos.Line, pos.Column) + ": " + got
+}
+
+func (a *app) diagramGuideCmd() *cobra.Command {
+	return &cobra.Command{
+		Use:   "guide",
+		Short: "Print how to write a diagram, by hand or as a graph, so that floe does not refuse it",
+		Args:  cobra.NoArgs,
+		RunE: func(_ *cobra.Command, _ []string) error {
+			a.write(docs.DiagramGuide)
+			return nil
+		},
+	}
 }
 
 func (a *app) diagramExampleCmd() *cobra.Command {
