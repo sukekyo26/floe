@@ -28,9 +28,9 @@
     --brand-glow: color-mix(in srgb, var(--logo-line) 35%, transparent);
     /* The projects' colors, by projectOrder */
     --pc0: #e5533d; --pc1: #2f6bff; --pc2: #16a37a; --pc3: #b04fd6; --pc4: #d99a00; --pc5: #0f9bb5;
-    /* Mixed of the colors above: a down server's frame, the live dot's pulse, a primary button pointed at, a check box's frame,
+    /* Mixed of the colors above: a down server's frame, a primary button pointed at, a check box's frame,
        an armed delete's frame */
-    --down-line: color-mix(in srgb, var(--danger) 40%, var(--line)); --pulse: color-mix(in srgb, var(--good) 45%, transparent); --ink-hover: color-mix(in srgb, var(--ink) 82%, var(--bg));
+    --down-line: color-mix(in srgb, var(--danger) 40%, var(--line)); --ink-hover: color-mix(in srgb, var(--ink) 82%, var(--bg));
     --box-line: color-mix(in srgb, var(--faint) 80%, transparent); --armed-line: color-mix(in srgb, var(--danger) 50%, transparent);
     --scrim: rgb(34 33 31 / 0.4);
     --shadow-sm: 0 1px 2px rgb(34 33 31 / 0.06);
@@ -118,15 +118,14 @@
     flex: none; padding: 0.15rem 0.5rem; font-size: var(--text-label); font-weight: 600; color: var(--muted);
     background: var(--subtle); border: 1px solid var(--line); border-radius: 999px;
   }
+  /* Shown only while the connection is lost. Connected, it stays in the page, empty, as a status region must to be read as it changes */
   .server {
-    display: flex; align-items: center; gap: 0.5rem; padding: 0.3rem 0.7rem; font: 600 var(--text-label)/1 var(--body); color: var(--muted);
-    background: var(--panel); border: 1px solid var(--line); border-radius: 999px; font-variant-numeric: tabular-nums;
+    display: flex; align-items: center; gap: 0.5rem; padding: 0.3rem 0.7rem; font: 600 var(--text-label)/1 var(--body); color: var(--danger);
+    background: var(--panel); border: 1px solid var(--down-line); border-radius: 999px; font-variant-numeric: tabular-nums; white-space: nowrap;
   }
-  .server::before { content: ""; flex: none; width: 6px; height: 6px; border-radius: 50%; background: var(--good); animation: pulse 2.4s ease-in-out infinite; }
-  .server:not(.down) { padding: 0.5rem; border: 0; background: none; }
-  .server.down { color: var(--danger); border-color: var(--down-line); }
-  .server.down::before { background: var(--danger); animation: none; }
-  @keyframes pulse { 0%, 100% { box-shadow: 0 0 0 0 var(--pulse); } 50% { box-shadow: 0 0 0 4px transparent; } }
+  .server::before { content: ""; flex: none; width: 6px; height: 6px; border-radius: 50%; background: var(--danger); }
+  .server:not(.down) { position: absolute; width: 1px; height: 1px; padding: 0; border: 0; overflow: hidden; clip-path: inset(50%); }
+  .server:not(.down)::before { display: none; }
 
   /* The page of what changed between two versions, and the words over a page that tell it */
 
@@ -896,8 +895,8 @@
     .framed #frame-actions .menu { right: 1rem; min-width: min(17.5rem, calc(100vw - 2rem)); }
     .framed .frame-title { margin-left: 0; padding-left: 0; }
     .framed .frame-title::before { display: none; }
-    /* Connected, the list's bar keeps the room .server:not(.down) gives it */
-    :is(.framed .server, .server.down) { font-size: 0; gap: 0; padding: 0.45rem; }
+    /* The words of a lost connection do not fit beside the logo and the tabs: only the dot, its words the dot's label */
+    .server.down { font-size: 0; gap: 0; padding: 0.45rem; }
     .bar-inner:has(> .search:not([hidden])) .bar-end { margin-left: auto; }
     .bar-inner > .search { flex: 0 0 36px; margin-inline: 0; transition: flex-basis 0.15s; }
     .bar-inner > .search:is(:focus-within, :has(input:not(:placeholder-shown))) { flex: 1 1 auto; }
