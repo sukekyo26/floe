@@ -306,14 +306,14 @@
         "x": { "$ref": "#/$defs/coord" },
         "y": { "$ref": "#/$defs/coord" },
         "direction": { "enum": ["down", "right"], "description": "Which way the edges run: down (the default) or right" },
-        "lanes": { "type": "array", "minItems": 1, "maxItems": 200, "items": { "$ref": "#/$defs/graphGroup" }, "description": "In place of nodes: lanes, each a group, a band from end to end of the graph along its edges, in the order written; a graph holds 200 boxes and groups at most, counted through its lanes" },
+        "lanes": { "type": "array", "minItems": 1, "maxItems": 200, "items": { "$ref": "#/$defs/graphGroup" }, "description": "In place of nodes: lanes, each a group, a band from end to end of the graph along its edges, in the order written; a graph holds 200 boxes, icons, groups and lanes at most, all counted together through its groups and lanes" },
         "nodes": { "$ref": "#/$defs/graphNodes" },
         "edges": { "type": "array", "maxItems": 400, "items": { "$ref": "#/$defs/graphEdge" } }
       }
     },
     "graphNodes": {
       "type": "array",
-      "description": "Boxes, icons and groups of them; a graph holds 200 of them at most, counted through its groups",
+      "description": "Boxes, icons and groups of them; a graph holds 200 boxes, icons, groups and lanes at most, all counted together through its groups and lanes",
       "minItems": 1,
       "maxItems": 200,
       "items": {

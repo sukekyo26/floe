@@ -10,8 +10,8 @@ import (
 	"github.com/sukekyo26/floe/internal/usererr"
 )
 
-// maxNodes is how many boxes and groups a graph holds, counted through its groups: the schema bounds each list of
-// nodes or lanes alone.
+// maxNodes is how many boxes, icons, groups and lanes a graph holds, counted through its groups and lanes: the
+// schema bounds each list of nodes or lanes alone.
 const maxNodes = 200
 
 // gbox is a box of a graph, read flat: its JSON pointer and its innermost group (-1 for none).
@@ -46,8 +46,8 @@ func flatBox(n graphNode, nat string, cl int) gbox {
 	return gbox{box: n.Box, at: nat + "/box", cl: cl}
 }
 
-// flatten reads g's nodes, or its lanes, as written, depth first on a stack of its own: its boxes and groups, and the
-// nodes at its top.
+// flatten reads g's nodes, or its lanes, as written, depth first on a stack of its own: its boxes, icons, groups
+// and lanes, and the nodes at its top.
 func flatten(g *graph, at string) (boxes []gbox, clusters []cluster, top []gref) {
 	type level struct {
 		nodes []graphNode

@@ -2143,7 +2143,7 @@ func TestGraphWith(t *testing.T) {
 				spec(b("nat", "alb")+
 					"        - group: { name: vpc, label: VPC, nodes: [ { box: { name: alb, rows: [ALB] } }, { box: { name: api, rows: [API] } } ] }\n",
 					e("alb", "api")+e("vpc", "nat")),
-				`s.yaml:11:28: edge "vpc"→"nat": "nat" can stand neither above group "vpc" nor below it, as "alb" stands no lower than it and "alb" no higher; end the edge at a box in "vpc"`,
+				`s.yaml:11:28: edge "vpc"→"nat": "nat" can stand neither above group "vpc" nor below it, as "alb" stands no lower than it and "alb" no higher; end the edge at a box or an icon in "vpc"`,
 			},
 			{
 				"a box a with stands between a level edge's boxes",
@@ -2160,12 +2160,12 @@ parts:
         - { from: u, to: q }
         - { from: p, to: q, level: true }
 `,
-				`s.yaml:12:36: edge "p"→"q": box "m" stands between its boxes in their rank; drop level, or move it out of the way`,
+				`s.yaml:12:36: edge "p"→"q": box "m" stands between its boxes or icons in their rank; drop level, or move it out of the way`,
 			},
 			{
 				"a box a with stands among a group", spec(b("e", "a")+
 					"        - group: { name: g, label: G, nodes: [ { box: { name: a, rows: [A] } } ] }\n", e("e", "g")),
-				`s.yaml:10:19: edge "e"→"g": "e" can stand neither above group "g" nor below it, as "a" stands no lower than it and "a" no higher; end the edge at a box in "g"`,
+				`s.yaml:10:19: edge "e"→"g": "e" can stand neither above group "g" nor below it, as "a" stands no lower than it and "a" no higher; end the edge at a box or an icon in "g"`,
 			},
 		} {
 			if _, told := draw(t, c.src, inspect); told != c.want {
