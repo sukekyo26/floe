@@ -208,9 +208,9 @@ floe の土台は、ページの根にこれらで地・色・書体を描きま
 
 ```yaml
 en:
-  status_doing: In progress
+  status_doing: 'In progress'
 ja:
-  status_doing: 進行中
+  status_doing: '進行中'
 ```
 
 鍵は言語のタグです。`{{word "status_doing"}}` は、ページの `lang:` の言葉を描き（`ja-JP` は `ja` を使う）、ファイルにその言語が無ければ `en` の言葉を描きます。その言語に無い言葉は、`words.yaml` を名指して描くのを止めます。
@@ -224,8 +224,8 @@ schema では言えない項目どうしの関係を、リストの各項目に�
 - for: sections
   # 外れたときに指す、項目の鍵（任意）
   field: heading
-  expr: item.heading != nil || len(item.parts ?? []) < 2
-  message: give a section of more than one part a heading
+  expr: 'item.heading != nil || len(item.parts ?? []) < 2'
+  message: 'give a section of more than one part a heading'
 ```
 
 - `for` の途中のリストは 1 つずつ辿ります。`sections.parts` は各節の部品を確かめ、外れたものはその項目で言います。
@@ -239,8 +239,8 @@ schema では言えない項目どうしの関係を、リストの各項目に�
 データから計算し、`page.html` が `.Calc.<名前>` で見せる値です。
 
 ```yaml
-item_bytes: sum(attributes, .avg_bytes)
-storage_gb: item_bytes * records.in_1_year / 1e9
+item_bytes: 'sum(attributes, .avg_bytes)'
+storage_gb: 'item_bytes * records.in_1_year / 1e9'
 ```
 
 - 式は、schema が宣言するデータファイルの項目と、ほかの計算した値を、書いた順によらず名前で見ます。

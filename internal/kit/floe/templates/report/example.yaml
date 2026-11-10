@@ -1,63 +1,63 @@
 # An example of the structure: pick the parts from floe part list, and floe part show <part> schema.json prints a part's keys.
 template: report
 lang: en
-title: Moving the team wiki
-eyebrow: Plan · 2030-04
-lead: The wiki moves to the new host in two weekends, with the old one read-only in between.
+title: 'Moving the team wiki'
+eyebrow: 'Plan · 2030-04'
+lead: 'The wiki moves to the new host in two weekends, with the old one read-only in between.'
 sections:
-  - heading: The move
+  - heading: 'The move'
     parts:
-      - text: The pages move over **two weekends**; the old wiki stays readable until the new one opens.
+      - text: 'The pages move over **two weekends**; the old wiki stays readable until the new one opens.'
       - terminal:
           shell: bash
           steps:
-            - run: wiki export --all --out pages/
-              out: 1840 pages written to pages/
-            - run: linkcheck pages/
+            - run: 'wiki export --all --out pages/'
+              out: '1840 pages written to pages/'
+            - run: 'linkcheck pages/'
     sections:
-      - heading: The old wiki
+      - heading: 'The old wiki'
         parts:
-          - text: It answers until the new one opens, with edits turned off.
+          - text: 'It answers until the new one opens, with edits turned off.'
           - code:
               file: old-wiki.conf
               text: |
                 # Read-only from the first Friday evening
                 read_only = true
                 banner = "This wiki has moved to the new host."
-  - heading: Who does what
+  - heading: 'Who does what'
     parts:
       - entries:
           - title: Copy
-            tags: [First weekend, { pill: ready, tone: good }]
-            text: Copies the pages and keeps a list of what failed.
+            tags: ['First weekend', { pill: ready, tone: good }]
+            text: 'Copies the pages and keeps a list of what failed.'
           - title: Links
-            tags: [Second weekend, { pill: waits on the copy, tone: warn }]
-            text: Runs the link check and fixes what it finds.
+            tags: ['Second weekend', { pill: 'waits on the copy', tone: warn }]
+            text: 'Runs the link check and fixes what it finds.'
   - heading: Risks
     parts:
       - table:
           columns:
             - Risk
             - { title: Pages, num: true }
-            - What we do
+            - 'What we do'
             - { title: State, pills: { watching: warn, covered: good, open: accent } }
           rows:
-            - [Broken links, '120', A link check after the copy, watching]
-            - [Lost attachments, '8', Keep the old host for **a month**, covered]
-            - [Slow search, "-", Rebuild the index with `wiki reindex`, open]
+            - ['Broken links', '120', 'A link check after the copy', watching]
+            - ['Lost attachments', '8', 'Keep the old host for **a month**', covered]
+            - ['Slow search', '-', 'Rebuild the index with `wiki reindex`', open]
       - note:
           tone: warn
-          title: Heads up
-          text: Anyone editing during the freeze loses their changes.
-  - heading: What changes for whom
+          title: 'Heads up'
+          text: 'Anyone editing during the freeze loses their changes.'
+  - heading: 'What changes for whom'
     parts:
       - columns:
           - title: Readers
             parts:
-              - text: Nothing to do. Bookmarks still work, as the old address **redirects** to the new host.
+              - text: 'Nothing to do. Bookmarks still work, as the old address **redirects** to the new host.'
           - title: Scripts
             parts:
-              - text: Point the wiki's API at the new host.
+              - text: 'Point the wiki''s API at the new host.'
               - code:
                   file: wiki.env
-                  text: WIKI_HOST=new.example.com
+                  text: 'WIKI_HOST=new.example.com'

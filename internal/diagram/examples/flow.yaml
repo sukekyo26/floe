@@ -1,50 +1,50 @@
 # Decision flow: what floe publish checks, as a graph. Only the boxes and the edges between them are written;
 # floe lays them out in ranks, then stands each answer on its edge, cutting the line, and a refusal leaves its check for the rank below with its reason. The path that skips the checks
 # of a data file is an edge two ranks long.
-title: { en: What floe publish checks, ja: "floe publish の検査" }
+title: { en: 'What floe publish checks', ja: 'floe publish の検査' }
 parts:
   - graph:
       x: 20
       y: 20
       nodes:
-        - box: { name: publish, tone: accent, shape: pill, rows: [["floe publish <file>", main code]] }
-        - box: { name: resolve, rows: [{ en: Resolve a link to its real path, ja: "リンクの symlink を実体のパスに解決" }] }
-        - box: { name: kind, shape: hex, rows: [{ en: "A data file, or linked HTML?", ja: "データファイルか、リンクする HTML か" }] }
-        - box: { name: linked, shape: hex, rows: [{ en: "Linked with --link?", ja: "--link で登録するか" }] }
-        - box: { name: hidden, shape: hex, rows: [{ en: "In a hidden directory of home?", ja: "home 直下の隠しディレクトリの中か" }] }
-        - box: { name: top, shape: hex, rows: [{ en: "Right under / or your home?", ja: "/ か home の直下にあるか" }] }
-        - box: { name: data, rows: [{ en: Check the data file and its images, ja: "データファイルと画像を検査" }, [{ en: a linked HTML file is shown as it is, ja: "リンクした HTML はそのまま表示" }, sub]] }
-        - box: { name: slug, shape: hex, rows: [{ en: "Slug of a-z, 0-9 and hyphens?", ja: "slug は英小文字・数字・ハイフンか" }] }
-        - box: { name: taken, shape: hex, rows: [{ en: "Slug taken by the other kind?", ja: "slug が別の種類で使われているか" }] }
-        - box: { name: owner, shape: hex, rows: [{ en: "Another owner, without --force?", ja: "別の持ち主で --force なしか" }] }
-        - box: { name: server, rows: [{ en: "Check the server, start it if needed", ja: "サーバーを確かめ、必要なら起動" }] }
-        - box: { name: save, rows: [{ en: Save the data file and its images, ja: "データファイルと画像の写しを保存" }, [{ en: a link keeps only meta.json, ja: "リンクは meta.json だけ" }, sub]] }
-        - box: { name: url, tone: good, shape: pill, rows: [{ en: Print the URL, ja: "URL を出力" }] }
-        - box: { name: notData, tone: bad, shape: pill, rows: [[{ en: "Publish a data file, or link HTML", ja: "データファイルにするか、HTML をリンク" }, sub]] }
-        - box: { name: secret, tone: bad, shape: pill, rows: [[{ en: Settings and keys live there, ja: "設定や鍵の置き場は公開しない" }, sub]] }
-        - box: { name: whole, tone: bad, shape: pill, rows: [[{ en: The whole directory would be served, ja: "ディレクトリ全体が公開されてしまう" }, sub]] }
-        - box: { name: mistakes, tone: bad, shape: pill, rows: [[{ en: Each mistake at its line and column, ja: "誤りをすべて行と列で示す" }, sub]] }
-        - box: { name: badSlug, tone: bad, shape: pill, rows: [[{ en: Not usable in a URL, ja: "URL に使えない" }, sub]] }
-        - box: { name: otherKind, tone: bad, shape: pill, rows: [[{ en: Use another slug, ja: "別の slug にする" }, sub]] }
-        - box: { name: otherOwner, tone: bad, shape: pill, rows: [[{ en: Use another slug, ja: "別の slug にする" }, sub]] }
+        - box: { name: publish, tone: accent, shape: pill, rows: [['floe publish <file>', 'main code']] }
+        - box: { name: resolve, rows: [{ en: 'Resolve a link to its real path', ja: 'リンクの symlink を実体のパスに解決' }] }
+        - box: { name: kind, shape: hex, rows: [{ en: 'A data file, or linked HTML?', ja: 'データファイルか、リンクする HTML か' }] }
+        - box: { name: linked, shape: hex, rows: [{ en: 'Linked with --link?', ja: '--link で登録するか' }] }
+        - box: { name: hidden, shape: hex, rows: [{ en: 'In a hidden directory of home?', ja: 'home 直下の隠しディレクトリの中か' }] }
+        - box: { name: top, shape: hex, rows: [{ en: 'Right under / or your home?', ja: '/ か home の直下にあるか' }] }
+        - box: { name: data, rows: [{ en: 'Check the data file and its images', ja: 'データファイルと画像を検査' }, [{ en: 'a linked HTML file is shown as it is', ja: 'リンクした HTML はそのまま表示' }, sub]] }
+        - box: { name: slug, shape: hex, rows: [{ en: 'Slug of a-z, 0-9 and hyphens?', ja: 'slug は英小文字・数字・ハイフンか' }] }
+        - box: { name: taken, shape: hex, rows: [{ en: 'Slug taken by the other kind?', ja: 'slug が別の種類で使われているか' }] }
+        - box: { name: owner, shape: hex, rows: [{ en: 'Another owner, without --force?', ja: '別の持ち主で --force なしか' }] }
+        - box: { name: server, rows: [{ en: 'Check the server, start it if needed', ja: 'サーバーを確かめ、必要なら起動' }] }
+        - box: { name: save, rows: [{ en: 'Save the data file and its images', ja: 'データファイルと画像の写しを保存' }, [{ en: 'a link keeps only meta.json', ja: 'リンクは meta.json だけ' }, sub]] }
+        - box: { name: url, tone: good, shape: pill, rows: [{ en: 'Print the URL', ja: 'URL を出力' }] }
+        - box: { name: notData, tone: bad, shape: pill, rows: [[{ en: 'Publish a data file, or link HTML', ja: 'データファイルにするか、HTML をリンク' }, sub]] }
+        - box: { name: secret, tone: bad, shape: pill, rows: [[{ en: 'Settings and keys live there', ja: '設定や鍵の置き場は公開しない' }, sub]] }
+        - box: { name: whole, tone: bad, shape: pill, rows: [[{ en: 'The whole directory would be served', ja: 'ディレクトリ全体が公開されてしまう' }, sub]] }
+        - box: { name: mistakes, tone: bad, shape: pill, rows: [[{ en: 'Each mistake at its line and column', ja: '誤りをすべて行と列で示す' }, sub]] }
+        - box: { name: badSlug, tone: bad, shape: pill, rows: [[{ en: 'Not usable in a URL', ja: 'URL に使えない' }, sub]] }
+        - box: { name: otherKind, tone: bad, shape: pill, rows: [[{ en: 'Use another slug', ja: '別の slug にする' }, sub]] }
+        - box: { name: otherOwner, tone: bad, shape: pill, rows: [[{ en: 'Use another slug', ja: '別の slug にする' }, sub]] }
       edges:
         - { from: publish, to: resolve }
         - { from: resolve, to: kind }
-        - { from: kind, to: linked, label: { en: "yes", ja: "はい" } }
-        - { from: kind, to: notData, label: { en: "no", ja: "いいえ" } }
-        - { from: linked, to: hidden, label: { en: "yes", ja: "はい" } }
-        - { from: linked, to: data, label: { en: "no", ja: "いいえ" } }
-        - { from: hidden, to: top, label: { en: "no", ja: "いいえ" } }
-        - { from: hidden, to: secret, label: { en: "yes", ja: "はい" } }
-        - { from: top, to: data, label: { en: "no", ja: "いいえ" } }
-        - { from: top, to: whole, label: { en: "yes", ja: "はい" } }
+        - { from: kind, to: linked, label: { en: 'yes', ja: 'はい' } }
+        - { from: kind, to: notData, label: { en: 'no', ja: 'いいえ' } }
+        - { from: linked, to: hidden, label: { en: 'yes', ja: 'はい' } }
+        - { from: linked, to: data, label: { en: 'no', ja: 'いいえ' } }
+        - { from: hidden, to: top, label: { en: 'no', ja: 'いいえ' } }
+        - { from: hidden, to: secret, label: { en: 'yes', ja: 'はい' } }
+        - { from: top, to: data, label: { en: 'no', ja: 'いいえ' } }
+        - { from: top, to: whole, label: { en: 'yes', ja: 'はい' } }
         - { from: data, to: slug }
-        - { from: data, to: mistakes, label: { en: mistakes, ja: "誤り" } }
-        - { from: slug, to: taken, label: { en: "yes", ja: "はい" } }
-        - { from: slug, to: badSlug, label: { en: "no", ja: "いいえ" } }
-        - { from: taken, to: owner, label: { en: "no", ja: "いいえ" } }
-        - { from: taken, to: otherKind, label: { en: "yes", ja: "はい" } }
-        - { from: owner, to: server, label: { en: "no", ja: "いいえ" } }
-        - { from: owner, to: otherOwner, label: { en: "yes", ja: "はい" } }
+        - { from: data, to: mistakes, label: { en: mistakes, ja: '誤り' } }
+        - { from: slug, to: taken, label: { en: 'yes', ja: 'はい' } }
+        - { from: slug, to: badSlug, label: { en: 'no', ja: 'いいえ' } }
+        - { from: taken, to: owner, label: { en: 'no', ja: 'いいえ' } }
+        - { from: taken, to: otherKind, label: { en: 'yes', ja: 'はい' } }
+        - { from: owner, to: server, label: { en: 'no', ja: 'いいえ' } }
+        - { from: owner, to: otherOwner, label: { en: 'yes', ja: 'はい' } }
         - { from: server, to: save }
         - { from: save, to: url }

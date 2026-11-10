@@ -3,42 +3,42 @@
 # and the edges are written: floe stands each lane from top to bottom, ranks the steps by their edges, and puts a step
 # with an edge to another lane at its lane's side towards it. The edges written level (ask and answer, and the ask to
 # agree to the merge) stand their two steps side by side in one rank, joined straight across.
-title: { en: "One pull request: the user, the architect and the engineer", ja: "1 つの PR：ユーザー・アーキテクト・エンジニア" }
+title: { en: 'One pull request: the user, the architect and the engineer', ja: '1 つの PR：ユーザー・アーキテクト・エンジニア' }
 parts:
   - graph:
       x: 20
       y: 20
       lanes:
         - name: user
-          label: { en: User, ja: "ユーザー" }
+          label: { en: User, ja: 'ユーザー' }
           nodes:
-            - box: { name: answer, rows: [{ en: Answer, ja: "判断に答える" }, { en: design choices, ja: "作りを変える点" }] }
-            - box: { name: ok, tone: good, rows: [{ en: Agree to merge, ja: "マージを了承" }] }
+            - box: { name: answer, rows: [{ en: Answer, ja: '判断に答える' }, { en: 'design choices', ja: '作りを変える点' }] }
+            - box: { name: ok, tone: good, rows: [{ en: 'Agree to merge', ja: 'マージを了承' }] }
         - name: architect
-          label: { en: Architect, ja: "アーキテクト" }
+          label: { en: Architect, ja: 'アーキテクト' }
           accent: true
           nodes:
-            - box: { name: order, tone: accent, rows: [{ en: Send the task, ja: "指示を送る" }, { en: step 1, ja: "段 1" }] }
-            - box: { name: dreview, rows: [{ en: Review the design, ja: "設計レビュー" }, { en: "step 2, medium then low", ja: "段 2・medium → low" }] }
-            - box: { name: review, rows: [{ en: Review the code, ja: "実装レビュー" }, { en: "step 4, medium", ja: "段 4・medium" }] }
-            - box: { name: ready, rows: [{ en: Review the fixes, ja: "直しのレビュー" }, { en: "step 5, low", ja: "段 5・low" }] }
+            - box: { name: order, tone: accent, rows: [{ en: 'Send the task', ja: '指示を送る' }, { en: 'step 1', ja: '段 1' }] }
+            - box: { name: dreview, rows: [{ en: 'Review the design', ja: '設計レビュー' }, { en: 'step 2, medium then low', ja: '段 2・medium → low' }] }
+            - box: { name: review, rows: [{ en: 'Review the code', ja: '実装レビュー' }, { en: 'step 4, medium', ja: '段 4・medium' }] }
+            - box: { name: ready, rows: [{ en: 'Review the fixes', ja: '直しのレビュー' }, { en: 'step 5, low', ja: '段 5・low' }] }
         - name: engineer
-          label: { en: Engineer, ja: "エンジニア" }
+          label: { en: Engineer, ja: 'エンジニア' }
           nodes:
-            - box: { name: design, rows: [{ en: Write the design, ja: "設計を書く" }, { en: "step 2, no code yet", ja: "段 2・コードは書かない" }] }
-            - box: { name: build, rows: [{ en: "Build, test, open the PR", ja: "実装・テスト・PR" }, { en: "step 3, just ci", ja: "段 3・just ci" }] }
-            - box: { name: fix, rows: [{ en: Fix and push, ja: "直して push" }, { en: step 5, ja: "段 5" }] }
-            - box: { name: ci, rows: [{ en: Check CI, ja: "CI を確かめる" }, { en: step 6, ja: "段 6" }] }
-            - box: { name: merge, tone: good, rows: [{ en: Merge, ja: "マージ" }, { en: mark the plan done, ja: "計画に（完了）" }] }
+            - box: { name: design, rows: [{ en: 'Write the design', ja: '設計を書く' }, { en: 'step 2, no code yet', ja: '段 2・コードは書かない' }] }
+            - box: { name: build, rows: [{ en: 'Build, test, open the PR', ja: '実装・テスト・PR' }, { en: 'step 3, just ci', ja: '段 3・just ci' }] }
+            - box: { name: fix, rows: [{ en: 'Fix and push', ja: '直して push' }, { en: 'step 5', ja: '段 5' }] }
+            - box: { name: ci, rows: [{ en: 'Check CI', ja: 'CI を確かめる' }, { en: 'step 6', ja: '段 6' }] }
+            - box: { name: merge, tone: good, rows: [{ en: Merge, ja: 'マージ' }, { en: 'mark the plan done', ja: '計画に（完了）' }] }
       edges:
         - { from: order, to: design }
         - { from: design, to: dreview }
-        - { from: dreview, to: answer, level: true, label: { en: ask, ja: "聞く" } }
-        - { from: answer, to: dreview, level: true, label: { en: answer, ja: "答える" } }
+        - { from: dreview, to: answer, level: true, label: { en: ask, ja: '聞く' } }
+        - { from: answer, to: dreview, level: true, label: { en: answer, ja: '答える' } }
         - { from: dreview, to: build, label: OK }
         - { from: build, to: review }
-        - { from: review, to: fix, label: { en: findings, ja: "指摘" } }
+        - { from: review, to: fix, label: { en: findings, ja: '指摘' } }
         - { from: fix, to: ready }
-        - { from: ready, to: ci, label: { en: ready to merge, ja: "マージしてよい" } }
-        - { from: ci, to: ok, level: true, label: { en: ask, ja: "聞く" } }
+        - { from: ready, to: ci, label: { en: 'ready to merge', ja: 'マージしてよい' } }
+        - { from: ci, to: ok, level: true, label: { en: ask, ja: '聞く' } }
         - { from: ok, to: merge }

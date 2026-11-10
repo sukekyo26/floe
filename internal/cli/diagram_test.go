@@ -78,7 +78,7 @@ func TestDiagram(t *testing.T) {
 	if lines := strings.Split(strings.TrimSpace(out), "\n"); len(lines) != 15 || !strings.HasPrefix(lines[0], "architecture\t") {
 		t.Errorf("example = %q, want 15 kinds", out)
 	}
-	if _, er, _ := runIn(dir, env, "diagram", "example", "er"); !strings.Contains(er, `ja: "ページ（meta.json）"`) {
+	if _, er, _ := runIn(dir, env, "diagram", "example", "er"); !strings.Contains(er, `ja: 'ページ（meta.json）'`) {
 		t.Errorf("example er = %q, want it with its Japanese", er)
 	}
 	code, _, errs = runIn(dir, env, "diagram", "example", "pie")

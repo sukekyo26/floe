@@ -18,35 +18,35 @@
 # so the dot's x is kept off the weeks' lines by hand.
 width: 920
 height: 330
-title: { en: "The plan of one version of an app, week by week", ja: "あるアプリの 1 つの版の開発の予定（週ごと）" }
+title: { en: 'The plan of one version of an app, week by week', ja: 'あるアプリの 1 つの版の開発の予定（週ごと）' }
 parts:
   - axis:
       x1: 200
       x2: 872
       y: 294
       ticks:
-        - [200, { en: "Week 1", ja: "1 週目" }]
-        - [312, { en: "Week 2", ja: "2 週目" }]
-        - [424, { en: "Week 3", ja: "3 週目" }]
-        - [536, { en: "Week 4", ja: "4 週目" }]
-        - [648, { en: "Week 5", ja: "5 週目" }]
-        - [760, { en: "Week 6", ja: "6 週目" }]
-        - [872, ""]
+        - [200, { en: 'Week 1', ja: '1 週目' }]
+        - [312, { en: 'Week 2', ja: '2 週目' }]
+        - [424, { en: 'Week 3', ja: '3 週目' }]
+        - [536, { en: 'Week 4', ja: '4 週目' }]
+        - [648, { en: 'Week 5', ja: '5 週目' }]
+        - [760, { en: 'Week 6', ja: '6 週目' }]
+        - [872, '']
       grid: 26
       labels: between
-  - label: { text: { en: Decide what to build, ja: "作るものを決める" }, x: 16, y: 44, anchor: start }
+  - label: { text: { en: 'Decide what to build', ja: '作るものを決める' }, x: 16, y: 44, anchor: start }
   - bar: { name: decide, x1: 200, x2: 296, y: 44, tone: accent }
-  - label: { text: { en: Design the screens, ja: "画面を設計する" }, x: 16, y: 80, anchor: start }
+  - label: { text: { en: 'Design the screens', ja: '画面を設計する' }, x: 16, y: 80, anchor: start }
   - bar: { name: design, x1: 312, x2: 408, y: 80, tone: accent }
-  - label: { text: { en: Build the screens, ja: "画面を作る" }, x: 16, y: 116, anchor: start }
+  - label: { text: { en: 'Build the screens', ja: '画面を作る' }, x: 16, y: 116, anchor: start }
   - bar: { name: screens, x1: 424, x2: 648, y: 116, tone: accent }
-  - label: { text: { en: Build the API, ja: "API を作る" }, x: 16, y: 152, anchor: start }
+  - label: { text: { en: 'Build the API', ja: 'API を作る' }, x: 16, y: 152, anchor: start }
   - bar: { name: api, x1: 312, x2: 536, y: 152, tone: accent }
-  - label: { text: { en: Test, ja: "テストする" }, x: 16, y: 188, anchor: start }
+  - label: { text: { en: Test, ja: 'テストする' }, x: 16, y: 188, anchor: start }
   - bar: { name: test, x1: 664, x2: 760, y: 188, tone: accent }
-  - label: { text: { en: Write the help, ja: "ヘルプを書く" }, x: 16, y: 224, anchor: start }
+  - label: { text: { en: 'Write the help', ja: 'ヘルプを書く' }, x: 16, y: 224, anchor: start }
   - bar: { name: help, x1: 552, x2: 744, y: 224, tone: accent }
-  - label: { text: { en: Release, ja: "リリース" }, x: 16, y: 260, anchor: start }
+  - label: { text: { en: Release, ja: 'リリース' }, x: 16, y: 260, anchor: start }
   - dot: { name: release, cx: 792, cy: 260 }
   - edge: { from: decide, fromSide: right, to: design, toSide: left }
   - edge: { from: design, fromSide: right, to: screens, toSide: left }

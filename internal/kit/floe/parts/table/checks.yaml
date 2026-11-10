@@ -2,8 +2,8 @@
 # path. Tell the key if rows of many lines come to hide it.
 # LIMIT: two columns of one id draw the one value twice, plain on the page; refused nowhere.
 - for: rows
-  expr: type(item) != "array" || len(item) == len(doc.columns)
-  message: write as many cells in each row as there are columns
+  expr: 'type(item) != "array" || len(item) == len(doc.columns)'
+  message: 'write as many cells in each row as there are columns'
 - for: rows
   expr: 'let ids = map(filter(doc.columns, type(#) == "map"), #.id); type(item) != "map" || all(keys(item), # in ids)'
-  message: write each key of a row as the id of a column
+  message: 'write each key of a row as the id of a column'
