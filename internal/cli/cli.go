@@ -10,6 +10,7 @@ import (
 	"github.com/spf13/cobra"
 
 	"github.com/sukekyo26/floe/internal/i18n"
+	"github.com/sukekyo26/floe/internal/store"
 	"github.com/sukekyo26/floe/internal/usererr"
 	"github.com/sukekyo26/floe/internal/version"
 )
@@ -116,6 +117,14 @@ func usage(validate cobra.PositionalArgs) cobra.PositionalArgs {
 
 // english is the language of the command line, whatever the environment's: an agent reads it.
 var english = i18n.EnglishCatalog()
+
+// inProject is a project of tasks.json (ProjectKey) as floe work and floe publish say it.
+func inProject(key string) string {
+	if key == store.ProjectKey("") {
+		return english.Msg("cli_no_project")
+	}
+	return english.Msg("cli_project", key)
+}
 
 // named is floe's name before each mistake the command line tells.
 const named = "floe: "

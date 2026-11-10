@@ -117,6 +117,11 @@ func (a *app) publish(ctx context.Context, file string, link bool, opts store.Op
 	if saved.Prev != nil {
 		a.noticeUpdate(saved)
 	}
+	// The directory floe publish runs in sets the project of a data file's page when the page is new, replaces another
+	// file's, or had none; a link's is its target's. Told after the URL, as the update is.
+	if !link && (saved.Prev == nil || saved.Prev.TaskProject != saved.TaskProject) {
+		a.warn("cli_page_project", inProject(saved.TaskProject))
+	}
 	return nil
 }
 
