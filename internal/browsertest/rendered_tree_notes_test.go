@@ -23,18 +23,25 @@ sections:
           - { path: internal/plain/inner.go, note: under a folder of no note }
           - { path: docs/login.md, note: guide }
           - { path: README.md }
+      - tree:
+          - { path: internal/kit/floe/parts/tree/part_with_a_long_name.go, note: its note is held at its least width }
 `
 
 // measureTreeNotes returns a line for what stands amiss: the notes of a tree start at one edge, whatever the depth, the
 // mark and the text of a name end before the note of its row, and a row with no note is no taller than its name.
-// LIMIT: on paper the names fold and the marks are not measured (a mark is a generated box, found by letting the name
+// A note beside a long name keeps 6rem. LIMIT: on paper the names fold and the marks are not measured (a mark is a generated box, found by letting the name
 // reach its widest, which unfolds it); the text of every line of a name is.
 const measureTreeNotes = `(() => {
   ` + textRightJS + `
   const out = [], paper = matchMedia('print').matches;
   const trees = document.querySelectorAll('[data-floe-part=tree]');
-  if (trees.length !== 1) return 'trees: ' + trees.length;
+  if (trees.length !== 2) return 'trees: ' + trees.length;
+  const least = parseFloat(getComputedStyle(document.documentElement).fontSize) * 6;
   let notes = 0, left;
+  for (const li of trees[1].querySelectorAll('li > .note')) {
+    const w = li.getBoundingClientRect().width;
+    if (w < least - 1) out.push('a note of a long name is ' + w + ' px wide, less than ' + least);
+  }
   for (const li of trees[0].querySelectorAll('li')) {
     const name = li.querySelector(':scope > .name'), note = li.querySelector(':scope > .note');
     const label = name.firstChild.data;
@@ -71,7 +78,6 @@ func TestRenderedTreeNotes(t *testing.T) { //nolint:paralleltest // the browser 
 	for _, theme := range themes {
 		s.floe(t, "publish", s.write(t, "notes-"+theme+".yaml", treeNotesPage+"theme: "+theme+"\n"), "--slug", "notes-"+theme)
 	}
-	defer s.b.unsize()
 	measure := func(what string) {
 		for _, theme := range themes {
 			s.b.navigate("/a/notes-" + theme + "/?raw")
@@ -83,8 +89,8 @@ func TestRenderedTreeNotes(t *testing.T) { //nolint:paralleltest // the browser 
 	s.b.size(1440, 900, false)
 	measure("1440 px")
 	onPhone(t, s, 390)
+	laidOut(t, s, 390)
 	measure("390 px")
-	s.b.size(paperWidth, 1000, false)
-	s.b.media("print")
+	onPaper(t, s)
 	measure("paper")
 }

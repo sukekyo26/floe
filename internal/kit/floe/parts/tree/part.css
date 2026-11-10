@@ -3,8 +3,9 @@
    names on paper. On screen its list reaches to its longest line, so that a theme's ground on it does too.
    Every row shares two columns (names, notes) through subgrid, so the notes start at one edge whatever the depth. The
    ::before holds a note at 6rem least, not min-width, which would drop the automatic least width that keeps a long word whole
-   (its ground would stop short). LIMIT: a tree of long names on a phone scrolls sideways to reach its notes; to fold them
-   under the names instead, lay the notes out by the width */
+   (its ground would stop short). LIMIT: names take their width first, so a tree of long names leaves its notes only 6rem (or
+   their longest word) on any screen, folded line by line, and on a phone scrolls sideways to reach them; to give the
+   notes the width instead, lay them out by the width */
 :scope {
   padding: var(--floe-pad-block) var(--floe-pad-inline); overflow-wrap: normal;
 }
@@ -13,10 +14,8 @@
   :scope > ul { width: fit-content; min-width: 100%; }
 }
 :scope ul { list-style: none; margin: 0; padding: 0; display: grid; gap: 0; grid-template-columns: auto 1fr; }
-:scope li, :scope ul ul { grid-column: 1 / -1; grid-template-columns: subgrid; }
-:scope li { display: grid; align-items: baseline; }
-:scope ul ul { margin-left: 0.5rem; padding-left: 1.15rem; border-left: 1px solid var(--line); }
-:scope li { padding-block: 0.12rem; }
+:scope li { display: grid; grid-column: 1 / -1; grid-template-columns: subgrid; align-items: baseline; padding-block: 0.12rem; }
+:scope ul ul { grid-column: 1 / -1; grid-template-columns: subgrid; margin-left: 0.5rem; padding-left: 1.15rem; border-left: 1px solid var(--line); }
 :scope .name {
   display: inline-flex; align-items: center; gap: 0.45rem; white-space: nowrap;
   font-family: var(--mono); font-size: 0.86rem;
