@@ -77,6 +77,7 @@ var messagesJA = map[string]string{
 	"kit_name_theme_file":        "%s はどのテーマにもあるファイル（%[1]s.css）の名前で、テーマのこの部品の CSS がそれとして読まれます。別の名前にしてください",
 	"kit_asset_unknown":          "assets/ に「%s」がありません。assets/ からのパス（img/logo.svg など）でその下のファイルを名指してください",
 	"kit_below_zero":             "%s は 0 以上の数を取ります。%s は 0 より小さい数です",
+	"kit_not_text":               "%s は字を取ります。%s は字ではありません",
 	"kit_stat_change":            "部品 stats の %d 番目 %q：from を書くときは、from と value を引用符で囲んだ数字で、better を lower か higher で書きます。%s がそうなっていません",
 	"kit_stat_item":              "部品 stats の項目はキーと値で書きます（label、value など）。%d 番目はそうなっていません",
 	"kit_bar_item":               "%s は、キーと値で書いた項目（label・value・of・unit・tone）を取ります。%d 番目の項目が、キーと値で書かれていません",

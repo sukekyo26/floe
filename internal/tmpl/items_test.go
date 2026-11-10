@@ -576,6 +576,8 @@ func TestPartBarsRefused(t *testing.T) {
 		{"{label: b, value: null}", `d.yaml:4:3: bars: bar 2 "b"'s value takes a number; none is written, or it is null`},
 		{"{label: b, value: 0}", ""},
 		{"{label: b, value: 1, of: null}", ""},
+		{"{label: b, value: 1, unit: pages}", ""},
+		{"{label: b, value: 1, unit: 3}", `d.yaml:4:3: bars: bar 2 "b"'s unit takes text, not 3`},
 		{"{label: b, value: 1, of: 0}", `d.yaml:4:3: bars: bar 2 "b"'s of takes a number above 0, not 0`},
 		{"{label: b, value: 1, of: x}", `d.yaml:4:3: bars: bar 2 "b"'s of takes a number, not "x"`},
 		{"{label: b, value: 5, of: 3}", `d.yaml:4:3: bars: bar 2 "b": 5 is over its of 3; write a value no greater than of, the whole`},

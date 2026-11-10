@@ -173,6 +173,10 @@ func barOf(i int, item any) (bar, error) {
 		Value: m["value"], Of: m["of"], Now: "", Max: "", Width: 0,
 	}
 	name := fmt.Sprintf("bars: bar %d %q", i+1, b.Label)
+	// A unit of a part of one's own, whose schema does not say it is text, would be read as none by stringOf.
+	if _, text := m["unit"].(string); !text && m["unit"] != nil {
+		return bar{}, usererr.New("kit_not_text", name+"'s unit", fmt.Sprint(m["unit"]))
+	}
 	n, err := float(name+"'s value", b.Value)
 	if err != nil {
 		return bar{}, err

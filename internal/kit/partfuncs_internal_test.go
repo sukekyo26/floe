@@ -209,14 +209,15 @@ func TestBarsOf(t *testing.T) {
 	}
 }
 
-// A bar's unit is the text written as unit, and none when it is not written or not text.
+// A bar's unit is the text written as unit, and none when it is not written (nil, as Walk sets a key the schema declares
+// and the data leaves out); one that is not text is refused, as a value that is not a number is, not read as none.
 func TestBarsUnit(t *testing.T) {
 	t.Parallel()
 
 	for _, c := range []struct {
 		unit any
 		want string
-	}{{"pages per hour", "pages per hour"}, {"%", "%"}, {nil, ""}, {3, ""}} {
+	}{{"pages per hour", "pages per hour"}, {"%", "%"}, {nil, ""}, {"", ""}} {
 		item := map[string]any{"label": "x", "value": 1, "unit": c.unit}
 		bars, err := barsOf([]any{item})
 		if err != nil {
@@ -224,6 +225,21 @@ func TestBarsUnit(t *testing.T) {
 		}
 		if bars[0].Unit != c.want {
 			t.Errorf("unit %v read as %q; want %q", c.unit, bars[0].Unit, c.want)
+		}
+	}
+}
+
+// A unit that is not text is told with its bar, and what it is.
+func TestBarsUnitRefused(t *testing.T) {
+	t.Parallel()
+
+	for _, c := range []struct {
+		unit any
+		want string
+	}{{3, `bars: bar 1 "x"'s unit takes text, not 3`}, {true, `bars: bar 1 "x"'s unit takes text, not true`}, {[]any{"a"}, `bars: bar 1 "x"'s unit takes text, not [a]`}} {
+		_, err := barsOf([]any{map[string]any{"label": "x", "value": 1, "unit": c.unit}})
+		if err == nil || err.Error() != c.want {
+			t.Errorf("unit %v: %v; want %q", c.unit, err, c.want)
 		}
 	}
 }

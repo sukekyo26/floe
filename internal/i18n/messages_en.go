@@ -95,6 +95,7 @@ var messagesEN = map[string]string{
 	"kit_example_name":           "example.yaml names the template %s; name it %s, after the template's directory",
 	"kit_for_undeclared":         "for %s: the schema allows no %s there; write a path of keys its schema declares",
 	"kit_not_number":             "%s takes a number, not %s",
+	"kit_not_text":               "%s takes text, not %s",
 	"kit_num_digits":             "write num, or num and a count of significant digits from 1 before the number, like num 3",
 	"kit_number_missing":         "%s takes a number; none is written, or it is null",
 	"kit_part_yaml":              "write part.yaml as keys and values: looks:, the list of the looks the part takes, like looks: [panel], marks:, which of its elements are rows with a mark at their left (box, items or joined), and a look alone's description:",
