@@ -33,7 +33,7 @@ floe turns a YAML file you write into a page for the user: it checks the file, r
 ## Themes
 
 - Do not write `theme` unless the user names a theme for the page. The user picks themes on the management page, at the root of the page's URL.
-- When you give the user a URL, run `floe theme default`. If it prints a name, say nothing of themes. If it prints nothing, tell the user once in the conversation that the default theme for new pages can be chosen in the management page's settings (the gear).
+- When you give the user a URL, run `floe theme default`. If it prints a name, say nothing of themes. If it prints nothing, tell the user once in the conversation that the default theme for new pages can be chosen in the management page's settings (the gear in the page list's bar).
 
 ## Picking parts
 

@@ -118,7 +118,8 @@
     flex: none; padding: 0.15rem 0.5rem; font-size: var(--text-label); font-weight: 600; color: var(--muted);
     background: var(--subtle); border: 1px solid var(--line); border-radius: 999px;
   }
-  /* Shown only while the connection is lost. Connected, it stays in the page, empty, as a status region must to be read as it changes */
+  /* Shown only while the connection is lost. Connected, it stays in the page, empty, as a status region must to be read as it changes.
+     LIMIT: lost, the label in the bar's flow pushes the list's search, centered by its auto margins, to the right (89px at 1280px, 179px at 700px), and back when it is found again. Take the label out of the flow if that comes to trouble someone */
   .server {
     display: flex; align-items: center; gap: 0.5rem; padding: 0.3rem 0.7rem; font: 600 var(--text-label)/1 var(--body); color: var(--danger);
     background: var(--panel); border: 1px solid var(--down-line); border-radius: 999px; font-variant-numeric: tabular-nums; white-space: nowrap;
@@ -725,7 +726,7 @@
   @media (max-width: 56rem) { #keys-open { display: none; } }
   /* The settings: the default theme, chosen from cards of a sample page drawn in each theme */
   #settings-open svg { width: 16px; height: 16px; }
-  /* LIMIT: no room for it in a bar of 40rem or less, as the shortcuts' button above 56rem: the settings open from a wider window. Give them a way there if they come to be needed on a phone */
+  /* LIMIT: no room for it in a bar of 40rem or less, as the shortcuts' button above 56rem: the settings open from the list's bar on a wider window, and not from a page whole. Give them a way there if they come to be needed on a phone */
   @media (max-width: 40rem) { #settings-open { display: none; } }
   /* A page whole leaves both to the list: they are of all pages, and beside the page's own buttons they read as this page's. ? still opens the shortcuts */
   .framed :is(#settings-open, #keys-open) { display: none; }
@@ -1800,7 +1801,7 @@
     errorFrom = msg ? from : '';
   }
 
-  // Only a dot while connected, and words only when the connection is lost. The address is the one in the address bar, so it is not shown
+  // Nothing shows while connected, and the words only when the connection is lost (a dot alone on a narrow bar). The address is the one in the address bar, so it is not shown
   function setServer(ok) {
     const label = t(ok ? 'ui_server_up' : 'ui_server_down_host', location.host);
     $('server').textContent = ok ? '' : t('ui_server_down');
