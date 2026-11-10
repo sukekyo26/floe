@@ -81,7 +81,7 @@ floe render plan.yaml           # floe 無しで開ける plan.html を隣に書
 - 時の順に起きたこと：`timeline`。
 - 言葉と意味：Markdown の箇条書き。意味が長いなら `entries`。
 - ページの頭の、短い値の数個：`facts`。
-- 行でも列でも見比べる、升の短い並び（短い値の前と後は別々の列に。先頭の列の見出しは空）：`table`。
+- 行と列で比べる短い値（前と後の値は別々の列に。先頭の列の見出しは空）：`table`。
 
 `report` が節の中に取る部品。自分の部品も取り（[parts.ja.md](parts.ja.md)）、`floe part list` がこれらと一緒に並べます：
 

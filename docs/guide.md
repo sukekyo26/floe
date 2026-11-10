@@ -21,7 +21,7 @@ floe turns a YAML file you write into a page for the user: it checks the file, r
          - text: Freeze edits on **Friday evening**, then copy the pages.
    ```
 
-3. Run `floe part list` and choose parts that fit the content from those allowed by the template's schema (read in step 1); where the choice is easily mistaken, follow the table in [Picking parts](#picking-parts). For each part the example does not show, look up its keys before writing it, as that section says: a guessed key is refused.
+3. Run `floe part list` and choose parts that fit the content from those allowed by the template's schema (read in step 1). Where the choice is easily mistaken, use the table in [Picking parts](#picking-parts). For each part the example does not show, look up its keys before writing it, as that section says: a guessed key is refused.
 4. Run `floe check db-choice.yaml`, fix every mistake, and run it again until it prints no mistake; when only `warning:` lines are left, you are done (they are advice).
 5. Run `floe publish db-choice.yaml` and give the user the URL it prints. You need not fetch the page.
 
@@ -39,7 +39,7 @@ floe turns a YAML file you write into a page for the user: it checks the file, r
 
 Each item of `parts` is one key naming the part. `floe part list` lists each part's keys and what it is for. For parts whose keys are not listed (`chart`, `stats`, `diagram`, …), read `floe part show <part> schema.json` to see their keys, types and details. The template's `schema.json`, read in step 1, says which parts each section or field accepts.
 
-Where the choice is easily mistaken, pick the part by what the content is:
+Use this table when the right part is not obvious:
 
 | Content | Part |
 |---|---|
@@ -51,7 +51,7 @@ Where the choice is easily mistaken, pick the part by what the content is:
 | Questions for the reader to decide | `asks` |
 | Results of checks or tests | `checks`, each with `result: ok`, `ng` or `unchecked`; floe counts the results at the top; not the conditions of a choice (`table`, `options`) nor what is still to do (`checklist`) |
 | Events at dates | `timeline`; stages without dates are `steps` |
-| Rows compared along and across, each cell short; short before-and-after values in separate columns (leave the first column's heading empty) | `table` |
+| Short values compared in rows and columns; before-and-after values in separate columns (leave the first column's heading empty) | `table` |
 | Independent blocks to view side by side, each with its own parts; useful for before-and-after screens or code | `columns` |
 | A few key values at the top | `facts` |
 | Numbers over time, or compared | `chart` |

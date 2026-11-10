@@ -81,7 +81,7 @@ To list things, pick the part by what the rows are:
 - What happened in order: `timeline`.
 - Words and what they mean: a Markdown list, or `entries` when a meaning is long.
 - A few short values at the top of a page: `facts`.
-- Rows compared both along and across, each cell short, such as short before-and-after values in separate columns (the first column's heading empty): `table`.
+- Short values compared in rows and columns, such as before-and-after values in separate columns (the first column's heading empty): `table`.
 
 The parts `report` takes in a section, with your own parts too ([parts.md](parts.md)), which `floe part list` lists with these:
 
