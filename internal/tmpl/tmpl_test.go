@@ -347,20 +347,40 @@ func TestDrawTwiceSame(t *testing.T) {
 	t.Parallel()
 
 	k := floeKit(t)
-	tpl, _, err := k.Template("report")
-	if err != nil {
-		t.Fatal(err)
-	}
 	o := tmpl.Options{Theme: "", Untitled: "", Images: nil, ImagesDir: ""}
-	first, _, err := tmpl.Draw(k, "report.yaml", tpl.Example(), o)
+	first, _, err := tmpl.Draw(k, "twice.yaml", []byte(drawnTwice), o)
 	if err != nil {
 		t.Fatal(told(err))
 	}
-	second, _, err := tmpl.Draw(k, "report.yaml", tpl.Example(), o)
+	second, _, err := tmpl.Draw(k, "twice.yaml", []byte(drawnTwice), o)
 	if err != nil {
 		t.Fatal(told(err))
 	}
 	if !bytes.Equal(first, second) {
-		t.Error("two drawings of report's example differ")
+		t.Error("two drawings of one page differ")
 	}
 }
+
+// drawnTwice is a report of an html part, a diagram and a script, which TestDrawTwiceSame draws twice.
+const drawnTwice = `template: report
+lang: en
+sections:
+  - heading: Twice
+    parts:
+      - html: <details><summary>What the freeze covers</summary><p>Edits and uploads.</p></details>
+      - diagram:
+          title: The pages from the old server to the new host
+          parts:
+            - graph:
+                x: 20
+                y: 20
+                nodes:
+                  - box: { name: old, rows: [Old server] }
+                  - box: { name: new, rows: [New host] }
+                edges:
+                  - { from: old, to: new }
+      - script:
+          data: { pages: 1840 }
+          js: |
+            function (el, data) { el.textContent = data.pages + ' pages'; }
+`
