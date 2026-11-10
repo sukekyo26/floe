@@ -1,37 +1,13 @@
-# A report: a heading and parts per section, and subsections of a heading and parts after them. Text is
-# Markdown; code and commands go in code and terminal, which draws the prompt; numbers, steps and what
-# changes go in stats, steps and table; a name and its longer text goes in entries, its state in a
-# tag, and a table is for rows compared both along and across, a thing before and after too (the first
-# heading empty, a column for each state);
-# a table's cells are lines of Markdown, numbers in quotes, or pills; html goes in as it is; a script is a
-# function the page calls with an element to draw in and its data; a diagram is checked for overlaps
-# and overflowing text (frames may cross, and a frame's label is held to the frame's width, not its
-# height or a canvas written), and floe diagram example prints one of each kind.
+# An example of the structure: pick the parts from floe part list, and floe part show <part> schema.json prints a part's keys.
 template: report
 lang: en
 title: Moving the team wiki
 eyebrow: Plan · 2030-04
 lead: The wiki moves to the new host in two weekends, with the old one read-only in between.
 sections:
-  - heading: At a glance
+  - heading: The move
     parts:
-      - stats:
-          - { label: Pages, value: '1,840' }
-          - { label: Broken links, value: '120', note: '-35 since the last check', tone: good }
-          - { label: Downtime, value: '0', unit: hours }
-      - table:
-          columns: ['', Now, After the move]
-          rows:
-            - [Host, The old server, The new host]
-            - [Search, Built in, 'Rebuilt on `Sunday`']
-            - [Address, wiki.example.com, wiki.example.com]
-  - heading: Steps
-    parts:
-      - text: The pages move over **one weekend**; the old wiki stays readable until the new one opens.
-      - steps:
-          - { title: Freeze edits on the old wiki, text: On **Friday evening**., state: done }
-          - { title: Copy the pages and check the links, state: doing }
-          - title: Point the team's bookmarks at the new host
+      - text: The pages move over **two weekends**; the old wiki stays readable until the new one opens.
       - terminal:
           shell: bash
           steps:
@@ -45,60 +21,43 @@ sections:
           - code:
               file: old-wiki.conf
               text: |
-                # Read-only from Friday evening
+                # Read-only from the first Friday evening
                 read_only = true
                 banner = "This wiki has moved to the new host."
   - heading: Who does what
     parts:
       - entries:
           - title: Copy
-            tags: [Saturday, { pill: ready, tone: good }]
+            tags: [First weekend, { pill: ready, tone: good }]
             text: Copies the pages and keeps a list of what failed.
           - title: Links
-            tags: [Sunday, { pill: waits on the copy, tone: warn }]
+            tags: [Second weekend, { pill: waits on the copy, tone: warn }]
             text: Runs the link check and fixes what it finds.
-          - title: Bookmarks
-            tags: [Monday morning]
-            text: Sends the new address to the team.
-  - heading: How long the copy takes
-    parts:
-      - script:
-          data: { pages: 1840 }
-          js: |
-            function (el, data) {
-              el.innerHTML = '<label>Pages an hour <input type="range" min="100" max="1000" step="50" value="300"></label> <output></output>';
-              const input = el.querySelector('input'), out = el.querySelector('output');
-              const update = () => { out.textContent = `${Math.ceil(data.pages / input.value)} hours`; };
-              input.addEventListener('input', update);
-              update();
-            }
-  - heading: Where the pages go
-    parts:
-      - diagram:
-          width: 640
-          height: 112
-          title: The pages from the old server to the new host
-          parts:
-            - box: { x: 20, y: 30, w: 180, h: 52, rows: [Old server, [read-only, sub]] }
-            - box: { x: 230, y: 30, w: 180, h: 52, tone: accent, rows: [Copy the pages, [and check the links, sub]] }
-            - box: { x: 440, y: 30, w: 180, h: 52, tone: good, rows: [New host] }
-            - edge: { from: [200, 56], to: [230, 56] }
-            - edge: { from: [410, 56], to: [440, 56] }
   - heading: Risks
     parts:
       - table:
           columns:
             - Risk
-            - Likelihood
             - { title: Pages, num: true }
             - What we do
             - { title: State, pills: { watching: warn, covered: good, open: accent } }
           rows:
-            - [Broken links, High, '120', A link check after the copy, watching]
-            - [Lost attachments, Low, '8', Keep the old host for **a month**, covered]
-            - [Slow search, Unknown, "-", Rebuild the index on `Sunday`, open]
+            - [Broken links, '120', A link check after the copy, watching]
+            - [Lost attachments, '8', Keep the old host for **a month**, covered]
+            - [Slow search, "-", Rebuild the index with `wiki reindex`, open]
       - note:
           tone: warn
           title: Heads up
           text: Anyone editing during the freeze loses their changes.
-      - html: <details><summary>What the freeze covers</summary><p>Edits, comments and uploads.</p></details>
+  - heading: What changes for whom
+    parts:
+      - columns:
+          - title: Readers
+            parts:
+              - text: Nothing to do. Bookmarks still work, as the old address **redirects** to the new host.
+          - title: Scripts
+            parts:
+              - text: Point the wiki's API at the new host.
+              - code:
+                  file: wiki.env
+                  text: WIKI_HOST=new.example.com

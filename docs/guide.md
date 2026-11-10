@@ -7,8 +7,8 @@ floe turns a YAML file you write into a page for the user: it checks the file, r
 1. Pick a template from `floe template list`:
    - the one made for the page's purpose, if there is one (`design` for a design document, `handoff`, `runbook`, …);
    - else `report`;
-   - before writing, read its example and schema: `floe template show <template> example.yaml` and `floe template show <template> schema.json`.
-2. Name the file for the page, as `db-choice.yaml`: its name, without `.yaml`, names the page in its URL. Every data file needs `template` and `lang`; `title` names the page, and a `report`'s `lead` sums it up under the title. Leave `theme` out ([Themes](#themes)).
+   - before writing, read its example and schema: `floe template show <template> example.yaml` and `floe template show <template> schema.json`. The example shows the file's structure; do not treat its parts as a fixed set. Pick parts in step 3.
+2. Name the file for the page, as `db-choice.yaml`. The file's name without `.yaml` becomes the page's slug in its URL. Every data file needs `template` and `lang`; `title` names the page, and a `report`'s `lead` sums it up under the title. Leave `theme` out ([Themes](#themes)).
 
    ```yaml
    template: report
@@ -21,8 +21,8 @@ floe turns a YAML file you write into a page for the user: it checks the file, r
          - text: Freeze edits on **Friday evening**, then copy the pages.
    ```
 
-3. Pick the parts by the table in [Picking parts](#picking-parts). For each part the example does not show, look up its keys before writing it, as that section says: a guessed key is refused.
-4. Run `floe check db-choice.yaml`, fix every mistake, and run it again until it prints no mistake; when only `warning:` lines are left, you are done (they are advice).
+3. Run `floe part list` and choose parts that fit the content from those allowed by the template's schema (read in step 1). Where the choice is easily mistaken, use the table in [Picking parts](#picking-parts). For each part the example does not show, look up its keys before writing it, as that section says: a guessed key is refused.
+4. Run `floe check db-choice.yaml`, fix every mistake, and run it again until none is left. When only `warning:` lines are left, you are done; they are advice.
 5. Run `floe publish db-choice.yaml` and give the user the URL it prints. You need not fetch the page.
 
 ## Publishing again
@@ -37,9 +37,9 @@ floe turns a YAML file you write into a page for the user: it checks the file, r
 
 ## Picking parts
 
-Each item of `parts` is one key naming the part. `floe part list` lists each part's keys and what it is for. For parts whose keys are not listed (`chart`, `stats`, `diagram`, …), read `floe part show <part> schema.json` to see their keys, types and details. For a template of your own, read its `schema.json` too (`floe template show <template> schema.json`): it says which parts a section takes.
+Each item of `parts` is one key naming the part. `floe part list` lists each part's keys and what it is for. For parts whose keys are not listed (`chart`, `stats`, `diagram`, …), read `floe part show <part> schema.json` to see their keys, types and details. The template's `schema.json`, read in step 1, says which parts each section or field accepts.
 
-Pick the part by what the content is:
+Use this table when the right part is not obvious:
 
 | Content | Part |
 |---|---|
@@ -51,13 +51,14 @@ Pick the part by what the content is:
 | Questions for the reader to decide | `asks` |
 | Results of checks or tests | `checks`, each with `result: ok`, `ng` or `unchecked`; floe counts the results at the top; not the conditions of a choice (`table`, `options`) nor what is still to do (`checklist`) |
 | Events at dates | `timeline`; stages without dates are `steps` |
-| Rows compared along and across, each cell short; a thing before and after, one column each | `table` |
+| Short values compared in rows and columns; before-and-after values in separate columns (leave the first column's heading empty) | `table` |
+| Independent blocks to view side by side, each with its own parts; useful for before-and-after screens or code | `columns` |
 | A few key values at the top | `facts` |
 | Numbers over time, or compared | `chart` |
 | Structure or flow: boxes and arrows | `diagram` ([Diagrams](#diagrams)) |
 | Code; commands with what they printed | `code`; `terminal` (write no `$ `) |
 
-For anything else (large numbers, files, fields, links, …) read the descriptions in `floe part list`. Draw no table or diagram with characters in `text` or `code`. Values look like this:
+Draw no table or diagram with characters in `text` or `code`. Values look like this:
 
 ```yaml
 - text: |
@@ -127,9 +128,11 @@ t.yaml:10:16: got number, want string or object
 
 ## Reading mistakes
 
-`floe check` prints one mistake to a line, at `file:line:column:` (one of the whole file at `file:` alone), and exits 1. It checks in stages, so fixing the mistakes may bring out those of the next stage.
+A mistake is in what you wrote, so you fix it. A failure is in floe itself, so tell the user what it printed.
 
-- A key a part does not take, a key it lacks, or a value of another type is the schema refusing it: read the schema, as [Picking parts](#picking-parts) says.
+`floe check` prints one mistake per line, prefixed with `file:line:column:` (or just `file:` for a mistake in the whole file), and exits with code 1. It checks in stages, so fixing the mistakes may bring out those of the next stage.
+
+- Schema mistakes include keys a part does not accept, missing required keys, and values of the wrong type: read the schema, as [Picking parts](#picking-parts) explains.
 - A mistake of YAML: see the section above.
 
 ```text

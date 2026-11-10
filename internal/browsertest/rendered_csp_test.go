@@ -4,7 +4,6 @@ import (
 	"context"
 	"net/http"
 	"net/http/httptest"
-	"os"
 	"slices"
 	"strings"
 	"sync"
@@ -108,7 +107,7 @@ func listen(t *testing.T) (string, func() string) {
 }
 
 // A script part runs under the CSP of a page drawn from a data file: its function gets the element in
-// its place and its data, a key __proto__ a key of it, the example's slider among them.
+// its place and its data, a key __proto__ a key of it, and a slider that writes into the page as it moves.
 func TestRenderedScript(t *testing.T) { //nolint:paralleltest // the browser tests share one Chrome, one at a time
 	s := newSite(t)
 	b := s.b
@@ -119,17 +118,29 @@ func TestRenderedScript(t *testing.T) { //nolint:paralleltest // the browser tes
 	b.navigate("/a/script/?raw")
 	got := b.eval("const el = document.getElementById('moved'); el.previousElementSibling.textContent + '|' + el.textContent")
 
-	example, err := os.ReadFile("../kit/floe/templates/report/example.yaml")
-	if err != nil {
-		t.Fatal(err)
-	}
-	s.floe(t, "publish", s.write(t, "example.yaml", string(example)), "--slug", "example")
-	b.navigate("/a/example/?raw")
+	s.floe(t, "publish", s.write(t, "slider.yaml", sliderPage), "--slug", "slider")
+	b.navigate("/a/slider/?raw")
 	slider := b.eval("const input = document.querySelector('input[type=range]'); const before = input.closest('div').querySelector('output').textContent;" +
 		"input.value = 1000; input.dispatchEvent(new Event('input')); before + ' ' + input.closest('div').querySelector('output').textContent")
 
 	check(t, "script", []string{got, slider}, "before|moves </script> __proto__,words|7 hours 2 hours")
 }
+
+const sliderPage = `template: report
+lang: en
+sections:
+  - parts:
+      - script:
+          data: { pages: 1840 }
+          js: |
+            function (el, data) {
+              el.innerHTML = '<label>Pages an hour <input type="range" min="100" max="1000" step="50" value="300"></label> <output></output>';
+              const input = el.querySelector('input'), out = el.querySelector('output');
+              const update = () => { out.textContent = ` + "`${Math.ceil(data.pages / input.value)} hours`" + `; };
+              input.addEventListener('input', update);
+              update();
+            }
+`
 
 // framedDocument is the URL of the document in the one frame of the tab's page, "" while there is none but
 // about:blank. The page's frame tree holds it when the frame runs in the page's process; Chrome for Testing puts a
