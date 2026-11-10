@@ -3,7 +3,8 @@ package browsertest_test
 import "testing"
 
 // barsUnitPage holds bars whose units are a short one in Japanese, a long one in Japanese with no space in it, and one
-// of many words, each beside a bar of a whole.
+// of many words, each beside a bar of a whole. The long ones are many times the column, whatever the width of the fonts
+// a machine has: the CI's, with other Japanese fonts, wrapped a unit of one line here.
 const barsUnitPage = `template: report
 lang: ja
 title: Bars
@@ -12,8 +13,8 @@ sections:
     parts:
       - bars:
           - { label: 取り込み, value: 1200, of: 1840, unit: ページ }
-          - { label: 速さ, value: 30, of: 100, unit: 新しいホストへのページ毎時 }
-          - { label: Speed, value: 30, of: 100, unit: pages per hour for each team on the new host }
+          - { label: 速さ, value: 30, of: 100, unit: 新しいホストへのページ毎時新しいホストへのページ毎時新しいホストへのページ毎時 }
+          - { label: Speed, value: 30, of: 100, unit: pages per hour for each team on the new host and pages per hour for each team on the old host }
 `
 
 // TestRenderedBarsUnit lays the units out on a phone: a short unit in Japanese stays whole (without word-break: keep-all
