@@ -204,10 +204,10 @@ floe の主要な変更を記録します。フォーマットは
   細い灰色の輪を 1 つ出し、マウスで押したボタンには出さない。
 - 追加：floe のテンプレート `report`（見出しの下に節を並べ、節ごとに見出しと部品と、その後に 1 段だけの
   小節（見出し `<h3>` と部品）を置く。見出しは、書くなら空の字にできず、小節のある節には要る）と、
-  テンプレートが `floe:///parts/<name>.json` で指す 28 の部品（`floe part list --all` が並べる）。
-  そのうち 26 は report の節が Markdown の `text`・`html` と並べて取るもの（`code`・
+  テンプレートが `floe:///parts/<name>.json` で指す 26 の部品（`floe part list --all` が並べる）。
+  そのうち 24 は report の節が Markdown の `text`・`html` と並べて取るもの（`code`・
   `terminal`・`table`・`image`（画面の写しなど、データファイルのディレクトリの画像）から
-  `findings`・`decision`・`entries`・`timeline`・`tabs`・`diagram`・`script` まで）、`cell` と `stack` はほかの部品が中に持つもの。
+  `decision`・`entries`・`timeline`・`tabs`・`diagram`・`script` まで）、`cell` と `stack` はほかの部品が中に持つもの。
   部品は、自分が置かれる段を知らないので見出しを描かない。`options` と `decision` の題も見出しでなく、
   部品をどこに置いてもページの見出しの段が崩れない。
 - 追加：データファイルが `theme:` で選ぶ 12 のテーマ（`default`・`soft`・`editorial`・
@@ -432,9 +432,6 @@ floe の主要な変更を記録します。フォーマットは
   注記の形で描く。pill は、置かれた所によらず本文の字体になる（retro の options の選んだ
   案の札は、カードの題の Georgia でなくなる）。notebook の pill は不透明に塗り、紙の
   罫線が透けない。
-- 変更：findings の nit は tone `muted` の pill になり、テーマのほかの pill と同じ形で
-  描く（blueprint・editorial・washi は地なし、ink は塗り、brutal・notebook・swiss は
-  テーマの字の色）。
 - 変更：tone は、class でなく `data-floe-tone` で付ける（自分の部品・テーマ・
   テンプレートと、データファイルの html。pill は
   `<span data-floe-tone="good" data-floe-part="cell">`）。floe は、付けた要素に

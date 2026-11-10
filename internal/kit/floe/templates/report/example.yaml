@@ -1,6 +1,6 @@
 # A report: a heading and parts per section, and subsections of a heading and parts after them. Text is
 # Markdown; code and commands go in code and terminal, which draws the prompt; numbers, steps and what
-# changes go in stats, steps and compare; a name and its longer text goes in entries, its state in a
+# changes go in stats, steps and table; a name and its longer text goes in entries, its state in a
 # tag, and a table is for rows compared both along and across;
 # a table's cells are lines of Markdown, numbers in quotes, or pills; html goes in as it is; a script is a
 # function the page calls with an element to draw in and its data; a diagram is checked for overlaps
@@ -18,13 +18,12 @@ sections:
           - { label: Pages, value: '1,840' }
           - { label: Broken links, value: '120', note: '-35 since the last check', tone: good }
           - { label: Downtime, value: '0', unit: hours }
-      - compare:
-          before: Now
-          after: After the move
+      - table:
+          columns: ['', Now, After the move]
           rows:
-            - { what: Host, before: The old server, after: The new host }
-            - { what: Search, before: Built in, after: Rebuilt on `Sunday` }
-            - { what: Address, before: wiki.example.com, after: wiki.example.com }
+            - [Host, The old server, The new host]
+            - [Search, Built in, 'Rebuilt on `Sunday`']
+            - [Address, wiki.example.com, wiki.example.com]
   - heading: Steps
     parts:
       - text: The pages move over **one weekend**; the old wiki stays readable until the new one opens.

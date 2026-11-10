@@ -22,9 +22,15 @@ sections:
             parts:
               - text: Second.
       - diff: { file: a.conf, lang: ini, text: "@@ -1 +1 @@\n-read_only = false\n+read_only = true\n" }
-      - findings:
-          - { level: must, at: a.conf:1, text: The wiki is still open, status: { pill: fixed, tone: good } }
-          - { level: nit, text: Two pages share a title }
+      - table:
+          columns:
+            - { title: Level, pills: { must: bad, nit: muted } }
+            - At
+            - Finding
+            - Status
+          rows:
+            - [must, '`a.conf:1`', The wiki is still open, { pill: fixed, tone: good }]
+            - [nit, '', Two pages share a title, '']
       - stats:
           - { label: Pages, value: '1,840' }
           - { label: Broken links, value: '120', tone: good }

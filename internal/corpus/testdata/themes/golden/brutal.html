@@ -372,70 +372,6 @@ blockquote {
 </style>
 <style>
 @layer floe.parts.depth0 {
-@scope ([data-floe-part="findings"]:where(:not(:is([data-floe-part], [data-floe-look]) *)), [data-floe-part="table"]:where(:not(:is([data-floe-part], [data-floe-look]) *))) to (:scope [data-floe-part] > *) {
-/* A panel: a face of the surface in a thin frame, its corners round, lifted a little. On its ground it sets its text's
-   colour and takes no face from around it (a band's); on a part's box base.css does that for what the box holds, the
-   box's ring staying in the face around it */
-:scope { background: var(--surface); color: var(--fg); border: 1px solid var(--line); border-radius: var(--radius); }
-:scope:where(:not([data-floe-part])) { --face: initial; --on-face: initial; }
-}
-}
-</style>
-<style>
-@layer floe.looks.depth1 {
-@scope ([data-floe-look~="panel"]:where(:is([data-floe-part], [data-floe-look]) *):where(:not(:is([data-floe-part], [data-floe-look]) :is([data-floe-part], [data-floe-look]) *))) to (:scope [data-floe-part] > *) {
-/* A panel: a face of the surface in a thin frame, its corners round, lifted a little. On its ground it sets its text's
-   colour and takes no face from around it (a band's); on a part's box base.css does that for what the box holds, the
-   box's ring staying in the face around it */
-:scope { background: var(--surface); color: var(--fg); border: 1px solid var(--line); border-radius: var(--radius); }
-:scope:where(:not([data-floe-part])) { --face: initial; --on-face: initial; }
-}
-}
-</style>
-<style>
-@layer floe.parts.depth0 {
-@scope ([data-floe-part="findings"]:where(:not(:is([data-floe-part], [data-floe-look]) *)), [data-floe-part="table"]:where(:not(:is([data-floe-part], [data-floe-look]) *))) to (:scope [data-floe-part] > *) {
-/* On narrow screens, the table scrolls sideways inside its element instead of squeezing its columns, telling nothing of
-   its width outside (base.css's pre has the LIMIT); on paper its columns share the paper's width, words kept whole */
-@media screen { :scope { overflow-x: auto; contain: inline-size; } }
-:scope table { border-collapse: collapse; width: 100%; overflow-wrap: normal; }
-:scope :is(th, td) { text-align: left; vertical-align: baseline; padding: var(--floe-row-pad) 0.8rem; }
-@media screen {
-  :scope :is(th, td):not(.num) { min-width: 7em; }
-  /* A num column's heading wraps as long as it needs, but not a character a line */
-  :scope th.num { min-width: 6em; }
-}
-:scope thead th { font-size: var(--floe-text-small); font-weight: 600; color: var(--table-head-fg, var(--muted)); }
-/* The head's ground is its row's, so that a gradient runs once across it, not once in each cell */
-/* LIMIT: Safari is not seen to paint a row's background once across it; if it paints it in each cell, a gradient starts
-   again in each column there (aurora's line). Measure it on darwin when a head comes to rely on it more */
-:scope thead tr { background: var(--table-head-bg, var(--quiet)); }
-/* A theme sets the head's ground and colour by --table-head-bg and --table-head-fg, and the rule between rows by
-   --table-rule (none for no rule) */
-:scope tbody tr + tr td { border-top: var(--table-rule, 1px solid var(--line)); }
-:scope .num { text-align: right; }
-:scope td.num {
-  min-width: auto; font-family: var(--mono);
-  font-variant-numeric: tabular-nums; white-space: nowrap;
-}
-}
-}
-</style>
-<style>
-@layer floe.parts.depth0 {
-@scope ([data-floe-part="findings"]:where(:not(:is([data-floe-part], [data-floe-look]) *))) to (:scope [data-floe-part] > *) {
-/* In the table's look, without a heading: a level's pill, then where it is and what became of it over what it is */
-:scope td.level { width: 1%; min-width: auto; white-space: nowrap; }
-:scope .head { display: flex; flex-wrap: wrap; align-items: center; gap: 0.2rem 0.75rem; }
-/* Where it is breaks, though in a table: a path would widen the column too far */
-:scope .at { padding: 0; background: none; font-size: var(--floe-text-small); color: var(--accent); overflow-wrap: anywhere; }
-:scope .status { margin-left: auto; }
-:scope .why { margin-top: 0.15rem; font-size: var(--floe-text-aside); color: var(--muted); }
-}
-}
-</style>
-<style>
-@layer floe.parts.depth0 {
 @scope ([data-floe-part="note"]:where(:not(:is([data-floe-part], [data-floe-look]) *))) to (:scope [data-floe-part] > *) {
 /* A mark of the tone stands at the left, the box a row (marks: box) that floe lays out, drawn by the style and
    silent to a screen reader, to which the hidden word at the box's head tells the tone instead: its Markdown stands in a
@@ -540,6 +476,28 @@ blockquote {
 }
 </style>
 <style>
+@layer floe.parts.depth0 {
+@scope ([data-floe-part="table"]:where(:not(:is([data-floe-part], [data-floe-look]) *))) to (:scope [data-floe-part] > *) {
+/* A panel: a face of the surface in a thin frame, its corners round, lifted a little. On its ground it sets its text's
+   colour and takes no face from around it (a band's); on a part's box base.css does that for what the box holds, the
+   box's ring staying in the face around it */
+:scope { background: var(--surface); color: var(--fg); border: 1px solid var(--line); border-radius: var(--radius); }
+:scope:where(:not([data-floe-part])) { --face: initial; --on-face: initial; }
+}
+}
+</style>
+<style>
+@layer floe.looks.depth1 {
+@scope ([data-floe-look~="panel"]:where(:is([data-floe-part], [data-floe-look]) *):where(:not(:is([data-floe-part], [data-floe-look]) :is([data-floe-part], [data-floe-look]) *))) to (:scope [data-floe-part] > *) {
+/* A panel: a face of the surface in a thin frame, its corners round, lifted a little. On its ground it sets its text's
+   colour and takes no face from around it (a band's); on a part's box base.css does that for what the box holds, the
+   box's ring staying in the face around it */
+:scope { background: var(--surface); color: var(--fg); border: 1px solid var(--line); border-radius: var(--radius); }
+:scope:where(:not([data-floe-part])) { --face: initial; --on-face: initial; }
+}
+}
+</style>
+<style>
 @layer floe.parts.depth1 {
 @scope ([data-floe-part="stack"]:where(:is([data-floe-part], [data-floe-look]) *):where(:not(:is([data-floe-part], [data-floe-look]) :is([data-floe-part], [data-floe-look]) *))) to (:scope [data-floe-part] > *) {
 /* What details, tabs, columns and an item of entries, checks or options hold.
@@ -548,6 +506,35 @@ blockquote {
 :scope { display: grid; gap: var(--floe-room); }
 /* A word kept whole (a table's on paper) overflows the stack's column instead of widening it */
 :scope > * { min-width: 0; }
+}
+}
+</style>
+<style>
+@layer floe.parts.depth0 {
+@scope ([data-floe-part="table"]:where(:not(:is([data-floe-part], [data-floe-look]) *))) to (:scope [data-floe-part] > *) {
+/* On narrow screens, the table scrolls sideways inside its element instead of squeezing its columns, telling nothing of
+   its width outside (base.css's pre has the LIMIT); on paper its columns share the paper's width, words kept whole */
+@media screen { :scope { overflow-x: auto; contain: inline-size; } }
+:scope table { border-collapse: collapse; width: 100%; overflow-wrap: normal; }
+:scope :is(th, td) { text-align: left; vertical-align: baseline; padding: var(--floe-row-pad) 0.8rem; }
+@media screen {
+  :scope :is(th, td):not(.num) { min-width: 7em; }
+  /* A num column's heading wraps as long as it needs, but not a character a line */
+  :scope th.num { min-width: 6em; }
+}
+:scope thead th { font-size: var(--floe-text-small); font-weight: 600; color: var(--table-head-fg, var(--muted)); }
+/* The head's ground is its row's, so that a gradient runs once across it, not once in each cell */
+/* LIMIT: Safari is not seen to paint a row's background once across it; if it paints it in each cell, a gradient starts
+   again in each column there (aurora's line). Measure it on darwin when a head comes to rely on it more */
+:scope thead tr { background: var(--table-head-bg, var(--quiet)); }
+/* A theme sets the head's ground and colour by --table-head-bg and --table-head-fg, and the rule between rows by
+   --table-rule (none for no rule) */
+:scope tbody tr + tr td { border-top: var(--table-rule, 1px solid var(--line)); }
+:scope .num { text-align: right; }
+:scope td.num {
+  min-width: auto; font-family: var(--mono);
+  font-variant-numeric: tabular-nums; white-space: nowrap;
+}
 }
 }
 </style>
@@ -643,28 +630,6 @@ blockquote {
 </style>
 <style>
 @layer floe.parts.depth0 {
-@scope ([data-floe-part="findings"]:where(:not(:is([data-floe-part], [data-floe-look]) *)), [data-floe-part="table"]:where(:not(:is([data-floe-part], [data-floe-look]) *))) to (:scope [data-floe-part] > *) {
-:scope { border: var(--brutal-frame) var(--fg); --floe-shadow-color: var(--fg); }
-}
-}
-</style>
-<style>
-@layer floe.looks.depth1 {
-@scope ([data-floe-look~="panel"]:where(:is([data-floe-part], [data-floe-look]) *):where(:not(:is([data-floe-part], [data-floe-look]) :is([data-floe-part], [data-floe-look]) *))) to (:scope [data-floe-part] > *) {
-:scope { border: var(--brutal-frame) var(--fg); --floe-shadow-color: var(--fg); }
-}
-}
-</style>
-<style>
-@layer floe.parts.depth0 {
-@scope ([data-floe-part="findings"]:where(:not(:is([data-floe-part], [data-floe-look]) *)), [data-floe-part="table"]:where(:not(:is([data-floe-part], [data-floe-look]) *))) to (:scope [data-floe-part] > *) {
-:scope { --table-head-bg: var(--brutal-head-bg); --table-head-fg: var(--brutal-head-fg); --table-rule: 2px solid var(--fg); }
-:scope thead th { --face: var(--table-head-bg); --on-face: var(--table-head-fg); font-weight: 900; }
-}
-}
-</style>
-<style>
-@layer floe.parts.depth0 {
 @scope ([data-floe-part="note"]:where(:not(:is([data-floe-part], [data-floe-look]) *))) to (:scope [data-floe-part] > *) {
 :scope {
   border: var(--brutal-frame) var(--fg); background: var(--surface); --floe-mark: 2.15rem;
@@ -690,6 +655,28 @@ blockquote {
 :scope.numbered > .card:nth-child(3n + 2) { --face: var(--brutal-blue); }
 :scope.numbered > .card:nth-child(3n) { --face: var(--brutal-pink); }
 :scope.numbered > .card :is(p, ul, ol, li, a) { font-weight: 600; }
+}
+}
+</style>
+<style>
+@layer floe.parts.depth0 {
+@scope ([data-floe-part="table"]:where(:not(:is([data-floe-part], [data-floe-look]) *))) to (:scope [data-floe-part] > *) {
+:scope { border: var(--brutal-frame) var(--fg); --floe-shadow-color: var(--fg); }
+}
+}
+</style>
+<style>
+@layer floe.looks.depth1 {
+@scope ([data-floe-look~="panel"]:where(:is([data-floe-part], [data-floe-look]) *):where(:not(:is([data-floe-part], [data-floe-look]) :is([data-floe-part], [data-floe-look]) *))) to (:scope [data-floe-part] > *) {
+:scope { border: var(--brutal-frame) var(--fg); --floe-shadow-color: var(--fg); }
+}
+}
+</style>
+<style>
+@layer floe.parts.depth0 {
+@scope ([data-floe-part="table"]:where(:not(:is([data-floe-part], [data-floe-look]) *))) to (:scope [data-floe-part] > *) {
+:scope { --table-head-bg: var(--brutal-head-bg); --table-head-fg: var(--brutal-head-fg); --table-rule: 2px solid var(--fg); }
+:scope thead th { --face: var(--table-head-bg); --on-face: var(--table-head-fg); font-weight: 900; }
 }
 }
 </style>
@@ -998,10 +985,11 @@ main > .body, .body > .sections { display: grid; gap: 2.5rem; grid-template-colu
   show(words.copy, false);
   document.currentScript.after(button, status);
 })({"copied":"Copied","copy":"Copy","failed":"Could not copy"});</script></figure>
-<div data-floe-part="findings"><table>
+<div data-floe-part="table"><table>
+<thead><tr><th scope="col">Level</th><th scope="col">At</th><th scope="col">Finding</th><th scope="col">Status</th></tr></thead>
 <tbody>
-<tr><td class="level"><span data-floe-tone="bad" data-floe-part="cell">must</span></td><td><div class="head"><code class="at">a.conf:1</code><span class="status"><span data-floe-tone="good" data-floe-part="cell">fixed</span></span></div><div>The wiki is still open</div></td></tr>
-<tr><td class="level"><span data-floe-tone="muted" data-floe-part="cell">nit</span></td><td><div>Two pages share a title</div></td></tr>
+<tr><td><span data-floe-tone="bad" data-floe-part="cell">must</span></td><td><code>a.conf:1</code></td><td>The wiki is still open</td><td><span data-floe-tone="good" data-floe-part="cell">fixed</span></td></tr>
+<tr><td><span data-floe-tone="muted" data-floe-part="cell">nit</span></td><td></td><td>Two pages share a title</td><td></td></tr>
 </tbody>
 </table></div>
 </section>

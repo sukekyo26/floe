@@ -278,11 +278,11 @@ adheres to [Semantic Versioning](https://semver.org/).
 - Add floe's template `report`: a header over sections, each a heading over
   parts and then subsections, one level of a heading (an `<h3>`) over parts (a
   heading, when written, is not empty, and a section with subsections has
-  one); and twenty-eight parts a template refers to as
-  `floe:///parts/<name>.json` (`floe part list --all` lists them): twenty-six that a
+  one); and twenty-six parts a template refers to as
+  `floe:///parts/<name>.json` (`floe part list --all` lists them): twenty-four that a
   section of report takes beside Markdown `text` and `html`, from `code`,
   `terminal`, `table` and `image` (an image of the data file's directory,
-  such as a screenshot) to `findings`, `decision`, `entries`, `timeline`,
+  such as a screenshot) to `decision`, `entries`, `timeline`,
   `tabs`, `diagram` and `script`, and `cell` and `stack`, which other parts
   hold. A part draws no heading, as it knows not the level it is put at: the
   titles of `options` and `decision` are not headings, so that the headings of
@@ -589,9 +589,6 @@ adheres to [Semantic Versioning](https://semver.org/).
   face wherever it stands (retro's pick in options, in its card's title, no
   longer in Georgia). notebook's pills are filled solid, the paper's lines no
   longer through them.
-- Change findings' nit to be a pill of the tone `muted`, drawn as the theme
-  draws its other pills: with no ground in blueprint, editorial and washi,
-  filled in ink, in the theme's text colour in brutal, notebook and swiss.
 - Change a tone to be marked by `data-floe-tone`, not by a class, in parts,
   themes and templates of one's own and in a data file's html (a pill written
   as `<span data-floe-tone="good" data-floe-part="cell">`). floe gives what is

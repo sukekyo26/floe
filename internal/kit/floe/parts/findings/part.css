@@ -1,7 +1,0 @@
-/* In the table's look, without a heading: a level's pill, then where it is and what became of it over what it is */
-:scope td.level { width: 1%; min-width: auto; white-space: nowrap; }
-:scope .head { display: flex; flex-wrap: wrap; align-items: center; gap: 0.2rem 0.75rem; }
-/* Where it is breaks, though in a table: a path would widen the column too far */
-:scope .at { padding: 0; background: none; font-size: var(--floe-text-small); color: var(--accent); overflow-wrap: anywhere; }
-:scope .status { margin-left: auto; }
-:scope .why { margin-top: 0.15rem; font-size: var(--floe-text-aside); color: var(--muted); }
