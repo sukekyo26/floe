@@ -81,7 +81,7 @@ To list things, pick the part by what the rows are:
 - What happened in order: `timeline`.
 - Words and what they mean: a Markdown list, or `entries` when a meaning is long.
 - A few short values at the top of a page: `facts`.
-- Rows compared both along and across, each cell short, such as short values before and after, one column each, the first heading empty: `table`.
+- Rows compared both along and across, each cell short, such as short before-and-after values in separate columns (the first column's heading empty): `table`.
 
 The parts `report` takes in a section, with your own parts too ([parts.md](parts.md)), which `floe part list` lists with these:
 
@@ -103,7 +103,7 @@ The parts `report` takes in a section, with your own parts too ([parts.md](parts
 | `decision`, `fields` | A decision, the keys of a setting. |
 | `timeline`, `bars`, `keys` | Dates in order, bars of values, keys to press. A bar with `of` is filled as far as its `value` goes of that whole and reads `5 / 8`, for how far a piece of work has gone; the others are shares of the largest value among them. |
 | `details`, `tabs` | Parts folded under a title, or shown one at a time under tabs, for things read one at a time; they hold every part but `tabs`, `columns` and `html`: a form in tabs' form would be dropped, columns would hold columns, and an `html` part's `</form>` would close tabs' form. A part laid out in cards, keys, a timeline and bars lays out by the width of its place, not the window's, and the pills of `asks` wrap there. A `script` in a closed `details` or a tab not shown runs with an element of no width. |
-| `columns` | Parts side by side, to see at once: a screen or code before and after, data beside its reading. Each column is an optional `title` over `parts`, which hold what `details` holds. Columns are of one width, 16rem at the least, so that how many stand side by side follows the width of the page's text (five at most in `report`, three in `adr` and `runbook`), and the rest fold under them. |
+| `columns` | Independent blocks side by side, each with its own parts: before-and-after screens or code, data beside its reading. Each column is an optional `title` over `parts`, which hold what `details` holds. Columns are of one width, 16rem at the least, so that how many stand side by side follows the width of the page's text (five at most in `report`, three in `adr` and `runbook`), and the rest fold under them. |
 | `diagram` | A diagram, checked and drawn as inline SVG ([diagrams.md](diagrams.md)). |
 | `script` | Something that moves ([Scripts and HTML](#scripts-and-html)). |
 | `html` | HTML that goes in as it is: a key of `any.json`, not a part of its own, so it has no schema.json; `floe part show html any.json` prints `any.json`, which holds it ([Scripts and HTML](#scripts-and-html)). |

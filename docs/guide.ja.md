@@ -9,7 +9,7 @@ floe は、あなたが YAML のファイルで書いたページをユーザー
 1. `floe template list` からテンプレートを選ぶ：
    - ページの目的のために作られたものがあれば、それ（設計書なら `design`、`handoff`、`runbook` など）
    - 無ければ `report`
-   - 書く前に、見本と schema を読む：`floe template show <template> example.yaml` と `floe template show <template> schema.json`。見本はファイルの形（項目と節の組み方）を見るためのもので、使う部品の一覧ではない。部品は手順 3 で選ぶ
+   - 書く前に、見本と schema を読む：`floe template show <template> example.yaml` と `floe template show <template> schema.json`。見本はファイルの組み立て（項目と節の組み方）を見せるもので、その部品を決まった組と思わない。部品は手順 3 で選ぶ
 2. ファイルにはページの名前を付ける（`db-choice.yaml` など）。`.yaml` を除いた名前が、ページの URL の名前になります。データファイルには必ず `template` と `lang` を書く。`title` はページの題、`report` の `lead` は題の下の要約です。`theme` は書かない（[テーマ](#テーマ)）。
 
    ```yaml
@@ -23,7 +23,7 @@ floe は、あなたが YAML のファイルで書いたページをユーザー
          - text: Freeze edits on **Friday evening**, then copy the pages.
    ```
 
-3. `floe part list` を走らせ、手順 1 で読んだテンプレートの schema がその場所に置ける部品から、中身に合うものを選ぶ。迷いやすい選び方は[部品を選ぶ](#部品を選ぶ)の表に従う。見本に無い部品は、書く前に、その節のとおりに鍵を調べる。推した鍵は断られます。
+3. `floe part list` を走らせ、手順 1 で読んだテンプレートの schema が許す部品から、中身に合うものを選ぶ。迷いやすい選び方は[部品を選ぶ](#部品を選ぶ)の表に従う。見本に無い部品は、書く前に、その節のとおりに鍵を調べる。推した鍵は断られます。
 4. `floe check db-choice.yaml` を走らせ、誤りを全部直して、誤りを出さなくなるまで走らせ直す。`warning:` の行だけが残ったら済みです（勧めなので）。
 5. `floe publish db-choice.yaml` を走らせ、出た URL をユーザーに渡す。ページを自分で取りに行かなくてよい。
 
@@ -39,7 +39,7 @@ floe は、あなたが YAML のファイルで書いたページをユーザー
 
 ## 部品を選ぶ
 
-`parts` の各項目は、部品を名指す鍵 1 つです。`floe part list` が各部品の鍵と使い道を出します。鍵が並ばない部品（`chart`・`stats`・`diagram` など）は、`floe part show <part> schema.json` を読んで、鍵と型と詳しいことを見る。手順 1 で読んだテンプレートの `schema.json` に、それぞれの場所に置ける部品が書いてあります。
+`parts` の各項目は、部品を名指す鍵 1 つです。`floe part list` が各部品の鍵と使い道を出します。鍵が並ばない部品（`chart`・`stats`・`diagram` など）は、`floe part show <part> schema.json` を読んで、鍵と型と詳しいことを見る。手順 1 で読んだテンプレートの `schema.json` に、節や欄ごとに置ける部品が書いてあります。
 
 迷いやすい所は、中身で部品を選ぶ：
 
@@ -53,8 +53,8 @@ floe は、あなたが YAML のファイルで書いたページをユーザー
 | 読み手に決めてほしい問い | `asks` |
 | 確かめた結果、テストの結果 | `checks`（各項目に `result: ok`・`ng`・`unchecked`。floe が結果の数を上に出す）。選ぶ条件（`table`・`options`）やまだすること（`checklist`）には使わない |
 | 日付のある出来事 | `timeline`。日付の無い段は `steps` |
-| 縦にも横にも比べる行、短い升（短い値の前と後は 1 列ずつ、先頭の見出しは空） | `table` |
-| 横に並べて同時に見せるもの、それぞれに部品（画面やコードの前と後） | `columns` |
+| 縦にも横にも比べる行、短い升（短い値の前と後は別々の列に。先頭の列の見出しは空にする） | `table` |
+| 横に並べて見る、互いに独立したまとまり。それぞれに部品（画面やコードの前と後に） | `columns` |
 | 頭に置く少しの値 | `facts` |
 | 数の動き、数の比べ | `chart` |
 | 構成や流れ：箱と矢印 | `diagram`（[図](#図)） |

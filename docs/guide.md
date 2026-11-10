@@ -7,7 +7,7 @@ floe turns a YAML file you write into a page for the user: it checks the file, r
 1. Pick a template from `floe template list`:
    - the one made for the page's purpose, if there is one (`design` for a design document, `handoff`, `runbook`, …);
    - else `report`;
-   - before writing, read its example and schema: `floe template show <template> example.yaml` and `floe template show <template> schema.json`. The example shows the shape of the file, not the parts to use: pick the parts in step 3.
+   - before writing, read its example and schema: `floe template show <template> example.yaml` and `floe template show <template> schema.json`. The example shows the file's structure; do not treat its parts as a fixed set. Pick parts in step 3.
 2. Name the file for the page, as `db-choice.yaml`: its name, without `.yaml`, names the page in its URL. Every data file needs `template` and `lang`; `title` names the page, and a `report`'s `lead` sums it up under the title. Leave `theme` out ([Themes](#themes)).
 
    ```yaml
@@ -21,7 +21,7 @@ floe turns a YAML file you write into a page for the user: it checks the file, r
          - text: Freeze edits on **Friday evening**, then copy the pages.
    ```
 
-3. Run `floe part list` and pick, from the parts the template's schema (read in step 1) takes there, those that fit the content; where the choice is easily mistaken, follow the table in [Picking parts](#picking-parts). For each part the example does not show, look up its keys before writing it, as that section says: a guessed key is refused.
+3. Run `floe part list` and choose parts that fit the content from those allowed by the template's schema (read in step 1); where the choice is easily mistaken, follow the table in [Picking parts](#picking-parts). For each part the example does not show, look up its keys before writing it, as that section says: a guessed key is refused.
 4. Run `floe check db-choice.yaml`, fix every mistake, and run it again until it prints no mistake; when only `warning:` lines are left, you are done (they are advice).
 5. Run `floe publish db-choice.yaml` and give the user the URL it prints. You need not fetch the page.
 
@@ -37,7 +37,7 @@ floe turns a YAML file you write into a page for the user: it checks the file, r
 
 ## Picking parts
 
-Each item of `parts` is one key naming the part. `floe part list` lists each part's keys and what it is for. For parts whose keys are not listed (`chart`, `stats`, `diagram`, …), read `floe part show <part> schema.json` to see their keys, types and details. The template's `schema.json`, read in step 1, says which parts each place takes.
+Each item of `parts` is one key naming the part. `floe part list` lists each part's keys and what it is for. For parts whose keys are not listed (`chart`, `stats`, `diagram`, …), read `floe part show <part> schema.json` to see their keys, types and details. The template's `schema.json`, read in step 1, says which parts each section or field accepts.
 
 Where the choice is easily mistaken, pick the part by what the content is:
 
@@ -51,8 +51,8 @@ Where the choice is easily mistaken, pick the part by what the content is:
 | Questions for the reader to decide | `asks` |
 | Results of checks or tests | `checks`, each with `result: ok`, `ng` or `unchecked`; floe counts the results at the top; not the conditions of a choice (`table`, `options`) nor what is still to do (`checklist`) |
 | Events at dates | `timeline`; stages without dates are `steps` |
-| Rows compared along and across, each cell short; short values before and after, one column each, the first heading empty | `table` |
-| Things to see at once, side by side, each with its own parts; a screen or code before and after | `columns` |
+| Rows compared along and across, each cell short; short before-and-after values in separate columns (leave the first column's heading empty) | `table` |
+| Independent blocks to view side by side, each with its own parts; useful for before-and-after screens or code | `columns` |
 | A few key values at the top | `facts` |
 | Numbers over time, or compared | `chart` |
 | Structure or flow: boxes and arrows | `diagram` ([Diagrams](#diagrams)) |
