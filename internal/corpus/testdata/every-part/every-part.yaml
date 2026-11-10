@@ -374,3 +374,16 @@ sections:
             function (el, data) {
               el.textContent = `${data.pages} pages`;
             }
+      - diagram:
+          title: The pages from the old server to the new host
+          parts:
+            - graph:
+                x: 20
+                y: 20
+                nodes:
+                  - box: { name: old, rows: [Old server, [read-only, sub]] }
+                  - box: { name: copy, tone: accent, rows: [Copy the pages] }
+                  - box: { name: new, tone: good, rows: [New host] }
+                edges:
+                  - { from: old, to: copy }
+                  - { from: copy, to: new }
