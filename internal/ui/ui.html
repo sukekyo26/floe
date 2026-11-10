@@ -28,9 +28,9 @@
     --brand-glow: color-mix(in srgb, var(--logo-line) 35%, transparent);
     /* The projects' colors, by projectOrder */
     --pc0: #e5533d; --pc1: #2f6bff; --pc2: #16a37a; --pc3: #b04fd6; --pc4: #d99a00; --pc5: #0f9bb5;
-    /* Mixed of the colors above: a down server's frame, the live dot's pulse, a primary button pointed at, a check box's frame,
+    /* Mixed of the colors above: a down server's frame, a primary button pointed at, a check box's frame,
        an armed delete's frame */
-    --down-line: color-mix(in srgb, var(--danger) 40%, var(--line)); --pulse: color-mix(in srgb, var(--good) 45%, transparent); --ink-hover: color-mix(in srgb, var(--ink) 82%, var(--bg));
+    --down-line: color-mix(in srgb, var(--danger) 40%, var(--line)); --ink-hover: color-mix(in srgb, var(--ink) 82%, var(--bg));
     --box-line: color-mix(in srgb, var(--faint) 80%, transparent); --armed-line: color-mix(in srgb, var(--danger) 50%, transparent);
     --scrim: rgb(34 33 31 / 0.4);
     --shadow-sm: 0 1px 2px rgb(34 33 31 / 0.06);
@@ -118,15 +118,15 @@
     flex: none; padding: 0.15rem 0.5rem; font-size: var(--text-label); font-weight: 600; color: var(--muted);
     background: var(--subtle); border: 1px solid var(--line); border-radius: 999px;
   }
+  /* Shown only while the connection is lost. Connected, it stays in the page, empty, as a status region must to be read as it changes.
+     LIMIT: lost, the label in the bar's flow pushes the list's search, centered by its auto margins, to the right (89px at 1280px, 179px at 700px), and back when it is found again. Take the label out of the flow if that comes to trouble someone */
   .server {
-    display: flex; align-items: center; gap: 0.5rem; padding: 0.3rem 0.7rem; font: 600 var(--text-label)/1 var(--body); color: var(--muted);
-    background: var(--panel); border: 1px solid var(--line); border-radius: 999px; font-variant-numeric: tabular-nums;
+    display: flex; align-items: center; gap: 0.5rem; padding: 0.3rem 0.7rem; font: 600 var(--text-label)/1 var(--body); color: var(--danger);
+    background: var(--panel); border: 1px solid var(--down-line); border-radius: 999px; font-variant-numeric: tabular-nums; white-space: nowrap;
   }
-  .server::before { content: ""; flex: none; width: 6px; height: 6px; border-radius: 50%; background: var(--good); animation: pulse 2.4s ease-in-out infinite; }
-  .server:not(.down) { padding: 0.5rem; border: 0; background: none; }
-  .server.down { color: var(--danger); border-color: var(--down-line); }
-  .server.down::before { background: var(--danger); animation: none; }
-  @keyframes pulse { 0%, 100% { box-shadow: 0 0 0 0 var(--pulse); } 50% { box-shadow: 0 0 0 4px transparent; } }
+  .server::before { content: ""; flex: none; width: 6px; height: 6px; border-radius: 50%; background: var(--danger); }
+  .server:not(.down) { position: absolute; width: 1px; height: 1px; padding: 0; border: 0; overflow: hidden; clip-path: inset(50%); }
+  .server:not(.down)::before { display: none; }
 
   /* The page of what changed between two versions, and the words over a page that tell it */
 
@@ -726,8 +726,12 @@
   @media (max-width: 56rem) { #keys-open { display: none; } }
   /* The settings: the default theme, chosen from cards of a sample page drawn in each theme */
   #settings-open svg { width: 16px; height: 16px; }
-  /* LIMIT: no room for it in a bar of 40rem or less, as the shortcuts' button above 56rem: the settings open from a wider window. Give them a way there if they come to be needed on a phone */
+  /* LIMIT: no room for it in a bar of 40rem or less, as the shortcuts' button above 56rem: the settings open from the list's bar on a wider window, and not from a page whole. Give them a way there if they come to be needed on a phone */
   @media (max-width: 40rem) { #settings-open { display: none; } }
+  /* A page whole leaves both to the list: they are of all pages, and beside the page's own buttons they read as this page's. ? still opens the shortcuts */
+  .framed :is(#settings-open, #keys-open) { display: none; }
+  /* Close to the logo: the dot is the logo's, not a button's */
+  .brand + .server { margin-left: -0.4rem; }
   #settings { width: min(64rem, calc(100% - 32px)); max-height: calc(100dvh - 32px); }
   /* Only the cards scroll, the head and the buttons in sight: a column, so that a line hidden (the default's title in a page's
      modal) moves no row */
@@ -892,8 +896,8 @@
     .framed #frame-actions .menu { right: 1rem; min-width: min(17.5rem, calc(100vw - 2rem)); }
     .framed .frame-title { margin-left: 0; padding-left: 0; }
     .framed .frame-title::before { display: none; }
-    /* Connected, the list's bar keeps the room .server:not(.down) gives it */
-    :is(.framed .server, .server.down) { font-size: 0; gap: 0; padding: 0.45rem; }
+    /* The words of a lost connection do not fit beside the logo and the tabs: only the dot, its words the dot's label */
+    .server.down { font-size: 0; gap: 0; padding: 0.45rem; }
     .bar-inner:has(> .search:not([hidden])) .bar-end { margin-left: auto; }
     .bar-inner > .search { flex: 0 0 36px; margin-inline: 0; transition: flex-basis 0.15s; }
     .bar-inner > .search:is(:focus-within, :has(input:not(:placeholder-shown))) { flex: 1 1 auto; }
@@ -1055,6 +1059,8 @@
       <svg viewBox="0 0 64 64" aria-hidden="true"><defs><linearGradient id="floe-sky" x1="0" y1="0" x2="0" y2="1"><stop offset="0" class="sky-top"/><stop offset="1" class="sky-bottom"/></linearGradient></defs><rect width="64" height="64" rx="15" fill="url(#floe-sky)"/><path d="M17 47.5H47" fill="none" class="line" stroke-width="2" stroke-linecap="round"/><path d="M24 52.5H40" fill="none" class="line-soft" stroke-width="2" stroke-linecap="round"/><path d="M12 32 22 38 41 37 53 29.5 53 34.5 41 42 22 43 12 37Z" class="edge"/><path d="M12 32 24 21.5 33 28 22 38Z" class="face-left"/><path d="M24 21.5 42 21 53 29.5 33 28Z" class="face-back"/><path d="M33 28 53 29.5 41 37 22 38Z" class="face-front"/></svg>
       floe
     </a>
+    <!-- The state of the server, not an action: by the logo, apart from the buttons -->
+    <span class="server" id="server" role="status"></span>
     <a class="icon-btn back" id="back" href="/" aria-label="{{.Msg "ui_to_page_list"}}" title="{{.Msg "ui_to_page_list"}}" hidden><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m15 6-6 6 6 6"/></svg><span class="back-word" id="back-word"></span></a>
     <nav class="screens" id="screens" aria-label="{{.Msg "ui_screens"}}" hidden><a id="to-list" href="/">{{.Msg "ui_screen_pages"}}</a><a id="to-tasks" href="/tasks">{{.Msg "ui_screen_tasks"}}</a></nav>
     <span class="frame-title" id="frame-title"></span>
@@ -1070,9 +1076,8 @@
       <span class="frame-actions" id="frame-actions" hidden></span>
       <a class="news" id="news" href="/?view=new" hidden><span class="dot"></span><span id="news-n"></span></a>
       <button type="button" class="icon-btn" id="find-open" aria-label="{{.Msg "ui_find"}}" title="{{.Msg "ui_find"}}"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true"><circle cx="11" cy="11" r="7"/><path d="m20 20-3.5-3.5"/></svg></button>
-      <button type="button" class="icon-btn" id="settings-open" aria-label="{{.Msg "ui_settings"}}" title="{{.Msg "ui_settings"}}"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.7 1.7 0 0 0 .3 1.8l.1.1a2 2 0 1 1-2.8 2.8l-.1-.1a1.7 1.7 0 0 0-1.8-.3 1.7 1.7 0 0 0-1 1.5V21a2 2 0 1 1-4 0v-.1a1.7 1.7 0 0 0-1.1-1.5 1.7 1.7 0 0 0-1.8.3l-.1.1a2 2 0 1 1-2.8-2.8l.1-.1a1.7 1.7 0 0 0 .3-1.8 1.7 1.7 0 0 0-1.5-1H3a2 2 0 1 1 0-4h.1a1.7 1.7 0 0 0 1.5-1.1 1.7 1.7 0 0 0-.3-1.8l-.1-.1a2 2 0 1 1 2.8-2.8l.1.1a1.7 1.7 0 0 0 1.8.3H9a1.7 1.7 0 0 0 1-1.5V3a2 2 0 1 1 4 0v.1a1.7 1.7 0 0 0 1 1.5 1.7 1.7 0 0 0 1.8-.3l.1-.1a2 2 0 1 1 2.8 2.8l-.1.1a1.7 1.7 0 0 0-.3 1.8V9a1.7 1.7 0 0 0 1.5 1H21a2 2 0 1 1 0 4h-.1a1.7 1.7 0 0 0-1.5 1Z"/></svg></button>
       <button type="button" class="icon-btn" id="keys-open" aria-label="{{.Msg "ui_keys"}}" title="{{.Msg "ui_keys_title"}}"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="9"/><path d="M9.6 9.4a2.5 2.5 0 0 1 4.8.8c0 1.7-2.4 2-2.4 3.6"/><path d="M12 17.2v.01"/></svg></button>
-      <span class="server" id="server" role="status"></span>
+      <button type="button" class="icon-btn" id="settings-open" aria-label="{{.Msg "ui_settings"}}" title="{{.Msg "ui_settings"}}"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.7 1.7 0 0 0 .3 1.8l.1.1a2 2 0 1 1-2.8 2.8l-.1-.1a1.7 1.7 0 0 0-1.8-.3 1.7 1.7 0 0 0-1 1.5V21a2 2 0 1 1-4 0v-.1a1.7 1.7 0 0 0-1.1-1.5 1.7 1.7 0 0 0-1.8.3l-.1.1a2 2 0 1 1-2.8-2.8l.1-.1a1.7 1.7 0 0 0 .3-1.8 1.7 1.7 0 0 0-1.5-1H3a2 2 0 1 1 0-4h.1a1.7 1.7 0 0 0 1.5-1.1 1.7 1.7 0 0 0-.3-1.8l-.1-.1a2 2 0 1 1 2.8-2.8l.1.1a1.7 1.7 0 0 0 1.8.3H9a1.7 1.7 0 0 0 1-1.5V3a2 2 0 1 1 4 0v.1a1.7 1.7 0 0 0 1 1.5 1.7 1.7 0 0 0 1.8-.3l.1-.1a2 2 0 1 1 2.8 2.8l-.1.1a1.7 1.7 0 0 0-.3 1.8V9a1.7 1.7 0 0 0 1.5 1H21a2 2 0 1 1 0 4h-.1a1.7 1.7 0 0 0-1.5 1Z"/></svg></button>
     </div>
   </div>
 </header>
@@ -1796,7 +1801,7 @@
     errorFrom = msg ? from : '';
   }
 
-  // Only a dot while connected, and words only when the connection is lost. The address is the one in the address bar, so it is not shown
+  // Nothing shows while connected, and the words only when the connection is lost (a dot alone on a narrow bar). The address is the one in the address bar, so it is not shown
   function setServer(ok) {
     const label = t(ok ? 'ui_server_up' : 'ui_server_down_host', location.host);
     $('server').textContent = ok ? '' : t('ui_server_down');

@@ -347,7 +347,7 @@ func TestUITaskList(t *testing.T) { //nolint:paralleltest // the browser tests s
 		beside := col.X >= shelf.X+shelf.Width-1
 		filter := b.eval("document.getElementById('narrow-filter').offsetParent !== null") == "true"
 		// The bar's own too, whose last thing goes off the screen when the logo's word stays
-		over := b.eval("document.documentElement.scrollWidth > innerWidth || document.getElementById('server').getBoundingClientRect().right > innerWidth") == "true"
+		over := b.eval("document.documentElement.scrollWidth > innerWidth || document.querySelector('.bar-inner').scrollWidth > document.querySelector('.bar-inner').clientWidth") == "true"
 		reader := b.eval("document.getElementById('reader').offsetParent !== null") == "true"
 		// Narrow, the button says the project, at every width, not lit as narrowed
 		if c.narrow {

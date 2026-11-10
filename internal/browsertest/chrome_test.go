@@ -247,7 +247,7 @@ func (b *browser) until(what, expr string) string {
 // still waits until none of the page's transitions and animations runs: a style read while one runs is between two
 // states, as a slow machine reads it. It waits for the whole document's, as an inherited style (an icon's fill of
 // currentColor) moves with its ancestor's motion, not its own. One that ended and holds its last frame (fill: both, as a
-// row's rise) and one without end (the server's pulse) do not count.
+// row's rise) and one without end (a loop) do not count.
 // LIMIT: a motion that starts between the wait and the read (the list redrawn, a toast) is not waited for; change nothing between them.
 // LIMIT: a frame's document is not waited for; wait in it when a test comes to read styles inside the frame.
 func (b *browser) still() {

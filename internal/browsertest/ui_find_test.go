@@ -350,7 +350,7 @@ func TestUIKeys(t *testing.T) { //nolint:paralleltest // the browser tests share
 		t.Fatal(err)
 	}
 	out = append(out, b.eval(open))
-	// The bar's ways: of the keys above 56rem, of finding on a narrow whole page alone.
+	// The bar's ways: of the keys above 56rem, but not on a page whole; of finding on a narrow whole page alone.
 	out = append(out, b.eval(ways))
 	b.eval("document.getElementById('keys-open').click()")
 	out = append(out, b.eval(open))
@@ -397,7 +397,7 @@ func TestUIKeys(t *testing.T) { //nolint:paralleltest // the browser tests share
 	out = append(out, b.eval("document.querySelector('#keys-list .mod').textContent + ' ' + document.getElementById('keys-note-list').textContent.includes('⌘K')"))
 	check(t, "keys", out, strings.Join([]string{
 		"false", "true", "false true j↓k↑Enterxf/CtrlK?Esc",
-		"false", "true false", "true", "false false", "false false", "false true", "true", "true false",
+		"false", "true false", "true", "false false", "false false", "false true", "true", "false false",
 		"true false jkhf/CtrlK?Esc", "true", "true", "1", "q false", "0", "⌘ true",
 	}, "|"))
 }
