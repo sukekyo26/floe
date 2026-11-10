@@ -157,13 +157,13 @@ check-no-repo-name: build-all
     set -euo pipefail
     for target in {{targets}}; do
         if grep -aq sukekyo26 "bin/floe-${target}"; then
-            echo "check-no-repo-name: bin/floe-${target} holds 'sukekyo26': find it with 'git grep -n sukekyo26' (what the binary embeds) and keep the module in go.mod as it is" >&2
+            echo "check-no-repo-name: bin/floe-${target} holds 'sukekyo26': see where with 'go version -m bin/floe-${target}' and 'strings bin/floe-${target} | grep sukekyo26'; the module in go.mod stays 'floe'" >&2
             exit 1
         fi
     done
 
 # Build every release binary and write bin/SHA256SUMS
-release-assets: build-all check-no-repo-name
+release-assets: check-no-repo-name
     #!/usr/bin/env bash
     set -euo pipefail
     cd bin
