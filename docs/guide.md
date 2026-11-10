@@ -82,7 +82,9 @@ Draw no table or diagram with characters in `text` or `code`. Values look like t
 
 ## Diagrams
 
-Write a `graph`: the boxes and what joins what. floe places the boxes; do not work out their positions. `x` and `y` (required) only say where the graph starts.
+floe validates each diagram part: it refuses text that overflows, overlapping parts, and edges that pass through boxes, reporting the line to change. Choose how to write the diagram based on what it needs to show.
+
+A `graph` for a flow, a state machine, or a diagram that changes often or joins many things: write the boxes and what joins what, and floe places them. `x` and `y` (required) only say where the graph starts.
 
 ```yaml
 - diagram:
@@ -101,7 +103,22 @@ Write a `graph`: the boxes and what joins what. floe places the boxes; do not wo
             - { from: check, to: write, label: "no" }
 ```
 
-`floe diagram example` lists examples of each kind (architecture, sequence, ER, …); `floe diagram example <kind>` prints one to copy. A diagram whose text overflows or whose parts overlap is refused at the line to change.
+Use manually positioned parts for diagrams read as pictures, such as architecture or layout diagrams, where the spatial arrangement matters. Give each box an `x` and `y`. Leave `w` and `h` out to let floe size the box to its text; specify them when you need to align boxes. Name both ends of each edge.
+
+```yaml
+- diagram:
+    title: How a request flows
+    parts:
+      - box: { name: user, x: 20, y: 40, rows: [User] }
+      - box: { name: api, x: 220, y: 40, rows: [API server] }
+      - box: { name: db, x: 220, y: 160, rows: [Database] }
+      - edge: { from: user, to: api, label: HTTPS }
+      - edge: { from: api, to: db }
+```
+
+In an AWS architecture, represent each service with an AWS icon, not a box. Do not draw a box around the icon. First run `floe icons fetch aws` if the icon set is not kept yet, then `floe icons search <word>` finds a name (a short one such as `alb` works).
+
+`floe diagram guide` explains both ways in detail, including their parts, keys, layout rules and checks. Read it before writing a larger diagram. `floe diagram example <kind>` prints a complete spec of each kind (architecture, sequence, ER, …) to copy. The examples set `w` and `h` to fix box sizes on their grid, so that boxes align. If you change a box's text, omit its `w` or increase it to at least the minimum floe reports (`needs w: 174 or more`).
 
 ## Writing YAML that floe reads as you meant
 

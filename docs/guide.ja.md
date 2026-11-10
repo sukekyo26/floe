@@ -84,26 +84,43 @@ floe は、あなたが YAML のファイルで書いたページをユーザー
 
 ## 図
 
-`graph` を書く：箱と、何が何につながるか。箱は floe が置くので、箱の位置は考えない。`x` と `y`（必須）は graph の始まりの位置だけを言います。
+floe は diagram の部品を 1 つずつ検証します。字のはみ出し、部品の重なり、箱を通る線は断られ、直す行が示されます。図で何を見せたいかによって、書き方を選びます。
+
+`graph`：流れ、状態の遷移、よく変わる図、つながりの多い図。箱と、何が何につながるかを書くと、floe が置きます。`x` と `y`（必須）は graph の始まりの位置だけを言います。
 
 ```yaml
 - diagram:
-    title: How a page is published
+    title: ページが公開されるまで
     parts:
       - graph:
           x: 20
           y: 20
           nodes:
-            - box: { name: write, rows: [Write the data] }
-            - box: { name: check, shape: hex, rows: ["Checks pass?"] }
-            - box: { name: show, rows: [Show the page] }
+            - box: { name: write, rows: [データを書く] }
+            - box: { name: check, shape: hex, rows: ["検査を通る？"] }
+            - box: { name: show, rows: [ページを出す] }
           edges:
             - { from: write, to: check }
-            - { from: check, to: show, label: "yes" }
-            - { from: check, to: write, label: "no" }
+            - { from: check, to: show, label: "はい" }
+            - { from: check, to: write, label: "いいえ" }
 ```
 
-`floe diagram example` が種類ごとの見本（構成、シーケンス、ER など）を並べ、`floe diagram example <kind>` が 1 つを写せる形で出します。字がはみ出す図、部品が重なる図は、直す行で断られます。
+部品を座標で置く書き方は、絵として読む図（構成図・配置図など）で、置き場所が意味を持つときに使います。箱に `x` と `y` を書きます。`w` と `h` を省くと、floe が箱を字に合わせた大きさにします。箱を揃えたいときは書きます。線は両端の名前を書きます。
+
+```yaml
+- diagram:
+    title: リクエストの流れ
+    parts:
+      - box: { name: user, x: 20, y: 40, rows: [利用者] }
+      - box: { name: api, x: 220, y: 40, rows: [API サーバー] }
+      - box: { name: db, x: 220, y: 160, rows: [データベース] }
+      - edge: { from: user, to: api, label: HTTPS }
+      - edge: { from: api, to: db }
+```
+
+AWS の構成図では、サービスを箱でなく AWS のアイコンで描きます。アイコンを箱で囲みません。アイコンのセットがまだ無ければ、先に `floe icons fetch aws` で取り、そのあと `floe icons search <語>` で名前を探します（`alb` のような短い名前でも引けます）。
+
+`floe diagram guide` は、2 つの書き方を、部品・鍵・配置の決まり・検査まで詳しく説明します。大きい図を書く前に読みます。`floe diagram example <kind>` は、種類ごと（構成、シーケンス、ER など）の完全な spec を写せる形で出します。見本は、格子の上で箱の大きさを決めて揃えるために `w` と `h` を書いています。箱の字を変えたら、その箱の `w` を消すか、floe が言う最小の幅以上に広げます（`needs w: 174 or more`）。
 
 ## floe が書いたとおりに読む YAML
 

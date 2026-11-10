@@ -33,6 +33,7 @@
 | `floe diagram render <spec.yaml>...` | 図の spec を確かめ、inline SVG で出す |
 | `floe diagram inspect <spec.yaml\|data.yaml>...` | spec かデータファイルの図を確かめ、各部品の置かれた所を出す |
 | `floe diagram example [種類]` | 見本の spec を並べる、または 1 つ出す |
+| `floe diagram guide` | 図の書き方（手書きか graph か）を出す |
 | `floe icons fetch <セット> [zip か URL]` | 図の `icon` の部品が使うアイコンのセット（`aws`）を手元に置く |
 | `floe icons search <語>...` | 取ってきたアイコンのうち、名前がどの語も含むものを並べる（`alb` のような略語でも探せる） |
 | `floe completion <シェル>` | シェルの補完のスクリプトを出す（Cobra の組み込み） |
@@ -158,7 +159,7 @@ floe と自分のテンプレートを 1 行ずつ、タブで区切った 4 列
 
 floe のテンプレートの節に書ける部品（floe の `any.json` の鍵と、そこに加わる自分の部品）を 1 行ずつ、タブで区切った 4 列で出します。名前、場所（`floe` か、自分の部品のディレクトリ）、形、説明です。`html` は HTML を字で取り、`schema.json` はありません。`floe part show html any.json` が、鍵 `html` を持つ `any.json` の全体を出します。自分の部品は `any` に加わりますが、`floe part show any any.json` が出すのは、書いてあるとおりの floe の `any.json` です。
 
-形は、その値の書き方です。鍵を名前の順に並べ、項目の並びなら頭に `[] `、どれか 1 つだけを書く鍵なら頭に `one of ` を付けます。字なら format の名前（`markdown`・`html`）、floe の部品そのものなら部品の名前です。`-` は、一覧が言わない形です。`floe part show <名前>`（`template show`・`theme show`）の `files:` の行が読むファイルを名指し、`floe diagram example <種類>` が見本を出します。テンプレートの形には、どのデータファイルにも書ける `template`・`lang`・`theme`・`title` も入ります。
+形は、その値の書き方です。鍵を名前の順に並べ、項目の並びなら頭に `[] `、どれか 1 つだけを書く鍵なら頭に `one of ` を付けます。字なら format の名前（`markdown`・`html`）、floe の部品そのものなら部品の名前です。`-` は、一覧が言わない形です。`floe part show <名前>`（`template show`・`theme show`）の `files:` の行が読むファイルを名指し、`floe diagram example <種類>` が見本を出し、`floe diagram guide` が図の書き方を言います。テンプレートの形には、どのデータファイルにも書ける `template`・`lang`・`theme`・`title` も入ります。
 
 `--all` を付けると、自分の schema が `$ref` で名指せる部品・見た目・共有の schema を、floe のものも自分のものも、同じ列で出します。場所は `floe` か、自分のもののディレクトリです。`floe:///parts/html.json` は無いので、`html` は入りません。
 
@@ -317,6 +318,10 @@ edge [60,10]→[60,120] M60,10 V120
 ## `floe diagram example [種類]`
 
 種類を書かなければ、組み込みの見本を、図の種類ごとに 1 つ（構成図、AWS の構成図、floe が配置する AWS の構成図、クラス図、ER 図、フロー図、ガントチャート、Git のブランチ、組織図、4 象限、シーケンス図、状態遷移図、スイムレーン、年表、ベン図）並べます。各行は、`floe part list` と同じく、タブで区切った種類・場所（`floe`）・形（見本は写すもので値に書かないので `-`）・要約です。種類を書けば、その spec を出します。コメントが、配置に使った格子を説明します。どの見本も確かめを通ります。文は英語と日本語の両方を持ち（`{en: …, ja: …}`）、spec と同じ書き方です。AWS の見本は 2 つとも AWS のアイコンを描くので、`floe icons fetch aws` の後に描いてください。
+
+## `floe diagram guide`
+
+図の書き方 [diagrams.ja.md](diagrams.ja.md) を、全部出します。図の 2 つの書き方（手書き、`graph`）、それぞれを floe に断られずに書く方法、全部の部品と鍵です。docs そのもので、エージェントが図を書く前に読みます。引数は取りません。ただし、出すのは英語の docs/diagrams.md です（CLI は英語だけで答えます）。
 
 ---
 

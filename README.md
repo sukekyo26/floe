@@ -24,6 +24,7 @@ release's `SHA256SUMS`.
 
 ```sh
 floe guide                   # how an agent writes, checks and publishes a page
+floe diagram guide           # how an agent writes a diagram, by hand or as a graph
 floe template list          # floe's templates (report, design, handoff, adr, postmortem, runbook, slides) and your own
 floe template show report   # report's files, what a data file holds first
 floe template show report example.yaml   # an example to start from
@@ -66,7 +67,7 @@ To show the user a page, use floe: run `floe guide` first and follow it. It is t
 | Write pages (data files) | [pages.md](docs/pages.md) | [pages.ja.md](docs/pages.ja.md) |
 | Make a template of your own | [templates.md](docs/templates.md) | [templates.ja.md](docs/templates.ja.md) |
 | Make a part or theme of your own | [parts.md](docs/parts.md) | [parts.ja.md](docs/parts.ja.md) |
-| Draw a diagram | [diagrams.md](docs/diagrams.md) | [diagrams.ja.md](docs/diagrams.ja.md) |
+| Draw a diagram (`floe diagram guide`) | [diagrams.md](docs/diagrams.md) | [diagrams.ja.md](docs/diagrams.ja.md) |
 | Show an HTML file or a folder as it is | [links.md](docs/links.md) | [links.ja.md](docs/links.ja.md) |
 | Look up a command or a setting | [commands.md](docs/commands.md) | [commands.ja.md](docs/commands.ja.md) |
 | See what changed | [CHANGELOG.md](CHANGELOG.md) | [CHANGELOG.ja.md](docs/CHANGELOG.ja.md) |

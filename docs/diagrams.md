@@ -1,6 +1,6 @@
 # Diagrams
 
-A `diagram` part, in a section or in `details`, `tabs`, `columns` and the `parts` of an item of `entries`, `checks` or `options`, is a spec written in place: a canvas and the parts placed on it at absolute coordinates (the top left is 0, 0), each within a million either way (a size within a million, a canvas within ten million). It is checked before the page is drawn, its mistakes at the data file's lines and columns, and drawn as inline SVG, which zooms where it is drawn smaller than its actual size. `floe diagram render` draws a spec of a file of its own the same way ([commands.md](commands.md#floe-diagram-render-specyaml)).
+A `diagram` part, in a section or in `details`, `tabs`, `columns` and the `parts` of an item of `entries`, `checks` or `options`, is a spec written in place: a canvas and the parts drawn on it. Parts written by hand use absolute coordinates (the top left is 0, 0), each within a million either way (a size within a million, a canvas within ten million); a graph is placed by floe. It is checked before the page is drawn; mistakes are reported at the data file's lines and columns. The diagram is drawn as inline SVG, which zooms where it is drawn smaller than its actual size. `floe diagram render` draws a spec of a file of its own the same way (`floe diagram render --help`).
 
 ```yaml
 - diagram:
@@ -10,20 +10,88 @@ A `diagram` part, in a section or in `details`, `tabs`, `columns` and the `parts
     title: How the API is laid out
     parts:
       - frame: { x: 16, y: 16, w: 608, h: 168, label: VPC }
-      - box: { name: alb, x: 40, y: 72, w: 200, h: 56, tone: accent, rows: [[ALB, main code], public entry] }
-      - box: { name: api, x: 400, y: 72, w: 200, h: 56, rows: [API server, ECS] }
+      - box: { name: alb, x: 40, y: 72, tone: accent, rows: [[ALB, main code], public entry] }
+      - box: { name: api, x: 400, y: 72, rows: [API server, ECS] }
       - edge: { from: alb, to: api, label: HTTPS }
 ```
 
 - `width` and `height` may each be left out: the canvas then reaches as far right (or down) as what is drawn, and 20 more. Its top left stays 0, 0, so the coordinates are as written. `raw` SVG is not measured: write `width` and `height` with it, or it may be cut off.
 - `example: <kind>` in place of the rest draws a built-in example (`floe diagram example` lists them). The page shows the diagram, not its spec: to read or copy an example's spec, print it with `floe diagram example <kind>`.
-- Text (a `title`, a row, a label) is text, or its words in each language, English among them: `{ en: Store, ja: 保存先 }`. A diagram's `title` is empty in no language, as it is what a reader who cannot see the diagram is told. Nor is a label's text (every `label` key, a graph's edges and groups among them, and the `text` of the part `label`): for no label, leave the key out. The page draws the words of its `lang:`, and the spec is laid out and checked once for every language it is written in.
+- Text (a `title`, a row, a label) is text, or its words in each language, English among them: `{ en: Store, ja: 保存先 }`. A diagram's `title` must not be empty in any language, as it is what a reader who cannot see the diagram is told. Nor is a label's text (every `label` key, a graph's edges and groups among them, and the `text` of the part `label`): for no label, leave the key out. The page draws the words of its `lang:`, and the spec is laid out and checked once for every language it is written in.
 - A diagram paints its own ground, the page's `--bg`, in its frame, and what hides the lines under it (a label's box, a hollow end or dot) is painted that ground: on a panel or a theme's patterned page, the diagram stands as a box of the page's ground.
 - Each part is one key naming its kind. `floe part show diagram schema.json` prints every key; `floe diagram example <kind>` prints a spec of each kind, its comments explaining its grid.
 
+## Two ways to write a diagram
+
+Pick by what the diagram is for:
+
+- **By hand** for diagrams read as pictures, such as architecture or layout diagrams, where spatial arrangement matters. You decide where each part goes, so you can keep flows straight, align related parts, and place each label on its edge. The example above is written this way.
+- **A `graph`** for a flow, a state machine, or a diagram that changes often or joins many things. You write what joins what, and adding to it takes no coordinates. floe decides where everything stands.
+
+A hand-placed diagram takes more work to write. Moving a part means moving what copies where it stands: the frame round it, and the `via` or `at` of its edges. Writing only the turns you choose avoids copying them in an edge (see [Edges written by hand](#edges-written-by-hand)); a frame is moved by hand.
+
+A graph usually takes more space than a hand-placed diagram. A diagram wider than the page shrinks to fit, until it is zoomed. Try both `direction`s: one often comes out far better than the other for the same spec. See [Graph](#graph) for an example.
+
+### Writing by hand so that floe does not refuse it
+
+Box sizes:
+
+- Give each box an `x` and `y`.
+- Leave `w` and `h` out to let floe size the box to its text; specify them when you need to align boxes.
+- A `w` that is too small is refused with the one it needs: `box "a": "A long title here" needs w: 174 or more`.
+- `floe diagram inspect` prints the size floe gave each box (`box "alb" 240,90 144x29`). Place the next box by it.
+
+Labels on edges:
+
+- Between the boxes of a horizontal edge with a label, leave at least the label's width, else `box "a" overlaps label "HTTPS"`.
+- The `label` row of `floe diagram inspect` gives the width (`label "HTTPS" 80,5.5 46x18`: 46).
+- Between the boxes of a vertical edge, leave at least the label's height (18).
+- A label stands across a vertical edge, centred on it, so a long one reaches both sides of the line.
+- Keep half the label's width between the line and the left of the canvas, else `label "HTTPS-LONG-LABEL" sticks out of the 142.6x169 canvas` (for a line 60 from the left).
+- To fix it, move the line to the right or shorten the label. A `width` only widens the canvas to the right.
+
+Frames:
+
+- Put a box whole inside a frame or whole outside it, else `box "a" straddles the edge of frame "F" at x 100, spanning 80 to 160`.
+- Put a box below the bottom edge of the frame's heading, else `box "a" overlaps the heading of frame "Frame label"`.
+- Put it below the frame's icon too, if the frame has one, else `the icon of frame "Group" overlaps box "a"`.
+
+Edges:
+
+- Write an edge as `{ from, to }` and let floe route it.
+- Use `via`, `fromSide` or `toSide` when you need to control its path; see [Edges written by hand](#edges-written-by-hand).
+- An edge with a box between its ends is refused: `edge "a"→"c" runs through box "b"; move one of them, or go round it by via`.
+- To fix it, move a box or write `via`.
+
+Checking:
+
+- Run `floe diagram inspect` on the data file after every few parts.
+- It prints where each part went, and each refusal at the line to change.
+
+### An AWS architecture: draw the services as icons
+
+In an AWS architecture, represent each service with an AWS icon, not a box. Do not draw a box around the icon. floe ships no icons. The one set is AWS's, kept once on each machine:
+
+1. `floe icons fetch aws` keeps the set (about 14MB, from aws.amazon.com). Without it, `floe check`, `floe diagram render` and `floe diagram inspect` refuse a diagram that holds an icon (`inspect` prints where the parts went first). The refusal reads `floe: AWS icons are not in <dir>/aws; run "floe icons fetch aws" (downloads about 14MB from aws.amazon.com) and try again`.
+2. `floe icons search <word>` lists the names of icons that hold the word, each with its group. `floe icons search alb` lists `aws/res/elastic-load-balancing-application-load-balancer`, and `floe icons search rds` lists `aws/amazon-rds`. A short name such as `alb` works. Take the name as it is printed.
+3. Write the icon as an `icon` part with `x`, `y` and its name in `icon`. Join icons by edges naming their `name`s. Or write it as an `icon` node of a `graph`, which floe places (`floe diagram example aws-graph` is one). A frame of the AWS group style takes an `icon` of its own (`aws/group/region`).
+
+```yaml
+- diagram:
+    title: A web app on AWS
+    parts:
+      - icon: { name: alb, x: 40, y: 40, icon: aws/res/elastic-load-balancing-application-load-balancer, label: ALB }
+      - icon: { name: api, x: 240, y: 40, icon: aws/amazon-elastic-container-service, label: ECS }
+      - icon: { name: db, x: 440, y: 40, icon: aws/amazon-rds, label: RDS }
+      - edge: { from: alb, to: api, label: HTTPS }
+      - edge: { from: api, to: db, label: SQL }
+```
+
+## The parts
+
 | Part | Keys |
 |---|---|
-| `frame` | `x` `y` `w` `h`, `label`, `name`, `accent`, `square` (no rounded corners), `icon` (an icon such as `aws/group/region`: the AWS group style, its icon in the corner). Its label sits inside the top left corner, so place its contents 32 or more below its top (40 with an icon). |
+| `frame` | `x` `y` `w` `h`, `label`, `name`, `accent`, `square` (no rounded corners), `icon` (an icon such as `aws/group/region`: the AWS group style, its icon in the corner). Its label sits inside the top left corner, so place its contents at or below the bottom edge of its heading and of its icon: the `the heading of frame` and `the icon of frame` rows of `floe diagram inspect` give where they stand (a heading of one line stands 9 below the frame's top and is 18 tall, so 27; with an `icon`, the icon is 31 square in the corner and the heading stands 6 down, so 31). |
 | `box` | `x` `y`, `rows`, `w` `h` (as large as the rows need when left out), `name`, `origin` (`left`; `centre` for an `x` at the middle), `tone`, `shape` (`rect`; `pill`, `hex` for a decision, `state`). A row is text, or `[text, style]` with the style `main`, `sub`, `main code` or `sub code`; without a style the first row is `main` and the rest `sub`. |
 | `table` | `x` `y`, `title`, `rows`, `w`, `name`, `origin`, `tone`. A row is `[name]`, `[name, type]`, `---` for a separator, or `{ name, cells: [name, type] }` for a row an edge can end at. |
 | `icon` | `x` `y` (the top left), `icon`, `label` (centred below the icon, 3 under it and 18 tall; an edge at the icon's bottom side ends under the label), `size` (48), `name`. `icon` is the icon's set and its name in the set, like `aws/amazon-ec2` (see `floe icons search`). |
@@ -36,30 +104,27 @@ A `diagram` part, in a section or in `details`, `tabs`, `columns` and the `parts
 | `line` | `x1` `y1` `x2` `y2`, `kind` (`line`; `lifeline`, `divider`). It may cross other parts, but not leave the canvas. |
 | `tree` | `x` `y` (the root's centre and top), `root`: a node of `rows`, `name`, `tone`, `shape` as a `box` has them, and `children`, nodes too. floe places each node under its parent, the children side by side and each depth in one row, and draws an edge down from each node to each child. A node's `name` can be the end of an edge written by hand; written without a side, the edge keeps off the sides the tree's edges end at (a node's top below the root, and its bottom when it has children), as at a box of a graph. |
 | `graph` | `x` `y` (the top left of all of it), `nodes`, `edges`, `direction` (`down`; `right`), and `lanes` in place of `nodes`. A node is `box: { name, with, rows, tone, shape }`, as a `box` has them, its `name` needed, `icon: { name, with, icon, label }`, an icon with its label below and no box round it, or `group: { name, label, accent, icon, nodes }`, boxes, icons and groups framed together, `icon` in the frame's corner, the AWS group style; an edge is `{ from, to }`, two names of its boxes, icons or groups, with `label`, `dashed`, `bold`, `tone`, `start` and `end` (`arrow` or `none`). floe lays the boxes out in ranks and draws each edge between them, as below. |
-| `raw` | `svg`: SVG that no part can draw, of SVG's elements alone (no script or `foreignObject`), not laid out or checked. Colour it with the variables in the table of [the palette](templates.md#the-palette), as attributes too (`fill="var(--accent-soft)" stroke="var(--accent)"`); a variable only a theme sets is not one to rely on. For a tone, write `data-floe-tone` on the element or on a `<g>` around it within the raw SVG, and read `var(--tone)` and `var(--tone-soft)`: the diagram's root clears any tone from outside it. Give text a colour and a size, as the parts' text is 12 to 13 (`<text fill="currentColor" font-size="12">`); `currentColor` is `--fg`. A part's classes, `data-floe-look` and `data-floe-part` are floe's own, not for raw. A variable or a tone that is not there, `var(--tone)` with no tone, and text without `fill` draw black (text at the page's size), and are not told. |
-
-## Hand or graph
-
-Write the parts by hand for a diagram read as a picture: you decide where everything stands, so the main flow runs straight, what belongs together lines up, and a label stands on its edge. It is the most to write, and moving a part means moving what copies where it stands: the frames round it, and a `via` or `at` of its edges that copies it, which writing only the turns you choose avoids (see [Edges written by hand](#edges-written-by-hand)).
-
-Write a `graph` for a draft, a diagram that often changes, or many connections: you write what joins what, and adding to it takes no coordinates. floe decides where everything stands, and takes more room than a hand would (of an AWS diagram of 25 edges, 1704×1407 against 1400×1005, or 1378×1416 laid out `right`, with `with` written where it helps); a diagram wider than the page shrinks to fit, until it is zoomed. Try both `direction`s, as one often comes out far better than the other for the same spec.
+| `raw` | `svg`: SVG that no part can draw, of SVG's elements alone (no script or `foreignObject`), not laid out or checked. Colour it with the variables `floe theme show default palette.css` defines (the CSS of the palette), as attributes too (`fill="var(--accent-soft)" stroke="var(--accent)"`); take the colours: `--bg`, `--surface`, `--fg`, `--muted`, `--muted-soft`, `--quiet`, `--line`, `--accent`, `--accent-soft`, `--good`, `--good-soft`, `--warn`, `--warn-soft`, `--bad`, `--bad-soft` and `--on-fill` (no other colour has a soft one, and a variable that is not there draws black), not the faces, sizes or shadows in it, and no variable a theme alone sets (`--accent-fill` and the other `--*-fill`, which palette.css does not define). For a tone, write `data-floe-tone` on the element or on a `<g>` around it within the raw SVG, and read `var(--tone)`, `var(--tone-soft)` and, for a fill, `var(--tone-fill)`: the diagram's root clears any tone from outside it. Give text a colour and a size, as the parts' text is 12 to 13 (`<text fill="currentColor" font-size="12">`); `currentColor` is `--fg`. A part's classes, `data-floe-look` and `data-floe-part` are floe's own, not for raw. A variable or a tone that is not there, `var(--tone)` with no tone, and text without `fill` draw black (text at the page's size), and are not told. |
 
 ## Graph
 
 A `graph` holds only how its boxes are joined; floe places them:
 
 ```yaml
-- graph:
-    x: 20
-    y: 20
-    nodes:
-      - box: { name: write, rows: [Write the data] }
-      - box: { name: check, shape: hex, rows: ["Checks pass?"] }
-      - box: { name: show, rows: [Show the page] }
-    edges:
-      - { from: write, to: check }
-      - { from: check, to: show, label: "yes" }
-      - { from: check, to: write, label: "no" }
+- diagram:
+    title: How a page is published
+    parts:
+      - graph:
+          x: 20
+          y: 20
+          nodes:
+            - box: { name: write, rows: [Write the data] }
+            - box: { name: check, shape: hex, rows: ["Checks pass?"] }
+            - box: { name: show, rows: [Show the page] }
+          edges:
+            - { from: write, to: check }
+            - { from: check, to: show, label: "yes" }
+            - { from: check, to: write, label: "no" }
 ```
 
 ### Ranks
@@ -68,7 +133,19 @@ A `graph` holds only how its boxes are joined; floe places them:
 - `with: <name>` on a box or an icon stands it in the rank of the box or icon named, with no edge drawn, of another group too. Write it for a box that should not go below what reaches it, a gateway below the servers that use it say, or that should not start a group's frame in the first rank. Edges keep the way they mean: `api → nat`, with `with: alb` on `nat`, runs up from `api`.
 
   ```yaml
-  - icon: { name: nat, with: alb, icon: aws/res/amazon-vpc-nat-gateway, label: NAT }
+  - diagram:
+      title: A NAT gateway beside the load balancer, below the servers that use it
+      parts:
+        - graph:
+            x: 20
+            y: 20
+            nodes:
+              - icon: { name: alb, icon: aws/res/elastic-load-balancing-application-load-balancer, label: ALB }
+              - icon: { name: api, icon: aws/amazon-elastic-container-service, label: ECS }
+              - icon: { name: nat, with: alb, icon: aws/res/amazon-vpc-nat-gateway, label: NAT }
+            edges:
+              - { from: alb, to: api }
+              - { from: api, to: nat }
   ```
 
 - `with` takes only an edge from a box into that box out of the ranks: it runs up or down as the ranks fall, and is refused when they fall in one rank. An edge from a group, into a level edge's other box or out of the box still decides ranks, moving the box named too, and an edge of them back up a cycle is drawn the way it is written, the order written deciding which: write the boxes in another order for another.
@@ -107,9 +184,26 @@ A `graph` holds only how its boxes are joined; floe places them:
 - An edge `level` cannot be, between two zones each a group say, or between two boxes `with` stands in one rank, can be written by hand beside the graph. It moves nothing of the graph, so its ends stay in the ranks their other edges give them:
 
   ```yaml
-  parts:
-    - graph: { x: 20, y: 20, nodes: [...], edges: [...] }
-    - edge: { from: writer, to: reader, label: copy }
+  - diagram:
+      title: A copy between two zones, an edge written by hand beside the graph
+      parts:
+        - graph:
+            x: 20
+            y: 20
+            nodes:
+              - group:
+                  name: zone-a
+                  label: Zone A
+                  nodes:
+                    - box: { name: writer, rows: [Writer] }
+              - group:
+                  name: zone-b
+                  label: Zone B
+                  nodes:
+                    - box: { name: reader, rows: [Reader] }
+            edges:
+              - { from: zone-a, to: zone-b }
+        - edge: { from: writer, to: reader, label: copy, fromSide: right, toSide: right, via: [{ x: 190 }] }
   ```
 - A box or an icon of a graph, and a group's or a lane's frame, can be the end of an edge written by hand, which ends on a side as any edge written by hand does (below). Without `fromSide` or `toSide`, with `via` or without, it takes a side the graph's edges leave to it, with its via next to it (or the other end) outside that side: across first, then up or down. The sides left are those no edge of the graph ends at and no loop or level edge takes on a box or an icon, and those no edge of the graph ends at or crosses on a group's or a lane's frame. When no side left has the via outside it, the edge keeps the side it would take and may run along one of the graph's edges: write `fromSide` or `toSide` for a side the graph's edges do not use. A box's side with loops or level edges is theirs: end no edge written by hand there.
 - A mistake between a part a graph or a tree laid out and one written by hand (an overlap, an edge through a box, a crossing) is told at the one written by hand, which can be moved. One between parts written by hand is told at the one written later (the later item of `parts`; of one item, the first compared), as the part added or moved last most often made it. One between parts of trees, or between a part of a tree and one of a graph, is told at the part of a tree written later. One that only parts of graphs make (two graphs overlapping or crossing, a graph off the canvas) is told at the graph, to move it by its `x` and `y` (or, off the canvas, to widen the canvas).
@@ -125,8 +219,15 @@ An edge without `via` and sides runs right-angled from the side of one end facin
 Write in `via` only what you choose of an edge's way, and `at` only when the middle of the edge's longest run, where the label stands without it, will not do; a label without `at` is not checked against a frame's edge, as the edge may cross it. floe adds a turn between points off line and enters the last side square, so the corners it adds need no writing, and a number copied from where a part stands needs rewriting when the part moves. A point may give one axis, `{ x: 710 }` or `{ y: 218 }`: the other is the point before's, and the first point's that of the centre of the edge's start (the point itself, the centre of a dot, the middle of a part or a row). `{ x: 710, y: 218 }` is `[710, 218]`.
 
 ```yaml
-- edge: { from: api-a, to: queue, fromSide: top, toSide: left, via: [[965, 218]] }   # M640,350 V218 H965 V510 H990
-- edge: { from: api-c, to: writer, fromSide: right, toSide: left, via: [{ x: 710 }] } # M664,646 H710 V374 H790
+- diagram:
+    title: Edges that turn where they are told
+    parts:
+      - box: { name: api-a, x: 40, y: 300, rows: [API A] }
+      - box: { name: api-c, x: 40, y: 400, rows: [API C] }
+      - box: { name: queue, x: 400, y: 300, rows: [Queue] }
+      - box: { name: writer, x: 400, y: 340, rows: [Writer] }
+      - edge: { from: api-a, to: queue, fromSide: top, toSide: left, via: [{ y: 240 }, { x: 300 }] } # M80,300 V240 H300 V314.5 H400
+      - edge: { from: api-c, to: writer, fromSide: right, toSide: left, via: [{ x: 300 }] }          # M120,414.5 H300 V354.5 H400
 ```
 
 Write the first point on the axis the edge leaves by: `{ y }` from a top or a bottom side, `{ x }` from a left or a right one. `fromSide: top, via: [{ x: 150 }]` takes the height of the box's centre and is refused as running through the box; `via: [{ y: 10 }, { x: 150 }]` leaves upward and then runs across.

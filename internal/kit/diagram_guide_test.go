@@ -1,0 +1,272 @@
+package kit_test
+
+import (
+	"bytes"
+	"fmt"
+	"os"
+	"path/filepath"
+	"regexp"
+	"slices"
+	"strings"
+	"testing"
+
+	"github.com/yuin/goldmark"
+	"github.com/yuin/goldmark/ast"
+	"github.com/yuin/goldmark/parser"
+	"github.com/yuin/goldmark/text"
+
+	"github.com/sukekyo26/floe/internal/cli"
+	"github.com/sukekyo26/floe/internal/kit"
+)
+
+// diagramGuides are the docs of how to write a diagram: the English one is what floe diagram guide prints, whole,
+// and the Japanese one is its translation.
+var diagramGuides = []string{"../../docs/diagrams.md", "../../docs/diagrams.ja.md"}
+
+// guideBlock is a fenced block of code in a doc: its language, and its text.
+type guideBlock struct{ lang, text string }
+
+// readGuideDoc reads the Markdown of path into its tree, as floe reads Markdown, and returns its fenced blocks, its
+// destinations of links and images, and what no doc for agents may hold: code indented rather than fenced, and raw
+// HTML (which can hide a link).
+func readGuideDoc(t *testing.T, path string) (blocks []guideBlock, dests, headings, bad []string) {
+	t.Helper()
+
+	src, err := os.ReadFile(path)
+	if err != nil {
+		t.Fatal(err)
+	}
+	// Links are read as the page reads Markdown (Linkify among them: a bare URL is a link); its headings' ids by
+	// goldmark's own parser, which no heading of the page's depends on.
+	doc := kit.PageMarkdown.Parser().Parse(text.NewReader(src))
+	headings = headingIDs(src)
+	err = ast.Walk(doc, func(n ast.Node, entering bool) (ast.WalkStatus, error) {
+		if !entering {
+			return ast.WalkContinue, nil
+		}
+		switch n := n.(type) {
+		case *ast.FencedCodeBlock:
+			var body bytes.Buffer
+			for i := range n.Lines().Len() {
+				seg := n.Lines().At(i)
+				body.Write(seg.Value(src))
+			}
+			blocks = append(blocks, guideBlock{lang: string(n.Language(src)), text: body.String()})
+		case *ast.CodeBlock:
+			bad = append(bad, "an indented block of code")
+		case *ast.Link:
+			dests = append(dests, string(n.Destination))
+		case *ast.Image:
+			dests = append(dests, string(n.Destination))
+		case *ast.AutoLink:
+			dests = append(dests, string(n.URL(src)))
+		case *ast.RawHTML, *ast.HTMLBlock:
+			bad = append(bad, "raw HTML")
+		}
+		return ast.WalkContinue, nil
+	})
+	if err != nil {
+		t.Fatal(err)
+	}
+	return blocks, dests, headings, bad
+}
+
+// headingIDs are the ids goldmark gives the headings of src, with their #, which a link to a heading of the doc
+// is written as.
+func headingIDs(src []byte) []string {
+	var ids []string
+	doc := goldmark.New(goldmark.WithParserOptions(parser.WithAutoHeadingID())).Parser().Parse(text.NewReader(src))
+	_ = ast.Walk(doc, func(n ast.Node, entering bool) (ast.WalkStatus, error) { //nolint:errcheck // the walk fails only as its func does
+		if h, ok := n.(*ast.Heading); ok && entering {
+			if id, found := h.AttributeString("id"); found {
+				if raw, isBytes := id.([]byte); isBytes {
+					ids = append(ids, "#"+string(raw))
+				}
+			}
+		}
+		return ast.WalkContinue, nil
+	})
+	return ids
+}
+
+// floe diagram guide prints docs/diagrams.md as it is to an agent, which cannot open another doc: no link leaves it
+// but to a heading of its own. A link's destination is read from the Markdown's tree, so that a link of any form (a
+// path, ../, ./, a heading of another doc, a reference, a URL) is told.
+func TestDiagramGuideLinks(t *testing.T) {
+	t.Parallel()
+
+	_, dests, headings, bad := readGuideDoc(t, diagramGuides[0])
+	if len(dests) == 0 {
+		t.Fatal("no link found: the doc links its headings")
+	}
+	for _, d := range dests {
+		if !strings.HasPrefix(d, "#") {
+			t.Errorf("%s links %q: floe diagram guide prints it, and an agent cannot open another doc (write what it says, or a command that prints it)", diagramGuides[0], d)
+		} else if !slices.Contains(headings, d) {
+			t.Errorf("%s links %q, which no heading of it has (its headings: %v)", diagramGuides[0], d, headings)
+		}
+	}
+	for _, b := range bad {
+		t.Errorf("%s holds %s: write fenced code, and no HTML", diagramGuides[0], b)
+	}
+}
+
+// guideEnv runs floe with a store and places of one's own that are empty, so that no command reads the developer's.
+// LIMIT: a copy of guideEnv of internal/cli's tests. A helper both use would live where internal/cli's own tests
+// cannot import it (a package that imports cli, a cycle), and in a file that is not a test, for a test alone.
+func guideEnv(t *testing.T, stdout, stderr *bytes.Buffer) cli.Env {
+	t.Helper()
+
+	tmp := t.TempDir()
+	vars := map[string]string{"HOME": tmp, "FLOE_DIR": filepath.Join(tmp, "store"), "FLOE_PORT": "1"}
+	for _, kind := range []string{"TEMPLATES", "PARTS", "THEMES", "ICONS"} {
+		own := filepath.Join(tmp, strings.ToLower(kind))
+		if err := os.Mkdir(own, 0o700); err != nil {
+			t.Fatal(err)
+		}
+		vars["FLOE_"+kind+"_DIR"] = own
+	}
+	fakeAWSIcons(t, vars["FLOE_ICONS_DIR"])
+	return cli.Env{Stdout: stdout, Stderr: stderr, Dir: tmp, Getenv: func(key string) string { return vars[key] }}
+}
+
+// fakeAWSIcons keeps in dir an AWS icon set of the icons the docs name, empty drawings: the set floe icons fetch
+// would keep, which no test downloads. A doc naming another icon fails its example, to be added here.
+func fakeAWSIcons(t *testing.T, dir string) {
+	t.Helper()
+
+	names := map[string]string{
+		"res/elastic-load-balancing-application-load-balancer": "Networking-Content-Delivery",
+		"amazon-elastic-container-service":                     "Containers",
+		"amazon-rds":                                           "Databases",
+		"res/amazon-vpc-nat-gateway":                           "Networking-Content-Delivery",
+	}
+	index := make([]string, 0, len(names))
+	for name, category := range names {
+		file := filepath.Join(dir, "aws", filepath.FromSlash(name)+".svg")
+		if err := os.MkdirAll(filepath.Dir(file), 0o700); err != nil {
+			t.Fatal(err)
+		}
+		if err := os.WriteFile(file, []byte(`<svg xmlns="http://www.w3.org/2000/svg"/>`), 0o600); err != nil {
+			t.Fatal(err)
+		}
+		index = append(index, fmt.Sprintf("%q:{\"category\":%q}", name, category))
+	}
+	body := `{"version":"01012030","source":"https://example.invalid/icons.zip","icons":{` + strings.Join(index, ",") + `}}`
+	if err := os.WriteFile(filepath.Join(dir, "aws", "index.json"), []byte(body), 0o600); err != nil {
+		t.Fatal(err)
+	}
+}
+
+// Every block of code in the docs of how to write a diagram is a complete YAML example floe diagram inspect passes:
+// a diagram of a page (a `- diagram:` item), or a spec (a `title:` at its top). A block of another kind or of another
+// language fails, so that no block is left unchecked by a way of writing it (```yml, a fence with no language,
+// ~~~yaml, four backticks all reach the tree as one fenced block); an agent copies each block, so none is a piece.
+func TestDiagramGuideExamples(t *testing.T) {
+	t.Parallel()
+
+	shapes := make([][]string, 0, len(diagramGuides))
+	for _, path := range diagramGuides {
+		blocks, _, _, bad := readGuideDoc(t, path)
+		for _, b := range bad {
+			t.Errorf("%s holds %s: write fenced code, and no HTML", path, b)
+		}
+		var shape []string
+		dir := t.TempDir()
+		for i, b := range blocks {
+			where := fmt.Sprintf("%s: block %d", path, i+1)
+			if b.lang != "yaml" {
+				t.Errorf("%s is of language %q, not yaml", where, b.lang)
+				continue
+			}
+			kind, file := guideBlockFile(b.text)
+			shape = append(shape, kind)
+			if kind == "unknown" {
+				t.Errorf("%s is neither a `- diagram:` item nor a spec with a `title:`: write a complete example, %.40q", where, b.text)
+				continue
+			}
+			name := filepath.Join(dir, fmt.Sprintf("block%d.yaml", i))
+			if err := os.WriteFile(name, []byte(file), 0o600); err != nil {
+				t.Fatal(err)
+			}
+			var out, errs bytes.Buffer
+			if code := cli.Run([]string{"diagram", "inspect", name}, guideEnv(t, &out, &errs)); code != 0 || errs.Len() != 0 {
+				t.Errorf("%s: floe diagram inspect = %d, %s", where, code, errs.String())
+			}
+		}
+		if len(shape) < 2 {
+			t.Errorf("%s: %d examples, want 2 or more", path, len(shape))
+		}
+		shapes = append(shapes, shape)
+	}
+	if strings.Join(shapes[0], " ") != strings.Join(shapes[1], " ") {
+		t.Errorf("the blocks of %s are %v, of %s %v: write the same in both", diagramGuides[0], shapes[0], diagramGuides[1], shapes[1])
+	}
+}
+
+// guideBlockFile tells what a block of YAML is (page or spec, else unknown) and the file to inspect: a
+// page puts the item in a section of report.
+func guideBlockFile(body string) (kind, file string) {
+	switch {
+	case strings.HasPrefix(body, "- diagram:"):
+		var parts strings.Builder
+		for line := range strings.Lines(body) {
+			parts.WriteString("      " + line)
+		}
+		return "page", "template: report\nlang: en\ntitle: T\nsections:\n  - heading: H\n    parts:\n" + parts.String()
+	case strings.HasPrefix(body, "title:") || strings.Contains(body, "\ntitle:"):
+		return "spec", body
+	}
+	return "unknown", ""
+}
+
+// The variables the doc names for the colours of raw SVG are ones default's palette.css defines, which an agent reads
+// with floe theme show default palette.css (those of a tone, and the --*-fill it says to leave, aside).
+func TestDiagramGuidePalette(t *testing.T) {
+	t.Parallel()
+
+	palette, err := os.ReadFile("floe/themes/default/palette.css")
+	if err != nil {
+		t.Fatal(err)
+	}
+	for _, path := range diagramGuides {
+		checkRawRow(t, path, string(palette))
+	}
+}
+
+// checkRawRow checks the row of the part raw in the doc at path.
+func checkRawRow(t *testing.T, path, palette string) {
+	t.Helper()
+
+	doc, err := os.ReadFile(path)
+	if err != nil {
+		t.Fatal(err)
+	}
+	var row string
+	for line := range strings.Lines(string(doc)) {
+		if strings.HasPrefix(line, "| `raw` |") {
+			row = line
+		}
+	}
+	if strings.Contains(row, "`-soft`") {
+		t.Errorf("%s: the raw row writes \"their `-soft`\": only some colours have one, name each", path)
+	}
+	named := regexp.MustCompile("--[a-z]+(?:-[a-z]+)*").FindAllString(row, -1)
+	if len(named) < 16 {
+		t.Fatalf("%s: the raw row names %d variables: %q", path, len(named), row)
+	}
+	for _, v := range named {
+		defined := strings.Contains(palette, " "+v+":")
+		switch {
+		case strings.HasPrefix(v, "--tone"):
+			// The colours of a tone are made by floe from tone.json, not set in palette.css.
+		case strings.HasSuffix(v, "-fill") && v != "--on-fill":
+			// A theme's own fill, named to be left: palette.css does not define it.
+			if defined {
+				t.Errorf("%s: the raw row says %s is not in default's palette.css, which defines it", path, v)
+			}
+		case !defined:
+			t.Errorf("%s: the raw row names %s, which default's palette.css does not define", path, v)
+		}
+	}
+}
