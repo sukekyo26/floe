@@ -82,7 +82,7 @@ Draw no table or diagram with characters in `text` or `code`. Values look like t
 
 ## Diagrams
 
-A `diagram` part is drawn from a spec floe checks: text that overflows, parts that overlap or an edge through a box are refused, at the line to change. Pick how to write it by what the diagram is for.
+floe validates each diagram part: it refuses text that overflows, overlapping parts, and edges that pass through boxes, reporting the line to change. Choose how to write the diagram based on what it needs to show.
 
 A `graph` for a flow, a state machine, a draft, a diagram that often changes or joins many things: write the boxes and what joins what, and floe places them. `x` and `y` (required) only say where the graph starts.
 
@@ -103,7 +103,7 @@ A `graph` for a flow, a state machine, a draft, a diagram that often changes or 
             - { from: check, to: write, label: "no" }
 ```
 
-Write the parts by hand for a diagram read as a picture, such as an architecture, where the placing matters: give each box an `x` and `y` (its size is worked out from its text; write `w` and `h` only to line boxes up), and name the ends of each edge.
+Use manually positioned parts for diagrams read as pictures, such as architecture or layout diagrams, where the spatial arrangement matters. Give each box an `x` and `y`. Leave `w` and `h` out to let floe size the box to its text; specify them when you need to align boxes. Name both ends of each edge.
 
 ```yaml
 - diagram:
@@ -116,9 +116,9 @@ Write the parts by hand for a diagram read as a picture, such as an architecture
       - edge: { from: api, to: db }
 ```
 
-An AWS architecture draws each service as an AWS icon, not as a box, and puts no box round it: `floe icons search <word>` finds the name (a short one such as `alb` works), after `floe icons fetch aws` if the set is not kept yet.
+In an AWS architecture, represent each service with an AWS icon, not a box. Do not draw a box around the icon. First run `floe icons fetch aws` if the icon set is not kept yet, then `floe icons search <word>` finds a name (a short one such as `alb` works).
 
-`floe diagram guide` says more on each way (the parts and keys, how to size and space boxes and labels so that floe does not refuse them): read it before you write a larger diagram. `floe diagram example <kind>` prints a complete spec of each kind (architecture, sequence, ER, …) to copy: it writes `w` and `h` to line its boxes up, so if you change a text in it, leave that box's `w` out or widen it to the number the refusal gives (`needs w: 174 or more`).
+`floe diagram guide` says more on each way (the parts and keys, how to size and space boxes and labels so that floe does not refuse them): read it before you write a larger diagram. `floe diagram example <kind>` prints a complete spec of each kind (architecture, sequence, ER, …) to copy. The examples set `w` and `h` to align boxes. If you change a box's text, omit its `w` or increase it to at least the minimum floe reports (`needs w: 174 or more`).
 
 ## Writing YAML that floe reads as you meant
 

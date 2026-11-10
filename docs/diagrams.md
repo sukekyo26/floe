@@ -30,7 +30,7 @@ Pick by what the diagram is for:
 
 ### Writing by hand so that floe does not refuse it
 
-- Give each box an `x` and `y`. Leave `w` and `h` out and a box is as large as its text needs; write them to line boxes up. A `w` too small is refused with the one it needs: `box "a": "A long title here" needs w: 174 or more`. `floe diagram inspect` prints the size floe gave each box (`box "alb" 240,90 144x29`): place the next box by it.
+- Give each box an `x` and `y`. Leave `w` and `h` out to let floe size the box to its text; specify them when you need to align boxes. A `w` too small is refused with the one it needs: `box "a": "A long title here" needs w: 174 or more`. `floe diagram inspect` prints the size floe gave each box (`box "alb" 240,90 144x29`): place the next box by it.
 - Leave between the boxes of an edge with a label at least the label's width for a horizontal edge, which the `label` row of `floe diagram inspect` gives (`label "HTTPS" 80,5.5 46x18`: 46), else `box "a" overlaps label "HTTPS"`; for a vertical edge, at least its height (18). A label stands across a vertical edge, centred on it, so a long one reaches to both sides of the line: keep half its width between the line and the left of the canvas (`label "HTTPS-LONG-LABEL" sticks out of the 142.6x169 canvas` for a line 60 from the left): move the line to the right or shorten the label (a `width` only widens the canvas to the right, and the label sticks out of its left).
 - Put a box whole inside a frame or whole outside it (`box "a" straddles the edge of frame "F" at x 100, spanning 80 to 160`), and below the bottom edge of the frame's heading, and of its icon if it has one (`box "a" overlaps the heading of frame "Frame label"`, `the icon of frame "Group" overlaps box "a"`).
 - Write an edge as `{ from, to }`, the names of its two ends, and floe routes it. An edge with a box between its ends is refused (`edge "a"→"c" runs through box "b"; move one of them, or go round it by via`): move a box, or write `via` ([Edges written by hand](#edges-written-by-hand)).
@@ -38,7 +38,7 @@ Pick by what the diagram is for:
 
 ### An AWS architecture: draw the services as icons
 
-Draw each AWS service as its AWS icon, not as a box, and put no box round an icon. floe ships no icons; the one set is AWS's, kept once on each machine:
+In an AWS architecture, represent each service with an AWS icon, not a box. Do not draw a box around the icon. floe ships no icons; the one set is AWS's, kept once on each machine:
 
 1. `floe icons fetch aws` keeps the set (about 14MB, from aws.amazon.com). Without it, `floe check`, `floe diagram render` and `floe diagram inspect` refuse a diagram that holds an icon (`inspect` after printing where the parts went): `floe: AWS icons are not in <dir>/aws; run "floe icons fetch aws" (downloads about 14MB from aws.amazon.com) and try again`.
 2. `floe icons search <word>` lists the names of icons that hold the word, each with its group: `floe icons search alb` lists `aws/res/elastic-load-balancing-application-load-balancer` (a short name such as `alb` works; `floe icons search rds` lists `aws/amazon-rds`). Take the name as it is printed.

@@ -30,7 +30,7 @@
 
 ### 手書きで、floe に断られずに書く
 
-- 箱には `x` と `y` を書きます。`w` と `h` を省くと、箱は字に必要な大きさになります。箱を揃えたいときに書きます。`w` が小さすぎると、要る幅を言って断られます：`box "a": "A long title here" needs w: 174 or more`。`floe diagram inspect` は floe が決めた箱の大きさ（`box "alb" 240,90 144x29`）を出すので、次の箱はそれを見て置きます。
+- 箱には `x` と `y` を書きます。`w` と `h` を省くと、floe が箱を字に合わせた大きさにします。箱を揃えたいときは書きます。`w` が小さすぎると、要る幅を言って断られます：`box "a": "A long title here" needs w: 174 or more`。`floe diagram inspect` は floe が決めた箱の大きさ（`box "alb" 240,90 144x29`）を出すので、次の箱はそれを見て置きます。
 - ラベルのある線の箱の間は、横の線ならラベルの幅以上にします。幅は `floe diagram inspect` の `label` の行が言います（`label "HTTPS" 80,5.5 46x18` の 46）。足りないと `box "a" overlaps label "HTTPS"` と断られます。縦の線なら高さ（18）以上です。ラベルは縦の線をまたいで中央に立つので、長いと線の両側に出ます：線からキャンバスの左端までに、ラベルの幅の半分を残します（線が左から 60 のとき `label "HTTPS-LONG-LABEL" sticks out of the 142.6x169 canvas`）。線を右へ動かすか、ラベルを短くします（`width` はキャンバスを右にしか広げず、左へはみ出したラベルは直りません）。
 - 箱は、枠の中にまるごと、または外にまるごと置きます（`box "a" straddles the edge of frame "F" at x 100, spanning 80 to 160`）。枠の見出しの下の端と、アイコンがあればその下の端より下に置きます（`box "a" overlaps the heading of frame "Frame label"`、`the icon of frame "Group" overlaps box "a"`）。
 - 線は、両端の名前を `{ from, to }` で書くと、floe が通します。間に箱がある線は断られます（`edge "a"→"c" runs through box "b"; move one of them, or go round it by via`）：箱を動かすか、`via` を書きます（[手で書く線](#手で書く線)）。
@@ -38,7 +38,7 @@
 
 ### AWS の構成図：サービスをアイコンで描く
 
-AWS のサービスは、箱でなく AWS のアイコンで描き、アイコンを箱で囲みません。floe はアイコンを持っていません。セットは AWS のものだけで、マシンごとに 1 回取ります：
+AWS の構成図では、サービスを箱でなく AWS のアイコンで描きます。アイコンを箱で囲みません。floe はアイコンを持っていません。セットは AWS のものだけで、マシンごとに 1 回取ります：
 
 1. `floe icons fetch aws` でセットを取ります（約 14MB、aws.amazon.com から）。無いと、アイコンのある図を `floe check`・`floe diagram render`・`floe diagram inspect` は断ります（`inspect` は部品の置き場所を出した後に）：`floe: AWS icons are not in <dir>/aws; run "floe icons fetch aws" (downloads about 14MB from aws.amazon.com) and try again`。
 2. `floe icons search <語>` は、その語を含むアイコンの名前を、グループつきで並べます：`floe icons search alb` は `aws/res/elastic-load-balancing-application-load-balancer` を出します（`alb` のような短い名前でも引けます。`floe icons search rds` は `aws/amazon-rds`）。名前は出たとおりに使います。
