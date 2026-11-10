@@ -31,7 +31,7 @@ Pick by what the diagram is for:
 ### Writing by hand so that floe does not refuse it
 
 - Give each box an `x` and `y`. Leave `w` and `h` out and a box is as large as its text needs; write them to line boxes up. A `w` too small is refused with the one it needs: `box "a": "A long title here" needs w: 174 or more`. `floe diagram inspect` prints the size floe gave each box (`box "alb" 240,90 144x29`): place the next box by it.
-- Leave between the boxes of an edge with a label at least the label's width for a horizontal edge, which the `label` row of `floe diagram inspect` gives (`label "HTTPS" 80,5.5 46x18`: 46), else `box "a" overlaps label "HTTPS"`; for a vertical edge, at least its height (18). A label stands across a vertical edge, centred on it, so a long one reaches to both sides of the line: keep half its width between the line and the left of the canvas (`label "HTTPS-LONG-LABEL" sticks out of the 142.6x169 canvas` for a line 60 from the left), or write a `width`.
+- Leave between the boxes of an edge with a label at least the label's width for a horizontal edge, which the `label` row of `floe diagram inspect` gives (`label "HTTPS" 80,5.5 46x18`: 46), else `box "a" overlaps label "HTTPS"`; for a vertical edge, at least its height (18). A label stands across a vertical edge, centred on it, so a long one reaches to both sides of the line: keep half its width between the line and the left of the canvas (`label "HTTPS-LONG-LABEL" sticks out of the 142.6x169 canvas` for a line 60 from the left): move the line to the right or shorten the label (a `width` only widens the canvas to the right, and the label sticks out of its left).
 - Put a box whole inside a frame or whole outside it (`box "a" straddles the edge of frame "F" at x 100, spanning 80 to 160`), and below the bottom edge of the frame's heading, and of its icon if it has one (`box "a" overlaps the heading of frame "Frame label"`, `the icon of frame "Group" overlaps box "a"`).
 - Write an edge as `{ from, to }`, the names of its two ends, and floe routes it. An edge with a box between its ends is refused (`edge "a"→"c" runs through box "b"; move one of them, or go round it by via`): move a box, or write `via` ([Edges written by hand](#edges-written-by-hand)).
 - Run `floe diagram inspect` on the data file after every few parts: it prints where each part went, and each refusal at the line to change.
@@ -72,7 +72,7 @@ Draw each AWS service as its AWS icon, not as a box, and put no box round an ico
 | `line` | `x1` `y1` `x2` `y2`, `kind` (`line`; `lifeline`, `divider`). It may cross other parts, but not leave the canvas. |
 | `tree` | `x` `y` (the root's centre and top), `root`: a node of `rows`, `name`, `tone`, `shape` as a `box` has them, and `children`, nodes too. floe places each node under its parent, the children side by side and each depth in one row, and draws an edge down from each node to each child. A node's `name` can be the end of an edge written by hand; written without a side, the edge keeps off the sides the tree's edges end at (a node's top below the root, and its bottom when it has children), as at a box of a graph. |
 | `graph` | `x` `y` (the top left of all of it), `nodes`, `edges`, `direction` (`down`; `right`), and `lanes` in place of `nodes`. A node is `box: { name, with, rows, tone, shape }`, as a `box` has them, its `name` needed, `icon: { name, with, icon, label }`, an icon with its label below and no box round it, or `group: { name, label, accent, icon, nodes }`, boxes, icons and groups framed together, `icon` in the frame's corner, the AWS group style; an edge is `{ from, to }`, two names of its boxes, icons or groups, with `label`, `dashed`, `bold`, `tone`, `start` and `end` (`arrow` or `none`). floe lays the boxes out in ranks and draws each edge between them, as below. |
-| `raw` | `svg`: SVG that no part can draw, of SVG's elements alone (no script or `foreignObject`), not laid out or checked. Colour it with the variables `floe theme show default palette.css` defines (the CSS of the palette), as attributes too (`fill="var(--accent-soft)" stroke="var(--accent)"`); a variable only a theme sets is not one to rely on. For a tone, write `data-floe-tone` on the element or on a `<g>` around it within the raw SVG, and read `var(--tone)` and `var(--tone-soft)`: the diagram's root clears any tone from outside it. Give text a colour and a size, as the parts' text is 12 to 13 (`<text fill="currentColor" font-size="12">`); `currentColor` is `--fg`. A part's classes, `data-floe-look` and `data-floe-part` are floe's own, not for raw. A variable or a tone that is not there, `var(--tone)` with no tone, and text without `fill` draw black (text at the page's size), and are not told. |
+| `raw` | `svg`: SVG that no part can draw, of SVG's elements alone (no script or `foreignObject`), not laid out or checked. Colour it with the variables `floe theme show default palette.css` defines (the CSS of the palette), as attributes too (`fill="var(--accent-soft)" stroke="var(--accent)"`); take the colours (`--bg`, `--surface`, `--fg`, `--muted`, `--line`, `--accent`, `--good`, `--warn`, `--bad` and their `-soft`), not the faces, sizes or shadows in it, and no variable a theme alone sets (`--accent-fill` and the other `--*-fill`, which palette.css does not define). For a tone, write `data-floe-tone` on the element or on a `<g>` around it within the raw SVG, and read `var(--tone)`, `var(--tone-soft)` and, for a fill, `var(--tone-fill)`: the diagram's root clears any tone from outside it. Give text a colour and a size, as the parts' text is 12 to 13 (`<text fill="currentColor" font-size="12">`); `currentColor` is `--fg`. A part's classes, `data-floe-look` and `data-floe-part` are floe's own, not for raw. A variable or a tone that is not there, `var(--tone)` with no tone, and text without `fill` draw black (text at the page's size), and are not told. |
 
 ## Graph
 
@@ -101,8 +101,19 @@ A `graph` holds only how its boxes are joined; floe places them:
 - `with: <name>` on a box or an icon stands it in the rank of the box or icon named, with no edge drawn, of another group too. Write it for a box that should not go below what reaches it, a gateway below the servers that use it say, or that should not start a group's frame in the first rank. Edges keep the way they mean: `api → nat`, with `with: alb` on `nat`, runs up from `api`.
 
   ```yaml
-  # fragment
-  - icon: { name: nat, with: alb, icon: aws/res/amazon-vpc-nat-gateway, label: NAT }
+  - diagram:
+      title: A NAT gateway beside the load balancer, below the servers that use it
+      parts:
+        - graph:
+            x: 20
+            y: 20
+            nodes:
+              - icon: { name: alb, icon: aws/res/elastic-load-balancing-application-load-balancer, label: ALB }
+              - icon: { name: api, icon: aws/amazon-elastic-container-service, label: ECS }
+              - icon: { name: nat, with: alb, icon: aws/res/amazon-vpc-nat-gateway, label: NAT }
+            edges:
+              - { from: alb, to: api }
+              - { from: api, to: nat }
   ```
 
 - `with` takes only an edge from a box into that box out of the ranks: it runs up or down as the ranks fall, and is refused when they fall in one rank. An edge from a group, into a level edge's other box or out of the box still decides ranks, moving the box named too, and an edge of them back up a cycle is drawn the way it is written, the order written deciding which: write the boxes in another order for another.
@@ -141,10 +152,26 @@ A `graph` holds only how its boxes are joined; floe places them:
 - An edge `level` cannot be, between two zones each a group say, or between two boxes `with` stands in one rank, can be written by hand beside the graph. It moves nothing of the graph, so its ends stay in the ranks their other edges give them:
 
   ```yaml
-  # fragment
-  parts:
-    - graph: { x: 20, y: 20, nodes: [...], edges: [...] }
-    - edge: { from: writer, to: reader, label: copy }
+  - diagram:
+      title: A copy between two zones, an edge written by hand beside the graph
+      parts:
+        - graph:
+            x: 20
+            y: 20
+            nodes:
+              - group:
+                  name: zone-a
+                  label: Zone A
+                  nodes:
+                    - box: { name: writer, rows: [Writer] }
+              - group:
+                  name: zone-b
+                  label: Zone B
+                  nodes:
+                    - box: { name: reader, rows: [Reader] }
+            edges:
+              - { from: zone-a, to: zone-b }
+        - edge: { from: writer, to: reader, label: copy, fromSide: right, toSide: right, via: [{ x: 190 }] }
   ```
 - A box or an icon of a graph, and a group's or a lane's frame, can be the end of an edge written by hand, which ends on a side as any edge written by hand does (below). Without `fromSide` or `toSide`, with `via` or without, it takes a side the graph's edges leave to it, with its via next to it (or the other end) outside that side: across first, then up or down. The sides left are those no edge of the graph ends at and no loop or level edge takes on a box or an icon, and those no edge of the graph ends at or crosses on a group's or a lane's frame. When no side left has the via outside it, the edge keeps the side it would take and may run along one of the graph's edges: write `fromSide` or `toSide` for a side the graph's edges do not use. A box's side with loops or level edges is theirs: end no edge written by hand there.
 - A mistake between a part a graph or a tree laid out and one written by hand (an overlap, an edge through a box, a crossing) is told at the one written by hand, which can be moved. One between parts written by hand is told at the one written later (the later item of `parts`; of one item, the first compared), as the part added or moved last most often made it. One between parts of trees, or between a part of a tree and one of a graph, is told at the part of a tree written later. One that only parts of graphs make (two graphs overlapping or crossing, a graph off the canvas) is told at the graph, to move it by its `x` and `y` (or, off the canvas, to widen the canvas).
@@ -160,9 +187,15 @@ An edge without `via` and sides runs right-angled from the side of one end facin
 Write in `via` only what you choose of an edge's way, and `at` only when the middle of the edge's longest run, where the label stands without it, will not do; a label without `at` is not checked against a frame's edge, as the edge may cross it. floe adds a turn between points off line and enters the last side square, so the corners it adds need no writing, and a number copied from where a part stands needs rewriting when the part moves. A point may give one axis, `{ x: 710 }` or `{ y: 218 }`: the other is the point before's, and the first point's that of the centre of the edge's start (the point itself, the centre of a dot, the middle of a part or a row). `{ x: 710, y: 218 }` is `[710, 218]`.
 
 ```yaml
-# fragment
-- edge: { from: api-a, to: queue, fromSide: top, toSide: left, via: [[965, 218]] }   # M640,350 V218 H965 V510 H990
-- edge: { from: api-c, to: writer, fromSide: right, toSide: left, via: [{ x: 710 }] } # M664,646 H710 V374 H790
+- diagram:
+    title: Edges that turn where they are told
+    parts:
+      - box: { name: api-a, x: 40, y: 300, rows: [API A] }
+      - box: { name: api-c, x: 40, y: 400, rows: [API C] }
+      - box: { name: queue, x: 400, y: 300, rows: [Queue] }
+      - box: { name: writer, x: 400, y: 400, rows: [Writer] }
+      - edge: { from: api-a, to: queue, fromSide: top, toSide: top, via: [[200, 240]] }   # M80,300 V240 H200 H440 V300
+      - edge: { from: api-c, to: writer, fromSide: right, toSide: left, via: [{ x: 300 }] } # M120,414.5 H300 H400
 ```
 
 Write the first point on the axis the edge leaves by: `{ y }` from a top or a bottom side, `{ x }` from a left or a right one. `fromSide: top, via: [{ x: 150 }]` takes the height of the box's centre and is refused as running through the box; `via: [{ y: 10 }, { x: 150 }]` leaves upward and then runs across.

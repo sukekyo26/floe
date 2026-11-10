@@ -5,17 +5,18 @@ import (
 	"fmt"
 	"os"
 	"path/filepath"
+	"regexp"
 	"slices"
 	"strings"
 	"testing"
 
-	"github.com/goccy/go-yaml"
 	"github.com/yuin/goldmark"
 	"github.com/yuin/goldmark/ast"
 	"github.com/yuin/goldmark/parser"
 	"github.com/yuin/goldmark/text"
 
 	"github.com/sukekyo26/floe/internal/cli"
+	"github.com/sukekyo26/floe/internal/kit"
 )
 
 // diagramGuides are the docs of how to write a diagram: the English one is what floe diagram guide prints, whole,
@@ -35,7 +36,10 @@ func readGuideDoc(t *testing.T, path string) (blocks []guideBlock, dests, headin
 	if err != nil {
 		t.Fatal(err)
 	}
-	doc := goldmark.New(goldmark.WithParserOptions(parser.WithAutoHeadingID())).Parser().Parse(text.NewReader(src))
+	// Links are read as the page reads Markdown (Linkify among them: a bare URL is a link); its headings' ids by
+	// goldmark's own parser, which no heading of the page's depends on.
+	doc := kit.PageMarkdown.Parser().Parse(text.NewReader(src))
+	headings = headingIDs(src)
 	err = ast.Walk(doc, func(n ast.Node, entering bool) (ast.WalkStatus, error) {
 		if !entering {
 			return ast.WalkContinue, nil
@@ -48,10 +52,6 @@ func readGuideDoc(t *testing.T, path string) (blocks []guideBlock, dests, headin
 				body.Write(seg.Value(src))
 			}
 			blocks = append(blocks, guideBlock{lang: string(n.Language(src)), text: body.String()})
-		case *ast.Heading:
-			if id, ok := n.AttributeString("id"); ok {
-				headings = append(headings, "#"+string(id.([]byte)))
-			}
 		case *ast.CodeBlock:
 			bad = append(bad, "an indented block of code")
 		case *ast.Link:
@@ -69,6 +69,22 @@ func readGuideDoc(t *testing.T, path string) (blocks []guideBlock, dests, headin
 		t.Fatal(err)
 	}
 	return blocks, dests, headings, bad
+}
+
+// headingIDs are the ids goldmark gives the headings of src, with their #, which a link to a heading of the doc
+// is written as.
+func headingIDs(src []byte) []string {
+	var ids []string
+	doc := goldmark.New(goldmark.WithParserOptions(parser.WithAutoHeadingID())).Parser().Parse(text.NewReader(src))
+	_ = ast.Walk(doc, func(n ast.Node, entering bool) (ast.WalkStatus, error) { //nolint:errcheck // the walk fails only as its func does
+		if h, ok := n.(*ast.Heading); ok && entering {
+			if id, found := h.AttributeString("id"); found {
+				ids = append(ids, "#"+string(id.([]byte)))
+			}
+		}
+		return ast.WalkContinue, nil
+	})
+	return ids
 }
 
 // floe diagram guide prints docs/diagrams.md as it is to an agent, which cannot open another doc: no link leaves it
@@ -121,6 +137,7 @@ func fakeAWSIcons(t *testing.T, dir string) {
 		"res/elastic-load-balancing-application-load-balancer": "Networking-Content-Delivery",
 		"amazon-elastic-container-service":                     "Containers",
 		"amazon-rds":                                           "Databases",
+		"res/amazon-vpc-nat-gateway":                           "Networking-Content-Delivery",
 	}
 	index := make([]string, 0, len(names))
 	for name, category := range names {
@@ -139,11 +156,10 @@ func fakeAWSIcons(t *testing.T, dir string) {
 	}
 }
 
-// Every block of code in the docs of how to write a diagram is a YAML block that is one of: a complete diagram of a
-// page (a `- diagram:` item), a spec (a `title:` at its top), both of which floe diagram inspect passes, or a
-// fragment, which says so in its first line (# fragment). A block of another kind, or of another language, fails, so
-// that no block is left unchecked by a way of writing it (```yml, a fence with no language, ~~~yaml, four backticks
-// all reach the tree as one fenced block).
+// Every block of code in the docs of how to write a diagram is a complete YAML example floe diagram inspect passes:
+// a diagram of a page (a `- diagram:` item), or a spec (a `title:` at its top). A block of another kind or of another
+// language fails, so that no block is left unchecked by a way of writing it (```yml, a fence with no language,
+// ~~~yaml, four backticks all reach the tree as one fenced block); an agent copies each block, so none is a piece.
 func TestDiagramGuideExamples(t *testing.T) {
 	t.Parallel()
 
@@ -162,15 +178,9 @@ func TestDiagramGuideExamples(t *testing.T) {
 				continue
 			}
 			kind, file := guideBlockFile(b.text)
-			if kind == "fragment" {
-				kind += ":" + fragmentKeys(t, where, b.text)
-			}
 			shape = append(shape, kind)
-			if strings.HasPrefix(kind, "fragment") {
-				continue
-			}
 			if kind == "unknown" {
-				t.Errorf("%s is neither a `- diagram:` item, a spec with a `title:` nor marked `# fragment`: %.40q", where, b.text)
+				t.Errorf("%s is neither a `- diagram:` item nor a spec with a `title:`: write a complete example, %.40q", where, b.text)
 				continue
 			}
 			name := filepath.Join(dir, fmt.Sprintf("block%d.yaml", i))
@@ -182,14 +192,8 @@ func TestDiagramGuideExamples(t *testing.T) {
 				t.Errorf("%s: floe diagram inspect = %d, %s", where, code, errs.String())
 			}
 		}
-		complete := 0
-		for _, k := range shape {
-			if !strings.HasPrefix(k, "fragment") {
-				complete++
-			}
-		}
-		if complete < 2 {
-			t.Errorf("%s: %d complete examples, want 2 or more (the blocks may not all be fragments)", path, complete)
+		if len(shape) < 2 {
+			t.Errorf("%s: %d examples, want 2 or more", path, len(shape))
 		}
 		shapes = append(shapes, shape)
 	}
@@ -198,41 +202,10 @@ func TestDiagramGuideExamples(t *testing.T) {
 	}
 }
 
-// fragmentKeys reads a fragment as YAML, which it must be, and tells the keys it holds: of its mapping, or of each
-// item of its list. Both languages' fragment of one place holds the same keys.
-func fragmentKeys(t *testing.T, where, body string) string {
-	t.Helper()
-
-	var v any
-	if err := yaml.Unmarshal([]byte(body), &v); err != nil {
-		t.Errorf("%s is a fragment that YAML cannot read: %v", where, err)
-		return "unreadable"
-	}
-	keys := func(m any) string {
-		mm, _ := m.(map[string]any)
-		names := make([]string, 0, len(mm))
-		for k := range mm {
-			names = append(names, k)
-		}
-		slices.Sort(names)
-		return strings.Join(names, ",")
-	}
-	if list, ok := v.([]any); ok {
-		parts := make([]string, 0, len(list))
-		for _, item := range list {
-			parts = append(parts, keys(item))
-		}
-		return "list[" + strings.Join(parts, ";") + "]"
-	}
-	return "map[" + keys(v) + "]"
-}
-
-// guideBlockFile tells what a block of YAML is (fragment, page or spec, else unknown) and the file to inspect: a
+// guideBlockFile tells what a block of YAML is (page or spec, else unknown) and the file to inspect: a
 // page puts the item in a section of report.
 func guideBlockFile(body string) (kind, file string) {
 	switch {
-	case strings.HasPrefix(body, "# fragment\n"):
-		return "fragment", ""
 	case strings.HasPrefix(body, "- diagram:"):
 		var parts strings.Builder
 		for line := range strings.Lines(body) {
@@ -243,4 +216,37 @@ func guideBlockFile(body string) (kind, file string) {
 		return "spec", body
 	}
 	return "unknown", ""
+}
+
+// The variables the doc names for the colours of raw SVG are ones default's palette.css defines, which an agent reads
+// with floe theme show default palette.css (those of a tone, and the --*-fill it says to leave, aside).
+func TestDiagramGuidePalette(t *testing.T) {
+	t.Parallel()
+
+	doc, err := os.ReadFile(diagramGuides[0])
+	if err != nil {
+		t.Fatal(err)
+	}
+	palette, err := os.ReadFile("floe/themes/default/palette.css")
+	if err != nil {
+		t.Fatal(err)
+	}
+	var row string
+	for line := range strings.Lines(string(doc)) {
+		if strings.HasPrefix(line, "| `raw` |") {
+			row = line
+		}
+	}
+	named := regexp.MustCompile("--[a-z]+(?:-[a-z]+)*").FindAllString(row, -1)
+	if len(named) < 8 {
+		t.Fatalf("the raw row names %d variables: %q", len(named), row)
+	}
+	for _, v := range named {
+		if strings.HasPrefix(v, "--tone") || strings.HasSuffix(v, "-fill") {
+			continue
+		}
+		if !strings.Contains(string(palette), "  "+v+":") && !strings.Contains(string(palette), " "+v+":") {
+			t.Errorf("the raw row names %s, which default's palette.css does not define", v)
+		}
+	}
 }

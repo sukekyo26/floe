@@ -3,11 +3,12 @@ package kit
 import "errors"
 
 // Read and Check are read and check, for the tests of this package to read and check apart; FloeFailure is
-// floeFailure, which no own thing reaches.
+// floeFailure, which no own thing reaches; PageMarkdown is the Markdown of floe's pages.
 var (
-	Read        = read
-	Check       = check
-	FloeFailure = floeFailure
+	Read         = read
+	Check        = check
+	FloeFailure  = floeFailure
+	PageMarkdown = markdown
 )
 
 // Compiled returns how many of k's templates were compiled again.

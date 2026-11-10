@@ -13,5 +13,5 @@ paths:
 - **図の字は描く class で測る**：図の字の大きさ・太字・等幅を知るのは `faceOf(class)` 1 つで、part.css と 1 対 1 に書く（part.css の字を変えたら `faceOf` も直す）。描く所も測る所も同じ class の値を読み、呼ぶ側は太字かを選ばない。`TestRenderedDiagramFaces`
 - **図は自分の地を塗る**：部品 diagram の枠は地を `--bg`、字を `--fg` で塗り、下を隠すものも `--bg` で塗る。図の外の地は読まない。`TestRenderedDiagramGround`
 - **ランダムのテストの個数**：race の時間を占めるランダムのテストの個数は `tries` で読む（`only` で図を名指すものは減らさない）。race のときだけ 1/5 になり、全部の個数は race なしのジョブが走らせる。全部の個数で測った下限と割合は全部の個数のときだけ見て、上限は 1/5 でも見る
-- **raw の色はパレットの表の変数**：raw の SVG の色は、docs のパレットの表の変数と、raw の中の `data-floe-tone` の下の `var(--tone)` で書かせる。部品の class・`data-floe-look`・`data-floe-part`・テーマだけの変数は勧めない。`TestRenderedFragment`（raw の色を測る）
+- **raw の色は default の palette.css の色の変数**：raw の SVG の色は、`floe theme show default palette.css` が定義する色の変数（docs/diagrams.md の raw の行が挙げる）と、raw の中の `data-floe-tone` の下の `var(--tone)`・`--tone-soft`・`--tone-fill` で書かせる。部品の class・`data-floe-look`・`data-floe-part`・テーマだけの変数（`--*-fill`）は勧めない。`TestRenderedFragment`（raw の色を測る）
 - **docs/diagrams.md は `floe diagram guide` がそのまま出す**：ほかの docs へのリンクを置かない（配った先で開けない）。`TestDiagramGuideLinks`
