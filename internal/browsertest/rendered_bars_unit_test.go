@@ -20,6 +20,8 @@ sections:
 // it breaks within the word), and a long one or one of many words wraps in the value's column, which keeps within 40% of
 // the part and leaves the bar a length (white-space: nowrap, or a long unit nothing breaks, widens the column and
 // squeezes the bar).
+// LIMIT: Chrome breaks a long unit under keep-all by itself, so this cannot tell overflow-wrap: anywhere, which keeps the
+// column's least width small in an engine that breaks it not; measure that engine if one comes to be run.
 func TestRenderedBarsUnit(t *testing.T) { //nolint:paralleltest // the browser tests share one Chrome, one at a time
 	s := newSite(t)
 	b := s.b

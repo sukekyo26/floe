@@ -46,7 +46,8 @@ const measurePaper = `(() => {
 
 // printPage holds what scrolls sideways on screen, to be folded on paper: long lines in code, a diff, a terminal,
 // Markdown's code in a text and in a card, a deep tree with a long name, an ordinary table with a path in code, and
-// a table of six short columns, which fits on paper but for a column's least width on screen (7em).
+// a table of six short columns, which fits on paper but for a column's least width on screen (7em), and a bar with a long
+// unit of many words.
 const printPage = `template: report
 lang: en
 title: Print
