@@ -505,8 +505,8 @@ func (s *Store) themesFor(slug, path, project, repo, place string, force bool) (
 	return "", set.Theme, err
 }
 
-// projectOf is the project of a page published from project: the one it was in, unless it is new, replaces another file's
-// or was emptied of its project, or opts moves it.
+// projectOf is the project of a page published from project: the one it was in, unless it is new, replaces another
+// file's or was emptied of its project, or opts moves it.
 func projectOf(opts Options, base *Meta, project string) string {
 	if opts.MoveProject {
 		return project
