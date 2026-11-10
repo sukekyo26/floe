@@ -23,15 +23,8 @@ const rowParts = `  - table:
       | Name | Count |
       | --- | --: |
       | memo | 12 |
-  - compare:
-      before: Now
-      after: Then
-      rows:
-        - { what: Host, before: Old, after: New }
   - fields:
       - { name: --port, text: The port }
-  - findings:
-      - { level: nit, text: A finding }
   - entries:
       - { title: Copy, tags: [Saturday] }
       - { title: Links }

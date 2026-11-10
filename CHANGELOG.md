@@ -278,11 +278,11 @@ adheres to [Semantic Versioning](https://semver.org/).
 - Add floe's template `report`: a header over sections, each a heading over
   parts and then subsections, one level of a heading (an `<h3>`) over parts (a
   heading, when written, is not empty, and a section with subsections has
-  one); and twenty-eight parts a template refers to as
-  `floe:///parts/<name>.json` (`floe part list --all` lists them): twenty-six that a
+  one); and twenty-six parts a template refers to as
+  `floe:///parts/<name>.json` (`floe part list --all` lists them): twenty-four that a
   section of report takes beside Markdown `text` and `html`, from `code`,
   `terminal`, `table` and `image` (an image of the data file's directory,
-  such as a screenshot) to `findings`, `decision`, `entries`, `timeline`,
+  such as a screenshot) to `decision`, `entries`, `timeline`,
   `tabs`, `diagram` and `script`, and `cell` and `stack`, which other parts
   hold. A part draws no heading, as it knows not the level it is put at: the
   titles of `options` and `decision` are not headings, so that the headings of
@@ -364,7 +364,7 @@ adheres to [Semantic Versioning](https://semver.org/).
 - Change the management page's folder row to show no time (nor in its tooltip or the search): the time was when the link was added, which never moves when a file in the folder is written, unlike a linked file's time. The folder keeps its place in the list, by that time. The rows of a folder's directories, and the note of an empty one, no longer show "just now" a minute after they are drawn.
 - Change the management page's words for deleting a task and a step to Delete, from Remove: "Delete the task", "Really delete it", "Delete <step>", "Deleted <step>", "cannot be deleted" and "was deleted elsewhere"; a task refused for its pages or child tasks says to take them off it or delete them first, at `floe work --forget` too. Making a task is Create, from Add and Make: "Create task", "Created task <ID>", "Created the child task <ID>", "Create" in the dialog and "Create <ID> as a new task"; finding or making a tag is Add: "Find or add a tag", "Add the tag <name>". The Japanese words for adding a step, and the toast for taking a page off favorites, change too.
 - Change "+ Add a link or folder" on the page list to "+ Link or folder", and its place: from the head of the list to its left column, under the kinds (page, link, folder); in Filter on a narrow screen. It stays while rows are selected and with the list folded, and goes with the left column folded; a list with no page at all has only the button in its middle
-- Change the tables of four themes, each still in its frame: soft's rows are striped faintly in the accent with no rules, its head on a tint of the accent in the accent; app's head is a band of the code's dark blue in light text, its rows striped with the ground; aurora's head stays clear over a line of its wash's three colours, deepened, with lines of light between the rows; swiss's table, ruled only above and below before, is framed in black, its head white on black. Markdown's tables, a chart's numbers, `compare`, `fields`, `findings` and the tables of the templates design and postmortem take the same look. A table's head is painted on its row now, so that a gradient in `--table-head-bg` runs once across it.
+- Change the tables of four themes, each still in its frame: soft's rows are striped faintly in the accent with no rules, its head on a tint of the accent in the accent; app's head is a band of the code's dark blue in light text, its rows striped with the ground; aurora's head stays clear over a line of its wash's three colours, deepened, with lines of light between the rows; swiss's table, ruled only above and below before, is framed in black, its head white on black. Markdown's tables, a chart's numbers, `fields` and the tables of the templates design and postmortem take the same look. A table's head is painted on its row now, so that a gradient in `--table-head-bg` runs once across it.
 - Change the management page's "Edit" of a page to fold its slug and project under "Slug and project", which shows what they are now and opens when one of them is refused or fails to save, with the field focused; each says what changing it changes on the screen. Japanese words for what a person does say 変更する ("名前は変更できない" on a task's steps).
 - Change the words of the management page's dialogs and failures: a dialog that saves what is typed closes by "Cancel" ("Set task", "Edit task" and the dialog adding a task, a child or a parent, which said "Close"), one with no button that saves by "Close"; a failure says "Failed to …: reason" ("…に失敗しました：理由") throughout, the reason in brackets when words follow it. Saving "Edit task" or "Add a page" when the server is not reached, or a version that changed meanwhile, now says "Failed to save: …" ("Add a page" said nothing when not reached), and marking a page read, when the server refuses it, says "Failed to mark as read: …".
 - Refuse a comment right after a text value not in quotes, or after a `|` or `>` text, when it is deeper than the value's key (or `-`), on a line after the value too. A `# Heading` line shallower than a `|` text's indentation, which YAML leaves out of the text as a comment, a `#` line of a plain value over lines, and a comment cutting a value in a file of CR line breaks are refused now. The mistake tells how to mend a `|` or `>` text (indent all its lines alike, the `#` line too, or write its indentation, like `|2`) and how deep to write a comment.
@@ -590,9 +590,6 @@ adheres to [Semantic Versioning](https://semver.org/).
   face wherever it stands (retro's pick in options, in its card's title, no
   longer in Georgia). notebook's pills are filled solid, the paper's lines no
   longer through them.
-- Change findings' nit to be a pill of the tone `muted`, drawn as the theme
-  draws its other pills: with no ground in blueprint, editorial and washi,
-  filled in ink, in the theme's text colour in brutal, notebook and swiss.
 - Change a tone to be marked by `data-floe-tone`, not by a class, in parts,
   themes and templates of one's own and in a data file's html (a pill written
   as `<span data-floe-tone="good" data-floe-part="cell">`). floe gives what is

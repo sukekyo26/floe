@@ -1,7 +1,7 @@
 {
   "$schema": "https://json-schema.org/draft/2020-12/schema",
   "title": "checks",
-  "description": "What was checked and what came of it, in a survey or a test, each with its result of ok, ng or unchecked and what actually happened, the count of each on top. For what is still to do, write checklist; for what a review found, findings; code goes in parts",
+  "description": "What was checked and what came of it, in a survey or a test, each with its result of ok, ng or unchecked and what actually happened, the count of each on top. For what is still to do, write checklist; code goes in parts",
   "type": "array",
   "minItems": 1,
   "items": {

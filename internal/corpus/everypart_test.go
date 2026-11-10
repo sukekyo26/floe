@@ -27,7 +27,7 @@ const floeParts = "../kit/floe/parts"
 
 // The sample of every part draws every part of floe's but a look (one of no schema), one of no style and the
 // diagram, each part that takes a tone in every tone and in none (an element of the same kind as one drawn in a tone, without
-// one), and every value of each enum of a part's schema (findings' level, steps' state) in its data, and every part
+// one), and every value of each enum of a part's schema (steps' state) in its data, and every part
 // stack takes in a stack. No part draws a heading, as a part knows not the level it is put at.
 func TestEveryPartDrawsEveryPart(t *testing.T) {
 	t.Parallel()

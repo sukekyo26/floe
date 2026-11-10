@@ -51,14 +51,13 @@ Pick the part by what the content is:
 | Questions for the reader to decide | `asks` |
 | Results of checks or tests | `checks`, each with `result: ok`, `ng` or `unchecked`; floe counts the results at the top; not the conditions of a choice (`table`, `options`) nor what is still to do (`checklist`) |
 | Events at dates | `timeline`; stages without dates are `steps` |
-| Rows compared along and across, each cell short | `table` |
+| Rows compared along and across, each cell short; a thing before and after, one column each | `table` |
 | A few key values at the top | `facts` |
-| A thing before and after | `compare` |
 | Numbers over time, or compared | `chart` |
 | Structure or flow: boxes and arrows | `diagram` ([Diagrams](#diagrams)) |
 | Code; commands with what they printed | `code`; `terminal` (write no `$ `) |
 
-For anything else (review findings, large numbers, files, fields, links, …) read the descriptions in `floe part list`. Draw no table or diagram with characters in `text` or `code`. Values look like this:
+For anything else (large numbers, files, fields, links, …) read the descriptions in `floe part list`. Draw no table or diagram with characters in `text` or `code`. Values look like this:
 
 ```yaml
 - text: |

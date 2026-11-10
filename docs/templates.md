@@ -117,10 +117,10 @@ section > h2 { border-top: var(--rule); padding-top: 1.3rem; }
 A part draws an item of the data: `floe part list --all` lists every part, look and shared schema a `$ref` can name, with its shape, and `floe part show <name>` lists on its `files:` line the files one reads, which `floe part show <name> <file>` prints: what one takes is a part's `schema.json` or a shared schema's `<name>.json`, and a look has none. The schema names it with `$ref`, under `properties`, `additionalProperties` (not the root's) or `items`:
 
 ```json
-"findings": { "$ref": "floe:///parts/findings.json", "description": "What the review found" }
+"fields": { "$ref": "floe:///parts/fields.json", "description": "The keys of the setting" }
 ```
 
-`page.html` puts the item where it goes, `{{.Data.findings}}`: floe checks it against the part's schema and checks, its mistakes at the data file's lines and columns, and draws it as HTML.
+`page.html` puts the item where it goes, `{{.Data.fields}}`: floe checks it against the part's schema and checks, its mistakes at the data file's lines and columns, and draws it as HTML.
 
 The part `text` is Markdown that stands among other parts, where `code` and `terminal` can stand beside it: floe warns of a fenced block of code in it, to be written in `code`. It draws its Markdown in a box of no part (`data-floe-text`), with no ground or tone of its own, so that it takes the face and tone around it; `page.css` and the theme's `base.css` stop at it, and the theme's `markdown.css` draws it as Markdown anywhere. Its headings are in Markdown's sizes (1.2em and 1.1em), as in a template's own Markdown. A field of plain Markdown, where no code part stands, is `{"type": "string", "format": "markdown"}` instead.
 

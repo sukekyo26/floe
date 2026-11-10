@@ -29,10 +29,6 @@
   [dt] Skipped
   [dd] 2
   [dd] left for later
-  [tr]  | Now | After the move
-  [tr] Host | The old server | The new host
-  [tr] Search | Built in | Rebuilt on Sunday
-  [tr] Address | wiki.example.com | wiki.example.com
 ## h2 Steps
   [p] The pages move over one weekend; the old wiki stays readable until the new one opens.
   [p] Read-only means read-only: the freeze covers comments too.
@@ -217,7 +213,6 @@
   [pre] Command: wiki freeze
   [div] The freeze What it stops
   [li] https://example.com/freeze
-  [tr] should | wiki.conf:1 The mode is not said in the banner
   [summary] The whole command
   [figcaption] sh
   [pre] wiki freeze --all --banner
@@ -238,9 +233,6 @@
   [li] https://example.com/guide
   [div] Old wiki
   [li] https://wiki.example.com/
-  [tr] must | wiki.conf:3 fixed The banner names the old host
-  [tr] should | The search index is rebuilt by hand
-  [tr] nit | Two pages have the same title Left as the owners asked
   [li] pages/ what export writes
   [li] home.md (changed)
   [li] old.md (removed)
@@ -355,8 +347,6 @@
   [p] Run it in a new window; the steps and run.sh.
   [tr] Shell | Lines
   [tr] PowerShell | 1
-  [tr]  | bash | PowerShell
-  [tr] Variable | export | $env
   [dt] Shell
   [dd] PowerShell 7
   [li] profile.ps1 (changed)

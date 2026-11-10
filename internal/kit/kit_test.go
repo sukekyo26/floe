@@ -46,7 +46,7 @@ func TestFloe(t *testing.T) {
 		t.Error("Floe read floe's own twice")
 	}
 	parts, looks, themes, templates := k.Names()
-	if len(parts) != 32 || !slices.Equal(looks, []string{"band", "cards", "marked", "numbered", "panel", "rows", "tags", "toc", "zoom"}) || len(themes) != 12 ||
+	if len(parts) != 30 || !slices.Equal(looks, []string{"band", "cards", "marked", "numbered", "panel", "rows", "tags", "toc", "zoom"}) || len(themes) != 12 ||
 		!slices.Equal(templates, []string{"adr", "design", "handoff", "postmortem", "report", "runbook", "slides"}) {
 		t.Errorf("Names = %v, %v, %v, %v", parts, looks, themes, templates)
 	}
@@ -778,8 +778,8 @@ func TestSectionParts(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	want := "asks bars chart checklist checks code columns compare decision details diagram diff entries facts fields " +
-		"findings html image keys links note options script stats steps table tabs terminal text timeline tree"
+	want := "asks bars chart checklist checks code columns decision details diagram diff entries facts fields " +
+		"html image keys links note options script stats steps table tabs terminal text timeline tree"
 	named := make([]string, 0, len(got))
 	for _, e := range got {
 		named = append(named, e.Name)
@@ -823,7 +823,7 @@ func TestShapes(t *testing.T) {
 	t.Parallel()
 
 	want := map[string]string{
-		"part any":            "one of asks,bars,chart,checklist,checks,code,columns,compare,decision,details,diagram,diff,entries,facts,fields,findings,html,image,keys,links,note,options,script,stats,steps,table,tabs,terminal,text,timeline,tree",
+		"part any":            "one of asks,bars,chart,checklist,checks,code,columns,decision,details,diagram,diff,entries,facts,fields,html,image,keys,links,note,options,script,stats,steps,table,tabs,terminal,text,timeline,tree",
 		"part asks":           "[] by,decided,options,question,recommend,why",
 		"part band":           "-",
 		"part bars":           "[] label,of,tone,value",
@@ -834,7 +834,6 @@ func TestShapes(t *testing.T) {
 		"part checks":         "[] actual,how,parts,result,title",
 		"part code":           "file,lang,mark,start,text,title",
 		"part columns":        "[] parts,title",
-		"part compare":        "after,before,rows",
 		"part decision":       "date,rejected,status,text,title",
 		"part details":        "open,parts,title",
 		"part diagram":        "-",
@@ -842,7 +841,6 @@ func TestShapes(t *testing.T) {
 		"part entries":        "[] parts,tags,text,title",
 		"part facts":          "[] name,value",
 		"part fields":         "[] default,name,required,text,type",
-		"part findings":       "[] at,level,status,text,why",
 		"part image":          "alt,caption,file",
 		"part keys":           "[] keys,text",
 		"part links":          "[] text,title,url",
@@ -853,7 +851,7 @@ func TestShapes(t *testing.T) {
 		"part panel":          "-",
 		"part rows":           "-",
 		"part script":         "data,js",
-		"part stack":          "[] one of asks,bars,chart,checklist,checks,code,compare,decision,details,diagram,diff,entries,facts,fields,findings,image,keys,links,note,options,script,stats,steps,table,terminal,text,timeline,tree",
+		"part stack":          "[] one of asks,bars,chart,checklist,checks,code,decision,details,diagram,diff,entries,facts,fields,image,keys,links,note,options,script,stats,steps,table,terminal,text,timeline,tree",
 		"part stats":          "-",
 		"part steps":          "[] state,tags,text,title",
 		"part table":          "columns,rows",

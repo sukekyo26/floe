@@ -117,10 +117,10 @@ section > h2 { border-top: var(--rule); padding-top: 1.3rem; }
 部品はデータの項目を描きます。`$ref` で名指せる部品・見た目・共有の schema は `floe part list --all` が形と一緒に並べ、`floe part show <名前>` が `files:` の行に読むファイルを並べ、`floe part show <名前> <ファイル>` がそれを出します。取るものは、部品なら `schema.json`、共有の schema なら `<名前>.json` で、見た目にはありません。schema は `properties`・`additionalProperties`（根のものを除く）・`items` の下で、`$ref` で名指します。
 
 ```json
-"findings": { "$ref": "floe:///parts/findings.json", "description": "What the review found" }
+"fields": { "$ref": "floe:///parts/fields.json", "description": "The keys of the setting" }
 ```
 
-`page.html` は項目を置きたい所に置きます（`{{.Data.findings}}`）。floe は部品の schema と checks で確かめ（誤りはデータファイルの行と列で言う）、HTML で描きます。
+`page.html` は項目を置きたい所に置きます（`{{.Data.fields}}`）。floe は部品の schema と checks で確かめ（誤りはデータファイルの行と列で言う）、HTML で描きます。
 
 部品 `text` は、ほかの部品と並び、横に `code`・`terminal` を置ける所の Markdown です。floe は中の囲んだコードのブロックを警告し、`code` に書くよう勧めます。Markdown は部品の箱でない外枠（`data-floe-text`）に描き、自分の地も tone も持たないので、外の面と tone を継ぎます。`page.css` とテーマの `base.css` はそこで止まり、テーマの `markdown.css` がどこでも Markdown として描きます。見出しは、テンプレート自身の Markdown と同じく Markdown の大きさです（1.2em・1.1em）。code の部品を置かない、ただの Markdown の欄は、`{"type": "string", "format": "markdown"}` にします。
 
