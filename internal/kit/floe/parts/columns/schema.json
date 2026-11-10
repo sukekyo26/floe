@@ -1,7 +1,7 @@
 {
   "$schema": "https://json-schema.org/draft/2020-12/schema",
   "title": "columns",
-  "description": "Things to see at once, side by side, such as a screen before and after, or data beside its reading: each column an optional title over parts of the kinds stack holds (floe part show stack schema.json), as wide as the others, and one under another where they don't fit",
+  "description": "Things to see at once, side by side, such as a screen or code before and after, or data beside its reading: each column an optional title over parts of the kinds stack holds (floe part show stack schema.json), as wide as the others, and one under another where they don't fit",
   "type": "array",
   "minItems": 2,
   "items": {

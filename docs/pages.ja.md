@@ -81,7 +81,7 @@ floe render plan.yaml           # floe 無しで開ける plan.html を隣に書
 - 時の順に起きたこと：`timeline`。
 - 言葉と意味：Markdown の箇条書き。意味が長いなら `entries`。
 - ページの頭の、短い値の数個：`facts`。
-- 行でも列でも見比べる、升の短い並び（前と後は 1 列ずつ）：`table`。
+- 行でも列でも見比べる、升の短い並び（短い値の前と後は 1 列ずつ）：`table`。
 
 `report` が節の中に取る部品。自分の部品も取り（[parts.ja.md](parts.ja.md)）、`floe part list` がこれらと一緒に並べます：
 
@@ -103,7 +103,7 @@ floe render plan.yaml           # floe 無しで開ける plan.html を隣に書
 | `decision`・`fields` | 決めたこと、設定の鍵。 |
 | `timeline`・`bars`・`keys` | 日付の順の出来事、値の棒、押すキー。`of` を書いた棒は、その全体のうち `value` までを塗り、`5 / 8` と出します（作業の進みに）。ほかの棒は、その中で一番大きい値に対する割合です。 |
 | `details`・`tabs` | 題の下に畳んだ部品、または 1 つずつ読めばよいものをタブで見せる部品。中に `tabs`・`columns`・`html` のほかの全部の部品を置ける（tabs の form の中の form は落ち、columns は列の中に列ができ、`html` の `</form>` は tabs の form を閉じるため）。カードで並べる部品・keys・timeline・bars は、窓の幅でなく置いた場所の幅で並べ、`asks` の札はそこで折り返す。閉じた `details` や見えていないタブの中の `script` は、幅の無い要素に対して走る。 |
-| `columns` | 部品を横に並べ、同時に見せます。前と後の画面、データと説明など。列は、省ける `title` とその下の `parts`（`details` と同じ部品）。列はどれも同じ幅で、幅は 16rem 以上なので、何列が横に並ぶかは本文の幅で決まり（`report` で最大 5 列、`adr`・`runbook` で 3 列）、残りは下に折り返します。 |
+| `columns` | 部品を横に並べ、同時に見せます。画面やコードの前と後、データと説明など。列は、省ける `title` とその下の `parts`（`details` と同じ部品）。列はどれも同じ幅で、幅は 16rem 以上なので、何列が横に並ぶかは本文の幅で決まり（`report` で最大 5 列、`adr`・`runbook` で 3 列）、残りは下に折り返します。 |
 | `diagram` | 確かめてから inline SVG で描く図（[diagrams.ja.md](diagrams.ja.md)）。 |
 | `script` | 動くもの（[スクリプトと HTML](#スクリプトと-html)）。 |
 | `html` | そのまま入る HTML。`any.json` の鍵で、部品そのものではないので schema.json はありません。`floe part show html any.json` が、その鍵を持つ `any.json` の全体を出します（[スクリプトと HTML](#スクリプトと-html)）。 |
