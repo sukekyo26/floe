@@ -1,6 +1,11 @@
 package browsertest_test
 
-import "testing"
+import (
+	"encoding/json"
+	"fmt"
+	"math"
+	"testing"
+)
 
 // timelineDatesPage holds three timelines: dates of every length up to 14rem (the first, in English: a date alone, a
 // time alone, with a time, seconds, a weekday, and an ISO 8601 with an offset), the dates of a Japanese page (the
@@ -30,9 +35,8 @@ sections:
 // measureTimelineDates returns a line for what stands amiss, given the form the page should be in: "wide" (the date
 // at the left of the dot) or "narrow" (over the title), or "" where either will do (paper). A date up to 14rem is in
 // one line; where wide, none is wider than 14rem (narrow, its box is the text's column), the dates of a timeline end at
-// one edge, its titles start at one (so do its dots, which stand a fixed width left of them), no date is nearer its dot
-// than 0.5rem, and a date over 14rem is folded; where narrow, the dates and the titles start at one edge and the date is
-// over its title.
+// one edge, its titles start at one, and a date over 14rem is folded; where narrow, the dates and the titles start at
+// one edge and the date is over its title. The dots are measured by dotsIn.
 const measureTimelineDates = `((want) => {
   const out = [], rem = parseFloat(getComputedStyle(document.documentElement).fontSize);
   const lines = (el) => {
@@ -59,12 +63,8 @@ const measureTimelineDates = `((want) => {
       if (wide && d.width > 14 * rem + 0.5) out.push(label + ' is ' + d.width + ' px wide, over 14rem');
       if (i === 2 && wide && date.textContent.length > 20 && n < 2) out.push(label + ' is over 14rem and in one line');
       same('title start', label, t.left);
-      // The dot stands its width and its gap left of the title, so that the dots of a timeline are in one line when its titles are.
-      const dot = getComputedStyle(li, '::before'), dotLeft = t.left - parseFloat(dot.width) - parseFloat(dot.marginRight);
-      same('dot start', label, dotLeft);
       if (wide) {
         same('date end', label, d.right);
-        if (dotLeft - d.right < 0.5 * rem) out.push(label + ' is ' + (dotLeft - d.right) + ' px from its dot, less than 0.5rem');
       } else {
         same('date start', label, d.left);
         if (d.bottom > t.top + 1) out.push(label + ' is not over its title');
@@ -73,6 +73,60 @@ const measureTimelineDates = `((want) => {
   });
   return out.join('\n');
 })`
+
+// tagTimelineRows gives each row of each timeline the attribute data-row (its timeline and its place), which a measure
+// of the dot reaches it by, and returns as JSON the 1rem in px and, for each row, the tag, the timeline, whether it is
+// wide, and the right of its date.
+const tagTimelineRows = `(() => {
+  const rem = parseFloat(getComputedStyle(document.documentElement).fontSize), rows = [];
+  document.querySelectorAll('[data-floe-part=timeline]').forEach((ol, i) => {
+    const cs = getComputedStyle(ol);
+    const wide = ol.clientWidth - parseFloat(cs.paddingLeft) - parseFloat(cs.paddingRight) > 36 * rem;
+    ol.querySelectorAll(':scope > li').forEach((li, k) => {
+      li.setAttribute('data-row', i + '-' + k);
+      rows.push({ tag: i + '-' + k, list: i, wide, dateRight: li.querySelector('.date').getBoundingClientRect().right });
+    });
+  });
+  return JSON.stringify({ rem, rows });
+})()`
+
+// dotsIn measures the dots (the ::before boxes, which DevTools gives: pseudoBoxes) of the page open: those of a
+// timeline start at one edge, and where it is wide each is 0.5rem or more from the right of its date. A dot moved by a
+// theme or put in another column, or a date that has lost its gap, is told.
+func (b *browser) dotsIn(what string) []string {
+	b.t.Helper()
+
+	var got struct {
+		Rem  float64
+		Rows []struct {
+			Tag       string
+			List      int
+			Wide      bool
+			DateRight float64
+		}
+	}
+	if err := json.Unmarshal([]byte(b.eval(tagTimelineRows)), &got); err != nil {
+		b.t.Fatal(err)
+	}
+	var amiss []string
+	left := map[int]float64{}
+	for _, r := range got.Rows {
+		dot, _ := b.pseudoBoxes(`[data-row="` + r.Tag + `"]`)
+		if dot == nil {
+			amiss = append(amiss, what+": timeline row "+r.Tag+" has no dot")
+			continue
+		}
+		if first, ok := left[r.List]; !ok {
+			left[r.List] = dot[0]
+		} else if math.Abs(dot[0]-first) > 1 {
+			amiss = append(amiss, fmt.Sprintf("%s: the dot of row %s starts at %.1f, not %.1f", what, r.Tag, dot[0], first))
+		}
+		if r.Wide && dot[0]-r.DateRight < 0.5*got.Rem {
+			amiss = append(amiss, fmt.Sprintf("%s: the dot of row %s is %.1f px from its date, less than 0.5rem", what, r.Tag, dot[0]-r.DateRight))
+		}
+	}
+	return amiss
+}
 
 // TestRenderedTimelineDates measures a timeline's dates in the default theme (it holds the font, and no theme draws a
 // timeline of its own) on a screen as wide as a desktop and a phone, and on paper; the dots of every theme are
@@ -84,6 +138,9 @@ func TestRenderedTimelineDates(t *testing.T) { //nolint:paralleltest // the brow
 		s.b.navigate("/a/timeline-dates/?raw")
 		if got := s.b.eval(measureTimelineDates + `("` + want + `")`); got != "" {
 			t.Errorf("%s:\n%s", what, got)
+		}
+		for _, a := range s.b.dotsIn(what) {
+			t.Error(a)
 		}
 	}
 	s.b.size(1440, 900, false)
