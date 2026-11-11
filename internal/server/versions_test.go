@@ -101,12 +101,6 @@ func TestDiffAPI(t *testing.T) {
 	if a.From.N != 1 || a.To.N != 2 || a.Counts.Changed != 1 || len(a.Places) != 1 || ops(a) != "del:three ins:four " {
 		t.Errorf("from 1 to 2: %+v, %s", a, ops(a))
 	}
-	if a := get("from=2&to=1"); a.Counts.Changed != 1 || a.Key == "" {
-		t.Errorf("from 2 to 1: %+v", a)
-	}
-	if a := get("from=2&to=2"); a.Counts.Changed != 0 || a.Counts.Same == 0 {
-		t.Errorf("from 2 to 2: %+v", a)
-	}
 	after, err := os.ReadFile(reads)
 	if err != nil && !errors.Is(err, fs.ErrNotExist) {
 		t.Fatal(err)
@@ -115,8 +109,11 @@ func TestDiffAPI(t *testing.T) {
 		t.Errorf("reads.json changed: %s", after)
 	}
 
-	for _, query := range []string{"", "from=1", "to=2", "from=abc&to=2", "from=0&to=2", "from=01&to=2", "from=-1&to=2", "from=1&to=2x"} {
-		want(t, e.do(t, http.MethodGet, "/api/artifacts/d/diff?"+query, ""), http.StatusBadRequest, "from and to must be numbers of versions")
+	// As the page of a diff, which marks a version against one before it alone.
+	for _, query := range []string{
+		"", "from=1", "to=2", "from=abc&to=2", "from=0&to=2", "from=01&to=2", "from=-1&to=2", "from=1&to=2x", "from=2&to=1", "from=2&to=2",
+	} {
+		want(t, e.do(t, http.MethodGet, "/api/artifacts/d/diff?"+query, ""), http.StatusBadRequest, "from and to must be")
 	}
 	want(t, e.do(t, http.MethodGet, "/api/artifacts/d/diff?from=1&to=3", ""), http.StatusNotFound, "not found")
 	want(t, e.do(t, http.MethodGet, "/api/artifacts/none/diff?from=1&to=2", ""), http.StatusNotFound, "not found")
