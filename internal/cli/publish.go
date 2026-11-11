@@ -133,7 +133,11 @@ func (a *app) tellSaved(ctx context.Context, u string, saved server.Saved, link 
 	}
 	// The directory floe publish runs in sets the project of a data file's page when the page is new, replaces another
 	// file's, had none, or is moved; a link's is its target's. Told after the URL, as the update is.
-	if !link && (saved.Prev == nil || saved.Prev.TaskProject != saved.TaskProject) {
+	switch {
+	case saved.OffTask != "":
+		// a page's task is of its project: moved, it was taken off it, a link's too
+		a.warn("cli_page_off_task", inProject(saved.TaskProject), saved.OffTask)
+	case !link && (saved.Prev == nil || saved.Prev.TaskProject != saved.TaskProject):
 		a.warn("cli_page_project", inProject(saved.TaskProject))
 	}
 }

@@ -57,6 +57,11 @@ func TestEncode(t *testing.T) {
 			}
 		case typ.Kind() == reflect.Struct:
 			for field := range typ.Fields() {
+				if field.Anonymous {
+					// embedded: its fields are the struct's own, as encoding/json/v2 reads them
+					texts(field.Type, at)
+					continue
+				}
 				name, _, _ := strings.Cut(field.Tag.Get("json"), ",")
 				texts(field.Type, at+"/"+name)
 			}
@@ -67,7 +72,7 @@ func TestEncode(t *testing.T) {
 	tags, _ := reflect.TypeFor[server.Edit]().FieldByName("Tags")
 	name, _, _ := strings.Cut(tags.Tag.Get("json"), ",")
 	texts(tags.Type, "/"+name)
-	texts(reflect.TypeFor[server.TaskEdit](), "")
+	texts(reflect.TypeFor[store.WorkWrite](), "")
 	work, _ := reflect.TypeFor[server.Edit]().FieldByName("Work")
 	name, _, _ = strings.Cut(work.Tag.Get("json"), ",")
 	texts(work.Type, "/"+name)

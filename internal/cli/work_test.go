@@ -77,18 +77,17 @@ func TestWorkCommand(t *testing.T) {
 		t.Errorf("--unpin: %s", got)
 	}
 
-	// Nor for a page on a task of no row, as one moved to another project is.
+	// A page on a task of no row, as a hand edit leaves: the next floe work of the page makes the row.
 	if _, err := s.Edit("e", store.Edit{Project: ptr("moved"), Work: &store.WorkEdit{Task: ptr("#8")}}); err != nil {
 		t.Fatal(err)
 	}
-	run(0, "work", "e", "--pin")
-	run(0, "work", "e", "--category", "")
-	if got := tasks(); len(got) != 0 {
-		t.Errorf("flags of the page wrote a task: %v", got)
+	if got := run(0, "work", "e", "--pin"); got != "task #8 in project moved: made\npage e: task #8 in project moved, pinned\n" {
+		t.Errorf("a page of a task of no row: %q", got)
 	}
 	if _, err := s.Edit("e", store.Edit{Work: &store.WorkEdit{Task: ptr(""), Pin: ptr(false)}}); err != nil {
 		t.Fatal(err)
 	}
+	run(0, "work", "--task", "#8", "--project", "moved", "--forget")
 
 	// A category of spaces is no category: the page's flag alone, of a page on no task as well.
 	run(0, "work", "a", "--category", "  ")
@@ -178,8 +177,8 @@ func TestWorkCommand(t *testing.T) {
 
 	// The task alone: of the working directory, of --project, of none.
 	run(0, "work", "--task", "#4", "--state", "done")
-	run(0, "work", "--task", "#5", "--project", "shop")
-	run(0, "work", "--task", "#6", "--project", "")
+	run(0, "work", "--task", "#5", "--project", "shop", "--title", "five")
+	run(0, "work", "--task", "#6", "--project", "", "--title", "six")
 	if tasks()["p"]["#4"].State != "done" || tasks()["shop"]["#5"].State != "todo" || tasks()["/"]["#6"].State != "todo" {
 		t.Errorf("tasks alone: %v", tasks())
 	}
@@ -199,7 +198,7 @@ func TestWorkCommand(t *testing.T) {
 	if _, ok := tasks()["p"]["#4"]; ok {
 		t.Error("--forget left #4")
 	}
-	if got := run(1, "work", "--task", "#4", "--forget"); got != "floe: no task #4 in project p: --project names another\n" {
+	if got := run(1, "work", "--task", "#4", "--forget"); got != "floe: no task #4 in project p: check the ID, or name its project with --project\n" {
 		t.Errorf("no task: %q", got)
 	}
 	if got := run(1, "work", "--task", "#1", "--forget"); !strings.HasPrefix(got, "floe: task #1 of project p still has 1 page(s), such as a:") {
@@ -219,7 +218,7 @@ func TestWorkCommand(t *testing.T) {
 	if got := tasks()["p"]["#21"].Parent; got != "" {
 		t.Errorf(`--parent "": %q`, got)
 	}
-	if got := run(1, "work", "--task", "#22", "--parent", ""); got != "floe: no task #22 in project p: --project names another\n" {
+	if got := run(1, "work", "--task", "#22", "--parent", ""); got != "floe: no task #22 in project p: check the ID, or name its project with --project\n" {
 		t.Errorf(`--parent "" of no row: %q`, got)
 	}
 	if got := run(1, "work", "--task", "#22", "--parent", "#7"); !strings.Contains(got, "project p has no task #7 that can be a parent") {
@@ -230,9 +229,8 @@ func TestWorkCommand(t *testing.T) {
 	run(0, "work", "--task", "#20", "--forget")
 	run(0, "work", "--task", "#21", "--forget")
 
-	// A parent with pages and --task: the task and the page in one command, refused in the store's words with the page
-	// as it was. --parent "" alone of a task of no row has nothing to take off: the page goes on it, which makes it, as
-	// --task alone does; with --state it makes the row.
+	// A parent with pages and --task: the task and the page in one write, refused in the store's words with the page as
+	// it was. --parent "" alone of a task of no row has nothing to take off: the page goes on it, which makes its row.
 	run(0, "work", "--task", "#30", "--title", "parent")
 	run(0, "work", "b", "--task", "#31", "--parent", "#30")
 	if got := tasks()["p"]["#31"].Parent; got != "#30" {
@@ -251,8 +249,8 @@ func TestWorkCommand(t *testing.T) {
 	if got := workOf(t, env, "b"); got != `{"task":"#33"}` {
 		t.Errorf(`--parent "" of no row with a page put it on: %s`, got)
 	}
-	if _, ok := tasks()["p"]["#33"]; ok {
-		t.Errorf(`--parent "" of no row with a page made a row: %v`, tasks()["p"]["#33"])
+	if got, ok := tasks()["p"]["#33"]; !ok || got.Parent != "" {
+		t.Errorf(`--parent "" of no row with a page: the page's task has no row of no parent: %v`, tasks()["p"])
 	}
 	run(0, "work", "b", "--task", "#33", "--parent", "", "--state", "doing")
 	if row, ok := tasks()["p"]["#33"]; !ok || row.State != "doing" || row.Parent != "" {
@@ -344,8 +342,8 @@ func TestWorkSays(t *testing.T) {
 	say("task t2 in no project: made; url \"https://example.com/2\", no parent\n",
 		"work", "--task", "t2", "--project", "", "--url", " https://example.com/2 ", "--parent", "")
 	// The task named is written, with nothing of it to change; a category is the page's alone.
-	say("task t1 in project p: unchanged\npage a: task t1 in project p, category \"design\"\n",
-		"work", "a", "--task", "t1", "--category", "design")
+	// A task of a row, named, with nothing of it to change, is not told; a category among its categories adds none.
+	say("page a: task t1 in project p, category \"design\"\n", "work", "a", "--task", "t1", "--category", "design")
 	say("page a: task t1 in project p, category \"build\"\n", "work", "a", "--category", "build")
 	say("page a: task t1 in project p, category \"build\", pinned\n", "work", "a", "--pin")
 	say("page a: no task, pinned\n", "work", "a", "--task", "")
@@ -354,7 +352,8 @@ func TestWorkSays(t *testing.T) {
 	say("task t4 in project p: made; parent \"t3\"\n", "work", "--task", "t4", "--parent", "t3")
 }
 
-// A page that cannot be written leaves its task written, and the same command given again finishes it.
+// A page that cannot be written, as the system refuses it after the checks, leaves its task's row written, which a
+// page needs anyway: the write breaks no rule, and the same command given again finishes it.
 func TestWorkCommandOrder(t *testing.T) {
 	t.Parallel()
 
@@ -370,9 +369,8 @@ func TestWorkCommandOrder(t *testing.T) {
 		t.Fatal(err)
 	}
 	t.Cleanup(func() { _ = os.Chmod(page, 0o700) }) //nolint:errcheck // for the temporary directory's removal
-	if code, out, errs := runIn(dir, env, "work", "a", "--task", "#1", "--state", "done"); code != 1 ||
-		out != "task #1 in project p: made; state done\n" {
-		t.Fatalf("work on a page that cannot be written = %d, %q, %q; want the task told, as written", code, out, errs)
+	if code, out, errs := runIn(dir, env, "work", "a", "--task", "#1", "--state", "done"); code != 1 || out != "" {
+		t.Fatalf("work on a page that cannot be written = %d, %q, %q; want refused, nothing told", code, out, errs)
 	}
 	s := store.New(env["FLOE_DIR"])
 	all, err := s.ReadTasks()
@@ -507,8 +505,10 @@ func TestWorkReadsPages(t *testing.T) {
 }
 
 // A category is the page's alone: given without --task, it asks nothing of tasks.json; with --task, the task named is
-// written with nothing of it to change, so that its rev stays. A category needs the page on a task, which is said.
-func TestWorkCategoryPagesAlone(t *testing.T) {
+// A page's category is always among its task's categories: added at the end, in the same write, which moves the
+// task's rev and says so; an order written keeps a category with pages, and takes the page's at its end. A category
+// needs the page on a task.
+func TestWorkCategoryAdded(t *testing.T) {
 	t.Parallel()
 
 	env, dir := served(t)
@@ -528,24 +528,45 @@ func TestWorkCategoryPagesAlone(t *testing.T) {
 		}
 		return string(b)
 	}
+	row := func() store.Task {
+		t.Helper()
+		all, err := store.New(env["FLOE_DIR"]).ReadTasks()
+		if err != nil {
+			t.Fatal(err)
+		}
+		return all["p"]["#1"]
+	}
 	run(0, "publish", "w.yaml", "--slug", "a")
 	run(0, "publish", "d.yaml", "--slug", "b")
 	run(0, "work", "a", "--task", "#1")
-	made := tasksFile()
 
-	if got := run(0, "work", "a", "--category", "x"); got != "page a: task #1 in project p, category \"x\"\n" {
+	if got := run(0, "work", "a", "--category", "x"); got != "task #1 in project p: changed; categories \"x\"\npage a: task #1 in project p, category \"x\"\n" {
 		t.Errorf("--category alone = %q", got)
 	}
-	if got := tasksFile(); got != made {
-		t.Errorf("--category alone wrote tasks.json:\n%s\nwant\n%s", got, made)
+	if got := row(); !slices.Equal(got.Categories, []string{"x"}) || got.Rev != 2 {
+		t.Errorf("--category alone: %+v", got)
 	}
-	run(0, "work", "--task", "#1", "--state", "doing")
 	before := tasksFile()
-	if got := run(0, "work", "a", "--task", "#1", "--category", "y"); !strings.HasPrefix(got, "task #1 in project p: unchanged\n") {
-		t.Errorf("--task with --category = %q", got)
+	if got := run(0, "work", "a", "--category", "x"); got != "page a: task #1 in project p, category \"x\"\n" {
+		t.Errorf("--category among them = %q", got)
 	}
 	if got := tasksFile(); got != before {
-		t.Errorf("--task with --category wrote the task:\n%s\nwant\n%s", got, before)
+		t.Errorf("--category among them wrote tasks.json:\n%s\nwant\n%s", got, before)
+	}
+	if got := run(0, "work", "a", "--task", "#1", "--categories", "y", "--category", "z"); got != "task #1 in project p: changed; categories \"y,z\"\npage a: task #1 in project p, category \"z\"\n" {
+		t.Errorf("--categories with another --category = %q", got)
+	}
+	// The page moves in the same write: an order without its old category is written.
+	run(0, "work", "a", "--categories", "n", "--category", "n")
+	if got := row().Categories; !slices.Equal(got, []string{"n"}) {
+		t.Errorf("moved within the write: %v", got)
+	}
+	before = tasksFile()
+	if got := run(1, "work", "--task", "#1", "--categories", "m"); !strings.Contains(got, "category n of task #1 in project p has pages (a)") {
+		t.Errorf("a category with pages left out = %q", got)
+	}
+	if got := tasksFile(); got != before {
+		t.Errorf("a refusal wrote tasks.json:\n%s\nwant\n%s", got, before)
 	}
 
 	if got := run(1, "work", "b", "--category", "x"); !strings.Contains(got, `"b" is on no task`) {
@@ -557,7 +578,7 @@ func TestWorkCategoryPagesAlone(t *testing.T) {
 	if got := workOf(t, env, "b"); got != "null" {
 		t.Errorf("a refusal wrote b: %s", got)
 	}
-	if got := workOf(t, env, "a"); got != `{"task":"#1","category":"y"}` {
+	if got := workOf(t, env, "a"); got != `{"task":"#1","category":"n"}` {
 		t.Errorf("a refusal wrote a: %s", got)
 	}
 }

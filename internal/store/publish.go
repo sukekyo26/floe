@@ -155,6 +155,8 @@ type Entry struct {
 	Images map[string][]byte
 	// Prev is the entry this one overwrites, nil for a new slug.
 	Prev *Meta
+	// OffTask is the task the page was taken off, as its project changed (offTaskOf), "" for none.
+	OffTask string
 	// Warnings are those of the page drawn, which Save does not keep.
 	Warnings []*usererr.Error
 
@@ -446,6 +448,7 @@ func (e *Entry) settle(prev *Meta) error {
 		base = &none
 	}
 	e.Meta = newMeta(e.opts, was.Path, e.project, e.repo, e.place, base, was.DataTitle, e.Slug)
+	e.OffTask = offTaskOf(&e.Meta, ProjectKey(base.Project))
 	if replacing || prev == nil {
 		e.Meta.CreatedTheme = e.created
 	}
@@ -1082,7 +1085,11 @@ func (s *Store) Edit(slug string, ed Edit) (Edited, error) {
 		if strings.TrimSpace(*ed.Project) == "/" {
 			return Edited{}, usererr.New("store_project_slash")
 		}
+		was := ProjectKey(m.Project)
 		m.Project = strings.TrimSpace(*ed.Project)
+		if ed.Work == nil || ed.Work.Task == nil {
+			offTaskOf(m, was)
+		}
 	}
 	to, err := s.renameTo(slug, ed.Slug)
 	if err != nil {
@@ -1101,6 +1108,17 @@ func (s *Store) Edit(slug string, ed Edit) (Edited, error) {
 		s.moveRead(slug, to)
 	}
 	return Edited{Slug: to, TaskProject: ProjectKey(m.Project), Work: m.Work}, nil
+}
+
+// offTaskOf takes m off its task when its project is no longer was (ProjectKey): a task is of its project, and one of
+// the same name in another is another task. It returns the task taken off, "" for none. The pin stays.
+func offTaskOf(m *Meta, was string) string {
+	if ProjectKey(m.Project) == was || m.Work == nil || m.Work.Task == "" {
+		return ""
+	}
+	task, off := m.Work.Task, ""
+	setWork(m, &WorkEdit{Task: &off, Category: nil, Pin: nil})
+	return task
 }
 
 // setMarks sets what ed changes of m that nothing refuses: its description, favourite, archived and tags.

@@ -38,7 +38,7 @@ func TestWorkWrite(t *testing.T) {
 	if all, err := s.ReadTasks(); err != nil || len(all) != 0 {
 		t.Fatalf("no tasks.json = %v, %v", all, err)
 	}
-	if _, err := s.EditTask("p", "#1", store.TaskEdit{}); err != nil {
+	if _, err := s.EditTask("p", "#1", store.TaskEdit{State: ptr("todo")}); err != nil {
 		t.Fatal(err)
 	}
 	if first := taskIn(t, s, "p"); first.State != "todo" || first.At == "" {
@@ -93,7 +93,7 @@ func TestWorkArchived(t *testing.T) {
 
 	root := filepath.Join(t.TempDir(), "S")
 	s := store.New(root)
-	if _, err := s.EditTask("p", "#1", store.TaskEdit{}); err != nil {
+	if _, err := s.EditTask("p", "#1", store.TaskEdit{State: ptr("todo")}); err != nil {
 		t.Fatal(err)
 	}
 	long := hour(1)
@@ -114,7 +114,7 @@ func TestWorkRefused(t *testing.T) {
 
 	root := filepath.Join(t.TempDir(), "S")
 	s := store.New(root)
-	if _, err := s.EditTask("p", "#1", store.TaskEdit{}); err != nil {
+	if _, err := s.EditTask("p", "#1", store.TaskEdit{State: ptr("todo")}); err != nil {
 		t.Fatal(err)
 	}
 	was := taskIn(t, s, "p")
@@ -128,11 +128,11 @@ func TestWorkRefused(t *testing.T) {
 		{"p", "#1", store.TaskEdit{URL: ptr("javascript:alert(1)")}, `"javascript:alert(1)" is not an http or https URL`},
 		{"p", "#1", store.TaskEdit{URL: ptr("   ")}, `"   " is not an http or https URL`},
 		{"p", "#1", store.TaskEdit{URL: ptr("https:")}, `"https:" is not an http or https URL`},
-		{"", "#1", store.TaskEdit{}, `a task needs its project: "/" for none`},
-		{"  ", "#1", store.TaskEdit{}, `a task needs its project: "/" for none`},
-		{"p", " ", store.TaskEdit{}, "a task needs an ID"},
-		{"\xff", "#1", store.TaskEdit{}, "a task's project and ID must be UTF-8"},
-		{"p", "\xff", store.TaskEdit{}, "a task's project and ID must be UTF-8"},
+		{"", "#1", store.TaskEdit{State: ptr("todo")}, `a task needs its project: "/" for none`},
+		{"  ", "#1", store.TaskEdit{State: ptr("todo")}, `a task needs its project: "/" for none`},
+		{"p", " ", store.TaskEdit{State: ptr("todo")}, "a task needs an ID"},
+		{"\xff", "#1", store.TaskEdit{State: ptr("todo")}, "a task's project and ID must be UTF-8"},
+		{"p", "\xff", store.TaskEdit{State: ptr("todo")}, "a task's project and ID must be UTF-8"},
 	} {
 		_, err := s.EditTask(c.project, c.name, c.ed)
 		if err == nil || !strings.Contains(told(err, root), c.want) {
@@ -212,7 +212,7 @@ func TestWorkForget(t *testing.T) {
 		t.Errorf("of no store: %v", err)
 	}
 	for _, project := range []string{"p", "/"} {
-		if _, err := s.EditTask(project, "#1", store.TaskEdit{}); err != nil {
+		if _, err := s.EditTask(project, "#1", store.TaskEdit{State: ptr("todo")}); err != nil {
 			t.Fatal(err)
 		}
 	}
@@ -223,7 +223,7 @@ func TestWorkForget(t *testing.T) {
 	pageOn(t, s, root, "none", "", false)
 	pageOn(t, s, root, "other", "q", false)
 	// A directory's name may end in a space, as no task's project does.
-	if _, err := s.EditTask("spaced ", "#1", store.TaskEdit{}); err != nil {
+	if _, err := s.EditTask("spaced ", "#1", store.TaskEdit{State: ptr("todo")}); err != nil {
 		t.Fatal(err)
 	}
 	pageOn(t, s, root, "spaced", "spaced ", false)
@@ -310,6 +310,13 @@ func TestPageWork(t *testing.T) {
 		}
 		project(c.want)
 	}
+	// A task is of its project: moved, the page is off it. Back in the project it is published from, it goes on again.
+	if got := s.ReadMeta("d").Work; got != nil {
+		t.Errorf("moved to another project: %+v", got)
+	}
+	if _, err := s.Edit("d", store.Edit{Project: ptr("p"), Work: &store.WorkEdit{Task: ptr("#3"), Category: ptr("s")}}); err != nil {
+		t.Fatal(err)
+	}
 
 	// It goes on through what writes the page anew, and with its name.
 	publish(t, s, dw, "d.yaml", "lang: en\ntemplate: pic\ntitle: two\n", nil, store.Options{})
@@ -366,7 +373,7 @@ func TestWorkParent(t *testing.T) {
 	root := filepath.Join(t.TempDir(), "S")
 	s := store.New(root)
 	for _, c := range []struct{ project, name string }{{"p", "#1"}, {"p", "#2"}, {"p", "#9"}, {"q", "#8"}} {
-		if _, err := s.EditTask(c.project, c.name, store.TaskEdit{}); err != nil {
+		if _, err := s.EditTask(c.project, c.name, store.TaskEdit{State: ptr("todo")}); err != nil {
 			t.Fatal(err)
 		}
 	}
@@ -450,8 +457,8 @@ func TestWorkForgetParent(t *testing.T) {
 		project, name string
 		ed            store.TaskEdit
 	}{
-		{"p", "#1", store.TaskEdit{}},
-		{"q", "#1", store.TaskEdit{}},
+		{"p", "#1", store.TaskEdit{State: ptr("todo")}},
+		{"q", "#1", store.TaskEdit{State: ptr("todo")}},
 		{"p", "#3", store.TaskEdit{Parent: ptr("#1")}},
 		{"p", "#2", store.TaskEdit{Parent: ptr("#1")}},
 	} {
@@ -588,23 +595,22 @@ func TestWorkNew(t *testing.T) {
 	}
 }
 
-// A task of pages alone, of no row, is there.
-func TestWorkNewOfPages(t *testing.T) {
+// A task is there of its row alone: one a page names with no row, as a hand edit leaves, is not there, so that a write
+// that takes it to be new makes its row, and one that takes it to be there is refused.
+func TestWorkThereOfRowAlone(t *testing.T) {
 	t.Parallel()
 
 	root := filepath.Join(t.TempDir(), "S")
 	s := store.New(root)
 	yes, no := true, false
 	pageOn(t, s, root, "kept", "p", true)
-	_, err := s.EditTask("p", "#1", store.TaskEdit{New: &yes, Title: ptr("t")})
+	_, err := s.EditTask("p", "#1", store.TaskEdit{New: &no, Title: ptr("t")})
 	if _, conflict := errors.AsType[*store.Conflict](err); !conflict {
-		t.Errorf("new, of a page alone: %v", err)
-	}
-	if all, readErr := s.ReadTasks(); readErr != nil || len(all) != 0 {
-		t.Errorf("written: %v, %v", all, readErr)
-	}
-	if _, err = s.EditTask("p", "#1", store.TaskEdit{New: &no, Parent: ptr("")}); err != nil {
 		t.Errorf("there, of a page alone: %v", err)
+	}
+	written, err := s.EditTask("p", "#1", store.TaskEdit{New: &yes, Title: ptr("t")})
+	if err != nil || !written.Made || written.Row.Rev != 1 {
+		t.Errorf("new, of a page alone: %+v, %v", written, err)
 	}
 }
 
@@ -639,9 +645,9 @@ func TestWorkParentNew(t *testing.T) {
 		after map[string]string
 	}{
 		{name: "made", rows: []row{{"#130", ""}}, task: "#130", ed: made(1), after: map[string]string{"#130": "#200", "#200": ""}},
-		{name: "a project of no row", page: true, task: "#1", ed: made(0), after: map[string]string{"#1": "#200", "#200": ""}},
+		{name: "a page's task of no row", page: true, task: "#1", ed: made(0), want: "task #1 is no longer there", stale: true},
 		{name: "the parent there", rows: []row{{"#130", ""}, {"#200", ""}}, task: "#130", ed: made(1), want: "task #200 is there already", stale: true},
-		{name: "the parent of pages alone", rows: []row{{"#130", ""}}, page: true, task: "#130", ed: store.TaskEdit{New: &no, Rev: ptr(1), Parent: ptr("#1"), ParentNew: &yes, ParentTitle: ptr("x")}, want: "task #1 is there already", stale: true},
+		{name: "a parent named by a page alone", rows: []row{{"#130", ""}}, page: true, task: "#130", ed: store.TaskEdit{New: &no, Rev: ptr(1), Parent: ptr("#1"), ParentNew: &yes, ParentTitle: ptr("x")}, after: map[string]string{"#130": "#1", "#1": ""}},
 		{name: "with children", rows: []row{{"#130", ""}, {"#131", "#130"}}, task: "#130", ed: made(1), want: "task #130 has child tasks, such as #131"},
 		{name: "the task gone", task: "#130", ed: made(1), want: "task #130 is no longer there", stale: true},
 		{name: "another parent meanwhile", rows: []row{{"#180", ""}, {"#130", "#180"}}, task: "#130", ed: made(0), want: "task #130 has changed since it was read", stale: true},
@@ -649,7 +655,7 @@ func TestWorkParentNew(t *testing.T) {
 		{name: "a title of spaces", rows: []row{{"#130", ""}}, task: "#130", ed: store.TaskEdit{New: &no, Rev: ptr(1), Parent: ptr("#200"), ParentNew: &yes, ParentTitle: ptr("  ")}, want: "parentNew and parentTitle go with a parent"},
 		{name: "a title alone", rows: []row{{"#130", ""}}, task: "#130", ed: store.TaskEdit{ParentTitle: ptr("pay")}, want: "parentNew and parentTitle go with a parent"},
 		{name: "taken off, said new", rows: []row{{"#123", ""}, {"#130", "#123"}}, task: "#130", ed: store.TaskEdit{Parent: ptr(""), ParentNew: &no}, want: "parentNew and parentTitle go with a parent"},
-		// Of no row, it can be no parent: refused so before the pages are read, gone or of pages alone.
+		// Of no row, it can be no parent.
 		{name: "the parent gone", rows: []row{{"#130", ""}}, task: "#130", ed: store.TaskEdit{New: &no, Rev: ptr(1), Parent: ptr("#180"), ParentNew: &no}, want: "project p has no task #180 that can be a parent"},
 		{name: "taken off, moved meanwhile", rows: []row{{"#123", ""}, {"#180", ""}, {"#130", "#180"}}, task: "#130", ed: store.TaskEdit{New: &no, Rev: ptr(0), Parent: ptr("")}, want: "task #130 has changed since it was read", stale: true},
 		{name: "taken off", rows: []row{{"#123", ""}, {"#130", "#123"}}, task: "#130", ed: store.TaskEdit{New: &no, Rev: ptr(1), Parent: ptr("")}, after: map[string]string{"#123": "", "#130": ""}},
@@ -769,8 +775,8 @@ func TestWorkRev(t *testing.T) {
 		{name: "written since", task: "#130", ed: store.TaskEdit{New: &no, Rev: ptr(1), State: ptr("done")}, want: "task #130 has changed since it was read"},
 		{name: "written since, to the state it is in", task: "#130", ed: store.TaskEdit{New: &no, Rev: ptr(1), State: ptr("doing")}, want: "task #130 has changed since it was read"},
 		{name: "no rev, as the CLI", task: "#130", ed: store.TaskEdit{State: ptr("done")}, rev: 3},
-		{name: "of pages alone, 0", page: true, task: "#1", ed: store.TaskEdit{New: &no, Rev: ptr(0), State: ptr("doing")}, rev: 1},
-		{name: "of pages alone, 1", page: true, task: "#1", ed: store.TaskEdit{New: &no, Rev: ptr(1), State: ptr("doing")}, want: "task #1 has changed since it was read"},
+		// A page's task of no row, written by hand, is not there: a screen that takes it to be is refused, and reads again.
+		{name: "a page's task of no row", page: true, task: "#1", ed: store.TaskEdit{New: &no, Rev: ptr(0), State: ptr("doing")}, want: "task #1 is no longer there"},
 		{name: "new, 0", task: "#140", ed: store.TaskEdit{New: &yes, Rev: ptr(0), Title: ptr("x")}, rev: 1},
 		{name: "new, 2", task: "#140", ed: store.TaskEdit{New: &yes, Rev: ptr(2)}, want: "task #140 has changed since it was read"},
 		{name: "negative", task: "#130", ed: store.TaskEdit{Rev: ptr(-1), State: ptr("done")}, want: "task #130 has changed since it was read"},
