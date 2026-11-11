@@ -73,6 +73,7 @@ const (
 	classAdd    = "floe-diff-add"
 	classGone   = "floe-diff-gone"
 	classSr     = "floe-diff-sr"
+	classOut    = "floe-diff-out"
 	classBefore = "floe-diff-before"
 	classAt     = "floe-diff-at"
 	markStyle   = `.floe-diff-ins{background:#d6f5df;color:inherit;text-decoration:underline 2px #1a7f37;text-underline-offset:3px}
@@ -80,10 +81,8 @@ const (
 .floe-diff-ch{outline:2px solid #d4a017;outline-offset:4px}
 .floe-diff-add{outline:2px solid #1a7f37;outline-offset:4px}
 tr.floe-diff-ch,tr.floe-diff-add{outline-offset:-2px}
-.floe-diff-gone{margin:6px 0;padding-left:10px;border-left:3px solid #cf222e}
-div.floe-diff-gone{color:#a40e26}
-div.floe-diff-gone>p{margin:2px 0}
-:not(div).floe-diff-gone,div.floe-diff-gone:has(>:not(p,.floe-diff-sr)){opacity:.55}
+.floe-diff-gone{color:#a40e26;text-decoration:line-through 2px}
+.floe-diff-out{outline:2px dashed #cf222e;outline-offset:4px}
 .floe-diff-sr{position:absolute;width:1px;height:1px;margin:-1px;padding:0;overflow:hidden;clip:rect(0 0 0 0);white-space:nowrap;border:0}
 .floe-diff-before{margin:12px 0;padding:6px 12px 12px;border:2px solid #d4a017;border-radius:8px;background:#fffbea;color:#24292f}
 .floe-diff-before>summary{font:600 13px system-ui,sans-serif;color:#7a5900;cursor:pointer;padding:4px 0}
@@ -274,6 +273,10 @@ func (m *marker) gone(sec int, b *block, box *html.Node) {
 		m.copied[under] = true
 		c := m.copyOld(under)
 		addClass(c, classGone)
+		// A diagram or image shows no line through: framed, as the blocks whose words cannot show what differs.
+		if holdsFigure(c) {
+			addClass(c, classOut)
+		}
 		c.InsertBefore(m.said(), c.FirstChild)
 		m.pending = append(m.pending, c)
 		m.place(sec, c)
@@ -295,6 +298,16 @@ func (m *marker) gone(sec int, b *block, box *html.Node) {
 		words.AppendChild(p)
 	}
 	m.place(sec, words)
+}
+
+// holdsFigure tells whether n holds a diagram or image.
+func holdsFigure(n *html.Node) bool {
+	for d := range withSelf(n) {
+		if d.Type == html.ElementNode && (d.DataAtom == atom.Img || (d.Data == "svg" && d.Namespace == "svg")) {
+			return true
+		}
+	}
+	return false
 }
 
 // said is the word that tells what is gone, for a screen reader alone.

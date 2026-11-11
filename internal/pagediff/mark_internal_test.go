@@ -55,8 +55,13 @@ func TestMark(t *testing.T) {
 			has: []string{`<label class="floe-diff-ch"><input type="radio" name="tab"/><span class="floe-diff-at" id="floe-diff.0"></span>Two</label>`},
 		},
 		{
+			name: "a diagram gone", from: `<h2>T</h2><p>kept</p><div data-floe-part="diagram"><svg viewBox="0 0 10 10"><text>x</text></svg></div>`, to: `<h2>T</h2><p>kept</p>`,
+			has: []string{`<div data-floe-part="diagram" class="floe-diff-gone floe-diff-out">`},
+		},
+		{
 			name: "copy apart", from: `<h2>T</h2><p>kept</p><details name="g"><p>a gone part</p></details>`, to: `<h2>T</h2><p>kept</p>`,
-			has: []string{`<details name="floe-diff.old.g" class="floe-diff-gone">`},
+			has:    []string{`<details name="floe-diff.old.g" class="floe-diff-gone">`},
+			hasNot: []string{classOut},
 		},
 	} {
 		got, err := Mark([]byte(tc.from), []byte(tc.to), testWords)
