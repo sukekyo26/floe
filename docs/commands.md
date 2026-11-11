@@ -79,7 +79,7 @@ A new page is in the project it is first published from. The project is named af
 - The slug of another file's page is refused unless `--force`. `--force` starts the page afresh: nothing of the old one is kept. `--force` drops the page's history: its versions, its pinned title, tags and favourite. To move a data file or rename it and keep its page's URL, publish it with `--force`. Without `--slug`, `--force` replaces only the page at the file's name, when the file has no page of its own.
 - A page renamed on the management page (`o` to `d`) is its file's still: publishing that file again without `--slug` writes to `d`. Another file publishing to `d` is refused unless `--force`. Of two pages of one file, which publishing it with another `--slug` makes, the one at the file's name is written to, else the first by slug: `floe rm` the one you do not want.
 - A page and a link cannot take each other's slug, even with `--force`: `floe rm` it first.
-- A republish keeps the page's project (unless `--move-project` is given: it puts the page in the project of the directory `floe publish` runs in, as a new page's is named, to mend a page that went into the wrong project; not with `--link`, and not where that directory has no project: run it in the repository the page is about. It moves nothing of the page's task: a task is of its name in the page's project, so after a move check it with `floe work <slug>` and set it again if it is not the one you mean), what was set on the management page (title, favourite, tags), the description and the creation time. `--title` and `--description` override them. A project emptied on the management page comes back to the one published from. An archived page comes back to the lists.
+- A republish keeps the page's project (unless `--move-project` is given: it puts the page in the project of the directory `floe publish` runs in, as a new page's is named, to mend a page that went into the wrong project; not with `--link`, and not where that directory has no project: run it in the repository the page is about. It takes the page off its task, as a task is of its project: publish says so after the URL (`page in project app, off task #9`), and `floe work <slug> --task <ID>` puts it on one again), what was set on the management page (title, favourite, tags), the description and the creation time. `--title` and `--description` override them. A project emptied on the management page comes back to the one published from. An archived page comes back to the lists.
 - A republish of the same content, with another theme or not, draws the page again, but its update time and its place in the list stay; other content moves them up. A linked file is listed at the later of the file's time and when it was linked, so that linking it again brings it up. A folder's row shows no time; its place in the list is by the time it was linked, linking it again included.
 
 ### Linked files
@@ -239,7 +239,7 @@ floe work --task "#130" --forget                                 # the task's ro
 floe work design-notes                                           # the page told as it is, nothing written
 ```
 
-Each task and page written is told on a line of its own, in the order written, as the store left it: a task `made` (it had no row), `changed` or `unchanged` (the same values, not written), with the fields given; a page with its task, category and pin. A task of no project is `in no project`. With slugs and no flag, each page is told so as it is and nothing is written; a slug of no page is refused before any page is told.
+Each task and page written is told on a line of its own, as the store left it: a task `made` (it had no row), `changed` or `unchanged` (a field was given, its value as it was), with the fields given, and its categories when a page's was added to them; then a page with its task, category and pin. A task the write left as it was, with no field given, is not told. A task of no project is `in no project`. With slugs and no flag, each page is told so as it is and nothing is written; a slug of no page is refused before any page is told. With `--task` and no field, without slugs, the task is told as it is (its state, and its title, URL, categories and parent when it has them) and nothing is written; a task of no row is refused.
 
 ```text
 $ floe work design-notes --task "#130"
@@ -249,6 +249,8 @@ $ floe work --task "#130" --state doing
 task #130 in project floe: changed; state doing
 $ floe work design-notes
 page design-notes: task #130 in project floe
+$ floe work --task "#130"
+task #130 in project floe: state doing
 $ floe work design-notes --task ""
 page design-notes: no task
 $ floe work --task "#130" --forget
@@ -260,17 +262,17 @@ With slugs, the task's project is each page's: `--task` puts the pages on that n
 | Flag | Changes | |
 | --- | --- | --- |
 | `--task <ID>` | pages or the task named | With slugs, `""` takes the pages off their task and takes their category off, and cannot go with what changes a task (`--state`, `--url`, `--title`, `--categories`, `--parent`), nor with a category, which needs a task. A page moved to another task leaves its category, unless `--category` gives it one there. A new ID is a task in the state `todo` |
-| `--category <category>` | pages | With slugs only, of pages on a task; it writes no task. `""` takes it off |
+| `--category <category>` | pages | With slugs only, of pages on a task. One not among the task's categories is added at their end, in the same write. `""` takes it off |
 | `--state <state>` | the task | `todo`, `doing`, `done` or `archived` |
 | `--url <url>` | the task | Its one outside link, `http` or `https`; `""` takes it off |
 | `--parent <task ID>` | the task | With slugs, with `--task`: of the one task the pages go on. A task of its project with a row and no parent of its own; a task with children takes none: one level only. `""` takes it off |
 | `--title <title>` | the task | `""` takes it off |
-| `--categories a,b,c` | the task | The order of its categories; a category not named comes after them. A category's name cannot hold a comma here. `""` takes it off |
+| `--categories a,b,c` | the task | The order of its categories, as written; a page's category not in it is added at its end, and one a page has is refused left out. A category's name cannot hold a comma here. `""` takes it off |
 | `--pin`, `--unpin` | pages | With slugs only |
 | `--clear` | pages | Off their task, and their pin off; the task stays |
 | `--forget` | the task | Without slugs. Refused while a page is on it, an archived one too, or it has a child task |
 
-When a flag changes a task, or `--task` names one, the tasks are written first, once for each different task the pages are on, and the pages then, in order, stopping at the first failure; a page that does not exist, or is on no task where the flags change one or give a category, is told before anything is written. The task `--task` names is written though nothing of it changes: `made` for a new task, `changed` when a task of pages alone gets its row, `unchanged` otherwise. A page that could not be written leaves its task written, a new task's row too, which `--forget` removes: the same command given again finishes it. Flags of the pages alone, without `--task`, write no task.
+The pages and their tasks are written in one write: everything is checked first (a page that does not exist, a page on no task where the flags change one or give a category, a category with pages left out of `--categories`), so that a refusal writes nothing; then `tasks.json`, and the pages. A task a page comes to be on gets its row when it has none (`made`), and the page's category is added at the end of its categories. A page whose project changes, by `floe publish --move-project` or the page's Edit on the management page, is taken off its task: a task is of its project, and one of the same name in another is another task.
 
 The task list, at `/tasks` of the server, lists the tasks of one project by state. Opened without one, it takes the project you last had in this browser while it is there, else the one with the task in progress that changed last, else the first on the shelf, and writes it in the URL. The tasks of each state go the latest changed first, each with its pages, how many are unread and its link, under the pages of that project that are pinned, each with a × that takes its pin off. A project with no task, whose last pin is taken off, is then no longer on the list, and its screen says so as for any such project. A task's place on the list is its state alone: `archived` puts it under Archive, whatever its pages are. The switch to it stands beside the logo, with no task too.
 

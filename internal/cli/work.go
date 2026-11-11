@@ -35,13 +35,13 @@ func (a *app) workCmd() *cobra.Command {
 			"categories' order",
 		Long: `With slugs, put the pages on a task and change that task; without, change the task --task names, of
 --project (the project of the working directory when left out; "" for none). With slugs and no flag, tell each page as
-it is, writing nothing.
+it is, writing nothing; with --task alone, tell the task.
 
-When a flag changes a task, or --task names one, the tasks are written first, once for each different task the pages
-are on, and the pages then, in order, stopping at the first failure; flags of the pages alone, without --task, write no
-task. The same command given again finishes what a failure left. Each task and page written is told on a
-line of its own, as the store left it: a task made, changed or unchanged with the fields given, a page with its task,
-category and pin. A page's category is where the task's page places it among its pages, which the user decides.
+The pages and their tasks are written in one write, checked whole before anything is written, so that a refusal
+writes nothing. A task a page comes to be on gets its row when it has none, and the page's category is added at the
+end of its categories. Each task written is told on a line of its own, as the store left it (made, changed, or
+unchanged when a field was given), then each page with its task, category and pin. A page's category is where the
+task's page places it among its pages, which the user decides.
 
   floe work design-notes --task "#130"
     task #130 in project floe: made
