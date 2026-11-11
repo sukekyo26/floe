@@ -191,6 +191,10 @@ func TestMark(t *testing.T) {
 			hasNot: []string{`sub kept</p><h2`, `sub kept</p></section><h2`},
 		},
 		{
+			name: "a tab picked keeps a box checked", from: "<h2>T</h2><p>kept</p>" + fmt.Sprintf(tabs, `gone <input type="checkbox" checked> box`), to: "<h2>T</h2><p>kept</p>",
+			has: []string{`<input type="checkbox" checked=""/>`},
+		},
+		{
 			name: "copy apart", from: `<h2>T</h2><p>kept</p><details name="g"><p>a gone part</p></details>`, to: `<h2>T</h2><p>kept</p>`,
 			has:    []string{`<details open="" class="floe-diff-gone"><p><del class="floe-diff-del"><span class="floe-diff-sr">Gone </span>`},
 			hasNot: []string{classOut},
