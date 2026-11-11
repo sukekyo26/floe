@@ -752,20 +752,29 @@ func tabOf(n *html.Node) *html.Node {
 	return nil
 }
 
-// pick picks the tab whose title is label: its radio checked, the others of its tabs not.
+// pick picks the tab whose title is label: its radio checked, the others of its tabs (the titles beside it) not.
 func pick(label *html.Node) {
-	for d := range label.Parent.Descendants() {
-		if d.Type != html.ElementNode || d.DataAtom != atom.Input {
-			continue
-		}
-		page.RemoveAttr(d, "checked")
-	}
-	for d := range label.Descendants() {
-		if d.Type == html.ElementNode && d.DataAtom == atom.Input {
-			page.SetAttr(d, "checked", "")
-			return
+	for l := label.Parent.FirstChild; l != nil; l = l.NextSibling {
+		if r := tabRadio(l); r != nil {
+			page.RemoveAttr(r, "checked")
 		}
 	}
+	if r := tabRadio(label); r != nil {
+		page.SetAttr(r, "checked", "")
+	}
+}
+
+// tabRadio is the radio of a tab's title l of floe's tabs, its child; nil for none.
+func tabRadio(l *html.Node) *html.Node {
+	if l.Type != html.ElementNode || l.DataAtom != atom.Label {
+		return nil
+	}
+	for c := l.FirstChild; c != nil; c = c.NextSibling {
+		if c.Type == html.ElementNode && c.DataAtom == atom.Input {
+			return c
+		}
+	}
+	return nil
 }
 
 // holdsFigure tells whether n holds a diagram or image.
