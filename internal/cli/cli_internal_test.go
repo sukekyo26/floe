@@ -42,9 +42,7 @@ func TestEncode(t *testing.T) {
 	// tags of floe tag, and the task's and the page's of floe work, down through their JSON names. These never reach
 	// encode with a text no UTF-8, each for its reason.
 	unreached := map[string]string{
-		"/parentTitle":   "the management page alone sends it",
-		"/work/task":     "pageFlags refuses --task first, with store.TaskName",
-		"/work/category": "floe work sends a page's category as /category, the work of a page's edit being the screen's",
+		"/parentTitle": "the management page alone sends it",
 	}
 	var texts func(typ reflect.Type, at string)
 	texts = func(typ reflect.Type, at string) {
@@ -74,9 +72,6 @@ func TestEncode(t *testing.T) {
 	name, _, _ := strings.Cut(tags.Tag.Get("json"), ",")
 	texts(tags.Type, "/"+name)
 	texts(reflect.TypeFor[store.WorkWrite](), "")
-	work, _ := reflect.TypeFor[server.Edit]().FieldByName("Work")
-	name, _, _ = strings.Cut(work.Tag.Get("json"), ",")
-	texts(work.Type, "/"+name)
 	// v2 still tells bytes no UTF-8 as notUTF8 matches them.
 	if _, err := jsonv2.Marshal("a\xffb"); !notUTF8(err) {
 		t.Errorf("encoding/json/v2 tells bytes no UTF-8 by %v, which notUTF8 does not match", err)

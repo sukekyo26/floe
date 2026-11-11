@@ -49,6 +49,24 @@ func mustInt(t *testing.T, s string) int {
 	return n
 }
 
+// handWork writes the project, archived and work of the page slug into its meta.json, as a hand edit or an older floe
+// leaves it: no task's row is made, which the test writes itself.
+func handWork(t *testing.T, st *store.Store, slug, project string, archived bool, task, category string, pin bool) {
+	t.Helper()
+
+	m := st.ReadMeta(slug)
+	if m == nil {
+		t.Fatalf("no page %s", slug)
+	}
+	m.Project, m.Archived, m.Work = project, archived, nil
+	if task != "" || pin {
+		m.Work = &store.Work{Task: task, Category: category, Pin: pin}
+	}
+	if err := st.WriteMeta(slug, m); err != nil {
+		t.Fatal(err)
+	}
+}
+
 // taskPages publishes the pages of taskWork, each by its project, task, category and whether archived.
 func taskPages(t *testing.T, s *site) {
 	t.Helper()
@@ -71,12 +89,7 @@ func taskPages(t *testing.T, s *site) {
 		{"pinonly", "pin", "", "", false, true},
 	} {
 		s.floe(t, "publish", s.page(t, p.slug+".yaml", p.slug, ""), "--slug", p.slug)
-		if _, err := st.Edit(p.slug, store.Edit{
-			Project: &p.project, Archived: &p.archived,
-			Work: &store.WorkEdit{Task: &p.task, Category: &p.category, Pin: &p.pin},
-		}); err != nil {
-			t.Fatal(err)
-		}
+		handWork(t, st, p.slug, p.project, p.archived, p.task, p.category, p.pin)
 	}
 }
 

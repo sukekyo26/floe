@@ -62,7 +62,10 @@ func TestUITaskPage(t *testing.T) { //nolint:paralleltest // the browser tests s
 	s.floe(t, "work", "loose", "--unpin")
 	s.write(t, "fold/one.html", "<title>one</title><p>one</p>")
 	s.floe(t, "publish", "--link", filepath.Join(s.Env["HOME"], "fold"), "--slug", "fold")
-	if _, err := st.Edit("fold", store.Edit{Project: ptrTo("proj"), Work: &store.WorkEdit{Task: ptrTo("#1")}}); err != nil {
+	if _, err := st.Edit("fold", store.Edit{Project: ptrTo("proj")}); err != nil {
+		t.Fatal(err)
+	}
+	if _, err := st.Work(store.WorkWrite{Slugs: []string{"fold"}, Task: ptrTo("#1")}); err != nil {
 		t.Fatal(err)
 	}
 	s.floe(t, "work", "--task", "#1", "--project", "proj", "--state", "done")

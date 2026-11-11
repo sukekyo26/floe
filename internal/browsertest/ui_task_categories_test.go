@@ -47,11 +47,8 @@ func TestUITaskCategories(t *testing.T) { //nolint:paralleltest // the browser t
 		t.Fatal(err)
 	}
 	s.floe(t, "work", "--project", "proj", "--task", "S300", "--title", "Categories", "--categories", "案,実装,リリース,レビュー")
-	// G2 has no row: its one page alone makes it, written to the page alone
-	g2, x := "G2", "x"
-	if _, err := st.Edit("g-a", store.Edit{Work: &store.WorkEdit{Task: &g2, Category: &x}}); err != nil {
-		t.Fatal(err)
-	}
+	// G2 has no row, as a hand edit leaves it: its page says it, and no task is listed of it
+	handWork(t, st, "g-a", "proj", false, "G2", "x", false)
 	b.size(1400, 900, false)
 	defer b.unsize()
 

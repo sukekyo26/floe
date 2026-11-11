@@ -475,7 +475,7 @@ func TestPublishMoveProject(t *testing.T) {
 	if got := said(dir); !strings.HasSuffix(got, "\npage in project p\n") {
 		t.Fatalf("a new page wrote %q", got)
 	}
-	if _, err := s.Edit("n", store.Edit{Work: &store.WorkEdit{Task: ptr("t1")}}); err != nil {
+	if _, err := s.Work(store.WorkWrite{Slugs: []string{"n"}, Task: ptr("t1")}); err != nil {
 		t.Fatal(err)
 	}
 	tasks, err := s.ReadTasks()

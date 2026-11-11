@@ -17,31 +17,6 @@ func (s *Server) tasks(w http.ResponseWriter, r *http.Request) {
 	sendJSON(w, http.StatusOK, tasks)
 }
 
-// editTask changes the task the query names, as the management page's URLs name it: a name holds any character, and
-// no project is "/". It makes one that is not there, and answers the row as written, with the keys it is under.
-func (s *Server) editTask(w http.ResponseWriter, r *http.Request) {
-	body, ok := s.readBody(w, r, maxBody)
-	if !ok {
-		return
-	}
-	in := decodeStrict[store.TaskEdit](w, body)
-	if in == nil {
-		return
-	}
-	q := r.URL.Query()
-	written, err := s.cfg.Store.EditTask(q.Get("project"), q.Get("task"), *in)
-	if errors.Is(err, store.ErrNotFound) {
-		notFound(w)
-		return
-	}
-	if err != nil {
-		refuse(w, r, err)
-		return
-	}
-	w.Header().Set("Cache-Control", "no-store")
-	sendJSON(w, http.StatusOK, written)
-}
-
 // editWork writes pages and their tasks in one write (store.Work), and answers each task and page as written. What only
 // a sender's mistake makes, which floe's own never send, is refused as such.
 func (s *Server) editWork(w http.ResponseWriter, r *http.Request) {

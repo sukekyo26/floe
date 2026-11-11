@@ -415,19 +415,6 @@ type TaskWritten struct {
 	Added []string `json:"added,omitempty"`
 }
 
-// EditTask is Work of the task (project, name) alone, which the management page writes by PATCH /api/tasks.
-// LIMIT: a row written by hand keeps its Rev, and one forgotten and made again starts it again: a screen that read it
-// before may write over it. Count them apart if hand edits come to be done while screens are open
-func (s *Store) EditTask(project, name string, ed TaskEdit) (TaskWritten, error) {
-	written, err := s.Work(WorkWrite{
-		TaskEdit: ed, Slugs: nil, Project: &project, Task: &name, Category: nil, Pin: nil, Clear: false,
-	})
-	if err != nil {
-		return TaskWritten{}, err
-	}
-	return written.Tasks[0], nil
-}
-
 // edited is t as ed changes it, which has been checked.
 func (t Task) edited(ed TaskEdit) Task {
 	if ed.State != nil && *ed.State != t.State {

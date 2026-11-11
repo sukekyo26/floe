@@ -312,7 +312,7 @@ func (a *app) archiveCmd() *cobra.Command {
 		RunE: func(cmd *cobra.Command, args []string) error {
 			archived := !undo
 			body := server.Edit{
-				Title: nil, Description: nil, Project: nil, Slug: nil, Favorite: nil, Archived: &archived, Tags: nil, Work: nil,
+				Title: nil, Description: nil, Project: nil, Slug: nil, Favorite: nil, Archived: &archived, Tags: nil,
 			}
 			return a.eachPage(cmd, args, http.MethodPatch, body, nil)
 		},
@@ -334,7 +334,7 @@ are taken off first, then those given to --add are put on, so a name given to bo
 		RunE: func(cmd *cobra.Command, args []string) error {
 			body := server.Edit{
 				Title: nil, Description: nil, Project: nil, Slug: nil, Favorite: nil, Archived: nil,
-				Tags: &store.TagsEdit{Add: add, Remove: remove}, Work: nil,
+				Tags: &store.TagsEdit{Add: add, Remove: remove},
 			}
 			return a.eachPage(cmd, args, http.MethodPatch, body, nil)
 		},
