@@ -108,27 +108,33 @@ func (s *Server) version(slug string, m *store.Meta, rest string, v int, diff di
 // that cannot be read) is its mistakes, its body the page of them in the language of c, drawn with what drawing
 // returns. drawn tells a page floe drew, whose CSP cuts it off. errNoPage for none.
 // LIMIT: no Range support. Add it if videos need seeking.
-func (s *Server) content(
-	c *i18n.Catalog, slug string, m *store.Meta, rest string, v int, diff diffOf, drawing func() store.Drawing, cut bool,
-) (served, error) {
+// versionContent is the stored page's version v, or with diff the later version v marked with what changed from diff's.
+func (s *Server) versionContent(c *i18n.Catalog, slug string, m *store.Meta, v int, diff diffOf) (served, error) {
 	none := served{body: nil, typ: "", drawn: false}
-	if v > 0 {
-		if diff.from > 0 {
-			pair, ok := s.cfg.Store.VersionPair(slug, m, diff.from, v)
-			if !ok || pair.Key != diff.key {
-				return none, errNoPage
-			}
-			_, marked, err := s.compared(pair, c)
-			if err != nil {
-				return none, err //nolint:wrapcheck // the library's words, as /diff tells them
-			}
-			return served{body: io.NopCloser(bytes.NewReader(marked)), typ: htmlType, drawn: true}, nil
-		}
+	if diff.from == 0 {
 		page, ok := s.cfg.Store.VersionPage(slug, m, v)
 		if !ok {
 			return none, errNoPage
 		}
 		return served{body: io.NopCloser(bytes.NewReader(page)), typ: htmlType, drawn: true}, nil
+	}
+	pair, ok := s.cfg.Store.VersionPair(slug, m, diff.from, v)
+	if !ok || pair.Key != diff.key {
+		return none, errNoPage
+	}
+	_, page, err := s.compared(slug, pair, c)
+	if err != nil {
+		return none, err //nolint:wrapcheck // the library's words, as /diff tells them
+	}
+	return served{body: io.NopCloser(bytes.NewReader(page)), typ: htmlType, drawn: true}, nil
+}
+
+func (s *Server) content(
+	c *i18n.Catalog, slug string, m *store.Meta, rest string, v int, diff diffOf, drawing func() store.Drawing, cut bool,
+) (served, error) {
+	none := served{body: nil, typ: "", drawn: false}
+	if v > 0 {
+		return s.versionContent(c, slug, m, v, diff)
 	}
 	file, ok := s.cfg.Store.File(slug, m, rest)
 	if !ok {
@@ -226,6 +232,44 @@ func pageHeaders(w http.ResponseWriter, r *http.Request, drawn bool) {
 // version, and of a stored page the version it tells its frame it served, are taken from the meta.json
 // its content is served by, before the content: a change in between costs one extra reload, not a miss. A stored
 // page whose copy a publish removed after its meta.json was read is read once more.
+// look is a page served: its version and tab mark, its read mark, and what it is.
+type look struct {
+	version string
+	read    *Read
+	got     served
+	v       int
+	diff    diffOf
+}
+
+// lookAt is the page of slug that r asks for, rest under it and q its query, as the store is now: errNoPage when there
+// is none, which may be that a publish or rm came between what it read.
+func (s *Server) lookAt(r *http.Request, slug, rest string, q url.Values) (look, error) {
+	var l look
+	m := s.cfg.Store.ReadMeta(slug)
+	var ok bool
+	if l.v, ok = versionParam(m, rest, q); m == nil || !ok {
+		return l, errNoPage
+	}
+	if l.diff, ok = diffParam(m, rest, l.v, q); !ok {
+		return l, errNoPage
+	}
+	l.version = s.version(slug, m, rest, l.v, l.diff)
+	if l.v > 0 && l.version == "" {
+		return l, errNoPage
+	}
+	// A diff is not read: opening it marks nothing read, nor takes a mark back.
+	if rest == "" && l.diff.from == 0 {
+		if mark, ok := s.cfg.Store.ReadMark(slug, m, l.v); ok {
+			l.read = &Read{N: mark.N, At: mark.At}
+		}
+	}
+	// Of the last look, as the version is: one changed since reloads the tab.
+	now := func() store.Drawing { d, _ := s.now(); return d }
+	var err error
+	l.got, err = s.content(catalog(r), slug, m, rest, l.v, l.diff, now, false)
+	return l, err
+}
+
 func (s *Server) servePage(w http.ResponseWriter, r *http.Request) {
 	slug, rest := r.PathValue("slug"), r.PathValue("rest")
 	q := r.URL.Query()
@@ -233,35 +277,12 @@ func (s *Server) servePage(w http.ResponseWriter, r *http.Request) {
 		s.frame(w, r, slug)
 		return
 	}
-	var version string
-	var read *Read
-	var got served
-	var v int
-	var diff diffOf
+	var l look
 	err := errNoPage
 	for try := 0; try < 2 && errors.Is(err, errNoPage); try++ {
-		m := s.cfg.Store.ReadMeta(slug)
-		var ok bool
-		if v, ok = versionParam(m, rest, q); m == nil || !ok {
-			break
-		}
-		if diff, ok = diffParam(m, rest, v, q); !ok {
-			break
-		}
-		version = s.version(slug, m, rest, v, diff)
-		if v > 0 && version == "" {
-			break
-		}
-		read = nil
-		// A diff is not read: opening it marks nothing read, nor takes a mark back.
-		if rest == "" && diff.from == 0 {
-			if mark, ok := s.cfg.Store.ReadMark(slug, m, v); ok {
-				read = &Read{N: mark.N, At: mark.At}
-			}
-		}
-		// Of the last look, as the version is: one changed since reloads the tab.
-		got, err = s.content(catalog(r), slug, m, rest, v, diff, func() store.Drawing { d, _ := s.now(); return d }, false)
+		l, err = s.lookAt(r, slug, rest, q)
 	}
+	got := l.got
 	if errors.Is(err, errNoPage) {
 		notFound(w)
 		return
@@ -275,7 +296,7 @@ func (s *Server) servePage(w http.ResponseWriter, r *http.Request) {
 	pageHeaders(w, r, got.drawn)
 	tail := ""
 	if got.typ == htmlType {
-		tail = servedScript(slug, rest, version, v, read, got.drawn, diff)
+		tail = servedScript(slug, rest, l.version, l.v, l.read, got.drawn, l.diff)
 	}
 	stream(w, got.typ, got.body, tail)
 }
@@ -494,7 +515,8 @@ func servedScript(slug, rest, version string, v int, read *Read, drawn bool, dif
 	again := "location.reload();"
 	if diff.from > 0 {
 		u += "&from=" + strconv.Itoa(diff.from)
-		again = "window.parent.postMessage({ artifactChanged: true, artifactPath: location.pathname }, location.protocol + '//' + location.host);"
+		again = "window.parent.postMessage({ artifactChanged: true, artifactPath: location.pathname }, " +
+			"location.protocol + '//' + location.host);"
 	}
 	lit, _ := json.Marshal(u) //nolint:errcheck // a string always encodes
 	// What a page could shadow is read through window, as in leaveFrame. busy stays set once reloading.

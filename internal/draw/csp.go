@@ -46,7 +46,8 @@ func withCutOff(tree *html.Node) {
 	// Taken out after the walk, which stops at a node taken out.
 	var charsets []*html.Node
 	for n := range tree.Descendants() {
-		if _, ok := page.Attr(n, "charset"); ok && n.Type == html.ElementNode && n.Namespace == "" && n.DataAtom == atom.Meta {
+		_, ok := page.Attr(n, "charset")
+		if ok && n.Type == html.ElementNode && n.Namespace == "" && n.DataAtom == atom.Meta {
 			charsets = append(charsets, n)
 		}
 	}

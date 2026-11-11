@@ -142,7 +142,10 @@ func readTree(page []byte) (*html.Node, []section, error) {
 	if err != nil {
 		return nil, nil, usererr.Library(err) //nolint:wrapcheck // the library's words
 	}
-	r := &reader{sections: []section{{heading: "", level: 0, head: nil, from: nil, blocks: nil}}, kind: "", node: nil, words: words{}}
+	r := &reader{
+		sections: []section{{heading: "", level: 0, head: nil, from: nil, blocks: nil}}, kind: "", node: nil,
+		words: words{b: strings.Builder{}, from: nil},
+	}
 	r.walk(root)
 	r.flush()
 	if len(r.sections[0].blocks) == 0 {
@@ -161,7 +164,9 @@ type reader struct {
 
 func (r *reader) add(kind, text, key string, node *html.Node, from []origin) {
 	s := &r.sections[len(r.sections)-1]
-	s.blocks = append(s.blocks, block{kind: kind, text: text, key: kind + "\x00" + key, node: node, from: from, cells: nil})
+	s.blocks = append(s.blocks, block{
+		kind: kind, text: text, key: kind + "\x00" + key, node: node, from: from, cells: nil,
+	})
 }
 
 func (r *reader) flush() {

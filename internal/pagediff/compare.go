@@ -103,7 +103,9 @@ type cellPair struct {
 }
 
 func compare(a, b []section, w *work) compared {
-	c := compared{result: Result{Counts: Counts{Changed: 0, Added: 0, Removed: 0, Same: 0}, Sections: []Section{}, Places: []int{}}, steps: nil}
+	c := compared{steps: nil, result: Result{
+		Counts: Counts{Changed: 0, Added: 0, Removed: 0, Same: 0}, Sections: []Section{}, Places: []int{},
+	}}
 	// Sections always, as they are few and short: one added would otherwise tell all those after it removed and added.
 	for _, p := range align(w.always(len(a), len(b)), headings(a), headings(b)) {
 		w.sectionPair(&c, a, b, p)
@@ -193,7 +195,8 @@ func (w *work) sectionPair(c *compared, a, b []section, p pair) {
 	for _, q := range aligned {
 		pairs = append(pairs, w.blockPair(blocksA, blocksB, q)...)
 	}
-	c.add(Section{State: StateChanged, Level: to.level, Heading: heading, Place: nil}, step{from: p.a, to: p.b, pairs: pairs})
+	c.add(Section{State: StateChanged, Level: to.level, Heading: heading, Place: nil},
+		step{from: p.a, to: p.b, pairs: pairs})
 }
 
 func (w *work) blockPair(a, b []block, q pair) []blockPair {
@@ -229,7 +232,7 @@ func rows(a, b []block, pairs []pair) []pair {
 	var out []pair
 	for i := 0; i < len(pairs); {
 		j := i
-		for j < len(pairs) && !(pairs[j].a >= 0 && pairs[j].b >= 0 && a[pairs[j].a].key == b[pairs[j].b].key) {
+		for j < len(pairs) && (pairs[j].a < 0 || pairs[j].b < 0 || a[pairs[j].a].key != b[pairs[j].b].key) {
 			j++
 		}
 		out = append(out, rowRun(a, b, pairs[i:j])...)
@@ -243,27 +246,45 @@ func rows(a, b []block, pairs []pair) []pair {
 
 // rowRun pairs the rows of a run by the longest sequence of rows that share half their cells or more, in order.
 func rowRun(a, b []block, run []pair) []pair {
-	var xs, ys []int
+	xs, ys, ok := rowsOf(a, b, run)
+	// LIMIT: the longest sequence by a table of n×m, as the differ compares runes, not rows by their likeness; past
+	// rowsMost of it, the rows go by place as they came.
+	if !ok || len(xs) == 0 || len(ys) == 0 || len(xs)*len(ys) > rowsMost {
+		return run
+	}
+	// The rows paired by their cells, and between them those left paired by place, as align leaves a run.
+	var out []pair
+	i, j := 0, 0
+	for _, q := range sameRows(a, b, xs, ys) {
+		out = byPlace(out, xs[i:q.a], ys[j:q.b])
+		out = append(out, pair{a: xs[q.a], b: ys[q.b]})
+		i, j = q.a+1, q.b+1
+	}
+	return byPlace(out, xs[i:], ys[j:])
+}
+
+// rowsOf are the blocks of a and of b in run: false when one of them is not a row.
+func rowsOf(a, b []block, run []pair) (xs, ys []int, ok bool) {
 	for _, p := range run {
 		if p.a >= 0 {
 			if a[p.a].kind != "tr" {
-				return run
+				return nil, nil, false
 			}
 			xs = append(xs, p.a)
 		}
 		if p.b >= 0 {
 			if b[p.b].kind != "tr" {
-				return run
+				return nil, nil, false
 			}
 			ys = append(ys, p.b)
 		}
 	}
+	return xs, ys, true
+}
+
+// sameRows is the longest sequence of the rows xs of a and ys of b that share cells, as indexes into xs and ys.
+func sameRows(a, b []block, xs, ys []int) []pair {
 	n, m := len(xs), len(ys)
-	// LIMIT: the longest sequence by a table of n×m, as the differ compares runes, not rows by their likeness; past
-	// rowsMost of it, the rows go by place as they came.
-	if n == 0 || m == 0 || n*m > rowsMost {
-		return run
-	}
 	best := make([][]int32, n+1)
 	for i := range best {
 		best[i] = make([]int32, m+1)
@@ -276,7 +297,6 @@ func rowRun(a, b []block, run []pair) []pair {
 			}
 		}
 	}
-	// The rows paired by their cells, and between them those left paired by place, as align leaves a run.
 	var matched []pair
 	i, j := 0, 0
 	for i < n && j < m {
@@ -291,14 +311,7 @@ func rowRun(a, b []block, run []pair) []pair {
 			j++
 		}
 	}
-	var out []pair
-	i, j = 0, 0
-	for _, q := range matched {
-		out = byPlace(out, xs[i:q.a], ys[j:q.b])
-		out = append(out, pair{a: xs[q.a], b: ys[q.b]})
-		i, j = q.a+1, q.b+1
-	}
-	return byPlace(out, xs[i:], ys[j:])
+	return matched
 }
 
 // byPlace pairs the places xs of one list and ys of the other one by one from the first, those of the longer left

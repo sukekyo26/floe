@@ -69,9 +69,11 @@ type Server struct {
 	diffs lastDiff
 }
 
-// lastDiff is the comparison of the last pair of versions asked, by its key (store.PairKey, which another publish or
-// rebuild changes) and the language of the words the page is marked with.
+// lastDiff is the comparison of the last pair of versions asked, by the page's slug, the pair's key (store.PairKey,
+// which another publish or rebuild changes) and the language of the words the page is marked with.
 // LIMIT: one pair: two diffs opened in turn compare each time. Keep more if that comes to weigh.
+// LIMIT: compared out of the lock, so that one large diff does not hold up the others: the same pair asked at once is
+// compared twice.
 type lastDiff struct {
 	sync.Mutex
 	key    string
@@ -79,20 +81,25 @@ type lastDiff struct {
 	page   []byte
 }
 
-// compared is the comparison of pair, its words in the language of c: of the last one asked when it is of the same
-// pair and words.
-func (s *Server) compared(pair store.Pair, c *i18n.Catalog) (pagediff.Result, []byte, error) {
-	key := pair.Key + "\x00" + string(c.Lang())
+// compared is the comparison of pair of the page slug, its words in the language of c: of the last one asked when it
+// is of the same page, pair and words.
+func (s *Server) compared(slug string, pair store.Pair, c *i18n.Catalog) (pagediff.Result, []byte, error) {
+	key := slug + "\x00" + pair.Key + "\x00" + string(c.Lang())
 	s.diffs.Lock()
-	defer s.diffs.Unlock()
 	if s.diffs.key == key {
-		return s.diffs.result, s.diffs.page, nil
+		result, page := s.diffs.result, s.diffs.page
+		s.diffs.Unlock()
+		return result, page, nil
 	}
-	result, page, err := pagediff.Diff(pair.Pages[0], pair.Pages[1], pagediff.Words{Gone: c.Msg("diff_page_gone"), Before: c.Msg("diff_page_before")})
+	s.diffs.Unlock()
+	words := pagediff.Words{Gone: c.Msg("diff_page_gone"), Before: c.Msg("diff_page_before")}
+	result, page, err := pagediff.Diff(pair.Pages[0], pair.Pages[1], words)
 	if err != nil {
 		return pagediff.Result{}, nil, err //nolint:wrapcheck // the library's words
 	}
+	s.diffs.Lock()
 	s.diffs.key, s.diffs.result, s.diffs.page = key, result, page
+	s.diffs.Unlock()
 	return result, page, nil
 }
 
@@ -102,6 +109,9 @@ func New(cfg Config) *Server {
 		cfg: cfg, hosts: map[string]bool{}, origins: map[string]bool{}, every: time.Second, id: rand.Text()[:8],
 		stopping: nil, halt: nil, looking: sync.Mutex{}, mu: sync.Mutex{},
 		drawing: store.Drawing{Kit: nil, Icons: nil, Err: nil}, gen: 0, mark: "",
+		diffs: lastDiff{Mutex: sync.Mutex{}, key: "", page: nil, result: pagediff.Result{
+			Counts: pagediff.Counts{Changed: 0, Added: 0, Removed: 0, Same: 0}, Sections: nil, Places: nil,
+		}},
 		fresh: false,
 	}
 	s.stopping, s.halt = context.WithCancel(context.Background())
@@ -384,7 +394,7 @@ func (s *Server) diff(w http.ResponseWriter, r *http.Request) {
 		notFound(w)
 		return
 	}
-	result, _, err := s.compared(pair, catalog(r))
+	result, _, err := s.compared(slug, pair, catalog(r))
 	if err != nil {
 		refuse(w, r, err)
 		return
@@ -394,7 +404,10 @@ func (s *Server) diff(w http.ResponseWriter, r *http.Request) {
 		To   Read   `json:"to"`
 		Key  string `json:"key"`
 		pagediff.Result
-	}{From: Read{N: from, At: pair.Versions[0].At}, To: Read{N: to, At: pair.Versions[1].At}, Key: pair.Key, Result: result})
+	}{
+		From: Read{N: from, At: pair.Versions[0].At}, To: Read{N: to, At: pair.Versions[1].At},
+		Key: pair.Key, Result: result,
+	})
 }
 
 func (*Server) redirect(w http.ResponseWriter, r *http.Request) {

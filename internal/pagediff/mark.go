@@ -82,14 +82,17 @@ const (
 	classOut    = "floe-diff-out"
 	classBefore = "floe-diff-before"
 	classAt     = "floe-diff-at"
-	markStyle   = `.floe-diff-ins{background:rgba(26,127,55,.18);color:inherit;text-decoration:underline 2px #1a7f37;text-underline-offset:3px}
+	markStyle   = `.floe-diff-ins{background:rgba(26,127,55,.18);color:inherit;
+  text-decoration:underline 2px #1a7f37;text-underline-offset:3px}
 .floe-diff-del{background:rgba(207,34,46,.18);color:inherit;text-decoration:line-through 2px #cf222e}
 .floe-diff-ch{outline:2px solid #d4a017;outline-offset:4px}
 .floe-diff-add{outline:2px solid #1a7f37;outline-offset:4px}
 tr.floe-diff-ch,tr.floe-diff-add{outline-offset:-2px}
 .floe-diff-out{outline:2px dashed #cf222e;outline-offset:4px}
-.floe-diff-sr{position:absolute;width:1px;height:1px;margin:-1px;padding:0;overflow:hidden;clip:rect(0 0 0 0);white-space:nowrap;border:0}
-.floe-diff-before{margin:12px 0;padding:6px 12px 12px;border:2px solid #d4a017;border-radius:8px;background:#fffbea;color:#24292f}
+.floe-diff-sr{position:absolute;width:1px;height:1px;margin:-1px;padding:0;overflow:hidden;
+  clip:rect(0 0 0 0);white-space:nowrap;border:0}
+.floe-diff-before{margin:12px 0;padding:6px 12px 12px;border:2px solid #d4a017;border-radius:8px;
+  background:#fffbea;color:#24292f}
 .floe-diff-before>summary{font:600 13px system-ui,sans-serif;color:#7a5900;cursor:pointer;padding:4px 0}
 .floe-diff-at{scroll-margin-top:30vh}`
 )
@@ -136,8 +139,10 @@ type holdKey struct {
 func newMarker(root *html.Node, words Words) *marker {
 	return &marker{
 		root: root, body: bodyOf(root), words: words, last: nil, lastBox: nil, tail: nil, pending: nil,
-		added: map[*html.Node]bool{}, kept: map[*html.Node]bool{}, copied: map[*html.Node]bool{}, held: map[holdKey]bool{}, ordinals: map[*html.Node]map[*html.Node]int{}, tables: tables{}, rows: map[*html.Node]*html.Node{}, lastRow: map[*html.Node]*html.Node{}, waiting: map[*html.Node][]waitingRow{}, labels: map[*html.Node]*html.Node{},
-		groups: nil, cur: nil,
+		added: map[*html.Node]bool{}, kept: map[*html.Node]bool{}, copied: map[*html.Node]bool{},
+		held: map[holdKey]bool{}, edits: nil, ordinals: map[*html.Node]map[*html.Node]int{}, gones: nil, branch: nil,
+		copies: 0, tables: tables{}, rows: map[*html.Node]*html.Node{}, lastRow: map[*html.Node]*html.Node{},
+		waiting: map[*html.Node][]waitingRow{}, labels: map[*html.Node]*html.Node{}, groups: nil, cur: nil,
 	}
 }
 
@@ -161,7 +166,27 @@ func boxes(sections []section, body *html.Node) []*html.Node {
 // mark marks the later page, walking the comparison's sections and blocks in order.
 func (m *marker) mark(treeA *html.Node, a, b []section, c compared) {
 	boxA, boxB := boxes(a, bodyOf(treeA)), boxes(b, m.body)
-	for _, st := range c.steps {
+	m.keepPaired(a, c.steps)
+	for i, st := range c.steps {
+		m.cur = nil
+		switch {
+		case st.to < 0:
+			m.goneSection(i, a[st.from], boxA[st.from])
+		case st.from < 0:
+			m.addedSection(i, b[st.to], boxB[st.to])
+		default:
+			m.changed(i, a[st.from], b[st.to], boxA[st.from], boxB[st.to], st.pairs, c.result.Sections[i].Heading)
+		}
+	}
+	m.flush(nil, nil)
+	m.writeWords()
+	m.trim()
+}
+
+// keepPaired keeps the earlier page's blocks and headings that are paired, as they are not gone, and the tables whose
+// rows' cells are compared.
+func (m *marker) keepPaired(a []section, steps []step) {
+	for _, st := range steps {
 		for _, p := range st.pairs {
 			if p.from != nil && p.to != nil {
 				m.keep(p.from.node)
@@ -174,35 +199,27 @@ func (m *marker) mark(treeA *html.Node, a, b []section, c compared) {
 			m.keep(a[st.from].head)
 		}
 	}
-	for i, st := range c.steps {
-		m.cur = nil
-		switch {
-		case st.to < 0:
-			from := a[st.from]
-			if from.head != nil {
-				m.gone(i, &block{kind: "", text: from.heading, key: "", node: from.head, from: nil}, boxA[st.from])
-			}
-			for j := range from.blocks {
-				m.gone(i, &from.blocks[j], boxA[st.from])
-			}
-		case st.from < 0:
-			to := b[st.to]
-			if to.head != nil {
-				m.visit(to.head, boxB[st.to])
-				m.show(i, to.head, "", to.from, added(to.heading), classAdd)
-			}
-			for j := range to.blocks {
-				blk := &to.blocks[j]
-				m.visit(blk.node, boxB[st.to])
-				m.show(i, blk.node, blk.kind, blk.from, added(blk.text), classAdd)
-			}
-		default:
-			m.changed(i, a[st.from], b[st.to], boxA[st.from], boxB[st.to], st.pairs, c.result.Sections[i].Heading)
-		}
+}
+
+func (m *marker) goneSection(sec int, from section, box *html.Node) {
+	if from.head != nil {
+		m.gone(sec, &block{kind: "", text: from.heading, key: "", node: from.head, from: nil, cells: nil}, box)
 	}
-	m.flush(nil, nil)
-	m.writeWords()
-	m.trim()
+	for j := range from.blocks {
+		m.gone(sec, &from.blocks[j], box)
+	}
+}
+
+func (m *marker) addedSection(sec int, to section, box *html.Node) {
+	if to.head != nil {
+		m.visit(to.head, box)
+		m.show(sec, to.head, "", to.from, added(to.heading), classAdd)
+	}
+	for j := range to.blocks {
+		blk := &to.blocks[j]
+		m.visit(blk.node, box)
+		m.show(sec, blk.node, blk.kind, blk.from, added(blk.text), classAdd)
+	}
 }
 
 func (m *marker) changed(sec int, from, to section, boxA, boxB *html.Node, pairs []blockPair, heading []Span) {
@@ -324,7 +341,10 @@ func (m *marker) copyGone(sec int, b *block, box *html.Node) {
 		return
 	}
 	m.copied[under] = true
-	c := &goneCopy{under: under, root: nil, of: nil, back: map[*html.Node]*html.Node{}, gone: nil, whole: whole, places: map[*html.Node]map[*html.Node]int{}}
+	c := &goneCopy{
+		under: under, root: nil, of: nil, back: map[*html.Node]*html.Node{}, gone: nil, whole: whole,
+		places: map[*html.Node]map[*html.Node]int{},
+	}
 	if whole {
 		c.root, c.of = copyTree(under)
 	} else {
@@ -345,8 +365,8 @@ type waitingRow struct {
 	box *html.Node
 }
 
-// rowAt goes through a row of the later page: the rows gone of its table before it go in before it, and those gone after
-// it go after it.
+// rowAt goes through a row of the later page: the rows gone of its table before it go in before it, and those gone
+// after it go after it.
 func (m *marker) rowAt(b *block) {
 	if b.kind != "tr" {
 		return
@@ -365,35 +385,36 @@ func (m *marker) rowAt(b *block) {
 // group of rows of row's kind (thead, tbody, tfoot); one of a kind the later's table has not, last in its thead or
 // first in its first tbody. Its words go struck through, as all words gone. False when there is no such group, or the
 // HTML parser holds no tr there: then it goes in as other parts gone, after the table.
+// rowGroup is where a row of a group of rows kind goes in table, where the row it was by is in another group: the
+// table's first of kind, at its start (a head row at its end), or else at the start of its first tbody.
+func rowGroup(table *html.Node, kind string) (parent, before *html.Node) {
+	for c := table.FirstChild; c != nil; c = c.NextSibling {
+		if c.Type == html.ElementNode && c.Data == kind {
+			if kind == "thead" {
+				return c, nil
+			}
+			return c, c.FirstChild
+		}
+	}
+	for c := table.FirstChild; c != nil; c = c.NextSibling {
+		if c.Type == html.ElementNode && c.DataAtom == atom.Tbody {
+			return c, c.FirstChild
+		}
+	}
+	return nil, nil
+}
+
 func (m *marker) putRow(sec int, row, at *html.Node, after bool) bool {
 	kind := row.Parent.Data
 	parent, before := at.Parent, at
 	if after {
 		before = at.NextSibling
-		if m.added[before] {
-			for before != nil && m.added[before] {
-				before = before.NextSibling
-			}
+		for before != nil && m.added[before] {
+			before = before.NextSibling
 		}
 	}
 	if parent.Data != kind {
-		table := tableOf(at)
-		parent, before = nil, nil
-		for c := table.FirstChild; c != nil; c = c.NextSibling {
-			if c.Type == html.ElementNode && c.Data == kind && parent == nil {
-				parent = c
-			}
-		}
-		switch {
-		case parent != nil && kind != "thead":
-			before = parent.FirstChild
-		case parent == nil:
-			for c := table.FirstChild; c != nil && parent == nil; c = c.NextSibling {
-				if c.Type == html.ElementNode && c.DataAtom == atom.Tbody {
-					parent, before = c, c.FirstChild
-				}
-			}
-		}
+		parent, before = rowGroup(tableOf(at), kind)
 	}
 	if parent == nil || !m.holds(parent, "tr") {
 		return false
@@ -562,10 +583,10 @@ func (m *marker) trim() {
 		}
 		m.numberItems(c)
 		m.apart(c.root)
-		// A tab's title is copied to show the tab, not as gone.
+		// A tab's title copied only to show the tab is not gone.
 		titles := map[*html.Node]bool{}
 		for _, old := range c.gone {
-			if label := tabOf(old); label != nil && c.of[label] != nil {
+			if label := tabOf(old); label != nil && c.of[label] != nil && !slices.Contains(c.gone, label) {
 				titles[c.of[label]] = true
 			}
 		}
@@ -602,6 +623,7 @@ func (m *marker) numberItems(c *goneCopy) {
 				}
 				page.SetAttr(n, "value", strconv.Itoa(m.ordinals[owner][old]))
 			}
+		default:
 		}
 	}
 }
@@ -611,7 +633,8 @@ func (m *marker) numberItems(c *goneCopy) {
 // LIMIT: an li not rendered has none in HTML; one here is still numbered.
 func listOwner(li *html.Node) *html.Node {
 	for a := li.Parent; a != nil; a = a.Parent {
-		if a.Type == html.ElementNode && a.Namespace == "" && (a.DataAtom == atom.Ol || a.DataAtom == atom.Ul || a.DataAtom == atom.Menu) {
+		if a.Type == html.ElementNode && a.Namespace == "" &&
+			(a.DataAtom == atom.Ol || a.DataAtom == atom.Ul || a.DataAtom == atom.Menu) {
 			return a
 		}
 	}
@@ -684,7 +707,8 @@ func htmlInteger(s string) (int, bool) {
 func tabTitles(n *html.Node) []*html.Node {
 	var titles []*html.Node
 	for c := n; c != nil && c.Parent != nil; c = c.Parent {
-		if v, _ := page.Attr(c.Parent, "data-floe-part"); c.Parent.DataAtom != atom.Form || v != "tabs" || c.DataAtom == atom.Label {
+		v, _ := page.Attr(c.Parent, "data-floe-part")
+		if c.Parent.DataAtom != atom.Form || v != "tabs" || c.DataAtom == atom.Label {
 			continue
 		}
 		for l := c.PrevSibling; l != nil; l = l.PrevSibling {
@@ -851,7 +875,9 @@ func copyTree(n *html.Node) (*html.Node, map[*html.Node]*html.Node) {
 
 // shallow is n alone copied, its attributes with it.
 func shallow(n *html.Node) *html.Node {
-	return &html.Node{Type: n.Type, DataAtom: n.DataAtom, Data: n.Data, Namespace: n.Namespace, Attr: slices.Clone(n.Attr)}
+	c := newNode(n.Type, n.DataAtom, n.Data)
+	c.Namespace, c.Attr = n.Namespace, slices.Clone(n.Attr)
+	return c
 }
 
 // edit is a change to a text node: the bytes [at, end) wrapped in an ins, or del's words put in at at.
@@ -873,18 +899,7 @@ func (m *marker) markWords(from []origin, spans []Span) bool {
 		case opSame:
 			pos += n
 		case opIns:
-			for i := pos; i < pos+n; i++ {
-				o := from[i]
-				if o.n == nil {
-					continue
-				}
-				size := runeSize(o)
-				if k := len(edits) - 1; k >= 0 && edits[k].del == "" && edits[k].n == o.n && edits[k].end == o.at {
-					edits[k].end += size
-				} else {
-					edits = append(edits, edit{n: o.n, at: o.at, end: o.at + size, del: ""})
-				}
-			}
+			edits = inserted(edits, from[pos:pos+n])
 			pos += n
 		case opDel:
 			at, ok := point(from, pos)
@@ -909,6 +924,22 @@ func (m *marker) markWords(from []origin, spans []Span) bool {
 	}
 	m.edits = append(m.edits, edits...)
 	return true
+}
+
+// inserted is edits with the runes of from added: the runes of one text node one after another are one ins.
+func inserted(edits []edit, from []origin) []edit {
+	for _, o := range from {
+		if o.n == nil {
+			continue
+		}
+		size := runeSize(o)
+		if k := len(edits) - 1; k >= 0 && edits[k].del == "" && edits[k].n == o.n && edits[k].end == o.at {
+			edits[k].end += size
+		} else {
+			edits = append(edits, edit{n: o.n, at: o.at, end: o.at + size, del: ""})
+		}
+	}
+	return edits
 }
 
 // writeWords puts in the marks of words that markWords found, all at once: a text node may hold the words of more
@@ -968,6 +999,21 @@ func runeSize(o origin) int {
 // reads parent's elements down from the root with tag in the last, and the tag must come back an HTML element in
 // parent. Those it does not: in a table but not a cell, in textarea or title, in svg or MathML.
 func (m *marker) holds(parent *html.Node, tag string) bool {
+	chain, starts := startTags(parent)
+	if got, ok := m.held[holdKey{starts: starts, tag: tag}]; ok {
+		return got
+	}
+	// The marks of words are asked of one parent together, each closed before the next.
+	tags := []string{tag}
+	if tag == "ins" || tag == "del" || tag == "span" {
+		tags = []string{"ins", "del", "span"}
+	}
+	m.probe(chain, starts, tags)
+	return m.held[holdKey{starts: starts, tag: tag}]
+}
+
+// startTags are parent and its ancestors, the outermost first, and their start tags.
+func startTags(parent *html.Node) ([]*html.Node, string) {
 	var chain []*html.Node
 	for n := parent; n != nil && n.Type == html.ElementNode; n = n.Parent {
 		chain = append(chain, n)
@@ -983,27 +1029,25 @@ func (m *marker) holds(parent *html.Node, tag string) bool {
 		}
 		b.WriteString(">")
 	}
-	starts := b.String()
-	if got, ok := m.held[holdKey{starts: starts, tag: tag}]; ok {
-		return got
-	}
-	// The marks of words are asked of one parent together, each closed before the next.
-	tags := []string{tag}
-	if tag == "ins" || tag == "del" || tag == "span" {
-		tags = []string{"ins", "del", "span"}
-	}
+	return chain, b.String()
+}
+
+// probe asks the parser which of tags the last of chain holds, of their start tags starts, and keeps the answers.
+func (m *marker) probe(chain []*html.Node, starts string, tags []string) {
+	b := starts
 	for _, t := range tags {
-		b.WriteString("<" + t + ` data-floe-probe="` + t + `"></` + t + ">")
+		b += "<" + t + ` data-floe-probe="` + t + `"></` + t + ">"
 		m.held[holdKey{starts: starts, tag: t}] = false
 	}
-	if root, err := html.Parse(strings.NewReader(b.String())); err == nil {
-		for n := range root.Descendants() {
-			if t, probe := page.Attr(n, "data-floe-probe"); probe && n.Type == html.ElementNode {
-				m.held[holdKey{starts: starts, tag: t}] = n.Data == t && n.Namespace == "" && sameChain(n.Parent, chain)
-			}
+	root, err := html.Parse(strings.NewReader(b))
+	if err != nil {
+		return
+	}
+	for n := range root.Descendants() {
+		if t, probe := page.Attr(n, "data-floe-probe"); probe && n.Type == html.ElementNode {
+			m.held[holdKey{starts: starts, tag: t}] = n.Data == t && n.Namespace == "" && sameChain(n.Parent, chain)
 		}
 	}
-	return m.held[holdKey{starts: starts, tag: tag}]
 }
 
 func sameChain(n *html.Node, chain []*html.Node) bool {
@@ -1017,9 +1061,10 @@ func sameChain(n *html.Node, chain []*html.Node) bool {
 }
 
 // number puts a mark to go to in each place, in the order of the page, and numbers them so: the number of each
-// section's first, -1 for none, and the section of each number. A place with no spot to hold a span has none. The places in a tab not picked are one,
-// at the tab's title; a details that holds a place is opened, and its name taken off so that all of them stay so.
-func (m *marker) number() ([]int, []int) {
+// section's first, -1 for none, and the section of each number. A place with no spot to hold a span has none. The
+// places in a tab not picked are one, at the tab's title; a details that holds a place is opened, and its name taken
+// off so that all of them stay so.
+func (m *marker) number() (places, sections []int) {
 	order := map[*html.Node]int{}
 	i := 0
 	for n := range m.root.Descendants() {
@@ -1035,8 +1080,8 @@ func (m *marker) number() ([]int, []int) {
 	}
 	slices.SortStableFunc(m.groups, func(x, y *group) int { return cmp.Compare(first[x], first[y]) })
 	numbers := map[*html.Node]int{}
-	sections := []int{}
-	places := map[int]int{}
+	sections = []int{}
+	firstOf := map[int]int{}
 	for _, g := range m.groups {
 		nodes := slices.Clone(g.nodes)
 		slices.SortStableFunc(nodes, func(x, y *html.Node) int { return cmp.Compare(order[x], order[y]) })
@@ -1055,18 +1100,18 @@ func (m *marker) number() ([]int, []int) {
 			sections = append(sections, g.sec)
 			page.SetAttr(s, "id", "floe-diff."+strconv.Itoa(k))
 		}
-		if at, ok := places[g.sec]; !ok || k < at {
-			places[g.sec] = k
+		if at, ok := firstOf[g.sec]; !ok || k < at {
+			firstOf[g.sec] = k
 		}
 	}
-	out := make([]int, 0)
-	for sec, k := range places {
-		for len(out) <= sec {
-			out = append(out, -1)
+	places = make([]int, 0)
+	for sec, k := range firstOf {
+		for len(places) <= sec {
+			places = append(places, -1)
 		}
-		out[sec] = k
+		places[sec] = k
 	}
-	return out, sections
+	return places, sections
 }
 
 // reveal shows what is marked, on either page: a details that holds a mark is opened (its name taken off, so that all
@@ -1182,7 +1227,7 @@ func openDetails(n *html.Node) {
 }
 
 func element(a atom.Atom, class string) *html.Node {
-	n := &html.Node{Type: html.ElementNode, DataAtom: a, Data: a.String()}
+	n := newNode(html.ElementNode, a, a.String())
 	if class != "" {
 		n.Attr = []html.Attribute{{Namespace: "", Key: "class", Val: class}}
 	}
@@ -1190,7 +1235,14 @@ func element(a atom.Atom, class string) *html.Node {
 }
 
 func text(s string) *html.Node {
-	return &html.Node{Type: html.TextNode, Data: s}
+	return newNode(html.TextNode, 0, s)
+}
+
+func newNode(typ html.NodeType, a atom.Atom, data string) *html.Node {
+	return &html.Node{
+		Parent: nil, FirstChild: nil, LastChild: nil, PrevSibling: nil, NextSibling: nil,
+		Type: typ, DataAtom: a, Data: data, Namespace: "", Attr: nil,
+	}
 }
 
 func addClass(n *html.Node, class string) {

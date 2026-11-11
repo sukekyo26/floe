@@ -250,15 +250,15 @@ type Pair struct {
 // VersionPair is the versions from and to of the stored page slug, whose meta.json is m: false when m lists one of
 // them not, or one cannot be read.
 func (s *Store) VersionPair(slug string, m *Meta, from, to int) (Pair, bool) {
-	var p Pair
+	var p, none Pair
 	for i, n := range [2]int{from, to} {
 		v, listed := s.ReadMark(slug, m, n)
 		if !listed {
-			return Pair{}, false
+			return none, false
 		}
 		page, read := s.VersionPage(slug, m, n)
 		if !read {
-			return Pair{}, false
+			return none, false
 		}
 		p.Versions[i], p.Pages[i] = v, page
 	}
