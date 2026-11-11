@@ -86,7 +86,6 @@ const (
 .floe-diff-ch{outline:2px solid #d4a017;outline-offset:4px}
 .floe-diff-add{outline:2px solid #1a7f37;outline-offset:4px}
 tr.floe-diff-ch,tr.floe-diff-add{outline-offset:-2px}
-.floe-diff-gone{text-decoration:line-through 2px #cf222e}
 .floe-diff-out{outline:2px dashed #cf222e;outline-offset:4px}
 .floe-diff-sr{position:absolute;width:1px;height:1px;margin:-1px;padding:0;overflow:hidden;clip:rect(0 0 0 0);white-space:nowrap;border:0}
 .floe-diff-before{margin:12px 0;padding:6px 12px 12px;border:2px solid #d4a017;border-radius:8px;background:#fffbea;color:#24292f}
@@ -332,7 +331,6 @@ func (m *marker) copyGone(sec int, b *block, box *html.Node) {
 		c.root = shallow(under)
 		c.of = map[*html.Node]*html.Node{under: c.root}
 	}
-	addClass(c.root, classGone)
 	c.add(b.node)
 	m.gones = append(m.gones, c)
 	m.branch = c
@@ -403,7 +401,7 @@ func (m *marker) putRow(sec int, row, at *html.Node, after bool) bool {
 	c := m.copyOld(row)
 	parent.InsertBefore(c, before)
 	m.added[c] = true
-	m.strike(c)
+	m.showGone(c, nil)
 	m.place(sec, c)
 	if after {
 		m.lastRow[tableOf(at)] = c
@@ -436,7 +434,7 @@ func (m *marker) showCells(sec int, row *html.Node, cells []cellPair) {
 			put := m.copyOld(c.from.node)
 			row.InsertBefore(put, before)
 			m.added[put] = true
-			m.strike(put)
+			m.showGone(put, nil)
 		}
 	}
 	if !ok {
@@ -446,10 +444,10 @@ func (m *marker) showCells(sec int, row *html.Node, cells []cellPair) {
 }
 
 // strike wraps the words in n, put in the page, in a del, where one is held: words gone, shown as words gone are.
-func (m *marker) strike(n *html.Node) {
+func (m *marker) strike(n *html.Node, apart map[*html.Node]bool) {
 	var words []*html.Node
 	for d := range n.Descendants() {
-		if d.Type == html.TextNode && strings.TrimFunc(d.Data, page.IsSpace) != "" {
+		if d.Type == html.TextNode && strings.TrimFunc(d.Data, page.IsSpace) != "" && !within(d, apart) {
 			words = append(words, d)
 		}
 	}
@@ -462,6 +460,16 @@ func (m *marker) strike(n *html.Node) {
 		t.Parent.RemoveChild(t)
 		del.AppendChild(t)
 	}
+}
+
+// within tells whether n is in one of the nodes of set.
+func within(n *html.Node, set map[*html.Node]bool) bool {
+	for ; n != nil && len(set) > 0; n = n.Parent {
+		if set[n] {
+			return true
+		}
+	}
+	return false
 }
 
 // goneCopy is the copy of a part of the earlier page that holds what is gone: under, copied as root, of telling the
@@ -554,11 +562,27 @@ func (m *marker) trim() {
 		}
 		m.numberItems(c)
 		m.apart(c.root)
-		if holdsFigure(c.root) {
-			addClass(c.root, classOut)
+		// A tab's title is copied to show the tab, not as gone.
+		titles := map[*html.Node]bool{}
+		for _, old := range c.gone {
+			if label := tabOf(old); label != nil && c.of[label] != nil {
+				titles[c.of[label]] = true
+			}
 		}
-		m.put(c.root, m.said())
+		m.showGone(c.root, titles)
 	}
+}
+
+// showGone shows n, what is gone put in, as all that is gone is shown: its words struck through in a del where one is
+// held (but those in apart, copied with it to show it), framed when it holds a diagram or image, which a line through
+// words does not show on, and the word for a screen reader first.
+func (m *marker) showGone(n *html.Node, apart map[*html.Node]bool) {
+	addClass(n, classGone)
+	m.strike(n, apart)
+	if holdsFigure(n) {
+		addClass(n, classOut)
+	}
+	m.put(n, m.said())
 }
 
 // numberItems gives each item copied of an ol the number it had in the earlier page, as its value, so that an item gone

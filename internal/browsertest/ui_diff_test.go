@@ -31,8 +31,8 @@ func diffSite(t *testing.T) *site {
 }
 
 const (
-	diffPair  = "[document.getElementById('diff-from').value, document.getElementById('diff-to').value].join(' ')"
-	diffPath  = "location.pathname + location.search"
+	diffPair = "[document.getElementById('diff-from').value, document.getElementById('diff-to').value].join(' ')"
+	diffPath = "location.pathname + location.search"
 	// The marked page of the answer shown, in the frame
 	diffShown = "typeof diffAnswer !== 'undefined' && diffAnswer !== null && document.getElementById('diff-frame').src.includes('key=' + diffAnswer.key)"
 	// The words marked on the page in the frame, read from the server as the frame reads it

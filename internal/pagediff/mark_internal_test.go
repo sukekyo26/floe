@@ -58,8 +58,12 @@ func TestMark(t *testing.T) {
 		},
 		{
 			name: "a column gone", from: table("<th>Name</th><th>Short</th><th>Long</th>", "<td>alpha</td><td>x</td><td>the long words of one</td>", "<td>beta</td><td>yy</td><td>the long words of two</td>"),
-			to:  table("<th>Name</th><th>Long</th>", "<td>alpha</td><td>the long words of one</td>", "<td>beta</td><td>the long words of two</td>"),
-			has: []string{`<th><del class="floe-diff-del">Short</del></th><th>Long</th>`, `<td>alpha</td><td><del class="floe-diff-del">x</del></td>`, `<td>beta</td><td><del class="floe-diff-del">yy</del></td>`},
+			to: table("<th>Name</th><th>Long</th>", "<td>alpha</td><td>the long words of one</td>", "<td>beta</td><td>the long words of two</td>"),
+			has: []string{
+				`<th class="floe-diff-gone"><del class="floe-diff-del"><span class="floe-diff-sr">Gone </span>Short</del></th><th>Long</th>`,
+				`<td>alpha</td><td class="floe-diff-gone"><del class="floe-diff-del"><span class="floe-diff-sr">Gone </span>x</del></td>`,
+				`<td>beta</td><td class="floe-diff-gone"><del class="floe-diff-del"><span class="floe-diff-sr">Gone </span>yy</del></td>`,
+			},
 		},
 		{
 			name: "a column added", from: table("<th>Name</th><th>Long</th>", "<td>alpha</td><td>the long words of one</td>"),
@@ -71,14 +75,14 @@ func TestMark(t *testing.T) {
 			name: "a row and a column gone", from: table("<th>Name</th><th>N</th><th>Long</th>", "<td>alpha</td><td>1</td><td>the long words of one</td>", "<td>beta</td><td>2</td><td>gone row words</td>", "<td>gamma</td><td>3</td><td>the long words of three</td>"),
 			to: table("<th>Name</th><th>Long</th>", "<td>alpha</td><td>the long words of one</td>", "<td>gamma</td><td>the long words of three</td>"),
 			has: []string{
-				`<td>alpha</td><td><del class="floe-diff-del">1</del></td><td>the long words of one</td></tr><tr><td><del class="floe-diff-del">`,
-				`beta</del></td><td><del class="floe-diff-del">2</del></td><td><del class="floe-diff-del">gone row words</del></td></tr><tr><td>gamma</td>`,
+				`<td>alpha</td><td class="floe-diff-gone"><del class="floe-diff-del"><span class="floe-diff-sr">Gone </span>1</del></td><td>the long words of one</td></tr><tr class="floe-diff-gone"><td><del`,
+				`<td><del class="floe-diff-del">2</del></td><td><del class="floe-diff-del">gone row words</del></td></tr><tr><td>gamma</td>`,
 			},
 		},
 		{
 			name: "the head's row gone", from: table("<th>Name</th><th>Long</th>", "<td>alpha</td><td>the long words of one</td>"),
 			to:  "<h2>T</h2><table><tbody><tr><td>alpha</td><td>the long words of one</td></tr></tbody></table>",
-			has: []string{"<tbody><tr><th><del", "Name</del></th><th><del class=\"floe-diff-del\">Long</del></th></tr><tr><td>alpha</td>"},
+			has: []string{`<tbody><tr class="floe-diff-gone"><th><del`, `Name</del></th><th><del class="floe-diff-del">Long</del></th></tr><tr><td>alpha</td>`},
 		},
 		{
 			name: "a body row gone, no body left", from: table("<th>Name</th><th>Long</th>", "<td>alpha</td><td>the long words of one</td>"),
@@ -93,8 +97,8 @@ func TestMark(t *testing.T) {
 		},
 		{
 			name: "a row gone", from: "<h2>T</h2><table><tr><td>a</td></tr><tr><td>b</td></tr></table>", to: "<h2>T</h2><table><tr><td>a</td></tr></table>",
-			has:    []string{`<tbody><tr><td>a</td></tr><tr><td><del class="floe-diff-del"><span class="floe-diff-at" id="floe-diff.0"></span>b</del></td></tr></tbody></table>`},
-			hasNot: []string{classGone},
+			has:    []string{`<tbody><tr><td>a</td></tr><tr class="floe-diff-gone"><td><del class="floe-diff-del"><span class="floe-diff-sr">Gone </span><span class="floe-diff-at" id="floe-diff.0"></span>b</del></td></tr></tbody></table>`},
+			hasNot: []string{"</table><table"},
 		},
 		{
 			name: "own ids", from: `<h2 id="overview">Overview</h2><p>x</p>`, to: `<h2 id="overview">Overview and scope</h2><p>x</p>`,
@@ -116,7 +120,7 @@ func TestMark(t *testing.T) {
 		},
 		{
 			name: "items gone one after another", from: "<h2>T</h2><ul><li>one</li><li>gone item</li><li>gone too</li></ul>", to: "<h2>T</h2><ul><li>one</li></ul>",
-			has:    []string{`<ul class="floe-diff-gone"><li><span class="floe-diff-sr">Gone </span><span class="floe-diff-at" id="floe-diff.0"></span>gone item</li><li>gone too</li></ul>`},
+			has:    []string{`<ul class="floe-diff-gone"><li><del class="floe-diff-del"><span class="floe-diff-sr">Gone </span><span class="floe-diff-at" id="floe-diff.0"></span>gone item</del></li><li><del class="floe-diff-del">gone too</del></li></ul>`},
 			hasNot: []string{`<ul class="floe-diff-gone"><li>one`, `id="floe-diff.1"`},
 		},
 		{
@@ -124,7 +128,7 @@ func TestMark(t *testing.T) {
 			has: []string{
 				`<input type="radio" name="floe-diff.old.0.tab" checked=""/>`,
 				`<input type="radio" name="floe-diff.old.1.tab" checked=""/>`,
-				"Two</label><div><p>gone in one</p></div></form>", "Two</label><div><p>gone in other</p></div></form>",
+				`Two</label><div><p><del class="floe-diff-del">gone in one</del></p></div></form>`, `Two</label><div><p><del class="floe-diff-del">gone in other</del></p></div></form>`,
 			},
 		},
 		{
@@ -151,11 +155,11 @@ func TestMark(t *testing.T) {
 		},
 		{
 			name: "words of the part itself gone", from: "<h2>T</h2><div>before<p>between</p>gone after</div>", to: "<h2>T</h2><div>before<p>between</p></div>",
-			has: []string{`<div class="floe-diff-gone">`, "gone after</div>"},
+			has: []string{`<div class="floe-diff-gone">`, `<del class="floe-diff-del">gone after</del></div>`},
 		},
 		{
 			name: "copy apart", from: `<h2>T</h2><p>kept</p><details name="g"><p>a gone part</p></details>`, to: `<h2>T</h2><p>kept</p>`,
-			has:    []string{`<details class="floe-diff-gone" open=""><p><span class="floe-diff-sr">Gone </span>`},
+			has:    []string{`<details open="" class="floe-diff-gone"><p><del class="floe-diff-del"><span class="floe-diff-sr">Gone </span>`},
 			hasNot: []string{classOut},
 		},
 	} {
