@@ -33,7 +33,7 @@ func (a *app) workCmd() *cobra.Command {
 	var f workFlags
 	cmd := &cobra.Command{
 		Use:   "work [<slug>...]",
-		Short: "Put pages on a task of the task list, pin them, or change a task's state, URL, title or categories' order",
+		Short: "Put pages on a task, pin them, or change a task's state, URL, title, parent or categories' order",
 		Long: `With slugs, put the pages on a task and change that task; without, change the task --task names, of
 --project (the project of the working directory when left out; "" for none). With slugs and no flag, tell each page as
 it is, writing nothing.
@@ -50,13 +50,13 @@ category and pin. A page's category is where the task's page places it among its
     task #130 in project floe: changed; state doing
   floe work --task "#130" --url https://example.com/issues/482
   floe work design-notes --category designs
+  floe work design-notes
+    page design-notes: task #130 in project floe, category "designs"
   floe work --task "#130" --categories proposals,designs,samples
   floe work --task "#130" --parent "#123"
   floe work design-notes --task "#131" --parent "#130"
   floe work design-notes --pin
-  floe work --task "#130" --forget
-  floe work design-notes
-    page design-notes: task #130 in project floe, category "designs"`,
+  floe work --task "#130" --forget`,
 		PreRunE: flagGroups,
 		RunE: func(cmd *cobra.Command, slugs []string) error {
 			// A category of spaces is the empty one from here on, as the server reads it.
