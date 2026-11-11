@@ -72,8 +72,15 @@ var errNoPage = errors.New("no such page")
 // versions into the server's watching if tabs come to be hundreds.
 // LIMIT: a linked data file's images, and the files under a linked HTML file, are not in its version: changing
 // only them reloads no tab (the user chose so). Save the data file again, or reload the tab.
-func (s *Server) version(slug string, m *store.Meta, rest string, v int) string {
+func (s *Server) version(slug string, m *store.Meta, rest string, v int, diff diffOf) string {
 	if m == nil {
+		return ""
+	}
+	// A diff's page is of its two versions: the key /diff told, which tells it apart from any other pair.
+	if diff.from > 0 {
+		if key := s.cfg.Store.PairKey(slug, m, diff.from, v); key != "" {
+			return s.id + ".diff." + key
+		}
 		return ""
 	}
 	if v > 0 {
@@ -107,20 +114,20 @@ func (s *Server) content(
 ) (served, error) {
 	none := served{body: nil, typ: "", drawn: false}
 	if v > 0 {
-		page, ok := s.cfg.Store.VersionPage(slug, m, v)
-		if !ok {
-			return none, errNoPage
-		}
 		if diff.from > 0 {
-			before, ok := s.cfg.Store.VersionPage(slug, m, diff.from)
-			if !ok || diffKey(s.cfg.Store.VersionMark(slug, m, diff.from), s.cfg.Store.VersionMark(slug, m, v)) != diff.key {
+			pair, ok := s.cfg.Store.VersionPair(slug, m, diff.from, v)
+			if !ok || pair.Key != diff.key {
 				return none, errNoPage
 			}
-			marked, err := pagediff.Mark(before, page, pagediff.Words{Gone: c.Msg("diff_page_gone"), Before: c.Msg("diff_page_before")}, diff.side)
+			marked, err := pagediff.Mark(pair.Pages[0], pair.Pages[1], pagediff.Words{Gone: c.Msg("diff_page_gone"), Before: c.Msg("diff_page_before")})
 			if err != nil {
 				return none, err //nolint:wrapcheck // the library's words, as /diff tells them
 			}
-			page = marked
+			return served{body: io.NopCloser(bytes.NewReader(marked)), typ: htmlType, drawn: true}, nil
+		}
+		page, ok := s.cfg.Store.VersionPage(slug, m, v)
+		if !ok {
+			return none, errNoPage
 		}
 		return served{body: io.NopCloser(bytes.NewReader(page)), typ: htmlType, drawn: true}, nil
 	}
@@ -164,27 +171,22 @@ func versionParam(m *store.Meta, rest string, q url.Values) (int, bool) {
 type diffOf struct {
 	from int
 	key  string
-	side pagediff.Side
 }
 
-// sides are the values of ?side=, of a diff whose two pages are shown side by side: none for the later alone.
-var sides = map[string]pagediff.Side{"": pagediff.Alone, "earlier": pagediff.Earlier, "later": pagediff.Later}
+// noDiff is a page marked against no earlier version.
+var noDiff = diffOf{from: 0, key: ""}
 
 // diffParam is the earlier version ?from= of q asks to mark version v against, with its ?key=: none when q asks none,
 // false for one that cannot be: not a number, not before v, or of no stored page's own URL.
 func diffParam(m *store.Meta, rest string, v int, q url.Values) (diffOf, bool) {
 	if !q.Has("from") {
-		return diffOf{from: 0, key: "", side: pagediff.Alone}, true
+		return noDiff, true
 	}
 	from, ok := versionNumber(q.Get("from"))
 	if !ok || m == nil || m.IsLink() || rest != "" || from >= v {
-		return diffOf{from: 0, key: "", side: pagediff.Alone}, false
+		return noDiff, false
 	}
-	side, ok := sides[q.Get("side")]
-	if !ok {
-		return diffOf{from: 0, key: "", side: pagediff.Alone}, false
-	}
-	return diffOf{from: from, key: q.Get("key"), side: side}, true
+	return diffOf{from: from, key: q.Get("key")}, true
 }
 
 // versionNumber reads raw as what can be a version's number: 1 or more, in plain digits. Whether there is such a
@@ -247,7 +249,7 @@ func (s *Server) servePage(w http.ResponseWriter, r *http.Request) {
 		if diff, ok = diffParam(m, rest, v, q); !ok {
 			break
 		}
-		version = s.version(slug, m, rest, v)
+		version = s.version(slug, m, rest, v, diff)
 		if v > 0 && version == "" {
 			break
 		}
@@ -335,7 +337,7 @@ func (s *Server) download(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	// A file kept is not mended by the watch: of what the directories hold now.
-	got, err := s.content(catalog(r), slug, m, "", v, diffOf{from: 0, key: "", side: pagediff.Alone}, s.latest, true)
+	got, err := s.content(catalog(r), slug, m, "", v, noDiff, s.latest, true)
 	switch {
 	case errors.Is(err, errNoPage):
 		notFound(w)
@@ -488,12 +490,19 @@ func servedScript(slug, rest, version string, v int, read *Read, drawn bool, dif
 	if v > 0 {
 		u += "&v=" + strconv.Itoa(v)
 	}
+	// A diff's page, its versions changed, tells the diff, which reads what changed again and the pages with it: it
+	// does not load itself again with a key no longer theirs.
+	again := "location.reload();"
+	if diff.from > 0 {
+		u += "&from=" + strconv.Itoa(diff.from)
+		again = "window.parent.postMessage({ artifactChanged: true }, location.protocol + '//' + location.host);"
+	}
 	lit, _ := json.Marshal(u) //nolint:errcheck // a string always encodes
 	// What a page could shadow is read through window, as in leaveFrame. busy stays set once reloading.
 	return "\n<script>{const u = " + string(lit) + "; let busy = false;" +
 		"const look = async () => { if (busy || window.document.hidden) return; busy = true;" +
 		"try { const r = await window.fetch(u, { cache: 'no-store', signal: window.AbortSignal.timeout(5000) });" +
-		"if ((await r.text()) === 'changed') { location.reload(); return; } } catch {}" +
+		"if ((await r.text()) === 'changed') { " + again + " return; } } catch {}" +
 		"busy = false; };" +
 		"window.setInterval(look, " + strconv.FormatInt(askEvery.Milliseconds(), 10) + ");" +
 		"window.document.addEventListener('visibilitychange', look); look();" +
@@ -514,9 +523,11 @@ func (s *Server) changed(w http.ResponseWriter, r *http.Request) {
 	answer := "same"
 	q := r.URL.Query()
 	m := s.cfg.Store.ReadMeta(slug)
-	if v, ok := versionParam(m, rest, q); !ok {
+	v, ok := versionParam(m, rest, q)
+	diff, diffOK := diffParam(m, rest, v, q)
+	if !ok || !diffOK {
 		answer = "changed"
-	} else if version := s.version(slug, m, rest, v); version == "" || version != q.Get("since") {
+	} else if version := s.version(slug, m, rest, v, diff); version == "" || version != q.Get("since") {
 		answer = "changed"
 	}
 	h := w.Header()

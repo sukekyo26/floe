@@ -239,39 +239,43 @@ func (s *Store) VersionPage(slug string, m *Meta, n int) ([]byte, bool) {
 	return page, err == nil
 }
 
-// VersionPages is the versions of the numbers of the stored page slug, their marks (VersionMark) and their pages, all
-// of one meta.json: false when
-// it lists one of them not, or one cannot be read. Read once more for a copy a publish removed after its meta.json was
-// read.
-// LIMIT: that second read is not tested, as nothing can put a publish in the middle of it. Give it a way in if it
-// breaks.
-func (s *Store) VersionPages(slug string, numbers ...int) ([]Version, []string, [][]byte, bool) {
-	for range 2 {
-		m := s.ReadMeta(slug)
-		if m == nil {
-			break
+// Pair is two versions of a stored page, of one meta.json, as a diff compares them: their versions and pages, and
+// the key that ties what is told of the diff to its pages (PairKey).
+type Pair struct {
+	Versions [2]Version
+	Pages    [2][]byte
+	Key      string
+}
+
+// VersionPair is the versions from and to of the stored page slug, whose meta.json is m: false when m lists one of
+// them not, or one cannot be read.
+func (s *Store) VersionPair(slug string, m *Meta, from, to int) (Pair, bool) {
+	var p Pair
+	for i, n := range [2]int{from, to} {
+		v, listed := s.ReadMark(slug, m, n)
+		if !listed {
+			return Pair{}, false
 		}
-		versions := make([]Version, len(numbers))
-		marks := make([]string, len(numbers))
-		pages := make([][]byte, len(numbers))
-		read := true
-		for i, n := range numbers {
-			v, listed := s.ReadMark(slug, m, n)
-			if !listed {
-				return nil, nil, nil, false
-			}
-			versions[i] = v
-			marks[i] = s.VersionMark(slug, m, n)
-			if pages[i], listed = s.VersionPage(slug, m, n); !listed {
-				read = false
-				break
-			}
+		page, read := s.VersionPage(slug, m, n)
+		if !read {
+			return Pair{}, false
 		}
-		if read {
-			return versions, marks, pages, true
-		}
+		p.Versions[i], p.Pages[i] = v, page
 	}
-	return nil, nil, nil, false
+	p.Key = s.PairKey(slug, m, from, to)
+	return p, true
+}
+
+// PairKey is what tells the pair of versions from and to of the stored page slug, whose meta.json is m, from any
+// other, without reading them: of their marks (VersionMark), which a rebuild of the last, or a number coming again
+// after a removal, changes. "" for a version m does not list.
+func (s *Store) PairKey(slug string, m *Meta, from, to int) string {
+	a, b := s.VersionMark(slug, m, from), s.VersionMark(slug, m, to)
+	if a == "" || b == "" {
+		return ""
+	}
+	sum := sha256.Sum256([]byte(a + "\x00" + b))
+	return hex.EncodeToString(sum[:8])
 }
 
 // gzipped is page gzipped, as a version before the last is kept.
