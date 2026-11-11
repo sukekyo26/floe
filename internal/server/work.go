@@ -9,13 +9,12 @@ import (
 
 // TaskEdit is what PATCH /api/tasks sends: each nil is left as it is.
 type TaskEdit struct {
-	Title  *string   `json:"title,omitzero"`
-	State  *string   `json:"state,omitzero"`
-	Step   *string   `json:"step,omitzero"`
-	URL    *string   `json:"url,omitzero"`
-	Steps  *[]string `json:"steps,omitzero"`
-	Parent *string   `json:"parent,omitzero"`
-	New    *bool     `json:"new,omitzero"`
+	Title      *string   `json:"title,omitzero"`
+	State      *string   `json:"state,omitzero"`
+	URL        *string   `json:"url,omitzero"`
+	Categories *[]string `json:"categories,omitzero"`
+	Parent     *string   `json:"parent,omitzero"`
+	New        *bool     `json:"new,omitzero"`
 	// What the screen read: store.TaskEdit says each.
 	Rev         *int    `json:"rev,omitzero"`
 	ParentNew   *bool   `json:"parentNew,omitzero"`

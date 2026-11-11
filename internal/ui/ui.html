@@ -393,9 +393,9 @@
   li.fresh, li.fresh:hover { background: var(--sel); }
   /* A day's heading: no row, and not pressed */
   li.group { display: block; padding: 0.7rem 1rem 0.25rem; font: 700 var(--text-small)/1.2 var(--body); color: var(--muted); border-bottom: 0; animation: none; }
-  /* A step's heading on a task's page: its way to add a page on the right, and under it, when it has none, that it has none */
+  /* A category's heading on a task's page: its way to add a page on the right, and under it, when it has none, that it has none */
   li.group.adds { display: grid; grid-template: none / minmax(0, 1fr) auto; align-items: center; gap: 0.25rem 0.5rem; }
-  li.group .step-empty { grid-column: 1 / -1; margin: 0; padding-bottom: 0.5rem; font-weight: 400; }
+  li.group .category-empty { grid-column: 1 / -1; margin: 0; padding-bottom: 0.5rem; font-weight: 400; }
   /* The list's rows are cards on its ground, apart by a margin and not a gap, which would part a heading and a folder's rows too.
      A folder open is one card: its row loses its foot, its rows have the sides, and the last of them the foot, the corners and the
      shadow (by :has, the DOM as it is). A folder open and its rows do not rise in, which would part the card for a moment */
@@ -410,7 +410,7 @@
   #list > li.tree { border: 1px solid var(--line); border-block-width: 0; animation: none; }
   #list > li.tree:not(:has(+ li.tree)) { border-bottom-width: 1px; border-end-start-radius: var(--corner-menu); border-end-end-radius: var(--corner-menu); box-shadow: var(--shadow-sm); }
   @media (hover: hover) { #list > li:not(.group, .tree):not(:has(+ li.tree)):hover { box-shadow: var(--shadow); } }
-  /* The headings' words start where a card's mark does (the list's room, the card's edge and its own), the step's add button ends
+  /* The headings' words start where a card's mark does (the list's room, the card's edge and its own), the category's add button ends
      where the card does */
   #list > li.group { padding-inline: calc(1rem + 1px) 0; background: transparent; }
   /* The first column holds what the row is: a dot, a ring, a link's or a folder's mark; while rows are selected, the check box */
@@ -774,31 +774,31 @@
   .edit-more > .field { margin-top: 0.4rem; }
   .edit-more > .field + .field { margin-top: 0.9rem; }
   .edit-more > .field:last-child { margin-bottom: 0.85rem; }
-  /* The steps of the task edit dialog, reordered by their buttons, or by a drag from the grip where there is a pointer that hovers */
-  .step-box { border: 1px solid var(--line); border-radius: var(--corner-small); overflow: hidden; }
-  .step-order { display: grid; margin: 0; padding: 0; list-style: none; }
-  .step-order li { display: flex; align-items: center; gap: 0.5rem; padding: 0.2rem 0.4rem 0.2rem 0.6rem; font-weight: 600; background: var(--panel); }
-  .step-order li + li { border-top: 1px solid var(--line); }
-  .step-order .step-name { flex: 1; min-width: 0; overflow-wrap: anywhere; }
+  /* The categories of the task edit dialog, reordered by their buttons, or by a drag from the grip where there is a pointer that hovers */
+  .category-box { border: 1px solid var(--line); border-radius: var(--corner-small); overflow: hidden; }
+  .category-order { display: grid; margin: 0; padding: 0; list-style: none; }
+  .category-order li { display: flex; align-items: center; gap: 0.5rem; padding: 0.2rem 0.4rem 0.2rem 0.6rem; font-weight: 600; background: var(--panel); }
+  .category-order li + li { border-top: 1px solid var(--line); }
+  .category-order .category-name { flex: 1; min-width: 0; overflow-wrap: anywhere; }
   /* Up and down close together, as the frame's bar holds its icon buttons, each its whole size to press */
-  .step-order .step-moves { display: flex; gap: 0.15rem; }
-  .step-order .step-grip { display: inline-flex; color: var(--faint); cursor: grab; touch-action: none; }
-  .step-order .step-grip svg { width: 14px; height: 14px; }
-  .step-order .icon-btn:is(:disabled, [aria-disabled="true"]) { opacity: 0.35; }
-  .step-order li.drop-before { box-shadow: inset 0 2px 0 var(--ink); }
-  .step-order li.drop-after { box-shadow: inset 0 -2px 0 var(--ink); }
-  @media (hover: none) { .step-order .step-grip { display: none; } }
-  .step-none { margin: 0; font-weight: 400; color: var(--muted); }
-  /* The last row of the steps adds one: a button the height of a row, which turns into the field the name is typed in */
-  .step-plus-row { display: flex; min-height: calc(var(--icon-btn) + 0.4rem); background: var(--panel); }
-  .step-order:not([hidden]) + .step-plus-row { border-top: 1px solid var(--line); }
-  .step-plus { display: flex; flex: 1; align-items: center; gap: 0.5rem; padding: 0 0.6rem; font: inherit; font-weight: 400; color: var(--muted); background: transparent; border: 0; cursor: pointer; }
-  .step-plus:hover { color: var(--fg); background: var(--subtle); }
-  .step-plus:focus-visible { outline-offset: -2px; }
-  .step-plus svg { width: 14px; height: 14px; }
-  .step-plus-row .text { flex: 1; height: auto; border: 0; border-radius: 0; box-shadow: none; padding-inline: 0.6rem; }
-  .step-plus-row .text:focus-visible { outline-offset: -2px; }
-  .step-said { margin: 0; font-weight: 400; color: var(--danger); }
+  .category-order .category-moves { display: flex; gap: 0.15rem; }
+  .category-order .category-grip { display: inline-flex; color: var(--faint); cursor: grab; touch-action: none; }
+  .category-order .category-grip svg { width: 14px; height: 14px; }
+  .category-order .icon-btn:is(:disabled, [aria-disabled="true"]) { opacity: 0.35; }
+  .category-order li.drop-before { box-shadow: inset 0 2px 0 var(--ink); }
+  .category-order li.drop-after { box-shadow: inset 0 -2px 0 var(--ink); }
+  @media (hover: none) { .category-order .category-grip { display: none; } }
+  .category-none { margin: 0; font-weight: 400; color: var(--muted); }
+  /* The last row of the categories adds one: a button the height of a row, which turns into the field the name is typed in */
+  .category-plus-row { display: flex; min-height: calc(var(--icon-btn) + 0.4rem); background: var(--panel); }
+  .category-order:not([hidden]) + .category-plus-row { border-top: 1px solid var(--line); }
+  .category-plus { display: flex; flex: 1; align-items: center; gap: 0.5rem; padding: 0 0.6rem; font: inherit; font-weight: 400; color: var(--muted); background: transparent; border: 0; cursor: pointer; }
+  .category-plus:hover { color: var(--fg); background: var(--subtle); }
+  .category-plus:focus-visible { outline-offset: -2px; }
+  .category-plus svg { width: 14px; height: 14px; }
+  .category-plus-row .text { flex: 1; height: auto; border: 0; border-radius: 0; box-shadow: none; padding-inline: 0.6rem; }
+  .category-plus-row .text:focus-visible { outline-offset: -2px; }
+  .category-said { margin: 0; font-weight: 400; color: var(--danger); }
   .dialog-actions { display: flex; justify-content: flex-end; gap: 0.5rem; padding-top: 1rem; margin-top: 0.25rem; border-top: 1px solid var(--line); }
   /* Only the rows of the filters scroll, their foot in sight: the height a dialog may have, of its own rule in the browser */
   #filter-box { grid-template-rows: auto minmax(0, 1fr) auto; max-height: calc(100dvh - 6px - 2rem); }
@@ -928,7 +928,7 @@
   .kin .tname { margin: 0; font-weight: 500; }
   .kin-title { min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
   li .kin-title { max-width: 11rem; }
-  /* A task's family, a card apart from the steps of pages under it: on the head's --panel, the lightest ground is what shows it a card.
+  /* A task's family, a card apart from the categories of pages under it: on the head's --panel, the lightest ground is what shows it a card.
      The room of a menu, its rows round as a menu's items */
   .family { display: grid; margin-top: 0.15rem; padding: var(--menu-pad); background: var(--frame-bg); border: 1px solid var(--line); border-radius: var(--corner-menu); box-shadow: var(--shadow-sm); }
   .family-head { display: flex; align-items: center; justify-content: space-between; gap: 0.5rem; padding: 0 0 0.25rem 0.5rem; }
@@ -966,7 +966,6 @@
   .kid-state.done { color: var(--ins); background: var(--ins-soft); }
   .tname { margin-right: 0.45rem; font: 600 var(--text-small) var(--mono); color: var(--muted); }
   li.unseen .tname { color: var(--fg); }
-  .step { padding: 0 0.4rem; color: var(--fg); background: var(--subtle); border-radius: var(--corner-small); white-space: nowrap; }
   .task-pages { white-space: nowrap; }
   /* Above the title's hit area, as the row's controls are. Gray: blue is what is unseen alone */
   .xlink { position: relative; z-index: 1; display: inline-flex; align-items: center; gap: 0.2rem; color: var(--muted); text-decoration: underline; text-underline-offset: 2px; font: var(--text-label) var(--mono); white-space: nowrap; }
@@ -1355,8 +1354,8 @@
     <label class="field" id="set-name-title-field">{{.Msg "ui_task_title"}}
       <input class="text" id="set-task-title" autocomplete="off">
     </label>
-    <label class="field"><span>{{.Msg "ui_task_step"}} <small>{{.Msg "ui_optional"}}</small></span>
-      <input class="text" id="set-step" autocomplete="off" placeholder="{{.Msg "ui_task_step_example"}}">
+    <label class="field"><span>{{.Msg "ui_task_category"}} <small>{{.Msg "ui_optional"}}</small></span>
+      <input class="text" id="set-category" autocomplete="off" placeholder="{{.Msg "ui_task_category_example"}}">
     </label>
     <p class="error" id="set-error" hidden></p>
     <div class="dialog-actions set-foot">
@@ -1382,18 +1381,18 @@
       <input class="text path" id="edit-task-url" autocomplete="off" spellcheck="false" placeholder="https://">
     </label>
     <div class="field">
-      <span id="edit-steps-head">{{.Msg "ui_task_steps"}}</span>
-      <p class="step-none" id="edit-steps-none" hidden>{{.Msg "ui_task_steps_none"}}</p>
-      <div class="step-box">
-        <ol class="step-order" id="edit-steps" aria-labelledby="edit-steps-head" aria-describedby="edit-steps-hint"></ol>
-        <div class="step-plus-row">
-          <button type="button" class="step-plus" id="edit-step-plus" aria-label="{{.Msg "ui_step_add"}}" title="{{.Msg "ui_step_add"}}"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true"><path d="M12 5v14M5 12h14"/></svg>{{.Msg "ui_step_add"}}</button>
-          <input class="text" id="edit-step-new" hidden autocomplete="off" aria-label="{{.Msg "ui_step_name"}}" placeholder="{{.Msg "ui_step_name_hint"}}" aria-describedby="edit-step-said">
+      <span id="edit-categories-head">{{.Msg "ui_task_categories"}}</span>
+      <p class="category-none" id="edit-categories-none" hidden>{{.Msg "ui_task_categories_none"}}</p>
+      <div class="category-box">
+        <ol class="category-order" id="edit-categories" aria-labelledby="edit-categories-head" aria-describedby="edit-categories-hint"></ol>
+        <div class="category-plus-row">
+          <button type="button" class="category-plus" id="edit-category-plus" aria-label="{{.Msg "ui_category_add"}}" title="{{.Msg "ui_category_add"}}"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true"><path d="M12 5v14M5 12h14"/></svg>{{.Msg "ui_category_add"}}</button>
+          <input class="text" id="edit-category-new" hidden autocomplete="off" aria-label="{{.Msg "ui_category_name"}}" placeholder="{{.Msg "ui_category_name_hint"}}" aria-describedby="edit-category-said">
         </div>
       </div>
-      <p class="step-said" id="edit-step-said" aria-live="polite"></p>
-      <small id="edit-steps-hint">{{.Msg "ui_task_steps_hint"}}</small>
-      <p class="sr-only" id="edit-steps-said" aria-live="polite"></p>
+      <p class="category-said" id="edit-category-said" aria-live="polite"></p>
+      <small id="edit-categories-hint">{{.Msg "ui_task_categories_hint"}}</small>
+      <p class="sr-only" id="edit-categories-said" aria-live="polite"></p>
     </div>
     <p class="error" id="edit-task-error" role="alert" hidden></p>
     <div class="dialog-actions">
@@ -3434,7 +3433,7 @@
     const byKey = new Map(rows.map((li) => [li.dataset.key, li]));
     const row = byKey.get(key);
     const place = (keys, kept) => keys.filter((k) => kept.has(k)).indexOf(key);
-    const stayed = row && (on === '.title' || on === 'summary' || on === '.step-add' || place(was, byKey) === place([...byKey.keys()], new Set(was)));
+    const stayed = row && (on === '.title' || on === 'summary' || on === '.category-add' || place(was, byKey) === place([...byKey.keys()], new Set(was)));
     const to = stayed ? row.querySelector(on) : (was.slice(was.indexOf(key) + 1).map((k) => byKey.get(k)).find((li) => li?.querySelector('.title'))
       ?? lastRow(rows))?.querySelector('.title');
     to?.focus({ preventScroll: true });
@@ -3444,7 +3443,7 @@
     // Rows drawn already are drawn anew in place, without rising in again: only a row new to the list rises in
     const had = new Set([...$('list').children].map((li) => li.dataset.key));
     // The row with the focus has it again once drawn anew: a page read redraws the list as the keys go through it
-    const focusedOn = $('list').contains(document.activeElement) ? ['.title', 'summary', '.star', '.actions > .archive', '.step-add'].find((on) => document.activeElement.matches(on)) : null;
+    const focusedOn = $('list').contains(document.activeElement) ? ['.title', 'summary', '.star', '.actions > .archive', '.category-add'].find((on) => document.activeElement.matches(on)) : null;
     const focused = focusedOn ? document.activeElement.closest('li').dataset.key : null;
     let i = 0;
     for (const { heading, entries, add } of groups) {
@@ -3458,10 +3457,10 @@
         words.setAttribute('aria-level', '2');
         words.textContent = heading;
         li.append(words);
-        // A group may add an entry to itself (a step's pages), and says when it has none
+        // A group may add an entry to itself (a category's pages), and says when it has none
         if (add) {
           li.classList.add('adds');
-          const button = tagged('button', 'btn step-add');
+          const button = tagged('button', 'btn category-add');
           button.type = 'button';
           button.innerHTML = PLUS_MARK;
           button.append(t('ui_page_add'));
@@ -3469,7 +3468,7 @@
           button.title = button.getAttribute('aria-label');
           button.addEventListener('click', add);
           li.append(button);
-          if (entries.length === 0) li.append(tagged('p', 'step-empty', t('ui_step_empty')));
+          if (entries.length === 0) li.append(tagged('p', 'category-empty', t('ui_category_empty')));
         }
         rows.push(li);
       }
@@ -3584,7 +3583,6 @@
     time.dateTime = task.at;
     time.textContent = ago(task.at);
     const sub = li.querySelector('.sub');
-    if (task.step) sub.append(tagged('span', 'step', task.step));
     sub.append(tagged('span', 'task-pages', t('ui_task_pages', task.pages.length)));
     if (task.archived.length > 0) sub.append(tagged('span', 'task-pages', t('ui_task_archived', task.archived.length)));
     if (unread > 0) sub.append(tagged('span', 'ver', t('ui_task_unread', unread)));
@@ -3746,28 +3744,28 @@
   }
   let cameBack = false;
 
-  // The rows of a task's page, under their steps: every step, those of no page too, with its way to add one; the steps written, then those
-  // not, as they first came; before them what has no step. Within each, what is archived after the rest, and each as first published
-  // LIMIT: when a step first came is not kept: a step's oldest page says it, so that a new step on an old page comes earlier. --steps orders it
+  // The rows of a task's page, under their categories: every category, those of no page too, with its way to add one; the categories written, then those
+  // not, as they first came; before them what has no category. Within each, what is archived after the rest, and each as first published
+  // LIMIT: when a category first came is not kept: a category's oldest page says it, so that a new category on an old page comes earlier. --categories orders it
   function taskGroups(task) {
-    const steps = new Map();
+    const categories = new Map();
     const none = [];
     for (const a of everyPage(task).sort((x, y) => Boolean(x.archived) - Boolean(y.archived) || madeAt(x) - madeAt(y))) {
-      if (!a.work.step) none.push(a);
-      else steps.set(a.work.step, [...(steps.get(a.work.step) ?? []), a]);
+      if (!a.work.category) none.push(a);
+      else categories.set(a.work.category, [...(categories.get(a.work.category) ?? []), a]);
     }
     const groups = [{ entries: none }];
-    for (const heading of stepOrder(task)) groups.push({ heading, entries: steps.get(heading) ?? [], add: () => openAddPage(task, heading) });
+    for (const heading of categoryOrder(task)) groups.push({ heading, entries: categories.get(heading) ?? [], add: () => openAddPage(task, heading) });
     return groups;
   }
   const madeAt = (a) => Date.parse(a.createdAt || a.updatedAt);
-  // A task's steps in order, as its page groups its pages and its edit dialog orders them: the steps written, in their order, those of no page
+  // A task's categories in order, as its page groups its pages and its edit dialog orders them: the categories written, in their order, those of no page
   // too, then those of its pages alone, by the oldest page of each, archived or not
-  function stepOrder(task) {
-    const written = task.steps ?? [];
+  function categoryOrder(task) {
+    const written = task.categories ?? [];
     const rest = [];
     for (const a of everyPage(task).sort((x, y) => madeAt(x) - madeAt(y))) {
-      if (a.work.step && !written.includes(a.work.step) && !rest.includes(a.work.step)) rest.push(a.work.step);
+      if (a.work.category && !written.includes(a.work.category) && !rest.includes(a.work.category)) rest.push(a.work.category);
     }
     return [...written, ...rest];
   }
@@ -5060,8 +5058,8 @@
     await load();
   }
 
-  // The page the task dialog is of, its task and step as opened: a step is sent only when changed, as the task's last may be a later one
-  // than this page's. Whether its URL was changed by hand: only then is it sent, so that one set since it opened stays
+  // The page the task dialog is of, and its task as opened. Whether its URL was changed by hand: only then is it sent, so that one set since it
+  // opened stays
   let setPage;
   let setOpened;
   // The task the dialog last showed for the name, which saving sends as new or not, as the child's dialog does
@@ -5075,8 +5073,8 @@
     resetTaskForm($('set'));
     $('set-target').textContent = a.title;
     $('set-task').value = a.work?.task ?? '';
-    $('set-step').value = a.work?.step ?? '';
-    setOpened = { task: $('set-task').value, step: $('set-step').value };
+    $('set-category').value = a.work?.category ?? '';
+    setOpened = { task: $('set-task').value };
     setTaskKnown();
     $('set-out').hidden = !a.work?.task;
     $('set-error').textContent = tasksRead.error ? t('ui_tasks_failed', tasksRead.error) : '';
@@ -5143,17 +5141,16 @@
     $('set-error').textContent = t('ui_save_failed', reason);
     $('set-error').hidden = false;
   };
-  // A page put on a step of a task, as floe work writes it: the task first, its step (body), which moves its rev on, so that a dialog
-  // showing the task is refused and reads it again; and the page then. The answer is writeTask's, not ok with the page's reason when the
-  // page is refused
-  // LIMIT: the page refused, what was written of the task stays: its step, or a new name's row of no page, which --forget removes
-  async function putPageOn(page, project, task, body, step) {
+  // A page put on a category of a task, as floe work writes it: the task first (body), checked as the screen saw it and made when new, and
+  // the page then, which alone holds its category. The answer is writeTask's, not ok with the page's reason when the page is refused
+  // LIMIT: the page refused, a new name's row of no page stays, which --forget removes
+  async function putPageOn(page, project, task, body, category) {
     const res = await writeTask(project, task, body);
     if (!res.ok) return res;
-    const reason = await patchOne(page.slug, { work: { task, step } });
+    const reason = await patchOne(page.slug, { work: { task, category } });
     return reason ? { ...res, ok: false, status: 0, text: reason } : res;
   }
-  // The task's own fields are its page's to write (openTaskEdit): this writes the page's step on it, and a new name's title
+  // The task's own fields are its page's to write (openTaskEdit): this writes the page's category, and a new name's title
   async function saveTaskSet(e) {
     e.preventDefault();
     const btn = $('set-submit');
@@ -5163,17 +5160,15 @@
     const task = $('set-task').value;
     // The state it comes to be under stays what it was: said, as it may not be the list the person has in mind
     const state = setShown?.state ?? STATES.find((x) => x.new).name;
-    const step = $('set-step').value.trim();
-    const moved = task.trim() !== setOpened.task || step !== setOpened.step;
+    const category = $('set-category').value.trim();
     const fresh = !setShown;
     const body = {
       // A task there is written as the dialog shows it (rev)
       new: fresh, ...(fresh ? { title: $('set-task-title').value.trim() } : { rev: setShown.rev }),
-      ...(step && moved ? { step } : {}),
     };
     try {
       if (!taskFormReady($('set'), $('set-error'))) return;
-      const res = await putPageOn(page, page.taskProject, task, body, step);
+      const res = await putPageOn(page, page.taskProject, task, body, category);
       // Whether the name is of a task there, as read again, a title asked of a new one alone; or, the task written and the page refused, as
       // written, from the tasks read, which hold it and no read since, as a load waits for the page's write, so that saving again writes the
       // page, and is refused when another wrote it since
@@ -5195,13 +5190,13 @@
       btn.disabled = false;
     }
   }
-  // The task edit dialog: an existing task's own fields, its title, URL and the order of its steps, as its page alone writes them; the
+  // The task edit dialog: an existing task's own fields, its title, URL and the order of its categories, as its page alone writes them; the
   // parent is the family card's. What it was opened over (base) is what saving compares with, and the rev it was read at
   let taskEditing;
-  const sameSteps = (x, y) => x.join('\n') === y.join('\n');
-  const editStepsNow = () => [...$('edit-steps').children].map((li) => li.dataset.step);
+  const sameCategories = (x, y) => x.join('\n') === y.join('\n');
+  const editCategoriesNow = () => [...$('edit-categories').children].map((li) => li.dataset.category);
   // What the dialog shows of task, read now: the tasks read hold it as the page draws it
-  const editBase = (task) => ({ title: task.title ?? '', url: task.url ?? '', steps: stepOrder(task) });
+  const editBase = (task) => ({ title: task.title ?? '', url: task.url ?? '', categories: categoryOrder(task) });
   // Opened over the task as the tasks read now have it, its rev and fields of one read: the page drawn before may be older
   function openTaskEdit(drawnTask) {
     const task = tasksOf().find((x) => x.project === drawnTask.project && x.name === drawnTask.name) ?? drawnTask;
@@ -5209,29 +5204,31 @@
     $('edit-task-target').textContent = task.name;
     $('edit-task-title').value = taskEditing.base.title;
     $('edit-task-url').value = taskEditing.base.url;
-    drawEditSteps(task, taskEditing.base.steps);
+    drawEditCategories(task, taskEditing.base.categories);
     plusField(false);
     $('edit-task-error').hidden = true;
     $('edit-task-submit').disabled = false;
-    $('edit-steps-said').textContent = '';
+    $('edit-categories-said').textContent = '';
     $('edit-task-dialog').showModal();
   }
-  // The steps as rows, each with its name, whether no page is under it, and its buttons up, down and to remove it; the grip drags it
-  const pagedOf = (task) => new Set(everyPage(task).map((a) => a.work.step).filter(Boolean));
-  function drawEditSteps(task, order) {
+  // The categories as rows, each with its name, whether no page is under it, and its buttons up, down and to remove it; the grip drags it
+  const pagedOf = (task) => new Set(everyPage(task).map((a) => a.work.category).filter(Boolean));
+  function drawEditCategories(task, order) {
     const paged = pagedOf(task);
-    $('edit-steps').replaceChildren(...order.map((name) => stepRow(name, paged.has(name))));
-    showSteps();
+    $('edit-categories').replaceChildren(...order.map((name) => categoryRow(name, paged.has(name))));
+    showCategories();
   }
-  // A step with pages is not deleted, as stepOrder would bring it back from them: its button is there, not pressed, and says why. It is
+  // A category with pages is not deleted, as categoryOrder would bring it back from them: its button is there, not pressed, and says why. It is
   // aria-disabled, not disabled, so that the keys reach it and pressing it says why
-  function stepRow(name, paged) {
+  // LIMIT: a page put on a category meanwhile moves no rev, so that one deleted here is saved deleted and comes back after those written,
+  // from its page. Read the pages again before saving if that order comes to matter.
+  function categoryRow(name, paged) {
     const li = document.createElement('li');
-    li.dataset.step = name;
-    const grip = tagged('span', 'step-grip');
+    li.dataset.category = name;
+    const grip = tagged('span', 'category-grip');
     grip.innerHTML = '<svg viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><circle cx="9" cy="6" r="1.5"/><circle cx="15" cy="6" r="1.5"/><circle cx="9" cy="12" r="1.5"/><circle cx="15" cy="12" r="1.5"/><circle cx="9" cy="18" r="1.5"/><circle cx="15" cy="18" r="1.5"/></svg>';
-    const word = tagged('span', 'step-name', name);
-    if (!paged) word.append(' ', tagged('small', '', t('ui_step_no_pages')));
+    const word = tagged('span', 'category-name', name);
+    if (!paged) word.append(' ', tagged('small', '', t('ui_category_no_pages')));
     const button = (cls, label, path) => {
       const b = tagged('button', `icon-btn ${cls}`);
       b.type = 'button';
@@ -5240,65 +5237,65 @@
       b.title = label;
       return b;
     };
-    const drop = button('step-drop', t(paged ? 'ui_step_drop_paged' : 'ui_step_drop_named', name), '<path d="M4 7h16M10 11v6m4-6v6M6 7l1 12h10l1-12M9 7V4h6v3"/>');
+    const drop = button('category-drop', t(paged ? 'ui_category_drop_paged' : 'ui_category_drop_named', name), '<path d="M4 7h16M10 11v6m4-6v6M6 7l1 12h10l1-12M9 7V4h6v3"/>');
     if (paged) drop.setAttribute('aria-disabled', 'true');
-    li.append(grip, word, tagged('span', 'step-moves'));
+    li.append(grip, word, tagged('span', 'category-moves'));
     li.lastChild.append(
-      button('step-up', t('ui_step_up_named', name), '<path d="M12 19V5"/><path d="m5 12 7-7 7 7"/>'),
-      button('step-down', t('ui_step_down_named', name), '<path d="M12 5v14"/><path d="m19 12-7 7-7-7"/>'),
+      button('category-up', t('ui_category_up_named', name), '<path d="M12 19V5"/><path d="m5 12 7-7 7 7"/>'),
+      button('category-down', t('ui_category_down_named', name), '<path d="M12 5v14"/><path d="m19 12-7 7-7-7"/>'),
       drop,
     );
     return li;
   }
-  function showSteps() {
-    const none = $('edit-steps').children.length === 0;
-    $('edit-steps').hidden = none;
-    $('edit-steps-none').hidden = !none;
-    $('edit-steps-hint').hidden = none;
-    markStepEnds();
+  function showCategories() {
+    const none = $('edit-categories').children.length === 0;
+    $('edit-categories').hidden = none;
+    $('edit-categories-none').hidden = !none;
+    $('edit-categories-hint').hidden = none;
+    markCategoryEnds();
   }
-  // The last row: the button that adds a step, or the field it turns into, empty as it turns back
+  // The last row: the button that adds a category, or the field it turns into, empty as it turns back
   function plusField(on) {
-    $('edit-step-plus').hidden = on;
-    $('edit-step-new').hidden = !on;
+    $('edit-category-plus').hidden = on;
+    $('edit-category-new').hidden = !on;
     if (on) return;
-    $('edit-step-new').value = '';
-    $('edit-step-new').setCustomValidity('');
-    $('edit-step-said').textContent = '';
+    $('edit-category-new').value = '';
+    $('edit-category-new').setCustomValidity('');
+    $('edit-category-said').textContent = '';
   }
-  // The name typed goes last, a row of no page, and the field stays, empty, for the next. The names are compared as the store's stepsOf has them
-  // LIMIT: trim and Go's TrimSpace drop a few spaces apart (U+0085, U+FEFF): two names this takes to differ by them, stepsOf makes one
-  function addStep() {
-    const input = $('edit-step-new');
+  // The name typed goes last, a row of no page, and the field stays, empty, for the next. The names are compared as the store's categoriesOf has them
+  // LIMIT: trim and Go's TrimSpace drop a few spaces apart (U+0085, U+FEFF): two names this takes to differ by them, categoriesOf makes one
+  function addCategory() {
+    const input = $('edit-category-new');
     const name = input.value.trim();
     input.setCustomValidity('');
-    const why = !name ? t('ui_step_blank') : editStepsNow().includes(name) ? t('ui_step_there', name) : '';
-    $('edit-step-said').textContent = why;
+    const why = !name ? t('ui_category_blank') : editCategoriesNow().includes(name) ? t('ui_category_there', name) : '';
+    $('edit-category-said').textContent = why;
     if (why) return;
-    $('edit-steps').append(stepRow(name, false));
-    showSteps();
+    $('edit-categories').append(categoryRow(name, false));
+    showCategories();
     input.value = '';
-    const n = $('edit-steps').children.length;
-    $('edit-steps-said').textContent = t('ui_step_added', name, n, n);
+    const n = $('edit-categories').children.length;
+    $('edit-categories-said').textContent = t('ui_category_added', name, n, n);
   }
   const pressable = (b) => !b.disabled && b.getAttribute('aria-disabled') !== 'true';
   // The row goes at once: nothing is sent until saving. The focus goes to a button that can be pressed of the row after it, or before
   // it, else to the last row
-  function dropStep(li) {
-    const rows = [...$('edit-steps').children];
+  function dropCategory(li) {
+    const rows = [...$('edit-categories').children];
     const at = rows.indexOf(li);
     li.remove();
-    showSteps();
-    $('edit-steps-said').textContent = t('ui_step_dropped', li.dataset.step);
+    showCategories();
+    $('edit-categories-said').textContent = t('ui_category_dropped', li.dataset.category);
     const near = rows[at + 1] ?? rows[at - 1];
-    const to = near && ['.step-drop', '.step-up', '.step-down'].map((on) => near.querySelector(on)).find(pressable);
-    (to ?? ($('edit-step-new').hidden ? $('edit-step-plus') : $('edit-step-new'))).focus();
+    const to = near && ['.category-drop', '.category-up', '.category-down'].map((on) => near.querySelector(on)).find(pressable);
+    (to ?? ($('edit-category-new').hidden ? $('edit-category-plus') : $('edit-category-new'))).focus();
   }
-  // The steps of the dialog as the task is read again (now): unchanged, as read; else as the person left them (mine), without those another
+  // The categories of the dialog as the task is read again (now): unchanged, as read; else as the person left them (mine), without those another
   // deleted and with those another added, after them. One the person deleted stays out, unless it has come to have pages, as one with
   // pages cannot be deleted
-  function mergeSteps(mine, was, now, paged) {
-    if (sameSteps(mine, was)) return now;
+  function mergeCategories(mine, was, now, paged) {
+    if (sameCategories(mine, was)) return now;
     return [
       ...mine.filter((x) => !was.includes(x) || now.includes(x)),
       ...was.filter((x) => !mine.includes(x) && paged.has(x) && now.includes(x)),
@@ -5306,26 +5303,26 @@
     ];
   }
   // The first row's up and the last row's down move nothing
-  function markStepEnds() {
-    const rows = [...$('edit-steps').children];
+  function markCategoryEnds() {
+    const rows = [...$('edit-categories').children];
     rows.forEach((li, i) => {
-      li.querySelector('.step-up').disabled = i === 0;
-      li.querySelector('.step-down').disabled = i === rows.length - 1;
+      li.querySelector('.category-up').disabled = i === 0;
+      li.querySelector('.category-down').disabled = i === rows.length - 1;
     });
   }
   // Moves the row li before ref (null: last), says where it went, and gives the focus back to the button pressed, as moving the row drops it:
   // or to the row's other button, the one pressed moving nothing more
-  function moveStep(li, ref, pressed) {
+  function moveCategory(li, ref, pressed) {
     if (ref === li) return;
-    $('edit-steps').insertBefore(li, ref);
-    markStepEnds();
-    const rows = [...$('edit-steps').children];
-    $('edit-steps-said').textContent = t('ui_step_moved', li.dataset.step, rows.indexOf(li) + 1, rows.length);
+    $('edit-categories').insertBefore(li, ref);
+    markCategoryEnds();
+    const rows = [...$('edit-categories').children];
+    $('edit-categories-said').textContent = t('ui_category_moved', li.dataset.category, rows.indexOf(li) + 1, rows.length);
     if (!pressed) return;
     const on = li.querySelector(pressed);
-    (on.disabled ? li.querySelector(pressed === '.step-up' ? '.step-down' : '.step-up') : on).focus();
+    (on.disabled ? li.querySelector(pressed === '.category-up' ? '.category-down' : '.category-up') : on).focus();
   }
-  // The dialog over the task as read again: refused as stale, what was changed in it stays, and the rest is as read now (mergeSteps). A row
+  // The dialog over the task as read again: refused as stale, what was changed in it stays, and the rest is as read now (mergeCategories). A row
   // removed meanwhile is not made again: the dialog says so
   function refillTaskEdit() {
     const task = tasksOf().find((x) => x.project === taskEditing.project && x.name === taskEditing.name);
@@ -5340,7 +5337,7 @@
     const now = editBase(task);
     if ($('edit-task-title').value.trim() === was.title) $('edit-task-title').value = now.title;
     if ($('edit-task-url').value.trim() === was.url) $('edit-task-url').value = now.url;
-    drawEditSteps(task, mergeSteps(editStepsNow(), was.steps, now.steps, pagedOf(task)));
+    drawEditCategories(task, mergeCategories(editCategoriesNow(), was.categories, now.categories, pagedOf(task)));
     taskEditing = { ...taskEditing, rev: readRev(task.project, task.name), had: hasRow(task), base: now };
     return true;
   }
@@ -5348,10 +5345,10 @@
   async function saveTaskEdit(e) {
     e.preventDefault();
     // A name typed and not added is not dropped unsaid
-    const left = $('edit-step-new');
+    const left = $('edit-category-new');
     const leftName = left.value.trim();
     if (!left.hidden && leftName) {
-      left.setCustomValidity(t(editStepsNow().includes(leftName) ? 'ui_step_there' : 'ui_step_unadded', leftName));
+      left.setCustomValidity(t(editCategoriesNow().includes(leftName) ? 'ui_category_there' : 'ui_category_unadded', leftName));
       left.reportValidity();
       return;
     }
@@ -5359,8 +5356,8 @@
     const { base } = taskEditing;
     const title = $('edit-task-title').value.trim();
     const url = $('edit-task-url').value.trim();
-    const steps = editStepsNow();
-    const changed = { ...(title !== base.title ? { title } : {}), ...(url !== base.url ? { url } : {}), ...(!sameSteps(steps, base.steps) ? { steps } : {}) };
+    const categories = editCategoriesNow();
+    const changed = { ...(title !== base.title ? { title } : {}), ...(url !== base.url ? { url } : {}), ...(!sameCategories(categories, base.categories) ? { categories } : {}) };
     const body = { new: false, rev: taskEditing.rev, ...changed };
     if (Object.keys(changed).length === 0) {
       $('edit-task-dialog').close();
@@ -5410,48 +5407,48 @@
     if (e.detail === 0) $('set-dialog').addEventListener('close', () => res.button.focus(), { once: true });
     $('set-dialog').close();
   }
-  // The add button of a step's heading, as drawn now
-  const stepAdd = (step) => [...$('list').children].find((li) => li.dataset.key === `group:${step}`)?.querySelector('.step-add');
+  // The add button of a category's heading, as drawn now
+  const categoryAdd = (category) => [...$('list').children].find((li) => li.dataset.key === `group:${category}`)?.querySelector('.category-add');
   // The page alone off its task: its pin stays, and the task's row, which nothing here writes. Its way back writes the page's work back as it
   // was, and nothing else, so that a task of pages alone is back as it was; Escape on it leaves the focus on back (the menu it came from),
-  // the row after it, its step's add button, or the task's edit button
+  // the row after it, its category's add button, or the task's edit button
   // LIMIT: a page's write has no rev, so the way back writes over what was written to the page since, as the archive's does. Give page writes a rev if that comes to trouble someone
   async function takePageOff(a, back) {
     const name = a.work.task;
-    const step = a.work.step ?? '';
+    const category = a.work.category ?? '';
     const rows = [...$('list').children].filter((li) => !li.classList.contains('group') && li.querySelector('.title'));
     const at = rows.findIndex((li) => li.dataset.key === `entry:${a.slug}`);
     const next = at === -1 ? null : (rows[at + 1] ?? rows[at - 1])?.dataset.key;
-    const reason = await patchOne(a.slug, { work: { task: '', step: '' } });
+    const reason = await patchOne(a.slug, { work: { task: '', category: '' } });
     if (reason) return { reason };
     const rowOf = (key) => [...$('list').children].find((li) => li.dataset.key === key)?.querySelector('.title');
     const edit = () => ($('task-edit').closest('[hidden]') ? null : $('task-edit'));
     const button = undoToast(t('ui_task_out_done', a.title, name), {
       undo: async () => {
-        const reason = await patchOne(a.slug, { work: { task: name, step } });
+        const reason = await patchOne(a.slug, { work: { task: name, category } });
         return { ok: !reason, text: reason };
       },
       done: () => rowOf(`entry:${a.slug}`) ?? back?.(),
-      away: () => back?.() ?? rowOf(next) ?? stepAdd(step) ?? edit(),
+      away: () => back?.() ?? rowOf(next) ?? categoryAdd(category) ?? edit(),
     });
     return { reason: '', button };
   }
 
-  // The modal that puts a page of the task's project on one of its steps. It shows the task as it opened, and sends the rev it opened at;
+  // The modal that puts a page of the task's project on one of its categories. It shows the task as it opened, and sends the rev it opened at;
   // refused as stale, it shows the task as read again. Nothing is reached as it opens, so that no Enter puts a page by itself
   let addTo = null;
   let addShown = [];
   let addSlug = null;
   const addHits = () => {
-    const all = items.filter((a) => a.taskProject === addTo.project && !a.archived && !(a.work?.task === addTo.name && (a.work?.step ?? '') === addTo.step));
+    const all = items.filter((a) => a.taskProject === addTo.project && !a.archived && !(a.work?.task === addTo.name && (a.work?.category ?? '') === addTo.category));
     return { all, hits: searched($('add-page-q'), all) };
   };
-  // Where a page comes from, as said of it: this task's other step, another task's, or none
+  // Where a page comes from, as said of it: this task's other category, another task's, or none
   const pageFrom = (a) => {
-    const { task, step } = a.work ?? {};
+    const { task, category } = a.work ?? {};
     if (!task) return '';
-    if (task === addTo.name) return step ? t('ui_page_from_step', step) : t('ui_page_from_no_step');
-    return step ? t('ui_page_from_task_step', task, step) : task;
+    if (task === addTo.name) return category ? t('ui_page_from_category', category) : t('ui_page_from_no_category');
+    return category ? t('ui_page_from_task_category', task, category) : task;
   };
   function drawAddPage() {
     const { all, hits } = addHits();
@@ -5459,7 +5456,7 @@
     // Of one project, the task's: no pill, as on the task's page
     $('add-page-list').replaceChildren(...addShown.map((a, i) => hitRow($('add-page-row'), `add-page-${i}`, a, new Map(), (put) => {
       if (!a.work?.task) return;
-      put('badge', a.work.task === addTo.name ? t('ui_page_here_step', a.work.step || t('ui_page_from_no_step')) : [a.work.task, a.work.step].filter(Boolean).join(' · '));
+      put('badge', a.work.task === addTo.name ? t('ui_page_here_category', a.work.category || t('ui_page_from_no_category')) : [a.work.task, a.work.category].filter(Boolean).join(' · '));
     })));
     const none = hits.length === 0;
     $('add-page-list').hidden = none;
@@ -5477,11 +5474,11 @@
     tab: () => {},
     moved: (i) => { addSlug = addShown[i]?.slug ?? null; },
   });
-  function openAddPage(drawn, step) {
+  function openAddPage(drawn, category) {
     if (document.querySelector('dialog[open]')) return;
     const task = tasksOf().find((x) => x.project === drawn.project && x.name === drawn.name) ?? drawn;
-    addTo = { project: task.project, name: task.name, step, rev: readRev(task.project, task.name) };
-    $('add-page-title').textContent = t('ui_page_add_named', step);
+    addTo = { project: task.project, name: task.name, category, rev: readRev(task.project, task.name) };
+    $('add-page-title').textContent = t('ui_page_add_named', category);
     $('add-page-target').textContent = named(task);
     $('add-page-q').value = '';
     addSlug = null;
@@ -5490,7 +5487,7 @@
     $('add-page-dialog').showModal();
     $('add-page-q').focus();
   }
-  // One page, and the modal closes; its focus goes back to the step's add button, as drawn again
+  // One page, and the modal closes; its focus goes back to the category's add button, as drawn again
   let adding = false;
   async function addPageTo(a) {
     if (!a || adding) return;
@@ -5504,7 +5501,7 @@
     try {
       let res;
       try {
-        res = await putPageOn(a, to.project, to.name, { new: false, rev: to.rev, step: to.step }, to.step);
+        res = await putPageOn(a, to.project, to.name, { new: false, rev: to.rev }, to.category);
       } catch (err) {
         failed(err.message);
         return;
@@ -5519,7 +5516,7 @@
         failed(res.status === 409 ? res.stale : res.text);
         return;
       }
-      toast(from ? t('ui_page_moved', a.title, from, to.step) : t('ui_page_added', a.title, to.step));
+      toast(from ? t('ui_page_moved', a.title, from, to.category) : t('ui_page_added', a.title, to.category));
       await load();
       $('add-page-dialog').close();
     } finally {
@@ -6066,87 +6063,87 @@
   });
   // The button it was opened from may have been drawn anew meanwhile
   $('add-page-dialog').addEventListener('close', () => {
-    if ($('add-page-dialog').contains(document.activeElement) || document.activeElement === document.body) stepAdd(addTo.step)?.focus();
+    if ($('add-page-dialog').contains(document.activeElement) || document.activeElement === document.body) categoryAdd(addTo.category)?.focus();
   });
   $('set-dialog').addEventListener('close', () => setBack?.()?.focus());
   $('edit-task').addEventListener('submit', saveTaskEdit);
   // Typing again lets a refusal go, but not that the task is gone, which no typing changes
   $('edit-task').addEventListener('input', () => { if (!taskEditing?.gone) $('edit-task-error').hidden = true; });
-  $('edit-step-plus').addEventListener('click', () => {
+  $('edit-category-plus').addEventListener('click', () => {
     plusField(true);
-    $('edit-step-new').focus();
+    $('edit-category-new').focus();
   });
   // Enter adds, and Escape turns it back to the button, the dialog staying open; neither while the input method has the key
-  $('edit-step-new').addEventListener('keydown', (e) => {
+  $('edit-category-new').addEventListener('keydown', (e) => {
     if (composing(e)) return;
     if (e.key === 'Enter') {
       e.preventDefault();
-      addStep();
+      addCategory();
     } else if (e.key === 'Escape') {
       e.preventDefault();
       e.stopPropagation();
       plusField(false);
-      $('edit-step-plus').focus();
+      $('edit-category-plus').focus();
     }
   });
   // Left empty, the field is the button again; with words in it, it stays, for saving to say so
-  $('edit-step-new').addEventListener('focusout', () => {
-    if (!$('edit-step-new').value.trim()) plusField(false);
+  $('edit-category-new').addEventListener('focusout', () => {
+    if (!$('edit-category-new').value.trim()) plusField(false);
   });
-  $('edit-steps').addEventListener('click', (e) => {
-    const drop = e.target.closest('.step-drop');
+  $('edit-categories').addEventListener('click', (e) => {
+    const drop = e.target.closest('.category-drop');
     if (drop) {
-      if (pressable(drop)) dropStep(drop.closest('li'));
-      else $('edit-step-said').textContent = drop.getAttribute('aria-label');
+      if (pressable(drop)) dropCategory(drop.closest('li'));
+      else $('edit-category-said').textContent = drop.getAttribute('aria-label');
       return;
     }
-    const btn = e.target.closest('.step-up, .step-down');
+    const btn = e.target.closest('.category-up, .category-down');
     if (!btn || btn.disabled) return;
     const li = btn.closest('li');
-    moveStep(li, btn.classList.contains('step-up') ? li.previousElementSibling : li.nextElementSibling?.nextElementSibling ?? null, btn.classList.contains('step-up') ? '.step-up' : '.step-down');
+    moveCategory(li, btn.classList.contains('category-up') ? li.previousElementSibling : li.nextElementSibling?.nextElementSibling ?? null, btn.classList.contains('category-up') ? '.category-up' : '.category-down');
   });
-  // A drag of a step's grip: the row goes before the row it is dropped on, or after it in its lower half. Only the grip makes a row draggable,
+  // A drag of a category's grip: the row goes before the row it is dropped on, or after it in its lower half. Only the grip makes a row draggable,
   // and a screen without a pointer that hovers shows none
   let dragged = null;
-  const dropMarks = () => { for (const li of $('edit-steps').children) li.classList.remove('drop-before', 'drop-after'); };
+  const dropMarks = () => { for (const li of $('edit-categories').children) li.classList.remove('drop-before', 'drop-after'); };
   const dropAt = (e) => {
-    const li = e.target.closest?.('#edit-steps > li');
+    const li = e.target.closest?.('#edit-categories > li');
     if (!li || li === dragged) return null;
     const box = li.getBoundingClientRect();
     return { li, after: e.clientY > box.top + box.height / 2 };
   };
-  $('edit-steps').addEventListener('pointerdown', (e) => {
-    const li = e.target.closest('.step-grip')?.closest('li');
+  $('edit-categories').addEventListener('pointerdown', (e) => {
+    const li = e.target.closest('.category-grip')?.closest('li');
     if (li) li.draggable = true;
   });
   // A press let go without a drag leaves no row draggable from anywhere but its grip; the row dragged is let go by dragend. Not on
   // pointercancel, which a browser may send before dragstart, and the drag would not start
   // LIMIT: a press cancelled without a drag (pointercancel alone) leaves its row draggable till the next press is let go or the dialog is drawn again
-  $('edit-steps').addEventListener('pointerup', () => {
-    for (const li of $('edit-steps').children) if (li !== dragged) li.draggable = false;
+  $('edit-categories').addEventListener('pointerup', () => {
+    for (const li of $('edit-categories').children) if (li !== dragged) li.draggable = false;
   });
-  $('edit-steps').addEventListener('dragstart', (e) => {
+  $('edit-categories').addEventListener('dragstart', (e) => {
     // A drag of words selected starts at a text node; a row's own drag only from its grip
-    const li = e.target instanceof Element ? e.target.closest('#edit-steps > li') : null;
+    const li = e.target instanceof Element ? e.target.closest('#edit-categories > li') : null;
     if (!li?.draggable) return;
     dragged = li;
     e.dataTransfer.effectAllowed = 'move';
-    e.dataTransfer.setData('text/plain', dragged.dataset.step);
+    e.dataTransfer.setData('text/plain', dragged.dataset.category);
   });
-  $('edit-steps').addEventListener('dragover', (e) => {
+  $('edit-categories').addEventListener('dragover', (e) => {
     if (!dragged) return;
     e.preventDefault();
     dropMarks();
     const at = dropAt(e);
     at?.li.classList.add(at.after ? 'drop-after' : 'drop-before');
   });
-  $('edit-steps').addEventListener('drop', (e) => {
+  $('edit-categories').addEventListener('drop', (e) => {
     if (!dragged) return;
     e.preventDefault();
     const at = dropAt(e);
-    if (at) moveStep(dragged, at.after ? at.li.nextElementSibling : at.li, null);
+    if (at) moveCategory(dragged, at.after ? at.li.nextElementSibling : at.li, null);
   });
-  $('edit-steps').addEventListener('dragend', () => {
+  $('edit-categories').addEventListener('dragend', () => {
     if (dragged) dragged.draggable = false;
     dragged = null;
     dropMarks();
@@ -6187,10 +6184,10 @@
   });
   $('add-task').addEventListener('click', fromShelf(openTaskAdd));
   $('task-add-empty').addEventListener('click', openTaskAdd);
-  suggestOne($('set-step'), () => {
+  suggestOne($('set-category'), () => {
     const task = setTaskOf($('set-task').value);
-    return task ? stepOrder(task) : [];
-  }, (name) => { $('set-step').value = name; });
+    return task ? categoryOrder(task) : [];
+  }, (name) => { $('set-category').value = name; });
   for (const b of document.querySelectorAll('[data-close]')) b.addEventListener('click', () => b.closest('dialog').close());
   // A click on the backdrop (the dialog itself) closes it, as Escape does: not one closedby none holds; the form fills the dialog, so
   // clicks inside never land here

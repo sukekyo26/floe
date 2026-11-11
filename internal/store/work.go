@@ -55,25 +55,25 @@ func TaskProject(project string) (string, error) {
 	return ProjectKey(project), nil
 }
 
-// Work is what a page holds of its place on the task list: the task it is on, its step there, whether it is pinned.
+// Work is what a page holds of its place on the task list: the task it is on, its category there, whether it is pinned.
 type Work struct {
-	Task string `json:"task,omitempty"`
-	Step string `json:"step,omitempty"`
-	Pin  bool   `json:"pin,omitempty"`
+	Task     string `json:"task,omitempty"`
+	Category string `json:"category,omitempty"`
+	Pin      bool   `json:"pin,omitempty"`
 }
 
 // WorkEdit is what an edit changes of a page's Work, each left as it is when nil.
 type WorkEdit struct {
-	Task *string `json:"task,omitzero"`
-	Step *string `json:"step,omitzero"`
-	Pin  *bool   `json:"pin,omitzero"`
+	Task     *string `json:"task,omitzero"`
+	Category *string `json:"category,omitzero"`
+	Pin      *bool   `json:"pin,omitzero"`
 }
 
-// setWork applies ed to m. A step is of its task: a page that moves to another task leaves it, unless ed gives the
-// step it takes there; a page off a task has none, and one neither on a task nor pinned has no Work. TaskName has
+// setWork applies ed to m. A category is of its task: a page that moves to another task leaves it, unless ed gives the
+// category it takes there; a page off a task has none, and one neither on a task nor pinned has no Work. TaskName has
 // checked ed.
-// LIMIT: a page moved to another project's task of the same name, by an edit or a publish, keeps its step: names of
-// steps mostly hold there. Take it off in the two ways if that comes to mislead.
+// LIMIT: a page moved to another project's task of the same name, by an edit or a publish, keeps its category: names
+// of categories mostly hold there. Take it off in the two ways if that comes to mislead.
 func setWork(m *Meta, ed *WorkEdit) {
 	var w Work
 	if m.Work != nil {
@@ -82,18 +82,18 @@ func setWork(m *Meta, ed *WorkEdit) {
 	if ed.Task != nil {
 		name := strings.TrimSpace(*ed.Task)
 		if name != w.Task {
-			w.Step = ""
+			w.Category = ""
 		}
 		w.Task = name
 	}
-	if ed.Step != nil {
-		w.Step = strings.TrimSpace(*ed.Step)
+	if ed.Category != nil {
+		w.Category = strings.TrimSpace(*ed.Category)
 	}
 	if ed.Pin != nil {
 		w.Pin = *ed.Pin
 	}
 	if w.Task == "" {
-		w.Step = ""
+		w.Category = ""
 	}
 	m.Work = &w
 	if w.Task == "" && !w.Pin {
@@ -101,16 +101,15 @@ func setWork(m *Meta, ed *WorkEdit) {
 	}
 }
 
-// Task is a task's row of tasks.json. At is when it was made or its state last changed; Step the last step written of
-// it that was not empty; Parent the task it is a child of, of the same project (childrenOfTask).
+// Task is a task's row of tasks.json. At is when it was made or its state last changed; Parent the task it is a child
+// of, of the same project (childrenOfTask). A page's category is the page's alone (Work).
 type Task struct {
-	Title  string   `json:"title,omitempty"`
-	State  string   `json:"state"`
-	Step   string   `json:"step,omitempty"`
-	At     string   `json:"at"`
-	URL    string   `json:"url,omitempty"`
-	Steps  []string `json:"steps,omitempty"`
-	Parent string   `json:"parent,omitempty"`
+	Title      string   `json:"title,omitempty"`
+	State      string   `json:"state"`
+	At         string   `json:"at"`
+	URL        string   `json:"url,omitempty"`
+	Categories []string `json:"categories,omitempty"`
+	Parent     string   `json:"parent,omitempty"`
 	// Rev counts the writes of the row, which a screen sends back as what it read: 0 of no row.
 	Rev int `json:"rev,omitempty"`
 }
@@ -134,14 +133,13 @@ var States = []State{
 	{Name: "archived", New: false, First: false},
 }
 
-// TaskEdit is what a write changes of a task's row, each left as it is when nil. An empty URL or Steps takes it off; an
-// empty Step leaves the last one written.
+// TaskEdit is what a write changes of a task's row, each left as it is when nil. An empty URL or Categories takes it
+// off.
 type TaskEdit struct {
-	Title *string
-	State *string
-	Step  *string
-	URL   *string
-	Steps *[]string
+	Title      *string
+	State      *string
+	URL        *string
+	Categories *[]string
 	// An empty Parent takes it off.
 	Parent *string
 	// New, when said, is whether the writer takes the task to be new: refused, as Conflict, when it is there, or not.
@@ -396,17 +394,17 @@ func (s *Store) checkSeen(project string, rows map[string]Task, name string, ed 
 // newTaskRow is the row a task starts with: of the state New, from now.
 func newTaskRow() Task {
 	fresh := States[slices.IndexFunc(States, func(s State) bool { return s.New })]
-	return Task{Title: "", State: fresh.Name, Step: "", At: Now(), URL: "", Steps: nil, Parent: "", Rev: 0}
+	return Task{Title: "", State: fresh.Name, At: Now(), URL: "", Categories: nil, Parent: "", Rev: 0}
 }
 
-// stepsOf is steps as a task keeps them: each trimmed, without the empty and a name twice, in the order given; nil for
-// none.
-func stepsOf(steps []string) []string {
+// categoriesOf is categories as a task keeps them: each trimmed, without the empty and a name twice, in the order
+// given; nil for none.
+func categoriesOf(categories []string) []string {
 	var kept []string
-	for _, step := range steps {
-		step = strings.TrimSpace(step)
-		if step != "" && !slices.Contains(kept, step) {
-			kept = append(kept, step)
+	for _, category := range categories {
+		category = strings.TrimSpace(category)
+		if category != "" && !slices.Contains(kept, category) {
+			kept = append(kept, category)
 		}
 	}
 	return kept
@@ -475,7 +473,7 @@ func (s *Store) EditTask(project, name string, ed TaskEdit) (TaskWritten, error)
 }
 
 // writeRow writes ed, checked, to the task name of the project in all: a parent made with it, of rev 1, and the row one
-// rev more. A write that changes nothing writes nothing, so that the writes of every step (floe work) do not refuse a
+// rev more. A write that changes nothing writes nothing, so that the same floe work given again does not refuse a
 // screen.
 func (s *Store) writeRow(all Tasks, project, name string, ed TaskEdit) (TaskWritten, error) {
 	rows := all[project]
@@ -527,14 +525,11 @@ func (t Task) edited(ed TaskEdit) Task {
 	if ed.Title != nil {
 		t.Title = strings.TrimSpace(*ed.Title)
 	}
-	if ed.Step != nil && strings.TrimSpace(*ed.Step) != "" {
-		t.Step = strings.TrimSpace(*ed.Step)
-	}
 	if ed.URL != nil {
 		t.URL = *ed.URL
 	}
-	if ed.Steps != nil {
-		t.Steps = stepsOf(*ed.Steps)
+	if ed.Categories != nil {
+		t.Categories = categoriesOf(*ed.Categories)
 	}
 	if ed.Parent != nil {
 		t.Parent = *ed.Parent

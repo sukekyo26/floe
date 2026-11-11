@@ -44,7 +44,6 @@ func TestEncode(t *testing.T) {
 	unreached := map[string]string{
 		"/parentTitle": "the management page alone sends it",
 		"/work/task":   "pageFlags refuses --task first, with store.TaskName",
-		"/work/step":   "the task's body refuses --step first, as /step",
 	}
 	var texts func(typ reflect.Type, at string)
 	texts = func(typ reflect.Type, at string) {

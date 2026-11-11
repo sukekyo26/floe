@@ -16,7 +16,7 @@ import (
 // the project of none. #6 is archived, #3 in progress with archived pages alone, and #8 done with one page left.
 const taskWork = `{
   "shop": {
-    "#1": {"title": "One", "state": "doing", "step": "design", "at": "2026-01-02T00:00:00Z", "url": "https://example.com/a/b/c"},
+    "#1": {"title": "One", "state": "doing", "at": "2026-01-02T00:00:00Z", "url": "https://example.com/a/b/c"},
     "#2": {"title": "Two", "state": "doing", "at": "2026-01-01T00:00:00Z"},
     "#4": {"state": "todo", "at": "2026-01-01T00:00:00Z"},
     "#5": {"state": "todo", "at": "2026-01-02T00:00:00Z"},
@@ -49,14 +49,14 @@ func mustInt(t *testing.T, s string) int {
 	return n
 }
 
-// taskPages publishes the pages of taskWork, each by its project, task, step and whether archived.
+// taskPages publishes the pages of taskWork, each by its project, task, category and whether archived.
 func taskPages(t *testing.T, s *site) {
 	t.Helper()
 
 	st := store.New(s.Env["FLOE_DIR"])
 	for _, p := range []struct {
-		slug, project, task, step string
-		archived, pin             bool
+		slug, project, task, category string
+		archived, pin                 bool
 	}{
 		{"p1", "shop", "#1", "design", false, false},
 		{"p2", "shop", "#1", "", false, false},
@@ -73,7 +73,7 @@ func taskPages(t *testing.T, s *site) {
 		s.floe(t, "publish", s.page(t, p.slug+".yaml", p.slug, ""), "--slug", p.slug)
 		if _, err := st.Edit(p.slug, store.Edit{
 			Project: &p.project, Archived: &p.archived,
-			Work: &store.WorkEdit{Task: &p.task, Step: &p.step, Pin: &p.pin},
+			Work: &store.WorkEdit{Task: &p.task, Category: &p.category, Pin: &p.pin},
 		}); err != nil {
 			t.Fatal(err)
 		}
@@ -383,7 +383,7 @@ func TestUITaskList(t *testing.T) { //nolint:paralleltest // the browser tests s
 // taskListWant is what TestUITaskList reads of the list, in the order it reads it.
 const taskListWant = `no work, tasks: shelf shown: false
 opened: ?project=shop shop
-doing: #1One [design, 2 page(s), 2 unread, b/c]; #2Two [0 page(s)]
+doing: #1One [2 page(s), 2 unread, b/c]; #2Two [0 page(s)]
 views: todo 3, doing 2, done 2, archived 1
 head: 2 · latest change first
 pins: pinned /a/pinned/
@@ -415,7 +415,7 @@ the first view is left out: ?project=shop
 to blog: ?project=blog blog
 blog again: ?project=blog true
 the one kept, the view kept: ?view=done&project=blog
-?project=shop: #1One [design, 2 page(s), 2 unread, b/c]; #2Two [0 page(s)]
+?project=shop: #1One [2 page(s), 2 unread, b/c]; #2Two [0 page(s)]
 ?project=shop none: 
 ?project=shop pins: pinned | undefined
 ?project=shop kept: shop

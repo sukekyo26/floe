@@ -10,8 +10,8 @@ import (
 	"floe/internal/store"
 )
 
-// A task's page edits the task's own fields in one dialog: its title, URL and the order of its steps, sending what was changed alone,
-// with the rev it showed. The steps are reordered, their names kept, by buttons that keep the focus and say where a step went, or by a
+// A task's page edits the task's own fields in one dialog: its title, URL and the order of its categories, sending what was changed alone,
+// with the rev it showed. The categories are reordered, their names kept, by buttons that keep the focus and say where a category went, or by a
 // drag of a grip that a screen without hover does not show. Refused as stale, what was changed stays and the rest is read again; a task
 // removed meanwhile is not made again.
 func TestUITaskEdit(t *testing.T) { //nolint:paralleltest // the browser tests share one Chrome, one at a time
@@ -25,11 +25,11 @@ func TestUITaskEdit(t *testing.T) { //nolint:paralleltest // the browser tests s
 			t.Fatal(err)
 		}
 		if p[1] != "" {
-			s.floe(t, "work", p[0], "--task", "S300", "--step", p[1])
+			s.floe(t, "work", p[0], "--task", "S300", "--category", p[1])
 		}
 	}
-	s.floe(t, "work", "--project", "proj", "--task", "S300", "--title", "Edit the task", "--url", "https://example.com/489", "--steps", "案,設計,実装,リリース")
-	s.floe(t, "work", "gone-a", "--task", "G1", "--step", "x")
+	s.floe(t, "work", "--project", "proj", "--task", "S300", "--title", "Edit the task", "--url", "https://example.com/489", "--categories", "案,設計,実装,リリース")
+	s.floe(t, "work", "gone-a", "--task", "G1", "--category", "x")
 	b.size(1400, 900, false)
 	defer b.unsize()
 
@@ -48,10 +48,10 @@ func TestUITaskEdit(t *testing.T) { //nolint:paralleltest // the browser tests s
 		if !ok {
 			return "none"
 		}
-		return strconv.Itoa(r.Rev) + " " + r.Title + " " + r.URL + " [" + strings.Join(r.Steps, ",") + "]"
+		return strconv.Itoa(r.Rev) + " " + r.Title + " " + r.URL + " [" + strings.Join(r.Categories, ",") + "]"
 	}
-	const steps = "[...document.querySelectorAll('#edit-steps li')].map((li) => li.querySelector('.step-name').textContent + (li.querySelector('.step-up').disabled ? '^' : '') + (li.querySelector('.step-down').disabled ? 'v' : '')).join(',')"
-	const fields = "[document.getElementById('edit-task-title').value, document.getElementById('edit-task-url').value].join(' / ') + ' / ' + " + steps
+	const categories = "[...document.querySelectorAll('#edit-categories li')].map((li) => li.querySelector('.category-name').textContent + (li.querySelector('.category-up').disabled ? '^' : '') + (li.querySelector('.category-down').disabled ? 'v' : '')).join(',')"
+	const fields = "[document.getElementById('edit-task-title').value, document.getElementById('edit-task-url').value].join(' / ') + ' / ' + " + categories
 	const errorText = "(document.getElementById('edit-task-error').hidden ? '-' : document.getElementById('edit-task-error').textContent)"
 	open := func(task string) {
 		t.Helper()
@@ -66,9 +66,9 @@ func TestUITaskEdit(t *testing.T) { //nolint:paralleltest // the browser tests s
 		t.Helper()
 		b.eval("document.getElementById(" + js(id) + ").value = " + js(value) + "; document.getElementById(" + js(id) + ").dispatchEvent(new Event('input', { bubbles: true }))")
 	}
-	press := func(step, dir string) {
+	press := func(category, dir string) {
 		t.Helper()
-		b.eval("[...document.querySelectorAll('#edit-steps li')].find((li) => li.dataset.step === " + js(step) + ").querySelector('.step-" + dir + "').click()")
+		b.eval("[...document.querySelectorAll('#edit-categories li')].find((li) => li.dataset.category === " + js(category) + ").querySelector('.category-" + dir + "').click()")
 	}
 	// Saves, until the dialog closes or says why it did not
 	save := func(what string) {
@@ -80,15 +80,15 @@ func TestUITaskEdit(t *testing.T) { //nolint:paralleltest // the browser tests s
 		t.Helper()
 		b.until(what, "!document.getElementById('edit-task-dialog').open")
 	}
-	// A drag of a step's grip onto another step, in its upper half or its lower one, as a browser sends it
+	// A drag of a category's grip onto another category, in its upper half or its lower one, as a browser sends it
 	drag := func(from, onto string, after bool) {
 		t.Helper()
 		b.eval(`(() => {
-			const rows = [...document.querySelectorAll('#edit-steps li')];
-			const li = rows.find((x) => x.dataset.step === ` + js(from) + `), to = rows.find((x) => x.dataset.step === ` + js(onto) + `);
+			const rows = [...document.querySelectorAll('#edit-categories li')];
+			const li = rows.find((x) => x.dataset.category === ` + js(from) + `), to = rows.find((x) => x.dataset.category === ` + js(onto) + `);
 			const box = to.getBoundingClientRect(), y = ` + strconv.FormatBool(after) + ` ? box.bottom - 2 : box.top + 2;
 			const data = new DataTransfer();
-			li.querySelector('.step-grip').dispatchEvent(new PointerEvent('pointerdown', { bubbles: true }));
+			li.querySelector('.category-grip').dispatchEvent(new PointerEvent('pointerdown', { bubbles: true }));
 			li.dispatchEvent(new DragEvent('dragstart', { bubbles: true, dataTransfer: data }));
 			to.dispatchEvent(new DragEvent('dragover', { bubbles: true, cancelable: true, dataTransfer: data, clientY: y }));
 			to.dispatchEvent(new DragEvent('drop', { bubbles: true, cancelable: true, dataTransfer: data, clientY: y }));
@@ -96,19 +96,19 @@ func TestUITaskEdit(t *testing.T) { //nolint:paralleltest // the browser tests s
 		})()`)
 	}
 
-	// Opened: the title, URL and steps written in order, those of no page marked, then those of pages alone; the ends move no further.
+	// Opened: the title, URL and categories written in order, those of no page marked, then those of pages alone; the ends move no further.
 	open("S300")
 	say("button", "document.getElementById('task-edit').getAttribute('aria-label') + ' / ' + document.getElementById('task-edit').textContent.trim()")
 	say("opened", fields)
-	say("no page", "[...document.querySelectorAll('#edit-steps li')].filter((li) => li.querySelector('.step-name small')).map((li) => li.dataset.step).join(',')")
-	say("described", "document.getElementById('edit-steps').getAttribute('aria-describedby') + ' ' + document.getElementById('edit-task-error').getAttribute('role')")
+	say("no page", "[...document.querySelectorAll('#edit-categories li')].filter((li) => li.querySelector('.category-name small')).map((li) => li.dataset.category).join(',')")
+	say("described", "document.getElementById('edit-categories').getAttribute('aria-describedby') + ' ' + document.getElementById('edit-task-error').getAttribute('role')")
 	// Nothing changed, nothing is sent; moved and moved back is no change.
 	save("closed unchanged")
 	out = append(out, "unchanged: "+row("S300"))
 	b.eval("document.getElementById('task-edit').click()")
 	b.until("the dialog", "document.getElementById('edit-task-dialog').open")
 	press("レビュー", "up")
-	say("moved up", steps+" + ' / ' + document.activeElement.getAttribute('aria-label') + ' / ' + document.getElementById('edit-steps-said').textContent")
+	say("moved up", categories+" + ' / ' + document.activeElement.getAttribute('aria-label') + ' / ' + document.getElementById('edit-categories-said').textContent")
 	press("レビュー", "down")
 	save("closed moved back")
 	out = append(out, "moved back: "+row("S300"))
@@ -120,10 +120,10 @@ func TestUITaskEdit(t *testing.T) { //nolint:paralleltest // the browser tests s
 	closed("closed by Escape")
 	say("focus back", "document.activeElement.id")
 
-	// A step at the top, its up gone: the focus goes to its down.
+	// A category at the top, its up gone: the focus goes to its down.
 	open("S300")
 	press("設計", "up")
-	say("at the top", steps+" + ' / ' + document.activeElement.getAttribute('aria-label')")
+	say("at the top", categories+" + ' / ' + document.activeElement.getAttribute('aria-label')")
 	b.pressKey(kb.Escape)
 	closed("closed")
 
@@ -134,7 +134,7 @@ func TestUITaskEdit(t *testing.T) { //nolint:paralleltest // the browser tests s
 	closed("closed")
 	out = append(out, "title: "+row("S300"))
 	say("sent the title", "sent.join(' ; ')")
-	// Reordered by buttons: the pages' steps follow, and a step of pages alone is written too.
+	// Reordered by buttons: the pages' categories follow, and a category of pages alone is written too.
 	open("S300")
 	press("レビュー", "up")
 	press("レビュー", "up")
@@ -143,34 +143,34 @@ func TestUITaskEdit(t *testing.T) { //nolint:paralleltest // the browser tests s
 	out = append(out, "order: "+row("S300"))
 	say("sent the order", "sent.join(' ; ')")
 	say("groups", "[...document.querySelectorAll('#list li.group')].map((li) => li.textContent.trim()).join(',')")
-	// Reordered by a drag: before a step in its upper half, after it in its lower one.
+	// Reordered by a drag: before a category in its upper half, after it in its lower one.
 	open("S300")
 	drag("リリース", "案", false)
 	drag("案", "実装", true)
-	say("dragged", steps)
+	say("dragged", categories)
 	// A grip pressed and let go without a drag leaves its row no drag from anywhere; a drag of words selected, from a text node, moves nothing
 	// and throws nothing.
 	b.eval(`(() => {
-		const li = document.querySelector('#edit-steps li');
-		li.querySelector('.step-grip').dispatchEvent(new PointerEvent('pointerdown', { bubbles: true }));
+		const li = document.querySelector('#edit-categories li');
+		li.querySelector('.category-grip').dispatchEvent(new PointerEvent('pointerdown', { bubbles: true }));
 		li.dispatchEvent(new PointerEvent('pointerup', { bubbles: true }));
 	})()`)
-	say("let go", "[...document.querySelectorAll('#edit-steps li')].some((li) => li.draggable)")
+	say("let go", "[...document.querySelectorAll('#edit-categories li')].some((li) => li.draggable)")
 	b.eval(`(() => {
 		window.thrown = 0;
 		addEventListener('error', () => { thrown++; });
-		const word = document.querySelectorAll('#edit-steps .step-name')[1].firstChild;
+		const word = document.querySelectorAll('#edit-categories .category-name')[1].firstChild;
 		const data = new DataTransfer();
 		word.dispatchEvent(new DragEvent('dragstart', { bubbles: true, dataTransfer: data }));
-		const to = document.querySelector('#edit-steps li');
+		const to = document.querySelector('#edit-categories li');
 		to.dispatchEvent(new DragEvent('drop', { bubbles: true, cancelable: true, dataTransfer: data, clientY: to.getBoundingClientRect().top + 2 }));
 	})()`)
-	say("words dragged", "thrown + ' / ' + "+steps)
+	say("words dragged", "thrown + ' / ' + "+categories)
 	save("saved the drag")
 	closed("closed")
 	out = append(out, "drag: "+row("S300"))
 	// A screen without hover shows no grip: the rule is there.
-	say("no grip without hover", "[...document.styleSheets].flatMap((sh) => [...sh.cssRules]).some((r) => r.media?.mediaText === '(hover: none)' && [...r.cssRules].some((x) => x.selectorText === '.step-order .step-grip' && x.style.display === 'none'))")
+	say("no grip without hover", "[...document.styleSheets].flatMap((sh) => [...sh.cssRules]).some((r) => r.media?.mediaText === '(hover: none)' && [...r.cssRules].some((x) => x.selectorText === '.category-order .category-grip' && x.style.display === 'none'))")
 
 	// Refused by the store: the dialog stays open with its words.
 	open("S300")
@@ -208,12 +208,12 @@ func TestUITaskEdit(t *testing.T) { //nolint:paralleltest // the browser tests s
 	closed("closed")
 	out = append(out, "again: "+row("S300"))
 	say("sent stale and again", "sent.join(' ; ')")
-	// Reordered while a step of no page was taken off: the order stays, without it.
+	// Reordered while a category of no page was taken off: the order stays, without it.
 	open("S300")
 	press("実装", "down")
-	s.floe(t, "work", "--project", "proj", "--task", "S300", "--steps", "案,設計")
+	s.floe(t, "work", "--project", "proj", "--task", "S300", "--categories", "案,設計")
 	save("stale order")
-	say("stale order", steps)
+	say("stale order", categories)
 	save("saved the order again")
 	closed("closed")
 	out = append(out, "order again: "+row("S300"))
@@ -234,39 +234,39 @@ func TestUITaskEdit(t *testing.T) { //nolint:paralleltest // the browser tests s
 	open("S300")
 	say("narrow", "document.getElementById('edit-task').scrollWidth <= document.getElementById('edit-task').clientWidth")
 	press("設計", "down")
-	say("narrow moved", steps)
+	say("narrow moved", categories)
 	b.pressKey(kb.Escape)
 
 	check(t, "task edit", out, strings.Join([]string{
 		"button: Edit S300 / Edit",
 		"opened: Edit the task / https://example.com/489 / 案^,設計,実装,リリース no page,レビューv",
 		"no page: リリース",
-		"described: edit-steps-hint alert",
-		"unchanged: 5 Edit the task https://example.com/489 [案,設計,実装,リリース]",
+		"described: edit-categories-hint alert",
+		"unchanged: 2 Edit the task https://example.com/489 [案,設計,実装,リリース]",
 		"moved up: 案^,設計,実装,レビュー,リリース no pagev / Move レビュー up / Moved レビュー to 4 of 5",
-		"moved back: 5 Edit the task https://example.com/489 [案,設計,実装,リリース]",
+		"moved back: 2 Edit the task https://example.com/489 [案,設計,実装,リリース]",
 		"sent unchanged: 0",
 		"focus back: task-edit",
 		"at the top: 設計^,案,実装,リリース no page,レビューv / Move 設計 down",
-		"title: 6 New title https://example.com/489 [案,設計,実装,リリース]",
-		`sent the title: {"new":false,"rev":5,"title":"New title"}`,
-		"order: 7 New title https://example.com/489 [案,設計,レビュー,実装,リリース]",
-		`sent the order: {"new":false,"rev":6,"steps":["案","設計","レビュー","実装","リリース"]}`,
+		"title: 3 New title https://example.com/489 [案,設計,実装,リリース]",
+		`sent the title: {"new":false,"rev":2,"title":"New title"}`,
+		"order: 4 New title https://example.com/489 [案,設計,レビュー,実装,リリース]",
+		`sent the order: {"new":false,"rev":3,"categories":["案","設計","レビュー","実装","リリース"]}`,
 		"groups: 案Add a page,設計Add a page,レビューAdd a page,実装Add a page,リリースAdd a pageNo pages yet",
 		"dragged: リリース no page^,設計,レビュー,実装,案v",
 		"let go: false",
 		"words dragged: 0 / リリース no page^,設計,レビュー,実装,案v",
-		"drag: 8 New title https://example.com/489 [リリース,設計,レビュー,実装,案]",
+		"drag: 5 New title https://example.com/489 [リリース,設計,レビュー,実装,案]",
 		"no grip without hover: true",
 		`refused: Failed to save: "ftp://x" is not an http or https URL / true`,
 		"not reached: Failed to save: Failed to fetch / true",
-		"emptied: 9   [リリース,設計,レビュー,実装,案]",
-		"opened over the drawn task: Later / 10",
+		"emptied: 6   [リリース,設計,レビュー,実装,案]",
+		"opened over the drawn task: Later / 7",
 		"stale: Typed / https://example.com/new / リリース no page^,設計,レビュー,実装,案v / Failed to save: task S300 has changed since it was read; the tasks are read again, so check and save again",
-		"again: 12 Typed https://example.com/new [リリース,設計,レビュー,実装,案]",
-		`sent stale and again: {"new":false,"rev":10,"title":"Typed"} ; {"new":false,"rev":11,"title":"Typed"}`,
+		"again: 9 Typed https://example.com/new [リリース,設計,レビュー,実装,案]",
+		`sent stale and again: {"new":false,"rev":7,"title":"Typed"} ; {"new":false,"rev":8,"title":"Typed"}`,
 		"stale order: 設計^,レビュー,案,実装v",
-		"order again: 14 Typed https://example.com/new [設計,レビュー,案,実装]",
+		"order again: 11 Typed https://example.com/new [設計,レビュー,案,実装]",
 		"gone: This task was deleted elsewhere: close this and look at the task list / true",
 		"gone, typed: This task was deleted elsewhere: close this and look at the task list",
 		"G1: none",

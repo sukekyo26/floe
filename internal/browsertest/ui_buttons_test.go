@@ -25,7 +25,7 @@ func TestUIButtons(t *testing.T) { //nolint:paralleltest // the browser tests sh
 			t.Fatal(err)
 		}
 	}
-	s.floe(t, "work", "a", "--task", "#1", "--title", "one", "--state", "done", "--step", "design")
+	s.floe(t, "work", "a", "--task", "#1", "--title", "one", "--state", "done", "--category", "design")
 	s.floe(t, "work", "--project", project, "--task", "#2", "--title", "no page")
 
 	const measure = `(() => {
@@ -86,7 +86,7 @@ func TestUIButtons(t *testing.T) { //nolint:paralleltest // the browser tests sh
 	check("a task done")
 	modal("kin-dialog", "document.getElementById('task-child').click()")
 	modal("edit-task-dialog", "document.getElementById('task-edit').click()")
-	modal("add-page-dialog", "document.querySelector('#list .step-add').click()")
+	modal("add-page-dialog", "document.querySelector('#list .category-add').click()")
 	b.navigate("/tasks?project=proj&task=%232")
 	b.until("no pages", "!document.getElementById('task-none').hidden")
 	check("a task of no page")

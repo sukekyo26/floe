@@ -10,10 +10,10 @@ import (
 	"floe/internal/store"
 )
 
-// TestUITaskArchivedInStep keeps a task's archived pages under their steps, after the rest of each, dimmed and marked: a step of
-// archived pages alone is a step all the same, and no archived page is unseen, wherever its row is. Archived by the keys and left
+// TestUITaskArchivedInCategory keeps a task's archived pages under their categories, after the rest of each, dimmed and marked: a category of
+// archived pages alone is a category all the same, and no archived page is unseen, wherever its row is. Archived by the keys and left
 // on the task's page, Escape on the way back goes back to its row; a row moved by its button leaves the focus on the one after it.
-func TestUITaskArchivedInStep(t *testing.T) { //nolint:paralleltest // the browser tests share one Chrome, one at a time
+func TestUITaskArchivedInCategory(t *testing.T) { //nolint:paralleltest // the browser tests share one Chrome, one at a time
 	s := newSite(t)
 	b := s.b
 	st := store.New(s.Env["FLOE_DIR"])
@@ -27,13 +27,13 @@ func TestUITaskArchivedInStep(t *testing.T) { //nolint:paralleltest // the brows
 		b.navigate("/a/" + slug + "/")
 		b.until(slug+" read", "document.querySelector('.toast.page')")
 	}
-	// In the order made, which orders the pages of a step: a0 is made after a1 and before a2, o1 before n1
+	// In the order made, which orders the pages of a category: a0 is made after a1 and before a2, o1 before n1
 	for _, p := range [][2]string{{"a1", "案"}, {"a0", "案"}, {"a2", "案"}, {"o1", "旧"}, {"n1", "新"}, {"v1", "設計"}, {"v0", "設計"}} {
 		publish(p[0], "one")
 		if _, err := st.Edit(p[0], store.Edit{Project: ptrTo("proj")}); err != nil {
 			t.Fatal(err)
 		}
-		s.floe(t, "work", p[0], "--task", "T1", "--step", p[1])
+		s.floe(t, "work", p[0], "--task", "T1", "--category", p[1])
 	}
 	s.write(t, "fold/one.html", "<title>one</title><p>one</p>")
 	s.write(t, "fold/sub/two.html", "<title>two</title><p>two</p>")
@@ -41,7 +41,7 @@ func TestUITaskArchivedInStep(t *testing.T) { //nolint:paralleltest // the brows
 	if _, err := st.Edit("fold", store.Edit{Project: ptrTo("proj"), Work: &store.WorkEdit{Task: ptrTo("T1")}}); err != nil {
 		t.Fatal(err)
 	}
-	s.floe(t, "work", "--project", "proj", "--task", "T1", "--steps", "案,設計")
+	s.floe(t, "work", "--project", "proj", "--task", "T1", "--categories", "案,設計")
 	// Read: o1 and n1 as they are, v1 and v0 before a new version of each
 	for _, slug := range []string{"o1", "n1", "v1", "v0"} {
 		readWhole(slug)
@@ -75,7 +75,7 @@ func TestUITaskArchivedInStep(t *testing.T) { //nolint:paralleltest // the brows
 		b.until("the task's rows", "document.querySelector('#list li[data-slug=a1]') && document.querySelector('#list li.tree')")
 	}
 
-	// Under their steps, after the rest; a step of archived pages alone headed; dimmed, marked, never unseen; the folder's rows too.
+	// Under their categories, after the rest; a category of archived pages alone headed; dimmed, marked, never unseen; the folder's rows too.
 	b.eval("localStorage.setItem('list.open', JSON.stringify(['fold']))")
 	open()
 	say("groups", groups)
@@ -99,12 +99,12 @@ func TestUITaskArchivedInStep(t *testing.T) { //nolint:paralleltest // the brows
 	b.pressKey(kb.Escape)
 	b.until("the search closed", "!document.getElementById('find').open")
 
-	// The steps Set task offers are the page's: archived pages count, in the order they were made.
+	// The categories Set task offers are the page's: archived pages count, in the order they were made.
 	b.eval("const m = document.querySelector('#list li[data-slug=n1] .more'); m.open = true; m.querySelector('.task-set').click()")
 	b.until("the dialog", "document.getElementById('set-dialog').open")
-	b.eval("document.getElementById('set-step').value = ''")
-	b.until("the steps", "document.getElementById('set-step-names').matches(':popover-open') || (document.getElementById('set-step').blur(), document.getElementById('set-step').focus(), false)")
-	say("set steps", "[...document.getElementById('set-step-names').children].map((e) => e.querySelector('.names-word')?.textContent ?? e.textContent).join(', ')")
+	b.eval("document.getElementById('set-category').value = ''")
+	b.until("the categories", "document.getElementById('set-category-names').matches(':popover-open') || (document.getElementById('set-category').blur(), document.getElementById('set-category').focus(), false)")
+	say("set categories", "[...document.getElementById('set-category-names').children].map((e) => e.querySelector('.names-word')?.textContent ?? e.textContent).join(', ')")
 	b.eval("document.getElementById('set-dialog').close()")
 	// Closed, the focus goes back to the menu it came from, as the dialog's close does
 	b.until("closed", "!document.getElementById('set-dialog').open && document.activeElement.tagName === 'SUMMARY'")
@@ -123,7 +123,7 @@ func TestUITaskArchivedInStep(t *testing.T) { //nolint:paralleltest // the brows
 	b.eval("const a = document.querySelector('#list li[data-slug=v1] .actions > .archive'); a.focus(); a.dispatchEvent(new MouseEvent('click', { bubbles: true, detail: 1 }))")
 	b.until("v1 archived", "document.querySelector('#list li[data-slug=v1]').classList.contains('archived')")
 	say("stayed", groups+" + ' / ' + document.activeElement.closest('li')?.dataset.slug + ' ' + document.activeElement.matches('.actions > .archive')")
-	// Given back by a pointer, a0 moves to the top of its step: the focus goes to the row that was after it.
+	// Given back by a pointer, a0 moves to the top of its category: the focus goes to the row that was after it.
 	b.eval("const a = document.querySelector('#list li[data-slug=a0] .actions > .archive'); a.focus(); a.dispatchEvent(new MouseEvent('click', { bubbles: true, detail: 1 }))")
 	b.until("given back", "!document.querySelector('#list li[data-slug=a0]').classList.contains('archived')")
 	say("given back", groups)
@@ -152,7 +152,7 @@ func TestUITaskArchivedInStep(t *testing.T) { //nolint:paralleltest // the brows
 	b.eval("document.querySelector('.toast.page .btn').click()")
 	say("unread after archived", "deleted + ' ' + Boolean(items.find((a) => a.slug === 'a2').news)")
 
-	check(t, "task archived in step", out, strings.Join([]string{
+	check(t, "task archived in category", out, strings.Join([]string{
 		"groups: fold* [案] a1 a2 a0* [設計] v1 v0* [旧] o1* [新] n1",
 		"a0: ring false 500 false",
 		"a1: dot true 700 false",
@@ -163,7 +163,7 @@ func TestUITaskArchivedInStep(t *testing.T) { //nolint:paralleltest // the brows
 		"count: All unread 3",
 		"mark unread: true false",
 		"find: ring false true Archived 4.8px 400",
-		"set steps: 案, 設計, 旧, 新",
+		"set categories: 案, 設計, 旧, 新",
 		"escape: a1 title",
 		"archived a1: fold* [案] a2 a1* a0* [設計] v1 v0* [旧] o1* [新] n1",
 		"stayed: fold* [案] a2 a1* a0* [設計] v1* v0* [旧] o1* [新] n1 / v1 true",

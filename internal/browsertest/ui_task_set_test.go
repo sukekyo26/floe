@@ -10,7 +10,7 @@ import (
 	"floe/internal/store"
 )
 
-// A page's menu pins it and sets its task and step, in the order floe work writes; the task's own fields are its page's (TestUITaskEdit), so
+// A page's menu pins it and sets its task and category, in the order floe work writes; the task's own fields are its page's (TestUITaskEdit), so
 // the dialog has none of its parent or URL; a name of no task is a new one; what is refused keeps the dialog open; off a task, the pin stays.
 // The page list's rows lead to the task and the task list.
 func TestUITaskSet(t *testing.T) { //nolint:paralleltest // the browser tests share one Chrome, one at a time
@@ -24,8 +24,8 @@ func TestUITaskSet(t *testing.T) { //nolint:paralleltest // the browser tests sh
 			t.Fatal(err)
 		}
 	}
-	s.floe(t, "work", "b", "--task", "#1", "--step", "design", "--url", "https://example.com/a/one")
-	s.floe(t, "work", "c", "--task", "#2", "--step", "build")
+	s.floe(t, "work", "b", "--task", "#1", "--category", "design", "--url", "https://example.com/a/one")
+	s.floe(t, "work", "c", "--task", "#2", "--category", "build")
 	b.size(1400, 800, false)
 	defer b.unsize()
 
@@ -51,7 +51,7 @@ func TestUITaskSet(t *testing.T) { //nolint:paralleltest // the browser tests sh
 		names := make([]string, 0, 4)
 		for _, name := range []string{"#1", "#2", "#3"} {
 			if row, ok := all["proj"][name]; ok {
-				names = append(names, name+" "+row.State+" "+row.Step+" "+row.URL)
+				names = append(names, name+" "+row.State+" "+row.URL)
 			}
 		}
 		return strings.Join(names, "; ")
@@ -71,7 +71,7 @@ func TestUITaskSet(t *testing.T) { //nolint:paralleltest // the browser tests sh
 		t.Helper()
 		b.eval("document.getElementById(" + js(id) + ").value = " + js(value) + "; document.getElementById(" + js(id) + ").dispatchEvent(new Event('input', { bubbles: true }))")
 	}
-	const fields = "['set-task', 'set-step'].map((id) => document.getElementById(id).value).join(' / ') + ' / out ' + !document.getElementById('set-out').hidden"
+	const fields = "['set-task', 'set-category'].map((id) => document.getElementById(id).value).join(' / ') + ' / out ' + !document.getElementById('set-out').hidden"
 	save := func() {
 		t.Helper()
 		// A new task asks a title: one is given where none is typed, the asking itself tested apart
@@ -107,7 +107,7 @@ func TestUITaskSet(t *testing.T) { //nolint:paralleltest // the browser tests sh
 	field("set-task", "#3")
 	b.until("the suggestions", "document.getElementById('set-task-names').matches(':popover-open') || (document.getElementById('set-task').focus(), false)")
 	say("offered", "[...document.getElementById('set-task-names').children].map((e) => e.textContent).join(', ')")
-	field("set-step", "first")
+	field("set-category", "first")
 	save()
 	out = append(out, "new task: "+work("a"), tasks())
 
@@ -154,7 +154,7 @@ func TestUITaskSet(t *testing.T) { //nolint:paralleltest // the browser tests sh
 	dialog("c")
 	b.eval(`window.realFetch = window.fetch; window.fetch = (url, init) => (String(url).includes('/api/artifacts/c') && init?.method === 'PATCH' ? Promise.resolve(new Response('no', { status: 500 })) : window.realFetch(url, init))`)
 	field("set-task", "#2")
-	field("set-step", "review")
+	field("set-category", "review")
 	b.eval("document.getElementById('set').requestSubmit()")
 	b.until("the page refused", "!document.getElementById('set-error').hidden")
 	out = append(out, "the page refused: "+tasks()+" | "+work("c"))
@@ -162,7 +162,7 @@ func TestUITaskSet(t *testing.T) { //nolint:paralleltest // the browser tests sh
 	save()
 	out = append(out, "saved again: "+work("c"))
 
-	// Off the task: the page's name and step go, its pin and the task's row stay.
+	// Off the task: the page's name and category go, its pin and the task's row stay.
 	dialog("a")
 	b.eval("document.getElementById('set-out').click()")
 	b.until("off the task", "!document.getElementById('set-dialog').open")
@@ -233,10 +233,7 @@ func TestUITaskSet(t *testing.T) { //nolint:paralleltest // the browser tests sh
 	save()
 	out = append(out, "saved: "+tasks())
 
-	// Saved with nothing of the step changed, the task's last step stays: the page's own is older.
-	s.floe(t, "work", "c", "--task", "#1", "--step", "later")
-	// Read before the dialog opens, which writes the task as read
-	b.until("read", "tasksRead.tasks.proj['#1'].step === 'later'")
+	// Saved with nothing changed: the page and its task as they were.
 	dialog("b")
 	save()
 	out = append(out, "nothing changed: "+tasks()+" | "+work("b"))
@@ -272,7 +269,7 @@ func TestUITaskSet(t *testing.T) { //nolint:paralleltest // the browser tests sh
 	s.floe(t, "work", "b", "--unpin")
 
 	// From a page whole, which reads the tasks as it opens: a task written since is that task as written.
-	s.floe(t, "work", "b", "--task", "#1", "--step", "whole")
+	s.floe(t, "work", "b", "--task", "#1", "--category", "whole")
 	b.navigate("/a/b/")
 	b.until("the bar", "document.querySelector('#frame-actions .task-set')")
 	b.eval("document.querySelector('#frame-actions .more').open = true; document.querySelector('#frame-actions .task-set').click()")
@@ -348,18 +345,18 @@ pinned: {"pin":true}
 a page of none:  /  / out false
 no parent nor URL: null
 offered: Create #3 as a new task
-new task: {"task":"#3","step":"first","pin":true}
-#1 todo design https://example.com/a/one; #2 todo build ; #3 todo first 
+new task: {"task":"#3","category":"first","pin":true}
+#1 todo https://example.com/a/one; #2 todo ; #3 todo 
 a page of a task: #1 / design / out true
 written meanwhile: Failed to save: task #1 has changed since it was read; the tasks are read again, so check and save again
-written meanwhile, saved: #1 todo design https://example.com/later; #2 todo build ; #3 todo first 
+written meanwhile, saved: #1 todo https://example.com/later; #2 todo ; #3 todo 
 refused: true Failed to save: no
 an empty name: true true 0
 a name of spaces: true Write more than spaces 3 0
-the page refused: #1 todo design https://example.com/later; #2 todo review ; #3 todo first  | {"task":"#2","step":"build"}
-saved again: {"task":"#2","step":"review"}
+the page refused: #1 todo https://example.com/later; #2 todo ; #3 todo  | {"task":"#2","category":"build"}
+saved again: {"task":"#2","category":"review"}
 off: {"pin":true}
-#1 todo design https://example.com/later; #2 todo review ; #3 todo first 
+#1 todo https://example.com/later; #2 todo ; #3 todo 
 off, no pin: null
 as it opens: false
 a suggestion pressed: #2 / design / out true
@@ -373,9 +370,9 @@ reached: #1
 escape: false true
 read again: true #2
 under the field once still: yes
-saved: #1 todo design https://example.com/a/one; #2 todo review https://example.com/a/two; #3 todo first 
-nothing changed: #1 todo later https://example.com/a/one; #2 todo review https://example.com/a/two; #3 todo first  | {"task":"#1","step":"design"}
-typed while saving: {"task":"#1","step":"design"}
+saved: #1 todo https://example.com/a/one; #2 todo https://example.com/a/two; #3 todo 
+nothing changed: #1 todo https://example.com/a/one; #2 todo https://example.com/a/two; #3 todo  | {"task":"#1","category":"design"}
+typed while saving: {"task":"#1","category":"design"}
 an archived page: true 0
 pinned, told: Pinned “T b” to the task list
 refused, told: Failed to save: HTTP 500: no
@@ -385,6 +382,6 @@ on its own task: true 0
 #1· To do, #2· To do, #3 a title· To do, #5 A very long title A very long title A very long title A very long title A very long title A very long title· Done
 put on a task: Put on #5 (Done) /tasks?project=proj&task=%235
 its state as it was: done
-the state written: #1 todo whole https://example.com/a/one; #2 todo review https://example.com/a/two; #3 todo first 
+the state written: #1 todo https://example.com/a/one; #2 todo https://example.com/a/two; #3 todo 
 the same task: Saved
 up, come by the toast: /tasks?project=proj&view=todo`

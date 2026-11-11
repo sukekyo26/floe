@@ -14,18 +14,18 @@ import (
 // TestUIRowCards lays the list's rows out as cards on the list's ground, on the page list, a task's page and the task list: an edge,
 // the menu's corner and the small shadow; apart by a margin that a heading and a folder's rows do not take; the row chosen edged in
 // the new colour, with no line inside; a folder open one card with its rows, chosen and pointed at within it; the headings' words
-// where a card's mark is, the step's add button ending where a card does; and an empty list of no room.
+// where a card's mark is, the category's add button ending where a card does; and an empty list of no room.
 func TestUIRowCards(t *testing.T) { //nolint:paralleltest // the browser tests share one Chrome, one at a time
 	s := newSite(t)
 	b := s.b
 	st := store.New(s.Env["FLOE_DIR"])
-	// The folder first, so that the step's card made after it follows its rows
+	// The folder first, so that the category's card made after it follows its rows
 	s.write(t, "fold/one.html", "<title>one</title><p>one</p>")
 	s.write(t, "fold/sub/two.html", "<title>two</title><p>two</p>")
 	// A file after the one chosen, so that the one chosen is not the card's last row
 	s.write(t, "fold/zz.html", "<title>zz</title><p>zz</p>")
 	s.floe(t, "publish", "--link", filepath.Join(s.Env["HOME"], "fold"), "--slug", "fold")
-	if _, err := st.Edit("fold", store.Edit{Project: ptrTo("demo"), Work: &store.WorkEdit{Task: ptrTo("S1"), Step: ptrTo("one")}}); err != nil {
+	if _, err := st.Edit("fold", store.Edit{Project: ptrTo("demo"), Work: &store.WorkEdit{Task: ptrTo("S1"), Category: ptrTo("one")}}); err != nil {
 		t.Fatal(err)
 	}
 	for _, p := range [][2]string{{"plan", "one"}, {"read", "two"}, {"notes", "two"}} {
@@ -33,7 +33,7 @@ func TestUIRowCards(t *testing.T) { //nolint:paralleltest // the browser tests s
 		if _, err := st.Edit(p[0], store.Edit{Project: ptrTo("demo")}); err != nil {
 			t.Fatal(err)
 		}
-		s.floe(t, "work", p[0], "--task", "S1", "--step", p[1])
+		s.floe(t, "work", p[0], "--task", "S1", "--category", p[1])
 	}
 	s.floe(t, "work", "--project", "demo", "--task", "S2", "--title", "No pages")
 	b.size(1400, 900, false)
@@ -79,7 +79,7 @@ func TestUIRowCards(t *testing.T) { //nolint:paralleltest // the browser tests s
 	b.still()
 	say("gaps", gaps)
 	say("headings", `(() => { const r = (e) => e.getBoundingClientRect(), head = document.querySelector('#list li.group.adds'), first = document.querySelector('#list li[data-slug=plan]');
-		return [r(head.querySelector('[role=heading]')).left === r(first.querySelector('.lead')).left, r(head.querySelector('.step-add')).right === r(first).right,
+		return [r(head.querySelector('[role=heading]')).left === r(first.querySelector('.lead')).left, r(head.querySelector('.category-add')).right === r(first).right,
 			getComputedStyle(head).borderTopWidth, getComputedStyle(head).boxShadow].join(' '); })()`)
 	say("folder", `(() => { const st = (e) => getComputedStyle(e), r = (e) => e.getBoundingClientRect(), f = document.querySelector('#list li[data-slug=fold]'), trees = [...document.querySelectorAll('#list li.tree')];
 		const last = trees.at(-1);

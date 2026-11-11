@@ -19,7 +19,7 @@ func TestUIRowHeight(t *testing.T) { //nolint:paralleltest // the browser tests 
 	if _, err := st.Edit("plan", store.Edit{Project: ptrTo("demo")}); err != nil {
 		t.Fatal(err)
 	}
-	s.floe(t, "work", "plan", "--task", "S1", "--step", "design")
+	s.floe(t, "work", "plan", "--task", "S1", "--category", "design")
 
 	// The row of plan: its height; its buttons' heights; the items of its menu, open and narrowed so that some wrap, each at least 36px
 	// and none with its words overflowing it; and the room the ring of its archive button, reached, leaves to the title above and to the
