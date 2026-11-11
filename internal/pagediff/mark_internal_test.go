@@ -190,7 +190,7 @@ func TestMark(t *testing.T) {
 		{
 			name: "a section gone after a subsection, out of it", from: `<section><h2>A</h2><p>a kept</p><section class="sub"><h3>A1</h3><p>sub kept</p></section></section><section><h2>B</h2><p>b gone words</p></section>`,
 			to:     `<section><h2>A</h2><p>a kept</p><section class="sub"><h3>A1</h3><p>sub kept</p></section></section>`,
-			has:    []string{`sub kept</p></section></section><section class="floe-diff-gone"`},
+			has:    []string{`sub kept</p></section><section class="floe-diff-gone"`},
 			hasNot: []string{`sub kept</p><h2`, `sub kept</p></section><h2`},
 		},
 		{
