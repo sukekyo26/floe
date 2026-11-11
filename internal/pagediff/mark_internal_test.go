@@ -25,6 +25,18 @@ func twoTabs(gone, other string) string {
 	return tab("T", gone) + tab("U", other)
 }
 
+// threeTabs is floe's part tabs of three, the first picked, with a middle tab titled title holding panel; none for "".
+func threeTabs(title, panel string) string {
+	tab := func(title, panel, checked string) string {
+		return `<label><input type="radio" name="tab"` + checked + `>` + title + `</label><div><p>` + panel + `</p></div>`
+	}
+	middle := ""
+	if title != "" {
+		middle = tab(title, panel, "")
+	}
+	return `<form data-floe-part="tabs">` + tab("One", "First panel", " checked") + middle + tab("Three", "Third panel", "") + `</form>`
+}
+
 // tabs is floe's part tabs, the second not picked holding %s.
 const tabs = `<form data-floe-part="tabs"><label><input type="radio" name="tab" checked>One</label><div><p>The first tab</p></div>` +
 	`<label><input type="radio" name="tab">Two</label><div><p>%s</p></div></form>`
@@ -122,6 +134,15 @@ func TestMark(t *testing.T) {
 			name: "items gone one after another", from: "<h2>T</h2><ul><li>one</li><li>gone item</li><li>gone too</li></ul>", to: "<h2>T</h2><ul><li>one</li></ul>",
 			has:    []string{`<ul class="floe-diff-gone"><li><del class="floe-diff-del"><span class="floe-diff-sr">Gone </span><span class="floe-diff-at" id="floe-diff.0"></span>gone item</del></li><li><del class="floe-diff-del">gone too</del></li></ul>`},
 			hasNot: []string{`<ul class="floe-diff-gone"><li>one`, `id="floe-diff.1"`},
+		},
+		{
+			name: "a tab gone, its title too", from: "<h2>T</h2><p>kept</p>" + threeTabs("Gonetitle", "Gone panel"),
+			to:  "<h2>T</h2><p>kept</p>" + threeTabs("", ""),
+			has: []string{`Gonetitle</del></label><div><p><del class="floe-diff-del">Gone panel</del>`},
+		},
+		{
+			name: "tabs gone whole", from: "<h2>T</h2><p>kept</p>" + threeTabs("Gonetitle", "Gone panel"), to: "<h2>T</h2><p>kept</p>",
+			has: []string{`Gonetitle</del></label><div><p><del class="floe-diff-del">Gone panel</del>`},
 		},
 		{
 			name: "from two tabs", from: twoTabs("gone in one", "gone in other"), to: twoTabs("", ""),
