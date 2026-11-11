@@ -146,7 +146,7 @@ A `diagram` part, in a section or in `details`, `tabs`, `columns` and the `parts
 `floe check` prints the mistakes one to a line, and the exit code is 1 when there is one. A data file is checked in stages ([templates.md](templates.md#the-order-of-the-checks)): every mistake of a stage is told at once, and a stage runs only when the one before it has none. So the shape is checked first:
 
 ```text
-plan.yaml:5:5: additional properties 'colour' not allowed
+plan.yaml:6:13: additional properties 'colour' not allowed
 plan.yaml:8:23: value must be one of 'accent', 'good', 'warn', 'bad', 'muted'
 ```
 

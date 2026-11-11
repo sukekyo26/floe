@@ -146,7 +146,7 @@ Markdown で名指した画像のファイル（`![x](shots/list.png)`）は書�
 `floe check` は誤りを 1 行ずつ出し、誤りがあれば終了コードは 1 です。データファイルは段ごとに確かめます（[templates.ja.md](templates.ja.md#確かめる順)）。1 つの段の誤りは全部まとめて言い、前の段に誤りがあれば、後の段は走りません。だから、まず形を確かめ：
 
 ```text
-plan.yaml:5:5: additional properties 'colour' not allowed
+plan.yaml:6:13: additional properties 'colour' not allowed
 plan.yaml:8:23: value must be one of 'accent', 'good', 'warn', 'bad', 'muted'
 ```
 
