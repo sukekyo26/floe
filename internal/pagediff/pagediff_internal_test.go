@@ -247,7 +247,8 @@ func TestCompareBounded(t *testing.T) { //nolint:paralleltest // it measures tim
 	if _, _, err := marked([]byte(from.String()), []byte(to.String()), pageMost, testWords); err != nil {
 		t.Fatal(err)
 	}
-	if took := time.Since(start); took > 20*time.Second {
+	// The race detector makes it some times slower: the time is checked without it (just cover-check, CI's coverage).
+	if took := time.Since(start); !underRace && took > 20*time.Second {
 		t.Errorf("took %v", took)
 	}
 }
