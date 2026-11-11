@@ -129,9 +129,9 @@ func find(root ast.Node, at []string) (key, value ast.Node) {
 }
 
 // Locate finds the value at the path at under root, and returns where it is written, as OfValue places it, and its
-// node; at the last value it reaches when the path goes on past it. When it reaches none under root (at is empty, its first key is not written, or root is nil, a file
-// of nothing), it returns no line and no node: the mistake is placed at the file alone, as at the first key it
-// would read as that key's.
+// node; at the last value it reaches when the path goes on past it. When it reaches none under root (at is empty,
+// its first key is not written, or root is nil, a file of nothing), it returns no line and no node: the mistake is
+// placed at the file alone, as at the first key it would read as that key's.
 func Locate(root *ast.MappingNode, at []string) (Pos, ast.Node) {
 	if root != nil {
 		if key, value := find(root, at); value != ast.Node(root) {
