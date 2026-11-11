@@ -114,7 +114,8 @@ func TestWorkWriteOne(t *testing.T) {
 		conflict bool
 	}{
 		{"a category with pages left out", store.WorkWrite{TaskEdit: store.TaskEdit{Categories: &[]string{"y"}}, Project: ptr("p"), Task: ptr("#9")}, "category z of task #9 in project p has pages (a)", false},
-		{"a rev of two tasks", store.WorkWrite{TaskEdit: store.TaskEdit{New: &no, Rev: ptr(3)}, Slugs: []string{"a", "b"}}, "has changed since it was read", true},
+		// Both tasks are there, as the screen says of one: the pages moved meanwhile, so it reads again
+		{"what the screen saw, of two tasks", store.WorkWrite{TaskEdit: store.TaskEdit{New: &no}, Slugs: []string{"a", "b"}}, "has changed since it was read", true},
 		{"a parent of two projects", store.WorkWrite{TaskEdit: store.TaskEdit{Parent: ptr("#1")}, Slugs: []string{"a", "b"}, Task: ptr("#9")}, "a parent goes with one task, and the pages are on tasks of 2 projects", false},
 		{"a field of pages taken off", store.WorkWrite{TaskEdit: store.TaskEdit{State: ptr("done")}, Slugs: []string{"a"}, Task: ptr("")}, "takes pages off their task changes no task", false},
 		{"a category of a page of no task", store.WorkWrite{Slugs: []string{"c"}, Category: ptr("x")}, "page c is on no task", false},
