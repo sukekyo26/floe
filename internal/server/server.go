@@ -5,6 +5,8 @@ package server
 import (
 	"context"
 	"crypto/rand"
+	"crypto/sha256"
+	"encoding/hex"
 	"encoding/json"
 	"errors"
 	"fmt"
@@ -337,7 +339,7 @@ func (s *Server) diff(w http.ResponseWriter, r *http.Request) {
 		send(w, http.StatusBadRequest, "from and to must be numbers of versions")
 		return
 	}
-	versions, pages, ok := s.cfg.Store.VersionPages(slug, from, to)
+	versions, marks, pages, ok := s.cfg.Store.VersionPages(slug, from, to)
 	if !ok {
 		notFound(w)
 		return
@@ -348,10 +350,18 @@ func (s *Server) diff(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	sendJSON(w, http.StatusOK, struct {
-		From Read `json:"from"`
-		To   Read `json:"to"`
+		From Read   `json:"from"`
+		To   Read   `json:"to"`
+		Key  string `json:"key"`
 		pagediff.Result
-	}{From: Read{N: from, At: versions[0].At}, To: Read{N: to, At: versions[1].At}, Result: result})
+	}{From: Read{N: from, At: versions[0].At}, To: Read{N: to, At: versions[1].At}, Key: diffKey(marks[0], marks[1]), Result: result})
+}
+
+// diffKey is what ties the page of a diff (?raw&v=&from=&key=) to the answer of /diff: of the marks of its two
+// versions, which a rebuild of the last, or a number coming again after a removal, changes.
+func diffKey(from, to string) string {
+	sum := sha256.Sum256([]byte(from + "\x00" + to))
+	return hex.EncodeToString(sum[:8])
 }
 
 func (*Server) redirect(w http.ResponseWriter, r *http.Request) {

@@ -1,6 +1,6 @@
 // Package pagediff compares two versions of a stored page, as drawn, by their words: what a reader reads, under its
-// headings. Its
-// answer holds words alone, never a page's HTML, for the management page to write as text.
+// headings. Compare answers the words alone, for the management page to write as text; Mark answers the later page
+// with the places that differ marked, for the sandbox alone. Both come of one comparison, of the pages alone.
 package pagediff
 
 import (
@@ -33,12 +33,13 @@ type Block struct {
 }
 
 // Section is a section told in both versions or either: its state one of the State values. A section the same holds no
-// blocks.
+// blocks. Place is the number of its first place on the marked page (Mark), none for a section with no place there.
 type Section struct {
 	State   string  `json:"state"`
 	Level   int     `json:"level"`
 	Heading []Span  `json:"heading"`
 	Blocks  []Block `json:"blocks,omitempty"`
+	Place   *int    `json:"place,omitempty"`
 }
 
 // The states of a section.
@@ -49,12 +50,13 @@ const (
 	StateRemoved = "removed"
 )
 
-// Counts counts the sections by state.
+// Counts counts the sections by state, and the places of the marked page.
 type Counts struct {
 	Changed int `json:"changed"`
 	Added   int `json:"added"`
 	Removed int `json:"removed"`
 	Same    int `json:"same"`
+	Places  int `json:"places"`
 }
 
 // Result is what differs between two versions of a page.
@@ -63,38 +65,59 @@ type Result struct {
 	Sections []Section `json:"sections"`
 }
 
+// The bounds of the differ's work, as the product of the lengths it compares (keys or runes): the answer is of the
+// pages alone, never of the time it took. never keeps the differ's own time limit out of reach, as a limit of 0 would
+// stop its half-match and cut lines otherwise.
+// LIMIT: past these the answer is coarser: blocks go by place, lines are replaced whole. Enough for the 17 MB of
+// 20,000 paragraphs all changed within the bound TestCompareBounded sets.
 const (
-	// LIMIT: past this the answer is coarser, and the same pages may answer differently. Enough for the 17 MB of 20,000
-	// paragraphs all changed.
-	timeLimit = 3 * time.Second
-	alignMost = time.Second
-	wordsMost = 100 * time.Millisecond
+	never    = 100 * 365 * 24 * time.Hour
+	callMost = 50_000_000
+	pageMost = 400_000_000
 )
 
 // Compare compares the page from to the page to, as drawn: an error for one the HTML parser gives up on.
 func Compare(from, to []byte) (Result, error) {
-	return compareIn(from, to, timeLimit)
+	return compareIn(from, to, pageMost)
 }
 
-func compareIn(from, to []byte, limit time.Duration) (Result, error) {
-	c := clock{end: time.Now().Add(limit)}
-	a, err := read(from)
-	if err != nil {
-		return Result{}, err
-	}
-	b, err := read(to)
-	if err != nil {
-		return Result{}, err
-	}
-	out := Result{Counts: Counts{Changed: 0, Added: 0, Removed: 0, Same: 0}, Sections: []Section{}}
+func compareIn(from, to []byte, most int) (Result, error) {
+	out, _, err := marked(from, to, most, Words{Gone: "", Before: ""})
+	return out, err
+}
+
+// compared is the sections of two pages compared, in order: of each, what goes into the result and what is marked.
+type compared struct {
+	result Result
+	steps  []step
+}
+
+// step is a section of the result, of the sections a[from] and b[to] (-1 for none), its blocks paired in order.
+type step struct {
+	from, to int
+	pairs    []blockPair
+}
+
+// blockPair is a block of a section and the one it is paired with, nil for one in a version alone; spans the words
+// that differ, for a pair of the same kind whose words are alike.
+type blockPair struct {
+	from, to *block
+	spans    []Span
+}
+
+func compare(a, b []section, w *work) compared {
+	c := compared{result: Result{Counts: Counts{Changed: 0, Added: 0, Removed: 0, Same: 0, Places: 0}, Sections: []Section{}}, steps: nil}
 	// Sections always, as they are few and short: one added would otherwise tell all those after it removed and added.
-	for _, p := range align(library(alignMost), headings(a), headings(b)) {
-		for _, s := range c.sectionPair(a, b, p) {
-			out.Sections = append(out.Sections, s)
-			out.Counts.count(s.State)
-		}
+	for _, p := range align(w.always(len(a), len(b)), headings(a), headings(b)) {
+		w.sectionPair(&c, a, b, p)
 	}
-	return out, nil
+	return c
+}
+
+func (c *compared) add(s Section, st step) {
+	c.result.Sections = append(c.result.Sections, s)
+	c.result.Counts.count(s.State)
+	c.steps = append(c.steps, st)
 }
 
 func (n *Counts) count(state string) {
@@ -131,7 +154,7 @@ func whole(s section, op, state string) Section {
 	for i, b := range s.blocks {
 		blocks[i] = wholeBlock(b, op)
 	}
-	return Section{State: state, Level: s.level, Heading: []Span{{Op: op, Text: s.heading}}, Blocks: blocks}
+	return Section{State: state, Level: s.level, Heading: []Span{{Op: op, Text: s.heading}}, Blocks: blocks, Place: nil}
 }
 
 func wholeBlock(b block, op string) Block {
@@ -141,81 +164,105 @@ func wholeBlock(b block, op string) Block {
 // pair is the places of what goes together in two lists, -1 for one in the other alone.
 type pair struct{ a, b int }
 
-// sectionPair is what a pair of sections comes to: one, or as their headings are not alike, the one removed and the
+// sectionPair adds what a pair of sections comes to: one, or as their headings are not alike, the one removed and the
 // other added.
-func (c clock) sectionPair(a, b []section, p pair) []Section {
+func (w *work) sectionPair(c *compared, a, b []section, p pair) {
 	switch {
 	case p.a < 0:
-		return []Section{whole(b[p.b], opIns, StateAdded)}
+		c.add(whole(b[p.b], opIns, StateAdded), step{from: -1, to: p.b, pairs: nil})
+		return
 	case p.b < 0:
-		return []Section{whole(a[p.a], opDel, StateRemoved)}
+		c.add(whole(a[p.a], opDel, StateRemoved), step{from: p.a, to: -1, pairs: nil})
+		return
 	}
 	from, to := a[p.a], b[p.b]
 	heading := []Span{{Op: opSame, Text: to.heading}}
 	if from.heading != to.heading {
-		if heading = c.words(from.heading, to.heading); heading == nil {
-			return []Section{whole(from, opDel, StateRemoved), whole(to, opIns, StateAdded)}
+		if heading = w.words(from.heading, to.heading); heading == nil {
+			c.add(whole(from, opDel, StateRemoved), step{from: p.a, to: -1, pairs: nil})
+			c.add(whole(to, opIns, StateAdded), step{from: -1, to: p.b, pairs: nil})
+			return
 		}
 	}
 	keysA, keysB := blockKeys(from), blockKeys(to)
 	if from.heading == to.heading && slices.Equal(keysA, keysB) {
-		return []Section{{State: StateSame, Level: to.level, Heading: heading, Blocks: nil}}
+		same := make([]blockPair, len(to.blocks))
+		for i := range to.blocks {
+			same[i] = blockPair{from: &a[p.a].blocks[i], to: &b[p.b].blocks[i], spans: nil}
+		}
+		c.add(Section{State: StateSame, Level: to.level, Heading: heading, Blocks: nil, Place: nil}, step{from: p.a, to: p.b, pairs: same})
+		return
 	}
 	blocks := []Block{}
-	for _, q := range align(c.library(alignMost), keysA, keysB) {
-		blocks = append(blocks, c.blockPair(from.blocks, to.blocks, q)...)
+	var pairs []blockPair
+	for _, q := range align(w.library(len(keysA), len(keysB)), keysA, keysB) {
+		bs, ps := w.blockPair(a[p.a].blocks, b[p.b].blocks, q)
+		blocks = append(blocks, bs...)
+		pairs = append(pairs, ps...)
 	}
-	return []Section{{State: StateChanged, Level: to.level, Heading: heading, Blocks: blocks}}
+	c.add(Section{State: StateChanged, Level: to.level, Heading: heading, Blocks: blocks, Place: nil}, step{from: p.a, to: p.b, pairs: pairs})
 }
 
-func (c clock) blockPair(a, b []block, q pair) []Block {
+func (w *work) blockPair(a, b []block, q pair) ([]Block, []blockPair) {
 	switch {
 	case q.a < 0:
-		return []Block{wholeBlock(b[q.b], opIns)}
+		return []Block{wholeBlock(b[q.b], opIns)}, []blockPair{{from: nil, to: &b[q.b], spans: nil}}
 	case q.b < 0:
-		return []Block{wholeBlock(a[q.a], opDel)}
+		return []Block{wholeBlock(a[q.a], opDel)}, []blockPair{{from: &a[q.a], to: nil, spans: nil}}
 	}
-	from, to := a[q.a], b[q.b]
+	from, to := &a[q.a], &b[q.b]
 	if from.key == to.key {
-		return []Block{wholeBlock(to, opSame)}
+		return []Block{wholeBlock(*to, opSame)}, []blockPair{{from: from, to: to, spans: nil}}
 	}
 	if from.kind == to.kind {
 		if from.text == to.text {
-			return []Block{{Kind: to.kind, Reshaped: true, Spans: []Span{{Op: opSame, Text: to.text}}}}
+			return []Block{{Kind: to.kind, Reshaped: true, Spans: []Span{{Op: opSame, Text: to.text}}}}, []blockPair{{from: from, to: to, spans: nil}}
 		}
-		if spans := c.words(from.text, to.text); spans != nil {
-			return []Block{{Kind: to.kind, Reshaped: false, Spans: spans}}
+		if spans := w.words(from.text, to.text); spans != nil {
+			return []Block{{Kind: to.kind, Reshaped: false, Spans: spans}}, []blockPair{{from: from, to: to, spans: spans}}
 		}
 	}
-	return []Block{wholeBlock(from, opDel), wholeBlock(to, opIns)}
+	return []Block{wholeBlock(*from, opDel), wholeBlock(*to, opIns)},
+		[]blockPair{{from: from, to: nil, spans: nil}, {from: nil, to: to, spans: nil}}
 }
 
-// clock is the time left for one comparison.
-type clock struct{ end time.Time }
+// work is what is left of the differ's work for one comparison.
+type work struct{ left int }
 
-// library is the differ with no more than most of the time left, nil once there is none: a DiffTimeout of 0 would mean
-// no limit.
-func (c clock) library(most time.Duration) *diffmatchpatch.DiffMatchPatch {
-	left := time.Until(c.end)
-	if left <= 0 {
+// library is the differ to compare lists of lengths n and m, its work taken from what is left: nil when it is more
+// than one call may take, or than is left.
+func (w *work) library(n, m int) *diffmatchpatch.DiffMatchPatch {
+	cost := n * m
+	if cost > callMost || cost > w.left {
 		return nil
 	}
-	return library(min(left, most))
+	w.left -= cost
+	return library()
 }
 
-func library(timeout time.Duration) *diffmatchpatch.DiffMatchPatch {
+// always is the differ for the sections, which are compared whatever is left, within one call's bound.
+func (w *work) always(n, m int) *diffmatchpatch.DiffMatchPatch {
+	cost := n * m
+	if cost > callMost {
+		return nil
+	}
+	w.left = max(w.left-cost, 0)
+	return library()
+}
+
+func library() *diffmatchpatch.DiffMatchPatch {
 	d := diffmatchpatch.New()
-	d.DiffTimeout = timeout
+	d.DiffTimeout = never
 	return d
 }
 
-// words compares two lines by their characters, as Japanese has no spaces to cut at: nil when they are not alike, or no
-// time is left.
+// words compares two lines by their characters, as Japanese has no spaces to cut at: nil when they are not alike, or
+// past the work left.
 // LIMIT: alike is the same characters making half of the longer line at least, a rule of thumb: below it the pieces in
 // common only
 // make two lines hard to read.
-func (c clock) words(from, to string) []Span {
-	d := c.library(wordsMost)
+func (w *work) words(from, to string) []Span {
+	d := w.library(utf8.RuneCountInString(from), utf8.RuneCountInString(to))
 	if d == nil {
 		return nil
 	}

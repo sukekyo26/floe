@@ -177,7 +177,7 @@ func TestCounts(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	if want := (Counts{Changed: 1, Added: 2, Removed: 1, Same: 1}); got.Counts != want {
+	if want := (Counts{Changed: 1, Added: 2, Removed: 1, Same: 1, Places: 4}); got.Counts != want {
 		t.Errorf("got %+v, want %+v\n%s", got.Counts, want, told(got))
 	}
 }
@@ -224,7 +224,7 @@ func TestCompareBounded(t *testing.T) { //nolint:paralleltest // it measures tim
 		fmt.Fprintf(&to, "<p>%s</p>", strings.Repeat("い"+strconv.Itoa(i), 40))
 	}
 	start := time.Now()
-	if _, err := compareIn([]byte(from.String()), []byte(to.String()), 200*time.Millisecond); err != nil {
+	if _, err := compareIn([]byte(from.String()), []byte(to.String()), pageMost); err != nil {
 		t.Fatal(err)
 	}
 	if took := time.Since(start); took > 20*time.Second {
@@ -236,7 +236,7 @@ func TestCompareBounded(t *testing.T) { //nolint:paralleltest // it measures tim
 func TestAlignKeys(t *testing.T) {
 	t.Parallel()
 
-	got := align(library(time.Second), []string{"a\nb", "c", "d\n"}, []string{"a\nb", "new", "d\n"})
+	got := align(library(), []string{"a\nb", "c", "d\n"}, []string{"a\nb", "new", "d\n"})
 	if s, want := fmt.Sprint(got), "[{0 0} {1 1} {2 2}]"; s != want {
 		t.Errorf("got %s, want %s", s, want)
 	}
@@ -259,7 +259,7 @@ func TestAlignKeys(t *testing.T) {
 	if _, _, ok := numbered(many, nil); ok {
 		t.Error("more keys than runes were numbered")
 	}
-	all := align(library(time.Second), many, []string{"0"})
+	all := align(library(), many, []string{"0"})
 	if len(all) != n || all[0] != (pair{a: 0, b: 0}) || all[1] != (pair{a: 1, b: -1}) {
 		t.Errorf("past the bound: %d %v", len(all), all[:2])
 	}

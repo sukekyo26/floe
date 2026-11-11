@@ -16,6 +16,7 @@ import (
 	"floe/internal/draw"
 	"floe/internal/files"
 	"floe/internal/i18n"
+	"floe/internal/pagediff"
 	"floe/internal/store"
 	"floe/internal/usererr"
 )
@@ -102,13 +103,24 @@ func (s *Server) version(slug string, m *store.Meta, rest string, v int) string 
 // returns. drawn tells a page floe drew, whose CSP cuts it off. errNoPage for none.
 // LIMIT: no Range support. Add it if videos need seeking.
 func (s *Server) content(
-	c *i18n.Catalog, slug string, m *store.Meta, rest string, v int, drawing func() store.Drawing, cut bool,
+	c *i18n.Catalog, slug string, m *store.Meta, rest string, v int, diff diffOf, drawing func() store.Drawing, cut bool,
 ) (served, error) {
 	none := served{body: nil, typ: "", drawn: false}
 	if v > 0 {
 		page, ok := s.cfg.Store.VersionPage(slug, m, v)
 		if !ok {
 			return none, errNoPage
+		}
+		if diff.from > 0 {
+			before, ok := s.cfg.Store.VersionPage(slug, m, diff.from)
+			if !ok || diffKey(s.cfg.Store.VersionMark(slug, m, diff.from), s.cfg.Store.VersionMark(slug, m, v)) != diff.key {
+				return none, errNoPage
+			}
+			marked, err := pagediff.Mark(before, page, pagediff.Words{Gone: c.Msg("diff_page_gone"), Before: c.Msg("diff_page_before")})
+			if err != nil {
+				return none, err //nolint:wrapcheck // the library's words, as /diff tells them
+			}
+			page = marked
 		}
 		return served{body: io.NopCloser(bytes.NewReader(page)), typ: htmlType, drawn: true}, nil
 	}
@@ -146,6 +158,25 @@ func versionParam(m *store.Meta, rest string, q url.Values) (int, bool) {
 		return 0, true
 	}
 	return versionNumber(q.Get("v"))
+}
+
+// diffOf is the earlier version a version is marked against, and the key of /diff that ties the two: none, from 0.
+type diffOf struct {
+	from int
+	key  string
+}
+
+// diffParam is the earlier version ?from= of q asks to mark version v against, with its ?key=: none when q asks none,
+// false for one that cannot be: not a number, not before v, or of no stored page's own URL.
+func diffParam(m *store.Meta, rest string, v int, q url.Values) (diffOf, bool) {
+	if !q.Has("from") {
+		return diffOf{from: 0, key: ""}, true
+	}
+	from, ok := versionNumber(q.Get("from"))
+	if !ok || m == nil || m.IsLink() || rest != "" || from >= v {
+		return diffOf{from: 0, key: ""}, false
+	}
+	return diffOf{from: from, key: q.Get("key")}, true
 }
 
 // versionNumber reads raw as what can be a version's number: 1 or more, in plain digits. Whether there is such a
@@ -197,6 +228,7 @@ func (s *Server) servePage(w http.ResponseWriter, r *http.Request) {
 	var read *Read
 	var got served
 	var v int
+	var diff diffOf
 	err := errNoPage
 	for try := 0; try < 2 && errors.Is(err, errNoPage); try++ {
 		m := s.cfg.Store.ReadMeta(slug)
@@ -204,21 +236,29 @@ func (s *Server) servePage(w http.ResponseWriter, r *http.Request) {
 		if v, ok = versionParam(m, rest, q); m == nil || !ok {
 			break
 		}
+		if diff, ok = diffParam(m, rest, v, q); !ok {
+			break
+		}
 		version = s.version(slug, m, rest, v)
 		if v > 0 && version == "" {
 			break
 		}
 		read = nil
-		if rest == "" {
+		// A diff is not read: opening it marks nothing read, nor takes a mark back.
+		if rest == "" && diff.from == 0 {
 			if mark, ok := s.cfg.Store.ReadMark(slug, m, v); ok {
 				read = &Read{N: mark.N, At: mark.At}
 			}
 		}
 		// Of the last look, as the version is: one changed since reloads the tab.
-		got, err = s.content(catalog(r), slug, m, rest, v, func() store.Drawing { d, _ := s.now(); return d }, false)
+		got, err = s.content(catalog(r), slug, m, rest, v, diff, func() store.Drawing { d, _ := s.now(); return d }, false)
 	}
 	if errors.Is(err, errNoPage) {
 		notFound(w)
+		return
+	}
+	if got.body == nil {
+		refuse(w, r, err)
 		return
 	}
 	defer got.body.Close() //nolint:errcheck // read-only
@@ -226,7 +266,7 @@ func (s *Server) servePage(w http.ResponseWriter, r *http.Request) {
 	pageHeaders(w, r, got.drawn)
 	tail := ""
 	if got.typ == htmlType {
-		tail = servedScript(slug, rest, version, v, read, got.drawn)
+		tail = servedScript(slug, rest, version, v, read, got.drawn, diff.from > 0)
 	}
 	stream(w, got.typ, got.body, tail)
 }
@@ -287,7 +327,7 @@ func (s *Server) download(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	// A file kept is not mended by the watch: of what the directories hold now.
-	got, err := s.content(catalog(r), slug, m, "", v, s.latest, true)
+	got, err := s.content(catalog(r), slug, m, "", v, diffOf{from: 0, key: ""}, s.latest, true)
 	switch {
 	case errors.Is(err, errNoPage):
 		notFound(w)
@@ -389,12 +429,15 @@ func tellRead(read *Read) string {
 // report's j and k). Nothing is taken until the frame says it takes them, of this origin, so that a page in another
 // iframe keeps the browser's / and Ctrl+K. It listens on window, after the page's own. Shift is not looked at, as ? is
 // typed with it on most keyboards; Ctrl+Shift+K has the key K. A field is the one to type in; a checkbox and a radio
-// (the part tabs) are not.
+// (the part tabs) are not. The page of a diff hands over n and p, which go through its places, in place of j, k and h.
 // LIMIT: a field inside a shadow root is seen as its host, and hands the keys over.
 // LIMIT: a page floe drew with a script of its own that takes these keys without preventDefault does both.
-func tellKeys(drawn bool) string {
+func tellKeys(drawn, diff bool) string {
 	letters := "[]"
-	if drawn {
+	switch {
+	case diff:
+		letters = "['n', 'p', 'd', '?', '/']"
+	case drawn:
 		letters = "['j', 'k', 'h', 'd', '?', '/']"
 	}
 	return "{const here = location.protocol + '//' + location.host; let wanted = false;" +
@@ -424,7 +467,7 @@ const askEvery = time.Second
 // drawn tells a page floe drew (tellKeys).
 // LIMIT: that a tab not shown asks nothing is not checked in a browser: headless Chrome showed no tab hidden. Were it
 // broken, a tab not shown asks every second, holding nothing.
-func servedScript(slug, rest, version string, v int, read *Read, drawn bool) string {
+func servedScript(slug, rest, version string, v int, read *Read, drawn, diff bool) string {
 	u := "/api/changed/" + slug
 	if rest != "" {
 		parts := strings.Split(rest, "/")
@@ -446,7 +489,7 @@ func servedScript(slug, rest, version string, v int, read *Read, drawn bool) str
 		"busy = false; };" +
 		"window.setInterval(look, " + strconv.FormatInt(askEvery.Milliseconds(), 10) + ");" +
 		"window.document.addEventListener('visibilitychange', look); look();" +
-		leaveFrame + tellRead(read) + tellKeys(drawn) + "}</script>\n"
+		leaveFrame + tellRead(read) + tellKeys(drawn, diff) + "}</script>\n"
 }
 
 // changed answers whether the page of slug (of rest under a link) is no longer of the version since: "changed" or
