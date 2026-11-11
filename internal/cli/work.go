@@ -39,7 +39,7 @@ func (a *app) workCmd() *cobra.Command {
 it is, writing nothing; with --task alone, tell the task.
 
 The pages and their tasks are written in one write, checked whole before anything is written, so that a refusal
-writes nothing. A task a page comes to be on gets its row when it has none, and the page's category is added at the
+writes nothing; a page the system cannot write then stops it there, and the same command given again finishes it. A task a page comes to be on gets its row when it has none, and the page's category is added at the
 end of its categories. Each task written is told on a line of its own, as the store left it (made, changed, or
 unchanged when a field was given), then each page with its task, category and pin. A page's category is where the
 task's page places it among its pages, which the user decides.
