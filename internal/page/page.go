@@ -107,3 +107,19 @@ func HasClass(n *html.Node, name string) bool {
 	value, _ := Attr(n, "class")
 	return slices.Contains(Fields(value), name)
 }
+
+// SetAttr sets n's attribute key, of no namespace, to val, in place of any it had.
+func SetAttr(n *html.Node, key, val string) {
+	for i, a := range n.Attr {
+		if a.Namespace == "" && a.Key == key {
+			n.Attr[i].Val = val
+			return
+		}
+	}
+	n.Attr = append(n.Attr, html.Attribute{Namespace: "", Key: key, Val: val})
+}
+
+// RemoveAttr takes n's attribute key, of no namespace, away.
+func RemoveAttr(n *html.Node, key string) {
+	n.Attr = slices.DeleteFunc(n.Attr, func(a html.Attribute) bool { return a.Namespace == "" && a.Key == key })
+}

@@ -55,10 +55,12 @@ type Counts struct {
 	Places  int `json:"places"`
 }
 
-// Result is what differs between two versions of a page.
+// Result is what differs between two versions of a page, and of each place of the marked page, by its number, the
+// section it is in.
 type Result struct {
 	Counts   Counts    `json:"counts"`
 	Sections []Section `json:"sections"`
+	Places   []int     `json:"places"`
 }
 
 // The bounds of the differ's work, as the product of the lengths it compares (keys or runes): the answer is of the
@@ -68,17 +70,14 @@ type Result struct {
 // 20,000 paragraphs all changed within the bound TestCompareBounded sets.
 const (
 	never    = 100 * 365 * 24 * time.Hour
+	rowsMost = 4_000_000
 	callMost = 50_000_000
 	pageMost = 400_000_000
 )
 
 // Compare compares the page from to the page to, as drawn: an error for one the HTML parser gives up on.
 func Compare(from, to []byte) (Result, error) {
-	return compareIn(from, to, pageMost)
-}
-
-func compareIn(from, to []byte, most int) (Result, error) {
-	out, _, err := marked(from, to, most, Words{Gone: "", Before: ""})
+	out, _, err := marked(from, to, pageMost, Words{Gone: "", Before: ""})
 	return out, err
 }
 
@@ -111,7 +110,7 @@ type cellPair struct {
 }
 
 func compare(a, b []section, w *work) compared {
-	c := compared{result: Result{Counts: Counts{Changed: 0, Added: 0, Removed: 0, Same: 0, Places: 0}, Sections: []Section{}}, steps: nil}
+	c := compared{result: Result{Counts: Counts{Changed: 0, Added: 0, Removed: 0, Same: 0, Places: 0}, Sections: []Section{}, Places: []int{}}, steps: nil}
 	// Sections always, as they are few and short: one added would otherwise tell all those after it removed and added.
 	for _, p := range align(w.always(len(a), len(b)), headings(a), headings(b)) {
 		w.sectionPair(&c, a, b, p)
@@ -192,7 +191,13 @@ func (w *work) sectionPair(c *compared, a, b []section, p pair) {
 	}
 	var pairs []blockPair
 	blocksA, blocksB := a[p.a].blocks, b[p.b].blocks
-	for _, q := range w.rows(blocksA, blocksB, align(w.library(len(keysA), len(keysB)), keysA, keysB)) {
+	d := w.library(len(keysA), len(keysB))
+	aligned := align(d, keysA, keysB)
+	// The rows again by their cells, within the work the blocks' alignment took: none past it.
+	if d != nil {
+		aligned = rows(blocksA, blocksB, aligned)
+	}
+	for _, q := range aligned {
 		pairs = append(pairs, w.blockPair(blocksA, blocksB, q)...)
 	}
 	c.add(Section{State: StateChanged, Level: to.level, Heading: heading, Place: nil}, step{from: p.a, to: p.b, pairs: pairs})
@@ -215,7 +220,7 @@ func (w *work) blockPair(a, b []block, q pair) []blockPair {
 		}
 		if spans := w.words(from.text, to.text); spans != nil {
 			var cells []cellPair
-			if from.kind == "tr" && !w.spanned(from.node) && !w.spanned(to.node) {
+			if w.cellsCompared(from, to) {
 				cells = w.cellPairs(from.cells, to.cells)
 			}
 			return []blockPair{{from: from, to: to, spans: spans, cells: cells}}
@@ -226,15 +231,15 @@ func (w *work) blockPair(a, b []block, q pair) []blockPair {
 
 // rows pairs again the rows of a table whose keys differ, between those the same: by the cells they share, as a
 // column gone or added changes every row's words, and by place one row gone would pair those after it off by one. A
-// run of blocks not all rows, or past the work left, stays as it is.
-func (w *work) rows(a, b []block, pairs []pair) []pair {
+// run of blocks not all rows stays as it is. Its work is within the blocks' alignment's, of more keys.
+func rows(a, b []block, pairs []pair) []pair {
 	var out []pair
 	for i := 0; i < len(pairs); {
 		j := i
 		for j < len(pairs) && !(pairs[j].a >= 0 && pairs[j].b >= 0 && a[pairs[j].a].key == b[pairs[j].b].key) {
 			j++
 		}
-		out = append(out, w.rowRun(a, b, pairs[i:j])...)
+		out = append(out, rowRun(a, b, pairs[i:j])...)
 		if j < len(pairs) {
 			out = append(out, pairs[j])
 		}
@@ -244,7 +249,7 @@ func (w *work) rows(a, b []block, pairs []pair) []pair {
 }
 
 // rowRun pairs the rows of a run by the longest sequence of rows that share half their cells or more, in order.
-func (w *work) rowRun(a, b []block, run []pair) []pair {
+func rowRun(a, b []block, run []pair) []pair {
 	var xs, ys []int
 	for _, p := range run {
 		if p.a >= 0 {
@@ -261,13 +266,14 @@ func (w *work) rowRun(a, b []block, run []pair) []pair {
 		}
 	}
 	n, m := len(xs), len(ys)
-	if n == 0 || m == 0 || w.library(n, m) == nil {
+	// LIMIT: the longest sequence by a table of n×m, as the differ compares runes, not rows by their likeness; past
+	// rowsMost of it, the rows go by place as they came.
+	if n == 0 || m == 0 || n*m > rowsMost {
 		return run
 	}
-	// LIMIT: the longest sequence by a table of n×m, as the differ compares runes, not rows by their likeness.
-	best := make([][]int, n+1)
+	best := make([][]int32, n+1)
 	for i := range best {
-		best[i] = make([]int, m+1)
+		best[i] = make([]int32, m+1)
 	}
 	for i := n - 1; i >= 0; i-- {
 		for j := m - 1; j >= 0; j-- {
@@ -294,26 +300,36 @@ func (w *work) rowRun(a, b []block, run []pair) []pair {
 	}
 	var out []pair
 	i, j = 0, 0
-	byPlace := func(toI, toJ int) {
-		for i < toI || j < toJ {
-			p := pair{a: -1, b: -1}
-			if i < toI {
-				p.a = xs[i]
-				i++
-			}
-			if j < toJ {
-				p.b = ys[j]
-				j++
-			}
-			out = append(out, p)
-		}
-	}
 	for _, q := range matched {
-		byPlace(q.a, q.b)
+		out = byPlace(out, xs[i:q.a], ys[j:q.b])
 		out = append(out, pair{a: xs[q.a], b: ys[q.b]})
 		i, j = q.a+1, q.b+1
 	}
-	byPlace(n, m)
+	return byPlace(out, xs[i:], ys[j:])
+}
+
+// byPlace pairs the places xs of one list and ys of the other one by one from the first, those of the longer left
+// alone, and adds the pairs to out.
+func byPlace(out []pair, xs, ys []int) []pair {
+	for k := range max(len(xs), len(ys)) {
+		p := pair{a: -1, b: -1}
+		if k < len(xs) {
+			p.a = xs[k]
+		}
+		if k < len(ys) {
+			p.b = ys[k]
+		}
+		out = append(out, p)
+	}
+	return out
+}
+
+// upTo is the places from up to to.
+func upTo(from, to int) []int {
+	out := make([]int, 0, max(to-from, 0))
+	for i := from; i < to; i++ {
+		out = append(out, i)
+	}
 	return out
 }
 
@@ -388,6 +404,12 @@ func (t tables) spanned(tr *html.Node) bool {
 	}
 	t[table] = got
 	return got
+}
+
+// cellsCompared tells whether two rows paired are compared cell by cell: rows of tables whose cells span one row and
+// column.
+func (t tables) cellsCompared(from, to *block) bool {
+	return from.kind == "tr" && to.kind == "tr" && !t.spanned(from.node) && !t.spanned(to.node)
 }
 
 // tableOf is the table n is in, nil for none.
@@ -525,18 +547,8 @@ func align(d *diffmatchpatch.DiffMatchPatch, a, b []string) []pair {
 	out := make([]pair, 0, max(len(a), len(b)))
 	i, j := 0, 0
 	left := func(toI, toJ int) {
-		for i < toI || j < toJ {
-			p := pair{a: -1, b: -1}
-			if i < toI {
-				p.a = i
-				i++
-			}
-			if j < toJ {
-				p.b = j
-				j++
-			}
-			out = append(out, p)
-		}
+		out = byPlace(out, upTo(i, toI), upTo(j, toJ))
+		i, j = toI, toJ
 	}
 	atI, atJ := 0, 0
 	for _, x := range diffs {

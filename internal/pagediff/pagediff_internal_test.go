@@ -30,20 +30,24 @@ func spans(sp []Span) string {
 	return b.String()
 }
 
+// readSections is the sections of page, read as Compare reads them.
+func readSections(t *testing.T, page []byte) []section {
+	t.Helper()
+
+	_, sections, err := readTree(page)
+	if err != nil {
+		t.Fatal(err)
+	}
+	return sections
+}
+
 // told is the comparison of two pages within most as a person reads it, a block the same left out: each section by its
 // state and heading, each block by its kind and its words as they differ, reshaped for a diagram or image whose words
 // are the same and whose content differs.
 func told(t *testing.T, from, to string, most int) string {
 	t.Helper()
 
-	a, err := read([]byte(from))
-	if err != nil {
-		t.Fatal(err)
-	}
-	b, err := read([]byte(to))
-	if err != nil {
-		t.Fatal(err)
-	}
+	a, b := readSections(t, []byte(from)), readSections(t, []byte(to))
 	c := compare(a, b, newWork(most))
 	var out strings.Builder
 	line := func(kind, words string) { fmt.Fprintf(&out, "  [%s] %s\n", kind, words) }
@@ -169,10 +173,7 @@ func TestPreLines(t *testing.T) {
 		{"<pre><code>a\n\nb\n</code></pre>", "a||b"},
 		{`<pre><span class="floe-hidden">run</span><span>a</span>` + "\n" + `<span class="floe-hidden">last</span></pre>`, "run a|last"},
 	} {
-		sections, err := read([]byte(tc.html))
-		if err != nil {
-			t.Fatal(err)
-		}
+		sections := readSections(t, []byte(tc.html))
 		lines := make([]string, len(sections[0].blocks))
 		for i, b := range sections[0].blocks {
 			lines[i] = b.text
@@ -242,7 +243,7 @@ func TestCompareBounded(t *testing.T) { //nolint:paralleltest // it measures tim
 		fmt.Fprintf(&to, "<p>%s</p>", strings.Repeat("い"+strconv.Itoa(i), 40))
 	}
 	start := time.Now()
-	if _, err := compareIn([]byte(from.String()), []byte(to.String()), pageMost); err != nil {
+	if _, _, err := marked([]byte(from.String()), []byte(to.String()), pageMost, testWords); err != nil {
 		t.Fatal(err)
 	}
 	if took := time.Since(start); took > 20*time.Second {
@@ -291,10 +292,7 @@ func TestReadEveryPart(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	sections, err := read(page)
-	if err != nil {
-		t.Fatal(err)
-	}
+	sections := readSections(t, page)
 	var b strings.Builder
 	for _, s := range sections {
 		fmt.Fprintf(&b, "## h%d %s\n", s.level, s.heading)
@@ -339,12 +337,26 @@ func TestSameAnswer(t *testing.T) {
 	if string(x) != string(y) {
 		t.Errorf("the same pages answered %s and %s", x, y)
 	}
-	a, _ := read([]byte(from)) //nolint:errcheck // read above
-	b, _ := read([]byte(to))   //nolint:errcheck // read above
+	// Rows gone of two tables of the earlier, both paired with one of the later, go in by the order of the pages.
+	two := "<h2>T</h2><table><tr><td>gone one</td><td>a</td></tr><tr><td>kept</td><td>b</td></tr></table>" +
+		"<table><tr><td>gone two</td><td>c</td></tr><tr><td>also kept</td><td>d</td></tr></table>"
+	one := "<h2>T</h2><table><tr><td>kept</td><td>b</td></tr><tr><td>also kept</td><td>d</td></tr></table>"
+	marks, err := Mark([]byte(two), []byte(one), testWords)
+	if err != nil {
+		t.Fatal(err)
+	}
+	for range 20 {
+		if again, _ := Mark([]byte(two), []byte(one), testWords); string(again) != string(marks) { //nolint:errcheck // as above
+			t.Fatalf("the same pages marked otherwise:\n%s\n%s", marks, again)
+		}
+	}
+	a := readSections(t, []byte(from))
+	b := readSections(t, []byte(to))
 	w := newWork(10_000)
 	compare(a, b, w)
-	// The sections 1×1, the blocks 2×2, the rows again by their cells 2×2, each row's words, each row's cells 3×2.
-	want := 1 + 2*2 + 2*2 + 15*11 + 14*10 + 3*2 + 3*2
+	// The sections 1×1, the blocks 2×2 (the rows paired again by their cells within it), each row's words, each row's
+	// cells 3×2.
+	want := 1 + 2*2 + 15*11 + 14*10 + 3*2 + 3*2
 	if used := 10_000 - w.left; used != want {
 		t.Errorf("the work counted is %d, want %d", used, want)
 	}

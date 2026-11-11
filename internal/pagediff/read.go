@@ -5,7 +5,6 @@ import (
 	"cmp"
 	"crypto/sha256"
 	"encoding/hex"
-	"slices"
 	"strconv"
 	"strings"
 	"unicode"
@@ -134,15 +133,10 @@ func names(list string) map[string]bool {
 	return set
 }
 
-// read reads the page as a browser does into its sections.
+// readTree reads the page as a browser does into its sections, with the tree it reads, which it leaves as the
+// parser made it.
 // LIMIT: a kept version past the parser's depth (read again, see draw.CutOffPage) cannot be compared: the writer cannot
 // mend a version kept, and the words do not say which. Keep them apart here if such pages come to be written.
-func read(page []byte) ([]section, error) {
-	_, sections, err := readTree(page)
-	return sections, err
-}
-
-// readTree is read with the tree it reads, which it leaves as the parser made it.
 func readTree(page []byte) (*html.Node, []section, error) {
 	root, err := html.Parse(bytes.NewReader(page))
 	if err != nil {
@@ -197,8 +191,10 @@ func (r *reader) walk(n *html.Node) {
 		r.add("svg", text, svgKey(n), n, nil)
 	case n.Data == "img":
 		r.flush()
-		alt := squeeze(attrValue(n, "alt"))
-		r.add("img", alt, alt+"\x00"+digest(attrValue(n, "src")), n, nil)
+		alt, _ := page.Attr(n, "alt")
+		src, _ := page.Attr(n, "src")
+		alt = squeeze(alt)
+		r.add("img", alt, alt+"\x00"+digest(src), n, nil)
 	case n.Data == "tr":
 		r.flush()
 		text, from, cells := row(n)
@@ -255,7 +251,8 @@ func flow(n *html.Node, w *words) {
 	}
 	// LIMIT: of an image in a line or a heading, its alt is told, not its src, and of a diagram there, nothing.
 	if n.Data == "img" {
-		w.addApart(" " + attrValue(n, "alt") + " ")
+		alt, _ := page.Attr(n, "alt")
+		w.addApart(" " + alt + " ")
 		return
 	}
 	if unread[n.Data] || n.Namespace == "svg" {
@@ -389,7 +386,7 @@ func digest(s string) string {
 // diagram's ids hold its number in the page, which a diagram added before it changes. It numbers a copy, the page's
 // tree left as it was drawn.
 func svgKey(n *html.Node) string {
-	n = deepCopy(n)
+	n, _ = copyTree(n)
 	renumber(n, func(int, string) string { return "" })
 	var out bytes.Buffer
 	// LIMIT: Render stops at a void element holding something, so that two versions differing only past it have one
@@ -399,22 +396,13 @@ func svgKey(n *html.Node) string {
 	return digest(out.String())
 }
 
-// deepCopy is n and all under it, apart from any tree.
-func deepCopy(n *html.Node) *html.Node {
-	c := &html.Node{Type: n.Type, DataAtom: n.DataAtom, Data: n.Data, Namespace: n.Namespace, Attr: slices.Clone(n.Attr)}
-	for k := n.FirstChild; k != nil; k = k.NextSibling {
-		c.AppendChild(deepCopy(k))
-	}
-	return c
-}
-
 // renumber gives each id under n, n's own too, the name named makes of its place in n's order and the id, and all that
 // names one of them by it (aria-labelledby and aria-describedby, for, #id in other values) the new name too. A name
 // attribute is named alike, so that a copy's radios and details make no group with the page's.
 func renumber(n *html.Node, named func(i int, id string) string) {
 	ids := map[string]string{}
 	note := func(m *html.Node) {
-		if id := attrValue(m, "id"); id != "" && ids[id] == "" {
+		if id, _ := page.Attr(m, "id"); id != "" && ids[id] == "" {
 			ids[id] = cmp.Or(named(len(ids), id), "id"+strconv.Itoa(len(ids)))
 		}
 	}
@@ -465,10 +453,4 @@ func numberedRefs(value string, ids map[string]string) string {
 		b.WriteString(cmp.Or(ids[after[:end]], after[:end]))
 		value = after[end:]
 	}
-}
-
-// attrValue is the value of n's attribute key, "" for none.
-func attrValue(n *html.Node, key string) string {
-	v, _ := page.Attr(n, key)
-	return v
 }

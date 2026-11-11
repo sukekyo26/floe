@@ -53,6 +53,10 @@ func TestMark(t *testing.T) {
 			hasNot: []string{"<ins", "<del"},
 		},
 		{
+			name: "two lines of one text changed", from: "<pre>alpha one\nbeta two\ngamma three\ndelta four</pre>", to: "<pre>alpha won\nbeta two\ngamma tree\ndelta four</pre>",
+			has: []string{"alpha ", "gamma ", `<ins class="floe-diff-ins">w</ins>`, `<del class="floe-diff-del">h</del>`},
+		},
+		{
 			name: "a column gone", from: table("<th>Name</th><th>Short</th><th>Long</th>", "<td>alpha</td><td>x</td><td>the long words of one</td>", "<td>beta</td><td>yy</td><td>the long words of two</td>"),
 			to:  table("<th>Name</th><th>Long</th>", "<td>alpha</td><td>the long words of one</td>", "<td>beta</td><td>the long words of two</td>"),
 			has: []string{`<th><del class="floe-diff-del">Short</del></th><th>Long</th>`, `<td>alpha</td><td><del class="floe-diff-del">x</del></td>`, `<td>beta</td><td><del class="floe-diff-del">yy</del></td>`},
@@ -75,6 +79,11 @@ func TestMark(t *testing.T) {
 			name: "the head's row gone", from: table("<th>Name</th><th>Long</th>", "<td>alpha</td><td>the long words of one</td>"),
 			to:  "<h2>T</h2><table><tbody><tr><td>alpha</td><td>the long words of one</td></tr></tbody></table>",
 			has: []string{"<tbody><tr><th><del", "Name</del></th><th><del class=\"floe-diff-del\">Long</del></th></tr><tr><td>alpha</td>"},
+		},
+		{
+			name: "a body row gone, no body left", from: table("<th>Name</th><th>Long</th>", "<td>alpha</td><td>the long words of one</td>"),
+			to:  "<h2>T</h2><table><thead><tr><th>Name</th><th>Long</th></tr></thead></table>",
+			has: []string{`</table><table class="floe-diff-gone">`, "alpha"},
 		},
 		{
 			name: "a table of spans", from: table(`<th colspan="2">Both</th>`, "<td>a</td><td>x</td>", "<td>b</td><td>the long words</td>"),
