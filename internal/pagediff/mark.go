@@ -103,7 +103,9 @@ type marker struct {
 	words      Words
 	// last is the later's element gone through last, in box, its section's box; tail what was put in after it last.
 	last, lastBox, tail *html.Node
-	pending             []*html.Node
+	// pending waits to go in after last; depth is the depth of the part the first of it was in the earlier, 0 for none.
+	pending []*html.Node
+	depth   int
 	// added is what floe put in; kept, the earlier's elements that hold a block the later keeps; copied, those copied.
 	added, kept, copied map[*html.Node]bool
 	held                map[holdKey]bool
@@ -138,7 +140,7 @@ type holdKey struct {
 
 func newMarker(root *html.Node, words Words) *marker {
 	return &marker{
-		root: root, body: bodyOf(root), words: words, last: nil, lastBox: nil, tail: nil, pending: nil,
+		root: root, body: bodyOf(root), words: words, last: nil, lastBox: nil, tail: nil, pending: nil, depth: 0,
 		added: map[*html.Node]bool{}, kept: map[*html.Node]bool{}, copied: map[*html.Node]bool{},
 		held: map[holdKey]bool{}, edits: nil, ordinals: map[*html.Node]map[*html.Node]int{}, gones: nil, branch: nil,
 		copies: 0, tables: tables{}, rows: map[*html.Node]*html.Node{}, lastRow: map[*html.Node]*html.Node{},
@@ -326,7 +328,7 @@ func (m *marker) gone(sec int, b *block, box *html.Node) {
 
 // copyGone puts what is gone in as its part copied, as gone tells.
 func (m *marker) copyGone(sec int, b *block, box *html.Node) {
-	under := childOf(b.node, box)
+	under := childOf(b.node, m.boxOf(b.node, box))
 	if under == nil {
 		under = b.node
 	}
@@ -341,6 +343,9 @@ func (m *marker) copyGone(sec int, b *block, box *html.Node) {
 		return
 	}
 	m.copied[under] = true
+	if len(m.pending) == 0 {
+		m.depth = depth(under)
+	}
 	c := &goneCopy{
 		under: under, root: nil, of: nil, back: map[*html.Node]*html.Node{}, gone: nil, whole: whole,
 		places: map[*html.Node]map[*html.Node]int{},
@@ -356,6 +361,24 @@ func (m *marker) copyGone(sec int, b *block, box *html.Node) {
 	m.branch = c
 	m.pending = append(m.pending, c.root)
 	m.place(sec, c.root)
+}
+
+// boxOf is the box n, gone, is copied under: box, else its nearest ancestor that holds n (a block of the section out
+// of its heading's box), and past one of which nothing is kept, its parent, so that a box gone whole goes as it was.
+func (m *marker) boxOf(n, box *html.Node) *html.Node {
+	for box.Parent != nil && box.DataAtom != atom.Body && (childOf(n, box) == nil || !m.kept[box]) {
+		box = box.Parent
+	}
+	return box
+}
+
+// depth is the number of n's ancestors.
+func depth(n *html.Node) int {
+	d := 0
+	for a := n.Parent; a != nil; a = a.Parent {
+		d++
+	}
+	return d
 }
 
 // waitingRow is a row gone of a table, at sec in its section's box, to put in before the first row of it gone through.
@@ -771,6 +794,9 @@ func (m *marker) before(sec int, n *html.Node) {
 	summary.AppendChild(text(m.words.Before))
 	d.AppendChild(summary)
 	d.AppendChild(m.copyOld(part))
+	if len(m.pending) == 0 {
+		m.depth = 0
+	}
 	m.pending = append(m.pending, d)
 	m.place(sec, d)
 	m.flush(nil, nil)
@@ -787,8 +813,11 @@ func partOf(n *html.Node) *html.Node {
 	return n
 }
 
-// flush puts in what is pending: after what was put in last, else after the element under its box that holds what was
-// gone through last, else before the one that holds next, else at the end of body.
+// flush puts in what is pending: after what was put in last, else after the element that holds what was gone through
+// last as deep as the part pending was in the earlier (or under its box), else before the one that holds next, else at
+// the end of body.
+// LIMIT: the depth is the earlier page's: a page whose later version wraps its parts in an element more puts what is
+// gone one level in. Floe's templates keep their frame; pair the boxes if a page comes to change it.
 func (m *marker) flush(next, nextBox *html.Node) {
 	if len(m.pending) == 0 {
 		return
@@ -798,7 +827,11 @@ func (m *marker) flush(next, nextBox *html.Node) {
 	case m.tail != nil:
 		parent, before = m.tail.Parent, m.tail.NextSibling
 	case m.last != nil:
-		if under := childOf(m.last, m.lastBox); under != nil {
+		under := childOf(m.last, m.lastBox)
+		if a := ancestorAt(m.last, m.depth); m.depth > 0 && a != nil {
+			under = a
+		}
+		if under != nil {
 			for under.NextSibling != nil && m.added[under.NextSibling] {
 				under = under.NextSibling
 			}
@@ -821,6 +854,17 @@ func (m *marker) flush(next, nextBox *html.Node) {
 	}
 	m.tail = m.pending[len(m.pending)-1]
 	m.pending = nil
+}
+
+// ancestorAt is n or its ancestor of depth d, nil when n is shallower.
+func ancestorAt(n *html.Node, d int) *html.Node {
+	for k := depth(n); k > d; k-- {
+		n = n.Parent
+	}
+	if n == nil || depth(n) != d {
+		return nil
+	}
+	return n
 }
 
 // childOf is the element that holds n (n itself too) whose parent is box: nil when box holds n not.
