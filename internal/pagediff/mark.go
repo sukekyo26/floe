@@ -103,10 +103,10 @@ type marker struct {
 	words      Words
 	// last is the later's element gone through last, in box, its section's box; tail what was put in after it last.
 	last, lastBox, tail *html.Node
-	// pending waits to go in; copyOf is the earlier's element the first of it is a copy of, which places it (goneAt), nil
-	// for what goes after last.
-	pending []*html.Node
-	copyOf  *html.Node
+	// pending waits to go in; copyOf is the earlier's element the first of it is a copy of, and goneOf the block gone in
+	// it, which place it (goneAt); nil for what goes after last.
+	pending        []*html.Node
+	copyOf, goneOf *html.Node
 	// later is the later's block or heading of each of the earlier's that is paired.
 	later map[*html.Node]*html.Node
 	// added is what floe put in; kept, the earlier's elements that hold a block the later keeps; copied, those copied.
@@ -143,8 +143,8 @@ type holdKey struct {
 
 func newMarker(root *html.Node, words Words) *marker {
 	return &marker{
-		root: root, body: bodyOf(root), words: words, last: nil, lastBox: nil, tail: nil, pending: nil, copyOf: nil,
-		later: map[*html.Node]*html.Node{},
+		root: root, body: bodyOf(root), words: words, last: nil, lastBox: nil, tail: nil, pending: nil,
+		copyOf: nil, goneOf: nil, later: map[*html.Node]*html.Node{},
 		added: map[*html.Node]bool{}, kept: map[*html.Node]bool{}, copied: map[*html.Node]bool{},
 		held: map[holdKey]bool{}, edits: nil, ordinals: map[*html.Node]map[*html.Node]int{}, gones: nil, branch: nil,
 		copies: 0, tables: tables{}, rows: map[*html.Node]*html.Node{}, lastRow: map[*html.Node]*html.Node{},
@@ -352,7 +352,7 @@ func (m *marker) copyGone(sec int, b *block, box *html.Node) {
 	}
 	m.copied[under] = true
 	if len(m.pending) == 0 {
-		m.copyOf = under
+		m.copyOf, m.goneOf = under, b.node
 	}
 	c := &goneCopy{
 		under: under, root: nil, of: nil, back: map[*html.Node]*html.Node{}, gone: nil, whole: whole,
@@ -833,7 +833,7 @@ func (m *marker) flush() {
 	case m.tail != nil:
 		parent, before = m.tail.Parent, m.tail.NextSibling
 	case m.copyOf != nil:
-		parent, before = m.goneAt(m.copyOf)
+		parent, before = m.goneAt(m.copyOf, m.goneOf)
 	default:
 		under := childOf(m.last, m.lastBox)
 		if under == nil {
@@ -846,32 +846,49 @@ func (m *marker) flush() {
 		m.added[n] = true
 	}
 	m.tail = m.pending[len(m.pending)-1]
-	m.pending, m.copyOf = nil, nil
+	m.pending, m.copyOf, m.goneOf = nil, nil, nil
 }
 
-// goneAt is where the copy of old, the earlier's element that holds what is gone, goes in the later: after the later's
-// of old, when it holds a block kept (a copy of its branches to what is gone); else after the later's of the nearest
-// sibling before it that holds one, else before the later's of the nearest after it, else so for its parent, else at
-// the end of body.
-// LIMIT: an element's later one is the element as far above the later's of its first block kept as it is above that
-// block: a page whose later version wraps or unwraps the blocks within it takes another.
-func (m *marker) goneAt(old *html.Node) (parent, before *html.Node) {
-	if later := m.laterOf(old); later != nil {
+// goneAt is where the copy of old, the earlier's element that holds gone, goes in the later: by the later's of the
+// element nearest it that holds a block kept. Of old itself (a copy of its branches to what is gone), before the
+// later's by its first block kept when gone comes before that block, else after the later's by its last; else after
+// the later's by the last block kept of the nearest sibling before it, else before the later's by the first of the
+// nearest after it, else so for its parent, else at the end of body.
+// LIMIT: an element's later one is the element as far above the later's of a block kept in it as it is above that
+// block, but body's child at most: a page whose later version wraps or unwraps the blocks within it takes another.
+func (m *marker) goneAt(old, gone *html.Node) (parent, before *html.Node) {
+	if later, first := m.laterOf(old, false); later != nil && comesBefore(old, gone, first) {
+		return later.Parent, later
+	}
+	if later, _ := m.laterOf(old, true); later != nil {
 		return m.after(later)
 	}
 	for n := old; n != nil && n.Parent != nil; n = n.Parent {
 		for s := n.PrevSibling; s != nil; s = s.PrevSibling {
-			if later := m.laterOf(s); later != nil {
+			if later, _ := m.laterOf(s, true); later != nil {
 				return m.after(later)
 			}
 		}
 		for s := n.NextSibling; s != nil; s = s.NextSibling {
-			if later := m.laterOf(s); later != nil {
+			if later, _ := m.laterOf(s, false); later != nil {
 				return later.Parent, later
 			}
 		}
 	}
 	return m.body, nil
+}
+
+// comesBefore tells whether x comes before y in root, in tree order.
+func comesBefore(root, x, y *html.Node) bool {
+	for d := range withSelf(root) {
+		switch d {
+		case x:
+			return true
+		case y:
+			return false
+		}
+	}
+	return false
 }
 
 // after is the place after n, past what floe put in after it.
@@ -882,32 +899,42 @@ func (m *marker) after(n *html.Node) (parent, before *html.Node) {
 	return n.Parent, n.NextSibling
 }
 
-// laterOf is the later's element of n, of the earlier: as far above the later's of the first block kept in n as n is
-// above that block. Nil when n holds none kept, or the later has nothing so far up.
-func (m *marker) laterOf(n *html.Node) *html.Node {
+// laterOf is the later's element of n, of the earlier, by block, the first block kept in n (its last, for last): the
+// element as far above block's later one as n is above block, but body's child at most. Nil when n holds none kept.
+func (m *marker) laterOf(n *html.Node, last bool) (later, block *html.Node) {
 	if !m.kept[n] {
-		return nil
+		return nil, nil
 	}
 	up := 0
 	for m.later[n] == nil {
-		c := n.FirstChild
-		for c != nil && !m.kept[c] {
-			c = c.NextSibling
-		}
+		c := keptChild(n, m.kept, last)
 		if c == nil {
-			return nil
+			return nil, nil
 		}
 		n = c
 		up++
 	}
-	later := m.later[n]
-	for ; up > 0 && later != nil; up-- {
+	later = m.later[n]
+	for ; up > 0 && later.Parent != nil && later.Parent != m.body; up-- {
 		later = later.Parent
 	}
-	if later == nil || later.Parent == nil {
-		return nil
+	return later, n
+}
+
+// keptChild is n's first child in kept (its last, for last), nil for none.
+func keptChild(n *html.Node, kept map[*html.Node]bool, last bool) *html.Node {
+	if last {
+		c := n.LastChild
+		for c != nil && !kept[c] {
+			c = c.PrevSibling
+		}
+		return c
 	}
-	return later
+	c := n.FirstChild
+	for c != nil && !kept[c] {
+		c = c.NextSibling
+	}
+	return c
 }
 
 // childOf is the element that holds n (n itself too) whose parent is box: nil when box holds n not.
