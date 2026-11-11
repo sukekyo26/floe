@@ -317,7 +317,7 @@ slug を書くと、タスクのプロジェクトは各ページのものです
 各図を `floe diagram render` と同じに確かめ、各部品の置かれた所を出します。線が狙った行に着いているか、ラベルが狙った範囲に入っているかを、絵を見ずに確かめられます。
 
 ```text
-page.yaml:9:11: diagram "The API" 560x190
+page.yaml:8:9: diagram "The API" 560x190
 frame "cloud" 20,20 300x150
 the heading of frame "cloud" 60,26 74.88x18
 the icon of frame "cloud" 20,20 31x31

@@ -45,7 +45,7 @@ func TestReadComputed(t *testing.T) {
 		{"empty", "", ""},
 		{"a list", "- a\n", "t1/computed.yaml:1:1: write computed.yaml as names and expressions, like total: sum(items, .price)"},
 		{"values", "x: [1]\ny:\nz: 3\n", lines(
-			"t1/computed.yaml:1:4: write computed.yaml as names and expressions, like total: sum(items, .price)",
+			"t1/computed.yaml:1:1: write computed.yaml as names and expressions, like total: sum(items, .price)",
 			"t1/computed.yaml:2:1: write computed.yaml as names and expressions, like total: sum(items, .price)",
 		)},
 		{"names", "zz: 1\n'true': 2\na: 3\nsum: 4\nin: 5\n'1a': 6\n", lines(

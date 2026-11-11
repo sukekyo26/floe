@@ -96,7 +96,7 @@ func TestDiagramLanguage(t *testing.T) {
 	// Two tags of one language stop the diagram, at its value (a LIMIT of Text).
 	twice := `{width: 300, height: 100, title: {en: Flow, ja: b, JA: a}, parts: [` +
 		`{box: {x: 900, y: 20, w: 80, h: 40, rows: [B]}}]}`
-	want := `d.yaml:7:19: JA and ja are one language, as a tag's case, or _ for -, does not tell languages apart: keep one`
+	want := `d.yaml:7:9: JA and ja are one language, as a tag's case, or _ for -, does not tell languages apart: keep one`
 	if got := drawn(t, k, diagramPage("en", twice), none); got != want {
 		t.Errorf("told\n%s\nwant\n%s", got, want)
 	}
@@ -114,7 +114,7 @@ func TestDiagramMistakes(t *testing.T) {
 	// At the box key of the item /parts/1, written after the box it overlaps; the icons' once, at no place, where
 	// Sorted puts those of no place: after d.yaml's, as the first diagram's mistake is d.yaml's.
 	want := lines(
-		`d.yaml:7:111: box "A" overlaps box "B"`,
+		`d.yaml:7:110: box "A" overlaps box "B"`,
 		`floe: there is no directory for icons, as HOME is not an absolute path; set FLOE_ICONS_DIR to an absolute path`,
 	)
 	if got := drawn(t, k, src, none); got != want {
@@ -146,7 +146,7 @@ func TestDiagramInStack(t *testing.T) {
 		t.Errorf("draws %d diagrams in a stack, want 2", got)
 	}
 	bad := head + "      - details: {title: d, parts: [{diagram: " + box("400") + "}]}\n"
-	if got, want := drawn(t, k, bad, none), `d.yaml:6:92: box "pic" sticks out of the 300x100 canvas`; got != want {
+	if got, want := drawn(t, k, bad, none), `d.yaml:6:91: box "pic" sticks out of the 300x100 canvas`; got != want {
 		t.Errorf("told %s, want %s", got, want)
 	}
 }
@@ -210,10 +210,10 @@ func TestOwnPartDiagrams(t *testing.T) {
 	overlap := `{width: 300, height: 100, title: o, parts: [{box: {x: 20, y: 20, w: 80, h: 40, rows: [A]}}, ` +
 		`{box: {x: 40, y: 30, w: 80, h: 40, rows: [B]}}]}`
 	for _, tt := range []struct{ src, want string }{
-		{"lang: en\ntemplate: mine\ntwo:\n  a: " + boxSpec + "\n  b: " + overlap + "\n", `d.yaml:5:99: box "A" overlaps box "B"`},
+		{"lang: en\ntemplate: mine\ntwo:\n  a: " + boxSpec + "\n  b: " + overlap + "\n", `d.yaml:5:98: box "A" overlaps box "B"`},
 		{"lang: en\ntemplate: mine\npic: {x: 1}\n", lines(
-			`d.yaml:3:7: additional properties 'x' not allowed`,
-			`d.yaml:3:7: missing properties 'title', 'parts'`,
+			`d.yaml:3:1: missing properties 'title', 'parts'`,
+			`d.yaml:3:10: additional properties 'x' not allowed`,
 		)},
 	} {
 		if got := drawn(t, k, tt.src, none); got != tt.want {

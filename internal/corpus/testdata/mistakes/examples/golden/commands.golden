@@ -3,8 +3,8 @@ exit 1
 --- stderr
 drawn.yaml:7:29: no example nope; use architecture, aws-graph, aws, class, er, flow, gantt, git, org, quadrant, sequence, state, swimlane, timeline, venn
 floe: AWS icons are not in $SAMPLE/.icons/aws; run "floe icons fetch aws" (downloads about 14MB from aws.amazon.com) and try again
-example.yaml:7:20: additional properties 'width' not allowed
-example.yaml:8:20: additional properties 'source' not allowed
+example.yaml:7:42: additional properties 'width' not allowed
+example.yaml:8:44: additional properties 'source' not allowed
 $ floe render --out-dir $TMP/pages/drawn.yaml drawn.yaml
 exit 1
 --- stderr
@@ -13,12 +13,12 @@ floe: AWS icons are not in $SAMPLE/.icons/aws; run "floe icons fetch aws" (downl
 $ floe render --out-dir $TMP/pages/example.yaml example.yaml
 exit 1
 --- stderr
-example.yaml:7:20: additional properties 'width' not allowed
-example.yaml:8:20: additional properties 'source' not allowed
+example.yaml:7:42: additional properties 'width' not allowed
+example.yaml:8:44: additional properties 'source' not allowed
 $ floe render --out-dir $TMP/together drawn.yaml example.yaml
 exit 1
 --- stderr
 drawn.yaml:7:29: no example nope; use architecture, aws-graph, aws, class, er, flow, gantt, git, org, quadrant, sequence, state, swimlane, timeline, venn
 floe: AWS icons are not in $SAMPLE/.icons/aws; run "floe icons fetch aws" (downloads about 14MB from aws.amazon.com) and try again
-example.yaml:7:20: additional properties 'width' not allowed
-example.yaml:8:20: additional properties 'source' not allowed
+example.yaml:7:42: additional properties 'width' not allowed
+example.yaml:8:44: additional properties 'source' not allowed

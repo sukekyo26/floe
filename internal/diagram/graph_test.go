@@ -71,14 +71,14 @@ func TestGraphMistakes(t *testing.T) {
 		{
 			"a name given twice",
 			strings.Replace(g1, "      edges:", "        - box: { name: write, rows: [Again] }\n      edges:", 1),
-			`s.yaml:10:18: the name "write" is given before: give each part, row and node its own name`,
+			`s.yaml:10:11: the name "write" is given before: give each part, row and node its own name`,
 		},
 		{"a label of a number", strings.Replace(g1, "to: check }", "to: check, label: 3 }", 1), `s.yaml:11:44: got number, want string or object`},
 		{"a diamond", strings.Replace(g1, "to: check }", "to: check, end: diamond }", 1), `s.yaml:11:42: value must be one of 'none', 'arrow'`},
 		{"x past a million", strings.Replace(g1, "x: 20\n", "x: 1000001\n", 1), `s.yaml:4:10: maximum: got 1.000001×10⁰⁶, want 1×10⁰⁶`},
 		{"up", strings.Replace(g1, "y: 20\n", "y: 20\n      direction: up\n", 1), `s.yaml:6:18: value must be one of 'down', 'right'`},
-		{"a box placed", strings.Replace(g1, "{ name: show,", "{ name: show, x: 10,", 1), `s.yaml:9:18: additional properties 'x' not allowed`},
-		{"201 boxes", many.String(), `s.yaml:7:9: maxItems: got 201, want 200`},
+		{"a box placed", strings.Replace(g1, "{ name: show,", "{ name: show, x: 10,", 1), `s.yaml:9:33: additional properties 'x' not allowed`},
+		{"201 boxes", many.String(), `s.yaml:6:7: maxItems: got 201, want 200`},
 		{"4,001 ranks passed", long.String(), `s.yaml: graph: the edges of this diagram's graphs pass 4001 ranks between their ends, more than 4000: split the diagram`},
 	} {
 		if _, got := draw(t, c.src, inspect); got != c.want {
@@ -178,7 +178,7 @@ parts:
 	for _, c := range []struct {
 		name, src, want string
 	}{
-		{"an empty group", strings.Replace(strings.Replace(gg, "                  nodes:\n                    - box: { name: store, rows: [Store] }\n", "                  nodes: []\n", 1), "        - { from: api, to: store }\n", "", 1), `s.yaml:15:26: minItems: got 0, want 1`},
+		{"an empty group", strings.Replace(strings.Replace(gg, "                  nodes:\n                    - box: { name: store, rows: [Store] }\n", "                  nodes: []\n", 1), "        - { from: api, to: store }\n", "", 1), `s.yaml:15:19: minItems: got 0, want 1`},
 		{"a name of none", edge("{ from: cli, to: servr }"), `s.yaml:21:28: edge: no box, icon or group of this graph named "servr"`},
 		{"from a box the group holds", edge("{ from: api, to: server }"), `s.yaml:21:19: edge "api"→"server": both ends are group "server" or inside it; end the edge at a box, an icon or another group outside "server"`},
 		{"to a box the group holds", edge("{ from: server, to: store }"), `s.yaml:21:31: edge "server"→"store": both ends are group "server" or inside it; end the edge at a box, an icon or another group outside "server"`},
@@ -187,22 +187,22 @@ parts:
 		{"a box among the group's ranks", edge("{ from: api, to: x }\n        - { from: x, to: store }\n        - { from: x, to: server }"), `s.yaml:23:19: edge "x"→"server": "x" can stand neither above group "server" nor below it, as "api" stands no lower than it and "store" no higher; end the edge at a box or an icon in "server"`},
 		{"to a box among the group's ranks", edge("{ from: api, to: x }\n        - { from: x, to: store }\n        - { from: server, to: x }"), `s.yaml:23:31: edge "server"→"x": "x" can stand neither above group "server" nor below it, as "api" stands no lower than it and "store" no higher; end the edge at a box or an icon in "server"`},
 		{"a group among another's ranks", tangled, `s.yaml:12:19: edge "h"→"g": "h" can stand neither above group "g" nor below it, as "g1" stands no lower than it and "g2" no higher; end the edge at a box or an icon in "g"`},
-		{"a group named as a box before it", strings.Replace(gg, "name: server", "name: cli", 1), `s.yaml:9:13: the name "cli" is given before: give each part, row and node its own name`},
-		{"a box named as a group before it", strings.Replace(gg, "name: x,", "name: server,", 1), `s.yaml:17:18: the name "server" is given before: give each part, row and node its own name`},
-		{"200 boxes and 2 groups", many.String(), `s.yaml:4:7: graph: 202 boxes, icons, groups and lanes, past 200; split it into graphs`},
-		{"200 icons and a group", icons.String(), `s.yaml:4:7: graph: 201 boxes, icons, groups and lanes, past 200; split it into graphs`},
-		{"101 lanes and 101 boxes", laneful.String(), `s.yaml:4:7: graph: 202 boxes, icons, groups and lanes, past 200; split it into graphs`},
+		{"a group named as a box before it", strings.Replace(gg, "name: server", "name: cli", 1), `s.yaml:8:11: the name "cli" is given before: give each part, row and node its own name`},
+		{"a box named as a group before it", strings.Replace(gg, "name: x,", "name: server,", 1), `s.yaml:17:11: the name "server" is given before: give each part, row and node its own name`},
+		{"200 boxes and 2 groups", many.String(), `s.yaml:3:5: graph: 202 boxes, icons, groups and lanes, past 200; split it into graphs`},
+		{"200 icons and a group", icons.String(), `s.yaml:3:5: graph: 201 boxes, icons, groups and lanes, past 200; split it into graphs`},
+		{"101 lanes and 101 boxes", laneful.String(), `s.yaml:3:5: graph: 202 boxes, icons, groups and lanes, past 200; split it into graphs`},
 		{"from a lane", lane("{ from: user, to: build }"), `s.yaml:16:19: edge "user"→"build": "user" is a lane, from end to end of the graph; end the edge at a box, an icon or a group in it`},
 		{"to a lane", lane("{ from: ask, to: dev }"), `s.yaml:16:28: edge "ask"→"dev": "dev" is a lane, from end to end of the graph; end the edge at a box, an icon or a group in it`},
 		{"from a lane to a lane", lane("{ from: user, to: dev }"), `s.yaml:16:19: edge "user"→"dev": "user" is a lane, from end to end of the graph; end the edge at a box, an icon or a group in it`},
 		{"from a lane to a box it holds", lane("{ from: dev, to: build }"), `s.yaml:16:28: edge "dev"→"build": both ends are group "dev" or inside it; end the edge at a box, an icon or another group outside "dev"`},
-		{"a box among the lanes", strings.Replace(lanes, "      lanes:\n", "      lanes:\n        - box: { name: z, rows: [Z] }\n", 1), "s.yaml:7:11: additional properties 'box' not allowed\ns.yaml:7:11: missing property 'nodes'"},
+		{"a box among the lanes", strings.Replace(lanes, "      lanes:\n", "      lanes:\n        - box: { name: z, rows: [Z] }\n", 1), "s.yaml:7:9: missing property 'nodes'\ns.yaml:7:11: additional properties 'box' not allowed"},
 		{"to a group in a lane", lane("{ from: ask, to: tools }"), ""},
-		{"nodes beside lanes", strings.Replace(lanes, "      edges:\n", "      nodes:\n        - box: { name: z, rows: [Z] }\n      edges:\n", 1), `s.yaml:4:7: additional properties 'nodes' not allowed`},
+		{"nodes beside lanes", strings.Replace(lanes, "      edges:\n", "      nodes:\n        - box: { name: z, rows: [Z] }\n      edges:\n", 1), `s.yaml:14:7: additional properties 'nodes' not allowed`},
 		{
 			"nodes beside lanes in the second graph", "title: T\nparts:\n  - graph:\n      x: 10\n      y: 10\n      nodes: [{ box: { name: c, rows: [c] } }]\n" +
 				"  - graph:\n      x: 10\n      y: 200\n      lanes: [{ name: team, nodes: [{ box: { name: a, rows: [a] } }] }]\n      nodes: [{ box: { name: b, rows: [b] } }]\n",
-			`s.yaml:8:7: additional properties 'nodes' not allowed`,
+			`s.yaml:11:7: additional properties 'nodes' not allowed`,
 		},
 	} {
 		if _, got := draw(t, c.src, inspect); got != c.want {
@@ -267,7 +267,7 @@ func TestGraphBlame(t *testing.T) {
 		},
 	} {
 		lines := strings.Count(c.graph, "\n") + 1
-		if _, got := draw(t, c.graph+c.part, inspect); got != strings.ReplaceAll(fmt.Sprintf("s.yaml:%d:5: ", lines)+c.want, "@", fmt.Sprintf("s.yaml:%d:5", lines)) {
+		if _, got := draw(t, c.graph+c.part, inspect); got != strings.ReplaceAll(fmt.Sprintf("s.yaml:%d:3: ", lines)+c.want, "@", fmt.Sprintf("s.yaml:%d:3", lines)) {
 			t.Errorf("%s:\n  told %q\n  want at line %d %q", c.name, got, lines, c.want)
 		}
 		// The part by hand first, at line 3, and the graph after it: told at the same part, its words in the order
@@ -275,7 +275,7 @@ func TestGraphBlame(t *testing.T) {
 		first := "title: T\nparts:\n" + c.part + strings.TrimPrefix(c.graph, "title: T\nparts:\n")
 		_, got := draw(t, first, inspect)
 		told := strings.Split(got, "\n")
-		if len(told) != strings.Count(c.want, "\n")+1 || slices.ContainsFunc(told, func(s string) bool { return !strings.HasPrefix(s, "s.yaml:3:5: ") }) {
+		if len(told) != strings.Count(c.want, "\n")+1 || slices.ContainsFunc(told, func(s string) bool { return !strings.HasPrefix(s, "s.yaml:3:3: ") }) {
 			t.Errorf("%s, written first:\n  told %q\n  want each at line 3", c.name, got)
 		}
 	}
@@ -283,8 +283,8 @@ func TestGraphBlame(t *testing.T) {
 	// An icon's label across the frame of another graph is told at its graph, once for each edge crossed.
 	const across = "title: T\nparts:\n  - graph:\n      x: 20\n      y: 20\n      nodes:\n        - group: { name: g1, label: g1, nodes: [{ box: { name: a, rows: [A] } }] }\n" +
 		"  - graph:\n      x: 30\n      y: 34\n      nodes:\n        - icon: { name: l, icon: aws/aws-lambda, label: A long Lambda function name that is wide }\n"
-	if _, got := draw(t, across, inspect); got != `s.yaml:9:7: label "A long Lambda function name that is wide" straddles the edge of frame "g1" of another graph at x 92, spanning 30 to 328; move one of the graphs by its x and y`+"\n"+
-		`s.yaml:9:7: label "A long Lambda function name that is wide" straddles the edge of frame "g1" of another graph at y 91, spanning 85 to 103; move one of the graphs by its x and y` {
+	if _, got := draw(t, across, inspect); got != `s.yaml:8:5: label "A long Lambda function name that is wide" straddles the edge of frame "g1" of another graph at x 92, spanning 30 to 328; move one of the graphs by its x and y`+"\n"+
+		`s.yaml:8:5: label "A long Lambda function name that is wide" straddles the edge of frame "g1" of another graph at y 91, spanning 85 to 103; move one of the graphs by its x and y` {
 		t.Errorf("an icon's label across another graph's frame:\n  told %q", got)
 	}
 
@@ -292,16 +292,16 @@ func TestGraphBlame(t *testing.T) {
 	// box, to move a graph.
 	second := strings.NewReplacer("x: 20", "x: 100", "y: 20", "y: 125", "write", "write2", "check", "check2", "show", "show2").
 		Replace(strings.TrimPrefix(g2, "title: T\nparts:\n"))
-	if _, got := draw(t, g2+second, inspect); got != `s.yaml:15:7: box "write2" overlaps label "yes" of another graph; move one of the graphs by its x and y`+"\n"+
-		`s.yaml:15:7: edge "write2"→"check2" runs through box "show" of another graph; move one of the graphs by its x and y` {
+	if _, got := draw(t, g2+second, inspect); got != `s.yaml:14:5: box "write2" overlaps label "yes" of another graph; move one of the graphs by its x and y`+"\n"+
+		`s.yaml:14:5: edge "write2"→"check2" runs through box "show" of another graph; move one of the graphs by its x and y` {
 		t.Errorf("two graphs: told %q", got)
 	}
 
 	// Off the canvas, what a graph laid out is told at the graph, to move it.
 	_, got := draw(t, "width: 100\n"+g1, inspect)
 	told := strings.Split(got, "\n")
-	if !slices.Contains(told, `s.yaml:5:7: box "write" sticks out of the 100x175 canvas; move its graph by its x and y, or widen the canvas by its width and height (or leave them out)`) ||
-		slices.ContainsFunc(told, func(s string) bool { return !strings.HasPrefix(s, "s.yaml:5:7: ") }) {
+	if !slices.Contains(told, `s.yaml:4:5: box "write" sticks out of the 100x175 canvas; move its graph by its x and y, or widen the canvas by its width and height (or leave them out)`) ||
+		slices.ContainsFunc(told, func(s string) bool { return !strings.HasPrefix(s, "s.yaml:4:5: ") }) {
 		t.Errorf("off the canvas: told %q", got)
 	}
 }
@@ -515,7 +515,7 @@ parts:
       edges:
         - { from: a, to: b, level: true }
         - { from: a, to: b }
-`, `s.yaml:11:13: edge "a"→"b": "a" and "b" stand in one rank by level edges, so this edge cannot run from one rank to another; end it elsewhere, or drop level from the edges joining them`},
+`, `s.yaml:11:9: edge "a"→"b": "a" and "b" stand in one rank by level edges, so this edge cannot run from one rank to another; end it elsewhere, or drop level from the edges joining them`},
 		{"a box of the block written between", `title: T
 parts:
   - graph:
@@ -904,7 +904,7 @@ func TestGraphHeadRoomByHand(t *testing.T) {
 	const src = "width: 500\nheight: 300\ntitle: T\nparts:\n  - graph:\n      x: 20\n      y: 60\n      nodes:\n" +
 		"        - group: { name: g, label: A long heading of the frame here, nodes: [{ box: { name: a, rows: [a] } }] }\n" +
 		"  - edge: { from: [300, 0], to: a%s }\n"
-	want := `s.yaml:10:5: edge [300,0]→"a" runs through the heading of frame "g"; move one of them, or go round it by via`
+	want := `s.yaml:10:3: edge [300,0]→"a" runs through the heading of frame "g"; move one of them, or go round it by via`
 	if _, told := draw(t, fmt.Sprintf(src, ""), inspect); told != want {
 		t.Errorf("told %q, want %q", told, want)
 	}

@@ -25,8 +25,8 @@ type Data struct {
 	Where map[string]yamlpos.Pos
 }
 
-// PosOf returns where the value at the path at (keys and indexes) is written in d: the value, or its key when
-// it is left out; no line, for the file alone, where it leads to no value written (yamlpos.Locate).
+// PosOf returns where the value at the path at (keys and indexes) is written in d, as yamlpos.Locate places it; no
+// line, for the file alone, where it leads to no value written.
 func (d *Data) PosOf(at []string) yamlpos.Pos {
 	pos, _ := yamlpos.Locate(d.Root, at)
 	return pos

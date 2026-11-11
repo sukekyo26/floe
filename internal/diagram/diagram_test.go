@@ -164,29 +164,29 @@ func TestShapeMistakes(t *testing.T) {
 		parts, want string
 	}{
 		{"  - boxx: {}", "s.yaml:5:5: additional properties 'boxx' not allowed"},
-		{"  - {}", "s.yaml:5:5: minProperties: got 0, want 1"},
+		{"  - {}", "s.yaml:5:3: minProperties: got 0, want 1"},
 		{"  - box: { x: 1, y: 1, rows: [a], tone: blue }", "s.yaml:5:41: value must be one of 'accent', 'good', 'warn', 'bad', 'muted'"},
-		{"  - box: { y: 1, rows: [a] }", "s.yaml:5:12: missing property 'x'"},
-		{"  - box: { x: 1, y: 1, rows: [{ ja: あ }] }", "s.yaml:5:33: missing property 'en'"},
+		{"  - box: { y: 1, rows: [a] }", "s.yaml:5:5: missing property 'x'"},
+		{"  - box: { x: 1, y: 1, rows: [{ ja: あ }] }", "s.yaml:5:31: missing property 'en'"},
 		{"  - box: { x: 1, y: 1, rows: [a], w: 0 }", "s.yaml:5:38: minimum: got 0, want 1"},
-		{"  - edge: { from: a, to: b, d: M1 }", "s.yaml:5:13: additional properties 'd' not allowed"},
+		{"  - edge: { from: a, to: b, d: M1 }", "s.yaml:5:32: additional properties 'd' not allowed"},
 		{"  - edge: { from: a, to: b, fromSide: up }", "s.yaml:5:39: value must be one of 'top', 'right', 'bottom', 'left'"},
-		{"  - label: { text: a }", "s.yaml:5:14: missing properties 'x', 'y'"},
-		{"  - label: { text: a, x: 1 }", "s.yaml:5:14: missing property 'y'"},
-		{"  - circle: { name: c, cx: 1, cy: 1, r: 1 }\n  - label: { text: a, x: 1, in: [c] }", "s.yaml:6:14: properties 'y' required, if 'x' exists"},
-		{"  - edge: { from: [1, 2, 3], to: b }", "s.yaml:5:19: maxItems: got 3, want 2"},
+		{"  - label: { text: a }", "s.yaml:5:5: missing properties 'x', 'y'"},
+		{"  - label: { text: a, x: 1 }", "s.yaml:5:5: missing property 'y'"},
+		{"  - circle: { name: c, cx: 1, cy: 1, r: 1 }\n  - label: { text: a, x: 1, in: [c] }", "s.yaml:6:5: properties 'y' required, if 'x' exists"},
+		{"  - edge: { from: [1, 2, 3], to: b }", "s.yaml:5:13: maxItems: got 3, want 2"},
 		// A point of via is either shape, each told in the library's words of its own: oneOf would say none matched.
 		{"  - edge: { from: a, to: b, via: [{}] }", "s.yaml:5:35: minProperties: got 0, want 1"},
-		{"  - edge: { from: a, to: b, via: [{ z: 1 }] }", "s.yaml:5:37: additional properties 'z' not allowed"},
+		{"  - edge: { from: a, to: b, via: [{ z: 1 }] }", "s.yaml:5:40: additional properties 'z' not allowed"},
 		{"  - edge: { from: a, to: b, via: [[1]] }", "s.yaml:5:35: minItems: got 1, want 2"},
 		{"  - edge: { from: a, to: b, via: [[1, 2, 3]] }", "s.yaml:5:35: maxItems: got 3, want 2"},
 		{"  - edge: { from: a, to: b, via: [140] }", "s.yaml:5:35: got number, want array or object"},
 		{"  - edge: { from: a, to: b, via: [{ x: a }] }", "s.yaml:5:40: got string, want number"},
 		{"  - axis: { x1: 1, x2: 9, y: 1, ticks: [], labels: Between }", "s.yaml:5:52: value must be one of 'at', 'between'"},
-		{"  - box: { x: 1, y: 1, rows: [a], zz: 1, aa: 1, mm: 1 }", "s.yaml:5:12: additional properties 'aa', 'mm', 'zz' not allowed"},
+		{"  - box: { x: 1, y: 1, rows: [a], zz: 1, aa: 1, mm: 1 }", "s.yaml:5:5: additional properties 'aa', 'mm', 'zz' not allowed"},
 		// A label placed by its region takes no anchor; one at x and y does.
-		{"  - circle: { name: c, cx: 100, cy: 100, r: 80 }\n  - label: { text: a, in: [c], anchor: start }", "s.yaml:6:14: properties 'x' required, if 'anchor' exists"},
-		{"  - circle: { name: c, cx: 100, cy: 100, r: 80 }\n  - label: { text: a, in: [c], x: 100, anchor: start }", "s.yaml:6:14: properties 'y' required, if 'x' exists"},
+		{"  - circle: { name: c, cx: 100, cy: 100, r: 80 }\n  - label: { text: a, in: [c], anchor: start }", "s.yaml:6:5: properties 'x' required, if 'anchor' exists"},
+		{"  - circle: { name: c, cx: 100, cy: 100, r: 80 }\n  - label: { text: a, in: [c], x: 100, anchor: start }", "s.yaml:6:5: properties 'y' required, if 'x' exists"},
 		{"  - circle: { name: c, cx: 100, cy: 100, r: 80 }\n  - label: { text: a, in: [c], x: 100, y: 100, anchor: start }", ""},
 		{"  - label: { text: a, x: 100, y: 100, anchor: end }", ""},
 	} {
@@ -217,34 +217,34 @@ func TestLayoutMistakes(t *testing.T) {
 	}{
 		{
 			"  - box: { x: 20, y: 20, rows: [{ en: A, ja: あ }] }\n  - box: { name: b, x: 30, y: 30, rows: [{ en: B, ja: い }] }",
-			`s.yaml:6:5: box "あ" overlaps box "b"`,
+			`s.yaml:6:3: box "あ" overlaps box "b"`,
 		},
-		{"  - box: { name: a, x: 20, y: 20, rows: [A] }\n  - box: { name: a, x: 200, y: 20, rows: [B] }", `s.yaml:6:5: the name "a" is given before: give each part, row and node its own name`},
-		{"  - edge: { from: chek, to: [10, 10] }", `s.yaml:5:5: edge: no part, row or node named "chek"`},
+		{"  - box: { name: a, x: 20, y: 20, rows: [A] }\n  - box: { name: a, x: 200, y: 20, rows: [B] }", `s.yaml:6:3: the name "a" is given before: give each part, row and node its own name`},
+		{"  - edge: { from: chek, to: [10, 10] }", `s.yaml:5:3: edge: no part, row or node named "chek"`},
 		{
 			"  - circle: { name: c, cx: 100, cy: 100, r: 50 }\n  - edge: { from: c, to: [300, 10] }",
-			`s.yaml:6:5: edge: "c" is a circle, which no edge can end at: end it at a box, a table or its named row, an icon, a frame, a bar, a dot or a point`,
+			`s.yaml:6:3: edge: "c" is a circle, which no edge can end at: end it at a box, a table or its named row, an icon, a frame, a bar, a dot or a point`,
 		},
 		{
 			"  - edge: { from: [10, 10], fromSide: top, to: [300, 10] }",
-			`s.yaml:5:5: edge: [10,10] has no side top: write the side of a box, a table, an icon, a frame or a bar, left or right of a row, and none for a dot or a point`,
+			`s.yaml:5:3: edge: [10,10] has no side top: write the side of a box, a table, an icon, a frame or a bar, left or right of a row, and none for a dot or a point`,
 		},
 		{
 			"  - table: { x: 20, y: 20, title: T, rows: [{ name: r, cells: [a] }] }\n  - edge: { from: r, fromSide: top, to: [300, 10] }",
-			`s.yaml:6:5: edge: "r" has no side top: write the side of a box, a table, an icon, a frame or a bar, left or right of a row, and none for a dot or a point`,
+			`s.yaml:6:3: edge: "r" has no side top: write the side of a box, a table, an icon, a frame or a bar, left or right of a row, and none for a dot or a point`,
 		},
 		{
 			"  - edge: { from: [10, 100], to: [390, 100] }\n  - edge: { from: [200, 10], to: [200, 190] }",
-			"s.yaml:6:5: edge [10,100]→[390,100] crosses edge [200,10]→[200,190] at 200,100; move one of them, or add crossing: true to one if it cannot be avoided",
+			"s.yaml:6:3: edge [10,100]→[390,100] crosses edge [200,10]→[200,190] at 200,100; move one of them, or add crossing: true to one if it cannot be avoided",
 		},
-		{"  - label: { text: hi, x: 500, y: 20 }", `s.yaml:5:5: label "hi" sticks out of the 400x200 canvas`},
+		{"  - label: { text: hi, x: 500, y: 20 }", `s.yaml:5:3: label "hi" sticks out of the 400x200 canvas`},
 		{
 			"  - circle: { name: a, cx: 100, cy: 100, r: 60 }\n  - label: { text: a long label here, x: 100, y: 100, in: [a] }",
-			`s.yaml:6:5: label "a long label here" is not all inside a and outside the other circles: move it, or leave out x and y for floe to place it`,
+			`s.yaml:6:3: label "a long label here" is not all inside a and outside the other circles: move it, or leave out x and y for floe to place it`,
 		},
 		{
 			"  - circle: { name: a, cx: 100, cy: 100, r: 20 }\n  - label: { text: a label far too wide for it, in: [a] }",
-			`s.yaml:6:5: label "a label far too wide for it" finds no room inside a and outside the other circles: make that area larger, or the text shorter`,
+			`s.yaml:6:3: label "a label far too wide for it" finds no room inside a and outside the other circles: make that area larger, or the text shorter`,
 		},
 		{"  - raw: { svg: '<rect/></svg><p>x</p>' }", "s.yaml:5:17: raw SVG holds <p>, " + rawWords},
 		{"  - raw: { svg: '<foreignObject><div/></foreignObject>' }", "s.yaml:5:17: raw SVG holds <foreignObject>, " + rawWords},
@@ -273,37 +273,37 @@ func TestLayoutMistakes(t *testing.T) {
 		{
 			"  - dot: { cx: 110, cy: 100 }\n  - label: { text: Dark mode, x: 122, y: 100, anchor: start }\n" +
 				"  - dot: { cx: 110, cy: 112 }\n  - label: { text: Share a note, x: 122, y: 112, anchor: start }",
-			"s.yaml:7:5: dot 103,93 14x14 overlaps dot 103,105 14x14\ns.yaml:8:5: label \"Dark mode\" overlaps label \"Share a note\"",
+			"s.yaml:7:3: dot 103,93 14x14 overlaps dot 103,105 14x14\ns.yaml:8:3: label \"Dark mode\" overlaps label \"Share a note\"",
 		},
-		{"  - label: { text: a note, x: 150, y: 100 }\n  - box: { name: a, x: 120, y: 80, w: 80, h: 40, rows: [a] }", `s.yaml:6:5: box "a" overlaps label "a note"`},
-		{"  - box: { name: a, x: 120, y: 80, w: 80, h: 40, rows: [a] }\n  - edge: { from: [20, 100], to: [300, 100] }", `s.yaml:6:5: edge [20,100]→[300,100] runs through box "a"; move one of them, or go round it by via`},
-		{"  - edge: { from: [20, 100], to: [300, 100] }\n  - box: { name: a, x: 120, y: 80, w: 80, h: 40, rows: [a] }", `s.yaml:6:5: edge [20,100]→[300,100] runs through box "a"; move one of them, or go round it by via`},
-		{"  - frame: { x: 10, y: 10, w: 200, h: 180, label: F }\n  - box: { name: a, x: 180, y: 80, w: 80, h: 40, rows: [a] }", `s.yaml:6:5: box "a" straddles the edge of frame "F" at x 210, spanning 180 to 260`},
-		{"  - box: { name: a, x: 180, y: 80, w: 80, h: 40, rows: [a] }\n  - frame: { x: 10, y: 10, w: 200, h: 180, label: F }", `s.yaml:6:5: box "a" straddles the edge of frame "F" at x 210, spanning 180 to 260`},
+		{"  - label: { text: a note, x: 150, y: 100 }\n  - box: { name: a, x: 120, y: 80, w: 80, h: 40, rows: [a] }", `s.yaml:6:3: box "a" overlaps label "a note"`},
+		{"  - box: { name: a, x: 120, y: 80, w: 80, h: 40, rows: [a] }\n  - edge: { from: [20, 100], to: [300, 100] }", `s.yaml:6:3: edge [20,100]→[300,100] runs through box "a"; move one of them, or go round it by via`},
+		{"  - edge: { from: [20, 100], to: [300, 100] }\n  - box: { name: a, x: 120, y: 80, w: 80, h: 40, rows: [a] }", `s.yaml:6:3: edge [20,100]→[300,100] runs through box "a"; move one of them, or go round it by via`},
+		{"  - frame: { x: 10, y: 10, w: 200, h: 180, label: F }\n  - box: { name: a, x: 180, y: 80, w: 80, h: 40, rows: [a] }", `s.yaml:6:3: box "a" straddles the edge of frame "F" at x 210, spanning 180 to 260`},
+		{"  - box: { name: a, x: 180, y: 80, w: 80, h: 40, rows: [a] }\n  - frame: { x: 10, y: 10, w: 200, h: 180, label: F }", `s.yaml:6:3: box "a" straddles the edge of frame "F" at x 210, spanning 180 to 260`},
 		{
 			"  - box: { name: a, x: 20, y: 20, w: 100, h: 40, rows: [a] }\n  - box: { name: b, x: 200, y: 20, w: 100, h: 40, rows: [b] }\n" +
 				"  - box: { name: c, x: 60, y: 30, w: 200, h: 30, rows: [c] }",
-			"s.yaml:7:5: box \"a\" overlaps box \"c\"\ns.yaml:7:5: box \"b\" overlaps box \"c\"",
+			"s.yaml:7:3: box \"a\" overlaps box \"c\"\ns.yaml:7:3: box \"b\" overlaps box \"c\"",
 		},
 		{
 			"  - box: { name: a, x: 120, y: 60, w: 80, h: 40, rows: [a] }\n  - edge: { from: [20, 106], to: [300, 106], label: a long edge label here }",
-			`s.yaml:6:5: box "a" overlaps label "a long edge label here"`,
+			`s.yaml:6:3: box "a" overlaps label "a long edge label here"`,
 		},
 		// Two parts named in the same words, told at one place, are told once (LIMIT in tell).
 		{
 			"  - box: { x: 20, y: 20, w: 60, h: 40, rows: [S] }\n  - box: { x: 90, y: 20, w: 60, h: 40, rows: [S] }\n  - label: { text: across both, x: 85, y: 40 }",
-			`s.yaml:7:5: box "S" overlaps label "across both"`,
+			`s.yaml:7:3: box "S" overlaps label "across both"`,
 		},
 		// A part with no name is named by its text in the language it is laid out as wide as (by code's widths in a code
 		// row), else by where it stands.
 		{
 			"  - label: { text: { en: Decide what to build, ja: \"作るものと作らないものを、使う人と話して決める\" }, x: 16, y: 44, anchor: start }\n" +
 				"  - bar: { x1: 200, x2: 280, y: 44 }",
-			`s.yaml:6:5: bar 200,37 80x14 overlaps label "作るものと作らないものを、使う人と話して決める"`,
+			`s.yaml:6:3: bar 200,37 80x14 overlaps label "作るものと作らないものを、使う人と話して決める"`,
 		},
 		{
 			"  - frame: { x: 10, y: 10, w: 250, h: 150 }\n  - frame: { x: 300, y: 100, w: 150, h: 40 }\n  - box: { x: 0, y: 140, w: 80, h: 40, rows: [A] }",
-			"s.yaml:6:5: frame 300,100 150x40 sticks out of the 400x200 canvas\ns.yaml:7:5: box \"A\" straddles the edge of frame 10,10 250x150 at x 10, spanning 0 to 80\ns.yaml:7:5: box \"A\" straddles the edge of frame 10,10 250x150 at y 160, spanning 140 to 180",
+			"s.yaml:6:3: frame 300,100 150x40 sticks out of the 400x200 canvas\ns.yaml:7:3: box \"A\" straddles the edge of frame 10,10 250x150 at x 10, spanning 0 to 80\ns.yaml:7:3: box \"A\" straddles the edge of frame 10,10 250x150 at y 160, spanning 140 to 180",
 		},
 		// A label's text is empty in no language, wherever a key takes one; rows and a table's title may be.
 		{"  - box: { name: a, x: 10, y: 30, w: 60, h: 30, rows: [a] }\n  - edge: { from: a, to: [200, 45], label: \"\" }", "s.yaml:6:44: minLength: got 0, want 1"},
@@ -319,67 +319,67 @@ func TestLayoutMistakes(t *testing.T) {
 		{"  - box: { x: 10, y: 30, rows: [\"\"] }\n  - box: { x: 100, y: 30, rows: [[\"\", sub]] }\n  - table: { x: 200, y: 10, title: \"\", rows: [[\"\", \"\"]] }", ""},
 		// Accepted, as the LIMITs of label and addAxis say: text of spaces, and a tick empty in one language, named by the other.
 		{"  - edge: { from: [10, 45], to: [200, 45], label: \" \" }", ""},
-		{"  - axis: { x1: 20, x2: 300, y: 100, ticks: [[160, { en: \"\", ja: 月 }]] }\n  - box: { name: b, x: 150, y: 100, w: 60, h: 30, rows: [b] }", `s.yaml:6:5: box "b" overlaps label "月"`},
+		{"  - axis: { x1: 20, x2: 300, y: 100, ticks: [[160, { en: \"\", ja: 月 }]] }\n  - box: { name: b, x: 150, y: 100, w: 60, h: 30, rows: [b] }", `s.yaml:6:3: box "b" overlaps label "月"`},
 		// A tick of no text in any language is a mark alone: nothing overlaps it or sticks out (an edge through it: f13).
 		{"  - axis: { x1: 20, x2: 300, y: 100, ticks: [[20, \"\"], [160, \"\"]] }\n  - box: { name: a, x: 150, y: 100, w: 60, h: 30, rows: [a] }", ""},
 		{"  - axis: { x1: 20, x2: 300, y: 100, ticks: [[20, { en: \"\", ja: \"\" }], [160, { en: \"\", ja: \"\" }]] }\n  - box: { name: a, x: 150, y: 100, w: 60, h: 30, rows: [a] }", ""},
 		{"  - axis: { x1: 10, x2: 396, y: 100, ticks: [[10, \"\"], [396, \"\"]] }", ""},
 		// A tick's text between ticks is checked as at one.
-		{"  - axis: { x1: 20, x2: 380, y: 100, ticks: [[20, Mon], [140, \"\"]], labels: between }\n  - box: { name: a, x: 60, y: 105, w: 40, h: 30, rows: [[a, sub]] }", `s.yaml:6:5: box "a" overlaps label "Mon"`},
-		{"  - box: { x: 20, y: 20, rows: [[{ en: \"あいう\", ja: \"abcde\" }, main code]] }\n  - box: { name: b, x: 30, y: 30, w: 80, h: 30, rows: [b] }", `s.yaml:6:5: box "abcde" overlaps box "b"`},
+		{"  - axis: { x1: 20, x2: 380, y: 100, ticks: [[20, Mon], [140, \"\"]], labels: between }\n  - box: { name: a, x: 60, y: 105, w: 40, h: 30, rows: [[a, sub]] }", `s.yaml:6:3: box "a" overlaps label "Mon"`},
+		{"  - box: { x: 20, y: 20, rows: [[{ en: \"あいう\", ja: \"abcde\" }, main code]] }\n  - box: { name: b, x: 30, y: 30, w: 80, h: 30, rows: [b] }", `s.yaml:6:3: box "abcde" overlaps box "b"`},
 		{
 			"  - circle: { name: A, cx: 150, cy: 100, r: 20 }\n  - label: { text: a much longer label than fits, in: [A] }",
-			"s.yaml:6:5: label \"a much longer label than fits\" finds no room inside A and outside the other circles: make that area larger, or the text shorter",
+			"s.yaml:6:3: label \"a much longer label than fits\" finds no room inside A and outside the other circles: make that area larger, or the text shorter",
 		},
-		{"  - circle: { cx: 390, cy: 100, r: 20 }", "s.yaml:5:5: circle 370,80 40x40 sticks out of the 400x200 canvas"},
+		{"  - circle: { cx: 390, cy: 100, r: 20 }", "s.yaml:5:3: circle 370,80 40x40 sticks out of the 400x200 canvas"},
 		// A label at x and y whose corner is on the circle's edge is in, wherever the circle stands; one 0.001 out is not.
 		{"  - circle: { name: A, cx: 100.3, cy: 100, r: 50 }\n  - label: { text: Mon, in: [A], x: 114.5, y: 131, plain: true }", ""},
 		{"  - circle: { name: A, cx: 117.3, cy: 100, r: 50 }\n  - label: { text: Mon, in: [A], x: 131.5, y: 131, plain: true }", ""},
 		{
 			"  - circle: { name: A, cx: 100.3, cy: 100, r: 50 }\n  - label: { text: Mon, in: [A], x: 114.5, y: 131.00125, plain: true }",
-			"s.yaml:6:5: label \"Mon\" is not all inside A and outside the other circles: move it, or leave out x and y for floe to place it",
+			"s.yaml:6:3: label \"Mon\" is not all inside A and outside the other circles: move it, or leave out x and y for floe to place it",
 		},
-		{"  - dot: { name: d, cx: 50, cy: 50 }\n  - box: { name: b, x: 40, y: 40, w: 60, h: 30, rows: [b] }", `s.yaml:6:5: box "b" overlaps dot "d"`},
+		{"  - dot: { name: d, cx: 50, cy: 50 }\n  - box: { name: b, x: 40, y: 40, w: 60, h: 30, rows: [b] }", `s.yaml:6:3: box "b" overlaps dot "d"`},
 		// Each check of the placement on its own.
-		{"  - frame: { x: 10, y: 10, w: 100, h: 100, label: F }\n  - box: { x: 80, y: 40, w: 60, h: 40, rows: [A] }", `s.yaml:6:5: box "A" straddles the edge of frame "F" at x 110, spanning 80 to 140`},
-		{"  - box: { name: b, x: 150, y: 80, w: 60, h: 40, rows: [B] }\n  - edge: { from: [100, 100], to: [300, 100] }", `s.yaml:6:5: edge [100,100]→[300,100] runs through box "b"; move one of them, or go round it by via`},
+		{"  - frame: { x: 10, y: 10, w: 100, h: 100, label: F }\n  - box: { x: 80, y: 40, w: 60, h: 40, rows: [A] }", `s.yaml:6:3: box "A" straddles the edge of frame "F" at x 110, spanning 80 to 140`},
+		{"  - box: { name: b, x: 150, y: 80, w: 60, h: 40, rows: [B] }\n  - edge: { from: [100, 100], to: [300, 100] }", `s.yaml:6:3: edge [100,100]→[300,100] runs through box "b"; move one of them, or go round it by via`},
 		// A label part written at an x and y straddles a frame as a box does, by its box; inside or outside one, or
 		// across frames that cross, as a box would.
-		{"  - frame: { x: 10, y: 10, w: 100, h: 100, label: F }\n  - label: { text: across, x: 100, y: 50 }", `s.yaml:6:5: label "across" straddles the edge of frame "F" at x 110, spanning 73.4 to 126.6`},
+		{"  - frame: { x: 10, y: 10, w: 100, h: 100, label: F }\n  - label: { text: across, x: 100, y: 50 }", `s.yaml:6:3: label "across" straddles the edge of frame "F" at x 110, spanning 73.4 to 126.6`},
 		{"  - frame: { x: 10, y: 10, w: 100, h: 100, label: F }\n  - label: { text: in, x: 50, y: 50 }", ""},
 		{"  - frame: { x: 10, y: 10, w: 100, h: 100, label: F }\n  - label: { text: out, x: 200, y: 50 }", ""},
 		{
 			"  - frame: { x: 10, y: 10, w: 100, h: 100, label: F }\n  - frame: { x: 120, y: 10, w: 100, h: 100, label: G }\n  - frame: { x: 5, y: 60, w: 230, h: 40, square: true }\n" +
 				"  - label: { text: a heading across both, x: 20, y: 80, anchor: start }",
-			"s.yaml:8:5: label \"a heading across both\" straddles the edge of frame \"F\" at x 110, spanning 15 to 176.2\n" +
-				"s.yaml:8:5: label \"a heading across both\" straddles the edge of frame \"G\" at x 120, spanning 15 to 176.2",
+			"s.yaml:8:3: label \"a heading across both\" straddles the edge of frame \"F\" at x 110, spanning 15 to 176.2\n" +
+				"s.yaml:8:3: label \"a heading across both\" straddles the edge of frame \"G\" at x 120, spanning 15 to 176.2",
 		},
-		{"  - circle: { name: c, cx: 100, cy: 100, r: 90 }\n  - frame: { x: 10, y: 10, w: 100, h: 180, label: F }\n  - label: { text: across, x: 110, y: 100, in: [c] }", `s.yaml:7:5: label "across" straddles the edge of frame "F" at x 110, spanning 83.4 to 136.6`},
+		{"  - circle: { name: c, cx: 100, cy: 100, r: 90 }\n  - frame: { x: 10, y: 10, w: 100, h: 180, label: F }\n  - label: { text: across, x: 110, y: 100, in: [c] }", `s.yaml:7:3: label "across" straddles the edge of frame "F" at x 110, spanning 83.4 to 136.6`},
 		// One out of its region is told so alone.
 		{
 			"  - circle: { name: c, cx: 100, cy: 100, r: 90 }\n  - frame: { x: 10, y: 10, w: 100, h: 180, label: F }\n  - label: { text: across, x: 110, y: 20, in: [c] }",
-			`s.yaml:7:5: label "across" is not all inside c and outside the other circles: move it, or leave out x and y for floe to place it`,
+			`s.yaml:7:3: label "across" is not all inside c and outside the other circles: move it, or leave out x and y for floe to place it`,
 		},
 		// An edge's label written at an x and y, as a label part.
 		{
 			"  - frame: { x: 10, y: 10, w: 100, h: 100, label: F }\n  - edge: { from: [20, 150], to: [200, 150], label: a long note, at: [100, 50] }",
-			`s.yaml:6:5: label "a long note" straddles the edge of frame "F" at x 110, spanning 55.4 to 144.6`,
+			`s.yaml:6:3: label "a long note" straddles the edge of frame "F" at x 110, spanning 55.4 to 144.6`,
 		},
 		// Of a part that may not straddle a frame itself, as a box: an icon's, by hand or in a graph, and a bar's; told at
 		// the last written, the frame after the part at the frame's line.
 		{
 			"  - frame: { name: f, x: 20, y: 20, w: 120, h: 90 }\n  - icon: { name: a, x: 56, y: 50, icon: aws/aws-lambda, label: Lambda function }",
-			`s.yaml:6:5: label "Lambda function" straddles the edge of frame "f" at y 110, spanning 101 to 119`,
+			`s.yaml:6:3: label "Lambda function" straddles the edge of frame "f" at y 110, spanning 101 to 119`,
 		},
 		{
 			"  - icon: { name: a, x: 56, y: 50, icon: aws/aws-lambda, label: Lambda function }\n  - frame: { name: f, x: 20, y: 20, w: 120, h: 90 }",
-			`s.yaml:6:5: label "Lambda function" straddles the edge of frame "f" at y 110, spanning 101 to 119`,
+			`s.yaml:6:3: label "Lambda function" straddles the edge of frame "f" at y 110, spanning 101 to 119`,
 		},
 		{"  - frame: { name: f, x: 20, y: 20, w: 120, h: 90 }\n  - icon: { name: a, x: 56, y: 41, icon: aws/aws-lambda, label: Lambda function }", ""},
 		{"  - frame: { name: f, x: 20, y: 20, w: 120, h: 90 }\n  - icon: { name: a, x: 200, y: 50, icon: aws/aws-lambda, label: Lambda function }", ""},
 		{
 			"  - frame: { name: f, x: 0, y: 0, w: 300, h: 80 }\n  - graph:\n      x: 20\n      y: 20\n      nodes:\n        - icon: { name: l, icon: aws/aws-lambda, label: Lambda function name }",
-			`s.yaml:5:5: label "Lambda function name" straddles the edge of frame "f" at y 80, spanning 71 to 89`,
+			`s.yaml:5:3: label "Lambda function name" straddles the edge of frame "f" at y 80, spanning 71 to 89`,
 		},
 		{
 			"  - graph:\n      x: 20\n      y: 20\n      nodes:\n        - group: { name: g, label: G, nodes: [{ icon: { name: l, icon: aws/aws-lambda, label: A very long Lambda function name } }] }",
@@ -387,29 +387,29 @@ func TestLayoutMistakes(t *testing.T) {
 		},
 		{
 			"  - frame: { x: 10, y: 10, w: 100, h: 100, label: F }\n  - bar: { x1: 20, x2: 80, y: 50, label: a long bar label }",
-			`s.yaml:6:5: label "a long bar label" straddles the edge of frame "F" at x 110, spanning 85 to 210.2`,
+			`s.yaml:6:3: label "a long bar label" straddles the edge of frame "F" at x 110, spanning 85 to 210.2`,
 		},
 		{"  - frame: { x: 10, y: 10, w: 100, h: 100, label: F }\n  - bar: { x1: 20, x2: 40, y: 50, label: ok }", ""},
 		// Once for each edge crossed: a corner, a box wider than the frame; one that only touches an edge is not told.
 		{
 			"  - frame: { name: f, x: 20, y: 20, w: 120, h: 90 }\n  - box: { name: a, x: 100, y: 90, w: 80, h: 40, rows: [a] }",
-			`s.yaml:6:5: box "a" straddles the edge of frame "f" at x 140, spanning 100 to 180` + "\n" +
-				`s.yaml:6:5: box "a" straddles the edge of frame "f" at y 110, spanning 90 to 130`,
+			`s.yaml:6:3: box "a" straddles the edge of frame "f" at x 140, spanning 100 to 180` + "\n" +
+				`s.yaml:6:3: box "a" straddles the edge of frame "f" at y 110, spanning 90 to 130`,
 		},
 		{
 			"  - frame: { name: f, x: 20, y: 50, w: 120, h: 90 }\n  - box: { name: a, x: 10, y: 80, w: 200, h: 40, rows: [a] }",
-			`s.yaml:6:5: box "a" straddles the edge of frame "f" at x 140, spanning 10 to 210` + "\n" +
-				`s.yaml:6:5: box "a" straddles the edge of frame "f" at x 20, spanning 10 to 210`,
+			`s.yaml:6:3: box "a" straddles the edge of frame "f" at x 140, spanning 10 to 210` + "\n" +
+				`s.yaml:6:3: box "a" straddles the edge of frame "f" at x 20, spanning 10 to 210`,
 		},
 		{"  - frame: { name: f, x: 20, y: 20, w: 120, h: 90 }\n  - box: { name: a, x: 140, y: 40, w: 80, h: 40, rows: [a] }", ""},
 		// A dot and a bar, of no x and y to write, spanned as any part.
 		{
 			"  - frame: { name: f, x: 20, y: 20, w: 120, h: 90 }\n  - dot: { name: a, cx: 140, cy: 60 }",
-			`s.yaml:6:5: dot "a" straddles the edge of frame "f" at x 140, spanning 133 to 147`,
+			`s.yaml:6:3: dot "a" straddles the edge of frame "f" at x 140, spanning 133 to 147`,
 		},
 		{
 			"  - frame: { name: f, x: 20, y: 20, w: 120, h: 90 }\n  - bar: { x1: 100, x2: 200, y: 60 }",
-			`s.yaml:6:5: bar 100,53 100x14 straddles the edge of frame "f" at x 140, spanning 100 to 200`,
+			`s.yaml:6:3: bar 100,53 100x14 straddles the edge of frame "f" at x 140, spanning 100 to 200`,
 		},
 		// Not of those: an edge's in its middle, an axis's, a graph edge's, a label part's in its region (LIMIT in
 		// checkPlacement): not compared.
@@ -421,20 +421,20 @@ func TestLayoutMistakes(t *testing.T) {
 				"      edges:\n        - { from: a, to: b, label: a graph label }\n  - frame: { x: 120, y: 5, w: 200, h: 150, label: F }",
 			"",
 		},
-		{"  - label: { text: L, x: 200, y: 100 }\n  - edge: { from: [100, 100], to: [300, 100] }", `s.yaml:6:5: edge [100,100]→[300,100] runs through label "L"; move one of them, or go round it by via`},
-		{"  - box: { x: 20, y: 20, w: 80, h: 20, rows: [A, B] }", `s.yaml:5:5: box "A": its text needs a height of 46px or more; the box has 20px`},
-		{"  - box: { x: 20, y: -5, w: 60, h: 40, rows: [A] }", `s.yaml:5:5: box "A" sticks out of the 400x200 canvas`},
-		{"  - box: { x: 20, y: 180, w: 60, h: 40, rows: [A] }", `s.yaml:5:5: box "A" sticks out of the 400x200 canvas`},
-		{"  - edge: { from: [10, 10], to: [10, 10] }", "s.yaml:5:5: edge [10,10]→[10,10] starts where it ends: end it at another part or point"},
+		{"  - label: { text: L, x: 200, y: 100 }\n  - edge: { from: [100, 100], to: [300, 100] }", `s.yaml:6:3: edge [100,100]→[300,100] runs through label "L"; move one of them, or go round it by via`},
+		{"  - box: { x: 20, y: 20, w: 80, h: 20, rows: [A, B] }", `s.yaml:5:3: box "A": its text needs a height of 46px or more; the box has 20px`},
+		{"  - box: { x: 20, y: -5, w: 60, h: 40, rows: [A] }", `s.yaml:5:3: box "A" sticks out of the 400x200 canvas`},
+		{"  - box: { x: 20, y: 180, w: 60, h: 40, rows: [A] }", `s.yaml:5:3: box "A" sticks out of the 400x200 canvas`},
+		{"  - edge: { from: [10, 10], to: [10, 10] }", "s.yaml:5:3: edge [10,10]→[10,10] starts where it ends: end it at another part or point"},
 		{
 			"  - box: { name: a, x: 100, y: 20, w: 80, h: 29, rows: [a] }\n  - edge: { from: a, fromSide: left, to: a, toSide: left }",
-			"s.yaml:6:5: edge \"a\"→\"a\" starts where it ends: end it at another part or point",
+			"s.yaml:6:3: edge \"a\"→\"a\" starts where it ends: end it at another part or point",
 		},
 		{
 			"  - circle: { name: c, cx: 100, cy: 100, r: 60 }\n  - circle: { name: c, cx: 300, cy: 100, r: 5 }\n  - label: { text: x, in: [c] }",
-			`s.yaml:6:5: the name "c" is given before: give each part, row and node its own name`,
+			`s.yaml:6:3: the name "c" is given before: give each part, row and node its own name`,
 		},
-		{"  - icon: { icon: aws/amazon-ec2, x: 10, y: 10 }", `s.yaml:5:5: icon "aws/amazon-ec2": no icon "aws/amazon-ec2" (search with: floe icons search <word>)`},
+		{"  - icon: { icon: aws/amazon-ec2, x: 10, y: 10 }", `s.yaml:5:3: icon "aws/amazon-ec2": no icon "aws/amazon-ec2" (search with: floe icons search <word>)`},
 	} {
 		if _, got := draw(t, head+c.parts+"\n", render("en")); got != c.want {
 			t.Errorf("%s\n  told %q\n  want %q", c.parts, got, c.want)
@@ -443,7 +443,7 @@ func TestLayoutMistakes(t *testing.T) {
 	// A label keeps out of every other circle, one over the middle of its box or along an edge too, and is placed
 	// where none is: in the middle of the circles' boxes of one room.
 	venn := "width: 300\nheight: 300\ntitle: T\nparts:\n  - circle: { name: a, cx: 150, cy: 150, r: 140 }\n"
-	region := `s.yaml:7:5: label "only in a" is not all inside a and outside the other circles: move it, or leave out x and y for floe to place it`
+	region := `s.yaml:7:3: label "only in a" is not all inside a and outside the other circles: move it, or leave out x and y for floe to place it`
 	at := "  - label: { text: only in a, in: [a], x: 150, y: 150 }"
 	for _, c := range []struct{ parts, want string }{
 		{"  - circle: { name: b, cx: 150, cy: 150, r: 8 }\n" + at, region},
@@ -453,15 +453,15 @@ func TestLayoutMistakes(t *testing.T) {
 		{"  - circle: { name: c, cx: 230, cy: 150, r: 60 }\n  - label: { text: a and c, in: [a, c], x: 230, y: 150 }", ""},
 		{
 			"  - circle: { name: c, cx: 230, cy: 150, r: 60 }\n  - label: { text: a and c, in: [a, c], x: 200, y: 150 }",
-			`s.yaml:7:5: label "a and c" is not all inside a, c and outside the other circles: move it, or leave out x and y for floe to place it`,
+			`s.yaml:7:3: label "a and c" is not all inside a, c and outside the other circles: move it, or leave out x and y for floe to place it`,
 		},
 		{
 			"  - circle: { name: b, cx: 150, cy: 162, r: 5 }\n  - circle: { name: c, cx: 150, cy: 138, r: 5 }\n" + at,
-			strings.Replace(region, "7:5", "8:5", 1),
+			strings.Replace(region, "7:3", "8:3", 1),
 		},
 		{
 			"  - circle: { name: b, cx: 150, cy: 150, r: 60 }\n  - label: { text: a fairly long label for the ring, in: [a] }",
-			`s.yaml:7:5: label "a fairly long label for the ring" finds no room inside a and outside the other circles: make that area larger, or the text shorter`,
+			`s.yaml:7:3: label "a fairly long label for the ring" finds no room inside a and outside the other circles: make that area larger, or the text shorter`,
 		},
 		{"  - circle: { name: b, cx: 150, cy: 200, r: 8 }\n" + at, ""},
 		{"  - circle: { name: b, cx: 150, cy: 168, r: 9 }\n" + at, ""},
@@ -523,32 +523,32 @@ func TestTooNarrow(t *testing.T) {
 	for _, c := range []struct {
 		parts, want string
 	}{
-		{"  - box: { x: 20, y: 20, w: 40, rows: [{ en: Short, ja: ずっと長い見出しの文字 }] }", `s.yaml:5:5: box "ずっと長い見出しの文字": "ずっと長い見出しの文字" (ja) needs w: 175 or more`},
-		{"  - frame: { x: 10, y: 10, w: 100, h: 100, label: { en: F, ja: とても長い日本語の見出し } }", `s.yaml:5:5: frame "とても長い日本語の見出し": "とても長い日本語の見出し" (ja) needs w: 168 or more`},
-		{"  - table: { x: 20, y: 20, w: 80, title: { en: T, ja: とても長い日本語の題 }, rows: [a] }", `s.yaml:5:5: table "とても長い日本語の題": "とても長い日本語の題" (ja) needs w: 162 or more`},
-		{"  - table: { x: 20, y: 20, w: 80, title: T, rows: [[{ en: id, ja: とても長い識別子 }, int]] }", `s.yaml:5:5: table "T": "とても長い識別子  int" (ja) needs w: 157 or more`},
-		{"  - table: { x: 20, y: 20, w: 80, title: T, rows: [[id, { en: int, ja: とても長い型の名前 }]] }", `s.yaml:5:5: table "T": "id  とても長い型の名前" (ja) needs w: 162 or more`},
+		{"  - box: { x: 20, y: 20, w: 40, rows: [{ en: Short, ja: ずっと長い見出しの文字 }] }", `s.yaml:5:3: box "ずっと長い見出しの文字": "ずっと長い見出しの文字" (ja) needs w: 175 or more`},
+		{"  - frame: { x: 10, y: 10, w: 100, h: 100, label: { en: F, ja: とても長い日本語の見出し } }", `s.yaml:5:3: frame "とても長い日本語の見出し": "とても長い日本語の見出し" (ja) needs w: 168 or more`},
+		{"  - table: { x: 20, y: 20, w: 80, title: { en: T, ja: とても長い日本語の題 }, rows: [a] }", `s.yaml:5:3: table "とても長い日本語の題": "とても長い日本語の題" (ja) needs w: 162 or more`},
+		{"  - table: { x: 20, y: 20, w: 80, title: T, rows: [[{ en: id, ja: とても長い識別子 }, int]] }", `s.yaml:5:3: table "T": "とても長い識別子  int" (ja) needs w: 157 or more`},
+		{"  - table: { x: 20, y: 20, w: 80, title: T, rows: [[id, { en: int, ja: とても長い型の名前 }]] }", `s.yaml:5:3: table "T": "id  とても長い型の名前" (ja) needs w: 162 or more`},
 		// The name and the type in other languages: each language's row as drawn, falling back to English.
-		{"  - table: { x: 20, y: 20, w: 80, title: T, rows: [[{ en: id, ja: とても長い識別子 }, { en: int, ko: 아주 긴 정수 형식 }]] }", `s.yaml:5:5: table "T": "id  아주 긴 정수 형식" (ko) needs w: 160 or more`},
+		{"  - table: { x: 20, y: 20, w: 80, title: T, rows: [[{ en: id, ja: とても長い識別子 }, { en: int, ko: 아주 긴 정수 형식 }]] }", `s.yaml:5:3: table "T": "id  아주 긴 정수 형식" (ko) needs w: 160 or more`},
 		// A row is measured as drawn: the name and the two spaces after it in code, the type not; the name and the
 		// type of one language, so the long Japanese name and the long English type are not added up.
-		{"  - table: { x: 20, y: 20, w: 200, title: T, rows: [[id, \"character varying(255)\"]] }", `s.yaml:5:5: table "T": "id  character varying(255)" needs w: 213 or more`},
+		{"  - table: { x: 20, y: 20, w: 200, title: T, rows: [[id, \"character varying(255)\"]] }", `s.yaml:5:3: table "T": "id  character varying(255)" needs w: 213 or more`},
 		{"  - table: { x: 20, y: 20, w: 216, title: T, rows: [[id, \"character varying(255)\"]] }", ""},
-		{"  - table: { x: 20, y: 20, w: 80, title: T, rows: [[{ en: a, ja: とても長い名前 }, { en: a very long type name, ja: 型 }]] }", `s.yaml:5:5: table "T": "a  a very long type name" needs w: 198 or more`},
-		{"  - box: { x: 20, y: 20, w: 40, rows: [{ en: A very long row, ja: 短い }] }", `s.yaml:5:5: box "A very long row": "A very long row" needs w: 157 or more`},
-		{"  - box: { x: 20, y: 20, w: 40, rows: [{ en: AB, ja: あ, ko: 아주 긴 한국어 줄 }] }", `s.yaml:5:5: box "아주 긴 한국어 줄": "아주 긴 한국어 줄" (ko) needs w: 148 or more`},
+		{"  - table: { x: 20, y: 20, w: 80, title: T, rows: [[{ en: a, ja: とても長い名前 }, { en: a very long type name, ja: 型 }]] }", `s.yaml:5:3: table "T": "a  a very long type name" needs w: 198 or more`},
+		{"  - box: { x: 20, y: 20, w: 40, rows: [{ en: A very long row, ja: 短い }] }", `s.yaml:5:3: box "A very long row": "A very long row" needs w: 157 or more`},
+		{"  - box: { x: 20, y: 20, w: 40, rows: [{ en: AB, ja: あ, ko: 아주 긴 한국어 줄 }] }", `s.yaml:5:3: box "아주 긴 한국어 줄": "아주 긴 한국어 줄" (ko) needs w: 148 or more`},
 		// Two languages other than English as wide: the first by tag.
-		{"  - box: { x: 20, y: 20, w: 40, rows: [{ en: A, ja: あいう, ko: 가나다 }] }", `s.yaml:5:5: box "あいう": "あいう" (ja) needs w: 71 or more`},
+		{"  - box: { x: 20, y: 20, w: 40, rows: [{ en: A, ja: あいう, ko: 가나다 }] }", `s.yaml:5:3: box "あいう": "あいう" (ja) needs w: 71 or more`},
 		// As wide as English, which is told: in the main row, the sub row, mixed widths and code.
-		{"  - box: { x: 20, y: 20, w: 40, rows: [{ en: ABCDEFGHIJKLMNOPQRSTUVWXY, ja: あいうえおかきくけこさしすせそた }] }", `s.yaml:5:5: box "ABCDEFGHIJKLMNOPQRSTUVWXY": "ABCDEFGHIJKLMNOPQRSTUVWXY" needs w: 240 or more`},
-		{"  - box: { x: 20, y: 20, w: 40, rows: [[{ en: ABCDEFGHIJ, ja: あいうえおか }, sub]] }", `s.yaml:5:5: box "ABCDEFGHIJ": "ABCDEFGHIJ" needs w: 104 or more`},
-		{"  - box: { x: 20, y: 20, w: 48, h: 60, rows: [A, { en: ABCDEFGHIJKLMNO, ja: あいうえおかきくけ }] }", `s.yaml:5:5: box "A": "ABCDEFGHIJKLMNO" needs w: 140 or more`},
-		{"  - box: { x: 20, y: 20, w: 40, rows: [[{ en: ABCDEFGHIJ, ja: ABCDEあいう }, sub]] }", `s.yaml:5:5: box "ABCDEFGHIJ": "ABCDEFGHIJ" needs w: 104 or more`},
-		{"  - table: { x: 20, y: 20, w: 80, title: T, rows: [[{ en: " + codeEn + ", ja: " + codeJa + " }]] }", `s.yaml:5:5: table "T": "` + codeEn + `" needs w: 396 or more`},
+		{"  - box: { x: 20, y: 20, w: 40, rows: [{ en: ABCDEFGHIJKLMNOPQRSTUVWXY, ja: あいうえおかきくけこさしすせそた }] }", `s.yaml:5:3: box "ABCDEFGHIJKLMNOPQRSTUVWXY": "ABCDEFGHIJKLMNOPQRSTUVWXY" needs w: 240 or more`},
+		{"  - box: { x: 20, y: 20, w: 40, rows: [[{ en: ABCDEFGHIJ, ja: あいうえおか }, sub]] }", `s.yaml:5:3: box "ABCDEFGHIJ": "ABCDEFGHIJ" needs w: 104 or more`},
+		{"  - box: { x: 20, y: 20, w: 48, h: 60, rows: [A, { en: ABCDEFGHIJKLMNO, ja: あいうえおかきくけ }] }", `s.yaml:5:3: box "A": "ABCDEFGHIJKLMNO" needs w: 140 or more`},
+		{"  - box: { x: 20, y: 20, w: 40, rows: [[{ en: ABCDEFGHIJ, ja: ABCDEあいう }, sub]] }", `s.yaml:5:3: box "ABCDEFGHIJ": "ABCDEFGHIJ" needs w: 104 or more`},
+		{"  - table: { x: 20, y: 20, w: 80, title: T, rows: [[{ en: " + codeEn + ", ja: " + codeJa + " }]] }", `s.yaml:5:3: table "T": "` + codeEn + `" needs w: 396 or more`},
 		// A separator has no text, in a table sized by its rows too.
 		{"  - table: { x: 20, y: 20, title: T, rows: [a, \"---\", b] }", ""},
 		// U+2E80, the first CJK radical, is full-width.
-		{"  - box: { x: 20, y: 20, w: 40, rows: [{ en: AB, ja: \"\u2e80\u2e80\" }] }", "s.yaml:5:5: box \"\u2e80\u2e80\": \"\u2e80\u2e80\" (ja) needs w: 58 or more"},
+		{"  - box: { x: 20, y: 20, w: 40, rows: [{ en: AB, ja: \"\u2e80\u2e80\" }] }", "s.yaml:5:3: box \"\u2e80\u2e80\": \"\u2e80\u2e80\" (ja) needs w: 58 or more"},
 		// Text exactly as wide as the room fits.
 		{"  - box: { x: 20, y: 20, w: 104, h: 60, rows: [A, ABCDEFGHIJ] }", ""},
 	} {
@@ -592,15 +592,15 @@ func TestEdgesPastShapes(t *testing.T) {
 		"to: [102, 382]", "to: [106, 386]", "to: [101.3, 464.3]", "to: [103, 466]", "to: [405, 30]", "to: [415, 60]",
 		"from: [130, 21], to: [270, 21]", "from: [60, 46], to: [340, 46]").Replace(shapes)
 	want := strings.Join([]string{
-		`s.yaml:6:5: edge [95,15]→[112,32] runs through box "h"; move one of them, or go round it by via`,
-		`s.yaml:7:5: edge [310,10]→[290,34] runs through box "h"; move one of them, or go round it by via`,
-		`s.yaml:9:5: edge [60,105]→[110,121] runs through box "s"; move one of them, or go round it by via`,
-		`s.yaml:11:5: edge [60,215]→[110,231] runs through box "p"; move one of them, or go round it by via`,
-		`s.yaml:13:5: edge [90,290]→[106,306] runs through box "r"; move one of them, or go round it by via`,
-		`s.yaml:15:5: edge [90,370]→[106,386] runs through table "t"; move one of them, or go round it by via`,
-		`s.yaml:17:5: edge [90,455]→[103,466] runs through bar "b"; move one of them, or go round it by via`,
-		`s.yaml:19:5: edge [390,15]→[415,60] runs through box "tall"; move one of them, or go round it by via`,
-		`s.yaml:20:5: edge [60,46]→[340,46] runs through box "h"; move one of them, or go round it by via`,
+		`s.yaml:6:3: edge [95,15]→[112,32] runs through box "h"; move one of them, or go round it by via`,
+		`s.yaml:7:3: edge [310,10]→[290,34] runs through box "h"; move one of them, or go round it by via`,
+		`s.yaml:9:3: edge [60,105]→[110,121] runs through box "s"; move one of them, or go round it by via`,
+		`s.yaml:11:3: edge [60,215]→[110,231] runs through box "p"; move one of them, or go round it by via`,
+		`s.yaml:13:3: edge [90,290]→[106,306] runs through box "r"; move one of them, or go round it by via`,
+		`s.yaml:15:3: edge [90,370]→[106,386] runs through table "t"; move one of them, or go round it by via`,
+		`s.yaml:17:3: edge [90,455]→[103,466] runs through bar "b"; move one of them, or go round it by via`,
+		`s.yaml:19:3: edge [390,15]→[415,60] runs through box "tall"; move one of them, or go round it by via`,
+		`s.yaml:20:3: edge [60,46]→[340,46] runs through box "h"; move one of them, or go round it by via`,
 	}, "\n")
 	if _, got := draw(t, inward, inspect); got != want {
 		t.Errorf("edges 4 in = %q, want %q", got, want)
@@ -816,12 +816,12 @@ func TestEdgesHandSides(t *testing.T) {
 		// a's bottom, where a→d leaves, is not left though c→a ends at its top: the level edge's side kept, and told.
 		{
 			"width: 400\nheight: 320\ntitle: T\nparts:\n  - graph:\n      x: 20\n      y: 20\n      nodes:\n        - box: { name: c, rows: [c] }\n        - box: { name: a, rows: [a] }\n        - box: { name: b, rows: [b] }\n        - box: { name: d, rows: [d] }\n      edges:\n        - { from: c, to: a }\n        - { from: a, to: d }\n        - { from: a, to: b, level: true }\n  - edge: { from: [200, 140], via: [[80, 140]], to: a }\n",
-			"s.yaml:17:5: edge \"a\"→\"b\" crosses edge [200,140]→\"a\" at 80,94; move one of them, or add crossing: true to one if it cannot be avoided",
+			"s.yaml:17:3: edge \"a\"→\"b\" crosses edge [200,140]→\"a\" at 80,94; move one of them, or add crossing: true to one if it cannot be avoided",
 		},
 		// No side left with the via outside it: the side kept, crossing the loop, is told.
 		{
 			"width: 260\nheight: 200\ntitle: T\nparts:\n  - graph:\n      x: 20\n      y: 20\n      nodes:\n        - box: { name: a, rows: [a] }\n        - box: { name: b, rows: [b] }\n      edges:\n        - { from: a, to: b }\n        - { from: b, to: b }\n  - edge: { from: [200, 0], via: [[200, 100]], to: b }\n",
-			"s.yaml:14:5: edge \"b\"→\"b\" crosses edge [200,0]→\"b\" at 92,88; move one of them, or add crossing: true to one if it cannot be avoided",
+			"s.yaml:14:3: edge \"b\"→\"b\" crosses edge [200,0]→\"b\" at 92,88; move one of them, or add crossing: true to one if it cannot be avoided",
 		},
 	} {
 		got, mistakes := draw(t, c.spec, render("en"))
@@ -905,10 +905,10 @@ func TestEdgeViaAxis(t *testing.T) {
 	for _, c := range []struct {
 		parts, want string
 	}{
-		{"  - edge: { from: a, to: b, fromSide: top, toSide: left, via: [{ x: 150 }] }", `s.yaml:8:5: edge "a"→"b" runs through box "a"; move one of them, or go round it by via`},
-		{"  - edge: { from: a, to: b, fromSide: right, toSide: top, via: [{ y: 150 }] }", `s.yaml:8:5: edge "a"→"b" runs through box "a"; move one of them, or go round it by via`},
-		{"  - edge: { from: a, to: b, via: [{ x: 50 }] }", "s.yaml:8:5: edge \"a\"→\"b\" runs through box \"a\"; move one of them, or go round it by via\ns.yaml:8:5: edge \"a\"→\"b\" runs through box \"c\"; move one of them, or go round it by via"},
-		{"  - edge: { from: nobody, to: b, via: [{ x: 50 }] }", `s.yaml:8:5: edge: no part, row or node named "nobody"`},
+		{"  - edge: { from: a, to: b, fromSide: top, toSide: left, via: [{ x: 150 }] }", `s.yaml:8:3: edge "a"→"b" runs through box "a"; move one of them, or go round it by via`},
+		{"  - edge: { from: a, to: b, fromSide: right, toSide: top, via: [{ y: 150 }] }", `s.yaml:8:3: edge "a"→"b" runs through box "a"; move one of them, or go round it by via`},
+		{"  - edge: { from: a, to: b, via: [{ x: 50 }] }", "s.yaml:8:3: edge \"a\"→\"b\" runs through box \"a\"; move one of them, or go round it by via\ns.yaml:8:3: edge \"a\"→\"b\" runs through box \"c\"; move one of them, or go round it by via"},
+		{"  - edge: { from: nobody, to: b, via: [{ x: 50 }] }", `s.yaml:8:3: edge: no part, row or node named "nobody"`},
 	} {
 		if _, got := draw(t, head+c.parts+"\n", inspect); got != c.want {
 			t.Errorf("%s\n  told %q\n  want %q", c.parts, got, c.want)
@@ -1049,23 +1049,23 @@ func TestEdgesVia(t *testing.T) {
 		{
 			"  - frame: { name: f, x: 200, y: 40, w: 280, h: 200, label: F }\n  - box: { name: a, x: 260, y: 120, w: 100, h: 40, rows: [a] }\n" +
 				"  - edge: { from: a, via: [[420, 140], [420, 200]], to: f }",
-			`s.yaml:7:5: edge "a"→"f" runs through box "a"; move one of them, or go round it by via`,
+			`s.yaml:7:3: edge "a"→"f" runs through box "a"; move one of them, or go round it by via`,
 		},
 		{
 			"  - box: { name: b, x: 300, y: 100, w: 100, h: 40, rows: [b] }\n  - edge: { from: [450, 300], via: [[500, 300]], to: b, toSide: top }",
-			`s.yaml:6:5: edge [450,300]→"b" runs through box "b"; move one of them, or go round it by via`,
+			`s.yaml:6:3: edge [450,300]→"b" runs through box "b"; move one of them, or go round it by via`,
 		},
 		{
 			"  - box: { name: a, x: 40, y: 140, w: 100, h: 40, rows: [a] }\n  - edge: { from: a, via: [[200, 220]], to: [210, 0] }",
-			`s.yaml:6:5: edge "a"→[210,0] runs through box "a"; move one of them, or go round it by via`,
+			`s.yaml:6:3: edge "a"→[210,0] runs through box "a"; move one of them, or go round it by via`,
 		},
 		{
 			"  - box: { name: k, x: 180, y: 30, w: 40, h: 40, rows: [[k, sub]] }\n  - edge: { from: [0, 0], via: [[200, 0]], to: [100, 100] }",
-			`s.yaml:6:5: edge [0,0]→[100,100] runs through box "k"; move one of them, or go round it by via`,
+			`s.yaml:6:3: edge [0,0]→[100,100] runs through box "k"; move one of them, or go round it by via`,
 		},
 		{
 			"  - edge: { from: nope1, via: [[30, 200]], to: nope2 }",
-			"s.yaml:5:5: edge: no part, row or node named \"nope1\"\ns.yaml:5:5: edge: no part, row or node named \"nope2\"",
+			"s.yaml:5:3: edge: no part, row or node named \"nope1\"\ns.yaml:5:3: edge: no part, row or node named \"nope2\"",
 		},
 	} {
 		if _, mistakes := draw(t, head+c.parts+"\n", render("en")); mistakes != c.want {
@@ -1104,7 +1104,7 @@ func TestVennBounded(t *testing.T) {
 		t.Errorf("a region in the canvas of circles out of it = %q, want the label placed", got)
 	}
 	src = head + "  - circle: { name: c, cx: 900, cy: 100, r: 50 }\n  - label: { text: x, in: [c] }\n"
-	if _, got := draw(t, src, render("en")); !strings.Contains(got, `s.yaml:6:5: label "x" sticks out of the 400x200 canvas`) {
+	if _, got := draw(t, src, render("en")); !strings.Contains(got, `s.yaml:6:3: label "x" sticks out of the 400x200 canvas`) {
 		t.Errorf("a region out of the canvas = %q, want the label to stick out", got)
 	}
 	// The region is where the circles of in all are, in no order of in.
@@ -1128,8 +1128,8 @@ func TestVennBounded(t *testing.T) {
 	// A region that only touches the canvas has no room in it and sticks out; one with some of the canvas looks for
 	// room there.
 	for _, tt := range []struct{ circle, want string }{
-		{"cx: -100.5, cy: 100, r: 100.5", `s.yaml:6:5: label "x" sticks out of the 400x200 canvas`},
-		{"cx: 0.5, cy: 100, r: 1.5", `s.yaml:6:5: label "x" finds no room inside c`},
+		{"cx: -100.5, cy: 100, r: 100.5", `s.yaml:6:3: label "x" sticks out of the 400x200 canvas`},
+		{"cx: 0.5, cy: 100, r: 1.5", `s.yaml:6:3: label "x" finds no room inside c`},
 	} {
 		src := head + "  - circle: { name: c, " + tt.circle + " }\n  - label: { text: x, in: [c] }\n"
 		if _, got := draw(t, src, render("en")); !strings.Contains(got, tt.want) {
@@ -1199,11 +1199,11 @@ func TestCanvasLeftOut(t *testing.T) {
 	}
 
 	for _, c := range []struct{ parts, want string }{
-		{"  - box: { x: -10, y: 20, rows: [Write] }\n", `s.yaml:3:5: box "Write" sticks out of the 90x69 canvas`},
-		{"  - box: { x: -200, y: -100, rows: [Write] }\n", `s.yaml:3:5: box "Write" sticks out of the 20x20 canvas`},
+		{"  - box: { x: -10, y: 20, rows: [Write] }\n", `s.yaml:3:3: box "Write" sticks out of the 90x69 canvas`},
+		{"  - box: { x: -200, y: -100, rows: [Write] }\n", `s.yaml:3:3: box "Write" sticks out of the 20x20 canvas`},
 		{
 			"  - circle: { name: a, cx: -200, cy: 50, r: 50 }\n  - label: { text: x, in: [a] }\n",
-			"s.yaml:3:5: circle \"a\" sticks out of the 20x120 canvas\ns.yaml:4:5: label \"x\" sticks out of the 20x120 canvas",
+			"s.yaml:3:3: circle \"a\" sticks out of the 20x120 canvas\ns.yaml:4:3: label \"x\" sticks out of the 20x120 canvas",
 		},
 		// Coordinates and sizes stand within a million either way, the schema refusing past it; at a million, the
 		// layout checks the part as any other.
@@ -1214,7 +1214,7 @@ func TestCanvasLeftOut(t *testing.T) {
 		},
 		{
 			"  - box: { x: 20, y: 20, w: 100, h: 40, rows: [A] }\n  - circle: { name: c, cx: -1000000, cy: 50, r: 1000000 }\n",
-			`s.yaml:4:5: circle "c" sticks out of the 140x1000070 canvas`,
+			`s.yaml:4:3: circle "c" sticks out of the 140x1000070 canvas`,
 		},
 	} {
 		_, got := draw(t, "title: T\nparts:\n"+c.parts, render("en"))
@@ -1428,7 +1428,7 @@ func TestEdgesAtDots(t *testing.T) {
 		{"a point at the centre", d + "  - edge: { from: [20, 20], via: [[300, 20]], to: [300, 100] }", `d="M20,20 H300 V100"`},
 		{
 			"checked as routed", d + "  - edge: { from: [100, 103], to: [340, 103] }\n  - edge: { from: [300, 150], to: d }",
-			"s.yaml:7:5: edge [100,103]→[340,103] crosses edge [300,150]→\"d\" at 300,103; move one of them, or add crossing: true to one if it cannot be avoided",
+			"s.yaml:7:3: edge [100,103]→[340,103] crosses edge [300,150]→\"d\" at 300,103; move one of them, or add crossing: true to one if it cannot be avoided",
 		},
 	} {
 		t.Run(c.name, func(t *testing.T) {
@@ -1830,18 +1830,18 @@ func TestFaces(t *testing.T) {
 		{
 			"the room of a frame's heading",
 			"  - frame: { x: 10, y: 10, w: 300, h: 150, label: Developer machine here }\n  - box: { x: 182, y: 16, w: 100, rows: [x] }\n",
-			`s.yaml:6:5: box "x" overlaps the heading of frame "Developer machine here"`,
+			`s.yaml:6:3: box "x" overlaps the heading of frame "Developer machine here"`,
 		},
 		{
 			"the room of the heading of a frame with an icon",
 			"  - frame: { x: 10, y: 10, w: 340, h: 150, icon: aws/aws-lambda, label: Developer machine here }\n  - box: { x: 226, y: 16, w: 100, rows: [x] }\n",
-			`s.yaml:6:5: box "x" overlaps the heading of frame "Developer machine here"`,
+			`s.yaml:6:3: box "x" overlaps the heading of frame "Developer machine here"`,
 		},
-		{"a frame's heading", "  - frame: { x: 10, y: 10, w: 60, h: 60, label: ABCDEFGHIJ }\n", `s.yaml:5:5: frame "ABCDEFGHIJ": "ABCDEFGHIJ" needs w: 101 or more`},
-		{"the heading of a frame with an icon", "  - frame: { x: 10, y: 10, w: 60, h: 60, icon: aws/aws-lambda, label: ABCDEFGHIJ }\n", `s.yaml:5:5: frame "ABCDEFGHIJ": "ABCDEFGHIJ" needs w: 136 or more`},
-		{"a table's title, by a written w", "  - table: { x: 10, y: 10, w: 100, title: ABCDEFGHIJ, rows: [[id, int]] }\n", `s.yaml:5:5: table "ABCDEFGHIJ": "ABCDEFGHIJ" needs w: 116 or more`},
-		{"a row, by a written w", "  - box: { x: 10, y: 10, w: 60, rows: [ABCDEFGHIJ] }\n", `s.yaml:5:5: box "ABCDEFGHIJ": "ABCDEFGHIJ" needs w: 116 or more`},
-		{"main code, by a written w", "  - box: { x: 10, y: 10, w: 60, rows: [[render, main code]] }\n", `s.yaml:5:5: box "render": "render" needs w: 77 or more`},
+		{"a frame's heading", "  - frame: { x: 10, y: 10, w: 60, h: 60, label: ABCDEFGHIJ }\n", `s.yaml:5:3: frame "ABCDEFGHIJ": "ABCDEFGHIJ" needs w: 101 or more`},
+		{"the heading of a frame with an icon", "  - frame: { x: 10, y: 10, w: 60, h: 60, icon: aws/aws-lambda, label: ABCDEFGHIJ }\n", `s.yaml:5:3: frame "ABCDEFGHIJ": "ABCDEFGHIJ" needs w: 136 or more`},
+		{"a table's title, by a written w", "  - table: { x: 10, y: 10, w: 100, title: ABCDEFGHIJ, rows: [[id, int]] }\n", `s.yaml:5:3: table "ABCDEFGHIJ": "ABCDEFGHIJ" needs w: 116 or more`},
+		{"a row, by a written w", "  - box: { x: 10, y: 10, w: 60, rows: [ABCDEFGHIJ] }\n", `s.yaml:5:3: box "ABCDEFGHIJ": "ABCDEFGHIJ" needs w: 116 or more`},
+		{"main code, by a written w", "  - box: { x: 10, y: 10, w: 60, rows: [[render, main code]] }\n", `s.yaml:5:3: box "render": "render" needs w: 77 or more`},
 	} {
 		if _, told := draw(t, head+c.parts, inspect); told != c.want {
 			t.Errorf("%s:\n  told %q\n  want %q", c.name, told, c.want)
@@ -1899,7 +1899,7 @@ func TestFacesNamed(t *testing.T) {
 	}
 	// A bold label in that finds no room is named as it is measured too.
 	const small = "  - circle: { name: A, cx: 150, cy: 150, r: 10 }\n  - label: { text: " + text + ", in: [A], strong: true }\n"
-	want := `s.yaml:6:5: label "The page" finds no room inside A and outside the other circles: make that area larger, or the text shorter`
+	want := `s.yaml:6:3: label "The page" finds no room inside A and outside the other circles: make that area larger, or the text shorter`
 	if _, told := draw(t, head+small, inspect); told != want {
 		t.Errorf("no room:\n  told %q\n  want %q", told, want)
 	}
@@ -1915,14 +1915,14 @@ func TestGraphIconMistakes(t *testing.T) {
 		tail = " } ] }\n"
 	)
 	for _, c := range []struct{ parts, want string }{
-		{node + "icon: { name: a, icon: aws/nope, label: A }" + tail, `s.yaml:3:45: icon "a": no icon "aws/nope" (search with: floe icons search <word>)`},
-		{node + "icon: { name: a, icon: nope, label: A }" + tail, `s.yaml:3:45: icon "a": "nope" needs its icon set in front (aws), like aws/amazon-ec2 (search with: floe icons search <word>)`},
-		{node + "icon: { name: a, icon: aws/aws-lambda, tone: warn }" + tail, "s.yaml:3:45: additional properties 'tone' not allowed"},
-		{node + "icon: { icon: aws/aws-lambda }" + tail, "s.yaml:3:45: missing property 'name'"},
+		{node + "icon: { name: a, icon: aws/nope, label: A }" + tail, `s.yaml:3:37: icon "a": no icon "aws/nope" (search with: floe icons search <word>)`},
+		{node + "icon: { name: a, icon: nope, label: A }" + tail, `s.yaml:3:37: icon "a": "nope" needs its icon set in front (aws), like aws/amazon-ec2 (search with: floe icons search <word>)`},
+		{node + "icon: { name: a, icon: aws/aws-lambda, tone: warn }" + tail, "s.yaml:3:82: additional properties 'tone' not allowed"},
+		{node + "icon: { icon: aws/aws-lambda }" + tail, "s.yaml:3:37: missing property 'name'"},
 		{node + `icon: { name: a, icon: "" }` + tail, "s.yaml:3:60: minLength: got 0, want 1"},
-		{node + "group: { name: g, icon: aws/nope, nodes: [ { box: { name: a, rows: [A] } } ] }" + tail, `s.yaml:3:46: the icon of frame "g": no icon "aws/nope" (search with: floe icons search <word>)`},
+		{node + "group: { name: g, icon: aws/nope, nodes: [ { box: { name: a, rows: [A] } } ] }" + tail, `s.yaml:3:37: the icon of frame "g": no icon "aws/nope" (search with: floe icons search <word>)`},
 		{node + `group: { name: g, icon: "", nodes: [ { box: { name: a, rows: [A] } } ] }` + tail, "s.yaml:3:61: minLength: got 0, want 1"},
-		{"  - box: { x: 0, y: 0, name: a, icon: aws/aws-lambda, rows: [A] }\n", "s.yaml:3:12: additional properties 'icon' not allowed"},
+		{"  - box: { x: 0, y: 0, name: a, icon: aws/aws-lambda, rows: [A] }\n", "s.yaml:3:39: additional properties 'icon' not allowed"},
 	} {
 		_, mistakes := draw(t, head+c.parts, drawWith("en", lambda))
 		if mistakes != c.want {
@@ -1933,7 +1933,7 @@ func TestGraphIconMistakes(t *testing.T) {
 	over := head + `  - graph: { x: 20, y: 20, nodes: [ { group: { name: g, icon: aws/aws-lambda, nodes: [ { icon: { name: a, icon: aws/aws-lambda } } ] } } ] }
   - box: { x: 20, y: 20, w: 20, h: 20, rows: [B] }
 `
-	if _, mistakes := draw(t, over, drawWith("en", lambda)); !strings.HasPrefix(mistakes, "s.yaml:4:5: ") {
+	if _, mistakes := draw(t, over, drawWith("en", lambda)); !strings.HasPrefix(mistakes, "s.yaml:4:3: ") {
 		t.Errorf("a box over a frame's icon: told %q, want it at the box", mistakes)
 	}
 }
@@ -2120,24 +2120,24 @@ func TestGraphWith(t *testing.T) {
 				`s.yaml:8:33: with: no box or icon of this graph named "nobody"`,
 			},
 			{"a group", spec(b("a", "g")+group, ""), `s.yaml:7:33: with: no box or icon of this graph named "g"`},
-			{"an edge within one rank", spec(b("a", "b")+b("b", ""), e("a", "b")), "s.yaml:10:13: edge \"a\"→\"b\": " + rank},
+			{"an edge within one rank", spec(b("a", "b")+b("b", ""), e("a", "b")), "s.yaml:10:9: edge \"a\"→\"b\": " + rank},
 			{
 				"an edge within one rank, across groups", spec(
 					"        - group: { name: h, label: H, nodes: [ { box: { name: a, with: b, rows: [A] } } ] }\n"+group, e("a", "b")),
-				"s.yaml:10:13: edge \"a\"→\"b\": " + rank,
+				"s.yaml:10:9: edge \"a\"→\"b\": " + rank,
 			},
 			{"an edge into one rank by level and with", spec(b("a", "")+b("b", "c")+b("c", ""),
-				"        - { from: a, to: b, level: true }\n"+e("a", "c")), "s.yaml:12:13: edge \"a\"→\"c\": " + rank},
+				"        - { from: a, to: b, level: true }\n"+e("a", "c")), "s.yaml:12:9: edge \"a\"→\"c\": " + rank},
 			{
 				"an edge within one rank by level alone", spec(b("a", "")+b("b", "a"),
 					"        - { from: a, to: b, level: true }\n"+e("a", "b")),
-				"s.yaml:11:13: edge \"a\"→\"b\": \"a\" and \"b\" stand in one rank by level edges, so this edge cannot run from one rank to another; end it elsewhere, or drop level from the edges joining them",
+				"s.yaml:11:9: edge \"a\"→\"b\": \"a\" and \"b\" stand in one rank by level edges, so this edge cannot run from one rank to another; end it elsewhere, or drop level from the edges joining them",
 			},
 			{"an edge that falls in one rank", spec(b("y", "")+b("alb", "")+b("nat", "alb")+b("x", ""),
-				"        - { from: nat, to: x, level: true }\n"+e("y", "nat")), "s.yaml:13:13: edge \"y\"→\"nat\": " + rank},
-			{"a with of itself", spec(b("a", "")+b("b", "b"), e("a", "b")), "s.yaml:10:13: edge \"a\"→\"b\": " + rank},
-			{"a ring of with", spec(b("x", "")+b("a", "b")+b("b", "a"), e("x", "a")), "s.yaml:11:13: edge \"x\"→\"a\": " + rank},
-			{"a ring holding the edge", spec(b("a", "b")+b("b", "c")+b("c", "a"), e("a", "c")), "s.yaml:11:13: edge \"a\"→\"c\": " + rank},
+				"        - { from: nat, to: x, level: true }\n"+e("y", "nat")), "s.yaml:13:9: edge \"y\"→\"nat\": " + rank},
+			{"a with of itself", spec(b("a", "")+b("b", "b"), e("a", "b")), "s.yaml:10:9: edge \"a\"→\"b\": " + rank},
+			{"a ring of with", spec(b("x", "")+b("a", "b")+b("b", "a"), e("x", "a")), "s.yaml:11:9: edge \"x\"→\"a\": " + rank},
+			{"a ring holding the edge", spec(b("a", "b")+b("b", "c")+b("c", "a"), e("a", "c")), "s.yaml:11:9: edge \"a\"→\"c\": " + rank},
 			{
 				"a box a with stands among a group of ranks",
 				spec(b("nat", "alb")+
