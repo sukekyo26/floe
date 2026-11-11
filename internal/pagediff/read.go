@@ -401,8 +401,8 @@ func deepCopy(n *html.Node) *html.Node {
 }
 
 // renumber gives each id under n, n's own too, the name named makes of its place in n's order and the id, and all that
-// names one of them by it (aria-labelledby and aria-describedby, for, #id in other values) the new name too. The name
-// attribute of an input is named alike, so that a copy's radios make no group with the page's.
+// names one of them by it (aria-labelledby and aria-describedby, for, #id in other values) the new name too. A name
+// attribute is named alike, so that a copy's radios and details make no group with the page's.
 func renumber(n *html.Node, named func(i int, id string) string) {
 	ids := map[string]string{}
 	note := func(m *html.Node) {
@@ -426,7 +426,7 @@ func renumber(n *html.Node, named func(i int, id string) string) {
 				}
 				m.Attr[i].Val = strings.Join(words, " ")
 			case "name":
-				if m.Data == "input" && a.Val != "" {
+				if a.Val != "" {
 					m.Attr[i].Val = cmp.Or(named(-1, a.Val), a.Val)
 				}
 			default:

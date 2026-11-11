@@ -70,7 +70,11 @@ func marked(from, to []byte, most int, words Words, side Side) (Result, *html.No
 	}
 	c := compare(a, b, &work{left: most})
 	m := newMarker(treeB, words)
+	// The later is marked as alone, or as beside the earlier for either of the two side by side.
 	m.side = side
+	if side == Earlier {
+		m.side = Later
+	}
 	m.mark(treeA, a, b, c)
 	places := m.number()
 	for i, k := range places {
@@ -87,62 +91,49 @@ func marked(from, to []byte, most int, words Words, side Side) (Result, *html.No
 	return c.result, treeA, treeB, nil
 }
 
-// markEarlier marks the earlier page of the two side by side: the words gone, the blocks that differ framed, those of
-// the earlier alone framed as gone.
+// markEarlier marks the earlier page of the two side by side, as the later is marked: the words gone, the blocks of
+// the earlier alone as gone, a block framed only when its words cannot show what differs.
 func markEarlier(a []section, c compared, m *marker) {
 	m.side = Earlier
-	var marked []*html.Node
-	frame := func(n *html.Node, class string) {
-		addClass(n, class)
-		marked = append(marked, n)
-	}
-	whole := func(text string) []Span { return []Span{{Op: opDel, Text: text}} }
-	show := func(n *html.Node, kind string, from []origin, spans []Span, class string) {
-		if figure(kind) {
-			frame(partOf(n), class)
-		} else if !m.markWords(from, spans) {
-			frame(n, class)
-		} else {
-			marked = append(marked, n)
-		}
-	}
+	gone := func(text string) []Span { return []Span{{Op: opDel, Text: text}} }
 	for i, st := range c.steps {
 		switch {
 		case st.from < 0:
 		case st.to < 0:
 			from := a[st.from]
 			if from.head != nil {
-				show(from.head, "", from.from, whole(from.heading), classOut)
+				m.show(i, from.head, "", from.from, gone(from.heading), classOut)
 			}
 			for _, b := range from.blocks {
-				show(b.node, b.kind, b.from, whole(b.text), classOut)
+				m.show(i, b.node, b.kind, b.from, gone(b.text), classOut)
 			}
 		default:
 			from := a[st.from]
 			if h := c.result.Sections[i].Heading; from.head != nil && !(len(h) == 1 && h[0].Op == opSame) {
-				show(from.head, "", from.from, h, classChange)
+				m.show(i, from.head, "", from.from, h, classChange)
 			}
 			for _, p := range st.pairs {
 				switch {
 				case p.from == nil:
 				case p.to == nil:
-					show(p.from.node, p.from.kind, p.from.from, whole(p.from.text), classOut)
+					m.show(i, p.from.node, p.from.kind, p.from.from, gone(p.from.text), classOut)
 				case p.from.key == p.to.key:
-				case figure(p.from.kind):
-					frame(partOf(p.from.node), classChange)
 				default:
-					show(p.from.node, p.from.kind, p.from.from, p.spans, classChange)
+					m.show(i, p.from.node, p.from.kind, p.from.from, p.spans, classChange)
 				}
 			}
 		}
 	}
-	for _, n := range marked {
-		openDetails(n)
+	for _, g := range m.groups {
+		for _, n := range g.nodes {
+			openDetails(n)
+		}
 	}
 }
 
 // numberEarlier puts the marks to go to of the places numbered on the later page, by the same numbers, in the earlier
-// beside it: at the first of the place's blocks of the earlier that holds a span, or in a tab not picked at its title.
+// beside it: at the first of the place's blocks of the earlier that holds a span, just before the part of a diagram
+// or image, or in a tab not picked at its title.
 // A place none of whose blocks can hold one has none there.
 func (m *marker) numberEarlier(groups []*group) {
 	done := map[int]bool{}
@@ -154,7 +145,13 @@ func (m *marker) numberEarlier(groups []*group) {
 			if label := hiddenTab(n); label != nil {
 				n = label
 			}
-			if s := m.spot(n); s != nil {
+			// A diagram holds no words a span can go before: the mark goes just before its part.
+			s := m.spot(n)
+			if part := partOf(n); s == nil && part.Parent != nil && m.holds(part.Parent, "span") {
+				s = element(atom.Span, classAt)
+				part.Parent.InsertBefore(s, part)
+			}
+			if s != nil {
 				s.Attr = append(s.Attr, html.Attribute{Namespace: "", Key: "id", Val: "floe-diff." + strconv.Itoa(g.k)})
 				done[g.k] = true
 				break
@@ -555,8 +552,9 @@ type edit struct {
 }
 
 // markWords marks the words of spans in the page whose words from tells: in the later, those added wrapped in an ins
-// and, alone, those gone put in a del where they were; in the earlier, those gone wrapped in a del. False when there
-// is nothing to mark, or a mark cannot be held where it goes, which leaves the words as they were: all or none.
+// and, alone, those gone put in a del where they were; in the earlier, those gone wrapped in a del. True with nothing
+// marked when none of them is of this side; false when what is of it cannot be marked, as words from no text node or
+// a mark not held where it goes, which leaves the words as they were: all or none.
 func (m *marker) markWords(from []origin, spans []Span) bool {
 	wrapped, wrapTag, wrapClass := opIns, atom.Ins, classIns
 	if m.side == Earlier {
@@ -564,8 +562,12 @@ func (m *marker) markWords(from []origin, spans []Span) bool {
 	}
 	var edits []edit
 	pos := 0
+	shows := false
 	for _, s := range spans {
 		n := utf8.RuneCountInString(s.Text)
+		if (s.Op == wrapped || (s.Op == opDel && m.side == Alone)) && strings.TrimSpace(s.Text) != "" {
+			shows = true
+		}
 		switch {
 		case s.Op == opSame:
 			pos += n
@@ -591,6 +593,10 @@ func (m *marker) markWords(from []origin, spans []Span) bool {
 			at.del = s.Text
 			edits = append(edits, at)
 		}
+	}
+	// Of this side nothing differs (words only added, beside the earlier): nothing to mark, and nothing to frame.
+	if !shows {
+		return true
 	}
 	if len(edits) == 0 {
 		return false
