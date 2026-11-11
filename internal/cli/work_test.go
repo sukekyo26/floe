@@ -561,6 +561,10 @@ func TestWorkCategoryAdded(t *testing.T) {
 	if got := row().Categories; !slices.Equal(got, []string{"n"}) {
 		t.Errorf("moved within the write: %v", got)
 	}
+	// A category among them is not said, though the row is written for another field.
+	if got := run(0, "work", "a", "--category", "n", "--state", "doing"); got != "task #1 in project p: changed; state doing\npage a: task #1 in project p, category \"n\"\n" {
+		t.Errorf("a category among them, with a field = %q", got)
+	}
 	before = tasksFile()
 	if got := run(1, "work", "--task", "#1", "--categories", "m"); !strings.Contains(got, "category n of task #1 in project p has pages (a)") {
 		t.Errorf("a category with pages left out = %q", got)

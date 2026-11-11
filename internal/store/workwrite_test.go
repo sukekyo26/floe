@@ -112,7 +112,7 @@ func TestWorkWriteOne(t *testing.T) {
 	}{
 		{"a category with pages left out", store.WorkWrite{TaskEdit: store.TaskEdit{Categories: &[]string{"y"}}, Project: ptr("p"), Task: ptr("#9")}, "category z of task #9 in project p has pages (a)", false},
 		// Both tasks are there, as the screen says of one: the pages moved meanwhile, so it reads again
-		{"what the screen saw, of two tasks", store.WorkWrite{TaskEdit: store.TaskEdit{New: &no}, Slugs: []string{"a", "b"}}, "has changed since it was read", true},
+		{"what the screen saw, of two tasks", store.WorkWrite{TaskEdit: store.TaskEdit{New: &no}, Slugs: []string{"a", "b"}}, "task #9 has changed since it was read", true},
 		{"a parent of two projects", store.WorkWrite{TaskEdit: store.TaskEdit{Parent: ptr("#1")}, Slugs: []string{"a", "b"}, Task: ptr("#9")}, "a parent goes with one task, and the pages are on tasks of 2 projects", false},
 		{"a field of pages taken off", store.WorkWrite{TaskEdit: store.TaskEdit{State: ptr("done")}, Slugs: []string{"a"}, Task: ptr("")}, "takes pages off their task changes no task", false},
 		{"a category of a page of no task", store.WorkWrite{Slugs: []string{"c"}, Category: ptr("x")}, "page c is on no task", false},
@@ -157,8 +157,9 @@ func TestEditProjectTakesOffTask(t *testing.T) {
 	if w := s.ReadMeta("a").Work; w == nil || w.Task != "#9" {
 		t.Errorf("the same project: %+v", w)
 	}
-	if _, err = s.Edit("a", store.Edit{Project: ptr("q")}); err != nil {
-		t.Fatal(err)
+	edited, err := s.Edit("a", store.Edit{Project: ptr("q")})
+	if err != nil || edited.OffTask != "#9" {
+		t.Errorf("moved: %+v, %v; want it said off #9", edited, err)
 	}
 	if w := s.ReadMeta("a").Work; w == nil || w.Task != "" || w.Category != "" || !w.Pin {
 		t.Errorf("moved: %+v", w)
@@ -172,5 +173,32 @@ func TestEditProjectTakesOffTask(t *testing.T) {
 	}
 	if w := s.ReadMeta("a").Work; w == nil || w.Task != "#9" {
 		t.Errorf("moved and named: %+v", w)
+	}
+}
+
+// A parent goes on the tasks of pages of one project, however many tasks they are on; of two projects it is refused.
+func TestWorkParentOfPages(t *testing.T) {
+	t.Parallel()
+
+	root := filepath.Join(t.TempDir(), "S")
+	s := store.New(root)
+	pageIn(t, s, root, "x", "p")
+	pageIn(t, s, root, "y", "p")
+	for _, w := range []store.WorkWrite{
+		{TaskEdit: store.TaskEdit{Title: ptr("parent")}, Project: ptr("p"), Task: ptr("#P")},
+		{Slugs: []string{"x"}, Task: ptr("#1")},
+		{Slugs: []string{"y"}, Task: ptr("#2")},
+		{TaskEdit: store.TaskEdit{Parent: ptr("#P")}, Slugs: []string{"x", "y"}},
+	} {
+		if _, err := s.Work(w); err != nil {
+			t.Fatal(err)
+		}
+	}
+	all, err := s.ReadTasks()
+	if err != nil {
+		t.Fatal(err)
+	}
+	if all["p"]["#1"].Parent != "#P" || all["p"]["#2"].Parent != "#P" {
+		t.Errorf("two tasks of one project: %v", all["p"])
 	}
 }

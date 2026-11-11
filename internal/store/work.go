@@ -411,6 +411,8 @@ type TaskWritten struct {
 	Row     Task   `json:"row"`
 	Made    bool   `json:"made"`
 	Wrote   bool   `json:"wrote"`
+	// Added is the categories of the write's pages added at the end of the row's, in order.
+	Added []string `json:"added,omitempty"`
 }
 
 // EditTask is Work of the task (project, name) alone, which the management page writes by PATCH /api/tasks.
@@ -448,20 +450,32 @@ func (t Task) edited(ed TaskEdit) Task {
 
 // pagesOfTask counts the pages on the task (project, name), the archived too, and names one of them.
 func (s *Store) pagesOfTask(project, name string) (count int, first string, err error) {
+	err = s.eachPageOn(project, name, func(slug string, _ *Meta) bool {
+		if count == 0 {
+			first = slug
+		}
+		count++
+		return true
+	})
+	return count, first, err
+}
+
+// eachPageOn calls on with each page on the task (project, name), the archived too, in the store's order, while it
+// says to go on: the one walk of the pages that finds a task's.
+// LIMIT: it reads every page's meta.json, under the lock where its callers write: fine at hundreds of pages; at
+// thousands, keep an index of the pages' tasks.
+func (s *Store) eachPageOn(project, name string, on func(slug string, m *Meta) bool) error {
 	slugs, err := s.slugs()
 	if err != nil {
-		return 0, "", err
+		return err
 	}
 	for _, slug := range slugs {
 		m := s.ReadMeta(slug)
-		if m != nil && m.Work != nil && m.Work.Task == name && ProjectKey(m.Project) == project {
-			if count == 0 {
-				first = slug
-			}
-			count++
+		if m != nil && m.Work != nil && m.Work.Task == name && ProjectKey(m.Project) == project && !on(slug, m) {
+			return nil
 		}
 	}
-	return count, first, nil
+	return nil
 }
 
 // ForgetTask removes the row of the task (project, name): ErrNotFound for none, and refused while a page is on it or it

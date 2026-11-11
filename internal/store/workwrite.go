@@ -165,12 +165,16 @@ func pagesTasks(w WorkWrite, pages []workPage) ([]taskRef, error) {
 // checkWork refuses w before anything is written: what the screen saw (New, Rev), which is of one task, the parent,
 // a task of nothing to write and no row, and a category with pages left out of the categories written.
 func (s *Store) checkWork(all Tasks, w WorkWrite, refs []taskRef, pages []workPage) error {
-	if w.Parent != nil && len(refs) > 1 {
-		return usererr.New("store_parent_projects", len(refs))
+	if projects := projectsOf(refs); w.Parent != nil && projects > 1 {
+		return usererr.New("store_parent_projects", projects)
 	}
 	if (w.New != nil || w.Rev != nil) && len(refs) != 1 {
 		// The tasks come of the pages as read under the lock: a write of one task, of pages moved meanwhile
-		return conflict(usererr.New("store_task_was", deref(w.Task)))
+		name := deref(w.Task)
+		if len(refs) > 0 {
+			name = refs[0].name
+		}
+		return conflict(usererr.New("store_task_was", name))
 	}
 	for _, ref := range refs {
 		if err := s.checkTask(all[ref.project], w, ref, pages); err != nil {
@@ -205,27 +209,39 @@ func (s *Store) checkTask(rows map[string]Task, w WorkWrite, ref taskRef, pages 
 // checkPaged refuses categories written of the task ref that leave out a category another page has on it: the pages of
 // the write come to be in them (writeWork adds theirs). Archived pages count.
 func (s *Store) checkPaged(ref taskRef, categories []string, pages []workPage) error {
-	slugs, err := s.slugs()
+	var refused error
+	err := s.eachPageOn(ref.project, ref.name, func(slug string, m *Meta) bool {
+		if slices.ContainsFunc(pages, func(p workPage) bool { return p.slug == slug }) {
+			return true
+		}
+		if c := m.Work.Category; c != "" && !slices.Contains(categories, c) {
+			refused = usererr.New("store_category_paged", c, ref.name, ref.project, slug)
+			return false
+		}
+		return true
+	})
 	if err != nil {
 		return err
 	}
-	for _, slug := range slugs {
-		if slices.ContainsFunc(pages, func(p workPage) bool { return p.slug == slug }) {
-			continue
-		}
-		m := s.ReadMeta(slug)
-		if m == nil || m.Work == nil || m.Work.Task != ref.name || ProjectKey(m.Project) != ref.project {
-			continue
-		}
-		if c := m.Work.Category; c != "" && !slices.Contains(categories, c) {
-			return usererr.New("store_category_paged", c, ref.name, ref.project, slug)
+	return refused
+}
+
+// projectsOf is the number of different projects of refs.
+func projectsOf(refs []taskRef) int {
+	var projects []string
+	for _, ref := range refs {
+		if !slices.Contains(projects, ref.project) {
+			projects = append(projects, ref.project)
 		}
 	}
-	return nil
+	return len(projects)
 }
 
 // writeWork writes w, checked: each task's row made when there is none, its fields, the categories of its pages it
 // has not added at the end, and its Rev moved on when it changed; tasks.json, then the pages.
+// LIMIT: a page the system refuses to write after tasks.json stops the write there: the rows and the pages before it
+// stay written, which keeps every task a page names of a row, and the same write given again finishes it. Write the
+// pages to new files first and rename them after if a half-done write comes to mislead.
 func (s *Store) writeWork(all Tasks, w WorkWrite, refs []taskRef, pages []workPage) (WorkWritten, error) {
 	out := WorkWritten{Tasks: make([]TaskWritten, 0, len(refs)), Pages: make([]Edited, 0, len(pages))}
 	changed := false
@@ -244,12 +260,17 @@ func (s *Store) writeWork(all Tasks, w WorkWrite, refs []taskRef, pages []workPa
 		was, had := rows[ref.name]
 		t := rowAfter(was, had, w, ref, pages)
 		wrote := !had || parentMade || !reflect.DeepEqual(t, was)
+		added := slices.DeleteFunc(slices.Clone(t.Categories), func(c string) bool {
+			return slices.Contains(was.Categories, c) || (w.Categories != nil && slices.Contains(categoriesOf(*w.Categories), c))
+		})
 		if wrote {
 			t.Rev++
 			rows[ref.name] = t
 			changed = true
 		}
-		out.Tasks = append(out.Tasks, TaskWritten{Project: ref.project, Task: ref.name, Row: t, Made: !had, Wrote: wrote})
+		out.Tasks = append(out.Tasks, TaskWritten{
+			Project: ref.project, Task: ref.name, Row: t, Made: !had, Wrote: wrote, Added: added,
+		})
 	}
 	if changed {
 		if err := s.writeTasks(all); err != nil {

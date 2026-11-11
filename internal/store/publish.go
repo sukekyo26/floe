@@ -1051,6 +1051,8 @@ type Edited struct {
 	Slug        string `json:"slug"`
 	TaskProject string `json:"taskProject"`
 	Work        *Work  `json:"work,omitzero"`
+	// OffTask is the task the page was taken off, as its project changed, "" for none.
+	OffTask string `json:"offTask,omitempty"`
 }
 
 // Edit applies ed to slug and returns the page as it left it. updatedAt stays, so neither the order of
@@ -1081,7 +1083,8 @@ func (s *Store) Edit(slug string, ed Edit) (Edited, error) {
 		}
 	}
 	setMarks(m, ed)
-	if err = setProject(m, ed); err != nil {
+	off, err := setProject(m, ed)
+	if err != nil {
 		return Edited{}, err
 	}
 	to, err := s.renameTo(slug, ed.Slug)
@@ -1100,24 +1103,25 @@ func (s *Store) Edit(slug string, ed Edit) (Edited, error) {
 		}
 		s.moveRead(slug, to)
 	}
-	return Edited{Slug: to, TaskProject: ProjectKey(m.Project), Work: m.Work}, nil
+	return Edited{Slug: to, TaskProject: ProjectKey(m.Project), Work: m.Work, OffTask: off}, nil
 }
 
-// setProject sets the project ed names of m, taking m off its task when it moves it, unless ed names its task too.
-func setProject(m *Meta, ed Edit) error {
+// setProject sets the project ed names of m, taking m off its task when it moves it, unless ed names its task too: it
+// returns the task taken off, "" for none.
+func setProject(m *Meta, ed Edit) (string, error) {
 	if ed.Project == nil {
-		return nil
+		return "", nil
 	}
 	// "/" is the management page's value for "no project".
 	if strings.TrimSpace(*ed.Project) == "/" {
-		return usererr.New("store_project_slash")
+		return "", usererr.New("store_project_slash")
 	}
 	was := ProjectKey(m.Project)
 	m.Project = strings.TrimSpace(*ed.Project)
-	if ed.Work == nil || ed.Work.Task == nil {
-		offTaskOf(m, was)
+	if ed.Work != nil && ed.Work.Task != nil {
+		return "", nil
 	}
-	return nil
+	return offTaskOf(m, was), nil
 }
 
 // offTaskOf takes m off its task when its project is no longer was (ProjectKey): a task is of its project, and one of
