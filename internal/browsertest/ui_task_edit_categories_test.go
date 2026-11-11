@@ -58,7 +58,6 @@ func TestUITaskEditCategories(t *testing.T) { //nolint:paralleltest // the brows
 	// Each category, d when its remove button may be pressed, x when not
 	const categories = "[...document.querySelectorAll('#edit-categories li')].map((li) => li.dataset.category + (li.querySelector('.category-drop').getAttribute('aria-disabled') === 'true' ? 'x' : 'd')).join(',')"
 	const said = "document.getElementById('edit-category-said').textContent"
-	const errorText = "(document.getElementById('edit-task-error').hidden ? '-' : document.getElementById('edit-task-error').textContent)"
 	const last = "(document.getElementById('edit-category-plus').hidden ? 'field' : 'plus') + ' / ' + document.activeElement.id"
 	open := func(task string) {
 		t.Helper()
