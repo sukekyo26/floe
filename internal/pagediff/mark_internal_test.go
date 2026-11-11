@@ -102,7 +102,7 @@ func TestMark(t *testing.T) {
 		},
 		{
 			name: "the styles of a part only the earlier draws", from: `<head><style>.only-before{}</style><style>.both{}</style></head><h2>T</h2><p>kept</p><div data-floe-part="x"><p>gone part</p></div>`,
-			to: `<head><style>.both{}</style></head><h2>T</h2><p>kept</p>`,
+			to:  `<head><style>.both{}</style></head><h2>T</h2><p>kept</p>`,
 			has: []string{`<style>.only-before{}</style>`},
 		},
 		{
