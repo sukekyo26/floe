@@ -84,6 +84,23 @@ func TestMark(t *testing.T) {
 			},
 		},
 		{
+			name: "an ol's third gone", from: "<h2>T</h2><ol><li>a</li><li>b</li><li>c c c</li></ol>", to: "<h2>T</h2><ol><li>a</li><li>b</li></ol>",
+			has: []string{`<ol class="floe-diff-gone"><li value="3">`},
+		},
+		{
+			name: "an ol of start 5, its third and fourth gone", from: `<h2>T</h2><ol start="5"><li>a</li><li>b</li><li>c c c</li><li>d d d</li></ol>`, to: `<h2>T</h2><ol start="5"><li>a</li><li>b</li></ol>`,
+			has: []string{`<li value="7">`, `<li value="8">`},
+		},
+		{
+			name: "a reversed ol's second gone", from: "<h2>T</h2><ol reversed><li>a a a</li><li>b b b</li><li>c c c</li></ol>", to: "<h2>T</h2><ol reversed><li>a a a</li><li>c c c</li></ol>",
+			has:    []string{`<ol class="floe-diff-gone"><li value="2">`, `<ol reversed=""><li>a a a`},
+			hasNot: []string{`<ol reversed="" class="floe-diff-gone">`},
+		},
+		{
+			name: "after an item of a value", from: `<h2>T</h2><ol><li value="10">a</li><li>b b b</li></ol>`, to: `<h2>T</h2><ol><li value="10">a</li></ol>`,
+			has: []string{`<li value="11">`},
+		},
+		{
 			name: "copy apart", from: `<h2>T</h2><p>kept</p><details name="g"><p>a gone part</p></details>`, to: `<h2>T</h2><p>kept</p>`,
 			has:    []string{`<details class="floe-diff-gone" open=""><p><span class="floe-diff-sr">Gone </span>`},
 			hasNot: []string{classOut},

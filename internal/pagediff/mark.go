@@ -368,9 +368,8 @@ func (c *goneCopy) insert(n, old *html.Node) {
 // in picked, as the tabs show the panel after the title picked alone. It is set apart from the page (apart); one that
 // holds a diagram or image is framed, as the line through its words does not show on them. The word for a screen
 // reader goes first.
-// LIMIT: an ol's items copied are numbered from its start again, a table's rows copied have no head, and a block of
-// words between others in one element copies the whole element: numbering them as they were would copy HTML's
-// numbering, and a head or the words apart would be a rule more.
+// LIMIT: a table's rows copied have no head, and a block of words between others in one element copies the whole
+// element: a head or the words apart would be a rule more.
 func (m *marker) trim() {
 	for _, c := range m.gones {
 		for _, old := range c.gone {
@@ -381,12 +380,106 @@ func (m *marker) trim() {
 				pick(c.of[label])
 			}
 		}
+		numberItems(c)
 		m.apart(c.root)
 		if holdsFigure(c.root) {
 			addClass(c.root, classOut)
 		}
 		m.put(c.root, m.said())
 	}
+}
+
+// numberItems gives each item copied of an ol the number it had in the earlier page, as its value, so that an item gone
+// reads as it was numbered, whatever was left out before it; a reversed ol copied counts by those values alone.
+func numberItems(c *goneCopy) {
+	for old, n := range c.of {
+		if n.Type != html.ElementNode || n.Namespace != "" {
+			continue
+		}
+		switch n.DataAtom {
+		case atom.Ol:
+			n.Attr = slices.DeleteFunc(n.Attr, func(a html.Attribute) bool { return a.Namespace == "" && a.Key == "reversed" })
+		case atom.Li:
+			if owner := listOwner(old); owner != nil && owner.DataAtom == atom.Ol {
+				n.Attr = slices.DeleteFunc(n.Attr, func(a html.Attribute) bool { return a.Namespace == "" && a.Key == "value" })
+				n.Attr = append(n.Attr, html.Attribute{Namespace: "", Key: "value", Val: strconv.Itoa(ordinal(owner, old))})
+			}
+		}
+	}
+}
+
+// listOwner is the list owner of an li, as HTML defines it (the li element, "list owner"): its closest ol, ul or menu
+// ancestor, nil for none.
+// LIMIT: an li not rendered has none in HTML; one here is still numbered.
+func listOwner(li *html.Node) *html.Node {
+	for a := li.Parent; a != nil; a = a.Parent {
+		if a.Type == html.ElementNode && a.Namespace == "" && (a.DataAtom == atom.Ol || a.DataAtom == atom.Ul || a.DataAtom == atom.Menu) {
+			return a
+		}
+	}
+	return nil
+}
+
+// ordinal is the ordinal value of li, of the list owner owner, as HTML's algorithm sets it out (the li element,
+// "ordinal value"): from the ol's starting value (its start, else the number of its items when reversed, else 1), each
+// of its items in tree order taking its value when it has one, and counting down when the ol is reversed, else up.
+func ordinal(owner, li *html.Node) int {
+	var items []*html.Node
+	for d := range owner.Descendants() {
+		if d.Type == html.ElementNode && d.Namespace == "" && d.DataAtom == atom.Li && listOwner(d) == owner {
+			items = append(items, d)
+		}
+	}
+	_, reversed := page.Attr(owner, "reversed")
+	numbering := 1
+	if reversed {
+		numbering = len(items)
+	}
+	if start, ok := page.Attr(owner, "start"); ok {
+		if n, ok := htmlInteger(start); ok {
+			numbering = n
+		}
+	}
+	for _, item := range items {
+		if v, ok := page.Attr(item, "value"); ok {
+			if n, ok := htmlInteger(v); ok {
+				numbering = n
+			}
+		}
+		if item == li {
+			return numbering
+		}
+		if reversed {
+			numbering--
+		} else {
+			numbering++
+		}
+	}
+	return numbering
+}
+
+// htmlInteger reads s by HTML's rules for parsing integers: ASCII whitespace skipped, a sign, then the digits up to the
+// first that is not one. False for no digits, or a number past an int.
+func htmlInteger(s string) (int, bool) {
+	s = strings.TrimLeftFunc(s, page.IsSpace)
+	sign := 1
+	if strings.HasPrefix(s, "-") {
+		sign, s = -1, s[1:]
+	} else if strings.HasPrefix(s, "+") {
+		s = s[1:]
+	}
+	end := 0
+	for end < len(s) && s[end] >= '0' && s[end] <= '9' {
+		end++
+	}
+	if end == 0 {
+		return 0, false
+	}
+	n, err := strconv.Atoi(s[:end])
+	if err != nil {
+		return 0, false
+	}
+	return sign * n, true
 }
 
 // tabOf is the title of the tab of floe's tabs n is in, the nearest: nil for none.
