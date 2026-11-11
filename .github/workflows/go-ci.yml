@@ -94,7 +94,9 @@ jobs:
         id: chrome
         with:
           chrome-version: ${{ env.CHROME_VERSION }}
-          install-dependencies: true
+          # The runner image holds Chrome's libraries; installing them ran an apt-get update that waited minutes on DNS.
+          # LIMIT: if the image drops one, Chrome fails to start and every browser test fails: set it back to true.
+          install-dependencies: false
       - run: just test-browser ${{ matrix.part }}
         # The browser tests run the pinned Chrome; on CI they fail without it.
         env:
