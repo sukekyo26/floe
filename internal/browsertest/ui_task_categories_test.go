@@ -70,7 +70,7 @@ func TestUITaskCategories(t *testing.T) { //nolint:paralleltest // the browser t
 		if !ok {
 			return "none"
 		}
-		return strconv.Itoa(r.Rev) + " " + r.Category
+		return strconv.Itoa(r.Rev)
 	}
 	work := func(slug string) string {
 		t.Helper()
@@ -122,7 +122,7 @@ func TestUITaskCategories(t *testing.T) { //nolint:paralleltest // the browser t
 	say("no link", "document.querySelectorAll('#add-page-list a').length")
 	b.pressKey(kb.Enter)
 	say("nothing reached", "sent.length + ' ' + document.getElementById('add-page-dialog').open")
-	// Words narrow them; ↓ and Enter put the one reached: the task's category first, then the page; closed, the focus on the category's button.
+	// Words narrow them; ↓ and Enter put the one reached: the task first, as read, then the page, which alone holds its category; closed, the focus on the category's button.
 	query("check")
 	say("narrowed", options)
 	b.pressKey(kb.ArrowDown)
@@ -156,7 +156,7 @@ func TestUITaskCategories(t *testing.T) { //nolint:paralleltest // the browser t
 	say("stale, then", "sent.join(' ; ')")
 	out = append(out, "stale, written: "+row("S300")+" / "+work("memo-a"))
 
-	// The task's row written and the page refused: said, and the next goes of the rev that write answered.
+	// The task's row checked and the page refused: said, and the next goes of the rev that check answered, the row unchanged.
 	b.eval("sent.length = 0; window.failPage = true; const was = window.fetch; window.fetch = (url, init) => { if (window.failPage && String(url).includes('/api/artifacts/') && init?.method === 'PATCH') { window.failPage = false; return Promise.resolve(new Response('no', { status: 500 })); } return was(url, init); }")
 	add("案")
 	query("note")
@@ -257,18 +257,18 @@ func TestUITaskCategories(t *testing.T) { //nolint:paralleltest // the browser t
 		"no link: 0",
 		"nothing reached: 0 true",
 		"narrowed: check-a",
-		`put: /api/tasks {"new":false,"rev":5,"category":"リリース"} ; /api/artifacts/check-a {"work":{"task":"S300","category":"リリース"}}`,
+		`put: /api/tasks {"new":false,"rev":2} ; /api/artifacts/check-a {"work":{"task":"S300","category":"リリース"}}`,
 		"put, told: Put T check-a under リリース",
 		"put, focus: Add a page to リリース",
-		"put, written: 6 リリース / S300/リリース",
+		"put, written: 2 / S300/リリース",
 		"put, groups: note-a [案+] plan-a old-a [実装+] build-a [リリース+] check-a [レビュー+] review-a",
 		"stale: Failed to save: task S300 has changed since it was read; the tasks are read again, so check and save again / true / memo-a",
 		"stale, typed: true",
-		`stale, then: /api/tasks {"new":false,"rev":6,"category":"リリース"} ; /api/tasks {"new":false,"rev":7,"category":"リリース"} ; /api/artifacts/memo-a {"work":{"task":"S300","category":"リリース"}}`,
-		"stale, written: 7 リリース / S300/リリース",
+		`stale, then: /api/tasks {"new":false,"rev":2} ; /api/tasks {"new":false,"rev":3} ; /api/artifacts/memo-a {"work":{"task":"S300","category":"リリース"}}`,
+		"stale, written: 3 / S300/リリース",
 		"page refused: Failed to save: HTTP 500: no / true",
-		`page refused, then: /api/tasks {"new":false,"rev":7,"category":"案"} ; /api/tasks {"new":false,"rev":8,"category":"案"} ; /api/artifacts/note-a {"work":{"task":"S300","category":"案"}}`,
-		"page refused, written: 8 案 / S300/案",
+		`page refused, then: /api/tasks {"new":false,"rev":3} ; /api/tasks {"new":false,"rev":3} ; /api/artifacts/note-a {"work":{"task":"S300","category":"案"}}`,
+		"page refused, written: 3 / S300/案",
 		"not reached: Failed to save: Failed to fetch / true",
 		"moved from a task: Moved T other-a from S301's 設計 to 案",
 		"moved from a category: Moved T build-a from 実装 to リリース",
@@ -279,7 +279,7 @@ func TestUITaskCategories(t *testing.T) { //nolint:paralleltest // the browser t
 		"off, focus: check-a",
 		"off, groups: [案+] plan-a note-a other-a old-a [実装+ none] [リリース+] build-a memo-a check-a",
 		`back: /api/artifacts/review-a {"work":{"task":"S300","category":"レビュー"}}`,
-		"back, written: 9 リリース / S300/レビュー",
+		"back, written: 3 / S300/レビュー",
 		"keys, focus: btn undo",
 		"keys, escape: note-a 0",
 		`back as it was: /api/artifacts/g-a {"work":{"task":"","category":""}} ; /api/artifacts/g-a {"work":{"task":"G2","category":"x"}}`,

@@ -5220,6 +5220,8 @@
   }
   // A category with pages is not deleted, as categoryOrder would bring it back from them: its button is there, not pressed, and says why. It is
   // aria-disabled, not disabled, so that the keys reach it and pressing it says why
+  // LIMIT: a page put on a category meanwhile moves no rev, so that one deleted here is saved deleted and comes back after those written,
+  // from its page. Read the pages again before saving if that order comes to matter.
   function categoryRow(name, paged) {
     const li = document.createElement('li');
     li.dataset.category = name;
