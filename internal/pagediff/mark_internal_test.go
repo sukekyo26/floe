@@ -179,6 +179,18 @@ func TestMark(t *testing.T) {
 			has: []string{`<div class="floe-diff-gone">`, `<del class="floe-diff-del">gone after</del></div>`},
 		},
 		{
+			name: "gone after a header, out of it", from: `<header><h1>Title</h1><p class="status">Accepted</p></header><div class="superseded-by"><p>By the next one</p></div><h2>Context</h2><p>kept</p>`,
+			to:     `<header><h1>Title</h1><p class="status">Accepted</p></header><h2>Context</h2><p>kept</p>`,
+			has:    []string{`Accepted</p></header><div class="superseded-by floe-diff-gone"`},
+			hasNot: []string{`Accepted</p><div`},
+		},
+		{
+			name: "a section gone after a subsection, out of it", from: `<section><h2>A</h2><p>a kept</p><section class="sub"><h3>A1</h3><p>sub kept</p></section></section><section><h2>B</h2><p>b gone words</p></section>`,
+			to:     `<section><h2>A</h2><p>a kept</p><section class="sub"><h3>A1</h3><p>sub kept</p></section></section>`,
+			has:    []string{`sub kept</p></section></section><section class="floe-diff-gone"`},
+			hasNot: []string{`sub kept</p><h2`, `sub kept</p></section><h2`},
+		},
+		{
 			name: "copy apart", from: `<h2>T</h2><p>kept</p><details name="g"><p>a gone part</p></details>`, to: `<h2>T</h2><p>kept</p>`,
 			has:    []string{`<details open="" class="floe-diff-gone"><p><del class="floe-diff-del"><span class="floe-diff-sr">Gone </span>`},
 			hasNot: []string{classOut},
