@@ -29,23 +29,52 @@ func spans(sp []Span) string {
 	return b.String()
 }
 
-// told is a result as a person reads it, a block the same left out.
-func told(r Result) string {
-	var b strings.Builder
-	for _, s := range r.Sections {
-		fmt.Fprintf(&b, "%s h%d %s\n", s.State, s.Level, spans(s.Heading))
-		for _, block := range s.Blocks {
-			if len(block.Spans) == 1 && block.Spans[0].Op == opSame && !block.Reshaped {
-				continue
+// told is the comparison of two pages within most as a person reads it, a block the same left out: each section by its
+// state and heading, each block by its kind and its words as they differ, reshaped for a diagram or image whose words
+// are the same and whose content differs.
+func told(t *testing.T, from, to string, most int) string {
+	t.Helper()
+
+	a, err := read([]byte(from))
+	if err != nil {
+		t.Fatal(err)
+	}
+	b, err := read([]byte(to))
+	if err != nil {
+		t.Fatal(err)
+	}
+	c := compare(a, b, &work{left: most})
+	var out strings.Builder
+	line := func(kind, words string) { fmt.Fprintf(&out, "  [%s] %s\n", kind, words) }
+	for i, s := range c.result.Sections {
+		fmt.Fprintf(&out, "%s h%d %s\n", s.State, s.Level, spans(s.Heading))
+		st := c.steps[i]
+		switch {
+		case st.from < 0:
+			for _, blk := range b[st.to].blocks {
+				line(blk.kind, "{+"+blk.text+"+}")
 			}
-			kind := block.Kind
-			if block.Reshaped {
-				kind += " reshaped"
+		case st.to < 0:
+			for _, blk := range a[st.from].blocks {
+				line(blk.kind, "[-"+blk.text+"-]")
 			}
-			fmt.Fprintf(&b, "  [%s] %s\n", kind, spans(block.Spans))
+		case s.State == StateChanged:
+			for _, p := range st.pairs {
+				switch {
+				case p.from == nil:
+					line(p.to.kind, "{+"+p.to.text+"+}")
+				case p.to == nil:
+					line(p.from.kind, "[-"+p.from.text+"-]")
+				case p.from.key == p.to.key:
+				case p.spans == nil:
+					line(p.to.kind+" reshaped", p.to.text)
+				default:
+					line(p.to.kind, spans(p.spans))
+				}
+			}
 		}
 	}
-	return b.String()
+	return out.String()
 }
 
 func TestCompare(t *testing.T) {
@@ -123,11 +152,7 @@ func TestCompare(t *testing.T) {
 		t.Run(tc.name, func(t *testing.T) {
 			t.Parallel()
 
-			got, err := Compare([]byte(tc.from), []byte(tc.to))
-			if err != nil {
-				t.Fatal(err)
-			}
-			if s := told(got); s != tc.want {
+			if s := told(t, tc.from, tc.to, pageMost); s != tc.want {
 				t.Errorf("got\n%swant\n%s", s, tc.want)
 			}
 		})
@@ -161,24 +186,26 @@ func TestPreLines(t *testing.T) {
 func TestSameHeadings(t *testing.T) {
 	t.Parallel()
 
-	got, err := Compare([]byte("<h2>Why</h2><p>first reason</p>"), []byte("<h2>Why</h2><p>a new reason</p><h2>Why</h2><p>first reason</p>"))
+	const from, to = "<h2>Why</h2><p>first reason</p>", "<h2>Why</h2><p>a new reason</p><h2>Why</h2><p>first reason</p>"
+	got, err := Compare([]byte(from), []byte(to))
 	if err != nil {
 		t.Fatal(err)
 	}
 	if got.Counts.Changed != 1 || got.Counts.Added != 1 {
-		t.Errorf("got %+v\n%s", got.Counts, told(got))
+		t.Errorf("got %+v\n%s", got.Counts, told(t, from, to, pageMost))
 	}
 }
 
 func TestCounts(t *testing.T) {
 	t.Parallel()
 
-	got, err := Compare([]byte("<h2>A</h2><p>a</p><h2>B</h2><p>b b</p><h2>C</h2>"), []byte("<h2>A</h2><p>a</p><h2>B</h2><p>b c</p><h2>D</h2><h2>Other heading</h2>"))
+	const from, to = "<h2>A</h2><p>a</p><h2>B</h2><p>b b</p><h2>C</h2>", "<h2>A</h2><p>a</p><h2>B</h2><p>b c</p><h2>D</h2><h2>Other heading</h2>"
+	got, err := Compare([]byte(from), []byte(to))
 	if err != nil {
 		t.Fatal(err)
 	}
 	if want := (Counts{Changed: 1, Added: 2, Removed: 1, Same: 1, Places: 4}); got.Counts != want {
-		t.Errorf("got %+v, want %+v\n%s", got.Counts, want, told(got))
+		t.Errorf("got %+v, want %+v\n%s", got.Counts, want, told(t, from, to, pageMost))
 	}
 }
 
@@ -196,22 +223,12 @@ func TestCompareDeep(t *testing.T) {
 func TestCompareOutOfTime(t *testing.T) {
 	t.Parallel()
 
-	got, err := compareIn(
-		[]byte("<h2>A</h2><p>x and y</p><p>z</p><h2>B</h2><p>the same</p>"),
-		[]byte("<h2>N</h2><h2>A</h2><p>x and w</p><p>z</p><h2>B</h2><p>the same</p>"), 0)
-	if err != nil {
-		t.Fatal(err)
-	}
 	const want = "added h2 {+N+}\nchanged h2 A\n  [p] [-x and y-]\n  [p] {+x and w+}\nsame h2 B\n"
-	if s := told(got); s != want {
+	if s := told(t, "<h2>A</h2><p>x and y</p><p>z</p><h2>B</h2><p>the same</p>", "<h2>N</h2><h2>A</h2><p>x and w</p><p>z</p><h2>B</h2><p>the same</p>", 0); s != want {
 		t.Errorf("got\n%swant\n%s", s, want)
 	}
 	// A heading to compare by its words, no time left for it: removed and added, whatever the rest.
-	got, err = compareIn([]byte("<h2>3. A</h2>"), []byte("<h2>4. A</h2>"), 0)
-	if err != nil {
-		t.Fatal(err)
-	}
-	if s, want := told(got), "removed h2 [-3. A-]\nadded h2 {+4. A+}\n"; s != want {
+	if s, want := told(t, "<h2>3. A</h2>", "<h2>4. A</h2>", 0), "removed h2 [-3. A-]\nadded h2 {+4. A+}\n"; s != want {
 		t.Errorf("got\n%swant\n%s", s, want)
 	}
 }

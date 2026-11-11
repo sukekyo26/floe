@@ -150,11 +150,11 @@ func namesIn(k *kit.Kit) names {
 func checkNames(
 	k *kit.Kit, ns names, n *html.Node, boxes, taken map[string]bool, refuse func(key string, args ...any),
 ) {
-	if value, ok := attrOf(n, "data-floe-part"); ok {
-		if strings.TrimFunc(value, isSpace) == "" {
+	if value, ok := page.Attr(n, "data-floe-part"); ok {
+		if strings.TrimFunc(value, page.IsSpace) == "" {
 			refuse("draw_part_several", value)
 		}
-		for _, name := range fields(value) {
+		for _, name := range page.Fields(value) {
 			_, isPart := k.Part(name)
 			_, isLook := k.Look(name)
 			switch {
@@ -169,8 +169,8 @@ func checkNames(
 			}
 		}
 	}
-	if value, ok := attrOf(n, "data-floe-look"); ok {
-		for _, name := range fields(value) {
+	if value, ok := page.Attr(n, "data-floe-look"); ok {
+		for _, name := range page.Fields(value) {
 			if !slices.Contains(ns.all, name) {
 				refuse("draw_part_unknown", name, strings.Join(ns.all, ", "))
 				continue
@@ -201,8 +201,8 @@ func depths(tree *html.Node) map[string][]int {
 		if name, ok := boxOf(n); ok {
 			found["part "+name] = append(found["part "+name], depth)
 		}
-		if value, ok := attrOf(n, "data-floe-look"); ok {
-			for _, name := range fields(value) {
+		if value, ok := page.Attr(n, "data-floe-look"); ok {
+			for _, name := range page.Fields(value) {
 				found["look "+name] = append(found["look "+name], depth)
 			}
 		}
@@ -219,8 +219,8 @@ func nests(n *html.Node) bool {
 	if n.Type != html.ElementNode {
 		return false
 	}
-	_, box := attrOf(n, "data-floe-part")
-	_, look := attrOf(n, "data-floe-look")
+	_, box := page.Attr(n, "data-floe-part")
+	_, look := page.Attr(n, "data-floe-look")
 	return box || look
 }
 
@@ -229,26 +229,6 @@ func boxOf(n *html.Node) (string, bool) {
 	if n.Type != html.ElementNode {
 		return "", false
 	}
-	value, ok := attrOf(n, "data-floe-part")
-	return value, ok && value != "" && !strings.ContainsFunc(value, isSpace)
-}
-
-// fields returns the names value holds, as HTML splits an attribute of names: at its ASCII whitespace.
-func fields(value string) []string {
-	return strings.FieldsFunc(value, isSpace)
-}
-
-// isSpace reports whether r is ASCII whitespace, which HTML splits names at (and CSS's ~= too).
-func isSpace(r rune) bool {
-	return strings.ContainsRune(" \t\n\f\r", r)
-}
-
-// attrOf returns the value of n's attribute key, of no namespace.
-func attrOf(n *html.Node, key string) (string, bool) {
-	for _, a := range n.Attr {
-		if a.Namespace == "" && a.Key == key {
-			return a.Val, true
-		}
-	}
-	return "", false
+	value, ok := page.Attr(n, "data-floe-part")
+	return value, ok && value != "" && !strings.ContainsFunc(value, page.IsSpace)
 }

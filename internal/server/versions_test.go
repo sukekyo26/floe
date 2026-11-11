@@ -4,6 +4,7 @@ import (
 	"bytes"
 	"encoding/json"
 	"errors"
+	"fmt"
 	"io/fs"
 	"net/http"
 	"os"
@@ -69,6 +70,7 @@ func TestDiffAPI(t *testing.T) {
 		From, To struct {
 			N int
 		}
+		Key      string
 		Counts   pagediff.Counts
 		Sections []pagediff.Section
 	}
@@ -85,25 +87,21 @@ func TestDiffAPI(t *testing.T) {
 		}
 		return a
 	}
+	// The words marked on the page of the diff the answer names by its key
 	ops := func(a answer) string {
+		w := e.do(t, http.MethodGet, fmt.Sprintf("/a/d/?raw&v=%d&from=%d&key=%s", a.To.N, a.From.N, a.Key), "")
 		var b strings.Builder
-		for _, s := range a.Sections {
-			for _, block := range s.Blocks {
-				for _, span := range block.Spans {
-					if span.Op != "same" {
-						b.WriteString(span.Op + ":" + span.Text + " ")
-					}
-				}
-			}
+		for _, m := range regexp.MustCompile(`<(del|ins) class="floe-diff-(?:del|ins)">([^<]*)<`).FindAllStringSubmatch(w.Body.String(), -1) {
+			b.WriteString(m[1] + ":" + m[2] + " ")
 		}
 		return b.String()
 	}
 	a := get("from=1&to=2")
-	if a.From.N != 1 || a.To.N != 2 || a.Counts.Changed != 1 || ops(a) != "del:three ins:four " {
+	if a.From.N != 1 || a.To.N != 2 || a.Counts.Changed != 1 || a.Counts.Places != 1 || ops(a) != "del:three ins:four " {
 		t.Errorf("from 1 to 2: %+v, %s", a, ops(a))
 	}
-	if a := get("from=2&to=1"); ops(a) != "del:four ins:three " {
-		t.Errorf("from 2 to 1: %s", ops(a))
+	if a := get("from=2&to=1"); a.Counts.Changed != 1 || a.Key == "" {
+		t.Errorf("from 2 to 1: %+v", a)
 	}
 	if a := get("from=2&to=2"); a.Counts.Changed != 0 || a.Counts.Same == 0 {
 		t.Errorf("from 2 to 2: %+v", a)
@@ -284,4 +282,32 @@ func TestDownloadVersion(t *testing.T) {
 	for _, v := range []string{"99", "abc", "01", "", "0"} {
 		want(t, e.do(t, http.MethodGet, "/api/artifacts/d/download?v="+v, ""), http.StatusNotFound, "not found")
 	}
+}
+
+// ?raw&v=<n>&from=<m>&key=<k> is version n marked against version m, served in the sandbox as the page is and read as
+// nothing; any other pair, or a key the versions no longer have, is not found.
+func TestDiffPage(t *testing.T) {
+	t.Parallel()
+
+	e := newEnv(t)
+	e.publish(t, "d", noted("one two three"), nil)
+	e.publish(t, "d", noted("one two four"), nil)
+	var a struct{ Key string }
+	if err := json.Unmarshal(e.do(t, http.MethodGet, "/api/artifacts/d/diff?from=1&to=2", "").Body.Bytes(), &a); err != nil {
+		t.Fatal(err)
+	}
+	page := "/a/d/?raw&v=2&from=1&key=" + a.Key
+	w := e.do(t, http.MethodGet, page, "")
+	plain := e.do(t, http.MethodGet, "/a/d/?raw&v=2", "")
+	body := w.Body.String()
+	if w.Code != http.StatusOK || !strings.Contains(body, `id="floe-diff.0"`) || strings.Contains(body, "artifactRead") ||
+		w.Header().Get("Content-Security-Policy") != plain.Header().Get("Content-Security-Policy") {
+		t.Errorf("%s: %d %s %q", page, w.Code, w.Header().Get("Content-Security-Policy"), body)
+	}
+	for _, query := range []string{"v=2&from=2&key=" + a.Key, "v=2&from=3&key=" + a.Key, "v=2&from=x&key=" + a.Key, "v=2&from=1&key=other", "from=1&key=" + a.Key} {
+		want(t, e.do(t, http.MethodGet, "/a/d/?raw&"+query, ""), http.StatusNotFound, "not found")
+	}
+	// A version published after: the last no longer the same, the key of the pair is no longer theirs.
+	e.publish(t, "d", noted("one two five"), nil)
+	want(t, e.do(t, http.MethodGet, page, ""), http.StatusNotFound, "not found")
 }

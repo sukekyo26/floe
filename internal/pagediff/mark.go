@@ -12,6 +12,7 @@ import (
 	"golang.org/x/net/html"
 	"golang.org/x/net/html/atom"
 
+	"floe/internal/page"
 	"floe/internal/usererr"
 )
 
@@ -139,15 +140,6 @@ func boxes(sections []section, body *html.Node) []*html.Node {
 		out[i] = next
 	}
 	return out
-}
-
-func bodyOf(root *html.Node) *html.Node {
-	for n := range root.Descendants() {
-		if n.Type == html.ElementNode && n.DataAtom == atom.Body && n.Namespace == "" {
-			return n
-		}
-	}
-	return root
 }
 
 // mark marks the later page, walking the comparison's sections and blocks in order.
@@ -288,7 +280,7 @@ func (m *marker) gone(sec int, b *block, box *html.Node) {
 		return
 	}
 	var words *html.Node
-	if n := len(m.pending); n > 0 && m.pending[n-1].DataAtom == atom.Div && hasClass(m.pending[n-1], classGone) && m.pending[n-1].FirstChild != nil && hasClass(m.pending[n-1].FirstChild, classSr) {
+	if n := len(m.pending); n > 0 && m.pending[n-1].DataAtom == atom.Div && page.HasClass(m.pending[n-1], classGone) && m.pending[n-1].FirstChild != nil && page.HasClass(m.pending[n-1].FirstChild, classSr) {
 		words = m.pending[n-1]
 	} else {
 		words = element(atom.Div, classGone)
@@ -330,7 +322,7 @@ func (m *marker) before(sec int, n *html.Node) {
 // drawn around the diagram.
 func partOf(n *html.Node) *html.Node {
 	for p := n; p != nil; p = p.Parent {
-		if _, ok := attrOf(p, "data-floe-part"); ok && p.Type == html.ElementNode {
+		if _, ok := page.Attr(p, "data-floe-part"); ok && p.Type == html.ElementNode {
 			return p
 		}
 	}
@@ -530,7 +522,7 @@ func (m *marker) holds(parent *html.Node, tag string) bool {
 	got := false
 	if root, err := html.Parse(strings.NewReader(b.String())); err == nil {
 		for n := range root.Descendants() {
-			if _, probe := attrOf(n, "data-floe-probe"); probe && n.Type == html.ElementNode {
+			if _, probe := page.Attr(n, "data-floe-probe"); probe && n.Type == html.ElementNode {
 				got = n.Data == tag && n.Namespace == "" && sameChain(n.Parent, chain)
 				break
 			}
@@ -580,7 +572,7 @@ func (m *marker) number() []int {
 	}
 	numbers := map[*html.Node]int{}
 	for n := range m.root.Descendants() {
-		if n.Type == html.ElementNode && hasClass(n, classAt) {
+		if n.Type == html.ElementNode && page.HasClass(n, classAt) {
 			n.Attr = append(n.Attr, html.Attribute{Namespace: "", Key: "id", Val: "floe-diff." + strconv.Itoa(m.count)})
 			numbers[n] = m.count
 			m.count++
@@ -680,7 +672,7 @@ func hiddenTab(n *html.Node) *html.Node {
 	var label *html.Node
 	for c := n; c != nil && c.Parent != nil; c = c.Parent {
 		p := c.Parent
-		if v, _ := attrOf(p, "data-floe-part"); p.DataAtom != atom.Form || v != "tabs" || c.DataAtom == atom.Label {
+		if v, _ := page.Attr(p, "data-floe-part"); p.DataAtom != atom.Form || v != "tabs" || c.DataAtom == atom.Label {
 			continue
 		}
 		for l := c.PrevSibling; l != nil; l = l.PrevSibling {
@@ -697,7 +689,7 @@ func hiddenTab(n *html.Node) *html.Node {
 
 func picked(label *html.Node) bool {
 	for d := range label.Descendants() {
-		if _, ok := attrOf(d, "checked"); ok && d.DataAtom == atom.Input {
+		if _, ok := page.Attr(d, "checked"); ok && d.DataAtom == atom.Input {
 			return true
 		}
 	}
@@ -726,20 +718,6 @@ func text(s string) *html.Node {
 	return &html.Node{Type: html.TextNode, Data: s}
 }
 
-func attrOf(n *html.Node, key string) (string, bool) {
-	for _, a := range n.Attr {
-		if a.Namespace == "" && a.Key == key {
-			return a.Val, true
-		}
-	}
-	return "", false
-}
-
-func hasClass(n *html.Node, class string) bool {
-	v, _ := attrOf(n, "class")
-	return slices.Contains(strings.Fields(v), class)
-}
-
 func addClass(n *html.Node, class string) {
 	for i, a := range n.Attr {
 		if a.Namespace == "" && a.Key == "class" {
@@ -754,12 +732,17 @@ func addClass(n *html.Node, class string) {
 
 // withStyle puts the style of the marks at the end of the page's head.
 func withStyle(root *html.Node) {
-	for n := range root.Descendants() {
-		if n.Type == html.ElementNode && n.DataAtom == atom.Head && n.Namespace == "" {
-			s := element(atom.Style, "")
-			s.AppendChild(text(markStyle))
-			n.AppendChild(s)
-			return
-		}
+	if head := page.First(root, atom.Head); head != nil {
+		s := element(atom.Style, "")
+		s.AppendChild(text(markStyle))
+		head.AppendChild(s)
 	}
+}
+
+// bodyOf is the body of the page root, the parser always makes one: root itself for none.
+func bodyOf(root *html.Node) *html.Node {
+	if body := page.First(root, atom.Body); body != nil {
+		return body
+	}
+	return root
 }

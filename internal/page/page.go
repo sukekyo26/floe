@@ -28,7 +28,7 @@ func Title(doc string) string {
 	if n == nil {
 		return ""
 	}
-	return strings.Join(strings.FieldsFunc(text(n), isASCIISpace), " ")
+	return strings.Join(strings.FieldsFunc(text(n), IsSpace), " ")
 }
 
 // First returns the first element of n, in tree order, of the HTML namespace and the tag a, or nil.
@@ -52,9 +52,9 @@ func text(n *html.Node) string {
 	return b.String()
 }
 
-// isASCIISpace reports whether r is ASCII whitespace, as HTML has it: tab, newline, form feed, carriage
-// return and space.
-func isASCIISpace(r rune) bool {
+// IsSpace reports whether r is ASCII whitespace, as HTML has it: tab, newline, form feed, carriage
+// return and space, which HTML splits a list of names at (and CSS's ~= too).
+func IsSpace(r rune) bool {
 	return r == '\t' || r == '\n' || r == '\f' || r == '\r' || r == ' '
 }
 
@@ -85,4 +85,25 @@ func shown(n *html.Node) bool {
 	}) && !slices.ContainsFunc(n.Attr, func(a html.Attribute) bool {
 		return a.Namespace != "" || a.Key != "name" && a.Key != "content"
 	})
+}
+
+// Fields splits value at ASCII whitespace, as HTML splits a list of names such as a class.
+func Fields(value string) []string {
+	return strings.FieldsFunc(value, IsSpace)
+}
+
+// Attr returns the value of n's attribute key, of no namespace.
+func Attr(n *html.Node, key string) (string, bool) {
+	for _, a := range n.Attr {
+		if a.Namespace == "" && a.Key == key {
+			return a.Val, true
+		}
+	}
+	return "", false
+}
+
+// HasClass reports whether the class of n holds name.
+func HasClass(n *html.Node, name string) bool {
+	value, _ := Attr(n, "class")
+	return slices.Contains(Fields(value), name)
 }

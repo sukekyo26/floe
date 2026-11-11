@@ -23,23 +23,14 @@ const (
 	opIns  = "ins"
 )
 
-// Block is a block of a section, kind its element's name. Reshaped tells a diagram or image whose words are the same
-// and whose
-// content differs.
-type Block struct {
-	Kind     string `json:"kind"`
-	Reshaped bool   `json:"reshaped,omitempty"`
-	Spans    []Span `json:"spans"`
-}
-
-// Section is a section told in both versions or either: its state one of the State values. A section the same holds no
-// blocks. Place is the number of its first place on the marked page (Mark), none for a section with no place there.
+// Section is a section told in both versions or either: its state one of the State values, its heading's words as
+// they differ. Place is the number of its first place on the marked page (Mark), none for a section with no place
+// there.
 type Section struct {
-	State   string  `json:"state"`
-	Level   int     `json:"level"`
-	Heading []Span  `json:"heading"`
-	Blocks  []Block `json:"blocks,omitempty"`
-	Place   *int    `json:"place,omitempty"`
+	State   string `json:"state"`
+	Level   int    `json:"level"`
+	Heading []Span `json:"heading"`
+	Place   *int   `json:"place,omitempty"`
 }
 
 // The states of a section.
@@ -150,15 +141,7 @@ func blockKeys(s section) []string {
 }
 
 func whole(s section, op, state string) Section {
-	blocks := make([]Block, len(s.blocks))
-	for i, b := range s.blocks {
-		blocks[i] = wholeBlock(b, op)
-	}
-	return Section{State: state, Level: s.level, Heading: []Span{{Op: op, Text: s.heading}}, Blocks: blocks, Place: nil}
-}
-
-func wholeBlock(b block, op string) Block {
-	return Block{Kind: b.kind, Reshaped: false, Spans: []Span{{Op: op, Text: b.text}}}
+	return Section{State: state, Level: s.level, Heading: []Span{{Op: op, Text: s.heading}}, Place: nil}
 }
 
 // pair is the places of what goes together in two lists, -1 for one in the other alone.
@@ -190,40 +173,36 @@ func (w *work) sectionPair(c *compared, a, b []section, p pair) {
 		for i := range to.blocks {
 			same[i] = blockPair{from: &a[p.a].blocks[i], to: &b[p.b].blocks[i], spans: nil}
 		}
-		c.add(Section{State: StateSame, Level: to.level, Heading: heading, Blocks: nil, Place: nil}, step{from: p.a, to: p.b, pairs: same})
+		c.add(Section{State: StateSame, Level: to.level, Heading: heading, Place: nil}, step{from: p.a, to: p.b, pairs: same})
 		return
 	}
-	blocks := []Block{}
 	var pairs []blockPair
 	for _, q := range align(w.library(len(keysA), len(keysB)), keysA, keysB) {
-		bs, ps := w.blockPair(a[p.a].blocks, b[p.b].blocks, q)
-		blocks = append(blocks, bs...)
-		pairs = append(pairs, ps...)
+		pairs = append(pairs, w.blockPair(a[p.a].blocks, b[p.b].blocks, q)...)
 	}
-	c.add(Section{State: StateChanged, Level: to.level, Heading: heading, Blocks: blocks, Place: nil}, step{from: p.a, to: p.b, pairs: pairs})
+	c.add(Section{State: StateChanged, Level: to.level, Heading: heading, Place: nil}, step{from: p.a, to: p.b, pairs: pairs})
 }
 
-func (w *work) blockPair(a, b []block, q pair) ([]Block, []blockPair) {
+func (w *work) blockPair(a, b []block, q pair) []blockPair {
 	switch {
 	case q.a < 0:
-		return []Block{wholeBlock(b[q.b], opIns)}, []blockPair{{from: nil, to: &b[q.b], spans: nil}}
+		return []blockPair{{from: nil, to: &b[q.b], spans: nil}}
 	case q.b < 0:
-		return []Block{wholeBlock(a[q.a], opDel)}, []blockPair{{from: &a[q.a], to: nil, spans: nil}}
+		return []blockPair{{from: &a[q.a], to: nil, spans: nil}}
 	}
 	from, to := &a[q.a], &b[q.b]
 	if from.key == to.key {
-		return []Block{wholeBlock(*to, opSame)}, []blockPair{{from: from, to: to, spans: nil}}
+		return []blockPair{{from: from, to: to, spans: nil}}
 	}
 	if from.kind == to.kind {
 		if from.text == to.text {
-			return []Block{{Kind: to.kind, Reshaped: true, Spans: []Span{{Op: opSame, Text: to.text}}}}, []blockPair{{from: from, to: to, spans: nil}}
+			return []blockPair{{from: from, to: to, spans: nil}}
 		}
 		if spans := w.words(from.text, to.text); spans != nil {
-			return []Block{{Kind: to.kind, Reshaped: false, Spans: spans}}, []blockPair{{from: from, to: to, spans: spans}}
+			return []blockPair{{from: from, to: to, spans: spans}}
 		}
 	}
-	return []Block{wholeBlock(*from, opDel), wholeBlock(*to, opIns)},
-		[]blockPair{{from: from, to: nil, spans: nil}, {from: nil, to: to, spans: nil}}
+	return []blockPair{{from: from, to: nil, spans: nil}, {from: nil, to: to, spans: nil}}
 }
 
 // work is what is left of the differ's work for one comparison.

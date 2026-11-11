@@ -13,6 +13,7 @@ import (
 
 	"golang.org/x/net/html"
 
+	"floe/internal/page"
 	"floe/internal/usererr"
 )
 
@@ -56,6 +57,12 @@ func (w *words) add(s string, n *html.Node) {
 
 func (w *words) addApart(s string) {
 	w.add(s, nil)
+}
+
+// addRead adds words read already, from telling where each rune of them comes from.
+func (w *words) addRead(s string, from []origin) {
+	w.b.WriteString(s)
+	w.from = append(w.from, from...)
 }
 
 func (w *words) reset() {
@@ -181,8 +188,8 @@ func (r *reader) walk(n *html.Node) {
 		r.add("svg", text, svgKey(n), n, nil)
 	case n.Data == "img":
 		r.flush()
-		alt := squeeze(attr(n, "alt"))
-		r.add("img", alt, alt+"\x00"+digest(attr(n, "src")), n, nil)
+		alt := squeeze(attrValue(n, "alt"))
+		r.add("img", alt, alt+"\x00"+digest(attrValue(n, "src")), n, nil)
 	case n.Data == "tr":
 		r.flush()
 		text, from := row(n)
@@ -229,15 +236,6 @@ func squeeze(s string) string {
 	return strings.Join(strings.Fields(s), " ")
 }
 
-func attr(n *html.Node, key string) string {
-	for _, a := range n.Attr {
-		if a.Key == key {
-			return a.Val
-		}
-	}
-	return ""
-}
-
 // flow writes the words under n as they read: an element that is no mark of words stands apart from what is beside it.
 func flow(n *html.Node, w *words) {
 	if n.Type == html.TextNode {
@@ -246,7 +244,7 @@ func flow(n *html.Node, w *words) {
 	}
 	// LIMIT: of an image in a line or a heading, its alt is told, not its src, and of a diagram there, nothing.
 	if n.Data == "img" {
-		w.addApart(" " + attr(n, "alt") + " ")
+		w.addApart(" " + attrValue(n, "alt") + " ")
 		return
 	}
 	if unread[n.Data] || n.Namespace == "svg" {
@@ -281,9 +279,7 @@ func row(n *html.Node) (string, []origin) {
 			w.addApart(" | ")
 		}
 		first = false
-		text, from := flowOf(c)
-		w.b.WriteString(text)
-		w.from = append(w.from, from...)
+		w.addRead(flowOf(c))
 	}
 	return w.b.String(), w.from
 }
@@ -329,7 +325,7 @@ func preLines(n *html.Node) []line {
 		var w words
 		plain(c, &w)
 		all := w.b.String()
-		if c.Type == html.ElementNode && slices.Contains(strings.Fields(attr(c, "class")), "floe-hidden") {
+		if c.Type == html.ElementNode && page.HasClass(c, "floe-hidden") {
 			head += strings.TrimSpace(all) + " "
 			continue
 		}
@@ -406,7 +402,7 @@ func deepCopy(n *html.Node) *html.Node {
 func renumber(n *html.Node, named func(i int, id string) string) {
 	ids := map[string]string{}
 	note := func(m *html.Node) {
-		if id := attr(m, "id"); id != "" && ids[id] == "" {
+		if id := attrValue(m, "id"); id != "" && ids[id] == "" {
 			ids[id] = cmp.Or(named(len(ids), id), "id"+strconv.Itoa(len(ids)))
 		}
 	}
@@ -457,4 +453,10 @@ func numberedRefs(value string, ids map[string]string) string {
 		b.WriteString(cmp.Or(ids[after[:end]], after[:end]))
 		value = after[end:]
 	}
+}
+
+// attrValue is the value of n's attribute key, "" for none.
+func attrValue(n *html.Node, key string) string {
+	v, _ := page.Attr(n, key)
+	return v
 }
