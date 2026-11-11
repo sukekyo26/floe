@@ -21,8 +21,12 @@ func TestUIDiffFrame(t *testing.T) { //nolint:paralleltest // the browser tests 
 	// Wait for the page in the frame to tell where it is, which it does as it moves: the URL stays.
 	b.still()
 	out = append(out, b.eval("location.search + '|' + location.hash"))
+	// A frame asked with a key no longer the pair's (a publish between /diff and the frame) is not found, and tells the
+	// diff, which reads what changed again.
+	b.eval("(() => { const f = document.getElementById('diff-frame'); f.src = f.src.replace(/key=[^&#]*/, 'key=stale'); return 'set'; })()")
+	out = append(out, b.until("the frame of a stale key read again", "("+shown+") && 'again'"))
 	key := b.eval("diffAnswer.key")
 	s.floe(t, "publish", s.page(t, "diff/d.yaml", "D", diffV3+"<p>One more.</p>"), "--slug", "d")
 	out = append(out, b.until("what changed read again", "diffAnswer.key !== '"+key+"' && ("+shown+") && String(diffVersions.length)"))
-	check(t, "frame", out, strings.Join([]string{"?diff&from=2&to=3|", "?diff&from=2&to=3|", "4"}, "|"))
+	check(t, "frame", out, strings.Join([]string{"?diff&from=2&to=3|", "?diff&from=2&to=3|", "again", "4"}, "|"))
 }
