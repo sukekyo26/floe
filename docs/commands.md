@@ -223,7 +223,7 @@ floe tag design-notes --remove draft                       # one taken off
 
 ## `floe work [<slug>...]`
 
-Say which task a page is on, and what a task's state is, through the server (it is started when it is not running). A task is named by its project and its ID; floe does not read what either means. The pages say which task they are on (`work` in each `meta.json`), and `tasks.json` in the store holds each task's title, state, last category, outside link and order of categories, and how many times it was changed (`rev`), which a screen sends back so that a task written since is refused.
+Say which task a page is on, and what a task's state is, through the server (it is started when it is not running). A task is named by its project and its ID; floe does not read what either means. The pages say which task they are on (`work` in each `meta.json`), and `tasks.json` in the store holds each task's title, state, outside link and order of categories, and how many times it was changed (`rev`), which a screen sends back so that a task written since is refused.
 
 A page's category is where the task's page places it among the task's pages, under a heading of its own; the user decides it.
 
@@ -260,7 +260,7 @@ With slugs, the task's project is each page's: `--task` puts the pages on that n
 | Flag | Changes | |
 | --- | --- | --- |
 | `--task <ID>` | pages or the task named | With slugs, `""` takes the pages off their task and takes their category off, and cannot go with what changes a task (`--state`, `--url`, `--title`, `--categories`, `--parent`, a category). A page moved to another task leaves its category, unless `--category` gives it one there. A new ID is a task in the state `todo` |
-| `--category <category>` | pages, and the task's last category | With slugs only. `""` takes it off the pages and leaves the task's |
+| `--category <category>` | pages | With slugs only, of pages on a task; it writes no task. `""` takes it off |
 | `--state <state>` | the task | `todo`, `doing`, `done` or `archived` |
 | `--url <url>` | the task | Its one outside link, `http` or `https`; `""` takes it off |
 | `--parent <task ID>` | the task | With slugs, with `--task`: of the one task the pages go on. A task of its project with a row and no parent of its own; a task with children takes none: one level only. `""` takes it off |
@@ -272,7 +272,7 @@ With slugs, the task's project is each page's: `--task` puts the pages on that n
 
 The tasks are written first, once for each different task the pages are on, and the pages then, in order, stopping at the first failure; a page that does not exist, or is on no task where the flags change one, is told before anything is written. A page that could not be written leaves its task written: the same command given again finishes it. Flags of the pages alone write no task.
 
-The task list, at `/tasks` of the server, lists the tasks of one project by state. Opened without one, it takes the project you last had in this browser while it is there, else the one with the task in progress that changed last, else the first on the shelf, and writes it in the URL. The tasks of each state go the latest changed first, each with its last category, its pages, how many are unread and its link, under the pages of that project that are pinned, each with a × that takes its pin off. A project with no task, whose last pin is taken off, is then no longer on the list, and its screen says so as for any such project. A task's place on the list is its state alone: `archived` puts it under Archive, whatever its pages are. The switch to it stands beside the logo, with no task too.
+The task list, at `/tasks` of the server, lists the tasks of one project by state. Opened without one, it takes the project you last had in this browser while it is there, else the one with the task in progress that changed last, else the first on the shelf, and writes it in the URL. The tasks of each state go the latest changed first, each with its pages, how many are unread and its link, under the pages of that project that are pinned, each with a × that takes its pin off. A project with no task, whose last pin is taken off, is then no longer on the list, and its screen says so as for any such project. A task's place on the list is its state alone: `archived` puts it under Archive, whatever its pages are. The switch to it stands beside the logo, with no task too.
 
 **Create task**: "+ Task" in the task list's left column, under the projects (in Filter on a narrow screen), makes a task of the project shown, from a task ID and a title. Made, the list goes to To do with the new row marked. An ID already there is said so, and "Open the task" goes to its page. The screen of no task anywhere has the same button, and asks for a project of those the pages have, or "Not set"; for a project no page has, use `floe work --project`. The archived list and a project not on the list, named in the URL, have no such button.
 
