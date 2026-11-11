@@ -143,6 +143,7 @@ func (m *marker) numberEarlier(groups []*group) {
 		}
 		for _, n := range g.from {
 			if label := hiddenTab(n); label != nil {
+				addClass(label, classChange)
 				n = label
 			}
 			// A diagram holds no words a span can go before: the mark goes just before its part.
