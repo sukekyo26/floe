@@ -55,6 +55,9 @@ func marked(from, to []byte, most int, words Words) (Result, *html.Node, error) 
 	c := compare(a, b, &work{left: most})
 	m := newMarker(treeB, words)
 	m.mark(treeA, a, b, c)
+	if m.copies > 0 {
+		carryStyles(treeA, treeB)
+	}
 	places := m.number()
 	for i, k := range places {
 		if k >= 0 {
@@ -993,6 +996,37 @@ func addClass(n *html.Node, class string) {
 		}
 	}
 	n.Attr = append(n.Attr, html.Attribute{Namespace: "", Key: "class", Val: class})
+}
+
+// carryStyles puts the styles of the earlier page's head the later's has not at the end of the later's head: the CSS
+// of a part only the earlier draws, which what is copied of it needs.
+// LIMIT: of two versions in different themes, the earlier's rules apply to the later page too, where they match.
+func carryStyles(earlier, later *html.Node) {
+	from, to := page.First(earlier, atom.Head), page.First(later, atom.Head)
+	if from == nil || to == nil {
+		return
+	}
+	has := map[string]bool{}
+	for d := range to.Descendants() {
+		if d.Type == html.ElementNode && d.DataAtom == atom.Style {
+			has[styleText(d)] = true
+		}
+	}
+	for d := range from.Descendants() {
+		if d.Type == html.ElementNode && d.DataAtom == atom.Style && d.Namespace == "" && !has[styleText(d)] {
+			c, _ := copyTree(d)
+			to.AppendChild(c)
+			has[styleText(d)] = true
+		}
+	}
+}
+
+func styleText(n *html.Node) string {
+	var b strings.Builder
+	for c := n.FirstChild; c != nil; c = c.NextSibling {
+		b.WriteString(c.Data)
+	}
+	return b.String()
 }
 
 // withStyle puts the style of the marks at the end of the page's head.
