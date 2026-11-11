@@ -54,8 +54,8 @@ func ReadChecks(file string, src []byte) (*Checks, error) {
 	if !ok {
 		found = append(found, yamlpos.New(file, yamlpos.Of(body), "rules_checks_yaml"))
 	} else {
-		for _, n := range seq.Values {
-			one, mistakes, err := readCheck(file, n)
+		for i, n := range seq.Values {
+			one, mistakes, err := readCheck(file, yamlpos.EntryKey(seq, i), n)
 			if err != nil {
 				return nil, err
 			}
@@ -71,13 +71,13 @@ func ReadChecks(file string, src []byte) (*Checks, error) {
 	return c, nil
 }
 
-// readCheck reads the check n of file: all the mistakes of its keys, and of its expression when it is text; or
-// floe's failure.
-func readCheck(file string, n ast.Node) (check, usererr.List, error) {
+// readCheck reads the check n of file, the entry of the list at entry (its -, nil in [ ]): all the mistakes of its
+// keys, and of its expression when it is text; or floe's failure.
+func readCheck(file string, entry, n ast.Node) (check, usererr.List, error) {
 	c := check{For: "", Field: "", Message: "", forAt: yamlpos.Pos{Line: 0, Column: 0}, prog: nil}
 	m, ok := n.(*ast.MappingNode)
 	if !ok {
-		return c, usererr.List{yamlpos.New(file, yamlpos.Of(n), "rules_checks_yaml")}, nil
+		return c, usererr.List{yamlpos.New(file, yamlpos.OfValue(entry, n), "rules_checks_yaml")}, nil
 	}
 	var found usererr.List
 	var src expression
@@ -114,7 +114,7 @@ func readCheck(file string, n ast.Node) (check, usererr.List, error) {
 			return yamlpos.KeyName(kv) == key
 		}):
 			// One that is not text is told as such.
-			found = append(found, yamlpos.New(file, yamlpos.Of(m), "rules_checks_missing", key))
+			found = append(found, yamlpos.New(file, yamlpos.OfValue(entry, m), "rules_checks_missing", key))
 		}
 	}
 	for _, key := range []string{"for", "field"} {

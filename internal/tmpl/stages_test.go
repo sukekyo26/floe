@@ -64,7 +64,7 @@ func TestRestPartMistake(t *testing.T) {
 "properties": {"note": {"additionalProperties": {"$ref": "floe:///parts/bars.json"}}}}`
 	k := ownKit(t, nil, mine(minePage, schema, nil))
 	data := "lang: en\ntemplate: mine\nnote:\n  x/y:\n    - { label: a, value: 5, of: 3 }\n"
-	want := lines(`d.yaml:5:5: bars: bar 1 "a": 5 is over its of 3; write a value no greater than of, the whole`)
+	want := lines(`d.yaml:4:3: bars: bar 1 "a": 5 is over its of 3; write a value no greater than of, the whole`)
 	if got := drawn(t, k, data, none); got != want {
 		t.Errorf("told\n%s\nwant\n%s", got, want)
 	}
@@ -228,7 +228,7 @@ func TestDrawMistakes(t *testing.T) {
 	}, mine(minePage, `{"$schema": "https://json-schema.org/draft/2020-12/schema", "type": "object",
 "properties": {"bigs": {"type": "array", "items": {"$ref": "floe:///parts/big.json"}}}}`, nil))
 	got := drawn(t, k, "lang: en\ntemplate: mine\nbigs:\n  - n: abc\n  - n: xyz\n", none)
-	if want := lines(`d.yaml:4:5: num takes a number, not "abc"`, `d.yaml:5:5: num takes a number, not "xyz"`); got != want {
+	if want := lines(`d.yaml:4:3: num takes a number, not "abc"`, `d.yaml:5:3: num takes a number, not "xyz"`); got != want {
 		t.Errorf("a part told\n%s\nwant\n%s", got, want)
 	}
 }

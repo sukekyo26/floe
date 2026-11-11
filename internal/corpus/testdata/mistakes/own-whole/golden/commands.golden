@@ -2,18 +2,19 @@ $ floe part check
 exit 0
 $ floe template check
 exit 0
-$ floe check b2.yaml c2.yaml d.yaml e.yaml f.yaml p2.yaml
+$ floe check b2.yaml c2.yaml d.yaml e.yaml f.yaml g.yaml p2.yaml
 exit 1
 --- stderr
 b2.yaml: missing property 'n'
 c2.yaml: neg
 c2.yaml:4:9: big ("20")
-d.yaml: additional properties 'zz' not allowed
 d.yaml: missing property 'n'
+d.yaml:3:5: additional properties 'zz' not allowed
 e.yaml: name the language of the page at the top level, like lang: en (a BCP 47 tag such as en, ja or pt-BR)
 e.yaml: missing property 'n'
 f.yaml: name the language of the page at the top level, like lang: en (a BCP 47 tag such as en, ja or pt-BR)
 f.yaml: name the template at the top level, like template: report (templates: adr, design, handoff, p, postmortem, report, runbook, slides, t)
+g.yaml:4:1: missing property 'c'
 p2.yaml: invalid propertyName 'X'
 $ floe render --out-dir $TMP/pages/b2.yaml b2.yaml
 exit 1
@@ -27,8 +28,8 @@ c2.yaml:4:9: big ("20")
 $ floe render --out-dir $TMP/pages/d.yaml d.yaml
 exit 1
 --- stderr
-d.yaml: additional properties 'zz' not allowed
 d.yaml: missing property 'n'
+d.yaml:3:5: additional properties 'zz' not allowed
 $ floe render --out-dir $TMP/pages/e.yaml e.yaml
 exit 1
 --- stderr
@@ -39,20 +40,25 @@ exit 1
 --- stderr
 f.yaml: name the language of the page at the top level, like lang: en (a BCP 47 tag such as en, ja or pt-BR)
 f.yaml: name the template at the top level, like template: report (templates: adr, design, handoff, p, postmortem, report, runbook, slides, t)
+$ floe render --out-dir $TMP/pages/g.yaml g.yaml
+exit 1
+--- stderr
+g.yaml:4:1: missing property 'c'
 $ floe render --out-dir $TMP/pages/p2.yaml p2.yaml
 exit 1
 --- stderr
 p2.yaml: invalid propertyName 'X'
-$ floe render --out-dir $TMP/together b2.yaml c2.yaml d.yaml e.yaml f.yaml p2.yaml
+$ floe render --out-dir $TMP/together b2.yaml c2.yaml d.yaml e.yaml f.yaml g.yaml p2.yaml
 exit 1
 --- stderr
 b2.yaml: missing property 'n'
 c2.yaml: neg
 c2.yaml:4:9: big ("20")
-d.yaml: additional properties 'zz' not allowed
 d.yaml: missing property 'n'
+d.yaml:3:5: additional properties 'zz' not allowed
 e.yaml: name the language of the page at the top level, like lang: en (a BCP 47 tag such as en, ja or pt-BR)
 e.yaml: missing property 'n'
 f.yaml: name the language of the page at the top level, like lang: en (a BCP 47 tag such as en, ja or pt-BR)
 f.yaml: name the template at the top level, like template: report (templates: adr, design, handoff, p, postmortem, report, runbook, slides, t)
+g.yaml:4:1: missing property 'c'
 p2.yaml: invalid propertyName 'X'

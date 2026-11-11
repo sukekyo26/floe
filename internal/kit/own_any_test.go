@@ -77,7 +77,7 @@ func TestOwnPartInAny(t *testing.T) {
 		{"quote in box", "box: { items: [ { quote: { text: a } } ] }", ""},
 		{"a misspelt quote", "qoute: { text: a }", "x.yaml:7:9: additional properties 'qoute' not allowed"},
 		{"the look", "frame: {}", "x.yaml:7:9: additional properties 'frame' not allowed"},
-		{"the shared schema", "shade: a", "x.yaml:7:9: additional properties 'shade' not allowed"},
+		{"the shared schema", "shade: a", "x.yaml:7:16: additional properties 'shade' not allowed"},
 		{"quote in details", "details: { title: d, parts: [ { quote: { text: a } } ] }", "x.yaml:7:41: additional properties 'quote' not allowed"},
 	} {
 		if got := valid(t, k, section(tt.part)); got != tt.want {

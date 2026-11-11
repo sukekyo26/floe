@@ -1,10 +1,10 @@
 $ floe check bars.yaml
 exit 1
 --- stderr
-bars.yaml:9:11: bars: bar 1 "a": 5 is over its of 3; write a value no greater than of, the whole
-bars.yaml:9:11: bars: bar 3 "c": 9 is over its of 4; write a value no greater than of, the whole
+bars.yaml:8:9: bars: bar 1 "a": 5 is over its of 3; write a value no greater than of, the whole
+bars.yaml:8:9: bars: bar 3 "c": 9 is over its of 4; write a value no greater than of, the whole
 $ floe render --out-dir $TMP/pages/bars.yaml bars.yaml
 exit 1
 --- stderr
-bars.yaml:9:11: bars: bar 1 "a": 5 is over its of 3; write a value no greater than of, the whole
-bars.yaml:9:11: bars: bar 3 "c": 9 is over its of 4; write a value no greater than of, the whole
+bars.yaml:8:9: bars: bar 1 "a": 5 is over its of 3; write a value no greater than of, the whole
+bars.yaml:8:9: bars: bar 3 "c": 9 is over its of 4; write a value no greater than of, the whole

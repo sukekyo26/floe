@@ -256,6 +256,13 @@ func TestReadMistakes(t *testing.T) {
 			"parts/p/part.yaml:1:33: write looks: as a list of the names of parts or looks, each as text (in quotes where YAML would read a number, true, false or null), like looks: [panel]",
 			"parts/p/part.yaml:1:36: write looks: as a list of the names of parts or looks, each as text (in quotes where YAML would read a number, true, false or null), like looks: [panel]",
 		)},
+		// A look written as keys and values is told at its -, or at its { in [ ].
+		{"looks of keys and values", part(map[string]string{"part.yaml": "looks:\n  - {a: 1}\n  - b\nmarks: [{a: 1}]\n"}), lines(
+			"parts/p/part.yaml:2:3: write looks: as a list of the names of parts or looks, each as text (in quotes where YAML would read a number, true, false or null), like looks: [panel]",
+			"parts/p/part.yaml:4:1: write marks: as box (the part's box is a row with a mark at its left), items (each li of the box is one) or joined (items, a line joining each to the next)",
+		)},
+		{"a look of keys and values in [ ]", part(map[string]string{"part.yaml": "looks: [panel, {a: 1}]\n"}),
+			"parts/p/part.yaml:1:16: write looks: as a list of the names of parts or looks, each as text (in quotes where YAML would read a number, true, false or null), like looks: [panel]"},
 		{
 			"part.yaml not keys and values", part(map[string]string{"part.yaml": "- a\n"}),
 			"parts/p/part.yaml:1:1: write part.yaml as keys and values: looks:, the list of the looks the part takes, like looks: [panel], marks:, which of its elements are rows with a mark at their left (box, items or joined), and a look alone's description:",
@@ -263,14 +270,14 @@ func TestReadMistakes(t *testing.T) {
 		{
 			"a look's description",
 			fstest.MapFS{"lk/part.css": {Data: []byte("")}, "lk/part.yaml": {Data: []byte("description: [1]\n")}},
-			"parts/lk/part.yaml:1:14: write description: as text, what the look is",
+			"parts/lk/part.yaml:1:1: write description: as text, what the look is",
 		},
 		{"marks: none of the three", fstest.MapFS{
 			"lk/part.css": {Data: []byte("")}, "lk/part.yaml": {Data: []byte("description: x\nmarks: line\n")},
 			"q/part.css": {Data: []byte("")}, "q/part.yaml": {Data: []byte("marks: [box]\n")},
 		}, lines(
 			"parts/lk/part.yaml:2:8: write marks: as box (the part's box is a row with a mark at its left), items (each li of the box is one) or joined (items, a line joining each to the next)",
-			"parts/q/part.yaml:1:8: write marks: as box (the part's box is a row with a mark at its left), items (each li of the box is one) or joined (items, a line joining each to the next)",
+			"parts/q/part.yaml:1:1: write marks: as box (the part's box is a row with a mark at its left), items (each li of the box is one) or joined (items, a line joining each to the next)",
 		)},
 		{
 			"a Go template", part(map[string]string{"part.html": "<div>{{.t}\n"}),
@@ -338,7 +345,7 @@ func TestThemeAbout(t *testing.T) {
 		{"another key", "looks: [panel]\n", "themes/t/theme.yaml:1:1: looks is not a key of theme.yaml; write description:, what the theme is"},
 		{"a list", "- a\n", "themes/t/theme.yaml:1:1: " + notMap},
 		{"text alone", "abc\n", "themes/t/theme.yaml:1:1: " + notMap},
-		{"a list for text", "description: [x]\n", "themes/t/theme.yaml:1:14: " + notText},
+		{"a list for text", "description: [x]\n", "themes/t/theme.yaml:1:1: " + notText},
 		{"a number", "description: 1\n", "themes/t/theme.yaml:1:14: " + notText},
 		{"null", "description: ~\n", "themes/t/theme.yaml:1:14: " + notText},
 		{"no value", "description:\n", "themes/t/theme.yaml:1:1: " + notText},
@@ -351,7 +358,7 @@ func TestThemeAbout(t *testing.T) {
 	_, err := read(map[string]string{"a/theme.yaml": "looks: [panel]\n", "b/theme.yaml": "description: [x]\n"})
 	if want := lines(
 		"themes/a/theme.yaml:1:1: looks is not a key of theme.yaml; write description:, what the theme is",
-		"themes/b/theme.yaml:1:14: "+notText,
+		"themes/b/theme.yaml:1:1: "+notText,
 	); told(err) != want {
 		t.Errorf("two themes: told\n%s\nwant\n%s", told(err), want)
 	}

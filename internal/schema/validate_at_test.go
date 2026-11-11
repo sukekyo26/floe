@@ -28,7 +28,7 @@ func TestValidateAt(t *testing.T) {
 		t.Errorf("a right value = %v", err)
 	}
 	err = c.ValidateAt(map[string]any{"a/b": []any{1, "x"}, "c": 1})
-	want := "floe: #: additional properties 'c' not allowed\nfloe: #: missing property 'title'\nfloe: #/a~1b/1: got string, want number"
+	want := "floe: #: missing property 'title'\nfloe: #/a~1b/1: got string, want number\nfloe: #/c: additional properties 'c' not allowed"
 	if got := usererr.Tell(i18n.EnglishCatalog(), err).Render("floe: "); got != want {
 		t.Errorf("ValidateAt = %q, want %q", got, want)
 	}

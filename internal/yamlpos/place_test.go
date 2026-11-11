@@ -29,7 +29,7 @@ func TestPlace(t *testing.T) {
 		usererr.New("library", "no place"),
 	)
 	// The whole of the diagram is at its first key; Collect put the mistake of no place first.
-	want := "floe: no place\nd.yaml:3:3: the whole diagram\nd.yaml:4:17: bad x\nd.yaml:5:8: bad a/b\nicons/aws/index.json:1:2: its own place"
+	want := "floe: no place\nd.yaml:2:1: the whole diagram\nd.yaml:4:17: bad x\nd.yaml:5:8: bad a/b\nicons/aws/index.json:1:2: its own place"
 	placed := yamlpos.Place(err, "d.yaml", root, []string{"diagram"})
 	if got := usererr.Tell(i18n.EnglishCatalog(), usererr.Collect(placed)).Render("floe: "); got != want {
 		t.Errorf("Place = %q, want %q", got, want)
