@@ -331,8 +331,9 @@ func imagesApart(file string, images map[string][]byte) error {
 // page, not in the list; a link's too. Publish it again if that shows.
 func (s *Store) storedPage(slug, named string, up Upload, src []byte, opts Options) (*Entry, error) {
 	e := &Entry{
-		Slug: slug, Meta: seedMeta("", up.File, src, opts.theme()), Source: src, Page: nil, Images: nil,
-		Prev: nil, Warnings: nil, opts: opts, project: up.Project, repo: up.Repo, place: up.Place, named: named, created: "",
+		Slug: slug, Meta: seedMeta("", up.File, src, opts.theme()), Source: src, Page: nil, Images: nil, Prev: nil,
+		OffTask: "", Warnings: nil, opts: opts, project: up.Project, repo: up.Repo, place: up.Place, named: named,
+		created: "",
 	}
 	if err := e.settle(s.ReadMeta(e.Slug)); err != nil {
 		return nil, err
@@ -402,7 +403,7 @@ func (s *Store) PrepareLink(
 	}
 	e := &Entry{
 		Slug: slug, Meta: seedMeta(path, path, data, opts.theme()), Source: nil, Page: nil, Images: nil, Prev: nil,
-		Warnings: warnings, opts: opts, project: from, repo: "", place: "", named: named, created: created,
+		OffTask: "", Warnings: warnings, opts: opts, project: from, repo: "", place: "", named: named, created: created,
 	}
 	e.Meta.Folder = folder
 	// A folder's own title, as a data file's title: is: where it is in its repository, its repository's name at its
@@ -1080,16 +1081,8 @@ func (s *Store) Edit(slug string, ed Edit) (Edited, error) {
 		}
 	}
 	setMarks(m, ed)
-	if ed.Project != nil {
-		// "/" is the management page's value for "no project".
-		if strings.TrimSpace(*ed.Project) == "/" {
-			return Edited{}, usererr.New("store_project_slash")
-		}
-		was := ProjectKey(m.Project)
-		m.Project = strings.TrimSpace(*ed.Project)
-		if ed.Work == nil || ed.Work.Task == nil {
-			offTaskOf(m, was)
-		}
+	if err = setProject(m, ed); err != nil {
+		return Edited{}, err
 	}
 	to, err := s.renameTo(slug, ed.Slug)
 	if err != nil {
@@ -1108,6 +1101,23 @@ func (s *Store) Edit(slug string, ed Edit) (Edited, error) {
 		s.moveRead(slug, to)
 	}
 	return Edited{Slug: to, TaskProject: ProjectKey(m.Project), Work: m.Work}, nil
+}
+
+// setProject sets the project ed names of m, taking m off its task when it moves it, unless ed names its task too.
+func setProject(m *Meta, ed Edit) error {
+	if ed.Project == nil {
+		return nil
+	}
+	// "/" is the management page's value for "no project".
+	if strings.TrimSpace(*ed.Project) == "/" {
+		return usererr.New("store_project_slash")
+	}
+	was := ProjectKey(m.Project)
+	m.Project = strings.TrimSpace(*ed.Project)
+	if ed.Work == nil || ed.Work.Task == nil {
+		offTaskOf(m, was)
+	}
+	return nil
 }
 
 // offTaskOf takes m off its task when its project is no longer was (ProjectKey): a task is of its project, and one of

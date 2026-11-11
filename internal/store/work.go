@@ -329,7 +329,7 @@ func checkParent(project string, rows map[string]Task, name string, ed TaskEdit)
 
 // checkThere refuses a write that takes the task name to be new while it has a row, or there while it has none, as a
 // screen read before it says: a task is there of its row alone.
-func (s *Store) checkThere(project string, rows map[string]Task, name string, taken *bool) error {
+func checkThere(rows map[string]Task, name string, taken *bool) error {
 	if taken == nil {
 		return nil
 	}
@@ -349,7 +349,7 @@ func (s *Store) checkThere(project string, rows map[string]Task, name string, ta
 // read.
 // LIMIT: a write of another field, or of the state the row is in already, is refused as well: the screen reads the
 // tasks again. Compare by field if refusals come to be many
-func (s *Store) checkSeen(project string, rows map[string]Task, name string, ed TaskEdit) error {
+func checkSeen(project string, rows map[string]Task, name string, ed TaskEdit) error {
 	if ed.Rev != nil && *ed.Rev != rows[name].Rev {
 		return conflict(usererr.New("store_task_was", name))
 	}
@@ -370,7 +370,7 @@ func (s *Store) checkSeen(project string, rows map[string]Task, name string, ed 
 	if _, ok := rows[parent]; !ok && ed.ParentNew != nil && !*ed.ParentNew {
 		return usererr.New("store_parent_none", parent, project)
 	}
-	return s.checkThere(project, rows, parent, ed.ParentNew)
+	return checkThere(rows, parent, ed.ParentNew)
 }
 
 // newTaskRow is the row a task starts with: of the state New, from now.

@@ -11,17 +11,14 @@ import (
 	"floe/internal/store"
 )
 
-// pageIn writes a page of project, on task with category when task is not "", as a hand edit or an older floe left it.
-func pageIn(t *testing.T, s *store.Store, root, slug, project, task, category string) {
+// pageIn writes a page of project, on no task.
+func pageIn(t *testing.T, s *store.Store, root, slug, project string) {
 	t.Helper()
 
 	if err := os.MkdirAll(filepath.Join(root, slug), 0o700); err != nil {
 		t.Fatal(err)
 	}
 	m := &store.Meta{Project: project, CreatedAt: hour(1), UpdatedAt: hour(1)}
-	if task != "" {
-		m.Work = &store.Work{Task: task, Category: category}
-	}
 	if err := s.WriteMeta(slug, m); err != nil {
 		t.Fatal(err)
 	}
@@ -31,11 +28,11 @@ func pageIn(t *testing.T, s *store.Store, root, slug, project, task, category st
 func written(t *testing.T, root string) string {
 	t.Helper()
 
-	var all []string
 	paths, err := filepath.Glob(filepath.Join(root, "*", "meta.json"))
 	if err != nil {
 		t.Fatal(err)
 	}
+	all := make([]string, 0, len(paths)+1)
 	for _, path := range append(paths, filepath.Join(root, "tasks.json")) {
 		b, err := os.ReadFile(path) //nolint:gosec // G304: the test's own store
 		if err != nil && !errors.Is(err, os.ErrNotExist) {
@@ -54,8 +51,8 @@ func TestWorkWriteOne(t *testing.T) {
 
 	root := filepath.Join(t.TempDir(), "S")
 	s := store.New(root)
-	pageIn(t, s, root, "a", "p", "", "")
-	pageIn(t, s, root, "b", "q", "", "")
+	pageIn(t, s, root, "a", "p")
+	pageIn(t, s, root, "b", "q")
 	work := func(w store.WorkWrite) store.WorkWritten {
 		t.Helper()
 		got, err := s.Work(w)
@@ -122,7 +119,7 @@ func TestWorkWriteOne(t *testing.T) {
 		{"new, there", store.WorkWrite{TaskEdit: store.TaskEdit{New: &yes, Title: ptr("t")}, Project: ptr("p"), Task: ptr("#9")}, "task #9 is there already", true},
 		{"a page not there", store.WorkWrite{Slugs: []string{"a", "none"}, Task: ptr("#1")}, `no page "none"`, false},
 	} {
-		pageIn(t, s, root, "c", "p", "", "")
+		pageIn(t, s, root, "c", "p")
 		before := written(t, root)
 		_, err := s.Work(c.w)
 		if _, conflict := errors.AsType[*store.Conflict](err); err == nil || !strings.Contains(told(err, root), c.want) || conflict != c.conflict {
@@ -145,7 +142,7 @@ func TestEditProjectTakesOffTask(t *testing.T) {
 
 	root := filepath.Join(t.TempDir(), "S")
 	s := store.New(root)
-	pageIn(t, s, root, "a", "p", "", "")
+	pageIn(t, s, root, "a", "p")
 	if _, err := s.Work(store.WorkWrite{Slugs: []string{"a"}, Task: ptr("#9"), Category: ptr("x"), Pin: ptr(true)}); err != nil {
 		t.Fatal(err)
 	}
@@ -166,7 +163,8 @@ func TestEditProjectTakesOffTask(t *testing.T) {
 	if w := s.ReadMeta("a").Work; w == nil || w.Task != "" || w.Category != "" || !w.Pin {
 		t.Errorf("moved: %+v", w)
 	}
-	if after, err := os.ReadFile(filepath.Join(root, "tasks.json")); err != nil || string(after) != string(before) {
+	after, err := os.ReadFile(filepath.Join(root, "tasks.json"))
+	if err != nil || string(after) != string(before) {
 		t.Errorf("moved, tasks.json written: %s", after)
 	}
 	if _, err = s.Edit("a", store.Edit{Project: ptr("p"), Work: &store.WorkEdit{Task: ptr("#9")}}); err != nil {

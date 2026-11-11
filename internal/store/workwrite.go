@@ -173,27 +173,33 @@ func (s *Store) checkWork(all Tasks, w WorkWrite, refs []taskRef, pages []workPa
 		return conflict(usererr.New("store_task_was", deref(w.Task)))
 	}
 	for _, ref := range refs {
-		rows := all[ref.project]
-		if err := s.checkThere(ref.project, rows, ref.name, w.New); err != nil {
+		if err := s.checkTask(all[ref.project], w, ref, pages); err != nil {
 			return err
-		}
-		if err := s.checkSeen(ref.project, rows, ref.name, w.TaskEdit); err != nil {
-			return err
-		}
-		// A parent taken off a task of no row: not found of the task alone, nothing for the pages, which make the row
-		if err := checkParent(ref.project, rows, ref.name, w.TaskEdit); err != nil && (len(pages) == 0 || !errors.Is(err, ErrNotFound)) {
-			return err
-		}
-		if _, had := rows[ref.name]; !had && len(pages) == 0 && !w.hasFields() {
-			return ErrNotFound
-		}
-		if w.Categories != nil {
-			if err := s.checkPaged(ref, categoriesOf(*w.Categories), pages); err != nil {
-				return err
-			}
 		}
 	}
 	return nil
+}
+
+// checkTask refuses w of the task ref, rows being its project's: as checkWork says.
+func (s *Store) checkTask(rows map[string]Task, w WorkWrite, ref taskRef, pages []workPage) error {
+	if err := checkThere(rows, ref.name, w.New); err != nil {
+		return err
+	}
+	if err := checkSeen(ref.project, rows, ref.name, w.TaskEdit); err != nil {
+		return err
+	}
+	// A parent taken off a task of no row: not found of the task alone, nothing for the pages, which make the row
+	err := checkParent(ref.project, rows, ref.name, w.TaskEdit)
+	if err != nil && (len(pages) == 0 || !errors.Is(err, ErrNotFound)) {
+		return err
+	}
+	if _, had := rows[ref.name]; !had && len(pages) == 0 && !w.hasFields() {
+		return ErrNotFound
+	}
+	if w.Categories == nil {
+		return nil
+	}
+	return s.checkPaged(ref, categoriesOf(*w.Categories), pages)
 }
 
 // checkPaged refuses categories written of the task ref that leave out a category another page has on it: the pages of
@@ -236,16 +242,7 @@ func (s *Store) writeWork(all Tasks, w WorkWrite, refs []taskRef, pages []workPa
 			rows[*w.Parent] = up
 		}
 		was, had := rows[ref.name]
-		t := was
-		if !had {
-			t = newTaskRow()
-		}
-		t = t.edited(w.TaskEdit)
-		for _, p := range pages {
-			if c := p.meta.Work; p.ref == ref && c != nil && c.Category != "" && !slices.Contains(t.Categories, c.Category) {
-				t.Categories = append(slices.Clone(t.Categories), c.Category)
-			}
-		}
+		t := rowAfter(was, had, w, ref, pages)
 		wrote := !had || parentMade || !reflect.DeepEqual(t, was)
 		if wrote {
 			t.Rev++
@@ -266,4 +263,23 @@ func (s *Store) writeWork(all Tasks, w WorkWrite, refs []taskRef, pages []workPa
 		out.Pages = append(out.Pages, Edited{Slug: p.slug, TaskProject: p.ref.project, Work: p.meta.Work})
 	}
 	return out, nil
+}
+
+// rowAfter is the row of the task ref as w leaves it: was, or a new one when it had none, with w's fields, and the
+// categories of its pages it has not, at the end in the pages' order.
+func rowAfter(was Task, had bool, w WorkWrite, ref taskRef, pages []workPage) Task {
+	t := was
+	if !had {
+		t = newTaskRow()
+	}
+	t = t.edited(w.TaskEdit)
+	for _, p := range pages {
+		if p.ref != ref || p.meta.Work == nil {
+			continue
+		}
+		if c := p.meta.Work.Category; c != "" && !slices.Contains(t.Categories, c) {
+			t.Categories = append(slices.Clone(t.Categories), c)
+		}
+	}
+	return t
 }

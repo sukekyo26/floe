@@ -322,17 +322,21 @@ func (a *app) workPages(cmd *cobra.Command, f workFlags, slugs []string) error {
 	if err = c.do(ctx, http.MethodPatch, "/api/work", sent, &written); err != nil {
 		return err
 	}
-	asked := len(onTask) > 0
-	added := body.Category != nil && *body.Category != ""
+	a.tellWork(written, ed, len(onTask) > 0, body.Category != nil && *body.Category != "")
+	return nil
+}
+
+// tellWork says a write of pages and their tasks: each task made or written, or each when fields were asked, with its
+// categories when a page's category was added to them; then each page.
+func (a *app) tellWork(written store.WorkWritten, ed store.TaskEdit, asked, category bool) {
 	for _, t := range written.Tasks {
 		if t.Made || t.Wrote || asked {
-			a.tellTask(t, ed, added && t.Wrote)
+			a.tellTask(t, ed, category && t.Wrote)
 		}
 	}
 	for _, page := range written.Pages {
 		a.tellPage(page)
 	}
-	return nil
 }
 
 // pageFlags refuses the flags of a floe work with slugs that cannot go together, and returns those that change the
