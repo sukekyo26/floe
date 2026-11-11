@@ -1,6 +1,6 @@
 // Package pagediff compares two versions of a stored page, as drawn, by their words: what a reader reads, under its
-// headings. Compare answers the words alone, for the management page to write as text; Mark answers the later page
-// with the places that differ marked, for the sandbox alone. Both come of one comparison, of the pages alone.
+// headings. Diff answers both of one comparison, of the pages alone: the words, for the management page to write as
+// text, and the later page with the places that differ marked, for the sandbox alone.
 package pagediff
 
 import (
@@ -30,7 +30,7 @@ const (
 )
 
 // Section is a section told in both versions or either: its state one of the State values, its heading's words as
-// they differ. Place is the number of its first place on the marked page (Mark), none for a section with no place
+// they differ. Place is the number of its first place on the marked page (Diff), none for a section with no place
 // there.
 type Section struct {
 	State   string `json:"state"`

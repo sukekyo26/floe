@@ -15,7 +15,7 @@ import (
 	"floe/internal/usererr"
 )
 
-// Words are the words Mark writes on a page, in the language of the one who reads it: over what is gone, and over a
+// Words are the words Diff writes on a page, in the language of the one who reads it: over what is gone, and over a
 // diagram or image's earlier version.
 type Words struct {
 	Gone   string
@@ -42,7 +42,7 @@ func Diff(from, to []byte, words Words) (Result, []byte, error) {
 	return result, out.Bytes(), nil
 }
 
-// marked compares the pages and marks the later's tree: the one comparison both Compare and Mark are of. The earlier
+// marked compares the pages and marks the later's tree: the one comparison both of Diff's answers are of. The earlier
 // is read to be compared, and for what of it is put in the later.
 func marked(from, to []byte, most int, words Words) (Result, *html.Node, error) {
 	treeA, a, err := readTree(from)
