@@ -495,7 +495,7 @@ func servedScript(slug, rest, version string, v int, read *Read, drawn bool, dif
 	again := "location.reload();"
 	if diff.from > 0 {
 		u += "&from=" + strconv.Itoa(diff.from)
-		again = "window.parent.postMessage({ artifactChanged: true }, location.protocol + '//' + location.host);"
+		again = "window.parent.postMessage({ artifactChanged: true, artifactPath: location.pathname }, location.protocol + '//' + location.host);"
 	}
 	lit, _ := json.Marshal(u) //nolint:errcheck // a string always encodes
 	// What a page could shadow is read through window, as in leaveFrame. busy stays set once reloading.
