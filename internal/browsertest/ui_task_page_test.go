@@ -67,7 +67,7 @@ func TestUITaskPage(t *testing.T) { //nolint:paralleltest // the browser tests s
 	}
 	s.floe(t, "work", "--task", "#1", "--project", "proj", "--state", "done")
 	s.floe(t, "work", "--task", "#130", "--project", "proj", "--categories", "design,build,review,nothing")
-	s.floe(t, "work", "--task", "#99", "--project", "proj")
+	s.floe(t, "work", "--task", "#99", "--project", "proj", "--state", "todo")
 
 	var out []string
 	say := func(what, expr string) {
@@ -217,7 +217,7 @@ func TestUITaskPage(t *testing.T) { //nolint:paralleltest // the browser tests s
 	s.floe(t, "work", "--task", "#142", "--project", "proj", "--state", "doing")
 
 	// A task of no pages is removed by two presses, its name and project whatever they hold.
-	s.floe(t, "work", "--task", "it's $(touch made)", "--project", "")
+	s.floe(t, "work", "--task", "it's $(touch made)", "--project", "", "--state", "todo")
 	b.navigate("/tasks?project=%2F&task=" + url.QueryEscape("it's $(touch made)"))
 	b.until("no pages", "!document.getElementById('task-none').hidden")
 	for range 2 {

@@ -28,7 +28,7 @@ func TestUITaskEdit(t *testing.T) { //nolint:paralleltest // the browser tests s
 			s.floe(t, "work", p[0], "--task", "S300", "--category", p[1])
 		}
 	}
-	s.floe(t, "work", "--project", "proj", "--task", "S300", "--title", "Edit the task", "--url", "https://example.com/489", "--categories", "案,設計,実装,リリース")
+	s.floe(t, "work", "--project", "proj", "--task", "S300", "--title", "Edit the task", "--url", "https://example.com/489", "--categories", "案,設計,実装,リリース,レビュー")
 	s.floe(t, "work", "gone-a", "--task", "G1", "--category", "x")
 	b.size(1400, 900, false)
 	defer b.unsize()
@@ -211,7 +211,7 @@ func TestUITaskEdit(t *testing.T) { //nolint:paralleltest // the browser tests s
 	// Reordered while a category of no page was taken off: the order stays, without it.
 	open("S300")
 	press("実装", "down")
-	s.floe(t, "work", "--project", "proj", "--task", "S300", "--categories", "案,設計")
+	s.floe(t, "work", "--project", "proj", "--task", "S300", "--categories", "案,設計,実装,レビュー")
 	save("stale order")
 	say("stale order", categories)
 	save("saved the order again")
@@ -242,31 +242,31 @@ func TestUITaskEdit(t *testing.T) { //nolint:paralleltest // the browser tests s
 		"opened: Edit the task / https://example.com/489 / 案^,設計,実装,リリース no page,レビューv",
 		"no page: リリース",
 		"described: edit-categories-hint alert",
-		"unchanged: 2 Edit the task https://example.com/489 [案,設計,実装,リリース]",
+		"unchanged: 5 Edit the task https://example.com/489 [案,設計,実装,リリース,レビュー]",
 		"moved up: 案^,設計,実装,レビュー,リリース no pagev / Move レビュー up / Moved レビュー to 4 of 5",
-		"moved back: 2 Edit the task https://example.com/489 [案,設計,実装,リリース]",
+		"moved back: 5 Edit the task https://example.com/489 [案,設計,実装,リリース,レビュー]",
 		"sent unchanged: 0",
 		"focus back: task-edit",
 		"at the top: 設計^,案,実装,リリース no page,レビューv / Move 設計 down",
-		"title: 3 New title https://example.com/489 [案,設計,実装,リリース]",
-		`sent the title: {"new":false,"rev":2,"title":"New title"}`,
-		"order: 4 New title https://example.com/489 [案,設計,レビュー,実装,リリース]",
-		`sent the order: {"new":false,"rev":3,"categories":["案","設計","レビュー","実装","リリース"]}`,
+		"title: 6 New title https://example.com/489 [案,設計,実装,リリース,レビュー]",
+		`sent the title: {"new":false,"rev":5,"title":"New title"}`,
+		"order: 7 New title https://example.com/489 [案,設計,レビュー,実装,リリース]",
+		`sent the order: {"new":false,"rev":6,"categories":["案","設計","レビュー","実装","リリース"]}`,
 		"groups: 案Add a page,設計Add a page,レビューAdd a page,実装Add a page,リリースAdd a pageNo pages yet",
 		"dragged: リリース no page^,設計,レビュー,実装,案v",
 		"let go: false",
 		"words dragged: 0 / リリース no page^,設計,レビュー,実装,案v",
-		"drag: 5 New title https://example.com/489 [リリース,設計,レビュー,実装,案]",
+		"drag: 8 New title https://example.com/489 [リリース,設計,レビュー,実装,案]",
 		"no grip without hover: true",
 		`refused: Failed to save: "ftp://x" is not an http or https URL / true`,
 		"not reached: Failed to save: Failed to fetch / true",
-		"emptied: 6   [リリース,設計,レビュー,実装,案]",
-		"opened over the drawn task: Later / 7",
+		"emptied: 9   [リリース,設計,レビュー,実装,案]",
+		"opened over the drawn task: Later / 10",
 		"stale: Typed / https://example.com/new / リリース no page^,設計,レビュー,実装,案v / Failed to save: task S300 has changed since it was read; the tasks are read again, so check and save again",
-		"again: 9 Typed https://example.com/new [リリース,設計,レビュー,実装,案]",
-		`sent stale and again: {"new":false,"rev":7,"title":"Typed"} ; {"new":false,"rev":8,"title":"Typed"}`,
+		"again: 12 Typed https://example.com/new [リリース,設計,レビュー,実装,案]",
+		`sent stale and again: {"new":false,"rev":10,"title":"Typed"} ; {"new":false,"rev":11,"title":"Typed"}`,
 		"stale order: 設計^,レビュー,案,実装v",
-		"order again: 11 Typed https://example.com/new [設計,レビュー,案,実装]",
+		"order again: 14 Typed https://example.com/new [設計,レビュー,案,実装]",
 		"gone: This task was deleted elsewhere: close this and look at the task list / true",
 		"gone, typed: This task was deleted elsewhere: close this and look at the task list",
 		"G1: none",

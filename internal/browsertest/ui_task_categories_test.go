@@ -46,7 +46,7 @@ func TestUITaskCategories(t *testing.T) { //nolint:paralleltest // the browser t
 	if _, err := st.Edit("old-a", store.Edit{Archived: &yes}); err != nil {
 		t.Fatal(err)
 	}
-	s.floe(t, "work", "--project", "proj", "--task", "S300", "--title", "Categories", "--categories", "案,実装,リリース")
+	s.floe(t, "work", "--project", "proj", "--task", "S300", "--title", "Categories", "--categories", "案,実装,リリース,レビュー")
 	// G2 has no row: its one page alone makes it, written to the page alone
 	g2, x := "G2", "x"
 	if _, err := st.Edit("g-a", store.Edit{Work: &store.WorkEdit{Task: &g2, Category: &x}}); err != nil {
@@ -257,18 +257,18 @@ func TestUITaskCategories(t *testing.T) { //nolint:paralleltest // the browser t
 		"no link: 0",
 		"nothing reached: 0 true",
 		"narrowed: check-a",
-		`put: /api/tasks {"new":false,"rev":2} ; /api/artifacts/check-a {"work":{"task":"S300","category":"リリース"}}`,
+		`put: /api/tasks {"new":false,"rev":4} ; /api/artifacts/check-a {"work":{"task":"S300","category":"リリース"}}`,
 		"put, told: Put T check-a under リリース",
 		"put, focus: Add a page to リリース",
-		"put, written: 2 / S300/リリース",
+		"put, written: 4 / S300/リリース",
 		"put, groups: note-a [案+] plan-a old-a [実装+] build-a [リリース+] check-a [レビュー+] review-a",
 		"stale: Failed to save: task S300 has changed since it was read; the tasks are read again, so check and save again / true / memo-a",
 		"stale, typed: true",
-		`stale, then: /api/tasks {"new":false,"rev":2} ; /api/tasks {"new":false,"rev":3} ; /api/artifacts/memo-a {"work":{"task":"S300","category":"リリース"}}`,
-		"stale, written: 3 / S300/リリース",
+		`stale, then: /api/tasks {"new":false,"rev":4} ; /api/tasks {"new":false,"rev":5} ; /api/artifacts/memo-a {"work":{"task":"S300","category":"リリース"}}`,
+		"stale, written: 5 / S300/リリース",
 		"page refused: Failed to save: HTTP 500: no / true",
-		`page refused, then: /api/tasks {"new":false,"rev":3} ; /api/tasks {"new":false,"rev":3} ; /api/artifacts/note-a {"work":{"task":"S300","category":"案"}}`,
-		"page refused, written: 3 / S300/案",
+		`page refused, then: /api/tasks {"new":false,"rev":5} ; /api/tasks {"new":false,"rev":5} ; /api/artifacts/note-a {"work":{"task":"S300","category":"案"}}`,
+		"page refused, written: 5 / S300/案",
 		"not reached: Failed to save: Failed to fetch / true",
 		"moved from a task: Moved T other-a from S301's 設計 to 案",
 		"moved from a category: Moved T build-a from 実装 to リリース",
@@ -277,9 +277,9 @@ func TestUITaskCategories(t *testing.T) { //nolint:paralleltest // the browser t
 		`off: /api/artifacts/review-a {"work":{"task":"","category":""}}`,
 		"off, told: Took T review-a off task S300Undo",
 		"off, focus: check-a",
-		"off, groups: [案+] plan-a note-a other-a old-a [実装+ none] [リリース+] build-a memo-a check-a",
+		"off, groups: [案+] plan-a note-a other-a old-a [実装+ none] [リリース+] build-a memo-a check-a [レビュー+ none]",
 		`back: /api/artifacts/review-a {"work":{"task":"S300","category":"レビュー"}}`,
-		"back, written: 3 / S300/レビュー",
+		"back, written: 5 / S300/レビュー",
 		"keys, focus: btn undo",
 		"keys, escape: note-a 0",
 		`back as it was: /api/artifacts/g-a {"work":{"task":"","category":""}} ; /api/artifacts/g-a {"work":{"task":"G2","category":"x"}}`,
