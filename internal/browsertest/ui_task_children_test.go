@@ -503,7 +503,7 @@ func TestUITaskSetTitle(t *testing.T) { //nolint:paralleltest // the browser tes
 
 	// The fields' words, and the example the catalog gives.
 	dialog("a")
-	if got := b.eval("[document.getElementById('set-task').placeholder, document.getElementById('set-task').closest('label').textContent.trim(), document.getElementById('set-task-title').closest('label').textContent.trim(), document.getElementById('set-category').placeholder, document.querySelectorAll('#set-dialog input').length].join('|')"); got != "e.g. #128|Task ID|Title|e.g. design, build, review|3" {
+	if got := b.eval("[document.getElementById('set-task').placeholder, document.getElementById('set-task').closest('label').textContent.trim(), document.getElementById('set-task-title').closest('label').textContent.trim(), document.getElementById('set-category').placeholder, document.querySelectorAll('#set-dialog input').length].join('|')"); got != "e.g. #128|Task ID|Title|e.g. proposals, designs, samples|3" {
 		t.Errorf("the fields: %q", got)
 	}
 	b.eval("document.getElementById('set-dialog').close()")
