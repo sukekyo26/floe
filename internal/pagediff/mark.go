@@ -857,6 +857,8 @@ func (m *marker) flush() {
 // nearest after it, else so for its parent, else at the end of body.
 // LIMIT: an element's later one is the element as far above the later's of a block kept in it as it is above that
 // block, but body's child at most: a page whose later version wraps or unwraps the blocks within it takes another.
+// LIMIT: with no block kept near, what is gone goes together before the next block kept, or at the end of body, not
+// between the blocks added in its place (the user chose so: a part all rewritten reads so).
 func (m *marker) goneAt(old, gone *html.Node) (parent, before *html.Node) {
 	if later, first := m.laterOf(old, false); later != nil && comesBefore(old, gone, first) {
 		return later.Parent, later
