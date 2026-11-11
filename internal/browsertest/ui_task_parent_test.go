@@ -340,7 +340,7 @@ func TestUITaskParent(t *testing.T) { //nolint:paralleltest // the browser tests
 		t.Errorf("by hand, changed: %q, %q", got, parentOf("#7"))
 	}
 
-	// Set the task: the task sent as it was read (rev); one changed meanwhile is refused, and a step alone saves.
+	// Set the task: the task sent as it was read (rev); one changed meanwhile is refused, and a category alone saves.
 	b.navigate("/?project=proj")
 	b.until("the rows", "document.querySelector('#list li[data-slug=p7]')")
 	setDialog := func() {
@@ -360,18 +360,18 @@ func TestUITaskParent(t *testing.T) { //nolint:paralleltest // the browser tests
 	byHand("#7", " #9")
 	b.until("read", "tasksRead.tasks.proj['#7'].parent === ' #9'")
 	setDialog()
-	b.eval("document.getElementById('set-step').value = 'build'")
+	b.eval("document.getElementById('set-category').value = 'build'")
 	b.eval("document.getElementById('set').requestSubmit()")
 	b.until("saved", "!document.getElementById('set-dialog').open")
-	if got := st.ReadMeta("p7").Work.Step; got != "build" {
-		t.Errorf("a step alone: %q", got)
+	if got := st.ReadMeta("p7").Work.Category; got != "build" {
+		t.Errorf("a category alone: %q", got)
 	}
 	if got := parentOf("#7"); got != " #9" {
 		t.Errorf("the parent left alone: %q", got)
 	}
 }
 
-// A task's family stands in a card inside the head, apart from the steps of pages, wide and narrow, by mouse and by touch:
+// A task's family stands in a card inside the head, apart from the categories of pages, wide and narrow, by mouse and by touch:
 // each row headed by its state and ended by its unread dot; on the children's rows, the states as wide as the widest with
 // their words inside, the names in line, and a long name cut at a fifth so that its title shows, both whole in the link's
 // title and read name first.

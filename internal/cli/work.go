@@ -20,8 +20,8 @@ import (
 
 // workFlags are the flags of floe work.
 type workFlags struct {
-	task, project, step, state, url, title, steps, parent string
-	pin, unpin, clear, forget                             bool
+	task, project, category, state, url, title, categories, parent string
+	pin, unpin, clear, forget                                      bool
 }
 
 // A task of pages: what a page names by its project and the name given, or its own.
@@ -33,28 +33,31 @@ func (a *app) workCmd() *cobra.Command {
 	var f workFlags
 	cmd := &cobra.Command{
 		Use:   "work [<slug>...]",
-		Short: "Put pages on a task of the task list, pin them, or change a task's state, step, URL, title or steps' order",
+		Short: "Put pages on a task of the task list, pin them, or change a task's state, URL, title or categories' order",
 		Long: `With slugs, put the pages on a task and change that task; without, change the task --task names, of
 --project (the project of the working directory when left out; "" for none).
 
 The tasks are written first, once for each different task the pages are on, and the pages then, in order, stopping at
 the first failure. The same command given again finishes what a failure left. Each task and page written is told on a
 line of its own, as the store left it: a task made, changed or unchanged with the fields given, a page with its task,
-step and pin.
+category and pin. A page's category is where the task's page places it among its pages, which the user decides.
 
-  floe work design-notes --task "#130" --step design --state doing
-    task #130 in project floe: changed; state doing, step "design"
-    page design-notes: task #130 in project floe, step "design"
+  floe work design-notes --task "#130"
+    task #130 in project floe: made
+    page design-notes: task #130 in project floe
+  floe work --task "#130" --state doing
+    task #130 in project floe: changed; state doing
   floe work --task "#130" --url https://example.com/issues/482
-  floe work --task "#130" --steps design,build,review
+  floe work design-notes --category designs
+  floe work --task "#130" --categories proposals,designs,samples
   floe work --task "#130" --parent "#123"
-  floe work design-notes --task "#131" --parent "#130" --step design
+  floe work design-notes --task "#131" --parent "#130"
   floe work design-notes --pin
   floe work --task "#130" --forget`,
 		PreRunE: flagGroups,
 		RunE: func(cmd *cobra.Command, slugs []string) error {
-			// A step of spaces is the empty one from here on, as the server reads it.
-			f.step = strings.TrimSpace(f.step)
+			// A category of spaces is the empty one from here on, as the server reads it.
+			f.category = strings.TrimSpace(f.category)
 			if len(slugs) == 0 {
 				return a.workTask(cmd, f)
 			}
@@ -64,22 +67,22 @@ step and pin.
 	flags := cmd.Flags()
 	flags.StringVar(&f.task, "task", "", `the task's ID; with slugs, "" takes the pages off their task`)
 	flags.StringVar(&f.project, "project", "", `the task's project, without slugs; "" for none`)
-	flags.StringVar(&f.step, "step", "", `the pages' step on the task; "" takes it off them`)
+	flags.StringVar(&f.category, "category", "", `the pages' category on their task, the user's choice; "" takes it off`)
 	flags.StringVar(&f.state, "state", "", "the task's state: "+store.StateNames())
 	flags.StringVar(&f.url, "url", "", `the task's one outside link, http or https; "" takes it off`)
 	flags.StringVar(&f.title, "title", "", `the task's title; "" takes it off`)
-	flags.StringVar(&f.steps, "steps", "", `the order of the task's steps, separated by commas; "" takes it off`)
+	flags.StringVar(&f.categories, "categories", "", `the task's categories in order, comma-separated; "" takes it off`)
 	flags.StringVar(&f.parent, "parent", "", `the task's parent, of its project; with slugs, with --task; "" takes it off`)
 	flags.BoolVar(&f.pin, "pin", false, "pin the pages to the top of the task list")
 	flags.BoolVar(&f.unpin, "unpin", false, "take the pages' pin off")
 	flags.BoolVar(&f.clear, "clear", false, "take the pages off their task and take their pin off; the task stays")
 	flags.BoolVar(&f.forget, "forget", false, "remove the task, which no page or child task may be on")
 	cmd.MarkFlagsMutuallyExclusive("pin", "unpin")
-	for _, other := range []string{"task", "step", "state", "url", "title", "steps", "pin", "unpin"} {
+	for _, other := range []string{"task", "category", "state", "url", "title", "categories", "pin", "unpin"} {
 		cmd.MarkFlagsMutuallyExclusive("clear", other)
 	}
 	cmd.MarkFlagsMutuallyExclusive("clear", "parent")
-	for _, other := range []string{"state", "url", "title", "steps", "parent"} {
+	for _, other := range []string{"state", "url", "title", "categories", "parent"} {
 		cmd.MarkFlagsMutuallyExclusive("forget", other)
 	}
 	return cmd
@@ -90,7 +93,7 @@ func changed(cmd *cobra.Command, names ...string) []string {
 	return slices.DeleteFunc(names, func(name string) bool { return !cmd.Flags().Changed(name) })
 }
 
-// taskEdit is what the flags change of a task: an empty --step, which changes the pages alone, leaves it out.
+// taskEdit is what the flags change of a task: an empty --category, which changes the pages alone, leaves it out.
 func taskEdit(cmd *cobra.Command, f workFlags) server.TaskEdit {
 	var ed server.TaskEdit
 	if cmd.Flags().Changed("title") {
@@ -99,17 +102,17 @@ func taskEdit(cmd *cobra.Command, f workFlags) server.TaskEdit {
 	if cmd.Flags().Changed("state") {
 		ed.State = &f.state
 	}
-	if f.step != "" {
-		ed.Step = &f.step
+	if f.category != "" {
+		ed.Category = &f.category
 	}
 	if cmd.Flags().Changed("url") {
 		ed.URL = &f.url
 	}
-	if cmd.Flags().Changed("steps") {
-		// LIMIT: a step's name with a comma cannot be written here, and comes after the steps written. Take a list of the
-		// flag if such names come to matter.
-		steps := strings.Split(f.steps, ",")
-		ed.Steps = &steps
+	if cmd.Flags().Changed("categories") {
+		// LIMIT: a category's name with a comma cannot be written here, and comes after the categories written. Take a
+		// list of the flag if such names come to matter.
+		categories := strings.Split(f.categories, ",")
+		ed.Categories = &categories
 	}
 	if cmd.Flags().Changed("parent") {
 		ed.Parent = &f.parent
@@ -127,7 +130,7 @@ func (a *app) workTask(cmd *cobra.Command, f workFlags) error {
 	if !cmd.Flags().Changed("task") {
 		return usageOf(usererr.New("cli_work_no_task"))
 	}
-	if onPages := changed(cmd, "step", "pin", "unpin", "clear"); len(onPages) > 0 {
+	if onPages := changed(cmd, "category", "pin", "unpin", "clear"); len(onPages) > 0 {
 		return usageOf(usererr.New("cli_work_needs_pages", onPages[0]))
 	}
 	t, err := a.namedTask(ctx, cmd, f)
@@ -188,14 +191,14 @@ func taskFields(row store.Task, ed server.TaskEdit) string {
 	if ed.State != nil {
 		fields = append(fields, "state "+row.State)
 	}
-	if ed.Step != nil {
-		fields = append(fields, fmt.Sprintf("step %q", row.Step))
+	if ed.Category != nil {
+		fields = append(fields, fmt.Sprintf("category %q", row.Category))
 	}
 	if ed.URL != nil {
 		fields = append(fields, fmt.Sprintf("url %q", row.URL))
 	}
-	if ed.Steps != nil {
-		fields = append(fields, fmt.Sprintf("steps %q", strings.Join(row.Steps, ",")))
+	if ed.Categories != nil {
+		fields = append(fields, fmt.Sprintf("categories %q", strings.Join(row.Categories, ",")))
 	}
 	if ed.Parent != nil {
 		parent := "no parent"
@@ -207,7 +210,7 @@ func taskFields(row store.Task, ed server.TaskEdit) string {
 	return strings.Join(fields, ", ")
 }
 
-// tellPage says the page as it was written: its task and project, step and pin.
+// tellPage says the page as it was written: its task and project, category and pin.
 func (a *app) tellPage(page store.Edited) {
 	work := page.Work
 	var parts []string
@@ -216,8 +219,8 @@ func (a *app) tellPage(page store.Edited) {
 	} else {
 		parts = append(parts, english.Msg("cli_work_page_task", work.Task, inProject(page.TaskProject)))
 	}
-	if work != nil && work.Step != "" {
-		parts = append(parts, fmt.Sprintf("step %q", work.Step))
+	if work != nil && work.Category != "" {
+		parts = append(parts, fmt.Sprintf("category %q", work.Category))
 	}
 	if work != nil && work.Pin {
 		parts = append(parts, "pinned")
@@ -304,16 +307,16 @@ func pageFlags(cmd *cobra.Command, f workFlags) (onPages, onTask []string, name 
 	if cmd.Flags().Changed("parent") && !named {
 		return nil, nil, "", usageOf(usererr.New("cli_work_parent_task"))
 	}
-	onPages = changed(cmd, "task", "step", "pin", "unpin", "clear")
-	onTask = changed(cmd, "state", "url", "title", "steps", "parent")
+	onPages = changed(cmd, "task", "category", "pin", "unpin", "clear")
+	onTask = changed(cmd, "state", "url", "title", "categories", "parent")
 	if len(onPages)+len(onTask) == 0 {
 		return nil, nil, "", usageOf(usererr.New("cli_work_nothing"))
 	}
 	if name, err = store.TaskName(f.task); err != nil {
 		return nil, nil, "", flagOf(err, "--task")
 	}
-	if f.step != "" {
-		onTask = append(onTask, "step")
+	if f.category != "" {
+		onTask = append(onTask, "category")
 	}
 	if named && name == "" && len(onTask) > 0 {
 		return nil, nil, "", usageOf(usererr.New("cli_work_task_off", onTask[0]))
@@ -382,13 +385,13 @@ func pageWorkEdit(cmd *cobra.Command, f workFlags) server.Edit {
 	if f.clear {
 		off := false
 		empty := ""
-		work.Task, work.Step, work.Pin = &empty, &empty, &off
+		work.Task, work.Category, work.Pin = &empty, &empty, &off
 	}
 	if cmd.Flags().Changed("task") {
 		work.Task = &f.task
 	}
-	if cmd.Flags().Changed("step") {
-		work.Step = &f.step
+	if cmd.Flags().Changed("category") {
+		work.Category = &f.category
 	}
 	if cmd.Flags().Changed("pin") {
 		work.Pin = &f.pin

@@ -224,7 +224,7 @@ func TestFailureWords(t *testing.T) {
 
 	states := []string{
 		"ui_server_down", "ui_server_down_host", "ui_load_slow", "ui_version_gone", "ui_diff_bad_url", "ui_tasks_unreadable",
-		"ui_task_none_kids", "ui_step_drop_paged",
+		"ui_task_none_kids", "ui_category_drop_paged",
 	}
 	old := map[i18n.Lang]*regexp.Regexp{"ja": regexp.MustCompile(`ませんでした|めません`), "en": regexp.MustCompile(`(?i)could not|cannot`)}
 	shape := map[i18n.Lang]*regexp.Regexp{

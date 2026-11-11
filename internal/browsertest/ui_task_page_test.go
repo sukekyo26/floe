@@ -10,7 +10,7 @@ import (
 	"floe/internal/store"
 )
 
-// taskPageRows says the rows of a task's page: a step's heading in brackets, a page by its title.
+// taskPageRows says the rows of a task's page: a category's heading in brackets, a page by its title.
 const taskPageRows = `[...document.querySelectorAll('#list > li')].map((li) => li.classList.contains('group') ? '[' + li.textContent + ']' : li.querySelector('.title').textContent).join(' | ')`
 
 // pressTaskArchive presses the task's archive button and waits until it says word and the pages are archived or given back
@@ -30,7 +30,7 @@ func pressTaskArchive(b *browser, word string) {
 // taskPageAt says where the focus and the page chosen are.
 const taskPageAt = `(document.activeElement.closest?.('li')?.querySelector('.title')?.textContent ?? 'none') + ' / ' + (picked?.slug ?? 'none')`
 
-// A task's page: nothing read as it opens, its pages under their steps in the order written, j and k through them, a page
+// A task's page: nothing read as it opens, its pages under their categories in the order written, j and k through them, a page
 // whole back to where it came from; the state changed and what that does to the list and the focus on the way back; what is
 // done archived and given back; and the pages the list cannot show.
 func TestUITaskPage(t *testing.T) { //nolint:paralleltest // the browser tests share one Chrome, one at a time
@@ -51,9 +51,9 @@ func TestUITaskPage(t *testing.T) { //nolint:paralleltest // the browser tests s
 	}
 	page("c1", "--task", "#128", "--state", "doing")
 	page("n1", "--task", "#130", "--state", "doing")
-	page("d1", "--task", "#130", "--step", "design")
-	page("r1", "--task", "#130", "--step", "review")
-	page("i1", "--task", "#130", "--step", "build")
+	page("d1", "--task", "#130", "--category", "design")
+	page("r1", "--task", "#130", "--category", "review")
+	page("i1", "--task", "#130", "--category", "build")
 	page("y1", "--task", "#142", "--state", "doing")
 	page("x1", "--task", "#120", "--state", "done")
 	page("p1", "--pin")
@@ -66,7 +66,7 @@ func TestUITaskPage(t *testing.T) { //nolint:paralleltest // the browser tests s
 		t.Fatal(err)
 	}
 	s.floe(t, "work", "--task", "#1", "--project", "proj", "--state", "done")
-	s.floe(t, "work", "--task", "#130", "--project", "proj", "--steps", "design,build,review,nothing")
+	s.floe(t, "work", "--task", "#130", "--project", "proj", "--categories", "design,build,review,nothing")
 	s.floe(t, "work", "--task", "#99", "--project", "proj")
 
 	var out []string
@@ -112,7 +112,7 @@ func TestUITaskPage(t *testing.T) { //nolint:paralleltest // the browser tests s
 		t.Errorf("opening the task read a page: %s, was %s", got, unread)
 	}
 
-	// j and k through its rows, in the order of its steps.
+	// j and k through its rows, in the order of its categories.
 	moved := make([]string, 0, 4)
 	for range 4 {
 		key("j")

@@ -16,7 +16,7 @@ import (
 // the project of none. #6 is archived, #3 in progress with archived pages alone, and #8 done with one page left.
 const taskWork = `{
   "shop": {
-    "#1": {"title": "One", "state": "doing", "step": "design", "at": "2026-01-02T00:00:00Z", "url": "https://example.com/a/b/c"},
+    "#1": {"title": "One", "state": "doing", "category": "design", "at": "2026-01-02T00:00:00Z", "url": "https://example.com/a/b/c"},
     "#2": {"title": "Two", "state": "doing", "at": "2026-01-01T00:00:00Z"},
     "#4": {"state": "todo", "at": "2026-01-01T00:00:00Z"},
     "#5": {"state": "todo", "at": "2026-01-02T00:00:00Z"},
@@ -49,14 +49,14 @@ func mustInt(t *testing.T, s string) int {
 	return n
 }
 
-// taskPages publishes the pages of taskWork, each by its project, task, step and whether archived.
+// taskPages publishes the pages of taskWork, each by its project, task, category and whether archived.
 func taskPages(t *testing.T, s *site) {
 	t.Helper()
 
 	st := store.New(s.Env["FLOE_DIR"])
 	for _, p := range []struct {
-		slug, project, task, step string
-		archived, pin             bool
+		slug, project, task, category string
+		archived, pin                 bool
 	}{
 		{"p1", "shop", "#1", "design", false, false},
 		{"p2", "shop", "#1", "", false, false},
@@ -73,7 +73,7 @@ func taskPages(t *testing.T, s *site) {
 		s.floe(t, "publish", s.page(t, p.slug+".yaml", p.slug, ""), "--slug", p.slug)
 		if _, err := st.Edit(p.slug, store.Edit{
 			Project: &p.project, Archived: &p.archived,
-			Work: &store.WorkEdit{Task: &p.task, Step: &p.step, Pin: &p.pin},
+			Work: &store.WorkEdit{Task: &p.task, Category: &p.category, Pin: &p.pin},
 		}); err != nil {
 			t.Fatal(err)
 		}
