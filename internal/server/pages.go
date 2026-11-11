@@ -118,15 +118,17 @@ func (s *Server) versionContent(c *i18n.Catalog, slug string, m *store.Meta, v i
 		}
 		return served{body: io.NopCloser(bytes.NewReader(page)), typ: htmlType, drawn: true}, nil
 	}
-	pair, ok := s.cfg.Store.VersionPair(slug, m, diff.from, v)
-	if !ok || pair.Key != diff.key {
+	if s.cfg.Store.PairKey(slug, m, diff.from, v) != diff.key {
 		return none, errNoPage
 	}
-	_, page, err := s.compared(slug, pair, c)
+	got, ok, err := s.compared(slug, m, diff.from, v, c)
 	if err != nil {
 		return none, err //nolint:wrapcheck // the library's words, as /diff tells them
 	}
-	return served{body: io.NopCloser(bytes.NewReader(page)), typ: htmlType, drawn: true}, nil
+	if !ok {
+		return none, errNoPage
+	}
+	return served{body: io.NopCloser(bytes.NewReader(got.page)), typ: htmlType, drawn: true}, nil
 }
 
 func (s *Server) content(

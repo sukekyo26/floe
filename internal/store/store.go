@@ -239,12 +239,11 @@ func (s *Store) VersionPage(slug string, m *Meta, n int) ([]byte, bool) {
 	return page, err == nil
 }
 
-// Pair is two versions of a stored page, of one meta.json, as a diff compares them: their versions and pages, and
-// the key that ties what is told of the diff to its pages (PairKey).
+// Pair is two versions of a stored page, of one meta.json, as a diff compares them: their pages, and the key that
+// ties what is told of the diff to its pages (PairKey).
 type Pair struct {
-	Versions [2]Version
-	Pages    [2][]byte
-	Key      string
+	Pages [2][]byte
+	Key   string
 }
 
 // VersionPair is the versions from and to of the stored page slug, whose meta.json is m: false when m lists one of
@@ -252,15 +251,11 @@ type Pair struct {
 func (s *Store) VersionPair(slug string, m *Meta, from, to int) (Pair, bool) {
 	var p, none Pair
 	for i, n := range [2]int{from, to} {
-		v, listed := s.ReadMark(slug, m, n)
-		if !listed {
-			return none, false
-		}
 		page, read := s.VersionPage(slug, m, n)
 		if !read {
 			return none, false
 		}
-		p.Versions[i], p.Pages[i] = v, page
+		p.Pages[i] = page
 	}
 	p.Key = s.PairKey(slug, m, from, to)
 	return p, true

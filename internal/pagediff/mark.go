@@ -702,9 +702,9 @@ func ordinals(owner *html.Node) map[*html.Node]int {
 	return out
 }
 
-// htmlInteger reads s by the steps of HTML's "rules for parsing integers": ASCII whitespace skipped, a - or + sign, then
-// the digits up to the first that is not one, negated for -. False for no digits (the rules' error), or a number past
-// an int.
+// htmlInteger reads s by the steps of HTML's "rules for parsing integers": ASCII whitespace skipped, a - or + sign,
+// then the digits up to the first that is not one, negated for -. False for no digits (the rules' error), or a number
+// past an int.
 func htmlInteger(s string) (int, bool) {
 	s = strings.TrimLeftFunc(s, page.IsSpace)
 	sign := 1

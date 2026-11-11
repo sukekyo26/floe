@@ -448,8 +448,8 @@ func rowSpans(tr *html.Node) bool {
 func rowGroups(table *html.Node) iter.Seq[*html.Node] {
 	return func(yield func(*html.Node) bool) {
 		for c := table.FirstChild; c != nil; c = c.NextSibling {
-			if c.Type == html.ElementNode && (c.DataAtom == atom.Thead || c.DataAtom == atom.Tbody || c.DataAtom == atom.Tfoot) &&
-				!yield(c) {
+			group := c.DataAtom == atom.Thead || c.DataAtom == atom.Tbody || c.DataAtom == atom.Tfoot
+			if c.Type == html.ElementNode && group && !yield(c) {
 				return
 			}
 		}

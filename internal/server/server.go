@@ -76,31 +76,48 @@ type Server struct {
 // compared twice.
 type lastDiff struct {
 	sync.Mutex
+	key string
+	diffAnswer
+}
+
+// diffAnswer is a comparison of two versions: the pair's key (store.PairKey), what differs and the later page marked.
+type diffAnswer struct {
 	key    string
 	result pagediff.Result
 	page   []byte
 }
 
-// compared is the comparison of pair of the page slug, its words in the language of c: of the last one asked when it
-// is of the same page, pair and words.
-func (s *Server) compared(slug string, pair store.Pair, c *i18n.Catalog) (pagediff.Result, []byte, error) {
-	key := slug + "\x00" + pair.Key + "\x00" + string(c.Lang())
+// compared is the comparison of the versions from and to of the page slug, whose meta.json is m, its words in the
+// language of c: of the last one asked when it is of the same page, pair and words, which reads neither version. False
+// when m lists one of them not, or one cannot be read.
+func (s *Server) compared(slug string, m *store.Meta, from, to int, c *i18n.Catalog) (diffAnswer, bool, error) {
+	var none diffAnswer
+	pairKey := s.cfg.Store.PairKey(slug, m, from, to)
+	if pairKey == "" {
+		return none, false, nil
+	}
+	key := slug + "\x00" + pairKey + "\x00" + string(c.Lang())
 	s.diffs.Lock()
 	if s.diffs.key == key {
-		result, page := s.diffs.result, s.diffs.page
+		got := s.diffs.diffAnswer
 		s.diffs.Unlock()
-		return result, page, nil
+		return got, true, nil
 	}
 	s.diffs.Unlock()
+	pair, ok := s.cfg.Store.VersionPair(slug, m, from, to)
+	if !ok {
+		return none, false, nil
+	}
 	words := pagediff.Words{Gone: c.Msg("diff_page_gone"), Before: c.Msg("diff_page_before")}
 	result, page, err := pagediff.Diff(pair.Pages[0], pair.Pages[1], words)
 	if err != nil {
-		return pagediff.Result{}, nil, err //nolint:wrapcheck // the library's words
+		return none, false, err //nolint:wrapcheck // the library's words
 	}
+	got := diffAnswer{key: pair.Key, result: result, page: page}
 	s.diffs.Lock()
-	s.diffs.key, s.diffs.result, s.diffs.page = key, result, page
+	s.diffs.key, s.diffs.diffAnswer = key, got
 	s.diffs.Unlock()
-	return result, page, nil
+	return got, true, nil
 }
 
 // New returns a server for cfg, the drawing read.
@@ -109,9 +126,9 @@ func New(cfg Config) *Server {
 		cfg: cfg, hosts: map[string]bool{}, origins: map[string]bool{}, every: time.Second, id: rand.Text()[:8],
 		stopping: nil, halt: nil, looking: sync.Mutex{}, mu: sync.Mutex{},
 		drawing: store.Drawing{Kit: nil, Icons: nil, Err: nil}, gen: 0, mark: "",
-		diffs: lastDiff{Mutex: sync.Mutex{}, key: "", page: nil, result: pagediff.Result{
+		diffs: lastDiff{Mutex: sync.Mutex{}, key: "", diffAnswer: diffAnswer{key: "", page: nil, result: pagediff.Result{
 			Counts: pagediff.Counts{Changed: 0, Added: 0, Removed: 0, Same: 0}, Sections: nil, Places: nil,
-		}},
+		}}},
 		fresh: false,
 	}
 	s.stopping, s.halt = context.WithCancel(context.Background())
@@ -361,10 +378,9 @@ func (s *Server) versions(w http.ResponseWriter, r *http.Request) {
 	}{Versions: versions, Read: s.cfg.Store.ReadBefore(Viewer, slug, m)})
 }
 
-// diff answers what differs between the versions from and to of the stored page slug, by their words alone: not found
-// for none of
-// them, or a link. It reads nothing as read. A version whose copy a publish removed after its meta.json was read is
-// read once more.
+// diff answers what differs between the versions from and to of the stored page slug, from before to as the page of
+// the diff marks them, by their words alone: not found for none of them, or a link. It reads nothing as read. A
+// version whose copy a publish removed after its meta.json was read is read once more.
 // LIMIT: it looks at no Origin and counts none running at once, so that a sandboxed page or another site, which cannot
 // read the answer,
 // can still ask it as often as they will. One viewer, on their own machine: put a bound on it if the load comes to
@@ -373,11 +389,12 @@ func (s *Server) diff(w http.ResponseWriter, r *http.Request) {
 	slug, q := r.PathValue("slug"), r.URL.Query()
 	from, fromOK := versionNumber(q.Get("from"))
 	to, toOK := versionNumber(q.Get("to"))
-	if !fromOK || !toOK {
-		send(w, http.StatusBadRequest, "from and to must be numbers of versions")
+	if !fromOK || !toOK || from >= to {
+		send(w, http.StatusBadRequest, "from and to must be numbers of versions, from before to")
 		return
 	}
-	var pair store.Pair
+	var got diffAnswer
+	var versions [2]store.Version
 	ok := false
 	// Read once more for a copy a publish removed after its meta.json was read.
 	// LIMIT: that second read is not tested, as nothing can put a publish in the middle of it.
@@ -386,17 +403,19 @@ func (s *Server) diff(w http.ResponseWriter, r *http.Request) {
 		if m == nil {
 			break
 		}
-		if pair, ok = s.cfg.Store.VersionPair(slug, m, from, to); ok {
+		var err error
+		if got, ok, err = s.compared(slug, m, from, to, catalog(r)); err != nil {
+			refuse(w, r, err)
+			return
+		}
+		if ok {
+			versions[0], _ = s.cfg.Store.ReadMark(slug, m, from)
+			versions[1], _ = s.cfg.Store.ReadMark(slug, m, to)
 			break
 		}
 	}
 	if !ok {
 		notFound(w)
-		return
-	}
-	result, _, err := s.compared(slug, pair, catalog(r))
-	if err != nil {
-		refuse(w, r, err)
 		return
 	}
 	sendJSON(w, http.StatusOK, struct {
@@ -405,8 +424,7 @@ func (s *Server) diff(w http.ResponseWriter, r *http.Request) {
 		Key  string `json:"key"`
 		pagediff.Result
 	}{
-		From: Read{N: from, At: pair.Versions[0].At}, To: Read{N: to, At: pair.Versions[1].At},
-		Key: pair.Key, Result: result,
+		From: Read{N: from, At: versions[0].At}, To: Read{N: to, At: versions[1].At}, Key: got.key, Result: got.result,
 	})
 }
 
