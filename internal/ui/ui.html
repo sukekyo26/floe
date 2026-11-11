@@ -258,7 +258,7 @@
   .grip::after { content: ""; position: absolute; left: 2px; top: 0; bottom: 0; width: 2px; background: transparent; transition: background-color 0.15s; }
   .grip:is(:hover, .dragging, :focus-visible)::after { background: var(--ink); }
   /* While an edge is dragged a page takes no pointer, which would leave the edge's pointer capture inside the iframe */
-  html:has(.grip.dragging) :is(.frame, .read-frame) { pointer-events: none; }
+  html:has(.grip.dragging) :is(.frame, .read-frame, .dbody > iframe) { pointer-events: none; }
   /* An iframe prints what fits one screen of the page in it: a frame's print hides the bar, the frame and the toasts,
      and names the page alone in their place, but on a missing page's frame, which prints its
      state. The screen shows no note.
@@ -1216,7 +1216,7 @@
     </nav>
     <div class="grip" id="diff-toc-grip" role="separator" aria-orientation="vertical" aria-controls="diff-toc-nav" aria-label="{{.Msg "ui_diff_toc_width"}}" tabindex="0" hidden></div>
     <button type="button" class="icon-btn side-show" id="diff-toc-show" aria-expanded="false" aria-controls="diff-toc-nav" title="{{.Msg "ui_diff_toc_show"}}" aria-label="{{.Msg "ui_diff_toc_show"}}" hidden><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linejoin="round" aria-hidden="true"><rect x="3" y="4" width="18" height="16" rx="2"/><path d="M9 4v16"/></svg></button>
-    <div class="dbody"><iframe id="diff-frame" title="{{.Msg "ui_diff_frame"}}" allow="clipboard-write *; fullscreen *"></iframe></div>
+    <div class="dbody" id="diff-body"><iframe id="diff-frame" title="{{.Msg "ui_diff_frame"}}" allow="clipboard-write *; fullscreen *"></iframe></div>
   </div>
   <div class="state notfound" id="diff-none" hidden><p>{{.Msg "ui_diff_none"}}</p><a class="btn" id="diff-page">{{.Msg "ui_diff_open_page"}}</a></div>
 </main>
@@ -1548,6 +1548,12 @@
   // A move to a part of the page (#…) is written into this URL too, while the iframe still shows this page, so that a copy of the URL
   // and a reload open that part; replaceState changes only the fragment and adds no history, which the iframe's move added already.
   // The iframe is the frame's, or the one beside the list; the page is read when it is the one that iframe was given
+  // The path this page gave the iframe f, whichever it is: the frame's and the one beside the list are moved by location.replace,
+  // which leaves their src as it was, and the diff's by its src
+  function givenPath(f) {
+    const given = f === $('frame') ? frameSrc : f === $('read-frame') ? picked && rawHref(picked) : f.getAttribute('src');
+    return given ? new URL(given, location.href).pathname : null;
+  }
   addEventListener('message', (e) => {
     const shown = DIFF ? $('diff-frame') : framed ? $('frame') : $('read-frame');
     // A page of floe is always sandboxed: any other origin is a site the iframe moved to
@@ -1562,9 +1568,8 @@
     }
     const to = typeof e.data?.artifactOpen === 'string' && new URL(e.data.artifactOpen, location.origin);
     if (to && to.origin === location.origin && /^\/(a\/[^/]+\/?)?$/.test(to.pathname) && !to.searchParams.has('raw')) location.href = to.href;
-    // The path the iframe that told it was given, read from the iframe itself: whichever it is, a page tells of itself only
-    // there, wherever a link took it
-    if (!shown.hasAttribute('src') || e.data?.artifactPath !== new URL(shown.getAttribute('src'), location.href).pathname) return;
+    // A page tells of itself only at the path its iframe was given, wherever a link took it
+    if (e.data?.artifactPath !== givenPath(shown)) return;
     // A diff's page whose versions changed: what changed is read again, and the pages with it
     if (DIFF && e.data.artifactChanged === true) {
       const a = items.find((x) => x.slug === framed);
@@ -4884,6 +4889,8 @@
     }
     $('diff-frame').src = diffPage();
     diffAt = -1;
+    // Of the one that scrolls at a phone's width, all of it: back to its top
+    $('diff').scrollTop = 0;
     const list = $('diff-toc');
     list.replaceChildren();
     sections.forEach((s, i) => {
