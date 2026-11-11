@@ -107,8 +107,9 @@ type marker struct {
 	// it, which place it (goneAt); nil for what goes after last.
 	pending        []*html.Node
 	copyOf, goneOf *html.Node
-	// later is the later's block or heading of each of the earlier's that is paired.
-	later map[*html.Node]*html.Node
+	// later is the later's block or heading of each of the earlier's that is paired; besides, of the earlier's elements.
+	later   map[*html.Node]*html.Node
+	besides map[*html.Node]beside
 	// added is what floe put in; kept, the earlier's elements that hold a block the later keeps; copied, those copied.
 	added, kept, copied map[*html.Node]bool
 	held                map[holdKey]bool
@@ -144,7 +145,7 @@ type holdKey struct {
 func newMarker(root *html.Node, words Words) *marker {
 	return &marker{
 		root: root, body: bodyOf(root), words: words, last: nil, lastBox: nil, tail: nil, pending: nil,
-		copyOf: nil, goneOf: nil, later: map[*html.Node]*html.Node{},
+		copyOf: nil, goneOf: nil, later: map[*html.Node]*html.Node{}, besides: map[*html.Node]beside{},
 		added: map[*html.Node]bool{}, kept: map[*html.Node]bool{}, copied: map[*html.Node]bool{},
 		held: map[holdKey]bool{}, edits: nil, ordinals: map[*html.Node]map[*html.Node]int{}, gones: nil, branch: nil,
 		copies: 0, tables: tables{}, rows: map[*html.Node]*html.Node{}, lastRow: map[*html.Node]*html.Node{},
@@ -864,18 +865,45 @@ func (m *marker) goneAt(old, gone *html.Node) (parent, before *html.Node) {
 		return m.after(later)
 	}
 	for n := old; n != nil && n.Parent != nil; n = n.Parent {
-		for s := n.PrevSibling; s != nil; s = s.PrevSibling {
-			if later, _ := m.laterOf(s, true); later != nil {
-				return m.after(later)
-			}
+		b := m.besideOf(n)
+		if later, _ := m.laterOf(b.before, true); later != nil {
+			return m.after(later)
 		}
-		for s := n.NextSibling; s != nil; s = s.NextSibling {
-			if later, _ := m.laterOf(s, false); later != nil {
-				return later.Parent, later
-			}
+		if later, _ := m.laterOf(b.after, false); later != nil {
+			return later.Parent, later
 		}
 	}
 	return m.body, nil
+}
+
+// beside is the nearest sibling before an element and after it that holds a block kept, nil for none.
+type beside struct {
+	before, after *html.Node
+}
+
+// besideOf is beside of n, of the earlier: those of all the children of its parent found at once, so that many gone
+// of one parent do not each go through its children.
+func (m *marker) besideOf(n *html.Node) beside {
+	if b, ok := m.besides[n]; ok {
+		return b
+	}
+	var last *html.Node
+	for c := n.Parent.FirstChild; c != nil; c = c.NextSibling {
+		m.besides[c] = beside{before: last, after: nil}
+		if m.kept[c] {
+			last = c
+		}
+	}
+	last = nil
+	for c := n.Parent.LastChild; c != nil; c = c.PrevSibling {
+		b := m.besides[c]
+		b.after = last
+		m.besides[c] = b
+		if m.kept[c] {
+			last = c
+		}
+	}
+	return m.besides[n]
 }
 
 // comesBefore tells whether x comes before y in root, in tree order.
@@ -902,7 +930,7 @@ func (m *marker) after(n *html.Node) (parent, before *html.Node) {
 // laterOf is the later's element of n, of the earlier, by block, the first block kept in n (its last, for last): the
 // element as far above block's later one as n is above block, but body's child at most. Nil when n holds none kept.
 func (m *marker) laterOf(n *html.Node, last bool) (later, block *html.Node) {
-	if !m.kept[n] {
+	if n == nil || !m.kept[n] {
 		return nil, nil
 	}
 	up := 0
