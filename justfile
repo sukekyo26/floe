@@ -99,7 +99,8 @@ test-browser part:
         fi
         seen[$name]=1
     done
-    CGO_ENABLED=1 go test -race -shuffle=on "$pick" '^({{browser_looks}})$' ./internal/browsertest
+    # The job stops at 10 minutes with nothing printed; past 7 the test binary stops itself and prints the tests running.
+    CGO_ENABLED=1 go test -race -shuffle=on -timeout 7m "$pick" '^({{browser_looks}})$' ./internal/browsertest
 
 # LIMIT: the tests are named here, corpus first, as pagediff's golden is read from corpus's golden page: a new test of golden files is missed unless it is added here
 # Write every golden file anew from what floe prints and draws now; read the change in git diff
