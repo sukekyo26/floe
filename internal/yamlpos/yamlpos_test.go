@@ -359,11 +359,12 @@ func TestParseFlowComments(t *testing.T) {
 }
 
 // Find follows keys and indexes to a value and its key, the - of an entry of a block sequence, and stops at the
-// last node it reaches.
+// last node it reaches; OfValue places a mapping or a sequence at that key, or at its { or [ when it has none.
 func TestFind(t *testing.T) {
 	t.Parallel()
 
-	body, err := yamlpos.Parse("a.yaml", []byte("a:\n  b: 1\n  c:\n    - x\n    -\nd: [y, z]\ne: [~, y, null]\n"))
+	body, err := yamlpos.Parse("a.yaml", []byte("a:\n  b: 1\n  c:\n    - x\n    -\nd: [y, z]\ne: [~, y, null]\n"+
+		"f: [{j: x}, [1]]\ng: {h: 1}\ni:\n  - k: 1\n"))
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -376,9 +377,17 @@ func TestFind(t *testing.T) {
 		{[]string{"a", "c", "0"}, yamlpos.Pos{Line: 4, Column: 7}},
 		{[]string{"a", "c", "1"}, yamlpos.Pos{Line: 5, Column: 5}},
 		{[]string{"d", "1"}, yamlpos.Pos{Line: 6, Column: 8}},
-		{[]string{"a", "nope"}, yamlpos.Pos{Line: 2, Column: 3}},
-		{[]string{"d", "9"}, yamlpos.Pos{Line: 6, Column: 4}},
-		{[]string{"d", "x"}, yamlpos.Pos{Line: 6, Column: 4}},
+		{[]string{"a"}, yamlpos.Pos{Line: 1, Column: 1}},
+		{[]string{"a", "c"}, yamlpos.Pos{Line: 3, Column: 3}},
+		{[]string{"a", "nope"}, yamlpos.Pos{Line: 1, Column: 1}},
+		{[]string{"d", "9"}, yamlpos.Pos{Line: 6, Column: 1}},
+		{[]string{"d", "x"}, yamlpos.Pos{Line: 6, Column: 1}},
+		{[]string{"f", "0"}, yamlpos.Pos{Line: 8, Column: 5}},
+		{[]string{"f", "0", "j"}, yamlpos.Pos{Line: 8, Column: 9}},
+		{[]string{"f", "1"}, yamlpos.Pos{Line: 8, Column: 13}},
+		{[]string{"g"}, yamlpos.Pos{Line: 9, Column: 1}},
+		{[]string{"i", "0"}, yamlpos.Pos{Line: 11, Column: 3}},
+		{[]string{"i", "0", "k"}, yamlpos.Pos{Line: 11, Column: 8}},
 		// An empty entry of a flow sequence is where it is written: goccy/go-yaml gives a flow sequence entries
 		// too, whose token is the , before each, nil for the first, not the entry.
 		{[]string{"e", "0"}, yamlpos.Pos{Line: 7, Column: 5}},
@@ -409,10 +418,10 @@ func TestLocate(t *testing.T) {
 		{root, []string{"zz"}, yamlpos.Pos{}},
 		{root, []string{"zz", "a"}, yamlpos.Pos{}},
 		{nil, []string{"a"}, yamlpos.Pos{}},
-		{root, []string{"a"}, yamlpos.Pos{Line: 3, Column: 3}},
+		{root, []string{"a"}, yamlpos.Pos{Line: 2, Column: 1}},
 		{root, []string{"a", "b"}, yamlpos.Pos{Line: 3, Column: 6}},
 		{root, []string{"a", "c", "0"}, yamlpos.Pos{Line: 5, Column: 7}},
-		{root, []string{"a", "zz"}, yamlpos.Pos{Line: 3, Column: 3}},
+		{root, []string{"a", "zz"}, yamlpos.Pos{Line: 2, Column: 1}},
 	} {
 		got, node := yamlpos.Locate(tt.root, tt.at)
 		if got != tt.want || (node == nil) != (tt.want == yamlpos.Pos{}) {

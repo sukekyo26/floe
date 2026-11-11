@@ -235,7 +235,7 @@ func TestPartHTMLItems(t *testing.T) {
 		{"white space alone", "{{.h}}", "{{.in}}", "<div>a{{.Data.p}}b</div>", `p: {h: "  "}`, "", "<div>a  b</div>"},
 		{"in an attribute by part.html", `<div data-floe-part="ph" title="{{.h}}">x</div>`, "{{.in}}", "{{.Data.p}}", `p: {h: "<b>x</b>"}`, placed("p.h", "<div>"), ""},
 		{"in an attribute by page.html", whole, "{{.in}}", `<p title="{{.Data.p}}">x</p>`, `p: {h: "<b>x</b>"}`, placed("p.h", "<p>"), ""},
-		{"in a function", `<div data-floe-part="ph">{{num .h}}</div>`, "{{.in}}", "{{.Data.p}}", `p: {h: "<b>x</b>"}`, `d.yaml:3:5: num takes a number, not "<b>x</b>"`, ""},
+		{"in a function", `<div data-floe-part="ph">{{num .h}}</div>`, "{{.in}}", "{{.Data.p}}", `p: {h: "<b>x</b>"}`, `d.yaml:3:1: num takes a number, not "<b>x</b>"`, ""},
 	} {
 		k := ownKit(t, parts(tt.ph, tt.po), mine(htmlPage(tt.body), schema, nil))
 		page, _, err := tmpl.Draw(k, "d.yaml", []byte("lang: en\ntemplate: mine\n"+tt.data+"\n"), none)
@@ -260,7 +260,7 @@ func TestFormatNotText(t *testing.T) {
 "properties": {"h": {"format": "html"}, "i": {"format": "image"}, "m": {"format": "markdown"}}}`, nil))
 	if got, want := drawn(t, k, "lang: en\ntemplate: mine\nh: 5\ni: [1]\nm: true\n", none), lines(
 		"d.yaml:3:4: an item of format html takes text: write it as text, in quotes where YAML would read a number, true, false or null",
-		"d.yaml:4:4: an item of format image takes text: write it as text, in quotes where YAML would read a number, true, false or null",
+		"d.yaml:4:1: an item of format image takes text: write it as text, in quotes where YAML would read a number, true, false or null",
 		"d.yaml:5:4: an item of format markdown takes text: write it as text, in quotes where YAML would read a number, true, false or null",
 	); got != want {
 		t.Errorf("told\n%s\nwant\n%s", got, want)
@@ -532,7 +532,7 @@ func TestPartExecPlaced(t *testing.T) {
 		},
 		{
 			head + `{"t": {}}}`, `<div data-floe-part="pb">{{num .t}}</div>`, "{{.Data.b}}", "b: {t: y}",
-			`d.yaml:3:5: num takes a number, not "y"`,
+			`d.yaml:3:1: num takes a number, not "y"`,
 		},
 		{
 			head + `{"t": {}}}`, "<div data-floe-part=\"pb\">\n  {{range .x}}{{end}}</div>", "{{.Data.b}}{{.Data.c}}", "b: {t: y}\nc: {t: z}",
@@ -570,18 +570,18 @@ func TestPartBarsRefused(t *testing.T) {
 	}
 	k := ownKit(t, parts, mine(htmlPage("{{.Data.b}}"), head+`{"b": {"$ref": "floe:///parts/pb.json"}}}`, nil))
 	for _, tt := range []struct{ item, want string }{
-		{"{label: b, value: -2}", `d.yaml:4:3: bars: bar 2 "b"'s value takes a number of 0 or more, not -2`},
-		{"{label: b, value: x}", `d.yaml:4:3: bars: bar 2 "b"'s value takes a number, not "x"`},
-		{"{label: b}", `d.yaml:4:3: bars: bar 2 "b"'s value takes a number; none is written, or it is null`},
-		{"{label: b, value: null}", `d.yaml:4:3: bars: bar 2 "b"'s value takes a number; none is written, or it is null`},
+		{"{label: b, value: -2}", `d.yaml:3:1: bars: bar 2 "b"'s value takes a number of 0 or more, not -2`},
+		{"{label: b, value: x}", `d.yaml:3:1: bars: bar 2 "b"'s value takes a number, not "x"`},
+		{"{label: b}", `d.yaml:3:1: bars: bar 2 "b"'s value takes a number; none is written, or it is null`},
+		{"{label: b, value: null}", `d.yaml:3:1: bars: bar 2 "b"'s value takes a number; none is written, or it is null`},
 		{"{label: b, value: 0}", ""},
 		{"{label: b, value: 1, of: null}", ""},
 		{"{label: b, value: 1, unit: pages}", ""},
-		{"{label: b, value: 1, unit: 3}", `d.yaml:4:3: bars: bar 2 "b"'s unit takes text, not 3`},
-		{"{label: b, value: 1, of: 0}", `d.yaml:4:3: bars: bar 2 "b"'s of takes a number above 0, not 0`},
-		{"{label: b, value: 1, of: x}", `d.yaml:4:3: bars: bar 2 "b"'s of takes a number, not "x"`},
-		{"{label: b, value: 5, of: 3}", `d.yaml:4:3: bars: bar 2 "b": 5 is over its of 3; write a value no greater than of, the whole`},
-		{"3", "d.yaml:4:3: bars takes items written as keys and values (label, value, of, unit, tone); item 2 is not"},
+		{"{label: b, value: 1, unit: 3}", `d.yaml:3:1: bars: bar 2 "b"'s unit takes text, not 3`},
+		{"{label: b, value: 1, of: 0}", `d.yaml:3:1: bars: bar 2 "b"'s of takes a number above 0, not 0`},
+		{"{label: b, value: 1, of: x}", `d.yaml:3:1: bars: bar 2 "b"'s of takes a number, not "x"`},
+		{"{label: b, value: 5, of: 3}", `d.yaml:3:1: bars: bar 2 "b": 5 is over its of 3; write a value no greater than of, the whole`},
+		{"3", "d.yaml:3:1: bars takes items written as keys and values (label, value, of, unit, tone); item 2 is not"},
 	} {
 		data := "lang: en\ntemplate: mine\nb:\n  items:\n    - {label: a, value: 3}\n    - " + tt.item + "\n"
 		if got := drawn(t, k, data, none); got != tt.want {
@@ -605,14 +605,14 @@ func TestChartMistakes(t *testing.T) {
 	const shape = "chart takes kind (line or bar), x (names) and series (each of name and values, a number for each name); "
 	for _, tt := range []struct{ value, want string }{
 		{"3", "d.yaml:3:4: got number, want object"},
-		{"{kind: line, x: [], series: [{name: a, values: []}]}", "d.yaml:3:5: " + shape + "x is not so"},
-		{"{kind: line, x: [a], series: []}", "d.yaml:3:5: " + shape + "series is not so"},
-		{"{kind: pie, x: [a], series: [{name: a, values: [1]}]}", "d.yaml:3:5: " + shape + "kind is not so"},
-		{"{kind: line, x: [a], series: [3]}", "d.yaml:3:5: " + shape + "series 1 is not so"},
-		{"{kind: line, x: [a], series: [{name: a}]}", "d.yaml:3:5: " + shape + "series 1 is not so"},
-		{"{kind: line, x: [a, b], series: [{name: a, values: [1]}]}", `d.yaml:3:55: chart: series 1 "a" has 1 values for the 2 names of x; write a value for each name`},
-		{"{kind: line, x: [a, b], series: [{name: a, values: [1]}, {name: b, values: [1, 2, 3]}]}", `d.yaml:3:55: chart: series 1 "a" has 1 values for the 2 names of x; write a value for each name` + "\n" +
-			`d.yaml:3:79: chart: series 2 "b" has 3 values for the 2 names of x; write a value for each name`},
+		{"{kind: line, x: [], series: [{name: a, values: []}]}", "d.yaml:3:1: " + shape + "x is not so"},
+		{"{kind: line, x: [a], series: []}", "d.yaml:3:1: " + shape + "series is not so"},
+		{"{kind: pie, x: [a], series: [{name: a, values: [1]}]}", "d.yaml:3:1: " + shape + "kind is not so"},
+		{"{kind: line, x: [a], series: [3]}", "d.yaml:3:1: " + shape + "series 1 is not so"},
+		{"{kind: line, x: [a], series: [{name: a}]}", "d.yaml:3:1: " + shape + "series 1 is not so"},
+		{"{kind: line, x: [a, b], series: [{name: a, values: [1]}]}", `d.yaml:3:47: chart: series 1 "a" has 1 values for the 2 names of x; write a value for each name`},
+		{"{kind: line, x: [a, b], series: [{name: a, values: [1]}, {name: b, values: [1, 2, 3]}]}", `d.yaml:3:47: chart: series 1 "a" has 1 values for the 2 names of x; write a value for each name` + "\n" +
+			`d.yaml:3:71: chart: series 2 "b" has 3 values for the 2 names of x; write a value for each name`},
 		{"{kind: line, x: [a], series: [{name: a, values: [x]}]}", `d.yaml:3:53: chart: series 1 "a" takes a number, not "x"`},
 		{"{kind: line, min: x, x: [a], series: [{name: a, values: [1]}]}", `d.yaml:3:22: chart: min takes a number, not "x"`},
 		{"{kind: bar, min: x, title: T, x: [a], series: [{name: a, values: [1]}]}", ""},
@@ -698,12 +698,12 @@ func TestPartStatsRefused(t *testing.T) {
 	const head = `stats: item 1 "a": with from, write from and value as digits in quotes, and better as lower or higher; `
 	k := statsKit(t)
 	for _, tt := range []struct{ item, want string }{
-		{"3", "d.yaml:4:3: stats takes items written as keys and values (label, value and the like); item 1 is not"},
-		{"{label: a, value: '1', from: 'x', better: lower}", "d.yaml:4:3: " + head + "from is not so"},
-		{"{label: a, value: 'x', from: '1', better: lower}", "d.yaml:4:3: " + head + "value is not so"},
-		{"{label: a, value: '1', from: '2'}", "d.yaml:4:3: " + head + "better is not so"},
-		{"{label: a, value: '1', from: '2', better: down}", "d.yaml:4:3: " + head + "better is not so"},
-		{"{label: a, value: 3, from: 2, better: lower}", "d.yaml:4:3: " + head + "from is not so\nd.yaml:4:3: " + head + "value is not so"},
+		{"3", "d.yaml:3:1: stats takes items written as keys and values (label, value and the like); item 1 is not"},
+		{"{label: a, value: '1', from: 'x', better: lower}", "d.yaml:3:1: " + head + "from is not so"},
+		{"{label: a, value: 'x', from: '1', better: lower}", "d.yaml:3:1: " + head + "value is not so"},
+		{"{label: a, value: '1', from: '2'}", "d.yaml:3:1: " + head + "better is not so"},
+		{"{label: a, value: '1', from: '2', better: down}", "d.yaml:3:1: " + head + "better is not so"},
+		{"{label: a, value: 3, from: 2, better: lower}", "d.yaml:3:1: " + head + "from is not so\nd.yaml:3:1: " + head + "value is not so"},
 		{"{label: a, value: 3}", ""},
 		{"{label: a, value: '1', better: lower}", ""},
 	} {
@@ -713,7 +713,7 @@ func TestPartStatsRefused(t *testing.T) {
 	}
 	const two = "lang: en\ntemplate: mine\nd:\n  items:\n    - {label: a, value: '1', from: x, better: lower}\n" +
 		"    - {label: b, value: '1', from: y, better: lower}\n"
-	want := "d.yaml:4:3: " + head + "from is not so\nd.yaml:4:3: " + strings.Replace(head, `item 1 "a"`, `item 2 "b"`, 1) + "from is not so"
+	want := "d.yaml:3:1: " + head + "from is not so\nd.yaml:3:1: " + strings.Replace(head, `item 1 "a"`, `item 2 "b"`, 1) + "from is not so"
 	if got := drawn(t, k, two, none); got != want {
 		t.Errorf("a piece of the value: told %q, want %q", got, want)
 	}
@@ -733,12 +733,12 @@ func TestEntriesParts(t *testing.T) {
 		{"parts: [{code: {text: x}}, {text: y}]", ""},
 		{"parts: [{entries: [{title: f, parts: [{code: {text: x}}]}]}]", ""},
 		{"text: ''", "d.yaml:4:41: minLength: got 0, want 1"},
-		{"parts: []", "d.yaml:4:42: minItems: got 0, want 1"},
+		{"parts: []", "d.yaml:4:35: minItems: got 0, want 1"},
 		{"parts: [{tabs: [{title: a, parts: [{text: x}]}, {title: b, parts: [{text: y}]}]}]", "d.yaml:4:44: additional properties 'tabs' not allowed"},
 		{"parts: [{details: {title: a, parts: [{text: x}]}}]", ""},
 		{"parts: [{options: [{title: a, parts: [{options: [{title: b}]}]}]}]", ""},
 		{"parts: [{columns: [{parts: [{text: x}]}]}]", "d.yaml:4:44: additional properties 'columns' not allowed"},
-		{"parts: [{html: '</form>'}]", "d.yaml:4:44: additional properties 'html' not allowed"},
+		{"parts: [{html: '</form>'}]", "d.yaml:4:50: additional properties 'html' not allowed"},
 		{"parts: [{table: {columns: [c], rows: [[1]]}}]", "d.yaml:4:74: got number, want string or object"},
 	} {
 		data := "lang: en\ntemplate: report\nsections:\n  - parts: [{entries: [{title: e, " + c.item + "}]}]\n"

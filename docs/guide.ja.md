@@ -164,7 +164,7 @@ t.yaml:10:16: got number, want string or object
 - YAML の誤り：上の節を見る。
 
 ```text
-plan.yaml:8:11: additional properties 'colour' not allowed
+plan.yaml:8:19: additional properties 'colour' not allowed
 plan.yaml:9:17: value must be one of 'accent', 'good', 'warn', 'bad', 'muted'
 ```
 

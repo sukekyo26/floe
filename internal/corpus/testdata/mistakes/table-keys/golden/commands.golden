@@ -1,54 +1,54 @@
 $ floe check keys.yaml shapes.yaml
 exit 1
 --- stderr
-keys.yaml:15:17: write each key of a row as the id of a column
-keys.yaml:16:15: write each key of a row as the id of a column
-keys.yaml:18:17: write each key of a row as the id of a column
-keys.yaml:19:17: write each key of a row as the id of a column
-keys.yaml:21:15: write as many cells in each row as there are columns
-keys.yaml:22:15: write as many cells in each row as there are columns
-keys.yaml:23:42: write each key of a row as the id of a column
+keys.yaml:15:13: write each key of a row as the id of a column
+keys.yaml:16:13: write each key of a row as the id of a column
+keys.yaml:18:13: write each key of a row as the id of a column
+keys.yaml:19:13: write each key of a row as the id of a column
+keys.yaml:21:13: write as many cells in each row as there are columns
+keys.yaml:22:13: write as many cells in each row as there are columns
+keys.yaml:23:41: write each key of a row as the id of a column
 shapes.yaml:11:21: got number, want string
 shapes.yaml:12:21: minLength: got 0, want 1
-shapes.yaml:13:17: missing property 'title'
-shapes.yaml:15:15: minProperties: got 0, want 1
+shapes.yaml:13:13: missing property 'title'
+shapes.yaml:15:13: minProperties: got 0, want 1
 shapes.yaml:16:24: got null, want string or object
 shapes.yaml:17:41: value must be one of 'accent', 'good', 'warn', 'bad', 'muted'
 shapes.yaml:18:15: got string, want array or object
 $ floe render --out-dir $TMP/pages/keys.yaml keys.yaml
 exit 1
 --- stderr
-keys.yaml:15:17: write each key of a row as the id of a column
-keys.yaml:16:15: write each key of a row as the id of a column
-keys.yaml:18:17: write each key of a row as the id of a column
-keys.yaml:19:17: write each key of a row as the id of a column
-keys.yaml:21:15: write as many cells in each row as there are columns
-keys.yaml:22:15: write as many cells in each row as there are columns
-keys.yaml:23:42: write each key of a row as the id of a column
+keys.yaml:15:13: write each key of a row as the id of a column
+keys.yaml:16:13: write each key of a row as the id of a column
+keys.yaml:18:13: write each key of a row as the id of a column
+keys.yaml:19:13: write each key of a row as the id of a column
+keys.yaml:21:13: write as many cells in each row as there are columns
+keys.yaml:22:13: write as many cells in each row as there are columns
+keys.yaml:23:41: write each key of a row as the id of a column
 $ floe render --out-dir $TMP/pages/shapes.yaml shapes.yaml
 exit 1
 --- stderr
 shapes.yaml:11:21: got number, want string
 shapes.yaml:12:21: minLength: got 0, want 1
-shapes.yaml:13:17: missing property 'title'
-shapes.yaml:15:15: minProperties: got 0, want 1
+shapes.yaml:13:13: missing property 'title'
+shapes.yaml:15:13: minProperties: got 0, want 1
 shapes.yaml:16:24: got null, want string or object
 shapes.yaml:17:41: value must be one of 'accent', 'good', 'warn', 'bad', 'muted'
 shapes.yaml:18:15: got string, want array or object
 $ floe render --out-dir $TMP/together keys.yaml shapes.yaml
 exit 1
 --- stderr
-keys.yaml:15:17: write each key of a row as the id of a column
-keys.yaml:16:15: write each key of a row as the id of a column
-keys.yaml:18:17: write each key of a row as the id of a column
-keys.yaml:19:17: write each key of a row as the id of a column
-keys.yaml:21:15: write as many cells in each row as there are columns
-keys.yaml:22:15: write as many cells in each row as there are columns
-keys.yaml:23:42: write each key of a row as the id of a column
+keys.yaml:15:13: write each key of a row as the id of a column
+keys.yaml:16:13: write each key of a row as the id of a column
+keys.yaml:18:13: write each key of a row as the id of a column
+keys.yaml:19:13: write each key of a row as the id of a column
+keys.yaml:21:13: write as many cells in each row as there are columns
+keys.yaml:22:13: write as many cells in each row as there are columns
+keys.yaml:23:41: write each key of a row as the id of a column
 shapes.yaml:11:21: got number, want string
 shapes.yaml:12:21: minLength: got 0, want 1
-shapes.yaml:13:17: missing property 'title'
-shapes.yaml:15:15: minProperties: got 0, want 1
+shapes.yaml:13:13: missing property 'title'
+shapes.yaml:15:13: minProperties: got 0, want 1
 shapes.yaml:16:24: got null, want string or object
 shapes.yaml:17:41: value must be one of 'accent', 'good', 'warn', 'bad', 'muted'
 shapes.yaml:18:15: got string, want array or object

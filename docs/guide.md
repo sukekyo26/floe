@@ -162,7 +162,7 @@ A mistake names a place in what you wrote (`file:line:column:` or `file:`), so y
 - A mistake of YAML: see the section above.
 
 ```text
-plan.yaml:8:11: additional properties 'colour' not allowed
+plan.yaml:8:19: additional properties 'colour' not allowed
 plan.yaml:9:17: value must be one of 'accent', 'good', 'warn', 'bad', 'muted'
 ```
 

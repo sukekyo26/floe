@@ -1,7 +1,7 @@
 $ floe check steps.yaml
 exit 1
 --- stderr
-steps.yaml:9:31: minItems: got 0, want 1
+steps.yaml:9:25: minItems: got 0, want 1
 steps.yaml:10:31: got string, want array
 steps.yaml:11:32: got number, want string or object
 steps.yaml:12:40: minLength: got 0, want 1
@@ -9,7 +9,7 @@ steps.yaml:13:49: value must be one of 'accent', 'good', 'warn', 'bad', 'muted'
 $ floe render --out-dir $TMP/pages/steps.yaml steps.yaml
 exit 1
 --- stderr
-steps.yaml:9:31: minItems: got 0, want 1
+steps.yaml:9:25: minItems: got 0, want 1
 steps.yaml:10:31: got string, want array
 steps.yaml:11:32: got number, want string or object
 steps.yaml:12:40: minLength: got 0, want 1

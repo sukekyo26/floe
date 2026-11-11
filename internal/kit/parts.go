@@ -521,13 +521,13 @@ func readLooks(file string, k, value ast.Node) ([]taken, usererr.List, error) {
 	}
 	looks := make([]taken, 0, len(seq.Values))
 	var found usererr.List
-	for _, v := range seq.Values {
+	for i, v := range seq.Values {
 		name, ok, err := yamlpos.Text(v)
 		switch {
 		case err != nil:
 			return nil, nil, err //nolint:wrapcheck // floe's failure, which says what failed
 		case !ok || name == "":
-			found = append(found, yamlpos.New(file, yamlpos.Of(v), "kit_part_yaml_looks"))
+			found = append(found, yamlpos.New(file, yamlpos.OfValue(yamlpos.EntryKey(seq, i), v), "kit_part_yaml_looks"))
 		default:
 			looks = append(looks, taken{name: name, file: file, at: yamlpos.Of(v)})
 		}

@@ -200,7 +200,7 @@ func TestPlaceItem(t *testing.T) {
 		got = append(got, e.File()+":"+strconv.Itoa(e.Line())+":"+strconv.Itoa(e.Column()))
 	}
 	slices.Sort(got)
-	if want := []string{":0:0", "a.yaml:6:12", "a.yaml:6:7", "b.yaml:2:3"}; !slices.Equal(got, want) {
+	if want := []string{":0:0", "a.yaml:5:5", "a.yaml:6:12", "b.yaml:2:3"}; !slices.Equal(got, want) {
 		t.Errorf("placed at %v, want %v", got, want)
 	}
 }

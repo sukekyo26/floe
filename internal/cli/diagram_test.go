@@ -39,7 +39,7 @@ func TestDiagram(t *testing.T) {
 	}
 	// What Inspect tells of a diagram the checks refuse does not come out here: nothing is drawn until all are fixed.
 	code, page0, errs := runIn(dir, env, "diagram", "render", "--no-assets", "a.yaml", "o.yaml")
-	if want := "o.yaml:4:5: box \"a\" overlaps box \"b\"\n"; code != 1 || page0 != "" || errs != want {
+	if want := "o.yaml:4:3: box \"a\" overlaps box \"b\"\n"; code != 1 || page0 != "" || errs != want {
 		t.Errorf("render of a right spec and a wrong one = %d, %q, %q, want %q", code, page0, errs, want)
 	}
 	code, _, errs = runIn(dir, nil, "diagram", "render", "b.yaml", "c.yaml", "gone.yaml")
@@ -143,43 +143,43 @@ func TestInspectData(t *testing.T) {
 			"keys written apart, in the order written",
 			[]string{"keys.yaml"},
 			0,
-			"keys.yaml:3:13: diagram \"Written first\" 78x59\nbox \"a\" 10,10 48x29\nkeys.yaml:4:9: diagram \"Written last\" 78x59\nbox \"a\" 10,10 48x29\n", "",
+			"keys.yaml:3:1: diagram \"Written first\" 78x59\nbox \"a\" 10,10 48x29\nkeys.yaml:4:1: diagram \"Written last\" 78x59\nbox \"a\" 10,10 48x29\n", "",
 		},
 		{
 			"their mistakes Sorted",
 			[]string{"keysbad.yaml"},
 			1,
-			"keysbad.yaml:4:3: diagram \"T\" 80x61\nbox \"a\" 10,10 48x29\nbox \"b\" 12,12 48x29\nkeysbad.yaml:9:3: diagram \"M\" 80x61\nbox \"a\" 10,10 48x29\nbox \"b\" 12,12 48x29\n",
-			"keysbad.yaml:7:7: box \"a\" overlaps box \"b\"\nkeysbad.yaml:12:7: box \"a\" overlaps box \"b\"\n",
+			"keysbad.yaml:3:1: diagram \"T\" 80x61\nbox \"a\" 10,10 48x29\nbox \"b\" 12,12 48x29\nkeysbad.yaml:8:1: diagram \"M\" 80x61\nbox \"a\" 10,10 48x29\nbox \"b\" 12,12 48x29\n",
+			"keysbad.yaml:7:5: box \"a\" overlaps box \"b\"\nkeysbad.yaml:12:5: box \"a\" overlaps box \"b\"\n",
 		},
 		{
 			"a spec the checks refuse",
 			[]string{"over.yaml"},
 			1,
-			"over.yaml: diagram \"O\" 80x61\nbox \"a\" 10,10 48x29\nbox \"b\" 12,12 48x29\n", "over.yaml:4:5: box \"a\" overlaps box \"b\"\n",
+			"over.yaml: diagram \"O\" 80x61\nbox \"a\" 10,10 48x29\nbox \"b\" 12,12 48x29\n", "over.yaml:4:3: box \"a\" overlaps box \"b\"\n",
 		},
 		{
 			"a page's diagram the checks refuse",
 			[]string{"overpage.yaml"},
 			1,
-			"overpage.yaml:8:11: diagram \"O\" 80x61\nbox \"a\" 10,10 48x29\nbox \"b\" 12,12 48x29\n", "overpage.yaml:11:15: box \"a\" overlaps box \"b\"\n",
+			"overpage.yaml:7:9: diagram \"O\" 80x61\nbox \"a\" 10,10 48x29\nbox \"b\" 12,12 48x29\n", "overpage.yaml:11:13: box \"a\" overlaps box \"b\"\n",
 		},
 		{"a shape gets no layout", []string{"shape.yaml"}, 1, "", "shape.yaml:3:5: additional properties 'boxx' not allowed\n"},
 		{
 			"one of two gets no layout",
 			[]string{"example.yaml"},
 			1,
-			"example.yaml:7:20: diagram \"Told\" 78x59\nbox \"a\" 10,10 48x29\n", "example.yaml:8:29: " + noExample + "\n",
+			"example.yaml:7:9: diagram \"Told\" 78x59\nbox \"a\" 10,10 48x29\n", "example.yaml:8:29: " + noExample + "\n",
 		},
 		{
 			"three files, each in its turn",
 			[]string{"over.yaml", "goodpage.yaml", "good.yaml"},
 			1,
-			"over.yaml: diagram \"O\" 80x61\nbox \"a\" 10,10 48x29\nbox \"b\" 12,12 48x29\ngoodpage.yaml:7:20: diagram \"Right\" 78x59\nbox \"a\" 10,10 48x29\ngood.yaml: diagram \"G\" 78x59\nbox \"k\" 10,10 48x29\n",
-			"over.yaml:4:5: box \"a\" overlaps box \"b\"\n",
+			"over.yaml: diagram \"O\" 80x61\nbox \"a\" 10,10 48x29\nbox \"b\" 12,12 48x29\ngoodpage.yaml:7:9: diagram \"Right\" 78x59\nbox \"a\" 10,10 48x29\ngood.yaml: diagram \"G\" 78x59\nbox \"k\" 10,10 48x29\n",
+			"over.yaml:4:3: box \"a\" overlaps box \"b\"\n",
 		},
 		{"a page of no diagram", []string{"none.yaml"}, 0, "", ""},
-		{"a mistake off the diagrams stops it", []string{"other.yaml"}, 1, "", "other.yaml:7:9: additional properties 'textt' not allowed\n"},
+		{"a mistake off the diagrams stops it", []string{"other.yaml"}, 1, "", "other.yaml:7:16: additional properties 'textt' not allowed\n"},
 		{
 			"a key misspelt reads as a spec",
 			[]string{"typo.yaml"},
@@ -196,7 +196,7 @@ func TestInspectData(t *testing.T) {
 			"a spec with the key reads as a page",
 			[]string{"tspec.yaml"},
 			1, "",
-			"tspec.yaml: name the language of the page at the top level, like lang: en (a BCP 47 tag such as en, ja or pt-BR)\ntspec.yaml: additional properties 'parts' not allowed\n",
+			"tspec.yaml: name the language of the page at the top level, like lang: en (a BCP 47 tag such as en, ja or pt-BR)\ntspec.yaml:3:1: additional properties 'parts' not allowed\n",
 		},
 		{
 			"a template there is none of",
@@ -218,8 +218,8 @@ func TestInspectData(t *testing.T) {
 			heads = append(heads, line)
 		}
 	}
-	want := "page.yaml:7:20: diagram \"First\" 78x59\n" + "page.yaml:11:26: diagram \"Folded\" 78x59\n" +
-		"page.yaml:15:28: diagram \"What floe publish checks\" 1072x901\n"
+	want := "page.yaml:7:9: diagram \"First\" 78x59\n" + "page.yaml:11:15: diagram \"Folded\" 78x59\n" +
+		"page.yaml:15:17: diagram \"What floe publish checks\" 1072x901\n"
 	if got := strings.Join(heads, ""); code != 0 || errs != "" || got != want {
 		t.Errorf("inspect of a page = %d, %q, its diagrams\n%swant\n%s", code, errs, got, want)
 	}
@@ -239,7 +239,7 @@ func TestInspectData(t *testing.T) {
 	}
 	// The checks and the computed values do not run: the page floe check refuses has its diagrams.
 	code, out, errs = runIn(dir, env, "diagram", "inspect", "refused.yaml")
-	if want := "refused.yaml:3:13: diagram \"Passes\" 78x59\nbox \"a\" 10,10 48x29\n"; code != 0 || errs != "" || out != want {
+	if want := "refused.yaml:3:1: diagram \"Passes\" 78x59\nbox \"a\" 10,10 48x29\n"; code != 0 || errs != "" || out != want {
 		t.Errorf("inspect of a page its checks refuse = %d, %q, %q", code, out, errs)
 	}
 	if code, _, errs := runIn(dir, env, "check", "refused.yaml"); code != 1 || !strings.Contains(errs, "refused by the template's checks") {

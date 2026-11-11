@@ -315,7 +315,7 @@ Check each diagram spec and print the diagrams, in order, as one HTML fragment o
 Check each diagram as `floe diagram render` does, and print where each part went. It lets one check that edges meet the rows they mean and labels sit in their areas, without seeing the drawing.
 
 ```text
-page.yaml:9:11: diagram "The API" 560x190
+page.yaml:8:9: diagram "The API" 560x190
 frame "cloud" 20,20 300x150
 the heading of frame "cloud" 60,26 74.88x18
 the icon of frame "cloud" 20,20 31x31

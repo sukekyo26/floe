@@ -27,18 +27,33 @@ func TestValidate(t *testing.T) {
 	t.Parallel()
 
 	for _, tt := range []struct{ name, body, data, want string }{
+		// An object's mistake is at the key that holds it, or at its { in [ ]; one key refused, at its value (a
+		// LIMIT of yamlpos.OfValue: the key for keys and values or a list, the value for a scalar).
+		{
+			"an object's mistakes", `"properties": {"a": {"type": "object", "required": ["c"], "additionalProperties": false},
+				"xs": {"type": "array", "items": {"type": "object", "required": ["k"], "additionalProperties": false}}}, "additionalProperties": false`,
+			"a:\n  b: 1\nxs: [{j: x}]\nzz: 1\nyy:\n  y: 1\n",
+			lines("d.yaml: additional properties 'yy', 'zz' not allowed", "d.yaml:3:1: missing property 'c'",
+				"d.yaml:4:6: additional properties 'b' not allowed", "d.yaml:5:6: missing property 'k'", "d.yaml:5:10: additional properties 'j' not allowed"),
+		},
+		{
+			"one key refused", `"additionalProperties": false`, "zz: 1\n", "d.yaml:3:5: additional properties 'zz' not allowed",
+		},
+		{
+			"one key of keys and values refused", `"additionalProperties": false`, "zz:\n  y: 1\n", "d.yaml:3:1: additional properties 'zz' not allowed",
+		},
 		{
 			"required, type, additional properties",
 			`"properties": {"n": {"type":"integer"}, "s": ` + N + `}, "required":["n"], "additionalProperties": false`,
 			"s:\n  text: 3\n  bad: 1\nzz: 1\nyy: 2\n",
 			lines("d.yaml: additional properties 'yy', 'zz' not allowed", "d.yaml: missing property 'n'",
-				"d.yaml:4:3: additional properties 'bad' not allowed", "d.yaml:4:9: got number, want string"),
+				"d.yaml:4:9: got number, want string", "d.yaml:5:8: additional properties 'bad' not allowed"),
 		},
 		{
 			"enum, minLength, oneOf",
 			`"properties": {"k": {"enum":["a","b"]}, "m": {"type":"string","minLength":3}, "o": {"oneOf":[{"type":"string"},{"type":"integer"}]}}`,
 			"k: c\nm: ab\no: [1]\n",
-			lines("d.yaml:3:4: value must be one of 'a', 'b'", "d.yaml:4:4: minLength: got 2, want 3", "d.yaml:5:4: 'oneOf' failed, none matched"),
+			lines("d.yaml:3:4: value must be one of 'a', 'b'", "d.yaml:4:4: minLength: got 2, want 3", "d.yaml:5:1: 'oneOf' failed, none matched"),
 		},
 		{
 			"numbers doc.Read made ints",
@@ -68,7 +83,7 @@ func TestValidateAdditionalInOrder(t *testing.T) {
 	if err != nil {
 		t.Fatal(told(err))
 	}
-	const want = "d.yaml:3:5: additional properties 'b', 'c', 'y', 'z' not allowed"
+	const want = "d.yaml:3:1: additional properties 'b', 'c', 'y', 'z' not allowed"
 	for range 20 {
 		if got := told(c.Validate(d)); got != want {
 			t.Fatalf("Validate told\n%s\nwant\n%s", got, want)
@@ -106,7 +121,7 @@ func TestPropertyNames(t *testing.T) {
 		},
 		{
 			"the top", `"propertyNames": ` + lower + `, "additionalProperties": false`,
-			"Bad: 1\n", lines("d.yaml: additional properties 'Bad' not allowed", "d.yaml:3:1: "+bad),
+			"Bad: 1\n", lines("d.yaml:3:1: "+bad, "d.yaml:3:6: additional properties 'Bad' not allowed"),
 		},
 		{
 			"names in two objects", `"properties": {"tags": {"propertyNames":` + lower + `}, "more": {}, "x": {"propertyNames": {"pattern": "^[a-y]+$"}}, "y": {}}`,

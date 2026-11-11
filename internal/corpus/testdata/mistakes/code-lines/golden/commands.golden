@@ -6,7 +6,7 @@ code.yaml:9:24: got string, want integer
 code.yaml:10:24: got number, want integer
 code.yaml:11:24: maximum: got 1.000000001×10⁰⁹, want 1×10⁰⁹
 code.yaml:12:23: got number, want array
-code.yaml:13:23: minItems: got 0, want 1
+code.yaml:13:17: minItems: got 0, want 1
 code.yaml:14:24: got string, want integer
 code.yaml:15:24: minimum: got 0, want 1
 code.yaml:16:24: minimum: got -1, want 1
@@ -21,7 +21,7 @@ code.yaml:9:24: got string, want integer
 code.yaml:10:24: got number, want integer
 code.yaml:11:24: maximum: got 1.000000001×10⁰⁹, want 1×10⁰⁹
 code.yaml:12:23: got number, want array
-code.yaml:13:23: minItems: got 0, want 1
+code.yaml:13:17: minItems: got 0, want 1
 code.yaml:14:24: got string, want integer
 code.yaml:15:24: minimum: got 0, want 1
 code.yaml:16:24: minimum: got -1, want 1

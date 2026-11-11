@@ -72,13 +72,37 @@ func QuoteOf(n ast.Node) Quote {
 	}
 }
 
-// OfValue returns where the value of key is written, ~ and null too, or where key is when the value is left
-// out: an empty value has no text to point at.
+// OfValue returns where the value of key is written, ~ and null too: a scalar at itself; a mapping or a sequence,
+// or a value left out, at key, the line it starts on (a mapping at its first key would read as that key's, and an
+// empty value has no text to point at); with no key (an entry of [ ]), a mapping or a sequence in { } or [ ] at its
+// { or [.
+// LIMIT: a mistake about one key placed by the path to it (additionalProperties naming one) lands where its value
+// is: at the key for a mapping or a sequence (zz: with y: 1 below it, 3:1), at the value for a scalar (zz: 1, 3:5).
+// A data file's mistake could go to the key itself, as schema.Validate has the file's nodes, but a diagram spec's
+// comes as a JSON pointer (schema.ValidateAt), which cannot name a key apart from its value: both are placed alike.
+// LIMIT: a pair in [ ] written without { } (a: [b: 1]) is a mapping goccy/go-yaml reads as not in flow style, with no
+// { to point at: it is placed at its first key, which is where it starts too.
 func OfValue(key, value ast.Node) Pos {
-	if n, null := value.(*ast.NullNode); null && n.GetToken().Type == token.ImplicitNullType && key != nil {
+	m, mapping := value.(*ast.MappingNode)
+	s, sequence := value.(*ast.SequenceNode)
+	n, null := value.(*ast.NullNode)
+	switch {
+	case key != nil && (mapping || sequence || null && n.GetToken().Type == token.ImplicitNullType):
 		return Of(key)
+	case mapping && m.IsFlowStyle || sequence && s.IsFlowStyle:
+		p := value.GetToken().Position // its { or [: Of takes a mapping at its first key
+		return Pos{Line: p.Line, Column: p.Column}
 	}
 	return Of(value)
+}
+
+// EntryKey returns the - of the entry i of seq, where an entry left empty is; nil in a flow sequence, whose
+// entries goccy/go-yaml gives the , before each (nil for the first).
+func EntryKey(seq *ast.SequenceNode, i int) ast.Node {
+	if seq.IsFlowStyle || len(seq.Entries) != len(seq.Values) {
+		return nil
+	}
+	return seq.Entries[i]
 }
 
 // find follows at, keys of mappings and indexes of sequences, from root. It returns the key node of the last
@@ -99,11 +123,7 @@ func find(root ast.Node, at []string) (key, value ast.Node) {
 			if err != nil || i < 0 || i >= len(n.Values) {
 				return key, value
 			}
-			key, value = nil, n.Values[i]
-			// goccy/go-yaml gives a flow sequence entries too, whose token is the , before each: nil for the first.
-			if !n.IsFlowStyle && len(n.Entries) == len(n.Values) {
-				key = n.Entries[i] // its -, where an entry left empty is
-			}
+			key, value = EntryKey(n, i), n.Values[i]
 		default:
 			return key, value
 		}
@@ -111,10 +131,10 @@ func find(root ast.Node, at []string) (key, value ast.Node) {
 	return key, value
 }
 
-// Locate returns where the value at the path at is written under root, and its node: OfValue of the last value
-// find reaches. When it reaches none under root (at is empty, its first key is not written, or root is nil, a file
-// of nothing), it returns no line and no node: the mistake is placed at the file alone, as at the first key it
-// would read as that key's.
+// Locate finds the value at the path at under root, and returns where it is written, as OfValue places it, and its
+// node; at the last value it reaches when the path goes on past it. When it reaches none under root (at is empty,
+// its first key is not written, or root is nil, a file of nothing), it returns no line and no node: the mistake is
+// placed at the file alone, as at the first key it would read as that key's.
 func Locate(root *ast.MappingNode, at []string) (Pos, ast.Node) {
 	if root != nil {
 		if key, value := find(root, at); value != ast.Node(root) {
