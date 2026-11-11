@@ -7,20 +7,6 @@ import (
 	"floe/internal/store"
 )
 
-// TaskEdit is what PATCH /api/tasks sends: each nil is left as it is.
-type TaskEdit struct {
-	Title      *string   `json:"title,omitzero"`
-	State      *string   `json:"state,omitzero"`
-	URL        *string   `json:"url,omitzero"`
-	Categories *[]string `json:"categories,omitzero"`
-	Parent     *string   `json:"parent,omitzero"`
-	New        *bool     `json:"new,omitzero"`
-	// What the screen read: store.TaskEdit says each.
-	Rev         *int    `json:"rev,omitzero"`
-	ParentNew   *bool   `json:"parentNew,omitzero"`
-	ParentTitle *string `json:"parentTitle,omitzero"`
-}
-
 // tasks answers the tasks.
 func (s *Server) tasks(w http.ResponseWriter, r *http.Request) {
 	tasks, err := s.cfg.Store.ReadTasks()
@@ -38,12 +24,44 @@ func (s *Server) editTask(w http.ResponseWriter, r *http.Request) {
 	if !ok {
 		return
 	}
-	in := decodeStrict[TaskEdit](w, body)
+	in := decodeStrict[store.TaskEdit](w, body)
 	if in == nil {
 		return
 	}
 	q := r.URL.Query()
-	written, err := s.cfg.Store.EditTask(q.Get("project"), q.Get("task"), store.TaskEdit(*in))
+	written, err := s.cfg.Store.EditTask(q.Get("project"), q.Get("task"), *in)
+	if errors.Is(err, store.ErrNotFound) {
+		notFound(w)
+		return
+	}
+	if err != nil {
+		refuse(w, r, err)
+		return
+	}
+	w.Header().Set("Cache-Control", "no-store")
+	sendJSON(w, http.StatusOK, written)
+}
+
+// editWork writes pages and their tasks in one write (store.Work), and answers each task and page as written. What only
+// a sender's mistake makes, which floe's own never send, is refused as such.
+func (s *Server) editWork(w http.ResponseWriter, r *http.Request) {
+	body, ok := s.readBody(w, r, maxBody)
+	if !ok {
+		return
+	}
+	in := decodeStrict[store.WorkWrite](w, body)
+	if in == nil {
+		return
+	}
+	if len(in.Slugs) == 0 && (in.Category != nil || in.Pin != nil || in.Clear) {
+		send(w, http.StatusBadRequest, "category, pin and clear go with slugs")
+		return
+	}
+	if len(in.Slugs) > 0 && in.Project != nil {
+		send(w, http.StatusBadRequest, "project goes without slugs: a page's task is of the page's project")
+		return
+	}
+	written, err := s.cfg.Store.Work(*in)
 	if errors.Is(err, store.ErrNotFound) {
 		notFound(w)
 		return

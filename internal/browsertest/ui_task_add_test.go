@@ -196,7 +196,7 @@ func TestUITaskAdd(t *testing.T) { //nolint:paralleltest // the browser tests sh
 	b.eval(dialog + ".close()")
 
 	// The same ID in another project is another task: the store's rows say so.
-	s.floe(t, "work", "--project", "alpha", "--task", "#7")
+	s.floe(t, "work", "--project", "alpha", "--task", "#7", "--state", "todo")
 	b.navigate("/tasks?project=alpha")
 	open("add-task")
 	name("#1", "alpha's one")

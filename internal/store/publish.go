@@ -155,6 +155,8 @@ type Entry struct {
 	Images map[string][]byte
 	// Prev is the entry this one overwrites, nil for a new slug.
 	Prev *Meta
+	// OffTask is the task the page was taken off, as its project changed (offTaskOf), "" for none.
+	OffTask string
 	// Warnings are those of the page drawn, which Save does not keep.
 	Warnings []*usererr.Error
 
@@ -329,8 +331,9 @@ func imagesApart(file string, images map[string][]byte) error {
 // page, not in the list; a link's too. Publish it again if that shows.
 func (s *Store) storedPage(slug, named string, up Upload, src []byte, opts Options) (*Entry, error) {
 	e := &Entry{
-		Slug: slug, Meta: seedMeta("", up.File, src, opts.theme()), Source: src, Page: nil, Images: nil,
-		Prev: nil, Warnings: nil, opts: opts, project: up.Project, repo: up.Repo, place: up.Place, named: named, created: "",
+		Slug: slug, Meta: seedMeta("", up.File, src, opts.theme()), Source: src, Page: nil, Images: nil, Prev: nil,
+		OffTask: "", Warnings: nil, opts: opts, project: up.Project, repo: up.Repo, place: up.Place, named: named,
+		created: "",
 	}
 	if err := e.settle(s.ReadMeta(e.Slug)); err != nil {
 		return nil, err
@@ -400,7 +403,7 @@ func (s *Store) PrepareLink(
 	}
 	e := &Entry{
 		Slug: slug, Meta: seedMeta(path, path, data, opts.theme()), Source: nil, Page: nil, Images: nil, Prev: nil,
-		Warnings: warnings, opts: opts, project: from, repo: "", place: "", named: named, created: created,
+		OffTask: "", Warnings: warnings, opts: opts, project: from, repo: "", place: "", named: named, created: created,
 	}
 	e.Meta.Folder = folder
 	// A folder's own title, as a data file's title: is: where it is in its repository, its repository's name at its
@@ -446,6 +449,7 @@ func (e *Entry) settle(prev *Meta) error {
 		base = &none
 	}
 	e.Meta = newMeta(e.opts, was.Path, e.project, e.repo, e.place, base, was.DataTitle, e.Slug)
+	e.OffTask = offTaskOf(&e.Meta, ProjectKey(base.Project))
 	if replacing || prev == nil {
 		e.Meta.CreatedTheme = e.created
 	}
@@ -1047,6 +1051,8 @@ type Edited struct {
 	Slug        string `json:"slug"`
 	TaskProject string `json:"taskProject"`
 	Work        *Work  `json:"work,omitzero"`
+	// OffTask is the task the page was taken off, as its project changed, "" for none.
+	OffTask string `json:"offTask,omitempty"`
 }
 
 // Edit applies ed to slug and returns the page as it left it. updatedAt stays, so neither the order of
@@ -1077,12 +1083,9 @@ func (s *Store) Edit(slug string, ed Edit) (Edited, error) {
 		}
 	}
 	setMarks(m, ed)
-	if ed.Project != nil {
-		// "/" is the management page's value for "no project".
-		if strings.TrimSpace(*ed.Project) == "/" {
-			return Edited{}, usererr.New("store_project_slash")
-		}
-		m.Project = strings.TrimSpace(*ed.Project)
+	off, err := setProject(m, ed)
+	if err != nil {
+		return Edited{}, err
 	}
 	to, err := s.renameTo(slug, ed.Slug)
 	if err != nil {
@@ -1100,7 +1103,36 @@ func (s *Store) Edit(slug string, ed Edit) (Edited, error) {
 		}
 		s.moveRead(slug, to)
 	}
-	return Edited{Slug: to, TaskProject: ProjectKey(m.Project), Work: m.Work}, nil
+	return Edited{Slug: to, TaskProject: ProjectKey(m.Project), Work: m.Work, OffTask: off}, nil
+}
+
+// setProject sets the project ed names of m, taking m off its task when it moves it, unless ed names its task too: it
+// returns the task taken off, "" for none.
+func setProject(m *Meta, ed Edit) (string, error) {
+	if ed.Project == nil {
+		return "", nil
+	}
+	// "/" is the management page's value for "no project".
+	if strings.TrimSpace(*ed.Project) == "/" {
+		return "", usererr.New("store_project_slash")
+	}
+	was := ProjectKey(m.Project)
+	m.Project = strings.TrimSpace(*ed.Project)
+	if ed.Work != nil && ed.Work.Task != nil {
+		return "", nil
+	}
+	return offTaskOf(m, was), nil
+}
+
+// offTaskOf takes m off its task when its project is no longer was (ProjectKey): a task is of its project, and one of
+// the same name in another is another task. It returns the task taken off, "" for none. The pin stays.
+func offTaskOf(m *Meta, was string) string {
+	if ProjectKey(m.Project) == was || m.Work == nil || m.Work.Task == "" {
+		return ""
+	}
+	task, off := m.Work.Task, ""
+	setWork(m, &WorkEdit{Task: &off, Category: nil, Pin: nil})
+	return task
 }
 
 // setMarks sets what ed changes of m that nothing refuses: its description, favourite, archived and tags.

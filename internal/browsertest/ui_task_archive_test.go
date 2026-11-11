@@ -268,7 +268,7 @@ the latest first: #second,#first,#focused
 a child by the button: #added To do,#kid3 To do,#kid In progress,#kid2 Archive`
 
 // The state changed on a task forgotten elsewhere is refused as what was seen is not there, says so and reads the tasks again, and does
-// not make the task again; on a task of pages alone, of no row, it is there.
+// not make the task again; a task a page names with no row, as a hand edit leaves, is not there either.
 func TestUITaskStateGone(t *testing.T) { //nolint:paralleltest // the browser tests share one Chrome, one at a time
 	s := newSite(t)
 	b := s.b
@@ -335,8 +335,11 @@ func TestUITaskStateGone(t *testing.T) { //nolint:paralleltest // the browser te
 	b.navigate("/tasks?project=proj&task=%23pages")
 	b.until("the head", "!document.getElementById('task-head').hidden")
 	b.eval(change)
-	b.until("the state", "tasksRead.tasks.proj?.['#pages']?.state === 'doing'")
-	if got := b.eval("document.getElementById('error').hidden"); got != "true" {
-		t.Errorf("a task of pages alone: error shown is %s", got)
+	b.until("the refusal", "!document.getElementById('error').hidden")
+	if got, want := b.eval("document.getElementById('error').textContent"), "Failed to change the state: task #pages is no longer there"; got != want {
+		t.Errorf("a page's task of no row: %q, want %q", got, want)
+	}
+	if tasks, err = st.ReadTasks(); err != nil || tasks["proj"]["#pages"].State != "" {
+		t.Errorf("a page's task of no row was made: %v, %v", tasks, err)
 	}
 }

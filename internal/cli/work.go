@@ -13,7 +13,6 @@ import (
 	"github.com/spf13/cobra"
 
 	"floe/internal/project"
-	"floe/internal/server"
 	"floe/internal/store"
 	"floe/internal/usererr"
 )
@@ -37,13 +36,14 @@ func (a *app) workCmd() *cobra.Command {
 			"categories' order",
 		Long: `With slugs, put the pages on a task and change that task; without, change the task --task names, of
 --project (the project of the working directory when left out; "" for none). With slugs and no flag, tell each page as
-it is, writing nothing.
+it is, writing nothing; with --task alone, tell the task.
 
-When a flag changes a task, or --task names one, the tasks are written first, once for each different task the pages
-are on, and the pages then, in order, stopping at the first failure; flags of the pages alone, without --task, write no
-task. The same command given again finishes what a failure left. Each task and page written is told on a
-line of its own, as the store left it: a task made, changed or unchanged with the fields given, a page with its task,
-category and pin. A page's category is where the task's page places it among its pages, which the user decides.
+The pages and their tasks are written in one write, checked whole before anything is written, so that a refusal
+writes nothing; a page the system cannot write then stops it there, and the same command given again finishes it. A
+task a page comes to be on gets its row when it has none, and the page's category is added at the end of its
+categories. Each task written is told on a line of its own, as the store left it (made, changed, or unchanged when a
+field was given), then each page with its task, category and pin. A page's category is where the task's page places
+it among its pages, which the user decides.
 
   floe work design-notes --task "#130"
     task #130 in project floe: made
@@ -99,8 +99,8 @@ func changed(cmd *cobra.Command, names ...string) []string {
 }
 
 // taskEdit is what the flags change of a task.
-func taskEdit(cmd *cobra.Command, f workFlags) server.TaskEdit {
-	var ed server.TaskEdit
+func taskEdit(cmd *cobra.Command, f workFlags) store.TaskEdit {
+	var ed store.TaskEdit
 	if cmd.Flags().Changed("title") {
 		ed.Title = &f.title
 	}
@@ -111,8 +111,8 @@ func taskEdit(cmd *cobra.Command, f workFlags) server.TaskEdit {
 		ed.URL = &f.url
 	}
 	if cmd.Flags().Changed("categories") {
-		// LIMIT: a category's name with a comma cannot be written here, and comes after the categories written. Take a
-		// list of the flag if such names come to matter.
+		// LIMIT: a category's name with a comma cannot be written here. Take a list of the flag if such names come to
+		// matter.
 		categories := strings.Split(f.categories, ",")
 		ed.Categories = &categories
 	}
@@ -126,7 +126,7 @@ func taskQuery(t taskOf) string {
 	return "/api/tasks?" + url.Values{"project": {t.project}, "task": {t.name}}.Encode()
 }
 
-// workTask changes the task --task names, or forgets it.
+// workTask changes the task --task names, or forgets it; with no field to change, it tells the task, writing nothing.
 func (a *app) workTask(cmd *cobra.Command, f workFlags) error {
 	ctx := cmd.Context()
 	if !cmd.Flags().Changed("task") {
@@ -140,19 +140,30 @@ func (a *app) workTask(cmd *cobra.Command, f workFlags) error {
 		return err
 	}
 	ed := taskEdit(cmd, f)
-	sent, err := encodeSent(ed)
-	if err != nil {
-		return err
+	var sent jsontext.Value
+	writing := !f.forget && len(changed(cmd, "title", "state", "url", "categories", "parent")) > 0
+	if writing {
+		body := store.WorkWrite{
+			TaskEdit: ed, Slugs: nil, Project: &t.project, Task: &t.name, Category: nil, Pin: nil, Clear: false,
+		}
+		if sent, err = encodeSent(body); err != nil {
+			return err
+		}
 	}
 	c, err := a.client(ctx, true)
 	if err != nil {
 		return err
 	}
-	var written store.TaskWritten
-	if f.forget {
+	switch {
+	case f.forget:
 		err = c.do(ctx, http.MethodDelete, taskQuery(t), nil, nil)
-	} else {
-		err = c.do(ctx, http.MethodPatch, taskQuery(t), sent, &written)
+	case writing:
+		var written store.WorkWritten
+		if err = c.do(ctx, http.MethodPatch, "/api/work", sent, &written); err == nil {
+			a.tellTask(written.Tasks[0], ed)
+		}
+	default:
+		return a.readTask(ctx, c, t)
 	}
 	if re, ok := errors.AsType[*remoteError](err); ok && re.status == http.StatusNotFound {
 		return usererr.New("cli_work_no_row", t.name, t.project)
@@ -162,14 +173,40 @@ func (a *app) workTask(cmd *cobra.Command, f workFlags) error {
 	}
 	if f.forget {
 		a.print("%s", english.Msg("cli_work_forgotten", t.name, inProject(t.project)))
-		return nil
 	}
-	a.tellTask(written, ed)
 	return nil
 }
 
-// tellTask says the task written: made, changed or as it was, and the fields ed asked for as the store left them.
-func (a *app) tellTask(w store.TaskWritten, ed server.TaskEdit) {
+// readTask tells the task t as the store has it, its state and the fields it has, writing nothing.
+func (a *app) readTask(ctx context.Context, c client, t taskOf) error {
+	var all store.Tasks
+	if err := c.do(ctx, http.MethodGet, "/api/tasks", nil, &all); err != nil {
+		return err
+	}
+	row, ok := all[t.project][t.name]
+	if !ok {
+		return usererr.New("cli_work_no_row", t.name, t.project)
+	}
+	fields := []string{"state " + row.State}
+	if row.Title != "" {
+		fields = append(fields, fmt.Sprintf("title %q", row.Title))
+	}
+	if row.URL != "" {
+		fields = append(fields, fmt.Sprintf("url %q", row.URL))
+	}
+	if len(row.Categories) > 0 {
+		fields = append(fields, fmt.Sprintf("categories %q", strings.Join(row.Categories, ",")))
+	}
+	if row.Parent != "" {
+		fields = append(fields, fmt.Sprintf("parent %q", row.Parent))
+	}
+	a.print("%s: %s", english.Msg("cli_work_page_task", t.name, inProject(t.project)), strings.Join(fields, ", "))
+	return nil
+}
+
+// tellTask says the task written: made, changed or as it was, and the fields ed asked for as the store left them, with
+// its categories when a page's category was added to them.
+func (a *app) tellTask(w store.TaskWritten, ed store.TaskEdit) {
 	key := "cli_work_unchanged"
 	switch {
 	case w.Made:
@@ -178,14 +215,14 @@ func (a *app) tellTask(w store.TaskWritten, ed server.TaskEdit) {
 		key = "cli_work_changed"
 	}
 	line := english.Msg(key, w.Task, inProject(w.Project))
-	if fields := taskFields(w.Row, ed); fields != "" {
+	if fields := taskFields(w.Row, ed, len(w.Added) > 0); fields != "" {
 		line += "; " + fields
 	}
 	a.print("%s", line)
 }
 
-// taskFields is the fields of row that ed asked for, in one order, the text ones quoted.
-func taskFields(row store.Task, ed server.TaskEdit) string {
+// taskFields is the fields of row that ed asked for, and its categories when added, in one order, the text ones quoted.
+func taskFields(row store.Task, ed store.TaskEdit, added bool) string {
 	var fields []string
 	if ed.Title != nil {
 		fields = append(fields, fmt.Sprintf("title %q", row.Title))
@@ -196,7 +233,7 @@ func taskFields(row store.Task, ed server.TaskEdit) string {
 	if ed.URL != nil {
 		fields = append(fields, fmt.Sprintf("url %q", row.URL))
 	}
-	if ed.Categories != nil {
+	if ed.Categories != nil || added {
 		fields = append(fields, fmt.Sprintf("categories %q", strings.Join(row.Categories, ",")))
 	}
 	if ed.Parent != nil {
@@ -254,29 +291,22 @@ func flagOf(err error, from string) error {
 	return err //nolint:wrapcheck // the store's words
 }
 
-// workPages puts the pages slugs on a task and changes it, or with no flag tells them as they are. What the CLI can
-// check (the pages listed, on a task, of one project for a parent) is checked before anything is written, so that a
-// page of no task, or none at all, leaves the rest as they were; the store checks a parent as it writes the task. Flags
-// of the pages alone ask nothing of tasks.json: an empty write would make a row for a task that has none. A parent goes
-// with --task alone, on the one task the pages go on: on each page's own, a page of the parent itself would stop the
-// writes halfway.
+// workPages puts the pages slugs on a task and changes it, or with no flag tells them as they are. The pages and their
+// tasks are written in one write (PATCH /api/work), which the store checks whole before it writes any. What the CLI can
+// say better (the pages listed, on a task, of one project for a parent) it checks first, in its own words.
 func (a *app) workPages(cmd *cobra.Command, f workFlags, slugs []string) error {
 	ctx := cmd.Context()
 	named := cmd.Flags().Changed("task")
 	if cmd.Flags().NFlag() == 0 {
 		return a.readPages(ctx, slugs)
 	}
-	onPages, onTask, needTask, name, err := pageFlags(cmd, f)
+	onTask, needTask, name, err := pageFlags(cmd, f)
 	if err != nil {
 		return err
 	}
 	ed := taskEdit(cmd, f)
-	sent, err := encodeSent(ed)
-	if err != nil {
-		return err
-	}
-	// The pages' body too is refused before a task is written: a category is in it alone.
-	pageSent, err := encodeSent(pageWorkEdit(cmd, f))
+	body := pageWork(cmd, f, ed, slugs)
+	sent, err := encodeSent(body)
 	if err != nil {
 		return err
 	}
@@ -292,63 +322,50 @@ func (a *app) workPages(cmd *cobra.Command, f workFlags, slugs []string) error {
 		// --task names one task, so that tasks differ by their projects alone
 		return usageOf(usererr.New("cli_work_parent_projects"))
 	}
-	// LIMIT: a page refused after its task was written leaves the task as written, a new name's row of no page too, which
-	// --forget removes, as the screen's putPageOn does. Write the pages first if that comes to mislead.
-	if err = a.writeTasks(ctx, c, tasks, ed, sent); err != nil {
+	var written store.WorkWritten
+	if err = c.do(ctx, http.MethodPatch, "/api/work", sent, &written); err != nil {
 		return err
 	}
-	if len(onPages) == 0 {
-		return nil
-	}
-	return a.eachPage(cmd, slugs, http.MethodPatch, pageSent, a.tellPage)
+	a.tellWork(written, ed, len(onTask) > 0)
+	return nil
 }
 
-// pageFlags refuses the flags of a floe work with slugs that cannot go together, and returns those that change the
-// pages, those that change their task, those that need the pages on a task (the task's, and a category: setWork drops
+// tellWork says a write of pages and their tasks: each task made or written, or each when fields were asked, with its
+// categories when a page's category was added to them; then each page.
+func (a *app) tellWork(written store.WorkWritten, ed store.TaskEdit, asked bool) {
+	for _, t := range written.Tasks {
+		if t.Made || t.Wrote || asked {
+			a.tellTask(t, ed)
+		}
+	}
+	for _, page := range written.Pages {
+		a.tellPage(page)
+	}
+}
+
+// pageFlags refuses the flags of a floe work with slugs that cannot go together, and returns those that change their
+// task, those that need the pages on a task (the task's, and a category: setWork drops
 // one of a page of no task), and the task's name --task gives.
-func pageFlags(cmd *cobra.Command, f workFlags) (onPages, onTask, needTask []string, name string, err error) {
+func pageFlags(cmd *cobra.Command, f workFlags) (onTask, needTask []string, name string, err error) {
 	if off := changed(cmd, "forget", "project"); len(off) > 0 {
-		return nil, nil, nil, "", usageOf(usererr.New("cli_work_no_pages", off[0]))
+		return nil, nil, "", usageOf(usererr.New("cli_work_no_pages", off[0]))
 	}
 	named := cmd.Flags().Changed("task")
 	if cmd.Flags().Changed("parent") && !named {
-		return nil, nil, nil, "", usageOf(usererr.New("cli_work_parent_task"))
+		return nil, nil, "", usageOf(usererr.New("cli_work_parent_task"))
 	}
-	onPages = changed(cmd, "task", "category", "pin", "unpin", "clear")
 	onTask = changed(cmd, "state", "url", "title", "categories", "parent")
 	if name, err = store.TaskName(f.task); err != nil {
-		return nil, nil, nil, "", flagOf(err, "--task")
+		return nil, nil, "", flagOf(err, "--task")
 	}
 	needTask = slices.Clone(onTask)
 	if f.category != "" {
 		needTask = append(needTask, "category")
 	}
 	if named && name == "" && len(needTask) > 0 {
-		return nil, nil, nil, "", usageOf(usererr.New("cli_work_task_off", needTask[0]))
+		return nil, nil, "", usageOf(usererr.New("cli_work_task_off", needTask[0]))
 	}
-	return onPages, onTask, needTask, name, nil
-}
-
-// writeTasks writes ed, sent as encodeSent made it, to each of tasks in turn, stopping at the first failure. One case
-// of not found is passed: ed taking the parent off alone, of a task of no row, which has no parent to take off and is
-// made by the pages going on.
-func (a *app) writeTasks(ctx context.Context, c client, tasks []taskOf, ed server.TaskEdit, sent jsontext.Value) error {
-	var none server.TaskEdit
-	rest := ed
-	rest.Parent = nil
-	parentOff := ed.Parent != nil && *ed.Parent == "" && rest == none
-	for _, t := range tasks {
-		var written store.TaskWritten
-		err := c.do(ctx, http.MethodPatch, taskQuery(t), sent, &written)
-		if re, ok := errors.AsType[*remoteError](err); ok && re.status == http.StatusNotFound && parentOff {
-			continue
-		}
-		if err != nil {
-			return err
-		}
-		a.tellTask(written, ed)
-	}
-	return nil
+	return onTask, needTask, name, nil
 }
 
 // readPages tells each of the pages slugs as tellPage does, writing nothing: one not listed is refused before any is
@@ -364,7 +381,7 @@ func (a *app) readPages(ctx context.Context, slugs []string) error {
 		if err != nil {
 			return err
 		}
-		pages = append(pages, store.Edited{Slug: page.Slug, TaskProject: page.TaskProject, Work: page.Work})
+		pages = append(pages, store.Edited{Slug: page.Slug, TaskProject: page.TaskProject, Work: page.Work, OffTask: ""})
 	}
 	for _, page := range pages {
 		a.tellPage(page)
@@ -396,7 +413,7 @@ func listedPage(list []store.Listed, slug string) (store.Listed, error) {
 
 // tasksOfPages is the different tasks the pages slugs are on, the first of each first: the name given, or each page's
 // own where the flags write the tasks (write). Each of slugs must be listed, and be on a task where the flags need one
-// (needTask).
+// (needTask). The CLI checks these first in its own words; the store checks them again as it writes.
 func tasksOfPages(list []store.Listed, slugs []string, named string, isNamed, needTask, write bool) ([]taskOf, error) {
 	var tasks []taskOf
 	for _, slug := range slugs {
@@ -427,28 +444,22 @@ func tasksOfPages(list []store.Listed, slugs []string, named string, isNamed, ne
 	return tasks, nil
 }
 
-// pageWorkEdit is the edit of the flags that change a page. --clear takes it all off.
-func pageWorkEdit(cmd *cobra.Command, f workFlags) server.Edit {
-	var work store.WorkEdit
-	if f.clear {
-		off := false
-		empty := ""
-		work.Task, work.Category, work.Pin = &empty, &empty, &off
-	}
+// pageWork is the write of the flags of floe work with slugs: the pages, the task --task names, the task's fields ed,
+// and the pages' own.
+func pageWork(cmd *cobra.Command, f workFlags, ed store.TaskEdit, slugs []string) store.WorkWrite {
+	w := store.WorkWrite{TaskEdit: ed, Slugs: slugs, Project: nil, Task: nil, Category: nil, Pin: nil, Clear: f.clear}
 	if cmd.Flags().Changed("task") {
-		work.Task = &f.task
+		w.Task = &f.task
 	}
 	if cmd.Flags().Changed("category") {
-		work.Category = &f.category
+		w.Category = &f.category
 	}
 	if cmd.Flags().Changed("pin") {
-		work.Pin = &f.pin
+		w.Pin = &f.pin
 	}
 	if cmd.Flags().Changed("unpin") {
 		off := !f.unpin
-		work.Pin = &off
+		w.Pin = &off
 	}
-	return server.Edit{
-		Title: nil, Description: nil, Project: nil, Slug: nil, Favorite: nil, Archived: nil, Tags: nil, Work: &work,
-	}
+	return w
 }

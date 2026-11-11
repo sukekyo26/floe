@@ -42,8 +42,9 @@ func TestEncode(t *testing.T) {
 	// tags of floe tag, and the task's and the page's of floe work, down through their JSON names. These never reach
 	// encode with a text no UTF-8, each for its reason.
 	unreached := map[string]string{
-		"/parentTitle": "the management page alone sends it",
-		"/work/task":   "pageFlags refuses --task first, with store.TaskName",
+		"/parentTitle":   "the management page alone sends it",
+		"/work/task":     "pageFlags refuses --task first, with store.TaskName",
+		"/work/category": "floe work sends a page's category as /category, the work of a page's edit being the screen's",
 	}
 	var texts func(typ reflect.Type, at string)
 	texts = func(typ reflect.Type, at string) {
@@ -57,6 +58,11 @@ func TestEncode(t *testing.T) {
 			}
 		case typ.Kind() == reflect.Struct:
 			for field := range typ.Fields() {
+				if field.Anonymous {
+					// embedded: its fields are the struct's own, as encoding/json/v2 reads them
+					texts(field.Type, at)
+					continue
+				}
 				name, _, _ := strings.Cut(field.Tag.Get("json"), ",")
 				texts(field.Type, at+"/"+name)
 			}
@@ -67,7 +73,7 @@ func TestEncode(t *testing.T) {
 	tags, _ := reflect.TypeFor[server.Edit]().FieldByName("Tags")
 	name, _, _ := strings.Cut(tags.Tag.Get("json"), ",")
 	texts(tags.Type, "/"+name)
-	texts(reflect.TypeFor[server.TaskEdit](), "")
+	texts(reflect.TypeFor[store.WorkWrite](), "")
 	work, _ := reflect.TypeFor[server.Edit]().FieldByName("Work")
 	name, _, _ = strings.Cut(work.Tag.Get("json"), ",")
 	texts(work.Type, "/"+name)
