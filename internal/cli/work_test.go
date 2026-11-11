@@ -78,15 +78,18 @@ func TestWorkCommand(t *testing.T) {
 	}
 
 	// A page on a task of no row, as a hand edit leaves: the next floe work of the page makes the row.
-	if _, err := s.Edit("e", store.Edit{Project: ptr("moved"), Work: &store.WorkEdit{Task: ptr("#8")}}); err != nil {
-		t.Fatal(err)
+	if m := s.ReadMeta("e"); m == nil {
+		t.Fatal("no page e")
+	} else {
+		m.Project, m.Work = "moved", &store.Work{Task: "#8", Category: "", Pin: false}
+		if err := s.WriteMeta("e", m); err != nil {
+			t.Fatal(err)
+		}
 	}
 	if got := run(0, "work", "e", "--pin"); got != "task #8 in project moved: made\npage e: task #8 in project moved, pinned\n" {
 		t.Errorf("a page of a task of no row: %q", got)
 	}
-	if _, err := s.Edit("e", store.Edit{Work: &store.WorkEdit{Task: ptr(""), Pin: ptr(false)}}); err != nil {
-		t.Fatal(err)
-	}
+	run(0, "work", "e", "--clear")
 	run(0, "work", "--task", "#8", "--project", "moved", "--forget")
 
 	// A category of spaces is no category: the page's flag alone, of a page on no task as well.

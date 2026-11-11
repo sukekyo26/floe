@@ -124,7 +124,7 @@ func TestUITaskSet(t *testing.T) { //nolint:paralleltest // the browser tests sh
 	// What is refused keeps the dialog open, says why; nothing of the page changes.
 	was := work("b")
 	dialog("b")
-	b.eval(`window.realFetch = window.fetch; window.fetch = (url, init) => (String(url).includes('/api/tasks') && init?.method === 'PATCH' ? Promise.resolve(new Response('no', { status: 400 })) : window.realFetch(url, init))`)
+	b.eval(`window.realFetch = window.fetch; window.fetch = (url, init) => (String(url).includes('/api/work') && init?.method === 'PATCH' ? Promise.resolve(new Response('no', { status: 400 })) : window.realFetch(url, init))`)
 	b.eval("document.getElementById('set').requestSubmit()")
 	b.until("the refusal", "!document.getElementById('set-error').hidden")
 	b.eval("window.fetch = window.realFetch")
@@ -152,7 +152,7 @@ func TestUITaskSet(t *testing.T) { //nolint:paralleltest // the browser tests sh
 
 	// Saved in order: the page's write refused, the task's is there, and saving again finishes it.
 	dialog("c")
-	b.eval(`window.realFetch = window.fetch; window.fetch = (url, init) => (String(url).includes('/api/artifacts/c') && init?.method === 'PATCH' ? Promise.resolve(new Response('no', { status: 500 })) : window.realFetch(url, init))`)
+	b.eval(`window.realFetch = window.fetch; window.fetch = (url, init) => (String(url).includes('/api/work') && init?.method === 'PATCH' ? Promise.resolve(new Response('no', { status: 500 })) : window.realFetch(url, init))`)
 	field("set-task", "#2")
 	field("set-category", "review")
 	b.eval("document.getElementById('set').requestSubmit()")
@@ -239,7 +239,7 @@ func TestUITaskSet(t *testing.T) { //nolint:paralleltest // the browser tests sh
 	out = append(out, "nothing changed: "+tasks()+" | "+work("b"))
 	// While saving, what is typed next goes nowhere.
 	dialog("b")
-	b.eval(`window.realFetch = window.fetch; window.fetch = async (url, init) => { const res = await window.realFetch(url, init); if (String(url).includes('/api/tasks') && init?.method === 'PATCH') document.getElementById('set-task').value = '#2'; return res; }`)
+	b.eval(`window.realFetch = window.fetch; window.fetch = async (url, init) => { const res = await window.realFetch(url, init); if (String(url).includes('/api/work') && init?.method === 'PATCH') document.getElementById('set-task').value = '#2'; return res; }`)
 	b.eval("document.getElementById('set').requestSubmit()")
 	b.until("saved", "!document.getElementById('set-dialog').open")
 	b.eval("window.fetch = window.realFetch")

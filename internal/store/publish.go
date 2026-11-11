@@ -1036,7 +1036,6 @@ type Edit struct {
 	Favorite    *bool
 	Archived    *bool
 	Tags        *TagsEdit
-	Work        *WorkEdit
 }
 
 // TagsEdit changes a page's tags: the names in Remove are taken off, then those in Add put on, so that a name in both
@@ -1077,11 +1076,6 @@ func (s *Store) Edit(slug string, ed Edit) (Edited, error) {
 	if m == nil {
 		return Edited{}, ErrNotFound
 	}
-	if ed.Work != nil && ed.Work.Task != nil {
-		if _, err = TaskName(*ed.Work.Task); err != nil {
-			return Edited{}, err
-		}
-	}
 	setMarks(m, ed)
 	off, err := setProject(m, ed)
 	if err != nil {
@@ -1106,8 +1100,8 @@ func (s *Store) Edit(slug string, ed Edit) (Edited, error) {
 	return Edited{Slug: to, TaskProject: ProjectKey(m.Project), Work: m.Work, OffTask: off}, nil
 }
 
-// setProject sets the project ed names of m, taking m off its task when it moves it, unless ed names its task too: it
-// returns the task taken off, "" for none.
+// setProject sets the project ed names of m, taking m off its task when it moves it: it returns the task taken off,
+// "" for none.
 func setProject(m *Meta, ed Edit) (string, error) {
 	if ed.Project == nil {
 		return "", nil
@@ -1118,9 +1112,6 @@ func setProject(m *Meta, ed Edit) (string, error) {
 	}
 	was := ProjectKey(m.Project)
 	m.Project = strings.TrimSpace(*ed.Project)
-	if ed.Work != nil && ed.Work.Task != nil {
-		return "", nil
-	}
 	return offTaskOf(m, was), nil
 }
 
@@ -1148,9 +1139,6 @@ func setMarks(m *Meta, ed Edit) {
 	}
 	if ed.Tags != nil {
 		m.Tags = tagged(append(without(m.Tags, ed.Tags.Remove), ed.Tags.Add...))
-	}
-	if ed.Work != nil {
-		setWork(m, ed.Work)
 	}
 }
 

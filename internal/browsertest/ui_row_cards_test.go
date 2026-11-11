@@ -25,7 +25,10 @@ func TestUIRowCards(t *testing.T) { //nolint:paralleltest // the browser tests s
 	// A file after the one chosen, so that the one chosen is not the card's last row
 	s.write(t, "fold/zz.html", "<title>zz</title><p>zz</p>")
 	s.floe(t, "publish", "--link", filepath.Join(s.Env["HOME"], "fold"), "--slug", "fold")
-	if _, err := st.Edit("fold", store.Edit{Project: ptrTo("demo"), Work: &store.WorkEdit{Task: ptrTo("S1"), Category: ptrTo("one")}}); err != nil {
+	if _, err := st.Edit("fold", store.Edit{Project: ptrTo("demo")}); err != nil {
+		t.Fatal(err)
+	}
+	if _, err := st.Work(store.WorkWrite{Slugs: []string{"fold"}, Task: ptrTo("S1"), Category: ptrTo("one")}); err != nil {
 		t.Fatal(err)
 	}
 	for _, p := range [][2]string{{"plan", "one"}, {"read", "two"}, {"notes", "two"}} {

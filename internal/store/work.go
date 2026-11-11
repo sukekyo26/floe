@@ -61,18 +61,16 @@ type Work struct {
 	Pin      bool   `json:"pin,omitempty"`
 }
 
-// WorkEdit is what an edit changes of a page's Work, each left as it is when nil.
+// WorkEdit is what a write changes of a page's Work, each left as it is when nil.
 type WorkEdit struct {
-	Task     *string `json:"task,omitzero"`
-	Category *string `json:"category,omitzero"`
-	Pin      *bool   `json:"pin,omitzero"`
+	Task     *string
+	Category *string
+	Pin      *bool
 }
 
 // setWork applies ed to m. A category is of its task: a page that moves to another task leaves it, unless ed gives the
 // category it takes there; a page off a task has none, and one neither on a task nor pinned has no Work. TaskName has
 // checked ed.
-// LIMIT: a page moved to another project's task of the same name, by an edit or a publish, keeps its category: names
-// of categories mostly hold there. Take it off in the two ways if that comes to mislead.
 func setWork(m *Meta, ed *WorkEdit) {
 	var w Work
 	if m.Work != nil {
@@ -413,19 +411,6 @@ type TaskWritten struct {
 	Wrote   bool   `json:"wrote"`
 	// Added is the categories of the write's pages added at the end of the row's, in order.
 	Added []string `json:"added,omitempty"`
-}
-
-// EditTask is Work of the task (project, name) alone, which the management page writes by PATCH /api/tasks.
-// LIMIT: a row written by hand keeps its Rev, and one forgotten and made again starts it again: a screen that read it
-// before may write over it. Count them apart if hand edits come to be done while screens are open
-func (s *Store) EditTask(project, name string, ed TaskEdit) (TaskWritten, error) {
-	written, err := s.Work(WorkWrite{
-		TaskEdit: ed, Slugs: nil, Project: &project, Task: &name, Category: nil, Pin: nil, Clear: false,
-	})
-	if err != nil {
-		return TaskWritten{}, err
-	}
-	return written.Tasks[0], nil
 }
 
 // edited is t as ed changes it, which has been checked.

@@ -432,6 +432,7 @@ var messagesJA = map[string]string{
 	"ui_project_hint":         "空欄にすると「未設定」になります。ページ一覧の絞り込みと、タスク一覧でどのプロジェクトに並ぶかが変わります。",
 	"ui_save":                 "保存",
 	"ui_saved":                "保存しました",
+	"ui_saved_off_task":       "保存しました。タスク %s は元のプロジェクトのものなので、ページを外しました",
 	// The descriptions of floe's themes the management page shows
 	"theme_about_app":          "アプリの画面：青みがかった灰色の背景、やわらかい影で浮いた白いカード、ラズベリー色の差し色",
 	"theme_about_aurora":       "すりガラス越しの夜明けの空：ラベンダー・桃色・ミントのにじみ、くもった白の面、すみれ色の差し色",

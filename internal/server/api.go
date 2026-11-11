@@ -373,7 +373,6 @@ type Edit struct {
 	Favorite    *bool           `json:"favorite,omitzero"`
 	Archived    *bool           `json:"archived,omitzero"`
 	Tags        *store.TagsEdit `json:"tags,omitzero"`
-	Work        *store.WorkEdit `json:"work,omitzero"`
 }
 
 // edit changes a page as Edit, from the management page, floe archive or floe tag, sends: its title, description,

@@ -135,8 +135,8 @@ func TestWorkWriteOne(t *testing.T) {
 	}
 }
 
-// A page whose project changes is taken off its task, its pin kept, the tasks as they were; unless the same edit names
-// its task, which is then of the new project.
+// A page whose project changes is taken off its task, its pin kept, the tasks as they were; put on a task again, it is
+// one of the new project.
 func TestEditProjectTakesOffTask(t *testing.T) {
 	t.Parallel()
 
@@ -168,7 +168,10 @@ func TestEditProjectTakesOffTask(t *testing.T) {
 	if err != nil || string(after) != string(before) {
 		t.Errorf("moved, tasks.json written: %s", after)
 	}
-	if _, err = s.Edit("a", store.Edit{Project: ptr("p"), Work: &store.WorkEdit{Task: ptr("#9")}}); err != nil {
+	if _, err = s.Edit("a", store.Edit{Project: ptr("p")}); err != nil {
+		t.Fatal(err)
+	}
+	if _, err = s.Work(store.WorkWrite{Slugs: []string{"a"}, Task: ptr("#9")}); err != nil {
 		t.Fatal(err)
 	}
 	if w := s.ReadMeta("a").Work; w == nil || w.Task != "#9" {

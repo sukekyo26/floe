@@ -328,28 +328,34 @@ func text(n *html.Node) string {
 	return b.String()
 }
 
-// The tasks' rows are asked of the server in one place each: read by readTasks, written by writeTask (as every screen's write of a task goes,
-// its rev with it), removed by forgetTask; the methods are the browser tests'. The set dialog has no field of a task's own, which its page
-// writes.
+// The tasks' rows are asked of the server in one place each: read by readTasks, removed by forgetTask, and pages and tasks written by
+// writeWork (as every screen's write of a task or a page's work goes, its rev with it); the methods are the browser tests'. The set dialog
+// has no field of a task's own, which its page writes.
 func TestTaskRequests(t *testing.T) {
 	t.Parallel()
 
 	funcRe := regexp.MustCompile(`(?:async\s+)?function\s+(\w+)\(`)
 	starts := funcRe.FindAllStringSubmatchIndex(pageSource, -1)
-	named := regexp.MustCompile("['`]/api/tasks").FindAllStringIndex(pageSource, -1)
-	got := make([]string, 0, len(named))
-	for _, at := range named {
-		in := ""
-		for _, f := range starts {
-			if f[0] < at[0] {
-				in = pageSource[f[2]:f[3]]
+	namedIn := func(path string) []string {
+		named := regexp.MustCompile("['`]"+regexp.QuoteMeta(path)).FindAllStringIndex(pageSource, -1)
+		got := make([]string, 0, len(named))
+		for _, at := range named {
+			in := ""
+			for _, f := range starts {
+				if f[0] < at[0] {
+					in = pageSource[f[2]:f[3]]
+				}
 			}
+			got = append(got, in)
 		}
-		got = append(got, in)
+		slices.Sort(got)
+		return got
 	}
-	slices.Sort(got)
-	if want := []string{"forgetTask", "readTasks", "writeTask"}; !slices.Equal(got, want) {
+	if got, want := namedIn("/api/tasks"), []string{"forgetTask", "readTasks"}; !slices.Equal(got, want) {
 		t.Errorf("/api/tasks is named in %v, want %v once each", got, want)
+	}
+	if got, want := namedIn("/api/work"), []string{"writeWork"}; !slices.Equal(got, want) {
+		t.Errorf("/api/work is named in %v, want %v once", got, want)
 	}
 	for _, id := range []string{`id="set-parent"`, `id="set-url"`} {
 		if strings.Contains(pageSource, id) {

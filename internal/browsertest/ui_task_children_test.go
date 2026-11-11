@@ -422,23 +422,20 @@ func TestUITaskChildren(t *testing.T) { //nolint:paralleltest // the browser tes
 	}
 	s.floe(t, "work", "--project", "proj", "--task", "pa", "--forget")
 
-	// A task of pages alone cannot be a parent, so that it has no way to make a child; it may have a parent.
-	open("t-pages")
-	if got := b.eval(adds + " + document.getElementById('task-kids-part').hidden + document.getElementById('task-parent-add').hidden"); got != "truetruefalse" {
-		t.Errorf("a way from a task of no row: %s", got)
-	}
+	// A task a page names with no row, as a hand edit leaves, is not there: its page says so.
+	b.navigate("/tasks?project=proj&task=t-pages")
+	b.until("not there", "!document.getElementById('task-missing').hidden")
 
-	// Named from another task's page, as the screen takes it to be there: of no row, it is not, so that the store refuses it as stale
-	// and makes no row.
+	// Named from another task's page, it is new to the screen: made of the title, and a child.
 	open("gp")
 	openChild()
 	child("t-pages", "")
-	b.until("refused", "!document.getElementById('kin-error').hidden")
+	b.until("saved", "!document.getElementById('kin-dialog').open")
 	if made, err = st.ReadTasks(); err != nil {
 		t.Fatal(err)
 	}
-	if _, ok := made["proj"]["t-pages"]; ok {
-		t.Errorf("a page's task of no row was made: %+v", made["proj"]["t-pages"])
+	if got := made["proj"]["t-pages"]; got.Parent != "gp" || got.Title != "a title" {
+		t.Errorf("a page's task of no row named a child: %+v", got)
 	}
 }
 
