@@ -82,7 +82,7 @@ func Compare(from, to []byte) (Result, error) {
 }
 
 func compareIn(from, to []byte, most int) (Result, error) {
-	out, _, err := marked(from, to, most, Words{Gone: "", Before: ""})
+	out, _, _, err := marked(from, to, most, Words{Gone: "", Before: ""}, Alone)
 	return out, err
 }
 

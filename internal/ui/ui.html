@@ -175,7 +175,8 @@
   .dcount b { font-weight: 700; }
   .dcount .c { color: var(--chg); } .dcount .a { color: var(--ins); } .dcount .r { color: var(--del); } .dcount .s { color: var(--fg); }
   .dtail { margin-left: auto; display: flex; flex-wrap: wrap; gap: 0.35rem 0.75rem; }
-  .dtail > .btn { white-space: nowrap; }
+  .dviews { display: flex; gap: 0.35rem; }
+  .dviews .btn, .dtail > .btn { white-space: nowrap; }
 
   .dmain { position: relative; flex: 1; min-height: 0; display: grid; grid-template-columns: var(--toc) minmax(0, 1fr); background: var(--panel); }
   .dmain > .grip { position: absolute; top: 0; }
@@ -208,7 +209,9 @@
   /* The later version's page, marked by the server, in the sandbox as any page */
   .dbody { grid-column: 2; min-width: 0; display: flex; background: var(--frame-bg); border-left: 1px solid var(--line); }
   .dbody > iframe { flex: 1; min-width: 0; border: 0; background: var(--frame-bg); }
+  .dbody > iframe + iframe:not([hidden]) { border-left: 2px solid var(--line); }
   @media (max-width: 56rem) {
+    .dviews { display: none; }
     .dmain { grid-template-columns: minmax(0, 1fr); }
     .dtoc, .dmain > .grip, .dmain > .side-show { display: none; }
     .dbody { grid-column: auto; border-left: 0; }
@@ -220,7 +223,7 @@
     .dvers, .dver, .dver select { width: 100%; }
     .dver label { flex: none; min-width: 3.2rem; }
     .dtail { margin-left: 0; }
-    .dtail > .btn { padding: 0 0.6rem; }
+    .dviews .btn, .dtail > .btn { padding: 0 0.6rem; }
     .dnote { padding-inline: 0.75rem; }
     .ver-actions { margin-left: 0; }
   }
@@ -1203,6 +1206,10 @@
     </div>
     <p class="dcount" id="diff-count" role="status"></p>
     <div class="dtail">
+      <div class="dviews" role="group" aria-label="{{.Msg "ui_diff_views"}}">
+        <button type="button" class="btn" data-diff-view="marks">{{.Msg "ui_diff_view_marks"}}</button>
+        <button type="button" class="btn" data-diff-view="side">{{.Msg "ui_diff_view_side"}}</button>
+      </div>
       <a class="btn" id="diff-close" title="{{.Msg "ui_diff_close_title"}}">{{.Msg "ui_close"}}</a>
     </div>
   </div>
@@ -1216,7 +1223,7 @@
     </nav>
     <div class="grip" id="diff-toc-grip" role="separator" aria-orientation="vertical" aria-controls="diff-toc-nav" aria-label="{{.Msg "ui_diff_toc_width"}}" tabindex="0" hidden></div>
     <button type="button" class="icon-btn side-show" id="diff-toc-show" aria-expanded="false" aria-controls="diff-toc-nav" title="{{.Msg "ui_diff_toc_show"}}" aria-label="{{.Msg "ui_diff_toc_show"}}" hidden><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linejoin="round" aria-hidden="true"><rect x="3" y="4" width="18" height="16" rx="2"/><path d="M9 4v16"/></svg></button>
-    <div class="dbody"><iframe id="diff-frame" title="{{.Msg "ui_diff_frame"}}" allow="clipboard-write *; fullscreen *"></iframe></div>
+    <div class="dbody"><iframe id="diff-frame-before" title="{{.Msg "ui_diff_frame_before"}}" allow="clipboard-write *; fullscreen *" hidden></iframe><iframe id="diff-frame" title="{{.Msg "ui_diff_frame"}}" allow="clipboard-write *; fullscreen *"></iframe></div>
   </div>
   <div class="state notfound" id="diff-none" hidden><p>{{.Msg "ui_diff_none"}}</p><a class="btn" id="diff-page">{{.Msg "ui_diff_open_page"}}</a></div>
 </main>
@@ -1549,7 +1556,16 @@
   // and a reload open that part; replaceState changes only the fragment and adds no history, which the iframe's move added already.
   // The iframe is the frame's, or the one beside the list; the page is read when it is the one that iframe was given
   addEventListener('message', (e) => {
-    const shown = DIFF ? $('diff-frame') : framed ? $('frame') : $('read-frame');
+    // Side by side, where one page of the diff is, told to the other: from one of the two, of the shape it must be
+    if (DIFF && e.data?.artifactDiffAt !== undefined) {
+      const frames = [$('diff-frame-before'), $('diff-frame')];
+      const from = frames.find((f) => f.contentWindow === e.source);
+      const at = e.data.artifactDiffAt;
+      if (!from || e.origin !== 'null' || diffView !== 'side' || !Number.isInteger(at?.pair) || at.pair < 0 || !(at.off >= 0 && at.off <= 1)) return;
+      frames.find((f) => f !== from).contentWindow?.postMessage({ artifactDiffGo: { pair: at.pair, off: at.off } }, '*');
+      return;
+    }
+    const shown = DIFF ? [$('diff-frame-before'), $('diff-frame')].find((f) => f.contentWindow === e.source) ?? $('diff-frame') : framed ? $('frame') : $('read-frame');
     // A page of floe is always sandboxed: any other origin is a site the iframe moved to
     // LIMIT: null does not prove a page of floe: a site that sandboxes itself, or a data: URL, says it too. All it can do is what a
     // page can, of PAGE_KEYS and a move to a whole page; a page's read stops at the path it must be at
@@ -4740,6 +4756,9 @@
   let diffFailed = false;
   // The place of the page n and p went to last, of the answer's places
   let diffAt = -1;
+  // How it is shown: on the later page alone (marks), or the two side by side (side), as the viewer chose last
+  const VIEW_KEY = 'diff.view';
+  let diffView = 'marks';
   const diffMonth = (iso) => {
     const d = new Date(iso);
     const two = (x) => String(x).padStart(2, '0');
@@ -4788,6 +4807,13 @@
       showError(t('ui_diff_failed', err.message));
       return;
     }
+    let saved = null;
+    try {
+      saved = localStorage.getItem(VIEW_KEY);
+    } catch {
+      // The first view, without storage
+    }
+    diffView = !oneColumn.matches && saved === 'side' ? 'side' : 'marks';
     diffPair = firstPair();
     drawDiffPicks();
     await readDiff();
@@ -4855,10 +4881,24 @@
     return m;
   }
   // The later version's page, its places marked: tied by key to the answer, which a version drawn anew since changes
-  const diffPage = () => `${rawHref({ slug: framed, v: diffAnswer.to.n })}&from=${diffAnswer.from.n}&key=${encodeURIComponent(diffAnswer.key)}`;
-  // To place k of the page, by its fragment: a move within the page, which reads nothing again
+  const diffPage = (side) => `${rawHref({ slug: framed, v: diffAnswer.to.n })}&from=${diffAnswer.from.n}&key=${encodeURIComponent(diffAnswer.key)}${side ? `&side=${side}` : ''}`;
+  const laterSide = () => (diffView === 'side' ? 'later' : '');
+  // To place k of the later page, by its fragment: a move within the page, which reads nothing again. Side by side, the
+  // earlier follows as the later tells where it is
   function goPlace(k) {
-    $('diff-frame').src = `${diffPage()}#floe-diff.${k}`;
+    $('diff-frame').src = `${diffPage(laterSide())}#floe-diff.${k}`;
+  }
+  function drawFrames() {
+    for (const b of document.querySelectorAll('[data-diff-view]')) {
+      b.setAttribute('aria-pressed', String(b.dataset.diffView === diffView));
+      b.classList.toggle('primary', b.dataset.diffView === diffView);
+    }
+    const before = $('diff-frame-before');
+    before.hidden = diffView !== 'side';
+    if (diffView === 'side') before.src = diffPage('earlier');
+    else before.removeAttribute('src');
+    $('diff-frame').src = diffPage(laterSide());
+    diffAt = -1;
   }
   function drawDiff() {
     const { counts, sections } = diffAnswer;
@@ -4874,8 +4914,7 @@
         count.append(part);
       }
     }
-    $('diff-frame').src = diffPage();
-    diffAt = -1;
+    drawFrames();
     const list = $('diff-toc');
     list.replaceChildren();
     sections.forEach((s, i) => {
@@ -4948,6 +4987,25 @@
       },
       keep: keepToc,
     });
+    // Too narrow for two pages, the later alone, the choice kept for a wider window
+    oneColumn.addEventListener('change', () => {
+      if (!oneColumn.matches || diffView !== 'side') return;
+      diffView = 'marks';
+      if (diffAnswer) drawFrames();
+    });
+    for (const b of document.querySelectorAll('[data-diff-view]')) {
+      b.addEventListener('click', () => {
+        diffView = b.dataset.diffView;
+        if (!oneColumn.matches) {
+          try {
+            localStorage.setItem(VIEW_KEY, diffView);
+          } catch {
+            // Without storage, the first view next time
+          }
+        }
+        if (diffAnswer) drawFrames();
+      });
+    }
     for (const name of ['from', 'to']) {
       $(`diff-${name}`).addEventListener('change', (e) => {
         diffPair[name] = Number(e.target.value);
@@ -6459,7 +6517,7 @@
     for (const e of $('keys').querySelectorAll('.keys-note')) e.textContent = e.textContent.replace('Ctrl+K', '⌘K');
   }
   // A page gives up its keys only to a frame that says it takes them
-  for (const id of ['frame', 'read-frame', 'diff-frame']) $(id)?.addEventListener('load', (e) => e.target.contentWindow.postMessage({ artifactKeysWanted: true }, '*'));
+  for (const id of ['frame', 'read-frame', 'diff-frame', 'diff-frame-before']) $(id)?.addEventListener('load', (e) => e.target.contentWindow.postMessage({ artifactKeysWanted: true }, '*'));
   document.addEventListener('visibilitychange', () => { if (!document.hidden) load(true); });
   setInterval(() => { if (!document.hidden) load(true); }, POLL_MS);
   load();

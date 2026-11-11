@@ -22,15 +22,33 @@ type Words struct {
 	Before string
 }
 
-// Mark is the page to with what differs from the page from marked on it, for the sandbox alone: the words added and
-// gone in their places, the blocks that differ framed, what is gone after the part it was in and an earlier diagram
-// or image under the later. Each place is numbered floe-diff.<k>, in the order of the page, as the Places of Compare.
-// The page's own elements keep their ids and attributes but the classes added, and the open and name of a details
-// that holds a place.
-func Mark(from, to []byte, words Words) ([]byte, error) {
-	_, tree, err := marked(from, to, pageMost, words)
+// Side is what Mark answers: the later page marked to be shown alone, or one of the two to be shown side by side.
+type Side int
+
+// The sides.
+const (
+	// Alone is the later page with all marked: the words added and gone in their places, the blocks that differ
+	// framed, what is gone after the part it was in and an earlier diagram or image under the later.
+	Alone Side = iota
+	// Earlier is the earlier page with what the later took away marked, beside Later.
+	Earlier
+	// Later is the later page with what it added marked, beside Earlier: where Alone puts in what is gone, an empty
+	// span holds the place.
+	Later
+)
+
+// Mark is a page of the two marked with what differs, for the sandbox alone, as side says. Each place of the later is
+// numbered floe-diff.<k>, in the order of the page, as the Places of Compare, alone or beside the earlier; beside each
+// other, the blocks of both versions that go together have the class floe-diff-pair-<n> on both. The page's own
+// elements keep their ids and attributes but the classes added, and the open and name of a details that holds a place.
+func Mark(from, to []byte, words Words, side Side) ([]byte, error) {
+	_, earlier, later, err := marked(from, to, pageMost, words, side)
 	if err != nil {
 		return nil, err
+	}
+	tree := later
+	if side == Earlier {
+		tree = earlier
 	}
 	withStyle(tree)
 	var out bytes.Buffer
@@ -40,18 +58,19 @@ func Mark(from, to []byte, words Words) ([]byte, error) {
 	return out.Bytes(), nil
 }
 
-// marked compares the pages and marks the later's tree: the one comparison both Compare and Mark are of.
-func marked(from, to []byte, most int, words Words) (Result, *html.Node, error) {
+// marked compares the pages and marks their trees as side says: the one comparison Compare and Mark are all of.
+func marked(from, to []byte, most int, words Words, side Side) (Result, *html.Node, *html.Node, error) {
 	treeA, a, err := readTree(from)
 	if err != nil {
-		return Result{}, nil, err
+		return Result{}, nil, nil, err
 	}
 	treeB, b, err := readTree(to)
 	if err != nil {
-		return Result{}, nil, err
+		return Result{}, nil, nil, err
 	}
 	c := compare(a, b, &work{left: most})
 	m := newMarker(treeB, words)
+	m.side = side
 	m.mark(treeA, a, b, c)
 	places := m.number()
 	for i, k := range places {
@@ -60,7 +79,90 @@ func marked(from, to []byte, most int, words Words) (Result, *html.Node, error) 
 		}
 	}
 	c.result.Counts.Places = m.count
-	return c.result, treeB, nil
+	if side != Alone {
+		markEarlier(a, c, newMarker(treeA, words))
+		pairs(a, b, c)
+	}
+	return c.result, treeA, treeB, nil
+}
+
+// markEarlier marks the earlier page of the two side by side: the words gone, the blocks that differ framed, those of
+// the earlier alone framed as gone.
+func markEarlier(a []section, c compared, m *marker) {
+	m.side = Earlier
+	var marked []*html.Node
+	frame := func(n *html.Node, class string) {
+		addClass(n, class)
+		marked = append(marked, n)
+	}
+	whole := func(text string) []Span { return []Span{{Op: opDel, Text: text}} }
+	show := func(n *html.Node, kind string, from []origin, spans []Span, class string) {
+		if figure(kind) {
+			frame(partOf(n), class)
+		} else if !m.markWords(from, spans) {
+			frame(n, class)
+		} else {
+			marked = append(marked, n)
+		}
+	}
+	for i, st := range c.steps {
+		switch {
+		case st.from < 0:
+		case st.to < 0:
+			from := a[st.from]
+			if from.head != nil {
+				show(from.head, "", from.from, whole(from.heading), classOut)
+			}
+			for _, b := range from.blocks {
+				show(b.node, b.kind, b.from, whole(b.text), classOut)
+			}
+		default:
+			from := a[st.from]
+			if h := c.result.Sections[i].Heading; from.head != nil && !(len(h) == 1 && h[0].Op == opSame) {
+				show(from.head, "", from.from, h, classChange)
+			}
+			for _, p := range st.pairs {
+				switch {
+				case p.from == nil:
+				case p.to == nil:
+					show(p.from.node, p.from.kind, p.from.from, whole(p.from.text), classOut)
+				case p.from.key == p.to.key:
+				case figure(p.from.kind):
+					frame(partOf(p.from.node), classChange)
+				default:
+					show(p.from.node, p.from.kind, p.from.from, p.spans, classChange)
+				}
+			}
+		}
+	}
+	for _, n := range marked {
+		openDetails(n)
+	}
+}
+
+// pairs gives the blocks of both versions that go together, and the headings of the sections kept, one number in the
+// comparison's order: the class floe-diff-pair-<n> on both, which the two pages side by side scroll together by.
+func pairs(a, b []section, c compared) {
+	n := 0
+	pair := func(x, y *html.Node) {
+		class := "floe-diff-pair-" + strconv.Itoa(n)
+		addClass(x, class)
+		addClass(y, class)
+		n++
+	}
+	for _, st := range c.steps {
+		if st.from < 0 || st.to < 0 {
+			continue
+		}
+		if x, y := a[st.from].head, b[st.to].head; x != nil && y != nil {
+			pair(x, y)
+		}
+		for _, p := range st.pairs {
+			if p.from != nil && p.to != nil {
+				pair(p.from.node, p.to.node)
+			}
+		}
+	}
 }
 
 // The classes marks are drawn by, and the style that draws them, in colours of no theme.
@@ -70,7 +172,9 @@ const (
 	classChange = "floe-diff-ch"
 	classAdd    = "floe-diff-add"
 	classGone   = "floe-diff-gone"
-	classTag    = "floe-diff-tag"
+	classSr     = "floe-diff-sr"
+	classOut    = "floe-diff-out"
+	classHole   = "floe-diff-hole"
 	classBefore = "floe-diff-before"
 	classAt     = "floe-diff-at"
 	markStyle   = `.floe-diff-ins{background:#d6f5df;color:inherit;text-decoration:underline 2px #1a7f37;text-underline-offset:3px}
@@ -78,9 +182,12 @@ const (
 .floe-diff-ch{outline:2px solid #d4a017;outline-offset:4px}
 .floe-diff-add{outline:2px solid #1a7f37;outline-offset:4px}
 tr.floe-diff-ch,tr.floe-diff-add{outline-offset:-2px}
-.floe-diff-gone{display:block;margin:12px 0;padding:8px 12px;border:2px dashed #cf222e;border-radius:6px;background:#fff0f0;color:#a40e26}
-.floe-diff-gone>p{margin:4px 0}
-.floe-diff-tag{display:inline-block;font:600 12px system-ui,sans-serif;color:#a40e26;background:#ffe0e0;padding:1px 8px;border-radius:999px}
+.floe-diff-gone{margin:6px 0;padding-left:10px;border-left:3px solid #cf222e}
+div.floe-diff-gone{color:#a40e26}
+div.floe-diff-gone>p{margin:2px 0}
+:not(div).floe-diff-gone,div.floe-diff-gone:has(>:not(p,.floe-diff-sr)){opacity:.55}
+.floe-diff-out{outline:2px dashed #cf222e;outline-offset:4px}
+.floe-diff-sr{position:absolute;width:1px;height:1px;margin:-1px;padding:0;overflow:hidden;clip:rect(0 0 0 0);white-space:nowrap;border:0}
 .floe-diff-before{margin:12px 0;padding:6px 12px 12px;border:2px solid #d4a017;border-radius:8px;background:#fffbea;color:#24292f}
 .floe-diff-before>summary{font:600 13px system-ui,sans-serif;color:#7a5900;cursor:pointer;padding:4px 0}
 .floe-diff-at{scroll-margin-top:30vh}`
@@ -99,6 +206,7 @@ type marker struct {
 	groups              []*group
 	cur                 *group
 	count               int
+	side                Side
 }
 
 // group is a place: what is marked one after another in a section, of its result's section sec.
@@ -116,7 +224,7 @@ func newMarker(root *html.Node, words Words) *marker {
 	return &marker{
 		root: root, body: bodyOf(root), words: words, last: nil, lastBox: nil, tail: nil, pending: nil,
 		added: map[*html.Node]bool{}, kept: map[*html.Node]bool{}, copied: map[*html.Node]bool{}, held: map[holdKey]bool{},
-		groups: nil, cur: nil, count: 0,
+		groups: nil, cur: nil, count: 0, side: Alone,
 	}
 }
 
@@ -174,11 +282,12 @@ func (m *marker) mark(treeA *html.Node, a, b []section, c compared) {
 			to := b[st.to]
 			if to.head != nil {
 				m.visit(to.head, boxB[st.to])
-				m.frame(i, to.head, classAdd)
+				m.show(i, to.head, "", to.from, added(to.heading), classAdd)
 			}
 			for j := range to.blocks {
-				m.visit(to.blocks[j].node, boxB[st.to])
-				m.frame(i, to.blocks[j].node, classAdd)
+				blk := &to.blocks[j]
+				m.visit(blk.node, boxB[st.to])
+				m.show(i, blk.node, blk.kind, blk.from, added(blk.text), classAdd)
 			}
 		default:
 			m.changed(i, a[st.from], b[st.to], boxA[st.from], boxB[st.to], st.pairs, c.result.Sections[i].Heading)
@@ -191,8 +300,7 @@ func (m *marker) changed(sec int, from, to section, boxA, boxB *html.Node, pairs
 	if to.head != nil {
 		m.visit(to.head, boxB)
 		if from.heading != to.heading {
-			m.frame(sec, to.head, classChange)
-			m.markWords(to.from, heading)
+			m.show(sec, to.head, "", to.from, heading, classChange)
 		} else {
 			m.cur = nil
 		}
@@ -203,20 +311,40 @@ func (m *marker) changed(sec int, from, to section, boxA, boxB *html.Node, pairs
 			m.gone(sec, p.from, boxA)
 		case p.from == nil:
 			m.visit(p.to.node, boxB)
-			m.frame(sec, p.to.node, classAdd)
+			m.show(sec, p.to.node, p.to.kind, p.to.from, added(p.to.text), classAdd)
 		case p.from.key == p.to.key:
 			m.visit(p.to.node, boxB)
 			m.cur = nil
-		case p.to.kind == "svg" || p.to.kind == "img":
+		case figure(p.to.kind):
 			m.visit(p.to.node, boxB)
 			m.frame(sec, partOf(p.to.node), classChange)
 			m.before(sec, p.from.node)
 		default:
 			m.visit(p.to.node, boxB)
-			m.frame(sec, p.to.node, classChange)
-			m.markWords(p.to.from, p.spans)
+			m.show(sec, p.to.node, p.to.kind, p.to.from, p.spans, classChange)
 		}
 	}
+}
+
+// show marks the words of a block that differ: framed alone when they cannot be, as of a diagram or image, or when a
+// mark cannot be held where it goes.
+func (m *marker) show(sec int, n *html.Node, kind string, from []origin, spans []Span, class string) {
+	switch {
+	case figure(kind):
+		m.frame(sec, partOf(n), class)
+	case !m.markWords(from, spans):
+		m.frame(sec, n, class)
+	default:
+		m.place(sec, n)
+	}
+}
+
+func figure(kind string) bool {
+	return kind == "svg" || kind == "img"
+}
+
+func added(text string) []Span {
+	return []Span{{Op: opIns, Text: text}}
 }
 
 func (m *marker) keep(n *html.Node) {
@@ -249,25 +377,33 @@ func (m *marker) frame(sec int, n *html.Node, class string) {
 // gone puts what is gone of the earlier page in after what was gone through last: the element under its section's box
 // that holds it copied, when that holds nothing the later keeps, else its words in a box of words gone.
 func (m *marker) gone(sec int, b *block, box *html.Node) {
-	if under := childOf(b.node, box); under != nil && !m.kept[under] {
-		if m.copied[under] {
-			return
+	under := childOf(b.node, box)
+	whole := under != nil && !m.kept[under]
+	if whole && m.copied[under] {
+		return
+	}
+	if m.side == Later {
+		if whole {
+			m.copied[under] = true
 		}
+		m.hole(sec)
+		return
+	}
+	if whole {
 		m.copied[under] = true
 		c := m.copyOld(under)
 		addClass(c, classGone)
+		c.InsertBefore(m.said(), c.FirstChild)
 		m.pending = append(m.pending, c)
 		m.place(sec, c)
 		return
 	}
 	var words *html.Node
-	if n := len(m.pending); n > 0 && m.pending[n-1].FirstChild != nil && hasClass(m.pending[n-1].FirstChild, classTag) {
+	if n := len(m.pending); n > 0 && m.pending[n-1].DataAtom == atom.Div && hasClass(m.pending[n-1], classGone) && m.pending[n-1].FirstChild != nil && hasClass(m.pending[n-1].FirstChild, classSr) {
 		words = m.pending[n-1]
 	} else {
 		words = element(atom.Div, classGone)
-		tag := element(atom.Span, classTag)
-		tag.AppendChild(text(m.words.Gone))
-		words.AppendChild(tag)
+		words.AppendChild(m.said())
 		m.pending = append(m.pending, words)
 	}
 	if b.text != "" {
@@ -280,9 +416,28 @@ func (m *marker) gone(sec int, b *block, box *html.Node) {
 	m.place(sec, words)
 }
 
+// said is the word that tells what is gone, for a screen reader alone.
+func (m *marker) said() *html.Node {
+	sr := element(atom.Span, classSr)
+	sr.AppendChild(text(m.words.Gone + " "))
+	return sr
+}
+
+// hole holds the place of what Alone puts in, beside the earlier page: so that the places are numbered alike.
+func (m *marker) hole(sec int) {
+	h := element(atom.Span, classHole)
+	m.pending = append(m.pending, h)
+	m.place(sec, h)
+}
+
 // before puts the earlier version of a diagram or image that changed under the later: its part (the nearest element
 // a part draws) copied in a details, after what was gone through last.
 func (m *marker) before(sec int, n *html.Node) {
+	if m.side == Later {
+		m.hole(sec)
+		m.flush(nil, nil)
+		return
+	}
 	part := partOf(n)
 	d := element(atom.Details, classBefore)
 	summary := element(atom.Summary, "")
@@ -375,17 +530,22 @@ type edit struct {
 	del     string
 }
 
-// markWords marks the words of spans, of the later's words where from tells: added in an ins, gone in a del where they
-// were. All or none: a block one of whose marks cannot be held where it goes is framed alone.
-func (m *marker) markWords(from []origin, spans []Span) {
+// markWords marks the words of spans in the page whose words from tells: in the later, those added wrapped in an ins
+// and, alone, those gone put in a del where they were; in the earlier, those gone wrapped in a del. False when there
+// is nothing to mark, or a mark cannot be held where it goes, which leaves the words as they were: all or none.
+func (m *marker) markWords(from []origin, spans []Span) bool {
+	wrapped, wrapTag, wrapClass := opIns, atom.Ins, classIns
+	if m.side == Earlier {
+		wrapped, wrapTag, wrapClass = opDel, atom.Del, classDel
+	}
 	var edits []edit
 	pos := 0
 	for _, s := range spans {
 		n := utf8.RuneCountInString(s.Text)
-		switch s.Op {
-		case opSame:
+		switch {
+		case s.Op == opSame:
 			pos += n
-		case opIns:
+		case s.Op == wrapped:
 			for i := pos; i < pos+n; i++ {
 				o := from[i]
 				if o.n == nil {
@@ -399,25 +559,28 @@ func (m *marker) markWords(from []origin, spans []Span) {
 				}
 			}
 			pos += n
-		case opDel:
+		case s.Op == opDel && m.side == Alone:
 			at, ok := point(from, pos)
 			if !ok {
-				return
+				return false
 			}
 			at.del = s.Text
 			edits = append(edits, at)
 		}
 	}
+	if len(edits) == 0 {
+		return false
+	}
 	for _, e := range edits {
-		tag := "ins"
+		tag := wrapTag.String()
 		if e.del != "" {
 			tag = "del"
 		}
 		if !m.holds(e.n.Parent, tag) {
-			return
+			return false
 		}
 	}
-	// From the end of each text node, so that the places before stay where they are; at one place the ins first,
+	// From the end of each text node, so that the places before stay where they are; at one place the wrap first,
 	// which the del then goes before.
 	slices.SortStableFunc(edits, func(x, y edit) int {
 		return cmp.Or(cmp.Compare(y.at, x.at), cmp.Compare(len(x.del), len(y.del)))
@@ -435,7 +598,7 @@ func (m *marker) markWords(from []origin, spans []Span) {
 			put = element(atom.Del, classDel)
 			put.AppendChild(text(e.del))
 		} else {
-			put = element(atom.Ins, classIns)
+			put = element(wrapTag, wrapClass)
 			put.AppendChild(text(mid))
 		}
 		e.n.Parent.InsertBefore(put, after)
@@ -443,6 +606,7 @@ func (m *marker) markWords(from []origin, spans []Span) {
 			e.n.Parent.InsertBefore(text(rest), after)
 		}
 	}
+	return true
 }
 
 // point is where words gone at pos go: before the next rune of a text node, else after the one before.

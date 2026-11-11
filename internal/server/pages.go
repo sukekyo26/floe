@@ -2,6 +2,7 @@ package server
 
 import (
 	"bytes"
+	_ "embed"
 	"encoding/json"
 	"errors"
 	"html/template"
@@ -16,6 +17,7 @@ import (
 	"floe/internal/draw"
 	"floe/internal/files"
 	"floe/internal/i18n"
+	"floe/internal/page"
 	"floe/internal/pagediff"
 	"floe/internal/store"
 	"floe/internal/usererr"
@@ -116,7 +118,7 @@ func (s *Server) content(
 			if !ok || diffKey(s.cfg.Store.VersionMark(slug, m, diff.from), s.cfg.Store.VersionMark(slug, m, v)) != diff.key {
 				return none, errNoPage
 			}
-			marked, err := pagediff.Mark(before, page, pagediff.Words{Gone: c.Msg("diff_page_gone"), Before: c.Msg("diff_page_before")})
+			marked, err := pagediff.Mark(before, page, pagediff.Words{Gone: c.Msg("diff_page_gone"), Before: c.Msg("diff_page_before")}, diff.side)
 			if err != nil {
 				return none, err //nolint:wrapcheck // the library's words, as /diff tells them
 			}
@@ -164,19 +166,27 @@ func versionParam(m *store.Meta, rest string, q url.Values) (int, bool) {
 type diffOf struct {
 	from int
 	key  string
+	side pagediff.Side
 }
+
+// sides are the values of ?side=, of a diff whose two pages are shown side by side: none for the later alone.
+var sides = map[string]pagediff.Side{"": pagediff.Alone, "earlier": pagediff.Earlier, "later": pagediff.Later}
 
 // diffParam is the earlier version ?from= of q asks to mark version v against, with its ?key=: none when q asks none,
 // false for one that cannot be: not a number, not before v, or of no stored page's own URL.
 func diffParam(m *store.Meta, rest string, v int, q url.Values) (diffOf, bool) {
 	if !q.Has("from") {
-		return diffOf{from: 0, key: ""}, true
+		return diffOf{from: 0, key: "", side: pagediff.Alone}, true
 	}
 	from, ok := versionNumber(q.Get("from"))
 	if !ok || m == nil || m.IsLink() || rest != "" || from >= v {
-		return diffOf{from: 0, key: ""}, false
+		return diffOf{from: 0, key: "", side: pagediff.Alone}, false
 	}
-	return diffOf{from: from, key: q.Get("key")}, true
+	side, ok := sides[q.Get("side")]
+	if !ok {
+		return diffOf{from: 0, key: "", side: pagediff.Alone}, false
+	}
+	return diffOf{from: from, key: q.Get("key"), side: side}, true
 }
 
 // versionNumber reads raw as what can be a version's number: 1 or more, in plain digits. Whether there is such a
@@ -266,7 +276,7 @@ func (s *Server) servePage(w http.ResponseWriter, r *http.Request) {
 	pageHeaders(w, r, got.drawn)
 	tail := ""
 	if got.typ == htmlType {
-		tail = servedScript(slug, rest, version, v, read, got.drawn, diff.from > 0)
+		tail = servedScript(slug, rest, version, v, read, got.drawn, diff)
 	}
 	stream(w, got.typ, got.body, tail)
 }
@@ -327,7 +337,7 @@ func (s *Server) download(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	// A file kept is not mended by the watch: of what the directories hold now.
-	got, err := s.content(catalog(r), slug, m, "", v, diffOf{from: 0, key: ""}, s.latest, true)
+	got, err := s.content(catalog(r), slug, m, "", v, diffOf{from: 0, key: "", side: pagediff.Alone}, s.latest, true)
 	switch {
 	case errors.Is(err, errNoPage):
 		notFound(w)
@@ -453,6 +463,21 @@ func tellKeys(drawn, diff bool) string {
 		"if (!key) return; e.preventDefault(); window.parent.postMessage({ artifactKey: key }, here); });}"
 }
 
+//go:embed diffsync.js
+var diffsync string
+
+// scrollTogether is the script that scrolls a page of a diff shown side by side with the other: none for another.
+func scrollTogether(diff diffOf) string {
+	if diff.from == 0 || diff.side == pagediff.Alone {
+		return ""
+	}
+	script, err := page.Script(diffsync, nil)
+	if err != nil {
+		return "" // nil always writes
+	}
+	return script + "\n"
+}
+
 // askEvery is how often a page shown asks whether it changed: about as often as the drawing is watched, and set
 // apart from it so that the page's asking does not follow a test's shorter watching.
 const askEvery = time.Second
@@ -467,7 +492,7 @@ const askEvery = time.Second
 // drawn tells a page floe drew (tellKeys).
 // LIMIT: that a tab not shown asks nothing is not checked in a browser: headless Chrome showed no tab hidden. Were it
 // broken, a tab not shown asks every second, holding nothing.
-func servedScript(slug, rest, version string, v int, read *Read, drawn, diff bool) string {
+func servedScript(slug, rest, version string, v int, read *Read, drawn bool, diff diffOf) string {
 	u := "/api/changed/" + slug
 	if rest != "" {
 		parts := strings.Split(rest, "/")
@@ -489,7 +514,7 @@ func servedScript(slug, rest, version string, v int, read *Read, drawn, diff boo
 		"busy = false; };" +
 		"window.setInterval(look, " + strconv.FormatInt(askEvery.Milliseconds(), 10) + ");" +
 		"window.document.addEventListener('visibilitychange', look); look();" +
-		leaveFrame + tellRead(read) + tellKeys(drawn, diff) + "}</script>\n"
+		leaveFrame + tellRead(read) + tellKeys(drawn, diff.from > 0) + "}</script>\n" + scrollTogether(diff)
 }
 
 // changed answers whether the page of slug (of rest under a link) is no longer of the version since: "changed" or
