@@ -210,6 +210,24 @@ func TestMark(t *testing.T) {
 			has: []string{`<p>a</p><p class="floe-diff-gone">`},
 		},
 		{
+			name: "gone between divs the later unwraps", from: `<div><p>a1</p></div><div><p>gone x y</p></div><div><p>b1</p></div>`,
+			to:  `<p>a1</p><p>b1</p>`,
+			has: []string{`<p>a1</p><div class="floe-diff-gone">`, `gone x y</del></p></div><p>b1</p></body>`},
+		},
+		{
+			name: "gone first of divs the later unwraps", from: `<div><p>gone zz</p></div><div><p>k1</p></div>`, to: `<p>k1</p>`,
+			has: []string{`<body><div class="floe-diff-gone">`, `gone zz</del></p></div><p>k1</p></body>`},
+		},
+		{
+			name: "a section in a div gone, the later unwrapping", from: `<div><h2>F</h2><p>f</p></div><div><h2>G</h2><p>g gone words</p></div><div><h2>H</h2><p>h</p></div>`,
+			to:  `<h2>F</h2><p>f</p><h2>H</h2><p>h</p>`,
+			has: []string{`<p>f</p><div class="floe-diff-gone">`, `g gone words</del></p></div><h2>H</h2>`},
+		},
+		{
+			name: "an item gone first of a list", from: `<h2>T</h2><ul><li>zero</li><li>one</li></ul>`, to: `<h2>T</h2><ul><li>one</li></ul>`,
+			has: []string{`<h2>T</h2><ul class="floe-diff-gone">`, `zero</del></li></ul><ul><li>one</li></ul>`},
+		},
+		{
 			name: "a tab picked keeps a box checked", from: "<h2>T</h2><p>kept</p>" + fmt.Sprintf(tabs, `gone <input type="checkbox" checked> box`), to: "<h2>T</h2><p>kept</p>",
 			has: []string{`<input type="checkbox" checked=""/>`},
 		},
