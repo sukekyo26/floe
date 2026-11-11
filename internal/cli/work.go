@@ -32,10 +32,12 @@ type taskOf struct {
 func (a *app) workCmd() *cobra.Command {
 	var f workFlags
 	cmd := &cobra.Command{
-		Use:   "work [<slug>...]",
-		Short: "Put pages on a task, pin them, or change a task's state, URL, title, parent or categories' order",
+		Use: "work [<slug>...]",
+		Short: "Tell pages' task, category and pin, or change them, or a task's state, URL, title, parent or " +
+			"categories' order",
 		Long: `With slugs, put the pages on a task and change that task; without, change the task --task names, of
---project (the project of the working directory when left out; "" for none).
+--project (the project of the working directory when left out; "" for none). With slugs and no flag, tell each page as
+it is, writing nothing.
 
 The tasks are written first, once for each different task the pages are on, and the pages then, in order, stopping at
 the first failure. The same command given again finishes what a failure left. Each task and page written is told on a
@@ -49,6 +51,8 @@ category and pin. A page's category is where the task's page places it among its
     task #130 in project floe: changed; state doing
   floe work --task "#130" --url https://example.com/issues/482
   floe work design-notes --category designs
+  floe work design-notes
+    page design-notes: task #130 in project floe, category "designs"
   floe work --task "#130" --categories proposals,designs,samples
   floe work --task "#130" --parent "#123"
   floe work design-notes --task "#131" --parent "#130"
@@ -210,7 +214,7 @@ func taskFields(row store.Task, ed server.TaskEdit) string {
 	return strings.Join(fields, ", ")
 }
 
-// tellPage says the page as it was written: its task and project, category and pin.
+// tellPage says the page as the store has it, written or read: its task and project, category and pin.
 func (a *app) tellPage(page store.Edited) {
 	work := page.Work
 	var parts []string
@@ -255,14 +259,18 @@ func flagOf(err error, from string) error {
 	return err //nolint:wrapcheck // the store's words
 }
 
-// workPages puts the pages slugs on a task and changes it: what the CLI can check (the pages listed, on a task, of one
-// project for a parent) is checked before anything is written, so that a page of no task, or none at all, leaves the
-// rest as they were; the store checks a parent as it writes the task. Flags of the pages alone ask nothing of
-// tasks.json: an empty write would make a row for a task that has none. A parent goes with --task alone, on the one
-// task the pages go on: on each page's own, a page of the parent itself would stop the writes halfway.
+// workPages puts the pages slugs on a task and changes it, or with no flag tells them as they are. What the CLI can
+// check (the pages listed, on a task, of one project for a parent) is checked before anything is written, so that a
+// page of no task, or none at all, leaves the rest as they were; the store checks a parent as it writes the task. Flags
+// of the pages alone ask nothing of tasks.json: an empty write would make a row for a task that has none. A parent goes
+// with --task alone, on the one task the pages go on: on each page's own, a page of the parent itself would stop the
+// writes halfway.
 func (a *app) workPages(cmd *cobra.Command, f workFlags, slugs []string) error {
 	ctx := cmd.Context()
 	named := cmd.Flags().Changed("task")
+	if cmd.Flags().NFlag() == 0 {
+		return a.readPages(ctx, slugs)
+	}
 	onPages, onTask, name, err := pageFlags(cmd, f)
 	if err != nil {
 		return err
@@ -272,12 +280,8 @@ func (a *app) workPages(cmd *cobra.Command, f workFlags, slugs []string) error {
 	if err != nil {
 		return err
 	}
-	c, err := a.client(ctx, true)
+	c, list, err := a.pageList(ctx)
 	if err != nil {
-		return err
-	}
-	var list []store.Listed
-	if err = c.do(ctx, http.MethodGet, "/api/artifacts", nil, &list); err != nil {
 		return err
 	}
 	tasks, err := tasksOfPages(list, slugs, name, named, len(onTask) > 0)
@@ -309,9 +313,6 @@ func pageFlags(cmd *cobra.Command, f workFlags) (onPages, onTask []string, name 
 	}
 	onPages = changed(cmd, "task", "category", "pin", "unpin", "clear")
 	onTask = changed(cmd, "state", "url", "title", "categories", "parent")
-	if len(onPages)+len(onTask) == 0 {
-		return nil, nil, "", usageOf(usererr.New("cli_work_nothing"))
-	}
 	if name, err = store.TaskName(f.task); err != nil {
 		return nil, nil, "", flagOf(err, "--task")
 	}
@@ -346,16 +347,58 @@ func (a *app) writeTasks(ctx context.Context, c client, tasks []taskOf, ed serve
 	return nil
 }
 
+// readPages tells each of the pages slugs as tellPage does, writing nothing: one not listed is refused before any is
+// told.
+func (a *app) readPages(ctx context.Context, slugs []string) error {
+	_, list, err := a.pageList(ctx)
+	if err != nil {
+		return err
+	}
+	pages := make([]store.Edited, 0, len(slugs))
+	for _, slug := range slugs {
+		page, err := listedPage(list, slug)
+		if err != nil {
+			return err
+		}
+		pages = append(pages, store.Edited{Slug: page.Slug, TaskProject: page.TaskProject, Work: page.Work})
+	}
+	for _, page := range pages {
+		a.tellPage(page)
+	}
+	return nil
+}
+
+// pageList is the client of the server, started when it is not running, and the pages it lists.
+func (a *app) pageList(ctx context.Context) (client, []store.Listed, error) {
+	c, err := a.client(ctx, true)
+	if err != nil {
+		return client{}, nil, err
+	}
+	var list []store.Listed
+	if err = c.do(ctx, http.MethodGet, "/api/artifacts", nil, &list); err != nil {
+		return client{}, nil, err
+	}
+	return c, list, nil
+}
+
+// listedPage is the page slug of list, refused when it is not there.
+func listedPage(list []store.Listed, slug string) (store.Listed, error) {
+	at := slices.IndexFunc(list, func(l store.Listed) bool { return l.Slug == slug })
+	if at < 0 {
+		return store.Listed{}, usererr.New("store_no_page", slug)
+	}
+	return list[at], nil
+}
+
 // tasksOfPages is the different tasks the pages slugs are on, the first of each first: of the name given, or each
 // page's own. Each of slugs must be listed, and be on a task where the flags change one (wanted).
 func tasksOfPages(list []store.Listed, slugs []string, named string, isNamed, wanted bool) ([]taskOf, error) {
 	var tasks []taskOf
 	for _, slug := range slugs {
-		at := slices.IndexFunc(list, func(l store.Listed) bool { return l.Slug == slug })
-		if at < 0 {
-			return nil, usererr.New("store_no_page", slug)
+		page, err := listedPage(list, slug)
+		if err != nil {
+			return nil, err
 		}
-		page := list[at]
 		name := ""
 		if page.Work != nil {
 			name = page.Work.Task

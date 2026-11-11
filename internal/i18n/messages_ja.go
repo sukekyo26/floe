@@ -167,7 +167,6 @@ var messagesJA = map[string]string{
 	"cli_work_no_pages":        "--%s はタスクだけを名指すので、slug を付けずに使ってください",
 	"cli_work_parent_projects": "slug と一緒の --parent は、1 つのプロジェクトのページとだけ使えます：プロジェクトごとにコマンドを分けてください",
 	"cli_work_parent_task":     "slug と一緒の --parent には --task が要ります：ページを付ける 1 つのタスクを名指してください",
-	"cli_work_nothing":         "ページの何を変えるかを書いてください（--task、--category、--state、--url、--title、--categories、--parent、--pin、--unpin、--clear）",
 	"cli_work_page_no_task":    "ページ「%s」はタスクにありません。--task で名指してください",
 	"cli_work_no_row":          "プロジェクト %[2]s にタスク %[1]s はありません。--project で別のプロジェクトを指せます",
 	"cli_work_task_off":        `--task "" はページをタスクから外すので、--%s と一緒には使えません`,

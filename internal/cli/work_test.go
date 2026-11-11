@@ -291,7 +291,6 @@ func TestWorkCommand(t *testing.T) {
 		// Not a flag of the task, --parent would be dropped here and say nothing.
 		{[]string{"work", "a", "--task", "", "--parent", "x"}, "floe: --task \"\" takes the pages off their task, so it cannot go with --parent: run floe --help\n"},
 		{[]string{"work", "a", "--parent", "x"}, "floe: --parent with slugs goes with --task: name the one task the pages go on: run floe --help\n"},
-		{[]string{"work", "a"}, "floe: say what to change of the pages: --task, --category, --state, --url, --title, --categories, --parent, --pin, --unpin or --clear: run floe --help\n"},
 	} {
 		if got := run(2, c.args...); got != c.want {
 			t.Errorf("floe %v = %q, want %q", c.args, got, c.want)
@@ -455,5 +454,58 @@ func TestWorkNotUTF8(t *testing.T) {
 	}
 	if got := workOf(t, env, "a"); got != "null" {
 		t.Errorf("the page written: %s", got)
+	}
+}
+
+// floe work with slugs and no flag tells each page as it is, as a write tells it, and writes nothing; a slug of no page
+// is refused before any page is told.
+func TestWorkReadsPages(t *testing.T) {
+	t.Parallel()
+
+	env, dir := served(t)
+	run := func(want int, args ...string) string {
+		t.Helper()
+		code, out, errs := runIn(dir, env, args...)
+		if code != want {
+			t.Fatalf("floe %v = %d, %q, %q", args, code, out, errs)
+		}
+		return out + errs
+	}
+	// What a write would change: tasks.json and each page's meta.json.
+	written := func() string {
+		t.Helper()
+		var all []string
+		err := filepath.WalkDir(env["FLOE_DIR"], func(path string, d os.DirEntry, err error) error {
+			if err != nil || d.IsDir() || (d.Name() != "meta.json" && d.Name() != "tasks.json") {
+				return err
+			}
+			b, err := os.ReadFile(path) //nolint:gosec // G304: the test's own store
+			all = append(all, path+"\n"+string(b))
+			return err
+		})
+		if err != nil {
+			t.Fatal(err)
+		}
+		return strings.Join(all, "\n")
+	}
+	run(0, "publish", "w.yaml", "--slug", "a")
+	run(0, "publish", "d.yaml", "--slug", "b")
+	run(0, "publish", "h.html", "--link", "--slug", "c")
+	run(0, "work", "a", "--task", "#1", "--category", "designs", "--pin")
+	run(0, "work", "c", "--task", "#1")
+	run(0, "archive", "c")
+
+	before := written()
+	want := "page a: task #1 in project p, category \"designs\", pinned\n" +
+		"page b: no task\n" +
+		"page c: task #1 in project p\n"
+	if got := run(0, "work", "a", "b", "c"); got != want {
+		t.Errorf("floe work a b c = %q, want %q", got, want)
+	}
+	if got := run(1, "work", "a", "nope"); strings.Contains(got, "page a") || !strings.Contains(got, `"nope"`) {
+		t.Errorf("floe work a nope = %q", got)
+	}
+	if after := written(); after != before {
+		t.Errorf("reading wrote:\n%s\nwant\n%s", after, before)
 	}
 }
