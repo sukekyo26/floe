@@ -411,17 +411,17 @@ func (m *marker) rowAt(b *block) {
 // rowGroup is where a row of a group of rows kind goes in table, where the row it was by is in another group: the
 // table's first of kind, at its start (a head row at its end), or else at the start of its first tbody.
 func rowGroup(table *html.Node, kind string) (parent, before *html.Node) {
-	for c := table.FirstChild; c != nil; c = c.NextSibling {
-		if c.Type == html.ElementNode && c.Data == kind {
+	for g := range rowGroups(table) {
+		if g.Data == kind {
 			if kind == "thead" {
-				return c, nil
+				return g, nil
 			}
-			return c, c.FirstChild
+			return g, g.FirstChild
 		}
 	}
-	for c := table.FirstChild; c != nil; c = c.NextSibling {
-		if c.Type == html.ElementNode && c.DataAtom == atom.Tbody {
-			return c, c.FirstChild
+	for g := range rowGroups(table) {
+		if g.DataAtom == atom.Tbody {
+			return g, g.FirstChild
 		}
 	}
 	return nil, nil

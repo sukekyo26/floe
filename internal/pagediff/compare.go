@@ -4,6 +4,7 @@
 package pagediff
 
 import (
+	"iter"
 	"slices"
 	"strings"
 	"time"
@@ -399,17 +400,43 @@ func (t tables) spanned(tr *html.Node) bool {
 		return got
 	}
 	got := false
-	for d := range table.Descendants() {
-		if d.Type == html.ElementNode && (d.DataAtom == atom.Td || d.DataAtom == atom.Th) {
-			for _, key := range []string{"colspan", "rowspan"} {
-				if v, ok := page.Attr(d, key); ok && strings.TrimFunc(v, page.IsSpace) != "1" {
-					got = true
-				}
+	for g := range rowGroups(table) {
+		for r := g.FirstChild; r != nil; r = r.NextSibling {
+			if r.Type == html.ElementNode && r.DataAtom == atom.Tr && rowSpans(r) {
+				got = true
 			}
 		}
 	}
 	t[table] = got
 	return got
+}
+
+// rowSpans tells whether a cell of the row tr spans more than one row or column.
+func rowSpans(tr *html.Node) bool {
+	for c := tr.FirstChild; c != nil; c = c.NextSibling {
+		if c.Type != html.ElementNode {
+			continue
+		}
+		for _, key := range []string{"colspan", "rowspan"} {
+			if v, ok := page.Attr(c, key); ok && strings.TrimFunc(v, page.IsSpace) != "1" {
+				return true
+			}
+		}
+	}
+	return false
+}
+
+// rowGroups are the groups of rows (thead, tbody, tfoot) of table itself, not of a table in its cells: the HTML parser
+// puts every row in one.
+func rowGroups(table *html.Node) iter.Seq[*html.Node] {
+	return func(yield func(*html.Node) bool) {
+		for c := table.FirstChild; c != nil; c = c.NextSibling {
+			if c.Type == html.ElementNode && (c.DataAtom == atom.Thead || c.DataAtom == atom.Tbody || c.DataAtom == atom.Tfoot) &&
+				!yield(c) {
+				return
+			}
+		}
+	}
 }
 
 // cellsCompared tells whether two rows paired are compared cell by cell: rows of tables whose cells span one row and
