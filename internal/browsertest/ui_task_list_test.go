@@ -83,6 +83,7 @@ func taskPages(t *testing.T, s *site) {
 		{"p8", "shop", "#8", "", false, false},
 		{"p8a", "shop", "#8", "", true, false},
 		{"p10", "", "#10", "", false, false},
+		// #11 has no row, as a hand edit leaves: its page says it, and it is not listed
 		{"p11", "shop", "#11", "", false, false},
 		{"pinned", "shop", "", "", false, true},
 		{"gonepin", "shop", "", "", true, true},
@@ -397,7 +398,7 @@ func TestUITaskList(t *testing.T) { //nolint:paralleltest // the browser tests s
 const taskListWant = `no work, tasks: shelf shown: false
 opened: ?project=shop shop
 doing: #1One [2 page(s), 2 unread, b/c]; #2Two [0 page(s)]
-views: todo 3, doing 2, done 2, archived 1
+views: todo 2, doing 2, done 2, archived 1
 head: 2 · latest change first
 pins: pinned /a/pinned/
 hrefs: /tasks?project=shop&task=%231 /tasks?project=shop&task=%232
@@ -410,10 +411,10 @@ j: #1One
 j j: #2Two
 j j k: #1One
 nothing picked: true
-todo: #11 [1 page(s), 1 unread]; #5 [0 page(s)]; #4 [0 page(s)]
-todo head: 3 · latest change first
+todo: #5 [0 page(s)]; #4 [0 page(s)]
+todo head: 2 · latest change first
 todo url: ?view=todo&project=shop ?view=todo&project=shop
-todo chips: 3 0 0 0 0
+todo chips: 2 0 0 0 0
 done: #8 [1 page(s), 1 archived, 1 unread]; #7 [0 page(s)]
 done head: 2 · latest change first
 done url: ?view=done&project=shop ?view=done&project=shop

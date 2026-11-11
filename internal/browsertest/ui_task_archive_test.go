@@ -165,7 +165,7 @@ func TestUITaskArchive(t *testing.T) { //nolint:paralleltest // the browser test
 
 	// The task's write refused: its pages are not touched.
 	open("#refused")
-	b.eval(`window.realFetch = fetch; fetch = (u, o) => (o?.method === 'PATCH' && String(u).startsWith('/api/tasks') ? Promise.resolve(new Response('no', { status: 500 })) : realFetch(u, o)); ` + button + `.click()`)
+	b.eval(`window.realFetch = fetch; fetch = (u, o) => (o?.method === 'PATCH' && String(u).startsWith('/api/work') ? Promise.resolve(new Response('no', { status: 500 })) : realFetch(u, o)); ` + button + `.click()`)
 	b.until("the refusal", "!document.getElementById('error').hidden")
 	out = append(out, "refused: "+b.eval("document.getElementById('error').textContent"))
 	head("refused, as it was")
@@ -332,13 +332,9 @@ func TestUITaskStateGone(t *testing.T) { //nolint:paralleltest // the browser te
 	}
 	b.eval(free)
 
+	// A task a page names with no row is not there: its page says so, and has no state to change.
 	b.navigate("/tasks?project=proj&task=%23pages")
-	b.until("the head", "!document.getElementById('task-head').hidden")
-	b.eval(change)
-	b.until("the refusal", "!document.getElementById('error').hidden")
-	if got, want := b.eval("document.getElementById('error').textContent"), "Failed to change the state: task #pages is no longer there"; got != want {
-		t.Errorf("a page's task of no row: %q, want %q", got, want)
-	}
+	b.until("not there", "!document.getElementById('task-missing').hidden")
 	if tasks, err = st.ReadTasks(); err != nil || tasks["proj"]["#pages"].State != "" {
 		t.Errorf("a page's task of no row was made: %v, %v", tasks, err)
 	}

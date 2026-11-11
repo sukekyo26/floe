@@ -63,7 +63,7 @@ func TestUITaskEditCategories(t *testing.T) { //nolint:paralleltest // the brows
 		t.Helper()
 		b.navigate("/tasks?project=proj&task=" + task)
 		b.until("the task's head", "!document.getElementById('task-head').hidden && document.getElementById('task-title').textContent.includes("+js(task)+")")
-		b.eval("window.sent = []; window.realFetch ??= window.fetch; window.fetch = (url, init) => { if (String(url).includes('/api/tasks') && init?.method === 'PATCH') sent.push(init.body); return window.realFetch(url, init); }")
+		b.eval("window.sent = []; window.realFetch ??= window.fetch; window.fetch = (url, init) => { if (String(url).includes('/api/work') && init?.method === 'PATCH') sent.push(init.body); return window.realFetch(url, init); }")
 		b.eval("document.getElementById('task-edit').click()")
 		b.until("the dialog", "document.getElementById('edit-task-dialog').open")
 	}
@@ -202,7 +202,7 @@ func TestUITaskEditCategories(t *testing.T) { //nolint:paralleltest // the brows
 		"dropped: 案x,設計x,実装x,レビューx,公開d / Move レビュー up / Deleted リリース",
 		"dropped last: 案x,設計x,実装x,レビューx / Move レビュー up",
 		"saved: 6 [案,設計,実装,レビュー]",
-		`sent: {"new":false,"rev":5,"categories":["案","設計","実装","レビュー"]}`,
+		`sent: {"project":"proj","task":"S300","new":false,"rev":5,"categories":["案","設計","実装","レビュー"]}`,
 		"unchanged: 0",
 		"paged meanwhile: Failed to save: category リリース of task S300 in project proj has pages (memo-a): take them off it first, or keep it in the order",
 		"paged meanwhile, written: 7 [案,設計,実装,リリース,レビュー]",
