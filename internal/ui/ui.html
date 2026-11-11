@@ -2032,8 +2032,10 @@
   // gone counts a 404 as done, for a delete
   async function writeOne(slug, init, gone = false) {
     try {
-      const res = await api(`/api/artifacts/${slug}`, init);
+      const { answer, ...sent } = init;
+      const res = await api(`/api/artifacts/${slug}`, sent);
       if (!res.ok && !(gone && res.status === 404)) return t('ui_http_error', await res.text(), res.status);
+      if (answer) answer(await res.json());
     } catch (e) {
       return e.message;
     }
@@ -2042,6 +2044,14 @@
   }
 
   const deleteOne = (slug) => writeOne(slug, { method: 'DELETE' }, true);
+  // A page's edit, as patchOne writes it, with the page as the store left it: { reason, edited }, edited null when refused
+  async function editOne(slug, body) {
+    let edited = null;
+    const reason = await writeOne(slug, {
+      method: 'PATCH', headers: { 'content-type': 'application/json' }, body: JSON.stringify(body), answer: (got) => { edited = got; },
+    });
+    return { reason, edited };
+  }
   const patchOne = (slug, body) => writeOne(slug, { method: 'PATCH', headers: { 'content-type': 'application/json' }, body: JSON.stringify(body) });
 
   // Acts on the entries of slugs and tells how many it did, done(n), and how many failed, failed(n, the first reason); settled(reasons)
@@ -3384,7 +3394,7 @@
     const changes = Object.fromEntries(Object.entries(EDIT_FIELDS)
       .filter(([key, id]) => $(id).value.trim() !== (editing[key] ?? ''))
       .map(([key, id]) => [key, $(id).value]));
-    const reason = await patchOne(editing.slug, changes);
+    const { reason, edited } = await editOne(editing.slug, changes);
     btn.disabled = false;
     if (reason) {
       $('edit-error').textContent = t('ui_save_failed', reason);
@@ -3412,7 +3422,8 @@
       // Drawn with the list read below
       if (picked?.slug === was) picked.slug = changes.slug;
     }
-    toast(t('ui_saved'));
+    // A page moved to another project is off its task, which is of its project
+    toast(edited?.offTask ? t('ui_saved_off_task', edited.offTask) : t('ui_saved'));
     // Drawn before the dialog closes, which gives focus to the row's menu button as drawn
     await load();
     $('edit-dialog').close();

@@ -102,6 +102,16 @@ func TestUIEditFold(t *testing.T) { //nolint:paralleltest // the browser tests s
 	b.pressKey(kb.Escape)
 	b.until("closed", "!document.getElementById('edit-dialog').open")
 
+	// A page moved to another project is off its task, which is of its project: said so as it saves.
+	s.floe(t, "work", "a", "--task", "#1")
+	b.navigate("/")
+	b.until("the rows", "document.querySelector('#list li[data-slug=a]')")
+	open()
+	field("edit-project", "else")
+	b.eval("document.getElementById('edit-submit').click()")
+	b.until("saved", "!document.getElementById('edit-dialog').open")
+	say("moved", "[...document.querySelectorAll('#toasts .toast')].at(-1)?.textContent.trim()")
+
 	check(t, "edit fold", out, strings.Join([]string{
 		"opened: false / a · proj",
 		"typed: false / a-new · proj",
@@ -116,5 +126,6 @@ func TestUIEditFold(t *testing.T) { //nolint:paralleltest // the browser tests s
 		"alert: alert",
 		"enter: true / true",
 		"space: false / true",
+		"moved: Saved; off task #1, which is of the project it was in",
 	}, "|"))
 }
