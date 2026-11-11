@@ -207,7 +207,7 @@
 
   /* The later version's page, marked by the server, in the sandbox as any page */
   .dbody { grid-column: 2; min-width: 0; display: flex; background: var(--frame-bg); border-left: 1px solid var(--line); }
-  .dbody > iframe { flex: 1; min-width: 0; border: 0; background: #fff; }
+  .dbody > iframe { flex: 1; min-width: 0; border: 0; background: var(--frame-bg); }
   @media (max-width: 56rem) {
     .dmain { grid-template-columns: minmax(0, 1fr); }
     .dtoc, .dmain > .grip, .dmain > .side-show { display: none; }
