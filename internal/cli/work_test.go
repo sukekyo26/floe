@@ -479,7 +479,7 @@ func TestWorkReadsPages(t *testing.T) {
 			if err != nil || d.IsDir() || (d.Name() != "meta.json" && d.Name() != "tasks.json") {
 				return err
 			}
-			b, err := os.ReadFile(path)
+			b, err := os.ReadFile(path) //nolint:gosec // G304: the test's own store
 			all = append(all, path+"\n"+string(b))
 			return err
 		})
