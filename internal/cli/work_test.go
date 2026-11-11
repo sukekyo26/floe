@@ -82,7 +82,7 @@ func TestWorkCommand(t *testing.T) {
 		t.Fatal(err)
 	}
 	run(0, "work", "e", "--pin")
-	run(0, "work", "e", "--step", "")
+	run(0, "work", "e", "--category", "")
 	if got := tasks(); len(got) != 0 {
 		t.Errorf("flags of the page wrote a task: %v", got)
 	}
@@ -90,10 +90,10 @@ func TestWorkCommand(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	// A step of spaces is no step: the page's flag alone, of a page on no task as well.
-	run(0, "work", "a", "--step", "  ")
+	// A category of spaces is no category: the page's flag alone, of a page on no task as well.
+	run(0, "work", "a", "--category", "  ")
 	if got := tasks(); len(got) != 0 {
-		t.Errorf("--step of spaces wrote a task: %v", got)
+		t.Errorf("--category of spaces wrote a task: %v", got)
 	}
 
 	// Refused before anything is written: a page of no task, or none.
@@ -111,7 +111,7 @@ func TestWorkCommand(t *testing.T) {
 	}
 
 	// Each to its own task, of its own project.
-	run(0, "work", "a", "--task", "#1", "--step", "設計")
+	run(0, "work", "a", "--task", "#1", "--category", "設計")
 	run(0, "work", "b", "--task", "#2")
 	run(0, "work", "c", "--task", "#1")
 	run(0, "work", "a", "b", "c", "--state", "done", "--url", "https://example.com/a/b", "--title", "T")
@@ -121,38 +121,38 @@ func TestWorkCommand(t *testing.T) {
 			t.Errorf("%v: %+v", task, got)
 		}
 	}
-	if got := tasks()["p"]["#1"].Step; got != "設計" {
-		t.Errorf("the step of #1: %q", got)
+	if got := tasks()["p"]["#1"].Category; got != "設計" {
+		t.Errorf("the category of #1: %q", got)
 	}
-	if got := workOf(t, env, "a"); got != `{"task":"#1","step":"設計"}` {
+	if got := workOf(t, env, "a"); got != `{"task":"#1","category":"設計"}` {
 		t.Errorf("a page's own work: %s", got)
 	}
 	// Named, all go to that task: of each page's project.
-	run(0, "work", "a", "c", "--task", "#3", "--steps", "設計,実装,,設計")
+	run(0, "work", "a", "c", "--task", "#3", "--categories", "設計,実装,,設計")
 	for _, project := range []string{"p", "q"} {
-		if got := tasks()[project]["#3"].Steps; !slices.Equal(got, []string{"設計", "実装"}) {
+		if got := tasks()[project]["#3"].Categories; !slices.Equal(got, []string{"設計", "実装"}) {
 			t.Errorf("%s: %v", project, got)
 		}
 	}
 	if got := workOf(t, env, "c"); got != `{"task":"#3"}` {
 		t.Errorf("c: %s", got)
 	}
-	// A step goes with a move to another task, stays on the same one, and is taken off the page alone.
+	// A category goes with a move to another task, stays on the same one, and is taken off the page alone.
 	run(0, "work", "a", "--task", "#9")
 	if got := workOf(t, env, "a"); got != `{"task":"#9"}` {
 		t.Errorf("--task to another task: %s", got)
 	}
-	run(0, "work", "a", "--task", "#1", "--step", "設計")
+	run(0, "work", "a", "--task", "#1", "--category", "設計")
 	run(0, "work", "a", "--task", "#1")
-	if got := workOf(t, env, "a"); got != `{"task":"#1","step":"設計"}` {
-		t.Errorf("--task keeps the step: %s", got)
+	if got := workOf(t, env, "a"); got != `{"task":"#1","category":"設計"}` {
+		t.Errorf("--task keeps the category: %s", got)
 	}
-	run(0, "work", "a", "--step", "")
+	run(0, "work", "a", "--category", "")
 	if got := workOf(t, env, "a"); got != `{"task":"#1"}` {
-		t.Errorf(`--step "": %s`, got)
+		t.Errorf(`--category "": %s`, got)
 	}
-	if got := tasks()["p"]["#1"].Step; got != "設計" {
-		t.Errorf(`--step "" of the task: %q`, got)
+	if got := tasks()["p"]["#1"].Category; got != "設計" {
+		t.Errorf(`--category "" of the task: %q`, got)
 	}
 
 	// A page of no project: its task is that of "/".
@@ -285,13 +285,13 @@ func TestWorkCommand(t *testing.T) {
 		{[]string{"work"}, "floe: name a task with --task, or pages by their slugs: run floe --help\n"},
 		{[]string{"work", "--state", "done"}, "floe: name a task with --task, or pages by their slugs: run floe --help\n"},
 		{[]string{"work", "--task", "#1", "--pin"}, "floe: --pin changes pages: name them by their slugs: run floe --help\n"},
-		{[]string{"work", "--task", "#1", "--step", "s"}, "floe: --step changes pages: name them by their slugs: run floe --help\n"},
+		{[]string{"work", "--task", "#1", "--category", "s"}, "floe: --category changes pages: name them by their slugs: run floe --help\n"},
 		{[]string{"work", "a", "--forget"}, "floe: --forget goes with a task alone, not with pages: give it without slugs: run floe --help\n"},
 		{[]string{"work", "a", "--project", "p"}, "floe: --project goes with a task alone, not with pages: give it without slugs: run floe --help\n"},
 		// Not a flag of the task, --parent would be dropped here and say nothing.
 		{[]string{"work", "a", "--task", "", "--parent", "x"}, "floe: --task \"\" takes the pages off their task, so it cannot go with --parent: run floe --help\n"},
 		{[]string{"work", "a", "--parent", "x"}, "floe: --parent with slugs goes with --task: name the one task the pages go on: run floe --help\n"},
-		{[]string{"work", "a"}, "floe: say what to change of the pages: --task, --step, --state, --url, --title, --steps, --parent, --pin, --unpin or --clear: run floe --help\n"},
+		{[]string{"work", "a"}, "floe: say what to change of the pages: --task, --category, --state, --url, --title, --categories, --parent, --pin, --unpin or --clear: run floe --help\n"},
 	} {
 		if got := run(2, c.args...); got != c.want {
 			t.Errorf("floe %v = %q, want %q", c.args, got, c.want)
@@ -309,7 +309,13 @@ func TestWorkCommand(t *testing.T) {
 	if got := run(2, "work", "a", "--clear", "--parent", "x"); !strings.Contains(got, "run floe --help") {
 		t.Errorf("--clear --parent: %q", got)
 	}
-	for _, flag := range []string{"--state", "--step"} {
+	// The names categories had before are no flags.
+	for _, flag := range []string{"--step", "--steps"} {
+		if got := run(2, "work", "a", "--task", "#1", flag, "x"); !strings.Contains(got, "unknown flag: "+flag) {
+			t.Errorf("%s: %q", flag, got)
+		}
+	}
+	for _, flag := range []string{"--state", "--category"} {
 		want := "floe: --task \"\" takes the pages off their task, so it cannot go with " + flag + ": run floe --help\n"
 		if got := run(2, "work", "a", "--task", "", flag, "done"); got != want {
 			t.Errorf("--task \"\" %s: %q", flag, got)
@@ -324,7 +330,7 @@ func TestWorkCommand(t *testing.T) {
 }
 
 // floe work says each task and page it wrote on a line of its own, in the order written: a task made, changed or as it
-// was with the fields asked for as the store left them, and a page with its task, step and pin after the write.
+// was with the fields asked for as the store left them, and a page with its task, category and pin after the write.
 func TestWorkSays(t *testing.T) {
 	t.Parallel()
 
@@ -340,13 +346,13 @@ func TestWorkSays(t *testing.T) {
 	}
 	say("task t1 in project p: made; title \"the task\"\n", "work", "--task", "t1", "--title", "the task")
 	say("task t1 in project p: unchanged; title \"the task\"\n", "work", "--task", "t1", "--title", "the task")
-	say("task t1 in project p: changed; state doing, steps \"design,build\"\n",
-		"work", "--task", "t1", "--state", "doing", "--steps", "design, build, design")
+	say("task t1 in project p: changed; state doing, categories \"design,build\"\n",
+		"work", "--task", "t1", "--state", "doing", "--categories", "design, build, design")
 	say("task t2 in no project: made; url \"https://example.com/2\", no parent\n",
 		"work", "--task", "t2", "--project", "", "--url", " https://example.com/2 ", "--parent", "")
-	say("task t1 in project p: changed; step \"design\"\npage a: task t1 in project p, step \"design\"\n",
-		"work", "a", "--task", "t1", "--step", "design")
-	say("page a: task t1 in project p, step \"design\", pinned\n", "work", "a", "--pin")
+	say("task t1 in project p: changed; category \"design\"\npage a: task t1 in project p, category \"design\"\n",
+		"work", "a", "--task", "t1", "--category", "design")
+	say("page a: task t1 in project p, category \"design\", pinned\n", "work", "a", "--pin")
 	say("page a: no task, pinned\n", "work", "a", "--task", "")
 	say("task t1 in project p: forgotten\n", "work", "--task", " t1 ", "--forget")
 	say("task t3 in project p: made\npage a: task t3 in project p, pinned\n", "work", "a", "--task", "t3")
@@ -419,9 +425,9 @@ func TestWorkNotUTF8(t *testing.T) {
 		args []string
 		told string
 	}{
-		{dir, []string{"work", "a", "--task", "t1", "--step", bad}, "--step"},
+		{dir, []string{"work", "a", "--task", "t1", "--category", bad}, "--category"},
 		{dir, []string{"work", "a", "--task", "t1", "--url", bad}, "--url"},
-		{dir, []string{"work", "a", "--task", "t1", "--steps", "x," + bad}, "--steps"},
+		{dir, []string{"work", "a", "--task", "t1", "--categories", "x," + bad}, "--categories"},
 		{dir, []string{"work", "--task", "t1", "--parent", bad}, "--parent"},
 		{dir, []string{"work", "--task", "t1", "--state", bad}, "--state"},
 		{dir, []string{"work", "--task", "t1", "--title", bad}, "--title"},

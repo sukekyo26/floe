@@ -391,9 +391,9 @@ func TestUITaskChildren(t *testing.T) { //nolint:paralleltest // the browser tes
 	for name, parent := range map[string]string{
 		"lost": "gone", "self": "self", "gp": "", "pa": "gp", "ch": "pa", "x": "y", "y": "x", "pagesonly": "t-pages",
 	} {
-		all["proj"][name] = store.Task{Title: "", State: "done", Step: "", At: at, URL: "", Steps: nil, Parent: parent, Rev: 0}
+		all["proj"][name] = store.Task{Title: "", State: "done", Category: "", At: at, URL: "", Categories: nil, Parent: parent, Rev: 0}
 	}
-	all["proj"]["proto"] = store.Task{Title: "", State: "done", Step: "", At: at, URL: "", Steps: nil, Parent: "constructor", Rev: 0}
+	all["proj"]["proto"] = store.Task{Title: "", State: "done", Category: "", At: at, URL: "", Categories: nil, Parent: "constructor", Rev: 0}
 	text, err = json.Marshal(all)
 	if err != nil {
 		t.Fatal(err)
@@ -503,7 +503,7 @@ func TestUITaskSetTitle(t *testing.T) { //nolint:paralleltest // the browser tes
 
 	// The fields' words, and the example the catalog gives.
 	dialog("a")
-	if got := b.eval("[document.getElementById('set-task').placeholder, document.getElementById('set-task').closest('label').textContent.trim(), document.getElementById('set-task-title').closest('label').textContent.trim(), document.getElementById('set-step').placeholder, document.querySelectorAll('#set-dialog input').length].join('|')"); got != "e.g. #128|Task ID|Title|e.g. design, build, review|3" {
+	if got := b.eval("[document.getElementById('set-task').placeholder, document.getElementById('set-task').closest('label').textContent.trim(), document.getElementById('set-task-title').closest('label').textContent.trim(), document.getElementById('set-category').placeholder, document.querySelectorAll('#set-dialog input').length].join('|')"); got != "e.g. #128|Task ID|Title|e.g. proposals, designs, samples|3" {
 		t.Errorf("the fields: %q", got)
 	}
 	b.eval("document.getElementById('set-dialog').close()")

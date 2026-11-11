@@ -28,8 +28,8 @@ func taskIn(t *testing.T, s *store.Store, project string) store.Task {
 	return row
 }
 
-// A new task is todo; its time moves with its state alone, its step with what is not empty; a key it does not set is
-// written back; an order of steps is kept clean, and an empty URL or order takes it off.
+// A new task is todo; its time moves with its state alone, its category with what is not empty; a key it does not set is
+// written back; an order of categories is kept clean, and an empty URL or order takes it off.
 func TestWorkWrite(t *testing.T) {
 	t.Parallel()
 
@@ -51,36 +51,36 @@ func TestWorkWrite(t *testing.T) {
 		t.Fatal(err)
 	}
 	// As Edit reads a project: trimmed, so that this is the same task.
-	if _, err := s.EditTask(" p ", " #1 ", store.TaskEdit{Step: ptr(" 設計 "), Title: ptr(" T ")}); err != nil {
+	if _, err := s.EditTask(" p ", " #1 ", store.TaskEdit{Category: ptr(" 設計 "), Title: ptr(" T ")}); err != nil {
 		t.Fatal(err)
 	}
 	row := taskIn(t, s, "p")
-	if row.Step != "設計" || row.Title != "T" || row.At != long {
-		t.Errorf("after a step: %+v", row)
+	if row.Category != "設計" || row.Title != "T" || row.At != long {
+		t.Errorf("after a category: %+v", row)
 	}
-	// An empty step leaves the last written, as does the same state, which leaves its time too.
-	if _, err := s.EditTask("p", "#1", store.TaskEdit{Step: ptr(" "), State: ptr("doing")}); err != nil {
+	// An empty category leaves the last written, as does the same state, which leaves its time too.
+	if _, err := s.EditTask("p", "#1", store.TaskEdit{Category: ptr(" "), State: ptr("doing")}); err != nil {
 		t.Fatal(err)
 	}
-	if row = taskIn(t, s, "p"); row.Step != "設計" || row.At != long {
-		t.Errorf("after an empty step: %+v", row)
+	if row = taskIn(t, s, "p"); row.Category != "設計" || row.At != long {
+		t.Errorf("after an empty category: %+v", row)
 	}
 	if _, err := s.EditTask("p", "#1", store.TaskEdit{
-		State: ptr("done"), URL: ptr("HTTPS://example.com/a"), Steps: ptr([]string{" 設計", "実装", "", "設計"}),
+		State: ptr("done"), URL: ptr("HTTPS://example.com/a"), Categories: ptr([]string{" 設計", "実装", "", "設計"}),
 	}); err != nil {
 		t.Fatal(err)
 	}
 	row = taskIn(t, s, "p")
-	if row.State != "done" || row.Parent != "#0" || row.URL != "HTTPS://example.com/a" || !slices.Equal(row.Steps, []string{"設計", "実装"}) {
+	if row.State != "done" || row.Parent != "#0" || row.URL != "HTTPS://example.com/a" || !slices.Equal(row.Categories, []string{"設計", "実装"}) {
 		t.Errorf("after the state: %+v", row)
 	}
 	if row.At == long {
 		t.Error("the state's time stayed")
 	}
-	if _, err := s.EditTask("p", "#1", store.TaskEdit{URL: ptr(""), Steps: ptr([]string{""})}); err != nil {
+	if _, err := s.EditTask("p", "#1", store.TaskEdit{URL: ptr(""), Categories: ptr([]string{""})}); err != nil {
 		t.Fatal(err)
 	}
-	if row = taskIn(t, s, "p"); row.URL != "" || row.Steps != nil {
+	if row = taskIn(t, s, "p"); row.URL != "" || row.Categories != nil {
 		t.Errorf("taken off: %+v", row)
 	}
 }
@@ -254,7 +254,7 @@ func TestWorkForget(t *testing.T) {
 	taskIn(t, s, "/")
 }
 
-// A page's work is changed a field at a time, its step going with its task and all of it with task and pin both;
+// A page's work is changed a field at a time, its category going with its task and all of it with task and pin both;
 // the list says its task's project, whatever the page's.
 func TestPageWork(t *testing.T) {
 	t.Parallel()
@@ -275,23 +275,23 @@ func TestPageWork(t *testing.T) {
 			t.Errorf("%+v: %s, want %s", ed, b, want)
 		}
 	}
-	work(store.WorkEdit{Task: ptr(" #1 "), Step: ptr(" 設計 ")}, `{"task":"#1","step":"設計"}`)
-	work(store.WorkEdit{Pin: ptr(true)}, `{"task":"#1","step":"設計","pin":true}`)
-	work(store.WorkEdit{Task: ptr(" #1 ")}, `{"task":"#1","step":"設計","pin":true}`)
-	work(store.WorkEdit{Task: ptr("#2"), Step: ptr("実装")}, `{"task":"#2","step":"実装","pin":true}`)
+	work(store.WorkEdit{Task: ptr(" #1 "), Category: ptr(" 設計 ")}, `{"task":"#1","category":"設計"}`)
+	work(store.WorkEdit{Pin: ptr(true)}, `{"task":"#1","category":"設計","pin":true}`)
+	work(store.WorkEdit{Task: ptr(" #1 ")}, `{"task":"#1","category":"設計","pin":true}`)
+	work(store.WorkEdit{Task: ptr("#2"), Category: ptr("実装")}, `{"task":"#2","category":"実装","pin":true}`)
 	work(store.WorkEdit{Task: ptr("#3")}, `{"task":"#3","pin":true}`)
-	work(store.WorkEdit{Step: ptr("設計")}, `{"task":"#3","step":"設計","pin":true}`)
-	work(store.WorkEdit{Step: ptr("")}, `{"task":"#3","pin":true}`)
+	work(store.WorkEdit{Category: ptr("設計")}, `{"task":"#3","category":"設計","pin":true}`)
+	work(store.WorkEdit{Category: ptr("")}, `{"task":"#3","pin":true}`)
 	work(store.WorkEdit{Task: ptr("")}, `{"pin":true}`)
-	work(store.WorkEdit{Step: ptr("off a task")}, `{"pin":true}`)
+	work(store.WorkEdit{Category: ptr("off a task")}, `{"pin":true}`)
 	work(store.WorkEdit{Pin: ptr(false)}, "null")
-	work(store.WorkEdit{Task: ptr("#3"), Step: ptr("s")}, `{"task":"#3","step":"s"}`)
+	work(store.WorkEdit{Task: ptr("#3"), Category: ptr("s")}, `{"task":"#3","category":"s"}`)
 	for _, name := range []string{"   ", "\xff"} {
 		if _, err := s.Edit("d", store.Edit{Work: &store.WorkEdit{Task: ptr(name)}}); err == nil {
 			t.Errorf("a page on the task %q", name)
 		}
 	}
-	work(store.WorkEdit{}, `{"task":"#3","step":"s"}`)
+	work(store.WorkEdit{}, `{"task":"#3","category":"s"}`)
 
 	project := func(want string) {
 		t.Helper()
@@ -313,7 +313,7 @@ func TestPageWork(t *testing.T) {
 
 	// It goes on through what writes the page anew, and with its name.
 	publish(t, s, dw, "d.yaml", "lang: en\ntemplate: pic\ntitle: two\n", nil, store.Options{})
-	if got := s.ReadMeta("d").Work; got == nil || got.Task != "#3" || got.Step != "s" {
+	if got := s.ReadMeta("d").Work; got == nil || got.Task != "#3" || got.Category != "s" {
 		t.Errorf("published again: %+v", got)
 	}
 	if err := s.Rebuild(picKit(t, "v2", "")); err != nil {
@@ -653,7 +653,7 @@ func TestWorkParentNew(t *testing.T) {
 		{name: "the parent gone", rows: []row{{"#130", ""}}, task: "#130", ed: store.TaskEdit{New: &no, Rev: ptr(1), Parent: ptr("#180"), ParentNew: &no}, want: "project p has no task #180 that can be a parent"},
 		{name: "taken off, moved meanwhile", rows: []row{{"#123", ""}, {"#180", ""}, {"#130", "#180"}}, task: "#130", ed: store.TaskEdit{New: &no, Rev: ptr(0), Parent: ptr("")}, want: "task #130 has changed since it was read", stale: true},
 		{name: "taken off", rows: []row{{"#123", ""}, {"#130", "#123"}}, task: "#130", ed: store.TaskEdit{New: &no, Rev: ptr(1), Parent: ptr("")}, after: map[string]string{"#123": "", "#130": ""}},
-		{name: "a step alone", rows: []row{{"#123", ""}, {"#130", "#123"}}, task: "#130", ed: store.TaskEdit{Step: ptr("build")}, after: map[string]string{"#123": "", "#130": "#123"}},
+		{name: "a category alone", rows: []row{{"#123", ""}, {"#130", "#123"}}, task: "#130", ed: store.TaskEdit{Category: ptr("build")}, after: map[string]string{"#123": "", "#130": "#123"}},
 		{name: "as the CLI, of none", rows: []row{{"#130", ""}}, task: "#130", ed: store.TaskEdit{Parent: ptr("#200")}, want: "project p has no task #200 that can be a parent"},
 	} {
 		t.Run(c.name, func(t *testing.T) {
@@ -775,7 +775,7 @@ func TestWorkRev(t *testing.T) {
 		{name: "new, 2", task: "#140", ed: store.TaskEdit{New: &yes, Rev: ptr(2)}, want: "task #140 has changed since it was read"},
 		{name: "negative", task: "#130", ed: store.TaskEdit{Rev: ptr(-1), State: ptr("done")}, want: "task #130 has changed since it was read"},
 		{name: "no change", task: "#130", ed: store.TaskEdit{New: &no, Rev: ptr(2), State: ptr("doing")}, rev: 2},
-		{name: "no change, no rev", task: "#130", ed: store.TaskEdit{Step: ptr(" ")}, rev: 2},
+		{name: "no change, no rev", task: "#130", ed: store.TaskEdit{Category: ptr(" ")}, rev: 2},
 		{name: "a parent made", task: "#130", ed: store.TaskEdit{New: &no, Rev: ptr(2), Parent: ptr("#200"), ParentNew: &yes, ParentTitle: ptr("pay")}, rev: 3, parent: 1},
 	} {
 		t.Run(c.name, func(t *testing.T) {

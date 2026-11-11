@@ -50,10 +50,10 @@ func TestWorkAPI(t *testing.T) {
 		t.Errorf("no tasks = %v", got)
 	}
 	// The answer is the row as written, under its keys
-	if code, body := patch(task("/", "#a/b"), `{"state":"done","step":"s"}`); code != http.StatusOK || answer(body) != "/ #a/b 1" {
+	if code, body := patch(task("/", "#a/b"), `{"state":"done","category":"s"}`); code != http.StatusOK || answer(body) != "/ #a/b 1" {
 		t.Errorf("a name of / = %d, %s", code, body)
 	}
-	if got := tasks()["/"]["#a/b"]; got.State != "done" || got.Step != "s" {
+	if got := tasks()["/"]["#a/b"]; got.State != "done" || got.Category != "s" {
 		t.Errorf("no project's task: %+v", got)
 	}
 	if code, body := patch(task(" shop ", " #1 "), `{}`); code != http.StatusOK || answer(body) != "shop #1 1" {
@@ -153,7 +153,7 @@ func TestWorkAPI(t *testing.T) {
 		return strings.TrimSpace(w.Body.String())
 	}
 	// The answer of a page's edit is its slug, project and work as written
-	if got := edit(`{"project":"shop","work":{"task":"#1","step":" s "}}`); got != `{"slug":"d","taskProject":"shop","work":{"task":"#1","step":"s"}}` {
+	if got := edit(`{"project":"shop","work":{"task":"#1","category":" s "}}`); got != `{"slug":"d","taskProject":"shop","work":{"task":"#1","category":"s"}}` {
 		t.Errorf("the answer of an edit: %s", got)
 	}
 	forget := func(project, name string) (int, string) {

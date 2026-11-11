@@ -117,7 +117,7 @@ func TestUITaskRev(t *testing.T) { //nolint:paralleltest // the browser tests sh
 		b.eval(watch)
 		b.eval("openTaskSet(items.find((a) => a.slug === 'pa'))")
 		b.until("the dialog", "document.getElementById('set-dialog').open")
-		b.eval("document.getElementById('set-step').value = 'next " + where + "'; pageDown = true")
+		b.eval("document.getElementById('set-category').value = 'next " + where + "'; pageDown = true")
 		say(where+", the page refused", setSave)
 		b.eval("pageDown = false")
 	}

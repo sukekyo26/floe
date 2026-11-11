@@ -30,6 +30,13 @@ floe turns a YAML file you write into a page for the user: it checks the file, r
 - floe identifies a page by its source file, not by the directory you run floe from: publish the same file again, from any directory, without `--slug`, and it replaces its page, even after the user renamed the page on the management page.
 - If floe refuses the name, a page of another file has it: rename your file (`db-choice-2.yaml`) or pass another `--slug`, and publish it again.
 
+## Tasks
+
+The user may put pages on tasks of the task list, and group a task's pages by category. Change these only when the user asks; `floe work --help` tells how.
+
+- A category is where a page is placed among its task's pages, and the user decides it. Do not give `--category`, or change a page's category, unless the user asks.
+- After `--move-project` (step 5 of [Writing a page](#writing-a-page)), putting the page back on the task it was on is part of that fix: give `--task` alone, and leave its category as it is.
+
 ## Themes
 
 - Do not write `theme` unless the user names a theme for the page. The user picks themes on the management page, at the root of the page's URL.

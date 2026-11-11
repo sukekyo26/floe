@@ -157,12 +157,12 @@ func TestUIRowActions(t *testing.T) { //nolint:paralleltest // the browser tests
 	b.eval(undo("d") + ".focus(); " + undo("d") + ".click()")
 	out = append(out, "whole: "+b.until("the bar's button", undo("d")+" === null && document.activeElement.matches('#frame-actions > .archive') && document.activeElement.title"))
 
-	// A task's page: the row stays under its step, dimmed, keeping its key, and the focus on its button.
+	// A task's page: the row stays under its category, dimmed, keeping its key, and the focus on its button.
 	for _, slug := range []string{"a", "e"} {
 		b.eval(`fetch('/api/artifacts/` + slug + `', { method: 'PATCH', headers: { 'Content-Type': 'application/json' }, body: '{"archived":false}' })`)
 	}
-	s.floe(t, "work", "a", "--task", "#1", "--step", "one")
-	s.floe(t, "work", "b", "--task", "#1", "--step", "two")
+	s.floe(t, "work", "a", "--task", "#1", "--category", "one")
+	s.floe(t, "work", "b", "--task", "#1", "--category", "two")
 	b.navigate("/tasks?project=one&task=%231")
 	b.until("the task's page", there("a")+" && "+there("b")+" && document.querySelector('#task-project .proj-name')")
 	say("the task's head", "document.querySelector('#task-project').textContent + ' ' + (getComputedStyle(document.querySelector('#task-project')).backgroundColor !== 'rgba(0, 0, 0, 0)')")
