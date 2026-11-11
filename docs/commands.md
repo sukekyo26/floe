@@ -246,6 +246,8 @@ task #130 in project floe: made
 page design-notes: task #130 in project floe
 $ floe work --task "#130" --state doing
 task #130 in project floe: changed; state doing
+$ floe work design-notes --task ""
+page design-notes: no task
 $ floe work --task "#130" --forget
 task #130 in project floe: forgotten
 ```

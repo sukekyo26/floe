@@ -33,7 +33,7 @@ func (a *app) workCmd() *cobra.Command {
 	var f workFlags
 	cmd := &cobra.Command{
 		Use:   "work [<slug>...]",
-		Short: "Put pages on a task of the task list, pin them, or change a task's state, URL, title or categories' order",
+		Short: "Put pages on a task, pin them, or change a task's state, URL, title, parent or categories' order",
 		Long: `With slugs, put the pages on a task and change that task; without, change the task --task names, of
 --project (the project of the working directory when left out; "" for none).
 
