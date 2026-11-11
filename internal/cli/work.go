@@ -380,7 +380,7 @@ func (a *app) readPages(ctx context.Context, slugs []string) error {
 		if err != nil {
 			return err
 		}
-		pages = append(pages, store.Edited{Slug: page.Slug, TaskProject: page.TaskProject, Work: page.Work})
+		pages = append(pages, store.Edited{Slug: page.Slug, TaskProject: page.TaskProject, Work: page.Work, OffTask: ""})
 	}
 	for _, page := range pages {
 		a.tellPage(page)

@@ -281,7 +281,7 @@ func (s *Store) writeWork(all Tasks, w WorkWrite, refs []taskRef, pages []workPa
 		if err := s.WriteMeta(p.slug, p.meta); err != nil {
 			return WorkWritten{}, err
 		}
-		out.Pages = append(out.Pages, Edited{Slug: p.slug, TaskProject: p.ref.project, Work: p.meta.Work})
+		out.Pages = append(out.Pages, Edited{Slug: p.slug, TaskProject: p.ref.project, Work: p.meta.Work, OffTask: ""})
 	}
 	return out, nil
 }
