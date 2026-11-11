@@ -68,7 +68,7 @@ func TestMark(t *testing.T) {
 		},
 		{
 			name: "a diagram gone", from: `<h2>T</h2><p>kept</p><div data-floe-part="diagram"><svg viewBox="0 0 10 10"><text>x</text></svg></div>`, to: `<h2>T</h2><p>kept</p>`,
-			has: []string{`<div data-floe-part="diagram" class="floe-diff-gone floe-diff-out">`},
+			has: []string{`<div data-floe-part="diagram" class="floe-diff-gone floe-diff-out"><svg`},
 		},
 		{
 			name: "items gone one after another", from: "<h2>T</h2><ul><li>one</li><li>gone item</li><li>gone too</li></ul>", to: "<h2>T</h2><ul><li>one</li></ul>",

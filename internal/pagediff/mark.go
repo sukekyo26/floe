@@ -809,7 +809,7 @@ func (m *marker) spot(n *html.Node) *html.Node {
 }
 
 // put puts span in n where it is held: before n's first words held where a span can be (not the words for a screen
-// reader), else first in a box floe put in that holds it. False for nowhere.
+// reader), else just before n, a box floe put in. False for nowhere.
 func (m *marker) put(n, span *html.Node) bool {
 	for d := range withSelf(n) {
 		if d.Type == html.TextNode && strings.TrimFunc(d.Data, unicode.IsSpace) != "" && d.Parent != nil &&
@@ -818,8 +818,9 @@ func (m *marker) put(n, span *html.Node) bool {
 			return true
 		}
 	}
-	if m.added[n] && m.holds(n, "span") {
-		n.InsertBefore(span, n.FirstChild)
+	// Not inside a box floe put in, which may be a part copied whose CSS reads its children: just before it.
+	if m.added[n] && n.Parent != nil && m.holds(n.Parent, "span") {
+		n.Parent.InsertBefore(span, n)
 		return true
 	}
 	return false
