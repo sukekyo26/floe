@@ -5402,8 +5402,10 @@
     if (e.detail === 0) $('set-dialog').addEventListener('close', () => res.button.focus(), { once: true });
     $('set-dialog').close();
   }
+  // The list's rows: a page whole has no list
+  const listRows = () => [...($('list')?.children ?? [])];
   // The add button of a category's heading, as drawn now
-  const categoryAdd = (category) => [...$('list').children].find((li) => li.dataset.key === `group:${category}`)?.querySelector('.category-add');
+  const categoryAdd = (category) => listRows().find((li) => li.dataset.key === `group:${category}`)?.querySelector('.category-add');
   // The page alone off its task: its pin stays, and the task's row. Its way back puts the page back on the task and category it was on, which
   // makes the row again when the task went meanwhile; Escape on it leaves the focus on back (the menu it came from),
   // the row after it, its category's add button, or the task's edit button
@@ -5411,14 +5413,15 @@
   async function takePageOff(a, back) {
     const name = a.work.task;
     const category = a.work.category ?? '';
-    const rows = [...$('list').children].filter((li) => !li.classList.contains('group') && li.querySelector('.title'));
+    const rows = listRows().filter((li) => !li.classList.contains('group') && li.querySelector('.title'));
     const at = rows.findIndex((li) => li.dataset.key === `entry:${a.slug}`);
     const next = at === -1 ? null : (rows[at + 1] ?? rows[at - 1])?.dataset.key;
     const reason = await workOf(a.slug, { task: '', category: '' });
     if (reason) return { reason };
-    // The way back is of the task as the toast shows it: its rev as read now, or new when it has no row
+    // The way back is of the task as the toast shows it: its rev as read now, or new when it has no row. A page whole's load reads no tasks
+    if (framed) tasksRead = await readTasks();
     const seen = Object.hasOwn(tasksRead.tasks[a.taskProject] ?? {}, name) ? { new: false, rev: readRev(a.taskProject, name) } : { new: true };
-    const rowOf = (key) => [...$('list').children].find((li) => li.dataset.key === key)?.querySelector('.title');
+    const rowOf = (key) => listRows().find((li) => li.dataset.key === key)?.querySelector('.title');
     const edit = () => ($('task-edit').closest('[hidden]') ? null : $('task-edit'));
     const button = undoToast(t('ui_task_out_done', a.title, name), {
       undo: async () => {

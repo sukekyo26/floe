@@ -247,6 +247,17 @@ func TestUITaskCategories(t *testing.T) { //nolint:paralleltest // the browser t
 	say("back as it was", "sent.join(' ; ')")
 	out = append(out, "back as it was, written: "+row("G2")+" / "+work("g-a"))
 
+	// Off its task from a page whole's bar, whose load reads no tasks: the way back is of the task's row as read then.
+	b.navigate("/a/review-a/")
+	b.until("the bar", "document.querySelector('#frame-actions .task-out')")
+	record()
+	b.eval("document.querySelector('#frame-actions .more').open = true; document.querySelector('#frame-actions .task-out').click()")
+	b.until("the way back", "document.querySelector('#toasts .undo')")
+	b.eval("sent.length = 0; document.querySelector('#toasts .undo').click()")
+	b.until("written back", "answered === 2")
+	say("whole, back", "sent.join(' ; ') + ' ' + document.getElementById('error').hidden")
+	out = append(out, "whole, back, written: "+work("review-a"))
+
 	// Only a page on a task has the item.
 	b.navigate("/")
 	b.until("the rows", "document.querySelector('#list li[data-slug=far-a]')")
@@ -299,6 +310,8 @@ func TestUITaskCategories(t *testing.T) { //nolint:paralleltest // the browser t
 		"keys, escape: note-a 0",
 		`back as it was: /api/work {"slugs":["g-a"],"task":"","category":""} ; /api/work {"slugs":["g-a"],"task":"G2","category":"x","new":true}`,
 		"back as it was, written: 1 / G2/x",
+		`whole, back: /api/work {"slugs":["review-a"],"task":"S300","category":"レビュー","new":false,"rev":6} true`,
+		"whole, back, written: S300/レビュー",
 		"item: true false Take T build-a off its task",
 		"dialog, focus: btn undo",
 		"dialog, escape: SUMMARY build-a",
