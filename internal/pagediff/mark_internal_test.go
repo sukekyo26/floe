@@ -37,6 +37,9 @@ func threeTabs(title, panel string) string {
 	return `<form data-floe-part="tabs">` + tab("One", "First panel", " checked") + middle + tab("Three", "Third panel", "") + `</form>`
 }
 
+// spanning is a small table whose cell spans two columns.
+const spanning = `<table><tbody><tr><td colspan="2">in</td></tr></tbody></table>`
+
 // tabs is floe's part tabs, the second not picked holding %s.
 const tabs = `<form data-floe-part="tabs"><label><input type="radio" name="tab" checked>One</label><div><p>The first tab</p></div>` +
 	`<label><input type="radio" name="tab">Two</label><div><p>%s</p></div></form>`
@@ -193,6 +196,11 @@ func TestMark(t *testing.T) {
 		{
 			name: "a tab picked keeps a box checked", from: "<h2>T</h2><p>kept</p>" + fmt.Sprintf(tabs, `gone <input type="checkbox" checked> box`), to: "<h2>T</h2><p>kept</p>",
 			has: []string{`<input type="checkbox" checked=""/>`},
+		},
+		{
+			name: "a column gone by a table in a cell that spans", from: table("<th>Name</th><th>Short</th><th>Long</th>", "<td>alpha</td><td>x</td><td>the long words of one</td>", `<td>beta</td><td>yy</td><td>the long words of two `+spanning+`</td>`),
+			to:  table("<th>Name</th><th>Long</th>", "<td>alpha</td><td>the long words of one</td>", `<td>beta</td><td>the long words of two `+spanning+`</td>`),
+			has: []string{`<td>alpha</td><td class="floe-diff-gone"><del class="floe-diff-del"><span class="floe-diff-sr">Gone </span>x</del></td>`},
 		},
 		{
 			name: "copy apart", from: `<h2>T</h2><p>kept</p><details name="g"><p>a gone part</p></details>`, to: `<h2>T</h2><p>kept</p>`,
