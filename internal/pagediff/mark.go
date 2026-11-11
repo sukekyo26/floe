@@ -103,9 +103,12 @@ type marker struct {
 	words      Words
 	// last is the later's element gone through last, in box, its section's box; tail what was put in after it last.
 	last, lastBox, tail *html.Node
-	// pending waits to go in after last; up is how far the first of it was copied from above its section's box.
+	// pending waits to go in; copyOf is the earlier's element the first of it is a copy of, which places it (goneAt), nil
+	// for what goes after last.
 	pending []*html.Node
-	up      int
+	copyOf  *html.Node
+	// later is the later's block or heading of each of the earlier's that is paired.
+	later map[*html.Node]*html.Node
 	// added is what floe put in; kept, the earlier's elements that hold a block the later keeps; copied, those copied.
 	added, kept, copied map[*html.Node]bool
 	held                map[holdKey]bool
@@ -140,7 +143,8 @@ type holdKey struct {
 
 func newMarker(root *html.Node, words Words) *marker {
 	return &marker{
-		root: root, body: bodyOf(root), words: words, last: nil, lastBox: nil, tail: nil, pending: nil, up: 0,
+		root: root, body: bodyOf(root), words: words, last: nil, lastBox: nil, tail: nil, pending: nil, copyOf: nil,
+		later: map[*html.Node]*html.Node{},
 		added: map[*html.Node]bool{}, kept: map[*html.Node]bool{}, copied: map[*html.Node]bool{},
 		held: map[holdKey]bool{}, edits: nil, ordinals: map[*html.Node]map[*html.Node]int{}, gones: nil, branch: nil,
 		copies: 0, tables: tables{}, rows: map[*html.Node]*html.Node{}, lastRow: map[*html.Node]*html.Node{},
@@ -168,7 +172,7 @@ func boxes(sections []section, body *html.Node) []*html.Node {
 // mark marks the later page, walking the comparison's sections and blocks in order.
 func (m *marker) mark(treeA *html.Node, a, b []section, c compared) {
 	boxA, boxB := boxes(a, bodyOf(treeA)), boxes(b, m.body)
-	m.keepPaired(a, c.steps)
+	m.keepPaired(a, b, c.steps)
 	for i, st := range c.steps {
 		m.cur = nil
 		switch {
@@ -180,18 +184,19 @@ func (m *marker) mark(treeA *html.Node, a, b []section, c compared) {
 			m.changed(i, a[st.from], b[st.to], boxA[st.from], boxB[st.to], st.pairs, c.result.Sections[i].Heading)
 		}
 	}
-	m.flush(nil, nil)
+	m.flush()
 	m.writeWords()
 	m.trim()
 }
 
 // keepPaired keeps the earlier page's blocks and headings that are paired, as they are not gone, and the tables whose
 // rows' cells are compared.
-func (m *marker) keepPaired(a []section, steps []step) {
+func (m *marker) keepPaired(a, b []section, steps []step) {
 	for _, st := range steps {
 		for _, p := range st.pairs {
 			if p.from != nil && p.to != nil {
 				m.keep(p.from.node)
+				m.later[p.from.node] = p.to.node
 				if m.cellsCompared(p.from, p.to) {
 					m.rows[tableOf(p.from.node)] = tableOf(p.to.node)
 				}
@@ -199,6 +204,9 @@ func (m *marker) keepPaired(a []section, steps []step) {
 		}
 		if st.from >= 0 && st.to >= 0 {
 			m.keep(a[st.from].head)
+			if h := a[st.from].head; h != nil && b[st.to].head != nil {
+				m.later[h] = b[st.to].head
+			}
 		}
 	}
 }
@@ -289,7 +297,7 @@ func (m *marker) keep(n *html.Node) {
 
 // visit goes on to n of the later page, in its section's box: what is gone before it goes in first.
 func (m *marker) visit(n, box *html.Node) {
-	m.flush(n, box)
+	m.flush()
 	m.last, m.lastBox, m.tail, m.branch = n, box, nil, nil
 }
 
@@ -328,8 +336,7 @@ func (m *marker) gone(sec int, b *block, box *html.Node) {
 
 // copyGone puts what is gone in as its part copied, as gone tells.
 func (m *marker) copyGone(sec int, b *block, box *html.Node) {
-	holder := m.boxOf(b.node, box)
-	under := childOf(b.node, holder)
+	under := childOf(b.node, m.boxOf(b.node, box))
 	if under == nil {
 		under = b.node
 	}
@@ -345,7 +352,7 @@ func (m *marker) copyGone(sec int, b *block, box *html.Node) {
 	}
 	m.copied[under] = true
 	if len(m.pending) == 0 {
-		m.up = depth(box) - depth(holder)
+		m.copyOf = under
 	}
 	c := &goneCopy{
 		under: under, root: nil, of: nil, back: map[*html.Node]*html.Node{}, gone: nil, whole: whole,
@@ -371,15 +378,6 @@ func (m *marker) boxOf(n, box *html.Node) *html.Node {
 		box = box.Parent
 	}
 	return box
-}
-
-// depth is the number of n's ancestors.
-func depth(n *html.Node) int {
-	d := 0
-	for a := n.Parent; a != nil; a = a.Parent {
-		d++
-	}
-	return d
 }
 
 // waitingRow is a row gone of a table, at sec in its section's box, to put in before the first row of it gone through.
@@ -806,11 +804,11 @@ func (m *marker) before(sec int, n *html.Node) {
 	d.AppendChild(summary)
 	d.AppendChild(m.copyOld(part))
 	if len(m.pending) == 0 {
-		m.up = 0
+		m.copyOf = nil
 	}
 	m.pending = append(m.pending, d)
 	m.place(sec, d)
-	m.flush(nil, nil)
+	m.flush()
 }
 
 // partOf is the nearest element a part draws that holds n, n itself for none: a diagram's frame clips what is
@@ -824,12 +822,9 @@ func partOf(n *html.Node) *html.Node {
 	return n
 }
 
-// flush puts in what is pending: after what was put in last, else under the box of what was gone through last, gone
-// up from it as far as the part pending was copied from above its own box in the earlier (up), after the element there
-// that holds it; else before the one that holds next, else at the end of body.
-// LIMIT: a section gone, whose box has none in the later, goes up from the box of the section before it: after a
-// subsection, it goes in the section that holds the subsection, after it. Pair the boxes if that comes to mislead.
-func (m *marker) flush(next, nextBox *html.Node) {
+// flush puts in what is pending: after what was put in last; else a copy where its element was (goneAt); else after
+// the element under its box that holds what was gone through last.
+func (m *marker) flush() {
 	if len(m.pending) == 0 {
 		return
 	}
@@ -837,37 +832,82 @@ func (m *marker) flush(next, nextBox *html.Node) {
 	switch {
 	case m.tail != nil:
 		parent, before = m.tail.Parent, m.tail.NextSibling
-	case m.last != nil:
-		box := m.lastBox
-		for range m.up {
-			if box.Parent == nil || box.DataAtom == atom.Body {
-				break
-			}
-			box = box.Parent
-		}
-		if under := childOf(m.last, box); under != nil {
-			for under.NextSibling != nil && m.added[under.NextSibling] {
-				under = under.NextSibling
-			}
-			parent, before = under.Parent, under.NextSibling
-		} else {
-			parent, before = box, nil
-		}
-	case next != nil:
-		if under := childOf(next, nextBox); under != nil {
-			parent, before = under.Parent, under
-		} else {
-			parent, before = nextBox, nextBox.FirstChild
-		}
+	case m.copyOf != nil:
+		parent, before = m.goneAt(m.copyOf)
 	default:
-		parent, before = m.body, nil
+		under := childOf(m.last, m.lastBox)
+		if under == nil {
+			under = m.last
+		}
+		parent, before = m.after(under)
 	}
 	for _, n := range m.pending {
 		parent.InsertBefore(n, before)
 		m.added[n] = true
 	}
 	m.tail = m.pending[len(m.pending)-1]
-	m.pending = nil
+	m.pending, m.copyOf = nil, nil
+}
+
+// goneAt is where the copy of old, the earlier's element that holds what is gone, goes in the later: after the later's
+// of old, when it holds a block kept (a copy of its branches to what is gone); else after the later's of the nearest
+// sibling before it that holds one, else before the later's of the nearest after it, else so for its parent, else at
+// the end of body.
+// LIMIT: an element's later one is the element as far above the later's of its first block kept as it is above that
+// block: a page whose later version wraps or unwraps the blocks within it takes another.
+func (m *marker) goneAt(old *html.Node) (parent, before *html.Node) {
+	if later := m.laterOf(old); later != nil {
+		return m.after(later)
+	}
+	for n := old; n != nil && n.Parent != nil; n = n.Parent {
+		for s := n.PrevSibling; s != nil; s = s.PrevSibling {
+			if later := m.laterOf(s); later != nil {
+				return m.after(later)
+			}
+		}
+		for s := n.NextSibling; s != nil; s = s.NextSibling {
+			if later := m.laterOf(s); later != nil {
+				return later.Parent, later
+			}
+		}
+	}
+	return m.body, nil
+}
+
+// after is the place after n, past what floe put in after it.
+func (m *marker) after(n *html.Node) (parent, before *html.Node) {
+	for n.NextSibling != nil && m.added[n.NextSibling] {
+		n = n.NextSibling
+	}
+	return n.Parent, n.NextSibling
+}
+
+// laterOf is the later's element of n, of the earlier: as far above the later's of the first block kept in n as n is
+// above that block. Nil when n holds none kept, or the later has nothing so far up.
+func (m *marker) laterOf(n *html.Node) *html.Node {
+	if !m.kept[n] {
+		return nil
+	}
+	up := 0
+	for m.later[n] == nil {
+		c := n.FirstChild
+		for c != nil && !m.kept[c] {
+			c = c.NextSibling
+		}
+		if c == nil {
+			return nil
+		}
+		n = c
+		up++
+	}
+	later := m.later[n]
+	for ; up > 0 && later != nil; up-- {
+		later = later.Parent
+	}
+	if later == nil || later.Parent == nil {
+		return nil
+	}
+	return later
 }
 
 // childOf is the element that holds n (n itself too) whose parent is box: nil when box holds n not.
