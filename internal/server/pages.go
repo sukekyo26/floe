@@ -16,6 +16,7 @@ import (
 	"floe/internal/draw"
 	"floe/internal/files"
 	"floe/internal/i18n"
+	"floe/internal/page"
 	"floe/internal/store"
 	"floe/internal/usererr"
 )
@@ -71,8 +72,15 @@ var errNoPage = errors.New("no such page")
 // versions into the server's watching if tabs come to be hundreds.
 // LIMIT: a linked data file's images, and the files under a linked HTML file, are not in its version: changing
 // only them reloads no tab (the user chose so). Save the data file again, or reload the tab.
-func (s *Server) version(slug string, m *store.Meta, rest string, v int) string {
+func (s *Server) version(slug string, m *store.Meta, rest string, v int, diff diffOf) string {
 	if m == nil {
+		return ""
+	}
+	// A diff's page is of its two versions: the key /diff told, which tells it apart from any other pair.
+	if diff.from > 0 {
+		if key := s.cfg.Store.PairKey(slug, m, diff.from, v); key != "" {
+			return s.id + ".diff." + key
+		}
 		return ""
 	}
 	if v > 0 {
@@ -101,16 +109,35 @@ func (s *Server) version(slug string, m *store.Meta, rest string, v int) string 
 // that cannot be read) is its mistakes, its body the page of them in the language of c, drawn with what drawing
 // returns. drawn tells a page floe drew, whose CSP cuts it off. errNoPage for none.
 // LIMIT: no Range support. Add it if videos need seeking.
-func (s *Server) content(
-	c *i18n.Catalog, slug string, m *store.Meta, rest string, v int, drawing func() store.Drawing, cut bool,
-) (served, error) {
+// versionContent is the stored page's version v, or with diff the later version v marked with what changed from diff's.
+func (s *Server) versionContent(c *i18n.Catalog, slug string, m *store.Meta, v int, diff diffOf) (served, error) {
 	none := served{body: nil, typ: "", drawn: false}
-	if v > 0 {
+	if diff.from == 0 {
 		page, ok := s.cfg.Store.VersionPage(slug, m, v)
 		if !ok {
 			return none, errNoPage
 		}
 		return served{body: io.NopCloser(bytes.NewReader(page)), typ: htmlType, drawn: true}, nil
+	}
+	if s.cfg.Store.PairKey(slug, m, diff.from, v) != diff.key {
+		return none, errNoPage
+	}
+	got, ok, err := s.compared(slug, m, diff.from, v, c)
+	if err != nil {
+		return none, err //nolint:wrapcheck // the library's words, as /diff tells them
+	}
+	if !ok {
+		return none, errNoPage
+	}
+	return served{body: io.NopCloser(bytes.NewReader(got.page)), typ: htmlType, drawn: true}, nil
+}
+
+func (s *Server) content(
+	c *i18n.Catalog, slug string, m *store.Meta, rest string, v int, diff diffOf, drawing func() store.Drawing, cut bool,
+) (served, error) {
+	none := served{body: nil, typ: "", drawn: false}
+	if v > 0 {
+		return s.versionContent(c, slug, m, v, diff)
 	}
 	file, ok := s.cfg.Store.File(slug, m, rest)
 	if !ok {
@@ -146,6 +173,28 @@ func versionParam(m *store.Meta, rest string, q url.Values) (int, bool) {
 		return 0, true
 	}
 	return versionNumber(q.Get("v"))
+}
+
+// diffOf is the earlier version a version is marked against, and the key of /diff that ties the two: none, from 0.
+type diffOf struct {
+	from int
+	key  string
+}
+
+// noDiff is a page marked against no earlier version.
+var noDiff = diffOf{from: 0, key: ""}
+
+// diffParam is the earlier version ?from= of q asks to mark version v against, with its ?key=: none when q asks none,
+// false for one that cannot be: not a number, not before v, or of no stored page's own URL.
+func diffParam(m *store.Meta, rest string, v int, q url.Values) (diffOf, bool) {
+	if !q.Has("from") {
+		return noDiff, true
+	}
+	from, ok := versionNumber(q.Get("from"))
+	if !ok || m == nil || m.IsLink() || rest != "" || from >= v {
+		return noDiff, false
+	}
+	return diffOf{from: from, key: q.Get("key")}, true
 }
 
 // versionNumber reads raw as what can be a version's number: 1 or more, in plain digits. Whether there is such a
@@ -186,6 +235,44 @@ func pageHeaders(w http.ResponseWriter, r *http.Request, drawn bool) {
 // version, and of a stored page the version it tells its frame it served, are taken from the meta.json
 // its content is served by, before the content: a change in between costs one extra reload, not a miss. A stored
 // page whose copy a publish removed after its meta.json was read is read once more.
+// look is a page served: its version and tab mark, its read mark, and what it is.
+type look struct {
+	version string
+	read    *Read
+	got     served
+	v       int
+	diff    diffOf
+}
+
+// lookAt is the page of slug that r asks for, rest under it and q its query, as the store is now: errNoPage when there
+// is none, which may be that a publish or rm came between what it read.
+func (s *Server) lookAt(r *http.Request, slug, rest string, q url.Values) (look, error) {
+	var l look
+	m := s.cfg.Store.ReadMeta(slug)
+	var ok bool
+	if l.v, ok = versionParam(m, rest, q); m == nil || !ok {
+		return l, errNoPage
+	}
+	if l.diff, ok = diffParam(m, rest, l.v, q); !ok {
+		return l, errNoPage
+	}
+	l.version = s.version(slug, m, rest, l.v, l.diff)
+	if l.v > 0 && l.version == "" {
+		return l, errNoPage
+	}
+	// A diff is not read: opening it marks nothing read, nor takes a mark back.
+	if rest == "" && l.diff.from == 0 {
+		if mark, ok := s.cfg.Store.ReadMark(slug, m, l.v); ok {
+			l.read = &Read{N: mark.N, At: mark.At}
+		}
+	}
+	// Of the last look, as the version is: one changed since reloads the tab.
+	now := func() store.Drawing { d, _ := s.now(); return d }
+	var err error
+	l.got, err = s.content(catalog(r), slug, m, rest, l.v, l.diff, now, false)
+	return l, err
+}
+
 func (s *Server) servePage(w http.ResponseWriter, r *http.Request) {
 	slug, rest := r.PathValue("slug"), r.PathValue("rest")
 	q := r.URL.Query()
@@ -193,32 +280,22 @@ func (s *Server) servePage(w http.ResponseWriter, r *http.Request) {
 		s.frame(w, r, slug)
 		return
 	}
-	var version string
-	var read *Read
-	var got served
-	var v int
+	var l look
 	err := errNoPage
 	for try := 0; try < 2 && errors.Is(err, errNoPage); try++ {
-		m := s.cfg.Store.ReadMeta(slug)
-		var ok bool
-		if v, ok = versionParam(m, rest, q); m == nil || !ok {
-			break
-		}
-		version = s.version(slug, m, rest, v)
-		if v > 0 && version == "" {
-			break
-		}
-		read = nil
-		if rest == "" {
-			if mark, ok := s.cfg.Store.ReadMark(slug, m, v); ok {
-				read = &Read{N: mark.N, At: mark.At}
-			}
-		}
-		// Of the last look, as the version is: one changed since reloads the tab.
-		got, err = s.content(catalog(r), slug, m, rest, v, func() store.Drawing { d, _ := s.now(); return d }, false)
+		l, err = s.lookAt(r, slug, rest, q)
+	}
+	got := l.got
+	if errors.Is(err, errNoPage) && rest == "" && q.Has("from") {
+		diffNotFound(w, r)
+		return
 	}
 	if errors.Is(err, errNoPage) {
 		notFound(w)
+		return
+	}
+	if got.body == nil {
+		refuse(w, r, err)
 		return
 	}
 	defer got.body.Close() //nolint:errcheck // read-only
@@ -226,9 +303,21 @@ func (s *Server) servePage(w http.ResponseWriter, r *http.Request) {
 	pageHeaders(w, r, got.drawn)
 	tail := ""
 	if got.typ == htmlType {
-		tail = servedScript(slug, rest, version, v, read, got.drawn)
+		tail = servedScript(slug, rest, l.version, l.v, l.read, got.drawn, l.diff)
 	}
 	stream(w, got.typ, got.body, tail)
+}
+
+// diffNotFound answers a diff's page that is not there, as when a publish changed its pair's key between /diff and
+// the page: it tells the diff, as a diff's page whose versions changed does, which reads what changed again.
+func diffNotFound(w http.ResponseWriter, r *http.Request) {
+	script, err := page.Script("() => { "+tellChanged+"; }", nil)
+	if err != nil {
+		notFound(w)
+		return
+	}
+	pageHeaders(w, r, false)
+	sendBytes(w, http.StatusNotFound, htmlType, []byte("<!doctype html><title>not found</title>not found"+script))
 }
 
 // frame answers the frame of slug, 404 when there is no page to frame. A folder has no page of its own: its URL is the
@@ -287,7 +376,7 @@ func (s *Server) download(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	// A file kept is not mended by the watch: of what the directories hold now.
-	got, err := s.content(catalog(r), slug, m, "", v, s.latest, true)
+	got, err := s.content(catalog(r), slug, m, "", v, noDiff, s.latest, true)
 	switch {
 	case errors.Is(err, errNoPage):
 		notFound(w)
@@ -389,12 +478,15 @@ func tellRead(read *Read) string {
 // report's j and k). Nothing is taken until the frame says it takes them, of this origin, so that a page in another
 // iframe keeps the browser's / and Ctrl+K. It listens on window, after the page's own. Shift is not looked at, as ? is
 // typed with it on most keyboards; Ctrl+Shift+K has the key K. A field is the one to type in; a checkbox and a radio
-// (the part tabs) are not.
+// (the part tabs) are not. The page of a diff hands over n and p, which go through its places, in place of j, k and h.
 // LIMIT: a field inside a shadow root is seen as its host, and hands the keys over.
 // LIMIT: a page floe drew with a script of its own that takes these keys without preventDefault does both.
-func tellKeys(drawn bool) string {
+func tellKeys(drawn, diff bool) string {
 	letters := "[]"
-	if drawn {
+	switch {
+	case diff:
+		letters = "['n', 'p', 'd', '?', '/']"
+	case drawn:
 		letters = "['j', 'k', 'h', 'd', '?', '/']"
 	}
 	return "{const here = location.protocol + '//' + location.host; let wanted = false;" +
@@ -414,6 +506,10 @@ func tellKeys(drawn bool) string {
 // apart from it so that the page's asking does not follow a test's shorter watching.
 const askEvery = time.Second
 
+// tellChanged tells the frame of a diff that its page's versions changed, from the page at the path it was given.
+const tellChanged = "window.parent.postMessage({ artifactChanged: true, artifactPath: location.pathname }, " +
+	"location.protocol + '//' + location.host)"
+
 // servedScript is appended to a served page only: it reloads the open tab when the page changes (a publish, a
 // rebuild, a linked file saved), and handles links inside the frame. The page holds no connection to the server,
 // as Chrome opens six at most to one server and an open tab holding one would make the next pages wait: while it is
@@ -424,7 +520,7 @@ const askEvery = time.Second
 // drawn tells a page floe drew (tellKeys).
 // LIMIT: that a tab not shown asks nothing is not checked in a browser: headless Chrome showed no tab hidden. Were it
 // broken, a tab not shown asks every second, holding nothing.
-func servedScript(slug, rest, version string, v int, read *Read, drawn bool) string {
+func servedScript(slug, rest, version string, v int, read *Read, drawn bool, diff diffOf) string {
 	u := "/api/changed/" + slug
 	if rest != "" {
 		parts := strings.Split(rest, "/")
@@ -437,16 +533,23 @@ func servedScript(slug, rest, version string, v int, read *Read, drawn bool) str
 	if v > 0 {
 		u += "&v=" + strconv.Itoa(v)
 	}
+	// A diff's page, its versions changed, tells the diff, which reads what changed again and the pages with it: it
+	// does not load itself again with a key no longer theirs.
+	again := "location.reload();"
+	if diff.from > 0 {
+		u += "&from=" + strconv.Itoa(diff.from)
+		again = tellChanged + ";"
+	}
 	lit, _ := json.Marshal(u) //nolint:errcheck // a string always encodes
 	// What a page could shadow is read through window, as in leaveFrame. busy stays set once reloading.
 	return "\n<script>{const u = " + string(lit) + "; let busy = false;" +
 		"const look = async () => { if (busy || window.document.hidden) return; busy = true;" +
 		"try { const r = await window.fetch(u, { cache: 'no-store', signal: window.AbortSignal.timeout(5000) });" +
-		"if ((await r.text()) === 'changed') { location.reload(); return; } } catch {}" +
+		"if ((await r.text()) === 'changed') { " + again + " return; } } catch {}" +
 		"busy = false; };" +
 		"window.setInterval(look, " + strconv.FormatInt(askEvery.Milliseconds(), 10) + ");" +
 		"window.document.addEventListener('visibilitychange', look); look();" +
-		leaveFrame + tellRead(read) + tellKeys(drawn) + "}</script>\n"
+		leaveFrame + tellRead(read) + tellKeys(drawn, diff.from > 0) + "}</script>\n"
 }
 
 // changed answers whether the page of slug (of rest under a link) is no longer of the version since: "changed" or
@@ -463,9 +566,11 @@ func (s *Server) changed(w http.ResponseWriter, r *http.Request) {
 	answer := "same"
 	q := r.URL.Query()
 	m := s.cfg.Store.ReadMeta(slug)
-	if v, ok := versionParam(m, rest, q); !ok {
+	v, ok := versionParam(m, rest, q)
+	diff, diffOK := diffParam(m, rest, v, q)
+	if !ok || !diffOK {
 		answer = "changed"
-	} else if version := s.version(slug, m, rest, v); version == "" || version != q.Get("since") {
+	} else if version := s.version(slug, m, rest, v, diff); version == "" || version != q.Get("since") {
 		answer = "changed"
 	}
 	h := w.Header()

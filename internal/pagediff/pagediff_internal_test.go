@@ -1,6 +1,7 @@
 package pagediff
 
 import (
+	"encoding/json"
 	"flag"
 	"fmt"
 	"os"
@@ -29,23 +30,56 @@ func spans(sp []Span) string {
 	return b.String()
 }
 
-// told is a result as a person reads it, a block the same left out.
-func told(r Result) string {
-	var b strings.Builder
-	for _, s := range r.Sections {
-		fmt.Fprintf(&b, "%s h%d %s\n", s.State, s.Level, spans(s.Heading))
-		for _, block := range s.Blocks {
-			if len(block.Spans) == 1 && block.Spans[0].Op == opSame && !block.Reshaped {
-				continue
+// readSections is the sections of page, read as Compare reads them.
+func readSections(t *testing.T, page []byte) []section {
+	t.Helper()
+
+	_, sections, err := readTree(page)
+	if err != nil {
+		t.Fatal(err)
+	}
+	return sections
+}
+
+// told is the comparison of two pages within most as a person reads it, a block the same left out: each section by its
+// state and heading, each block by its kind and its words as they differ, reshaped for a diagram or image whose words
+// are the same and whose content differs.
+func told(t *testing.T, from, to string, most int) string {
+	t.Helper()
+
+	a, b := readSections(t, []byte(from)), readSections(t, []byte(to))
+	c := compare(a, b, newWork(most))
+	var out strings.Builder
+	line := func(kind, words string) { fmt.Fprintf(&out, "  [%s] %s\n", kind, words) }
+	for i, s := range c.result.Sections {
+		fmt.Fprintf(&out, "%s h%d %s\n", s.State, s.Level, spans(s.Heading))
+		st := c.steps[i]
+		switch {
+		case st.from < 0:
+			for _, blk := range b[st.to].blocks {
+				line(blk.kind, "{+"+blk.text+"+}")
 			}
-			kind := block.Kind
-			if block.Reshaped {
-				kind += " reshaped"
+		case st.to < 0:
+			for _, blk := range a[st.from].blocks {
+				line(blk.kind, "[-"+blk.text+"-]")
 			}
-			fmt.Fprintf(&b, "  [%s] %s\n", kind, spans(block.Spans))
+		case s.State == StateChanged:
+			for _, p := range st.pairs {
+				switch {
+				case p.from == nil:
+					line(p.to.kind, "{+"+p.to.text+"+}")
+				case p.to == nil:
+					line(p.from.kind, "[-"+p.from.text+"-]")
+				case p.from.key == p.to.key:
+				case p.spans == nil:
+					line(p.to.kind+" reshaped", p.to.text)
+				default:
+					line(p.to.kind, spans(p.spans))
+				}
+			}
 		}
 	}
-	return b.String()
+	return out.String()
 }
 
 func TestCompare(t *testing.T) {
@@ -123,11 +157,7 @@ func TestCompare(t *testing.T) {
 		t.Run(tc.name, func(t *testing.T) {
 			t.Parallel()
 
-			got, err := Compare([]byte(tc.from), []byte(tc.to))
-			if err != nil {
-				t.Fatal(err)
-			}
-			if s := told(got); s != tc.want {
+			if s := told(t, tc.from, tc.to, pageMost); s != tc.want {
 				t.Errorf("got\n%swant\n%s", s, tc.want)
 			}
 		})
@@ -143,10 +173,7 @@ func TestPreLines(t *testing.T) {
 		{"<pre><code>a\n\nb\n</code></pre>", "a||b"},
 		{`<pre><span class="floe-hidden">run</span><span>a</span>` + "\n" + `<span class="floe-hidden">last</span></pre>`, "run a|last"},
 	} {
-		sections, err := read([]byte(tc.html))
-		if err != nil {
-			t.Fatal(err)
-		}
+		sections := readSections(t, []byte(tc.html))
 		lines := make([]string, len(sections[0].blocks))
 		for i, b := range sections[0].blocks {
 			lines[i] = b.text
@@ -161,24 +188,27 @@ func TestPreLines(t *testing.T) {
 func TestSameHeadings(t *testing.T) {
 	t.Parallel()
 
-	got, err := Compare([]byte("<h2>Why</h2><p>first reason</p>"), []byte("<h2>Why</h2><p>a new reason</p><h2>Why</h2><p>first reason</p>"))
+	const from, to = "<h2>Why</h2><p>first reason</p>", "<h2>Why</h2><p>a new reason</p><h2>Why</h2><p>first reason</p>"
+	got, _, err := Diff([]byte(from), []byte(to), testWords)
 	if err != nil {
 		t.Fatal(err)
 	}
 	if got.Counts.Changed != 1 || got.Counts.Added != 1 {
-		t.Errorf("got %+v\n%s", got.Counts, told(got))
+		t.Errorf("got %+v\n%s", got.Counts, told(t, from, to, pageMost))
 	}
 }
 
 func TestCounts(t *testing.T) {
 	t.Parallel()
 
-	got, err := Compare([]byte("<h2>A</h2><p>a</p><h2>B</h2><p>b b</p><h2>C</h2>"), []byte("<h2>A</h2><p>a</p><h2>B</h2><p>b c</p><h2>D</h2><h2>Other heading</h2>"))
+	const from, to = "<h2>A</h2><p>a</p><h2>B</h2><p>b b</p><h2>C</h2>", "<h2>A</h2><p>a</p><h2>B</h2><p>b c</p><h2>D</h2><h2>Other heading</h2>"
+	got, _, err := Diff([]byte(from), []byte(to), testWords)
 	if err != nil {
 		t.Fatal(err)
 	}
-	if want := (Counts{Changed: 1, Added: 2, Removed: 1, Same: 1}); got.Counts != want {
-		t.Errorf("got %+v, want %+v\n%s", got.Counts, want, told(got))
+	// Of each place, the section it is in, by the sections' order.
+	if want := (Counts{Changed: 1, Added: 2, Removed: 1, Same: 1}); got.Counts != want || fmt.Sprint(got.Places) != "[1 2 3 4]" {
+		t.Errorf("got %+v %v, want %+v\n%s", got.Counts, got.Places, want, told(t, from, to, pageMost))
 	}
 }
 
@@ -186,7 +216,7 @@ func TestCounts(t *testing.T) {
 func TestCompareDeep(t *testing.T) {
 	t.Parallel()
 
-	if _, err := Compare([]byte(strings.Repeat("<div>", 600)), []byte("<p>x</p>")); err == nil || !strings.Contains(err.Error(), "512") {
+	if _, _, err := Diff([]byte(strings.Repeat("<div>", 600)), []byte("<p>x</p>"), testWords); err == nil || !strings.Contains(err.Error(), "512") {
 		t.Errorf("got %v", err)
 	}
 }
@@ -196,22 +226,12 @@ func TestCompareDeep(t *testing.T) {
 func TestCompareOutOfTime(t *testing.T) {
 	t.Parallel()
 
-	got, err := compareIn(
-		[]byte("<h2>A</h2><p>x and y</p><p>z</p><h2>B</h2><p>the same</p>"),
-		[]byte("<h2>N</h2><h2>A</h2><p>x and w</p><p>z</p><h2>B</h2><p>the same</p>"), 0)
-	if err != nil {
-		t.Fatal(err)
-	}
 	const want = "added h2 {+N+}\nchanged h2 A\n  [p] [-x and y-]\n  [p] {+x and w+}\nsame h2 B\n"
-	if s := told(got); s != want {
+	if s := told(t, "<h2>A</h2><p>x and y</p><p>z</p><h2>B</h2><p>the same</p>", "<h2>N</h2><h2>A</h2><p>x and w</p><p>z</p><h2>B</h2><p>the same</p>", 0); s != want {
 		t.Errorf("got\n%swant\n%s", s, want)
 	}
 	// A heading to compare by its words, no time left for it: removed and added, whatever the rest.
-	got, err = compareIn([]byte("<h2>3. A</h2>"), []byte("<h2>4. A</h2>"), 0)
-	if err != nil {
-		t.Fatal(err)
-	}
-	if s, want := told(got), "removed h2 [-3. A-]\nadded h2 {+4. A+}\n"; s != want {
+	if s, want := told(t, "<h2>3. A</h2>", "<h2>4. A</h2>", 0), "removed h2 [-3. A-]\nadded h2 {+4. A+}\n"; s != want {
 		t.Errorf("got\n%swant\n%s", s, want)
 	}
 }
@@ -224,10 +244,11 @@ func TestCompareBounded(t *testing.T) { //nolint:paralleltest // it measures tim
 		fmt.Fprintf(&to, "<p>%s</p>", strings.Repeat("い"+strconv.Itoa(i), 40))
 	}
 	start := time.Now()
-	if _, err := compareIn([]byte(from.String()), []byte(to.String()), 200*time.Millisecond); err != nil {
+	if _, _, err := marked([]byte(from.String()), []byte(to.String()), pageMost, testWords); err != nil {
 		t.Fatal(err)
 	}
-	if took := time.Since(start); took > 20*time.Second {
+	// The race detector makes it some times slower: the time is checked without it (just cover-check, CI's coverage).
+	if took := time.Since(start); !underRace && took > 20*time.Second {
 		t.Errorf("took %v", took)
 	}
 }
@@ -236,7 +257,7 @@ func TestCompareBounded(t *testing.T) { //nolint:paralleltest // it measures tim
 func TestAlignKeys(t *testing.T) {
 	t.Parallel()
 
-	got := align(library(time.Second), []string{"a\nb", "c", "d\n"}, []string{"a\nb", "new", "d\n"})
+	got := align(library(), []string{"a\nb", "c", "d\n"}, []string{"a\nb", "new", "d\n"})
 	if s, want := fmt.Sprint(got), "[{0 0} {1 1} {2 2}]"; s != want {
 		t.Errorf("got %s, want %s", s, want)
 	}
@@ -259,7 +280,7 @@ func TestAlignKeys(t *testing.T) {
 	if _, _, ok := numbered(many, nil); ok {
 		t.Error("more keys than runes were numbered")
 	}
-	all := align(library(time.Second), many, []string{"0"})
+	all := align(library(), many, []string{"0"})
 	if len(all) != n || all[0] != (pair{a: 0, b: 0}) || all[1] != (pair{a: 1, b: -1}) {
 		t.Errorf("past the bound: %d %v", len(all), all[:2])
 	}
@@ -273,10 +294,7 @@ func TestReadEveryPart(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	sections, err := read(page)
-	if err != nil {
-		t.Fatal(err)
-	}
+	sections := readSections(t, page)
 	var b strings.Builder
 	for _, s := range sections {
 		fmt.Fprintf(&b, "## h%d %s\n", s.level, s.heading)
@@ -298,5 +316,49 @@ func TestReadEveryPart(t *testing.T) {
 	}
 	if b.String() != string(want) {
 		t.Errorf("%s differs from what is read now; %s", golden, fix)
+	}
+}
+
+// TestSameAnswer: the answer is of the pages alone. The differ is never cut by time, the same pages answer the same,
+// and every call to it is counted in the work, the cells of rows too.
+func TestSameAnswer(t *testing.T) {
+	t.Parallel()
+
+	if d := library(); d.DiffTimeout != never {
+		t.Errorf("the differ's time limit is %v", d.DiffTimeout)
+	}
+	from := "<h2>T</h2><table><tr><td>alpha</td><td>x</td><td>one</td></tr><tr><td>beta</td><td>y</td><td>two</td></tr></table>"
+	to := "<h2>T</h2><table><tr><td>alpha</td><td>one</td></tr><tr><td>beta</td><td>two</td></tr></table>"
+	first, _, err := Diff([]byte(from), []byte(to), testWords)
+	if err != nil {
+		t.Fatal(err)
+	}
+	again, _, _ := Diff([]byte(from), []byte(to), testWords) //nolint:errcheck // the same as above
+	x, _ := json.Marshal(first)                              //nolint:errcheck // a Result always encodes
+	y, _ := json.Marshal(again)                              //nolint:errcheck // as above
+	if string(x) != string(y) {
+		t.Errorf("the same pages answered %s and %s", x, y)
+	}
+	// Rows gone of two tables of the earlier, both paired with one of the later, go in by the order of the pages.
+	two := "<h2>T</h2><table><tr><td>gone one</td><td>a</td></tr><tr><td>kept</td><td>b</td></tr></table>" +
+		"<table><tr><td>gone two</td><td>c</td></tr><tr><td>also kept</td><td>d</td></tr></table>"
+	one := "<h2>T</h2><table><tr><td>kept</td><td>b</td></tr><tr><td>also kept</td><td>d</td></tr></table>"
+	_, marks, err := Diff([]byte(two), []byte(one), testWords)
+	if err != nil {
+		t.Fatal(err)
+	}
+	for range 20 {
+		if _, again, _ := Diff([]byte(two), []byte(one), testWords); string(again) != string(marks) { //nolint:errcheck // as above
+			t.Fatalf("the same pages marked otherwise:\n%s\n%s", marks, again)
+		}
+	}
+	a := readSections(t, []byte(from))
+	b := readSections(t, []byte(to))
+	w := newWork(10_000)
+	compare(a, b, w)
+	// The sections 1×1, the blocks 2×2, the rows paired again by their cells 2×2, each row's words, each row's cells 3×2.
+	want := 1 + 2*2 + 2*2 + 15*11 + 14*10 + 3*2 + 3*2
+	if used := 10_000 - w.left; used != want {
+		t.Errorf("the work counted is %d, want %d", used, want)
 	}
 }

@@ -175,8 +175,7 @@
   .dcount b { font-weight: 700; }
   .dcount .c { color: var(--chg); } .dcount .a { color: var(--ins); } .dcount .r { color: var(--del); } .dcount .s { color: var(--fg); }
   .dtail { margin-left: auto; display: flex; flex-wrap: wrap; gap: 0.35rem 0.75rem; }
-  .dviews { display: flex; gap: 0.35rem; }
-  .dviews .btn, .dtail > .btn { white-space: nowrap; }
+  .dtail > .btn { white-space: nowrap; }
 
   .dmain { position: relative; flex: 1; min-height: 0; display: grid; grid-template-columns: var(--toc) minmax(0, 1fr); background: var(--panel); }
   .dmain > .grip { position: absolute; top: 0; }
@@ -189,8 +188,7 @@
   .dtoc .side-head { padding-inline: 1rem; }
   .dtoc h2 { margin: 0; }
   /* What scrolls holds what is placed in it, so that the .sr-only words, absolute, are cut with the rest and do not widen the page past it */
-  .dtoc-list, .dbody { position: relative; }
-  .dtoc-list { flex: 1; min-height: 0; overflow: auto; padding: 0 0.5rem; }
+  .dtoc-list { position: relative; flex: 1; min-height: 0; overflow: auto; padding: 0 0.5rem; }
   .dtoc-item { width: 100%; display: flex; align-items: center; gap: 0.4rem; min-height: 1.75rem; padding: 0.1rem 0.5rem; color: var(--muted); border-radius: var(--corner-small); }
   .dtoc-item span:first-child { min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
   .dtoc button { font: inherit; text-align: left; cursor: pointer; background: none; border: 0; color: var(--fg); font-weight: 650; }
@@ -206,44 +204,9 @@
   .mk.added { color: var(--ins); background: var(--ins-soft); }
   .mk.removed { color: var(--del); background: var(--del-soft); }
 
-  .dbody { grid-column: 2; min-width: 0; overflow: auto; background: var(--frame-bg); border-left: 1px solid var(--line); font-size: var(--text); line-height: 1.7; }
-  .dcols, .drow { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); }
-  .dcols { position: sticky; top: 0; z-index: 1; background: var(--frame-bg); border-bottom: 1px solid var(--line); font-size: var(--text-small); color: var(--muted); }
-  .dcols > div { display: flex; gap: 0.4rem; align-items: center; padding: 0.4rem 1.25rem; }
-  .dcols > div + div, .drow > div + div { border-left: 1px solid var(--line); }
-  .drow, .dsame, .dh, .bk { scroll-margin-top: 2.5rem; }
-  .drow > div { min-width: 0; padding: 0.15rem 1.25rem; }
-  .drow > .del { background: var(--del-soft); }
-  .drow > .ins { background: var(--ins-soft); }
-  .drow > .blank { background: var(--subtle); }
-
-  .dflow { max-width: 46rem; margin-inline: auto; padding: 0 1.25rem 1.5rem; }
-  .dflow .bk { margin-inline: -0.5rem; padding: 0.15rem 0.5rem; border-radius: var(--corner-small); }
-  .dflow .bk.changed { background: var(--chg-soft); }
-  .dflow .bk.del { background: var(--del-soft); }
-  .dflow .bk.ins { background: var(--ins-soft); }
-
-  .dh { margin: 0; padding-top: 0.75rem; font-size: 1rem; font-weight: 700; color: var(--fg); }
-  .dh .mk { margin-left: 0.4rem; vertical-align: 0.1em; }
-  .dh.lv1 { font-size: 1.15rem; }
-  .dh.nohead { font-size: var(--text-small); font-weight: 400; color: var(--muted); }
-  .dtext { color: var(--muted); }
-  .dtext.lit { color: var(--fg); }
-  .dli { display: list-item; margin-left: 1.1rem; }
-  .dpre { font-family: var(--mono); font-size: var(--text-small); white-space: pre-wrap; min-height: 1lh; }
-  .diff del { color: var(--del); background: var(--del-mark); text-decoration: line-through; border-radius: var(--corner-small); }
-  .diff ins { color: var(--ins); background: var(--ins-mark); text-decoration: none; border-radius: var(--corner-small); }
-
-  .dfig { display: flex; flex-wrap: wrap; align-items: baseline; gap: 0.1rem 0.5rem; }
-  .dtag { flex: none; padding: 0 0.4rem; font-size: var(--text-label); font-weight: 700; color: var(--muted); background: var(--frame-bg); border: 1px solid var(--box-line); border-radius: var(--corner-small); }
-  .dfig small { flex-basis: 100%; font-size: var(--text-small); color: var(--muted); }
-
-  .dsame { display: flex; align-items: center; gap: 0.75rem; margin: 0.6rem 0; padding: 0 1.25rem; font-size: var(--text-small); color: var(--muted); }
-  .dflow .dsame { padding: 0; }
-  .dsame::before, .dsame::after { content: "" / ""; flex: 1 1 1.5rem; border-top: 1px solid var(--line); }
-  .dsame > span { flex: 0 1 auto; display: flex; min-width: 0; gap: 0.4rem; }
-  .dsame .names { min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
-  .dsame .word { flex: none; }
+  /* The later version's page, marked by the server, in the sandbox as any page */
+  .dbody { grid-column: 2; min-width: 0; display: flex; background: var(--frame-bg); border-left: 1px solid var(--line); }
+  .dbody > iframe { flex: 1; min-width: 0; border: 0; background: var(--frame-bg); }
   @media (max-width: 56rem) {
     .dmain { grid-template-columns: minmax(0, 1fr); }
     .dtoc, .dmain > .grip, .dmain > .side-show { display: none; }
@@ -251,14 +214,12 @@
   }
   @media (max-width: 40rem) {
     .diff:not([hidden]) { display: block; overflow: auto; }
-    .dbody { overflow: visible; }
+    .dbody { height: 85dvh; }
     .dhead { padding: 0.6rem 0.75rem; }
     .dvers, .dver, .dver select { width: 100%; }
     .dver label { flex: none; min-width: 3.2rem; }
     .dtail { margin-left: 0; }
-    .dviews .btn, .dtail > .btn { padding: 0 0.6rem; }
-    .dflow { padding-inline: 0.75rem; }
-    .drow > div, .dcols > div { padding-inline: 0.5rem; }
+    .dtail > .btn { padding: 0 0.6rem; }
     .dnote { padding-inline: 0.75rem; }
     .ver-actions { margin-left: 0; }
   }
@@ -296,7 +257,7 @@
   .grip::after { content: ""; position: absolute; left: 2px; top: 0; bottom: 0; width: 2px; background: transparent; transition: background-color 0.15s; }
   .grip:is(:hover, .dragging, :focus-visible)::after { background: var(--ink); }
   /* While an edge is dragged a page takes no pointer, which would leave the edge's pointer capture inside the iframe */
-  html:has(.grip.dragging) :is(.frame, .read-frame) { pointer-events: none; }
+  html:has(.grip.dragging) :is(.frame, .read-frame, .dbody > iframe) { pointer-events: none; }
   /* An iframe prints what fits one screen of the page in it: a frame's print hides the bar, the frame and the toasts,
      and names the page alone in their place, but on a missing page's frame, which prints its
      state. The screen shows no note.
@@ -1232,7 +1193,7 @@
 <div class="tagline" id="frame-tags" hidden></div>
 <!-- Lets copy and fullscreen buttons in the page work. The sandboxed page has an opaque origin, which the default 'src' does not match, hence * -->
 <iframe class="frame" id="frame" allow="clipboard-write *; fullscreen *" hidden></iframe>
-<!-- What changed between two versions, in words the server read from them: never the page's HTML, which runs in the sandbox alone -->
+<!-- What changed between two versions: the contents and counts in words the server read from them, and the later version's page with them marked in an iframe, in the sandbox as any page -->
 <main class="diff" id="diff" hidden>
   <div class="dhead" id="diff-head">
     <div class="dvers">
@@ -1241,11 +1202,6 @@
     </div>
     <p class="dcount" id="diff-count" role="status"></p>
     <div class="dtail">
-      <div class="dviews" role="group" aria-label="{{.Msg "ui_diff_views"}}">
-        <button type="button" class="btn" data-diff-view="side">{{.Msg "ui_diff_view_side"}}</button>
-        <button type="button" class="btn" data-diff-view="all">{{.Msg "ui_diff_view_all"}}</button>
-        <button type="button" class="btn" data-diff-view="only">{{.Msg "ui_diff_view_only"}}</button>
-      </div>
       <a class="btn" id="diff-close" title="{{.Msg "ui_diff_close_title"}}">{{.Msg "ui_close"}}</a>
     </div>
   </div>
@@ -1259,7 +1215,7 @@
     </nav>
     <div class="grip" id="diff-toc-grip" role="separator" aria-orientation="vertical" aria-controls="diff-toc-nav" aria-label="{{.Msg "ui_diff_toc_width"}}" tabindex="0" hidden></div>
     <button type="button" class="icon-btn side-show" id="diff-toc-show" aria-expanded="false" aria-controls="diff-toc-nav" title="{{.Msg "ui_diff_toc_show"}}" aria-label="{{.Msg "ui_diff_toc_show"}}" hidden><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linejoin="round" aria-hidden="true"><rect x="3" y="4" width="18" height="16" rx="2"/><path d="M9 4v16"/></svg></button>
-    <div class="dbody" id="diff-body"></div>
+    <div class="dbody" id="diff-body"><iframe id="diff-frame" title="{{.Msg "ui_diff_frame"}}" allow="clipboard-write *; fullscreen *"></iframe></div>
   </div>
   <div class="state notfound" id="diff-none" hidden><p>{{.Msg "ui_diff_none"}}</p><a class="btn" id="diff-page">{{.Msg "ui_diff_open_page"}}</a></div>
 </main>
@@ -1591,8 +1547,14 @@
   // A move to a part of the page (#…) is written into this URL too, while the iframe still shows this page, so that a copy of the URL
   // and a reload open that part; replaceState changes only the fragment and adds no history, which the iframe's move added already.
   // The iframe is the frame's, or the one beside the list; the page is read when it is the one that iframe was given
+  // The path this page gave the iframe f, whichever it is: the frame's and the one beside the list are moved by location.replace,
+  // which leaves their src as it was, and the diff's by its src
+  function givenPath(f) {
+    const given = f === $('frame') ? frameSrc : f === $('read-frame') ? picked && rawHref(picked) : f.getAttribute('src');
+    return given ? new URL(given, location.href).pathname : null;
+  }
   addEventListener('message', (e) => {
-    const shown = framed ? $('frame') : $('read-frame');
+    const shown = DIFF ? $('diff-frame') : framed ? $('frame') : $('read-frame');
     // A page of floe is always sandboxed: any other origin is a site the iframe moved to
     // LIMIT: null does not prove a page of floe: a site that sandboxes itself, or a data: URL, says it too. All it can do is what a
     // page can, of PAGE_KEYS and a move to a whole page; a page's read stops at the path it must be at
@@ -1605,10 +1567,17 @@
     }
     const to = typeof e.data?.artifactOpen === 'string' && new URL(e.data.artifactOpen, location.origin);
     if (to && to.origin === location.origin && /^\/(a\/[^/]+\/?)?$/.test(to.pathname) && !to.searchParams.has('raw')) location.href = to.href;
-    const given = framed ? new URL(frameSrc, location.href).pathname : picked && new URL(rawHref(picked), location.href).pathname;
-    if (e.data?.artifactPath !== given) return;
+    // A page tells of itself only at the path its iframe was given, wherever a link took it
+    if (e.data?.artifactPath !== givenPath(shown)) return;
+    // A diff's page whose versions changed: what changed is read again, and the pages with it
+    if (DIFF && e.data.artifactChanged === true) {
+      const a = items.find((x) => x.slug === framed);
+      if (a) openDiff(a);
+      return;
+    }
     const hash = e.data.artifactHash;
-    if (framed && typeof hash === 'string' && (hash === '' || hash.startsWith('#'))) {
+    // A move within the frame's page alone is written into this URL: a diff's goes to its places, which the URL does not keep
+    if (shown === $('frame') && typeof hash === 'string' && (hash === '' || hash.startsWith('#'))) {
       history.replaceState(history.state, '', location.pathname + location.search + hash);
     }
     const read = e.data.artifactRead;
@@ -1751,7 +1720,8 @@
   // The frame URL of an entry, or of a folder's page (file), and the page alone at its own URL
   // v is a version of a stored page other than the latest. These alone write a page's URLs
   const pageHref = (x) => (x.file ? `/a/${x.slug}/?file=${encodeURIComponent(x.file)}` : `/a/${x.slug}/${x.v ? `?v=${x.v}` : ''}`);
-  const rawHref = (x) => (x.file ? `/a/${x.slug}/${x.file.split('/').map(encodeURIComponent).join('/')}` : `/a/${x.slug}/?raw${x.v ? `&v=${x.v}` : ''}`);
+  // x.from and x.key: the page of version x.v marked against x.from, of the pair /diff answered with key
+  const rawHref = (x) => (x.file ? `/a/${x.slug}/${x.file.split('/').map(encodeURIComponent).join('/')}` : `/a/${x.slug}/?raw${x.v ? `&v=${x.v}` : ''}${x.from ? `&from=${x.from}&key=${encodeURIComponent(x.key)}` : ''}`);
   const diffHref = (slug, from, to) => `/a/${slug}/?diff${from ? `&from=${from}&to=${to}` : ''}`;
   const downloadHref = (x) => `/api/artifacts/${x.slug}/download${x.v ? `?v=${x.v}` : ''}`;
   // What the frame shows. The server read ?v= (data-version: a version, 0 for the latest, gone for none), which leaves the URL as soon as it says
@@ -4773,7 +4743,6 @@
   }
 
   // LIMIT: it does not follow a version published while it is open: reload it, or choose. Printed, it says to print the page alone, as a frame does
-  // LIMIT: every row of the answer is drawn at once, which tens of thousands of changes make heavy. Draw them by section if that comes to trouble someone
   // LIMIT: the contents follow n, p and a press, not the scrolling
   let diffOpened = false;
   let diffVersions = [];
@@ -4782,11 +4751,8 @@
   let diffAnswer = null;
   let diffCall = null;
   let diffFailed = false;
-  // The places n and p go through, the last gone to, and each section's place, by its index
-  let diffChanges = [];
+  // The place of the page n and p went to last, of the answer's places
   let diffAt = -1;
-  const VIEW_KEY = 'diff.view';
-  let diffView = 'all';
   const diffMonth = (iso) => {
     const d = new Date(iso);
     const two = (x) => String(x).padStart(2, '0');
@@ -4835,13 +4801,6 @@
       showError(t('ui_diff_failed', err.message));
       return;
     }
-    let saved = null;
-    try {
-      saved = localStorage.getItem(VIEW_KEY);
-    } catch {
-      // The first view, without storage
-    }
-    diffView = oneColumn.matches ? 'all' : ['side', 'all', 'only'].includes(saved) ? saved : 'side';
     diffPair = firstPair();
     drawDiffPicks();
     await readDiff();
@@ -4892,27 +4851,10 @@
       writeDiffPair();
     }
   }
-  const spansOnly = (b, op) => b.spans.every((x) => x.op === op);
   const spansText = (spans, skip) => spans.filter((x) => x.op !== skip).map((x) => x.text).join('');
   const sectionName = (s) => spansText(s.heading, s.state === 'removed' ? '' : 'del') || t('ui_diff_top');
   const lvOf = (s) => Math.min(Math.max(s.level, 1), 3);
-  const headingChanged = (s) => s.state !== 'changed' || !s.heading.every((x) => x.op === 'same');
   const said = (word) => tagged('span', 'sr-only', `${word} `);
-  // Words alone: textContent, as what a page says may look like HTML, and this page may call the API
-  function putSpans(box, spans, side) {
-    for (const x of spans) {
-      if (x.op === 'same') box.append(x.text);
-      else if (x.op === 'del' && side !== 'ins') {
-        const e = tagged('del');
-        e.append(said(t('ui_diff_del')), x.text);
-        box.append(e);
-      } else if (x.op === 'ins' && side !== 'del') {
-        const e = tagged('ins');
-        e.append(said(t('ui_diff_ins')), x.text);
-        box.append(e);
-      }
-    }
-  }
   const DIFF_MARK = {
     changed: ['ui_diff_mark_changed', 'ui_diff_said_changed'],
     added: ['ui_diff_mark_added', 'ui_diff_said_added'],
@@ -4925,121 +4867,11 @@
     m.firstChild.setAttribute('aria-hidden', 'true');
     return m;
   }
-  const DIFF_TAG = { svg: 'ui_diff_svg', img: 'ui_diff_img' };
-  function blockBody(b, side) {
-    if (DIFF_TAG[b.kind]) {
-      const f = tagged('div', 'dfig');
-      const words = tagged('span');
-      putSpans(words, b.spans, side);
-      f.append(tagged('span', 'dtag', t(DIFF_TAG[b.kind])), words);
-      if (b.reshaped) f.append(tagged('small', '', t('ui_diff_reshaped')));
-      return f;
-    }
-    const changed = b.spans.some((x) => x.op !== 'same');
-    const d = tagged('div', `dtext${changed ? ' lit' : ''}${b.kind === 'li' ? ' dli' : ''}${b.kind === 'pre' ? ' dpre' : ''}`);
-    putSpans(d, b.spans, side);
-    return d;
-  }
-  // A diagram or image of no words, the same in both, is an icon: nothing to read
-  const blockUnsaid = (b) => !b.reshaped && spansOnly(b, 'same') && DIFF_TAG[b.kind] && !spansText(b.spans);
-  function sameRow(names) {
-    const box = tagged('div', 'dsame');
-    const text = names.length <= 3 ? names.join(t('ui_diff_join')) : t('ui_diff_others', names[0], names.length - 1);
-    const inner = tagged('span');
-    inner.append(tagged('span', 'names', text), tagged('span', 'word', t('ui_diff_same')));
-    box.append(inner);
-    return box;
-  }
-  function headingOf(s, side) {
-    const h = tagged('h3', `dh lv${lvOf(s)}${s.level === 0 ? ' nohead' : ''}`);
-    if (s.level === 0) h.textContent = t('ui_diff_top');
-    else putSpans(h, s.heading, side);
-    if (s.state !== 'changed') h.append(diffMark(s.state));
-    return h;
-  }
-  // Calls same with each run of sections the same and other with each other section, its index with them
-  function eachRun(sections, same, other) {
-    let run = [];
-    const flush = () => {
-      if (run.length) same(run);
-      run = [];
-    };
-    sections.forEach((s, i) => {
-      if (s.state === 'same') run.push(i);
-      else {
-        flush();
-        other(s, i);
-      }
-    });
-    flush();
-  }
-  function drawSide(box, sections) {
-    const heads = tagged('div', 'dcols');
-    for (const n of [diffAnswer.from.n, diffAnswer.to.n]) heads.append(tagged('div', '', verText(diffVersions.find((v) => v.n === n))));
-    box.append(heads);
-    const cell = (cls, child) => {
-      const c = tagged('div', cls);
-      if (child) c.append(child);
-      return c;
-    };
-    eachRun(sections, (run) => {
-      const r = sameRow(run.map((i) => sectionName(sections[i])));
-      box.append(r);
-    }, (s, at) => {
-      const row = (l, r, change) => {
-        const x = tagged('div', `drow${change ? ' ch' : ''}`);
-        x.dataset.section = at;
-        x.append(l, r);
-        box.append(x);
-      };
-      row(s.state === 'added' ? cell('blank') : cell('', headingOf(s, 'del')), s.state === 'removed' ? cell('blank') : cell('', headingOf(s, 'ins')), headingChanged(s));
-      const blocks = s.blocks ?? [];
-      for (let i = 0; i < blocks.length;) {
-        const b = blocks[i];
-        if (blockUnsaid(b)) {
-          i++;
-        } else if (b.reshaped || !(spansOnly(b, 'del') || spansOnly(b, 'ins') || spansOnly(b, 'same'))) {
-          row(cell('del', blockBody(b, 'del')), cell('ins', blockBody(b, 'ins')), true);
-          i++;
-        } else if (spansOnly(b, 'same')) {
-          row(cell('', blockBody(b)), cell('', blockBody(b)), false);
-          i++;
-        } else {
-          // Blocks gone and blocks added, one after another, stand on the same rows from the first
-          const gone = [];
-          const come = [];
-          while (i < blocks.length && !blocks[i].reshaped && spansOnly(blocks[i], 'del')) gone.push(blocks[i++]);
-          while (i < blocks.length && !blocks[i].reshaped && spansOnly(blocks[i], 'ins')) come.push(blocks[i++]);
-          for (let k = 0; k < Math.max(gone.length, come.length); k++) {
-            row(gone[k] ? cell('del', blockBody(gone[k], 'del')) : cell('blank'), come[k] ? cell('ins', blockBody(come[k], 'ins')) : cell('blank'), true);
-          }
-        }
-      }
-    });
-  }
-  function drawFlow(box, sections, only) {
-    const col = tagged('div', 'dflow');
-    eachRun(sections, (run) => {
-      if (only) return;
-      const r = sameRow(run.map((i) => sectionName(sections[i])));
-      col.append(r);
-    }, (s, at) => {
-      const h = headingOf(s);
-      h.dataset.section = at;
-      h.classList.toggle('ch', headingChanged(s));
-      col.append(h);
-      for (const b of s.blocks ?? []) {
-        const same = !b.reshaped && spansOnly(b, 'same');
-        if (blockUnsaid(b) || (only && same)) continue;
-        const gone = !b.reshaped && spansOnly(b, 'del');
-        const come = !b.reshaped && spansOnly(b, 'ins');
-        const w = tagged('div', `bk ${same ? '' : `ch ${gone ? 'del' : come ? 'ins' : 'changed'}`}`);
-        w.dataset.section = at;
-        w.append(blockBody(b));
-        col.append(w);
-      }
-    });
-    box.append(col);
+  // The later version's page, its places marked: tied by key to the answer, which a version drawn anew since changes
+  const diffPage = () => rawHref({ slug: framed, v: diffAnswer.to.n, from: diffAnswer.from.n, key: diffAnswer.key });
+  // To place k of the page, by its fragment: a move within the page, which reads nothing again
+  function goPlace(k) {
+    $('diff-frame').src = `${diffPage()}#floe-diff.${k}`;
   }
   function drawDiff() {
     const { counts, sections } = diffAnswer;
@@ -5055,36 +4887,27 @@
         count.append(part);
       }
     }
-    for (const b of document.querySelectorAll('[data-diff-view]')) {
-      b.setAttribute('aria-pressed', String(b.dataset.diffView === diffView));
-      b.classList.toggle('primary', b.dataset.diffView === diffView);
-    }
-    const body = $('diff-body');
-    body.replaceChildren();
-    // Of the one that scrolls: the words, or at a phone's width all of it
-    body.scrollTop = 0;
-    $('diff').scrollTop = 0;
-    if (diffView === 'side') drawSide(body, sections);
-    else drawFlow(body, sections, diffView === 'only');
-    // n and p go by what changed: a run of changes one after another is one place
-    diffChanges = [...body.querySelectorAll('.ch')].filter((e) => !e.previousElementSibling?.classList.contains('ch'));
+    $('diff-frame').src = diffPage();
     diffAt = -1;
+    // Of the one that scrolls at a phone's width, all of it: back to its top
+    $('diff').scrollTop = 0;
     const list = $('diff-toc');
     list.replaceChildren();
     sections.forEach((s, i) => {
       const row = tagged('div', `lv${lvOf(s)}`);
-      const same = s.state === 'same';
-      const item = tagged(same ? 'div' : 'button', 'dtoc-item');
+      // A section with no place on the page has nothing to go to: one the same, or one marked where no mark to go to holds
+      const go = s.place !== undefined;
+      const item = tagged(go ? 'button' : 'div', 'dtoc-item');
       item.append(tagged('span', '', sectionName(s)));
       row.append(item);
       list.append(row);
-      // A section the same is words only: there is no change to go to
-      if (same) return;
+      if (s.state !== 'same') item.append(diffMark(s.state));
+      if (!go) return;
       item.type = 'button';
       item.dataset.section = i;
-      item.append(diffMark(s.state));
       item.addEventListener('click', () => {
-        body.querySelector(`[data-section="${i}"]`)?.scrollIntoView({ block: 'start' });
+        diffAt = s.place;
+        goPlace(s.place);
         tocAt(i);
       });
     });
@@ -5117,11 +4940,12 @@
     $(open ? 'diff-toc-hide' : 'diff-toc-show').focus();
   }
   function moveChange(step) {
-    const next = diffChanges[diffAt + step];
-    if (!next) return;
-    diffAt += step;
-    next.scrollIntoView({ block: 'center' });
-    tocAt(next.dataset.section);
+    const next = diffAt + step;
+    if (!diffAnswer || next < 0 || next >= diffAnswer.places.length) return;
+    diffAt = next;
+    goPlace(next);
+    // The section of the place, as the answer tells it: what is gone of a section may lie after the next one's place
+    tocAt(diffAnswer.places[next]);
   }
   if (DIFF) {
     layoutToc();
@@ -5142,19 +4966,6 @@
         writeDiffPair();
         drawDiffPicks();
         readDiff();
-      });
-    }
-    for (const b of document.querySelectorAll('[data-diff-view]')) {
-      b.addEventListener('click', () => {
-        diffView = b.dataset.diffView;
-        if (!oneColumn.matches) {
-          try {
-            localStorage.setItem(VIEW_KEY, diffView);
-          } catch {
-            // Without storage, the first view next time
-          }
-        }
-        if (diffAnswer) drawDiff();
       });
     }
   }
@@ -6147,7 +5958,7 @@
     '?': openKeys,
     'Ctrl+K': () => ($('find').open ? $('find').close() : openFind()),
   };
-  const PAGE_KEYS = new Set(['j', 'k', 'h', 'd', '?', '/', 'Ctrl+K']);
+  const PAGE_KEYS = new Set(['j', 'k', 'h', 'n', 'p', 'd', '?', '/', 'Ctrl+K']);
   function pressKey(key) {
     if (!Object.hasOwn(KEYS, key)) return false;
     KEYS[key]();
@@ -6659,7 +6470,7 @@
     for (const e of $('keys').querySelectorAll('.keys-note')) e.textContent = e.textContent.replace('Ctrl+K', '⌘K');
   }
   // A page gives up its keys only to a frame that says it takes them
-  for (const id of ['frame', 'read-frame']) $(id)?.addEventListener('load', (e) => e.target.contentWindow.postMessage({ artifactKeysWanted: true }, '*'));
+  for (const id of ['frame', 'read-frame', 'diff-frame']) $(id)?.addEventListener('load', (e) => e.target.contentWindow.postMessage({ artifactKeysWanted: true }, '*'));
   document.addEventListener('visibilitychange', () => { if (!document.hidden) load(true); });
   setInterval(() => { if (!document.hidden) load(true); }, POLL_MS);
   load();

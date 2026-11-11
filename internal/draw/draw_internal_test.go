@@ -83,14 +83,14 @@ func TestExecuted(t *testing.T) {
 func TestCutOffPage(t *testing.T) {
 	t.Parallel()
 
-	for _, page := range []string{
+	for _, src := range []string{
 		"<!doctype html><html><head><title>t</title></head><body></body></html>", "<!-- c --> <!DOCTYPE html>\n<p>x",
 		"<!doctype html><html><head>\n<meta charset=\"utf-8\">\n<title>t</title>\n</head><body></body></html>",
 		`<!doctype html><html><head><title>t</title><meta charset="shift_jis"></head><body></body></html>`,
 		`<!doctype html><html><head><meta charset="utf-8"></head><body><p>x<meta charset="utf-8"></p>` +
 			`<template><meta charset="utf-8"></template></body></html>`,
 	} {
-		got, err := CutOffPage([]byte(page))
+		got, err := CutOffPage([]byte(src))
 		if err != nil {
 			t.Fatal(err)
 		}
@@ -101,22 +101,22 @@ func TestCutOffPage(t *testing.T) {
 			if n.Type == html.ElementNode && n.Data == "head" && head == nil {
 				head = n
 			}
-			if _, ok := attrOf(n, "charset"); ok && n.Type == html.ElementNode && n.Data == "meta" {
+			if _, ok := page.Attr(n, "charset"); ok && n.Type == html.ElementNode && n.Data == "meta" {
 				charsets++
 			}
 		}
 		if charsets != 1 {
-			t.Errorf("%q: %d charsets in %q, want 1", page, charsets, got)
+			t.Errorf("%q: %d charsets in %q, want 1", src, charsets, got)
 		}
 		if bytes.Contains(got, []byte("\n\n")) {
-			t.Errorf("%q: an empty line where a charset was: %q", page, got)
+			t.Errorf("%q: an empty line where a charset was: %q", src, got)
 		}
 		charset, csp := head.FirstChild, head.FirstChild.NextSibling
-		if v, _ := attrOf(charset, "charset"); v != "utf-8" {
-			t.Errorf("%q: the head starts %q", page, got)
+		if v, _ := page.Attr(charset, "charset"); v != "utf-8" {
+			t.Errorf("%q: the head starts %q", src, got)
 		}
-		if v, _ := attrOf(csp, "content"); v != CutOff("'none'") {
-			t.Errorf("%q: no CSP second in the head: %q", page, got)
+		if v, _ := page.Attr(csp, "content"); v != CutOff("'none'") {
+			t.Errorf("%q: no CSP second in the head: %q", src, got)
 		}
 	}
 }

@@ -8,6 +8,8 @@ import (
 
 	"golang.org/x/net/html"
 	"golang.org/x/net/html/atom"
+
+	"floe/internal/page"
 )
 
 // headingID is the id of a heading whose text is text, near the one GitHub gives: lower case, without what
@@ -34,7 +36,7 @@ var Headings = []atom.Atom{atom.H1, atom.H2, atom.H3, atom.H4, atom.H5, atom.H6}
 func withHeadingIDs(tree *html.Node) {
 	found, taken := headingsOf(tree)
 	for _, n := range found {
-		if id, _ := attrOf(n, "id"); id != "" {
+		if id, _ := page.Attr(n, "id"); id != "" {
 			continue
 		}
 		if id := headingID(textOf(n)); id != "" {
@@ -75,7 +77,7 @@ func textOf(n *html.Node) string {
 	var walk func(n *html.Node)
 	walk = func(n *html.Node) {
 		for c := n.FirstChild; c != nil; c = c.NextSibling {
-			_, isPart := attrOf(c, "data-floe-part")
+			_, isPart := page.Attr(c, "data-floe-part")
 			switch {
 			case c.Type == html.TextNode:
 				b.WriteString(c.Data)
