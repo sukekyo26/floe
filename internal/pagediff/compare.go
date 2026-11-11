@@ -46,13 +46,12 @@ const (
 	StateRemoved = "removed"
 )
 
-// Counts counts the sections by state, and the places of the marked page.
+// Counts counts the sections by state.
 type Counts struct {
 	Changed int `json:"changed"`
 	Added   int `json:"added"`
 	Removed int `json:"removed"`
 	Same    int `json:"same"`
-	Places  int `json:"places"`
 }
 
 // Result is what differs between two versions of a page, and of each place of the marked page, by its number, the
@@ -110,7 +109,7 @@ type cellPair struct {
 }
 
 func compare(a, b []section, w *work) compared {
-	c := compared{result: Result{Counts: Counts{Changed: 0, Added: 0, Removed: 0, Same: 0, Places: 0}, Sections: []Section{}, Places: []int{}}, steps: nil}
+	c := compared{result: Result{Counts: Counts{Changed: 0, Added: 0, Removed: 0, Same: 0}, Sections: []Section{}, Places: []int{}}, steps: nil}
 	// Sections always, as they are few and short: one added would otherwise tell all those after it removed and added.
 	for _, p := range align(w.always(len(a), len(b)), headings(a), headings(b)) {
 		w.sectionPair(&c, a, b, p)

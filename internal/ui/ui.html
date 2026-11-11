@@ -1721,7 +1721,8 @@
   // The frame URL of an entry, or of a folder's page (file), and the page alone at its own URL
   // v is a version of a stored page other than the latest. These alone write a page's URLs
   const pageHref = (x) => (x.file ? `/a/${x.slug}/?file=${encodeURIComponent(x.file)}` : `/a/${x.slug}/${x.v ? `?v=${x.v}` : ''}`);
-  const rawHref = (x) => (x.file ? `/a/${x.slug}/${x.file.split('/').map(encodeURIComponent).join('/')}` : `/a/${x.slug}/?raw${x.v ? `&v=${x.v}` : ''}`);
+  // x.from and x.key: the page of version x.v marked against x.from, of the pair /diff answered with key
+  const rawHref = (x) => (x.file ? `/a/${x.slug}/${x.file.split('/').map(encodeURIComponent).join('/')}` : `/a/${x.slug}/?raw${x.v ? `&v=${x.v}` : ''}${x.from ? `&from=${x.from}&key=${encodeURIComponent(x.key)}` : ''}`);
   const diffHref = (slug, from, to) => `/a/${slug}/?diff${from ? `&from=${from}&to=${to}` : ''}`;
   const downloadHref = (x) => `/api/artifacts/${x.slug}/download${x.v ? `?v=${x.v}` : ''}`;
   // What the frame shows. The server read ?v= (data-version: a version, 0 for the latest, gone for none), which leaves the URL as soon as it says
@@ -4868,7 +4869,7 @@
     return m;
   }
   // The later version's page, its places marked: tied by key to the answer, which a version drawn anew since changes
-  const diffPage = () => `${rawHref({ slug: framed, v: diffAnswer.to.n })}&from=${diffAnswer.from.n}&key=${encodeURIComponent(diffAnswer.key)}`;
+  const diffPage = () => rawHref({ slug: framed, v: diffAnswer.to.n, from: diffAnswer.from.n, key: diffAnswer.key });
   // To place k of the page, by its fragment: a move within the page, which reads nothing again
   function goPlace(k) {
     $('diff-frame').src = `${diffPage()}#floe-diff.${k}`;
@@ -4941,15 +4942,11 @@
   }
   function moveChange(step) {
     const next = diffAt + step;
-    if (!diffAnswer || next < 0 || next >= diffAnswer.counts.places) return;
+    if (!diffAnswer || next < 0 || next >= diffAnswer.places.length) return;
     diffAt = next;
     goPlace(next);
-    // The section of the place: the last whose first place is not past it
-    let at = -1;
-    diffAnswer.sections.forEach((s, i) => {
-      if (s.place !== undefined && s.place <= next) at = i;
-    });
-    tocAt(at);
+    // The section of the place, as the answer tells it: what is gone of a section may lie after the next one's place
+    tocAt(diffAnswer.places[next]);
   }
   if (DIFF) {
     layoutToc();

@@ -66,7 +66,6 @@ func marked(from, to []byte, most int, words Words) (Result, *html.Node, error) 
 			c.result.Sections[i].Place = &k
 		}
 	}
-	c.result.Counts.Places = m.count
 	return c.result, treeB, nil
 }
 
@@ -117,7 +116,6 @@ type marker struct {
 	labels  map[*html.Node]*html.Node
 	groups  []*group
 	cur     *group
-	count   int
 }
 
 // group is a place: what is marked one after another in a section, of its result's section sec.
@@ -137,7 +135,7 @@ func newMarker(root *html.Node, words Words) *marker {
 	return &marker{
 		root: root, body: bodyOf(root), words: words, last: nil, lastBox: nil, tail: nil, pending: nil,
 		added: map[*html.Node]bool{}, kept: map[*html.Node]bool{}, copied: map[*html.Node]bool{}, held: map[holdKey]bool{}, ordinals: map[*html.Node]map[*html.Node]int{}, tables: tables{}, rows: map[*html.Node]*html.Node{}, lastRow: map[*html.Node]*html.Node{}, waiting: map[*html.Node][]waitingRow{}, labels: map[*html.Node]*html.Node{},
-		groups: nil, cur: nil, count: 0,
+		groups: nil, cur: nil,
 	}
 }
 
@@ -1059,7 +1057,6 @@ func (m *marker) number() ([]int, []int) {
 			places[g.sec] = k
 		}
 	}
-	m.count = len(sections)
 	out := make([]int, 0)
 	for sec, k := range places {
 		for len(out) <= sec {

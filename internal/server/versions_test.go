@@ -73,6 +73,7 @@ func TestDiffAPI(t *testing.T) {
 		Key      string
 		Counts   pagediff.Counts
 		Sections []pagediff.Section
+		Places   []int
 	}
 	get := func(query string) answer {
 		t.Helper()
@@ -97,7 +98,7 @@ func TestDiffAPI(t *testing.T) {
 		return b.String()
 	}
 	a := get("from=1&to=2")
-	if a.From.N != 1 || a.To.N != 2 || a.Counts.Changed != 1 || a.Counts.Places != 1 || ops(a) != "del:three ins:four " {
+	if a.From.N != 1 || a.To.N != 2 || a.Counts.Changed != 1 || len(a.Places) != 1 || ops(a) != "del:three ins:four " {
 		t.Errorf("from 1 to 2: %+v, %s", a, ops(a))
 	}
 	if a := get("from=2&to=1"); a.Counts.Changed != 1 || a.Key == "" {

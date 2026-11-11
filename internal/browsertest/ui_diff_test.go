@@ -370,12 +370,20 @@ func TestUIDiffClose(t *testing.T) { //nolint:paralleltest // the browser tests 
 			t.Errorf("at %d: %s", width, got)
 		}
 	}
+	// A link drawn as the bar's buttons are, not as a link: as a button of the bar put beside it.
 	const like = `(() => {
 		const close = document.getElementById('diff-close');
-		return getComputedStyle(close).textDecorationLine + ' ' + close.classList.contains('btn');
+		const other = document.createElement('button');
+		other.className = 'btn';
+		other.textContent = 'x';
+		close.before(other);
+		const a = getComputedStyle(close), v = getComputedStyle(other);
+		const got = a.textDecorationLine + ' ' + (a.color === v.color && a.height === v.height && a.borderRadius === v.borderRadius && a.backgroundColor === v.backgroundColor);
+		other.remove();
+		return got;
 	})()`
 	if got := b.eval(like); got != "none true" {
-		t.Errorf("not a button of the bar: %s", got)
+		t.Errorf("not like a button of the bar: %s", got)
 	}
 	b.moving("document.getElementById('diff-close').click()")
 	b.until("the page", "location.pathname + location.search === '/a/d/' && document.getElementById('frame').hasAttribute('src')")

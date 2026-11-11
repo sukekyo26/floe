@@ -206,8 +206,9 @@ func TestCounts(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	if want := (Counts{Changed: 1, Added: 2, Removed: 1, Same: 1, Places: 4}); got.Counts != want {
-		t.Errorf("got %+v, want %+v\n%s", got.Counts, want, told(t, from, to, pageMost))
+	// Of each place, the section it is in, by the sections' order.
+	if want := (Counts{Changed: 1, Added: 2, Removed: 1, Same: 1}); got.Counts != want || fmt.Sprint(got.Places) != "[1 2 3 4]" {
+		t.Errorf("got %+v %v, want %+v\n%s", got.Counts, got.Places, want, told(t, from, to, pageMost))
 	}
 }
 
