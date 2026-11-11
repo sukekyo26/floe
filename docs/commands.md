@@ -236,9 +236,10 @@ floe work --task "#130" --categories proposals,designs,samples   # the order its
 floe work design-notes --pin                                     # pinned, whatever its task
 floe work design-notes --task "#131" --parent "#130"             # the page on a child task of #130
 floe work --task "#130" --forget                                 # the task's row removed
+floe work design-notes                                           # the page told as it is, nothing written
 ```
 
-Each task and page written is told on a line of its own, in the order written, as the store left it: a task `made` (it had no row), `changed` or `unchanged` (the same values, not written), with the fields given; a page with its task, category and pin. A task of no project is `in no project`.
+Each task and page written is told on a line of its own, in the order written, as the store left it: a task `made` (it had no row), `changed` or `unchanged` (the same values, not written), with the fields given; a page with its task, category and pin. A task of no project is `in no project`. With slugs and no flag, each page is told so as it is and nothing is written; a slug of no page is refused before any page is told.
 
 ```text
 $ floe work design-notes --task "#130"
@@ -246,6 +247,8 @@ task #130 in project floe: made
 page design-notes: task #130 in project floe
 $ floe work --task "#130" --state doing
 task #130 in project floe: changed; state doing
+$ floe work design-notes
+page design-notes: task #130 in project floe, category "designs"
 $ floe work --task "#130" --forget
 task #130 in project floe: forgotten
 ```

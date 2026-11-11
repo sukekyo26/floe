@@ -236,9 +236,10 @@ floe work --task "#130" --categories proposals,designs,samples   # カテゴリ�
 floe work design-notes --pin                                     # タスクによらずピン止め
 floe work design-notes --task "#131" --parent "#130"             # #130 の子のタスクにページを付ける
 floe work --task "#130" --forget                                 # タスクの行を消す
+floe work design-notes                                           # ページの今を言い、何も書かない
 ```
 
-書いたタスクとページを、書いた順に 1 行ずつ、store が残した値で言います。タスクは `made`（行が無かった）・`changed`・`unchanged`（同じ値で書かなかった）と書いた欄、ページはタスク・カテゴリ・ピンです。プロジェクトの無いタスクは `in no project` です。
+書いたタスクとページを、書いた順に 1 行ずつ、store が残した値で言います。タスクは `made`（行が無かった）・`changed`・`unchanged`（同じ値で書かなかった）と書いた欄、ページはタスク・カテゴリ・ピンです。プロジェクトの無いタスクは `in no project` です。slug だけでフラグが無ければ、各ページを今の値で同じように言い、何も書きません。無いページの slug があれば、どのページも言う前に断ります。
 
 ```text
 $ floe work design-notes --task "#130"
@@ -246,6 +247,8 @@ task #130 in project floe: made
 page design-notes: task #130 in project floe
 $ floe work --task "#130" --state doing
 task #130 in project floe: changed; state doing
+$ floe work design-notes
+page design-notes: task #130 in project floe, category "designs"
 $ floe work --task "#130" --forget
 task #130 in project floe: forgotten
 ```
