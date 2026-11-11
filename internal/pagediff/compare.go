@@ -74,12 +74,6 @@ const (
 	pageMost = 400_000_000
 )
 
-// Compare compares the page from to the page to, as drawn: an error for one the HTML parser gives up on.
-func Compare(from, to []byte) (Result, error) {
-	out, _, err := marked(from, to, pageMost, Words{Gone: "", Before: ""})
-	return out, err
-}
-
 // compared is the sections of two pages compared, in order: of each, what goes into the result and what is marked.
 type compared struct {
 	result Result

@@ -189,7 +189,7 @@ func TestSameHeadings(t *testing.T) {
 	t.Parallel()
 
 	const from, to = "<h2>Why</h2><p>first reason</p>", "<h2>Why</h2><p>a new reason</p><h2>Why</h2><p>first reason</p>"
-	got, err := Compare([]byte(from), []byte(to))
+	got, _, err := Diff([]byte(from), []byte(to), testWords)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -202,7 +202,7 @@ func TestCounts(t *testing.T) {
 	t.Parallel()
 
 	const from, to = "<h2>A</h2><p>a</p><h2>B</h2><p>b b</p><h2>C</h2>", "<h2>A</h2><p>a</p><h2>B</h2><p>b c</p><h2>D</h2><h2>Other heading</h2>"
-	got, err := Compare([]byte(from), []byte(to))
+	got, _, err := Diff([]byte(from), []byte(to), testWords)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -216,7 +216,7 @@ func TestCounts(t *testing.T) {
 func TestCompareDeep(t *testing.T) {
 	t.Parallel()
 
-	if _, err := Compare([]byte(strings.Repeat("<div>", 600)), []byte("<p>x</p>")); err == nil || !strings.Contains(err.Error(), "512") {
+	if _, _, err := Diff([]byte(strings.Repeat("<div>", 600)), []byte("<p>x</p>"), testWords); err == nil || !strings.Contains(err.Error(), "512") {
 		t.Errorf("got %v", err)
 	}
 }
@@ -328,11 +328,11 @@ func TestSameAnswer(t *testing.T) {
 	}
 	from := "<h2>T</h2><table><tr><td>alpha</td><td>x</td><td>one</td></tr><tr><td>beta</td><td>y</td><td>two</td></tr></table>"
 	to := "<h2>T</h2><table><tr><td>alpha</td><td>one</td></tr><tr><td>beta</td><td>two</td></tr></table>"
-	first, err := Compare([]byte(from), []byte(to))
+	first, _, err := Diff([]byte(from), []byte(to), testWords)
 	if err != nil {
 		t.Fatal(err)
 	}
-	again, _ := Compare([]byte(from), []byte(to)) //nolint:errcheck // the same as above
+	again, _, _ := Diff([]byte(from), []byte(to), testWords) //nolint:errcheck // the same as above
 	x, _ := json.Marshal(first)                   //nolint:errcheck // a Result always encodes
 	y, _ := json.Marshal(again)                   //nolint:errcheck // as above
 	if string(x) != string(y) {
@@ -342,12 +342,12 @@ func TestSameAnswer(t *testing.T) {
 	two := "<h2>T</h2><table><tr><td>gone one</td><td>a</td></tr><tr><td>kept</td><td>b</td></tr></table>" +
 		"<table><tr><td>gone two</td><td>c</td></tr><tr><td>also kept</td><td>d</td></tr></table>"
 	one := "<h2>T</h2><table><tr><td>kept</td><td>b</td></tr><tr><td>also kept</td><td>d</td></tr></table>"
-	marks, err := Mark([]byte(two), []byte(one), testWords)
+	_, marks, err := Diff([]byte(two), []byte(one), testWords)
 	if err != nil {
 		t.Fatal(err)
 	}
 	for range 20 {
-		if again, _ := Mark([]byte(two), []byte(one), testWords); string(again) != string(marks) { //nolint:errcheck // as above
+		if _, again, _ := Diff([]byte(two), []byte(one), testWords); string(again) != string(marks) { //nolint:errcheck // as above
 			t.Fatalf("the same pages marked otherwise:\n%s\n%s", marks, again)
 		}
 	}

@@ -64,6 +64,36 @@ type Server struct {
 	mark    string // what the directories it was read from were then
 	// fresh is whether the drawing is of mark: false before it is read, and after floe's failure, to read it again.
 	fresh bool
+
+	// diffs is the last pair of versions compared, which /diff and the page of the diff both ask of one diff.
+	diffs lastDiff
+}
+
+// lastDiff is the comparison of the last pair of versions asked, by its key (store.PairKey, which another publish or
+// rebuild changes) and the language of the words the page is marked with.
+// LIMIT: one pair: two diffs opened in turn compare each time. Keep more if that comes to weigh.
+type lastDiff struct {
+	sync.Mutex
+	key    string
+	result pagediff.Result
+	page   []byte
+}
+
+// compared is the comparison of pair, its words in the language of c: of the last one asked when it is of the same
+// pair and words.
+func (s *Server) compared(pair store.Pair, c *i18n.Catalog) (pagediff.Result, []byte, error) {
+	key := pair.Key + "\x00" + string(c.Lang())
+	s.diffs.Lock()
+	defer s.diffs.Unlock()
+	if s.diffs.key == key {
+		return s.diffs.result, s.diffs.page, nil
+	}
+	result, page, err := pagediff.Diff(pair.Pages[0], pair.Pages[1], pagediff.Words{Gone: c.Msg("diff_page_gone"), Before: c.Msg("diff_page_before")})
+	if err != nil {
+		return pagediff.Result{}, nil, err //nolint:wrapcheck // the library's words
+	}
+	s.diffs.key, s.diffs.result, s.diffs.page = key, result, page
+	return result, page, nil
 }
 
 // New returns a server for cfg, the drawing read.
@@ -354,7 +384,7 @@ func (s *Server) diff(w http.ResponseWriter, r *http.Request) {
 		notFound(w)
 		return
 	}
-	result, err := pagediff.Compare(pair.Pages[0], pair.Pages[1])
+	result, _, err := s.compared(pair, catalog(r))
 	if err != nil {
 		refuse(w, r, err)
 		return

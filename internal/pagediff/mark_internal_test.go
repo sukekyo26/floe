@@ -163,7 +163,7 @@ func TestMark(t *testing.T) {
 			hasNot: []string{classOut},
 		},
 	} {
-		got, err := Mark([]byte(tc.from), []byte(tc.to), testWords)
+		_, got, err := Diff([]byte(tc.from), []byte(tc.to), testWords)
 		if err != nil {
 			t.Fatalf("%s: %v", tc.name, err)
 		}

@@ -22,22 +22,24 @@ type Words struct {
 	Before string
 }
 
-// Mark is the page to with what differs from the page from marked on it, for the sandbox alone: the words added and
-// gone in their places, a block framed only when its words cannot show what differs, what is gone after the part it
-// was in and an earlier diagram or image under the later. Each place is numbered floe-diff.<k>, in the order of the
-// page, as the Places of Compare. The page's own elements keep their ids and attributes but the classes added, and
+// Diff compares the page from to the page to, as drawn, and answers both of one comparison: what differs, in words
+// (Result, for the contents and counts of the management page), and the page to marked, for the sandbox alone: an
+// error for one the HTML parser gives up on. The page marked has the words added and gone in their places, a block
+// framed only when its words cannot show what differs, what is gone after the part it was in (in a table, where it
+// was) and an earlier diagram or image under the later. Each place is numbered floe-diff.<k>, in the order of the
+// page, as the Places of the Result. The page's own elements keep their ids and attributes but the classes added, and
 // the open and name of a details that holds a place.
-func Mark(from, to []byte, words Words) ([]byte, error) {
-	_, tree, err := marked(from, to, pageMost, words)
+func Diff(from, to []byte, words Words) (Result, []byte, error) {
+	result, tree, err := marked(from, to, pageMost, words)
 	if err != nil {
-		return nil, err
+		return Result{}, nil, err
 	}
 	withStyle(tree)
 	var out bytes.Buffer
 	if err := html.Render(&out, tree); err != nil {
-		return nil, usererr.Library(err) //nolint:wrapcheck // the library's words
+		return Result{}, nil, usererr.Library(err) //nolint:wrapcheck // the library's words
 	}
-	return out.Bytes(), nil
+	return result, out.Bytes(), nil
 }
 
 // marked compares the pages and marks the later's tree: the one comparison both Compare and Mark are of. The earlier

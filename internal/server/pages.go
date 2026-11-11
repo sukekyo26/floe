@@ -16,7 +16,6 @@ import (
 	"floe/internal/draw"
 	"floe/internal/files"
 	"floe/internal/i18n"
-	"floe/internal/pagediff"
 	"floe/internal/store"
 	"floe/internal/usererr"
 )
@@ -119,7 +118,7 @@ func (s *Server) content(
 			if !ok || pair.Key != diff.key {
 				return none, errNoPage
 			}
-			marked, err := pagediff.Mark(pair.Pages[0], pair.Pages[1], pagediff.Words{Gone: c.Msg("diff_page_gone"), Before: c.Msg("diff_page_before")})
+			_, marked, err := s.compared(pair, c)
 			if err != nil {
 				return none, err //nolint:wrapcheck // the library's words, as /diff tells them
 			}
