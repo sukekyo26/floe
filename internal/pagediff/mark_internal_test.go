@@ -106,6 +106,10 @@ func TestMark(t *testing.T) {
 			has: []string{`<style>.only-before{}</style>`},
 		},
 		{
+			name: "words of the part itself gone", from: "<h2>T</h2><div>before<p>between</p>gone after</div>", to: "<h2>T</h2><div>before<p>between</p></div>",
+			has: []string{`<div class="floe-diff-gone">`, "gone after</div>"},
+		},
+		{
 			name: "copy apart", from: `<h2>T</h2><p>kept</p><details name="g"><p>a gone part</p></details>`, to: `<h2>T</h2><p>kept</p>`,
 			has:    []string{`<details class="floe-diff-gone" open=""><p><span class="floe-diff-sr">Gone </span>`},
 			hasNot: []string{classOut},

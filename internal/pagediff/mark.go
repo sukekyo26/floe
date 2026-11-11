@@ -281,7 +281,8 @@ func (m *marker) gone(sec int, b *block, box *html.Node) {
 		m.place(sec, c.root)
 		return
 	}
-	whole := !m.kept[under]
+	// Words of the part itself, between its blocks, are not of a branch: the part goes whole.
+	whole := !m.kept[under] || b.node == under
 	if whole && m.copied[under] {
 		return
 	}
