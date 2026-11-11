@@ -8,6 +8,18 @@ import (
 
 var testWords = Words{Gone: "Gone", Before: "Earlier"}
 
+// twoTabs is two sections of floe's tabs, the second tab of each holding a kept paragraph after one of gone.
+func twoTabs(gone, other string) string {
+	tab := func(heading, gone string) string {
+		if gone != "" {
+			gone = "<p>" + gone + "</p>"
+		}
+		return "<h2>" + heading + `</h2><form data-floe-part="tabs"><label><input type="radio" name="tab" checked>One</label><div><p>The first tab</p></div>` +
+			`<label><input type="radio" name="tab">Two</label><div>` + gone + "<p>kept</p></div></form>"
+	}
+	return tab("T", gone) + tab("U", other)
+}
+
 // tabs is floe's part tabs, the second not picked holding %s.
 const tabs = `<form data-floe-part="tabs"><label><input type="radio" name="tab" checked>One</label><div><p>The first tab</p></div>` +
 	`<label><input type="radio" name="tab">Two</label><div><p>%s</p></div></form>`
@@ -37,8 +49,8 @@ func TestMark(t *testing.T) {
 		},
 		{
 			name: "a row gone", from: "<h2>T</h2><table><tr><td>a</td></tr><tr><td>b</td></tr></table>", to: "<h2>T</h2><table><tr><td>a</td></tr></table>",
-			has:    []string{`</table><div class="floe-diff-gone"><span class="floe-diff-at" id="floe-diff.0"></span><span class="floe-diff-sr">`, `<del class="floe-diff-del">b</del>`},
-			hasNot: []string{"<tr><div", "</tr><div"},
+			has:    []string{`</table><table class="floe-diff-gone"><tbody><tr><td><span class="floe-diff-sr">Gone </span><span class="floe-diff-at" id="floe-diff.0"></span>b</td></tr></tbody></table>`},
+			hasNot: []string{"<td>a</td></tr></tbody></table></table>", `class="floe-diff-gone"><tbody><tr><td>a`},
 		},
 		{
 			name: "own ids", from: `<h2 id="overview">Overview</h2><p>x</p>`, to: `<h2 id="overview">Overview and scope</h2><p>x</p>`,
@@ -59,8 +71,21 @@ func TestMark(t *testing.T) {
 			has: []string{`<div data-floe-part="diagram" class="floe-diff-gone floe-diff-out">`},
 		},
 		{
+			name: "items gone one after another", from: "<h2>T</h2><ul><li>one</li><li>gone item</li><li>gone too</li></ul>", to: "<h2>T</h2><ul><li>one</li></ul>",
+			has:    []string{`<ul class="floe-diff-gone"><li><span class="floe-diff-sr">Gone </span><span class="floe-diff-at" id="floe-diff.0"></span>gone item</li><li>gone too</li></ul>`},
+			hasNot: []string{`<ul class="floe-diff-gone"><li>one`, `id="floe-diff.1"`},
+		},
+		{
+			name: "from two tabs", from: twoTabs("gone in one", "gone in other"), to: twoTabs("", ""),
+			has: []string{
+				`<input type="radio" name="floe-diff.old.0.tab" checked=""/>`,
+				`<input type="radio" name="floe-diff.old.1.tab" checked=""/>`,
+				"Two</label><div><p>gone in one</p></div></form>", "Two</label><div><p>gone in other</p></div></form>",
+			},
+		},
+		{
 			name: "copy apart", from: `<h2>T</h2><p>kept</p><details name="g"><p>a gone part</p></details>`, to: `<h2>T</h2><p>kept</p>`,
-			has:    []string{`<details name="floe-diff.old.g" class="floe-diff-gone">`},
+			has:    []string{`<details class="floe-diff-gone" open=""><p><span class="floe-diff-sr">Gone </span>`},
 			hasNot: []string{classOut},
 		},
 	} {

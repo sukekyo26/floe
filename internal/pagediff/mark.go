@@ -99,6 +99,9 @@ type marker struct {
 	// added is what floe put in; kept, the earlier's elements that hold a block the later keeps; copied, those copied.
 	added, kept, copied map[*html.Node]bool
 	held                map[holdKey]bool
+	gones               []*goneCopy
+	branch              *goneCopy
+	copies              int
 	labels              map[*html.Node]*html.Node
 	groups              []*group
 	cur                 *group
@@ -181,6 +184,7 @@ func (m *marker) mark(treeA *html.Node, a, b []section, c compared) {
 		}
 	}
 	m.flush(nil, nil)
+	m.trim()
 }
 
 func (m *marker) changed(sec int, from, to section, boxA, boxB *html.Node, pairs []blockPair, heading []Span) {
@@ -243,7 +247,7 @@ func (m *marker) keep(n *html.Node) {
 // visit goes on to n of the later page, in its section's box: what is gone before it goes in first.
 func (m *marker) visit(n, box *html.Node) {
 	m.flush(n, box)
-	m.last, m.lastBox, m.tail = n, box, nil
+	m.last, m.lastBox, m.tail, m.branch = n, box, nil, nil
 }
 
 func (m *marker) place(sec int, n *html.Node) {
@@ -261,43 +265,123 @@ func (m *marker) frame(sec int, n *html.Node, class string) {
 	m.place(sec, n)
 }
 
-// gone puts what is gone of the earlier page in after what was gone through last: the element under its section's box
-// that holds it copied, when that holds nothing the later keeps, else its words in a box of words gone.
+// gone puts what is gone of the earlier page in after what was gone through last, as it was: the element under its
+// section's box that holds it (the part) copied, whole when the later keeps nothing of it, else only the branches to
+// what is gone (trim). What is gone of one part one after another goes in one copy.
 func (m *marker) gone(sec int, b *block, box *html.Node) {
 	under := childOf(b.node, box)
-	whole := under != nil && !m.kept[under]
+	if under == nil {
+		under = b.node
+	}
+	if c := m.branch; c != nil && c.under == under && len(m.pending) > 0 && m.pending[len(m.pending)-1] == c.root {
+		c.gone = append(c.gone, b.node)
+		m.place(sec, c.root)
+		return
+	}
+	whole := !m.kept[under]
 	if whole && m.copied[under] {
 		return
 	}
-	if whole {
-		m.copied[under] = true
-		c := m.copyOld(under)
-		addClass(c, classGone)
-		// A diagram or image shows no line through: framed, as the blocks whose words cannot show what differs.
-		if holdsFigure(c) {
-			addClass(c, classOut)
+	m.copied[under] = true
+	root, of := m.copyOld(under)
+	addClass(root, classGone)
+	c := &goneCopy{under: under, root: root, of: of, gone: []*html.Node{b.node}, whole: whole}
+	m.gones = append(m.gones, c)
+	m.branch = c
+	m.pending = append(m.pending, root)
+	m.place(sec, root)
+}
+
+// goneCopy is the copy of a part of the earlier page that holds what is gone: under, copied as root, of telling the
+// copy of each of its nodes; gone, the blocks of it gone; whole when the later keeps nothing of it.
+type goneCopy struct {
+	under, root *html.Node
+	of          map[*html.Node]*html.Node
+	gone        []*html.Node
+	whole       bool
+}
+
+// trim leaves of each copy of what is gone the branches to it alone, as a part the later keeps some of, and shows them
+// as marks are shown: a details on a branch opened, the title of a tab of floe's tabs on one kept and picked, as the
+// tabs show the panel after the title picked alone. A copy that holds a diagram or image is framed, as the line
+// through its words does not show on them. The word for a screen reader goes first.
+// LIMIT: an ol's items copied are numbered from its start again, a table's rows copied have no head, and a block of
+// words between others in one element copies the whole element: numbering them as they were would copy HTML's
+// numbering, and a head or the words apart would be a rule more.
+func (m *marker) trim() {
+	for _, c := range m.gones {
+		keep := map[*html.Node]bool{}
+		for _, old := range c.gone {
+			n := c.of[old]
+			if n == nil {
+				continue
+			}
+			for d := range withSelf(n) {
+				keep[d] = true
+			}
+			for a := n.Parent; a != nil; a = a.Parent {
+				keep[a] = true
+			}
+			if label := tabOf(n); label != nil {
+				for d := range withSelf(label) {
+					keep[d] = true
+				}
+				pick(label)
+			}
+			openDetails(n)
 		}
-		c.InsertBefore(m.said(), c.FirstChild)
-		m.pending = append(m.pending, c)
-		m.place(sec, c)
-		return
+		if !c.whole {
+			prune(c.root, keep)
+		}
+		if holdsFigure(c.root) {
+			addClass(c.root, classOut)
+		}
+		m.put(c.root, m.said())
 	}
-	var words *html.Node
-	if n := len(m.pending); n > 0 && m.pending[n-1].DataAtom == atom.Div && page.HasClass(m.pending[n-1], classGone) && m.pending[n-1].FirstChild != nil && page.HasClass(m.pending[n-1].FirstChild, classSr) {
-		words = m.pending[n-1]
-	} else {
-		words = element(atom.Div, classGone)
-		words.AppendChild(m.said())
-		m.pending = append(m.pending, words)
+}
+
+// prune takes out of n what keep holds not.
+func prune(n *html.Node, keep map[*html.Node]bool) {
+	for c := n.FirstChild; c != nil; {
+		next := c.NextSibling
+		if keep[c] {
+			prune(c, keep)
+		} else {
+			n.RemoveChild(c)
+		}
+		c = next
 	}
-	if b.text != "" {
-		p := element(atom.P, "")
-		del := element(atom.Del, classDel)
-		del.AppendChild(text(b.text))
-		p.AppendChild(del)
-		words.AppendChild(p)
+}
+
+// tabOf is the title of the tab of floe's tabs n is in, the nearest: nil for none.
+func tabOf(n *html.Node) *html.Node {
+	for c := n; c != nil && c.Parent != nil; c = c.Parent {
+		if v, _ := page.Attr(c.Parent, "data-floe-part"); c.Parent.DataAtom != atom.Form || v != "tabs" || c.DataAtom == atom.Label {
+			continue
+		}
+		for l := c.PrevSibling; l != nil; l = l.PrevSibling {
+			if l.Type == html.ElementNode && l.DataAtom == atom.Label {
+				return l
+			}
+		}
 	}
-	m.place(sec, words)
+	return nil
+}
+
+// pick picks the tab whose title is label: its radio checked, the others of its tabs not.
+func pick(label *html.Node) {
+	for d := range label.Parent.Descendants() {
+		if d.Type != html.ElementNode || d.DataAtom != atom.Input {
+			continue
+		}
+		d.Attr = slices.DeleteFunc(d.Attr, func(a html.Attribute) bool { return a.Namespace == "" && a.Key == "checked" })
+	}
+	for d := range label.Descendants() {
+		if d.Type == html.ElementNode && d.DataAtom == atom.Input {
+			d.Attr = append(d.Attr, html.Attribute{Namespace: "", Key: "checked", Val: ""})
+			return
+		}
+	}
 }
 
 // holdsFigure tells whether n holds a diagram or image.
@@ -325,7 +409,8 @@ func (m *marker) before(sec int, n *html.Node) {
 	summary := element(atom.Summary, "")
 	summary.AppendChild(text(m.words.Before))
 	d.AppendChild(summary)
-	d.AppendChild(m.copyOld(part))
+	c, _ := m.copyOld(part)
+	d.AppendChild(c)
 	m.pending = append(m.pending, d)
 	m.place(sec, d)
 	m.flush(nil, nil)
@@ -390,8 +475,18 @@ func childOf(n, box *html.Node) *html.Node {
 
 // copyOld is n of the earlier page copied, its scripts left out, its ids and the names of its inputs, and all that
 // names them, apart from the later page's.
-func (m *marker) copyOld(n *html.Node) *html.Node {
-	c := deepCopy(n)
+func (m *marker) copyOld(n *html.Node) (*html.Node, map[*html.Node]*html.Node) {
+	of := map[*html.Node]*html.Node{}
+	var copyOf func(n *html.Node) *html.Node
+	copyOf = func(n *html.Node) *html.Node {
+		c := &html.Node{Type: n.Type, DataAtom: n.DataAtom, Data: n.Data, Namespace: n.Namespace, Attr: slices.Clone(n.Attr)}
+		of[n] = c
+		for k := n.FirstChild; k != nil; k = k.NextSibling {
+			c.AppendChild(copyOf(k))
+		}
+		return c
+	}
+	c := copyOf(n)
 	var scripts []*html.Node
 	for d := range c.Descendants() {
 		if d.Type == html.ElementNode && d.Data == "script" {
@@ -401,8 +496,11 @@ func (m *marker) copyOld(n *html.Node) *html.Node {
 	for _, s := range scripts {
 		s.Parent.RemoveChild(s)
 	}
-	renumber(c, func(_ int, id string) string { return "floe-diff.old." + id })
-	return c
+	// Each copy apart, from the page and from the others: two copies of one tabs make no group.
+	prefix := "floe-diff.old." + strconv.Itoa(m.copies) + "."
+	m.copies++
+	renumber(c, func(_ int, id string) string { return prefix + id })
+	return c, of
 }
 
 // edit is a change to a text node: the bytes [at, end) wrapped in an ins, or del's words put in at at.
@@ -654,17 +752,27 @@ func (m *marker) anchor(nodes []*html.Node) *html.Node {
 // floe put in. nil for none.
 func (m *marker) spot(n *html.Node) *html.Node {
 	at := element(atom.Span, classAt)
-	if m.added[n] {
-		n.InsertBefore(at, n.FirstChild)
-		return at
+	if !m.put(n, at) {
+		return nil
 	}
+	return at
+}
+
+// put puts span in n where it is held: before n's first words held where a span can be (not the words for a screen
+// reader), else first in a box floe put in that holds it. False for nowhere.
+func (m *marker) put(n, span *html.Node) bool {
 	for d := range withSelf(n) {
-		if d.Type == html.TextNode && strings.TrimFunc(d.Data, unicode.IsSpace) != "" && d.Parent != nil && m.holds(d.Parent, "span") {
-			d.Parent.InsertBefore(at, d)
-			return at
+		if d.Type == html.TextNode && strings.TrimFunc(d.Data, unicode.IsSpace) != "" && d.Parent != nil &&
+			!page.HasClass(d.Parent, classSr) && m.holds(d.Parent, "span") {
+			d.Parent.InsertBefore(span, d)
+			return true
 		}
 	}
-	return nil
+	if m.added[n] && m.holds(n, "span") {
+		n.InsertBefore(span, n.FirstChild)
+		return true
+	}
+	return false
 }
 
 func withSelf(n *html.Node) func(func(*html.Node) bool) {
