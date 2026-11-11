@@ -203,8 +203,8 @@ func TestUITaskCategories(t *testing.T) { //nolint:paralleltest // the browser t
 	b.pressKey(kb.Escape)
 	b.size(1400, 900, false)
 
-	// Off its task by a pointer: the page alone written; its category of pages alone goes with it, the focus on the row after, or before; the way back
-	// writes the page's work back alone, the task's row as it was.
+	// Off its task by a pointer: the page alone written; its category stays, of no page now, the focus on the row after, or before; the way back
+	// puts the page back on the task as the toast shows it, its rev with it, the task's row as it was.
 	open("S300")
 	menu("review-a", "task-out", false)
 	b.until("off", "!document.querySelector('#list li[data-slug=review-a]')")
@@ -216,6 +216,16 @@ func TestUITaskCategories(t *testing.T) { //nolint:paralleltest // the browser t
 	b.until("back", "document.querySelector('#list li[data-slug=review-a]')")
 	say("back", "sent.join(' ; ')")
 	out = append(out, "back, written: "+row("S300")+" / "+work("review-a"))
+	// The way back after another wrote the task meanwhile: refused as stale and said, the page left off.
+	menu("review-a", "task-out", false)
+	b.until("off again", "!document.querySelector('#list li[data-slug=review-a]')")
+	s.floe(t, "work", "--project", "proj", "--task", "S300", "--title", "Categories again")
+	b.eval("[...document.querySelectorAll('#toasts .undo')].at(-1).click()")
+	b.until("refused", "!document.getElementById('error').hidden")
+	say("back, stale", "document.getElementById('error').textContent")
+	out = append(out, "back, stale, written: "+work("review-a"))
+	s.floe(t, "work", "review-a", "--task", "S300", "--category", "レビュー")
+	open("S300")
 	// From the keys: the focus on the way back; Escape leaves it on the row after the one taken off.
 	menu("plan-a", "task-out", true)
 	b.until("off", "!document.querySelector('#list li[data-slug=plan-a]')")
@@ -281,11 +291,13 @@ func TestUITaskCategories(t *testing.T) { //nolint:paralleltest // the browser t
 		"off, told: Took T review-a off task S300Undo",
 		"off, focus: check-a",
 		"off, groups: [案+] plan-a note-a other-a old-a [実装+ none] [リリース+] build-a memo-a check-a [レビュー+ none]",
-		`back: /api/work {"slugs":["review-a"],"task":"S300","category":"レビュー"}`,
+		`back: /api/work {"slugs":["review-a"],"task":"S300","category":"レビュー","new":false,"rev":5}`,
 		"back, written: 5 / S300/レビュー",
+		"back, stale: Failed to save: task S300 has changed since it was read; the tasks are read again, so check and save again",
+		"back, stale, written: none",
 		"keys, focus: btn undo",
 		"keys, escape: note-a 0",
-		`back as it was: /api/work {"slugs":["g-a"],"task":"","category":""} ; /api/work {"slugs":["g-a"],"task":"G2","category":"x"}`,
+		`back as it was: /api/work {"slugs":["g-a"],"task":"","category":""} ; /api/work {"slugs":["g-a"],"task":"G2","category":"x","new":true}`,
 		"back as it was, written: 1 / G2/x",
 		"item: true false Take T build-a off its task",
 		"dialog, focus: btn undo",

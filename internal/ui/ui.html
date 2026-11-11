@@ -2045,7 +2045,7 @@
   }
 
   const deleteOne = (slug) => writeOne(slug, { method: 'DELETE' }, true);
-  // A page's edit, as patchOne writes it, with the page as the store left it: { reason, edited }, edited null when refused
+  // A page's edit, with the page as the store left it: { reason, edited }, edited null when refused
   async function editOne(slug, body) {
     let edited = null;
     const reason = await writeOne(slug, {
@@ -2053,7 +2053,8 @@
     });
     return { reason, edited };
   }
-  const patchOne = (slug, body) => writeOne(slug, { method: 'PATCH', headers: { 'content-type': 'application/json' }, body: JSON.stringify(body) });
+  // A page's edit told by its reason alone, "" when written
+  const patchOne = async (slug, body) => (await editOne(slug, body)).reason;
 
   // Acts on the entries of slugs and tells how many it did, done(n), and how many failed, failed(n, the first reason); settled(reasons)
   // comes before the list is read again
@@ -5109,12 +5110,11 @@
     blank.reportValidity();
     return false;
   }
-  // A task's write from the screen, a modal, the state's choices or the archive button, which says whether it takes the task to be new, and
-  // of one there the rev read: one of no rev is not sent, as JSON would drop it and the store write it unchecked. Refused as stale (409), the
-  // tasks are read again, a page whole too, whose load reads none; stale is the refusal with what to do next in a modal, which can save again.
-  // Written, the row as the store answers it goes in the tasks read, so that the next write is of its rev, a read failing too; rev is its rev
-  // The one write of pages and their tasks (PATCH /api/work): every task it answers goes in tasksRead, the first one's rev is what the caller
-  // goes on with. Refused as stale, the tasks and the list are read again
+  // The one write of pages and their tasks (PATCH /api/work), from the screen, a modal, the state's choices or the archive button, which says
+  // whether it takes the task named to be new, and of one there the rev read: one of no rev is not sent, as JSON would drop it and the store
+  // write it unchecked. Refused as stale (409), the tasks are read again, a page whole too, whose load reads none; stale is the refusal with
+  // what to do next in a modal, which can save again. Written, every task the store answers goes in the tasks read, so that the next write
+  // is of its rev, a read failing too; rev is the first one's
   async function writeWork(body) {
     if (body.new === false && !Number.isInteger(body.rev)) return { ok: false, status: 0, text: t('ui_task_no_rev'), rev: null, stale: '' };
     const res = await api('/api/work', { method: 'PATCH', headers: { 'content-type': 'application/json' }, body: JSON.stringify(body) });
@@ -5169,11 +5169,9 @@
     try {
       if (!taskFormReady($('set'), $('set-error'))) return;
       const res = await putPageOn(page, task, body, category);
-      // Whether the name is of a task there, as read again, a title asked of a new one alone; or, the task written and the page refused, as
-      // written, from the tasks read, which hold it and no read since, as a load waits for the page's write, so that saving again writes the
-      // page, and is refused when another wrote it since
+      // Refused as stale: whether the name is of a task there, as read again, a title asked of a new one alone
       if (!res.ok) {
-        if (res.status === 409 || res.rev !== null) setTaskKnown();
+        if (res.status === 409) setTaskKnown();
         throw new Error(res.status === 409 ? res.stale : res.text);
       }
       if (task.trim() === setOpened.task) toast(t('ui_saved'));
@@ -5218,10 +5216,8 @@
     $('edit-categories').replaceChildren(...order.map((name) => categoryRow(name, paged.has(name))));
     showCategories();
   }
-  // A category with pages is not deleted, as categoryOrder would bring it back from them: its button is there, not pressed, and says why. It is
+  // A category with pages is not deleted, as the store refuses to leave one out: its button is there, not pressed, and says why. It is
   // aria-disabled, not disabled, so that the keys reach it and pressing it says why
-  // LIMIT: a page put on a category meanwhile moves no rev, so that one deleted here is saved deleted and comes back after those written,
-  // from its page. Read the pages again before saving if that order comes to matter.
   function categoryRow(name, paged) {
     const li = document.createElement('li');
     li.dataset.category = name;
@@ -5420,12 +5416,14 @@
     const next = at === -1 ? null : (rows[at + 1] ?? rows[at - 1])?.dataset.key;
     const reason = await workOf(a.slug, { task: '', category: '' });
     if (reason) return { reason };
+    // The way back is of the task as the toast shows it: its rev as read now, or new when it has no row
+    const seen = Object.hasOwn(tasksRead.tasks[a.taskProject] ?? {}, name) ? { new: false, rev: readRev(a.taskProject, name) } : { new: true };
     const rowOf = (key) => [...$('list').children].find((li) => li.dataset.key === key)?.querySelector('.title');
     const edit = () => ($('task-edit').closest('[hidden]') ? null : $('task-edit'));
     const button = undoToast(t('ui_task_out_done', a.title, name), {
       undo: async () => {
-        const reason = await workOf(a.slug, { task: name, category });
-        return { ok: !reason, text: reason };
+        const res = await putPageOn(a, name, seen, category);
+        return { ok: res.ok, text: res.status === 409 ? res.stale : res.text };
       },
       done: () => rowOf(`entry:${a.slug}`) ?? back?.(),
       away: () => back?.() ?? rowOf(next) ?? categoryAdd(category) ?? edit(),
@@ -5505,8 +5503,7 @@
         failed(err.message);
         return;
       }
-      // The task's row written, the page refused, the row's rev is the one written; refused as stale, the one read again
-      if (res.rev !== null) to.rev = res.rev;
+      // Refused as stale, the rev is the one read again
       if (!res.ok) {
         if (res.status === 409) {
           to.rev = readRev(to.project, to.name);

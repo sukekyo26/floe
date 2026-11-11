@@ -47,6 +47,8 @@ func (ed TaskEdit) hasFields() bool {
 // (the task named without pages), are checked, and only then tasks.json and the pages' meta.json are written, in that
 // order, so that a refusal writes nothing, and a task a page names always has a row and the page's category among its
 // categories. A row that changes moves its Rev on.
+// LIMIT: a row written by hand keeps its Rev, and one forgotten and made again starts it again: a screen that read it
+// before may write over it. Count them apart if hand edits come to be done while screens are open
 func (s *Store) Work(w WorkWrite) (WorkWritten, error) {
 	w.URL = pastedURL(w.URL)
 	if err := checkTaskEdit(w.TaskEdit); err != nil {

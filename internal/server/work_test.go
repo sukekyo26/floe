@@ -156,6 +156,12 @@ func TestWorkAPI(t *testing.T) {
 			t.Errorf("PATCH %s = %d, %q, want %q", c.body, code, body, c.want)
 		}
 	}
+	// A project or ID that is no UTF-8, a lone surrogate in the body, is refused as decodeStrict reads it, before the store
+	for _, body := range []string{`{"project":"p","task":"\ud800","state":"done"}`, `{"project":"\ud800","task":"x","state":"done"}`, `{"slugs":["d"],"task":"\ud800"}`} {
+		if code, answer := work(body); code != http.StatusBadRequest || !strings.Contains(answer, "surrogate") {
+			t.Errorf("PATCH %s = %d, %q", body, code, answer)
+		}
+	}
 	if _, ok := tasks()["p"]; ok {
 		t.Errorf("a refused write wrote: %v", tasks())
 	}
