@@ -7,7 +7,6 @@ import (
 	"io/fs"
 	"net/url"
 	"path/filepath"
-	"reflect"
 	"slices"
 	"strings"
 	"unicode/utf8"
@@ -62,18 +61,16 @@ type Work struct {
 	Pin      bool   `json:"pin,omitempty"`
 }
 
-// WorkEdit is what an edit changes of a page's Work, each left as it is when nil.
+// WorkEdit is what a write changes of a page's Work, each left as it is when nil.
 type WorkEdit struct {
-	Task     *string `json:"task,omitzero"`
-	Category *string `json:"category,omitzero"`
-	Pin      *bool   `json:"pin,omitzero"`
+	Task     *string
+	Category *string
+	Pin      *bool
 }
 
 // setWork applies ed to m. A category is of its task: a page that moves to another task leaves it, unless ed gives the
 // category it takes there; a page off a task has none, and one neither on a task nor pinned has no Work. TaskName has
 // checked ed.
-// LIMIT: a page moved to another project's task of the same name, by an edit or a publish, keeps its category: names
-// of categories mostly hold there. Take it off in the two ways if that comes to mislead.
 func setWork(m *Meta, ed *WorkEdit) {
 	var w Work
 	if m.Work != nil {
@@ -133,23 +130,23 @@ var States = []State{
 	{Name: "archived", New: false, First: false},
 }
 
-// TaskEdit is what a write changes of a task's row, each left as it is when nil. An empty URL or Categories takes it
-// off.
+// TaskEdit is what a write changes of a task's row, each left as it is when nil, as the API sends it. An empty URL or
+// Categories takes it off.
 type TaskEdit struct {
-	Title      *string
-	State      *string
-	URL        *string
-	Categories *[]string
+	Title      *string   `json:"title,omitzero"`
+	State      *string   `json:"state,omitzero"`
+	URL        *string   `json:"url,omitzero"`
+	Categories *[]string `json:"categories,omitzero"`
 	// An empty Parent takes it off.
-	Parent *string
+	Parent *string `json:"parent,omitzero"`
 	// New, when said, is whether the writer takes the task to be new: refused, as Conflict, when it is there, or not.
-	New *bool
+	New *bool `json:"new,omitzero"`
 	// Rev, when said, is the row's Rev as the writer read it: refused, as Conflict, when the row has been written since.
-	Rev *int
+	Rev *int `json:"rev,omitzero"`
 	// ParentNew and ParentTitle go with Parent: ParentNew whether the parent named is taken to be new, as New is of the
 	// task; and ParentTitle, with ParentNew true, the title of the parent made in the same write.
-	ParentNew   *bool
-	ParentTitle *string
+	ParentNew   *bool   `json:"parentNew,omitzero"`
+	ParentTitle *string `json:"parentTitle,omitzero"`
 }
 
 func validState(name string) bool {
@@ -328,20 +325,13 @@ func checkParent(project string, rows map[string]Task, name string, ed TaskEdit)
 	return nil
 }
 
-// checkThere refuses a write that takes the task name to be new while it is there, or there while it is not, as a
-// screen read before it says: there is on the task list, of a row or of a page on it, an archived one too, as the
-// management page's tasksOf has it. The pages are read only for a name of no row. The pages are written under the same
-// lock.
-// LIMIT: a new name, of no row, reads every page's meta.json under the lock. Fine at hundreds of pages; at thousands,
-// keep an index of the pages' tasks.
-func (s *Store) checkThere(project string, rows map[string]Task, name string, taken *bool) error {
+// checkThere refuses a write that takes the task name to be new while it has a row, or there while it has none, as a
+// screen read before it says: a task is there of its row alone.
+func checkThere(rows map[string]Task, name string, taken *bool) error {
 	if taken == nil {
 		return nil
 	}
-	there, err := s.taskThere(project, rows, name)
-	if err != nil {
-		return err
-	}
+	_, there := rows[name]
 	switch {
 	case *taken && there:
 		return conflict(usererr.New("store_task_there", name))
@@ -351,23 +341,13 @@ func (s *Store) checkThere(project string, rows map[string]Task, name string, ta
 	return nil
 }
 
-// taskThere reports whether the task name is there, rows being its project's: of a row, or of pages alone, as the task
-// list shows it.
-func (s *Store) taskThere(project string, rows map[string]Task, name string) (bool, error) {
-	if _, ok := rows[name]; ok {
-		return true, nil
-	}
-	count, _, err := s.pagesOfTask(project, name)
-	return count > 0, err
-}
-
 // checkSeen refuses, before checkParent, what ed says the screen saw that is no longer so: the task's row written since
 // (Rev), whatever it wrote, and a parent named there or new (ParentNew). A parent of itself is refused first, which
 // would else be said to be there; one taken to be there of no row next, as it can be no parent, before its pages are
 // read.
 // LIMIT: a write of another field, or of the state the row is in already, is refused as well: the screen reads the
 // tasks again. Compare by field if refusals come to be many
-func (s *Store) checkSeen(project string, rows map[string]Task, name string, ed TaskEdit) error {
+func checkSeen(project string, rows map[string]Task, name string, ed TaskEdit) error {
 	if ed.Rev != nil && *ed.Rev != rows[name].Rev {
 		return conflict(usererr.New("store_task_was", name))
 	}
@@ -388,7 +368,7 @@ func (s *Store) checkSeen(project string, rows map[string]Task, name string, ed 
 	if _, ok := rows[parent]; !ok && ed.ParentNew != nil && !*ed.ParentNew {
 		return usererr.New("store_parent_none", parent, project)
 	}
-	return s.checkThere(project, rows, parent, ed.ParentNew)
+	return checkThere(rows, parent, ed.ParentNew)
 }
 
 // newTaskRow is the row a task starts with: of the state New, from now.
@@ -420,101 +400,17 @@ func pastedURL(raw *string) *string {
 	return &trimmed
 }
 
-// TaskWritten is a task's row as EditTask left it, under the project (ProjectKey) and name tasks.json keys it by,
-// which a screen puts in place of the row it read. Made is whether the task was not there before this write (no row
-// and no page, as checkThere has it), and Wrote
-// whether tasks.json was written: not when the row came out as it was, unless a parent was made with it.
+// TaskWritten is a task's row as Work left it, under the project (ProjectKey) and name tasks.json keys it by, which a
+// screen puts in place of the row it read. Made is whether the task had no row before this write, and Wrote whether
+// its row was written: not when it came out as it was, unless a parent was made with it.
 type TaskWritten struct {
 	Project string `json:"project"`
 	Task    string `json:"task"`
 	Row     Task   `json:"row"`
 	Made    bool   `json:"made"`
 	Wrote   bool   `json:"wrote"`
-}
-
-// EditTask applies ed to the row of the task (project, name), making it of the state of a new one when there is none,
-// but for checkParent's ErrNotFound, and returns the row as it left it: a write that changes nothing writes nothing.
-// LIMIT: a row written by hand keeps its Rev, and one forgotten and made again starts it again: a screen that read it
-// before may write over it. Count them apart if hand edits come to be done while screens are open
-func (s *Store) EditTask(project, name string, ed TaskEdit) (TaskWritten, error) {
-	project, name, err := taskKey(project, name)
-	if err != nil {
-		return TaskWritten{}, err
-	}
-	ed.URL = pastedURL(ed.URL)
-	if err = checkTaskEdit(ed); err != nil {
-		return TaskWritten{}, err
-	}
-	if ed.Parent != nil {
-		var parent string
-		if parent, err = TaskName(*ed.Parent); err != nil {
-			return TaskWritten{}, err
-		}
-		ed.Parent = &parent
-	}
-	unlock, err := s.lock(true)
-	if err != nil {
-		return TaskWritten{}, err
-	}
-	defer unlock()
-	all, err := s.ReadTasks()
-	if err != nil {
-		return TaskWritten{}, err
-	}
-	// Made first: a parent made goes in it before checkParent, though the project has no row yet. Refused, none is written
-	if all[project] == nil {
-		all[project] = map[string]Task{}
-	}
-	rows := all[project]
-	if err = s.checkWrite(project, rows, name, ed); err != nil {
-		return TaskWritten{}, err
-	}
-	return s.writeRow(all, project, name, ed)
-}
-
-// writeRow writes ed, checked, to the task name of the project in all: a parent made with it, of rev 1, and the row one
-// rev more. A write that changes nothing writes nothing, so that the same floe work given again does not refuse a
-// screen.
-func (s *Store) writeRow(all Tasks, project, name string, ed TaskEdit) (TaskWritten, error) {
-	rows := all[project]
-	parentMade := ed.ParentNew != nil && *ed.ParentNew
-	if parentMade {
-		up := newTaskRow()
-		up.Title = strings.TrimSpace(*ed.ParentTitle)
-		up.Rev = 1
-		rows[*ed.Parent] = up
-	}
-	was, had := rows[name]
-	if !had {
-		was = newTaskRow()
-	}
-	t := was.edited(ed)
-	if had && !parentMade && reflect.DeepEqual(t, was) {
-		return TaskWritten{Project: project, Task: name, Row: was, Made: false, Wrote: false}, nil
-	}
-	// Made is of the task, not the row: one of pages alone was there, as the task list shows it.
-	there, err := s.taskThere(project, rows, name)
-	if err != nil {
-		return TaskWritten{}, err
-	}
-	t.Rev++
-	rows[name] = t
-	if err := s.writeTasks(all); err != nil {
-		return TaskWritten{}, err
-	}
-	return TaskWritten{Project: project, Task: name, Row: t, Made: !there, Wrote: true}, nil
-}
-
-// checkWrite refuses ed of the task name, rows being the project's now: whether it is there as said, what the screen
-// saw, and the parent.
-func (s *Store) checkWrite(project string, rows map[string]Task, name string, ed TaskEdit) error {
-	if err := s.checkThere(project, rows, name, ed.New); err != nil {
-		return err
-	}
-	if err := s.checkSeen(project, rows, name, ed); err != nil {
-		return err
-	}
-	return checkParent(project, rows, name, ed)
+	// Added is the categories of the write's pages added at the end of the row's, in order.
+	Added []string `json:"added,omitempty"`
 }
 
 // edited is t as ed changes it, which has been checked.
@@ -539,20 +435,32 @@ func (t Task) edited(ed TaskEdit) Task {
 
 // pagesOfTask counts the pages on the task (project, name), the archived too, and names one of them.
 func (s *Store) pagesOfTask(project, name string) (count int, first string, err error) {
+	err = s.eachPageOn(project, name, func(slug string, _ *Meta) bool {
+		if count == 0 {
+			first = slug
+		}
+		count++
+		return true
+	})
+	return count, first, err
+}
+
+// eachPageOn calls on with each page on the task (project, name), the archived too, in the store's order, while it
+// says to go on: the one walk of the pages that finds a task's.
+// LIMIT: it reads every page's meta.json, under the lock where its callers write: fine at hundreds of pages; at
+// thousands, keep an index of the pages' tasks.
+func (s *Store) eachPageOn(project, name string, on func(slug string, m *Meta) bool) error {
 	slugs, err := s.slugs()
 	if err != nil {
-		return 0, "", err
+		return err
 	}
 	for _, slug := range slugs {
 		m := s.ReadMeta(slug)
-		if m != nil && m.Work != nil && m.Work.Task == name && ProjectKey(m.Project) == project {
-			if count == 0 {
-				first = slug
-			}
-			count++
+		if m != nil && m.Work != nil && m.Work.Task == name && ProjectKey(m.Project) == project && !on(slug, m) {
+			return nil
 		}
 	}
-	return count, first, nil
+	return nil
 }
 
 // ForgetTask removes the row of the task (project, name): ErrNotFound for none, and refused while a page is on it or it

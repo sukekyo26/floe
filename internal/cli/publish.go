@@ -133,7 +133,11 @@ func (a *app) tellSaved(ctx context.Context, u string, saved server.Saved, link 
 	}
 	// The directory floe publish runs in sets the project of a data file's page when the page is new, replaces another
 	// file's, had none, or is moved; a link's is its target's. Told after the URL, as the update is.
-	if !link && (saved.Prev == nil || saved.Prev.TaskProject != saved.TaskProject) {
+	switch {
+	case saved.OffTask != "":
+		// a page's task is of its project: moved, it was taken off it, a link's too
+		a.warn("cli_page_off_task", inProject(saved.TaskProject), saved.OffTask)
+	case !link && (saved.Prev == nil || saved.Prev.TaskProject != saved.TaskProject):
 		a.warn("cli_page_project", inProject(saved.TaskProject))
 	}
 }
@@ -308,7 +312,7 @@ func (a *app) archiveCmd() *cobra.Command {
 		RunE: func(cmd *cobra.Command, args []string) error {
 			archived := !undo
 			body := server.Edit{
-				Title: nil, Description: nil, Project: nil, Slug: nil, Favorite: nil, Archived: &archived, Tags: nil, Work: nil,
+				Title: nil, Description: nil, Project: nil, Slug: nil, Favorite: nil, Archived: &archived, Tags: nil,
 			}
 			return a.eachPage(cmd, args, http.MethodPatch, body, nil)
 		},
@@ -330,7 +334,7 @@ are taken off first, then those given to --add are put on, so a name given to bo
 		RunE: func(cmd *cobra.Command, args []string) error {
 			body := server.Edit{
 				Title: nil, Description: nil, Project: nil, Slug: nil, Favorite: nil, Archived: nil,
-				Tags: &store.TagsEdit{Add: add, Remove: remove}, Work: nil,
+				Tags: &store.TagsEdit{Add: add, Remove: remove},
 			}
 			return a.eachPage(cmd, args, http.MethodPatch, body, nil)
 		},

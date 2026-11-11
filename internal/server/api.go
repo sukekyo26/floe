@@ -165,6 +165,8 @@ type Saved struct {
 	Warnings []usererr.Told `json:"warnings,omitempty"`
 	// TaskProject is the page's project as tasks.json has it (store.ProjectKey), as the store kept it.
 	TaskProject string `json:"taskProject"`
+	// OffTask is the task the page was taken off, as its project changed, "" for none.
+	OffTask string `json:"offTask,omitempty"`
 }
 
 // SavedPrev is the page a publish replaced.
@@ -194,7 +196,7 @@ func sendSaved(w http.ResponseWriter, r *http.Request, entry *store.Entry) {
 	warnings := usererr.Warn(catalog(r), entry.Warnings)
 	sendJSON(w, status, Saved{
 		Slug: entry.Slug, Title: entry.Meta.Title, Prev: prev, Folder: entry.Meta.Folder, Warnings: warnings,
-		TaskProject: store.ProjectKey(entry.Meta.Project),
+		TaskProject: store.ProjectKey(entry.Meta.Project), OffTask: entry.OffTask,
 	})
 }
 
@@ -371,7 +373,6 @@ type Edit struct {
 	Favorite    *bool           `json:"favorite,omitzero"`
 	Archived    *bool           `json:"archived,omitzero"`
 	Tags        *store.TagsEdit `json:"tags,omitzero"`
-	Work        *store.WorkEdit `json:"work,omitzero"`
 }
 
 // edit changes a page as Edit, from the management page, floe archive or floe tag, sends: its title, description,

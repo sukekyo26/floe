@@ -422,13 +422,11 @@ func TestUITaskChildren(t *testing.T) { //nolint:paralleltest // the browser tes
 	}
 	s.floe(t, "work", "--project", "proj", "--task", "pa", "--forget")
 
-	// A task of pages alone cannot be a parent, so that it has no way to make a child; it may have a parent.
-	open("t-pages")
-	if got := b.eval(adds + " + document.getElementById('task-kids-part').hidden + document.getElementById('task-parent-add').hidden"); got != "truetruefalse" {
-		t.Errorf("a way from a task of no row: %s", got)
-	}
+	// A task a page names with no row, as a hand edit leaves, is not there: its page says so.
+	b.navigate("/tasks?project=proj&task=t-pages")
+	b.until("not there", "!document.getElementById('task-missing').hidden")
 
-	// Named from another task's page, it comes to have a row and be a child.
+	// Named from another task's page, it is new to the screen: made of the title, and a child.
 	open("gp")
 	openChild()
 	child("t-pages", "")
@@ -436,8 +434,8 @@ func TestUITaskChildren(t *testing.T) { //nolint:paralleltest // the browser tes
 	if made, err = st.ReadTasks(); err != nil {
 		t.Fatal(err)
 	}
-	if got := made["proj"]["t-pages"].Parent; got != "gp" {
-		t.Errorf("a task of pages alone: %q", got)
+	if got := made["proj"]["t-pages"]; got.Parent != "gp" || got.Title != "a title" {
+		t.Errorf("a page's task of no row named a child: %+v", got)
 	}
 }
 
@@ -446,7 +444,7 @@ func TestUITaskUpRoom(t *testing.T) { //nolint:paralleltest // the browser tests
 	s := newSite(t)
 	b := s.b
 	b.navigate("/")
-	s.floe(t, "work", "--project", "proj", "--task", "#1")
+	s.floe(t, "work", "--project", "proj", "--task", "#1", "--state", "todo")
 	defer b.unsize()
 	for _, width := range []int64{1400, 400} {
 		b.size(width, 800, width == 400)
@@ -477,8 +475,8 @@ func TestUITaskSetTitle(t *testing.T) { //nolint:paralleltest // the browser tes
 	s.floe(t, "work", "b", "--task", "#2")
 	s.floe(t, "work", "c", "--task", "#3")
 	s.floe(t, "work", "--project", "proj", "--task", "#3", "--parent", "#1")
-	s.floe(t, "work", "--project", "proj", "--task", "#12")
-	s.floe(t, "work", "--project", "proj", "--task", "#AB")
+	s.floe(t, "work", "--project", "proj", "--task", "#12", "--state", "todo")
+	s.floe(t, "work", "--project", "proj", "--task", "#AB", "--state", "todo")
 	b.size(1400, 800, false)
 	defer b.unsize()
 	dialog := func(slug string) {
@@ -561,7 +559,7 @@ func TestUITaskSetTitle(t *testing.T) { //nolint:paralleltest // the browser tes
 	stale("c", "#90", "mine", "task #90 is there already; the tasks are read again", func() {
 		s.floe(t, "work", "--project", project, "--task", "#90", "--title", "theirs")
 	})
-	s.floe(t, "work", "--project", project, "--task", "#91")
+	s.floe(t, "work", "--project", project, "--task", "#91", "--state", "todo")
 	b.eval("load()")
 	b.until("#91 read", "tasksOf().some((x) => x.name === '#91')")
 	stale("c", "#91", "", "task #91 is no longer there; the tasks are read again", func() {
@@ -596,7 +594,7 @@ func TestUITaskSetTitle(t *testing.T) { //nolint:paralleltest // the browser tes
 	b.until("the dialog", "document.getElementById('set-dialog').open")
 	field("set-task", "#92")
 	field("set-task-title", "mine")
-	s.floe(t, "work", "--project", project, "--task", "#92")
+	s.floe(t, "work", "--project", project, "--task", "#92", "--state", "todo")
 	b.eval("document.getElementById('set').requestSubmit()")
 	b.until("refused", "!document.getElementById('set-error').hidden")
 	save()

@@ -49,6 +49,24 @@ func mustInt(t *testing.T, s string) int {
 	return n
 }
 
+// handWork writes the project, archived and work of the page slug into its meta.json, as a hand edit or an older floe
+// leaves it: no task's row is made, which the test writes itself.
+func handWork(t *testing.T, st *store.Store, slug, project string, archived bool, task, category string, pin bool) {
+	t.Helper()
+
+	m := st.ReadMeta(slug)
+	if m == nil {
+		t.Fatalf("no page %s", slug)
+	}
+	m.Project, m.Archived, m.Work = project, archived, nil
+	if task != "" || pin {
+		m.Work = &store.Work{Task: task, Category: category, Pin: pin}
+	}
+	if err := st.WriteMeta(slug, m); err != nil {
+		t.Fatal(err)
+	}
+}
+
 // taskPages publishes the pages of taskWork, each by its project, task, category and whether archived.
 func taskPages(t *testing.T, s *site) {
 	t.Helper()
@@ -65,18 +83,14 @@ func taskPages(t *testing.T, s *site) {
 		{"p8", "shop", "#8", "", false, false},
 		{"p8a", "shop", "#8", "", true, false},
 		{"p10", "", "#10", "", false, false},
+		// #11 has no row, as a hand edit leaves: its page says it, and it is not listed
 		{"p11", "shop", "#11", "", false, false},
 		{"pinned", "shop", "", "", false, true},
 		{"gonepin", "shop", "", "", true, true},
 		{"pinonly", "pin", "", "", false, true},
 	} {
 		s.floe(t, "publish", s.page(t, p.slug+".yaml", p.slug, ""), "--slug", p.slug)
-		if _, err := st.Edit(p.slug, store.Edit{
-			Project: &p.project, Archived: &p.archived,
-			Work: &store.WorkEdit{Task: &p.task, Category: &p.category, Pin: &p.pin},
-		}); err != nil {
-			t.Fatal(err)
-		}
+		handWork(t, st, p.slug, p.project, p.archived, p.task, p.category, p.pin)
 	}
 }
 
@@ -384,7 +398,7 @@ func TestUITaskList(t *testing.T) { //nolint:paralleltest // the browser tests s
 const taskListWant = `no work, tasks: shelf shown: false
 opened: ?project=shop shop
 doing: #1One [2 page(s), 2 unread, b/c]; #2Two [0 page(s)]
-views: todo 3, doing 2, done 2, archived 1
+views: todo 2, doing 2, done 2, archived 1
 head: 2 · latest change first
 pins: pinned /a/pinned/
 hrefs: /tasks?project=shop&task=%231 /tasks?project=shop&task=%232
@@ -397,10 +411,10 @@ j: #1One
 j j: #2Two
 j j k: #1One
 nothing picked: true
-todo: #11 [1 page(s), 1 unread]; #5 [0 page(s)]; #4 [0 page(s)]
-todo head: 3 · latest change first
+todo: #5 [0 page(s)]; #4 [0 page(s)]
+todo head: 2 · latest change first
 todo url: ?view=todo&project=shop ?view=todo&project=shop
-todo chips: 3 0 0 0 0
+todo chips: 2 0 0 0 0
 done: #8 [1 page(s), 1 archived, 1 unread]; #7 [0 page(s)]
 done head: 2 · latest change first
 done url: ?view=done&project=shop ?view=done&project=shop

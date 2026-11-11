@@ -38,10 +38,13 @@ func TestUITaskArchivedInCategory(t *testing.T) { //nolint:paralleltest // the b
 	s.write(t, "fold/one.html", "<title>one</title><p>one</p>")
 	s.write(t, "fold/sub/two.html", "<title>two</title><p>two</p>")
 	s.floe(t, "publish", "--link", filepath.Join(s.Env["HOME"], "fold"), "--slug", "fold")
-	if _, err := st.Edit("fold", store.Edit{Project: ptrTo("proj"), Work: &store.WorkEdit{Task: ptrTo("T1")}}); err != nil {
+	if _, err := st.Edit("fold", store.Edit{Project: ptrTo("proj")}); err != nil {
 		t.Fatal(err)
 	}
-	s.floe(t, "work", "--project", "proj", "--task", "T1", "--categories", "案,設計")
+	if _, err := st.Work(store.WorkWrite{Slugs: []string{"fold"}, Task: ptrTo("T1")}); err != nil {
+		t.Fatal(err)
+	}
+	s.floe(t, "work", "--project", "proj", "--task", "T1", "--categories", "案,設計,旧,新")
 	// Read: o1 and n1 as they are, v1 and v0 before a new version of each
 	for _, slug := range []string{"o1", "n1", "v1", "v0"} {
 		readWhole(slug)

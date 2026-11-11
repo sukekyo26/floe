@@ -121,10 +121,10 @@ var sentAt = map[string]string{
 	"/path": "argument 1", "/file": "argument 1", "/slug": "--slug", "/title": "--title", "/description": "--description",
 	"/theme": "--theme", "/tags/add": "--add", "/tags/remove": "--remove",
 	"/state": "--state", "/url": "--url", "/categories": "--categories", "/parent": "--parent",
-	"/work/category": "--category",
-	"/project":       "the project name (of the git remote, the repository's directory or the working directory)",
-	"/repo":          "the file's repository name (of the git remote or the repository's directory)",
-	"/place":         "the file's place (from its repository's root, else its real path)",
+	"/category": "--category", "/task": "--task", "/slugs": "a slug",
+	"/project": "the project name (of the git remote, the repository's directory or the working directory)",
+	"/repo":    "the file's repository name (of the git remote or the repository's directory)",
+	"/place":   "the file's place (from its repository's root, else its real path)",
 }
 
 // notUTF8 reports whether err is encoding/json/v2's for a string's bytes that are no UTF-8, as it tells them now.

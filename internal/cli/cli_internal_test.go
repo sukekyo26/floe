@@ -43,7 +43,6 @@ func TestEncode(t *testing.T) {
 	// encode with a text no UTF-8, each for its reason.
 	unreached := map[string]string{
 		"/parentTitle": "the management page alone sends it",
-		"/work/task":   "pageFlags refuses --task first, with store.TaskName",
 	}
 	var texts func(typ reflect.Type, at string)
 	texts = func(typ reflect.Type, at string) {
@@ -57,6 +56,11 @@ func TestEncode(t *testing.T) {
 			}
 		case typ.Kind() == reflect.Struct:
 			for field := range typ.Fields() {
+				if field.Anonymous {
+					// embedded: its fields are the struct's own, as encoding/json/v2 reads them
+					texts(field.Type, at)
+					continue
+				}
 				name, _, _ := strings.Cut(field.Tag.Get("json"), ",")
 				texts(field.Type, at+"/"+name)
 			}
@@ -67,10 +71,7 @@ func TestEncode(t *testing.T) {
 	tags, _ := reflect.TypeFor[server.Edit]().FieldByName("Tags")
 	name, _, _ := strings.Cut(tags.Tag.Get("json"), ",")
 	texts(tags.Type, "/"+name)
-	texts(reflect.TypeFor[server.TaskEdit](), "")
-	work, _ := reflect.TypeFor[server.Edit]().FieldByName("Work")
-	name, _, _ = strings.Cut(work.Tag.Get("json"), ",")
-	texts(work.Type, "/"+name)
+	texts(reflect.TypeFor[store.WorkWrite](), "")
 	// v2 still tells bytes no UTF-8 as notUTF8 matches them.
 	if _, err := jsonv2.Marshal("a\xffb"); !notUTF8(err) {
 		t.Errorf("encoding/json/v2 tells bytes no UTF-8 by %v, which notUTF8 does not match", err)

@@ -475,7 +475,7 @@ func TestPublishMoveProject(t *testing.T) {
 	if got := said(dir); !strings.HasSuffix(got, "\npage in project p\n") {
 		t.Fatalf("a new page wrote %q", got)
 	}
-	if _, err := s.Edit("n", store.Edit{Work: &store.WorkEdit{Task: ptr("t1")}}); err != nil {
+	if _, err := s.Work(store.WorkWrite{Slugs: []string{"n"}, Task: ptr("t1")}); err != nil {
 		t.Fatal(err)
 	}
 	tasks, err := s.ReadTasks()
@@ -490,7 +490,7 @@ func TestPublishMoveProject(t *testing.T) {
 		in   string // the project of the page after it
 	}{
 		{"another place, without the flag", other, nil, "", "p"},
-		{"another place, with the flag", other, []string{"--move-project"}, "\npage in project q\n", "q"},
+		{"another place, with the flag", other, []string{"--move-project"}, "\npage in project q, off task t1\n", "q"},
 		{"the same place again", other, []string{"--move-project"}, "", "q"},
 		{"the first place, without the flag", dir, nil, "", "q"},
 		{"the first place, with the flag", dir, []string{"--move-project"}, "\npage in project p\n", "p"},
@@ -500,8 +500,9 @@ func TestPublishMoveProject(t *testing.T) {
 			t.Errorf("%s: wrote %q, the page is in %q; want it to end with %q and be in %q", step.what, got, projectOfPage(), step.told, step.in)
 		}
 	}
-	if m := s.ReadMeta("n"); m == nil || m.Work == nil || m.Work.Task != "t1" {
-		t.Errorf("moved, the page's work is %+v, want its task t1 kept", m)
+	// A task is of its project: moved, the page is off it, and told so once; the task stays.
+	if m := s.ReadMeta("n"); m == nil || m.Work != nil {
+		t.Errorf("moved, the page's work is %+v, want it off its task", m)
 	}
 	if got, err := s.ReadTasks(); err != nil || !reflect.DeepEqual(got, tasks) {
 		t.Errorf("moved, the tasks are %v (%v), want them as they were, %v", got, err, tasks)

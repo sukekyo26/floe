@@ -28,7 +28,7 @@ func TestUITaskEditCategories(t *testing.T) { //nolint:paralleltest // the brows
 			s.floe(t, "work", p[0], "--task", "S300", "--category", p[1])
 		}
 	}
-	s.floe(t, "work", "--project", "proj", "--task", "S300", "--title", "Edit the task", "--categories", "案,設計,実装,リリース")
+	s.floe(t, "work", "--project", "proj", "--task", "S300", "--title", "Edit the task", "--categories", "案,設計,実装,リリース,レビュー")
 	s.floe(t, "work", "none-a", "--task", "N1")
 	// 実装's one page archived: a page all the same, so 実装 cannot be deleted
 	yes := true
@@ -63,7 +63,7 @@ func TestUITaskEditCategories(t *testing.T) { //nolint:paralleltest // the brows
 		t.Helper()
 		b.navigate("/tasks?project=proj&task=" + task)
 		b.until("the task's head", "!document.getElementById('task-head').hidden && document.getElementById('task-title').textContent.includes("+js(task)+")")
-		b.eval("window.sent = []; window.realFetch ??= window.fetch; window.fetch = (url, init) => { if (String(url).includes('/api/tasks') && init?.method === 'PATCH') sent.push(init.body); return window.realFetch(url, init); }")
+		b.eval("window.sent = []; window.realFetch ??= window.fetch; window.fetch = (url, init) => { if (String(url).includes('/api/work') && init?.method === 'PATCH') sent.push(init.body); return window.realFetch(url, init); }")
 		b.eval("document.getElementById('task-edit').click()")
 		b.until("the dialog", "document.getElementById('edit-task-dialog').open")
 	}
@@ -153,24 +153,21 @@ func TestUITaskEditCategories(t *testing.T) { //nolint:paralleltest // the brows
 	closed("closed")
 	say("unchanged", "sent.length")
 
-	// A category removed that came to have a page meanwhile, which moves no rev: saved removed, it comes back after those written, from its
-	// page (LIMIT).
-	s.floe(t, "work", "--project", "proj", "--task", "S300", "--categories", "案,設計,実装,リリース")
+	// A category removed that came to have a page meanwhile: the save is refused, as the category has pages, and said; nothing written.
+	s.floe(t, "work", "--project", "proj", "--task", "S300", "--categories", "案,設計,実装,リリース,レビュー")
 	open("S300")
 	drop("リリース")
 	s.floe(t, "work", "memo-a", "--task", "S300", "--category", "リリース")
 	save("paged meanwhile")
-	closed("closed")
-	out = append(out, "paged meanwhile, written: "+row("S300"))
-	open("S300")
-	say("paged meanwhile, opened", categories)
+	say("paged meanwhile", "document.getElementById('edit-task-error').textContent")
 	b.pressKey(kb.Escape)
 	closed("closed")
+	out = append(out, "paged meanwhile, written: "+row("S300"))
 	// Stale, a category added while another removed one of no page: the one added stays, the other goes.
-	s.floe(t, "work", "--project", "proj", "--task", "S300", "--categories", "案,設計,実装,リリース,検証")
+	s.floe(t, "work", "--project", "proj", "--task", "S300", "--categories", "案,設計,実装,リリース,検証,レビュー")
 	open("S300")
 	key("公開", "Enter", false)
-	s.floe(t, "work", "--project", "proj", "--task", "S300", "--categories", "案,設計,実装,リリース")
+	s.floe(t, "work", "--project", "proj", "--task", "S300", "--categories", "案,設計,実装,リリース,レビュー")
 	save("stale, added")
 	say("stale, added", categories)
 	save("saved again")
@@ -204,13 +201,13 @@ func TestUITaskEditCategories(t *testing.T) { //nolint:paralleltest // the brows
 		"there left: 設計 is already among the categories / 0",
 		"dropped: 案x,設計x,実装x,レビューx,公開d / Move レビュー up / Deleted リリース",
 		"dropped last: 案x,設計x,実装x,レビューx / Move レビュー up",
-		"saved: 3 [案,設計,実装,レビュー]",
-		`sent: {"new":false,"rev":2,"categories":["案","設計","実装","レビュー"]}`,
+		"saved: 6 [案,設計,実装,レビュー]",
+		`sent: {"project":"proj","task":"S300","new":false,"rev":5,"categories":["案","設計","実装","レビュー"]}`,
 		"unchanged: 0",
-		"paged meanwhile, written: 5 [案,設計,実装,レビュー]",
-		"paged meanwhile, opened: 案x,設計x,実装x,レビューx,リリースx",
+		"paged meanwhile: Failed to save: category リリース of task S300 in project proj has pages (memo-a): take them off it first, or keep it in the order",
+		"paged meanwhile, written: 7 [案,設計,実装,リリース,レビュー]",
 		"stale, added: 案x,設計x,実装x,リリースx,レビューx,公開d",
-		"saved again: 8 [案,設計,実装,リリース,レビュー,公開]",
+		"saved again: 10 [案,設計,実装,リリース,レビュー,公開]",
 		"no categories: true / false / plus / edit-task-title",
 		"first: 2 [案]",
 	}, "|"))

@@ -203,7 +203,7 @@ func (s *Server) Handler() http.Handler {
 	mux.HandleFunc("POST /api/artifacts/{slug}/read", s.markRead)
 	mux.HandleFunc("DELETE /api/artifacts/{slug}/read", s.markUnread)
 	mux.HandleFunc("GET /api/tasks", s.tasks)
-	mux.HandleFunc("PATCH /api/tasks", s.editTask)
+	mux.HandleFunc("PATCH /api/work", s.editWork)
 	mux.HandleFunc("DELETE /api/tasks", s.forgetTask)
 	mux.HandleFunc("POST /api/rebuild", s.rebuild)
 	mux.HandleFunc("GET /api/artifacts/{slug}/theme", s.ownTheme)
