@@ -60,8 +60,12 @@ func TestWorkAPI(t *testing.T) {
 	if code, body := patch(task("shop", "#c"), `{"category":"x"}`); code != http.StatusBadRequest {
 		t.Errorf("a task's category = %d, %s", code, body)
 	}
-	if code, body := patch(task(" shop ", " #1 "), `{}`); code != http.StatusOK || answer(body) != "shop #1 1" {
-		t.Errorf("an empty write = %d, %s", code, body)
+	// A write of nothing makes no row: not found.
+	if code, body := patch(task(" shop ", " #1 "), `{}`); code != http.StatusNotFound {
+		t.Errorf("an empty write of no row = %d, %s", code, body)
+	}
+	if code, body := patch(task(" shop ", " #1 "), `{"state":"todo"}`); code != http.StatusOK || answer(body) != "shop #1 1" {
+		t.Errorf("a write = %d, %s", code, body)
 	}
 	if got := tasks()["shop"]["#1"]; got.State != "todo" {
 		t.Errorf("trimmed, made todo: %+v", tasks())
@@ -185,9 +189,10 @@ func TestWorkAPI(t *testing.T) {
 	if code, _ := forget("shop", "#1"); code != http.StatusNoContent {
 		t.Errorf("a task of no page = %d", code)
 	}
-	// A task of a page alone is there: its first row is not made
+	// A task is there of its row alone: one a page names with no row (here by the page's edit, which does not look at
+	// tasks.json) is made by its first row
 	edit(`{"work":{"task":"#p"}}`)
-	if code, body := patch(task("shop", "#p"), `{"title":"t"}`); code != http.StatusOK || madeWrote(body) != "false true" {
+	if code, body := patch(task("shop", "#p"), `{"title":"t"}`); code != http.StatusOK || madeWrote(body) != "true true" {
 		t.Errorf("the first row of a task of a page = %d, %s", code, body)
 	}
 
@@ -212,5 +217,41 @@ func TestWorkAPI(t *testing.T) {
 	}
 	if b, err := os.ReadFile(file); err != nil || string(b) != "{ broken" {
 		t.Errorf("a broken file came to be %s, %v", b, err)
+	}
+}
+
+// PATCH /api/work reads the keys the management page sends of a task, the embedded TaskEdit's as the write's own, and
+// refuses as a protocol's what only a sender's mistake makes.
+func TestWorkWriteAPI(t *testing.T) {
+	t.Parallel()
+
+	e := newEnv(t)
+	patch := func(body string) (int, string) {
+		t.Helper()
+		w := e.do(t, http.MethodPatch, "/api/work", body, "Origin", origin, "Content-Type", jsonType)
+		return w.Code, w.Body.String()
+	}
+	code, body := patch(`{"project":"p","task":"#2","new":true,"title":"C","parent":"#P","parentNew":true,"parentTitle":"Par"}`)
+	var got store.WorkWritten
+	if err := json.Unmarshal([]byte(body), &got); err != nil || code != http.StatusOK {
+		t.Fatalf("a child and its parent made = %d, %s, %v", code, body, err)
+	}
+	all, err := store.New(e.root).ReadTasks()
+	if err != nil {
+		t.Fatal(err)
+	}
+	if c, p := all["p"]["#2"], all["p"]["#P"]; c.Title != "C" || c.Parent != "#P" || p.Title != "Par" || len(got.Tasks) != 1 || !got.Tasks[0].Made {
+		t.Errorf("made: %+v, %+v, answered %+v", c, p, got)
+	}
+	if code, body = patch(`{"project":"p","task":"#2","new":false,"rev":1,"state":"doing"}`); code != http.StatusOK {
+		t.Errorf("a screen's write, as it saw the row = %d, %s", code, body)
+	}
+	for _, c := range []struct{ body, want string }{
+		{`{"project":"p","task":"#2","category":"x"}`, "category, pin and clear go with slugs"},
+		{`{"slugs":["a"],"project":"p"}`, "project goes without slugs"},
+	} {
+		if code, body := patch(c.body); code != http.StatusBadRequest || !strings.Contains(body, c.want) {
+			t.Errorf("%s = %d, %s", c.body, code, body)
+		}
 	}
 }

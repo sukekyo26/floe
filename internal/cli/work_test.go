@@ -582,3 +582,65 @@ func TestWorkCategoryAdded(t *testing.T) {
 		t.Errorf("a refusal wrote a: %s", got)
 	}
 }
+
+// floe work --task with no field to change tells the task as the store has it, writing nothing; a task of no row is
+// refused, and none is made.
+func TestWorkReadsTask(t *testing.T) {
+	t.Parallel()
+
+	env, dir := served(t)
+	tasksFile := func() string {
+		t.Helper()
+		b, err := os.ReadFile(filepath.Join(env["FLOE_DIR"], "tasks.json"))
+		if err != nil && !os.IsNotExist(err) {
+			t.Fatal(err)
+		}
+		return string(b)
+	}
+	if code, out, errs := runIn(dir, env, "work", "--task", "#1"); code != 1 || out != "" ||
+		errs != "floe: no task #1 in project p: check the ID, or name its project with --project\n" {
+		t.Errorf("no row = %d, %q, %q", code, out, errs)
+	}
+	if got := tasksFile(); got != "" {
+		t.Errorf("reading made a row: %s", got)
+	}
+	if code, out, errs := runIn(dir, env, "work", "--task", "#1", "--title", "T", "--state", "doing", "--categories", "a,b"); code != 0 {
+		t.Fatalf("written = %d, %q, %q", code, out, errs)
+	}
+	before := tasksFile()
+	if code, out, errs := runIn(dir, env, "work", "--task", "#1"); code != 0 ||
+		out != "task #1 in project p: state doing, title \"T\", categories \"a,b\"\n" || errs != "" {
+		t.Errorf("read = %d, %q, %q", code, out, errs)
+	}
+	if got := tasksFile(); got != before {
+		t.Errorf("reading wrote:\n%s\nwant\n%s", got, before)
+	}
+}
+
+// A link whose project comes back to its directory's, after an edit emptied it, is taken off its task, and says so.
+func TestLinkOffTask(t *testing.T) {
+	t.Parallel()
+
+	env, dir := served(t)
+	if code, out, errs := runIn(dir, env, "publish", "--link", "h.html", "--slug", "l"); code != 0 {
+		t.Fatalf("link = %d, %q, %q", code, out, errs)
+	}
+	if code, out, errs := runIn(dir, env, "work", "l", "--task", "#1"); code != 0 {
+		t.Fatalf("work = %d, %q, %q", code, out, errs)
+	}
+	s := store.New(env["FLOE_DIR"])
+	if _, err := s.Edit("l", store.Edit{Project: ptr("")}); err != nil {
+		t.Fatal(err)
+	}
+	// The edit moved it to no project: off its task already; put back on that project's task
+	if code, out, errs := runIn(dir, env, "work", "l", "--task", "#1"); code != 0 {
+		t.Fatalf("work again = %d, %q, %q", code, out, errs)
+	}
+	code, _, errs := runIn(dir, env, "publish", "--link", "h.html", "--slug", "l")
+	if code != 0 || !strings.Contains(errs, "page in project p, off task #1") {
+		t.Errorf("linked again = %d, %q", code, errs)
+	}
+	if w := s.ReadMeta("l").Work; w != nil {
+		t.Errorf("linked again, the page's work: %+v", w)
+	}
+}
