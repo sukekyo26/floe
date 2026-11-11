@@ -355,9 +355,8 @@ func TestSameAnswer(t *testing.T) {
 	b := readSections(t, []byte(to))
 	w := newWork(10_000)
 	compare(a, b, w)
-	// The sections 1×1, the blocks 2×2 (the rows paired again by their cells within it), each row's words, each row's
-	// cells 3×2.
-	want := 1 + 2*2 + 15*11 + 14*10 + 3*2 + 3*2
+	// The sections 1×1, the blocks 2×2, the rows paired again by their cells 2×2, each row's words, each row's cells 3×2.
+	want := 1 + 2*2 + 2*2 + 15*11 + 14*10 + 3*2 + 3*2
 	if used := 10_000 - w.left; used != want {
 		t.Errorf("the work counted is %d, want %d", used, want)
 	}

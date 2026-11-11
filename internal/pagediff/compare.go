@@ -189,9 +189,9 @@ func (w *work) sectionPair(c *compared, a, b []section, p pair) {
 	blocksA, blocksB := a[p.a].blocks, b[p.b].blocks
 	d := w.library(len(keysA), len(keysB))
 	aligned := align(d, keysA, keysB)
-	// The rows again by their cells, within the work the blocks' alignment took: none past it.
+	// The rows again by their cells, none past the blocks' alignment.
 	if d != nil {
-		aligned = rows(blocksA, blocksB, aligned)
+		aligned = w.rows(blocksA, blocksB, aligned)
 	}
 	for _, q := range aligned {
 		pairs = append(pairs, w.blockPair(blocksA, blocksB, q)...)
@@ -228,15 +228,15 @@ func (w *work) blockPair(a, b []block, q pair) []blockPair {
 
 // rows pairs again the rows of a table whose keys differ, between those the same: by the cells they share, as a
 // column gone or added changes every row's words, and by place one row gone would pair those after it off by one. A
-// run of blocks not all rows stays as it is. Its work is within the blocks' alignment's, of more keys.
-func rows(a, b []block, pairs []pair) []pair {
+// run of blocks not all rows stays as it is.
+func (w *work) rows(a, b []block, pairs []pair) []pair {
 	var out []pair
 	for i := 0; i < len(pairs); {
 		j := i
 		for j < len(pairs) && (pairs[j].a < 0 || pairs[j].b < 0 || a[pairs[j].a].key != b[pairs[j].b].key) {
 			j++
 		}
-		out = append(out, rowRun(a, b, pairs[i:j])...)
+		out = append(out, w.rowRun(a, b, pairs[i:j])...)
 		if j < len(pairs) {
 			out = append(out, pairs[j])
 		}
@@ -245,18 +245,21 @@ func rows(a, b []block, pairs []pair) []pair {
 	return out
 }
 
-// rowRun pairs the rows of a run by the longest sequence of rows that share half their cells or more, in order.
-func rowRun(a, b []block, run []pair) []pair {
+// rowRun pairs the rows of a run by the longest sequence of rows that share half their cells or more, in order: its
+// work, a row of one compared with each of the other, taken from what is left.
+func (w *work) rowRun(a, b []block, run []pair) []pair {
 	xs, ys, ok := rowsOf(a, b, run)
+	cost := len(xs) * len(ys)
 	// LIMIT: the longest sequence by a table of n×m, as the differ compares runes, not rows by their likeness; past
 	// rowsMost of it, the rows go by place as they came.
-	if !ok || len(xs) == 0 || len(ys) == 0 || len(xs)*len(ys) > rowsMost {
+	if !ok || cost == 0 || cost > rowsMost || cost > w.left {
 		return run
 	}
+	w.left -= cost
 	// The rows paired by their cells, and between them those left paired by place, as align leaves a run.
 	var out []pair
 	i, j := 0, 0
-	for _, q := range sameRows(a, b, xs, ys) {
+	for _, q := range sameRows(cellCounts(a, xs), cellCounts(b, ys)) {
 		out = byPlace(out, xs[i:q.a], ys[j:q.b])
 		out = append(out, pair{a: xs[q.a], b: ys[q.b]})
 		i, j = q.a+1, q.b+1
@@ -283,17 +286,19 @@ func rowsOf(a, b []block, run []pair) (xs, ys []int, ok bool) {
 	return xs, ys, true
 }
 
-// sameRows is the longest sequence of the rows xs of a and ys of b that share cells, as indexes into xs and ys.
-func sameRows(a, b []block, xs, ys []int) []pair {
+// sameRows is the longest sequence of the rows xs and ys, their cells counted, that share cells, as indexes into them.
+func sameRows(xs, ys []cellCount) []pair {
 	n, m := len(xs), len(ys)
 	best := make([][]int32, n+1)
+	shared := make([][]bool, n)
 	for i := range best {
 		best[i] = make([]int32, m+1)
 	}
 	for i := n - 1; i >= 0; i-- {
+		shared[i] = make([]bool, m)
 		for j := m - 1; j >= 0; j-- {
 			best[i][j] = max(best[i+1][j], best[i][j+1])
-			if shareCells(a[xs[i]], b[ys[j]]) {
+			if shared[i][j] = shareCells(xs[i], ys[j]); shared[i][j] {
 				best[i][j] = max(best[i][j], best[i+1][j+1]+1)
 			}
 		}
@@ -302,7 +307,7 @@ func sameRows(a, b []block, xs, ys []int) []pair {
 	i, j := 0, 0
 	for i < n && j < m {
 		switch {
-		case shareCells(a[xs[i]], b[ys[j]]) && best[i][j] == best[i+1][j+1]+1:
+		case shared[i][j] && best[i][j] == best[i+1][j+1]+1:
 			matched = append(matched, pair{a: i, b: j})
 			i++
 			j++
@@ -340,20 +345,32 @@ func upTo(from, to int) []int {
 	return out
 }
 
-// shareCells tells whether two rows share half the cells of the longer at least, by their words.
-func shareCells(x, y block) bool {
-	left := map[string]int{}
-	for _, c := range x.cells {
-		left[c.text]++
-	}
-	shared := 0
-	for _, c := range y.cells {
-		if left[c.text] > 0 {
-			left[c.text]--
-			shared++
+// cellCount is a row's cells counted by their words, and how many it has.
+type cellCount struct {
+	words map[string]int
+	n     int
+}
+
+// cellCounts counts the cells of the rows of bs at the places at.
+func cellCounts(bs []block, at []int) []cellCount {
+	out := make([]cellCount, len(at))
+	for i, k := range at {
+		words := make(map[string]int, len(bs[k].cells))
+		for _, c := range bs[k].cells {
+			words[c.text]++
 		}
+		out[i] = cellCount{words: words, n: len(bs[k].cells)}
 	}
-	return shared*2 >= max(len(x.cells), len(y.cells)) && shared > 0
+	return out
+}
+
+// shareCells tells whether two rows share half the cells of the longer at least, by their words.
+func shareCells(x, y cellCount) bool {
+	shared := 0
+	for text, k := range x.words {
+		shared += min(k, y.words[text])
+	}
+	return shared*2 >= max(x.n, y.n) && shared > 0
 }
 
 // cellPairs pairs the cells of two rows by their words, as blocks are: those alike compared by their words, the others
