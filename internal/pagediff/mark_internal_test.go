@@ -194,6 +194,16 @@ func TestMark(t *testing.T) {
 			hasNot: []string{`sub kept</p><h2`, `sub kept</p></section><h2`},
 		},
 		{
+			name: "gone of a page the later wraps in main", from: `<h2>T</h2><p>a</p><p>gone words long here</p><h2>U</h2><p>u</p>`,
+			to:  `<main><h2>T</h2><p>a</p><h2>U</h2><p>u</p></main>`,
+			has: []string{`<p>a</p><p class="floe-diff-gone">`},
+		},
+		{
+			name: "gone of a page the later unwraps from divs", from: `<div><h2>T</h2><p>a</p><p>gone words long here</p></div><div><h2>U</h2><p>u</p></div>`,
+			to:  `<h2>T</h2><p>a</p><h2>U</h2><p>u</p>`,
+			has: []string{`<p>a</p><p class="floe-diff-gone">`},
+		},
+		{
 			name: "a tab picked keeps a box checked", from: "<h2>T</h2><p>kept</p>" + fmt.Sprintf(tabs, `gone <input type="checkbox" checked> box`), to: "<h2>T</h2><p>kept</p>",
 			has: []string{`<input type="checkbox" checked=""/>`},
 		},
