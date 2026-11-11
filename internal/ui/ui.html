@@ -1556,15 +1556,6 @@
   // and a reload open that part; replaceState changes only the fragment and adds no history, which the iframe's move added already.
   // The iframe is the frame's, or the one beside the list; the page is read when it is the one that iframe was given
   addEventListener('message', (e) => {
-    // Side by side, where one page of the diff is, told to the other: from one of the two, of the shape it must be
-    if (DIFF && e.data?.artifactDiffAt !== undefined) {
-      const frames = [$('diff-frame-before'), $('diff-frame')];
-      const from = frames.find((f) => f.contentWindow === e.source);
-      const at = e.data.artifactDiffAt;
-      if (!from || e.origin !== 'null' || diffView !== 'side' || !Number.isInteger(at?.pair) || at.pair < 0 || !(at.off >= 0 && at.off <= 1)) return;
-      frames.find((f) => f !== from).contentWindow?.postMessage({ artifactDiffGo: { pair: at.pair, off: at.off } }, '*');
-      return;
-    }
     const shown = DIFF ? [$('diff-frame-before'), $('diff-frame')].find((f) => f.contentWindow === e.source) ?? $('diff-frame') : framed ? $('frame') : $('read-frame');
     // A page of floe is always sandboxed: any other origin is a site the iframe moved to
     // LIMIT: null does not prove a page of floe: a site that sandboxes itself, or a data: URL, says it too. All it can do is what a
@@ -4884,9 +4875,10 @@
   const diffPage = (side) => `${rawHref({ slug: framed, v: diffAnswer.to.n })}&from=${diffAnswer.from.n}&key=${encodeURIComponent(diffAnswer.key)}${side ? `&side=${side}` : ''}`;
   const laterSide = () => (diffView === 'side' ? 'later' : '');
   // To place k of the later page, by its fragment: a move within the page, which reads nothing again. Side by side, the
-  // earlier follows as the later tells where it is
+  // earlier to its place k too; each is scrolled on its own
   function goPlace(k) {
     $('diff-frame').src = `${diffPage(laterSide())}#floe-diff.${k}`;
+    if (diffView === 'side') $('diff-frame-before').src = `${diffPage('earlier')}#floe-diff.${k}`;
   }
   function drawFrames() {
     for (const b of document.querySelectorAll('[data-diff-view]')) {

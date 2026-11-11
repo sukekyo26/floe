@@ -2,7 +2,6 @@ package server
 
 import (
 	"bytes"
-	_ "embed"
 	"encoding/json"
 	"errors"
 	"html/template"
@@ -17,7 +16,6 @@ import (
 	"floe/internal/draw"
 	"floe/internal/files"
 	"floe/internal/i18n"
-	"floe/internal/page"
 	"floe/internal/pagediff"
 	"floe/internal/store"
 	"floe/internal/usererr"
@@ -463,21 +461,6 @@ func tellKeys(drawn, diff bool) string {
 		"if (!key) return; e.preventDefault(); window.parent.postMessage({ artifactKey: key }, here); });}"
 }
 
-//go:embed diffsync.js
-var diffsync string
-
-// scrollTogether is the script that scrolls a page of a diff shown side by side with the other: none for another.
-func scrollTogether(diff diffOf) string {
-	if diff.from == 0 || diff.side == pagediff.Alone {
-		return ""
-	}
-	script, err := page.Script(diffsync, nil)
-	if err != nil {
-		return "" // nil always writes
-	}
-	return script + "\n"
-}
-
 // askEvery is how often a page shown asks whether it changed: about as often as the drawing is watched, and set
 // apart from it so that the page's asking does not follow a test's shorter watching.
 const askEvery = time.Second
@@ -514,7 +497,7 @@ func servedScript(slug, rest, version string, v int, read *Read, drawn bool, dif
 		"busy = false; };" +
 		"window.setInterval(look, " + strconv.FormatInt(askEvery.Milliseconds(), 10) + ");" +
 		"window.document.addEventListener('visibilitychange', look); look();" +
-		leaveFrame + tellRead(read) + tellKeys(drawn, diff.from > 0) + "}</script>\n" + scrollTogether(diff)
+		leaveFrame + tellRead(read) + tellKeys(drawn, diff.from > 0) + "}</script>\n"
 }
 
 // changed answers whether the page of slug (of rest under a link) is no longer of the version since: "changed" or

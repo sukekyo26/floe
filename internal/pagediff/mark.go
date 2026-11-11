@@ -38,8 +38,8 @@ const (
 )
 
 // Mark is a page of the two marked with what differs, for the sandbox alone, as side says. Each place of the later is
-// numbered floe-diff.<k>, in the order of the page, as the Places of Compare, alone or beside the earlier; beside each
-// other, the blocks of both versions that go together have the class floe-diff-pair-<n> on both. The page's own
+// numbered floe-diff.<k>, in the order of the page, as the Places of Compare, alone or beside the earlier, and the
+// earlier's by the same numbers, so that both go to one place together. The page's own
 // elements keep their ids and attributes but the classes added, and the open and name of a details that holds a place.
 func Mark(from, to []byte, words Words, side Side) ([]byte, error) {
 	_, earlier, later, err := marked(from, to, pageMost, words, side)
@@ -80,8 +80,9 @@ func marked(from, to []byte, most int, words Words, side Side) (Result, *html.No
 	}
 	c.result.Counts.Places = m.count
 	if side != Alone {
-		markEarlier(a, c, newMarker(treeA, words))
-		pairs(a, b, c)
+		earlier := newMarker(treeA, words)
+		markEarlier(a, c, earlier)
+		earlier.numberEarlier(m.groups)
 	}
 	return c.result, treeA, treeB, nil
 }
@@ -140,26 +141,23 @@ func markEarlier(a []section, c compared, m *marker) {
 	}
 }
 
-// pairs gives the blocks of both versions that go together, and the headings of the sections kept, one number in the
-// comparison's order: the class floe-diff-pair-<n> on both, which the two pages side by side scroll together by.
-func pairs(a, b []section, c compared) {
-	n := 0
-	pair := func(x, y *html.Node) {
-		class := "floe-diff-pair-" + strconv.Itoa(n)
-		addClass(x, class)
-		addClass(y, class)
-		n++
-	}
-	for _, st := range c.steps {
-		if st.from < 0 || st.to < 0 {
+// numberEarlier puts the marks to go to of the places numbered on the later page, by the same numbers, in the earlier
+// beside it: at the first of the place's blocks of the earlier that holds a span, or in a tab not picked at its title.
+// A place none of whose blocks can hold one has none there.
+func (m *marker) numberEarlier(groups []*group) {
+	done := map[int]bool{}
+	for _, g := range groups {
+		if g.k < 0 || done[g.k] {
 			continue
 		}
-		if x, y := a[st.from].head, b[st.to].head; x != nil && y != nil {
-			pair(x, y)
-		}
-		for _, p := range st.pairs {
-			if p.from != nil && p.to != nil {
-				pair(p.from.node, p.to.node)
+		for _, n := range g.from {
+			if label := hiddenTab(n); label != nil {
+				n = label
+			}
+			if s := m.spot(n); s != nil {
+				s.Attr = append(s.Attr, html.Attribute{Namespace: "", Key: "id", Val: "floe-diff." + strconv.Itoa(g.k)})
+				done[g.k] = true
+				break
 			}
 		}
 	}
@@ -207,12 +205,17 @@ type marker struct {
 	cur                 *group
 	count               int
 	side                Side
+	// at is the earlier page's block the comparison is at, and before the last of them gone through.
+	at, prev *html.Node
 }
 
 // group is a place: what is marked one after another in a section, of its result's section sec.
 type group struct {
 	sec   int
 	nodes []*html.Node
+	// from is what of the earlier page the place is of: its blocks, or for what the later alone has, the one before.
+	from []*html.Node
+	k    int
 }
 
 type holdKey struct {
@@ -224,7 +227,7 @@ func newMarker(root *html.Node, words Words) *marker {
 	return &marker{
 		root: root, body: bodyOf(root), words: words, last: nil, lastBox: nil, tail: nil, pending: nil,
 		added: map[*html.Node]bool{}, kept: map[*html.Node]bool{}, copied: map[*html.Node]bool{}, held: map[holdKey]bool{},
-		groups: nil, cur: nil, count: 0, side: Alone,
+		groups: nil, cur: nil, count: 0, side: Alone, at: nil, prev: nil,
 	}
 }
 
@@ -273,13 +276,16 @@ func (m *marker) mark(treeA *html.Node, a, b []section, c compared) {
 		case st.to < 0:
 			from := a[st.from]
 			if from.head != nil {
+				m.earlier(from.head)
 				m.gone(i, &block{kind: "", text: from.heading, key: "", node: from.head, from: nil}, boxA[st.from])
 			}
 			for j := range from.blocks {
+				m.earlier(from.blocks[j].node)
 				m.gone(i, &from.blocks[j], boxA[st.from])
 			}
 		case st.from < 0:
 			to := b[st.to]
+			m.earlier(nil)
 			if to.head != nil {
 				m.visit(to.head, boxB[st.to])
 				m.show(i, to.head, "", to.from, added(to.heading), classAdd)
@@ -297,6 +303,7 @@ func (m *marker) mark(treeA *html.Node, a, b []section, c compared) {
 }
 
 func (m *marker) changed(sec int, from, to section, boxA, boxB *html.Node, pairs []blockPair, heading []Span) {
+	m.earlier(from.head)
 	if to.head != nil {
 		m.visit(to.head, boxB)
 		if from.heading != to.heading {
@@ -306,6 +313,11 @@ func (m *marker) changed(sec int, from, to section, boxA, boxB *html.Node, pairs
 		}
 	}
 	for _, p := range pairs {
+		if p.from != nil {
+			m.earlier(p.from.node)
+		} else {
+			m.earlier(nil)
+		}
 		switch {
 		case p.to == nil:
 			m.gone(sec, p.from, boxA)
@@ -361,12 +373,24 @@ func (m *marker) visit(n, box *html.Node) {
 
 func (m *marker) place(sec int, n *html.Node) {
 	if m.cur == nil || m.cur.sec != sec {
-		m.cur = &group{sec: sec, nodes: nil}
+		m.cur = &group{sec: sec, nodes: nil, from: nil, k: -1}
 		m.groups = append(m.groups, m.cur)
 	}
 	if !slices.Contains(m.cur.nodes, n) {
 		m.cur.nodes = append(m.cur.nodes, n)
 	}
+	if m.at != nil && !slices.Contains(m.cur.from, m.at) {
+		m.cur.from = append(m.cur.from, m.at)
+	}
+}
+
+// earlier tells what of the earlier page the comparison is at: n, or for nil what of it came last.
+func (m *marker) earlier(n *html.Node) {
+	if n == nil {
+		m.at = m.prev
+		return
+	}
+	m.at, m.prev = n, n
 }
 
 func (m *marker) frame(sec int, n *html.Node, class string) {
@@ -732,6 +756,9 @@ func (m *marker) number() []int {
 	}
 	places := map[int]int{}
 	for _, g := range m.groups {
+		if s := at[g]; s != nil {
+			g.k = numbers[s]
+		}
 		if s := at[g]; s != nil {
 			if k, ok := places[g.sec]; !ok || numbers[s] < k {
 				places[g.sec] = numbers[s]
