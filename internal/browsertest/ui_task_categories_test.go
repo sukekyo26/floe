@@ -10,8 +10,8 @@ import (
 	"floe/internal/store"
 )
 
-// A task's page heads every category, those of no page too, each with a way to add a page of the task's project: the task's category is written
-// first, of the rev the modal opened at, then the page. A page comes off its task from its menu, the toast's way back putting it on the same
+// A task's page heads every category, those of no page too, each with a way to add a page of the task's project: the task is written first,
+// of the rev the modal opened at, then the page, which alone holds its category. A page comes off its task from its menu, the toast's way back putting it on the same
 // task and category, made anew when the task went with it.
 func TestUITaskCategories(t *testing.T) { //nolint:paralleltest // the browser tests share one Chrome, one at a time
 	s := newSite(t)

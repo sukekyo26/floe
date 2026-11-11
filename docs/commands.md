@@ -259,7 +259,7 @@ With slugs, the task's project is each page's: `--task` puts the pages on that n
 
 | Flag | Changes | |
 | --- | --- | --- |
-| `--task <ID>` | pages or the task named | With slugs, `""` takes the pages off their task and takes their category off, and cannot go with what changes a task (`--state`, `--url`, `--title`, `--categories`, `--parent`, a category). A page moved to another task leaves its category, unless `--category` gives it one there. A new ID is a task in the state `todo` |
+| `--task <ID>` | pages or the task named | With slugs, `""` takes the pages off their task and takes their category off, and cannot go with what changes a task (`--state`, `--url`, `--title`, `--categories`, `--parent`), nor with a category, which needs a task. A page moved to another task leaves its category, unless `--category` gives it one there. A new ID is a task in the state `todo` |
 | `--category <category>` | pages | With slugs only, of pages on a task; it writes no task. `""` takes it off |
 | `--state <state>` | the task | `todo`, `doing`, `done` or `archived` |
 | `--url <url>` | the task | Its one outside link, `http` or `https`; `""` takes it off |
@@ -270,7 +270,7 @@ With slugs, the task's project is each page's: `--task` puts the pages on that n
 | `--clear` | pages | Off their task, and their pin off; the task stays |
 | `--forget` | the task | Without slugs. Refused while a page is on it, an archived one too, or it has a child task |
 
-The tasks are written first, once for each different task the pages are on, and the pages then, in order, stopping at the first failure; a page that does not exist, or is on no task where the flags change one, is told before anything is written. A page that could not be written leaves its task written: the same command given again finishes it. Flags of the pages alone write no task.
+When a flag changes a task, or `--task` names one, the tasks are written first, once for each different task the pages are on, and the pages then, in order, stopping at the first failure; a page that does not exist, or is on no task where the flags change one or give a category, is told before anything is written. The task `--task` names is written though nothing of it changes: `made` for a new task, `changed` when a task of pages alone gets its row, `unchanged` otherwise. A page that could not be written leaves its task written, a new task's row too, which `--forget` removes: the same command given again finishes it. Flags of the pages alone, without `--task`, write no task.
 
 The task list, at `/tasks` of the server, lists the tasks of one project by state. Opened without one, it takes the project you last had in this browser while it is there, else the one with the task in progress that changed last, else the first on the shelf, and writes it in the URL. The tasks of each state go the latest changed first, each with its pages, how many are unread and its link, under the pages of that project that are pinned, each with a × that takes its pin off. A project with no task, whose last pin is taken off, is then no longer on the list, and its screen says so as for any such project. A task's place on the list is its state alone: `archived` puts it under Archive, whatever its pages are. The switch to it stands beside the logo, with no task too.
 

@@ -39,8 +39,9 @@ func (a *app) workCmd() *cobra.Command {
 --project (the project of the working directory when left out; "" for none). With slugs and no flag, tell each page as
 it is, writing nothing.
 
-The tasks are written first, once for each different task the pages are on, and the pages then, in order, stopping at
-the first failure. The same command given again finishes what a failure left. Each task and page written is told on a
+When a flag changes a task, or --task names one, the tasks are written first, once for each different task the pages
+are on, and the pages then, in order, stopping at the first failure; flags of the pages alone, without --task, write no
+task. The same command given again finishes what a failure left. Each task and page written is told on a
 line of its own, as the store left it: a task made, changed or unchanged with the fields given, a page with its task,
 category and pin. A page's category is where the task's page places it among its pages, which the user decides.
 
@@ -291,6 +292,8 @@ func (a *app) workPages(cmd *cobra.Command, f workFlags, slugs []string) error {
 		// --task names one task, so that tasks differ by their projects alone
 		return usageOf(usererr.New("cli_work_parent_projects"))
 	}
+	// LIMIT: a page refused after its task was written leaves the task as written, a new name's row of no page too, which
+	// --forget removes, as the screen's putPageOn does. Write the pages first if that comes to mislead.
 	if err = a.writeTasks(ctx, c, tasks, ed, sent); err != nil {
 		return err
 	}
