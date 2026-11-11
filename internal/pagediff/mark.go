@@ -266,15 +266,15 @@ func (m *marker) frame(sec int, n *html.Node, class string) {
 }
 
 // gone puts what is gone of the earlier page in after what was gone through last, as it was: the element under its
-// section's box that holds it (the part) copied, whole when the later keeps nothing of it, else only the branches to
-// what is gone (trim). What is gone of one part one after another goes in one copy.
+// section's box that holds it (the part) copied, whole when the later keeps nothing of it, else the branches to what
+// is gone alone, copied as they are found. What is gone of one part one after another goes in one copy.
 func (m *marker) gone(sec int, b *block, box *html.Node) {
 	under := childOf(b.node, box)
 	if under == nil {
 		under = b.node
 	}
 	if c := m.branch; c != nil && c.under == under && len(m.pending) > 0 && m.pending[len(m.pending)-1] == c.root {
-		c.gone = append(c.gone, b.node)
+		c.add(b.node)
 		m.place(sec, c.root)
 		return
 	}
@@ -283,73 +283,109 @@ func (m *marker) gone(sec int, b *block, box *html.Node) {
 		return
 	}
 	m.copied[under] = true
-	root, of := m.copyOld(under)
-	addClass(root, classGone)
-	c := &goneCopy{under: under, root: root, of: of, gone: []*html.Node{b.node}, whole: whole}
+	c := &goneCopy{under: under, root: nil, of: nil, back: map[*html.Node]*html.Node{}, gone: nil, whole: whole}
+	if whole {
+		c.root, c.of = copyTree(under)
+	} else {
+		c.root = shallow(under)
+		c.of = map[*html.Node]*html.Node{under: c.root}
+	}
+	addClass(c.root, classGone)
+	c.add(b.node)
 	m.gones = append(m.gones, c)
 	m.branch = c
-	m.pending = append(m.pending, root)
-	m.place(sec, root)
+	m.pending = append(m.pending, c.root)
+	m.place(sec, c.root)
 }
 
 // goneCopy is the copy of a part of the earlier page that holds what is gone: under, copied as root, of telling the
-// copy of each of its nodes; gone, the blocks of it gone; whole when the later keeps nothing of it.
+// copy of each node copied, back the node each copy is of; gone, the blocks of it gone; whole when the later keeps
+// nothing of it.
 type goneCopy struct {
 	under, root *html.Node
-	of          map[*html.Node]*html.Node
+	of, back    map[*html.Node]*html.Node
 	gone        []*html.Node
 	whole       bool
 }
 
-// trim leaves of each copy of what is gone the branches to it alone, as a part the later keeps some of, and shows them
-// as marks are shown: a details on a branch opened, the title of a tab of floe's tabs on one kept and picked, as the
-// tabs show the panel after the title picked alone. A copy that holds a diagram or image is framed, as the line
-// through its words does not show on them. The word for a screen reader goes first.
+// add copies old, gone, into the copy, with the branch down to it, and the title of the tab of floe's tabs it is in.
+func (c *goneCopy) add(old *html.Node) {
+	c.gone = append(c.gone, old)
+	c.branch(old)
+	if label := tabOf(old); label != nil {
+		c.branch(label)
+	}
+}
+
+// branch copies old into the copy, all in it, and the elements on the way down to it from the part alone, each in its
+// place among those copied by the earlier page's order. Nothing for one copied already, or a copy whole.
+func (c *goneCopy) branch(old *html.Node) {
+	if c.whole || c.of[old] != nil {
+		return
+	}
+	var path []*html.Node
+	for a := old.Parent; a != c.under; a = a.Parent {
+		if a == nil {
+			return
+		}
+		path = append(path, a)
+	}
+	slices.Reverse(path)
+	for _, a := range path {
+		if c.of[a] == nil {
+			n := shallow(a)
+			c.of[a], c.back[n] = n, a
+			c.insert(n, a)
+		}
+	}
+	n, of := copyTree(old)
+	for k, v := range of {
+		c.of[k], c.back[v] = v, k
+	}
+	c.insert(n, old)
+}
+
+// insert puts n, the copy of old, under the copy of old's parent, before the first copied there that comes after old.
+func (c *goneCopy) insert(n, old *html.Node) {
+	parent := c.of[old.Parent]
+	place := map[*html.Node]int{}
+	i := 0
+	for k := old.Parent.FirstChild; k != nil; k = k.NextSibling {
+		place[k] = i
+		i++
+	}
+	var before *html.Node
+	for k := parent.FirstChild; k != nil; k = k.NextSibling {
+		if o, ok := c.back[k]; ok && place[o] > place[old] {
+			before = k
+			break
+		}
+	}
+	parent.InsertBefore(n, before)
+}
+
+// trim shows each copy of what is gone as marks are shown: a details on its way opened, the tab of floe's tabs it is
+// in picked, as the tabs show the panel after the title picked alone. It is set apart from the page (apart); one that
+// holds a diagram or image is framed, as the line through its words does not show on them. The word for a screen
+// reader goes first.
 // LIMIT: an ol's items copied are numbered from its start again, a table's rows copied have no head, and a block of
 // words between others in one element copies the whole element: numbering them as they were would copy HTML's
 // numbering, and a head or the words apart would be a rule more.
 func (m *marker) trim() {
 	for _, c := range m.gones {
-		keep := map[*html.Node]bool{}
 		for _, old := range c.gone {
-			n := c.of[old]
-			if n == nil {
-				continue
+			if n := c.of[old]; n != nil {
+				openDetails(n)
 			}
-			for d := range withSelf(n) {
-				keep[d] = true
+			if label := tabOf(old); label != nil && c.of[label] != nil {
+				pick(c.of[label])
 			}
-			for a := n.Parent; a != nil; a = a.Parent {
-				keep[a] = true
-			}
-			if label := tabOf(n); label != nil {
-				for d := range withSelf(label) {
-					keep[d] = true
-				}
-				pick(label)
-			}
-			openDetails(n)
 		}
-		if !c.whole {
-			prune(c.root, keep)
-		}
+		m.apart(c.root)
 		if holdsFigure(c.root) {
 			addClass(c.root, classOut)
 		}
 		m.put(c.root, m.said())
-	}
-}
-
-// prune takes out of n what keep holds not.
-func prune(n *html.Node, keep map[*html.Node]bool) {
-	for c := n.FirstChild; c != nil; {
-		next := c.NextSibling
-		if keep[c] {
-			prune(c, keep)
-		} else {
-			n.RemoveChild(c)
-		}
-		c = next
 	}
 }
 
@@ -409,8 +445,7 @@ func (m *marker) before(sec int, n *html.Node) {
 	summary := element(atom.Summary, "")
 	summary.AppendChild(text(m.words.Before))
 	d.AppendChild(summary)
-	c, _ := m.copyOld(part)
-	d.AppendChild(c)
+	d.AppendChild(m.copyOld(part))
 	m.pending = append(m.pending, d)
 	m.place(sec, d)
 	m.flush(nil, nil)
@@ -475,18 +510,15 @@ func childOf(n, box *html.Node) *html.Node {
 
 // copyOld is n of the earlier page copied, its scripts left out, its ids and the names of its inputs, and all that
 // names them, apart from the later page's.
-func (m *marker) copyOld(n *html.Node) (*html.Node, map[*html.Node]*html.Node) {
-	of := map[*html.Node]*html.Node{}
-	var copyOf func(n *html.Node) *html.Node
-	copyOf = func(n *html.Node) *html.Node {
-		c := &html.Node{Type: n.Type, DataAtom: n.DataAtom, Data: n.Data, Namespace: n.Namespace, Attr: slices.Clone(n.Attr)}
-		of[n] = c
-		for k := n.FirstChild; k != nil; k = k.NextSibling {
-			c.AppendChild(copyOf(k))
-		}
-		return c
-	}
-	c := copyOf(n)
+func (m *marker) copyOld(n *html.Node) *html.Node {
+	c, _ := copyTree(n)
+	m.apart(c)
+	return c
+}
+
+// apart sets a copy of the earlier page apart from the page and the other copies: its scripts left out, its ids and
+// names, and all that names them, given a head of its own, so that two copies of one tabs make no group.
+func (m *marker) apart(c *html.Node) {
 	var scripts []*html.Node
 	for d := range c.Descendants() {
 		if d.Type == html.ElementNode && d.Data == "script" {
@@ -496,11 +528,29 @@ func (m *marker) copyOld(n *html.Node) (*html.Node, map[*html.Node]*html.Node) {
 	for _, s := range scripts {
 		s.Parent.RemoveChild(s)
 	}
-	// Each copy apart, from the page and from the others: two copies of one tabs make no group.
 	prefix := "floe-diff.old." + strconv.Itoa(m.copies) + "."
 	m.copies++
 	renumber(c, func(_ int, id string) string { return prefix + id })
-	return c, of
+}
+
+// copyTree is n and all in it copied, and the copy of each of its nodes.
+func copyTree(n *html.Node) (*html.Node, map[*html.Node]*html.Node) {
+	of := map[*html.Node]*html.Node{}
+	var copyOf func(n *html.Node) *html.Node
+	copyOf = func(n *html.Node) *html.Node {
+		c := shallow(n)
+		of[n] = c
+		for k := n.FirstChild; k != nil; k = k.NextSibling {
+			c.AppendChild(copyOf(k))
+		}
+		return c
+	}
+	return copyOf(n), of
+}
+
+// shallow is n alone copied, its attributes with it.
+func shallow(n *html.Node) *html.Node {
+	return &html.Node{Type: n.Type, DataAtom: n.DataAtom, Data: n.Data, Namespace: n.Namespace, Attr: slices.Clone(n.Attr)}
 }
 
 // edit is a change to a text node: the bytes [at, end) wrapped in an ins, or del's words put in at at.
