@@ -333,8 +333,8 @@ func TestSameAnswer(t *testing.T) {
 		t.Fatal(err)
 	}
 	again, _, _ := Diff([]byte(from), []byte(to), testWords) //nolint:errcheck // the same as above
-	x, _ := json.Marshal(first)                   //nolint:errcheck // a Result always encodes
-	y, _ := json.Marshal(again)                   //nolint:errcheck // as above
+	x, _ := json.Marshal(first)                              //nolint:errcheck // a Result always encodes
+	y, _ := json.Marshal(again)                              //nolint:errcheck // as above
 	if string(x) != string(y) {
 		t.Errorf("the same pages answered %s and %s", x, y)
 	}

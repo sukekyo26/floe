@@ -7,7 +7,7 @@ paths:
 # 保存先とサーバー
 
 - **保存したページは描いた HTML を返す**：publish（か `store.Rebuild`）の時に `tmpl.Draw` が描いた HTML を写しに保存し、開くときはそれを返す。開くときに描くのは link したデータファイルだけ。CSP とサンドボックスは HTML に焼き込まない。版を増やすのは、publish で中身（データファイルと読んだ画像。theme は入れない）が変わったときだけで、rebuild・開くときの描き直し・edit・link は版も `updatedAt` も動かさず、前の版は描き直さない。番号は rm の後に戻りうるので、タブの印は番号と時刻で作る。縮め方を知るのは store だけで、縮めるのは lock の外
-- **slug と写しのパスは 1 か所で作る**：slug をパスにするのは `store` の `dir`、meta.json の `source` を写しのパスにするのは `copyDir`、版の番号を版のパスにするのは `versionFile` だけで、そこで確かめ、呼ぶ側で別に確かめない。URL の `v` を版の番号として読むのは `versionParam`（保存したページの rest の無い URL だけ）、`diff` の `from`・`to` は `versionNumber`
+- **slug と写しのパスは 1 か所で作る**：slug をパスにするのは `store` の `dir`、meta.json の `source` を写しのパスにするのは `copyDir`、版の番号を版のパスにするのは `versionFile` だけで、そこで確かめ、呼ぶ側で別に確かめない。URL の `v` を版の番号として読むのは `versionParam`（保存したページの rest の無い URL だけ）、`diff` の `from`・`to` と差分の枠の `?raw` の `from`（`diffParam`）は `versionNumber`。2 つの版とその key を読むのは `store.VersionPair` 1 つ
 - **URL 名を省いた publish は `ownSlug` 1 つが決める**：データもリンクも、そのファイルの項目（ページは `publishedFrom`・`publishedFile`、リンクは `path`）を探す。`Prepare` で決め、`commit` が lock の中で確かめ直す。CLI・handler は URL 名を決めない
 - **publish は読んだ画像だけを書く**：publish が保存する画像は、描くときに `kit.ReadImage` が読んだ名前のものだけ。送られても読まなかった名前は書かない（信頼境界）。rebuild は前の写しの `images/` を全部引き継ぐ。版の中身の印も、読んだ画像だけから作る。版は画像を別に持たない（描いた HTML に埋め込まれている）
 - **サーバーを止めるのは `/api/stop` 1 つ**：`daemon.Stop` が `POST /api/stop` で、止めたいサーバーの pid を本文に書いて頼み、違えば 409。floe のコマンドはシグナルを送らない（名乗る pid は別のプロセスでありうる）。要求の ctx は `Serve` の ctx で切らない
