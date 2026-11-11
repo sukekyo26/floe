@@ -16,6 +16,7 @@ import (
 	"floe/internal/draw"
 	"floe/internal/files"
 	"floe/internal/i18n"
+	"floe/internal/page"
 	"floe/internal/store"
 	"floe/internal/usererr"
 )
@@ -285,6 +286,10 @@ func (s *Server) servePage(w http.ResponseWriter, r *http.Request) {
 		l, err = s.lookAt(r, slug, rest, q)
 	}
 	got := l.got
+	if errors.Is(err, errNoPage) && rest == "" && q.Has("from") {
+		diffNotFound(w, r)
+		return
+	}
 	if errors.Is(err, errNoPage) {
 		notFound(w)
 		return
@@ -301,6 +306,18 @@ func (s *Server) servePage(w http.ResponseWriter, r *http.Request) {
 		tail = servedScript(slug, rest, l.version, l.v, l.read, got.drawn, l.diff)
 	}
 	stream(w, got.typ, got.body, tail)
+}
+
+// diffNotFound answers a diff's page that is not there, as when a publish changed its pair's key between /diff and
+// the page: it tells the diff, as a diff's page whose versions changed does, which reads what changed again.
+func diffNotFound(w http.ResponseWriter, r *http.Request) {
+	script, err := page.Script("() => { "+tellChanged+"; }", nil)
+	if err != nil {
+		notFound(w)
+		return
+	}
+	pageHeaders(w, r, false)
+	sendBytes(w, http.StatusNotFound, htmlType, []byte("<!doctype html><title>not found</title>not found"+script))
 }
 
 // frame answers the frame of slug, 404 when there is no page to frame. A folder has no page of its own: its URL is the
@@ -489,6 +506,10 @@ func tellKeys(drawn, diff bool) string {
 // apart from it so that the page's asking does not follow a test's shorter watching.
 const askEvery = time.Second
 
+// tellChanged tells the frame of a diff that its page's versions changed, from the page at the path it was given.
+const tellChanged = "window.parent.postMessage({ artifactChanged: true, artifactPath: location.pathname }, " +
+	"location.protocol + '//' + location.host)"
+
 // servedScript is appended to a served page only: it reloads the open tab when the page changes (a publish, a
 // rebuild, a linked file saved), and handles links inside the frame. The page holds no connection to the server,
 // as Chrome opens six at most to one server and an open tab holding one would make the next pages wait: while it is
@@ -517,8 +538,7 @@ func servedScript(slug, rest, version string, v int, read *Read, drawn bool, dif
 	again := "location.reload();"
 	if diff.from > 0 {
 		u += "&from=" + strconv.Itoa(diff.from)
-		again = "window.parent.postMessage({ artifactChanged: true, artifactPath: location.pathname }, " +
-			"location.protocol + '//' + location.host);"
+		again = tellChanged + ";"
 	}
 	lit, _ := json.Marshal(u) //nolint:errcheck // a string always encodes
 	// What a page could shadow is read through window, as in leaveFrame. busy stays set once reloading.
