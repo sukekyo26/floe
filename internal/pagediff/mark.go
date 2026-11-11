@@ -651,8 +651,8 @@ func (m *marker) numberItems(c *goneCopy) {
 	}
 }
 
-// listOwner is the list owner of an li, as HTML defines it (the li element, "list owner"): its closest ol, ul or menu
-// ancestor, nil for none.
+// listOwner is the list owner of an li, by the steps of HTML's "list owner" (the li element): its closest ol, ul or
+// menu ancestor, else its parent.
 // LIMIT: an li not rendered has none in HTML; one here is still numbered.
 func listOwner(li *html.Node) *html.Node {
 	for a := li.Parent; a != nil; a = a.Parent {
@@ -661,13 +661,13 @@ func listOwner(li *html.Node) *html.Node {
 			return a
 		}
 	}
-	return nil
+	return li.Parent
 }
 
-// ordinals are the ordinal values of the items of the list owner owner, an ol, as HTML's algorithm sets them out (the
-// li element, "ordinal value"): from the ol's starting value (its start, else the number of its items when reversed,
-// else 1), each of its items in tree order taking its value when it has one, and counting down when the ol is reversed,
-// else up.
+// ordinals are the ordinal values of the owned list items of owner, an ol, by the steps of HTML's "ordinal value" (the
+// li element) and "starting value" (the ol element): numbering from the ol's starting value (its start parsed, else
+// the number of its owned items when reversed, else 1); each item in tree order takes its value parsed when it has
+// one, then numbering goes down when the ol is reversed, else up.
 func ordinals(owner *html.Node) map[*html.Node]int {
 	var items []*html.Node
 	for d := range owner.Descendants() {
@@ -702,8 +702,9 @@ func ordinals(owner *html.Node) map[*html.Node]int {
 	return out
 }
 
-// htmlInteger reads s by HTML's rules for parsing integers: ASCII whitespace skipped, a sign, then the digits up to the
-// first that is not one. False for no digits, or a number past an int.
+// htmlInteger reads s by the steps of HTML's "rules for parsing integers": ASCII whitespace skipped, a - or + sign, then
+// the digits up to the first that is not one, negated for -. False for no digits (the rules' error), or a number past
+// an int.
 func htmlInteger(s string) (int, bool) {
 	s = strings.TrimLeftFunc(s, page.IsSpace)
 	sign := 1
