@@ -188,8 +188,15 @@ func frameURL(t *testing.T, b *browser) string {
 	if err != nil {
 		t.Fatal(err)
 	}
-	if kids := res.FrameTree.ChildFrames; len(kids) == 1 {
-		return kids[0].Frame.URL
+	// The frame's iframe: the diff's, empty out of a diff, is about:blank.
+	var urls []string
+	for _, kid := range res.FrameTree.ChildFrames {
+		if kid.Frame.URL != "about:blank" {
+			urls = append(urls, kid.Frame.URL)
+		}
+	}
+	if len(urls) == 1 {
+		return urls[0]
 	}
 	return ""
 }
