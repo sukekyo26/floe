@@ -52,8 +52,10 @@ func marked(from, to []byte, most int, words Words) (Result, *html.Node, error) 
 	if err != nil {
 		return Result{}, nil, err
 	}
-	c := compare(a, b, &work{left: most})
+	w := newWork(most)
+	c := compare(a, b, w)
 	m := newMarker(treeB, words)
+	m.tables = w.tables
 	m.mark(treeA, a, b, c)
 	if m.copies > 0 {
 		carryStyles(treeA, treeB)
@@ -79,12 +81,12 @@ const (
 	classOut    = "floe-diff-out"
 	classBefore = "floe-diff-before"
 	classAt     = "floe-diff-at"
-	markStyle   = `.floe-diff-ins{background:#d6f5df;color:inherit;text-decoration:underline 2px #1a7f37;text-underline-offset:3px}
-.floe-diff-del{background:#ffe0e0;color:#a40e26;text-decoration:line-through 2px}
+	markStyle   = `.floe-diff-ins{background:rgba(26,127,55,.18);color:inherit;text-decoration:underline 2px #1a7f37;text-underline-offset:3px}
+.floe-diff-del{background:rgba(207,34,46,.18);color:inherit;text-decoration:line-through 2px #cf222e}
 .floe-diff-ch{outline:2px solid #d4a017;outline-offset:4px}
 .floe-diff-add{outline:2px solid #1a7f37;outline-offset:4px}
 tr.floe-diff-ch,tr.floe-diff-add{outline-offset:-2px}
-.floe-diff-gone{color:#a40e26;text-decoration:line-through 2px}
+.floe-diff-gone{text-decoration:line-through 2px #cf222e}
 .floe-diff-out{outline:2px dashed #cf222e;outline-offset:4px}
 .floe-diff-sr{position:absolute;width:1px;height:1px;margin:-1px;padding:0;overflow:hidden;clip:rect(0 0 0 0);white-space:nowrap;border:0}
 .floe-diff-before{margin:12px 0;padding:6px 12px 12px;border:2px solid #d4a017;border-radius:8px;background:#fffbea;color:#24292f}
@@ -103,12 +105,18 @@ type marker struct {
 	added, kept, copied map[*html.Node]bool
 	held                map[holdKey]bool
 	gones               []*goneCopy
-	branch              *goneCopy
-	copies              int
-	labels              map[*html.Node]*html.Node
-	groups              []*group
-	cur                 *group
-	count               int
+	tables
+	// rows tells of each table of the earlier whose rows are paired the later's it is; lastRow, the later's row of
+	// each table gone through last; waiting, rows gone of a table before any of its rows was gone through.
+	rows    map[*html.Node]*html.Node
+	lastRow map[*html.Node]*html.Node
+	waiting map[*html.Node][]waitingRow
+	branch  *goneCopy
+	copies  int
+	labels  map[*html.Node]*html.Node
+	groups  []*group
+	cur     *group
+	count   int
 }
 
 // group is a place: what is marked one after another in a section, of its result's section sec.
@@ -125,7 +133,7 @@ type holdKey struct {
 func newMarker(root *html.Node, words Words) *marker {
 	return &marker{
 		root: root, body: bodyOf(root), words: words, last: nil, lastBox: nil, tail: nil, pending: nil,
-		added: map[*html.Node]bool{}, kept: map[*html.Node]bool{}, copied: map[*html.Node]bool{}, held: map[holdKey]bool{}, labels: map[*html.Node]*html.Node{},
+		added: map[*html.Node]bool{}, kept: map[*html.Node]bool{}, copied: map[*html.Node]bool{}, held: map[holdKey]bool{}, tables: tables{}, rows: map[*html.Node]*html.Node{}, lastRow: map[*html.Node]*html.Node{}, waiting: map[*html.Node][]waitingRow{}, labels: map[*html.Node]*html.Node{},
 		groups: nil, cur: nil, count: 0,
 	}
 }
@@ -154,6 +162,9 @@ func (m *marker) mark(treeA *html.Node, a, b []section, c compared) {
 		for _, p := range st.pairs {
 			if p.from != nil && p.to != nil {
 				m.keep(p.from.node)
+				if p.to.kind == "tr" && !m.spanned(p.from.node) && !m.spanned(p.to.node) {
+					m.rows[tableOf(p.from.node)] = tableOf(p.to.node)
+				}
 			}
 		}
 		if st.from >= 0 && st.to >= 0 {
@@ -205,10 +216,16 @@ func (m *marker) changed(sec int, from, to section, boxA, boxB *html.Node, pairs
 			m.gone(sec, p.from, boxA)
 		case p.from == nil:
 			m.visit(p.to.node, boxB)
+			m.rowAt(p.to)
 			m.show(sec, p.to.node, p.to.kind, p.to.from, added(p.to.text), classAdd)
 		case p.from.key == p.to.key:
 			m.visit(p.to.node, boxB)
+			m.rowAt(p.to)
 			m.cur = nil
+		case p.cells != nil:
+			m.visit(p.to.node, boxB)
+			m.rowAt(p.to)
+			m.showCells(sec, p.to.node, p.cells)
 		case figure(p.to.kind):
 			m.visit(p.to.node, boxB)
 			m.frame(sec, partOf(p.to.node), classChange)
@@ -272,6 +289,17 @@ func (m *marker) frame(sec int, n *html.Node, class string) {
 // section's box that holds it (the part) copied, whole when the later keeps nothing of it, else the branches to what
 // is gone alone, copied as they are found. What is gone of one part one after another goes in one copy.
 func (m *marker) gone(sec int, b *block, box *html.Node) {
+	if b.kind == "tr" {
+		if later := m.rows[tableOf(b.node)]; later != nil {
+			if last := m.lastRow[later]; last != nil {
+				m.putRow(sec, b.node, last, true)
+			} else {
+				old := tableOf(b.node)
+				m.waiting[old] = append(m.waiting[old], waitingRow{sec: sec, row: b.node})
+			}
+			return
+		}
+	}
 	under := childOf(b.node, box)
 	if under == nil {
 		under = b.node
@@ -300,6 +328,130 @@ func (m *marker) gone(sec int, b *block, box *html.Node) {
 	m.branch = c
 	m.pending = append(m.pending, c.root)
 	m.place(sec, c.root)
+}
+
+// waitingRow is a row gone of a table, at sec, to put in before the first row of it gone through.
+type waitingRow struct {
+	sec int
+	row *html.Node
+}
+
+// rowAt goes through a row of the later page: the rows gone of its table before it go in before it, and those gone after
+// it go after it.
+func (m *marker) rowAt(b *block) {
+	if b.kind != "tr" {
+		return
+	}
+	later := tableOf(b.node)
+	for old, t := range m.rows {
+		if t != later {
+			continue
+		}
+		for _, w := range m.waiting[old] {
+			m.putRow(w.sec, w.row, b.node, false)
+		}
+		delete(m.waiting, old)
+	}
+	m.lastRow[later] = b.node
+}
+
+// putRow puts row, gone, in the later's table where it was: after the row at (before it, for after false), in the
+// group of rows of row's kind (thead, tbody, tfoot); one of a kind the later's table has not, last in its thead or
+// first in its first tbody. Its words go struck through, as all words gone. The HTML parser must hold a tr there,
+// else it goes in as gone goes, after the table.
+func (m *marker) putRow(sec int, row, at *html.Node, after bool) {
+	kind := row.Parent.Data
+	parent, before := at.Parent, at
+	if after {
+		before = at.NextSibling
+		if m.added[before] {
+			for before != nil && m.added[before] {
+				before = before.NextSibling
+			}
+		}
+	}
+	if parent.Data != kind {
+		table := tableOf(at)
+		parent, before = nil, nil
+		for c := table.FirstChild; c != nil; c = c.NextSibling {
+			if c.Type == html.ElementNode && c.Data == kind && parent == nil {
+				parent = c
+			}
+		}
+		switch {
+		case parent != nil && kind != "thead":
+			before = parent.FirstChild
+		case parent == nil:
+			parent = page.First(table, atom.Tbody)
+			if parent != nil {
+				before = parent.FirstChild
+			}
+		}
+	}
+	if parent == nil || !m.holds(parent, "tr") {
+		return
+	}
+	c := m.copyOld(row)
+	parent.InsertBefore(c, before)
+	m.added[c] = true
+	m.strike(c)
+	m.place(sec, c)
+	if after {
+		m.lastRow[tableOf(at)] = c
+	}
+}
+
+// showCells marks the cells of a row paired: those alike by their words, those added by theirs, those gone put in
+// where they were, their words struck through. The row is framed when a mark cannot be held.
+func (m *marker) showCells(sec int, row *html.Node, cells []cellPair) {
+	ok := true
+	for i, c := range cells {
+		switch {
+		case c.from != nil && c.to != nil && c.spans != nil:
+			ok = m.markWords(c.to.from, c.spans) && ok
+		case c.from == nil && strings.TrimFunc(c.to.text, page.IsSpace) != "":
+			ok = m.markWords(c.to.from, added(c.to.text)) && ok
+		case c.to == nil:
+			var before *html.Node
+			for _, next := range cells[i+1:] {
+				if next.to != nil {
+					before = next.to.node
+					break
+				}
+			}
+			if !m.holds(row, c.from.node.Data) {
+				ok = false
+				continue
+			}
+			put := m.copyOld(c.from.node)
+			row.InsertBefore(put, before)
+			m.added[put] = true
+			m.strike(put)
+		}
+	}
+	if !ok {
+		addClass(row, classChange)
+	}
+	m.place(sec, row)
+}
+
+// strike wraps the words in n, put in the page, in a del, where one is held: words gone, shown as words gone are.
+func (m *marker) strike(n *html.Node) {
+	var words []*html.Node
+	for d := range n.Descendants() {
+		if d.Type == html.TextNode && strings.TrimFunc(d.Data, unicode.IsSpace) != "" {
+			words = append(words, d)
+		}
+	}
+	for _, t := range words {
+		if !m.holds(t.Parent, "del") {
+			continue
+		}
+		del := element(atom.Del, classDel)
+		t.Parent.InsertBefore(del, t)
+		t.Parent.RemoveChild(t)
+		del.AppendChild(t)
+	}
 }
 
 // goneCopy is the copy of a part of the earlier page that holds what is gone: under, copied as root, of telling the

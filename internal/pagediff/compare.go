@@ -5,10 +5,15 @@ package pagediff
 
 import (
 	"slices"
+	"strings"
 	"time"
 	"unicode/utf8"
 
 	"github.com/sergi/go-diff/diffmatchpatch"
+	"golang.org/x/net/html"
+	"golang.org/x/net/html/atom"
+
+	"floe/internal/page"
 )
 
 // Span is words that are the same in both versions, gone from the later or added to it.
@@ -94,6 +99,15 @@ type step struct {
 type blockPair struct {
 	from, to *block
 	spans    []Span
+	// cells are the cells of a pair of rows paired, of a table whose cells span no more than one row and column.
+	cells []cellPair
+}
+
+// cellPair is a cell of a row and the one it is paired with, nil for one in a version alone; spans the words that
+// differ, for cells whose words are alike.
+type cellPair struct {
+	from, to *cell
+	spans    []Span
 }
 
 func compare(a, b []section, w *work) compared {
@@ -171,14 +185,15 @@ func (w *work) sectionPair(c *compared, a, b []section, p pair) {
 	if from.heading == to.heading && slices.Equal(keysA, keysB) {
 		same := make([]blockPair, len(to.blocks))
 		for i := range to.blocks {
-			same[i] = blockPair{from: &a[p.a].blocks[i], to: &b[p.b].blocks[i], spans: nil}
+			same[i] = blockPair{from: &a[p.a].blocks[i], to: &b[p.b].blocks[i], spans: nil, cells: nil}
 		}
 		c.add(Section{State: StateSame, Level: to.level, Heading: heading, Place: nil}, step{from: p.a, to: p.b, pairs: same})
 		return
 	}
 	var pairs []blockPair
-	for _, q := range align(w.library(len(keysA), len(keysB)), keysA, keysB) {
-		pairs = append(pairs, w.blockPair(a[p.a].blocks, b[p.b].blocks, q)...)
+	blocksA, blocksB := a[p.a].blocks, b[p.b].blocks
+	for _, q := range w.rows(blocksA, blocksB, align(w.library(len(keysA), len(keysB)), keysA, keysB)) {
+		pairs = append(pairs, w.blockPair(blocksA, blocksB, q)...)
 	}
 	c.add(Section{State: StateChanged, Level: to.level, Heading: heading, Place: nil}, step{from: p.a, to: p.b, pairs: pairs})
 }
@@ -186,27 +201,214 @@ func (w *work) sectionPair(c *compared, a, b []section, p pair) {
 func (w *work) blockPair(a, b []block, q pair) []blockPair {
 	switch {
 	case q.a < 0:
-		return []blockPair{{from: nil, to: &b[q.b], spans: nil}}
+		return []blockPair{{from: nil, to: &b[q.b], spans: nil, cells: nil}}
 	case q.b < 0:
-		return []blockPair{{from: &a[q.a], to: nil, spans: nil}}
+		return []blockPair{{from: &a[q.a], to: nil, spans: nil, cells: nil}}
 	}
 	from, to := &a[q.a], &b[q.b]
 	if from.key == to.key {
-		return []blockPair{{from: from, to: to, spans: nil}}
+		return []blockPair{{from: from, to: to, spans: nil, cells: nil}}
 	}
 	if from.kind == to.kind {
 		if from.text == to.text {
-			return []blockPair{{from: from, to: to, spans: nil}}
+			return []blockPair{{from: from, to: to, spans: nil, cells: nil}}
 		}
 		if spans := w.words(from.text, to.text); spans != nil {
-			return []blockPair{{from: from, to: to, spans: spans}}
+			var cells []cellPair
+			if from.kind == "tr" && !w.spanned(from.node) && !w.spanned(to.node) {
+				cells = w.cellPairs(from.cells, to.cells)
+			}
+			return []blockPair{{from: from, to: to, spans: spans, cells: cells}}
 		}
 	}
-	return []blockPair{{from: from, to: nil, spans: nil}, {from: nil, to: to, spans: nil}}
+	return []blockPair{{from: from, to: nil, spans: nil, cells: nil}, {from: nil, to: to, spans: nil, cells: nil}}
 }
 
-// work is what is left of the differ's work for one comparison.
-type work struct{ left int }
+// rows pairs again the rows of a table whose keys differ, between those the same: by the cells they share, as a
+// column gone or added changes every row's words, and by place one row gone would pair those after it off by one. A
+// run of blocks not all rows, or past the work left, stays as it is.
+func (w *work) rows(a, b []block, pairs []pair) []pair {
+	var out []pair
+	for i := 0; i < len(pairs); {
+		j := i
+		for j < len(pairs) && !(pairs[j].a >= 0 && pairs[j].b >= 0 && a[pairs[j].a].key == b[pairs[j].b].key) {
+			j++
+		}
+		out = append(out, w.rowRun(a, b, pairs[i:j])...)
+		if j < len(pairs) {
+			out = append(out, pairs[j])
+		}
+		i = j + 1
+	}
+	return out
+}
+
+// rowRun pairs the rows of a run by the longest sequence of rows that share half their cells or more, in order.
+func (w *work) rowRun(a, b []block, run []pair) []pair {
+	var xs, ys []int
+	for _, p := range run {
+		if p.a >= 0 {
+			if a[p.a].kind != "tr" {
+				return run
+			}
+			xs = append(xs, p.a)
+		}
+		if p.b >= 0 {
+			if b[p.b].kind != "tr" {
+				return run
+			}
+			ys = append(ys, p.b)
+		}
+	}
+	n, m := len(xs), len(ys)
+	if n == 0 || m == 0 || w.library(n, m) == nil {
+		return run
+	}
+	// LIMIT: the longest sequence by a table of n×m, as the differ compares runes, not rows by their likeness.
+	best := make([][]int, n+1)
+	for i := range best {
+		best[i] = make([]int, m+1)
+	}
+	for i := n - 1; i >= 0; i-- {
+		for j := m - 1; j >= 0; j-- {
+			best[i][j] = max(best[i+1][j], best[i][j+1])
+			if shareCells(a[xs[i]], b[ys[j]]) {
+				best[i][j] = max(best[i][j], best[i+1][j+1]+1)
+			}
+		}
+	}
+	// The rows paired by their cells, and between them those left paired by place, as align leaves a run.
+	var matched []pair
+	i, j := 0, 0
+	for i < n && j < m {
+		switch {
+		case shareCells(a[xs[i]], b[ys[j]]) && best[i][j] == best[i+1][j+1]+1:
+			matched = append(matched, pair{a: i, b: j})
+			i++
+			j++
+		case best[i+1][j] >= best[i][j+1]:
+			i++
+		default:
+			j++
+		}
+	}
+	var out []pair
+	i, j = 0, 0
+	byPlace := func(toI, toJ int) {
+		for i < toI || j < toJ {
+			p := pair{a: -1, b: -1}
+			if i < toI {
+				p.a = xs[i]
+				i++
+			}
+			if j < toJ {
+				p.b = ys[j]
+				j++
+			}
+			out = append(out, p)
+		}
+	}
+	for _, q := range matched {
+		byPlace(q.a, q.b)
+		out = append(out, pair{a: xs[q.a], b: ys[q.b]})
+		i, j = q.a+1, q.b+1
+	}
+	byPlace(n, m)
+	return out
+}
+
+// shareCells tells whether two rows share half the cells of the longer at least, by their words.
+func shareCells(x, y block) bool {
+	left := map[string]int{}
+	for _, c := range x.cells {
+		left[c.text]++
+	}
+	shared := 0
+	for _, c := range y.cells {
+		if left[c.text] > 0 {
+			left[c.text]--
+			shared++
+		}
+	}
+	return shared*2 >= max(len(x.cells), len(y.cells)) && shared > 0
+}
+
+// cellPairs pairs the cells of two rows by their words, as blocks are: those alike compared by their words, the others
+// each in one row alone.
+func (w *work) cellPairs(a, b []cell) []cellPair {
+	keys := func(cells []cell) []string {
+		out := make([]string, len(cells))
+		for i, c := range cells {
+			out[i] = c.text
+		}
+		return out
+	}
+	var out []cellPair
+	for _, q := range align(w.library(len(a), len(b)), keys(a), keys(b)) {
+		switch {
+		case q.a < 0:
+			out = append(out, cellPair{from: nil, to: &b[q.b], spans: nil})
+		case q.b < 0:
+			out = append(out, cellPair{from: &a[q.a], to: nil, spans: nil})
+		case a[q.a].text == b[q.b].text:
+			out = append(out, cellPair{from: &a[q.a], to: &b[q.b], spans: nil})
+		default:
+			if spans := w.words(a[q.a].text, b[q.b].text); spans != nil {
+				out = append(out, cellPair{from: &a[q.a], to: &b[q.b], spans: spans})
+			} else {
+				out = append(out, cellPair{from: &a[q.a], to: nil, spans: nil}, cellPair{from: nil, to: &b[q.b], spans: nil})
+			}
+		}
+	}
+	return out
+}
+
+// tables tells of each table whether a cell of it spans more than one row or column: a cell put in or left out there
+// moves the columns of other rows.
+type tables map[*html.Node]bool
+
+// spanned tells it of the table of the row tr, true for a row of no table.
+func (t tables) spanned(tr *html.Node) bool {
+	table := tableOf(tr)
+	if table == nil {
+		return true
+	}
+	if got, ok := t[table]; ok {
+		return got
+	}
+	got := false
+	for d := range table.Descendants() {
+		if d.Type == html.ElementNode && (d.DataAtom == atom.Td || d.DataAtom == atom.Th) {
+			for _, key := range []string{"colspan", "rowspan"} {
+				if v, ok := page.Attr(d, key); ok && strings.TrimFunc(v, page.IsSpace) != "1" {
+					got = true
+				}
+			}
+		}
+	}
+	t[table] = got
+	return got
+}
+
+// tableOf is the table n is in, nil for none.
+func tableOf(n *html.Node) *html.Node {
+	for ; n != nil; n = n.Parent {
+		if n.Type == html.ElementNode && n.DataAtom == atom.Table && n.Namespace == "" {
+			return n
+		}
+	}
+	return nil
+}
+
+// work is what is left of the differ's work for one comparison, and which tables have cells that span.
+type work struct {
+	left int
+	tables
+}
+
+func newWork(most int) *work {
+	return &work{left: most, tables: tables{}}
+}
 
 // library is the differ to compare lists of lengths n and m, its work taken from what is left: nil when it is more
 // than one call may take, or than is left.

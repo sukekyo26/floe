@@ -8,6 +8,11 @@ import (
 
 var testWords = Words{Gone: "Gone", Before: "Earlier"}
 
+// table is a table under a heading, of the head row head and the rows rows.
+func table(head string, rows ...string) string {
+	return "<h2>T</h2><table><thead><tr>" + head + "</tr></thead><tbody><tr>" + strings.Join(rows, "</tr><tr>") + "</tr></tbody></table>"
+}
+
 // twoTabs is two sections of floe's tabs, the second tab of each holding a kept paragraph after one of gone.
 func twoTabs(gone, other string) string {
 	tab := func(heading, gone string) string {
@@ -48,9 +53,39 @@ func TestMark(t *testing.T) {
 			hasNot: []string{"<ins", "<del"},
 		},
 		{
+			name: "a column gone", from: table("<th>Name</th><th>Short</th><th>Long</th>", "<td>alpha</td><td>x</td><td>the long words of one</td>", "<td>beta</td><td>yy</td><td>the long words of two</td>"),
+			to: table("<th>Name</th><th>Long</th>", "<td>alpha</td><td>the long words of one</td>", "<td>beta</td><td>the long words of two</td>"),
+			has: []string{`<th><del class="floe-diff-del">Short</del></th><th>Long</th>`, `<td>alpha</td><td><del class="floe-diff-del">x</del></td>`, `<td>beta</td><td><del class="floe-diff-del">yy</del></td>`},
+		},
+		{
+			name: "a column added", from: table("<th>Name</th><th>Long</th>", "<td>alpha</td><td>the long words of one</td>"),
+			to:     table("<th>Name</th><th>New</th><th>Long</th>", "<td>alpha</td><td>added</td><td>the long words of one</td>"),
+			has:    []string{`<th><ins class="floe-diff-ins">New</ins></th>`, `<td><ins class="floe-diff-ins">added</ins></td>`},
+			hasNot: []string{classChange},
+		},
+		{
+			name: "a row and a column gone", from: table("<th>Name</th><th>N</th><th>Long</th>", "<td>alpha</td><td>1</td><td>the long words of one</td>", "<td>beta</td><td>2</td><td>gone row words</td>", "<td>gamma</td><td>3</td><td>the long words of three</td>"),
+			to: table("<th>Name</th><th>Long</th>", "<td>alpha</td><td>the long words of one</td>", "<td>gamma</td><td>the long words of three</td>"),
+			has: []string{
+				`<td>alpha</td><td><del class="floe-diff-del">1</del></td><td>the long words of one</td></tr><tr><td><del class="floe-diff-del">`,
+				`beta</del></td><td><del class="floe-diff-del">2</del></td><td><del class="floe-diff-del">gone row words</del></td></tr><tr><td>gamma</td>`,
+			},
+		},
+		{
+			name: "the head's row gone", from: table("<th>Name</th><th>Long</th>", "<td>alpha</td><td>the long words of one</td>"),
+			to:  "<h2>T</h2><table><tbody><tr><td>alpha</td><td>the long words of one</td></tr></tbody></table>",
+			has: []string{"<tbody><tr><th><del", "Name</del></th><th><del class=\"floe-diff-del\">Long</del></th></tr><tr><td>alpha</td>"},
+		},
+		{
+			name: "a table of spans", from: table(`<th colspan="2">Both</th>`, "<td>a</td><td>x</td>", "<td>b</td><td>the long words</td>"),
+			to: table(`<th colspan="2">Both</th>`, "<td>a</td><td>x</td>"),
+			has:    []string{`</table><table class="floe-diff-gone">`},
+			hasNot: []string{"</td></tr><tr><td><del"},
+		},
+		{
 			name: "a row gone", from: "<h2>T</h2><table><tr><td>a</td></tr><tr><td>b</td></tr></table>", to: "<h2>T</h2><table><tr><td>a</td></tr></table>",
-			has:    []string{`</table><table class="floe-diff-gone"><tbody><tr><td><span class="floe-diff-sr">Gone </span><span class="floe-diff-at" id="floe-diff.0"></span>b</td></tr></tbody></table>`},
-			hasNot: []string{"<td>a</td></tr></tbody></table></table>", `class="floe-diff-gone"><tbody><tr><td>a`},
+			has:    []string{`<tbody><tr><td>a</td></tr><tr><td><del class="floe-diff-del"><span class="floe-diff-at" id="floe-diff.0"></span>b</del></td></tr></tbody></table>`},
+			hasNot: []string{classGone},
 		},
 		{
 			name: "own ids", from: `<h2 id="overview">Overview</h2><p>x</p>`, to: `<h2 id="overview">Overview and scope</h2><p>x</p>`,

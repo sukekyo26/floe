@@ -23,6 +23,15 @@ type block struct {
 	kind, text, key string
 	node            *html.Node
 	from            []origin
+	// cells are a row's cells, in order.
+	cells []cell
+}
+
+// cell is a cell of a row: its element, its words, and where each rune of them comes from.
+type cell struct {
+	node *html.Node
+	text string
+	from []origin
 }
 
 // section is what lies under a heading, up to the next of any level. level 0 is what comes before the first heading,
@@ -158,7 +167,7 @@ type reader struct {
 
 func (r *reader) add(kind, text, key string, node *html.Node, from []origin) {
 	s := &r.sections[len(r.sections)-1]
-	s.blocks = append(s.blocks, block{kind: kind, text: text, key: kind + "\x00" + key, node: node, from: from})
+	s.blocks = append(s.blocks, block{kind: kind, text: text, key: kind + "\x00" + key, node: node, from: from, cells: nil})
 }
 
 func (r *reader) flush() {
@@ -192,8 +201,10 @@ func (r *reader) walk(n *html.Node) {
 		r.add("img", alt, alt+"\x00"+digest(attrValue(n, "src")), n, nil)
 	case n.Data == "tr":
 		r.flush()
-		text, from := row(n)
+		text, from, cells := row(n)
 		r.add("tr", text, text, n, from)
+		s := &r.sections[len(r.sections)-1]
+		s.blocks[len(s.blocks)-1].cells = cells
 	case n.Data == "pre":
 		r.flush()
 		for _, line := range preLines(n) {
@@ -268,20 +279,21 @@ func flowOf(n *html.Node) (string, []origin) {
 	return w.squeezed()
 }
 
-func row(n *html.Node) (string, []origin) {
+func row(n *html.Node) (string, []origin, []cell) {
 	var w words
-	first := true
+	var cells []cell
 	for c := n.FirstChild; c != nil; c = c.NextSibling {
 		if c.Type != html.ElementNode {
 			continue
 		}
-		if !first {
+		if len(cells) > 0 {
 			w.addApart(" | ")
 		}
-		first = false
-		w.addRead(flowOf(c))
+		text, from := flowOf(c)
+		cells = append(cells, cell{node: c, text: text, from: from})
+		w.addRead(text, from)
 	}
-	return w.b.String(), w.from
+	return w.b.String(), w.from, cells
 }
 
 func plain(n *html.Node, w *words) {

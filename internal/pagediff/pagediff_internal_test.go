@@ -1,6 +1,7 @@
 package pagediff
 
 import (
+	"encoding/json"
 	"flag"
 	"fmt"
 	"os"
@@ -43,7 +44,7 @@ func told(t *testing.T, from, to string, most int) string {
 	if err != nil {
 		t.Fatal(err)
 	}
-	c := compare(a, b, &work{left: most})
+	c := compare(a, b, newWork(most))
 	var out strings.Builder
 	line := func(kind, words string) { fmt.Fprintf(&out, "  [%s] %s\n", kind, words) }
 	for i, s := range c.result.Sections {
@@ -315,5 +316,36 @@ func TestReadEveryPart(t *testing.T) {
 	}
 	if b.String() != string(want) {
 		t.Errorf("%s differs from what is read now; %s", golden, fix)
+	}
+}
+
+// TestSameAnswer: the answer is of the pages alone. The differ is never cut by time, the same pages answer the same,
+// and every call to it is counted in the work, the cells of rows too.
+func TestSameAnswer(t *testing.T) {
+	t.Parallel()
+
+	if d := library(); d.DiffTimeout != never {
+		t.Errorf("the differ's time limit is %v", d.DiffTimeout)
+	}
+	from := "<h2>T</h2><table><tr><td>alpha</td><td>x</td><td>one</td></tr><tr><td>beta</td><td>y</td><td>two</td></tr></table>"
+	to := "<h2>T</h2><table><tr><td>alpha</td><td>one</td></tr><tr><td>beta</td><td>two</td></tr></table>"
+	first, err := Compare([]byte(from), []byte(to))
+	if err != nil {
+		t.Fatal(err)
+	}
+	again, _ := Compare([]byte(from), []byte(to)) //nolint:errcheck // the same as above
+	x, _ := json.Marshal(first) //nolint:errcheck // a Result always encodes
+	y, _ := json.Marshal(again) //nolint:errcheck // as above
+	if string(x) != string(y) {
+		t.Errorf("the same pages answered %s and %s", x, y)
+	}
+	a, _ := read([]byte(from)) //nolint:errcheck // read above
+	b, _ := read([]byte(to))   //nolint:errcheck // read above
+	w := newWork(10_000)
+	compare(a, b, w)
+	// The sections 1×1, the blocks 2×2, the rows again by their cells 2×2, each row's words, each row's cells 3×2.
+	want := 1 + 2*2 + 2*2 + 15*11 + 14*10 + 3*2 + 3*2
+	if used := 10_000 - w.left; used != want {
+		t.Errorf("the work counted is %d, want %d", used, want)
 	}
 }
