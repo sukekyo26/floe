@@ -11,7 +11,6 @@ import (
 type TaskEdit struct {
 	Title      *string   `json:"title,omitzero"`
 	State      *string   `json:"state,omitzero"`
-	Category   *string   `json:"category,omitzero"`
 	URL        *string   `json:"url,omitzero"`
 	Categories *[]string `json:"categories,omitzero"`
 	Parent     *string   `json:"parent,omitzero"`

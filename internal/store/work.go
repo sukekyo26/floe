@@ -101,12 +101,11 @@ func setWork(m *Meta, ed *WorkEdit) {
 	}
 }
 
-// Task is a task's row of tasks.json. At is when it was made or its state last changed; Category the last category
-// written of it that was not empty; Parent the task it is a child of, of the same project (childrenOfTask).
+// Task is a task's row of tasks.json. At is when it was made or its state last changed; Parent the task it is a child
+// of, of the same project (childrenOfTask). A page's category is the page's alone (Work).
 type Task struct {
 	Title      string   `json:"title,omitempty"`
 	State      string   `json:"state"`
-	Category   string   `json:"category,omitempty"`
 	At         string   `json:"at"`
 	URL        string   `json:"url,omitempty"`
 	Categories []string `json:"categories,omitempty"`
@@ -135,11 +134,10 @@ var States = []State{
 }
 
 // TaskEdit is what a write changes of a task's row, each left as it is when nil. An empty URL or Categories takes it
-// off; an empty Category leaves the last one written.
+// off.
 type TaskEdit struct {
 	Title      *string
 	State      *string
-	Category   *string
 	URL        *string
 	Categories *[]string
 	// An empty Parent takes it off.
@@ -396,7 +394,7 @@ func (s *Store) checkSeen(project string, rows map[string]Task, name string, ed 
 // newTaskRow is the row a task starts with: of the state New, from now.
 func newTaskRow() Task {
 	fresh := States[slices.IndexFunc(States, func(s State) bool { return s.New })]
-	return Task{Title: "", State: fresh.Name, Category: "", At: Now(), URL: "", Categories: nil, Parent: "", Rev: 0}
+	return Task{Title: "", State: fresh.Name, At: Now(), URL: "", Categories: nil, Parent: "", Rev: 0}
 }
 
 // categoriesOf is categories as a task keeps them: each trimmed, without the empty and a name twice, in the order
@@ -526,9 +524,6 @@ func (t Task) edited(ed TaskEdit) Task {
 	}
 	if ed.Title != nil {
 		t.Title = strings.TrimSpace(*ed.Title)
-	}
-	if ed.Category != nil && strings.TrimSpace(*ed.Category) != "" {
-		t.Category = strings.TrimSpace(*ed.Category)
 	}
 	if ed.URL != nil {
 		t.URL = *ed.URL

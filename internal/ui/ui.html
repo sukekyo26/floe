@@ -966,7 +966,6 @@
   .kid-state.done { color: var(--ins); background: var(--ins-soft); }
   .tname { margin-right: 0.45rem; font: 600 var(--text-small) var(--mono); color: var(--muted); }
   li.unseen .tname { color: var(--fg); }
-  .category { padding: 0 0.4rem; color: var(--fg); background: var(--subtle); border-radius: var(--corner-small); white-space: nowrap; }
   .task-pages { white-space: nowrap; }
   /* Above the title's hit area, as the row's controls are. Gray: blue is what is unseen alone */
   .xlink { position: relative; z-index: 1; display: inline-flex; align-items: center; gap: 0.2rem; color: var(--muted); text-decoration: underline; text-underline-offset: 2px; font: var(--text-label) var(--mono); white-space: nowrap; }
@@ -3584,7 +3583,6 @@
     time.dateTime = task.at;
     time.textContent = ago(task.at);
     const sub = li.querySelector('.sub');
-    if (task.category) sub.append(tagged('span', 'category', task.category));
     sub.append(tagged('span', 'task-pages', t('ui_task_pages', task.pages.length)));
     if (task.archived.length > 0) sub.append(tagged('span', 'task-pages', t('ui_task_archived', task.archived.length)));
     if (unread > 0) sub.append(tagged('span', 'ver', t('ui_task_unread', unread)));
@@ -5060,8 +5058,8 @@
     await load();
   }
 
-  // The page the task dialog is of, its task and category as opened: a category is sent only when changed, as the task's last may be a later one
-  // than this page's. Whether its URL was changed by hand: only then is it sent, so that one set since it opened stays
+  // The page the task dialog is of, and its task as opened. Whether its URL was changed by hand: only then is it sent, so that one set since it
+  // opened stays
   let setPage;
   let setOpened;
   // The task the dialog last showed for the name, which saving sends as new or not, as the child's dialog does
@@ -5076,7 +5074,7 @@
     $('set-target').textContent = a.title;
     $('set-task').value = a.work?.task ?? '';
     $('set-category').value = a.work?.category ?? '';
-    setOpened = { task: $('set-task').value, category: $('set-category').value };
+    setOpened = { task: $('set-task').value };
     setTaskKnown();
     $('set-out').hidden = !a.work?.task;
     $('set-error').textContent = tasksRead.error ? t('ui_tasks_failed', tasksRead.error) : '';
@@ -5143,17 +5141,16 @@
     $('set-error').textContent = t('ui_save_failed', reason);
     $('set-error').hidden = false;
   };
-  // A page put on a category of a task, as floe work writes it: the task first, its category (body), which moves its rev on, so that a dialog
-  // showing the task is refused and reads it again; and the page then. The answer is writeTask's, not ok with the page's reason when the
-  // page is refused
-  // LIMIT: the page refused, what was written of the task stays: its category, or a new name's row of no page, which --forget removes
+  // A page put on a category of a task, as floe work writes it: the task first (body), checked as the screen saw it and made when new, and
+  // the page then, which alone holds its category. The answer is writeTask's, not ok with the page's reason when the page is refused
+  // LIMIT: the page refused, a new name's row of no page stays, which --forget removes
   async function putPageOn(page, project, task, body, category) {
     const res = await writeTask(project, task, body);
     if (!res.ok) return res;
     const reason = await patchOne(page.slug, { work: { task, category } });
     return reason ? { ...res, ok: false, status: 0, text: reason } : res;
   }
-  // The task's own fields are its page's to write (openTaskEdit): this writes the page's category on it, and a new name's title
+  // The task's own fields are its page's to write (openTaskEdit): this writes the page's category, and a new name's title
   async function saveTaskSet(e) {
     e.preventDefault();
     const btn = $('set-submit');
@@ -5164,12 +5161,10 @@
     // The state it comes to be under stays what it was: said, as it may not be the list the person has in mind
     const state = setShown?.state ?? STATES.find((x) => x.new).name;
     const category = $('set-category').value.trim();
-    const moved = task.trim() !== setOpened.task || category !== setOpened.category;
     const fresh = !setShown;
     const body = {
       // A task there is written as the dialog shows it (rev)
       new: fresh, ...(fresh ? { title: $('set-task-title').value.trim() } : { rev: setShown.rev }),
-      ...(category && moved ? { category } : {}),
     };
     try {
       if (!taskFormReady($('set'), $('set-error'))) return;
@@ -5225,6 +5220,8 @@
   }
   // A category with pages is not deleted, as categoryOrder would bring it back from them: its button is there, not pressed, and says why. It is
   // aria-disabled, not disabled, so that the keys reach it and pressing it says why
+  // LIMIT: a page put on a category meanwhile moves no rev, so that one deleted here is saved deleted and comes back after those written,
+  // from its page. Read the pages again before saving if that order comes to matter.
   function categoryRow(name, paged) {
     const li = document.createElement('li');
     li.dataset.category = name;
@@ -5504,7 +5501,7 @@
     try {
       let res;
       try {
-        res = await putPageOn(a, to.project, to.name, { new: false, rev: to.rev, category: to.category }, to.category);
+        res = await putPageOn(a, to.project, to.name, { new: false, rev: to.rev }, to.category);
       } catch (err) {
         failed(err.message);
         return;

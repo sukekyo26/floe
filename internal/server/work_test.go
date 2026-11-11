@@ -50,11 +50,15 @@ func TestWorkAPI(t *testing.T) {
 		t.Errorf("no tasks = %v", got)
 	}
 	// The answer is the row as written, under its keys
-	if code, body := patch(task("/", "#a/b"), `{"state":"done","category":"s"}`); code != http.StatusOK || answer(body) != "/ #a/b 1" {
+	if code, body := patch(task("/", "#a/b"), `{"state":"done"}`); code != http.StatusOK || answer(body) != "/ #a/b 1" {
 		t.Errorf("a name of / = %d, %s", code, body)
 	}
-	if got := tasks()["/"]["#a/b"]; got.State != "done" || got.Category != "s" {
+	if got := tasks()["/"]["#a/b"]; got.State != "done" {
 		t.Errorf("no project's task: %+v", got)
+	}
+	// A category is a page's alone: a task's body has none.
+	if code, body := patch(task("shop", "#c"), `{"category":"x"}`); code != http.StatusBadRequest {
+		t.Errorf("a task's category = %d, %s", code, body)
 	}
 	if code, body := patch(task(" shop ", " #1 "), `{}`); code != http.StatusOK || answer(body) != "shop #1 1" {
 		t.Errorf("an empty write = %d, %s", code, body)

@@ -51,19 +51,19 @@ func TestWorkWrite(t *testing.T) {
 		t.Fatal(err)
 	}
 	// As Edit reads a project: trimmed, so that this is the same task.
-	if _, err := s.EditTask(" p ", " #1 ", store.TaskEdit{Category: ptr(" 設計 "), Title: ptr(" T ")}); err != nil {
+	if _, err := s.EditTask(" p ", " #1 ", store.TaskEdit{Title: ptr(" T ")}); err != nil {
 		t.Fatal(err)
 	}
 	row := taskIn(t, s, "p")
-	if row.Category != "設計" || row.Title != "T" || row.At != long {
-		t.Errorf("after a category: %+v", row)
+	if row.Title != "T" || row.At != long {
+		t.Errorf("after a title: %+v", row)
 	}
-	// An empty category leaves the last written, as does the same state, which leaves its time too.
-	if _, err := s.EditTask("p", "#1", store.TaskEdit{Category: ptr(" "), State: ptr("doing")}); err != nil {
+	// The same state leaves its time.
+	if _, err := s.EditTask("p", "#1", store.TaskEdit{State: ptr("doing")}); err != nil {
 		t.Fatal(err)
 	}
-	if row = taskIn(t, s, "p"); row.Category != "設計" || row.At != long {
-		t.Errorf("after an empty category: %+v", row)
+	if row = taskIn(t, s, "p"); row.At != long {
+		t.Errorf("after the same state: %+v", row)
 	}
 	if _, err := s.EditTask("p", "#1", store.TaskEdit{
 		State: ptr("done"), URL: ptr("HTTPS://example.com/a"), Categories: ptr([]string{" 設計", "実装", "", "設計"}),
@@ -653,7 +653,7 @@ func TestWorkParentNew(t *testing.T) {
 		{name: "the parent gone", rows: []row{{"#130", ""}}, task: "#130", ed: store.TaskEdit{New: &no, Rev: ptr(1), Parent: ptr("#180"), ParentNew: &no}, want: "project p has no task #180 that can be a parent"},
 		{name: "taken off, moved meanwhile", rows: []row{{"#123", ""}, {"#180", ""}, {"#130", "#180"}}, task: "#130", ed: store.TaskEdit{New: &no, Rev: ptr(0), Parent: ptr("")}, want: "task #130 has changed since it was read", stale: true},
 		{name: "taken off", rows: []row{{"#123", ""}, {"#130", "#123"}}, task: "#130", ed: store.TaskEdit{New: &no, Rev: ptr(1), Parent: ptr("")}, after: map[string]string{"#123": "", "#130": ""}},
-		{name: "a category alone", rows: []row{{"#123", ""}, {"#130", "#123"}}, task: "#130", ed: store.TaskEdit{Category: ptr("build")}, after: map[string]string{"#123": "", "#130": "#123"}},
+		{name: "a URL alone", rows: []row{{"#123", ""}, {"#130", "#123"}}, task: "#130", ed: store.TaskEdit{URL: ptr("https://example.com/b")}, after: map[string]string{"#123": "", "#130": "#123"}},
 		{name: "as the CLI, of none", rows: []row{{"#130", ""}}, task: "#130", ed: store.TaskEdit{Parent: ptr("#200")}, want: "project p has no task #200 that can be a parent"},
 	} {
 		t.Run(c.name, func(t *testing.T) {
@@ -775,7 +775,7 @@ func TestWorkRev(t *testing.T) {
 		{name: "new, 2", task: "#140", ed: store.TaskEdit{New: &yes, Rev: ptr(2)}, want: "task #140 has changed since it was read"},
 		{name: "negative", task: "#130", ed: store.TaskEdit{Rev: ptr(-1), State: ptr("done")}, want: "task #130 has changed since it was read"},
 		{name: "no change", task: "#130", ed: store.TaskEdit{New: &no, Rev: ptr(2), State: ptr("doing")}, rev: 2},
-		{name: "no change, no rev", task: "#130", ed: store.TaskEdit{Category: ptr(" ")}, rev: 2},
+		{name: "no change, no rev", task: "#130", ed: store.TaskEdit{}, rev: 2},
 		{name: "a parent made", task: "#130", ed: store.TaskEdit{New: &no, Rev: ptr(2), Parent: ptr("#200"), ParentNew: &yes, ParentTitle: ptr("pay")}, rev: 3, parent: 1},
 	} {
 		t.Run(c.name, func(t *testing.T) {

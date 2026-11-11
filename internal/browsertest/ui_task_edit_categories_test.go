@@ -58,7 +58,6 @@ func TestUITaskEditCategories(t *testing.T) { //nolint:paralleltest // the brows
 	// Each category, d when its remove button may be pressed, x when not
 	const categories = "[...document.querySelectorAll('#edit-categories li')].map((li) => li.dataset.category + (li.querySelector('.category-drop').getAttribute('aria-disabled') === 'true' ? 'x' : 'd')).join(',')"
 	const said = "document.getElementById('edit-category-said').textContent"
-	const errorText = "(document.getElementById('edit-task-error').hidden ? '-' : document.getElementById('edit-task-error').textContent)"
 	const last = "(document.getElementById('edit-category-plus').hidden ? 'field' : 'plus') + ' / ' + document.activeElement.id"
 	open := func(task string) {
 		t.Helper()
@@ -154,13 +153,17 @@ func TestUITaskEditCategories(t *testing.T) { //nolint:paralleltest // the brows
 	closed("closed")
 	say("unchanged", "sent.length")
 
-	// Stale, a category removed that came to have a page meanwhile: back, last, not to be removed.
+	// A category removed that came to have a page meanwhile, which moves no rev: saved removed, it comes back after those written, from its
+	// page (LIMIT).
 	s.floe(t, "work", "--project", "proj", "--task", "S300", "--categories", "案,設計,実装,リリース")
 	open("S300")
 	drop("リリース")
 	s.floe(t, "work", "memo-a", "--task", "S300", "--category", "リリース")
-	save("stale, paged")
-	say("stale, paged", categories+" + ' / ' + "+errorText)
+	save("paged meanwhile")
+	closed("closed")
+	out = append(out, "paged meanwhile, written: "+row("S300"))
+	open("S300")
+	say("paged meanwhile, opened", categories)
 	b.pressKey(kb.Escape)
 	closed("closed")
 	// Stale, a category added while another removed one of no page: the one added stays, the other goes.
@@ -201,12 +204,13 @@ func TestUITaskEditCategories(t *testing.T) { //nolint:paralleltest // the brows
 		"there left: 設計 is already among the categories / 0",
 		"dropped: 案x,設計x,実装x,レビューx,公開d / Move レビュー up / Deleted リリース",
 		"dropped last: 案x,設計x,実装x,レビューx / Move レビュー up",
-		"saved: 6 [案,設計,実装,レビュー]",
-		`sent: {"new":false,"rev":5,"categories":["案","設計","実装","レビュー"]}`,
+		"saved: 3 [案,設計,実装,レビュー]",
+		`sent: {"new":false,"rev":2,"categories":["案","設計","実装","レビュー"]}`,
 		"unchanged: 0",
-		"stale, paged: 案x,設計x,実装x,レビューx,リリースx / Failed to save: task S300 has changed since it was read; the tasks are read again, so check and save again",
+		"paged meanwhile, written: 5 [案,設計,実装,レビュー]",
+		"paged meanwhile, opened: 案x,設計x,実装x,レビューx,リリースx",
 		"stale, added: 案x,設計x,実装x,リリースx,レビューx,公開d",
-		"saved again: 11 [案,設計,実装,リリース,レビュー,公開]",
+		"saved again: 8 [案,設計,実装,リリース,レビュー,公開]",
 		"no categories: true / false / plus / edit-task-title",
 		"first: 2 [案]",
 	}, "|"))
