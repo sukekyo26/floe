@@ -121,9 +121,6 @@ func TestWorkCommand(t *testing.T) {
 			t.Errorf("%v: %+v", task, got)
 		}
 	}
-	if got := tasks()["p"]["#1"].Category; got != "設計" {
-		t.Errorf("the category of #1: %q", got)
-	}
 	if got := workOf(t, env, "a"); got != `{"task":"#1","category":"設計"}` {
 		t.Errorf("a page's own work: %s", got)
 	}
@@ -150,9 +147,6 @@ func TestWorkCommand(t *testing.T) {
 	run(0, "work", "a", "--category", "")
 	if got := workOf(t, env, "a"); got != `{"task":"#1"}` {
 		t.Errorf(`--category "": %s`, got)
-	}
-	if got := tasks()["p"]["#1"].Category; got != "設計" {
-		t.Errorf(`--category "" of the task: %q`, got)
 	}
 
 	// A page of no project: its task is that of "/".
@@ -349,9 +343,11 @@ func TestWorkSays(t *testing.T) {
 		"work", "--task", "t1", "--state", "doing", "--categories", "design, build, design")
 	say("task t2 in no project: made; url \"https://example.com/2\", no parent\n",
 		"work", "--task", "t2", "--project", "", "--url", " https://example.com/2 ", "--parent", "")
-	say("task t1 in project p: changed; category \"design\"\npage a: task t1 in project p, category \"design\"\n",
+	// The task named is written, with nothing of it to change; a category is the page's alone.
+	say("task t1 in project p: unchanged\npage a: task t1 in project p, category \"design\"\n",
 		"work", "a", "--task", "t1", "--category", "design")
-	say("page a: task t1 in project p, category \"design\", pinned\n", "work", "a", "--pin")
+	say("page a: task t1 in project p, category \"build\"\n", "work", "a", "--category", "build")
+	say("page a: task t1 in project p, category \"build\", pinned\n", "work", "a", "--pin")
 	say("page a: no task, pinned\n", "work", "a", "--task", "")
 	say("task t1 in project p: forgotten\n", "work", "--task", " t1 ", "--forget")
 	say("task t3 in project p: made\npage a: task t3 in project p, pinned\n", "work", "a", "--task", "t3")
@@ -507,5 +503,61 @@ func TestWorkReadsPages(t *testing.T) {
 	}
 	if after := written(); after != before {
 		t.Errorf("reading wrote:\n%s\nwant\n%s", after, before)
+	}
+}
+
+// A category is the page's alone: given without --task, it asks nothing of tasks.json; with --task, the task named is
+// written with nothing of it to change, so that its rev stays. A category needs the page on a task, which is said.
+func TestWorkCategoryPagesAlone(t *testing.T) {
+	t.Parallel()
+
+	env, dir := served(t)
+	run := func(want int, args ...string) string {
+		t.Helper()
+		code, out, errs := runIn(dir, env, args...)
+		if code != want {
+			t.Fatalf("floe %v = %d, %q, %q", args, code, out, errs)
+		}
+		return out + errs
+	}
+	tasksFile := func() string {
+		t.Helper()
+		b, err := os.ReadFile(filepath.Join(env["FLOE_DIR"], "tasks.json"))
+		if err != nil && !os.IsNotExist(err) {
+			t.Fatal(err)
+		}
+		return string(b)
+	}
+	run(0, "publish", "w.yaml", "--slug", "a")
+	run(0, "publish", "d.yaml", "--slug", "b")
+	run(0, "work", "a", "--task", "#1")
+	made := tasksFile()
+
+	if got := run(0, "work", "a", "--category", "x"); got != "page a: task #1 in project p, category \"x\"\n" {
+		t.Errorf("--category alone = %q", got)
+	}
+	if got := tasksFile(); got != made {
+		t.Errorf("--category alone wrote tasks.json:\n%s\nwant\n%s", got, made)
+	}
+	run(0, "work", "--task", "#1", "--state", "doing")
+	before := tasksFile()
+	if got := run(0, "work", "a", "--task", "#1", "--category", "y"); !strings.HasPrefix(got, "task #1 in project p: unchanged\n") {
+		t.Errorf("--task with --category = %q", got)
+	}
+	if got := tasksFile(); got != before {
+		t.Errorf("--task with --category wrote the task:\n%s\nwant\n%s", got, before)
+	}
+
+	if got := run(1, "work", "b", "--category", "x"); !strings.Contains(got, `"b" is on no task`) {
+		t.Errorf("a page of no task = %q", got)
+	}
+	if got := run(2, "work", "a", "--task", "", "--category", "x"); !strings.Contains(got, "cannot go with --category") {
+		t.Errorf(`--task "" --category = %q`, got)
+	}
+	if got := workOf(t, env, "b"); got != "null" {
+		t.Errorf("a refusal wrote b: %s", got)
+	}
+	if got := workOf(t, env, "a"); got != `{"task":"#1","category":"y"}` {
+		t.Errorf("a refusal wrote a: %s", got)
 	}
 }

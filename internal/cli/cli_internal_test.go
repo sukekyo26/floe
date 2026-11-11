@@ -42,9 +42,8 @@ func TestEncode(t *testing.T) {
 	// tags of floe tag, and the task's and the page's of floe work, down through their JSON names. These never reach
 	// encode with a text no UTF-8, each for its reason.
 	unreached := map[string]string{
-		"/parentTitle":   "the management page alone sends it",
-		"/work/task":     "pageFlags refuses --task first, with store.TaskName",
-		"/work/category": "the task's body refuses --category first, as /category",
+		"/parentTitle": "the management page alone sends it",
+		"/work/task":   "pageFlags refuses --task first, with store.TaskName",
 	}
 	var texts func(typ reflect.Type, at string)
 	texts = func(typ reflect.Type, at string) {
