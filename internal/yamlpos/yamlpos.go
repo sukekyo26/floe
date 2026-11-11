@@ -78,7 +78,10 @@ func QuoteOf(n ast.Node) Quote {
 // { or [.
 // LIMIT: a mistake about one key placed by the path to it (additionalProperties naming one) lands where its value
 // is: at the key for a mapping or a sequence (zz: with y: 1 below it, 3:1), at the value for a scalar (zz: 1, 3:5).
-// Placing it at the key alone would need a mark the JSON pointer of a usererr.Error cannot carry.
+// A data file's mistake could go to the key itself, as schema.Validate has the file's nodes, but a diagram spec's
+// comes as a JSON pointer (schema.ValidateAt), which cannot name a key apart from its value: both are placed alike.
+// LIMIT: a pair in [ ] written without { } (a: [b: 1]) is a mapping goccy/go-yaml reads as not in flow style, with no
+// { to point at: it is placed at its first key, which is where it starts too.
 func OfValue(key, value ast.Node) Pos {
 	m, mapping := value.(*ast.MappingNode)
 	s, sequence := value.(*ast.SequenceNode)
