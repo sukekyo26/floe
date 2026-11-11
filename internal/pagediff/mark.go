@@ -524,8 +524,8 @@ func (c *goneCopy) insert(n, old *html.Node) {
 // in picked, as the tabs show the panel after the title picked alone. It is set apart from the page (apart); one that
 // holds a diagram or image is framed, as the line through its words does not show on them. The word for a screen
 // reader goes first.
-// LIMIT: a table's rows copied have no head, and a block of words between others in one element copies the whole
-// element: a head or the words apart would be a rule more.
+// LIMIT: the rows gone of a table whose cells span rows or columns are copied after it, with no head, and a block of
+// words between others in one element copies the whole element: a head or the words apart would be a rule more.
 func (m *marker) trim() {
 	for _, c := range m.gones {
 		for _, old := range c.gone {

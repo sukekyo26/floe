@@ -54,7 +54,7 @@ func TestMark(t *testing.T) {
 		},
 		{
 			name: "a column gone", from: table("<th>Name</th><th>Short</th><th>Long</th>", "<td>alpha</td><td>x</td><td>the long words of one</td>", "<td>beta</td><td>yy</td><td>the long words of two</td>"),
-			to: table("<th>Name</th><th>Long</th>", "<td>alpha</td><td>the long words of one</td>", "<td>beta</td><td>the long words of two</td>"),
+			to:  table("<th>Name</th><th>Long</th>", "<td>alpha</td><td>the long words of one</td>", "<td>beta</td><td>the long words of two</td>"),
 			has: []string{`<th><del class="floe-diff-del">Short</del></th><th>Long</th>`, `<td>alpha</td><td><del class="floe-diff-del">x</del></td>`, `<td>beta</td><td><del class="floe-diff-del">yy</del></td>`},
 		},
 		{
@@ -78,7 +78,7 @@ func TestMark(t *testing.T) {
 		},
 		{
 			name: "a table of spans", from: table(`<th colspan="2">Both</th>`, "<td>a</td><td>x</td>", "<td>b</td><td>the long words</td>"),
-			to: table(`<th colspan="2">Both</th>`, "<td>a</td><td>x</td>"),
+			to:     table(`<th colspan="2">Both</th>`, "<td>a</td><td>x</td>"),
 			has:    []string{`</table><table class="floe-diff-gone">`},
 			hasNot: []string{"</td></tr><tr><td><del"},
 		},
