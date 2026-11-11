@@ -3490,30 +3490,23 @@
 
   // A task's pages, archived or not
   const everyPage = (task) => [...task.pages, ...task.archived];
-  // Each task of tasks.json and of the pages that name it. A page whose project changed may
-  // name a task with no row: it shows in the state of a new one, from its last page's time, and nothing is written.
+  // Each task of tasks.json, with the pages on it. A task is of its row alone: a page naming a task with no row, as a hand edit leaves, is on
+  // none here, its badge on its own row still saying the name.
   function tasksOf() {
     const tasks = new Map();
-    const taskAt = (project, name) => {
-      const key = JSON.stringify([project, name]);
-      // Of no row, or a row of no rev, rev 0, as the store counts it
-      if (!tasks.has(key)) tasks.set(key, { project, name, state: STATES.find((s) => s.new).name, at: '', rev: 0, pages: [], archived: [], children: [] });
-      return tasks.get(key);
-    };
+    const key = (project, name) => JSON.stringify([project, name]);
     for (const [project, rows] of Object.entries(tasksRead.tasks)) {
-      for (const [name, task] of Object.entries(rows)) Object.assign(taskAt(project, name), task);
+      for (const [name, task] of Object.entries(rows)) {
+        // A row of no rev, rev 0, as the store counts it
+        tasks.set(key(project, name), { rev: 0, ...task, project, name, pages: [], archived: [], children: [] });
+      }
     }
+    const taskAt = (project, name) => tasks.get(key(project, name));
     for (const a of items) {
-      if (!a.work?.task) continue;
-      const task = taskAt(a.taskProject, a.work.task);
-      task[a.archived ? 'archived' : 'pages'].push(a);
+      const task = a.work?.task && taskAt(a.taskProject, a.work.task);
+      task?.[a.archived ? 'archived' : 'pages'].push(a);
     }
-    for (const task of tasks.values()) {
-      if (!task.at) task.at = everyPage(task).map((a) => a.updatedAt).sort().at(-1);
-    }
-    // A child, as the store's childrenOfTask says: of a parent with a row of the same project and no parent itself. The rows are
-    // looked at, as tasks holds tasks of pages alone too
-    // LIMIT: a page moved to another project leaves its task's row, with its parent and children, behind: over there a task of the same name is of no family, and of no row cannot be a parent
+    // A child, as the store's childrenOfTask says: of a parent with a row of the same project and no parent itself
     for (const [project, rows] of Object.entries(tasksRead.tasks)) {
       for (const [name, { parent }] of Object.entries(rows)) {
         if (!parent || !Object.hasOwn(rows, parent) || rows[parent].parent) continue;
@@ -3551,8 +3544,6 @@
   }
 
   const taskRowKey = (project, name) => `task:${JSON.stringify([project, name])}`;
-  // Whether tasks.json has the task's row, which one of pages alone has not
-  const hasRow = (task) => Object.hasOwn(tasksRead.tasks[task.project] ?? {}, task.name);
   const unreadOf = (task) => task.pages.filter((a) => a.news).length;
   // What a row of the list says of the task's family, the one place that draws it: words, not links. A list of families would change this and what renderTaskList gives drawRows
   function taskKin(task) {
@@ -3744,31 +3735,25 @@
   }
   let cameBack = false;
 
-  // The rows of a task's page, under their categories: every category, those of no page too, with its way to add one; the categories written, then those
-  // not, as they first came; before them what has no category. Within each, what is archived after the rest, and each as first published
-  // LIMIT: when a category first came is not kept: a category's oldest page says it, so that a new category on an old page comes earlier. --categories orders it
+  // The rows of a task's page, under its categories in their order, those of no page too, each with its way to add one; before them what has
+  // no category, and a page whose category the task has not, as a hand edit leaves. Within each, what is archived after the rest, and each
+  // as first published
   function taskGroups(task) {
     const categories = new Map();
     const none = [];
+    const order = categoryOrder(task);
     for (const a of everyPage(task).sort((x, y) => Boolean(x.archived) - Boolean(y.archived) || madeAt(x) - madeAt(y))) {
-      if (!a.work.category) none.push(a);
+      if (!order.includes(a.work.category)) none.push(a);
       else categories.set(a.work.category, [...(categories.get(a.work.category) ?? []), a]);
     }
     const groups = [{ entries: none }];
-    for (const heading of categoryOrder(task)) groups.push({ heading, entries: categories.get(heading) ?? [], add: () => openAddPage(task, heading) });
+    for (const heading of order) groups.push({ heading, entries: categories.get(heading) ?? [], add: () => openAddPage(task, heading) });
     return groups;
   }
   const madeAt = (a) => Date.parse(a.createdAt || a.updatedAt);
-  // A task's categories in order, as its page groups its pages and its edit dialog orders them: the categories written, in their order, those of no page
-  // too, then those of its pages alone, by the oldest page of each, archived or not
-  function categoryOrder(task) {
-    const written = task.categories ?? [];
-    const rest = [];
-    for (const a of everyPage(task).sort((x, y) => madeAt(x) - madeAt(y))) {
-      if (a.work.category && !written.includes(a.work.category) && !rest.includes(a.work.category)) rest.push(a.work.category);
-    }
-    return [...written, ...rest];
-  }
+  // A task's categories in order, as its page groups its pages and its edit dialog orders them: its row's, which has every category of its
+  // pages, as the store adds them
+  const categoryOrder = (task) => task.categories ?? [];
 
   // A browser without base-select has no :open, and its own list goes on over what is drawn
   const selectOpen = (sel) => CSS.supports('selector(:open)') && sel.matches(':open');
@@ -3822,7 +3807,7 @@
     const kids = [...task.children].sort((x, y) => viewAt(x) - viewAt(y) || taskOrder(x, y));
     // What the store's checkParent would refuse is not offered. The parent as written, one that makes no family too, is changed, not added to
     const ups = task.children.length === 0;
-    const adds = !task.parent && hasRow(task);
+    const adds = !task.parent;
     const focused = document.activeElement;
     $('task-up-part').hidden = !ups;
     $('task-parent-add').hidden = Boolean(task.parent);
@@ -3936,8 +3921,8 @@
   // may be what is asked (offered, as the suggestions are) is said before; one that may not is not, and pressed, the store refuses it
   const named = (x) => [x.name, x.title].filter(Boolean).join(' ');
   const isOwnChild = (x) => x?.parentTask?.name === TASK_NAME;
-  // What may be a parent: a task with a row, which a task of pages alone has not, no parent of its own, and not the one it is for
-  const mayParent = (x, of) => hasRow(x) && !x.parent && x.name !== of;
+  // What may be a parent: a task of no parent of its own, and not the one it is for
+  const mayParent = (x, of) => !x.parent && x.name !== of;
   function linkToast(words, project, name) {
     const to = tagged('a', 'toast-link', words);
     to.href = taskHref({ project, name });
@@ -5049,7 +5034,7 @@
   }
 
   async function togglePin(a) {
-    const reason = await patchOne(a.slug, { work: { pin: !a.work?.pin } });
+    const reason = await workOf(a.slug, { pin: !a.work?.pin });
     if (reason) {
       showError(t('ui_save_failed', reason));
       return;
@@ -5116,9 +5101,11 @@
   // of one there the rev read: one of no rev is not sent, as JSON would drop it and the store write it unchecked. Refused as stale (409), the
   // tasks are read again, a page whole too, whose load reads none; stale is the refusal with what to do next in a modal, which can save again.
   // Written, the row as the store answers it goes in the tasks read, so that the next write is of its rev, a read failing too; rev is its rev
-  async function writeTask(project, name, body) {
+  // The one write of pages and their tasks (PATCH /api/work): every task it answers goes in tasksRead, the first one's rev is what the caller
+  // goes on with. Refused as stale, the tasks and the list are read again
+  async function writeWork(body) {
     if (body.new === false && !Number.isInteger(body.rev)) return { ok: false, status: 0, text: t('ui_task_no_rev'), rev: null, stale: '' };
-    const res = await api(`/api/tasks?${new URLSearchParams({ project, task: name })}`, { method: 'PATCH', headers: { 'content-type': 'application/json' }, body: JSON.stringify(body) });
+    const res = await api('/api/work', { method: 'PATCH', headers: { 'content-type': 'application/json' }, body: JSON.stringify(body) });
     const text = res.ok ? '' : await res.text();
     if (res.status === 409) {
       if (framed) tasksRead = await readTasks();
@@ -5127,11 +5114,13 @@
     let rev = null;
     if (res.ok) {
       const written = await res.json();
-      (tasksRead.tasks[written.project] ??= {})[written.task] = written.row;
-      rev = written.row.rev ?? 0;
+      for (const task of written.tasks) (tasksRead.tasks[task.project] ??= {})[task.task] = task.row;
+      rev = written.tasks[0]?.row.rev ?? null;
     }
     return { ok: res.ok, status: res.status, text, rev, stale: t('ui_task_stale', text) };
   }
+  // A write of the task (project, name) alone
+  const writeTask = (project, name, body) => writeWork({ project, task: name, ...body });
   // The rev of a task as this screen knows it: as read, or as it wrote it since; 0 of no row. A button drawn on the page sends it; what
   // shows a task held apart (the open choices, a dialog, a toast) sends the rev of what it shows, which its own write moves on
   function readRev(project, name) {
@@ -5141,14 +5130,13 @@
     $('set-error').textContent = t('ui_save_failed', reason);
     $('set-error').hidden = false;
   };
-  // A page put on a category of a task, as floe work writes it: the task first (body), checked as the screen saw it and made when new, and
-  // the page then, which alone holds its category. The answer is writeTask's, not ok with the page's reason when the page is refused
-  // LIMIT: the page refused, a new name's row of no page stays, which --forget removes
-  async function putPageOn(page, project, task, body, category) {
-    const res = await writeTask(project, task, body);
-    if (!res.ok) return res;
-    const reason = await patchOne(page.slug, { work: { task, category } });
-    return reason ? { ...res, ok: false, status: 0, text: reason } : res;
+  // A page put on a category of a task in one write, with what the screen saw of the task (body): the store makes the task's row when it has
+  // none and adds the category to its categories. The page's project is the task's
+  const putPageOn = (page, task, body, category) => writeWork({ slugs: [page.slug], task, category, ...body });
+  // A write of the page's own work alone (its pin, or off its task and back), told as patchOne tells a write: "" or the reason
+  async function workOf(slug, body) {
+    const res = await writeWork({ slugs: [slug], ...body });
+    return res.ok ? '' : t('ui_http_error', res.text, res.status);
   }
   // The task's own fields are its page's to write (openTaskEdit): this writes the page's category, and a new name's title
   async function saveTaskSet(e) {
@@ -5168,7 +5156,7 @@
     };
     try {
       if (!taskFormReady($('set'), $('set-error'))) return;
-      const res = await putPageOn(page, page.taskProject, task, body, category);
+      const res = await putPageOn(page, task, body, category);
       // Whether the name is of a task there, as read again, a title asked of a new one alone; or, the task written and the page refused, as
       // written, from the tasks read, which hold it and no read since, as a load waits for the page's write, so that saving again writes the
       // page, and is refused when another wrote it since
@@ -5200,7 +5188,7 @@
   // Opened over the task as the tasks read now have it, its rev and fields of one read: the page drawn before may be older
   function openTaskEdit(drawnTask) {
     const task = tasksOf().find((x) => x.project === drawnTask.project && x.name === drawnTask.name) ?? drawnTask;
-    taskEditing = { project: task.project, name: task.name, rev: readRev(task.project, task.name), had: hasRow(task), base: editBase(task), gone: false };
+    taskEditing = { project: task.project, name: task.name, rev: readRev(task.project, task.name), base: editBase(task), gone: false };
     $('edit-task-target').textContent = task.name;
     $('edit-task-title').value = taskEditing.base.title;
     $('edit-task-url').value = taskEditing.base.url;
@@ -5292,13 +5280,12 @@
     (to ?? ($('edit-category-new').hidden ? $('edit-category-plus') : $('edit-category-new'))).focus();
   }
   // The categories of the dialog as the task is read again (now): unchanged, as read; else as the person left them (mine), without those another
-  // deleted and with those another added, after them. One the person deleted stays out, unless it has come to have pages, as one with
-  // pages cannot be deleted
-  function mergeCategories(mine, was, now, paged) {
+  // deleted and with those another added, after them. One the person deleted stays out: one that has come to have pages meanwhile, the store
+  // refuses to leave out, and the dialog says so
+  function mergeCategories(mine, was, now) {
     if (sameCategories(mine, was)) return now;
     return [
       ...mine.filter((x) => !was.includes(x) || now.includes(x)),
-      ...was.filter((x) => !mine.includes(x) && paged.has(x) && now.includes(x)),
       ...now.filter((x) => !was.includes(x) && !mine.includes(x)),
     ];
   }
@@ -5326,7 +5313,7 @@
   // removed meanwhile is not made again: the dialog says so
   function refillTaskEdit() {
     const task = tasksOf().find((x) => x.project === taskEditing.project && x.name === taskEditing.name);
-    if (!task || (taskEditing.had && !hasRow(task))) {
+    if (!task) {
       taskEditing.gone = true;
       $('edit-task-error').textContent = t('ui_task_gone_edit');
       $('edit-task-error').hidden = false;
@@ -5337,8 +5324,8 @@
     const now = editBase(task);
     if ($('edit-task-title').value.trim() === was.title) $('edit-task-title').value = now.title;
     if ($('edit-task-url').value.trim() === was.url) $('edit-task-url').value = now.url;
-    drawEditCategories(task, mergeCategories(editCategoriesNow(), was.categories, now.categories, pagedOf(task)));
-    taskEditing = { ...taskEditing, rev: readRev(task.project, task.name), had: hasRow(task), base: now };
+    drawEditCategories(task, mergeCategories(editCategoriesNow(), was.categories, now.categories));
+    taskEditing = { ...taskEditing, rev: readRev(task.project, task.name), base: now };
     return true;
   }
   // Sends what was changed since it opened, nothing when nothing was, with the rev it showed
@@ -5409,8 +5396,8 @@
   }
   // The add button of a category's heading, as drawn now
   const categoryAdd = (category) => [...$('list').children].find((li) => li.dataset.key === `group:${category}`)?.querySelector('.category-add');
-  // The page alone off its task: its pin stays, and the task's row, which nothing here writes. Its way back writes the page's work back as it
-  // was, and nothing else, so that a task of pages alone is back as it was; Escape on it leaves the focus on back (the menu it came from),
+  // The page alone off its task: its pin stays, and the task's row. Its way back puts the page back on the task and category it was on, which
+  // makes the row again when the task went meanwhile; Escape on it leaves the focus on back (the menu it came from),
   // the row after it, its category's add button, or the task's edit button
   // LIMIT: a page's write has no rev, so the way back writes over what was written to the page since, as the archive's does. Give page writes a rev if that comes to trouble someone
   async function takePageOff(a, back) {
@@ -5419,13 +5406,13 @@
     const rows = [...$('list').children].filter((li) => !li.classList.contains('group') && li.querySelector('.title'));
     const at = rows.findIndex((li) => li.dataset.key === `entry:${a.slug}`);
     const next = at === -1 ? null : (rows[at + 1] ?? rows[at - 1])?.dataset.key;
-    const reason = await patchOne(a.slug, { work: { task: '', category: '' } });
+    const reason = await workOf(a.slug, { task: '', category: '' });
     if (reason) return { reason };
     const rowOf = (key) => [...$('list').children].find((li) => li.dataset.key === key)?.querySelector('.title');
     const edit = () => ($('task-edit').closest('[hidden]') ? null : $('task-edit'));
     const button = undoToast(t('ui_task_out_done', a.title, name), {
       undo: async () => {
-        const reason = await patchOne(a.slug, { work: { task: name, category } });
+        const reason = await workOf(a.slug, { task: name, category });
         return { ok: !reason, text: reason };
       },
       done: () => rowOf(`entry:${a.slug}`) ?? back?.(),
@@ -5501,7 +5488,7 @@
     try {
       let res;
       try {
-        res = await putPageOn(a, to.project, to.name, { new: false, rev: to.rev }, to.category);
+        res = await putPageOn(a, to.name, { new: false, rev: to.rev }, to.category);
       } catch (err) {
         failed(err.message);
         return;
