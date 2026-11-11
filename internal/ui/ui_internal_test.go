@@ -337,7 +337,7 @@ func TestTaskRequests(t *testing.T) {
 	funcRe := regexp.MustCompile(`(?:async\s+)?function\s+(\w+)\(`)
 	starts := funcRe.FindAllStringSubmatchIndex(pageSource, -1)
 	namedIn := func(path string) []string {
-		named := regexp.MustCompile("['`]" + regexp.QuoteMeta(path)).FindAllStringIndex(pageSource, -1)
+		named := regexp.MustCompile("['`]"+regexp.QuoteMeta(path)).FindAllStringIndex(pageSource, -1)
 		got := make([]string, 0, len(named))
 		for _, at := range named {
 			in := ""
