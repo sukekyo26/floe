@@ -10,6 +10,7 @@ import (
 	"os"
 	"os/exec"
 	"path/filepath"
+	"regexp"
 	"slices"
 	"strconv"
 	"strings"
@@ -434,9 +435,10 @@ func TestPublishOtherDirs(t *testing.T) {
 	e := newDenv(t)
 	wantRun(t, "publish", e.run("publish", "page.yaml"), 0, e.base()+"/a/page/\n", projectLine)
 	first, _ := e.health(t.Context())
-	refused := "floe: the server on port " + e.port + " draws pages with the templates of " + first.Templates
+	refused := "floe: the server on port " + e.port + " draws pages with the templates of " + strconv.Quote(first.Templates)
 	again := `; move yours where the server reads them, or run "floe stop" and run this command again` + "\n"
-	for key, dir := range map[string]string{"FLOE_ICONS_DIR": "other-icons", "FLOE_THEMES_DIR": "other-themes", "FLOE_PARTS_DIR": "other-parts"} {
+	// Names with a space and a semicolon: the message must show where a path ends.
+	for key, dir := range map[string]string{"FLOE_ICONS_DIR": "other icons; 1", "FLOE_THEMES_DIR": "other themes; 1", "FLOE_PARTS_DIR": "other parts; 1"} {
 		e.vars[key] = filepath.Join(e.tmp, dir)
 		if err := os.Mkdir(e.vars[key], 0o700); err != nil {
 			t.Fatal(err)
@@ -446,6 +448,9 @@ func TestPublishOtherDirs(t *testing.T) {
 			wantRun(t, args[0]+" with "+dir, r, 1, "", refused)
 			if !strings.HasSuffix(r.stderr, again) {
 				t.Errorf("%s with %s = %q, want it to end in %q", args[0], dir, r.stderr, again)
+			}
+			if !slices.Contains(quotedPaths(r.stderr), e.vars[key]) {
+				t.Errorf("%s with %s = %q, want the directory this command means in quotes", args[0], dir, r.stderr)
 			}
 		}
 		wantRun(t, "publish with "+dir+" from another build", e.exe(t, otherBuild, "publish", "page.yaml"), 1, "", refused)
@@ -467,15 +472,31 @@ func TestPublishOtherDirs(t *testing.T) {
 	wantRun(t, "again", n.run("publish", "page.yaml"), 0, n.base()+"/a/page/\n", "updated")
 }
 
+var quotedRe = regexp.MustCompile(`"(?:[^"\\]|\\.)*"`)
+
+// quotedPaths are the absolute paths a message writes in quotes, as strconv.Quote does, in order.
+func quotedPaths(msg string) []string {
+	var paths []string
+	for _, q := range quotedRe.FindAllString(msg, -1) {
+		if p, err := strconv.Unquote(q); err == nil && filepath.IsAbs(p) {
+			paths = append(paths, p)
+		}
+	}
+	return paths
+}
+
 // A command to a server of another store, or to a port another program holds, is refused.
 func TestPublishToAnotherServer(t *testing.T) {
 	t.Parallel()
 
 	e := newDenv(t)
+	// A name with a space and a semicolon: the message must show where the path ends.
+	store := filepath.Join(e.tmp, "my store; 1")
+	e.vars["FLOE_DIR"] = store
 	wantRun(t, "publish", e.run("publish", "page.yaml"), 0, e.base()+"/a/page/\n", projectLine)
 	// A serve that loses the port to a floe server writes nothing in the store, the log over the cap too, which it would
 	// move aside from under the server that holds the port if it opened the log before it had the port.
-	held := filepath.Join(e.tmp, "store", server.LogName)
+	held := filepath.Join(store, server.LogName)
 	big, err := os.OpenFile(held, os.O_WRONLY|os.O_APPEND, 0) //nolint:gosec // G304: the test's own
 	if err != nil {
 		t.Fatal(err)
@@ -488,18 +509,31 @@ func TestPublishToAnotherServer(t *testing.T) {
 	if _, err = os.Stat(held + ".1"); err == nil {
 		t.Error("a floe that lost the port moved the log of the server that holds it aside")
 	}
-	e.vars["FLOE_DIR"] = filepath.Join(e.tmp, "other")
-	otherStore := "floe: the server on port " + e.port + " serves " + filepath.Join(e.tmp, "store") +
-		`; to run a server of your own beside it, set FLOE_PORT to another port in the shell's environment, where` +
-		` every command for your store takes it, or run "floe stop" (which stops that server) and run this command` +
-		" again\n"
+	other := filepath.Join(e.tmp, "other")
 	for _, args := range [][]string{{"publish", "page.yaml"}, {"rebuild"}, {"list"}} {
-		wantRun(t, args[0]+" to another store", e.run(args...), 1, "", otherStore)
+		e.vars["FLOE_DIR"] = other
+		r := e.run(args...)
+		if r.code != 1 || r.stdout != "" || !strings.HasPrefix(r.stderr, "floe: ") || !strings.Contains(r.stderr, "port "+e.port) ||
+			!strings.Contains(r.stderr, "FLOE_DIR") || !strings.Contains(r.stderr, "FLOE_PORT") || !strings.Contains(r.stderr, "floe stop") {
+			t.Errorf("%s to another store = %+v, want a refusal that names port %s, FLOE_DIR, FLOE_PORT and floe stop", args[0], r, e.port)
+			continue
+		}
+		// The store the server serves, said twice: where it serves, and what FLOE_DIR is to be set to.
+		told := quotedPaths(r.stderr)
+		if len(told) != 2 || told[0] != told[1] {
+			t.Errorf("%s to another store names the paths %q, want the server's store twice", args[0], told)
+			continue
+		}
+		// Taken from the message: set so, the command is not refused for its store.
+		e.vars["FLOE_DIR"] = told[0]
+		if r = e.run(args...); r.code != 0 {
+			t.Errorf("%s with FLOE_DIR set as the refusal says = %+v, want it to go through", args[0], r)
+		}
 	}
-	if _, err := os.Stat(filepath.Join(e.tmp, "other", "page")); err == nil {
+	if _, err := os.Stat(filepath.Join(other, "page")); err == nil {
 		t.Error("a failed publish left the page in the store")
 	}
-	e.vars["FLOE_DIR"] = filepath.Join(e.tmp, "store")
+	e.vars["FLOE_DIR"] = store
 
 	// Another program on a port.
 	ln, port := holdPort(t)
