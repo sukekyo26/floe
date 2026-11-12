@@ -27,8 +27,10 @@ const logCap = 1 << 20
 // process.
 // LIMIT: the size is looked at on opening only, so a server that runs on and panics on passes the cap; and two servers
 // of one store (on two ports) that start at once with the log over the cap race between looking and moving: one's
-// first line may land in LogName+".1", or the generation before be lost. Move it under the store's lock if that
-// comes to matter.
+// first line may land in LogName+".1", or the generation before be lost. A server still stopping (10 s at most) when
+// the next one starts and moves the log writes its last lines (stopped, a panic) to LogName+".1", so that a log with a
+// "serving" and no "stopped" may have it there. Move it under the store's lock, or have the old server open the
+// log again, if that comes to matter.
 func OpenLog(root string) (*os.File, error) {
 	name := filepath.Join(root, LogName)
 	f, info, err := files.OpenAppend(name)

@@ -342,8 +342,9 @@ type Stop struct {
 	PID int `json:"pid"`
 }
 
-// stop answers 204 to a Stop that names this server, then ends Serve once the requests under way are done; one
-// naming another is 409, for the server a command saw may be gone and this one started after it.
+// stop answers 204 to the first Stop that names this server, then ends Serve once the requests under way are done;
+// one naming another is 409, for the server a command saw may be gone and this one started after it, and so is one
+// that comes after the first, the server stopping already.
 func (s *Server) stop(w http.ResponseWriter, r *http.Request) {
 	body, ok := s.readBody(w, r, maxBody)
 	if !ok {
@@ -355,6 +356,12 @@ func (s *Server) stop(w http.ResponseWriter, r *http.Request) {
 	}
 	if in.PID != os.Getpid() {
 		send(w, http.StatusConflict, "another server: not the pid asked to stop")
+		return
+	}
+	// 204 to the first request only, so that the one command it answers is the one that stopped the server: another's,
+	// that came while it stops, is told 409 as one for a server gone.
+	if !s.stopAsked.CompareAndSwap(false, true) {
+		send(w, http.StatusConflict, "already stopping")
 		return
 	}
 	w.Header().Set("Cache-Control", "no-store")

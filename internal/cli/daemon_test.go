@@ -273,7 +273,7 @@ func TestRestartOnAnotherBuild(t *testing.T) {
 	e := newDenv(t)
 	url := e.base() + "/a/page/\n"
 	stopped := func(pid int) string {
-		return "stopped the server on port " + e.port + " (pid " + strconv.Itoa(pid) + "), which was of another build of floe"
+		return "stopping the server on port " + e.port + " (pid " + strconv.Itoa(pid) + "), which was of another build of floe"
 	}
 	wantRun(t, "publish", e.run("publish", "page.yaml"), 0, url, projectLine)
 	first, _ := e.health(t.Context())
@@ -285,7 +285,7 @@ func TestRestartOnAnotherBuild(t *testing.T) {
 	second, _ := e.health(t.Context())
 	r = e.exe(t, otherBuild, "publish", "page.yaml")
 	wantRun(t, "again", r, 0, url, "updated")
-	if strings.Contains(r.stderr, "stopped the server") {
+	if strings.Contains(r.stderr, "stopping the server") {
 		t.Errorf("a publish of the build that runs the server said %q", r.stderr)
 	}
 	third, _ := e.health(t.Context())
@@ -299,7 +299,7 @@ func TestRestartOnAnotherBuild(t *testing.T) {
 	}
 	// The first server wrote that it stops before the second says it serves, and wrote that it stopped after it was
 	// asked, long after it started (the order of that line and the second's is not fixed).
-	log := e.logWith(t, "msg=stopped pid="+strconv.Itoa(first.PID))
+	log := e.logWith(t, "msg=stopped", "pid="+strconv.Itoa(first.PID))
 	stopping := lineAt(log, "msg=stopping", "pid="+strconv.Itoa(first.PID), `why="asked to stop"`)
 	serving := lineAt(log, "msg=serving", "pid="+strconv.Itoa(second.PID))
 	if stopping < 0 || serving < 0 || stopping > serving {
@@ -311,36 +311,66 @@ func TestRestartOnAnotherBuild(t *testing.T) {
 		wg.Go(func() { results[i] = e.exe(t, otherBuild, "publish", "page.yaml") })
 	}
 	wg.Wait()
+	// Of two commands asking the server to stop together, one is answered 204 and says so: the other is told it is
+	// stopping already, and the server it stops is not its doing.
+	said := 0
 	for _, r := range results {
 		if r.code != 0 {
 			t.Errorf("a racing publish = %+v", r)
 		}
+		said += strings.Count(r.stderr, "stopping the server")
+	}
+	if said != 1 {
+		t.Errorf("two racing commands said that they stopped the server %d times, want once: %q %q", said, results[0].stderr, results[1].stderr)
 	}
 }
 
-// lineAt is the number of the first line of log that holds all of parts, or -1.
+// lineAt is the number of the first line of log that holds all of parts, each between spaces (or the line's ends), so
+// that pid=4521 is not pid=45210; or -1.
 func lineAt(log string, parts ...string) int {
 	for i, line := range strings.Split(log, "\n") {
-		if !slices.ContainsFunc(parts, func(p string) bool { return !strings.Contains(line, p) }) {
+		padded := " " + line + " "
+		if !slices.ContainsFunc(parts, func(p string) bool { return !strings.Contains(padded, " "+p+" ") }) {
 			return i
 		}
 	}
 	return -1
 }
 
-// logWith is the log of the server of e's store once it holds want, which the server may write after the command that
-// asked for it ended: waited for 5 s.
-func (e *denv) logWith(t *testing.T, want string) string {
+// lineAt takes a part between spaces or a line's ends: pid=4521 is not a part of a line with pid=45210.
+func TestLineAt(t *testing.T) {
+	t.Parallel()
+
+	log := "time=t level=INFO msg=serving pid=45210 why=\"asked to stop\"\ntime=t msg=stopped pid=4521"
+	for _, c := range []struct {
+		parts []string
+		want  int
+	}{
+		{[]string{"msg=serving", "pid=45210"}, 0},
+		{[]string{"pid=4521"}, 1},
+		{[]string{"msg=serving", "pid=4521"}, -1},
+		{[]string{`why="asked to stop"`}, 0},
+		{[]string{"pid=452"}, -1},
+	} {
+		if got := lineAt(log, c.parts...); got != c.want {
+			t.Errorf("lineAt(%q) = %d, want %d", c.parts, got, c.want)
+		}
+	}
+}
+
+// logWith is the log of the server of e's store once it has a line that holds all of want (lineAt), which the server
+// may write after the command that asked for it ended: waited for 5 s.
+func (e *denv) logWith(t *testing.T, want ...string) string {
 	t.Helper()
 
 	path := filepath.Join(e.vars["FLOE_DIR"], server.LogName)
 	for deadline := time.Now().Add(5 * time.Second); ; time.Sleep(20 * time.Millisecond) {
 		b, _ := os.ReadFile(path) //nolint:errcheck // not there yet
-		if strings.Contains(string(b), want) {
+		if lineAt(string(b), want...) >= 0 {
 			return string(b)
 		}
 		if time.Now().After(deadline) {
-			t.Errorf("%s = %q, want it to hold %q", server.LogName, b, want)
+			t.Errorf("%s = %q, want it to hold a line with %q", server.LogName, b, want)
 			return string(b)
 		}
 	}
@@ -365,7 +395,7 @@ func TestStoppedThenNotStarted(t *testing.T) {
 	t.Cleanup(func() { _ = os.Chmod(store, 0o700) }) //nolint:errcheck // a temporary directory
 
 	r := e.run("work", "--project", "p", "--task", "t1", "--title", "x")
-	said := "stopped the server on port " + e.port + " (pid " + strconv.Itoa(old.PID) + "), which was of another build of floe"
+	said := "stopping the server on port " + e.port + " (pid " + strconv.Itoa(old.PID) + "), which was of another build of floe"
 	didNot := "the server did not start"
 	i, j := strings.Index(r.stderr, said), strings.Index(r.stderr, didNot)
 	if r.code != 1 || i < 0 || j < i {

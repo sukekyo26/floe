@@ -256,7 +256,7 @@ var messagesEN = map[string]string{
 	"cli_not_running":       "server is not running",
 	"cli_stopped":           "stopped server (pid %d)",
 	"cli_stopped_other":     "server (pid %d) is gone, and another (pid %d) serves the port now",
-	"cli_replaced_server":   "stopped the server on port %d (pid %d), which was of another build of floe, to start this build's",
+	"cli_replaced_server":   "stopping the server on port %d (pid %d), which was of another build of floe, to start this build's",
 	"cli_updated":           "updated \"%s\" (last updated %s)",
 	"cli_updated_titled":    "updated \"%s\" (last updated %s, title \"%s\")",
 	"cli_title_changed":     "warning: the title changed from \"%s\" to \"%s\"",

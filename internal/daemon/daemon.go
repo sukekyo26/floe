@@ -134,8 +134,9 @@ func Addr(port int) string {
 }
 
 // Ensure makes sure a server of this build serves the root on the port, starting one or replacing an
-// outdated one as needed. It returns the pid of the server of another build that it stopped (0 when it stopped none),
-// with the mistake of what came after as well: a server stopped and not started in its place is told too.
+// outdated one as needed. It returns the pid of the server of another build that it asked to stop and that took the
+// request (Stop's asked: 0 when it asked none, or another command's request stopped it), with the mistake of what
+// came after as well: a server asked to stop and not gone, or gone and not started in its place, is told too.
 func Ensure(ctx context.Context, s Server) (stopped int, err error) {
 	p := Probe(ctx, Base(s.Port))
 	outdated := p.State == Ours && sameDir(p.Health.Root, s.Root) && p.Health.Build != s.Build
@@ -148,10 +149,14 @@ func Ensure(ctx context.Context, s Server) (stopped int, err error) {
 	}
 	if outdated {
 		old := p.Health.PID
-		if p, err = Stop(ctx, s.Port, p); err != nil {
-			return 0, err
+		var asked bool
+		p, asked, err = Stop(ctx, s.Port, p)
+		if asked {
+			stopped = old
 		}
-		stopped = old
+		if err != nil {
+			return stopped, err
+		}
 	}
 	return stopped, s.serves(ctx, p)
 }
@@ -180,29 +185,33 @@ func (s Server) serves(ctx context.Context, p Status) error {
 }
 
 // Stop asks p, the server of floe on port, to stop, and returns what serves the port once it is gone: nothing, or
-// another server a command started meanwhile.
+// another server a command started meanwhile. It returns whether the server took this request, by answering it
+// 204: a server answers 204 to one request only, so of commands that ask together one is told it did, and the
+// others (409, or no answer from a server that is gone) are not, though the server stops all the same.
 // LIMIT: it returns once the port is free, while the old process may finish the requests under way (10 s at most,
 // under the store's lock). A server in a container whose port is handed out stops, but the container's proxy may
 // keep the port bound, and the next command is told the port is silent. Two servers of one pid (of other
 // namespaces, or a pid used again) are not told apart. Give the health an id of each start if waiting for the
 // process or telling them apart comes to matter.
-func Stop(ctx context.Context, port int, p Status) (Status, error) {
+func Stop(ctx context.Context, port int, p Status) (Status, bool, error) {
 	old := p.Health.PID
-	// 409 is another server's (this one gone already); no answer, one gone as it answered. The wait tells both.
+	// 409 is another server's (this one gone already, or stopping on another command's request); no answer, one gone
+	// as it answered. The wait tells both.
 	code, err := ask(ctx, Base(port), old)
+	asked := err == nil && code == http.StatusNoContent
 	if err == nil && code != http.StatusNoContent && code != http.StatusConflict {
-		return p, usererr.New("daemon_kept_answering", port, old)
+		return p, false, usererr.New("daemon_kept_answering", port, old)
 	}
 	// Wait for that server only: a concurrent command may have started the new one already.
 	p = waitWhile(ctx, Base(port), p, func(q Status) bool { return q.State == Ours && q.Health.PID == old })
 	switch {
 	case p.State != Ours || p.Health.PID != old:
-		return p, nil
+		return p, asked, nil
 	case err != nil:
 		// Why it was not asked, in net/http's words, after what to do.
-		return p, usererr.Collect(usererr.New("daemon_kept_answering", port, old), usererr.Library(err))
+		return p, false, usererr.Collect(usererr.New("daemon_kept_answering", port, old), usererr.Library(err))
 	default:
-		return p, usererr.New("daemon_kept_answering", port, old)
+		return p, asked, usererr.New("daemon_kept_answering", port, old)
 	}
 }
 

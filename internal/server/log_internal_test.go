@@ -143,6 +143,25 @@ func TestOpenLog(t *testing.T) {
 		}
 	})
 
+	t.Run("a link to nowhere is not followed", func(t *testing.T) {
+		t.Parallel()
+
+		root, made := t.TempDir(), filepath.Join(t.TempDir(), "made.log")
+		if err := os.Symlink(made, filepath.Join(root, LogName)); err != nil {
+			t.Fatal(err)
+		}
+		f, err := OpenLog(root)
+		if f != nil {
+			_ = f.Close() //nolint:errcheck // not wanted
+		}
+		if ue, ok := errors.AsType[*usererr.Error](err); !ok || ue.Key != "cannot_write" {
+			t.Errorf("OpenLog over a link to nowhere = %#v, want cannot_write", err)
+		}
+		if _, err = os.Stat(made); err == nil {
+			t.Error("the log was made where a link to nowhere leads, out of the store")
+		}
+	})
+
 	t.Run("not a regular file", func(t *testing.T) {
 		t.Parallel()
 
@@ -324,12 +343,36 @@ func TestServeRecords(t *testing.T) {
 		}
 		_ = held.Close() //nolint:errcheck // lets Shutdown end
 		ended(t, done)
+		if strings.Contains(buf.String(), "level=WARN") {
+			t.Errorf("the log = %q: a stop that cut nothing off warned", buf.String())
+		}
 		pid := "pid=" + strconv.Itoa(os.Getpid())
 		inOrder(t, buf.String(), "level=INFO", "msg=serving", pid, "root="+s.cfg.Store.Root(), "addr="+addr, "build=test",
 			"msg=stopping", pid, `why="asked to stop"`, "msg=stopped", pid)
 		if strings.Contains(buf.String(), "a signal") {
 			t.Errorf("the log = %q: a stop asked for was written as a signal", buf.String())
 		}
+	})
+
+	t.Run("a request is cut off", func(t *testing.T) {
+		t.Parallel()
+
+		s, buf := logged(t)
+		s.grace = 50 * time.Millisecond
+		addr, done := serving(t.Context(), t, s)
+		waitFor(t, buf, "msg=serving")
+		var d net.Dialer
+		held, err := d.DialContext(t.Context(), "tcp", addr)
+		if err != nil {
+			t.Fatal(err)
+		}
+		defer held.Close() //nolint:errcheck // test
+		if code := askStop(t, addr, `{"pid": `+strconv.Itoa(os.Getpid())+`}`); code != http.StatusNoContent {
+			t.Fatalf("stop = %d", code)
+		}
+		// The connection is not given up in the grace: what Shutdown could not finish is cut off, and said.
+		ended(t, done)
+		inOrder(t, buf.String(), "msg=stopping", "level=WARN", `msg="cutting off what was under way"`, "error=", "msg=stopped")
 	})
 
 	t.Run("its context ended", func(t *testing.T) {

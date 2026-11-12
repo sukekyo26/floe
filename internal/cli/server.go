@@ -249,7 +249,7 @@ func (a *app) stopCmd() *cobra.Command {
 				a.print("%s", english.Msg("cli_not_running"))
 				return nil
 			}
-			q, err := daemon.Stop(cmd.Context(), port, p)
+			q, _, err := daemon.Stop(cmd.Context(), port, p)
 			if err != nil {
 				return err //nolint:wrapcheck // already says what failed
 			}

@@ -67,8 +67,9 @@ func Open(path string) (*os.File, fs.FileInfo, error) {
 	return openWith(paths{}, path, os.O_RDONLY, 0)
 }
 
-// OpenAppend opens the file path to append to, a link followed, made with the permissions 0600 (less the umask) when
-// there is none, as Open does a file to read: a FIFO, a device or a socket is refused unopened (an
+// OpenAppend opens the file path to append to, a link to a file followed (one to nowhere is not, so that the file is
+// not made where it leads), made with the permissions 0600 (less the umask) when there is none, as Open does a file to
+// read: a FIFO, a device or a socket is refused unopened (an
 // *fs.PathError of usererr.ErrNotFile), which would block the open, and one made so since is refused after. A
 // directory is the system's to refuse (EISDIR). The info is of the file opened.
 func OpenAppend(path string) (*os.File, fs.FileInfo, error) {
@@ -78,11 +79,17 @@ func OpenAppend(path string) (*os.File, fs.FileInfo, error) {
 // openWith opens path with flag as Open and OpenAppend say; a file that is not there is made when flag has O_CREATE.
 func openWith(o Opener, path string, flag int, perm fs.FileMode) (*os.File, fs.FileInfo, error) {
 	before, err := o.Stat(path)
-	if err != nil && (flag&os.O_CREATE == 0 || !errors.Is(err, fs.ErrNotExist)) {
+	creating := flag&os.O_CREATE != 0 && errors.Is(err, fs.ErrNotExist)
+	if err != nil && !creating {
 		return nil, nil, err //nolint:wrapcheck // the system's *fs.PathError, for the caller to tell
 	}
 	if err == nil && IsNotFile(before) {
 		return nil, before, &fs.PathError{Op: "open", Path: path, Err: usererr.ErrNotFile}
+	}
+	if creating {
+		// A link to nowhere is not followed to make the file where it leads, out of its directory (ELOOP); a link to a
+		// file is followed, as it is to read.
+		flag |= syscall.O_NOFOLLOW
 	}
 	f, err := o.OpenFile(path, flag|syscall.O_NONBLOCK|syscall.O_NOCTTY, perm)
 	if err != nil {
