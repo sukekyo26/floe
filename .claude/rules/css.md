@@ -25,7 +25,7 @@ paths:
 - **部品はパレットの変数をそのまま読む** [palette-vars]：部品・見た目の CSS は `var(--accent)` のように既定なしで読み、値を写さない。パレットの根は `:scope`。（判断）
 - **パレットの無いページでも図は同じ色** [fragment-alone]：`floe diagram render` の切れ端は、パレットの無いページと shadow root でも、floe のページと同じ色で描く（図の根に置くパレットと tones だけで塗る）。`TestLookRule/fragment-alone`
 - **パレットの無いページへ出す CSS は自分の根だけに** [fragment-outside]：切れ端の CSS は自分の根だけに当て、まわりのページの見た目を変えない（`diagramAssets`）。`TestLookRule/fragment-outside`
-- **パレットの変数は docs の表に名前で書く** [palette-in-docs]：default の palette.css の変数は、docs/agents/templates.md の「The palette」の表に、まとめずに名前を字のまま書く（raw と自分のテーマが頼る約束なので）。`TestLintRule/palette-in-docs`
+- **パレットの変数は docs の表に名前で書く** [palette-in-docs]：default の palette.css の変数は、docs/agents/templates.md の「The palette」と docs/agents/themes.md の「Palette」の表に、まとめずに名前を字のまま書き、themes.md の表は既定の値も default の palette.css と同じに書く（raw と自分のテーマが頼る約束なので）。`TestLintRule/palette-in-docs`
 - **tone は `data-floe-tone` と、floe が tone.json から組み立てる変数** [tone]：tone の印は class でなく `data-floe-tone`。名前を色に写すのは style.go の `Tones` だけで、部品・テーマ・テンプレートは `--tone`・`--tone-soft`・`--tone-fill` を読む。tone ごとのセレクタは tone の色でないものにだけ書く。テーマが自分の色で塗るときはパレットに `--<tone>-fill` を置く。`TestLookRule/tone`
 - **部品の箱と見た目の並びは floe が外す** [lists-off]：`ul`・`ol`・`menu` の印・左の余白・項目の間は style.go の `boxes` が外し、grid で並べる。`TestLookRule/lists-off`
 - **部品の箱と見た目の並びは印を出さない** [lists-marked]：部品の箱か見た目である `ul`・`ol`・`menu` は、どのテーマ・テンプレートでも印を出さない。`TestLookRule/lists-marked`
