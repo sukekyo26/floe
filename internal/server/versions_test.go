@@ -309,3 +309,36 @@ func TestDiffPage(t *testing.T) {
 	e.publish(t, "d", noted("one two five"), nil)
 	want(t, e.do(t, http.MethodGet, page, ""), http.StatusNotFound, "not found")
 }
+
+// What the script floe adds to a page it serves tells its frame is told by the page's names, whatever the page is: a stored page's own
+// messages (open, keys, the version served, where it is), a diff's (its versions changed), and the diff of a key no longer the pair's,
+// which is not found. None says artifact, which these were called, whether or not it says the new name too.
+func TestServedScriptNames(t *testing.T) {
+	t.Parallel()
+
+	e := newEnv(t)
+	e.publish(t, "d", noted("one two three"), nil)
+	e.publish(t, "d", noted("one two four"), nil)
+	var a struct{ Key string }
+	if err := json.Unmarshal(e.do(t, http.MethodGet, "/api/pages/d/diff?from=1&to=2", "").Body.Bytes(), &a); err != nil {
+		t.Fatal(err)
+	}
+	for _, c := range []struct {
+		path  string
+		names []string
+	}{
+		{"/a/d/?raw", []string{"pageOpen", "pageHash", "pagePath", "pageServed", "pageKey", "pageKeysWanted"}},
+		{"/a/d/?raw&v=2&from=1&key=" + a.Key, []string{"pageChanged", "pagePath"}},
+		{"/a/d/?raw&v=2&from=1&key=other", []string{"pageChanged", "pagePath"}},
+	} {
+		body := e.do(t, http.MethodGet, c.path, "").Body.String()
+		for _, name := range c.names {
+			if !strings.Contains(body, name) {
+				t.Errorf("%s does not tell %s: %q", c.path, name, body)
+			}
+		}
+		if strings.Contains(strings.ToLower(body), "artifact") {
+			t.Errorf("%s still says artifact: %q", c.path, body)
+		}
+	}
+}

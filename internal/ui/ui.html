@@ -1818,9 +1818,9 @@
   const noWrites = () => (writesGoing ? new Promise((go) => writesDone.push(go)) : null);
   // A load's reading, while it goes: a read mark waits for it, so that a page that keeps telling its read never keeps the list from being drawn
   let reading = null;
-  // The connection state only says whether the server was reached; an HTTP error is still an answer
   // The pages' API: GET lists them, and /{slug} and what is under it is one page's
   const PAGES_API = '/api/pages';
+  // The connection state only says whether the server was reached; an HTTP error is still an answer
   async function api(url, init) {
     const write = Boolean(init?.method && init.method !== 'GET');
     if (write) {

@@ -22,7 +22,7 @@ func TestUILoadOrder(t *testing.T) { //nolint:paralleltest // the browser tests 
 		const real = window.fetch;
 		// The next read of the list (or of a write) waits for its release: served tells the server answered, fail answers 500
 		const marks = [];
-		let pagesLimited = null, hang = false, slowMarks = false, limited = false, gets = 0, holdRead = null, holdWrite = null, holdFolder = null;
+		let filesLimited = null, hang = false, slowMarks = false, limited = false, gets = 0, holdRead = null, holdWrite = null, holdFolder = null;
 		const hold = (fail = false) => {
 			const h = { fail };
 			h.held = new Promise((r) => { h.release = r; });
@@ -45,7 +45,7 @@ func TestUILoadOrder(t *testing.T) { //nolint:paralleltest // the browser tests 
 					return res.then((r) => h.held.then(() => r));
 				}
 			}
-			if (String(u).includes('/files?')) pagesLimited = Boolean(i?.signal);
+			if (String(u).includes('/files?')) filesLimited = Boolean(i?.signal);
 			if (String(u).includes('/files?') && holdFolder) {
 				const h = holdFolder;
 				holdFolder = null;
@@ -238,7 +238,7 @@ func TestUILoadOrder(t *testing.T) { //nolint:paralleltest // the browser tests 
 		// A read outside a load (a folder opened by hand, versions, a diff) has no time limit
 		// Its fetch is called at once, before a poll's read of the folder can come between
 		const outside = readListing(slug2, '');
-		const outsideLimited = pagesLimited;
+		const outsideLimited = filesLimited;
 		await outside;
 		out.push('a read outside a load limited: ' + outsideLimited);
 

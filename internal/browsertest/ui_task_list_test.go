@@ -104,20 +104,31 @@ func TestUIStorageKeys(t *testing.T) { //nolint:paralleltest // the browser test
 	if err := os.WriteFile(filepath.Join(s.Env["FLOE_DIR"], "tasks.json"), []byte(taskWork), 0o600); err != nil { //nolint:gosec // G703: a path the test names
 		t.Fatal(err)
 	}
+	out := make([]string, 0, 8)
 	b.navigate("/")
 	b.until("the page list", "document.querySelector('#list > li')")
+	out = append(out, b.eval("[LIST_KEY, ORDER_KEY, FROM_KEY, TASKS_KEY, PROJECT_KEY].join(' ')"), "list "+b.eval("sessionStorage.getItem('pages.list') !== null"))
 	// A page opened whole from the list keeps the list's order for j and k.
 	b.eval("document.querySelector('#list li .title').focus()")
 	b.moving("document.activeElement.dispatchEvent(new KeyboardEvent('keydown', { key: 'Enter', bubbles: true, cancelable: true }))")
 	b.until("a page whole", "location.pathname.startsWith('/a/') && document.getElementById('frame-title').textContent")
-	out := make([]string, 0, 4)
-	out = append(out, b.eval("[LIST_KEY, ORDER_KEY, FROM_KEY, TASKS_KEY, PROJECT_KEY].join(' ')"), b.eval("sessionStorage.getItem('pages.order') !== null"))
-	b.navigate("/tasks")
+	out = append(out, "order "+b.eval("sessionStorage.getItem('pages.order') !== null"))
+	b.navigate("/tasks?project=shop")
 	b.until("the task rows", "document.querySelector('#list > li')")
-	out = append(out,
-		b.eval("(sessionStorage.getItem('pages.tasks') !== null) + ' ' + (localStorage.getItem('pages.taskProject') !== null)"),
-		b.eval("Object.keys(sessionStorage).concat(Object.keys(localStorage)).filter((k) => k.startsWith('artifacts')).length"))
-	check(t, "keys", out, strings.Join([]string{"pages.list pages.order pages.tasks.from pages.tasks pages.taskProject", "true", "true true", "0"}, "|"))
+	out = append(out, "tasks "+b.eval("(sessionStorage.getItem('pages.tasks') !== null) + ' ' + (localStorage.getItem('pages.taskProject') !== null)"))
+	// The key the task list's focus is kept by is written as the task page's way up is pressed, and taken as the list opens: what is
+	// written is recorded in window.name, which the move to the list keeps.
+	b.navigate("/tasks?project=shop&task=%231")
+	b.until("the task's page", taskPageShown)
+	b.eval("(() => { window.name = ''; const set = Storage.prototype.setItem; Storage.prototype.setItem = function (k, v) { window.name += k + ' '; return set.call(this, k, v); }; })()")
+	b.moving("document.getElementById('task-up').click()")
+	b.until("the task list again", "location.pathname === '/tasks' && document.querySelector('#list > li')")
+	out = append(out, "written "+b.eval("window.name"),
+		"old "+b.eval("Object.keys(sessionStorage).concat(Object.keys(localStorage)).filter((k) => k.startsWith('artifacts')).length"))
+	check(t, "keys", out, strings.Join([]string{
+		"pages.list pages.order pages.tasks.from pages.tasks pages.taskProject", "list true", "order true", "tasks true true",
+		"written pages.tasks.from ", "old 0",
+	}, "|"))
 }
 
 // The task list: nothing of it where nothing is on a task; j and k move the focus alone, reading nothing; each state in

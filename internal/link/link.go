@@ -161,7 +161,7 @@ type File struct {
 	Modified time.Time `json:"updatedAt"`
 }
 
-var pageName = regexp.MustCompile(`(?i)\.html?$`)
+var htmlName = regexp.MustCompile(`(?i)\.html?$`)
 
 // Dir lists the directory dir of the folder registered as the real path folder ("" for the folder itself): what
 // Resolve serves, of what is directly in it. It opens no file and walks no further down, so what it costs is that
@@ -193,7 +193,7 @@ func Dir(folder, dir string) (Listing, error) {
 		// A symlink to a directory is no directory here: followed, it could lead round in a loop.
 		case e.IsDir():
 			l.Dirs = append(l.Dirs, name)
-		case !pageName.MatchString(name):
+		case !htmlName.MatchString(name):
 		// What path holds is under the folder already: only a symlink may lead out, or to what is no regular file.
 		case e.Type()&fs.ModeSymlink != 0:
 			if _, fi, ok := within(folder, prefix+name, false); ok {
