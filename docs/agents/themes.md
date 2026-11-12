@@ -10,12 +10,12 @@ A theme is a directory of CSS files that changes a page's colours, typefaces and
 | `floe theme check` | Checks every theme of yours and the parts, looks and shared schemas of yours, as `floe part check` does (a theme's `<name>.css` needs its part). Prints every mistake; exit code 1 when there is one. |
 | `floe theme list` | Lists the themes, floe's and yours. |
 | `floe theme show <name>` | Lists the files the theme reads, floe's themes too. |
-| `floe theme show <name> <file>` | Prints one of them. `floe theme show default palette.css` is floe's palette, which yours goes over. |
+| `floe theme show <name> <file>` | Prints the file named. `floe theme show default palette.css` is floe's palette, which yours goes over. |
 
 ## Where themes are
 
 - A theme is a directory in `FLOE_THEMES_DIR` (default `$XDG_CONFIG_HOME/floe/themes`, else `~/.config/floe/themes`), holding the theme's files. A file directly in `FLOE_THEMES_DIR` is not read, and nothing says so.
-- The name MUST be lower case letters, digits, `-` and `_`, starting with a letter or a digit, and MUST NOT be the name of one of floe's themes. Yours sit beside floe's and never replace them.
+- The name MUST be lower case letters, digits, `-` and `_`, starting with a letter or a digit, and MUST NOT be the name of one of floe's themes. A theme of your own cannot take the name of a built-in theme.
 - A theme directory, and anything in it, MUST NOT be a link to a directory (a link to a file is read).
 - `FLOE_THEMES_DIR` MUST NOT be, or be in, the directory of your parts or templates (`FLOE_PARTS_DIR`, `FLOE_TEMPLATES_DIR`): floe would read the files of one as those of the other.
 - A mistake in any theme of yours stops every page, whether or not the page uses that theme, until it is fixed (`floe template guide`, *Where templates are*). A new theme made in another directory and moved in once `floe theme check` is clean stops none: set `FLOE_THEMES_DIR` to that directory for `floe theme new` and `floe theme check` (`floe template guide`, *Make one in another directory*).
@@ -118,16 +118,17 @@ Each item gives the action, then the reason in parentheses.
 
 ### Shadows and space
 
-- Give a shadow with `--floe-shadow-x`, `--floe-shadow-y`, `--floe-shadow-blur`, `--floe-shadow-spread` in `palette.css`, `--floe-shadow-color` on the element that casts it (`.card { --floe-shadow-color: var(--fg); }`) and `--floe-inset` for one within the box (floe's base writes `box-shadow` from them; a `box-shadow` written on a part's box, a look's element or a quote is written over floe's and drops them).
+- Give a shadow with `--floe-shadow-x`, `--floe-shadow-y`, `--floe-shadow-blur`, `--floe-shadow-spread` in `palette.css`, `--floe-shadow-color` on the element that casts it (`.card { --floe-shadow-color: var(--fg); }`) and `--floe-inset` for one within the box (floe's base writes `box-shadow` from them).
+- Do not write `box-shadow` on a part's box, a look's element or a blockquote (it is written over floe's and drops the shadow and the inset).
 - Keep what a box draws outside itself within `--floe-room` (0.75rem) (a shadow, a pseudo-element standing out or an outline that reaches further meets the next box or the page's edge; a shadow reaches blur + spread + its offset towards a side, and a tilt or a scale reaches further the bigger the box).
 - Draw a decoration on a box that has a focus ring or a selected option (the cards of `options`) with `--floe-inset` or `::before`, as in `.card { --floe-inset: inset 0 0 0 2px var(--surface); }` (the ring is an `outline`, and takes the place of one a theme writes).
 - Leave the space between parts to `--floe-room` (floe's base sets it on `:root`, 0.75rem; a `gap` on the root of `cards.css` or `tabs.css` changes it).
-- Write no word in a `content` string (CSS text does not pass `words.yaml`, so a word stays in one language whatever the page's).
+- Do not write a word in a `content` string; use symbols (CSS text does not pass `words.yaml`, so a word stays in one language whatever the page's).
 
 ### Rows: note, numbered, timeline, links, marked
 
 - Size a row's marker (the symbol of a note, the ring of numbered, the dot of timeline, the sign of links, the letters of `marked`, which `checklist` takes) with `--floe-mark` and `--floe-mark-gap`, and hide it with `content: none` (its column then takes no space).
-- Write no `display`, `gap` or `grid-template` on a row with a marker (floe lays the marker out in the layer `floe.marks`, under a theme's file of a part, and such a rule wins over it without a word).
+- Do not set `display`, `gap` or `grid-template` on a row with a marker (floe lays the marker out in the layer `floe.marks`, under a theme's file of a part, and such a rule wins over it without a word).
 
 ### cards
 
@@ -172,7 +173,7 @@ Each item gives the action, then the reason in parentheses.
 - a theme directory whose name breaks the naming rule or is the name of one of floe's themes, or that is a link to a directory, or a link to a directory in a theme, or `FLOE_THEMES_DIR` overlapping the directory of your parts or templates;
 - a file or a directory of a name floe does not read (*Files*), and a file floe cannot read (a link with no target, a file without permission, a FIFO or a device);
 - a `theme.yaml` that is not keys and values, a key other than `description:`, or a `description:` that is not text;
-- in a CSS file, a `}` that closes no block, an `@import`, an escape (`\`) outside a string, a `url()` or a comment, a string not ended on its line, a `url()` that is neither one address nor one quoted string alone (`url("a.png" x)`, `url(a b)`), and a block, a comment, a string or a `url()` still open at the end of the file.
+- in a CSS file: CSS floe cannot read (a block, string, comment or `url()` left open at the end of the file, a `}` that closes no block, a string that runs past its line), an `@import`, an escape (`\`) outside a string, a `url()` or a comment, or a `url()` that is not one address or one quoted string alone (`url("a.png" x)`, `url(a b)`).
 
 If `theme.yaml` has a mistake, a theme is a link to a directory, or a file cannot be read, the check prints that alone: mend it and run the check again for the rest.
 
