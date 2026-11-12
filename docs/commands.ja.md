@@ -22,6 +22,8 @@
 | `floe part check` | 自分の部品・見た目・共有の schema・テーマを確かめる |
 | `floe theme list` | テーマを並べる |
 | `floe theme show <名前> [ファイル]` | テーマと、読むファイルの並びを出す。ファイル名を足すと、そのファイルを書いたとおりに |
+| `floe theme new <名前>` | 埋めて使う最小の自分のテーマを作る |
+| `floe theme check` | 自分の部品・見た目・共有の schema・テーマを、`floe part check` と同じに確かめる |
 | `floe theme default` | 管理ページの設定で選んだ既定のテーマを出す |
 | `floe list` | ページを新しい順に並べる |
 | `floe rm <slug>...` | ページを消す |
@@ -172,13 +174,23 @@ floe のテンプレートの節に書ける部品（floe の `any.json` の鍵�
 
 ## `floe part check`
 
-`FLOE_PARTS_DIR` の部品・見た目・共有の schema と `FLOE_THEMES_DIR` のテーマを floe のものの上で読み、すべての誤りを出します（終了コード 1）。共有の schema は、どれかの schema が名指すかによらず、その根から確かめます。自分の部品があれば、floe のテンプレートもそれとともにコンパイルします。正しければ何も出しません（終了コード 0）。
+`FLOE_PARTS_DIR` の部品・見た目・共有の schema と `FLOE_THEMES_DIR` のテーマを floe のものの上で読み、すべての誤りを出します（終了コード 1）。共有の schema は、どれかの schema が名指すかによらず、その根から確かめます。自分の部品があれば、floe のテンプレートもそれとともにコンパイルします。正しければ何も出しません（終了コード 0）。`floe theme check` も同じです。テーマの `<部品名>.css` は部品があることを前提にするので、部品とテーマは一緒に確かめます。
 
 部品とテーマの中身は [parts.ja.md](parts.ja.md) にあります。
 
 ## `floe theme list`
 
 テーマを、floe のものも自分のものも 1 行に 1 つずつ、`floe part list` と同じタブ区切りの 4 列で出します。名前、場所（`floe` か、自分のテーマのディレクトリ）、形（テーマは値に書かないので `-`）と、説明（`theme.yaml` の `description:`。無ければ空）です。
+
+## `floe theme new <名前>`
+
+`FLOE_THEMES_DIR` にテーマ `<名前>` を作ります。`floe theme check` が通す最小の、空の `palette.css` で、埋めて使います。floe の `default` のパレット（`floe theme show default palette.css` が出す）の上に重なるので、変えるものだけを書きます。
+
+- 何も上書きしません。その名前のものがあれば、何も作らずに止まります（終了コード 1）。
+
+## `floe theme check`
+
+`floe part check` と同じことをします。テーマの `<部品名>.css` は部品があることを前提にするので、部品とテーマは一緒に確かめます。出す誤りも終了コードも同じです。
 
 ## `floe theme default`
 

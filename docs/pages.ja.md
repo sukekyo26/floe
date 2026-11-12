@@ -159,7 +159,7 @@ plan.yaml:8:36: write the command without its prompt, which floe draws from the 
 - `file:line:column:` が誤りの場所です。変える値か、それを持つ鍵を指します。行の無い `file:` だけの誤りは、ファイル全体の誤りです。根に足りない鍵（`design.yaml: missing properties 'background', 'goals'`）や、テンプレートのデータファイル全体にかける検査がこう出ます。言われた誤りを全部直してから、`floe check` をもう一度走らせます。次の段の誤りが出ることがあります。
 - YAML そのものの誤り（`mapping value is not allowed in this context`）は、floe の YAML ライブラリの言葉で、ライブラリが名指す場所に出ます。引用符の無い値の中の `: ` なら、場所は値の始まりです。場所が `|` や `>` の文の後の行なら、その文の最初の行が深すぎるかもしれません。文の最初の行の深さを確かめます（[文の書き方](#文の書き方)）。
 - 形の誤り（`additional properties 'x' not allowed`・`missing property 'x'`・`got string, want array`）は、テンプレートか部品の schema がデータを断ったものです。`floe template show <テンプレート> schema.json` と `floe part show <部品> schema.json` が、取るものを出します。
-- 自分の部品・見た目・共有の schema・テーマ・テンプレートの誤りは、使うかどうかによらず、どのページも止めます。誤りはそのファイルの所で言います（`~/.config/floe/parts/quote/schema.json:2:1: …`）。`floe part check` と `floe template check` が並べます。
+- 自分の部品・見た目・共有の schema・テーマ・テンプレートの誤りは、使うかどうかによらず、どのページも止めます。誤りはそのファイルの所で言います（`~/.config/floe/parts/quote/schema.json:2:1: …`）。`floe part check`（か、同じことをする `floe theme check`）と `floe template check` が並べます。
 - 同じ誤りは、何か所から指されても 1 回だけ言います。
 
 ページの中で一度に開いておける要素は 512 までで、`<html>`・`<body>` と、テンプレートや部品が開く要素も数えます。超えると `html: open stack of elements exceeds 512 nodes` で断ります。Markdown・`html` の部品・部品・`page.html` のどれからも深くなるので、場所はデータファイルだけです。図の `raw` がそれだけで超えるときは、その行と列です。入れ子を浅くしてください。

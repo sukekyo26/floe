@@ -12,7 +12,7 @@ floe template check        # checks every template of your own, drawing its exam
 floe template show memo    # lists its themes and the files it reads, its schema and example first
 ```
 
-A mistake of a template, part, look, shared schema or theme of your own stops every page, whether it is drawn with that one or not (a page of `report` too), until it is fixed: `floe check`, `floe render`, and the server's publishes and linked pages alike. `floe part check` and `floe template check` list them all. A published page is drawn with the server's templates ([commands.md](commands.md#the-server)); after you change one, `floe rebuild` draws the stored pages again with it.
+A mistake of a template, part, look, shared schema or theme of your own stops every page, whether it is drawn with that one or not (a page of `report` too), until it is fixed: `floe check`, `floe render`, and the server's publishes and linked pages alike. `floe part check` (or `floe theme check`, the same) and `floe template check` list them all. A published page is drawn with the server's templates ([commands.md](commands.md#the-server)); after you change one, `floe rebuild` draws the stored pages again with it.
 
 ### Make one in another directory
 
@@ -33,7 +33,7 @@ mv ~/.config/floe/staging-templates/memo ~/.config/floe/templates/
 - Make `~/.config/floe/templates` before the `mv`: with none there, `mv` would rename `memo` to `templates` itself, its files right in the directory of templates, where floe reads none and says nothing until a page names `memo`.
 - Keep the other directory on the file system of your templates, so that `mv` puts the template in at once rather than a copy the server reads half made.
 - To change a template you have, copy it to the other directory, change and check it there, and move it back in place of the old one.
-- Parts are made the same way, with `FLOE_PARTS_DIR`, `floe part new` and `floe part check`. A theme has no `new`: make its directory in `FLOE_THEMES_DIR` by hand ([parts.md](parts.md#themes)) and check it with `floe part check`.
+- Parts and themes are made the same way, with `FLOE_PARTS_DIR`, `floe part new` and `floe part check`, and `FLOE_THEMES_DIR`, `floe theme new` and `floe theme check` ([parts.md](parts.md#themes)).
 
 ## Files
 

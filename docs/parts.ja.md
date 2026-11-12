@@ -13,9 +13,11 @@
 floe part new quote     # 埋めて使う最小の部品 quote を作る
 floe part check         # 自分の部品・見た目・共有の schema・テーマを全部確かめる
 floe part show quote    # 見た目と、読むファイルの並びを出す
+floe theme new calm     # 埋めて使う最小のテーマ calm（空の palette.css）を作る
+floe theme check        # floe part check と同じ
 ```
 
-誤りが 1 つあると、[templates.ja.md](templates.ja.md#テンプレートの置き場所) のとおり、どのページも止めます。`floe part check` が並べます。書いている間は、別の置き場所で作り、確かめてから移してください（[templates.ja.md](templates.ja.md#別の置き場所で作る)）。`FLOE_PARTS_DIR` か `FLOE_THEMES_DIR` をそこに向け、`floe part check` で確かめます。
+誤りが 1 つあると、[templates.ja.md](templates.ja.md#テンプレートの置き場所) のとおり、どのページも止めます。`floe part check` が並べます。書いている間は、別の置き場所で作り、確かめてから移してください（[templates.ja.md](templates.ja.md#別の置き場所で作る)）。`FLOE_PARTS_DIR` か `FLOE_THEMES_DIR` をそこに向け、`floe part check` か `floe theme check`（同じことをします）で確かめます。
 
 ## 部品のファイル
 
@@ -166,7 +168,7 @@ tone（`tone.json` のどれか）は、class でなく、その色で描く要�
 
 ## テーマ
 
-自分のテーマは、次のファイルのディレクトリです。要らないものは省きます。`floe theme list` がテーマを並べ、`floe theme show <名前>` が、floe のものも含めて、読むファイルの並びを出し、名前を足すとそのファイルを出します（`floe theme show ink palette.css`）。
+自分のテーマは、次のファイルのディレクトリです。要らないものは省きます。`floe theme new <名前>` が、埋めて使う空の `palette.css` で作ります。`floe theme list` がテーマを並べ、`floe theme show <名前>` が、floe のものも含めて、読むファイルの並びを出し、名前を足すとそのファイルを出します（`floe theme show ink palette.css`）。
 
 | ファイル | 中身 |
 |---|---|
@@ -198,4 +200,4 @@ tone（`tone.json` のどれか）は、class でなく、その色で描く要�
 
 ## 確かめる
 
-`floe part check` は、自分の部品・見た目・共有の schema・テーマを floe のものの上で全部読み、すべての誤りを出します（終了コード 1）。ファイル、名前、借りる見た目、自分の見た目を借りる部品、schema が宣言しない `checks.yaml` のパス、部品と共有の schema の schema、CSS の誤りです。部品はデータが無いので描きません。それを使うテンプレートの見本は `floe template check` が描きます。
+`floe part check` は、自分の部品・見た目・共有の schema・テーマを floe のものの上で全部読み、すべての誤りを出します（終了コード 1）。ファイル、名前、借りる見た目、自分の見た目を借りる部品、schema が宣言しない `checks.yaml` のパス、部品と共有の schema の schema、CSS の誤りです。部品はデータが無いので描きません。それを使うテンプレートの見本は `floe template check` が描きます。`floe theme check` は `floe part check` と同じことをします。テーマの `<名前>.css` は部品があることを前提にするので、部品とテーマは一緒に確かめます。
