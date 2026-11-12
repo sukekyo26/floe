@@ -148,7 +148,7 @@ func TestHelp(t *testing.T) {
 		"stop\tStop the background server\n" +
 		"tag\tAdd tags to pages and remove tags from them, in order, stopping at the first failure\n" +
 		"template\tList the templates, show one, make one of your own, and check yours\n" +
-		"theme\tList the themes and show one\n" +
+		"theme\tList the themes, show one, make one of your own, and check yours\n" +
 		"version\tPrint the floe version\n" +
 		"work\tTell a project's open tasks and pages' task, category and pin, or change them, or a task's state, URL, title, parent or categories' order\n:4\n"
 	if code, got, _ := run("", "__complete", "help", ""); code != 0 || !strings.HasPrefix(got, want) {
