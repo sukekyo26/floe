@@ -35,6 +35,7 @@ floe turns a YAML file you write into a page for the user: it checks the file, r
 The user may put pages on tasks of the task list, and group a task's pages by category. Change these only when the user asks; `floe work --help` tells how.
 
 - `floe work <slug>` prints the page's task, its project, its category and whether it is pinned, and changes nothing.
+- `floe work` prints the project's tasks that are todo or doing, the latest change first, a line each; `--project` names another project.
 - A category is where a page is placed among its task's pages, and the user decides it. Do not give `--category`, or change a page's category, unless the user asks.
 - After `--move-project` (step 5 of [Writing a page](#writing-a-page)) says `off task #9`, putting the page back on that task is part of that fix: `floe work <slug> --task <ID>`, without `--category`.
 

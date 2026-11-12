@@ -1,6 +1,7 @@
 package store
 
 import (
+	"cmp"
 	"encoding/json"
 	"errors"
 	"fmt"
@@ -114,20 +115,45 @@ type Task struct {
 // Tasks is tasks.json: the tasks by project (ProjectKey), then by name.
 type Tasks map[string]map[string]Task
 
-// State is a state a task can be in: whether a task new or of no row is in it, and whether the task list opens on it.
+// State is a state a task can be in: whether a task new or of no row is in it, whether the task list opens on it, and
+// whether a task in it is open, not yet done, which floe work tells (Open is for the CLI; the management page is not
+// given it).
 type State struct {
 	Name  string `json:"name"`
 	New   bool   `json:"new"`
 	First bool   `json:"first"`
+	Open  bool   `json:"-"`
 }
 
 // States is the one table of the states of a task, in the order of the work: what is written is checked by it, and the
 // management page reads it, in this order.
 var States = []State{
-	{Name: "todo", New: true, First: false},
-	{Name: "doing", New: false, First: true},
-	{Name: "done", New: false, First: false},
-	{Name: "archived", New: false, First: false},
+	{Name: "todo", New: true, First: false, Open: true},
+	{Name: "doing", New: false, First: true, Open: true},
+	{Name: "done", New: false, First: false, Open: false},
+	{Name: "archived", New: false, First: false, Open: false},
+}
+
+// NamedTask is a task with the name Tasks keys it by.
+type NamedTask struct {
+	Name string
+	Task
+}
+
+// Open is the tasks of project (a ProjectKey) in an open state (States), the one whose state changed last first, and
+// by name (byte order) among those that changed at the same time. A time is compared as a time, so that the times
+// written by hand (RFC 3339 with or without a fraction, in any zone) are put in their order.
+func (all Tasks) Open(project string) []NamedTask {
+	var open []NamedTask
+	for name, t := range all[project] {
+		if slices.ContainsFunc(States, func(s State) bool { return s.Name == t.State && s.Open }) {
+			open = append(open, NamedTask{Name: name, Task: t})
+		}
+	}
+	slices.SortFunc(open, func(x, y NamedTask) int {
+		return cmp.Or(timeOf(y.At).Compare(timeOf(x.At)), strings.Compare(x.Name, y.Name))
+	})
+	return open
 }
 
 // TaskEdit is what a write changes of a task's row, each left as it is when nil, as the API sends it. An empty URL or
