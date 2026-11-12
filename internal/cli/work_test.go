@@ -2,7 +2,9 @@ package cli_test
 
 import (
 	"encoding/json"
+	"errors"
 	"os"
+	"os/exec"
 	"path/filepath"
 	"runtime"
 	"slices"
@@ -272,13 +274,25 @@ func TestWorkCommand(t *testing.T) {
 		t.Errorf("--parent with pages of two projects moved b: %s", got)
 	}
 
+	// With no --task, a flag but --project is no way to tell the open tasks (--state done is no filter of them): refused
+	// with nothing told, and the refusal names --task and says which command line tells them.
+	for _, args := range [][]string{
+		{"work", "--state", "done"},
+		{"work", "--title", "T"},
+		{"work", "--forget"},
+		{"work", "--pin"},
+		{"work", "--project", "p", "--state", "done"},
+	} {
+		if code, out, errs := runIn(dir, env, args...); code != 2 || out != "" ||
+			!strings.HasPrefix(errs, "floe: ") || !strings.Contains(errs, "--task") || !strings.Contains(errs, "no flag but --project") {
+			t.Errorf("floe %v = %d, %q, %q", args, code, out, errs)
+		}
+	}
 	// The command line that cannot mean anything.
 	for _, c := range []struct {
 		args []string
 		want string
 	}{
-		{[]string{"work"}, "floe: name a task with --task, or pages by their slugs: run floe --help\n"},
-		{[]string{"work", "--state", "done"}, "floe: name a task with --task, or pages by their slugs: run floe --help\n"},
 		{[]string{"work", "--task", "#1", "--pin"}, "floe: --pin changes pages: name them by their slugs: run floe --help\n"},
 		{[]string{"work", "--task", "#1", "--category", "s"}, "floe: --category changes pages: name them by their slugs: run floe --help\n"},
 		{[]string{"work", "a", "--forget"}, "floe: --forget goes with a task alone, not with pages: give it without slugs: run floe --help\n"},
@@ -621,6 +635,128 @@ func TestWorkReadsTask(t *testing.T) {
 	}
 	if got := tasksFile(); got != before {
 		t.Errorf("reading wrote:\n%s\nwant\n%s", got, before)
+	}
+}
+
+// floe work with no slug and no flag tells the open tasks of the working directory's project (--project names another),
+// a line each as floe work --task tells the task, the latest change first and by name among the same time, writing
+// nothing. The tasks are written by hand, with times that are in one order as text and another as times, and ones that
+// are done, archived or of another project.
+func TestWorkListsOpenTasks(t *testing.T) {
+	t.Parallel()
+
+	env, dir := served(t)
+	hand := `{
+  "p": {
+    "T1": {"state": "doing", "at": "2026-11-12T10:00:00+09:00", "title": "Fix login", "url": "https://example.com/1", "parent": "#1", "categories": ["a", "b"]},
+    "T2": {"state": "todo", "at": "2026-11-12T09:30:00Z"},
+    "T3": {"state": "todo", "at": "2026-11-12T09:30:00.500Z", "title": "Third"},
+    "#1": {"state": "todo", "at": "2026-11-11T09:00:00Z"},
+    "#10": {"state": "todo", "at": "2026-11-11T09:00:00Z"},
+    "#2": {"state": "todo", "at": "2026-11-11T09:00:00Z"},
+    "B": {"state": "doing", "at": "2026-11-11T09:00:00Z"},
+    "Z9": {"state": "todo", "at": "2026-11-11T18:00:00+09:00"},
+    "a": {"state": "todo", "at": "2026-11-11T09:00:00Z"},
+    "done": {"state": "done", "at": "2026-11-13T00:00:00Z"},
+    "archived": {"state": "archived", "at": "2026-11-13T00:00:00Z"}
+  },
+  "q": {"Q1": {"state": "doing", "at": "2026-11-14T00:00:00Z"}},
+  "/": {"N1": {"state": "todo", "at": "2026-11-14T00:00:00Z"}}
+}`
+	file := filepath.Join(env["FLOE_DIR"], "tasks.json")
+	if err := os.WriteFile(file, []byte(hand), 0o600); err != nil {
+		t.Fatal(err)
+	}
+	// The line of each task is what floe work --task tells of it, not a text written here.
+	told := func(project string, names ...string) string {
+		t.Helper()
+		var lines string
+		for _, name := range names {
+			code, out, errs := runIn(dir, env, "work", "--task", name, "--project", project)
+			if code != 0 || errs != "" {
+				t.Fatalf("floe work --task %s = %d, %q, %q", name, code, out, errs)
+			}
+			lines += out
+		}
+		return lines
+	}
+	want := told("p", "T3", "T2", "T1", "#1", "#10", "#2", "B", "Z9", "a")
+	if !strings.Contains(want, `title "Fix login", url "https://example.com/1", categories "a,b", parent "#1"`) {
+		t.Fatalf("the lines to compare have no task with every field: %s", want)
+	}
+	if code, out, errs := runIn(dir, env, "work"); code != 0 || out != want || errs != "" {
+		t.Errorf("floe work = %d, %q, %q; want the lines\n%s", code, out, errs, want)
+	}
+	// The project is told as tasks.json keys it: "" is the key "/", and a name is trimmed, as ProjectKey does.
+	for _, c := range []struct{ flag, project, task string }{{"q", "q", "Q1"}, {" q ", "q", "Q1"}, {"", "", "N1"}} {
+		if code, out, errs := runIn(dir, env, "work", "--project", c.flag); code != 0 || out != told(c.project, c.task) || errs != "" {
+			t.Errorf("floe work --project %q = %d, %q, %q", c.flag, code, out, errs)
+		}
+	}
+	if b, err := os.ReadFile(file); err != nil || string(b) != hand {
+		t.Errorf("telling the tasks wrote tasks.json: %s, %v", b, err)
+	}
+}
+
+// With no open task, floe work says so, and is not refused: for a project of no task at all (which makes no tasks.json),
+// of done tasks only, and of no project.
+func TestWorkListsNone(t *testing.T) {
+	t.Parallel()
+
+	env, dir := served(t)
+	file := filepath.Join(env["FLOE_DIR"], "tasks.json")
+	if code, out, errs := runIn(dir, env, "work"); code != 0 || out != "no open task in project p\n" || errs != "" {
+		t.Errorf("no task = %d, %q, %q", code, out, errs)
+	}
+	if _, err := os.Stat(file); !errors.Is(err, os.ErrNotExist) {
+		t.Errorf("telling no task made tasks.json: %v", err)
+	}
+	// A task is made with a field to write: --task alone only reads.
+	if code, out, errs := runIn(dir, env, "work", "--task", "#1", "--state", "done"); code != 0 {
+		t.Fatalf("done task = %d, %q, %q", code, out, errs)
+	}
+	if code, out, errs := runIn(dir, env, "work"); code != 0 || out != "no open task in project p\n" || errs != "" {
+		t.Errorf("done tasks only = %d, %q, %q", code, out, errs)
+	}
+	if code, out, errs := runIn(dir, env, "work", "--project", ""); code != 0 || out != "no open task in no project\n" || errs != "" {
+		t.Errorf("no project = %d, %q, %q", code, out, errs)
+	}
+}
+
+// The project of the list is the one floe publish puts a data file in, and floe work --task names: the repository's
+// name by its origin, not the directory's.
+func TestWorkListsOfPublishedProject(t *testing.T) {
+	t.Parallel()
+
+	env, home := served(t)
+	repo := filepath.Join(filepath.Dir(home), "r")
+	if err := os.MkdirAll(repo, 0o750); err != nil {
+		t.Fatal(err)
+	}
+	if err := os.WriteFile(filepath.Join(repo, "d.yaml"), []byte("lang: en\ntemplate: pic\ntitle: D\n"), 0o600); err != nil {
+		t.Fatal(err)
+	}
+	for _, args := range [][]string{{"init", "-q"}, {"remote", "add", "origin", "https://example.com/o/named.git"}} {
+		git := exec.CommandContext(t.Context(), "git", args...)
+		git.Dir = repo
+		git.Env = append(os.Environ(), "GIT_CONFIG_GLOBAL=/dev/null", "GIT_CONFIG_NOSYSTEM=1")
+		if out, err := git.CombinedOutput(); err != nil {
+			t.Fatalf("git %v: %v\n%s", args, err, out)
+		}
+	}
+	if code, _, errs := runIn(repo, env, "publish", "d.yaml"); code != 0 || !strings.Contains(errs, "page in project named") {
+		t.Fatalf("publish = %d, %q: the project is not the origin's name", code, errs)
+	}
+	for _, args := range [][]string{
+		{"--task", "X", "--state", "todo"},
+		{"--task", "Y", "--state", "todo", "--project", "r"},
+	} {
+		if code, out, errs := runIn(repo, env, append([]string{"work"}, args...)...); code != 0 {
+			t.Fatalf("floe work %v = %d, %q, %q", args, code, out, errs)
+		}
+	}
+	if code, out, errs := runIn(repo, env, "work"); code != 0 || out != "task X in project named: state todo\n" || errs != "" {
+		t.Errorf("floe work = %d, %q, %q; want the tasks of project named, not of r", code, out, errs)
 	}
 }
 

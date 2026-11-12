@@ -377,6 +377,71 @@ func TestStates(t *testing.T) {
 	if got := store.StateNames(); got != "todo, doing, done, archived" {
 		t.Errorf("StateNames = %q", got)
 	}
+	var open []string
+	for _, s := range store.States {
+		if s.Open {
+			open = append(open, s.Name)
+		}
+		if (s.New || s.First) && !s.Open {
+			t.Errorf("%s is where a new task or the list's first view is, and is not open", s.Name)
+		}
+	}
+	if got := strings.Join(open, ", "); got != "todo, doing" {
+		t.Errorf("the open states are %q", got)
+	}
+	// Open is for the CLI: the management page reads this table as JSON, and is not given it.
+	if b, err := json.Marshal(store.States); err != nil || strings.Contains(strings.ToLower(string(b)), "open") {
+		t.Errorf("the states as JSON, %s, %v", b, err)
+	}
+}
+
+// The open tasks of a project come the latest change first, by name among those that changed at the same time, and
+// the times are compared as times: T1 to T3 are in the reverse order as text of the order as times (a zone, and a
+// fraction against none), and Z9 is the time of the six, written in another zone.
+func TestTasksOpen(t *testing.T) {
+	t.Parallel()
+
+	root := filepath.Join(t.TempDir(), "S")
+	if err := os.MkdirAll(root, 0o700); err != nil {
+		t.Fatal(err)
+	}
+	hand := `{
+  "p": {
+    "T1": {"state": "doing", "at": "2026-11-12T10:00:00+09:00", "title": "Fix login"},
+    "T2": {"state": "todo", "at": "2026-11-12T09:30:00Z"},
+    "T3": {"state": "todo", "at": "2026-11-12T09:30:00.500Z"},
+    "#1": {"state": "todo", "at": "2026-11-11T09:00:00Z"},
+    "#10": {"state": "todo", "at": "2026-11-11T09:00:00Z"},
+    "#2": {"state": "todo", "at": "2026-11-11T09:00:00Z"},
+    "B": {"state": "doing", "at": "2026-11-11T09:00:00Z"},
+    "Z9": {"state": "todo", "at": "2026-11-11T18:00:00+09:00"},
+    "a": {"state": "todo", "at": "2026-11-11T09:00:00Z"},
+    "done": {"state": "done", "at": "2026-11-13T00:00:00Z"},
+    "archived": {"state": "archived", "at": "2026-11-13T00:00:00Z"}
+  },
+  "q": {"Q1": {"state": "doing", "at": "2026-11-14T00:00:00Z"}}
+}`
+	if err := os.WriteFile(filepath.Join(root, "tasks.json"), []byte(hand), 0o600); err != nil {
+		t.Fatal(err)
+	}
+	all, err := store.New(root).ReadTasks()
+	if err != nil {
+		t.Fatal(err)
+	}
+	opened := all.Open("p")
+	names := make([]string, len(opened))
+	for i, task := range opened {
+		names[i] = task.Name
+	}
+	if got, want := strings.Join(names, " "), "T3 T2 T1 #1 #10 #2 B Z9 a"; got != want {
+		t.Errorf("the open tasks of p = %s, want %s", got, want)
+	}
+	if row := opened[2]; row.Name != "T1" || row.State != "doing" || row.Title != "Fix login" {
+		t.Errorf("a task of Open is %+v, not the row of T1", row)
+	}
+	if got := all.Open("none"); len(got) != 0 {
+		t.Errorf("a project of no task has %v", got)
+	}
 }
 
 // A parent is a task of the same project with a row and no parent of its own, of a task with no children; what is

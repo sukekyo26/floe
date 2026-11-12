@@ -32,11 +32,12 @@ func (a *app) workCmd() *cobra.Command {
 	var f workFlags
 	cmd := &cobra.Command{
 		Use: "work [<slug>...]",
-		Short: "Tell pages' task, category and pin, or change them, or a task's state, URL, title, parent or " +
-			"categories' order",
-		Long: `With slugs, put the pages on a task and change that task; without, change the task --task names, of
---project (the project of the working directory when left out; "" for none). With slugs and no flag, tell each page as
-it is, writing nothing; with --task alone, tell the task.
+		Short: "Tell a project's open tasks and pages' task, category and pin, or change them, or a task's state, URL, " +
+			"title, parent or categories' order",
+		Long: `With no slug and no flag but --project, tell the open tasks (todo or doing) of --project (the project of the
+working directory when left out; "" for none), the latest change first, a line each as --task tells a task. With
+slugs, put the pages on a task and change that task; without, change the task --task names, of --project. With slugs
+and no flag, tell each page as it is, writing nothing; with --task alone, tell the task.
 
 The pages and their tasks are written in one write, checked whole before anything is written, so that a refusal
 writes nothing; a page the system cannot write then stops it there, and the same command given again finishes it. A
@@ -45,6 +46,8 @@ categories. Each task written is told on a line of its own, as the store left it
 field was given), then each page with its task, category and pin. A page's category is where the task's page places
 it among its pages, which the user decides.
 
+  floe work
+    task #130 in project floe: state doing, title "Fix login"
   floe work design-notes --task "#130"
     task #130 in project floe: made
     page design-notes: task #130 in project floe
@@ -71,7 +74,7 @@ it among its pages, which the user decides.
 	}
 	flags := cmd.Flags()
 	flags.StringVar(&f.task, "task", "", `the task's ID; with slugs, "" takes the pages off their task`)
-	flags.StringVar(&f.project, "project", "", `the task's project, without slugs; "" for none`)
+	flags.StringVar(&f.project, "project", "", `the project of the task, or of the tasks told, without slugs; "" for none`)
 	flags.StringVar(&f.category, "category", "", `the pages' category on their task, the user's choice; "" takes it off`)
 	flags.StringVar(&f.state, "state", "", "the task's state: "+store.StateNames())
 	flags.StringVar(&f.url, "url", "", `the task's one outside link, http or https; "" takes it off`)
@@ -127,10 +130,12 @@ func taskQuery(t taskOf) string {
 }
 
 // workTask changes the task --task names, or forgets it; with no field to change, it tells the task, writing nothing.
+// With no --task, it tells the open tasks of a project when no flag but --project is given (every other flag changes
+// a task or pages, which it must name).
 func (a *app) workTask(cmd *cobra.Command, f workFlags) error {
 	ctx := cmd.Context()
 	if !cmd.Flags().Changed("task") {
-		return usageOf(usererr.New("cli_work_no_task"))
+		return a.listTasks(cmd, f)
 	}
 	if onPages := changed(cmd, "category", "pin", "unpin", "clear"); len(onPages) > 0 {
 		return usageOf(usererr.New("cli_work_needs_pages", onPages[0]))
@@ -187,6 +192,49 @@ func (a *app) readTask(ctx context.Context, c client, t taskOf) error {
 	if !ok {
 		return usererr.New("cli_work_no_row", t.name, t.project)
 	}
+	a.print("%s", taskLine(t.name, t.project, row))
+	return nil
+}
+
+// listTasks tells the open tasks of the project --project names, or the working directory's, a line each as readTask
+// tells a task, writing nothing. Which are open, and their order, are the store's (Tasks.Open). Any flag but --project
+// changes a task or pages that were not named, and is refused.
+// LIMIT: the tasks of every project are read to tell one project's. Send the project to GET /api/tasks if tasks.json
+// grows to where that is slow (the user's, 113 tasks, is 31 KB).
+func (a *app) listTasks(cmd *cobra.Command, f workFlags) error {
+	ctx := cmd.Context()
+	others := cmd.Flags().NFlag()
+	if cmd.Flags().Changed("project") {
+		others--
+	}
+	if others > 0 {
+		return usageOf(usererr.New("cli_work_no_task"))
+	}
+	key, err := a.taskProjectOf(ctx, cmd, f)
+	if err != nil {
+		return err
+	}
+	c, err := a.client(ctx, true)
+	if err != nil {
+		return err
+	}
+	var all store.Tasks
+	if err = c.do(ctx, http.MethodGet, "/api/tasks", nil, &all); err != nil {
+		return err
+	}
+	open := all.Open(key)
+	if len(open) == 0 {
+		a.print("%s", english.Msg("cli_work_none_open", inProject(key)))
+	}
+	for _, t := range open {
+		a.print("%s", taskLine(t.Name, key, t.Task))
+	}
+	return nil
+}
+
+// taskLine is the task name of project (a key of tasks.json) as the store has it: its state, and its title, URL,
+// categories and parent when it has them.
+func taskLine(name, project string, row store.Task) string {
 	fields := []string{"state " + row.State}
 	if row.Title != "" {
 		fields = append(fields, fmt.Sprintf("title %q", row.Title))
@@ -200,8 +248,7 @@ func (a *app) readTask(ctx context.Context, c client, t taskOf) error {
 	if row.Parent != "" {
 		fields = append(fields, fmt.Sprintf("parent %q", row.Parent))
 	}
-	a.print("%s: %s", english.Msg("cli_work_page_task", t.name, inProject(t.project)), strings.Join(fields, ", "))
-	return nil
+	return english.Msg("cli_work_page_task", name, inProject(project)) + ": " + strings.Join(fields, ", ")
 }
 
 // tellTask says the task written: made, changed or as it was, and the fields ed asked for as the store left them, with
@@ -271,15 +318,25 @@ func (a *app) namedTask(ctx context.Context, cmd *cobra.Command, f workFlags) (t
 	if err != nil {
 		return taskOf{}, flagOf(err, "--task")
 	}
+	key, err := a.taskProjectOf(ctx, cmd, f)
+	if err != nil {
+		return taskOf{}, err
+	}
+	return taskOf{project: key, name: name}, nil
+}
+
+// taskProjectOf is the project --project names, or the working directory's when left out, as tasks.json keeps it: the
+// one place the project of a task or of a list of tasks is told.
+func (a *app) taskProjectOf(ctx context.Context, cmd *cobra.Command, f workFlags) (string, error) {
 	projectName, from := f.project, "--project"
 	if !cmd.Flags().Changed("project") {
 		projectName, from = project.Name(ctx, a.env.Dir), sentAt["/project"]
 	}
 	key, err := store.TaskProject(projectName)
 	if err != nil {
-		return taskOf{}, flagOf(err, from)
+		return "", flagOf(err, from)
 	}
-	return taskOf{project: key, name: name}, nil
+	return key, nil
 }
 
 // flagOf is err of the store's check of a value from (a flag, or where it was given): one that is no UTF-8 is told

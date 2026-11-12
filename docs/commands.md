@@ -27,7 +27,7 @@ Reference for every command of the `floe` binary. How to write a data file is in
 | `floe rm <slug>...` | Delete pages |
 | `floe archive <slug>...` | Take pages off the lists, keeping them (`--undo` gives them back) |
 | `floe tag <slug>... --add <name> --remove <name>` | Put tags on pages and take them off |
-| `floe work [<slug>...]` | Tell pages' task, category and pin; put them on a task, pin them, or change a task |
+| `floe work [<slug>...]` | Tell a project's open tasks and pages' task, category and pin; put pages on a task, pin them, or change a task |
 | `floe serve` | Run the server in the foreground |
 | `floe stop` | Stop the background server |
 | `floe diagram render <spec.yaml>...` | Check diagram specs and print them as inline SVG |
@@ -223,11 +223,12 @@ floe tag design-notes --remove draft                       # one taken off
 
 ## `floe work [<slug>...]`
 
-Say which task a page is on, and what a task's state is, through the server (it is started when it is not running). A task is named by its project and its ID; floe does not read what either means. The pages say which task they are on (`work` in each `meta.json`), and `tasks.json` in the store holds each task's title, state, outside link and order of categories, and how many times it was changed (`rev`), which a screen sends back so that a task written since is refused. A task a page names always has its row, and a page's category is always among its task's categories: the one write of pages and tasks makes them. A page naming a task of no row, as a hand edit of `tasks.json` leaves, shows the name on its row, and the task is not listed; the next write of the page's work makes the row: `floe work` of the page, or Set task, a pin, or the way back of Take off the task on the management page.
+Tell a project's open tasks, say which task a page is on, and what a task's state is, through the server (it is started when it is not running). A task is named by its project and its ID; floe does not read what either means. The pages say which task they are on (`work` in each `meta.json`), and `tasks.json` in the store holds each task's title, state, outside link and order of categories, and how many times it was changed (`rev`), which a screen sends back so that a task written since is refused. A task a page names always has its row, and a page's category is always among its task's categories: the one write of pages and tasks makes them. A page naming a task of no row, as a hand edit of `tasks.json` leaves, shows the name on its row, and the task is not listed; the next write of the page's work makes the row: `floe work` of the page, or Set task, a pin, or the way back of Take off the task on the management page.
 
 A page's category is where the task's page places it among the task's pages, under a heading of its own; the user decides it.
 
 ```sh
+floe work                                                        # the project's open tasks, nothing written
 floe work design-notes --task "#130"                             # the page on the task
 floe work --task "#130" --state doing                            # the task's state
 floe work --task "#130" --url https://example.com/issues/482     # the task alone
@@ -241,7 +242,11 @@ floe work design-notes                                           # the page told
 
 Each task and page written is told on a line of its own, as the store left it: a task `made` (it had no row), `changed` or `unchanged` (a field was given, its value as it was), with the fields given, and its categories when a page's was added to them; then a page with its task, category and pin. A task the write left as it was, with no field given, is not told. A task of no project is `in no project`. With slugs and no flag, each page is told so as it is and nothing is written; a slug of no page is refused before any page is told. With `--task` and no field, without slugs, the task is told as it is (its state, and its title, URL, categories and parent when it has them) and nothing is written; a task of no row is refused.
 
+With no slug and no flag but `--project`, the open tasks of a project are told, the states `todo` and `doing`, a line each as `--task` tells a task, and nothing is written. The one whose state changed last comes first, and those that changed at the same time go by name; done and archived tasks are left out (`floe work --task <ID>` tells one of any state). The project is the working directory's when `--project` is left out, the one `floe publish` puts a data file's page in; `""` is no project. A page published as HTML has no project and a `--link` has the linked file's, so for those give `--project` the project `floe publish` told. A project with no open task is told `no open task in project floe`, which is not a refusal. A flag but `--project` with no `--task` and no slug is refused, as it changes a task or pages that are not named.
+
 ```text
+$ floe work
+task #130 in project floe: state doing, title "Fix login"
 $ floe work design-notes --task "#130"
 task #130 in project floe: made
 page design-notes: task #130 in project floe
@@ -257,7 +262,7 @@ $ floe work --task "#130" --forget
 task #130 in project floe: forgotten
 ```
 
-With slugs, the task's project is each page's: `--task` puts the pages on that name in their own projects, and without it each page's own task is changed. `--project` and `--forget` go with a task alone, not with pages, so they go without slugs. `--parent` with slugs goes with pages of one project. Without slugs, `--task` names the task, of `--project` (the working directory's project when left out; `""` for none).
+With slugs, the task's project is each page's: `--task` puts the pages on that name in their own projects, and without it each page's own task is changed. `--project` and `--forget` go with a task alone, not with pages, so they go without slugs. `--parent` with slugs goes with pages of one project. Without slugs, `--task` names the task, of `--project` (the working directory's project when left out; `""` for none), and with no `--task`, `--project` names the project whose open tasks are told.
 
 | Flag | Changes | |
 | --- | --- | --- |
