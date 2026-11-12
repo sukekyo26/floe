@@ -2,19 +2,9 @@
 
 A theme is a directory of CSS files that changes a page's colours, typefaces and the look of the parts, by setting variables and writing rules. A data file selects a theme with `theme:`, as it selects one of floe's. This doc says what each file and variable changes, how a change takes effect, and what `floe theme check` refuses.
 
-## Commands
-
-| Command | What it does |
-|---|---|
-| `floe theme new <name>` | Makes the smallest theme in `FLOE_THEMES_DIR`: an empty `palette.css` to fill in. |
-| `floe theme check` | Checks every theme of yours and the parts, looks and shared schemas of yours, as `floe part check` does (a theme's `<name>.css` needs its part). Prints every mistake; exit code 1 when there is one. |
-| `floe theme list` | Lists the themes, floe's and yours. |
-| `floe theme show <name>` | Lists the files the theme reads, floe's themes too. |
-| `floe theme show <name> <file>` | Prints the file named. `floe theme show default palette.css` is floe's palette, which yours goes over. |
-
 ## Where themes are
 
-- A theme is a directory in `FLOE_THEMES_DIR` (default `$XDG_CONFIG_HOME/floe/themes`, else `~/.config/floe/themes`), holding the theme's files. A file directly in `FLOE_THEMES_DIR` is ignored without a message.
+- A theme is a directory in `FLOE_THEMES_DIR` (default `$XDG_CONFIG_HOME/floe/themes`, else `~/.config/floe/themes`), holding the theme's files. `floe theme new <name>` makes the smallest one: an empty `palette.css` to fill in. A file directly in `FLOE_THEMES_DIR` is ignored without a message.
 - The name MUST be lower case letters, digits, `-` and `_`, starting with a letter or a digit, and MUST NOT be the name of one of floe's themes.
 - A theme directory, and anything in it, MUST NOT be a link to a directory (a link to a file is read).
 - `FLOE_THEMES_DIR` MUST NOT be the directory of your parts or templates (`FLOE_PARTS_DIR`, `FLOE_TEMPLATES_DIR`), contain it, or be in it: floe would read the files of one as those of the other.
@@ -22,7 +12,7 @@ A theme is a directory of CSS files that changes a page's colours, typefaces and
 
 ## Files
 
-A theme holds these files, each optional. A file or directory of any other name MUST NOT be in a theme: floe refuses it, a `<name>.css` of a name that no part or look has too. A name that begins with `.` (`.git/`, `.DS_Store`) is skipped, neither read nor refused.
+A theme holds these files, each optional. `floe theme show <name>` lists the files a theme reads (floe's themes too) and `floe theme show <name> <file>` prints one. A file or directory of any other name MUST NOT be in a theme: floe refuses it, a `<name>.css` of a name that no part or look has too. A name that begins with `.` (`.git/`, `.DS_Store`) is skipped, neither read nor refused.
 
 | File | What it holds |
 |---|---|
@@ -76,7 +66,7 @@ A theme sets these on the element that needs them, in any file (`--tone` and the
 
 ### Padding and text size
 
-floe's base sets these on `:root`. A theme sets them on `:scope` in `palette.css` or `base.css`.
+floe's base sets these on `:root`. Set them on `:scope` in `base.css` (a rule of `palette.css` sits under floe's base, which wins over it).
 
 | Variable | What it changes | Default |
 |---|---|---|
@@ -122,7 +112,7 @@ Each item gives the action, then the reason in parentheses.
 
 ### Colours
 
-- Set `--face` and `--on-face` on `:scope, :scope > *` and paint with `background: var(--face); color: var(--on-face)` to fill a part's root (the two variables paint nothing: floe's base only draws the links, a line's code and the focus ring in a box in `--on-face`, and sets both to `initial` on what a part's box holds, so without them they sink into the fill).
+- Set `--face` and `--on-face` on `:scope, :scope > *` and paint with `background: var(--face); color: var(--on-face)` to fill a part's root (the two variables paint nothing: floe's base only draws the links, a line's code, a quote's text and the focus ring in a box in `--on-face`, and sets both to `initial` on what a part's box holds, so without them they sink into the fill).
 - Set `--quiet` on a box painted in a background close to it, as in `.card { --quiet: var(--surface); }` in `cards.css` (`--quiet` melts into such a box).
 - Name `--good-fill` and the like in `palette.css`, as in `:scope { --good-fill: #cfe8cf; }`, and draw with `var(--tone-fill)` (floe sets `--tone-fill` from `--<tone>-fill`, else from the tone's `-soft`; `--accent-fill` is for what has no tone).
 - Make a box background that lets what is under it through opaque in a band, in `band.css` (a band is filled with the accent, which would show through and sink its text; `floe theme show aurora band.css` does it for glass).
@@ -164,7 +154,7 @@ In `cards.css`, `:scope` is the cards as a whole (the part's root) and `.card` i
 
 - Set the colours of a diff's counts with `--code-head-add` and `--code-head-del` when you lighten code's heading (the counts are drawn on it).
 - Set `--code-ground` to the same colour as code's lines when you paint them a background of your own on `:scope pre` (it is the copy button's background).
-- Write a heading's `color` knowing a terminal's heading takes it (a terminal's heading is fainter, at 85% of `--code-head-fg`, whatever colour a theme gives it).
+- A heading's `color` in `code.css` (`:scope figcaption { color: red; }`) paints a terminal's heading too. Set `--code-head-fg` to keep a terminal's heading fainter than code's (it is drawn at 85% of it).
 - Write a heading's rule and its type on `:scope figcaption` in `code.css`.
 
 ### chart
@@ -181,7 +171,7 @@ In `cards.css`, `:scope` is the cards as a whole (the part's root) and `.card` i
 
 ## What `floe theme check` refuses
 
-`floe theme check` does what `floe part check` does, so parts and themes are checked together. It prints every mistake and exits with code 1 when there is one. For a theme it refuses:
+`floe theme check` checks every theme of yours and the parts, looks and shared schemas of yours, as `floe part check` does (a theme's `<name>.css` needs its part). It prints every mistake and exits with code 1 when there is one. For a theme it refuses:
 
 - a theme directory whose name breaks the naming rule or is the name of one of floe's themes, or that is a link to a directory, or a link to a directory in a theme, or `FLOE_THEMES_DIR` equal to, containing or inside the directory of your parts or templates;
 - a file or a directory of a name floe does not read (*Files*; a name beginning with `.` is skipped), and a file floe cannot read (a link with no target, a file without permission, a FIFO or a device);

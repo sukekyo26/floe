@@ -11,13 +11,14 @@ import (
 	"floe/internal/kit"
 )
 
-// paletteDoc is the doc that holds the table of the palette, and paletteHeading the heading over it.
-const (
-	paletteDoc     = "agents/templates.md"
-	paletteHeading = "The palette"
-)
+// paletteDocs are the docs that hold a table of the palette, each with the heading over its table: the template guide
+// and the theme guide print one each, and both are held to the default palette.
+var paletteDocs = []struct{ file, heading string }{
+	{"agents/templates.md", "The palette"},
+	{"agents/themes.md", "Palette"},
+}
 
-// paletteInDocs keeps every variable of the default palette named, whole, in the first column of the docs' table of the
+// paletteInDocs keeps every variable of the default palette named, whole, in the first column of each doc's table of the
 // palette: raw SVG and one's own themes rely on that table, and a variable out of it
 // is no promise. Every name in that column is whole (--good-soft, not -soft), so that the table reads as the rule.
 // LIMIT: default's palette.css alone is read; a variable only a theme sets is the theme's own, and the docs promise none
@@ -38,26 +39,29 @@ var paletteInDocs = Rule{Name: "palette-in-docs", Check: func(in *Input) []Findi
 	if len(set) == 0 {
 		return []Finding{{"themes/default/palette.css", 0, "palette-in-docs", "sets no variable; the default palette sets every one"}}
 	}
-	names, err := paletteTable(in.Docs(), paletteDoc, paletteHeading)
-	if err != "" {
-		return []Finding{{paletteDoc, 0, "palette-in-docs", err}}
-	}
 	var found []Finding
 	in.Saw()
-	for _, name := range names {
-		if !strings.HasPrefix(name, "--") || strings.ContainsAny(name, "<>") {
-			found = append(found, Finding{paletteDoc, 0, "palette-in-docs", "the table of the palette names " + name + ": write each variable's name whole"})
+	for _, doc := range paletteDocs {
+		names, err := paletteTable(in.Docs(), doc.file, doc.heading)
+		if err != "" {
+			found = append(found, Finding{doc.file, 0, "palette-in-docs", err})
+			continue
 		}
-	}
-	for _, name := range set {
-		if !slices.Contains(names, name) {
-			found = append(found, Finding{paletteDoc, 0, "palette-in-docs", "names no " + name + ", which " + palette.File + " sets: write `" + name + "` in the table of the palette"})
+		for _, name := range names {
+			if !strings.HasPrefix(name, "--") || strings.ContainsAny(name, "<>") {
+				found = append(found, Finding{doc.file, 0, "palette-in-docs", "the table of the palette names " + name + ": write each variable's name whole"})
+			}
+		}
+		for _, name := range set {
+			if !slices.Contains(names, name) {
+				found = append(found, Finding{doc.file, 0, "palette-in-docs", "names no " + name + ", which " + palette.File + " sets: write `" + name + "` in the table of the palette"})
+			}
 		}
 	}
 	return found
 }}
 
-// paletteTable returns the code in the first column of the first table after the heading of the text heading in the doc
+// paletteTable returns the code in the first column of the first table after the h2 or h3 of the text heading in the doc
 // file of docs, Markdown, as floe draws it, or why it cannot.
 func paletteTable(docs fs.FS, file, heading string) ([]string, string) {
 	src, err := fs.ReadFile(docs, file)
@@ -76,7 +80,7 @@ func paletteTable(docs fs.FS, file, heading string) ([]string, string) {
 	under := false
 	for n := range root.Descendants() {
 		switch {
-		case n.DataAtom == atom.H2:
+		case n.DataAtom == atom.H2 || n.DataAtom == atom.H3:
 			under = textOf(n) == heading
 		case under && n.DataAtom == atom.Table && table == nil:
 			table = n
