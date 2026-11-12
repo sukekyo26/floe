@@ -3,6 +3,7 @@ package lint
 import (
 	"io/fs"
 	"slices"
+	"strconv"
 	"strings"
 
 	"golang.org/x/net/html"
@@ -24,6 +25,8 @@ var paletteDocs = []struct{ file, heading string }{
 // LIMIT: default's palette.css alone is read; a variable only a theme sets is the theme's own, and the docs promise none
 // of them but those the table names. The table names more than the default palette (a theme's --<tone>-fill, the
 // shadow's, the tone's), so a name of it is not held to the palette.
+// A table with a Default column (the theme guide's) is held to the values too: the code in a row's Default cell is the
+// value of each of its names, in order, as default's palette.css writes it, whitespace aside.
 var paletteInDocs = Rule{Name: "palette-in-docs", Check: func(in *Input) []Finding {
 	var set []string
 	var palette Sheet
@@ -36,16 +39,41 @@ var paletteInDocs = Rule{Name: "palette-in-docs", Check: func(in *Input) []Findi
 		}
 	}
 	slices.Sort(set)
+	values := map[string]string{}
+	for name, ds := range declarations(palette.Src, func(p string) bool { return strings.HasPrefix(p, "--") }) {
+		d := ds[len(ds)-1]
+		if len(d.value) > 0 {
+			last := d.value[len(d.value)-1]
+			values[name] = strings.Join(strings.Fields(string(palette.Src[d.value[0].At:last.At+len(last.Data)])), " ")
+		}
+	}
 	if len(set) == 0 {
 		return []Finding{{"themes/default/palette.css", 0, "palette-in-docs", "sets no variable; the default palette sets every one"}}
 	}
 	var found []Finding
 	in.Saw()
 	for _, doc := range paletteDocs {
-		names, err := paletteTable(in.Docs(), doc.file, doc.heading)
+		rows, err := paletteTable(in.Docs(), doc.file, doc.heading)
 		if err != "" {
 			found = append(found, Finding{doc.file, 0, "palette-in-docs", err})
 			continue
+		}
+		var names []string
+		for _, row := range rows {
+			names = append(names, row.names...)
+			if !row.hasDefault {
+				continue
+			}
+			held := slices.ContainsFunc(row.names, func(n string) bool { _, ok := values[n]; return ok })
+			if held && len(row.defaults) != len(row.names) {
+				found = append(found, Finding{doc.file, 0, "palette-in-docs", "the row of " + row.names[0] + " names " + strconv.Itoa(len(row.names)) + " variables and gives " + strconv.Itoa(len(row.defaults)) + " defaults: give each its default in code, in order"})
+				continue
+			}
+			for i, name := range row.names {
+				if want, ok := values[name]; ok && row.defaults[i] != want {
+					found = append(found, Finding{doc.file, 0, "palette-in-docs", "gives " + name + " the default " + row.defaults[i] + ", which " + palette.File + " writes as " + want})
+				}
+			}
 		}
 		for _, name := range names {
 			if !strings.HasPrefix(name, "--") || strings.ContainsAny(name, "<>") {
@@ -61,9 +89,16 @@ var paletteInDocs = Rule{Name: "palette-in-docs", Check: func(in *Input) []Findi
 	return found
 }}
 
-// paletteTable returns the code in the first column of the first table after the h2 or h3 of the text heading in the doc
-// file of docs, Markdown, as floe draws it, or why it cannot.
-func paletteTable(docs fs.FS, file, heading string) ([]string, string) {
+// paletteRow is a row of the table of the palette: the code in its first column, and, when the table has a Default
+// column, the code in that cell.
+type paletteRow struct {
+	names, defaults []string
+	hasDefault      bool
+}
+
+// paletteTable returns the rows of the first table after the h2 or h3 of the text heading in the doc file of docs,
+// Markdown, as floe draws it, or why it cannot.
+func paletteTable(docs fs.FS, file, heading string) ([]paletteRow, string) {
 	src, err := fs.ReadFile(docs, file)
 	if err != nil {
 		return nil, err.Error()
@@ -89,25 +124,39 @@ func paletteTable(docs fs.FS, file, heading string) ([]string, string) {
 	if table == nil {
 		return nil, "has no table under the heading " + heading + "; write the table of the palette there"
 	}
-	var names []string
+	defaultAt := -1
+	for n := range table.Descendants() {
+		if n.DataAtom == atom.Th && textOf(n) == "Default" {
+			defaultAt = 0
+			for p := n.PrevSibling; p != nil; p = p.PrevSibling {
+				if p.DataAtom == atom.Th {
+					defaultAt++
+				}
+			}
+		}
+	}
+	var rows []paletteRow
 	for n := range table.Descendants() {
 		if n.DataAtom != atom.Tr || n.Parent.DataAtom != atom.Tbody {
 			continue
 		}
-		cell := n.FirstChild
-		for cell != nil && cell.DataAtom != atom.Td {
-			cell = cell.NextSibling
-		}
-		if cell == nil {
-			continue
-		}
-		for c := range cell.Descendants() {
-			if c.DataAtom == atom.Code {
-				names = append(names, textOf(c))
+		var cells []*html.Node
+		for c := n.FirstChild; c != nil; c = c.NextSibling {
+			if c.DataAtom == atom.Td {
+				cells = append(cells, c)
 			}
 		}
+		if len(cells) == 0 {
+			continue
+		}
+		row := paletteRow{names: codeIn(cells[0])}
+		if defaultAt >= 0 && defaultAt < len(cells) {
+			row.hasDefault = true
+			row.defaults = codeIn(cells[defaultAt])
+		}
+		rows = append(rows, row)
 	}
-	return names, ""
+	return rows, ""
 }
 
 func textOf(n *html.Node) string {
@@ -118,4 +167,15 @@ func textOf(n *html.Node) string {
 		}
 	}
 	return b.String()
+}
+
+// codeIn returns the text of each code element in n, whitespace collapsed to single spaces.
+func codeIn(n *html.Node) []string {
+	var out []string
+	for c := range n.Descendants() {
+		if c.DataAtom == atom.Code {
+			out = append(out, strings.Join(strings.Fields(textOf(c)), " "))
+		}
+	}
+	return out
 }

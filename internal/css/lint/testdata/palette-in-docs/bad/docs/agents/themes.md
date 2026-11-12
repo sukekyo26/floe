@@ -4,10 +4,10 @@
 
 ### Palette
 
-| Variable | Use |
-|---|---|
-| `--accent` | a |
-| `--bg` | b |
+| Variable | Use | Default |
+|---|---|---|
+| `--accent` | a | `red`, `blue` |
+| `--bg` | b | `whites` |
 
 ### Padding
 

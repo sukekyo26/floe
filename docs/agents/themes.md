@@ -46,7 +46,9 @@ Set in `palette.css`. A palette may set properties of the root too (`default` se
 | `--shadow` | A colour for shadows | `rgb(34 33 31 / 0.12)` |
 | `--floe-shadow-x`, `--floe-shadow-y`, `--floe-shadow-blur`, `--floe-shadow-spread` | The theme's one shadow, in px or rem | not set: no shadow |
 | `--radius`, `--radius-small`, `--radius-pill` | Round corners, one length each: a box's, a small box's within it, a pill's | `20px`, `6px`, `999px` |
-| `--font`, `--display`, `--mono` | The typeface of text, of headings and of fixed-width text | system sans-serif stacks (`floe theme show default palette.css`); `--display` is `var(--font)` |
+| `--font` | The typeface of text | `"Hiragino Sans", "Noto Sans JP", "Noto Sans CJK JP", "Yu Gothic UI", Meiryo, system-ui, -apple-system, "Segoe UI", sans-serif` |
+| `--display` | The typeface of headings | `var(--font)` |
+| `--mono` | The typeface of fixed-width text | `ui-monospace, "SFMono-Regular", Menlo, Consolas, "DejaVu Sans Mono", "Liberation Mono", monospace, "Hiragino Sans", "Noto Sans JP", "Noto Sans CJK JP"` |
 | `--code-bg`, `--code-fg`, `--code-prompt` | The background of code and a terminal (always dark), their text, and a terminal's prompt | `#1b2120`, `#e2e9e7`, `#b5e05a` |
 | `--code-add`, `--code-del` | A diff's lines added and removed | `#6fcf97`, `#f2b8b5` |
 | `--chart-1`, `--chart-2`, `--chart-3`, `--chart-4` | The colours of a chart's series, in order | `#008fa3`, `#c2660a`, `#6157d9`, `#c8366f` |
@@ -112,7 +114,7 @@ Each item gives the action, then the reason in parentheses.
 
 ### Colours
 
-- Set `--face` and `--on-face` on `:scope, :scope > *` and paint with `background: var(--face); color: var(--on-face)` to fill a part's root (the two variables paint nothing: floe's base only draws the links, a line's code, a quote's text and the focus ring in a box in `--on-face`, and sets both to `initial` on what a part's box holds, so without them they sink into the fill).
+- Set `--face` and `--on-face` on `:scope, :scope > *` and paint with `background: var(--face); color: var(--on-face)` to fill a part's root (the two variables paint nothing themselves: floe's base draws the links, a quote's text and the focus ring in `--on-face`, and a line's code on `--face` within a 1px inner ring of `--on-face`; it sets both to `initial` on what a part's box holds, so without them these sink into the fill).
 - Set `--quiet` on a box painted in a background close to it, as in `.card { --quiet: var(--surface); }` in `cards.css` (`--quiet` melts into such a box).
 - Name `--good-fill` and the like in `palette.css`, as in `:scope { --good-fill: #cfe8cf; }`, and draw with `var(--tone-fill)` (floe sets `--tone-fill` from `--<tone>-fill`, else from the tone's `-soft`; `--accent-fill` is for what has no tone).
 - Make a box background that lets what is under it through opaque in a band, in `band.css` (a band is filled with the accent, which would show through and sink its text; `floe theme show aurora band.css` does it for glass).
@@ -129,7 +131,7 @@ Each item gives the action, then the reason in parentheses.
 ### Rows: note, numbered, timeline, links, marked
 
 - Size a row's marker (the symbol of a note, the ring of numbered, the dot of timeline, the sign of links, the letters of `marked`, which `checklist` takes) with `--floe-mark` and `--floe-mark-gap`, and hide it with `content: none` (its column then takes no space).
-- Do not set `display`, `gap` or `grid-template` on a row with a marker (floe lays the marker out in the layer `floe.marks`, under a theme's file of a part, and such a rule wins over it without a word).
+- Do not set `display`, `gap` or `grid-template` on a row with a marker in the file of a part (`timeline.css`): floe lays the marker out in the layer `floe.marks`, under that file, so the rule wins over it without a word. In the file of a look (`marked.css`, on an element that is not a part's box, such as the `<ul>` of a template) the same rule loses to `floe.marks` and changes nothing.
 
 ### cards
 
@@ -147,7 +149,7 @@ In `cards.css`, `:scope` is the cards as a whole (the part's root) and `.card` i
 ### tabs
 
 - Set the selected tab with `--tabs-picked-bg`, `--tabs-picked-fg` and `--tabs-picked-ring` (a part paints it on screen alone; on paper every tab shows under its title).
-- Expect the selected tab in a box filled with colours of its own (a band and the like) to take the box's two colours swapped, `--on-face` as its background and `--face` as its text: `--tabs-picked-*` do not apply there (`tabs/part.css` sets `--tabs-face-bg` and `--tabs-face-fg` from them).
+- Expect the selected tab in a box filled with colours of its own (a band and the like) to take the box's two colours swapped, `--on-face` as its background and `--face` as its text: `--tabs-picked-bg` and `--tabs-picked-fg` do not apply there (`tabs/part.css` sets `--tabs-face-bg` and `--tabs-face-fg`, which win over them); `--tabs-picked-ring` still does.
 - Set the shadow you give every tab title as the ring too, to have it on the selected tab (the ring is drawn over that shadow).
 
 ### code
