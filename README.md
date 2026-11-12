@@ -65,8 +65,9 @@ To show the user a page, use floe: run `floe guide` first and follow it. It is t
 |---|---|---|
 | What an agent reads first (`floe guide`) | [guide.md](docs/guide.md) | [guide.ja.md](docs/guide.ja.md) |
 | Write pages (data files) | [pages.md](docs/pages.md) | [pages.ja.md](docs/pages.ja.md) |
-| Make a template of your own | [templates.md](docs/templates.md) | [templates.ja.md](docs/templates.ja.md) |
-| Make a part or theme of your own | [parts.md](docs/parts.md) | [parts.ja.md](docs/parts.ja.md) |
+| Make a template of your own (`floe template guide`) | [templates.md](docs/templates.md) | [templates.ja.md](docs/templates.ja.md) |
+| Make a part of your own (`floe part guide`) | [parts.md](docs/parts.md) | [parts.ja.md](docs/parts.ja.md) |
+| Make a theme of your own (`floe theme guide`) | [themes.md](docs/themes.md) | [themes.ja.md](docs/themes.ja.md) |
 | Draw a diagram (`floe diagram guide`) | [diagrams.md](docs/diagrams.md) | [diagrams.ja.md](docs/diagrams.ja.md) |
 | Show an HTML file or a folder as it is | [links.md](docs/links.md) | [links.ja.md](docs/links.ja.md) |
 | Look up a command or a setting | [commands.md](docs/commands.md) | [commands.ja.md](docs/commands.ja.md) |

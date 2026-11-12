@@ -16,14 +16,17 @@ Reference for every command of the `floe` binary. How to write a data file is in
 | `floe template show <name> [file]` | Show a template: its themes and the files it reads, or one of them as written |
 | `floe template new <name>` | Make a template of your own to fill in: the smallest floe takes, with a viewport |
 | `floe template check` | Check the templates of your own |
+| `floe template guide` | Print how to make a template of your own |
 | `floe part list [--all]` | List the parts a section of floe's templates takes; `--all` every part, look and shared schema |
 | `floe part show <name> [file]` | Show a part, look or shared schema, or, for `html`, `any.json`, and the files it reads, or one of them as written |
 | `floe part new <name>` | Make the smallest part of your own, to fill in |
 | `floe part check` | Check the parts, looks, shared schemas and themes of your own |
+| `floe part guide` | Print how to make a part, a look or a shared schema of your own |
 | `floe theme list` | List the themes |
 | `floe theme show <name> [file]` | Show a theme and the files it reads, or one of them as written |
 | `floe theme new <name>` | Make the smallest theme of your own, to fill in |
 | `floe theme check` | Check the parts, looks, shared schemas and themes of your own, as `floe part check` does |
+| `floe theme guide` | Print how to make a theme of your own |
 | `floe theme default` | Print the default theme chosen in the management page's settings |
 | `floe list` | List pages, newest first |
 | `floe rm <slug>...` | Delete pages |
@@ -158,6 +161,10 @@ Read the templates in `FLOE_TEMPLATES_DIR` with the parts and themes of your own
 
 [templates.md](templates.md) tells what each file holds.
 
+## `floe template guide`
+
+Print how to make a template of your own, [templates.md](templates.md), whole: its files, what each holds and what floe checks. It is the doc itself, for an agent to read before it writes a template. It takes no arguments.
+
 ## `floe part list`
 
 Print the parts a section of floe's templates takes (the keys of floe's `any.json`, and your own parts, which join it), one per line in four tab-separated columns: the name, where it is (`floe`, or the directory of one of your own), its shape and its description. `html` takes HTML as text and has no `schema.json`: `floe part show html any.json` prints `any.json`, which holds the key `html`. Your own parts join `any`, but `floe part show any any.json` prints floe's `any.json` as it is written.
@@ -176,7 +183,11 @@ Make the part `<name>` in `FLOE_PARTS_DIR`: a `schema.json`, a `part.html` of it
 
 Read the parts, looks and shared schemas in `FLOE_PARTS_DIR` and the themes in `FLOE_THEMES_DIR`, over floe's own, and print every mistake of them (exit code 1), a shared schema's too, checked from its root whether a schema names it or not. With parts of your own, it compiles floe's templates with them too. Nothing is printed when they are right (exit code 0). `floe theme check` does the same: a theme's `<part>.css` needs its part, so parts and themes are checked together.
 
-[parts.md](parts.md) tells what a part and a theme hold.
+[parts.md](parts.md) tells what a part holds, and [themes.md](themes.md) what a theme holds.
+
+## `floe part guide`
+
+Print how to make a part, a look or a shared schema of your own, [parts.md](parts.md), whole: their files, the functions of `part.html`, the CSS layers and what floe checks. It is the doc itself, for an agent to read before it writes a part. It takes no arguments.
 
 ## `floe theme list`
 
@@ -191,6 +202,10 @@ Make the theme `<name>` in `FLOE_THEMES_DIR`: an empty `palette.css`, the smalle
 ## `floe theme check`
 
 Do what `floe part check` does: a theme's `<part>.css` needs its part, so parts and themes are checked together. The same mistakes are printed, with the same exit code.
+
+## `floe theme guide`
+
+Print how to make a theme of your own, [themes.md](themes.md), whole: its files and the rules floe checks them by. It is the doc itself, for an agent to read before it writes a theme. It takes no arguments.
 
 ## `floe theme default`
 
@@ -410,7 +425,7 @@ List the fetched icons whose name contains every word (case does not matter), on
 | `FLOE_ICONS_DIR` | Where `floe icons fetch` keeps icon sets, a directory each (`aws`). Defaults to `$XDG_DATA_HOME/floe-icons`, else `~/.local/share/floe-icons`. |
 | `FLOE_TEMPLATES_DIR` | Where templates of your own are, a directory each ([templates.md](templates.md)). Defaults to `$XDG_CONFIG_HOME/floe/templates`, else `~/.config/floe/templates`. |
 | `FLOE_PARTS_DIR` | Where parts, looks and shared schemas of your own are ([parts.md](parts.md)). Defaults to `$XDG_CONFIG_HOME/floe/parts`, else `~/.config/floe/parts`. |
-| `FLOE_THEMES_DIR` | Where themes of your own are, a directory each ([parts.md](parts.md)). Defaults to `$XDG_CONFIG_HOME/floe/themes`, else `~/.config/floe/themes`. |
+| `FLOE_THEMES_DIR` | Where themes of your own are, a directory each ([themes.md](themes.md)). Defaults to `$XDG_CONFIG_HOME/floe/themes`, else `~/.config/floe/themes`. |
 | `BROWSER` | The command that opens a new page. Defaults to `open` on macOS, else `wslview` or `xdg-open`. |
 
 Each `FLOE_*` directory is an absolute path. floe reads one place wherever it runs, so a relative one is refused, and so is one starting with `~`, which no shell read (`FLOE_PARTS_DIR is ~/x, a relative path; set it to an absolute path`). A relative `XDG_DATA_HOME` or `XDG_CONFIG_HOME` is ignored, as the XDG spec says.

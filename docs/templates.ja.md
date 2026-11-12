@@ -1,6 +1,6 @@
 # テンプレート
 
-自分のテンプレート（データファイルを描き入れるページ）の作り方です。データファイルは `template:` でテンプレートを名指します（書き方は [pages.ja.md](pages.ja.md)）。floe のテンプレートは `report`・`design`・`handoff`・`adr`・`postmortem`・`runbook`・`slides` です（`floe template list` が並べます）。自分の部品やテーマの作り方は [parts.ja.md](parts.ja.md) にあります。
+自分のテンプレート（データファイルを描き入れるページ）の作り方です。データファイルは `template:` でテンプレートを名指します（書き方は `floe guide`）。floe のテンプレートは `report`・`design`・`handoff`・`adr`・`postmortem`・`runbook`・`slides` です（`floe template list` が並べます）。自分の部品やテーマの作り方は `floe part guide` にあります。
 
 ## テンプレートの置き場所
 
@@ -12,7 +12,7 @@ floe template check        # 自分のテンプレートを全部、example.yaml
 floe template show memo    # テーマと、読むファイルの並びを出す（schema と見本が先）
 ```
 
-自分のテンプレート・部品・見た目・共有の schema・テーマに誤りが 1 つあると、そのテンプレートで描くかどうかによらず（`report` のページも）、直すまでどのページも止めます。`floe check`・`floe render` も、サーバーの publish とリンクしたページもです。`floe part check`（か、同じことをする `floe theme check`）と `floe template check` が全部を並べます。公開したページはサーバーのテンプレートで描きます（[commands.ja.md](commands.ja.md#サーバー)）。テンプレートを変えたら、`floe rebuild` が保存したページを描き直します。
+自分のテンプレート・部品・見た目・共有の schema・テーマに誤りが 1 つあると、そのテンプレートで描くかどうかによらず（`report` のページも）、直すまでどのページも止めます。`floe check`・`floe render` も、サーバーの publish とリンクしたページもです。`floe part check`（か、同じことをする `floe theme check`）と `floe template check` が全部を並べます。公開したページはサーバーのテンプレートで描きます（`floe serve --help`）。テンプレートを変えたら、`floe rebuild` が保存したページを描き直します。
 
 ### 別の置き場所で作る
 
@@ -33,7 +33,7 @@ mv ~/.config/floe/staging-templates/memo ~/.config/floe/templates/
 - `mv` の前に `~/.config/floe/templates` を作ってください。無いと、`mv` が `memo` の名前を `templates` に変え、そのファイルがテンプレートの置き場所の直下に並びます。floe は直下のファイルを読まず、ページが `memo` を名指すまで何も言いません。
 - 別の置き場所は、テンプレートと同じファイルシステムに置いてください。`mv` が 1 回で入れ替え、サーバーが写しかけを読むことがありません。
 - 今あるテンプレートを変えるときも、別の置き場所に写して直し、確かめてから、古いものと入れ替えます。
-- 部品とテーマも同じに作ります。部品は `FLOE_PARTS_DIR` と `floe part new`・`floe part check`、テーマは `FLOE_THEMES_DIR` と `floe theme new`・`floe theme check` を使います（[parts.ja.md](parts.ja.md#テーマ)）。
+- 部品とテーマも同じに作ります。部品は `FLOE_PARTS_DIR` と `floe part new`・`floe part check`、テーマは `FLOE_THEMES_DIR` と `floe theme new`・`floe theme check` を使います（`floe theme guide`）。
 
 ## ファイル
 
@@ -53,7 +53,7 @@ memo/
 
 ## page.html
 
-`page.html` は Go の [html/template](https://pkg.go.dev/html/template) で、入れるものをエスケープします。`floe template new` は次のものを書きます。floe が受ける最小のものに viewport の `<meta>` を足したもので、viewport が無いと、スマホは直に開いたページを 980px の幅で描いて縮めます。charset は書かなくてかまいません。サーバーを通さずに開くページ（`floe render` の出力、ダウンロード）には floe が頭の先頭に 1 つ置き、サーバーはヘッダーで渡します。
+`page.html` は Go の html/template で、入れるものをエスケープします。`floe template new` は次のものを書きます。floe が受ける最小のものに viewport の `<meta>` を足したもので、viewport が無いと、スマホは直に開いたページを 980px の幅で描いて縮めます。charset は書かなくてかまいません。サーバーを通さずに開くページ（`floe render` の出力、ダウンロード）には floe が頭の先頭に 1 つ置き、サーバーはヘッダーで渡します。
 
 ```html
 <!doctype html>
@@ -75,7 +75,7 @@ memo/
 | `.Lang` | ページの言語。データファイルの `lang:` |
 | `.Data` | データファイルの項目。floe が自分で読む `lang`・`template`・`theme`・`title` は除く。schema が宣言し、データが省いた項目は nil。`{{with .Data.lead}}`・`{{range}}`・`{{if}}` は空として読むが、`len`・`index`・`slice` は断る（`len of nil pointer`）ので、`with` の中で書く：`{{with .Data.done}}{{len .}}{{else}}0{{end}}`。部品は描いた形で来る（[テンプレートの中の部品](#テンプレートの中の部品)）。`"format": "markdown"` の項目は HTML、`"format": "image"` の項目は data URI で来る |
 | `.Calc` | `computed.yaml` の値。名前で引く |
-| `markdown` | Markdown の文を HTML に（`{{markdown .text}}`）。中の HTML は書いたとおりの字で描く。`page.html` ではテンプレート自身の Markdown の包みに（下）、部品の `part.html` では text の外枠に包む（[parts.ja.md](parts.ja.md)） |
+| `markdown` | Markdown の文を HTML に（`{{markdown .text}}`）。中の HTML は書いたとおりの字で描く。`page.html` ではテンプレート自身の Markdown の包みに（下）、部品の `part.html` では text の外枠に包む（`floe part guide`） |
 | `markdownLine` | 表のセルのような Markdown の 1 行を、段落で囲まない HTML に |
 | `markdownLabel` | `markdownLine` と同じ Markdown の 1 行を、リンク（書いたもの、URL のように見つけたもの）を字にして。テンプレート自身のリンクの中に置く字に |
 | `contents` | すぐ前の目次（`<nav data-floe-look="toc">…</nav>{{contents}}`）で、今読んでいる所へのリンクに `aria-current="location"` を付ける script |
@@ -100,8 +100,8 @@ memo/
 - パレットの変数（`var(--muted)`）で描くと、データファイルが選んだテーマに従います。
 - 続けて並ぶ部品の間（節の中、項目の中）は、floe のどこもと同じく `var(--floe-room)`（0.75rem）をあけます。テーマの影が箱の外へ出る、一番大きい長さです。部品 text の外枠も部品と同じくそこに並び、中の段落や見出しは floe が同じ間で並べます。テンプレート自身の Markdown の包み（`data-floe-markdown`）も同じ間で並びますが、text の外枠と違い、自分の `page.css` が中に届きます。
 - 地や枠を持つページの箱（見た目 panel を借りるものなど）の余白は、floe の部品とテンプレートと同じく `var(--floe-pad-block) var(--floe-pad-inline)`（1.1rem と 1.3rem）にします。見た目 `rows` の行には余白を書きません。`rows` が行の左右にも余白を付けます。
-- 横にスクロールする箱は、`overflow-x: auto` と `contain: inline-size` を `@media screen` の中の 1 つの規則に書き、紙では中身を折り返します。中身の幅で外の grid・flex の項目もページも広げないためと、紙ではスクロールした所が読めないためです。中身で幅が決まる所（`justify-self: start`、inline-block、自動の幅の表の升、flex の行の `flex-basis: auto` の項目）には置きません。そこでは枠と余白だけの幅に潰れます（[parts.ja.md](parts.ja.md#css-の層と-scope)）。自分の幅で並べる `chart`・`keys`・`timeline` も、そこでは同じに潰れます。
-- 部品の箱でもある要素への規則（`ul { margin-block: 1rem }`、`figure { … }`）は、部品にも届きます。部品は自分の箱に margin を書かないためです（checklist・links は `ul`、steps・timeline は `ol`、facts・keys・entries・stats は `dl`、code・image・diff・terminal は `figure`、tabs は `form`）。ただし、部品の箱の並びの display・印・余白・項目の間は、floe が決めるので変わりません（[parts.ja.md](parts.ja.md#css-の層と-scope)）。見た目を借りる並びのそれは `page.css` で変わるので、テンプレートが整えられます。
+- 横にスクロールする箱は、`overflow-x: auto` と `contain: inline-size` を `@media screen` の中の 1 つの規則に書き、紙では中身を折り返します。中身の幅で外の grid・flex の項目もページも広げないためと、紙ではスクロールした所が読めないためです。中身で幅が決まる所（`justify-self: start`、inline-block、自動の幅の表の升、flex の行の `flex-basis: auto` の項目）には置きません。そこでは枠と余白だけの幅に潰れます（`floe part guide` の「CSS の層と @scope」）。自分の幅で並べる `chart`・`keys`・`timeline` も、そこでは同じに潰れます。
+- 部品の箱でもある要素への規則（`ul { margin-block: 1rem }`、`figure { … }`）は、部品にも届きます。部品は自分の箱に margin を書かないためです（checklist・links は `ul`、steps・timeline は `ol`、facts・keys・entries・stats は `dl`、code・image・diff・terminal は `figure`、tabs は `form`）。ただし、部品の箱の並びの display・印・余白・項目の間は、floe が決めるので変わりません（`floe part guide` の「CSS の層と @scope」）。見た目を借りる並びのそれは `page.css` で変わるので、テンプレートが整えられます。
 - floe は、どのページも body の余白を 0 にし、class `floe-column` の要素（`<main class="floe-column">`）を列にしてページを中央にそろえます。列の幅は `--column-width`（テンプレートが置かなければパレットの `--page-width`）で、左右に `--page-pad` をあけます。1 列のページは `page.css` に `:scope { --column-width: var(--text-width); }` を置きます。テーマは `--column-width` を置きません。どちらも `page.css` と同じく部品の箱で止まり、`page.css` がセレクタによらず勝ちます。floe は字の大きさを決めないので、ページの字は読み手のブラウザの大きさになります。
 
 たとえば `report` の `page.css` は、列（`<main class="floe-column">`）の中を並べます：
@@ -124,7 +124,7 @@ section > h2 { border-top: var(--rule); padding-top: 1.3rem; }
 
 部品 `text` は、ほかの部品と並び、横に `code`・`terminal` を置ける所の Markdown です。floe は中の囲んだコードのブロックを警告し、`code` に書くよう勧めます。Markdown は部品の箱でない外枠（`data-floe-text`）に描き、自分の地も tone も持たないので、外の面と tone を継ぎます。`page.css` とテーマの `base.css` はそこで止まり、テーマの `markdown.css` がどこでも Markdown として描きます。見出しは、テンプレート自身の Markdown と同じく Markdown の大きさです（1.2em・1.1em）。code の部品を置かない、ただの Markdown の欄は、`{"type": "string", "format": "markdown"}` にします。
 
-種類を名指す鍵 1 つの部品は、種類によらず `any.json` を指します。そのリストは、report の節と同じく、`items` で `any.json` を指します。自分の部品もそこに加わります（[parts.ja.md](parts.ja.md)）。テンプレートの根の schema では、次のとおりです。
+種類を名指す鍵 1 つの部品は、種類によらず `any.json` を指します。そのリストは、report の節と同じく、`items` で `any.json` を指します。自分の部品もそこに加わります（`floe part guide`）。テンプレートの根の schema では、次のとおりです。
 
 ```json
 "part":  { "$ref": "floe:///parts/any.json" },
@@ -143,7 +143,7 @@ section > h2 { border-top: var(--rule); padding-top: 1.3rem; }
 
 ### 借りられる見た目
 
-テンプレートの要素は、`data-floe-look` で見た目を借ります。どのテーマでも同じに描きます（決まりは [parts.ja.md](parts.ja.md#見た目を借りる) にあります）。
+テンプレートの要素は、`data-floe-look` で見た目を借ります。どのテーマでも同じに描きます（決まりは `floe part guide` の「見た目を借りる」 にあります）。
 
 - `panel`：ほとんどの部品を描く箱（`<section data-floe-look="panel">`）。
 - `rows`・`table`：`checklist` と `table` の見た目。
@@ -171,8 +171,8 @@ section > h2 { border-top: var(--rule); padding-top: 1.3rem; }
 | `--good`・`--warn`・`--bad`・`--good-soft`・`--warn-soft`・`--bad-soft` | 良い・注意・悪いと、その淡い地。その tone の色 |
 | `--on-fill` | `--accent` やトーンの色で塗った面の上の文字（pill など） |
 | `--accent-fill`・`--good-fill`・`--warn-fill`・`--bad-fill`・`--muted-fill` | テーマが tone を塗る色（`--good-fill`）。`--tone-fill` が読む。無ければその tone の `-soft` |
-| `--tone`・`--tone-soft`・`--tone-fill` | 読む要素の tone（`data-floe-tone`、[parts.ja.md](parts.ja.md#css-の層と-scope)）の色。上の変数から floe が置き、tone の外では accent の色。テンプレートも tone をこの属性で付ける |
-| `--shadow` | 影の色の候補。影は、テーマが箱に `--floe-shadow-color` を置いたときだけ描かれる（[parts.ja.md](parts.ja.md#テーマ)） |
+| `--tone`・`--tone-soft`・`--tone-fill` | 読む要素の tone（`data-floe-tone`、`floe part guide` の「CSS の層と @scope」）の色。上の変数から floe が置き、tone の外では accent の色。テンプレートも tone をこの属性で付ける |
+| `--shadow` | 影の色の候補。影は、テーマが箱に `--floe-shadow-color` を置いたときだけ描かれる（`floe theme guide`） |
 | `--floe-shadow-x`・`--floe-shadow-y`・`--floe-shadow-blur`・`--floe-shadow-spread` | テーマの 1 組の影。px か rem（既定は無し） |
 | `--radius`・`--radius-small`・`--radius-pill` | 角の丸さ。どれも 1 つの長さ。箱（panel・note・code・引用）、箱の中の小さな升（キー・棒・画像・行の中の code）、札（cell・タブの名前。折り返した cell は floe の `--floe-pill-end` までしか丸くならない）。箱の縁から間だけ内にあって縁に沿う箱は 間の変数を引く。余白もその変数を読む（default は `--default-pad` を置き、`padding` と `calc(var(--radius) - var(--default-pad))` の両方が読む） |
 | `--font`・`--display`・`--mono` | 本文・見出し・等幅の書体。`--mono` は `monospace` の前に書体の名前を置く（ページは字の大きさを決めないので、ブラウザは `monospace` だけの字を 13px から測る） |
@@ -184,13 +184,13 @@ section > h2 { border-top: var(--rule); padding-top: 1.3rem; }
 | `--text-width` | 1 列のページの幅。テンプレートが `--column-width: var(--text-width)` で列をこの幅にする（`adr`・`runbook` のように）。部品 note の幅にも使う。文そのものは、入っている列か箱の幅まで使う |
 | `--page-width`・`--page-pad` | ページを中央にそろえる列（`.floe-column`）の幅（テンプレートが `--column-width` を置かなければ）と、列の箱の内側の左右の余白 |
 
-floe の土台は、ページの根にこれらで地・色・書体を描きます（`:root { background: var(--page-bg); color: var(--fg); font-family: var(--font); }`）。`page.css` は `:scope` でこれを変えられます。自分のテーマも変えられます（[parts.ja.md](parts.ja.md#テーマ)）。印刷でも、どの地も画面のとおりに出ます。
+floe の土台は、ページの根にこれらで地・色・書体を描きます（`:root { background: var(--page-bg); color: var(--fg); font-family: var(--font); }`）。`page.css` は `:scope` でこれを変えられます。自分のテーマも変えられます（`floe theme guide`）。印刷でも、どの地も画面のとおりに出ます。
 
 帯や塗った注意のように、色で自分を塗り、中に字を持つ要素は、`--face` に地を、`--on-face` に字の色を置き、それで自分を塗ります（`background: var(--face); color: var(--on-face)`）。floe の土台は、中のリンク・行の code（地なしの枠）・フォーカスの輪を `--on-face` で描きます（アクセントでは塗った地に溶けるため）。部品の中は、部品の地で初めから描きます。パネルの上の引用のように、自分で明るい地を塗る要素も、中を初めから描きます（`blockquote > * { --face: initial; --on-face: initial; }`）。見た目 `panel` は、地と一緒に字の色も書きます。地を塗らずに色を決めるときは、塗った面の中でも読めるように `var(--on-face, …)` と書きます。
 
 ## schema.json
 
-データファイルの項目の [JSON Schema](https://json-schema.org/)（2020-12）です。書き損じた鍵を断るように `"additionalProperties": false` を書きます。`floe template new` が作る `schema.json` には無いので、自分で足します。これを書き、鍵を `properties` だけで書くとき、ある条件で鍵を書けなくするなら、その鍵に `false` を書かず（誤りが `false schema` とだけ出る）、`then` に書ける鍵を `true` で並べて `"additionalProperties": false` と書きます（誤りが鍵を名指す）。並べた鍵は `properties` の写しなので、鍵を足すときは両方に足します。
+データファイルの項目の JSON Schema（2020-12）です。書き損じた鍵を断るように `"additionalProperties": false` を書きます。`floe template new` が作る `schema.json` には無いので、自分で足します。これを書き、鍵を `properties` だけで書くとき、ある条件で鍵を書けなくするなら、その鍵に `false` を書かず（誤りが `false schema` とだけ出る）、`then` に書ける鍵を `true` で並べて `"additionalProperties": false` と書きます（誤りが鍵を名指す）。並べた鍵は `properties` の写しなので、鍵を足すときは両方に足します。
 
 - `lang`・`template`・`theme`・`title` は floe が読むので、宣言せず、必須にもしません。
 - floe に文の描き方を伝える `format` は `markdown`・`html`・`image` です。floe が辿る `properties`・`additionalProperties`・`items` の下で宣言します。根の `additionalProperties` には置けません（floe が自分で読む `lang` や `title` まで描くことになるため）。
@@ -230,7 +230,7 @@ schema では言えない項目どうしの関係を、リストの各項目に�
 
 - `for` の途中のリストは 1 つずつ辿ります。`sections.parts` は各節の部品を確かめ、外れたものはその項目で言います。
 - `for` が無ければ、データファイル全体を `item` として 1 回確かめます。
-- `expr` は、成り立つべき [expr](https://expr-lang.org/) の式です。リストの項目を `item`、データファイルの項目を `doc` で見ます。外れた項目ごとに、`field` の所で `message` を言います。
+- `expr` は、成り立つべき expr の式です。リストの項目を `item`、データファイルの項目を `doc` で見ます。外れた項目ごとに、`field` の所で `message` を言います。
 - `for` のパスは schema が宣言するものにします。`field` は確かめません。
 - ` #` を含む式（`filter(xs, # > 1)` の expr の `#` など）は引用符で囲みます。YAML がそこからコメントと読むからです。
 
@@ -253,7 +253,7 @@ storage_gb: 'item_bytes * records.in_1_year / 1e9'
 
 ## 画像
 
-データの画像と `assets/` の画像は、png・jpeg・gif・webp・svg のファイル（名前で見分ける）で、1 MiB までです。データの画像は [pages.ja.md](pages.ja.md#画像) のとおりに名指します。`assets/` の画像は `assets/` の中のパスで、名前の間は `/` 1 つ、`./`・`..` を使わず、ドットで始まる名前の下にも置きません。floe はそれを読まないからです（`assets/ has no ".x/a.png"`）。
+データの画像と `assets/` の画像は、png・jpeg・gif・webp・svg のファイル（名前で見分ける）で、1 MiB までです。データの画像は、データファイルのディレクトリからの、その下のパスで名指します（`floe part show image schema.json`）。`assets/` の画像は `assets/` の中のパスで、名前の間は `/` 1 つ、`./`・`..` を使わず、ドットで始まる名前の下にも置きません。floe はそれを読まないからです（`assets/ has no ".x/a.png"`）。
 
 - `floe template check` は `assets/` の画像を全部読みます。
 - `example.yaml` が名指す画像は、テンプレートのディレクトリから読みます。見本から書き始めたデータファイルは、その隣に画像が要ります。

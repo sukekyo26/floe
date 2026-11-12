@@ -1,6 +1,6 @@
 # Templates
 
-How to make a template of your own: the page a data file is drawn into. A data file names its template with `template:` ([pages.md](pages.md) tells how to write one); floe's templates are `report`, `design`, `handoff`, `adr`, `postmortem`, `runbook` and `slides` (`floe template list` lists them). To make a part or a theme of your own, see [parts.md](parts.md).
+How to make a template of your own: the page a data file is drawn into. A data file names its template with `template:` (`floe guide` tells how to write one); floe's templates are `report`, `design`, `handoff`, `adr`, `postmortem`, `runbook` and `slides` (`floe template list` lists them). To make a part or a theme of your own, see `floe part guide`.
 
 ## Where templates are
 
@@ -12,7 +12,7 @@ floe template check        # checks every template of your own, drawing its exam
 floe template show memo    # lists its themes and the files it reads, its schema and example first
 ```
 
-A mistake of a template, part, look, shared schema or theme of your own stops every page, whether it is drawn with that one or not (a page of `report` too), until it is fixed: `floe check`, `floe render`, and the server's publishes and linked pages alike. `floe part check` (or `floe theme check`, the same) and `floe template check` list them all. A published page is drawn with the server's templates ([commands.md](commands.md#the-server)); after you change one, `floe rebuild` draws the stored pages again with it.
+A mistake of a template, part, look, shared schema or theme of your own stops every page, whether it is drawn with that one or not (a page of `report` too), until it is fixed: `floe check`, `floe render`, and the server's publishes and linked pages alike. `floe part check` (or `floe theme check`, the same) and `floe template check` list them all. A published page is drawn with the server's templates (`floe serve --help`); after you change one, `floe rebuild` draws the stored pages again with it.
 
 ### Make one in another directory
 
@@ -33,7 +33,7 @@ mv ~/.config/floe/staging-templates/memo ~/.config/floe/templates/
 - Make `~/.config/floe/templates` before the `mv`: with none there, `mv` would rename `memo` to `templates` itself, its files right in the directory of templates, where floe reads none and says nothing until a page names `memo`.
 - Keep the other directory on the file system of your templates, so that `mv` puts the template in at once rather than a copy the server reads half made.
 - To change a template you have, copy it to the other directory, change and check it there, and move it back in place of the old one.
-- Parts and themes are made the same way, with `FLOE_PARTS_DIR`, `floe part new` and `floe part check`, and `FLOE_THEMES_DIR`, `floe theme new` and `floe theme check` ([parts.md](parts.md#themes)).
+- Parts and themes are made the same way, with `FLOE_PARTS_DIR`, `floe part new` and `floe part check`, and `FLOE_THEMES_DIR`, `floe theme new` and `floe theme check` (`floe theme guide`).
 
 ## Files
 
@@ -53,7 +53,7 @@ A file of another name is refused. `example.yaml` names the template of its dire
 
 ## page.html
 
-`page.html` is a Go [html/template](https://pkg.go.dev/html/template), which escapes what it inserts. `floe template new` writes this one, the smallest floe takes with a viewport `<meta>`: without the viewport, a phone draws a page opened by itself 980px wide and shrinks it. You need not write a charset: a page opened without floe's server (`floe render`, a download) gets one from floe, first in its head, and the server sends it in its header.
+`page.html` is a Go html/template, which escapes what it inserts. `floe template new` writes this one, the smallest floe takes with a viewport `<meta>`: without the viewport, a phone draws a page opened by itself 980px wide and shrinks it. You need not write a charset: a page opened without floe's server (`floe render`, a download) gets one from floe, first in its head, and the server sends it in its header.
 
 ```html
 <!doctype html>
@@ -75,7 +75,7 @@ It sees:
 | `.Lang` | The page's language: the data file's `lang:` |
 | `.Data` | The data file's items, without `lang`, `template`, `theme` and `title`, which floe reads itself. An item the schema declares but the data leaves out is nil: `{{with .Data.lead}}`, `{{range}}` and `{{if}}` read it as empty, but `len`, `index` and `slice` refuse it (`len of nil pointer`), so write them inside `with`: `{{with .Data.done}}{{len .}}{{else}}0{{end}}`. A part comes drawn (see [Parts in a template](#parts-in-a-template)), as does an item of `"format": "markdown"` (its HTML) or `"format": "image"` (a data URI) |
 | `.Calc` | The values of `computed.yaml`, by name |
-| `markdown` | Markdown text as HTML (`{{markdown .text}}`), HTML in it drawn as the text written: in `page.html`, in the box of a template's own Markdown (below); in a part's `part.html`, in a text's box ([parts.md](parts.md)) |
+| `markdown` | Markdown text as HTML (`{{markdown .text}}`), HTML in it drawn as the text written: in `page.html`, in the box of a template's own Markdown (below); in a part's `part.html`, in a text's box (`floe part guide`) |
 | `markdownLine` | A line of Markdown, such as a table cell, as HTML without a paragraph around it |
 | `markdownLabel` | A line of Markdown as `markdownLine` writes it, its links (written or found, such as a URL) as their words: a label that goes in a link of the template's own |
 | `contents` | The script that marks, in the contents just before it (`<nav data-floe-look="toc">…</nav>{{contents}}`), the link to the part of the page being read: `aria-current="location"` |
@@ -100,8 +100,8 @@ It sees:
 - Draw with the palette's variables (`var(--muted)`), so that the page follows the theme the data file picks.
 - Leave `var(--floe-room)` (0.75rem) between parts that stand one after another (in a section, in an item), as every place of floe's does, the most a theme's shadow reaches outside a box. A part text's box stands there as a part does, and floe spaces its paragraphs and headings by the same room in it. The box of your template's own Markdown (`data-floe-markdown`) is spaced so too, but your `page.css` reaches in it, as it does not in a text's.
 - Pad a box of your page with a ground or a frame (one that takes the look panel, say) by `var(--floe-pad-block) var(--floe-pad-inline)` (1.1rem and 1.3rem), as floe's parts and templates pad theirs, and a row of the look `rows` by none: `rows` pads its rows at the sides too.
-- A box that scrolls sideways writes `overflow-x: auto` and `contain: inline-size` in one rule under `@media screen`, and folds what it holds on paper, so that its content's width widens no grid or flex item around it, nor the page; keep it out of a place whose width its content sets (`justify-self: start`, an inline-block, a table's cell of auto width, an item of a flex row on `flex-basis: auto`), where it shrinks to its border and padding ([parts.md](parts.md#the-css-layers-and-scope)). `chart`, `keys` and `timeline`, which lay out by their own width, shrink so in such a place too.
-- A rule for an element that is a part's box too (`ul { margin-block: 1rem }`, `figure { … }`) reaches the part, as a part writes no margin of its own on its box (checklist and links are `ul`, steps and timeline `ol`, facts, keys, entries and stats `dl`, code, image, diff and terminal `figure`, tabs `form`). It does not change a list's display, marks, padding or room between items, which floe sets for a list that is a part's box ([parts.md](parts.md#the-css-layers-and-scope)); a list that takes a look takes those from the template's `page.css` too, so that the template adjusts it.
+- A box that scrolls sideways writes `overflow-x: auto` and `contain: inline-size` in one rule under `@media screen`, and folds what it holds on paper, so that its content's width widens no grid or flex item around it, nor the page; keep it out of a place whose width its content sets (`justify-self: start`, an inline-block, a table's cell of auto width, an item of a flex row on `flex-basis: auto`), where it shrinks to its border and padding (`floe part guide`, *The CSS layers and @scope*). `chart`, `keys` and `timeline`, which lay out by their own width, shrink so in such a place too.
+- A rule for an element that is a part's box too (`ul { margin-block: 1rem }`, `figure { … }`) reaches the part, as a part writes no margin of its own on its box (checklist and links are `ul`, steps and timeline `ol`, facts, keys, entries and stats `dl`, code, image, diff and terminal `figure`, tabs `form`). It does not change a list's display, marks, padding or room between items, which floe sets for a list that is a part's box (`floe part guide`, *The CSS layers and @scope*); a list that takes a look takes those from the template's `page.css` too, so that the template adjusts it.
 - floe starts every page with no margin on the body, and centres the page in a column on an element of the class `floe-column` (`<main class="floe-column">`): `--column-width` wide, the palette's `--page-width` unless the template sets it, within `--page-pad` each side. A page of one column sets `:scope { --column-width: var(--text-width); }` in its `page.css`; a theme sets no `--column-width`. Both stop at the parts' boxes, as `page.css` does, and `page.css` wins over them whatever its selectors. floe sets no font size, so the page's text takes the size its reader's browser sets.
 
 `report`'s `page.css`, for one, lays out its column (`<main class="floe-column">`):
@@ -124,7 +124,7 @@ A part draws an item of the data: `floe part list --all` lists every part, look 
 
 The part `text` is Markdown that stands among other parts, where `code` and `terminal` can stand beside it: floe warns of a fenced block of code in it, to be written in `code`. It draws its Markdown in a box of no part (`data-floe-text`), with no ground or tone of its own, so that it takes the face and tone around it; `page.css` and the theme's `base.css` stop at it, and the theme's `markdown.css` draws it as Markdown anywhere. Its headings are in Markdown's sizes (1.2em and 1.1em), as in a template's own Markdown. A field of plain Markdown, where no code part stands, is `{"type": "string", "format": "markdown"}` instead.
 
-A part of any kind, one key naming its kind, refers to `any.json`; a list of them, as report's sections do, refers to it as its items. Your own parts join it ([parts.md](parts.md)). In a template's root schema:
+A part of any kind, one key naming its kind, refers to `any.json`; a list of them, as report's sections do, refers to it as its items. Your own parts join it (`floe part guide`). In a template's root schema:
 
 ```json
 "part":  { "$ref": "floe:///parts/any.json" },
@@ -143,7 +143,7 @@ The last draws the part only when it is a note. Test the item before its kind, a
 
 ### Looks to borrow
 
-An element of the template borrows a look by `data-floe-look`, drawn alike in every theme ([parts.md](parts.md#borrowing-a-look) tells the rules):
+An element of the template borrows a look by `data-floe-look`, drawn alike in every theme (`floe part guide` (*Borrowing a look*) tells the rules):
 
 - `panel`: the box most parts are drawn in (`<section data-floe-look="panel">`).
 - `rows`, `table`: the looks of `checklist` and of `table`.
@@ -171,8 +171,8 @@ The page's colours and faces are CSS variables that the theme's `palette.css` se
 | `--good`, `--warn`, `--bad`, `--good-soft`, `--warn-soft`, `--bad-soft` | Good, warning and bad, and their pale grounds: the colours of those tones |
 | `--on-fill` | Text on a face filled with `--accent` or a tone's colour, such as a pill |
 | `--accent-fill`, `--good-fill`, `--warn-fill`, `--bad-fill`, `--muted-fill` | A theme's own fill for a tone (`--good-fill`), which `--tone-fill` takes; left out, the tone's `-soft` |
-| `--tone`, `--tone-soft`, `--tone-fill` | The colours of the tone of the element they are read in (`data-floe-tone`, [parts.md](parts.md#the-css-layers-and-scope)), from those above; accent's outside a tone. A template marks a tone so too |
-| `--shadow` | A colour for shadows; a box casts one only when its theme sets `--floe-shadow-color` on it ([parts.md](parts.md#themes)) |
+| `--tone`, `--tone-soft`, `--tone-fill` | The colours of the tone of the element they are read in (`data-floe-tone`, `floe part guide` (*The CSS layers and @scope*)), from those above; accent's outside a tone. A template marks a tone so too |
+| `--shadow` | A colour for shadows; a box casts one only when its theme sets `--floe-shadow-color` on it (`floe theme guide`) |
 | `--floe-shadow-x`, `--floe-shadow-y`, `--floe-shadow-blur`, `--floe-shadow-spread` | The theme's one shadow, in px or rem (none by default) |
 | `--radius`, `--radius-small`, `--radius-pill` | How round corners are, one length each: a box's (a panel, a note, code, a quote), a small box's within one (a key, a bar, an image, code in a line), and a pill's (a cell, a tab's title; a cell that wraps rounds no more than floe's `--floe-pill-end`). A box along the edge of another, a gap within it, subtracts a variable of that gap, which its padding reads too: default sets `--default-pad` and reads it in `padding` and in `calc(var(--radius) - var(--default-pad))` |
 | `--font`, `--display`, `--mono` | The text's typeface, the headings', and the fixed-width one. Name a face before `monospace` in `--mono`: a page sets no font size, and a browser sizes text in `monospace` alone from 13px |
@@ -184,13 +184,13 @@ The page's colours and faces are CSS variables that the theme's `palette.css` se
 | `--text-width` | The width of a page of one column, which a template sets its column to by `--column-width: var(--text-width)` (as `adr` and `runbook` do), and of a note. Text itself takes the width of the column or the box it is in |
 | `--page-width`, `--page-pad` | The column a page is centred in (`.floe-column`): its width, unless the template sets `--column-width`, and the pad each side of it, inside the column's box |
 
-floe's base draws the page's ground, colour and face on its root with them (`:root { background: var(--page-bg); color: var(--fg); font-family: var(--font); }`), which `page.css` may set otherwise on `:scope`. A theme of your own may set them too ([parts.md](parts.md#themes)). In print, every ground is kept as the screen draws it.
+floe's base draws the page's ground, colour and face on its root with them (`:root { background: var(--page-bg); color: var(--fg); font-family: var(--font); }`), which `page.css` may set otherwise on `:scope`. A theme of your own may set them too (`floe theme guide`). In print, every ground is kept as the screen draws it.
 
 An element that fills itself with a colour and holds text, as a band or a filled note, sets `--face` to its ground and `--on-face` to its text's colour, and paints itself with them (`background: var(--face); color: var(--on-face)`): floe's base then draws the links, a line's code (framed, on no ground of its own) and the focus ring in it in `--on-face`, where the accent would sink into the fill. What a part holds starts afresh, on the part's own ground. An element that paints a light ground of its own, as a quote on a panel, starts afresh what it holds too (`blockquote > * { --face: initial; --on-face: initial; }`), and the look `panel` sets its text's colour with its ground, and a colour set on no ground of its own is written `var(--on-face, …)`, so as to read in a face.
 
 ## schema.json
 
-A [JSON Schema](https://json-schema.org/) (2020-12) of the data file's items. Write `"additionalProperties": false` so that a misspelt key is refused: the `schema.json` that `floe template new` makes has none, so add it yourself. With it, and the keys written under `properties` alone, refuse a key under a condition not by `false` for it, which is told only as `false schema`, but by `then` listing the keys it takes as `true` with `"additionalProperties": false`, which names the key: the list copies `properties`, so add a key to both.
+A JSON Schema (2020-12) of the data file's items. Write `"additionalProperties": false` so that a misspelt key is refused: the `schema.json` that `floe template new` makes has none, so add it yourself. With it, and the keys written under `properties` alone, refuse a key under a condition not by `false` for it, which is told only as `false schema`, but by `then` listing the keys it takes as `true` with `"additionalProperties": false`, which names the key: the list copies `properties`, so add a key to both.
 
 - `lang`, `template`, `theme` and `title` are read by floe and are not declared, nor required.
 - A `format` that tells floe how to draw a text: `markdown`, `html` or `image`. Declare it under `properties`, `additionalProperties` or `items`, where floe follows; the `additionalProperties` of the root holds neither (it would draw the keys floe reads itself, `lang` and `title` too).
@@ -230,7 +230,7 @@ Relations between items that a schema cannot say, each checked on every item of 
 
 - A list on the way of `for` is gone through item by item: `sections.parts` checks the parts of every section, and a failure is reported at its item.
 - Without `for`, a check runs once, on the whole data file as `item`.
-- `expr` is an [expr](https://expr-lang.org/) expression that must hold. It sees the list's item as `item` and the data file's items as `doc`. Each item it fails for is reported at its `field`, with `message`.
+- `expr` is an expr expression that must hold. It sees the list's item as `item` and the data file's items as `doc`. Each item it fails for is reported at its `field`, with `message`.
 - The path of `for` must be one the schema declares; `field` is not checked against it.
 - An expression with a ` #` in it, as expr's `#` in `filter(xs, # > 1)`, goes in quotes: YAML would read a comment from there.
 
@@ -253,7 +253,7 @@ A data file of the template, to start one from: `floe template show <name> examp
 
 ## Images
 
-An image, of the data or of `assets/`, is a png, jpeg, gif, webp or svg file, by its name, up to 1 MiB. An image of the data is named as [pages.md](pages.md#images) tells; one of `assets/` by its path in `assets/`, with one `/` between names, without `./` or `..`, and never under a name starting with a dot, which floe does not read (`assets/ has no ".x/a.png"`).
+An image, of the data or of `assets/`, is a png, jpeg, gif, webp or svg file, by its name, up to 1 MiB. An image of the data is named by its path, relative to the data file's directory and under it (`floe part show image schema.json`); one of `assets/` by its path in `assets/`, with one `/` between names, without `./` or `..`, and never under a name starting with a dot, which floe does not read (`assets/ has no ".x/a.png"`).
 
 - `floe template check` reads every image of `assets/`.
 - The images `example.yaml` names are read from the template's directory: a data file started from the example needs them beside it.
