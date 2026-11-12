@@ -14,8 +14,9 @@ const (
 	helpPanels  = "['help-about', 'help-keys'].filter((id) => document.getElementById(id).offsetParent !== null).join(' ')"
 	helpOpen    = "document.getElementById('keys').open + ' ' + " + helpPressed + " + ' ' + " + helpPanels +
 		" + ' ' + (document.activeElement === document.querySelector('#keys [data-close]'))"
-	// Where the dialog and the first button stand: the buttons must not move as one panel goes for the other.
-	helpTops = "(() => { const t = (e) => Math.round(document.querySelector(e).getBoundingClientRect().top); return t('#keys') + '/' + t('.help-switch .btn'); })()"
+	// Where the dialog stands and each button, to a tenth: the buttons must not move, nor change their width, as one panel goes for the other.
+	helpTops = `(() => { const r = (e) => { const b = e.getBoundingClientRect(); return [b.left, b.top, b.width].map((v) => Math.round(v * 10) / 10).join(','); };
+		return r(document.getElementById('keys')) + ' ' + [...document.querySelectorAll('.help-switch .btn')].map(r).join(' '); })()`
 	// The box of the panels, as the window leaves it.
 	helpBox = `(() => { const d = document.getElementById('keys'), p = document.querySelector('.help-panels'), r = d.getBoundingClientRect(),
 		c = document.querySelector('#keys [data-close]').getBoundingClientRect();
@@ -66,10 +67,11 @@ func TestUIHelp(t *testing.T) { //nolint:paralleltest // the browser tests share
 	keyDown(b, "key: '?', shiftKey: true")
 	b.eval("openKeys('keys')")
 	out = append(out, b.eval(helpOpen))
-	// With another window open, openKeys leaves the help as it was: shut on the shortcuts, it stays on them.
+	// With another window open, openKeys leaves the help as it was: shut on the shortcuts, it stays on them, and its d row as it was.
 	b.eval("document.getElementById('keys').close(); openKeys(); document.getElementById('keys').close(); openFind()")
+	b.eval("for (const e of document.querySelectorAll('#keys .diff-go')) e.hidden = false")
 	b.eval("openKeys('about')")
-	out = append(out, b.eval("document.getElementById('keys').open + ' ' + "+helpPressed))
+	out = append(out, b.eval("document.getElementById('keys').open + ' ' + "+helpPressed+" + ' ' + [...document.querySelectorAll('#keys .diff-go')].every((e) => !e.hidden)"))
 	b.eval("document.getElementById('find').close()")
 
 	// The buttons stay as the panel changes, on the list and on the task list.
@@ -124,7 +126,7 @@ func TestUIHelp(t *testing.T) { //nolint:paralleltest // the browser tests share
 
 	check(t, "help", out, strings.Join([]string{
 		// the bar's button, ? and Enter; opened again by the button after the shortcuts; ? and openKeys while it is open; another window open
-		"true about help-about true", "false", "true keys help-keys true", "false", "true about help-about true", "true about help-about true", "false keys",
+		"true about help-about true", "false", "true keys help-keys true", "false", "true about help-about true", "true about help-about true", "false keys true",
 		// the buttons stay where they are as the panel goes
 		"/ same keys help-keys", "/tasks same keys help-keys",
 		// the two screens' sections, the words in them, the buttons, no key

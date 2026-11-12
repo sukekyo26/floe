@@ -334,7 +334,8 @@
   .dialog-actions .btn { height: 2.25rem; padding: 0 0.9rem; font-size: var(--text); }
   a.btn { color: var(--fg); text-decoration: none; }
   .btn:hover { border-color: var(--faint); }
-  .btn.primary, .btn[aria-pressed="true"] { font-weight: 600; color: var(--on-ink); border-color: transparent; background: var(--ink); }
+  .btn.primary, .btn[aria-pressed="true"] { color: var(--on-ink); border-color: transparent; background: var(--ink); }
+  .btn.primary { font-weight: 600; }
   .btn.primary:hover, .btn[aria-pressed="true"]:hover { background: var(--ink-hover); }
   .btn:disabled { opacity: 0.6; cursor: progress; }
   .btn svg { width: 15px; height: 15px; }
@@ -1275,7 +1276,7 @@
 <dialog id="keys" aria-labelledby="keys-title">
   <div class="modal-body keys-body">
     <div class="modal-head"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="9"/><path d="M9.6 9.4a2.5 2.5 0 0 1 4.8.8c0 1.7-2.4 2-2.4 3.6"/><path d="M12 17.2v.01"/></svg><h2 id="keys-title">{{.Msg "ui_help"}}</h2></div>
-    <div class="help-switch" role="group" aria-labelledby="keys-title">
+    <div class="help-switch">
       <button type="button" class="btn" data-help="about" aria-pressed="true">{{.Msg "ui_help_about"}}</button>
       <button type="button" class="btn" data-help="keys" aria-pressed="false">{{.Msg "ui_keys"}}</button>
     </div>
@@ -5986,11 +5987,11 @@
   }
   // 'keys' where a press of ? opens it, 'about' where the bar's button does
   function openKeys(name = 'keys') {
+    if (document.querySelector('dialog[open]')) return;
     // d, only where it goes somewhere: the same as the button it presses
     const open = framed ? $('frame-actions') : $('read-actions');
     const diffable = !DIFF && !open.hidden && open.querySelector('.diff-open:not([hidden])');
     for (const e of $('keys').querySelectorAll('.diff-go')) e.hidden = !diffable;
-    if (document.querySelector('dialog[open]')) return;
     $('keys').showModal();
     showHelp(name);
   }
