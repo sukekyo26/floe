@@ -89,25 +89,39 @@ func headingIDs(src []byte) []string {
 	return ids
 }
 
-// floe diagram guide prints docs/diagrams.md as it is to an agent, which cannot open another doc: no link leaves it
-// but to a heading of its own. A link's destination is read from the Markdown's tree, so that a link of any form (a
-// path, ../, ./, a heading of another doc, a reference, a URL) is told.
-func TestDiagramGuideLinks(t *testing.T) {
+// The docs floe prints (floe guide, floe diagram|part|template|theme guide) reach an agent, which cannot open
+// another doc: no link leaves one but to a heading of its own. A link's destination is read from the Markdown's
+// tree, so that a link of any form (a path, ../, ./, a heading of another doc, a reference, a URL) is told. The docs
+// are those docs/docs.go embeds, so that a doc printed anew is checked too.
+func TestGuideDocLinks(t *testing.T) {
 	t.Parallel()
 
-	_, dests, headings, bad := readGuideDoc(t, diagramGuides[0])
-	if len(dests) == 0 {
-		t.Fatal("no link found: the doc links its headings")
+	src, err := os.ReadFile("../../docs/docs.go")
+	if err != nil {
+		t.Fatal(err)
 	}
-	for _, d := range dests {
-		if !strings.HasPrefix(d, "#") {
-			t.Errorf("%s links %q: floe diagram guide prints it, and an agent cannot open another doc (write what it says, or a command that prints it)", diagramGuides[0], d)
-		} else if !slices.Contains(headings, d) {
-			t.Errorf("%s links %q, which no heading of it has (its headings: %v)", diagramGuides[0], d, headings)
+	embedded := regexp.MustCompile(`(?m)^//go:embed (\S+)$`).FindAllStringSubmatch(string(src), -1)
+	if len(embedded) < 5 {
+		t.Fatalf("docs.go embeds %d docs, want guide.md, diagrams.md, parts.md, templates.md and themes.md", len(embedded))
+	}
+	links := 0
+	for _, m := range embedded {
+		path := "../../docs/" + m[1]
+		_, dests, headings, bad := readGuideDoc(t, path)
+		links += len(dests)
+		for _, d := range dests {
+			if !strings.HasPrefix(d, "#") {
+				t.Errorf("%s links %q: floe prints it, and an agent cannot open another doc (write what it says, or a command that prints it)", path, d)
+			} else if !slices.Contains(headings, d) {
+				t.Errorf("%s links %q, which no heading of it has (its headings: %v)", path, d, headings)
+			}
+		}
+		for _, b := range bad {
+			t.Errorf("%s holds %s: write fenced code, and no HTML", path, b)
 		}
 	}
-	for _, b := range bad {
-		t.Errorf("%s holds %s: write fenced code, and no HTML", diagramGuides[0], b)
+	if links == 0 {
+		t.Fatal("no link found: the docs link their headings")
 	}
 }
 

@@ -27,7 +27,7 @@ func (a *app) diagramCmd() *cobra.Command {
 		Short: "Draw diagrams from specs of parts on a canvas",
 		Args:  cobra.NoArgs,
 	}
-	cmd.AddCommand(a.diagramRenderCmd(), a.diagramInspectCmd(), a.diagramExampleCmd(), a.diagramGuideCmd())
+	cmd.AddCommand(a.diagramRenderCmd(), a.diagramInspectCmd(), a.diagramExampleCmd(), a.docGuideCmd("Print how to write a diagram, by hand or as a graph, so that floe does not refuse it", docs.DiagramGuide))
 	return cmd
 }
 
@@ -241,13 +241,14 @@ func placedAt(file string, pos yamlpos.Pos, got string) string {
 	return usererr.Where(file, pos.Line, pos.Column) + ": " + got
 }
 
-func (a *app) diagramGuideCmd() *cobra.Command {
+// docGuideCmd is a command guide that prints doc, a doc of floe's as it is.
+func (a *app) docGuideCmd(short string, doc []byte) *cobra.Command {
 	return &cobra.Command{
 		Use:   "guide",
-		Short: "Print how to write a diagram, by hand or as a graph, so that floe does not refuse it",
+		Short: short,
 		Args:  cobra.NoArgs,
 		RunE: func(_ *cobra.Command, _ []string) error {
-			a.write(docs.DiagramGuide)
+			a.write(doc)
 			return nil
 		},
 	}
