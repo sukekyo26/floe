@@ -74,6 +74,17 @@ A theme sets these on the element that needs them, in any file (`--tone` and the
 | `--face`, `--on-face` | The background and the text colour of a box filled with colours of its own | not set (`initial` on what a part's box holds) |
 | `--tone`, `--tone-soft`, `--tone-fill` | The colours of the tone of the element they are read in (`data-floe-tone`; accent's outside a tone). floe builds them from the palette's tone colours. They are read, not set: `background: var(--tone-soft); color: var(--tone)` | built from the palette |
 
+### Padding and text size
+
+floe's base sets these on `:root`. A theme sets them on `:scope` in `palette.css` or `base.css`.
+
+| Variable | What it changes | Default |
+|---|---|---|
+| `--floe-row-pad` | The padding above and below a row | `0.4rem` |
+| `--floe-pad-block`, `--floe-pad-inline` | A box's padding, and a row's at the sides | `1.1rem`, `1.3rem` |
+| `--floe-text-small` | The small text of parts: a pill, a chip, a ring's number, a key, a table's heading, a term, a date, a count | `0.8rem` |
+| `--floe-text-aside` | The slightly larger small text: a card's or a step's words, a note's title, a tab's name, a value's unit | `0.9rem` |
+
 ### Part variables
 
 A part reads its variables on its own root. A theme sets one on the root `:scope` of its file of the part or look that sets or reads it (`floe part show <part> part.css` prints it): a look's file reaches every part that takes the look (`marked.css` reaches `checklist` and `decision`), a part's file that part alone. floe's own themes set them nowhere else (floe's tests refuse any other place in floe's themes; `floe theme check` does not test yours). A variable a part sets on an element inside it from the data (chart's `--c`, code's `--digits`) is the part's own: a value on the root does not reach it.
