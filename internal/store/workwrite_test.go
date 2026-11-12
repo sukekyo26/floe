@@ -110,13 +110,13 @@ func TestWorkWriteOne(t *testing.T) {
 		want     string
 		conflict bool
 	}{
-		{"a category with pages left out", store.WorkWrite{TaskEdit: store.TaskEdit{Categories: &[]string{"y"}}, Project: ptr("p"), Task: ptr("#9")}, "category z of task #9 in project p has pages (a)", false},
+		{"a category with pages left out", store.WorkWrite{TaskEdit: store.TaskEdit{Categories: &[]string{"y"}}, TaskProject: ptr("p"), Task: ptr("#9")}, "category z of task #9 in project p has pages (a)", false},
 		// Both tasks are there, as the screen says of one: the pages moved meanwhile, so it reads again
 		{"what the screen saw, of two tasks", store.WorkWrite{TaskEdit: store.TaskEdit{New: &no}, Slugs: []string{"a", "b"}}, "task #9 has changed since it was read", true},
 		{"a parent of two projects", store.WorkWrite{TaskEdit: store.TaskEdit{Parent: ptr("#1")}, Slugs: []string{"a", "b"}, Task: ptr("#9")}, "a parent goes with one task, and the pages are on tasks of 2 projects", false},
 		{"a field of pages taken off", store.WorkWrite{TaskEdit: store.TaskEdit{State: ptr("done")}, Slugs: []string{"a"}, Task: ptr("")}, "takes pages off their task changes no task", false},
 		{"a category of a page of no task", store.WorkWrite{Slugs: []string{"c"}, Category: ptr("x")}, "page c is on no task", false},
-		{"new, there", store.WorkWrite{TaskEdit: store.TaskEdit{New: &yes, Title: ptr("t")}, Project: ptr("p"), Task: ptr("#9")}, "task #9 is there already", true},
+		{"new, there", store.WorkWrite{TaskEdit: store.TaskEdit{New: &yes, Title: ptr("t")}, TaskProject: ptr("p"), Task: ptr("#9")}, "task #9 is there already", true},
 		{"a page not there", store.WorkWrite{Slugs: []string{"a", "none"}, Task: ptr("#1")}, `no page "none"`, false},
 	} {
 		pageIn(t, s, root, "c", "p")
@@ -130,7 +130,7 @@ func TestWorkWriteOne(t *testing.T) {
 		}
 	}
 	// Nothing to write of a task of no row is not found, and makes none.
-	if _, err := s.Work(store.WorkWrite{Project: ptr("p"), Task: ptr("#5")}); !errors.Is(err, store.ErrNotFound) {
+	if _, err := s.Work(store.WorkWrite{TaskProject: ptr("p"), Task: ptr("#5")}); !errors.Is(err, store.ErrNotFound) {
 		t.Errorf("nothing of no row: %v", err)
 	}
 }
@@ -188,7 +188,7 @@ func TestWorkParentOfPages(t *testing.T) {
 	pageIn(t, s, root, "x", "p")
 	pageIn(t, s, root, "y", "p")
 	for _, w := range []store.WorkWrite{
-		{TaskEdit: store.TaskEdit{Title: ptr("parent")}, Project: ptr("p"), Task: ptr("#P")},
+		{TaskEdit: store.TaskEdit{Title: ptr("parent")}, TaskProject: ptr("p"), Task: ptr("#P")},
 		{Slugs: []string{"x"}, Task: ptr("#1")},
 		{Slugs: []string{"y"}, Task: ptr("#2")},
 		{TaskEdit: store.TaskEdit{Parent: ptr("#P")}, Slugs: []string{"x", "y"}},

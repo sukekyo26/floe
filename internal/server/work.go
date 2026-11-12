@@ -32,8 +32,8 @@ func (s *Server) editWork(w http.ResponseWriter, r *http.Request) {
 		send(w, http.StatusBadRequest, "category, pin and clear go with slugs")
 		return
 	}
-	if len(in.Slugs) > 0 && in.Project != nil {
-		send(w, http.StatusBadRequest, "project goes without slugs: a page's task is of the page's project")
+	if len(in.Slugs) > 0 && in.TaskProject != nil {
+		send(w, http.StatusBadRequest, "taskProject goes without slugs: a page's task is of the page's project")
 		return
 	}
 	written, err := s.cfg.Store.Work(*in)
@@ -50,13 +50,16 @@ func (s *Server) editWork(w http.ResponseWriter, r *http.Request) {
 }
 
 // forgetTask removes the task the query names: not found for none, refused while a page or a child is on it.
+// LIMIT: the query is read for taskProject and task alone, and a key it does not know is not refused, so a project
+// beside taskProject is left unread. floe's own CLI and screen send taskProject only; count the keys if a client
+// comes to send both.
 func (s *Server) forgetTask(w http.ResponseWriter, r *http.Request) {
 	if !s.origins[r.Header.Get("Origin")] {
 		send(w, http.StatusForbidden, "forbidden origin")
 		return
 	}
 	q := r.URL.Query()
-	err := s.cfg.Store.ForgetTask(q.Get("project"), q.Get("task"))
+	err := s.cfg.Store.ForgetTask(q.Get("taskProject"), q.Get("task"))
 	if errors.Is(err, store.ErrNotFound) {
 		notFound(w)
 		return

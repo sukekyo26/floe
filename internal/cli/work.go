@@ -126,7 +126,7 @@ func taskEdit(cmd *cobra.Command, f workFlags) store.TaskEdit {
 }
 
 func taskQuery(t taskOf) string {
-	return "/api/tasks?" + url.Values{"project": {t.project}, "task": {t.name}}.Encode()
+	return "/api/tasks?" + url.Values{"taskProject": {t.project}, "task": {t.name}}.Encode()
 }
 
 // workTask changes the task --task names, or forgets it; with no field to change, it tells the task, writing nothing.
@@ -149,7 +149,7 @@ func (a *app) workTask(cmd *cobra.Command, f workFlags) error {
 	writing := !f.forget && len(changed(cmd, "title", "state", "url", "categories", "parent")) > 0
 	if writing {
 		body := store.WorkWrite{
-			TaskEdit: ed, Slugs: nil, Project: &t.project, Task: &t.name, Category: nil, Pin: nil, Clear: false,
+			TaskEdit: ed, Slugs: nil, TaskProject: &t.project, Task: &t.name, Category: nil, Pin: nil, Clear: false,
 		}
 		if sent, err = encodeSent(body); err != nil {
 			return err
@@ -261,7 +261,7 @@ func (a *app) tellTask(w store.TaskWritten, ed store.TaskEdit) {
 	case w.Wrote:
 		key = "cli_work_changed"
 	}
-	line := english.Msg(key, w.Task, inProject(w.Project))
+	line := english.Msg(key, w.Task, inProject(w.TaskProject))
 	if fields := taskFields(w.Row, ed, len(w.Added) > 0); fields != "" {
 		line += "; " + fields
 	}
@@ -504,7 +504,7 @@ func tasksOfPages(list []store.Listed, slugs []string, named string, isNamed, ne
 // pageWork is the write of the flags of floe work with slugs: the pages, the task --task names, the task's fields ed,
 // and the pages' own.
 func pageWork(cmd *cobra.Command, f workFlags, ed store.TaskEdit, slugs []string) store.WorkWrite {
-	w := store.WorkWrite{TaskEdit: ed, Slugs: slugs, Project: nil, Task: nil, Category: nil, Pin: nil, Clear: f.clear}
+	w := store.WorkWrite{TaskEdit: ed, Slugs: slugs, TaskProject: nil, Task: nil, Category: nil, Pin: nil, Clear: f.clear}
 	if cmd.Flags().Changed("task") {
 		w.Task = &f.task
 	}

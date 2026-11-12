@@ -15,7 +15,7 @@ import (
 
 // editTask is a write of the task (project, name) alone, its row as written.
 func editTask(s *store.Store, project, name string, ed store.TaskEdit) (store.TaskWritten, error) {
-	written, err := s.Work(store.WorkWrite{TaskEdit: ed, Slugs: nil, Project: &project, Task: &name, Category: nil, Pin: nil, Clear: false})
+	written, err := s.Work(store.WorkWrite{TaskEdit: ed, Slugs: nil, TaskProject: &project, Task: &name, Category: nil, Pin: nil, Clear: false})
 	if err != nil {
 		return store.TaskWritten{}, err
 	}

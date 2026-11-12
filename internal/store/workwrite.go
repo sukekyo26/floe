@@ -10,15 +10,15 @@ import (
 )
 
 // WorkWrite is one write of pages and their tasks, all checked under the lock before any is written: the pages' own
-// marks, and the fields of each task the pages are on, or of the task Project and Task name without pages. Its task
+// marks, and the fields of each task the pages are on, or of the task TaskProject and Task name without pages. Its task
 // fields are TaskEdit's, embedded, which encoding/json/v2 reads as the write's own.
 type WorkWrite struct {
 	TaskEdit
 
 	// Slugs is the pages, none for a task alone.
 	Slugs []string `json:"slugs,omitzero"`
-	// Project is, without Slugs, the task's project as tasks.json has it ("/" for none).
-	Project *string `json:"project,omitzero"`
+	// TaskProject is, without Slugs, the task's project as tasks.json has it ("/" for none).
+	TaskProject *string `json:"taskProject,omitzero"`
 	// Task is, with Slugs, the task the pages go on in their projects ("" takes them off); without, the task written.
 	Task *string `json:"task,omitzero"`
 	// Category, Pin and Clear are the pages' own, as WorkEdit has them; Clear takes the task, category and pin off.
@@ -63,7 +63,7 @@ func (s *Store) Work(w WorkWrite) (WorkWritten, error) {
 	}
 	var alone taskRef
 	if len(w.Slugs) == 0 {
-		project, name, err := taskKey(deref(w.Project), deref(w.Task))
+		project, name, err := taskKey(deref(w.TaskProject), deref(w.Task))
 		if err != nil {
 			return WorkWritten{}, err
 		}
@@ -271,7 +271,7 @@ func (s *Store) writeWork(all Tasks, w WorkWrite, refs []taskRef, pages []workPa
 			changed = true
 		}
 		out.Tasks = append(out.Tasks, TaskWritten{
-			Project: ref.project, Task: ref.name, Row: t, Made: !had, Wrote: wrote, Added: added,
+			TaskProject: ref.project, Task: ref.name, Row: t, Made: !had, Wrote: wrote, Added: added,
 		})
 	}
 	if changed {
