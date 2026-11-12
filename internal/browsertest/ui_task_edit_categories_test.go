@@ -202,7 +202,7 @@ func TestUITaskEditCategories(t *testing.T) { //nolint:paralleltest // the brows
 		"dropped: 案x,設計x,実装x,レビューx,公開d / Move レビュー up / Deleted リリース",
 		"dropped last: 案x,設計x,実装x,レビューx / Move レビュー up",
 		"saved: 6 [案,設計,実装,レビュー]",
-		`sent: {"project":"proj","task":"S300","new":false,"rev":5,"categories":["案","設計","実装","レビュー"]}`,
+		`sent: {"taskProject":"proj","task":"S300","new":false,"rev":5,"categories":["案","設計","実装","レビュー"]}`,
 		"unchanged: 0",
 		"paged meanwhile: Failed to save: category リリース of task S300 in project proj has pages (memo-a): take them off it first, or keep it in the order",
 		"paged meanwhile, written: 7 [案,設計,実装,リリース,レビュー]",

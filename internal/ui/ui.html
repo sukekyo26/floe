@@ -4196,7 +4196,7 @@
     if (arm(btn, t('ui_task_forget_sure'))) return;
     $('task-delete-error').hidden = true;
     try {
-      const res = await api(`/api/tasks?${new URLSearchParams({ project, task: TASK_NAME })}`, { method: 'DELETE' });
+      const res = await api(`/api/tasks?${new URLSearchParams({ taskProject: project, task: TASK_NAME })}`, { method: 'DELETE' });
       if (!res.ok && res.status !== 404) throw new Error(await res.text());
       location.href = taskListHref(task);
     } catch (e) {
@@ -5160,13 +5160,13 @@
     let rev = null;
     if (res.ok) {
       const written = await res.json();
-      for (const task of written.tasks) (tasksRead.tasks[task.project] ??= {})[task.task] = task.row;
+      for (const task of written.tasks) (tasksRead.tasks[task.taskProject] ??= {})[task.task] = task.row;
       rev = written.tasks[0]?.row.rev ?? null;
     }
     return { ok: res.ok, status: res.status, text, rev, stale: t('ui_task_stale', text) };
   }
   // A write of the task (project, name) alone
-  const writeTask = (project, name, body) => writeWork({ project, task: name, ...body });
+  const writeTask = (project, name, body) => writeWork({ taskProject: project, task: name, ...body });
   // The rev of a task as this screen knows it: as read, or as it wrote it since; 0 of no row. A button drawn on the page sends it; what
   // shows a task held apart (the open choices, a dialog, a toast) sends the rev of what it shows, which its own write moves on
   function readRev(project, name) {

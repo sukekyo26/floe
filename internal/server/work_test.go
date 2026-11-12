@@ -21,7 +21,7 @@ func TestWorkAPI(t *testing.T) {
 
 	e := newEnv(t)
 	task := func(project, name string) string {
-		return "/api/tasks?" + url.Values{"project": {project}, "task": {name}}.Encode()
+		return "/api/tasks?" + url.Values{"taskProject": {project}, "task": {name}}.Encode()
 	}
 	work := func(body string) (int, string) {
 		t.Helper()
@@ -35,7 +35,7 @@ func TestWorkAPI(t *testing.T) {
 		if err := json.Unmarshal([]byte(body), &fields); err != nil {
 			t.Fatal(err)
 		}
-		fields["project"], fields["task"] = project, name
+		fields["taskProject"], fields["task"] = project, name
 		b, err := json.Marshal(fields)
 		if err != nil {
 			t.Fatal(err)
@@ -55,7 +55,7 @@ func TestWorkAPI(t *testing.T) {
 	answer := func(body string) string {
 		t.Helper()
 		w := first(body)
-		return fmt.Sprintf("%s %s %d", w.Project, w.Task, w.Row.Rev)
+		return fmt.Sprintf("%s %s %d", w.TaskProject, w.Task, w.Row.Rev)
 	}
 	tasks := func() store.Tasks {
 		t.Helper()
@@ -147,17 +147,17 @@ func TestWorkAPI(t *testing.T) {
 		body, want string
 	}{
 		{`{"task":"x","state":"done"}`, `a task needs its project: "/" for none`},
-		{`{"project":"  ","task":"x","state":"done"}`, `a task needs its project: "/" for none`},
-		{`{"project":"p","state":"done"}`, "a task needs an ID"},
-		{`{"project":"p","task":"x","state":"nope"}`, `unknown state "nope": use todo, doing, done, archived`},
-		{`{"project":"p","task":"x","url":"javascript:alert(1)"}`, `"javascript:alert(1)" is not an http or https URL`},
+		{`{"taskProject":"  ","task":"x","state":"done"}`, `a task needs its project: "/" for none`},
+		{`{"taskProject":"p","state":"done"}`, "a task needs an ID"},
+		{`{"taskProject":"p","task":"x","state":"nope"}`, `unknown state "nope": use todo, doing, done, archived`},
+		{`{"taskProject":"p","task":"x","url":"javascript:alert(1)"}`, `"javascript:alert(1)" is not an http or https URL`},
 	} {
 		if code, body := work(c.body); code != http.StatusBadRequest || body != c.want {
 			t.Errorf("PATCH %s = %d, %q, want %q", c.body, code, body, c.want)
 		}
 	}
 	// A project or ID that is no UTF-8, a lone surrogate in the body, is refused as decodeStrict reads it, before the store
-	for _, body := range []string{`{"project":"p","task":"\ud800","state":"done"}`, `{"project":"\ud800","task":"x","state":"done"}`, `{"slugs":["d"],"task":"\ud800"}`} {
+	for _, body := range []string{`{"taskProject":"p","task":"\ud800","state":"done"}`, `{"taskProject":"\ud800","task":"x","state":"done"}`, `{"slugs":["d"],"task":"\ud800"}`} {
 		if code, answer := work(body); code != http.StatusBadRequest || !strings.Contains(answer, "surrogate") {
 			t.Errorf("PATCH %s = %d, %q", body, code, answer)
 		}
@@ -211,7 +211,7 @@ func TestWorkAPI(t *testing.T) {
 	if w := e.do(t, http.MethodPatch, "/api/pages/d", `{"work":{"task":"#1"}}`, "Origin", origin, "Content-Type", jsonType); w.Code != http.StatusBadRequest {
 		t.Errorf("a page's work by its edit = %d, %s", w.Code, w.Body)
 	}
-	w := e.do(t, http.MethodDelete, "/api/tasks?project=shop&task=%FF", "", "Origin", origin)
+	w := e.do(t, http.MethodDelete, "/api/tasks?taskProject=shop&task=%FF", "", "Origin", origin)
 	if w.Code != http.StatusBadRequest || w.Body.String() != "a task's project and ID must be UTF-8" {
 		t.Errorf("forget of no UTF-8 = %d, %s", w.Code, w.Body)
 	}
@@ -223,6 +223,10 @@ func TestWorkAPI(t *testing.T) {
 	}
 	if got := page(`{"slugs":["d"],"task":""}`); got != `{"slug":"d","taskProject":"shop"}` {
 		t.Errorf("the answer of an edit taking the page off its task: %s", got)
+	}
+	// The query's old key reads as no project, and removes nothing: the task is still there for the next to remove
+	if w := e.do(t, http.MethodDelete, "/api/tasks?project=shop&task=%231", "", "Origin", origin); w.Code != http.StatusBadRequest || !strings.Contains(w.Body.String(), "needs its project") {
+		t.Errorf("forget by the old key = %d, %s", w.Code, w.Body)
 	}
 	if code, _ := forget("shop", "#1"); code != http.StatusNoContent {
 		t.Errorf("a task of no page = %d", code)
@@ -263,10 +267,14 @@ func TestWorkWriteAPI(t *testing.T) {
 		w := e.do(t, http.MethodPatch, "/api/work", body, "Origin", origin, "Content-Type", jsonType)
 		return w.Code, w.Body.String()
 	}
-	code, body := patch(`{"project":"p","task":"#2","new":true,"title":"C","parent":"#P","parentNew":true,"parentTitle":"Par"}`)
+	code, body := patch(`{"taskProject":"p","task":"#2","new":true,"title":"C","parent":"#P","parentNew":true,"parentTitle":"Par"}`)
 	var got store.WorkWritten
 	if err := json.Unmarshal([]byte(body), &got); err != nil || code != http.StatusOK {
 		t.Fatalf("a child and its parent made = %d, %s, %v", code, body, err)
+	}
+	// The answer names the task's project as the pages' are named (Edited): the Go type reads either, the text does not
+	if !strings.Contains(body, `"taskProject":"p"`) || strings.Contains(body, `"project"`) {
+		t.Errorf("the answer names the project by a key but taskProject: %s", body)
 	}
 	all, err := store.New(e.root).ReadTasks()
 	if err != nil {
@@ -275,12 +283,15 @@ func TestWorkWriteAPI(t *testing.T) {
 	if c, p := all["p"]["#2"], all["p"]["#P"]; c.Title != "C" || c.Parent != "#P" || p.Title != "Par" || len(got.Tasks) != 1 || !got.Tasks[0].Made {
 		t.Errorf("made: %+v, %+v, answered %+v", c, p, got)
 	}
-	if code, body = patch(`{"project":"p","task":"#2","new":false,"rev":1,"state":"doing"}`); code != http.StatusOK {
+	if code, body = patch(`{"taskProject":"p","task":"#2","new":false,"rev":1,"state":"doing"}`); code != http.StatusOK {
 		t.Errorf("a screen's write, as it saw the row = %d, %s", code, body)
 	}
 	for _, c := range []struct{ body, want string }{
-		{`{"project":"p","task":"#2","category":"x"}`, "category, pin and clear go with slugs"},
-		{`{"slugs":["a"],"project":"p"}`, "project goes without slugs"},
+		{`{"taskProject":"p","task":"#2","category":"x"}`, "category, pin and clear go with slugs"},
+		{`{"slugs":["a"],"taskProject":"p"}`, "taskProject goes without slugs"},
+		// The old key is no other name for taskProject: refused as a key unknown, whether alone or beside it
+		{`{"project":"p","task":"#2","new":true,"title":"t"}`, `unknown object member name "project"`},
+		{`{"project":"a","taskProject":"b","task":"#2","new":true,"title":"t"}`, `unknown object member name "project"`},
 	} {
 		if code, body := patch(c.body); code != http.StatusBadRequest || !strings.Contains(body, c.want) {
 			t.Errorf("%s = %d, %s", c.body, code, body)

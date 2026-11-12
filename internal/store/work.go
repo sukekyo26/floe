@@ -430,11 +430,11 @@ func pastedURL(raw *string) *string {
 // screen puts in place of the row it read. Made is whether the task had no row before this write, and Wrote whether
 // its row was written: not when it came out as it was, unless a parent was made with it.
 type TaskWritten struct {
-	Project string `json:"project"`
-	Task    string `json:"task"`
-	Row     Task   `json:"row"`
-	Made    bool   `json:"made"`
-	Wrote   bool   `json:"wrote"`
+	TaskProject string `json:"taskProject"`
+	Task        string `json:"task"`
+	Row         Task   `json:"row"`
+	Made        bool   `json:"made"`
+	Wrote       bool   `json:"wrote"`
 	// Added is the categories of the write's pages added at the end of the row's, in order.
 	Added []string `json:"added,omitempty"`
 }
