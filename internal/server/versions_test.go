@@ -312,7 +312,8 @@ func TestDiffPage(t *testing.T) {
 
 // What the script floe adds to a page it serves tells its frame is told by the page's names, whatever the page is: a stored page's own
 // messages (open, keys, the version served, where it is), a diff's (its versions changed), and the diff of a key no longer the pair's,
-// which is not found. None says artifact, which these were called, whether or not it says the new name too.
+// which is not found. Each is looked for as the key it sends (pageKey: key, not pageKey, which pageKeysWanted holds too). None says
+// artifact, which these were called, whether or not it says the new name too.
 func TestServedScriptNames(t *testing.T) {
 	t.Parallel()
 
@@ -327,9 +328,9 @@ func TestServedScriptNames(t *testing.T) {
 		path  string
 		names []string
 	}{
-		{"/a/d/?raw", []string{"pageOpen", "pageHash", "pagePath", "pageServed", "pageKey", "pageKeysWanted"}},
-		{"/a/d/?raw&v=2&from=1&key=" + a.Key, []string{"pageChanged", "pagePath"}},
-		{"/a/d/?raw&v=2&from=1&key=other", []string{"pageChanged", "pagePath"}},
+		{"/a/d/?raw", []string{"pageOpen:", "pageHash:", "pagePath:", "pageServed:", "pageKey: key", "pageKeysWanted === true"}},
+		{"/a/d/?raw&v=2&from=1&key=" + a.Key, []string{"pageChanged:", "pagePath:"}},
+		{"/a/d/?raw&v=2&from=1&key=other", []string{"pageChanged:", "pagePath:"}},
 	} {
 		body := e.do(t, http.MethodGet, c.path, "").Body.String()
 		for _, name := range c.names {
