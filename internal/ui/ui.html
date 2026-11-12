@@ -685,8 +685,6 @@
   .help-lead, .keys-note { margin: 0; color: var(--muted); font-size: var(--text-small); }
   #help-about dl { grid-template-columns: 7.5rem minmax(0, 1fr); }
   #help-about dt { font-weight: 600; }
-  #help-about h3 { margin: 0 0 0.2rem; font-size: var(--text-small); color: var(--fg); }
-  #help-about section > p { margin: 0 0 0.5rem; color: var(--muted); font-size: var(--text-small); }
   /* The shortcuts' panel of the help */
   .keys-part { display: grid; gap: 1rem; }
   .keys-part[hidden] { display: none; }
@@ -1273,28 +1271,25 @@
     </div>
   </form>
 </dialog>
+{{define "helpProject"}}<dt>{{.Msg "ui_project"}}</dt><dd>{{.Msg "ui_help_project_text"}}</dd>{{end}}
 <dialog id="keys" aria-labelledby="keys-title">
   <div class="modal-body keys-body">
     <div class="modal-head"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="9"/><path d="M9.6 9.4a2.5 2.5 0 0 1 4.8.8c0 1.7-2.4 2-2.4 3.6"/><path d="M12 17.2v.01"/></svg><h2 id="keys-title">{{.Msg "ui_help"}}</h2></div>
     <div class="help-switch">
-      <button type="button" class="btn" data-help="about" aria-pressed="true">{{.Msg "ui_help_about"}}</button>
+      <button type="button" class="btn" data-help="about" aria-pressed="true"><span class="help-pages">{{.Msg "ui_help_about_pages"}}</span><span class="help-tasks">{{.Msg "ui_help_about_tasks"}}</span></button>
       <button type="button" class="btn" data-help="keys" aria-pressed="false">{{.Msg "ui_keys"}}</button>
     </div>
     <div class="help-panels">
       <div id="help-about" class="help-panel">
-        <p class="help-lead">{{.Msg "ui_help_lead"}}</p>
-        <dl><dt>{{.Msg "ui_project"}}</dt><dd>{{.Msg "ui_help_project_text"}}</dd></dl>
-        <section id="help-pages">
-          <h3>{{.Msg "ui_screen_pages"}}</h3>
-          <p>{{.Msg "ui_help_pages_text"}}</p>
-          <dl><dt>{{.Msg "ui_view_new"}}</dt><dd>{{.Msg "ui_help_new_text"}}</dd><dt>{{.Msg "ui_view_favorites"}}</dt><dd>{{.Msg "ui_help_favorites_text"}}</dd><dt>{{.Msg "ui_state_archived"}}</dt><dd>{{.Msg "ui_help_archive_text"}}</dd></dl>
-        </section>
-        <section id="help-tasks">
-          <h3>{{.Msg "ui_screen_tasks"}}</h3>
-          <p>{{.Msg "ui_help_tasks_text"}}</p>
+        <div class="help-panel help-pages">
+          <p class="help-lead">{{.Msg "ui_help_pages_text"}}</p>
+          <dl>{{template "helpProject" .}}<dt>{{.Msg "ui_view_new"}}</dt><dd>{{.Msg "ui_help_new_text"}}</dd><dt>{{.Msg "ui_view_favorites"}}</dt><dd>{{.Msg "ui_help_favorites_text"}}</dd><dt>{{.Msg "ui_state_archived"}}</dt><dd>{{.Msg "ui_help_archive_text"}}</dd></dl>
+        </div>
+        <div class="help-panel help-tasks">
+          <p class="help-lead">{{.Msg "ui_help_tasks_text"}}</p>
           {{/* LIMIT: the four states are named here: add a state that store.States comes to have */}}
-          <dl><dt>{{.Msg "ui_help_task"}}</dt><dd>{{.Msg "ui_help_task_text"}}</dd><dt>{{.Msg "ui_help_state"}}</dt><dd>{{.Msg "ui_help_state_text" (.Msg "ui_state_todo") (.Msg "ui_state_doing") (.Msg "ui_state_done") (.Msg "ui_state_archived")}}</dd><dt>{{.Msg "ui_task_category"}}</dt><dd>{{.Msg "ui_help_category_text"}}</dd><dt>{{.Msg "ui_pins"}}</dt><dd>{{.Msg "ui_help_pin_text"}}</dd></dl>
-        </section>
+          <dl>{{template "helpProject" .}}<dt>{{.Msg "ui_help_task"}}</dt><dd>{{.Msg "ui_help_task_text"}}</dd><dt>{{.Msg "ui_help_state"}}</dt><dd>{{.Msg "ui_help_state_text" (.Msg "ui_state_todo") (.Msg "ui_state_doing") (.Msg "ui_state_done") (.Msg "ui_state_archived")}}</dd><dt>{{.Msg "ui_task_category"}}</dt><dd>{{.Msg "ui_help_category_text"}}</dd><dt>{{.Msg "ui_pins"}}</dt><dd>{{.Msg "ui_help_pin_text"}}</dd></dl>
+        </div>
       </div>
       <div id="help-keys" class="help-panel" hidden>
         <p class="keys-note" id="keys-note-list">{{.Msg "ui_keys_note_list"}}</p>
@@ -6279,7 +6274,7 @@
     // The page alone in full, as the browser reads the link to it: a link on paper cannot be followed
     $('print-raw').href = $('print-raw').textContent = new URL(frameSrc, location.href).href;
     $('keys-list').hidden = $('keys-note-list').hidden = true;
-    $('help-tasks').hidden = true;
+    for (const e of document.querySelectorAll('.help-tasks')) e.hidden = true;
     $('q').addEventListener('keydown', (e) => {
       if (e.key === 'Enter' && !composing(e)) location.href = `/?q=${encodeURIComponent($('q').value.trim())}`;
     });
@@ -6298,7 +6293,7 @@
     }
   } else {
     $('keys-frame').hidden = $('keys-note-frame').hidden = true;
-    $(TASKS ? 'help-pages' : 'help-tasks').hidden = true;
+    for (const e of document.querySelectorAll(TASKS ? '.help-pages' : '.help-tasks')) e.hidden = true;
     $('diff').remove();
     // Back on a list, what the one before kept for j and k is over
     comeBack(performance.getEntriesByType('navigation')[0]?.type === 'back_forward');

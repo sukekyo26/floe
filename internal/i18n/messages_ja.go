@@ -762,8 +762,8 @@ var messagesJA = map[string]string{
 
 	// ui: the help, what floe is and what the words of its two screens mean
 	"ui_help":                "ヘルプ",
-	"ui_help_about":          "floe について",
-	"ui_help_lead":           "floe は、エージェントが書いたページを表示して管理する道具です。",
+	"ui_help_about_pages":    "ページ一覧について",
+	"ui_help_about_tasks":    "タスク一覧について",
 	"ui_help_project_text":   "ページをまとめる単位です。ページを floe に出した場所（リポジトリやフォルダ）の名前が付きます。ページ一覧にも、タスク一覧にも出ます。",
 	"ui_help_pages_text":     "保存したページを並べた画面です。",
 	"ui_help_new_text":       "まだ開いていない版があるページです。",

@@ -305,8 +305,8 @@ func TestDialogCloseWords(t *testing.T) {
 	}
 }
 
-// The help says what floe is, then each of the two screens in a section of its own with the words that are its own: the explanations stand
-// beside the words they explain, and a word does not move to the other screen's section.
+// The help tells of each of the two screens in a part of its own, under a tab of its name: a sentence on the screen, then the words of the
+// project and the screen's own, each with its explanation. A word does not move to the other screen's part.
 func TestHelpSections(t *testing.T) {
 	t.Parallel()
 
@@ -320,34 +320,45 @@ func TestHelpSections(t *testing.T) {
 		if err != nil {
 			t.Fatal(err)
 		}
-		var got []string
+		var got, tabs []string
 		for n := range doc.Descendants() {
-			if n.Type != html.ElementNode || attr(n, "id") != "help-about" {
+			if n.Type != html.ElementNode {
 				continue
 			}
-			for d := range n.Descendants() {
-				if d.Type != html.ElementNode {
-					continue
+			switch {
+			case attr(n, "id") == "help-about":
+				for d := range n.Descendants() {
+					if d.Type != html.ElementNode {
+						continue
+					}
+					switch d.DataAtom { //nolint:exhaustive // the sentences and the words only
+					case atom.P:
+						got = append(got, "¶ "+strings.TrimSpace(text(d)))
+					case atom.Dt:
+						got = append(got, strings.TrimSpace(text(d)))
+					case atom.Dd:
+						if strings.TrimSpace(text(d)) == "" {
+							t.Errorf("%s: a word of the help has no explanation", lang)
+						}
+					}
 				}
-				switch d.DataAtom { //nolint:exhaustive // the words and the screens' names only
-				case atom.H3:
-					got = append(got, "# "+strings.TrimSpace(text(d)))
-				case atom.Dt:
-					got = append(got, strings.TrimSpace(text(d)))
-				case atom.Dd:
-					if strings.TrimSpace(text(d)) == "" {
-						t.Errorf("%s: a word of the help has no explanation", lang)
+			case n.DataAtom == atom.Button && attr(n, "data-help") == "about":
+				for d := range n.Descendants() {
+					if d.Type == html.ElementNode && d.DataAtom == atom.Span {
+						tabs = append(tabs, strings.TrimSpace(text(d)))
 					}
 				}
 			}
 		}
 		want := []string{
-			c.Msg("ui_project"),
-			"# " + c.Msg("ui_screen_pages"), c.Msg("ui_view_new"), c.Msg("ui_view_favorites"), c.Msg("ui_state_archived"),
-			"# " + c.Msg("ui_screen_tasks"), c.Msg("ui_help_task"), c.Msg("ui_help_state"), c.Msg("ui_task_category"), c.Msg("ui_pins"),
+			"¶ " + c.Msg("ui_help_pages_text"), c.Msg("ui_project"), c.Msg("ui_view_new"), c.Msg("ui_view_favorites"), c.Msg("ui_state_archived"),
+			"¶ " + c.Msg("ui_help_tasks_text"), c.Msg("ui_project"), c.Msg("ui_help_task"), c.Msg("ui_help_state"), c.Msg("ui_task_category"), c.Msg("ui_pins"),
 		}
 		if !slices.Equal(got, want) {
 			t.Errorf("%s: the help says %q, want %q", lang, got, want)
+		}
+		if want := []string{c.Msg("ui_help_about_pages"), c.Msg("ui_help_about_tasks")}; !slices.Equal(tabs, want) {
+			t.Errorf("%s: the help's tab is named %q, want %q", lang, tabs, want)
 		}
 	}
 }

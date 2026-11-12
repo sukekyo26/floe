@@ -25,16 +25,17 @@ const (
 		return [d.scrollHeight <= d.clientHeight, p.scrollHeight > p.clientHeight, r.top >= 0 && r.bottom <= innerHeight, c.bottom <= innerHeight].join(' '); })()`
 )
 
-// What floe is tells of the screen it opens on alone: the section of the page list or of the task list in sight, its words, and the
-// help's two buttons of the one form (.btn), with no aria-controls and no key in the words.
-const helpAbout = "[...document.querySelectorAll('#help-about h3')].filter((h) => h.offsetParent !== null).map((h) => h.textContent).join('+') + ' ' + " +
+// What the help tells of the screen it opens on alone: the tab's name, the sentence on that screen in sight, the words of its part (the
+// project's and its own), and the help's two buttons of the one form (.btn), with no aria-controls, no heading and no key in the words.
+const helpAbout = "document.querySelector('.help-switch [data-help=about]').innerText + ' ' + " +
+	"[...document.querySelectorAll('#help-about .help-lead')].filter((p) => p.offsetParent !== null).length + ' ' + " +
 	"[...document.querySelectorAll('#help-about dl')].filter((d) => d.offsetParent !== null).map((d) => d.querySelectorAll('dt').length).join(',') + ' ' + " +
 	"document.querySelectorAll('.help-switch .btn').length + ' ' + document.querySelectorAll('.help-switch [aria-controls]').length + ' ' + " +
-	"document.querySelectorAll('#help-about kbd').length"
+	"document.querySelectorAll('#help-about h3').length + ' ' + document.querySelectorAll('#help-about kbd').length"
 
-// TestUIHelp says how the help opens and what it shows: the bar's button opens what floe is, ? the shortcuts, each with the focus on
-// the close button; the buttons stay where they are as a panel goes for the other, and the panels scroll from their top; what floe is
-// tells of the screen it opens on, as it moves from one to the other; the button is there from 641px.
+// TestUIHelp says how the help opens and what it shows: the bar's button opens the tab of the screen, ? the shortcuts, each with the focus on
+// the close button; the buttons stay where they are as a panel goes for the other, and the panels scroll from their top; the help tells of
+// the screen it opens on, as it moves from one to the other; the button is there from 641px.
 func TestUIHelp(t *testing.T) { //nolint:paralleltest // the browser tests share one Chrome, one at a time
 	s := newSite(t)
 	b := s.b
@@ -63,7 +64,7 @@ func TestUIHelp(t *testing.T) { //nolint:paralleltest // the browser tests share
 		b.until("the page's script", "typeof openKeys === 'function' && document.readyState === 'complete'")
 	}
 
-	// The button opens what floe is, ? the shortcuts, the focus on the close button for both; Enter shuts it.
+	// The button opens the tab of the screen, ? the shortcuts, the focus on the close button for both; Enter shuts it.
 	open("/")
 	b.eval("document.getElementById('keys-open').click()")
 	out = append(out, b.settled(helpOpen))
@@ -73,7 +74,7 @@ func TestUIHelp(t *testing.T) { //nolint:paralleltest // the browser tests share
 	out = append(out, b.settled(helpOpen))
 	enter()
 	out = append(out, b.eval("document.getElementById('keys').open"))
-	// It opens as its way says, not as it was left: shut on the shortcuts, the button opens what floe is.
+	// It opens as its way says, not as it was left: shut on the shortcuts, the button opens the tab of the screen.
 	b.eval("document.getElementById('keys-open').click()")
 	out = append(out, b.eval(helpOpen))
 	// A ? with the help open does nothing, as the focus in a dialog is not a key's (plainKey); nor does a call of openKeys, which
@@ -99,8 +100,8 @@ func TestUIHelp(t *testing.T) { //nolint:paralleltest // the browser tests share
 		b.eval("document.getElementById('keys').close()")
 	}
 
-	// What floe is tells of the screen it opens on: the page list's section on the list and on a page whole, the task list's on the task
-	// list and on a task's page.
+	// The help tells of the screen it opens on: the page list's on the list and on a page whole, the task list's on the task list and on a
+	// task's page.
 	for _, path := range []string{"/", "/tasks", "/tasks?project=proj&task=%231", "/a/a/"} {
 		open(path)
 		if path == "/a/a/" {
@@ -121,8 +122,8 @@ func TestUIHelp(t *testing.T) { //nolint:paralleltest // the browser tests share
 		b.eval("document.getElementById('keys').close()")
 	}
 
-	// The panels' box scrolls alone, from its top: what floe is on the task list, in a window of 660 by 600, is longer than the window.
-	b.size(660, 600, false)
+	// The panels' box scrolls alone, from its top: the help of the task list, in a window of 660 by 500, is longer than the window.
+	b.size(660, 500, false)
 	open("/tasks")
 	b.eval("openKeys('about')")
 	out = append(out, b.settled(helpBox))
@@ -150,9 +151,9 @@ func TestUIHelp(t *testing.T) { //nolint:paralleltest // the browser tests share
 		"true about help-about true", "false", "true keys help-keys true", "false", "true about help-about true", "true about help-about true", "false keys true",
 		// the buttons stay where they are as the panel goes
 		"/ same keys help-keys", "/tasks same keys help-keys",
-		// the section of the screen it opens on, its words, the buttons, no key; and as the screen changes by the links
-		"Page list 1,3 2 0 0", "Task list 1,4 2 0 0", "Task list 1,4 2 0 0", "Page list 1,3 2 0 0",
-		"Task list 1,4 2 0 0", "Page list 1,3 2 0 0",
+		// the tab and the words of the screen it opens on, the buttons, no heading, no key; and as the screen changes by the links
+		"About the page list 1 4 2 0 0 0", "About the task list 1 5 2 0 0 0", "About the task list 1 5 2 0 0 0", "About the page list 1 4 2 0 0 0",
+		"About the task list 1 5 2 0 0 0", "About the page list 1 4 2 0 0 0",
 		// a window of 660 by 600: the box scrolls alone, and goes back to its top on a switch and on opening
 		"true true true true", "true", "0", "true", "0", "0",
 		// the button from 641px
