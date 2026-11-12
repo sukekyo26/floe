@@ -243,19 +243,6 @@ func placedAt(file string, pos yamlpos.Pos, got string) string {
 	return usererr.Where(file, pos.Line, pos.Column) + ": " + got
 }
 
-// docGuideCmd is a command guide that prints doc, a doc of floe's as it is.
-func (a *app) docGuideCmd(short string, doc []byte) *cobra.Command {
-	return &cobra.Command{
-		Use:   "guide",
-		Short: short,
-		Args:  cobra.NoArgs,
-		RunE: func(_ *cobra.Command, _ []string) error {
-			a.write(doc)
-			return nil
-		},
-	}
-}
-
 func (a *app) diagramExampleCmd() *cobra.Command {
 	return &cobra.Command{
 		Use:   "example [kind]",

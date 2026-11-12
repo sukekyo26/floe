@@ -14,7 +14,6 @@ import (
 
 	"github.com/spf13/cobra"
 
-	"floe/docs"
 	"floe/internal/files"
 	"floe/internal/usererr"
 )
@@ -73,13 +72,14 @@ func agentsNamed() string {
 	return strings.Join(groups, ", or ")
 }
 
-func (a *app) guideCmd() *cobra.Command {
+// docGuideCmd is a command guide that prints doc, a doc of floe's as it is.
+func (a *app) docGuideCmd(short string, doc []byte) *cobra.Command {
 	return &cobra.Command{
 		Use:   "guide",
-		Short: "Print the guide for agents: how to write, check and publish a page",
+		Short: short,
 		Args:  cobra.NoArgs,
 		RunE: func(_ *cobra.Command, _ []string) error {
-			a.write(docs.Guide)
+			a.write(doc)
 			return nil
 		},
 	}
