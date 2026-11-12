@@ -19,9 +19,8 @@ import (
 	"floe/internal/kit"
 )
 
-// diagramGuides are the docs of how to write a diagram: the English one is what floe diagram guide prints, whole,
-// and the Japanese one is its translation.
-var diagramGuides = []string{"../../docs/diagrams.md", "../../docs/diagrams.ja.md"}
+// diagramGuide is the doc of how to write a diagram, what floe diagram guide prints, whole.
+const diagramGuide = "../../docs/agents/diagrams.md"
 
 // guideBlock is a fenced block of code in a doc: its language, and its text.
 type guideBlock struct{ lang, text string }
@@ -96,17 +95,13 @@ func headingIDs(src []byte) []string {
 func TestGuideDocLinks(t *testing.T) {
 	t.Parallel()
 
-	src, err := os.ReadFile("../../docs/docs.go")
-	if err != nil {
-		t.Fatal(err)
-	}
-	embedded := regexp.MustCompile(`(?m)^//go:embed (\S+)$`).FindAllStringSubmatch(string(src), -1)
+	embedded := embeddedDocs(t)
 	if len(embedded) < 5 {
 		t.Fatalf("docs.go embeds %d docs, want guide.md, diagrams.md, parts.md, templates.md and themes.md", len(embedded))
 	}
 	links := 0
-	for _, m := range embedded {
-		path := "../../docs/" + m[1]
+	for _, rel := range embedded {
+		path := "../../docs/" + rel
 		_, dests, headings, bad := readGuideDoc(t, path)
 		links += len(dests)
 		for _, d := range dests {
@@ -122,6 +117,57 @@ func TestGuideDocLinks(t *testing.T) {
 	}
 	if links == 0 {
 		t.Fatal("no link found: the docs link their headings")
+	}
+}
+
+// embeddedDocs returns the docs docs/docs.go embeds, as //go:embed gives them (agents/guide.md), so that a doc
+// printed anew is read too.
+func embeddedDocs(t *testing.T) []string {
+	t.Helper()
+
+	src, err := os.ReadFile("../../docs/docs.go")
+	if err != nil {
+		t.Fatal(err)
+	}
+	var paths []string
+	for _, m := range regexp.MustCompile(`(?m)^//go:embed (\S+)$`).FindAllStringSubmatch(string(src), -1) {
+		paths = append(paths, m[1])
+	}
+	return paths
+}
+
+// The docs floe prints are in docs/agents/ alone, and in English alone: the docs docs.go embeds are those of
+// docs/agents/, and it holds no md that is not embedded (TestGuideDocLinks reads only what is) and no Japanese
+// version, which the docs for people have; no embedded doc has a copy or a Japanese version in docs/ either.
+func TestAgentDocs(t *testing.T) {
+	t.Parallel()
+
+	var want []string
+	for _, rel := range embeddedDocs(t) {
+		name, ok := strings.CutPrefix(rel, "agents/")
+		if !ok || strings.Contains(name, "/") || strings.HasSuffix(name, ".ja.md") {
+			t.Errorf("docs.go embeds %s: the docs floe prints are the English ones of docs/agents/", rel)
+			continue
+		}
+		want = append(want, name)
+		for _, beside := range []string{name, strings.TrimSuffix(name, ".md") + ".ja.md"} {
+			if _, err := os.Stat("../../docs/" + beside); err == nil {
+				t.Errorf("docs/%s exists beside docs/agents/%s, which floe prints: keep it in docs/agents/ alone, in English alone", beside, name)
+			}
+		}
+	}
+	files, err := filepath.Glob("../../docs/agents/*")
+	if err != nil {
+		t.Fatal(err)
+	}
+	have := make([]string, 0, len(files))
+	for _, f := range files {
+		have = append(have, filepath.Base(f))
+	}
+	slices.Sort(want)
+	slices.Sort(have)
+	if !slices.Equal(have, want) {
+		t.Errorf("docs/agents/ holds %v, docs.go embeds %v: embed every md there in docs.go, and write no Japanese version", have, want)
 	}
 }
 
@@ -179,42 +225,35 @@ func fakeAWSIcons(t *testing.T, dir string) {
 func TestDiagramGuideExamples(t *testing.T) {
 	t.Parallel()
 
-	shapes := make([][]string, 0, len(diagramGuides))
-	for _, path := range diagramGuides {
-		blocks, _, _, bad := readGuideDoc(t, path)
-		for _, b := range bad {
-			t.Errorf("%s holds %s: write fenced code, and no HTML", path, b)
-		}
-		var shape []string
-		dir := t.TempDir()
-		for i, b := range blocks {
-			where := fmt.Sprintf("%s: block %d", path, i+1)
-			if b.lang != "yaml" {
-				t.Errorf("%s is of language %q, not yaml", where, b.lang)
-				continue
-			}
-			kind, file := guideBlockFile(b.text)
-			shape = append(shape, kind)
-			if kind == "unknown" {
-				t.Errorf("%s is neither a `- diagram:` item nor a spec with a `title:`: write a complete example, %.40q", where, b.text)
-				continue
-			}
-			name := filepath.Join(dir, fmt.Sprintf("block%d.yaml", i))
-			if err := os.WriteFile(name, []byte(file), 0o600); err != nil {
-				t.Fatal(err)
-			}
-			var out, errs bytes.Buffer
-			if code := cli.Run([]string{"diagram", "inspect", name}, guideEnv(t, &out, &errs)); code != 0 || errs.Len() != 0 {
-				t.Errorf("%s: floe diagram inspect = %d, %s", where, code, errs.String())
-			}
-		}
-		if len(shape) < 2 {
-			t.Errorf("%s: %d examples, want 2 or more", path, len(shape))
-		}
-		shapes = append(shapes, shape)
+	blocks, _, _, bad := readGuideDoc(t, diagramGuide)
+	for _, b := range bad {
+		t.Errorf("%s holds %s: write fenced code, and no HTML", diagramGuide, b)
 	}
-	if strings.Join(shapes[0], " ") != strings.Join(shapes[1], " ") {
-		t.Errorf("the blocks of %s are %v, of %s %v: write the same in both", diagramGuides[0], shapes[0], diagramGuides[1], shapes[1])
+	examples := 0
+	dir := t.TempDir()
+	for i, b := range blocks {
+		where := fmt.Sprintf("%s: block %d", diagramGuide, i+1)
+		if b.lang != "yaml" {
+			t.Errorf("%s is of language %q, not yaml", where, b.lang)
+			continue
+		}
+		kind, file := guideBlockFile(b.text)
+		examples++
+		if kind == "unknown" {
+			t.Errorf("%s is neither a `- diagram:` item nor a spec with a `title:`: write a complete example, %.40q", where, b.text)
+			continue
+		}
+		name := filepath.Join(dir, fmt.Sprintf("block%d.yaml", i))
+		if err := os.WriteFile(name, []byte(file), 0o600); err != nil {
+			t.Fatal(err)
+		}
+		var out, errs bytes.Buffer
+		if code := cli.Run([]string{"diagram", "inspect", name}, guideEnv(t, &out, &errs)); code != 0 || errs.Len() != 0 {
+			t.Errorf("%s: floe diagram inspect = %d, %s", where, code, errs.String())
+		}
+	}
+	if examples < 2 {
+		t.Errorf("%s: %d examples, want 2 or more", diagramGuide, examples)
 	}
 }
 
@@ -243,9 +282,7 @@ func TestDiagramGuidePalette(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	for _, path := range diagramGuides {
-		checkRawRow(t, path, string(palette))
-	}
+	checkRawRow(t, diagramGuide, string(palette))
 }
 
 // checkRawRow checks the row of the part raw in the doc at path.

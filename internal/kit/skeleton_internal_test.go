@@ -52,13 +52,12 @@ func viewport(n *html.Node) bool {
 func TestSkeletonInDocs(t *testing.T) {
 	t.Parallel()
 
-	for _, doc := range []string{"../../docs/templates.md", "../../docs/templates.ja.md"} {
-		src, err := os.ReadFile(doc)
-		if err != nil {
-			t.Fatal(err)
-		}
-		if !strings.Contains(string(src), "```html\n"+skeletonPage+"```\n") {
-			t.Errorf("%s does not show skeletonPage as it is", doc)
-		}
+	const doc = "../../docs/agents/templates.md"
+	src, err := os.ReadFile(doc)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if !strings.Contains(string(src), "```html\n"+skeletonPage+"```\n") {
+		t.Errorf("%s does not show skeletonPage as it is", doc)
 	}
 }

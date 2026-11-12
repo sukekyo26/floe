@@ -200,7 +200,7 @@ func TestRenderedImageZoom(t *testing.T) { //nolint:paralleltest // the browser 
 	}
 }
 
-// shotKit is the part shot of docs/parts.md's example of zoom, as it is written there, and a template that places it.
+// shotKit is the part shot of docs/agents/parts.md's example of zoom, as it is written there, and a template that places it.
 var shotKit = map[string]string{
 	"parts/shot/schema.json": `{"$schema": "https://json-schema.org/draft/2020-12/schema", "type": "object",
 "properties": {"file": {"type": "string", "format": "image"}, "alt": {"type": "string"}}}`,

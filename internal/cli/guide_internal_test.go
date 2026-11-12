@@ -24,9 +24,8 @@ import (
 	"floe/internal/yamlpos"
 )
 
-// guides are the guide for agents and its translation; a test of them failing means: fix docs/guide.md and
-// docs/guide.ja.md.
-var guides = []string{"../../docs/guide.md", "../../docs/guide.ja.md"}
+// guidePath is the guide for agents; a test of it failing means: fix docs/agents/guide.md.
+const guidePath = "../../docs/agents/guide.md"
 
 func readGuide(t *testing.T, path string) string {
 	t.Helper()
@@ -88,7 +87,7 @@ func TestGuideDocs(t *testing.T) {
 		{"template", "templates.md", docs.TemplateGuide},
 		{"theme", "themes.md", docs.ThemeGuide},
 	} {
-		file, err := os.ReadFile("../../docs/" + tt.file)
+		file, err := os.ReadFile("../../docs/agents/" + tt.file)
 		if err != nil {
 			t.Fatal(err)
 		}
@@ -119,7 +118,7 @@ func TestGuide(t *testing.T) {
 	t.Parallel()
 
 	env := guideEnv(t, t.TempDir())
-	if code, out, errs := runIn(env, "guide"); code != 0 || out != readGuide(t, guides[0]) || errs != "" {
+	if code, out, errs := runIn(env, "guide"); code != 0 || out != readGuide(t, guidePath) || errs != "" {
 		t.Errorf("floe guide = %d, stderr %q, stdout the guide: %t", code, errs, out == string(docs.Guide))
 	}
 	if code, _, _ := runIn(env, "guide", "x"); code != 2 {
@@ -128,7 +127,7 @@ func TestGuide(t *testing.T) {
 }
 
 // placeholders are the words a command of the guide is run with for each <…> in it.
-var placeholders = map[string]string{"<template>": "report", "<part>": "note", "<kind>": "flow", "<command>": "check", "<word>": "alb", "<語>": "alb", "<slug>": "db-choice", "<ID>": "#130"}
+var placeholders = map[string]string{"<template>": "report", "<part>": "note", "<kind>": "flow", "<command>": "check", "<word>": "alb", "<slug>": "db-choice", "<ID>": "#130"}
 
 // readOnly are the commands a test runs as the guide writes them: they read, write nothing and ask no server.
 var readOnly = [][]string{{"guide"}, {"template"}, {"part"}, {"diagram"}, {"theme", "default"}}
@@ -139,42 +138,40 @@ var readOnly = [][]string{{"guide"}, {"template"}, {"part"}, {"diagram"}, {"them
 func TestGuideCommands(t *testing.T) {
 	t.Parallel()
 
-	for _, path := range guides {
-		guide := readGuide(t, path)
-		named := regexp.MustCompile("`floe ([^`]*)`").FindAllStringSubmatch(guide, -1)
-		if len(named) < 10 {
-			t.Fatalf("%s: %d commands found", path, len(named))
-		}
-		for _, m := range named {
-			args := strings.Fields(m[1])
-			for i, word := range args {
-				if strings.HasPrefix(word, "<") {
-					w, ok := placeholders[word]
-					if !ok {
-						t.Fatalf("%s: floe %s: no word for %s in placeholders", path, m[1], word)
-					}
-					args[i] = w
+	guide := readGuide(t, guidePath)
+	named := regexp.MustCompile("`floe ([^`]*)`").FindAllStringSubmatch(guide, -1)
+	if len(named) < 10 {
+		t.Fatalf("%s: %d commands found", guidePath, len(named))
+	}
+	for _, m := range named {
+		args := strings.Fields(m[1])
+		for i, word := range args {
+			if strings.HasPrefix(word, "<") {
+				w, ok := placeholders[word]
+				if !ok {
+					t.Fatalf("%s: floe %s: no word for %s in placeholders", guidePath, m[1], word)
 				}
+				args[i] = w
 			}
-			env := guideEnv(t, t.TempDir())
-			if err := readable(env, args); err != nil {
-				t.Errorf("%s: floe %s: %v (fix docs/guide.md and docs/guide.ja.md)", path, m[1], err)
-				continue
-			}
-			root, _ := newRoot(env, io.Discard)
-			if cmd, _, err := root.Find(args); err != nil || cmd == root && len(args) > 0 && !strings.HasPrefix(args[0], "-") {
-				t.Errorf("%s: floe %s names no command (fix docs/guide.md and docs/guide.ja.md)", path, m[1])
-				continue
-			}
-			ro := slices.Contains(args, "--help") || slices.ContainsFunc(readOnly, func(c []string) bool {
-				return len(args) >= len(c) && slices.Equal(args[:len(c)], c)
-			})
-			if !ro {
-				continue
-			}
-			if code, _, errs := runIn(env, args...); code != 0 {
-				t.Errorf("%s: floe %s = %d, %s (fix docs/guide.md and docs/guide.ja.md)", path, m[1], code, errs)
-			}
+		}
+		env := guideEnv(t, t.TempDir())
+		if err := readable(env, args); err != nil {
+			t.Errorf("%s: floe %s: %v (fix docs/agents/guide.md)", guidePath, m[1], err)
+			continue
+		}
+		root, _ := newRoot(env, io.Discard)
+		if cmd, _, err := root.Find(args); err != nil || cmd == root && len(args) > 0 && !strings.HasPrefix(args[0], "-") {
+			t.Errorf("%s: floe %s names no command (fix docs/agents/guide.md)", guidePath, m[1])
+			continue
+		}
+		ro := slices.Contains(args, "--help") || slices.ContainsFunc(readOnly, func(c []string) bool {
+			return len(args) >= len(c) && slices.Equal(args[:len(c)], c)
+		})
+		if !ro {
+			continue
+		}
+		if code, _, errs := runIn(env, args...); code != 0 {
+			t.Errorf("%s: floe %s = %d, %s (fix docs/agents/guide.md)", guidePath, m[1], code, errs)
 		}
 	}
 }
@@ -184,30 +181,28 @@ func TestGuideCommands(t *testing.T) {
 func TestGuideExamples(t *testing.T) {
 	t.Parallel()
 
-	for _, path := range guides {
-		blocks := fences(readGuide(t, path), "yaml")
-		if len(blocks) != 4 {
-			t.Fatalf("%s: %d YAML blocks, want 4", path, len(blocks))
+	blocks := fences(readGuide(t, guidePath), "yaml")
+	if len(blocks) != 4 {
+		t.Fatalf("%s: %d YAML blocks, want 4", guidePath, len(blocks))
+	}
+	dir := t.TempDir()
+	for i, b := range blocks {
+		if !strings.HasPrefix(b, "template:") {
+			var parts strings.Builder
+			for line := range strings.Lines(b) {
+				parts.WriteString("      " + line)
+			}
+			b = "template: report\nlang: en\ntitle: T\nsections:\n  - heading: H\n    parts:\n" + parts.String()
 		}
-		dir := t.TempDir()
-		for i, b := range blocks {
-			if !strings.HasPrefix(b, "template:") {
-				var parts strings.Builder
-				for line := range strings.Lines(b) {
-					parts.WriteString("      " + line)
-				}
-				b = "template: report\nlang: en\ntitle: T\nsections:\n  - heading: H\n    parts:\n" + parts.String()
-			}
-			name := filepath.Join(dir, "b"+string(rune('0'+i))+".yaml")
-			if err := os.WriteFile(name, []byte(b), 0o600); err != nil {
-				t.Fatal(err)
-			}
-			if code, out, errs := runIn(guideEnv(t, dir), "check", name); code != 0 || out != "" || errs != "" {
-				t.Errorf("%s: block %d: %d %q %q (fix docs/guide.md and docs/guide.ja.md)", path, i+1, code, out, errs)
-			}
-			if code, _, errs := runIn(guideEnv(t, dir), "diagram", "inspect", name); code != 0 || errs != "" {
-				t.Errorf("%s: block %d: floe diagram inspect = %d, %q (fix docs/guide.md and docs/guide.ja.md)", path, i+1, code, errs)
-			}
+		name := filepath.Join(dir, "b"+string(rune('0'+i))+".yaml")
+		if err := os.WriteFile(name, []byte(b), 0o600); err != nil {
+			t.Fatal(err)
+		}
+		if code, out, errs := runIn(guideEnv(t, dir), "check", name); code != 0 || out != "" || errs != "" {
+			t.Errorf("%s: block %d: %d %q %q (fix docs/agents/guide.md)", guidePath, i+1, code, out, errs)
+		}
+		if code, _, errs := runIn(guideEnv(t, dir), "diagram", "inspect", name); code != 0 || errs != "" {
+			t.Errorf("%s: block %d: floe diagram inspect = %d, %q (fix docs/agents/guide.md)", guidePath, i+1, code, errs)
 		}
 	}
 }
@@ -231,10 +226,8 @@ func TestGuideMistakes(t *testing.T) {
 		}
 		got = append(got, errs)
 	}
-	for _, path := range guides {
-		if quoted := fences(readGuide(t, path), "text"); !slices.Equal(quoted, got) {
-			t.Errorf("%s quotes %q; floe check prints %q (fix docs/guide.md and docs/guide.ja.md)", path, quoted, got)
-		}
+	if quoted := fences(readGuide(t, guidePath), "text"); !slices.Equal(quoted, got) {
+		t.Errorf("%s quotes %q; floe check prints %q (fix docs/agents/guide.md)", guidePath, quoted, got)
 	}
 }
 
@@ -256,10 +249,8 @@ func TestGuideQuotes(t *testing.T) {
 		if !ok {
 			t.Errorf("floe no longer prints %s as the guide says: %q %q %q", quote, placed, whole, warned)
 		}
-		for _, path := range guides {
-			if !strings.Contains(readGuide(t, path), quote) {
-				t.Errorf("%s does not say %s", path, quote)
-			}
+		if !strings.Contains(readGuide(t, guidePath), quote) {
+			t.Errorf("%s does not say %s", guidePath, quote)
 		}
 	}
 }
@@ -285,12 +276,10 @@ func TestGuideCheckResults(t *testing.T) {
 		t.Fatal(err)
 	}
 	if got := schema.Items.Properties.Result.Enum; !slices.Equal(got, []string{"ok", "ng", "unchecked"}) {
-		t.Errorf("checks takes result %v; the guide says ok, ng and unchecked (fix docs/guide.md and docs/guide.ja.md)", got)
+		t.Errorf("checks takes result %v; the guide says ok, ng and unchecked (fix docs/agents/guide.md)", got)
 	}
-	for path, says := range map[string]string{guides[0]: "`result: ok`, `ng` or `unchecked`", guides[1]: "`result: ok`・`ng`・`unchecked`"} {
-		if !strings.Contains(readGuide(t, path), says) {
-			t.Errorf("%s does not say %s", path, says)
-		}
+	if says := "`result: ok`, `ng` or `unchecked`"; !strings.Contains(readGuide(t, guidePath), says) {
+		t.Errorf("%s does not say %s", guidePath, says)
 	}
 }
 
@@ -457,16 +446,20 @@ func copied(t *testing.T) map[string][]byte {
 	t.Helper()
 
 	sources := map[string][]byte{}
-	docs, err := filepath.Glob("../../docs/*.md")
-	if err != nil || len(docs) == 0 {
-		t.Fatalf("docs: %v, %d files", err, len(docs))
+	var docs []string
+	for _, pattern := range []string{"../../docs/*.md", "../../docs/agents/*.md"} {
+		found, err := filepath.Glob(pattern)
+		if err != nil || len(found) == 0 {
+			t.Fatalf("docs %s: %v, %d files", pattern, err, len(found))
+		}
+		docs = append(docs, found...)
 	}
 	for _, path := range docs {
 		if strings.HasPrefix(filepath.Base(path), "CHANGELOG") {
 			continue
 		}
 		for i, block := range fences(readGuide(t, path), "yaml") {
-			sources[fmt.Sprintf("docs/%s block %d", filepath.Base(path), i+1)] = []byte(block)
+			sources[fmt.Sprintf("%s block %d", strings.TrimPrefix(path, "../../"), i+1)] = []byte(block)
 		}
 	}
 	for _, root := range []string{"../kit/floe", "../diagram/examples"} {
@@ -497,7 +490,7 @@ func TestGuideSentencesQuoted(t *testing.T) {
 	sources := copied(t)
 	// A doc that holds a YAML block, and each of floe's kinds of file, is read: that none is left unread is the test's
 	// own check.
-	for _, name := range []string{"guide.md", "guide.ja.md", "pages.md", "pages.ja.md", "templates.md", "templates.ja.md", "diagrams.md", "diagrams.ja.md"} {
+	for _, name := range []string{"agents/guide.md", "pages.md", "pages.ja.md", "agents/templates.md", "agents/diagrams.md"} {
 		if _, ok := sources["docs/"+name+" block 1"]; !ok {
 			t.Errorf("docs/%s holds no YAML block: the test reads none of it", name)
 		}

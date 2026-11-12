@@ -1,6 +1,6 @@
 # Writing pages
 
-How to write a data file, the YAML that floe draws a page from with one of floe's templates or one of your own. A `diagram` part's spec is in [diagrams.md](diagrams.md), and showing an HTML file or a folder as it is in [links.md](links.md); [templates.md](templates.md) tells how to make a template of your own, and [commands.md](commands.md) every command and flag. Agents get a short guide of this, [guide.md](guide.md), from `floe guide`, and how to write a diagram, [diagrams.md](diagrams.md), from `floe diagram guide`.
+How to write a data file, the YAML that floe draws a page from with one of floe's templates or one of your own. A `diagram` part's spec is in [diagrams.md](agents/diagrams.md), and showing an HTML file or a folder as it is in [links.md](links.md); [templates.md](agents/templates.md) tells how to make a template of your own, and [commands.md](commands.md) every command and flag. Agents get a short guide of this, [guide.md](agents/guide.md), from `floe guide`, and how to write a diagram, [diagrams.md](agents/diagrams.md), from `floe diagram guide`.
 
 ## A data file
 
@@ -83,7 +83,7 @@ To list things, pick the part by what the rows are:
 - A few short values at the top of a page: `facts`.
 - Short values compared in rows and columns, such as before-and-after values in separate columns (the first column's heading empty): `table`.
 
-The parts `report` takes in a section, with your own parts too ([parts.md](parts.md)), which `floe part list` lists with these:
+The parts `report` takes in a section, with your own parts too ([parts.md](agents/parts.md)), which `floe part list` lists with these:
 
 | Part | What it draws |
 |---|---|
@@ -104,7 +104,7 @@ The parts `report` takes in a section, with your own parts too ([parts.md](parts
 | `timeline`, `bars`, `keys` | Dates in order, bars of values, keys to press. A bar with `of` is filled as far as its `value` goes of that whole and reads `5 / 8`, for how far a piece of work has gone; the others are shares of the largest value among them. A bar's `unit` is drawn after its value (`240 s`, `5 / 8 pages`), one bar at a time, so that bars with `of` may differ in unit; bars without `of` are compared by length, which units that differ would make meaningless. |
 | `details`, `tabs` | Parts folded under a title, or shown one at a time under tabs, for things read one at a time; they hold every part but `tabs`, `columns` and `html`: a form in tabs' form would be dropped, columns would hold columns, and an `html` part's `</form>` would close tabs' form. A part laid out in cards, keys, a timeline and bars lays out by the width of its place, not the window's, and the pills of `asks` wrap there. A `script` in a closed `details` or a tab not shown runs with an element of no width. |
 | `columns` | Independent blocks side by side, each with its own parts: before-and-after screens or code, data beside its reading. Each column is an optional `title` over `parts`, which hold what `details` holds. Columns are of one width, 16rem at the least, so that how many stand side by side follows the width of the page's text (five at most in `report`, three in `adr` and `runbook`), and the rest fold under them. |
-| `diagram` | A diagram, checked and drawn as inline SVG ([diagrams.md](diagrams.md)). |
+| `diagram` | A diagram, checked and drawn as inline SVG ([diagrams.md](agents/diagrams.md)). |
 | `script` | Something that moves ([Scripts and HTML](#scripts-and-html)). |
 | `html` | HTML that goes in as it is: a key of `any.json`, not a part of its own, so it has no schema.json; `floe part show html any.json` prints `any.json`, which holds it ([Scripts and HTML](#scripts-and-html)). |
 
@@ -133,7 +133,7 @@ An image file Markdown names (`![x](shots/list.png)`) is drawn as written, and t
 
 ## Diagrams
 
-A `diagram` part, in a section or in `details`, `tabs`, `columns` and the `parts` of an item of `entries`, `checks` or `options`, draws a diagram from a spec written in place, checked before the page is drawn: [diagrams.md](diagrams.md) tells how a spec is written.
+A `diagram` part, in a section or in `details`, `tabs`, `columns` and the `parts` of an item of `entries`, `checks` or `options`, draws a diagram from a spec written in place, checked before the page is drawn: [diagrams.md](agents/diagrams.md) tells how a spec is written.
 
 ## Scripts and HTML
 
@@ -143,7 +143,7 @@ A `diagram` part, in a section or in `details`, `tabs`, `columns` and the `parts
 
 ## Reading mistakes
 
-`floe check` prints the mistakes one to a line, and the exit code is 1 when there is one. A data file is checked in stages ([templates.md](templates.md#the-order-of-the-checks)): every mistake of a stage is told at once, and a stage runs only when the one before it has none. So the shape is checked first:
+`floe check` prints the mistakes one to a line, and the exit code is 1 when there is one. A data file is checked in stages ([templates.md](agents/templates.md#the-order-of-the-checks)): every mistake of a stage is told at once, and a stage runs only when the one before it has none. So the shape is checked first:
 
 ```text
 plan.yaml:6:13: additional properties 'colour' not allowed
