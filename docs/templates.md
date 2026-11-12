@@ -1,6 +1,6 @@
 # Templates
 
-How to make a template of your own: the page a data file is drawn into. A data file names its template with `template:` (`floe guide` tells how to write one); floe's templates are `report`, `design`, `handoff`, `adr`, `postmortem`, `runbook` and `slides` (`floe template list` lists them). To make a part or a theme of your own, see `floe part guide`.
+How to make a template of your own: the page a data file is drawn into. A data file names its template with `template:` (`floe guide` tells how to write one); floe's templates are `report`, `design`, `handoff`, `adr`, `postmortem`, `runbook` and `slides` (`floe template list` lists them). To make a part of your own, see `floe part guide`; a theme, `floe theme guide`.
 
 ## Where templates are
 

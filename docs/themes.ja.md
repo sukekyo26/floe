@@ -46,8 +46,8 @@ floe theme show default palette.css   # 自分のテーマが上に重なる flo
 - 箱の中の静かな地（表の頭、棒の溝、キー）は `var(--quiet)` です。箱をそれに近い地で塗るテーマは、その箱で `--quiet` を置き直します（default は、灰色の panel の上では白、その中の白い面の上では灰色に）。
 - グラフの形も変数で、それぞれ未設定なら floe の値で読みます。テーマは自分の `chart.css` の `:scope` に置き、場所を取りません：`--chart-line`・`--chart-dash`（線の太さと破線）、`--chart-dot`・`--chart-dot-fill`・`--chart-dot-edge`・`--chart-dot-line`（点の半径、塗り、縁、縁の太さ）、`--chart-bar-fill`・`--chart-bar-edge`・`--chart-bar-line`（棒の塗り、枠、枠の太さ）、`--chart-ground`（線の場所の地。箱の模様が目盛りとぶつかるときに）。`currentColor` が系列の色です。線は 3px、点の半径は 5px、点の縁と棒の枠は 2px までにします（字はその外に置かれます）。枠より細い棒は枠なしで描きます。
 - 角の丸さはパレットのものです。テーマは `palette.css` に `--radius`・`--radius-small`・`--radius-pill` を 1 つの長さで書き、ほかのファイルは丸さを書きません。ほかの形の角（notebook の手書きなど）は、`palette.css` か `base.css` の `:scope` にテーマ自身の名前の変数で置き、テーマのファイルが読みます。3 つに 4 つの角や `/` を入れると、1 つの角として読む規則や `calc()`・`min()` の中で無効になります。角は 2 つの変数の小さい方を取ってもよいです（札の `min(var(--radius-pill), var(--floe-pill-end))`）。
-- 影は、テーマの 1 組です。`palette.css` に `--floe-shadow-x`・`-y`・`-blur`・`-spread` で 1 回だけ書き（px か rem。em は箱の字の大きさで変わり、% は影が無くなります）ます。
-- テーマは部品の間を書きません。間はどこも `--floe-room` で、部品とテンプレートが決めます。テーマの `cards.css` や `tabs.css` が根に `gap` を書くと、間がずれます。
+- 影は、テーマの 1 組です。`palette.css` に `--floe-shadow-x`・`-y`・`-blur`・`-spread` で 1 回だけ書き（px か rem。em は箱の字の大きさで変わり、% は影が無くなります）、影を落とす箱に、部品か見た目のファイルで色 `--floe-shadow-color` を置きます（`.card { --floe-shadow-color: var(--fg); }`）。色は中の箱に届きません。箱の中に描く影は `--floe-inset` に置きます（打ち消すのは `initial`。`none` を書くと、箱の影も一緒に消えます）。部品の箱・見た目を借りる要素・引用に `box-shadow` を書きません。floe の base がこれらから書き、上から書くと消えます。
+- 箱の外へ描くもの（影、外へ出る疑似要素、outline）のために場所は空けません。四方とも、floe が部品の間に空ける `--floe-room`（0.75rem）以下にし、ほかの箱やページの端に届かないようにします。大きさは箱の大きさによらない値にします。傾きや拡大のように、箱が大きいほど外へ出る変形は使いません。テーマは部品の間を書きません。間はどこも `--floe-room` で、部品とテンプレートが決めます。テーマの `cards.css` や `tabs.css` が根に `gap` を書くと、間がずれます。
 - データファイルは、floe のテーマと同じく `theme:` で選びます。
 
 ## 確かめる

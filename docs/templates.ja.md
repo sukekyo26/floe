@@ -1,6 +1,6 @@
 # テンプレート
 
-自分のテンプレート（データファイルを描き入れるページ）の作り方です。データファイルは `template:` でテンプレートを名指します（書き方は `floe guide`）。floe のテンプレートは `report`・`design`・`handoff`・`adr`・`postmortem`・`runbook`・`slides` です（`floe template list` が並べます）。自分の部品やテーマの作り方は `floe part guide` にあります。
+自分のテンプレート（データファイルを描き入れるページ）の作り方です。データファイルは `template:` でテンプレートを名指します（書き方は `floe guide`）。floe のテンプレートは `report`・`design`・`handoff`・`adr`・`postmortem`・`runbook`・`slides` です（`floe template list` が並べます）。自分の部品の作り方は `floe part guide`、テーマの作り方は `floe theme guide` にあります。
 
 ## テンプレートの置き場所
 

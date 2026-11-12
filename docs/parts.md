@@ -147,7 +147,7 @@ A part or a template that draws a box among parts, with a ground or a frame of i
 
 A part writes its text smaller than the page's by floe's base's two steps, never a size of its own: `var(--floe-text-small)` (0.8rem) for a pill, a chip, a ring's number, a key, a table's heading, a term, a date, a count or a note beside a value, and `var(--floe-text-aside)` (0.9rem) for a card's or a step's words, a note's title, a small title over a list, a tab's name or a value's unit. The text of code (its lines, a tree's names) follows code's size instead. Both are in rem: small text in large text is no larger.
 
-A part or look of one's own that reads `--floe-mark` sets it on its own root, as floe's do, so that a value around it (a card's number's) does not reach its marks. A part of your own reads the three too, and writes no length of its own beside a shape (`0`, `50%`, `999px`).
+A part or look of one's own that reads `--floe-mark` sets it on its own root, as floe's do, so that a value around it (a card's number's) does not reach its marks. A part of your own reads the palette's corners too, `--radius`, `--radius-small` and `--radius-pill`, and writes no length of its own beside a shape (`0`, `50%`, `999px`).
 
 A box casts the theme's shadow (its `palette.css` gives it as `--floe-shadow-x`, `-y`, `-blur` and `-spread`) where its part's or look's file sets its colour, `--floe-shadow-color` (`.card { --floe-shadow-color: var(--fg); }`); the colour reaches no box inside. A shadow drawn within the box goes in `--floe-inset` (`initial` clears it; `none` voids the box's shadow too). Write no `box-shadow` on a part's box, a look's element or a quote: floe's base writes it from these, and one written over it drops them.
 
