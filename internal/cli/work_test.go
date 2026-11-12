@@ -274,18 +274,25 @@ func TestWorkCommand(t *testing.T) {
 		t.Errorf("--parent with pages of two projects moved b: %s", got)
 	}
 
-	// The command line that cannot mean anything. With no --task, a flag but --project is no way to tell the open tasks
-	// (--state done is no filter of them), and the refusal says which command line is.
-	noTask := "floe: name a task with --task, or pages by their slugs; to tell the open tasks, give no flag but --project: run floe --help\n"
+	// With no --task, a flag but --project is no way to tell the open tasks (--state done is no filter of them): refused
+	// with nothing told, and the refusal names --task and says which command line tells them.
+	for _, args := range [][]string{
+		{"work", "--state", "done"},
+		{"work", "--title", "T"},
+		{"work", "--forget"},
+		{"work", "--pin"},
+		{"work", "--project", "p", "--state", "done"},
+	} {
+		if code, out, errs := runIn(dir, env, args...); code != 2 || out != "" ||
+			!strings.HasPrefix(errs, "floe: ") || !strings.Contains(errs, "--task") || !strings.Contains(errs, "no flag but --project") {
+			t.Errorf("floe %v = %d, %q, %q", args, code, out, errs)
+		}
+	}
+	// The command line that cannot mean anything.
 	for _, c := range []struct {
 		args []string
 		want string
 	}{
-		{[]string{"work", "--state", "done"}, noTask},
-		{[]string{"work", "--title", "T"}, noTask},
-		{[]string{"work", "--forget"}, noTask},
-		{[]string{"work", "--pin"}, noTask},
-		{[]string{"work", "--project", "p", "--state", "done"}, noTask},
 		{[]string{"work", "--task", "#1", "--pin"}, "floe: --pin changes pages: name them by their slugs: run floe --help\n"},
 		{[]string{"work", "--task", "#1", "--category", "s"}, "floe: --category changes pages: name them by their slugs: run floe --help\n"},
 		{[]string{"work", "a", "--forget"}, "floe: --forget goes with a task alone, not with pages: give it without slugs: run floe --help\n"},
@@ -653,7 +660,8 @@ func TestWorkListsOpenTasks(t *testing.T) {
     "done": {"state": "done", "at": "2026-11-13T00:00:00Z"},
     "archived": {"state": "archived", "at": "2026-11-13T00:00:00Z"}
   },
-  "q": {"Q1": {"state": "doing", "at": "2026-11-14T00:00:00Z"}}
+  "q": {"Q1": {"state": "doing", "at": "2026-11-14T00:00:00Z"}},
+  "/": {"N1": {"state": "todo", "at": "2026-11-14T00:00:00Z"}}
 }`
 	file := filepath.Join(env["FLOE_DIR"], "tasks.json")
 	if err := os.WriteFile(file, []byte(hand), 0o600); err != nil {
@@ -679,8 +687,11 @@ func TestWorkListsOpenTasks(t *testing.T) {
 	if code, out, errs := runIn(dir, env, "work"); code != 0 || out != want || errs != "" {
 		t.Errorf("floe work = %d, %q, %q; want the lines\n%s", code, out, errs, want)
 	}
-	if code, out, errs := runIn(dir, env, "work", "--project", "q"); code != 0 || out != told("q", "Q1") || errs != "" {
-		t.Errorf("floe work --project q = %d, %q, %q", code, out, errs)
+	// The project is told as tasks.json keys it: "" is the key "/", and a name is trimmed, as ProjectKey does.
+	for _, c := range []struct{ flag, project, task string }{{"q", "q", "Q1"}, {" q ", "q", "Q1"}, {"", "", "N1"}} {
+		if code, out, errs := runIn(dir, env, "work", "--project", c.flag); code != 0 || out != told(c.project, c.task) || errs != "" {
+			t.Errorf("floe work --project %q = %d, %q, %q", c.flag, code, out, errs)
+		}
 	}
 	if b, err := os.ReadFile(file); err != nil || string(b) != hand {
 		t.Errorf("telling the tasks wrote tasks.json: %s, %v", b, err)
@@ -728,6 +739,7 @@ func TestWorkListsOfPublishedProject(t *testing.T) {
 	for _, args := range [][]string{{"init", "-q"}, {"remote", "add", "origin", "https://example.com/o/named.git"}} {
 		git := exec.CommandContext(t.Context(), "git", args...)
 		git.Dir = repo
+		git.Env = append(os.Environ(), "GIT_CONFIG_GLOBAL=/dev/null", "GIT_CONFIG_NOSYSTEM=1")
 		if out, err := git.CombinedOutput(); err != nil {
 			t.Fatalf("git %v: %v\n%s", args, err, out)
 		}
