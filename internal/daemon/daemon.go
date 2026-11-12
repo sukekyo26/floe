@@ -175,6 +175,8 @@ func (s Server) serves(ctx context.Context, p Status) error {
 		return usererr.New("daemon_port_taken", s.Port)
 	case p.State == Down:
 		return usererr.New("daemon_not_started")
+	// LIMIT: a server that answers no Root is refused as another store, and the message says FLOE_DIR is to be "".
+	// LIMIT: %q quotes for Go, not for a shell: a root with $ or a backtick is expanded when pasted into one.
 	case !sameDir(p.Health.Root, s.Root):
 		return usererr.New("daemon_other_root", s.Port, p.Health.Root)
 	case s.AnyDirs:
