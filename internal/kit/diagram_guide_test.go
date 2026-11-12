@@ -129,8 +129,9 @@ func embeddedDocs(t *testing.T) []string {
 	if err != nil {
 		t.Fatal(err)
 	}
-	var paths []string
-	for _, m := range regexp.MustCompile(`(?m)^//go:embed (\S+)$`).FindAllStringSubmatch(string(src), -1) {
+	embedded := regexp.MustCompile(`(?m)^//go:embed (\S+)$`).FindAllStringSubmatch(string(src), -1)
+	paths := make([]string, 0, len(embedded))
+	for _, m := range embedded {
 		paths = append(paths, m[1])
 	}
 	return paths
