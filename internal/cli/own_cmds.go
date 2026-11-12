@@ -6,6 +6,7 @@ import (
 
 	"github.com/spf13/cobra"
 
+	"floe/docs"
 	"floe/internal/files"
 	"floe/internal/kit"
 	"floe/internal/store"
@@ -14,9 +15,11 @@ import (
 )
 
 func (a *app) partCmd() *cobra.Command {
+	short := "List the parts, show one, make one of your own, and check yours"
 	cmd := &cobra.Command{
 		Use:   "part",
-		Short: "List the parts, show one, make one of your own, and check yours",
+		Short: short,
+		Long:  short + ".\n\nfloe part guide prints how to make one of your own: its files and what floe checks.",
 		Args:  cobra.NoArgs,
 	}
 	var all bool
@@ -95,13 +98,17 @@ a theme's <part>.css needs its part, so parts and themes are checked together.`,
 			return a.checkPartsThemes()
 		},
 	})
+	cmd.AddCommand(a.docGuideCmd(
+		"Print how to make a part, a look or a shared schema of your own: their files and what floe checks", docs.PartGuide))
 	return cmd
 }
 
 func (a *app) templateCmd() *cobra.Command {
+	short := "List the templates, show one, make one of your own, and check yours"
 	cmd := &cobra.Command{
 		Use:   "template",
-		Short: "List the templates, show one, make one of your own, and check yours",
+		Short: short,
+		Long:  short + ".\n\nfloe template guide prints how to make one of your own: its files and what floe checks.",
 		Args:  cobra.NoArgs,
 	}
 	cmd.AddCommand(&cobra.Command{
@@ -162,13 +169,17 @@ mistake, and nothing is printed when they are right and have no warning.`,
 			return a.checkTemplates()
 		},
 	})
+	cmd.AddCommand(a.docGuideCmd("Print how to make a template of your own: its files and what floe checks",
+		docs.TemplateGuide))
 	return cmd
 }
 
 func (a *app) themeCmd() *cobra.Command {
+	short := "List the themes, show one, make one of your own, and check yours"
 	cmd := &cobra.Command{
 		Use:   "theme",
-		Short: "List the themes, show one, make one of your own, and check yours",
+		Short: short,
+		Long:  short + ".\n\nfloe theme guide prints how to make one of your own: its files and what floe checks.",
 		Args:  cobra.NoArgs,
 	}
 	cmd.AddCommand(&cobra.Command{
@@ -242,6 +253,7 @@ the other commands send to (FLOE_DIR) without starting the server.`,
 			return nil
 		},
 	})
+	cmd.AddCommand(a.docGuideCmd("Print how to make a theme of your own: its files and what floe checks", docs.ThemeGuide))
 	return cmd
 }
 

@@ -74,20 +74,43 @@ func runIn(env Env, args ...string) (int, string, string) {
 	return code, stdout.String(), stderr.String()
 }
 
-// floe diagram guide prints docs/diagrams.md as it is, the file and the embedded text alike.
-func TestDiagramGuide(t *testing.T) {
+// floe diagram|part|template|theme guide print their docs as they are, the file and the embedded text alike, and take
+// no argument.
+func TestGuideDocs(t *testing.T) {
 	t.Parallel()
 
-	file, err := os.ReadFile("../../docs/diagrams.md")
-	if err != nil {
-		t.Fatal(err)
+	for _, tt := range []struct {
+		kind, file string
+		embedded   []byte
+	}{
+		{"diagram", "diagrams.md", docs.DiagramGuide},
+		{"part", "parts.md", docs.PartGuide},
+		{"template", "templates.md", docs.TemplateGuide},
+		{"theme", "themes.md", docs.ThemeGuide},
+	} {
+		file, err := os.ReadFile("../../docs/" + tt.file)
+		if err != nil {
+			t.Fatal(err)
+		}
+		code, out, errs := runIn(guideEnv(t, t.TempDir()), tt.kind, "guide")
+		if code != 0 || errs != "" || out != string(file) || out != string(tt.embedded) || len(file) < 5000 {
+			t.Errorf("floe %s guide = %d, stderr %q, stdout %s: %t (%d bytes)", tt.kind, code, errs, tt.file, out == string(file), len(out))
+		}
+		if code, _, errs := runIn(guideEnv(t, t.TempDir()), tt.kind, "guide", "x"); code == 0 || errs == "" {
+			t.Errorf("floe %s guide x = %d, %q: it takes no argument", tt.kind, code, errs)
+		}
 	}
-	code, out, errs := runIn(guideEnv(t, t.TempDir()), "diagram", "guide")
-	if code != 0 || errs != "" || out != string(file) || out != string(docs.DiagramGuide) || len(file) < 10000 {
-		t.Errorf("floe diagram guide = %d, stderr %q, stdout the doc: %t (%d bytes)", code, errs, out == string(file), len(out))
-	}
-	if code, _, errs := runIn(guideEnv(t, t.TempDir()), "diagram", "guide", "x"); code == 0 || errs == "" {
-		t.Errorf("floe diagram guide x = %d, %q: it takes no argument", code, errs)
+}
+
+// floe part|template|theme --help points to the kind's guide.
+func TestGuidesInHelp(t *testing.T) {
+	t.Parallel()
+
+	for _, kind := range []string{"part", "template", "theme"} {
+		code, out, errs := runIn(guideEnv(t, t.TempDir()), kind, "--help")
+		if want := "floe " + kind + " guide prints how to make"; code != 0 || errs != "" || !strings.Contains(out, want) {
+			t.Errorf("floe %s --help = %d, %q, %q; want it to hold %q", kind, code, out, errs, want)
+		}
 	}
 }
 

@@ -1,5 +1,6 @@
-// Package docs holds the texts floe prints for agents: the guide (floe guide) and the guide to writing a
-// diagram (floe diagram guide), the docs themselves rather than copies of them.
+// Package docs holds the docs floe prints for agents: the guide (floe guide) and the guides to writing a diagram, a
+// part, a template and a theme (floe diagram|part|template|theme guide), the docs themselves rather than copies of
+// them. Each links only its own headings, as an agent cannot open another doc (TestGuideDocLinks).
 package docs
 
 import _ "embed"
@@ -9,8 +10,22 @@ import _ "embed"
 //go:embed guide.md
 var Guide []byte
 
-// DiagramGuide is diagrams.md, how to write a diagram, whole: it holds no link to another doc, which an agent
-// cannot open (TestDiagramGuideLinks).
+// DiagramGuide is diagrams.md, how to write a diagram, whole.
 //
 //go:embed diagrams.md
 var DiagramGuide []byte
+
+// PartGuide is parts.md, how to make a part, a look or a shared schema of one's own, whole.
+//
+//go:embed parts.md
+var PartGuide []byte
+
+// TemplateGuide is templates.md, how to make a template of one's own, whole.
+//
+//go:embed templates.md
+var TemplateGuide []byte
+
+// ThemeGuide is themes.md, how to make a theme of one's own, whole.
+//
+//go:embed themes.md
+var ThemeGuide []byte

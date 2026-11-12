@@ -18,14 +18,17 @@
 | `floe template show <名前> [ファイル]` | テンプレートのテーマと、読むファイルの並びを出す。ファイル名を足すと、そのファイルを書いたとおりに |
 | `floe template new <名前>` | 埋めて使う自分のテンプレートを作る（floe が受ける最小のものに、viewport を足したもの） |
 | `floe template check` | 自分のテンプレートを確かめる |
+| `floe template guide` | 自分のテンプレートの作り方を出す |
 | `floe part list` | floe のテンプレートの節に書ける部品を並べる。全部の部品・見た目・共有の schema を並べることもできる |
 | `floe part show <名前> [ファイル]` | 部品・見た目・共有の schema（`html` なら `any.json`）と、読むファイルの並びを出す。ファイル名を足すと、そのファイルを書いたとおりに |
 | `floe part new <名前>` | 埋めて使う最小の自分の部品を作る |
 | `floe part check` | 自分の部品・見た目・共有の schema・テーマを確かめる |
+| `floe part guide` | 自分の部品・見た目・共有の schema の作り方を出す |
 | `floe theme list` | テーマを並べる |
 | `floe theme show <名前> [ファイル]` | テーマと、読むファイルの並びを出す。ファイル名を足すと、そのファイルを書いたとおりに |
 | `floe theme new <名前>` | 埋めて使う最小の自分のテーマを作る |
 | `floe theme check` | 自分の部品・見た目・共有の schema・テーマを、`floe part check` と同じに確かめる |
+| `floe theme guide` | 自分のテーマの作り方を出す |
 | `floe theme default` | 管理ページの設定で選んだ既定のテーマを出す |
 | `floe list` | ページを新しい順に並べる |
 | `floe rm <slug>...` | ページを消す |
@@ -160,6 +163,10 @@ floe と自分のテンプレートを 1 行ずつ、タブで区切った 4 列
 
 各ファイルの中身は [templates.ja.md](templates.ja.md) にあります。
 
+## `floe template guide`
+
+自分のテンプレートの作り方 [templates.ja.md](templates.ja.md) を、全部出します。ファイル、それぞれに書くこと、floe が確かめることです。docs そのもので、エージェントがテンプレートを書く前に読みます。引数は取りません。ただし、出すのは英語の docs/templates.md です（CLI は英語だけで答えます）。
+
 ## `floe part list`
 
 floe のテンプレートの節に書ける部品（floe の `any.json` の鍵と、そこに加わる自分の部品）を 1 行ずつ、タブで区切った 4 列で出します。名前、場所（`floe` か、自分の部品のディレクトリ）、形、説明です。`html` は HTML を字で取り、`schema.json` はありません。`floe part show html any.json` が、鍵 `html` を持つ `any.json` の全体を出します。自分の部品は `any` に加わりますが、`floe part show any any.json` が出すのは、書いてあるとおりの floe の `any.json` です。
@@ -178,7 +185,11 @@ floe のテンプレートの節に書ける部品（floe の `any.json` の鍵�
 
 `FLOE_PARTS_DIR` の部品・見た目・共有の schema と `FLOE_THEMES_DIR` のテーマを floe のものの上で読み、すべての誤りを出します（終了コード 1）。共有の schema は、どれかの schema が名指すかによらず、その根から確かめます。自分の部品があれば、floe のテンプレートもそれとともにコンパイルします。正しければ何も出しません（終了コード 0）。`floe theme check` も同じです。テーマの `<部品名>.css` は部品があることを前提にするので、部品とテーマは一緒に確かめます。
 
-部品とテーマの中身は [parts.ja.md](parts.ja.md) にあります。
+部品の中身は [parts.ja.md](parts.ja.md)、テーマの中身は [themes.ja.md](themes.ja.md) にあります。
+
+## `floe part guide`
+
+自分の部品・見た目・共有の schema の作り方 [parts.ja.md](parts.ja.md) を、全部出します。ファイル、`part.html` の関数、CSS の層、floe が確かめることです。docs そのもので、エージェントが部品を書く前に読みます。引数は取りません。ただし、出すのは英語の docs/parts.md です（CLI は英語だけで答えます）。
 
 ## `floe theme list`
 
@@ -193,6 +204,10 @@ floe のテンプレートの節に書ける部品（floe の `any.json` の鍵�
 ## `floe theme check`
 
 `floe part check` と同じことをします。テーマの `<部品名>.css` は部品があることを前提にするので、部品とテーマは一緒に確かめます。出す誤りも終了コードも同じです。
+
+## `floe theme guide`
+
+自分のテーマの作り方 [themes.ja.md](themes.ja.md) を、全部出します。ファイルと、floe がそれを確かめる決まりです。docs そのもので、エージェントがテーマを書く前に読みます。引数は取りません。ただし、出すのは英語の docs/themes.md です（CLI は英語だけで答えます）。
 
 ## `floe theme default`
 
@@ -413,7 +428,7 @@ edge [60,10]→[60,120] M60,10 V120
 | `FLOE_ICONS_DIR` | `floe icons fetch` がアイコンのセットを 1 つずつディレクトリ（`aws`）で置く所。既定は `$XDG_DATA_HOME/floe-icons`、無ければ `~/.local/share/floe-icons`。 |
 | `FLOE_TEMPLATES_DIR` | 自分のテンプレートを 1 つずつディレクトリで置く所（[templates.ja.md](templates.ja.md)）。既定は `$XDG_CONFIG_HOME/floe/templates`、無ければ `~/.config/floe/templates`。 |
 | `FLOE_PARTS_DIR` | 自分の部品・見た目・共有の schema の置き場所（[parts.ja.md](parts.ja.md)）。既定は `$XDG_CONFIG_HOME/floe/parts`、無ければ `~/.config/floe/parts`。 |
-| `FLOE_THEMES_DIR` | 自分のテーマを 1 つずつディレクトリで置く所（[parts.ja.md](parts.ja.md)）。既定は `$XDG_CONFIG_HOME/floe/themes`、無ければ `~/.config/floe/themes`。 |
+| `FLOE_THEMES_DIR` | 自分のテーマを 1 つずつディレクトリで置く所（[themes.ja.md](themes.ja.md)）。既定は `$XDG_CONFIG_HOME/floe/themes`、無ければ `~/.config/floe/themes`。 |
 | `BROWSER` | 新しいページを開くコマンド。既定は macOS では `open`、ほかは `wslview` か `xdg-open`。 |
 
 `FLOE_*` のディレクトリは絶対パスにします。floe はどこで動かしても 1 つの所を読むので、相対パスは断り、どのシェルも読まなかった `~` で始まるものも断ります（`FLOE_PARTS_DIR is ~/x, a relative path; set it to an absolute path`）。相対の `XDG_DATA_HOME`・`XDG_CONFIG_HOME` は、XDG の決まりどおり無いものとします。
