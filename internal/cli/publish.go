@@ -198,7 +198,7 @@ func (a *app) publishLink(ctx context.Context, b jsontext.Value) (server.Saved, 
 	if err != nil {
 		return saved, err
 	}
-	err = c.do(ctx, http.MethodPost, "/api/artifacts", b, &saved)
+	err = c.do(ctx, http.MethodPost, pagesPath, b, &saved)
 	return saved, err
 }
 
@@ -210,7 +210,7 @@ func (a *app) publishData(ctx context.Context, p arg, up server.Upload, b jsonte
 	if err != nil {
 		return saved, err
 	}
-	const path = "/api/artifacts/data"
+	const path = pagesPath + "/data"
 	err = c.do(ctx, http.MethodPost, path, b, &saved)
 	if re, ok := errors.AsType[*remoteError](err); ok && re.status == http.StatusUnprocessableEntity {
 		var need server.ImagesNeeded
@@ -268,7 +268,7 @@ func (a *app) listCmd() *cobra.Command {
 				return err
 			}
 			var list []store.Listed
-			if err = c.do(cmd.Context(), http.MethodGet, "/api/artifacts", nil, &list); err != nil {
+			if err = c.do(cmd.Context(), http.MethodGet, pagesPath, nil, &list); err != nil {
 				return err
 			}
 			for _, l := range list {
@@ -347,7 +347,7 @@ are taken off first, then those given to --add are put on, so a name given to bo
 
 // eachPage sends method with body to each page of slugs in order, stopping at the first failure, a page not there
 // told by its slug; done, when given, is called with each answer as the page is written.
-// done reads the answer of PATCH /api/artifacts/{slug} (store.Edited) alone: give it with that method only.
+// done reads the answer of PATCH /api/pages/{slug} (store.Edited) alone: give it with that method only.
 func (a *app) eachPage(cmd *cobra.Command, slugs []string, method string, body any, done func(store.Edited)) error {
 	var sent any
 	if body != nil {
@@ -367,7 +367,7 @@ func (a *app) eachPage(cmd *cobra.Command, slugs []string, method string, body a
 		if done != nil {
 			out = &got
 		}
-		err = c.do(cmd.Context(), method, "/api/artifacts/"+url.PathEscape(slug), sent, out)
+		err = c.do(cmd.Context(), method, pagesPath+"/"+url.PathEscape(slug), sent, out)
 		if re, ok := errors.AsType[*remoteError](err); ok && re.status == http.StatusNotFound {
 			return usererr.New("store_no_page", slug)
 		}

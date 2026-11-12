@@ -167,7 +167,7 @@ func TestStopFinishesRequests(t *testing.T) {
 				t.Fatal(err)
 			}
 			defer conn.Close()
-			head := "POST /api/artifacts HTTP/1.1\r\nHost: " + addr + "\r\nOrigin: http://" + addr +
+			head := "POST /api/pages HTTP/1.1\r\nHost: " + addr + "\r\nOrigin: http://" + addr +
 				"\r\nContent-Type: application/json\r\nContent-Length: " + strconv.Itoa(len(body)) + "\r\n\r\n"
 			if _, err = io.WriteString(conn, head+body[:5]); err != nil {
 				t.Fatal(err)

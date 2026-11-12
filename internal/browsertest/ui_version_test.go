@@ -95,7 +95,7 @@ func TestUIVersionPick(t *testing.T) { //nolint:paralleltest // the browser test
 
 	// Marked unread: the versions gone through tell nothing, until another page has been open.
 	b.eval(`window.reads = 0; window.fetch = ((f) => (u, i) => { if (i?.method === 'POST' && String(u).endsWith('/read')) window.reads++; return f(u, i); })(window.fetch);
-		window.heard = 0; addEventListener('message', (e) => { if (e.data?.artifactRead) window.heard++; }); markUnread('d')`)
+		window.heard = 0; addEventListener('message', (e) => { if (e.data?.pageServed) window.heard++; }); markUnread('d')`)
 	b.until("unread", newsOfD)
 	const shelfWord = "[...document.querySelectorAll('#read-version option')].find((o) => o.textContent.includes('v2')).textContent.includes('·')"
 	out = append(out, b.eval(shelfWord))
@@ -125,7 +125,7 @@ func TestUIVersionPick(t *testing.T) { //nolint:paralleltest // the browser test
 		"v3", "v3 · Latest, v2, v1",
 		"/a/d/?raw&v=2 / false / true / Showing v2 (at). The latest is v3.Open the latest versionSee what differs from the latest",
 		"v2", "BODY",
-		"/a/d/?v=2 /a/d/?raw&v=2 /api/artifacts/d/download?v=2 true /a/d/?diff&from=2&to=3 /a/d/?raw&v=2",
+		"/a/d/?v=2 /a/d/?raw&v=2 /api/pages/d/download?v=2 true /a/d/?diff&from=2&to=3 /a/d/?raw&v=2",
 		"read-version",
 		"/a/d/?raw&v=2",
 		"/a/d/?raw&v=2 / false / true / Showing v2 (at). The latest is v4.Open the latest versionSee what differs from the latest", "version", "0",
@@ -153,7 +153,7 @@ func TestUIVersionURL(t *testing.T) { //nolint:paralleltest // the browser tests
 			if (i?.method === 'POST' && String(u).endsWith('/read')) sessionStorage.setItem('reads', Number(sessionStorage.getItem('reads')) + 1);
 			return f(u, i);
 		};
-		addEventListener('message', (e) => { if (e.data?.artifactRead) sessionStorage.setItem('served', (sessionStorage.getItem('served') ?? '') + ' ' + e.data.artifactRead.n); });
+		addEventListener('message', (e) => { if (e.data?.pageServed) sessionStorage.setItem('served', (sessionStorage.getItem('served') ?? '') + ' ' + e.data.pageServed.n); });
 	}`)
 	open := func(path string) string {
 		t.Helper()

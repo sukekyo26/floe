@@ -453,7 +453,7 @@ func (a *app) pageList(ctx context.Context) (client, []store.Listed, error) {
 		return client{}, nil, err
 	}
 	var list []store.Listed
-	if err = c.do(ctx, http.MethodGet, "/api/artifacts", nil, &list); err != nil {
+	if err = c.do(ctx, http.MethodGet, pagesPath, nil, &list); err != nil {
 		return client{}, nil, err
 	}
 	return c, list, nil

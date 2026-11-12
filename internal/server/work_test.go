@@ -175,7 +175,7 @@ func TestWorkAPI(t *testing.T) {
 	e.publish(t, "d", noted("one"), nil)
 	edit := func(body string) string {
 		t.Helper()
-		w := e.do(t, http.MethodPatch, "/api/artifacts/d", body, "Origin", origin, "Content-Type", jsonType)
+		w := e.do(t, http.MethodPatch, "/api/pages/d", body, "Origin", origin, "Content-Type", jsonType)
 		if w.Code != http.StatusOK {
 			t.Fatalf("PATCH d %s = %d, %s", body, w.Code, w.Body)
 		}
@@ -208,7 +208,7 @@ func TestWorkAPI(t *testing.T) {
 		t.Errorf("a name of spaces = %d, %s", code, body)
 	}
 	// A page's work is written by PATCH /api/work alone: its edit has no such key
-	if w := e.do(t, http.MethodPatch, "/api/artifacts/d", `{"work":{"task":"#1"}}`, "Origin", origin, "Content-Type", jsonType); w.Code != http.StatusBadRequest {
+	if w := e.do(t, http.MethodPatch, "/api/pages/d", `{"work":{"task":"#1"}}`, "Origin", origin, "Content-Type", jsonType); w.Code != http.StatusBadRequest {
 		t.Errorf("a page's work by its edit = %d, %s", w.Code, w.Body)
 	}
 	w := e.do(t, http.MethodDelete, "/api/tasks?project=shop&task=%FF", "", "Origin", origin)

@@ -67,19 +67,19 @@ adheres to [Semantic Versioning](https://semver.org/).
   whole, and acts on the row reached with the buttons of a row. Add a help modal of two parts: the keyboard shortcuts, opened by `?`, and About the page list or About the task list, which says what that screen is and what its words mean, opened by the `?` button in the bar (on a window wider than 40rem). On a page open whole, `h` goes back to the list. With the focus in a page, `j`, `k`, `h`, `?`, `/` and `Ctrl+K` now work too (`Ctrl+K` alone in a link's HTML and a folder's,
   which may use the letters themselves).
 - Add marking a stored page unread: a toast offers it for 8 seconds as a page you open becomes read, and "Mark as unread" stays in
-  the page's menus. It goes back to how it looked before you opened it, by `DELETE /api/artifacts/{slug}/read`; opening it again reads it.
-  `POST /api/artifacts/{slug}/read` now answers `{"cleared": true}` when it read the page up to its last version. An archived page is never
+  the page's menus. It goes back to how it looked before you opened it, by `DELETE /api/pages/{slug}/read`; opening it again reads it.
+  `POST /api/pages/{slug}/read` now answers `{"cleared": true}` when it read the page up to its last version. An archived page is never
   unread: its row has no dot, bold title or new version mark, nothing counts it, and nothing offers to mark it unread.
 - Add what a viewer has read of the stored pages, kept in `reads.json` in the store. A page opened in its frame tells
-  the frame the version it served, which the frame sends to `POST /api/artifacts/{slug}/read`, and `GET /api/artifacts`
+  the frame the version it served, which the frame sends to `POST /api/pages/{slug}/read`, and `GET /api/pages`
   gives each stored page `news` (`new` for a page not seen, `version` for a version after the one read) and `version`
-  (the number of its last). Pages from before floe first writes `reads.json` count as read. `GET /api/artifacts` also
+  (the number of its last). Pages from before floe first writes `reads.json` count as read. `GET /api/pages` also
   gives the name of the `template` of a stored page and a linked data file; `floe rebuild` writes it to the meta.json of
   pages published before.
 - Add the versions of a stored page: a publish of a data file, or images it reads, other than the last version's
   keeps the page before as a version and makes the new page the next one (a rebuild, or a publish of a theme only,
   draws the last again and adds none). A page keeps 20, the oldest going first, those before the last gzipped under
-  its directory. `GET /api/artifacts/{slug}/versions` lists them, and `/a/{slug}/?raw&v=<n>` serves version `n` as the
+  its directory. `GET /api/pages/{slug}/versions` lists them, and `/a/{slug}/?raw&v=<n>` serves version `n` as the
   page is served.
 - Add `labels: between` to the diagram part `axis`: each tick's text stands halfway between it and the next tick on
   its right, or `x2` past the last, as a week's name in the middle of its week (the default `labels: at` keeps it at
@@ -248,7 +248,7 @@ adheres to [Semantic Versioning](https://semver.org/).
   write the clipboard, such as in VS Code's Simple Browser.
 - Add archiving: `floe archive <slug>...` (`--undo` to give back), "Archive"
   on the management page, one page or those selected, and `archived` in
-  `PATCH /api/artifacts/{slug}` take a page off `floe list` and the management
+  `PATCH /api/pages/{slug}` take a page off `floe list` and the management
   page's list without deleting it; it is still served at its URL. The
   management page shows the archived under "Archive" on its shelf, and
   `floe list --archived` lists them too, with a fifth column. Publishing an
@@ -279,7 +279,7 @@ adheres to [Semantic Versioning](https://semver.org/).
   row's menu holds its edit, opening, download, archive and delete, and the bar
   over an open page stars and archives it with buttons of icons alone, filled in
   while on. Tags are given in a page's edit dialog, to those selected,
-  or as the names to `add` and `remove` in `tags` of `PATCH /api/artifacts/{slug}`; they show under a page's
+  or as the names to `add` and `remove` in `tags` of `PATCH /api/pages/{slug}`; they show under a page's
   title, are searched, and stay when the page is published again. What is
   reached by keyboard shows one thin grey ring, and a button pressed with the
   mouse shows none.
@@ -415,7 +415,7 @@ adheres to [Semantic Versioning](https://semver.org/).
 - Change `report`'s `lead` to a line of Markdown, as the `summary` of `design`, `handoff`, `postmortem` and `runbook`: code in backticks, bold and links are drawn, while a heading, a list or a table stays text. What looks like a tag (`<prefix>`, `Vec<u8>`) is left out and marks such as `*` and `_` are read, so write those as text in backticks.
 - Warn of a fenced block of code in the `text` of an item of `entries`, as in a `text` part: a page that has one now gets a warning, and is drawn as before with the same exit code.
 - Change `floe diagram inspect` to begin each diagram with a line of where it is written, its title and its canvas (`page.yaml:9:11: diagram "T" 560x190`, `spec.yaml: diagram "T" 560x190`), and to print where the parts went for a diagram the checks refuse too, as a guide, on stdout with its mistakes on stderr and the exit code still 1.
-- `GET /api/artifacts/{slug}/download` takes `?v=<n>` to save that version of a stored page as `<slug>-v<n>.html`, and answers
+- `GET /api/pages/{slug}/download` takes `?v=<n>` to save that version of a stored page as `<slug>-v<n>.html`, and answers
   404 for a version that is not there. The page's download follows the version shown.
 - Change the bar over a page of the management page to diff, download, open alone, archive, star and `…`, whose menu no longer
   repeats what the bar shows. At 40rem or less a page open whole keeps diff and `…` in the bar, the rest in the menu, favorites

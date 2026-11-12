@@ -99,7 +99,7 @@ func TestPublishRenamed(t *testing.T) {
 			t.Fatalf("floe publish %s = %d, %q", c.file, code, errs)
 		}
 		body := `{"slug":"` + c.slug + `-b"}`
-		req, err := http.NewRequestWithContext(t.Context(), http.MethodPatch, url+"/api/artifacts/"+c.slug, strings.NewReader(body))
+		req, err := http.NewRequestWithContext(t.Context(), http.MethodPatch, url+"/api/pages/"+c.slug, strings.NewReader(body))
 		if err != nil {
 			t.Fatal(err)
 		}
@@ -309,7 +309,7 @@ func TestPublishNotUTF8(t *testing.T) {
 	})
 	runIn(dir, env, "publish", "--link", "h.html", "--description", "d")
 	runIn(dir, env, "publish", "--link", "h.html", "--description", "")
-	if b := get(t, "http://127.0.0.1:"+env["FLOE_PORT"]+"/api/artifacts"); !strings.Contains(b, `"description":""`) {
+	if b := get(t, "http://127.0.0.1:"+env["FLOE_PORT"]+"/api/pages"); !strings.Contains(b, `"description":""`) {
 		t.Errorf("a description sent empty is kept: %s", b)
 	}
 }

@@ -21,7 +21,7 @@ func (e env) newsOf(t *testing.T, slug string) string {
 	t.Helper()
 
 	var list []store.Listed
-	if err := json.Unmarshal(e.do(t, http.MethodGet, "/api/artifacts", "").Body.Bytes(), &list); err != nil {
+	if err := json.Unmarshal(e.do(t, http.MethodGet, "/api/pages", "").Body.Bytes(), &list); err != nil {
 		t.Fatal(err)
 	}
 	for _, l := range list {
@@ -54,7 +54,7 @@ func TestReadAPI(t *testing.T) {
 	} {
 		t.Helper()
 
-		w := e.write(t, http.MethodPost, "/api/artifacts/"+slug+"/read", body)
+		w := e.write(t, http.MethodPost, "/api/pages/"+slug+"/read", body)
 		return &struct {
 			code int
 			text string
@@ -70,7 +70,7 @@ func TestReadAPI(t *testing.T) {
 		t.Errorf("read again: %+v", got)
 	}
 	// Marked unread by the management page alone: no body, no other origin, no page in the sandbox. Twice is once.
-	unread := "/api/artifacts/d/read"
+	unread := "/api/pages/d/read"
 	want(t, e.do(t, http.MethodDelete, unread, ""), http.StatusForbidden, "forbidden origin")
 	want(t, e.do(t, http.MethodDelete, unread, "", "Origin", "null"), http.StatusForbidden, "forbidden origin")
 	want(t, e.do(t, http.MethodDelete, unread, "", "Origin", "https://example.com"), http.StatusForbidden, "forbidden origin")
@@ -88,21 +88,21 @@ func TestReadAPI(t *testing.T) {
 	if got := read("d", server.Read{N: v.N, At: v.At}); got.text != `{"cleared":true}` {
 		t.Errorf("read after the mark: %+v", got)
 	}
-	if w := e.do(t, http.MethodDelete, "/api/artifacts/no-such/read", "", "Origin", origin); w.Code != http.StatusNotFound {
+	if w := e.do(t, http.MethodDelete, "/api/pages/no-such/read", "", "Origin", origin); w.Code != http.StatusNotFound {
 		t.Errorf("no page: %d", w.Code)
 	}
 
 	writeFiles(t, filepath.Join(e.home, "proj"), map[string]string{"h.html": "<title>h</title>", "docs/a.html": "<title>a</title>"})
 	for path, slug := range map[string]string{"h.html": "h", "docs": "docs"} {
 		link := server.Link{Path: filepath.Join(e.home, "proj", path), Slug: &slug} //nolint:exhaustruct // the rest not given
-		want(t, e.write(t, http.MethodPost, "/api/artifacts", link), http.StatusCreated, `"slug":"`+slug+`"`)
+		want(t, e.write(t, http.MethodPost, "/api/pages", link), http.StatusCreated, `"slug":"`+slug+`"`)
 	}
 	for _, slug := range []string{"h", "docs", "none", "Bad_Slug"} {
 		if got := read(slug, server.Read{N: 1, At: "x"}); got.code != http.StatusNotFound || got.text != "not found" {
 			t.Errorf("%s: %+v", slug, got)
 		}
 	}
-	const path = "/api/artifacts/d/read"
+	const path = "/api/pages/d/read"
 	const body = `{"n":1,"at":"x"}`
 	strict := e.do(t, http.MethodPost, path, `{"n":1,"at":"x","mark":"y"}`, "Origin", origin, "Content-Type", jsonType)
 	want(t, strict, http.StatusBadRequest, `cannot read the request: `)
@@ -117,12 +117,12 @@ func TestReadAPI(t *testing.T) {
 		t.Fatal(err)
 	}
 	f := s.ReadMeta("f").Versions[0]
-	w := e.do(t, http.MethodPost, "/api/artifacts/f/read", `{"n":`+strconv.Itoa(f.N)+`,"at":"`+f.At+`"}`, "Origin", origin, "Content-Type", jsonType)
+	w := e.do(t, http.MethodPost, "/api/pages/f/read", `{"n":`+strconv.Itoa(f.N)+`,"at":"`+f.At+`"}`, "Origin", origin, "Content-Type", jsonType)
 	if text := strings.ReplaceAll(w.Body.String(), e.root, "S"); w.Code != http.StatusBadRequest ||
 		text != "S/reads.json: is missing, broken or has no since: run floe stop, then floe serve, which writes it anew" {
 		t.Errorf("no since: %d %q", w.Code, text)
 	}
-	if w := e.do(t, http.MethodDelete, "/api/artifacts/f/read", "", "Origin", origin); w.Code != http.StatusBadRequest {
+	if w := e.do(t, http.MethodDelete, "/api/pages/f/read", "", "Origin", origin); w.Code != http.StatusBadRequest {
 		t.Errorf("marked unread with no since: %d", w.Code)
 	}
 	if got := e.newsOf(t, "f"); got != "" {
@@ -139,8 +139,8 @@ func TestServedRead(t *testing.T) {
 	e.publish(t, "d", noted("one"), nil)
 	e.publish(t, "d", noted("two"), nil)
 	versions := store.New(e.root).ReadMeta("d").Versions
-	told := regexp.MustCompile(`if \(window\.parent !== window\) window\.parent\.postMessage\(\{ artifactRead: \{"n":(\d+),"at":"([^"]+)"\}, ` +
-		`artifactPath: location\.pathname \}, location\.protocol \+ '//' \+ location\.host\);`)
+	told := regexp.MustCompile(`if \(window\.parent !== window\) window\.parent\.postMessage\(\{ pageServed: \{"n":(\d+),"at":"([^"]+)"\}, ` +
+		`pagePath: location\.pathname \}, location\.protocol \+ '//' \+ location\.host\);`)
 	for path, v := range map[string]store.Version{"/a/d/?raw": versions[1], "/a/d/?raw&v=1": versions[0], "/a/d/?raw&v=2": versions[1]} {
 		got := told.FindStringSubmatch(e.do(t, http.MethodGet, path, "").Body.String())
 		if len(got) != 3 || got[1] != strconv.Itoa(v.N) || got[2] != v.At {
@@ -152,12 +152,12 @@ func TestServedRead(t *testing.T) {
 	})
 	for _, name := range []string{"h.html", "l.yaml", "bad.yaml", "docs"} {
 		link := server.Link{Path: filepath.Join(e.home, "proj", name)} //nolint:exhaustruct // the rest not given
-		want(t, e.write(t, http.MethodPost, "/api/artifacts", link), http.StatusCreated, `"slug":"`)
+		want(t, e.write(t, http.MethodPost, "/api/pages", link), http.StatusCreated, `"slug":"`)
 	}
 	writeFiles(t, filepath.Join(e.home, "proj"), map[string]string{"bad.yaml": "lang: en\ntemplate: nope\n"})
 	for _, path := range []string{"/a/h/?raw", "/a/l/?raw", "/a/bad/?raw", "/a/docs/a.html"} {
 		w := e.do(t, http.MethodGet, path, "")
-		if w.Code != http.StatusOK || strings.Contains(w.Body.String(), "artifactRead") {
+		if w.Code != http.StatusOK || strings.Contains(w.Body.String(), "pageServed") {
 			t.Errorf("%s: %d, telling a version: %q", path, w.Code, w.Body)
 		}
 	}
@@ -173,12 +173,12 @@ func TestServedKeys(t *testing.T) {
 	writeFiles(t, filepath.Join(e.home, "proj"), map[string]string{"h.html": "<title>h</title>", "l.yaml": noted("linked"), "docs/a.html": "<title>a</title>", "docs/b.txt": "b"})
 	for _, name := range []string{"h.html", "l.yaml", "docs"} {
 		link := server.Link{Path: filepath.Join(e.home, "proj", name)} //nolint:exhaustruct // the rest not given
-		want(t, e.write(t, http.MethodPost, "/api/artifacts", link), http.StatusCreated, `"slug":"`)
+		want(t, e.write(t, http.MethodPost, "/api/pages", link), http.StatusCreated, `"slug":"`)
 	}
 	const letters = "['j', 'k', 'h', 'd', '?', '/']"
 	for path, drawn := range map[string]bool{"/a/d/?raw": true, "/a/l/?raw": true, "/a/h/?raw": false, "/a/docs/a.html": false} {
 		body := e.do(t, http.MethodGet, path, "").Body.String()
-		if !strings.Contains(body, "artifactKey: key") || !strings.Contains(body, "artifactKeysWanted") {
+		if !strings.Contains(body, "pageKey: key") || !strings.Contains(body, "pageKeysWanted") {
 			t.Errorf("%s has no script for the keys: %q", path, body)
 		}
 		if strings.Contains(body, letters) != drawn {
@@ -188,7 +188,7 @@ func TestServedKeys(t *testing.T) {
 			t.Errorf("%s: a script cut: %q", path, body)
 		}
 	}
-	if body := e.do(t, http.MethodGet, "/a/docs/b.txt", "").Body.String(); strings.Contains(body, "artifactKey") {
+	if body := e.do(t, http.MethodGet, "/a/docs/b.txt", "").Body.String(); strings.Contains(body, "pageKey") {
 		t.Errorf("a text file has the script: %q", body)
 	}
 }

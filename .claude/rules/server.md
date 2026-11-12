@@ -13,7 +13,7 @@ paths:
 - **publish は読んだ画像だけを書く**：publish が保存する画像は、描くときに `kit.ReadImage` が読んだ名前のものだけ。送られても読まなかった名前は書かない（信頼境界）。rebuild は前の写しの `images/` を全部引き継ぐ。版の中身の印も、読んだ画像だけから作る。版は画像を別に持たない（描いた HTML に埋め込まれている）
 - **サーバーを止めるのは `/api/stop` 1 つ**：`daemon.Stop` が `POST /api/stop` で、止めたいサーバーの pid を本文に書いて頼み、違えば 409。floe のコマンドはシグナルを送らない（名乗る pid は別のプロセスでありうる）。要求の ctx は `Serve` の ctx で切らない。本文は変えない（入れ替えの相手の古いビルドが `decodeStrict` で読むため）
 - **サーバーの記録は `server.log` 1 つ**：書くのは `floe serve` だけ（`Store.Begin` の後に `server.OpenLog` で開き、`Config.Log` で渡す）。CLI と daemon は書かず、サーバーを止めたことは `Ensure` の戻り値で CLI が 1 行言う。要求ごとの記録は書かない
-- **アーカイブは meta.json の `archived` 1 つ**：一覧から外すのはこれだけで持ち、立てる・外すのは `Store.Edit` と publish し直し（`newMeta`）だけ。`GET /api/artifacts` は全部を返し、一覧から外すのは見せる側でする
+- **アーカイブは meta.json の `archived` 1 つ**：一覧から外すのはこれだけで持ち、立てる・外すのは `Store.Edit` と publish し直し（`newMeta`）だけ。`GET /api/pages` は全部を返し、一覧から外すのは見せる側でする
 - **フォルダの中は開いた所だけ読む**：フォルダは meta.json の `folder` で見分け、名前で種類を決めない（データファイルかは `Meta.IsData`）。中は `link.Dir` が開いたディレクトリ 1 つを `link.within` を通して返すだけで、全体を歩かず、中の HTML を読まず、HTML ごとの状態を持たない
 - **CSP とサンドボックスは返すときに付ける**：ページとその下のファイルはヘッダーで。ヘッダーの無い出口（render・ダウンロード）は、`draw` の `withCutOff` が描いたページの木に CSP の meta を足し、ページの charset の meta を全部外して、floe の charset 1 つを頭の先頭に置く（サーバーが返すページは、page.html の charset が残ってもヘッダーの utf-8 が勝つ）。render は確かめた木のまま書き（`tmpl.Options.CutOff`）、読み直すのは保存したページから作るダウンロードだけ（`CutOffPage`）
 - **描くものはまとまり 1 つ**：サーバーは `Config.Drawing` で読んだ Kit とアイコン集を 1 つ持ち、自分の 3 つの根とアイコン集を 1 つのタイマーで毎秒見張り、変われば丸ごと読み直す。見張りが後で直せない描き（ストアに書くものと download）は、描く前に同じ見張りをその場で 1 回走らせる（`latest`）。読めなければ `store.Drawing.Err` で描く出力を全部止める

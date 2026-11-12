@@ -207,7 +207,7 @@ func TestRecovered(t *testing.T) {
 	s, buf := logged(t)
 	h := s.recovered(http.HandlerFunc(func(http.ResponseWriter, *http.Request) { panic("boom") }))
 	for _, accept := range []string{"application/json", "text/html"} {
-		req := httptest.NewRequestWithContext(t.Context(), http.MethodPut, "/api/artifacts/x?secret=1", http.NoBody)
+		req := httptest.NewRequestWithContext(t.Context(), http.MethodPut, "/api/pages/x?secret=1", http.NoBody)
 		req.Header.Set("Accept", accept)
 		w := httptest.NewRecorder()
 		h.ServeHTTP(w, req)
@@ -222,7 +222,7 @@ func TestRecovered(t *testing.T) {
 		if w.Code != http.StatusInternalServerError {
 			t.Errorf("a panic answered %d (Accept %s), want 500", w.Code, accept)
 		}
-		for _, want := range []string{"PUT /api/artifacts/x", "boom", filepath.Join(s.cfg.Store.Root(), LogName)} {
+		for _, want := range []string{"PUT /api/pages/x", "boom", filepath.Join(s.cfg.Store.Root(), LogName)} {
 			if !strings.Contains(failure, want) {
 				t.Errorf("the answer (Accept %s) = %q, want it to say %q", accept, failure, want)
 			}
@@ -233,7 +233,7 @@ func TestRecovered(t *testing.T) {
 	}
 	// The stack is from where it panicked: the handler's own frame is in it.
 	for _, want := range []string{
-		"level=ERROR", `msg="panic in request"`, "method=PUT", "path=/api/artifacts/x", "panic=boom",
+		"level=ERROR", `msg="panic in request"`, "method=PUT", "path=/api/pages/x", "panic=boom",
 		"goroutine", "TestRecovered", "pid=" + strconv.Itoa(os.Getpid()),
 	} {
 		if !strings.Contains(buf.String(), want) {

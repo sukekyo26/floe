@@ -20,7 +20,7 @@ parts:
   - box: { x: 644, y: 152, w: 240, h: 56, rows: [['/a/<slug>/?raw', 'main code'], { en: 'the page, sandboxed', ja: 'ページを返す（sandbox）' }] }
   - box: { x: 644, y: 240, w: 240, h: 56, rows: [['/api/changed/<slug>', 'main code'], { en: 'asked while shown', ja: '見えている間に問い合わせ' }] }
   - box: { x: 644, y: 328, w: 240, h: 56, rows: [[{ en: '/ and /a/<slug>/', ja: '/ と /a/<slug>/' }, 'main code'], { en: 'manager and frame (ui.html)', ja: '管理画面と外枠（ui.html）' }] }
-  - box: { x: 644, y: 416, w: 240, h: 56, rows: [['/api/artifacts', 'main code'], { en: 'list, edit, register links', ja: '一覧・編集・リンク登録' }] }
+  - box: { x: 644, y: 416, w: 240, h: 56, rows: [['/api/pages', 'main code'], { en: 'list, edit, register links', ja: '一覧・編集・リンク登録' }] }
   - box: { x: 1000, y: 152, w: 200, h: 132, tone: accent, rows: [{ en: 'The page', ja: 'ページ本体' }, { en: 'an iframe of ?raw', ja: '?raw を読む iframe' }, { en: 'sandboxed, origin null', ja: 'sandbox・origin null' }] }
   - box: { x: 988, y: 416, w: 224, h: 56, rows: [{ en: 'Management page', ja: '管理画面' }, { en: 'origin 127.0.0.1', ja: '127.0.0.1 の origin' }] }
   - edge: { from: [224, 92], to: [644, 92], label: { en: '1 health', ja: '① 起動確認' } }

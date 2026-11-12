@@ -30,7 +30,7 @@ func TestUILoadOrder(t *testing.T) { //nolint:paralleltest // the browser tests 
 			return h;
 		};
 		window.fetch = (u, i) => {
-			if (String(u) === '/api/artifacts' && !i?.method) {
+			if (String(u) === '/api/pages' && !i?.method) {
 				gets++;
 				limited = Boolean(i?.signal);
 				if (hang) {
@@ -45,15 +45,15 @@ func TestUILoadOrder(t *testing.T) { //nolint:paralleltest // the browser tests 
 					return res.then((r) => h.held.then(() => r));
 				}
 			}
-			if (String(u).includes('/pages?')) pagesLimited = Boolean(i?.signal);
-			if (String(u).includes('/pages?') && holdFolder) {
+			if (String(u).includes('/files?')) pagesLimited = Boolean(i?.signal);
+			if (String(u).includes('/files?') && holdFolder) {
 				const h = holdFolder;
 				holdFolder = null;
 				const res = h.fail ? Promise.resolve(new Response('', { status: 404 })) : real(u, i);
 				res.then(h.serve);
 				return res.then((r) => h.held.then(() => r));
 			}
-			if (String(u) === '/api/artifacts/kept/read') marks.push(i.body);
+			if (String(u) === '/api/pages/kept/read') marks.push(i.body);
 			if (slowMarks && i?.method === 'POST' && String(u).endsWith('/read')) return real(u, i).then((r) => new Promise((go) => setTimeout(() => go(r), 20)));
 			if (i?.method === 'PATCH' && holdWrite) {
 				const h = holdWrite;
@@ -74,7 +74,7 @@ func TestUILoadOrder(t *testing.T) { //nolint:paralleltest // the browser tests 
 		gets = 0;
 		const l1 = load();
 		await served(h);
-		await real('/api/artifacts/a', archive);
+		await real('/api/pages/a', archive);
 		const l2 = load();
 		await tick();
 		out.push('reads before the first answered: ' + gets);
@@ -86,7 +86,7 @@ func TestUILoadOrder(t *testing.T) { //nolint:paralleltest // the browser tests 
 		// A write going: the load reads after its answer, and returns with what it wrote
 		h = holdWrite = hold();
 		gets = 0;
-		const w = api('/api/artifacts/b', archive);
+		const w = api('/api/pages/b', archive);
 		const l3 = load(true);
 		await tick();
 		out.push('reads while the write goes: ' + gets);
@@ -100,7 +100,7 @@ func TestUILoadOrder(t *testing.T) { //nolint:paralleltest // the browser tests 
 		gets = 0;
 		const l4 = load(true);
 		await served(h);
-		await api('/api/artifacts/c', archive);
+		await api('/api/pages/c', archive);
 		h.release();
 		await l4;
 		out.push('read again: ' + (gets > 1) + ', c there: ' + has('c'));
@@ -109,7 +109,7 @@ func TestUILoadOrder(t *testing.T) { //nolint:paralleltest // the browser tests 
 		h = holdRead = hold(true);
 		const l5 = load();
 		await served(h);
-		await api('/api/artifacts/d', archive);
+		await api('/api/pages/d', archive);
 		h.release();
 		await l5;
 		out.push('failure told: ' + !document.getElementById('error').hidden);
@@ -118,7 +118,7 @@ func TestUILoadOrder(t *testing.T) { //nolint:paralleltest // the browser tests 
 		h = holdRead = hold();
 		const l6 = load(true);
 		await served(h);
-		const added = await api('/api/artifacts', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ path: ` + js(more) + ` }) });
+		const added = await api('/api/pages', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ path: ` + js(more) + ` }) });
 		const { slug } = await added.json();
 		opened.add(slug);
 		h.release();
@@ -129,7 +129,7 @@ func TestUILoadOrder(t *testing.T) { //nolint:paralleltest // the browser tests 
 		h = holdFolder = hold();
 		const l7 = load(true);
 		await served(h);
-		await api('/api/artifacts/' + slug, archive);
+		await api('/api/pages/' + slug, archive);
 		h.release();
 		await l7;
 		out.push('folder there: ' + has(slug));
@@ -139,7 +139,7 @@ func TestUILoadOrder(t *testing.T) { //nolint:paralleltest // the browser tests 
 		const l8 = load(true);
 		await served(h);
 		pressedAt = performance.now();
-		await real('/api/artifacts/e', archive);
+		await real('/api/pages/e', archive);
 		const joined = [load(true), load()];
 		h.release();
 		await l8;
@@ -204,12 +204,12 @@ func TestUILoadOrder(t *testing.T) { //nolint:paralleltest // the browser tests 
 
 		// A write sent by what runs on another write's answer, before the load that waits for that answer goes on: the load waits for it too
 		h = holdWrite = hold();
-		const wa = api('/api/artifacts/f', archive);
+		const wa = api('/api/pages/f', archive);
 		const hb = hold();
 		let wb;
 		noWrites().then(() => {
 			holdWrite = hb;
-			wb = api('/api/artifacts/g', archive);
+			wb = api('/api/pages/g', archive);
 		});
 		const l11 = load(true);
 		h.release();
@@ -221,14 +221,14 @@ func TestUILoadOrder(t *testing.T) { //nolint:paralleltest // the browser tests 
 		out.push('g there: ' + has('g'));
 
 		// A folder's read in the first round, a write meanwhile, and a press in the second round: nothing of the first round is kept
-		const added2 = await api('/api/artifacts', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ path: ` + js(two) + ` }) });
+		const added2 = await api('/api/pages', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ path: ` + js(two) + ` }) });
 		const { slug: slug2 } = await added2.json();
 		opened.add(slug2);
 		await load();
 		h = holdFolder = hold(true);
 		const l12 = load(true);
 		await served(h);
-		await api('/api/artifacts/h', archive);
+		await api('/api/pages/h', archive);
 		pressedAt = performance.now();
 		h.release();
 		await l12;
@@ -275,8 +275,8 @@ func TestUILoadOrder(t *testing.T) { //nolint:paralleltest // the browser tests 
 		let tasksBroken = false, listBroken = false, markBroken = false;
 		window.fetch = (u, i) => {
 			if (tasksBroken && String(u) === '/api/tasks') return Promise.resolve(new Response('tasks broken', { status: 500 }));
-			if (listBroken && String(u) === '/api/artifacts') return Promise.resolve(new Response('', { status: 500 }));
-			if (markBroken && String(u) === '/api/artifacts/gone/read') return Promise.resolve(new Response('marks broken', { status: 500 }));
+			if (listBroken && String(u) === '/api/pages') return Promise.resolve(new Response('', { status: 500 }));
+			if (markBroken && String(u) === '/api/pages/gone/read') return Promise.resolve(new Response('marks broken', { status: 500 }));
 			return real(u, i);
 		};
 		const realRender = render;

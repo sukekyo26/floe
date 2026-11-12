@@ -117,7 +117,7 @@ func TestUIList(t *testing.T) { //nolint:paralleltest // the browser tests share
 	b.moving("document.activeElement.dispatchEvent(new KeyboardEvent('keydown', { key: 'Enter', bubbles: true, cancelable: true }))")
 	// The bar too: the logo's link is drawn with it, once the list is read.
 	b.until("the page whole", "location.pathname === '/a/v/' && document.getElementById('frame-title').textContent")
-	out = append(out, b.eval("sessionStorage.getItem('artifacts.order')"), b.eval("document.querySelector('.brand').getAttribute('href')"))
+	out = append(out, b.eval("sessionStorage.getItem(ORDER_KEY)"), b.eval("document.querySelector('.brand').getAttribute('href')"))
 	b.stub(strings.Replace(listList, "news: 'version', ", "", 1))
 	b.until("the bar", "document.getElementById('frame-title').textContent")
 	key("j")
@@ -126,7 +126,7 @@ func TestUIList(t *testing.T) { //nolint:paralleltest // the browser tests share
 	key("k")
 	b.until("the page before", "location.pathname === '/a/v/'")
 	// From the URL, on no such list: the list it was last on, else all of its kind.
-	b.eval(`sessionStorage.setItem('artifacts.order', '{"order":[],"shown":[],"back":"/"}'); sessionStorage.setItem('artifacts.list', '')`)
+	b.eval(`sessionStorage.setItem(ORDER_KEY, '{"order":[],"shown":[],"back":"/"}'); sessionStorage.setItem(LIST_KEY, '')`)
 	b.navigate("/a/r/")
 	b.until("the bar", "document.getElementById('frame-title').textContent")
 	key("j")
@@ -134,7 +134,7 @@ func TestUIList(t *testing.T) { //nolint:paralleltest // the browser tests share
 	// An end stays where it is.
 	b.navigate("/a/v/")
 	b.until("the bar", "document.getElementById('frame-title').textContent")
-	b.eval(`sessionStorage.setItem('artifacts.order', '{"order":["v"],"shown":["v"],"back":"/"}')`)
+	b.eval(`sessionStorage.setItem(ORDER_KEY, '{"order":["v"],"shown":["v"],"back":"/"}')`)
 	b.navigate("/a/v/")
 	b.until("the bar", "document.getElementById('frame-title').textContent")
 	key("j")
@@ -479,7 +479,7 @@ func TestUIReader(t *testing.T) { //nolint:paralleltest // the browser tests sha
 		b.until(what, "window.heard.includes("+js(path)+")")
 	}
 	// A page in the iframe tells the path it is at as it loads.
-	b.eval("window.heard = []; addEventListener('message', (e) => { if (e.data?.artifactPath) window.heard.push(e.data.artifactPath); })")
+	b.eval("window.heard = []; addEventListener('message', (e) => { if (e.data?.pagePath) window.heard.push(e.data.pagePath); })")
 	out := make([]string, 0, 8)
 	before := b.eval("history.length")
 	for _, slug := range []string{"a1", "a2", "a3"} {
@@ -548,7 +548,7 @@ func TestUIFrameOrder(t *testing.T) { //nolint:paralleltest // the browser tests
 		t.Helper()
 
 		b.navigate("/")
-		b.eval("sessionStorage.setItem('artifacts.order', " + js(`{"order":`+order+`,"shown":`+order+`,"back":"/"}`) + "); sessionStorage.setItem('artifacts.list', " + js(list) + ")")
+		b.eval("sessionStorage.setItem(ORDER_KEY, " + js(`{"order":`+order+`,"shown":`+order+`,"back":"/"}`) + "); sessionStorage.setItem(LIST_KEY, " + js(list) + ")")
 		b.navigate("/a/" + from + "/")
 		b.until("the bar", "document.getElementById('frame-title').textContent")
 		b.moving("document.body.dispatchEvent(new KeyboardEvent('keydown', { key: 'j', bubbles: true }))")
@@ -574,7 +574,7 @@ func TestUIFrameOrder(t *testing.T) { //nolint:paralleltest // the browser tests
 	go1("a", "[]", "?kind=link", "b")
 	// At the end of the list that opened it, it stays.
 	b.navigate("/")
-	b.eval(`sessionStorage.setItem('artifacts.order', '{"order":["v","n"],"shown":["v","n"],"back":"/"}')`)
+	b.eval(`sessionStorage.setItem(ORDER_KEY, '{"order":["v","n"],"shown":["v","n"],"back":"/"}')`)
 	stays("n")
 }
 
@@ -721,7 +721,7 @@ func TestUIColumns(t *testing.T) { //nolint:paralleltest // the browser tests sh
 	out = append(out, b.eval(list), b.eval("document.getElementById('read-blank').hidden + ' ' + document.getElementById('read-actions').hidden + ' ' + document.getElementById('read-title').hidden"))
 	// A page chosen and gone leaves no link to it in the head.
 	b.eval("document.querySelector('#list li[data-slug=a2] .title').click()")
-	b.eval("window.fetch = ((f) => async (u, i) => { const r = await f(u, i); if (i?.method || String(u) !== '/api/artifacts') return r; return new Response(JSON.stringify((await r.json()).filter((a) => a.slug !== 'a2'))); })(window.fetch); load()")
+	b.eval("window.fetch = ((f) => async (u, i) => { const r = await f(u, i); if (i?.method || String(u) !== '/api/pages') return r; return new Response(JSON.stringify((await r.json()).filter((a) => a.slug !== 'a2'))); })(window.fetch); load()")
 	out = append(out, b.until("the page gone", "!document.querySelector('#list li[data-slug=a2]') && [document.getElementById('read-title').getClientRects().length, picked].join(' ')"))
 	b.navigate("/")
 	b.until("the rows", "document.querySelector('#list li[data-slug=a2]')")
@@ -1148,7 +1148,7 @@ func TestUIBarActions(t *testing.T) { //nolint:paralleltest // the browser tests
 		"download open archive star more | tag-item theme-item task-set edit delete",
 		"Restore / Restore Kept to the list /  / true / false",
 		"Archive / Archive Kept /  / false / true", "true",
-		"/api/artifacts/two/download ",
+		"/api/pages/two/download ",
 		"copy open | ",
 		"Restore / Restore One to the list /  / true / false",
 		"1 / Archived “One”Restore / true",
@@ -1271,7 +1271,7 @@ func TestUIRowAgain(t *testing.T) { //nolint:paralleltest // the browser tests s
 	b.until("whole", "location.pathname === '/a/a2/'")
 	// The URL is the new page's before its script has kept where it is; the frame's src comes after that
 	b.until("its bar", "document.getElementById('frame').hasAttribute('src')")
-	out = append(out, b.eval("sessionStorage.getItem('artifacts.order')"))
+	out = append(out, b.eval("sessionStorage.getItem(ORDER_KEY)"))
 	b.pressKey("j")
 	b.until("on through the list", "location.pathname === '/a/a1/'")
 
@@ -1321,7 +1321,7 @@ func TestUIRowAgainKinds(t *testing.T) { //nolint:paralleltest // the browser te
 	b.until("the words why", "picked?.slug === 'gone' && !document.getElementById('read-blank').hidden")
 	b.click(x, y)
 	out := make([]string, 0, 2)
-	out = append(out, b.eval("picked.slug + ' ' + "+rowAgainPath+" + ' ' + sessionStorage.getItem('artifacts.order')"))
+	out = append(out, b.eval("picked.slug + ' ' + "+rowAgainPath+" + ' ' + sessionStorage.getItem(ORDER_KEY)"))
 
 	const expanded = ".querySelector('.title').getAttribute('aria-expanded')"
 	x, y = rowPoint(t, b, folder, false)

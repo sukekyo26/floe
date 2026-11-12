@@ -448,7 +448,7 @@ func TestUIBulkBar(t *testing.T) { //nolint:paralleltest // the browser tests sh
 
 // frameKeys makes a whole page's keys say that they came, and catches what a page sends, for a press to be read.
 const framedCatch = `window.got = []; window.seen = []; addEventListener('message', (e) => {
-	if (typeof e.data?.artifactKey === 'string') window.got.push(e.data.artifactKey);
+	if (typeof e.data?.pageKey === 'string') window.got.push(e.data.pageKey);
 	if (e.data?.seen) window.seen.push(e.data.seen + ':' + e.data.prevented);
 	if (e.data?.ran) window.ran = e.data.ran;
 	if (e.data?.ready) window.ready = true;
@@ -461,16 +461,16 @@ const keysPage = `<input id="t"><input id="c" type="checkbox"><input id="r" type
 <script>
 const home = location.protocol + '//' + location.host;
 addEventListener('keydown', (e) => { if (window.pageTakes) e.preventDefault(); setTimeout(() => parent.postMessage({ seen: e.key, prevented: e.defaultPrevented }, home)); });
-addEventListener('message', (e) => { if (e.data?.artifactKeysWanted) parent.postMessage({ ready: 1 }, home); if (e.data?.run) { does[e.data.run](e.data.arg); parent.postMessage({ ran: e.data.n }, home); } });
+addEventListener('message', (e) => { if (e.data?.pageKeysWanted) parent.postMessage({ ready: 1 }, home); if (e.data?.run) { does[e.data.run](e.data.arg); parent.postMessage({ ran: e.data.n }, home); } });
 const does = {
   focus: (id) => document.getElementById(id).focus(),
   design: () => { document.designMode = 'on'; },
   stop: () => { window.pageTakes = true; },
   rest: () => { window.pageTakes = false; document.designMode = 'off'; document.activeElement.blur(); },
-  post: (keys) => { for (const k of keys) parent.postMessage({ artifactKey: k }, home); },
+  post: (keys) => { for (const k of keys) parent.postMessage({ pageKey: k }, home); },
   go: (url) => { setTimeout(() => { location.href = url; }); },
-  open: () => parent.postMessage({ artifactOpen: '/' }, home),
-  self: () => postMessage({ artifactKeysWanted: true }, '*'),
+  open: () => parent.postMessage({ pageOpen: '/' }, home),
+  self: () => postMessage({ pageKeysWanted: true }, '*'),
 };
 </script>`
 
@@ -522,7 +522,7 @@ func realKey(b *browser, k string, modifiers int64) {
 func TestUIPageKeys(t *testing.T) { //nolint:paralleltest // the browser tests share one Chrome, one at a time
 	ext := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, _ *http.Request) {
 		w.Header().Set("Content-Type", "text/html")
-		fmt.Fprint(w, `<!doctype html><script>parent.postMessage({ artifactKey: 'j' }, '*'); parent.postMessage({ artifactOpen: '/' }, '*'); parent.postMessage({ there: 1 }, '*');</script>`)
+		fmt.Fprint(w, `<!doctype html><script>parent.postMessage({ pageKey: 'j' }, '*'); parent.postMessage({ pageOpen: '/' }, '*'); parent.postMessage({ there: 1 }, '*');</script>`)
 	}))
 	defer ext.Close()
 	s := newSite(t)
@@ -703,7 +703,7 @@ func TestUIComposing(t *testing.T) { //nolint:paralleltest // the browser tests 
 func TestUIFindTrap(t *testing.T) { //nolint:paralleltest // the browser tests share one Chrome, one at a time
 	s := newSite(t)
 	b := s.b
-	s.floe(t, "publish", s.page(t, "d.yaml", "d", keysPage+`<script>addEventListener('message', (e) => { if (e.data?.run === 'trap') setInterval(() => { window.focus(); document.getElementById('b').focus(); parent.postMessage({ artifactKey: 'Ctrl+K' }, home); }, 50); });</script>`), "--slug", "d")
+	s.floe(t, "publish", s.page(t, "d.yaml", "d", keysPage+`<script>addEventListener('message', (e) => { if (e.data?.run === 'trap') setInterval(() => { window.focus(); document.getElementById('b').focus(); parent.postMessage({ pageKey: 'Ctrl+K' }, home); }, 50); });</script>`), "--slug", "d")
 	b.navigate("about:blank")
 	b.addScript(framedCatch)
 	b.navigate("/a/d/")
@@ -1106,9 +1106,9 @@ func TestUIFindOrder(t *testing.T) { //nolint:paralleltest // the browser tests 
 		// On the list of the tag, whose next after P3 is P5, with the order of all kept, whose next is P4.
 		b.navigate("/?tag=t")
 		b.until("the rows", "document.querySelector('#list .title')")
-		b.eval(`sessionStorage.setItem('artifacts.order', '{"order":["p1","p2","p3","p4","p5"],"shown":["p1","p2","p3","p4","p5"],"back":"/"}'); openFind()`)
+		b.eval(`sessionStorage.setItem(ORDER_KEY, '{"order":["p1","p2","p3","p4","p5"],"shown":["p1","p2","p3","p4","p5"],"back":"/"}'); openFind()`)
 		// A press beside the rows opens nothing, and the order stays.
-		out = append(out, b.eval("document.getElementById('find-list').click(); sessionStorage.getItem('artifacts.order') !== null"))
+		out = append(out, b.eval("document.getElementById('find-list').click(); sessionStorage.getItem(ORDER_KEY) !== null"))
 		open[how]()
 		b.until("the page", "location.pathname === '/a/p3/'")
 		b.until("the bar", "document.getElementById('frame-title').textContent")
@@ -1137,7 +1137,7 @@ func TestUIReadLoads(t *testing.T) { //nolint:paralleltest // the browser tests 
 	s.floe(t, "publish", s.page(t, "read/pv.yaml", "pv", "<p>pv</p>"), "--slug", "pv")
 	b.addScript(`(() => { const f = window.fetch; window.told = 0; window.next = 0;
 		window.fetch = (u, o) => { const read = String(u).endsWith('/read');
-			if (window.told && !window.next && String(u) === '/api/artifacts') window.next = performance.now();
+			if (window.told && !window.next && String(u) === '/api/pages') window.next = performance.now();
 			return f(u, o).then((r) => { if (read) window.told = performance.now(); return r; }); }; })()`)
 	b.navigate("/a/pv/")
 	b.until("the read told and the list read", "window.told > 0 && window.next > 0")

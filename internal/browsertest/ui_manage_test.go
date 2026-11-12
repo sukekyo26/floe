@@ -60,8 +60,8 @@ func fake(list string) string {
 	window.list = made;
 	window.fetch = (url, init = {}) => {
 		// A folder's directory: one directory, one page and more left out, so that each kind of its rows shows
-		if (!init.method && String(url).includes('/pages')) {
-			return Promise.resolve(new Response('{"dirs":["guide"],"pages":[{"file":"index.html","updatedAt":"' + at(3) + '"}],"more":1200}'));
+		if (!init.method && String(url).includes('/files')) {
+			return Promise.resolve(new Response('{"dirs":["guide"],"files":[{"file":"index.html","updatedAt":"' + at(3) + '"}],"more":1200}'));
 		}
 		if (!init.method && String(url).includes('/api/tasks')) return Promise.resolve(new Response('{}'));
 		if (!init.method) {
@@ -343,19 +343,19 @@ func uiExtras(t *testing.T, lang i18n.Lang, msg func(string, ...any) string) {
 	label := func(key string) string { return strings.Fields(msg(key, ""))[0] }
 	check(t, "extras", out, strings.Join([]string{
 		"Beta,Alpha,Gamma,Linked,Missing", "Gamma fav",
-		`PATCH /api/artifacts/b {"favorite":true}`, label("ui_created_at") + " " + label("ui_updated_at"), "none", "Alpha",
+		`PATCH /api/pages/b {"favorite":true}`, label("ui_created_at") + " " + label("ui_updated_at"), "none", "Alpha",
 		msg("ui_selected_n", 1) + msg("ui_selected_more"), "grid", msg("ui_selected_n", 2) + msg("ui_selected_more"), msg("ui_delete_bulk_confirm", 2),
-		"DELETE /api/artifacts/a,DELETE /api/artifacts/b", "none", msg("ui_unlink"),
-		"true old", `PATCH /api/artifacts/a {"description":"new"}`, "true", "true",
-		"copy /tmp/x/l.html", "true", "Missing", `POST /api/artifacts {"path":"/tmp/x/n.html","description":"a link"}`,
+		"DELETE /api/pages/a,DELETE /api/pages/b", "none", msg("ui_unlink"),
+		"true old", `PATCH /api/pages/a {"description":"new"}`, "true", "true",
+		"copy /tmp/x/l.html", "true", "Missing", `POST /api/pages {"path":"/tmp/x/n.html","description":"a link"}`,
 		"3 2 " + msg("ui_no_project") + "5 false 0 5 1 3 " + msg("ui_list_head", 0) + " Beta,Alpha,Gamma,Linked,Missing ",
 		msg("ui_archive") + " / " + msg("ui_archive_named", "Beta") + " / " + msg("ui_archive"),
-		`PATCH /api/artifacts/b {"archived":true}`, "0", "true",
+		`PATCH /api/pages/b {"archived":true}`, "0", "true",
 		// The archived, by project: p's Zeta and those of none; two projects, so the shelf shows them.
 		"2 1 p1 " + msg("ui_no_project") + "2 false 0 5 1 3 " + msg("ui_list_head", 0) + " Zeta,Ypsilon,Kept archived",
 		msg("ui_unarchive") + " / " + msg("ui_unarchive_named", "Zeta") + " / " + msg("ui_unarchive"),
-		`PATCH /api/artifacts/z {"archived":false}`, "true", msg("ui_unarchive"),
-		`PATCH /api/artifacts/k {"archived":false},PATCH /api/artifacts/y {"archived":false},PATCH /api/artifacts/z {"archived":false}`,
+		`PATCH /api/pages/z {"archived":false}`, "true", msg("ui_unarchive"),
+		`PATCH /api/pages/k {"archived":false},PATCH /api/pages/y {"archived":false},PATCH /api/pages/z {"archived":false}`,
 		"empty-archived:" + msg("ui_none_archived") + " true", "false",
 		msg("ui_favorite_failed", "Failed to fetch"), "true",
 		"all-archived:" + msg("ui_all_archived", 1),
@@ -585,12 +585,12 @@ func uiShelf(t *testing.T, lang i18n.Lang, msg func(string, ...any) string) {
 		"0010", "shown", "shown", "shown", "0",
 		msg("ui_more_named", "Beta"), msg("ui_mark_unread") + " / " + msg("ui_select") + " / " + msg("ui_tags") + " / " + msg("ui_pin") + " / " + msg("ui_task_set") + " / " + msg("ui_edit") + " / " + msg("ui_open_raw") + " / " + msg("ui_download") + " / " + msg("ui_delete"),
 		"false true", "Alpha", "false true", "1", "false true", "true", "true",
-		"true", "DELETE /api/artifacts/a",
+		"true", "DELETE /api/pages/a",
 		"false true true true", "false true true true", "false false false true", "report2,design1",
 		"Hal ?template=report", "Hl ?kind=link&template=report", "fav link report", "Hald ",
 		"floe:var(--pc0),p:var(--pc1)", "false", "empty-favorites", "all-archived", "archived ?view=archived",
 		"false", "true 1 New,Alpha", "true", "true",
-		"Zeta / false / true / " + msg("ui_favorite_named", "Zeta") + " / /a/z/?raw / " + msg("ui_unarchive"), `PATCH /api/artifacts/z {"archived":false}`,
+		"Zeta / false / true / " + msg("ui_favorite_named", "Zeta") + " / /a/z/?raw / " + msg("ui_unarchive"), `PATCH /api/pages/z {"archived":false}`,
 		"Zeta / true / true / " + msg("ui_favorite_named", "Zeta") + " / /a/z/?raw / " + msg("ui_archive"),
 		msg("ui_favorite_failed", "Failed to fetch"), "/a/z2/",
 	}, "|"))
@@ -775,12 +775,12 @@ func uiTags(t *testing.T, lang i18n.Lang, msg func(string, ...any) string) {
 		"ab plan", "plan2:true,設計1:false,設計、実装1:false false", "ab plan", "abcd -",
 		"old1:false,plan1:false false", "c 設計、実装", msg("ui_selected_n", 1) + msg("ui_selected_more"), "ac -",
 		"other2:false,plan0:true,設計1:false,設計、実装1:false false", "false", "abcd -",
-		msg("ui_tag_one_title", "Gamma"), "設計、実装:all:✓:,old:none:+:,plan:none:+:,設計:none:+:", `PATCH /api/artifacts/c {"tags":{"add":["old"],"remove":[]}}`, "true",
-		`PATCH /api/artifacts/c {"title":"G2"}`,
+		msg("ui_tag_one_title", "Gamma"), "設計、実装:all:✓:,old:none:+:,plan:none:+:,設計:none:+:", `PATCH /api/pages/c {"tags":{"add":["old"],"remove":[]}}`, "true",
+		`PATCH /api/pages/c {"title":"G2"}`,
 		msg("ui_tag_bulk_title", 3), "plan:some:−:2/3,設計:some:−:1/3,old:none:+:,設計、実装:none:+:", "false", "plan solid",
 		"all:true none:true some:false all:true", "plan:all:✓:2/3,設計:none:+:1/3,old:all:✓:,設計、実装:none:+:", "true",
-		`PATCH /api/artifacts/a {"tags":{"add":["old","plan"],"remove":["設計"]}},PATCH /api/artifacts/b {"tags":{"add":["old","plan"],"remove":["設計"]}},PATCH /api/artifacts/d {"tags":{"add":["old","plan"],"remove":["設計"]}}`, "true", "1",
-		`PATCH /api/artifacts/a {"tags":{"add":["old"],"remove":[]}},PATCH /api/artifacts/c {"tags":{"add":["old"],"remove":[]}}`,
+		`PATCH /api/pages/a {"tags":{"add":["old","plan"],"remove":["設計"]}},PATCH /api/pages/b {"tags":{"add":["old","plan"],"remove":["設計"]}},PATCH /api/pages/d {"tags":{"add":["old","plan"],"remove":["設計"]}}`, "true", "1",
+		`PATCH /api/pages/a {"tags":{"add":["old"],"remove":[]}},PATCH /api/pages/c {"tags":{"add":["old"],"remove":[]}}`,
 		"plan:all:✓: false", msg("ui_tag_create", "new"), "plan:all:✓:,new:all:✓:,old:none:+:,設計:none:+:,設計、実装:none:+:", "true 0 true", "false",
 		"true 0",
 		"plan,設計,設計、実装", "ab plan", "true", msg("ui_narrow_n", 1), "abcd -", "shelf",
@@ -900,7 +900,7 @@ func TestUIStubSlowServer(t *testing.T) { //nolint:paralleltest // the browser t
 	s.floe(t, "publish", s.page(t, "real.yaml", "Real", "<p>r</p>"), "--slug", "real")
 	// The list's answer alone, slower than a poll: the page itself comes at once.
 	slow := network.EmulateNetworkConditionsByRuleParams{MatchedNetworkConditions: []*network.Conditions{
-		{URLPattern: s.Base + "/api/artifacts", Latency: 3500, DownloadThroughput: -1, UploadThroughput: -1},
+		{URLPattern: s.Base + "/api/pages", Latency: 3500, DownloadThroughput: -1, UploadThroughput: -1},
 	}}
 	if _, err := chromedp.Call(b.ctx, network.EmulateNetworkConditionsByRule, slow); err != nil {
 		t.Fatal(err)

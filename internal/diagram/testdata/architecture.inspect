@@ -15,7 +15,7 @@ box "/api/health" 644,64 240x56
 box "/a/<slug>/?raw" 644,152 240x56
 box "/api/changed/<slug>" 644,240 240x56
 box "/ and /a/<slug>/" 644,328 240x56
-box "/api/artifacts" 644,416 240x56
+box "/api/pages" 644,416 240x56
 box "The page" 1000,152 200x132
 box "Management page" 988,416 224x56
 edge [224,92]→[644,92] M224,92 H644
