@@ -435,9 +435,10 @@ func TestPublishOtherDirs(t *testing.T) {
 	e := newDenv(t)
 	wantRun(t, "publish", e.run("publish", "page.yaml"), 0, e.base()+"/a/page/\n", projectLine)
 	first, _ := e.health(t.Context())
-	refused := "floe: the server on port " + e.port + " draws pages with the templates of " + first.Templates
+	refused := "floe: the server on port " + e.port + " draws pages with the templates of " + strconv.Quote(first.Templates)
 	again := `; move yours where the server reads them, or run "floe stop" and run this command again` + "\n"
-	for key, dir := range map[string]string{"FLOE_ICONS_DIR": "other-icons", "FLOE_THEMES_DIR": "other-themes", "FLOE_PARTS_DIR": "other-parts"} {
+	// Names with a space and a semicolon: the message must show where a path ends.
+	for key, dir := range map[string]string{"FLOE_ICONS_DIR": "other icons; 1", "FLOE_THEMES_DIR": "other themes; 1", "FLOE_PARTS_DIR": "other parts; 1"} {
 		e.vars[key] = filepath.Join(e.tmp, dir)
 		if err := os.Mkdir(e.vars[key], 0o700); err != nil {
 			t.Fatal(err)
@@ -447,6 +448,9 @@ func TestPublishOtherDirs(t *testing.T) {
 			wantRun(t, args[0]+" with "+dir, r, 1, "", refused)
 			if !strings.HasSuffix(r.stderr, again) {
 				t.Errorf("%s with %s = %q, want it to end in %q", args[0], dir, r.stderr, again)
+			}
+			if !slices.Contains(quotedPaths(r.stderr), e.vars[key]) {
+				t.Errorf("%s with %s = %q, want the directory this command means in quotes", args[0], dir, r.stderr)
 			}
 		}
 		wantRun(t, "publish with "+dir+" from another build", e.exe(t, otherBuild, "publish", "page.yaml"), 1, "", refused)
@@ -509,9 +513,9 @@ func TestPublishToAnotherServer(t *testing.T) {
 	for _, args := range [][]string{{"publish", "page.yaml"}, {"rebuild"}, {"list"}} {
 		e.vars["FLOE_DIR"] = other
 		r := e.run(args...)
-		if r.code != 1 || r.stdout != "" || !strings.HasPrefix(r.stderr, "floe: ") ||
-			!strings.Contains(r.stderr, "FLOE_PORT") || !strings.Contains(r.stderr, "floe stop") {
-			t.Errorf("%s to another store = %+v, want a refusal that names FLOE_PORT and floe stop", args[0], r)
+		if r.code != 1 || r.stdout != "" || !strings.HasPrefix(r.stderr, "floe: ") || !strings.Contains(r.stderr, "port "+e.port) ||
+			!strings.Contains(r.stderr, "FLOE_DIR") || !strings.Contains(r.stderr, "FLOE_PORT") || !strings.Contains(r.stderr, "floe stop") {
+			t.Errorf("%s to another store = %+v, want a refusal that names port %s, FLOE_DIR, FLOE_PORT and floe stop", args[0], r, e.port)
 			continue
 		}
 		// The store the server serves, said twice: where it serves, and what FLOE_DIR is to be set to.
