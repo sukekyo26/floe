@@ -334,8 +334,8 @@
   .dialog-actions .btn { height: 2.25rem; padding: 0 0.9rem; font-size: var(--text); }
   a.btn { color: var(--fg); text-decoration: none; }
   .btn:hover { border-color: var(--faint); }
-  .btn.primary { font-weight: 600; color: var(--on-ink); border-color: transparent; background: var(--ink); }
-  .btn.primary:hover { background: var(--ink-hover); }
+  .btn.primary, .btn[aria-pressed="true"] { font-weight: 600; color: var(--on-ink); border-color: transparent; background: var(--ink); }
+  .btn.primary:hover, .btn[aria-pressed="true"]:hover { background: var(--ink-hover); }
   .btn:disabled { opacity: 0.6; cursor: progress; }
   .btn svg { width: 15px; height: 15px; }
 
@@ -673,7 +673,20 @@
   .find-foot { position: relative; align-items: center; }
   .find-foot .more { position: static; }
   .find-foot .menu { top: auto; bottom: calc(100% - 0.5rem); left: 0; right: auto; min-width: min(17.5rem, 100%); max-width: 100%; }
-  /* The modal of the shortcuts */
+  /* The modal of the help: a button for each of its two panels, which share one box. The top stays where it is as one panel goes for
+     the other, so that the buttons do; only the box scrolls, the head and the foot in sight (as the settings' cards do) */
+  .help-switch { display: flex; gap: 0.4rem; }
+  .help-panel { display: grid; gap: 1rem; }
+  #keys { margin-block: 6dvh auto; max-height: calc(94dvh - 1rem); }
+  #keys .modal-body { display: flex; flex-direction: column; max-height: calc(94dvh - 1rem - 2px); }
+  #keys .modal-body > * { flex: none; }
+  #keys .help-panels { flex: 0 1 auto; min-height: 0; overflow-y: auto; }
+  .help-lead, .keys-note { margin: 0; color: var(--muted); font-size: var(--text-small); }
+  #help-about dl { grid-template-columns: 7.5rem minmax(0, 1fr); }
+  #help-about dt { font-weight: 600; }
+  #help-about h3 { margin: 0 0 0.2rem; font-size: var(--text-small); color: var(--fg); }
+  #help-about section > p { margin: 0 0 0.5rem; color: var(--muted); font-size: var(--text-small); }
+  /* The shortcuts' panel of the help */
   .keys-part { display: grid; gap: 1rem; }
   .keys-part[hidden] { display: none; }
   .keys-body h3 { margin: 0 0 0.3rem; font-size: var(--text-label); font-weight: 650; color: var(--muted); }
@@ -681,15 +694,14 @@
   .keys-body dt { display: flex; align-items: center; gap: 0.25rem; }
   .keys-body dt i { white-space: nowrap; font-style: normal; font-size: var(--text-label); color: var(--faint); }
   .keys-body dd { margin: 0; }
-  /* The bar's ways to the two modals: of the shortcuts where there are likely to be keys; of finding where a whole page has no search */
+  /* The bar's ways to the two modals: of the help; of finding where a whole page has no search */
   #find-open { display: none; flex: none; }
   #keys-open svg, #find-open svg { width: 16px; height: 16px; }
-  @media (max-width: 56rem) { #keys-open { display: none; } }
   /* The settings: the default theme, chosen from cards of a sample page drawn in each theme */
   #settings-open svg { width: 16px; height: 16px; }
-  /* LIMIT: no room for it in a bar of 40rem or less, as the shortcuts' button above 56rem: the settings open from the list's bar on a wider window, and not from a page whole. Give them a way there if they come to be needed on a phone */
-  @media (max-width: 40rem) { #settings-open { display: none; } }
-  /* A page whole leaves both to the list: they are of all pages, and beside the page's own buttons they read as this page's. ? still opens the shortcuts */
+  /* LIMIT: no room for the settings' and the help's buttons in a bar of 40rem or less: they open from the list's bar on a wider window, and not from a page whole. Give them a way there if they come to be needed on a phone. The help's shortcuts show on a touch screen too, which has no keys: hide them there if that troubles someone */
+  @media (max-width: 40rem) { :is(#settings-open, #keys-open) { display: none; } }
+  /* A page whole leaves both to the list: they are of all pages, and beside the page's own buttons they read as this page's. ? still opens the help, on its shortcuts */
   .framed :is(#settings-open, #keys-open) { display: none; }
   /* Close to the logo: the dot is the logo's, not a button's */
   .brand + .server { margin-left: -0.4rem; }
@@ -1036,7 +1048,7 @@
       <span class="frame-actions" id="frame-actions" hidden></span>
       <a class="news" id="news" href="/?view=new" hidden><span class="dot"></span><span id="news-n"></span></a>
       <button type="button" class="icon-btn" id="find-open" aria-label="{{.Msg "ui_find"}}" title="{{.Msg "ui_find"}}"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true"><circle cx="11" cy="11" r="7"/><path d="m20 20-3.5-3.5"/></svg></button>
-      <button type="button" class="icon-btn" id="keys-open" aria-label="{{.Msg "ui_keys"}}" title="{{.Msg "ui_keys_title"}}"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="9"/><path d="M9.6 9.4a2.5 2.5 0 0 1 4.8.8c0 1.7-2.4 2-2.4 3.6"/><path d="M12 17.2v.01"/></svg></button>
+      <button type="button" class="icon-btn" id="keys-open" aria-label="{{.Msg "ui_help"}}" title="{{.Msg "ui_help"}}"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="9"/><path d="M9.6 9.4a2.5 2.5 0 0 1 4.8.8c0 1.7-2.4 2-2.4 3.6"/><path d="M12 17.2v.01"/></svg></button>
       <button type="button" class="icon-btn" id="settings-open" aria-label="{{.Msg "ui_settings"}}" title="{{.Msg "ui_settings"}}"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.7 1.7 0 0 0 .3 1.8l.1.1a2 2 0 1 1-2.8 2.8l-.1-.1a1.7 1.7 0 0 0-1.8-.3 1.7 1.7 0 0 0-1 1.5V21a2 2 0 1 1-4 0v-.1a1.7 1.7 0 0 0-1.1-1.5 1.7 1.7 0 0 0-1.8.3l-.1.1a2 2 0 1 1-2.8-2.8l.1-.1a1.7 1.7 0 0 0 .3-1.8 1.7 1.7 0 0 0-1.5-1H3a2 2 0 1 1 0-4h.1a1.7 1.7 0 0 0 1.5-1.1 1.7 1.7 0 0 0-.3-1.8l-.1-.1a2 2 0 1 1 2.8-2.8l.1.1a1.7 1.7 0 0 0 1.8.3H9a1.7 1.7 0 0 0 1-1.5V3a2 2 0 1 1 4 0v.1a1.7 1.7 0 0 0 1 1.5 1.7 1.7 0 0 0 1.8-.3l.1-.1a2 2 0 1 1 2.8 2.8l-.1.1a1.7 1.7 0 0 0-.3 1.8V9a1.7 1.7 0 0 0 1.5 1H21a2 2 0 1 1 0 4h-.1a1.7 1.7 0 0 0-1.5 1Z"/></svg></button>
     </div>
   </div>
@@ -1262,18 +1274,43 @@
 </dialog>
 <dialog id="keys" aria-labelledby="keys-title">
   <div class="modal-body keys-body">
-    <div class="modal-head"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="3" y="6" width="18" height="12" rx="2"/><path d="M7 10h.01M11 10h.01M15 10h.01M7 14h10"/></svg><div><h2 id="keys-title">{{.Msg "ui_keys"}}</h2><p class="lead keys-note" id="keys-note-list">{{.Msg "ui_keys_note_list"}}</p><p class="lead keys-note" id="keys-note-frame">{{.Msg "ui_keys_note_frame"}}</p></div></div>
-    <div class="keys-part" id="keys-list">
-      <section><h3>{{.Msg "ui_keys_move"}}</h3><dl><dt><kbd>j</kbd><i>{{.Msg "ui_keys_or"}}</i><kbd>↓</kbd></dt><dd>{{.Msg "ui_keys_next_row"}}</dd><dt><kbd>k</kbd><i>{{.Msg "ui_keys_or"}}</i><kbd>↑</kbd></dt><dd>{{.Msg "ui_keys_prev_row"}}</dd><dt><kbd>Enter</kbd></dt><dd id="keys-enter">{{.Msg "ui_keys_whole"}}</dd></dl></section>
-      <section id="keys-row"><h3>{{.Msg "ui_keys_row"}}</h3><dl><dt class="select-key"><kbd>x</kbd></dt><dd class="select-key">{{.Msg "ui_keys_select"}}</dd><dt><kbd>f</kbd></dt><dd>{{.Msg "ui_view_favorites"}}</dd><dt class="diff-go"><kbd>d</kbd></dt><dd class="diff-go">{{.Msg "ui_keys_diff"}}</dd></dl></section>
-      <section><h3>{{.Msg "ui_keys_open_part"}}</h3><dl><dt><kbd>/</kbd></dt><dd>{{.Msg "ui_keys_search"}}</dd><dt><kbd class="mod">Ctrl</kbd><kbd>K</kbd></dt><dd>{{.Msg "ui_keys_find"}}</dd><dt><kbd>?</kbd></dt><dd>{{.Msg "ui_keys_this"}}</dd><dt><kbd>Esc</kbd></dt><dd>{{.Msg "ui_keys_close"}}</dd></dl></section>
+    <div class="modal-head"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="9"/><path d="M9.6 9.4a2.5 2.5 0 0 1 4.8.8c0 1.7-2.4 2-2.4 3.6"/><path d="M12 17.2v.01"/></svg><h2 id="keys-title">{{.Msg "ui_help"}}</h2></div>
+    <div class="help-switch" role="group" aria-labelledby="keys-title">
+      <button type="button" class="btn" data-help="about" aria-pressed="true">{{.Msg "ui_help_about"}}</button>
+      <button type="button" class="btn" data-help="keys" aria-pressed="false">{{.Msg "ui_keys"}}</button>
     </div>
-    <div class="keys-part" id="keys-frame">
-      <section><h3>{{.Msg "ui_keys_move"}}</h3><dl><dt><kbd>j</kbd></dt><dd>{{.Msg "ui_keys_next_page"}}</dd><dt><kbd>k</kbd></dt><dd>{{.Msg "ui_keys_prev_page"}}</dd><dt><kbd>h</kbd></dt><dd id="keys-back">{{.Msg "ui_to_page_list"}}</dd></dl></section>
-      <section><h3>{{.Msg "ui_keys_page"}}</h3><dl><dt><kbd>f</kbd></dt><dd>{{.Msg "ui_view_favorites"}}</dd><dt class="diff-go"><kbd>d</kbd></dt><dd class="diff-go">{{.Msg "ui_keys_diff"}}</dd><dt class="diff-key"><kbd>d</kbd></dt><dd class="diff-key">{{.Msg "ui_diff_close"}}</dd><dt class="diff-key"><kbd>n</kbd></dt><dd class="diff-key">{{.Msg "ui_diff_next"}}</dd><dt class="diff-key"><kbd>p</kbd></dt><dd class="diff-key">{{.Msg "ui_diff_prev"}}</dd></dl></section>
-      <section><h3>{{.Msg "ui_keys_open_part"}}</h3><dl><dt><kbd>/</kbd><i>{{.Msg "ui_keys_or"}}</i><kbd class="mod">Ctrl</kbd><kbd>K</kbd></dt><dd>{{.Msg "ui_keys_find"}}</dd><dt><kbd>?</kbd></dt><dd>{{.Msg "ui_keys_this"}}</dd><dt><kbd>Esc</kbd></dt><dd>{{.Msg "ui_keys_close"}}</dd></dl></section>
+    <div class="help-panels">
+      <div id="help-about" class="help-panel">
+        <p class="help-lead">{{.Msg "ui_help_lead"}}</p>
+        <dl><dt>{{.Msg "ui_project"}}</dt><dd>{{.Msg "ui_help_project_text"}}</dd></dl>
+        <section>
+          <h3>{{.Msg "ui_screen_pages"}}</h3>
+          <p>{{.Msg "ui_help_pages_text"}}</p>
+          <dl><dt>{{.Msg "ui_view_new"}}</dt><dd>{{.Msg "ui_help_new_text"}}</dd><dt>{{.Msg "ui_view_favorites"}}</dt><dd>{{.Msg "ui_help_favorites_text"}}</dd><dt>{{.Msg "ui_state_archived"}}</dt><dd>{{.Msg "ui_help_archive_text"}}</dd></dl>
+        </section>
+        <section>
+          <h3>{{.Msg "ui_screen_tasks"}}</h3>
+          <p>{{.Msg "ui_help_tasks_text"}}</p>
+          {{/* LIMIT: the four states are named here: add a state that store.States comes to have */}}
+          <dl><dt>{{.Msg "ui_help_task"}}</dt><dd>{{.Msg "ui_help_task_text"}}</dd><dt>{{.Msg "ui_help_state"}}</dt><dd>{{.Msg "ui_help_state_text" (.Msg "ui_state_todo") (.Msg "ui_state_doing") (.Msg "ui_state_done") (.Msg "ui_state_archived")}}</dd><dt>{{.Msg "ui_task_category"}}</dt><dd>{{.Msg "ui_help_category_text"}}</dd><dt>{{.Msg "ui_pins"}}</dt><dd>{{.Msg "ui_help_pin_text"}}</dd></dl>
+        </section>
+      </div>
+      <div id="help-keys" class="help-panel" hidden>
+        <p class="keys-note" id="keys-note-list">{{.Msg "ui_keys_note_list"}}</p>
+        <p class="keys-note" id="keys-note-frame">{{.Msg "ui_keys_note_frame"}}</p>
+        <div class="keys-part" id="keys-list">
+          <section><h3>{{.Msg "ui_keys_move"}}</h3><dl><dt><kbd>j</kbd><i>{{.Msg "ui_keys_or"}}</i><kbd>↓</kbd></dt><dd>{{.Msg "ui_keys_next_row"}}</dd><dt><kbd>k</kbd><i>{{.Msg "ui_keys_or"}}</i><kbd>↑</kbd></dt><dd>{{.Msg "ui_keys_prev_row"}}</dd><dt><kbd>Enter</kbd></dt><dd id="keys-enter">{{.Msg "ui_keys_whole"}}</dd></dl></section>
+          <section id="keys-row"><h3>{{.Msg "ui_keys_row"}}</h3><dl><dt class="select-key"><kbd>x</kbd></dt><dd class="select-key">{{.Msg "ui_keys_select"}}</dd><dt><kbd>f</kbd></dt><dd>{{.Msg "ui_view_favorites"}}</dd><dt class="diff-go"><kbd>d</kbd></dt><dd class="diff-go">{{.Msg "ui_keys_diff"}}</dd></dl></section>
+          <section><h3>{{.Msg "ui_keys_open_part"}}</h3><dl><dt><kbd>/</kbd></dt><dd>{{.Msg "ui_keys_search"}}</dd><dt><kbd class="mod">Ctrl</kbd><kbd>K</kbd></dt><dd>{{.Msg "ui_keys_find"}}</dd><dt><kbd>?</kbd></dt><dd>{{.Msg "ui_keys_this"}}</dd><dt><kbd>Esc</kbd></dt><dd>{{.Msg "ui_keys_close"}}</dd></dl></section>
+        </div>
+        <div class="keys-part" id="keys-frame">
+          <section><h3>{{.Msg "ui_keys_move"}}</h3><dl><dt><kbd>j</kbd></dt><dd>{{.Msg "ui_keys_next_page"}}</dd><dt><kbd>k</kbd></dt><dd>{{.Msg "ui_keys_prev_page"}}</dd><dt><kbd>h</kbd></dt><dd id="keys-back">{{.Msg "ui_to_page_list"}}</dd></dl></section>
+          <section><h3>{{.Msg "ui_keys_page"}}</h3><dl><dt><kbd>f</kbd></dt><dd>{{.Msg "ui_view_favorites"}}</dd><dt class="diff-go"><kbd>d</kbd></dt><dd class="diff-go">{{.Msg "ui_keys_diff"}}</dd><dt class="diff-key"><kbd>d</kbd></dt><dd class="diff-key">{{.Msg "ui_diff_close"}}</dd><dt class="diff-key"><kbd>n</kbd></dt><dd class="diff-key">{{.Msg "ui_diff_next"}}</dd><dt class="diff-key"><kbd>p</kbd></dt><dd class="diff-key">{{.Msg "ui_diff_prev"}}</dd></dl></section>
+          <section><h3>{{.Msg "ui_keys_open_part"}}</h3><dl><dt><kbd>/</kbd><i>{{.Msg "ui_keys_or"}}</i><kbd class="mod">Ctrl</kbd><kbd>K</kbd></dt><dd>{{.Msg "ui_keys_find"}}</dd><dt><kbd>?</kbd></dt><dd>{{.Msg "ui_keys_this"}}</dd><dt><kbd>Esc</kbd></dt><dd>{{.Msg "ui_keys_close"}}</dd></dl></section>
+        </div>
+      </div>
     </div>
-    <div class="dialog-actions"><button type="button" class="btn" data-close>{{.Msg "ui_close"}}</button></div>
+    <div class="dialog-actions"><button type="button" class="btn" data-close autofocus>{{.Msg "ui_close"}}</button></div>
   </div>
 </dialog>
 <dialog id="add-dialog" aria-labelledby="add-title">
@@ -5937,12 +5974,25 @@
     await load();
   }
 
-  function openKeys() {
+  // The panel of the help named, its button pressed, from its top. Called once the dialog is open: a closed one has no layout,
+  // and the box would keep the scroll it had
+  function showHelp(name) {
+    for (const button of document.querySelectorAll('.help-switch .btn')) {
+      const on = button.dataset.help === name;
+      button.setAttribute('aria-pressed', String(on));
+      $(`help-${button.dataset.help}`).hidden = !on;
+    }
+    document.querySelector('.help-panels').scrollTop = 0;
+  }
+  // 'keys' where a press of ? opens it, 'about' where the bar's button does
+  function openKeys(name = 'keys') {
     // d, only where it goes somewhere: the same as the button it presses
     const open = framed ? $('frame-actions') : $('read-actions');
     const diffable = !DIFF && !open.hidden && open.querySelector('.diff-open:not([hidden])');
     for (const e of $('keys').querySelectorAll('.diff-go')) e.hidden = !diffable;
-    if (!document.querySelector('dialog[open]')) $('keys').showModal();
+    if (document.querySelector('dialog[open]')) return;
+    $('keys').showModal();
+    showHelp(name);
   }
 
   // The keys, of the list or of a page whole, all pressed through pressKey
@@ -6456,7 +6506,8 @@
     document.body.append($('toasts'));
   });
   $('find-open').addEventListener('click', openFind);
-  $('keys-open').addEventListener('click', openKeys);
+  $('keys-open').addEventListener('click', () => openKeys('about'));
+  for (const button of document.querySelectorAll('.help-switch .btn')) button.addEventListener('click', () => showHelp(button.dataset.help));
   $('settings-open').addEventListener('click', () => openThemes());
   $('settings').addEventListener('close', () => themesBack?.()?.focus());
   $('settings-form').addEventListener('submit', chooseTheme);

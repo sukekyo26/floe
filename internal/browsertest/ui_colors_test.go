@@ -94,7 +94,7 @@ func TestUIColors(t *testing.T) { //nolint:paralleltest // the browser tests sha
 		measure("the edit dialog")
 		b.eval("document.querySelector('#edit-dialog [data-close]').click(); document.getElementById('bulk-clear').click()")
 		// The bulk bar on the ground of the rows selected, its delete waiting or not; the window that finds, a row reached, an
-		// archived one and none; the window of the keys.
+		// archived one and none; the window of the keys and of what floe is.
 		b.eval("for (const s of [...document.querySelectorAll('#list li:not(.group) .sel')].slice(0, 2)) s.click()")
 		measure("the bulk bar")
 		b.eval("document.getElementById('bulk-delete').click()")
@@ -107,6 +107,8 @@ func TestUIColors(t *testing.T) { //nolint:paralleltest // the browser tests sha
 		measure("the window that finds, none")
 		b.eval("document.getElementById('find').close(); openKeys()")
 		measure("the window of the keys")
+		b.eval("document.getElementById('keys').close(); openKeys('about')")
+		measure("the window of the help, what floe is")
 		b.eval("document.getElementById('keys').close()")
 		b.eval("readDone(items[0].slug)")
 		measure("the toast to mark a page unread")

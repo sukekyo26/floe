@@ -6,7 +6,7 @@ import (
 )
 
 // The header bar's ends, from the left: the server's state is by the logo, apart from the buttons, and the buttons at the end are the
-// ones of the list, ending with the settings; a page whole has neither the shortcuts nor the settings, only the page's own buttons.
+// ones of the list, ending with the settings; a page whole has neither the help nor the settings, only the page's own buttons.
 const (
 	barIDs   = "[...document.querySelector('.bar-end').children].map((e) => e.id).join(' ')"
 	barShown = "[...document.querySelector('.bar-end').children].filter((e) => e.getClientRects().length > 0).map((e) => e.id)"
@@ -22,7 +22,7 @@ const (
 
 // TestUIBarEnd says what the header bar holds and where: the connection's state, out of the way while it holds and by the logo when
 // it is lost (its words with room, its dot alone without); the buttons of the list in their order; and a page whole without the settings
-// and the shortcuts.
+// and the help.
 func TestUIBarEnd(t *testing.T) { //nolint:paralleltest // the browser tests share one Chrome, one at a time
 	s := newSite(t)
 	b := s.b

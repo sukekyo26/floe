@@ -305,6 +305,68 @@ func TestDialogCloseWords(t *testing.T) {
 	}
 }
 
+// The help says what floe is, then each of the two screens in a section of its own with the words that are its own: the explanations stand
+// beside the words they explain, and a word does not move to the other screen's section.
+func TestHelpSections(t *testing.T) {
+	t.Parallel()
+
+	for _, lang := range i18n.Langs() {
+		c := i18n.New(lang)
+		b, err := Page(c, "", false, "")
+		if err != nil {
+			t.Fatal(err)
+		}
+		doc, err := html.Parse(strings.NewReader(string(b)))
+		if err != nil {
+			t.Fatal(err)
+		}
+		var got []string
+		for n := range doc.Descendants() {
+			if n.Type != html.ElementNode || attr(n, "id") != "help-about" {
+				continue
+			}
+			for d := range n.Descendants() {
+				if d.Type != html.ElementNode {
+					continue
+				}
+				switch d.DataAtom { //nolint:exhaustive // the words and the screens' names only
+				case atom.H3:
+					got = append(got, "# "+strings.TrimSpace(text(d)))
+				case atom.Dt:
+					got = append(got, strings.TrimSpace(text(d)))
+				case atom.Dd:
+					if strings.TrimSpace(text(d)) == "" {
+						t.Errorf("%s: a word of the help has no explanation", lang)
+					}
+				}
+			}
+		}
+		want := []string{
+			c.Msg("ui_project"),
+			"# " + c.Msg("ui_screen_pages"), c.Msg("ui_view_new"), c.Msg("ui_view_favorites"), c.Msg("ui_state_archived"),
+			"# " + c.Msg("ui_screen_tasks"), c.Msg("ui_help_task"), c.Msg("ui_help_state"), c.Msg("ui_task_category"), c.Msg("ui_pins"),
+		}
+		if !slices.Equal(got, want) {
+			t.Errorf("%s: the help says %q, want %q", lang, got, want)
+		}
+	}
+}
+
+// A message that takes words (the help's states) is given as many as it has verbs, in every language: fmt writes %! where it is not.
+func TestPageFormats(t *testing.T) {
+	t.Parallel()
+
+	for _, lang := range i18n.Langs() {
+		b, err := Page(i18n.New(lang), "", false, "")
+		if err != nil {
+			t.Fatal(err)
+		}
+		if i := strings.Index(string(b), "%!"); i >= 0 {
+			t.Errorf("%s: the page holds %q, which fmt writes for a verb it was not given words for", lang, string(b)[i:min(i+40, len(b))])
+		}
+	}
+}
+
 func attr(n *html.Node, key string) string {
 	for _, a := range n.Attr {
 		if a.Key == key {
