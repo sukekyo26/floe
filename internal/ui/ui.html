@@ -1271,7 +1271,6 @@
     </div>
   </form>
 </dialog>
-{{define "helpProject"}}<dt>{{.Msg "ui_project"}}</dt><dd>{{.Msg "ui_help_project_text"}}</dd>{{end}}
 <dialog id="keys" aria-labelledby="keys-title">
   <div class="modal-body keys-body">
     <div class="modal-head"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="9"/><path d="M9.6 9.4a2.5 2.5 0 0 1 4.8.8c0 1.7-2.4 2-2.4 3.6"/><path d="M12 17.2v.01"/></svg><h2 id="keys-title">{{.Msg "ui_help"}}</h2></div>
@@ -1283,12 +1282,12 @@
       <div id="help-about" class="help-panel">
         <div class="help-panel help-pages">
           <p class="help-lead">{{.Msg "ui_help_pages_text"}}</p>
-          <dl>{{template "helpProject" .}}<dt>{{.Msg "ui_view_new"}}</dt><dd>{{.Msg "ui_help_new_text"}}</dd><dt>{{.Msg "ui_view_favorites"}}</dt><dd>{{.Msg "ui_help_favorites_text"}}</dd><dt>{{.Msg "ui_state_archived"}}</dt><dd>{{.Msg "ui_help_archive_text"}}</dd></dl>
+          <dl><dt>{{.Msg "ui_view_new"}}</dt><dd>{{.Msg "ui_help_new_text"}}</dd><dt>{{.Msg "ui_view_favorites"}}</dt><dd>{{.Msg "ui_help_favorites_text"}}</dd><dt>{{.Msg "ui_state_archived"}}</dt><dd>{{.Msg "ui_help_archive_text"}}</dd><dt>{{.Msg "ui_project"}}</dt><dd>{{.Msg "ui_help_project_pages_text"}}</dd></dl>
         </div>
         <div class="help-panel help-tasks">
           <p class="help-lead">{{.Msg "ui_help_tasks_text"}}</p>
           {{/* LIMIT: the four states are named here: add a state that store.States comes to have */}}
-          <dl>{{template "helpProject" .}}<dt>{{.Msg "ui_help_task"}}</dt><dd>{{.Msg "ui_help_task_text"}}</dd><dt>{{.Msg "ui_help_state"}}</dt><dd>{{.Msg "ui_help_state_text" (.Msg "ui_state_todo") (.Msg "ui_state_doing") (.Msg "ui_state_done") (.Msg "ui_state_archived")}}</dd><dt>{{.Msg "ui_task_category"}}</dt><dd>{{.Msg "ui_help_category_text"}}</dd><dt>{{.Msg "ui_pins"}}</dt><dd>{{.Msg "ui_help_pin_text"}}</dd></dl>
+          <dl><dt>{{.Msg "ui_project"}}</dt><dd>{{.Msg "ui_help_project_tasks_text"}}</dd><dt>{{.Msg "ui_help_task"}}</dt><dd>{{.Msg "ui_help_task_text"}}</dd><dt>{{.Msg "ui_help_state"}}</dt><dd>{{.Msg "ui_help_state_text" (.Msg "ui_state_todo") (.Msg "ui_state_doing") (.Msg "ui_state_done") (.Msg "ui_state_archived")}}</dd><dt>{{.Msg "ui_task_category"}}</dt><dd>{{.Msg "ui_help_category_text"}}</dd><dt>{{.Msg "ui_pins"}}</dt><dd>{{.Msg "ui_help_pin_text"}}</dd></dl>
         </div>
       </div>
       <div id="help-keys" class="help-panel" hidden>

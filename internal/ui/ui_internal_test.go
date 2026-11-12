@@ -305,8 +305,9 @@ func TestDialogCloseWords(t *testing.T) {
 	}
 }
 
-// The help tells of each of the two screens in a part of its own, under a tab of its name: a sentence on the screen, then the words of the
-// project and the screen's own, each with its explanation. A word does not move to the other screen's part.
+// The help tells of each of the two screens in a part of its own, under a tab of its name: a sentence on the screen, then its words, the
+// project among them (the last on the page list, where it narrows the pages, the first on the task list, which is of one project), each
+// with its explanation. A word does not move to the other screen's part, and the project is explained as the screen uses it.
 func TestHelpSections(t *testing.T) {
 	t.Parallel()
 
@@ -320,7 +321,7 @@ func TestHelpSections(t *testing.T) {
 		if err != nil {
 			t.Fatal(err)
 		}
-		var got, tabs []string
+		var got, tabs, projects []string
 		for n := range doc.Descendants() {
 			if n.Type != html.ElementNode {
 				continue
@@ -340,6 +341,9 @@ func TestHelpSections(t *testing.T) {
 						if strings.TrimSpace(text(d)) == "" {
 							t.Errorf("%s: a word of the help has no explanation", lang)
 						}
+						if got[len(got)-1] == c.Msg("ui_project") {
+							projects = append(projects, strings.TrimSpace(text(d)))
+						}
 					}
 				}
 			case n.DataAtom == atom.Button && attr(n, "data-help") == "about":
@@ -351,11 +355,14 @@ func TestHelpSections(t *testing.T) {
 			}
 		}
 		want := []string{
-			"¶ " + c.Msg("ui_help_pages_text"), c.Msg("ui_project"), c.Msg("ui_view_new"), c.Msg("ui_view_favorites"), c.Msg("ui_state_archived"),
+			"¶ " + c.Msg("ui_help_pages_text"), c.Msg("ui_view_new"), c.Msg("ui_view_favorites"), c.Msg("ui_state_archived"), c.Msg("ui_project"),
 			"¶ " + c.Msg("ui_help_tasks_text"), c.Msg("ui_project"), c.Msg("ui_help_task"), c.Msg("ui_help_state"), c.Msg("ui_task_category"), c.Msg("ui_pins"),
 		}
 		if !slices.Equal(got, want) {
 			t.Errorf("%s: the help says %q, want %q", lang, got, want)
+		}
+		if want := []string{c.Msg("ui_help_project_pages_text"), c.Msg("ui_help_project_tasks_text")}; !slices.Equal(projects, want) {
+			t.Errorf("%s: the project is explained as %q, want %q", lang, projects, want)
 		}
 		if want := []string{c.Msg("ui_help_about_pages"), c.Msg("ui_help_about_tasks")}; !slices.Equal(tabs, want) {
 			t.Errorf("%s: the help's tab is named %q, want %q", lang, tabs, want)
