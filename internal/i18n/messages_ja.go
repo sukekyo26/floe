@@ -240,7 +240,7 @@ var messagesJA = map[string]string{
 	"daemon_port_silent":    "ポート %d は使われていますが、何も答えません。別の floe のコマンドが起こしたサーバーがまだ起きている途中か、別のプログラムが持っています。このコマンドをもう一度実行するか、FLOE_PORT に空いているポートを設定してください",
 	"daemon_not_started":    "サーバーが起きませんでした。floe serve を実行して誤りを確かめてください",
 	"daemon_other_root":     "ポート %d のサーバーは %q を返していますが、このコマンドは別の保存先のものです。このコマンドをそのサーバーに送るなら、FLOE_DIR を %[2]q にしてください。自分のサーバーを並べて動かすなら、自分の保存先のどのコマンドにも渡るよう、シェルの環境に FLOE_PORT で別のポートを設定してください。または、floe stop を実行して（そのサーバーが止まります）から、このコマンドをもう一度実行してください",
-	"daemon_other_dirs":     "ポート %d のサーバーはテンプレート %s、部品 %s、テーマ %s、アイコン %s で描いていますが、このコマンドはテンプレート %s、部品 %s、テーマ %s、アイコン %s を使います（FLOE_TEMPLATES_DIR・FLOE_PARTS_DIR・FLOE_THEMES_DIR・FLOE_ICONS_DIR）。自分のものをサーバーが読む所に移すか、floe stop を実行してから、このコマンドをもう一度実行してください",
+	"daemon_other_dirs":     "ポート %d のサーバーはテンプレート %q、部品 %q、テーマ %q、アイコン %q で描いていますが、このコマンドはテンプレート %q、部品 %q、テーマ %q、アイコン %q を使います（FLOE_TEMPLATES_DIR・FLOE_PARTS_DIR・FLOE_THEMES_DIR・FLOE_ICONS_DIR）。自分のものをサーバーが読む所に移すか、floe stop を実行してから、このコマンドをもう一度実行してください",
 	"cli_invalid_port":      "FLOE_PORT「%s」は使えません。1〜65535 のポート番号にしてください",
 	"cli_publish_large":     "データファイルと画像が、publish が受ける %s より大きいです。小さくするか、見せる画像を減らしてください",
 	"cli_serving":           "%s を %s/ で返しています",

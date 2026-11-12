@@ -175,8 +175,12 @@ func (s Server) serves(ctx context.Context, p Status) error {
 		return usererr.New("daemon_port_taken", s.Port)
 	case p.State == Down:
 		return usererr.New("daemon_not_started")
-	// LIMIT: a server that answers no Root is refused as another store, and the message says FLOE_DIR is to be "".
-	// LIMIT: %q quotes for Go, not for a shell: a root with $ or a backtick is expanded when pasted into one.
+	// LIMIT: a server that answers no Root, or a Root that sameDir cannot stat (it is gone), is refused as another store,
+	// though it may be this one; for no Root the message says FLOE_DIR is to be "", the default store again, so
+	// following it repeats the refusal.
+	// LIMIT: the messages that name a path (this one, daemon_other_dirs) quote it with %q, which is Go's quoting and
+	// not a shell's: a character it cannot show (a wide space, a tab) is escaped, and a $, a backtick or a ! is
+	// expanded by the shell, so such a path does not go through when pasted as it is.
 	case !sameDir(p.Health.Root, s.Root):
 		return usererr.New("daemon_other_root", s.Port, p.Health.Root)
 	case s.AnyDirs:
