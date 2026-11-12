@@ -54,12 +54,12 @@ To show the user a page, use floe: run `floe guide` first and follow it. It is t
 
 | したいこと | 読む | English |
 |---|---|---|
-| エージェントが最初に読む（`floe guide`） | [guide.ja.md](guide.ja.md) | [guide.md](guide.md) |
+| エージェントが最初に読む（`floe guide`） | — | [guide.md](agents/guide.md) |
 | ページを作る（データファイルを書く） | [pages.ja.md](pages.ja.md) | [pages.md](pages.md) |
-| 自分のテンプレートを作る（`floe template guide`） | [templates.ja.md](templates.ja.md) | [templates.md](templates.md) |
-| 自分の部品を作る（`floe part guide`） | [parts.ja.md](parts.ja.md) | [parts.md](parts.md) |
-| 自分のテーマを作る（`floe theme guide`） | [themes.ja.md](themes.ja.md) | [themes.md](themes.md) |
-| 図を描く | [diagrams.ja.md](diagrams.ja.md) | [diagrams.md](diagrams.md) |
+| 自分のテンプレートを作る（`floe template guide`） | — | [templates.md](agents/templates.md) |
+| 自分の部品を作る（`floe part guide`） | — | [parts.md](agents/parts.md) |
+| 自分のテーマを作る（`floe theme guide`） | — | [themes.md](agents/themes.md) |
+| 図を描く | — | [diagrams.md](agents/diagrams.md) |
 | HTML のファイルやフォルダをそのまま見せる | [links.ja.md](links.ja.md) | [links.md](links.md) |
 | コマンド・設定を調べる | [commands.ja.md](commands.ja.md) | [commands.md](commands.md) |
 | 変わったことを見る | [CHANGELOG.ja.md](CHANGELOG.ja.md) | [CHANGELOG.md](../CHANGELOG.md) |

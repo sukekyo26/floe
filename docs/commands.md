@@ -51,7 +51,7 @@ Flags are in each command's section below.
 
 ## `floe guide`
 
-Print the guide for agents, [guide.md](guide.md): how to write, check and publish a page, pick the template and the parts, write YAML that floe reads as meant, and read its mistakes. It is a summary of these docs, for an agent to read before it writes a page. It takes no arguments.
+Print the guide for agents, [guide.md](agents/guide.md): how to write, check and publish a page, pick the template and the parts, write YAML that floe reads as meant, and read its mistakes. It is a summary of these docs, for an agent to read before it writes a page. It takes no arguments.
 
 ## `floe skill install <agent>`
 
@@ -145,7 +145,7 @@ Have the server draw every stored page again from the copy of its data file and 
 
 ## `floe template list`
 
-Print the templates, floe's and your own, one per line in four tab-separated columns: the name, where it is (`floe`, or the directory of a template of your own), its shape (the keys of its data file, below) and the description of its `schema.json`. A template of your own hides floe's of its name. [templates.md](templates.md) tells how templates are written.
+Print the templates, floe's and your own, one per line in four tab-separated columns: the name, where it is (`floe`, or the directory of a template of your own), its shape (the keys of its data file, below) and the description of its `schema.json`. A template of your own hides floe's of its name. [templates.md](agents/templates.md) tells how templates are written.
 
 ## `floe template new <name>`
 
@@ -161,11 +161,11 @@ Read the templates in `FLOE_TEMPLATES_DIR` with the parts and themes of your own
 - The mistakes are printed (exit code 1): those of the files, and the examples drawn once the files have none; then the warnings of the examples drawn. Nothing is printed when they are right and have no warning (exit code 0).
 - A file floe does not read in a template (a `template.yaml`, say) is refused: a template holds `page.html`, `schema.json` and `example.yaml`, and `page.css`, `computed.yaml`, `checks.yaml`, `words.yaml` and `assets/` if it likes.
 
-[templates.md](templates.md) tells what each file holds.
+[templates.md](agents/templates.md) tells what each file holds.
 
 ## `floe template guide`
 
-Print how to make a template of your own, [templates.md](templates.md), whole: its files, what each holds and what floe checks. It is the doc itself, for an agent to read before it writes a template. It takes no arguments.
+Print how to make a template of your own, [templates.md](agents/templates.md), whole: its files, what each holds and what floe checks. It is the doc itself, for an agent to read before it writes a template. It takes no arguments.
 
 ## `floe part list`
 
@@ -185,11 +185,11 @@ Make the part `<name>` in `FLOE_PARTS_DIR`: a `schema.json`, a `part.html` of it
 
 Read the parts, looks and shared schemas in `FLOE_PARTS_DIR` and the themes in `FLOE_THEMES_DIR`, over floe's own, and print every mistake of them (exit code 1), a shared schema's too, checked from its root whether a schema names it or not. With parts of your own, it compiles floe's templates with them too. Nothing is printed when they are right (exit code 0). `floe theme check` does the same: a theme's `<part>.css` needs its part, so parts and themes are checked together.
 
-[parts.md](parts.md) tells what a part holds, and [themes.md](themes.md) what a theme holds.
+[parts.md](agents/parts.md) tells what a part holds, and [themes.md](agents/themes.md) what a theme holds.
 
 ## `floe part guide`
 
-Print how to make a part, a look or a shared schema of your own, [parts.md](parts.md), whole: their files, the functions of `part.html`, the CSS layers and what floe checks. It is the doc itself, for an agent to read before it writes a part. It takes no arguments.
+Print how to make a part, a look or a shared schema of your own, [parts.md](agents/parts.md), whole: their files, the functions of `part.html`, the CSS layers and what floe checks. It is the doc itself, for an agent to read before it writes a part. It takes no arguments.
 
 ## `floe theme list`
 
@@ -207,7 +207,7 @@ Do what `floe part check` does: a theme's `<part>.css` needs its part, so parts 
 
 ## `floe theme guide`
 
-Print how to make a theme of your own, [themes.md](themes.md), whole: its files and the rules floe checks them by. It is the doc itself, for an agent to read before it writes a theme. It takes no arguments.
+Print how to make a theme of your own, [themes.md](agents/themes.md), whole: its files and the rules floe checks them by. It is the doc itself, for an agent to read before it writes a theme. It takes no arguments.
 
 ## `floe theme default`
 
@@ -335,9 +335,9 @@ Stop the background server, and return once it is gone, so that a command right 
 
 ## `floe diagram render <spec.yaml>...`
 
-Check each diagram spec and print the diagrams, in order, as one HTML fragment of inline SVG on stdout, to paste into an HTML page of your own: a whole document with `<!doctype html>` and `<html lang>`, since `floe publish --link` shows the file as it is. In a data file, write the spec in a `diagram` part instead ([diagrams.md](diagrams.md), which tells how a spec is written). A relative path is resolved against the working directory.
+Check each diagram spec and print the diagrams, in order, as one HTML fragment of inline SVG on stdout, to paste into an HTML page of your own: a whole document with `<!doctype html>` and `<html lang>`, since `floe publish --link` shows the file as it is. In a data file, write the spec in a `diagram` part instead ([diagrams.md](agents/diagrams.md), which tells how a spec is written). A relative path is resolved against the working directory.
 
-- A spec is checked against the diagram's schema, then laid out once for every language its text is written in, and checked: text that overflows, parts that overlap or stick out of the canvas, edges through boxes, crossings … ([diagrams.md](diagrams.md) lists the checks).
+- A spec is checked against the diagram's schema, then laid out once for every language its text is written in, and checked: text that overflows, parts that overlap or stick out of the canvas, edges through boxes, crossings … ([diagrams.md](agents/diagrams.md) lists the checks).
 - Every mistake of every spec is printed as `file:line:column: message` (`file: message` for one of the whole spec), in the order the specs were given, and nothing is drawn until all are fixed (exit code 1).
 - The text is written in the language of `--lang` (`en` when left out). A language a text does not have falls back to English.
 - The fragment starts with the assets: `default`'s palette on the diagrams alone, the diagrams' style, which takes its colours from the palette's CSS variables, and the script that zooms them. The page around the diagrams keeps its own colours and variables, and the diagrams take none of the page's: the palette and `color-scheme: light` are set on the diagrams' roots, so a variable or a color-scheme on the page's `:root`, or on an element holding them (a dark panel), does not reach them. Each diagram paints its own ground, the palette's `--bg` (`default`'s, `#f4f3f0`): on a dark page it stands as a light box, unless you set `--bg` on its roots as below. To draw the diagrams in the page's colours, set the palette's variables on their roots, outside any cascade layer (`.floe-zoom-tools, .floe-zoom { --accent: …; }`): the fragment's palette is in the layer `floe.palette`, which comes after the layers the page names first, so a rule in one of the page's layers (Tailwind's `@layer components`) loses to it, and a rule outside layers wins. Keep the assets in the same tree as the diagrams (the document, or one shadow root). In a shadow root the diagrams take their colours, but not the toolbar or the zoom: the script looks for diagrams in the document only. Read the page in a browser the README names: one that does not read `@scope` draws the diagrams without colours. The CSS that `floe part show diagram part.css` prints takes the palette's variables and has none of its own, so a page without a palette takes the fragment's assets, not that CSS. Readers zoom a diagram drawn smaller than its actual size with the buttons, Ctrl / ⌘ + wheel or a pinch, and drag or use the arrow keys to move while zoomed. A page needs the assets once; holding them more than once does no harm.
@@ -370,7 +370,7 @@ Without a kind, list the built-in examples, one per kind of diagram (architectur
 
 ## `floe diagram guide`
 
-Print how to write a diagram, [diagrams.md](diagrams.md), whole: the two ways to write one (by hand, or as a `graph`), how to write each so that floe does not refuse it, and every part and key. It is the doc itself, for an agent to read before it writes a diagram. It takes no arguments.
+Print how to write a diagram, [diagrams.md](agents/diagrams.md), whole: the two ways to write one (by hand, or as a `graph`), how to write each so that floe does not refuse it, and every part and key. It is the doc itself, for an agent to read before it writes a diagram. It takes no arguments.
 
 ---
 
@@ -426,9 +426,9 @@ List the fetched icons whose name contains every word (case does not matter), on
 | `FLOE_DIR` | Where pages are stored. Defaults to `$XDG_DATA_HOME/floe`, else `~/.local/share/floe`. |
 | `FLOE_PORT` | The port (default `7325`). A decimal number from 1 to 65535. |
 | `FLOE_ICONS_DIR` | Where `floe icons fetch` keeps icon sets, a directory each (`aws`). Defaults to `$XDG_DATA_HOME/floe-icons`, else `~/.local/share/floe-icons`. |
-| `FLOE_TEMPLATES_DIR` | Where templates of your own are, a directory each ([templates.md](templates.md)). Defaults to `$XDG_CONFIG_HOME/floe/templates`, else `~/.config/floe/templates`. |
-| `FLOE_PARTS_DIR` | Where parts, looks and shared schemas of your own are ([parts.md](parts.md)). Defaults to `$XDG_CONFIG_HOME/floe/parts`, else `~/.config/floe/parts`. |
-| `FLOE_THEMES_DIR` | Where themes of your own are, a directory each ([themes.md](themes.md)). Defaults to `$XDG_CONFIG_HOME/floe/themes`, else `~/.config/floe/themes`. |
+| `FLOE_TEMPLATES_DIR` | Where templates of your own are, a directory each ([templates.md](agents/templates.md)). Defaults to `$XDG_CONFIG_HOME/floe/templates`, else `~/.config/floe/templates`. |
+| `FLOE_PARTS_DIR` | Where parts, looks and shared schemas of your own are ([parts.md](agents/parts.md)). Defaults to `$XDG_CONFIG_HOME/floe/parts`, else `~/.config/floe/parts`. |
+| `FLOE_THEMES_DIR` | Where themes of your own are, a directory each ([themes.md](agents/themes.md)). Defaults to `$XDG_CONFIG_HOME/floe/themes`, else `~/.config/floe/themes`. |
 | `BROWSER` | The command that opens a new page. Defaults to `open` on macOS, else `wslview` or `xdg-open`. |
 
 Each `FLOE_*` directory is an absolute path. floe reads one place wherever it runs, so a relative one is refused, and so is one starting with `~`, which no shell read (`FLOE_PARTS_DIR is ~/x, a relative path; set it to an absolute path`). A relative `XDG_DATA_HOME` or `XDG_CONFIG_HOME` is ignored, as the XDG spec says.

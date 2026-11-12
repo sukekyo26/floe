@@ -51,7 +51,7 @@
 
 ## `floe guide`
 
-エージェント向けの手引き [guide.ja.md](guide.ja.md)（英語の guide.md を出す）を出します。ページの書き方・検査・出し方、テンプレートと部品の選び方、floe が書いたとおりに読む YAML、誤りの読み方です。この docs の要約で、エージェントがページを書く前に読みます。引数は取りません。
+エージェント向けの手引き [guide.md](agents/guide.md) を出します。ページの書き方・検査・出し方、テンプレートと部品の選び方、floe が書いたとおりに読む YAML、誤りの読み方です。この docs の要約で、エージェントがページを書く前に読みます。引数は取りません。
 
 ## `floe skill install <agent>`
 
@@ -145,7 +145,7 @@ floe render --check docs/*.yaml            # CI で：書き直していない�
 
 ## `floe template list`
 
-floe と自分のテンプレートを 1 行ずつ、タブで区切った 4 列で出します。名前、場所（`floe`、または自分のテンプレートのディレクトリ）、形（データファイルの鍵。下の part list の節）、`schema.json` の説明です。自分のテンプレートは、同じ名前の floe のものを隠します。テンプレートの書き方は [templates.ja.md](templates.ja.md) にあります。
+floe と自分のテンプレートを 1 行ずつ、タブで区切った 4 列で出します。名前、場所（`floe`、または自分のテンプレートのディレクトリ）、形（データファイルの鍵。下の part list の節）、`schema.json` の説明です。自分のテンプレートは、同じ名前の floe のものを隠します。テンプレートの書き方は [templates.md](agents/templates.md) にあります。
 
 ## `floe template new <名前>`
 
@@ -161,11 +161,11 @@ floe と自分のテンプレートを 1 行ずつ、タブで区切った 4 列
 - 誤りを出します（終了コード 1）。まずファイルの誤りを出し、ファイルに誤りが無ければ見本を描きます。その後に、描けた見本の警告を出します。正しく、警告も無ければ何も出しません（終了コード 0）。
 - テンプレートの中で floe が読まないファイル（`template.yaml` など）は断ります。テンプレートが持つのは `page.html`・`schema.json`・`example.yaml` と、要るなら `page.css`・`computed.yaml`・`checks.yaml`・`words.yaml`・`assets/` です。
 
-各ファイルの中身は [templates.ja.md](templates.ja.md) にあります。
+各ファイルの中身は [templates.md](agents/templates.md) にあります。
 
 ## `floe template guide`
 
-自分のテンプレートの作り方 [templates.ja.md](templates.ja.md) を、全部出します。ファイル、それぞれに書くこと、floe が確かめることです。docs そのもので、エージェントがテンプレートを書く前に読みます。引数は取りません。ただし、出すのは英語の docs/templates.md です（CLI は英語だけで答えます）。
+自分のテンプレートの作り方 [templates.md](agents/templates.md) を、全部出します。ファイル、それぞれに書くこと、floe が確かめることです。docs そのもので、エージェントがテンプレートを書く前に読みます。引数は取りません。
 
 ## `floe part list`
 
@@ -185,11 +185,11 @@ floe のテンプレートの節に書ける部品（floe の `any.json` の鍵�
 
 `FLOE_PARTS_DIR` の部品・見た目・共有の schema と `FLOE_THEMES_DIR` のテーマを floe のものの上で読み、すべての誤りを出します（終了コード 1）。共有の schema は、どれかの schema が名指すかによらず、その根から確かめます。自分の部品があれば、floe のテンプレートもそれとともにコンパイルします。正しければ何も出しません（終了コード 0）。`floe theme check` も同じです。テーマの `<部品名>.css` は部品があることを前提にするので、部品とテーマは一緒に確かめます。
 
-部品の中身は [parts.ja.md](parts.ja.md)、テーマの中身は [themes.ja.md](themes.ja.md) にあります。
+部品の中身は [parts.md](agents/parts.md)、テーマの中身は [themes.md](agents/themes.md) にあります。
 
 ## `floe part guide`
 
-自分の部品・見た目・共有の schema の作り方 [parts.ja.md](parts.ja.md) を、全部出します。ファイル、`part.html` の関数、CSS の層、floe が確かめることです。docs そのもので、エージェントが部品を書く前に読みます。引数は取りません。ただし、出すのは英語の docs/parts.md です（CLI は英語だけで答えます）。
+自分の部品・見た目・共有の schema の作り方 [parts.md](agents/parts.md) を、全部出します。ファイル、`part.html` の関数、CSS の層、floe が確かめることです。docs そのもので、エージェントが部品を書く前に読みます。引数は取りません。
 
 ## `floe theme list`
 
@@ -207,7 +207,7 @@ floe のテンプレートの節に書ける部品（floe の `any.json` の鍵�
 
 ## `floe theme guide`
 
-自分のテーマの作り方 [themes.ja.md](themes.ja.md) を、全部出します。ファイルと、floe がそれを確かめる決まりです。docs そのもので、エージェントがテーマを書く前に読みます。引数は取りません。ただし、出すのは英語の docs/themes.md です（CLI は英語だけで答えます）。
+自分のテーマの作り方 [themes.md](agents/themes.md) を、全部出します。ファイルと、floe がそれを確かめる決まりです。docs そのもので、エージェントがテーマを書く前に読みます。引数は取りません。
 
 ## `floe theme default`
 
@@ -335,9 +335,9 @@ slug を書くと、タスクのプロジェクトは各ページのものです
 
 ## `floe diagram render <spec.yaml>...`
 
-各図の spec を確かめ、図を順に、inline SVG の 1 つの HTML の断片として標準出力に出します。自分の HTML のページ（`floe publish --link` はファイルをそのまま見せるので、`<!doctype html>` と `<html lang>` を持つ文書の全体）に貼るためのものです。データファイルでは、代わりに `diagram` の部品に spec を書きます（spec の書き方は [diagrams.ja.md](diagrams.ja.md)）。相対パスは作業ディレクトリから読みます。
+各図の spec を確かめ、図を順に、inline SVG の 1 つの HTML の断片として標準出力に出します。自分の HTML のページ（`floe publish --link` はファイルをそのまま見せるので、`<!doctype html>` と `<html lang>` を持つ文書の全体）に貼るためのものです。データファイルでは、代わりに `diagram` の部品に spec を書きます（spec の書き方は [diagrams.md](agents/diagrams.md)）。相対パスは作業ディレクトリから読みます。
 
-- spec を図の schema で確かめ、書いた言語ごとに並べて確かめます。はみ出す字、重なる部品やキャンバスからはみ出す部品、箱を通る線、交差 …（確かめることの一覧は [diagrams.ja.md](diagrams.ja.md)）。
+- spec を図の schema で確かめ、書いた言語ごとに並べて確かめます。はみ出す字、重なる部品やキャンバスからはみ出す部品、箱を通る線、交差 …（確かめることの一覧は [diagrams.md](agents/diagrams.md)）。
 - 全部の spec のすべての誤りを、`file:line:column: message`（spec 全体の誤りは `file: message`）で渡した順に出し、全部直すまで何も描きません（終了コード 1）。
 - 文は `--lang` の言語で書きます（省けば `en`）。文にその言語が無ければ英語にします。
 - 断片は、図だけに当てた `default` のパレットと、図のスタイル（パレットの CSS の変数から色を取る）と、拡大のスクリプトで始まります。図の外のページの色と変数は変わらず、図もページのものを読みません。パレットと `color-scheme: light` を図の根に置くので、ページの `:root` や、図を包む要素（暗いパネルなど）に書いた変数と color-scheme は、図に届きません。図は自分の地にパレットの `--bg`（`default` の `#f4f3f0`）を塗るので、暗いページの上では、下のように図の根に `--bg` を書かない限り、明るい箱になります。ページの色で図を描くときは、パレットの変数を図の根に、どの層（`@layer`）の外にも書きます（`.floe-zoom-tools, .floe-zoom { --accent: …; }`）。断片のパレットは層 `floe.palette` にあり、ページが先に名付けた層より後に来るので、ページの層（Tailwind の `@layer components` など）の中の規則は負け、層の外の規則は勝ちます。スタイルは図と同じ木（文書か、1 つの shadow root）に置きます。shadow root の中の図には色が付きますが、道具の並びと拡大は付きません（スクリプトは文書の中の図だけを探します）。README の勧めるブラウザで見ます。`@scope` を読まないブラウザでは、図に色が付きません。`floe part show diagram part.css` が出す CSS はパレットの変数を読むだけで自分の色を持たないので、パレットの無いページには、その CSS でなく断片のスタイルを使います。原寸より小さく描かれた図は、読む人がボタン、Ctrl / ⌘ + ホイール、ピンチで拡大し、拡大中はドラッグか矢印キーで動かします。ページに 1 回あれば足り、2 回以上あっても害はありません。
@@ -370,7 +370,7 @@ edge [60,10]→[60,120] M60,10 V120
 
 ## `floe diagram guide`
 
-図の書き方 [diagrams.ja.md](diagrams.ja.md) を、全部出します。図の 2 つの書き方（手書き、`graph`）、それぞれを floe に断られずに書く方法、全部の部品と鍵です。docs そのもので、エージェントが図を書く前に読みます。引数は取りません。ただし、出すのは英語の docs/diagrams.md です（CLI は英語だけで答えます）。
+図の書き方 [diagrams.md](agents/diagrams.md) を、全部出します。図の 2 つの書き方（手書き、`graph`）、それぞれを floe に断られずに書く方法、全部の部品と鍵です。docs そのもので、エージェントが図を書く前に読みます。引数は取りません。
 
 ---
 
@@ -426,9 +426,9 @@ edge [60,10]→[60,120] M60,10 V120
 | `FLOE_DIR` | ページの保存先。既定は `$XDG_DATA_HOME/floe`、無ければ `~/.local/share/floe`。 |
 | `FLOE_PORT` | ポート（既定は `7325`）。1〜65535 の 10 進の数。 |
 | `FLOE_ICONS_DIR` | `floe icons fetch` がアイコンのセットを 1 つずつディレクトリ（`aws`）で置く所。既定は `$XDG_DATA_HOME/floe-icons`、無ければ `~/.local/share/floe-icons`。 |
-| `FLOE_TEMPLATES_DIR` | 自分のテンプレートを 1 つずつディレクトリで置く所（[templates.ja.md](templates.ja.md)）。既定は `$XDG_CONFIG_HOME/floe/templates`、無ければ `~/.config/floe/templates`。 |
-| `FLOE_PARTS_DIR` | 自分の部品・見た目・共有の schema の置き場所（[parts.ja.md](parts.ja.md)）。既定は `$XDG_CONFIG_HOME/floe/parts`、無ければ `~/.config/floe/parts`。 |
-| `FLOE_THEMES_DIR` | 自分のテーマを 1 つずつディレクトリで置く所（[themes.ja.md](themes.ja.md)）。既定は `$XDG_CONFIG_HOME/floe/themes`、無ければ `~/.config/floe/themes`。 |
+| `FLOE_TEMPLATES_DIR` | 自分のテンプレートを 1 つずつディレクトリで置く所（[templates.md](agents/templates.md)）。既定は `$XDG_CONFIG_HOME/floe/templates`、無ければ `~/.config/floe/templates`。 |
+| `FLOE_PARTS_DIR` | 自分の部品・見た目・共有の schema の置き場所（[parts.md](agents/parts.md)）。既定は `$XDG_CONFIG_HOME/floe/parts`、無ければ `~/.config/floe/parts`。 |
+| `FLOE_THEMES_DIR` | 自分のテーマを 1 つずつディレクトリで置く所（[themes.md](agents/themes.md)）。既定は `$XDG_CONFIG_HOME/floe/themes`、無ければ `~/.config/floe/themes`。 |
 | `BROWSER` | 新しいページを開くコマンド。既定は macOS では `open`、ほかは `wslview` か `xdg-open`。 |
 
 `FLOE_*` のディレクトリは絶対パスにします。floe はどこで動かしても 1 つの所を読むので、相対パスは断り、どのシェルも読まなかった `~` で始まるものも断ります（`FLOE_PARTS_DIR is ~/x, a relative path; set it to an absolute path`）。相対の `XDG_DATA_HOME`・`XDG_CONFIG_HOME` は、XDG の決まりどおり無いものとします。

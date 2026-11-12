@@ -1,3 +1,2 @@
-templates.ja.md "has no table under the heading パレット; write the table of the palette there"
-templates.md "names no --fg, which themes/default/palette.css sets: write `--fg` in the table of the palette"
-templates.md "the table of the palette names -soft: write each variable's name whole"
+agents/templates.md "names no --fg, which themes/default/palette.css sets: write `--fg` in the table of the palette"
+agents/templates.md "the table of the palette names -soft: write each variable's name whole"

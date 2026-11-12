@@ -11,13 +11,14 @@ import (
 	"floe/internal/kit"
 )
 
-// paletteDocs are the docs that hold the table of the palette, and the heading over it.
-var paletteDocs = []struct{ file, heading string }{
-	{"templates.md", "The palette"}, {"templates.ja.md", "パレット"},
-}
+// paletteDoc is the doc that holds the table of the palette, and paletteHeading the heading over it.
+const (
+	paletteDoc     = "agents/templates.md"
+	paletteHeading = "The palette"
+)
 
 // paletteInDocs keeps every variable of the default palette named, whole, in the first column of the docs' table of the
-// palette, English and Japanese: raw SVG and one's own themes rely on that table, and a variable out of it
+// palette: raw SVG and one's own themes rely on that table, and a variable out of it
 // is no promise. Every name in that column is whole (--good-soft, not -soft), so that the table reads as the rule.
 // LIMIT: default's palette.css alone is read; a variable only a theme sets is the theme's own, and the docs promise none
 // of them but those the table names. The table names more than the default palette (a theme's --<tone>-fill, the
@@ -37,23 +38,20 @@ var paletteInDocs = Rule{Name: "palette-in-docs", Check: func(in *Input) []Findi
 	if len(set) == 0 {
 		return []Finding{{"themes/default/palette.css", 0, "palette-in-docs", "sets no variable; the default palette sets every one"}}
 	}
+	names, err := paletteTable(in.Docs(), paletteDoc, paletteHeading)
+	if err != "" {
+		return []Finding{{paletteDoc, 0, "palette-in-docs", err}}
+	}
 	var found []Finding
-	for _, doc := range paletteDocs {
-		names, err := paletteTable(in.Docs(), doc.file, doc.heading)
-		if err != "" {
-			found = append(found, Finding{doc.file, 0, "palette-in-docs", err})
-			continue
+	in.Saw()
+	for _, name := range names {
+		if !strings.HasPrefix(name, "--") || strings.ContainsAny(name, "<>") {
+			found = append(found, Finding{paletteDoc, 0, "palette-in-docs", "the table of the palette names " + name + ": write each variable's name whole"})
 		}
-		in.Saw()
-		for _, name := range names {
-			if !strings.HasPrefix(name, "--") || strings.ContainsAny(name, "<>") {
-				found = append(found, Finding{doc.file, 0, "palette-in-docs", "the table of the palette names " + name + ": write each variable's name whole"})
-			}
-		}
-		for _, name := range set {
-			if !slices.Contains(names, name) {
-				found = append(found, Finding{doc.file, 0, "palette-in-docs", "names no " + name + ", which " + palette.File + " sets: write `" + name + "` in the table of the palette"})
-			}
+	}
+	for _, name := range set {
+		if !slices.Contains(names, name) {
+			found = append(found, Finding{paletteDoc, 0, "palette-in-docs", "names no " + name + ", which " + palette.File + " sets: write `" + name + "` in the table of the palette"})
 		}
 	}
 	return found

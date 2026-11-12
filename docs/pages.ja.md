@@ -1,6 +1,6 @@
 # ページを書く
 
-floe がページを描く元の YAML、データファイルの書き方です。floe のテンプレートでも自分のテンプレートでも同じです。部品 `diagram` の spec は [diagrams.ja.md](diagrams.ja.md)、HTML のファイルやフォルダをそのまま見せるには [links.ja.md](links.ja.md) を見てください。自分のテンプレートの作り方は [templates.ja.md](templates.ja.md)、コマンドとフラグは全部 [commands.ja.md](commands.ja.md) にあります。エージェントには、この短い手引き [guide.ja.md](guide.ja.md) を `floe guide` が、図の書き方 [diagrams.ja.md](diagrams.ja.md) を `floe diagram guide` が出します。
+floe がページを描く元の YAML、データファイルの書き方です。floe のテンプレートでも自分のテンプレートでも同じです。部品 `diagram` の spec は [diagrams.md](agents/diagrams.md)、HTML のファイルやフォルダをそのまま見せるには [links.ja.md](links.ja.md) を見てください。自分のテンプレートの作り方は [templates.md](agents/templates.md)、コマンドとフラグは全部 [commands.ja.md](commands.ja.md) にあります。エージェントには、この短い手引き [guide.md](agents/guide.md) を `floe guide` が、図の書き方 [diagrams.md](agents/diagrams.md) を `floe diagram guide` が出します。
 
 ## データファイル
 
@@ -83,7 +83,7 @@ floe render plan.yaml           # floe 無しで開ける plan.html を隣に書
 - ページの頭の、短い値の数個：`facts`。
 - 行と列で比べる短い値（前と後の値は別々の列に。先頭の列の見出しは空）：`table`。
 
-`report` が節の中に取る部品。自分の部品も取り（[parts.ja.md](parts.ja.md)）、`floe part list` がこれらと一緒に並べます：
+`report` が節の中に取る部品。自分の部品も取り（[parts.md](agents/parts.md)）、`floe part list` がこれらと一緒に並べます：
 
 | 部品 | 描くもの |
 |---|---|
@@ -104,7 +104,7 @@ floe render plan.yaml           # floe 無しで開ける plan.html を隣に書
 | `timeline`・`bars`・`keys` | 日付の順の出来事、値の棒、押すキー。`of` を書いた棒は、その全体のうち `value` までを塗り、`5 / 8` と出します（作業の進みに）。ほかの棒は、その中で一番大きい値に対する割合です。棒の `unit` は値の後に出し（`240 秒`・`5 / 8 ページ`）、棒ごとに書くので、`of` のある棒は単位が違ってよく、`of` の無い棒は長さで比べるので、単位が違うと比べる意味がありません。 |
 | `details`・`tabs` | 題の下に畳んだ部品、または 1 つずつ読めばよいものをタブで見せる部品。中に `tabs`・`columns`・`html` のほかの全部の部品を置ける（tabs の form の中の form は落ち、columns は列の中に列ができ、`html` の `</form>` は tabs の form を閉じるため）。カードで並べる部品・keys・timeline・bars は、窓の幅でなく置いた場所の幅で並べ、`asks` の札はそこで折り返す。閉じた `details` や見えていないタブの中の `script` は、幅の無い要素に対して走る。 |
 | `columns` | 互いに独立したまとまりを横に並べ、それぞれに部品を置きます。画面やコードの前と後、データと説明など。列は、省ける `title` とその下の `parts`（`details` と同じ部品）。列はどれも同じ幅で、幅は 16rem 以上なので、何列が横に並ぶかは本文の幅で決まり（`report` で最大 5 列、`adr`・`runbook` で 3 列）、残りは下に折り返します。 |
-| `diagram` | 確かめてから inline SVG で描く図（[diagrams.ja.md](diagrams.ja.md)）。 |
+| `diagram` | 確かめてから inline SVG で描く図（[diagrams.md](agents/diagrams.md)）。 |
 | `script` | 動くもの（[スクリプトと HTML](#スクリプトと-html)）。 |
 | `html` | そのまま入る HTML。`any.json` の鍵で、部品そのものではないので schema.json はありません。`floe part show html any.json` が、その鍵を持つ `any.json` の全体を出します（[スクリプトと HTML](#スクリプトと-html)）。 |
 
@@ -133,7 +133,7 @@ Markdown で名指した画像のファイル（`![x](shots/list.png)`）は書�
 
 ## 図
 
-部品 `diagram` は、節や `details`・`tabs`・`columns`・`entries`・`checks`・`options` の項目の `parts` の中に書いた spec から図を描き、ページを描く前に確かめます。spec の書き方は [diagrams.ja.md](diagrams.ja.md) にあります。
+部品 `diagram` は、節や `details`・`tabs`・`columns`・`entries`・`checks`・`options` の項目の `parts` の中に書いた spec から図を描き、ページを描く前に確かめます。spec の書き方は [diagrams.md](agents/diagrams.md) にあります。
 
 ## スクリプトと HTML
 
@@ -143,7 +143,7 @@ Markdown で名指した画像のファイル（`![x](shots/list.png)`）は書�
 
 ## 誤りの読み方
 
-`floe check` は誤りを 1 行ずつ出し、誤りがあれば終了コードは 1 です。データファイルは段ごとに確かめます（[templates.ja.md](templates.ja.md#確かめる順)）。1 つの段の誤りは全部まとめて言い、前の段に誤りがあれば、後の段は走りません。だから、まず形を確かめ：
+`floe check` は誤りを 1 行ずつ出し、誤りがあれば終了コードは 1 です。データファイルは段ごとに確かめます（[templates.md](agents/templates.md#the-order-of-the-checks)）。1 つの段の誤りは全部まとめて言い、前の段に誤りがあれば、後の段は走りません。だから、まず形を確かめ：
 
 ```text
 plan.yaml:6:13: additional properties 'colour' not allowed
