@@ -142,15 +142,22 @@ func TestOldPathsGone(t *testing.T) {
 	t.Parallel()
 
 	e := newEnv(t)
+	// A page and a folder there are, so that a route kept under an old name would answer for them, not as for a slug that is none.
+	docs := filepath.Join(e.home, "proj", "docs")
+	writeFiles(t, filepath.Dir(docs), map[string]string{"docs/index.html": "<title>i</title>"})
+	want(t, e.write(t, http.MethodPost, "/api/pages", server.Link{Path: docs}), http.StatusCreated, `"slug":"docs"`)
+	want(t, e.publish(t, "d", "lang: en\ntemplate: pic\n", nil), http.StatusCreated, `"slug":"d"`)
 	for _, path := range []string{
-		"/api/artifacts", "/api/artifacts/data", "/api/artifacts/x", "/api/artifacts/x/read", "/api/artifacts/x/theme",
-		"/api/artifacts/x/pages", "/api/pages/x/pages",
+		"/api/artifacts", "/api/artifacts/data", "/api/artifacts/d", "/api/artifacts/d/read", "/api/artifacts/d/theme",
+		"/api/artifacts/d/download", "/api/artifacts/d/versions", "/api/artifacts/d/diff", "/api/artifacts/docs/pages",
+		"/api/pages/docs/pages",
 	} {
 		for _, method := range []string{http.MethodGet, http.MethodPost, http.MethodPatch, http.MethodPut, http.MethodDelete} {
 			want(t, e.do(t, method, path, ""), http.StatusNotFound, "not found")
 		}
 	}
-	want(t, e.do(t, http.MethodGet, "/api/pages", ""), http.StatusOK, "[")
+	want(t, e.do(t, http.MethodGet, "/api/pages", ""), http.StatusOK, `"slug":"d"`)
+	want(t, e.do(t, http.MethodGet, "/api/pages/docs/files", ""), http.StatusOK, `"files":[`)
 }
 
 // What no request should see is refused as the protocol is, in fixed English: another host, another origin, a
