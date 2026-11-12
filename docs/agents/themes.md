@@ -14,8 +14,8 @@ A theme is a directory of CSS files that changes a page's colours, typefaces and
 
 ## Where themes are
 
-- A theme is a directory in `FLOE_THEMES_DIR` (default `$XDG_CONFIG_HOME/floe/themes`, else `~/.config/floe/themes`), holding the theme's files. A file directly in `FLOE_THEMES_DIR` is not read, and nothing says so.
-- The name MUST be lower case letters, digits, `-` and `_`, starting with a letter or a digit, and MUST NOT be the name of one of floe's themes. A theme of your own cannot take the name of a built-in theme.
+- A theme is a directory in `FLOE_THEMES_DIR` (default `$XDG_CONFIG_HOME/floe/themes`, else `~/.config/floe/themes`), holding the theme's files. A file directly in `FLOE_THEMES_DIR` is ignored without a message.
+- The name MUST be lower case letters, digits, `-` and `_`, starting with a letter or a digit, and MUST NOT be the name of one of floe's themes.
 - A theme directory, and anything in it, MUST NOT be a link to a directory (a link to a file is read).
 - `FLOE_THEMES_DIR` MUST NOT be the directory of your parts or templates (`FLOE_PARTS_DIR`, `FLOE_TEMPLATES_DIR`), contain it, or be in it: floe would read the files of one as those of the other.
 - A mistake in any theme of yours stops every page, whether or not the page uses that theme, until it is fixed (`floe template guide`, *Where templates are*). A new theme made in another directory and moved in once `floe theme check` is clean stops none: set `FLOE_THEMES_DIR` to that directory for `floe theme new` and `floe theme check` (`floe template guide`, *Make one in another directory*).
@@ -143,9 +143,11 @@ Each item gives the action, then the reason in parentheses.
 
 ### cards
 
+In `cards.css`, `:scope` is the cards as a whole (the part's root) and `.card` is one card.
+
 - Draw a card in `panel.css` and write in `cards.css` what differs, the background, the frame, the number (a card takes the panel too).
 - Change the space between what a card holds with `--cards-gap`, not a `gap` on the card (`options` holding parts, whose rows have no gap, lose a `gap` without a word).
-- Size a card's number with `--floe-mark` on `:scope.numbered`, hide it with `content: none` on `:scope.numbered > .card::before` (in `cards.css`, where `:scope` is the part's root), and draw it as plain text with `--floe-mark: auto` and no background.
+- Size a card's number with `--floe-mark` on `:scope.numbered`, hide it with `content: none` on `:scope.numbered > .card::before` and draw it as plain text with `--floe-mark: auto` and no background.
 
 ### table
 
