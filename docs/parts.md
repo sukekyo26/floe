@@ -13,9 +13,11 @@ How to make a part, a look or a theme of your own. A part draws an item of a dat
 floe part new quote     # makes the smallest part, quote, to fill in
 floe part check         # checks every part, look, shared schema and theme of your own
 floe part show quote    # lists its looks and the files it reads
+floe theme new calm     # makes the smallest theme, calm: an empty palette.css to fill in
+floe theme check        # the same as floe part check
 ```
 
-A mistake of one stops every page, as [templates.md](templates.md#where-templates-are) tells: `floe part check` lists them. While you write one, make it in another directory and move it in once it is checked, as [templates.md](templates.md#make-one-in-another-directory) tells: set `FLOE_PARTS_DIR` or `FLOE_THEMES_DIR` to it and run `floe part check`.
+A mistake of one stops every page, as [templates.md](templates.md#where-templates-are) tells: `floe part check` lists them. While you write one, make it in another directory and move it in once it is checked, as [templates.md](templates.md#make-one-in-another-directory) tells: set `FLOE_PARTS_DIR` or `FLOE_THEMES_DIR` to it and run `floe part check` or `floe theme check`, which do the same.
 
 ## A part's files
 
@@ -166,7 +168,7 @@ As in `page.css`, a `}` that closes no block and an `@import` are refused at the
 
 ## Themes
 
-A theme of your own is a directory of these files, each left out if not needed. `floe theme list` lists the themes, and `floe theme show <name>` lists the files one reads, floe's too, and prints one named after (`floe theme show ink palette.css`):
+A theme of your own is a directory of these files, each left out if not needed. `floe theme new <name>` makes one: an empty `palette.css`, to fill in. `floe theme list` lists the themes, and `floe theme show <name>` lists the files one reads, floe's too, and prints one named after (`floe theme show ink palette.css`):
 
 | File | What it holds |
 |---|---|
@@ -198,4 +200,4 @@ A theme of your own is a directory of these files, each left out if not needed. 
 
 ## Checking
 
-`floe part check` reads every part, look, shared schema and theme of your own over floe's own, and prints every mistake of them (exit code 1): of their files, their names, the looks they take, a part that takes its own look, a path of a `checks.yaml` that its schema does not declare, the schemas of parts and shared schemas, and their CSS. A part is not drawn, as it has no data: `floe template check` draws the example of a template that uses it.
+`floe part check` reads every part, look, shared schema and theme of your own over floe's own, and prints every mistake of them (exit code 1): of their files, their names, the looks they take, a part that takes its own look, a path of a `checks.yaml` that its schema does not declare, the schemas of parts and shared schemas, and their CSS. A part is not drawn, as it has no data: `floe template check` draws the example of a template that uses it. `floe theme check` does the same as `floe part check`: a theme's `<name>.css` needs its part, so parts and themes are checked together.

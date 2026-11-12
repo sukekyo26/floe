@@ -171,4 +171,5 @@ plan.yaml:9:17: value must be one of 'accent', 'good', 'warn', 'bad', 'muted'
 
 - `floe render db-choice.yaml` writes `db-choice.html` beside it, to keep in a repository.
 - `floe publish --link file.html` shows an HTML file of your own as it is.
+- You can make templates, parts and themes of your own too: `floe template --help`, `floe part --help` and `floe theme --help` tell how.
 - To change a data file from a program, read and write it with a YAML library set to write no anchors or aliases, to keep non-ASCII text and the keys' order (PyYAML: `allow_unicode=True`, `sort_keys=False`, a Dumper whose `ignore_aliases` returns true).
