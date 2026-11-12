@@ -131,6 +131,9 @@ linters:
               desc: "internal packages must not import the cmd binary"
         no-stdlog:
           list-mode: lax
+          # "log" is a prefix of log/slog, which the message tells us to use.
+          allow:
+            - "log/slog"
           deny:
             - pkg: "log"
               desc: "use log/slog instead of the standard log package"

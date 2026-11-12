@@ -69,3 +69,37 @@ func TestOpenSwapped(t *testing.T) {
 		}
 	}
 }
+
+// A regular file made a FIFO between what OpenAppend looks at and what it opens, with a reader there to let the open
+// through, is refused after it is opened: looking before is not enough.
+func TestOpenAppendSwapped(t *testing.T) {
+	t.Parallel()
+
+	dir := t.TempDir()
+	path := filepath.Join(dir, "a.log")
+	if err := os.WriteFile(path, []byte("x"), 0o600); err != nil {
+		t.Fatal(err)
+	}
+	var reader *os.File
+	s := swapped{Opener: paths{}, swap: func(string) error {
+		if err := os.Remove(path); err != nil {
+			return err //nolint:wrapcheck // the test's
+		}
+		if err := syscall.Mkfifo(path, 0o600); err != nil {
+			return err //nolint:wrapcheck // the test's
+		}
+		var err error
+		reader, err = os.OpenFile(path, os.O_RDWR, 0) //nolint:gosec // G304: the test's own
+		return err                                    //nolint:wrapcheck // the test's
+	}}
+	f, _, err := openWith(s, path, os.O_WRONLY|os.O_APPEND|os.O_CREATE, 0o600)
+	if reader != nil {
+		defer reader.Close() //nolint:errcheck // test
+	}
+	if f != nil {
+		_ = f.Close() //nolint:errcheck // not wanted
+	}
+	if !errors.Is(err, usererr.ErrNotFile) {
+		t.Errorf("openWith of a file made a FIFO = %v, want ErrNotFile", err)
+	}
+}

@@ -64,18 +64,34 @@ func (paths) OpenFile(name string, flag int, perm fs.FileMode) (*os.File, error)
 // (a save by rename) is read. The system's errors are
 // *fs.PathError (fs.ErrNotExist for none); one of opening it comes with what the system said of it before.
 func Open(path string) (*os.File, fs.FileInfo, error) {
-	return openWith(paths{}, path)
+	return openWith(paths{}, path, os.O_RDONLY, 0)
 }
 
-func openWith(o Opener, path string) (*os.File, fs.FileInfo, error) {
+// OpenAppend opens the file path to append to, a link to a file followed (one to nowhere is not, so that the file is
+// not made where it leads), made with the permissions 0600 (less the umask) when there is none, as Open does a file to
+// read: a FIFO, a device or a socket is refused unopened (an
+// *fs.PathError of usererr.ErrNotFile), which would block the open, and one made so since is refused after. A
+// directory is the system's to refuse (EISDIR). The info is of the file opened.
+func OpenAppend(path string) (*os.File, fs.FileInfo, error) {
+	return openWith(paths{}, path, os.O_WRONLY|os.O_APPEND|os.O_CREATE, 0o600)
+}
+
+// openWith opens path with flag as Open and OpenAppend say; a file that is not there is made when flag has O_CREATE.
+func openWith(o Opener, path string, flag int, perm fs.FileMode) (*os.File, fs.FileInfo, error) {
 	before, err := o.Stat(path)
-	if err != nil {
+	creating := flag&os.O_CREATE != 0 && errors.Is(err, fs.ErrNotExist)
+	if err != nil && !creating {
 		return nil, nil, err //nolint:wrapcheck // the system's *fs.PathError, for the caller to tell
 	}
-	if IsNotFile(before) {
+	if err == nil && IsNotFile(before) {
 		return nil, before, &fs.PathError{Op: "open", Path: path, Err: usererr.ErrNotFile}
 	}
-	f, err := o.OpenFile(path, os.O_RDONLY|syscall.O_NONBLOCK|syscall.O_NOCTTY, 0)
+	if creating {
+		// A link to nowhere is not followed to make the file where it leads, out of its directory (ELOOP); a link to a
+		// file is followed, as it is to read.
+		flag |= syscall.O_NOFOLLOW
+	}
+	f, err := o.OpenFile(path, flag|syscall.O_NONBLOCK|syscall.O_NOCTTY, perm)
 	if err != nil {
 		return nil, before, err //nolint:wrapcheck // as above
 	}
@@ -98,7 +114,7 @@ func Read(path string) ([]byte, fs.FileInfo, error) {
 // ReadIn reads the file name of o as Read reads a path: under an *os.Root, the system refuses one that leads out
 // of it, by .. or by a link.
 func ReadIn(o Opener, name string) ([]byte, fs.FileInfo, error) {
-	f, info, err := openWith(o, name)
+	f, info, err := openWith(o, name, os.O_RDONLY, 0)
 	if err != nil {
 		return nil, info, err
 	}

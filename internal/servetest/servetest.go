@@ -87,6 +87,7 @@ func Start(t *testing.T, files map[string]string) *Site {
 			return store.Drawing{Kit: k, Icons: nil, Err: nil}, err //nolint:wrapcheck // as above
 		},
 		Templates: dir("templates"), Parts: dir("parts"), Themes: dir("themes"), Icons: dir("icons"), Home: dir("home"),
+		Log: nil,
 	})
 	served := make(chan error, 1)
 	go func() { served <- srv.Serve(t.Context(), ln) }()

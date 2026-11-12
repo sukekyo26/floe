@@ -81,7 +81,7 @@ func TestCannotListen(t *testing.T) {
 		}
 		t.Skip("port 1 is not refused here")
 	}
-	err := daemon.Ensure(t.Context(), daemon.Server{Port: 1, Root: t.TempDir(), Build: "b", Env: nil})
+	_, err := daemon.Ensure(t.Context(), daemon.Server{Port: 1, Root: t.TempDir(), Build: "b", Env: nil})
 	var ue *usererr.Error
 	if !errors.As(err, &ue) || ue.Key != "daemon_cannot_listen" || len(ue.Args) != 1 {
 		t.Errorf("Ensure on a privileged port = %#v", err)
@@ -136,15 +136,61 @@ func TestStopNamesTheServer(t *testing.T) {
 
 			//nolint:exhaustruct // the rest of the health is not read
 			saw := daemon.Status{State: daemon.Ours, Health: server.Health{App: server.App, PID: c.pid}}
-			p, err := daemon.Stop(t.Context(), addr.Port, saw)
+			p, asked, err := daemon.Stop(t.Context(), addr.Port, saw)
 			if err != nil {
 				t.Errorf("Stop = %v", err)
+			}
+			// Only a server that took the request, with 204, makes it this command's: one that refused it (409) did not.
+			if asked == c.answers {
+				t.Errorf("Stop took by the server: %v, want %v", asked, !c.answers)
 			}
 			if got, want := strings.Join(bodies(), " "), `{"pid":`+strconv.Itoa(c.pid)+`}`; got != want {
 				t.Errorf("bodies = %s, want %s", got, want)
 			}
 			if (p.State == daemon.Ours) != c.answers {
 				t.Errorf("after Stop the server answers: %v, want %v", p.State == daemon.Ours, c.answers)
+			}
+		})
+	}
+}
+
+// Ensure returns the pid of the server it stopped only when the server took its request to stop: one that refused it
+// (409: another command's request stopped it, or it was another server) is not told of; one that took it and went on
+// answering, so that Stop failed, is told of with the mistake. A fake server of another build stands for the one
+// running.
+func TestEnsureStopped(t *testing.T) {
+	t.Parallel()
+
+	for _, c := range []struct {
+		name string
+		fake servetest.Fake
+		want int
+		kept bool
+	}{
+		{"another command stopped it", servetest.Fake{PID: 4242, Next: 4343}, 0, false},        //nolint:exhaustruct // the rest unset
+		{"it took the request and stayed", servetest.Fake{PID: 4242, Keeps: true}, 4242, true}, //nolint:exhaustruct // as above
+	} {
+		t.Run(c.name, func(t *testing.T) {
+			t.Parallel()
+
+			var lc net.ListenConfig
+			ln, err := lc.Listen(t.Context(), "tcp", "127.0.0.1:0")
+			if err != nil {
+				t.Fatal(err)
+			}
+			addr, ok := ln.Addr().(*net.TCPAddr)
+			if !ok {
+				t.Fatalf("a TCP listener on %v", ln.Addr())
+			}
+			c.fake.Serve(t, ln)
+
+			stopped, err := daemon.Ensure(t.Context(), daemon.Server{Port: addr.Port, Build: "b"}) //nolint:exhaustruct // the rest unset
+			var ue *usererr.Error
+			if kept := errors.As(err, &ue) && ue.Key == "daemon_kept_answering"; kept != c.kept || !c.kept && err != nil {
+				t.Errorf("Ensure = %d, %v, want a mistake of the server that kept answering: %v", stopped, err, c.kept)
+			}
+			if stopped != c.want {
+				t.Errorf("Ensure told it stopped pid %d, want %d", stopped, c.want)
 			}
 		})
 	}

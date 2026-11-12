@@ -10,6 +10,7 @@ import (
 	"os"
 	"os/exec"
 	"path/filepath"
+	"slices"
 	"strconv"
 	"strings"
 	"sync"
@@ -263,32 +264,163 @@ func TestHoldSkipsHeld(t *testing.T) {
 	}
 }
 
-// A publish starts the server, one of another build replaces it once, and two racing to replace it both succeed.
+// A publish starts the server, one of another build replaces it once, and two racing to replace it both succeed. The
+// command that stops the server of another build says so on stderr, once and only then; the log of the server says
+// why it stopped before the next one says it serves, and a line it writes long after it started is there.
 func TestRestartOnAnotherBuild(t *testing.T) {
 	t.Parallel()
 
 	e := newDenv(t)
 	url := e.base() + "/a/page/\n"
+	stopped := func(pid int) string {
+		return "stopping the server on port " + e.port + " (pid " + strconv.Itoa(pid) + "), which was of another build of floe"
+	}
 	wantRun(t, "publish", e.run("publish", "page.yaml"), 0, url, projectLine)
 	first, _ := e.health(t.Context())
-	wantRun(t, "publish from another build", e.exe(t, otherBuild, "publish", "page.yaml"), 0, url, "updated")
+	r := e.exe(t, otherBuild, "publish", "page.yaml")
+	wantRun(t, "publish from another build", r, 0, url, "updated")
+	if !strings.Contains(r.stderr, stopped(first.PID)) {
+		t.Errorf("the publish that replaced the server said %q, want %q", r.stderr, stopped(first.PID))
+	}
 	second, _ := e.health(t.Context())
-	wantRun(t, "again", e.exe(t, otherBuild, "publish", "page.yaml"), 0, url, "updated")
+	r = e.exe(t, otherBuild, "publish", "page.yaml")
+	wantRun(t, "again", r, 0, url, "updated")
+	if strings.Contains(r.stderr, "stopping the server") {
+		t.Errorf("a publish of the build that runs the server said %q", r.stderr)
+	}
 	third, _ := e.health(t.Context())
 	if first.PID == second.PID || second.PID != third.PID || second.Build == first.Build {
 		t.Errorf("pids %d %d %d: the server should restart once for the new build", first.PID, second.PID, third.PID)
 	}
-	wantRun(t, "back to this build", e.run("publish", "page.yaml"), 0, url, "updated")
+	r = e.run("publish", "page.yaml")
+	wantRun(t, "back to this build", r, 0, url, "updated")
+	if !strings.Contains(r.stderr, stopped(second.PID)) {
+		t.Errorf("the publish back said %q, want %q", r.stderr, stopped(second.PID))
+	}
+	// The first server wrote that it stops before the second says it serves, and wrote that it stopped after it was
+	// asked, long after it started (the order of that line and the second's is not fixed).
+	log := e.logWith(t, "msg=stopped", "pid="+strconv.Itoa(first.PID))
+	stopping := lineAt(log, "msg=stopping", "pid="+strconv.Itoa(first.PID), `why="asked to stop"`)
+	serving := lineAt(log, "msg=serving", "pid="+strconv.Itoa(second.PID))
+	if stopping < 0 || serving < 0 || stopping > serving {
+		t.Errorf("the log = %q: want the first server's stopping before the second's serving", log)
+	}
 	var wg sync.WaitGroup
 	results := make([]result, 2)
 	for i := range results {
 		wg.Go(func() { results[i] = e.exe(t, otherBuild, "publish", "page.yaml") })
 	}
 	wg.Wait()
+	// Of two commands asking the server to stop together, one is answered 204 and says so: the other is told it is
+	// stopping already, and the server it stops is not its doing.
+	said := 0
 	for _, r := range results {
 		if r.code != 0 {
 			t.Errorf("a racing publish = %+v", r)
 		}
+		said += strings.Count(r.stderr, "stopping the server")
+	}
+	if said != 1 {
+		t.Errorf("two racing commands said that they stopped the server %d times, want once: %q %q", said, results[0].stderr, results[1].stderr)
+	}
+}
+
+// lineAt is the number of the first line of log that holds all of parts, each between spaces (or the line's ends), so
+// that pid=4521 is not pid=45210; or -1.
+func lineAt(log string, parts ...string) int {
+	for i, line := range strings.Split(log, "\n") {
+		padded := " " + line + " "
+		if !slices.ContainsFunc(parts, func(p string) bool { return !strings.Contains(padded, " "+p+" ") }) {
+			return i
+		}
+	}
+	return -1
+}
+
+// lineAt takes a part between spaces or a line's ends: pid=4521 is not a part of a line with pid=45210.
+func TestLineAt(t *testing.T) {
+	t.Parallel()
+
+	log := "time=t level=INFO msg=serving pid=45210 why=\"asked to stop\"\ntime=t msg=stopped pid=4521"
+	for _, c := range []struct {
+		parts []string
+		want  int
+	}{
+		{[]string{"msg=serving", "pid=45210"}, 0},
+		{[]string{"pid=4521"}, 1},
+		{[]string{"msg=serving", "pid=4521"}, -1},
+		{[]string{`why="asked to stop"`}, 0},
+		{[]string{"pid=452"}, -1},
+	} {
+		if got := lineAt(log, c.parts...); got != c.want {
+			t.Errorf("lineAt(%q) = %d, want %d", c.parts, got, c.want)
+		}
+	}
+}
+
+// logWith is the log of the server of e's store once it has a line that holds all of want (lineAt), which the server
+// may write after the command that asked for it ended: waited for 5 s.
+func (e *denv) logWith(t *testing.T, want ...string) string {
+	t.Helper()
+
+	path := filepath.Join(e.vars["FLOE_DIR"], server.LogName)
+	for deadline := time.Now().Add(5 * time.Second); ; time.Sleep(20 * time.Millisecond) {
+		b, _ := os.ReadFile(path) //nolint:errcheck // not there yet
+		if lineAt(string(b), want...) >= 0 {
+			return string(b)
+		}
+		if time.Now().After(deadline) {
+			t.Errorf("%s = %q, want it to hold a line with %q", server.LogName, b, want)
+			return string(b)
+		}
+	}
+}
+
+// A server of another build is stopped and none starts in its place (the store cannot be written: the new server's
+// serve refuses to start), and the command says that it stopped the server before it says the server did not start.
+func TestStoppedThenNotStarted(t *testing.T) {
+	t.Parallel()
+
+	if os.Geteuid() == 0 {
+		t.Skip("root writes where it is told not to")
+	}
+	e := newDenv(t)
+	wantRun(t, "publish from another build", e.exe(t, otherBuild, "publish", "page.yaml"), 0, e.base()+"/a/page/\n", projectLine)
+	old, _ := e.health(t.Context())
+	store := e.vars["FLOE_DIR"]
+	if err := os.Chmod(store, 0o500); err != nil {
+		t.Fatal(err)
+	}
+	// Before the cleanup that stops the server, which needs it writable to be asked.
+	t.Cleanup(func() { _ = os.Chmod(store, 0o700) }) //nolint:errcheck // a temporary directory
+
+	r := e.run("work", "--project", "p", "--task", "t1", "--title", "x")
+	said := "stopping the server on port " + e.port + " (pid " + strconv.Itoa(old.PID) + "), which was of another build of floe"
+	didNot := "the server did not start"
+	i, j := strings.Index(r.stderr, said), strings.Index(r.stderr, didNot)
+	if r.code != 1 || i < 0 || j < i {
+		t.Errorf("work after the server of another build was stopped and none started = %d %q, want 1 and %q, then %q",
+			r.code, r.stderr, said, didNot)
+	}
+}
+
+// A server that is made to crash (SIGQUIT) leaves what the runtime wrote of it in server.log: the standard error of
+// the server a command starts is discarded, so the log is where it is.
+func TestCrashOutput(t *testing.T) {
+	t.Parallel()
+
+	e := newDenv(t)
+	wantRun(t, "publish", e.run("publish", "page.yaml"), 0, e.base()+"/a/page/\n", projectLine)
+	h, up := e.health(t.Context())
+	if !up {
+		t.Fatal("no server after a publish")
+	}
+	if err := unix.Kill(h.PID, unix.SIGQUIT); err != nil {
+		t.Fatal(err)
+	}
+	log := e.logWith(t, "goroutine")
+	if !strings.Contains(log, "SIGQUIT") {
+		t.Errorf("%s = %q, want the crash in it", server.LogName, log)
 	}
 }
 
@@ -341,6 +473,21 @@ func TestPublishToAnotherServer(t *testing.T) {
 
 	e := newDenv(t)
 	wantRun(t, "publish", e.run("publish", "page.yaml"), 0, e.base()+"/a/page/\n", projectLine)
+	// A serve that loses the port to a floe server writes nothing in the store, the log over the cap too, which it would
+	// move aside from under the server that holds the port if it opened the log before it had the port.
+	held := filepath.Join(e.tmp, "store", server.LogName)
+	big, err := os.OpenFile(held, os.O_WRONLY|os.O_APPEND, 0) //nolint:gosec // G304: the test's own
+	if err != nil {
+		t.Fatal(err)
+	}
+	if _, err = big.Write(bytes.Repeat([]byte("x"), 2<<20)); err != nil {
+		t.Fatal(err)
+	}
+	_ = big.Close() //nolint:errcheck // written
+	wantRun(t, "serve on a port a floe server holds", e.run("serve"), 1, "", "is in use")
+	if _, err = os.Stat(held + ".1"); err == nil {
+		t.Error("a floe that lost the port moved the log of the server that holds it aside")
+	}
 	e.vars["FLOE_DIR"] = filepath.Join(e.tmp, "other")
 	otherStore := "floe: the server on port " + e.port + " serves " + filepath.Join(e.tmp, "store") +
 		`; to run a server of your own beside it, set FLOE_PORT to another port in the shell's environment, where` +
@@ -365,8 +512,10 @@ func TestPublishToAnotherServer(t *testing.T) {
 	wantRun(t, "serve on a busy port", o.run("serve"), 1, "",
 		"floe: port "+o.port+" is in use; stop that program (floe stop, if it is floe's server) or set FLOE_PORT")
 	// It took no port: it writes nothing of what a server keeps.
-	if _, err := os.Stat(filepath.Join(o.vars["FLOE_DIR"], "reads.json")); err == nil {
-		t.Error("a floe that cannot serve wrote reads.json")
+	for _, name := range []string{"reads.json", server.LogName} {
+		if _, err := os.Stat(filepath.Join(o.vars["FLOE_DIR"], name)); err == nil {
+			t.Errorf("a floe that cannot serve wrote %s", name)
+		}
 	}
 }
 

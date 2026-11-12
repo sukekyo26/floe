@@ -115,6 +115,21 @@ func TestStop(t *testing.T) {
 	ended(t, done)
 }
 
+// Only the first request to stop that names the server is answered 204: another that comes while it stops is 409, so
+// that of commands asking together, one alone is told that it stopped the server.
+func TestStopOnce(t *testing.T) {
+	t.Parallel()
+
+	s, _ := watched(t, false)
+	h := s.Handler()
+	body := `{"pid": ` + strconv.Itoa(os.Getpid()) + `}`
+	for i, want := range []int{http.StatusNoContent, http.StatusConflict, http.StatusConflict} {
+		if w := api(t.Context(), t, h, http.MethodPost, "/api/stop", body); w.Code != want {
+			t.Errorf("request %d to stop = %d, want %d", i+1, w.Code, want)
+		}
+	}
+}
+
 // A link under way when the server is stopped, asked to or by its context (SIGTERM), is answered, and named by its
 // git remote as ever: the git the link runs is not cut off with the context.
 func TestStopFinishesRequests(t *testing.T) {
