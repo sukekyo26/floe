@@ -79,7 +79,7 @@ schema.json, a part.html of its box and an empty part.css, which floe part check
 written over: with anything of that name there, nothing is made.`,
 		Args: cobra.ExactArgs(1),
 		RunE: func(_ *cobra.Command, args []string) error {
-			return a.newOwn(kit.KindPart, args[0])
+			return a.newOwn(ownParts, args[0])
 		},
 	}, &cobra.Command{
 		Use:   "check",
@@ -88,14 +88,11 @@ written over: with anything of that name there, nothing is made.`,
 FLOE_THEMES_DIR (else floe/parts and floe/themes under XDG_CONFIG_HOME, or ~/.config), over
 floe's own, and print every mistake of them. The exit code is 1 when there is one; nothing is
 printed when they are right. A mistake of one of your own stops floe check and floe render too.
-With parts of your own, it compiles floe's templates with them too.`,
+With parts of your own, it compiles floe's templates with them too. floe theme check does the same:
+a theme's <part>.css needs its part, so parts and themes are checked together.`,
 		Args: cobra.NoArgs,
 		RunE: func(_ *cobra.Command, _ []string) error {
-			k, err := a.kit(false)
-			if err != nil {
-				return err
-			}
-			return k.CompileAgain() //nolint:wrapcheck // floe's failure, which says what failed
+			return a.checkPartsThemes()
 		},
 	})
 	return cmd
@@ -150,7 +147,7 @@ schema.json and an example.yaml, which floe template check takes. Nothing is wri
 anything of that name there, nothing is made.`,
 		Args: cobra.ExactArgs(1),
 		RunE: func(_ *cobra.Command, args []string) error {
-			return a.newOwn(kit.KindTemplate, args[0])
+			return a.newOwn(ownTemplates, args[0])
 		},
 	}, &cobra.Command{
 		Use:   "check",
@@ -171,7 +168,7 @@ mistake, and nothing is printed when they are right and have no warning.`,
 func (a *app) themeCmd() *cobra.Command {
 	cmd := &cobra.Command{
 		Use:   "theme",
-		Short: "List the themes and show one",
+		Short: "List the themes, show one, make one of your own, and check yours",
 		Args:  cobra.NoArgs,
 	}
 	cmd.AddCommand(&cobra.Command{
@@ -204,6 +201,25 @@ print that file alone, as written but the byte order mark at its start: floe the
 			return a.show(k.Themes(), args, "tmpl_unknown_theme", nil)
 		},
 	}, &cobra.Command{
+		Use:   "new <name>",
+		Short: "Make a theme of your own: the smallest that floe theme check takes, to fill in",
+		Long: `Make the theme <name> in FLOE_THEMES_DIR (else floe/themes under XDG_CONFIG_HOME, or ~/.config): an
+empty palette.css, which goes over floe's default palette (floe theme show default palette.css) and which
+floe theme check takes. Nothing is written over: with anything of that name there, nothing is made.`,
+		Args: cobra.ExactArgs(1),
+		RunE: func(_ *cobra.Command, args []string) error {
+			return a.newOwn(ownThemes, args[0])
+		},
+	}, &cobra.Command{
+		Use:   "check",
+		Short: "Check the parts, looks, shared schemas and themes of your own, as floe part check does",
+		Long: `Do what floe part check does, with the same output and exit code: a theme's <part>.css needs its
+part, so parts and themes are checked together. floe part check --help tells what it reads and prints.`,
+		Args: cobra.NoArgs,
+		RunE: func(_ *cobra.Command, _ []string) error {
+			return a.checkPartsThemes()
+		},
+	}, &cobra.Command{
 		Use:   "default",
 		Short: "Print the default theme chosen in the management page's settings, or nothing when none is",
 		Long: `Print the name of the default theme chosen in the management page's settings, which a page takes when
@@ -227,6 +243,16 @@ the other commands send to (FLOE_DIR) without starting the server.`,
 		},
 	})
 	return cmd
+}
+
+// checkPartsThemes is floe part check and floe theme check: the parts and themes of one's own, read together, and
+// floe's templates compiled again with one's own parts.
+func (a *app) checkPartsThemes() error {
+	k, err := a.kit(false)
+	if err != nil {
+		return err
+	}
+	return k.CompileAgain() //nolint:wrapcheck // floe's failure, which says what failed
 }
 
 // checkTemplates draws the example.yaml of each template of one's own, with its images under its directory and

@@ -1,6 +1,8 @@
 ---
 paths:
   - "internal/{schema,kit,draw,tmpl,doc,rules,page}/**"
+  - "internal/cli/own.go"
+  - "internal/cli/own_cmds.go"
 ---
 
 # 部品・テンプレート・kit・描く所
@@ -23,4 +25,5 @@ paths:
 - **report の見本はよく使う部品だけ**：部品を足しても example.yaml に足さない。全部の部品を見せるのは every-part と `floe part list`・`floe part show`
 - **組み込みは schema だけで断る**：組み込みのテンプレートは checks.yaml を持たず、断るのは schema（必須・型・知らない鍵・空の字）だけ。見れば分かる誤り（判断に推しが 2 つ、など）は `LIMIT:` にする
 - **目次の id はテンプレートが付ける**：テンプレートが自分の段へリンクするときは、page.html が言語によらない決まった id を付け、floe が見出しの字から作る id に頼らない。見出しの字が決まっている段（design）は見出しに、書き手が見出しを書く段（report の節）は段の要素に、見出しの字から作れない `.` を含む id（`section.0`）で付ける
+- **部品とテーマは一緒に確かめる**：テーマの `<部品名>.css` は部品があることを前提にするので、`floe part check` と `floe theme check` は同じもの（部品とテーマ）を確かめる。`TestThemeCheckIsPartCheck`
 - **Go が写す CSS の値は 1 対 1**：部品の座標を Go で計算するときは、`part.css` の字の大きさ・高さ・幅の段を Go の定数に写し、片方を変えたら両方直す。今は `chart`（`chart.go`）。`TestRenderedChart`

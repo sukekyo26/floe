@@ -1,5 +1,7 @@
 $ floe part check
 exit 0
+$ floe theme check
+exit 0
 $ floe template check
 exit 0
 $ floe check memo.yaml

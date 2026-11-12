@@ -173,4 +173,5 @@ plan.yaml:9:17: value must be one of 'accent', 'good', 'warn', 'bad', 'muted'
 
 - `floe render db-choice.yaml` は、リポジトリに置く `db-choice.html` を隣に書きます。
 - `floe publish --link file.html` は、自分で作った HTML のファイルをそのまま見せます。
+- テンプレート・部品・テーマは自分でも作れます。詳しくは `floe template --help`・`floe part --help`・`floe theme --help`。
 - プログラムからデータファイルを書き換えるときは、アンカーとエイリアスを書かず、ASCII でない字と鍵の順を保つ設定の YAML ライブラリで読み書きする（PyYAML なら `allow_unicode=True`、`sort_keys=False`、`ignore_aliases` が true を返す Dumper）。

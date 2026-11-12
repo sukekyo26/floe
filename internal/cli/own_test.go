@@ -236,6 +236,7 @@ func TestNewOwnOverlap(t *testing.T) {
 	mkdirs(t, floe, filepath.Join(dir, "parts"), filepath.Join(dir, "themes"))
 	in := map[string]string{"HOME": home, "FLOE_TEMPLATES_DIR": floe}
 	byTemplates := overlap("FLOE_PARTS_DIR", defaultParts, "FLOE_TEMPLATES_DIR", floe)
+	defaultThemes := filepath.Join(floe, "themes")
 	for _, tt := range []struct {
 		env  map[string]string
 		args []string
@@ -246,6 +247,7 @@ func TestNewOwnOverlap(t *testing.T) {
 		{in, []string{"check", "d.yaml"}, 0, ""},
 		{in, []string{"part", "new", "quote"}, 1, byTemplates},
 		{in, []string{"template", "new", "parts"}, 1, byTemplates},
+		{in, []string{"theme", "new", "calm"}, 1, overlap("FLOE_THEMES_DIR", defaultThemes, "FLOE_TEMPLATES_DIR", floe)},
 		{in, []string{"template", "new", "tp2"}, 0, ""},
 		{
 			map[string]string{"FLOE_PARTS_DIR": filepath.Join(dir, "parts"), "FLOE_THEMES_DIR": filepath.Join(dir, "themes")},
@@ -258,8 +260,10 @@ func TestNewOwnOverlap(t *testing.T) {
 			t.Errorf("%v floe %v = %d, %q; want %d, %q", tt.env, tt.args, code, stderr, tt.code, tt.errs)
 		}
 	}
-	if _, err := os.Stat(defaultParts); err == nil {
-		t.Errorf("%s made; want nothing made where it overlaps", defaultParts)
+	for _, d := range []string{defaultParts, defaultThemes} {
+		if _, err := os.Stat(d); err == nil {
+			t.Errorf("%s made; want nothing made where it overlaps", d)
+		}
 	}
 	if _, err := os.Stat(filepath.Join(floe, "tp2", "page.html")); err != nil {
 		t.Errorf("template new tp2 made no %s", filepath.Join(floe, "tp2", "page.html"))
@@ -281,7 +285,10 @@ func TestOwnStops(t *testing.T) {
 		"templates/memo/page.html":    "<!doctype html><html><head><title>{{.Title}}</title></head><body></body></html>",
 		"templates/memo/example.yaml": "lang: en\ntemplate: memo\n",
 	})
-	env := map[string]string{"FLOE_PARTS_DIR": filepath.Join(dir, "parts"), "FLOE_TEMPLATES_DIR": filepath.Join(dir, "templates")}
+	// HOME for theme new, which makes in the default directory of themes.
+	env := map[string]string{
+		"HOME": filepath.Join(dir, "home"), "FLOE_PARTS_DIR": filepath.Join(dir, "parts"), "FLOE_TEMPLATES_DIR": filepath.Join(dir, "templates"),
+	}
 	want := filepath.Join(dir, "parts/mine/schema.json") + ": floe:///parts/gone.json is not a part; refer to one as floe:///parts/<name>.json\n"
 	for _, args := range [][]string{
 		{"check", "d.yaml"},
@@ -294,6 +301,8 @@ func TestOwnStops(t *testing.T) {
 		{"template", "list"},
 		{"template", "show", "report"},
 		{"template", "new", "x"},
+		{"theme", "check"},
+		{"theme", "new", "x"},
 		{"theme", "list"},
 		{"theme", "show", "ink"},
 	} {
@@ -468,5 +477,47 @@ func TestServeCannotBegin(t *testing.T) {
 	code, stdout, stderr := runEnv(dir, env, "serve")
 	if code != 1 || stdout != "" || !strings.HasPrefix(stderr, filepath.Join(root, "reads.json.broken")+": cannot be written (") {
 		t.Errorf("floe serve = %d, %q, %q", code, stdout, stderr)
+	}
+}
+
+// Parts and themes rely on each other, so floe theme check checks what floe part check does, and says the same:
+// a theme's mistake, its <part>.css of no part, a part's mistake, and their places overlapping.
+func TestThemeCheckIsPartCheck(t *testing.T) {
+	t.Parallel()
+
+	dir := write(t, map[string]string{
+		"broken/mine/base.css":  "a { color: red",
+		"stray/mine/quote.css":  ":scope { color: red; }",
+		"good/mine/palette.css": ":scope { --accent: #123456; }",
+		"parts/bad/schema.json": ownSchema,
+		"ok/mine/schema.json":   ownSchema, "ok/mine/part.html": ownPage, "ok/mine/part.css": "",
+	})
+	mkdirs(t, filepath.Join(dir, "ok", "th"))
+	// Each wants a piece of its own mistake, which a check that reads neither parts nor themes, or compares no
+	// places, does not print.
+	for _, tt := range []struct {
+		name string
+		env  map[string]string
+		want string
+	}{
+		{"right", map[string]string{"FLOE_THEMES_DIR": filepath.Join(dir, "good")}, ""},
+		{"a theme's mistake", map[string]string{"FLOE_THEMES_DIR": filepath.Join(dir, "broken")}, filepath.Join(dir, "broken/mine/base.css") + ":1:3: "},
+		{"a file of no part", map[string]string{"FLOE_THEMES_DIR": filepath.Join(dir, "stray")}, filepath.Join(dir, "stray/mine/quote.css") + ": floe reads no file of this name"},
+		{"a part's mistake", map[string]string{"FLOE_PARTS_DIR": filepath.Join(dir, "parts"), "FLOE_THEMES_DIR": filepath.Join(dir, "good")}, filepath.Join(dir, "parts/bad") + ": a part holds"},
+		{
+			"overlapping",
+			map[string]string{"FLOE_PARTS_DIR": filepath.Join(dir, "ok"), "FLOE_THEMES_DIR": filepath.Join(dir, "ok", "th")},
+			"and FLOE_THEMES_DIR (" + filepath.Join(dir, "ok", "th") + ") are one directory, or one is in the other",
+		},
+	} {
+		env := map[string]string{"HOME": filepath.Join(dir, "home")}
+		maps.Copy(env, tt.env)
+		code, stdout, stderr := runEnv(dir, env, "part", "check")
+		if code != map[bool]int{true: 0, false: 1}[tt.want == ""] || stdout != "" || !strings.Contains(stderr, tt.want) || (stderr == "") != (tt.want == "") {
+			t.Errorf("%s: floe part check = %d, %q, %q; want one with %q", tt.name, code, stdout, stderr, tt.want)
+		}
+		if themeCode, themeOut, themeErr := runEnv(dir, env, "theme", "check"); themeCode != code || themeOut != stdout || themeErr != stderr {
+			t.Errorf("%s: floe theme check = %d, %q, %q; want floe part check's %d, %q, %q", tt.name, themeCode, themeOut, themeErr, code, stdout, stderr)
+		}
 	}
 }

@@ -70,18 +70,29 @@ func (a *app) ownPlace(kind string) (dataPlace, error) {
 	return a.dataDir("FLOE_"+strings.ToUpper(kind)+"_DIR", "XDG_CONFIG_HOME", ".config", filepath.Join("floe", kind))
 }
 
-// ownKind is a kind of one's own: its name (ownPlace) and its directory in the sources of a kit.
+// ownKind is a kind of one's own: its name (ownPlace), its directory in the sources of a kit, its kind to the kit,
+// and the files new makes of it.
 type ownKind struct {
-	name string
-	in   func(*kit.Sources) *kit.Dir
+	name     string
+	in       func(*kit.Sources) *kit.Dir
+	kind     kit.Kind
+	skeleton func(name string) map[string][]byte
 }
 
+// The kinds of one's own.
+var (
+	ownParts  = ownKind{"parts", func(s *kit.Sources) *kit.Dir { return &s.Parts }, kit.KindPart, kit.PartSkeleton}
+	ownThemes = ownKind{
+		"themes", func(s *kit.Sources) *kit.Dir { return &s.Themes }, kit.KindTheme,
+		func(string) map[string][]byte { return kit.ThemeSkeleton() },
+	}
+	ownTemplates = ownKind{
+		"templates", func(s *kit.Sources) *kit.Dir { return &s.Templates }, kit.KindTemplate, kit.TemplateSkeleton,
+	}
+)
+
 // ownKinds are the kinds of one's own, in the order a mistake names their settings.
-var ownKinds = []ownKind{
-	{"parts", func(s *kit.Sources) *kit.Dir { return &s.Parts }},
-	{"themes", func(s *kit.Sources) *kit.Dir { return &s.Themes }},
-	{"templates", func(s *kit.Sources) *kit.Dir { return &s.Templates }},
-}
+var ownKinds = []ownKind{ownParts, ownThemes, ownTemplates}
 
 // ownDir is the directory of one's own at p (ownPlace), to read with the system following its links, its Name
 // as it was set; a zero Dir for none. One set that cannot be read is refused for its setting; a default that is
@@ -226,16 +237,13 @@ func within(a, b string) bool {
 	}
 }
 
-// newOwn makes the part (kit.KindPart) or the template of one's own named name, kit.Skeleton's files, in the
+// newOwn makes the part, the theme or the template of one's own (of) named name, its skeleton's files, in the
 // directory of its kind: written whole in a directory of a dot name beside it, of no length of name's, then
 // renamed, so that nothing is left half made and nothing there is written over. Its modes are under the umask.
 // LIMIT: an empty directory made at its place between the Lstat and the Rename is replaced (rename(2)); use
 // renameat2 with RENAME_NOREPLACE if that comes to happen.
-func (a *app) newOwn(kind kit.Kind, name string) error {
-	made := "parts"
-	if kind == kit.KindTemplate {
-		made = "templates"
-	}
+func (a *app) newOwn(of ownKind, name string) error {
+	made := of.name
 	p, err := a.ownPlace(made)
 	switch {
 	case err != nil:
@@ -246,11 +254,11 @@ func (a *app) newOwn(kind kit.Kind, name string) error {
 		return usererr.New("cli_new_no_dir", p.key)
 	}
 	dir := p.dir
-	k, err := a.kit(kind == kit.KindTemplate)
+	k, err := a.kit(of.kind == kit.KindTemplate)
 	if err != nil {
 		return err
 	}
-	if mistake := k.NameMistake(dir, kind, name); mistake != nil {
+	if mistake := k.NameMistake(dir, of.kind, name); mistake != nil {
 		return mistake //nolint:wrapcheck // the mistake Load would tell
 	}
 	if overlaps := a.madeOverlaps(made, dirs.Join(dir, name)); overlaps != nil {
@@ -260,17 +268,17 @@ func (a *app) newOwn(kind kit.Kind, name string) error {
 	if _, err = os.Lstat(at); err == nil {
 		return usererr.NewAt(at, 0, 0, "cli_new_exists")
 	}
-	if err = os.MkdirAll(dir, 0o755); err != nil { //nolint:gosec // G301: parts and templates are not secret
+	if err = os.MkdirAll(dir, 0o755); err != nil { //nolint:gosec // G301: parts, themes and templates are not secret
 		return usererr.SettingDir(p.setting(), dir, err, usererr.CannotWrite(dir, err))
 	}
 	// Not MkdirTemp, which makes it 0700 whatever the umask.
 	tmp := filepath.Join(dir, ".new-"+rand.Text())
-	if err = os.Mkdir(tmp, 0o755); err != nil { //nolint:gosec // G301: parts and templates are not secret
+	if err = os.Mkdir(tmp, 0o755); err != nil { //nolint:gosec // G301: parts, themes and templates are not secret
 		return usererr.SettingDir(p.setting(), dir, err, usererr.CannotWrite(dir, err))
 	}
 	defer os.RemoveAll(tmp) //nolint:errcheck // gone once renamed; what is left is a dot directory, which Load skips
-	for file, text := range kit.Skeleton(kind, name) {
-		//nolint:gosec // G306: parts and templates are not secret
+	for file, text := range of.skeleton(name) {
+		//nolint:gosec // G306: parts, themes and templates are not secret
 		if err := os.WriteFile(filepath.Join(tmp, file), text, 0o644); err != nil {
 			return usererr.CannotWrite(filepath.Join(at, file), err)
 		}

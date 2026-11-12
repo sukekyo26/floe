@@ -22,6 +22,8 @@ Reference for every command of the `floe` binary. How to write a data file is in
 | `floe part check` | Check the parts, looks, shared schemas and themes of your own |
 | `floe theme list` | List the themes |
 | `floe theme show <name> [file]` | Show a theme and the files it reads, or one of them as written |
+| `floe theme new <name>` | Make the smallest theme of your own, to fill in |
+| `floe theme check` | Check the parts, looks, shared schemas and themes of your own, as `floe part check` does |
 | `floe theme default` | Print the default theme chosen in the management page's settings |
 | `floe list` | List pages, newest first |
 | `floe rm <slug>...` | Delete pages |
@@ -172,13 +174,23 @@ Make the part `<name>` in `FLOE_PARTS_DIR`: a `schema.json`, a `part.html` of it
 
 ## `floe part check`
 
-Read the parts, looks and shared schemas in `FLOE_PARTS_DIR` and the themes in `FLOE_THEMES_DIR`, over floe's own, and print every mistake of them (exit code 1), a shared schema's too, checked from its root whether a schema names it or not. With parts of your own, it compiles floe's templates with them too. Nothing is printed when they are right (exit code 0).
+Read the parts, looks and shared schemas in `FLOE_PARTS_DIR` and the themes in `FLOE_THEMES_DIR`, over floe's own, and print every mistake of them (exit code 1), a shared schema's too, checked from its root whether a schema names it or not. With parts of your own, it compiles floe's templates with them too. Nothing is printed when they are right (exit code 0). `floe theme check` does the same: a theme's `<part>.css` needs its part, so parts and themes are checked together.
 
 [parts.md](parts.md) tells what a part and a theme hold.
 
 ## `floe theme list`
 
 Print the themes, floe's and your own, one per line in the same four tab-separated columns as `floe part list`: the name, where it is (`floe`, or the directory of a theme of your own), its shape, `-`, as nothing is written as a theme's value, and its description, its `theme.yaml`'s `description:`, empty without one.
+
+## `floe theme new <name>`
+
+Make the theme `<name>` in `FLOE_THEMES_DIR`: an empty `palette.css`, the smallest that `floe theme check` takes, to fill in. It goes over floe's `default` palette, which `floe theme show default palette.css` prints, so it writes only what it changes.
+
+- Nothing is written over: with anything of that name there, the command stops and makes nothing (exit code 1).
+
+## `floe theme check`
+
+Do what `floe part check` does: a theme's `<part>.css` needs its part, so parts and themes are checked together. The same mistakes are printed, with the same exit code.
 
 ## `floe theme default`
 

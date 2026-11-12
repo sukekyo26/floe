@@ -12,7 +12,7 @@ floe template check        # 自分のテンプレートを全部、example.yaml
 floe template show memo    # テーマと、読むファイルの並びを出す（schema と見本が先）
 ```
 
-自分のテンプレート・部品・見た目・共有の schema・テーマに誤りが 1 つあると、そのテンプレートで描くかどうかによらず（`report` のページも）、直すまでどのページも止めます。`floe check`・`floe render` も、サーバーの publish とリンクしたページもです。`floe part check` と `floe template check` が全部を並べます。公開したページはサーバーのテンプレートで描きます（[commands.ja.md](commands.ja.md#サーバー)）。テンプレートを変えたら、`floe rebuild` が保存したページを描き直します。
+自分のテンプレート・部品・見た目・共有の schema・テーマに誤りが 1 つあると、そのテンプレートで描くかどうかによらず（`report` のページも）、直すまでどのページも止めます。`floe check`・`floe render` も、サーバーの publish とリンクしたページもです。`floe part check`（か、同じことをする `floe theme check`）と `floe template check` が全部を並べます。公開したページはサーバーのテンプレートで描きます（[commands.ja.md](commands.ja.md#サーバー)）。テンプレートを変えたら、`floe rebuild` が保存したページを描き直します。
 
 ### 別の置き場所で作る
 
@@ -33,7 +33,7 @@ mv ~/.config/floe/staging-templates/memo ~/.config/floe/templates/
 - `mv` の前に `~/.config/floe/templates` を作ってください。無いと、`mv` が `memo` の名前を `templates` に変え、そのファイルがテンプレートの置き場所の直下に並びます。floe は直下のファイルを読まず、ページが `memo` を名指すまで何も言いません。
 - 別の置き場所は、テンプレートと同じファイルシステムに置いてください。`mv` が 1 回で入れ替え、サーバーが写しかけを読むことがありません。
 - 今あるテンプレートを変えるときも、別の置き場所に写して直し、確かめてから、古いものと入れ替えます。
-- 部品も同じに作ります。`FLOE_PARTS_DIR` と、`floe part new`・`floe part check` を使います。テーマには `new` が無いので、`FLOE_THEMES_DIR` の中にディレクトリを手で作り（[parts.ja.md](parts.ja.md#テーマ)）、`floe part check` で確かめます。
+- 部品とテーマも同じに作ります。部品は `FLOE_PARTS_DIR` と `floe part new`・`floe part check`、テーマは `FLOE_THEMES_DIR` と `floe theme new`・`floe theme check` を使います（[parts.ja.md](parts.ja.md#テーマ)）。
 
 ## ファイル
 
