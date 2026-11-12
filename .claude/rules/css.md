@@ -6,7 +6,7 @@ paths:
   - "internal/css/lint/**"
 ---
 
-# CSS（変数の一覧と細かい形は docs/parts.md と docs/templates.md）
+# CSS（変数の一覧と細かい形は docs/parts.md・docs/themes.md・docs/templates.md）
 
 - **CSS の決まりは一覧の 1 行** [rule-lists]：CSS の字で読む決まりは `internal/css/lint` の `Rules` に 1 行足し、`testdata/<名前>/bad`（違反の行に want）と `good` を置き、行の終わりに `TestLintRule/<名前>` を書く。見た目を測る決まりは `internal/browsertest` の `looks` に 1 行足し、floe のページを測る `floe` と、書き手が書ける CSS（`!important` も）でその決まりを 1 か所だけ破るページを測る `broken` を持たせ、行の終わりに `TestLookRule/<名前>` を書く。（判断）
 - **行の余白は `--floe-row-pad` と `--floe-pad-inline`** [row-pad]：線で区切った行の上下と左右の余白はこの 2 つだけが決める。見た目 rows を借りる側は行の余白を書かず、テーマは替えない。`TestLookRule/row-pad`
