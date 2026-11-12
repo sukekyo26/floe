@@ -225,7 +225,7 @@ func TestWorkAPI(t *testing.T) {
 		t.Errorf("the answer of an edit taking the page off its task: %s", got)
 	}
 	// The query's old key reads as no project, and removes nothing: the task is still there for the next to remove
-	if w := e.do(t, http.MethodDelete, "/api/tasks?project=shop&task=%231", "", "Origin", origin); w.Code != http.StatusBadRequest {
+	if w := e.do(t, http.MethodDelete, "/api/tasks?project=shop&task=%231", "", "Origin", origin); w.Code != http.StatusBadRequest || !strings.Contains(w.Body.String(), "needs its project") {
 		t.Errorf("forget by the old key = %d, %s", w.Code, w.Body)
 	}
 	if code, _ := forget("shop", "#1"); code != http.StatusNoContent {

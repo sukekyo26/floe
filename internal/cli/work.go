@@ -330,7 +330,7 @@ func (a *app) namedTask(ctx context.Context, cmd *cobra.Command, f workFlags) (t
 func (a *app) taskProjectOf(ctx context.Context, cmd *cobra.Command, f workFlags) (string, error) {
 	projectName, from := f.project, "--project"
 	if !cmd.Flags().Changed("project") {
-		projectName, from = project.Name(ctx, a.env.Dir), sentAt["/project"]
+		projectName, from = project.Name(ctx, a.env.Dir), sentAt["/taskProject"]
 	}
 	key, err := store.TaskProject(projectName)
 	if err != nil {
