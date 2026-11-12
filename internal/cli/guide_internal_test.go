@@ -459,7 +459,7 @@ func copied(t *testing.T) map[string][]byte {
 			t.Fatal(err)
 		}
 	}
-	sources["the example of floe template new"] = kit.Skeleton(kit.KindTemplate, "memo")["example.yaml"]
+	sources["the example of floe template new"] = kit.TemplateSkeleton("memo")["example.yaml"]
 	return sources
 }
 

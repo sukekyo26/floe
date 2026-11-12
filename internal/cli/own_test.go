@@ -490,24 +490,31 @@ func TestThemeCheckIsPartCheck(t *testing.T) {
 		"stray/mine/quote.css":  ":scope { color: red; }",
 		"good/mine/palette.css": ":scope { --accent: #123456; }",
 		"parts/bad/schema.json": ownSchema,
+		"ok/mine/schema.json":   ownSchema, "ok/mine/part.html": ownPage, "ok/mine/part.css": "",
 	})
-	mkdirs(t, filepath.Join(dir, "parts", "th"))
+	mkdirs(t, filepath.Join(dir, "ok", "th"))
+	// Each wants a piece of its own mistake, which a check that reads neither parts nor themes, or compares no
+	// places, does not print.
 	for _, tt := range []struct {
 		name string
 		env  map[string]string
-		code int
+		want string
 	}{
-		{"right", map[string]string{"FLOE_THEMES_DIR": filepath.Join(dir, "good")}, 0},
-		{"a theme's mistake", map[string]string{"FLOE_THEMES_DIR": filepath.Join(dir, "broken")}, 1},
-		{"a file of no part", map[string]string{"FLOE_THEMES_DIR": filepath.Join(dir, "stray")}, 1},
-		{"a part's mistake", map[string]string{"FLOE_PARTS_DIR": filepath.Join(dir, "parts"), "FLOE_THEMES_DIR": filepath.Join(dir, "good")}, 1},
-		{"overlapping", map[string]string{"FLOE_PARTS_DIR": filepath.Join(dir, "parts"), "FLOE_THEMES_DIR": filepath.Join(dir, "parts", "th")}, 1},
+		{"right", map[string]string{"FLOE_THEMES_DIR": filepath.Join(dir, "good")}, ""},
+		{"a theme's mistake", map[string]string{"FLOE_THEMES_DIR": filepath.Join(dir, "broken")}, filepath.Join(dir, "broken/mine/base.css") + ":1:3: "},
+		{"a file of no part", map[string]string{"FLOE_THEMES_DIR": filepath.Join(dir, "stray")}, filepath.Join(dir, "stray/mine/quote.css") + ": floe reads no file of this name"},
+		{"a part's mistake", map[string]string{"FLOE_PARTS_DIR": filepath.Join(dir, "parts"), "FLOE_THEMES_DIR": filepath.Join(dir, "good")}, filepath.Join(dir, "parts/bad") + ": a part holds"},
+		{
+			"overlapping",
+			map[string]string{"FLOE_PARTS_DIR": filepath.Join(dir, "ok"), "FLOE_THEMES_DIR": filepath.Join(dir, "ok", "th")},
+			"and FLOE_THEMES_DIR (" + filepath.Join(dir, "ok", "th") + ") are one directory, or one is in the other",
+		},
 	} {
 		env := map[string]string{"HOME": filepath.Join(dir, "home")}
 		maps.Copy(env, tt.env)
 		code, stdout, stderr := runEnv(dir, env, "part", "check")
-		if code != tt.code || stdout != "" || (stderr == "") != (tt.code == 0) {
-			t.Errorf("%s: floe part check = %d, %q, %q; want %d", tt.name, code, stdout, stderr, tt.code)
+		if code != map[bool]int{true: 0, false: 1}[tt.want == ""] || stdout != "" || !strings.Contains(stderr, tt.want) || (stderr == "") != (tt.want == "") {
+			t.Errorf("%s: floe part check = %d, %q, %q; want one with %q", tt.name, code, stdout, stderr, tt.want)
 		}
 		if themeCode, themeOut, themeErr := runEnv(dir, env, "theme", "check"); themeCode != code || themeOut != stdout || themeErr != stderr {
 			t.Errorf("%s: floe theme check = %d, %q, %q; want floe part check's %d, %q, %q", tt.name, themeCode, themeOut, themeErr, code, stdout, stderr)

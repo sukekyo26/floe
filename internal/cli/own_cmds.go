@@ -79,7 +79,7 @@ schema.json, a part.html of its box and an empty part.css, which floe part check
 written over: with anything of that name there, nothing is made.`,
 		Args: cobra.ExactArgs(1),
 		RunE: func(_ *cobra.Command, args []string) error {
-			return a.newOwn(kit.KindPart, args[0])
+			return a.newOwn(ownParts, args[0])
 		},
 	}, &cobra.Command{
 		Use:   "check",
@@ -147,7 +147,7 @@ schema.json and an example.yaml, which floe template check takes. Nothing is wri
 anything of that name there, nothing is made.`,
 		Args: cobra.ExactArgs(1),
 		RunE: func(_ *cobra.Command, args []string) error {
-			return a.newOwn(kit.KindTemplate, args[0])
+			return a.newOwn(ownTemplates, args[0])
 		},
 	}, &cobra.Command{
 		Use:   "check",
@@ -208,16 +208,13 @@ empty palette.css, which goes over floe's default palette (floe theme show defau
 floe theme check takes. Nothing is written over: with anything of that name there, nothing is made.`,
 		Args: cobra.ExactArgs(1),
 		RunE: func(_ *cobra.Command, args []string) error {
-			return a.newOwn(kit.KindTheme, args[0])
+			return a.newOwn(ownThemes, args[0])
 		},
 	}, &cobra.Command{
 		Use:   "check",
 		Short: "Check the parts, looks, shared schemas and themes of your own, as floe part check does",
-		Long: `Do what floe part check does: a theme's <part>.css needs its part, so parts and themes are checked
-together. Read the parts, looks and shared schemas under FLOE_PARTS_DIR and the themes under
-FLOE_THEMES_DIR (else floe/parts and floe/themes under XDG_CONFIG_HOME, or ~/.config), over floe's
-own, and print every mistake of them. The exit code is 1 when there is one; nothing is printed when
-they are right.`,
+		Long: `Do what floe part check does, with the same output and exit code: a theme's <part>.css needs its
+part, so parts and themes are checked together. floe part check --help tells what it reads and prints.`,
 		Args: cobra.NoArgs,
 		RunE: func(_ *cobra.Command, _ []string) error {
 			return a.checkPartsThemes()

@@ -1,7 +1,8 @@
 ---
 paths:
   - "internal/{schema,kit,draw,tmpl,doc,rules,page}/**"
-  - "internal/cli/own*.go"
+  - "internal/cli/own.go"
+  - "internal/cli/own_cmds.go"
 ---
 
 # 部品・テンプレート・kit・描く所
