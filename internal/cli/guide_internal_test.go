@@ -27,6 +27,9 @@ import (
 // guidePath is the guide for agents; a test of it failing means: fix docs/agents/guide.md.
 const guidePath = "../../docs/agents/guide.md"
 
+// commandDocs are the docs whose commands TestGuideCommands runs, each a doc floe prints.
+var commandDocs = []string{guidePath, "../../docs/agents/themes.md"}
+
 func readGuide(t *testing.T, path string) string {
 	t.Helper()
 	b, err := os.ReadFile(path)
@@ -127,51 +130,54 @@ func TestGuide(t *testing.T) {
 }
 
 // placeholders are the words a command of the guide is run with for each <…> in it.
-var placeholders = map[string]string{"<template>": "report", "<part>": "note", "<kind>": "flow", "<command>": "check", "<word>": "alb", "<slug>": "db-choice", "<ID>": "#130"}
+var placeholders = map[string]string{"<template>": "report", "<part>": "note", "<kind>": "flow", "<command>": "check", "<word>": "alb", "<slug>": "db-choice", "<ID>": "#130", "<name>": "default", "<file>": "palette.css"}
 
 // readOnly are the commands a test runs as the guide writes them: they read, write nothing and ask no server.
-var readOnly = [][]string{{"guide"}, {"template"}, {"part"}, {"diagram"}, {"theme", "default"}}
+var readOnly = [][]string{{"guide"}, {"template"}, {"part"}, {"diagram"}, {"theme", "default"}, {"theme", "show"}, {"theme", "list"}, {"theme", "check"}}
 
-// Each floe command the guide names is one floe reads, its flags too; those that only read run and end well.
+// Each floe command the docs of commandDocs name is one floe reads, its flags too; those that only read run and end
+// well (themes.md names floe's themes' files, which this keeps real).
 // LIMIT: the names of parts in the guide's prose (entries, steps, …) are not checked: a PR renaming a part changes
 // any.json and docs, and greps the guide there.
 func TestGuideCommands(t *testing.T) {
 	t.Parallel()
 
-	guide := readGuide(t, guidePath)
-	named := regexp.MustCompile("`floe ([^`]*)`").FindAllStringSubmatch(guide, -1)
-	if len(named) < 10 {
-		t.Fatalf("%s: %d commands found", guidePath, len(named))
-	}
-	for _, m := range named {
-		args := strings.Fields(m[1])
-		for i, word := range args {
-			if strings.HasPrefix(word, "<") {
-				w, ok := placeholders[word]
-				if !ok {
-					t.Fatalf("%s: floe %s: no word for %s in placeholders", guidePath, m[1], word)
+	for _, path := range commandDocs {
+		guide := readGuide(t, path)
+		named := regexp.MustCompile("`floe ([^`]*)`").FindAllStringSubmatch(guide, -1)
+		if len(named) < 10 {
+			t.Fatalf("%s: %d commands found", path, len(named))
+		}
+		for _, m := range named {
+			args := strings.Fields(m[1])
+			for i, word := range args {
+				if strings.HasPrefix(word, "<") {
+					w, ok := placeholders[word]
+					if !ok {
+						t.Fatalf("%s: floe %s: no word for %s in placeholders", path, m[1], word)
+					}
+					args[i] = w
 				}
-				args[i] = w
 			}
-		}
-		env := guideEnv(t, t.TempDir())
-		if err := readable(env, args); err != nil {
-			t.Errorf("%s: floe %s: %v (fix docs/agents/guide.md)", guidePath, m[1], err)
-			continue
-		}
-		root, _ := newRoot(env, io.Discard)
-		if cmd, _, err := root.Find(args); err != nil || cmd == root && len(args) > 0 && !strings.HasPrefix(args[0], "-") {
-			t.Errorf("%s: floe %s names no command (fix docs/agents/guide.md)", guidePath, m[1])
-			continue
-		}
-		ro := slices.Contains(args, "--help") || slices.ContainsFunc(readOnly, func(c []string) bool {
-			return len(args) >= len(c) && slices.Equal(args[:len(c)], c)
-		})
-		if !ro {
-			continue
-		}
-		if code, _, errs := runIn(env, args...); code != 0 {
-			t.Errorf("%s: floe %s = %d, %s (fix docs/agents/guide.md)", guidePath, m[1], code, errs)
+			env := guideEnv(t, t.TempDir())
+			if err := readable(env, args); err != nil {
+				t.Errorf("%s: floe %s: %v (fix %s)", path, m[1], err, path)
+				continue
+			}
+			root, _ := newRoot(env, io.Discard)
+			if cmd, _, err := root.Find(args); err != nil || cmd == root && len(args) > 0 && !strings.HasPrefix(args[0], "-") {
+				t.Errorf("%s: floe %s names no command (fix %s)", path, m[1], path)
+				continue
+			}
+			ro := slices.Contains(args, "--help") || slices.ContainsFunc(readOnly, func(c []string) bool {
+				return len(args) >= len(c) && slices.Equal(args[:len(c)], c)
+			})
+			if !ro {
+				continue
+			}
+			if code, _, errs := runIn(env, args...); code != 0 {
+				t.Errorf("%s: floe %s = %d, %s (fix %s)", path, m[1], code, errs, path)
+			}
 		}
 	}
 }
