@@ -460,9 +460,9 @@ func (s *Store) listed(slug string, m *Meta, r *reader) Listed {
 	return l
 }
 
-// Pages lists the directory dir ("" for the top) of the folder slug links, as link.Dir does: ErrNotFound for a slug
+// Files lists the directory dir ("" for the top) of the folder slug links, as link.Dir does: ErrNotFound for a slug
 // that is no folder's link or a directory that is none of it.
-func (s *Store) Pages(slug, dir string) (link.Listing, error) {
+func (s *Store) Files(slug, dir string) (link.Listing, error) {
 	m := s.ReadMeta(slug)
 	if m == nil || !m.Folder {
 		return link.Listing{}, ErrNotFound

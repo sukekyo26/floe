@@ -94,6 +94,43 @@ func taskPages(t *testing.T, s *site) {
 	}
 }
 
+// The management page remembers under keys of "pages." (the tab's list, order and task list in sessionStorage, and the
+// task list's last project in localStorage), and under none of "artifacts.", which they had. The other tests read the
+// keys through the page's constants, so that this one holds their values.
+func TestUIStorageKeys(t *testing.T) { //nolint:paralleltest // the browser tests share one Chrome, one at a time
+	s := newSite(t)
+	b := s.b
+	taskPages(t, s)
+	if err := os.WriteFile(filepath.Join(s.Env["FLOE_DIR"], "tasks.json"), []byte(taskWork), 0o600); err != nil { //nolint:gosec // G703: a path the test names
+		t.Fatal(err)
+	}
+	out := make([]string, 0, 8)
+	b.navigate("/")
+	b.until("the page list", "document.querySelector('#list > li')")
+	out = append(out, b.eval("[LIST_KEY, ORDER_KEY, FROM_KEY, TASKS_KEY, PROJECT_KEY].join(' ')"), "list "+b.eval("sessionStorage.getItem('pages.list') !== null"))
+	// A page opened whole from the list keeps the list's order for j and k.
+	b.eval("document.querySelector('#list li .title').focus()")
+	b.moving("document.activeElement.dispatchEvent(new KeyboardEvent('keydown', { key: 'Enter', bubbles: true, cancelable: true }))")
+	b.until("a page whole", "location.pathname.startsWith('/a/') && document.getElementById('frame-title').textContent")
+	out = append(out, "order "+b.eval("sessionStorage.getItem('pages.order') !== null"))
+	b.navigate("/tasks?project=shop")
+	b.until("the task rows", "document.querySelector('#list > li')")
+	out = append(out, "tasks "+b.eval("(sessionStorage.getItem('pages.tasks') !== null) + ' ' + (localStorage.getItem('pages.taskProject') !== null)"))
+	// The key the task list's focus is kept by is written as the task page's way up is pressed, and taken as the list opens: what is
+	// written is recorded in window.name, which the move to the list keeps.
+	b.navigate("/tasks?project=shop&task=%231")
+	b.until("the task's page", taskPageShown)
+	b.eval("(() => { window.name = ''; const set = Storage.prototype.setItem; Storage.prototype.setItem = function (k, v) { window.name += k + ' '; return set.call(this, k, v); }; })()")
+	b.moving("document.getElementById('task-up').click()")
+	b.until("the task list again", "location.pathname === '/tasks' && document.querySelector('#list > li')")
+	out = append(out, "written "+b.eval("window.name"),
+		"old "+b.eval("Object.keys(sessionStorage).concat(Object.keys(localStorage)).filter((k) => k.startsWith('artifacts')).length"))
+	check(t, "keys", out, strings.Join([]string{
+		"pages.list pages.order pages.tasks.from pages.tasks pages.taskProject", "list true", "order true", "tasks true true",
+		"written pages.tasks.from ", "old 0",
+	}, "|"))
+}
+
 // The task list: nothing of it where nothing is on a task; j and k move the focus alone, reading nothing; each state in
 // its own order; what is archived goes to the archive, nothing else; projects as the page list picks them.
 func TestUITaskList(t *testing.T) { //nolint:paralleltest // the browser tests share one Chrome, one at a time
@@ -129,7 +166,7 @@ func TestUITaskList(t *testing.T) { //nolint:paralleltest // the browser tests s
 	before := b.eval("history.length")
 	b.navigate("/tasks")
 	b.until("the rows", rowsDrawn)
-	say("opened", "location.search + ' ' + localStorage.getItem('artifacts.taskProject')")
+	say("opened", "location.search + ' ' + localStorage.getItem(PROJECT_KEY)")
 	if got := b.eval("history.length"); got != fmt.Sprint(mustInt(t, before)+1) {
 		t.Errorf("history went from %s to %s", before, got)
 	}
@@ -162,17 +199,17 @@ func TestUITaskList(t *testing.T) { //nolint:paralleltest // the browser tests s
 		b.eval("document.querySelector('.views [data-view=" + view + "]').click()")
 		say(view, taskRows)
 		say(view+" head", "document.getElementById('count').textContent")
-		say(view+" url", "location.search + ' ' + sessionStorage.getItem('artifacts.tasks')")
+		say(view+" url", "location.search + ' ' + sessionStorage.getItem(TASKS_KEY)")
 		say(view+" chips", "[...document.querySelectorAll('#chips .n')].map((n) => n.textContent).join(' ')")
 	}
-	say("the list's own key untouched", "sessionStorage.getItem('artifacts.list')")
+	say("the list's own key untouched", "sessionStorage.getItem(LIST_KEY)")
 	say("switch hrefs", "document.getElementById('to-list').getAttribute('href') + ' ' + document.getElementById('to-tasks').getAttribute('href')")
 	b.eval("document.querySelector('.views [data-view=doing]').click()")
 	say("the first view is left out", "location.search")
 
 	// A project pressed: to it, the view kept; again, nothing; and it is what opens next.
 	b.eval("document.querySelector('.chip[data-project=blog]').click()")
-	say("to blog", "location.search + ' ' + localStorage.getItem('artifacts.taskProject')")
+	say("to blog", "location.search + ' ' + localStorage.getItem(PROJECT_KEY)")
 	b.eval("document.querySelector('.chip[data-project=blog]').click()")
 	say("blog again", "location.search + ' ' + document.querySelector('.chip[data-project=blog]').getAttribute('aria-pressed')")
 	b.navigate("/tasks?view=done")
@@ -186,21 +223,21 @@ func TestUITaskList(t *testing.T) { //nolint:paralleltest // the browser tests s
 		say(query, taskRows)
 		say(query+" none", "document.getElementById('tasks-none').hidden ? '' : document.querySelector('#tasks-none strong').textContent + ' / ' + !document.getElementById('tasks-other').hidden")
 		say(query+" pins", "[...document.querySelectorAll('.pin')].map((p) => p.textContent).join(', ') + ' | ' + document.querySelector('.pins-none')?.textContent")
-		say(query+" kept", "localStorage.getItem('artifacts.taskProject')")
+		say(query+" kept", "localStorage.getItem(PROJECT_KEY)")
 	}
 	say("gone, on the shelf", "document.querySelector('.chip[aria-pressed=true]').textContent")
-	b.moving("localStorage.setItem('artifacts.taskProject', 'blog'); document.getElementById('tasks-other').click()")
+	b.moving("localStorage.setItem(PROJECT_KEY, 'blog'); document.getElementById('tasks-other').click()")
 	b.until("the project kept", "location.pathname === '/tasks' && location.search === '?project=blog'")
 
 	// What another window chose is not taken back at the next look.
 	b.navigate("/tasks?project=shop")
 	b.until("the rows", rowsDrawn)
-	b.eval("localStorage.setItem('artifacts.taskProject', 'blog'); drawn = ''; load()")
+	b.eval("localStorage.setItem(PROJECT_KEY, 'blog'); drawn = ''; load()")
 	b.until("the next look", "document.querySelector('#list > li')")
 	b.still()
-	say("another window's", "localStorage.getItem('artifacts.taskProject')")
+	say("another window's", "localStorage.getItem(PROJECT_KEY)")
 	b.eval("document.querySelector('.chip[data-project=shop]').click()")
-	say("pressed, it is kept", "localStorage.getItem('artifacts.taskProject')")
+	say("pressed, it is kept", "localStorage.getItem(PROJECT_KEY)")
 
 	// The shelf folded: the head says the project.
 	b.eval("localStorage.setItem('list.columns', JSON.stringify({ open: false }))")
@@ -210,17 +247,17 @@ func TestUITaskList(t *testing.T) { //nolint:paralleltest // the browser tests s
 	b.eval("localStorage.removeItem('list.columns')")
 
 	// One kept that is gone is passed over; with no task in progress, the shelf's first.
-	b.eval("localStorage.setItem('artifacts.taskProject', 'gone')")
+	b.eval("localStorage.setItem(PROJECT_KEY, 'gone')")
 	b.navigate("/tasks")
 	b.until("a project", "location.search.includes('project=')")
 	say("the kept gone", "location.search")
-	b.eval("localStorage.removeItem('artifacts.taskProject')")
+	b.eval("localStorage.removeItem(PROJECT_KEY)")
 	writeTasks(strings.ReplaceAll(taskWork, `"doing"`, `"todo"`))
 	b.navigate("/tasks")
 	b.until("a project", "location.search.includes('project=')")
 	say("none in progress", "location.search")
 	// With the latest change in progress in another project than the shelf's first, that one.
-	b.eval("localStorage.removeItem('artifacts.taskProject')")
+	b.eval("localStorage.removeItem(PROJECT_KEY)")
 	writeTasks(strings.ReplaceAll(taskWork, "2025-12-03T00:00:00Z\"}},", "2027-01-03T00:00:00Z\"}},"))
 	b.navigate("/tasks")
 	b.until("a project", "location.search.includes('project=')")
@@ -237,7 +274,7 @@ func TestUITaskList(t *testing.T) { //nolint:paralleltest // the browser tests s
 		{"?project=blog", "?project=%2F&task=%2310"},
 	} {
 		b.navigate("/tasks" + c.list)
-		b.until("the list kept", "sessionStorage.getItem('artifacts.tasks') === "+js(c.list))
+		b.until("the list kept", "sessionStorage.getItem(TASKS_KEY) === "+js(c.list))
 		b.navigate("/tasks" + c.task)
 		b.until("the task's page", "!document.getElementById('task-head').hidden")
 		say("up "+c.list+" "+c.task, up)
@@ -247,7 +284,7 @@ func TestUITaskList(t *testing.T) { //nolint:paralleltest // the browser tests s
 	b.navigate("/?project=shop")
 	b.until("the page list", rowsDrawn)
 	say("page list chips", "[...document.querySelectorAll('#chips .chip')].map((c) => c.textContent + ' ' + c.style.getPropertyValue('--c')).join(', ')")
-	say("page list, its query kept", "sessionStorage.getItem('artifacts.list') + ' ' + document.getElementById('to-list').getAttribute('href')")
+	say("page list, its query kept", "sessionStorage.getItem(LIST_KEY) + ' ' + document.getElementById('to-list').getAttribute('href')")
 	b.eval("document.querySelector('.chip[data-project=shop]').click()")
 	say("page list, let go", "location.search")
 
@@ -296,16 +333,16 @@ func TestUITaskList(t *testing.T) { //nolint:paralleltest // the browser tests s
 	b.navigate("/")
 	b.until("the page list", rowsDrawn)
 	say("broken, list: error hidden", "document.getElementById('error').hidden")
-	b.eval("localStorage.setItem('artifacts.taskProject', 'blog')")
+	b.eval("localStorage.setItem(PROJECT_KEY, 'blog')")
 	b.navigate("/tasks?project=shop")
 	b.until("the error", "!document.getElementById('error').hidden")
 	say("broken, tasks: failed shown", "!document.getElementById('tasks-failed').hidden + ' ' + document.getElementById('tasks-none').hidden")
-	say("broken, tasks", "location.search + ' ' + localStorage.getItem('artifacts.taskProject') + ' ' + [...document.querySelectorAll('.views button[data-view]')].map((v) => v.dataset.view).join(',') + ' pins ' + document.querySelectorAll('.pin').length + ' rows ' + document.querySelectorAll('#list > li').length")
+	say("broken, tasks", "location.search + ' ' + localStorage.getItem(PROJECT_KEY) + ' ' + [...document.querySelectorAll('.views button[data-view]')].map((v) => v.dataset.view).join(',') + ' pins ' + document.querySelectorAll('.pin').length + ' rows ' + document.querySelectorAll('#list > li').length")
 	say("broken, tasks: says why", "document.getElementById('error').textContent.includes('mend it by hand')")
 	b.navigate("/tasks")
 	b.until("the error", "!document.getElementById('error').hidden")
-	say("broken, the one kept", "location.search + ' ' + localStorage.getItem('artifacts.taskProject')")
-	b.eval("localStorage.removeItem('artifacts.taskProject')")
+	say("broken, the one kept", "location.search + ' ' + localStorage.getItem(PROJECT_KEY)")
+	b.eval("localStorage.removeItem(PROJECT_KEY)")
 	b.navigate("/tasks")
 	b.until("the error", "!document.getElementById('error').hidden")
 	say("broken, none kept", "location.search + ' ' + document.getElementById('pins').hidden")
@@ -314,17 +351,17 @@ func TestUITaskList(t *testing.T) { //nolint:paralleltest // the browser tests s
 	say("mended", "location.search + ' ' + document.getElementById('tasks-failed').hidden")
 	// The kept one written nowhere while unreadable, so that the project mended is the one the tasks choose.
 	writeTasks("{ broken")
-	b.eval("localStorage.setItem('artifacts.taskProject', 'gone')")
+	b.eval("localStorage.setItem(PROJECT_KEY, 'gone')")
 	b.navigate("/tasks")
 	b.until("the error", "!document.getElementById('error').hidden")
-	say("broken, gone kept", "location.search + ' ' + sessionStorage.getItem('artifacts.tasks') + ' ' + localStorage.getItem('artifacts.taskProject')")
+	say("broken, gone kept", "location.search + ' ' + sessionStorage.getItem(TASKS_KEY) + ' ' + localStorage.getItem(PROJECT_KEY)")
 	writeTasks(taskWork)
 	b.until("mended", "document.getElementById('error').hidden && "+rowsDrawn)
-	say("mended, chosen anew", "location.search + ' ' + localStorage.getItem('artifacts.taskProject')")
+	say("mended, chosen anew", "location.search + ' ' + localStorage.getItem(PROJECT_KEY)")
 
 	// Pressed while unreadable, the project borrowed is the one chosen.
 	writeTasks("{ broken")
-	b.eval("localStorage.setItem('artifacts.taskProject', 'blog')")
+	b.eval("localStorage.setItem(PROJECT_KEY, 'blog')")
 	b.navigate("/tasks")
 	b.until("the error", "!document.getElementById('error').hidden && document.querySelector('.chip[data-project=blog]')")
 	b.eval("document.querySelector('.chip[data-project=blog]').click()")

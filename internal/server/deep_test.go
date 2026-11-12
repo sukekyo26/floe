@@ -32,18 +32,18 @@ func TestTooDeep(t *testing.T) {
 	want(t, e.publish(t, "d", src, nil), http.StatusCreated, "")
 	data := filepath.Join(e.home, "proj", "l.yaml")
 	writeFiles(t, filepath.Dir(data), map[string]string{"l.yaml": src})
-	want(t, e.write(t, http.MethodPost, "/api/artifacts", server.Link{Path: data}), http.StatusCreated, `"slug":"l"`) //nolint:exhaustruct // the rest not given
+	want(t, e.write(t, http.MethodPost, "/api/pages", server.Link{Path: data}), http.StatusCreated, `"slug":"l"`) //nolint:exhaustruct // the rest not given
 
 	deepTemplate(t, e, strings.Repeat("<div>", 600))
 	want(t, e.publish(t, "d", "lang: en\ntemplate: deep\nnote: two\n", nil), http.StatusBadRequest, `{"file":"d.yaml","text":"`+tooDeep+`"}`)
 	want(t, e.do(t, http.MethodGet, "/a/d/?raw", ""), http.StatusOK, "one")
 
 	want(t, e.do(t, http.MethodGet, "/a/l/?raw", ""), http.StatusOK, tooDeep)
-	want(t, e.do(t, http.MethodGet, "/api/artifacts/l/download", ""), http.StatusBadRequest, data+": "+tooDeep)
+	want(t, e.do(t, http.MethodGet, "/api/pages/l/download", ""), http.StatusBadRequest, data+": "+tooDeep)
 
 	other := filepath.Join(e.home, "proj", "n.yaml")
 	writeFiles(t, filepath.Dir(other), map[string]string{"n.yaml": src})
-	want(t, e.write(t, http.MethodPost, "/api/artifacts", server.Link{Path: other}), http.StatusBadRequest, `{"file":"`+other+`","text":"`+tooDeep+`"}`) //nolint:exhaustruct // the rest not given
+	want(t, e.write(t, http.MethodPost, "/api/pages", server.Link{Path: other}), http.StatusBadRequest, `{"file":"`+other+`","text":"`+tooDeep+`"}`) //nolint:exhaustruct // the rest not given
 	want(t, e.do(t, http.MethodGet, "/a/n/?raw", ""), http.StatusNotFound, "")
 }
 
@@ -57,7 +57,7 @@ func TestKeptNotReadAgain(t *testing.T) {
 	want(t, e.publish(t, "d", "lang: en\ntemplate: deep\nnote: one\n", nil), http.StatusCreated, "")
 	want(t, e.publish(t, "d", "lang: en\ntemplate: deep\nnote: two\n", nil), http.StatusOK, "")
 	want(t, e.do(t, http.MethodGet, "/a/d/?raw", ""), http.StatusOK, "two")
-	for _, path := range []string{"/api/artifacts/d/download", "/api/artifacts/d/diff?from=1&to=2"} {
+	for _, path := range []string{"/api/pages/d/download", "/api/pages/d/diff?from=1&to=2"} {
 		w := e.do(t, http.MethodGet, path, "")
 		if w.Code != http.StatusBadRequest || w.Body.String() != tooDeep {
 			t.Errorf("%s = %d, %q", path, w.Code, w.Body)
@@ -66,8 +66,8 @@ func TestKeptNotReadAgain(t *testing.T) {
 
 	data := filepath.Join(e.home, "proj", "l.yaml")
 	writeFiles(t, filepath.Dir(data), map[string]string{"l.yaml": "lang: en\ntemplate: deep\nnote: one\n"})
-	want(t, e.write(t, http.MethodPost, "/api/artifacts", server.Link{Path: data}), http.StatusCreated, `"slug":"l"`) //nolint:exhaustruct // the rest not given
-	want(t, e.do(t, http.MethodGet, "/api/artifacts/l/download", ""), http.StatusOK, `<meta http-equiv="Content-Security-Policy"`)
+	want(t, e.write(t, http.MethodPost, "/api/pages", server.Link{Path: data}), http.StatusCreated, `"slug":"l"`) //nolint:exhaustruct // the rest not given
+	want(t, e.do(t, http.MethodGet, "/api/pages/l/download", ""), http.StatusOK, `<meta http-equiv="Content-Security-Policy"`)
 }
 
 // What the library will not write is the page's mistake, not floe's failure.

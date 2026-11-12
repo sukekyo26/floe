@@ -124,7 +124,7 @@ func (e env) write(t *testing.T, method, path string, body any) *httptest.Respon
 func (e env) publish(t *testing.T, slug, src string, images map[string][]byte) *httptest.ResponseRecorder {
 	t.Helper()
 
-	return e.write(t, http.MethodPost, "/api/artifacts/data",
+	return e.write(t, http.MethodPost, "/api/pages/data",
 		server.Upload{File: slug + ".yaml", Source: []byte(src), Images: images, Project: "p", Repo: "p", Place: slug + ".yaml", Slug: &slug}) //nolint:exhaustruct // the rest not given
 }
 
@@ -136,37 +136,61 @@ func want(t *testing.T, w *httptest.ResponseRecorder, status int, body string) {
 	}
 }
 
+// The paths the API had before it named its pages so (/api/artifacts, and /pages for the HTML files of a folder) are no
+// routes: every method answers as any path the server does not know, and /api/pages answers.
+func TestOldPathsGone(t *testing.T) {
+	t.Parallel()
+
+	e := newEnv(t)
+	// A page and a folder there are, so that a route kept under an old name would answer for them, not as for a slug that is none.
+	docs := filepath.Join(e.home, "proj", "docs")
+	writeFiles(t, filepath.Dir(docs), map[string]string{"docs/index.html": "<title>i</title>"})
+	want(t, e.write(t, http.MethodPost, "/api/pages", server.Link{Path: docs}), http.StatusCreated, `"slug":"docs"`)
+	want(t, e.publish(t, "d", "lang: en\ntemplate: pic\n", nil), http.StatusCreated, `"slug":"d"`)
+	for _, path := range []string{
+		"/api/artifacts", "/api/artifacts/data", "/api/artifacts/d", "/api/artifacts/d/read", "/api/artifacts/d/theme",
+		"/api/artifacts/d/download", "/api/artifacts/d/versions", "/api/artifacts/d/diff", "/api/artifacts/docs/pages",
+		"/api/pages/docs/pages",
+	} {
+		for _, method := range []string{http.MethodGet, http.MethodPost, http.MethodPatch, http.MethodPut, http.MethodDelete} {
+			want(t, e.do(t, method, path, ""), http.StatusNotFound, "not found")
+		}
+	}
+	want(t, e.do(t, http.MethodGet, "/api/pages", ""), http.StatusOK, `"slug":"d"`)
+	want(t, e.do(t, http.MethodGet, "/api/pages/docs/files", ""), http.StatusOK, `"files":[`)
+}
+
 // What no request should see is refused as the protocol is, in fixed English: another host, another origin, a
 // body that is not JSON as mime reads its type.
 func TestProtocol(t *testing.T) {
 	t.Parallel()
 
 	e := newEnv(t)
-	req := httptest.NewRequestWithContext(t.Context(), http.MethodGet, "/api/artifacts", nil)
+	req := httptest.NewRequestWithContext(t.Context(), http.MethodGet, "/api/pages", nil)
 	req.Host = "evil.example:7325"
 	w := httptest.NewRecorder()
 	e.h.ServeHTTP(w, req)
 	want(t, w, http.StatusForbidden, "forbidden host")
-	want(t, e.do(t, http.MethodDelete, "/api/artifacts/x", ""), http.StatusForbidden, "forbidden origin")
+	want(t, e.do(t, http.MethodDelete, "/api/pages/x", ""), http.StatusForbidden, "forbidden origin")
 	e.publish(t, "d", "lang: en\ntemplate: pic\n", nil)
 	for typ, status := range map[string]int{
 		"text/plain": 415, "application/jsonx": 415, "application/json-seq": 415, "application/json; charset": 415,
 		"Application/JSON; charset=utf-8": 200, "application/json": 200,
 	} {
-		w := e.do(t, http.MethodPatch, "/api/artifacts/d", `{"favorite": true}`, "Origin", origin, "Content-Type", typ)
+		w := e.do(t, http.MethodPatch, "/api/pages/d", `{"favorite": true}`, "Origin", origin, "Content-Type", typ)
 		if w.Code != status {
 			t.Errorf("Content-Type %q: %d, want %d", typ, w.Code, status)
 		}
 	}
 	// Another site cannot tell whether a page is there.
-	want(t, e.do(t, http.MethodPatch, "/api/artifacts/none", "{}", "Origin", "http://evil.example", "Content-Type", "application/json"),
+	want(t, e.do(t, http.MethodPatch, "/api/pages/none", "{}", "Origin", "http://evil.example", "Content-Type", "application/json"),
 		http.StatusForbidden, "forbidden origin")
-	want(t, e.do(t, http.MethodPatch, "/api/artifacts/none", "{}", "Origin", origin, "Content-Type", "application/json"), http.StatusNotFound, "not found")
-	want(t, e.do(t, http.MethodPatch, "/api/artifacts/Bad%20slug", "x", "Origin", origin, "Content-Type", "text/plain"), http.StatusNotFound, "not found")
+	want(t, e.do(t, http.MethodPatch, "/api/pages/none", "{}", "Origin", origin, "Content-Type", "application/json"), http.StatusNotFound, "not found")
+	want(t, e.do(t, http.MethodPatch, "/api/pages/Bad%20slug", "x", "Origin", origin, "Content-Type", "text/plain"), http.StatusNotFound, "not found")
 	want(t, e.do(t, http.MethodGet, "/a/x/%2e%2e/y", ""), http.StatusNotFound, "not found")
-	want(t, e.write(t, http.MethodPost, "/api/artifacts", map[string]any{"path": "/x", "bogus": 1}), http.StatusBadRequest,
+	want(t, e.write(t, http.MethodPost, "/api/pages", map[string]any{"path": "/x", "bogus": 1}), http.StatusBadRequest,
 		`unknown object member name "bogus"`)
-	want(t, e.write(t, http.MethodPost, "/api/artifacts/data", map[string]any{
+	want(t, e.write(t, http.MethodPost, "/api/pages/data", map[string]any{
 		"file": "x.yaml", "source": []byte("a"), "place": "x.yaml", "repo": "r",
 		"images": map[string][]byte{"../e.png": nil},
 	}), http.StatusBadRequest, "send each image by a slash-separated path")
@@ -174,7 +198,7 @@ func TestProtocol(t *testing.T) {
 	for _, key := range []map[string]any{{"place": "docs/x.yaml", "repo": ""}, {"place": "/home/x.yaml", "repo": "r"}} {
 		body := map[string]any{"file": "x.yaml", "source": []byte("a")}
 		maps.Copy(body, key)
-		want(t, e.write(t, http.MethodPost, "/api/artifacts/data", body), http.StatusBadRequest,
+		want(t, e.write(t, http.MethodPost, "/api/pages/data", body), http.StatusBadRequest,
 			"send the repository with a place from its root, and none with a real path")
 	}
 }
@@ -187,10 +211,10 @@ func TestPublish(t *testing.T) {
 	e := newEnv(t)
 	want(t, e.publish(t, "d", "lang: en\ntemplate: pic\ntitle: T\n", nil), http.StatusCreated, `"slug":"d"`)
 	want(t, e.publish(t, "d", "lang: en\ntemplate: pic\ntitle: T\n", nil), http.StatusOK, `"prev":{"title":"T"`)
-	other := e.write(t, http.MethodPost, "/api/artifacts/data", server.Upload{File: "d.yaml", Source: []byte("lang: en\ntemplate: pic\n"), Project: "q", Repo: "q", Place: "d.yaml"}) //nolint:exhaustruct // the rest not given
+	other := e.write(t, http.MethodPost, "/api/pages/data", server.Upload{File: "d.yaml", Source: []byte("lang: en\ntemplate: pic\n"), Project: "q", Repo: "q", Place: "d.yaml"}) //nolint:exhaustruct // the rest not given
 	want(t, other, http.StatusConflict, `{"mistakes":[{"text":"slug \"d\" was published from d.yaml in repository p: choose another slug"}]}`)
 	want(t, e.publish(t, "e", "lang: en\ntemplate: nope\n", nil), http.StatusBadRequest, `unknown template \"nope\"`)
-	asText := e.do(t, http.MethodPost, "/api/artifacts", `{"path": "rel.html"}`, "Origin", origin, "Content-Type", "application/json",
+	asText := e.do(t, http.MethodPost, "/api/pages", `{"path": "rel.html"}`, "Origin", origin, "Content-Type", "application/json",
 		"Accept", "application/json, text/plain")
 	want(t, asText, http.StatusBadRequest, "rel.html is not an absolute path")
 	if strings.HasPrefix(asText.Body.String(), "{") {
@@ -201,12 +225,12 @@ func TestPublish(t *testing.T) {
 	png := []byte("\x89PNG\r\n\x1a\n0000")
 	want(t, e.publish(t, "f", "lang: en\ntemplate: pic\ni: [img/a.png]\n", map[string][]byte{"img/a.png": png}), http.StatusCreated, `"slug":"f"`)
 	// Renamed, f.yaml's page is found without a slug, the images asked for and sent again.
-	want(t, e.write(t, http.MethodPatch, "/api/artifacts/f", map[string]any{"slug": "f-b"}), http.StatusOK, `"slug":"f-b"`)
+	want(t, e.write(t, http.MethodPatch, "/api/pages/f", map[string]any{"slug": "f-b"}), http.StatusOK, `"slug":"f-b"`)
 	up := server.Upload{File: "f.yaml", Source: []byte("lang: en\ntemplate: pic\ni: [img/a.png]\ntitle: two\n"), Project: "p", Repo: "p", Place: "f.yaml"} //nolint:exhaustruct // the rest not given
-	want(t, e.write(t, http.MethodPost, "/api/artifacts/data", up), http.StatusUnprocessableEntity, `{"images":["img/a.png"]}`)
+	want(t, e.write(t, http.MethodPost, "/api/pages/data", up), http.StatusUnprocessableEntity, `{"images":["img/a.png"]}`)
 	up.Images = map[string][]byte{"img/a.png": png}
-	want(t, e.write(t, http.MethodPost, "/api/artifacts/data", up), http.StatusOK, `"slug":"f-b"`)
-	want(t, e.write(t, http.MethodPut, "/api/artifacts/f-b", up), http.StatusNotFound, "not found")
+	want(t, e.write(t, http.MethodPost, "/api/pages/data", up), http.StatusOK, `"slug":"f-b"`)
+	want(t, e.write(t, http.MethodPut, "/api/pages/f-b", up), http.StatusNotFound, "not found")
 }
 
 // A publish answers the project the page was kept in, and the one of the page it replaced, as tasks.json says it: one
@@ -217,11 +241,11 @@ func TestPublishTaskProject(t *testing.T) {
 	e := newEnv(t)
 	const src = "lang: en\ntemplate: pic\ntitle: T\n"
 	want(t, e.publish(t, "d", src, nil), http.StatusCreated, `"prev":null,"taskProject":"p"}`)
-	none := e.write(t, http.MethodPost, "/api/artifacts/data", server.Upload{File: "n.yaml", Source: []byte(src), Project: "", Repo: "n", Place: "n.yaml"}) //nolint:exhaustruct // the rest not given
+	none := e.write(t, http.MethodPost, "/api/pages/data", server.Upload{File: "n.yaml", Source: []byte(src), Project: "", Repo: "n", Place: "n.yaml"}) //nolint:exhaustruct // the rest not given
 	want(t, none, http.StatusCreated, `"prev":null,"taskProject":"/"}`)
-	want(t, e.write(t, http.MethodPatch, "/api/artifacts/d", map[string]any{"project": "moved"}), http.StatusOK, `"taskProject":"moved"`)
+	want(t, e.write(t, http.MethodPatch, "/api/pages/d", map[string]any{"project": "moved"}), http.StatusOK, `"taskProject":"moved"`)
 	want(t, e.publish(t, "d", src, nil), http.StatusOK, `"taskProject":"moved"},"taskProject":"moved"}`)
-	want(t, e.write(t, http.MethodPatch, "/api/artifacts/d", map[string]any{"project": ""}), http.StatusOK, `"taskProject":"/"`)
+	want(t, e.write(t, http.MethodPatch, "/api/pages/d", map[string]any{"project": ""}), http.StatusOK, `"taskProject":"/"`)
 	want(t, e.publish(t, "d", src, nil), http.StatusOK, `"taskProject":"/"},"taskProject":"p"}`)
 }
 
@@ -234,7 +258,7 @@ func TestPublishMoveProject(t *testing.T) {
 	const src = "lang: en\ntemplate: pic\ntitle: T\n"
 	send := func(project string, move bool) *httptest.ResponseRecorder {
 		slug := "d"
-		return e.write(t, http.MethodPost, "/api/artifacts/data",
+		return e.write(t, http.MethodPost, "/api/pages/data",
 			server.Upload{File: "d.yaml", Source: []byte(src), Project: project, Repo: "p", Place: "d.yaml", Slug: &slug, MoveProject: move}) //nolint:exhaustruct // the rest not given
 	}
 	want(t, send("p", false), http.StatusCreated, `"taskProject":"p"}`)
@@ -244,7 +268,7 @@ func TestPublishMoveProject(t *testing.T) {
 	want(t, send("q", false), http.StatusOK, `"taskProject":"q"},"taskProject":"q"}`)
 	// From a place with no project the page would be emptied of its project, which a publish from another place fills again.
 	want(t, send("", true), http.StatusBadRequest, "run it in the repository the page is about")
-	want(t, e.do(t, http.MethodPost, "/api/artifacts", `{"path": "/x.html", "moveProject": true}`, "Origin", origin, "Content-Type", "application/json",
+	want(t, e.do(t, http.MethodPost, "/api/pages", `{"path": "/x.html", "moveProject": true}`, "Origin", origin, "Content-Type", "application/json",
 		"Accept", "application/json"), http.StatusBadRequest, "moveProject")
 }
 
@@ -264,7 +288,7 @@ func TestStoredPage(t *testing.T) {
 	// It asks every second whether it changed, each ask cut off after 5 s, holding no connection.
 	if !strings.HasPrefix(w.Body.String(), string(kept)) || !strings.Contains(w.Body.String(), "window.AbortSignal.timeout(5000)") ||
 		!strings.Contains(w.Body.String(), "window.setInterval(look, 1000)") || strings.Contains(w.Body.String(), "EventSource") ||
-		!strings.Contains(w.Body.String(), "artifactOpen") {
+		!strings.Contains(w.Body.String(), "pageOpen") {
 		t.Errorf("served\n%s", w.Body)
 	}
 	csp := w.Header().Get("Content-Security-Policy")
@@ -274,7 +298,7 @@ func TestStoredPage(t *testing.T) {
 	if w.Header().Get("X-Content-Type-Options") != "nosniff" {
 		t.Error("no nosniff")
 	}
-	download := e.do(t, http.MethodGet, "/api/artifacts/d/download", "")
+	download := e.do(t, http.MethodGet, "/api/pages/d/download", "")
 	if !strings.Contains(download.Body.String(), `http-equiv="Content-Security-Policy"`) || strings.Contains(download.Body.String(), "/api/changed/") {
 		t.Errorf("downloaded\n%s", download.Body)
 	}
@@ -375,14 +399,14 @@ func TestLinkedData(t *testing.T) {
 	e := newEnv(t)
 	data := filepath.Join(e.home, "proj", "d.yaml")
 	writeFiles(t, filepath.Dir(data), map[string]string{"d.yaml": "lang: en\ntemplate: pic\nnote: one\n", "h.html": "<title>h</title><p>x</p>", "s.css": "p{}"})
-	want(t, e.write(t, http.MethodPost, "/api/artifacts", server.Link{Path: data}), http.StatusCreated, `"slug":"d"`) //nolint:exhaustruct // the rest not given
+	want(t, e.write(t, http.MethodPost, "/api/pages", server.Link{Path: data}), http.StatusCreated, `"slug":"d"`) //nolint:exhaustruct // the rest not given
 	want(t, e.do(t, http.MethodGet, "/a/d/?raw", ""), http.StatusOK, "one")
 	writeFiles(t, filepath.Dir(data), map[string]string{"d.yaml": "lang: en\ntemplate: pic\nnote: two\n"})
 	want(t, e.do(t, http.MethodGet, "/a/d/?raw", ""), http.StatusOK, "two")
 	writeFiles(t, filepath.Dir(data), map[string]string{"d.yaml": "lang: en\ntemplate: nope\n"})
 	want(t, e.do(t, http.MethodGet, "/a/d/?raw", "", "Accept-Language", "ja"), http.StatusOK, "データファイルに誤りがあります")
-	want(t, e.do(t, http.MethodGet, "/api/artifacts/d/download", ""), http.StatusBadRequest, `unknown template "nope"`)
-	want(t, e.write(t, http.MethodPost, "/api/artifacts", server.Link{Path: filepath.Join(e.home, "proj", "h.html")}), http.StatusCreated, `"slug":"h"`) //nolint:exhaustruct // the rest not given
+	want(t, e.do(t, http.MethodGet, "/api/pages/d/download", ""), http.StatusBadRequest, `unknown template "nope"`)
+	want(t, e.write(t, http.MethodPost, "/api/pages", server.Link{Path: filepath.Join(e.home, "proj", "h.html")}), http.StatusCreated, `"slug":"h"`) //nolint:exhaustruct // the rest not given
 	want(t, e.do(t, http.MethodGet, "/a/h/s.css", ""), http.StatusOK, "p{}")
 	want(t, e.do(t, http.MethodGet, "/a/h/nope.css", ""), http.StatusNotFound, "not found")
 	// What is not a regular file is not served, so that a FIFO does not block the server.
@@ -396,8 +420,8 @@ func TestLinkedData(t *testing.T) {
 	if err := unix.Mkfifo(data, 0o600); err != nil {
 		t.Fatal(err)
 	}
-	want(t, e.do(t, http.MethodGet, "/api/artifacts/d/download", ""), http.StatusNotFound, "not found")
-	plain := e.do(t, http.MethodGet, "/api/artifacts/h/download", "")
+	want(t, e.do(t, http.MethodGet, "/api/pages/d/download", ""), http.StatusNotFound, "not found")
+	plain := e.do(t, http.MethodGet, "/api/pages/h/download", "")
 	if plain.Body.String() != "<title>h</title><p>x</p>" {
 		t.Errorf("a linked HTML file downloaded as %q", plain.Body)
 	}
@@ -414,7 +438,7 @@ func TestFolder(t *testing.T) {
 		"docs/index.html": "<title>i</title>", "docs/guide/setup.html": "<p>s</p>", "docs/s.css": "p{}", "docs/.git/config": "x",
 		"sibling.html": "beside",
 	})
-	want(t, e.write(t, http.MethodPost, "/api/artifacts", server.Link{Path: docs}), http.StatusCreated, `"slug":"docs","title":"","prev":null,"folder":true,"taskProject":"docs"}`) //nolint:exhaustruct // the rest not given
+	want(t, e.write(t, http.MethodPost, "/api/pages", server.Link{Path: docs}), http.StatusCreated, `"slug":"docs","title":"","prev":null,"folder":true,"taskProject":"docs"}`) //nolint:exhaustruct // the rest not given
 	if w := e.do(t, http.MethodGet, "/a/docs/", ""); w.Code != http.StatusSeeOther || w.Header().Get("Location") != "/?kind=folder&open=docs" {
 		t.Errorf("GET /a/docs/ = %d to %q, want 303 to the list with it open", w.Code, w.Header().Get("Location"))
 	}
@@ -436,26 +460,30 @@ func TestFolder(t *testing.T) {
 	}
 	want(t, e.do(t, http.MethodGet, "/a/docs/s.css", ""), http.StatusOK, "p{}")
 	for _, target := range []string{
-		"/a/docs/?raw", "/api/artifacts/docs/download", "/a/docs/.git/config", "/api/artifacts/docs/pages?dir=..",
-		"/api/artifacts/docs/pages?dir=.git", "/api/artifacts/docs/pages?dir=nope", "/api/artifacts/none/pages",
+		"/a/docs/?raw", "/api/pages/docs/download", "/a/docs/.git/config", "/api/pages/docs/files?dir=..",
+		"/api/pages/docs/files?dir=.git", "/api/pages/docs/files?dir=nope", "/api/pages/none/files",
 	} {
 		want(t, e.do(t, http.MethodGet, target, ""), http.StatusNotFound, "not found")
 	}
-	top := e.do(t, http.MethodGet, "/api/artifacts/docs/pages", "")
+	top := e.do(t, http.MethodGet, "/api/pages/docs/files", "")
+	// The answer names the HTML files `files`, as its path does, and not `pages`.
+	if body := top.Body.String(); !strings.Contains(body, `"files":[`) || strings.Contains(body, `"pages"`) {
+		t.Errorf("the keys of the listing = %s", body)
+	}
 	var l link.Listing
 	if err := json.Unmarshal(top.Body.Bytes(), &l); err != nil || top.Code != http.StatusOK || !slices.Equal(l.Dirs, []string{"guide"}) ||
-		len(l.Pages) != 1 || l.Pages[0].File != "index.html" || l.More != 0 {
-		t.Errorf("pages of the top = %d %s", top.Code, top.Body)
+		len(l.Files) != 1 || l.Files[0].File != "index.html" || l.More != 0 {
+		t.Errorf("files of the top = %d %s", top.Code, top.Body)
 	}
-	want(t, e.do(t, http.MethodGet, "/api/artifacts/docs/pages?dir=guide", ""), http.StatusOK, `{"dirs":[],"pages":[{"file":"guide/setup.html","updatedAt":"`)
+	want(t, e.do(t, http.MethodGet, "/api/pages/docs/files?dir=guide", ""), http.StatusOK, `{"dirs":[],"files":[{"file":"guide/setup.html","updatedAt":"`)
 	// An archived folder's URL leads to the archived list.
-	want(t, e.write(t, http.MethodPatch, "/api/artifacts/docs", map[string]any{"archived": true}), http.StatusOK, `"slug":"docs"`)
+	want(t, e.write(t, http.MethodPatch, "/api/pages/docs", map[string]any{"archived": true}), http.StatusOK, `"slug":"docs"`)
 	if w := e.do(t, http.MethodGet, "/a/docs/", ""); w.Header().Get("Location") != "/?kind=folder&open=docs&view=archived" {
 		t.Errorf("GET /a/docs/ archived leads to %q", w.Header().Get("Location"))
 	}
 	// A file's link has no directories to list.
-	want(t, e.write(t, http.MethodPost, "/api/artifacts", server.Link{Path: filepath.Join(e.home, "proj", "sibling.html")}), http.StatusCreated, `"slug":"sibling"`) //nolint:exhaustruct // the rest not given
-	want(t, e.do(t, http.MethodGet, "/api/artifacts/sibling/pages", ""), http.StatusNotFound, "not found")
+	want(t, e.write(t, http.MethodPost, "/api/pages", server.Link{Path: filepath.Join(e.home, "proj", "sibling.html")}), http.StatusCreated, `"slug":"sibling"`) //nolint:exhaustruct // the rest not given
+	want(t, e.do(t, http.MethodGet, "/api/pages/sibling/files", ""), http.StatusNotFound, "not found")
 	want(t, e.do(t, http.MethodGet, "/a/sibling/?file=sibling.html", ""), http.StatusNotFound, `data-slug="sibling"`)
 }
 
@@ -466,24 +494,24 @@ func TestEditArchived(t *testing.T) {
 
 	e := newEnv(t)
 	e.publish(t, "d", "lang: en\ntemplate: pic\n", nil)
-	want(t, e.write(t, http.MethodPatch, "/api/artifacts/d", map[string]any{"archived": true}), http.StatusOK, `{"slug":"d",`)
-	want(t, e.do(t, http.MethodGet, "/api/artifacts", ""), http.StatusOK, `"archived":true`)
+	want(t, e.write(t, http.MethodPatch, "/api/pages/d", map[string]any{"archived": true}), http.StatusOK, `{"slug":"d",`)
+	want(t, e.do(t, http.MethodGet, "/api/pages", ""), http.StatusOK, `"archived":true`)
 	// encoding/json/v2 says "cannot" or "unable to" as the process falls: what follows the verb is told.
 	for body, told := range map[string]string{
 		`{"archived":"yes"}`: `unmarshal JSON string into Go bool within "/archived"`,
 		`{"archived":1}`:     `unmarshal JSON number into Go bool within "/archived"`,
 		`{"favorite":"yes"}`: `unmarshal JSON string into Go bool within "/favorite"`,
 	} {
-		w := e.write(t, http.MethodPatch, "/api/artifacts/d", json.RawMessage(body))
+		w := e.write(t, http.MethodPatch, "/api/pages/d", json.RawMessage(body))
 		if w.Code != http.StatusBadRequest || !strings.Contains(w.Body.String(), told) {
 			t.Errorf("%s: answered %d %q, want %q", body, w.Code, w.Body.String(), told)
 		}
 	}
-	want(t, e.write(t, http.MethodPatch, "/api/artifacts/d", map[string]any{"archived": false}), http.StatusOK, `{"slug":"d",`)
-	if w := e.do(t, http.MethodGet, "/api/artifacts", ""); strings.Contains(w.Body.String(), "archived") {
+	want(t, e.write(t, http.MethodPatch, "/api/pages/d", map[string]any{"archived": false}), http.StatusOK, `{"slug":"d",`)
+	if w := e.do(t, http.MethodGet, "/api/pages", ""); strings.Contains(w.Body.String(), "archived") {
 		t.Errorf("given back, still listed archived: %s", w.Body.String())
 	}
-	want(t, e.write(t, http.MethodPatch, "/api/artifacts/none", map[string]any{"archived": true}), http.StatusNotFound, "not found")
+	want(t, e.write(t, http.MethodPatch, "/api/pages/none", map[string]any{"archived": true}), http.StatusNotFound, "not found")
 }
 
 // An edit changes each field by its own key and no other; a field null is not changed. A key it does not know is
@@ -531,14 +559,14 @@ func TestEditKeys(t *testing.T) {
 		// Kept on, for the rename below to keep.
 		{`{"tags":{"add":["k"]}}`, func(f *fields) { f.tags = "k" }},
 	} {
-		want(t, e.write(t, http.MethodPatch, "/api/artifacts/d", json.RawMessage(c.body)), http.StatusOK, `{"slug":"d",`)
+		want(t, e.write(t, http.MethodPatch, "/api/pages/d", json.RawMessage(c.body)), http.StatusOK, `{"slug":"d",`)
 		c.change(&now)
 		if got := look("d"); got != now {
 			t.Errorf("%s: %+v, want %+v", c.body, got, now)
 		}
 	}
 	for _, body := range []string{`{"archivd":true}`, `{"title":"T2","color":"red"}`} {
-		want(t, e.write(t, http.MethodPatch, "/api/artifacts/d", json.RawMessage(body)), http.StatusBadRequest,
+		want(t, e.write(t, http.MethodPatch, "/api/pages/d", json.RawMessage(body)), http.StatusBadRequest,
 			"unknown object member name")
 		if got := look("d"); got != now {
 			t.Errorf("%s changed the page: %+v, want %+v", body, got, now)
@@ -550,11 +578,11 @@ func TestEditKeys(t *testing.T) {
 		`{"tags":{"add":[1]}}`:   `unmarshal JSON number into Go string within "/tags/add/0"`,
 		`{"tags":{"put":["a"]}}`: `unknown object member name "put" within "/tags"`,
 	} {
-		want(t, e.write(t, http.MethodPatch, "/api/artifacts/d", json.RawMessage(body)), http.StatusBadRequest, told)
+		want(t, e.write(t, http.MethodPatch, "/api/pages/d", json.RawMessage(body)), http.StatusBadRequest, told)
 	}
-	want(t, e.write(t, http.MethodPatch, "/api/artifacts/none", json.RawMessage(`{"x":1}`)), http.StatusBadRequest,
+	want(t, e.write(t, http.MethodPatch, "/api/pages/none", json.RawMessage(`{"x":1}`)), http.StatusBadRequest,
 		`unknown object member name "x"`)
-	want(t, e.write(t, http.MethodPatch, "/api/artifacts/d", json.RawMessage(`{"slug":"e"}`)), http.StatusOK, `{"slug":"e",`)
+	want(t, e.write(t, http.MethodPatch, "/api/pages/d", json.RawMessage(`{"slug":"e"}`)), http.StatusOK, `{"slug":"e",`)
 	if got := look("e"); got != now {
 		t.Errorf("renamed: %+v, want %+v", got, now)
 	}
@@ -579,9 +607,9 @@ func TestNotObject(t *testing.T) {
 	e := newEnv(t)
 	e.publish(t, "d", "lang: en\ntemplate: pic\n", nil)
 	for _, to := range []struct{ method, path string }{
-		{http.MethodPost, "/api/artifacts"},
-		{http.MethodPost, "/api/artifacts/data"},
-		{http.MethodPatch, "/api/artifacts/d"},
+		{http.MethodPost, "/api/pages"},
+		{http.MethodPost, "/api/pages/data"},
+		{http.MethodPatch, "/api/pages/d"},
 		{http.MethodPost, "/api/rebuild"},
 	} {
 		for _, body := range []string{"null", "1", `"s"`, "[1]", "x", "", "   "} {
@@ -594,7 +622,7 @@ func TestNotObject(t *testing.T) {
 	for body, told := range map[string]string{
 		"{}{}": "jsontext: invalid character '{' after top-level value", "{": "jsontext: unexpected EOF",
 	} {
-		want(t, e.do(t, http.MethodPatch, "/api/artifacts/d", body, "Origin", origin, "Content-Type", "application/json"),
+		want(t, e.do(t, http.MethodPatch, "/api/pages/d", body, "Origin", origin, "Content-Type", "application/json"),
 			http.StatusBadRequest, "cannot read the request: "+told)
 	}
 }
@@ -608,34 +636,34 @@ func TestStrictKeys(t *testing.T) {
 	e.publish(t, "d", "lang: en\ntemplate: pic\ntitle: T\n", nil)
 	src := `"bGFuZzogZW4KdGVtcGxhdGU6IHBpYwo="` // lang: en, template: pic
 	for _, c := range []struct{ method, path, body, told string }{
-		{http.MethodPost, "/api/artifacts", `{"Path":"/x"}`, `unknown object member name "Path"`},
-		{http.MethodPost, "/api/artifacts/data", `{"File":"e.yaml","source":` + src + `}`, `unknown object member name "File"`},
-		{http.MethodPatch, "/api/artifacts/d", `{"Archived":true}`, `unknown object member name "Archived"`},
-		{http.MethodPost, "/api/artifacts", `{"path":"/a","path":"/b"}`, `duplicate object member name "path"`},
+		{http.MethodPost, "/api/pages", `{"Path":"/x"}`, `unknown object member name "Path"`},
+		{http.MethodPost, "/api/pages/data", `{"File":"e.yaml","source":` + src + `}`, `unknown object member name "File"`},
+		{http.MethodPatch, "/api/pages/d", `{"Archived":true}`, `unknown object member name "Archived"`},
+		{http.MethodPost, "/api/pages", `{"path":"/a","path":"/b"}`, `duplicate object member name "path"`},
 		{
-			http.MethodPost, "/api/artifacts/data", `{"file":"e.yaml","file":"f.yaml","source":` + src + `}`,
+			http.MethodPost, "/api/pages/data", `{"file":"e.yaml","file":"f.yaml","source":` + src + `}`,
 			`duplicate object member name "file"`,
 		},
 		{
-			http.MethodPost, "/api/artifacts/data", `{"file":"e.yaml","source":` + src + `,"images":{"x.png":"YQ==","x.png":"Yg=="}}`,
+			http.MethodPost, "/api/pages/data", `{"file":"e.yaml","source":` + src + `,"images":{"x.png":"YQ==","x.png":"Yg=="}}`,
 			`duplicate object member name "x.png" within "/images"`,
 		},
-		{http.MethodPatch, "/api/artifacts/d", `{"title":"a","title":"b"}`, `duplicate object member name "title"`},
+		{http.MethodPatch, "/api/pages/d", `{"title":"a","title":"b"}`, `duplicate object member name "title"`},
 		// rebuild has no field: the first x is unknown before the second is seen.
 		{http.MethodPost, "/api/rebuild", `{"x":1,"x":1}`, `unknown object member name "x"`},
-		{http.MethodPost, "/api/artifacts", `{"path":"/a\ud800"}`, "invalid surrogate pair"},
-		{http.MethodPost, "/api/artifacts/data", `{"file":"e\ud800.yaml","source":` + src + `}`, "invalid surrogate pair"},
-		{http.MethodPatch, "/api/artifacts/d", `{"title":"\ud800"}`, "invalid surrogate pair"},
+		{http.MethodPost, "/api/pages", `{"path":"/a\ud800"}`, "invalid surrogate pair"},
+		{http.MethodPost, "/api/pages/data", `{"file":"e\ud800.yaml","source":` + src + `}`, "invalid surrogate pair"},
+		{http.MethodPatch, "/api/pages/d", `{"title":"\ud800"}`, "invalid surrogate pair"},
 		{http.MethodPost, "/api/rebuild", `{"\ud800":1}`, "invalid surrogate pair"},
-		{http.MethodPost, "/api/artifacts", "{\"path\":\"/a\xff\"}", "invalid UTF-8"},
-		{http.MethodPost, "/api/artifacts/data", "{\"file\":\"e\xff.yaml\",\"source\":" + src + "}", "invalid UTF-8"},
+		{http.MethodPost, "/api/pages", "{\"path\":\"/a\xff\"}", "invalid UTF-8"},
+		{http.MethodPost, "/api/pages/data", "{\"file\":\"e\xff.yaml\",\"source\":" + src + "}", "invalid UTF-8"},
 		{
-			http.MethodPost, "/api/artifacts/data", "{\"file\":\"e.yaml\",\"source\":" + src + ",\"images\":{\"a\xff.png\":\"YQ==\"}}",
+			http.MethodPost, "/api/pages/data", "{\"file\":\"e.yaml\",\"source\":" + src + ",\"images\":{\"a\xff.png\":\"YQ==\"}}",
 			"invalid UTF-8",
 		},
-		{http.MethodPatch, "/api/artifacts/d", "{\"title\":\"a\xffb\"}", "invalid UTF-8"},
+		{http.MethodPatch, "/api/pages/d", "{\"title\":\"a\xffb\"}", "invalid UTF-8"},
 		{http.MethodPost, "/api/rebuild", "{\"a\xff\":1}", "invalid UTF-8"},
-		{http.MethodPost, "/api/artifacts/data", `{"file":"e.yaml","source":"bGFuZzogZW4KdGVtcGxhdGU6IHBpYwo=\n"}`, `within "/source"`},
+		{http.MethodPost, "/api/pages/data", `{"file":"e.yaml","source":"bGFuZzogZW4KdGVtcGxhdGU6IHBpYwo=\n"}`, `within "/source"`},
 	} {
 		w := e.do(t, c.method, c.path, c.body, "Origin", origin, "Content-Type", "application/json")
 		if w.Code != http.StatusBadRequest || !strings.HasPrefix(w.Body.String(), "cannot read the request: ") ||
@@ -660,7 +688,7 @@ func TestRemove(t *testing.T) {
 		t.Skip("root removes what it may not")
 	}
 	e := newEnv(t)
-	want(t, e.do(t, http.MethodDelete, "/api/artifacts/none", "", "Origin", origin), http.StatusNotFound, "not found")
+	want(t, e.do(t, http.MethodDelete, "/api/pages/none", "", "Origin", origin), http.StatusNotFound, "not found")
 	e.publish(t, "d", "lang: en\ntemplate: pic\n", nil)
 	dir := filepath.Join(e.root, "d")
 	m := store.New(e.root).ReadMeta("d")
@@ -668,13 +696,13 @@ func TestRemove(t *testing.T) {
 		t.Fatal(err)
 	}
 	t.Cleanup(func() { _ = os.Chmod(filepath.Join(dir, m.Source), 0o700) }) //nolint:errcheck // told already
-	want(t, e.do(t, http.MethodDelete, "/api/artifacts/d", "", "Origin", origin), http.StatusBadRequest, "cannot be written (permission denied)")
-	want(t, e.do(t, http.MethodGet, "/api/artifacts", ""), http.StatusOK, `"slug":"d"`)
+	want(t, e.do(t, http.MethodDelete, "/api/pages/d", "", "Origin", origin), http.StatusBadRequest, "cannot be written (permission denied)")
+	want(t, e.do(t, http.MethodGet, "/api/pages", ""), http.StatusOK, `"slug":"d"`)
 	if err := os.Chmod(filepath.Join(dir, m.Source), 0o700); err != nil {
 		t.Fatal(err)
 	}
-	want(t, e.do(t, http.MethodDelete, "/api/artifacts/d", "", "Origin", origin), http.StatusNoContent, "")
-	want(t, e.do(t, http.MethodGet, "/api/artifacts", ""), http.StatusOK, "[]")
+	want(t, e.do(t, http.MethodDelete, "/api/pages/d", "", "Origin", origin), http.StatusNoContent, "")
+	want(t, e.do(t, http.MethodGet, "/api/pages", ""), http.StatusOK, "[]")
 }
 
 // Requests in parallel, of every kind, share the drawing (go test -race).
@@ -684,13 +712,13 @@ func TestParallel(t *testing.T) {
 	e := newEnv(t)
 	data := filepath.Join(e.home, "proj", "d.yaml")
 	writeFiles(t, filepath.Dir(data), map[string]string{"d.yaml": "lang: en\ntemplate: pic\nnote: one\n"})
-	e.write(t, http.MethodPost, "/api/artifacts", server.Link{Path: data}) //nolint:exhaustruct // the rest not given
+	e.write(t, http.MethodPost, "/api/pages", server.Link{Path: data}) //nolint:exhaustruct // the rest not given
 	var wg sync.WaitGroup
 	for range 8 {
 		wg.Go(func() {
 			e.do(t, http.MethodGet, "/a/d/?raw", "")
 			e.publish(t, "s", "lang: en\ntemplate: pic\n", nil)
-			e.do(t, http.MethodGet, "/api/artifacts", "")
+			e.do(t, http.MethodGet, "/api/pages", "")
 		})
 	}
 	wg.Wait()

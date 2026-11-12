@@ -50,7 +50,7 @@ func TestUIFolders(t *testing.T) { //nolint:paralleltest // the browser tests sh
 		const b = li.querySelector('button.title');
 		return b ? b.textContent + (b.getAttribute('aria-expanded') === 'true' ? '-' : '+') : li.querySelector('.title')?.textContent ?? '(' + li.textContent.trim() + ')';
 	}).join(',')`
-	read := `performance.getEntriesByType('resource').map((e) => new URL(e.name)).filter((u) => u.pathname.endsWith('/pages'))
+	read := `performance.getEntriesByType('resource').map((e) => new URL(e.name)).filter((u) => u.pathname.endsWith('/files'))
 		.map((u) => u.searchParams.get('dir') || '.').filter((d, i, all) => all.indexOf(d) === i).sort().join(',')`
 	opens := "localStorage.getItem('list.open') + ' ' + location.search"
 	click := func(name string) {
@@ -75,7 +75,7 @@ func TestUIFolders(t *testing.T) { //nolint:paralleltest // the browser tests sh
 	// not registered and a directory not there leave what is kept.
 	// Written where no list is drawn, which would keep what it has over it
 	back := b.eval("location.pathname + location.search")
-	b.navigate("/api/artifacts")
+	b.navigate("/api/pages")
 	b.eval("localStorage.setItem('list.open', JSON.stringify([...JSON.parse(localStorage.getItem('list.open')), 'gone', 'docs:nope']))")
 	b.navigate(back)
 	out = append(out, b.until("the tree again", rows+".includes('odd.html') && "+rows),

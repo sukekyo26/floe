@@ -157,7 +157,7 @@ func TestUIFrameBack(t *testing.T) { //nolint:paralleltest // the browser tests 
 	wholeAt("named back", "/a/a/")
 
 	// Come back to from the browser's memory, what was kept since is drawn.
-	b.eval(`sessionStorage.setItem('artifacts.order', '{"order":["a"],"shown":["a"],"back":"/tasks?project=proj"}'); dispatchEvent(new PageTransitionEvent('pageshow', { persisted: true }))`)
+	b.eval(`sessionStorage.setItem(ORDER_KEY, '{"order":["a"],"shown":["a"],"back":"/tasks?project=proj"}'); dispatchEvent(new PageTransitionEvent('pageshow', { persisted: true }))`)
 	out = append(out, "from the browser's memory: "+b.eval(frameBack))
 
 	// A task of no project, and a list at a view.
@@ -370,14 +370,14 @@ func TestUIFrameBackFocus(t *testing.T) { //nolint:paralleltest // the browser t
 
 	// Come back to from the browser's memory: the page whole knows it is there, and the list picks the row as any way back does.
 	b.navigate(pages)
-	b.eval(`sessionStorage.setItem('artifacts.order', '{"order":["a"],"shown":["a"],"back":"/?project=proj","at":{"slug":"c","file":"","v":0}}')`)
+	b.eval(`sessionStorage.setItem(ORDER_KEY, '{"order":["a"],"shown":["a"],"back":"/?project=proj","at":{"slug":"c","file":"","v":0}}')`)
 	b.navigate("/a/a/")
 	b.until("the bar", "document.getElementById('frame-title').textContent")
-	b.eval(`sessionStorage.setItem('artifacts.order', '{"order":["a"],"shown":["a"],"back":"/?project=proj","at":{"slug":"c","file":"","v":0}}'); dispatchEvent(new PageTransitionEvent('pageshow', { persisted: true }))`)
-	out = append(out, "whole, from the memory: "+b.eval("JSON.parse(sessionStorage.getItem('artifacts.order')).at.slug"))
+	b.eval(`sessionStorage.setItem(ORDER_KEY, '{"order":["a"],"shown":["a"],"back":"/?project=proj","at":{"slug":"c","file":"","v":0}}'); dispatchEvent(new PageTransitionEvent('pageshow', { persisted: true }))`)
+	out = append(out, "whole, from the memory: "+b.eval("JSON.parse(sessionStorage.getItem(ORDER_KEY)).at.slug"))
 	b.navigate(pages)
 	b.until("the rows", "document.querySelector('#list li[data-slug=a]')")
-	b.eval(`sessionStorage.setItem('artifacts.order', '{"order":["a"],"shown":["a"],"back":"/?project=proj","at":{"slug":"a","file":"","v":0}}'); dispatchEvent(new PageTransitionEvent('pageshow', { persisted: true }))`)
+	b.eval(`sessionStorage.setItem(ORDER_KEY, '{"order":["a"],"shown":["a"],"back":"/?project=proj","at":{"slug":"a","file":"","v":0}}'); dispatchEvent(new PageTransitionEvent('pageshow', { persisted: true }))`)
 	read("list, from the memory", pages)
 
 	if got := strings.Join(out, "\n"); got != frameBackFocusWant {

@@ -210,27 +210,27 @@ func (s *Server) Handler() http.Handler {
 	mux.HandleFunc("GET /{$}", serveUI)
 	mux.HandleFunc("GET /tasks", serveUI)
 	mux.HandleFunc("GET /api/health", s.health)
-	mux.HandleFunc("GET /api/artifacts", s.list)
-	mux.HandleFunc("POST /api/artifacts", s.addLink)
-	mux.HandleFunc("POST /api/artifacts/data", s.save)
-	mux.HandleFunc("PATCH /api/artifacts/{slug}", s.edit)
-	mux.HandleFunc("DELETE /api/artifacts/{slug}", s.remove)
-	mux.HandleFunc("POST /api/artifacts/{slug}/read", s.markRead)
-	mux.HandleFunc("DELETE /api/artifacts/{slug}/read", s.markUnread)
+	mux.HandleFunc("GET /api/pages", s.list)
+	mux.HandleFunc("POST /api/pages", s.addLink)
+	mux.HandleFunc("POST /api/pages/data", s.save)
+	mux.HandleFunc("PATCH /api/pages/{slug}", s.edit)
+	mux.HandleFunc("DELETE /api/pages/{slug}", s.remove)
+	mux.HandleFunc("POST /api/pages/{slug}/read", s.markRead)
+	mux.HandleFunc("DELETE /api/pages/{slug}/read", s.markUnread)
 	mux.HandleFunc("GET /api/tasks", s.tasks)
 	mux.HandleFunc("PATCH /api/work", s.editWork)
 	mux.HandleFunc("DELETE /api/tasks", s.forgetTask)
 	mux.HandleFunc("POST /api/rebuild", s.rebuild)
-	mux.HandleFunc("GET /api/artifacts/{slug}/theme", s.ownTheme)
-	mux.HandleFunc("PUT /api/artifacts/{slug}/theme", s.pickTheme)
+	mux.HandleFunc("GET /api/pages/{slug}/theme", s.ownTheme)
+	mux.HandleFunc("PUT /api/pages/{slug}/theme", s.pickTheme)
 	mux.HandleFunc("PUT /api/settings", s.putSettings)
 	mux.HandleFunc("GET /api/themes", s.themes)
 	mux.HandleFunc("GET /api/themes/{name}/sample", s.themeSample)
 	mux.HandleFunc("POST /api/stop", s.stop)
-	mux.HandleFunc("GET /api/artifacts/{slug}/download", s.download)
-	mux.HandleFunc("GET /api/artifacts/{slug}/pages", s.pages)
-	mux.HandleFunc("GET /api/artifacts/{slug}/versions", s.versions)
-	mux.HandleFunc("GET /api/artifacts/{slug}/diff", s.diff)
+	mux.HandleFunc("GET /api/pages/{slug}/download", s.download)
+	mux.HandleFunc("GET /api/pages/{slug}/files", s.files)
+	mux.HandleFunc("GET /api/pages/{slug}/versions", s.versions)
+	mux.HandleFunc("GET /api/pages/{slug}/diff", s.diff)
 	mux.HandleFunc("GET /api/changed/{slug}", s.changed)
 	mux.HandleFunc("GET /api/changed/{slug}/{rest...}", s.changed)
 	mux.HandleFunc("GET /a/{slug}", s.redirect)
@@ -358,10 +358,10 @@ func (s *Server) list(w http.ResponseWriter, r *http.Request) {
 	sendJSON(w, http.StatusOK, list)
 }
 
-// pages answers the directory ?dir= ("" for the top) of the folder slug links, which the management page reads
+// files answers the directory ?dir= ("" for the top) of the folder slug links, which the management page reads
 // when it is opened.
-func (s *Server) pages(w http.ResponseWriter, r *http.Request) {
-	l, err := s.cfg.Store.Pages(r.PathValue("slug"), r.URL.Query().Get("dir"))
+func (s *Server) files(w http.ResponseWriter, r *http.Request) {
+	l, err := s.cfg.Store.Files(r.PathValue("slug"), r.URL.Query().Get("dir"))
 	if errors.Is(err, store.ErrNotFound) {
 		notFound(w)
 		return

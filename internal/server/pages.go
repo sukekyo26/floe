@@ -449,10 +449,10 @@ const leaveFrame = "if (top !== window) window.addEventListener('click', (e) => 
 	"e.preventDefault();" +
 	"if (u.href.includes('#') && !u.search && u.pathname.replace(/\\/?$/, '/') === location.pathname) {" +
 	"location.href = location.pathname + location.search + (u.hash || '#'); return; }" +
-	"top.postMessage({ artifactOpen: u.pathname + u.search + u.hash }, " +
+	"top.postMessage({ pageOpen: u.pathname + u.search + u.hash }, " +
 	"location.protocol + '//' + location.host);});" +
 	"if (top !== window) { const tell = () => top.postMessage(" +
-	"{ artifactHash: location.hash, artifactPath: location.pathname }, location.protocol + '//' + location.host);" +
+	"{ pageHash: location.hash, pagePath: location.pathname }, location.protocol + '//' + location.host);" +
 	"tell(); window.addEventListener('hashchange', tell); }"
 
 // tellRead tells the frame the version of a stored page it was served, read as soon as it is loaded. It goes to parent,
@@ -468,8 +468,8 @@ func tellRead(read *Read) string {
 	}
 	// Marshal writes no < or >: it stays within the script.
 	lit, _ := json.Marshal(read) //nolint:errcheck // a number and a string always encode
-	return "if (window.parent !== window) window.parent.postMessage({ artifactRead: " + string(lit) +
-		", artifactPath: location.pathname }, location.protocol + '//' + location.host);"
+	return "if (window.parent !== window) window.parent.postMessage({ pageServed: " + string(lit) +
+		", pagePath: location.pathname }, location.protocol + '//' + location.host);"
 }
 
 // tellKeys hands the frame the keys pressed in the page that move on or open a modal, so that they work with the focus
@@ -491,7 +491,7 @@ func tellKeys(drawn, diff bool) string {
 	}
 	return "{const here = location.protocol + '//' + location.host; let wanted = false;" +
 		"window.addEventListener('message', (e) => { if (e.source === window.parent && e.origin === here " +
-		"&& e.data?.artifactKeysWanted === true) wanted = true; });" +
+		"&& e.data?.pageKeysWanted === true) wanted = true; });" +
 		"window.addEventListener('keydown', (e) => {" +
 		"if (!wanted || e.defaultPrevented || e.isComposing || e.keyCode === 229 || e.altKey) return;" +
 		"const on = e.target;" +
@@ -499,7 +499,7 @@ func tellKeys(drawn, diff bool) string {
 		"|| on.isContentEditable || window.document.designMode === 'on') return;" +
 		"const key = e.ctrlKey || e.metaKey ? (e.key === 'k' ? 'Ctrl+K' : '') : " +
 		"(" + letters + ".includes(e.key) ? e.key : '');" +
-		"if (!key) return; e.preventDefault(); window.parent.postMessage({ artifactKey: key }, here); });}"
+		"if (!key) return; e.preventDefault(); window.parent.postMessage({ pageKey: key }, here); });}"
 }
 
 // askEvery is how often a page shown asks whether it changed: about as often as the drawing is watched, and set
@@ -507,7 +507,7 @@ func tellKeys(drawn, diff bool) string {
 const askEvery = time.Second
 
 // tellChanged tells the frame of a diff that its page's versions changed, from the page at the path it was given.
-const tellChanged = "window.parent.postMessage({ artifactChanged: true, artifactPath: location.pathname }, " +
+const tellChanged = "window.parent.postMessage({ pageChanged: true, pagePath: location.pathname }, " +
 	"location.protocol + '//' + location.host)"
 
 // servedScript is appended to a served page only: it reloads the open tab when the page changes (a publish, a

@@ -159,7 +159,7 @@ func TestUIUnreadKept(t *testing.T) { //nolint:paralleltest // the browser tests
 	anew := func() {
 		t.Helper()
 		// Heard here after the frame's own listener, which has by then sent it or kept it back.
-		b.eval(`window.heard = false; addEventListener('message', (e) => { if (e.data?.artifactRead) window.heard = true; }, { once: false });
+		b.eval(`window.heard = false; addEventListener('message', (e) => { if (e.data?.pageServed) window.heard = true; }, { once: false });
 			document.getElementById('read-frame').contentWindow.location.replace(readLoaded)`)
 		b.until("told anew", "window.heard")
 		sentAll(b)

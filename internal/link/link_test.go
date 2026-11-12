@@ -176,8 +176,8 @@ func TestDir(t *testing.T) {
 		t.Fatal(err)
 	}
 	files := func(l link.Listing) []string {
-		out := make([]string, 0, len(l.Pages))
-		for _, p := range l.Pages {
+		out := make([]string, 0, len(l.Files))
+		for _, p := range l.Files {
 			out = append(out, p.File)
 		}
 		return out
@@ -186,9 +186,9 @@ func TestDir(t *testing.T) {
 		t.Errorf("Dir(top).Dirs = %q, more %d; want %q", got.Dirs, got.More, want)
 	}
 	if want := []string{"README.HTM", "in.html", "index.html"}; !slices.Equal(files(got), want) {
-		t.Errorf("Dir(top).Pages = %q, want %q", files(got), want)
+		t.Errorf("Dir(top).Files = %q, want %q", files(got), want)
 	}
-	if got.Pages[0].Modified.IsZero() {
+	if got.Files[0].Modified.IsZero() {
 		t.Error("a page's time is not given")
 	}
 	for dir, want := range map[string][]string{"guide": {"guide/setup.html"}, "a,b:c": {"a,b:c/odd.html"}} {
@@ -227,9 +227,9 @@ func TestDirKeepsTheFirstByName(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	if len(l.Dirs) != 2 || len(l.Pages) != link.MaxListed-2 || l.More != 6 || l.Pages[0].File != "p0000.html" {
+	if len(l.Dirs) != 2 || len(l.Files) != link.MaxListed-2 || l.More != 6 || l.Files[0].File != "p0000.html" {
 		t.Errorf("Dir = %d dirs, %d pages (first %q), more %d; want 2, %d, p0000.html, 6",
-			len(l.Dirs), len(l.Pages), l.Pages[0].File, l.More, link.MaxListed-2)
+			len(l.Dirs), len(l.Files), l.Files[0].File, l.More, link.MaxListed-2)
 	}
 }
 

@@ -33,7 +33,7 @@ func TestRenderedCutOff(t *testing.T) { //nolint:paralleltest // the browser tes
 			"document.addEventListener('securitypolicyviolation', (e) => blocked.push(e.effectiveDirective));" +
 			"addEventListener('load', () => {const out = " + js(out) + ";" +
 			"const x = new XMLHttpRequest(); x.open('GET', out + '/xhr'); const img = new Image();" +
-			"Promise.allSettled([fetch(out + '/fetch'), fetch('/api/artifacts')," +
+			"Promise.allSettled([fetch(out + '/fetch'), fetch('/api/pages')," +
 			"new Promise((r) => { x.onloadend = r; x.send(); })," +
 			"new Promise((r) => { img.onload = img.onerror = r; img.src = out + '/img'; })]).then(() => {" +
 			"const f = document.createElement('form'); f.method = 'post'; f.action = out + '/form'; document.body.append(f); f.submit();});});" +
@@ -57,7 +57,7 @@ func TestRenderedCutOff(t *testing.T) { //nolint:paralleltest // the browser tes
 	out = append(out, "reloaded")
 
 	// The download is opened from another server, without floe's headers: its <meta> cuts it off.
-	download := s.get(t, "/api/artifacts/cut/download")
+	download := s.get(t, "/api/pages/cut/download")
 	plain := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, _ *http.Request) {
 		w.Header().Set("Content-Type", "text/html; charset=utf-8")
 		_, _ = w.Write([]byte(download)) //nolint:errcheck,gosec // the test checks what the page does

@@ -16,7 +16,7 @@ import (
 )
 
 // listening attaches one message listener per document and returns the last message the page sent.
-// It keeps the page's own words, not what floe's script in the page tells the frame (artifactHash).
+// It keeps the page's own words, not what floe's script in the page tells the frame (pageHash).
 const listening = "(window.listening ||= (addEventListener('message', (e) => { if (typeof e.data === 'string') window.reported = e.data; }), true)) && window.reported"
 
 // TestUIReload checks that an open page reloads itself when republished, from inside the sandbox, and

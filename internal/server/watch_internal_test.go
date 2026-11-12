@@ -349,7 +349,7 @@ func TestWatchParallel(t *testing.T) {
 		wg.Go(func() {
 			for j := range 5 {
 				mine(t, dir, "{{.Data.n}} "+strconv.Itoa(i*10+j))
-				for _, path := range []string{"/a/d/?raw", "/api/artifacts", "/api/artifacts/d/download"} {
+				for _, path := range []string{"/a/d/?raw", "/api/pages", "/api/pages/d/download"} {
 					req := httptest.NewRequestWithContext(ctx, http.MethodGet, path, nil)
 					req.Host = "127.0.0.1:7325"
 					h.ServeHTTP(httptest.NewRecorder(), req)

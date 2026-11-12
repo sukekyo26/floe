@@ -21,6 +21,10 @@ import (
 	"floe/internal/usererr"
 )
 
+// pagesPath is where the server's API keeps the pages (server.go's routes under /api/pages): GET lists them, and
+// /data, /{slug} and what is under it are one page's.
+const pagesPath = "/api/pages"
+
 // client calls the API of the server at base, in English as the command line speaks. The server is the
 // only one that writes the store: the CLI asks it.
 type client struct {

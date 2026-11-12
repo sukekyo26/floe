@@ -84,7 +84,7 @@ func TestUIRowActions(t *testing.T) { //nolint:paralleltest // the browser tests
 	b.until("c archived", "!"+there("c")+" && document.activeElement.matches('.undo')")
 	b.pressKey(kb.Escape)
 	out = append(out, "left: "+b.until("the toast gone", undo("c")+" === null && "+focus))
-	b.eval(`fetch('/api/artifacts/c', { method: 'PATCH', headers: { 'Content-Type': 'application/json' }, body: '{"archived":false}' }).then(() => load())`)
+	b.eval(`fetch('/api/pages/c', { method: 'PATCH', headers: { 'Content-Type': 'application/json' }, body: '{"archived":false}' }).then(() => load())`)
 	b.untilActed("c back again", there("c"))
 
 	// The last row has none after it: the row that is last now takes the focus.
@@ -92,7 +92,7 @@ func TestUIRowActions(t *testing.T) { //nolint:paralleltest // the browser tests
 	b.until("b archived", "!"+there("b")+" && document.activeElement.matches('.undo')")
 	b.pressKey(kb.Escape)
 	out = append(out, "left, the last: "+b.until("the toast gone", undo("b")+" === null && "+focus))
-	b.eval(`fetch('/api/artifacts/b', { method: 'PATCH', headers: { 'Content-Type': 'application/json' }, body: '{"archived":false}' }).then(() => load())`)
+	b.eval(`fetch('/api/pages/b', { method: 'PATCH', headers: { 'Content-Type': 'application/json' }, body: '{"archived":false}' }).then(() => load())`)
 	b.untilActed("b back", there("b"))
 
 	// The way back fails: it stays to press again. The list slow to come: it can be pressed all the same.
@@ -103,7 +103,7 @@ func TestUIRowActions(t *testing.T) { //nolint:paralleltest // the browser tests
 	b.until("the error", "!document.getElementById('error').hidden")
 	say("failed, it stays", undo("c")+" !== null && !"+there("c"))
 	b.eval(`window.patches = []; window.hold = new Promise((r) => { window.release = r; });
-		window.fetch = (u, i) => { if (i?.method === 'PATCH') { window.patches.push(i.body); return window.realFetch(u, i); } return String(u).startsWith('/api/artifacts') ? window.hold.then(() => window.realFetch(u, i)) : window.realFetch(u, i); };
+		window.fetch = (u, i) => { if (i?.method === 'PATCH') { window.patches.push(i.body); return window.realFetch(u, i); } return String(u).startsWith('/api/pages') ? window.hold.then(() => window.realFetch(u, i)) : window.realFetch(u, i); };
 		document.querySelector('#list li[data-slug=b] .actions > .archive').click()`)
 	b.until("b's way back, the list not read", undo("b"))
 	b.eval(undo("b") + ".click()")
@@ -159,7 +159,7 @@ func TestUIRowActions(t *testing.T) { //nolint:paralleltest // the browser tests
 
 	// A task's page: the row stays under its category, dimmed, keeping its key, and the focus on its button.
 	for _, slug := range []string{"a", "e"} {
-		b.eval(`fetch('/api/artifacts/` + slug + `', { method: 'PATCH', headers: { 'Content-Type': 'application/json' }, body: '{"archived":false}' })`)
+		b.eval(`fetch('/api/pages/` + slug + `', { method: 'PATCH', headers: { 'Content-Type': 'application/json' }, body: '{"archived":false}' })`)
 	}
 	s.floe(t, "work", "a", "--task", "#1", "--category", "one")
 	s.floe(t, "work", "b", "--task", "#1", "--category", "two")

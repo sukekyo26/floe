@@ -44,7 +44,7 @@ func publish(ctx context.Context, t *testing.T, h http.Handler) *httptest.Respon
 	if err != nil {
 		t.Fatal(err)
 	}
-	return api(ctx, t, h, http.MethodPost, "/api/artifacts/data", string(b))
+	return api(ctx, t, h, http.MethodPost, "/api/pages/data", string(b))
 }
 
 // told is the report of w, laid out.
@@ -163,7 +163,7 @@ func TestLatestLink(t *testing.T) {
 	}
 	write(t, data, mineData)
 	mine(t, dir, "{{.Data.nope.x}}")
-	w := api(t.Context(), t, s.Handler(), http.MethodPost, "/api/artifacts", `{"path": "`+data+`"}`)
+	w := api(t.Context(), t, s.Handler(), http.MethodPost, "/api/pages", `{"path": "`+data+`"}`)
 	if w.Code != http.StatusBadRequest {
 		t.Fatalf("link = %d %s, want 400", w.Code, w.Body)
 	}
@@ -186,11 +186,11 @@ func TestLatestDownload(t *testing.T) {
 		t.Fatal(err)
 	}
 	write(t, data, mineData)
-	if w := api(t.Context(), t, h, http.MethodPost, "/api/artifacts", `{"path": "`+data+`"}`); w.Code != http.StatusCreated {
+	if w := api(t.Context(), t, h, http.MethodPost, "/api/pages", `{"path": "`+data+`"}`); w.Code != http.StatusCreated {
 		t.Fatalf("link = %d %s", w.Code, w.Body)
 	}
 	mine(t, dir, "{{.Data.n}} saved just now")
-	w := api(t.Context(), t, h, http.MethodGet, "/api/artifacts/l/download", "")
+	w := api(t.Context(), t, h, http.MethodGet, "/api/pages/l/download", "")
 	if w.Code != http.StatusOK || !strings.Contains(w.Body.String(), "1 saved just now") {
 		t.Errorf("download = %d %s; want the template saved just now", w.Code, w.Body)
 	}

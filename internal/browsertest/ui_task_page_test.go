@@ -85,7 +85,7 @@ func TestUITaskPage(t *testing.T) { //nolint:paralleltest // the browser tests s
 		t.Helper()
 		b.moving("document.activeElement.dispatchEvent(new KeyboardEvent('keydown', { key: 'Enter', bubbles: true, cancelable: true }))")
 	}
-	const whole = "document.getElementById('back').getAttribute('href') + ' ' + document.querySelector('.brand').getAttribute('href') + ' ' + sessionStorage.getItem('artifacts.order')"
+	const whole = "document.getElementById('back').getAttribute('href') + ' ' + document.querySelector('.brand').getAttribute('href') + ' ' + sessionStorage.getItem(ORDER_KEY)"
 	opened := func(task, path string) {
 		t.Helper()
 		b.navigate(path)
@@ -107,7 +107,7 @@ func TestUITaskPage(t *testing.T) { //nolint:paralleltest // the browser tests s
 	say("rows", taskPageRows)
 	say("nothing open", taskPageAt)
 	say("url", "location.pathname + location.search")
-	say("the list's keys", "sessionStorage.getItem('artifacts.list') + ' ' + sessionStorage.getItem('artifacts.tasks')")
+	say("the list's keys", "sessionStorage.getItem(LIST_KEY) + ' ' + sessionStorage.getItem(TASKS_KEY)")
 	say("head", "[document.getElementById('task-title').textContent, document.getElementById('task-state').value, document.getElementById('task-state').className, document.getElementById('task-project').textContent, document.getElementById('task-archive').hidden, document.getElementById('task-up').getAttribute('href')].join(' / ')")
 	say("nothing to select", "document.querySelectorAll('#list .sel').length + ' ' + [...document.querySelectorAll('#list .menu .select')].every((e) => e.hidden)")
 	b.still()
@@ -153,7 +153,7 @@ func TestUITaskPage(t *testing.T) { //nolint:paralleltest // the browser tests s
 	// A pin: through the pins, back to the list with its filter.
 	b.navigate("/tasks?view=todo&project=proj")
 	b.until("the rows", "document.querySelector('#list > li')")
-	say("the list kept", "sessionStorage.getItem('artifacts.tasks')")
+	say("the list kept", "sessionStorage.getItem(TASKS_KEY)")
 	b.moving("document.querySelector('.pin').click()")
 	b.until("the pin whole", "location.pathname.startsWith('/a/p') && document.getElementById('frame-title').textContent")
 	say("pin", "location.pathname + ' ' + "+whole)
@@ -179,7 +179,7 @@ func TestUITaskPage(t *testing.T) { //nolint:paralleltest // the browser tests s
 	b.moving("openEdit(items.find((a) => a.slug === 'c1')); document.getElementById('edit-slug').value = 'c2'; document.getElementById('edit').requestSubmit()")
 	b.until("the new name", "location.pathname === '/a/c2/' && document.getElementById('frame-title').textContent")
 	say("renamed whole", whole)
-	b.eval("sessionStorage.removeItem('artifacts.order')")
+	b.eval("sessionStorage.removeItem(ORDER_KEY)")
 	b.navigate("/a/loose/")
 	b.until("the bar", "document.getElementById('frame-title').textContent")
 	say("of no rows", whole)

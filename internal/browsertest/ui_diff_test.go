@@ -58,7 +58,7 @@ func TestUIDiff(t *testing.T) { //nolint:paralleltest // the browser tests share
 
 	// The last two, no page loaded in the page's frame, nothing read.
 	const counts = "[...document.querySelectorAll('#diff-count > span')].map((x) => x.textContent).join(', ')"
-	const unseen = "fetch('/api/artifacts').then((r) => r.json()).then((l) => l.find((a) => a.slug === 'd').news ?? 'none')"
+	const unseen = "fetch('/api/pages').then((r) => r.json()).then((l) => l.find((a) => a.slug === 'd').news ?? 'none')"
 	out = append(out, b.eval(diffPair), b.eval(counts), b.eval("String(document.getElementById('frame').hasAttribute('src'))"), b.eval(unseen))
 	// What is gone and what is added, on the page in the frame.
 	out = append(out, b.eval(diffMarks))
@@ -95,7 +95,7 @@ func TestUIDiff(t *testing.T) { //nolint:paralleltest // the browser tests share
 		drawn = '';
 		await load(true);
 		window.fetch = real;
-		return asked.filter((u) => u !== '/api/artifacts').join(' ');
+		return asked.filter((u) => u !== '/api/pages').join(' ');
 	})()`)
 	if after := b.eval(state); got != "" || after != before || !strings.HasSuffix(after, "#floe-diff.1") {
 		t.Errorf("the list read again asked %q: %s, was %s", got, after, before)
@@ -206,18 +206,18 @@ func TestUIDiffWays(t *testing.T) { //nolint:paralleltest // the browser tests s
 	b.eval(strings.ReplaceAll(row, "%s", "e") + ".focus()")
 	b.pressKey("d")
 	b.until("to the diff", "location.pathname === '/a/e/' && location.search === '?diff'")
-	b.until("the order", "sessionStorage.getItem('artifacts.order')?.includes('e')")
+	b.until("the order", "sessionStorage.getItem(ORDER_KEY)?.includes('e')")
 	// Closed by the bar's button.
 	b.until("the bar", "!document.querySelector('#frame-actions .diff-open').hidden")
 	b.moving("document.querySelector('#frame-actions .diff-open').click()")
 	b.until("closed", "location.pathname === '/a/e/' && location.search === ''")
 	// From a page whole, the order stays what it was.
-	b.eval(`sessionStorage.setItem('artifacts.order', '{"order":["e","one"],"shown":["e","one"],"back":"/"}')`)
+	b.eval(`sessionStorage.setItem(ORDER_KEY, '{"order":["e","one"],"shown":["e","one"],"back":"/"}')`)
 	b.navigate("/a/e/")
 	b.until("its bar", "!document.querySelector('#frame-actions .diff-open').hidden")
 	b.moving("document.querySelector('#frame-actions .diff-open').click()")
 	b.until("from whole", "location.search === '?diff'")
-	out = append(out, b.eval("sessionStorage.getItem('artifacts.order')"))
+	out = append(out, b.eval("sessionStorage.getItem(ORDER_KEY)"))
 	b.until("what changed", diffShown)
 	b.pressKey("j")
 	b.until("the order's next", "location.pathname === '/a/one/'")
@@ -228,17 +228,17 @@ func TestUIDiffWays(t *testing.T) { //nolint:paralleltest // the browser tests s
 	b.pressKey("d")
 	b.until("the page d", "location.pathname === '/a/d/' && location.search === ''")
 	b.until("read, with its toast", "document.querySelector('.toast.page .btn')")
-	b.until("read", "fetch('/api/artifacts').then((r) => r.json()).then((l) => !l.find((a) => a.slug === 'd').news)")
+	b.until("read", "fetch('/api/pages').then((r) => r.json()).then((l) => !l.find((a) => a.slug === 'd').news)")
 	// Marked unread, the diff and back: read again.
 	b.eval("document.querySelector('.toast.page .btn').click()")
-	b.until("unread", "fetch('/api/artifacts').then((r) => r.json()).then((l) => l.find((a) => a.slug === 'd').news)")
+	b.until("unread", "fetch('/api/pages').then((r) => r.json()).then((l) => l.find((a) => a.slug === 'd').news)")
 	b.navigate("/a/d/?diff")
 	b.until("what changed again", diffShown)
-	if got := b.eval("fetch('/api/artifacts').then((r) => r.json()).then((l) => l.find((a) => a.slug === 'd').news ?? 'none')"); got == "none" {
+	if got := b.eval("fetch('/api/pages').then((r) => r.json()).then((l) => l.find((a) => a.slug === 'd').news ?? 'none')"); got == "none" {
 		t.Error("the diff read the page")
 	}
 	b.pressKey("d")
-	b.until("read again", "fetch('/api/artifacts').then((r) => r.json()).then((l) => !l.find((a) => a.slug === 'd').news)")
+	b.until("read again", "fetch('/api/pages').then((r) => r.json()).then((l) => !l.find((a) => a.slug === 'd').news)")
 
 	// At a phone's width: the page's frame, no contents, the button short, and shown on a page whole.
 	b.size(400, 800, false)

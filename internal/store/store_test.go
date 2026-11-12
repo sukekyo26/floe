@@ -900,10 +900,10 @@ func TestPrepareLinkFolder(t *testing.T) {
 		t.Errorf("List = %v, want %v", got, want)
 	}
 
-	top, err := s.Pages("docs", "")
-	if err != nil || !slices.Equal(top.Dirs, []string{"guide"}) || len(top.Pages) != 1 || top.Pages[0].File != "index.html" ||
-		top.Pages[0].Modified.IsZero() {
-		t.Errorf("Pages(docs) = %+v, %v", top, err)
+	top, err := s.Files("docs", "")
+	if err != nil || !slices.Equal(top.Dirs, []string{"guide"}) || len(top.Files) != 1 || top.Files[0].File != "index.html" ||
+		top.Files[0].Modified.IsZero() {
+		t.Errorf("Files(docs) = %+v, %v", top, err)
 	}
 	if err = os.WriteFile(filepath.Join(proj, "docs/guide/new.html"), nil, 0o600); err != nil {
 		t.Fatal(err)
@@ -911,13 +911,13 @@ func TestPrepareLinkFolder(t *testing.T) {
 	if err = os.Rename(filepath.Join(proj, "docs/guide/setup.html"), filepath.Join(proj, "docs/guide/start.html")); err != nil {
 		t.Fatal(err)
 	}
-	guide, err := s.Pages("docs", "guide")
-	if err != nil || len(guide.Pages) != 2 || guide.Pages[0].File != "guide/new.html" || guide.Pages[1].File != "guide/start.html" {
-		t.Errorf("Pages(docs, guide) after a change = %+v, %v", guide, err)
+	guide, err := s.Files("docs", "guide")
+	if err != nil || len(guide.Files) != 2 || guide.Files[0].File != "guide/new.html" || guide.Files[1].File != "guide/start.html" {
+		t.Errorf("Files(docs, guide) after a change = %+v, %v", guide, err)
 	}
 	for _, c := range []struct{ slug, dir string }{{"docs", ".."}, {"docs", "nope"}, {"nope", ""}} {
-		if _, got := s.Pages(c.slug, c.dir); !errors.Is(got, store.ErrNotFound) {
-			t.Errorf("Pages(%s, %q) = %v, want ErrNotFound", c.slug, c.dir, got)
+		if _, got := s.Files(c.slug, c.dir); !errors.Is(got, store.ErrNotFound) {
+			t.Errorf("Files(%s, %q) = %v, want ErrNotFound", c.slug, c.dir, got)
 		}
 	}
 	if err = os.RemoveAll(filepath.Join(proj, "docs")); err != nil {

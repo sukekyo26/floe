@@ -147,21 +147,21 @@ const MaxListed = 1000
 // ErrNoDir is Dir's for a directory that is not one of the folder's: gone, or refused by within.
 var ErrNoDir = errors.New("no such directory in the folder")
 
-// Listing is what Dir gives of a directory of a folder, as GET /api/artifacts/{slug}/pages answers it: its
-// directories by name, then its pages by name, MaxListed of them in all; More tells how many were left out.
+// Listing is what Dir gives of a directory of a folder, as GET /api/pages/{slug}/files answers it: its
+// directories by name, then its HTML files by name, MaxListed of them in all; More tells how many were left out.
 type Listing struct {
 	Dirs  []string `json:"dirs"`
-	Pages []Page   `json:"pages"`
+	Files []File   `json:"files"`
 	More  int      `json:"more"`
 }
 
-// Page is a page of a folder: its path under the folder, as rest, and when it changed.
-type Page struct {
+// File is an HTML file of a folder: its path under the folder, as rest, and when it changed.
+type File struct {
 	File     string    `json:"file"`
 	Modified time.Time `json:"updatedAt"`
 }
 
-var pageName = regexp.MustCompile(`(?i)\.html?$`)
+var htmlName = regexp.MustCompile(`(?i)\.html?$`)
 
 // Dir lists the directory dir of the folder registered as the real path folder ("" for the folder itself): what
 // Resolve serves, of what is directly in it. It opens no file and walks no further down, so what it costs is that
@@ -169,7 +169,7 @@ var pageName = regexp.MustCompile(`(?i)\.html?$`)
 // LIMIT: os.ReadDir reads the whole directory, which MaxListed does not bound. Read it in parts (ReadDir(n), in
 // the directory's own order) if a directory of hundreds of thousands of names comes up.
 func Dir(folder, dir string) (Listing, error) {
-	l := Listing{Dirs: []string{}, Pages: []Page{}, More: 0}
+	l := Listing{Dirs: []string{}, Files: []File{}, More: 0}
 	if !isReal(folder) {
 		return l, ErrNoDir
 	}
@@ -185,7 +185,7 @@ func Dir(folder, dir string) (Listing, error) {
 	if err != nil {
 		return l, err //nolint:wrapcheck // the system's *fs.PathError, for the caller to tell at the folder
 	}
-	pages := []Page{}
+	files := []File{}
 	for _, e := range entries {
 		name := e.Name()
 		switch {
@@ -193,21 +193,21 @@ func Dir(folder, dir string) (Listing, error) {
 		// A symlink to a directory is no directory here: followed, it could lead round in a loop.
 		case e.IsDir():
 			l.Dirs = append(l.Dirs, name)
-		case !pageName.MatchString(name):
+		case !htmlName.MatchString(name):
 		// What path holds is under the folder already: only a symlink may lead out, or to what is no regular file.
 		case e.Type()&fs.ModeSymlink != 0:
 			if _, fi, ok := within(folder, prefix+name, false); ok {
-				pages = append(pages, Page{File: prefix + name, Modified: fi.ModTime()})
+				files = append(files, File{File: prefix + name, Modified: fi.ModTime()})
 			}
 		case e.Type().IsRegular():
 			if fi, err := e.Info(); err == nil {
-				pages = append(pages, Page{File: prefix + name, Modified: fi.ModTime()})
+				files = append(files, File{File: prefix + name, Modified: fi.ModTime()})
 			}
 		}
 	}
 	room := MaxListed
-	l.More = max(0, len(l.Dirs)+len(pages)-room)
+	l.More = max(0, len(l.Dirs)+len(files)-room)
 	l.Dirs = l.Dirs[:min(len(l.Dirs), room)]
-	l.Pages = pages[:min(len(pages), room-len(l.Dirs))]
+	l.Files = files[:min(len(files), room-len(l.Dirs))]
 	return l, nil
 }

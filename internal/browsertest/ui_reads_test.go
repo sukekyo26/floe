@@ -25,7 +25,7 @@ func TestUIRead(t *testing.T) { //nolint:paralleltest // the browser tests share
 	news := func(slug string) string {
 		t.Helper()
 
-		res, err := http.Get(s.Base + "/api/artifacts") //nolint:noctx,gosec // the test's own server
+		res, err := http.Get(s.Base + "/api/pages") //nolint:noctx,gosec // the test's own server
 		if err != nil {
 			t.Fatal(err)
 		}
@@ -46,7 +46,7 @@ func TestUIRead(t *testing.T) { //nolint:paralleltest // the browser tests share
 		t.Helper()
 
 		// Asked from the page, as until waits on what it can read there.
-		b.until(what, "window.reads ??= {}, fetch('/api/artifacts').then((r) => r.json()).then((l) => { window.reads["+js(slug)+"] = l.find((a) => a.slug === "+js(slug)+").news ?? ''; }), window.reads["+js(slug)+"] === ''")
+		b.until(what, "window.reads ??= {}, fetch('/api/pages').then((r) => r.json()).then((l) => { window.reads["+js(slug)+"] = l.find((a) => a.slug === "+js(slug)+").news ?? ''; }), window.reads["+js(slug)+"] === ''")
 	}
 	// In a tab of its own: no frame to tell.
 	b.navigate("/a/pv/?raw")
@@ -65,7 +65,7 @@ func TestUIRead(t *testing.T) { //nolint:paralleltest // the browser tests share
 
 		b.navigate("/a/own/")
 		waitRead("the frame's own page to be read", "own")
-		b.eval(`window.heard = 0; addEventListener('message', (e) => { if (e.data?.artifactRead) window.heard++; });
+		b.eval(`window.heard = 0; addEventListener('message', (e) => { if (e.data?.pageServed) window.heard++; });
 			window.sent = []; { const f = window.fetch; window.fetch = (u, i) => { if (i?.method === 'POST') window.sent.push(String(u)); return f(u, i); }; }
 			document.getElementById('frame').src = ` + js(src))
 		b.until(what, "window.heard === 1")
@@ -83,7 +83,7 @@ func TestUIRead(t *testing.T) { //nolint:paralleltest // the browser tests share
 		w.Header().Set("Content-Type", "text/html")
 		//nolint:errcheck // the test's own
 		_, _ = w.Write([]byte(`<!doctype html><title>site</title><script>window.heard = 0;
-			addEventListener('message', (e) => { if (e.data?.artifactRead) window.heard++; });</script>
+			addEventListener('message', (e) => { if (e.data?.pageServed) window.heard++; });</script>
 			<iframe id="raw" src="` + s.Base + `/a/other/?raw" onload="window.loaded = true"></iframe>`))
 	}))
 	t.Cleanup(site.Close)
