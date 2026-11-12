@@ -1,6 +1,8 @@
 package cli_test
 
 import (
+	"errors"
+	"io/fs"
 	"maps"
 	"os"
 	"path/filepath"
@@ -12,15 +14,16 @@ import (
 	"floe/internal/kit"
 )
 
-// floe part new and template new write a part and a template to fill in, which part check and template check take,
-// of any name floe takes, YAML's null, true and 017 too, and one as long as a file's name may be; once there, a name is refused and nothing changes.
+// floe part new, theme new and template new write a part, a theme (an empty palette.css) and a template to fill in,
+// which their checks take, of any name floe takes, YAML's null, true and 017 too, and one as long as a file's name may
+// be; once there, a name is refused and nothing changes.
 func TestNew(t *testing.T) {
 	t.Parallel()
 
 	for _, name := range []string{"mine", "a-b_c", "null", "true", "017", strings.Repeat("a", 255)} {
 		home := t.TempDir()
 		env := map[string]string{"HOME": home}
-		for _, kind := range []string{"part", "template"} {
+		for _, kind := range []string{"part", "theme", "template"} {
 			at := filepath.Join(home, ".config/floe", kind+"s", name)
 			if code, stdout, stderr := runEnv(home, env, kind, "new", name); code != 0 || stdout != "made "+at+"\n" || stderr != "" {
 				t.Errorf("floe %s new %s = %d, %q, %q", kind, name, code, stdout, stderr)
@@ -29,6 +32,9 @@ func TestNew(t *testing.T) {
 				t.Errorf("floe %s check after new %s = %d, %q, %q", kind, name, code, stdout, stderr)
 			}
 			before := texts(t, at)
+			if want := map[string]string{"palette.css": ""}; kind == "theme" && !maps.Equal(before, want) {
+				t.Errorf("floe theme new %s made %v; want %v", name, before, want)
+			}
 			want := at + ": there is something of this name here already: pick another name, or remove it\n"
 			if code, stdout, stderr := runEnv(home, env, kind, "new", name); code != 1 || stdout != "" || stderr != want {
 				t.Errorf("floe %s new %s again = %d, %q, %q; want 1, %q", kind, name, code, stdout, stderr, want)
@@ -62,6 +68,34 @@ func TestNewUmask(t *testing.T) { //nolint:paralleltest // sets the umask of the
 	}
 }
 
+// new reads what its kind relies on before it makes one: a part and a theme the parts and themes, so that a broken
+// template does not stop them; a template all three. A broken part stops all three.
+func TestNewReads(t *testing.T) {
+	t.Parallel()
+
+	dir := write(t, map[string]string{"templates/memo/schema.json": "{}", "parts/bad/schema.json": ownSchema})
+	brokenTemplate := map[string]string{"HOME": filepath.Join(dir, "home"), "FLOE_TEMPLATES_DIR": filepath.Join(dir, "templates")}
+	brokenPart := map[string]string{"HOME": filepath.Join(dir, "home2"), "FLOE_PARTS_DIR": filepath.Join(dir, "parts")}
+	for _, tt := range []struct {
+		env  map[string]string
+		args []string
+		code int
+		errs string
+	}{
+		{brokenTemplate, []string{"part", "new", "x"}, 0, ""},
+		{brokenTemplate, []string{"theme", "new", "x"}, 0, ""},
+		{brokenTemplate, []string{"template", "new", "x"}, 1, filepath.Join(dir, "templates/memo")},
+		{brokenPart, []string{"part", "new", "x"}, 1, filepath.Join(dir, "parts/bad")},
+		{brokenPart, []string{"theme", "new", "x"}, 1, filepath.Join(dir, "parts/bad")},
+		{brokenPart, []string{"template", "new", "x"}, 1, filepath.Join(dir, "parts/bad")},
+	} {
+		code, _, stderr := runEnv(dir, tt.env, tt.args...)
+		if code != tt.code || !strings.HasPrefix(stderr, tt.errs) || (stderr == "") != (tt.errs == "") {
+			t.Errorf("%v floe %v = %d, %q; want %d, beginning %q", tt.env, tt.args, code, stderr, tt.code, tt.errs)
+		}
+	}
+}
+
 // texts returns the files in dir by name, with their texts.
 func texts(t *testing.T, dir string) map[string]string {
 	t.Helper()
@@ -86,7 +120,7 @@ func TestNewRefused(t *testing.T) {
 	t.Parallel()
 
 	home := write(t, map[string]string{".config/floe/parts/shr.json": "{}"})
-	parts := filepath.Join(home, ".config/floe/parts")
+	parts, themes := filepath.Join(home, ".config/floe/parts"), filepath.Join(home, ".config/floe/themes")
 	for _, tt := range []struct {
 		env  map[string]string
 		args []string
@@ -97,6 +131,8 @@ func TestNewRefused(t *testing.T) {
 		{nil, []string{"part", "new", "Bad"}, 1, filepath.Join(parts, "Bad") + ": floe takes no such name: write lower case letters, digits, - and _, starting with a letter or a digit; rename it\n"},
 		{nil, []string{"part", "new", "palette"}, 1, filepath.Join(parts, "palette") + ": palette names a file of every theme (palette.css), which a theme's CSS for this part would be read as: give it another name\n"},
 		{nil, []string{"part", "new", "shr"}, 1, filepath.Join(parts, "shr") + ": shr names both " + filepath.Join(parts, "shr") + " and " + filepath.Join(parts, "shr.json") + ": give one of them another name\n"},
+		{nil, []string{"theme", "new", "default"}, 1, filepath.Join(themes, "default") + ": default is the name of floe's themes/default: give yours another name\n"},
+		{nil, []string{"theme", "new", "Bad"}, 1, filepath.Join(themes, "Bad") + ": floe takes no such name: write lower case letters, digits, - and _, starting with a letter or a digit; rename it\n"},
 		{nil, []string{"part", "new"}, 2, "floe: accepts 1 arg(s), received 0: run floe --help\n"},
 		{nil, []string{"part", "new", "x", "--from", "note"}, 2, "floe: unknown flag: --from: run floe --help\n"},
 		{nil, []string{"template", "new", "a", "b"}, 2, "floe: accepts 1 arg(s), received 2: run floe --help\n"},
@@ -120,6 +156,9 @@ func TestNewRefused(t *testing.T) {
 	}
 	if got := texts(t, parts); len(got) != 1 {
 		t.Errorf("refused names wrote in %s: %v", parts, got)
+	}
+	if _, err := os.Stat(themes); !errors.Is(err, fs.ErrNotExist) {
+		t.Errorf("refused names made %s: %v", themes, err)
 	}
 }
 

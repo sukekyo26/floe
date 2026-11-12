@@ -23,18 +23,22 @@ const (
 `
 )
 
-// Skeleton returns the files of a part (KindPart) or a template of one's own named name, as small as Load
-// takes, by their names in its directory. name goes in as written in the part's box and the example's
-// template:, quoted ('...'), so that YAML reads a name like null or 017 as text; validName keeps it to characters
-// neither HTML nor YAML escapes.
+// Skeleton returns the files of a part (KindPart), a theme or a template of one's own named name, as small as Load
+// takes, by their names in its directory. A theme needs no file: its is an empty palette.css, to fill in. name goes
+// in as written in the part's box and the example's template:, quoted ('...'), so that YAML reads a name like null
+// or 017 as text; validName keeps it to characters neither HTML nor YAML escapes.
 func Skeleton(kind Kind, name string) map[string][]byte {
-	if kind == KindTemplate {
+	switch kind {
+	case KindTheme:
+		return map[string][]byte{"palette.css": {}}
+	case KindTemplate:
 		return map[string][]byte{
 			"page.html":   []byte(skeletonPage),
 			"schema.json": []byte(skeletonSchema),
 			// The title is not the name, which YAML might read as other than text (Null).
 			"example.yaml": fmt.Appendf(nil, "template: '%s'\nlang: en\ntitle: Example\n", name),
 		}
+	case KindPart, KindShared:
 	}
 	return map[string][]byte{
 		"schema.json": []byte(skeletonSchema),

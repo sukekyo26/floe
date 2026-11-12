@@ -104,6 +104,9 @@ func runSample(t *testing.T, name, dir string) map[string][]byte {
 	if own {
 		s.run(t, "part", "check")
 	}
+	if _, ok := s.env["FLOE_THEMES_DIR"]; ok {
+		s.run(t, "theme", "check")
+	}
 	if _, ok := s.env["FLOE_TEMPLATES_DIR"]; ok {
 		s.run(t, "template", "check")
 	}
