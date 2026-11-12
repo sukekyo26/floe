@@ -302,9 +302,27 @@ func TestServeRecords(t *testing.T) {
 		s, buf := logged(t)
 		addr, done := serving(t.Context(), t, s)
 		waitFor(t, buf, "msg=serving")
+		// A connection that sent nothing holds Shutdown up (it waits for it, 5 s at most): the reason is written
+		// before that, as the next server starts once the port is free, which Shutdown's first step does.
+		var d net.Dialer
+		held, err := d.DialContext(t.Context(), "tcp", addr)
+		if err != nil {
+			t.Fatal(err)
+		}
+		defer held.Close() //nolint:errcheck // test
 		if code := askStop(t, addr, `{"pid": `+strconv.Itoa(os.Getpid())+`}`); code != http.StatusNoContent {
 			t.Fatalf("stop = %d", code)
 		}
+		waitFor(t, buf, "msg=stopping")
+		select {
+		case err = <-done:
+			t.Fatalf("Serve ended while a connection was held open: %v", err)
+		default:
+		}
+		if strings.Contains(buf.String(), "msg=stopped") {
+			t.Errorf("the log = %q: stopped before Serve ended", buf.String())
+		}
+		_ = held.Close() //nolint:errcheck // lets Shutdown end
 		ended(t, done)
 		pid := "pid=" + strconv.Itoa(os.Getpid())
 		inOrder(t, buf.String(), "level=INFO", "msg=serving", pid, "root="+s.cfg.Store.Root(), "addr="+addr, "build=test",

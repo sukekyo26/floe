@@ -153,22 +153,29 @@ func Ensure(ctx context.Context, s Server) (stopped int, err error) {
 		}
 		stopped = old
 	}
+	return stopped, s.serves(ctx, p)
+}
+
+// serves starts a server on the port when p, what serves it, is none, and refuses what is there when it is not a
+// server of floe for the root of s, or draws with other directories.
+func (s Server) serves(ctx context.Context, p Status) error {
 	if p.State == Down {
+		var err error
 		if p, err = startAndWait(ctx, s, p); err != nil {
-			return stopped, err
+			return err
 		}
 	}
 	switch {
 	case p.State == Other:
-		return stopped, usererr.New("daemon_port_taken", s.Port)
+		return usererr.New("daemon_port_taken", s.Port)
 	case p.State == Down:
-		return stopped, usererr.New("daemon_not_started")
+		return usererr.New("daemon_not_started")
 	case !sameDir(p.Health.Root, s.Root):
-		return stopped, usererr.New("daemon_other_root", s.Port, p.Health.Root)
+		return usererr.New("daemon_other_root", s.Port, p.Health.Root)
 	case s.AnyDirs:
-		return stopped, nil
+		return nil
 	default:
-		return stopped, s.otherDirs(p)
+		return s.otherDirs(p)
 	}
 }
 
