@@ -4,11 +4,13 @@ Reference for every command of the `floe` binary. How to write a data file is in
 
 ## Quick reference
 
+Flags are in each command's section below.
+
 | Command | Purpose |
 |---|---|
 | `floe guide` | Print the guide for agents: how to write, check and publish a page |
 | `floe skill install <agent>` | Write a skill that points the agent named to `floe guide` |
-| `floe publish <data.yaml>` | Store the page drawn from a data file (or `--link` a file or a folder in place) and print its URL |
+| `floe publish <data.yaml>` | Store the page drawn from a data file, or link a file or a folder in place, and print its URL |
 | `floe check <data.yaml>...` | Check data files as their pages are drawn, without writing them |
 | `floe render <data.yaml>...` | Write the page of each data file to an HTML file, to keep in a repository |
 | `floe rebuild` | Draw every stored page again with the templates, parts and themes of now |
@@ -17,7 +19,7 @@ Reference for every command of the `floe` binary. How to write a data file is in
 | `floe template new <name>` | Make a template of your own to fill in: the smallest floe takes, with a viewport |
 | `floe template check` | Check the templates of your own |
 | `floe template guide` | Print how to make a template of your own |
-| `floe part list [--all]` | List the parts a section of floe's templates takes; `--all` every part, look and shared schema |
+| `floe part list` | List the parts a section of floe's templates takes, or every part, look and shared schema |
 | `floe part show <name> [file]` | Show a part, look or shared schema, or, for `html`, `any.json`, and the files it reads, or one of them as written |
 | `floe part new <name>` | Make the smallest part of your own, to fill in |
 | `floe part check` | Check the parts, looks, shared schemas and themes of your own |
@@ -30,8 +32,8 @@ Reference for every command of the `floe` binary. How to write a data file is in
 | `floe theme default` | Print the default theme chosen in the management page's settings |
 | `floe list` | List pages, newest first |
 | `floe rm <slug>...` | Delete pages |
-| `floe archive <slug>...` | Take pages off the lists, keeping them (`--undo` gives them back) |
-| `floe tag <slug>... --add <name> --remove <name>` | Put tags on pages and take them off |
+| `floe archive <slug>...` | Take pages off the lists, keeping them; they can be given back |
+| `floe tag <slug>...` | Put tags on pages and take them off |
 | `floe work [<slug>...]` | Tell a project's open tasks and pages' task, category and pin; put pages on a task, pin them, or change a task |
 | `floe serve` | Run the server in the foreground |
 | `floe stop` | Stop the background server |
@@ -53,7 +55,7 @@ Print the guide for agents, [guide.md](guide.md): how to write, check and publis
 
 ## `floe skill install <agent>`
 
-Write floe's skill, `floe/SKILL.md`, where the agent named reads the skills of all your projects; `floe skill install --help` lists the agents and their places. The skill only tells the agent to run `floe guide`, so it stays right when floe is upgraded. It prints the path written to, links followed. A `SKILL.md` that is this floe's is left as it is; another is kept, and `--force` writes this floe's over it. A link named `floe` is followed only to a directory named `floe`, and one named `SKILL.md` only to a file named `SKILL.md`, as `floe render` follows a page's link only to a `.html` file. With `CLAUDE_CONFIG_DIR` set, `claude` writes under it; a directory there that cannot be used is told for the setting, a file under it at its own path.
+Write floe's skill, `floe/SKILL.md`, where the agent named reads the skills of all your projects; `floe skill install --help` lists the agents and their places. The skill only tells the agent to run `floe guide`, so it stays right when floe is upgraded. It prints `made <path>`, the path written to, links followed. A `SKILL.md` that is this floe's is left as it is, which it says: `<path> is this floe's skill already`. Another is kept and refused (exit code 1, `pass --force`), and `--force` writes this floe's over it and says `replaced <path> with this floe's skill`. A link named `floe` is followed only to a directory named `floe`, and one named `SKILL.md` only to a file named `SKILL.md`, as `floe render` follows a page's link only to a `.html` file. With `CLAUDE_CONFIG_DIR` set, `claude` writes under it; a directory there that cannot be used is told for the setting, a file under it at its own path.
 
 ## `floe publish <data.yaml>` / `floe publish --link <file|folder>`
 
@@ -294,6 +296,7 @@ With slugs, the task's project is each page's: `--task` puts the pages on that n
 | Flag | Changes | |
 | --- | --- | --- |
 | `--task <ID>` | pages or the task named | With slugs, `""` takes the pages off their task and takes their category off, and cannot go with what changes a task (`--state`, `--url`, `--title`, `--categories`, `--parent`), nor with a category, which needs a task. A page moved to another task leaves its category, unless `--category` gives it one there. A new ID is a task in the state `todo` |
+| `--project <project>` | the task named, or the tasks told | Without slugs only: the project of the task `--task` names, or, with no `--task`, whose open tasks are told. The working directory's project when left out; `""` is no project |
 | `--category <category>` | pages | With slugs only, of pages on a task. One not among the task's categories is added at their end, in the same write. `""` takes it off |
 | `--state <state>` | the task | `todo`, `doing`, `done` or `archived` |
 | `--url <url>` | the task | Its one outside link, `http` or `https`; `""` takes it off |
@@ -322,7 +325,7 @@ A page keeps its `work` when published again, renamed or drawn again. `tasks.jso
 
 ## `floe serve`
 
-Run the server in the foreground on `127.0.0.1` until SIGTERM, SIGINT or `floe stop`; it stops once the requests under way are done (10 seconds at most), and a second signal ends it at once. The commands [The server](#the-server) lists start the same server in the background, so this is mainly for seeing why a server does not start: what happens to one that runs is in its `server.log` ([The server](#the-server)). A background server that does not start is told as `the server did not start; run "floe serve" to see the error`. Closing the terminal of one in the foreground (SIGHUP) ends it at once, as a second signal does, and neither writes that it stopped.
+Run the server in the foreground on `127.0.0.1` until SIGTERM, SIGINT or `floe stop`; it stops once the requests under way are done (10 seconds at most), and a second signal ends it at once. When it has the port it prints `serving <store> at http://127.0.0.1:7325/` on stdout (the store is `FLOE_DIR`'s, the port `FLOE_PORT`'s), and nothing else. The commands [The server](#the-server) lists start the same server in the background, so this is mainly for seeing why a server does not start: what happens to one that runs is in its `server.log` ([The server](#the-server)). A background server that does not start is told as `the server did not start; run "floe serve" to see the error`. Closing the terminal of one in the foreground (SIGHUP) ends it at once, as a second signal does, and neither writes that it stopped.
 
 ## `floe stop`
 
