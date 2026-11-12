@@ -27,7 +27,9 @@ func (a *app) diagramCmd() *cobra.Command {
 		Short: "Draw diagrams from specs of parts on a canvas",
 		Args:  cobra.NoArgs,
 	}
-	cmd.AddCommand(a.diagramRenderCmd(), a.diagramInspectCmd(), a.diagramExampleCmd(), a.docGuideCmd("Print how to write a diagram, by hand or as a graph, so that floe does not refuse it", docs.DiagramGuide))
+	const short = "Print how to write a diagram, by hand or as a graph, so that floe does not refuse it"
+	guide := a.docGuideCmd(short, docs.DiagramGuide)
+	cmd.AddCommand(a.diagramRenderCmd(), a.diagramInspectCmd(), a.diagramExampleCmd(), guide)
 	return cmd
 }
 

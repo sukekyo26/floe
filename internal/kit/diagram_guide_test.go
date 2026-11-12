@@ -32,7 +32,7 @@ type guideBlock struct{ lang, text string }
 func readGuideDoc(t *testing.T, path string) (blocks []guideBlock, dests, headings, bad []string) {
 	t.Helper()
 
-	src, err := os.ReadFile(path)
+	src, err := os.ReadFile(path) //nolint:gosec // G304: a doc of this repository
 	if err != nil {
 		t.Fatal(err)
 	}
