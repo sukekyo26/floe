@@ -1,2 +1,5 @@
 agents/templates.md "names no --fg, which themes/default/palette.css sets: write `--fg` in the table of the palette"
 agents/templates.md "the table of the palette names -soft: write each variable's name whole"
+agents/themes.md "names no --fg, which themes/default/palette.css sets: write `--fg` in the table of the palette"
+agents/themes.md "the row of --accent names 1 variables and gives 2 defaults: give each its default in code, in order"
+agents/themes.md "gives --bg the default whites, which themes/default/palette.css writes as white"
