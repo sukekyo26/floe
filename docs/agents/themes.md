@@ -17,12 +17,12 @@ A theme is a directory of CSS files that changes a page's colours, typefaces and
 - A theme is a directory in `FLOE_THEMES_DIR` (default `$XDG_CONFIG_HOME/floe/themes`, else `~/.config/floe/themes`), holding the theme's files. A file directly in `FLOE_THEMES_DIR` is not read, and nothing says so.
 - The name MUST be lower case letters, digits, `-` and `_`, starting with a letter or a digit, and MUST NOT be the name of one of floe's themes. A theme of your own cannot take the name of a built-in theme.
 - A theme directory, and anything in it, MUST NOT be a link to a directory (a link to a file is read).
-- `FLOE_THEMES_DIR` MUST NOT be, or be in, the directory of your parts or templates (`FLOE_PARTS_DIR`, `FLOE_TEMPLATES_DIR`): floe would read the files of one as those of the other.
+- `FLOE_THEMES_DIR` MUST NOT be the directory of your parts or templates (`FLOE_PARTS_DIR`, `FLOE_TEMPLATES_DIR`), contain it, or be in it: floe would read the files of one as those of the other.
 - A mistake in any theme of yours stops every page, whether or not the page uses that theme, until it is fixed (`floe template guide`, *Where templates are*). A new theme made in another directory and moved in once `floe theme check` is clean stops none: set `FLOE_THEMES_DIR` to that directory for `floe theme new` and `floe theme check` (`floe template guide`, *Make one in another directory*).
 
 ## Files
 
-A theme holds these files, each optional. A file or directory of any other name MUST NOT be in a theme: floe refuses it, a `<name>.css` of a name that no part or look has too.
+A theme holds these files, each optional. A file or directory of any other name MUST NOT be in a theme: floe refuses it, a `<name>.css` of a name that no part or look has too. A name that begins with `.` (`.git/`, `.DS_Store`) is skipped, neither read nor refused.
 
 | File | What it holds |
 |---|---|
@@ -60,7 +60,7 @@ Set in `palette.css`. A palette may set properties of the root too (`default` se
 | `--code-bg`, `--code-fg`, `--code-prompt` | The background of code and a terminal (always dark), their text, and a terminal's prompt | `#1b2120`, `#e2e9e7`, `#b5e05a` |
 | `--code-add`, `--code-del` | A diff's lines added and removed | `#6fcf97`, `#f2b8b5` |
 | `--chart-1`, `--chart-2`, `--chart-3`, `--chart-4` | The colours of a chart's series, in order | `#008fa3`, `#c2660a`, `#6157d9`, `#c8366f` |
-| `--text-width` | The width a page of one column grows to (a template sets its column to it by `--column-width: var(--text-width)`) | `56rem` |
+| `--text-width` | The width a page of one column grows to (a template sets its column to it by `--column-width: var(--text-width)`), and a note's maximum width in every template | `56rem` |
 | `--page-width`, `--page-pad` | The width of the column a page is centred in, and the pad each side of it | `96rem`, `16px` |
 
 ### floe's own variables
@@ -69,7 +69,7 @@ A theme sets these on the element that needs them, in any file (`--tone` and the
 
 | Variable | What it changes | Default |
 |---|---|---|
-| `--floe-shadow-color` | The colour of the shadow a part's box, a look's element or a quote casts (`.card { --floe-shadow-color: var(--fg); }`; a quote's in `markdown.css`). It reaches no element inside | `transparent` |
+| `--floe-shadow-color` | The colour of the shadow a part's box, a look's element or a quote casts (`.card { --floe-shadow-color: var(--fg); }` in `cards.css`; `:scope { … }` in `panel.css`, where the card is the root; a quote's in `markdown.css`). It reaches no element inside | `transparent` |
 | `--floe-inset` | A shadow drawn within the box. `initial` clears it; `none` voids the box's shadow too | `0 0 #0000` |
 | `--face`, `--on-face` | The background and the text colour of a box filled with colours of its own | not set (`initial` on what a part's box holds) |
 | `--tone`, `--tone-soft`, `--tone-fill` | The colours of the tone of the element they are read in (`data-floe-tone`; accent's outside a tone). floe builds them from the palette's tone colours. They are read, not set: `background: var(--tone-soft); color: var(--tone)` | built from the palette |
@@ -118,21 +118,21 @@ Each item gives the action, then the reason in parentheses.
 
 ### Page and column
 
-- Leave `--column-width` to the template's `page.css` (a theme that sets it in its palette widens the column only of a template that sets none: report, design, handoff and postmortem; adr's and runbook's `page.css` win over it; floe does not check it).
+- Leave `--column-width` to the template's `page.css` (a theme that sets it in its palette widens the column only of a template that sets none: report, design, handoff and postmortem; adr's and runbook's `page.css` win over it, and so does a report's with contents, `main:has(> .body) { --column-width: 100%; }`; floe does not check it).
 
 ### Colours
 
-- Set `--face` and `--on-face` on `:scope, :scope > *` to fill a part's root (floe's base sets both to `initial` on what a part's box holds, and draws the links, a line's code and the focus ring in a box in `--on-face`).
-- Set `--quiet` on a box painted in a background close to it, as in `.card { --quiet: var(--surface); }` (`--quiet` melts into such a box).
+- Set `--face` and `--on-face` on `:scope, :scope > *` and paint with `background: var(--face); color: var(--on-face)` to fill a part's root (the two variables paint nothing: floe's base only draws the links, a line's code and the focus ring in a box in `--on-face`, and sets both to `initial` on what a part's box holds, so without them they sink into the fill).
+- Set `--quiet` on a box painted in a background close to it, as in `.card { --quiet: var(--surface); }` in `cards.css` (`--quiet` melts into such a box).
 - Name `--good-fill` and the like in `palette.css`, as in `:scope { --good-fill: #cfe8cf; }`, and draw with `var(--tone-fill)` (floe sets `--tone-fill` from `--<tone>-fill`, else from the tone's `-soft`; `--accent-fill` is for what has no tone).
 - Make a box background that lets what is under it through opaque in a band, in `band.css` (a band is filled with the accent, which would show through and sink its text; `floe theme show aurora band.css` does it for glass).
 
 ### Shadows and space
 
-- Give a shadow with `--floe-shadow-x`, `--floe-shadow-y`, `--floe-shadow-blur`, `--floe-shadow-spread` in `palette.css`, `--floe-shadow-color` on the element that casts it (`.card { --floe-shadow-color: var(--fg); }`) and `--floe-inset` for one within the box (floe's base writes `box-shadow` from them).
+- Give a shadow with `--floe-shadow-x`, `--floe-shadow-y`, `--floe-shadow-blur`, `--floe-shadow-spread` in `palette.css`, `--floe-shadow-color` on the element that casts it (`.card { --floe-shadow-color: var(--fg); }` in `cards.css`, where the cards are inside the root) and `--floe-inset` for one within the box (floe's base writes `box-shadow` from them).
 - Do not write `box-shadow` on a part's box, a look's element or a blockquote (it is written over floe's and drops the shadow and the inset).
 - Keep what a box draws outside itself within `--floe-room` (0.75rem) (a shadow, a pseudo-element standing out or an outline that reaches further meets the next box or the page's edge; a shadow reaches blur + spread + its offset towards a side, and a tilt or a scale reaches further the bigger the box).
-- Draw a decoration on a box that has a focus ring or a selected option (the cards of `options`) with `--floe-inset` or `::before`, as in `.card { --floe-inset: inset 0 0 0 2px var(--surface); }` (the ring is an `outline`, and takes the place of one a theme writes).
+- Draw a decoration on a box that has a focus ring or a selected option (the cards of `options`) with `--floe-inset` or `::before`, as in `.card { --floe-inset: inset 0 0 0 2px var(--surface); }` in `cards.css` (the ring is an `outline`, and takes the place of one a theme writes).
 - Leave the space between parts to `--floe-room` (floe's base sets it on `:root`, 0.75rem; a `gap` on the root of `cards.css` or `tabs.css` changes it).
 - Do not write a word in a `content` string; use symbols (CSS text does not pass `words.yaml`, so a word stays in one language whatever the page's).
 
@@ -145,7 +145,7 @@ Each item gives the action, then the reason in parentheses.
 
 - Draw a card in `panel.css` and write in `cards.css` what differs, the background, the frame, the number (a card takes the panel too).
 - Change the space between what a card holds with `--cards-gap`, not a `gap` on the card (`options` holding parts, whose rows have no gap, lose a `gap` without a word).
-- Size a card's number with `--floe-mark` on `:scope.numbered`, hide it with `content: none` on `.numbered > .card::before`, and draw it as plain text with `--floe-mark: auto` and no background.
+- Size a card's number with `--floe-mark` on `:scope.numbered`, hide it with `content: none` on `:scope.numbered > .card::before` (in `cards.css`, where `:scope` is the part's root), and draw it as plain text with `--floe-mark: auto` and no background.
 
 ### table
 
@@ -181,8 +181,8 @@ Each item gives the action, then the reason in parentheses.
 
 `floe theme check` does what `floe part check` does, so parts and themes are checked together. It prints every mistake and exits with code 1 when there is one. For a theme it refuses:
 
-- a theme directory whose name breaks the naming rule or is the name of one of floe's themes, or that is a link to a directory, or a link to a directory in a theme, or `FLOE_THEMES_DIR` overlapping the directory of your parts or templates;
-- a file or a directory of a name floe does not read (*Files*), and a file floe cannot read (a link with no target, a file without permission, a FIFO or a device);
+- a theme directory whose name breaks the naming rule or is the name of one of floe's themes, or that is a link to a directory, or a link to a directory in a theme, or `FLOE_THEMES_DIR` equal to, containing or inside the directory of your parts or templates;
+- a file or a directory of a name floe does not read (*Files*; a name beginning with `.` is skipped), and a file floe cannot read (a link with no target, a file without permission, a FIFO or a device);
 - a `theme.yaml` that is not keys and values, a key other than `description:`, or a `description:` that is not text;
 - in a CSS file: CSS floe cannot read (a block, string, comment or `url()` left open at the end of the file, a `}` that closes no block, a string that runs past its line), an `@import`, an escape (`\`) outside a string, a `url()` or a comment, or a `url()` that is not one address or one quoted string alone (`url("a.png" x)`, `url(a b)`).
 
