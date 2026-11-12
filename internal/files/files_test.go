@@ -7,6 +7,7 @@ import (
 	"path/filepath"
 	"syscall"
 	"testing"
+	"time"
 
 	"floe/internal/files"
 	"floe/internal/usererr"
@@ -133,5 +134,91 @@ func TestWriteAtomicPermissions(t *testing.T) { //nolint:paralleltest // sets th
 		if info, err := os.Lstat(path); err != nil || info.Mode() != mode.Perm() {
 			t.Errorf("in place of %v: %v, %v; want %v", mode, info.Mode(), err, mode.Perm())
 		}
+	}
+}
+
+// OpenAppend makes the file with no wider permissions than 0600 and appends to it, follows a link, and refuses what
+// is not a regular file without opening it (a FIFO would block the open, with or without a reader) or the system's
+// words for a directory.
+func TestOpenAppend(t *testing.T) {
+	t.Parallel()
+
+	dir := t.TempDir()
+	path := filepath.Join(dir, "a.log")
+	for _, text := range []string{"one\n", "two\n"} {
+		f, info, err := files.OpenAppend(path)
+		if err != nil {
+			t.Fatal(err)
+		}
+		if info.Mode().Perm()&^0o600 != 0 {
+			t.Errorf("made with permissions %v, want no wider than 0600", info.Mode().Perm())
+		}
+		if _, err = f.WriteString(text); err != nil {
+			t.Fatal(err)
+		}
+		if err = f.Close(); err != nil {
+			t.Fatal(err)
+		}
+	}
+	if b, err := os.ReadFile(path); err != nil || string(b) != "one\ntwo\n" {
+		t.Errorf("appended twice = %q, %v", b, err)
+	}
+
+	link := filepath.Join(dir, "link.log")
+	if err := os.Symlink(path, link); err != nil {
+		t.Fatal(err)
+	}
+	f, _, err := files.OpenAppend(link)
+	if err != nil {
+		t.Fatalf("OpenAppend of a link to a file = %v", err)
+	}
+	_, _ = f.WriteString("three\n")                                  //nolint:errcheck // read back below
+	_ = f.Close()                                                    //nolint:errcheck // as above
+	if b, _ := os.ReadFile(path); string(b) != "one\ntwo\nthree\n" { //nolint:errcheck // as above
+		t.Errorf("appended through a link = %q", b)
+	}
+
+	fifo := filepath.Join(dir, "fifo")
+	if err = syscall.Mkfifo(fifo, 0o600); err != nil {
+		t.Fatal(err)
+	}
+	fifoLink := filepath.Join(dir, "fifo-link")
+	if err = os.Symlink(fifo, fifoLink); err != nil {
+		t.Fatal(err)
+	}
+	// Opening one for writing with no reader blocks for good: the call must come back.
+	for _, name := range []string{fifo, fifoLink} {
+		got := make(chan error, 1)
+		go func() {
+			opened, _, openErr := files.OpenAppend(name)
+			if opened != nil {
+				_ = opened.Close() //nolint:errcheck // not wanted
+			}
+			got <- openErr
+		}()
+		select {
+		case err = <-got:
+			if !errors.Is(err, usererr.ErrNotFile) {
+				t.Errorf("OpenAppend of %s = %v, want ErrNotFile", filepath.Base(name), err)
+			}
+		case <-time.After(5 * time.Second):
+			t.Fatalf("OpenAppend of %s did not come back: it opened a FIFO", filepath.Base(name))
+		}
+	}
+	// With a reader, a plain open succeeds: it is refused all the same.
+	reader, err := os.OpenFile(fifo, os.O_RDWR, 0) //nolint:gosec // G304: the test's own
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer reader.Close() //nolint:errcheck // test
+	if f, _, err = files.OpenAppend(fifo); !errors.Is(err, usererr.ErrNotFile) {
+		if f != nil {
+			_ = f.Close() //nolint:errcheck // not wanted
+		}
+		t.Errorf("OpenAppend of a FIFO with a reader = %v, want ErrNotFile", err)
+	}
+
+	if _, _, err = files.OpenAppend(dir); !errors.Is(err, syscall.EISDIR) {
+		t.Errorf("OpenAppend of a directory = %v, want EISDIR", err)
 	}
 }

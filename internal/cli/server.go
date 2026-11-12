@@ -3,10 +3,12 @@ package cli
 import (
 	"context"
 	"errors"
+	"fmt"
 	"net"
 	"os"
 	"os/signal"
 	"regexp"
+	"runtime/debug"
 	"slices"
 	"strconv"
 	"strings"
@@ -120,10 +122,14 @@ func (a *app) client(ctx context.Context, anyDirs bool) (client, error) {
 	if err != nil {
 		return client{}, err //nolint:wrapcheck // already says what failed
 	}
-	err = daemon.Ensure(ctx, daemon.Server{
+	stopped, err := daemon.Ensure(ctx, daemon.Server{
 		Port: cfg.Port, Root: cfg.Store.Root(), Build: build, Templates: cfg.Templates, Parts: cfg.Parts,
 		Themes: cfg.Themes, Icons: cfg.Icons, AnyDirs: anyDirs, Env: a.serverEnv(),
 	})
+	// Told before the mistake, so that a server stopped and not started in its place is not lost.
+	if stopped != 0 {
+		a.warn("cli_replaced_server", cfg.Port, stopped)
+	}
 	if err != nil {
 		return client{}, err //nolint:wrapcheck // the message is for the user as is
 	}
@@ -182,6 +188,18 @@ func (a *app) serve(ctx context.Context) error {
 		_ = ln.Close() //nolint:errcheck // nothing served
 		return err     //nolint:wrapcheck // a usererr, at the file
 	}
+	// The log is the server's alone to write, and lives as long as the process: it is not closed. The runtime keeps
+	// its own copy of the descriptor for what brings the process down.
+	logFile, err := server.OpenLog(root)
+	if err != nil {
+		_ = ln.Close() //nolint:errcheck // nothing served
+		return err     //nolint:wrapcheck // a usererr, at the file
+	}
+	if err = debug.SetCrashOutput(logFile, debug.CrashOptions{}); err != nil {
+		_ = ln.Close() //nolint:errcheck // nothing served
+		return fmt.Errorf("write a crash to %s: %w", server.LogName, err)
+	}
+	cfg.Log = logFile
 	srv := server.New(cfg)
 	a.print("%s", english.Msg("cli_serving", root, daemon.Base(cfg.Port)))
 	return srv.Serve(ctx, ln) //nolint:wrapcheck // already says what failed

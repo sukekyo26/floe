@@ -8,6 +8,8 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
+	"io"
+	"log/slog"
 	"net"
 	"net/http"
 	"os"
@@ -41,6 +43,8 @@ type Config struct {
 	Templates, Parts, Themes, Icons string
 	// Home is the user's home directory, which bounds what may be linked.
 	Home string
+	// Log is where the server writes what happens to it (OpenLog); nil writes nowhere, for a test.
+	Log io.Writer
 }
 
 // Server handles the requests.
@@ -55,6 +59,8 @@ type Server struct {
 	// stopping is done when the server is asked to stop (/api/stop, which calls halt).
 	stopping context.Context
 	halt     context.CancelFunc
+	// log writes to cfg.Log (newLog).
+	log *slog.Logger
 
 	// looking lets one look run at a time (look).
 	looking sync.Mutex
@@ -122,9 +128,14 @@ func (s *Server) compared(slug string, m *store.Meta, from, to int, c *i18n.Cata
 
 // New returns a server for cfg, the drawing read.
 func New(cfg Config) *Server {
+	out := cfg.Log
+	if out == nil {
+		out = io.Discard
+	}
 	s := &Server{
 		cfg: cfg, hosts: map[string]bool{}, origins: map[string]bool{}, every: time.Second, id: rand.Text()[:8],
-		stopping: nil, halt: nil, looking: sync.Mutex{}, mu: sync.Mutex{},
+		stopping: nil, halt: nil, log: newLog(out),
+		looking: sync.Mutex{}, mu: sync.Mutex{},
 		drawing: store.Drawing{Kit: nil, Icons: nil, Err: nil}, gen: 0, mark: "",
 		diffs: lastDiff{Mutex: sync.Mutex{}, key: "", diffAnswer: diffAnswer{key: "", page: nil, result: pagediff.Result{
 			Counts: pagediff.Counts{Changed: 0, Added: 0, Removed: 0, Same: 0}, Sections: nil, Places: nil,
@@ -189,7 +200,7 @@ func (s *Server) latest() store.Drawing {
 	return d
 }
 
-// Handler returns the routes behind the request checks.
+// Handler returns the routes behind the request checks, and behind recovered, which answers a request that panics.
 func (s *Server) Handler() http.Handler {
 	mux := http.NewServeMux()
 	mux.HandleFunc("GET /{$}", serveUI)
@@ -223,7 +234,7 @@ func (s *Server) Handler() http.Handler {
 	mux.HandleFunc("GET /a/{slug}/{rest...}", s.servePage)
 	// Everything else, other methods included, is 404 rather than ServeMux's 405.
 	mux.HandleFunc("/", func(w http.ResponseWriter, _ *http.Request) { notFound(w) })
-	return s.check(mux)
+	return s.recovered(s.check(mux))
 }
 
 // check refuses what no route should see. A malformed request target (//) is a client error. A path
@@ -444,13 +455,24 @@ func (*Server) redirect(w http.ResponseWriter, r *http.Request) {
 }
 
 // Serve serves on ln until ctx is done or the server is asked to stop, then stops once the requests under way are
-// done, watching the drawing every s.every until then.
-func (s *Server) Serve(ctx context.Context, ln net.Listener) error {
+// done, watching the drawing every s.every until then. It writes to the log that it serves, why it stops (before it
+// stops listening: the next server starts after that) and that it has stopped, or the mistake that ended it.
+func (s *Server) Serve(ctx context.Context, ln net.Listener) (err error) {
+	s.log.Info("serving", slog.String("root", s.cfg.Store.Root()), slog.String("addr", ln.Addr().String()),
+		slog.String("build", s.cfg.Build))
+	defer func() {
+		if err != nil {
+			s.log.Error("stopped", slog.Any("error", err))
+			return
+		}
+		s.log.Info("stopped")
+	}()
 	// The watching ends however serving does.
 	ctx, cancel := context.WithCancel(ctx)
 	defer cancel()
 	srv := &http.Server{
 		Handler:           s.Handler(),
+		ErrorLog:          slog.NewLogLogger(s.log.Handler(), slog.LevelError),
 		ReadHeaderTimeout: 10 * time.Second,
 		// Not ctx: the requests Shutdown waits for go on once it is done (a link's git).
 		BaseContext: func(net.Listener) context.Context { return context.WithoutCancel(ctx) },
@@ -462,7 +484,9 @@ func (s *Server) Serve(ctx context.Context, ln net.Listener) error {
 	case err := <-errc:
 		return fmt.Errorf("serve: %w", err)
 	case <-ctx.Done():
+		s.log.Info("stopping", slog.String("why", "a signal"))
 	case <-s.stopping.Done():
+		s.log.Info("stopping", slog.String("why", "asked to stop"))
 	}
 	// The watching ends.
 	cancel()

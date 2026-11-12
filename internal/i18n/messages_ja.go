@@ -247,6 +247,7 @@ var messagesJA = map[string]string{
 	"cli_not_running":       "サーバーは動いていません",
 	"cli_stopped":           "サーバーを止めました（pid %d）",
 	"cli_stopped_other":     "サーバー（pid %d）は止まり、今は別のサーバー（pid %d）がポートで動いています",
+	"cli_replaced_server":   "別のビルドの floe のサーバー（ポート %d、pid %d）を、このビルドのサーバーに替えるため止めました",
 	"cli_updated":           "「%s」を置き換えました（前の更新は %s）",
 	"cli_updated_titled":    "「%s」を置き換えました（前の更新は %s、題は「%s」）",
 	"cli_title_changed":     "注意：題が「%s」から「%s」に変わりました",

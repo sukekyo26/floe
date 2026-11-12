@@ -83,8 +83,9 @@ func Probe(ctx context.Context, base string) Status {
 // waitWhile probes every 20 ms while cond holds, for 10 s in all. Starting and stopping take well under
 // 100 ms, but a race build that shares the CPUs with other tests took over 3 s to start. The deadline
 // bounds the probes too, so a program that accepts and never answers cannot stretch the wait.
-// LIMIT: a server that fails to start is told only to run "floe serve"; if CI still fails to start one in 10 s, keep
-// the started serve's output to tell slow from failing.
+// LIMIT: a server that fails to start is told only to run "floe serve"; if CI still fails to start one in 10 s, read
+// server.log (the "serving" line's time tells slow from failing once it is up; a start that fails before the log
+// opens leaves nothing, and the started serve's output is discarded).
 func waitWhile(ctx context.Context, base string, p Status, cond func(Status) bool) Status {
 	ctx, cancel := context.WithTimeout(ctx, 10*time.Second)
 	defer cancel()
@@ -133,40 +134,41 @@ func Addr(port int) string {
 }
 
 // Ensure makes sure a server of this build serves the root on the port, starting one or replacing an
-// outdated one as needed.
-func Ensure(ctx context.Context, s Server) error {
+// outdated one as needed. It returns the pid of the server of another build that it stopped (0 when it stopped none),
+// with the mistake of what came after as well: a server stopped and not started in its place is told too.
+func Ensure(ctx context.Context, s Server) (stopped int, err error) {
 	p := Probe(ctx, Base(s.Port))
 	outdated := p.State == Ours && sameDir(p.Health.Root, s.Root) && p.Health.Build != s.Build
 	// One of other directories is refused before it is replaced, which would draw others' pages with these,
 	// whatever the command.
 	if !s.AnyDirs || outdated {
-		if err := s.otherDirs(p); err != nil {
-			return err
+		if err = s.otherDirs(p); err != nil {
+			return 0, err
 		}
 	}
 	if outdated {
-		var err error
+		old := p.Health.PID
 		if p, err = Stop(ctx, s.Port, p); err != nil {
-			return err
+			return 0, err
 		}
+		stopped = old
 	}
 	if p.State == Down {
-		var err error
 		if p, err = startAndWait(ctx, s, p); err != nil {
-			return err
+			return stopped, err
 		}
 	}
 	switch {
 	case p.State == Other:
-		return usererr.New("daemon_port_taken", s.Port)
+		return stopped, usererr.New("daemon_port_taken", s.Port)
 	case p.State == Down:
-		return usererr.New("daemon_not_started")
+		return stopped, usererr.New("daemon_not_started")
 	case !sameDir(p.Health.Root, s.Root):
-		return usererr.New("daemon_other_root", s.Port, p.Health.Root)
+		return stopped, usererr.New("daemon_other_root", s.Port, p.Health.Root)
 	case s.AnyDirs:
-		return nil
+		return stopped, nil
 	default:
-		return s.otherDirs(p)
+		return stopped, s.otherDirs(p)
 	}
 }
 
