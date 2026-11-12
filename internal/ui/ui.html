@@ -1284,12 +1284,12 @@
       <div id="help-about" class="help-panel">
         <p class="help-lead">{{.Msg "ui_help_lead"}}</p>
         <dl><dt>{{.Msg "ui_project"}}</dt><dd>{{.Msg "ui_help_project_text"}}</dd></dl>
-        <section>
+        <section id="help-pages">
           <h3>{{.Msg "ui_screen_pages"}}</h3>
           <p>{{.Msg "ui_help_pages_text"}}</p>
           <dl><dt>{{.Msg "ui_view_new"}}</dt><dd>{{.Msg "ui_help_new_text"}}</dd><dt>{{.Msg "ui_view_favorites"}}</dt><dd>{{.Msg "ui_help_favorites_text"}}</dd><dt>{{.Msg "ui_state_archived"}}</dt><dd>{{.Msg "ui_help_archive_text"}}</dd></dl>
         </section>
-        <section>
+        <section id="help-tasks">
           <h3>{{.Msg "ui_screen_tasks"}}</h3>
           <p>{{.Msg "ui_help_tasks_text"}}</p>
           {{/* LIMIT: the four states are named here: add a state that store.States comes to have */}}
@@ -6279,6 +6279,7 @@
     // The page alone in full, as the browser reads the link to it: a link on paper cannot be followed
     $('print-raw').href = $('print-raw').textContent = new URL(frameSrc, location.href).href;
     $('keys-list').hidden = $('keys-note-list').hidden = true;
+    $('help-tasks').hidden = true;
     $('q').addEventListener('keydown', (e) => {
       if (e.key === 'Enter' && !composing(e)) location.href = `/?q=${encodeURIComponent($('q').value.trim())}`;
     });
@@ -6297,6 +6298,7 @@
     }
   } else {
     $('keys-frame').hidden = $('keys-note-frame').hidden = true;
+    $(TASKS ? 'help-pages' : 'help-tasks').hidden = true;
     $('diff').remove();
     // Back on a list, what the one before kept for j and k is over
     comeBack(performance.getEntriesByType('navigation')[0]?.type === 'back_forward');

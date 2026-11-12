@@ -775,7 +775,7 @@ var messagesEN = map[string]string{
 	"ui_help":                "Help",
 	"ui_help_about":          "About floe",
 	"ui_help_lead":           "floe shows and keeps the pages your agents write.",
-	"ui_help_project_text":   "A group of pages. It is named after the repository or folder the page was sent to floe from. Both screens show it.",
+	"ui_help_project_text":   "A group of pages. It is named after the repository or folder the page was sent to floe from. Both the page list and the task list show it.",
 	"ui_help_pages_text":     "The screen that lists the saved pages.",
 	"ui_help_new_text":       "Pages with a version you have not opened yet.",
 	"ui_help_favorites_text": "Pages you gave a star (★). The page list can show only them. Not the same as pinned pages on the task list.",

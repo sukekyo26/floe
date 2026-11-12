@@ -63,7 +63,7 @@ adheres to [Semantic Versioning](https://semver.org/).
 - Add a modal that searches the pages, opened by `Ctrl+K` (`⌘K`) anywhere, by `/` on a page open whole, or by the magnifier on a
   phone's whole page: it searches by title, description, slug, project, path, template and tag, the archived last, opens a row
   whole, and acts on the row reached with the buttons of a row. Add a help modal of two parts: the keyboard shortcuts, opened by `?`, and About floe, which says what floe is and what the words of the
-  page list and the task list mean, opened by the `?` button in the bar (on a window wider than 40rem). On a page open whole, `h` goes back to the list. With the focus in a page, `j`, `k`, `h`, `?`, `/` and `Ctrl+K` now work too (`Ctrl+K` alone in a link's HTML and a folder's,
+  screen it opens on, the page list or the task list, mean, opened by the `?` button in the bar (on a window wider than 40rem). On a page open whole, `h` goes back to the list. With the focus in a page, `j`, `k`, `h`, `?`, `/` and `Ctrl+K` now work too (`Ctrl+K` alone in a link's HTML and a folder's,
   which may use the letters themselves).
 - Add marking a stored page unread: a toast offers it for 8 seconds as a page you open becomes read, and "Mark as unread" stays in
   the page's menus. It goes back to how it looked before you opened it, by `DELETE /api/artifacts/{slug}/read`; opening it again reads it.

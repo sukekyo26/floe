@@ -764,7 +764,7 @@ var messagesJA = map[string]string{
 	"ui_help":                "ヘルプ",
 	"ui_help_about":          "floe について",
 	"ui_help_lead":           "floe は、エージェントが書いたページを表示して管理する道具です。",
-	"ui_help_project_text":   "ページをまとめる単位です。ページを floe に出した場所（リポジトリやフォルダ）の名前が付きます。どちらの画面にも出ます。",
+	"ui_help_project_text":   "ページをまとめる単位です。ページを floe に出した場所（リポジトリやフォルダ）の名前が付きます。ページ一覧にも、タスク一覧にも出ます。",
 	"ui_help_pages_text":     "保存したページを並べた画面です。",
 	"ui_help_new_text":       "まだ開いていない版があるページです。",
 	"ui_help_favorites_text": "星（★）を付けたページです。ページ一覧で、お気に入りだけを見られます。タスク一覧のピン止めとは別のものです。",

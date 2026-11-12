@@ -6,6 +6,8 @@ import (
 
 	"github.com/chromedp/chromedp"
 	"github.com/chromedp/chromedp/kb"
+
+	"floe/internal/store"
 )
 
 // What the help shows: the button pressed, the panels in sight, and whether the focus is on the close button.
@@ -23,13 +25,25 @@ const (
 		return [d.scrollHeight <= d.clientHeight, p.scrollHeight > p.clientHeight, r.top >= 0 && r.bottom <= innerHeight, c.bottom <= innerHeight].join(' '); })()`
 )
 
+// What floe is tells of the screen it opens on alone: the section of the page list or of the task list in sight, its words, and the
+// help's two buttons of the one form (.btn), with no aria-controls and no key in the words.
+const helpAbout = "[...document.querySelectorAll('#help-about h3')].filter((h) => h.offsetParent !== null).map((h) => h.textContent).join('+') + ' ' + " +
+	"[...document.querySelectorAll('#help-about dl')].filter((d) => d.offsetParent !== null).map((d) => d.querySelectorAll('dt').length).join(',') + ' ' + " +
+	"document.querySelectorAll('.help-switch .btn').length + ' ' + document.querySelectorAll('.help-switch [aria-controls]').length + ' ' + " +
+	"document.querySelectorAll('#help-about kbd').length"
+
 // TestUIHelp says how the help opens and what it shows: the bar's button opens what floe is, ? the shortcuts, each with the focus on
-// the close button; the buttons stay where they are as a panel goes for the other, and the panels scroll from their top; the words
-// of the two screens stand in their sections wherever it opens; the button is there from 641px.
+// the close button; the buttons stay where they are as a panel goes for the other, and the panels scroll from their top; what floe is
+// tells of the screen it opens on, as it moves from one to the other; the button is there from 641px.
 func TestUIHelp(t *testing.T) { //nolint:paralleltest // the browser tests share one Chrome, one at a time
 	s := newSite(t)
 	b := s.b
 	s.floe(t, "publish", s.page(t, "a.yaml", "T a", ""), "--slug", "a")
+	project := "proj"
+	if _, err := store.New(s.Env["FLOE_DIR"]).Edit("a", store.Edit{Project: &project}); err != nil {
+		t.Fatal(err)
+	}
+	s.floe(t, "work", "a", "--task", "#1", "--title", "one", "--state", "doing")
 	b.size(1440, 900, false)
 	defer b.unsize()
 	out := make([]string, 0, 32)
@@ -85,24 +99,31 @@ func TestUIHelp(t *testing.T) { //nolint:paralleltest // the browser tests share
 		b.eval("document.getElementById('keys').close()")
 	}
 
-	// What floe is is the same wherever it opens: the two screens' sections in sight, the words in the section of their screen, and
-	// two buttons of the one form (.btn), pressed alone, with no key in the words.
-	for _, path := range []string{"/", "/tasks", "/a/a/"} {
+	// What floe is tells of the screen it opens on: the page list's section on the list and on a page whole, the task list's on the task
+	// list and on a task's page.
+	for _, path := range []string{"/", "/tasks", "/tasks?project=proj&task=%231", "/a/a/"} {
 		open(path)
 		if path == "/a/a/" {
 			b.until("the bar", "document.getElementById('frame-title').textContent")
 		}
 		b.eval("openKeys('about')")
-		out = append(out, b.settled("[...document.querySelectorAll('#help-about h3')].map((h) => h.offsetParent !== null).join(' ') + ' ' + "+
-			"[...document.querySelectorAll('#help-about dl')].map((d) => d.querySelectorAll('dt').length).join(',') + ' ' + "+
-			"document.querySelectorAll('.help-switch .btn').length + ' ' + document.querySelectorAll('.help-switch [aria-controls]').length + ' ' + "+
-			"document.querySelectorAll('#help-about kbd').length"))
+		out = append(out, b.settled(helpAbout))
+		b.eval("document.getElementById('keys').close()")
+	}
+	// As the screen changes, by the links between them, the section is the one of the screen it came to.
+	open("/")
+	for _, link := range []string{"to-tasks", "to-list"} {
+		b.eval("document.getElementById('" + link + "').click()")
+		b.until("the other screen", "document.readyState === 'complete' && typeof openKeys === 'function' && location.pathname === "+
+			map[string]string{"to-tasks": "'/tasks'", "to-list": "'/'"}[link])
+		b.eval("openKeys('about')")
+		out = append(out, b.settled(helpAbout))
 		b.eval("document.getElementById('keys').close()")
 	}
 
-	// The panels' box scrolls alone, from its top: the help in a window of 660 by 600 is longer than the window.
+	// The panels' box scrolls alone, from its top: what floe is on the task list, in a window of 660 by 600, is longer than the window.
 	b.size(660, 600, false)
-	open("/")
+	open("/tasks")
 	b.eval("openKeys('about')")
 	out = append(out, b.settled(helpBox))
 	b.eval("document.querySelector('.help-panels').scrollTop = 1000")
@@ -129,8 +150,9 @@ func TestUIHelp(t *testing.T) { //nolint:paralleltest // the browser tests share
 		"true about help-about true", "false", "true keys help-keys true", "false", "true about help-about true", "true about help-about true", "false keys true",
 		// the buttons stay where they are as the panel goes
 		"/ same keys help-keys", "/tasks same keys help-keys",
-		// the two screens' sections, the words in them, the buttons, no key
-		"true true 1,3,4 2 0 0", "true true 1,3,4 2 0 0", "true true 1,3,4 2 0 0",
+		// the section of the screen it opens on, its words, the buttons, no key; and as the screen changes by the links
+		"Page list 1,3 2 0 0", "Task list 1,4 2 0 0", "Task list 1,4 2 0 0", "Page list 1,3 2 0 0",
+		"Task list 1,4 2 0 0", "Page list 1,3 2 0 0",
 		// a window of 660 by 600: the box scrolls alone, and goes back to its top on a switch and on opening
 		"true true true true", "true", "0", "true", "0", "0",
 		// the button from 641px
