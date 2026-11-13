@@ -119,7 +119,7 @@ func TestDirSettingTold(t *testing.T) {
 		{map[string]string{"FLOE_PARTS_DIR": unread}, []string{"part", "check"}, 1, told("FLOE_PARTS_DIR", unread, "permission denied"), false},
 		{map[string]string{"FLOE_PARTS_DIR": unwritten}, []string{"part", "new", "x"}, 1, told("FLOE_PARTS_DIR", unwritten, "permission denied"), false},
 		{map[string]string{"FLOE_TEMPLATES_DIR": filepath.Join(dir, "none")}, []string{"part", "check"}, 0, "", true},
-		{map[string]string{"FLOE_ICONS_DIR": file}, []string{"icons", "search", "x"}, 1, told("FLOE_ICONS_DIR", file, "not a directory"), true},
+		{map[string]string{"FLOE_ICONS_DIR": file}, []string{"icons", "search", "aws", "x"}, 1, told("FLOE_ICONS_DIR", file, "not a directory"), true},
 		{map[string]string{"FLOE_DIR": file}, []string{"serve"}, 1, told("FLOE_DIR", file, "not a directory"), true},
 		{map[string]string{"FLOE_DIR": unwritten}, []string{"serve"}, 1, told("FLOE_DIR", unwritten, "permission denied"), false},
 	} {

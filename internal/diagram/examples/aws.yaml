@@ -1,6 +1,6 @@
 # AWS architecture: an agent that writes floe pages calls Claude through Amazon Bedrock. Group frames
 # (AWS Cloud, a Region) take their icon in the corner; a service is an icon with its name below.
-# Every frame of an AWS diagram has square corners. Find icon names with floe icons search <word>.
+# Every frame of an AWS diagram has square corners. Find icon names with floe icons search aws <word>.
 #
 # Grid: icons are 48px and the flow runs along y = 140, through the icons' middles. Contents of a
 # frame with an icon start 40 or more below its top. Edges go from the side of one icon to the side

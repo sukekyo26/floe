@@ -4,7 +4,7 @@ exit 1
 floe: AWS icons are not in $SAMPLE/.icons/aws; run "floe icons fetch aws" (downloads about 14MB from aws.amazon.com) and try again
 script.yaml:7:9: js would end its <script> early, or move where it ends, as it holds </script, or <!-- before a <script: split them in a string, as '<' + '/script'
 two.yaml:19:13: box "A" overlaps box "B"
-two.yaml:21:13: icon "nope/x": "nope/x" needs its icon set in front (aws), like aws/amazon-ec2 (search with: floe icons search <word>)
+two.yaml:21:13: icon "nope/x": "nope/x" needs its icon set in front (aws, gcp, azure), like aws/amazon-ec2 (search with: floe icons search <set> <word>)
 two.yaml:21:13: icon "nope/x" sticks out of the 200x100 canvas
 two.yaml:21:13: icon "aws/res/amazon-ec2" overlaps icon "nope/x"
 $ floe render --out-dir $TMP/pages/ex.yaml ex.yaml
@@ -28,7 +28,7 @@ exit 1
 --- stderr
 floe: AWS icons are not in $SAMPLE/.icons/aws; run "floe icons fetch aws" (downloads about 14MB from aws.amazon.com) and try again
 two.yaml:19:13: box "A" overlaps box "B"
-two.yaml:21:13: icon "nope/x": "nope/x" needs its icon set in front (aws), like aws/amazon-ec2 (search with: floe icons search <word>)
+two.yaml:21:13: icon "nope/x": "nope/x" needs its icon set in front (aws, gcp, azure), like aws/amazon-ec2 (search with: floe icons search <set> <word>)
 two.yaml:21:13: icon "nope/x" sticks out of the 200x100 canvas
 two.yaml:21:13: icon "aws/res/amazon-ec2" overlaps icon "nope/x"
 $ floe render --out-dir $TMP/together ex.yaml icon.yaml icon2.yaml script.yaml two.yaml
@@ -37,6 +37,6 @@ exit 1
 floe: AWS icons are not in $SAMPLE/.icons/aws; run "floe icons fetch aws" (downloads about 14MB from aws.amazon.com) and try again
 script.yaml:7:9: js would end its <script> early, or move where it ends, as it holds </script, or <!-- before a <script: split them in a string, as '<' + '/script'
 two.yaml:19:13: box "A" overlaps box "B"
-two.yaml:21:13: icon "nope/x": "nope/x" needs its icon set in front (aws), like aws/amazon-ec2 (search with: floe icons search <word>)
+two.yaml:21:13: icon "nope/x": "nope/x" needs its icon set in front (aws, gcp, azure), like aws/amazon-ec2 (search with: floe icons search <set> <word>)
 two.yaml:21:13: icon "nope/x" sticks out of the 200x100 canvas
 two.yaml:21:13: icon "aws/res/amazon-ec2" overlaps icon "nope/x"

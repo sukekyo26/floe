@@ -5,6 +5,7 @@ import (
 	"bytes"
 	"os"
 	"path/filepath"
+	"strings"
 	"testing"
 
 	"floe/internal/cli"
@@ -35,7 +36,7 @@ func TestIconsDir(t *testing.T) {
 		// The default under a file holds none.
 		{map[string]string{"HOME": "/dev/null"}, "/dev/null/.local/share/floe-icons/aws"},
 	} {
-		_, _, stderr := runIn("", c.env, "icons", "search", "x")
+		_, _, stderr := runIn("", c.env, "icons", "search", "aws", "x")
 		want := "floe: AWS icons are not in " + c.want + `; run "floe icons fetch aws" (downloads about 14MB from ` +
 			"aws.amazon.com) and try again\n"
 		if stderr != want {
@@ -54,7 +55,7 @@ func TestIconsDir(t *testing.T) {
 		{map[string]string{"FLOE_ICONS_DIR": "/dev/null/i", "HOME": "/h"}, "floe: FLOE_ICONS_DIR is /dev/null/i, which cannot be used as a directory (not a directory); make it a directory floe can use, or set FLOE_ICONS_DIR to another directory\n"},
 	} {
 		for _, dir := range []string{"", t.TempDir()} {
-			if code, _, stderr := runIn(dir, c.env, "icons", "search", "x"); code != 1 || stderr != c.want {
+			if code, _, stderr := runIn(dir, c.env, "icons", "search", "aws", "x"); code != 1 || stderr != c.want {
 				t.Errorf("%v in %q: %d, %q, want 1, %q", c.env, dir, code, stderr, c.want)
 			}
 		}
@@ -98,16 +99,74 @@ func TestIconsFetchAndSearch(t *testing.T) {
 	}{
 		{[]string{"icons", "fetch", "aws", "icons.zip"}, 0, "fetched 1 AWS icons (01022030) into " + store + "/aws\n", ""},
 		{[]string{"icons", "fetch", "aws", "icons.zip"}, 0, "AWS icons 01022030 are already in " + store + "/aws (add --force to fetch them again)\n", ""},
-		{[]string{"icons", "search", "lambda"}, 0, "aws/aws-lambda\tCompute\n", ""},
-		{[]string{"icons", "fetch", "aws", "page.html"}, 1, "", "page.html: is not a zip file; pass the zip of the package on https://aws.amazon.com/architecture/icons/\n"},
+		{[]string{"icons", "search", "aws", "lambda"}, 0, "aws/aws-lambda\tCompute\n", ""},
+		{[]string{"icons", "fetch", "aws", "page.html"}, 1, "", "page.html: is not a zip file; pass the Icon package zip from https://aws.amazon.com/architecture/icons/: floe icons fetch aws <path-or-url>\n"},
 		{[]string{"icons", "fetch", "aws", "gone.zip"}, 1, "", "gone.zip: no such file or directory\n"},
 		// Every mistake of the command line is told at once.
-		{[]string{"icons", "fetch", "gcp", ""}, 1, "", "floe: argument 2 is an empty path; give a zip file of the icons, " +
-			"or a URL, and check that a variable written for it is set\n" + `floe: unknown icon set "gcp"; use aws` + "\n"},
+		{[]string{"icons", "fetch", "nope", ""}, 1, "", "floe: argument 2 is an empty path; give a zip file of the icons, " +
+			"or a URL, and check that a variable written for it is set\n" + `floe: unknown icon set "nope"; use aws, gcp, azure` + "\n"},
 	} {
 		code, stdout, stderr := runIn(dir, env, c.args...)
 		if code != c.code || stdout != c.stdout || stderr != c.stderr {
 			t.Errorf("floe %v = %d, %q, %q; want %d, %q, %q", c.args, code, stdout, stderr, c.code, c.stdout, c.stderr)
+		}
+	}
+
+	// The zips are as many as the set's packages, told with the other mistakes of the command line; a set of two
+	// takes both.
+	code, _, stderr := runIn(dir, env, "icons", "fetch", "aws", "", "b.zip")
+	if code != 1 || !strings.Contains(stderr, "argument 2 is an empty path") || !strings.Contains(stderr, "AWS icons come in the Icon package zip alone") {
+		t.Errorf("floe icons fetch aws \"\" b.zip = %d, %q; want both mistakes", code, stderr)
+	}
+	// Azure without its zip is told with the other mistakes too, before the network.
+	code, _, stderr = runIn(dir, map[string]string{"FLOE_ICONS_DIR": "relative"}, "icons", "fetch", "azure")
+	if code != 1 || !strings.Contains(stderr, "FLOE_ICONS_DIR") || !strings.Contains(stderr, "agreeing to their terms") {
+		t.Errorf("FLOE_ICONS_DIR=relative floe icons fetch azure = %d, %q; want both mistakes", code, stderr)
+	}
+	for name, entry := range map[string]string{
+		"core.zip": "Unique Icons/GKE/SVG/GKE-512-color.svg", "category.zip": "Category Icons/Storage/SVG/Storage-512-color.svg",
+	} {
+		var z bytes.Buffer
+		zw := zip.NewWriter(&z)
+		if _, err := zw.Create(entry); err != nil {
+			t.Fatal(err)
+		}
+		if err := zw.Close(); err != nil {
+			t.Fatal(err)
+		}
+		if err := os.WriteFile(filepath.Join(dir, name), z.Bytes(), 0o600); err != nil {
+			t.Fatal(err)
+		}
+	}
+	if code, stdout, stderr := runIn(dir, env, "icons", "fetch", "gcp", "core.zip", "category.zip"); code != 0 || !strings.HasPrefix(stdout, "fetched 2 Google Cloud icons") {
+		t.Errorf("floe icons fetch gcp core.zip category.zip = %d, %q, %q", code, stdout, stderr)
+	}
+	if code, stdout, _ := runIn(dir, env, "icons", "search", "gcp", "gke"); code != 0 || stdout != "gcp/gke\tCore product\n" {
+		t.Errorf("floe icons search gcp gke = %d, %q", code, stdout)
+	}
+}
+
+// floe icons search takes a set and a word or more: fewer is told in one line, an unknown set only with words, and a
+// set not fetched with how to fetch it.
+func TestIconsSearchArgs(t *testing.T) {
+	t.Parallel()
+
+	env := map[string]string{"FLOE_ICONS_DIR": t.TempDir()}
+	words := "name the icon set and a word to search for"
+	for _, c := range []struct {
+		args []string
+		want string // what the one line of stderr holds
+	}{
+		{[]string{"icons", "search"}, words},
+		{[]string{"icons", "search", "storage"}, words},
+		{[]string{"icons", "search", "gcp"}, words},
+		{[]string{"icons", "search", "ibm", "x"}, `unknown icon set "ibm"`},
+		{[]string{"icons", "search", "gcp", "storage"}, `Google Cloud icons are not in`},
+		{[]string{"icons", "search", "azure", "vm"}, `agree to their terms`},
+	} {
+		code, stdout, stderr := runIn("", env, c.args...)
+		if code != 1 || stdout != "" || strings.Count(stderr, "\n") != 1 || !strings.Contains(stderr, c.want) {
+			t.Errorf("floe %v = %d, %q, %q; want 1 and one line holding %q", c.args, code, stdout, stderr, c.want)
 		}
 	}
 }

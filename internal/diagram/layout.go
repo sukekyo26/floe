@@ -863,7 +863,7 @@ func (l *layout) image(at, name string, x, y, size float64, who string) (elem, b
 		l.problem(at, "diagram_icon_set", who, name, strings.Join(icons.Sets(), ", "))
 		return elem{}, false //nolint:exhaustruct // none
 	case errors.Is(err, icons.ErrNoIcon):
-		l.problem(at, "diagram_icon_unknown", who, name)
+		l.problem(at, "diagram_icon_unknown", who, name, strings.SplitN(name, "/", 2)[0])
 		return elem{}, false //nolint:exhaustruct // none
 	case err != nil:
 		if failed := l.problems.Add(err); failed != nil && l.failure == nil {

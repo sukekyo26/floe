@@ -130,7 +130,7 @@ func TestGuide(t *testing.T) {
 }
 
 // placeholders are the words a command of the guide is run with for each <…> in it.
-var placeholders = map[string]string{"<template>": "report", "<part>": "note", "<kind>": "flow", "<command>": "check", "<word>": "alb", "<slug>": "db-choice", "<ID>": "#130", "<name>": "default", "<file>": "palette.css", "<look>": "rows"}
+var placeholders = map[string]string{"<template>": "report", "<part>": "note", "<kind>": "flow", "<command>": "check", "<word>": "alb", "<slug>": "db-choice", "<ID>": "#130", "<name>": "default", "<file>": "palette.css", "<look>": "rows", "<set>": "aws", "<zip>": "icons.zip"}
 
 // readOnly are the commands a test runs as the guide writes them: they read, write nothing and ask no server.
 var readOnly = [][]string{{"guide"}, {"template"}, {"part", "guide"}, {"part", "list"}, {"part", "show"}, {"part", "check"}, {"diagram", "example"}, {"diagram", "guide"}, {"theme", "default"}, {"theme", "show"}, {"theme", "list"}, {"theme", "check"}}

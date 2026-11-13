@@ -105,7 +105,7 @@
         "x": { "$ref": "#/$defs/coord" }, "y": { "$ref": "#/$defs/coord" }, "w": { "$ref": "#/$defs/size" }, "h": { "$ref": "#/$defs/size" },
         "label": { "$ref": "#/$defs/nonEmptyText" },
         "accent": { "type": "boolean" },
-        "icon": { "type": "string", "description": "An icon in the corner, the AWS group frame style" },
+        "icon": { "type": "string", "description": "An icon in the corner, its label to the right of it" },
         "square": { "type": "boolean" }
       }
     },
@@ -166,7 +166,7 @@
     },
     "icon": {
       "type": "object",
-      "description": "An icon of an icon set (aws/…, found with floe icons search) with its top left at x, y; with a label, its bottom side, where an edge ends, is under the label",
+      "description": "An icon of an icon set (aws/…, gcp/…, azure/…, found with floe icons search) with its top left at x, y; with a label, its bottom side, where an edge ends, is under the label",
       "required": ["icon", "x", "y"],
       "additionalProperties": false,
       "properties": {
@@ -334,7 +334,7 @@
         "name": { "$ref": "#/$defs/name" },
         "label": { "$ref": "#/$defs/nonEmptyText" },
         "accent": { "type": "boolean" },
-        "icon": { "type": "string", "minLength": 1, "description": "An icon in the frame's corner, its label to the right of it, the AWS group frame style" },
+        "icon": { "type": "string", "minLength": 1, "description": "An icon in the frame's corner, its label to the right of it" },
         "nodes": { "$ref": "#/$defs/graphNodes" }
       }
     },

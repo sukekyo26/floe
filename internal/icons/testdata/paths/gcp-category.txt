@@ -1,0 +1,130 @@
+Category Icons/.DS_Store
+Category Icons/Integration Services/.DS_Store
+Category Icons/Collaboration/.DS_Store
+Category Icons/Operations/.DS_Store
+Category Icons/AI _ Machine Learning/.DS_Store
+Category Icons/Developer Tools/.DS_Store
+Category Icons/DevOps/.DS_Store
+Category Icons/Data Analytics/.DS_Store
+Category Icons/Media Services/.DS_Store
+Category Icons/Storage/.DS_Store
+Category Icons/Migration/.DS_Store
+Category Icons/Compute/.DS_Store
+Category Icons/Serverless Computing/.DS_Store
+Category Icons/Hybrid & Multicloud/.DS_Store
+Category Icons/Web & Mobile/.DS_Store
+Category Icons/Networking/.DS_Store
+Category Icons/AI _ Machine Learning/PNG/.DS_Store
+Category Icons/Migration/SVG/.DS_Store
+Category Icons/Agents/.DS_Store
+Category Icons/AI _ Machine Learning/SVG/.DS_Store
+Category Icons/Observability/.DS_Store
+Category Icons/Containers/.DS_Store
+Category Icons/AI _ Machine Learning/PNG/AIMachineLearning-512-color.png
+Category Icons/Data Analytics/SVG/DataAnalytics-512-color.svg
+Category Icons/Integration Services/SVG/IntegrationServices-512-color.svg
+Category Icons/Marketplace/.DS_Store
+Category Icons/AI _ Machine Learning/SVG/AIMachineLearning-512-color.svg
+Category Icons/Migration/SVG/Migration-512-color.svg
+Category Icons/Mixed Reality/.DS_Store
+Category Icons/Data Analytics/SVG/.DS_Store
+Category Icons/Security Identity/.DS_Store
+Category Icons/Integration Services/SVG/.DS_Store
+Category Icons/Web3/.DS_Store
+Category Icons/Business Intelligence/.DS_Store
+Category Icons/Security Identity/Security Identity.ai
+Category Icons/Integration Services/PNG/IntegrationServices-512-color.png
+Category Icons/DevOps/SVG/DevOps-512-color.svg
+Category Icons/Serverless Computing/PNG/.DS_Store
+Category Icons/Operations/PNG/.DS_Store
+Category Icons/Hybrid & Multicloud/SVG/HybridMulticloud-512-color.svg
+Category Icons/Integration Services/PNG/.DS_Store
+Category Icons/Serverless Computing/PNG/ServerlessComputing-512-color.png
+Category Icons/Databases/.DS_Store
+Category Icons/Operations/PNG/Operations-512-color.png
+Category Icons/DevOps/SVG/.DS_Store
+Category Icons/Hybrid & Multicloud/SVG/.DS_Store
+Category Icons/Compute/PNG/Compute-512-color.png
+Category Icons/Developer Tools/PNG/Developer_Tools-512-color.png
+Category Icons/Operations/SVG/Operations-512-color.svg
+Category Icons/Collaboration/SVG/Collaboration-512-color.svg
+Category Icons/Operations/SVG/.DS_Store
+Category Icons/Compute/PNG/.DS_Store
+Category Icons/Agents/PNG/Agents-512-color.png
+Category Icons/Agents/PNG/.DS_Store
+Category Icons/DevOps/PNG/.DS_Store
+Category Icons/Migration/PNG/.DS_Store
+Category Icons/Migration/PNG/Migration-512-color.png
+Category Icons/DevOps/PNG/DevOps-512-color.png
+Category Icons/Developer Tools/PNG/.DS_Store
+Category Icons/Data Analytics/PNG/DataAnalytics-512-color.png
+Category Icons/Storage/PNG/Storage-512-color.png
+Category Icons/Collaboration/SVG/.DS_Store
+Category Icons/Data Analytics/PNG/.DS_Store
+Category Icons/Storage/PNG/.DS_Store
+Category Icons/Developer Tools/SVG/.DS_Store
+Category Icons/Web & Mobile/SVG/.DS_Store
+Category Icons/Web & Mobile/SVG/WebMobile-512-color.svg
+Category Icons/Media Services/SVG/.DS_Store
+Category Icons/Collaboration/PNG/.DS_Store
+Category Icons/Collaboration/PNG/Collaboration-512-color.png
+Category Icons/Observability/SVG/Observability-512-color.svg
+Category Icons/Media Services/SVG/MediaServices-512-color.svg
+Category Icons/Containers/SVG/.DS_Store
+Category Icons/Containers/SVG/Containers-512-color.svg
+Category Icons/Management Tools/SVG/ManagementTools-512-color.svg
+Category Icons/Management Tools/SVG/.DS_Store
+Category Icons/Web & Mobile/PNG/.DS_Store
+Category Icons/Web & Mobile/PNG/WebMobile-512-color.png
+Category Icons/Agents/SVG/.DS_Store
+Category Icons/Developer Tools/SVG/Developer_Tools-512-color.svg
+Category Icons/Databases/PNG/Databases-512-color.png
+Category Icons/Mixed Reality/PNG/.DS_Store
+Category Icons/Mixed Reality/PNG/MixedReality-512-color.png
+Category Icons/Networking/SVG/.DS_Store
+Category Icons/Networking/SVG/Networking-512-color-rgb.svg
+Category Icons/Security Identity/SVG/SecurityIdentity-512-color.svg
+Category Icons/Agents/SVG/Agents-512-color.svg
+Category Icons/Marketplace/PNG/.DS_Store
+Category Icons/Security Identity/SVG/.DS_Store
+Category Icons/Business Intelligence/PNG/BusinessIntelligence-512-color.png
+Category Icons/Marketplace/PNG/Marketplace-512-color.png
+Category Icons/Business Intelligence/PNG/.DS_Store
+Category Icons/Security Identity/PNG/.DS_Store
+Category Icons/Business Intelligence/SVG/BusinessIntelligence-512-color.svg
+Category Icons/Mixed Reality/SVG/MixedReality-512-color.svg
+Category Icons/Compute/SVG/Compute-512-color.svg
+Category Icons/Networking/PNG/.DS_Store
+Category Icons/Networking/PNG/Networking-512-color.png
+Category Icons/Observability/SVG/.DS_Store
+Category Icons/Security Identity/PNG/SecurityIdentity-512-color.png
+Category Icons/Maps & Geospatial/.DS_Store
+Category Icons/Hybrid & Multicloud/PNG/HybridMulticloud-512-color.png
+Category Icons/Compute/SVG/.DS_Store
+Category Icons/Business Intelligence/SVG/.DS_Store
+Category Icons/Mixed Reality/SVG/.DS_Store
+Category Icons/Hybrid & Multicloud/PNG/.DS_Store
+Category Icons/Web3/SVG/Web3-512-color.svg
+Category Icons/Media Services/PNG/.DS_Store
+Category Icons/Databases/SVG/Databases-512-color.svg
+Category Icons/Web3/SVG/.DS_Store
+Category Icons/Web3/PNG/Web3-512-color.png
+Category Icons/Maps & Geospatial/SVG/MapsGeospatial-512-color.svg
+Category Icons/Media Services/PNG/MediaServices-512-color.png
+Category Icons/Web3/PNG/.DS_Store
+Category Icons/Observability/PNG/Observability-512-color.png
+Category Icons/Serverless Computing/SVG/ServerlessComputing-512-color.svg
+Category Icons/Management Tools/.DS_Store
+Category Icons/Maps & Geospatial/SVG/.DS_Store
+Category Icons/Marketplace/SVG/Marketplace-512-color.svg
+Category Icons/Management Tools/PNG/.DS_Store
+Category Icons/Maps & Geospatial/PNG/.DS_Store
+Category Icons/Storage/SVG/.DS_Store
+Category Icons/Maps & Geospatial/PNG/MapsGeospatial-512-color.png
+Category Icons/Observability/PNG/.DS_Store
+Category Icons/Marketplace/SVG/.DS_Store
+Category Icons/Containers/PNG/Containers-512-color.png
+Category Icons/Management Tools/PNG/ManagementTools-512-color.png
+Category Icons/Containers/PNG/.DS_Store
+Category Icons/Serverless Computing/SVG/.DS_Store
+Category Icons/Storage/SVG/Storage-512-color.svg

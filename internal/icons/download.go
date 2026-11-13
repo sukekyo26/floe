@@ -43,33 +43,42 @@ func readAtMost(r io.Reader, limit int64) ([]byte, error) {
 	return b, err //nolint:wrapcheck // worded by the caller
 }
 
-// packageURL is the package that the set's page links: the first link whose URL is one of the set's packages.
-func (k *kit) packageURL(ctx context.Context) (string, error) {
-	page, err := download(ctx, k.page, "icons_page_download")
+// packageURLs are the packages that the set's page links, one for each of its packs: the first link whose URL is
+// the pack's.
+func (k *kit) packageURLs(ctx context.Context) ([]Source, error) {
+	page, err := k.download(ctx, k.page, "icons_page_download")
 	if err != nil {
-		return "", err
+		return nil, err
 	}
 	base, err := url.Parse(k.page)
 	if err != nil {
-		return "", fmt.Errorf("read the page of %s: %w", k.name, err)
+		return nil, fmt.Errorf("read the page of %s: %w", k.name, err)
 	}
+	ats := make([]string, len(k.packages))
 	z := html.NewTokenizer(bytes.NewReader(page))
-	for {
-		switch z.Next() {
-		case html.ErrorToken:
-			return "", usererr.NewAt(k.page, 0, 0, "icons_no_package_link", k.name)
-		case html.StartTagToken, html.SelfClosingTagToken:
-			if at := k.linkOf(z, base); at != "" {
-				return at, nil
+	for tt := z.Next(); tt != html.ErrorToken; tt = z.Next() {
+		if tt != html.StartTagToken && tt != html.SelfClosingTagToken {
+			continue
+		}
+		at := linkOf(z, base)
+		for i, p := range k.packages {
+			if ats[i] == "" && at != "" && p.link.MatchString(at) {
+				ats[i] = at
 			}
-		default:
 		}
 	}
+	from := make([]Source, len(ats))
+	for i, at := range ats {
+		if at == "" {
+			return nil, usererr.NewAt(k.page, 0, 0, "icons_no_package_link", k.packages[i].what, k.zips(), k.usage())
+		}
+		from[i] = Source{Name: at, At: at}
+	}
+	return from, nil
 }
 
-// linkOf returns the URL of the tag z is at, an <a> whose href is one of the set's packages, resolved against
-// base; "" for any other.
-func (k *kit) linkOf(z *html.Tokenizer, base *url.URL) string {
+// linkOf returns the URL of the tag z is at, an <a> with an href, resolved against base; "" for any other.
+func linkOf(z *html.Tokenizer, base *url.URL) string {
 	name, more := z.TagName()
 	if string(name) != "a" {
 		return ""
@@ -84,33 +93,33 @@ func (k *kit) linkOf(z *html.Tokenizer, base *url.URL) string {
 		if err != nil {
 			return ""
 		}
-		if at := base.ResolveReference(ref).String(); k.link.MatchString(at) {
-			return at
-		}
+		return base.ResolveReference(ref).String()
 	}
 	return ""
 }
 
 // download reads what at, a URL, holds; failing tells it with the catalog message key failing, which says what
-// to do instead.
-func download(ctx context.Context, at, failing string) ([]byte, error) {
+// to do instead: download the set's zips by hand.
+func (k *kit) download(ctx context.Context, at, failing string) ([]byte, error) {
 	ctx, cancel := context.WithCancelCause(ctx)
 	defer cancel(nil)
 	req, err := http.NewRequestWithContext(ctx, http.MethodGet, at, nil)
 	if err != nil {
 		return nil, fmt.Errorf("download %s: %w", at, err)
 	}
+	// cloud.google.com answers Go's default User-Agent (Go-http-client) with a bare "OK", not its page.
+	req.Header.Set("User-Agent", "floe")
 	// Timers give up on the download: after headerTimeout without a response (connecting included), then
 	// after stallTimeout without data. No timeout covers the whole of it, so a slow one is let finish.
 	waiting := time.AfterFunc(headerTimeout, func() { cancel(fmt.Errorf("%w in %v", errNoResponse, headerTimeout)) })
 	res, err := http.DefaultClient.Do(req)
 	waiting.Stop()
 	if err != nil {
-		return nil, libraryAt(at, 0, 0, failing, unwrapped(cmp.Or(context.Cause(ctx), err)))
+		return nil, libraryAt(at, 0, 0, failing, unwrapped(cmp.Or(context.Cause(ctx), err)), k.zips(), k.usage())
 	}
 	defer res.Body.Close() //nolint:errcheck // read only
 	if res.StatusCode != http.StatusOK {
-		return nil, usererr.NewAt(at, 0, 0, failing, "HTTP "+strconv.Itoa(res.StatusCode))
+		return nil, usererr.NewAt(at, 0, 0, failing, "HTTP "+strconv.Itoa(res.StatusCode), k.zips(), k.usage())
 	}
 	if res.ContentLength > maxPackage {
 		return nil, usererr.NewAt(at, 0, 0, "icons_download_too_large", maxPackage>>20)
@@ -122,7 +131,7 @@ func download(ctx context.Context, at, failing string) ([]byte, error) {
 		return nil, usererr.NewAt(at, 0, 0, "icons_download_too_large", maxPackage>>20)
 	}
 	if err != nil {
-		return nil, libraryAt(at, 0, 0, failing, unwrapped(cmp.Or(context.Cause(ctx), err)))
+		return nil, libraryAt(at, 0, 0, failing, unwrapped(cmp.Or(context.Cause(ctx), err)), k.zips(), k.usage())
 	}
 	return b, nil
 }

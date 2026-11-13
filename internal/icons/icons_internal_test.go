@@ -33,7 +33,7 @@ func TestFetchRestoresPrevious(t *testing.T) { //nolint:paralleltest // replaces
 	if err := os.MkdirAll(dir, 0o700); err != nil {
 		t.Fatal(err)
 	}
-	previous := `{"version": "01012020", "source": "before", "icons": {}}`
+	previous := `{"version": "01012020", "sources": ["before"], "icons": {}}`
 	if err := os.WriteFile(filepath.Join(dir, "index.json"), []byte(previous), 0o600); err != nil {
 		t.Fatal(err)
 	}
@@ -49,7 +49,7 @@ func TestFetchRestoresPrevious(t *testing.T) { //nolint:paralleltest // replaces
 	}
 	t.Cleanup(func() { rename = os.Rename })
 
-	_, err := set.Fetch(context.Background(), "aws", Source{Name: src, At: src}, true)
+	_, err := set.Fetch(context.Background(), "aws", []Source{{Name: src, At: src}}, true)
 	if got := told(err); !strings.Contains(got, "cannot be written (injected)") {
 		t.Errorf("Fetch = %s, want the injected failure", got)
 	}
@@ -84,7 +84,7 @@ func TestFetchLeavesPrevious(t *testing.T) { //nolint:paralleltest // replaces r
 	}
 	t.Cleanup(func() { rename = os.Rename })
 
-	_, err := New(root, false, "").Fetch(context.Background(), "aws", Source{Name: src, At: src}, true)
+	_, err := New(root, false, "").Fetch(context.Background(), "aws", []Source{{Name: src, At: src}}, true)
 	want := dir + ": cannot be written (injected), and the previous icons are left in " + old +
 		": move them back here, or fetch the icons again"
 	if told(err) != want {
@@ -117,13 +117,21 @@ func TestPackageURL(t *testing.T) {
 		k := aws
 		k.page = srv.URL + "/architecture/icons/"
 		// The test's server is http: the set's pattern is let take it.
-		k.link = regexp.MustCompile(strings.Replace(aws.link.String(), "^https://", "^https?://", 1))
-		got, err := k.packageURL(context.Background())
+		k.packages = []pack{{
+			what:   aws.packages[0].what,
+			link:   regexp.MustCompile(strings.Replace(aws.packages[0].link.String(), "^https://", "^https?://", 1)),
+			iconOf: awsIconOf,
+		}}
+		urls, err := k.packageURLs(context.Background())
+		got := ""
+		if len(urls) == 1 {
+			got = urls[0].At
+		}
 		srv.Close()
 		want := strings.Replace(c.want, "https://aws.amazon.com", srv.URL, 1)
 		if c.want == "" {
-			if wantErr := k.page + `: no link to the icon package is on this page; download the zip there and run: ` +
-				`floe icons fetch aws <path-or-url>`; told(err) != wantErr {
+			if wantErr := k.page + `: no link to the Icon package zip is on this page; download the Icon package zip there ` +
+				`and run: floe icons fetch aws <path-or-url>`; told(err) != wantErr {
 				t.Errorf("page %s = %q, %s; want %s", c.page, got, told(err), wantErr)
 			}
 			continue
@@ -147,6 +155,16 @@ func TestIconOfStaysInside(t *testing.T) {
 			t.Errorf("awsIconOf(%s) keeps %s", path, icon.name)
 		}
 	}
+}
+
+// extractOne extracts b, an AWS package zip named p.zip, to a new directory.
+func extractOne(t *testing.T, b []byte) (*index, error) {
+	t.Helper()
+	zr, err := zip.NewReader(bytes.NewReader(b), int64(len(b)))
+	if err != nil {
+		t.Fatal(err)
+	}
+	return aws.extract([]opened{{from: Source{Name: "p.zip", At: "/p.zip"}, zr: zr}}, t.TempDir())
 }
 
 // zipOf is a zip of the entries, each of its size in bytes.
@@ -215,16 +233,16 @@ func TestDownloadLimits(t *testing.T) { //nolint:paralleltest // changes the lim
 	ctx := context.Background()
 	tooLarge := ": the download is over 0MB, far larger than an icon package; check that it is the right URL"
 	for path, want := range map[string]string{
-		"/silent":        ": cannot be downloaded (no response in 100ms); check the network, or download it in a browser and pass its path",
-		"/stalls":        ": cannot be downloaded (no data for 100ms); check the network, or download it in a browser and pass its path",
+		"/silent":        ": cannot be downloaded (no response in 100ms); check the network, or download the Icon package zip in a browser and run: floe icons fetch aws <path-or-url>",
+		"/stalls":        ": cannot be downloaded (no data for 100ms); check the network, or download the Icon package zip in a browser and run: floe icons fetch aws <path-or-url>",
 		"/large":         tooLarge,
 		"/large-unsized": tooLarge,
 	} {
-		if _, err := download(ctx, srv.URL+path, "icons_download"); told(err) != srv.URL+path+want {
+		if _, err := aws.download(ctx, srv.URL+path, "icons_download"); told(err) != srv.URL+path+want {
 			t.Errorf("download %s = %s, want %s", path, told(err), srv.URL+path+want)
 		}
 	}
-	if b, err := download(ctx, srv.URL+"/slow", "icons_download"); err != nil || len(b) != 40 {
+	if b, err := aws.download(ctx, srv.URL+"/slow", "icons_download"); err != nil || len(b) != 40 {
 		t.Errorf("download /slow = %d bytes, %v; want all 40", len(b), err)
 	}
 }
@@ -244,14 +262,14 @@ func TestExtractLimits(t *testing.T) { //nolint:paralleltest // changes the limi
 		{map[string]int{icon("A"): 10, icon("B"): 10}, ""},
 	} {
 		b := zipOf(t, c.entries)
-		_, err := aws.extract(bytes.NewReader(b), int64(len(b)), Source{Name: "p.zip", At: "/p.zip"}, t.TempDir())
+		_, err := extractOne(t, b)
 		if (err != nil || c.want != "") && told(err) != c.want {
 			t.Errorf("extract %v = %s, want %q", c.entries, told(err), c.want)
 		}
 	}
 	set(t, &maxPackage, 15)
 	b := zipOf(t, map[string]int{icon("A"): 10, icon("B"): 10})
-	_, err := aws.extract(bytes.NewReader(b), int64(len(b)), Source{Name: "p.zip", At: "/p.zip"}, t.TempDir())
+	_, err := extractOne(t, b)
 	if want := "p.zip: the icons in it come to over 0MB, far more than an icon package; check that it is the right file"; told(err) != want {
 		t.Errorf("extract of icons past the limit in all = %s, want %s", told(err), want)
 	}
@@ -266,12 +284,12 @@ func TestDownloadMistakes(t *testing.T) {
 	t.Cleanup(srv.Close)
 	k := aws
 	k.page = srv.URL + "/icons/"
-	_, err := k.packageURL(context.Background())
-	if want := k.page + ": cannot be downloaded (HTTP 404); check the network, or download the package's zip from this page " +
-		"and pass its path"; told(err) != want {
+	_, err := k.packageURLs(context.Background())
+	if want := k.page + ": cannot be downloaded (HTTP 404); check the network, or download the Icon package zip from this " +
+		"page and run: floe icons fetch aws <path-or-url>"; told(err) != want {
 		t.Errorf("a page not there = %s, want %s", told(err), want)
 	}
-	_, err = download(context.Background(), "http://127.0.0.1:1/x.zip", "icons_download")
+	_, err = aws.download(context.Background(), "http://127.0.0.1:1/x.zip", "icons_download")
 	if got := told(err); strings.Count(got, "http://127.0.0.1:1/x.zip") != 1 || strings.Contains(got, "Get ") {
 		t.Errorf("a URL nothing answers = %s, want the URL once, without net/http's request before its words", got)
 	}
@@ -310,7 +328,7 @@ func TestSearchShort(t *testing.T) {
 	t.Parallel()
 
 	set := New(t.TempDir(), false, "")
-	set.indexes["aws"] = &index{Version: "", Source: "", Icons: map[string]entry{
+	set.indexes["aws"] = &index{Version: "", Sources: nil, Icons: map[string]entry{
 		"amazon-simple-storage-service":            {Category: "Storage"},
 		"res/amazon-simple-storage-service-bucket": {Category: "Storage"},
 		"amazon-s3-on-outposts":                    {Category: "Storage"},
@@ -339,7 +357,7 @@ func TestSearchShort(t *testing.T) {
 		{"not the whole word", []string{"aws/s3"}, nil},
 		{"part of a short name", []string{"sg"}, nil},
 	} {
-		hits, err := set.Search(c.words)
+		hits, err := set.Search("aws", c.words)
 		var got []string
 		for _, h := range hits {
 			got = append(got, h.Name)

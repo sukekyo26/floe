@@ -213,7 +213,7 @@ func fakeAWSIcons(t *testing.T, dir string) {
 		}
 		index = append(index, fmt.Sprintf("%q:{\"category\":%q}", name, category))
 	}
-	body := `{"version":"01012030","source":"https://example.invalid/icons.zip","icons":{` + strings.Join(index, ",") + `}}`
+	body := `{"version":"01012030","sources":["https://example.invalid/icons.zip"],"icons":{` + strings.Join(index, ",") + `}}`
 	if err := os.WriteFile(filepath.Join(dir, "aws", "index.json"), []byte(body), 0o600); err != nil {
 		t.Fatal(err)
 	}

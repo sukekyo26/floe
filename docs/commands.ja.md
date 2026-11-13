@@ -41,8 +41,8 @@
 | `floe diagram inspect <spec.yaml\|data.yaml>...` | spec かデータファイルの図を確かめ、各部品の置かれた所を出す |
 | `floe diagram example [種類]` | 見本の spec を並べる、または 1 つ出す |
 | `floe diagram guide` | 図の書き方（手書きか graph か）を出す |
-| `floe icons fetch <セット> [zip か URL]` | 図の `icon` の部品が使うアイコンのセット（`aws`）を手元に置く |
-| `floe icons search <語>...` | 取ってきたアイコンのうち、名前がどの語も含むものを並べる（`alb` のような略語でも探せる） |
+| `floe icons fetch <セット> [zip か URL...]` | 図の `icon` の部品が使うアイコンのセット（`aws`・`gcp`・`azure`）を手元に置く |
+| `floe icons search <セット> <語>...` | 取ってきたセットのアイコンのうち、名前がどの語も含むものを並べる（`alb` のような略語でも探せる） |
 | `floe completion <シェル>` | シェルの補完のスクリプトを出す（Cobra の組み込み） |
 | `floe version` | 版を出す（`floe --version` も） |
 | `floe help [コマンド]` | ヘルプを出す（Cobra の組み込み） |
@@ -374,15 +374,18 @@ edge [60,10]→[60,120] M60,10 V120
 
 ---
 
-## `floe icons fetch <セット> [zip か URL]`
+## `floe icons fetch <セット> [zip か URL...]`
 
 図の `icon` の部品のため、アイコンのセットを `FLOE_ICONS_DIR/<セット>` に置きます。floe はアイコンを同梱しないので、マシンごとに 1 回取ってきます。セット：
 
 | セット | アイコン |
 |---|---|
 | `aws` | [AWS Architecture Icons](https://aws.amazon.com/architecture/icons/)。48px のサービスとリソースのアイコン、32px のグループのアイコン。Icon package の zip は約 14MB。 |
+| `gcp` | [Google Cloud のプロダクトアイコン](https://cloud.google.com/icons)。中心のプロダクトのアイコン（`gcp/cloud-run`）と、プロダクトの分類のアイコン（`gcp/category/networking`）。Google の手引きでは、ほかのプロダクトは分類のアイコンを使います。zip が 2 つで、合わせて約 1MB。Google が廃止した旧のアイコンは取りません。 |
+| `azure` | [Azure のアーキテクチャアイコン](https://learn.microsoft.com/azure/architecture/icons/)（`azure/virtual-machine`）。公式のページは、利用の条件（構成図・研修の資料・文書に使う。形を変えない。自社の製品やサービスに使わない）に同意してからでないと zip を取らせないので、floe は取ってきません。同意して zip を取り、その zip か URL を渡してください。約 1MB。 |
 
-- zip を渡さなければ、セットの公式のページからパッケージを探して取ってきます。ブラウザで取ってきた zip か、その URL を渡すこともできます。相対パスは作業ディレクトリから読みます。
+- zip を渡さなければ、セットの公式のページからパッケージを探して取ってきます（`azure` を除く）。ブラウザで取ってきた zip か、その URL を、セットのパッケージごとに 1 つ渡すこともできます。`gcp` は 2 つの zip を両方渡します（順は問いません）。相対パスは作業ディレクトリから読みます。
+- `gcp` と `azure` のパッケージには版が無いので、アイコンから作るハッシュを版にします。
 - その版がすでにあれば、そのままにします。`--force` は取り直します。
 - アイコンは丸ごと入れ替えます。失敗すれば前のものが残ります。
 
@@ -390,9 +393,9 @@ edge [60,10]→[60,120] M60,10 V120
 |---|---|
 | `--force` | その版がすでにあっても取り直す。 |
 
-## `floe icons search <語>...`
+## `floe icons search <セット> <語>...`
 
-取ってきたアイコンのうち、名前がどの語も含むもの（大文字と小文字は区別しない）を 1 行ずつ出します。`icon` の部品に書く名前（`aws/…`）と分類を、タブで区切ります。サービスのよく使う略語（`alb`、`s3`、`ecs`）では、そのサービスのアイコンを先頭に出し、続けてその資源も出します（`s3 bucket`）。略語は floe が短い表で持ち、ほかの語は名前とだけ比べます。
+セット（`aws`・`gcp`・`azure`）のアイコンのうち、名前がどの語も含むもの（大文字と小文字は区別しない）を 1 行ずつ出します。`icon` の部品に書く名前（`aws/…`・`gcp/…`・`azure/…`）と分類を、タブで区切ります。サービスのよく使う略語（`alb`、`s3`、`gke`、`aks`、`vnet`）では、そのサービスのアイコンを先頭に出し、続けてその資源も出します（`s3 bucket`）。略語は floe が短い表で持ち、ほかの語は名前とだけ比べます。略語は名指したセットの中だけで引きます（`k8s` は `aws` なら EKS、`gcp` なら GKE、`azure` なら AKS）。あるクラウドの図に別のクラウドのアイコンを置かないよう、セットは必ず名指します（`floe icons search gcp storage`）。取っていないセットは、その取り方を言います。
 
 ---
 
@@ -425,7 +428,7 @@ edge [60,10]→[60,120] M60,10 V120
 |---|---|
 | `FLOE_DIR` | ページの保存先。既定は `$XDG_DATA_HOME/floe`、無ければ `~/.local/share/floe`。 |
 | `FLOE_PORT` | ポート（既定は `7325`）。1〜65535 の 10 進の数。 |
-| `FLOE_ICONS_DIR` | `floe icons fetch` がアイコンのセットを 1 つずつディレクトリ（`aws`）で置く所。既定は `$XDG_DATA_HOME/floe-icons`、無ければ `~/.local/share/floe-icons`。 |
+| `FLOE_ICONS_DIR` | `floe icons fetch` がアイコンのセットを 1 つずつディレクトリ（`aws`・`gcp`・`azure`）で置く所。既定は `$XDG_DATA_HOME/floe-icons`、無ければ `~/.local/share/floe-icons`。 |
 | `FLOE_TEMPLATES_DIR` | 自分のテンプレートを 1 つずつディレクトリで置く所（[templates.md](agents/templates.md)）。既定は `$XDG_CONFIG_HOME/floe/templates`、無ければ `~/.config/floe/templates`。 |
 | `FLOE_PARTS_DIR` | 自分の部品・見た目・共有の schema の置き場所（[parts.md](agents/parts.md)）。既定は `$XDG_CONFIG_HOME/floe/parts`、無ければ `~/.config/floe/parts`。 |
 | `FLOE_THEMES_DIR` | 自分のテーマを 1 つずつディレクトリで置く所（[themes.md](agents/themes.md)）。既定は `$XDG_CONFIG_HOME/floe/themes`、無ければ `~/.config/floe/themes`。 |

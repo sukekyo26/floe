@@ -127,7 +127,7 @@ Use manually positioned parts for diagrams read as pictures, such as architectur
       - edge: { from: api, to: db }
 ```
 
-In an AWS architecture, represent each service with an AWS icon, not a box. Do not draw a box around the icon. First run `floe icons fetch aws` if the icon set is not kept yet, then `floe icons search <word>` finds a name (a short one such as `alb` works).
+In an AWS architecture, represent each service with an AWS icon, not a box. Do not draw a box around the icon. First run `floe icons fetch aws` if the icon set is not kept yet, then `floe icons search aws alb` finds a name: the set (`aws`, `gcp` or `azure`) first, then a word or a short name such as `alb`.
 
 `floe diagram guide` explains both ways in detail, including their parts, keys, layout rules and checks. Read it before writing a larger diagram. `floe diagram example <kind>` prints a complete spec of each kind (architecture, sequence, ER, …) to copy. A spec file that you inspect or render by itself holds what a `diagram:` item holds: `title`, `parts` and so on at the top, with no `diagram:` key, `template` or `lang`. The examples set `w` and `h` to fix box sizes on their grid, so that boxes align. If you change a box's text, omit its `w` or increase it to at least the minimum floe reports (`needs w: 174 or more`).
 
