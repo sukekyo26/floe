@@ -41,10 +41,8 @@ var paletteInDocs = Rule{Name: "palette-in-docs", Check: func(in *Input) []Findi
 	slices.Sort(set)
 	values := map[string]string{}
 	for name, ds := range declarations(palette.Src, func(p string) bool { return strings.HasPrefix(p, "--") }) {
-		d := ds[len(ds)-1]
-		if len(d.value) > 0 {
-			last := d.value[len(d.value)-1]
-			values[name] = strings.Join(strings.Fields(string(palette.Src[d.value[0].At:last.At+len(last.Data)])), " ")
+		if d := ds[len(ds)-1]; len(d.value) > 0 {
+			values[name] = valueOf(palette.Src, d)
 		}
 	}
 	if len(set) == 0 {

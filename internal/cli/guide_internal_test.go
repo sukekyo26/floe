@@ -28,7 +28,7 @@ import (
 const guidePath = "../../docs/agents/guide.md"
 
 // commandDocs are the docs whose commands TestGuideCommands runs, each a doc floe prints.
-var commandDocs = []string{guidePath, "../../docs/agents/themes.md"}
+var commandDocs = []string{guidePath, "../../docs/agents/themes.md", "../../docs/agents/parts.md"}
 
 func readGuide(t *testing.T, path string) string {
 	t.Helper()
@@ -130,7 +130,7 @@ func TestGuide(t *testing.T) {
 }
 
 // placeholders are the words a command of the guide is run with for each <…> in it.
-var placeholders = map[string]string{"<template>": "report", "<part>": "note", "<kind>": "flow", "<command>": "check", "<word>": "alb", "<slug>": "db-choice", "<ID>": "#130", "<name>": "default", "<file>": "palette.css"}
+var placeholders = map[string]string{"<template>": "report", "<part>": "note", "<kind>": "flow", "<command>": "check", "<word>": "alb", "<slug>": "db-choice", "<ID>": "#130", "<name>": "default", "<file>": "palette.css", "<look>": "rows"}
 
 // readOnly are the commands a test runs as the guide writes them: they read, write nothing and ask no server.
 var readOnly = [][]string{{"guide"}, {"template"}, {"part"}, {"diagram"}, {"theme", "default"}, {"theme", "show"}, {"theme", "list"}, {"theme", "check"}}
