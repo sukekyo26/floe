@@ -184,6 +184,7 @@ var Rules = []Rule{
 	partVariables,
 	partsInDocs,
 	radiusRule,
+	rawInDocs,
 	speechCSS,
 	textCase,
 	textScale,
