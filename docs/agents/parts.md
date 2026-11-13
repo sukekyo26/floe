@@ -65,7 +65,7 @@ A schema takes floe's `format`s as a template's does, declared under `properties
 ```
 
 - The part's element is its box, which names it: `data-floe-part="<name>"`. Write it on the one element every other element of the part is in.
-- Do not draw `<h1>`–`<h6>` in `part.html`; write a title as an element of `class="title"` (floe gives every heading of the page an id from its text, in page order, so a part's heading takes the id a writer's link names, and the writer's own heading with that text gets the next one: `summary-1`).
+- Do not draw `<h1>`–`<h6>` in `part.html` (floe gives every heading of the page an id from its text, in page order, so a part's heading takes the id a writer's link names, and the writer's own heading with that text gets the next one: `summary-1`). Write a title as an element of `class="title"`, which the look `cards` styles in a `.card` and `code`'s look in its heading; style it yourself elsewhere.
 - `.` is the item (the quote above: its schema declares `text` a plain string, and its `words.yaml` the word `by`). The functions of a template's `page.html` but `asset` are there, and the functions of the next section.
 - `markdown` draws the Markdown in a box of no part (`<div data-floe-text>`), as an item of format `markdown` is drawn. floe spaces the box's blocks `--floe-room` apart, and the part spaces the box alone: it adds no space between the blocks (`:scope p` reaches into the box, `:scope > p` does not; in the quote above the blockquote holds the box). Empty Markdown draws no box. The box of an item of format `markdown` is a child of the element it is written in, so that `:scope > *` reaches it.
 - An item its schema declares but the value leaves out is nil, as in `page.html`'s `.Data`.
@@ -103,8 +103,8 @@ The functions floe adds to html/template's own (`printf`, `index`, `eq` and the 
 It copies the text of each element marked `data-floe-copy`, each ending in a line break (`code` marks each line's `<span>`, `diff` its `<code class="lines">`, `terminal` each `.run` span). It copies every marked element in the nearest box of a part above the button, the boxes of parts inside that one too: the button of a part inside yours copies that part's, and yours copies both. Its look is floe's.
 
 - Put `{{copyButton}}` right under the part's box (`<figure data-floe-part="quote">…{{copyButton}}</figure>`).
-- Write `isolation: isolate` on the part's box, and place the button as the next item says, unless the part takes `code`'s look (`looks: [code]`), which has both from code's CSS (the button has `z-index: 1`: without `isolation` on the box the button is drawn over elements outside the part that lie above the part, such as a fixed header).
-- Place the button and keep text clear of it in the part's CSS: `margin: var(--floe-copy-gap)` around it, and where text lies under it, `padding-inline-end: var(--floe-copy-room)` after the longest line, under `:scope:has(> .floe-copy)` (a line scrolled to its end then ends left of the button).
+- Write `isolation: isolate` on the part's box, unless the part takes `code`'s look (`looks: [code]`), which has it from code's CSS (the button has `z-index: 1`: without `isolation` on the box the button is drawn over elements outside the part that lie above the part, such as a fixed header).
+- Place the button and keep text clear of it in the part's CSS, unless the part takes `code`'s look, which does it too: `margin: var(--floe-copy-gap)` around it, and where text lies under it, `padding-inline-end: var(--floe-copy-room)` after the longest line, under `:scope:has(> .floe-copy)` (a line scrolled to its end then ends left of the button).
 
 `--floe-copy-size`, `--floe-copy-gap` and `--floe-copy-room` are set on the page's root (*Variables floe sets*); floe applies none of them to a part.
 
@@ -119,7 +119,7 @@ It draws the script that zooms, the one the parts `image` and `diagram` use, onc
 - Put `{{zoom}}` in the part's box before a frame of `class="floe-zoom"`, and take the look `zoom` in `part.yaml` (`looks: [zoom]`): `<figure data-floe-part="shot">{{zoom}}<div class="floe-zoom"><img src="{{.file}}" alt="{{.alt}}"></div></figure>`.
 - The frame's first element is what it zooms, an `svg` or an `img` itself (an element that holds one is not moved): an `svg` by its `viewBox`, an `img` by a `transform`, its size taken from the `viewBox` or the image. The look `zoom` lays an `img` out shrunk to the frame's width (`display: block; max-width: 100%; height: auto`), so the example above, copied as it is, zooms. While zoomed, the image's line is dropped.
 - A toolbar before the frame and a tab stop on it stand only while what it holds is drawn smaller than its actual size, or zoomed. A frame written with a `title` keeps it, in place of the tooltip that tells how to zoom; a `title` of an element in the frame wins over the frame's while the pointer is over that element.
-- The part's CSS sizes the frame.
+- The part's CSS sizes the frame. Set a width on the part's box rather than on the frame (the toolbar stands before the frame in the box, and takes the box's width).
 - Do not select the line that tells how to zoom with a sibling selector such as `.floe-zoom + p`, and put the frame in a box of its own in a grid or a flex that holds it directly (the script puts that line as the frame's next element, shown only while the keyboard is on the frame: it no longer matches, and in a grid or flex it is a new item while it shows).
 
 ### script
@@ -179,8 +179,7 @@ It reads a list of items, each written as keys and values: `label`, `value`, `un
 
 | Field | Is |
 |---|---|
-| `.Label`, `.Unit`, `.Note`, `.Tone`, `.From` | As written |
-| `.Value` | As written |
+| `.Label`, `.Value`, `.Unit`, `.Note`, `.Tone`, `.From` | As written |
 | `.Way` | `better`, `worse` or `same`; empty without `from` |
 | `.WayTone` | `good`, `bad` or `muted`; empty without `from` |
 | `.Change` | `value` less `from`, signed and exact, to the decimals of the longer of the two; empty when they are the same |
@@ -189,7 +188,7 @@ With `from`, `from` and `value` MUST be text of digits alone (`^-?[0-9]+([.][0-9
 
 ### chart
 
-It counts the places of the part `chart` from the part's whole value, for its `part.html` to write the SVG. It is for that part: its fields, and the height, text and class they assume, are not promised. `kind` MUST be `line` or `bar`, `x` and `series` MUST NOT be empty, each series MUST have a number of `values` equal to that of `x`, every value MUST be a number, and for `kind: line` (the only kind that reads `min`) `min` if written MUST be a number. `chart` refuses the others when a page is drawn: a number of `values`, and a value or `min` not a number, where they are written in the part's value, the others at the part's value.
+It counts the places of the part `chart` from the part's whole value, for its `part.html` to write the SVG. Its fields, what it assumes of the height, text and class, and what it refuses are not promised to other parts.
 
 ### written
 
@@ -256,11 +255,11 @@ A list (`ul`, `ol` or `menu`) that is a part's box or takes a look has no marks,
 
 ### Variables floe sets
 
-floe sets these, or registers them with their default, where the Set in column says; a part or a look reads them. The palette's variables (`--fg`, `--accent`, `--line`, `--radius`, `--font`, `--mono`, `--code-bg` and the rest) are set on the page too, and `floe theme guide` lists them (*Palette*); `floe theme show default palette.css` prints floe's.
+floe sets these, or registers them with their default, where the Set in column says; a part or a look reads them. The palette's variables are set on the page too; read them as they are (`var(--accent)`, `var(--radius)`, `var(--mono)`): `floe theme show default palette.css` prints every one with its value, and `floe theme guide` says what each changes (*Palette*).
 
 | Variable | Set in | What it is | Default |
 |---|---|---|---|
-| `--floe-room` | The page's root | The room between parts that stand one after another | `0.75rem` |
+| `--floe-room` | The page's root | The space between parts that stand one after another | `0.75rem` |
 | `--floe-pad-block` | The page's root | A box's padding above and below its text, from its frame (a card, what takes `note`; the look `panel` pads nothing itself) | `1.1rem` |
 | `--floe-pad-inline` | The page's root | A box's padding at its sides, and the padding at the sides of a row of the look `rows` | `1.3rem` |
 | `--floe-row-pad` | The page's root | The padding above and below a row, which the look `rows` gives each of its rows | `0.4rem` |
@@ -269,7 +268,7 @@ floe sets these, or registers them with their default, where the Set in column s
 | `--floe-pill-end` | The page's root | The most a pill's corners round (a pill that wraps is a label) | `0.75lh` |
 | `--floe-copy-size` | The page's root | The copy button's size | `30px` |
 | `--floe-copy-gap` | The page's root | The gap around the copy button | `0.4rem` |
-| `--floe-copy-room` | The page's root | The room a text keeps for the copy button at its right (`0px` on paper, where the button is left out) | `calc(var(--floe-copy-size) + 2 * var(--floe-copy-gap))` |
+| `--floe-copy-room` | The page's root | The padding a text keeps at its right for the copy button (`0px` on paper, where the button is left out) | `calc(var(--floe-copy-size) + 2 * var(--floe-copy-gap))` |
 | `--floe-shadow-color` | The part's or look's file, on the box or element that casts (registered by `@property`) | The colour of the shadow a box casts (*Shadows*) | `transparent` |
 | `--floe-inset` | The same | A shadow drawn within the box (`initial` clears it; `none` voids the box's shadow too) | `0 0 #0000` |
 | `--tone` | An element with `data-floe-tone`; the page's root and a part's box to accent's | The colour of the tone of the element it is read on (*Tones*) | — |
@@ -300,10 +299,12 @@ Each item gives the action, then the reason in parentheses.
 
 ### Space
 
-- Do not write a margin on a part's box (floe's base gives the blocks a part's box may be, `p`, `ul`, `ol`, `dl`, `figure`, `form`, `menu`, `fieldset` and the like, none, and what places the part spaces it `--floe-room` from what stands next to it; a margin written there adds to that room in a section, a stack or columns). In the flow of a part's own Markdown (between its paragraphs, and before and after a part's box in it, such as a Markdown table), the part sets the space.
-- Do not write a padding on the rows of a part that takes the look `rows` (the look gives each row `--floe-row-pad` above and below and `--floe-pad-inline` at the sides, its box's `::after` too: a padding written on a row replaces the look's, and one at the sides of an element in it, such as a `summary` or a `div`, sits twice as far in); a line indented within its row writes the indent alone. A part whose rows do not take `rows` reads `var(--floe-row-pad)` (`padding-block: var(--floe-row-pad)`).
+- Do not write a margin on a part's box (what places the part spaces it `--floe-room` from what stands next to it; a margin written there adds to that space in a section, a stack or columns).
+- floe's base gives the blocks a part's box may be (`p`, `ul`, `ol`, `dl`, `figure`, `form`, `menu`, `fieldset` and the like) no margin. The part sets the space in the flow of its own Markdown, between its paragraphs and before and after a part's box in it, such as a Markdown table.
+- Do not write a padding on the rows of a part that takes the look `rows`, or at the sides of an element in a row (a padding on a row replaces the look's; one on an element in it, such as a `summary` or a `div`, sits twice as far in).
+- The look `rows` gives each row `--floe-row-pad` above and below and `--floe-pad-inline` at the sides, its box's `::after` too; a line indented within its row writes the indent alone. A part whose rows do not take `rows` reads `var(--floe-row-pad)` (`padding-block: var(--floe-row-pad)`).
 - An element that opens a row across its width reaches over the row's padding at the sides and pads itself as much (`margin-inline: calc(-1 * var(--floe-pad-inline)); padding-inline: var(--floe-pad-inline)`).
-- Keep what a box draws outside itself (a shadow, a pseudo-element standing out, an outline) within `--floe-room` on every side, and in a size that does not follow the box's (nothing makes room for it, so that a larger one meets the next box or the page's edge; a tilt or a scale reaches out further the bigger the box).
+- Keep what a box draws outside itself (a shadow, a pseudo-element standing out, an outline) within `--floe-room` on every side, and in a size that does not follow the box's (nothing makes space for it, so that a larger one meets the next box or the page's edge; a tilt or a scale reaches out further the bigger the box).
 
 ### Colours
 
@@ -320,13 +321,13 @@ A tone (one of `tone.json`'s) is marked by `data-floe-tone` on the element drawn
 
 ### Shadows
 
-A box casts the theme's shadow, which its `palette.css` gives as `--floe-shadow-x`, `--floe-shadow-y`, `--floe-shadow-blur` and `--floe-shadow-spread`, where its part's or look's file sets its colour, `--floe-shadow-color` (`.card { --floe-shadow-color: var(--fg); }`, on an element that is a part's box or takes a look: floe's cards take `panel`). The colour reaches no box inside. floe's `default` theme sets no `--floe-shadow-x`, `-y`, `-blur` or `-spread`, so a shadow shows in a theme that sets them.
-
-- Do not write `box-shadow` on a part's box, a look's element or a quote (floe's base writes it from `--floe-shadow-color` and `--floe-inset`, and one written over it drops them).
+- Do not write `box-shadow` on a part's box, a look's element or a quote (floe's base writes it from the shadow variables, and one written over it drops them). Set `--floe-shadow-color` and, for a shadow within, `--floe-inset` on the box that casts (`.card { --floe-shadow-color: var(--fg); }`, on an element that is a part's box or takes a look; the colour reaches no box inside).
+- The theme's `palette.css` gives the shadow's shape, `--floe-shadow-x`, `--floe-shadow-y`, `--floe-shadow-blur` and `--floe-shadow-spread`: floe's `default` theme gives none, so no shadow shows there.
 
 ### Scrolling boxes
 
-- Write `overflow-x: auto` and `contain: inline-size` in one rule under `@media screen`, in a box of yours that scrolls sideways, (a `pre` has both from floe's base, which also gives it a background, a border, a radius and padding: a part that draws it otherwise resets them), and fold what it holds on paper, where what scrolls is not read (floe's `pre` folds its lines there). Without it, the box tells its content's width outside, and a grid or flex item around it (a list's item, a card) widens to its longest line, and the page with it.
+- Write `overflow-x: auto` and `contain: inline-size` in one rule under `@media screen`, in a box of yours that scrolls sideways, and fold what it holds on paper, where what scrolls is not read (floe's `pre` folds its lines there). Without `contain: inline-size`, the box tells its content's width outside, and a grid or flex item around it (a list's item, a card) widens to its longest line, and the page with it.
+- A `pre` has both from floe's base, which also gives it a background, a border, a radius and padding: a part that draws it otherwise resets them.
 - Keep such a box out of a place whose width its content sets: an inline-block, a float, an absolute or other shrink-to-fit box, a width of `min-content`, `max-content` or `fit-content`, a table's cell of auto width, `justify-self: start`, an item of a flex row on `flex-basis: auto` (it shrinks to its border and padding there).
 - Make an element in it that paints a background reach to the end of what it holds on screen (`width: fit-content; min-width: 100%` for what folds, `max-content` for lines that never fold): else, scrolled, its background stops at the box's width and what it holds runs out of it.
 
@@ -340,20 +341,26 @@ A box casts the theme's shadow, which its `palette.css` gives as `--floe-shadow-
 | `items` | Each `li` child of that, alone: a row of `div`s takes no mark |
 | `joined` | `items`, with a line running from each mark to the next |
 
-- A row is a grid with the columns `mark` and `text`. Its `::before` is the mark in `mark`, `--floe-mark` big with its frame and `--floe-mark-gap` from the text, standing, as what the row holds does, on the baseline of the first line. In a row of `joined` its `::after` is the line to the next mark, from 0.35rem below the mark to 0.35rem above the row's end.
+- A row is a grid with the columns `mark` and `text`. Its `::before` is the mark in `mark`, the mark's box `--floe-mark` across and `--floe-mark-gap` from the text, standing, as what the row holds does, on the baseline of the first line. In a row of `joined` its `::after` is the line to the next mark, from 0.35rem below the mark to 0.35rem above the row's end.
 - floe writes where they stand and how big, no colour, corner or content: a part writes its mark's look (`content`, background, frame) and the line's colour, and spaces what the row holds by `> * + * { margin-top }`.
-- A part or look that takes a look that writes `marks:` (`looks: [numbered]`) has its rows laid out by it, and MUST NOT write `marks:` of its own. Write each row's text in elements (`<li><span>…</span></li>`): text written straight in a row becomes a grid item for each run of text, each placed in the next free cell, so that the row breaks onto rows of its own (`Restart <code>api</code> now` takes three rows). A mark of letters before each row of a list is a row's mark too, by the look `marked` (`<ul data-floe-look="marked">`, or `looks: [marked]`): the part writes its letter and colour (`li::before { content: "×" }`) and each item's text in one element, so that a line of text and code flows as one.
+- A part or look that takes a look that writes `marks:` (`looks: [numbered]`) has its rows laid out by it, and MUST NOT write `marks:` of its own.
+- Write each row's text in elements (`<li><span>…</span></li>`): text written straight in a row becomes a grid item for each run of text, each placed in the next free cell, so that the row breaks onto rows of its own (`Restart <code>api</code> now` takes three rows).
+- A mark of letters before each row of a list is a row's mark too, by the look `marked` (`<ul data-floe-look="marked">`, or `looks: [marked]`). The part writes its letter and colour (`li::before { content: "×" }`) and each item's text in one element, so that a line of text and code flows as one.
 - A sign before one title, word or cell (a prompt, an →), and a list's own marker (`list-style`, `::marker`), are no row's mark.
 - Do not write `display`, `gap` or `grid-template` on a row in a part's `part.css`, a theme's file of the part, or a look file the part takes (they are in `floe.parts`, over floe's layout in `floe.marks`: the rule wins and the marks lose their layout). A template's `page.css` wins too, but it reaches the part's box and not what the box holds: rows of `box`, not the `li` of `items` and `joined`.
-- Expect a rule for those on an element that is no part's box (an element that takes a look, such as the `<ul>` of a template) to change nothing when it is in a look's file or a theme's file of that look (they are in `floe.looks`, under `floe.marks`), and a theme's `base.css` to change nothing anywhere (it is in `floe.theme`).
-- In a row of `box` or `items`, write `position: absolute; position-anchor: --floe-mark; top: anchor(top); left: anchor(left)` on an `::after` that is to lie over the mark (`position-anchor` alone places nothing; an `::after` with no `position` is an item of the grid: it adds a row in the column `mark` under what the row holds, and one wider than the mark moves the text too).
-- Write the words that tell what a mark alone means as hidden text, `<span class="floe-hidden">{{word "done"}}</span>`, with its `words.yaml`, within a row's text (`<li><span><span class="floe-hidden">…</span>…</span></li>`), not as the row's child (it would shift the space between what the row holds; a row that holds no element of text, such as a Markdown box, takes it as its first child and counts its gaps from after it: `:scope > :not(.floe-hidden) + *`), and outside what the copy button copies (`data-floe-copy`).
+- Expect a rule for those on an element that is no part's box (an element that takes a look, such as the `<ul>` of a template) to change nothing when it is in a look's file or a theme's file of that look (they are in `floe.looks`, under `floe.marks`).
+- Expect a theme's `base.css` to change nothing there or anywhere (it is in `floe.theme`).
+- In a row of `box` or `items`, write `position: absolute; position-anchor: --floe-mark; top: anchor(top); left: anchor(left)` on an `::after` that is to lie over the mark (`position-anchor` alone places nothing).
+- An `::after` with no `position` is an item of the grid: it adds a row in the column `mark` under what the row holds, and one wider than the mark moves the text too.
+- Write the words that tell what a mark alone means as hidden text, `<span class="floe-hidden">{{word "done"}}</span>`, with its `words.yaml`, outside what the copy button copies (`data-floe-copy`).
+- Put the hidden text within a row's text (`<li><span><span class="floe-hidden">…</span>…</span></li>`), not as the row's child (it would shift the space between what the row holds).
+- A row that holds no element of text, such as a Markdown box, takes it as its first child and counts its gaps from after it: `:scope > :not(.floe-hidden) + *`.
 - Do not write a word in a `content` string (CSS text does not pass `words.yaml`, so a word stays in one language whatever the page's).
 - Set `--floe-mark` and `--floe-mark-gap` on the part's or look's own root (a value around it, a card's number's, would reach its marks).
 
 | Variable | Set in | What it changes |
 |---|---|---|
-| `--floe-mark` | The root of the part or look that draws the rows | The size of a row's marker, its frame within |
+| `--floe-mark` | The root of the part or look that draws the rows | The size of a row's mark: the box it is drawn in |
 | `--floe-mark-gap` | The same | The gap between a row's marker and its text |
 
 floe's parts that draw rows set their own values on their roots: `floe part show numbered part.css` prints one.
@@ -364,15 +371,17 @@ A part that takes code's look (`looks: [code]`, as `diff` and `terminal` do) rea
 
 | Variable | Set in | What it is | Default |
 |---|---|---|---|
-| `--floe-code-pad` | `code`'s root | The room at a line's sides | `1.1rem` |
-| `--floe-code-room` | `code`'s root | The room after a line, with the copy button's when the part draws it | `var(--floe-code-pad)` |
+| `--floe-code-pad` | `code`'s root | The padding at a line's sides | `1.1rem` |
+| `--floe-code-room` | `code`'s root | The padding after a line, with the copy button's when the part draws it | `var(--floe-code-pad)` |
 | `--floe-code-faint` | `code`'s root | A line's faint text | `color-mix(in srgb, currentColor 70%, transparent)` |
 | `--floe-code-head-faint` | `code`'s root | The heading's faint text | `color-mix(in srgb, var(--code-head-fg, var(--code-fg)) 85%, transparent)` |
 
-The room is on each line, an element `pre` holds, not on `pre`.
+The padding is on each line, an element `pre` holds, not on `pre`.
 
-- Make each line an element: one element a line in one `<code class="lines">`, as code and a diff do; one `<code>` around the whole; or one element a line in `pre`, as a terminal does (text `pre` holds outside an element has no room, and one inline among it has room around it).
-- Do not write padding on a line (it drops code's room). Lines in a `<code class="lines">` have code's look paint their background to the end of the line and move the room onto each (e.g. `diff`); a part whose lines differ further moves the room onto them by the variables: `:scope pre > code { padding-inline: 0; } :scope code > span { padding-inline: var(--floe-code-pad) var(--floe-code-room); }`.
+- Make each line an element: one element a line in one `<code class="lines">`, as code and a diff do; one `<code>` around the whole; or one element a line in `pre`, as a terminal does (text `pre` holds outside an element has no padding, and one inline among it has padding around it).
+- Do not write padding on a line (it drops code's padding).
+- Lines in a `<code class="lines">` have code's look paint their background to the end of the line and move the padding onto each (e.g. `diff`). A part whose lines differ further moves it onto them by the variables: `:scope pre > code { padding-inline: 0; } :scope code > span { padding-inline: var(--floe-code-pad) var(--floe-code-room); }`.
+- The look styles the part's `figcaption` as a heading row, in it `.names` (holding `.title` and `.file`) and `.lang`, and in the lines `.lines`, `.mark` and `.numbered`: a part that takes the look and uses those names is styled by it.
 - Code's look makes a block of a `<code>` that `pre` holds. A `<code>` anywhere inside a `pre` has none of the inline look (its size, background, shadow and padding: floe's base); a `<code>` elsewhere in such a part, in its heading, keeps it.
 
 ## What `floe part check` refuses
