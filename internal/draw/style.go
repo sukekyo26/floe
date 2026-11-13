@@ -10,6 +10,12 @@ import (
 	"floe/internal/kit"
 )
 
+// pageLayers are the layers a page's CSS is in, in their order, the last the strongest: pageStyle declares them first,
+// and docs/agents/parts.md names them in that order (TestPartsDocLayers).
+var pageLayers = []string{
+	"floe.palette", "floe.base", "floe.theme", "floe.looks", "floe.marks", "floe.page", "floe.parts",
+}
+
 // pageStyle returns the CSS of each <style> of a page drawn in the theme named so, whose elements name what n
 // holds, with own, its template's page.css. Each is a layer: floe's base.css, under the palettes (the default theme's,
 // then the theme's), the theme's base.css, the looks, the template's own and the parts'. The theme's base.css
@@ -68,8 +74,8 @@ func pageStyle(k *kit.Kit, theme string, n named, own []byte) ([]string, error) 
 			order = append(order, fmt.Sprintf("%s.depth%d", kind, d))
 		}
 	}
-	layers := "@layer floe.palette, floe.base, floe.theme, floe.looks, floe.marks, floe.page, floe.parts;\n@layer " +
-		strings.Join(order, ", ") + ";\n" + boxes + "@layer floe.base {\n" + string(k.BaseCSS()) + "}\n"
+	layers := "@layer " + strings.Join(pageLayers, ", ") + ";\n@layer " + strings.Join(order, ", ") + ";\n" +
+		boxes + "@layer floe.base {\n" + string(k.BaseCSS()) + "}\n"
 	sheets = append(sheets, Sheet("", []byte(layers)))
 	sheet := func(layer string, css []byte) {
 		if len(css) != 0 {

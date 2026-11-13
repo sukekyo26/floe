@@ -2,7 +2,6 @@ package draw
 
 import (
 	"os"
-	"regexp"
 	"slices"
 	"strings"
 	"testing"
@@ -76,27 +75,11 @@ func text(n *html.Node) string {
 }
 
 // The table of layers in docs/agents/parts.md, which floe part guide prints, names the layers floe puts a page's CSS
-// in, in their order: the first @layer statement of the page's first <style>, which fixes the order.
+// in, in their order: pageLayers, which pageStyle declares first.
 func TestPartsDocLayers(t *testing.T) {
 	t.Parallel()
 
-	k, err := kit.Floe()
-	if err != nil {
-		t.Fatal(err)
-	}
-	sheets, err := pageStyle(k, kit.DefaultTheme, named{}, nil)
-	if err != nil || len(sheets) == 0 {
-		t.Fatalf("pageStyle = %d sheets, %v", len(sheets), err)
-	}
-	m := regexp.MustCompile(`@layer ([^;{]*);`).FindStringSubmatch(sheets[0])
-	if m == nil {
-		t.Fatalf("the first <style> declares no layers: %q", sheets[0])
-	}
-	var want []string
-	for l := range strings.SplitSeq(m[1], ",") {
-		want = append(want, strings.TrimSpace(l))
-	}
-	if got := firstColumn(t, "../../docs/agents/parts.md", "The CSS layers and @scope"); !slices.Equal(got, want) {
-		t.Errorf("the table of layers in docs/agents/parts.md names %v, floe puts the CSS in %v, in that order: write the table as the layers are", got, want)
+	if got := firstColumn(t, "../../docs/agents/parts.md", "The CSS layers and @scope"); !slices.Equal(got, pageLayers) {
+		t.Errorf("the table of layers in docs/agents/parts.md names %v, floe puts the CSS in %v, in that order: write the table as the layers are", got, pageLayers)
 	}
 }

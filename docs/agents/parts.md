@@ -220,7 +220,7 @@ A theme's rules for a look draw every part that takes it. A card in an element t
 | `data-floe-tone` | Any element | The tone it draws in (*Tones*) |
 | `data-floe-text` | The box of drawn Markdown (a box of no part) | Its blocks are spaced `--floe-room` apart |
 | `data-floe-copy` | An element of a part | Its text is what the copy button copies |
-| `.title` | An element in a `.card` | A card's title, which the look `cards` draws |
+| `.title` | An element in a `.card`, or in the heading of code's look | A card's title, which the look `cards` draws; the title in the heading, which code's look draws |
 | `.floe-hidden` | A word | Shown to no one, read to a screen reader (*Rows with a mark*) |
 | `.floe-zoom` | A frame | What the function `zoom` zooms |
 | `.floe-copy` | The copy button | The button `copyButton` draws |
@@ -345,7 +345,7 @@ A tone (one of `tone.json`'s) is marked by `data-floe-tone` on the element drawn
 - floe writes where they stand and how big, no colour, corner or content: a part writes its mark's look (`content`, background, frame) and the line's colour, and spaces what the row holds by `> * + * { margin-top }`.
 - A part or look that takes a look that writes `marks:` (`looks: [numbered]`) has its rows laid out by it, and MUST NOT write `marks:` of its own.
 - Write each row's text in elements (`<li><span>…</span></li>`): text written straight in a row becomes a grid item for each run of text, each placed in the next free cell, so that the row breaks onto rows of its own (`Restart <code>api</code> now` takes three rows).
-- A mark of letters before each row of a list is a row's mark too, by the look `marked` (`<ul data-floe-look="marked">`, or `looks: [marked]`). The part writes its letter and colour (`li::before { content: "×" }`) and each item's text in one element, so that a line of text and code flows as one.
+- A mark of letters before each row of a list is a row's mark too, by the look `marked` (`<ul data-floe-look="marked">`, or `looks: [marked]`). The part writes its letter and colour (`li::before { content: "×" / "" }`) and each item's text in one element, so that a line of text and code flows as one.
 - A sign before one title, word or cell (a prompt, an →), and a list's own marker (`list-style`, `::marker`), are no row's mark.
 - Do not write `display`, `gap` or `grid-template` on a row in a part's `part.css`, a theme's file of the part, or a look file the part takes (they are in `floe.parts`, over floe's layout in `floe.marks`: the rule wins and the marks lose their layout). A template's `page.css` wins too, but it reaches the part's box and not what the box holds: rows of `box`, not the `li` of `items` and `joined`.
 - Expect a rule for those on an element that is no part's box (an element that takes a look, such as the `<ul>` of a template) to change nothing when it is in a look's file or a theme's file of that look (they are in `floe.looks`, under `floe.marks`).

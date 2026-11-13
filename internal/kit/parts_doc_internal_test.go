@@ -12,11 +12,10 @@ import (
 	"golang.org/x/net/html/atom"
 )
 
-// docFunctions returns the code in the first column of the table under the heading "Functions of part.html" of
-// docs/agents/parts.md, Markdown as floe draws it. The docs hold the same small reader in each package that tests a table
-// (lint's paletteTable is a _test.go of that package, which none else can call, and sharing it would take a package of its
-// own for tests).
-func docFunctions(t *testing.T) []string {
+// partsDoc returns docs/agents/parts.md, Markdown as floe draws it, as an HTML tree. The docs hold the same small reader
+// in each package that tests a table (lint's paletteTable is a _test.go of that package, which none else can call, and
+// sharing it would take a package of its own for tests).
+func partsDoc(t *testing.T) *html.Node {
 	t.Helper()
 
 	src, err := os.ReadFile("../../docs/agents/parts.md")
@@ -31,18 +30,25 @@ func docFunctions(t *testing.T) []string {
 	if err != nil {
 		t.Fatal(err)
 	}
+	return root
+}
+
+// docFirstColumn returns the code in the first column of the first table under the heading of docs/agents/parts.md.
+func docFirstColumn(t *testing.T, heading string) []string {
+	t.Helper()
+
 	var table *html.Node
 	under := false
-	for n := range root.Descendants() {
+	for n := range partsDoc(t).Descendants() {
 		switch {
 		case n.DataAtom == atom.H2 || n.DataAtom == atom.H3:
-			under = textOf(n) == "Functions of part.html"
+			under = textOf(n) == heading
 		case under && n.DataAtom == atom.Table && table == nil:
 			table = n
 		}
 	}
 	if table == nil {
-		t.Fatal("docs/agents/parts.md has no table under the heading Functions of part.html")
+		t.Fatalf("docs/agents/parts.md has no table under the heading %s", heading)
 	}
 	var names []string
 	for tr := range table.Descendants() {
@@ -83,33 +89,20 @@ func TestPartsDocFunctions(t *testing.T) {
 
 	want := append(slices.Collect(maps.Keys(partFuncsAll())), "word")
 	slices.Sort(want)
-	got := docFunctions(t)
+	got := docFirstColumn(t, "Functions of part.html")
 	slices.Sort(got)
 	if !slices.Equal(got, want) {
 		t.Errorf("the table of functions in docs/agents/parts.md names %v, a part.html can call %v: write a row for each, and no other", got, want)
 	}
 }
 
-// docCode returns the code spans of the section under the h2 heading of docs/agents/parts.md, down to the next h2,
-// Markdown as floe draws it.
+// docCode returns the code spans of the section under the h2 heading of docs/agents/parts.md, down to the next h2.
 func docCode(t *testing.T, heading string) []string {
 	t.Helper()
 
-	src, err := os.ReadFile("../../docs/agents/parts.md")
-	if err != nil {
-		t.Fatal(err)
-	}
-	drawn, err := Markdown(string(src))
-	if err != nil {
-		t.Fatal(err)
-	}
-	root, err := html.Parse(strings.NewReader(string(drawn)))
-	if err != nil {
-		t.Fatal(err)
-	}
 	var spans []string
 	under := false
-	for n := range root.Descendants() {
+	for n := range partsDoc(t).Descendants() {
 		switch {
 		case n.DataAtom == atom.H2:
 			under = textOf(n) == heading

@@ -23,8 +23,8 @@ var partsDocs = []struct {
 // (in the Default column, as code); and each --floe-* that column names is one the CSS sets. A plain root is the rule's
 // own, alone in its selector and in no at-rule: a declaration in @media print, or on :scope:has(> .floe-copy), is not the
 // default.
-// LIMIT: a row of the table that has no --floe-* (the tone's) is not held to the CSS; a variable the table names is held
-// to the first heading's CSS that sets it.
+// LIMIT: a row of the table that has no --floe-* (the tone's) is not held to the CSS; each table is held to the CSS of its
+// own heading alone (partsDocs): the first to base.css's, the second to code's.
 var partsInDocs = Rule{Name: "parts-in-docs", Check: func(in *Input) []Finding {
 	var found []Finding
 	const doc = "agents/parts.md"
@@ -112,9 +112,8 @@ func propertyInitials(src []byte, prefix string) map[string]string {
 	out := map[string]string{}
 	for _, ds := range declarations(src, func(p string) bool { return p == "initial-value" }) {
 		for _, d := range ds {
-			at, name, ok := strings.Cut(strings.TrimSpace(d.rule), " ")
-			if ok && strings.EqualFold(at, "@property") && strings.HasPrefix(name, prefix) && len(d.value) > 0 {
-				out[name] = valueOf(src, d)
+			if at := strings.Fields(d.rule); len(at) == 2 && strings.EqualFold(at[0], "@property") && strings.HasPrefix(at[1], prefix) && len(d.value) > 0 {
+				out[at[1]] = valueOf(src, d)
 			}
 		}
 	}
@@ -123,6 +122,5 @@ func propertyInitials(src []byte, prefix string) map[string]string {
 
 // valueOf returns the value of the declaration d of src, its whitespace collapsed to single spaces.
 func valueOf(src []byte, d decl) string {
-	last := d.value[len(d.value)-1]
-	return strings.Join(strings.Fields(string(src[d.value[0].At:last.At+len(last.Data)])), " ")
+	return strings.Join(strings.Fields(text(src, d.value)), " ")
 }
