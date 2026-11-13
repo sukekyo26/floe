@@ -28,7 +28,7 @@ import (
 const guidePath = "../../docs/agents/guide.md"
 
 // commandDocs are the docs whose commands TestGuideCommands runs, each a doc floe prints.
-var commandDocs = []string{guidePath, "../../docs/agents/themes.md", "../../docs/agents/parts.md", "../../docs/agents/templates.md"}
+var commandDocs = []string{guidePath, "../../docs/agents/themes.md", "../../docs/agents/parts.md", "../../docs/agents/templates.md", "../../docs/agents/diagrams.md"}
 
 func readGuide(t *testing.T, path string) string {
 	t.Helper()
@@ -133,7 +133,7 @@ func TestGuide(t *testing.T) {
 var placeholders = map[string]string{"<template>": "report", "<part>": "note", "<kind>": "flow", "<command>": "check", "<word>": "alb", "<slug>": "db-choice", "<ID>": "#130", "<name>": "default", "<file>": "palette.css", "<look>": "rows"}
 
 // readOnly are the commands a test runs as the guide writes them: they read, write nothing and ask no server.
-var readOnly = [][]string{{"guide"}, {"template"}, {"part", "guide"}, {"part", "list"}, {"part", "show"}, {"part", "check"}, {"diagram"}, {"theme", "default"}, {"theme", "show"}, {"theme", "list"}, {"theme", "check"}}
+var readOnly = [][]string{{"guide"}, {"template"}, {"part", "guide"}, {"part", "list"}, {"part", "show"}, {"part", "check"}, {"diagram", "example"}, {"diagram", "guide"}, {"theme", "default"}, {"theme", "show"}, {"theme", "list"}, {"theme", "check"}}
 
 // Each floe command the docs of commandDocs name is one floe reads, its flags too; those that only read run and end
 // well (themes.md names floe's themes' files, which this keeps real).
