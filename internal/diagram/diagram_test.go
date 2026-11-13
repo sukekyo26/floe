@@ -7,6 +7,7 @@ import (
 	"os"
 	"path/filepath"
 	"regexp"
+	"slices"
 	"strconv"
 	"strings"
 	"testing"
@@ -42,7 +43,7 @@ type iconsOf map[string][]byte
 
 func (s iconsOf) Lookup(name string) ([]byte, error) {
 	set, _, _ := strings.Cut(name, "/")
-	if set != "aws" {
+	if !slices.Contains(icons.Sets(), set) {
 		return nil, icons.ErrNoSet
 	}
 	if b, ok := s[name]; ok {
@@ -1916,6 +1917,7 @@ func TestGraphIconMistakes(t *testing.T) {
 	)
 	for _, c := range []struct{ parts, want string }{
 		{node + "icon: { name: a, icon: aws/nope, label: A }" + tail, `s.yaml:3:37: icon "a": no icon "aws/nope" (search with: floe icons search aws <word>)`},
+		{node + "icon: { name: a, icon: gcp/nope, label: A }" + tail, `s.yaml:3:37: icon "a": no icon "gcp/nope" (search with: floe icons search gcp <word>)`},
 		{node + "icon: { name: a, icon: nope, label: A }" + tail, `s.yaml:3:37: icon "a": "nope" needs its icon set in front (aws, gcp, azure), like aws/amazon-ec2 (search with: floe icons search <set> <word>)`},
 		{node + "icon: { name: a, icon: aws/aws-lambda, tone: warn }" + tail, "s.yaml:3:82: additional properties 'tone' not allowed"},
 		{node + "icon: { icon: aws/aws-lambda }" + tail, "s.yaml:3:37: missing property 'name'"},
