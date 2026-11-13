@@ -118,6 +118,11 @@ func TestIconsFetchAndSearch(t *testing.T) {
 	if code != 1 || !strings.Contains(stderr, "argument 2 is an empty path") || !strings.Contains(stderr, "AWS icons come in the Icon package zip alone") {
 		t.Errorf("floe icons fetch aws \"\" b.zip = %d, %q; want both mistakes", code, stderr)
 	}
+	// Azure without its zip is told with the other mistakes too, before the network.
+	code, _, stderr = runIn(dir, map[string]string{"FLOE_ICONS_DIR": "relative"}, "icons", "fetch", "azure")
+	if code != 1 || !strings.Contains(stderr, "FLOE_ICONS_DIR") || !strings.Contains(stderr, "agreeing to their terms") {
+		t.Errorf("FLOE_ICONS_DIR=relative floe icons fetch azure = %d, %q; want both mistakes", code, stderr)
+	}
 	for name, entry := range map[string]string{
 		"core.zip": "Unique Icons/GKE/SVG/GKE-512-color.svg", "category.zip": "Category Icons/Storage/SVG/Storage-512-color.svg",
 	} {

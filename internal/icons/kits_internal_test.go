@@ -176,15 +176,15 @@ func TestCheckSources(t *testing.T) {
 		{"azure", 2, true},
 		{"nope", 5, false},
 	} {
-		err := CheckSources(c.set, c.n)
+		err := checkSources(c.set, c.n)
 		if !c.fail {
 			if err != nil {
-				t.Errorf("CheckSources(%s, %d) = %v", c.set, c.n, err)
+				t.Errorf("checkSources(%s, %d) = %v", c.set, c.n, err)
 			}
 			continue
 		}
 		k := kitOf(c.set)
-		wantMistake(t, "CheckSources("+c.set+")", err, "icons_too_many_zips", k.title, k.zips(), k.usage())
+		wantMistake(t, "checkSources("+c.set+")", err, "icons_too_many_zips", k.title, k.zips(), k.usage())
 	}
 	// Fetch refuses them too, writing nothing.
 	root := t.TempDir()
