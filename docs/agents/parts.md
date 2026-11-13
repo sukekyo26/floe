@@ -232,7 +232,7 @@ floe puts a page's CSS into `<style>`s before its `</head>`, in cascade layers, 
 | Layer | What is in it |
 |---|---|
 | `floe.palette` | The palettes: floe's `default`, then the theme's, then the tones |
-| `floe.base` | floe's base: the page's background and text colour on its root, and text, lists, links, code and quotes |
+| `floe.base` | floe's base: the page's background, text colour and font (`font-family: var(--font)`) on its root, and text, lists, links, code and quotes |
 | `floe.theme` | The theme's `base.css`, scoped as the template's `page.css` is: it reaches the page and the boxes of the parts, not what they hold, nor a text's Markdown. Then the theme's `markdown.css`, which reaches the whole page |
 | `floe.looks` | The looks of elements that take one without being a part's box (`data-floe-look`) |
 | `floe.marks` | The layout of the rows with a mark (*Rows with a mark*) |
@@ -355,6 +355,8 @@ A tone (one of `tone.json`'s) is marked by `data-floe-tone` on the element drawn
 - Write the words that tell what a mark alone means as hidden text, `<span class="floe-hidden">{{word "done"}}</span>`, with its `words.yaml`, outside what the copy button copies (`data-floe-copy`).
 - Put the hidden text within a row's text (`<li><span><span class="floe-hidden">…</span>…</span></li>`), not as the row's child (it would shift the space between what the row holds).
 - A row that holds no element of text, such as a Markdown box, takes it as its first child and counts its gaps from after it: `:scope > :not(.floe-hidden) + *`.
+- A line the full height of a row that holds parts is no mark (`marks:` places a mark `--floe-mark` across, on the first line): draw it as the row's `::before` with `position: absolute; inset-block: 0`, in a row of `position: relative`, and not as the row's border (a framed row is a box, which what the parts in it draw outside themselves may not leave).
+- Write after a `/` what a screen reader reads of what `content` draws: `""` for a mark (`content: "✓"; content: "✓" / "";`, the first line for browsers that read no `/`), and the counters before it, in order, for a number to read (`content: counter(step) / counter(step)`; `""` for a number that no word tells from what is around it, as a slide's). Without it a screen reader says each mark by its shape ("check mark") on every row, and reads no number.
 - Do not write a word in a `content` string (CSS text does not pass `words.yaml`, so a word stays in one language whatever the page's).
 
 | Variable | Set in | What it changes |

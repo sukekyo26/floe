@@ -51,7 +51,12 @@ var paletteInDocs = Rule{Name: "palette-in-docs", Check: func(in *Input) []Findi
 	var found []Finding
 	in.Saw()
 	for _, doc := range paletteDocs {
-		rows, err := paletteTable(in.Docs(), doc.file, doc.heading, "the palette")
+		root, err := docTree(in.Docs(), doc.file)
+		if err != "" {
+			found = append(found, Finding{doc.file, 0, "palette-in-docs", err})
+			continue
+		}
+		rows, err := paletteTable(root, doc.heading, "the palette")
 		if err != "" {
 			found = append(found, Finding{doc.file, 0, "palette-in-docs", err})
 			continue
@@ -111,14 +116,9 @@ func docTree(docs fs.FS, file string) (*html.Node, string) {
 	return root, ""
 }
 
-// paletteTable returns the rows of the first table after the h2 or h3 of the text heading in the doc file of docs,
-// Markdown, as floe draws it, or why it cannot. what names the table in the message that asks for it, as "the palette"
-// in "the table of the palette".
-func paletteTable(docs fs.FS, file, heading, what string) ([]paletteRow, string) {
-	root, why := docTree(docs, file)
-	if why != "" {
-		return nil, why
-	}
+// paletteTable returns the rows of the first table after the h2 or h3 of the text heading in the tree of a doc, or why it
+// cannot. what names the table in the message that asks for it, as "the palette" in "the table of the palette".
+func paletteTable(root *html.Node, heading, what string) ([]paletteRow, string) {
 	var table *html.Node
 	under := false
 	for n := range root.Descendants() {

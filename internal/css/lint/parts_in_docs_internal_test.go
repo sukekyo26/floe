@@ -6,6 +6,7 @@ import (
 	"strings"
 
 	"github.com/tdewolff/parse/v2/css"
+	"golang.org/x/net/html"
 	"golang.org/x/net/html/atom"
 )
 
@@ -33,11 +34,15 @@ var partsDocs = []struct {
 // A third check holds the classes of the section "Code's look": each `.class` that a code span of it names alone is one
 // that a selector of code's part.css, outside a comment, has.
 var partsInDocs = Rule{Name: "parts-in-docs", Check: func(in *Input) []Finding {
-	var found []Finding
 	const doc = "agents/parts.md"
+	root, err := docTree(in.Docs(), doc)
+	if err != "" {
+		return []Finding{{doc, 0, "parts-in-docs", err}}
+	}
+	var found []Finding
 	for _, table := range partsDocs {
 		set := table.declared(in)
-		rows, err := paletteTable(in.Docs(), doc, table.heading, table.heading)
+		rows, err := paletteTable(root, table.heading, table.heading)
 		if err != "" {
 			found = append(found, Finding{doc, 0, "parts-in-docs", err})
 			continue
@@ -72,24 +77,16 @@ var partsInDocs = Rule{Name: "parts-in-docs", Check: func(in *Input) []Finding {
 			}
 		}
 	}
-	return append(found, codeClasses(in, doc)...)
+	return append(found, codeClasses(in, root, doc)...)
 }}
 
 // codeClasses returns a finding for each class that a code span of the section "Code's look" of the doc names alone and
 // no selector of code's part.css has: such a part that writes the class in its HTML is styled by the look.
-func codeClasses(in *Input, doc string) []Finding {
-	root, why := docTree(in.Docs(), doc)
-	if why != "" {
-		return []Finding{{doc, 0, "parts-in-docs", why}}
-	}
+func codeClasses(in *Input, root *html.Node, doc string) []Finding {
 	have := map[string]bool{}
 	for _, s := range in.Sheets() {
-		if s.Kind != kindPart || s.Owner != "code" {
-			continue
-		}
-		prelude, _, _ := rules(tokensOf(s.Src))
-		for _, p := range prelude {
-			for _, class := range classesOf(p) {
+		if s.Kind == kindPart && s.Owner == "code" {
+			for _, class := range selectorClasses(tokensOf(s.Src)) {
 				have[class] = true
 			}
 		}
@@ -101,7 +98,8 @@ func codeClasses(in *Input, doc string) []Finding {
 		case n.DataAtom == atom.H2:
 			under = textOf(n) == "Code's look"
 		case under && n.DataAtom == atom.Code:
-			if span := textOf(n); len(tokensOf([]byte(span))) == 2 && len(classesOf(span)) == 1 {
+			span := textOf(n)
+			if class := classesOf(tokensOf([]byte(span))); len(class) == 1 && class[0] == span {
 				in.Saw()
 				if !have[span] {
 					found = append(found, Finding{doc, 0, "parts-in-docs", "names the class " + span + " in Code's look, which a selector of code's part.css does not have: write the classes it does"})
@@ -112,11 +110,27 @@ func codeClasses(in *Input, doc string) []Finding {
 	return found
 }
 
-// classesOf returns the classes (".name") that the selectors in src write, by the lexer's tokens: a delimiter . and the
-// identifier right after it.
-func classesOf(src string) []string {
+// selectorClasses returns the classes of the selectors of toks: those in the tokens before a rule's {, from the last
+// rule token (a {, a ; or a }) before it, as rules marks them. A rule of no declaration has its selectors too.
+func selectorClasses(toks []token) []string {
+	_, _, ruling := rules(toks)
 	var out []string
-	toks := tokensOf([]byte(src))
+	from := 0
+	for i, t := range toks {
+		if !ruling[i] {
+			continue
+		}
+		if t.Type == css.LeftBraceToken {
+			out = append(out, classesOf(toks[from:i])...)
+		}
+		from = i + 1
+	}
+	return out
+}
+
+// classesOf returns the classes (".name") that toks write: a delimiter . and the identifier right after it.
+func classesOf(toks []token) []string {
+	var out []string
 	for i := 0; i+1 < len(toks); i++ {
 		if toks[i].Type == css.DelimToken && string(toks[i].Data) == "." && toks[i+1].Type == css.IdentToken {
 			out = append(out, "."+string(toks[i+1].Data))
