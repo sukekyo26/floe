@@ -11,13 +11,13 @@ import (
 	"golang.org/x/net/html/atom"
 )
 
-// partsDoc returns docs/agents/parts.md, Markdown as floe draws it, as an HTML tree. The docs hold the same small reader
+// agentDoc returns docs/agents/<file>, Markdown as floe draws it, as an HTML tree. The docs hold the same small reader
 // in each package that tests a table (lint's paletteTable is a _test.go of that package, which none else can call, and
 // sharing it would take a package of its own for tests).
-func partsDoc(t *testing.T) *html.Node {
+func agentDoc(t *testing.T, file string) *html.Node {
 	t.Helper()
 
-	src, err := os.ReadFile("../../docs/agents/parts.md")
+	src, err := os.ReadFile("../../docs/agents/" + file)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -32,13 +32,13 @@ func partsDoc(t *testing.T) *html.Node {
 	return root
 }
 
-// docFirstColumn returns the code in the first column of the first table under the heading of docs/agents/parts.md.
-func docFirstColumn(t *testing.T, heading string) []string {
+// docFirstColumn returns the code in the first column of the first table under the heading of docs/agents/<file>.
+func docFirstColumn(t *testing.T, file, heading string) []string {
 	t.Helper()
 
 	var table *html.Node
 	under := false
-	for n := range partsDoc(t).Descendants() {
+	for n := range agentDoc(t, file).Descendants() {
 		switch {
 		case n.DataAtom == atom.H2 || n.DataAtom == atom.H3:
 			under = textOf(n) == heading
@@ -47,7 +47,7 @@ func docFirstColumn(t *testing.T, heading string) []string {
 		}
 	}
 	if table == nil {
-		t.Fatalf("docs/agents/parts.md has no table under the heading %s", heading)
+		t.Fatalf("docs/agents/%s has no table under the heading %s", file, heading)
 	}
 	var names []string
 	for tr := range table.Descendants() {
@@ -88,7 +88,7 @@ func TestPartsDocFunctions(t *testing.T) {
 
 	want := append(slices.Collect(maps.Keys(partFuncsAll())), "word")
 	slices.Sort(want)
-	got := docFirstColumn(t, "Functions of part.html")
+	got := docFirstColumn(t, "parts.md", "Functions of part.html")
 	slices.Sort(got)
 	if !slices.Equal(got, want) {
 		t.Errorf("the table of functions in docs/agents/parts.md names %v, a part.html can call %v: write a row for each, and no other", got, want)

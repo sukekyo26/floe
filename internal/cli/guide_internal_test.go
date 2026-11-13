@@ -28,7 +28,7 @@ import (
 const guidePath = "../../docs/agents/guide.md"
 
 // commandDocs are the docs whose commands TestGuideCommands runs, each a doc floe prints.
-var commandDocs = []string{guidePath, "../../docs/agents/themes.md", "../../docs/agents/parts.md"}
+var commandDocs = []string{guidePath, "../../docs/agents/themes.md", "../../docs/agents/parts.md", "../../docs/agents/templates.md"}
 
 func readGuide(t *testing.T, path string) string {
 	t.Helper()
