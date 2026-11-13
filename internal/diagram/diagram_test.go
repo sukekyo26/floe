@@ -1916,7 +1916,7 @@ func TestGraphIconMistakes(t *testing.T) {
 	)
 	for _, c := range []struct{ parts, want string }{
 		{node + "icon: { name: a, icon: aws/nope, label: A }" + tail, `s.yaml:3:37: icon "a": no icon "aws/nope" (search with: floe icons search <word>)`},
-		{node + "icon: { name: a, icon: nope, label: A }" + tail, `s.yaml:3:37: icon "a": "nope" needs its icon set in front (aws), like aws/amazon-ec2 (search with: floe icons search <word>)`},
+		{node + "icon: { name: a, icon: nope, label: A }" + tail, `s.yaml:3:37: icon "a": "nope" needs its icon set in front (aws, gcp, azure), like aws/amazon-ec2 (search with: floe icons search <word>)`},
 		{node + "icon: { name: a, icon: aws/aws-lambda, tone: warn }" + tail, "s.yaml:3:82: additional properties 'tone' not allowed"},
 		{node + "icon: { icon: aws/aws-lambda }" + tail, "s.yaml:3:37: missing property 'name'"},
 		{node + `icon: { name: a, icon: "" }` + tail, "s.yaml:3:60: minLength: got 0, want 1"},

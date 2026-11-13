@@ -1,6 +1,8 @@
 package cli
 
 import (
+	"fmt"
+
 	"github.com/spf13/cobra"
 
 	"floe/internal/diagram"
@@ -21,33 +23,38 @@ func (a *app) iconsCmd() *cobra.Command {
 func (a *app) iconsFetchCmd() *cobra.Command {
 	var force bool
 	cmd := &cobra.Command{
-		Use:   "fetch <set> [zip-or-url]",
-		Short: "Keep an icon set from its official package for icon parts",
+		Use:   "fetch <set> [zip-or-url...]",
+		Short: "Keep an icon set from its official packages for icon parts",
 		Long: `Keep an icon set in $FLOE_ICONS_DIR/<set> for the icon parts of diagrams. The sets:
 
-  aws  the AWS Architecture Icons (48px services and resources, 32px groups); the Icon
-       package zip is about 14MB
+  aws    the AWS Architecture Icons (48px services and resources, 32px groups); the Icon
+         package zip is about 14MB
+  gcp    the Google Cloud product icons: the core products' own and the product categories',
+         which every other product takes; two zips, about 1MB
+  azure  the Azure architecture icons; their page lets the zip be downloaded only after
+         agreeing to its terms, so floe does not download it: pass the zip or its URL
 
-Without a zip, the package is found on the set's official page; a downloaded zip or its
-URL can be given instead.
+Without a zip, the set's packages are found on its official page; downloaded zips or their
+URLs can be given instead, one for each package of the set (gcp takes both of its zips).
 The icons are replaced as a whole, and the previous ones stay if that fails. A version
 already there is kept unless --force.
 
 FLOE_ICONS_DIR is an absolute path; without it, the icons are kept in
 $XDG_DATA_HOME/floe-icons, or ~/.local/share/floe-icons.`,
-		Args: cobra.RangeArgs(1, 2),
+		Args: cobra.MinimumNArgs(1),
 		RunE: func(cmd *cobra.Command, args []string) error {
-			from := icons.Source{Name: "", At: ""}
-			var fromErr error
-			if len(args) == 2 {
-				from = icons.Source{Name: args[1], At: args[1]}
-				if !icons.IsURL(args[1]) {
-					p := a.arg(args[1], place{name: "argument 2", wants: "cli_wants_icons"})
-					from.At, fromErr = p.abs, p.err
+			from := make([]icons.Source, len(args)-1)
+			errs := []error{icons.CheckSet(args[0]), icons.CheckSources(args[0], len(from))}
+			for i, arg := range args[1:] {
+				from[i] = icons.Source{Name: arg, At: arg}
+				if !icons.IsURL(arg) {
+					p := a.arg(arg, place{name: fmt.Sprintf("argument %d", i+2), wants: "cli_wants_icons"})
+					from[i].At = p.abs
+					errs = append(errs, p.err)
 				}
 			}
 			at, dirErr := a.iconsDir()
-			if err := usererr.Collect(icons.CheckSet(args[0]), fromErr, dirErr); err != nil {
+			if err := usererr.Collect(append(errs, dirErr)...); err != nil {
 				return err //nolint:wrapcheck // mistakes for the user as they are
 			}
 			got, err := iconsIn(at).Fetch(cmd.Context(), args[0], from, force)
@@ -71,7 +78,7 @@ func (a *app) iconsSearchCmd() *cobra.Command {
 		Use:   "search <word>...",
 		Short: "List the fetched icons whose name contains every word, or a short name such as alb",
 		Long: `List the fetched icons whose name contains every word, one per line as the name to give
-an icon part (aws/…) and its category, tab-separated. A common short name of a service (alb, s3,
+an icon part (aws/…, gcp/…, azure/…) and its category, tab-separated. A common short name of a service (alb, s3,
 ecs) finds the service first, then its resources.`,
 		Args: cobra.MinimumNArgs(1),
 		RunE: func(_ *cobra.Command, args []string) error {

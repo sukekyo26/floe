@@ -62,7 +62,7 @@ func TestExampleByName(t *testing.T) {
 func TestExampleMistakes(t *testing.T) {
 	t.Parallel()
 
-	broken := failing{usererr.NewAt("/i/aws/index.json", 1, 1, "icons_index_no_version", "aws")}
+	broken := failing{usererr.NewAt("/i/aws/index.json", 1, 1, "icons_index_no_version", "floe icons fetch aws --force")}
 	for _, tt := range []struct {
 		src   string
 		icons diagram.Icons

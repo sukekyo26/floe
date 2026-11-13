@@ -6,14 +6,18 @@ import "regexp"
 // dark backgrounds of an icon without a light one. The package's URL holds its date and a hash and
 // changes every quarter.
 var aws = kit{
-	name:    "aws",
-	title:   "AWS",
-	page:    "https://aws.amazon.com/architecture/icons/",
-	host:    "aws.amazon.com",
-	size:    "14MB",
-	link:    regexp.MustCompile(`^https://[^"'\s<>]+/Icon-package_\d{8}[^"'\s<>/?#]*\.zip$`),
+	name:  "aws",
+	title: "AWS",
+	page:  "https://aws.amazon.com/architecture/icons/",
+	host:  "aws.amazon.com",
+	size:  "14MB",
+	terms: false,
+	packages: []pack{{
+		what:   "the Icon package zip",
+		link:   regexp.MustCompile(`^https://[^"'\s<>]+/Icon-package_\d{8}[^"'\s<>/?#]*\.zip$`),
+		iconOf: awsIconOf,
+	}},
 	version: regexp.MustCompile(`Icon-package_(\d{8})`),
-	iconOf:  awsIconOf,
 	short: map[string][]string{
 		"acm":   {"aws-certificate-manager"},
 		"alb":   {"res/elastic-load-balancing-application-load-balancer"},
@@ -58,13 +62,13 @@ var (
 
 func awsIconOf(path string) (packed, bool) {
 	if m := awsServiceRe.FindStringSubmatch(path); m != nil {
-		return packed{version: m[1], name: slug(m[3]), category: m[2], dark: m[4] != ""}, true
+		return named(packed{version: m[1], name: "", category: m[2], dark: m[4] != ""}, "", m[3])
 	}
 	if m := awsGroupRe.FindStringSubmatch(path); m != nil {
-		return packed{version: m[1], name: "group/" + slug(m[2]), category: "Group", dark: m[3] != ""}, true
+		return named(packed{version: m[1], name: "", category: "Group", dark: m[3] != ""}, "group/", m[2])
 	}
 	if m := awsResRe.FindStringSubmatch(path); m != nil {
-		return packed{version: m[1], name: "res/" + slug(m[3]), category: m[2], dark: m[4] == "Dark"}, true
+		return named(packed{version: m[1], name: "", category: m[2], dark: m[4] == "Dark"}, "res/", m[3])
 	}
 	return packed{version: "", name: "", category: "", dark: false}, false
 }
