@@ -1,0 +1,7 @@
+agents/parts.md "the row of --floe-room names --floe-copy-size too: write a variable to a row, in Variables floe sets"
+agents/parts.md "gives --floe-copy-room the default 0px, which floe's CSS writes as calc(var(--floe-copy-size) + 2 * var(--floe-copy-gap))"
+agents/parts.md "gives --floe-inset no default: write `0 0 #0000` in code, in its Default column"
+agents/parts.md "names --floe-gone, which floe's CSS sets nowhere: remove its row from Variables floe sets, or set it"
+agents/parts.md "names no --floe-code-room, which floe's CSS sets: write `--floe-code-room` in the table of Code's look"
+agents/parts.md "names the class .names in Code's look, which a selector of code's part.css does not have: write the classes it does"
+agents/parts.md "names the class .ghost in Code's look, which a selector of code's part.css does not have: write the classes it does"

@@ -182,6 +182,7 @@ var Rules = []Rule{
 	opacityRule,
 	paletteInDocs,
 	partVariables,
+	partsInDocs,
 	radiusRule,
 	speechCSS,
 	textCase,

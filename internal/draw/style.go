@@ -10,6 +10,12 @@ import (
 	"floe/internal/kit"
 )
 
+// pageLayers are the layers a page's CSS is in, in their order, the last the strongest: pageStyle declares them first,
+// and docs/agents/parts.md names them in that order (TestPartsDocLayers).
+var pageLayers = []string{
+	"floe.palette", "floe.base", "floe.theme", "floe.looks", "floe.marks", "floe.page", "floe.parts",
+}
+
 // pageStyle returns the CSS of each <style> of a page drawn in the theme named so, whose elements name what n
 // holds, with own, its template's page.css. Each is a layer: floe's base.css, under the palettes (the default theme's,
 // then the theme's), the theme's base.css, the looks, the template's own and the parts'. The theme's base.css
@@ -68,8 +74,8 @@ func pageStyle(k *kit.Kit, theme string, n named, own []byte) ([]string, error) 
 			order = append(order, fmt.Sprintf("%s.depth%d", kind, d))
 		}
 	}
-	layers := "@layer floe.palette, floe.base, floe.theme, floe.looks, floe.marks, floe.page, floe.parts;\n@layer " +
-		strings.Join(order, ", ") + ";\n" + boxes + "@layer floe.base {\n" + string(k.BaseCSS()) + "}\n"
+	layers := "@layer " + strings.Join(pageLayers, ", ") + ";\n@layer " + strings.Join(order, ", ") + ";\n" +
+		boxes + "@layer floe.base {\n" + string(k.BaseCSS()) + "}\n"
 	sheets = append(sheets, Sheet("", []byte(layers)))
 	sheet := func(layer string, css []byte) {
 		if len(css) != 0 {
@@ -123,7 +129,9 @@ func pageStyle(k *kit.Kit, theme string, n named, own []byte) ([]string, error) 
 // what draws it does: without a list's marks, padding or the room between items, in a grid. Each goes in the lowest
 // layer of what draws it, under the layers of depth, so that the part's or look's own rules at any depth set it over.
 // A part's box keeps these four over the page's and the theme's rules for lists; an element that takes a look over the
-// theme's alone, as the template that borrows a look adjusts it (a rule for the items, li or ::marker, reaches both).
+// theme's alone, as the template that borrows a look adjusts it (a rule for the box itself, such as its margin, reaches
+// both; a rule for the items, li or ::marker, reaches those of an element that takes a look, not those of a part's box
+// (they stand in the box), but for the theme's markdown.css, which reaches both).
 // floe's own and fixed, it goes unchecked by css.Check.
 const boxes = "@layer floe.parts.boxes { :is(ul, ol, menu)[data-floe-part] { " + boxList + " } }\n" +
 	"@layer floe.looks.boxes { :is(ul, ol, menu)[data-floe-look] { " + boxList + " } }\n"

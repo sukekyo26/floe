@@ -1,0 +1,5 @@
+:scope { --floe-code-pad: 1.1rem; --floe-code-room: var(--floe-code-pad); }
+:scope:has(> .floe-copy) { --floe-code-room: max(var(--floe-code-pad), var(--floe-copy-room)); }
+:scope .lines { --floe-code-gutter: 0px; }
+/* .names reaches a part that takes the look */
+:scope .names {}
