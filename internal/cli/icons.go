@@ -44,7 +44,7 @@ $XDG_DATA_HOME/floe-icons, or ~/.local/share/floe-icons.`,
 		Args: cobra.MinimumNArgs(1),
 		RunE: func(cmd *cobra.Command, args []string) error {
 			from := make([]icons.Source, len(args)-1)
-			errs := []error{icons.CheckSet(args[0]), icons.CheckSources(args[0], len(from))}
+			errs := []error{icons.CheckFetch(args[0], len(from))}
 			for i, arg := range args[1:] {
 				from[i] = icons.Source{Name: arg, At: arg}
 				if !icons.IsURL(arg) {

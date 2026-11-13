@@ -134,9 +134,9 @@ func CheckSearch(args []string) error {
 	return CheckSet(args[0])
 }
 
-// CheckSources refuses n zips or URLs to fetch set from when the set holds fewer packages: zips of two versions
+// checkSources refuses n zips or URLs to fetch set from when the set holds fewer packages: zips of two versions
 // would mix under one. A set floe cannot fetch is CheckSet's to tell.
-func CheckSources(set string, n int) error {
+func checkSources(set string, n int) error {
 	k := kitOf(set)
 	if k == nil || n <= len(k.packages) {
 		return nil
@@ -346,7 +346,7 @@ type Fetched struct {
 // kept unless force; without force, the index there is read to tell it, and one that cannot be read stops the
 // fetch, as it stops a search.
 func (s *Store) Fetch(ctx context.Context, set string, from []Source, force bool) (Fetched, error) {
-	if err := checkFetch(set, len(from)); err != nil {
+	if err := CheckFetch(set, len(from)); err != nil {
 		return Fetched{}, err //nolint:exhaustruct // nothing fetched
 	}
 	k := kitOf(set)
@@ -400,13 +400,13 @@ func (s *Store) Fetch(ctx context.Context, set string, from []Source, force bool
 	return got, nil
 }
 
-// checkFetch refuses to fetch set from n zips or URLs, before anything is done: a set floe cannot fetch, more zips
+// CheckFetch refuses to fetch set from n zips or URLs, before anything is done: a set floe cannot fetch, more zips
 // than it has packages, or none of a set whose page asks to agree to terms first.
-func checkFetch(set string, n int) error {
+func CheckFetch(set string, n int) error {
 	if err := CheckSet(set); err != nil {
 		return err
 	}
-	if err := CheckSources(set, n); err != nil {
+	if err := checkSources(set, n); err != nil {
 		return err
 	}
 	if k := kitOf(set); n == 0 && k.terms {
