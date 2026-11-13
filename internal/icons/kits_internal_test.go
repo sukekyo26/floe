@@ -167,8 +167,13 @@ func TestCheckSources(t *testing.T) {
 		n    int
 		fail bool
 	}{
-		{"gcp", 0, false}, {"gcp", 2, false}, {"gcp", 3, true},
-		{"aws", 1, false}, {"aws", 2, true}, {"azure", 2, true}, {"nope", 5, false},
+		{"gcp", 0, false},
+		{"gcp", 2, false},
+		{"gcp", 3, true},
+		{"aws", 1, false},
+		{"aws", 2, true},
+		{"azure", 2, true},
+		{"nope", 5, false},
 	} {
 		err := CheckSources(c.set, c.n)
 		if !c.fail {
@@ -185,8 +190,8 @@ func TestCheckSources(t *testing.T) {
 	core := writeZipOf(t, "core.zip", gcpCoreZip)
 	_, err := New(root, false, "").Fetch(context.Background(), "aws", []Source{core, core}, false)
 	wantMistake(t, "Fetch aws of 2", err, "icons_too_many_zips", "floe icons fetch aws <path-or-url>")
-	if entries, _ := os.ReadDir(root); len(entries) != 0 {
-		t.Errorf("a refused fetch left %v", entries)
+	if entries, err := os.ReadDir(root); err != nil || len(entries) != 0 {
+		t.Errorf("a refused fetch left %v, %v", entries, err)
 	}
 }
 
@@ -203,8 +208,8 @@ func TestFetchPacks(t *testing.T) {
 		t.Fatalf("Fetch gcp of both = %+v, %v; want 4 icons", got, err)
 	}
 	for _, name := range []string{"gcp/cloud-run", "gcp/gke", "gcp/category/networking", "gcp/category/ai-machine-learning"} {
-		if _, err := set.Lookup(name); err != nil {
-			t.Errorf("Lookup %s = %v", name, err)
+		if _, lerr := set.Lookup(name); lerr != nil {
+			t.Errorf("Lookup %s = %v", name, lerr)
 		}
 	}
 	for _, c := range []struct {
@@ -217,13 +222,13 @@ func TestFetchPacks(t *testing.T) {
 		{"the same zip twice", []Source{core, core}, "icons_pack_missing", []any{"the product category icons zip"}},
 		{"a zip of another set", []Source{core, other}, "icons_none_in_zip", []any{"Google Cloud", gcp.zips(), gcp.page, gcp.usage()}},
 	} {
-		_, err := New(t.TempDir(), false, "").Fetch(context.Background(), "gcp", c.from, true)
-		wantMistake(t, c.what, err, c.key, c.args...)
+		_, ferr := New(t.TempDir(), false, "").Fetch(context.Background(), "gcp", c.from, true)
+		wantMistake(t, c.what, ferr, c.key, c.args...)
 	}
 	_, err = New(t.TempDir(), false, "").Fetch(context.Background(), "azure", []Source{core}, true)
 	wantMistake(t, "a Google Cloud zip for Azure", err, "icons_none_in_zip", "Azure", azure.zips(), azure.page, azure.usage())
 	notZip := filepath.Join(t.TempDir(), "page.html")
-	if err := os.WriteFile(notZip, []byte("<html>"), 0o600); err != nil {
+	if err = os.WriteFile(notZip, []byte("<html>"), 0o600); err != nil {
 		t.Fatal(err)
 	}
 	_, err = New(t.TempDir(), false, "").Fetch(context.Background(), "gcp", []Source{{Name: "page.html", At: notZip}}, true)
@@ -267,16 +272,16 @@ func TestHashVersion(t *testing.T) {
 	if err != nil || len(first.Version) != 8 {
 		t.Fatalf("Fetch gcp = %+v, %v", first, err)
 	}
-	if again, err := set.Fetch(context.Background(), "gcp", []Source{category, core}, false); err != nil || !again.Already {
-		t.Errorf("Fetch of the zips in the other order = %+v, %v; want already", again, err)
+	if again, aerr := set.Fetch(context.Background(), "gcp", []Source{category, core}, false); aerr != nil || !again.Already {
+		t.Errorf("Fetch of the zips in the other order = %+v, %v; want already", again, aerr)
 	}
 	changed := map[string]string{}
 	for p, c := range gcpCoreZip {
 		changed[p] = c
 	}
 	changed["Unique Icons/GKE/SVG/GKE-512-color.svg"] = "<svg>gke!</svg>"
-	if got, err := set.Fetch(context.Background(), "gcp", []Source{writeZipOf(t, "c2.zip", changed), category}, false); err != nil || got.Already || got.Version == first.Version {
-		t.Errorf("Fetch of an icon changed = %+v, %v; want another version", got, err)
+	if got, cerr := set.Fetch(context.Background(), "gcp", []Source{writeZipOf(t, "c2.zip", changed), category}, false); cerr != nil || got.Already || got.Version == first.Version {
+		t.Errorf("Fetch of an icon changed = %+v, %v; want another version", got, cerr)
 	}
 
 	azureSet := New(t.TempDir(), false, "")
@@ -366,7 +371,7 @@ func TestPackageURLs(t *testing.T) {
 			wantMistake(t, "a page without the category zip", err, "icons_no_package_link", "the product category icons zip", gcp.zips(), gcp.usage())
 			continue
 		}
-		var ats []string
+		ats := make([]string, 0, len(got))
 		for _, s := range got {
 			ats = append(ats, s.At)
 		}

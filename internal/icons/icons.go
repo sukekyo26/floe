@@ -38,7 +38,7 @@ type kit struct {
 	title      string              // the set as messages name it
 	page       string              // the page that links the packages
 	host, size string              // where the packages download from and about how large they are
-	terms      bool                // the page lets its zip be downloaded only after agreeing to terms: Fetch downloads none itself
+	terms      bool                // its page asks to agree to terms before the download: Fetch downloads none
 	packages   []pack              // the zips that hold the set, each needed
 	version    *regexp.Regexp      // the package's version in its URL; nil: the icons' hash is their version
 	short      map[string][]string // the icons a word means as a service's short name
@@ -337,14 +337,11 @@ type Fetched struct {
 // kept unless force; without force, the index there is read to tell it, and one that cannot be read stops the
 // fetch, as it stops a search.
 func (s *Store) Fetch(ctx context.Context, set string, from []Source, force bool) (Fetched, error) {
-	if err := cmp.Or(CheckSet(set), CheckSources(set, len(from))); err != nil {
+	if err := checkFetch(set, len(from)); err != nil {
 		return Fetched{}, err //nolint:exhaustruct // nothing fetched
 	}
 	k := kitOf(set)
 	got := Fetched{Title: k.title, Dir: s.dir(k), Version: "", Count: 0, Already: false}
-	if len(from) == 0 && k.terms {
-		return got, usererr.New("icons_terms", k.title, k.page, k.zips(), k.usage())
-	}
 	// Before the network, so that a store that cannot be written is told for it; made only with the icons.
 	if err := s.checkWritable(); err != nil {
 		return got, err
@@ -394,6 +391,21 @@ func (s *Store) Fetch(ctx context.Context, set string, from []Source, force bool
 	return got, nil
 }
 
+// checkFetch refuses to fetch set from n zips or URLs, before anything is done: a set floe cannot fetch, more zips
+// than it has packages, or none of a set whose page asks to agree to terms first.
+func checkFetch(set string, n int) error {
+	if err := CheckSet(set); err != nil {
+		return err
+	}
+	if err := CheckSources(set, n); err != nil {
+		return err
+	}
+	if k := kitOf(set); n == 0 && k.terms {
+		return usererr.New("icons_terms", k.title, k.page, k.zips(), k.usage())
+	}
+	return nil
+}
+
 // tells reports whether at, the package's URL, tells it is of version: a URL may tell its version, which saves
 // the download; a path or another URL is opened to tell it.
 func (k *kit) tells(at, version string) bool {
@@ -408,12 +420,18 @@ func (k *kit) tells(at, version string) bool {
 // fetch writes the icons of the packages at from to dir.
 func (k *kit) fetch(ctx context.Context, from []Source, dir string) (*index, error) {
 	zips := make([]opened, 0, len(from))
+	closers := make([]io.Closer, 0, len(from))
+	defer func() {
+		for _, c := range closers {
+			_ = c.Close() //nolint:errcheck // read only
+		}
+	}()
 	for _, f := range from {
 		zr, closer, err := k.open(ctx, f)
 		if err != nil {
 			return nil, err
 		}
-		defer closer.Close() //nolint:errcheck // read only
+		closers = append(closers, closer)
 		zips = append(zips, opened{from: f, zr: zr})
 	}
 	return k.extract(zips, dir)
@@ -498,53 +516,19 @@ func (k *kit) zipOf(r io.ReaderAt, size int64, from Source) (*zip.Reader, error)
 // extract writes the set's icons in zips to dir, with their index.json. Its limits count the icons of all the
 // zips together, as one package's.
 func (k *kit) extract(zips []opened, dir string) (*index, error) {
-	idx := &index{Version: "", Sources: make([]string, len(zips)), Icons: map[string]entry{}}
-	light := k.lightOnes(zips)
-	sums := map[string][sha256.Size]byte{}
-	found := make([]bool, len(k.packages))
-	version := ""
-	var written int64
+	x := extraction{
+		k: k, dir: dir, light: k.lightOnes(zips), sums: map[string][sha256.Size]byte{},
+		found: make([]bool, len(k.packages)), version: "", written: 0,
+		idx: &index{Version: "", Sources: make([]string, len(zips)), Icons: map[string]entry{}},
+	}
 	for i, z := range zips {
-		idx.Sources[i] = z.from.At
-		hits := 0
-		for _, f := range z.zr.File {
-			icon, p, ok := k.iconOf(f.Name)
-			if !ok {
-				continue
-			}
-			hits++
-			found[p] = true
-			// A service in two categories (only the background differs) keeps the first with a light variant, or
-			// the first if it has none.
-			if _, kept := idx.Icons[icon.name]; kept || icon.dark && light[icon.name] {
-				continue
-			}
-			if len(idx.Icons) == maxIcons {
-				return nil, usererr.NewAt(z.from.Name, 0, 0, "icons_too_many", maxIcons)
-			}
-			b, err := readEntry(f)
-			if errors.Is(err, errTooLarge) {
-				return nil, usererr.NewAt(z.from.Name, 0, 0, "icons_icon_too_large", f.Name, maxIcon>>20)
-			}
-			if err != nil {
-				return nil, zipMistake(z.from, err)
-			}
-			if written += int64(len(b)); written > maxPackage {
-				return nil, usererr.NewAt(z.from.Name, 0, 0, "icons_written_too_large", maxPackage>>20)
-			}
-			if err = keep(dir, icon, b); err != nil {
-				return nil, err
-			}
-			version = cmp.Or(version, icon.version)
-			idx.Icons[icon.name] = entry{Category: icon.category}
-			sums[icon.name] = sha256.Sum256(b)
-		}
-		if hits == 0 {
-			return nil, usererr.NewAt(z.from.Name, 0, 0, "icons_none_in_zip", k.title, k.zips(), k.page, k.usage())
+		x.idx.Sources[i] = z.from.At
+		if err := x.add(z); err != nil {
+			return nil, err
 		}
 	}
 	var missing []pack
-	for p, ok := range found {
+	for p, ok := range x.found {
 		if !ok {
 			missing = append(missing, k.packages[p])
 		}
@@ -552,11 +536,72 @@ func (k *kit) extract(zips []opened, dir string) (*index, error) {
 	if len(missing) > 0 {
 		return nil, usererr.New("icons_pack_missing", k.title, whats(missing), k.zips(), k.page, k.usage())
 	}
-	idx.Version = version
+	x.idx.Version = x.version
 	if k.version == nil {
-		idx.Version = hashOf(idx.Icons, sums)
+		x.idx.Version = hashOf(x.idx.Icons, x.sums)
 	}
-	return idx, writeIndex(idx, dir)
+	return x.idx, writeIndex(x.idx, dir)
+}
+
+// extraction is what extract has kept so far, of all the zips.
+type extraction struct {
+	k       *kit
+	dir     string
+	idx     *index
+	light   map[string]bool
+	sums    map[string][sha256.Size]byte // each icon's content, for the version of a set without one
+	found   []bool                       // the set's packs any icon was of
+	version string                       // the first icon's version
+	written int64
+}
+
+// add keeps the icons of z; a zip holding none of the set's is told for itself.
+func (x *extraction) add(z opened) error {
+	hits := 0
+	for _, f := range z.zr.File {
+		icon, p, ok := x.k.iconOf(f.Name)
+		if !ok {
+			continue
+		}
+		hits++
+		x.found[p] = true
+		// A service in two categories (only the background differs) keeps the first with a light variant, or the
+		// first if it has none.
+		if _, kept := x.idx.Icons[icon.name]; kept || icon.dark && x.light[icon.name] {
+			continue
+		}
+		if err := x.keep(z.from, f, icon); err != nil {
+			return err
+		}
+	}
+	if hits == 0 {
+		return usererr.NewAt(z.from.Name, 0, 0, "icons_none_in_zip", x.k.title, x.k.zips(), x.k.page, x.k.usage())
+	}
+	return nil
+}
+
+// keep writes the icon of f, an entry of the zip from, within the limits.
+func (x *extraction) keep(from Source, f *zip.File, icon packed) error {
+	if len(x.idx.Icons) == maxIcons {
+		return usererr.NewAt(from.Name, 0, 0, "icons_too_many", maxIcons)
+	}
+	b, err := readEntry(f)
+	if errors.Is(err, errTooLarge) {
+		return usererr.NewAt(from.Name, 0, 0, "icons_icon_too_large", f.Name, maxIcon>>20)
+	}
+	if err != nil {
+		return zipMistake(from, err)
+	}
+	if x.written += int64(len(b)); x.written > maxPackage {
+		return usererr.NewAt(from.Name, 0, 0, "icons_written_too_large", maxPackage>>20)
+	}
+	if err = keep(x.dir, icon, b); err != nil {
+		return err
+	}
+	x.version = cmp.Or(x.version, icon.version)
+	x.idx.Icons[icon.name] = entry{Category: icon.category}
+	x.sums[icon.name] = sha256.Sum256(b)
+	return nil
 }
 
 // hashOf is the version of icons whose package holds none: of their names, categories and contents, in the order
