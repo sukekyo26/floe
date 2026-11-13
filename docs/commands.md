@@ -42,7 +42,7 @@ Flags are in each command's section below.
 | `floe diagram example [kind]` | List the example specs, or print one |
 | `floe diagram guide` | Print how to write a diagram, by hand or as a graph |
 | `floe icons fetch <set> [zip-or-url...]` | Keep an icon set (`aws`, `gcp`, `azure`) for the `icon` parts of diagrams |
-| `floe icons search <word>...` | List the fetched icons whose name contains every word, or a short name such as `alb` |
+| `floe icons search <set> <word>...` | List the icons of a fetched set whose name contains every word, or a short name such as `alb` |
 | `floe completion <shell>` | Print the completion script for a shell (Cobra builtin) |
 | `floe version` | Print the version (also `floe --version`) |
 | `floe help [command]` | Print help (Cobra builtin) |
@@ -393,9 +393,9 @@ Keep an icon set in `FLOE_ICONS_DIR/<set>` for the `icon` parts of diagrams. flo
 |---|---|
 | `--force` | Fetch the icons again even if that version is already there. |
 
-## `floe icons search <word>...`
+## `floe icons search <set> <word>...`
 
-List the fetched icons whose name contains every word (case does not matter), one per line: the name to give an `icon` part (`aws/…`, `gcp/…`, `azure/…`) and its category, tab-separated. A common short name of a service (`alb`, `s3`, `gke`, `aks`, `vnet`) finds the service first, then its resources (`s3 bucket`); floe keeps a short list of these, and any other word is matched only against the names.
+List the icons of the set (`aws`, `gcp`, `azure`) whose name contains every word (case does not matter), one per line: the name to give an `icon` part (`aws/…`, `gcp/…`, `azure/…`) and its category, tab-separated. A common short name of a service (`alb`, `s3`, `gke`, `aks`, `vnet`) finds the service first, then its resources (`s3 bucket`); floe keeps a short list of these, and any other word is matched only against the names. A short name finds the services of the set named alone (`k8s` is EKS in `aws`, GKE in `gcp`, AKS in `azure`). The set is needed (`floe icons search gcp storage`), so that a diagram of one cloud does not take another's icon; a set not fetched is told with how to fetch it.
 
 ---
 
