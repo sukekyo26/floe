@@ -16,3 +16,5 @@
 |---|---|---|---|
 | `--floe-code-pad` | `code`'s root | The room at a line's sides | `1.1rem` |
 | `--floe-code-room` | `code`'s root | The room after a line | `var(--floe-code-pad)` |
+
+The look styles `.lines` and `.names` in a part.

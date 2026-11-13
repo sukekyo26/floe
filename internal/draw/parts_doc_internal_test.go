@@ -35,7 +35,7 @@ func firstColumn(t *testing.T, file, heading string) []string {
 	for n := range root.Descendants() {
 		switch {
 		case n.DataAtom == atom.H2 || n.DataAtom == atom.H3:
-			under = text(n) == heading
+			under = textOf(n) == heading
 		case under && n.DataAtom == atom.Table && table == nil:
 			table = n
 		}
@@ -54,24 +54,13 @@ func firstColumn(t *testing.T, file, heading string) []string {
 			}
 			for c := range td.Descendants() {
 				if c.DataAtom == atom.Code {
-					names = append(names, text(c))
+					names = append(names, textOf(c))
 				}
 			}
 			break
 		}
 	}
 	return names
-}
-
-// text returns the text n holds.
-func text(n *html.Node) string {
-	var b strings.Builder
-	for c := range n.Descendants() {
-		if c.Type == html.TextNode {
-			b.WriteString(c.Data)
-		}
-	}
-	return b.String()
 }
 
 // The table of layers in docs/agents/parts.md, which floe part guide prints, names the layers floe puts a page's CSS

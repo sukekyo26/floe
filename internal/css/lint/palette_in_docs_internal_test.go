@@ -51,7 +51,7 @@ var paletteInDocs = Rule{Name: "palette-in-docs", Check: func(in *Input) []Findi
 	var found []Finding
 	in.Saw()
 	for _, doc := range paletteDocs {
-		rows, err := paletteTable(in.Docs(), doc.file, doc.heading)
+		rows, err := paletteTable(in.Docs(), doc.file, doc.heading, "the palette")
 		if err != "" {
 			found = append(found, Finding{doc.file, 0, "palette-in-docs", err})
 			continue
@@ -94,9 +94,8 @@ type paletteRow struct {
 	hasDefault      bool
 }
 
-// paletteTable returns the rows of the first table after the h2 or h3 of the text heading in the doc file of docs,
-// Markdown, as floe draws it, or why it cannot.
-func paletteTable(docs fs.FS, file, heading string) ([]paletteRow, string) {
+// docTree returns the doc file of docs, Markdown, as floe draws it, as an HTML tree, or why it cannot.
+func docTree(docs fs.FS, file string) (*html.Node, string) {
 	src, err := fs.ReadFile(docs, file)
 	if err != nil {
 		return nil, err.Error()
@@ -109,6 +108,17 @@ func paletteTable(docs fs.FS, file, heading string) ([]paletteRow, string) {
 	if err != nil {
 		return nil, err.Error()
 	}
+	return root, ""
+}
+
+// paletteTable returns the rows of the first table after the h2 or h3 of the text heading in the doc file of docs,
+// Markdown, as floe draws it, or why it cannot. what names the table in the message that asks for it, as "the palette"
+// in "the table of the palette".
+func paletteTable(docs fs.FS, file, heading, what string) ([]paletteRow, string) {
+	root, why := docTree(docs, file)
+	if why != "" {
+		return nil, why
+	}
 	var table *html.Node
 	under := false
 	for n := range root.Descendants() {
@@ -120,7 +130,7 @@ func paletteTable(docs fs.FS, file, heading string) ([]paletteRow, string) {
 		}
 	}
 	if table == nil {
-		return nil, "has no table under the heading " + heading + "; write the table of the palette there"
+		return nil, "has no table under the heading " + heading + "; write the table of " + what + " there"
 	}
 	defaultAt := -1
 	for n := range table.Descendants() {

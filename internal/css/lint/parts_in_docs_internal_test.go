@@ -4,6 +4,9 @@ import (
 	"maps"
 	"slices"
 	"strings"
+
+	"github.com/tdewolff/parse/v2/css"
+	"golang.org/x/net/html/atom"
 )
 
 // partsDocs are the tables of docs/agents/parts.md held to floe's CSS: the heading over each, and the variables of the
@@ -24,13 +27,17 @@ var partsDocs = []struct {
 // own, alone in its selector and in no at-rule: a declaration in @media print, or on :scope:has(> .floe-copy), is not the
 // default.
 // LIMIT: a row of the table that has no --floe-* (the tone's) is not held to the CSS; each table is held to the CSS of its
-// own heading alone (partsDocs): the first to base.css's, the second to code's.
+// own heading alone (partsDocs): the first to base.css's, the second to code's. The tables of "Rows with a mark" (--floe-mark,
+// --floe-mark-gap) and "Variables a part sets" (--floe-pill-wrap) are not held to the CSS either: a part sets those, and the
+// default differs part by part.
+// A third check holds the classes of the section "Code's look": each `.class` that a code span of it names alone is one
+// that a selector of code's part.css, outside a comment, has.
 var partsInDocs = Rule{Name: "parts-in-docs", Check: func(in *Input) []Finding {
 	var found []Finding
 	const doc = "agents/parts.md"
 	for _, table := range partsDocs {
 		set := table.declared(in)
-		rows, err := paletteTable(in.Docs(), doc, table.heading)
+		rows, err := paletteTable(in.Docs(), doc, table.heading, table.heading)
 		if err != "" {
 			found = append(found, Finding{doc, 0, "parts-in-docs", err})
 			continue
@@ -65,8 +72,58 @@ var partsInDocs = Rule{Name: "parts-in-docs", Check: func(in *Input) []Finding {
 			}
 		}
 	}
-	return found
+	return append(found, codeClasses(in, doc)...)
 }}
+
+// codeClasses returns a finding for each class that a code span of the section "Code's look" of the doc names alone and
+// no selector of code's part.css has: such a part that writes the class in its HTML is styled by the look.
+func codeClasses(in *Input, doc string) []Finding {
+	root, why := docTree(in.Docs(), doc)
+	if why != "" {
+		return []Finding{{doc, 0, "parts-in-docs", why}}
+	}
+	have := map[string]bool{}
+	for _, s := range in.Sheets() {
+		if s.Kind != kindPart || s.Owner != "code" {
+			continue
+		}
+		prelude, _, _ := rules(tokensOf(s.Src))
+		for _, p := range prelude {
+			for _, class := range classesOf(p) {
+				have[class] = true
+			}
+		}
+	}
+	var found []Finding
+	under := false
+	for n := range root.Descendants() {
+		switch {
+		case n.DataAtom == atom.H2:
+			under = textOf(n) == "Code's look"
+		case under && n.DataAtom == atom.Code:
+			if span := textOf(n); len(tokensOf([]byte(span))) == 2 && len(classesOf(span)) == 1 {
+				in.Saw()
+				if !have[span] {
+					found = append(found, Finding{doc, 0, "parts-in-docs", "names the class " + span + " in Code's look, which a selector of code's part.css does not have: write the classes it does"})
+				}
+			}
+		}
+	}
+	return found
+}
+
+// classesOf returns the classes (".name") that the selectors in src write, by the lexer's tokens: a delimiter . and the
+// identifier right after it.
+func classesOf(src string) []string {
+	var out []string
+	toks := tokensOf([]byte(src))
+	for i := 0; i+1 < len(toks); i++ {
+		if toks[i].Type == css.DelimToken && string(toks[i].Data) == "." && toks[i+1].Type == css.IdentToken {
+			out = append(out, "."+string(toks[i+1].Data))
+		}
+	}
+	return out
+}
 
 // baseVariables returns the --floe-* that floe's base.css sets on a plain :root or registers by @property, with the value
 // a part reads: the last one written on the root, else the @property's initial-value.
