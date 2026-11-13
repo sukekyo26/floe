@@ -12,6 +12,8 @@ import (
 // The table of names in docs/agents/templates.md, which floe template guide prints, has a row for every name a page.html
 // can use that floe gives: the page's own (.Title, .Lang, .Data, .Calc), the functions floe adds to html/template's, and
 // asset and word, which a template's files give; and no other.
+// LIMIT: .Title, .Lang, .Data, .Calc, asset and word are copied by hand from draw.Draw (which kit cannot import) and the
+// template's own funcs; a name draw comes to pass is not caught. Test it from draw if the names change.
 func TestTemplatesDocNames(t *testing.T) {
 	t.Parallel()
 
