@@ -356,11 +356,10 @@ A tone (one of `tone.json`'s) is marked by `data-floe-tone` on the element drawn
 - Put the hidden text within a row's text (`<li><span><span class="floe-hidden">…</span>…</span></li>`), not as the row's child (it would shift the space between what the row holds).
 - A row that holds no element of text, such as a Markdown box, takes it as its first child and counts its gaps from after it: `:scope > :not(.floe-hidden) + *`.
 - Do not write a word in a `content` string (CSS text does not pass `words.yaml`, so a word stays in one language whatever the page's).
-- Set `--floe-mark` and `--floe-mark-gap` on the part's or look's own root (a value around it, a card's number's, would reach its marks).
 
 | Variable | Set in | What it changes |
 |---|---|---|
-| `--floe-mark` | The root of the part or look that draws the rows | The size of a row's mark: the box it is drawn in |
+| `--floe-mark` | The root of the part or look that draws the rows (a value set around it, such as a card's number's, would reach its marks) | The size of a row's mark: the box it is drawn in |
 | `--floe-mark-gap` | The same | The gap between a row's marker and its text |
 
 floe's parts that draw rows set their own values on their roots: `floe part show numbered part.css` prints one.

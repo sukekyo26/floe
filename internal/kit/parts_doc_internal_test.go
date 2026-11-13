@@ -3,6 +3,7 @@ package kit
 import (
 	"maps"
 	"os"
+	"regexp"
 	"slices"
 	"strings"
 	"testing"
@@ -86,5 +87,65 @@ func TestPartsDocFunctions(t *testing.T) {
 	slices.Sort(got)
 	if !slices.Equal(got, want) {
 		t.Errorf("the table of functions in docs/agents/parts.md names %v, a part.html can call %v: write a row for each, and no other", got, want)
+	}
+}
+
+// docCode returns the code spans of the section under the h2 heading of docs/agents/parts.md, down to the next h2,
+// Markdown as floe draws it.
+func docCode(t *testing.T, heading string) []string {
+	t.Helper()
+
+	src, err := os.ReadFile("../../docs/agents/parts.md")
+	if err != nil {
+		t.Fatal(err)
+	}
+	drawn, err := Markdown(string(src))
+	if err != nil {
+		t.Fatal(err)
+	}
+	root, err := html.Parse(strings.NewReader(string(drawn)))
+	if err != nil {
+		t.Fatal(err)
+	}
+	var spans []string
+	under := false
+	for n := range root.Descendants() {
+		switch {
+		case n.DataAtom == atom.H2:
+			under = textOf(n) == heading
+		case under && n.DataAtom == atom.Code:
+			spans = append(spans, textOf(n))
+		}
+	}
+	return spans
+}
+
+// The class names Code's look of docs/agents/parts.md gives (`.names`, `.lines`) are classes the part code's own CSS
+// styles: a part that writes them in its HTML is styled by that look, so each one the section names, alone in a code
+// span, is in code's part.css.
+func TestPartsDocCodeClasses(t *testing.T) {
+	t.Parallel()
+
+	k, err := Floe()
+	if err != nil {
+		t.Fatal(err)
+	}
+	p, ok := k.Part("code")
+	if !ok {
+		t.Fatal("floe has no part code")
+	}
+	css := string(p.CSS())
+	named := 0
+	for _, span := range docCode(t, "Code's look") {
+		if !regexp.MustCompile(`^\.[a-z][a-z-]*$`).MatchString(span) {
+			continue
+		}
+		named++
+		if !regexp.MustCompile(regexp.QuoteMeta(span) + `[^a-z-]`).MatchString(css) {
+			t.Errorf("docs/agents/parts.md names the class %s in Code's look, which the part code's part.css does not style: write the classes it does", span)
+		}
+	}
+	if named < 5 {
+		t.Errorf("%d classes found in Code's look: the section names the classes of code's heading and lines", named)
 	}
 }
