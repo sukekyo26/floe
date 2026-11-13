@@ -41,7 +41,7 @@ Flags are in each command's section below.
 | `floe diagram inspect <spec.yaml\|data.yaml>...` | Check diagrams, of specs or of data files, and print where each part went |
 | `floe diagram example [kind]` | List the example specs, or print one |
 | `floe diagram guide` | Print how to write a diagram, by hand or as a graph |
-| `floe icons fetch <set> [zip-or-url]` | Keep an icon set (`aws`) for the `icon` parts of diagrams |
+| `floe icons fetch <set> [zip-or-url...]` | Keep an icon set (`aws`, `gcp`, `azure`) for the `icon` parts of diagrams |
 | `floe icons search <word>...` | List the fetched icons whose name contains every word, or a short name such as `alb` |
 | `floe completion <shell>` | Print the completion script for a shell (Cobra builtin) |
 | `floe version` | Print the version (also `floe --version`) |
@@ -374,15 +374,18 @@ Print how to write a diagram, [diagrams.md](agents/diagrams.md), whole: the two 
 
 ---
 
-## `floe icons fetch <set> [zip-or-url]`
+## `floe icons fetch <set> [zip-or-url...]`
 
 Keep an icon set in `FLOE_ICONS_DIR/<set>` for the `icon` parts of diagrams. floe does not ship icons; each machine fetches a set once. The sets:
 
 | Set | Icons |
 |---|---|
 | `aws` | The [AWS Architecture Icons](https://aws.amazon.com/architecture/icons/): the 48px service and resource icons and the 32px group icons. The Icon package zip is about 14MB. |
+| `gcp` | The [Google Cloud product icons](https://cloud.google.com/icons): the core products' own icons (`gcp/cloud-run`) and the product category icons (`gcp/category/networking`), which Google's guide has every other product take. Two zips, about 1MB in all. The legacy icons, which Google has deprecated, are not fetched. |
+| `azure` | The [Azure architecture icons](https://learn.microsoft.com/azure/architecture/icons/) (`azure/virtual-machine`). Their page lets the zip be downloaded only after agreeing to their terms (use in architecture diagrams, training materials and documentation; do not change their shape; do not use them for your own product or service), so floe does not download it: agree, download the zip, and pass it or its URL. About 1MB. |
 
-- Without a zip, the set's package is found on its official page and downloaded. A zip downloaded in a browser, or its URL, can be given instead; a relative path is resolved against the working directory.
+- Without a zip, the set's packages are found on its official page and downloaded (not for `azure`). Zips downloaded in a browser, or their URLs, can be given instead, one for each package of the set: `gcp` takes both of its zips, in either order. A relative path is resolved against the working directory.
+- The version of `gcp` and `azure`, whose packages hold none, is a hash of their icons.
 - A version already there is kept. `--force` fetches it again.
 - The icons are replaced as a whole: if that fails, the previous ones stay.
 
@@ -392,7 +395,7 @@ Keep an icon set in `FLOE_ICONS_DIR/<set>` for the `icon` parts of diagrams. flo
 
 ## `floe icons search <word>...`
 
-List the fetched icons whose name contains every word (case does not matter), one per line: the name to give an `icon` part (`aws/…`) and its category, tab-separated. A common short name of a service (`alb`, `s3`, `ecs`) finds the service first, then its resources (`s3 bucket`); floe keeps a short list of these, and any other word is matched only against the names.
+List the fetched icons whose name contains every word (case does not matter), one per line: the name to give an `icon` part (`aws/…`, `gcp/…`, `azure/…`) and its category, tab-separated. A common short name of a service (`alb`, `s3`, `gke`, `aks`, `vnet`) finds the service first, then its resources (`s3 bucket`); floe keeps a short list of these, and any other word is matched only against the names.
 
 ---
 
@@ -425,7 +428,7 @@ List the fetched icons whose name contains every word (case does not matter), on
 |---|---|
 | `FLOE_DIR` | Where pages are stored. Defaults to `$XDG_DATA_HOME/floe`, else `~/.local/share/floe`. |
 | `FLOE_PORT` | The port (default `7325`). A decimal number from 1 to 65535. |
-| `FLOE_ICONS_DIR` | Where `floe icons fetch` keeps icon sets, a directory each (`aws`). Defaults to `$XDG_DATA_HOME/floe-icons`, else `~/.local/share/floe-icons`. |
+| `FLOE_ICONS_DIR` | Where `floe icons fetch` keeps icon sets, a directory each (`aws`, `gcp`, `azure`). Defaults to `$XDG_DATA_HOME/floe-icons`, else `~/.local/share/floe-icons`. |
 | `FLOE_TEMPLATES_DIR` | Where templates of your own are, a directory each ([templates.md](agents/templates.md)). Defaults to `$XDG_CONFIG_HOME/floe/templates`, else `~/.config/floe/templates`. |
 | `FLOE_PARTS_DIR` | Where parts, looks and shared schemas of your own are ([parts.md](agents/parts.md)). Defaults to `$XDG_CONFIG_HOME/floe/parts`, else `~/.config/floe/parts`. |
 | `FLOE_THEMES_DIR` | Where themes of your own are, a directory each ([themes.md](agents/themes.md)). Defaults to `$XDG_CONFIG_HOME/floe/themes`, else `~/.config/floe/themes`. |
