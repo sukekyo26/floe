@@ -286,8 +286,39 @@ func TestDiagramGuidePalette(t *testing.T) {
 	checkRawRow(t, diagramGuide, string(palette))
 }
 
-// checkRawRow checks the section of the doc at path that is about the part raw: the variables it names for the colours of
-// raw SVG.
+// rawNotTaken are the colour variables of default's palette.css that the doc's table of colours for raw SVG leaves out:
+// the series of the part chart, the panel of the part code, the pattern of the page's background, and shadows.
+var rawNotTaken = []string{"--chart-1", "--chart-2", "--chart-3", "--chart-4", "--code-bg", "--code-fg", "--code-prompt", "--code-add", "--code-del", "--page-bg", "--shadow"}
+
+// paletteColours returns the variables of palette.css that hold a colour: a value of a hex colour, rgb() or color-mix(),
+// or one that is another colour variable (`--on-fill: var(--surface)`).
+// LIMIT: a faces, size or rule variable (`--font`, `--radius`, `--rule`) is none, by its value, so a variable of
+// another form of colour (hsl(), a named colour) is not found until the form is added here.
+func paletteColours(palette string) []string {
+	decl := regexp.MustCompile(`(--[a-z0-9]+(?:-[a-z0-9]+)*):\s*([^;]+);`)
+	values := map[string]string{}
+	for _, m := range decl.FindAllStringSubmatch(palette, -1) {
+		values[m[1]] = strings.TrimSpace(m[2])
+	}
+	isColour := func(v string) bool {
+		return strings.HasPrefix(v, "#") || strings.HasPrefix(v, "rgb(") || strings.HasPrefix(v, "color-mix(")
+	}
+	var colours []string
+	for name, v := range values {
+		if ref, ok := strings.CutPrefix(v, "var("); ok {
+			v = values[strings.TrimSuffix(ref, ")")]
+		}
+		if isColour(v) {
+			colours = append(colours, name)
+		}
+	}
+	slices.Sort(colours)
+	return colours
+}
+
+// checkRawRow checks the section of the doc at path that is about the part raw: the table of the variables it names for
+// the colours of raw SVG is the colours of default's palette.css, but those left out (rawNotTaken), and every variable
+// the section writes is one palette.css defines, bar the theme's fills and a tone's.
 func checkRawRow(t *testing.T, path, palette string) {
 	t.Helper()
 
@@ -303,11 +334,24 @@ func checkRawRow(t *testing.T, path, palette string) {
 	if strings.Contains(section, "`-soft`") {
 		t.Errorf("%s: the raw section writes \"their `-soft`\": only some colours have one, name each", path)
 	}
-	named := regexp.MustCompile("--[a-z]+(?:-[a-z]+)*").FindAllString(section, -1)
-	if len(named) < 16 {
-		t.Fatalf("%s: the raw section names %d variables: %q", path, len(named), section)
+	var table []string
+	for line := range strings.Lines(section) {
+		if cell, ok := strings.CutPrefix(line, "| `--"); ok {
+			first, _, _ := strings.Cut("--"+cell, "|")
+			table = append(table, regexp.MustCompile("--[a-z]+(?:-[a-z]+)*").FindAllString(first, -1)...)
+		}
 	}
-	for _, v := range named {
+	slices.Sort(table)
+	var want []string
+	for _, v := range paletteColours(palette) {
+		if !slices.Contains(rawNotTaken, v) {
+			want = append(want, v)
+		}
+	}
+	if !slices.Equal(table, want) {
+		t.Errorf("%s: the raw section's table names the colours %v, default's palette.css has %v (but %v): write a row for each, and no other", path, table, want, rawNotTaken)
+	}
+	for _, v := range regexp.MustCompile("--[a-z]+(?:-[a-z]+)*").FindAllString(section, -1) {
 		defined := strings.Contains(palette, " "+v+":")
 		switch {
 		case strings.HasPrefix(v, "--tone"):

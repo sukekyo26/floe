@@ -231,7 +231,7 @@ A line without arrows. It may cross other parts, but not leave the canvas.
 | Key | Takes | Default | What it does |
 |---|---|---|---|
 | `x1` `y1` `x2` `y2` | numbers, required | — | The ends |
-| `kind` | `line`, `lifeline`, `divider` | `line` | The look: `lifeline` is the dotted line down from a participant of a sequence diagram, and `divider` a dashed line across the diagram that marks a change of scene |
+| `kind` | `line`, `lifeline`, `divider` | `line` | The look: `lifeline` is the dashed line down from a participant of a sequence diagram, and `divider` a dashed line across the diagram that marks a change of scene |
 
 ### tree
 
@@ -398,7 +398,7 @@ A `graph` specifies only how its boxes, icons and groups are joined, and floe pl
 
 - On a `box`, edges leave and enter at separate points of its side, so that no two share a run. A `box` widens (with `right`, grows taller) for many edges.
 - Edges of one graph may cross one another. An edge of a graph that crosses another part is checked as any edge.
-- An icon stays 48 square however many edges reach it. Do not put more than four edges on one side of an icon: five arrowheads touch, and eight overlap.
+- An icon stays 48 square however many edges reach it. Do not put more than three edges on one side of an icon: four arrowheads touch at their bases, and five or more overlap.
 
 ### Labels
 
