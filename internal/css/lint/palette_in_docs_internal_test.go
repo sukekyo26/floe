@@ -25,7 +25,7 @@ var paletteDocs = []struct{ file, heading string }{
 // LIMIT: default's palette.css alone is read; a variable only a theme sets is the theme's own, and the docs promise none
 // of them but those the table names. The table names more than the default palette (a theme's --<tone>-fill, the
 // shadow's, the tone's), so a name of it is not held to the palette.
-// A table with a Default column (the theme guide's) is held to the values too: the code in a row's Default cell is the
+// A table with a Default column (both guides') is held to the values too: the code in a row's Default cell is the
 // value of each of its names, in order, as default's palette.css writes it, whitespace aside.
 var paletteInDocs = Rule{Name: "palette-in-docs", Check: func(in *Input) []Finding {
 	var set []string
