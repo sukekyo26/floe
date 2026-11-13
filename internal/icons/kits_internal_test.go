@@ -343,6 +343,11 @@ func TestPackageURLs(t *testing.T) {
 				`<a href="https://s.example/misc/core-products-icons.zip">`,
 			[]string{"https://s.example/misc/core-products-icons.zip", "https://s.example/misc/category-icons.zip"},
 		},
+		{
+			`<a href="https://s.example/1/core-products-icons.zip"><a href="https://s.example/1/category-icons.zip">` +
+				`<a href="https://s.example/2/category-icons.zip"><a href="https://s.example/2/core-products-icons.zip">`,
+			[]string{"https://s.example/1/core-products-icons.zip", "https://s.example/1/category-icons.zip"},
+		},
 		{`<a href="https://s.example/misc/core-products-icons.zip"><a href="/misc/google-cloud-legacy-icons.zip">`, nil},
 	} {
 		var agent atomic.Value
