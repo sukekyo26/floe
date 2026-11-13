@@ -286,7 +286,8 @@ func TestDiagramGuidePalette(t *testing.T) {
 	checkRawRow(t, diagramGuide, string(palette))
 }
 
-// checkRawRow checks the row of the part raw in the doc at path.
+// checkRawRow checks the section of the doc at path that is about the part raw: the variables it names for the colours of
+// raw SVG.
 func checkRawRow(t *testing.T, path, palette string) {
 	t.Helper()
 
@@ -294,18 +295,17 @@ func checkRawRow(t *testing.T, path, palette string) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	var row string
-	for line := range strings.Lines(string(doc)) {
-		if strings.HasPrefix(line, "| `raw` |") {
-			row = line
-		}
+	_, after, ok := strings.Cut(string(doc), "\n### raw\n")
+	if !ok {
+		t.Fatalf("%s has no section \"raw\"", path)
 	}
-	if strings.Contains(row, "`-soft`") {
-		t.Errorf("%s: the raw row writes \"their `-soft`\": only some colours have one, name each", path)
+	section, _, _ := strings.Cut(after, "\n## ")
+	if strings.Contains(section, "`-soft`") {
+		t.Errorf("%s: the raw section writes \"their `-soft`\": only some colours have one, name each", path)
 	}
-	named := regexp.MustCompile("--[a-z]+(?:-[a-z]+)*").FindAllString(row, -1)
+	named := regexp.MustCompile("--[a-z]+(?:-[a-z]+)*").FindAllString(section, -1)
 	if len(named) < 16 {
-		t.Fatalf("%s: the raw row names %d variables: %q", path, len(named), row)
+		t.Fatalf("%s: the raw section names %d variables: %q", path, len(named), section)
 	}
 	for _, v := range named {
 		defined := strings.Contains(palette, " "+v+":")
@@ -315,10 +315,10 @@ func checkRawRow(t *testing.T, path, palette string) {
 		case strings.HasSuffix(v, "-fill") && v != "--on-fill":
 			// A theme's own fill, named to be left: palette.css does not define it.
 			if defined {
-				t.Errorf("%s: the raw row says %s is not in default's palette.css, which defines it", path, v)
+				t.Errorf("%s: the raw section says %s is not in default's palette.css, which defines it", path, v)
 			}
 		case !defined:
-			t.Errorf("%s: the raw row names %s, which default's palette.css does not define", path, v)
+			t.Errorf("%s: the raw section names %s, which default's palette.css does not define", path, v)
 		}
 	}
 }
