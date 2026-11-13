@@ -14,4 +14,3 @@ paths:
 - **図は自分の地を塗る**：部品 diagram の枠は地を `--bg`、字を `--fg` で塗り、下を隠すものも `--bg` で塗る。図の外の地は読まない。`TestRenderedDiagramGround`
 - **ランダムのテストの個数**：race の時間を占めるランダムのテストの個数は `tries` で読む（`only` で図を名指すものは減らさない）。race のときだけ 1/5 になり、全部の個数は race なしのジョブが走らせる。全部の個数で測った下限と割合は全部の個数のときだけ見て、上限は 1/5 でも見る
 - **raw の色は default の palette.css の色の変数**：raw の SVG の色は、`floe theme show default palette.css` が定義する色の変数（docs/agents/diagrams.md の raw の節の表が挙げる）と、raw の中の `data-floe-tone` の下の `var(--tone)`・`--tone-soft`・`--tone-fill` で書かせる。部品の class・`data-floe-look`・`data-floe-part`・テーマだけの変数（`--*-fill`）は勧めない。`TestRenderedFragment`（raw の色を測る）
-- **raw の色の表は default の palette の変数と照らす** [raw-in-docs]：docs/agents/diagrams.md の raw の節の「Variable」の表は、default の palette.css の変数の全部から、raw に取らせないもの（字・大きさ・角・影・chart の系列・code の盤・ページの背景の模様。規則の `Allow` が名指し、理由を書く）を除いたものを、名前を字のまま書く（raw が頼る約束なので）。palette に変数が増えたら、表に足すか `Allow` に足すかを、テストが落ちて決めさせる。`TestLintRule/raw-in-docs`
