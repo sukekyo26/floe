@@ -1,7 +1,7 @@
 # AWS architecture laid out by floe: a web app in two availability zones, with no coordinate but the graph's x and y.
 # A service is an icon node of the graph, its name below it; a group of them takes an icon in its frame's corner.
 # The edges at a side of an icon end at the points that part it equally: one in its middle, two at its thirds, and so
-# on. Find icon names with floe icons search <word>. Write the part icon, with x and y, where you place icons yourself.
+# on. Find icon names with floe icons search aws <word>. Write the part icon, with x and y, where you place icons yourself.
 title: { en: 'A web app on AWS in two availability zones', ja: '2 つのアベイラビリティゾーンで動く AWS の Web アプリ' }
 parts:
   - graph:

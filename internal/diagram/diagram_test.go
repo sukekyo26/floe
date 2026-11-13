@@ -434,7 +434,7 @@ func TestLayoutMistakes(t *testing.T) {
 			"  - circle: { name: c, cx: 100, cy: 100, r: 60 }\n  - circle: { name: c, cx: 300, cy: 100, r: 5 }\n  - label: { text: x, in: [c] }",
 			`s.yaml:6:3: the name "c" is given before: give each part, row and node its own name`,
 		},
-		{"  - icon: { icon: aws/amazon-ec2, x: 10, y: 10 }", `s.yaml:5:3: icon "aws/amazon-ec2": no icon "aws/amazon-ec2" (search with: floe icons search <word>)`},
+		{"  - icon: { icon: aws/amazon-ec2, x: 10, y: 10 }", `s.yaml:5:3: icon "aws/amazon-ec2": no icon "aws/amazon-ec2" (search with: floe icons search aws <word>)`},
 	} {
 		if _, got := draw(t, head+c.parts+"\n", render("en")); got != c.want {
 			t.Errorf("%s\n  told %q\n  want %q", c.parts, got, c.want)
@@ -1915,12 +1915,12 @@ func TestGraphIconMistakes(t *testing.T) {
 		tail = " } ] }\n"
 	)
 	for _, c := range []struct{ parts, want string }{
-		{node + "icon: { name: a, icon: aws/nope, label: A }" + tail, `s.yaml:3:37: icon "a": no icon "aws/nope" (search with: floe icons search <word>)`},
-		{node + "icon: { name: a, icon: nope, label: A }" + tail, `s.yaml:3:37: icon "a": "nope" needs its icon set in front (aws, gcp, azure), like aws/amazon-ec2 (search with: floe icons search <word>)`},
+		{node + "icon: { name: a, icon: aws/nope, label: A }" + tail, `s.yaml:3:37: icon "a": no icon "aws/nope" (search with: floe icons search aws <word>)`},
+		{node + "icon: { name: a, icon: nope, label: A }" + tail, `s.yaml:3:37: icon "a": "nope" needs its icon set in front (aws, gcp, azure), like aws/amazon-ec2 (search with: floe icons search <set> <word>)`},
 		{node + "icon: { name: a, icon: aws/aws-lambda, tone: warn }" + tail, "s.yaml:3:82: additional properties 'tone' not allowed"},
 		{node + "icon: { icon: aws/aws-lambda }" + tail, "s.yaml:3:37: missing property 'name'"},
 		{node + `icon: { name: a, icon: "" }` + tail, "s.yaml:3:60: minLength: got 0, want 1"},
-		{node + "group: { name: g, icon: aws/nope, nodes: [ { box: { name: a, rows: [A] } } ] }" + tail, `s.yaml:3:37: the icon of frame "g": no icon "aws/nope" (search with: floe icons search <word>)`},
+		{node + "group: { name: g, icon: aws/nope, nodes: [ { box: { name: a, rows: [A] } } ] }" + tail, `s.yaml:3:37: the icon of frame "g": no icon "aws/nope" (search with: floe icons search aws <word>)`},
 		{node + `group: { name: g, icon: "", nodes: [ { box: { name: a, rows: [A] } } ] }` + tail, "s.yaml:3:61: minLength: got 0, want 1"},
 		{"  - box: { x: 0, y: 0, name: a, icon: aws/aws-lambda, rows: [A] }\n", "s.yaml:3:39: additional properties 'icon' not allowed"},
 	} {

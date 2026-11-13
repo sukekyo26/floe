@@ -75,18 +75,21 @@ $XDG_DATA_HOME/floe-icons, or ~/.local/share/floe-icons.`,
 
 func (a *app) iconsSearchCmd() *cobra.Command {
 	return &cobra.Command{
-		Use:   "search <word>...",
-		Short: "List the fetched icons whose name contains every word, or a short name such as alb",
-		Long: `List the fetched icons whose name contains every word, one per line as the name to give
-an icon part (aws/…, gcp/…, azure/…) and its category, tab-separated. A common short name of a service (alb, s3,
-ecs) finds the service first, then its resources.`,
-		Args: cobra.MinimumNArgs(1),
+		Use:   "search <set> <word>...",
+		Short: "List the icons of a fetched set whose name contains every word, or a short name such as alb",
+		Long: `List the icons of the set (aws, gcp, azure) whose name contains every word, one per line as the
+name to give an icon part (aws/…, gcp/…, azure/…) and its category, tab-separated. A common short name of
+a service in the set (alb, s3, gke, aks, vnet) finds the service first, then its resources. A set not
+fetched is told with how to fetch it.
+
+  floe icons search gcp storage`,
+		Args: cobra.ArbitraryArgs,
 		RunE: func(_ *cobra.Command, args []string) error {
-			at, err := a.iconsDir()
-			if err != nil {
-				return err
+			at, dirErr := a.iconsDir()
+			if err := usererr.Collect(icons.CheckSearch(args), dirErr); err != nil {
+				return err //nolint:wrapcheck // mistakes for the user as they are
 			}
-			hits, err := iconsIn(at).Search(args)
+			hits, err := iconsIn(at).Search(args[0], args[1:])
 			if err != nil {
 				return err //nolint:wrapcheck // already says what failed
 			}

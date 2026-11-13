@@ -103,9 +103,8 @@ func TestFetchAndSearch(t *testing.T) {
 	dir := filepath.Join(root, "aws")
 	// Before a fetch, a search and a lookup say how to fetch.
 	notFetched := "floe: AWS icons are not in " + dir + `; run "floe icons fetch aws" (downloads about 14MB from aws.amazon.com) and try again`
-	_, err := set.Search([]string{"lambda"})
-	// The other sets, not fetched either, follow.
-	if got := told(err); !strings.HasPrefix(got, notFetched+"\n") {
+	_, err := set.Search("aws", []string{"lambda"})
+	if got := told(err); got != notFetched {
 		t.Errorf("Search before a fetch = %s, want %s", got, notFetched)
 	}
 	_, err = set.Lookup("aws/aws-lambda")
@@ -126,7 +125,7 @@ func TestFetchAndSearch(t *testing.T) {
 		t.Errorf("Fetch --force = %+v, want 8 fetched", got)
 	}
 
-	hits, err := set.Search([]string{"LAMBDA"})
+	hits, err := set.Search("aws", []string{"LAMBDA"})
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -134,15 +133,15 @@ func TestFetchAndSearch(t *testing.T) {
 	if !reflect.DeepEqual(hits, wantHits) {
 		t.Errorf("Search lambda = %v, want %v", hits, wantHits)
 	}
-	if hits, serr := set.Search([]string{"lambda", "function"}); serr != nil || len(hits) != 1 {
+	if hits, serr := set.Search("aws", []string{"lambda", "function"}); serr != nil || len(hits) != 1 {
 		t.Errorf("Search lambda function = %v, %v, want the function only", hits, serr)
 	}
 	// A name as a spec writes it finds itself.
-	if hits, serr := set.Search([]string{"aws/aws-lambda"}); serr != nil || len(hits) != 1 {
+	if hits, serr := set.Search("aws", []string{"aws/aws-lambda"}); serr != nil || len(hits) != 1 {
 		t.Errorf("Search aws/aws-lambda = %v, %v, want aws/aws-lambda", hits, serr)
 	}
-	_, err = set.Search([]string{"lambda", "nothing"})
-	if want := `floe: no icon name contains all of "lambda" "nothing"; try fewer words, or a word of the full name (floe icons search <set> lists a set's icons)`; told(err) != want {
+	_, err = set.Search("aws", []string{"lambda", "nothing"})
+	if want := `floe: no aws icon name contains all of "lambda" "nothing"; try fewer words, or a word of the full name (floe icons search aws aws lists every one)`; told(err) != want {
 		t.Errorf("Search without a hit = %s, want %s", told(err), want)
 	}
 
@@ -311,7 +310,7 @@ func TestSettingTold(t *testing.T) {
 	}
 	for _, root := range []string{file, filepath.Join(file, "sub")} {
 		set := icons.New(root, false, "FLOE_ICONS_DIR")
-		if _, err := set.Search([]string{"x"}); told(err) != want(root, "not a directory") {
+		if _, err := set.Search("aws", []string{"x"}); told(err) != want(root, "not a directory") {
 			t.Errorf("Search in %s = %s", root, told(err))
 		}
 		if _, err := set.Fetch(context.Background(), "aws", []icons.Source{zip}, false); told(err) != want(root, "not a directory") {
@@ -411,7 +410,7 @@ func TestFetchRefusals(t *testing.T) {
 	zipFile := local(writeZip(t, "Icon-package.zip", packageFiles))
 	want := index + `:2:14: cannot be read (json: cannot unmarshal number into Go struct field index.version of type string); ` +
 		`run "floe icons fetch aws --force" to fetch the icons again`
-	_, serr := set.Search([]string{"lambda"})
+	_, serr := set.Search("aws", []string{"lambda"})
 	_, ferr := set.Fetch(context.Background(), "aws", []icons.Source{zipFile}, false)
 	for _, err := range []error{serr, ferr} {
 		if told(err) != want {
@@ -477,7 +476,7 @@ func TestBrokenIndex(t *testing.T) {
 		if err := os.WriteFile(index, []byte(c.index), 0o600); err != nil {
 			t.Fatal(err)
 		}
-		if _, err := icons.New(filepath.Dir(dir), false, "").Search([]string{"x"}); told(err) != index+c.want {
+		if _, err := icons.New(filepath.Dir(dir), false, "").Search("aws", []string{"x"}); told(err) != index+c.want {
 			t.Errorf("index %s = %s, want %s", c.index, told(err), index+c.want)
 		}
 	}
@@ -489,7 +488,7 @@ func TestBrokenIndex(t *testing.T) {
 	if err := syscall.Mkfifo(filepath.Join(fifoRoot, "aws", "index.json"), 0o600); err != nil {
 		t.Fatal(err)
 	}
-	if _, err := icons.New(fifoRoot, false, "").Search([]string{"x"}); told(err) != filepath.Join(fifoRoot, "aws", "index.json")+
+	if _, err := icons.New(fifoRoot, false, "").Search("aws", []string{"x"}); told(err) != filepath.Join(fifoRoot, "aws", "index.json")+
 		`: is neither a regular file nor a directory (a FIFO, a device or the like), which floe does not open; run "floe icons fetch aws --force" to fetch the icons again` {
 		t.Errorf("an index that is a FIFO = %s", told(err))
 	}
@@ -498,7 +497,7 @@ func TestBrokenIndex(t *testing.T) {
 	if err := os.WriteFile(filepath.Join(fileSet, "aws"), nil, 0o600); err != nil {
 		t.Fatal(err)
 	}
-	if _, err := icons.New(fileSet, false, "").Search([]string{"x"}); told(err) != filepath.Join(fileSet, "aws", "index.json")+
+	if _, err := icons.New(fileSet, false, "").Search("aws", []string{"x"}); told(err) != filepath.Join(fileSet, "aws", "index.json")+
 		`: cannot be read (not a directory); run "floe icons fetch aws --force" to fetch the icons again` {
 		t.Errorf("a set's directory that is a file = %s", told(err))
 	}
@@ -507,13 +506,13 @@ func TestBrokenIndex(t *testing.T) {
 	if err := os.WriteFile(file, nil, 0o600); err != nil {
 		t.Fatal(err)
 	}
-	if _, err := icons.New(file, false, "").Search([]string{"x"}); told(err) != file+"/aws/index.json: not a directory" {
+	if _, err := icons.New(file, false, "").Search("aws", []string{"x"}); told(err) != file+"/aws/index.json: not a directory" {
 		t.Errorf("a root that is a file = %s", told(err))
 	}
 	// A store under a file is told as it is (the default one is none, which cli tells), and a fetch into one
 	// stops before the network (the context is done); one failing at the network makes nothing.
 	under := filepath.Join(file, "x")
-	if _, err := icons.New(under, false, "").Search([]string{"x"}); told(err) != under+"/aws/index.json: not a directory" {
+	if _, err := icons.New(under, false, "").Search("aws", []string{"x"}); told(err) != under+"/aws/index.json: not a directory" {
 		t.Errorf("a root under a file = %s", told(err))
 	}
 	done, cancel := context.WithCancel(context.Background())

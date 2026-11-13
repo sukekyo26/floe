@@ -6,6 +6,7 @@ import (
 	"bytes"
 	"context"
 	"errors"
+	"fmt"
 	"net/http"
 	"net/http/httptest"
 	"os"
@@ -403,6 +404,78 @@ func TestNewIconOfStaysInside(t *testing.T) {
 			if icon, _, ok := k.iconOf(path); ok && !filepath.IsLocal(icon.name+".svg") {
 				t.Errorf("%s: %s keeps %s", k.name, path, icon.name)
 			}
+		}
+	}
+}
+
+// A search looks in the set named alone, its short names in that set's table; a set not fetched is told with how to
+// fetch it, once in all that is drawn.
+func TestSearchSet(t *testing.T) {
+	t.Parallel()
+
+	store := New(t.TempDir(), false, "")
+	store.indexes["aws"] = &index{Version: "1", Sources: nil, Icons: map[string]entry{
+		"amazon-elastic-kubernetes-service": {Category: "Containers"},
+		"amazon-simple-storage-service":     {Category: "Storage"},
+	}}
+	store.indexes["gcp"] = &index{Version: "1", Sources: nil, Icons: map[string]entry{
+		"gke": {Category: "Core product"}, "cloud-storage": {Category: "Core product"},
+	}}
+	for _, c := range []struct {
+		set, word string
+		want      []string
+	}{
+		{"aws", "k8s", []string{"aws/amazon-elastic-kubernetes-service"}},
+		{"gcp", "k8s", []string{"gcp/gke"}},
+		{"gcp", "storage", []string{"gcp/cloud-storage"}},
+		{"aws", "storage", []string{"aws/amazon-simple-storage-service"}},
+	} {
+		hits, err := store.Search(c.set, []string{c.word})
+		got := make([]string, 0, len(hits))
+		for _, h := range hits {
+			got = append(got, h.Name)
+		}
+		if err != nil || !slices.Equal(got, c.want) {
+			t.Errorf("Search %s %s = %v, %v; want %v", c.set, c.word, got, err, c.want)
+		}
+	}
+	_, err := store.Search("gcp", []string{"nothing"})
+	wantMistake(t, "Search gcp nothing", err, "icons_no_match", "gcp")
+	_, err = store.Search("azure", []string{"vm"})
+	wantMistake(t, "Search of azure not fetched", err, "icons_not_fetched_terms", "Azure", azure.usage())
+	var e *usererr.Error
+	if errors.As(err, &e) && e.PlacedAt("page.yaml", 1, 1).File() != "" {
+		t.Errorf("Search of a set not fetched = %v, not a mistake of the whole output", err)
+	}
+	_, err = store.Search("ibm", []string{"x"})
+	wantMistake(t, "Search ibm", err, "icons_unknown_set", "ibm")
+}
+
+// The arguments of a search are a set and a word or more: fewer is one mistake, which names the sets; an unknown set
+// is told only when the words are there.
+func TestCheckSearch(t *testing.T) {
+	t.Parallel()
+
+	for _, c := range []struct {
+		args []string
+		key  string
+	}{
+		{nil, "icons_search_words"},
+		{[]string{"storage"}, "icons_search_words"},
+		{[]string{"gcp"}, "icons_search_words"},
+		{[]string{"ibm", "x"}, "icons_unknown_set"},
+		{[]string{"gcp", "storage"}, ""},
+	} {
+		err := CheckSearch(c.args)
+		if c.key == "" {
+			if err != nil {
+				t.Errorf("CheckSearch %v = %v", c.args, err)
+			}
+			continue
+		}
+		wantMistake(t, fmt.Sprint("CheckSearch ", c.args), err, c.key)
+		if e := (*usererr.Error)(nil); c.key == "icons_search_words" && errors.As(err, &e) && !slices.Contains(e.Args, any("aws, gcp, azure")) {
+			t.Errorf("CheckSearch %v names the sets %v", c.args, e.Args)
 		}
 	}
 }

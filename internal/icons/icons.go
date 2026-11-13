@@ -125,6 +125,15 @@ func CheckSet(set string) error {
 	return nil
 }
 
+// CheckSearch refuses the arguments of a search, a set and the words to search it for: without both, that alone is
+// told, with the sets; else a set floe does not know.
+func CheckSearch(args []string) error {
+	if len(args) < 2 {
+		return usererr.New("icons_search_words", strings.Join(Sets(), ", "))
+	}
+	return CheckSet(args[0])
+}
+
 // CheckSources refuses n zips or URLs to fetch set from when the set holds fewer packages: zips of two versions
 // would mix under one. A set floe cannot fetch is CheckSet's to tell.
 func CheckSources(set string, n int) error {
@@ -705,44 +714,38 @@ type Hit struct {
 	Category string
 }
 
-// Search returns the icons of the fetched sets whose name (set/name) contains every word, or, for a word that is a
-// short name (alb, s3), the name of an icon it means: the icons a word means first, then the rest, each by name, so
-// that a first line is what was asked for. With no set fetched, it tells each not fetched.
-func (s *Store) Search(words []string) ([]Hit, error) {
+// Search returns the icons of set whose name (set/name) contains every word, or, for a word that is a short name of
+// the set (alb, gke), the name of an icon it means: the icons a word means first, then the rest, each by name, so
+// that a first line is what was asked for. A set not fetched is told so, with how to fetch it.
+func (s *Store) Search(set string, words []string) ([]Hit, error) {
+	if err := CheckSet(set); err != nil {
+		return nil, err
+	}
+	k := kitOf(set)
+	idx, err := s.loadIndex(k)
+	if err != nil {
+		return nil, err
+	}
 	terms := make([]string, len(words))
 	for i, w := range words {
 		terms[i] = strings.ToLower(w)
 	}
-	var missing usererr.List
 	// LIMIT: short names are kept by hand; a renamed icon loses its short name, unnoticed (no real set in CI).
 	var meant, rest []Hit
-	for _, k := range kits {
-		idx, err := s.readIndex(k)
-		if err != nil {
-			return nil, err
-		}
-		if idx == nil {
-			missing = append(missing, s.notFetched(k))
+	for name, e := range idx.Icons {
+		// Matched as printed, set and all, so that a name copied from a spec finds itself.
+		full := k.name + "/" + name
+		if slices.ContainsFunc(terms, func(t string) bool { return !strings.Contains(full, t) && !k.holdsMeant(t, name) }) {
 			continue
 		}
-		for name, e := range idx.Icons {
-			// Matched as printed, set and all, so that a name copied from a spec finds itself.
-			full := k.name + "/" + name
-			if slices.ContainsFunc(terms, func(t string) bool { return !strings.Contains(full, t) && !k.holdsMeant(t, name) }) {
-				continue
-			}
-			if slices.ContainsFunc(terms, func(t string) bool { return slices.Contains(k.short[t], name) }) {
-				meant = append(meant, Hit{Name: full, Category: e.Category})
-			} else {
-				rest = append(rest, Hit{Name: full, Category: e.Category})
-			}
+		if slices.ContainsFunc(terms, func(t string) bool { return slices.Contains(k.short[t], name) }) {
+			meant = append(meant, Hit{Name: full, Category: e.Category})
+		} else {
+			rest = append(rest, Hit{Name: full, Category: e.Category})
 		}
 	}
-	if len(missing) == len(kits) {
-		return nil, missing.Err()
-	}
 	if len(meant)+len(rest) == 0 {
-		return nil, usererr.New("icons_no_match", `"`+strings.Join(terms, `" "`)+`"`)
+		return nil, usererr.New("icons_no_match", `"`+strings.Join(terms, `" "`)+`"`, k.name)
 	}
 	byName := func(a, b Hit) int { return strings.Compare(a.Name, b.Name) }
 	slices.SortFunc(meant, byName)

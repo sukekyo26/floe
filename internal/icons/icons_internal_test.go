@@ -357,7 +357,7 @@ func TestSearchShort(t *testing.T) {
 		{"not the whole word", []string{"aws/s3"}, nil},
 		{"part of a short name", []string{"sg"}, nil},
 	} {
-		hits, err := set.Search(c.words)
+		hits, err := set.Search("aws", c.words)
 		var got []string
 		for _, h := range hits {
 			got = append(got, h.Name)
