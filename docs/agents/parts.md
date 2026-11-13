@@ -344,7 +344,7 @@ A tone (one of `tone.json`'s) is marked by `data-floe-tone` on the element drawn
 - A row is a grid with the columns `mark` and `text`. Its `::before` is the mark in `mark`, the mark's box `--floe-mark` across and `--floe-mark-gap` from the text, standing, as what the row holds does, on the baseline of the first line. In a row of `joined` its `::after` is the line to the next mark, from 0.35rem below the mark to 0.35rem above the row's end.
 - floe writes where they stand and how big, no colour, corner or content: a part writes its mark's look (`content`, background, frame) and the line's colour, and spaces what the row holds by `> * + * { margin-top }`.
 - A part or look that takes a look that writes `marks:` (`looks: [numbered]`) has its rows laid out by it, and MUST NOT write `marks:` of its own.
-- Write each row's text in elements (`<li><span>…</span></li>`): text written straight in a row becomes a grid item for each run of text, each placed in the next free cell, so that the row breaks onto rows of its own (`Restart <code>api</code> now` takes three rows).
+- Write each row's text in elements (`<li><span>…</span></li>`): text written straight in a row breaks, at each run of text, onto a row of its own (`Restart <code>api</code> now` takes three rows).
 - A mark of letters before each row of a list is a row's mark too, by the look `marked` (`<ul data-floe-look="marked">`, or `looks: [marked]`). The part writes its letter and colour (`li::before { content: "×" / "" }`) and each item's text in one element, so that a line of text and code flows as one.
 - A sign before one title, word or cell (a prompt, an →), and a list's own marker (`list-style`, `::marker`), are no row's mark.
 - Do not write `display`, `gap` or `grid-template` on a row in a part's `part.css`, a theme's file of the part, or a look file the part takes (they are in `floe.parts`, over floe's layout in `floe.marks`: the rule wins and the marks lose their layout). A template's `page.css` wins too, but it reaches the part's box and not what the box holds: rows of `box`, not the `li` of `items` and `joined`.
@@ -354,7 +354,7 @@ A tone (one of `tone.json`'s) is marked by `data-floe-tone` on the element drawn
 - An `::after` with no `position` is an item of the grid: it adds a row in the column `mark` under what the row holds, and one wider than the mark moves the text too.
 - Write the words that tell what a mark alone means as hidden text, `<span class="floe-hidden">{{word "done"}}</span>`, with its `words.yaml`, outside what the copy button copies (`data-floe-copy`).
 - Put the hidden text within a row's text (`<li><span><span class="floe-hidden">…</span>…</span></li>`), not as the row's child (it would shift the space between what the row holds).
-- A row that holds no element of text, such as a Markdown box, takes it as its first child and counts its gaps from after it: `:scope > :not(.floe-hidden) + *`.
+- A row that holds no element of text, such as a Markdown box, takes the hidden text as its first child and counts its gaps from after it: `:scope > :not(.floe-hidden) + *`.
 - A line the full height of a row that holds parts is no mark (`marks:` places a mark `--floe-mark` across, on the first line): draw it as the row's `::before` with `position: absolute; inset-block: 0`, in a row of `position: relative`, and not as the row's border (a framed row is a box, which what the parts in it draw outside themselves may not leave).
 - Write after a `/` what a screen reader reads of what `content` draws: `""` for a mark (`content: "✓"; content: "✓" / "";`, the first line for browsers that read no `/`), and the counters before it, in order, for a number to read (`content: counter(step) / counter(step)`; `""` for a number that no word tells from what is around it, as a slide's). Without it a screen reader says each mark by its shape ("check mark") on every row, and reads no number.
 - Do not write a word in a `content` string (CSS text does not pass `words.yaml`, so a word stays in one language whatever the page's).
@@ -372,12 +372,10 @@ A part that takes code's look (`looks: [code]`, as `diff` and `terminal` do) rea
 
 | Variable | Set in | What it is | Default |
 |---|---|---|---|
-| `--floe-code-pad` | `code`'s root | The padding at a line's sides | `1.1rem` |
+| `--floe-code-pad` | `code`'s root | The padding at a line's sides, on each line (an element `pre` holds), not on `pre` | `1.1rem` |
 | `--floe-code-room` | `code`'s root | The padding after a line, with the copy button's when the part draws it | `var(--floe-code-pad)` |
 | `--floe-code-faint` | `code`'s root | A line's faint text | `color-mix(in srgb, currentColor 70%, transparent)` |
 | `--floe-code-head-faint` | `code`'s root | The heading's faint text | `color-mix(in srgb, var(--code-head-fg, var(--code-fg)) 85%, transparent)` |
-
-The padding is on each line, an element `pre` holds, not on `pre`.
 
 - Make each line an element: one element a line in one `<code class="lines">`, as code and a diff do; one `<code>` around the whole; or one element a line in `pre`, as a terminal does (text `pre` holds outside an element has no padding, and one inline among it has padding around it).
 - Do not write padding on a line (it drops code's padding).
