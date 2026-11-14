@@ -1133,18 +1133,21 @@ func (s *Store) Edit(slug string, ed Edit) (Edited, error) {
 		}
 		s.moveRead(slug, to)
 	}
-	return Edited{Slug: to, TaskProject: ProjectKey(m.Project), Task: m.Task, OffTask: off.Name, OffCategory: off.Category}, nil
+	return Edited{
+		Slug: to, TaskProject: ProjectKey(m.Project), Task: m.Task, OffTask: off.Name, OffCategory: off.Category,
+	}, nil
 }
 
 // setProject sets the project ed names of m, taking m off its task when it moves it: it returns the task taken off,
 // "" for none.
 func setProject(m *Meta, ed Edit) (PageTask, error) {
+	var none PageTask
 	if ed.Project == nil {
-		return PageTask{}, nil
+		return none, nil
 	}
 	// "/" is the management page's value for "no project".
 	if strings.TrimSpace(*ed.Project) == "/" {
-		return PageTask{}, usererr.New("store_project_slash")
+		return none, usererr.New("store_project_slash")
 	}
 	was := ProjectKey(m.Project)
 	m.Project = strings.TrimSpace(*ed.Project)
@@ -1155,7 +1158,8 @@ func setProject(m *Meta, ed Edit) (PageTask, error) {
 // the same name in another is another task. It returns the task taken off, "" for none. The pin stays.
 func offTaskOf(m *Meta, was string) PageTask {
 	if ProjectKey(m.Project) == was || m.Task == nil || m.Task.Name == "" {
-		return PageTask{}
+		var none PageTask
+		return none
 	}
 	task, off := PageTask{Name: m.Task.Name, Category: m.Task.Category, Pin: false}, ""
 	setPageTask(m, &PageTaskEdit{Name: &off, Category: nil, Pin: nil})

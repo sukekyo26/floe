@@ -182,10 +182,11 @@ type TaskEdit struct {
 	ParentTitle *string `json:"parentTitle,omitzero"`
 }
 
-// URLsEdit changes a task's URLs as TagsEdit does a page's tags: those in Remove are taken off, and those in Add the row
-// has not put on at the end; one in both stays on, where the row has it. Only the URLs a writer changed are sent, so that one another wrote
-// since it read the row stays. Order then puts those of its URLs the row has first, in its order, and the others
-// after them as they were: one another added stays, at the end, and one the row has not is let be.
+// URLsEdit changes a task's URLs as TagsEdit does a page's tags: those in Remove are taken off, and those in Add the
+// row has not put on at the end; one in both stays on, where the row has it. Only the URLs a writer changed are sent,
+// so that one another wrote since it read the row stays. Order then puts those of its URLs the row has first, in its
+// order, and the others after them as they were: one another added stays, at the end, and one the row has not is let
+// be.
 type URLsEdit struct {
 	Add    []string `json:"add,omitzero"`
 	Remove []string `json:"remove,omitzero"`
