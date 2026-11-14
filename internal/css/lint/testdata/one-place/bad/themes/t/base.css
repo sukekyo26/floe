@@ -1,0 +1,4 @@
+:scope { --page-width: 90rem; } /* want "sets --page-width, which palette alone sets" */
+:scope { --column-width: 40rem; } /* want "sets --column-width, which page.css alone sets" */
+:scope { --floe-text-small: 0.7rem; } /* want "sets --floe-text-small, which base.css alone sets" */
+:scope { --radius-pill: 4px; } /* want "sets --radius-pill, which palette alone sets" */

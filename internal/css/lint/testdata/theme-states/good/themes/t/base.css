@@ -1,0 +1,3 @@
+:scope { --tabs-picked-bg: var(--accent); }
+@media screen { :scope { color: red; } }
+:scope .checked { color: red; }
