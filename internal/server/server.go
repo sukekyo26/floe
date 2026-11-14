@@ -390,7 +390,7 @@ func (s *Server) versions(w http.ResponseWriter, r *http.Request) {
 	sendJSON(w, http.StatusOK, struct {
 		Versions []store.Version `json:"versions"`
 		Read     int             `json:"read"`
-	}{Versions: versions, Read: s.cfg.Store.ReadBefore(Viewer, slug, m)})
+	}{Versions: versions, Read: s.cfg.Store.ReadBefore(Viewer, m)})
 }
 
 // diff answers what differs between the versions from and to of the stored page slug, from before to as the page of

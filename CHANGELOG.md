@@ -78,7 +78,10 @@ adheres to [Semantic Versioning](https://semver.org/).
 - Add what a viewer has read of the stored pages, kept in `reads.json` in the store. A page opened in its frame tells
   the frame the version it served, which the frame sends to `POST /api/pages/{slug}/read`, and `GET /api/pages`
   gives each stored page `news` (`new` for a page not seen, `version` for a version after the one read) and `version`
-  (the number of its last). Pages from before floe first writes `reads.json` count as read. `GET /api/pages` also
+  (the number of its last). Pages from before floe first writes `reads.json` count as read. A record is kept by the
+  page's `id`, which its `meta.json` gets when the page is first stored, so that it stays when the page is renamed; a
+  page removed, or replaced by another file's, has its record removed first, and the removal or the publish is refused
+  when `reads.json` cannot be read or written. `GET /api/pages` also
   gives the name of the `template` of a stored page and a linked data file; `floe rebuild` writes it to the meta.json of
   pages published before.
 - Add the versions of a stored page: a publish of a data file, or images it reads, other than the last version's
