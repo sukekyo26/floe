@@ -794,8 +794,9 @@ type Hit struct {
 }
 
 // Search returns the icons of set whose name (set/name) contains every word, or, for a word that is a short name of
-// the set (alb, gke), the name of an icon it means: the icons a word means first, then the rest, each by name, so
-// that a first line is what was asked for. A set not fetched is told so, with how to fetch it.
+// the set (alb, gke), the name of an icon it means: the icons a word means or names whole (user for lucide/user)
+// first, then the rest, each by name, so that a first line is what was asked for. A set not fetched is told so,
+// with how to fetch it.
 func (s *Store) Search(set string, words []string) ([]Hit, error) {
 	if err := CheckSet(set); err != nil {
 		return nil, err
@@ -817,7 +818,7 @@ func (s *Store) Search(set string, words []string) ([]Hit, error) {
 		if slices.ContainsFunc(terms, func(t string) bool { return !strings.Contains(full, t) && !k.holdsMeant(t, name) }) {
 			continue
 		}
-		if slices.ContainsFunc(terms, func(t string) bool { return slices.Contains(k.short[t], name) }) {
+		if slices.ContainsFunc(terms, func(t string) bool { return t == name || slices.Contains(k.short[t], name) }) {
 			meant = append(meant, Hit{Name: full, Category: e.Category})
 		} else {
 			rest = append(rest, Hit{Name: full, Category: e.Category})

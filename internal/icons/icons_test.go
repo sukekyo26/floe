@@ -12,6 +12,7 @@ import (
 	"os"
 	"path/filepath"
 	"reflect"
+	"slices"
 	"strings"
 	"sync"
 	"sync/atomic"
@@ -633,9 +634,11 @@ func TestBuiltin(t *testing.T) {
 				t.Errorf("%s: Lookup %s = %v, want ErrNoIcon", what, name, lookErr)
 			}
 		}
+		// The icon the word names whole comes first, before those it is part of.
 		hits, err := s.Search("lucide", []string{"user"})
-		if want := []icons.Hit{{Name: "lucide/user", Category: "people"}, {Name: "lucide/users", Category: "people"}}; err != nil || !reflect.DeepEqual(hits, want) {
-			t.Errorf("%s: Search lucide user = %v, %v; want %v", what, hits, err, want)
+		if err != nil || len(hits) < 2 || hits[0] != (icons.Hit{Name: "lucide/user", Category: "account"}) ||
+			!slices.Contains(hits, icons.Hit{Name: "lucide/users", Category: "account"}) {
+			t.Errorf("%s: Search lucide user = %v, %v; want lucide/user first, and lucide/users", what, hits, err)
 		}
 		if hits, err := s.Search("lucide", []string{"db"}); err != nil || len(hits) == 0 || hits[0].Name != "lucide/database" {
 			t.Errorf("%s: Search lucide db = %v, %v; want lucide/database first", what, hits, err)

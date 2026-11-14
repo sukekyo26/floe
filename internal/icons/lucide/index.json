@@ -4,152 +4,2924 @@
   "lucide-icons-1.72.0.zip"
  ],
  "icons": {
+  "a-arrow-down": {
+   "category": "text"
+  },
+  "a-arrow-up": {
+   "category": "text"
+  },
+  "a-large-small": {
+   "category": "text"
+  },
+  "accessibility": {
+   "category": "accessibility"
+  },
   "activity": {
-   "category": "work"
+   "category": "medical"
+  },
+  "ad": {
+   "category": "multimedia"
+  },
+  "air-vent": {
+   "category": "home"
+  },
+  "airplay": {
+   "category": "multimedia"
+  },
+  "alarm-clock": {
+   "category": "devices"
+  },
+  "alarm-clock-check": {
+   "category": "devices"
+  },
+  "alarm-clock-minus": {
+   "category": "devices"
+  },
+  "alarm-clock-off": {
+   "category": "devices"
+  },
+  "alarm-clock-plus": {
+   "category": "devices"
+  },
+  "alarm-smoke": {
+   "category": "home"
+  },
+  "align-center-horizontal": {
+   "category": "layout"
+  },
+  "align-center-vertical": {
+   "category": "layout"
+  },
+  "align-end-horizontal": {
+   "category": "layout"
+  },
+  "align-end-vertical": {
+   "category": "layout"
+  },
+  "align-horizontal-distribute-center": {
+   "category": "layout"
+  },
+  "align-horizontal-distribute-end": {
+   "category": "layout"
+  },
+  "align-horizontal-distribute-start": {
+   "category": "layout"
+  },
+  "align-horizontal-justify-center": {
+   "category": "layout"
+  },
+  "align-horizontal-justify-end": {
+   "category": "layout"
+  },
+  "align-horizontal-justify-start": {
+   "category": "layout"
+  },
+  "align-horizontal-space-around": {
+   "category": "layout"
+  },
+  "align-horizontal-space-between": {
+   "category": "layout"
+  },
+  "align-start-horizontal": {
+   "category": "layout"
+  },
+  "align-start-vertical": {
+   "category": "layout"
+  },
+  "align-vertical-distribute-center": {
+   "category": "layout"
+  },
+  "align-vertical-distribute-end": {
+   "category": "layout"
+  },
+  "align-vertical-distribute-start": {
+   "category": "layout"
+  },
+  "align-vertical-justify-center": {
+   "category": "layout"
+  },
+  "align-vertical-justify-end": {
+   "category": "layout"
+  },
+  "align-vertical-justify-start": {
+   "category": "layout"
+  },
+  "align-vertical-space-around": {
+   "category": "layout"
+  },
+  "align-vertical-space-between": {
+   "category": "layout"
+  },
+  "ambulance": {
+   "category": "medical"
+  },
+  "ampersand": {
+   "category": "text"
+  },
+  "ampersands": {
+   "category": "text"
+  },
+  "amphora": {
+   "category": "food-beverage"
+  },
+  "anchor": {
+   "category": "transportation"
+  },
+  "angle": {
+   "category": "math"
+  },
+  "antenna": {
+   "category": "devices"
+  },
+  "anvil": {
+   "category": "tools"
+  },
+  "aperture": {
+   "category": "photography"
   },
   "app-window": {
-   "category": "network"
+   "category": "layout"
+  },
+  "app-window-mac": {
+   "category": "layout"
+  },
+  "apple": {
+   "category": "food-beverage"
   },
   "archive": {
-   "category": "data"
+   "category": "files"
+  },
+  "archive-arrow-down": {
+   "category": "files"
+  },
+  "archive-arrow-up": {
+   "category": "files"
+  },
+  "archive-x": {
+   "category": "files"
+  },
+  "armchair": {
+   "category": "home"
+  },
+  "armenian-dram": {
+   "category": "finance"
+  },
+  "arrow-big-down": {
+   "category": "arrows"
+  },
+  "arrow-big-down-dash": {
+   "category": "files"
+  },
+  "arrow-big-left": {
+   "category": "arrows"
+  },
+  "arrow-big-left-dash": {
+   "category": "arrows"
+  },
+  "arrow-big-right": {
+   "category": "arrows"
+  },
+  "arrow-big-right-dash": {
+   "category": "arrows"
+  },
+  "arrow-big-up": {
+   "category": "arrows"
+  },
+  "arrow-big-up-dash": {
+   "category": "arrows"
+  },
+  "arrow-down": {
+   "category": "arrows"
+  },
+  "arrow-down-0-1": {
+   "category": "text"
+  },
+  "arrow-down-1-0": {
+   "category": "text"
+  },
+  "arrow-down-a-z": {
+   "category": "text"
+  },
+  "arrow-down-from-line": {
+   "category": "files"
+  },
+  "arrow-down-left": {
+   "category": "arrows"
+  },
+  "arrow-down-narrow-wide": {
+   "category": "text"
+  },
+  "arrow-down-right": {
+   "category": "arrows"
+  },
+  "arrow-down-to-dot": {
+   "category": "arrows"
+  },
+  "arrow-down-to-line": {
+   "category": "files"
+  },
+  "arrow-down-up": {
+   "category": "arrows"
+  },
+  "arrow-down-wide-narrow": {
+   "category": "text"
+  },
+  "arrow-down-z-a": {
+   "category": "text"
+  },
+  "arrow-left": {
+   "category": "arrows"
+  },
+  "arrow-left-from-line": {
+   "category": "arrows"
+  },
+  "arrow-left-right": {
+   "category": "arrows"
+  },
+  "arrow-left-to-line": {
+   "category": "arrows"
+  },
+  "arrow-right": {
+   "category": "arrows"
+  },
+  "arrow-right-from-line": {
+   "category": "arrows"
+  },
+  "arrow-right-left": {
+   "category": "arrows"
+  },
+  "arrow-right-to-line": {
+   "category": "development"
+  },
+  "arrow-up": {
+   "category": "arrows"
+  },
+  "arrow-up-0-1": {
+   "category": "text"
+  },
+  "arrow-up-1-0": {
+   "category": "text"
+  },
+  "arrow-up-a-z": {
+   "category": "text"
+  },
+  "arrow-up-down": {
+   "category": "arrows"
+  },
+  "arrow-up-from-dot": {
+   "category": "arrows"
+  },
+  "arrow-up-from-line": {
+   "category": "files"
+  },
+  "arrow-up-left": {
+   "category": "arrows"
+  },
+  "arrow-up-narrow-wide": {
+   "category": "text"
+  },
+  "arrow-up-right": {
+   "category": "arrows"
+  },
+  "arrow-up-to-line": {
+   "category": "files"
+  },
+  "arrow-up-wide-narrow": {
+   "category": "text"
+  },
+  "arrow-up-z-a": {
+   "category": "text"
+  },
+  "arrows-up-from-line": {
+   "category": "arrows"
+  },
+  "asterisk": {
+   "category": "text"
+  },
+  "asterism": {
+   "category": "text"
+  },
+  "astroid": {
+   "category": "shapes"
+  },
+  "at-sign": {
+   "category": "text"
+  },
+  "atom": {
+   "category": "science"
+  },
+  "audio-lines": {
+   "category": "multimedia"
+  },
+  "audio-lines-off": {
+   "category": "multimedia"
+  },
+  "audio-lines-x": {
+   "category": "multimedia"
+  },
+  "audio-waveform": {
+   "category": "multimedia"
+  },
+  "avocado": {
+   "category": "food-beverage"
+  },
+  "award": {
+   "category": "account"
+  },
+  "axe": {
+   "category": "tools"
+  },
+  "axis-3d": {
+   "category": "design"
+  },
+  "azerbaijani-manat": {
+   "category": "finance"
+  },
+  "baby": {
+   "category": "accessibility"
+  },
+  "backpack": {
+   "category": "gaming"
+  },
+  "bacon": {
+   "category": "food-beverage"
+  },
+  "badge": {
+   "category": "account"
+  },
+  "badge-cent": {
+   "category": "shopping"
   },
   "badge-check": {
-   "category": "security"
+   "category": "social"
+  },
+  "badge-dollar-sign": {
+   "category": "shopping"
+  },
+  "badge-euro": {
+   "category": "shopping"
+  },
+  "badge-exclamation-point": {
+   "category": "account"
+  },
+  "badge-indian-rupee": {
+   "category": "shopping"
+  },
+  "badge-info": {
+   "category": "letters-digits"
+  },
+  "badge-japanese-yen": {
+   "category": "shopping"
+  },
+  "badge-minus": {
+   "category": "social"
+  },
+  "badge-percent": {
+   "category": "finance"
+  },
+  "badge-plus": {
+   "category": "social"
+  },
+  "badge-pound-sterling": {
+   "category": "shopping"
+  },
+  "badge-question-mark": {
+   "category": "accessibility"
+  },
+  "badge-russian-ruble": {
+   "category": "shopping"
+  },
+  "badge-swiss-franc": {
+   "category": "shopping"
+  },
+  "badge-turkish-lira": {
+   "category": "shopping"
+  },
+  "badge-x": {
+   "category": "social"
+  },
+  "baggage-claim": {
+   "category": "transportation"
+  },
+  "ball-wave": {
+   "category": "sports"
+  },
+  "balloon": {
+   "category": "emoji"
+  },
+  "ban": {
+   "category": "account"
+  },
+  "banana": {
+   "category": "food-beverage"
+  },
+  "bandage": {
+   "category": "medical"
+  },
+  "bangladeshi-taka": {
+   "category": "finance"
+  },
+  "banknote": {
+   "category": "finance"
+  },
+  "banknote-arrow-down": {
+   "category": "finance"
+  },
+  "banknote-arrow-up": {
+   "category": "finance"
+  },
+  "banknote-check": {
+   "category": "finance"
+  },
+  "banknote-x": {
+   "category": "finance"
+  },
+  "barcode": {
+   "category": "shopping"
+  },
+  "barrel": {
+   "category": "food-beverage"
+  },
+  "baseline": {
+   "category": "text"
+  },
+  "bath": {
+   "category": "travel"
+  },
+  "battery": {
+   "category": "devices"
+  },
+  "battery-charging": {
+   "category": "devices"
+  },
+  "battery-exclamation-point": {
+   "category": "devices"
+  },
+  "battery-full": {
+   "category": "devices"
+  },
+  "battery-low": {
+   "category": "devices"
+  },
+  "battery-medium": {
+   "category": "devices"
+  },
+  "battery-plus": {
+   "category": "devices"
+  },
+  "beaker": {
+   "category": "science"
+  },
+  "bean": {
+   "category": "food-beverage"
+  },
+  "bean-off": {
+   "category": "food-beverage"
+  },
+  "bed": {
+   "category": "home"
+  },
+  "bed-double": {
+   "category": "home"
+  },
+  "bed-single": {
+   "category": "home"
+  },
+  "beef": {
+   "category": "food-beverage"
+  },
+  "beef-off": {
+   "category": "food-beverage"
+  },
+  "beer": {
+   "category": "food-beverage"
+  },
+  "beer-off": {
+   "category": "food-beverage"
+  },
+  "belarusian-ruble": {
+   "category": "finance"
   },
   "bell": {
-   "category": "messages"
+   "category": "account"
+  },
+  "bell-check": {
+   "category": "account"
+  },
+  "bell-dot": {
+   "category": "account"
+  },
+  "bell-electric": {
+   "category": "devices"
+  },
+  "bell-minus": {
+   "category": "notifications"
+  },
+  "bell-off": {
+   "category": "notifications"
+  },
+  "bell-plus": {
+   "category": "notifications"
+  },
+  "bell-ring": {
+   "category": "notifications"
+  },
+  "between-horizontal-end": {
+   "category": "layout"
+  },
+  "between-horizontal-start": {
+   "category": "layout"
+  },
+  "between-vertical-end": {
+   "category": "layout"
+  },
+  "between-vertical-start": {
+   "category": "layout"
+  },
+  "biceps-flexed": {
+   "category": "emoji"
+  },
+  "bike": {
+   "category": "transportation"
+  },
+  "binary": {
+   "category": "text"
+  },
+  "binoculars": {
+   "category": "navigation"
+  },
+  "biohazard": {
+   "category": "science"
+  },
+  "bird": {
+   "category": "animals"
+  },
+  "birdhouse": {
+   "category": "nature"
+  },
+  "bitcoin": {
+   "category": "finance"
+  },
+  "blend": {
+   "category": "design"
+  },
+  "blender": {
+   "category": "food-beverage"
+  },
+  "blinds": {
+   "category": "home"
+  },
+  "blocks": {
+   "category": "development"
+  },
+  "bluetooth": {
+   "category": "connectivity"
+  },
+  "bluetooth-connected": {
+   "category": "connectivity"
+  },
+  "bluetooth-off": {
+   "category": "connectivity"
+  },
+  "bluetooth-searching": {
+   "category": "connectivity"
+  },
+  "bolt": {
+   "category": "tools"
+  },
+  "bomb": {
+   "category": "gaming"
+  },
+  "bone": {
+   "category": "animals"
+  },
+  "bone-fracture": {
+   "category": "medical"
+  },
+  "book": {
+   "category": "text"
+  },
+  "book-a": {
+   "category": "text"
+  },
+  "book-audio": {
+   "category": "multimedia"
+  },
+  "book-bookmark": {
+   "category": "text"
+  },
+  "book-check": {
+   "category": "text"
+  },
+  "book-copy": {
+   "category": "text"
+  },
+  "book-dashed": {
+   "category": "development"
+  },
+  "book-down": {
+   "category": "development"
+  },
+  "book-exclamation-point": {
+   "category": "text"
+  },
+  "book-headphones": {
+   "category": "multimedia"
+  },
+  "book-heart": {
+   "category": "social"
+  },
+  "book-image": {
+   "category": "photography"
+  },
+  "book-key": {
+   "category": "development"
+  },
+  "book-lock": {
+   "category": "development"
+  },
+  "book-minus": {
+   "category": "text"
   },
   "book-open": {
-   "category": "work"
+   "category": "text"
+  },
+  "book-open-check": {
+   "category": "text"
+  },
+  "book-open-text": {
+   "category": "text"
+  },
+  "book-plus": {
+   "category": "text"
+  },
+  "book-search": {
+   "category": "text"
+  },
+  "book-text": {
+   "category": "text"
+  },
+  "book-type": {
+   "category": "text"
+  },
+  "book-up": {
+   "category": "development"
+  },
+  "book-up-2": {
+   "category": "development"
+  },
+  "book-user": {
+   "category": "account"
+  },
+  "book-x": {
+   "category": "text"
+  },
+  "bookmark": {
+   "category": "account"
+  },
+  "bookmark-check": {
+   "category": "account"
+  },
+  "bookmark-minus": {
+   "category": "account"
+  },
+  "bookmark-off": {
+   "category": "account"
+  },
+  "bookmark-plus": {
+   "category": "account"
+  },
+  "bookmark-x": {
+   "category": "account"
+  },
+  "boom-box": {
+   "category": "devices"
   },
   "bot": {
-   "category": "people"
+   "category": "development"
+  },
+  "bot-message-square": {
+   "category": "development"
+  },
+  "bot-off": {
+   "category": "development"
+  },
+  "bottle-wine": {
+   "category": "food-beverage"
+  },
+  "bow-arrow": {
+   "category": "gaming"
   },
   "box": {
-   "category": "data"
+   "category": "shapes"
+  },
+  "boxes": {
+   "category": "shapes"
+  },
+  "boxes-linked": {
+   "category": "development"
+  },
+  "braces": {
+   "category": "development"
+  },
+  "brackets": {
+   "category": "development"
   },
   "brain": {
-   "category": "work"
+   "category": "medical"
+  },
+  "brain-circuit": {
+   "category": "science"
+  },
+  "brain-cog": {
+   "category": "science"
+  },
+  "brain-off": {
+   "category": "development"
+  },
+  "brick-wall": {
+   "category": "buildings"
+  },
+  "brick-wall-fire": {
+   "category": "security"
+  },
+  "brick-wall-shield": {
+   "category": "security"
+  },
+  "bridge": {
+   "category": "travel"
+  },
+  "briefcase": {
+   "category": "travel"
+  },
+  "briefcase-business": {
+   "category": "travel"
+  },
+  "briefcase-conveyor-belt": {
+   "category": "travel"
+  },
+  "briefcase-medical": {
+   "category": "medical"
+  },
+  "briefcase-plus": {
+   "category": "files"
+  },
+  "bring-to-front": {
+   "category": "design"
+  },
+  "broccoli": {
+   "category": "food-beverage"
+  },
+  "broom": {
+   "category": "tools"
+  },
+  "broom-sparkles": {
+   "category": "tools"
+  },
+  "brush": {
+   "category": "text"
+  },
+  "brush-cleaning": {
+   "category": "home"
+  },
+  "bubbles": {
+   "category": "home"
   },
   "bug": {
    "category": "development"
   },
+  "bug-off": {
+   "category": "development"
+  },
+  "bug-play": {
+   "category": "development"
+  },
   "building": {
-   "category": "places"
+   "category": "account"
   },
   "building-complex": {
-   "category": "places"
+   "category": "account"
+  },
+  "building-complex-plus": {
+   "category": "account"
+  },
+  "bus": {
+   "category": "transportation"
+  },
+  "bus-front": {
+   "category": "transportation"
   },
   "cable": {
-   "category": "network"
+   "category": "connectivity"
+  },
+  "cable-car": {
+   "category": "transportation"
+  },
+  "cake": {
+   "category": "food-beverage"
+  },
+  "cake-slice": {
+   "category": "food-beverage"
+  },
+  "calculator": {
+   "category": "math"
   },
   "calendar": {
-   "category": "messages"
+   "category": "time"
+  },
+  "calendar-1": {
+   "category": "time"
+  },
+  "calendar-arrow-down": {
+   "category": "time"
+  },
+  "calendar-arrow-left": {
+   "category": "time"
+  },
+  "calendar-arrow-right": {
+   "category": "time"
+  },
+  "calendar-arrow-up": {
+   "category": "time"
+  },
+  "calendar-check": {
+   "category": "time"
+  },
+  "calendar-check-2": {
+   "category": "time"
+  },
+  "calendar-chevrons-left": {
+   "category": "time"
+  },
+  "calendar-chevrons-right": {
+   "category": "time"
+  },
+  "calendar-clock": {
+   "category": "time"
+  },
+  "calendar-cog": {
+   "category": "time"
+  },
+  "calendar-days": {
+   "category": "time"
+  },
+  "calendar-fold": {
+   "category": "files"
+  },
+  "calendar-heart": {
+   "category": "time"
+  },
+  "calendar-minus": {
+   "category": "time"
+  },
+  "calendar-minus-2": {
+   "category": "time"
+  },
+  "calendar-off": {
+   "category": "time"
+  },
+  "calendar-plus": {
+   "category": "time"
+  },
+  "calendar-plus-2": {
+   "category": "time"
+  },
+  "calendar-range": {
+   "category": "time"
+  },
+  "calendar-search": {
+   "category": "time"
+  },
+  "calendar-sync": {
+   "category": "arrows"
+  },
+  "calendar-x": {
+   "category": "time"
+  },
+  "calendar-x-2": {
+   "category": "time"
+  },
+  "calendars": {
+   "category": "time"
+  },
+  "camera": {
+   "category": "photography"
+  },
+  "camera-off": {
+   "category": "photography"
+  },
+  "can": {
+   "category": "food-beverage"
+  },
+  "can-soda": {
+   "category": "food-beverage"
+  },
+  "candy": {
+   "category": "food-beverage"
+  },
+  "candy-cane": {
+   "category": "food-beverage"
+  },
+  "candy-off": {
+   "category": "food-beverage"
+  },
+  "cannabis": {
+   "category": "nature"
+  },
+  "cannabis-off": {
+   "category": "nature"
+  },
+  "captions": {
+   "category": "multimedia"
+  },
+  "captions-off": {
+   "category": "multimedia"
+  },
+  "car": {
+   "category": "transportation"
+  },
+  "car-battery": {
+   "category": "devices"
+  },
+  "car-front": {
+   "category": "transportation"
+  },
+  "car-taxi-front": {
+   "category": "transportation"
+  },
+  "caravan": {
+   "category": "transportation"
+  },
+  "card-sim": {
+   "category": "connectivity"
+  },
+  "carrot": {
+   "category": "food-beverage"
+  },
+  "carton": {
+   "category": "food-beverage"
+  },
+  "carton-off": {
+   "category": "food-beverage"
+  },
+  "case-lower": {
+   "category": "text"
+  },
+  "case-sensitive": {
+   "category": "text"
+  },
+  "case-upper": {
+   "category": "text"
+  },
+  "cassette-tape": {
+   "category": "devices"
+  },
+  "cast": {
+   "category": "devices"
+  },
+  "castle": {
+   "category": "buildings"
+  },
+  "cat": {
+   "category": "animals"
+  },
+  "cctv": {
+   "category": "security"
+  },
+  "cctv-off": {
+   "category": "security"
+  },
+  "certificate": {
+   "category": "security"
+  },
+  "chart-area": {
+   "category": "charts"
+  },
+  "chart-bar": {
+   "category": "charts"
+  },
+  "chart-bar-big": {
+   "category": "charts"
+  },
+  "chart-bar-decreasing": {
+   "category": "charts"
+  },
+  "chart-bar-increasing": {
+   "category": "charts"
+  },
+  "chart-bar-stacked": {
+   "category": "charts"
+  },
+  "chart-bell-curve": {
+   "category": "charts"
+  },
+  "chart-candlestick": {
+   "category": "charts"
   },
   "chart-column": {
-   "category": "data"
+   "category": "charts"
+  },
+  "chart-column-big": {
+   "category": "charts"
+  },
+  "chart-column-decreasing": {
+   "category": "charts"
+  },
+  "chart-column-increasing": {
+   "category": "charts"
+  },
+  "chart-column-stacked": {
+   "category": "charts"
+  },
+  "chart-gantt": {
+   "category": "charts"
   },
   "chart-line": {
-   "category": "data"
+   "category": "charts"
+  },
+  "chart-network": {
+   "category": "charts"
+  },
+  "chart-no-axes-column": {
+   "category": "charts"
+  },
+  "chart-no-axes-column-decreasing": {
+   "category": "charts"
+  },
+  "chart-no-axes-column-increasing": {
+   "category": "charts"
+  },
+  "chart-no-axes-combined": {
+   "category": "charts"
+  },
+  "chart-no-axes-gantt": {
+   "category": "development"
   },
   "chart-pie": {
-   "category": "data"
+   "category": "charts"
+  },
+  "chart-quadrant": {
+   "category": "charts"
+  },
+  "chart-radar": {
+   "category": "charts"
+  },
+  "chart-scatter": {
+   "category": "charts"
+  },
+  "chart-spline": {
+   "category": "charts"
+  },
+  "check": {
+   "category": "notifications"
+  },
+  "check-check": {
+   "category": "notifications"
+  },
+  "check-line": {
+   "category": "notifications"
+  },
+  "cheese": {
+   "category": "food-beverage"
+  },
+  "chef-hat": {
+   "category": "food-beverage"
+  },
+  "cherry": {
+   "category": "food-beverage"
+  },
+  "chess-bishop": {
+   "category": "gaming"
+  },
+  "chess-king": {
+   "category": "gaming"
+  },
+  "chess-knight": {
+   "category": "gaming"
+  },
+  "chess-pawn": {
+   "category": "gaming"
+  },
+  "chess-queen": {
+   "category": "gaming"
+  },
+  "chess-rook": {
+   "category": "gaming"
+  },
+  "chevron-down": {
+   "category": "arrows"
+  },
+  "chevron-first": {
+   "category": "arrows"
+  },
+  "chevron-last": {
+   "category": "arrows"
+  },
+  "chevron-left": {
+   "category": "arrows"
+  },
+  "chevron-right": {
+   "category": "arrows"
+  },
+  "chevron-up": {
+   "category": "arrows"
+  },
+  "chevrons-down": {
+   "category": "arrows"
+  },
+  "chevrons-down-up": {
+   "category": "arrows"
+  },
+  "chevrons-left": {
+   "category": "arrows"
+  },
+  "chevrons-left-right": {
+   "category": "arrows"
+  },
+  "chevrons-left-right-ellipsis": {
+   "category": "devices"
+  },
+  "chevrons-right": {
+   "category": "arrows"
+  },
+  "chevrons-right-left": {
+   "category": "arrows"
+  },
+  "chevrons-up": {
+   "category": "arrows"
+  },
+  "chevrons-up-down": {
+   "category": "arrows"
+  },
+  "church": {
+   "category": "buildings"
+  },
+  "cigarette": {
+   "category": "travel"
+  },
+  "cigarette-off": {
+   "category": "travel"
+  },
+  "circle": {
+   "category": "shapes"
+  },
+  "circle-arrow-down": {
+   "category": "arrows"
+  },
+  "circle-arrow-down-left-exit": {
+   "category": "arrows"
+  },
+  "circle-arrow-down-right-exit": {
+   "category": "arrows"
+  },
+  "circle-arrow-left": {
+   "category": "arrows"
+  },
+  "circle-arrow-right": {
+   "category": "arrows"
+  },
+  "circle-arrow-up": {
+   "category": "arrows"
+  },
+  "circle-arrow-up-left-exit": {
+   "category": "arrows"
+  },
+  "circle-arrow-up-right-exit": {
+   "category": "arrows"
   },
   "circle-check": {
-   "category": "status"
+   "category": "notifications"
+  },
+  "circle-check-big": {
+   "category": "notifications"
+  },
+  "circle-chevron-down": {
+   "category": "arrows"
+  },
+  "circle-chevron-left": {
+   "category": "arrows"
+  },
+  "circle-chevron-right": {
+   "category": "arrows"
+  },
+  "circle-chevron-up": {
+   "category": "arrows"
+  },
+  "circle-chevrons-down": {
+   "category": "arrows"
+  },
+  "circle-chevrons-left": {
+   "category": "arrows"
+  },
+  "circle-chevrons-right": {
+   "category": "arrows"
+  },
+  "circle-chevrons-up": {
+   "category": "arrows"
+  },
+  "circle-dashed": {
+   "category": "development"
+  },
+  "circle-dashed-check": {
+   "category": "notifications"
+  },
+  "circle-divide": {
+   "category": "math"
+  },
+  "circle-dollar-sign": {
+   "category": "finance"
+  },
+  "circle-dot": {
+   "category": "development"
+  },
+  "circle-dot-dashed": {
+   "category": "development"
+  },
+  "circle-ellipsis": {
+   "category": "layout"
+  },
+  "circle-equal": {
+   "category": "math"
+  },
+  "circle-euro": {
+   "category": "finance"
+  },
+  "circle-exclamation-point": {
+   "category": "notifications"
+  },
+  "circle-fading-arrow-up": {
+   "category": "arrows"
+  },
+  "circle-fading-check": {
+   "category": "notifications"
+  },
+  "circle-fading-play": {
+   "category": "multimedia"
+  },
+  "circle-fading-plus": {
+   "category": "communication"
+  },
+  "circle-gauge": {
+   "category": "transportation"
+  },
+  "circle-letter-a": {
+   "category": "letters-digits"
+  },
+  "circle-letter-b": {
+   "category": "letters-digits"
+  },
+  "circle-letter-c": {
+   "category": "letters-digits"
+  },
+  "circle-letter-d": {
+   "category": "letters-digits"
+  },
+  "circle-letter-e": {
+   "category": "letters-digits"
+  },
+  "circle-letter-f": {
+   "category": "letters-digits"
+  },
+  "circle-letter-g": {
+   "category": "letters-digits"
+  },
+  "circle-letter-h": {
+   "category": "letters-digits"
+  },
+  "circle-letter-i": {
+   "category": "letters-digits"
+  },
+  "circle-letter-j": {
+   "category": "letters-digits"
+  },
+  "circle-letter-k": {
+   "category": "letters-digits"
+  },
+  "circle-letter-l": {
+   "category": "letters-digits"
+  },
+  "circle-letter-m": {
+   "category": "letters-digits"
+  },
+  "circle-letter-n": {
+   "category": "letters-digits"
+  },
+  "circle-letter-o": {
+   "category": "letters-digits"
+  },
+  "circle-letter-p": {
+   "category": "letters-digits"
+  },
+  "circle-letter-p-off": {
+   "category": "letters-digits"
+  },
+  "circle-letter-q": {
+   "category": "letters-digits"
+  },
+  "circle-letter-r": {
+   "category": "letters-digits"
+  },
+  "circle-letter-s": {
+   "category": "letters-digits"
+  },
+  "circle-letter-t": {
+   "category": "letters-digits"
+  },
+  "circle-letter-u": {
+   "category": "letters-digits"
+  },
+  "circle-letter-v": {
+   "category": "letters-digits"
+  },
+  "circle-letter-w": {
+   "category": "letters-digits"
+  },
+  "circle-letter-x": {
+   "category": "letters-digits"
+  },
+  "circle-letter-y": {
+   "category": "letters-digits"
+  },
+  "circle-letter-z": {
+   "category": "letters-digits"
+  },
+  "circle-minus": {
+   "category": "math"
+  },
+  "circle-off": {
+   "category": "shapes"
+  },
+  "circle-pause": {
+   "category": "multimedia"
+  },
+  "circle-percent": {
+   "category": "social"
+  },
+  "circle-pile": {
+   "category": "shapes"
+  },
+  "circle-play": {
+   "category": "multimedia"
+  },
+  "circle-plus": {
+   "category": "math"
+  },
+  "circle-pound-sterling": {
+   "category": "finance"
+  },
+  "circle-power": {
+   "category": "devices"
+  },
+  "circle-question-mark": {
+   "category": "accessibility"
+  },
+  "circle-slash": {
+   "category": "development"
+  },
+  "circle-slash-2": {
+   "category": "shapes"
+  },
+  "circle-small": {
+   "category": "shapes"
+  },
+  "circle-star": {
+   "category": "sports"
+  },
+  "circle-stop": {
+   "category": "multimedia"
+  },
+  "circle-user": {
+   "category": "account"
+  },
+  "circle-user-round": {
+   "category": "account"
   },
   "circle-x": {
-   "category": "status"
+   "category": "math"
+  },
+  "circuit-board": {
+   "category": "science"
+  },
+  "citrus": {
+   "category": "food-beverage"
+  },
+  "clapperboard": {
+   "category": "multimedia"
+  },
+  "clef-alto": {
+   "category": "multimedia"
+  },
+  "clef-bass": {
+   "category": "multimedia"
+  },
+  "clef-treble": {
+   "category": "multimedia"
+  },
+  "clipboard": {
+   "category": "text"
+  },
+  "clipboard-check": {
+   "category": "text"
+  },
+  "clipboard-clock": {
+   "category": "time"
+  },
+  "clipboard-copy": {
+   "category": "text"
   },
   "clipboard-list": {
-   "category": "work"
+   "category": "text"
+  },
+  "clipboard-minus": {
+   "category": "text"
+  },
+  "clipboard-paste": {
+   "category": "text"
+  },
+  "clipboard-pen": {
+   "category": "text"
+  },
+  "clipboard-pen-line": {
+   "category": "text"
+  },
+  "clipboard-plus": {
+   "category": "medical"
+  },
+  "clipboard-type": {
+   "category": "text"
+  },
+  "clipboard-x": {
+   "category": "text"
   },
   "clock": {
-   "category": "work"
+   "category": "time"
+  },
+  "clock-1": {
+   "category": "time"
+  },
+  "clock-10": {
+   "category": "time"
+  },
+  "clock-11": {
+   "category": "time"
+  },
+  "clock-12": {
+   "category": "time"
+  },
+  "clock-2": {
+   "category": "time"
+  },
+  "clock-3": {
+   "category": "time"
+  },
+  "clock-4": {
+   "category": "time"
+  },
+  "clock-5": {
+   "category": "time"
+  },
+  "clock-6": {
+   "category": "time"
+  },
+  "clock-7": {
+   "category": "time"
+  },
+  "clock-8": {
+   "category": "time"
+  },
+  "clock-9": {
+   "category": "time"
+  },
+  "clock-arrow-down": {
+   "category": "time"
+  },
+  "clock-arrow-left": {
+   "category": "time"
+  },
+  "clock-arrow-right": {
+   "category": "time"
+  },
+  "clock-arrow-up": {
+   "category": "time"
+  },
+  "clock-check": {
+   "category": "time"
+  },
+  "clock-exclamation-point": {
+   "category": "time"
+  },
+  "clock-fading": {
+   "category": "time"
+  },
+  "clock-plus": {
+   "category": "time"
+  },
+  "closed-caption": {
+   "category": "accessibility"
   },
   "cloud": {
-   "category": "network"
+   "category": "weather"
+  },
+  "cloud-backup": {
+   "category": "arrows"
+  },
+  "cloud-check": {
+   "category": "development"
+  },
+  "cloud-cog": {
+   "category": "development"
+  },
+  "cloud-download": {
+   "category": "arrows"
+  },
+  "cloud-drizzle": {
+   "category": "weather"
+  },
+  "cloud-exclamation-point": {
+   "category": "development"
+  },
+  "cloud-fog": {
+   "category": "weather"
+  },
+  "cloud-hail": {
+   "category": "weather"
+  },
+  "cloud-lightning": {
+   "category": "weather"
+  },
+  "cloud-moon": {
+   "category": "weather"
+  },
+  "cloud-moon-rain": {
+   "category": "weather"
+  },
+  "cloud-off": {
+   "category": "connectivity"
+  },
+  "cloud-rain": {
+   "category": "weather"
+  },
+  "cloud-rain-wind": {
+   "category": "weather"
+  },
+  "cloud-snow": {
+   "category": "weather"
+  },
+  "cloud-sun": {
+   "category": "weather"
+  },
+  "cloud-sun-rain": {
+   "category": "weather"
+  },
+  "cloud-sync": {
+   "category": "arrows"
+  },
+  "cloud-upload": {
+   "category": "arrows"
+  },
+  "cloudy": {
+   "category": "weather"
+  },
+  "clover": {
+   "category": "gaming"
+  },
+  "club": {
+   "category": "shapes"
   },
   "code": {
+   "category": "text"
+  },
+  "code-xml": {
+   "category": "text"
+  },
+  "coffee": {
+   "category": "food-beverage"
+  },
+  "cog": {
+   "category": "account"
+  },
+  "coins": {
+   "category": "gaming"
+  },
+  "columns-2": {
+   "category": "layout"
+  },
+  "columns-3": {
+   "category": "layout"
+  },
+  "columns-3-cog": {
+   "category": "layout"
+  },
+  "columns-4": {
+   "category": "layout"
+  },
+  "combine": {
    "category": "development"
+  },
+  "command": {
+   "category": "development"
+  },
+  "compass": {
+   "category": "navigation"
+  },
+  "component": {
+   "category": "design"
+  },
+  "computer": {
+   "category": "devices"
+  },
+  "concierge-bell": {
+   "category": "travel"
+  },
+  "cone": {
+   "category": "shapes"
+  },
+  "construction": {
+   "category": "development"
+  },
+  "contact": {
+   "category": "account"
+  },
+  "contact-round": {
+   "category": "account"
   },
   "container": {
    "category": "development"
   },
+  "contrast": {
+   "category": "photography"
+  },
+  "cookie": {
+   "category": "account"
+  },
+  "cooking-pot": {
+   "category": "food-beverage"
+  },
+  "copy": {
+   "category": "text"
+  },
+  "copy-check": {
+   "category": "notifications"
+  },
+  "copy-minus": {
+   "category": "text"
+  },
+  "copy-plus": {
+   "category": "text"
+  },
+  "copy-slash": {
+   "category": "text"
+  },
+  "copy-x": {
+   "category": "notifications"
+  },
+  "copyleft": {
+   "category": "text"
+  },
+  "corner-down-left": {
+   "category": "arrows"
+  },
+  "corner-down-right": {
+   "category": "arrows"
+  },
+  "corner-left-down": {
+   "category": "arrows"
+  },
+  "corner-left-up": {
+   "category": "arrows"
+  },
+  "corner-right-down": {
+   "category": "arrows"
+  },
+  "corner-right-up": {
+   "category": "arrows"
+  },
+  "corner-up-left": {
+   "category": "arrows"
+  },
+  "corner-up-right": {
+   "category": "arrows"
+  },
   "cpu": {
    "category": "devices"
   },
+  "cpu-ai": {
+   "category": "development"
+  },
+  "creative-commons": {
+   "category": "text"
+  },
   "credit-card": {
-   "category": "money"
+   "category": "account"
+  },
+  "credit-card-check": {
+   "category": "shopping"
+  },
+  "credit-card-minus": {
+   "category": "shopping"
+  },
+  "credit-card-plus": {
+   "category": "shopping"
+  },
+  "credit-card-reader": {
+   "category": "finance"
+  },
+  "credit-card-x": {
+   "category": "shopping"
+  },
+  "croissant": {
+   "category": "food-beverage"
+  },
+  "crop": {
+   "category": "photography"
+  },
+  "cross": {
+   "category": "shapes"
+  },
+  "crosshair": {
+   "category": "photography"
+  },
+  "crown": {
+   "category": "gaming"
+  },
+  "cuboid": {
+   "category": "shapes"
+  },
+  "cup-soda": {
+   "category": "food-beverage"
+  },
+  "cupcake": {
+   "category": "food-beverage"
+  },
+  "currency": {
+   "category": "finance"
+  },
+  "cylinder": {
+   "category": "shapes"
+  },
+  "dam": {
+   "category": "buildings"
   },
   "database": {
-   "category": "data"
+   "category": "devices"
+  },
+  "database-arrow-down": {
+   "category": "devices"
+  },
+  "database-arrow-up": {
+   "category": "devices"
+  },
+  "database-backup": {
+   "category": "devices"
+  },
+  "database-check": {
+   "category": "devices"
+  },
+  "database-cog": {
+   "category": "development"
+  },
+  "database-minus": {
+   "category": "devices"
+  },
+  "database-plus": {
+   "category": "devices"
+  },
+  "database-search": {
+   "category": "devices"
+  },
+  "database-x": {
+   "category": "devices"
+  },
+  "database-zap": {
+   "category": "devices"
+  },
+  "decimals-arrow-left": {
+   "category": "design"
+  },
+  "decimals-arrow-right": {
+   "category": "design"
+  },
+  "delete": {
+   "category": "text"
+  },
+  "dessert": {
+   "category": "food-beverage"
+  },
+  "diagram-flow-horizontal": {
+   "category": "design"
+  },
+  "diagram-flow-vertical": {
+   "category": "design"
+  },
+  "diameter": {
+   "category": "shapes"
+  },
+  "diamond": {
+   "category": "shapes"
+  },
+  "diamond-minus": {
+   "category": "multimedia"
+  },
+  "diamond-percent": {
+   "category": "social"
+  },
+  "diamond-plus": {
+   "category": "multimedia"
+  },
+  "dice-1": {
+   "category": "gaming"
+  },
+  "dice-2": {
+   "category": "gaming"
+  },
+  "dice-3": {
+   "category": "gaming"
+  },
+  "dice-4": {
+   "category": "gaming"
+  },
+  "dice-5": {
+   "category": "gaming"
+  },
+  "dice-6": {
+   "category": "gaming"
+  },
+  "dices": {
+   "category": "gaming"
+  },
+  "diff": {
+   "category": "development"
+  },
+  "disc": {
+   "category": "devices"
+  },
+  "disc-2": {
+   "category": "devices"
+  },
+  "disc-3": {
+   "category": "devices"
+  },
+  "disc-album": {
+   "category": "devices"
+  },
+  "divide": {
+   "category": "math"
+  },
+  "dna": {
+   "category": "medical"
+  },
+  "dna-off": {
+   "category": "food-beverage"
+  },
+  "dock": {
+   "category": "layout"
+  },
+  "dog": {
+   "category": "animals"
+  },
+  "dollar-sign": {
+   "category": "finance"
+  },
+  "dome": {
+   "category": "buildings"
+  },
+  "donut": {
+   "category": "food-beverage"
+  },
+  "door-closed": {
+   "category": "home"
+  },
+  "door-closed-cog": {
+   "category": "home"
+  },
+  "door-closed-locked": {
+   "category": "home"
+  },
+  "door-closed-package": {
+   "category": "home"
+  },
+  "door-open": {
+   "category": "home"
+  },
+  "door-stairwell": {
+   "category": "buildings"
+  },
+  "dot": {
+   "category": "shapes"
   },
   "download": {
-   "category": "work"
+   "category": "arrows"
+  },
+  "drafting-compass": {
+   "category": "math"
+  },
+  "drama": {
+   "category": "multimedia"
+  },
+  "drill": {
+   "category": "tools"
+  },
+  "drone": {
+   "category": "transportation"
+  },
+  "droplet": {
+   "category": "weather"
+  },
+  "droplet-off": {
+   "category": "weather"
+  },
+  "droplets": {
+   "category": "weather"
+  },
+  "drum": {
+   "category": "multimedia"
+  },
+  "drumstick": {
+   "category": "food-beverage"
+  },
+  "dumbbell": {
+   "category": "navigation"
+  },
+  "ear": {
+   "category": "medical"
+  },
+  "ear-off": {
+   "category": "medical"
+  },
+  "earbuds": {
+   "category": "devices"
+  },
+  "earbuds-off": {
+   "category": "devices"
+  },
+  "earth": {
+   "category": "navigation"
+  },
+  "earth-lock": {
+   "category": "security"
+  },
+  "eclipse": {
+   "category": "science"
+  },
+  "egg": {
+   "category": "food-beverage"
+  },
+  "egg-fried": {
+   "category": "food-beverage"
+  },
+  "egg-off": {
+   "category": "food-beverage"
+  },
+  "eighth-note": {
+   "category": "multimedia"
+  },
+  "eighth-notes": {
+   "category": "multimedia"
+  },
+  "eject": {
+   "category": "devices"
+  },
+  "ellipse": {
+   "category": "shapes"
+  },
+  "ellipsis": {
+   "category": "layout"
+  },
+  "ellipsis-vertical": {
+   "category": "layout"
+  },
+  "emirati-dirham": {
+   "category": "finance"
+  },
+  "engine": {
+   "category": "transportation"
+  },
+  "equal": {
+   "category": "math"
+  },
+  "equal-approximately": {
+   "category": "math"
+  },
+  "equal-approximately-not": {
+   "category": "development"
+  },
+  "equal-not": {
+   "category": "math"
+  },
+  "eraser": {
+   "category": "text"
+  },
+  "ethernet-port": {
+   "category": "devices"
+  },
+  "euro": {
+   "category": "finance"
+  },
+  "ev-charger": {
+   "category": "transportation"
+  },
+  "exclamation-mark": {
+   "category": "letters-digits"
+  },
+  "expand": {
+   "category": "arrows"
+  },
+  "external-link": {
+   "category": "arrows"
+  },
+  "eye": {
+   "category": "accessibility"
+  },
+  "eye-closed": {
+   "category": "accessibility"
+  },
+  "eye-dashed": {
+   "category": "accessibility"
+  },
+  "eye-off": {
+   "category": "accessibility"
+  },
+  "face-angry": {
+   "category": "emoji"
+  },
+  "face-expressionless": {
+   "category": "emoji"
+  },
+  "face-grinning": {
+   "category": "emoji"
+  },
+  "face-neutral": {
+   "category": "emoji"
+  },
+  "face-slightly-frowning": {
+   "category": "emoji"
+  },
+  "face-slightly-smiling": {
+   "category": "emoji"
+  },
+  "face-slightly-smiling-plus": {
+   "category": "emoji"
   },
   "factory": {
-   "category": "places"
+   "category": "buildings"
+  },
+  "fan": {
+   "category": "home"
+  },
+  "fast-forward": {
+   "category": "multimedia"
+  },
+  "faucet": {
+   "category": "food-beverage"
+  },
+  "feather": {
+   "category": "nature"
+  },
+  "fence": {
+   "category": "home"
+  },
+  "ferris-wheel": {
+   "category": "navigation"
   },
   "file": {
    "category": "files"
   },
-  "file-braces": {
+  "file-archive": {
    "category": "files"
+  },
+  "file-axis-3d": {
+   "category": "design"
+  },
+  "file-badge": {
+   "category": "files"
+  },
+  "file-box": {
+   "category": "design"
+  },
+  "file-braces": {
+   "category": "development"
+  },
+  "file-braces-corner": {
+   "category": "development"
+  },
+  "file-chart-column": {
+   "category": "files"
+  },
+  "file-chart-column-increasing": {
+   "category": "files"
+  },
+  "file-chart-line": {
+   "category": "files"
+  },
+  "file-chart-pie": {
+   "category": "files"
+  },
+  "file-check": {
+   "category": "files"
+  },
+  "file-check-corner": {
+   "category": "files"
+  },
+  "file-clock": {
+   "category": "time"
   },
   "file-code": {
+   "category": "development"
+  },
+  "file-code-corner": {
+   "category": "development"
+  },
+  "file-cog": {
    "category": "files"
   },
+  "file-database": {
+   "category": "development"
+  },
+  "file-diff": {
+   "category": "development"
+  },
+  "file-digit": {
+   "category": "development"
+  },
+  "file-down": {
+   "category": "files"
+  },
+  "file-exclamation-point": {
+   "category": "notifications"
+  },
+  "file-headphone": {
+   "category": "multimedia"
+  },
+  "file-heart": {
+   "category": "files"
+  },
+  "file-image": {
+   "category": "photography"
+  },
+  "file-input": {
+   "category": "files"
+  },
+  "file-key": {
+   "category": "security"
+  },
+  "file-lock": {
+   "category": "security"
+  },
+  "file-minus": {
+   "category": "files"
+  },
+  "file-minus-corner": {
+   "category": "files"
+  },
+  "file-music": {
+   "category": "multimedia"
+  },
+  "file-output": {
+   "category": "files"
+  },
+  "file-pen": {
+   "category": "files"
+  },
+  "file-pen-line": {
+   "category": "files"
+  },
+  "file-play": {
+   "category": "files"
+  },
+  "file-plus": {
+   "category": "files"
+  },
+  "file-plus-corner": {
+   "category": "files"
+  },
+  "file-question-mark": {
+   "category": "files"
+  },
+  "file-scan": {
+   "category": "files"
+  },
+  "file-search": {
+   "category": "files"
+  },
+  "file-search-corner": {
+   "category": "files"
+  },
+  "file-signal": {
+   "category": "multimedia"
+  },
+  "file-sliders": {
+   "category": "development"
+  },
+  "file-spreadsheet": {
+   "category": "files"
+  },
+  "file-stack": {
+   "category": "development"
+  },
+  "file-symlink": {
+   "category": "files"
+  },
+  "file-terminal": {
+   "category": "development"
+  },
   "file-text": {
+   "category": "text"
+  },
+  "file-type": {
+   "category": "text"
+  },
+  "file-type-corner": {
+   "category": "text"
+  },
+  "file-up": {
+   "category": "files"
+  },
+  "file-user": {
+   "category": "account"
+  },
+  "file-video-camera": {
+   "category": "multimedia"
+  },
+  "file-volume": {
+   "category": "multimedia"
+  },
+  "file-x": {
+   "category": "files"
+  },
+  "file-x-corner": {
    "category": "files"
   },
   "files": {
    "category": "files"
   },
+  "film": {
+   "category": "photography"
+  },
   "fingerprint-pattern": {
-   "category": "security"
+   "category": "account"
+  },
+  "fire-extinguisher": {
+   "category": "home"
+  },
+  "fish": {
+   "category": "food-beverage"
+  },
+  "fish-off": {
+   "category": "food-beverage"
+  },
+  "fish-symbol": {
+   "category": "food-beverage"
+  },
+  "fishing-hook": {
+   "category": "sports"
+  },
+  "fishing-rod": {
+   "category": "sports"
   },
   "flag": {
-   "category": "status"
+   "category": "account"
+  },
+  "flag-off": {
+   "category": "account"
+  },
+  "flag-triangle-left": {
+   "category": "development"
+  },
+  "flag-triangle-right": {
+   "category": "development"
+  },
+  "flame": {
+   "category": "weather"
+  },
+  "flame-kindling": {
+   "category": "nature"
+  },
+  "flashlight": {
+   "category": "photography"
+  },
+  "flashlight-off": {
+   "category": "photography"
+  },
+  "flask-conical": {
+   "category": "science"
+  },
+  "flask-conical-off": {
+   "category": "science"
+  },
+  "flask-round": {
+   "category": "science"
+  },
+  "flower": {
+   "category": "nature"
+  },
+  "flower-2": {
+   "category": "nature"
+  },
+  "focus": {
+   "category": "photography"
+  },
+  "fold-horizontal": {
+   "category": "arrows"
+  },
+  "fold-vertical": {
+   "category": "arrows"
   },
   "folder": {
    "category": "files"
   },
+  "folder-archive": {
+   "category": "files"
+  },
+  "folder-bookmark": {
+   "category": "files"
+  },
+  "folder-check": {
+   "category": "files"
+  },
+  "folder-clock": {
+   "category": "time"
+  },
+  "folder-closed": {
+   "category": "files"
+  },
+  "folder-code": {
+   "category": "development"
+  },
+  "folder-cog": {
+   "category": "files"
+  },
+  "folder-dot": {
+   "category": "development"
+  },
+  "folder-down": {
+   "category": "files"
+  },
+  "folder-git": {
+   "category": "development"
+  },
+  "folder-git-2": {
+   "category": "development"
+  },
+  "folder-heart": {
+   "category": "files"
+  },
+  "folder-input": {
+   "category": "files"
+  },
+  "folder-kanban": {
+   "category": "charts"
+  },
+  "folder-key": {
+   "category": "security"
+  },
+  "folder-lock": {
+   "category": "security"
+  },
+  "folder-minus": {
+   "category": "files"
+  },
+  "folder-open": {
+   "category": "files"
+  },
+  "folder-open-dot": {
+   "category": "development"
+  },
+  "folder-output": {
+   "category": "files"
+  },
+  "folder-pen": {
+   "category": "files"
+  },
+  "folder-plus": {
+   "category": "files"
+  },
+  "folder-root": {
+   "category": "development"
+  },
+  "folder-search": {
+   "category": "files"
+  },
+  "folder-search-2": {
+   "category": "files"
+  },
+  "folder-symlink": {
+   "category": "files"
+  },
+  "folder-sync": {
+   "category": "files"
+  },
+  "folder-tree": {
+   "category": "files"
+  },
+  "folder-up": {
+   "category": "files"
+  },
+  "folder-user": {
+   "category": "account"
+  },
+  "folder-users": {
+   "category": "account"
+  },
+  "folder-x": {
+   "category": "files"
+  },
+  "folders": {
+   "category": "files"
+  },
+  "footprints": {
+   "category": "navigation"
+  },
+  "forklift": {
+   "category": "transportation"
+  },
+  "form": {
+   "category": "development"
+  },
+  "forward": {
+   "category": "mail"
+  },
+  "frame": {
+   "category": "design"
+  },
+  "fuel": {
+   "category": "transportation"
+  },
+  "fullscreen": {
+   "category": "layout"
+  },
   "funnel": {
-   "category": "data"
+   "category": "layout"
+  },
+  "funnel-plus": {
+   "category": "layout"
+  },
+  "funnel-x": {
+   "category": "layout"
+  },
+  "galaxy": {
+   "category": "science"
+  },
+  "gallery-horizontal": {
+   "category": "layout"
+  },
+  "gallery-horizontal-end": {
+   "category": "files"
+  },
+  "gallery-thumbnails": {
+   "category": "layout"
+  },
+  "gallery-vertical": {
+   "category": "layout"
+  },
+  "gallery-vertical-end": {
+   "category": "files"
+  },
+  "gamepad": {
+   "category": "gaming"
+  },
+  "gamepad-2": {
+   "category": "gaming"
+  },
+  "gamepad-directional": {
+   "category": "gaming"
+  },
+  "gap-horizontal": {
+   "category": "design"
+  },
+  "gap-vertical": {
+   "category": "design"
   },
   "gauge": {
-   "category": "work"
+   "category": "transportation"
+  },
+  "gavel": {
+   "category": "tools"
+  },
+  "gem": {
+   "category": "gaming"
+  },
+  "georgian-lari": {
+   "category": "finance"
+  },
+  "germ": {
+   "category": "medical"
+  },
+  "germ-off": {
+   "category": "medical"
+  },
+  "ghost": {
+   "category": "gaming"
+  },
+  "gift": {
+   "category": "gaming"
   },
   "git-branch": {
+   "category": "development"
+  },
+  "git-branch-minus": {
+   "category": "development"
+  },
+  "git-branch-plus": {
+   "category": "development"
+  },
+  "git-commit-horizontal": {
+   "category": "development"
+  },
+  "git-commit-vertical": {
+   "category": "development"
+  },
+  "git-compare": {
+   "category": "development"
+  },
+  "git-compare-arrows": {
+   "category": "development"
+  },
+  "git-fork": {
+   "category": "development"
+  },
+  "git-graph": {
    "category": "development"
   },
   "git-merge": {
    "category": "development"
   },
-  "globe": {
-   "category": "network"
+  "git-merge-conflict": {
+   "category": "development"
   },
-  "hard-drive": {
+  "git-pull-request": {
+   "category": "development"
+  },
+  "git-pull-request-arrow": {
+   "category": "development"
+  },
+  "git-pull-request-closed": {
+   "category": "development"
+  },
+  "git-pull-request-create": {
+   "category": "development"
+  },
+  "git-pull-request-create-arrow": {
+   "category": "development"
+  },
+  "git-pull-request-draft": {
+   "category": "development"
+  },
+  "glass-water": {
+   "category": "food-beverage"
+  },
+  "glasses": {
+   "category": "accessibility"
+  },
+  "globe": {
+   "category": "navigation"
+  },
+  "globe-ban": {
+   "category": "security"
+  },
+  "globe-check": {
+   "category": "navigation"
+  },
+  "globe-code": {
+   "category": "development"
+  },
+  "globe-lock": {
+   "category": "security"
+  },
+  "globe-off": {
+   "category": "navigation"
+  },
+  "globe-plus": {
+   "category": "navigation"
+  },
+  "globe-x": {
+   "category": "navigation"
+  },
+  "goal": {
+   "category": "gaming"
+  },
+  "gpu": {
    "category": "devices"
   },
+  "graduation-cap": {
+   "category": "buildings"
+  },
+  "grape": {
+   "category": "food-beverage"
+  },
+  "graph-hub": {
+   "category": "connectivity"
+  },
+  "graph-star": {
+   "category": "development"
+  },
+  "grid-2x2": {
+   "category": "text"
+  },
+  "grid-2x2-check": {
+   "category": "text"
+  },
+  "grid-2x2-plus": {
+   "category": "text"
+  },
+  "grid-2x2-x": {
+   "category": "text"
+  },
+  "grid-3x2": {
+   "category": "text"
+  },
+  "grid-3x3": {
+   "category": "text"
+  },
+  "grid-3x3-off": {
+   "category": "text"
+  },
+  "grip": {
+   "category": "layout"
+  },
+  "grip-horizontal": {
+   "category": "layout"
+  },
+  "grip-vertical": {
+   "category": "layout"
+  },
+  "groceries": {
+   "category": "food-beverage"
+  },
+  "group": {
+   "category": "layout"
+  },
+  "guitar": {
+   "category": "multimedia"
+  },
+  "guitar-electric": {
+   "category": "multimedia"
+  },
+  "half-note": {
+   "category": "multimedia"
+  },
+  "ham": {
+   "category": "food-beverage"
+  },
+  "hamburger": {
+   "category": "food-beverage"
+  },
+  "hammer": {
+   "category": "tools"
+  },
+  "hand": {
+   "category": "cursors"
+  },
+  "hand-coins": {
+   "category": "finance"
+  },
+  "hand-fist": {
+   "category": "social"
+  },
+  "hand-grab": {
+   "category": "cursors"
+  },
+  "hand-heart": {
+   "category": "social"
+  },
+  "hand-helping": {
+   "category": "emoji"
+  },
+  "hand-metal": {
+   "category": "emoji"
+  },
+  "hand-platter": {
+   "category": "food-beverage"
+  },
+  "handbag": {
+   "category": "shopping"
+  },
+  "handle-bottom-right": {
+   "category": "design"
+  },
+  "handshake": {
+   "category": "social"
+  },
+  "hard-drive": {
+   "category": "development"
+  },
+  "hard-drive-download": {
+   "category": "development"
+  },
+  "hard-drive-upload": {
+   "category": "development"
+  },
+  "hard-hat": {
+   "category": "tools"
+  },
+  "hash": {
+   "category": "text"
+  },
+  "hat-glasses": {
+   "category": "social"
+  },
+  "haze": {
+   "category": "weather"
+  },
+  "hd": {
+   "category": "devices"
+  },
+  "hdmi-port": {
+   "category": "devices"
+  },
+  "heading-1": {
+   "category": "letters-digits"
+  },
+  "heading-2": {
+   "category": "letters-digits"
+  },
+  "heading-3": {
+   "category": "letters-digits"
+  },
+  "heading-4": {
+   "category": "letters-digits"
+  },
+  "heading-5": {
+   "category": "letters-digits"
+  },
+  "heading-6": {
+   "category": "letters-digits"
+  },
+  "headphone-off": {
+   "category": "multimedia"
+  },
+  "headphones": {
+   "category": "multimedia"
+  },
+  "headset": {
+   "category": "multimedia"
+  },
+  "heart": {
+   "category": "medical"
+  },
+  "heart-crack": {
+   "category": "emoji"
+  },
+  "heart-handshake": {
+   "category": "emoji"
+  },
+  "heart-minus": {
+   "category": "social"
+  },
+  "heart-off": {
+   "category": "social"
+  },
+  "heart-plus": {
+   "category": "social"
+  },
+  "heart-pulse": {
+   "category": "medical"
+  },
+  "heart-x": {
+   "category": "social"
+  },
+  "heater": {
+   "category": "home"
+  },
+  "helicopter": {
+   "category": "transportation"
+  },
+  "hexagon": {
+   "category": "shapes"
+  },
+  "highlighter": {
+   "category": "text"
+  },
+  "hiking-stick": {
+   "category": "sports"
+  },
+  "hockey-stick": {
+   "category": "sports"
+  },
+  "hop": {
+   "category": "food-beverage"
+  },
+  "hop-off": {
+   "category": "food-beverage"
+  },
+  "hospital": {
+   "category": "medical"
+  },
+  "hot-air-balloon": {
+   "category": "transportation"
+  },
+  "hotel": {
+   "category": "buildings"
+  },
   "hourglass": {
-   "category": "work"
+   "category": "time"
+  },
+  "hourglass-cog": {
+   "category": "time"
   },
   "house": {
-   "category": "places"
+   "category": "buildings"
+  },
+  "house-cog": {
+   "category": "buildings"
+  },
+  "house-heart": {
+   "category": "home"
+  },
+  "house-plug": {
+   "category": "buildings"
+  },
+  "house-plus": {
+   "category": "buildings"
+  },
+  "house-wifi": {
+   "category": "home"
+  },
+  "houses": {
+   "category": "buildings"
+  },
+  "ice-cream-bowl": {
+   "category": "food-beverage"
+  },
+  "ice-cream-cone": {
+   "category": "food-beverage"
   },
   "id-card": {
    "category": "security"
   },
+  "id-card-lanyard": {
+   "category": "security"
+  },
   "image": {
-   "category": "files"
+   "category": "photography"
+  },
+  "image-down": {
+   "category": "photography"
+  },
+  "image-minus": {
+   "category": "photography"
+  },
+  "image-off": {
+   "category": "photography"
+  },
+  "image-play": {
+   "category": "photography"
+  },
+  "image-plus": {
+   "category": "photography"
+  },
+  "image-up": {
+   "category": "photography"
+  },
+  "image-upscale": {
+   "category": "photography"
+  },
+  "images": {
+   "category": "photography"
+  },
+  "import": {
+   "category": "arrows"
   },
   "inbox": {
-   "category": "messages"
+   "category": "mail"
+  },
+  "indian-rupee": {
+   "category": "finance"
+  },
+  "infinity": {
+   "category": "multimedia"
   },
   "info": {
-   "category": "status"
+   "category": "accessibility"
+  },
+  "inspection-panel": {
+   "category": "tools"
+  },
+  "italic": {
+   "category": "letters-digits"
+  },
+  "iteration-ccw": {
+   "category": "arrows"
+  },
+  "iteration-cw": {
+   "category": "arrows"
+  },
+  "iv-bag": {
+   "category": "medical"
+  },
+  "japanese-yen": {
+   "category": "finance"
+  },
+  "joystick": {
+   "category": "gaming"
+  },
+  "kanban": {
+   "category": "charts"
+  },
+  "kayak": {
+   "category": "transportation"
+  },
+  "kazakh-tenge": {
+   "category": "finance"
   },
   "key": {
    "category": "security"
@@ -157,152 +2929,3236 @@
   "key-round": {
    "category": "security"
   },
+  "key-square": {
+   "category": "security"
+  },
+  "keyboard": {
+   "category": "text"
+  },
+  "keyboard-music": {
+   "category": "multimedia"
+  },
+  "keyboard-off": {
+   "category": "text"
+  },
+  "lambda": {
+   "category": "letters-digits"
+  },
+  "lamp": {
+   "category": "home"
+  },
+  "lamp-ceiling": {
+   "category": "home"
+  },
+  "lamp-desk": {
+   "category": "home"
+  },
+  "lamp-floor": {
+   "category": "home"
+  },
+  "lamp-wall-down": {
+   "category": "home"
+  },
+  "lamp-wall-up": {
+   "category": "home"
+  },
+  "land-plot": {
+   "category": "math"
+  },
+  "landmark": {
+   "category": "finance"
+  },
+  "languages": {
+   "category": "text"
+  },
   "laptop": {
    "category": "devices"
   },
+  "laptop-minimal": {
+   "category": "devices"
+  },
+  "laptop-minimal-check": {
+   "category": "notifications"
+  },
+  "laser": {
+   "category": "tools"
+  },
+  "lasso": {
+   "category": "design"
+  },
+  "lasso-select": {
+   "category": "design"
+  },
+  "layer-arrow-down": {
+   "category": "design"
+  },
+  "layer-arrow-up": {
+   "category": "design"
+  },
   "layers": {
-   "category": "data"
+   "category": "design"
+  },
+  "layers-2": {
+   "category": "design"
+  },
+  "layers-arrow-down": {
+   "category": "design"
+  },
+  "layers-arrow-up": {
+   "category": "design"
+  },
+  "layers-minus": {
+   "category": "design"
+  },
+  "layers-plus": {
+   "category": "design"
+  },
+  "layout-arrow-down": {
+   "category": "design"
+  },
+  "layout-arrow-right": {
+   "category": "design"
   },
   "layout-dashboard": {
+   "category": "design"
+  },
+  "layout-freeform": {
+   "category": "design"
+  },
+  "layout-grid": {
+   "category": "design"
+  },
+  "layout-grid-circles": {
+   "category": "design"
+  },
+  "layout-list": {
+   "category": "design"
+  },
+  "layout-panel-left": {
+   "category": "design"
+  },
+  "layout-panel-top": {
+   "category": "layout"
+  },
+  "layout-template": {
+   "category": "layout"
+  },
+  "leaf": {
+   "category": "nature"
+  },
+  "leafy-green": {
+   "category": "food-beverage"
+  },
+  "lectern": {
+   "category": "communication"
+  },
+  "lens": {
+   "category": "photography"
+  },
+  "lens-concave": {
+   "category": "science"
+  },
+  "lens-convex": {
+   "category": "science"
+  },
+  "letter-a": {
+   "category": "letters-digits"
+  },
+  "letter-b": {
+   "category": "letters-digits"
+  },
+  "letter-c": {
+   "category": "letters-digits"
+  },
+  "letter-d": {
+   "category": "letters-digits"
+  },
+  "letter-e": {
+   "category": "letters-digits"
+  },
+  "letter-f": {
+   "category": "letters-digits"
+  },
+  "letter-g": {
+   "category": "letters-digits"
+  },
+  "letter-h": {
+   "category": "letters-digits"
+  },
+  "letter-i": {
+   "category": "letters-digits"
+  },
+  "letter-j": {
+   "category": "letters-digits"
+  },
+  "letter-k": {
+   "category": "letters-digits"
+  },
+  "letter-l": {
+   "category": "letters-digits"
+  },
+  "letter-m": {
+   "category": "letters-digits"
+  },
+  "letter-n": {
+   "category": "letters-digits"
+  },
+  "letter-o": {
+   "category": "letters-digits"
+  },
+  "letter-p": {
+   "category": "letters-digits"
+  },
+  "letter-q": {
+   "category": "letters-digits"
+  },
+  "letter-r": {
+   "category": "letters-digits"
+  },
+  "letter-s": {
+   "category": "letters-digits"
+  },
+  "letter-spacing": {
+   "category": "text"
+  },
+  "letter-t": {
+   "category": "letters-digits"
+  },
+  "letter-u": {
+   "category": "letters-digits"
+  },
+  "letter-v": {
+   "category": "letters-digits"
+  },
+  "letter-w": {
+   "category": "letters-digits"
+  },
+  "letter-x": {
+   "category": "letters-digits"
+  },
+  "letter-y": {
+   "category": "letters-digits"
+  },
+  "letter-z": {
+   "category": "letters-digits"
+  },
+  "letters": {
+   "category": "letters-digits"
+  },
+  "library": {
+   "category": "text"
+  },
+  "library-big": {
+   "category": "text"
+  },
+  "life-buoy": {
+   "category": "accessibility"
+  },
+  "ligature": {
+   "category": "text"
+  },
+  "lightbulb": {
+   "category": "photography"
+  },
+  "lightbulb-off": {
+   "category": "photography"
+  },
+  "lighthouse": {
+   "category": "buildings"
+  },
+  "line-dot-bottom-vertical": {
    "category": "development"
   },
+  "line-dot-left-horizontal": {
+   "category": "development"
+  },
+  "line-dot-right-horizontal": {
+   "category": "development"
+  },
+  "line-dot-top-vertical": {
+   "category": "development"
+  },
+  "line-height": {
+   "category": "text"
+  },
+  "line-squiggle": {
+   "category": "shapes"
+  },
+  "line-style": {
+   "category": "design"
+  },
   "link": {
-   "category": "network"
+   "category": "text"
+  },
+  "link-2": {
+   "category": "text"
+  },
+  "link-2-off": {
+   "category": "text"
+  },
+  "list": {
+   "category": "text"
+  },
+  "list-check": {
+   "category": "text"
   },
   "list-checks": {
-   "category": "work"
+   "category": "text"
+  },
+  "list-chevrons-down-up": {
+   "category": "text"
+  },
+  "list-chevrons-up-down": {
+   "category": "text"
+  },
+  "list-clock": {
+   "category": "time"
+  },
+  "list-collapse": {
+   "category": "text"
+  },
+  "list-end": {
+   "category": "multimedia"
+  },
+  "list-filter": {
+   "category": "layout"
+  },
+  "list-filter-plus": {
+   "category": "layout"
+  },
+  "list-indent-decrease": {
+   "category": "development"
+  },
+  "list-indent-increase": {
+   "category": "development"
+  },
+  "list-minus": {
+   "category": "multimedia"
+  },
+  "list-music": {
+   "category": "multimedia"
+  },
+  "list-ordered": {
+   "category": "text"
+  },
+  "list-plus": {
+   "category": "multimedia"
+  },
+  "list-restart": {
+   "category": "multimedia"
+  },
+  "list-sort-ascending": {
+   "category": "layout"
+  },
+  "list-sort-descending": {
+   "category": "layout"
+  },
+  "list-start": {
+   "category": "multimedia"
+  },
+  "list-todo": {
+   "category": "text"
+  },
+  "list-tree": {
+   "category": "files"
+  },
+  "list-video": {
+   "category": "multimedia"
+  },
+  "list-x": {
+   "category": "multimedia"
+  },
+  "loader": {
+   "category": "cursors"
+  },
+  "loader-circle": {
+   "category": "cursors"
+  },
+  "loader-pinwheel": {
+   "category": "cursors"
+  },
+  "locate": {
+   "category": "navigation"
+  },
+  "locate-fixed": {
+   "category": "navigation"
+  },
+  "locate-off": {
+   "category": "navigation"
   },
   "lock": {
+   "category": "security"
+  },
+  "lock-keyhole": {
+   "category": "security"
+  },
+  "lock-keyhole-open": {
    "category": "security"
   },
   "lock-open": {
    "category": "security"
   },
+  "log-in": {
+   "category": "arrows"
+  },
+  "log-out": {
+   "category": "arrows"
+  },
+  "logs": {
+   "category": "text"
+  },
+  "lollipop": {
+   "category": "food-beverage"
+  },
+  "luggage": {
+   "category": "travel"
+  },
+  "magnet": {
+   "category": "design"
+  },
   "mail": {
-   "category": "messages"
+   "category": "mail"
+  },
+  "mail-badge": {
+   "category": "mail"
+  },
+  "mail-check": {
+   "category": "mail"
+  },
+  "mail-clock": {
+   "category": "time"
+  },
+  "mail-dot": {
+   "category": "notifications"
+  },
+  "mail-exclamation-point": {
+   "category": "mail"
+  },
+  "mail-minus": {
+   "category": "mail"
+  },
+  "mail-open": {
+   "category": "mail"
+  },
+  "mail-pen": {
+   "category": "mail"
+  },
+  "mail-plus": {
+   "category": "mail"
+  },
+  "mail-question-mark": {
+   "category": "mail"
+  },
+  "mail-search": {
+   "category": "mail"
+  },
+  "mail-x": {
+   "category": "mail"
+  },
+  "mailbox": {
+   "category": "mail"
+  },
+  "mails": {
+   "category": "mail"
+  },
+  "mango": {
+   "category": "food-beverage"
+  },
+  "map": {
+   "category": "navigation"
+  },
+  "map-minus": {
+   "category": "navigation"
   },
   "map-pin": {
-   "category": "places"
+   "category": "navigation"
+  },
+  "map-pin-check": {
+   "category": "navigation"
+  },
+  "map-pin-check-inside": {
+   "category": "navigation"
+  },
+  "map-pin-house": {
+   "category": "navigation"
+  },
+  "map-pin-minus": {
+   "category": "navigation"
+  },
+  "map-pin-minus-inside": {
+   "category": "navigation"
+  },
+  "map-pin-off": {
+   "category": "navigation"
+  },
+  "map-pin-pen": {
+   "category": "navigation"
+  },
+  "map-pin-plus": {
+   "category": "navigation"
+  },
+  "map-pin-plus-inside": {
+   "category": "navigation"
+  },
+  "map-pin-search": {
+   "category": "navigation"
+  },
+  "map-pin-x": {
+   "category": "navigation"
+  },
+  "map-pin-x-inside": {
+   "category": "navigation"
+  },
+  "map-pinned": {
+   "category": "navigation"
+  },
+  "map-plus": {
+   "category": "navigation"
+  },
+  "margin": {
+   "category": "layout"
+  },
+  "margin-bottom": {
+   "category": "layout"
+  },
+  "margin-horizontal": {
+   "category": "layout"
+  },
+  "margin-left": {
+   "category": "layout"
+  },
+  "margin-right": {
+   "category": "layout"
+  },
+  "margin-top": {
+   "category": "layout"
+  },
+  "margin-vertical": {
+   "category": "layout"
+  },
+  "mars": {
+   "category": "medical"
+  },
+  "mars-stroke": {
+   "category": "medical"
+  },
+  "martini": {
+   "category": "food-beverage"
+  },
+  "maximize": {
+   "category": "layout"
+  },
+  "maximize-2": {
+   "category": "arrows"
+  },
+  "medal": {
+   "category": "sports"
+  },
+  "megaphone": {
+   "category": "multimedia"
+  },
+  "megaphone-off": {
+   "category": "multimedia"
+  },
+  "memory-stick": {
+   "category": "devices"
+  },
+  "menu": {
+   "category": "layout"
+  },
+  "merge": {
+   "category": "development"
+  },
+  "message-circle": {
+   "category": "social"
+  },
+  "message-circle-check": {
+   "category": "social"
+  },
+  "message-circle-code": {
+   "category": "development"
+  },
+  "message-circle-dashed": {
+   "category": "social"
+  },
+  "message-circle-dashed-check": {
+   "category": "social"
+  },
+  "message-circle-exclamation-point": {
+   "category": "notifications"
+  },
+  "message-circle-heart": {
+   "category": "social"
+  },
+  "message-circle-more": {
+   "category": "social"
+  },
+  "message-circle-off": {
+   "category": "social"
+  },
+  "message-circle-plus": {
+   "category": "social"
+  },
+  "message-circle-question-mark": {
+   "category": "social"
+  },
+  "message-circle-reply": {
+   "category": "social"
+  },
+  "message-circle-text": {
+   "category": "social"
+  },
+  "message-circle-x": {
+   "category": "social"
   },
   "message-square": {
-   "category": "messages"
+   "category": "social"
+  },
+  "message-square-check": {
+   "category": "social"
+  },
+  "message-square-code": {
+   "category": "development"
+  },
+  "message-square-dashed": {
+   "category": "social"
+  },
+  "message-square-diff": {
+   "category": "development"
+  },
+  "message-square-dot": {
+   "category": "notifications"
+  },
+  "message-square-exclamation-point": {
+   "category": "notifications"
+  },
+  "message-square-heart": {
+   "category": "social"
+  },
+  "message-square-lock": {
+   "category": "security"
+  },
+  "message-square-more": {
+   "category": "social"
+  },
+  "message-square-off": {
+   "category": "social"
+  },
+  "message-square-plus": {
+   "category": "social"
+  },
+  "message-square-quote": {
+   "category": "text"
+  },
+  "message-square-reply": {
+   "category": "social"
+  },
+  "message-square-share": {
+   "category": "social"
+  },
+  "message-square-text": {
+   "category": "social"
+  },
+  "message-square-x": {
+   "category": "social"
+  },
+  "messages-circle": {
+   "category": "social"
+  },
+  "messages-square": {
+   "category": "social"
+  },
+  "metronome": {
+   "category": "multimedia"
+  },
+  "mic": {
+   "category": "devices"
+  },
+  "mic-audio-lines": {
+   "category": "devices"
+  },
+  "mic-off": {
+   "category": "devices"
+  },
+  "mic-signal": {
+   "category": "connectivity"
+  },
+  "mic-vocal": {
+   "category": "devices"
+  },
+  "microchip": {
+   "category": "devices"
+  },
+  "microscope": {
+   "category": "science"
+  },
+  "microwave": {
+   "category": "food-beverage"
+  },
+  "midi-port": {
+   "category": "multimedia"
+  },
+  "milestone": {
+   "category": "arrows"
+  },
+  "milk": {
+   "category": "food-beverage"
+  },
+  "milk-off": {
+   "category": "food-beverage"
+  },
+  "minimize": {
+   "category": "layout"
+  },
+  "minimize-2": {
+   "category": "arrows"
+  },
+  "minus": {
+   "category": "math"
+  },
+  "mirror-rectangular": {
+   "category": "science"
+  },
+  "mirror-round": {
+   "category": "science"
   },
   "monitor": {
    "category": "devices"
   },
+  "monitor-activity": {
+   "category": "connectivity"
+  },
+  "monitor-check": {
+   "category": "devices"
+  },
+  "monitor-cloud": {
+   "category": "development"
+  },
+  "monitor-cog": {
+   "category": "devices"
+  },
+  "monitor-dot": {
+   "category": "devices"
+  },
+  "monitor-down": {
+   "category": "devices"
+  },
+  "monitor-off": {
+   "category": "devices"
+  },
+  "monitor-pause": {
+   "category": "multimedia"
+  },
+  "monitor-pc": {
+   "category": "devices"
+  },
+  "monitor-play": {
+   "category": "multimedia"
+  },
+  "monitor-smartphone": {
+   "category": "devices"
+  },
+  "monitor-speaker": {
+   "category": "connectivity"
+  },
+  "monitor-stop": {
+   "category": "multimedia"
+  },
+  "monitor-up": {
+   "category": "devices"
+  },
+  "monitor-x": {
+   "category": "devices"
+  },
+  "moon": {
+   "category": "accessibility"
+  },
+  "moon-star": {
+   "category": "accessibility"
+  },
+  "mop": {
+   "category": "home"
+  },
+  "mop-sparkles": {
+   "category": "home"
+  },
+  "moped": {
+   "category": "transportation"
+  },
+  "mosque": {
+   "category": "buildings"
+  },
+  "motorbike": {
+   "category": "transportation"
+  },
+  "mound-shovel": {
+   "category": "tools"
+  },
+  "mountain": {
+   "category": "nature"
+  },
+  "mountain-snow": {
+   "category": "nature"
+  },
+  "mouse": {
+   "category": "devices"
+  },
+  "mouse-left": {
+   "category": "devices"
+  },
+  "mouse-off": {
+   "category": "devices"
+  },
+  "mouse-pointer": {
+   "category": "cursors"
+  },
+  "mouse-pointer-2": {
+   "category": "cursors"
+  },
+  "mouse-pointer-2-off": {
+   "category": "cursors"
+  },
+  "mouse-pointer-ban": {
+   "category": "cursors"
+  },
+  "mouse-pointer-click": {
+   "category": "cursors"
+  },
+  "mouse-right": {
+   "category": "devices"
+  },
+  "mouth": {
+   "category": "medical"
+  },
+  "mouth-off": {
+   "category": "medical"
+  },
+  "move": {
+   "category": "arrows"
+  },
+  "move-3d": {
+   "category": "design"
+  },
+  "move-diagonal": {
+   "category": "arrows"
+  },
+  "move-diagonal-2": {
+   "category": "arrows"
+  },
+  "move-down": {
+   "category": "arrows"
+  },
+  "move-down-left": {
+   "category": "arrows"
+  },
+  "move-down-right": {
+   "category": "arrows"
+  },
+  "move-horizontal": {
+   "category": "arrows"
+  },
+  "move-left": {
+   "category": "arrows"
+  },
+  "move-right": {
+   "category": "arrows"
+  },
+  "move-up": {
+   "category": "arrows"
+  },
+  "move-up-left": {
+   "category": "arrows"
+  },
+  "move-up-right": {
+   "category": "arrows"
+  },
+  "move-vertical": {
+   "category": "arrows"
+  },
+  "navigation": {
+   "category": "navigation"
+  },
+  "navigation-2": {
+   "category": "navigation"
+  },
+  "navigation-2-off": {
+   "category": "navigation"
+  },
+  "navigation-off": {
+   "category": "navigation"
+  },
+  "nepali-rupee": {
+   "category": "finance"
+  },
   "network": {
-   "category": "network"
+   "category": "development"
+  },
+  "newspaper": {
+   "category": "multimedia"
+  },
+  "nfc": {
+   "category": "finance"
+  },
+  "non-binary": {
+   "category": "medical"
+  },
+  "notebook": {
+   "category": "text"
+  },
+  "notebook-dot": {
+   "category": "text"
+  },
+  "notebook-pen": {
+   "category": "text"
+  },
+  "notebook-tabs": {
+   "category": "account"
+  },
+  "notebook-text": {
+   "category": "text"
+  },
+  "notepad-text": {
+   "category": "text"
+  },
+  "notepad-text-dashed": {
+   "category": "text"
+  },
+  "numbers": {
+   "category": "letters-digits"
+  },
+  "nut": {
+   "category": "food-beverage"
+  },
+  "nut-off": {
+   "category": "food-beverage"
+  },
+  "octagon": {
+   "category": "shapes"
+  },
+  "octagon-exclamation-point": {
+   "category": "notifications"
+  },
+  "octagon-minus": {
+   "category": "transportation"
+  },
+  "octagon-pause": {
+   "category": "multimedia"
+  },
+  "octagon-x": {
+   "category": "notifications"
+  },
+  "omega": {
+   "category": "letters-digits"
+  },
+  "opacity": {
+   "category": "design"
+  },
+  "option": {
+   "category": "development"
+  },
+  "orbit": {
+   "category": "science"
+  },
+  "origami": {
+   "category": "animals"
   },
   "package": {
-   "category": "data"
+   "category": "files"
+  },
+  "package-2": {
+   "category": "files"
+  },
+  "package-check": {
+   "category": "files"
+  },
+  "package-minus": {
+   "category": "files"
+  },
+  "package-open": {
+   "category": "files"
+  },
+  "package-pen": {
+   "category": "files"
+  },
+  "package-plus": {
+   "category": "files"
+  },
+  "package-question-mark": {
+   "category": "files"
+  },
+  "package-search": {
+   "category": "files"
+  },
+  "package-x": {
+   "category": "development"
+  },
+  "paint-bucket": {
+   "category": "design"
+  },
+  "paint-roller": {
+   "category": "design"
+  },
+  "paintbrush": {
+   "category": "text"
+  },
+  "paintbrush-vertical": {
+   "category": "text"
+  },
+  "palette": {
+   "category": "design"
+  },
+  "panda": {
+   "category": "animals"
+  },
+  "panel-bottom": {
+   "category": "layout"
+  },
+  "panel-bottom-close": {
+   "category": "layout"
+  },
+  "panel-bottom-dashed": {
+   "category": "layout"
+  },
+  "panel-bottom-open": {
+   "category": "layout"
+  },
+  "panel-left": {
+   "category": "layout"
+  },
+  "panel-left-close": {
+   "category": "layout"
+  },
+  "panel-left-dashed": {
+   "category": "layout"
+  },
+  "panel-left-open": {
+   "category": "layout"
+  },
+  "panel-left-right-dashed": {
+   "category": "layout"
+  },
+  "panel-right": {
+   "category": "layout"
+  },
+  "panel-right-close": {
+   "category": "layout"
+  },
+  "panel-right-dashed": {
+   "category": "layout"
+  },
+  "panel-right-open": {
+   "category": "layout"
+  },
+  "panel-top": {
+   "category": "layout"
+  },
+  "panel-top-bottom-dashed": {
+   "category": "layout"
+  },
+  "panel-top-close": {
+   "category": "layout"
+  },
+  "panel-top-dashed": {
+   "category": "layout"
+  },
+  "panel-top-open": {
+   "category": "layout"
+  },
+  "panels-left-bottom": {
+   "category": "layout"
+  },
+  "panels-right-bottom": {
+   "category": "layout"
+  },
+  "panels-top-left": {
+   "category": "layout"
+  },
+  "paper-bag": {
+   "category": "food-beverage"
+  },
+  "paperclip": {
+   "category": "files"
+  },
+  "parasol": {
+   "category": "travel"
+  },
+  "parentheses": {
+   "category": "development"
+  },
+  "park": {
+   "category": "nature"
+  },
+  "parking-meter": {
+   "category": "transportation"
+  },
+  "party-popper": {
+   "category": "emoji"
+  },
+  "pause": {
+   "category": "multimedia"
+  },
+  "paw-print": {
+   "category": "animals"
+  },
+  "pc-case": {
+   "category": "devices"
+  },
+  "pen": {
+   "category": "text"
+  },
+  "pen-line": {
+   "category": "text"
+  },
+  "pen-off": {
+   "category": "text"
+  },
+  "pen-tool": {
+   "category": "design"
+  },
+  "pencil": {
+   "category": "design"
+  },
+  "pencil-line": {
+   "category": "text"
+  },
+  "pencil-off": {
+   "category": "design"
+  },
+  "pencil-ruler": {
+   "category": "tools"
+  },
+  "pencil-sparkles": {
+   "category": "design"
+  },
+  "pentagon": {
+   "category": "shapes"
+  },
+  "percent": {
+   "category": "math"
+  },
+  "perfume-bottle": {
+   "category": "shopping"
+  },
+  "person-standing": {
+   "category": "accessibility"
+  },
+  "phi": {
+   "category": "letters-digits"
+  },
+  "philippine-peso": {
+   "category": "finance"
   },
   "phone": {
-   "category": "messages"
+   "category": "connectivity"
+  },
+  "phone-call": {
+   "category": "connectivity"
+  },
+  "phone-forwarded": {
+   "category": "connectivity"
+  },
+  "phone-incoming": {
+   "category": "connectivity"
+  },
+  "phone-log": {
+   "category": "connectivity"
+  },
+  "phone-missed": {
+   "category": "connectivity"
+  },
+  "phone-off": {
+   "category": "connectivity"
+  },
+  "phone-outgoing": {
+   "category": "connectivity"
+  },
+  "pi": {
+   "category": "letters-digits"
+  },
+  "piano": {
+   "category": "multimedia"
+  },
+  "pickaxe": {
+   "category": "tools"
+  },
+  "picture-in-picture": {
+   "category": "multimedia"
+  },
+  "picture-in-picture-2": {
+   "category": "multimedia"
+  },
+  "piggy-bank": {
+   "category": "finance"
+  },
+  "pilcrow": {
+   "category": "text"
+  },
+  "pilcrow-left": {
+   "category": "text"
+  },
+  "pilcrow-right": {
+   "category": "text"
+  },
+  "pill": {
+   "category": "medical"
+  },
+  "pill-bottle": {
+   "category": "medical"
+  },
+  "pin": {
+   "category": "navigation"
+  },
+  "pin-off": {
+   "category": "navigation"
+  },
+  "pipette": {
+   "category": "design"
+  },
+  "pizza": {
+   "category": "food-beverage"
+  },
+  "plane": {
+   "category": "transportation"
+  },
+  "plane-landing": {
+   "category": "transportation"
+  },
+  "plane-takeoff": {
+   "category": "transportation"
+  },
+  "plant-pot": {
+   "category": "home"
   },
   "play": {
-   "category": "work"
+   "category": "multimedia"
+  },
+  "play-off": {
+   "category": "multimedia"
+  },
+  "playing-card": {
+   "category": "gaming"
+  },
+  "playing-cards": {
+   "category": "gaming"
+  },
+  "playing-cards-fan": {
+   "category": "social"
   },
   "plug": {
-   "category": "network"
+   "category": "devices"
+  },
+  "plug-2": {
+   "category": "devices"
+  },
+  "plug-zap": {
+   "category": "devices"
+  },
+  "plus": {
+   "category": "math"
+  },
+  "pocket-knife": {
+   "category": "tools"
+  },
+  "podium": {
+   "category": "sports"
+  },
+  "pointer": {
+   "category": "cursors"
+  },
+  "pointer-off": {
+   "category": "cursors"
+  },
+  "popcorn": {
+   "category": "food-beverage"
+  },
+  "popsicle": {
+   "category": "food-beverage"
+  },
+  "pound-sterling": {
+   "category": "finance"
+  },
+  "power": {
+   "category": "devices"
+  },
+  "power-off": {
+   "category": "devices"
+  },
+  "presentation": {
+   "category": "multimedia"
+  },
+  "printer": {
+   "category": "devices"
+  },
+  "printer-3d": {
+   "category": "tools"
+  },
+  "printer-check": {
+   "category": "devices"
+  },
+  "printer-x": {
+   "category": "devices"
+  },
+  "projector": {
+   "category": "multimedia"
+  },
+  "proportions": {
+   "category": "layout"
+  },
+  "puzzle": {
+   "category": "development"
+  },
+  "pyramid": {
+   "category": "shapes"
+  },
+  "qr-code": {
+   "category": "development"
+  },
+  "question-mark": {
+   "category": "text"
+  },
+  "quote": {
+   "category": "text"
+  },
+  "rabbit": {
+   "category": "animals"
+  },
+  "radar": {
+   "category": "navigation"
+  },
+  "radiation": {
+   "category": "science"
+  },
+  "radical": {
+   "category": "development"
+  },
+  "radio": {
+   "category": "devices"
+  },
+  "radio-off": {
+   "category": "devices"
+  },
+  "radio-receiver": {
+   "category": "devices"
   },
   "radio-tower": {
-   "category": "network"
+   "category": "devices"
+  },
+  "radius": {
+   "category": "shapes"
+  },
+  "rainbow": {
+   "category": "weather"
+  },
+  "rat": {
+   "category": "animals"
+  },
+  "ratio": {
+   "category": "layout"
   },
   "receipt": {
-   "category": "money"
+   "category": "finance"
+  },
+  "receipt-cent": {
+   "category": "finance"
+  },
+  "receipt-euro": {
+   "category": "finance"
+  },
+  "receipt-indian-rupee": {
+   "category": "finance"
+  },
+  "receipt-japanese-yen": {
+   "category": "finance"
+  },
+  "receipt-pound-sterling": {
+   "category": "finance"
+  },
+  "receipt-russian-ruble": {
+   "category": "finance"
+  },
+  "receipt-swiss-franc": {
+   "category": "finance"
+  },
+  "receipt-text": {
+   "category": "finance"
+  },
+  "receipt-turkish-lira": {
+   "category": "finance"
+  },
+  "rectangle-circle": {
+   "category": "development"
+  },
+  "rectangle-ellipsis": {
+   "category": "text"
+  },
+  "rectangle-goggles": {
+   "category": "devices"
+  },
+  "rectangle-horizontal": {
+   "category": "shapes"
+  },
+  "rectangle-vertical": {
+   "category": "shapes"
+  },
+  "recycle": {
+   "category": "sustainability"
+  },
+  "redo": {
+   "category": "text"
+  },
+  "redo-2": {
+   "category": "text"
+  },
+  "redo-dot": {
+   "category": "text"
+  },
+  "refresh-ccw": {
+   "category": "arrows"
+  },
+  "refresh-ccw-dot": {
+   "category": "development"
   },
   "refresh-cw": {
-   "category": "work"
+   "category": "arrows"
+  },
+  "refresh-cw-off": {
+   "category": "arrows"
+  },
+  "refrigerator": {
+   "category": "food-beverage"
+  },
+  "regex": {
+   "category": "text"
+  },
+  "remove-formatting": {
+   "category": "text"
+  },
+  "repeat": {
+   "category": "arrows"
+  },
+  "repeat-1": {
+   "category": "multimedia"
+  },
+  "repeat-2": {
+   "category": "social"
+  },
+  "repeat-off": {
+   "category": "arrows"
+  },
+  "replace": {
+   "category": "text"
+  },
+  "replace-all": {
+   "category": "text"
+  },
+  "reply": {
+   "category": "mail"
+  },
+  "reply-all": {
+   "category": "mail"
+  },
+  "rewind": {
+   "category": "arrows"
+  },
+  "ribbon": {
+   "category": "social"
+  },
+  "road": {
+   "category": "transportation"
+  },
+  "robot-arm": {
+   "category": "science"
+  },
+  "robot-vacuum": {
+   "category": "devices"
   },
   "rocket": {
-   "category": "development"
+   "category": "gaming"
+  },
+  "rocking-chair": {
+   "category": "home"
+  },
+  "roller-coaster": {
+   "category": "navigation"
+  },
+  "rose": {
+   "category": "nature"
+  },
+  "rotate-3d": {
+   "category": "design"
+  },
+  "rotate-ccw": {
+   "category": "arrows"
+  },
+  "rotate-ccw-clock": {
+   "category": "arrows"
+  },
+  "rotate-ccw-key": {
+   "category": "security"
+  },
+  "rotate-ccw-square": {
+   "category": "arrows"
+  },
+  "rotate-cw": {
+   "category": "arrows"
+  },
+  "rotate-cw-clock": {
+   "category": "arrows"
+  },
+  "rotate-cw-fading-clock": {
+   "category": "time"
+  },
+  "rotate-cw-square": {
+   "category": "arrows"
+  },
+  "route": {
+   "category": "navigation"
+  },
+  "route-arrow-right": {
+   "category": "arrows"
+  },
+  "route-off": {
+   "category": "navigation"
   },
   "router": {
    "category": "devices"
   },
-  "search": {
-   "category": "data"
+  "rows-2": {
+   "category": "layout"
   },
-  "send": {
-   "category": "messages"
+  "rows-3": {
+   "category": "layout"
   },
-  "server": {
+  "rows-4": {
+   "category": "layout"
+  },
+  "rss": {
+   "category": "development"
+  },
+  "rugby-ball": {
+   "category": "sports"
+  },
+  "ruler": {
+   "category": "tools"
+  },
+  "ruler-dimension-line": {
+   "category": "tools"
+  },
+  "russian-ruble": {
+   "category": "finance"
+  },
+  "sailboat": {
+   "category": "transportation"
+  },
+  "salad": {
+   "category": "food-beverage"
+  },
+  "sandwich": {
+   "category": "food-beverage"
+  },
+  "satellite": {
+   "category": "connectivity"
+  },
+  "satellite-dish": {
+   "category": "connectivity"
+  },
+  "saudi-riyal": {
+   "category": "finance"
+  },
+  "save": {
+   "category": "files"
+  },
+  "save-all": {
+   "category": "files"
+  },
+  "save-check": {
+   "category": "files"
+  },
+  "save-off": {
+   "category": "files"
+  },
+  "save-pen": {
+   "category": "files"
+  },
+  "save-plus": {
+   "category": "files"
+  },
+  "scale": {
+   "category": "science"
+  },
+  "scale-3d": {
+   "category": "design"
+  },
+  "scaling": {
+   "category": "design"
+  },
+  "scan": {
    "category": "devices"
   },
+  "scan-barcode": {
+   "category": "shopping"
+  },
+  "scan-box": {
+   "category": "design"
+  },
+  "scan-eye": {
+   "category": "photography"
+  },
+  "scan-face": {
+   "category": "account"
+  },
+  "scan-heart": {
+   "category": "medical"
+  },
+  "scan-line": {
+   "category": "devices"
+  },
+  "scan-qr-code": {
+   "category": "account"
+  },
+  "scan-search": {
+   "category": "photography"
+  },
+  "scan-square": {
+   "category": "photography"
+  },
+  "scan-text": {
+   "category": "text"
+  },
+  "school": {
+   "category": "buildings"
+  },
+  "scissors": {
+   "category": "text"
+  },
+  "scissors-line-dashed": {
+   "category": "design"
+  },
+  "scooter": {
+   "category": "transportation"
+  },
+  "scratch-blocks": {
+   "category": "development"
+  },
+  "screen-share": {
+   "category": "connectivity"
+  },
+  "screen-share-off": {
+   "category": "connectivity"
+  },
+  "screw": {
+   "category": "tools"
+  },
+  "scroll": {
+   "category": "gaming"
+  },
+  "scroll-text": {
+   "category": "gaming"
+  },
+  "search": {
+   "category": "text"
+  },
+  "search-check": {
+   "category": "text"
+  },
+  "search-code": {
+   "category": "development"
+  },
+  "search-exclamation-point": {
+   "category": "text"
+  },
+  "search-slash": {
+   "category": "text"
+  },
+  "search-x": {
+   "category": "text"
+  },
+  "section": {
+   "category": "text"
+  },
+  "send": {
+   "category": "mail"
+  },
+  "send-horizontal": {
+   "category": "mail"
+  },
+  "send-to-back": {
+   "category": "design"
+  },
+  "separator-horizontal": {
+   "category": "text"
+  },
+  "separator-vertical": {
+   "category": "text"
+  },
+  "server": {
+   "category": "development"
+  },
+  "server-cog": {
+   "category": "development"
+  },
+  "server-crash": {
+   "category": "development"
+  },
+  "server-nas": {
+   "category": "files"
+  },
+  "server-off": {
+   "category": "development"
+  },
+  "server-plus": {
+   "category": "development"
+  },
   "settings": {
-   "category": "work"
+   "category": "account"
+  },
+  "settings-2": {
+   "category": "account"
+  },
+  "shapes": {
+   "category": "shapes"
+  },
+  "share": {
+   "category": "social"
+  },
+  "share-2": {
+   "category": "social"
+  },
+  "sheet": {
+   "category": "text"
+  },
+  "shell": {
+   "category": "animals"
+  },
+  "shelving-unit": {
+   "category": "home"
   },
   "shield": {
-   "category": "security"
+   "category": "account"
+  },
+  "shield-ban": {
+   "category": "account"
   },
   "shield-check": {
+   "category": "account"
+  },
+  "shield-cog": {
+   "category": "account"
+  },
+  "shield-cog-corner": {
+   "category": "account"
+  },
+  "shield-ellipsis": {
+   "category": "account"
+  },
+  "shield-exclamation-point": {
+   "category": "account"
+  },
+  "shield-half": {
+   "category": "account"
+  },
+  "shield-house": {
    "category": "security"
   },
+  "shield-keyhole": {
+   "category": "account"
+  },
+  "shield-lock": {
+   "category": "security"
+  },
+  "shield-minus": {
+   "category": "account"
+  },
+  "shield-off": {
+   "category": "account"
+  },
+  "shield-plus": {
+   "category": "account"
+  },
+  "shield-question-mark": {
+   "category": "account"
+  },
+  "shield-user": {
+   "category": "account"
+  },
+  "shield-x": {
+   "category": "account"
+  },
+  "ship": {
+   "category": "transportation"
+  },
+  "ship-cargo": {
+   "category": "transportation"
+  },
+  "ship-wheel": {
+   "category": "transportation"
+  },
+  "shirt": {
+   "category": "shopping"
+  },
+  "shopping-bag": {
+   "category": "shopping"
+  },
+  "shopping-basket": {
+   "category": "shopping"
+  },
   "shopping-cart": {
-   "category": "money"
+   "category": "shopping"
+  },
+  "shopping-cart-minus": {
+   "category": "shopping"
+  },
+  "shopping-cart-plus": {
+   "category": "shopping"
+  },
+  "shovel": {
+   "category": "nature"
+  },
+  "shower-head": {
+   "category": "home"
+  },
+  "shredder": {
+   "category": "files"
+  },
+  "shrimp": {
+   "category": "animals"
+  },
+  "shrimp-off": {
+   "category": "animals"
+  },
+  "shrink": {
+   "category": "layout"
+  },
+  "shrub": {
+   "category": "nature"
+  },
+  "shuffle": {
+   "category": "multimedia"
+  },
+  "sigma": {
+   "category": "letters-digits"
+  },
+  "signal": {
+   "category": "connectivity"
+  },
+  "signal-high": {
+   "category": "connectivity"
+  },
+  "signal-low": {
+   "category": "connectivity"
+  },
+  "signal-medium": {
+   "category": "connectivity"
+  },
+  "signal-zero": {
+   "category": "connectivity"
+  },
+  "signature": {
+   "category": "text"
+  },
+  "signpost": {
+   "category": "arrows"
+  },
+  "signpost-big": {
+   "category": "arrows"
+  },
+  "siren": {
+   "category": "medical"
+  },
+  "siren-off": {
+   "category": "medical"
+  },
+  "sixteenth-notes": {
+   "category": "multimedia"
+  },
+  "skip-back": {
+   "category": "multimedia"
+  },
+  "skip-forward": {
+   "category": "multimedia"
+  },
+  "skull": {
+   "category": "gaming"
+  },
+  "slash": {
+   "category": "development"
+  },
+  "slice": {
+   "category": "design"
+  },
+  "sliders-horizontal": {
+   "category": "account"
+  },
+  "sliders-vertical": {
+   "category": "account"
   },
   "smartphone": {
    "category": "devices"
   },
+  "smartphone-charging": {
+   "category": "devices"
+  },
+  "smartphone-nfc": {
+   "category": "finance"
+  },
+  "smartphone-user-round": {
+   "category": "account"
+  },
+  "snail": {
+   "category": "animals"
+  },
+  "snowflake": {
+   "category": "weather"
+  },
+  "soap-dispenser-droplet": {
+   "category": "home"
+  },
+  "sofa": {
+   "category": "home"
+  },
+  "solar-panel": {
+   "category": "home"
+  },
+  "soup": {
+   "category": "food-beverage"
+  },
+  "space": {
+   "category": "text"
+  },
+  "spade": {
+   "category": "shapes"
+  },
+  "sparkle": {
+   "category": "shapes"
+  },
   "sparkles": {
-   "category": "work"
+   "category": "multimedia"
+  },
+  "speaker": {
+   "category": "multimedia"
+  },
+  "speech": {
+   "category": "accessibility"
+  },
+  "spell-check": {
+   "category": "text"
+  },
+  "spell-check-2": {
+   "category": "text"
+  },
+  "spline": {
+   "category": "design"
+  },
+  "spline-pointer": {
+   "category": "cursors"
+  },
+  "split": {
+   "category": "development"
+  },
+  "spool": {
+   "category": "tools"
+  },
+  "sport-shoe": {
+   "category": "sports"
+  },
+  "spotlight": {
+   "category": "devices"
+  },
+  "spray-can": {
+   "category": "design"
+  },
+  "sprout": {
+   "category": "nature"
+  },
+  "square": {
+   "category": "shapes"
+  },
+  "square-activity": {
+   "category": "medical"
+  },
+  "square-arrow-down": {
+   "category": "arrows"
+  },
+  "square-arrow-down-enter": {
+   "category": "files"
+  },
+  "square-arrow-down-exit": {
+   "category": "arrows"
+  },
+  "square-arrow-down-left": {
+   "category": "arrows"
+  },
+  "square-arrow-down-left-enter": {
+   "category": "arrows"
+  },
+  "square-arrow-down-left-exit": {
+   "category": "arrows"
+  },
+  "square-arrow-down-right": {
+   "category": "arrows"
+  },
+  "square-arrow-down-right-enter": {
+   "category": "arrows"
+  },
+  "square-arrow-down-right-exit": {
+   "category": "arrows"
+  },
+  "square-arrow-left": {
+   "category": "arrows"
+  },
+  "square-arrow-left-enter": {
+   "category": "arrows"
+  },
+  "square-arrow-left-exit": {
+   "category": "arrows"
+  },
+  "square-arrow-right": {
+   "category": "arrows"
+  },
+  "square-arrow-right-enter": {
+   "category": "account"
+  },
+  "square-arrow-right-exit": {
+   "category": "account"
+  },
+  "square-arrow-up": {
+   "category": "arrows"
+  },
+  "square-arrow-up-enter": {
+   "category": "arrows"
+  },
+  "square-arrow-up-exit": {
+   "category": "files"
+  },
+  "square-arrow-up-left": {
+   "category": "arrows"
+  },
+  "square-arrow-up-left-enter": {
+   "category": "arrows"
+  },
+  "square-arrow-up-left-exit": {
+   "category": "arrows"
+  },
+  "square-arrow-up-right": {
+   "category": "arrows"
+  },
+  "square-arrow-up-right-enter": {
+   "category": "arrows"
+  },
+  "square-arrow-up-right-exit": {
+   "category": "arrows"
+  },
+  "square-asterisk": {
+   "category": "text"
+  },
+  "square-bookmark": {
+   "category": "photography"
+  },
+  "square-bottom-dashed-scissors": {
+   "category": "text"
+  },
+  "square-centerline-dashed-horizontal": {
+   "category": "design"
+  },
+  "square-centerline-dashed-vertical": {
+   "category": "design"
+  },
+  "square-chart-gantt": {
+   "category": "development"
+  },
+  "square-check": {
+   "category": "notifications"
+  },
+  "square-check-big": {
+   "category": "notifications"
+  },
+  "square-chevron-down": {
+   "category": "arrows"
+  },
+  "square-chevron-left": {
+   "category": "arrows"
+  },
+  "square-chevron-right": {
+   "category": "arrows"
+  },
+  "square-chevron-up": {
+   "category": "arrows"
+  },
+  "square-chevrons-down": {
+   "category": "arrows"
+  },
+  "square-chevrons-left": {
+   "category": "arrows"
+  },
+  "square-chevrons-right": {
+   "category": "arrows"
+  },
+  "square-chevrons-up": {
+   "category": "arrows"
+  },
+  "square-code": {
+   "category": "text"
+  },
+  "square-dashed": {
+   "category": "design"
+  },
+  "square-dashed-bottom": {
+   "category": "development"
+  },
+  "square-dashed-bottom-code": {
+   "category": "development"
+  },
+  "square-dashed-kanban": {
+   "category": "charts"
+  },
+  "square-dashed-mouse-pointer": {
+   "category": "cursors"
+  },
+  "square-dashed-plus": {
+   "category": "design"
+  },
+  "square-dashed-search": {
+   "category": "design"
+  },
+  "square-dashed-text": {
+   "category": "text"
+  },
+  "square-dashed-top-solid": {
+   "category": "design"
+  },
+  "square-dashed-x": {
+   "category": "design"
+  },
+  "square-dashed-x-corner": {
+   "category": "design"
+  },
+  "square-dimensions": {
+   "category": "design"
+  },
+  "square-divide": {
+   "category": "math"
+  },
+  "square-dot": {
+   "category": "development"
+  },
+  "square-equal": {
+   "category": "math"
+  },
+  "square-exclamation-point": {
+   "category": "notifications"
+  },
+  "square-function": {
+   "category": "letters-digits"
+  },
+  "square-kanban": {
+   "category": "charts"
+  },
+  "square-kanban-plus": {
+   "category": "charts"
+  },
+  "square-letter-a": {
+   "category": "letters-digits"
+  },
+  "square-letter-b": {
+   "category": "letters-digits"
+  },
+  "square-letter-c": {
+   "category": "letters-digits"
+  },
+  "square-letter-d": {
+   "category": "letters-digits"
+  },
+  "square-letter-e": {
+   "category": "letters-digits"
+  },
+  "square-letter-f": {
+   "category": "letters-digits"
+  },
+  "square-letter-g": {
+   "category": "letters-digits"
+  },
+  "square-letter-h": {
+   "category": "letters-digits"
+  },
+  "square-letter-i": {
+   "category": "letters-digits"
+  },
+  "square-letter-j": {
+   "category": "letters-digits"
+  },
+  "square-letter-k": {
+   "category": "letters-digits"
+  },
+  "square-letter-l": {
+   "category": "letters-digits"
+  },
+  "square-letter-m": {
+   "category": "letters-digits"
+  },
+  "square-letter-n": {
+   "category": "letters-digits"
+  },
+  "square-letter-o": {
+   "category": "letters-digits"
+  },
+  "square-letter-p": {
+   "category": "letters-digits"
+  },
+  "square-letter-p-off": {
+   "category": "letters-digits"
+  },
+  "square-letter-q": {
+   "category": "letters-digits"
+  },
+  "square-letter-r": {
+   "category": "letters-digits"
+  },
+  "square-letter-s": {
+   "category": "letters-digits"
+  },
+  "square-letter-t": {
+   "category": "letters-digits"
+  },
+  "square-letter-u": {
+   "category": "letters-digits"
+  },
+  "square-letter-v": {
+   "category": "letters-digits"
+  },
+  "square-letter-w": {
+   "category": "letters-digits"
+  },
+  "square-letter-x": {
+   "category": "letters-digits"
+  },
+  "square-letter-y": {
+   "category": "letters-digits"
+  },
+  "square-letter-z": {
+   "category": "letters-digits"
+  },
+  "square-library": {
+   "category": "text"
+  },
+  "square-menu": {
+   "category": "layout"
+  },
+  "square-minus": {
+   "category": "math"
+  },
+  "square-mouse-pointer": {
+   "category": "cursors"
+  },
+  "square-off": {
+   "category": "shapes"
+  },
+  "square-padding": {
+   "category": "layout"
+  },
+  "square-padding-bottom": {
+   "category": "layout"
+  },
+  "square-padding-horizontal": {
+   "category": "layout"
+  },
+  "square-padding-left": {
+   "category": "layout"
+  },
+  "square-padding-right": {
+   "category": "layout"
+  },
+  "square-padding-top": {
+   "category": "layout"
+  },
+  "square-padding-vertical": {
+   "category": "layout"
+  },
+  "square-pause": {
+   "category": "multimedia"
+  },
+  "square-pen": {
+   "category": "text"
+  },
+  "square-percent": {
+   "category": "social"
+  },
+  "square-pi": {
+   "category": "letters-digits"
+  },
+  "square-pilcrow": {
+   "category": "text"
+  },
+  "square-play": {
+   "category": "multimedia"
+  },
+  "square-plus": {
+   "category": "math"
+  },
+  "square-power": {
+   "category": "devices"
+  },
+  "square-radical": {
+   "category": "development"
+  },
+  "square-round-corner": {
+   "category": "design"
+  },
+  "square-scissors": {
+   "category": "text"
+  },
+  "square-sigma": {
+   "category": "letters-digits"
+  },
+  "square-slash": {
+   "category": "development"
+  },
+  "square-sparkles": {
+   "category": "photography"
+  },
+  "square-split-horizontal": {
+   "category": "layout"
+  },
+  "square-split-vertical": {
+   "category": "layout"
+  },
+  "square-square": {
+   "category": "layout"
+  },
+  "square-stack": {
+   "category": "text"
+  },
+  "square-star": {
+   "category": "sports"
+  },
+  "square-stop": {
+   "category": "multimedia"
+  },
+  "square-terminal": {
+   "category": "development"
+  },
+  "square-text": {
+   "category": "text"
+  },
+  "square-user": {
+   "category": "account"
+  },
+  "square-user-round": {
+   "category": "account"
+  },
+  "square-x": {
+   "category": "math"
+  },
+  "squares-exclude": {
+   "category": "design"
+  },
+  "squares-intersect": {
+   "category": "design"
+  },
+  "squares-subtract": {
+   "category": "design"
+  },
+  "squares-unite": {
+   "category": "design"
+  },
+  "squircle": {
+   "category": "shapes"
+  },
+  "squircle-dashed": {
+   "category": "development"
+  },
+  "squirrel": {
+   "category": "animals"
+  },
+  "stamp": {
+   "category": "design"
+  },
+  "star": {
+   "category": "social"
+  },
+  "star-check": {
+   "category": "social"
+  },
+  "star-half": {
+   "category": "social"
+  },
+  "star-minus": {
+   "category": "social"
+  },
+  "star-off": {
+   "category": "social"
+  },
+  "star-plus": {
+   "category": "social"
+  },
+  "star-x": {
+   "category": "social"
+  },
+  "step-back": {
+   "category": "multimedia"
+  },
+  "step-forward": {
+   "category": "multimedia"
+  },
+  "stethoscope": {
+   "category": "science"
+  },
+  "sticker": {
+   "category": "social"
+  },
+  "sticky-note": {
+   "category": "text"
+  },
+  "sticky-note-check": {
+   "category": "text"
+  },
+  "sticky-note-minus": {
+   "category": "text"
+  },
+  "sticky-note-off": {
+   "category": "text"
+  },
+  "sticky-note-plus": {
+   "category": "text"
+  },
+  "sticky-note-x": {
+   "category": "text"
+  },
+  "sticky-notes": {
+   "category": "text"
+  },
+  "stone": {
+   "category": "nature"
   },
   "store": {
-   "category": "places"
+   "category": "buildings"
+  },
+  "stretch-horizontal": {
+   "category": "layout"
+  },
+  "stretch-vertical": {
+   "category": "layout"
+  },
+  "strikethrough": {
+   "category": "text"
+  },
+  "stroke-line-cap-butt": {
+   "category": "design"
+  },
+  "stroke-line-cap-round": {
+   "category": "design"
+  },
+  "stroke-line-cap-square": {
+   "category": "design"
+  },
+  "stroke-line-join-bevel": {
+   "category": "design"
+  },
+  "stroke-line-join-miter": {
+   "category": "design"
+  },
+  "stroke-line-join-round": {
+   "category": "design"
+  },
+  "subscript": {
+   "category": "text"
+  },
+  "summary": {
+   "category": "text"
+  },
+  "sun": {
+   "category": "accessibility"
+  },
+  "sun-dim": {
+   "category": "accessibility"
+  },
+  "sun-medium": {
+   "category": "accessibility"
+  },
+  "sun-moon": {
+   "category": "accessibility"
+  },
+  "sun-snow": {
+   "category": "weather"
+  },
+  "sunrise": {
+   "category": "weather"
+  },
+  "sunset": {
+   "category": "weather"
+  },
+  "superscript": {
+   "category": "text"
+  },
+  "swatch-book": {
+   "category": "design"
+  },
+  "swiss-franc": {
+   "category": "finance"
+  },
+  "switch-camera": {
+   "category": "communication"
+  },
+  "sword": {
+   "category": "gaming"
+  },
+  "swords": {
+   "category": "gaming"
+  },
+  "syringe": {
+   "category": "science"
   },
   "table": {
-   "category": "data"
+   "category": "text"
+  },
+  "table-2": {
+   "category": "text"
+  },
+  "table-cells-merge": {
+   "category": "text"
+  },
+  "table-cells-split": {
+   "category": "text"
+  },
+  "table-columns-split": {
+   "category": "text"
+  },
+  "table-of-contents": {
+   "category": "text"
+  },
+  "table-properties": {
+   "category": "development"
+  },
+  "table-rows-split": {
+   "category": "text"
   },
   "tablet": {
    "category": "devices"
   },
+  "tablet-smartphone": {
+   "category": "design"
+  },
+  "tablets": {
+   "category": "medical"
+  },
+  "tag": {
+   "category": "account"
+  },
+  "tag-plus": {
+   "category": "account"
+  },
+  "tag-x": {
+   "category": "account"
+  },
+  "tags": {
+   "category": "account"
+  },
+  "tally-1": {
+   "category": "math"
+  },
+  "tally-2": {
+   "category": "math"
+  },
+  "tally-3": {
+   "category": "math"
+  },
+  "tally-4": {
+   "category": "math"
+  },
+  "tally-5": {
+   "category": "math"
+  },
+  "tangent": {
+   "category": "shapes"
+  },
+  "target": {
+   "category": "gaming"
+  },
+  "telescope": {
+   "category": "science"
+  },
+  "tent": {
+   "category": "travel"
+  },
+  "tent-tree": {
+   "category": "travel"
+  },
   "terminal": {
    "category": "development"
   },
+  "test-tube": {
+   "category": "science"
+  },
+  "test-tube-diagonal": {
+   "category": "science"
+  },
+  "test-tubes": {
+   "category": "science"
+  },
+  "text-align-center": {
+   "category": "text"
+  },
+  "text-align-end": {
+   "category": "text"
+  },
+  "text-align-justify": {
+   "category": "text"
+  },
+  "text-align-justify-center": {
+   "category": "text"
+  },
+  "text-align-justify-end": {
+   "category": "text"
+  },
+  "text-align-justify-start": {
+   "category": "text"
+  },
+  "text-align-start": {
+   "category": "text"
+  },
+  "text-cursor": {
+   "category": "text"
+  },
+  "text-cursor-input": {
+   "category": "text"
+  },
+  "text-initial": {
+   "category": "text"
+  },
+  "text-pen": {
+   "category": "text"
+  },
+  "text-quote": {
+   "category": "text"
+  },
+  "text-search": {
+   "category": "text"
+  },
+  "text-wrap": {
+   "category": "text"
+  },
+  "theater": {
+   "category": "buildings"
+  },
+  "thermometer": {
+   "category": "weather"
+  },
+  "thermometer-snowflake": {
+   "category": "weather"
+  },
+  "thermometer-sun": {
+   "category": "weather"
+  },
+  "thumbs-down": {
+   "category": "social"
+  },
+  "thumbs-up": {
+   "category": "social"
+  },
+  "tic-tac-toe": {
+   "category": "gaming"
+  },
+  "ticket": {
+   "category": "account"
+  },
+  "ticket-check": {
+   "category": "transportation"
+  },
+  "ticket-minus": {
+   "category": "transportation"
+  },
+  "ticket-percent": {
+   "category": "transportation"
+  },
+  "ticket-plus": {
+   "category": "transportation"
+  },
+  "ticket-slash": {
+   "category": "transportation"
+  },
+  "ticket-x": {
+   "category": "transportation"
+  },
+  "tickets": {
+   "category": "travel"
+  },
+  "tickets-plane": {
+   "category": "transportation"
+  },
+  "timeline": {
+   "category": "time"
+  },
   "timer": {
-   "category": "work"
+   "category": "time"
+  },
+  "timer-off": {
+   "category": "time"
+  },
+  "timer-reset": {
+   "category": "time"
+  },
+  "toggle-left": {
+   "category": "layout"
+  },
+  "toggle-right": {
+   "category": "layout"
+  },
+  "toilet": {
+   "category": "home"
+  },
+  "tombstone": {
+   "category": "gaming"
+  },
+  "tool-case": {
+   "category": "tools"
+  },
+  "toolbox": {
+   "category": "tools"
+  },
+  "toothbrush": {
+   "category": "home"
+  },
+  "toothbrush-sparkles": {
+   "category": "home"
+  },
+  "tornado": {
+   "category": "weather"
+  },
+  "torus": {
+   "category": "shapes"
+  },
+  "touchpad": {
+   "category": "devices"
+  },
+  "touchpad-off": {
+   "category": "devices"
+  },
+  "towel-rack": {
+   "category": "home"
+  },
+  "tower-control": {
+   "category": "travel"
+  },
+  "toy-brick": {
+   "category": "gaming"
+  },
+  "tractor": {
+   "category": "transportation"
+  },
+  "traffic-cone": {
+   "category": "transportation"
+  },
+  "trailer": {
+   "category": "transportation"
+  },
+  "train-front": {
+   "category": "transportation"
+  },
+  "train-front-tunnel": {
+   "category": "navigation"
+  },
+  "train-track": {
+   "category": "transportation"
+  },
+  "tram-front": {
+   "category": "transportation"
+  },
+  "transgender": {
+   "category": "medical"
   },
   "trash": {
-   "category": "work"
+   "category": "files"
+  },
+  "trash-off": {
+   "category": "files"
+  },
+  "tree-deciduous": {
+   "category": "nature"
+  },
+  "tree-palm": {
+   "category": "nature"
+  },
+  "tree-pine": {
+   "category": "nature"
+  },
+  "trees": {
+   "category": "nature"
+  },
+  "trending-down": {
+   "category": "charts"
+  },
+  "trending-up": {
+   "category": "charts"
+  },
+  "trending-up-down": {
+   "category": "charts"
+  },
+  "triangle": {
+   "category": "shapes"
+  },
+  "triangle-dashed": {
+   "category": "shapes"
   },
   "triangle-exclamation-point": {
-   "category": "status"
+   "category": "notifications"
+  },
+  "triangle-right": {
+   "category": "math"
+  },
+  "triangles-centerline-dashed-horizontal": {
+   "category": "design"
+  },
+  "triangles-centerline-dashed-vertical": {
+   "category": "design"
+  },
+  "trophy": {
+   "category": "sports"
   },
   "truck": {
-   "category": "places"
+   "category": "transportation"
+  },
+  "truck-electric": {
+   "category": "transportation"
+  },
+  "tube-lotion": {
+   "category": "medical"
+  },
+  "turkish-lira": {
+   "category": "finance"
+  },
+  "turntable": {
+   "category": "multimedia"
+  },
+  "turtle": {
+   "category": "animals"
+  },
+  "tv": {
+   "category": "devices"
+  },
+  "tv-minimal": {
+   "category": "devices"
+  },
+  "tv-minimal-play": {
+   "category": "devices"
+  },
+  "type": {
+   "category": "letters-digits"
+  },
+  "type-outline": {
+   "category": "letters-digits"
+  },
+  "umbrella": {
+   "category": "weather"
+  },
+  "umbrella-off": {
+   "category": "weather"
+  },
+  "underline": {
+   "category": "text"
+  },
+  "undo": {
+   "category": "text"
+  },
+  "undo-2": {
+   "category": "text"
+  },
+  "undo-dot": {
+   "category": "text"
+  },
+  "unfold-horizontal": {
+   "category": "arrows"
+  },
+  "unfold-vertical": {
+   "category": "arrows"
+  },
+  "ungroup": {
+   "category": "files"
+  },
+  "university": {
+   "category": "buildings"
+  },
+  "unlink": {
+   "category": "text"
+  },
+  "unlink-2": {
+   "category": "text"
+  },
+  "unplug": {
+   "category": "devices"
   },
   "upload": {
-   "category": "work"
+   "category": "arrows"
+  },
+  "usb": {
+   "category": "devices"
+  },
+  "usb-c-port": {
+   "category": "devices"
   },
   "user": {
+   "category": "account"
+  },
+  "user-check": {
+   "category": "account"
+  },
+  "user-cog": {
+   "category": "account"
+  },
+  "user-exclamation-point": {
+   "category": "account"
+  },
+  "user-group": {
    "category": "people"
+  },
+  "user-key": {
+   "category": "security"
+  },
+  "user-lock": {
+   "category": "security"
+  },
+  "user-minus": {
+   "category": "account"
+  },
+  "user-pen": {
+   "category": "account"
+  },
+  "user-plus": {
+   "category": "account"
+  },
+  "user-round": {
+   "category": "account"
+  },
+  "user-round-arrow-left": {
+   "category": "people"
+  },
+  "user-round-check": {
+   "category": "account"
+  },
+  "user-round-cog": {
+   "category": "account"
+  },
+  "user-round-exclamation-point": {
+   "category": "account"
+  },
+  "user-round-group": {
+   "category": "people"
+  },
+  "user-round-key": {
+   "category": "security"
+  },
+  "user-round-minus": {
+   "category": "account"
+  },
+  "user-round-pen": {
+   "category": "account"
+  },
+  "user-round-plus": {
+   "category": "account"
+  },
+  "user-round-search": {
+   "category": "social"
+  },
+  "user-round-shield": {
+   "category": "account"
+  },
+  "user-round-star": {
+   "category": "account"
+  },
+  "user-round-x": {
+   "category": "account"
+  },
+  "user-search": {
+   "category": "social"
+  },
+  "user-shield": {
+   "category": "security"
+  },
+  "user-star": {
+   "category": "account"
+  },
+  "user-x": {
+   "category": "account"
   },
   "users": {
-   "category": "people"
+   "category": "account"
+  },
+  "users-collaboration": {
+   "category": "social"
+  },
+  "users-round": {
+   "category": "account"
+  },
+  "users-round-collaboration": {
+   "category": "social"
+  },
+  "utensils": {
+   "category": "food-beverage"
+  },
+  "utensils-crossed": {
+   "category": "food-beverage"
+  },
+  "utility-pole": {
+   "category": "buildings"
+  },
+  "van": {
+   "category": "transportation"
+  },
+  "variable": {
+   "category": "development"
+  },
+  "vault": {
+   "category": "security"
+  },
+  "vector-polygon": {
+   "category": "design"
+  },
+  "vector-square": {
+   "category": "shapes"
+  },
+  "vegan": {
+   "category": "food-beverage"
+  },
+  "venetian-mask": {
+   "category": "account"
+  },
+  "venus": {
+   "category": "medical"
+  },
+  "venus-and-mars": {
+   "category": "medical"
+  },
+  "vibrate": {
+   "category": "devices"
+  },
+  "vibrate-off": {
+   "category": "devices"
+  },
+  "video": {
+   "category": "devices"
+  },
+  "video-off": {
+   "category": "devices"
+  },
+  "videotape": {
+   "category": "devices"
+  },
+  "view": {
+   "category": "design"
+  },
+  "virus": {
+   "category": "medical"
+  },
+  "virus-off": {
+   "category": "medical"
+  },
+  "voicemail": {
+   "category": "devices"
+  },
+  "volleyball": {
+   "category": "sports"
+  },
+  "volume": {
+   "category": "communication"
+  },
+  "volume-1": {
+   "category": "communication"
+  },
+  "volume-2": {
+   "category": "communication"
+  },
+  "volume-off": {
+   "category": "communication"
+  },
+  "volume-x": {
+   "category": "communication"
+  },
+  "vote": {
+   "category": "social"
   },
   "wallet": {
-   "category": "money"
+   "category": "account"
+  },
+  "wallet-cards": {
+   "category": "account"
+  },
+  "wallet-minimal": {
+   "category": "account"
+  },
+  "wallpaper": {
+   "category": "devices"
+  },
+  "wand": {
+   "category": "design"
+  },
+  "wand-sparkles": {
+   "category": "design"
   },
   "warehouse": {
-   "category": "places"
+   "category": "buildings"
+  },
+  "washing-machine": {
+   "category": "home"
+  },
+  "watch": {
+   "category": "time"
+  },
+  "waves-arrow-down": {
+   "category": "weather"
+  },
+  "waves-arrow-up": {
+   "category": "weather"
+  },
+  "waves-horizontal": {
+   "category": "weather"
+  },
+  "waves-ladder": {
+   "category": "sports"
+  },
+  "waves-vertical": {
+   "category": "weather"
   },
   "waypoints": {
-   "category": "network"
+   "category": "security"
+  },
+  "webcam": {
+   "category": "devices"
+  },
+  "webcam-off": {
+   "category": "devices"
   },
   "webhook": {
-   "category": "network"
+   "category": "development"
+  },
+  "webhook-off": {
+   "category": "development"
+  },
+  "weight": {
+   "category": "math"
+  },
+  "weight-tilde": {
+   "category": "math"
+  },
+  "wheat": {
+   "category": "food-beverage"
+  },
+  "wheat-off": {
+   "category": "food-beverage"
+  },
+  "whistle": {
+   "category": "sports"
+  },
+  "whole-word": {
+   "category": "text"
   },
   "wifi": {
-   "category": "network"
+   "category": "connectivity"
+  },
+  "wifi-cog": {
+   "category": "connectivity"
+  },
+  "wifi-high": {
+   "category": "connectivity"
+  },
+  "wifi-lock": {
+   "category": "security"
+  },
+  "wifi-low": {
+   "category": "connectivity"
+  },
+  "wifi-off": {
+   "category": "connectivity"
+  },
+  "wifi-pen": {
+   "category": "connectivity"
+  },
+  "wifi-sync": {
+   "category": "connectivity"
+  },
+  "wifi-zero": {
+   "category": "connectivity"
+  },
+  "wind": {
+   "category": "weather"
+  },
+  "wind-arrow-down": {
+   "category": "weather"
+  },
+  "wind-arrow-up": {
+   "category": "weather"
+  },
+  "wine": {
+   "category": "food-beverage"
+  },
+  "wine-off": {
+   "category": "food-beverage"
   },
   "workflow": {
-   "category": "network"
+   "category": "development"
+  },
+  "worm": {
+   "category": "animals"
   },
   "wrench": {
-   "category": "work"
+   "category": "account"
+  },
+  "wrench-off": {
+   "category": "account"
+  },
+  "x": {
+   "category": "notifications"
+  },
+  "x-line-top": {
+   "category": "notifications"
   },
   "zap": {
-   "category": "work"
+   "category": "photography"
+  },
+  "zap-off": {
+   "category": "photography"
+  },
+  "zodiac-aquarius": {
+   "category": "social"
+  },
+  "zodiac-aries": {
+   "category": "social"
+  },
+  "zodiac-cancer": {
+   "category": "social"
+  },
+  "zodiac-capricorn": {
+   "category": "social"
+  },
+  "zodiac-gemini": {
+   "category": "social"
+  },
+  "zodiac-leo": {
+   "category": "social"
+  },
+  "zodiac-libra": {
+   "category": "social"
+  },
+  "zodiac-ophiuchus": {
+   "category": "social"
+  },
+  "zodiac-pisces": {
+   "category": "social"
+  },
+  "zodiac-sagittarius": {
+   "category": "social"
+  },
+  "zodiac-scorpio": {
+   "category": "social"
+  },
+  "zodiac-taurus": {
+   "category": "social"
+  },
+  "zodiac-virgo": {
+   "category": "social"
+  },
+  "zoom-in": {
+   "category": "accessibility"
+  },
+  "zoom-out": {
+   "category": "accessibility"
   }
  }
 }

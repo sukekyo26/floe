@@ -2,6 +2,7 @@ package icons
 
 import (
 	"bytes"
+	"encoding/json"
 	"errors"
 	"flag"
 	"io/fs"
@@ -27,7 +28,7 @@ var (
 // currentColor and none (a colour of its own would be painted over).
 var colourRe = regexp.MustCompile(`(?:fill|stroke|color)\s*[=:]\s*"?([^";\s]+)`)
 
-// The built-in icons are those lucidePick names, each an SVG of lines in currentColor, with the index a fetch
+// The built-in icons are each an SVG of lines in currentColor, in a category of Lucide's, with the index a fetch
 // writes and Lucide's LICENSE. With -update, they are written anew from -lucide-zip, as a fetch extracts a set.
 func TestBuiltinLucide(t *testing.T) {
 	t.Parallel()
@@ -40,31 +41,30 @@ func TestBuiltinLucide(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	if got, want := slices.Sorted(maps.Keys(idx.Icons)), slices.Sorted(maps.Keys(lucidePick)); !slices.Equal(got, want) {
-		t.Errorf("the built-in index holds %v, want lucidePick's %v", got, want)
-	}
 	if want := []string{"lucide-icons-" + lucideVersion + ".zip"}; idx.Version != lucideVersion || !slices.Equal(idx.Sources, want) {
 		t.Errorf("the built-in index is of %q from %v, want %q from %v", idx.Version, idx.Sources, lucideVersion, want)
 	}
 	for name, e := range idx.Icons {
-		if e.Category != lucidePick[name] {
-			t.Errorf("%s: category %q, want %q", name, e.Category, lucidePick[name])
+		if e.Category == "" || strings.HasPrefix(e.Category, "$") {
+			t.Errorf("%s: category %q, want one of Lucide's", name, e.Category)
 		}
 	}
 	entries, err := fs.ReadDir(builtinFS, "lucide")
 	if err != nil {
 		t.Fatal(err)
 	}
+	var svgs []string
 	for _, e := range entries {
 		name := e.Name()
 		if name == "index.json" || name == "LICENSE" {
 			continue
 		}
 		icon, isSVG := strings.CutSuffix(name, ".svg")
-		if _, ok := lucidePick[icon]; !ok || !isSVG {
-			t.Errorf("lucide/%s is no icon of lucidePick", name)
+		if !isSVG {
+			t.Errorf("lucide/%s is no icon", name)
 			continue
 		}
+		svgs = append(svgs, icon)
 		b, readErr := fs.ReadFile(builtinFS, "lucide/"+name)
 		if readErr != nil {
 			t.Fatal(readErr)
@@ -78,6 +78,9 @@ func TestBuiltinLucide(t *testing.T) {
 			}
 		}
 	}
+	if got := slices.Sorted(maps.Keys(idx.Icons)); !slices.Equal(got, slices.Sorted(slices.Values(svgs))) {
+		t.Errorf("the built-in index names %d icons, the set holds %d SVGs", len(got), len(svgs))
+	}
 	license, err := fs.ReadFile(builtinFS, "lucide/LICENSE")
 	if err != nil {
 		t.Fatal(err)
@@ -89,7 +92,7 @@ func TestBuiltinLucide(t *testing.T) {
 	}
 	for word, names := range lucide.short {
 		for _, n := range names {
-			if _, ok := lucidePick[n]; !ok {
+			if _, ok := idx.Icons[n]; !ok {
 				t.Errorf("the short name %q means %q, no built-in icon", word, n)
 			}
 		}
@@ -97,7 +100,8 @@ func TestBuiltinLucide(t *testing.T) {
 }
 
 // writeLucide writes internal/icons/lucide anew from the zip -lucide-zip names, keeping its LICENSE, which the zip
-// holds none of: the icons as a fetch extracts them, and the index of the release, not of the zip's path.
+// holds none of: the icons as a fetch extracts them, and the index of the release, not of the zip's path, each icon
+// in its category of Lucide's metadata.
 func writeLucide(t *testing.T) {
 	t.Helper()
 	zipPath := *lucideZip
@@ -125,12 +129,85 @@ func writeLucide(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
+	meta := map[string][]string{}
+	for _, f := range zr.File {
+		name, ok := strings.CutSuffix(strings.TrimPrefix(f.Name, "icons/"), ".json")
+		if !ok || strings.Contains(name, "/") {
+			continue
+		}
+		b, readErr := readEntry(f)
+		if readErr != nil {
+			t.Fatal(readErr)
+		}
+		var m struct{ Categories []string }
+		if jsonErr := json.Unmarshal(b, &m); jsonErr != nil {
+			t.Fatalf("%s: %v", f.Name, jsonErr)
+		}
+		meta[name] = m.Categories
+	}
+	var none []string
+	for name := range idx.Icons {
+		category := lucideCategory(meta, name)
+		if category == "" {
+			none = append(none, name)
+		}
+		idx.Icons[name] = entry{Category: category}
+	}
+	if len(none) > 0 {
+		t.Fatalf("no category of Lucide's for %v: decide what they are in", slices.Sorted(slices.Values(none)))
+	}
 	idx.Version, idx.Sources = lucideVersion, []string{filepath.Base(zipPath)}
 	if err := writeIndex(idx, dir); err != nil {
 		t.Fatal(err)
 	}
 	// The build embeds what was there when it began, so what was written is checked by the next run.
 	t.Logf("wrote %d icons into %s; run the test again without -update to check them", len(idx.Icons), dir)
+}
+
+// lucideCategory is the category of the icon name in meta, Lucide's categories of each icon: its first that is no
+// $-mark, or else that of the icon its first "$extends:" names, and so on; "" when none is found, or the marks lead
+// round.
+func lucideCategory(meta map[string][]string, name string) string {
+	seen := map[string]bool{}
+	for name != "" && !seen[name] {
+		seen[name] = true
+		next := ""
+		for _, c := range meta[name] {
+			if !strings.HasPrefix(c, "$") {
+				return c
+			}
+			if base, ok := strings.CutPrefix(c, "$extends:"); ok && next == "" {
+				next = base
+			}
+		}
+		name = next
+	}
+	return ""
+}
+
+// An icon of no category of its own takes that of the icon it extends, through a chain, and none where the chain
+// goes round or ends without one.
+func TestLucideCategory(t *testing.T) {
+	t.Parallel()
+
+	meta := map[string][]string{
+		"clock":       {"time", "tools"},
+		"alarm":       {"$extends:clock"},
+		"alarm-check": {"$extends:alarm", "$other"},
+		"both":        {"$extends:clock", "devices"},
+		"round-a":     {"$extends:round-b"},
+		"round-b":     {"$extends:round-a"},
+		"bare":        {},
+		"to-nothing":  {"$extends:gone"},
+	}
+	for name, want := range map[string]string{
+		"clock": "time", "alarm": "time", "alarm-check": "time", "both": "devices",
+		"round-a": "", "bare": "", "to-nothing": "", "unknown": "",
+	} {
+		if got := lucideCategory(meta, name); got != want {
+			t.Errorf("lucideCategory(%s) = %q, want %q", name, got, want)
+		}
+	}
 }
 
 // A built-in file that cannot be read is floe's failure, not a mistake to mend by a fetch, which is refused.

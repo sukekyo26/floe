@@ -34,8 +34,8 @@ func (a *app) iconsFetchCmd() *cobra.Command {
   azure  the Azure architecture icons; their page lets the zip be downloaded only after
          agreeing to its terms, so floe does not download it: pass the zip or its URL
 
-lucide, a hundred icons of things any diagram shows (lucide/users, lucide/database), is built
-into floe and never fetched: search it with floe icons search lucide <word>.
+lucide, every icon of Lucide 1.72.0 (lucide/users, lucide/database), is built into floe and
+never fetched: search it with floe icons search lucide <word>.
 
 Without a zip, the set's packages are found on its official page; downloaded zips or their
 URLs can be given instead, one for each package of the set (gcp takes both of its zips).
@@ -82,10 +82,10 @@ func (a *app) iconsSearchCmd() *cobra.Command {
 		Short: "List the icons of a set, lucide or one fetched, whose name holds every word, or a short name such as alb",
 		Long: `List the icons of the set (lucide, aws, gcp, azure) whose name contains every word, one per line as
 the name to give an icon part (lucide/…, aws/…, gcp/…, azure/…) and its category, tab-separated. lucide is
-built into floe: a hundred icons of things any diagram shows, drawn in the text colour or a tone, which
-needs no fetch. A common short name of a service in the set (alb, s3, gke, aks, vnet), or of a thing in
-lucide (db, person, browser), finds it first, then its resources. A set not fetched is told with how to
-fetch it.
+built into floe: every icon of Lucide 1.72.0, drawn in the text colour or a tone, which needs no fetch.
+An icon whose name is a word whole (user for lucide/user) comes first, as does a common short name of a
+service in the set (alb, s3, gke, aks, vnet), or of a thing in lucide (db, person, browser), then the
+service's resources. A set not fetched is told with how to fetch it.
 
   floe icons search gcp storage`,
 		Args: cobra.ArbitraryArgs,

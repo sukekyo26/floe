@@ -125,7 +125,7 @@ func TestIconsFetchAndSearch(t *testing.T) {
 	}
 	// The set built in is searched with no directory for icons, and never fetched; a set to fetch still needs one.
 	rel := map[string]string{"FLOE_ICONS_DIR": "relative"}
-	if code, stdout, stderr := runIn(dir, rel, "icons", "search", "lucide", "user"); code != 0 || stdout != "lucide/user\tpeople\nlucide/users\tpeople\n" || stderr != "" {
+	if code, stdout, stderr := runIn(dir, rel, "icons", "search", "lucide", "user"); code != 0 || !strings.HasPrefix(stdout, "lucide/user\taccount\n") || !strings.Contains(stdout, "lucide/users\t") || stderr != "" {
 		t.Errorf("FLOE_ICONS_DIR=relative floe icons search lucide user = %d, %q, %q", code, stdout, stderr)
 	}
 	if code, _, stderr := runIn(dir, rel, "icons", "search", "aws", "lambda"); code != 1 || !strings.Contains(stderr, "FLOE_ICONS_DIR") {

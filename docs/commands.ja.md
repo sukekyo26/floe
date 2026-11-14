@@ -395,7 +395,7 @@ edge [60,10]→[60,120] M60,10 V120
 
 ## `floe icons search <セット> <語>...`
 
-セット（`lucide`・`aws`・`gcp`・`azure`）のアイコンのうち、名前がどの語も含むもの（大文字と小文字は区別しない）を 1 行ずつ出します。`icon` の部品に書く名前（`lucide/…`・`aws/…`・`gcp/…`・`azure/…`）と分類を、タブで区切ります。`lucide` は floe に入っています。[Lucide](https://lucide.dev) 1.72.0（ISC）から、どの図にも出てくる物の 100 個（`lucide/users`・`lucide/database`・`lucide/server` など）を選んだもので、取ってこなくても `FLOE_ICONS_DIR` が無くても探せます。線は図の字の色で、`icon` の部品の `tone` を書けばその色で描きます。サービスのよく使う略語（`alb`、`s3`、`gke`、`aks`、`vnet`）や、物の略語（`lucide` の `db`・`person`・`browser`）では、そのサービスのアイコンを先頭に出し、続けてその資源も出します（`s3 bucket`）。略語は floe が短い表で持ち、ほかの語は名前とだけ比べます。略語は名指したセットの中だけで引きます（`k8s` は `aws` なら EKS、`gcp` なら GKE、`azure` なら AKS）。あるクラウドの図に別のクラウドのアイコンを置かないよう、セットは必ず名指します（`floe icons search gcp storage`）。取っていないセットは、その取り方を言います。
+セット（`lucide`・`aws`・`gcp`・`azure`）のアイコンのうち、名前がどの語も含むもの（大文字と小文字は区別しない）を 1 行ずつ出します。`icon` の部品に書く名前（`lucide/…`・`aws/…`・`gcp/…`・`azure/…`）と分類を、タブで区切ります。`lucide` は floe に入っています。[Lucide](https://lucide.dev) 1.72.0（ISC）の 2,052 個の全部（`lucide/users`・`lucide/database`・`lucide/server` など）で、分類は Lucide が付けたもの。取ってこなくても `FLOE_ICONS_DIR` が無くても探せます。線は図の字の色で、`icon` の部品の `tone` を書けばその色で描きます。サービスのよく使う略語（`alb`、`s3`、`gke`、`aks`、`vnet`）や、物の略語（`lucide` の `db`・`person`・`browser`）では、そのサービスのアイコンを先頭に出し、続けてその資源も出します（`s3 bucket`）。名前が語とちょうど同じアイコンも先頭に出します（`user` なら `lucide/book-user` より先に `lucide/user`）。略語は floe が短い表で持ち、ほかの語は名前とだけ比べます。略語は名指したセットの中だけで引きます（`k8s` は `aws` なら EKS、`gcp` なら GKE、`azure` なら AKS）。あるクラウドの図に別のクラウドのアイコンを置かないよう、セットは必ず名指します（`floe icons search gcp storage`）。取っていないセットは、その取り方を言います。
 
 ---
 
