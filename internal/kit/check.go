@@ -66,8 +66,8 @@ func check(k *Kit) error {
 // ownCSS refuses, in the CSS of the themes, parts, looks and templates k read itself over floe's, a --radius-small or
 // --radius-pill whose value is not one item: floe's parts read them as one corner, a bar's rx and a pill's min(), which
 // two lengths or a / void without a word. It reads the values alone, no selector nor place (css.RadiusLength). It runs
-// over floe's alone, not over a Kit read over none: floe's own CSS is checked by the tests, and the examples of
-// internal/css/lint read over none hold corners of two lengths.
+// over floe's alone, not over a Kit read over none (Load(nil, …) checks no corner): floe's own CSS is checked by the
+// tests, and the examples of internal/css/lint read over none hold corners of two lengths.
 // LIMIT: a part of one's own that reads its --radius-pill as it is (border-radius: var(--radius-pill)) would draw two
 // lengths, and is refused too: whether a pill or a bar of floe's is in it is the data's, which the CSS does not tell.
 func ownCSS(k *Kit) usererr.List {
@@ -77,7 +77,7 @@ func ownCSS(k *Kit) usererr.List {
 	var found usererr.List
 	refuse := func(file string, src []byte) {
 		for _, c := range css.RadiusLength(src) {
-			found = append(found, usererr.NewAt(file, c.Line, 0, "kit_css_radius_length", c.Name, c.Value))
+			found = append(found, usererr.NewAt(file, c.Line, c.Column, "kit_css_radius_length", c.Name, c.Value))
 		}
 	}
 	for _, name := range slices.Sorted(maps.Keys(k.themes)) {

@@ -26,8 +26,8 @@ func TestRadiusLength(t *testing.T) {
 	found := []string{"5px 3px", "5px / 3px", "5px/3px", "5px, 3px", "var(--a) var(--b)", "calc(1px) 2px", "5px 3px !important"}
 	for _, v := range found {
 		got := css.RadiusLength([]byte(":scope {\n  --radius-pill: " + v + ";\n}"))
-		if len(got) != 1 || got[0].Line != 2 || got[0].Name != "--radius-pill" {
-			t.Errorf("%s: got %v, want --radius-pill on line 2", v, got)
+		if len(got) != 1 || got[0].Line != 2 || got[0].Column != 18 || got[0].Name != "--radius-pill" {
+			t.Errorf("%s: got %v, want --radius-pill at its value, 2:18", v, got)
 		}
 	}
 	if got := css.RadiusLength([]byte(":scope { --radius-small: 5px 3px }")); len(got) != 1 || got[0].Value != "5px 3px" {

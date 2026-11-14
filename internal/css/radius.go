@@ -1,11 +1,12 @@
 package css
 
 import (
-	"bytes"
 	"slices"
 	"strings"
 
 	"github.com/tdewolff/parse/v2/css"
+
+	"floe/internal/textpos"
 )
 
 // Items splits a value into its items at its own depth: a function or a bracket with what it holds, or a token. Give it
@@ -45,10 +46,11 @@ func opens(t Token) bool {
 // one length, and --radius-pill in a pill's min(). A value of two items voids them without a word.
 var oneCorner = []string{"--radius-small", "--radius-pill"}
 
-// Corner is a declaration of a corner of oneCorner whose value is not one item: its line, its name and its value.
+// Corner is a declaration of a corner of oneCorner whose value is not one item: the line and column of its value (of
+// its name when it has none), its name and its value.
 type Corner struct {
-	Line        int
-	Name, Value string
+	Line, Column int
+	Name, Value  string
 }
 
 // RadiusLength returns each declaration in src of --radius-small or --radius-pill whose value, !important left out, is
@@ -79,8 +81,12 @@ func RadiusLength(src []byte) []Corner {
 		}
 		value, end, ok := valueOf(toks, i)
 		if ok && len(Items(value)) != 1 {
-			line := bytes.Count(src[:t.At], []byte("\n")) + 1
-			found = append(found, Corner{Line: line, Name: string(t.Data), Value: written(src, value)})
+			at := t.At
+			if len(value) > 0 {
+				at = value[0].At
+			}
+			line, column := textpos.Of(src, at)
+			found = append(found, Corner{Line: line, Column: column, Name: string(t.Data), Value: written(src, value)})
 		}
 		i = end - 1
 	}

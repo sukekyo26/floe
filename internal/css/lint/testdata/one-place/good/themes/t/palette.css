@@ -1,1 +1,1 @@
-:scope { --page-width: 90rem; --text-width: 50rem; --page-pad: 12px; --radius: 6px; --radius-small: 4px; --radius-pill: 999px; }
+:scope { --page-width: 90rem; --text-width: 50rem; --page-pad: 12px; --radius: 6px !important; --radius-small: 4px; --radius-pill: 999px; }

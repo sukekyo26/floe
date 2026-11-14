@@ -3,6 +3,7 @@ package lint
 import (
 	"maps"
 	"slices"
+	"strings"
 
 	floecss "floe/internal/css"
 )
@@ -11,8 +12,18 @@ import (
 var placeOf = map[string]string{
 	"--page-width": "palette", "--text-width": "palette", "--page-pad": "palette",
 	"--radius": "palette", "--radius-small": "palette", "--radius-pill": "palette",
-	"--column-width":    "page.css",
-	"--floe-text-small": "base.css", "--floe-text-aside": "base.css",
+	"--column-width": "page.css",
+}
+
+// stepPrefix is the start of the names of the steps of small text, which floe's base.css alone sets.
+const stepPrefix = "--floe-text-"
+
+// placeOfName returns where name is set alone, "" for anywhere.
+func placeOfName(name string) string {
+	if strings.HasPrefix(name, stepPrefix) {
+		return "base.css"
+	}
+	return placeOf[name]
 }
 
 // placed returns where in floe's CSS a sheet is, as placeOf names it: palette, page.css, base.css or "".
@@ -34,13 +45,13 @@ func placed(s Sheet) string {
 var onePlace = Rule{Name: "one-place", Check: func(in *Input) []Finding {
 	var found []Finding
 	for _, s := range in.Sheets() {
-		decls := declarations(s.Src, func(p string) bool { _, ok := placeOf[p]; return ok })
+		decls := declarations(s.Src, func(p string) bool { return placeOfName(p) != "" })
 		for _, name := range slices.Sorted(maps.Keys(decls)) {
 			for _, d := range decls[name] {
 				in.Saw()
 				file, line := s.at(d.at)
-				if place := placed(s); place != placeOf[name] {
-					found = append(found, Finding{file, line, "one-place", "sets " + name + ", which " + placeOf[name] + " alone sets"})
+				if place := placed(s); place != placeOfName(name) {
+					found = append(found, Finding{file, line, "one-place", "sets " + name + ", which " + placeOfName(name) + " alone sets"})
 				} else if name == "--radius" && len(floecss.Items(d.value)) != 1 {
 					found = append(found, Finding{file, line, "one-place", "--radius: " + text(s.Src, d.value) + "; give it one length"})
 				}

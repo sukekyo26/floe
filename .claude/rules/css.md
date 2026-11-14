@@ -59,7 +59,7 @@ paths:
 - **テンプレートの見出しは包みの外の形で指す** [template-markdown]：page.css は自分の見出しの規則を包みの外の形（`header h1`・`section > h2`）で指し、テンプレートの Markdown の見出しは text の中と同じに描く。`TestLookRule/template-markdown`
 - **角の丸さはパレットの 3 つの変数** [radius]：角は `--radius`・`--radius-small`・`--radius-pill` を読むか、形（`0`・`50%`・`999px`）だけを書く。縁に沿う内の箱は、余白の変数を引く（`calc(var(--radius) - var(--pad))`）。4 つの角が違う形はテーマの自分の変数に置く。角が読むほかの変数はパレットか base.css の根だけが置く。`TestLintRule/radius`
 - **pill と小さな角は 1 つの項** [radius-length]：`--radius-small`・`--radius-pill` の値は 1 つの長さか 1 つの関数（棒の `rx` と pill の `min()` が読み、2 つの項は黙って無効になる）。自分のテーマ・部品・テンプレートも check が断る。`TestLintRule/radius-length`
-- **1 つの所だけが置く変数** [one-place]：`--page-width`・`--text-width`・`--page-pad`・`--radius*` はパレット（`--radius` は 1 つの長さ）、`--column-width` はテンプレートの page.css、`--floe-text-*` は floe の base.css だけが置く。`TestLintRule/one-place`
+- **1 つの所だけが置く変数** [one-place]：`--page-width`・`--text-width`・`--page-pad`・`--radius`・`--radius-small`・`--radius-pill` はパレット（`--radius` は 1 つの長さ）、`--column-width` はテンプレートの page.css、`--floe-text-` で始まる変数は floe の base.css だけが置く。`TestLintRule/one-place`
 - **静かな地は `--quiet`** [quiet]：箱の中の静かな地はパレットの `--quiet` を読み、部品が割合を混ぜない。テーマだけの変数はパレットか base.css の `:scope` に置く（default の palette.css はどのテーマの下にも入るので、default だけのものは base.css に）。（判断）
 - **テーマの飾りは場所を取らない** [room-free]：padding を広げず、地の色や透明の枠で場所を作らず、今ある余白の上に重ねて描く（地、`--floe-inset`、`::before`）。部品が輪や印を outline で描く箱に、飾りの outline を書かない（輪に置き換わって消える）。（判断）
 - **テーマの飾りは言葉を書かない** [theme-marks]：テーマの CSS は受ける形だけを書く：文字列は記号だけで、字は書体の名前にだけ（CSS の字は words.yaml を通らない）、数え方は decimal の類と形だけ。`TestLintRule/theme-marks`

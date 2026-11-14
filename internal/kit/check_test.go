@@ -212,7 +212,7 @@ func TestCheckAfterDrawing(t *testing.T) {
 	}
 }
 
-// corners returns the lines of told that refuse a corner of two items, kit_css_radius_length, by file:line and name, in
+// corners returns the lines of told that refuse a corner of two items, kit_css_radius_length, by file:line:column and name, in
 // order.
 func corners(told string) []string {
 	var out []string
@@ -254,11 +254,11 @@ func TestOwnCSS(t *testing.T) {
 		want []string
 	}{
 		{"floe theme check, floe part check", themesParts, []string{
-			"own/parts/p/part.css:2 --radius-pill", "own/themes/t/cards.css:3 --radius-small", "own/themes/t/palette.css:1 --radius-pill",
+			"own/parts/p/part.css:2:18 --radius-pill", "own/themes/t/cards.css:3:19 --radius-small", "own/themes/t/palette.css:1:44 --radius-pill",
 		}},
 		{"floe template check, render, check, the server", all, []string{
-			"own/parts/p/part.css:2 --radius-pill", "own/templates/m/page.css:1 --radius-small", "own/themes/t/cards.css:3 --radius-small",
-			"own/themes/t/palette.css:1 --radius-pill",
+			"own/parts/p/part.css:2:18 --radius-pill", "own/templates/m/page.css:1:26 --radius-small", "own/themes/t/cards.css:3:19 --radius-small",
+			"own/themes/t/palette.css:1:44 --radius-pill",
 		}},
 	} {
 		k, err := kit.Read(floe(t), tt.src)
