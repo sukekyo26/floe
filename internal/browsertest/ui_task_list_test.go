@@ -328,7 +328,7 @@ func TestUITaskList(t *testing.T) { //nolint:paralleltest // the browser tests s
 	}
 	// A link of long words wraps within its row, narrow too
 	b.eval("document.querySelector('#list > li .xlink span').textContent = 'x'.repeat(200)")
-	if got := b.eval("(() => { const a = document.querySelector('#list > li .xlink'); return a.getBoundingClientRect().right <= a.closest('li').getBoundingClientRect().right + 0.5; })()"); got != "true" {
+	if got := b.eval("(() => { const a = document.querySelector('#list > li .xlink span'); return a.getBoundingClientRect().right <= a.closest('li').getBoundingClientRect().right + 0.5 && a.scrollWidth <= a.clientWidth + 1; })()"); got != "true" {
 		t.Errorf("a long link goes out of its row")
 	}
 	b.size(1440, 800, false)
