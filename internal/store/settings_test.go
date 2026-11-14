@@ -122,6 +122,34 @@ func TestSettings(t *testing.T) {
 	}
 }
 
+// A settings.json the system cannot read (here of no permission to read) is refused by a write, and left as it is: a key
+// in it is not lost unseen, as one whose JSON is refused is written anew.
+func TestSettingsUnreadable(t *testing.T) {
+	t.Parallel()
+
+	s, root := newStore(t)
+	if err := setTheme(s, "ink"); err != nil {
+		t.Fatal(err)
+	}
+	file := filepath.Join(root, "settings.json")
+	if err := os.Chmod(file, 0o000); err != nil {
+		t.Fatal(err)
+	}
+	if _, err := os.ReadFile(file); err == nil {
+		t.Skip("the file of no permission is read (root)")
+	}
+	on := true
+	if set, err := s.SetSettings(store.SettingsEdit{Theme: nil, TaskMode: &on}); err == nil {
+		t.Errorf("written over a file that cannot be read: %+v", set)
+	}
+	if err := os.Chmod(file, 0o600); err != nil {
+		t.Fatal(err)
+	}
+	if set, err := s.ReadSettings(); err != nil || set != (store.Settings{Theme: "ink", TaskMode: false}) {
+		t.Errorf("after the refusal: %+v, %v", set, err)
+	}
+}
+
 // A page drawn from a data file takes the default theme chosen when it is first stored, under the data's theme:,
 // and keeps it: the default changed, published again, or changed between its drawing and its Save. A page replacing
 // another file's (--force) is new; a default gone refuses only a new page that would be drawn in it.

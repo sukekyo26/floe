@@ -5930,7 +5930,7 @@
     $('mode-save').hidden = panel !== 'mode';
     // The list saves nothing: Close; a part with its button that saves: Cancel
     $('settings').querySelector('[data-close]').textContent = t(panel === 'list' ? 'ui_close' : 'ui_cancel');
-    if (panel === 'mode') $('task-mode').checked = Boolean(themesRead?.taskMode);
+    if (panel === 'mode') drawTaskMode();
   }
   // A part of the list gone into, its heading focused; back to the list, the row of the part it came from
   function settingsTo(panel) {
@@ -5939,11 +5939,18 @@
     if (panel === 'list') $('settings-list').querySelector(`[data-panel="${from}"]`)?.focus();
     else $('settings-title').focus();
   }
-  // The values the list shows, as read
+  // The task mode as read; until it is read (or when it cannot be), not to be saved, as saving would write what it does
+  // not know
+  function drawTaskMode() {
+    $('task-mode').checked = Boolean(themesRead?.taskMode);
+    $('mode-save').disabled = !themesRead;
+  }
+  // The values the list shows, as read, and the task mode's part, if it is open
   function drawSettingsList(got) {
     $('settings-theme-now').textContent = got.settings ? '—' : got.default || 'default';
     $('settings-mode-now').textContent = got.settings ? '—' : t(got.taskMode ? 'ui_mode_on' : 'ui_mode_off');
     $('settings-broken').hidden = $('settings').dataset.panel !== 'list' || !got.settings;
+    if ($('settings').dataset.panel === 'mode') drawTaskMode();
   }
   async function openThemes(a = null, back = null) {
     if (document.querySelector('dialog[open]')) return;
@@ -5975,6 +5982,8 @@
       $('theme-now').textContent = t('ui_theme_load_failed', e.message);
       $('settings-broken').textContent = t('ui_theme_load_failed', e.message);
       $('settings-broken').hidden = $('settings').dataset.panel !== 'list';
+      $('settings-theme-now').textContent = '—';
+      $('settings-mode-now').textContent = '—';
       return;
     }
     themesRead = got;

@@ -37,30 +37,52 @@ func (s *Store) settingsFile() string {
 // what encoding/json/v2 refuses (a key twice, a key it does not know, a theme that is not text) is its words there.
 // It takes no lock: SetSettings replaces the file whole.
 func (s *Store) ReadSettings() (Settings, error) {
-	var set Settings
+	b, err := s.settingsBytes()
+	if err != nil {
+		return Settings{Theme: "", TaskMode: false}, err
+	}
+	return s.decodeSettings(b)
+}
+
+// settingsBytes is settings.json as it is, nil for none, or the system's words at the file when it cannot be read.
+func (s *Store) settingsBytes() ([]byte, error) {
 	b, _, err := files.Read(s.settingsFile())
 	if errors.Is(err, fs.ErrNotExist) {
-		return set, nil
+		return nil, nil
 	}
 	if err != nil {
-		return set, usererr.CannotRead(s.settingsFile(), err) //nolint:wrapcheck // the system's words, at the file
+		return nil, usererr.CannotRead(s.settingsFile(), err) //nolint:wrapcheck // the system's words, at the file
+	}
+	return b, nil
+}
+
+// decodeSettings is b as Settings, none for nil, or encoding/json/v2's words at the file.
+func (s *Store) decodeSettings(b []byte) (Settings, error) {
+	var set Settings
+	if b == nil {
+		return set, nil
 	}
 	if err := jsonv2.Unmarshal(b, &set, jsonv2.RejectUnknownMembers(true)); err != nil {
-		return Settings{}, usererr.LibraryAt(s.settingsFile(), 0, 0, err.Error())
+		return Settings{Theme: "", TaskMode: false}, usererr.LibraryAt(s.settingsFile(), 0, 0, err.Error())
 	}
 	return set, nil
 }
 
 // SetSettings writes the keys ed names to settings.json under the lock, the others as they are, and returns what it
-// wrote. A file that cannot be read is written anew from ed alone, so that it is mended by choosing again. The caller
-// checks a theme is one.
+// wrote. A file whose JSON is refused is written anew from ed alone, so that it is mended by choosing again; one the
+// system cannot read is refused, and stays as it is, so that a key in it is not lost unseen. The caller checks a theme
+// is one.
 func (s *Store) SetSettings(ed SettingsEdit) (Settings, error) {
 	unlock, err := s.lock(true)
 	if err != nil {
 		return Settings{}, err
 	}
 	defer unlock()
-	set, err := s.ReadSettings()
+	b, err := s.settingsBytes()
+	if err != nil {
+		return Settings{}, err
+	}
+	set, err := s.decodeSettings(b)
 	if err != nil {
 		set = Settings{Theme: "", TaskMode: false}
 	}
@@ -70,7 +92,7 @@ func (s *Store) SetSettings(ed SettingsEdit) (Settings, error) {
 	if ed.TaskMode != nil {
 		set.TaskMode = *ed.TaskMode
 	}
-	b, err := jsonv2.Marshal(set)
+	b, err = jsonv2.Marshal(set)
 	if err != nil {
 		return Settings{}, fmt.Errorf("encode %s: %w", settingsName, err)
 	}

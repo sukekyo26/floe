@@ -75,6 +75,25 @@ func TestUISettings(t *testing.T) { //nolint:paralleltest // the browser tests s
 	b.eval("document.getElementById('settings-open').click()")
 	b.until("the list's values", "document.getElementById('settings-mode-now').textContent === 'On'")
 	b.eval("document.getElementById('settings').close()")
+	// The mode's part opened before the settings are read: not checked as off, nor saved, till they are; read, it is on
+	const mode = "document.getElementById('task-mode').checked + ' ' + document.getElementById('mode-save').disabled"
+	b.eval(`window.realFetch ??= window.fetch; window.held = null;
+		window.fetch = (u, i) => (String(u).startsWith('/api/themes') && !i?.method ? new Promise((go) => { window.held = () => go(window.realFetch(u, i)); }) : window.realFetch(u, i));
+		document.getElementById('settings-open').click(); document.querySelector('.settings-item[data-panel=mode]').click()`)
+	b.until("the read held", "window.held !== null")
+	out = append(out, b.eval(mode))
+	b.eval("window.held()")
+	b.until("the mode read", "document.getElementById('task-mode').checked")
+	out = append(out, b.eval(mode))
+	b.eval("document.getElementById('settings').close()")
+	// Not read at all: the list's values are dashes, and the mode is not to be saved
+	b.eval(`window.fetch = (u, i) => (String(u).startsWith('/api/themes') && !i?.method ? Promise.reject(new TypeError('Failed to fetch')) : window.realFetch(u, i));
+		document.getElementById('settings-open').click()`)
+	b.until("the failure", "document.getElementById('settings-theme-now').textContent === '—'")
+	out = append(out, b.eval("[document.getElementById('settings-mode-now').textContent, document.getElementById('settings-broken').textContent].join(' / ')"))
+	b.eval("document.querySelector('.settings-item[data-panel=mode]').click()")
+	out = append(out, b.eval(mode))
+	b.eval("window.fetch = window.realFetch; document.getElementById('settings').close()")
 	// A page stored now is drawn in ink.
 	s.floe(t, "publish", s.page(t, "new.yaml", "New", ""))
 	out = append(out, b.eval("fetch('/a/new/?raw').then((r) => r.text()).then((t) => t.includes('--accent: #2b3a67'))"))
@@ -102,6 +121,8 @@ func TestUISettings(t *testing.T) { //nolint:paralleltest // the browser tests s
 		"false", "ink",
 		"settings-open",
 		"false", "false", `{"theme":"ink","taskMode":true}`, "true",
+		"false true", "true false",
+		"— / Failed to load the themes: Failed to fetch", "false true",
 		"true",
 		"Failed to read the settings. Saving one writes them again / —",
 		"Failed to read the settings. Choosing a theme writes them again",
