@@ -121,7 +121,7 @@ func TestAPIThemes(t *testing.T) {
 		t.Fatal(err)
 	}
 	read("en")
-	if got.Settings == nil || len(got.Settings.Mistakes) != 1 || got.Settings.Mistakes[0].File != filepath.Join(e.root, "settings.json") || got.Settings.Mistakes[0].Text != "jsontext: unexpected EOF after offset 1" || about("ink") == "none" {
+	if got.Settings == nil || len(got.Settings.Mistakes) != 1 || got.Settings.Mistakes[0].File != filepath.Join(e.root, "settings.json") || !strings.HasPrefix(got.Settings.Mistakes[0].Text, "jsontext: unexpected EOF after offset 1: ") || !strings.Contains(got.Settings.Mistakes[0].Text, "management page's settings") || about("ink") == "none" {
 		t.Errorf("a settings.json broken: %+v", got)
 	}
 }

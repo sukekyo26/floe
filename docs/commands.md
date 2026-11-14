@@ -211,7 +211,7 @@ Print how to make a theme of your own, [themes.md](agents/themes.md), whole: its
 
 ## `floe theme default`
 
-Print the name of the default theme chosen in the management page's settings, which a page that names no theme takes when it is first stored, or nothing when none is chosen (`default` then). Choosing `default` prints `default`. It reads `settings.json` of the store (`FLOE_DIR`) without starting the server, the store the other commands send to.
+Print the name of the default theme chosen in the management page's settings, which a page that names no theme takes when it is first stored, or nothing when none is chosen (`default` then). Choosing `default` prints `default`. It reads `settings.json` of the store (`FLOE_DIR`) without starting the server, the store the other commands send to. A `settings.json` whose JSON floe refuses is told with how to mend it: choose a setting again in the management page's settings, which writes the file anew.
 
 ## `floe template show <name> [file]` / `floe part show <name> [file]` / `floe theme show <name> [file]`
 

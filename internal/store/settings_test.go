@@ -102,8 +102,10 @@ func TestSettings(t *testing.T) {
 		}
 		var set store.Settings
 		v2 := jsonv2.Unmarshal([]byte(broken), &set, jsonv2.RejectUnknownMembers(true))
+		// v2's words, at the file, with how to mend it: of a syntax, a type, a key twice and a key it does not know alike
 		_, err := s.ReadSettings()
-		if v2 == nil || told(err, root) != "S/settings.json: "+v2.Error() {
+		e, ok := errors.AsType[*usererr.Error](err)
+		if v2 == nil || !ok || e.Key != "store_settings_broken" || len(e.Args) != 1 || e.Args[0] != v2.Error() || e.File() != file {
 			t.Errorf("%s: told %s, v2 %v", broken, told(err, root), v2)
 		}
 		if err := setTheme(s, "washi"); err != nil {

@@ -151,7 +151,7 @@ func TestGuide(t *testing.T) {
 	vars := map[string]string{"HOME": "relative"}
 	guide("no store", Env{Stdout: nil, Stderr: nil, Dir: env.Dir, Getenv: func(key string) string { return vars[key] }}, string(off))
 	settings(`{"taskMode":1}`)
-	if code, _, errs := runIn(env, "guide"); code != 1 || !strings.Contains(errs, "settings.json") {
+	if code, _, errs := runIn(env, "guide"); code != 1 || !strings.Contains(errs, "settings.json: ") || !strings.Contains(errs, "management page's settings") {
 		t.Errorf("a broken settings.json: floe guide = %d, %q", code, errs)
 	}
 	file := filepath.Join(t.TempDir(), "file")

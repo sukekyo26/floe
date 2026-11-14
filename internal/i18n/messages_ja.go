@@ -206,6 +206,7 @@ var messagesJA = map[string]string{
 	"store_project_slash":     "プロジェクト名に / だけは使えません",
 	"store_move_no_project":   "floe publish を走らせた場所にはプロジェクトが無いので、--move-project でページを入れられません。ページが扱うリポジトリで走らせてください",
 	"store_tasks_broken":      "%s。floe は上書きしないので、手で直してください",
+	"store_settings_broken":   "%s。管理ページの設定（ページ一覧の上の帯の歯車）で項目を選び直して保存すると、ファイルを書き直します",
 	"store_task_project":      "タスクにはプロジェクトが要ります（無しは /）",
 	"store_task_name":         "タスクには ID が要ります",
 	"store_task_utf8":         "タスクのプロジェクトと ID は UTF-8 で書いてください",

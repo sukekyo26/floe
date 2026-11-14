@@ -56,14 +56,15 @@ func (s *Store) settingsBytes() ([]byte, error) {
 	return b, nil
 }
 
-// decodeSettings is b as Settings, none for nil, or encoding/json/v2's words at the file.
+// decodeSettings is b as Settings, none for nil, or encoding/json/v2's words at the file, with how to mend it: no command
+// writes settings.json, and saving a setting writes it anew (SetSettings).
 func (s *Store) decodeSettings(b []byte) (Settings, error) {
 	var set Settings
 	if b == nil {
 		return set, nil
 	}
 	if err := jsonv2.Unmarshal(b, &set, jsonv2.RejectUnknownMembers(true)); err != nil {
-		return Settings{Theme: "", TaskMode: false}, usererr.LibraryAt(s.settingsFile(), 0, 0, err.Error())
+		return Settings{Theme: "", TaskMode: false}, usererr.LibraryWith("store_settings_broken", err).PlacedAt(s.settingsFile(), 0, 0)
 	}
 	return set, nil
 }
