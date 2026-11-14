@@ -46,6 +46,9 @@ type kit struct {
 	// in the text colour or a tone (Mono). Split it in two if a built-in set of colours or a fetched one of lines
 	// comes.
 	builtin bool
+	// categorized: a product without an icon of its own is drawn with its category's icon (Google's guide), which a
+	// search finding nothing points to.
+	categorized bool
 }
 
 // pack is a zip of a set: its link on the set's page, and which of its paths are icons.
@@ -807,10 +810,8 @@ func (s *Store) Search(set string, words []string) ([]Hit, error) {
 	if err != nil {
 		return nil, err
 	}
-	terms := make([]string, len(words))
-	for i, w := range words {
-		terms[i] = strings.ToLower(w)
-	}
+	// Names hold no spaces, so a word of two ("api gateway") is searched as its words.
+	terms := strings.Fields(strings.ToLower(strings.Join(words, " ")))
 	// LIMIT: short names are kept by hand; a renamed icon loses its short name, unnoticed (no real set in CI).
 	var meant, rest []Hit
 	for name, e := range idx.Icons {
@@ -827,7 +828,11 @@ func (s *Store) Search(set string, words []string) ([]Hit, error) {
 		}
 	}
 	if len(meant)+len(rest) == 0 {
-		return nil, usererr.New("icons_no_match", `"`+strings.Join(terms, `" "`)+`"`, k.name)
+		key := "icons_no_match"
+		if k.categorized {
+			key = "icons_no_match_category"
+		}
+		return nil, usererr.New(key, `"`+strings.Join(terms, `" "`)+`"`, k.name)
 	}
 	byName := func(a, b Hit) int { return strings.Compare(a.Name, b.Name) }
 	slices.SortFunc(meant, byName)

@@ -20,13 +20,14 @@ const lucideVersion = "1.72.0"
 // lucide is every icon of a release of Lucide (ISC; MIT for those of Feather), lines in currentColor, each in the
 // category Lucide gives it. It is built in: its icons are in floe, and it is never fetched.
 var lucide = kit{
-	name:    "lucide",
-	title:   "Lucide",
-	page:    "https://github.com/lucide-icons/lucide/releases/tag/" + lucideVersion,
-	host:    "",
-	size:    "",
-	terms:   false,
-	builtin: true,
+	name:        "lucide",
+	title:       "Lucide",
+	page:        "https://github.com/lucide-icons/lucide/releases/tag/" + lucideVersion,
+	host:        "",
+	size:        "",
+	terms:       false,
+	builtin:     true,
+	categorized: false,
 	packages: []pack{{
 		what:   "the lucide-icons zip",
 		link:   nil, // never fetched

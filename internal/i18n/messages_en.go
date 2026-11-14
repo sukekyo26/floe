@@ -296,6 +296,7 @@ var messagesEN = map[string]string{
 	"icons_written_too_large":  "the icons in it come to over %dMB, far more than an icon package; check that it is the right file",
 	"icons_none_in_zip":        "holds no %s icons; pass %s from %s: %s",
 	"icons_no_match":           "no %[2]s icon name contains all of %[1]s; try fewer words, or a word of the full name (floe icons search %[2]s %[2]s lists every one)",
+	"icons_no_match_category":  "no %[2]s icon name contains all of %[1]s; try fewer words, or a word of the full name (floe icons search %[2]s %[2]s lists every one); a product without an icon of its own is drawn with its category's icon and its name as the label (floe icons search %[2]s category lists them)",
 	"icons_fetched":            "fetched %d %s icons (%s) into %s",
 	"icons_already":            "%s icons %s are already in %s (add --force to fetch them again)",
 	"icons_search_words":       "name the icon set and a word to search for: floe icons search <set> <word>... (sets: %s)",

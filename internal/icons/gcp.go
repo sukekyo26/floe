@@ -24,8 +24,9 @@ var gcp = kit{
 			iconOf: gcpCategoryOf,
 		},
 	},
-	version: nil,
-	builtin: false,
+	version:     nil,
+	builtin:     false,
+	categorized: true,
 	short: map[string][]string{
 		"gce": {"compute-engine"},
 		"gcs": {"cloud-storage"},
