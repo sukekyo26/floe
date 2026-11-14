@@ -58,6 +58,9 @@ func ValidSlug(s string) bool {
 
 // Meta is meta.json.
 type Meta struct {
+	// ID names the page for good, so that what was read of it stays when it is renamed or published again: made when
+	// it is first stored, or replaced by another file's (newMeta).
+	ID string `json:"id,omitempty"`
 	// Path is the real path of a linked file; a stored page has none.
 	Path  string `json:"path,omitempty"`
 	Title string `json:"title,omitempty"`
@@ -428,7 +431,7 @@ func (s *Store) listed(slug string, m *Meta, r *reader) Listed {
 	// The list is read every few seconds: versions are asked for a page at a time.
 	l.Versions = nil
 	if !m.IsLink() {
-		l.News = r.news(slug, m)
+		l.News = r.news(m)
 		l.Version = m.LastNumber()
 		l.VersionCount = len(m.Versions)
 		return l
