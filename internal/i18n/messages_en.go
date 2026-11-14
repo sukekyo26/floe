@@ -118,6 +118,7 @@ var messagesEN = map[string]string{
 	"kit_part_unread":            "floe reads no file of this name in a part: a part holds schema.json, part.html and part.css, and part.yaml, checks.yaml and words.yaml if it likes; remove it",
 	"kit_marks_twice":            "%[1]s and the looks it takes write marks: twice (%[2]s and %[3]s), though one chain of looks writes it once: remove %[1]s's own marks:, or take one look that writes it",
 	"kit_look_unread":            "floe reads no file but part.css and part.yaml in a look, a directory without a schema.json: remove it, or add the schema.json to make it a part",
+	"kit_css_radius_length":      "%s is read as one corner (a bar's rx, a pill's min()), which a value of more than one item voids without a word: give it one length or one function, not %q",
 	"kit_theme_unread":           "floe reads no file of this name in a theme: a theme holds theme.yaml (its description:), base.css, markdown.css, palette.css and a <part>.css for each part or look it styles; rename it after one, or remove it",
 	"kit_theme_yaml":             "write theme.yaml as keys and values: description:, what the theme is",
 	"kit_theme_yaml_key":         "%s is not a key of theme.yaml; write description:, what the theme is",

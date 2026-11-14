@@ -1,0 +1,121 @@
+package css
+
+import (
+	"bytes"
+	"slices"
+	"strings"
+
+	"github.com/tdewolff/parse/v2/css"
+)
+
+// Items splits a value into its items at its own depth: a function or a bracket with what it holds, or a token. Give it
+// the value's tokens without whitespace and comments.
+func Items(value []Token) [][]Token {
+	if len(value) == 0 {
+		return nil
+	}
+	base := value[0].Depth
+	var out [][]Token
+	start := -1
+	for i, t := range value {
+		switch {
+		case t.Depth > base:
+		case start >= 0:
+			out = append(out, value[start:i+1])
+			start = -1
+		case opens(t):
+			start = i
+		default:
+			out = append(out, value[i:i+1])
+		}
+	}
+	if start >= 0 {
+		out = append(out, value[start:])
+	}
+	return out
+}
+
+// opens is whether t opens a block or a function.
+func opens(t Token) bool {
+	return t.Type == css.FunctionToken || t.Type == css.LeftParenthesisToken || t.Type == css.LeftBracketToken ||
+		t.Type == css.LeftBraceToken
+}
+
+// oneCorner are the palette's corners that floe's parts read as one corner: --radius-small in a bar's rx, which takes
+// one length, and --radius-pill in a pill's min(). A value of two items voids them without a word.
+var oneCorner = []string{"--radius-small", "--radius-pill"}
+
+// Corner is a declaration of a corner of oneCorner whose value is not one item: its line, its name and its value.
+type Corner struct {
+	Line        int
+	Name, Value string
+}
+
+// RadiusLength returns each declaration in src of --radius-small or --radius-pill whose value, !important left out, is
+// not one item (Items): a length or one function passes, two lengths or a / do not. It reads the value alone: a name
+// after a block's { or a ; (or at the start), a colon, and the tokens up to the ; or } of the name's depth; never a
+// selector nor where the declaration is.
+// LIMIT: a variable that holds two lengths and is read here (--radius-pill: var(--hand)) passes; the value of the
+// variable is not followed.
+func RadiusLength(src []byte) []Corner {
+	src = Preprocess(src)
+	toks := Tokens(src)
+	var found []Corner
+	begins := true
+	for i := 0; i < len(toks); i++ {
+		t := toks[i]
+		switch {
+		case t.Type == css.WhitespaceToken || t.Type == css.CommentToken:
+			continue
+		case t.Type == css.LeftBraceToken || t.Type == css.SemicolonToken || t.Type == css.RightBraceToken:
+			begins = true
+			continue
+		}
+		starts := begins
+		begins = false
+		if !starts || t.Type != css.CustomPropertyNameToken || !slices.Contains(oneCorner, string(t.Data)) {
+			continue
+		}
+		j := next(toks, i+1)
+		if j == len(toks) || toks[j].Type != css.ColonToken {
+			continue
+		}
+		var value []Token
+		prelude := false
+		for j++; j < len(toks); j++ {
+			v := toks[j]
+			if v.Depth == t.Depth && v.Type == css.SemicolonToken || v.Depth < t.Depth {
+				break
+			}
+			if v.Depth == t.Depth && v.Type == css.LeftBraceToken {
+				prelude = true
+				break
+			}
+			if v.Type != css.WhitespaceToken && v.Type != css.CommentToken {
+				value = append(value, v)
+			}
+		}
+		if n := len(value); n >= 2 && value[n-2].Type == css.DelimToken && string(value[n-2].Data) == "!" &&
+			value[n-1].Type == css.IdentToken && strings.EqualFold(string(value[n-1].Data), "important") {
+			value = value[:n-2]
+		}
+		if !prelude && len(Items(value)) != 1 {
+			c := Corner{Line: bytes.Count(src[:t.At], []byte("\n")) + 1, Name: string(t.Data), Value: ""}
+			if len(value) > 0 {
+				last := value[len(value)-1]
+				c.Value = string(src[value[0].At : last.At+len(last.Data)])
+			}
+			found = append(found, c)
+		}
+		i = j - 1
+	}
+	return found
+}
+
+// next returns the place of the first token from i that is no whitespace nor comment, len(toks) for none.
+func next(toks []Token, i int) int {
+	for i < len(toks) && (toks[i].Type == css.WhitespaceToken || toks[i].Type == css.CommentToken) {
+		i++
+	}
+	return i
+}
