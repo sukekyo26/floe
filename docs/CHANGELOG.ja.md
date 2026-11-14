@@ -271,6 +271,7 @@ floe の主要な変更を記録します。フォーマットは
 
 ### 変更
 
+- 変更：`floe theme check`・`floe part check`・`floe template check` と、自分のテーマ・部品・テンプレートを読むコマンド（`floe check`・`floe render`・サーバーの publish）が、CSS の `--radius-small`・`--radius-pill` の値が 2 つ以上の項（`5px 3px`・`4px / 2px`）なら断るようにした。floe の部品はどちらも 1 つの角（棒の `rx`、pill の `min()`）として読み、そうした値は黙って無効になっていた。1 つの長さか 1 つの関数（`var()`・`calc()`・`min()`）は通り、`--radius` は見ない。テンプレートの `page.css` は、テンプレートを読むコマンドが見て、`floe theme check`・`floe part check` は見ない。
 - 変更：`floe work` の書き方を変えた。ページとタスクを 1 回の書き込み（`PATCH /api/work`）で、先に全部を確かめてから書くので、断るときは何も書かず、ページを断られてタスクだけが残ることも無くなった。ページを付けるタスクに行が無ければ同じ書き込みで作り、ページのカテゴリはタスクのカテゴリの並びの末尾に足す。`--categories` はページのあるカテゴリを落とすと断り、ページのカテゴリは末尾に足す。`floe work --task X` は、変える欄が無ければタスクを言うだけで何も書かない（前は空の行を作った）。行の無いタスクへの空の書き込みは見つからないと言う。`floe publish --move-project` や「編集」でページのプロジェクトが変わると、ページはタスクから外れ、publish がそう言う（`page in project app, off task #9`）。
 - 変更：ページのカテゴリは、ページだけが持つようにした。タスクは最後に書いたカテゴリを持たなくなり、タスク一覧の各タスクにカテゴリを出さない。`floe work --category` は、`--task` が無ければタスクを書かず、`--task` と一緒なら名指したタスクを今どおり確かめて書く（made・changed・unchanged。カテゴリは書かない）。`PATCH /api/tasks` は `category` を断る。
 - 変更：タスクの中のページの置き場所の名前を、段階（step）からカテゴリ（category）に変えた。`floe work --category`・`--categories`（前の `--step`・`--steps` は知らないフラグとして断る）、`meta.json`・`tasks.json`・API の `category`・`categories`、管理ページの「カテゴリ」。help と docs の例は、カテゴリをタスクの状態と同じ行に書かない。`floe guide` に、ページのカテゴリはユーザーが決め、エージェントは頼まれたときだけ `--category` を付けると書いた。
