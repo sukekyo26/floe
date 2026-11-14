@@ -56,7 +56,7 @@ func indent(text, by string) string {
 }
 
 // rowPadKit is a template of one's own that draws its parts as report does, its page.css setting --floe-row-pad and
-// --floe-pad-inline, in floe.page over floe.base.
+// --floe-pad-inline, in floe.page over floe's defaults.
 var rowPadKit = map[string]string{
 	"templates/rowpad/page.html": "<!doctype html>\n<html lang=\"{{.Lang}}\"><head><meta charset=\"utf-8\">" +
 		"<title>{{.Title}}</title></head>\n<body>\n{{range .Data.parts}}{{range .}}{{with .}}{{.}}{{end}}{{end}}{{end}}\n</body></html>\n",
@@ -122,7 +122,7 @@ const lookRowPadFix = "pad a row by --floe-row-pad above and below and --floe-pa
 	"and write no padding of a row; a theme sets neither"
 
 // lookRowPad measures rowParts in every theme, on the screen and printed, and design's and postmortem's examples, by
-// base.css's variables (basePads), and rowParts in a template of one's own (rowPadKit) whose page.css sets them
+// defaults.css's variables (basePads), and rowParts in a template of one's own (rowPadKit) whose page.css sets them
 // otherwise, by those, as measureRowPad does. Every part that takes the look rows or table, and table and facts, must be drawn as rows in
 // rowParts.
 func lookRowPad(t *testing.T, s *site) measured {
@@ -172,7 +172,7 @@ func lookRowPad(t *testing.T, s *site) measured {
 	s.b.navigate("/a/rows-own/?raw")
 	own := padsOn(t, s)
 	if own.Row == base.Row || own.Inline == base.Inline {
-		m.amiss = append(m.amiss, amiss{Page: "rowParts in rowpad", At: "rowpad", Text: fmt.Sprintf("its page.css's variables reach not the page: %+v, base.css's %+v", own, base)})
+		m.amiss = append(m.amiss, amiss{Page: "rowParts in rowpad", At: "rowpad", Text: fmt.Sprintf("its page.css's variables reach not the page: %+v, defaults.css's %+v", own, base)})
 	}
 	got, _ := rowsOn(t, s, "rowParts in rowpad", own)
 	m.add(got)

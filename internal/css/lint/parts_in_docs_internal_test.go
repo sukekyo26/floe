@@ -21,14 +21,14 @@ var partsDocs = []struct {
 	{"Code's look", codeVariables},
 }
 
-// partsInDocs keeps the variables a part reads that floe sets, base.css's --floe-* (on a plain :root, and registered by
-// @property with their default) and code's --floe-code-* (on a plain :scope), in two directions: each is named, whole, in
+// partsInDocs keeps the variables a part reads that floe sets, defaults.css's --floe-* (on a plain :root) and base.css's
+// (registered by @property with their default) and code's --floe-code-* (on a plain :scope), in two directions: each is named, whole, in
 // the first column of the table of its heading in parts.md, a variable to a row, with the default that the CSS gives it
 // (in the Default column, as code); and each --floe-* that column names is one the CSS sets. A plain root is the rule's
 // own, alone in its selector and in no at-rule: a declaration in @media print, or on :scope:has(> .floe-copy), is not the
 // default.
 // LIMIT: a row of the table that has no --floe-* (the tone's) is not held to the CSS; each table is held to the CSS of its
-// own heading alone (partsDocs): the first to base.css's, the second to code's. The tables of "Rows with a mark" (--floe-mark,
+// own heading alone (partsDocs): the first to defaults.css's and base.css's, the second to code's. The tables of "Rows with a mark" (--floe-mark,
 // --floe-mark-gap) and "Variables a part sets" (--floe-pill-wrap) are not held to the CSS either: a part sets those, and the
 // default differs part by part.
 // A third check holds the classes of the section "Code's look": each `.class` that a code span of it names alone is one
@@ -139,16 +139,17 @@ func classesOf(toks []token) []string {
 	return out
 }
 
-// baseVariables returns the --floe-* that floe's base.css sets on a plain :root or registers by @property, with the value
-// a part reads: the last one written on the root, else the @property's initial-value.
+// baseVariables returns the --floe-* that floe's defaults.css sets on a plain :root and base.css registers by @property,
+// with the value a part reads: the last one written on the root, else the @property's initial-value.
 func baseVariables(in *Input) map[string]string {
 	out := map[string]string{}
 	for _, s := range in.Sheets() {
-		if s.Kind != kindBase {
-			continue
+		switch s.Kind {
+		case kindBase:
+			maps.Copy(out, propertyInitials(s.Src, "--floe-"))
+		case kindDefaults:
+			maps.Copy(out, plainDeclared(s.Src, ":root", "--floe-"))
 		}
-		maps.Copy(out, propertyInitials(s.Src, "--floe-"))
-		maps.Copy(out, plainDeclared(s.Src, ":root", "--floe-"))
 	}
 	return out
 }

@@ -54,10 +54,8 @@ func check(k *Kit) error {
 			return err
 		}
 	}
-	if k.baseCSS != nil {
-		if err := add(css.Check("base.css", k.baseCSS)); err != nil {
-			return err
-		}
+	if err := add(checkFloeCSS(k)); err != nil {
+		return err
 	}
 	found = append(found, ownCSS(k)...)
 	return found.Sorted().Err()
@@ -238,6 +236,18 @@ func unread(dir string, files []string, key string) usererr.List {
 		found = append(found, usererr.NewAt(path.Join(dir, f), 0, 0, key))
 	}
 	return found
+}
+
+// checkFloeCSS checks floe's base.css and defaults.css, of floe's Kit alone: a Kit read over it holds neither.
+func checkFloeCSS(k *Kit) error {
+	var errs []error
+	if k.baseCSS != nil {
+		errs = append(errs, css.Check("base.css", k.baseCSS))
+	}
+	if k.defaultsCSS != nil {
+		errs = append(errs, css.Check("defaults.css", k.defaultsCSS))
+	}
+	return usererr.Collect(errs...)
 }
 
 // checkTheme checks the CSS of t, palette.css as the others; and refuses a file it does not read, of no part or

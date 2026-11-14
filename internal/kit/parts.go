@@ -396,10 +396,7 @@ func (k *Kit) baseDir(name string) (string, bool) {
 
 // sectionKey reports whether name is a key of floe's shared schema any, under k.
 func sectionKey(k *Kit, name string) bool {
-	for k.base != nil {
-		k = k.base
-	}
-	s := k.shared["any"]
+	s := k.root().shared["any"]
 	if s == nil {
 		return false
 	}

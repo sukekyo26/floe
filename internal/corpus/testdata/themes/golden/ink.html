@@ -2,7 +2,7 @@
 <meta name="viewport" content="width=device-width, initial-scale=1"/>
 <title>The ink theme</title>
 <style>
-@layer floe.palette, floe.base, floe.theme, floe.looks, floe.marks, floe.page, floe.parts;
+@layer floe.defaults, floe.palette, floe.base, floe.theme, floe.looks, floe.marks, floe.page, floe.parts;
 @layer floe.looks.boxes, floe.looks.depth1, floe.looks.depth0, floe.parts.boxes, floe.parts.depth1, floe.parts.depth0;
 @layer floe.parts.boxes { :is(ul, ol, menu)[data-floe-part] { display: grid; list-style: none; padding: 0; gap: 0; } }
 @layer floe.looks.boxes { :is(ul, ol, menu)[data-floe-look] { display: grid; list-style: none; padding: 0; gap: 0; } }
@@ -20,11 +20,6 @@
    paper. The prefixed name is for a Chromium before 136, as a VS Code's may be.
    LIMIT: no test fails without the prefixed name, as the Chrome of the tests reads both */
 :root { background: var(--page-bg); color: var(--fg); font-family: var(--font); overflow-wrap: anywhere; -webkit-print-color-adjust: exact; print-color-adjust: exact; }
-/* A pill's corners round no more than 3/4 of its line, more than half its height on one line (half a line, its
-   padding and frame) and less on two: a pill of one line stays round at both ends, and one that wraps is a label.
-   LIMIT: a line box over about 1.3 lines (a fallback face of letters, kana or emoji) leaves a one-line pill straight sides.
-   Only the faces of the tests are measured */
-:root { --floe-pill-end: 0.75lh; }
 h1, h2, h3 { margin: 0; font-family: var(--display); font-weight: 700; line-height: 1.35; text-wrap: balance; }
 h3 { font-size: 1.05rem; }
 /* A heading in a part, a text or a template's own Markdown is the author's, as a part draws none and a template names
@@ -89,21 +84,13 @@ pre code { font-size: inherit; background: none; box-shadow: none; padding: 0; }
 blockquote { margin: 0; padding-left: 1rem; border-left: 3px solid var(--line); color: var(--on-face, var(--muted)); }
 blockquote > * + * { margin-top: 0.6rem; }
 @media (prefers-reduced-motion: reduce) { * { animation: none !important; transition: none !important; } }
-/* The padding above and below a row of what draws rows one under another: the look rows gives it to each of its
-   rows, and the look table and facts take it. Themes leave it as it is, so that rows are as tall in every theme */
-:root { --floe-row-pad: 0.4rem; }
-/* The padding of a box among parts, from its frame to its text (a card, what takes the look panel, note), and at the
-   sides of a row of the look rows. Themes leave it as it is and pad no box; a theme's frame around a box pads the
-   element it paints inside by it (default's tree) */
-:root { --floe-pad-block: 1.1rem; --floe-pad-inline: 1.3rem; }
 /* The copy button a part draws with copyButton, the same in every part: round, in the colours of code on its ground
    (--code-ground, which a theme sets where it gives code a ground of its own), its icon a check once it copied. Above
    what it lies over, which may draw above it otherwise (a block that scrolls): a part
    holding it isolates its box (isolation: isolate), so that it stays under the page outside. Its ring is
    inside it, in the code's colour, which the accent is too faint on. Its status is for screen readers alone. Its size,
-   the room a part leaves around it and what text keeps clear of it at its right are here alone: a part that lies text
-   under it keeps --floe-copy-room after its longest line, as code does */
-:root { --floe-copy-size: 30px; --floe-copy-gap: 0.4rem; --floe-copy-room: calc(var(--floe-copy-size) + 2 * var(--floe-copy-gap)); }
+   the room a part leaves around it and what text keeps clear of it at its right are defaults.css's alone: a part that
+   lies text under it keeps --floe-copy-room after its longest line, as code does */
 .floe-copy {
   position: relative; z-index: 1; display: grid; place-items: center; width: var(--floe-copy-size); height: var(--floe-copy-size); padding: 0;
   border: 0; border-radius: 999px; cursor: pointer;
@@ -134,13 +121,6 @@ blockquote > * + * { margin-top: 0.6rem; }
    LIMIT: a part spaces its Markdown's box from its own elements and edge (a title above, its padding below) under
    --floe-room, so a theme's quote shadowed as far as that, first or last in a part's Markdown, may reach the title or
    leave the part's box */
-:root { --floe-room: 0.75rem; }
-/* The small text of parts, in two steps: small (a pill, a chip, a ring's number, a key, a table's heading, a term, a
-   date, a count, a note beside a value) and an aside, a little larger (a card's or a step's words, a note's title, a
-   tab's name, a value's unit). The text of code (code's lines, a tree's names, code in a pill) follows code's size
-   instead, and a diagram's, in its SVG, the diagram's units.
-   LIMIT: in rem, small text in large text (a slide's heading, swiss's large quote) is no larger */
-:root { --floe-text-small: 0.8rem; --floe-text-aside: 0.9rem; }
 @property --floe-shadow-color { syntax: "<color>"; inherits: false; initial-value: transparent; }
 @property --floe-inset { syntax: "*"; inherits: false; initial-value: 0 0 #0000; }
 [data-floe-part], [data-floe-look], blockquote {
@@ -148,6 +128,38 @@ blockquote > * + * { margin-top: 0.6rem; }
     var(--floe-shadow-x, 0px) var(--floe-shadow-y, 0px) var(--floe-shadow-blur, 0px) var(--floe-shadow-spread, 0px) var(--floe-shadow-color),
     var(--floe-inset);
 }
+}
+</style>
+<style>
+@layer floe.defaults {
+/* The defaults of the variables floe sets on the page's root, in floe.defaults, the lowest layer, under every palette,
+   as default's palette lies under every theme's: a theme that sets one on :scope in its palette.css or base.css wins
+   over it. Only a plain :root's --floe-* are here, without !important nor an at-rule (TestLintRule/defaults-root): a
+   style here would lose to whatever a theme writes, and !important turns the order of the layers round */
+/* A pill's corners round no more than 3/4 of its line, more than half its height on one line (half a line, its
+   padding and frame) and less on two: a pill of one line stays round at both ends, and one that wraps is a label.
+   LIMIT: a line box over about 1.3 lines (a fallback face of letters, kana or emoji) leaves a one-line pill straight sides.
+   Only the faces of the tests are measured */
+:root { --floe-pill-end: 0.75lh; }
+/* The padding above and below a row of what draws rows one under another: the look rows gives it to each of its
+   rows, and the look table and facts take it. floe's themes leave it as it is, so that rows are as tall in every theme */
+:root { --floe-row-pad: 0.4rem; }
+/* The padding of a box among parts, from its frame to its text (a card, what takes the look panel, note), and at the
+   sides of a row of the look rows. floe's themes leave it as it is and pad no box; a theme's frame around a box pads the
+   element it paints inside by it (default's tree) */
+:root { --floe-pad-block: 1.1rem; --floe-pad-inline: 1.3rem; }
+/* The copy button's size, the room a part leaves around it and what text keeps clear of it at its right (base.css
+   draws the button, and keeps no room on paper, over the palette).
+   LIMIT: --floe-copy-room set in a theme's base.css, a layer over base.css's print, holds on paper too */
+:root { --floe-copy-size: 30px; --floe-copy-gap: 0.4rem; --floe-copy-room: calc(var(--floe-copy-size) + 2 * var(--floe-copy-gap)); }
+/* The space between parts that stand one after another, which a box's shadow reaches no further than (base.css) */
+:root { --floe-room: 0.75rem; }
+/* The small text of parts, in two steps: small (a pill, a chip, a ring's number, a key, a table's heading, a term, a
+   date, a count, a note beside a value) and an aside, a little larger (a card's or a step's words, a note's title, a
+   tab's name, a value's unit). The text of code (code's lines, a tree's names, code in a pill) follows code's size
+   instead, and a diagram's, in its SVG, the diagram's units.
+   LIMIT: in rem, small text in large text (a slide's heading, swiss's large quote) is no larger */
+:root { --floe-text-small: 0.8rem; --floe-text-aside: 0.9rem; }
 }
 </style>
 <style>
@@ -220,7 +232,7 @@ blockquote { --face: var(--fg); --on-face: var(--bg); border: 0; padding: 1.1rem
 @scope ([data-floe-part="cell"]:where(:is([data-floe-part], [data-floe-look]) *):where(:not(:is([data-floe-part], [data-floe-look]) :is([data-floe-part], [data-floe-look]) *))) to (:scope [data-floe-part] > *) {
 /* A pill: a short status in the colour of its tone, in the text's own face wherever it stands (a template's line of
    fixed-width text too). It keeps to one line, in a table's or a grid's column too, unless what holds it sets
-   --floe-pill-wrap: normal; one that wraps is a label of round corners (base.css's --floe-pill-end) */
+   --floe-pill-wrap: normal; one that wraps is a label of round corners (defaults.css's --floe-pill-end) */
 :scope {
   display: inline-block; font-family: var(--font); font-size: var(--floe-text-small); font-weight: 600; letter-spacing: normal; line-height: 1.6;
   padding: 0.1em 0.75em; border-radius: min(var(--radius-pill), var(--floe-pill-end)); white-space: var(--floe-pill-wrap, nowrap);

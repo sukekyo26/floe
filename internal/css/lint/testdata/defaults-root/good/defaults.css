@@ -1,0 +1,5 @@
+/* A default */
+:root { --floe-room: 0.75rem; }
+:root {
+  --floe-row-pad: 0.4rem; --floe-copy-room: calc(var(--floe-copy-size) + 2 * var(--floe-copy-gap));
+}

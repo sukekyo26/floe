@@ -93,10 +93,7 @@ func (k *Kit) partEntry(p *Part) Entry {
 // over it, which any takes too. floe's are read from floe's Kit under k, so that a part of one's own named as a key
 // does not stand for it. A key that is neither is floe's failure.
 func (k *Kit) SectionParts() ([]Entry, error) {
-	floe := k
-	for floe.base != nil {
-		floe = floe.base
-	}
+	floe := k.root()
 	anyOf := floe.shared["any"]
 	if anyOf == nil {
 		return nil, errors.New("kit: floe has no shared schema any") //nolint:err113 // floe's failure
