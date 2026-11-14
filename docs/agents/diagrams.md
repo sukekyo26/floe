@@ -152,6 +152,7 @@ An icon of an icon set (*Cloud icons*).
 | `icon` | the set and the name in it, required | — | Like `aws/amazon-ec2` or `gcp/cloud-run` (`floe icons search` finds a name) |
 | `label` | text | none | Centred below the icon, 3 under it and 18 tall; an edge at the icon's bottom side ends under the label |
 | `size` | a size | 48 | The icon's width and height |
+| `tone` | a tone | none (the text colour) | The colour of a `lucide/…` icon's lines; an icon of another set keeps its own colours, and floe refuses a `tone` on it |
 | `name` | a name | none | The name an edge can end at |
 
 ### edge
@@ -294,6 +295,7 @@ An icon with its label below and no box round it.
 | `icon` | the set and the name in it, required | — | Like `aws/amazon-ec2` |
 | `with` | the name of a box or icon of the graph | none | Stands this icon in the rank of that one (*Ranks*) |
 | `label` | text | none | Below the icon |
+| `tone` | a tone | none | As for the part `icon` |
 
 #### A group of a graph
 
