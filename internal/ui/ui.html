@@ -1438,6 +1438,22 @@
     </div>
   </form>
 </dialog>
+<!-- Asked over Set the task or Add a page, before a page on another task is moved: No writes nothing -->
+<dialog id="move-dialog" aria-labelledby="move-title" aria-describedby="move-lead">
+  <div class="modal-body">
+    <div class="modal-head">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M9 6h11M9 12h11M9 18h11M4 6h.01M4 12h.01M4 18h.01"/></svg>
+      <div>
+        <h2 id="move-title">{{.Msg "ui_task_move_ask"}}</h2>
+        <p class="lead" id="move-lead"></p>
+      </div>
+    </div>
+    <div class="dialog-actions">
+      <button type="button" class="btn" id="move-no" data-close>{{.Msg "ui_no"}}</button>
+      <button type="button" class="btn primary" id="move-yes">{{.Msg "ui_yes"}}</button>
+    </div>
+  </div>
+</dialog>
 <dialog id="edit-task-dialog" aria-labelledby="edit-task-heading">
   <form class="modal-body" id="edit-task">
     <div class="modal-head">
@@ -5207,7 +5223,7 @@
   // what to do next in a modal, which can save again. Written, every task the store answers goes in the tasks read, so that the next write
   // is of its rev, a read failing too; rev is the first one's
   async function changeTasks(body) {
-    if (body.new === false && !Number.isInteger(body.rev)) return { ok: false, status: 0, text: t('ui_task_no_rev'), rev: null, stale: '' };
+    if (body.new === false && !Number.isInteger(body.rev)) return { ok: false, status: 0, text: t('ui_task_no_rev'), rev: null, stale: '', pages: [] };
     const res = await api('/api/tasks', { method: 'PATCH', headers: { 'content-type': 'application/json' }, body: JSON.stringify(body) });
     const text = res.ok ? '' : await res.text();
     if (res.status === 409) {
@@ -5215,12 +5231,14 @@
       await load();
     }
     let rev = null;
+    let pages = [];
     if (res.ok) {
       const written = await res.json();
       for (const task of written.tasks) (tasksRead.tasks[task.taskProject] ??= {})[task.task] = task.row;
       rev = written.tasks[0]?.row.rev ?? null;
+      pages = written.pages;
     }
-    return { ok: res.ok, status: res.status, text, rev, stale: t('ui_task_stale', text) };
+    return { ok: res.ok, status: res.status, text, rev, stale: t('ui_task_stale', text), pages };
   }
   // A write of the task (project, name) alone
   const writeTask = (project, name, body) => changeTasks({ taskProject: project, task: name, ...body });
@@ -5233,6 +5251,25 @@
     $('set-error').textContent = t('ui_save_failed', reason);
     $('set-error').hidden = false;
   };
+  // Where a page was: its task, and the category on it when it had one. Said of the page the list has, and of the page a write took off a task
+  const leftPlace = (task, category) => (category ? t('ui_page_from_task_category', task, category) : task);
+  // Whether to put the page on the task name: asked when the list now has it on another task (the page as the dialog opened, when the list
+  // has it not), and at once yes when it is on none or on that one. The question is over the dialog it came from, which stays as it was
+  // LIMIT: a page put on another task since the list was read is moved unasked, which the toast after the write tells. Give page writes a
+  // rev if that comes to trouble someone
+  let moveYes = false;
+  function askMove(page, name) {
+    const listed = items.find((x) => x.slug === page.slug) ?? page;
+    const from = listed.task?.name?.trim() ?? '';
+    const to = name.trim();
+    if (!from || from === to) return Promise.resolve(true);
+    $('move-lead').textContent = t('ui_task_move_lead', listed.title, leftPlace(from, listed.task.category), to, from);
+    moveYes = false;
+    const dialog = $('move-dialog');
+    dialog.showModal();
+    $('move-no').focus();
+    return new Promise((resolve) => dialog.addEventListener('close', () => resolve(moveYes), { once: true }));
+  }
   // A page put on a category of a task in one write, with what the screen saw of the task (body): the store makes the task's row when it has
   // none and adds the category to its categories. The page's project is the task's
   const putPageOn = (page, task, body, category) => changeTasks({ slugs: [page.slug], task, category, ...body });
@@ -5245,7 +5282,6 @@
   async function saveTaskSet(e) {
     e.preventDefault();
     const btn = $('set-submit');
-    btn.disabled = true;
     // What was asked to be saved, whatever is typed while it goes
     const page = setPage;
     const task = $('set-task').value;
@@ -5257,17 +5293,28 @@
       // A task there is written as the dialog shows it (rev)
       new: fresh, ...(fresh ? { title: $('set-task-title').value.trim() } : { rev: setShown.rev }),
     };
+    // Asked once the form may be sent, not of what would be refused; No leaves the dialog as it was
+    if (!taskFormReady($('set'), $('set-error'))) return;
+    if (!(await askMove(page, task))) {
+      btn.focus();
+      return;
+    }
+    btn.disabled = true;
     try {
-      if (!taskFormReady($('set'), $('set-error'))) return;
       const res = await putPageOn(page, task, body, category);
       // Refused as stale: whether the name is of a task there, as read again, a title asked of a new one alone
       if (!res.ok) {
         if (res.status === 409) setTaskKnown();
         throw new Error(res.status === 409 ? res.stale : res.text);
       }
-      if (task.trim() === setOpened.task) toast(t('ui_saved'));
+      // The task it left, as the write found it, before what the dialog opened at: it may have been moved since
+      const left = res.pages[0]?.offTask;
+      if (!left && task.trim() === setOpened.task) toast(t('ui_saved'));
       else {
-        const to = tagged('a', 'toast-link', t('ui_task_put', task.trim(), t(VIEW_WORDS[state])));
+        const words = left
+          ? t('ui_task_put_moved', leftPlace(left, res.pages[0].offCategory), task.trim(), t(VIEW_WORDS[state]))
+          : t('ui_task_put', task.trim(), t(VIEW_WORDS[state]));
+        const to = tagged('a', 'toast-link', words);
         to.href = taskHref({ project: page.taskProject, name: task.trim() });
         toast('', { ms: 8000, button: to });
       }
@@ -5695,7 +5742,7 @@
     const { name: task, category } = a.task ?? {};
     if (!task) return '';
     if (task === addTo.name) return category ? t('ui_page_from_category', category) : t('ui_page_from_no_category');
-    return category ? t('ui_page_from_task_category', task, category) : task;
+    return leftPlace(task, category);
   };
   function drawAddPage() {
     const { all, hits } = addHits();
@@ -5746,6 +5793,11 @@
       $('add-page-error').hidden = false;
     };
     try {
+      // No leaves the modal as it was, the page still marked: its rows take no focus (listKeys), so the search box has it
+      if (!(await askMove(a, to.name))) {
+        $('add-page-q').focus();
+        return;
+      }
       let res;
       try {
         res = await putPageOn(a, to.name, { new: false, rev: to.rev }, to.category);
@@ -5762,7 +5814,10 @@
         failed(res.status === 409 ? res.stale : res.text);
         return;
       }
-      toast(from ? t('ui_page_moved', a.title, from, to.category) : t('ui_page_added', a.title, to.category));
+      // Of another task, as the write found it; of another category of this one, as the list had it
+      const off = res.pages[0];
+      const said = off?.offTask ? leftPlace(off.offTask, off.offCategory) : from;
+      toast(said ? t('ui_page_moved', a.title, said, to.category) : t('ui_page_added', a.title, to.category));
       await load();
       $('add-page-dialog').close();
     } finally {
@@ -6521,6 +6576,10 @@
     return task ? categoryOrder(task) : [];
   }, (name) => { $('set-category').value = name; });
   for (const b of document.querySelectorAll('[data-close]')) b.addEventListener('click', () => b.closest('dialog').close());
+  $('move-yes').addEventListener('click', () => {
+    moveYes = true;
+    $('move-dialog').close();
+  });
   // A click on the backdrop (the dialog itself) closes it, as Escape does: not one closedby none holds; the form fills the dialog, so
   // clicks inside never land here
   for (const d of document.querySelectorAll('dialog')) {

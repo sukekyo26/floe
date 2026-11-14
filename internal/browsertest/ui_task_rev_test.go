@@ -107,10 +107,11 @@ func TestUITaskRev(t *testing.T) { //nolint:paralleltest // the browser tests sh
 		return document.getElementById('error').textContent; })()`)
 
 	// Set the task, its page's write refused: saving again is of the rev written, refused when another wrote it since, and else saved; a page
-	// whole, which reads the tasks only as the dialog opens, too
+	// whole, which reads the tasks only as the dialog opens, too. Moved from another task, it is asked first, and Yes answered
 	const setSave = `(async () => { const at = document.getElementById('set-error').textContent; const n = sent.length; document.getElementById('set').requestSubmit();
 		const end = Date.now() + 5000;
-		await new Promise((r) => { const look = () => (Date.now() < end && document.getElementById('set-dialog').open && document.getElementById('set-error').textContent === at ? setTimeout(look, 10) : r()); setTimeout(look, 10); });
+		const yes = () => { if (document.getElementById('move-dialog').open) document.getElementById('move-yes').click(); };
+		await new Promise((r) => { const look = () => (yes(), Date.now() < end && document.getElementById('set-dialog').open && document.getElementById('set-error').textContent === at ? setTimeout(look, 10) : r()); setTimeout(look, 10); });
 		return document.getElementById('set-dialog').open ? document.getElementById('set-error').textContent + (Date.now() >= end ? ' (stuck: ' + sent.slice(n).join(' ; ') + ')' : '') : 'saved'; })()`
 	setOnce := func(where string) {
 		t.Helper()

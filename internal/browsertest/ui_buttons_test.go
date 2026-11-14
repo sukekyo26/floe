@@ -96,6 +96,8 @@ func TestUIButtons(t *testing.T) { //nolint:paralleltest // the browser tests sh
 	modal("add-dialog", "document.getElementById('add-link').click()")
 	modal("edit-dialog", menu("b", "edit"))
 	modal("set-dialog", menu("b", "task-set"))
+	// Asked of a page on another task, as Set the task asks it
+	modal("move-dialog", "askMove(items.find((x) => x.slug === 'a'), '#2')")
 	modal("find", "openFind()")
 	modal("keys", "openKeys()")
 	modal("settings", "document.getElementById('settings-open').click()")

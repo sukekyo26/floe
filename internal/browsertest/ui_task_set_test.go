@@ -318,20 +318,63 @@ func TestUITaskSet(t *testing.T) { //nolint:paralleltest // the browser tests sh
 	say("the same task", "[...document.querySelectorAll('.toast')].at(-1).textContent")
 	b.navigate("/?project=proj")
 	b.until("the rows", "document.querySelector('#list li[data-slug=c]')")
+	// A page on another task is asked of before it moves: No, or Escape, writes nothing and leaves the dialog as it was; the question is of
+	// the task the list has the page on as it asks.
 	dialog("c")
 	field("set-task", "#5")
 	field("set-task", "#2")
-	save()
+	const asked = "document.getElementById('move-lead').textContent + ' / ' + document.activeElement.id"
+	// Pressed as a person does: Chrome closes dialogs opened with no press between them on one Escape
+	b.still()
+	submit := b.rect("document.getElementById('set-submit')")
+	b.click(submit.X+submit.Width/2, submit.Y+submit.Height/2)
+	b.until("asked", "document.getElementById('move-dialog').open")
+	say("asked", asked)
+	b.pressKey(kb.Escape)
+	// The answer is had once the dialog's close event is, which gives the focus back
+	b.until("no", "!document.getElementById('move-dialog').open && document.activeElement.id === 'set-submit'")
+	say("no", "document.getElementById('set-dialog').open + ' ' + document.activeElement.id + ' ' + document.getElementById('set-task').value")
+	out = append(out, "no, written: "+pageTask("c"))
+	s.floe(t, "task", "--slug", "c", "--task", "#3", "--category", "x")
+	b.eval("load()")
+	b.until("read again", "items.find((x) => x.slug === 'c').task?.name === '#3'")
+	b.eval("document.getElementById('set').requestSubmit()")
+	b.until("asked", "document.getElementById('move-dialog').open")
+	say("asked as read now", asked)
+	b.moveYes()
+	b.until("saved", "!document.getElementById('set-dialog').open")
 	b.until("the toast", "document.querySelector('.toast-link')")
+	say("moved", "document.querySelector('.toast-link').textContent")
 	b.still()
 	link := b.rect("document.querySelector('.toast-link')")
 	b.click(link.X+link.Width/2, link.Y+link.Height/2)
 	b.until("the task's page", "location.search === '?project=proj&task=%232' && !document.getElementById('task-head').hidden")
 	say("up, come by the toast", "document.getElementById('task-up').getAttribute('href')")
 
+	// Moved since the list was read, a page is moved unasked, as the dialog has it on the task named: the toast says the task it left, of the
+	// write's answer, not "Saved".
+	b.navigate("/?project=proj")
+	b.until("the rows", "document.querySelector('#list li[data-slug=c]')")
+	dialog("c")
+	s.floe(t, "task", "--slug", "c", "--task", "#1")
+	b.eval("items.find((x) => x.slug === 'c').task = { name: '#2' }")
+	b.eval("document.getElementById('set').requestSubmit()")
+	b.until("saved", "!document.getElementById('set-dialog').open")
+	b.until("the toast", "document.querySelector('.toast-link')")
+	say("moved unasked", "document.querySelector('.toast-link').textContent")
+
 	if got, want := strings.Join(out, "\n"), taskSetWant; got != want {
 		t.Errorf("the task's dialog:\n%s\nwant:\n%s", got, want)
 	}
+}
+
+// submitSet saves Set the task, answering Yes when it asks before a page on another task moves: it asks as the save is pressed.
+const submitSet = "document.getElementById('set').requestSubmit(); if (document.getElementById('move-dialog').open) document.getElementById('move-yes').click()"
+
+// moveYes answers Yes to the question asked before a page on another task moves.
+func (b *browser) moveYes() {
+	b.until("asked", "document.getElementById('move-dialog').open")
+	b.eval("document.getElementById('move-yes').click()")
 }
 
 // taskSetWant is what TestUITaskSet reads, in the order it does things.
@@ -384,4 +427,10 @@ put on a task: Put on #5 (Done) /tasks?project=proj&task=%235
 its state as it was: done
 the state written: #1 todo https://example.com/a/one; #2 todo https://example.com/a/two; #3 todo 
 the same task: Saved
-up, come by the toast: /tasks?project=proj&view=todo`
+asked: “T c” is on #5. Moving it to #2 takes it off #5. / move-no
+no: true set-submit #2
+no, written: {"name":"#5"}
+asked as read now: “T c” is on #3's x. Moving it to #2 takes it off #3. / move-no
+moved: Moved from #3's x to #2 (To do)
+up, come by the toast: /tasks?project=proj&view=todo
+moved unasked: Moved from #1 to #2 (To do)`

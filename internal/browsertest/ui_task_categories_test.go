@@ -176,17 +176,28 @@ func TestUITaskCategories(t *testing.T) { //nolint:paralleltest // the browser t
 	query("other")
 	b.pressKey(kb.ArrowDown)
 	b.pressKey(kb.Enter)
+	b.moveYes()
 	b.until("not reached", "!document.getElementById('add-page-error').hidden")
 	say("not reached", "document.getElementById('add-page-error').textContent + ' / ' + document.getElementById('add-page-dialog').open")
 	b.eval("window.fetch = window.cutFetch")
 	b.pressKey(kb.Escape)
 	b.until("closed", "!document.getElementById('add-page-dialog').open")
 
-	// From another task, and from another category of this one: said where it came from.
+	// From another task, asked first: No, or Escape, puts nothing and leaves the modal, the search box focused and the page still marked, so
+	// that Enter asks again. From another category of this one, nothing is asked. Either is said where it came from.
+	b.eval("sent.length = 0")
 	add("案")
 	query("other")
 	b.pressKey(kb.ArrowDown)
 	b.pressKey(kb.Enter)
+	b.until("asked", "document.getElementById('move-dialog').open")
+	say("asked", "document.getElementById('move-lead').textContent + ' / ' + document.activeElement.id")
+	b.pressKey(kb.Escape)
+	// The answer is had once the dialog's close event is
+	b.until("no", "!document.getElementById('move-dialog').open && !adding")
+	say("no", "sent.length + ' ' + document.getElementById('add-page-dialog').open + ' ' + document.activeElement.id + ' ' + Boolean(document.getElementById('add-page-q').getAttribute('aria-activedescendant'))")
+	b.pressKey(kb.Enter)
+	b.moveYes()
 	b.until("closed", "!document.getElementById('add-page-dialog').open")
 	say("moved from a task", lastToast)
 	add("リリース")
@@ -294,6 +305,8 @@ func TestUITaskCategories(t *testing.T) { //nolint:paralleltest // the browser t
 		`page refused, then: /api/tasks {"slugs":["note-a"],"task":"S300","category":"案","new":false,"rev":5}`,
 		"page refused, written: 5 / S300/案",
 		"not reached: Failed to save: Failed to fetch / true",
+		"asked: “T other-a” is on S301's 設計. Moving it to S300 takes it off S301. / move-no",
+		"no: 0 true add-page-q true",
 		"moved from a task: Moved T other-a from S301's 設計 to 案",
 		"moved from a category: Moved T build-a from 実装 to リリース",
 		"moved, groups: [案+] plan-a note-a other-a old-a [実装+ none] [リリース+] build-a memo-a check-a [レビュー+] review-a",

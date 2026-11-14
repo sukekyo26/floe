@@ -252,13 +252,14 @@ func TestFailureWords(t *testing.T) {
 	}
 }
 
-// A dialog's close button says Cancel where a submit button saves what is typed, which closing throws away, and Close where nothing is.
+// A dialog's close button says Cancel where a submit button saves what is typed, which closing throws away, and Close where nothing is;
+// a question's says No.
 // The page is read as the server renders it, in each language.
 func TestDialogCloseWords(t *testing.T) {
 	t.Parallel()
 
 	want := []string{
-		"filter-dialog", "find", "add-page-dialog", "settings", "keys", "add-dialog", "edit-dialog", "set-dialog", "edit-task-dialog", "kin-dialog",
+		"filter-dialog", "find", "add-page-dialog", "settings", "keys", "add-dialog", "edit-dialog", "set-dialog", "move-dialog", "edit-task-dialog", "kin-dialog",
 		"tag-dialog",
 	}
 	for _, lang := range i18n.Langs() {
@@ -294,6 +295,9 @@ func TestDialogCloseWords(t *testing.T) {
 			word := c.Msg("ui_close")
 			if submit {
 				word = c.Msg("ui_cancel")
+			}
+			if id == "move-dialog" {
+				word = c.Msg("ui_no")
 			}
 			if !slices.Equal(closers, []string{word}) {
 				t.Errorf("%s %s: close buttons %q, want one %q", lang, id, closers, word)
