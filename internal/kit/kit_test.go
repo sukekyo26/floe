@@ -70,6 +70,16 @@ func TestFloe(t *testing.T) {
 	if len(k.BaseCSS()) == 0 {
 		t.Error("no base.css")
 	}
+	// A Kit read over floe's holds neither file itself: it gives floe's, which every page it draws lays under the rest.
+	own, err := kit.Load(k, kit.Sources{})
+	if err != nil {
+		t.Fatal(told(err))
+	}
+	for _, of := range []*kit.Kit{k, own} {
+		if len(of.DefaultsCSS()) == 0 || len(of.BaseCSS()) == 0 {
+			t.Errorf("no defaults.css or base.css: %d, %d bytes", len(of.DefaultsCSS()), len(of.BaseCSS()))
+		}
+	}
 }
 
 // The files floe part show and template show print are copies: Floe's kit, shared by the process, stays.

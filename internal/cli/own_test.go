@@ -403,7 +403,7 @@ func TestAssetUnreadable(t *testing.T) {
 		t.Fatal(err)
 	}
 	env := map[string]string{"FLOE_TEMPLATES_DIR": filepath.Join(dir, "templates")}
-	if code, _, stderr := runEnv(dir, env, "template", "check"); code != 1 || stderr != file+": permission denied\n" {
+	if code, _, stderr := runEnv(dir, env, "template", "check"); code != 1 || stderr != file+": the image \"a.svg\" cannot be read (permission denied)\n" {
 		t.Errorf("floe template check = %d, %q", code, stderr)
 	}
 }

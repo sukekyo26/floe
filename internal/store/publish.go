@@ -25,6 +25,7 @@ import (
 	"floe/internal/project"
 	"floe/internal/tmpl"
 	"floe/internal/usererr"
+	"floe/internal/yamlpos"
 )
 
 var indexRe = regexp.MustCompile(`(?i)^index\.html?$`)
@@ -195,21 +196,47 @@ type Upload struct {
 	Place string
 }
 
-// NeedImages answers an Upload without images whose data reads some: Names, as it writes them.
+// NeedImages answers an Upload without images whose data reads some: the images, as it writes them.
 type NeedImages struct {
-	Names []string
+	Images []NeededImage
+}
+
+// NeededImage is an image the data reads, by its name, with the place of each item naming it in the data file.
+type NeededImage struct {
+	Name   string
+	Places []yamlpos.Pos
 }
 
 func (e *NeedImages) Error() string {
-	return "the data names images to be sent with it: " + strings.Join(e.Names, ", ")
+	names := make([]string, len(e.Images))
+	for i, n := range e.Images {
+		names[i] = n.Name
+	}
+	return "the data names images to be sent with it: " + strings.Join(names, ", ")
 }
 
 // recorder notes each name read of fsys, with Stat as with Open: kit.ReadImage stats an image before it opens
-// it, and an image that is not there fails the Stat.
+// it, and an image that is not there fails the Stat. It notes too where the data names each image (at, as
+// tmpl.Options.ImageAt), which names it does not read as well: the publisher reads the images it is asked for
+// and tells its mistakes, which are of the names, at these places of its data file.
 type recorder struct {
-	fsys  fs.FS
-	names []string
-	seen  map[string]bool
+	fsys   fs.FS
+	names  []string
+	seen   map[string]bool
+	places map[string][]yamlpos.Pos
+}
+
+func (r *recorder) at(name string, line, column int) {
+	r.places[name] = append(r.places[name], yamlpos.Pos{Line: line, Column: column})
+}
+
+// needed is the images read of fsys, as NeedImages answers them.
+func (r *recorder) needed() []NeededImage {
+	images := make([]NeededImage, len(r.names))
+	for i, name := range r.names {
+		images[i] = NeededImage{Name: name, Places: r.places[name]}
+	}
+	return images
 }
 
 func (r *recorder) note(name string) {
@@ -260,14 +287,14 @@ func (s *Store) PrepareData(dw Drawing, up Upload, opts Options) (*Entry, error)
 	for name, b := range up.Images {
 		sent[name] = &fstest.MapFile{Data: b, Mode: 0, ModTime: time.Time{}, Sys: nil}
 	}
-	images := &recorder{fsys: sent, names: nil, seen: map[string]bool{}}
+	images := &recorder{fsys: sent, names: nil, seen: map[string]bool{}, places: map[string][]yamlpos.Pos{}}
 	picked, created, err := s.themesFor(slug, "", up.Project, up.Repo, up.Place, opts.Force)
 	if err != nil {
 		return nil, err
 	}
 	o := tmpl.Options{
 		Theme: cmp.Or(picked, opts.theme()), Default: created, Untitled: slug, Images: images, ImagesDir: "",
-		Icons: dw.Icons, CutOff: false,
+		ImageAt: images.at, Icons: dw.Icons, CutOff: false,
 	}
 	page, warnings, drawErr := tmpl.Draw(dw.Kit, up.File, up.Source, o)
 	var mistakes usererr.List
@@ -280,7 +307,7 @@ func (s *Store) PrepareData(dw Drawing, up Upload, opts Options) (*Entry, error)
 		if _, refused := s.storedPage(slug, named, up, nil, opts); refused != nil {
 			return nil, usererr.WithWarnings(refused, warnings) //nolint:wrapcheck // its mistakes, with the page's warnings
 		}
-		return nil, &NeedImages{Names: images.names}
+		return nil, &NeedImages{Images: images.needed()}
 	}
 	if drawErr != nil {
 		return nil, drawErr //nolint:wrapcheck // mistakes at their places, for the caller to show
@@ -394,7 +421,7 @@ func (s *Store) PrepareLink(
 		data = src
 		images := files.NewRoot(filepath.Dir(path))
 		o := tmpl.Options{
-			Theme: cmp.Or(picked, opts.theme()), Default: created, Untitled: slug, Images: images, ImagesDir: "",
+			Theme: cmp.Or(picked, opts.theme()), Default: created, Untitled: slug, Images: images, ImagesDir: "", ImageAt: nil,
 			Icons: dw.Icons, CutOff: false,
 		}
 		_, warnings, err = tmpl.Draw(dw.Kit, path, src, o)

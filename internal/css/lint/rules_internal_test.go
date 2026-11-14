@@ -46,6 +46,7 @@ func (f Finding) String() string {
 // Kinds of sheet.
 const (
 	kindBase     = "base"     // floe's base.css
+	kindDefaults = "defaults" // floe's defaults.css
 	kindPart     = "part"     // a part's part.css
 	kindLook     = "look"     // a look's part.css
 	kindTheme    = "theme"    // a theme's file
@@ -65,26 +66,30 @@ func (s Sheet) at(at int) (string, int) { return s.File, lineOf(s.Src, at) }
 // Input is all a rule reads, by its methods alone, so that what it reads has one source: floe's own files, or a
 // testdata example's.
 type Input struct {
-	kit   *kit.Kit
-	base  []byte            // floe's base.css
-	docs  fs.FS             // floe's docs
-	pages fs.FS             // pages floe drew, the HTML (every-part)
-	ui    []byte            // the management page, ui.html
-	allow map[string]string // the exceptions in force: a key and its reason
-	used  map[string]bool   // the keys of allow looked up and found
-	seen  int               // what the rule looked at (Saw)
+	kit      *kit.Kit
+	base     []byte            // floe's base.css
+	defaults []byte            // floe's defaults.css
+	docs     fs.FS             // floe's docs
+	pages    fs.FS             // pages floe drew, the HTML (every-part)
+	ui       []byte            // the management page, ui.html
+	allow    map[string]string // the exceptions in force: a key and its reason
+	used     map[string]bool   // the keys of allow looked up and found
+	seen     int               // what the rule looked at (Saw)
 }
 
 // Saw notes that the rule looked at one more thing it checks (a declaration, a file): TestLintRule fails a rule that
 // looks at nothing on floe's files or its good example, as when what it checks is renamed or gone.
 func (in *Input) Saw() { in.seen++ }
 
-// Sheets returns every CSS file of in: base.css, then each part's and look's, each theme's and each template's, in the
+// Sheets returns every CSS file of in: base.css, defaults.css, then each part's and look's, each theme's and each template's, in the
 // order of their names.
 func (in *Input) Sheets() []Sheet {
 	var out []Sheet
 	if in.base != nil {
 		out = append(out, Sheet{Kind: kindBase, File: "base.css", Src: in.base})
+	}
+	if in.defaults != nil {
+		out = append(out, Sheet{Kind: kindDefaults, File: "defaults.css", Src: in.defaults})
 	}
 	if in.kit == nil {
 		return out
@@ -177,6 +182,7 @@ func (in *Input) Allowed(key string) bool {
 // Rules are floe's CSS rules read in its text, in the order of their names.
 var Rules = []Rule{
 	codeLook,
+	defaultsRoot,
 	manageColours,
 	manageCornersRule,
 	onePlace,

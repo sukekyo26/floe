@@ -8,33 +8,33 @@ import (
 	floecss "floe/internal/css"
 )
 
-// placeOf is where each variable of it is set alone: in a palette, in a template's page.css or in floe's base.css.
+// placeOf is where each variable of it is set alone: in a palette, in a template's page.css or in floe's defaults.css.
 var placeOf = map[string]string{
 	"--page-width": "palette", "--text-width": "palette", "--page-pad": "palette",
 	"--radius": "palette", "--radius-small": "palette", "--radius-pill": "palette",
 	"--column-width": "page.css",
 }
 
-// stepPrefix is the start of the names of the steps of small text, which floe's base.css alone sets.
+// stepPrefix is the start of the names of the steps of small text, which floe's defaults.css alone sets.
 const stepPrefix = "--floe-text-"
 
 // placeOfName returns where name is set alone, "" for anywhere.
 func placeOfName(name string) string {
 	if strings.HasPrefix(name, stepPrefix) {
-		return "base.css"
+		return "defaults.css"
 	}
 	return placeOf[name]
 }
 
-// placed returns where in floe's CSS a sheet is, as placeOf names it: palette, page.css, base.css or "".
+// placed returns where in floe's CSS a sheet is, as placeOf names it: palette, page.css, defaults.css or "".
 func placed(s Sheet) string {
 	switch {
 	case s.Kind == kindTheme && s.For == "palette":
 		return "palette"
 	case s.Kind == kindTemplate:
 		return "page.css"
-	case s.Kind == kindBase:
-		return "base.css"
+	case s.Kind == kindDefaults:
+		return "defaults.css"
 	default:
 		return ""
 	}

@@ -13,7 +13,7 @@ paths:
 - **箱の中の余白は `--floe-pad-block` と `--floe-pad-inline`** [box-pad]：部品の間に地や枠を持つ箱を描くときは、縁から字までをこの 2 つで書き、数で書かない（箱の中の小さな升、行、code の行は外）。見た目 panel 自身は余白を持たない。テーマは置き直さず、箱の余白を書かない。`TestLookRule/box-pad`
 - **部品の小さい字は 2 つの段** [text-scale]：部品と見た目の、本文より小さい字は数で書かず、`--floe-text-small`（札・印と名前・付記）か `--floe-text-aside`（添えの文・小さな題）で書く。`TestLintRule/text-scale`
 - **折り返す並びは、並びの位置で描き分けない** [wrapped-alike]：幅で折り返す並びの子の形（枠・余白）を `:first-child`・`:nth-child` などで描き分けない（どの子が行の先頭になるかは幅で決まる）。並んだ順に地の色を替えるのはよい。`TestLookRule/wrapped-alike`
-- **写すボタンは `copyButton` 1 つ** [copy-button]：part.html の `{{copyButton}}` だけが描き、写す要素は `data-floe-copy` で決める。部品ごとに script・ボタン・言葉・ボタンの形を書かない。部品の CSS が決めるのは置き場所だけで、大きさと間は base.css の `--floe-copy-*`。（判断）
+- **写すボタンは `copyButton` 1 つ** [copy-button]：part.html の `{{copyButton}}` だけが描き、写す要素は `data-floe-copy` で決める。部品ごとに script・ボタン・言葉・ボタンの形を書かない。部品の CSS が決めるのは置き場所だけで、大きさと間は defaults.css の `--floe-copy-*`。（判断）
 - **拡大は `zoom` 1 つ** [zoom]：枠の中で拡大する図と絵は、`part.html` の `{{zoom}}` と、見た目 `zoom` の枠 `.floe-zoom` で描く。部品ごとに script・道具の並び・言葉を書かない。部品の CSS が書くのは枠の大きさと中身の形だけ。（判断）
 - **code の一族は code の変数で描く** [code-look]：code の見た目を借りる部品（diff・terminal）は、余白と薄い字を code が根に置く `--floe-code-*` で描き、数と `.floe-copy` を写さない。`TestLintRule/code-look`
 - **code の一族の行** [code-lines]：行は `pre` の子の要素か、`<code class="lines">` の子の要素にし、行に padding を書かず、`:has(> .floe-copy)` を写さない（行に書くと code の余白が黙って消える）。テーマは `--floe-code-*` を置き直さない。（判断）
@@ -24,7 +24,7 @@ paths:
 - **パレットの無いページでも図は同じ色** [fragment-alone]：`floe diagram render` の切れ端は、パレットの無いページと shadow root でも、floe のページと同じ色で描く（図の根に置くパレットと tones だけで塗る）。`TestLookRule/fragment-alone`
 - **パレットの無いページへ出す CSS は自分の根だけに** [fragment-outside]：切れ端の CSS は自分の根だけに当て、まわりのページの見た目を変えない（`diagramAssets`）。`TestLookRule/fragment-outside`
 - **パレットの変数は docs の表に名前で書く** [palette-in-docs]：default の palette.css の変数は、docs/agents/templates.md の「The palette」と docs/agents/themes.md の「Palette」の表に、まとめずに名前を字のまま書き、既定の値も default の palette.css と同じに書く（raw と自分のテーマが頼る約束なので）。`TestLintRule/palette-in-docs`
-- **部品が読む floe の変数は docs の表に値で書く** [parts-in-docs]：base.css が置く `--floe-*`（`:root` と `@property` の既定）と、code の part.css が置く `--floe-code-*` は、docs/agents/parts.md の表に名前を字のまま書き、既定の値も実物と同じに書く（自分の部品が頼る約束なので）。「Code's look」の節が単独の code で挙げる `.クラス` は、code の part.css のセレクタにある。`TestLintRule/parts-in-docs`
+- **部品が読む floe の変数は docs の表に値で書く** [parts-in-docs]：defaults.css が `:root` に置く `--floe-*` と、base.css が `@property` で置く既定と、code の part.css が置く `--floe-code-*` は、docs/agents/parts.md の表に名前を字のまま書き、既定の値も実物と同じに書く（自分の部品が頼る約束なので）。「Code's look」の節が単独の code で挙げる `.クラス` は、code の part.css のセレクタにある。`TestLintRule/parts-in-docs`
 - **raw の色の表は palette と照らす** [raw-in-docs]：docs/agents/diagrams.md の raw の節の表には、default の palette.css の変数の全部から、規則の `Allow` が理由つきで外すもの（字・大きさ・角・影など）を除いたものを、名前を字のまま書く。palette に変数を足したら、表か `Allow` に足す。`TestLintRule/raw-in-docs`
 - **tone は `data-floe-tone` と、floe が tone.json から組み立てる変数** [tone]：tone の印は class でなく `data-floe-tone`。名前を色に写すのは style.go の `Tones` だけで、部品・テーマ・テンプレートは `--tone`・`--tone-soft`・`--tone-fill` を読む。tone ごとのセレクタは tone の色でないものにだけ書く。テーマが自分の色で塗るときはパレットに `--<tone>-fill` を置く。`TestLookRule/tone`
 - **部品の箱と見た目の並びは floe が外す** [lists-off]：`ul`・`ol`・`menu` の印・左の余白・項目の間は style.go の `boxes` が外し、grid で並べる。`TestLookRule/lists-off`
@@ -57,9 +57,10 @@ paths:
 - **箱の外へ出る飾りは `--floe-room` 以下** [shadows]：箱の外へ描く飾りは四方とも `--floe-room` 以下で、傾きや拡大を使わず、場所を空けない。中に部品を持つ行の左の線を枠で描かない（行が箱になり、中の部品の影が外へ出る）。`TestLookRule/shadows`
 - **影は base.css の 1 つの規則が描く** [shadow-cast]：部品の箱・見た目の要素・引用の `box-shadow` は base.css の 1 つの規則だけが書き（ほかで書くと影が黙って消える）、テーマはパレットの `--floe-shadow-*` と箱の `--floe-shadow-color`・`--floe-inset` で描く。`TestLookRule/shadow-cast`
 - **テンプレートの見出しは包みの外の形で指す** [template-markdown]：page.css は自分の見出しの規則を包みの外の形（`header h1`・`section > h2`）で指し、テンプレートの Markdown の見出しは text の中と同じに描く。`TestLookRule/template-markdown`
-- **角の丸さはパレットの 3 つの変数** [radius]：角は `--radius`・`--radius-small`・`--radius-pill` を読むか、形（`0`・`50%`・`999px`）だけを書く。縁に沿う内の箱は、余白の変数を引く（`calc(var(--radius) - var(--pad))`）。4 つの角が違う形はテーマの自分の変数に置く。角が読むほかの変数はパレットか base.css の根だけが置く。`TestLintRule/radius`
+- **角の丸さはパレットの 3 つの変数** [radius]：角は `--radius`・`--radius-small`・`--radius-pill` を読むか、形（`0`・`50%`・`999px`）だけを書く。縁に沿う内の箱は、余白の変数を引く（`calc(var(--radius) - var(--pad))`）。4 つの角が違う形はテーマの自分の変数に置く。角が読むほかの変数は、パレット、テーマの base.css の `:scope`、floe の defaults.css の `:root` だけが置く。`TestLintRule/radius`
 - **pill と小さな角は 1 つの項** [radius-length]：`--radius-small`・`--radius-pill` の値は 1 つの長さか 1 つの関数（棒の `rx` と pill の `min()` が読み、2 つの項は黙って無効になる）。自分のテーマ・部品・テンプレートも check が断る。`TestLintRule/radius-length`
-- **1 つの所だけが置く変数** [one-place]：`--page-width`・`--text-width`・`--page-pad`・`--radius`・`--radius-small`・`--radius-pill` はパレット（`--radius` は 1 つの長さ）、`--column-width` はテンプレートの page.css、`--floe-text-` で始まる変数は floe の base.css だけが置く。`TestLintRule/one-place`
+- **1 つの所だけが置く変数** [one-place]：`--page-width`・`--text-width`・`--page-pad`・`--radius`・`--radius-small`・`--radius-pill` はパレット（`--radius` は 1 つの長さ）、`--column-width` はテンプレートの page.css、`--floe-text-` で始まる変数は floe の defaults.css だけが置く。`TestLintRule/one-place`
+- **floe の根の変数の既定値は defaults.css** [defaults-root]：floe が根に置く `--floe-*` の既定値は、一番下の層 `floe.defaults` に入る defaults.css だけが置く（テーマの palette.css と base.css が勝つ）。defaults.css は何も付かない `:root` の `--floe-*` の宣言だけで、`!important` と at-rule を書かない。floe の base.css は、at-rule の外の `:root` に `--floe-*` を置かない。`TestLintRule/defaults-root`
 - **静かな地は `--quiet`** [quiet]：箱の中の静かな地はパレットの `--quiet` を読み、部品が割合を混ぜない。テーマだけの変数はパレットか base.css の `:scope` に置く（default の palette.css はどのテーマの下にも入るので、default だけのものは base.css に）。（判断）
 - **テーマの飾りは場所を取らない** [room-free]：padding を広げず、地の色や透明の枠で場所を作らず、今ある余白の上に重ねて描く（地、`--floe-inset`、`::before`）。部品が輪や印を outline で描く箱に、飾りの outline を書かない（輪に置き換わって消える）。（判断）
 - **テーマの飾りは言葉を書かない** [theme-marks]：テーマの CSS は受ける形だけを書く：文字列は記号だけで、字は書体の名前にだけ（CSS の字は words.yaml を通らない）、数え方は decimal の類と形だけ。`TestLintRule/theme-marks`

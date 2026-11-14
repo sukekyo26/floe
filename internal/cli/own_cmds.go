@@ -277,7 +277,9 @@ func (a *app) checkTemplates() error {
 		}
 		file := t.File("example.yaml")
 		images := files.NewRoot(t.File("."))
-		o := tmpl.Options{Theme: "", Default: "", Untitled: name, Images: images, ImagesDir: "", Icons: store, CutOff: false}
+		o := tmpl.Options{
+			Theme: "", Default: "", Untitled: name, Images: images, ImagesDir: "", ImageAt: nil, Icons: store, CutOff: false,
+		}
 		_, warnings, err := tmpl.Draw(k, file, t.Example(), o)
 		a.warnings = append(a.warnings, warnings...)
 		_ = images.Close() //nolint:errcheck // only read from

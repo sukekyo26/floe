@@ -5,6 +5,7 @@ import (
 	"io/fs"
 	"os"
 	"path/filepath"
+	"slices"
 	"testing"
 
 	"floe/internal/i18n"
@@ -51,10 +52,27 @@ func TestCannotReadWrite(t *testing.T) {
 	for _, err := range []error{
 		usererr.CannotRead("a", errors.New("odd")), usererr.CannotWrite("a", errors.New("odd")),
 		usererr.InSystemWords("icons_previous_left", "a", errors.New("odd"), "b"),
+		usererr.InSystemWordsOf("kit_image_unread", "a", errors.New("odd")),
 		usererr.SettingDir("FLOE_DIR", "a", errors.New("odd"), nil),
 	} {
 		if r := usererr.Tell(english, err); r.Failure != "a: odd" {
 			t.Errorf("%v is told %+v, want floe's failure", err, r)
 		}
+	}
+}
+
+// A file that cannot be read where it was named is told without a place, its system's words then its name and the
+// rest as arguments, for the caller to place.
+func TestInSystemWordsOf(t *testing.T) {
+	t.Parallel()
+
+	_, rerr := os.ReadFile(filepath.Join(t.TempDir(), "gone.png"))
+	var e *usererr.Error
+	if !errors.As(usererr.InSystemWordsOf("kit_image_unread", "gone.png", rerr, "more"), &e) {
+		t.Fatal("not a mistake")
+	}
+	if e.Key != "kit_image_unread" || e.File() != "" || e.Line() != 0 ||
+		!slices.Equal(e.Args, []any{"no such file or directory", "gone.png", "more"}) {
+		t.Errorf("made %s at %q:%d with %q", e.Key, e.File(), e.Line(), e.Args)
 	}
 }

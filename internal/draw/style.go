@@ -13,12 +13,14 @@ import (
 // pageLayers are the layers a page's CSS is in, in their order, the last the strongest: pageStyle declares them first,
 // and docs/agents/parts.md names them in that order (TestPartsDocLayers).
 var pageLayers = []string{
-	"floe.palette", "floe.base", "floe.theme", "floe.looks", "floe.marks", "floe.page", "floe.parts",
+	"floe.defaults", "floe.palette", "floe.base", "floe.theme", "floe.looks", "floe.marks", "floe.page", "floe.parts",
 }
 
 // pageStyle returns the CSS of each <style> of a page drawn in the theme named so, whose elements name what n
-// holds, with own, its template's page.css. Each is a layer: floe's base.css, under the palettes (the default theme's,
-// then the theme's), the theme's base.css, the looks, the template's own and the parts'. The theme's base.css
+// holds, with own, its template's page.css. Each is a layer, the lowest first: floe's defaults.css, the defaults of the
+// variables floe sets on the page's root, under the palettes, so that a theme's palette.css or base.css wins over them
+// as over default's palette; the palettes (the default theme's, then the theme's); floe's base.css; the theme's
+// base.css; the looks, the template's own and the parts'. The theme's base.css
 // reaches what the template's does, the page short of what the parts hold, so that the template, the looks and the
 // parts each win over it, and a part draws what it holds from floe's base alone. The parts' are the style of
 // each part the page names a box of, and of each look the page or those parts take, before the parts that take it,
@@ -82,6 +84,7 @@ func pageStyle(k *kit.Kit, theme string, n named, own []byte) ([]string, error) 
 			sheets = append(sheets, Sheet(layer, css))
 		}
 	}
+	sheet("floe.defaults", k.DefaultsCSS())
 	sheet("floe.palette", base.Palette())
 	if theme != kit.DefaultTheme {
 		sheet("floe.palette", themed.Palette())

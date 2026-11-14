@@ -100,24 +100,44 @@ func (c client) do(ctx context.Context, method, path string, body, out any) erro
 	return nil
 }
 
-// readImages reads names, the images the server asked for, under dir, the directory of the data file named
-// file, as the server's drawing reads them (kit.ImageFile), telling every one that cannot be sent at once.
-func readImages(dir, file string, names []string) (map[string][]byte, error) {
+// readImages reads needed, the images the server asked for, under dir, the directory of the data file named
+// file, as the server's drawing reads them (kit.ImageFile), telling every one that cannot be sent at once. A
+// mistake of an image is of its name, which the CLI alone can read: it is told at each place the server answered
+// the data names it, in file, as floe check tells it, and in the order of the file.
+func readImages(dir, file string, needed []server.NeededImage) (map[string][]byte, error) {
 	root := files.NewRoot(dir)
 	defer root.Close() //nolint:errcheck // only read from
-	images := make(map[string][]byte, len(names))
+	images := make(map[string][]byte, len(needed))
 	var found usererr.List
-	for _, name := range names {
-		b, _, err := kit.ImageFile(root, name, dirs.Dir(file), file)
-		if failed := found.Add(err); failed != nil {
+	for _, n := range needed {
+		b, _, err := kit.ImageFile(root, n.Name, dirs.Dir(file), file)
+		if failed := found.Add(imagePlaced(err, file, n)); failed != nil {
 			return nil, failed //nolint:wrapcheck // already says what failed
 		}
-		images[name] = b
+		images[n.Name] = b
 	}
-	if err := found.Err(); err != nil {
+	if err := found.Sorted().Err(); err != nil {
 		return nil, err //nolint:wrapcheck // mistakes for the user as they are
 	}
 	return images, nil
+}
+
+// imagePlaced is err, of reading the image n, a mistake of its name at each place n has in file; err as it is when
+// it has a place (a directory that cannot be opened) or is floe's failure.
+func imagePlaced(err error, file string, n server.NeededImage) error {
+	e, ok := errors.AsType[*usererr.Error](err)
+	if !ok || e.File() != "" {
+		return err
+	}
+	if len(n.Places) == 0 {
+		// The server answers the names its drawing read, each of an item.
+		return fmt.Errorf("the server asked for the image %s with no place in %s", n.Name, file) //nolint:err113 // floe's
+	}
+	placed := make(usererr.List, len(n.Places))
+	for i, p := range n.Places {
+		placed[i] = e.PlacedAt(file, p.Line, p.Column)
+	}
+	return placed
 }
 
 // projectGiven is where a project name comes from, of a page (publish) and of a task (floe work).

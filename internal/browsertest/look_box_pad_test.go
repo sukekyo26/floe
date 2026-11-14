@@ -40,7 +40,7 @@ const boxParts = `  - asks:
 `
 
 // boxPadKit is a template of one's own that draws its parts as report does, its page.css setting both variables of a
-// box's padding, in floe.page over floe.base.
+// box's padding, in floe.page over floe's defaults.
 var boxPadKit = map[string]string{
 	"templates/boxpad/page.html": "<!doctype html>\n<html lang=\"{{.Lang}}\"><head><meta charset=\"utf-8\">" +
 		"<title>{{.Title}}</title></head>\n<body>\n{{range .Data.parts}}{{range .}}{{with .}}{{.}}{{end}}{{end}}{{end}}\n</body></html>\n",
@@ -102,7 +102,7 @@ var partBoxes = []string{"options", "asks", "checks", "chart", "stats", "facts",
 const lookBoxPadFix = "pad a box between parts by --floe-pad-block and --floe-pad-inline, not by numbers; a theme sets neither and pads no box"
 
 // lookBoxPad measures the box of every part that draws one (boxParts), and runbook's and handoff's examples, in every
-// theme (measureBoxPad): padded by base.css's variables (basePads), which a theme leaves as they are and writes no
+// theme (measureBoxPad): padded by defaults.css's variables (basePads), which a theme leaves as they are and writes no
 // padding over (a theme's decorations lie over it). A template of one's own (boxPadKit) whose page.css sets both
 // variables otherwise pads every part's box by them.
 func lookBoxPad(t *testing.T, s *site) measured {
@@ -141,7 +141,7 @@ func lookBoxPad(t *testing.T, s *site) measured {
 	s.b.navigate("/a/boxes-own/?raw")
 	own := padsOn(t, s)
 	if own.Block == base.Block || own.Inline == base.Inline {
-		m.amiss = append(m.amiss, amiss{Page: "boxParts in boxpad", At: "boxpad", Text: fmt.Sprintf("its page.css's variables reach not the page: %+v, base.css's %+v", own, base)})
+		m.amiss = append(m.amiss, amiss{Page: "boxParts in boxpad", At: "boxpad", Text: fmt.Sprintf("its page.css's variables reach not the page: %+v, defaults.css's %+v", own, base)})
 	}
 	m.add(s.b.measure("boxParts in boxpad", measureBoxPad(own, partBoxes)))
 	return m

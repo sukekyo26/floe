@@ -38,11 +38,13 @@ type items struct {
 	html      [][]string // the path of each item of format html, by its number
 	texts     []string   // its text
 	images    fs.FS      // the data's images, nil for none
-	imagesDir string     // the directory mistakes name them under, "" for the data file's
-	read      map[string]image
-	icons     diagram.Icons
-	diagrams  int
-	warnings  []*usererr.Error // of the items drawn
+	imagesDir string     // the directory told when it cannot be opened, "" for the data file's
+	// imageAt is told where each image is named, nil for none.
+	imageAt  func(name string, line, column int)
+	read     map[string]image
+	icons    diagram.Icons
+	diagrams int
+	warnings []*usererr.Error // of the items drawn
 }
 
 // image is an image read, or its mistake.
@@ -51,14 +53,14 @@ type image struct {
 	err error
 }
 
-// newItems returns the items of a drawing whose data's images are images (nil for none), named in mistakes
-// under imagesDir ("" for the data file's directory), and whose diagrams show the icons of icons (nil for
-// the built-in sets alone).
-func newItems(images fs.FS, imagesDir string, icons diagram.Icons) *items {
+// newItems returns the items of a drawing whose data's images are images (nil for none), named imagesDir ("" for
+// the data file's directory) when they cannot be opened, and the place of each naming told to imageAt (nil for none),
+// and whose diagrams show the icons of icons (nil for the built-in sets alone).
+func newItems(images fs.FS, imagesDir string, imageAt func(name string, line, column int), icons diagram.Icons) *items {
 	secret := strings.ToLower(rand.Text())
 	return &items{
 		secret: secret, edge: secret + "p", html: nil, texts: nil, images: images, imagesDir: imagesDir,
-		read: map[string]image{}, icons: icons, diagrams: 0, warnings: nil,
+		imageAt: imageAt, read: map[string]image{}, icons: icons, diagrams: 0, warnings: nil,
 	}
 }
 
@@ -104,8 +106,12 @@ func (s *items) plainArgs(args []any) []any {
 	return plain
 }
 
-// image reads the image name of d, once a drawing.
-func (s *items) image(d *doc.Data, name string) (template.URL, error) {
+// image reads the image name of d, written at pos, once a drawing; it tells imageAt of pos each time, before the
+// read kept, so that every place naming an image is told.
+func (s *items) image(d *doc.Data, name string, pos yamlpos.Pos) (template.URL, error) {
+	if s.imageAt != nil {
+		s.imageAt(name, pos.Line, pos.Column)
+	}
 	if got, ok := s.read[name]; ok {
 		return got.uri, got.err
 	}

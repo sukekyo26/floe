@@ -188,14 +188,14 @@ func TestUITaskPage(t *testing.T) { //nolint:paralleltest // the browser tests s
 	opened("#120", "/tasks?project=proj&task=%23120")
 	const archive = "(() => { const e = document.getElementById('task-archive'); return e.hidden ? 'none' : e.textContent; })()"
 	say("done", archive)
-	pressTaskArchive(b, "Bring the archive back")
+	pressTaskArchive(b, "Restore")
 	say("archived", taskPageRows)
 	b.navigate("/tasks?view=archived")
 	b.until("the archive", "document.querySelector('#list > li')")
 	say("the shelf's archive", "[...document.querySelectorAll('#list .tname')].map((e) => e.textContent).join(' | ')")
 	opened("#120", "/tasks?project=proj&task=%23120")
 	b.eval("document.getElementById('task-archive').click()")
-	b.until("given back", "document.getElementById('task-archive').textContent === 'Archive the task'")
+	b.until("given back", "document.getElementById('task-archive').textContent === 'Archive'")
 
 	// A task's page with the list folded on the page list: the rows until a page is chosen.
 	b.eval("localStorage.setItem('list.columns', JSON.stringify({ listOpen: false }))")
@@ -329,7 +329,7 @@ up goes to the task's state: /tasks?project=proj&view=todo
 in the folder: /tasks?project=proj&task=%231 / {"order":[],"shown":["fold"],"back":"/tasks?project=proj&task=%231","at":{"slug":"fold","file":"one.html","v":0}}
 renamed whole: /tasks?project=proj&task=%23128 / {"order":["c2"],"shown":["c2"],"back":"/tasks?project=proj&task=%23128","at":{"slug":"c2","file":"","v":0}}
 of no rows: / / null
-done: Archive the task
+done: Archive
 archived: T x1
 the shelf's archive: #120
 folded, none chosen: true true
@@ -339,7 +339,7 @@ doing has no archive button: none
 no pages: This task has no pages Delete the task true
 unreadable, drawn: false false true
 unreadable, first: true true true
-unreadable, done: Archive the task
+unreadable, done: Archive
 no task: No task #999 true 0
 refused: doing false true`
 

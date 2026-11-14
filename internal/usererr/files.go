@@ -51,11 +51,32 @@ func SettingDir(key, dir string, err, otherwise error) error {
 // catalog message key: the system's words of err (ErrNotFile's too, unlike CannotRead) its first argument and
 // args after them, for what more there is to say; any other error is floe's failure.
 func InSystemWords(key, name string, err error, args ...any) error {
-	words, ok := systemWords(err)
-	if !ok {
-		return fmt.Errorf("%s: %w", name, err)
+	words, failed := wordsOf(name, err)
+	if failed != nil {
+		return failed
 	}
 	return NewAt(name, 0, 0, key, append([]any{words}, args...)...)
+}
+
+// InSystemWordsOf is err, of reading the file name names, in the words of the catalog message key, without a
+// place, for the caller to put it where the name was written: the system's words of err its first argument,
+// name its second and args after them; any other error is floe's failure.
+func InSystemWordsOf(key, name string, err error, args ...any) error {
+	words, failed := wordsOf(name, err)
+	if failed != nil {
+		return failed
+	}
+	return New(key, append([]any{words, name}, args...)...)
+}
+
+// wordsOf returns the system's words of err, of the file or the directory named so, or floe's failure for an
+// error that has none.
+func wordsOf(name string, err error) (string, error) {
+	words, ok := systemWords(err)
+	if !ok {
+		return "", fmt.Errorf("%s: %w", name, err)
+	}
+	return words, nil
 }
 
 // systemWords returns the system's words of err, without the paths it names: those of an *fs.PathError, and of
