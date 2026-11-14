@@ -183,17 +183,19 @@ func TestPublishCopy(t *testing.T) {
 	}
 }
 
-// With no images sent, the images the data reads are asked for, after the slug's owner; a mistake before the
-// drawing is told without asking. With some sent, or none in an empty map, one not sent is a mistake.
+// With no images sent, the images the data reads are asked for, after the slug's owner, each with every place
+// that names it, and not a name floe does not read; a mistake before the drawing is told without asking. With
+// some sent, or none in an empty map, one not sent is a mistake.
 func TestNeedImages(t *testing.T) {
 	t.Parallel()
 
 	s, root := newStore(t)
 	dw := picKit(t, "", "")
-	two := "lang: en\ntemplate: pic\ni: [img/a.png, img/b.png, img/a.png]\n"
+	two := "lang: en\ntemplate: pic\ni: [img/a.png, img/b.png, img/a.png, img/n.txt]\n"
 	_, err := s.PrepareData(dw, store.Upload{File: "d.yaml", Source: []byte(two), Images: nil, Project: "p", Repo: "p", Place: "d.yaml"}, store.Options{})
-	if need, ok := errors.AsType[*store.NeedImages](err); !ok || !slices.Equal(need.Names, []string{"img/a.png", "img/b.png"}) {
-		t.Errorf("PrepareData = %v, want NeedImages of img/a.png and img/b.png", err)
+	need, ok := errors.AsType[*store.NeedImages](err)
+	if want := "[{img/a.png [{3 5} {3 27}]} {img/b.png [{3 16}]}]"; !ok || fmt.Sprint(need.Images) != want {
+		t.Errorf("PrepareData = %v, want NeedImages %s", err, want)
 	}
 	schema := "lang: en\ntemplate: pic\ni: [img/a.png]\nx: 1\nj: 2\n"
 	_, err = s.PrepareData(picKit(t, "", `{"$schema": "https://json-schema.org/draft/2020-12/schema", "type": "object",
@@ -204,7 +206,7 @@ func TestNeedImages(t *testing.T) {
 	}
 	for _, sent := range []map[string][]byte{{"img/a.png": png}, {}} {
 		_, err = s.PrepareData(dw, store.Upload{File: "d.yaml", Source: []byte(two), Images: sent, Project: "p", Repo: "p", Place: "d.yaml"}, store.Options{})
-		if got := told(err, root); !strings.Contains(got, "img/b.png: file does not exist") {
+		if got := told(err, root); !strings.Contains(got, `d.yaml:3:16: the image "img/b.png" cannot be read (file does not exist)`) {
 			t.Errorf("sent %v: told\n%s", sent, got)
 		}
 	}
@@ -225,7 +227,7 @@ func TestImagePartPublished(t *testing.T) {
 	src := "lang: en\ntemplate: report\nsections:\n  - parts:\n      - image: { file: img/a.png, alt: a }\n" +
 		"      - tabs:\n          - { title: b, parts: [{ image: { file: img/b.png, alt: b } }] }\n          - { title: c, parts: [{ text: c }] }\n"
 	_, err := s.PrepareData(dw, store.Upload{File: "d.yaml", Source: []byte(src), Images: nil, Project: "p", Repo: "p", Place: "d.yaml"}, store.Options{})
-	if need, ok := errors.AsType[*store.NeedImages](err); !ok || !slices.Equal(need.Names, []string{"img/a.png", "img/b.png"}) {
+	if need, ok := errors.AsType[*store.NeedImages](err); !ok || fmt.Sprint(need.Images) != "[{img/a.png [{5 24}]} {img/b.png [{7 50}]}]" {
 		t.Fatalf("PrepareData = %v, want NeedImages of img/a.png and img/b.png", err)
 	}
 	publish(t, s, dw, "d.yaml", src, map[string][]byte{"img/a.png": png, "img/b.png": png, "img/c.png": png}, store.Options{})

@@ -177,7 +177,7 @@ func TestFloePartExecPlaced(t *testing.T) {
 		t.Fatal(err)
 	}
 	it := schema.Item{At: []string{"b"}, Part: "code", Format: "", Value: "x"}
-	_, err = drawPart(k, d, it, "x", newItems(nil, "", nil))
+	_, err = drawPart(k, d, it, "x", newItems(nil, "", nil, nil))
 	want := `parts/code/part.html:1:16: executing "part.html" at <.text>: can't evaluate field text in type string`
 	if got := usererr.Tell(i18n.EnglishCatalog(), err).Render(""); got != want {
 		t.Errorf("told %q, want %q", got, want)
@@ -204,7 +204,7 @@ func TestWritten(t *testing.T) {
 		"rows":    []any{[]any{template.HTML("drawn x")}, []any{template.HTML("drawn y")}},
 	}
 	it := schema.Item{At: []string{"b"}, Part: "table", Format: "", Value: value}
-	got, err := drawPart(k, d, it, ready, newItems(nil, "", nil))
+	got, err := drawPart(k, d, it, ready, newItems(nil, "", nil, nil))
 	if err != nil {
 		t.Fatal(err)
 	}
