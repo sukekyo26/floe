@@ -166,7 +166,7 @@ func TestUIPinOff(t *testing.T) { //nolint:paralleltest // the browser tests sha
 
 	press("p2")
 	say("none left")
-	out = append(out, "says: "+b.eval("document.querySelector('.pins-none').textContent")+", the page's task: "+b.eval("items.find((a) => a.slug === 'p1').work.task"))
+	out = append(out, "says: "+b.eval("document.querySelector('.pins-none').textContent")+", the page's task: "+b.eval("items.find((a) => a.slug === 'p1').task.name"))
 
 	// A project of pins alone: the last gone, it is no project on the list.
 	b.navigate("/tasks?project=solo")

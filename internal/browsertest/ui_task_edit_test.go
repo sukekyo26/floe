@@ -59,7 +59,7 @@ func TestUITaskEdit(t *testing.T) { //nolint:paralleltest // the browser tests s
 		b.navigate("/tasks?project=proj&task=" + task)
 		b.until("the task's head", "!document.getElementById('task-head').hidden && document.getElementById('task-title').textContent.includes("+js(task)+")")
 		// The bodies of the task's writes, as sent
-		b.eval("window.sent = []; window.realFetch ??= window.fetch; window.fetch = (url, init) => { if (String(url).includes('/api/work') && init?.method === 'PATCH') sent.push(init.body); return window.realFetch(url, init); }")
+		b.eval("window.sent = []; window.realFetch ??= window.fetch; window.fetch = (url, init) => { if (String(url).includes('/api/tasks') && init?.method === 'PATCH') sent.push(init.body); return window.realFetch(url, init); }")
 		b.eval("document.getElementById('task-edit').focus(); document.getElementById('task-edit').click()")
 		b.until("the dialog", "document.getElementById('edit-task-dialog').open")
 	}
@@ -285,7 +285,7 @@ func TestUITaskEdit(t *testing.T) { //nolint:paralleltest // the browser tests s
 	open("S300")
 	addURL("https://example.com/e")
 	reordered := store.URLsEdit{Order: []string{"https://example.com/pull/9"}}
-	if _, err := st.Work(store.WorkWrite{TaskEdit: store.TaskEdit{URLs: &reordered}, TaskProject: &project, Task: ptrTo("S300")}); err != nil {
+	if _, err := st.ChangeTasks(store.TaskChange{TaskEdit: store.TaskEdit{URLs: &reordered}, TaskProject: &project, Task: ptrTo("S300")}); err != nil {
 		t.Fatal(err)
 	}
 	save("stale while reordered")
@@ -314,7 +314,7 @@ func TestUITaskEdit(t *testing.T) { //nolint:paralleltest // the browser tests s
 	save("refused")
 	say("refused", errorText+" + ' / ' + document.getElementById('edit-task-dialog').open")
 	// Not reached: said as a save that failed, not as the browser's words alone.
-	b.eval("window.cutFetch = window.fetch; window.fetch = (url, init) => (String(url).startsWith('/api/work') && init?.method === 'PATCH' ? Promise.reject(new TypeError('Failed to fetch')) : window.cutFetch(url, init))")
+	b.eval("window.cutFetch = window.fetch; window.fetch = (url, init) => (String(url).startsWith('/api/tasks') && init?.method === 'PATCH' ? Promise.reject(new TypeError('Failed to fetch')) : window.cutFetch(url, init))")
 	save("not reached")
 	say("not reached", errorText+" + ' / ' + document.getElementById('edit-task-dialog').open")
 	b.eval("window.fetch = window.cutFetch")

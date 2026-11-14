@@ -20,15 +20,15 @@ func ptr[T any](v T) *T {
 	return &v
 }
 
-// workOf is the work of the page slug in the store of env.
-func workOf(t *testing.T, env map[string]string, slug string) string {
+// pageTaskOf is the task of the page slug in the store of env.
+func pageTaskOf(t *testing.T, env map[string]string, slug string) string {
 	t.Helper()
 
 	m := store.New(env["FLOE_DIR"]).ReadMeta(slug)
 	if m == nil {
 		t.Fatalf("no page %s", slug)
 	}
-	b, err := json.Marshal(m.Work)
+	b, err := json.Marshal(m.Task)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -37,7 +37,7 @@ func workOf(t *testing.T, env map[string]string, slug string) string {
 
 // floe task writes the tasks first, once for each different task of the pages, and the pages then: checked first, so that
 // a page of no task or no page at all leaves the rest; flags of the pages alone make no row of a task.
-func TestWorkCommand(t *testing.T) {
+func TestTaskCommand(t *testing.T) {
 	t.Parallel()
 
 	env, dir := served(t)
@@ -73,11 +73,11 @@ func TestWorkCommand(t *testing.T) {
 	if got := tasks(); len(got) != 0 {
 		t.Errorf("--pin wrote a task: %v", got)
 	}
-	if got := workOf(t, env, "a"); got != `{"pin":true}` {
+	if got := pageTaskOf(t, env, "a"); got != `{"pin":true}` {
 		t.Errorf("--pin: %s", got)
 	}
 	run(0, "task", "--slug", "a", "--unpin")
-	if got := workOf(t, env, "a"); got != "null" {
+	if got := pageTaskOf(t, env, "a"); got != "null" {
 		t.Errorf("--unpin: %s", got)
 	}
 
@@ -85,7 +85,7 @@ func TestWorkCommand(t *testing.T) {
 	if m := s.ReadMeta("e"); m == nil {
 		t.Fatal("no page e")
 	} else {
-		m.Project, m.Work = "moved", &store.Work{Task: "#8", Category: "", Pin: false}
+		m.Project, m.Task = "moved", &store.PageTask{Name: "#8", Category: "", Pin: false}
 		if err := s.WriteMeta("e", m); err != nil {
 			t.Fatal(err)
 		}
@@ -112,7 +112,7 @@ func TestWorkCommand(t *testing.T) {
 	if got := tasks(); len(got) != 0 {
 		t.Errorf("a refusal wrote a task: %v", got)
 	}
-	if got := workOf(t, env, "a"); got != "null" {
+	if got := pageTaskOf(t, env, "a"); got != "null" {
 		t.Errorf("a refusal wrote a page: %s", got)
 	}
 
@@ -127,8 +127,8 @@ func TestWorkCommand(t *testing.T) {
 			t.Errorf("%v: %+v", task, got)
 		}
 	}
-	if got := workOf(t, env, "a"); got != `{"task":"#1","category":"設計"}` {
-		t.Errorf("a page's own work: %s", got)
+	if got := pageTaskOf(t, env, "a"); got != `{"name":"#1","category":"設計"}` {
+		t.Errorf("a page's own task: %s", got)
 	}
 	// Named, all go to that task: of each page's project.
 	run(0, "task", "--slug", "a", "--slug", "c", "--task", "#3", "--categories", "設計,実装,,設計")
@@ -137,21 +137,21 @@ func TestWorkCommand(t *testing.T) {
 			t.Errorf("%s: %v", project, got)
 		}
 	}
-	if got := workOf(t, env, "c"); got != `{"task":"#3"}` {
+	if got := pageTaskOf(t, env, "c"); got != `{"name":"#3"}` {
 		t.Errorf("c: %s", got)
 	}
 	// A category goes with a move to another task, stays on the same one, and is taken off the page alone.
 	run(0, "task", "--slug", "a", "--task", "#9")
-	if got := workOf(t, env, "a"); got != `{"task":"#9"}` {
+	if got := pageTaskOf(t, env, "a"); got != `{"name":"#9"}` {
 		t.Errorf("--task to another task: %s", got)
 	}
 	run(0, "task", "--slug", "a", "--task", "#1", "--category", "設計")
 	run(0, "task", "--slug", "a", "--task", "#1")
-	if got := workOf(t, env, "a"); got != `{"task":"#1","category":"設計"}` {
+	if got := pageTaskOf(t, env, "a"); got != `{"name":"#1","category":"設計"}` {
 		t.Errorf("--task keeps the category: %s", got)
 	}
 	run(0, "task", "--slug", "a", "--category", "")
-	if got := workOf(t, env, "a"); got != `{"task":"#1"}` {
+	if got := pageTaskOf(t, env, "a"); got != `{"name":"#1"}` {
 		t.Errorf(`--category "": %s`, got)
 	}
 
@@ -171,11 +171,11 @@ func TestWorkCommand(t *testing.T) {
 	// A link goes the same way; off its task and its pin, the task stays.
 	run(0, "task", "--slug", "e", "--task", "#1", "--pin")
 	run(0, "task", "--slug", "e", "--clear")
-	if got := workOf(t, env, "e"); got != "null" {
+	if got := pageTaskOf(t, env, "e"); got != "null" {
 		t.Errorf("--clear: %s", got)
 	}
 	run(0, "task", "--slug", "b", "--task", "")
-	if got := workOf(t, env, "b"); got != "null" {
+	if got := pageTaskOf(t, env, "b"); got != "null" {
 		t.Errorf(`--task "": %s`, got)
 	}
 	if _, ok := tasks()["p"]["#2"]; !ok {
@@ -246,17 +246,17 @@ func TestWorkCommand(t *testing.T) {
 	if got := tasks()["p"]["#31"].Parent; got != "#30" {
 		t.Errorf("--parent with a page: %q", got)
 	}
-	if got := workOf(t, env, "b"); got != `{"task":"#31"}` {
+	if got := pageTaskOf(t, env, "b"); got != `{"name":"#31"}` {
 		t.Errorf("--parent with a page put it on: %s", got)
 	}
 	if got := run(1, "task", "--slug", "b", "--task", "#32", "--parent", "#7"); !strings.Contains(got, "project p has no task #7 that can be a parent") {
 		t.Errorf("a parent of no row with a page: %q", got)
 	}
-	if got := workOf(t, env, "b"); got != `{"task":"#31"}` {
+	if got := pageTaskOf(t, env, "b"); got != `{"name":"#31"}` {
 		t.Errorf("a parent refused moved the page: %s", got)
 	}
 	run(0, "task", "--slug", "b", "--task", "#33", "--parent", "")
-	if got := workOf(t, env, "b"); got != `{"task":"#33"}` {
+	if got := pageTaskOf(t, env, "b"); got != `{"name":"#33"}` {
 		t.Errorf(`--parent "" of no row with a page put it on: %s`, got)
 	}
 	if got, ok := tasks()["p"]["#33"]; !ok || got.Parent != "" {
@@ -275,7 +275,7 @@ func TestWorkCommand(t *testing.T) {
 	if _, ok := tasks()["p"]["#34"]; ok {
 		t.Errorf("--parent with pages of two projects wrote #34: %v", tasks()["p"]["#34"])
 	}
-	if got := workOf(t, env, "b"); got != "null" {
+	if got := pageTaskOf(t, env, "b"); got != "null" {
 		t.Errorf("--parent with pages of two projects moved b: %s", got)
 	}
 
@@ -344,7 +344,7 @@ func TestWorkCommand(t *testing.T) {
 
 // floe task says each task and page it wrote on a line of its own, in the order written: a task made, changed or as it
 // was with the fields asked for as the store left them, and a page with its task, category and pin after the write.
-func TestWorkSays(t *testing.T) {
+func TestTaskSays(t *testing.T) {
 	t.Parallel()
 
 	env, dir := served(t)
@@ -380,7 +380,7 @@ func TestWorkSays(t *testing.T) {
 
 // A page that cannot be written, as the system refuses it after the checks, leaves its task's row written, which a
 // page needs anyway: the write breaks no rule, and the same command given again finishes it.
-func TestWorkCommandOrder(t *testing.T) {
+func TestTaskCommandOrder(t *testing.T) {
 	t.Parallel()
 
 	if os.Geteuid() == 0 {
@@ -396,7 +396,7 @@ func TestWorkCommandOrder(t *testing.T) {
 	}
 	t.Cleanup(func() { _ = os.Chmod(page, 0o700) }) //nolint:errcheck // for the temporary directory's removal
 	if code, out, errs := runIn(dir, env, "task", "--slug", "a", "--task", "#1", "--state", "done"); code != 1 || out != "" {
-		t.Fatalf("work on a page that cannot be written = %d, %q, %q; want refused, nothing told", code, out, errs)
+		t.Fatalf("a task write on a page that cannot be written = %d, %q, %q; want refused, nothing told", code, out, errs)
 	}
 	s := store.New(env["FLOE_DIR"])
 	all, err := s.ReadTasks()
@@ -406,7 +406,7 @@ func TestWorkCommandOrder(t *testing.T) {
 	if got := all["p"]["#1"].State; got != "done" {
 		t.Errorf("the task was not written first: %v", all)
 	}
-	if got := workOf(t, env, "a"); got != "null" {
+	if got := pageTaskOf(t, env, "a"); got != "null" {
 		t.Errorf("the page: %s", got)
 	}
 	if err := os.Chmod(page, 0o700); err != nil {
@@ -416,14 +416,14 @@ func TestWorkCommandOrder(t *testing.T) {
 		out != "task #1 in project p: unchanged; state done\npage a: task #1 in project p\n" {
 		t.Fatalf("given again = %d, %q, %q", code, out, errs)
 	}
-	if got := workOf(t, env, "a"); got != `{"task":"#1"}` {
+	if got := pageTaskOf(t, env, "a"); got != `{"name":"#1"}` {
 		t.Errorf("given again, the page: %s", got)
 	}
 }
 
 // A value of floe task's flags that is no UTF-8 is told by its flag, before anything is asked of the server: a task's
 // body and its name and project alike, and a page not there is not looked for.
-func TestWorkNotUTF8(t *testing.T) {
+func TestTaskNotUTF8(t *testing.T) {
 	t.Parallel()
 
 	env, dir := served(t)
@@ -473,14 +473,14 @@ func TestWorkNotUTF8(t *testing.T) {
 	if all, err := store.New(env["FLOE_DIR"]).ReadTasks(); err != nil || len(all) != 0 {
 		t.Errorf("tasks written: %v, %v", all, err)
 	}
-	if got := workOf(t, env, "a"); got != "null" {
+	if got := pageTaskOf(t, env, "a"); got != "null" {
 		t.Errorf("the page written: %s", got)
 	}
 }
 
 // floe task with --slug and no other flag tells each page as it is, as a write tells it, and writes nothing, not even
 // the row of a task a page names that has none; a slug of no page is refused before any page is told.
-func TestWorkReadsPages(t *testing.T) {
+func TestTaskReadsPages(t *testing.T) {
 	t.Parallel()
 
 	env, dir := served(t)
@@ -542,7 +542,7 @@ func TestWorkReadsPages(t *testing.T) {
 // A page's category is always among its task's categories: added at the end, in the same write, which moves the
 // task's rev and says so; an order written keeps a category with pages, and takes the page's at its end. A category
 // needs the page on a task.
-func TestWorkCategoryAdded(t *testing.T) {
+func TestTaskCategoryAdded(t *testing.T) {
 	t.Parallel()
 
 	env, dir := served(t)
@@ -613,17 +613,17 @@ func TestWorkCategoryAdded(t *testing.T) {
 	if got := run(2, "task", "--slug", "a", "--task", "", "--category", "x"); !strings.Contains(got, "cannot go with --category") {
 		t.Errorf(`--task "" --category = %q`, got)
 	}
-	if got := workOf(t, env, "b"); got != "null" {
+	if got := pageTaskOf(t, env, "b"); got != "null" {
 		t.Errorf("a refusal wrote b: %s", got)
 	}
-	if got := workOf(t, env, "a"); got != `{"task":"#1","category":"n"}` {
+	if got := pageTaskOf(t, env, "a"); got != `{"name":"#1","category":"n"}` {
 		t.Errorf("a refusal wrote a: %s", got)
 	}
 }
 
 // floe task --task with no field to change tells the task as the store has it, writing nothing; a task of no row is
 // refused, and none is made.
-func TestWorkReadsTask(t *testing.T) {
+func TestTaskReadsTask(t *testing.T) {
 	t.Parallel()
 
 	env, dir := served(t)
@@ -659,7 +659,7 @@ func TestWorkReadsTask(t *testing.T) {
 // a line each as floe task --task tells the task, the latest change first and by name among the same time, writing
 // nothing. The tasks are written by hand, with times that are in one order as text and another as times, and ones that
 // are done, archived or of another project.
-func TestWorkListsOpenTasks(t *testing.T) {
+func TestTaskListsOpenTasks(t *testing.T) {
 	t.Parallel()
 
 	env, dir := served(t)
@@ -717,7 +717,7 @@ func TestWorkListsOpenTasks(t *testing.T) {
 
 // With no open task, floe task says so, and is not refused: for a project of no task at all (which makes no tasks.json),
 // of done tasks only, and of no project.
-func TestWorkListsNone(t *testing.T) {
+func TestTaskListsNone(t *testing.T) {
 	t.Parallel()
 
 	env, dir := served(t)
@@ -742,7 +742,7 @@ func TestWorkListsNone(t *testing.T) {
 
 // The project of the list is the one floe publish puts a data file in, and floe task --task names: the repository's
 // name by its origin, not the directory's.
-func TestWorkListsOfPublishedProject(t *testing.T) {
+func TestTaskListsOfPublishedProject(t *testing.T) {
 	t.Parallel()
 
 	env, home := served(t)
@@ -786,7 +786,7 @@ func TestLinkOffTask(t *testing.T) {
 		t.Fatalf("link = %d, %q, %q", code, out, errs)
 	}
 	if code, out, errs := runIn(dir, env, "task", "--slug", "l", "--task", "#1"); code != 0 {
-		t.Fatalf("work = %d, %q, %q", code, out, errs)
+		t.Fatalf("task = %d, %q, %q", code, out, errs)
 	}
 	s := store.New(env["FLOE_DIR"])
 	if _, err := s.Edit("l", store.Edit{Project: ptr("")}); err != nil {
@@ -794,14 +794,14 @@ func TestLinkOffTask(t *testing.T) {
 	}
 	// The edit moved it to no project: off its task already; put back on that project's task
 	if code, out, errs := runIn(dir, env, "task", "--slug", "l", "--task", "#1"); code != 0 {
-		t.Fatalf("work again = %d, %q, %q", code, out, errs)
+		t.Fatalf("task again = %d, %q, %q", code, out, errs)
 	}
 	code, _, errs := runIn(dir, env, "publish", "--link", "h.html", "--slug", "l")
 	if code != 0 || !strings.Contains(errs, "page in project p, off task #1") {
 		t.Errorf("linked again = %d, %q", code, errs)
 	}
-	if w := s.ReadMeta("l").Work; w != nil {
-		t.Errorf("linked again, the page's work: %+v", w)
+	if w := s.ReadMeta("l").Task; w != nil {
+		t.Errorf("linked again, the page's task: %+v", w)
 	}
 }
 

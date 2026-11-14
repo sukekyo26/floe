@@ -165,7 +165,7 @@ func TestUITaskArchive(t *testing.T) { //nolint:paralleltest // the browser test
 
 	// The task's write refused: its pages are not touched.
 	open("#refused")
-	b.eval(`window.realFetch = fetch; fetch = (u, o) => (o?.method === 'PATCH' && String(u).startsWith('/api/work') ? Promise.resolve(new Response('no', { status: 500 })) : realFetch(u, o)); ` + button + `.click()`)
+	b.eval(`window.realFetch = fetch; fetch = (u, o) => (o?.method === 'PATCH' && String(u).startsWith('/api/tasks') ? Promise.resolve(new Response('no', { status: 500 })) : realFetch(u, o)); ` + button + `.click()`)
 	b.until("the refusal", "!document.getElementById('error').hidden")
 	out = append(out, "refused: "+b.eval("document.getElementById('error').textContent"))
 	head("refused, as it was")

@@ -486,7 +486,7 @@ func TestPublishMoveProject(t *testing.T) {
 	if got := said(dir); !strings.HasSuffix(got, "\npage in project p\n") {
 		t.Fatalf("a new page wrote %q", got)
 	}
-	if _, err := s.Work(store.WorkWrite{Slugs: []string{"n"}, Task: ptr("t1")}); err != nil {
+	if _, err := s.ChangeTasks(store.TaskChange{Slugs: []string{"n"}, Task: ptr("t1")}); err != nil {
 		t.Fatal(err)
 	}
 	tasks, err := s.ReadTasks()
@@ -512,8 +512,8 @@ func TestPublishMoveProject(t *testing.T) {
 		}
 	}
 	// A task is of its project: moved, the page is off it, and told so once; the task stays.
-	if m := s.ReadMeta("n"); m == nil || m.Work != nil {
-		t.Errorf("moved, the page's work is %+v, want it off its task", m)
+	if m := s.ReadMeta("n"); m == nil || m.Task != nil {
+		t.Errorf("moved, the page's task is %+v, want it off its task", m)
 	}
 	if got, err := s.ReadTasks(); err != nil || !reflect.DeepEqual(got, tasks) {
 		t.Errorf("moved, the tasks are %v (%v), want them as they were, %v", got, err, tasks)

@@ -28,7 +28,7 @@ func TestUITaskRev(t *testing.T) { //nolint:paralleltest // the browser tests sh
 		window.sent = []; window.realFetch = fetch; window.down = false; window.pageDown = false;
 		fetch = (u, o) => {
 			if (!o?.method && down) return Promise.reject(new TypeError('down'));
-			if (o?.method === 'PATCH' && pageDown && String(u).startsWith('/api/work') && String(o.body).includes('"slugs"')) return Promise.resolve(new Response('no', { status: 500 }));
+			if (o?.method === 'PATCH' && pageDown && String(u).startsWith('/api/tasks') && String(o.body).includes('"slugs"')) return Promise.resolve(new Response('no', { status: 500 }));
 			if (o?.method === 'PATCH') sent.push(String(u).split('?')[0] + ' ' + o.body);
 			return realFetch(u, o);
 		}; } 'watched'`
@@ -49,7 +49,7 @@ func TestUITaskRev(t *testing.T) { //nolint:paralleltest // the browser tests sh
 
 	// Written elsewhere since it was drawn: refused, read again, said
 	open("#130")
-	b.eval(`(async () => (await realFetch('/api/work', { method: 'PATCH', headers: { 'content-type': 'application/json' }, body: '{"taskProject":"proj","task":"#130","state":"done"}' })).status)()`)
+	b.eval(`(async () => (await realFetch('/api/tasks', { method: 'PATCH', headers: { 'content-type': 'application/json' }, body: '{"taskProject":"proj","task":"#130","state":"done"}' })).status)()`)
 	if got, err := st.ReadTasks(); err != nil || got["proj"]["#130"].Rev != 2 {
 		t.Fatalf("written elsewhere: %+v, %v", got["proj"]["#130"], err)
 	}
@@ -142,13 +142,13 @@ func TestUITaskRev(t *testing.T) { //nolint:paralleltest // the browser tests sh
 	say("whole, again", setSave)
 
 	check(t, "task revs", out, strings.Join([]string{
-		`written since: /api/work {"taskProject":"proj","task":"#130","new":false,"rev":1,"state":"todo"} | done | done | Failed to change the state: task #130 has changed since it was read`,
-		`archived: /api/work {"taskProject":"proj","task":"#130","new":false,"rev":2,"state":"archived"} | archived | pa as it was`,
-		`given back: /api/work {"taskProject":"proj","task":"#130","new":false,"rev":3,"state":"done"} | done | pa as it was`,
+		`written since: /api/tasks {"taskProject":"proj","task":"#130","new":false,"rev":1,"state":"todo"} | done | done | Failed to change the state: task #130 has changed since it was read`,
+		`archived: /api/tasks {"taskProject":"proj","task":"#130","new":false,"rev":2,"state":"archived"} | archived | pa as it was`,
+		`given back: /api/tasks {"taskProject":"proj","task":"#130","new":false,"rev":3,"state":"done"} | done | pa as it was`,
 		`no rev: none | Failed to change the state: the version of the task shown is not known; load the page again`,
-		`then off its parent: /api/work {"taskProject":"proj","task":"#kid","new":false,"rev":2,"parent":""} | no parent | no error`,
-		`reads failing, the state twice: /api/work {"taskProject":"proj","task":"#kid","new":false,"rev":4,"state":"done"} ; /api/work {"taskProject":"proj","task":"#kid","new":false,"rev":5,"state":"doing"} | doing`,
-		`reads failing, off, back, off: /api/work {"taskProject":"proj","task":"#kid","new":false,"rev":6,"parent":""} ; /api/work {"taskProject":"proj","task":"#kid","new":false,"rev":7,"parent":"#up","parentNew":false} ; /api/work {"taskProject":"proj","task":"#kid","new":false,"rev":8,"parent":""} | no parent`,
+		`then off its parent: /api/tasks {"taskProject":"proj","task":"#kid","new":false,"rev":2,"parent":""} | no parent | no error`,
+		`reads failing, the state twice: /api/tasks {"taskProject":"proj","task":"#kid","new":false,"rev":4,"state":"done"} ; /api/tasks {"taskProject":"proj","task":"#kid","new":false,"rev":5,"state":"doing"} | doing`,
+		`reads failing, off, back, off: /api/tasks {"taskProject":"proj","task":"#kid","new":false,"rev":6,"parent":""} ; /api/tasks {"taskProject":"proj","task":"#kid","new":false,"rev":7,"parent":"#up","parentNew":false} ; /api/tasks {"taskProject":"proj","task":"#kid","new":false,"rev":8,"parent":""} | no parent`,
 		`off, the state, back: Failed to save: task #kid has changed since it was read`,
 		`the list, the page refused: Failed to save: no`,
 		`the list, written since: Failed to save: task #130 has changed since it was read; the tasks are read again, so check and save again`,

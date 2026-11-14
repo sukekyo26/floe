@@ -400,7 +400,7 @@ func TestStoppedThenNotStarted(t *testing.T) {
 	didNot := "the server did not start"
 	i, j := strings.Index(r.stderr, said), strings.Index(r.stderr, didNot)
 	if r.code != 1 || i < 0 || j < i {
-		t.Errorf("work after the server of another build was stopped and none started = %d %q, want 1 and %q, then %q",
+		t.Errorf("task after the server of another build was stopped and none started = %d %q, want 1 and %q, then %q",
 			r.code, r.stderr, said, didNot)
 	}
 }

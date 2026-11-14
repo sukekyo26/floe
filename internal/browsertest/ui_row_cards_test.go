@@ -28,7 +28,7 @@ func TestUIRowCards(t *testing.T) { //nolint:paralleltest // the browser tests s
 	if _, err := st.Edit("fold", store.Edit{Project: ptrTo("demo")}); err != nil {
 		t.Fatal(err)
 	}
-	if _, err := st.Work(store.WorkWrite{Slugs: []string{"fold"}, Task: ptrTo("S1"), Category: ptrTo("one")}); err != nil {
+	if _, err := st.ChangeTasks(store.TaskChange{Slugs: []string{"fold"}, Task: ptrTo("S1"), Category: ptrTo("one")}); err != nil {
 		t.Fatal(err)
 	}
 	for _, p := range [][2]string{{"plan", "one"}, {"read", "two"}, {"notes", "two"}} {

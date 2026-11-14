@@ -363,7 +363,7 @@ func TestUITaskParent(t *testing.T) { //nolint:paralleltest // the browser tests
 	b.eval("document.getElementById('set-category').value = 'build'")
 	b.eval("document.getElementById('set').requestSubmit()")
 	b.until("saved", "!document.getElementById('set-dialog').open")
-	if got := st.ReadMeta("p7").Work.Category; got != "build" {
+	if got := st.ReadMeta("p7").Task.Category; got != "build" {
 		t.Errorf("a category alone: %q", got)
 	}
 	if got := parentOf("#7"); got != " #9" {

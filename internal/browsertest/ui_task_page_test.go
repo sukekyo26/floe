@@ -65,7 +65,7 @@ func TestUITaskPage(t *testing.T) { //nolint:paralleltest // the browser tests s
 	if _, err := st.Edit("fold", store.Edit{Project: ptrTo("proj")}); err != nil {
 		t.Fatal(err)
 	}
-	if _, err := st.Work(store.WorkWrite{Slugs: []string{"fold"}, Task: ptrTo("#1")}); err != nil {
+	if _, err := st.ChangeTasks(store.TaskChange{Slugs: []string{"fold"}, Task: ptrTo("#1")}); err != nil {
 		t.Fatal(err)
 	}
 	s.floe(t, "task", "--task", "#1", "--project", "proj", "--state", "done")
