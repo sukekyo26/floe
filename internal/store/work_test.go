@@ -232,7 +232,7 @@ func TestWorkURLOrder(t *testing.T) {
 		{"the same", store.URLsEdit{Order: []string{c, a, b}}, []string{c, a, b}, false},
 		{"none", store.URLsEdit{Order: []string{}}, []string{c, a, b}, false},
 		{"one, the rest after", store.URLsEdit{Order: []string{b}}, []string{b, c, a}, true},
-		{"one not there, one twice, spaces", store.URLsEdit{Order: []string{x, " "+a+" ", b, a}}, []string{a, b, c}, true},
+		{"one not there, one twice, spaces", store.URLsEdit{Order: []string{x, " " + a + " ", b, a}}, []string{a, b, c}, true},
 		{"added and put first", store.URLsEdit{Add: []string{d}, Order: []string{d, a}}, []string{d, a, b, c}, true},
 		{"added, there already", store.URLsEdit{Add: []string{a}, Order: []string{c}}, []string{c, d, a, b}, true},
 		{"taken off stays off", store.URLsEdit{Remove: []string{d}, Order: []string{d, b}}, []string{b, c, a}, true},
