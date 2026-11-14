@@ -44,6 +44,7 @@
 | `floe icons fetch <セット> [zip か URL...]` | 図の `icon` の部品が使うアイコンのセット（`aws`・`gcp`・`azure`）を手元に置く。`lucide` は floe に入っている |
 | `floe icons search <セット> <語>...` | `lucide` か取ってきたセットのアイコンのうち、名前がどの語も含むものを並べる（`alb` のような略語でも探せる） |
 | `floe completion <シェル>` | シェルの補完のスクリプトを出す（Cobra の組み込み） |
+| `floe licenses` | floe と、floe に入っているコードのライセンスの文を出す |
 | `floe version` | 版を出す（`floe --version` も） |
 | `floe help [コマンド]` | ヘルプを出す（Cobra の組み込み） |
 
