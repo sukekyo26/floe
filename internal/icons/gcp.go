@@ -25,6 +25,7 @@ var gcp = kit{
 		},
 	},
 	version: nil,
+	builtin: false,
 	short: map[string][]string{
 		"gce": {"compute-engine"},
 		"gcs": {"cloud-storage"},

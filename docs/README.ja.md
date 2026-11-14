@@ -75,4 +75,4 @@ To show the user a page, use floe: run `floe guide` first and follow it. It is t
 
 ## ライセンス
 
-[MIT](../LICENSE)
+[MIT](../LICENSE)。floe が図のために同梱する [Lucide](https://lucide.dev) のアイコン（`lucide/…`）は ISC ライセンスで、一部は MIT ライセンスも受けます：[internal/icons/lucide/LICENSE](../internal/icons/lucide/LICENSE)。

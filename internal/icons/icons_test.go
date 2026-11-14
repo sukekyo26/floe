@@ -12,6 +12,7 @@ import (
 	"os"
 	"path/filepath"
 	"reflect"
+	"slices"
 	"strings"
 	"sync"
 	"sync/atomic"
@@ -605,5 +606,73 @@ func TestNotFetchedOnce(t *testing.T) {
 	r := usererr.Tell(i18n.EnglishCatalog(), usererr.Collect(errs...))
 	if len(r.Mistakes) != 1 || !strings.Contains(r.Mistakes[0].Text, "not in") {
 		t.Fatalf("a set not fetched looked up at once = %q, want it told once", r.Render(""))
+	}
+}
+
+// The set built in is read without a directory for icons, or with one that cannot be: its icons, found by name or
+// short name, are lines (Mono). A set to fetch is told why there is no directory.
+func TestBuiltin(t *testing.T) {
+	t.Parallel()
+
+	file := filepath.Join(t.TempDir(), "file")
+	if err := os.WriteFile(file, nil, 0o600); err != nil {
+		t.Fatal(err)
+	}
+	noDir := usererr.New("dir_relative", "FLOE_ICONS_DIR", "rel")
+	for what, s := range map[string]*icons.Store{
+		"Without(nil)":        icons.Without(nil),
+		"Without(err)":        icons.Without(noDir),
+		"a root not there":    icons.New(filepath.Join(t.TempDir(), "none"), false, ""),
+		"a root under a file": icons.New(filepath.Join(file, "icons"), true, ""),
+	} {
+		b, err := s.Lookup("lucide/users")
+		if err != nil || !bytes.Contains(b, []byte(`stroke="currentColor"`)) {
+			t.Errorf("%s: Lookup lucide/users = %.40q, %v", what, b, err)
+		}
+		for _, name := range []string{"lucide/nope", "lucide/../lucide/users", "lucide/"} {
+			if _, lookErr := s.Lookup(name); !errors.Is(lookErr, icons.ErrNoIcon) {
+				t.Errorf("%s: Lookup %s = %v, want ErrNoIcon", what, name, lookErr)
+			}
+		}
+		// The icon the word names whole comes first, before those it is part of.
+		hits, err := s.Search("lucide", []string{"user"})
+		if err != nil || len(hits) < 2 || hits[0] != (icons.Hit{Name: "lucide/user", Category: "account"}) ||
+			!slices.Contains(hits, icons.Hit{Name: "lucide/users", Category: "account"}) {
+			t.Errorf("%s: Search lucide user = %v, %v; want lucide/user first, and lucide/users", what, hits, err)
+		}
+		if hits, err := s.Search("lucide", []string{"db"}); err != nil || len(hits) == 0 || hits[0].Name != "lucide/database" {
+			t.Errorf("%s: Search lucide db = %v, %v; want lucide/database first", what, hits, err)
+		}
+	}
+	if _, err := icons.Without(noDir).Lookup("aws/aws-lambda"); !errors.Is(err, noDir) {
+		t.Errorf("Without(err): Lookup aws/aws-lambda = %v, want %v", err, noDir)
+	}
+	if _, err := icons.Without(nil).Lookup("aws/aws-lambda"); told(err) != "floe: "+i18n.EnglishCatalog().Msg("icons_no_dir") {
+		t.Errorf("Without(nil): Lookup aws/aws-lambda = %v, want icons_no_dir", err)
+	}
+	for name, want := range map[string]bool{"lucide/users": true, "lucide/nope": true, "aws/aws-lambda": false, "users": false, "nope/x": false} {
+		if icons.Mono(name) != want {
+			t.Errorf("Mono(%s) = %t, want %t", name, !want, want)
+		}
+	}
+}
+
+// The set built in is never fetched: told so before anything is done, and a set floe does not know is told the
+// sets it fetches, not the one built in.
+func TestFetchBuiltin(t *testing.T) {
+	t.Parallel()
+
+	root := filepath.Join(t.TempDir(), "icons")
+	s := icons.New(root, false, "")
+	_, err := s.Fetch(context.Background(), "lucide", nil, false)
+	var e *usererr.Error
+	if !errors.As(err, &e) || e.Key != "icons_builtin" {
+		t.Errorf("Fetch lucide = %v, want icons_builtin", err)
+	}
+	if _, err := os.Stat(root); !errors.Is(err, os.ErrNotExist) {
+		t.Errorf("Fetch lucide made %s (%v)", root, err)
+	}
+	if err := icons.CheckFetch("nope", 0); !errors.As(err, &e) || e.Key != "icons_unknown_set" || strings.Contains(told(err), "lucide") {
+		t.Errorf("CheckFetch nope = %v, want icons_unknown_set without lucide", err)
 	}
 }

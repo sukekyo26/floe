@@ -52,8 +52,8 @@ type image struct {
 }
 
 // newItems returns the items of a drawing whose data's images are images (nil for none), named in mistakes
-// under imagesDir ("" for the data file's directory), and whose diagrams show the icons of icons (nil for none
-// kept).
+// under imagesDir ("" for the data file's directory), and whose diagrams show the icons of icons (nil for
+// the built-in sets alone).
 func newItems(images fs.FS, imagesDir string, icons diagram.Icons) *items {
 	secret := strings.ToLower(rand.Text())
 	return &items{
