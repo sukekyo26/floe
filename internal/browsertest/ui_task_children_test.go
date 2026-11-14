@@ -391,9 +391,9 @@ func TestUITaskChildren(t *testing.T) { //nolint:paralleltest // the browser tes
 	for name, parent := range map[string]string{
 		"lost": "gone", "self": "self", "gp": "", "pa": "gp", "ch": "pa", "x": "y", "y": "x", "pagesonly": "t-pages",
 	} {
-		all["proj"][name] = store.Task{Title: "", State: "done", At: at, URL: "", Categories: nil, Parent: parent, Rev: 0}
+		all["proj"][name] = store.Task{Title: "", State: "done", At: at, URLs: nil, Categories: nil, Parent: parent, Rev: 0}
 	}
-	all["proj"]["proto"] = store.Task{Title: "", State: "done", At: at, URL: "", Categories: nil, Parent: "constructor", Rev: 0}
+	all["proj"]["proto"] = store.Task{Title: "", State: "done", At: at, URLs: nil, Categories: nil, Parent: "constructor", Rev: 0}
 	text, err = json.Marshal(all)
 	if err != nil {
 		t.Fatal(err)

@@ -150,7 +150,7 @@ func TestWorkAPI(t *testing.T) {
 		{`{"taskProject":"  ","task":"x","state":"done"}`, `a task needs its project: "/" for none`},
 		{`{"taskProject":"p","state":"done"}`, "a task needs an ID"},
 		{`{"taskProject":"p","task":"x","state":"nope"}`, `unknown state "nope": use todo, doing, done, archived`},
-		{`{"taskProject":"p","task":"x","url":"javascript:alert(1)"}`, `"javascript:alert(1)" is not an http or https URL`},
+		{`{"taskProject":"p","task":"x","urls":{"add":["javascript:alert(1)"]}}`, `"javascript:alert(1)" is not an http or https URL`},
 	} {
 		if code, body := work(c.body); code != http.StatusBadRequest || body != c.want {
 			t.Errorf("PATCH %s = %d, %q, want %q", c.body, code, body, c.want)
@@ -234,7 +234,7 @@ func TestWorkAPI(t *testing.T) {
 
 	// What it cannot read it says, and writes nothing over: a link of another scheme goes no further than here.
 	file := filepath.Join(e.root, "tasks.json")
-	for _, text := range []string{"null", `{"p":{"x":{"state":"doing","at":"2026-01-02T00:00:00Z","url":"javascript:alert(1)"}}}`} {
+	for _, text := range []string{"null", `{"p":{"x":{"state":"doing","at":"2026-01-02T00:00:00Z","urls":["javascript:alert(1)"]}}}`} {
 		if err := os.WriteFile(file, []byte(text), 0o600); err != nil {
 			t.Fatal(err)
 		}

@@ -7,6 +7,7 @@ import (
 	"os"
 	"path/filepath"
 	"slices"
+	"strconv"
 	"strings"
 	"testing"
 
@@ -38,7 +39,7 @@ func taskIn(t *testing.T, s *store.Store, project string) store.Task {
 }
 
 // A new task is todo; its time moves with its state alone, its category with what is not empty; a key it does not set is
-// written back; an order of categories is kept clean, and an empty URL or order takes it off.
+// written back; an order of categories is kept clean, and an empty order takes it off.
 func TestWorkWrite(t *testing.T) {
 	t.Parallel()
 
@@ -75,21 +76,21 @@ func TestWorkWrite(t *testing.T) {
 		t.Errorf("after the same state: %+v", row)
 	}
 	if _, err := editTask(s, "p", "#1", store.TaskEdit{
-		State: ptr("done"), URL: ptr("HTTPS://example.com/a"), Categories: ptr([]string{" 設計", "実装", "", "設計"}),
+		State: ptr("done"), URLs: &store.URLsEdit{Add: []string{"HTTPS://example.com/a"}}, Categories: ptr([]string{" 設計", "実装", "", "設計"}),
 	}); err != nil {
 		t.Fatal(err)
 	}
 	row = taskIn(t, s, "p")
-	if row.State != "done" || row.Parent != "#0" || row.URL != "HTTPS://example.com/a" || !slices.Equal(row.Categories, []string{"設計", "実装"}) {
+	if row.State != "done" || row.Parent != "#0" || !slices.Equal(row.URLs, []string{"HTTPS://example.com/a"}) || !slices.Equal(row.Categories, []string{"設計", "実装"}) {
 		t.Errorf("after the state: %+v", row)
 	}
 	if row.At == long {
 		t.Error("the state's time stayed")
 	}
-	if _, err := editTask(s, "p", "#1", store.TaskEdit{URL: ptr(""), Categories: ptr([]string{""})}); err != nil {
+	if _, err := editTask(s, "p", "#1", store.TaskEdit{URLs: &store.URLsEdit{Remove: []string{"HTTPS://example.com/a"}}, Categories: ptr([]string{""})}); err != nil {
 		t.Fatal(err)
 	}
-	if row = taskIn(t, s, "p"); row.URL != "" || row.Categories != nil {
+	if row = taskIn(t, s, "p"); row.URLs != nil || row.Categories != nil {
 		t.Errorf("taken off: %+v", row)
 	}
 }
@@ -118,6 +119,79 @@ func TestWorkArchived(t *testing.T) {
 	}
 }
 
+// adding is a TaskEdit that adds urls.
+func adding(urls ...string) store.TaskEdit {
+	return store.TaskEdit{URLs: &store.URLsEdit{Add: urls}}
+}
+
+// URLs are added at the end and taken off, each once and trimmed as pasted, those in both staying; a write that would
+// bring a task over 10 is refused and writes nothing, while a row over it by hand still takes the other writes.
+func TestWorkURLs(t *testing.T) {
+	t.Parallel()
+
+	root := filepath.Join(t.TempDir(), "S")
+	s := store.New(root)
+	u := func(n int) string { return fmt.Sprintf("https://example.com/%d", n) }
+	urls := func() []string { return taskIn(t, s, "p").URLs }
+	edit := func(ed store.URLsEdit) error {
+		_, err := editTask(s, "p", "#1", store.TaskEdit{URLs: &ed})
+		return err
+	}
+	if err := edit(store.URLsEdit{Add: []string{" " + u(1) + " ", u(2), u(1)}}); err != nil {
+		t.Fatal(err)
+	}
+	if err := edit(store.URLsEdit{Add: []string{u(3), u(2)}, Remove: []string{"  " + u(1), u(2), "https://nowhere.example"}}); err != nil {
+		t.Fatal(err)
+	}
+	if got, want := urls(), []string{u(2), u(3)}; !slices.Equal(got, want) {
+		t.Fatalf("after adding and taking off: %q, want %q", got, want)
+	}
+	if err := edit(store.URLsEdit{Add: []string{u(4), u(5), u(6), u(7), u(8), u(9), u(10), u(11)}}); err != nil {
+		t.Fatal(err)
+	}
+	was := taskIn(t, s, "p")
+	err := edit(store.URLsEdit{Add: []string{u(12)}})
+	if err == nil || !strings.Contains(told(err, root), "would hold 11 URLs") {
+		t.Errorf("an 11th URL: %v", err)
+	}
+	// Swapping one for another keeps 10
+	if err := edit(store.URLsEdit{Add: []string{u(12)}, Remove: []string{u(2)}}); err != nil {
+		t.Errorf("one for another at 10: %v", err)
+	}
+	if got := taskIn(t, s, "p"); len(got.URLs) != 10 || got.Rev != was.Rev+1 {
+		t.Errorf("after the refusal and the swap: %+v", got)
+	}
+	// Over 10 by hand: the state is written and a URL taken off; one added that leaves it over 10 is refused
+	hand := fmt.Sprintf(`{"p": {"#1": {"state": "doing", "at": %q, "urls": [%s]}}}`, hour(1), quotedURLs(u, 12))
+	if err := os.WriteFile(filepath.Join(root, "tasks.json"), []byte(hand), 0o600); err != nil {
+		t.Fatal(err)
+	}
+	if _, err := editTask(s, "p", "#1", store.TaskEdit{State: ptr("done")}); err != nil {
+		t.Errorf("a state of a row of 12: %v", err)
+	}
+	if err := edit(store.URLsEdit{Remove: []string{u(1)}}); err != nil {
+		t.Errorf("taking one off a row of 12: %v", err)
+	}
+	if err := edit(store.URLsEdit{Add: []string{u(13)}, Remove: []string{u(2), u(3)}}); err != nil {
+		t.Errorf("down to 10: %v", err)
+	}
+	if err := edit(store.URLsEdit{Add: []string{u(14)}}); err == nil {
+		t.Error("an 11th after the hand's")
+	}
+	if got := urls(); len(got) != 10 {
+		t.Errorf("at the end: %q", got)
+	}
+}
+
+// quotedURLs is the URLs u makes of 1 to n, quoted and comma-separated, as JSON has them in a list.
+func quotedURLs(u func(int) string, n int) string {
+	quoted := make([]string, n)
+	for i := range n {
+		quoted[i] = strconv.Quote(u(i + 1))
+	}
+	return strings.Join(quoted, ", ")
+}
+
 func TestWorkRefused(t *testing.T) {
 	t.Parallel()
 
@@ -134,9 +208,10 @@ func TestWorkRefused(t *testing.T) {
 	}{
 		{"p", "#1", store.TaskEdit{State: ptr("DOING")}, `unknown state "DOING": use todo, doing, done, archived`},
 		{"p", "#1", store.TaskEdit{State: ptr("waiting")}, `unknown state "waiting": use todo, doing, done, archived`},
-		{"p", "#1", store.TaskEdit{URL: ptr("javascript:alert(1)")}, `"javascript:alert(1)" is not an http or https URL`},
-		{"p", "#1", store.TaskEdit{URL: ptr("   ")}, `"   " is not an http or https URL`},
-		{"p", "#1", store.TaskEdit{URL: ptr("https:")}, `"https:" is not an http or https URL`},
+		{"p", "#1", adding("javascript:alert(1)"), `"javascript:alert(1)" is not an http or https URL`},
+		{"p", "#1", adding("   "), `"" is not an http or https URL`},
+		{"p", "#1", adding(""), `"" is not an http or https URL`},
+		{"p", "#1", adding("https://example.com/ok", "https:"), `"https:" is not an http or https URL`},
 		{"", "#1", store.TaskEdit{State: ptr("todo")}, `a task needs its project: "/" for none`},
 		{"  ", "#1", store.TaskEdit{State: ptr("todo")}, `a task needs its project: "/" for none`},
 		{"p", " ", store.TaskEdit{State: ptr("todo")}, "a task needs an ID"},
@@ -151,11 +226,8 @@ func TestWorkRefused(t *testing.T) {
 	if got := taskIn(t, s, "p"); got.At != was.At || got.State != was.State {
 		t.Errorf("after the refusals: %+v", got)
 	}
-	if _, err := editTask(s, "p", "#1", store.TaskEdit{URL: ptr("  https://example.com/a  ")}); err != nil {
-		t.Fatal(err)
-	}
-	if got := taskIn(t, s, "p").URL; got != "https://example.com/a" {
-		t.Errorf("a URL as pasted: %q", got)
+	if got := taskIn(t, s, "p").URLs; got != nil {
+		t.Errorf("URLs after the refusals: %q", got)
 	}
 	if err := s.ForgetTask("p", "\xff"); err == nil || !strings.Contains(told(err, root), "must be UTF-8") {
 		t.Errorf("forget of no UTF-8: %v", err)
@@ -170,7 +242,11 @@ func TestWorkBroken(t *testing.T) {
 	for _, text := range []string{
 		"{ broken", "null", `{"p": null}`, `{"p": {"#1": {"state": "paused", "at": "2026-01-02T00:00:00Z"}}}`,
 		`{"p": {"#1": {"state": "waiting", "at": "2026-01-02T00:00:00Z"}}}`,
-		`{"p": {"#1": {"state": "doing", "at": "2026-01-02T00:00:00Z", "url": "javascript:alert(1)"}}}`,
+		`{"p": {"#1": {"state": "doing", "at": "2026-01-02T00:00:00Z", "urls": ["https://example.com/a", "javascript:alert(1)"]}}}`,
+		// A key floe does not know, as the URL of before is, one twice, and one of another case are refused, not dropped
+		`{"p": {"#1": {"state": "doing", "at": "2026-01-02T00:00:00Z", "url": "https://example.com/a"}}}`,
+		`{"p": {"#1": {"state": "doing", "at": "2026-01-02T00:00:00Z", "title": "a", "title": "b"}}}`,
+		`{"p": {"#1": {"state": "doing", "at": "2026-01-02T00:00:00Z", "Title": "a"}}}`,
 		`{"p": {"#1": {"state": "doing"}}}`, `{"p": {"#1": {"state": "doing", "at": "soon"}}}`,
 	} {
 		root := filepath.Join(t.TempDir(), "S")
@@ -739,7 +815,7 @@ func TestWorkParentNew(t *testing.T) {
 		{name: "the parent gone", rows: []row{{"#130", ""}}, task: "#130", ed: store.TaskEdit{New: &no, Rev: ptr(1), Parent: ptr("#180"), ParentNew: &no}, want: "project p has no task #180 that can be a parent"},
 		{name: "taken off, moved meanwhile", rows: []row{{"#123", ""}, {"#180", ""}, {"#130", "#180"}}, task: "#130", ed: store.TaskEdit{New: &no, Rev: ptr(0), Parent: ptr("")}, want: "task #130 has changed since it was read", stale: true},
 		{name: "taken off", rows: []row{{"#123", ""}, {"#130", "#123"}}, task: "#130", ed: store.TaskEdit{New: &no, Rev: ptr(1), Parent: ptr("")}, after: map[string]string{"#123": "", "#130": ""}},
-		{name: "a URL alone", rows: []row{{"#123", ""}, {"#130", "#123"}}, task: "#130", ed: store.TaskEdit{URL: ptr("https://example.com/b")}, after: map[string]string{"#123": "", "#130": "#123"}},
+		{name: "a URL alone", rows: []row{{"#123", ""}, {"#130", "#123"}}, task: "#130", ed: adding("https://example.com/b"), after: map[string]string{"#123": "", "#130": "#123"}},
 		{name: "as the CLI, of none", rows: []row{{"#130", ""}}, task: "#130", ed: store.TaskEdit{Parent: ptr("#200")}, want: "project p has no task #200 that can be a parent"},
 	} {
 		t.Run(c.name, func(t *testing.T) {

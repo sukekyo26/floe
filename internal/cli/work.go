@@ -8,6 +8,7 @@ import (
 	"net/http"
 	"net/url"
 	"slices"
+	"strconv"
 	"strings"
 
 	"github.com/spf13/cobra"
@@ -19,9 +20,13 @@ import (
 
 // workFlags are the flags of floe work.
 type workFlags struct {
-	task, project, category, state, url, title, categories, parent string
-	pin, unpin, clear, forget                                      bool
+	task, project, category, state, title, categories, parent string
+	urls, removeURLs                                          []string
+	pin, unpin, clear, forget                                 bool
 }
+
+// taskFieldFlags are the flags that write a field of a task's row.
+var taskFieldFlags = []string{"state", "url", "remove-url", "title", "categories", "parent"}
 
 // A task of pages: what a page names by its project and the name given, or its own.
 type taskOf struct {
@@ -53,7 +58,9 @@ it among its pages, which the user decides.
     page design-notes: task #130 in project floe
   floe work --task "#130" --state doing
     task #130 in project floe: changed; state doing
-  floe work --task "#130" --url https://example.com/issues/482
+  floe work --task "#130" --url https://example.com/issues/482 --url https://example.com/pull/9
+    task #130 in project floe: changed; urls "https://example.com/issues/482" "https://example.com/pull/9"
+  floe work --task "#130" --remove-url https://example.com/issues/482
   floe work design-notes --category designs
   floe work design-notes
     page design-notes: task #130 in project floe, category "designs"
@@ -77,7 +84,8 @@ it among its pages, which the user decides.
 	flags.StringVar(&f.project, "project", "", `the project of the task, or of the tasks told, without slugs; "" for none`)
 	flags.StringVar(&f.category, "category", "", `the pages' category on their task, the user's choice; "" takes it off`)
 	flags.StringVar(&f.state, "state", "", "the task's state: "+store.StateNames())
-	flags.StringVar(&f.url, "url", "", `the task's one outside link, http or https; "" takes it off`)
+	flags.StringArrayVar(&f.urls, "url", nil, "an outside link, http or https, to add to the task; give it again for more")
+	flags.StringArrayVar(&f.removeURLs, "remove-url", nil, "a link to take off the task's; give it again for more")
 	flags.StringVar(&f.title, "title", "", `the task's title; "" takes it off`)
 	flags.StringVar(&f.categories, "categories", "", `the task's categories in order, comma-separated; "" takes it off`)
 	flags.StringVar(&f.parent, "parent", "", `the task's parent, of its project; with slugs, with --task; "" takes it off`)
@@ -86,19 +94,18 @@ it among its pages, which the user decides.
 	flags.BoolVar(&f.clear, "clear", false, "take the pages off their task and take their pin off; the task stays")
 	flags.BoolVar(&f.forget, "forget", false, "remove the task, which no page or child task may be on")
 	cmd.MarkFlagsMutuallyExclusive("pin", "unpin")
-	for _, other := range []string{"task", "category", "state", "url", "title", "categories", "pin", "unpin"} {
+	for _, other := range append([]string{"task", "category", "pin", "unpin"}, taskFieldFlags...) {
 		cmd.MarkFlagsMutuallyExclusive("clear", other)
 	}
-	cmd.MarkFlagsMutuallyExclusive("clear", "parent")
-	for _, other := range []string{"state", "url", "title", "categories", "parent"} {
+	for _, other := range taskFieldFlags {
 		cmd.MarkFlagsMutuallyExclusive("forget", other)
 	}
 	return cmd
 }
 
-// changed is the flags of names that were given.
+// changed is the flags of names that were given, in a list of its own: names may be shared.
 func changed(cmd *cobra.Command, names ...string) []string {
-	return slices.DeleteFunc(names, func(name string) bool { return !cmd.Flags().Changed(name) })
+	return slices.DeleteFunc(slices.Clone(names), func(name string) bool { return !cmd.Flags().Changed(name) })
 }
 
 // taskEdit is what the flags change of a task.
@@ -110,8 +117,8 @@ func taskEdit(cmd *cobra.Command, f workFlags) store.TaskEdit {
 	if cmd.Flags().Changed("state") {
 		ed.State = &f.state
 	}
-	if cmd.Flags().Changed("url") {
-		ed.URL = &f.url
+	if len(changed(cmd, "url", "remove-url")) > 0 {
+		ed.URLs = &store.URLsEdit{Add: f.urls, Remove: f.removeURLs}
 	}
 	if cmd.Flags().Changed("categories") {
 		// LIMIT: a category's name with a comma cannot be written here. Take a list of the flag if such names come to
@@ -146,7 +153,7 @@ func (a *app) workTask(cmd *cobra.Command, f workFlags) error {
 	}
 	ed := taskEdit(cmd, f)
 	var sent jsontext.Value
-	writing := !f.forget && len(changed(cmd, "title", "state", "url", "categories", "parent")) > 0
+	writing := !f.forget && len(changed(cmd, taskFieldFlags...)) > 0
 	if writing {
 		body := store.WorkWrite{
 			TaskEdit: ed, Slugs: nil, TaskProject: &t.project, Task: &t.name, Category: nil, Pin: nil, Clear: false,
@@ -239,8 +246,8 @@ func taskLine(name, project string, row store.Task) string {
 	if row.Title != "" {
 		fields = append(fields, fmt.Sprintf("title %q", row.Title))
 	}
-	if row.URL != "" {
-		fields = append(fields, fmt.Sprintf("url %q", row.URL))
+	if len(row.URLs) > 0 {
+		fields = append(fields, urlsField(row.URLs))
 	}
 	if len(row.Categories) > 0 {
 		fields = append(fields, fmt.Sprintf("categories %q", strings.Join(row.Categories, ",")))
@@ -277,8 +284,8 @@ func taskFields(row store.Task, ed store.TaskEdit, added bool) string {
 	if ed.State != nil {
 		fields = append(fields, "state "+row.State)
 	}
-	if ed.URL != nil {
-		fields = append(fields, fmt.Sprintf("url %q", row.URL))
+	if ed.URLs != nil {
+		fields = append(fields, urlsField(row.URLs))
 	}
 	if ed.Categories != nil || added {
 		fields = append(fields, fmt.Sprintf("categories %q", strings.Join(row.Categories, ",")))
@@ -291,6 +298,18 @@ func taskFields(row store.Task, ed store.TaskEdit, added bool) string {
 		fields = append(fields, parent)
 	}
 	return strings.Join(fields, ", ")
+}
+
+// urlsField is a task's URLs as a line tells them, each quoted, or no urls.
+func urlsField(urls []string) string {
+	if len(urls) == 0 {
+		return "no urls"
+	}
+	quoted := make([]string, len(urls))
+	for i, u := range urls {
+		quoted[i] = strconv.Quote(u)
+	}
+	return "urls " + strings.Join(quoted, " ")
 }
 
 // tellPage says the page as the store has it, written or read: its task and project, category and pin.
@@ -411,7 +430,7 @@ func pageFlags(cmd *cobra.Command, f workFlags) (onTask, needTask []string, name
 	if cmd.Flags().Changed("parent") && !named {
 		return nil, nil, "", usageOf(usererr.New("cli_work_parent_task"))
 	}
-	onTask = changed(cmd, "state", "url", "title", "categories", "parent")
+	onTask = changed(cmd, taskFieldFlags...)
 	if name, err = store.TaskName(f.task); err != nil {
 		return nil, nil, "", flagOf(err, "--task")
 	}

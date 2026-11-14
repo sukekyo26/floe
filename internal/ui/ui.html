@@ -810,6 +810,8 @@
   .category-plus-row .text { flex: 1; height: auto; border: 0; border-radius: 0; box-shadow: none; padding-inline: 0.6rem; }
   .category-plus-row .text:focus-visible { outline-offset: -2px; }
   .category-said { margin: 0; font-weight: 400; color: var(--danger); }
+  .url-order li { font-weight: 400; }
+  .url-order .category-name { font-family: var(--mono); }
   .dialog-actions { display: flex; justify-content: flex-end; gap: 0.5rem; padding-top: 1rem; margin-top: 0.25rem; border-top: 1px solid var(--line); }
   /* Only the rows of the filters scroll, their foot in sight: the height a dialog may have, of its own rule in the browser */
   #filter-box { grid-template-rows: auto minmax(0, 1fr) auto; max-height: calc(100dvh - 6px - 2rem); }
@@ -981,6 +983,7 @@
   /* Above the title's hit area, as the row's controls are. Gray: blue is what is unseen alone */
   .xlink { position: relative; z-index: 1; display: inline-flex; align-items: center; gap: 0.2rem; color: var(--muted); text-decoration: underline; text-underline-offset: 2px; font: var(--text-label) var(--mono); white-space: nowrap; }
   .xlink:hover { color: var(--fg); }
+  #task-link { display: inline-flex; flex-wrap: wrap; gap: 0.2rem 0.6rem; }
   .xlink svg { width: 12px; height: 12px; flex: none; }
   .pins { flex: none; display: flex; flex-wrap: wrap; align-items: center; gap: 0.4rem 0.5rem; padding: 0.6rem 1rem; background: var(--bg); border-bottom: 1px solid var(--line); font-size: var(--text-small); }
   .pins > h2 { margin: 0 0.4rem 0 0; font: 600 var(--text-label)/1.2 var(--body); color: var(--muted); white-space: nowrap; }
@@ -1409,9 +1412,19 @@
     <label class="field">{{.Msg "ui_task_title"}}
       <input class="text" id="edit-task-title" autocomplete="off">
     </label>
-    <label class="field"><span>{{.Msg "ui_task_url"}} <small>{{.Msg "ui_optional"}}</small></span>
-      <input class="text path" id="edit-task-url" autocomplete="off" spellcheck="false" placeholder="https://">
-    </label>
+    <div class="field">
+      <span id="edit-urls-head">{{.Msg "ui_task_url"}} <small>{{.Msg "ui_optional"}}</small></span>
+      <div class="category-box">
+        <ol class="category-order url-order" id="edit-urls" aria-labelledby="edit-urls-head" hidden></ol>
+        <div class="category-plus-row">
+          <button type="button" class="category-plus" id="edit-url-plus"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true"><path d="M12 5v14M5 12h14"/></svg>{{.Msg "ui_url_add"}}</button>
+          <input class="text path" id="edit-url-new" hidden autocomplete="off" spellcheck="false" aria-label="{{.Msg "ui_url_add"}}" placeholder="{{.Msg "ui_url_new_hint"}}" aria-describedby="edit-url-said">
+        </div>
+      </div>
+      <p class="category-said" id="edit-url-said" aria-live="polite"></p>
+      <small>{{.Msg "ui_task_urls_hint"}}</small>
+      <p class="sr-only" id="edit-urls-said" aria-live="polite"></p>
+    </div>
     <div class="field">
       <span id="edit-categories-head">{{.Msg "ui_task_categories"}}</span>
       <p class="category-none" id="edit-categories-none" hidden>{{.Msg "ui_task_categories_none"}}</p>
@@ -3615,7 +3628,7 @@
     li.querySelector('.lead').innerHTML = leadOf({ news: unread > 0 });
     const link = li.querySelector('.title');
     link.href = taskHref(task);
-    link.title = [task.name, task.title, projectWord(task.project), task.url].filter(Boolean).join('\n');
+    link.title = [task.name, task.title, projectWord(task.project), ...(task.urls ?? [])].filter(Boolean).join('\n');
     link.append(tagged('span', 'tname', task.name), task.title ?? '');
     const time = li.querySelector('time');
     time.dateTime = task.at;
@@ -3624,7 +3637,7 @@
     sub.append(tagged('span', 'task-pages', t('ui_task_pages', task.pages.length)));
     if (task.archived.length > 0) sub.append(tagged('span', 'task-pages', t('ui_task_archived', task.archived.length)));
     if (unread > 0) sub.append(tagged('span', 'ver', t('ui_task_unread', unread)));
-    if (task.url) sub.append(xlink(task.url));
+    sub.append(...(task.urls ?? []).map(xlink));
     sub.append(...taskKin(task));
     return li;
   }
@@ -3828,7 +3841,7 @@
       $('task-at').dateTime = task.at;
       $('task-at').textContent = ago(task.at);
     }
-    $('task-link').replaceChildren(...(task.url ? [xlink(task.url)] : []));
+    $('task-link').replaceChildren(...(task.urls ?? []).map(xlink));
     drawProject($('task-project'), projectWord(task.project), taskProjectColor(task.project));
     $('task-up').href = taskListHref(task);
     drawTaskFamily(task);
@@ -5228,20 +5241,71 @@
   const sameCategories = (x, y) => x.join('\n') === y.join('\n');
   const editCategoriesNow = () => [...$('edit-categories').children].map((li) => li.dataset.category);
   // What the dialog shows of task, read now: the tasks read hold it as the page draws it
-  const editBase = (task) => ({ title: task.title ?? '', url: task.url ?? '', categories: categoryOrder(task) });
+  const editBase = (task) => ({ title: task.title ?? '', urls: task.urls ?? [], categories: categoryOrder(task) });
   // Opened over the task as the tasks read now have it, its rev and fields of one read: the page drawn before may be older
   function openTaskEdit(drawnTask) {
     const task = tasksOf().find((x) => x.project === drawnTask.project && x.name === drawnTask.name) ?? drawnTask;
     taskEditing = { project: task.project, name: task.name, rev: readRev(task.project, task.name), base: editBase(task), gone: false };
     $('edit-task-target').textContent = task.name;
     $('edit-task-title').value = taskEditing.base.title;
-    $('edit-task-url').value = taskEditing.base.url;
+    drawEditURLs(taskEditing.base.urls);
+    urlField(false);
+    $('edit-urls-said').textContent = '';
     drawEditCategories(task, taskEditing.base.categories);
     plusField(false);
     $('edit-task-error').hidden = true;
     $('edit-task-submit').disabled = false;
     $('edit-categories-said').textContent = '';
     $('edit-task-dialog').showModal();
+  }
+  // The URLs as rows, each with its URL and the button that takes it off; nothing is sent until saving
+  const editURLsNow = () => [...$('edit-urls').children].map((li) => li.dataset.url);
+  function drawEditURLs(urls) {
+    $('edit-urls').replaceChildren(...urls.map(urlRow));
+    $('edit-urls').hidden = urls.length === 0;
+  }
+  function urlRow(url) {
+    const li = document.createElement('li');
+    li.dataset.url = url;
+    const drop = tagged('button', 'icon-btn url-drop');
+    drop.type = 'button';
+    drop.innerHTML = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" aria-hidden="true"><path d="M6 6l12 12M18 6 6 18"/></svg>';
+    drop.setAttribute('aria-label', t('ui_url_drop_named', url));
+    drop.title = drop.getAttribute('aria-label');
+    li.append(tagged('span', 'category-name', url), drop);
+    return li;
+  }
+  // The last row: the button that adds a URL, or the field it turns into, empty as it turns back
+  function urlField(on) {
+    $('edit-url-plus').hidden = on;
+    $('edit-url-new').hidden = !on;
+    if (on) return;
+    $('edit-url-new').value = '';
+    $('edit-url-new').setCustomValidity('');
+    $('edit-url-said').textContent = '';
+  }
+  // The URL typed goes last, and the field stays, empty, for the next; the store says whether it is one it takes
+  function addURL() {
+    const input = $('edit-url-new');
+    const url = input.value.trim();
+    input.setCustomValidity('');
+    const why = !url ? t('ui_url_blank') : editURLsNow().includes(url) ? t('ui_url_there', url) : '';
+    $('edit-url-said').textContent = why;
+    if (why) return;
+    $('edit-urls').append(urlRow(url));
+    $('edit-urls').hidden = false;
+    input.value = '';
+    $('edit-urls-said').textContent = t('ui_url_added', url);
+  }
+  // The focus goes to the button of the row after it, or before it, else to the way to add one
+  function dropURL(li) {
+    const rows = [...$('edit-urls').children];
+    const at = rows.indexOf(li);
+    li.remove();
+    $('edit-urls').hidden = $('edit-urls').children.length === 0;
+    $('edit-urls-said').textContent = t('ui_url_dropped', li.dataset.url);
+    const near = rows[at + 1] ?? rows[at - 1];
+    (near?.querySelector('.url-drop') ?? ($('edit-url-new').hidden ? $('edit-url-plus') : $('edit-url-new'))).focus();
   }
   // The categories as rows, each with its name, whether no page is under it, and its buttons up, down and to remove it; the grip drags it
   const pagedOf = (task) => new Set(everyPage(task).map((a) => a.work.category).filter(Boolean));
@@ -5321,10 +5385,10 @@
     const to = near && ['.category-drop', '.category-up', '.category-down'].map((on) => near.querySelector(on)).find(pressable);
     (to ?? ($('edit-category-new').hidden ? $('edit-category-plus') : $('edit-category-new'))).focus();
   }
-  // The categories of the dialog as the task is read again (now): unchanged, as read; else as the person left them (mine), without those another
-  // deleted and with those another added, after them. One the person deleted stays out: one that has come to have pages meanwhile, the store
-  // refuses to leave out, and the dialog says so
-  function mergeCategories(mine, was, now) {
+  // The categories or URLs of the dialog as the task is read again (now): unchanged, as read; else as the person left them (mine), without those
+  // another removed and with those another added, after them. A category the person deleted stays out: one that has come to have pages
+  // meanwhile, the store refuses to leave out, and the dialog says so
+  function mergeLists(mine, was, now) {
     if (sameCategories(mine, was)) return now;
     return [
       ...mine.filter((x) => !was.includes(x) || now.includes(x)),
@@ -5351,7 +5415,7 @@
     const on = li.querySelector(pressed);
     (on.disabled ? li.querySelector(pressed === '.category-up' ? '.category-down' : '.category-up') : on).focus();
   }
-  // The dialog over the task as read again: refused as stale, what was changed in it stays, and the rest is as read now (mergeCategories). A row
+  // The dialog over the task as read again: refused as stale, what was changed in it stays, and the rest is as read now (mergeLists). A row
   // removed meanwhile is not made again: the dialog says so
   function refillTaskEdit() {
     const task = tasksOf().find((x) => x.project === taskEditing.project && x.name === taskEditing.name);
@@ -5365,8 +5429,8 @@
     const was = taskEditing.base;
     const now = editBase(task);
     if ($('edit-task-title').value.trim() === was.title) $('edit-task-title').value = now.title;
-    if ($('edit-task-url').value.trim() === was.url) $('edit-task-url').value = now.url;
-    drawEditCategories(task, mergeCategories(editCategoriesNow(), was.categories, now.categories));
+    drawEditURLs(mergeLists(editURLsNow(), was.urls, now.urls));
+    drawEditCategories(task, mergeLists(editCategoriesNow(), was.categories, now.categories));
     taskEditing = { ...taskEditing, rev: readRev(task.project, task.name), base: now };
     return true;
   }
@@ -5381,12 +5445,27 @@
       left.reportValidity();
       return;
     }
+    const leftURL = $('edit-url-new');
+    const leftAt = leftURL.value.trim();
+    if (!leftURL.hidden && leftAt) {
+      leftURL.setCustomValidity(t(editURLsNow().includes(leftAt) ? 'ui_url_there' : 'ui_url_unadded', leftAt));
+      leftURL.reportValidity();
+      return;
+    }
     if (!taskFormReady($('edit-task'), $('edit-task-error'))) return;
     const { base } = taskEditing;
     const title = $('edit-task-title').value.trim();
-    const url = $('edit-task-url').value.trim();
+    const urls = editURLsNow();
+    // Only what the person changed, from the URLs last read, so that one another added or removed meanwhile is left as it is
+    const added = urls.filter((u) => !base.urls.includes(u));
+    const removed = base.urls.filter((u) => !urls.includes(u));
+    const urlsEdit = { ...(added.length > 0 ? { add: added } : {}), ...(removed.length > 0 ? { remove: removed } : {}) };
     const categories = editCategoriesNow();
-    const changed = { ...(title !== base.title ? { title } : {}), ...(url !== base.url ? { url } : {}), ...(!sameCategories(categories, base.categories) ? { categories } : {}) };
+    const changed = {
+      ...(title !== base.title ? { title } : {}),
+      ...(added.length + removed.length > 0 ? { urls: urlsEdit } : {}),
+      ...(!sameCategories(categories, base.categories) ? { categories } : {}),
+    };
     const body = { new: false, rev: taskEditing.rev, ...changed };
     if (Object.keys(changed).length === 0) {
       $('edit-task-dialog').close();
@@ -6115,6 +6194,30 @@
   $('edit-task').addEventListener('submit', saveTaskEdit);
   // Typing again lets a refusal go, but not that the task is gone, which no typing changes
   $('edit-task').addEventListener('input', () => { if (!taskEditing?.gone) $('edit-task-error').hidden = true; });
+  $('edit-url-plus').addEventListener('click', () => {
+    urlField(true);
+    $('edit-url-new').focus();
+  });
+  // As a category's field: Enter adds, Escape turns it back to the button
+  $('edit-url-new').addEventListener('keydown', (e) => {
+    if (composing(e)) return;
+    if (e.key === 'Enter') {
+      e.preventDefault();
+      addURL();
+    } else if (e.key === 'Escape') {
+      e.preventDefault();
+      e.stopPropagation();
+      urlField(false);
+      $('edit-url-plus').focus();
+    }
+  });
+  $('edit-url-new').addEventListener('focusout', () => {
+    if (!$('edit-url-new').value.trim()) urlField(false);
+  });
+  $('edit-urls').addEventListener('click', (e) => {
+    const drop = e.target.closest('.url-drop');
+    if (drop) dropURL(drop.closest('li'));
+  });
   $('edit-category-plus').addEventListener('click', () => {
     plusField(true);
     $('edit-category-new').focus();

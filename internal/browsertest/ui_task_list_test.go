@@ -16,7 +16,7 @@ import (
 // the project of none. #6 is archived, #3 in progress with archived pages alone, and #8 done with one page left.
 const taskWork = `{
   "shop": {
-    "#1": {"title": "One", "state": "doing", "at": "2026-01-02T00:00:00Z", "url": "https://example.com/a/b/c"},
+    "#1": {"title": "One", "state": "doing", "at": "2026-01-02T00:00:00Z", "urls": ["https://example.com/a/b/c", "https://example.com/pull/9"]},
     "#2": {"title": "Two", "state": "doing", "at": "2026-01-01T00:00:00Z"},
     "#4": {"state": "todo", "at": "2026-01-01T00:00:00Z"},
     "#5": {"state": "todo", "at": "2026-01-02T00:00:00Z"},
@@ -176,7 +176,8 @@ func TestUITaskList(t *testing.T) { //nolint:paralleltest // the browser tests s
 	say("pins", "[...document.querySelectorAll('.pin')].map((p) => p.textContent + ' ' + p.getAttribute('href')).join(', ')")
 	say("hrefs", "[...document.querySelectorAll('#list > li .title')].map((a) => a.getAttribute('href')).join(' ')")
 	say("a row's project, in its title alone", "document.querySelector('#list > li .title').title.replaceAll('\\n', ' / ')")
-	say("link", "(() => { const a = document.querySelector('.xlink'); return [a.textContent, a.href, a.target, a.rel, a.title].join(' '); })()")
+	// A link of each URL, in order
+	say("link", "[...document.querySelector('#list > li').querySelectorAll('.xlink')].map((a) => [a.textContent, a.href, a.target, a.rel, a.title].join(' ')).join(' | ')")
 	say("current", "document.getElementById('to-tasks').getAttribute('aria-current')")
 	say("search shown", "document.getElementById('search').hidden + ' ' + (document.getElementById('find-open').offsetParent !== null)")
 	say("chips", "[...document.querySelectorAll('#chips .chip')].map((c) => c.textContent + ' ' + c.getAttribute('aria-pressed') + ' ' + c.style.getPropertyValue('--c')).join(', ')")
@@ -434,13 +435,13 @@ func TestUITaskList(t *testing.T) { //nolint:paralleltest // the browser tests s
 // taskListWant is what TestUITaskList reads of the list, in the order it reads it.
 const taskListWant = `no work, tasks: shelf shown: false
 opened: ?project=shop shop
-doing: #1One [2 page(s), 2 unread, b/c]; #2Two [0 page(s)]
+doing: #1One [2 page(s), 2 unread, b/c, pull/9]; #2Two [0 page(s)]
 views: todo 2, doing 2, done 2, archived 1
 head: 2 · latest change first
 pins: pinned /a/pinned/
 hrefs: /tasks?project=shop&task=%231 /tasks?project=shop&task=%232
-a row's project, in its title alone: #1 / One / shop / https://example.com/a/b/c
-link: b/c https://example.com/a/b/c _blank noopener https://example.com/a/b/c
+a row's project, in its title alone: #1 / One / shop / https://example.com/a/b/c / https://example.com/pull/9
+link: b/c https://example.com/a/b/c _blank noopener https://example.com/a/b/c | pull/9 https://example.com/pull/9 _blank noopener https://example.com/pull/9
 current: page
 search shown: true true
 chips: shop2 true var(--pc0), blog1 false var(--pc1), pin0 false var(--pc2), solo1 false var(--pc3), Not set1 false var(--faint)
@@ -466,7 +467,7 @@ the first view is left out: ?project=shop
 to blog: ?project=blog blog
 blog again: ?project=blog true
 the one kept, the view kept: ?view=done&project=blog
-?project=shop: #1One [2 page(s), 2 unread, b/c]; #2Two [0 page(s)]
+?project=shop: #1One [2 page(s), 2 unread, b/c, pull/9]; #2Two [0 page(s)]
 ?project=shop none: 
 ?project=shop pins: pinned | undefined
 ?project=shop kept: shop
