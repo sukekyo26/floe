@@ -231,6 +231,7 @@ floe puts a page's CSS into `<style>`s before its `</head>`, in cascade layers, 
 
 | Layer | What is in it |
 |---|---|
+| `floe.defaults` | floe's defaults of the variables it sets on the page's root (*Variables floe sets*), under the palettes, so that a theme's `palette.css` or `base.css` changes them |
 | `floe.palette` | The palettes: floe's `default`, then the theme's, then the tones |
 | `floe.base` | floe's base: the page's background, text colour and font (`font-family: var(--font)`) on its root, and text, lists, links, code and quotes |
 | `floe.theme` | The theme's `base.css`, scoped as the template's `page.css` is: it reaches the page and the boxes of the parts, not what they hold, nor a text's Markdown. Then the theme's `markdown.css`, which reaches the whole page |
@@ -239,7 +240,7 @@ floe puts a page's CSS into `<style>`s before its `</head>`, in cascade layers, 
 | `floe.page` | The template's `page.css`, over floe's start of every page in a sublayer under it: the body's margin of 0 and the column `.floe-column` |
 | `floe.parts` | The parts' style, each part after the looks it takes, then the theme's files of the parts |
 
-The layers have sublayers, the names DevTools shows: `floe.looks.boxes` and `floe.parts.boxes` (the list layout below), `floe.looks.depth<N>` and `floe.parts.depth<N>` (a layer for each depth of nesting: the outer wins), and `floe.page.defaults` (the body's margin and the column).
+The layers have sublayers, the names DevTools shows: `floe.looks.boxes` and `floe.parts.boxes` (the list layout below), `floe.looks.depth<N>` and `floe.parts.depth<N>` (a layer for each depth of nesting: the outer wins), and `floe.page.defaults` (the body's margin and the column), a sublayer of `floe.page`, apart from the layer `floe.defaults`.
 
 - A part's `part.css`, and a theme's file of it, are scoped to the elements that have its look, from their own on, short of what the parts in them hold. Write the element itself as `:scope`. A part's style reaches the box of a part it holds, but not what that part holds.
 - A theme's file of a part wins over its `part.css` (its `@media print` too). floe's themes, `default` among them, hold such files for floe's parts and looks (`floe theme show default`), which draw a part that takes one of those looks too.

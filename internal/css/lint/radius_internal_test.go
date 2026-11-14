@@ -10,7 +10,7 @@ import (
 
 // radiusRule keeps the round of every corner of floe's CSS in the palette: a corner (rx, or a property ending in radius)
 // is a shape (cornerShapes), or takes all its lengths from variables set in a palette, the root of a theme's base.css or
-// the root of floe's base.css alone. Where the palette's three corners are set is one-place's, and how many items
+// the root of floe's defaults.css alone. Where the palette's three corners are set is one-place's, and how many items
 // --radius-small and --radius-pill hold radius-length's.
 // LIMIT: clip-path's inset(… round …), corner-shape, SVG's rx= attribute and style attributes are not read; floe's CSS
 // writes none.
@@ -78,12 +78,12 @@ var radiusRule = Rule{Name: "radius", Check: func(in *Input) []Finding {
 
 // setsCorners is whether a variable a corner reads may be set in rule of s: a palette, where a theme's corners are, the
 // root of a theme's base.css, which holds what is the theme's own alone (default's palette lies under every theme's), or
-// the :root of floe's base.css, which holds floe's own (--floe-room).
+// the :root of floe's defaults.css, which holds floe's own (--floe-room).
 func setsCorners(s Sheet, rule string) bool {
 	switch {
 	case s.For == "palette":
 		return true
-	case s.Kind == kindBase:
+	case s.Kind == kindDefaults:
 		return rootOf(rule, ":root") == onTheRoot
 	default:
 		return s.For == "base" && rootOf(rule, ":scope") == onTheRoot

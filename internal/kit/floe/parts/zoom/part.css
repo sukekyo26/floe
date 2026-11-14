@@ -8,7 +8,7 @@
 /* How it is used, under the frame while the keyboard is on it: over the frame it would hide what is moved there, and a low
    frame would clip it.
    LIMIT: what is under the frame moves down while it shows, not the frame. Lay it over them if that comes to mislead.
-   LIMIT: in a fragment of floe diagram render, without base.css's steps of small text, the line and the toolbar take the
+   LIMIT: in a fragment of floe diagram render, without defaults.css's steps of small text, the line and the toolbar take the
    size of the page around, larger than here: under the frame, it still reads whole. Give the fragment the steps if one is too large */
 .floe-zoom-hint { display: none; margin-top: 0.4rem; font-size: var(--floe-text-small); line-height: 1.4; color: var(--muted); }
 @media screen { .floe-zoom.can-zoom:focus-visible + .floe-zoom-hint { display: block; } }

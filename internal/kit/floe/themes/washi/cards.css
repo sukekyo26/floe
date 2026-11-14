@@ -1,4 +1,4 @@
-/* A card in two rules, the inner one drawn over a card's padding (base.css's two variables), short of its text (facts' rows).
+/* A card in two rules, the inner one drawn over a card's padding (defaults.css's two variables), short of its text (facts' rows).
    LIMIT: it stands 5px in, within --floe-row-pad (0.4rem); a template of one's own setting the variable under 5px
    draws facts' text over it.
    LIMIT: drawn within the box (--floe-inset, not an outline, which options' pick takes), its band

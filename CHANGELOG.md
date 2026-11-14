@@ -144,7 +144,7 @@ adheres to [Semantic Versioning](https://semver.org/).
 - Add one padding above and below the rows of what is drawn as rows (the
   looks table and rows, the parts that take them, the templates' tables and
   lists in them, and facts' tiles): 0.4rem, set by `--floe-row-pad` in
-  floe's base.css, in the page's line height; a part of your own takes it by
+  floe's defaults.css, in the page's line height; a part of your own takes it by
   the look rows, or by the variable.
 - Add the line and column of a mistake about a value of a YAML file at the
   value's first character, though floe's YAML library places it off after a
@@ -463,7 +463,7 @@ adheres to [Semantic Versioning](https://semver.org/).
   the body, which was a fixed 14px and now follows the browser's text size (14px at its default). Most sizes move by a few hundredths of a rem; a field's corners are 6px (9px before), the room in a pop-up and a
   menu is 6px, a side tree's links and the keys' words are a little larger.
 - Change parts' small text, written before in nine sizes from 0.72rem to 0.92rem, half a stat's number for its unit
-  and 12px in a diagram's toolbar, to two steps of floe's base: `--floe-text-small` (0.8rem) for pills, chips, a ring's
+  and 12px in a diagram's toolbar, to two steps of floe's defaults: `--floe-text-small` (0.8rem) for pills, chips, a ring's
   number, keys, a table's heading, terms (a bar's name too), dates, counts, a note beside a value and a diagram's
   toolbar, and `--floe-text-aside` (0.9rem) for a card's or a step's words, a note's title, a small title over a list
   (decision's set-aside options), a tab's name and a value's unit. A language's chip, a field's `required` and
@@ -641,6 +641,7 @@ adheres to [Semantic Versioning](https://semver.org/).
 
 ### Fixed
 
+- Fix `--floe-text-small`, `--floe-text-aside`, `--floe-row-pad`, `--floe-pad-block`, `--floe-pad-inline`, `--floe-room` and the other variables floe sets on the page's root, set on `:scope` in a theme's `palette.css`, losing to floe's defaults without a word: floe's defaults now lie under every palette, in a layer of their own (`floe.defaults`), so a value in `palette.css` takes effect, and one in `base.css` still wins over it. On paper floe keeps no room for the copy button whatever the palette sets (S343).
 - Fix the management page's buttons whose words broke over lines where it is narrow (a done task's "Edit" and "Archive the task", the help modal's switch, the foot of the modal that sets a page's task): their words keep to one line, and the row of buttons goes onto another. The task's archive button now says "Archive" and "Restore", as a page's does, and every button on the screen has an icon, the buttons in a modal, the bar of the selected and a toast keeping to words. The page shown for a page not found draws its picture at its size again, its button back in sight.
 - Fix `floe publish` of a file whose name has no letter a to z or digit (`設計.yaml`, a `--link` of `資料/index.html`), which was refused as an `invalid slug ""` the publisher never wrote: it now says that no slug can be made of the name, at the file, and to pass `--slug` or rename it. A page published before under its own `--slug` is still updated (S339).
 - Fix `floe icons search` of a word with spaces (`floe icons search gcp "api gateway"`), which found nothing: it is searched as its words. When `gcp` finds nothing, the message also says that a product without an icon of its own is drawn with its category's icon and its name as the label, and that `floe icons search gcp category` lists them (S340, S345).

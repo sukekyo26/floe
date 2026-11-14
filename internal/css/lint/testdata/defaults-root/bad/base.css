@@ -1,0 +1,2 @@
+:root { --floe-room: 0.75rem; } /* want "--floe-room on base.css's :root; set floe's defaults in defaults.css" */
+@media print { :root { --floe-copy-room: 0px; } }
