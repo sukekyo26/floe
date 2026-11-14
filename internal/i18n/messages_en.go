@@ -771,6 +771,7 @@ var messagesEN = map[string]string{
 	"ui_url_new_hint":            "https:// (Enter adds it)",
 	"ui_url_blank":               "Write the URL",
 	"ui_url_there":               "%s is already among the URLs",
+	"ui_url_max":                 "A task holds %d URLs at most: take one off first",
 	"ui_url_unadded":             "%s is not added yet: press Enter to add it, or empty the field",
 	"ui_url_added":               "Added %s",
 	"ui_url_drop_named":          "Take off %s",

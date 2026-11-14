@@ -5284,12 +5284,15 @@
     $('edit-url-new').setCustomValidity('');
     $('edit-url-said').textContent = '';
   }
-  // The URL typed goes last, and the field stays, empty, for the next; the store says whether it is one it takes
+  // The URL typed goes last, and the field stays, empty, for the next; the store says whether it is one it takes. MAX_URLS is
+  // the store's maxURLs, which refuses a write over it anyway
+  const MAX_URLS = 10;
   function addURL() {
     const input = $('edit-url-new');
     const url = input.value.trim();
     input.setCustomValidity('');
-    const why = !url ? t('ui_url_blank') : editURLsNow().includes(url) ? t('ui_url_there', url) : '';
+    const urls = editURLsNow();
+    const why = !url ? t('ui_url_blank') : urls.includes(url) ? t('ui_url_there', url) : urls.length >= MAX_URLS ? t('ui_url_max', MAX_URLS) : '';
     $('edit-url-said').textContent = why;
     if (why) return;
     $('edit-urls').append(urlRow(url));

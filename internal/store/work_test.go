@@ -181,6 +181,14 @@ func TestWorkURLs(t *testing.T) {
 	if got := urls(); len(got) != 10 {
 		t.Errorf("at the end: %q", got)
 	}
+	// 10 by hand and one of them twice: one more is an 11th
+	hand = fmt.Sprintf(`{"p": {"#1": {"state": "doing", "at": %q, "urls": [%s, %q]}}}`, hour(1), quotedURLs(u, 10), u(1))
+	if err := os.WriteFile(filepath.Join(root, "tasks.json"), []byte(hand), 0o600); err != nil {
+		t.Fatal(err)
+	}
+	if err := edit(store.URLsEdit{Add: []string{u(11)}}); err == nil || !strings.Contains(told(err, root), "would hold 11 URLs") {
+		t.Errorf("an 11th to 10 and one twice: %v", err)
+	}
 }
 
 // quotedURLs is the URLs u makes of 1 to n, quoted and comma-separated, as JSON has them in a list.
