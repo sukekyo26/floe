@@ -278,7 +278,9 @@ func (s *Store) writeWork(all Tasks, w WorkWrite, refs []taskRef, pages []workPa
 		}
 		was, had := rows[ref.name]
 		t := rowAfter(was, had, w, ref, pages)
-		wrote := !had || parentMade || !reflect.DeepEqual(t, was)
+		// Compared with the URLs as a write leaves them, so that a row written by hand ([] or one twice) is not taken
+		// to change, and its rev move, by a write that changes nothing of it
+		wrote := !had || parentMade || !reflect.DeepEqual(t.tidied(), was.tidied())
 		added := slices.DeleteFunc(slices.Clone(t.Categories), func(c string) bool {
 			return slices.Contains(was.Categories, c) || (w.Categories != nil && slices.Contains(categoriesOf(*w.Categories), c))
 		})

@@ -442,6 +442,12 @@ func categoriesOf(categories []string) []string {
 	return kept
 }
 
+// tidied is t with its URLs as a write leaves them: each once, none for an empty list.
+func (t Task) tidied() Task {
+	t.URLs = withURLs(t.URLs, URLsEdit{Add: nil, Remove: nil})
+	return t
+}
+
 // pastedURLs is ed with the spaces round each URL gone, as pasted ones have them.
 func pastedURLs(ed *URLsEdit) *URLsEdit {
 	if ed == nil {
