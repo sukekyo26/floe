@@ -1,7 +1,6 @@
 package store
 
 import (
-	"errors"
 	"reflect"
 	"slices"
 	"strings"
@@ -38,9 +37,21 @@ type taskRef struct {
 	project, name string
 }
 
-// hasFields tells whether ed writes any field of a task: what may make a row, and needs the pages on a task.
+// hasFields tells whether ed writes any field of a task: what needs the pages on a task.
 func (ed TaskEdit) hasFields() bool {
 	return ed.Title != nil || ed.State != nil || ed.URLs != nil || ed.Categories != nil || ed.Parent != nil
+}
+
+// makesRow tells whether ed writes a field of a task of no row: what makes the row. URLs taken off or ordered, and a
+// parent taken off, change nothing of none, so that a mistyped ID makes no empty task.
+func (ed TaskEdit) makesRow() bool {
+	if ed.URLs != nil && len(ed.URLs.Add) == 0 {
+		ed.URLs = nil
+	}
+	if ed.Parent != nil && *ed.Parent == "" {
+		ed.Parent = nil
+	}
+	return ed.hasFields()
 }
 
 // ChangeTasks writes w under one lock: the pages are read, each one's task as it comes to be, and the tasks it comes to
@@ -200,15 +211,13 @@ func (s *Store) checkTask(rows map[string]Task, w TaskChange, ref taskRef, pages
 	if err := checkSeen(ref.project, rows, ref.name, w.TaskEdit); err != nil {
 		return err
 	}
-	// A parent taken off a task of no row: not found of the task alone, nothing for the pages, which make the row
-	err := checkParent(ref.project, rows, ref.name, w.TaskEdit)
-	if err != nil && (len(pages) == 0 || !errors.Is(err, ErrNotFound)) {
+	if err := checkParent(ref.project, rows, ref.name, w.TaskEdit); err != nil {
 		return err
 	}
 	if err := checkURLCount(rows[ref.name], ref.name, w.URLs); err != nil {
 		return err
 	}
-	if _, had := rows[ref.name]; !had && len(pages) == 0 && !w.hasFields() {
+	if _, had := rows[ref.name]; !had && len(pages) == 0 && !w.makesRow() {
 		return ErrNotFound
 	}
 	if w.Categories == nil {
@@ -217,7 +226,7 @@ func (s *Store) checkTask(rows map[string]Task, w TaskChange, ref taskRef, pages
 	return s.checkPaged(ref, categoriesOf(*w.Categories), pages)
 }
 
-// checkURLCount refuses ed when it adds URLs to the row t of the task name beyond maxURLs. A row over it already,
+// checkURLCount refuses ed when it adds URLs to the row t of the task name beyond MaxURLs. A row over it already,
 // written by hand, still takes the other writes, and those that take URLs off.
 func checkURLCount(t Task, name string, ed *URLsEdit) error {
 	if ed == nil {
@@ -225,8 +234,8 @@ func checkURLCount(t Task, name string, ed *URLsEdit) error {
 	}
 	// Counted each once, as a write leaves them: a row written by hand may hold one twice
 	before, after := withURLs(t.URLs, URLsEdit{Add: nil, Remove: nil, Order: nil}), withURLs(t.URLs, *ed)
-	if len(after) > len(before) && len(after) > maxURLs {
-		return usererr.New("store_task_urls_max", name, len(after), maxURLs)
+	if len(after) > len(before) && len(after) > MaxURLs {
+		return usererr.New("store_task_urls_max", name, len(after), MaxURLs)
 	}
 	return nil
 }

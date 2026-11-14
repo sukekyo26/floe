@@ -126,6 +126,34 @@ func TestSettings(t *testing.T) {
 
 // A settings.json the system cannot read (here of no permission to read) is refused by a write, and left as it is: a key
 // in it is not lost unseen, as one whose JSON is refused is written anew.
+// A write of no key writes nothing: no file is made where there is none, and a broken one stays, told as a read tells it.
+func TestSettingsNothing(t *testing.T) {
+	t.Parallel()
+
+	s, root := newStore(t)
+	file := filepath.Join(root, "settings.json")
+	if set, err := s.SetSettings(store.SettingsEdit{Theme: nil, TaskMode: nil}); err != nil || set != (store.Settings{Theme: "", TaskMode: false}) {
+		t.Errorf("nothing, of no file: %+v, %v", set, err)
+	}
+	if _, err := os.Stat(file); !errors.Is(err, os.ErrNotExist) {
+		t.Errorf("nothing made a file: %v", err)
+	}
+	broken := `{"theme": "a", "x": 1}`
+	if err := os.MkdirAll(root, 0o700); err != nil {
+		t.Fatal(err)
+	}
+	if err := os.WriteFile(file, []byte(broken), 0o600); err != nil {
+		t.Fatal(err)
+	}
+	_, err := s.SetSettings(store.SettingsEdit{Theme: nil, TaskMode: nil})
+	if e, ok := errors.AsType[*usererr.Error](err); !ok || e.Key != "store_settings_broken" {
+		t.Errorf("nothing, of a broken file: %v", err)
+	}
+	if b, err := os.ReadFile(file); err != nil || string(b) != broken {
+		t.Errorf("nothing wrote the broken file: %q, %v", b, err)
+	}
+}
+
 func TestSettingsUnreadable(t *testing.T) {
 	t.Parallel()
 

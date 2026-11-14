@@ -326,6 +326,11 @@ func TestUITaskList(t *testing.T) { //nolint:paralleltest // the browser tests s
 		b.pressKey("\x1b")
 		b.until("Esc to close", "!"+tip)
 	}
+	// A link of long words wraps within its row, narrow too
+	b.eval("document.querySelector('#list > li .xlink span').textContent = 'x'.repeat(200)")
+	if got := b.eval("(() => { const a = document.querySelector('#list > li .xlink span'); return a.getBoundingClientRect().right <= a.closest('li').getBoundingClientRect().right + 0.5 && a.scrollWidth <= a.clientWidth + 1; })()"); got != "true" {
+		t.Errorf("a long link goes out of its row")
+	}
 	b.size(1440, 800, false)
 
 	// What cannot be read says so on the task list alone, and goes when mended. The project in use stays, not called gone, and the one

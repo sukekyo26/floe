@@ -33,7 +33,7 @@ type Themes struct {
 
 // putSettings writes the keys store.SettingsEdit names to settings.json, the others as they are: the default theme, a
 // theme of the drawing of now, and the task mode. Pages stored already keep the default they were stored with: none is
-// drawn again. A body of no key is refused, as a write of nothing.
+// drawn again. A body of no key writes nothing, and answers the settings as they are.
 func (s *Server) putSettings(w http.ResponseWriter, r *http.Request) {
 	body, ok := s.readBody(w, r, maxBody)
 	if !ok {
@@ -41,10 +41,6 @@ func (s *Server) putSettings(w http.ResponseWriter, r *http.Request) {
 	}
 	in := decodeStrict[store.SettingsEdit](w, body)
 	if in == nil {
-		return
-	}
-	if in.Theme == nil && in.TaskMode == nil {
-		send(w, http.StatusBadRequest, "send theme, taskMode or both")
 		return
 	}
 	if in.Theme != nil {

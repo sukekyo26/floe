@@ -101,7 +101,7 @@ floe checks the whole command before it writes, so a refused command writes noth
 | `--category` for a page on no task | `page "design-notes" is on no task: name one with --task` |
 | `--category`, `--pin` or `--unpin` with `--task` and no `--slug` | `--pin changes pages: name them with --slug: run floe --help` |
 | `--forget` or `--project` with `--slug` | `--forget goes with a task alone, not with pages: give it without --slug: run floe --help` |
-| `--task` of a task of no row, alone or with `--forget` | `no task #130 in project floe: check the ID, or name its project with --project` |
+| `--task` of a task of no row, alone, with `--forget`, or with `--remove-url` alone (a mistyped ID makes no task) | `no task #130 in project floe: check the ID, or name its project with --project` |
 | A category with pages left out of `--categories` | `category designs of task #130 in project floe has pages (design-notes): take them off it first, or keep it in the order` |
 | `--forget` of a task a page or a child task is on | `task #130 of project floe still has 1 page(s), such as design-notes: take them off it or delete them first` |
 | `--parent` naming a task of no row | `project floe has no task #42 that can be a parent` |

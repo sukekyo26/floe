@@ -36,7 +36,8 @@ func TestAPISettings(t *testing.T) {
 	theme := func(name string) store.SettingsEdit { return store.SettingsEdit{Theme: &name, TaskMode: nil} }
 	want(t, e.write(t, http.MethodPut, "/api/settings", theme("nope")), http.StatusBadRequest, `there is no theme \"nope\"; use app, aurora,`)
 	want(t, e.write(t, http.MethodPut, "/api/settings", theme("")), http.StatusBadRequest, `there is no theme \"\"`)
-	want(t, e.do(t, http.MethodPut, "/api/settings", `{}`, "Origin", origin, "Content-Type", "application/json"), http.StatusBadRequest, "send theme, taskMode or both")
+	// Nothing to change changes nothing
+	want(t, e.do(t, http.MethodPut, "/api/settings", `{}`, "Origin", origin, "Content-Type", "application/json"), http.StatusOK, `{}`)
 	unknown := e.do(t, http.MethodPut, "/api/settings", `{"theme": "ink", "x": 1}`, "Origin", origin, "Content-Type", "application/json")
 	want(t, unknown, http.StatusBadRequest, `unknown object member name "x"`)
 	want(t, e.write(t, http.MethodPut, "/api/settings", theme("ink")), http.StatusOK, `{"theme":"ink"}`)

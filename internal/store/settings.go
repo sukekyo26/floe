@@ -75,6 +75,10 @@ func (s *Store) decodeSettings(b []byte) (Settings, error) {
 // system cannot read is refused, and stays as it is, so that a key in it is not lost unseen. The caller checks a theme
 // is one.
 func (s *Store) SetSettings(ed SettingsEdit) (Settings, error) {
+	// Nothing to change writes nothing: a file it cannot read stays, and is told as it is
+	if ed.Theme == nil && ed.TaskMode == nil {
+		return s.ReadSettings()
+	}
 	unlock, err := s.lock(true)
 	if err != nil {
 		return Settings{}, err

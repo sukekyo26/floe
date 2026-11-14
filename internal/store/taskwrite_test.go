@@ -193,8 +193,8 @@ func TestEditProjectTakesOffTask(t *testing.T) {
 		t.Errorf("the same project: %+v", w)
 	}
 	edited, err := s.Edit("a", store.Edit{Project: ptr("q")})
-	if err != nil || edited.OffTask != "#9" {
-		t.Errorf("moved: %+v, %v; want it said off #9", edited, err)
+	if err != nil || edited.OffTask != "#9" || edited.OffCategory != "x" {
+		t.Errorf("moved: %+v, %v; want it said off #9, category x", edited, err)
 	}
 	if w := s.ReadMeta("a").Task; w == nil || w.Name != "" || w.Category != "" || !w.Pin {
 		t.Errorf("moved: %+v", w)

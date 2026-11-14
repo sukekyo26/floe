@@ -1007,15 +1007,13 @@
   li.unseen .tname { color: var(--fg); }
   .task-pages { white-space: nowrap; }
   /* Above the title's hit area, as the row's controls are. Gray: blue is what is unseen alone */
-  .xlink { position: relative; z-index: 1; display: inline-flex; align-items: center; gap: 0.2rem; color: var(--muted); text-decoration: underline; text-underline-offset: 2px; font: var(--text-label) var(--mono); white-space: nowrap; }
+  .xlink { position: relative; z-index: 1; display: inline-flex; align-items: flex-start; gap: 0.2rem; max-width: 100%; color: var(--muted); text-decoration: underline; text-underline-offset: 2px; font: var(--text-label) var(--mono); overflow-wrap: anywhere; }
   .xlink:hover { color: var(--fg); }
   /* A task's URLs under its state, one a line, each whole as written: a long one wraps in its line, as an ellipsis
      would hide what tells the site */
   .task-links { display: grid; justify-items: start; gap: 0.2rem; margin-top: 0.35rem; min-width: 0; }
   .task-links[hidden] { display: none; }
-  .task-links .xlink { align-items: flex-start; max-width: 100%; white-space: normal; overflow-wrap: anywhere; }
-  .task-links .xlink svg { margin-top: 0.2em; }
-  .xlink svg { width: 12px; height: 12px; flex: none; }
+  .xlink svg { width: 12px; height: 12px; flex: none; margin-top: 0.2em; }
   .pins { flex: none; display: flex; flex-wrap: wrap; align-items: center; gap: 0.4rem 0.5rem; padding: 0.6rem 1rem; background: var(--bg); border-bottom: 1px solid var(--line); font-size: var(--text-small); }
   .pins > h2 { margin: 0 0.4rem 0 0; font: 600 var(--text-label)/1.2 var(--body); color: var(--muted); white-space: nowrap; }
   #pin-list { display: contents; }
@@ -5397,9 +5395,8 @@
     $('edit-url-new').setCustomValidity('');
     $('edit-url-said').textContent = '';
   }
-  // The URL typed goes last, and the field stays, empty, for the next; the store says whether it is one it takes. MAX_URLS is
-  // the store's maxURLs, which refuses a write over it anyway
-  const MAX_URLS = 10;
+  // The URL typed goes last, and the field stays, empty, for the next; the store says whether it is one it takes
+  const MAX_URLS = {{.MaxURLs}};
   function addURL() {
     const input = $('edit-url-new');
     const url = input.value.trim();
