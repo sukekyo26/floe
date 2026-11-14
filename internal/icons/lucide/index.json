@@ -1,0 +1,308 @@
+{
+ "version": "1.72.0",
+ "sources": [
+  "lucide-icons-1.72.0.zip"
+ ],
+ "icons": {
+  "activity": {
+   "category": "work"
+  },
+  "app-window": {
+   "category": "network"
+  },
+  "archive": {
+   "category": "data"
+  },
+  "badge-check": {
+   "category": "security"
+  },
+  "bell": {
+   "category": "messages"
+  },
+  "book-open": {
+   "category": "work"
+  },
+  "bot": {
+   "category": "people"
+  },
+  "box": {
+   "category": "data"
+  },
+  "brain": {
+   "category": "work"
+  },
+  "bug": {
+   "category": "development"
+  },
+  "building": {
+   "category": "places"
+  },
+  "building-complex": {
+   "category": "places"
+  },
+  "cable": {
+   "category": "network"
+  },
+  "calendar": {
+   "category": "messages"
+  },
+  "chart-column": {
+   "category": "data"
+  },
+  "chart-line": {
+   "category": "data"
+  },
+  "chart-pie": {
+   "category": "data"
+  },
+  "circle-check": {
+   "category": "status"
+  },
+  "circle-x": {
+   "category": "status"
+  },
+  "clipboard-list": {
+   "category": "work"
+  },
+  "clock": {
+   "category": "work"
+  },
+  "cloud": {
+   "category": "network"
+  },
+  "code": {
+   "category": "development"
+  },
+  "container": {
+   "category": "development"
+  },
+  "cpu": {
+   "category": "devices"
+  },
+  "credit-card": {
+   "category": "money"
+  },
+  "database": {
+   "category": "data"
+  },
+  "download": {
+   "category": "work"
+  },
+  "factory": {
+   "category": "places"
+  },
+  "file": {
+   "category": "files"
+  },
+  "file-braces": {
+   "category": "files"
+  },
+  "file-code": {
+   "category": "files"
+  },
+  "file-text": {
+   "category": "files"
+  },
+  "files": {
+   "category": "files"
+  },
+  "fingerprint-pattern": {
+   "category": "security"
+  },
+  "flag": {
+   "category": "status"
+  },
+  "folder": {
+   "category": "files"
+  },
+  "funnel": {
+   "category": "data"
+  },
+  "gauge": {
+   "category": "work"
+  },
+  "git-branch": {
+   "category": "development"
+  },
+  "git-merge": {
+   "category": "development"
+  },
+  "globe": {
+   "category": "network"
+  },
+  "hard-drive": {
+   "category": "devices"
+  },
+  "hourglass": {
+   "category": "work"
+  },
+  "house": {
+   "category": "places"
+  },
+  "id-card": {
+   "category": "security"
+  },
+  "image": {
+   "category": "files"
+  },
+  "inbox": {
+   "category": "messages"
+  },
+  "info": {
+   "category": "status"
+  },
+  "key": {
+   "category": "security"
+  },
+  "key-round": {
+   "category": "security"
+  },
+  "laptop": {
+   "category": "devices"
+  },
+  "layers": {
+   "category": "data"
+  },
+  "layout-dashboard": {
+   "category": "development"
+  },
+  "link": {
+   "category": "network"
+  },
+  "list-checks": {
+   "category": "work"
+  },
+  "lock": {
+   "category": "security"
+  },
+  "lock-open": {
+   "category": "security"
+  },
+  "mail": {
+   "category": "messages"
+  },
+  "map-pin": {
+   "category": "places"
+  },
+  "message-square": {
+   "category": "messages"
+  },
+  "monitor": {
+   "category": "devices"
+  },
+  "network": {
+   "category": "network"
+  },
+  "package": {
+   "category": "data"
+  },
+  "phone": {
+   "category": "messages"
+  },
+  "play": {
+   "category": "work"
+  },
+  "plug": {
+   "category": "network"
+  },
+  "radio-tower": {
+   "category": "network"
+  },
+  "receipt": {
+   "category": "money"
+  },
+  "refresh-cw": {
+   "category": "work"
+  },
+  "rocket": {
+   "category": "development"
+  },
+  "router": {
+   "category": "devices"
+  },
+  "search": {
+   "category": "data"
+  },
+  "send": {
+   "category": "messages"
+  },
+  "server": {
+   "category": "devices"
+  },
+  "settings": {
+   "category": "work"
+  },
+  "shield": {
+   "category": "security"
+  },
+  "shield-check": {
+   "category": "security"
+  },
+  "shopping-cart": {
+   "category": "money"
+  },
+  "smartphone": {
+   "category": "devices"
+  },
+  "sparkles": {
+   "category": "work"
+  },
+  "store": {
+   "category": "places"
+  },
+  "table": {
+   "category": "data"
+  },
+  "tablet": {
+   "category": "devices"
+  },
+  "terminal": {
+   "category": "development"
+  },
+  "timer": {
+   "category": "work"
+  },
+  "trash": {
+   "category": "work"
+  },
+  "triangle-exclamation-point": {
+   "category": "status"
+  },
+  "truck": {
+   "category": "places"
+  },
+  "upload": {
+   "category": "work"
+  },
+  "user": {
+   "category": "people"
+  },
+  "users": {
+   "category": "people"
+  },
+  "wallet": {
+   "category": "money"
+  },
+  "warehouse": {
+   "category": "places"
+  },
+  "waypoints": {
+   "category": "network"
+  },
+  "webhook": {
+   "category": "network"
+  },
+  "wifi": {
+   "category": "network"
+  },
+  "workflow": {
+   "category": "network"
+  },
+  "wrench": {
+   "category": "work"
+  },
+  "zap": {
+   "category": "work"
+  }
+ }
+}

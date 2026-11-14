@@ -15,6 +15,7 @@ import (
 	"time"
 
 	"floe/internal/i18n"
+	"floe/internal/icons"
 	"floe/internal/yamlpos"
 )
 
@@ -222,7 +223,7 @@ func handFault(g *graph, l *layout) string {
 		}
 	}
 	hands := newLayout(&spec{Width: 0, Height: 0, Title: Text{"en": "g"}, Parts: parts, Example: ""}, //nolint:exhaustruct_v5 // a graph and edges
-		Options{Lang: "en", Icons: NoIcons{Err: nil}, Seq: 1})
+		Options{Lang: "en", Icons: icons.Without(nil), Seq: 1})
 	hands.check()
 	for _, p := range hands.problems {
 		if slices.ContainsFunc(p.Args, func(a any) bool { return strings.HasPrefix(fmt.Sprint(a), `label "`) }) {
@@ -1731,7 +1732,7 @@ func TestCrossPairs(t *testing.T) {
 		{[]part{{Graph: bipartite(10, 20, 0)}, {Graph: bipartite(10, 20, 5000)}, hand}, 40000 + 400}, //nolint:exhaustruct_v5 // one kind of part
 	} {
 		l := newLayout(&spec{Width: 0, Height: 0, Title: Text{"en": "g"}, Parts: c.parts, Example: ""},
-			Options{Lang: "en", Icons: NoIcons{Err: nil}, Seq: 1})
+			Options{Lang: "en", Icons: icons.Without(nil), Seq: 1})
 		n := 0
 		for range l.crossPairs() {
 			n++
@@ -2005,9 +2006,9 @@ func TestGraphShapes(t *testing.T) {
 	langs := graphOf([]string{"a", "b"}, "a>b")
 	langs.Nodes[1].Box.Rows[0].Text = Text{"en": "Save", "ja": "データファイルと画像の写しを保存する"}
 	en := newLayout(&spec{Width: 0, Height: 0, Title: Text{"en": "g"}, Parts: []part{{Graph: langs}}, Example: ""}, //nolint:exhaustruct_v5 // one kind of part
-		Options{Lang: "en", Icons: NoIcons{Err: nil}, Seq: 1})
+		Options{Lang: "en", Icons: icons.Without(nil), Seq: 1})
 	ja := newLayout(&spec{Width: 0, Height: 0, Title: Text{"en": "g"}, Parts: []part{{Graph: langs}}, Example: ""}, //nolint:exhaustruct_v5 // one kind of part
-		Options{Lang: "ja", Icons: NoIcons{Err: nil}, Seq: 1})
+		Options{Lang: "ja", Icons: icons.Without(nil), Seq: 1})
 	if en.inspect() != ja.inspect() {
 		t.Errorf("languages: en\n%s\nja\n%s", en.inspect(), ja.inspect())
 	}
@@ -2089,7 +2090,7 @@ func laidSpec(t *testing.T, src string, lang i18n.Lang) *layout {
 	if err != nil {
 		t.Fatal(err)
 	}
-	l := newLayout(s, Options{Lang: lang, Icons: NoIcons{Err: nil}, Seq: 1})
+	l := newLayout(s, Options{Lang: lang, Icons: icons.Without(nil), Seq: 1})
 	l.check()
 	if l.failure != nil || len(l.problems) > 0 {
 		t.Fatalf("%v %v", l.failure, l.problems)

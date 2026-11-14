@@ -275,6 +275,7 @@ var messagesEN = map[string]string{
 	// LIMIT: the first %s of icons_broken, icons_download, icons_page_download, icons_bad_zip and
 	// icons_previous_left is encoding/json's, net/http's, archive/zip's or the system's English
 	"icons_unknown_set":        "unknown icon set \"%s\"; use %s",
+	"icons_builtin":            "%[1]s icons are built into floe, so there is nothing to fetch; search them with: floe icons search %[1]s <word>",
 	"dir_relative":             "%s is %s, a relative path; set it to an absolute path",
 	"icons_no_dir":             "there is no directory for icons, as HOME is not an absolute path; set FLOE_ICONS_DIR to an absolute path",
 	"icons_not_fetched":        "%[1]s icons are not in %[2]s; run \"floe icons fetch %[3]s\" (downloads about %[4]s from %[5]s) and try again",
@@ -331,6 +332,7 @@ var messagesEN = map[string]string{
 	"diagram_label_no_room":      "%s finds no room inside %s and outside the other circles: make that area larger, or the text shorter",
 	"diagram_raw_element":        "raw SVG holds <%s>, which a diagram may not hold: leave it out, and draw the looks with SVG's shapes and attributes (fill= and the like)",
 	"diagram_icon_set":           "%s: \"%s\" needs its icon set in front (%s), like aws/amazon-ec2 (search with: floe icons search <set> <word>)",
+	"diagram_icon_tone":          "%s: %s draws in its own colours and takes no tone; remove tone (only lucide icons take one)",
 	"diagram_icon_unknown":       "%s: no icon \"%s\" (search with: floe icons search %s <word>)",
 	"copy_button":                "Copy",
 	"copy_failed":                "Could not copy",

@@ -1918,8 +1918,10 @@ func TestGraphIconMistakes(t *testing.T) {
 	for _, c := range []struct{ parts, want string }{
 		{node + "icon: { name: a, icon: aws/nope, label: A }" + tail, `s.yaml:3:37: icon "a": no icon "aws/nope" (search with: floe icons search aws <word>)`},
 		{node + "icon: { name: a, icon: gcp/nope, label: A }" + tail, `s.yaml:3:37: icon "a": no icon "gcp/nope" (search with: floe icons search gcp <word>)`},
-		{node + "icon: { name: a, icon: nope, label: A }" + tail, `s.yaml:3:37: icon "a": "nope" needs its icon set in front (aws, gcp, azure), like aws/amazon-ec2 (search with: floe icons search <set> <word>)`},
-		{node + "icon: { name: a, icon: aws/aws-lambda, tone: warn }" + tail, "s.yaml:3:82: additional properties 'tone' not allowed"},
+		{node + "icon: { name: a, icon: nope, label: A }" + tail, `s.yaml:3:37: icon "a": "nope" needs its icon set in front (aws, gcp, azure, lucide), like aws/amazon-ec2 (search with: floe icons search <set> <word>)`},
+		// A tone is told at its value, and only for an icon of colours; a name of no set is told for its set alone.
+		{node + "icon: { name: a, icon: aws/aws-lambda, tone: warn }" + tail, `s.yaml:3:82: icon "a": aws/aws-lambda draws in its own colours and takes no tone; remove tone (only lucide icons take one)`},
+		{node + "icon: { name: a, icon: lucid/server, tone: warn }" + tail, `s.yaml:3:37: icon "a": "lucid/server" needs its icon set in front (aws, gcp, azure, lucide), like aws/amazon-ec2 (search with: floe icons search <set> <word>)`},
 		{node + "icon: { icon: aws/aws-lambda }" + tail, "s.yaml:3:37: missing property 'name'"},
 		{node + `icon: { name: a, icon: "" }` + tail, "s.yaml:3:60: minLength: got 0, want 1"},
 		{node + "group: { name: g, icon: aws/nope, nodes: [ { box: { name: a, rows: [A] } } ] }" + tail, `s.yaml:3:37: the icon of frame "g": no icon "aws/nope" (search with: floe icons search aws <word>)`},
@@ -2222,4 +2224,58 @@ parts:
 		above(t, tops, "pay", "nat")
 		above(t, tops, "nat", "api")
 	})
+}
+
+// An icon of lines (lucide) is a mask over currentColor, coloured by its <use>; an icon of colours is an <image>, and
+// a tone on it is told at the tone, wherever it is written and however often the icon is placed. Drawn with a real
+// store, a set of colours fetched into it.
+func TestIconTones(t *testing.T) {
+	t.Parallel()
+
+	dir := t.TempDir()
+	if err := os.MkdirAll(filepath.Join(dir, "aws"), 0o700); err != nil {
+		t.Fatal(err)
+	}
+	for name, b := range map[string]string{
+		"aws/index.json":     `{"version": "1", "sources": [], "icons": {"aws-lambda": {"category": "Compute"}}}`,
+		"aws/aws-lambda.svg": `<svg xmlns="http://www.w3.org/2000/svg"/>`,
+	} {
+		if err := os.WriteFile(filepath.Join(dir, name), []byte(b), 0o600); err != nil {
+			t.Fatal(err)
+		}
+	}
+	store := icons.New(dir, false, "")
+	const head = "title: t\nparts:\n"
+	out, mistakes := draw(t, head+`  - icon: { name: a, x: 0, y: 0, icon: lucide/database, tone: bad }
+  - icon: { name: b, x: 100, y: 0, icon: lucide/database }
+  - icon: { name: c, x: 200, y: 0, icon: aws/aws-lambda }
+`, drawWith("en", store))
+	if mistakes != "" {
+		t.Fatalf("told %s", mistakes)
+	}
+	for _, want := range []string{
+		`mask-type="alpha"`, `fill="currentColor" mask="url(#`, `x="0" y="0" class="icon" data-floe-tone="bad"/>`,
+		`x="100" y="0" class="icon"/>`, `<image id="`,
+	} {
+		if !strings.Contains(out, want) {
+			t.Errorf("the drawing lacks %s:\n%s", want, out)
+		}
+	}
+	if n := strings.Count(out, "<mask "); n != 1 {
+		t.Errorf("%d masks, want 1, of the lucide icon placed twice", n)
+	}
+	for _, c := range []struct{ parts, want string }{
+		{"  - icon: { name: a, x: 0, y: 0, icon: aws/aws-lambda, tone: bad }\n",
+			`s.yaml:3:62: icon "a"`},
+		// The second of one icon is looked up no more, and told all the same.
+		{"  - icon: { name: a, x: 0, y: 0, icon: aws/aws-lambda }\n  - icon: { name: b, x: 100, y: 0, icon: aws/aws-lambda, tone: bad }\n",
+			`s.yaml:4:64: icon "b"`},
+		{"  - graph: { x: 0, y: 0, nodes: [ { icon: { name: a, icon: aws/aws-lambda } }, { icon: { name: b, icon: aws/aws-lambda, tone: bad } } ] }\n",
+			`s.yaml:3:127: icon "b"`},
+	} {
+		// At the tone's value, told as an icon of colours: the words are the catalog's.
+		if _, got := draw(t, head+c.parts, drawWith("en", store)); !strings.HasPrefix(got, c.want+":") || !strings.Contains(got, "aws/aws-lambda") || !strings.Contains(got, "tone") {
+			t.Errorf("%s\n  told %q\n  want it at %q", c.parts, got, c.want)
+		}
+	}
 }

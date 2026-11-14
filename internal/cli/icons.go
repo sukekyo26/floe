@@ -86,6 +86,10 @@ fetched is told with how to fetch it.
 		Args: cobra.ArbitraryArgs,
 		RunE: func(_ *cobra.Command, args []string) error {
 			at, dirErr := a.iconsDir()
+			// A set built in needs no directory for icons.
+			if len(args) > 0 && icons.IsBuiltin(args[0]) {
+				dirErr = nil
+			}
 			if err := usererr.Collect(icons.CheckSearch(args), dirErr); err != nil {
 				return err //nolint:wrapcheck // mistakes for the user as they are
 			}
@@ -117,11 +121,12 @@ func iconsIn(p dataPlace) *icons.Store {
 }
 
 // iconStore returns the icons the diagrams of one command show: those of iconsDir, or, without a directory for
-// them, none, which a diagram with an icon is told. Made once for the command: a Store keeps the indexes it read.
+// them, those built in, a diagram with another icon told why. Made once for the command: a Store keeps the indexes
+// it read.
 func (a *app) iconStore() diagram.Icons {
 	at, err := a.iconsDir()
 	if err != nil {
-		return diagram.NoIcons{Err: err}
+		return icons.Without(err)
 	}
 	return iconsIn(at)
 }

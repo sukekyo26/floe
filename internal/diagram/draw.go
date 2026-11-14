@@ -1,7 +1,6 @@
 package diagram
 
 import (
-	"cmp"
 	_ "embed" // the template
 	"errors"
 	"fmt"
@@ -12,6 +11,7 @@ import (
 	"strings"
 
 	"floe/internal/i18n"
+	"floe/internal/icons"
 	"floe/internal/schema"
 	"floe/internal/usererr"
 	"floe/internal/zoom"
@@ -42,15 +42,6 @@ type Icons interface {
 	Lookup(name string) ([]byte, error)
 }
 
-// NoIcons are no icons to look up: there is no directory for them, Err says why, which a diagram with an icon
-// is told.
-type NoIcons struct{ Err error }
-
-// Lookup returns Err, or icons_no_dir for none.
-func (n NoIcons) Lookup(string) ([]byte, error) {
-	return nil, cmp.Or(n.Err, error(usererr.NewWhole("icons_no_dir"))) //nolint:wrapcheck // Err as given, or the mistake
-}
-
 // Drawer draws specs that its schema checks: the one entry of a spec, wherever it comes from.
 type Drawer struct {
 	schema *schema.Compiled
@@ -76,7 +67,7 @@ func (d *Drawer) Draw(spec any, opts Options) (template.HTML, error) {
 // checks, which Inspect shows and Draw does not; a nil layout when it did not get as far.
 func (d *Drawer) layout(v any, opts Options) (*layout, error) {
 	if opts.Icons == nil {
-		opts.Icons = NoIcons{Err: nil}
+		opts.Icons = icons.Without(nil)
 	}
 	if err := d.schema.ValidateAt(v); err != nil {
 		return nil, err //nolint:wrapcheck // mistakes in the library's words, at their pointers

@@ -242,6 +242,7 @@ type icon struct {
 	Y         float64  `json:"y"`
 	Label     Text     `json:"label"`
 	Size      float64  `json:"size"`
+	Tone      string   `json:"tone"`
 	With      string   `json:"with,omitempty"` // a graph's icon alone (see graphBox)
 	graph     string   // the JSON pointer of the graph that laid it out; "" for an icon written by hand
 	handSides []string // the sides left to edges written by hand, for an icon a graph laid out; nil: any

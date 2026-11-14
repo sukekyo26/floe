@@ -474,7 +474,7 @@ func TestCheckSearch(t *testing.T) {
 			continue
 		}
 		wantMistake(t, fmt.Sprint("CheckSearch ", c.args), err, c.key)
-		if e := (*usererr.Error)(nil); c.key == "icons_search_words" && errors.As(err, &e) && !slices.Contains(e.Args, any("aws, gcp, azure")) {
+		if e := (*usererr.Error)(nil); c.key == "icons_search_words" && errors.As(err, &e) && !slices.Contains(e.Args, any("aws, gcp, azure, lucide")) {
 			t.Errorf("CheckSearch %v names the sets %v", c.args, e.Args)
 		}
 	}

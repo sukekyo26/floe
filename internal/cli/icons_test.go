@@ -123,6 +123,17 @@ func TestIconsFetchAndSearch(t *testing.T) {
 	if code != 1 || !strings.Contains(stderr, "FLOE_ICONS_DIR") || !strings.Contains(stderr, "agreeing to their terms") {
 		t.Errorf("FLOE_ICONS_DIR=relative floe icons fetch azure = %d, %q; want both mistakes", code, stderr)
 	}
+	// The set built in is searched with no directory for icons, and never fetched; a set to fetch still needs one.
+	rel := map[string]string{"FLOE_ICONS_DIR": "relative"}
+	if code, stdout, stderr := runIn(dir, rel, "icons", "search", "lucide", "user"); code != 0 || stdout != "lucide/user\tpeople\nlucide/users\tpeople\n" || stderr != "" {
+		t.Errorf("FLOE_ICONS_DIR=relative floe icons search lucide user = %d, %q, %q", code, stdout, stderr)
+	}
+	if code, _, stderr := runIn(dir, rel, "icons", "search", "aws", "lambda"); code != 1 || !strings.Contains(stderr, "FLOE_ICONS_DIR") {
+		t.Errorf("FLOE_ICONS_DIR=relative floe icons search aws lambda = %d, %q; want the directory told", code, stderr)
+	}
+	if code, stdout, stderr := runIn(dir, env, "icons", "fetch", "lucide"); code != 1 || stdout != "" || !strings.Contains(stderr, "floe icons search lucide") {
+		t.Errorf("floe icons fetch lucide = %d, %q, %q; want it refused, naming the search", code, stdout, stderr)
+	}
 	for name, entry := range map[string]string{
 		"core.zip": "Unique Icons/GKE/SVG/GKE-512-color.svg", "category.zip": "Category Icons/Storage/SVG/Storage-512-color.svg",
 	} {
