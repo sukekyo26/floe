@@ -28,17 +28,17 @@ import (
 
 // Page draws d, checked, with t of k in the theme named so, as a page titled title, calc the values of t's
 // computed.yaml (nil for none), the images it names read from images (nil for none) and named in mistakes under
-// imagesDir ("" for the data file's directory), its diagrams' icons
-// looked up in icons (nil for the built-in sets alone): each part and item of a format from the inner ones out, then
-// page.html. The mistakes of the items are told together, a part
-// holding one that failed left undrawn. It checks the page drawn, its items of format html first (items.check),
+// imagesDir ("" for the data file's directory), each item naming one told to imageAt (nil for none), its
+// diagrams' icons looked up in icons (nil for the built-in sets alone): each part and item of a format from the
+// inner ones out, then page.html. The mistakes of the items are told together, a part holding one that failed
+// left undrawn. It checks the page drawn, its items of format html first (items.check),
 // and returns it as the parser read it, with its styles in its head and its headings given ids, when cut with the
 // CSP of a page opened without the headers (withCutOff) too, written anew, and the warnings of its items.
 func Page(
 	k *kit.Kit, t *kit.Template, theme string, d *doc.Data, calc map[string]any, title string,
-	images fs.FS, imagesDir string, icons diagram.Icons, cut bool,
+	images fs.FS, imagesDir string, imageAt func(name string, line, column int), icons diagram.Icons, cut bool,
 ) ([]byte, []*usererr.Error, error) {
-	s := newItems(images, imagesDir, icons)
+	s := newItems(images, imagesDir, imageAt, icons)
 	var found usererr.List
 	var failed [][]string
 	data, err := t.Schema().Walk(d.Values, func(it schema.Item, ready any) (any, error) {
@@ -250,11 +250,12 @@ func drawItem(k *kit.Kit, d *doc.Data, it schema.Item, ready any, s *items) (any
 	case "html":
 		return s.marked(it.At, text), nil
 	case "image":
-		uri, err := s.image(d, text)
+		pos := d.PosOf(it.At)
+		uri, err := s.image(d, text, pos)
 		var e *usererr.Error
 		if errors.As(err, &e) && e.File() == "" {
-			// What names no file is the item's: one of the file is told at it, once.
-			pos := d.PosOf(it.At)
+			// A mistake of the image is the item's, at each item naming it; a directory that cannot be opened is
+			// told at it, once.
 			return nil, e.PlacedAt(d.File, pos.Line, pos.Column)
 		}
 		return uri, err

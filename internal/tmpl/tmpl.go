@@ -21,13 +21,15 @@ import (
 
 // Options are what a caller gives a drawing besides the data.
 type Options struct {
-	Theme     string        // drawn with instead of the data's theme:, "" for none
-	Default   string        // drawn with when neither Theme nor the data's theme: names one, "" for floe's default
-	Untitled  string        // the title of a page whose data names none
-	Images    fs.FS         // the data's images, nil for none; its maker closes it
-	ImagesDir string        // the directory mistakes name the images under, "" for the data file's
-	Icons     diagram.Icons // the icons the diagrams show, nil for the built-in sets alone
-	CutOff    bool          // the page opens without the headers (a file floe render writes): its CSP goes in it
+	Theme     string // drawn with instead of the data's theme:, "" for none
+	Default   string // drawn with when neither Theme nor the data's theme: names one, "" for floe's default
+	Untitled  string // the title of a page whose data names none
+	Images    fs.FS  // the data's images, nil for none; its maker closes it
+	ImagesDir string // the directory mistakes name the images under, "" for the data file's
+	// ImageAt is told the line and column of each item that names an image, every one, as it is drawn; nil for none.
+	ImageAt func(name string, line, column int)
+	Icons   diagram.Icons // the icons the diagrams show, nil for the built-in sets alone
+	CutOff  bool          // the page opens without the headers (a file floe render writes): its CSP goes in it
 }
 
 // Draw draws the data file src, file in its mistakes, with the templates, parts and themes of k, as a page:
@@ -44,7 +46,8 @@ func Draw(k *kit.Kit, file string, src []byte, o Options) ([]byte, []*usererr.Er
 		return nil, nil, err
 	}
 	//nolint:wrapcheck // mistakes of the page, or floe's failure
-	return draw.Page(k, t, theme, d, calc, cmp.Or(d.Title, o.Untitled), o.Images, o.ImagesDir, o.Icons, o.CutOff)
+	return draw.Page(k, t, theme, d, calc, cmp.Or(d.Title, o.Untitled), o.Images, o.ImagesDir, o.ImageAt, o.Icons,
+		o.CutOff)
 }
 
 // Diagrams returns the data file src, file in its mistakes, read and checked against its template's schema as Draw

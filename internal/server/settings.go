@@ -160,7 +160,7 @@ func (s *Server) themeSample(w http.ResponseWriter, r *http.Request) {
 	}
 	file, src := ui.Sample(i18n.FromAcceptLanguage(r.Header.Get("Accept-Language")))
 	o := tmpl.Options{
-		Theme: name, Default: "", Untitled: "", Images: nil, ImagesDir: "", Icons: drawing.Icons, CutOff: false,
+		Theme: name, Default: "", Untitled: "", Images: nil, ImagesDir: "", ImageAt: nil, Icons: drawing.Icons, CutOff: false,
 	}
 	page, _, err := tmpl.Draw(drawing.Kit, file, src, o)
 	if err != nil {

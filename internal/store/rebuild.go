@@ -124,7 +124,7 @@ func redraw(dw Drawing, slug string, m *Meta, dir string) (*drawn, error) {
 	if err != nil {
 		return got, usererr.CannotRead(had, err) //nolint:wrapcheck // as above
 	}
-	// One path for both, so that the images read are those the mistakes name.
+	// The copy's images/, where a directory that cannot be opened is told.
 	imagesDir := filepath.Join(dir, imagesName)
 	images := files.NewRoot(imagesDir)
 	defer images.Close() //nolint:errcheck // only read from
@@ -134,8 +134,9 @@ func redraw(dw Drawing, slug string, m *Meta, dir string) (*drawn, error) {
 	// a publish checked by the same rule. Have draw name it by ImagesDir too if the rule comes to change.
 	o := tmpl.Options{
 		Theme: m.GivenTheme(), Default: m.CreatedTheme, Untitled: slug, Images: images, ImagesDir: imagesDir,
-		Icons:  dw.Icons,
-		CutOff: false,
+		ImageAt: nil,
+		Icons:   dw.Icons,
+		CutOff:  false,
 	}
 	// Its warnings are of the copy, which no one mends: a publish of the data file tells them.
 	page, _, err := tmpl.Draw(dw.Kit, data, src, o)
