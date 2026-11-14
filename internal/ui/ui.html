@@ -5915,6 +5915,10 @@
   let themesPage = null;
   let themesBack = null;
   let themesOwn = '';
+  // Why the settings could not be read this time, '' when they were or are being read; and which opening this is, so that
+  // what was asked in one closed since (a read, a save) leaves the modal open now alone
+  let themesFailed = '';
+  let themesOpened = 0;
   // The part of the settings shown: list, theme or mode; a page's themes are theme alone, with no way to the list
   const SETTINGS_TITLES = { list: 'ui_settings', theme: 'ui_settings_theme', mode: 'ui_settings_mode' };
   function showSettings(panel) {
@@ -5923,7 +5927,7 @@
     $('settings-title').textContent = t(themesPage ? 'ui_theme_page' : SETTINGS_TITLES[panel]);
     $('settings-back').hidden = Boolean(themesPage) || panel === 'list';
     $('settings-list').hidden = panel !== 'list';
-    $('settings-broken').hidden = panel !== 'list' || !themesRead?.settings;
+    $('settings-broken').hidden = panel !== 'list' || (!themesRead?.settings && !themesFailed);
     $('theme-now').hidden = panel !== 'theme';
     $('theme-grid').hidden = panel !== 'theme';
     $('theme-choose').hidden = panel !== 'theme';
@@ -5958,6 +5962,8 @@
     themesPage = a;
     themesBack = back;
     themesRead = null;
+    themesFailed = '';
+    const opened = ++themesOpened;
     $('settings-theme-now').textContent = '';
     $('settings-mode-now').textContent = '';
     $('settings-broken').textContent = t('ui_settings_broken');
@@ -5982,21 +5988,26 @@
       if (!res.ok) throw new Error(t('ui_http_error', await res.text(), res.status));
       got = await res.json();
     } catch (e) {
-      $('theme-now').textContent = t('ui_theme_load_failed', e.message);
-      $('settings-broken').textContent = t('ui_theme_load_failed', e.message);
+      if (opened !== themesOpened) return;
+      themesFailed = t('ui_theme_load_failed', e.message);
+      $('theme-now').textContent = themesFailed;
+      $('settings-broken').textContent = themesFailed;
       $('settings-broken').hidden = $('settings').dataset.panel !== 'list';
       $('settings-theme-now').textContent = '—';
       $('settings-mode-now').textContent = '—';
       return;
     }
+    const pageOwn = await own;
+    if (opened !== themesOpened) return;
     themesRead = got;
-    themesOwn = await own;
+    themesOwn = pageOwn;
     drawThemes(got);
     drawSettingsList(got);
   }
 
   // The task mode as checked, written alone: the default theme stays as it is
   async function saveTaskMode() {
+    const opened = themesOpened;
     const on = $('task-mode').checked;
     $('mode-save').disabled = true;
     let why = '';
@@ -6005,6 +6016,11 @@
       if (!res.ok) why = t('ui_http_error', await res.text(), res.status);
     } catch (e) {
       why = e.message;
+    }
+    // Closed meanwhile: what was saved is told, the modal opened since left as it is
+    if (opened !== themesOpened) {
+      toast(why ? t('ui_task_mode_failed', why) : t(on ? 'ui_task_mode_set_on' : 'ui_task_mode_set_off'));
+      return;
     }
     $('mode-save').disabled = false;
     if (why) {
@@ -6123,6 +6139,7 @@
     if (!picked) return;
     const theme = picked.value;
     const a = themesPage;
+    const opened = themesOpened;
     $('theme-choose').disabled = true;
     let why = '';
     try {
@@ -6136,9 +6153,16 @@
     } catch (e) {
       why = e.message;
     }
+    const done = why ? t(a ? 'ui_theme_page_failed' : 'ui_theme_set_failed', why) : a ? (theme ? t('ui_theme_page_set', theme) : t('ui_theme_page_unset')) : t('ui_theme_set', theme);
+    // Closed meanwhile: what was saved is told, the modal opened since left as it is
+    if (opened !== themesOpened) {
+      toast(done);
+      if (a && !why) await load();
+      return;
+    }
     $('theme-choose').disabled = false;
     if (why) {
-      toast(t(a ? 'ui_theme_page_failed' : 'ui_theme_set_failed', why));
+      toast(done);
       return;
     }
     if (!a) {
@@ -6147,11 +6171,11 @@
       drawThemes(themesRead);
       drawSettingsList(themesRead);
       settingsTo('list');
-      toast(t('ui_theme_set', theme));
+      toast(done);
       return;
     }
     $('settings').close();
-    toast(theme ? t('ui_theme_page_set', theme) : t('ui_theme_page_unset'));
+    toast(done);
     await load();
   }
 
@@ -6716,7 +6740,9 @@
   $('keys-open').addEventListener('click', () => openKeys('about'));
   for (const button of document.querySelectorAll('.help-switch .btn')) button.addEventListener('click', () => showHelp(button.dataset.help));
   $('settings-open').addEventListener('click', () => openThemes());
+  // This comes after the closing, when it may have been opened again
   $('settings').addEventListener('close', () => {
+    if ($('settings').open) return;
     document.body.append($('toasts'));
     themesBack?.()?.focus();
   });

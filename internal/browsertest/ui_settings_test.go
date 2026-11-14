@@ -96,7 +96,29 @@ func TestUISettings(t *testing.T) { //nolint:paralleltest // the browser tests s
 	out = append(out, b.eval("[document.getElementById('settings-mode-now').textContent, document.getElementById('settings-broken').textContent].join(' / ')"))
 	b.eval("document.querySelector('.settings-item[data-panel=mode]').click()")
 	out = append(out, b.eval(mode))
+	// Back on the list, the failure is still said
+	b.eval("document.getElementById('settings-back').click()")
+	out = append(out, b.eval("document.getElementById('settings-broken').hidden + ' / ' + document.getElementById('settings-broken').textContent"))
 	b.eval("window.fetch = window.realFetch; document.getElementById('settings').close()")
+	// A save answered after the modal was closed and opened again: told, and the modal open now stays as it is
+	b.eval("window.thrown = 0; addEventListener('error', () => { thrown++; })")
+	for _, c := range []struct{ part, save, told string }{
+		{"theme", "document.querySelector('#theme-grid input[value=ink]').click(); document.getElementById('theme-choose').click()", "Changed the default theme to ink"},
+		{"mode", "document.getElementById('mode-save').click()", "Turned the task mode on"},
+	} {
+		b.eval("document.getElementById('settings-open').click()")
+		b.until("the list's values", "document.getElementById('settings-mode-now').textContent === 'On'")
+		b.eval(`window.held = null; window.fetch = (u, i) => (i?.method === 'PUT' ? new Promise((go) => { window.held = () => go(window.realFetch(u, i)); }) : window.realFetch(u, i));
+			document.querySelector('.settings-item[data-panel=` + c.part + `]').click(); ` + c.save)
+		b.until("the save held", "window.held !== null")
+		b.eval("document.getElementById('settings').close(); window.fetch = window.realFetch; document.getElementById('settings-open').click()")
+		b.until("opened again", "document.getElementById('settings-mode-now').textContent === 'On'")
+		b.eval("document.querySelector('.settings-item[data-panel=theme]').click(); window.held()")
+		b.until("the old save told", "[...document.querySelectorAll('.toast')].some((e) => e.textContent.includes("+js(c.told)+") && !window.toldBefore?.includes(e))")
+		b.eval("window.toldBefore = [...document.querySelectorAll('.toast')]")
+		out = append(out, b.eval("[document.getElementById('settings').dataset.panel, document.getElementById('settings').contains(document.getElementById('toasts')), thrown].join(' ')"))
+		b.eval("document.getElementById('settings').close()")
+	}
 	// A page stored now is drawn in ink.
 	s.floe(t, "publish", s.page(t, "new.yaml", "New", ""))
 	out = append(out, b.eval("fetch('/a/new/?raw').then((r) => r.text()).then((t) => t.includes('--accent: #2b3a67'))"))
@@ -127,6 +149,8 @@ func TestUISettings(t *testing.T) { //nolint:paralleltest // the browser tests s
 		"false", "list / Settings / true / Close / false / true / true", "On", "mode", `{"theme":"ink","taskMode":true}`, "true",
 		"false true", "true false",
 		"— / Failed to load the themes: Failed to fetch", "false true",
+		"false / Failed to load the themes: Failed to fetch",
+		"theme true 0", "theme true 0",
 		"true",
 		"Failed to read the settings. Saving one writes them again / —",
 		"Failed to read the settings. Choosing a theme writes them again",
