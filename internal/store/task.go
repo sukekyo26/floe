@@ -35,6 +35,11 @@ func ProjectKey(project string) string {
 	return project
 }
 
+// IsNoProject reports whether key, a project as tasks.json has it (ProjectKey), is that of pages of no project.
+func IsNoProject(key string) bool {
+	return key == noProject
+}
+
 // TaskName is the name of a page's task as written: trimmed, "" taking the page off its task. A name of spaces alone is
 // no way to say that, and is refused.
 func TaskName(name string) (string, error) {

@@ -53,7 +53,7 @@ func infoLines(page store.Listed, url string) []string {
 		kind = "folder"
 	}
 	project := ""
-	if page.TaskProject != store.ProjectKey("") {
+	if !store.IsNoProject(page.TaskProject) {
 		project = page.TaskProject
 	}
 	var on store.PageTask

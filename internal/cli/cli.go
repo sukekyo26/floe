@@ -120,7 +120,7 @@ var english = i18n.EnglishCatalog()
 
 // inProject is a project of tasks.json (ProjectKey) as floe task and floe publish say it.
 func inProject(key string) string {
-	if key == store.ProjectKey("") {
+	if store.IsNoProject(key) {
 		return english.Msg("cli_no_project")
 	}
 	return english.Msg("cli_project", key)

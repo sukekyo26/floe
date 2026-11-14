@@ -285,14 +285,13 @@ func TestGuideQuotes(t *testing.T) {
 		usererr.NewAt("f.yaml", 1, 2, "cli_skill_kept"),
 	})}.Render(named)
 	for quote, ok := range map[string]bool{
-		"`warning:`":                         strings.HasPrefix(warned, "f.yaml:1:2: warning: "),
-		"`file:line:column:`":                strings.HasPrefix(placed, "f.yaml:1:2: "),
-		"`file:`":                            strings.HasPrefix(whole, "f.yaml: "),
-		"`page in project app`":              english.Msg("cli_page_project", inProject("app")) == "page in project app",
-		"`page in project app, off task #9`": english.Msg("cli_page_off_task", inProject("app"), "#9") == "page in project app, off task #9",
-		"`page <slug>: no task`":             english.Msg("cli_task_page", "<slug>", english.Msg("cli_task_page_off")) == "page <slug>: no task",
-		"`page old-notes: no task, in project floe`": english.Msg("cli_task_page", "old-notes",
-			english.Msg("cli_task_page_off")+", "+english.Msg("cli_task_page_in", inProject("floe"))) == "page old-notes: no task, in project floe",
+		"`warning:`":                                 strings.HasPrefix(warned, "f.yaml:1:2: warning: "),
+		"`file:line:column:`":                        strings.HasPrefix(placed, "f.yaml:1:2: "),
+		"`file:`":                                    strings.HasPrefix(whole, "f.yaml: "),
+		"`page in project app`":                      english.Msg("cli_page_project", inProject("app")) == "page in project app",
+		"`page in project app, off task #9`":         english.Msg("cli_page_off_task", inProject("app"), "#9") == "page in project app, off task #9",
+		"`page <slug>: no task`":                     english.Msg("cli_task_page", "<slug>", english.Msg("cli_task_page_off")) == "page <slug>: no task",
+		"`page old-notes: no task, in project floe`": english.Msg("cli_task_page", "old-notes", english.Msg("cli_task_page_off_in", inProject("floe"))) == "page old-notes: no task, in project floe",
 		"`slug \"db-choice\" was published from …: choose another slug`": english.Msg("store_slug_placed_alone", "db-choice", "…") == `slug "db-choice" was published from …: choose another slug`,
 	} {
 		if !ok {
