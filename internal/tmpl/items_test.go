@@ -4,6 +4,7 @@ import (
 	"bytes"
 	"os"
 	"path/filepath"
+	"slices"
 	"strconv"
 	"strings"
 	"syscall"
@@ -12,6 +13,7 @@ import (
 	"floe/internal/files"
 	"floe/internal/kit"
 	"floe/internal/tmpl"
+	"floe/internal/usererr"
 )
 
 // htmlSchema is a template's schema of an item h of format html, and t of plain text.
@@ -680,8 +682,23 @@ func statsKit(t *testing.T) *kit.Kit {
 	return ownKit(t, parts, mine(page, head+`"type": "object", "properties": {"c": {"$ref": "floe:///parts/ps.json"}}}`, nil))
 }
 
-// The form of from and value is written twice, in the part's schema and in the function for a part of one's own: each
-// of these is taken or refused by both.
+// drawnKeys is the keys of the mistakes tmpl.Draw tells of src, none when it draws.
+func drawnKeys(t *testing.T, k *kit.Kit, src string) []string {
+	t.Helper()
+	_, _, err := tmpl.Draw(k, "d.yaml", []byte(src), none)
+	var all usererr.List
+	if failed := all.Add(err); failed != nil {
+		t.Fatalf("%v", failed)
+	}
+	keys := make([]string, 0, len(all))
+	for _, e := range all {
+		keys = append(keys, e.Key)
+	}
+	return keys
+}
+
+// The form of from and value is the function's alone: floe's stats and a part of one's own take and refuse each of
+// these alike, refused as kit_stat_change. "" is refused by floe's schema first, by minLength.
 func TestStatNumbers(t *testing.T) {
 	t.Parallel()
 
@@ -718,11 +735,18 @@ func TestStatNumbers(t *testing.T) {
 	} {
 		q := strconv.Quote(tt.value)
 		for _, item := range []string{"{label: a, value: " + q + ", from: '2', better: lower}\n", "{label: a, value: '2', from: " + q + ", better: lower}\n"} {
-			function := drawn(t, own, "lang: en\ntemplate: mine\nc:\n  - "+item, none)
-			part := drawn(t, floe, "lang: en\ntemplate: report\ntitle: t\nsections:\n  - heading: a\n    parts:\n      - stats:\n          - "+item, none)
-			// The function refuses after the schema, whose words alone show that the schema did.
-			if (function == "") != tt.good || (part == "") != tt.good || (!tt.good && !strings.Contains(part, "does not match pattern")) {
-				t.Errorf("%s: the function told %q, the schema %q, want taken %v", item, function, part, tt.good)
+			function := drawnKeys(t, own, "lang: en\ntemplate: mine\nc:\n  - "+item)
+			part := drawnKeys(t, floe, "lang: en\ntemplate: report\ntitle: t\nsections:\n  - heading: a\n    parts:\n      - stats:\n          - "+item)
+			want := []string{}
+			if !tt.good {
+				want = []string{"kit_stat_change"}
+			}
+			wantPart := want
+			if tt.value == "" {
+				wantPart = []string{"library"} // the schema's minLength
+			}
+			if !slices.Equal(function, want) || !slices.Equal(part, wantPart) {
+				t.Errorf("%s: the function told %q, floe's stats %q; want %q, %q", item, function, part, want, wantPart)
 			}
 		}
 	}

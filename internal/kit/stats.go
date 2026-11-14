@@ -18,7 +18,8 @@ type stat struct {
 	From, Change, Way, WayTone string
 }
 
-// statNumber is the form the schema of the part stats gives from and value. TestStatNumbers holds the two alike.
+// statNumber is the form of from and value with from, for the change to be counted. It alone refuses others, for
+// floe's stats and a part of one's own alike: floe's schema has no pattern, whose words would show the regex alone.
 var statNumber = regexp.MustCompile(`^-?[0-9]+([.][0-9]+)?$`)
 
 // scaled is a number of statNumber's form as a whole number, its point moved decimals to the right.
