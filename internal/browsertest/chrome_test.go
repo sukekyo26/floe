@@ -226,20 +226,24 @@ func truthy(s string) bool {
 const waitLimit = 10 * time.Second
 
 // until polls expr every 50 ms, up to waitLimit, until it is truthy; an evaluation error (a document
-// being replaced) counts as not yet.
+// being replaced) and a document still loading count as not yet.
 func (b *browser) until(what, expr string) string {
 	b.t.Helper()
 
+	// A page moved to whole has its new URL while it loads, before its script runs. The state is read in the same
+	// evaluation as expr: read apart, the page could be replaced between the two.
+	// LIMIT: interactive comes before the DOMContentLoaded handlers (contents.js, zoom.js); wait for what they make itself.
+	loaded := "document.readyState !== 'loading' ? (0, eval)(" + js(expr) + ") : false"
 	var last string
 	var err error
 	for deadline := time.Now().Add(waitLimit); time.Now().Before(deadline); {
-		if last, err = b.try(expr); err == nil && truthy(last) {
+		if last, err = b.try(loaded); err == nil && truthy(last) {
 			return last
 		}
 		time.Sleep(50 * time.Millisecond)
 	}
 	// What the page threw, and what it drew: a draw that threw stays as it is until the data changes.
-	seen, seenErr := b.try("[location.pathname + location.search, document.activeElement?.tagName + '#' + document.activeElement?.id, [...document.querySelectorAll(':is(:open, :popover-open)')].map((e) => e.tagName + '#' + e.id).join(), (window.thrown ?? []).join(' / '), document.getElementById('list')?.innerText?.replaceAll('\\n', ' | ')].join(' ## ')")
+	seen, seenErr := b.try("[location.pathname + location.search, document.readyState, document.activeElement?.tagName + '#' + document.activeElement?.id, [...document.querySelectorAll(':is(:open, :popover-open)')].map((e) => e.tagName + '#' + e.id).join(), (window.thrown ?? []).join(' / '), document.getElementById('list')?.innerText?.replaceAll('\\n', ' | ')].join(' ## ')")
 	b.t.Fatalf("timed out waiting for %s: last %q, %v; the page: %s, %v", what, last, err, seen, seenErr)
 	return ""
 }
