@@ -229,11 +229,7 @@ func (s *Store) readIndex(k *kit) (*index, error) {
 		return idx, nil
 	}
 	if k.builtin {
-		idx, err := builtinIndex(k)
-		if err == nil {
-			s.indexes[k.name] = idx
-		}
-		return idx, err
+		return lucideIndex()
 	}
 	if s.none != nil {
 		return nil, s.none
@@ -256,6 +252,10 @@ func (s *Store) readIndex(k *kit) (*index, error) {
 	s.indexes[k.name] = idx
 	return idx, nil
 }
+
+// lucideIndex is the index of lucide, the one set built in, read once for every store: a server makes a store at
+// each change it watches.
+var lucideIndex = sync.OnceValues(func() (*index, error) { return builtinIndex(&lucide) })
 
 // builtinIndex reads the index of k, a set built in. One that cannot be read is floe's failure: a fetch cannot
 // mend it.

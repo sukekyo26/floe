@@ -131,8 +131,9 @@ func TestIconsFetchAndSearch(t *testing.T) {
 	if code, _, stderr := runIn(dir, rel, "icons", "search", "aws", "lambda"); code != 1 || !strings.Contains(stderr, "FLOE_ICONS_DIR") {
 		t.Errorf("FLOE_ICONS_DIR=relative floe icons search aws lambda = %d, %q; want the directory told", code, stderr)
 	}
-	if code, stdout, stderr := runIn(dir, env, "icons", "fetch", "lucide"); code != 1 || stdout != "" || !strings.Contains(stderr, "floe icons search lucide") {
-		t.Errorf("floe icons fetch lucide = %d, %q, %q; want it refused, naming the search", code, stdout, stderr)
+	if code, stdout, stderr := runIn(dir, rel, "icons", "fetch", "lucide"); code != 1 || stdout != "" ||
+		!strings.Contains(stderr, "floe icons search lucide") || strings.Contains(stderr, "FLOE_ICONS_DIR") {
+		t.Errorf("FLOE_ICONS_DIR=relative floe icons fetch lucide = %d, %q, %q; want it refused for itself alone", code, stdout, stderr)
 	}
 	for name, entry := range map[string]string{
 		"core.zip": "Unique Icons/GKE/SVG/GKE-512-color.svg", "category.zip": "Category Icons/Storage/SVG/Storage-512-color.svg",

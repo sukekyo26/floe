@@ -54,7 +54,7 @@ func New(c *schema.Compiled) *Drawer {
 
 // Draw checks spec, a spec's value, against the schema, lays it out and checks the layout, and draws it in
 // opts.Lang as an HTML fragment of inline SVG. Every mistake is at a JSON pointer in spec, with no file, but
-// those of the icons kept: at their file, or of the whole output. Icons of nil are none kept.
+// those of the icons kept: at their file, or of the whole output. Icons of nil are the built-in sets alone.
 func (d *Drawer) Draw(spec any, opts Options) (template.HTML, error) {
 	l, err := d.layout(spec, opts)
 	if err != nil {

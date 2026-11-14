@@ -26,7 +26,7 @@ type Options struct {
 	Untitled  string        // the title of a page whose data names none
 	Images    fs.FS         // the data's images, nil for none; its maker closes it
 	ImagesDir string        // the directory mistakes name the images under, "" for the data file's
-	Icons     diagram.Icons // the icons the diagrams show, nil for none kept
+	Icons     diagram.Icons // the icons the diagrams show, nil for the built-in sets alone
 	CutOff    bool          // the page opens without the headers (a file floe render writes): its CSP goes in it
 }
 

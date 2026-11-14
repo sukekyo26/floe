@@ -56,7 +56,7 @@ $XDG_DATA_HOME/floe-icons, or ~/.local/share/floe-icons.`,
 					errs = append(errs, p.err)
 				}
 			}
-			at, dirErr := a.iconsDir()
+			at, dirErr := a.iconsDirFor(args[0])
 			if err := usererr.Collect(append(errs, dirErr)...); err != nil {
 				return err //nolint:wrapcheck // mistakes for the user as they are
 			}
@@ -90,11 +90,11 @@ fetch it.
   floe icons search gcp storage`,
 		Args: cobra.ArbitraryArgs,
 		RunE: func(_ *cobra.Command, args []string) error {
-			at, dirErr := a.iconsDir()
-			// A set built in needs no directory for icons.
-			if len(args) > 0 && icons.IsBuiltin(args[0]) {
-				dirErr = nil
+			var set string
+			if len(args) > 0 {
+				set = args[0]
 			}
+			at, dirErr := a.iconsDirFor(set)
 			if err := usererr.Collect(icons.CheckSearch(args), dirErr); err != nil {
 				return err //nolint:wrapcheck // mistakes for the user as they are
 			}
@@ -116,6 +116,16 @@ func (a *app) iconsDir() (dataPlace, error) {
 	p, err := a.dataDir("FLOE_ICONS_DIR", "XDG_DATA_HOME", ".local/share", "floe-icons")
 	if err == nil && p.dir == "" {
 		err = usererr.NewWhole("icons_no_dir")
+	}
+	return p, err
+}
+
+// iconsDirFor is the directory of the icon sets for a command on set: a set built in needs none, so that the
+// directory's mistake is not told for it.
+func (a *app) iconsDirFor(set string) (dataPlace, error) {
+	p, err := a.iconsDir()
+	if icons.IsBuiltin(set) {
+		err = nil
 	}
 	return p, err
 }

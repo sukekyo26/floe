@@ -65,6 +65,10 @@ func TestRenderedIconTone(t *testing.T) { //nolint:paralleltest // the browser t
 		shot := screenshot(t, s.b)
 		colours := map[string][3]int{}
 		for _, ink := range inks {
+			// Those of no tone (the part b and the frame's corner) are all in the text's colour.
+			if c, ok := colours[ink.Tone]; ok && c != ink.RGB {
+				t.Errorf("%s: icons of tone %q in %v and %v", when, ink.Tone, c, ink.RGB)
+			}
 			colours[ink.Tone] = ink.RGB
 			if !inked(shot, ink) {
 				t.Errorf("%s: the icon of tone %q at %.0f,%.0f paints no line in its color %v", when, ink.Tone, ink.X, ink.Y, ink.RGB)

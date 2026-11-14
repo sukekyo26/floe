@@ -11,6 +11,7 @@ import (
 	"regexp"
 	"slices"
 	"strings"
+	"sync"
 	"testing"
 	"testing/fstest"
 
@@ -134,14 +135,15 @@ func writeLucide(t *testing.T) {
 
 // A built-in file that cannot be read is floe's failure, not a mistake to mend by a fetch, which is refused.
 func TestBuiltinBroken(t *testing.T) { //nolint:paralleltest // it swaps builtinFS
-	saved := builtinFS
-	t.Cleanup(func() { builtinFS = saved })
+	saved, savedIndex := builtinFS, lucideIndex
+	t.Cleanup(func() { builtinFS, lucideIndex = saved, savedIndex })
 	for what, fsys := range map[string]fs.FS{
 		"no index":      fstest.MapFS{},
 		"a broken one":  fstest.MapFS{"lucide/index.json": {Data: []byte("{")}},
 		"no icon there": fstest.MapFS{"lucide/index.json": {Data: []byte(`{"version": "1", "icons": {"users": {}}}`)}},
 	} {
 		builtinFS = fsys
+		lucideIndex = sync.OnceValues(func() (*index, error) { return builtinIndex(&lucide) })
 		_, err := New(t.TempDir(), false, "").Lookup("lucide/users")
 		var e *usererr.Error
 		if err == nil || errors.As(err, &e) {
