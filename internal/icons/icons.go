@@ -478,8 +478,8 @@ func checkFetchable(set string) error {
 	return nil
 }
 
-// CheckFetch refuses to fetch set from n zips or URLs, before anything is done: a set built in or floe does not know, more zips
-// than it has packages, or none of a set whose page asks to agree to terms first.
+// CheckFetch refuses to fetch set from n zips or URLs, before anything is done: a set built in or floe does not
+// know, more zips than it has packages, or none of a set whose page asks to agree to terms first.
 func CheckFetch(set string, n int) error {
 	if err := checkFetchable(set); err != nil {
 		return err
@@ -860,9 +860,9 @@ func (s *Store) Lookup(name string) ([]byte, error) {
 		return nil, ErrNoIcon
 	}
 	if k.builtin {
-		b, err := fs.ReadFile(builtinFS, k.name+"/"+rest+".svg")
-		if err != nil {
-			return nil, fmt.Errorf("read the built-in icon %s: %w", name, err)
+		b, readErr := fs.ReadFile(builtinFS, k.name+"/"+rest+".svg")
+		if readErr != nil {
+			return nil, fmt.Errorf("read the built-in icon %s: %w", name, readErr)
 		}
 		return b, nil
 	}

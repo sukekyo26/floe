@@ -629,8 +629,8 @@ func TestBuiltin(t *testing.T) {
 			t.Errorf("%s: Lookup lucide/users = %.40q, %v", what, b, err)
 		}
 		for _, name := range []string{"lucide/nope", "lucide/../lucide/users", "lucide/"} {
-			if _, err := s.Lookup(name); !errors.Is(err, icons.ErrNoIcon) {
-				t.Errorf("%s: Lookup %s = %v, want ErrNoIcon", what, name, err)
+			if _, lookErr := s.Lookup(name); !errors.Is(lookErr, icons.ErrNoIcon) {
+				t.Errorf("%s: Lookup %s = %v, want ErrNoIcon", what, name, lookErr)
 			}
 		}
 		hits, err := s.Search("lucide", []string{"user"})

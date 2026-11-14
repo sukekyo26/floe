@@ -29,6 +29,8 @@ var colourRe = regexp.MustCompile(`(?:fill|stroke|color)\s*[=:]\s*"?([^";\s]+)`)
 // The built-in icons are those lucidePick names, each an SVG of lines in currentColor, with the index a fetch
 // writes and Lucide's LICENSE. With -update, they are written anew from -lucide-zip, as a fetch extracts a set.
 func TestBuiltinLucide(t *testing.T) {
+	t.Parallel()
+
 	if *updateLucide {
 		writeLucide(t)
 		return
@@ -62,9 +64,9 @@ func TestBuiltinLucide(t *testing.T) {
 			t.Errorf("lucide/%s is no icon of lucidePick", name)
 			continue
 		}
-		b, err := fs.ReadFile(builtinFS, "lucide/"+name)
-		if err != nil {
-			t.Fatal(err)
+		b, readErr := fs.ReadFile(builtinFS, "lucide/"+name)
+		if readErr != nil {
+			t.Fatal(readErr)
 		}
 		if !bytes.Contains(b, []byte(`stroke="currentColor"`)) {
 			t.Errorf("lucide/%s draws no lines in currentColor", name)
@@ -108,8 +110,8 @@ func writeLucide(t *testing.T) {
 	}
 	for _, e := range entries {
 		if e.Name() != "LICENSE" {
-			if err := os.RemoveAll(filepath.Join(dir, e.Name())); err != nil {
-				t.Fatal(err)
+			if rmErr := os.RemoveAll(filepath.Join(dir, e.Name())); rmErr != nil {
+				t.Fatal(rmErr)
 			}
 		}
 	}

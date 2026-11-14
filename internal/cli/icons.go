@@ -79,7 +79,7 @@ $XDG_DATA_HOME/floe-icons, or ~/.local/share/floe-icons.`,
 func (a *app) iconsSearchCmd() *cobra.Command {
 	return &cobra.Command{
 		Use:   "search <set> <word>...",
-		Short: "List the icons of a set, lucide or a fetched one, whose name contains every word, or a short name such as alb",
+		Short: "List the icons of a set, lucide or one fetched, whose name holds every word, or a short name such as alb",
 		Long: `List the icons of the set (lucide, aws, gcp, azure) whose name contains every word, one per line as
 the name to give an icon part (lucide/…, aws/…, gcp/…, azure/…) and its category, tab-separated. lucide is
 built into floe: a hundred icons of things any diagram shows, drawn in the text colour or a tone, which
