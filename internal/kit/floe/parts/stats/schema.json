@@ -8,7 +8,7 @@
     "type": "object",
     "properties": {
       "label": { "type": "string", "minLength": 1 },
-      "value": { "type": "string", "minLength": 1, "description": "The number, in quotes as it is drawn: '14.9'. With from, in digits alone, as -3.5, for the change to be counted" },
+      "value": { "type": "string", "minLength": 1, "description": "The number, in quotes as it is drawn: '14.9'. With from, in digits alone, as '-3.5', for the change to be counted" },
       "from": { "type": "string", "minLength": 1, "description": "The number before, in digits alone and quotes, as '3.1', drawn small before value; the change is counted under it, to as many decimals as the longer of the two" },
       "better": { "enum": ["lower", "higher"], "description": "Which way is for the better, needed with from and taken only with it" },
       "unit": { "type": "string", "minLength": 1, "description": "Drawn small after the value, such as MB or %" },
