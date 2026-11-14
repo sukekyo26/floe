@@ -195,6 +195,7 @@ var messagesJA = map[string]string{
 
 	// store
 	"store_invalid_slug":      "URL 名「%s」は使えません。英小文字・数字・ハイフンの 1〜64 文字で、先頭と末尾は英小文字か数字にしてください",
+	"store_slug_unnamed":      "この名前には英字・数字が無いので、URL 名を作れません。--slug で URL 名を渡すか、名前を変えてください",
 	"store_slug_is_page":      "URL 名「%s」は保存したページで使われています。別の URL 名にしてください",
 	"store_slug_is_link":      "URL 名「%s」はリンクで使われています。別の URL 名にしてください",
 	"store_slug_linked":       "URL 名「%s」は %s のリンクで使われています。別の URL 名にしてください",

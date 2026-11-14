@@ -204,6 +204,7 @@ var messagesEN = map[string]string{
 
 	// store: publishing and editing pages
 	"store_invalid_slug":      `invalid slug "%s": use 1 to 64 lowercase letters, digits and hyphens, starting and ending with a letter or digit`,
+	"store_slug_unnamed":      "no slug can be made of this name, as it has no letter a to z or digit: pass --slug, or rename it",
 	"store_slug_is_page":      `slug "%s" is used by a stored page: choose another slug`,
 	"store_slug_is_link":      `slug "%s" is used by a linked file: choose another slug`,
 	"store_slug_linked":       `slug "%s" is linked to %s: choose another slug`,
