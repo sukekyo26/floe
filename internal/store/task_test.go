@@ -712,6 +712,13 @@ func TestTaskParent(t *testing.T) {
 	if _, wrote := editTask(s, "p", "#5", store.TaskEdit{Title: ptr("t"), Parent: ptr("")}); wrote != nil {
 		t.Errorf(`"" with a title, of no row: %v`, wrote)
 	}
+	// Taken off its parent with URLs taken off, of no row, is no field written either: not found, and no row made
+	if _, off := editTask(s, "p", "#6", store.TaskEdit{Parent: ptr(""), URLs: &store.URLsEdit{Remove: []string{"x"}}}); !errors.Is(off, store.ErrNotFound) {
+		t.Errorf(`"" and a URL taken off, of no row: %v`, off)
+	}
+	if after, read := s.ReadTasks(); read != nil || after["p"]["#6"].State != "" {
+		t.Errorf(`"" and a URL taken off, of no row, made: %+v, %v`, after["p"]["#6"], read)
+	}
 	// The same again, to another parent, and off, of a task with none too.
 	at := all["p"]["#2"].At
 	for _, c := range []struct{ name, parent, want string }{

@@ -1097,7 +1097,8 @@ type Edited struct {
 	// OffTask is the task the page was on and left: its project changed (Edit), or ChangeTasks put it on another task
 	// or none; "" for none.
 	OffTask string `json:"offTask,omitempty"`
-	// OffCategory is the page's category on OffTask as ChangeTasks found it, "" for none.
+	// OffCategory is the page's category on OffTask as the write found it, "" for none. The CLI says it of a page
+	// ChangeTasks moved; the screen and publish do not, saying of an Edit that the project changed.
 	OffCategory string `json:"offCategory,omitempty"`
 }
 
@@ -1148,8 +1149,8 @@ func (s *Store) Edit(slug string, ed Edit) (Edited, error) {
 	}, nil
 }
 
-// setProject sets the project ed names of m, taking m off its task when it moves it: it returns the task taken off,
-// "" for none.
+// setProject sets the project ed names of m, taking m off its task when it moves it: it returns the task and category
+// taken off, none for none.
 func setProject(m *Meta, ed Edit) (PageTask, error) {
 	var none PageTask
 	if ed.Project == nil {
@@ -1165,7 +1166,7 @@ func setProject(m *Meta, ed Edit) (PageTask, error) {
 }
 
 // offTaskOf takes m off its task when its project is no longer was (ProjectKey): a task is of its project, and one of
-// the same name in another is another task. It returns the task taken off, "" for none. The pin stays.
+// the same name in another is another task. It returns the task and category taken off, none for none. The pin stays.
 func offTaskOf(m *Meta, was string) PageTask {
 	if ProjectKey(m.Project) == was || m.Task == nil || m.Task.Name == "" {
 		var none PageTask

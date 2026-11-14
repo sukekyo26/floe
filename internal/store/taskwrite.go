@@ -1,7 +1,6 @@
 package store
 
 import (
-	"errors"
 	"reflect"
 	"slices"
 	"strings"
@@ -43,11 +42,16 @@ func (ed TaskEdit) hasFields() bool {
 	return ed.Title != nil || ed.State != nil || ed.URLs != nil || ed.Categories != nil || ed.Parent != nil
 }
 
-// makesRow tells whether ed writes a field of a task of no row: what makes the row, as URLs taken off or ordered
-// change nothing of none.
+// makesRow tells whether ed writes a field of a task of no row: what makes the row. URLs taken off or ordered, and a
+// parent taken off, change nothing of none, so that a mistyped ID makes no empty task.
 func (ed TaskEdit) makesRow() bool {
-	return ed.Title != nil || ed.State != nil || (ed.URLs != nil && len(ed.URLs.Add) > 0) || ed.Categories != nil ||
-		ed.Parent != nil
+	if ed.URLs != nil && len(ed.URLs.Add) == 0 {
+		ed.URLs = nil
+	}
+	if ed.Parent != nil && *ed.Parent == "" {
+		ed.Parent = nil
+	}
+	return ed.hasFields()
 }
 
 // ChangeTasks writes w under one lock: the pages are read, each one's task as it comes to be, and the tasks it comes to
@@ -207,9 +211,7 @@ func (s *Store) checkTask(rows map[string]Task, w TaskChange, ref taskRef, pages
 	if err := checkSeen(ref.project, rows, ref.name, w.TaskEdit); err != nil {
 		return err
 	}
-	// A parent taken off a task of no row: not found of the task alone, nothing for the pages, which make the row
-	err := checkParent(ref.project, rows, ref.name, w.TaskEdit)
-	if err != nil && (len(pages) == 0 || !errors.Is(err, ErrNotFound)) {
+	if err := checkParent(ref.project, rows, ref.name, w.TaskEdit); err != nil {
 		return err
 	}
 	if err := checkURLCount(rows[ref.name], ref.name, w.URLs); err != nil {

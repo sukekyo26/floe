@@ -361,13 +361,8 @@ func checkParent(project string, rows map[string]Task, name string, ed TaskEdit)
 		return nil
 	}
 	parent := *ed.Parent
+	// Taken off: of a task of no row, which it does not make (makesRow), it is not found there
 	if parent == "" {
-		// What the screen saw is no change: a task of no row taken off its parent, and nothing else, is not found still
-		var nothing TaskEdit
-		ed.Parent, ed.Rev, ed.ParentNew, ed.ParentTitle = nil, nil, nil, nil
-		if _, had := rows[name]; !had && ed == nothing {
-			return ErrNotFound
-		}
 		return nil
 	}
 	// A parent made (ParentNew true) has no row yet, nor a parent of its own
