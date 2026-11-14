@@ -260,6 +260,10 @@ func TestUITaskEdit(t *testing.T) { //nolint:paralleltest // the browser tests s
 	dragRow(categoryRow("案"), urlRow("https://example.com/c"), false)
 	dragRow(urlRow("https://example.com/c"), categoryRow("案"), true)
 	say("across the lists", urlRows+" + ' / ' + "+categories)
+	// A URL's grip pressed and let go over the categories leaves no row of its list draggable
+	b.eval(urlRow("https://example.com/c") + ".querySelector('.category-grip').dispatchEvent(new PointerEvent('pointerdown', { bubbles: true }))")
+	b.eval(categoryRow("案") + ".dispatchEvent(new PointerEvent('pointerup', { bubbles: true }))")
+	say("let go elsewhere", "[...document.querySelectorAll('#edit-urls li')].some((li) => li.draggable)")
 	save("saved the URL order")
 	closed("closed")
 	out = append(out, "url order: "+row("S300"))
@@ -417,6 +421,7 @@ func TestUITaskEdit(t *testing.T) { //nolint:paralleltest // the browser tests s
 		"url at the top: c^,pull/9,489v / Move https://example.com/c down",
 		"url dragged: 489^,c,pull/9v / Moved https://example.com/489 to 1 of 3",
 		"across the lists: 489^,c,pull/9v / リリース no page^,設計,レビュー,実装,案v",
+		"let go elsewhere: false",
 		"url order: 10 New title https://example.com/489,https://example.com/c,https://example.com/pull/9 [リリース,設計,レビュー,実装,案]",
 		`sent the URL order: {"taskProject":"proj","task":"S300","new":false,"rev":9,"urls":{"add":["https://example.com/c"],"order":["https://example.com/489","https://example.com/c","https://example.com/pull/9"]}}`,
 		`sent one added: {"taskProject":"proj","task":"S300","new":false,"rev":10,"urls":{"add":["https://example.com/d"]}}`,

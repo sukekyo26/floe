@@ -5358,7 +5358,7 @@
     input.value = '';
     $('edit-urls-said').textContent = t('ui_url_added', url);
   }
-  // The focus goes to a button that can be pressed of the row after it, or before it, as dropCategory's does, else to the way to add one
+  // The focus goes to the x of the row after it, or before it, else to the way to add one
   function dropURL(li) {
     const rows = [...$('edit-urls').children];
     const at = rows.indexOf(li);
@@ -5367,8 +5367,7 @@
     markURLEnds();
     $('edit-urls-said').textContent = t('ui_url_dropped', li.dataset.url);
     const near = rows[at + 1] ?? rows[at - 1];
-    const to = near && ['.url-drop', '.category-up', '.category-down'].map((on) => near.querySelector(on)).find(pressable);
-    (to ?? ($('edit-url-new').hidden ? $('edit-url-plus') : $('edit-url-new'))).focus();
+    (near?.querySelector('.url-drop') ?? ($('edit-url-new').hidden ? $('edit-url-plus') : $('edit-url-new'))).focus();
   }
   // The categories as rows, each with its name, whether no page is under it, and its buttons up, down and to remove it; the grip drags it
   const pagedOf = (task) => new Set(everyPage(task).map((a) => a.work.category).filter(Boolean));
@@ -5504,10 +5503,10 @@
       const li = rowOf(e.target.closest('.category-grip'));
       if (li) li.draggable = true;
     });
-    // A press let go without a drag leaves no row draggable from anywhere but its grip; the row dragged is let go by dragend. Not on
-    // pointercancel, which a browser may send before dragstart, and the drag would not start
+    // A press let go without a drag, anywhere, leaves no row draggable from anywhere but its grip; the row dragged is let go by dragend.
+    // Not on pointercancel, which a browser may send before dragstart, and the drag would not start
     // LIMIT: a press cancelled without a drag (pointercancel alone) leaves its row draggable till the next press is let go or the dialog is drawn again
-    list.addEventListener('pointerup', () => {
+    document.addEventListener('pointerup', () => {
       for (const li of list.children) if (li !== dragged) li.draggable = false;
     });
     list.addEventListener('dragstart', (e) => {
