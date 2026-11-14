@@ -38,4 +38,4 @@ floe が入力を断る検査は、次の 4 つのどれかに当たるものだ
 
 ## floe の不具合や困ったこと
 
-floe を使っていて、または直していて困ったこと（誤りの文が直し方を言わない、検査の漏れ、書きづらいなど）に気付いたら、その時点で報告し（回避したときも）、聞かずにページ `floe-sc-usage-issues`（データは `~/.local/share/floe-plans/floe-sc-usage-issues.yaml`）に S 番号で載せる。書き方はそのページの注に従い、floe 本体を直すかはユーザーが決める（今の PR に混ぜない）。
+floe を使っていて、または直していて困ったこと（誤りの文が直し方を言わない、検査の漏れ、書きづらいなど）に気付いたら、その時点で報告し（回避したときも）、聞かずにページ `floe-issues`（データは `~/.local/share/floe-plans/floe-issues.yaml`）に S 番号で載せる。データは自分のテンプレート `floe-issues` で書き、形と重大さの決め方は `floe template show floe-issues schema.json` に、番号の取り方はページの注に従い、`floe check` を通してから publish する。直ったら項目を消し、`fixed` の末尾に 1 行足す。floe 本体を直すか、いつ直すかはユーザーが決める（今の PR に混ぜない）。
