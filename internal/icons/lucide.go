@@ -6,13 +6,12 @@ import (
 	"regexp"
 )
 
-// builtinFS holds the icon sets floe ships: lucide/, its index.json, icons and LICENSE, written by
-// go test ./internal/icons -run TestBuiltinLucide -update -lucide-zip <lucide-icons-<version>.zip>.
-//
 //go:embed lucide
 var embedded embed.FS
 
-// builtinFS is embedded; a test makes it fail.
+// builtinFS holds the icon sets floe ships: lucide/, its index.json, icons and LICENSE, written by
+// go test ./internal/icons -run TestBuiltinLucide -update -lucide-zip <lucide-icons-<version>.zip>. It is embedded;
+// a test makes it fail.
 var builtinFS fs.FS = embedded
 
 // lucideVersion is the release of Lucide whose icons floe ships.

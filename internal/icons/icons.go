@@ -121,7 +121,7 @@ func Sets() []string {
 	return names
 }
 
-// CheckSet refuses a set that floe cannot fetch, naming the ones it can.
+// CheckSet refuses a set that floe does not know, naming the ones it does: those it fetches and those built in.
 func CheckSet(set string) error {
 	if kitOf(set) == nil {
 		return usererr.New("icons_unknown_set", set, strings.Join(Sets(), ", "))
@@ -163,7 +163,7 @@ func CheckSearch(args []string) error {
 }
 
 // checkSources refuses n zips or URLs to fetch set from when the set holds fewer packages: zips of two versions
-// would mix under one. A set floe cannot fetch is CheckSet's to tell.
+// would mix under one. A set built in or unknown is checkFetchable's to tell.
 func checkSources(set string, n int) error {
 	k := kitOf(set)
 	if k == nil || n <= len(k.packages) {

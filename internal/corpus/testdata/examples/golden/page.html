@@ -285,6 +285,7 @@ blockquote::before { content: "“"; content: "“" / ""; display: block; font: 
 /* A frame's dashes are a little darker than the secondary text. Without color-mix, --muted stays */
 .dg .frame rect { fill: none; stroke: var(--muted); stroke: color-mix(in srgb, var(--muted) 75%, var(--fg)); stroke-width: 1.2; stroke-dasharray: 5 4; }
 .dg .frame.accent rect { stroke: var(--accent); }
+.dg .frame rect.icon-ground { fill: var(--bg); stroke: none; }
 .dg .frame text { fill: var(--muted); font-size: 12px; font-weight: 700; }
 .dg .frame.grouped text { fill: var(--fg); font-size: 13px; }
 .dg .edge { fill: none; stroke: var(--tone, var(--muted)); stroke-width: 1.5; }

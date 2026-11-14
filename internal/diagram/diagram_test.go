@@ -2264,6 +2264,14 @@ func TestIconTones(t *testing.T) {
 	if n := strings.Count(out, "<mask "); n != 1 {
 		t.Errorf("%d masks, want 1, of the lucide icon placed twice", n)
 	}
+	// A frame's corner icon of lines lies on the diagram's ground, which hides the frame's corner under it; one of
+	// colours paints its own.
+	out, mistakes = draw(t, head+`  - frame: { x: 10, y: 10, w: 200, h: 100, icon: lucide/cloud }
+  - frame: { x: 300, y: 10, w: 200, h: 100, icon: aws/aws-lambda }
+`, drawWith("en", store))
+	if mistakes != "" || strings.Count(out, `class="icon-ground"`) != 1 || !strings.Contains(out, `<rect x="9" y="9" width="32" height="32" class="icon-ground"/>`) {
+		t.Errorf("frames' corner icons: told %q, drew\n%s\nwant one ground, under the lucide icon", mistakes, out)
+	}
 	for _, c := range []struct{ parts, want string }{
 		{
 			"  - icon: { name: a, x: 0, y: 0, icon: aws/aws-lambda, tone: bad }\n",

@@ -816,6 +816,11 @@ func (l *layout) addFrame(f *frame, at string) {
 		}
 		l.boxes = append(l.boxes, ir)
 		if use, ok := l.image(at, f.Icon, f.X-1, f.Y-1, 32, "the icon of "+who, ""); ok {
+			// The groups' icons of the clouds paint their own ground over the frame's corner; one of lines is laid on
+			// the diagram's ground, so that the corner does not show through it.
+			if icons.Mono(f.Icon) {
+				kids = append(kids, elem{Kind: "rect", X: f.X - 1, Y: f.Y - 1, W: 32, H: 32, Class: "icon-ground"})
+			}
 			kids = append(kids, use)
 		}
 	}

@@ -420,3 +420,40 @@ func TestShortNames(t *testing.T) {
 		t.Skipf("no set is fetched in %s", root)
 	}
 }
+
+// An icon a word names whole comes first, then the rest by name as before, in a set of azure's shape too: the
+// short names keep their place among those first.
+func TestSearchNamedWhole(t *testing.T) {
+	t.Parallel()
+
+	root := t.TempDir()
+	dir := filepath.Join(root, "azure")
+	if err := os.MkdirAll(dir, 0o700); err != nil {
+		t.Fatal(err)
+	}
+	idx := `{"version": "1", "sources": [], "icons": {"a-virtual-machine": {}, "virtual-machine": {}, ` +
+		`"virtual-machine-scale-sets": {}, "virtual-networks": {}, "kubernetes-services": {}, "aks-engine": {}}}`
+	if err := os.WriteFile(filepath.Join(dir, "index.json"), []byte(idx), 0o600); err != nil {
+		t.Fatal(err)
+	}
+	set := New(root, false, "")
+	for _, c := range []struct {
+		words []string
+		want  []string
+	}{
+		{[]string{"virtual-machine"}, []string{"azure/virtual-machine", "azure/a-virtual-machine", "azure/virtual-machine-scale-sets"}},
+		// No name is the word whole: by name, as before.
+		{[]string{"virtual"}, []string{"azure/a-virtual-machine", "azure/virtual-machine", "azure/virtual-machine-scale-sets", "azure/virtual-networks"}},
+		{[]string{"vnet"}, []string{"azure/virtual-networks"}},
+		{[]string{"aks"}, []string{"azure/kubernetes-services", "azure/aks-engine"}},
+	} {
+		hits, err := set.Search("azure", c.words)
+		var got []string
+		for _, h := range hits {
+			got = append(got, h.Name)
+		}
+		if err != nil || !reflect.DeepEqual(got, c.want) {
+			t.Errorf("Search azure %v = %v, %v; want %v", c.words, got, err, c.want)
+		}
+	}
+}
