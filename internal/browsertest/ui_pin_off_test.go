@@ -40,11 +40,11 @@ func TestUIPinOff(t *testing.T) { //nolint:paralleltest // the browser tests sha
 	publish("alone", "T alone", &solo)
 	s.floe(t, "task", "--slug", "p1", "--task", "#1")
 	pin := make([]string, 0, 4+2*len(slugs))
-	pin = append(pin, "task", "--pin", "--slug", "alone")
+	pin = append(pin, "task", "--pin")
 	for _, slug := range slugs {
 		pin = append(pin, "--slug", slug)
 	}
-	s.floe(t, pin...)
+	s.floe(t, append(pin, "--slug", "alone")...)
 	defer b.unsize()
 	b.size(1440, 900, false)
 	b.navigate("/tasks?project=proj")

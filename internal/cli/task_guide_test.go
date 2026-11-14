@@ -30,11 +30,17 @@ func TestTaskGuideExamples(t *testing.T) {
 		_, out, errs := runIn(dir, s.Env, args...)
 		return out + errs
 	}
-	for _, slug := range []string{"design-notes", "old-notes", "api-notes"} {
-		run("publish", slug+".yaml")
+	ready := func(args ...string) {
+		t.Helper()
+		if code, out, errs := runIn(dir, s.Env, args...); code != 0 {
+			t.Fatalf("floe %v = %d, %q, %q", args, code, out, errs)
+		}
 	}
-	run("task", "--task", "#131", "--title", "Price table")
-	run("task", "--slug", "design-notes", "--task", "#130", "--title", "Fix login", "--state", "doing",
+	for _, slug := range []string{"design-notes", "old-notes", "api-notes"} {
+		ready("publish", slug+".yaml")
+	}
+	ready("task", "--task", "#131", "--title", "Price table")
+	ready("task", "--slug", "design-notes", "--task", "#130", "--title", "Fix login", "--state", "doing",
 		"--url", "https://example.com/issues/482", "--category", "designs")
 
 	doc, err := os.ReadFile("../../docs/agents/tasks.md")

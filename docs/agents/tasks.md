@@ -46,7 +46,7 @@ $ floe task --slug old-notes
 page old-notes: no task
 ```
 
-A page on no task prints `page <slug>: no task`, without its project: `floe publish` prints the project. A project of no open task prints `no open task in project floe`. A page published as HTML has no project, and a `--link` page has the linked file's: give `--project` the project `floe publish` printed.
+A page on no task prints `page <slug>: no task`, without its project: `floe publish` prints the project. A project of no open task prints `no open task in project floe`. A page published by `--link` is in the project of the linked file, and `floe publish --link` does not print it: run `floe task` in that file's repository, or give `--project` that repository's name.
 
 ## Put pages on a task
 
@@ -86,7 +86,7 @@ floe task --task "#131" --parent "#130"
 | `--categories a,b,c` | The order of its categories, whole; `""` takes it off |
 | `--forget` | Removes the task; without `--slug` |
 
-Without `--slug`, `--task` names the task in `--project` (the working directory's project when left out). With `--slug` and `--task`, these but `--forget` change the task the pages go on; with `--slug` alone, each page's own task.
+Without `--slug`, `--task` names the task in `--project` (the working directory's project when left out). With `--slug` and `--task`, these but `--forget` change the task the pages go on; with `--slug` alone, each page's own task, but for `--parent`, which needs `--task`.
 
 ## What floe refuses
 
@@ -103,7 +103,9 @@ floe checks the whole command before it writes, so a refused command writes noth
 | `--task` of a task of no row, alone or with `--forget` | `no task #130 in project floe: check the ID, or name its project with --project` |
 | A category with pages left out of `--categories` | `category designs of task #130 in project floe has pages (design-notes): take them off it first, or keep it in the order` |
 | `--forget` of a task a page or a child task is on | `task #130 of project floe still has 1 page(s), such as design-notes: take them off it or delete them first` |
-| `--parent` naming a task with a parent, or given to a task with children | `task #130 has a parent itself (#120), so it cannot be a parent: tasks have one level of children` |
+| `--parent` naming a task of no row | `project floe has no task #42 that can be a parent` |
+| `--parent` naming a task with a parent | `task #130 has a parent itself (#120), so it cannot be a parent: tasks have one level of children` |
+| `--parent` given to a task with children | `task #42 has child tasks, such as #41, so it cannot have a parent: tasks have one level of children` |
 | `--parent` with `--slug` but no `--task` | `--parent with --slug goes with --task: name the one task the pages go on: run floe --help` |
 | A flag but `--project` with neither `--task` nor `--slug` | `name a task with --task, or pages with --slug; to tell the open tasks, give no flag but --project: run floe --help` |
 | An argument (`floe task design-notes`) | `unknown command "design-notes" for "floe task": run floe --help` |
