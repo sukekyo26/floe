@@ -61,6 +61,7 @@ func TestUIButtons(t *testing.T) { //nolint:paralleltest // the browser tests sh
 				if (Boolean(e.querySelector('svg')) === Boolean(e.closest('dialog, .bulk, .toast'))) why.push(e.querySelector('svg') ? 'an icon' : 'no icon');
 			}
 			if (e.scrollHeight > e.clientHeight + 1) why.push('words over lines');
+			if (e.scrollWidth > e.clientWidth + 1) why.push('words cut off');
 			if (r.left < c.left - 0.5 || r.right > c.right + 0.5 || r.top < c.top - 0.5 || r.bottom > c.bottom + 0.5) why.push('out of its box');
 			return why.length ? [(e.id || e.className) + ': ' + why.join(', ')] : [];
 		});
@@ -165,6 +166,14 @@ func TestUIButtons(t *testing.T) { //nolint:paralleltest // the browser tests sh
 	check("a narrow task done")
 	pressTaskArchive(b, ja.Msg("ui_unarchive"))
 	check("a narrow task archived")
+	// Narrower: a card's heading and its button no longer fit side by side
+	b.size(240, 800, false)
+	b.navigate("/tasks?project=proj&task=%231")
+	b.until("the children", "!document.getElementById('task-child').hidden")
+	check("the narrowest task with a child")
+	b.navigate("/tasks?project=proj&task=%233")
+	b.until("the parent", "!document.getElementById('task-parent-change').hidden")
+	check("the narrowest task with a parent")
 
 	// The diff and a page not found, last: publishing a again may take it off its task
 	b.size(1400, 800, false)

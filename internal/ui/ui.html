@@ -379,7 +379,6 @@
   }
   .lhead:has(> .bulk:not([hidden])) > :not(.bulk) { display: none; }
   .count { min-width: 0; margin-right: auto; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
-  .add-open { flex: 0 1 auto; min-width: 0; white-space: nowrap; overflow: hidden; }
   .add-open svg { flex: none; width: 13px; height: 13px; }
   ul { list-style: none; margin: 0; padding: 0; }
   li {
@@ -489,7 +488,8 @@
      mark (✓, −, +) and its look, not by its color alone. The checkbox is the chip's own, out of sight, so keys and screen readers
      use it as any. No transition: a chip seen between two marks reads as neither */
   .tag-boxes { display: flex; flex-wrap: wrap; align-content: flex-start; gap: 0.4rem; max-height: 16rem; overflow-y: auto; padding: 0.2rem; }
-  /* The one button of words a person typed, of no bound in length: shown whole, over lines, as cutting them would hide what it adds */
+  /* The one button of words a person typed, of no bound in length: shown whole, over lines, as cutting them would hide what it adds.
+     Kept on one line, its words would run out of the modal's box of tags */
   #tag-new { height: auto; min-height: 2rem; padding-block: 0.3rem; white-space: normal; overflow-wrap: anywhere; text-align: start; }
   .tag-box {
     position: relative; display: inline-flex; align-items: center; gap: 0.35rem; max-width: 100%; padding: 0.28rem 0.7rem 0.28rem 0.55rem;
@@ -949,7 +949,9 @@
   /* A task's family, a card apart from the categories of pages under it: on the head's --panel, the lightest ground is what shows it a card.
      The room of a menu, its rows round as a menu's items */
   .family { display: grid; margin-top: 0.15rem; padding: var(--menu-pad); background: var(--frame-bg); border: 1px solid var(--line); border-radius: var(--corner-menu); box-shadow: var(--shadow-sm); }
-  .family-head { display: flex; align-items: center; justify-content: space-between; gap: 0.5rem; padding: 0 0 0.25rem 0.5rem; }
+  /* Its button to the right, on the line under the heading where they do not fit side by side */
+  .family-head { display: flex; flex-wrap: wrap; align-items: center; gap: 0.5rem; padding: 0 0 0.25rem 0.5rem; }
+  .family-head > .btn { margin-left: auto; }
   .family h3 { display: flex; align-items: center; gap: 0.35rem; margin: 0; font: 700 var(--text-small)/1.4 var(--body); color: var(--fg); }
   .family h3 svg { flex: none; width: 15px; height: 15px; color: var(--muted); }
   .family-part { display: grid; gap: 0.1rem; }
