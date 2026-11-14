@@ -37,7 +37,8 @@ sections:
 ## Publishing
 
 - A new page goes in a project, which groups pages on the management page and the task list. floe names the project after the git repository `floe publish` runs in: its `origin`'s name, else the repository's directory name; outside a repository, the directory's name. Where the data file is does not matter (`cd ~/work/app && floe publish ~/notes/db-choice.yaml`).
-- `floe publish` prints the project on stderr after the URL (`page in project app`). If it is not the name of the repository the page is about, move to that repository and publish again with `--move-project`. That takes the page off its task, as a task is of its project, and says so (`page in project app, off task #9`); the task stays in the old project without the page. Tell the user, who decides whether to put the page on a task (*Tasks*). The user can also change the project on the management page (the page's Edit, Slug and project).
+- For a new page, or one whose project changed, `floe publish` prints the project on stderr after the URL (`page in project app`). If it is not the name of the repository the page is about, move to that repository and publish again with `--move-project`.
+- `--move-project` takes the page off its task, as a task is of its project, and says so (`page in project app, off task #9`); the task stays in the old project without the page. Tell the user, who decides whether to put the page on a task (*Tasks*). The user can also change the project on the management page (the page's Edit, Slug and project).
 - floe knows a page by its data file, not by the directory floe runs in: publish the same file again, from any directory and without `--slug`, and it replaces its page, even after the user renamed the page on the management page.
 - A slug MUST NOT be that of another file's page (`slug "db-choice" was published from …: choose another slug`): rename your file (`db-choice-2.yaml`) or give another `--slug`, and publish again.
 
@@ -46,7 +47,7 @@ sections:
 The user may put pages on the tasks of the task list, and group a task's pages by category. Change them only when the user asks; `floe work --help` says how.
 
 - `floe work <slug>` prints the page's task with the task's project, its category and whether it is pinned, and changes nothing. A page on no task prints `page <slug>: no task`, without its project: `floe publish` tells the project.
-- `floe work` prints the todo and doing tasks of the working directory's project, the latest change first, a line each. `--project` names another project (`--project ""` for pages of no project, as a page published as HTML is).
+- `floe work` prints the todo and doing tasks of the working directory's project, the latest change first, a line each. `--project` names another project (`--project ""` for pages of no project).
 - Do not give `--category`, or change a page's category, unless the user asks: the user decides where a page stands among its task's pages.
 
 ## Themes
@@ -113,12 +114,13 @@ Write so:
 
 floe refuses these:
 
-- A text MUST NOT be left bare where YAML reads it as something else: with a `: ` (a key) or a ` #` (a comment) in it, starting with a backtick, or reading as a number, `null` or `~` where text goes (`'42'` in a table's cell, `'1.10'`, `'0x1F'`, `'null'`, `'-'`).
+- A text MUST NOT be left bare where YAML reads it as something else: with a `: ` (a key) or a ` #` (a comment) in it, starting with a backtick, or reading as a number, `null` or `~` where only text goes (`'42'` in a table's cell, `'0x1F'`, `'null'`, `'-'`).
 - A comment MUST NOT stand in `{ }` or `[ ]`. The first line of a `|` block MUST NOT be deeper than the next, nor hold a tab after its spaces.
 - A file MUST be one document (no `---`), with no anchors, aliases, merge keys (`<<`) or tags.
 
 These pass `floe check` and change what you wrote:
 
+- Do not leave bare a text that reads as a number where a number goes too: `default: 1.10` of `fields` is drawn `1.1`. Write `'1.10'`.
 - Do not write a `,` in a bare item of `[ ]`: it ends the item (`tags: [Tokyo, Osaka office]` is two tags).
 - Do not use `"…"`: a `\` in it is an escape, mostly with no mistake (`\_` is a no-break space).
 - Beside Japanese, Chinese or Korean letters, `**`, `*` and `~~` mark text across punctuation too (`**「題」**に` is bold): write a `*` meant as a character there as `\*` or in backticks.

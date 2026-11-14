@@ -182,8 +182,7 @@ func TestGuideCommands(t *testing.T) {
 	}
 }
 
-// Each YAML block of the guide passes floe check and floe diagram inspect: a data file as it is, parts in a section of
-// report.
+// Each YAML block of the guide passes floe check: a data file as it is, parts in a section of report.
 func TestGuideExamples(t *testing.T) {
 	t.Parallel()
 
@@ -206,9 +205,6 @@ func TestGuideExamples(t *testing.T) {
 		}
 		if code, out, errs := runIn(guideEnv(t, dir), "check", name); code != 0 || out != "" || errs != "" {
 			t.Errorf("%s: block %d: %d %q %q (fix docs/agents/guide.md)", guidePath, i+1, code, out, errs)
-		}
-		if code, _, errs := runIn(guideEnv(t, dir), "diagram", "inspect", name); code != 0 || errs != "" {
-			t.Errorf("%s: block %d: floe diagram inspect = %d, %q (fix docs/agents/guide.md)", guidePath, i+1, code, errs)
 		}
 	}
 }

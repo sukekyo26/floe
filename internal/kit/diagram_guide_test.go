@@ -145,12 +145,12 @@ func TestGuideIconSets(t *testing.T) {
 	var tables [][]string
 	err = ast.Walk(kit.PageMarkdown.Parser().Parse(text.NewReader(src)), func(n ast.Node, entering bool) (ast.WalkStatus, error) {
 		table, ok := n.(*extast.Table)
-		if !entering || !ok || cellText(table.FirstChild().FirstChild(), src) != "Set" {
+		if !entering || !ok || plainText(table.FirstChild().FirstChild(), src) != "Set" {
 			return ast.WalkContinue, nil
 		}
 		var sets []string
 		for row := table.FirstChild().NextSibling(); row != nil; row = row.NextSibling() {
-			sets = append(sets, cellText(row.FirstChild(), src))
+			sets = append(sets, plainText(row.FirstChild(), src))
 		}
 		tables = append(tables, sets)
 		return ast.WalkSkipChildren, nil
@@ -161,18 +161,6 @@ func TestGuideIconSets(t *testing.T) {
 	if len(tables) != 1 || !slices.Equal(tables[0], icons.Sets()) {
 		t.Errorf("%s: its tables of icon sets name %q; want one naming %q, the sets floe icons fetch keeps", diagramGuide, tables, icons.Sets())
 	}
-}
-
-// cellText is the text n holds, its code spans' among it.
-func cellText(n ast.Node, src []byte) string {
-	var b strings.Builder
-	_ = ast.Walk(n, func(n ast.Node, entering bool) (ast.WalkStatus, error) { //nolint:errcheck // the walk returns no error
-		if t, ok := n.(*ast.Text); ok && entering {
-			b.Write(t.Segment.Value(src))
-		}
-		return ast.WalkContinue, nil
-	})
-	return b.String()
 }
 
 // embeddedDocs returns the docs docs/docs.go embeds, as //go:embed gives them (agents/guide.md), so that a doc

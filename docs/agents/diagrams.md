@@ -64,7 +64,7 @@ Run `floe diagram inspect` on the data file after every few parts. It prints whe
 
 ## Cloud icons
 
-Draw each service of AWS, Google Cloud or Azure that a diagram shows, in an architecture or a flow or any other diagram, as its cloud's icon. Do not draw a box around an icon. floe ships no icons: it uses each cloud's official icon set, kept once on each machine.
+Draw each service of AWS, Google Cloud or Azure that a diagram shows, in an architecture or a flow or any other diagram, as its cloud's icon. Do not draw a box around an icon (an Azure service is a box until its set is kept: step 1). floe ships no icons: it uses each cloud's official icon set, kept once on each machine.
 
 | Set | How it is kept | Names |
 |---|---|---|
