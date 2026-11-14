@@ -37,7 +37,8 @@ sections:
 ## Publishing
 
 - A new page goes in a project, which groups pages on the management page and the task list. floe names the project after the git repository `floe publish` runs in: its `origin`'s name, else the repository's directory name; outside a repository, the directory's name. Where the data file is does not matter (`cd ~/work/app && floe publish ~/notes/db-choice.yaml`).
-- When a page is new or its project changes (it had none, it replaced another file's page, or `--move-project` moved it), `floe publish` prints the project on stderr after the URL (`page in project app`). If it is not the name of the repository the page is about, move to that repository and publish again with `--move-project`.
+- When a page is new or its project changes (it had none, it replaced another file's page, or `--move-project` moved it), `floe publish` prints the project on stderr after the URL (`page in project app`). If it is not the name of the repository the page is about, move to that repository and publish again with `--move-project`, but not for a `--link` page (next item).
+- A `--link` page is in the project of the linked file's directory (for a folder, the folder itself), not of where `floe publish` runs; linking it again keeps that project, and `--move-project` does not go with `--link`. For a link in the wrong project, tell the user, who changes the project on the management page (the page's Edit, Slug and project). To begin with, link a file inside the repository the page is about.
 - `--move-project` takes the page off its task, as a task is of its project, and says so (`page in project app, off task #9`); the task stays in the old project without the page. Tell the user, who decides whether to put the page on a task (*Tasks*). The user can also change the project on the management page (the page's Edit, Slug and project).
 - floe knows a page by its data file, not by the directory floe runs in: publish the same file again, from any directory and without `--slug`, and it replaces its page, even after the user renamed the page on the management page.
 - A slug MUST NOT be that of another file's page (`slug "db-choice" was published from …: choose another slug`): rename your file (`db-choice-2.yaml`) or give another `--slug`, and publish again.
@@ -147,6 +148,6 @@ plan.yaml:9:17: value must be one of 'accent', 'good', 'warn', 'bad', 'muted'
 ## More
 
 - `floe render db-choice.yaml` writes `db-choice.html` beside it, to keep in a repository.
-- `floe publish --link file.html` shows an HTML file of your own as it is.
+- `floe publish --link file.html` shows an HTML file of your own as it is, in the project of its directory (*Publishing*).
 - Templates, parts and themes of your own: `floe template --help`, `floe part --help` and `floe theme --help`.
 - To change a data file from a program, write it with a YAML library set to write no anchors or aliases, to keep non-ASCII text as it is, and to keep the keys' order.
