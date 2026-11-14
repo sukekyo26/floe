@@ -2,8 +2,6 @@
 :scope { content: "●" / ""; }
 :scope { content: counter(c, Decimal); }
 :scope { content: counters(c, ".", decimal-leading-zero); }
-:scope { transform: translate(2px, 50%); }
-:scope { transform: none; }
 :scope { list-style: inside square; }
 :scope { list-style: none !important; }
 :scope { --font: "Hiragino Sans", sans-serif; }
@@ -13,4 +11,3 @@
 :scope { --n: counter(c); }
 :scope { --m: counter(c, decimal); }
 :scope { --u: upper-alpha; }
-:scope { transform: none !important; }

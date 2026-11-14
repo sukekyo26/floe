@@ -12,6 +12,8 @@ import (
 
 	"github.com/tdewolff/parse/v2/css"
 	"golang.org/x/net/html"
+
+	floecss "floe/internal/css"
 )
 
 // uiSheet is a piece of the management page's CSS: a <style>, or an element's style attribute written as a rule of its
@@ -174,7 +176,7 @@ var manageCornersRule = Rule{Name: "manage-corners", Check: func(in *Input) []Fi
 				case slices.Contains(manageSteps, name) && !bareRoot(d.rule):
 					found = append(found, uiFinding("manage-corners", s, d.at, "sets "+name+" in "+d.rule+"; only :root sets the steps"))
 				case radiusProperty.MatchString(name):
-					for _, c := range items(d.value) {
+					for _, c := range floecss.Items(d.value) {
 						if c := text(s.src, c); c != "/" && !slices.Contains(manageCorners, c) {
 							found = append(found, uiFinding("manage-corners", s, d.at, name+": "+value+" in "+d.rule+"; read one of :root's corners "+strings.Join(manageCorners, ", ")))
 						}

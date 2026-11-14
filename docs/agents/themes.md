@@ -79,7 +79,7 @@ floe's base sets these on `:root`. Set them on `:scope` in `base.css` (a rule of
 
 ### Part variables
 
-A part reads its variables on its own root. A theme sets one on the root `:scope` of its file of the part or look that sets or reads it (`floe part show <part> part.css` prints it): a look's file reaches every part that takes the look (`marked.css` reaches `checklist` and `decision`), a part's file that part alone. floe's own themes set them nowhere else (floe's tests refuse any other place in floe's themes; `floe theme check` does not test yours). A variable a part sets on an element inside it from the data (chart's `--c`, code's `--digits`) is the part's own: a value on the root does not reach it.
+Set a part's variable on the root `:scope` of the theme's file of that part, or of a look it takes (`floe part show <part> part.css` prints where the part sets it): a look's file reaches every part that takes the look (`marked.css` reaches `checklist` and `decision`), a part's file that part alone. Do not set it in a file that does not reach the part (`palette.css`, `base.css`, `markdown.css`, the file of another part): the part's own value on its root wins, and the theme's is lost without a word. A variable a part sets on elements inside it (chart's `--c` on each series, code's `--floe-code-gutter`) is set on that element in the part's file (`:scope .s1 { --c: … }` in `chart.css`); one a part sets from the data in a style attribute (chart's `--left`, `--right`, `--right-narrow`, code's `--digits`) cannot be set by a theme. A variable a part only reads may be set wherever it is inherited from. `floe theme check` does not check where a variable is set.
 
 | Variable | Set in | What it changes | Default |
 |---|---|---|---|
@@ -167,7 +167,8 @@ In `cards.css`, `:scope` is the cards as a whole (the part's root) and `.card` i
 
 ### Corners
 
-- Give each of `--radius`, `--radius-small` and `--radius-pill` one length (four corners, or a `/`, voids a rule that reads it as one corner or inside `calc()` or `min()`).
+- `--radius-small` and `--radius-pill` MUST each be one item, a length or one function: `var()`, `calc()` and `min()` pass (refused: two lengths or a `/` void a bar's `rx` and a pill's `min()`, without a word).
+- Give `--radius` one length too (floe's parts read it as it is, but a rule of yours that reads it in `calc()` or as one corner is void).
 - Make a pill that wraps round no more than `--floe-pill-end` (`0.75lh`) with `min(var(--radius-pill), var(--floe-pill-end))`.
 - Name corners of other shapes with variables of your own, as in `:scope { --hand: 14px 6px 12px 8px / 8px 12px 6px 14px; }`.
 
@@ -178,8 +179,9 @@ In `cards.css`, `:scope` is the cards as a whole (the part's root) and `.card` i
 - a theme directory whose name breaks the naming rule or is the name of one of floe's themes, or that is a link to a directory, or a link to a directory in a theme, or `FLOE_THEMES_DIR` equal to, containing or inside the directory of your parts or templates;
 - a file or a directory of a name floe does not read (*Files*; a name beginning with `.` is skipped), and a file floe cannot read (a link with no target, a file without permission, a FIFO or a device);
 - a `theme.yaml` that is not keys and values, a key other than `description:`, or a `description:` that is not text;
-- in a CSS file: CSS floe cannot read (a block, string, comment or `url()` left open at the end of the file, a `}` that closes no block, a string that runs past its line), an `@import`, an escape (`\`) outside a string, a `url()` or a comment, or a `url()` that is not one address or one quoted string alone (`url("a.png" x)`, `url(a b)`).
+- in a CSS file: CSS floe cannot read (a block, string, comment or `url()` left open at the end of the file, a `}` that closes no block, a string that runs past its line), an `@import`, an escape (`\`) outside a string, a `url()` or a comment, or a `url()` that is not one address or one quoted string alone (`url("a.png" x)`, `url(a b)`);
+- a `--radius-small` or `--radius-pill` of more than one item (*Corners*), in a theme or a part of yours.
 
 If `theme.yaml` has a mistake, a theme is a link to a directory, or a file cannot be read, the check prints that alone: mend it and run the check again for the rest.
 
-The check tests CSS syntax, not values or places. A part variable set where its part does not read it (in `base.css`, in the file of another part, on a state, in nested CSS, in a list of selectors, in `@keyframes`, with `!important`), or text that sinks into its background, passes with exit code 0.
+Of values, the check tests only those two corners, and it does not test places. A part variable set where it does not reach (*Part variables*), and what a page shows (text that sinks into its background, a `box-shadow` over floe's, `--floe-text-small` set in `palette.css`), pass with exit code 0.

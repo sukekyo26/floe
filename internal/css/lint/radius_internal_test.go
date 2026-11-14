@@ -8,13 +8,10 @@ import (
 	"github.com/tdewolff/parse/v2/css"
 )
 
-// paletteRadii are the palette's corners, which floe's CSS reads within calc() and as one corner of several: each is one
-// length.
-var paletteRadii = []string{"--radius", "--radius-small", "--radius-pill"}
-
 // radiusRule keeps the round of every corner of floe's CSS in the palette: a corner (rx, or a property ending in radius)
 // is a shape (cornerShapes), or takes all its lengths from variables set in a palette, the root of a theme's base.css or
-// the root of floe's base.css alone. The palette's three corners are set in a palette alone, one length each.
+// the root of floe's base.css alone. Where the palette's three corners are set is one-place's, and how many items
+// --radius-small and --radius-pill hold radius-length's.
 // LIMIT: clip-path's inset(… round …), corner-shape, SVG's rx= attribute and style attributes are not read; floe's CSS
 // writes none.
 var radiusRule = Rule{Name: "radius", Check: func(in *Input) []Finding {
@@ -35,10 +32,6 @@ var radiusRule = Rule{Name: "radius", Check: func(in *Input) []Finding {
 					setOK[name] = true
 				} else {
 					setIn[name] = append(setIn[name], s.File+" "+d.rule)
-				}
-				if slices.Contains(paletteRadii, name) && (s.For != "palette" || len(d.value) != 1) {
-					file, line := s.at(d.at)
-					found = append(found, Finding{file, line, "radius", name + ": " + text(s.Src, d.value) + "; the palette sets it to one length"})
 				}
 			}
 		}

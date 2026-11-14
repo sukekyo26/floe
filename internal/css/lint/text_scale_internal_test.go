@@ -11,23 +11,12 @@ import (
 var textSteps = []string{"var(--floe-text-small)", "var(--floe-text-aside)"}
 
 // textScale keeps the size of parts' and looks' text, in font-size and in font, to base.css's steps of small text, inherit,
-// or a rem or an em of 1 or more. Only floe's base.css sets a step. An exception's Key is a part's file, the rule and the
-// size it writes: "parts/code/part.css :scope pre: 0.875rem".
+// or a rem or an em of 1 or more (only floe's base.css sets a step: one-place). An exception's Key is a part's file,
+// the rule and the size it writes: "parts/code/part.css :scope pre: 0.875rem".
 // LIMIT: the templates' page.css and the themes are not read for sizes.
 var textScale = Rule{Name: "text-scale", Check: func(in *Input) []Finding {
 	var found []Finding
 	for _, s := range in.Sheets() {
-		if s.Kind != kindBase {
-			for name, ds := range declarations(s.Src, func(p string) bool { return strings.HasPrefix(p, "--floe-text-") }) {
-				for _, d := range ds {
-					file, line := s.at(d.at)
-					found = append(found, Finding{
-						file, line, "text-scale",
-						"sets " + name + "; only floe's base.css sets the steps of small text, and a theme writes a size of its own as it is",
-					})
-				}
-			}
-		}
 		if s.Kind != kindPart && s.Kind != kindLook {
 			continue
 		}

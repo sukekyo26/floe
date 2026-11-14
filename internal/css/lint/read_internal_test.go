@@ -150,35 +150,9 @@ func opener(t token) bool {
 		t.Type == css.LeftBraceToken
 }
 
-// items splits a value into its items at its own depth: a function or a bracket with what it holds, or a token.
-func items(value []token) [][]token {
-	if len(value) == 0 {
-		return nil
-	}
-	base := value[0].Depth
-	var out [][]token
-	start := -1
-	for i, t := range value {
-		switch {
-		case t.Depth > base:
-		case start >= 0:
-			out = append(out, value[start:i+1])
-			start = -1
-		case opener(t):
-			start = i
-		default:
-			out = append(out, value[i:i+1])
-		}
-	}
-	if start >= 0 {
-		out = append(out, value[start:])
-	}
-	return out
-}
-
 // joined returns each item of value as its tokens written together, without what was between them.
 func joined(value []token) []string {
-	all := items(value)
+	all := floecss.Items(value)
 	out := make([]string, 0, len(all))
 	for _, item := range all {
 		var b strings.Builder
@@ -358,7 +332,7 @@ func sizeOf(prop string, value []token) (string, bool) {
 		}
 		return b[len(b)-1], true
 	}
-	for _, item := range items(value) {
+	for _, item := range floecss.Items(value) {
 		t := item[0]
 		switch {
 		case opener(t):

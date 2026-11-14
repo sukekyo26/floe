@@ -12,21 +12,6 @@
 :scope { content: counters(c, ".", lower-roman); } /* want "content: counters(c, \".\", lower-roman) counts in lower-roman; count in digits" */
 :scope { content: counter(c, var(--style)); } /* want "content: counter(c, var(--style)) counts by a variable; count in digits" */
 :scope { list-style-type: var(--style); } /* want "list-style-type: var(--style) counts by a variable; count in digits" */
-:scope { transform: rotate(-2deg); } /* want "transform: rotate(-2deg) turns, skews or scales; a theme moves alone" */
-:scope { -webkit-transform: skewX(4deg); } /* want "-webkit-transform: skewX(4deg) turns, skews or scales; a theme moves alone" */
-:scope { -moz-transform: scale(1.1); } /* want "-moz-transform: scale(1.1) turns, skews or scales; a theme moves alone" */
-:scope { transform: matrix(1, 0, 0, 1, 2, 2); } /* want "transform: matrix(1, 0, 0, 1, 2, 2) turns, skews or scales; a theme moves alone" */
-:scope { transform: var(--move); } /* want "transform: var(--move) turns, skews or scales; a theme moves alone" */
-:scope { transform: translateZ(2px); } /* want "transform: translateZ(2px) turns, skews or scales; a theme moves alone" */
-:scope { rotate: 2deg; } /* want "rotate: 2deg turns, scales or moves along a path; a theme writes it not" */
-:scope { rotate: none; } /* want "rotate: none turns, scales or moves along a path; a theme writes it not" */
-:scope { scale: 1.1; } /* want "scale: 1.1 turns, scales or moves along a path; a theme writes it not" */
-:scope { zoom: 1.1; } /* want "zoom: 1.1 turns, scales or moves along a path; a theme writes it not" */
-:scope { offset-path: path("M0 0"); } /* want "\"M0 0\" writes a word; write a mark" "offset-path: path(\"M0 0\") turns, scales or moves along a path; a theme writes it not" */
-:scope { offset-rotate: 10deg; } /* want "offset-rotate: 10deg turns, scales or moves along a path; a theme writes it not" */
-:scope { perspective: 100px; } /* want "perspective: 100px turns, scales or moves along a path; a theme writes it not" */
-:scope { --tilt: rotate(-2deg); } /* want "--tilt: rotate(-2deg) holds a turn for a transform; a theme moves alone" */
-:scope { --flat: perspective(9px); } /* want "--flat: perspective(9px) holds a turn for a transform; a theme moves alone" */
 :scope { --x: attr(data-x); } /* want "--x: attr(data-x) shows an attribute's text; write a mark" */
 :scope { --s: counter(c, upper-alpha); } /* want "--s: counter(c, upper-alpha) counts in upper-alpha; count in digits" */
 :scope { --t: counters(c, ".", lower-roman); } /* want "--t: counters(c, \".\", lower-roman) counts in lower-roman; count in digits" */
@@ -34,5 +19,5 @@
 :scope { --display: attr(data-x); } /* want "--display: attr(data-x) shows an attribute's text; write a mark" */
 :scope { --FONT: "Fig."; } /* want "\"Fig.\" writes a word; write a mark" */
 :scope { --Display: "Fig."; } /* want "\"Fig.\" writes a word; write a mark" */
-:scope { transform/**/: rotate(9deg); } /* want "transform: rotate(9deg) turns, skews or scales; a theme moves alone" */
 @counter-style kanji { system: fixed; symbols: '一'; } /* want "'一' writes a word; write a mark" "@counter-style counts in a style of its own; count in digits" */
+:scope { offset-path: path("M0 0"); } /* want "\"M0 0\" writes a word; write a mark" */
