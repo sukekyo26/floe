@@ -5704,6 +5704,7 @@
   // makes the row again when the task went meanwhile; Escape on it leaves the focus on back (the menu it came from),
   // the row after it, its category's add button, or the task's edit button
   // LIMIT: a page's write has no rev, so the way back writes over what was written to the page since, as the archive's does. Give page writes a rev if that comes to trouble someone
+  // LIMIT: put on another task since, the page is moved back unasked, the toast not saying the task it left. Ask and say it as Set the task does if that comes to trouble someone
   async function takePageOff(a, back) {
     const name = a.task.name;
     const category = a.task.category ?? '';
