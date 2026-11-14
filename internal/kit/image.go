@@ -10,7 +10,6 @@ import (
 	"strconv"
 	"strings"
 
-	"floe/internal/dirs"
 	"floe/internal/files"
 	"floe/internal/usererr"
 )
@@ -39,10 +38,10 @@ func ReadImage(fsys fs.FS, name, dir, of string) (template.URL, error) {
 
 // ImageFile reads the image name of fsys, the directory dir as its mistakes name it, that of the file of, and
 // returns it with the type of its data URI: what a page shows, and what the command line sends a server to draw
-// with. A name floe does not read (told relative to the directory of of), an extension of no image floe takes, a
-// file that is not a regular one, and one over maxImage are mistakes of the name, without a place; one that cannot
-// be read is told at its path under dir, in the system's words (usererr.CannotRead), which says what is wrong of
-// the file.
+// with. Its mistakes are of the name, without a place, for the caller to put where the name was written: a name
+// floe does not read (told relative to the directory of of), an extension of no image floe takes, a file that is
+// not a regular one, one over maxImage, and one that cannot be read, in the system's words (kit_image_unread).
+// Only a directory that cannot be opened is told at it (dir), once.
 // LIMIT: a file is taken by its name's type, what it holds unchecked: one that holds another shows broken.
 // LIMIT: a file made a FIFO between the Stat and the Open blocks the read; open it without blocking if it comes to.
 func ImageFile(fsys fs.FS, name, dir, of string) ([]byte, string, error) {
@@ -50,16 +49,15 @@ func ImageFile(fsys fs.FS, name, dir, of string) ([]byte, string, error) {
 	if err != nil {
 		return nil, "", err
 	}
-	at := dirs.Join(dir, name)
 	f, err := fsys.Open(name)
 	if err != nil {
-		return nil, "", usererr.CannotRead(at, err) //nolint:wrapcheck // the system's words, at the file
+		return nil, "", imageUnread(name, err)
 	}
 	defer f.Close()
 	fi, err := f.Stat()
 	switch {
 	case err != nil:
-		return nil, "", usererr.CannotRead(at, err) //nolint:wrapcheck // the system's words, at the file
+		return nil, "", imageUnread(name, err)
 	case !fi.Mode().IsRegular():
 		return nil, "", usererr.New("kit_image_not_file", name)
 	case fi.Size() > maxImage:
@@ -68,7 +66,7 @@ func ImageFile(fsys fs.FS, name, dir, of string) ([]byte, string, error) {
 	b, err := io.ReadAll(io.LimitReader(f, maxImage+1))
 	switch {
 	case err != nil:
-		return nil, "", usererr.CannotRead(at, err) //nolint:wrapcheck // the system's words, at the file
+		return nil, "", imageUnread(name, err)
 	case len(b) > maxImage:
 		return nil, "", tooLarge(name, int64(len(b)))
 	}
@@ -94,7 +92,7 @@ func imageStat(fsys fs.FS, name, dir, of string) (string, error) {
 		if de, ok := errors.AsType[*files.DirError](err); ok {
 			return "", usererr.CannotRead(dir, de.Err) //nolint:wrapcheck // the system's words, at the directory
 		}
-		return "", usererr.CannotRead(dirs.Join(dir, name), err) //nolint:wrapcheck // the system's words, at the file
+		return "", imageUnread(name, err)
 	case !fi.Mode().IsRegular():
 		// A FIFO would block the read.
 		return "", usererr.New("kit_image_not_file", name)
@@ -102,6 +100,11 @@ func imageStat(fsys fs.FS, name, dir, of string) (string, error) {
 		return "", tooLarge(name, fi.Size())
 	}
 	return typ, nil
+}
+
+// imageUnread is err, of reading the image name, a mistake of the name in the system's words.
+func imageUnread(name string, err error) error {
+	return usererr.InSystemWordsOf("kit_image_unread", name, err) //nolint:wrapcheck // the system's words, of the name
 }
 
 // tooLarge refuses the image name of size bytes, saying by how much: one just over the limit would be 1 MiB as

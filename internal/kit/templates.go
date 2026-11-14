@@ -391,17 +391,27 @@ func (a *assetsOf) walk(at string) error {
 	return nil
 }
 
-// check checks the file p of the assets as an image floe takes, its mistake at it, and keeps a read of it.
+// check checks the file p of the assets as an image floe takes, its mistake at it, and keeps a read of it, whose
+// mistake is at it too: page.html's asset reads it when drawn.
 func (a *assetsOf) check(p string) error {
 	if _, err := imageStat(a.files, p, a.dir, "assets/"); err != nil {
-		var e *usererr.Error
-		if errors.As(err, &e) && e.File() == "" {
-			return e.PlacedAt(path.Join(a.dir, p), 0, 0)
-		}
-		return err
+		return a.placed(p, err)
 	}
-	a.reads[p] = sync.OnceValues(func() (template.URL, error) { return ReadImage(a.files, p, a.dir, "assets/") })
+	a.reads[p] = sync.OnceValues(func() (template.URL, error) {
+		uri, err := ReadImage(a.files, p, a.dir, "assets/")
+		return uri, a.placed(p, err)
+	})
 	return nil
+}
+
+// placed is err, of the file p of the assets: a mistake of its name at it; err as it is when it has a place (the
+// directory that cannot be opened) or is floe's failure.
+func (a *assetsOf) placed(p string, err error) error {
+	var e *usererr.Error
+	if errors.As(err, &e) && e.File() == "" {
+		return e.PlacedAt(path.Join(a.dir, p), 0, 0)
+	}
+	return err
 }
 
 // sub is the directory dir of an FS as an FS of its own, its Stat the FS's: fs.Sub's opens a file to stat it,

@@ -221,13 +221,13 @@ func TestPublish(t *testing.T) {
 		t.Errorf("a report as JSON to an Accept that is not JSON exactly: %s", asText.Body)
 	}
 	need := e.publish(t, "f", "lang: en\ntemplate: pic\ni: [img/a.png, img/b.png]\n", nil)
-	want(t, need, http.StatusUnprocessableEntity, `{"images":["img/a.png","img/b.png"]}`)
+	want(t, need, http.StatusUnprocessableEntity, `{"images":[{"name":"img/a.png","places":[{"line":3,"column":5}]},{"name":"img/b.png","places":[{"line":3,"column":16}]}]}`)
 	png := []byte("\x89PNG\r\n\x1a\n0000")
 	want(t, e.publish(t, "f", "lang: en\ntemplate: pic\ni: [img/a.png]\n", map[string][]byte{"img/a.png": png}), http.StatusCreated, `"slug":"f"`)
 	// Renamed, f.yaml's page is found without a slug, the images asked for and sent again.
 	want(t, e.write(t, http.MethodPatch, "/api/pages/f", map[string]any{"slug": "f-b"}), http.StatusOK, `"slug":"f-b"`)
 	up := server.Upload{File: "f.yaml", Source: []byte("lang: en\ntemplate: pic\ni: [img/a.png]\ntitle: two\n"), Project: "p", Repo: "p", Place: "f.yaml"} //nolint:exhaustruct // the rest not given
-	want(t, e.write(t, http.MethodPost, "/api/pages/data", up), http.StatusUnprocessableEntity, `{"images":["img/a.png"]}`)
+	want(t, e.write(t, http.MethodPost, "/api/pages/data", up), http.StatusUnprocessableEntity, `{"images":[{"name":"img/a.png","places":[{"line":3,"column":5}]}]}`)
 	up.Images = map[string][]byte{"img/a.png": png}
 	want(t, e.write(t, http.MethodPost, "/api/pages/data", up), http.StatusOK, `"slug":"f-b"`)
 	want(t, e.write(t, http.MethodPut, "/api/pages/f-b", up), http.StatusNotFound, "not found")
@@ -403,6 +403,11 @@ func TestLinkedData(t *testing.T) {
 	want(t, e.do(t, http.MethodGet, "/a/d/?raw", ""), http.StatusOK, "one")
 	writeFiles(t, filepath.Dir(data), map[string]string{"d.yaml": "lang: en\ntemplate: pic\nnote: two\n"})
 	want(t, e.do(t, http.MethodGet, "/a/d/?raw", ""), http.StatusOK, "two")
+	// An image that cannot be read is told at each item naming it.
+	writeFiles(t, filepath.Dir(data), map[string]string{"d.yaml": "lang: en\ntemplate: pic\ni: [img/none.png, img/none.png]\n"})
+	unread := `: the image "img/none.png" cannot be read (no such file or directory)`
+	gone := e.do(t, http.MethodGet, "/api/pages/d/download", "")
+	want(t, gone, http.StatusBadRequest, "d.yaml:3:5"+unread+"\n"+data+":3:19"+unread)
 	writeFiles(t, filepath.Dir(data), map[string]string{"d.yaml": "lang: en\ntemplate: nope\n"})
 	want(t, e.do(t, http.MethodGet, "/a/d/?raw", "", "Accept-Language", "ja"), http.StatusOK, "データファイルに誤りがあります")
 	want(t, e.do(t, http.MethodGet, "/api/pages/d/download", ""), http.StatusBadRequest, `unknown template "nope"`)

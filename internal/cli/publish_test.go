@@ -28,11 +28,14 @@ func served(t *testing.T) (env map[string]string, dir string) {
 	s := servetest.Start(t, map[string]string{
 		"templates/pic/page.html": "<!doctype html>\n<html lang=\"{{.Lang}}\"><head><title>{{.Title}}</title></head><body>" +
 			"{{range .Data.i}}<img src=\"{{.}}\">{{end}}</body></html>\n",
-		"templates/pic/schema.json":  `{"type": "object", "properties": {"i": {"type": "array", "items": {"type": "string", "format": "image"}}}}`,
+		"templates/pic/schema.json": `{"type": "object", "properties": {"i": {"type": "array", "items": {"type": "string", "format": "image"}}, ` +
+			`"zeta": {"type": "string", "format": "image"}, "alpha": {"type": "string", "format": "image"}}}`,
 		"templates/pic/example.yaml": "lang: en\ntemplate: pic\n",
 		"home/p/d.yaml":              "lang: en\ntemplate: pic\ntitle: D\ni: [img/a.png]\n",
 		"home/p/img/a.png":           "\x89PNG\r\n\x1a\n0000",
 		"home/p/gone.yaml":           "lang: en\ntemplate: pic\ni: [img/none.png]\n",
+		"home/p/order.yaml":          "lang: en\ntemplate: pic\nzeta: img/none.png\ni: [img/dir.png, img/none.png]\nalpha: img/none.png\n",
+		"home/p/img/dir.png/a.png":   "",
 		"home/p/h.html":              "<title>H</title>",
 		"home/p/docs/a.html":         "<title>A</title>",
 		"home/p/w.yaml":              "lang: en\ntemplate: report\nsections:\n  - parts:\n      - text: \"```\\ncode\\n```\"\n",
@@ -55,7 +58,15 @@ func TestPublishThroughServer(t *testing.T) {
 	}{
 		{[]string{"publish", "d.yaml"}, 0, url + "/a/d/\n", ""},
 		{[]string{"publish", "d.yaml", "--title", "Kept"}, 0, url + "/a/d/\n", `, title "D")` + "\n" + `warning: the title changed from "D" to "Kept"` + "\n"},
-		{[]string{"publish", "gone.yaml"}, 1, "", "img/none.png: no such file or directory\n"},
+		{[]string{"publish", "gone.yaml"}, 1, "", `gone.yaml:3:5: the image "img/none.png" cannot be read (no such file or directory)` + "\n"},
+		// The images the CLI reads are told at each item naming them, in the order of the file, as floe check
+		// tells them, whatever the order of the keys.
+		{[]string{"publish", "order.yaml"}, 1, "", `order.yaml:3:7: the image "img/none.png" cannot be read (no such file or directory)
+order.yaml:4:5: "img/dir.png" is not a file of an image, but a directory or the like: name a regular file of the image
+order.yaml:4:18: the image "img/none.png" cannot be read (no such file or directory)
+order.yaml:5:8: the image "img/none.png" cannot be read (no such file or directory)
+`},
+		{[]string{"publish", "--link", "gone.yaml"}, 1, "", `gone.yaml:3:5: the image "img/none.png" cannot be read (no such file or directory)` + "\n"},
 		{[]string{"publish", "--link", "h.html"}, 0, url + "/a/h/\n", ""},
 		{[]string{"publish", "w.yaml"}, 0, url + "/a/w/\n", "w.yaml:5:15: warning: this text holds a fenced block of code on its line 1"},
 		{[]string{"publish", "--link", "w.yaml", "--slug", "wl"}, 0, url + "/a/wl/\n", "w.yaml:5:15: warning: this text holds a fenced block of code on its line 1"},

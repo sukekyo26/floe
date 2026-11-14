@@ -179,7 +179,33 @@ type SavedPrev struct {
 
 // ImagesNeeded answers a publish without images whose data reads some: the images to send.
 type ImagesNeeded struct {
-	Images []string `json:"images"`
+	Images []NeededImage `json:"images"`
+}
+
+// NeededImage is an image to send, by its name, with the line and column of each item naming it in the data file
+// sent: the publisher tells a mistake of reading it there, in the file as it named it.
+type NeededImage struct {
+	Name   string       `json:"name"`
+	Places []ImagePlace `json:"places"`
+}
+
+// ImagePlace is a line and a column of the data file sent.
+type ImagePlace struct {
+	Line   int `json:"line"`
+	Column int `json:"column"`
+}
+
+// imagesNeeded is need as the publisher reads it.
+func imagesNeeded(need *store.NeedImages) ImagesNeeded {
+	images := make([]NeededImage, len(need.Images))
+	for i, n := range need.Images {
+		places := make([]ImagePlace, len(n.Places))
+		for j, p := range n.Places {
+			places[j] = ImagePlace{Line: p.Line, Column: p.Column}
+		}
+		images[i] = NeededImage{Name: n.Name, Places: places}
+	}
+	return ImagesNeeded{Images: images}
 }
 
 // sendSaved answers the entry a write of r saved: 201 for a new slug, 200 for one replaced.
@@ -237,7 +263,7 @@ func (s *Server) save(w http.ResponseWriter, r *http.Request) {
 	drawing := s.latest()
 	entry, err := s.cfg.Store.PrepareData(drawing, up, opts)
 	if need, ok := errors.AsType[*store.NeedImages](err); ok {
-		sendJSON(w, http.StatusUnprocessableEntity, ImagesNeeded{Images: need.Names})
+		sendJSON(w, http.StatusUnprocessableEntity, imagesNeeded(need))
 		return
 	}
 	if err == nil {

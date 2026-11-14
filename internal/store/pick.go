@@ -93,7 +93,8 @@ func DrawLink(dw Drawing, slug string, m *Meta, file string, cut bool) ([]byte, 
 	images := files.NewRoot(filepath.Dir(file))
 	defer images.Close() //nolint:errcheck // only read from
 	o := tmpl.Options{
-		Theme: m.GivenTheme(), Default: m.CreatedTheme, Untitled: slug, Images: images, ImagesDir: "", Icons: dw.Icons,
+		Theme: m.GivenTheme(), Default: m.CreatedTheme, Untitled: slug, Images: images, ImagesDir: "", ImageAt: nil,
+		Icons:  dw.Icons,
 		CutOff: cut,
 	}
 	// Its warnings are the writer's, whom publish and check tell; one who opens the page cannot mend them.
