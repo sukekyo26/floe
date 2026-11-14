@@ -31,6 +31,7 @@
 | `floe theme guide` | 自分のテーマの作り方を出す |
 | `floe theme default` | 管理ページの設定で選んだ既定のテーマを出す |
 | `floe list` | ページを新しい順に並べる |
+| `floe info <slug>` | ページのプロジェクト・タスク・データファイルなど、floe が持つものを出す |
 | `floe rm <slug>...` | ページを消す |
 | `floe archive <slug>...` | ページを消さずに一覧から外す。あとで戻せる |
 | `floe tag <slug>...` | ページにタグを付ける・外す |
@@ -235,6 +236,28 @@ floe のものか自分のものの、テンプレート・部品（見た目と
 
 サーバーが並べるとおりに、ページを新しい順に出します（動いていなければ起こす）。各行はタブで区切った 4 列で、更新した日時（手元の時刻、`YYYY-MM-DD HH:MM`）、slug、題、リンクしたパス（保存したページなら空）です。アーカイブしたページは出しません。`--archived` を付けるとそれも出し、どの行にも 5 列目（`archived` か空）を足します。
 
+## `floe info <slug>`
+
+サーバーが持つとおりにページを出します（動いていなければ起こす）。何も書きません。1 行に、名前と値をタブで区切って 1 つずつ出し、毎回同じ 14 個の名前を同じ順に出します。無い値は空です。字の値（`title`・`project`・`task`・`category`・`repository`・`source` と、`tags` の 1 つずつ。タグは空白で並べる）は Go の書き方で引用符に囲み、`slug`・`url`・`kind`・`pinned`・`archived`・`version`・`updated` は囲みません。`project` はプロジェクトの無いページでは空で、引用符を外すと `floe task` の `--project` にそのまま渡せます。`kind` は `data`・`link`・`folder` のどれかです。`source` は、データファイルの `repository` の根からのパス（`repository` が空なら実際のパス）か、リンクしたファイル・フォルダの実際のパスです。`version` はリンクでは空です。`updated` は `floe list` と同じ、手元の時刻です。アーカイブしたページも出し、`archived true` と言います。無い slug は断ります。
+
+```text
+$ floe info design-notes
+slug	design-notes
+title	"Design notes"
+url	http://127.0.0.1:7325/a/design-notes/
+kind	data
+project	"floe"
+task	"#130"
+category	"designs"
+pinned	false
+tags	"plans" "cli, api"
+archived	false
+repository	"floe"
+source	"docs/design-notes.yaml"
+version	3
+updated	2026-11-15 10:20
+```
+
 ## `floe rm <slug>...`
 
 サーバーを通して、ページを順に消します（動いていなければ起こす）。最初の失敗（無いページなど）で止まります。リンクしたファイルそのものは残し、登録だけを消します。
@@ -272,9 +295,9 @@ floe task --task "#130" --forget                                    # タスク�
 floe task --slug design-notes                                       # ページの今を言い、何も書かない
 ```
 
-書いたタスクとページを 1 行ずつ、store が残した値で言います。タスクは `made`（行が無かった）・`changed`・`unchanged`（欄を書いたが同じ値だった）と書いた欄、ページのカテゴリを足したときはカテゴリの並び、その後にページのタスク・カテゴリ・ピンです。何も変わらず欄も書いていないタスクは言いません。プロジェクトの無いタスクは `in no project` です。`--slug` だけでほかのフラグが無ければ、各ページを今の値で同じように言い、何も書きません（ページが名指すタスクに行が無くても、行を作りません）。無いページの `--slug` があれば、どのページも言う前に断ります。`--slug` が無く `--task` だけなら、タスクを今の値（状態と、あれば題・URL・カテゴリ・親。URL は 1 つずつ引用符で `urls "https://…" "https://…"`、書き込みで最後の 1 つを外したら `no urls`）で言い、何も書きません。行の無いタスクは断ります。
+書いたタスクとページを 1 行ずつ、store が残した値で言います。タスクは `made`（行が無かった）・`changed`・`unchanged`（欄を書いたが同じ値だった）と書いた欄、ページのカテゴリを足したときはカテゴリの並び、その後にページのタスク・カテゴリ・ピンです。何も変わらず欄も書いていないタスクは言いません。プロジェクトの無いタスクは `in no project` です。タスクに無いページは、`no task` の後にプロジェクトを言い（`page design-notes: no task, in project floe`）、プロジェクトの無いページは `no task` だけです。`--slug` だけでほかのフラグが無ければ、各ページを今の値で同じように言い、何も書きません（ページが名指すタスクに行が無くても、行を作りません）。無いページの `--slug` があれば、どのページも言う前に断ります。`--slug` が無く `--task` だけなら、タスクを今の値（状態と、あれば題・URL・カテゴリ・親。URL は 1 つずつ引用符で `urls "https://…" "https://…"`、書き込みで最後の 1 つを外したら `no urls`）で言い、何も書きません。行の無いタスクは断ります。
 
-`--project` 以外のフラグが無ければ、プロジェクトの着手前・作業中（状態が `todo` か `doing`）のタスクを、`--task` がタスクを言うのと同じ行で 1 つずつ言い、何も書きません。状態を最後に変えたものが先で、同じ時刻のものは名前順です。完了とアーカイブのタスクは出しません（どの状態のタスクも、`floe task --task <ID>` で言えます）。プロジェクトは、`--project` を省くとカレントディレクトリのもの（`floe publish` がデータファイルのページを入れるプロジェクトと同じ）で、`""` は無しです。`--link` で publish したページは、リンク先のファイルのプロジェクトに入り、`floe publish --link` はそのプロジェクトを言いません。そのファイルのリポジトリの名前を `--project` に渡すか、そこで `floe task` を打ちます。着手前・作業中のタスクが無いプロジェクトは `no open task in project floe` と言い、断りではありません。`--task` も `--slug` も無く `--project` 以外のフラグがあれば、名指されていないタスクやページを変えることになるので断ります。
+`--project` 以外のフラグが無ければ、プロジェクトの着手前・作業中（状態が `todo` か `doing`）のタスクを、`--task` がタスクを言うのと同じ行で 1 つずつ言い、何も書きません。状態を最後に変えたものが先で、同じ時刻のものは名前順です。完了とアーカイブのタスクは出しません（どの状態のタスクも、`floe task --task <ID>` で言えます）。プロジェクトは、`--project` を省くとカレントディレクトリのもの（`floe publish` がデータファイルのページを入れるプロジェクトと同じ）で、`""` は無しです。`--link` で publish したページは、リンク先のファイルのプロジェクトに入ります。そのプロジェクトは `floe task --slug` と `floe info` が言い、ページが新しいときと移ったときは `floe publish` も言います。着手前・作業中のタスクが無いプロジェクトは `no open task in project floe` と言い、断りではありません。`--task` も `--slug` も無く `--project` 以外のフラグがあれば、名指されていないタスクやページを変えることになるので断ります。
 
 ```text
 $ floe task
@@ -289,7 +312,7 @@ page design-notes: task #130 in project floe
 $ floe task --task "#130"
 task #130 in project floe: state doing
 $ floe task --slug design-notes --task ""
-page design-notes: no task
+page design-notes: no task, in project floe
 $ floe task --task "#130" --forget
 task #130 in project floe: forgotten
 ```

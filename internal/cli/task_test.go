@@ -35,6 +35,25 @@ func pageTaskOf(t *testing.T, env map[string]string, slug string) string {
 	return string(b)
 }
 
+// storeWrites is what a write of pages or tasks would change in the store of env: tasks.json and each page's meta.json.
+func storeWrites(t *testing.T, env map[string]string) string {
+	t.Helper()
+
+	var all []string
+	err := filepath.WalkDir(env["FLOE_DIR"], func(path string, d os.DirEntry, err error) error {
+		if err != nil || d.IsDir() || (d.Name() != "meta.json" && d.Name() != "tasks.json") {
+			return err
+		}
+		b, err := os.ReadFile(path) //nolint:gosec // G304: the test's own store
+		all = append(all, path+"\n"+string(b))
+		return err
+	})
+	if err != nil {
+		t.Fatal(err)
+	}
+	return strings.Join(all, "\n")
+}
+
 // floe task writes the tasks first, once for each different task of the pages, and the pages then: checked first, so that
 // a page of no task or no page at all leaves the rest; flags of the pages alone make no row of a task.
 func TestTaskCommand(t *testing.T) {
@@ -375,7 +394,7 @@ func TestTaskSays(t *testing.T) {
 	// A page that leaves a task is told with the task and category it left, of the same name as its new one too.
 	say("task t5 in project p: made; categories \"build\"\npage a: task t5 in project p, category \"build\", pinned; moved from task t1, category \"build\"\n",
 		"task", "--slug", "a", "--task", "t5", "--category", "build")
-	say("page a: no task, pinned; off task t5, category \"build\"\n", "task", "--slug", "a", "--task", "")
+	say("page a: no task, in project p, pinned; off task t5, category \"build\"\n", "task", "--slug", "a", "--task", "")
 	say("task t1 in project p: forgotten\n", "task", "--task", " t1 ", "--forget")
 	say("task t3 in project p: made\npage a: task t3 in project p, pinned\n", "task", "--slug", "a", "--task", "t3")
 	say("task t4 in project p: made; parent \"t3\"\n", "task", "--task", "t4", "--parent", "t3")
@@ -496,48 +515,34 @@ func TestTaskReadsPages(t *testing.T) {
 		}
 		return out + errs
 	}
-	// What a write would change: tasks.json and each page's meta.json.
-	written := func() string {
-		t.Helper()
-		var all []string
-		err := filepath.WalkDir(env["FLOE_DIR"], func(path string, d os.DirEntry, err error) error {
-			if err != nil || d.IsDir() || (d.Name() != "meta.json" && d.Name() != "tasks.json") {
-				return err
-			}
-			b, err := os.ReadFile(path) //nolint:gosec // G304: the test's own store
-			all = append(all, path+"\n"+string(b))
-			return err
-		})
-		if err != nil {
-			t.Fatal(err)
-		}
-		return strings.Join(all, "\n")
-	}
 	run(0, "publish", "w.yaml", "--slug", "a")
 	run(0, "publish", "d.yaml", "--slug", "b")
 	run(0, "publish", "h.html", "--link", "--slug", "c")
 	run(0, "task", "--slug", "a", "--task", "#1", "--category", "designs", "--pin")
 	run(0, "task", "--slug", "c", "--task", "#1")
 	run(0, "archive", "c")
+	run(0, "publish", "../q/w.yaml", "--slug", "d")
+	setMeta(t, env, "d", "project", "")
 	// The pages name a task of no row, as a hand edit leaves: a write would make it, a read leaves it out.
 	if err := os.Remove(filepath.Join(env["FLOE_DIR"], "tasks.json")); err != nil {
 		t.Fatal(err)
 	}
 
-	before := written()
+	before := storeWrites(t, env)
 	want := "page a: task #1 in project p, category \"designs\", pinned\n" +
-		"page b: no task\n" +
-		"page c: task #1 in project p\n"
-	if got := run(0, "task", "--slug", "a", "--slug", "b", "--slug", "c"); got != want {
-		t.Errorf("floe task --slug a --slug b --slug c = %q, want %q", got, want)
+		"page b: no task, in project p\n" +
+		"page c: task #1 in project p\n" +
+		"page d: no task\n"
+	if got := run(0, "task", "--slug", "a", "--slug", "b", "--slug", "c", "--slug", "d"); got != want {
+		t.Errorf("floe task --slug a --slug b --slug c --slug d = %q, want %q", got, want)
 	}
-	if got := run(0, "task", "--slug", "b"); got != "page b: no task\n" {
+	if got := run(0, "task", "--slug", "b"); got != "page b: no task, in project p\n" {
 		t.Errorf("floe task --slug b = %q", got)
 	}
 	if got := run(1, "task", "--slug", "a", "--slug", "nope"); strings.Contains(got, "page a") || !strings.Contains(got, `"nope"`) {
 		t.Errorf("floe task --slug a --slug nope = %q", got)
 	}
-	if after := written(); after != before {
+	if after := storeWrites(t, env); after != before {
 		t.Errorf("reading wrote:\n%s\nwant\n%s", after, before)
 	}
 }
