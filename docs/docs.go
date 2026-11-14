@@ -30,3 +30,8 @@ var TemplateGuide []byte
 //
 //go:embed agents/themes.md
 var ThemeGuide []byte
+
+// TaskGuide is tasks.md, how to read the task list, put pages on a task and change a task, whole.
+//
+//go:embed agents/tasks.md
+var TaskGuide []byte

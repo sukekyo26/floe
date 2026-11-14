@@ -38,8 +38,12 @@ func TestUIPinOff(t *testing.T) { //nolint:paralleltest // the browser tests sha
 	}
 	solo := "solo"
 	publish("alone", "T alone", &solo)
-	s.floe(t, "work", "p1", "--task", "#1")
-	s.floe(t, append(append([]string{"work"}, slugs...), "alone", "--pin")...)
+	s.floe(t, "task", "--slug", "p1", "--task", "#1")
+	pin := []string{"task", "--pin", "--slug", "alone"}
+	for _, slug := range slugs {
+		pin = append(pin, "--slug", slug)
+	}
+	s.floe(t, pin...)
 	defer b.unsize()
 	b.size(1440, 900, false)
 	b.navigate("/tasks?project=proj")

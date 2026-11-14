@@ -75,15 +75,16 @@ func agentsNamed() string {
 	return strings.Join(groups, ", or ")
 }
 
-// guideCmd is floe guide: guide.md, without its Tasks section unless the task mode is on in the management page's
-// settings. With no store to be had (no HOME to put it under), it is off, so that an agent reads the guide anyway.
+// guideCmd is floe guide: guide.md, without its Tasks section's Ask after publishing unless the task mode is on in the
+// management page's settings. With no store to be had (no HOME to put it under), it is off, so that an agent reads the guide anyway.
 func (a *app) guideCmd() *cobra.Command {
 	return &cobra.Command{
 		Use:   "guide",
 		Short: "Print the guide for agents: how to write, check and publish a page",
-		Long: `Print the guide for agents: how to write, check and publish a page. Its Tasks section, which has the agent ask
-whether to put each new page on a task, is printed only when the task mode is on in the management page's settings;
-it reads them from the store the other commands send to (FLOE_DIR) without starting the server.`,
+		Long: `Print the guide for agents: how to write, check and publish a page. Its Tasks section points to floe task
+guide; the part of it that has the agent ask whether to put each new page on a task is printed only when the task mode
+is on in the management page's settings, read from the store the other commands send to (FLOE_DIR) without starting
+the server.`,
 		Args: cobra.NoArgs,
 		RunE: func(_ *cobra.Command, _ []string) error {
 			set, err := a.settings()
@@ -95,7 +96,7 @@ it reads them from the store the other commands send to (FLOE_DIR) without start
 			}
 			guide := docs.Guide
 			if !set.TaskMode {
-				if guide, err = kit.WithoutSection(docs.Guide, "Tasks"); err != nil {
+				if guide, err = kit.WithoutSection(docs.Guide, "Ask after publishing"); err != nil {
 					return err //nolint:wrapcheck // floe's failure, which says what failed
 				}
 			}

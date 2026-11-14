@@ -64,7 +64,7 @@ func TestUISettings(t *testing.T) { //nolint:paralleltest // the browser tests s
 	b.pressKey(kb.Escape)
 	b.until("closed by Escape", "!document.getElementById('settings').open")
 	out = append(out, b.eval(focused))
-	// The task mode on: written alone, the theme kept, and floe guide prints its Tasks section
+	// The task mode on: written alone, the theme kept, and floe guide prints its Tasks section's Ask after publishing
 	b.eval("document.getElementById('settings-open').click()")
 	b.until("the list's values", "document.getElementById('settings-mode-now').textContent !== ''")
 	b.eval("document.querySelector('.settings-item[data-panel=mode]').click()")
@@ -76,7 +76,7 @@ func TestUISettings(t *testing.T) { //nolint:paralleltest // the browser tests s
 		t.Fatal(err)
 	}
 	out = append(out, b.eval(seen), b.eval("document.getElementById('settings-mode-now').textContent"), b.eval(focused),
-		strings.TrimSpace(string(set)), strconv.FormatBool(strings.Contains(s.floe(t, "guide"), "\n## Tasks\n")))
+		strings.TrimSpace(string(set)), strconv.FormatBool(strings.Contains(s.floe(t, "guide"), "\n### Ask after publishing\n")))
 	b.eval("document.getElementById('settings').close()")
 	// The mode's part opened before the settings are read: not checked as off, nor saved, till they are; read, it is on
 	const mode = "document.getElementById('task-mode').checked + ' ' + document.getElementById('mode-save').disabled"

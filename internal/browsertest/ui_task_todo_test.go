@@ -18,9 +18,9 @@ func TestUITaskTodo(t *testing.T) { //nolint:paralleltest // the browser tests s
 	b.navigate("/")
 	const long = "社内ポータルの作り直しと権限の見直しと監査の記録"
 	for _, name := range []string{"#a", "#b"} {
-		s.floe(t, "work", "--project", long, "--task", name, "--state", "todo")
+		s.floe(t, "task", "--project", long, "--task", name, "--state", "todo")
 	}
-	s.floe(t, "work", "--project", long, "--task", "#w", "--state", "done")
+	s.floe(t, "task", "--project", long, "--task", "#w", "--state", "done")
 	// Times apart, which two writes in a row may not be: tied, the names would give the order looked for
 	file := filepath.Join(s.Env["FLOE_DIR"], "tasks.json")
 	text, err := os.ReadFile(file) //nolint:gosec // G304: a path the test names

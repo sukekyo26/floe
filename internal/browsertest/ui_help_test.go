@@ -44,7 +44,7 @@ func TestUIHelp(t *testing.T) { //nolint:paralleltest // the browser tests share
 	if _, err := store.New(s.Env["FLOE_DIR"]).Edit("a", store.Edit{Project: &project}); err != nil {
 		t.Fatal(err)
 	}
-	s.floe(t, "work", "a", "--task", "#1", "--title", "one", "--state", "doing")
+	s.floe(t, "task", "--slug", "a", "--task", "#1", "--title", "one", "--state", "doing")
 	b.size(1440, 900, false)
 	defer b.unsize()
 	out := make([]string, 0, 32)

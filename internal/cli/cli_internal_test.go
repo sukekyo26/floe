@@ -39,7 +39,7 @@ func TestEncode(t *testing.T) {
 		t.Errorf("encoded %s, %v", b, err)
 	}
 	// Every text a command line gives, a string or strings, by its JSON pointer: the bodies of publish and link, the
-	// tags of floe tag, and the task's and the page's of floe work, down through their JSON names. These never reach
+	// tags of floe tag, and the task's and the page's of floe task, down through their JSON names. These never reach
 	// encode with a text no UTF-8, each for its reason.
 	unreached := map[string]string{
 		"/parentTitle": "the management page alone sends it",
