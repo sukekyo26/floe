@@ -175,7 +175,6 @@
   .dcount b { font-weight: 700; }
   .dcount .c { color: var(--chg); } .dcount .a { color: var(--ins); } .dcount .r { color: var(--del); } .dcount .s { color: var(--fg); }
   .dtail { margin-left: auto; display: flex; flex-wrap: wrap; gap: 0.35rem 0.75rem; }
-  .dtail > .btn { white-space: nowrap; }
 
   .dmain { position: relative; flex: 1; min-height: 0; display: grid; grid-template-columns: var(--toc) minmax(0, 1fr); background: var(--panel); }
   .dmain > .grip { position: absolute; top: 0; }
@@ -230,6 +229,7 @@
   /* A folder's page has the folder's tree on its left, --side the width it takes (0 when hidden or over the page) */
   .frame { flex: 1; display: block; width: calc(100% - var(--side, 0px)); margin-left: var(--side, 0px); border: 0; background: var(--frame-bg); }
   .notfound { flex: 1; align-content: center; }
+  .notfound > svg { width: 52px; height: 52px; }
   .side {
     position: fixed; left: 0; top: var(--bar); bottom: 0; z-index: 2; width: var(--side-width); display: flex; flex-direction: column;
     background: var(--panel); border-right: 1px solid var(--line);
@@ -325,10 +325,12 @@
   .dot { background: var(--new); }
   .ring { border: 1.5px solid var(--box-line); }
 
-  /* Every button of words is of this one form, a modal's foot taller; round stays for the buttons of an icon and what is not a button */
+  /* Every button of words is of this one form, a modal's foot taller; round stays for the buttons of an icon and what is not a button.
+     Its words keep to one line, of its fixed height: where they do not fit, the row of buttons goes onto another */
   .btn {
     display: inline-flex; align-items: center; justify-content: center; gap: 0.3rem; height: 2rem; padding: 0 0.65rem;
     font-size: var(--text-small); color: var(--fg); background: var(--panel); border: 1px solid var(--line); border-radius: var(--corner-small);
+    white-space: nowrap;
     transition: background-color 0.15s, border-color 0.15s, filter 0.15s;
   }
   .dialog-actions .btn { height: 2.25rem; padding: 0 0.9rem; font-size: var(--text); }
@@ -377,7 +379,6 @@
   }
   .lhead:has(> .bulk:not([hidden])) > :not(.bulk) { display: none; }
   .count { min-width: 0; margin-right: auto; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
-  .add-open { flex: 0 1 auto; min-width: 0; white-space: nowrap; overflow: hidden; }
   .add-open svg { flex: none; width: 13px; height: 13px; }
   ul { list-style: none; margin: 0; padding: 0; }
   li {
@@ -487,6 +488,9 @@
      mark (✓, −, +) and its look, not by its color alone. The checkbox is the chip's own, out of sight, so keys and screen readers
      use it as any. No transition: a chip seen between two marks reads as neither */
   .tag-boxes { display: flex; flex-wrap: wrap; align-content: flex-start; gap: 0.4rem; max-height: 16rem; overflow-y: auto; padding: 0.2rem; }
+  /* The one button of words a person typed, of no bound in length: shown whole, over lines, as cutting them would hide what it adds.
+     Kept on one line, its words would run out of the modal's box of tags */
+  #tag-new { height: auto; min-height: 2rem; padding-block: 0.3rem; white-space: normal; overflow-wrap: anywhere; text-align: start; }
   .tag-box {
     position: relative; display: inline-flex; align-items: center; gap: 0.35rem; max-width: 100%; padding: 0.28rem 0.7rem 0.28rem 0.55rem;
     color: var(--muted); background: var(--panel); border: 1px solid var(--line); border-radius: 999px; font-size: var(--text-small); cursor: pointer;
@@ -599,7 +603,7 @@
   @keyframes toast-in { from { opacity: 0; transform: translateY(8px); } }
   /* Only one with a button takes the pointer from the page under it */
   .toast:has(.btn) { padding-block: 0.4rem; padding-right: 0.4rem; pointer-events: auto; }
-  .toast .btn { margin-left: 0.5rem; white-space: nowrap; }
+  .toast .btn { margin-left: 0.5rem; }
   /* The bulk bar, in the head over the list while items are selected: the head on the ground of the rows selected */
   .lhead:has(> .bulk:not([hidden])) { padding-inline: 0.5rem; background: var(--sel); }
   /* What a font makes too wide for the list scrolls, as the row of views does, the clearing staying in reach; 4px hold the focus ring */
@@ -607,7 +611,7 @@
   .bulk::-webkit-scrollbar { display: none; }
   /* The count gives way first, cut off, where the bar is too narrow for all */
   .bulk-count { min-width: 0; margin-right: auto; padding-left: 0.5rem; overflow: hidden; text-overflow: ellipsis; font-size: var(--text-small); font-weight: 650; color: var(--fg); white-space: nowrap; }
-  .bulk .btn { flex: none; padding: 0 0.5rem; background: none; border-color: transparent; white-space: nowrap; }
+  .bulk .btn { flex: none; padding: 0 0.5rem; background: none; border-color: transparent; }
   .bulk .btn:hover { background: var(--subtle); }
   .bulk .clear { flex: none; position: sticky; right: 0; background: var(--sel); }
   .bulk .clear:hover { background: var(--subtle); }
@@ -646,6 +650,8 @@
   .find-acts .frame-actions { flex: none; align-items: center; }
   /* A finger's press on a row opens it, and there are no arrow keys: the buttons could only act on the first */
   @media (hover: none) { .find-acts:not([hidden]) { display: none; } }
+  /* LIMIT: the 17rem hold a foot of one line. On two, in a window with a mouse under some 340px wide and 630px high, the close button goes
+     partly under the modal's edge. Take the foot's height off the box's if such a window comes to matter */
   .find-list, .find-none { height: min(20rem, calc(100dvh - 17rem)); }
   /* The rows as wide as the field, the 10px of the scrollbar in the modal's margin. LIMIT: a scrollbar drawn over the page, as on a
      phone, leaves the rows 10px wider than the field. Measure the scrollbar if that comes to show */
@@ -676,7 +682,7 @@
   .find-foot .menu { top: auto; bottom: calc(100% - 0.5rem); left: 0; right: auto; min-width: min(17.5rem, 100%); max-width: 100%; }
   /* The modal of the help: a button for each of its two panels, which share one box. The top stays where it is as one panel goes for
      the other, so that the buttons do; only the box scrolls, the head and the foot in sight (as the settings' cards do) */
-  .help-switch { display: flex; gap: 0.4rem; }
+  .help-switch { display: flex; flex-wrap: wrap; gap: 0.4rem; }
   .help-panel { display: grid; gap: 1rem; }
   #keys { margin-block: 6dvh auto; max-height: calc(94dvh - 1rem); }
   #keys .modal-body { display: flex; flex-direction: column; max-height: calc(94dvh - 1rem - 2px); }
@@ -810,7 +816,7 @@
   .category-plus-row .text { flex: 1; height: auto; border: 0; border-radius: 0; box-shadow: none; padding-inline: 0.6rem; }
   .category-plus-row .text:focus-visible { outline-offset: -2px; }
   .category-said { margin: 0; font-weight: 400; color: var(--danger); }
-  .dialog-actions { display: flex; justify-content: flex-end; gap: 0.5rem; padding-top: 1rem; margin-top: 0.25rem; border-top: 1px solid var(--line); }
+  .dialog-actions { display: flex; flex-wrap: wrap; justify-content: flex-end; gap: 0.5rem; padding-top: 1rem; margin-top: 0.25rem; border-top: 1px solid var(--line); }
   /* Only the rows of the filters scroll, their foot in sight: the height a dialog may have, of its own rule in the browser */
   #filter-box { grid-template-rows: auto minmax(0, 1fr) auto; max-height: calc(100dvh - 6px - 2rem); }
   #filter-box .shelf-more { min-height: 0; overflow-y: auto; margin-inline: -4px; padding: 4px; }
@@ -908,8 +914,9 @@
   .shell.task-missing { grid-template-columns: minmax(0, 1fr); }
   .shell.task-missing .reader, .shell.task-missing #list-grip, .shell.task-missing .listcol > .col-foot { display: none; }
   .thead { flex: none; display: grid; gap: 0.35rem; padding: 0.5rem 1rem 0.65rem; background: var(--panel); border-bottom: 1px solid var(--line); }
-  .ttop { display: flex; align-items: center; justify-content: space-between; gap: 0.5rem; }
-  .tacts { display: flex; gap: 0.5rem; }
+  /* The buttons stay to the right, on the line under the way back where they do not fit beside it */
+  .ttop { display: flex; flex-wrap: wrap; align-items: center; gap: 0.5rem; }
+  .tacts { display: flex; gap: 0.5rem; margin-left: auto; }
   /* A press's height: it stands right under the bar's tabs, which a small one sends the press to */
   .up { justify-self: start; display: inline-flex; align-items: center; gap: 0.15rem; height: 2.25rem; margin-left: -0.25rem; font-size: var(--text-small); color: var(--muted); text-decoration: none; }
   .up:hover { color: var(--fg); text-decoration: underline; }
@@ -1105,7 +1112,7 @@
           <a class="up" id="task-up" href="/tasks" title="{{.Msg "ui_tasks_back"}}"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m15 6-6 6 6 6"/></svg>{{.Msg "ui_screen_tasks"}}</a>
           <span class="tacts">
             <button type="button" class="btn" id="task-edit"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4 20h4L19 9a2.8 2.8 0 0 0-4-4L4 16v4Zm9.5-13.5 4 4"/></svg>{{.Msg "ui_edit"}}</button>
-            <button type="button" class="btn" id="task-archive" hidden></button>
+            <button type="button" class="btn" id="task-archive" hidden><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4 5h16v4H4zM5 9v10h14V9M10 13h4"/></svg><span class="label"></span></button>
           </span>
         </div>
         <h2 id="task-title"></h2>
@@ -1117,11 +1124,11 @@
         </div>
         <div class="family" id="task-family" hidden>
           <div class="family-part" id="task-up-part" hidden>
-            <div class="family-head"><h3><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m14 9-5-5-5 5"/><path d="M20 20h-7a4 4 0 0 1-4-4V4"/></svg>{{.Msg "ui_task_parent"}}</h3><button type="button" class="btn add-open" id="task-parent-add" aria-label="{{.Msg "ui_up_add_named"}}" hidden><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" aria-hidden="true"><path d="M12 5v14M5 12h14"/></svg>{{.Msg "ui_task_child_add"}}</button><button type="button" class="btn add-open" id="task-parent-change" aria-label="{{.Msg "ui_up_change_named"}}" hidden>{{.Msg "ui_task_up_change"}}</button></div>
+            <div class="family-head"><h3><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m14 9-5-5-5 5"/><path d="M20 20h-7a4 4 0 0 1-4-4V4"/></svg>{{.Msg "ui_task_parent"}}</h3><button type="button" class="btn add-open" id="task-parent-add" aria-label="{{.Msg "ui_up_add_named"}}" hidden><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true"><path d="M12 5v14M5 12h14"/></svg>{{.Msg "ui_task_child_add"}}</button><button type="button" class="btn add-open" id="task-parent-change" aria-label="{{.Msg "ui_up_change_named"}}" hidden><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4 20h4L19 9a2.8 2.8 0 0 0-4-4L4 16v4Zm9.5-13.5 4 4"/></svg>{{.Msg "ui_task_up_change"}}</button></div>
             <div class="family-rows" id="task-up-rows"></div>
           </div>
           <div class="family-part" id="task-kids-part" hidden>
-            <div class="family-head"><h3><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m15 10 5 5-5 5"/><path d="M4 4v7a4 4 0 0 0 4 4h12"/></svg><span id="task-family-word"></span></h3><button type="button" class="btn add-open" id="task-child" aria-label="{{.Msg "ui_child_add_named"}}" hidden><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" aria-hidden="true"><path d="M12 5v14M5 12h14"/></svg>{{.Msg "ui_task_child_add"}}</button></div>
+            <div class="family-head"><h3><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m15 10 5 5-5 5"/><path d="M4 4v7a4 4 0 0 0 4 4h12"/></svg><span id="task-family-word"></span></h3><button type="button" class="btn add-open" id="task-child" aria-label="{{.Msg "ui_child_add_named"}}" hidden><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true"><path d="M12 5v14M5 12h14"/></svg>{{.Msg "ui_task_child_add"}}</button></div>
             <div class="family-rows" id="task-family-rows"></div>
           </div>
         </div>
@@ -1145,7 +1152,7 @@
         </div>
       </div>
       <ul id="list"></ul>
-      <div class="state" id="task-none" hidden><strong>{{.Msg "ui_task_no_pages"}}</strong><p id="task-delete-box"><button type="button" class="btn danger" id="task-delete">{{.Msg "ui_task_forget"}}</button></p><p class="error" id="task-delete-error" hidden></p><p id="task-none-kids" hidden>{{.Msg "ui_task_none_kids"}}</p></div>
+      <div class="state" id="task-none" hidden><strong>{{.Msg "ui_task_no_pages"}}</strong><p id="task-delete-box"><button type="button" class="btn danger" id="task-delete"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4 7h16M10 11v6m4-6v6M6 7l1 12h10l1-12M9 7V4h6v3"/></svg><span class="label">{{.Msg "ui_task_forget"}}</span></button></p><p class="error" id="task-delete-error" hidden></p><p id="task-none-kids" hidden>{{.Msg "ui_task_none_kids"}}</p></div>
       <div class="state" id="task-missing" hidden><strong></strong><p><a href="/tasks" id="task-missing-up">{{.Msg "ui_tasks_back"}}</a></p></div>
       <div class="state" id="tasks-none" hidden><strong></strong><p><a href="/tasks" id="tasks-other">{{.Msg "ui_tasks_other"}}</a></p></div>
       <div class="state" id="tasks-failed" hidden><strong>{{.Msg "ui_tasks_unreadable"}}</strong><p><a href="/">{{.Msg "ui_to_page_list"}}</a></p></div>
@@ -1153,12 +1160,12 @@
         <strong>{{.Msg "ui_tasks_empty"}}</strong>
         <p>{{.Msg "ui_tasks_empty_hint"}}</p>
         <p><a href="/">{{.Msg "ui_to_page_list"}}</a></p>
-        <p><button type="button" class="btn add-open" id="task-add-empty"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" aria-hidden="true"><path d="M12 5v14M5 12h14"/></svg>{{.Msg "ui_task_add"}}</button></p>
+        <p><button type="button" class="btn add-open" id="task-add-empty"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true"><path d="M12 5v14M5 12h14"/></svg>{{.Msg "ui_task_add"}}</button></p>
       </div>
       <div class="state" id="empty" hidden>
         <strong>{{.Msg "ui_empty_pages"}}</strong>
         <p>{{.Msg "ui_empty_pages_hint"}}</p>
-        <p><button type="button" class="btn add-open" id="add-empty"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" aria-hidden="true"><path d="M12 5v14M5 12h14"/></svg>{{.Msg "ui_add_link"}}</button></p>
+        <p><button type="button" class="btn add-open" id="add-empty"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true"><path d="M12 5v14M5 12h14"/></svg>{{.Msg "ui_add_link"}}</button></p>
       </div>
       <div class="state" id="all-archived" hidden>
         <strong></strong>
@@ -1212,7 +1219,7 @@
     </div>
     <p class="dcount" id="diff-count" role="status"></p>
     <div class="dtail">
-      <a class="btn" id="diff-close" title="{{.Msg "ui_diff_close_title"}}">{{.Msg "ui_close"}}</a>
+      <a class="btn" id="diff-close" title="{{.Msg "ui_diff_close_title"}}"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true"><path d="M6 6l12 12M18 6 6 18"/></svg>{{.Msg "ui_close"}}</a>
     </div>
   </div>
   <p class="dnote" id="diff-url-note" hidden>{{.Msg "ui_diff_bad_url"}}</p>
@@ -1227,7 +1234,7 @@
     <button type="button" class="icon-btn side-show" id="diff-toc-show" aria-expanded="false" aria-controls="diff-toc-nav" title="{{.Msg "ui_diff_toc_show"}}" aria-label="{{.Msg "ui_diff_toc_show"}}" hidden><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linejoin="round" aria-hidden="true"><rect x="3" y="4" width="18" height="16" rx="2"/><path d="M9 4v16"/></svg></button>
     <div class="dbody" id="diff-body"><iframe id="diff-frame" title="{{.Msg "ui_diff_frame"}}" allow="clipboard-write *; fullscreen *"></iframe></div>
   </div>
-  <div class="state notfound" id="diff-none" hidden><p>{{.Msg "ui_diff_none"}}</p><a class="btn" id="diff-page">{{.Msg "ui_diff_open_page"}}</a></div>
+  <div class="state notfound" id="diff-none" hidden><p>{{.Msg "ui_diff_none"}}</p><a class="btn" id="diff-page"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linejoin="round" aria-hidden="true"><path d="M6 3h8l4 4v14H6zM14 3v4h4M9 12h6M9 16h6"/></svg>{{.Msg "ui_diff_open_page"}}</a></div>
 </main>
 <p class="print-alone" id="print-alone"><span id="print-alone-text">{{.Msg "ui_print_alone" (.Msg "ui_open_raw")}}</span> <a id="print-raw"></a></p>
 <div class="toasts" id="toasts" role="status" aria-live="polite"></div>
@@ -1235,7 +1242,7 @@
   <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linejoin="round" aria-hidden="true"><path d="M7 3h7l5 5v12a1 1 0 0 1-1 1H7a1 1 0 0 1-1-1V4a1 1 0 0 1 1-1Zm7 0v5h5"/></svg>
   <strong>{{.Msg "ui_not_found"}}</strong>
   <p id="notfound-detail"></p>
-  <p><a class="btn" id="notfound-back" href="/">{{.Msg "ui_to_page_list"}}</a></p>
+  <p><a class="btn" id="notfound-back" href="/"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m15 6-6 6 6 6"/></svg>{{.Msg "ui_to_page_list"}}</a></p>
 </div>
 <dialog id="find" aria-labelledby="find-title">
   <div class="modal-body">
@@ -3838,7 +3845,9 @@
     const archive = $('task-archive');
     const back = task.state === 'archived';
     archive.hidden = !back && task.state !== 'done';
-    archive.textContent = t(back ? 'ui_task_unarchive' : 'ui_task_archive');
+    archive.querySelector('.label').textContent = t(back ? 'ui_unarchive' : 'ui_archive');
+    archive.title = t(back ? 'ui_unarchive_named' : 'ui_archive_named', task.name);
+    archive.setAttribute('aria-label', archive.title);
     archive.onclick = (e) => archiveTask(e, task, !back);
     // Archived elsewhere: the word takes no focus, and the button is there beside it
     if (onState && sel.hidden) archive.focus();
@@ -4207,7 +4216,7 @@
   }
   function disarmForget() {
     $('task-delete').classList.remove('armed');
-    $('task-delete').textContent = t('ui_task_forget');
+    $('task-delete').querySelector('.label').textContent = t('ui_task_forget');
   }
 
   // A task's page. Nothing is open at first, whatever is unread: opening it reads nothing
