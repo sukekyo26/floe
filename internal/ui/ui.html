@@ -5815,9 +5815,10 @@
         failed(res.status === 409 ? res.stale : res.text);
         return;
       }
-      // Of another task, as the write found it; of another category of this one, as the list had it
+      // Of another task, as the write found it; of another category of this one, as the list had it. The list's other task is not said: the
+      // write found the page off it
       const off = res.pages[0];
-      const said = off?.offTask ? leftPlace(off.offTask, off.offCategory) : from;
+      const said = off?.offTask ? leftPlace(off.offTask, off.offCategory) : (a.task?.name === to.name ? from : '');
       toast(said ? t('ui_page_moved', a.title, said, to.category) : t('ui_page_added', a.title, to.category));
       await load();
       $('add-page-dialog').close();
