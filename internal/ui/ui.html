@@ -1002,9 +1002,12 @@
   /* Above the title's hit area, as the row's controls are. Gray: blue is what is unseen alone */
   .xlink { position: relative; z-index: 1; display: inline-flex; align-items: center; gap: 0.2rem; color: var(--muted); text-decoration: underline; text-underline-offset: 2px; font: var(--text-label) var(--mono); white-space: nowrap; }
   .xlink:hover { color: var(--fg); }
-  /* A task's URLs under its state, one a line: a few at most, none folded */
-  .task-links { display: grid; justify-items: start; gap: 0.2rem; margin-top: 0.35rem; }
+  /* A task's URLs under its state, one a line, each whole as written: a long one wraps in its line, as an ellipsis
+     would hide what tells the site */
+  .task-links { display: grid; justify-items: start; gap: 0.2rem; margin-top: 0.35rem; min-width: 0; }
   .task-links[hidden] { display: none; }
+  .task-links .xlink { align-items: flex-start; max-width: 100%; white-space: normal; overflow-wrap: anywhere; }
+  .task-links .xlink svg { margin-top: 0.2em; }
   .xlink svg { width: 12px; height: 12px; flex: none; }
   .pins { flex: none; display: flex; flex-wrap: wrap; align-items: center; gap: 0.4rem 0.5rem; padding: 0.6rem 1rem; background: var(--bg); border-bottom: 1px solid var(--line); font-size: var(--text-small); }
   .pins > h2 { margin: 0 0.4rem 0 0; font: 600 var(--text-label)/1.2 var(--body); color: var(--muted); white-space: nowrap; }
@@ -3618,16 +3621,19 @@
       return url;
     }
   }
-  // The way to a task's other place, above the row's own hit area
-  function xlink(url) {
+  // The way to a task's other place, above the row's own hit area: by words, the URL whole in its title when they are
+  // not all of it
+  function xlink(url, words) {
     const link = document.createElement('a');
     link.className = 'xlink';
     link.href = url;
     link.target = '_blank';
     link.rel = 'noopener';
-    link.title = url;
+    if (words !== url) link.title = url;
     link.innerHTML = EXTERNAL_MARK;
-    link.append(urlEnd(url));
+    const text = document.createElement('span');
+    text.textContent = words;
+    link.append(text);
     return link;
   }
 
@@ -3665,7 +3671,7 @@
     sub.append(tagged('span', 'task-pages', t('ui_task_pages', task.pages.length)));
     if (task.archived.length > 0) sub.append(tagged('span', 'task-pages', t('ui_task_archived', task.archived.length)));
     if (unread > 0) sub.append(tagged('span', 'ver', t('ui_task_unread', unread)));
-    sub.append(...(task.urls ?? []).map(xlink));
+    sub.append(...(task.urls ?? []).map((url) => xlink(url, urlEnd(url))));
     sub.append(...taskKin(task));
     return li;
   }
@@ -3869,7 +3875,7 @@
       $('task-at').dateTime = task.at;
       $('task-at').textContent = ago(task.at);
     }
-    $('task-link').replaceChildren(...(task.urls ?? []).map(xlink));
+    $('task-link').replaceChildren(...(task.urls ?? []).map((url) => xlink(url, url)));
     $('task-link').hidden = !task.urls?.length;
     drawProject($('task-project'), projectWord(task.project), taskProjectColor(task.project));
     $('task-up').href = taskListHref(task);

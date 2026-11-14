@@ -202,11 +202,20 @@ func TestUITaskEdit(t *testing.T) { //nolint:paralleltest // the browser tests s
 	out = append(out, "urls: "+row("S300"))
 	say("sent the URLs", "sent.join(' ; ')")
 	b.until("the links", "document.querySelectorAll('#task-link a').length === 2")
-	say("links", "[...document.querySelectorAll('#task-link a')].map((a) => a.href).join(',')")
+	say("links", "[...document.querySelectorAll('#task-link a')].map((a) => a.href + ' ' + a.textContent).join(',')")
 	// Under the state's line, one a line, at one left edge
 	say("links stacked", `(() => {
 		const r = [...document.querySelectorAll('#task-link a')].map((a) => a.getBoundingClientRect()), state = document.querySelector('#task-head .tstate').getBoundingClientRect();
 		return [r[0].top >= state.bottom, r[1].top >= r[0].bottom, r[0].left === r[1].left, document.getElementById('task-link').hidden].join(' ');
+	})()`)
+	// One longer than the head wraps in its line, all its words there: none cut, none past the head's edge
+	say("a long link wraps", `(() => {
+		const head = document.getElementById('task-head');
+		head.style.width = '9rem';
+		const a = document.querySelector('#task-link a'), r = a.getBoundingClientRect(), edge = document.getElementById('task-link').getBoundingClientRect().right;
+		const said = [r.height > 2 * parseFloat(getComputedStyle(a).fontSize), r.right <= edge, a.scrollWidth <= a.clientWidth, a.textContent === a.href].join(' ');
+		head.style.width = '';
+		return said;
 	})()`)
 	// At 10, one more is said and not added
 	open("S300")
@@ -322,8 +331,9 @@ func TestUITaskEdit(t *testing.T) { //nolint:paralleltest // the browser tests s
 		"dropped: https://example.com/pull/9 / Take off https://example.com/pull/9 / Took off https://example.com/489",
 		"urls: 9 New title https://example.com/489,https://example.com/pull/9 [リリース,設計,レビュー,実装,案]",
 		`sent the URLs: {"taskProject":"proj","task":"S300","new":false,"rev":8,"urls":{"add":["https://example.com/pull/9"]}}`,
-		"links: https://example.com/489,https://example.com/pull/9",
+		"links: https://example.com/489 https://example.com/489,https://example.com/pull/9 https://example.com/pull/9",
 		"links stacked: true true true false",
+		"a long link wraps: true true true true",
 		"an 11th: 10 / A task holds 10 URLs at most: take one off first / http or https URLs, 10 at most",
 		`refused: Failed to save: "ftp://x" is not an http or https URL / true`,
 		"not reached: Failed to save: Failed to fetch / true",
