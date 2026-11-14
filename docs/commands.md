@@ -150,7 +150,7 @@ Print the templates, floe's and your own, one per line in four tab-separated col
 
 ## `floe template new <name>`
 
-Make the template `<name>` in `FLOE_TEMPLATES_DIR`: a `page.html`, a `schema.json` and an `example.yaml`, the smallest that `floe template check` takes, to fill in. The `page.html` also holds a viewport `<meta>`, so that a phone draws the page at its own width.
+Make the template `<name>` in `FLOE_TEMPLATES_DIR`: a `page.html`, a `schema.json` and an `example.yaml`, the smallest that `floe template check` takes, to fill in. The `page.html` also holds a viewport `<meta>`, so that a phone draws the page at its own width. It prints `made <path>`, the directory it made.
 
 - A name is lower case letters, digits, `-` and `_`, starting with a letter or a digit.
 - Nothing is written over: with anything of that name there, the command stops and makes nothing (exit code 1).
@@ -178,7 +178,7 @@ With `--all`, print every part, look and shared schema, floe's and your own, tha
 
 ## `floe part new <name>`
 
-Make the part `<name>` in `FLOE_PARTS_DIR`: a `schema.json`, a `part.html` of its box and an empty `part.css`, the smallest that `floe part check` takes, to fill in.
+Make the part `<name>` in `FLOE_PARTS_DIR`: a `schema.json`, a `part.html` of its box and an empty `part.css`, the smallest that `floe part check` takes, to fill in. It prints `made <path>`, the directory it made.
 
 - Nothing is written over: with anything of that name there, the command stops and makes nothing (exit code 1).
 
@@ -198,7 +198,7 @@ Print the themes, floe's and your own, one per line in the same four tab-separat
 
 ## `floe theme new <name>`
 
-Make the theme `<name>` in `FLOE_THEMES_DIR`: an empty `palette.css`, the smallest that `floe theme check` takes, to fill in. It goes over floe's `default` palette, which `floe theme show default palette.css` prints, so it writes only what it changes.
+Make the theme `<name>` in `FLOE_THEMES_DIR`: an empty `palette.css`, the smallest that `floe theme check` takes, to fill in. It goes over floe's `default` palette, which `floe theme show default palette.css` prints, so it writes only what it changes. It prints `made <path>`, the directory it made.
 
 - Nothing is written over: with anything of that name there, the command stops and makes nothing (exit code 1).
 
@@ -418,6 +418,7 @@ List the icons of the set (`lucide`, `aws`, `gcp`, `azure`) whose name contains 
 - A page opens at the part its URL names (`/a/<slug>/#part`), and a move to a part inside it is kept in the URL, so that a copy of the URL or a reload opens that part.
 - The management page downloads a page as one file: the stored page, or a linked file, with its CSP in a `<meta>`.
 - The management page's settings (the gear at the end of the list's bar, on a window wider than 40rem; a page shown whole has none) choose the default theme, from a card of a sample page drawn in each theme, floe's and your own. A page that names no theme takes it when it is first stored; the pages stored already do not change. The store keeps it in `settings.json`; a `settings.json` that cannot be read refuses a new page drawn from a data file until a theme is chosen again, which writes it whole.
+- A page's menu (…) has Edit, which changes its title and description, and its slug and project under Slug and project, which is folded: the project is changed in its Project.
 - A page's menu (…) has Theme, for a page drawn from a data file, stored or linked: a theme picked there draws that page alone again and wins over `--theme` and `theme:`, kept when the page is published again or rebuilt, and dropped when another file's page replaces it (`--force`). Its first card, Remove this page's theme, names the theme the page then shows in (`--theme`, `theme:` or the default it was first stored with) and gives it back to that. A theme the page cannot be drawn in leaves it as it was.
 - A stored page of two versions or more shows what changed between any two of them on the later version's page itself, in its theme and parts: words added are underlined in green, words gone struck through in red where they were, and what is gone of a list, a section or a part goes back in its shape by the part it was in (before it when it came before all that is left of it, else after), struck through; a table's rows and cells gone stay in their place in it, an ol's items with their numbers. A diagram or image that changed is framed, and its earlier version opens under it. A block is framed only where its words cannot show what changed. The contents list the sections that changed; `n` and `p` go from one change to the next. It opens from `Diff` over the page, and a page newly at another version says what changed since the one read. Opening it reads nothing; closing it opens the page, which reads it. A link and a folder have no versions. Bold, a link's target and CSS do not show; an image in a line of text is compared by its alt.
 - Printed from its frame, a page comes out one screen long, with a note to open it alone and print it there.
