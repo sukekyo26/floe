@@ -233,7 +233,8 @@ func TestGuideMistakes(t *testing.T) {
 	}
 }
 
-// The floe words the guide quotes outside its blocks are floe's: the head of a warning and where a mistake is.
+// The floe words the guide quotes outside its blocks are floe's: the head of a warning, where a mistake is, and the
+// lines publish and work print.
 func TestGuideQuotes(t *testing.T) {
 	t.Parallel()
 
@@ -243,10 +244,13 @@ func TestGuideQuotes(t *testing.T) {
 		usererr.NewAt("f.yaml", 1, 2, "cli_skill_kept"),
 	})}.Render(named)
 	for quote, ok := range map[string]bool{
-		"`warning:`":            strings.HasPrefix(warned, "f.yaml:1:2: warning: "),
-		"`file:line:column:`":   strings.HasPrefix(placed, "f.yaml:1:2: "),
-		"`file:`":               strings.HasPrefix(whole, "f.yaml: "),
-		"`page in project app`": english.Msg("cli_page_project", inProject("app")) == "page in project app",
+		"`warning:`":                         strings.HasPrefix(warned, "f.yaml:1:2: warning: "),
+		"`file:line:column:`":                strings.HasPrefix(placed, "f.yaml:1:2: "),
+		"`file:`":                            strings.HasPrefix(whole, "f.yaml: "),
+		"`page in project app`":              english.Msg("cli_page_project", inProject("app")) == "page in project app",
+		"`page in project app, off task #9`": english.Msg("cli_page_off_task", inProject("app"), "#9") == "page in project app, off task #9",
+		"`page <slug>: no task`":             english.Msg("cli_work_page", "<slug>", english.Msg("cli_work_page_off")) == "page <slug>: no task",
+		"`slug \"db-choice\" was published from …: choose another slug`": english.Msg("store_slug_placed_alone", "db-choice", "…") == `slug "db-choice" was published from …: choose another slug`,
 	} {
 		if !ok {
 			t.Errorf("floe no longer prints %s as the guide says: %q %q %q", quote, placed, whole, warned)

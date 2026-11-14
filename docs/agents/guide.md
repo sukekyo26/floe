@@ -37,7 +37,7 @@ sections:
 ## Publishing
 
 - A new page goes in a project, which groups pages on the management page and the task list. floe names the project after the git repository `floe publish` runs in: its `origin`'s name, else the repository's directory name; outside a repository, the directory's name. Where the data file is does not matter (`cd ~/work/app && floe publish ~/notes/db-choice.yaml`).
-- For a new page, or one whose project changed, `floe publish` prints the project on stderr after the URL (`page in project app`). If it is not the name of the repository the page is about, move to that repository and publish again with `--move-project`.
+- When a page is new or its project changes (it had none, it replaced another file's page, or `--move-project` moved it), `floe publish` prints the project on stderr after the URL (`page in project app`). If it is not the name of the repository the page is about, move to that repository and publish again with `--move-project`.
 - `--move-project` takes the page off its task, as a task is of its project, and says so (`page in project app, off task #9`); the task stays in the old project without the page. Tell the user, who decides whether to put the page on a task (*Tasks*). The user can also change the project on the management page (the page's Edit, Slug and project).
 - floe knows a page by its data file, not by the directory floe runs in: publish the same file again, from any directory and without `--slug`, and it replaces its page, even after the user renamed the page on the management page.
 - A slug MUST NOT be that of another file's page (`slug "db-choice" was published from …: choose another slug`): rename your file (`db-choice-2.yaml`) or give another `--slug`, and publish again.
@@ -108,7 +108,7 @@ Read `floe diagram guide` before writing a diagram: it says how to write one, wh
 
 Write so:
 
-- Write a text value in `'…'`, or over several lines as a `|` block, without judging whether it needs quotes: `heading: 'Step 1: plan'`, ``text: '`algorithms` fixes the methods.'``. In `'…'`, write a `'` as `''`; nothing else is special, a `\` and a `"` included. In a `|` block, write the text as it is. Leave bare only a number, `true` or `false`, and a word that starts with an ASCII letter or digit and holds only ASCII letters, digits, `_`, `.`, `/` and `-` (`template: report`, `tone: warn`).
+- Write a text value in `'…'`, or over several lines as a `|` block, without judging whether it needs quotes: `heading: 'Step 1: plan'`, ``text: '`algorithms` fixes the methods.'``. In `'…'`, write a `'` as `''`; nothing else is special, a `\` and a `"` included. In a `|` block, write the text as it is. Leave bare only a number, `true` or `false`, and a word that starts with an ASCII letter or digit, holds only ASCII letters, digits, `_`, `.`, `/` and `-`, and does not read as a number (`template: report`, `tone: warn`; not `1.10`, `08` or `1_000`, as below).
 - Write a comment on a line of its own, no deeper than the key of the value above it (or the `-` of a list item).
 - In a `|` block, indent the first line as the lines after it, with spaces only.
 
