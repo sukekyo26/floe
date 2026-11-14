@@ -5927,7 +5927,9 @@
     $('settings-title').textContent = t(themesPage ? 'ui_theme_page' : SETTINGS_TITLES[panel]);
     $('settings-back').hidden = Boolean(themesPage) || panel === 'list';
     $('settings-list').hidden = panel !== 'list';
-    $('settings-broken').hidden = panel !== 'list' || (!themesRead?.settings && !themesFailed);
+    // A read that failed is said on the list and the mode's part, which cannot be saved then; a settings.json that cannot
+    // be read, on the list alone
+    $('settings-broken').hidden = !(themesFailed ? panel !== 'theme' : panel === 'list' && themesRead?.settings);
     $('theme-now').hidden = panel !== 'theme';
     $('theme-grid').hidden = panel !== 'theme';
     $('theme-choose').hidden = panel !== 'theme';
@@ -5992,7 +5994,7 @@
       themesFailed = t('ui_theme_load_failed', e.message);
       $('theme-now').textContent = themesFailed;
       $('settings-broken').textContent = themesFailed;
-      $('settings-broken').hidden = $('settings').dataset.panel !== 'list';
+      $('settings-broken').hidden = $('settings').dataset.panel === 'theme';
       $('settings-theme-now').textContent = '—';
       $('settings-mode-now').textContent = '—';
       return;

@@ -95,10 +95,23 @@ func TestUISettings(t *testing.T) { //nolint:paralleltest // the browser tests s
 	b.until("the failure", "document.getElementById('settings-theme-now').textContent === '—'")
 	out = append(out, b.eval("[document.getElementById('settings-mode-now').textContent, document.getElementById('settings-broken').textContent].join(' / ')"))
 	b.eval("document.querySelector('.settings-item[data-panel=mode]').click()")
-	out = append(out, b.eval(mode))
+	out = append(out, b.eval(mode), b.eval("document.getElementById('settings-broken').hidden + ' / ' + document.getElementById('settings-broken').textContent"))
 	// Back on the list, the failure is still said
 	b.eval("document.getElementById('settings-back').click()")
 	out = append(out, b.eval("document.getElementById('settings-broken').hidden + ' / ' + document.getElementById('settings-broken').textContent"))
+	b.eval("window.fetch = window.realFetch; document.getElementById('settings').close()")
+	// A read answered after the modal was closed and opened again: the modal open now keeps what it read itself
+	b.eval(`window.held = null; window.fetch = (u, i) => (String(u).startsWith('/api/themes') && !i?.method && !window.heldOnce
+		? (window.heldOnce = true, new Promise((go) => { window.held = () => go({ ok: true, json: async () => { window.staleRead = true; return { themes: [], default: 'stale', taskMode: false }; } }); }))
+		: window.realFetch(u, i));
+		document.getElementById('settings-open').click()`)
+	b.until("the read held", "window.held !== null")
+	b.eval("document.getElementById('settings').close(); document.getElementById('settings-open').click()")
+	b.until("read again", "document.getElementById('settings-mode-now').textContent === 'On'")
+	b.eval("window.held()")
+	// Read by the opening before; what it does after comes in the same task, before this is read again
+	b.until("the old read answered", "window.staleRead === true")
+	out = append(out, b.eval("[document.getElementById('settings-theme-now').textContent, document.getElementById('settings-mode-now').textContent, document.querySelectorAll('#theme-grid .theme-card').length >= 12].join(' / ')"))
 	b.eval("window.fetch = window.realFetch; document.getElementById('settings').close()")
 	// A save answered after the modal was closed and opened again: told, and the modal open now stays as it is
 	b.eval("window.thrown = 0; addEventListener('error', () => { thrown++; })")
@@ -148,8 +161,9 @@ func TestUISettings(t *testing.T) { //nolint:paralleltest // the browser tests s
 		"settings-open",
 		"false", "list / Settings / true / Close / false / true / true", "On", "mode", `{"theme":"ink","taskMode":true}`, "true",
 		"false true", "true false",
-		"— / Failed to load the themes: Failed to fetch", "false true",
+		"— / Failed to load the themes: Failed to fetch", "false true", "false / Failed to load the themes: Failed to fetch",
 		"false / Failed to load the themes: Failed to fetch",
+		"ink / On / true",
 		"theme true 0", "theme true 0",
 		"true",
 		"Failed to read the settings. Saving one writes them again / —",
