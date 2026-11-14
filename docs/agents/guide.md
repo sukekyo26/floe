@@ -38,13 +38,19 @@ sections:
 
 - A new page goes in a project, which groups pages on the management page and the task list. floe names the project after the git repository `floe publish` runs in: its `origin`'s name, else the repository's directory name; outside a repository, the directory's name. Where the data file is does not matter (`cd ~/work/app && floe publish ~/notes/db-choice.yaml`).
 - When a page is new or its project changes (it had none, it replaced another file's page, or `--move-project` moved it), `floe publish` prints the project on stderr after the URL (`page in project app`). If it is not the name of the repository the page is about, move to that repository and publish again with `--move-project`.
-- `--move-project` takes the page off its task, as a task is of its project, and says so (`page in project app, off task #9`); the task stays in the old project without the page. Tell the user, who decides whether to put the page on a task (*Tasks*). The user can also change the project on the management page (the page's Edit, Slug and project).
+- `--move-project` takes the page off its task, as a task is of its project, and says so (`page in project app, off task #9`); the task stays in the old project without the page. Tell the user, who decides whether to put the page on a task. The user can also change the project on the management page (the page's Edit, Slug and project).
 - floe knows a page by its data file, not by the directory floe runs in: publish the same file again, from any directory and without `--slug`, and it replaces its page, even after the user renamed the page on the management page.
 - A slug MUST NOT be that of another file's page (`slug "db-choice" was published from …: choose another slug`): rename your file (`db-choice-2.yaml`) or give another `--slug`, and publish again.
 
 ## Tasks
 
-The user may put pages on the tasks of the task list, and group a task's pages by category. Change them only when the user asks; `floe work --help` says how.
+The user keeps a task list: tasks of a project, each with a state (todo, doing, done, archived), links (an issue, a pull request) and pages, grouped by category.
+
+- When `floe publish` prints the page's project (`page in project app`), ask the user whether to put the page on a task, in one question offering the tasks `floe work` prints, a new task, and none (`Put this page on a task? #12 Login screen / #15 Price table / a new task / none`). With no task open, offer a new task and none.
+- Put the page where the user answers: `floe work <slug> --task <ID>`, with `--title '<title>'` for a new task, whose ID and title the user gives.
+- When the user says not to use tasks, do not ask again in the conversation.
+- When your instructions (a CLAUDE.md, a skill) name the task a page goes on, put it there without asking.
+- Change a task (its state, title, links or parent), or move a page to another task, only when the user asks; `floe work --help` says how.
 
 - `floe work <slug>` prints the page's task with the task's project, its category and whether it is pinned, and changes nothing. A page on no task prints `page <slug>: no task`, without its project: `floe publish` tells the project.
 - `floe work` prints the todo and doing tasks of the working directory's project, the latest change first, a line each. `--project` names another project (`--project ""` for pages of no project).

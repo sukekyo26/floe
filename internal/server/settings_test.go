@@ -33,11 +33,16 @@ func TestAPISettings(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	want(t, e.write(t, http.MethodPut, "/api/settings", server.SettingsPut{Theme: "nope"}), http.StatusBadRequest, `there is no theme \"nope\"; use app, aurora,`)
-	want(t, e.write(t, http.MethodPut, "/api/settings", server.SettingsPut{Theme: ""}), http.StatusBadRequest, `there is no theme \"\"`)
+	theme := func(name string) store.SettingsEdit { return store.SettingsEdit{Theme: &name, TaskMode: nil} }
+	want(t, e.write(t, http.MethodPut, "/api/settings", theme("nope")), http.StatusBadRequest, `there is no theme \"nope\"; use app, aurora,`)
+	want(t, e.write(t, http.MethodPut, "/api/settings", theme("")), http.StatusBadRequest, `there is no theme \"\"`)
+	want(t, e.do(t, http.MethodPut, "/api/settings", `{}`, "Origin", origin, "Content-Type", "application/json"), http.StatusBadRequest, "send theme, taskMode or both")
 	unknown := e.do(t, http.MethodPut, "/api/settings", `{"theme": "ink", "x": 1}`, "Origin", origin, "Content-Type", "application/json")
 	want(t, unknown, http.StatusBadRequest, `unknown object member name "x"`)
-	want(t, e.write(t, http.MethodPut, "/api/settings", server.SettingsPut{Theme: "ink"}), http.StatusOK, `{"theme":"ink"}`)
+	want(t, e.write(t, http.MethodPut, "/api/settings", theme("ink")), http.StatusOK, `{"theme":"ink"}`)
+	// The task mode alone keeps the theme, and GET /api/themes tells it
+	want(t, e.do(t, http.MethodPut, "/api/settings", `{"taskMode": true}`, "Origin", origin, "Content-Type", "application/json"), http.StatusOK, `{"theme":"ink","taskMode":true}`)
+	want(t, e.do(t, http.MethodGet, "/api/themes", ""), http.StatusOK, `"default":"ink","taskMode":true`)
 	if set, err := store.New(e.root).ReadSettings(); err != nil || set.Theme != "ink" {
 		t.Errorf("settings.json: %+v, %v", set, err)
 	}

@@ -116,13 +116,51 @@ func TestGuidesInHelp(t *testing.T) {
 	}
 }
 
-// floe guide prints guide.md as it is.
+// floe guide prints guide.md as it is when the task mode is on in settings.json, and without its Tasks section when it
+// is off, there is no settings.json, or no store can be had (HOME not absolute, no FLOE_DIR); a settings.json that
+// cannot be read, or a FLOE_DIR that cannot be used, is refused as floe theme default refuses it.
 func TestGuide(t *testing.T) {
 	t.Parallel()
 
+	whole := readGuide(t, guidePath)
+	off, err := kit.WithoutSection([]byte(whole), "Tasks")
+	if err != nil {
+		t.Fatal(err)
+	}
 	env := guideEnv(t, t.TempDir())
-	if code, out, errs := runIn(env, "guide"); code != 0 || out != readGuide(t, guidePath) || errs != "" {
-		t.Errorf("floe guide = %d, stderr %q, stdout the guide: %t", code, errs, out == string(docs.Guide))
+	settings := func(text string) {
+		t.Helper()
+		if err := os.MkdirAll(env.Getenv("FLOE_DIR"), 0o700); err != nil {
+			t.Fatal(err)
+		}
+		if err := os.WriteFile(filepath.Join(env.Getenv("FLOE_DIR"), "settings.json"), []byte(text), 0o600); err != nil {
+			t.Fatal(err)
+		}
+	}
+	guide := func(what string, e Env, want string) {
+		t.Helper()
+		if code, out, errs := runIn(e, "guide"); code != 0 || out != want || errs != "" {
+			t.Errorf("%s: floe guide = %d, stderr %q, stdout the guide: %t, without Tasks: %t", what, code, errs, out == whole, out == string(off))
+		}
+	}
+	guide("no settings.json", env, string(off))
+	settings(`{"theme":"app"}`)
+	guide("off", env, string(off))
+	settings(`{"theme":"app","taskMode":true}`)
+	guide("on", env, whole)
+	vars := map[string]string{"HOME": "relative"}
+	guide("no store", Env{Stdout: nil, Stderr: nil, Dir: env.Dir, Getenv: func(key string) string { return vars[key] }}, string(off))
+	settings(`{"taskMode":1}`)
+	if code, _, errs := runIn(env, "guide"); code != 1 || !strings.Contains(errs, "settings.json") {
+		t.Errorf("a broken settings.json: floe guide = %d, %q", code, errs)
+	}
+	file := filepath.Join(t.TempDir(), "file")
+	if err := os.WriteFile(file, nil, 0o600); err != nil {
+		t.Fatal(err)
+	}
+	vars = map[string]string{"HOME": t.TempDir(), "FLOE_DIR": file}
+	if code, _, errs := runIn(Env{Stdout: nil, Stderr: nil, Dir: env.Dir, Getenv: func(key string) string { return vars[key] }}, "guide"); code != 1 || errs == "" {
+		t.Errorf("a FLOE_DIR of a file: floe guide = %d, %q", code, errs)
 	}
 	if code, _, _ := runIn(env, "guide", "x"); code != 2 {
 		t.Errorf("floe guide x = %d, want 2", code)

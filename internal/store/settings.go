@@ -18,6 +18,15 @@ type Settings struct {
 	// Theme is the default theme a page takes when it is first stored (Meta.CreatedTheme), "" for none chosen: then
 	// floe's default. Choosing floe's default writes "default", so that chosen and not chosen stay apart.
 	Theme string `json:"theme,omitzero"`
+	// TaskMode is whether floe guide gives agents its Tasks section, which has them ask the user about tasks.
+	TaskMode bool `json:"taskMode,omitzero"`
+}
+
+// SettingsEdit is a change of settings.json, as the management page's settings send it: each key left as it is when
+// nil.
+type SettingsEdit struct {
+	Theme    *string `json:"theme,omitzero"`
+	TaskMode *bool   `json:"taskMode,omitzero"`
 }
 
 func (s *Store) settingsFile() string {
@@ -26,7 +35,7 @@ func (s *Store) settingsFile() string {
 
 // ReadSettings reads settings.json, none being none chosen. What cannot be read is the system's words at the file;
 // what encoding/json/v2 refuses (a key twice, a key it does not know, a theme that is not text) is its words there.
-// It takes no lock: SetTheme replaces the file whole.
+// It takes no lock: SetSettings replaces the file whole.
 func (s *Store) ReadSettings() (Settings, error) {
 	var set Settings
 	b, _, err := files.Read(s.settingsFile())
@@ -42,20 +51,31 @@ func (s *Store) ReadSettings() (Settings, error) {
 	return set, nil
 }
 
-// SetTheme writes theme as the default theme of settings.json, whole and without reading it, so that a file that
-// cannot be read is mended by choosing again. The caller checks theme is one.
-func (s *Store) SetTheme(theme string) error {
+// SetSettings writes the keys ed names to settings.json under the lock, the others as they are, and returns what it
+// wrote. A file that cannot be read is written anew from ed alone, so that it is mended by choosing again. The caller
+// checks a theme is one.
+func (s *Store) SetSettings(ed SettingsEdit) (Settings, error) {
 	unlock, err := s.lock(true)
 	if err != nil {
-		return err
+		return Settings{}, err
 	}
 	defer unlock()
-	b, err := jsonv2.Marshal(Settings{Theme: theme})
+	set, err := s.ReadSettings()
 	if err != nil {
-		return fmt.Errorf("encode %s: %w", settingsName, err)
+		set = Settings{Theme: "", TaskMode: false}
+	}
+	if ed.Theme != nil {
+		set.Theme = *ed.Theme
+	}
+	if ed.TaskMode != nil {
+		set.TaskMode = *ed.TaskMode
+	}
+	b, err := jsonv2.Marshal(set)
+	if err != nil {
+		return Settings{}, fmt.Errorf("encode %s: %w", settingsName, err)
 	}
 	if err := files.WriteAtomic(s.settingsFile(), append(b, '\n'), 0o600, nil); err != nil {
-		return usererr.CannotWrite(s.settingsFile(), err) //nolint:wrapcheck // the system's words, at the file
+		return Settings{}, usererr.CannotWrite(s.settingsFile(), err) //nolint:wrapcheck // the system's words, at the file
 	}
-	return nil
+	return set, nil
 }

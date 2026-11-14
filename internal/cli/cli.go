@@ -9,7 +9,6 @@ import (
 
 	"github.com/spf13/cobra"
 
-	"floe/docs"
 	"floe/internal/i18n"
 	"floe/internal/store"
 	"floe/internal/usererr"
@@ -160,7 +159,7 @@ that points your agent to it (floe skill install --help lists the agents).`,
 	a := &app{env: env, out: out, warnings: nil, told: nil}
 	root.AddCommand(
 		a.archiveCmd(), a.checkCmd(), a.diagramCmd(),
-		a.docGuideCmd("Print the guide for agents: how to write, check and publish a page", docs.Guide),
+		a.guideCmd(),
 		a.iconsCmd(), a.listCmd(), a.partCmd(), a.publishCmd(),
 		a.rebuildCmd(), a.renderCmd(), a.rmCmd(), a.serveCmd(), a.skillCmd(), a.stopCmd(), a.tagCmd(), a.templateCmd(),
 		a.themeCmd(), a.workCmd(),

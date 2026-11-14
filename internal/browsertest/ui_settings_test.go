@@ -3,13 +3,19 @@ package browsertest_test
 import (
 	"os"
 	"path/filepath"
+	"strconv"
 	"strings"
 	"testing"
+
+	"github.com/chromedp/chromedp/kb"
 )
 
 // TestUISettings opens the settings from the bar's button, shown at the width of a desk, not of a phone, the bar within
-// the window at both, shows a card of each theme with its sample drawn in the sandbox, and writes the default theme chosen
-// from them, which a new page is then drawn in; a settings.json that cannot be read is said, and choosing mends it.
+// the window at both, on their list: the default theme and the task mode, each with its value. Going into one focuses
+// its heading, and the way back focuses the row it came from; Escape closes the modal from any part, the focus back on
+// the button. The theme's part shows a card of each theme with its sample drawn in the sandbox, and writes the default
+// theme chosen from them, which a new page is then drawn in; the mode's part writes the task mode alone, which floe guide
+// then reads. A settings.json that cannot be read is said on the list, and choosing mends it.
 func TestUISettings(t *testing.T) { //nolint:paralleltest // the browser tests share one Chrome, one at a time
 	s := newSite(t)
 	b := s.b
@@ -24,9 +30,19 @@ func TestUISettings(t *testing.T) { //nolint:paralleltest // the browser tests s
 		})()`))
 	}
 	b.size(1440, 900, false)
-	b.eval("document.getElementById('settings-open').click()")
+	// The parts shown, the title, the way back and the close button's word
+	const seen = "[document.getElementById('settings').dataset.panel, document.getElementById('settings-title').textContent, document.getElementById('settings-back').hidden, document.querySelector('#settings [data-close]').textContent, document.getElementById('settings-list').hidden, document.getElementById('theme-grid').hidden, document.getElementById('settings-mode').hidden].join(' / ')"
+	const focused = "document.activeElement.id || document.activeElement.dataset.panel"
+	b.eval("document.getElementById('settings-open').focus(); document.getElementById('settings-open').click()")
+	b.until("the list's values", "document.getElementById('settings-mode-now').textContent !== ''")
+	out = append(out, b.eval(seen), b.eval("document.getElementById('settings-theme-now').textContent + ' / ' + document.getElementById('settings-mode-now').textContent"))
+	b.eval("document.querySelector('.settings-item[data-panel=mode]').click()")
+	out = append(out, b.eval(seen), b.eval(focused))
+	b.eval("document.getElementById('settings-back').click()")
+	out = append(out, b.eval(seen), b.eval(focused))
+	b.eval("document.querySelector('.settings-item[data-panel=theme]').click()")
 	b.until("the cards", "document.querySelectorAll('#theme-grid .theme-card').length >= 12")
-	out = append(out,
+	out = append(out, b.eval(seen), b.eval(focused),
 		b.eval("document.getElementById('settings').open"),
 		b.eval("document.getElementById('theme-now').textContent"),
 		// default is the one now, picked; each card's sample in the sandbox, from the server
@@ -37,6 +53,28 @@ func TestUISettings(t *testing.T) { //nolint:paralleltest // the browser tests s
 	b.eval("document.querySelector('#theme-grid input[value=ink]').click(); document.getElementById('theme-choose').click()")
 	b.until("the toast", "[...document.querySelectorAll('.toast')].some((e) => e.textContent.includes('Changed the default theme to ink'))")
 	out = append(out, b.eval("document.getElementById('settings').open"), strings.TrimSpace(s.floe(t, "theme", "default")))
+	// Escape from a part closes the modal, the focus back on its button
+	b.eval("document.getElementById('settings-open').focus(); document.getElementById('settings-open').click()")
+	b.until("the list's values", "document.getElementById('settings-mode-now').textContent !== ''")
+	b.eval("document.querySelector('.settings-item[data-panel=mode]').click()")
+	b.pressKey(kb.Escape)
+	b.until("closed by Escape", "!document.getElementById('settings').open")
+	out = append(out, b.eval(focused))
+	// The task mode on: written alone, the theme kept, and floe guide prints its Tasks section
+	b.eval("document.getElementById('settings-open').click()")
+	b.until("the list's values", "document.getElementById('settings-mode-now').textContent !== ''")
+	b.eval("document.querySelector('.settings-item[data-panel=mode]').click()")
+	out = append(out, b.eval("document.getElementById('task-mode').checked"))
+	b.eval("document.getElementById('task-mode').click(); document.getElementById('mode-save').click()")
+	b.until("the mode's toast", "[...document.querySelectorAll('.toast')].some((e) => e.textContent.includes('Turned the task mode on'))")
+	set, err := os.ReadFile(filepath.Join(s.Env["FLOE_DIR"], "settings.json"))
+	if err != nil {
+		t.Fatal(err)
+	}
+	out = append(out, b.eval("document.getElementById('settings').open"), strings.TrimSpace(string(set)), strconv.FormatBool(strings.Contains(s.floe(t, "guide"), "\n## Tasks\n")))
+	b.eval("document.getElementById('settings-open').click()")
+	b.until("the list's values", "document.getElementById('settings-mode-now').textContent === 'On'")
+	b.eval("document.getElementById('settings').close()")
 	// A page stored now is drawn in ink.
 	s.floe(t, "publish", s.page(t, "new.yaml", "New", ""))
 	out = append(out, b.eval("fetch('/a/new/?raw').then((r) => r.text()).then((t) => t.includes('--accent: #2b3a67'))"))
@@ -46,11 +84,29 @@ func TestUISettings(t *testing.T) { //nolint:paralleltest // the browser tests s
 	}
 	b.eval("document.getElementById('settings-open').click()")
 	b.until("the cards again", "document.getElementById('settings').open && document.querySelectorAll('#theme-grid .theme-card').length >= 12")
+	out = append(out, b.eval("[document.getElementById('settings-broken').textContent, document.getElementById('settings-theme-now').textContent].join(' / ')"))
+	b.eval("document.querySelector('.settings-item[data-panel=theme]').click()")
 	out = append(out, b.eval("document.getElementById('theme-now').textContent"))
 	b.eval("document.querySelector('#theme-grid input[value=washi]').click(); document.getElementById('theme-choose').click()")
 	b.until("mended", "!document.getElementById('settings').open")
 	out = append(out, strings.TrimSpace(s.floe(t, "theme", "default")))
-	check(t, "settings", out, "true true|false true|true|Default now: default. Pages stored from now on are drawn in this theme. The pages there are now do not change.|default|true|Ink on paper: near black, an indigo ink for emphasis, its sections ruled in the ink|false|ink|true|Failed to read the settings. Choosing a theme writes them again|washi")
+	check(t, "settings", out, strings.Join([]string{
+		"true true", "false true",
+		"list / Settings / true / Close / false / true / true", "default / Off",
+		"mode / Mode / false / Cancel / true / true / false", "settings-title",
+		"list / Settings / true / Close / false / true / true", "mode",
+		"theme / Theme / false / Cancel / true / false / true", "settings-title",
+		"true",
+		"Default now: default. Pages stored from now on are drawn in this theme. The pages there are now do not change.", "default", "true",
+		"Ink on paper: near black, an indigo ink for emphasis, its sections ruled in the ink",
+		"false", "ink",
+		"settings-open",
+		"false", "false", `{"theme":"ink","taskMode":true}`, "true",
+		"true",
+		"Failed to read the settings. Saving one writes them again / —",
+		"Failed to read the settings. Choosing a theme writes them again",
+		"washi",
+	}, "|"))
 }
 
 // TestUIPageTheme opens a page's themes from its row's menu, none chosen first and checked, picks one, which draws the
@@ -105,7 +161,7 @@ func TestUIPageTheme(t *testing.T) { //nolint:paralleltest // the browser tests 
 	// The settings again, after a page's: of their own head
 	b.eval("document.getElementById('settings').close(); openThemes()")
 	b.until("the settings", "document.getElementById('settings').open")
-	out = append(out, b.eval("[document.getElementById('settings-title').textContent, document.getElementById('theme-page').hidden, document.getElementById('theme-title').hidden].join(' / ')"), b.eval(icon))
+	out = append(out, b.eval("[document.getElementById('settings-title').textContent, document.getElementById('theme-page').hidden, document.getElementById('settings-list').hidden].join(' / ')"), b.eval(icon))
 	check(t, "page theme", out, strings.Join([]string{
 		"This page's theme / P / Choosing draws this page alone again. The theme chosen stays when the page is updated.",
 		"The page then shows in default / Remove this page's theme",
@@ -137,7 +193,7 @@ func TestUIThemesFit(t *testing.T) { //nolint:paralleltest // the browser tests 
 		b.navigate("/")
 		b.size(size[0], size[1], size[0] < 600)
 		b.until("the row", "items.find((a) => a.slug === 'p')")
-		for _, open := range []string{"openThemes()", "openThemes(items.find((a) => a.slug === 'p'))"} {
+		for _, open := range []string{"openThemes(); settingsTo('theme')", "openThemes(items.find((a) => a.slug === 'p'))"} {
 			b.eval(open)
 			b.until("the cards", "document.querySelectorAll('#theme-grid .theme-card').length >= 12")
 			out = append(out, b.settled(fits))
