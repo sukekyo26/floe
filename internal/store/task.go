@@ -56,34 +56,35 @@ func TaskProject(project string) (string, error) {
 	return ProjectKey(project), nil
 }
 
-// Work is what a page holds of its place on the task list: the task it is on, its category there, whether it is pinned.
-type Work struct {
-	Task     string `json:"task,omitempty"`
+// PageTask is what a page holds of its place on the task list: the task it is on, its category there, whether it is
+// pinned.
+type PageTask struct {
+	Name     string `json:"name,omitempty"`
 	Category string `json:"category,omitempty"`
 	Pin      bool   `json:"pin,omitempty"`
 }
 
-// WorkEdit is what a write changes of a page's Work, each left as it is when nil.
-type WorkEdit struct {
-	Task     *string
+// PageTaskEdit is what a write changes of a page's PageTask, each left as it is when nil.
+type PageTaskEdit struct {
+	Name     *string
 	Category *string
 	Pin      *bool
 }
 
-// setWork applies ed to m. A category is of its task: a page that moves to another task leaves it, unless ed gives the
-// category it takes there; a page off a task has none, and one neither on a task nor pinned has no Work. TaskName has
-// checked ed.
-func setWork(m *Meta, ed *WorkEdit) {
-	var w Work
-	if m.Work != nil {
-		w = *m.Work
+// setPageTask applies ed to m. A category is of its task: a page that moves to another task leaves it, unless ed gives
+// the category it takes there; a page off a task has none, and one neither on a task nor pinned has no PageTask.
+// TaskName has checked ed.
+func setPageTask(m *Meta, ed *PageTaskEdit) {
+	var w PageTask
+	if m.Task != nil {
+		w = *m.Task
 	}
-	if ed.Task != nil {
-		name := strings.TrimSpace(*ed.Task)
-		if name != w.Task {
+	if ed.Name != nil {
+		name := strings.TrimSpace(*ed.Name)
+		if name != w.Name {
 			w.Category = ""
 		}
-		w.Task = name
+		w.Name = name
 	}
 	if ed.Category != nil {
 		w.Category = strings.TrimSpace(*ed.Category)
@@ -91,17 +92,17 @@ func setWork(m *Meta, ed *WorkEdit) {
 	if ed.Pin != nil {
 		w.Pin = *ed.Pin
 	}
-	if w.Task == "" {
+	if w.Name == "" {
 		w.Category = ""
 	}
-	m.Work = &w
-	if w.Task == "" && !w.Pin {
-		m.Work = nil
+	m.Task = &w
+	if w.Name == "" && !w.Pin {
+		m.Task = nil
 	}
 }
 
 // Task is a task's row of tasks.json. At is when it was made or its state last changed; Parent the task it is a child
-// of, of the same project (childrenOfTask). A page's category is the page's alone (Work).
+// of, of the same project (childrenOfTask). A page's category is the page's alone (PageTask).
 type Task struct {
 	Title      string   `json:"title,omitempty"`
 	State      string   `json:"state"`
@@ -482,9 +483,9 @@ func withURLs(urls []string, ed URLsEdit) []string {
 	return slices.Concat(first, slices.DeleteFunc(kept, func(u string) bool { return slices.Contains(first, u) }))
 }
 
-// TaskWritten is a task's row as Work left it, under the project (ProjectKey) and name tasks.json keys it by, which a
-// screen puts in place of the row it read. Made is whether the task had no row before this write, and Wrote whether
-// its row was written: not when it came out as it was, unless a parent was made with it.
+// TaskWritten is a task's row as ChangeTasks left it, under the project (ProjectKey) and name tasks.json keys it by,
+// which a screen puts in place of the row it read. Made is whether the task had no row before this write, and Wrote
+// whether its row was written: not when it came out as it was, unless a parent was made with it.
 type TaskWritten struct {
 	TaskProject string `json:"taskProject"`
 	Task        string `json:"task"`
@@ -538,7 +539,7 @@ func (s *Store) eachPageOn(project, name string, on func(slug string, m *Meta) b
 	}
 	for _, slug := range slugs {
 		m := s.ReadMeta(slug)
-		if m != nil && m.Work != nil && m.Work.Task == name && ProjectKey(m.Project) == project && !on(slug, m) {
+		if m != nil && m.Task != nil && m.Task.Name == name && ProjectKey(m.Project) == project && !on(slug, m) {
 			return nil
 		}
 	}

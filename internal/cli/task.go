@@ -162,7 +162,7 @@ func (a *app) changeTask(cmd *cobra.Command, f taskFlags) error {
 	var sent jsontext.Value
 	writing := !f.forget && len(changed(cmd, taskFieldFlags...)) > 0
 	if writing {
-		body := store.WorkWrite{
+		body := store.TaskChange{
 			TaskEdit: ed, Slugs: nil, TaskProject: &t.project, Task: &t.name, Category: nil, Pin: nil, Clear: false,
 		}
 		if sent, err = encodeSent(body); err != nil {
@@ -177,8 +177,8 @@ func (a *app) changeTask(cmd *cobra.Command, f taskFlags) error {
 	case f.forget:
 		err = c.do(ctx, http.MethodDelete, taskQuery(t), nil, nil)
 	case writing:
-		var written store.WorkWritten
-		if err = c.do(ctx, http.MethodPatch, "/api/work", sent, &written); err == nil {
+		var written store.TaskChangeResult
+		if err = c.do(ctx, http.MethodPatch, "/api/tasks", sent, &written); err == nil {
 			a.tellTask(written.Tasks[0], ed)
 		}
 	default:
@@ -321,17 +321,17 @@ func urlsField(urls []string) string {
 
 // tellPage says the page as the store has it, written or read: its task and project, category and pin.
 func (a *app) tellPage(page store.Edited) {
-	work := page.Work
+	on := page.Task
 	var parts []string
-	if work == nil || work.Task == "" {
+	if on == nil || on.Name == "" {
 		parts = append(parts, english.Msg("cli_task_page_off"))
 	} else {
-		parts = append(parts, english.Msg("cli_task_page_task", work.Task, inProject(page.TaskProject)))
+		parts = append(parts, english.Msg("cli_task_page_task", on.Name, inProject(page.TaskProject)))
 	}
-	if work != nil && work.Category != "" {
-		parts = append(parts, fmt.Sprintf("category %q", work.Category))
+	if on != nil && on.Category != "" {
+		parts = append(parts, fmt.Sprintf("category %q", on.Category))
 	}
-	if work != nil && work.Pin {
+	if on != nil && on.Pin {
 		parts = append(parts, "pinned")
 	}
 	a.print("%s", english.Msg("cli_task_page", page.Slug, strings.Join(parts, ", ")))
@@ -375,7 +375,7 @@ func flagOf(err error, from string) error {
 }
 
 // pagesTask puts the pages --slug names on a task and changes it, or with no other flag tells them as they are. The
-// pages and their tasks are written in one write (PATCH /api/work), which the store checks whole before it writes any.
+// pages and their tasks are written in one write (PATCH /api/tasks), which the store checks whole before it writes any.
 // What the CLI can say better (the pages listed, on a task, of one project for a parent) it checks first, in its own
 // words.
 func (a *app) pagesTask(cmd *cobra.Command, f taskFlags) error {
@@ -391,7 +391,7 @@ func (a *app) pagesTask(cmd *cobra.Command, f taskFlags) error {
 		return err
 	}
 	ed := taskEdit(cmd, f)
-	body := pageWork(cmd, f, ed, slugs)
+	body := pagesChange(cmd, f, ed, slugs)
 	sent, err := encodeSent(body)
 	if err != nil {
 		return err
@@ -408,17 +408,17 @@ func (a *app) pagesTask(cmd *cobra.Command, f taskFlags) error {
 		// --task names one task, so that tasks differ by their projects alone
 		return usageOf(usererr.New("cli_task_parent_projects"))
 	}
-	var written store.WorkWritten
-	if err = c.do(ctx, http.MethodPatch, "/api/work", sent, &written); err != nil {
+	var written store.TaskChangeResult
+	if err = c.do(ctx, http.MethodPatch, "/api/tasks", sent, &written); err != nil {
 		return err
 	}
-	a.tellWork(written, ed, len(onTask) > 0)
+	a.tellChange(written, ed, len(onTask) > 0)
 	return nil
 }
 
-// tellWork says a write of pages and their tasks: each task made or written, or each when fields were asked, with its
+// tellChange says a write of pages and their tasks: each task made or written, or each when fields were asked, with its
 // categories when a page's category was added to them; then each page.
-func (a *app) tellWork(written store.WorkWritten, ed store.TaskEdit, asked bool) {
+func (a *app) tellChange(written store.TaskChangeResult, ed store.TaskEdit, asked bool) {
 	for _, t := range written.Tasks {
 		if t.Made || t.Wrote || asked {
 			a.tellTask(t, ed)
@@ -430,7 +430,7 @@ func (a *app) tellWork(written store.WorkWritten, ed store.TaskEdit, asked bool)
 }
 
 // pageFlags refuses the flags of a floe task with --slug that cannot go together, and returns those that change their
-// task, those that need the pages on a task (the task's, and a category: setWork drops
+// task, those that need the pages on a task (the task's, and a category: setPageTask drops
 // one of a page of no task), and the task's name --task gives.
 func pageFlags(cmd *cobra.Command, f taskFlags) (onTask, needTask []string, name string, err error) {
 	if off := changed(cmd, "forget", "project"); len(off) > 0 {
@@ -467,7 +467,7 @@ func (a *app) readPages(ctx context.Context, slugs []string) error {
 		if err != nil {
 			return err
 		}
-		pages = append(pages, store.Edited{Slug: page.Slug, TaskProject: page.TaskProject, Work: page.Work, OffTask: ""})
+		pages = append(pages, store.Edited{Slug: page.Slug, TaskProject: page.TaskProject, Task: page.Task, OffTask: ""})
 	}
 	for _, page := range pages {
 		a.tellPage(page)
@@ -508,8 +508,8 @@ func tasksOfPages(list []store.Listed, slugs []string, named string, isNamed, ne
 			return nil, err
 		}
 		name := ""
-		if page.Work != nil {
-			name = page.Work.Task
+		if page.Task != nil {
+			name = page.Task.Name
 		}
 		if isNamed {
 			name = named
@@ -530,10 +530,10 @@ func tasksOfPages(list []store.Listed, slugs []string, named string, isNamed, ne
 	return tasks, nil
 }
 
-// pageWork is the write of the flags of floe task with --slug: the pages, the task --task names, the task's fields ed,
-// and the pages' own.
-func pageWork(cmd *cobra.Command, f taskFlags, ed store.TaskEdit, slugs []string) store.WorkWrite {
-	w := store.WorkWrite{TaskEdit: ed, Slugs: slugs, TaskProject: nil, Task: nil, Category: nil, Pin: nil, Clear: f.clear}
+// pagesChange is the write of the flags of floe task with --slug: the pages, the task --task names, the task's fields
+// ed, and the pages' own.
+func pagesChange(cmd *cobra.Command, f taskFlags, ed store.TaskEdit, slugs []string) store.TaskChange {
+	w := store.TaskChange{TaskEdit: ed, Slugs: slugs, TaskProject: nil, Task: nil, Category: nil, Pin: nil, Clear: f.clear}
 	if cmd.Flags().Changed("task") {
 		w.Task = &f.task
 	}

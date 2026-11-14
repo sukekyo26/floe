@@ -587,7 +587,7 @@ func newMeta(opts Options, path, project, repo, place string, base *Meta, own, s
 		Folder:        false,
 		Archived:      false,
 		Tags:          base.Tags,
-		Work:          base.Work,
+		Task:          base.Task,
 		Versions:      base.Versions,
 		CreatedAt:     cmp.Or(base.CreatedAt, now),
 		UpdatedAt:     now,
@@ -1078,11 +1078,11 @@ type TagsEdit struct {
 	Remove []string `json:"remove,omitzero"`
 }
 
-// Edited is a page as an edit wrote it: its slug afterwards, and its project (ProjectKey) and work, under the lock.
+// Edited is a page as an edit wrote it: its slug afterwards, and its project (ProjectKey) and task, under the lock.
 type Edited struct {
-	Slug        string `json:"slug"`
-	TaskProject string `json:"taskProject"`
-	Work        *Work  `json:"work,omitzero"`
+	Slug        string    `json:"slug"`
+	TaskProject string    `json:"taskProject"`
+	Task        *PageTask `json:"task,omitzero"`
 	// OffTask is the task the page was taken off, as its project changed, "" for none.
 	OffTask string `json:"offTask,omitempty"`
 }
@@ -1130,7 +1130,7 @@ func (s *Store) Edit(slug string, ed Edit) (Edited, error) {
 		}
 		s.moveRead(slug, to)
 	}
-	return Edited{Slug: to, TaskProject: ProjectKey(m.Project), Work: m.Work, OffTask: off}, nil
+	return Edited{Slug: to, TaskProject: ProjectKey(m.Project), Task: m.Task, OffTask: off}, nil
 }
 
 // setProject sets the project ed names of m, taking m off its task when it moves it: it returns the task taken off,
@@ -1151,11 +1151,11 @@ func setProject(m *Meta, ed Edit) (string, error) {
 // offTaskOf takes m off its task when its project is no longer was (ProjectKey): a task is of its project, and one of
 // the same name in another is another task. It returns the task taken off, "" for none. The pin stays.
 func offTaskOf(m *Meta, was string) string {
-	if ProjectKey(m.Project) == was || m.Work == nil || m.Work.Task == "" {
+	if ProjectKey(m.Project) == was || m.Task == nil || m.Task.Name == "" {
 		return ""
 	}
-	task, off := m.Work.Task, ""
-	setWork(m, &WorkEdit{Task: &off, Category: nil, Pin: nil})
+	task, off := m.Task.Name, ""
+	setPageTask(m, &PageTaskEdit{Name: &off, Category: nil, Pin: nil})
 	return task
 }
 

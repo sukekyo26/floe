@@ -72,7 +72,7 @@ func TestEncode(t *testing.T) {
 	tags, _ := reflect.TypeFor[server.Edit]().FieldByName("Tags")
 	name, _, _ := strings.Cut(tags.Tag.Get("json"), ",")
 	texts(tags.Type, "/"+name)
-	texts(reflect.TypeFor[store.WorkWrite](), "")
+	texts(reflect.TypeFor[store.TaskChange](), "")
 	// v2 still tells bytes no UTF-8 as notUTF8 matches them.
 	if _, err := jsonv2.Marshal("a\xffb"); !notUTF8(err) {
 		t.Errorf("encoding/json/v2 tells bytes no UTF-8 by %v, which notUTF8 does not match", err)

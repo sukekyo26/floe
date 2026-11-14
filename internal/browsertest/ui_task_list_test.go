@@ -12,9 +12,9 @@ import (
 	"floe/internal/store"
 )
 
-// taskWork is tasks.json of TestUITaskList: each state's order by its times, tasks of no page, one project of no page, and
+// tasksJSON is tasks.json of TestUITaskList: each state's order by its times, tasks of no page, one project of no page, and
 // the project of none. #6 is archived, #3 in progress with archived pages alone, and #8 done with one page left.
-const taskWork = `{
+const tasksJSON = `{
   "shop": {
     "#1": {"title": "One", "state": "doing", "at": "2026-01-02T00:00:00Z", "urls": ["https://example.com/a/b/c", "https://example.com/pull/9"]},
     "#2": {"title": "Two", "state": "doing", "at": "2026-01-01T00:00:00Z"},
@@ -49,25 +49,25 @@ func mustInt(t *testing.T, s string) int {
 	return n
 }
 
-// handWork writes the project, archived and work of the page slug into its meta.json, as a hand edit or an older floe
+// handMeta writes the project, archived and task of the page slug into its meta.json, as a hand edit or an older floe
 // leaves it: no task's row is made, which the test writes itself.
-func handWork(t *testing.T, st *store.Store, slug, project string, archived bool, task, category string, pin bool) {
+func handMeta(t *testing.T, st *store.Store, slug, project string, archived bool, task, category string, pin bool) {
 	t.Helper()
 
 	m := st.ReadMeta(slug)
 	if m == nil {
 		t.Fatalf("no page %s", slug)
 	}
-	m.Project, m.Archived, m.Work = project, archived, nil
+	m.Project, m.Archived, m.Task = project, archived, nil
 	if task != "" || pin {
-		m.Work = &store.Work{Task: task, Category: category, Pin: pin}
+		m.Task = &store.PageTask{Name: task, Category: category, Pin: pin}
 	}
 	if err := st.WriteMeta(slug, m); err != nil {
 		t.Fatal(err)
 	}
 }
 
-// taskPages publishes the pages of taskWork, each by its project, task, category and whether archived.
+// taskPages publishes the pages of tasksJSON, each by its project, task, category and whether archived.
 func taskPages(t *testing.T, s *site) {
 	t.Helper()
 
@@ -90,7 +90,7 @@ func taskPages(t *testing.T, s *site) {
 		{"pinonly", "pin", "", "", false, true},
 	} {
 		s.floe(t, "publish", s.page(t, p.slug+".yaml", p.slug, ""), "--slug", p.slug)
-		handWork(t, st, p.slug, p.project, p.archived, p.task, p.category, p.pin)
+		handMeta(t, st, p.slug, p.project, p.archived, p.task, p.category, p.pin)
 	}
 }
 
@@ -101,7 +101,7 @@ func TestUIStorageKeys(t *testing.T) { //nolint:paralleltest // the browser test
 	s := newSite(t)
 	b := s.b
 	taskPages(t, s)
-	if err := os.WriteFile(filepath.Join(s.Env["FLOE_DIR"], "tasks.json"), []byte(taskWork), 0o600); err != nil { //nolint:gosec // G703: a path the test names
+	if err := os.WriteFile(filepath.Join(s.Env["FLOE_DIR"], "tasks.json"), []byte(tasksJSON), 0o600); err != nil { //nolint:gosec // G703: a path the test names
 		t.Fatal(err)
 	}
 	out := make([]string, 0, 8)
@@ -158,7 +158,7 @@ func TestUITaskList(t *testing.T) { //nolint:paralleltest // the browser tests s
 	say("no work, tasks: shelf shown", "document.getElementById('shelf').offsetParent !== null")
 
 	taskPages(t, s)
-	writeTasks(taskWork)
+	writeTasks(tasksJSON)
 
 	// Opened with no project: the one where a task in progress changed last, written in the URL with no entry of its own, and kept.
 	b.navigate("/")
@@ -253,17 +253,17 @@ func TestUITaskList(t *testing.T) { //nolint:paralleltest // the browser tests s
 	b.until("a project", "location.search.includes('project=')")
 	say("the kept gone", "location.search")
 	b.eval("localStorage.removeItem(PROJECT_KEY)")
-	writeTasks(strings.ReplaceAll(taskWork, `"doing"`, `"todo"`))
+	writeTasks(strings.ReplaceAll(tasksJSON, `"doing"`, `"todo"`))
 	b.navigate("/tasks")
 	b.until("a project", "location.search.includes('project=')")
 	say("none in progress", "location.search")
 	// With the latest change in progress in another project than the shelf's first, that one.
 	b.eval("localStorage.removeItem(PROJECT_KEY)")
-	writeTasks(strings.ReplaceAll(taskWork, "2025-12-03T00:00:00Z\"}},", "2027-01-03T00:00:00Z\"}},"))
+	writeTasks(strings.ReplaceAll(tasksJSON, "2025-12-03T00:00:00Z\"}},", "2027-01-03T00:00:00Z\"}},"))
 	b.navigate("/tasks")
 	b.until("a project", "location.search.includes('project=')")
 	say("changed last", "location.search")
-	writeTasks(taskWork)
+	writeTasks(tasksJSON)
 
 	// The way up of a task's page opened by its URL: its project's list, at the task's view, whatever list was last seen.
 	const up = "document.getElementById('task-up').getAttribute('href')"
@@ -347,7 +347,7 @@ func TestUITaskList(t *testing.T) { //nolint:paralleltest // the browser tests s
 	b.navigate("/tasks")
 	b.until("the error", "!document.getElementById('error').hidden")
 	say("broken, none kept", "location.search + ' ' + document.getElementById('pins').hidden")
-	writeTasks(taskWork)
+	writeTasks(tasksJSON)
 	b.until("mended", "document.getElementById('error').hidden && "+rowsDrawn)
 	say("mended", "location.search + ' ' + document.getElementById('tasks-failed').hidden")
 	// The kept one written nowhere while unreadable, so that the project mended is the one the tasks choose.
@@ -356,7 +356,7 @@ func TestUITaskList(t *testing.T) { //nolint:paralleltest // the browser tests s
 	b.navigate("/tasks")
 	b.until("the error", "!document.getElementById('error').hidden")
 	say("broken, gone kept", "location.search + ' ' + sessionStorage.getItem(TASKS_KEY) + ' ' + localStorage.getItem(PROJECT_KEY)")
-	writeTasks(taskWork)
+	writeTasks(tasksJSON)
 	b.until("mended", "document.getElementById('error').hidden && "+rowsDrawn)
 	say("mended, chosen anew", "location.search + ' ' + localStorage.getItem(PROJECT_KEY)")
 
@@ -366,7 +366,7 @@ func TestUITaskList(t *testing.T) { //nolint:paralleltest // the browser tests s
 	b.navigate("/tasks")
 	b.until("the error", "!document.getElementById('error').hidden && document.querySelector('.chip[data-project=blog]')")
 	b.eval("document.querySelector('.chip[data-project=blog]').click()")
-	writeTasks(taskWork)
+	writeTasks(tasksJSON)
 	b.until("mended", "document.getElementById('error').hidden && "+rowsDrawn)
 	say("pressed while unreadable", "location.search")
 
@@ -381,7 +381,7 @@ func TestUITaskList(t *testing.T) { //nolint:paralleltest // the browser tests s
 	b.until("the guide", "!document.getElementById('tasks-empty').hidden")
 	s.floe(t, "publish", s.page(t, "p1.yaml", "p1", ""), "--slug", "p1")
 	s.floe(t, "task", "--slug", "p1", "--task", "#1", "--state", "done")
-	writeTasks(taskWork)
+	writeTasks(tasksJSON)
 
 	if got, want := strings.Join(out, "\n"), taskListWant; got != want {
 		t.Errorf("the task list:\n%s\nwant:\n%s", got, want)

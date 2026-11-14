@@ -1753,7 +1753,7 @@
   const TASKS_KEY = 'pages.tasks';
   const STATE_NAMES = STATES.map((s) => s.name);
   // What a task's state is changed to by hand and what has a dot on the shelf: the archive has its button for that, which writes its pages too
-  const WORK_STATES = STATES.filter((s) => s.name !== 'archived');
+  const UNARCHIVED_STATES = STATES.filter((s) => s.name !== 'archived');
   // The views the URL may name, and the one it leaves out
   const VIEWS = TASKS ? STATE_NAMES : ['new', 'fav', 'archived'];
   const FIRST_VIEW = TASKS ? STATES.find((s) => s.first).name : 'all';
@@ -2682,8 +2682,8 @@
     const pin = box.querySelector('.pin-item');
     // Archived it leaves the pins, and comes back with its pin as it is given back
     pin.hidden = Boolean(a.archived);
-    pin.querySelector('.label').textContent = t(a.work?.pin ? 'ui_unpin' : 'ui_pin');
-    pin.setAttribute('aria-label', t(a.work?.pin ? 'ui_unpin_named' : 'ui_pin_named', a.title));
+    pin.querySelector('.label').textContent = t(a.task?.pin ? 'ui_unpin' : 'ui_pin');
+    pin.setAttribute('aria-label', t(a.task?.pin ? 'ui_unpin_named' : 'ui_pin_named', a.title));
     pin.addEventListener('click', () => togglePin(a));
     const taskSet = box.querySelector('.task-set');
     taskSet.setAttribute('aria-label', t('ui_task_set_named', a.title));
@@ -2694,7 +2694,7 @@
     // Off its task at once, with the way back in the toast. The focus first on the menu's button, for the redraw to keep it, or move it
     // where a row gone leaves it; from the keys, to the way back
     const taskOut = box.querySelector('.task-out');
-    taskOut.hidden = !a.work?.task;
+    taskOut.hidden = !a.task?.name;
     taskOut.setAttribute('aria-label', t('ui_task_out_named', a.title));
     taskOut.addEventListener('click', async (e) => {
       const back = box.closest('#find') ? () => $('find-actions').querySelector('summary') : menuBack(box, () => a.slug);
@@ -2710,7 +2710,7 @@
     });
     // Of its task, unless this is that task's page
     const taskOpen = box.querySelector('.task-open');
-    const name = a.work?.task;
+    const name = a.task?.name;
     taskOpen.hidden = !name || (name === TASK_NAME && a.taskProject === project);
     if (name) {
       taskOpen.href = taskHref({ project: a.taskProject, name });
@@ -3128,9 +3128,9 @@
     const sub = li.querySelector('.sub');
     drawSub(sub, a, ranks, (put) => {
       // On the page list, the way to the task it is on, or to the task list it is pinned on
-      if (!TASKS && a.work?.task) sub.append(taskTag(taskHref({ project: a.taskProject, name: a.work.task }), t('ui_task_badge', a.work.task)));
+      if (!TASKS && a.task?.name) sub.append(taskTag(taskHref({ project: a.taskProject, name: a.task.name }), t('ui_task_badge', a.task.name)));
       if (TASK_PAGE && a.archived) put('badge', t('ui_archived_badge'));
-      if (!TASKS && a.work?.pin && !a.archived) sub.append(taskTag(`${TASKS_PATH}?${new URLSearchParams({ project: a.taskProject })}`, t('ui_pin_badge')));
+      if (!TASKS && a.task?.pin && !a.archived) sub.append(taskTag(`${TASKS_PATH}?${new URLSearchParams({ project: a.taskProject })}`, t('ui_pin_badge')));
       if (!a.tags?.length) return;
       const tags = put('tags', '');
       tags.append(...a.tags.map((name) => {
@@ -3601,7 +3601,7 @@
     }
     const taskAt = (project, name) => tasks.get(key(project, name));
     for (const a of items) {
-      const task = a.work?.task && taskAt(a.taskProject, a.work.task);
+      const task = a.task?.name && taskAt(a.taskProject, a.task.name);
       task?.[a.archived ? 'archived' : 'pages'].push(a);
     }
     // A child, as the store's childrenOfTask says: of a parent with a row of the same project and no parent itself
@@ -3720,7 +3720,7 @@
   // The pages pinned, which leave as they are archived, and how to pin one when none is
   // LIMIT: a folder pinned leads to the page list, where it opens (its URL), and not back here
   function drawPins() {
-    const pinned = items.filter((a) => a.work?.pin && !a.archived && a.taskProject === project);
+    const pinned = items.filter((a) => a.task?.pin && !a.archived && a.taskProject === project);
     const pins = pinned.map((a) => {
       const link = document.createElement('a');
       link.className = 'pin';
@@ -3754,7 +3754,7 @@
 
   // The projects there are for the task list: of its tasks, and of the pages pinned
   function taskProjects(tasks) {
-    return new Set([...tasks.map((task) => task.project), ...items.filter((a) => a.work?.pin && !a.archived).map((a) => a.taskProject)]);
+    return new Set([...tasks.map((task) => task.project), ...items.filter((a) => a.task?.pin && !a.archived).map((a) => a.taskProject)]);
   }
   // The viewer's last project, kept in the browser: whose it is, not the store's
   const PROJECT_KEY = 'pages.taskProject';
@@ -3844,8 +3844,8 @@
     const none = [];
     const order = categoryOrder(task);
     for (const a of everyPage(task).sort((x, y) => Boolean(x.archived) - Boolean(y.archived) || madeAt(x) - madeAt(y))) {
-      if (!order.includes(a.work.category)) none.push(a);
-      else categories.set(a.work.category, [...(categories.get(a.work.category) ?? []), a]);
+      if (!order.includes(a.task.category)) none.push(a);
+      else categories.set(a.task.category, [...(categories.get(a.task.category) ?? []), a]);
     }
     const groups = [{ entries: none }];
     for (const heading of order) groups.push({ heading, entries: categories.get(heading) ?? [], add: () => openAddPage(task, heading) });
@@ -5138,12 +5138,12 @@
   }
 
   async function togglePin(a) {
-    const reason = await workOf(a.slug, { pin: !a.work?.pin });
+    const reason = await changePageTask(a.slug, { pin: !a.task?.pin });
     if (reason) {
       showError(t('ui_save_failed', reason));
       return;
     }
-    toast(t(a.work?.pin ? 'ui_unpinned' : 'ui_pinned', a.title));
+    toast(t(a.task?.pin ? 'ui_unpinned' : 'ui_pinned', a.title));
     await load();
   }
 
@@ -5161,11 +5161,11 @@
     if (framed) tasksRead = await readTasks();
     resetTaskForm($('set'));
     $('set-target').textContent = a.title;
-    $('set-task').value = a.work?.task ?? '';
-    $('set-category').value = a.work?.category ?? '';
+    $('set-task').value = a.task?.name ?? '';
+    $('set-category').value = a.task?.category ?? '';
     setOpened = { task: $('set-task').value };
     setTaskKnown();
-    $('set-out').hidden = !a.work?.task;
+    $('set-out').hidden = !a.task?.name;
     $('set-error').textContent = tasksRead.error ? t('ui_tasks_failed', tasksRead.error) : '';
     $('set-error').hidden = !tasksRead.error;
     $('set-dialog').showModal();
@@ -5201,14 +5201,14 @@
     blank.reportValidity();
     return false;
   }
-  // The one write of pages and their tasks (PATCH /api/work), from the screen, a modal, the state's choices or the archive button, which says
+  // The one write of pages and their tasks (PATCH /api/tasks), from the screen, a modal, the state's choices or the archive button, which says
   // whether it takes the task named to be new, and of one there the rev read: one of no rev is not sent, as JSON would drop it and the store
   // write it unchecked. Refused as stale (409), the tasks are read again, a page whole too, whose load reads none; stale is the refusal with
   // what to do next in a modal, which can save again. Written, every task the store answers goes in the tasks read, so that the next write
   // is of its rev, a read failing too; rev is the first one's
-  async function writeWork(body) {
+  async function changeTasks(body) {
     if (body.new === false && !Number.isInteger(body.rev)) return { ok: false, status: 0, text: t('ui_task_no_rev'), rev: null, stale: '' };
-    const res = await api('/api/work', { method: 'PATCH', headers: { 'content-type': 'application/json' }, body: JSON.stringify(body) });
+    const res = await api('/api/tasks', { method: 'PATCH', headers: { 'content-type': 'application/json' }, body: JSON.stringify(body) });
     const text = res.ok ? '' : await res.text();
     if (res.status === 409) {
       if (framed) tasksRead = await readTasks();
@@ -5223,7 +5223,7 @@
     return { ok: res.ok, status: res.status, text, rev, stale: t('ui_task_stale', text) };
   }
   // A write of the task (project, name) alone
-  const writeTask = (project, name, body) => writeWork({ taskProject: project, task: name, ...body });
+  const writeTask = (project, name, body) => changeTasks({ taskProject: project, task: name, ...body });
   // The rev of a task as this screen knows it: as read, or as it wrote it since; 0 of no row. A button drawn on the page sends it; what
   // shows a task held apart (the open choices, a dialog, a toast) sends the rev of what it shows, which its own write moves on
   function readRev(project, name) {
@@ -5235,10 +5235,10 @@
   };
   // A page put on a category of a task in one write, with what the screen saw of the task (body): the store makes the task's row when it has
   // none and adds the category to its categories. The page's project is the task's
-  const putPageOn = (page, task, body, category) => writeWork({ slugs: [page.slug], task, category, ...body });
-  // A write of the page's own work alone (its pin, or off its task and back), told as patchOne tells a write: "" or the reason
-  async function workOf(slug, body) {
-    const res = await writeWork({ slugs: [slug], ...body });
+  const putPageOn = (page, task, body, category) => changeTasks({ slugs: [page.slug], task, category, ...body });
+  // A write of the page's own task alone (its pin, or off its task and back), told as patchOne tells a write: "" or the reason
+  async function changePageTask(slug, body) {
+    const res = await changeTasks({ slugs: [slug], ...body });
     return res.ok ? '' : t('ui_http_error', res.text, res.status);
   }
   // The task's own fields are its page's to write (openTaskEdit): this writes the page's category, and a new name's title
@@ -5379,7 +5379,7 @@
     (near?.querySelector('.url-drop') ?? ($('edit-url-new').hidden ? $('edit-url-plus') : $('edit-url-new'))).focus();
   }
   // The categories as rows, each with its name, whether no page is under it, and its buttons up, down and to remove it; the grip drags it
-  const pagedOf = (task) => new Set(everyPage(task).map((a) => a.work.category).filter(Boolean));
+  const pagedOf = (task) => new Set(everyPage(task).map((a) => a.task.category).filter(Boolean));
   function drawEditCategories(task, order) {
     const paged = pagedOf(task);
     $('edit-categories').replaceChildren(...order.map((name) => categoryRow(name, paged.has(name))));
@@ -5658,12 +5658,12 @@
   // the row after it, its category's add button, or the task's edit button
   // LIMIT: a page's write has no rev, so the way back writes over what was written to the page since, as the archive's does. Give page writes a rev if that comes to trouble someone
   async function takePageOff(a, back) {
-    const name = a.work.task;
-    const category = a.work.category ?? '';
+    const name = a.task.name;
+    const category = a.task.category ?? '';
     const rows = listRows().filter((li) => !li.classList.contains('group') && li.querySelector('.title'));
     const at = rows.findIndex((li) => li.dataset.key === `entry:${a.slug}`);
     const next = at === -1 ? null : (rows[at + 1] ?? rows[at - 1])?.dataset.key;
-    const reason = await workOf(a.slug, { task: '', category: '' });
+    const reason = await changePageTask(a.slug, { task: '', category: '' });
     if (reason) return { reason };
     // The way back is of the task as the toast shows it: its rev as read now, or new when it has no row. A page whole's load reads no tasks
     if (framed) tasksRead = await readTasks();
@@ -5687,12 +5687,12 @@
   let addShown = [];
   let addSlug = null;
   const addHits = () => {
-    const all = items.filter((a) => a.taskProject === addTo.project && !a.archived && !(a.work?.task === addTo.name && (a.work?.category ?? '') === addTo.category));
+    const all = items.filter((a) => a.taskProject === addTo.project && !a.archived && !(a.task?.name === addTo.name && (a.task?.category ?? '') === addTo.category));
     return { all, hits: searched($('add-page-q'), all) };
   };
   // Where a page comes from, as said of it: this task's other category, another task's, or none
   const pageFrom = (a) => {
-    const { task, category } = a.work ?? {};
+    const { name: task, category } = a.task ?? {};
     if (!task) return '';
     if (task === addTo.name) return category ? t('ui_page_from_category', category) : t('ui_page_from_no_category');
     return category ? t('ui_page_from_task_category', task, category) : task;
@@ -5702,8 +5702,8 @@
     addShown = hits.slice(0, FIND_ROWS);
     // Of one project, the task's: no pill, as on the task's page
     $('add-page-list').replaceChildren(...addShown.map((a, i) => hitRow($('add-page-row'), `add-page-${i}`, a, new Map(), (put) => {
-      if (!a.work?.task) return;
-      put('badge', a.work.task === addTo.name ? t('ui_page_here_category', a.work.category || t('ui_page_from_no_category')) : [a.work.task, a.work.category].filter(Boolean).join(' · '));
+      if (!a.task?.name) return;
+      put('badge', a.task.name === addTo.name ? t('ui_page_here_category', a.task.category || t('ui_page_from_no_category')) : [a.task.name, a.task.category].filter(Boolean).join(' · '));
     })));
     const none = hits.length === 0;
     $('add-page-list').hidden = none;
@@ -6607,7 +6607,7 @@
       $('manage').classList.add('task-page');
       $('task-up').href = taskListHref();
       $('task-missing-up').href = $('task-up').href;
-      $('task-state').append(...WORK_STATES.map(({ name }) => {
+      $('task-state').append(...UNARCHIVED_STATES.map(({ name }) => {
         const o = tagged('option', '', t(`ui_state_${name}`));
         o.value = name;
         return o;
@@ -6629,7 +6629,7 @@
     if (TASK_LIST) {
       // The shelf's views are the task's states, and only they and the project narrow it
       for (const b of document.querySelectorAll('.views button[data-view]:not([data-view="archived"])')) b.remove();
-      document.querySelector('.views button[data-view="archived"]').before(...WORK_STATES.map(({ name }) => {
+      document.querySelector('.views button[data-view="archived"]').before(...UNARCHIVED_STATES.map(({ name }) => {
         const b = tagged('button');
         b.type = 'button';
         b.dataset.view = name;

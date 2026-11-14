@@ -13,19 +13,19 @@ import (
 	"floe/internal/store"
 )
 
-// A task is written by PATCH /api/work, of its project ("/" for none) and name; what cannot be a row is refused as the
+// A task is written by PATCH /api/tasks, of its project ("/" for none) and name; what cannot be a row is refused as the
 // user's, what is not from the page itself or not of the form as a protocol's; a task with a page on it is not
 // forgotten (by the query of DELETE /api/tasks), and none is not found.
-func TestWorkAPI(t *testing.T) {
+func TestTaskAPI(t *testing.T) {
 	t.Parallel()
 
 	e := newEnv(t)
 	task := func(project, name string) string {
 		return "/api/tasks?" + url.Values{"taskProject": {project}, "task": {name}}.Encode()
 	}
-	work := func(body string) (int, string) {
+	change := func(body string) (int, string) {
 		t.Helper()
-		w := e.do(t, http.MethodPatch, "/api/work", body, "Origin", origin, "Content-Type", jsonType)
+		w := e.do(t, http.MethodPatch, "/api/tasks", body, "Origin", origin, "Content-Type", jsonType)
 		return w.Code, w.Body.String()
 	}
 	// A write of the task (project, name) alone, of the fields of body
@@ -40,12 +40,12 @@ func TestWorkAPI(t *testing.T) {
 		if err != nil {
 			t.Fatal(err)
 		}
-		return work(string(b))
+		return change(string(b))
 	}
 	// The first task of the answer of a write
 	first := func(body string) store.TaskWritten {
 		t.Helper()
-		var w store.WorkWritten
+		var w store.TaskChangeResult
 		if err := json.Unmarshal([]byte(body), &w); err != nil || len(w.Tasks) == 0 {
 			t.Fatalf("the answer %q: %v", body, err)
 		}
@@ -152,13 +152,13 @@ func TestWorkAPI(t *testing.T) {
 		{`{"taskProject":"p","task":"x","state":"nope"}`, `unknown state "nope": use todo, doing, done, archived`},
 		{`{"taskProject":"p","task":"x","urls":{"add":["javascript:alert(1)"]}}`, `"javascript:alert(1)" is not an http or https URL`},
 	} {
-		if code, body := work(c.body); code != http.StatusBadRequest || body != c.want {
+		if code, body := change(c.body); code != http.StatusBadRequest || body != c.want {
 			t.Errorf("PATCH %s = %d, %q, want %q", c.body, code, body, c.want)
 		}
 	}
 	// A project or ID that is no UTF-8, a lone surrogate in the body, is refused as decodeStrict reads it, before the store
 	for _, body := range []string{`{"taskProject":"p","task":"\ud800","state":"done"}`, `{"taskProject":"\ud800","task":"x","state":"done"}`, `{"slugs":["d"],"task":"\ud800"}`} {
-		if code, answer := work(body); code != http.StatusBadRequest || !strings.Contains(answer, "surrogate") {
+		if code, answer := change(body); code != http.StatusBadRequest || !strings.Contains(answer, "surrogate") {
 			t.Errorf("PATCH %s = %d, %q", body, code, answer)
 		}
 	}
@@ -168,8 +168,8 @@ func TestWorkAPI(t *testing.T) {
 	if code, _ := patch("p", "x", `{"bad":1}`); code != http.StatusBadRequest {
 		t.Errorf("a key of none = %d", code)
 	}
-	want(t, e.do(t, http.MethodPatch, "/api/work", `{}`, "Content-Type", jsonType), http.StatusForbidden, "forbidden origin")
-	want(t, e.do(t, http.MethodPatch, "/api/work", `{}`, "Origin", "null", "Content-Type", jsonType), http.StatusForbidden, "forbidden origin")
+	want(t, e.do(t, http.MethodPatch, "/api/tasks", `{}`, "Content-Type", jsonType), http.StatusForbidden, "forbidden origin")
+	want(t, e.do(t, http.MethodPatch, "/api/tasks", `{}`, "Origin", "null", "Content-Type", jsonType), http.StatusForbidden, "forbidden origin")
 	want(t, e.do(t, http.MethodDelete, task("shop", "#1"), "", "Origin", "null"), http.StatusForbidden, "forbidden origin")
 
 	e.publish(t, "d", noted("one"), nil)
@@ -182,11 +182,11 @@ func TestWorkAPI(t *testing.T) {
 		return strings.TrimSpace(w.Body.String())
 	}
 	edit(`{"project":"shop"}`)
-	// The answer of a page's work is its slug, project and work as written
+	// The answer of a page's task is its slug, project and task as written
 	page := func(body string) string {
 		t.Helper()
-		code, answer := work(body)
-		var w store.WorkWritten
+		code, answer := change(body)
+		var w store.TaskChangeResult
 		if err := json.Unmarshal([]byte(answer), &w); err != nil || code != http.StatusOK || len(w.Pages) != 1 {
 			t.Fatalf("PATCH %s = %d, %s", body, code, answer)
 		}
@@ -196,20 +196,20 @@ func TestWorkAPI(t *testing.T) {
 		}
 		return string(b)
 	}
-	if got := page(`{"slugs":["d"],"task":"#1","category":" s "}`); got != `{"slug":"d","taskProject":"shop","work":{"task":"#1","category":"s"}}` {
-		t.Errorf("the answer of a page's work: %s", got)
+	if got := page(`{"slugs":["d"],"task":"#1","category":" s "}`); got != `{"slug":"d","taskProject":"shop","task":{"name":"#1","category":"s"}}` {
+		t.Errorf("the answer of a page's task: %s", got)
 	}
 	forget := func(project, name string) (int, string) {
 		t.Helper()
 		w := e.do(t, http.MethodDelete, task(project, name), "", "Origin", origin)
 		return w.Code, w.Body.String()
 	}
-	if code, body := work(`{"slugs":["d"],"task":"   "}`); code != http.StatusBadRequest || body != "a task needs an ID" {
+	if code, body := change(`{"slugs":["d"],"task":"   "}`); code != http.StatusBadRequest || body != "a task needs an ID" {
 		t.Errorf("a name of spaces = %d, %s", code, body)
 	}
-	// A page's work is written by PATCH /api/work alone: its edit has no such key
-	if w := e.do(t, http.MethodPatch, "/api/pages/d", `{"work":{"task":"#1"}}`, "Origin", origin, "Content-Type", jsonType); w.Code != http.StatusBadRequest {
-		t.Errorf("a page's work by its edit = %d, %s", w.Code, w.Body)
+	// A page's task is written by PATCH /api/tasks alone: its edit has no such key
+	if w := e.do(t, http.MethodPatch, "/api/pages/d", `{"task":{"name":"#1"}}`, "Origin", origin, "Content-Type", jsonType); w.Code != http.StatusBadRequest {
+		t.Errorf("a page's task by its edit = %d, %s", w.Code, w.Body)
 	}
 	w := e.do(t, http.MethodDelete, "/api/tasks?taskProject=shop&task=%FF", "", "Origin", origin)
 	if w.Code != http.StatusBadRequest || w.Body.String() != "a task's project and ID must be UTF-8" {
@@ -256,19 +256,23 @@ func TestWorkAPI(t *testing.T) {
 	}
 }
 
-// PATCH /api/work reads the keys the management page sends of a task, the embedded TaskEdit's as the write's own, and
+// PATCH /api/tasks reads the keys the management page sends of a task, the embedded TaskEdit's as the write's own, and
 // refuses as a protocol's what only a sender's mistake makes.
-func TestWorkWriteAPI(t *testing.T) {
+func TestTaskWriteAPI(t *testing.T) {
 	t.Parallel()
 
 	e := newEnv(t)
 	patch := func(body string) (int, string) {
 		t.Helper()
-		w := e.do(t, http.MethodPatch, "/api/work", body, "Origin", origin, "Content-Type", jsonType)
+		w := e.do(t, http.MethodPatch, "/api/tasks", body, "Origin", origin, "Content-Type", jsonType)
 		return w.Code, w.Body.String()
 	}
+	// The way it had before is no more: not found, not a method of another way
+	if w := e.do(t, http.MethodPatch, "/api/work", `{"taskProject":"p","task":"#2","new":true}`, "Origin", origin, "Content-Type", jsonType); w.Code != http.StatusNotFound {
+		t.Errorf("PATCH /api/work = %d, %s; want 404", w.Code, w.Body)
+	}
 	code, body := patch(`{"taskProject":"p","task":"#2","new":true,"title":"C","parent":"#P","parentNew":true,"parentTitle":"Par"}`)
-	var got store.WorkWritten
+	var got store.TaskChangeResult
 	if err := json.Unmarshal([]byte(body), &got); err != nil || code != http.StatusOK {
 		t.Fatalf("a child and its parent made = %d, %s, %v", code, body, err)
 	}

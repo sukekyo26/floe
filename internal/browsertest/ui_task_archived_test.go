@@ -41,7 +41,7 @@ func TestUITaskArchivedInCategory(t *testing.T) { //nolint:paralleltest // the b
 	if _, err := st.Edit("fold", store.Edit{Project: ptrTo("proj")}); err != nil {
 		t.Fatal(err)
 	}
-	if _, err := st.Work(store.WorkWrite{Slugs: []string{"fold"}, Task: ptrTo("T1")}); err != nil {
+	if _, err := st.ChangeTasks(store.TaskChange{Slugs: []string{"fold"}, Task: ptrTo("T1")}); err != nil {
 		t.Fatal(err)
 	}
 	s.floe(t, "task", "--project", "proj", "--task", "T1", "--categories", "案,設計,旧,新")

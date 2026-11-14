@@ -94,8 +94,8 @@ type Meta struct {
 	Archived bool `json:"archived,omitempty"`
 	// Tags are the page's tags, as tagged keeps them.
 	Tags []string `json:"tags,omitempty"`
-	// Work is its place on the task list; its task's state is in tasks.json.
-	Work *Work `json:"work,omitempty"`
+	// Task is its place on the task list; its task's state is in tasks.json.
+	Task *PageTask `json:"task,omitempty"`
 	// Versions are a stored page's versions, oldest first: a publish of other content than the last's adds one.
 	Versions  []Version `json:"versions,omitempty"`
 	CreatedAt string    `json:"createdAt"`

@@ -510,7 +510,7 @@ func TestUITaskSetTitle(t *testing.T) { //nolint:paralleltest // the browser tes
 	dialog("a")
 	field("set-task", "#7")
 	save()
-	if got := st.ReadMeta("a").Work.Task; got != "#7" {
+	if got := st.ReadMeta("a").Task.Name; got != "#7" {
 		t.Errorf("a new name: %q", got)
 	}
 
@@ -528,7 +528,7 @@ func TestUITaskSetTitle(t *testing.T) { //nolint:paralleltest // the browser tes
 		t.Errorf("a name there: %q", got)
 	}
 	save()
-	if got := st.ReadMeta("b").Work.Task; got != "#1" {
+	if got := st.ReadMeta("b").Task.Name; got != "#1" {
 		t.Errorf("saved on #1: %q", got)
 	}
 	// Opened again, the title typed before is gone, and a task there asks none.
