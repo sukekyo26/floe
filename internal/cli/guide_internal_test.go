@@ -188,8 +188,8 @@ func TestGuideExamples(t *testing.T) {
 	t.Parallel()
 
 	blocks := fences(readGuide(t, guidePath), "yaml")
-	if len(blocks) != 4 {
-		t.Fatalf("%s: %d YAML blocks, want 4", guidePath, len(blocks))
+	if len(blocks) != 2 {
+		t.Fatalf("%s: %d YAML blocks, want 2", guidePath, len(blocks))
 	}
 	dir := t.TempDir()
 	for i, b := range blocks {

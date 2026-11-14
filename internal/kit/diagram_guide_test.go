@@ -12,10 +12,12 @@ import (
 
 	"github.com/yuin/goldmark"
 	"github.com/yuin/goldmark/ast"
+	extast "github.com/yuin/goldmark/extension/ast"
 	"github.com/yuin/goldmark/parser"
 	"github.com/yuin/goldmark/text"
 
 	"floe/internal/cli"
+	"floe/internal/icons"
 	"floe/internal/kit"
 )
 
@@ -99,11 +101,9 @@ func TestGuideDocLinks(t *testing.T) {
 	if len(embedded) < 5 {
 		t.Fatalf("docs.go embeds %d docs, want guide.md, diagrams.md, parts.md, templates.md and themes.md", len(embedded))
 	}
-	links := 0
 	for _, rel := range embedded {
 		path := "../../docs/" + rel
 		_, dests, headings, bad := readGuideDoc(t, path)
-		links += len(dests)
 		for _, d := range dests {
 			if !strings.HasPrefix(d, "#") {
 				t.Errorf("%s links %q: floe prints it, and an agent cannot open another doc (write what it says, or a command that prints it)", path, d)
@@ -115,9 +115,64 @@ func TestGuideDocLinks(t *testing.T) {
 			t.Errorf("%s holds %s: write fenced code, and no HTML", path, b)
 		}
 	}
-	if links == 0 {
-		t.Fatal("no link found: the docs link their headings")
+}
+
+// readGuideDoc finds a link of every form, so that TestGuideDocLinks finding none in a doc means it holds none.
+func TestReadGuideDocLinks(t *testing.T) {
+	t.Parallel()
+
+	path := filepath.Join(t.TempDir(), "d.md")
+	src := "# D\n\n## A b\n\n[a](#a-b), [o](other.md#x), ![i](i.png), <https://a.example>, https://b.example and [r][1].\n\n[1]: ../r.md\n"
+	if err := os.WriteFile(path, []byte(src), 0o600); err != nil {
+		t.Fatal(err)
 	}
+	_, dests, headings, _ := readGuideDoc(t, path)
+	want := []string{"#a-b", "other.md#x", "i.png", "https://a.example", "https://b.example", "../r.md"}
+	if !slices.Equal(dests, want) || !slices.Contains(headings, "#a-b") {
+		t.Errorf("links %q, headings %q; want links %q and the heading #a-b", dests, headings, want)
+	}
+}
+
+// The table of icon sets in diagrams.md, the table whose first heading is Set, names the sets floe icons fetch keeps,
+// in its order. The table is read from the Markdown's tree, as the page reads it.
+func TestGuideIconSets(t *testing.T) {
+	t.Parallel()
+
+	src, err := os.ReadFile(diagramGuide)
+	if err != nil {
+		t.Fatal(err)
+	}
+	var tables [][]string
+	err = ast.Walk(kit.PageMarkdown.Parser().Parse(text.NewReader(src)), func(n ast.Node, entering bool) (ast.WalkStatus, error) {
+		table, ok := n.(*extast.Table)
+		if !entering || !ok || cellText(table.FirstChild().FirstChild(), src) != "Set" {
+			return ast.WalkContinue, nil
+		}
+		var sets []string
+		for row := table.FirstChild().NextSibling(); row != nil; row = row.NextSibling() {
+			sets = append(sets, cellText(row.FirstChild(), src))
+		}
+		tables = append(tables, sets)
+		return ast.WalkSkipChildren, nil
+	})
+	if err != nil {
+		t.Fatal(err)
+	}
+	if len(tables) != 1 || !slices.Equal(tables[0], icons.Sets()) {
+		t.Errorf("%s: its tables of icon sets name %q; want one naming %q, the sets floe icons fetch keeps", diagramGuide, tables, icons.Sets())
+	}
+}
+
+// cellText is the text n holds, its code spans' among it.
+func cellText(n ast.Node, src []byte) string {
+	var b strings.Builder
+	_ = ast.Walk(n, func(n ast.Node, entering bool) (ast.WalkStatus, error) { //nolint:errcheck // the walk returns no error
+		if t, ok := n.(*ast.Text); ok && entering {
+			b.Write(t.Segment.Value(src))
+		}
+		return ast.WalkContinue, nil
+	})
+	return b.String()
 }
 
 // embeddedDocs returns the docs docs/docs.go embeds, as //go:embed gives them (agents/guide.md), so that a doc
