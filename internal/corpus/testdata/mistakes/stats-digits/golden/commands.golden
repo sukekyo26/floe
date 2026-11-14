@@ -1,0 +1,10 @@
+$ floe check stats.yaml
+exit 1
+--- stderr
+stats.yaml:9:32: stats: item 1 "e": with from, write from and value as digits in quotes, and better as lower or higher; value is not so
+stats.yaml:10:43: stats: item 2 "f": with from, write from and value as digits in quotes, and better as lower or higher; from is not so
+$ floe render --out-dir $TMP/pages/stats.yaml stats.yaml
+exit 1
+--- stderr
+stats.yaml:9:32: stats: item 1 "e": with from, write from and value as digits in quotes, and better as lower or higher; value is not so
+stats.yaml:10:43: stats: item 2 "f": with from, write from and value as digits in quotes, and better as lower or higher; from is not so

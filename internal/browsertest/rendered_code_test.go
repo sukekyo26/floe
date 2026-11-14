@@ -206,7 +206,7 @@ func TestRenderedCode(t *testing.T) { //nolint:paralleltest // the browser tests
 
 var codeOwnKit = map[string]string{
 	"parts/lined/schema.json": `{"$schema": "https://json-schema.org/draft/2020-12/schema", "type": "object"}`,
-	"parts/lined/part.html": `{{$c := code .text .start .mark}}<ol data-floe-part="lined" data-before="{{$c.Before}}" data-digits="{{$c.Digits}}" data-numbered="{{$c.Numbered}}">` +
+	"parts/lined/part.html": `{{$c := code}}<ol data-floe-part="lined" data-before="{{$c.Before}}" data-digits="{{$c.Digits}}" data-numbered="{{$c.Numbered}}">` +
 		`{{range $c.Lines}}<li{{if .Mark}} class="mark"{{end}}>{{.Text}}</li>{{end}}</ol>`,
 	"parts/lined/part.css": "",
 	"templates/lines/page.html": "<!doctype html>\n<html lang=\"{{.Lang}}\"><head><meta charset=\"utf-8\">" +

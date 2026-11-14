@@ -67,10 +67,10 @@ order.yaml:4:18: the image "img/none.png" cannot be read (no such file or direct
 order.yaml:5:8: the image "img/none.png" cannot be read (no such file or directory)
 `},
 		{[]string{"publish", "--link", "gone.yaml"}, 1, "", `gone.yaml:3:5: the image "img/none.png" cannot be read (no such file or directory)` + "\n"},
-		{[]string{"publish", "--link", "h.html"}, 0, url + "/a/h/\n", ""},
+		{[]string{"publish", "--link", "h.html"}, 0, url + "/a/h/\n", "page in project p\n"},
 		{[]string{"publish", "w.yaml"}, 0, url + "/a/w/\n", "w.yaml:5:15: warning: this text holds a fenced block of code on its line 1"},
 		{[]string{"publish", "--link", "w.yaml", "--slug", "wl"}, 0, url + "/a/wl/\n", "w.yaml:5:15: warning: this text holds a fenced block of code on its line 1"},
-		{[]string{"publish", "--link", "docs"}, 0, url + "/a/docs/\n", ""},
+		{[]string{"publish", "--link", "docs"}, 0, url + "/a/docs/\n", "page in project docs\n"},
 		{[]string{"publish", "--link", "docs", "--theme", "ink"}, 1, "", "floe: --theme picks the theme of a page drawn from a data file: a linked file is shown as it is\n"},
 		{[]string{"publish", "--link", "h.html", "--theme", "ink"}, 1, "", "floe: --theme picks the theme of a page drawn from a data file: a linked file is shown as it is\n"},
 		{[]string{"list"}, 0, "\th\tH\t", ""},
@@ -403,9 +403,9 @@ func publishedTogether(t *testing.T, dir string, env map[string]string, args ...
 	return both.String()
 }
 
-// A page the directory floe publish runs in gives its project is told after its URL, on stderr: when it is new, when
-// it replaces another file's (--force) and when it was emptied of its project; not when it keeps its project, nor for a
-// link, which is in its target's directory's project.
+// The project of a page, or of a link, is told after its URL, on stderr: when it is new, when it replaces another file's
+// (--force) and when it was emptied of its project; not when it keeps its project. A data file's page is in the project
+// of the directory floe publish runs in, a link in that of its file's directory.
 func TestPublishSaysProject(t *testing.T) {
 	t.Parallel()
 
@@ -421,6 +421,9 @@ func TestPublishSaysProject(t *testing.T) {
 	if err := os.WriteFile(filepath.Join(other, "v.yaml"), []byte(page), 0o600); err != nil {
 		t.Fatal(err)
 	}
+	if err := os.WriteFile(filepath.Join(other, "g.html"), []byte("<title>G</title>"), 0o600); err != nil {
+		t.Fatal(err)
+	}
 	s := store.New(env["FLOE_DIR"])
 	for _, step := range []struct {
 		what string
@@ -431,7 +434,12 @@ func TestPublishSaysProject(t *testing.T) {
 		{"a new page", dir, []string{"n.yaml"}, "\npage in project p\n"},
 		{"a new page of no project", "/", []string{filepath.Join(dir, "m.yaml")}, "\npage in no project\n"},
 		{"a page keeping its project", dir, []string{"n.yaml"}, ""},
-		{"a link", dir, []string{"--link", "h.html"}, ""},
+		{"a new link", dir, []string{"--link", "h.html"}, "\npage in project p\n"},
+		{"a link keeping its project", dir, []string{"--link", "h.html"}, ""},
+		{"a new folder", dir, []string{"--link", "docs"}, "\npage in project docs\n"},
+		{"a folder keeping its project", dir, []string{"--link", "docs"}, ""},
+		{"another file's link, of another project (--force)", other, []string{"--link", "g.html", "--slug", "h", "--force"}, "\npage in project q\n"},
+		{"a link from another project's directory", other, []string{"--link", filepath.Join(dir, "h.html"), "--slug", "h2"}, "\npage in project p\n"},
 		{"another file's page, of another project (--force)", other, []string{"v.yaml", "--slug", "n", "--force"}, "\npage in project q\n"},
 		{"another file's page, of the same project (--force)", other, []string{"w.yaml", "--slug", "n", "--force"}, ""},
 	} {
@@ -449,6 +457,13 @@ func TestPublishSaysProject(t *testing.T) {
 	}
 	if got := publishedTogether(t, dir, env, "m.yaml"); !strings.Contains(got, "\npage in project p\n") {
 		t.Errorf("a page emptied of its project wrote %q, want its project told", got)
+	}
+	// Emptied of its project, a link takes its file's again, not that of the directory floe publish runs in.
+	if _, err := s.Edit("h2", store.Edit{Project: ptr("")}); err != nil {
+		t.Fatal(err)
+	}
+	if got := publishedTogether(t, other, env, "--link", filepath.Join(dir, "h.html")); !strings.Contains(got, "\npage in project p\n") {
+		t.Errorf("a link emptied of its project wrote %q, want its file's project told", got)
 	}
 	// Moved on the management page, a page keeps its project.
 	if _, err := s.Edit("m", store.Edit{Project: ptr("moved")}); err != nil {

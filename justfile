@@ -109,6 +109,10 @@ golden:
     go test ./internal/diagram -run 'TestExamples|TestFaceOfGolden' -update
     go test ./internal/pagediff -run TestReadEveryPart -update
 
+# Write internal/licenses/NOTICES.txt anew, which floe licenses prints, after a module is added, removed or upgraded
+licenses:
+    go test ./internal/licenses -run '^TestNotices$' -update
+
 # Fail when total coverage of internal/ is below MIN_COVERAGE (default 90)
 cover-check:
     #!/usr/bin/env bash

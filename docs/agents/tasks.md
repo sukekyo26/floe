@@ -46,7 +46,7 @@ $ floe task --slug old-notes
 page old-notes: no task, in project floe
 ```
 
-A page on no task prints its project after `no task` (`page old-notes: no task, in project floe`), and a page of no project prints `page <slug>: no task` alone. A project of no open task prints `no open task in project floe`. `floe info <slug>` prints the rest floe keeps of a page: its title, URL, tags, data file or linked path, and whether it is archived.
+A page on no task prints its project after `no task` (`page old-notes: no task, in project floe`), and a page of no project prints `page <slug>: no task` alone. A project of no open task prints `no open task in project floe`. A page published by `--link` is in the project of the linked file. `floe info <slug>` prints the rest floe keeps of a page: its title, URL, tags, data file or linked path, and whether it is archived.
 
 ## Put pages on a task
 

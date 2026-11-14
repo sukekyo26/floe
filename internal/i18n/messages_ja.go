@@ -114,6 +114,8 @@ var messagesJA = map[string]string{
 	"kit_words_unknown":          "words.yaml の %[2]s に言葉「%[1]s」がありません",
 	"kit_part_files":             "部品は schema.json・part.html・part.css の 3 つを、見た目だけの部品はほかの 2 つを置かずに part.css を（見た目を借りるか、印のある行（marks:）を持つなら part.yaml も）置きます。足りないものを足すか、見た目に要らないものを消してください",
 	"kit_part_unread":            "floe は部品の中のこの名前のファイルを読みません。部品は schema.json・part.html・part.css と、要るなら part.yaml・checks.yaml・words.yaml を持ちます。消してください",
+	"kit_part_value":             "%[1]s は %[2]s（. は部品の値）を JSON の %[3]s として読みます。そう書いてください。部品を作った人は、schema.json で %[2]s に \"type\": \"%[3]s\" を書いてください",
+	"kit_bound_args":             "%[1]s は引数を取らず、部品の値を読みます。{{%[1]s}} と書いてください",
 	"kit_marks_twice":            "%[1]s とそれが取る見た目で marks: が 2 回書かれています（%[2]s と %[3]s）。1 つの見た目の連なりで marks: を書けるのは 1 つだけです。%[1]s の marks: を消すか、marks: を書く見た目を 1 つだけ取ってください",
 	"kit_look_unread":            "schema.json の無いディレクトリ（見た目）の中で、floe が読むのは part.css と part.yaml だけです。消すか、schema.json を足して部品にしてください",
 	"kit_css_radius_length":      "%s は 1 つの角として読まれ（棒の rx、pill の min()）、2 つ以上の項の値は黙って無効になります。%q でなく、1 つの長さか 1 つの関数にしてください",

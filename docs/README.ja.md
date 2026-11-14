@@ -75,4 +75,4 @@ To show the user a page, use floe: run `floe guide` first and follow it. It is t
 
 ## ライセンス
 
-[MIT](../LICENSE)。floe が図のために同梱する [Lucide](https://lucide.dev) のアイコン（`lucide/…`）は ISC ライセンスで、一部は MIT ライセンスも受けます：[internal/icons/lucide/LICENSE](../internal/icons/lucide/LICENSE)。
+[MIT](../LICENSE)。floe のバイナリには、ほかの人が作った Go の標準ライブラリと Go のモジュールが、それぞれのライセンスのまま入っています。`floe licenses` が floe のライセンスとそれらのライセンスを出します（中身は [internal/licenses/NOTICES.txt](../internal/licenses/NOTICES.txt)）。floe が図のために同梱する [Lucide](https://lucide.dev) のアイコン（`lucide/…`）は ISC ライセンスで、一部は MIT ライセンスも受けます：[internal/icons/lucide/LICENSE](../internal/icons/lucide/LICENSE)。

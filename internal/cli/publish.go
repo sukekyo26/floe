@@ -54,8 +54,9 @@ files under its directory are served for its relative references. A data file is
 its page is opened, and saving it, a part, theme or template of one's own, or fetching icons
 reloads the open tab; saving an image it shows does not. A folder is listed on the management page,
 a directory at a time as it is opened, with the HTML files under it (none under a name starting with
-a dot), each shown as a linked HTML file is. The same slug for another file is refused unless
---force. A page and a link cannot take each other's slug, even with --force: floe rm it first.`,
+a dot), each shown as a linked HTML file is. A link is in the project of its file's directory (for
+a folder, the folder itself), not of where floe publish runs, and is told so as a page is. The same slug for another
+file is refused unless --force. A page and a link cannot take each other's slug, even with --force: floe rm it first.`,
 		Args: usage(cobra.ExactArgs(1)),
 		RunE: func(cmd *cobra.Command, args []string) error {
 			flags := cmd.Flags()
@@ -116,7 +117,7 @@ func (a *app) publish(ctx context.Context, file string, link bool, opts store.Op
 	if err != nil {
 		return err
 	}
-	a.tellSaved(ctx, pageURL(daemon.Base(port), saved.Slug), saved, link)
+	a.tellSaved(ctx, pageURL(daemon.Base(port), saved.Slug), saved)
 	return nil
 }
 
@@ -127,7 +128,7 @@ func pageURL(base, slug string) string {
 
 // tellSaved prints the URL u of the page saved, and what a publish tells of it: that it replaced one, and the
 // project it is in.
-func (a *app) tellSaved(ctx context.Context, u string, saved server.Saved, link bool) {
+func (a *app) tellSaved(ctx context.Context, u string, saved server.Saved) {
 	// A republish does not open another tab; the open one reloads itself.
 	if saved.Prev == nil {
 		daemon.OpenBrowser(ctx, a.getenv("BROWSER"), u)
@@ -136,13 +137,13 @@ func (a *app) tellSaved(ctx context.Context, u string, saved server.Saved, link 
 	if saved.Prev != nil {
 		a.noticeUpdate(saved)
 	}
-	// The directory floe publish runs in sets the project of a data file's page when the page is new, replaces another
-	// file's, had none, or is moved; a link's is its target's. Told after the URL, as the update is.
+	// The project is set when the page is new, replaces another file's, had none, or is moved: by the directory floe
+	// publish runs in for a data file's page, by its file's directory for a link. Told after the URL, as the update is.
 	switch {
 	case saved.OffTask != "":
 		// a page's task is of its project: moved, it was taken off it, a link's too
 		a.warn("cli_page_off_task", inProject(saved.TaskProject), saved.OffTask)
-	case !link && (saved.Prev == nil || saved.Prev.TaskProject != saved.TaskProject):
+	case saved.Prev == nil || saved.Prev.TaskProject != saved.TaskProject:
 		a.warn("cli_page_project", inProject(saved.TaskProject))
 	}
 }
