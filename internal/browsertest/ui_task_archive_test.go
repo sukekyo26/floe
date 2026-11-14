@@ -80,11 +80,11 @@ func TestUITaskArchive(t *testing.T) { //nolint:paralleltest // the browser test
 	// Of no page: the button is there, and the same button gives it back.
 	open("#none")
 	head("no page")
-	pressTaskArchive(b, "Bring the archive back")
+	pressTaskArchive(b, "Restore")
 	head("no page, archived")
 	out = append(out, "said: "+toast())
 	out = append(out, "the way up: "+b.eval("document.getElementById('task-up').getAttribute('href')"))
-	pressTaskArchive(b, "Archive the task")
+	pressTaskArchive(b, "Archive")
 	head("no page, given back")
 	out = append(out, "said: "+toast())
 
@@ -92,7 +92,7 @@ func TestUITaskArchive(t *testing.T) { //nolint:paralleltest // the browser test
 	task("#still", "--state", "done")
 	open("#still")
 	b.eval("pressedAt = performance.now() + 1e9; " + button + ".click()")
-	b.until("the head drawn by the press", button+".textContent === 'Bring the archive back'")
+	b.until("the head drawn by the press", button+".textContent === 'Restore'")
 	b.eval("pressedAt = -Infinity")
 
 	// A double press: the second lands on the button turned the other way, and is no press more.
@@ -102,7 +102,7 @@ func TestUITaskArchive(t *testing.T) { //nolint:paralleltest // the browser test
 	x, y := r.X+r.Width/2, r.Y+r.Height/2
 	b.mouse(input.DispatchMouseEventTypeMousePressed, x, y, 1)
 	b.mouse(input.DispatchMouseEventTypeMouseReleased, x, y, 1)
-	b.until("the press done", button+".textContent === 'Bring the archive back' && !archivingTask")
+	b.until("the press done", button+".textContent === 'Restore' && !archivingTask")
 	b.mouse(input.DispatchMouseEventTypeMousePressed, x, y, 2)
 	b.mouse(input.DispatchMouseEventTypeMouseReleased, x, y, 2)
 	b.painted()
@@ -111,17 +111,17 @@ func TestUITaskArchive(t *testing.T) { //nolint:paralleltest // the browser test
 
 	// Of pages: the task alone, its pages left as they are, either way.
 	open("#pages")
-	pressTaskArchive(b, "Bring the archive back")
+	pressTaskArchive(b, "Restore")
 	head("pages, archived")
 	shelf("with #pages in the archive")
 	open("#pages")
-	pressTaskArchive(b, "Archive the task")
+	pressTaskArchive(b, "Archive")
 	head("pages, given back")
 
 	// Its pages archived do not move it: it is done, and archived by its button.
 	open("#marked")
 	head("pages archived by floe archive")
-	pressTaskArchive(b, "Bring the archive back")
+	pressTaskArchive(b, "Restore")
 	head("those, archived")
 
 	// A page given back or published again leaves it in the archive, with its unread on its row.
@@ -139,7 +139,7 @@ func TestUITaskArchive(t *testing.T) { //nolint:paralleltest // the browser test
 	const kids = "[...document.querySelectorAll('#task-family .kin-row')].map((e) => e.dataset.task + ' ' + e.querySelector('.kid-state').textContent).join()"
 	b.until("the children", kids)
 	out = append(out, "the children: "+b.eval(kids))
-	pressTaskArchive(b, "Bring the archive back")
+	pressTaskArchive(b, "Restore")
 	out = append(out, "the parent archived: "+b.eval(kids))
 	task("#kid3", "--state", "todo", "--parent", "#up")
 	b.until("a child more", "document.querySelectorAll('#task-family .kin-row').length === 3")
@@ -219,7 +219,7 @@ func TestUITaskArchive(t *testing.T) { //nolint:paralleltest // the browser test
 
 	// At every width the word and the button stay in the window.
 	open("#none")
-	pressTaskArchive(b, "Bring the archive back")
+	pressTaskArchive(b, "Restore")
 	for _, width := range []int64{1440, 1100, 900, 800, 360} {
 		b.size(width, 900, width == 360)
 		b.until("the width", fmt.Sprintf("innerWidth === %d", width))
@@ -237,18 +237,18 @@ func TestUITaskArchive(t *testing.T) { //nolint:paralleltest // the browser test
 }
 
 const taskArchiveWant = `at first: done #forgot,#marked,#none,#pages,#refused,#up | archive #kid2
-no page: Archive the task | done | no word | rows  | 
-no page, archived: Bring the archive back | no select | Archive | rows  | task-archive
+no page: Archive | done | no word | rows  | 
+no page, archived: Restore | no select | Archive | rows  | task-archive
 said: Archived #none
 the way up: /tasks?project=proj&view=archived
-no page, given back: Archive the task | done | no word | rows  | task-archive
+no page, given back: Archive | done | no word | rows  | task-archive
 said: Brought #none back from the archive
-a double press: Bring the archive back archived
-pages, archived: Bring the archive back | no select | Archive | rows p1,p2 | task-archive
+a double press: Restore archived
+pages, archived: Restore | no select | Archive | rows p1,p2 | task-archive
 with #pages in the archive: done #forgot,#marked,#none,#refused,#up | archive #double,#kid2,#pages,#still
-pages, given back: Archive the task | done | no word | rows p1,p2 | task-archive
-pages archived by floe archive: Archive the task | done | no word | rows m1* | 
-those, archived: Bring the archive back | no select | Archive | rows m1* | task-archive
+pages, given back: Archive | done | no word | rows p1,p2 | task-archive
+pages archived by floe archive: Archive | done | no word | rows m1* | 
+those, archived: Restore | no select | Archive | rows m1* | task-archive
 published again: 1 page(s)1 unread
 at work, its pages archived: no button | doing | no word | rows w1* | 
 the children: #kid In progress,#kid2 Archive
@@ -259,7 +259,7 @@ its parent, from the child: #up
 with the parent in the archive: done #forgot,#none,#pages,#refused | archive #double,#kid2,#marked,#still,#up
 forgotten: Failed to save: task #forgot is no longer there
 refused: Failed to save: no
-refused, as it was: Archive the task | done | no word | rows f1 | 
+refused, as it was: Archive | done | no word | rows f1 | 
 not reached: Failed to save: no server | done
 archived elsewhere, open: false true
 closed: true false
