@@ -17,7 +17,9 @@ var aws = kit{
 		link:   regexp.MustCompile(`^https://[^"'\s<>]+/Icon-package_\d{8}[^"'\s<>/?#]*\.zip$`),
 		iconOf: awsIconOf,
 	}},
-	version: regexp.MustCompile(`Icon-package_(\d{8})`),
+	version:     regexp.MustCompile(`Icon-package_(\d{8})`),
+	builtin:     false,
+	categorized: false,
 	short: map[string][]string{
 		"acm":   {"aws-certificate-manager"},
 		"alb":   {"res/elastic-load-balancing-application-load-balancer"},

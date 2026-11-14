@@ -9,6 +9,7 @@ floe の主要な変更を記録します。フォーマットは
 ### 追加
 
 - 追加：管理ページの設定にタスクモード。設定は、項目の一覧（全体テーマ・モード。それぞれ今の値つき）で開き、行からその設定に進み、見出しの上から一覧に戻る。モードでタスクモードの入・切を選び、既定のテーマと一緒に `settings.json` に持つ（片方を保存してももう片方は変わらない）。入なら `floe guide` が Tasks の節を出し、エージェントは新しいページを publish するたびに、タスクに付けるか（作業中のタスク・新しいタスク・付けない）をユーザーに聞く。タスクを使わないと言われたときや、指示が付け先を決めているときは聞かない。切（既定）なら、その節を除いた手引きを出す。`floe guide` は `floe theme default` と同じく保存先の設定を読み、保存先を決められないときは節を除いて出す（S322）。
+- 追加：floe に入ったアイコン集 `lucide`。[Lucide](https://lucide.dev) 1.72.0（ISC）の 2,052 個の全部で、利用者・ブラウザ・スマホ・サーバー・データベース・ファイル・鍵・メールのような物を図の `icon` の部品で描ける（`lucide/users`・`lucide/database`）。分類は Lucide が付けたもの。取ってこなくてよく、`FLOE_ICONS_DIR` も要らない。`floe icons search lucide user` で名前を探せ、`db`・`person`・`browser` のような略語でも引ける。フォルダを除いた名前が語とちょうど同じアイコンは、どの集でも先頭に出す（`server` なら `aws/res/server`）。`floe icons fetch lucide` は、そう言って断る。線は図の字の色で描き、`tone` を書けばその色になる（`icon` の部品と graph の `icon` が `tone` を受けるようにした）。クラウドのアイコン集のアイコンは絵の色のままで、`tone` を書くと断る。ライセンスの文は `internal/icons/lucide/LICENSE` にあり、README が指す（S338）。
 - 追加：`floe icons fetch` に、AWS のほか Google Cloud と Azure のアイコン集を足した。図の `icon` の部品で使える（`gcp/cloud-run`・`gcp/category/networking`・`azure/virtual-machine`）。`floe icons fetch gcp` は、Google Cloud の公式ページにある 2 つの zip（中心のプロダクトのアイコンと、プロダクトの分類のアイコン。Google の手引きでは、ほかのプロダクトは分類のアイコンを使う）を取る。Google が廃止した旧のアイコンは取らない。Azure の公式ページは利用の条件に同意してからでないと zip を取らせないので、`floe icons fetch azure` は何も取らず、どこで同意するかを言う。そこで zip を取り、その zip か URL を渡す。`floe icons fetch` は、セットのパッケージごとに zip か URL を 1 つ受け取り（`gcp` は 2 つ）、それより多ければ断る。`floe icons search` は 1 つ目の引数でセットを名指し、そのセットだけを探す（`floe icons search gcp storage`）。あるクラウドの図に別のクラウドのアイコンを置かないためで、取っていないセットはその取り方を言う。`k8s` のような略語は、そのセットのサービスを引く（S337）。
 - 追加：`floe part guide`・`floe template guide`・`floe theme guide`。自分の部品・テンプレート・テーマの作り方を出す。`floe diagram guide` と同じく docs そのものを出すので、floe のリポジトリの外のエージェントも読める。`floe part --help`・`floe template --help`・`floe theme --help` がこれを指す。テーマは `docs/agents/parts.md` から自分の docs `docs/agents/themes.md` に移した。floe が出す docs は、ほかの docs をリンクでなく、それを出すコマンドの名前で指す（S329）。
 - 追加：`floe theme new <名前>`。`floe part new` が部品を作るのと同じく、`FLOE_THEMES_DIR` に自分のテーマを作る。中身は埋めて使う空の `palette.css` で、floe の `default` のパレットの上に重なる。何も上書きしない。`floe theme check` も追加した。テーマの `<部品名>.css` は部品があることを前提にするので、`floe part check` と同じく部品とテーマを一緒に確かめる。`floe guide` は、テンプレート・部品・テーマを自分でも作れることと、詳しくは各 `--help` を見ることを言う（S329）。
@@ -476,6 +477,8 @@ floe の主要な変更を記録します。フォーマットは
 
 ### 修正
 
+- 英字も数字も無い名前のファイル（`設計.yaml`、`資料/index.html` の `--link`）の `floe publish` が、書いていない `invalid slug ""` で断られていたのを修正。名前から URL 名を作れないことを、そのファイルに置いて言い、`--slug` を渡すか名前を変えるよう勧めます。前に自分の `--slug` で出したページは、今までどおり書き換えます（S339）。
+- 空白を含む語の `floe icons search`（`floe icons search gcp "api gateway"`）が何も見つけなかったのを修正。空白で分けた語で探します。`gcp` で何も見つからないときは、自分のアイコンを持たない製品をカテゴリのアイコンと製品名のラベルで描くことと、`floe icons search gcp category` で出ることも言います（S340・S345）。
 - 要求の中で panic すると、コマンドラインに `EOF` とだけ出て、サーバーにも何も残らなかったのを修正しました。500 と、どこで panic したかと、スタックが `server.log` にあることを答え、サーバーは動き続けます（S229）。
 - 修正：全面で開いたページのバーの「…」→「タスクから外す」が何もしなかった。今はページをタスクから外し、トーストの「元に戻す」で戻せる。
 - 修正：ページだけが名指し行の無いタスクを、管理ページがページから推して出し、最初の書き込みの時刻で行を作って一覧の並びが飛んだ（S286）。ページが名指すタスクには、ページの書き込みと一緒に必ず行を作り、管理ページは行のあるタスクだけを出す。ページのカテゴリは必ずタスクのカテゴリの並びにあるので、ページを付け外ししてもカテゴリが出たり消えたりしない。管理ページはページとタスクを `PATCH /api/work` の 1 回の書き込みで書く（前の `PATCH /api/tasks` とページの編集の `work` に替わる）。

@@ -1,7 +1,7 @@
 {{define "diagram" -}}
 <div class="{{.Wrap}}" style="aspect-ratio: {{n .W}} / {{n .H}}; max-height: min(85vh, {{n .MaxH}}px)"><svg viewBox="0 0 {{n .W}} {{n .H}}" class="dg" role="img" aria-label="{{t .Title}}"><defs>
 {{- range .Markers}}<marker id="{{.ID}}" viewBox="{{.ViewBox}}" refX="{{n .RX}}" refY="{{n .RY}}" markerWidth="{{n .W}}" markerHeight="{{n .H}}" markerUnits="userSpaceOnUse" orient="auto-start-reverse">{{.Body}}</marker>{{end}}
-{{- range .Icons}}<image id="{{.ID}}" href="{{.Href}}" width="{{n .Size}}" height="{{n .Size}}"/>{{end -}}
+{{- range .Icons}}{{if .Mono}}<g id="{{.ID}}"><mask id="{{.ID}}-m" mask-type="alpha" maskUnits="userSpaceOnUse" x="0" y="0" width="{{n .Size}}" height="{{n .Size}}"><image href="{{.Href}}" width="{{n .Size}}" height="{{n .Size}}"/></mask><rect width="{{n .Size}}" height="{{n .Size}}" fill="currentColor" mask="url(#{{.ID}}-m)"/></g>{{else}}<image id="{{.ID}}" href="{{.Href}}" width="{{n .Size}}" height="{{n .Size}}"/>{{end}}{{end -}}
 </defs>{{range .Elems}}{{template "el" .}}{{end}}</svg></div>
 {{- end}}
 
@@ -12,7 +12,7 @@
 {{- else if eq .Kind "line"}}<line x1="{{n .X}}" y1="{{n .Y}}" x2="{{n .X2}}" y2="{{n .Y2}}" class="{{.Class}}"/>
 {{- else if eq .Kind "text"}}<text x="{{n .X}}" y="{{n .Y}}" text-anchor="{{.Anchor}}"{{with .Class}} class="{{.}}"{{end}}{{with .Tone}} data-floe-tone="{{.}}"{{end}}>{{t .Text}}</text>
 {{- else if eq .Kind "g"}}<g class="{{.Class}}"{{with .Tone}} data-floe-tone="{{.}}"{{end}}>{{range .Kids}}{{template "el" .}}{{end}}</g>
-{{- else if eq .Kind "use"}}<use href="#{{.Ref}}" x="{{n .X}}" y="{{n .Y}}"/>
+{{- else if eq .Kind "use"}}<use href="#{{.Ref}}" x="{{n .X}}" y="{{n .Y}}"{{with .Class}} class="{{.}}"{{end}}{{with .Tone}} data-floe-tone="{{.}}"{{end}}/>
 {{- else if eq .Kind "raw"}}{{.Raw}}
 {{- end}}
 {{- end}}

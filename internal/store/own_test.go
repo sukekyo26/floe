@@ -136,8 +136,8 @@ func TestOwnSlugOrder(t *testing.T) {
 			}
 			e, err := put(t, s, dw, c.file, c.file, ownSrc, store.Options{})
 			if c.want == "" {
-				if u, ok := errors.AsType[*usererr.Error](err); !ok || u.Key != "store_invalid_slug" || !slices.Equal(u.Args, []any{""}) {
-					t.Errorf("refused %v, want store_invalid_slug of \"\"", err)
+				if u, ok := errors.AsType[*usererr.Error](err); !ok || u.Key != "store_slug_unnamed" || u.File() != c.file {
+					t.Errorf("refused %v, want store_slug_unnamed at %s", err, c.file)
 				}
 				return
 			}
@@ -174,6 +174,31 @@ func TestOwnSlugUnreadable(t *testing.T) {
 		if u, ok := errors.AsType[*usererr.Error](err); !ok || u.File() != root {
 			t.Errorf("refused %v, want the store unread", err)
 		}
+	}
+}
+
+// A link whose name makes no slug, and no page of its, is refused at its path; a slug given empty is a slug's mistake.
+func TestOwnSlugUnnamed(t *testing.T) {
+	t.Parallel()
+
+	s, root := newStore(t)
+	home := filepath.Dir(root)
+	dir := filepath.Join(home, "資料")
+	if err := os.MkdirAll(dir, 0o700); err != nil {
+		t.Fatal(err)
+	}
+	html := filepath.Join(dir, "index.html")
+	if err := os.WriteFile(html, []byte("<title>p</title>"), 0o600); err != nil {
+		t.Fatal(err)
+	}
+	dw := picKit(t, "", "")
+	_, err := s.PrepareLink(t.Context(), dw, html, store.Options{}, "", filepath.Dir(home))
+	if u, ok := errors.AsType[*usererr.Error](err); !ok || u.Key != "store_slug_unnamed" || u.File() != html {
+		t.Errorf("link refused %v, want store_slug_unnamed at %s", err, html)
+	}
+	_, err = put(t, s, dw, "日本語.yaml", "日本語.yaml", ownSrc, store.Options{Slug: ptr("")})
+	if keyOf(err) != "store_invalid_slug" {
+		t.Errorf("empty slug refused %v, want store_invalid_slug", err)
 	}
 }
 

@@ -815,7 +815,12 @@ func (l *layout) addFrame(f *frame, at string) {
 			form: outlineOf(frameIcon, frameIcon, "icon"),
 		}
 		l.boxes = append(l.boxes, ir)
-		if use, ok := l.image(at, f.Icon, f.X-1, f.Y-1, 32, "the icon of "+who); ok {
+		if use, ok := l.image(at, f.Icon, f.X-1, f.Y-1, 32, "the icon of "+who, ""); ok {
+			// The groups' icons of the clouds paint their own ground over the frame's corner; one of lines is laid on
+			// the diagram's ground, so that the corner does not show through it.
+			if icons.Mono(f.Icon) {
+				kids = append(kids, elem{Kind: "rect", X: f.X - 1, Y: f.Y - 1, W: 32, H: 32, Class: "icon-ground"})
+			}
 			kids = append(kids, use)
 		}
 	}
@@ -832,8 +837,13 @@ func (l *layout) addIcon(i *icon, at string) {
 	who := r.what
 	r.graph = i.graph
 	l.boxes = append(l.boxes, r)
-	if use, ok := l.image(at, i.Icon, i.X, i.Y, size, who); ok {
+	if use, ok := l.image(at, i.Icon, i.X, i.Y, size, who, i.Tone); ok {
 		l.boxEls = append(l.boxEls, use)
+		// Only after image: a name of no set is told for its set, and an icon placed again is checked too. Whether an
+		// icon takes a tone is known only once its name is resolved, so the schema cannot tell it.
+		if i.Tone != "" && !icons.Mono(i.Icon) {
+			l.problem(iconToneAt(i, at), "diagram_icon_tone", who, i.Icon)
+		}
 	}
 	if i.Label != nil {
 		n := l.label(at, i.Label, i.X+size/2, i.Y+size+iconLabelY, "middle", false, false)
@@ -841,21 +851,32 @@ func (l *layout) addIcon(i *icon, at string) {
 	}
 }
 
+// iconToneAt is where the tone of icon i is written: an icon part is at its item of parts, a graph's at its icon.
+func iconToneAt(i *icon, at string) string {
+	if i.graph != "" {
+		return at + "/tone"
+	}
+	return at + "/icon/tone"
+}
+
 // iconDef is an icon at a size, defined once and placed with <use>: the official icons' ids collide between
-// icons, so an icon is an <image>, not inline <svg>.
+// icons, so an icon is an <image>, not inline <svg>. An <image> holds its own document, which no CSS or color of
+// the page reaches, so an icon of lines in currentColor (Mono) is a mask that cuts a rectangle in currentColor, the
+// color of its <use>.
 type iconDef struct {
 	ID   string
 	Href template.URL
 	Size float64
+	Mono bool
 }
 
 // image places the icon of name. A name its set does not hold is a mistake of the spec; icons not fetched or
 // not read are mistakes of their own place, and a failure that is no mistake stops the drawing.
-func (l *layout) image(at, name string, x, y, size float64, who string) (elem, bool) {
+func (l *layout) image(at, name string, x, y, size float64, who, tone string) (elem, bool) {
 	// An icon placed again is looked up once.
 	key := name + " " + num(size)
 	if id, ok := l.iconIDs[key]; ok {
-		return elem{Kind: "use", Ref: id, X: x, Y: y}, true
+		return elem{Kind: "use", Ref: id, X: x, Y: y, Class: "icon", Tone: tone}, true
 	}
 	b, err := l.opts.Icons.Lookup(name)
 	switch {
@@ -875,8 +896,8 @@ func (l *layout) image(at, name string, x, y, size float64, who string) (elem, b
 	l.iconIDs[key] = id
 	// A data URI of the SVG floe fetched itself (icons.Lookup reads only the set's own files).
 	href := template.URL("data:image/svg+xml;base64," + base64.StdEncoding.EncodeToString(b)) //nolint:gosec // see above
-	l.iconDefs = append(l.iconDefs, iconDef{ID: id, Href: href, Size: size})
-	return elem{Kind: "use", Ref: id, X: x, Y: y}, true
+	l.iconDefs = append(l.iconDefs, iconDef{ID: id, Href: href, Size: size, Mono: icons.Mono(name)})
+	return elem{Kind: "use", Ref: id, X: x, Y: y, Class: "icon", Tone: tone}, true
 }
 
 // label places text at x, y: 18px tall, with 5px around it, on a box of the diagram's ground (label-bg) unless plain.
