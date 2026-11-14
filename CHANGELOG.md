@@ -23,3 +23,4 @@ adheres to [Semantic Versioning](https://semver.org/).
 - Add `floe guide`, the guide for agents, with `floe task guide`, `floe diagram guide`, `floe part guide`, `floe template guide` and `floe theme guide`, and `floe skill install`, which points an agent's skill to it.
 - Add a page's CSP and sandbox, which keep its scripts to floe's own.
 - Add `floe licenses`, which prints the licenses of floe and of what is built into it.
+
