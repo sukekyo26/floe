@@ -76,7 +76,8 @@ func agentsNamed() string {
 }
 
 // guideCmd is floe guide: guide.md, without its Tasks section's Ask after publishing unless the task mode is on in the
-// management page's settings. With no store to be had (no HOME to put it under), it is off, so that an agent reads the guide anyway.
+// management page's settings. With no store to be had (no HOME to put it under), it is off, so that an agent reads the
+// guide anyway.
 func (a *app) guideCmd() *cobra.Command {
 	return &cobra.Command{
 		Use:   "guide",

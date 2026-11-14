@@ -85,14 +85,16 @@ it among its pages, which the user decides.
 	flags := cmd.Flags()
 	flags.StringArrayVar(&f.slugs, "slug", nil, "a page to put on a task, change or tell; give it again for more")
 	flags.StringVar(&f.task, "task", "", `the task's ID; with --slug, "" takes the pages off their task`)
-	flags.StringVar(&f.project, "project", "", `the project of the task, or of the tasks told, without --slug; "" for none`)
+	flags.StringVar(&f.project, "project", "",
+		`the project of the task, or of the tasks told, without --slug; "" for none`)
 	flags.StringVar(&f.category, "category", "", `the pages' category on their task, the user's choice; "" takes it off`)
 	flags.StringVar(&f.state, "state", "", "the task's state: "+store.StateNames())
 	flags.StringArrayVar(&f.urls, "url", nil, "an outside link, http or https, to add to the task; give it again for more")
 	flags.StringArrayVar(&f.removeURLs, "remove-url", nil, "a link to take off the task's; give it again for more")
 	flags.StringVar(&f.title, "title", "", `the task's title; "" takes it off`)
 	flags.StringVar(&f.categories, "categories", "", `the task's categories in order, comma-separated; "" takes it off`)
-	flags.StringVar(&f.parent, "parent", "", `the task's parent, of its project; with --slug, with --task; "" takes it off`)
+	flags.StringVar(&f.parent, "parent", "",
+		`the task's parent, of its project; with --slug, with --task; "" takes it off`)
 	flags.BoolVar(&f.pin, "pin", false, "pin the pages to the top of the task list")
 	flags.BoolVar(&f.unpin, "unpin", false, "take the pages' pin off")
 	flags.BoolVar(&f.clear, "clear", false, "take the pages off their task and take their pin off; the task stays")
@@ -372,9 +374,10 @@ func flagOf(err error, from string) error {
 	return err //nolint:wrapcheck // the store's words
 }
 
-// pagesTask puts the pages --slug names on a task and changes it, or with no other flag tells them as they are. The pages and their
-// tasks are written in one write (PATCH /api/work), which the store checks whole before it writes any. What the CLI can
-// say better (the pages listed, on a task, of one project for a parent) it checks first, in its own words.
+// pagesTask puts the pages --slug names on a task and changes it, or with no other flag tells them as they are. The
+// pages and their tasks are written in one write (PATCH /api/work), which the store checks whole before it writes any.
+// What the CLI can say better (the pages listed, on a task, of one project for a parent) it checks first, in its own
+// words.
 func (a *app) pagesTask(cmd *cobra.Command, f taskFlags) error {
 	ctx := cmd.Context()
 	slugs := f.slugs
