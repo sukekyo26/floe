@@ -160,7 +160,7 @@ that points your agent to it (floe skill install --help lists the agents).`,
 	root.AddCommand(
 		a.archiveCmd(), a.checkCmd(), a.diagramCmd(),
 		a.guideCmd(),
-		a.iconsCmd(), a.listCmd(), a.partCmd(), a.publishCmd(),
+		a.iconsCmd(), a.infoCmd(), a.listCmd(), a.partCmd(), a.publishCmd(),
 		a.rebuildCmd(), a.renderCmd(), a.rmCmd(), a.serveCmd(), a.skillCmd(), a.stopCmd(), a.tagCmd(), a.taskCmd(),
 		a.templateCmd(), a.themeCmd(),
 	)

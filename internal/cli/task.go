@@ -325,6 +325,9 @@ func (a *app) tellPage(page store.Edited) {
 	var parts []string
 	if on == nil || on.Name == "" {
 		parts = append(parts, english.Msg("cli_task_page_off"))
+		if page.TaskProject != store.ProjectKey("") {
+			parts = append(parts, english.Msg("cli_task_page_in", inProject(page.TaskProject)))
+		}
 	} else {
 		parts = append(parts, english.Msg("cli_task_page_task", on.Name, inProject(page.TaskProject)))
 	}
