@@ -190,6 +190,12 @@ func TestUITaskEdit(t *testing.T) { //nolint:paralleltest // the browser tests s
 	addURL("https://example.com/pull/9")
 	addURL("https://example.com/pull/9")
 	say("added twice", urls+" + ' / ' + document.getElementById('edit-url-said').textContent")
+	// A URL's row and a category's are taken off by one icon, drawn alike
+	say("one x", `(() => {
+		const d = (on) => [...document.querySelectorAll(on + ' svg path')].map((p) => p.getAttribute('d')).join(' ');
+		const url = document.querySelector('#edit-urls .url-drop svg'), category = document.querySelector('#edit-categories .category-drop svg');
+		return [d('#edit-urls li:first-child .url-drop') === d('#edit-categories li:first-child .category-drop'), url.getAttribute('stroke-width') === category.getAttribute('stroke-width')].join(' ');
+	})()`)
 	field("edit-url-new", "https://example.com/left")
 	b.eval("document.getElementById('edit-task').requestSubmit()")
 	say("typed, not added", "document.getElementById('edit-url-new').validationMessage + ' / ' + document.getElementById('edit-task-dialog').open")
@@ -202,7 +208,21 @@ func TestUITaskEdit(t *testing.T) { //nolint:paralleltest // the browser tests s
 	out = append(out, "urls: "+row("S300"))
 	say("sent the URLs", "sent.join(' ; ')")
 	b.until("the links", "document.querySelectorAll('#task-link a').length === 2")
-	say("links", "[...document.querySelectorAll('#task-link a')].map((a) => a.href).join(',')")
+	say("links", "[...document.querySelectorAll('#task-link a')].map((a) => a.href + ' ' + a.textContent).join(',')")
+	// Under the state's line, one a line, at one left edge
+	say("links stacked", `(() => {
+		const r = [...document.querySelectorAll('#task-link a')].map((a) => a.getBoundingClientRect()), state = document.querySelector('#task-head .tstate').getBoundingClientRect();
+		return [r[0].top >= state.bottom, r[1].top >= r[0].bottom, r[0].left === r[1].left, document.getElementById('task-link').hidden].join(' ');
+	})()`)
+	// One longer than the head wraps in its line, all its words there: none cut, none past the head's edge
+	say("a long link wraps", `(() => {
+		const head = document.getElementById('task-head');
+		head.style.width = '9rem';
+		const a = document.querySelector('#task-link a'), r = a.getBoundingClientRect(), edge = document.getElementById('task-link').getBoundingClientRect().right;
+		const said = [r.height > 2 * parseFloat(getComputedStyle(a).fontSize), r.right <= edge, a.scrollWidth <= a.clientWidth, a.textContent === a.href].join(' ');
+		head.style.width = '';
+		return said;
+	})()`)
 	// At 10, one more is said and not added
 	open("S300")
 	for i := 3; i <= 11; i++ {
@@ -230,6 +250,7 @@ func TestUITaskEdit(t *testing.T) { //nolint:paralleltest // the browser tests s
 	save("saved empty")
 	closed("closed")
 	out = append(out, "emptied: "+row("S300"))
+	b.until("no links", "document.getElementById('task-link').hidden && document.getElementById('task-link').getClientRects().length === 0")
 	// Opened over the task drawn before the tasks were read again: its fields and rev are of the one read now, not of what was drawn.
 	b.eval("window.drawnTask = tasksOf().find((x) => x.name === 'S300')")
 	s.floe(t, "work", "--project", "proj", "--task", "S300", "--title", "Later")
@@ -312,11 +333,14 @@ func TestUITaskEdit(t *testing.T) { //nolint:paralleltest // the browser tests s
 		"drag: 8 New title https://example.com/489 [リリース,設計,レビュー,実装,案]",
 		"no grip without hover: true",
 		"added twice: https://example.com/489,https://example.com/pull/9 / https://example.com/pull/9 is already among the URLs",
+		"one x: true true",
 		"typed, not added: https://example.com/left is not added yet: press Enter to add it, or empty the field / true",
 		"dropped: https://example.com/pull/9 / Take off https://example.com/pull/9 / Took off https://example.com/489",
 		"urls: 9 New title https://example.com/489,https://example.com/pull/9 [リリース,設計,レビュー,実装,案]",
 		`sent the URLs: {"taskProject":"proj","task":"S300","new":false,"rev":8,"urls":{"add":["https://example.com/pull/9"]}}`,
-		"links: https://example.com/489,https://example.com/pull/9",
+		"links: https://example.com/489 https://example.com/489,https://example.com/pull/9 https://example.com/pull/9",
+		"links stacked: true true true false",
+		"a long link wraps: true true true true",
 		"an 11th: 10 / A task holds 10 URLs at most: take one off first / http or https URLs, 10 at most",
 		`refused: Failed to save: "ftp://x" is not an http or https URL / true`,
 		"not reached: Failed to save: Failed to fetch / true",

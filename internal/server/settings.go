@@ -13,12 +13,6 @@ import (
 	"floe/internal/usererr"
 )
 
-// SettingsPut is a change of settings.json, as the management page's settings send it: the default theme of the pages
-// stored from now on.
-type SettingsPut struct {
-	Theme string `json:"theme"`
-}
-
 // Theme is a theme of the drawing of now, as the management page's settings list it: About in the reader's language
 // for floe's.
 type Theme struct {
@@ -28,39 +22,48 @@ type Theme struct {
 }
 
 // Themes is what the management page's settings show: the themes, the default theme of settings.json ("" for none
-// chosen), and the mistakes that keep the one or the other from being read, as refuse words them.
+// chosen) and its task mode, and the mistakes that keep the one or the other from being read, as refuse words them.
 type Themes struct {
 	Themes   []Theme         `json:"themes"`
 	Default  string          `json:"default"`
+	TaskMode bool            `json:"taskMode"`
 	Drawing  *usererr.Report `json:"drawing,omitzero"`
 	Settings *usererr.Report `json:"settings,omitzero"`
 }
 
-// putSettings writes the default theme SettingsPut names, a theme of the drawing of now, to settings.json. Pages
-// stored already keep the default they were stored with: none is drawn again.
+// putSettings writes the keys store.SettingsEdit names to settings.json, the others as they are: the default theme, a
+// theme of the drawing of now, and the task mode. Pages stored already keep the default they were stored with: none is
+// drawn again. A body of no key is refused, as a write of nothing.
 func (s *Server) putSettings(w http.ResponseWriter, r *http.Request) {
 	body, ok := s.readBody(w, r, maxBody)
 	if !ok {
 		return
 	}
-	in := decodeStrict[SettingsPut](w, body)
+	in := decodeStrict[store.SettingsEdit](w, body)
 	if in == nil {
 		return
 	}
-	drawing := s.latest()
-	if drawing.Err != nil {
-		refuse(w, r, drawing.Err)
+	if in.Theme == nil && in.TaskMode == nil {
+		send(w, http.StatusBadRequest, "send theme, taskMode or both")
 		return
 	}
-	if err := knownTheme(drawing, in.Theme); err != nil {
+	if in.Theme != nil {
+		drawing := s.latest()
+		err := drawing.Err
+		if err == nil {
+			err = knownTheme(drawing, *in.Theme)
+		}
+		if err != nil {
+			refuse(w, r, err)
+			return
+		}
+	}
+	set, err := s.cfg.Store.SetSettings(*in)
+	if err != nil {
 		refuse(w, r, err)
 		return
 	}
-	if err := s.cfg.Store.SetTheme(in.Theme); err != nil {
-		refuse(w, r, err)
-		return
-	}
-	sendJSON(w, http.StatusOK, SettingsPut{Theme: in.Theme})
+	sendJSON(w, http.StatusOK, set)
 }
 
 // knownTheme refuses name when it is no theme of drawing, read without a mistake.
@@ -116,13 +119,13 @@ func (s *Server) pickTheme(w http.ResponseWriter, r *http.Request) {
 // themes answers Themes. A settings.json that cannot be read still lists the themes, for one to be chosen, which
 // writes it whole.
 func (s *Server) themes(w http.ResponseWriter, r *http.Request) {
-	out := Themes{Themes: []Theme{}, Default: "", Drawing: nil, Settings: nil}
+	out := Themes{Themes: []Theme{}, Default: "", TaskMode: false, Drawing: nil, Settings: nil}
 	c := catalog(r)
 	if set, err := s.cfg.Store.ReadSettings(); err != nil {
 		report := usererr.Tell(c, err)
 		out.Settings = &report
 	} else {
-		out.Default = set.Theme
+		out.Default, out.TaskMode = set.Theme, set.TaskMode
 	}
 	drawing := s.latest()
 	if drawing.Err != nil {
