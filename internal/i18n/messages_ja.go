@@ -4,6 +4,9 @@ func init() {
 	register("ja", messagesJA)
 }
 
+// noIconJA is said whatever the set; a set of category icons adds how to draw a product without its own.
+const noIconJA = "%[1]s をすべて含む %[2]s のアイコンの名前はありません。語を減らすか、正式な名前の語で試してください（floe icons search %[2]s %[2]s で全部出ます）"
+
 var messagesJA = map[string]string{
 	"library": "%s",
 
@@ -284,8 +287,8 @@ var messagesJA = map[string]string{
 	"icons_too_many":           "アイコンが %d 個を超え、アイコン集よりはるかに多いです。ファイルが正しいか確かめてください",
 	"icons_written_too_large":  "中のアイコンの合計が %dMB を超え、アイコン集よりはるかに大きいです。ファイルが正しいか確かめてください",
 	"icons_none_in_zip":        "%[1]s のアイコンがありません。%[3]s の %[2]s を渡してください：%[4]s",
-	"icons_no_match":           "%[1]s をすべて含む %[2]s のアイコンの名前はありません。語を減らすか、正式な名前の語で試してください（floe icons search %[2]s %[2]s で全部出ます）",
-	"icons_no_match_category":  "%[1]s をすべて含む %[2]s のアイコンの名前はありません。語を減らすか、正式な名前の語で試してください（floe icons search %[2]s %[2]s で全部出ます）。自分のアイコンを持たない製品は、カテゴリのアイコンと製品名のラベルで描きます（floe icons search %[2]s category で出ます）",
+	"icons_no_match":           noIconJA,
+	"icons_no_match_category":  noIconJA + "。自分のアイコンを持たない製品は、カテゴリのアイコンと製品名のラベルで描きます（floe icons search %[2]s category で出ます）",
 	"icons_fetched":            "%[2]s のアイコン %[1]d 個（%[3]s）を %[4]s に取得しました",
 	"icons_already":            "%s のアイコン %s はすでに %s にあります（取り直すなら --force を付けてください）",
 	"icons_search_words":       "アイコン集の名前と、探す語を書いてください：floe icons search <集> <語>...（集：%s）",

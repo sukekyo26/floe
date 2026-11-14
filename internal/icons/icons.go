@@ -159,7 +159,8 @@ func Mono(name string) bool {
 // CheckSearch refuses the arguments of a search, a set and the words to search it for: without both, that alone is
 // told, with the sets; else a set floe does not know.
 func CheckSearch(args []string) error {
-	if len(args) < 2 {
+	// Search splits the words at spaces: words of spaces alone are no word.
+	if len(args) < 2 || len(strings.Fields(strings.Join(args[1:], " "))) == 0 {
 		return usererr.New("icons_search_words", strings.Join(Sets(), ", "))
 	}
 	return CheckSet(args[0])

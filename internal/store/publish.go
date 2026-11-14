@@ -78,13 +78,13 @@ func (s *Store) ownSlug(base, file string, own func(*Meta) bool, link bool) (str
 			return slug, nil
 		}
 	}
+	if base == "" {
+		return "", usererr.NewAt(file, 0, 0, "store_slug_unnamed")
+	}
 	slug := base
 	for n := 2; link && s.ReadMeta(slug) != nil; n++ {
 		suffix := "-" + strconv.Itoa(n)
 		slug = strings.TrimRight(base[:min(len(base), files.MaxSlugLen-len(suffix))], "-") + suffix
-	}
-	if base == "" {
-		return "", usererr.NewAt(file, 0, 0, "store_slug_unnamed")
 	}
 	if mistake := slugMistake(slug); mistake != nil {
 		return "", mistake
