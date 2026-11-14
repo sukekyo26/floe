@@ -3,6 +3,7 @@ package store_test
 import (
 	"encoding/json"
 	"errors"
+	"maps"
 	"os"
 	"path/filepath"
 	"slices"
@@ -26,11 +27,12 @@ func hour(h int) string {
 	return time.Date(2026, 11, 4, h, 0, 0, 0, time.UTC).Format("2006-01-02T15:04:05.000Z")
 }
 
-// made writes the meta.json of a stored page made at the hour created, of the versions, their hours by number from 1.
+// made writes the meta.json of a stored page made at the hour created, of the versions, their hours by number from 1:
+// its id is "id-" and its slug.
 func made(t *testing.T, s *store.Store, root, slug string, created int, versions ...int) *store.Meta {
 	t.Helper()
 
-	m := &store.Meta{Source: "source-1", CreatedAt: hour(created), UpdatedAt: hour(created)}
+	m := &store.Meta{ID: "id-" + slug, Source: "source-1", CreatedAt: hour(created), UpdatedAt: hour(created)}
 	for i, h := range versions {
 		m.Versions = append(m.Versions, store.Version{N: i + 1, At: hour(h), Mark: "m"})
 	}
@@ -140,7 +142,7 @@ func TestNews(t *testing.T) {
 		made(t, s, root, "d", tt.created, tt.versions...)
 		pages := ""
 		if tt.rec != "" {
-			pages = `,"pages":{"d":` + tt.rec + `}`
+			pages = `,"pages":{"id-d":` + tt.rec + `}`
 		}
 		writeReads(t, root, `{"local":{"since":"`+hour(10)+`"`+pages+`}}`)
 		if got := listedOf(t, s, "d"); got.News != tt.want {
@@ -257,7 +259,7 @@ func TestReadsBegin(t *testing.T) {
 	if err := s.Begin(viewer, hour(3)); err != nil {
 		t.Fatal(err)
 	}
-	if got := keptReads(t, root)[viewer]; got.Since != hour(1) || got.Pages["d"].N != 1 {
+	if got := keptReads(t, root)[viewer]; got.Since != hour(1) || got.Pages["id-d"].N != 1 {
 		t.Errorf("after the list, a mark and a second start: %+v", got)
 	}
 
@@ -412,7 +414,7 @@ func TestMarkReadNewer(t *testing.T) {
 	}
 	mark(3, v(3))
 	mark(2, v(2))
-	if got := keptReads(t, root)[viewer].Pages["d"]; got.N != 3 {
+	if got := keptReads(t, root)[viewer].Pages["id-d"]; got.N != 3 {
 		t.Errorf("an earlier one after the last: %+v", got)
 	}
 
@@ -421,7 +423,7 @@ func TestMarkReadNewer(t *testing.T) {
 	if _, err := s.MarkRead(viewer, "old", 1, old.Versions[0].At); err != nil {
 		t.Fatal(err)
 	}
-	if _, kept := keptReads(t, root)[viewer].Pages["old"]; kept || listedOf(t, s, "old").News != "" {
+	if _, kept := keptReads(t, root)[viewer].Pages["id-old"]; kept || listedOf(t, s, "old").News != "" {
 		t.Errorf("before since: %+v", keptReads(t, root)[viewer].Pages)
 	}
 
@@ -433,7 +435,7 @@ func TestMarkReadNewer(t *testing.T) {
 	if _, err := s.MarkRead(viewer, "d", 1, again.Versions[0].At); err != nil {
 		t.Fatal(err)
 	}
-	if got := keptReads(t, root)[viewer].Pages["d"]; got.N != 1 || got.At != again.Versions[0].At {
+	if got := keptReads(t, root)[viewer].Pages["id-d"]; got.N != 1 || got.At != again.Versions[0].At {
 		t.Errorf("made again: %+v", got)
 	}
 
@@ -461,80 +463,142 @@ func TestMarkReadNewer(t *testing.T) {
 	}
 }
 
-// What was read follows the slug in a rename and goes with the page, and the key of a page gone goes when another takes
-// its slug. A removal that stops halfway keeps it. A slug that starts the same is another.
+// What was read stays with the page through a rename, by its id: reads.json is neither read nor written, so that one that
+// cannot be read loses nothing. A page made again at the slug it left is another.
 func TestReadsFollow(t *testing.T) {
 	t.Parallel()
 
-	s, root := newStore(t)
-	writeReads(t, root, `{"local":{"since":"`+hour(1)+`","pages":{"pv":{"n":1,"at":"a"},"pv-old":{"n":2,"at":"b"},"gone":{"n":3,"at":"c"},"left":{"n":4,"at":"d"}}}}`)
-	made(t, s, root, "pv", 2, 2)
-	made(t, s, root, "pv-old", 2, 2)
-	pages := func() []string {
-		t.Helper()
-
-		kept := keptReads(t, root)[viewer].Pages
-		got := make([]string, 0, len(kept))
-		for slug, r := range kept {
-			got = append(got, slug+"="+strconv.Itoa(r.N))
-		}
-		slices.Sort(got)
-		return got
+	s, root := begun(t, hour(10))
+	m := made(t, s, root, "d", 11, 11, 12)
+	if _, err := s.MarkRead(viewer, "d", 2, m.Versions[1].At); err != nil {
+		t.Fatal(err)
 	}
-	check := func(what string, want ...string) {
+	file := filepath.Join(root, "reads.json")
+	before := read(t, file)
+	rename := func(from, to string) {
 		t.Helper()
 
-		if got := pages(); !slices.Equal(got, want) {
+		if got, err := s.Edit(from, store.Edit{Slug: ptr(to)}); err != nil || got.Slug != to {
+			t.Fatalf("renamed to %s: %v", got.Slug, err)
+		}
+	}
+	rename("d", "d2")
+	last := "d2"
+	if os.Geteuid() != 0 { // root reads what a mode keeps
+		if err := os.Chmod(file, 0); err != nil {
+			t.Fatal(err)
+		}
+		rename("d2", "d3")
+		if err := os.Chmod(file, 0o600); err != nil {
+			t.Fatal(err)
+		}
+		last = "d3"
+	}
+	if got := read(t, file); got != before {
+		t.Errorf("a rename wrote reads.json: %s", got)
+	}
+	if got := listedOf(t, s, last); got.News != "" {
+		t.Errorf("renamed: news %q", got.News)
+	}
+
+	again := made(t, s, root, "d", 11, 11, 12)
+	again.ID = "id-again"
+	if err := s.WriteMeta("d", again); err != nil {
+		t.Fatal(err)
+	}
+	if got := listedOf(t, s, "d"); got.News != "new" {
+		t.Errorf("made again: news %q", got.News)
+	}
+}
+
+// A page removed takes what was read of it with it, first: a reads.json that cannot be read or written stops the
+// removal, one missing or broken does not, and a link or a page of no id has none to read.
+func TestReadsForget(t *testing.T) {
+	t.Parallel()
+
+	s, root := begun(t, hour(10))
+	file := filepath.Join(root, "reads.json")
+	for _, slug := range []string{"a", "b", "c"} {
+		m := made(t, s, root, slug, 11, 11)
+		if _, err := s.MarkRead(viewer, slug, 1, m.Versions[0].At); err != nil {
+			t.Fatal(err)
+		}
+	}
+	made(t, s, root, "none", 11, 11)
+	noID := made(t, s, root, "noid", 11, 11)
+	noID.ID = ""
+	if err := s.WriteMeta("noid", noID); err != nil {
+		t.Fatal(err)
+	}
+	if err := os.Mkdir(filepath.Join(root, "l"), 0o700); err != nil {
+		t.Fatal(err)
+	}
+	if err := s.WriteMeta("l", &store.Meta{ID: "id-l", Path: "/x/y.html", CreatedAt: hour(11), UpdatedAt: hour(11)}); err != nil {
+		t.Fatal(err)
+	}
+	kept := func(what string, want ...string) {
+		t.Helper()
+
+		got := slices.Sorted(maps.Keys(keptReads(t, root)[viewer].Pages))
+		if !slices.Equal(got, want) {
 			t.Errorf("%s: %v, want %v", what, got, want)
 		}
 	}
-	if _, err := s.Edit("pv", store.Edit{Title: ptr("t")}); err != nil {
-		t.Fatal(err)
-	}
-	check("not renamed", "gone=3", "left=4", "pv-old=2", "pv=1")
-	if _, err := s.Edit("pv", store.Edit{Slug: ptr("pv2")}); err != nil {
-		t.Fatal(err)
-	}
-	check("renamed", "gone=3", "left=4", "pv-old=2", "pv2=1")
-	if _, err := s.Edit("pv2", store.Edit{Slug: ptr("gone")}); err != nil {
-		t.Fatal(err)
-	}
-	check("onto the key of a page gone", "gone=1", "left=4", "pv-old=2")
+	remove := func(slug string) string {
+		t.Helper()
 
-	made(t, s, root, "fresh", 2, 2)
-	if _, err := s.Edit("fresh", store.Edit{Slug: ptr("left")}); err != nil {
-		t.Fatal(err)
+		err := s.Remove(slug)
+		if err == nil {
+			return ""
+		}
+		return told(err, root)
 	}
-	check("none to move, onto the key of a page gone", "gone=1", "pv-old=2")
 
-	if os.Geteuid() != 0 { // root removes what a mode keeps
-		dir := filepath.Join(root, "gone")
-		if err := os.MkdirAll(filepath.Join(dir, "x"), 0o700); err != nil {
+	if got := remove("a"); got != "" {
+		t.Fatal(got)
+	}
+	kept("removed", "id-b", "id-c")
+	before := read(t, file)
+	if got := remove("none"); got != "" {
+		t.Fatal(got)
+	}
+	if read(t, file) != before {
+		t.Error("a page read by no one: reads.json written")
+	}
+
+	if os.Geteuid() != 0 { // root reads and writes what a mode keeps
+		if err := os.Chmod(file, 0); err != nil {
 			t.Fatal(err)
 		}
-		if err := os.Chmod(dir, 0o500); err != nil {
+		if got := remove("b"); got != "S/reads.json: permission denied" || s.ReadMeta("b") == nil {
+			t.Errorf("reads.json unreadable: told %s", got)
+		}
+		for _, slug := range []string{"l", "noid"} {
+			if got := remove(slug); got != "" {
+				t.Errorf("%s, reads.json unreadable: told %s", slug, got)
+			}
+		}
+		if err := os.Chmod(file, 0o600); err != nil {
 			t.Fatal(err)
 		}
-		if err := s.Remove("gone"); err == nil {
-			t.Error("removed all the same")
-		}
-		check("a removal that stopped", "gone=1", "pv-old=2")
-		if err := os.Chmod(dir, 0o700); err != nil {
-			t.Fatal(err)
-		}
-	}
-	if err := s.Remove("gone"); err != nil {
-		t.Fatal(err)
-	}
-	check("removed", "pv-old=2")
+		kept("unreadable", "id-b", "id-c")
 
-	// reads.json that cannot be read: the rename and the removal are done all the same.
+		if err := os.Chmod(root, 0o500); err != nil {
+			t.Fatal(err)
+		}
+		got := remove("b")
+		if err := os.Chmod(root, 0o700); err != nil {
+			t.Fatal(err)
+		}
+		if !strings.HasPrefix(got, "S/reads.json: cannot be written (") || s.ReadMeta("b") == nil {
+			t.Errorf("reads.json not writable: told %s", got)
+		}
+		kept("not writable", "id-b", "id-c")
+	}
+
 	writeReads(t, root, `{`)
-	if to, err := s.Edit("pv-old", store.Edit{Slug: ptr("pv3")}); err != nil || to.Slug != "pv3" {
-		t.Errorf("renamed to %s: %v", to.Slug, err)
-	}
-	if err := s.Remove("pv3"); err != nil {
-		t.Error(err)
+	if got := remove("c"); got != "" || s.ReadMeta("c") != nil {
+		t.Errorf("reads.json broken: told %s", got)
 	}
 }
 
@@ -741,21 +805,21 @@ func TestMarkUnread(t *testing.T) {
 		{name: "new, read once: the dot alone", created: before, versions: []int{before}, read: 1, cleared: true, kept: 0, news: "new"},
 		{
 			name: "a later version read: back to the one before, with its mark", created: before, versions: []int{before, before, before},
-			reads: `"p":{"n":1,"at":"` + hour(before) + `"}`, read: 3, cleared: true, kept: 1, news: "version",
+			reads: `"id-p":{"n":1,"at":"` + hour(before) + `"}`, read: 3, cleared: true, kept: 1, news: "version",
 		},
 		{name: "before since, a version after: back to the one taken as read", created: 9, versions: []int{9, 9, before}, read: 3, cleared: true, kept: 2, news: "version"},
 		{name: "before since, all taken as read: the dot alone", created: 9, versions: []int{9, 9}, kept: 0, news: "new"},
 		{
 			name: "kept from before this was: the dot alone", created: before, versions: []int{before},
-			reads: `"p":{"n":1,"at":"` + hour(before) + `"}`, kept: 0, news: "new",
+			reads: `"id-p":{"n":1,"at":"` + hour(before) + `"}`, kept: 0, news: "new",
 		},
 		{
 			name: "the one before gone from the versions: the dot alone", created: before, versions: []int{before, before},
-			reads: `"p":{"n":2,"at":"` + hour(before) + `","before":{"n":9,"at":"gone"}}`, kept: 0, news: "new",
+			reads: `"id-p":{"n":2,"at":"` + hour(before) + `","before":{"n":9,"at":"gone"}}`, kept: 0, news: "new",
 		},
 		{
 			name: "a record of no version, its before still one, on a page taken as read: the dot alone", created: 9, versions: []int{9},
-			reads: `"p":{"n":7,"at":"gone","before":{"n":1,"at":"` + hour(9) + `"}}`, kept: 0, news: "new",
+			reads: `"id-p":{"n":7,"at":"gone","before":{"n":1,"at":"` + hour(9) + `"}}`, kept: 0, news: "new",
 		},
 	}
 	for _, c := range cases {
@@ -778,7 +842,7 @@ func TestMarkUnread(t *testing.T) {
 				if err := s.MarkUnread(viewer, "p"); err != nil {
 					t.Fatal(err)
 				}
-				rec := keptReads(t, root)[viewer].Pages["p"]
+				rec := keptReads(t, root)[viewer].Pages["id-p"]
 				if got := listedOf(t, s, "p").News; rec.N != c.kept || rec.Before != nil || got != c.news {
 					t.Errorf("kept %+v, news %q, want %d %q", rec, got, c.kept, c.news)
 				}
@@ -792,7 +856,7 @@ func TestMarkUnread(t *testing.T) {
 			if err := s.MarkUnread(viewer, "p"); err != nil {
 				t.Fatal(err)
 			}
-			if rec := keptReads(t, root)[viewer].Pages["p"]; rec.N != c.kept {
+			if rec := keptReads(t, root)[viewer].Pages["id-p"]; rec.N != c.kept {
 				t.Errorf("marked again, kept %+v, want %d", rec, c.kept)
 			}
 		})
@@ -831,13 +895,14 @@ func TestMarkReadCleared(t *testing.T) {
 			t.Errorf("%s: %v, %v", c.name, got, err)
 		}
 	}
-	if rec := keptReads(t, root)[viewer].Pages["p"]; rec.N != 2 || rec.Before == nil || rec.Before.N != 1 {
+	if rec := keptReads(t, root)[viewer].Pages["id-p"]; rec.N != 2 || rec.Before == nil || rec.Before.N != 1 {
 		t.Errorf("kept %+v", rec)
 	}
 }
 
-// A page marked unread stays so through a publish of the same content and a rebuild, a new version and one that replaces it, and
-// follows the page to its new slug, with what it held; a record left by a replacing publish is of no version.
+// A page marked unread stays so through a publish of the same content and a rebuild and a new version, and follows the
+// page to its new slug, with what it held. A page that replaces it is another, of another id: the record of the one it
+// replaces goes first, and one that cannot go stops it.
 func TestMarkUnreadKept(t *testing.T) {
 	t.Parallel()
 
@@ -852,11 +917,16 @@ func TestMarkUnreadKept(t *testing.T) {
 	if err := s.MarkUnread(viewer, "d"); err != nil {
 		t.Fatal(err)
 	}
+	// recOf is the number on record of the page slug, false for none.
+	recOf := func(slug string) (int, bool) {
+		rec, ok := keptReads(t, root)[viewer].Pages[s.ReadMeta(slug).ID]
+		return rec.N, ok
+	}
 	still := func(what string) {
 		t.Helper()
 
-		if rec := keptReads(t, root)[viewer].Pages["d"]; rec.N != 0 || listedOf(t, s, "d").News != "new" {
-			t.Errorf("%s: kept %+v, news %q", what, rec, listedOf(t, s, "d").News)
+		if n, ok := recOf("d"); !ok || n != 0 || listedOf(t, s, "d").News != "new" {
+			t.Errorf("%s: kept %d %v, news %q", what, n, ok, listedOf(t, s, "d").News)
 		}
 	}
 	publish(t, s, dw, "d.yaml", titled("t0"), images, store.Options{})
@@ -867,13 +937,11 @@ func TestMarkUnreadKept(t *testing.T) {
 	still("a rebuild")
 	publish(t, s, dw, "d.yaml", titled("t1"), images, store.Options{})
 	still("a new version")
-	publish(t, s, dw, "other.yaml", titled("t2"), images, store.Options{Slug: ptr("d"), Force: true})
-	still("replaced")
 	if _, err := s.Edit("d", store.Edit{Slug: ptr("d2")}); err != nil {
 		t.Fatal(err)
 	}
-	if rec, ok := keptReads(t, root)[viewer].Pages["d2"]; !ok || rec.N != 0 || listedOf(t, s, "d2").News != "new" {
-		t.Errorf("moved: kept %+v %v, news %q", rec, ok, listedOf(t, s, "d2").News)
+	if n, ok := recOf("d2"); !ok || n != 0 || listedOf(t, s, "d2").News != "new" {
+		t.Errorf("moved: kept %d %v, news %q", n, ok, listedOf(t, s, "d2").News)
 	}
 	if _, err := s.Edit("d2", store.Edit{Slug: ptr("d")}); err != nil {
 		t.Fatal(err)
@@ -883,15 +951,47 @@ func TestMarkUnreadKept(t *testing.T) {
 	if _, err := s.MarkRead(viewer, "d", last.Versions[len(last.Versions)-1].N, last.Versions[len(last.Versions)-1].At); err != nil {
 		t.Fatal(err)
 	}
-	publish(t, s, dw, "third.yaml", titled("t3"), images, store.Options{Slug: ptr("d"), Force: true})
-	if got := listedOf(t, s, "d").News; got == "" {
-		t.Errorf("read before a replacing publish: no news")
+	was := s.ReadMeta("d").ID
+	replace := func(file string) error {
+		t.Helper()
+
+		up := store.Upload{File: file, Source: []byte(titled(file)), Images: images, Project: "p", Repo: "p", Place: file}
+		e, err := s.PrepareData(dw, up, store.Options{Slug: ptr("d"), Force: true})
+		if err != nil {
+			t.Fatal(err)
+		}
+		return s.Save(e) //nolint:wrapcheck // for the test to look at
+	}
+	if os.Geteuid() != 0 { // root reads what a mode keeps
+		file := filepath.Join(root, "reads.json")
+		if err := os.Chmod(file, 0); err != nil {
+			t.Fatal(err)
+		}
+		refused := replace("other.yaml")
+		if err := os.Chmod(file, 0o600); err != nil {
+			t.Fatal(err)
+		}
+		if got := told(refused, root); got != "S/reads.json: permission denied" || s.ReadMeta("d").ID != was {
+			t.Errorf("reads.json unreadable: told %s", got)
+		}
+		if _, ok := keptReads(t, root)[viewer].Pages[was]; !ok {
+			t.Error("reads.json unreadable: the record went")
+		}
+	}
+	if err := replace("third.yaml"); err != nil {
+		t.Fatal(err)
+	}
+	if _, ok := keptReads(t, root)[viewer].Pages[was]; ok || s.ReadMeta("d").ID == was {
+		t.Errorf("replaced: the record of %s kept, or the id: %+v", was, keptReads(t, root)[viewer].Pages)
+	}
+	if got := listedOf(t, s, "d").News; got != "new" {
+		t.Errorf("replaced: news %q", got)
 	}
 	if err := s.MarkUnread(viewer, "d"); err != nil {
 		t.Fatal(err)
 	}
-	if rec := keptReads(t, root)[viewer].Pages["d"]; rec.N == 0 {
-		t.Errorf("with news already, a mark changes nothing: kept %+v", rec)
+	if n, ok := recOf("d"); ok {
+		t.Errorf("with news already, a mark changes nothing: kept %d", n)
 	}
 }
 
@@ -926,9 +1026,9 @@ func TestReadBefore(t *testing.T) {
 				for h := 23; h >= 0; h-- {
 					tc.record = strings.ReplaceAll(tc.record, "H"+strconv.Itoa(h), hour(h))
 				}
-				writeReads(t, root, `{"local":{"since":"`+hour(since)+`","pages":{"d":`+tc.record+`}}}`)
+				writeReads(t, root, `{"local":{"since":"`+hour(since)+`","pages":{"id-d":`+tc.record+`}}}`)
 			}
-			if got := s.ReadBefore(viewer, "d", m); got != tc.want {
+			if got := s.ReadBefore(viewer, m); got != tc.want {
 				t.Errorf("got %d, want %d", got, tc.want)
 			}
 		})
@@ -936,10 +1036,86 @@ func TestReadBefore(t *testing.T) {
 	// No reader, and a link.
 	s, root := begun(t, hour(since))
 	m := made(t, s, root, "d", 13, 13, 14)
-	if got := s.ReadBefore("nobody", "d", m); got != 0 {
+	if got := s.ReadBefore("nobody", m); got != 0 {
 		t.Errorf("no reader: %d", got)
 	}
-	if got := s.ReadBefore(viewer, "d", &store.Meta{Path: "/x/y.html"}); got != 0 {
+	if got := s.ReadBefore(viewer, &store.Meta{ID: "id-d", Path: "/x/y.html"}); got != 0 {
 		t.Errorf("a link: %d", got)
+	}
+}
+
+// A page's id is made when it is first stored, and stays through what keeps the page; a page replacing it by another
+// file is another, of another id.
+func TestMetaID(t *testing.T) {
+	t.Parallel()
+
+	s, root := newStore(t)
+	dw := floeDrawing(t)
+	publish(t, s, dw, "a.yaml", report("washi"), nil, store.Options{})
+	id := s.ReadMeta("a").ID
+	if id == "" {
+		t.Fatal("published: no id")
+	}
+	stays := func(what, slug string) {
+		t.Helper()
+
+		if got := s.ReadMeta(slug).ID; got != id {
+			t.Errorf("%s: id %q, was %q", what, got, id)
+		}
+	}
+	publish(t, s, dw, "a.yaml", report("washi"), nil, store.Options{})
+	stays("published again", "a")
+	publish(t, s, dw, "a.yaml", report("ink"), nil, store.Options{})
+	stays("a new version", "a")
+	if err := s.Rebuild(dw); err != nil {
+		t.Fatal(told(err, root))
+	}
+	stays("rebuilt", "a")
+	if err := s.PickTheme(dw, "a", "ink"); err != nil {
+		t.Fatal(told(err, root))
+	}
+	stays("a theme picked", "a")
+	if _, err := s.Edit("a", store.Edit{Title: ptr("t"), Project: ptr("q")}); err != nil {
+		t.Fatal(err)
+	}
+	stays("edited", "a")
+	if _, err := s.ChangeTasks(store.TaskChange{Slugs: []string{"a"}, Task: ptr("#1")}); err != nil {
+		t.Fatal(told(err, root))
+	}
+	stays("put on a task", "a")
+	if _, err := s.Edit("a", store.Edit{Slug: ptr("b")}); err != nil {
+		t.Fatal(err)
+	}
+	stays("renamed", "b")
+
+	publish(t, s, dw, "c.yaml", report("washi"), nil, store.Options{})
+	if got := s.ReadMeta("c").ID; got == "" || got == id {
+		t.Errorf("another page: id %q", got)
+	}
+	publish(t, s, dw, "other.yaml", report("washi"), nil, store.Options{Slug: ptr("b"), Force: true})
+	if got := s.ReadMeta("b").ID; got == "" || got == id {
+		t.Errorf("replaced: id %q", got)
+	}
+}
+
+// A page of no id keeps no record, as a link: a read is not found, and reads.json is not written.
+func TestMarkReadNoID(t *testing.T) {
+	t.Parallel()
+
+	s, root := begun(t, hour(10))
+	m := made(t, s, root, "d", 11, 11)
+	m.ID = ""
+	if err := s.WriteMeta("d", m); err != nil {
+		t.Fatal(err)
+	}
+	before := read(t, filepath.Join(root, "reads.json"))
+	if _, err := s.MarkRead(viewer, "d", 1, m.Versions[0].At); !errors.Is(err, store.ErrNotFound) {
+		t.Errorf("read: %v", err)
+	}
+	if err := s.MarkUnread(viewer, "d"); !errors.Is(err, store.ErrNotFound) {
+		t.Errorf("marked unread: %v", err)
+	}
+	if got := read(t, filepath.Join(root, "reads.json")); got != before {
+		t.Errorf("written: %s", got)
 	}
 }

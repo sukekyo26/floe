@@ -3,6 +3,7 @@ package store
 import (
 	"cmp"
 	"context"
+	"crypto/rand"
 	"errors"
 	"fmt"
 	"io/fs"
@@ -570,6 +571,7 @@ func newMeta(opts Options, path, project, repo, place string, base *Meta, own, s
 	// One reading of the clock, so that a new page's createdAt equals its updatedAt.
 	now := Now()
 	m := Meta{
+		ID:            cmp.Or(base.ID, rand.Text()),
 		Path:          path,
 		Title:         title(opts, path, keepTitle, base, own, slug),
 		TitleEdited:   keepTitle,
@@ -730,7 +732,9 @@ func (s *Store) press(slug, mark string) *pressed {
 	return &pressed{source: m.Source, n: last.N, gz: gzipped(page)}
 }
 
-// commit is Save, the content of a stored page of mark, its page before pressed as pre (nil for none).
+// commit is Save, the content of a stored page of mark, its page before pressed as pre (nil for none). What was read
+// of a page it replaces with one of another id goes first.
+// LIMIT: a save that fails after that leaves the page before with nothing read.
 func (s *Store) commit(e *Entry, mark string, pre *pressed) error {
 	unlock, err := s.lock(true)
 	if err != nil {
@@ -740,8 +744,14 @@ func (s *Store) commit(e *Entry, mark string, pre *pressed) error {
 	if err = s.pickAgain(e); err != nil {
 		return err
 	}
-	if err = e.settle(s.ReadMeta(e.Slug)); err != nil {
+	prev := s.ReadMeta(e.Slug)
+	if err = e.settle(prev); err != nil {
 		return err
+	}
+	if prev != nil && prev.ID != e.Meta.ID {
+		if err = s.forgetRead(prev); err != nil {
+			return err
+		}
 	}
 	dir, ok := s.dir(e.Slug)
 	if !ok {
@@ -1011,7 +1021,8 @@ func removeSources(dir, keep string) {
 	}
 }
 
-// Remove deletes slug, ErrNotFound for no page. A linked file itself is left alone.
+// Remove deletes slug, ErrNotFound for no page, what was read of it first. A linked file itself is left alone.
+// LIMIT: a removal that stops halfway leaves the page listed with nothing read. Removing it again finishes it.
 func (s *Store) Remove(slug string) error {
 	dir, ok := s.dir(slug)
 	if !ok {
@@ -1026,14 +1037,14 @@ func (s *Store) Remove(slug string) error {
 	}
 	defer unlock()
 	// A removal that waited for another of the same slug finds nothing, as one that came after.
-	if s.ReadMeta(slug) == nil {
+	m := s.ReadMeta(slug)
+	if m == nil {
 		return ErrNotFound
 	}
-	if err := removePage(dir); err != nil {
+	if err := s.forgetRead(m); err != nil {
 		return err
 	}
-	s.moveRead(slug, "")
-	return nil
+	return removePage(dir)
 }
 
 // removePage removes dir, a page's directory, its meta.json last: one that cannot all be removed keeps it, listed
@@ -1131,7 +1142,6 @@ func (s *Store) Edit(slug string, ed Edit) (Edited, error) {
 		if err := os.Rename(from, dest); err != nil {
 			return Edited{}, usererr.CannotWrite(dest, err) //nolint:wrapcheck // the system's words, at the new name
 		}
-		s.moveRead(slug, to)
 	}
 	return Edited{Slug: to, TaskProject: ProjectKey(m.Project), Task: m.Task, OffTask: off, OffCategory: ""}, nil
 }
