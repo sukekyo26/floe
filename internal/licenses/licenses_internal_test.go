@@ -1,7 +1,6 @@
 package licenses
 
 import (
-	"bufio"
 	"bytes"
 	"encoding/json"
 	"errors"
@@ -77,7 +76,6 @@ func goRelease(modJSON []byte) (string, error) {
 }
 
 type module struct {
-	version string
 	dir     string
 	pkgDirs []string
 }
@@ -113,7 +111,7 @@ func build(t *testing.T) ([]byte, error) {
 		if readErr != nil {
 			return nil, readErr
 		}
-		section(&b, path+" "+m.version, files)
+		section(&b, path, files)
 	}
 
 	lucide, err := os.ReadFile(filepath.Join(root, "internal", "icons", "lucide", "LICENSE"))
@@ -144,8 +142,8 @@ func modules(t *testing.T) (map[string]*module, error) {
 				Dir      string
 				Standard bool
 				Module   *struct {
-					Path, Version, Dir string
-					Main               bool
+					Path, Dir string
+					Main      bool
 				}
 			}
 			if err := dec.Decode(&p); errors.Is(err, io.EOF) {
@@ -158,7 +156,7 @@ func modules(t *testing.T) (map[string]*module, error) {
 			}
 			m := mods[p.Module.Path]
 			if m == nil {
-				m = &module{version: p.Module.Version, dir: p.Module.Dir, pkgDirs: nil}
+				m = &module{dir: p.Module.Dir, pkgDirs: nil}
 				mods[p.Module.Path] = m
 			}
 			rel, err := filepath.Rel(m.dir, p.Dir)
@@ -218,6 +216,8 @@ func read(dir string, pkgDirs []string, what string) ([]file, error) {
 }
 
 // isLicense takes more names than licenses have rather than fewer: any but Go's with a word of one.
+// LIMIT: a file named COPYRIGHT alone, and the files in a REUSE LICENSES/ directory, are not taken; no module built
+// into floe has them. Add their names when one does.
 func isLicense(name string) bool {
 	lower := strings.ToLower(name)
 	if strings.HasSuffix(lower, ".go") {
@@ -244,16 +244,19 @@ func section(b *bytes.Buffer, title string, files []file) {
 }
 
 func firstDiff(old, made []byte) string {
-	a, b := bufio.NewScanner(bytes.NewReader(old)), bufio.NewScanner(bytes.NewReader(made))
-	for n := 1; ; n++ {
-		okA, okB := a.Scan(), b.Scan()
-		if !okA && !okB {
-			return "the same lines"
-		}
-		if okA != okB || a.Text() != b.Text() {
-			return fmt.Sprintf("line %d is %q, go list gives %q", n, a.Text(), b.Text())
+	a, b := bytes.Split(old, []byte("\n")), bytes.Split(made, []byte("\n"))
+	for n := 0; ; n++ {
+		if n == len(a) || n == len(b) || !bytes.Equal(a[n], b[n]) {
+			return fmt.Sprintf("line %d is %q, go list gives %q", n+1, line(a, n), line(b, n))
 		}
 	}
+}
+
+func line(lines [][]byte, n int) []byte {
+	if n < len(lines) {
+		return lines[n]
+	}
+	return nil
 }
 
 func run(t *testing.T, name string, args ...string) []byte {
