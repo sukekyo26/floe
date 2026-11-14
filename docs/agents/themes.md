@@ -68,7 +68,7 @@ A theme sets these on the element that needs them, in any file (`--tone` and the
 
 ### Padding and text size
 
-floe's base sets these on `:root`. Set them on `:scope` in `base.css` (a rule of `palette.css` sits under floe's base, which wins over it).
+floe sets these on `:root` in its lowest layer, under every palette. Set them on `:scope` in `base.css`; one set in `palette.css` takes effect too (`base.css` wins over it).
 
 | Variable | What it changes | Default |
 |---|---|---|
@@ -125,7 +125,7 @@ Each item gives the action, then the reason in parentheses.
 - Do not write `box-shadow` on a part's box, a look's element or a blockquote (it is written over floe's and drops the shadow and the inset).
 - Keep what a box draws outside itself within `--floe-room` (0.75rem) (a shadow, a pseudo-element standing out or an outline that reaches further meets the next box or the page's edge; a shadow reaches blur + spread + its offset towards a side, and a tilt or a scale reaches further the bigger the box).
 - Draw a decoration on a box that has a focus ring or a selected option (the cards of `options`) with `--floe-inset` or `::before`, as in `.card { --floe-inset: inset 0 0 0 2px var(--surface); }` in `cards.css` (the ring is an `outline`, and takes the place of one a theme writes).
-- Leave the space between parts to `--floe-room` (floe's base sets it on `:root`, 0.75rem; a `gap` on the root of `cards.css` or `tabs.css` changes it).
+- Leave the space between parts to `--floe-room` (floe sets it on `:root`, 0.75rem; a `gap` on the root of `cards.css` or `tabs.css` changes it).
 - Do not write a word in a `content` string; use symbols (CSS text does not pass `words.yaml`, so a word stays in one language whatever the page's).
 
 ### Rows: note, numbered, timeline, links, marked
@@ -184,4 +184,4 @@ In `cards.css`, `:scope` is the cards as a whole (the part's root) and `.card` i
 
 If `theme.yaml` has a mistake, a theme is a link to a directory, or a file cannot be read, the check prints that alone: mend it and run the check again for the rest.
 
-Of values, the check tests only those two corners, and it does not test places. A part variable set where it does not reach (*Part variables*), and what a page shows (text that sinks into its background, a `box-shadow` over floe's, `--floe-text-small` set in `palette.css`), pass with exit code 0.
+Of values, the check tests only those two corners, and it does not test places. A part variable set where it does not reach (*Part variables*), and what a page shows (text that sinks into its background, a `box-shadow` over floe's), pass with exit code 0.

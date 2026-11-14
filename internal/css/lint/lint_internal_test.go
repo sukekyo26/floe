@@ -35,7 +35,7 @@ func floeInput(t *testing.T) *Input {
 		t.Fatal(err)
 	}
 	return &Input{
-		kit: k, base: k.BaseCSS(), docs: os.DirFS("../../../docs"),
+		kit: k, base: k.BaseCSS(), defaults: k.DefaultsCSS(), docs: os.DirFS("../../../docs"),
 		pages: os.DirFS("../../corpus/testdata/every-part/golden"), ui: floecss.Preprocess(ui),
 	}
 }
@@ -49,7 +49,7 @@ func sub(dir, name string) fs.FS {
 }
 
 // dirInput returns an example of testdata as a rule reads it: dir holds a kit of its own (parts, themes, templates, read
-// over none of floe's), base.css, docs, pages and ui.html, each when the rule reads it, and allow.txt, the exceptions in
+// over none of floe's), base.css, defaults.css, docs, pages and ui.html, each when the rule reads it, and allow.txt, the exceptions in
 // force: a line each, a quoted key and its reason.
 func dirInput(t *testing.T, dir string) *Input {
 	t.Helper()
@@ -65,6 +65,9 @@ func dirInput(t *testing.T, dir string) *Input {
 	in := &Input{kit: k, docs: sub(dir, "docs"), pages: sub(dir, "pages"), allow: map[string]string{}}
 	if base := readIf(t, filepath.Join(dir, "base.css")); base != nil {
 		in.base = floecss.Preprocess(base)
+	}
+	if defaults := readIf(t, filepath.Join(dir, "defaults.css")); defaults != nil {
+		in.defaults = floecss.Preprocess(defaults)
 	}
 	if ui := readIf(t, filepath.Join(dir, "ui.html")); ui != nil {
 		in.ui = floecss.Preprocess(ui)

@@ -279,7 +279,7 @@ func padsOn(t *testing.T, s *site) pads {
 	return p
 }
 
-// basePads returns base.css's variables of padding, read on a page in a theme of one's own that sets nothing.
+// basePads returns defaults.css's variables of padding, read on a page in a theme of one's own that sets nothing.
 func basePads(t *testing.T, s *site) pads {
 	t.Helper()
 

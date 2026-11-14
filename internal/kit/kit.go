@@ -27,12 +27,13 @@ import (
 // Kit is the parts, looks, themes and templates read at stage 1, over those of a base. It is not changed
 // once read: reading more makes a new Kit, so that one Kit may serve every run at once.
 type Kit struct {
-	base      *Kit
-	baseCSS   []byte // floe's base.css, of floe's Kit alone
-	parts     map[string]*Part
-	looks     map[string]*Look
-	themes    map[string]*Theme
-	templates map[string]*Template
+	base        *Kit
+	baseCSS     []byte // floe's base.css, of floe's Kit alone
+	defaultsCSS []byte // floe's defaults.css, of floe's Kit alone
+	parts       map[string]*Part
+	looks       map[string]*Look
+	themes      map[string]*Theme
+	templates   map[string]*Template
 	// rebuilt are the base's templates compiled again with its own parts in any, each when first taken: called by
 	// Template alone.
 	rebuilt map[string]func() (*Template, error)
@@ -79,11 +80,13 @@ var floe = sync.OnceValues(func() (*Kit, error) {
 	if err != nil {
 		return nil, err
 	}
-	base, err := floeFiles.ReadFile("floe/base.css")
-	if err != nil {
-		return nil, fmt.Errorf("kit: floe's base.css: %w", err)
+	for file, to := range map[string]*[]byte{"base.css": &k.baseCSS, "defaults.css": &k.defaultsCSS} {
+		src, err := floeFiles.ReadFile(path.Join("floe", file))
+		if err != nil {
+			return nil, fmt.Errorf("kit: floe's %s: %w", file, err)
+		}
+		*to = css.Preprocess(bom.Trim(src))
 	}
-	k.baseCSS = css.Preprocess(bom.Trim(base))
 	return k, nil
 })
 
@@ -106,19 +109,28 @@ func Load(base *Kit, src Sources) (*Kit, error) {
 	return k, nil
 }
 
-// BaseCSS returns floe's base.css, under every page's own CSS: that of the floe Kit k reads over.
-func (k *Kit) BaseCSS() []byte {
+// root returns floe's Kit, the one k reads over, k itself when it reads over none.
+func (k *Kit) root() *Kit {
 	for k.base != nil {
 		k = k.base
 	}
-	return bytes.Clone(k.baseCSS)
+	return k
+}
+
+// BaseCSS returns floe's base.css, under every page's own CSS: that of the floe Kit k reads over.
+func (k *Kit) BaseCSS() []byte {
+	return bytes.Clone(k.root().baseCSS)
+}
+
+// DefaultsCSS returns floe's defaults.css, the defaults of the variables floe sets on the page's root, under every
+// palette: that of the floe Kit k reads over, as a Kit read over it holds none.
+func (k *Kit) DefaultsCSS() []byte {
+	return bytes.Clone(k.root().defaultsCSS)
 }
 
 // Tones returns the tones a part may take, tone.json's of floe's, in its order, or floe's mistake when it has none.
 func (k *Kit) Tones() ([]string, error) {
-	for k.base != nil {
-		k = k.base
-	}
+	k = k.root()
 	if s := k.shared[toneSchema]; s != nil && s.schema != nil {
 		if tones := s.schema.Enum(); len(tones) != 0 {
 			return tones, nil
@@ -134,9 +146,9 @@ const toneSchema = "tone"
 // in either. It does what it takes to have the values, and returns every mistake of it Sorted, and no Kit.
 func read(base *Kit, src Sources) (*Kit, error) {
 	k := &Kit{
-		base: base, baseCSS: nil, parts: map[string]*Part{}, looks: map[string]*Look{}, themes: map[string]*Theme{},
-		templates: map[string]*Template{}, rebuilt: nil, compiled: atomic.Int32{}, shared: map[string]*shared{},
-		resources: map[string]schema.Resource{},
+		base: base, baseCSS: nil, defaultsCSS: nil, parts: map[string]*Part{}, looks: map[string]*Look{},
+		themes: map[string]*Theme{}, templates: map[string]*Template{}, rebuilt: nil, compiled: atomic.Int32{},
+		shared: map[string]*shared{}, resources: map[string]schema.Resource{},
 	}
 	if base != nil {
 		maps.Copy(k.resources, base.resources)

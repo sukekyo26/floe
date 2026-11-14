@@ -641,6 +641,7 @@ adheres to [Semantic Versioning](https://semver.org/).
 
 ### Fixed
 
+- Fix `--floe-text-small`, `--floe-text-aside`, `--floe-row-pad`, `--floe-pad-block`, `--floe-pad-inline`, `--floe-room` and the other variables floe sets on the page's root, set on `:scope` in a theme's `palette.css`, losing to floe's defaults without a word: floe's defaults now lie under every palette, in a layer of their own (`floe.defaults`), so a value in `palette.css` takes effect, and one in `base.css` still wins over it. On paper floe keeps no room for the copy button whatever the palette sets (S343).
 - Fix `floe publish` of a file whose name has no letter a to z or digit (`設計.yaml`, a `--link` of `資料/index.html`), which was refused as an `invalid slug ""` the publisher never wrote: it now says that no slug can be made of the name, at the file, and to pass `--slug` or rename it. A page published before under its own `--slug` is still updated (S339).
 - Fix `floe icons search` of a word with spaces (`floe icons search gcp "api gateway"`), which found nothing: it is searched as its words. When `gcp` finds nothing, the message also says that a product without an icon of its own is drawn with its category's icon and its name as the label, and that `floe icons search gcp category` lists them (S340, S345).
 - Fix a request that panics ending in `EOF` on the command line and in nothing at all in the server: it is answered with a 500 that says where it panicked and where the stack is (`server.log`), and the server goes on (S229).

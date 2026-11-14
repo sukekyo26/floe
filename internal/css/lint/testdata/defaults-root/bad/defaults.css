@@ -1,0 +1,6 @@
+:root { --floe-room: 0.75rem !important; } /* want "--floe-room is !important; write no !important in defaults.css" */
+:root, :host { --floe-row-pad: 0.4rem; } /* want "--floe-row-pad in :root, :host; set only a plain :root in defaults.css" */
+:root { color: red; } /* want "color on :root; set only --floe-* variables in defaults.css" */
+:root { --x: 1px; } /* want "--x on :root; set only --floe-* variables in defaults.css" */
+@media print { :root { --floe-room: 0; } } /* want "@media: write no at-rule in defaults.css" */
+:root { .a { --floe-pad-block: 0; } } /* want "--floe-pad-block in :root { .a; set only a plain :root in defaults.css" */

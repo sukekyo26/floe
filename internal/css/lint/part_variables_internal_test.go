@@ -15,8 +15,8 @@ import (
 	"floe/internal/kit"
 )
 
-// floesOwnWays are the variables of floe's own ways, set by rules of their own and out of this rule, that floe's base.css
-// neither sets on its :root nor registers by @property, nor the default palette sets.
+// floesOwnWays are the variables of floe's own ways, set by rules of their own and out of this rule, that floe's
+// defaults.css and base.css neither set on their :root nor register by @property, nor the default palette sets.
 var floesOwnWays = map[string]string{
 	"--face":           "a face's ground (css.md: a painted face), base.css clears it on a part's box",
 	"--on-face":        "a face's text, as --face",
@@ -28,10 +28,10 @@ var floesOwnWays = map[string]string{
 
 // partVariables keeps a part's variables where a theme can set them. A part or a look sets a variable on its root
 // (rootOf), not !important, but for an exception (a variable that switches between the elements in it, or made from the
-// data on each: Key "<part> <variable>"), and the marks floe lays out set none; a theme and floe's base.css set a part's
+// data on each: Key "<part> <variable>"), and the marks floe lays out set none; a theme and floe's base and defaults set a part's
 // variable on the root of the file of a part or look that sets or reads it, or that a part reading it takes, where it
-// wins, not !important, and never a part's switching one. Out of it are floe's own: what floe's base.css sets on its
-// :root or registers, what the default palette sets, and floesOwnWays.
+// wins, not !important, and never a part's switching one. Out of it are floe's own: what floe's defaults.css and
+// base.css set on their :root or register, what the default palette sets, and floesOwnWays.
 // LIMIT: a style attribute the pages drawn (every-part) do not hold goes unread; add the data to every-part if a part
 // comes to set a variable so.
 var partVariables = Rule{Name: "part-variables", Check: func(in *Input) []Finding {
@@ -134,7 +134,7 @@ var partVariables = Rule{Name: "part-variables", Check: func(in *Input) []Findin
 		return strings.Join(at, ", ")
 	}
 	for _, s := range sheets {
-		if s.Kind != kindBase && s.Kind != kindTheme {
+		if s.Kind != kindBase && s.Kind != kindDefaults && s.Kind != kindTheme {
 			continue
 		}
 		for v, ds := range declarations(s.Src, func(p string) bool { return strings.HasPrefix(p, "--") }) {
@@ -185,8 +185,8 @@ func reachesOwner(in *Input, name string, names, owners []string) bool {
 	return slices.ContainsFunc(owners, func(o string) bool { return o == name || slices.Contains(in.Taken(o), name) })
 }
 
-// floesOwn returns the variables out of partVariables: floesOwnWays, what floe's base.css sets on its :root or registers
-// by @property, and what the default palette sets.
+// floesOwn returns the variables out of partVariables: floesOwnWays, what floe's defaults.css and base.css set on their
+// :root or register by @property, and what the default palette sets.
 func floesOwn(sheets []Sheet) map[string]bool {
 	own := map[string]bool{}
 	for v := range floesOwnWays {
@@ -194,7 +194,7 @@ func floesOwn(sheets []Sheet) map[string]bool {
 	}
 	for _, s := range sheets {
 		switch {
-		case s.Kind == kindBase:
+		case s.Kind == kindBase || s.Kind == kindDefaults:
 			for v, ds := range declarations(s.Src, func(p string) bool { return strings.HasPrefix(p, "--") }) {
 				for _, d := range ds {
 					if rootOf(d.rule, ":root") == onTheRoot {

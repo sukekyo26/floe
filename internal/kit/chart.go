@@ -12,7 +12,7 @@ import (
 	"floe/internal/usererr"
 )
 
-// The plot's height and the room of its labels, in rem, as part.css and base.css set them.
+// The plot's height and the room of its labels, in rem, as part.css and defaults.css set them.
 // LIMIT: a chart in a box in a column has less than narrowBox, and its labels may meet; the table holds them.
 const (
 	plotHeight  = 16.5 - 1 - 2 // the svg's height less its padding

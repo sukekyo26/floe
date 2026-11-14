@@ -476,6 +476,7 @@ floe の主要な変更を記録します。フォーマットは
 
 ### 修正
 
+- テーマの `palette.css` の `:scope` に置いた `--floe-text-small`・`--floe-text-aside`・`--floe-row-pad`・`--floe-pad-block`・`--floe-pad-inline`・`--floe-room` など、floe がページの根に置く変数が、floe の既定値に黙って負けて効かなかったのを修正しました。floe の既定値は、どのパレットより下の自分の層（`floe.defaults`）に入るので、`palette.css` に置いた値が効きます。`base.css` に置いた値は、今までどおりそれに勝ちます。印刷では、パレットが何を置いても、写すボタンの場所を空けません（S343）。
 - 英字も数字も無い名前のファイル（`設計.yaml`、`資料/index.html` の `--link`）の `floe publish` が、書いていない `invalid slug ""` で断られていたのを修正。名前から URL 名を作れないことを、そのファイルに置いて言い、`--slug` を渡すか名前を変えるよう勧めます。前に自分の `--slug` で出したページは、今までどおり書き換えます（S339）。
 - 空白を含む語の `floe icons search`（`floe icons search gcp "api gateway"`）が何も見つけなかったのを修正。空白で分けた語で探します。`gcp` で何も見つからないときは、自分のアイコンを持たない製品をカテゴリのアイコンと製品名のラベルで描くことと、`floe icons search gcp category` で出ることも言います（S340・S345）。
 - 要求の中で panic すると、コマンドラインに `EOF` とだけ出て、サーバーにも何も残らなかったのを修正しました。500 と、どこで panic したかと、スタックが `server.log` にあることを答え、サーバーは動き続けます（S229）。

@@ -1,5 +1,1 @@
-:root { --floe-room: 0.75rem; --floe-copy-room: calc(var(--floe-copy-size) + 2 * var(--floe-copy-gap)); --floe-copy-size: 30px; }
-@media print { :root { --floe-room: 0px; --floe-copy-room: 0px; } }
 @property --floe-inset { syntax: "*"; inherits: false; initial-value: 0 0 #0000; }
-:root { --not-floe: 1px; }
-.a { --floe-room: 9rem; }
