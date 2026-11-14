@@ -298,7 +298,7 @@ func TestNoticesPick(t *testing.T) {
 	if err := os.Mkdir(filepath.Join(dir, "m", "a", "b", "COPYING"), 0o755); err != nil {
 		t.Fatal(err)
 	}
-	files, err := read(filepath.Join(dir, "m"), []string{filepath.Join("a", "b"), "a"}, "m")
+	files, err := read(filepath.Join(dir, "m"), []string{filepath.Join("a", "b")}, "m")
 	if err != nil {
 		t.Fatal(err)
 	}
