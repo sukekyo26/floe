@@ -460,3 +460,4 @@ floe: FLOE_PARTS_DIR (/tmp/pp) and FLOE_THEMES_DIR (/tmp/pp) are one directory, 
 | `0` | Success |
 | `1` | Failure, and a value floe refuses (a refused publish, a missing page, a port in use, a data file or diagram spec with mistakes, an unknown example …) |
 | `2` | A command line floe cannot read, or that lacks what it needs (an unknown flag or command, missing arguments) |
+
