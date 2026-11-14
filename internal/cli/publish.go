@@ -54,8 +54,8 @@ files under its directory are served for its relative references. A data file is
 its page is opened, and saving it, a part, theme or template of one's own, or fetching icons
 reloads the open tab; saving an image it shows does not. A folder is listed on the management page,
 a directory at a time as it is opened, with the HTML files under it (none under a name starting with
-a dot), each shown as a linked HTML file is. A link is in the project of its file's directory (a
-folder's own), not of where floe publish runs, and is told so as a page is. The same slug for another
+a dot), each shown as a linked HTML file is. A link is in the project of its file's directory (for
+a folder, the folder itself), not of where floe publish runs, and is told so as a page is. The same slug for another
 file is refused unless --force. A page and a link cannot take each other's slug, even with --force: floe rm it first.`,
 		Args: usage(cobra.ExactArgs(1)),
 		RunE: func(cmd *cobra.Command, args []string) error {
