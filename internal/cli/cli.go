@@ -11,6 +11,7 @@ import (
 
 	"floe/docs"
 	"floe/internal/i18n"
+	"floe/internal/licenses"
 	"floe/internal/store"
 	"floe/internal/usererr"
 	"floe/internal/version"
@@ -154,6 +155,14 @@ that points your agent to it (floe skill install --help lists the agents).`,
 		Args:  cobra.NoArgs,
 		RunE: func(cmd *cobra.Command, _ []string) error {
 			_, err := fmt.Fprintf(cmd.OutOrStdout(), "floe %s\n", version.Version)
+			return err //nolint:wrapcheck // a stdout write error needs no extra context
+		},
+	}, &cobra.Command{
+		Use:   "licenses",
+		Short: "Print the license notices of floe and of the code built into it",
+		Args:  cobra.NoArgs,
+		RunE: func(cmd *cobra.Command, _ []string) error {
+			_, err := cmd.OutOrStdout().Write(licenses.Notices)
 			return err //nolint:wrapcheck // a stdout write error needs no extra context
 		},
 	})

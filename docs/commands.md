@@ -44,6 +44,7 @@ Flags are in each command's section below.
 | `floe icons fetch <set> [zip-or-url...]` | Keep an icon set (`aws`, `gcp`, `azure`) for the `icon` parts of diagrams; `lucide` is built in |
 | `floe icons search <set> <word>...` | List the icons of a set, `lucide` or a fetched one, whose name contains every word, or a short name such as `alb` |
 | `floe completion <shell>` | Print the completion script for a shell (Cobra builtin) |
+| `floe licenses` | Print the licenses of floe and of the code built into it |
 | `floe version` | Print the version (also `floe --version`) |
 | `floe help [command]` | Print help (Cobra builtin) |
 
