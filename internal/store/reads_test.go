@@ -1079,7 +1079,7 @@ func TestMetaID(t *testing.T) {
 		t.Fatal(err)
 	}
 	stays("edited", "a")
-	if _, err := s.Work(store.WorkWrite{Slugs: []string{"a"}, Task: ptr("#1")}); err != nil {
+	if _, err := s.ChangeTasks(store.TaskChange{Slugs: []string{"a"}, Task: ptr("#1")}); err != nil {
 		t.Fatal(told(err, root))
 	}
 	stays("put on a task", "a")

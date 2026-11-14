@@ -395,12 +395,12 @@ func TestStoppedThenNotStarted(t *testing.T) {
 	// Before the cleanup that stops the server, which needs it writable to be asked.
 	t.Cleanup(func() { _ = os.Chmod(store, 0o700) }) //nolint:errcheck // a temporary directory
 
-	r := e.run("work", "--project", "p", "--task", "t1", "--title", "x")
+	r := e.run("task", "--project", "p", "--task", "t1", "--title", "x")
 	said := "stopping the server on port " + e.port + " (pid " + strconv.Itoa(old.PID) + "), which was of another build of floe"
 	didNot := "the server did not start"
 	i, j := strings.Index(r.stderr, said), strings.Index(r.stderr, didNot)
 	if r.code != 1 || i < 0 || j < i {
-		t.Errorf("work after the server of another build was stopped and none started = %d %q, want 1 and %q, then %q",
+		t.Errorf("task after the server of another build was stopped and none started = %d %q, want 1 and %q, then %q",
 			r.code, r.stderr, said, didNot)
 	}
 }

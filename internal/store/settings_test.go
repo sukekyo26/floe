@@ -58,8 +58,14 @@ func drawnIn(t *testing.T, s *store.Store, root, slug string) string {
 	return in
 }
 
+// setTheme writes theme as the default theme, the task mode as it is.
+func setTheme(s *store.Store, theme string) error {
+	_, err := s.SetSettings(store.SettingsEdit{Theme: &theme, TaskMode: nil})
+	return err
+}
+
 // settings.json is none chosen until written; what encoding/json/v2 refuses in it is its words at the file, and
-// choosing again writes it whole, mending it.
+// choosing again writes it whole, mending it. A write changes the keys it names alone.
 func TestSettings(t *testing.T) {
 	t.Parallel()
 
@@ -67,11 +73,27 @@ func TestSettings(t *testing.T) {
 	if set, err := s.ReadSettings(); err != nil || set.Theme != "" {
 		t.Errorf("none written: %+v, %v", set, err)
 	}
-	if err := s.SetTheme("ink"); err != nil {
+	if err := setTheme(s, "ink"); err != nil {
 		t.Fatal(err)
 	}
 	if set, err := s.ReadSettings(); err != nil || set.Theme != "ink" {
 		t.Errorf("written: %+v, %v", set, err)
+	}
+	on, off := true, false
+	if set, err := s.SetSettings(store.SettingsEdit{Theme: nil, TaskMode: &on}); err != nil || set != (store.Settings{Theme: "ink", TaskMode: true}) {
+		t.Errorf("the task mode on: %+v, %v", set, err)
+	}
+	if err := setTheme(s, "app"); err != nil {
+		t.Fatal(err)
+	}
+	if set, err := s.ReadSettings(); err != nil || set != (store.Settings{Theme: "app", TaskMode: true}) {
+		t.Errorf("a theme after the task mode: %+v, %v", set, err)
+	}
+	if _, err := s.SetSettings(store.SettingsEdit{Theme: nil, TaskMode: &off}); err != nil {
+		t.Fatal(err)
+	}
+	if b, err := os.ReadFile(filepath.Join(root, "settings.json")); err != nil || string(b) != `{"theme":"app"}`+"\n" {
+		t.Errorf("the task mode off: %q, %v", b, err)
 	}
 	file := filepath.Join(root, "settings.json")
 	for _, broken := range []string{`{"theme": 1}`, `{"theme": "a", "theme": "b"}`, `{"theme": "a", "x": 1}`, `{`, ``} {
@@ -80,16 +102,81 @@ func TestSettings(t *testing.T) {
 		}
 		var set store.Settings
 		v2 := jsonv2.Unmarshal([]byte(broken), &set, jsonv2.RejectUnknownMembers(true))
+		// v2's words, at the file, with how to mend it: of a syntax, a type, a key twice and a key it does not know alike
 		_, err := s.ReadSettings()
-		if v2 == nil || told(err, root) != "S/settings.json: "+v2.Error() {
+		e, ok := errors.AsType[*usererr.Error](err)
+		if v2 == nil || !ok || e.Key != "store_settings_broken" || len(e.Args) != 1 || e.Args[0] != v2.Error() || e.File() != file {
 			t.Errorf("%s: told %s, v2 %v", broken, told(err, root), v2)
 		}
-		if err := s.SetTheme("washi"); err != nil {
+		if err := setTheme(s, "washi"); err != nil {
 			t.Fatal(err)
 		}
-		if set, err := s.ReadSettings(); err != nil || set.Theme != "washi" {
+		if set, err := s.ReadSettings(); err != nil || set != (store.Settings{Theme: "washi", TaskMode: false}) {
 			t.Errorf("mended %s: %+v, %v", broken, set, err)
 		}
+		// The task mode alone mends it too
+		if err := os.WriteFile(file, []byte(broken), 0o600); err != nil {
+			t.Fatal(err)
+		}
+		if set, err := s.SetSettings(store.SettingsEdit{Theme: nil, TaskMode: &on}); err != nil || set != (store.Settings{Theme: "", TaskMode: true}) {
+			t.Errorf("mended %s by the task mode: %+v, %v", broken, set, err)
+		}
+	}
+}
+
+// A settings.json the system cannot read (here of no permission to read) is refused by a write, and left as it is: a key
+// in it is not lost unseen, as one whose JSON is refused is written anew.
+// A write of no key writes nothing: no file is made where there is none, and a broken one stays, told as a read tells it.
+func TestSettingsNothing(t *testing.T) {
+	t.Parallel()
+
+	s, root := newStore(t)
+	file := filepath.Join(root, "settings.json")
+	if set, err := s.SetSettings(store.SettingsEdit{Theme: nil, TaskMode: nil}); err != nil || set != (store.Settings{Theme: "", TaskMode: false}) {
+		t.Errorf("nothing, of no file: %+v, %v", set, err)
+	}
+	if _, err := os.Stat(file); !errors.Is(err, os.ErrNotExist) {
+		t.Errorf("nothing made a file: %v", err)
+	}
+	broken := `{"theme": "a", "x": 1}`
+	if err := os.MkdirAll(root, 0o700); err != nil {
+		t.Fatal(err)
+	}
+	if err := os.WriteFile(file, []byte(broken), 0o600); err != nil {
+		t.Fatal(err)
+	}
+	_, err := s.SetSettings(store.SettingsEdit{Theme: nil, TaskMode: nil})
+	if e, ok := errors.AsType[*usererr.Error](err); !ok || e.Key != "store_settings_broken" {
+		t.Errorf("nothing, of a broken file: %v", err)
+	}
+	if b, err := os.ReadFile(file); err != nil || string(b) != broken {
+		t.Errorf("nothing wrote the broken file: %q, %v", b, err)
+	}
+}
+
+func TestSettingsUnreadable(t *testing.T) {
+	t.Parallel()
+
+	s, root := newStore(t)
+	if err := setTheme(s, "ink"); err != nil {
+		t.Fatal(err)
+	}
+	file := filepath.Join(root, "settings.json")
+	if err := os.Chmod(file, 0o000); err != nil {
+		t.Fatal(err)
+	}
+	if _, err := os.ReadFile(file); err == nil {
+		t.Skip("the file of no permission is read (root)")
+	}
+	on := true
+	if set, err := s.SetSettings(store.SettingsEdit{Theme: nil, TaskMode: &on}); err == nil {
+		t.Errorf("written over a file that cannot be read: %+v", set)
+	}
+	if err := os.Chmod(file, 0o600); err != nil {
+		t.Fatal(err)
+	}
+	if set, err := s.ReadSettings(); err != nil || set != (store.Settings{Theme: "ink", TaskMode: false}) {
+		t.Errorf("after the refusal: %+v, %v", set, err)
 	}
 }
 
@@ -105,13 +192,13 @@ func TestPublishCreatedTheme(t *testing.T) {
 	if m := s.ReadMeta("none"); m.CreatedTheme != "" || drawnIn(t, s, root, "none") != "" {
 		t.Errorf("none chosen: created %q, drawn in %q", m.CreatedTheme, drawnIn(t, s, root, "none"))
 	}
-	if err := s.SetTheme("ink"); err != nil {
+	if err := setTheme(s, "ink"); err != nil {
 		t.Fatal(err)
 	}
 	publish(t, s, dw, "a.yaml", report(""), nil, store.Options{})
 	publish(t, s, dw, "own.yaml", report("app"), nil, store.Options{})
 	publish(t, s, dw, "none.yaml", report(""), nil, store.Options{})
-	if err := s.SetTheme("washi"); err != nil {
+	if err := setTheme(s, "washi"); err != nil {
 		t.Fatal(err)
 	}
 	publish(t, s, dw, "a.yaml", report(""), nil, store.Options{})
@@ -121,7 +208,7 @@ func TestPublishCreatedTheme(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	if err = s.SetTheme("ink"); err != nil {
+	if err = setTheme(s, "ink"); err != nil {
 		t.Fatal(err)
 	}
 	if err = s.Save(e); err != nil {
@@ -142,7 +229,7 @@ func TestPublishCreatedTheme(t *testing.T) {
 			t.Errorf("%s: created %q, drawn in %q; want %q, %q", slug, m.CreatedTheme, drawnIn(t, s, root, slug), want[0], want[1])
 		}
 	}
-	if err = s.SetTheme("gone"); err != nil {
+	if err = setTheme(s, "gone"); err != nil {
 		t.Fatal(err)
 	}
 	_, err = s.PrepareData(dw, store.Upload{File: "d.yaml", Source: []byte(report("")), Images: nil, Project: "p", Repo: "p", Place: "d.yaml"}, store.Options{})
@@ -201,7 +288,7 @@ func TestSettingsBrokenLinks(t *testing.T) {
 	if _, err = s.PrepareLink(t.Context(), dw, data, store.Options{}, "", home); !strings.HasPrefix(told(err, root), "S/settings.json: ") {
 		t.Errorf("a data file linked: told %s", told(err, root))
 	}
-	if err = s.SetTheme("ink"); err != nil {
+	if err = setTheme(s, "ink"); err != nil {
 		t.Fatal(err)
 	}
 	e, err := s.PrepareLink(t.Context(), dw, data, store.Options{}, "", home)

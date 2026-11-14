@@ -14,7 +14,10 @@ import (
 
 	"github.com/spf13/cobra"
 
+	"floe/docs"
 	"floe/internal/files"
+	"floe/internal/kit"
+	"floe/internal/store"
 	"floe/internal/usererr"
 )
 
@@ -70,6 +73,48 @@ func agentsNamed() string {
 		i = j
 	}
 	return strings.Join(groups, ", or ")
+}
+
+// guideCmd is floe guide: guide.md, without its Tasks section's Ask after publishing unless the task mode is on in the
+// management page's settings. With no store to be had (no HOME to put it under), it is off, so that an agent reads the
+// guide anyway.
+func (a *app) guideCmd() *cobra.Command {
+	return &cobra.Command{
+		Use:   "guide",
+		Short: "Print the guide for agents: how to write, check and publish a page",
+		Long: `Print the guide for agents: how to write, check and publish a page. Its Tasks section points to floe task
+guide; the part of it that has the agent ask whether to put each new page on a task is printed only when the task mode
+is on in the management page's settings, read from the store the other commands send to (FLOE_DIR) without starting
+the server.`,
+		Args: cobra.NoArgs,
+		RunE: func(_ *cobra.Command, _ []string) error {
+			set, err := a.settings()
+			if e, ok := errors.AsType[*usererr.Error](err); ok && e.Key == "store_no_dir" {
+				set, err = store.Settings{Theme: "", TaskMode: false}, nil
+			}
+			if err != nil {
+				return err
+			}
+			guide := docs.Guide
+			if !set.TaskMode {
+				if guide, err = kit.WithoutSection(docs.Guide, "Ask after publishing"); err != nil {
+					return err //nolint:wrapcheck // floe's failure, which says what failed
+				}
+			}
+			a.write(guide)
+			return nil
+		},
+	}
+}
+
+// settings reads settings.json of the store the other commands send to, without starting the server.
+func (a *app) settings() (store.Settings, error) {
+	root, err := a.storeDir()
+	if err != nil {
+		return store.Settings{}, err
+	}
+	// The store a server for these commands holds: daemon refuses one of another (daemon_other_root).
+	return store.New(root.dir).ReadSettings() //nolint:wrapcheck // mistakes for the user as they are
 }
 
 // docGuideCmd is a command guide that prints doc, a doc of floe's as it is.

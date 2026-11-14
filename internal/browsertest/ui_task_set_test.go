@@ -10,7 +10,7 @@ import (
 	"floe/internal/store"
 )
 
-// A page's menu pins it and sets its task and category, in the order floe work writes; the task's own fields are its page's (TestUITaskEdit), so
+// A page's menu pins it and sets its task and category, in the order floe task writes; the task's own fields are its page's (TestUITaskEdit), so
 // the dialog has none of its parent or URL; a name of no task is a new one; what is refused keeps the dialog open; off a task, the pin stays.
 // The page list's rows lead to the task and the task list.
 func TestUITaskSet(t *testing.T) { //nolint:paralleltest // the browser tests share one Chrome, one at a time
@@ -24,8 +24,8 @@ func TestUITaskSet(t *testing.T) { //nolint:paralleltest // the browser tests sh
 			t.Fatal(err)
 		}
 	}
-	s.floe(t, "work", "b", "--task", "#1", "--category", "design", "--url", "https://example.com/a/one")
-	s.floe(t, "work", "c", "--task", "#2", "--category", "build")
+	s.floe(t, "task", "--slug", "b", "--task", "#1", "--category", "design", "--url", "https://example.com/a/one")
+	s.floe(t, "task", "--slug", "c", "--task", "#2", "--category", "build")
 	b.size(1400, 800, false)
 	defer b.unsize()
 
@@ -34,9 +34,9 @@ func TestUITaskSet(t *testing.T) { //nolint:paralleltest // the browser tests sh
 		t.Helper()
 		out = append(out, what+": "+b.eval(expr))
 	}
-	work := func(slug string) string {
+	pageTask := func(slug string) string {
 		t.Helper()
-		got, err := json.Marshal(st.ReadMeta(slug).Work)
+		got, err := json.Marshal(st.ReadMeta(slug).Task)
 		if err != nil {
 			t.Fatal(err)
 		}
@@ -51,7 +51,7 @@ func TestUITaskSet(t *testing.T) { //nolint:paralleltest // the browser tests sh
 		names := make([]string, 0, 4)
 		for _, name := range []string{"#1", "#2", "#3"} {
 			if row, ok := all["proj"][name]; ok {
-				names = append(names, name+" "+row.State+" "+row.URL)
+				names = append(names, name+" "+row.State+" "+strings.Join(row.URLs, ","))
 			}
 		}
 		return strings.Join(names, "; ")
@@ -95,10 +95,10 @@ func TestUITaskSet(t *testing.T) { //nolint:paralleltest // the browser tests sh
 
 	// A pin on and off, from the menu.
 	menu("a", "pin-item")
-	b.until("pinned", "items.find((x) => x.slug === 'a').work?.pin")
+	b.until("pinned", "items.find((x) => x.slug === 'a').task?.pin")
 	b.until("drawn", "document.querySelector('#list li[data-slug=a] .task-tag')")
 	say("pinned", "document.querySelector('#list li[data-slug=a] .task-tag').textContent + ' ' + document.querySelector('#list li[data-slug=a] .task-tag').getAttribute('href') + ' ' + document.querySelector('#list li[data-slug=a] .pin-item').textContent")
-	out = append(out, "pinned: "+work("a"))
+	out = append(out, "pinned: "+pageTask("a"))
 
 	// A name of no task: new, doing; the suggestions name what there is, and say it is new. The dialog has no field of a task's parent or URL.
 	dialog("a")
@@ -109,12 +109,12 @@ func TestUITaskSet(t *testing.T) { //nolint:paralleltest // the browser tests sh
 	say("offered", "[...document.getElementById('set-task-names').children].map((e) => e.textContent).join(', ')")
 	field("set-category", "first")
 	save()
-	out = append(out, "new task: "+work("a"), tasks())
+	out = append(out, "new task: "+pageTask("a"), tasks())
 
 	// A task written since the dialog opened: refused, and saved then, as the dialog shows it read again.
 	dialog("b")
 	say("a page of a task", fields)
-	s.floe(t, "work", "--task", "#1", "--project", "proj", "--url", "https://example.com/later")
+	s.floe(t, "task", "--task", "#1", "--project", "proj", "--url", "https://example.com/later")
 	b.eval("document.getElementById('set').requestSubmit()")
 	b.until("refused", "!document.getElementById('set-error').hidden")
 	say("written meanwhile", "document.getElementById('set-error').textContent")
@@ -122,14 +122,14 @@ func TestUITaskSet(t *testing.T) { //nolint:paralleltest // the browser tests sh
 	out = append(out, "written meanwhile, saved: "+tasks())
 
 	// What is refused keeps the dialog open, says why; nothing of the page changes.
-	was := work("b")
+	was := pageTask("b")
 	dialog("b")
-	b.eval(`window.realFetch = window.fetch; window.fetch = (url, init) => (String(url).includes('/api/work') && init?.method === 'PATCH' ? Promise.resolve(new Response('no', { status: 400 })) : window.realFetch(url, init))`)
+	b.eval(`window.realFetch = window.fetch; window.fetch = (url, init) => (String(url).includes('/api/tasks') && init?.method === 'PATCH' ? Promise.resolve(new Response('no', { status: 400 })) : window.realFetch(url, init))`)
 	b.eval("document.getElementById('set').requestSubmit()")
 	b.until("the refusal", "!document.getElementById('set-error').hidden")
 	b.eval("window.fetch = window.realFetch")
 	say("refused", "document.getElementById('set-dialog').open + ' ' + document.getElementById('set-error').textContent")
-	if got := work("b"); got != was {
+	if got := pageTask("b"); got != was {
 		t.Errorf("a refusal changed the page: %s", got)
 	}
 	b.eval("document.getElementById('set-dialog').close()")
@@ -145,38 +145,38 @@ func TestUITaskSet(t *testing.T) { //nolint:paralleltest // the browser tests sh
 	field("set-task-title", "a title")
 	b.eval("document.getElementById('set').requestSubmit()")
 	say("a name of spaces", "document.getElementById('set-dialog').open + ' ' + document.getElementById('set-task').validationMessage + ' ' + document.getElementById('set-task').value.length + ' ' + document.querySelectorAll('.toast').length")
-	if got := work("b"); got != was {
+	if got := pageTask("b"); got != was {
 		t.Errorf("an empty name changed the page: %s", got)
 	}
 	b.eval("document.getElementById('set-dialog').close()")
 
 	// Saved in order: the page's write refused, the task's is there, and saving again finishes it.
 	dialog("c")
-	b.eval(`window.realFetch = window.fetch; window.fetch = (url, init) => (String(url).includes('/api/work') && init?.method === 'PATCH' ? Promise.resolve(new Response('no', { status: 500 })) : window.realFetch(url, init))`)
+	b.eval(`window.realFetch = window.fetch; window.fetch = (url, init) => (String(url).includes('/api/tasks') && init?.method === 'PATCH' ? Promise.resolve(new Response('no', { status: 500 })) : window.realFetch(url, init))`)
 	field("set-task", "#2")
 	field("set-category", "review")
 	b.eval("document.getElementById('set').requestSubmit()")
 	b.until("the page refused", "!document.getElementById('set-error').hidden")
-	out = append(out, "the page refused: "+tasks()+" | "+work("c"))
+	out = append(out, "the page refused: "+tasks()+" | "+pageTask("c"))
 	b.eval("window.fetch = window.realFetch")
 	save()
-	out = append(out, "saved again: "+work("c"))
+	out = append(out, "saved again: "+pageTask("c"))
 
 	// Off the task: the page's name and category go, its pin and the task's row stay.
 	dialog("a")
 	b.eval("document.getElementById('set-out').click()")
 	b.until("off the task", "!document.getElementById('set-dialog').open")
-	out = append(out, "off: "+work("a"), tasks())
+	out = append(out, "off: "+pageTask("a"), tasks())
 	dialog("c")
 	b.eval("document.getElementById('set-out').click()")
 	b.until("off the task", "!document.getElementById('set-dialog').open")
-	out = append(out, "off, no pin: "+work("c"))
+	out = append(out, "off, no pin: "+pageTask("c"))
 
 	// As it opens, no suggestions over the fields; a suggestion pressed, as a person does, goes in and closes; a tag's too.
 	dialog("b")
 	say("as it opens", "document.getElementById('set-task-names').matches(':popover-open')")
-	s.floe(t, "work", "--task", "#1", "--project", "proj", "--url", "https://example.com/a/one")
-	s.floe(t, "work", "--task", "#2", "--project", "proj", "--url", "https://example.com/a/two")
+	s.floe(t, "task", "--task", "#1", "--project", "proj", "--remove-url", "https://example.com/later")
+	s.floe(t, "task", "--task", "#2", "--project", "proj", "--url", "https://example.com/a/two")
 	b.eval("document.getElementById('set-dialog').close()")
 	b.navigate("/?project=proj")
 	b.until("the rows", "document.querySelector('#list li[data-slug=b]')")
@@ -236,14 +236,14 @@ func TestUITaskSet(t *testing.T) { //nolint:paralleltest // the browser tests sh
 	// Saved with nothing changed: the page and its task as they were.
 	dialog("b")
 	save()
-	out = append(out, "nothing changed: "+tasks()+" | "+work("b"))
+	out = append(out, "nothing changed: "+tasks()+" | "+pageTask("b"))
 	// While saving, what is typed next goes nowhere.
 	dialog("b")
-	b.eval(`window.realFetch = window.fetch; window.fetch = async (url, init) => { const res = await window.realFetch(url, init); if (String(url).includes('/api/work') && init?.method === 'PATCH') document.getElementById('set-task').value = '#2'; return res; }`)
+	b.eval(`window.realFetch = window.fetch; window.fetch = async (url, init) => { const res = await window.realFetch(url, init); if (String(url).includes('/api/tasks') && init?.method === 'PATCH') document.getElementById('set-task').value = '#2'; return res; }`)
 	b.eval("document.getElementById('set').requestSubmit()")
 	b.until("saved", "!document.getElementById('set-dialog').open")
 	b.eval("window.fetch = window.realFetch")
-	out = append(out, "typed while saving: "+work("b"))
+	out = append(out, "typed while saving: "+pageTask("b"))
 
 	// An archived page has no pin to give: the shelf of pins leaves it out.
 	s.floe(t, "archive", "a")
@@ -251,7 +251,7 @@ func TestUITaskSet(t *testing.T) { //nolint:paralleltest // the browser tests sh
 	b.until("the archive", "document.querySelector('#list li[data-slug=a]')")
 	say("an archived page", "document.querySelector('#list li[data-slug=a] .pin-item').hidden + ' ' + document.querySelectorAll('#list li[data-slug=a] .task-tag').length")
 	s.floe(t, "archive", "--undo", "a")
-	if got := work("a"); got != `{"pin":true}` {
+	if got := pageTask("a"); got != `{"pin":true}` {
 		t.Errorf("archived and back: %s", got)
 	}
 
@@ -266,10 +266,10 @@ func TestUITaskSet(t *testing.T) { //nolint:paralleltest // the browser tests sh
 	b.until("the refusal", "!document.getElementById('error').hidden")
 	say("refused, told", "document.getElementById('error').textContent")
 	b.eval("window.fetch = window.realFetch; showError('')")
-	s.floe(t, "work", "b", "--unpin")
+	s.floe(t, "task", "--slug", "b", "--unpin")
 
 	// From a page whole, which reads the tasks as it opens: a task written since is that task as written.
-	s.floe(t, "work", "b", "--task", "#1", "--category", "whole")
+	s.floe(t, "task", "--slug", "b", "--task", "#1", "--category", "whole")
 	b.navigate("/a/b/")
 	b.until("the bar", "document.querySelector('#frame-actions .task-set')")
 	b.eval("document.querySelector('#frame-actions .more').open = true; document.querySelector('#frame-actions .task-set').click()")
@@ -283,7 +283,7 @@ func TestUITaskSet(t *testing.T) { //nolint:paralleltest // the browser tests sh
 	say("on its own task", "document.querySelector('#list li[data-slug=b] .task-open').hidden + ' ' + document.querySelectorAll('#list .task-tag').length")
 
 	// The suggestions say what a task is in, cut to their box; put on a task, the toast says it too, and leads there.
-	s.floe(t, "work", "--task", "#5", "--project", "proj", "--title", strings.Repeat("A very long title ", 6), "--state", "done")
+	s.floe(t, "task", "--task", "#5", "--project", "proj", "--title", strings.Repeat("A very long title ", 6), "--state", "done")
 	b.navigate("/?project=proj")
 	b.until("the rows", "document.querySelector('#list li[data-slug=c]')")
 	for _, width := range []int64{1400, 400} {
@@ -318,20 +318,63 @@ func TestUITaskSet(t *testing.T) { //nolint:paralleltest // the browser tests sh
 	say("the same task", "[...document.querySelectorAll('.toast')].at(-1).textContent")
 	b.navigate("/?project=proj")
 	b.until("the rows", "document.querySelector('#list li[data-slug=c]')")
+	// A page on another task is asked of before it moves: No, or Escape, writes nothing and leaves the dialog as it was; the question is of
+	// the task the list has the page on as it asks.
 	dialog("c")
 	field("set-task", "#5")
 	field("set-task", "#2")
-	save()
+	const asked = "document.getElementById('move-lead').textContent + ' / ' + document.activeElement.id"
+	// Pressed as a person does: Chrome closes dialogs opened with no press between them on one Escape
+	b.still()
+	submit := b.rect("document.getElementById('set-submit')")
+	b.click(submit.X+submit.Width/2, submit.Y+submit.Height/2)
+	b.until("asked", "document.getElementById('move-dialog').open")
+	say("asked", asked)
+	b.pressKey(kb.Escape)
+	// The answer is had once the dialog's close event is, which gives the focus back
+	b.until("no", "!document.getElementById('move-dialog').open && document.activeElement.id === 'set-submit'")
+	say("no", "document.getElementById('set-dialog').open + ' ' + document.activeElement.id + ' ' + document.getElementById('set-task').value")
+	out = append(out, "no, written: "+pageTask("c"))
+	s.floe(t, "task", "--slug", "c", "--task", "#3", "--category", "x")
+	b.eval("load()")
+	b.until("read again", "items.find((x) => x.slug === 'c').task?.name === '#3'")
+	b.eval("document.getElementById('set').requestSubmit()")
+	b.until("asked", "document.getElementById('move-dialog').open")
+	say("asked as read now", asked)
+	b.moveYes()
+	b.until("saved", "!document.getElementById('set-dialog').open")
 	b.until("the toast", "document.querySelector('.toast-link')")
+	say("moved", "document.querySelector('.toast-link').textContent")
 	b.still()
 	link := b.rect("document.querySelector('.toast-link')")
 	b.click(link.X+link.Width/2, link.Y+link.Height/2)
 	b.until("the task's page", "location.search === '?project=proj&task=%232' && !document.getElementById('task-head').hidden")
 	say("up, come by the toast", "document.getElementById('task-up').getAttribute('href')")
 
+	// Moved since the list was read, a page is moved unasked, as the dialog has it on the task named: the toast says the task it left, of the
+	// write's answer, not "Saved".
+	b.navigate("/?project=proj")
+	b.until("the rows", "document.querySelector('#list li[data-slug=c]')")
+	dialog("c")
+	s.floe(t, "task", "--slug", "c", "--task", "#1")
+	b.eval("items.find((x) => x.slug === 'c').task = { name: '#2' }")
+	b.eval("document.getElementById('set').requestSubmit()")
+	b.until("saved", "!document.getElementById('set-dialog').open")
+	b.until("the toast", "document.querySelector('.toast-link')")
+	say("moved unasked", "document.querySelector('.toast-link').textContent")
+
 	if got, want := strings.Join(out, "\n"), taskSetWant; got != want {
 		t.Errorf("the task's dialog:\n%s\nwant:\n%s", got, want)
 	}
+}
+
+// submitSet saves Set the task, answering Yes when it asks before a page on another task moves: it asks as the save is pressed.
+const submitSet = "document.getElementById('set').requestSubmit(); if (document.getElementById('move-dialog').open) document.getElementById('move-yes').click()"
+
+// moveYes answers Yes to the question asked before a page on another task moves.
+func (b *browser) moveYes() {
+	b.until("asked", "document.getElementById('move-dialog').open")
+	b.eval("document.getElementById('move-yes').click()")
 }
 
 // taskSetWant is what TestUITaskSet reads, in the order it does things.
@@ -345,18 +388,18 @@ pinned: {"pin":true}
 a page of none:  /  / out false
 no parent nor URL: null
 offered: Create #3 as a new task
-new task: {"task":"#3","category":"first","pin":true}
+new task: {"name":"#3","category":"first","pin":true}
 #1 todo https://example.com/a/one; #2 todo ; #3 todo 
 a page of a task: #1 / design / out true
 written meanwhile: Failed to save: task #1 has changed since it was read; the tasks are read again, so check and save again
-written meanwhile, saved: #1 todo https://example.com/later; #2 todo ; #3 todo 
+written meanwhile, saved: #1 todo https://example.com/a/one,https://example.com/later; #2 todo ; #3 todo 
 refused: true Failed to save: no
 an empty name: true true 0
 a name of spaces: true Write more than spaces 3 0
-the page refused: #1 todo https://example.com/later; #2 todo ; #3 todo  | {"task":"#2","category":"build"}
-saved again: {"task":"#2","category":"review"}
+the page refused: #1 todo https://example.com/a/one,https://example.com/later; #2 todo ; #3 todo  | {"name":"#2","category":"build"}
+saved again: {"name":"#2","category":"review"}
 off: {"pin":true}
-#1 todo https://example.com/later; #2 todo ; #3 todo 
+#1 todo https://example.com/a/one,https://example.com/later; #2 todo ; #3 todo 
 off, no pin: null
 as it opens: false
 a suggestion pressed: #2 / design / out true
@@ -371,8 +414,8 @@ escape: false true
 read again: true #2
 under the field once still: yes
 saved: #1 todo https://example.com/a/one; #2 todo https://example.com/a/two; #3 todo 
-nothing changed: #1 todo https://example.com/a/one; #2 todo https://example.com/a/two; #3 todo  | {"task":"#1","category":"design"}
-typed while saving: {"task":"#1","category":"design"}
+nothing changed: #1 todo https://example.com/a/one; #2 todo https://example.com/a/two; #3 todo  | {"name":"#1","category":"design"}
+typed while saving: {"name":"#1","category":"design"}
 an archived page: true 0
 pinned, told: Pinned “T b” to the task list
 refused, told: Failed to save: HTTP 500: no
@@ -384,4 +427,10 @@ put on a task: Put on #5 (Done) /tasks?project=proj&task=%235
 its state as it was: done
 the state written: #1 todo https://example.com/a/one; #2 todo https://example.com/a/two; #3 todo 
 the same task: Saved
-up, come by the toast: /tasks?project=proj&view=todo`
+asked: “T c” is on #5. Moving it to #2 takes it off #5. / move-no
+no: true set-submit #2
+no, written: {"name":"#5"}
+asked as read now: “T c” is on #3's x. Moving it to #2 takes it off #3. / move-no
+moved: Moved from #3's x to #2 (To do)
+up, come by the toast: /tasks?project=proj&view=todo
+moved unasked: Moved from #1 to #2 (To do)`

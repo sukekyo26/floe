@@ -27,11 +27,11 @@ func TestUITaskArchive(t *testing.T) { //nolint:paralleltest // the browser test
 		if _, err := st.Edit(slug, store.Edit{Project: &project}); err != nil {
 			t.Fatal(err)
 		}
-		s.floe(t, append([]string{"work", slug}, args...)...)
+		s.floe(t, append([]string{"task", "--slug", slug}, args...)...)
 	}
 	task := func(args ...string) {
 		t.Helper()
-		s.floe(t, append([]string{"work", "--project", project, "--task"}, args...)...)
+		s.floe(t, append([]string{"task", "--project", project, "--task"}, args...)...)
 	}
 	task("#none", "--state", "done", "--title", "no page")
 	page("p1", "--task", "#pages", "--state", "done")
@@ -165,7 +165,7 @@ func TestUITaskArchive(t *testing.T) { //nolint:paralleltest // the browser test
 
 	// The task's write refused: its pages are not touched.
 	open("#refused")
-	b.eval(`window.realFetch = fetch; fetch = (u, o) => (o?.method === 'PATCH' && String(u).startsWith('/api/work') ? Promise.resolve(new Response('no', { status: 500 })) : realFetch(u, o)); ` + button + `.click()`)
+	b.eval(`window.realFetch = fetch; fetch = (u, o) => (o?.method === 'PATCH' && String(u).startsWith('/api/tasks') ? Promise.resolve(new Response('no', { status: 500 })) : realFetch(u, o)); ` + button + `.click()`)
 	b.until("the refusal", "!document.getElementById('error').hidden")
 	out = append(out, "refused: "+b.eval("document.getElementById('error').textContent"))
 	head("refused, as it was")
@@ -274,12 +274,12 @@ func TestUITaskStateGone(t *testing.T) { //nolint:paralleltest // the browser te
 	b := s.b
 	st := store.New(s.Env["FLOE_DIR"])
 	project := "proj"
-	s.floe(t, "work", "--project", project, "--task", "#gone", "--state", "done")
+	s.floe(t, "task", "--project", project, "--task", "#gone", "--state", "done")
 	s.floe(t, "publish", s.page(t, "p.yaml", "T p", ""), "--slug", "p")
 	if _, err := st.Edit("p", store.Edit{Project: &project}); err != nil {
 		t.Fatal(err)
 	}
-	s.floe(t, "work", "p", "--task", "#pages")
+	s.floe(t, "task", "--slug", "p", "--task", "#pages")
 	// No row for #pages, which the command made.
 	if err := os.WriteFile(filepath.Join(s.Env["FLOE_DIR"], "tasks.json"), []byte(`{"proj": {"#gone": {"state": "done", "at": "2026-01-01T00:00:00Z"}}}`), 0o600); err != nil {
 		t.Fatal(err)
@@ -288,7 +288,7 @@ func TestUITaskStateGone(t *testing.T) { //nolint:paralleltest // the browser te
 
 	b.navigate("/tasks?project=proj&task=%23gone")
 	b.until("the head", "!document.getElementById('task-head').hidden")
-	s.floe(t, "work", "--project", project, "--task", "#gone", "--forget")
+	s.floe(t, "task", "--project", project, "--task", "#gone", "--forget")
 	b.eval(change)
 	b.until("the refusal", "!document.getElementById('error').hidden")
 	b.until("read again", "!document.getElementById('task-missing').hidden")
@@ -307,11 +307,11 @@ func TestUITaskStateGone(t *testing.T) { //nolint:paralleltest // the browser te
 	// so that none reads them for it, and the refusal stays.
 	const refuse = "window.realFetch = fetch; fetch = (u, o) => (o?.method === 'PATCH' ? Promise.resolve(new Response('no', { status: 500 })) : realFetch(u, o)); pressedAt = performance.now() + 1e9; "
 	const free = "fetch = realFetch; pressedAt = -Infinity; showError('')"
-	s.floe(t, "work", "--project", project, "--task", "#other", "--state", "done")
+	s.floe(t, "task", "--project", project, "--task", "#other", "--state", "done")
 	b.navigate("/tasks?project=proj&task=%23other")
 	b.until("the state", "document.getElementById('task-state').value === 'done'")
 	b.eval(refuse)
-	s.floe(t, "work", "--project", project, "--task", "#other", "--state", "todo")
+	s.floe(t, "task", "--project", project, "--task", "#other", "--state", "todo")
 	b.eval(change)
 	b.until("the refusal", "!document.getElementById('error').hidden")
 	if got, want := b.eval("document.getElementById('task-state').value + ' | ' + document.getElementById('error').textContent"), "todo | Failed to change the state: no"; got != want {
@@ -320,11 +320,11 @@ func TestUITaskStateGone(t *testing.T) { //nolint:paralleltest // the browser te
 	b.eval(free)
 
 	// The archive button the same.
-	s.floe(t, "work", "--project", project, "--task", "#other", "--state", "done")
+	s.floe(t, "task", "--project", project, "--task", "#other", "--state", "done")
 	b.navigate("/tasks?project=proj&task=%23other")
 	b.until("the button", "!document.getElementById('task-archive').hidden")
 	b.eval(refuse)
-	s.floe(t, "work", "--project", project, "--task", "#other", "--state", "todo")
+	s.floe(t, "task", "--project", project, "--task", "#other", "--state", "todo")
 	b.eval("document.getElementById('task-archive').click()")
 	b.until("the refusal", "!archivingTask && !document.getElementById('error').hidden")
 	if got, want := b.eval("document.getElementById('task-archive').hidden + ' | ' + document.getElementById('error').textContent"), "true | Failed to save: no"; got != want {

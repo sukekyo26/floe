@@ -7,15 +7,17 @@ import (
 	"os"
 	"path/filepath"
 	"slices"
+	"strconv"
 	"strings"
 	"testing"
 
 	"floe/internal/store"
+	"floe/internal/usererr"
 )
 
 // editTask is a write of the task (project, name) alone, its row as written.
 func editTask(s *store.Store, project, name string, ed store.TaskEdit) (store.TaskWritten, error) {
-	written, err := s.Work(store.WorkWrite{TaskEdit: ed, Slugs: nil, TaskProject: &project, Task: &name, Category: nil, Pin: nil, Clear: false})
+	written, err := s.ChangeTasks(store.TaskChange{TaskEdit: ed, Slugs: nil, TaskProject: &project, Task: &name, Category: nil, Pin: nil, Clear: false})
 	if err != nil {
 		return store.TaskWritten{}, err
 	}
@@ -38,8 +40,8 @@ func taskIn(t *testing.T, s *store.Store, project string) store.Task {
 }
 
 // A new task is todo; its time moves with its state alone, its category with what is not empty; a key it does not set is
-// written back; an order of categories is kept clean, and an empty URL or order takes it off.
-func TestWorkWrite(t *testing.T) {
+// written back; an order of categories is kept clean, and an empty order takes it off.
+func TestTaskWrite(t *testing.T) {
 	t.Parallel()
 
 	root := filepath.Join(t.TempDir(), "S")
@@ -75,21 +77,21 @@ func TestWorkWrite(t *testing.T) {
 		t.Errorf("after the same state: %+v", row)
 	}
 	if _, err := editTask(s, "p", "#1", store.TaskEdit{
-		State: ptr("done"), URL: ptr("HTTPS://example.com/a"), Categories: ptr([]string{" 設計", "実装", "", "設計"}),
+		State: ptr("done"), URLs: &store.URLsEdit{Add: []string{"HTTPS://example.com/a"}}, Categories: ptr([]string{" 設計", "実装", "", "設計"}),
 	}); err != nil {
 		t.Fatal(err)
 	}
 	row = taskIn(t, s, "p")
-	if row.State != "done" || row.Parent != "#0" || row.URL != "HTTPS://example.com/a" || !slices.Equal(row.Categories, []string{"設計", "実装"}) {
+	if row.State != "done" || row.Parent != "#0" || !slices.Equal(row.URLs, []string{"HTTPS://example.com/a"}) || !slices.Equal(row.Categories, []string{"設計", "実装"}) {
 		t.Errorf("after the state: %+v", row)
 	}
 	if row.At == long {
 		t.Error("the state's time stayed")
 	}
-	if _, err := editTask(s, "p", "#1", store.TaskEdit{URL: ptr(""), Categories: ptr([]string{""})}); err != nil {
+	if _, err := editTask(s, "p", "#1", store.TaskEdit{URLs: &store.URLsEdit{Remove: []string{"HTTPS://example.com/a"}}, Categories: ptr([]string{""})}); err != nil {
 		t.Fatal(err)
 	}
-	if row = taskIn(t, s, "p"); row.URL != "" || row.Categories != nil {
+	if row = taskIn(t, s, "p"); row.URLs != nil || row.Categories != nil {
 		t.Errorf("taken off: %+v", row)
 	}
 }
@@ -97,7 +99,7 @@ func TestWorkWrite(t *testing.T) {
 // What no row may hold is refused and leaves the file as it was: a state of no table, a URL of another scheme or of no
 // host, a task of no project or name.
 // Archived is a state as any: written, its time is when it went there, and read back.
-func TestWorkArchived(t *testing.T) {
+func TestTaskArchived(t *testing.T) {
 	t.Parallel()
 
 	root := filepath.Join(t.TempDir(), "S")
@@ -118,7 +120,196 @@ func TestWorkArchived(t *testing.T) {
 	}
 }
 
-func TestWorkRefused(t *testing.T) {
+// adding is a TaskEdit that adds urls.
+func adding(urls ...string) store.TaskEdit {
+	return store.TaskEdit{URLs: &store.URLsEdit{Add: urls}}
+}
+
+// URLs are added at the end and taken off, each once and trimmed as pasted, those in both staying; a write that would
+// bring a task over 10 is refused and writes nothing, while a row over it by hand still takes the other writes.
+func TestTaskURLs(t *testing.T) {
+	t.Parallel()
+
+	root := filepath.Join(t.TempDir(), "S")
+	s := store.New(root)
+	u := func(n int) string { return fmt.Sprintf("https://example.com/%d", n) }
+	urls := func() []string { return taskIn(t, s, "p").URLs }
+	edit := func(ed store.URLsEdit) error {
+		_, err := editTask(s, "p", "#1", store.TaskEdit{URLs: &ed})
+		return err
+	}
+	if err := edit(store.URLsEdit{Add: []string{" " + u(1) + " ", u(2), u(1)}}); err != nil {
+		t.Fatal(err)
+	}
+	if err := edit(store.URLsEdit{Add: []string{u(3), u(2)}, Remove: []string{"  " + u(1), u(2), "https://nowhere.example"}}); err != nil {
+		t.Fatal(err)
+	}
+	if got, want := urls(), []string{u(2), u(3)}; !slices.Equal(got, want) {
+		t.Fatalf("after adding and taking off: %q, want %q", got, want)
+	}
+	if err := edit(store.URLsEdit{Add: []string{u(4), u(5), u(6), u(7), u(8), u(9), u(10), u(11)}}); err != nil {
+		t.Fatal(err)
+	}
+	was := taskIn(t, s, "p")
+	err := edit(store.URLsEdit{Add: []string{u(12)}})
+	if got := keyArgs(err); got != "store_task_urls_max [#1 11 10]" {
+		t.Errorf("an 11th URL: %s", got)
+	}
+	// Swapping one for another keeps 10
+	if err := edit(store.URLsEdit{Add: []string{u(12)}, Remove: []string{u(2)}}); err != nil {
+		t.Errorf("one for another at 10: %v", err)
+	}
+	if got := taskIn(t, s, "p"); len(got.URLs) != 10 || got.Rev != was.Rev+1 {
+		t.Errorf("after the refusal and the swap: %+v", got)
+	}
+	// Over 10 by hand: the state is written and a URL taken off; one added that leaves it over 10 is refused
+	hand := fmt.Sprintf(`{"p": {"#1": {"state": "doing", "at": %q, "urls": [%s]}}}`, hour(1), quotedURLs(u, 12))
+	if err := os.WriteFile(filepath.Join(root, "tasks.json"), []byte(hand), 0o600); err != nil {
+		t.Fatal(err)
+	}
+	if _, err := editTask(s, "p", "#1", store.TaskEdit{State: ptr("done")}); err != nil {
+		t.Errorf("a state of a row of 12: %v", err)
+	}
+	if err := edit(store.URLsEdit{Remove: []string{u(1)}}); err != nil {
+		t.Errorf("taking one off a row of 12: %v", err)
+	}
+	if err := edit(store.URLsEdit{Add: []string{u(13)}, Remove: []string{u(2), u(3)}}); err != nil {
+		t.Errorf("down to 10: %v", err)
+	}
+	if err := edit(store.URLsEdit{Add: []string{u(14)}}); err == nil {
+		t.Error("an 11th after the hand's")
+	}
+	if got := urls(); len(got) != 10 {
+		t.Errorf("at the end: %q", got)
+	}
+	// 10 by hand and one of them twice: one more is an 11th
+	hand = fmt.Sprintf(`{"p": {"#1": {"state": "doing", "at": %q, "urls": [%s, %q]}}}`, hour(1), quotedURLs(u, 10), u(1))
+	if err := os.WriteFile(filepath.Join(root, "tasks.json"), []byte(hand), 0o600); err != nil {
+		t.Fatal(err)
+	}
+	if got := keyArgs(edit(store.URLsEdit{Add: []string{u(11)}})); got != "store_task_urls_max [#1 11 10]" {
+		t.Errorf("an 11th to 10 and one twice: %s", got)
+	}
+	// A write that changes nothing of a row by hand, [] or one twice, writes nothing: its rev stays
+	hand = fmt.Sprintf(`{"p": {"#1": {"state": "doing", "at": %q, "urls": []}, "#2": {"state": "doing", "at": %q, "urls": [%q, %q], "rev": 3}}}`, hour(1), hour(1), u(1), u(1))
+	if err := os.WriteFile(filepath.Join(root, "tasks.json"), []byte(hand), 0o600); err != nil {
+		t.Fatal(err)
+	}
+	for _, name := range []string{"#1", "#2"} {
+		w, err := editTask(s, "p", name, store.TaskEdit{URLs: &store.URLsEdit{Remove: []string{"https://nowhere.example"}}, State: ptr("doing")})
+		if err != nil || w.Wrote {
+			t.Errorf("%s changed by nothing: %+v, %v", name, w, err)
+		}
+	}
+}
+
+// Order puts the URLs it names that the row has first, in its order, the others after them as they were: one it names
+// twice at its first place, one the row has not let be. It goes after Add and Remove, and moves the rev only when the
+// order changes.
+func TestTaskURLOrder(t *testing.T) {
+	t.Parallel()
+
+	a, b, c, d, x := "https://a.example", "https://b.example", "https://c.example", "https://d.example", "https://x.example"
+
+	root := filepath.Join(t.TempDir(), "S")
+	s := store.New(root)
+	edit := func(ed store.URLsEdit) store.TaskWritten {
+		t.Helper()
+		w, err := editTask(s, "p", "#1", store.TaskEdit{URLs: &ed})
+		if err != nil {
+			t.Fatal(err)
+		}
+		return w
+	}
+	edit(store.URLsEdit{Add: []string{a, b, c}})
+	for _, c := range []struct {
+		name  string
+		ed    store.URLsEdit
+		want  []string
+		wrote bool
+	}{
+		{"all", store.URLsEdit{Order: []string{c, a, b}}, []string{c, a, b}, true},
+		{"the same", store.URLsEdit{Order: []string{c, a, b}}, []string{c, a, b}, false},
+		{"none", store.URLsEdit{Order: []string{}}, []string{c, a, b}, false},
+		{"one, the rest after", store.URLsEdit{Order: []string{b}}, []string{b, c, a}, true},
+		{"one not there, one twice, spaces", store.URLsEdit{Order: []string{x, " " + a + " ", b, a}}, []string{a, b, c}, true},
+		{"added and put first", store.URLsEdit{Add: []string{d}, Order: []string{d, a}}, []string{d, a, b, c}, true},
+		{"added, there already", store.URLsEdit{Add: []string{a}, Order: []string{c}}, []string{c, d, a, b}, true},
+		{"taken off stays off", store.URLsEdit{Remove: []string{d}, Order: []string{d, b}}, []string{b, c, a}, true},
+		{"taken off, not there", store.URLsEdit{Remove: []string{x}, Order: []string{a}}, []string{a, b, c}, true},
+	} {
+		was := taskIn(t, s, "p").Rev
+		w := edit(c.ed)
+		got := taskIn(t, s, "p")
+		if !slices.Equal(got.URLs, c.want) || w.Wrote != c.wrote || (got.Rev != was) != c.wrote {
+			t.Errorf("%s: %q, wrote %v, rev %d from %d; want %q, wrote %v", c.name, got.URLs, w.Wrote, got.Rev, was, c.want, c.wrote)
+		}
+	}
+	// A task of no row is not found by URLs taken off or ordered, nor by none (a mistyped ID would make an empty task), and
+	// none is made; URLs added make it.
+	for _, ed := range []store.URLsEdit{{Order: []string{"x"}}, {Remove: []string{"x"}}, {}} {
+		if _, err := editTask(s, "p", "#2", store.TaskEdit{URLs: &ed}); !errors.Is(err, store.ErrNotFound) {
+			t.Errorf("%+v of no row: %v", ed, err)
+		}
+	}
+	if all, err := s.ReadTasks(); err != nil || len(all["p"]) != 1 {
+		t.Errorf("made by URLs not added: %+v, %v", all["p"], err)
+	}
+	if _, err := editTask(s, "p", "#2", store.TaskEdit{URLs: &store.URLsEdit{Add: []string{"https://example.com/2"}}}); err != nil {
+		t.Errorf("made by a URL added: %v", err)
+	}
+}
+
+// An order sent for pages goes to each one's task, as the task's own URLs have it.
+func TestPagesURLOrder(t *testing.T) {
+	t.Parallel()
+
+	a, b, c := "https://a.example", "https://b.example", "https://c.example"
+	s, _ := newStore(t)
+	dw := picKit(t, "", "")
+	for _, c := range []struct{ slug, task string }{{"d", "#1"}, {"e", "#2"}} {
+		publish(t, s, dw, c.slug+".yaml", "lang: en\ntemplate: pic\n", nil, store.Options{})
+		if _, err := s.ChangeTasks(store.TaskChange{Slugs: []string{c.slug}, Task: ptr(c.task)}); err != nil {
+			t.Fatal(err)
+		}
+	}
+	if _, err := editTask(s, "p", "#1", adding(a, b)); err != nil {
+		t.Fatal(err)
+	}
+	if _, err := editTask(s, "p", "#2", adding(c, a)); err != nil {
+		t.Fatal(err)
+	}
+	if _, err := s.ChangeTasks(store.TaskChange{Slugs: []string{"d", "e"}, TaskEdit: store.TaskEdit{URLs: &store.URLsEdit{Order: []string{b, a}}}}); err != nil {
+		t.Fatal(err)
+	}
+	all, err := s.ReadTasks()
+	if err != nil {
+		t.Fatal(err)
+	}
+	if one, two := all["p"]["#1"].URLs, all["p"]["#2"].URLs; !slices.Equal(one, []string{b, a}) || !slices.Equal(two, []string{a, c}) {
+		t.Errorf("ordered for two pages: %q and %q", one, two)
+	}
+}
+
+// keyArgs is the key and the arguments of the one mistake err holds, as fmt prints them, "" for none.
+func keyArgs(err error) string {
+	e, ok := errors.AsType[*usererr.Error](err)
+	if !ok {
+		return fmt.Sprint(err)
+	}
+	return fmt.Sprint(e.Key, " ", e.Args)
+}
+
+// quotedURLs is the URLs u makes of 1 to n, quoted and comma-separated, as JSON has them in a list.
+func quotedURLs(u func(int) string, n int) string {
+	quoted := make([]string, n)
+	for i := range n {
+		quoted[i] = strconv.Quote(u(i + 1))
+	}
+	return strings.Join(quoted, ", ")
+}
+
+func TestTaskRefused(t *testing.T) {
 	t.Parallel()
 
 	root := filepath.Join(t.TempDir(), "S")
@@ -134,9 +325,6 @@ func TestWorkRefused(t *testing.T) {
 	}{
 		{"p", "#1", store.TaskEdit{State: ptr("DOING")}, `unknown state "DOING": use todo, doing, done, archived`},
 		{"p", "#1", store.TaskEdit{State: ptr("waiting")}, `unknown state "waiting": use todo, doing, done, archived`},
-		{"p", "#1", store.TaskEdit{URL: ptr("javascript:alert(1)")}, `"javascript:alert(1)" is not an http or https URL`},
-		{"p", "#1", store.TaskEdit{URL: ptr("   ")}, `"   " is not an http or https URL`},
-		{"p", "#1", store.TaskEdit{URL: ptr("https:")}, `"https:" is not an http or https URL`},
 		{"", "#1", store.TaskEdit{State: ptr("todo")}, `a task needs its project: "/" for none`},
 		{"  ", "#1", store.TaskEdit{State: ptr("todo")}, `a task needs its project: "/" for none`},
 		{"p", " ", store.TaskEdit{State: ptr("todo")}, "a task needs an ID"},
@@ -151,11 +339,22 @@ func TestWorkRefused(t *testing.T) {
 	if got := taskIn(t, s, "p"); got.At != was.At || got.State != was.State {
 		t.Errorf("after the refusals: %+v", got)
 	}
-	if _, err := editTask(s, "p", "#1", store.TaskEdit{URL: ptr("  https://example.com/a  ")}); err != nil {
-		t.Fatal(err)
+	// A URL to add that is not http or https, or empty when trimmed, the first such named
+	for _, c := range []struct {
+		add  []string
+		want string
+	}{
+		{[]string{"javascript:alert(1)"}, "store_task_url [javascript:alert(1)]"},
+		{[]string{"   "}, "store_task_url []"},
+		{[]string{""}, "store_task_url []"},
+		{[]string{"https://example.com/ok", "https:"}, "store_task_url [https:]"},
+	} {
+		if _, err := editTask(s, "p", "#1", adding(c.add...)); keyArgs(err) != c.want {
+			t.Errorf("adding %q: %s, want %s", c.add, keyArgs(err), c.want)
+		}
 	}
-	if got := taskIn(t, s, "p").URL; got != "https://example.com/a" {
-		t.Errorf("a URL as pasted: %q", got)
+	if got := taskIn(t, s, "p").URLs; got != nil {
+		t.Errorf("URLs after the refusals: %q", got)
 	}
 	if err := s.ForgetTask("p", "\xff"); err == nil || !strings.Contains(told(err, root), "must be UTF-8") {
 		t.Errorf("forget of no UTF-8: %v", err)
@@ -164,13 +363,17 @@ func TestWorkRefused(t *testing.T) {
 
 // A tasks.json that cannot be read, or holds a state of no table, is refused to read and to write, and stays as it is
 // for a person to mend.
-func TestWorkBroken(t *testing.T) {
+func TestTaskBroken(t *testing.T) {
 	t.Parallel()
 
 	for _, text := range []string{
 		"{ broken", "null", `{"p": null}`, `{"p": {"#1": {"state": "paused", "at": "2026-01-02T00:00:00Z"}}}`,
 		`{"p": {"#1": {"state": "waiting", "at": "2026-01-02T00:00:00Z"}}}`,
-		`{"p": {"#1": {"state": "doing", "at": "2026-01-02T00:00:00Z", "url": "javascript:alert(1)"}}}`,
+		`{"p": {"#1": {"state": "doing", "at": "2026-01-02T00:00:00Z", "urls": ["https://example.com/a", "javascript:alert(1)"]}}}`,
+		// A key floe does not know, as the URL of before is, one twice, and one of another case are refused, not dropped
+		`{"p": {"#1": {"state": "doing", "at": "2026-01-02T00:00:00Z", "url": "https://example.com/a"}}}`,
+		`{"p": {"#1": {"state": "doing", "at": "2026-01-02T00:00:00Z", "title": "a", "title": "b"}}}`,
+		`{"p": {"#1": {"state": "doing", "at": "2026-01-02T00:00:00Z", "Title": "a"}}}`,
 		`{"p": {"#1": {"state": "doing"}}}`, `{"p": {"#1": {"state": "doing", "at": "soon"}}}`,
 	} {
 		root := filepath.Join(t.TempDir(), "S")
@@ -204,7 +407,7 @@ func pageOn(t *testing.T, s *store.Store, root, slug, project string, archived b
 	if err := os.MkdirAll(filepath.Join(root, slug), 0o700); err != nil {
 		t.Fatal(err)
 	}
-	m := &store.Meta{Project: project, Archived: archived, CreatedAt: hour(1), UpdatedAt: hour(1), Work: &store.Work{Task: "#1"}}
+	m := &store.Meta{Project: project, Archived: archived, CreatedAt: hour(1), UpdatedAt: hour(1), Task: &store.PageTask{Name: "#1"}}
 	if err := s.WriteMeta(slug, m); err != nil {
 		t.Fatal(err)
 	}
@@ -212,7 +415,7 @@ func pageOn(t *testing.T, s *store.Store, root, slug, project string, archived b
 
 // A task is forgotten once no page is on it, an archived one and one of no project too; a page of another project of
 // the same name is not on it. None is not found.
-func TestWorkForget(t *testing.T) {
+func TestTaskForget(t *testing.T) {
 	t.Parallel()
 
 	root := filepath.Join(t.TempDir(), "S")
@@ -263,20 +466,20 @@ func TestWorkForget(t *testing.T) {
 	taskIn(t, s, "/")
 }
 
-// A page's work is changed a field at a time, its category going with its task and all of it with task and pin both;
+// A page's task is changed a field at a time, its category going with its task and all of it with task and pin both;
 // the list says its task's project, whatever the page's.
-func TestPageWork(t *testing.T) {
+func TestPageTask(t *testing.T) {
 	t.Parallel()
 
 	s, _ := newStore(t)
 	dw := picKit(t, "", "")
 	publish(t, s, dw, "d.yaml", "lang: en\ntemplate: pic\n", nil, store.Options{})
-	work := func(ed store.WorkEdit, want string) {
+	pageTask := func(ed store.PageTaskEdit, want string) {
 		t.Helper()
-		if _, err := s.Work(store.WorkWrite{Slugs: []string{"d"}, Task: ed.Task, Category: ed.Category, Pin: ed.Pin}); err != nil {
+		if _, err := s.ChangeTasks(store.TaskChange{Slugs: []string{"d"}, Task: ed.Name, Category: ed.Category, Pin: ed.Pin}); err != nil {
 			t.Fatal(err)
 		}
-		b, err := json.Marshal(s.ReadMeta("d").Work)
+		b, err := json.Marshal(s.ReadMeta("d").Task)
 		if err != nil {
 			t.Fatal(err)
 		}
@@ -284,26 +487,26 @@ func TestPageWork(t *testing.T) {
 			t.Errorf("%+v: %s, want %s", ed, b, want)
 		}
 	}
-	work(store.WorkEdit{Task: ptr(" #1 "), Category: ptr(" 設計 ")}, `{"task":"#1","category":"設計"}`)
-	work(store.WorkEdit{Pin: ptr(true)}, `{"task":"#1","category":"設計","pin":true}`)
-	work(store.WorkEdit{Task: ptr(" #1 ")}, `{"task":"#1","category":"設計","pin":true}`)
-	work(store.WorkEdit{Task: ptr("#2"), Category: ptr("実装")}, `{"task":"#2","category":"実装","pin":true}`)
-	work(store.WorkEdit{Task: ptr("#3")}, `{"task":"#3","pin":true}`)
-	work(store.WorkEdit{Category: ptr("設計")}, `{"task":"#3","category":"設計","pin":true}`)
-	work(store.WorkEdit{Category: ptr("")}, `{"task":"#3","pin":true}`)
-	work(store.WorkEdit{Task: ptr("")}, `{"pin":true}`)
+	pageTask(store.PageTaskEdit{Name: ptr(" #1 "), Category: ptr(" 設計 ")}, `{"name":"#1","category":"設計"}`)
+	pageTask(store.PageTaskEdit{Pin: ptr(true)}, `{"name":"#1","category":"設計","pin":true}`)
+	pageTask(store.PageTaskEdit{Name: ptr(" #1 ")}, `{"name":"#1","category":"設計","pin":true}`)
+	pageTask(store.PageTaskEdit{Name: ptr("#2"), Category: ptr("実装")}, `{"name":"#2","category":"実装","pin":true}`)
+	pageTask(store.PageTaskEdit{Name: ptr("#3")}, `{"name":"#3","pin":true}`)
+	pageTask(store.PageTaskEdit{Category: ptr("設計")}, `{"name":"#3","category":"設計","pin":true}`)
+	pageTask(store.PageTaskEdit{Category: ptr("")}, `{"name":"#3","pin":true}`)
+	pageTask(store.PageTaskEdit{Name: ptr("")}, `{"pin":true}`)
 	// A category of a page on no task is refused, not dropped
-	if _, err := s.Work(store.WorkWrite{Slugs: []string{"d"}, Category: ptr("off a task")}); err == nil {
+	if _, err := s.ChangeTasks(store.TaskChange{Slugs: []string{"d"}, Category: ptr("off a task")}); err == nil {
 		t.Error("a category of a page on no task")
 	}
-	work(store.WorkEdit{Pin: ptr(false)}, "null")
-	work(store.WorkEdit{Task: ptr("#3"), Category: ptr("s")}, `{"task":"#3","category":"s"}`)
+	pageTask(store.PageTaskEdit{Pin: ptr(false)}, "null")
+	pageTask(store.PageTaskEdit{Name: ptr("#3"), Category: ptr("s")}, `{"name":"#3","category":"s"}`)
 	for _, name := range []string{"   ", "\xff"} {
-		if _, err := s.Work(store.WorkWrite{Slugs: []string{"d"}, Task: ptr(name)}); err == nil {
+		if _, err := s.ChangeTasks(store.TaskChange{Slugs: []string{"d"}, Task: ptr(name)}); err == nil {
 			t.Errorf("a page on the task %q", name)
 		}
 	}
-	work(store.WorkEdit{}, `{"task":"#3","category":"s"}`)
+	pageTask(store.PageTaskEdit{}, `{"name":"#3","category":"s"}`)
 
 	project := func(want string) {
 		t.Helper()
@@ -323,31 +526,31 @@ func TestPageWork(t *testing.T) {
 		project(c.want)
 	}
 	// A task is of its project: moved, the page is off it. Back in the project it is published from, it goes on again.
-	if got := s.ReadMeta("d").Work; got != nil {
+	if got := s.ReadMeta("d").Task; got != nil {
 		t.Errorf("moved to another project: %+v", got)
 	}
 	if _, err := s.Edit("d", store.Edit{Project: ptr("p")}); err != nil {
 		t.Fatal(err)
 	}
-	if _, err := s.Work(store.WorkWrite{Slugs: []string{"d"}, Task: ptr("#3"), Category: ptr("s")}); err != nil {
+	if _, err := s.ChangeTasks(store.TaskChange{Slugs: []string{"d"}, Task: ptr("#3"), Category: ptr("s")}); err != nil {
 		t.Fatal(err)
 	}
 
 	// It goes on through what writes the page anew, and with its name.
 	publish(t, s, dw, "d.yaml", "lang: en\ntemplate: pic\ntitle: two\n", nil, store.Options{})
-	if got := s.ReadMeta("d").Work; got == nil || got.Task != "#3" || got.Category != "s" {
+	if got := s.ReadMeta("d").Task; got == nil || got.Name != "#3" || got.Category != "s" {
 		t.Errorf("published again: %+v", got)
 	}
 	if err := s.Rebuild(picKit(t, "v2", "")); err != nil {
 		t.Fatal(err)
 	}
-	if got := s.ReadMeta("d").Work; got == nil || got.Task != "#3" {
+	if got := s.ReadMeta("d").Task; got == nil || got.Name != "#3" {
 		t.Errorf("drawn again: %+v", got)
 	}
 	if _, err := s.Edit("d", store.Edit{Slug: ptr("e")}); err != nil {
 		t.Fatal(err)
 	}
-	if got := s.ReadMeta("e").Work; got == nil || got.Task != "#3" {
+	if got := s.ReadMeta("e").Task; got == nil || got.Name != "#3" {
 		t.Errorf("renamed: %+v", got)
 	}
 }
@@ -447,7 +650,7 @@ func TestTasksOpen(t *testing.T) {
 // A parent is a task of the same project with a row and no parent of its own, of a task with no children; what is
 // refused writes nothing, a new task's row too. The same again changes nothing, and "" takes a parent off a row that is
 // there.
-func TestWorkParent(t *testing.T) {
+func TestTaskParent(t *testing.T) {
 	t.Parallel()
 
 	root := filepath.Join(t.TempDir(), "S")
@@ -509,6 +712,13 @@ func TestWorkParent(t *testing.T) {
 	if _, wrote := editTask(s, "p", "#5", store.TaskEdit{Title: ptr("t"), Parent: ptr("")}); wrote != nil {
 		t.Errorf(`"" with a title, of no row: %v`, wrote)
 	}
+	// Taken off its parent with URLs taken off, of no row, is no field written either: not found, and no row made
+	if _, off := editTask(s, "p", "#6", store.TaskEdit{Parent: ptr(""), URLs: &store.URLsEdit{Remove: []string{"x"}}}); !errors.Is(off, store.ErrNotFound) {
+		t.Errorf(`"" and a URL taken off, of no row: %v`, off)
+	}
+	if after, read := s.ReadTasks(); read != nil || after["p"]["#6"].State != "" {
+		t.Errorf(`"" and a URL taken off, of no row, made: %+v, %v`, after["p"]["#6"], read)
+	}
 	// The same again, to another parent, and off, of a task with none too.
 	at := all["p"]["#2"].At
 	for _, c := range []struct{ name, parent, want string }{
@@ -528,7 +738,7 @@ func TestWorkParent(t *testing.T) {
 
 // A parent keeps its row while it has a child, whose row may go; the pages on it are told with its children. A page of a
 // task and a child of it are of one task, and of no other project's of the same name.
-func TestWorkForgetParent(t *testing.T) {
+func TestTaskForgetParent(t *testing.T) {
 	t.Parallel()
 
 	root := filepath.Join(t.TempDir(), "S")
@@ -580,7 +790,7 @@ func TestWorkForgetParent(t *testing.T) {
 // A parent written by hand is read as it is, keeps no other row from being written, and is mended by a write; what
 // childrenOfTask does not count as a child keeps nothing: a task of itself, one of a parent with a parent, either of a
 // pair each the other's, one of a parent gone.
-func TestWorkParentByHand(t *testing.T) {
+func TestTaskParentByHand(t *testing.T) {
 	t.Parallel()
 
 	root := filepath.Join(t.TempDir(), "S")
@@ -634,7 +844,7 @@ func TestWorkParentByHand(t *testing.T) {
 
 // A write that says whether it takes the task to be new is refused, as a Conflict that writes nothing, when the task is
 // there or not otherwise: there is of a row, or of a page on it with no row. One that says nothing is as the CLI's.
-func TestWorkNew(t *testing.T) {
+func TestTaskNew(t *testing.T) {
 	t.Parallel()
 
 	root := filepath.Join(t.TempDir(), "S")
@@ -677,7 +887,7 @@ func TestWorkNew(t *testing.T) {
 
 // A task is there of its row alone: one a page names with no row, as a hand edit leaves, is not there, so that a write
 // that takes it to be new makes its row, and one that takes it to be there is refused.
-func TestWorkThereOfRowAlone(t *testing.T) {
+func TestTaskThereOfRowAlone(t *testing.T) {
 	t.Parallel()
 
 	root := filepath.Join(t.TempDir(), "S")
@@ -706,7 +916,7 @@ func taskTitle(t *testing.T, s *store.Store, name string) string {
 // A parent written from a screen says what the screen saw: the task's row read (rev), and whether the parent named is
 // new, made then in the same write. Refused, nothing is written, a parent to make neither. Each row there is written
 // once, of rev 1.
-func TestWorkParentNew(t *testing.T) {
+func TestTaskParentNew(t *testing.T) {
 	t.Parallel()
 
 	yes, no := true, false
@@ -739,7 +949,7 @@ func TestWorkParentNew(t *testing.T) {
 		{name: "the parent gone", rows: []row{{"#130", ""}}, task: "#130", ed: store.TaskEdit{New: &no, Rev: ptr(1), Parent: ptr("#180"), ParentNew: &no}, want: "project p has no task #180 that can be a parent"},
 		{name: "taken off, moved meanwhile", rows: []row{{"#123", ""}, {"#180", ""}, {"#130", "#180"}}, task: "#130", ed: store.TaskEdit{New: &no, Rev: ptr(0), Parent: ptr("")}, want: "task #130 has changed since it was read", stale: true},
 		{name: "taken off", rows: []row{{"#123", ""}, {"#130", "#123"}}, task: "#130", ed: store.TaskEdit{New: &no, Rev: ptr(1), Parent: ptr("")}, after: map[string]string{"#123": "", "#130": ""}},
-		{name: "a URL alone", rows: []row{{"#123", ""}, {"#130", "#123"}}, task: "#130", ed: store.TaskEdit{URL: ptr("https://example.com/b")}, after: map[string]string{"#123": "", "#130": "#123"}},
+		{name: "a URL alone", rows: []row{{"#123", ""}, {"#130", "#123"}}, task: "#130", ed: adding("https://example.com/b"), after: map[string]string{"#123": "", "#130": "#123"}},
 		{name: "as the CLI, of none", rows: []row{{"#130", ""}}, task: "#130", ed: store.TaskEdit{Parent: ptr("#200")}, want: "project p has no task #200 that can be a parent"},
 	} {
 		t.Run(c.name, func(t *testing.T) {
@@ -796,7 +1006,7 @@ func TestWorkParentNew(t *testing.T) {
 
 // A row written by hand keeps its rev: a screen that read it before writes over it, as the LIMIT of EditTask says. A
 // name of no row taken off its parent, and nothing else, is not found, said read or not: a name mistyped makes no row.
-func TestWorkRevByHand(t *testing.T) {
+func TestTaskRevByHand(t *testing.T) {
 	t.Parallel()
 
 	root := filepath.Join(t.TempDir(), "S")
@@ -838,7 +1048,7 @@ func TestWorkRevByHand(t *testing.T) {
 // A write from a screen sends the rev it read, 0 of no row: refused as Conflict when the row has been written since, of
 // any field, and else written, its rev one more, which EditTask returns with the row. A write that changes nothing
 // writes nothing, and keeps the rev. A parent made is of rev 1.
-func TestWorkRev(t *testing.T) {
+func TestTaskRev(t *testing.T) {
 	t.Parallel()
 
 	yes, no := true, false

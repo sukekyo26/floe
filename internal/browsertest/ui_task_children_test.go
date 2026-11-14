@@ -25,11 +25,11 @@ func TestUITaskChildren(t *testing.T) { //nolint:paralleltest // the browser tes
 		if _, err := st.Edit(slug, store.Edit{Project: &project}); err != nil {
 			t.Fatal(err)
 		}
-		s.floe(t, append([]string{"work", slug}, args...)...)
+		s.floe(t, append([]string{"task", "--slug", slug}, args...)...)
 	}
 	task := func(project string, args ...string) {
 		t.Helper()
-		s.floe(t, append([]string{"work", "--project", project, "--task"}, args...)...)
+		s.floe(t, append([]string{"task", "--project", project, "--task"}, args...)...)
 	}
 	page("proj", "p1", "--task", "#1", "--state", "doing", "--title", "the parent")
 	page("proj", "p1b", "--task", "#1")
@@ -391,9 +391,9 @@ func TestUITaskChildren(t *testing.T) { //nolint:paralleltest // the browser tes
 	for name, parent := range map[string]string{
 		"lost": "gone", "self": "self", "gp": "", "pa": "gp", "ch": "pa", "x": "y", "y": "x", "pagesonly": "t-pages",
 	} {
-		all["proj"][name] = store.Task{Title: "", State: "done", At: at, URL: "", Categories: nil, Parent: parent, Rev: 0}
+		all["proj"][name] = store.Task{Title: "", State: "done", At: at, URLs: nil, Categories: nil, Parent: parent, Rev: 0}
 	}
-	all["proj"]["proto"] = store.Task{Title: "", State: "done", At: at, URL: "", Categories: nil, Parent: "constructor", Rev: 0}
+	all["proj"]["proto"] = store.Task{Title: "", State: "done", At: at, URLs: nil, Categories: nil, Parent: "constructor", Rev: 0}
 	text, err = json.Marshal(all)
 	if err != nil {
 		t.Fatal(err)
@@ -420,7 +420,7 @@ func TestUITaskChildren(t *testing.T) { //nolint:paralleltest // the browser tes
 	if got := b.eval("document.getElementById('task-delete-box').hidden + ''"); got != "true" {
 		t.Errorf("a task the store keeps has its command")
 	}
-	s.floe(t, "work", "--project", "proj", "--task", "pa", "--forget")
+	s.floe(t, "task", "--project", "proj", "--task", "pa", "--forget")
 
 	// A task a page names with no row, as a hand edit leaves, is not there: its page says so.
 	b.navigate("/tasks?project=proj&task=t-pages")
@@ -444,7 +444,7 @@ func TestUITaskUpRoom(t *testing.T) { //nolint:paralleltest // the browser tests
 	s := newSite(t)
 	b := s.b
 	b.navigate("/")
-	s.floe(t, "work", "--project", "proj", "--task", "#1", "--state", "todo")
+	s.floe(t, "task", "--project", "proj", "--task", "#1", "--state", "todo")
 	defer b.unsize()
 	for _, width := range []int64{1400, 400} {
 		b.size(width, 800, width == 400)
@@ -471,12 +471,12 @@ func TestUITaskSetTitle(t *testing.T) { //nolint:paralleltest // the browser tes
 			t.Fatal(err)
 		}
 	}
-	s.floe(t, "work", "a", "--task", "#1", "--title", "one")
-	s.floe(t, "work", "b", "--task", "#2")
-	s.floe(t, "work", "c", "--task", "#3")
-	s.floe(t, "work", "--project", "proj", "--task", "#3", "--parent", "#1")
-	s.floe(t, "work", "--project", "proj", "--task", "#12", "--state", "todo")
-	s.floe(t, "work", "--project", "proj", "--task", "#AB", "--state", "todo")
+	s.floe(t, "task", "--slug", "a", "--task", "#1", "--title", "one")
+	s.floe(t, "task", "--slug", "b", "--task", "#2")
+	s.floe(t, "task", "--slug", "c", "--task", "#3")
+	s.floe(t, "task", "--project", "proj", "--task", "#3", "--parent", "#1")
+	s.floe(t, "task", "--project", "proj", "--task", "#12", "--state", "todo")
+	s.floe(t, "task", "--project", "proj", "--task", "#AB", "--state", "todo")
 	b.size(1400, 800, false)
 	defer b.unsize()
 	dialog := func(slug string) {
@@ -495,7 +495,7 @@ func TestUITaskSetTitle(t *testing.T) { //nolint:paralleltest // the browser tes
 		t.Helper()
 		// A new task asks a title: one is given where none is typed, the asking itself tested apart
 		b.eval("const ti = document.getElementById('set-task-title'); if (!ti.closest('[hidden]') && !ti.value) ti.value = 'a title'")
-		b.eval("document.getElementById('set').requestSubmit()")
+		b.eval(submitSet)
 		b.until("saved", "!document.getElementById('set-dialog').open")
 	}
 
@@ -510,7 +510,7 @@ func TestUITaskSetTitle(t *testing.T) { //nolint:paralleltest // the browser tes
 	dialog("a")
 	field("set-task", "#7")
 	save()
-	if got := st.ReadMeta("a").Work.Task; got != "#7" {
+	if got := st.ReadMeta("a").Task.Name; got != "#7" {
 		t.Errorf("a new name: %q", got)
 	}
 
@@ -519,7 +519,7 @@ func TestUITaskSetTitle(t *testing.T) { //nolint:paralleltest // the browser tes
 	dialog("b")
 	field("set-task", "#77")
 	field("set-task-title", "   ")
-	b.eval("document.getElementById('set').requestSubmit()")
+	b.eval(submitSet)
 	if got := b.eval("document.getElementById('set-task-title').validationMessage + '|' + " + shown); got != "Write more than spaces|true" {
 		t.Errorf("a title of spaces: %q", got)
 	}
@@ -528,7 +528,7 @@ func TestUITaskSetTitle(t *testing.T) { //nolint:paralleltest // the browser tes
 		t.Errorf("a name there: %q", got)
 	}
 	save()
-	if got := st.ReadMeta("b").Work.Task; got != "#1" {
+	if got := st.ReadMeta("b").Task.Name; got != "#1" {
 		t.Errorf("saved on #1: %q", got)
 	}
 	// Opened again, the title typed before is gone, and a task there asks none.
@@ -549,7 +549,7 @@ func TestUITaskSetTitle(t *testing.T) { //nolint:paralleltest // the browser tes
 		field("set-task", name)
 		field("set-task-title", made)
 		then()
-		b.eval("document.getElementById('set').requestSubmit()")
+		b.eval(submitSet)
 		b.until("refused", "!document.getElementById('set-error').hidden")
 		if got := b.eval("document.getElementById('set-error').textContent"); !strings.Contains(got, gone) {
 			t.Errorf("%s: %q", name, got)
@@ -557,13 +557,13 @@ func TestUITaskSetTitle(t *testing.T) { //nolint:paralleltest // the browser tes
 		save()
 	}
 	stale("c", "#90", "mine", "task #90 is there already; the tasks are read again", func() {
-		s.floe(t, "work", "--project", project, "--task", "#90", "--title", "theirs")
+		s.floe(t, "task", "--project", project, "--task", "#90", "--title", "theirs")
 	})
-	s.floe(t, "work", "--project", project, "--task", "#91", "--state", "todo")
+	s.floe(t, "task", "--project", project, "--task", "#91", "--state", "todo")
 	b.eval("load()")
 	b.until("#91 read", "tasksOf().some((x) => x.name === '#91')")
 	stale("c", "#91", "", "task #91 is no longer there; the tasks are read again", func() {
-		s.floe(t, "work", "--project", project, "--task", "#91", "--forget")
+		s.floe(t, "task", "--project", project, "--task", "#91", "--forget")
 	})
 	all, err := st.ReadTasks()
 	if err != nil {
@@ -577,10 +577,10 @@ func TestUITaskSetTitle(t *testing.T) { //nolint:paralleltest // the browser tes
 	dialog("c")
 	field("set-task", "#93")
 	field("set-task-title", "mine")
-	s.floe(t, "work", "--project", project, "--task", "#93", "--title", "theirs", "--url", "https://example.com/theirs", "--parent", "#1")
+	s.floe(t, "task", "--project", project, "--task", "#93", "--title", "theirs", "--url", "https://example.com/theirs", "--parent", "#1")
 	b.eval("load()")
 	b.until("#93 read", "tasksOf().some((x) => x.name === '#93')")
-	b.eval("document.getElementById('set').requestSubmit()")
+	b.eval(submitSet)
 	b.until("refused", "!document.getElementById('set-error').hidden")
 	if got := b.eval("document.getElementById('set-error').textContent.includes('task #93 is there already') + '|' + " + shown); got != "true|false" {
 		t.Errorf("made meanwhile: %q", got)
@@ -594,8 +594,8 @@ func TestUITaskSetTitle(t *testing.T) { //nolint:paralleltest // the browser tes
 	b.until("the dialog", "document.getElementById('set-dialog').open")
 	field("set-task", "#92")
 	field("set-task-title", "mine")
-	s.floe(t, "work", "--project", project, "--task", "#92", "--state", "todo")
-	b.eval("document.getElementById('set').requestSubmit()")
+	s.floe(t, "task", "--project", project, "--task", "#92", "--state", "todo")
+	b.eval(submitSet)
 	b.until("refused", "!document.getElementById('set-error').hidden")
 	save()
 
@@ -612,7 +612,7 @@ func TestUITaskSetTitle(t *testing.T) { //nolint:paralleltest // the browser tes
 	b.until("unreadable", "tasksRead.error")
 	dialog("c")
 	field("set-task", "#93")
-	b.eval("document.getElementById('set').requestSubmit()")
+	b.eval(submitSet)
 	if got := b.eval("document.getElementById('set-dialog').open + '|' + !document.getElementById('set-error').hidden + '|' + document.getElementById('set-task-title').required"); got != "true|true|false" {
 		t.Errorf("unreadable: %q", got)
 	}

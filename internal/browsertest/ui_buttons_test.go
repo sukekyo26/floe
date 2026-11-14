@@ -34,9 +34,9 @@ func TestUIButtons(t *testing.T) { //nolint:paralleltest // the browser tests sh
 	if _, err := st.Edit("c", store.Edit{Project: &project}); err != nil {
 		t.Fatal(err)
 	}
-	s.floe(t, "work", "a", "--task", "#1", "--title", "one", "--state", "done", "--category", "design")
-	s.floe(t, "work", "--project", project, "--task", "#2", "--title", "no page")
-	s.floe(t, "work", "--project", project, "--task", "#3", "--title", "a child", "--parent", "#1")
+	s.floe(t, "task", "--slug", "a", "--task", "#1", "--title", "one", "--state", "done", "--category", "design")
+	s.floe(t, "task", "--project", project, "--task", "#2", "--title", "no page")
+	s.floe(t, "task", "--project", project, "--task", "#3", "--title", "a child", "--parent", "#1")
 
 	// The box that clips a button is its nearest ancestor that does not show what overflows it, or the screen; what it shows of
 	// itself is measured, not all it scrolls over
@@ -96,9 +96,23 @@ func TestUIButtons(t *testing.T) { //nolint:paralleltest // the browser tests sh
 	modal("add-dialog", "document.getElementById('add-link').click()")
 	modal("edit-dialog", menu("b", "edit"))
 	modal("set-dialog", menu("b", "task-set"))
+	// Asked of a page on another task, as Set the task asks it
+	modal("move-dialog", "void askMove(items.find((x) => x.slug === 'a'), '#2')")
 	modal("find", "openFind()")
 	modal("keys", "openKeys()")
 	modal("settings", "document.getElementById('settings-open').click()")
+	// The settings' rows and their way back are rows, not .btn: the rule's exceptions, named
+	const rows = "[...document.querySelectorAll('#settings button')].filter((e) => e.getClientRects().length && e.textContent.trim() && !e.matches('.btn, .icon-btn')).map((e) => e.id || e.className).join(',')"
+	b.eval("document.getElementById('settings-open').click()")
+	b.until("the settings", "document.getElementById('settings').open")
+	if got := b.eval(rows); got != "settings-item,settings-item" {
+		t.Errorf("the settings' list: text buttons not .btn %q, want its two rows", got)
+	}
+	b.eval("document.querySelector('.settings-item[data-panel=mode]').click()")
+	if got := b.eval(rows); got != "settings-back" {
+		t.Errorf("the mode's part: text buttons not .btn %q, want the way back", got)
+	}
+	b.eval("document.getElementById('settings').close()")
 	b.eval("for (const s of [...document.querySelectorAll('#list li:not(.group) .sel')].slice(0, 2)) s.click()")
 	b.until("the bar", "!document.getElementById('bulk').hidden")
 	check("the bar of the selected")

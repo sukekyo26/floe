@@ -117,8 +117,13 @@ func (a *app) publish(ctx context.Context, file string, link bool, opts store.Op
 	if err != nil {
 		return err
 	}
-	a.tellSaved(ctx, daemon.Base(port)+"/a/"+saved.Slug+"/", saved)
+	a.tellSaved(ctx, pageURL(daemon.Base(port), saved.Slug), saved)
 	return nil
+}
+
+// pageURL is the URL of the page slug on the server at base.
+func pageURL(base, slug string) string {
+	return base + "/a/" + slug + "/"
 }
 
 // tellSaved prints the URL u of the page saved, and what a publish tells of it: that it replaced one, and the

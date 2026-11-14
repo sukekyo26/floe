@@ -215,7 +215,7 @@ func TestOwnTheme(t *testing.T) {
 	publish(t, s, dw, "none.yaml", report(""), nil, store.Options{})
 	publish(t, s, dw, "data.yaml", report("washi"), nil, store.Options{})
 	publish(t, s, dw, "given.yaml", report("washi"), nil, store.Options{Theme: ptr("app")})
-	if err := s.SetTheme("ink"); err != nil {
+	if err := setTheme(s, "ink"); err != nil {
 		t.Fatal(err)
 	}
 	publish(t, s, dw, "created.yaml", report(""), nil, store.Options{})

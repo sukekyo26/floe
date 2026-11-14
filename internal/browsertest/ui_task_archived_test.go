@@ -33,7 +33,7 @@ func TestUITaskArchivedInCategory(t *testing.T) { //nolint:paralleltest // the b
 		if _, err := st.Edit(p[0], store.Edit{Project: ptrTo("proj")}); err != nil {
 			t.Fatal(err)
 		}
-		s.floe(t, "work", p[0], "--task", "T1", "--category", p[1])
+		s.floe(t, "task", "--slug", p[0], "--task", "T1", "--category", p[1])
 	}
 	s.write(t, "fold/one.html", "<title>one</title><p>one</p>")
 	s.write(t, "fold/sub/two.html", "<title>two</title><p>two</p>")
@@ -41,10 +41,10 @@ func TestUITaskArchivedInCategory(t *testing.T) { //nolint:paralleltest // the b
 	if _, err := st.Edit("fold", store.Edit{Project: ptrTo("proj")}); err != nil {
 		t.Fatal(err)
 	}
-	if _, err := st.Work(store.WorkWrite{Slugs: []string{"fold"}, Task: ptrTo("T1")}); err != nil {
+	if _, err := st.ChangeTasks(store.TaskChange{Slugs: []string{"fold"}, Task: ptrTo("T1")}); err != nil {
 		t.Fatal(err)
 	}
-	s.floe(t, "work", "--project", "proj", "--task", "T1", "--categories", "案,設計,旧,新")
+	s.floe(t, "task", "--project", "proj", "--task", "T1", "--categories", "案,設計,旧,新")
 	// Read: o1 and n1 as they are, v1 and v0 before a new version of each
 	for _, slug := range []string{"o1", "n1", "v1", "v0"} {
 		readWhole(slug)

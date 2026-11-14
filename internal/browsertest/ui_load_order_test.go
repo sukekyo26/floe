@@ -274,7 +274,7 @@ func TestUILoadOrder(t *testing.T) { //nolint:paralleltest // the browser tests 
 		const real = window.fetch;
 		let tasksBroken = false, listBroken = false, markBroken = false;
 		window.fetch = (u, i) => {
-			if (tasksBroken && String(u) === '/api/tasks') return Promise.resolve(new Response('tasks broken', { status: 500 }));
+			if (tasksBroken && String(u) === '/api/tasks' && (i?.method ?? 'GET') === 'GET') return Promise.resolve(new Response('tasks broken', { status: 500 }));
 			if (listBroken && String(u) === '/api/pages') return Promise.resolve(new Response('', { status: 500 }));
 			if (markBroken && String(u) === '/api/pages/gone/read') return Promise.resolve(new Response('marks broken', { status: 500 }));
 			return real(u, i);
