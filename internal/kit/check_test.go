@@ -3,6 +3,8 @@ package kit_test
 import (
 	"html/template"
 	"io"
+	"slices"
+	"strings"
 	"testing"
 	"testing/fstest"
 
@@ -207,5 +209,73 @@ func TestCheckAfterDrawing(t *testing.T) {
 	}
 	if err := kit.Check(k); err != nil {
 		t.Errorf("Check after drawing: %v", err)
+	}
+}
+
+// corners returns the lines of told that refuse a corner of two items, kit_css_radius_length, by file:line:column and name, in
+// order.
+func corners(told string) []string {
+	var out []string
+	for line := range strings.Lines(told) {
+		if strings.Contains(line, "is read as one corner") {
+			where, rest, _ := strings.Cut(line, ": ")
+			name, _, _ := strings.Cut(rest, " ")
+			out = append(out, where+" "+name)
+		}
+	}
+	slices.Sort(out)
+	return out
+}
+
+// TestOwnCSS refuses a --radius-small or --radius-pill of more than one item in one's own themes, parts, looks and
+// templates, where it is, read over floe's: the theme and part checks read no template, so a page.css is told by those
+// that do. A value of one item, --radius of two and what is no corner pass.
+func TestOwnCSS(t *testing.T) {
+	t.Parallel()
+
+	parts := map[string]string{
+		"p/schema.json": `{"type": "object"}`, "p/part.html": `<div data-floe-part="p"></div>`,
+		"p/part.css":  ":scope {\n  --radius-pill: 5px 3px;\n  border-radius: var(--radius-pill);\n}\n",
+		"lk/part.css": ":scope { --radius-small: calc(2px + 1px); --radius-pill: var(--hand, 4px); }\n",
+	}
+	themes := map[string]string{
+		"t/palette.css": ":scope { --radius: 5px 3px; --radius-pill: 999px 4px; --radius-small: min(4px, 2vw); }\n",
+		"t/cards.css":   ".card { opacity: .5; text-transform: uppercase; border-radius: 4px; }\n:scope {\n  --radius-small: 5px / 3px !important;\n}\n",
+	}
+	templates := map[string]string{"m/page.css": ":scope { --radius-small: 4px 2px; }\n"}
+	themesParts := kit.Sources{
+		Parts: kit.Dir{FS: mapFS(parts), Name: "own/parts"}, Themes: kit.Dir{FS: mapFS(themes), Name: "own/themes"},
+	}
+	all := themesParts
+	all.Templates = kit.Dir{FS: mapFS(templates), Name: "own/templates"}
+	for _, tt := range []struct {
+		name string
+		src  kit.Sources
+		want []string
+	}{
+		{"floe theme check, floe part check", themesParts, []string{
+			"own/parts/p/part.css:2:18 --radius-pill", "own/themes/t/cards.css:3:19 --radius-small", "own/themes/t/palette.css:1:44 --radius-pill",
+		}},
+		{"floe template check, render, check, the server", all, []string{
+			"own/parts/p/part.css:2:18 --radius-pill", "own/templates/m/page.css:1:26 --radius-small", "own/themes/t/cards.css:3:19 --radius-small",
+			"own/themes/t/palette.css:1:44 --radius-pill",
+		}},
+	} {
+		k, err := kit.Read(floe(t), tt.src)
+		if err != nil {
+			t.Fatalf("%s: %s", tt.name, told(err))
+		}
+		if got := corners(told(kit.Check(k))); !slices.Equal(got, tt.want) {
+			t.Errorf("%s:\n got %v\nwant %v", tt.name, got, tt.want)
+		}
+	}
+
+	// Over none, as internal/css/lint reads its examples, the corners are not read.
+	k, err := kit.Read(nil, themesParts)
+	if err != nil {
+		t.Fatal(told(err))
+	}
+	if got := corners(told(kit.Check(k))); got != nil {
+		t.Errorf("over none: got %v, want none", got)
 	}
 }
