@@ -2265,13 +2265,19 @@ func TestIconTones(t *testing.T) {
 		t.Errorf("%d masks, want 1, of the lucide icon placed twice", n)
 	}
 	for _, c := range []struct{ parts, want string }{
-		{"  - icon: { name: a, x: 0, y: 0, icon: aws/aws-lambda, tone: bad }\n",
-			`s.yaml:3:62: icon "a"`},
+		{
+			"  - icon: { name: a, x: 0, y: 0, icon: aws/aws-lambda, tone: bad }\n",
+			`s.yaml:3:62: icon "a"`,
+		},
 		// The second of one icon is looked up no more, and told all the same.
-		{"  - icon: { name: a, x: 0, y: 0, icon: aws/aws-lambda }\n  - icon: { name: b, x: 100, y: 0, icon: aws/aws-lambda, tone: bad }\n",
-			`s.yaml:4:64: icon "b"`},
-		{"  - graph: { x: 0, y: 0, nodes: [ { icon: { name: a, icon: aws/aws-lambda } }, { icon: { name: b, icon: aws/aws-lambda, tone: bad } } ] }\n",
-			`s.yaml:3:127: icon "b"`},
+		{
+			"  - icon: { name: a, x: 0, y: 0, icon: aws/aws-lambda }\n  - icon: { name: b, x: 100, y: 0, icon: aws/aws-lambda, tone: bad }\n",
+			`s.yaml:4:64: icon "b"`,
+		},
+		{
+			"  - graph: { x: 0, y: 0, nodes: [ { icon: { name: a, icon: aws/aws-lambda } }, { icon: { name: b, icon: aws/aws-lambda, tone: bad } } ] }\n",
+			`s.yaml:3:127: icon "b"`,
+		},
 	} {
 		// At the tone's value, told as an icon of colours: the words are the catalog's.
 		if _, got := draw(t, head+c.parts, drawWith("en", store)); !strings.HasPrefix(got, c.want+":") || !strings.Contains(got, "aws/aws-lambda") || !strings.Contains(got, "tone") {
