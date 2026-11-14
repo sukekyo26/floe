@@ -12,6 +12,7 @@ import (
 	"testing"
 
 	"floe/internal/store"
+	"floe/internal/usererr"
 )
 
 // editTask is a write of the task (project, name) alone, its row as written.
@@ -151,8 +152,8 @@ func TestWorkURLs(t *testing.T) {
 	}
 	was := taskIn(t, s, "p")
 	err := edit(store.URLsEdit{Add: []string{u(12)}})
-	if err == nil || !strings.Contains(told(err, root), "would hold 11 URLs") {
-		t.Errorf("an 11th URL: %v", err)
+	if got := keyArgs(err); got != "store_task_urls_max [#1 11 10]" {
+		t.Errorf("an 11th URL: %s", got)
 	}
 	// Swapping one for another keeps 10
 	if err := edit(store.URLsEdit{Add: []string{u(12)}, Remove: []string{u(2)}}); err != nil {
@@ -186,9 +187,29 @@ func TestWorkURLs(t *testing.T) {
 	if err := os.WriteFile(filepath.Join(root, "tasks.json"), []byte(hand), 0o600); err != nil {
 		t.Fatal(err)
 	}
-	if err := edit(store.URLsEdit{Add: []string{u(11)}}); err == nil || !strings.Contains(told(err, root), "would hold 11 URLs") {
-		t.Errorf("an 11th to 10 and one twice: %v", err)
+	if got := keyArgs(edit(store.URLsEdit{Add: []string{u(11)}})); got != "store_task_urls_max [#1 11 10]" {
+		t.Errorf("an 11th to 10 and one twice: %s", got)
 	}
+	// A write that changes nothing of a row by hand, [] or one twice, writes nothing: its rev stays
+	hand = fmt.Sprintf(`{"p": {"#1": {"state": "doing", "at": %q, "urls": []}, "#2": {"state": "doing", "at": %q, "urls": [%q, %q], "rev": 3}}}`, hour(1), hour(1), u(1), u(1))
+	if err := os.WriteFile(filepath.Join(root, "tasks.json"), []byte(hand), 0o600); err != nil {
+		t.Fatal(err)
+	}
+	for _, name := range []string{"#1", "#2"} {
+		w, err := editTask(s, "p", name, store.TaskEdit{URLs: &store.URLsEdit{Remove: []string{"https://nowhere.example"}}, State: ptr("doing")})
+		if err != nil || w.Wrote {
+			t.Errorf("%s changed by nothing: %+v, %v", name, w, err)
+		}
+	}
+}
+
+// keyArgs is the key and the arguments of the one mistake err holds, as fmt prints them, "" for none.
+func keyArgs(err error) string {
+	e, ok := errors.AsType[*usererr.Error](err)
+	if !ok {
+		return fmt.Sprint(err)
+	}
+	return fmt.Sprint(e.Key, " ", e.Args)
 }
 
 // quotedURLs is the URLs u makes of 1 to n, quoted and comma-separated, as JSON has them in a list.
@@ -216,10 +237,6 @@ func TestWorkRefused(t *testing.T) {
 	}{
 		{"p", "#1", store.TaskEdit{State: ptr("DOING")}, `unknown state "DOING": use todo, doing, done, archived`},
 		{"p", "#1", store.TaskEdit{State: ptr("waiting")}, `unknown state "waiting": use todo, doing, done, archived`},
-		{"p", "#1", adding("javascript:alert(1)"), `"javascript:alert(1)" is not an http or https URL`},
-		{"p", "#1", adding("   "), `"" is not an http or https URL`},
-		{"p", "#1", adding(""), `"" is not an http or https URL`},
-		{"p", "#1", adding("https://example.com/ok", "https:"), `"https:" is not an http or https URL`},
 		{"", "#1", store.TaskEdit{State: ptr("todo")}, `a task needs its project: "/" for none`},
 		{"  ", "#1", store.TaskEdit{State: ptr("todo")}, `a task needs its project: "/" for none`},
 		{"p", " ", store.TaskEdit{State: ptr("todo")}, "a task needs an ID"},
@@ -233,6 +250,20 @@ func TestWorkRefused(t *testing.T) {
 	}
 	if got := taskIn(t, s, "p"); got.At != was.At || got.State != was.State {
 		t.Errorf("after the refusals: %+v", got)
+	}
+	// A URL to add that is not http or https, or empty when trimmed, the first such named
+	for _, c := range []struct {
+		add  []string
+		want string
+	}{
+		{[]string{"javascript:alert(1)"}, "store_task_url [javascript:alert(1)]"},
+		{[]string{"   "}, "store_task_url []"},
+		{[]string{""}, "store_task_url []"},
+		{[]string{"https://example.com/ok", "https:"}, "store_task_url [https:]"},
+	} {
+		if _, err := editTask(s, "p", "#1", adding(c.add...)); keyArgs(err) != c.want {
+			t.Errorf("adding %q: %s, want %s", c.add, keyArgs(err), c.want)
+		}
 	}
 	if got := taskIn(t, s, "p").URLs; got != nil {
 		t.Errorf("URLs after the refusals: %q", got)

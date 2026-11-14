@@ -777,7 +777,7 @@ var messagesJA = map[string]string{
 	"ui_url_added":               "「%s」を追加しました",
 	"ui_url_drop_named":          "「%s」を外す",
 	"ui_url_dropped":             "「%s」を外しました",
-	"ui_task_urls_hint":          "http か https の URL を 10 個まで",
+	"ui_task_urls_hint":          "http か https の URL を %d 個まで",
 	"ui_page_add":                "ページを追加",
 	"ui_page_add_named":          "「%s」にページを追加",
 	"ui_page_add_none":           "付けられるページがありません",

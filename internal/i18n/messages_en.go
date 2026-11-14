@@ -788,7 +788,7 @@ var messagesEN = map[string]string{
 	"ui_url_added":               "Added %s",
 	"ui_url_drop_named":          "Take off %s",
 	"ui_url_dropped":             "Took off %s",
-	"ui_task_urls_hint":          "http or https URLs, 10 at most",
+	"ui_task_urls_hint":          "http or https URLs, %d at most",
 	"ui_page_add":                "Add a page",
 	"ui_page_add_named":          "Add a page to %s",
 	"ui_page_add_none":           "No page to add",

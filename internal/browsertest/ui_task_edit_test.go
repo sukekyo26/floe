@@ -208,7 +208,7 @@ func TestUITaskEdit(t *testing.T) { //nolint:paralleltest // the browser tests s
 	for i := 3; i <= 11; i++ {
 		addURL("https://example.com/more/" + strconv.Itoa(i))
 	}
-	say("an 11th", "document.querySelectorAll('#edit-urls li').length + ' / ' + document.getElementById('edit-url-said').textContent")
+	say("an 11th", "document.querySelectorAll('#edit-urls li').length + ' / ' + document.getElementById('edit-url-said').textContent + ' / ' + document.getElementById('edit-urls-hint').textContent")
 	b.pressKey(kb.Escape)
 	b.pressKey(kb.Escape)
 	closed("closed")
@@ -317,7 +317,7 @@ func TestUITaskEdit(t *testing.T) { //nolint:paralleltest // the browser tests s
 		"urls: 9 New title https://example.com/489,https://example.com/pull/9 [リリース,設計,レビュー,実装,案]",
 		`sent the URLs: {"taskProject":"proj","task":"S300","new":false,"rev":8,"urls":{"add":["https://example.com/pull/9"]}}`,
 		"links: https://example.com/489,https://example.com/pull/9",
-		"an 11th: 10 / A task holds 10 URLs at most: take one off first",
+		"an 11th: 10 / A task holds 10 URLs at most: take one off first / http or https URLs, 10 at most",
 		`refused: Failed to save: "ftp://x" is not an http or https URL / true`,
 		"not reached: Failed to save: Failed to fetch / true",
 		"emptied: 10   [リリース,設計,レビュー,実装,案]",

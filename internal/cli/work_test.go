@@ -11,6 +11,7 @@ import (
 	"strings"
 	"testing"
 
+	"floe/internal/i18n"
 	"floe/internal/store"
 )
 
@@ -197,7 +198,7 @@ func TestWorkCommand(t *testing.T) {
 	if got := run(1, "work", "--task", "#4", "--url", "ftp://x/y"); got != "floe: \"ftp://x/y\" is not an http or https URL\n" {
 		t.Errorf("a URL of none: %q", got)
 	}
-	if got := run(1, "work", "--task", "#4", "--url", ""); !strings.Contains(got, `"" is not an http or https URL`) {
+	if got := run(1, "work", "--task", "#4", "--url", ""); got != "floe: "+i18n.New("en").Msg("store_task_url", "")+"\n" {
 		t.Errorf("an empty URL: %q", got)
 	}
 

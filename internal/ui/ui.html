@@ -1447,7 +1447,7 @@
         </div>
       </div>
       <p class="category-said" id="edit-url-said" aria-live="polite"></p>
-      <small>{{.Msg "ui_task_urls_hint"}}</small>
+      <small id="edit-urls-hint"></small>
       <p class="sr-only" id="edit-urls-said" aria-live="polite"></p>
     </div>
     <div class="field">
@@ -5274,6 +5274,7 @@
     $('edit-task-target').textContent = task.name;
     $('edit-task-title').value = taskEditing.base.title;
     drawEditURLs(taskEditing.base.urls);
+    $('edit-urls-hint').textContent = t('ui_task_urls_hint', MAX_URLS);
     urlField(false);
     $('edit-urls-said').textContent = '';
     drawEditCategories(task, taskEditing.base.categories);
