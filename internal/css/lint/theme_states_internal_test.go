@@ -36,6 +36,8 @@ var themeStates = Rule{Name: "theme-states", Check: func(in *Input) []Finding {
 
 // inPrelude is whether the tokens after a token of depth stand in a rule's prelude, a selector: of the tokens no deeper
 // than it (out of :has( too), a { comes before a ; or } that ends a declaration's value (--x:checked;).
+// LIMIT: a comment between the colon and checked (:/**/checked) passes, and a { in a variable's value or
+// @supports selector(:checked) is taken for a selector; it reads floe's own themes alone, which write none of these.
 func inPrelude(toks []token, depth int) bool {
 	for _, t := range toks {
 		switch {
