@@ -327,7 +327,7 @@ With `--slug`, the task's project is each page's: `--task` puts the pages on tha
 | `--category <category>` | pages | With `--slug` only, of pages on a task. One not among the task's categories is added at their end, in the same write. `""` takes it off |
 | `--state <state>` | the task | `todo`, `doing`, `done` or `archived` |
 | `--url <url>` | the task | An outside link, `http` or `https`, added after its others; give it again for more. A task holds 10 at most: one that would bring it over is refused, while a task over 10 by hand still takes the other writes |
-| `--remove-url <url>` | the task | A link taken off; give it again for more. One the task does not have is no mistake. A link in both `--url` and `--remove-url` stays on |
+| `--remove-url <url>` | the task | A link taken off; give it again for more. One the task does not have is no mistake. A link in both `--url` and `--remove-url` stays on. Of a task of no row it makes none: floe says there is no such task |
 | `--parent <task ID>` | the task | With `--slug`, with `--task`: of the one task the pages go on. A task of its project with a row and no parent of its own; a task with children takes none: one level only. `""` takes it off |
 | `--title <title>` | the task | `""` takes it off |
 | `--categories a,b,c` | the task | The order of its categories, as written; a page's category not in it is added at its end, and one a page has is refused left out. A category's name cannot hold a comma here. `""` takes it off |
