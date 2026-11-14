@@ -99,7 +99,8 @@ func ownCSS(k *Kit) usererr.List {
 	return found
 }
 
-// checkPart checks the files, the CSS, the schema, the checks' for and the escaping of p.
+// checkPart checks the files, the CSS, the schema, the checks' for and the escaping of p, and that its part.html
+// gives the functions bound to the part no argument (boundArgs).
 func checkPart(p *Part) error {
 	var found usererr.List
 	if p.pages == nil || !p.hasCSS {
