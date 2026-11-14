@@ -5294,6 +5294,9 @@
     $('edit-categories-said').textContent = '';
     $('edit-task-dialog').showModal();
   }
+  // The icons of the dialog's row buttons, drawn in lines. A row's URL and category are taken off by the one x, as both are the same act
+  const lineIcon = (path) => `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">${path}</svg>`;
+  const DROP_PATH = '<path d="M6 6l12 12M18 6 6 18"/>';
   // The URLs as rows, each with its URL and the button that takes it off; nothing is sent until saving
   const editURLsNow = () => [...$('edit-urls').children].map((li) => li.dataset.url);
   function drawEditURLs(urls) {
@@ -5305,7 +5308,7 @@
     li.dataset.url = url;
     const drop = tagged('button', 'icon-btn url-drop');
     drop.type = 'button';
-    drop.innerHTML = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" aria-hidden="true"><path d="M6 6l12 12M18 6 6 18"/></svg>';
+    drop.innerHTML = lineIcon(DROP_PATH);
     drop.setAttribute('aria-label', t('ui_url_drop_named', url));
     drop.title = drop.getAttribute('aria-label');
     li.append(tagged('span', 'category-name', url), drop);
@@ -5365,12 +5368,12 @@
     const button = (cls, label, path) => {
       const b = tagged('button', `icon-btn ${cls}`);
       b.type = 'button';
-      b.innerHTML = `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">${path}</svg>`;
+      b.innerHTML = lineIcon(path);
       b.setAttribute('aria-label', label);
       b.title = label;
       return b;
     };
-    const drop = button('category-drop', t(paged ? 'ui_category_drop_paged' : 'ui_category_drop_named', name), '<path d="M4 7h16M10 11v6m4-6v6M6 7l1 12h10l1-12M9 7V4h6v3"/>');
+    const drop = button('category-drop', t(paged ? 'ui_category_drop_paged' : 'ui_category_drop_named', name), DROP_PATH);
     if (paged) drop.setAttribute('aria-disabled', 'true');
     li.append(grip, word, tagged('span', 'category-moves'));
     li.lastChild.append(
