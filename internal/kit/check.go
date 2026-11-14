@@ -110,6 +110,7 @@ func checkPart(p *Part) error {
 	errs := []error{css.Check(path.Join(p.dir, "part.css"), p.css), p.schema.CheckPart()}
 	if p.pages != nil {
 		errs = append(errs, escapeMistake(p.pages[""], p.pageSrc, path.Join(p.dir, "part.html")))
+		found = append(found, boundArgs(p.pages[""], p.pageSrc, p.dir)...)
 	}
 	for _, err := range errs {
 		if failed := found.Add(err); failed != nil {

@@ -272,7 +272,7 @@ floe の主要な変更を記録します。フォーマットは
 
 ### 変更
 
-- **BREAKING**: 部品の `part.html` の関数 `bars`・`chart`・`code`・`script`・`stats` を、引数を取らない形に変更。どれも `diagram` と同じく部品の値全体を読みます（`{{range bars}}`、`{{$c := code}}`、`{{script}}`）。引数を渡す `part.html`（`{{range bars .items}}`、`{{script .js .data}}`）は、`floe part check` は通りますが、ページを描くときにその行で断られます。部品の値は、`bars`・`stats` では項目の列、`code` では鍵と値（`text`・`start`・`mark`）、`script` では鍵と値（`js`・`data`）です。違う形の値は、その値か鍵の所で、schema にどの `"type"` を書くかを言って断ります（S321）。
+- **BREAKING**: 部品の `part.html` の関数 `bars`・`chart`・`code`・`script`・`stats` を、引数を取らない形に変更。どれも `diagram` と同じく部品の値全体を読みます（`{{range bars}}`、`{{$c := code}}`、`{{script}}`）。これらと `diagram`・`written` に引数を渡す `part.html`（`{{range bars .items}}`、`{{script .js .data}}`）は、部品を読むとき（`floe part check` でも）にその行と列で断られます。部品の値は、`bars`・`stats` では項目の列、`code` では鍵と値（`text`・`start`・`mark`）、`script` では鍵と値（`js`・`data`）です。違う形の値は、その値か鍵の所で、schema にどの `"type"` を書くかを言って断ります（S321）。
 - 変更：`floe theme check`・`floe part check`・`floe template check` と、自分のテーマ・部品・テンプレートを読むコマンド（`floe check`・`floe render`・サーバーの publish）が、CSS の `--radius-small`・`--radius-pill` の値が 2 つ以上の項（`5px 3px`・`4px / 2px`）なら断るようにした。floe の部品はどちらも 1 つの角（棒の `rx`、pill の `min()`）として読み、そうした値は黙って無効になっていた。1 つの長さか 1 つの関数（`var()`・`calc()`・`min()`）は通り、`--radius` は見ない。テンプレートの `page.css` は、テンプレートを読むコマンドが見て、`floe theme check`・`floe part check` は見ない。
 - 変更：`floe work` の書き方を変えた。ページとタスクを 1 回の書き込み（`PATCH /api/work`）で、先に全部を確かめてから書くので、断るときは何も書かず、ページを断られてタスクだけが残ることも無くなった。ページを付けるタスクに行が無ければ同じ書き込みで作り、ページのカテゴリはタスクのカテゴリの並びの末尾に足す。`--categories` はページのあるカテゴリを落とすと断り、ページのカテゴリは末尾に足す。`floe work --task X` は、変える欄が無ければタスクを言うだけで何も書かない（前は空の行を作った）。行の無いタスクへの空の書き込みは見つからないと言う。`floe publish --move-project` や「編集」でページのプロジェクトが変わると、ページはタスクから外れ、publish がそう言う（`page in project app, off task #9`）。
 - 変更：ページのカテゴリは、ページだけが持つようにした。タスクは最後に書いたカテゴリを持たなくなり、タスク一覧の各タスクにカテゴリを出さない。`floe work --category` は、`--task` が無ければタスクを書かず、`--task` と一緒なら名指したタスクを今どおり確かめて書く（made・changed・unchanged。カテゴリは書かない）。`PATCH /api/tasks` は `category` を断る。
@@ -477,7 +477,7 @@ floe の主要な変更を記録します。フォーマットは
 
 ### 修正
 
-- 部品の値の中の誤りを、関数 `bars`・`code`・`script`・`stats` が部品の位置（`- bars:`）に出していたのを修正。誤った項目のその鍵の所に出します（3 本目の bar の `value` なら `bars.yaml:11:32:`、`script` なら `js`）（S321）。
+- 部品の値の中の誤りを、関数 `bars`・`code`・`script`・`stats` が部品の位置（`- bars:`）に出していたのを修正。誤った項目のその鍵の所（3 本目の bar の `value`、`script` の `js` など）に出します（S321）。
 - 読めない画像（無い、データファイルのディレクトリの外を指すリンク、読む権限が無い）の誤りが、画像のパスだけを言い（`x/missing.png: no such file or directory`）、どの項目かを言わなかったのを修正。画像を名指す項目ごとに `d.yaml:7:24: the image "missing.png" cannot be read (no such file or directory)` と出し、同じ画像を何か所にも書けば書いた所ごとに 1 行出します（ほかの画像の誤りと同じ）。`floe publish` も、コマンド行で読んだ画像の誤りを場所無しで出していた（`floe: "dir.png" is not a file of an image…`）のを、項目の場所に出します。テンプレートの `assets/` の画像が読めないときは、今までどおりそのファイルに出し、文を同じ形にそろえます（S335・S68）。
 - テーマの `palette.css` の `:scope` に置いた `--floe-text-small`・`--floe-text-aside`・`--floe-row-pad`・`--floe-pad-block`・`--floe-pad-inline`・`--floe-room` など、floe がページの根に置く変数が、floe の既定値に黙って負けて効かなかったのを修正しました。floe の既定値は、どのパレットより下の自分の層（`floe.defaults`）に入るので、`palette.css` に置いた値が効きます。`base.css` に置いた値は、今までどおりそれに勝ちます。印刷では、パレットが何を置いても、写すボタンの場所を空けません（S343）。
 - 管理ページのボタンの字が、狭いと縦に折れていた（完了のタスクの「編集」「タスクをアーカイブ」、ヘルプの切り替え、タスクを設定のモーダルの足）のを修正。字は 1 行に保ち、ボタンの並びのほうが折り返します。タスクのアーカイブのボタンはページと同じく「アーカイブ」「元に戻す」と言い、画面に置くボタンにはアイコンが付きます（モーダル・選択の帯・トーストの中のボタンは字だけ）。見つからないページの画面の絵も元の大きさに戻り、ボタンが見えるようになりました。

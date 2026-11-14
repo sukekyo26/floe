@@ -615,6 +615,24 @@ func TestPartCodePlaced(t *testing.T) {
 	}
 }
 
+// A part of one's own whose part.html gives a function bound to the part an argument, as it was written before they
+// took none, is refused when the parts are read, at that line and column, though no page draws it.
+func TestPartBoundArgsRefused(t *testing.T) {
+	t.Parallel()
+
+	parts := map[string]string{
+		"pi/schema.json": `{"$schema": "https://json-schema.org/draft/2020-12/schema", "type": "object"}`,
+		"pi/part.html":   `<div data-floe-part="pi">{{range stats .items}}[{{.Value}}]{{end}}</div>`,
+		"pi/part.css":    "",
+	}
+	_, err := kit.Load(floeKit(t), kit.Sources{
+		Parts: kit.Dir{FS: mapFS(parts), Name: "parts"}, Themes: kit.Dir{FS: nil, Name: ""}, Templates: kit.Dir{FS: nil, Name: ""},
+	})
+	if got := told(err); !strings.HasPrefix(got, "parts/pi/part.html:1:34: stats ") || strings.Contains(got, "\n") {
+		t.Errorf("told %q, want one mistake at parts/pi/part.html:1:34", got)
+	}
+}
+
 // What chart cannot place is refused, for a part of one's own too, whose schema says nothing of it: a mistake in a
 // series at its values, each such told, and the rest at the part's value.
 func TestChartMistakes(t *testing.T) {
@@ -649,8 +667,7 @@ func TestChartMistakes(t *testing.T) {
 	}
 }
 
-// statsKit is a kit with a part that draws the function stats of its value, whose schema says nothing of its items,
-// and one that gives it a piece of its value, as was written before stats took none.
+// statsKit is a kit with a part that draws the function stats of its value, whose schema says nothing of its items.
 func statsKit(t *testing.T) *kit.Kit {
 	t.Helper()
 	const head = `{"$schema": "https://json-schema.org/draft/2020-12/schema", `
@@ -658,13 +675,9 @@ func statsKit(t *testing.T) *kit.Kit {
 		"ps/schema.json": head + `"type": "array"}`,
 		"ps/part.html":   `<div data-floe-part="ps">{{range stats}}[{{.Value}}]{{end}}</div>`,
 		"ps/part.css":    "",
-		"pi/schema.json": head + `"type": "object"}`,
-		"pi/part.html":   `<div data-floe-part="pi">{{range stats .items}}[{{.Value}}]{{end}}</div>`,
-		"pi/part.css":    "",
 	}
-	page := htmlPage("{{.Data.c}}{{.Data.d}}")
-	return ownKit(t, parts, mine(page, head+`"type": "object", "properties": {"c": {"$ref": "floe:///parts/ps.json"}, `+
-		`"d": {"$ref": "floe:///parts/pi.json"}}}`, nil))
+	page := htmlPage("{{.Data.c}}")
+	return ownKit(t, parts, mine(page, head+`"type": "object", "properties": {"c": {"$ref": "floe:///parts/ps.json"}}}`, nil))
 }
 
 // The form of from and value is written twice, in the part's schema and in the function for a part of one's own: each
@@ -716,8 +729,7 @@ func TestStatNumbers(t *testing.T) {
 }
 
 // What stats cannot count is refused for a part of one's own, all of an item's and each item's, at the key of the
-// item it is of (the item for one not written); the rest is its schema's to say. A part that gives stats a piece of
-// its value, as before stats was bound to the part's value, is refused at its part.html when drawn.
+// item it is of (the item for one not written); the rest is its schema's to say.
 func TestPartStatsRefused(t *testing.T) {
 	t.Parallel()
 
@@ -736,10 +748,6 @@ func TestPartStatsRefused(t *testing.T) {
 		if got := drawn(t, k, "lang: en\ntemplate: mine\nc:\n  - "+tt.item+"\n", none); got != tt.want {
 			t.Errorf("%s: told %q, want %q", tt.item, got, tt.want)
 		}
-	}
-	const two = "lang: en\ntemplate: mine\nd:\n  items:\n    - {label: a, value: '1'}\n"
-	if got := drawn(t, k, two, none); !strings.HasPrefix(got, "parts/pi/part.html:1:") || strings.Contains(got, "\n") {
-		t.Errorf("a piece of the value: told %q, want one mistake at parts/pi/part.html:1", got)
 	}
 	page, _, err := tmpl.Draw(k, "d.yaml", []byte("lang: en\ntemplate: mine\nc:\n  - {label: a, value: 3}\n"), none)
 	if err != nil || !strings.Contains(string(page), "[3]") {

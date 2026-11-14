@@ -1,8 +1,12 @@
 package kit
 
 import (
+	"fmt"
+	"html/template"
+	"maps"
 	"reflect"
 	"slices"
+	"strconv"
 	"testing"
 
 	"floe/internal/i18n"
@@ -19,21 +23,9 @@ func told(err error) string {
 func TestBoundFuncsMatchNames(t *testing.T) {
 	t.Parallel()
 
-	bound := BoundFuncs(nil)
-	names := slices.Sorted(func(yield func(string) bool) {
-		for name := range boundFuncs {
-			if !yield(name) {
-				return
-			}
-		}
-	})
-	if got := slices.Sorted(func(yield func(string) bool) {
-		for name := range bound {
-			if !yield(name) {
-				return
-			}
-		}
-	}); !slices.Equal(got, names) {
+	bound := BoundFuncs(nil, nil, nil)
+	names := boundNames()
+	if got := slices.Sorted(maps.Keys(bound)); !slices.Equal(got, names) {
 		t.Fatalf("bound %v, named %v", got, names)
 	}
 	for _, name := range names {
@@ -82,7 +74,7 @@ func TestBoundFuncsPlaces(t *testing.T) {
 			map[string]any{"name": "s", "values": []any{1, 2}},
 		}}, []string{"#/series/0/values"}, false},
 	} {
-		out := reflect.ValueOf(BoundFuncs(tt.value)[tt.fn]).Call(nil)
+		out := reflect.ValueOf(BoundFuncs(tt.value, nil, nil)[tt.fn]).Call(nil)
 		err, isErr := out[1].Interface().(error)
 		var all usererr.List
 		if !isErr || all.Add(err) != nil || all == nil {
@@ -98,6 +90,35 @@ func TestBoundFuncsPlaces(t *testing.T) {
 		}
 		if (all[0].Key == "kit_part_value") != tt.shape {
 			t.Errorf("%s: told %s", tt.name, all[0].Key)
+		}
+	}
+}
+
+// A call of a function bound to the part given an argument, after it or piped into it, is refused at its line and
+// column of part.html, wherever it stands: in an action, a condition, an argument or a template defined.
+func TestBoundArgs(t *testing.T) {
+	t.Parallel()
+
+	for _, tt := range []struct {
+		src  string
+		want []string
+	}{
+		{`<p>{{range bars}}{{.Label}}{{end}}{{written}}{{diagram}}{{(code).Lines}}</p>`, nil},
+		{`<p>{{range bars .}}{{end}}</p>`, []string{"p/part.html:1:12: bars"}},
+		{"<p>\n{{. | stats}}</p>", []string{"p/part.html:2:7: stats"}},
+		{`<p>{{if (code .text).Numbered}}x{{end}}{{len (script .js .data)}}</p>`, []string{"p/part.html:1:10: code", "p/part.html:1:47: script"}},
+		{`{{define "x"}}{{diagram .}}{{end}}<p>{{template "x" chart}}</p>`, []string{"p/part.html:1:17: diagram"}},
+	} {
+		page, err := template.New("part.html").Funcs(partFuncsAll()).Parse(tt.src)
+		if err != nil {
+			t.Fatal(err)
+		}
+		var got []string
+		for _, e := range boundArgs(page, []byte(tt.src), "p") {
+			got = append(got, e.File()+":"+strconv.Itoa(e.Line())+":"+strconv.Itoa(e.Column())+": "+fmt.Sprint(e.Args[0]))
+		}
+		if !slices.Equal(got, tt.want) {
+			t.Errorf("%s: refused %q, want %q", tt.src, got, tt.want)
 		}
 	}
 }

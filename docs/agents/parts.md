@@ -107,7 +107,7 @@ The functions floe adds to html/template's own (`printf`, `index`, `eq` and the 
 | `script` | Keys and values: `js` (text), `data` |
 | `chart` | As the part `chart` takes it |
 
-- Do not give them an argument: `{{range bars .items}}` or `{{script .js .data}}` is refused when a page is drawn, at its line of `part.html` (`wrong number of args`); `floe part check` does not draw, so it passes it.
+- Do not give them, nor `diagram` and `written`, an argument, after them or piped into them: `{{range bars .items}}`, `{{script .js .data}}` or `{{. | stats}}` is refused when the parts are read (`floe part check`, and every command that draws), at its line and column of `part.html`.
 - A part MUST NOT hold more than its list beside a list it gives `bars` or `stats` (a title and its bars), nor two texts for `code`: make each its own part.
 
 ### copyButton

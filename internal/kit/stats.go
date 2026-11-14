@@ -110,6 +110,8 @@ func statOf(i int, item any, found *usererr.List) (stat, error) {
 	return s, nil
 }
 
+// statsOf reads the stats of items, the value of a stats part, telling the mistakes of every item, each at the key of
+// the item it is of.
 func statsOf(items []any) ([]stat, error) {
 	stats := make([]stat, 0, len(items))
 	var found usererr.List

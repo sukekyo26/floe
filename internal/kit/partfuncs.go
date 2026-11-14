@@ -24,8 +24,7 @@ import (
 // partFuncs are the functions floe's parts draw with, besides those of page.html and over them: markdown draws in a
 // text's box, as all a part holds of Markdown is (MarkdownFlow).
 var partFuncs = template.FuncMap{
-	"copyButton": copyButtonOf, "diagram": diagramOf, "diff": diffOf, "markdown": MarkdownFlow, "tree": treeOf,
-	"written": writtenOf, "zoom": zoomScript,
+	"copyButton": copyButtonOf, "diff": diffOf, "markdown": MarkdownFlow, "tree": treeOf, "zoom": zoomScript,
 }
 
 // zoomScript is the function zoom of a part.html: the script that zooms the frames of class floe-zoom, as the
@@ -99,19 +98,6 @@ func copyButton(tag string) func() (template.HTML, error) {
 		}
 		return "", fmt.Errorf("%w: copyButton: no script in English", ErrFunc)
 	}
-}
-
-// writtenOf holds the name of the function that returns the value of the part as written, which draw binds
-// anew for each part it draws: its parts and formats not drawn, and no nil for a key left out.
-func writtenOf() (any, error) {
-	return nil, fmt.Errorf("%w: written: not bound to a page", ErrFunc)
-}
-
-// diagramOf holds the name of the function that draws the value of the part as a diagram, which draw binds
-// anew for each part it draws: what it draws with (the page's language, the icons, the diagram's number in
-// the page) is the page's.
-func diagramOf() (template.HTML, error) {
-	return "", fmt.Errorf("%w: diagram: not bound to a page", ErrFunc)
 }
 
 // bar is an item of a bars part, and the width of its bar, a percentage of its whole: of when written, else the
