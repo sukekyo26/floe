@@ -31,8 +31,60 @@ env:
   CHROME_VERSION: 156.0.8078.47
 
 jobs:
+  # Says whether a pull request changes only files that the jobs below need not run for, for them to skip their work and
+  # report success under the names the ruleset requires; any other event runs all. A failure here leaves the outputs
+  # empty, so everything runs.
+  # LIMIT: the files are named one by one from what //go:embed, the tests and the screens read. Add one only when a grep
+  # shows it: at level 1 nothing builds or tests it; at level 2 no browser test reads it and no screen shows it.
+  changes:
+    name: Changed files
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    outputs:
+      skip: ${{ steps.files.outputs.skip }}
+      skip_browser: ${{ steps.files.outputs.skip_browser }}
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          fetch-depth: 2
+      - id: files
+        env:
+          EVENT: ${{ github.event_name }}
+        run: |
+          level() {
+            case "$1" in
+              CHANGELOG.md | docs/CHANGELOG.ja.md | .claude/CLAUDE.md) echo 1 ;;
+              docs/agents/guide.md | docs/agents/diagrams.md | docs/agents/parts.md | docs/agents/templates.md | \
+                docs/agents/themes.md | docs/commands.md | docs/commands.ja.md | docs/pages.md | docs/pages.ja.md | \
+                docs/links.md | docs/links.ja.md | README.md | docs/README.ja.md) echo 2 ;;
+              *) echo 3 ;;
+            esac
+          }
+          top=3
+          if [ "$EVENT" = pull_request ]; then
+            # The checkout is the merge of the pull request into its base, whose first parent is the base. The diff is
+            # read whole first, so that a failing git stops the step. A renamed file counts by both its names.
+            changed=$(git diff --name-only --no-renames HEAD^1 HEAD)
+            if [ -n "$changed" ]; then
+              top=1
+              while IFS= read -r file; do
+                l=$(level "$file")
+                if [ "$l" -gt "$top" ]; then top=$l; fi
+              done <<< "$changed"
+            fi
+          fi
+          echo "level $top"
+          skip=false
+          skip_browser=false
+          if [ "$top" -le 1 ]; then skip=true; fi
+          if [ "$top" -le 2 ]; then skip_browser=true; fi
+          echo "skip=$skip" >> "$GITHUB_OUTPUT"
+          echo "skip_browser=$skip_browser" >> "$GITHUB_OUTPUT"
+
   lint:
     name: Lint (golangci-lint v2)
+    needs: changes
+    if: ${{ !cancelled() && needs.changes.outputs.skip != 'true' }}
     runs-on: ubuntu-latest
     timeout-minutes: 10
     steps:
@@ -60,6 +112,8 @@ jobs:
 
   test:
     name: Test (race + shuffle)
+    needs: changes
+    if: ${{ !cancelled() && needs.changes.outputs.skip != 'true' }}
     runs-on: ubuntu-latest
     timeout-minutes: 10
     steps:
@@ -77,6 +131,9 @@ jobs:
 
   browser:
     name: Browser (${{ matrix.part }})
+    needs: changes
+    # It always runs, so that the matrix names its checks as the ruleset requires them; its steps skip instead.
+    if: ${{ !cancelled() }}
     runs-on: ubuntu-latest
     timeout-minutes: 10
     strategy:
@@ -84,26 +141,33 @@ jobs:
       matrix:
         part: [looks, rest]
     steps:
-      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
-      - uses: actions/setup-go@b7ad1dad31e06c5925ef5d2fc7ad053ef454303e # v7.0.0
+      - if: ${{ needs.changes.outputs.skip_browser != 'true' }}
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+      - if: ${{ needs.changes.outputs.skip_browser != 'true' }}
+        uses: actions/setup-go@b7ad1dad31e06c5925ef5d2fc7ad053ef454303e # v7.0.0
         with:
           go-version-file: go.mod
           cache: true
-      - uses: ./.github/actions/setup-just
-      - uses: browser-actions/setup-chrome@48ad923757ca74d66703209fe939badbdf80f2f4 # v2.2.0
+      - if: ${{ needs.changes.outputs.skip_browser != 'true' }}
+        uses: ./.github/actions/setup-just
+      - if: ${{ needs.changes.outputs.skip_browser != 'true' }}
+        uses: browser-actions/setup-chrome@48ad923757ca74d66703209fe939badbdf80f2f4 # v2.2.0
         id: chrome
         with:
           chrome-version: ${{ env.CHROME_VERSION }}
           # The runner image holds Chrome's libraries; installing them ran an apt-get update that waited minutes on DNS.
           # LIMIT: if the image drops one, Chrome fails to start and every browser test fails: set it back to true.
           install-dependencies: false
-      - run: just test-browser ${{ matrix.part }}
+      - if: ${{ needs.changes.outputs.skip_browser != 'true' }}
+        run: just test-browser ${{ matrix.part }}
         # The browser tests run the pinned Chrome; on CI they fail without it.
         env:
           FLOE_CHROME: ${{ steps.chrome.outputs.chrome-path }}
 
   coverage:
     name: Coverage gate (>= 90%)
+    needs: changes
+    if: ${{ !cancelled() && needs.changes.outputs.skip != 'true' }}
     runs-on: ubuntu-latest
     timeout-minutes: 10
     steps:
@@ -117,6 +181,8 @@ jobs:
 
   vuln:
     name: govulncheck
+    needs: changes
+    if: ${{ !cancelled() && needs.changes.outputs.skip != 'true' }}
     runs-on: ubuntu-latest
     timeout-minutes: 10
     steps:
@@ -130,6 +196,8 @@ jobs:
 
   build:
     name: Release assets (linux/darwin x amd64/arm64)
+    needs: changes
+    if: ${{ !cancelled() && needs.changes.outputs.skip != 'true' }}
     runs-on: ubuntu-latest
     timeout-minutes: 10
     steps:
@@ -145,6 +213,8 @@ jobs:
 
   shell:
     name: Shell (shellcheck + shfmt)
+    needs: changes
+    if: ${{ !cancelled() && needs.changes.outputs.skip != 'true' }}
     runs-on: ubuntu-latest
     timeout-minutes: 10
     steps:
