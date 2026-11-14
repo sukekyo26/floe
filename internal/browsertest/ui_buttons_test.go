@@ -166,14 +166,11 @@ func TestUIButtons(t *testing.T) { //nolint:paralleltest // the browser tests sh
 	check("a narrow task done")
 	pressTaskArchive(b, ja.Msg("ui_unarchive"))
 	check("a narrow task archived")
-	// Narrower: a card's heading and its button no longer fit side by side
-	b.size(240, 800, false)
+	// A card's heading longer than its line, as some language might have it: the heading goes over lines, its button whole
 	b.navigate("/tasks?project=proj&task=%231")
 	b.until("the children", "!document.getElementById('task-child').hidden")
-	check("the narrowest task with a child")
-	b.navigate("/tasks?project=proj&task=%233")
-	b.until("the parent", "!document.getElementById('task-parent-change').hidden")
-	check("the narrowest task with a parent")
+	b.eval("document.getElementById('task-family-word').textContent = 'The child tasks of this task, a heading long enough to take more than its line'")
+	check("a long heading of a card")
 
 	// The diff and a page not found, last: publishing a again may take it off its task
 	b.size(1400, 800, false)

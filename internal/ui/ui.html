@@ -949,9 +949,7 @@
   /* A task's family, a card apart from the categories of pages under it: on the head's --panel, the lightest ground is what shows it a card.
      The room of a menu, its rows round as a menu's items */
   .family { display: grid; margin-top: 0.15rem; padding: var(--menu-pad); background: var(--frame-bg); border: 1px solid var(--line); border-radius: var(--corner-menu); box-shadow: var(--shadow-sm); }
-  /* Its button to the right, on the line under the heading where they do not fit side by side */
-  .family-head { display: flex; flex-wrap: wrap; align-items: center; gap: 0.5rem; padding: 0 0 0.25rem 0.5rem; }
-  .family-head > .btn { margin-left: auto; }
+  .family-head { display: flex; align-items: center; justify-content: space-between; gap: 0.5rem; padding: 0 0 0.25rem 0.5rem; }
   .family h3 { display: flex; align-items: center; gap: 0.35rem; margin: 0; font: 700 var(--text-small)/1.4 var(--body); color: var(--fg); }
   .family h3 svg { flex: none; width: 15px; height: 15px; color: var(--muted); }
   .family-part { display: grid; gap: 0.1rem; }
