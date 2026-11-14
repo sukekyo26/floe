@@ -159,7 +159,7 @@ func TestBarsOf(t *testing.T) {
 
 	item := func(v any) any { return map[string]any{"label": "x", "value": v} }
 	of := func(label string, v, of any) any { return map[string]any{"label": label, "value": v, "of": of} }
-	notItem := "bars takes items written as keys and values (label, value, of, unit, tone); item 2 is not"
+	notItem := "#/1: bars takes items written as keys and values (label, value, of, unit, tone); item 2 is not"
 	for _, c := range []struct {
 		items []any
 		want  string
@@ -167,11 +167,11 @@ func TestBarsOf(t *testing.T) {
 		{[]any{item(1), item(4), item(2.5)}, "25 100 62.5"},
 		{[]any{item(0), item(0)}, "0 0"},
 		{[]any{item(math.Copysign(0, -1)), item(4)}, "0 100"},
-		{[]any{item(3), item(-2)}, `bars: bar 2 "x"'s value takes a number of 0 or more, not -2`},
-		{[]any{item(3), item(-0.5)}, `bars: bar 2 "x"'s value takes a number of 0 or more, not -0.5`},
-		{[]any{item(3), item("x")}, `bars: bar 2 "x"'s value takes a number, not "x"`},
-		{[]any{item(3), item(nil)}, `bars: bar 2 "x"'s value takes a number; none is written, or it is null`},
-		{[]any{item(3), map[string]any{"label": "x"}}, `bars: bar 2 "x"'s value takes a number; none is written, or it is null`},
+		{[]any{item(3), item(-2)}, `#/1/value: bars: bar 2 "x"'s value takes a number of 0 or more, not -2`},
+		{[]any{item(3), item(-0.5)}, `#/1/value: bars: bar 2 "x"'s value takes a number of 0 or more, not -0.5`},
+		{[]any{item(3), item("x")}, `#/1/value: bars: bar 2 "x"'s value takes a number, not "x"`},
+		{[]any{item(3), item(nil)}, `#/1/value: bars: bar 2 "x"'s value takes a number; none is written, or it is null`},
+		{[]any{item(3), map[string]any{"label": "x"}}, `#/1/value: bars: bar 2 "x"'s value takes a number; none is written, or it is null`},
 		{[]any{item(1), 3}, notItem},
 		{[]any{item(1), ""}, notItem},
 		{[]any{item(1), nil}, notItem},
@@ -180,19 +180,19 @@ func TestBarsOf(t *testing.T) {
 		{[]any{item(2), item(4), of("c", 30, 40)}, "50 100 75"},
 		{[]any{of("a", 5, 8), of("b", 3, 3), of("c", 0, 5), of("d", 1, 2.5)}, "62.5 100 0 40"},
 		{[]any{of("a", 2, nil), item(4)}, "50 100"},
-		{[]any{of("a", 1, 0)}, `bars: bar 1 "a"'s of takes a number above 0, not 0`},
-		{[]any{of("a", 1, -2)}, `bars: bar 1 "a"'s of takes a number above 0, not -2`},
-		{[]any{of("a", 1, "8")}, `bars: bar 1 "a"'s of takes a number, not "8"`},
-		{[]any{of("a", 5, 3), of("b", 1, 2), of("c", 9, 4)}, `bars: bar 1 "a": 5 is over its of 3; write a value no greater than of, the whole` + "\n" +
-			`bars: bar 3 "c": 9 is over its of 4; write a value no greater than of, the whole`},
+		{[]any{of("a", 1, 0)}, `#/0/of: bars: bar 1 "a"'s of takes a number above 0, not 0`},
+		{[]any{of("a", 1, -2)}, `#/0/of: bars: bar 1 "a"'s of takes a number above 0, not -2`},
+		{[]any{of("a", 1, "8")}, `#/0/of: bars: bar 1 "a"'s of takes a number, not "8"`},
+		{[]any{of("a", 5, 3), of("b", 1, 2), of("c", 9, 4)}, `#/0/value: bars: bar 1 "a": 5 is over its of 3; write a value no greater than of, the whole` + "\n" +
+			`#/2/value: bars: bar 3 "c": 9 is over its of 4; write a value no greater than of, the whole`},
 		// Past 2^53, a float holds both as one number: they are compared as integers.
 		{
 			[]any{of("a", 9007199254740993, 9007199254740992)},
-			`bars: bar 1 "a": 9,007,199,254,740,993 is over its of 9,007,199,254,740,992; write a value no greater than of, the whole`,
+			`#/0/value: bars: bar 1 "a": 9,007,199,254,740,993 is over its of 9,007,199,254,740,992; write a value no greater than of, the whole`,
 		},
-		{[]any{of("a", 3e21, 2e21)}, `bars: bar 1 "a": 3,000,000,000,000,000,000,000 is over its of 2,000,000,000,000,000,000,000; write a value no greater than of, the whole`},
+		{[]any{of("a", 3e21, 2e21)}, `#/0/value: bars: bar 1 "a": 3,000,000,000,000,000,000,000 is over its of 2,000,000,000,000,000,000,000; write a value no greater than of, the whole`},
 		// No label: told by the number.
-		{[]any{item(1), map[string]any{"value": 2, "of": 1}}, `bars: bar 2 "": 2 is over its of 1; write a value no greater than of, the whole`},
+		{[]any{item(1), map[string]any{"value": 2, "of": 1}}, `#/1/value: bars: bar 2 "": 2 is over its of 1; write a value no greater than of, the whole`},
 	} {
 		bars, err := barsOf(c.items)
 		widths := make([]string, 0, len(bars))
@@ -236,10 +236,10 @@ func TestBarsUnitRefused(t *testing.T) {
 	for _, c := range []struct {
 		unit any
 		want string
-	}{{3, `bars: bar 1 "x"'s unit takes text, not 3`}, {true, `bars: bar 1 "x"'s unit takes text, not true`}, {[]any{"a"}, `bars: bar 1 "x"'s unit takes text, not [a]`}} {
+	}{{3, `#/0/unit: bars: bar 1 "x"'s unit takes text, not 3`}, {true, `#/0/unit: bars: bar 1 "x"'s unit takes text, not true`}, {[]any{"a"}, `#/0/unit: bars: bar 1 "x"'s unit takes text, not [a]`}} {
 		_, err := barsOf([]any{map[string]any{"label": "x", "value": 1, "unit": c.unit}})
-		if err == nil || err.Error() != c.want {
-			t.Errorf("unit %v: %v; want %q", c.unit, err, c.want)
+		if got := usererr.Tell(i18n.EnglishCatalog(), err).Render(""); err == nil || got != c.want {
+			t.Errorf("unit %v: %q; want %q", c.unit, got, c.want)
 		}
 	}
 }
@@ -322,25 +322,29 @@ func TestCodeOf(t *testing.T) {
 	}
 }
 
-// What a part of one's own hands code is refused when it is no whole number or no list; the range is its schema's.
+// What a part of one's own hands code is refused when it is no whole number or no list, at its key from the root of
+// the part's value; the range is its schema's.
 func TestCodeOfRefuses(t *testing.T) {
 	t.Parallel()
 
-	line := func(key, value string) string { return "code's " + key + " takes a whole number, not " + value }
+	line := func(at, key, value string) string {
+		return at + ": code's " + key + " takes a whole number, not " + value
+	}
+	notList := func(value string) string { return "#/mark: code's mark takes a list of line numbers, not " + value }
 	for _, tt := range []struct {
 		start, mark any
 		want        string
 	}{
-		{12.5, nil, line("start", "12.5")},
-		{"a", nil, line("start", "a")},
-		{nil, 2, "code's mark takes a list of line numbers, not 2"},
-		{nil, "2", "code's mark takes a list of line numbers, not 2"},
-		{nil, []any{1.5}, line("mark", "1.5")},
-		{nil, []any{"1"}, line("mark", "1")},
-		{nil, []any{nil}, line("mark", "<nil>")},
-		{nil, []any{1.5, "a"}, line("mark", "1.5") + "\n" + line("mark", "a")},
-		{1.5, []any{"a", 2.5}, line("start", "1.5") + "\n" + line("mark", "a") + "\n" + line("mark", "2.5")},
-		{1.5, 2, line("start", "1.5") + "\ncode's mark takes a list of line numbers, not 2"},
+		{12.5, nil, line("#/start", "start", "12.5")},
+		{"a", nil, line("#/start", "start", "a")},
+		{nil, 2, notList("2")},
+		{nil, "2", notList("2")},
+		{nil, []any{1.5}, line("#/mark/0", "mark", "1.5")},
+		{nil, []any{"1"}, line("#/mark/0", "mark", "1")},
+		{nil, []any{nil}, line("#/mark/0", "mark", "<nil>")},
+		{nil, []any{1.5, "a"}, line("#/mark/0", "mark", "1.5") + "\n" + line("#/mark/1", "mark", "a")},
+		{1.5, []any{"a", 2.5}, line("#/start", "start", "1.5") + "\n" + line("#/mark/0", "mark", "a") + "\n" + line("#/mark/1", "mark", "2.5")},
+		{1.5, 2, line("#/start", "start", "1.5") + "\n" + notList("2")},
 	} {
 		_, err := codeOf("a\n", tt.start, tt.mark)
 		if got := strings.TrimSpace(usererr.Tell(i18n.EnglishCatalog(), err).Render("")); got != tt.want {

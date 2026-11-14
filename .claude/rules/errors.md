@@ -15,7 +15,7 @@ paths:
 - **描くときの誤りの場所**：html/template の Execute の誤りの場所は `draw` が置く。置く所は誤りの種類で決まる。floe の失敗（`kit.ErrFunc`）のほかは、文の頭を切り、後ろのライブラリの言葉は変えない
   - page.html の誤り：page.html の行と列（下の「テンプレートの誤りの場所」）
   - 部品の part.html の誤り（part.html の text/template の実行の誤り（`map has no entry` など）、words.yaml に無い言葉）：part.html の行と列。floe の部品も自分の部品も分けず、部品を何か所で使っても 1 回だけ言う。行を読めないときは、その部品が描く値のデータの位置に置く
-  - 部品のファイルの位置を持たない誤り（floe の関数が値を断る誤り、行を読めない実行の誤り）：その部品が描く値のデータの位置（出力の全体の誤りは置かれない）。部品の関数が値の中の誤りを返すときは、その `At` を部品の値の根からの JSON ポインタにし（関数の引数の値からのポインタにしない）、draw が `yamlpos.Place` で部品の値の下の行と列に置く
+  - 部品のファイルの位置を持たない誤り（floe の関数が値を断る誤り、行を読めない実行の誤り）：その部品が描く値のデータの位置（出力の全体の誤りは置かれない）。値の中の誤りを返す部品の関数は引数を取らず、draw が部品ごとに描く値に結び付ける。その誤りは `At` を部品の値の根からの JSON ポインタにして返し、draw が `yamlpos.Place` で部品の値の下の行と列に置く
   - floe の関数の中の floe の失敗（`kit.ErrFunc`）：floe の失敗のまま、文の頭も切らずに出す
   - html の項目を字や属性の中に置く誤り（`draw_html_placed`）：置いたのが page.html か部品の part.html かは印から分からない（分けるには部品の出力にも印が要る）ので、どちらでもデータファイルの `template:` に置き、文がどちらかと言う（`LIMIT:`）
 - **テンプレートの誤りの場所**：text/template の文の頭を読むのは `textpos.OfTemplate` だけで、読んだ場所は `Line`・`Column` に入れ、文に残さない。html/template のエスケープの誤りは Node の位置を先に使い、無ければ `Error.Line` を `textpos.TemplateLine` で写す

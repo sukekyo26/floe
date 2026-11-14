@@ -3,6 +3,7 @@ package kit
 import (
 	"math/big"
 	"regexp"
+	"strconv"
 	"strings"
 
 	"floe/internal/usererr"
@@ -62,7 +63,7 @@ func statChange(from, value string) (string, int) {
 func statOf(i int, item any, found *usererr.List) (stat, error) {
 	m, ok := item.(map[string]any)
 	if !ok {
-		return stat{}, found.Add(usererr.New("kit_stat_item", i+1))
+		return stat{}, found.Add(usererr.New("kit_stat_item", i+1).PlacedIn("#/" + strconv.Itoa(i)))
 	}
 	// LIMIT: a part of one's own whose schema lets label, unit, note or tone be other than text draws them empty, plain
 	// on the page, and better without from is not read: what they may be is its schema's to say.
@@ -87,7 +88,8 @@ func statOf(i int, item any, found *usererr.List) (stat, error) {
 			continue
 		}
 		counted = false
-		if failed := found.Add(usererr.New("kit_stat_change", i+1, s.Label, c.key)); failed != nil {
+		at := "#/" + strconv.Itoa(i) + "/" + c.key
+		if failed := found.Add(usererr.New("kit_stat_change", i+1, s.Label, c.key).PlacedIn(at)); failed != nil {
 			return stat{}, failed
 		}
 	}
@@ -108,8 +110,8 @@ func statOf(i int, item any, found *usererr.List) (stat, error) {
 	return s, nil
 }
 
-// LIMIT: mistakes are told at the part's value, naming the item by its number and label, as with bars: stats knows not
-// where in the part's value the list is. Place them at the item if that misleads.
+// statsOf reads the stats of items, the value of a stats part, telling the mistakes of every item, each at the key of
+// the item it is of.
 func statsOf(items []any) ([]stat, error) {
 	stats := make([]stat, 0, len(items))
 	var found usererr.List

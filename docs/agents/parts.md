@@ -89,14 +89,26 @@ The functions floe adds to html/template's own (`printf`, `index`, `eq` and the 
 | `copyButton` | `{{copyButton}}` | The copy button, in the page's language |
 | `diagram` | `{{diagram}}` | The part's whole value drawn as a diagram |
 | `zoom` | `{{zoom}}` | The script that zooms a frame |
-| `script` | `{{script .js .data}}` | An element and a script that calls `.js` with it and `.data` |
+| `script` | `{{script}}` | An element and a script that calls the part's `js` with it and its `data` |
 | `diff` | `{{$d := diff .text}}` | A `git diff` read into lines |
-| `code` | `{{$c := code .text .start .mark}}` | Text cut into lines |
-| `bars` | `{{range bars .}}` | A list of bars read |
-| `stats` | `{{range stats .}}` | A list of stats read |
-| `chart` | `{{$c := chart .}}` | The places of the part `chart` |
+| `code` | `{{$c := code}}` | The part's `text` cut into lines |
+| `bars` | `{{range bars}}` | The part's value, a list, read as bars |
+| `stats` | `{{range stats}}` | The part's value, a list, read as stats |
+| `chart` | `{{$c := chart}}` | The places of the part `chart`, from the part's value |
 | `written` | `{{written}}` | The part's value as written |
 | `tree` | `{{range tree .}}` | A list of paths nested |
+
+`script`, `code`, `bars`, `stats` and `chart` take nothing and read the part's whole value (`.`), as `diagram` does, so that a mistake in it is told at its line and column. The value MUST have the shape each reads (refused when a page is drawn, at the value or its key, saying which `"type"` to give it in your schema):
+
+| Function | The part's value |
+|---|---|
+| `bars`, `stats` | A list of the items |
+| `code` | Keys and values: `text` (text), `start`, `mark` |
+| `script` | Keys and values: `js` (text), `data` |
+| `chart` | As the part `chart` takes it |
+
+- Do not give them, nor `diagram` and `written`, an argument, after them or piped into them: `{{range bars .items}}`, `{{script .js .data}}` or `{{. | stats}}` is refused when the parts are read (`floe part check`, and every command that draws), at its line and column of `part.html`.
+- A part MUST NOT hold more than its list beside a list it gives `bars` or `stats` (a title and its bars), nor two texts for `code`: make each its own part.
 
 ### copyButton
 
@@ -124,7 +136,7 @@ It draws the script that zooms, the one the parts `image` and `diagram` use, onc
 
 ### script
 
-It draws an element, and a script that calls `.js`, a function, with it and `.data`, as the part `script` does. `js` MUST NOT hold `</script`, or `<!--` before a `<script` (refused when a page is drawn: it would end its `<script>` early); split them in a string, as `'<' + '/script'`.
+It draws an element, and a script that calls the part's `js`, a function, with it and the part's `data`, as the part `script` does. `js` MUST NOT hold `</script`, or `<!--` before a `<script` (refused when a page is drawn, at `js`: it would end its `<script>` early); split them in a string, as `'<' + '/script'`.
 
 ### diff
 
@@ -139,7 +151,7 @@ It draws an element, and a script that calls `.js`, a function, with it and `.da
 
 ### code
 
-It cuts text into lines, as the part `code` does: `$c.Lines`, each with `.Text` (its line break kept) and `.Mark`, whether `.mark`, a list of line numbers or nothing, names it. `.start`, a line number or nothing, is the number of the first line: written, `$c.Numbered` is true, `$c.Before` is the count before the first line and `$c.Digits` the digits of the last line's number. A line number MUST be a whole number (refused when a page is drawn); its range is for your schema to set, as the part `code`'s does (from 1 to 1,000,000,000). A number no line has marks nothing.
+It cuts the part's `text` into lines, as the part `code` does: `$c.Lines`, each with `.Text` (its line break kept) and `.Mark`, whether the part's `mark`, a list of line numbers or nothing, names it. The part's `start`, a line number or nothing, is the number of the first line: written, `$c.Numbered` is true, `$c.Before` is the count before the first line and `$c.Digits` the digits of the last line's number. A line number MUST be a whole number (refused when a page is drawn, at the number); its range is for your schema to set, as the part `code`'s does (from 1 to 1,000,000,000). A number no line has marks nothing.
 
 ### bars
 
@@ -152,7 +164,7 @@ It reads a list of items, each written as keys and values: `label`, `value`, `of
 | `.Now`, `.Max` | For an item with `of`: `value` and `of` in plain digits, without grouping or an exponent, for `aria-valuenow` and `aria-valuemax` (`num` writes them grouped); empty for the others |
 | `.Width` | For an item with `of`, its value as a percentage of its `of`; for the others, as a percentage of the largest value among them, which the items with `of` are left out of |
 
-`bars` reads an `of` of null as one not written; a part's schema that declares `of` a number refuses null before. Each item MUST be written as keys and values, `value` MUST be a number of 0 or more, `of` if written MUST be a number above 0, `value` MUST NOT be over its `of`, and `unit` if written MUST be text. `bars` refuses the others when a page is drawn, all together at the part's value, each told with its bar's number in the list and its label (an item not as keys and values with which item it is; a `value` that is not a number or is below 0 with the value; one not written or null as missing).
+`bars` reads an `of` of null as one not written; a part's schema that declares `of` a number refuses null before. Each item MUST be written as keys and values, `value` MUST be a number of 0 or more, `of` if written MUST be a number above 0, `value` MUST NOT be over its `of`, and `unit` if written MUST be text. `bars` refuses the others when a page is drawn, all together, each at the key of its item it is of and told with its bar's number in the list and its label (an item not as keys and values with which item it is; a `value` that is not a number or is below 0 with the value; one not written or null as missing).
 
 To have a mistake of a value's shape told at the item or the value itself, give the list in the part's schema the items `bars` takes, as the part `bars` does (`minimum` alone lets a value that is not a number through to `bars`):
 
@@ -171,7 +183,7 @@ To have a mistake of a value's shape told at the item or the value itself, give 
 }
 ```
 
-Put it as the `items` of the schema of the list `part.html` gives to `bars`: `properties.items.items` for `bars .items`, the root's `items` for `bars .` (a part whose value is the list). An `items` at the root of an object schema checks nothing of a list under `properties`.
+Put it as the `items` at the root of the part's schema, whose value is the list (`"type": "array"`).
 
 ### stats
 
@@ -184,7 +196,7 @@ It reads a list of items, each written as keys and values: `label`, `value`, `un
 | `.WayTone` | `good`, `bad` or `muted`; empty without `from` |
 | `.Change` | `value` less `from`, signed and exact, to the decimals of the longer of the two; empty when they are the same |
 
-With `from`, `from` and `value` MUST be text of digits alone (`^-?[0-9]+([.][0-9]+)?$`) and `better` MUST be `lower` or `higher`: the function refuses others at the part's value, naming the item by its number and label. The other keys are for the part's schema to say.
+With `from`, `from` and `value` MUST be text of digits alone (`^-?[0-9]+([.][0-9]+)?$`) and `better` MUST be `lower` or `higher`: the function refuses others at the key of the item, naming the item by its number and label. The other keys are for the part's schema to say.
 
 ### chart
 

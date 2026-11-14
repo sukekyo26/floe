@@ -9,7 +9,7 @@ name.yaml:7:15: the page drawn from this file names the part nope, which there i
 noscript.yaml:1:11: the page drawn from this file has a <noscript>, which page.html, a part's part.html or an item of format html writes: floe does not check what it holds, which works where scripts are off; leave it out
 number.yaml:7:15: got number, want string
 open.yaml:7:15: HTML changes the page around it at <b>: close in it each element and comment it opens, and close no element it did not open
-script.yaml:7:9: js would end its <script> early, or move where it ends, as it holds </script, or <!-- before a <script: split them in a string, as '<' + '/script'
+script.yaml:7:23: js would end its <script> early, or move where it ends, as it holds </script, or <!-- before a <script: split them in a string, as '<' + '/script'
 shape.yaml:7:46: additional properties 'css' not allowed
 $ floe render --out-dir $TMP/pages/closes.yaml closes.yaml
 exit 1
@@ -46,7 +46,7 @@ open.yaml:7:15: HTML changes the page around it at <b>: close in it each element
 $ floe render --out-dir $TMP/pages/script.yaml script.yaml
 exit 1
 --- stderr
-script.yaml:7:9: js would end its <script> early, or move where it ends, as it holds </script, or <!-- before a <script: split them in a string, as '<' + '/script'
+script.yaml:7:23: js would end its <script> early, or move where it ends, as it holds </script, or <!-- before a <script: split them in a string, as '<' + '/script'
 $ floe render --out-dir $TMP/pages/shape.yaml shape.yaml
 exit 1
 --- stderr
@@ -62,5 +62,5 @@ name.yaml:7:15: the page drawn from this file names the part nope, which there i
 noscript.yaml:1:11: the page drawn from this file has a <noscript>, which page.html, a part's part.html or an item of format html writes: floe does not check what it holds, which works where scripts are off; leave it out
 number.yaml:7:15: got number, want string
 open.yaml:7:15: HTML changes the page around it at <b>: close in it each element and comment it opens, and close no element it did not open
-script.yaml:7:9: js would end its <script> early, or move where it ends, as it holds </script, or <!-- before a <script: split them in a string, as '<' + '/script'
+script.yaml:7:23: js would end its <script> early, or move where it ends, as it holds </script, or <!-- before a <script: split them in a string, as '<' + '/script'
 shape.yaml:7:46: additional properties 'css' not allowed

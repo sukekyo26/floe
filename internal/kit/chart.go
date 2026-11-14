@@ -492,7 +492,6 @@ func (c *chart) drawLabels(in chartInput, p chartPlot, longest float64) {
 }
 
 // chartOf reads a chart's whole value and counts where each thing goes, part.html writing the SVG.
-// LIMIT: given a piece of a part's value, the places of its mistakes are off, as they count from the part's value.
 // LIMIT: a fifth series is not refused for an own part, whose schema says what it takes: it has no colour.
 // LIMIT: no bound on the points, a page only growing (ten thousand points of one series, 2 MB). Thin them if pages
 // come to be slow.
