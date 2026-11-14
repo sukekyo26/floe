@@ -440,7 +440,9 @@ func TestSearchSet(t *testing.T) {
 		}
 	}
 	_, err := store.Search("gcp", []string{"nothing"})
-	wantMistake(t, "Search gcp nothing", err, "icons_no_match", "gcp")
+	wantMistake(t, "Search gcp nothing", err, "icons_no_match_category", "gcp")
+	_, err = store.Search("aws", []string{"nothing"})
+	wantMistake(t, "Search aws nothing", err, "icons_no_match", "aws")
 	_, err = store.Search("azure", []string{"vm"})
 	wantMistake(t, "Search of azure not fetched", err, "icons_not_fetched_terms", "Azure", azure.usage())
 	var e *usererr.Error
@@ -463,6 +465,7 @@ func TestCheckSearch(t *testing.T) {
 		{nil, "icons_search_words"},
 		{[]string{"storage"}, "icons_search_words"},
 		{[]string{"gcp"}, "icons_search_words"},
+		{[]string{"lucide", " ", ""}, "icons_search_words"},
 		{[]string{"ibm", "x"}, "icons_unknown_set"},
 		{[]string{"gcp", "storage"}, ""},
 	} {

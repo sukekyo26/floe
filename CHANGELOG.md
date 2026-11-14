@@ -641,6 +641,8 @@ adheres to [Semantic Versioning](https://semver.org/).
 
 ### Fixed
 
+- Fix `floe publish` of a file whose name has no letter a to z or digit (`設計.yaml`, a `--link` of `資料/index.html`), which was refused as an `invalid slug ""` the publisher never wrote: it now says that no slug can be made of the name, at the file, and to pass `--slug` or rename it. A page published before under its own `--slug` is still updated (S339).
+- Fix `floe icons search` of a word with spaces (`floe icons search gcp "api gateway"`), which found nothing: it is searched as its words. When `gcp` finds nothing, the message also says that a product without an icon of its own is drawn with its category's icon and its name as the label, and that `floe icons search gcp category` lists them (S340, S345).
 - Fix a request that panics ending in `EOF` on the command line and in nothing at all in the server: it is answered with a 500 that says where it panicked and where the stack is (`server.log`), and the server goes on (S229).
 - Fix "Take off the task" in the "…" menu of a page opened whole doing nothing: it now takes the page off its task, and the toast's Undo puts it back.
 - Fix a task named by pages alone, which the management page showed from its pages and made a row of at the time of its first write, jumping on the task list (S286): every task a page names has its row, made with the page's write, and the management page shows tasks of their rows alone; a page's categories are always among its task's, so a category no longer shows up or goes with its pages. The management page writes pages and tasks by `PATCH /api/work` alone, in one write, which `PATCH /api/tasks` and a page edit's `work` were.

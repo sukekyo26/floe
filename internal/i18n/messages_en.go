@@ -5,6 +5,9 @@ func init() {
 }
 
 // messagesEN is the reference catalog: every other language has exactly its keys.
+// noIconEN is said whatever the set; a set of category icons adds how to draw a product without its own.
+const noIconEN = "no %[2]s icon name contains all of %[1]s; try fewer words, or a word of the full name (floe icons search %[2]s %[2]s lists every one)"
+
 var messagesEN = map[string]string{
 	// LIMIT: a library's own words, English in every language; floe words only what it checks itself
 	"library": "%s",
@@ -204,6 +207,7 @@ var messagesEN = map[string]string{
 
 	// store: publishing and editing pages
 	"store_invalid_slug":      `invalid slug "%s": use 1 to 64 lowercase letters, digits and hyphens, starting and ending with a letter or digit`,
+	"store_slug_unnamed":      "no slug can be made of this name, as it has no letter a to z or digit: pass --slug, or rename it",
 	"store_slug_is_page":      `slug "%s" is used by a stored page: choose another slug`,
 	"store_slug_is_link":      `slug "%s" is used by a linked file: choose another slug`,
 	"store_slug_linked":       `slug "%s" is linked to %s: choose another slug`,
@@ -294,7 +298,8 @@ var messagesEN = map[string]string{
 	"icons_too_many":           "holds over %d icons, far more than an icon package; check that it is the right file",
 	"icons_written_too_large":  "the icons in it come to over %dMB, far more than an icon package; check that it is the right file",
 	"icons_none_in_zip":        "holds no %s icons; pass %s from %s: %s",
-	"icons_no_match":           "no %[2]s icon name contains all of %[1]s; try fewer words, or a word of the full name (floe icons search %[2]s %[2]s lists every one)",
+	"icons_no_match":           noIconEN,
+	"icons_no_match_category":  noIconEN + "; a product without an icon of its own is drawn with its category's icon and its name as the label (floe icons search %[2]s category lists them)",
 	"icons_fetched":            "fetched %d %s icons (%s) into %s",
 	"icons_already":            "%s icons %s are already in %s (add --force to fetch them again)",
 	"icons_search_words":       "name the icon set and a word to search for: floe icons search <set> <word>... (sets: %s)",

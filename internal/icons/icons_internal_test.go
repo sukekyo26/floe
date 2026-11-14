@@ -352,6 +352,7 @@ func TestSearchShort(t *testing.T) {
 		{"two meant, by name", []string{"asg"}, []string{"aws/amazon-ec2-auto-scaling", "aws/aws-auto-scaling"}},
 		{"meant and held, once", []string{"nat"}, []string{"aws/res/amazon-vpc-nat-gateway", "aws/res/amazon-nat-other", "aws/res/amazon-vpc-nat-gateway-spare"}},
 		{"every word holds", []string{"s3", "outposts"}, []string{"aws/amazon-s3-on-outposts"}},
+		{"words in one argument", []string{"NAT  gateway "}, []string{"aws/res/amazon-vpc-nat-gateway", "aws/res/amazon-vpc-nat-gateway-spare"}},
 		{"one word meant is first", []string{"s3", "amazon"}, []string{s3, "aws/amazon-s3-on-outposts", bucket}},
 		{"a target not in the set", []string{"alb"}, []string{"aws/res/zz-alb-in-its-name"}},
 		{"not the whole word", []string{"aws/s3"}, nil},
