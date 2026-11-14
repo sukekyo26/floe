@@ -229,6 +229,7 @@ func (s *Store) readIndex(k *kit) (*index, error) {
 		return idx, nil
 	}
 	if k.builtin {
+		// LIMIT: lucide is the one set built in; keep an index for each if another comes.
 		return lucideIndex()
 	}
 	if s.none != nil {
@@ -407,7 +408,7 @@ type Fetched struct {
 	Already bool
 }
 
-// Fetch keeps the icons of set (one of Sets) from its package zips in its directory, replacing what is there as
+// Fetch keeps the icons of set (one of Fetchable) from its package zips in its directory, replacing what is there as
 // a whole: from the zips or URLs of from, or, with none, those the set's page links. A version already there is
 // kept unless force; without force, the index there is read to tell it, and one that cannot be read stops the
 // fetch, as it stops a search.
