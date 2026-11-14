@@ -72,7 +72,7 @@ func TestInfo(t *testing.T) {
 	setMeta(t, env, "n", "project", "")
 	run(home, 0, "publish", "d.yaml", "--slug", "s")
 	setMeta(t, env, "s", "project", " p ")
-	real, err := filepath.EvalSymlinks(home)
+	actual, err := filepath.EvalSymlinks(home)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -88,12 +88,12 @@ func TestInfo(t *testing.T) {
 			"category\t\"designs\"\npinned\tfalse\ntags\t\"plans\" \"a, b\"\narchived\tfalse\nrepository\t\"named\"\n" +
 			"source\t\"docs/d.yaml\"\nversion\t1\n",
 		"l": "slug\tl\ntitle\t\"H\"\nurl\t" + base + "l/\nkind\tlink\nproject\t\"p\"\ntask\t\ncategory\t\npinned\ttrue\n" +
-			"tags\t\narchived\tfalse\nrepository\t\nsource\t\"" + filepath.Join(real, "h.html") + "\"\nversion\t\n",
+			"tags\t\narchived\tfalse\nrepository\t\nsource\t\"" + filepath.Join(actual, "h.html") + "\"\nversion\t\n",
 		// A folder outside a repository is in the project of its own name.
 		"f": "slug\tf\ntitle\t\"docs\"\nurl\t" + base + "f/\nkind\tfolder\nproject\t\"docs\"\ntask\t\ncategory\t\npinned\tfalse\n" +
-			"tags\t\narchived\ttrue\nrepository\t\nsource\t\"" + filepath.Join(real, "docs") + "\"\nversion\t\n",
-		"n": data("n", `"n"`, "", "", `"`+filepath.Join(real, "w.yaml")+`"`),
-		"s": data("s", `"D"`, `"p"`, "", `"`+filepath.Join(real, "d.yaml")+`"`),
+			"tags\t\narchived\ttrue\nrepository\t\nsource\t\"" + filepath.Join(actual, "docs") + "\"\nversion\t\n",
+		"n": data("n", `"n"`, "", "", `"`+filepath.Join(actual, "w.yaml")+`"`),
+		"s": data("s", `"D"`, `"p"`, "", `"`+filepath.Join(actual, "d.yaml")+`"`),
 	} {
 		got := run(home, 0, "info", slug)
 		// The time is the server's own: told as floe list tells it.
