@@ -232,6 +232,7 @@ func (b *browser) until(what, expr string) string {
 
 	// A page moved to whole has its new URL while it loads, before its script runs. The state is read in the same
 	// evaluation as expr: read apart, the page could be replaced between the two.
+	// LIMIT: interactive comes before the DOMContentLoaded handlers (contents.js, zoom.js); wait for what they make itself.
 	loaded := "document.readyState !== 'loading' ? (0, eval)(" + js(expr) + ") : false"
 	var last string
 	var err error
