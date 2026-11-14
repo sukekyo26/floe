@@ -30,6 +30,8 @@ type pageData struct {
 	Version string
 	// States is the states of a task, for the task list to read when tasks.json cannot be
 	States []store.State
+	// MaxURLs is the most URLs the store lets a task have, which the edit dialog tells before a write is refused
+	MaxURLs int
 }
 
 // Page renders the management page, which is also the frame around each page, in the language of c: the frame
@@ -38,6 +40,7 @@ func Page(c *i18n.Catalog, framed string, served bool, version string) ([]byte, 
 	var b bytes.Buffer
 	data := pageData{
 		Catalog: c, Messages: c.Formats("ui_"), Framed: framed, Served: served, Version: version, States: store.States,
+		MaxURLs: store.MaxURLs,
 	}
 	if err := pageTemplate.Execute(&b, data); err != nil {
 		return nil, fmt.Errorf("render ui.html: %w", err)

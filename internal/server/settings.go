@@ -43,10 +43,6 @@ func (s *Server) putSettings(w http.ResponseWriter, r *http.Request) {
 	if in == nil {
 		return
 	}
-	if in.Theme == nil && in.TaskMode == nil {
-		send(w, http.StatusBadRequest, "send theme, taskMode or both")
-		return
-	}
 	if in.Theme != nil {
 		drawing := s.latest()
 		err := drawing.Err

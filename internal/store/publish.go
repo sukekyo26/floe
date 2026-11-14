@@ -482,7 +482,7 @@ func (e *Entry) settle(prev *Meta) error {
 		base = &none
 	}
 	e.Meta = newMeta(e.opts, was.Path, e.project, e.repo, e.place, base, was.DataTitle, e.Slug)
-	e.OffTask = offTaskOf(&e.Meta, ProjectKey(base.Project))
+	e.OffTask = offTaskOf(&e.Meta, ProjectKey(base.Project)).Name
 	if replacing || prev == nil {
 		e.Meta.CreatedTheme = e.created
 	}
@@ -1133,18 +1133,18 @@ func (s *Store) Edit(slug string, ed Edit) (Edited, error) {
 		}
 		s.moveRead(slug, to)
 	}
-	return Edited{Slug: to, TaskProject: ProjectKey(m.Project), Task: m.Task, OffTask: off, OffCategory: ""}, nil
+	return Edited{Slug: to, TaskProject: ProjectKey(m.Project), Task: m.Task, OffTask: off.Name, OffCategory: off.Category}, nil
 }
 
 // setProject sets the project ed names of m, taking m off its task when it moves it: it returns the task taken off,
 // "" for none.
-func setProject(m *Meta, ed Edit) (string, error) {
+func setProject(m *Meta, ed Edit) (PageTask, error) {
 	if ed.Project == nil {
-		return "", nil
+		return PageTask{}, nil
 	}
 	// "/" is the management page's value for "no project".
 	if strings.TrimSpace(*ed.Project) == "/" {
-		return "", usererr.New("store_project_slash")
+		return PageTask{}, usererr.New("store_project_slash")
 	}
 	was := ProjectKey(m.Project)
 	m.Project = strings.TrimSpace(*ed.Project)
@@ -1153,11 +1153,11 @@ func setProject(m *Meta, ed Edit) (string, error) {
 
 // offTaskOf takes m off its task when its project is no longer was (ProjectKey): a task is of its project, and one of
 // the same name in another is another task. It returns the task taken off, "" for none. The pin stays.
-func offTaskOf(m *Meta, was string) string {
+func offTaskOf(m *Meta, was string) PageTask {
 	if ProjectKey(m.Project) == was || m.Task == nil || m.Task.Name == "" {
-		return ""
+		return PageTask{}
 	}
-	task, off := m.Task.Name, ""
+	task, off := PageTask{Name: m.Task.Name, Category: m.Task.Category, Pin: false}, ""
 	setPageTask(m, &PageTaskEdit{Name: &off, Category: nil, Pin: nil})
 	return task
 }

@@ -245,12 +245,18 @@ func TestTaskURLOrder(t *testing.T) {
 			t.Errorf("%s: %q, wrote %v, rev %d from %d; want %q, wrote %v", c.name, got.URLs, w.Wrote, got.Rev, was, c.want, c.wrote)
 		}
 	}
-	// A task of no row is made by an order as by any URLs, of none
-	if _, err := editTask(s, "p", "#2", store.TaskEdit{URLs: &store.URLsEdit{Order: []string{}}}); err != nil {
-		t.Fatal(err)
+	// A task of no row is not found by URLs taken off or ordered, nor by none (a mistyped ID would make an empty task), and
+	// none is made; URLs added make it.
+	for _, ed := range []store.URLsEdit{{Order: []string{"x"}}, {Remove: []string{"x"}}, {}} {
+		if _, err := editTask(s, "p", "#2", store.TaskEdit{URLs: &ed}); !errors.Is(err, store.ErrNotFound) {
+			t.Errorf("%+v of no row: %v", ed, err)
+		}
 	}
-	if all, err := s.ReadTasks(); err != nil || all["p"]["#2"].URLs != nil {
-		t.Errorf("made by an order: %+v, %v", all["p"]["#2"], err)
+	if all, err := s.ReadTasks(); err != nil || len(all["p"]) != 1 {
+		t.Errorf("made by URLs not added: %+v, %v", all["p"], err)
+	}
+	if _, err := editTask(s, "p", "#2", store.TaskEdit{URLs: &store.URLsEdit{Add: []string{"https://example.com/2"}}}); err != nil {
+		t.Errorf("made by a URL added: %v", err)
 	}
 }
 

@@ -182,8 +182,8 @@ type TaskEdit struct {
 	ParentTitle *string `json:"parentTitle,omitzero"`
 }
 
-// URLsEdit changes a task's URLs as TagsEdit does a page's tags: those in Remove are taken off, then those in Add put
-// on at the end, so that one in both stays on. Only the URLs a writer changed are sent, so that one another wrote
+// URLsEdit changes a task's URLs as TagsEdit does a page's tags: those in Remove are taken off, and those in Add the row
+// has not put on at the end; one in both stays on, where the row has it. Only the URLs a writer changed are sent, so that one another wrote
 // since it read the row stays. Order then puts those of its URLs the row has first, in its order, and the others
 // after them as they were: one another added stays, at the end, and one the row has not is let be.
 type URLsEdit struct {
@@ -192,8 +192,8 @@ type URLsEdit struct {
 	Order  []string `json:"order,omitzero"`
 }
 
-// maxURLs is the most URLs a write may bring a task to.
-const maxURLs = 10
+// MaxURLs is the most URLs a write may bring a task to.
+const MaxURLs = 10
 
 func validState(name string) bool {
 	return slices.ContainsFunc(States, func(s State) bool { return s.Name == name })
