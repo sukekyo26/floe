@@ -67,10 +67,10 @@ order.yaml:4:18: the image "img/none.png" cannot be read (no such file or direct
 order.yaml:5:8: the image "img/none.png" cannot be read (no such file or directory)
 `},
 		{[]string{"publish", "--link", "gone.yaml"}, 1, "", `gone.yaml:3:5: the image "img/none.png" cannot be read (no such file or directory)` + "\n"},
-		{[]string{"publish", "--link", "h.html"}, 0, url + "/a/h/\n", ""},
+		{[]string{"publish", "--link", "h.html"}, 0, url + "/a/h/\n", "page in project p\n"},
 		{[]string{"publish", "w.yaml"}, 0, url + "/a/w/\n", "w.yaml:5:15: warning: this text holds a fenced block of code on its line 1"},
 		{[]string{"publish", "--link", "w.yaml", "--slug", "wl"}, 0, url + "/a/wl/\n", "w.yaml:5:15: warning: this text holds a fenced block of code on its line 1"},
-		{[]string{"publish", "--link", "docs"}, 0, url + "/a/docs/\n", ""},
+		{[]string{"publish", "--link", "docs"}, 0, url + "/a/docs/\n", "page in project docs\n"},
 		{[]string{"publish", "--link", "docs", "--theme", "ink"}, 1, "", "floe: --theme picks the theme of a page drawn from a data file: a linked file is shown as it is\n"},
 		{[]string{"publish", "--link", "h.html", "--theme", "ink"}, 1, "", "floe: --theme picks the theme of a page drawn from a data file: a linked file is shown as it is\n"},
 		{[]string{"list"}, 0, "\th\tH\t", ""},
@@ -403,9 +403,9 @@ func publishedTogether(t *testing.T, dir string, env map[string]string, args ...
 	return both.String()
 }
 
-// A page the directory floe publish runs in gives its project is told after its URL, on stderr: when it is new, when
-// it replaces another file's (--force) and when it was emptied of its project; not when it keeps its project. A link is
-// told so too, with its file's directory's project.
+// The project of a page, or of a link, is told after its URL, on stderr: when it is new, when it replaces another file's
+// (--force) and when it was emptied of its project; not when it keeps its project. A data file's page is in the project
+// of the directory floe publish runs in, a link in that of its file's directory.
 func TestPublishSaysProject(t *testing.T) {
 	t.Parallel()
 
