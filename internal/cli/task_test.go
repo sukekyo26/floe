@@ -372,10 +372,14 @@ func TestTaskSays(t *testing.T) {
 	say("page a: task t1 in project p, category \"design\"\n", "task", "--slug", "a", "--task", "t1", "--category", "design")
 	say("page a: task t1 in project p, category \"build\"\n", "task", "--slug", "a", "--category", "build")
 	say("page a: task t1 in project p, category \"build\", pinned\n", "task", "--slug", "a", "--pin")
-	say("page a: no task, pinned\n", "task", "--slug", "a", "--task", "")
+	// A page that leaves a task is told with the task and category it left, of the same name as its new one too.
+	say("task t5 in project p: made; categories \"build\"\npage a: task t5 in project p, category \"build\", pinned; moved from task t1, category \"build\"\n",
+		"task", "--slug", "a", "--task", "t5", "--category", "build")
+	say("page a: no task, pinned; off task t5, category \"build\"\n", "task", "--slug", "a", "--task", "")
 	say("task t1 in project p: forgotten\n", "task", "--task", " t1 ", "--forget")
 	say("task t3 in project p: made\npage a: task t3 in project p, pinned\n", "task", "--slug", "a", "--task", "t3")
 	say("task t4 in project p: made; parent \"t3\"\n", "task", "--task", "t4", "--parent", "t3")
+	say("page a: task t4 in project p, pinned; moved from task t3\n", "task", "--slug", "a", "--task", "t4")
 }
 
 // A page that cannot be written, as the system refuses it after the checks, leaves its task's row written, which a

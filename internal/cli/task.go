@@ -319,7 +319,8 @@ func urlsField(urls []string) string {
 	return "urls " + strings.Join(quoted, " ")
 }
 
-// tellPage says the page as the store has it, written or read: its task and project, category and pin.
+// tellPage says the page as the store has it, written or read: its task and project, category and pin, and the task
+// and category it left, when a write took it off one.
 func (a *app) tellPage(page store.Edited) {
 	on := page.Task
 	var parts []string
@@ -334,7 +335,18 @@ func (a *app) tellPage(page store.Edited) {
 	if on != nil && on.Pin {
 		parts = append(parts, "pinned")
 	}
-	a.print("%s", english.Msg("cli_task_page", page.Slug, strings.Join(parts, ", ")))
+	line := english.Msg("cli_task_page", page.Slug, strings.Join(parts, ", "))
+	if page.OffTask != "" {
+		key := "cli_task_page_moved"
+		if on == nil || on.Name == "" {
+			key = "cli_task_page_left"
+		}
+		line += "; " + english.Msg(key, page.OffTask)
+		if page.OffCategory != "" {
+			line += fmt.Sprintf(", category %q", page.OffCategory)
+		}
+	}
+	a.print("%s", line)
 }
 
 // namedTask is the task of --task and --project, whose project is the working directory's when left out, its name

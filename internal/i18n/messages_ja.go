@@ -170,6 +170,8 @@ var messagesJA = map[string]string{
 	"cli_task_page":            "ページ %[1]s：%[2]s",
 	"cli_task_page_task":       "%[2]s のタスク %[1]s",
 	"cli_task_page_off":        "タスク無し",
+	"cli_task_page_moved":      "タスク %[1]s から移しました",
+	"cli_task_page_left":       "タスク %[1]s から外しました",
 	"cli_task_no_task":         "--task でタスクを、または --slug でページを名指してください。着手前・作業中のタスクを見るには、--project 以外のフラグを付けません",
 	"cli_task_none_open":       "%s に、着手前・作業中のタスクはありません",
 	"cli_task_needs_pages":     "--%s はページを変えます。--slug で名指してください",

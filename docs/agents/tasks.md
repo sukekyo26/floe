@@ -9,6 +9,7 @@ The user keeps a task list in the store: the tasks of each project, each with a 
 - Quote an ID in the shell (`--task "#130"`): a bare `#130` starts a comment, and the ID is lost.
 - Do not give `--category` or `--categories`, and do not change a page's category, unless the user asks: the user decides where a page stands among its task's pages.
 - Do not give `--forget` or `--clear` unless the user asks for that.
+- When `floe task` says a page `moved from task …`, tell the user which task and category the page left: the user may not have known it was there.
 
 ## What a task holds
 
@@ -65,7 +66,7 @@ floe task --slug design-notes --task ""                             # off its ta
 | `--unpin` | Takes their pin off |
 | `--clear` | Takes them off their task and their pin off; the task stays |
 
-A page moved to another task leaves its category, unless `--category` gives it one there. `floe publish --move-project` takes a page off its task, as a task is of its project, and says so.
+A page moved from another task leaves that task and its category (unless `--category` gives it one on the new task), and floe says where it was after the page: `; moved from task #130, category "designs"`. `--task ""` and `--clear` say `; off task #130` the same way. `floe publish --move-project` takes a page off its task, as a task is of its project, and says so.
 
 ## Change a task
 
@@ -113,16 +114,19 @@ floe checks the whole command before it writes, so a refused command writes noth
 
 ## What it prints
 
-Each task and page written is printed on a line of its own, as the store left it: a task `made` (it had no row), `changed` or `unchanged` (a field was given, its value as it was), then each page with its task, category and pin.
+Each task and page written is printed on a line of its own, as the store left it: a task `made` (it had no row), `changed` or `unchanged` (a field was given, its value as it was), then each page with its task, category and pin, and, when it left a task, the task and category it was on.
 
 ```text
 $ floe task --slug api-notes --task "#132" --title "API notes"
 task #132 in project floe: made; title "API notes"
 page api-notes: task #132 in project floe
+$ floe task --slug design-notes --task "#132"
+page design-notes: task #132 in project floe; moved from task #130, category "designs"
 $ floe task --task "#132" --state doing
 task #132 in project floe: changed; state doing
-$ floe task --slug api-notes --task ""
-page api-notes: no task
+$ floe task --slug api-notes --slug design-notes --task ""
+page api-notes: no task; off task #132
+page design-notes: no task; off task #132
 $ floe task --task "#132" --forget
 task #132 in project floe: forgotten
 ```

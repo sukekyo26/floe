@@ -177,6 +177,8 @@ var messagesEN = map[string]string{
 	"cli_task_page":            "page %[1]s: %[2]s",
 	"cli_task_page_task":       "task %[1]s in %[2]s",
 	"cli_task_page_off":        "no task",
+	"cli_task_page_moved":      "moved from task %[1]s",
+	"cli_task_page_left":       "off task %[1]s",
 	"cli_task_no_task":         "name a task with --task, or pages with --slug; to tell the open tasks, give no flag but --project",
 	"cli_task_none_open":       "no open task in %s",
 	"cli_task_needs_pages":     "--%s changes pages: name them with --slug",

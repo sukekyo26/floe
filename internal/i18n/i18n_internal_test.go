@@ -228,3 +228,14 @@ func TestThemeAboutKeys(t *testing.T) {
 		}
 	}
 }
+
+// floe task and floe publish say a page taken off its task in the same words: what publish says of it holds what floe
+// task says, in each language.
+func TestOffTaskWords(t *testing.T) {
+	for _, lang := range Langs() {
+		c := New(lang)
+		if publish, task := c.Msg("cli_page_off_task", "P", "#9"), c.Msg("cli_task_page_left", "#9"); !strings.Contains(publish, task) {
+			t.Errorf("%s: %q does not hold %q", lang, publish, task)
+		}
+	}
+}
