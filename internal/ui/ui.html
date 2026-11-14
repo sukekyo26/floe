@@ -5276,7 +5276,7 @@
   const sameCategories = (x, y) => x.join('\n') === y.join('\n');
   const editCategoriesNow = () => [...$('edit-categories').children].map((li) => li.dataset.category);
   // What the dialog shows of task, read now: the tasks read hold it as the page draws it
-  const editBase = (task) => ({ title: task.title ?? '', urls: task.urls ?? [], categories: categoryOrder(task) });
+  const editBase = (task) => ({ title: task.title ?? '', urls: [...new Set(task.urls ?? [])], categories: categoryOrder(task) });
   // Opened over the task as the tasks read now have it, its rev and fields of one read: the page drawn before may be older
   function openTaskEdit(drawnTask) {
     const task = tasksOf().find((x) => x.project === drawnTask.project && x.name === drawnTask.name) ?? drawnTask;
@@ -5297,21 +5297,39 @@
   // The icons of the dialog's row buttons, drawn in lines. A row's URL and category are taken off by the one x, as both are the same act
   const lineIcon = (path) => `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">${path}</svg>`;
   const DROP_PATH = '<path d="M6 6l12 12M18 6 6 18"/>';
+  const UP_PATH = '<path d="M12 19V5"/><path d="m5 12 7-7 7 7"/>';
+  const DOWN_PATH = '<path d="M12 5v14"/><path d="m19 12-7 7-7-7"/>';
+  // A button of a row of the dialog's lists: an icon named by its label
+  function rowButton(cls, label, path) {
+    const b = tagged('button', `icon-btn ${cls}`);
+    b.type = 'button';
+    b.innerHTML = lineIcon(path);
+    b.setAttribute('aria-label', label);
+    b.title = label;
+    return b;
+  }
+  // The grip a row of the dialog's lists is dragged by
+  function rowGrip() {
+    const grip = tagged('span', 'category-grip');
+    grip.innerHTML = '<svg viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><circle cx="9" cy="6" r="1.5"/><circle cx="15" cy="6" r="1.5"/><circle cx="9" cy="12" r="1.5"/><circle cx="15" cy="12" r="1.5"/><circle cx="9" cy="18" r="1.5"/><circle cx="15" cy="18" r="1.5"/></svg>';
+    return grip;
+  }
   // The URLs as rows, each with its URL and the button that takes it off; nothing is sent until saving
   const editURLsNow = () => [...$('edit-urls').children].map((li) => li.dataset.url);
   function drawEditURLs(urls) {
     $('edit-urls').replaceChildren(...urls.map(urlRow));
     $('edit-urls').hidden = urls.length === 0;
+    markURLEnds();
   }
   function urlRow(url) {
     const li = document.createElement('li');
     li.dataset.url = url;
-    const drop = tagged('button', 'icon-btn url-drop');
-    drop.type = 'button';
-    drop.innerHTML = lineIcon(DROP_PATH);
-    drop.setAttribute('aria-label', t('ui_url_drop_named', url));
-    drop.title = drop.getAttribute('aria-label');
-    li.append(tagged('span', 'category-name', url), drop);
+    li.append(rowGrip(), tagged('span', 'category-name', url), tagged('span', 'category-moves'));
+    li.lastChild.append(
+      rowButton('category-up', t('ui_url_up_named', url), UP_PATH),
+      rowButton('category-down', t('ui_url_down_named', url), DOWN_PATH),
+      rowButton('url-drop', t('ui_url_drop_named', url), DROP_PATH),
+    );
     return li;
   }
   // The last row: the button that adds a URL, or the field it turns into, empty as it turns back
@@ -5336,15 +5354,17 @@
     if (why) return;
     $('edit-urls').append(urlRow(url));
     $('edit-urls').hidden = false;
+    markURLEnds();
     input.value = '';
     $('edit-urls-said').textContent = t('ui_url_added', url);
   }
-  // The focus goes to the button of the row after it, or before it, else to the way to add one
+  // The focus goes to the x of the row after it, or before it, else to the way to add one
   function dropURL(li) {
     const rows = [...$('edit-urls').children];
     const at = rows.indexOf(li);
     li.remove();
     $('edit-urls').hidden = $('edit-urls').children.length === 0;
+    markURLEnds();
     $('edit-urls-said').textContent = t('ui_url_dropped', li.dataset.url);
     const near = rows[at + 1] ?? rows[at - 1];
     (near?.querySelector('.url-drop') ?? ($('edit-url-new').hidden ? $('edit-url-plus') : $('edit-url-new'))).focus();
@@ -5361,24 +5381,14 @@
   function categoryRow(name, paged) {
     const li = document.createElement('li');
     li.dataset.category = name;
-    const grip = tagged('span', 'category-grip');
-    grip.innerHTML = '<svg viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><circle cx="9" cy="6" r="1.5"/><circle cx="15" cy="6" r="1.5"/><circle cx="9" cy="12" r="1.5"/><circle cx="15" cy="12" r="1.5"/><circle cx="9" cy="18" r="1.5"/><circle cx="15" cy="18" r="1.5"/></svg>';
     const word = tagged('span', 'category-name', name);
     if (!paged) word.append(' ', tagged('small', '', t('ui_category_no_pages')));
-    const button = (cls, label, path) => {
-      const b = tagged('button', `icon-btn ${cls}`);
-      b.type = 'button';
-      b.innerHTML = lineIcon(path);
-      b.setAttribute('aria-label', label);
-      b.title = label;
-      return b;
-    };
-    const drop = button('category-drop', t(paged ? 'ui_category_drop_paged' : 'ui_category_drop_named', name), DROP_PATH);
+    const drop = rowButton('category-drop', t(paged ? 'ui_category_drop_paged' : 'ui_category_drop_named', name), DROP_PATH);
     if (paged) drop.setAttribute('aria-disabled', 'true');
-    li.append(grip, word, tagged('span', 'category-moves'));
+    li.append(rowGrip(), word, tagged('span', 'category-moves'));
     li.lastChild.append(
-      button('category-up', t('ui_category_up_named', name), '<path d="M12 19V5"/><path d="m5 12 7-7 7 7"/>'),
-      button('category-down', t('ui_category_down_named', name), '<path d="M12 5v14"/><path d="m19 12-7 7-7-7"/>'),
+      rowButton('category-up', t('ui_category_up_named', name), UP_PATH),
+      rowButton('category-down', t('ui_category_down_named', name), DOWN_PATH),
       drop,
     );
     return li;
@@ -5437,26 +5447,98 @@
       ...now.filter((x) => !was.includes(x) && !mine.includes(x)),
     ];
   }
-  // The first row's up and the last row's down move nothing
-  function markCategoryEnds() {
-    const rows = [...$('edit-categories').children];
-    rows.forEach((li, i) => {
-      li.querySelector('.category-up').disabled = i === 0;
-      li.querySelector('.category-down').disabled = i === rows.length - 1;
+  // The URLs as saving sends them when their order is not changed: those read, without those taken off, and those added after them
+  const editedURLs = (read, mine) => [...read.filter((u) => mine.includes(u)), ...mine.filter((u) => !read.includes(u))];
+  // The URLs of the dialog as the task is read again: as read now, with the person's changes, when they did not reorder them, so that
+  // an order another saved meanwhile stays; else as mergeLists has them
+  function mergeURLs(mine, was, now) {
+    if (!sameCategories(mine, editedURLs(was, mine))) return mergeLists(mine, was, now);
+    const added = mine.filter((u) => !was.includes(u));
+    return [...now.filter((u) => !was.includes(u) || mine.includes(u)), ...added.filter((u) => !now.includes(u))];
+  }
+  // Makes the rows of list reordered by their buttons up and down, and by a drag from the grip where there is a pointer that hovers: the row
+  // goes before the row it is dropped on, or after it in its lower half. Each list holds its own drag, so that a row of one is not dropped
+  // in another. nameOf reads a row's name, which said tells where it went by movedKey. Returns what marks the ends, the first row's up and
+  // the last row's down moving nothing, for the list's own drawing to call
+  function sortable(list, { nameOf, said, movedKey }) {
+    const markEnds = () => {
+      const rows = [...list.children];
+      rows.forEach((li, i) => {
+        li.querySelector('.category-up').disabled = i === 0;
+        li.querySelector('.category-down').disabled = i === rows.length - 1;
+      });
+    };
+    // Moves the row li before ref (null: last), says where it went, and gives the focus back to the button pressed, as moving the row drops
+    // it: or to the row's other button, the one pressed moving nothing more
+    const move = (li, ref, pressed) => {
+      if (ref === li) return;
+      list.insertBefore(li, ref);
+      markEnds();
+      const rows = [...list.children];
+      said.textContent = t(movedKey, nameOf(li), rows.indexOf(li) + 1, rows.length);
+      if (!pressed) return;
+      const on = li.querySelector(pressed);
+      (on.disabled ? li.querySelector(pressed === '.category-up' ? '.category-down' : '.category-up') : on).focus();
+    };
+    const rowOf = (node) => {
+      const li = node instanceof Element ? node.closest('li') : null;
+      return li?.parentElement === list ? li : null;
+    };
+    list.addEventListener('click', (e) => {
+      const btn = e.target.closest('.category-up, .category-down');
+      if (!btn || btn.disabled) return;
+      const li = rowOf(btn);
+      const up = btn.classList.contains('category-up');
+      move(li, up ? li.previousElementSibling : li.nextElementSibling?.nextElementSibling ?? null, up ? '.category-up' : '.category-down');
     });
+    let dragged = null;
+    const dropMarks = () => { for (const li of list.children) li.classList.remove('drop-before', 'drop-after'); };
+    const dropAt = (e) => {
+      const li = rowOf(e.target);
+      if (!li || li === dragged) return null;
+      const box = li.getBoundingClientRect();
+      return { li, after: e.clientY > box.top + box.height / 2 };
+    };
+    list.addEventListener('pointerdown', (e) => {
+      const li = rowOf(e.target.closest('.category-grip'));
+      if (li) li.draggable = true;
+    });
+    // A press let go without a drag, anywhere, leaves no row draggable from anywhere but its grip; the row dragged is let go by dragend.
+    // Not on pointercancel, which a browser may send before dragstart, and the drag would not start
+    // LIMIT: a press cancelled without a drag (pointercancel alone) leaves its row draggable till the next press is let go or the dialog is drawn again
+    document.addEventListener('pointerup', () => {
+      for (const li of list.children) if (li !== dragged) li.draggable = false;
+    });
+    list.addEventListener('dragstart', (e) => {
+      // A drag of words selected starts at a text node; a row's own drag only from its grip
+      const li = rowOf(e.target);
+      if (!li?.draggable) return;
+      dragged = li;
+      e.dataTransfer.effectAllowed = 'move';
+      e.dataTransfer.setData('text/plain', nameOf(li));
+    });
+    list.addEventListener('dragover', (e) => {
+      if (!dragged) return;
+      e.preventDefault();
+      dropMarks();
+      const at = dropAt(e);
+      at?.li.classList.add(at.after ? 'drop-after' : 'drop-before');
+    });
+    list.addEventListener('drop', (e) => {
+      if (!dragged) return;
+      e.preventDefault();
+      const at = dropAt(e);
+      if (at) move(dragged, at.after ? at.li.nextElementSibling : at.li, null);
+    });
+    list.addEventListener('dragend', () => {
+      if (dragged) dragged.draggable = false;
+      dragged = null;
+      dropMarks();
+    });
+    return markEnds;
   }
-  // Moves the row li before ref (null: last), says where it went, and gives the focus back to the button pressed, as moving the row drops it:
-  // or to the row's other button, the one pressed moving nothing more
-  function moveCategory(li, ref, pressed) {
-    if (ref === li) return;
-    $('edit-categories').insertBefore(li, ref);
-    markCategoryEnds();
-    const rows = [...$('edit-categories').children];
-    $('edit-categories-said').textContent = t('ui_category_moved', li.dataset.category, rows.indexOf(li) + 1, rows.length);
-    if (!pressed) return;
-    const on = li.querySelector(pressed);
-    (on.disabled ? li.querySelector(pressed === '.category-up' ? '.category-down' : '.category-up') : on).focus();
-  }
+  const markCategoryEnds = sortable($('edit-categories'), { nameOf: (li) => li.dataset.category, said: $('edit-categories-said'), movedKey: 'ui_category_moved' });
+  const markURLEnds = sortable($('edit-urls'), { nameOf: (li) => li.dataset.url, said: $('edit-urls-said'), movedKey: 'ui_url_moved' });
   // The dialog over the task as read again: refused as stale, what was changed in it stays, and the rest is as read now (mergeLists). A row
   // removed meanwhile is not made again: the dialog says so
   function refillTaskEdit() {
@@ -5471,7 +5553,7 @@
     const was = taskEditing.base;
     const now = editBase(task);
     if ($('edit-task-title').value.trim() === was.title) $('edit-task-title').value = now.title;
-    drawEditURLs(mergeLists(editURLsNow(), was.urls, now.urls));
+    drawEditURLs(mergeURLs(editURLsNow(), was.urls, now.urls));
     drawEditCategories(task, mergeLists(editCategoriesNow(), was.categories, now.categories));
     taskEditing = { ...taskEditing, rev: readRev(task.project, task.name), base: now };
     return true;
@@ -5501,11 +5583,12 @@
     // Only what the person changed, from the URLs last read, so that one another added or removed meanwhile is left as it is
     const added = urls.filter((u) => !base.urls.includes(u));
     const removed = base.urls.filter((u) => !urls.includes(u));
-    const urlsEdit = { ...(added.length > 0 ? { add: added } : {}), ...(removed.length > 0 ? { remove: removed } : {}) };
+    const ordered = !sameCategories(urls, editedURLs(base.urls, urls));
+    const urlsEdit = { ...(added.length > 0 ? { add: added } : {}), ...(removed.length > 0 ? { remove: removed } : {}), ...(ordered ? { order: urls } : {}) };
     const categories = editCategoriesNow();
     const changed = {
       ...(title !== base.title ? { title } : {}),
-      ...(added.length + removed.length > 0 ? { urls: urlsEdit } : {}),
+      ...(Object.keys(urlsEdit).length > 0 ? { urls: urlsEdit } : {}),
       ...(!sameCategories(categories, base.categories) ? { categories } : {}),
     };
     const body = { new: false, rev: taskEditing.rev, ...changed };
@@ -6384,61 +6467,9 @@
   });
   $('edit-categories').addEventListener('click', (e) => {
     const drop = e.target.closest('.category-drop');
-    if (drop) {
-      if (pressable(drop)) dropCategory(drop.closest('li'));
-      else $('edit-category-said').textContent = drop.getAttribute('aria-label');
-      return;
-    }
-    const btn = e.target.closest('.category-up, .category-down');
-    if (!btn || btn.disabled) return;
-    const li = btn.closest('li');
-    moveCategory(li, btn.classList.contains('category-up') ? li.previousElementSibling : li.nextElementSibling?.nextElementSibling ?? null, btn.classList.contains('category-up') ? '.category-up' : '.category-down');
-  });
-  // A drag of a category's grip: the row goes before the row it is dropped on, or after it in its lower half. Only the grip makes a row draggable,
-  // and a screen without a pointer that hovers shows none
-  let dragged = null;
-  const dropMarks = () => { for (const li of $('edit-categories').children) li.classList.remove('drop-before', 'drop-after'); };
-  const dropAt = (e) => {
-    const li = e.target.closest?.('#edit-categories > li');
-    if (!li || li === dragged) return null;
-    const box = li.getBoundingClientRect();
-    return { li, after: e.clientY > box.top + box.height / 2 };
-  };
-  $('edit-categories').addEventListener('pointerdown', (e) => {
-    const li = e.target.closest('.category-grip')?.closest('li');
-    if (li) li.draggable = true;
-  });
-  // A press let go without a drag leaves no row draggable from anywhere but its grip; the row dragged is let go by dragend. Not on
-  // pointercancel, which a browser may send before dragstart, and the drag would not start
-  // LIMIT: a press cancelled without a drag (pointercancel alone) leaves its row draggable till the next press is let go or the dialog is drawn again
-  $('edit-categories').addEventListener('pointerup', () => {
-    for (const li of $('edit-categories').children) if (li !== dragged) li.draggable = false;
-  });
-  $('edit-categories').addEventListener('dragstart', (e) => {
-    // A drag of words selected starts at a text node; a row's own drag only from its grip
-    const li = e.target instanceof Element ? e.target.closest('#edit-categories > li') : null;
-    if (!li?.draggable) return;
-    dragged = li;
-    e.dataTransfer.effectAllowed = 'move';
-    e.dataTransfer.setData('text/plain', dragged.dataset.category);
-  });
-  $('edit-categories').addEventListener('dragover', (e) => {
-    if (!dragged) return;
-    e.preventDefault();
-    dropMarks();
-    const at = dropAt(e);
-    at?.li.classList.add(at.after ? 'drop-after' : 'drop-before');
-  });
-  $('edit-categories').addEventListener('drop', (e) => {
-    if (!dragged) return;
-    e.preventDefault();
-    const at = dropAt(e);
-    if (at) moveCategory(dragged, at.after ? at.li.nextElementSibling : at.li, null);
-  });
-  $('edit-categories').addEventListener('dragend', () => {
-    if (dragged) dragged.draggable = false;
-    dragged = null;
-    dropMarks();
+    if (!drop) return;
+    if (pressable(drop)) dropCategory(drop.closest('li'));
+    else $('edit-category-said').textContent = drop.getAttribute('aria-label');
   });
   $('set-task').addEventListener('input', setTaskKnown);
   // Offers tasks of a project by name, as the fields that name a task do: what each is in, which a long title does not cut (a task done is

@@ -223,6 +223,81 @@ func TestUITaskEdit(t *testing.T) { //nolint:paralleltest // the browser tests s
 		head.style.width = '';
 		return said;
 	})()`)
+
+	// URLs are reordered as the categories are, by their buttons and by a drag of the grip, the ends moving no further; saving sends the
+	// order whole, and the task's page shows them in it (the list's row, as tasks.json has them: TestUITaskList). A row of one list dropped on the other moves nothing.
+	const urlRows = "[...document.querySelectorAll('#edit-urls li')].map((li) => li.dataset.url.slice(20) + (li.querySelector('.category-up').disabled ? '^' : '') + (li.querySelector('.category-down').disabled ? 'v' : '')).join(',')"
+	const urlSaid = "document.getElementById('edit-urls-said').textContent"
+	urlRow := func(url string) string {
+		return "[...document.querySelectorAll('#edit-urls li')].find((li) => li.dataset.url === " + js(url) + ")"
+	}
+	categoryRow := func(name string) string {
+		return "[...document.querySelectorAll('#edit-categories li')].find((li) => li.dataset.category === " + js(name) + ")"
+	}
+	// A drag of a row's grip onto another row, each a JS expression of its li, as a browser sends it
+	dragRow := func(from, onto string, after bool) {
+		t.Helper()
+		b.eval(`(() => {
+			const li = ` + from + `, to = ` + onto + `;
+			const box = to.getBoundingClientRect(), y = ` + strconv.FormatBool(after) + ` ? box.bottom - 2 : box.top + 2;
+			const data = new DataTransfer();
+			li.querySelector('.category-grip').dispatchEvent(new PointerEvent('pointerdown', { bubbles: true }));
+			li.dispatchEvent(new DragEvent('dragstart', { bubbles: true, dataTransfer: data }));
+			to.dispatchEvent(new DragEvent('dragover', { bubbles: true, cancelable: true, dataTransfer: data, clientY: y }));
+			to.dispatchEvent(new DragEvent('drop', { bubbles: true, cancelable: true, dataTransfer: data, clientY: y }));
+			li.dispatchEvent(new DragEvent('dragend', { bubbles: true, dataTransfer: data }));
+		})()`)
+	}
+	open("S300")
+	addURL("https://example.com/c")
+	say("url ends", urlRows+" + ' / ' + document.getElementById('edit-urls-hint').textContent")
+	b.eval(urlRow("https://example.com/c") + ".querySelector('.category-up').click()")
+	say("url moved up", urlRows+" + ' / ' + document.activeElement.getAttribute('aria-label') + ' / ' + "+urlSaid)
+	b.eval(urlRow("https://example.com/c") + ".querySelector('.category-up').click()")
+	say("url at the top", urlRows+" + ' / ' + document.activeElement.getAttribute('aria-label')")
+	dragRow(urlRow("https://example.com/489"), urlRow("https://example.com/c"), false)
+	say("url dragged", urlRows+" + ' / ' + "+urlSaid)
+	dragRow(categoryRow("案"), urlRow("https://example.com/c"), false)
+	dragRow(urlRow("https://example.com/c"), categoryRow("案"), true)
+	say("across the lists", urlRows+" + ' / ' + "+categories)
+	// A URL's grip pressed and let go over the categories leaves no row of its list draggable
+	b.eval(urlRow("https://example.com/c") + ".querySelector('.category-grip').dispatchEvent(new PointerEvent('pointerdown', { bubbles: true }))")
+	b.eval(categoryRow("案") + ".dispatchEvent(new PointerEvent('pointerup', { bubbles: true }))")
+	say("let go elsewhere", "[...document.querySelectorAll('#edit-urls li')].some((li) => li.draggable)")
+	save("saved the URL order")
+	closed("closed")
+	out = append(out, "url order: "+row("S300"))
+	say("sent the URL order", "sent.join(' ; ')")
+	b.until("the links in order", "[...document.querySelectorAll('#task-link a')].map((a) => a.href).join(',') === 'https://example.com/489,https://example.com/c,https://example.com/pull/9'")
+	// Added alone, the order is not sent; taken off, the focus goes to the next row's x
+	open("S300")
+	addURL("https://example.com/d")
+	save("saved one added")
+	closed("closed")
+	say("sent one added", "sent.join(' ; ')")
+	open("S300")
+	dropURL("https://example.com/c")
+	say("dropped, the focus", "document.activeElement.className + ' / ' + document.activeElement.getAttribute('aria-label') + ' / ' + "+urlRows)
+	dropURL("https://example.com/d")
+	save("saved two off")
+	closed("closed")
+	// Added alone while another reordered them: read again as the other ordered them, with the one added last, and no order sent
+	open("S300")
+	addURL("https://example.com/e")
+	reordered := store.URLsEdit{Order: []string{"https://example.com/pull/9"}}
+	if _, err := st.Work(store.WorkWrite{TaskEdit: store.TaskEdit{URLs: &reordered}, TaskProject: &project, Task: ptrTo("S300")}); err != nil {
+		t.Fatal(err)
+	}
+	save("stale while reordered")
+	say("read again, reordered", urlRows+" + ' / ' + "+errorText)
+	save("saved after reordered")
+	closed("closed")
+	say("sent after reordered", "sent.join(' ; ')")
+	out = append(out, "kept their order: "+row("S300"))
+	open("S300")
+	dropURL("https://example.com/e")
+	save("saved e off")
+	closed("closed")
 	// At 10, one more is said and not added
 	open("S300")
 	for i := 3; i <= 11; i++ {
@@ -336,24 +411,37 @@ func TestUITaskEdit(t *testing.T) { //nolint:paralleltest // the browser tests s
 		"one x: true true",
 		"typed, not added: https://example.com/left is not added yet: press Enter to add it, or empty the field / true",
 		"dropped: https://example.com/pull/9 / Take off https://example.com/pull/9 / Took off https://example.com/489",
-		"urls: 9 New title https://example.com/489,https://example.com/pull/9 [リリース,設計,レビュー,実装,案]",
-		`sent the URLs: {"taskProject":"proj","task":"S300","new":false,"rev":8,"urls":{"add":["https://example.com/pull/9"]}}`,
-		"links: https://example.com/489 https://example.com/489,https://example.com/pull/9 https://example.com/pull/9",
+		"urls: 9 New title https://example.com/pull/9,https://example.com/489 [リリース,設計,レビュー,実装,案]",
+		`sent the URLs: {"taskProject":"proj","task":"S300","new":false,"rev":8,"urls":{"add":["https://example.com/pull/9"],"order":["https://example.com/pull/9","https://example.com/489"]}}`,
+		"links: https://example.com/pull/9 https://example.com/pull/9,https://example.com/489 https://example.com/489",
 		"links stacked: true true true false",
 		"a long link wraps: true true true true",
-		"an 11th: 10 / A task holds 10 URLs at most: take one off first / http or https URLs, 10 at most",
+		"url ends: pull/9^,489,cv / Drag, or use ↑ and ↓, to reorder; http or https URLs, 10 at most",
+		"url moved up: pull/9^,c,489v / Move https://example.com/c up / Moved https://example.com/c to 2 of 3",
+		"url at the top: c^,pull/9,489v / Move https://example.com/c down",
+		"url dragged: 489^,c,pull/9v / Moved https://example.com/489 to 1 of 3",
+		"across the lists: 489^,c,pull/9v / リリース no page^,設計,レビュー,実装,案v",
+		"let go elsewhere: false",
+		"url order: 10 New title https://example.com/489,https://example.com/c,https://example.com/pull/9 [リリース,設計,レビュー,実装,案]",
+		`sent the URL order: {"taskProject":"proj","task":"S300","new":false,"rev":9,"urls":{"add":["https://example.com/c"],"order":["https://example.com/489","https://example.com/c","https://example.com/pull/9"]}}`,
+		`sent one added: {"taskProject":"proj","task":"S300","new":false,"rev":10,"urls":{"add":["https://example.com/d"]}}`,
+		"dropped, the focus: icon-btn url-drop / Take off https://example.com/pull/9 / 489^,pull/9,dv",
+		"read again, reordered: pull/9^,489,ev / Failed to save: task S300 has changed since it was read; the tasks are read again, so check and save again",
+		`sent after reordered: {"taskProject":"proj","task":"S300","new":false,"rev":12,"urls":{"add":["https://example.com/e"]}} ; {"taskProject":"proj","task":"S300","new":false,"rev":13,"urls":{"add":["https://example.com/e"]}}`,
+		"kept their order: 14 New title https://example.com/pull/9,https://example.com/489,https://example.com/e [リリース,設計,レビュー,実装,案]",
+		"an 11th: 10 / A task holds 10 URLs at most: take one off first / Drag, or use ↑ and ↓, to reorder; http or https URLs, 10 at most",
 		`refused: Failed to save: "ftp://x" is not an http or https URL / true`,
 		"not reached: Failed to save: Failed to fetch / true",
-		"emptied: 10   [リリース,設計,レビュー,実装,案]",
-		"opened over the drawn task: Later / 11",
+		"emptied: 16   [リリース,設計,レビュー,実装,案]",
+		"opened over the drawn task: Later / 17",
 		"stale: Typed / https://example.com/new / リリース no page^,設計,レビュー,実装,案v / Failed to save: task S300 has changed since it was read; the tasks are read again, so check and save again",
-		"again: 13 Typed https://example.com/new [リリース,設計,レビュー,実装,案]",
-		`sent stale and again: {"taskProject":"proj","task":"S300","new":false,"rev":11,"title":"Typed"} ; {"taskProject":"proj","task":"S300","new":false,"rev":12,"title":"Typed"}`,
-		"stale URLs: https://example.com/mine,https://example.com/theirs",
-		"urls again: 15 Typed https://example.com/theirs,https://example.com/mine [リリース,設計,レビュー,実装,案]",
-		`sent the URLs again: {"taskProject":"proj","task":"S300","new":false,"rev":13,"urls":{"add":["https://example.com/mine"]}} ; {"taskProject":"proj","task":"S300","new":false,"rev":14,"urls":{"add":["https://example.com/mine"]}}`,
+		"again: 19 Typed https://example.com/new [リリース,設計,レビュー,実装,案]",
+		`sent stale and again: {"taskProject":"proj","task":"S300","new":false,"rev":17,"title":"Typed"} ; {"taskProject":"proj","task":"S300","new":false,"rev":18,"title":"Typed"}`,
+		"stale URLs: https://example.com/theirs,https://example.com/mine",
+		"urls again: 21 Typed https://example.com/theirs,https://example.com/mine [リリース,設計,レビュー,実装,案]",
+		`sent the URLs again: {"taskProject":"proj","task":"S300","new":false,"rev":19,"urls":{"add":["https://example.com/mine"]}} ; {"taskProject":"proj","task":"S300","new":false,"rev":20,"urls":{"add":["https://example.com/mine"]}}`,
 		"stale order: 設計^,レビュー,案,実装v",
-		"order again: 17 Typed https://example.com/theirs,https://example.com/mine [設計,レビュー,案,実装]",
+		"order again: 23 Typed https://example.com/theirs,https://example.com/mine [設計,レビュー,案,実装]",
 		"gone: This task was deleted elsewhere: close this and look at the task list / true",
 		"gone, typed: This task was deleted elsewhere: close this and look at the task list",
 		"G1: none",

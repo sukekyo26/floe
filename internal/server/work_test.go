@@ -286,6 +286,11 @@ func TestWorkWriteAPI(t *testing.T) {
 	if code, body = patch(`{"taskProject":"p","task":"#2","new":false,"rev":1,"state":"doing"}`); code != http.StatusOK {
 		t.Errorf("a screen's write, as it saw the row = %d, %s", code, body)
 	}
+	// URLs added and put in order in one write
+	code, body = patch(`{"taskProject":"p","task":"#2","urls":{"add":["https://a.example","https://b.example"],"order":["https://b.example"]}}`)
+	if code != http.StatusOK || !strings.Contains(body, `"urls":["https://b.example","https://a.example"]`) {
+		t.Errorf("URLs ordered = %d, %s", code, body)
+	}
 	for _, c := range []struct{ body, want string }{
 		{`{"taskProject":"p","task":"#2","category":"x"}`, "category, pin and clear go with slugs"},
 		{`{"slugs":["a"],"taskProject":"p"}`, "taskProject goes without slugs"},

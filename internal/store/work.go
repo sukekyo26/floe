@@ -178,10 +178,12 @@ type TaskEdit struct {
 
 // URLsEdit changes a task's URLs as TagsEdit does a page's tags: those in Remove are taken off, then those in Add put
 // on at the end, so that one in both stays on. Only the URLs a writer changed are sent, so that one another wrote
-// since it read the row stays.
+// since it read the row stays. Order then puts those of its URLs the row has first, in its order, and the others
+// after them as they were: one another added stays, at the end, and one the row has not is let be.
 type URLsEdit struct {
 	Add    []string `json:"add,omitzero"`
 	Remove []string `json:"remove,omitzero"`
+	Order  []string `json:"order,omitzero"`
 }
 
 // maxURLs is the most URLs a write may bring a task to.
@@ -444,7 +446,7 @@ func categoriesOf(categories []string) []string {
 
 // tidied is t with its URLs as a write leaves them: each once, none for an empty list.
 func (t Task) tidied() Task {
-	t.URLs = withURLs(t.URLs, URLsEdit{Add: nil, Remove: nil})
+	t.URLs = withURLs(t.URLs, URLsEdit{Add: nil, Remove: nil, Order: nil})
 	return t
 }
 
@@ -460,10 +462,10 @@ func pastedURLs(ed *URLsEdit) *URLsEdit {
 		}
 		return out
 	}
-	return &URLsEdit{Add: trim(ed.Add), Remove: trim(ed.Remove)}
+	return &URLsEdit{Add: trim(ed.Add), Remove: trim(ed.Remove), Order: trim(ed.Order)}
 }
 
-// withURLs is urls as ed changes them, in order and each once.
+// withURLs is urls as ed changes them, each once.
 func withURLs(urls []string, ed URLsEdit) []string {
 	var kept []string
 	for _, u := range slices.Concat(urls, ed.Add) {
@@ -471,7 +473,13 @@ func withURLs(urls []string, ed URLsEdit) []string {
 			kept = append(kept, u)
 		}
 	}
-	return kept
+	var first []string
+	for _, u := range ed.Order {
+		if slices.Contains(kept, u) && !slices.Contains(first, u) {
+			first = append(first, u)
+		}
+	}
+	return slices.Concat(first, slices.DeleteFunc(kept, func(u string) bool { return slices.Contains(first, u) }))
 }
 
 // TaskWritten is a task's row as Work left it, under the project (ProjectKey) and name tasks.json keys it by, which a

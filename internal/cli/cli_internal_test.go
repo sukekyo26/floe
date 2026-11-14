@@ -43,6 +43,7 @@ func TestEncode(t *testing.T) {
 	// encode with a text no UTF-8, each for its reason.
 	unreached := map[string]string{
 		"/parentTitle": "the management page alone sends it",
+		"/urls/order":  "the management page alone sends it",
 	}
 	var texts func(typ reflect.Type, at string)
 	texts = func(typ reflect.Type, at string) {

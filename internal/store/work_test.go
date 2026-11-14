@@ -203,6 +203,88 @@ func TestWorkURLs(t *testing.T) {
 	}
 }
 
+// Order puts the URLs it names that the row has first, in its order, the others after them as they were: one it names
+// twice at its first place, one the row has not let be. It goes after Add and Remove, and moves the rev only when the
+// order changes.
+func TestWorkURLOrder(t *testing.T) {
+	t.Parallel()
+
+	a, b, c, d, x := "https://a.example", "https://b.example", "https://c.example", "https://d.example", "https://x.example"
+
+	root := filepath.Join(t.TempDir(), "S")
+	s := store.New(root)
+	edit := func(ed store.URLsEdit) store.TaskWritten {
+		t.Helper()
+		w, err := editTask(s, "p", "#1", store.TaskEdit{URLs: &ed})
+		if err != nil {
+			t.Fatal(err)
+		}
+		return w
+	}
+	edit(store.URLsEdit{Add: []string{a, b, c}})
+	for _, c := range []struct {
+		name  string
+		ed    store.URLsEdit
+		want  []string
+		wrote bool
+	}{
+		{"all", store.URLsEdit{Order: []string{c, a, b}}, []string{c, a, b}, true},
+		{"the same", store.URLsEdit{Order: []string{c, a, b}}, []string{c, a, b}, false},
+		{"none", store.URLsEdit{Order: []string{}}, []string{c, a, b}, false},
+		{"one, the rest after", store.URLsEdit{Order: []string{b}}, []string{b, c, a}, true},
+		{"one not there, one twice, spaces", store.URLsEdit{Order: []string{x, " " + a + " ", b, a}}, []string{a, b, c}, true},
+		{"added and put first", store.URLsEdit{Add: []string{d}, Order: []string{d, a}}, []string{d, a, b, c}, true},
+		{"added, there already", store.URLsEdit{Add: []string{a}, Order: []string{c}}, []string{c, d, a, b}, true},
+		{"taken off stays off", store.URLsEdit{Remove: []string{d}, Order: []string{d, b}}, []string{b, c, a}, true},
+		{"taken off, not there", store.URLsEdit{Remove: []string{x}, Order: []string{a}}, []string{a, b, c}, true},
+	} {
+		was := taskIn(t, s, "p").Rev
+		w := edit(c.ed)
+		got := taskIn(t, s, "p")
+		if !slices.Equal(got.URLs, c.want) || w.Wrote != c.wrote || (got.Rev != was) != c.wrote {
+			t.Errorf("%s: %q, wrote %v, rev %d from %d; want %q, wrote %v", c.name, got.URLs, w.Wrote, got.Rev, was, c.want, c.wrote)
+		}
+	}
+	// A task of no row is made by an order as by any URLs, of none
+	if _, err := editTask(s, "p", "#2", store.TaskEdit{URLs: &store.URLsEdit{Order: []string{}}}); err != nil {
+		t.Fatal(err)
+	}
+	if all, err := s.ReadTasks(); err != nil || all["p"]["#2"].URLs != nil {
+		t.Errorf("made by an order: %+v, %v", all["p"]["#2"], err)
+	}
+}
+
+// An order sent for pages goes to each one's task, as the task's own URLs have it.
+func TestPagesURLOrder(t *testing.T) {
+	t.Parallel()
+
+	a, b, c := "https://a.example", "https://b.example", "https://c.example"
+	s, _ := newStore(t)
+	dw := picKit(t, "", "")
+	for _, c := range []struct{ slug, task string }{{"d", "#1"}, {"e", "#2"}} {
+		publish(t, s, dw, c.slug+".yaml", "lang: en\ntemplate: pic\n", nil, store.Options{})
+		if _, err := s.Work(store.WorkWrite{Slugs: []string{c.slug}, Task: ptr(c.task)}); err != nil {
+			t.Fatal(err)
+		}
+	}
+	if _, err := editTask(s, "p", "#1", adding(a, b)); err != nil {
+		t.Fatal(err)
+	}
+	if _, err := editTask(s, "p", "#2", adding(c, a)); err != nil {
+		t.Fatal(err)
+	}
+	if _, err := s.Work(store.WorkWrite{Slugs: []string{"d", "e"}, TaskEdit: store.TaskEdit{URLs: &store.URLsEdit{Order: []string{b, a}}}}); err != nil {
+		t.Fatal(err)
+	}
+	all, err := s.ReadTasks()
+	if err != nil {
+		t.Fatal(err)
+	}
+	if one, two := all["p"]["#1"].URLs, all["p"]["#2"].URLs; !slices.Equal(one, []string{b, a}) || !slices.Equal(two, []string{a, c}) {
+		t.Errorf("ordered for two pages: %q and %q", one, two)
+	}
+}
+
 // keyArgs is the key and the arguments of the one mistake err holds, as fmt prints them, "" for none.
 func keyArgs(err error) string {
 	e, ok := errors.AsType[*usererr.Error](err)

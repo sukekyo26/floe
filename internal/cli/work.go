@@ -118,7 +118,7 @@ func taskEdit(cmd *cobra.Command, f workFlags) store.TaskEdit {
 		ed.State = &f.state
 	}
 	if len(changed(cmd, "url", "remove-url")) > 0 {
-		ed.URLs = &store.URLsEdit{Add: f.urls, Remove: f.removeURLs}
+		ed.URLs = &store.URLsEdit{Add: f.urls, Remove: f.removeURLs, Order: nil}
 	}
 	if cmd.Flags().Changed("categories") {
 		// LIMIT: a category's name with a comma cannot be written here. Take a list of the flag if such names come to
