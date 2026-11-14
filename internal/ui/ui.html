@@ -5970,6 +5970,8 @@
     grid.replaceChildren();
     $('theme-now').textContent = '';
     $('theme-choose').disabled = true;
+    // A save's toast shows in it, as the list stays open: the top layer hides the rest
+    $('settings').append($('toasts'));
     $('settings').showModal();
     // The theme a page shows in without its own theme, told on its first card: none when it cannot be read
     const own = a ? api(`${PAGES_API}/${encodeURIComponent(a.slug)}/theme`).then((r) => (r.ok ? r.json() : {})).then((o) => o.own ?? '', () => '') : '';
@@ -6008,7 +6010,10 @@
       toast(t('ui_task_mode_failed', why));
       return;
     }
-    $('settings').close();
+    // Back on the list, its row of the mode told anew and focused
+    themesRead = { ...themesRead, taskMode: on, settings: undefined };
+    drawSettingsList(themesRead);
+    settingsTo('list');
     toast(t(on ? 'ui_task_mode_set_on' : 'ui_task_mode_set_off'));
   }
 
@@ -6135,11 +6140,16 @@
       toast(t(a ? 'ui_theme_page_failed' : 'ui_theme_set_failed', why));
       return;
     }
-    $('settings').close();
     if (!a) {
+      // Back on the list, its row of the theme told anew and focused
+      themesRead = { ...themesRead, default: theme, settings: undefined };
+      drawThemes(themesRead);
+      drawSettingsList(themesRead);
+      settingsTo('list');
       toast(t('ui_theme_set', theme));
       return;
     }
+    $('settings').close();
     toast(theme ? t('ui_theme_page_set', theme) : t('ui_theme_page_unset'));
     await load();
   }
@@ -6705,7 +6715,10 @@
   $('keys-open').addEventListener('click', () => openKeys('about'));
   for (const button of document.querySelectorAll('.help-switch .btn')) button.addEventListener('click', () => showHelp(button.dataset.help));
   $('settings-open').addEventListener('click', () => openThemes());
-  $('settings').addEventListener('close', () => themesBack?.()?.focus());
+  $('settings').addEventListener('close', () => {
+    document.body.append($('toasts'));
+    themesBack?.()?.focus();
+  });
   $('settings-form').addEventListener('submit', (e) => {
     if ($('settings').dataset.panel !== 'mode') return chooseTheme(e);
     e.preventDefault();

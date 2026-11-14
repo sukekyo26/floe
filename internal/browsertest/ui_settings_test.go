@@ -52,7 +52,11 @@ func TestUISettings(t *testing.T) { //nolint:paralleltest // the browser tests s
 	)
 	b.eval("document.querySelector('#theme-grid input[value=ink]').click(); document.getElementById('theme-choose').click()")
 	b.until("the toast", "[...document.querySelectorAll('.toast')].some((e) => e.textContent.includes('Changed the default theme to ink'))")
-	out = append(out, b.eval("document.getElementById('settings').open"), strings.TrimSpace(s.floe(t, "theme", "default")))
+	// Saved, back on the list: its row of the theme told anew and focused, the toast in the modal, which the top layer shows
+	out = append(out, b.eval(seen), b.eval("document.getElementById('settings-theme-now').textContent"), b.eval(focused),
+		b.eval("document.getElementById('settings').contains(document.getElementById('toasts'))"), strings.TrimSpace(s.floe(t, "theme", "default")))
+	b.eval("document.getElementById('settings').close()")
+	out = append(out, b.until("the toasts back", "document.body === document.getElementById('toasts').parentElement"))
 	// Escape from a part closes the modal, the focus back on its button
 	b.eval("document.getElementById('settings-open').focus(); document.getElementById('settings-open').click()")
 	b.until("the list's values", "document.getElementById('settings-mode-now').textContent !== ''")
@@ -71,9 +75,8 @@ func TestUISettings(t *testing.T) { //nolint:paralleltest // the browser tests s
 	if err != nil {
 		t.Fatal(err)
 	}
-	out = append(out, b.eval("document.getElementById('settings').open"), strings.TrimSpace(string(set)), strconv.FormatBool(strings.Contains(s.floe(t, "guide"), "\n## Tasks\n")))
-	b.eval("document.getElementById('settings-open').click()")
-	b.until("the list's values", "document.getElementById('settings-mode-now').textContent === 'On'")
+	out = append(out, b.eval(seen), b.eval("document.getElementById('settings-mode-now').textContent"), b.eval(focused),
+		strings.TrimSpace(string(set)), strconv.FormatBool(strings.Contains(s.floe(t, "guide"), "\n## Tasks\n")))
 	b.eval("document.getElementById('settings').close()")
 	// The mode's part opened before the settings are read: not checked as off, nor saved, till they are; read, it is on
 	const mode = "document.getElementById('task-mode').checked + ' ' + document.getElementById('mode-save').disabled"
@@ -107,7 +110,8 @@ func TestUISettings(t *testing.T) { //nolint:paralleltest // the browser tests s
 	b.eval("document.querySelector('.settings-item[data-panel=theme]').click()")
 	out = append(out, b.eval("document.getElementById('theme-now').textContent"))
 	b.eval("document.querySelector('#theme-grid input[value=washi]').click(); document.getElementById('theme-choose').click()")
-	b.until("mended", "!document.getElementById('settings').open")
+	b.until("mended", "document.getElementById('settings').dataset.panel === 'list' && document.getElementById('settings-theme-now').textContent === 'washi'")
+	out = append(out, b.eval("document.getElementById('settings-broken').hidden"))
 	out = append(out, strings.TrimSpace(s.floe(t, "theme", "default")))
 	check(t, "settings", out, strings.Join([]string{
 		"true true", "false true",
@@ -118,15 +122,15 @@ func TestUISettings(t *testing.T) { //nolint:paralleltest // the browser tests s
 		"true",
 		"Default now: default. Pages stored from now on are drawn in this theme. The pages there are now do not change.", "default", "true",
 		"Ink on paper: near black, an indigo ink for emphasis, its sections ruled in the ink",
-		"false", "ink",
+		"list / Settings / true / Close / false / true / true", "ink", "theme", "true", "ink", "true",
 		"settings-open",
-		"false", "false", `{"theme":"ink","taskMode":true}`, "true",
+		"false", "list / Settings / true / Close / false / true / true", "On", "mode", `{"theme":"ink","taskMode":true}`, "true",
 		"false true", "true false",
 		"— / Failed to load the themes: Failed to fetch", "false true",
 		"true",
 		"Failed to read the settings. Saving one writes them again / —",
 		"Failed to read the settings. Choosing a theme writes them again",
-		"washi",
+		"true", "washi",
 	}, "|"))
 }
 
