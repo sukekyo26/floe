@@ -38,7 +38,7 @@ type items struct {
 	html      [][]string // the path of each item of format html, by its number
 	texts     []string   // its text
 	images    fs.FS      // the data's images, nil for none
-	imagesDir string     // the directory mistakes name them under, "" for the data file's
+	imagesDir string     // the directory told when it cannot be opened, "" for the data file's
 	// imageAt is told where each image is named, nil for none.
 	imageAt  func(name string, line, column int)
 	read     map[string]image
@@ -53,8 +53,8 @@ type image struct {
 	err error
 }
 
-// newItems returns the items of a drawing whose data's images are images (nil for none), named in mistakes
-// under imagesDir ("" for the data file's directory) and the place of each naming told to imageAt (nil for none),
+// newItems returns the items of a drawing whose data's images are images (nil for none), named imagesDir ("" for
+// the data file's directory) when they cannot be opened, and the place of each naming told to imageAt (nil for none),
 // and whose diagrams show the icons of icons (nil for the built-in sets alone).
 func newItems(images fs.FS, imagesDir string, imageAt func(name string, line, column int), icons diagram.Icons) *items {
 	secret := strings.ToLower(rand.Text())

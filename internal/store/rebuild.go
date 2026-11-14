@@ -131,7 +131,9 @@ func redraw(dw Drawing, slug string, m *Meta, dir string) (*drawn, error) {
 	// LIMIT: a page of no title: is drawn under the slug of now, which a rename on the management page changes
 	// while the list keeps the title it had. Keep the title drawn under in meta.json if that comes to matter.
 	// LIMIT: kit_image_path names the directory of data, not images/, for a name floe no longer reads, which
-	// a publish checked by the same rule. Have draw name it by ImagesDir too if the rule comes to change.
+	// a publish checked by the same rule; and kit_image_unread, at the copy's data.yaml, an image gone from
+	// images/ by its name, which reads as one beside data.yaml. Have draw name them by ImagesDir too if the
+	// rule comes to change, or if a copy comes to lose its images.
 	o := tmpl.Options{
 		Theme: m.GivenTheme(), Default: m.CreatedTheme, Untitled: slug, Images: images, ImagesDir: imagesDir,
 		ImageAt: nil,

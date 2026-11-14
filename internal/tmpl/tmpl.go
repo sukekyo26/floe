@@ -25,7 +25,7 @@ type Options struct {
 	Default   string // drawn with when neither Theme nor the data's theme: names one, "" for floe's default
 	Untitled  string // the title of a page whose data names none
 	Images    fs.FS  // the data's images, nil for none; its maker closes it
-	ImagesDir string // the directory mistakes name the images under, "" for the data file's
+	ImagesDir string // the directory a mistake of opening the images' directory names, "" for the data file's
 	// ImageAt is told the line and column of each item that names an image, every one, as it is drawn; nil for none.
 	ImageAt func(name string, line, column int)
 	Icons   diagram.Icons // the icons the diagrams show, nil for the built-in sets alone
