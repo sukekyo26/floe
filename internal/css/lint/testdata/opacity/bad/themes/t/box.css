@@ -1,1 +1,0 @@
-:scope { opacity: .9; } /* want "opacity: .9 in :scope; fade it by its colour (color-mix(… transparent)), opacity is 0 alone" */

@@ -1,5 +1,0 @@
-.a { opacity: .5; } /* want "opacity: .5 in .a; fade it by its colour (color-mix(… transparent)), opacity is 0 alone" */
-.b { opacity/**/: .5; } /* want "opacity: .5 in .b; fade it by its colour (color-mix(… transparent)), opacity is 0 alone" */
-@media print { .c { opacity: 0.5; } } /* want "opacity: 0.5 in @media print { .c; fade it by its colour (color-mix(… transparent)), opacity is 0 alone" */
-.d { OPACITY: 1; } /* want "opacity: 1 in .d; fade it by its colour (color-mix(… transparent)), opacity is 0 alone" */
-.e { opacity: 0.0; } /* want "opacity: 0.0 in .e; fade it by its colour (color-mix(… transparent)), opacity is 0 alone" */

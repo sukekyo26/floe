@@ -1,1 +1,1 @@
-:scope { --radius: 3px 4px; --both: 2px; } /* want "--radius: 3px 4px; the palette sets it to one length" */
+:scope { --radius: 3px 4px; --both: 2px; }

@@ -1,1 +1,0 @@
-:scope { --floe-text-small: 0.7rem; } /* want "sets --floe-text-small; only floe's base.css sets the steps of small text, and a theme writes a size of its own as it is" */

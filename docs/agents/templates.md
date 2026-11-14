@@ -220,7 +220,7 @@ The page's colours and faces are CSS variables that the theme's `palette.css` se
 | `--tone`, `--tone-soft`, `--tone-fill` | The colours of the tone of the element they are read in (`data-floe-tone`, `floe part guide` (*Tones*)), from those above; accent's outside a tone. A template marks a tone so too | built from the palette |
 | `--shadow` | A colour for shadows; a box casts one only when its theme sets `--floe-shadow-color` on it (`floe theme guide`) | `rgb(34 33 31 / 0.12)` |
 | `--floe-shadow-x`, `--floe-shadow-y`, `--floe-shadow-blur`, `--floe-shadow-spread` | The theme's one shadow, in px or rem (none by default) | not set |
-| `--radius`, `--radius-small`, `--radius-pill` | How round corners are, one length each: a box's (a panel, a note, code, a quote), a small box's within one (a key, a bar, an image, code in a line), and a pill's (a cell, a tab's title; a cell that wraps rounds no more than floe's `--floe-pill-end`) | `20px`, `6px`, `999px` |
+| `--radius`, `--radius-small`, `--radius-pill` | How round corners are: a box's (a panel, a note, code, a quote), a small box's within one (a key, a bar, an image, code in a line), and a pill's (a cell, a tab's title; a cell that wraps rounds no more than floe's `--floe-pill-end`). `--radius-small` and `--radius-pill` MUST each be one item, a length or one function (`var()`, `calc()` and `min()` pass; two lengths or a `/` void a bar's `rx` and a pill's `min()`); give `--radius` one length too (`floe theme guide`, *Corners*) | `20px`, `6px`, `999px` |
 | `--font`, `--display`, `--mono` | The text's typeface, the headings', and the fixed-width one. Name a face before `monospace` in `--mono` (a browser sizes text in `monospace` alone from 13px) | `"Hiragino Sans", "Noto Sans JP", "Noto Sans CJK JP", "Yu Gothic UI", Meiryo, system-ui, -apple-system, "Segoe UI", sans-serif`, `var(--font)`, `ui-monospace, "SFMono-Regular", Menlo, Consolas, "DejaVu Sans Mono", "Liberation Mono", monospace, "Hiragino Sans", "Noto Sans JP", "Noto Sans CJK JP"` |
 | `--code-bg`, `--code-fg`, `--code-prompt` | The background of code and a terminal, always dark; their text; a terminal's prompt | `#1b2120`, `#e2e9e7`, `#b5e05a` |
 | `--code-add`, `--code-del` | A diff's lines added and removed | `#6fcf97`, `#f2b8b5` |
@@ -336,6 +336,7 @@ An image is one of the data (an item of `"format": "image"`) or one of `assets/`
 - a `words.yaml` that is not language tags each with names and their text, a word that is not text, two language tags that are one, and a word `page.html` names that the example's language lacks;
 - an image of `assets/` that is not one floe takes, and an `asset` that names none;
 - CSS floe cannot read in `page.css` (*page.css*);
+- a `--radius-small` or `--radius-pill` of more than one item in `page.css`, or in a theme or part of yours;
 - a file floe cannot read as written, in any file: YAML or JSON that is not UTF-8 or holds a byte order mark inside, JSON that holds a lone surrogate, and YAML that floe would read otherwise than YAML 1.2 does (a `#` that cuts a value short, `{a, b: 1}`, a number read differently); YAML that floe does not take: anchors, aliases, merge keys, tags, and a second document;
 - the page drawn from `example.yaml`: what the data file's items break in the schema and the checks, what *page.html* says the page drawn MUST NOT hold, an item of format `markdown`, `html` or `image` that is not text (a number, `true` or `null` unquoted), an item of format `html` that opens or closes an element of the page or stands in a text or an attribute.
 
@@ -347,4 +348,4 @@ A data file is checked in this order, each stage only on data that passed the on
 4. The template's `checks.yaml`, the `checks.yaml` of each part for each item it draws, and the template's `computed.yaml`, together.
 5. The page drawn: each part and item of a format (images, diagrams, HTML), then `page.html`, and the page drawn as a whole.
 
-The check tests files, names and syntax, not values or places. A page without `<!doctype html>`, a `page.css` rule that restyles nothing or breaks a layout, a word missing in a language the example does not use, and a `schema.json` without `"additionalProperties": false` pass with exit code 0.
+The check tests files, names and syntax, and of values those two corners alone, not places. A page without `<!doctype html>`, a `page.css` rule that restyles nothing or breaks a layout, a word missing in a language the example does not use, and a `schema.json` without `"additionalProperties": false` pass with exit code 0.

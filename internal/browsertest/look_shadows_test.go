@@ -53,7 +53,7 @@ var shadowsKit = map[string]string{
 // terminal, at the least room floe leaves in a step.
 var shadowsQuote = strings.NewReplacer("text: 'Name it with today''s date", "text: '> Name it with today''s date")
 
-// markProbed gives each box drawn with a transform (a theme moves alone, by translate), or with a ::before or ::after
+// markProbed gives each box drawn with a transform (floe's themes move one by translate), or with a ::before or ::after
 // placed out of the flow (notebook's tape), an
 // index, so that those, which a script cannot measure, are measured by pseudoBoxes, and returns how many there are.
 const markProbed = `(() => { const probed = [...document.querySelectorAll('[data-floe-part], [data-floe-look]')]

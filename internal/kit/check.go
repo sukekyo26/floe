@@ -59,7 +59,46 @@ func check(k *Kit) error {
 			return err
 		}
 	}
+	found = append(found, ownCSS(k)...)
 	return found.Sorted().Err()
+}
+
+// ownCSS refuses, in the CSS of the themes, parts, looks and templates k read itself over floe's, a --radius-small or
+// --radius-pill whose value is not one item: floe's parts read them as one corner, a bar's rx and a pill's min(), which
+// two lengths or a / void without a word. It reads the values alone, no selector nor place (css.RadiusLength). It runs
+// over floe's alone, not over a Kit read over none (Load(nil, …) checks no corner): floe's own CSS is checked by the
+// tests, and the examples of internal/css/lint read over none hold corners of two lengths.
+// LIMIT: a part of one's own that reads its --radius-pill as it is (border-radius: var(--radius-pill)) would draw two
+// lengths, and is refused too: whether a pill or a bar of floe's is in it is the data's, which the CSS does not tell.
+func ownCSS(k *Kit) usererr.List {
+	if k.base == nil {
+		return nil
+	}
+	var found usererr.List
+	refuse := func(file string, src []byte) {
+		for _, c := range css.RadiusLength(src) {
+			found = append(found, usererr.NewAt(file, c.Line, c.Column, "kit_css_radius_length", c.Name, c.Value))
+		}
+	}
+	for _, name := range slices.Sorted(maps.Keys(k.themes)) {
+		t := k.themes[name]
+		refuse(path.Join(t.dir, "palette.css"), t.palette)
+		refuse(path.Join(t.dir, "base.css"), t.base)
+		refuse(path.Join(t.dir, "markdown.css"), t.markdown)
+		for _, of := range slices.Sorted(maps.Keys(t.partsCSS)) {
+			refuse(path.Join(t.dir, of+".css"), t.partsCSS[of])
+		}
+	}
+	for _, name := range slices.Sorted(maps.Keys(k.parts)) {
+		refuse(path.Join(k.parts[name].dir, "part.css"), k.parts[name].css)
+	}
+	for _, name := range slices.Sorted(maps.Keys(k.looks)) {
+		refuse(path.Join(k.looks[name].dir, "part.css"), k.looks[name].css)
+	}
+	for _, name := range slices.Sorted(maps.Keys(k.templates)) {
+		refuse(path.Join(k.templates[name].dir, "page.css"), k.templates[name].css)
+	}
+	return found
 }
 
 // checkPart checks the files, the CSS, the schema, the checks' for and the escaping of p.

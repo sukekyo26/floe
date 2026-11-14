@@ -23,29 +23,12 @@ var listWords = []string{
 	"inside", "outside", "inherit", "initial", "unset", "revert", "revert-layer",
 }
 
-// moves are the transform functions a theme may write, which move alone, never turn, skew nor scale.
-var moves = []string{"translate", "translatex", "translatey"}
-
-// transforms are the properties of a transform; unturned are those a theme writes not at all (they turn, scale or move
-// along a path).
-var (
-	transforms = []string{"transform", "-webkit-transform", "-moz-transform"}
-	unturned   = []string{"rotate", "scale", "zoom", "offset-path", "offset-rotate", "perspective"}
-)
-
-// turnings are the functions a variable may not hold, as a transform may read it: they turn, skew, scale or stand in for
-// those.
-var turnings = []string{"rotate", "skew", "scale", "matrix", "perspective"}
-
-// global are CSS's own keywords, which any property takes.
-var global = []string{"inherit", "initial", "unset", "revert", "revert-layer", "none"}
-
 func foldIn(list []string, s string) bool {
 	return slices.ContainsFunc(list, func(w string) bool { return strings.EqualFold(w, s) })
 }
 
-// themeMarks keeps a theme's decorations out of words and tilts, by what a theme's CSS may write alone: strings of marks
-// (letters only in a typeface's name), counters of digits, and transforms that move.
+// themeMarks keeps a theme's decorations out of words, by what a theme's CSS may write alone: strings of marks (letters
+// only in a typeface's name) and counters of digits.
 // LIMIT: a string in a url() (an SVG of text in data:) and list-style-image are not read; floe's themes write neither.
 var themeMarks = Rule{Name: "theme-marks", Check: func(in *Input) []Finding {
 	var found []Finding
@@ -88,29 +71,10 @@ var themeMarks = Rule{Name: "theme-marks", Check: func(in *Input) []Finding {
 }}
 
 // declAmiss returns what a theme's declaration of prop writes amiss, by the forms a theme may write alone, a variable's
-// value as any other's (it may be read anywhere): a counter or list style of digits or shapes and no variable, no
-// attribute's text, a transform that moves alone, and no variable that turns.
+// value as any other's (it may be read anywhere): a counter or list style of digits or shapes and no variable, and no
+// attribute's text.
 func declAmiss(prop string, value []token) []string {
 	var amiss []string
-	switch {
-	case slices.Contains(unturned, prop):
-		return []string{"turns, scales or moves along a path; a theme writes it not"}
-	case slices.Contains(transforms, prop):
-		for _, t := range value {
-			f := strings.ToLower(strings.TrimSuffix(string(t.Data), "("))
-			if t.Type == css.FunctionToken && !slices.Contains(moves, f) || t.Type == css.IdentToken && !foldIn(global, f) {
-				amiss = append(amiss, "turns, skews or scales; a theme moves alone")
-			}
-		}
-		return amiss
-	case strings.HasPrefix(prop, "--"):
-		for _, t := range value {
-			f := strings.ToLower(string(t.Data))
-			if t.Type == css.FunctionToken && slices.ContainsFunc(turnings, func(w string) bool { return strings.HasPrefix(f, w) }) {
-				amiss = append(amiss, "holds a turn for a transform; a theme moves alone")
-			}
-		}
-	}
 	for i, t := range value {
 		data := string(t.Data)
 		switch t.Type {
