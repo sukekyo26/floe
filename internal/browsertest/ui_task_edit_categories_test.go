@@ -25,11 +25,11 @@ func TestUITaskEditCategories(t *testing.T) { //nolint:paralleltest // the brows
 			t.Fatal(err)
 		}
 		if p[1] != "" {
-			s.floe(t, "work", p[0], "--task", "S300", "--category", p[1])
+			s.floe(t, "task", "--slug", p[0], "--task", "S300", "--category", p[1])
 		}
 	}
-	s.floe(t, "work", "--project", "proj", "--task", "S300", "--title", "Edit the task", "--categories", "案,設計,実装,リリース,レビュー")
-	s.floe(t, "work", "none-a", "--task", "N1")
+	s.floe(t, "task", "--project", "proj", "--task", "S300", "--title", "Edit the task", "--categories", "案,設計,実装,リリース,レビュー")
+	s.floe(t, "task", "--slug", "none-a", "--task", "N1")
 	// 実装's one page archived: a page all the same, so 実装 cannot be deleted
 	yes := true
 	if _, err := st.Edit("build-a", store.Edit{Archived: &yes}); err != nil {
@@ -154,20 +154,20 @@ func TestUITaskEditCategories(t *testing.T) { //nolint:paralleltest // the brows
 	say("unchanged", "sent.length")
 
 	// A category removed that came to have a page meanwhile: the save is refused, as the category has pages, and said; nothing written.
-	s.floe(t, "work", "--project", "proj", "--task", "S300", "--categories", "案,設計,実装,リリース,レビュー")
+	s.floe(t, "task", "--project", "proj", "--task", "S300", "--categories", "案,設計,実装,リリース,レビュー")
 	open("S300")
 	drop("リリース")
-	s.floe(t, "work", "memo-a", "--task", "S300", "--category", "リリース")
+	s.floe(t, "task", "--slug", "memo-a", "--task", "S300", "--category", "リリース")
 	save("paged meanwhile")
 	say("paged meanwhile", "document.getElementById('edit-task-error').textContent")
 	b.pressKey(kb.Escape)
 	closed("closed")
 	out = append(out, "paged meanwhile, written: "+row("S300"))
 	// Stale, a category added while another removed one of no page: the one added stays, the other goes.
-	s.floe(t, "work", "--project", "proj", "--task", "S300", "--categories", "案,設計,実装,リリース,検証,レビュー")
+	s.floe(t, "task", "--project", "proj", "--task", "S300", "--categories", "案,設計,実装,リリース,検証,レビュー")
 	open("S300")
 	key("公開", "Enter", false)
-	s.floe(t, "work", "--project", "proj", "--task", "S300", "--categories", "案,設計,実装,リリース,レビュー")
+	s.floe(t, "task", "--project", "proj", "--task", "S300", "--categories", "案,設計,実装,リリース,レビュー")
 	save("stale, added")
 	say("stale, added", categories)
 	save("saved again")

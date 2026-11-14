@@ -98,8 +98,8 @@ func TestGuideDocLinks(t *testing.T) {
 	t.Parallel()
 
 	embedded := embeddedDocs(t)
-	if len(embedded) < 5 {
-		t.Fatalf("docs.go embeds %d docs, want guide.md, diagrams.md, parts.md, templates.md and themes.md", len(embedded))
+	if len(embedded) < 6 {
+		t.Fatalf("docs.go embeds %d docs, want guide.md, diagrams.md, parts.md, tasks.md, templates.md and themes.md", len(embedded))
 	}
 	for _, rel := range embedded {
 		path := "../../docs/" + rel

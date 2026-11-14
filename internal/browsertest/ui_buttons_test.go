@@ -34,9 +34,9 @@ func TestUIButtons(t *testing.T) { //nolint:paralleltest // the browser tests sh
 	if _, err := st.Edit("c", store.Edit{Project: &project}); err != nil {
 		t.Fatal(err)
 	}
-	s.floe(t, "work", "a", "--task", "#1", "--title", "one", "--state", "done", "--category", "design")
-	s.floe(t, "work", "--project", project, "--task", "#2", "--title", "no page")
-	s.floe(t, "work", "--project", project, "--task", "#3", "--title", "a child", "--parent", "#1")
+	s.floe(t, "task", "--slug", "a", "--task", "#1", "--title", "one", "--state", "done", "--category", "design")
+	s.floe(t, "task", "--project", project, "--task", "#2", "--title", "no page")
+	s.floe(t, "task", "--project", project, "--task", "#3", "--title", "a child", "--parent", "#1")
 
 	// The box that clips a button is its nearest ancestor that does not show what overflows it, or the screen; what it shows of
 	// itself is measured, not all it scrolls over

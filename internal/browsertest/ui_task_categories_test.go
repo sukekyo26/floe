@@ -36,7 +36,7 @@ func TestUITaskCategories(t *testing.T) { //nolint:paralleltest // the browser t
 			t.Fatal(err)
 		}
 		if task, category, ok := strings.Cut(p[2], " "); ok {
-			args := []string{"work", p[0], "--task", task}
+			args := []string{"task", "--slug", p[0], "--task", task}
 			if category != "" {
 				args = append(args, "--category", category)
 			}
@@ -46,7 +46,7 @@ func TestUITaskCategories(t *testing.T) { //nolint:paralleltest // the browser t
 	if _, err := st.Edit("old-a", store.Edit{Archived: &yes}); err != nil {
 		t.Fatal(err)
 	}
-	s.floe(t, "work", "--project", "proj", "--task", "S300", "--title", "Categories", "--categories", "案,実装,リリース,レビュー")
+	s.floe(t, "task", "--project", "proj", "--task", "S300", "--title", "Categories", "--categories", "案,実装,リリース,レビュー")
 	// G2 has no row, as a hand edit leaves it: its page says it, and no task is listed of it
 	handWork(t, st, "g-a", "proj", false, "G2", "x", false)
 	b.size(1400, 900, false)
@@ -139,7 +139,7 @@ func TestUITaskCategories(t *testing.T) { //nolint:paralleltest // the browser t
 	// Written meanwhile: refused, nothing put, said in the modal; the second goes, of the rev read again.
 	b.eval("sent.length = 0")
 	add("リリース")
-	s.floe(t, "work", "--project", "proj", "--task", "S300", "--title", "Later")
+	s.floe(t, "task", "--project", "proj", "--task", "S300", "--title", "Later")
 	// Read again meanwhile, as a look does: the modal still sends the rev it opened at
 	b.eval("window.reread = false; readTasks().then((r) => { tasksRead = r; window.reread = true; })")
 	b.until("the tasks read again", "window.reread")
@@ -219,12 +219,12 @@ func TestUITaskCategories(t *testing.T) { //nolint:paralleltest // the browser t
 	// The way back after another wrote the task meanwhile: refused as stale and said, the page left off.
 	menu("review-a", "task-out", false)
 	b.until("off again", "!document.querySelector('#list li[data-slug=review-a]')")
-	s.floe(t, "work", "--project", "proj", "--task", "S300", "--title", "Categories again")
+	s.floe(t, "task", "--project", "proj", "--task", "S300", "--title", "Categories again")
 	b.eval("[...document.querySelectorAll('#toasts .undo')].at(-1).click()")
 	b.until("refused", "!document.getElementById('error').hidden")
 	say("back, stale", "document.getElementById('error').textContent")
 	out = append(out, "back, stale, written: "+work("review-a"))
-	s.floe(t, "work", "review-a", "--task", "S300", "--category", "レビュー")
+	s.floe(t, "task", "--slug", "review-a", "--task", "S300", "--category", "レビュー")
 	open("S300")
 	// From the keys: the focus on the way back; Escape leaves it on the row after the one taken off.
 	menu("plan-a", "task-out", true)

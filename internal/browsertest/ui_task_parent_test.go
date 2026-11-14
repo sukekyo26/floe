@@ -30,11 +30,11 @@ func TestUITaskParent(t *testing.T) { //nolint:paralleltest // the browser tests
 		if _, err := st.Edit(slug, store.Edit{Project: &project}); err != nil {
 			t.Fatal(err)
 		}
-		s.floe(t, append([]string{"work", slug}, args...)...)
+		s.floe(t, append([]string{"task", "--slug", slug}, args...)...)
 	}
 	task := func(args ...string) {
 		t.Helper()
-		s.floe(t, append([]string{"work", "--project", project, "--task"}, args...)...)
+		s.floe(t, append([]string{"task", "--project", project, "--task"}, args...)...)
 	}
 	page("p1", "--task", "#1", "--title", "free")
 	page("p2", "--task", "#2", "--title", "a child")
@@ -197,7 +197,7 @@ func TestUITaskParent(t *testing.T) { //nolint:paralleltest // the browser tests
 
 	// The reading failing: the task is off its parent, so the way back is there and works, and Escape still leaves the focus on a button.
 	const unread = "window.realFetch = window.fetch; window.fetch = (u, o) => (o?.method ? window.realFetch(u, o) : Promise.reject(new TypeError('down'))), 1"
-	s.floe(t, "work", "--project", "proj", "--task", "#1", "--parent", "#3")
+	s.floe(t, "task", "--project", "proj", "--task", "#1", "--parent", "#3")
 	open("#1")
 	b.eval(unread)
 	byKeys()
@@ -383,7 +383,7 @@ func TestUITaskFamilyCard(t *testing.T) { //nolint:paralleltest // the browser t
 	const longTitle = "move the payments to the new provider, running both until the old contract ends"
 	task := func(args ...string) {
 		t.Helper()
-		s.floe(t, append([]string{"work", "--project", "proj", "--task"}, args...)...)
+		s.floe(t, append([]string{"task", "--project", "proj", "--task"}, args...)...)
 	}
 	task("#1", "--title", "up")
 	task("#2", "--title", "two", "--state", "doing", "--parent", "#1")

@@ -161,8 +161,8 @@ func TestUIRowActions(t *testing.T) { //nolint:paralleltest // the browser tests
 	for _, slug := range []string{"a", "e"} {
 		b.eval(`fetch('/api/pages/` + slug + `', { method: 'PATCH', headers: { 'Content-Type': 'application/json' }, body: '{"archived":false}' })`)
 	}
-	s.floe(t, "work", "a", "--task", "#1", "--category", "one")
-	s.floe(t, "work", "b", "--task", "#1", "--category", "two")
+	s.floe(t, "task", "--slug", "a", "--task", "#1", "--category", "one")
+	s.floe(t, "task", "--slug", "b", "--task", "#1", "--category", "two")
 	b.navigate("/tasks?project=one&task=%231")
 	b.until("the task's page", there("a")+" && "+there("b")+" && document.querySelector('#task-project .proj-name')")
 	say("the task's head", "document.querySelector('#task-project').textContent + ' ' + (getComputedStyle(document.querySelector('#task-project')).backgroundColor !== 'rgba(0, 0, 0, 0)')")

@@ -10,7 +10,7 @@ import (
 	"floe/internal/store"
 )
 
-// A page's menu pins it and sets its task and category, in the order floe work writes; the task's own fields are its page's (TestUITaskEdit), so
+// A page's menu pins it and sets its task and category, in the order floe task writes; the task's own fields are its page's (TestUITaskEdit), so
 // the dialog has none of its parent or URL; a name of no task is a new one; what is refused keeps the dialog open; off a task, the pin stays.
 // The page list's rows lead to the task and the task list.
 func TestUITaskSet(t *testing.T) { //nolint:paralleltest // the browser tests share one Chrome, one at a time
@@ -24,8 +24,8 @@ func TestUITaskSet(t *testing.T) { //nolint:paralleltest // the browser tests sh
 			t.Fatal(err)
 		}
 	}
-	s.floe(t, "work", "b", "--task", "#1", "--category", "design", "--url", "https://example.com/a/one")
-	s.floe(t, "work", "c", "--task", "#2", "--category", "build")
+	s.floe(t, "task", "--slug", "b", "--task", "#1", "--category", "design", "--url", "https://example.com/a/one")
+	s.floe(t, "task", "--slug", "c", "--task", "#2", "--category", "build")
 	b.size(1400, 800, false)
 	defer b.unsize()
 
@@ -114,7 +114,7 @@ func TestUITaskSet(t *testing.T) { //nolint:paralleltest // the browser tests sh
 	// A task written since the dialog opened: refused, and saved then, as the dialog shows it read again.
 	dialog("b")
 	say("a page of a task", fields)
-	s.floe(t, "work", "--task", "#1", "--project", "proj", "--url", "https://example.com/later")
+	s.floe(t, "task", "--task", "#1", "--project", "proj", "--url", "https://example.com/later")
 	b.eval("document.getElementById('set').requestSubmit()")
 	b.until("refused", "!document.getElementById('set-error').hidden")
 	say("written meanwhile", "document.getElementById('set-error').textContent")
@@ -175,8 +175,8 @@ func TestUITaskSet(t *testing.T) { //nolint:paralleltest // the browser tests sh
 	// As it opens, no suggestions over the fields; a suggestion pressed, as a person does, goes in and closes; a tag's too.
 	dialog("b")
 	say("as it opens", "document.getElementById('set-task-names').matches(':popover-open')")
-	s.floe(t, "work", "--task", "#1", "--project", "proj", "--remove-url", "https://example.com/later")
-	s.floe(t, "work", "--task", "#2", "--project", "proj", "--url", "https://example.com/a/two")
+	s.floe(t, "task", "--task", "#1", "--project", "proj", "--remove-url", "https://example.com/later")
+	s.floe(t, "task", "--task", "#2", "--project", "proj", "--url", "https://example.com/a/two")
 	b.eval("document.getElementById('set-dialog').close()")
 	b.navigate("/?project=proj")
 	b.until("the rows", "document.querySelector('#list li[data-slug=b]')")
@@ -266,10 +266,10 @@ func TestUITaskSet(t *testing.T) { //nolint:paralleltest // the browser tests sh
 	b.until("the refusal", "!document.getElementById('error').hidden")
 	say("refused, told", "document.getElementById('error').textContent")
 	b.eval("window.fetch = window.realFetch; showError('')")
-	s.floe(t, "work", "b", "--unpin")
+	s.floe(t, "task", "--slug", "b", "--unpin")
 
 	// From a page whole, which reads the tasks as it opens: a task written since is that task as written.
-	s.floe(t, "work", "b", "--task", "#1", "--category", "whole")
+	s.floe(t, "task", "--slug", "b", "--task", "#1", "--category", "whole")
 	b.navigate("/a/b/")
 	b.until("the bar", "document.querySelector('#frame-actions .task-set')")
 	b.eval("document.querySelector('#frame-actions .more').open = true; document.querySelector('#frame-actions .task-set').click()")
@@ -283,7 +283,7 @@ func TestUITaskSet(t *testing.T) { //nolint:paralleltest // the browser tests sh
 	say("on its own task", "document.querySelector('#list li[data-slug=b] .task-open').hidden + ' ' + document.querySelectorAll('#list .task-tag').length")
 
 	// The suggestions say what a task is in, cut to their box; put on a task, the toast says it too, and leads there.
-	s.floe(t, "work", "--task", "#5", "--project", "proj", "--title", strings.Repeat("A very long title ", 6), "--state", "done")
+	s.floe(t, "task", "--task", "#5", "--project", "proj", "--title", strings.Repeat("A very long title ", 6), "--state", "done")
 	b.navigate("/?project=proj")
 	b.until("the rows", "document.querySelector('#list li[data-slug=c]')")
 	for _, width := range []int64{1400, 400} {

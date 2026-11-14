@@ -19,9 +19,9 @@ func TestUITaskRev(t *testing.T) { //nolint:paralleltest // the browser tests sh
 	if _, err := st.Edit("pa", store.Edit{Project: &project}); err != nil {
 		t.Fatal(err)
 	}
-	s.floe(t, "work", "pa", "--task", "#130", "--state", "doing")
-	s.floe(t, "work", "--project", project, "--task", "#up", "--state", "doing")
-	s.floe(t, "work", "--project", project, "--task", "#kid", "--state", "doing", "--parent", "#up")
+	s.floe(t, "task", "--slug", "pa", "--task", "#130", "--state", "doing")
+	s.floe(t, "task", "--project", project, "--task", "#up", "--state", "doing")
+	s.floe(t, "task", "--project", project, "--task", "#kid", "--state", "doing", "--parent", "#up")
 
 	// The page's script: the looks stopped, every write to the store kept as sent; down fails every read, pageDown a page's write
 	const watch = `if (!window.realLoad) { window.realLoad = load; load = (polled) => (polled ? Promise.resolve() : realLoad(polled));
@@ -74,7 +74,7 @@ func TestUITaskRev(t *testing.T) { //nolint:paralleltest // the browser tests sh
 		return [sent.join(' ; '), tasksOf().find((x) => x.name === '#kid').parent || 'no parent', document.getElementById('error').hidden ? 'no error' : document.getElementById('error').textContent].join(' | '); })()`)
 
 	// The reads failing: each write is of the rev the one before it answered. The state twice, then the child off, back, and off again
-	s.floe(t, "work", "--project", project, "--task", "#kid", "--parent", "#up")
+	s.floe(t, "task", "--project", project, "--task", "#kid", "--parent", "#up")
 	open("#kid")
 	b.eval("down = true")
 	const twice = `(async () => { sent.length = 0; const sel = document.getElementById('task-state');
@@ -97,7 +97,7 @@ func TestUITaskRev(t *testing.T) { //nolint:paralleltest // the browser tests sh
 	b.eval("down = false; document.getElementById('toasts').replaceChildren()")
 
 	// The way back is of the screen as it was when taken off: a write since, its own state too, refuses it
-	s.floe(t, "work", "--project", project, "--task", "#kid", "--parent", "#up")
+	s.floe(t, "task", "--project", project, "--task", "#kid", "--parent", "#up")
 	open("#kid")
 	say("off, the state, back", `(async () => { sent.length = 0; showError('');
 		await unlinkTask(tasksOf().find((x) => x.name === '#kid'), '#up', false);
@@ -125,7 +125,7 @@ func TestUITaskRev(t *testing.T) { //nolint:paralleltest // the browser tests sh
 	b.until("the list", "items.some((a) => a.slug === 'pa')")
 	setOnce("the list")
 	// Written since and read by the page, the dialog showing what it wrote: refused
-	s.floe(t, "work", "--project", project, "--task", "#130", "--title", "another's")
+	s.floe(t, "task", "--project", project, "--task", "#130", "--title", "another's")
 	b.eval("(async () => { await realLoad(); return 'read'; })()")
 	say("the list, written since", setSave)
 	b.eval("document.getElementById('set-dialog').close()")

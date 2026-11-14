@@ -117,7 +117,7 @@ type Task struct {
 type Tasks map[string]map[string]Task
 
 // State is a state a task can be in: whether a task new or of no row is in it, whether the task list opens on it, and
-// whether a task in it is open, not yet done, which floe work tells (Open is for the CLI; the management page is not
+// whether a task in it is open, not yet done, which floe task tells (Open is for the CLI; the management page is not
 // given it).
 type State struct {
 	Name  string `json:"name"`

@@ -140,7 +140,7 @@ func imagePlaced(err error, file string, n server.NeededImage) error {
 	return placed
 }
 
-// projectGiven is where a project name comes from, of a page (publish) and of a task (floe work).
+// projectGiven is where a project name comes from, of a page (publish) and of a task (floe task).
 const projectGiven = "the project name (of the git remote, the repository's directory or the working directory)"
 
 // sentAt names where each field of a body was given, by its JSON pointer: a text in it that is no UTF-8 is told there.

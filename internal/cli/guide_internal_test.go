@@ -27,8 +27,10 @@ import (
 // guidePath is the guide for agents; a test of it failing means: fix docs/agents/guide.md.
 const guidePath = "../../docs/agents/guide.md"
 
+const taskGuidePath = "../../docs/agents/tasks.md"
+
 // commandDocs are the docs whose commands TestGuideCommands runs, each a doc floe prints.
-var commandDocs = []string{guidePath, "../../docs/agents/themes.md", "../../docs/agents/parts.md", "../../docs/agents/templates.md", "../../docs/agents/diagrams.md"}
+var commandDocs = []string{guidePath, taskGuidePath, "../../docs/agents/themes.md", "../../docs/agents/parts.md", "../../docs/agents/templates.md", "../../docs/agents/diagrams.md"}
 
 func readGuide(t *testing.T, path string) string {
 	t.Helper()
@@ -76,7 +78,7 @@ func runIn(env Env, args ...string) (int, string, string) {
 	return code, stdout.String(), stderr.String()
 }
 
-// floe diagram|part|template|theme guide print their docs as they are, the file and the embedded text alike, and take
+// floe diagram|part|task|template|theme guide print their docs as they are, the file and the embedded text alike, and take
 // no argument.
 func TestGuideDocs(t *testing.T) {
 	t.Parallel()
@@ -87,6 +89,7 @@ func TestGuideDocs(t *testing.T) {
 	}{
 		{"diagram", "diagrams.md", docs.DiagramGuide},
 		{"part", "parts.md", docs.PartGuide},
+		{"task", "tasks.md", docs.TaskGuide},
 		{"template", "templates.md", docs.TemplateGuide},
 		{"theme", "themes.md", docs.ThemeGuide},
 	} {
@@ -116,14 +119,14 @@ func TestGuidesInHelp(t *testing.T) {
 	}
 }
 
-// floe guide prints guide.md as it is when the task mode is on in settings.json, and without its Tasks section when it
-// is off, there is no settings.json, or no store can be had (HOME not absolute, no FLOE_DIR); a settings.json that
+// floe guide prints guide.md as it is when the task mode is on in settings.json, and without its Tasks section's Ask
+// after publishing when it is off, there is no settings.json, or no store can be had (HOME not absolute, no FLOE_DIR); a settings.json that
 // cannot be read, or a FLOE_DIR that cannot be used, is refused as floe theme default refuses it.
 func TestGuide(t *testing.T) {
 	t.Parallel()
 
 	whole := readGuide(t, guidePath)
-	off, err := kit.WithoutSection([]byte(whole), "Tasks")
+	off, err := kit.WithoutSection([]byte(whole), "Ask after publishing")
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -168,10 +171,10 @@ func TestGuide(t *testing.T) {
 }
 
 // placeholders are the words a command of the guide is run with for each <…> in it.
-var placeholders = map[string]string{"<template>": "report", "<part>": "note", "<kind>": "flow", "<command>": "check", "<word>": "alb", "<slug>": "db-choice", "<ID>": "#130", "<name>": "default", "<file>": "palette.css", "<look>": "rows", "<set>": "aws", "<zip>": "icons.zip"}
+var placeholders = map[string]string{"<template>": "report", "<part>": "note", "<kind>": "flow", "<command>": "check", "<word>": "alb", "<slug>": "db-choice", "<ID>": "#130", "<project>": "app", "<name>": "default", "<file>": "palette.css", "<look>": "rows", "<set>": "aws", "<zip>": "icons.zip"}
 
 // readOnly are the commands a test runs as the guide writes them: they read, write nothing and ask no server.
-var readOnly = [][]string{{"guide"}, {"template"}, {"part", "guide"}, {"part", "list"}, {"part", "show"}, {"part", "check"}, {"diagram", "example"}, {"diagram", "guide"}, {"theme", "default"}, {"theme", "show"}, {"theme", "list"}, {"theme", "check"}}
+var readOnly = [][]string{{"guide"}, {"task", "guide"}, {"template"}, {"part", "guide"}, {"part", "list"}, {"part", "show"}, {"part", "check"}, {"diagram", "example"}, {"diagram", "guide"}, {"theme", "default"}, {"theme", "show"}, {"theme", "list"}, {"theme", "check"}}
 
 // Each floe command the docs of commandDocs name is one floe reads, its flags too; those that only read run and end
 // well (themes.md names floe's themes' files, which this keeps real).
@@ -271,8 +274,8 @@ func TestGuideMistakes(t *testing.T) {
 	}
 }
 
-// The floe words the guide quotes outside its blocks are floe's: the head of a warning, where a mistake is, and the
-// lines publish and work print.
+// The floe words the guide and floe task guide quote outside their blocks are floe's: the head of a warning, where a
+// mistake is, and the lines publish and task print.
 func TestGuideQuotes(t *testing.T) {
 	t.Parallel()
 
@@ -287,14 +290,14 @@ func TestGuideQuotes(t *testing.T) {
 		"`file:`":                            strings.HasPrefix(whole, "f.yaml: "),
 		"`page in project app`":              english.Msg("cli_page_project", inProject("app")) == "page in project app",
 		"`page in project app, off task #9`": english.Msg("cli_page_off_task", inProject("app"), "#9") == "page in project app, off task #9",
-		"`page <slug>: no task`":             english.Msg("cli_work_page", "<slug>", english.Msg("cli_work_page_off")) == "page <slug>: no task",
+		"`page <slug>: no task`":             english.Msg("cli_task_page", "<slug>", english.Msg("cli_task_page_off")) == "page <slug>: no task",
 		"`slug \"db-choice\" was published from …: choose another slug`": english.Msg("store_slug_placed_alone", "db-choice", "…") == `slug "db-choice" was published from …: choose another slug`,
 	} {
 		if !ok {
 			t.Errorf("floe no longer prints %s as the guide says: %q %q %q", quote, placed, whole, warned)
 		}
-		if !strings.Contains(readGuide(t, guidePath), quote) {
-			t.Errorf("%s does not say %s", guidePath, quote)
+		if !strings.Contains(readGuide(t, guidePath)+readGuide(t, taskGuidePath), quote) {
+			t.Errorf("%s and %s do not say %s", guidePath, taskGuidePath, quote)
 		}
 	}
 }

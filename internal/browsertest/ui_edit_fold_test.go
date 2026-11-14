@@ -103,7 +103,7 @@ func TestUIEditFold(t *testing.T) { //nolint:paralleltest // the browser tests s
 	b.until("closed", "!document.getElementById('edit-dialog').open")
 
 	// A page moved to another project is off its task, which is of its project: said so as it saves.
-	s.floe(t, "work", "a", "--task", "#1")
+	s.floe(t, "task", "--slug", "a", "--task", "#1")
 	b.navigate("/")
 	b.until("the rows", "document.querySelector('#list li[data-slug=a]')")
 	open()

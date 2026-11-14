@@ -36,9 +36,9 @@ func TestUIRowCards(t *testing.T) { //nolint:paralleltest // the browser tests s
 		if _, err := st.Edit(p[0], store.Edit{Project: ptrTo("demo")}); err != nil {
 			t.Fatal(err)
 		}
-		s.floe(t, "work", p[0], "--task", "S1", "--category", p[1])
+		s.floe(t, "task", "--slug", p[0], "--task", "S1", "--category", p[1])
 	}
-	s.floe(t, "work", "--project", "demo", "--task", "S2", "--title", "No pages")
+	s.floe(t, "task", "--project", "demo", "--task", "S2", "--title", "No pages")
 	b.size(1400, 900, false)
 	defer b.unsize()
 

@@ -4106,8 +4106,8 @@
     $('kin-dialog').showModal();
   }
   // With no task anywhere there is no project on the screen to make it in: it is asked, of the projects the pages have, so that the name is
-  // the store's (taskProject) and not what was typed. One no page has is for floe work --project
-  // LIMIT: the first task made, the other projects are not on the screen to make one in: a page's "Set task" makes one in its project and floe work
+  // the store's (taskProject) and not what was typed. One no page has is for floe task --project
+  // LIMIT: the first task made, the other projects are not on the screen to make one in: a page's "Set task" makes one in its project and floe task
   // --project in any. Ask the project every time if that comes to trouble someone
   function openTaskAdd() {
     if (anyTasks()) {
@@ -4188,7 +4188,7 @@
     }
   }
 
-  // Archives the task, or gives it back, as drawn (rev): the task alone, as floe work --state writes it, its pages archived on their own. A
+  // Archives the task, or gives it back, as drawn (rev): the task alone, as floe task --state writes it, its pages archived on their own. A
   // second press of a double one would land on the button turned the other way
   // LIMIT: given back it is done, whatever it was: what it was before would be a state more to keep
   let archivingTask = false;

@@ -44,17 +44,16 @@ sections:
 
 ## Tasks
 
-The user keeps a task list: tasks of a project, each with a state (todo, doing, done, archived), links (an issue, a pull request) and pages, grouped by category.
+When the user asks you to put a page on a task, or to read or change their tasks, read `floe task guide` first: it says how.
 
-- When `floe publish` prints the page's project (`page in project app`), ask the user whether to put the page on a task, in one question offering the tasks `floe work` prints, a new task, and none (`Put this page on a task? #12 Login screen / #15 Price table / a new task / none`). With no task open, offer a new task and none.
-- Put the page where the user answers: `floe work <slug> --task <ID>`, with `--title '<title>'` for a new task, whose ID and title the user gives.
+### Ask after publishing
+
+The user keeps a task list, and wants each new page put on a task.
+
+- When `floe publish` prints the page's project (`page in project app`), ask the user whether to put the page on a task, in one question offering the tasks `floe task --project <project>` prints for that project, a new task, and none (`Put this page on a task? #12 Login screen / #15 Price table / a new task / none`). With no task open, offer a new task and none.
+- Put the page where the user answers, without reading `floe task guide`: `floe task --slug <slug> --task "<ID>"`, with `--title '<title>'` for a new task, whose ID and title the user gives.
 - When the user says not to use tasks, do not ask again in the conversation.
 - When your instructions (a CLAUDE.md, a skill) name the task a page goes on, put it there without asking.
-- Change a task (its state, title, links or parent), or move a page to another task, only when the user asks; `floe work --help` says how.
-
-- `floe work <slug>` prints the page's task with the task's project, its category and whether it is pinned, and changes nothing. A page on no task prints `page <slug>: no task`, without its project: `floe publish` tells the project.
-- `floe work` prints the todo and doing tasks of the working directory's project, the latest change first, a line each. `--project` names another project (`--project ""` for pages of no project).
-- Do not give `--category`, or change a page's category, unless the user asks: the user decides where a page stands among its task's pages.
 
 ## Themes
 

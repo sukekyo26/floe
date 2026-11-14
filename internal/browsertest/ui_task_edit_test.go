@@ -25,11 +25,11 @@ func TestUITaskEdit(t *testing.T) { //nolint:paralleltest // the browser tests s
 			t.Fatal(err)
 		}
 		if p[1] != "" {
-			s.floe(t, "work", p[0], "--task", "S300", "--category", p[1])
+			s.floe(t, "task", "--slug", p[0], "--task", "S300", "--category", p[1])
 		}
 	}
-	s.floe(t, "work", "--project", "proj", "--task", "S300", "--title", "Edit the task", "--url", "https://example.com/489", "--categories", "案,設計,実装,リリース,レビュー")
-	s.floe(t, "work", "gone-a", "--task", "G1", "--category", "x")
+	s.floe(t, "task", "--project", "proj", "--task", "S300", "--title", "Edit the task", "--url", "https://example.com/489", "--categories", "案,設計,実装,リリース,レビュー")
+	s.floe(t, "task", "--slug", "gone-a", "--task", "G1", "--category", "x")
 	b.size(1400, 900, false)
 	defer b.unsize()
 
@@ -328,7 +328,7 @@ func TestUITaskEdit(t *testing.T) { //nolint:paralleltest // the browser tests s
 	b.until("no links", "document.getElementById('task-link').hidden && document.getElementById('task-link').getClientRects().length === 0")
 	// Opened over the task drawn before the tasks were read again: its fields and rev are of the one read now, not of what was drawn.
 	b.eval("window.drawnTask = tasksOf().find((x) => x.name === 'S300')")
-	s.floe(t, "work", "--project", "proj", "--task", "S300", "--title", "Later")
+	s.floe(t, "task", "--project", "proj", "--task", "S300", "--title", "Later")
 	b.eval("window.reread = false; readTasks().then((r) => { tasksRead = r; window.reread = true; })")
 	b.until("the tasks read again", "window.reread")
 	b.eval("openTaskEdit(drawnTask)")
@@ -339,7 +339,7 @@ func TestUITaskEdit(t *testing.T) { //nolint:paralleltest // the browser tests s
 
 	// Stale: what was changed stays, the rest is read again, and the second save sends the change alone.
 	open("S300")
-	s.floe(t, "work", "--project", "proj", "--task", "S300", "--url", "https://example.com/new")
+	s.floe(t, "task", "--project", "proj", "--task", "S300", "--url", "https://example.com/new")
 	field("edit-task-title", "Typed")
 	save("stale")
 	say("stale", fields+" + ' / ' + "+errorText)
@@ -350,7 +350,7 @@ func TestUITaskEdit(t *testing.T) { //nolint:paralleltest // the browser tests s
 	// URLs changed elsewhere meanwhile: the one added there is kept, the one taken off there stays off, and only the person's own is sent.
 	open("S300")
 	addURL("https://example.com/mine")
-	s.floe(t, "work", "--project", "proj", "--task", "S300", "--url", "https://example.com/theirs", "--remove-url", "https://example.com/new")
+	s.floe(t, "task", "--project", "proj", "--task", "S300", "--url", "https://example.com/theirs", "--remove-url", "https://example.com/new")
 	save("stale URLs")
 	say("stale URLs", urls)
 	save("saved the URLs again")
@@ -360,7 +360,7 @@ func TestUITaskEdit(t *testing.T) { //nolint:paralleltest // the browser tests s
 	// Reordered while a category of no page was taken off: the order stays, without it.
 	open("S300")
 	press("実装", "down")
-	s.floe(t, "work", "--project", "proj", "--task", "S300", "--categories", "案,設計,実装,レビュー")
+	s.floe(t, "task", "--project", "proj", "--task", "S300", "--categories", "案,設計,実装,レビュー")
 	save("stale order")
 	say("stale order", categories)
 	save("saved the order again")
@@ -369,8 +369,8 @@ func TestUITaskEdit(t *testing.T) { //nolint:paralleltest // the browser tests s
 
 	// Removed meanwhile: not made again.
 	open("G1")
-	s.floe(t, "work", "gone-a", "--clear")
-	s.floe(t, "work", "--project", "proj", "--task", "G1", "--forget")
+	s.floe(t, "task", "--slug", "gone-a", "--clear")
+	s.floe(t, "task", "--project", "proj", "--task", "G1", "--forget")
 	field("edit-task-title", "Again")
 	save("gone")
 	say("gone", errorText+" + ' / ' + document.getElementById('edit-task-submit').disabled")

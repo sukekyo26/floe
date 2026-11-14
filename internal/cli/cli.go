@@ -118,7 +118,7 @@ func usage(validate cobra.PositionalArgs) cobra.PositionalArgs {
 // english is the language of the command line, whatever the environment's: an agent reads it.
 var english = i18n.EnglishCatalog()
 
-// inProject is a project of tasks.json (ProjectKey) as floe work and floe publish say it.
+// inProject is a project of tasks.json (ProjectKey) as floe task and floe publish say it.
 func inProject(key string) string {
 	if key == store.ProjectKey("") {
 		return english.Msg("cli_no_project")
@@ -161,8 +161,8 @@ that points your agent to it (floe skill install --help lists the agents).`,
 		a.archiveCmd(), a.checkCmd(), a.diagramCmd(),
 		a.guideCmd(),
 		a.iconsCmd(), a.listCmd(), a.partCmd(), a.publishCmd(),
-		a.rebuildCmd(), a.renderCmd(), a.rmCmd(), a.serveCmd(), a.skillCmd(), a.stopCmd(), a.tagCmd(), a.templateCmd(),
-		a.themeCmd(), a.workCmd(),
+		a.rebuildCmd(), a.renderCmd(), a.rmCmd(), a.serveCmd(), a.skillCmd(), a.stopCmd(), a.tagCmd(), a.taskCmd(),
+		a.templateCmd(), a.themeCmd(),
 	)
 	// cobra adds these as it runs: here, so that readable finds them, and their arguments are wrapped below.
 	root.InitDefaultHelpCmd()

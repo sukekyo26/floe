@@ -47,7 +47,7 @@ func TestUITaskPage(t *testing.T) { //nolint:paralleltest // the browser tests s
 		if _, err := st.Edit(slug, store.Edit{Project: &project}); err != nil {
 			t.Fatal(err)
 		}
-		s.floe(t, append([]string{"work", slug}, args...)...)
+		s.floe(t, append([]string{"task", "--slug", slug}, args...)...)
 	}
 	page("c1", "--task", "#128", "--state", "doing")
 	page("n1", "--task", "#130", "--state", "doing")
@@ -59,7 +59,7 @@ func TestUITaskPage(t *testing.T) { //nolint:paralleltest // the browser tests s
 	page("p1", "--pin")
 	page("p2", "--pin")
 	page("loose", "--pin")
-	s.floe(t, "work", "loose", "--unpin")
+	s.floe(t, "task", "--slug", "loose", "--unpin")
 	s.write(t, "fold/one.html", "<title>one</title><p>one</p>")
 	s.floe(t, "publish", "--link", filepath.Join(s.Env["HOME"], "fold"), "--slug", "fold")
 	if _, err := st.Edit("fold", store.Edit{Project: ptrTo("proj")}); err != nil {
@@ -68,9 +68,9 @@ func TestUITaskPage(t *testing.T) { //nolint:paralleltest // the browser tests s
 	if _, err := st.Work(store.WorkWrite{Slugs: []string{"fold"}, Task: ptrTo("#1")}); err != nil {
 		t.Fatal(err)
 	}
-	s.floe(t, "work", "--task", "#1", "--project", "proj", "--state", "done")
-	s.floe(t, "work", "--task", "#130", "--project", "proj", "--categories", "design,build,review,nothing")
-	s.floe(t, "work", "--task", "#99", "--project", "proj", "--state", "todo")
+	s.floe(t, "task", "--task", "#1", "--project", "proj", "--state", "done")
+	s.floe(t, "task", "--task", "#130", "--project", "proj", "--categories", "design,build,review,nothing")
+	s.floe(t, "task", "--task", "#99", "--project", "proj", "--state", "todo")
 
 	var out []string
 	say := func(what, expr string) {
@@ -211,16 +211,16 @@ func TestUITaskPage(t *testing.T) { //nolint:paralleltest // the browser tests s
 	state := b.rect("document.getElementById('task-state')")
 	b.click(state.X+state.Width/2, state.Y+state.Height/2)
 	b.until("the choices", "document.getElementById('task-state').matches(':open')")
-	s.floe(t, "work", "--task", "#142", "--project", "proj", "--state", "done")
+	s.floe(t, "task", "--task", "#142", "--project", "proj", "--state", "done")
 	b.until("a look at the tasks", "tasksRead.raw.includes('done') && tasksRead.tasks.proj['#142'].state === 'done'")
 	say("while open", "document.getElementById('task-state').value")
 	b.pressKey("\x1b")
 	b.until("the choices closed", "!document.getElementById('task-state').matches(':open')")
 	b.until("the state drawn", "document.getElementById('task-state').value === 'done'")
-	s.floe(t, "work", "--task", "#142", "--project", "proj", "--state", "doing")
+	s.floe(t, "task", "--task", "#142", "--project", "proj", "--state", "doing")
 
 	// A task of no pages is removed by two presses, its name and project whatever they hold.
-	s.floe(t, "work", "--task", "it's $(touch made)", "--project", "", "--state", "todo")
+	s.floe(t, "task", "--task", "it's $(touch made)", "--project", "", "--state", "todo")
 	b.navigate("/tasks?project=%2F&task=" + url.QueryEscape("it's $(touch made)"))
 	b.until("no pages", "!document.getElementById('task-none').hidden")
 	for range 2 {
@@ -356,8 +356,8 @@ func TestUITaskUp(t *testing.T) { //nolint:paralleltest // the browser tests sha
 			t.Fatal(err)
 		}
 	}
-	s.floe(t, "work", "a", "b", "--task", "#1", "--state", "todo")
-	s.floe(t, "work", "c", "--task", "#2", "--state", "done")
+	s.floe(t, "task", "--slug", "a", "--slug", "b", "--task", "#1", "--state", "todo")
+	s.floe(t, "task", "--slug", "c", "--task", "#2", "--state", "done")
 	b.size(1400, 800, false)
 	defer b.unsize()
 
@@ -410,11 +410,11 @@ func TestUITaskUp(t *testing.T) { //nolint:paralleltest // the browser tests sha
 	b.until("the focus", "document.activeElement.closest('#list')")
 	out = append(out, "on it: "+b.eval("location.search + ' ' + document.activeElement.querySelector('.tname').textContent"))
 	// Changed elsewhere, as it is read.
-	s.floe(t, "work", "--task", "#1", "--project", "proj", "--state", "todo")
+	s.floe(t, "task", "--task", "#1", "--project", "proj", "--state", "todo")
 	b.navigate("/tasks?project=proj&task=%231")
 	b.until("the task's page", task1)
 	say("changed elsewhere")
-	s.floe(t, "work", "--task", "#1", "--project", "proj", "--state", "doing")
+	s.floe(t, "task", "--task", "#1", "--project", "proj", "--state", "doing")
 	b.until("read again", up+" === '/tasks?project=proj'")
 	say("changed elsewhere, while open")
 
@@ -424,7 +424,7 @@ func TestUITaskUp(t *testing.T) { //nolint:paralleltest // the browser tests sha
 	say("the URL, of a task done")
 
 	// By a badge on the page list, and by the way in a page's menu.
-	s.floe(t, "work", "--task", "#1", "--project", "proj", "--state", "todo")
+	s.floe(t, "task", "--task", "#1", "--project", "proj", "--state", "todo")
 	b.navigate("/?project=proj")
 	b.until("the page list", "document.querySelector('#list li[data-slug=a] .task-tag')")
 	press("document.querySelector('#list li[data-slug=a] .task-tag')")
