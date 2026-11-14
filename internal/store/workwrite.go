@@ -40,7 +40,7 @@ type taskRef struct {
 
 // hasFields tells whether ed writes any field of a task: what may make a row, and needs the pages on a task.
 func (ed TaskEdit) hasFields() bool {
-	return ed.Title != nil || ed.State != nil || ed.URL != nil || ed.Categories != nil || ed.Parent != nil
+	return ed.Title != nil || ed.State != nil || ed.URLs != nil || ed.Categories != nil || ed.Parent != nil
 }
 
 // Work writes w under one lock: the pages are read, each one's work as it comes to be, and the tasks it comes to be on
@@ -50,7 +50,7 @@ func (ed TaskEdit) hasFields() bool {
 // LIMIT: a row written by hand keeps its Rev, and one forgotten and made again starts it again: a screen that read it
 // before may write over it. Count them apart if hand edits come to be done while screens are open
 func (s *Store) Work(w WorkWrite) (WorkWritten, error) {
-	w.URL = pastedURL(w.URL)
+	w.URLs = pastedURLs(w.URLs)
 	if err := checkTaskEdit(w.TaskEdit); err != nil {
 		return WorkWritten{}, err
 	}
@@ -199,6 +199,9 @@ func (s *Store) checkTask(rows map[string]Task, w WorkWrite, ref taskRef, pages 
 	if err != nil && (len(pages) == 0 || !errors.Is(err, ErrNotFound)) {
 		return err
 	}
+	if err := checkURLCount(rows[ref.name], ref.name, w.URLs); err != nil {
+		return err
+	}
 	if _, had := rows[ref.name]; !had && len(pages) == 0 && !w.hasFields() {
 		return ErrNotFound
 	}
@@ -206,6 +209,20 @@ func (s *Store) checkTask(rows map[string]Task, w WorkWrite, ref taskRef, pages 
 		return nil
 	}
 	return s.checkPaged(ref, categoriesOf(*w.Categories), pages)
+}
+
+// checkURLCount refuses ed when it adds URLs to the row t of the task name beyond maxURLs. A row over it already,
+// written by hand, still takes the other writes, and those that take URLs off.
+func checkURLCount(t Task, name string, ed *URLsEdit) error {
+	if ed == nil {
+		return nil
+	}
+	// Counted each once, as a write leaves them: a row written by hand may hold one twice
+	before, after := withURLs(t.URLs, URLsEdit{Add: nil, Remove: nil}), withURLs(t.URLs, *ed)
+	if len(after) > len(before) && len(after) > maxURLs {
+		return usererr.New("store_task_urls_max", name, len(after), maxURLs)
+	}
+	return nil
 }
 
 // checkPaged refuses categories written of the task ref that leave out a category another page has on it: the pages of
@@ -261,7 +278,9 @@ func (s *Store) writeWork(all Tasks, w WorkWrite, refs []taskRef, pages []workPa
 		}
 		was, had := rows[ref.name]
 		t := rowAfter(was, had, w, ref, pages)
-		wrote := !had || parentMade || !reflect.DeepEqual(t, was)
+		// Compared with the URLs as a write leaves them, so that a row written by hand ([] or one twice) is not taken
+		// to change, and its rev move, by a write that changes nothing of it
+		wrote := !had || parentMade || !reflect.DeepEqual(t.tidied(), was.tidied())
 		added := slices.DeleteFunc(slices.Clone(t.Categories), func(c string) bool {
 			return slices.Contains(was.Categories, c) || (w.Categories != nil && slices.Contains(categoriesOf(*w.Categories), c))
 		})

@@ -10,8 +10,8 @@ import (
 	"floe/internal/store"
 )
 
-// A task's page edits the task's own fields in one dialog: its title, URL and the order of its categories, sending what was changed alone,
-// with the rev it showed. The categories are reordered, their names kept, by buttons that keep the focus and say where a category went, or by a
+// A task's page edits the task's own fields in one dialog: its title, URLs and the order of its categories, sending what was changed alone,
+// with the rev it showed: of the URLs, those added and those taken off. The categories are reordered, their names kept, by buttons that keep the focus and say where a category went, or by a
 // drag of a grip that a screen without hover does not show. Refused as stale, what was changed stays and the rest is read again; a task
 // removed meanwhile is not made again.
 func TestUITaskEdit(t *testing.T) { //nolint:paralleltest // the browser tests share one Chrome, one at a time
@@ -48,10 +48,11 @@ func TestUITaskEdit(t *testing.T) { //nolint:paralleltest // the browser tests s
 		if !ok {
 			return "none"
 		}
-		return strconv.Itoa(r.Rev) + " " + r.Title + " " + r.URL + " [" + strings.Join(r.Categories, ",") + "]"
+		return strconv.Itoa(r.Rev) + " " + r.Title + " " + strings.Join(r.URLs, ",") + " [" + strings.Join(r.Categories, ",") + "]"
 	}
 	const categories = "[...document.querySelectorAll('#edit-categories li')].map((li) => li.querySelector('.category-name').textContent + (li.querySelector('.category-up').disabled ? '^' : '') + (li.querySelector('.category-down').disabled ? 'v' : '')).join(',')"
-	const fields = "[document.getElementById('edit-task-title').value, document.getElementById('edit-task-url').value].join(' / ') + ' / ' + " + categories
+	const urls = "[...document.querySelectorAll('#edit-urls li')].map((li) => li.dataset.url).join(',')"
+	const fields = "[document.getElementById('edit-task-title').value, " + urls + "].join(' / ') + ' / ' + " + categories
 	const errorText = "(document.getElementById('edit-task-error').hidden ? '-' : document.getElementById('edit-task-error').textContent)"
 	open := func(task string) {
 		t.Helper()
@@ -65,6 +66,17 @@ func TestUITaskEdit(t *testing.T) { //nolint:paralleltest // the browser tests s
 	field := func(id, value string) {
 		t.Helper()
 		b.eval("document.getElementById(" + js(id) + ").value = " + js(value) + "; document.getElementById(" + js(id) + ").dispatchEvent(new Event('input', { bubbles: true }))")
+	}
+	// Adds a URL as typed: the button, then the field and Enter
+	addURL := func(url string) {
+		t.Helper()
+		b.eval("document.getElementById('edit-url-plus').click()")
+		field("edit-url-new", url)
+		b.eval("document.getElementById('edit-url-new').dispatchEvent(new KeyboardEvent('keydown', { key: 'Enter', bubbles: true }))")
+	}
+	dropURL := func(url string) {
+		t.Helper()
+		b.eval("[...document.querySelectorAll('#edit-urls li')].find((li) => li.dataset.url === " + js(url) + ").querySelector('.url-drop').click()")
 	}
 	press := func(category, dir string) {
 		t.Helper()
@@ -172,9 +184,38 @@ func TestUITaskEdit(t *testing.T) { //nolint:paralleltest // the browser tests s
 	// A screen without hover shows no grip: the rule is there.
 	say("no grip without hover", "[...document.styleSheets].flatMap((sh) => [...sh.cssRules]).some((r) => r.media?.mediaText === '(hover: none)' && [...r.cssRules].some((x) => x.selectorText === '.category-order .category-grip' && x.style.display === 'none'))")
 
+	// URLs: one added and one taken off are sent as such, and the page shows a link of each. A URL there already, or typed and not added, is
+	// said, not sent.
+	open("S300")
+	addURL("https://example.com/pull/9")
+	addURL("https://example.com/pull/9")
+	say("added twice", urls+" + ' / ' + document.getElementById('edit-url-said').textContent")
+	field("edit-url-new", "https://example.com/left")
+	b.eval("document.getElementById('edit-task').requestSubmit()")
+	say("typed, not added", "document.getElementById('edit-url-new').validationMessage + ' / ' + document.getElementById('edit-task-dialog').open")
+	field("edit-url-new", "")
+	dropURL("https://example.com/489")
+	say("dropped", urls+" + ' / ' + document.activeElement.getAttribute('aria-label') + ' / ' + document.getElementById('edit-urls-said').textContent")
+	addURL("https://example.com/489")
+	save("saved the URLs")
+	closed("closed")
+	out = append(out, "urls: "+row("S300"))
+	say("sent the URLs", "sent.join(' ; ')")
+	b.until("the links", "document.querySelectorAll('#task-link a').length === 2")
+	say("links", "[...document.querySelectorAll('#task-link a')].map((a) => a.href).join(',')")
+	// At 10, one more is said and not added
+	open("S300")
+	for i := 3; i <= 11; i++ {
+		addURL("https://example.com/more/" + strconv.Itoa(i))
+	}
+	say("an 11th", "document.querySelectorAll('#edit-urls li').length + ' / ' + document.getElementById('edit-url-said').textContent + ' / ' + document.getElementById('edit-urls-hint').textContent")
+	b.pressKey(kb.Escape)
+	b.pressKey(kb.Escape)
+	closed("closed")
+
 	// Refused by the store: the dialog stays open with its words.
 	open("S300")
-	field("edit-task-url", "ftp://x")
+	addURL("ftp://x")
 	save("refused")
 	say("refused", errorText+" + ' / ' + document.getElementById('edit-task-dialog').open")
 	// Not reached: said as a save that failed, not as the browser's words alone.
@@ -182,7 +223,9 @@ func TestUITaskEdit(t *testing.T) { //nolint:paralleltest // the browser tests s
 	save("not reached")
 	say("not reached", errorText+" + ' / ' + document.getElementById('edit-task-dialog').open")
 	b.eval("window.fetch = window.cutFetch")
-	field("edit-task-url", "")
+	dropURL("ftp://x")
+	dropURL("https://example.com/pull/9")
+	dropURL("https://example.com/489")
 	field("edit-task-title", "")
 	save("saved empty")
 	closed("closed")
@@ -208,6 +251,16 @@ func TestUITaskEdit(t *testing.T) { //nolint:paralleltest // the browser tests s
 	closed("closed")
 	out = append(out, "again: "+row("S300"))
 	say("sent stale and again", "sent.join(' ; ')")
+	// URLs changed elsewhere meanwhile: the one added there is kept, the one taken off there stays off, and only the person's own is sent.
+	open("S300")
+	addURL("https://example.com/mine")
+	s.floe(t, "work", "--project", "proj", "--task", "S300", "--url", "https://example.com/theirs", "--remove-url", "https://example.com/new")
+	save("stale URLs")
+	say("stale URLs", urls)
+	save("saved the URLs again")
+	closed("closed")
+	out = append(out, "urls again: "+row("S300"))
+	say("sent the URLs again", "sent.join(' ; ')")
 	// Reordered while a category of no page was taken off: the order stays, without it.
 	open("S300")
 	press("実装", "down")
@@ -258,15 +311,25 @@ func TestUITaskEdit(t *testing.T) { //nolint:paralleltest // the browser tests s
 		"words dragged: 0 / リリース no page^,設計,レビュー,実装,案v",
 		"drag: 8 New title https://example.com/489 [リリース,設計,レビュー,実装,案]",
 		"no grip without hover: true",
+		"added twice: https://example.com/489,https://example.com/pull/9 / https://example.com/pull/9 is already among the URLs",
+		"typed, not added: https://example.com/left is not added yet: press Enter to add it, or empty the field / true",
+		"dropped: https://example.com/pull/9 / Take off https://example.com/pull/9 / Took off https://example.com/489",
+		"urls: 9 New title https://example.com/489,https://example.com/pull/9 [リリース,設計,レビュー,実装,案]",
+		`sent the URLs: {"taskProject":"proj","task":"S300","new":false,"rev":8,"urls":{"add":["https://example.com/pull/9"]}}`,
+		"links: https://example.com/489,https://example.com/pull/9",
+		"an 11th: 10 / A task holds 10 URLs at most: take one off first / http or https URLs, 10 at most",
 		`refused: Failed to save: "ftp://x" is not an http or https URL / true`,
 		"not reached: Failed to save: Failed to fetch / true",
-		"emptied: 9   [リリース,設計,レビュー,実装,案]",
-		"opened over the drawn task: Later / 10",
+		"emptied: 10   [リリース,設計,レビュー,実装,案]",
+		"opened over the drawn task: Later / 11",
 		"stale: Typed / https://example.com/new / リリース no page^,設計,レビュー,実装,案v / Failed to save: task S300 has changed since it was read; the tasks are read again, so check and save again",
-		"again: 12 Typed https://example.com/new [リリース,設計,レビュー,実装,案]",
-		`sent stale and again: {"taskProject":"proj","task":"S300","new":false,"rev":10,"title":"Typed"} ; {"taskProject":"proj","task":"S300","new":false,"rev":11,"title":"Typed"}`,
+		"again: 13 Typed https://example.com/new [リリース,設計,レビュー,実装,案]",
+		`sent stale and again: {"taskProject":"proj","task":"S300","new":false,"rev":11,"title":"Typed"} ; {"taskProject":"proj","task":"S300","new":false,"rev":12,"title":"Typed"}`,
+		"stale URLs: https://example.com/mine,https://example.com/theirs",
+		"urls again: 15 Typed https://example.com/theirs,https://example.com/mine [リリース,設計,レビュー,実装,案]",
+		`sent the URLs again: {"taskProject":"proj","task":"S300","new":false,"rev":13,"urls":{"add":["https://example.com/mine"]}} ; {"taskProject":"proj","task":"S300","new":false,"rev":14,"urls":{"add":["https://example.com/mine"]}}`,
 		"stale order: 設計^,レビュー,案,実装v",
-		"order again: 14 Typed https://example.com/new [設計,レビュー,案,実装]",
+		"order again: 17 Typed https://example.com/theirs,https://example.com/mine [設計,レビュー,案,実装]",
 		"gone: This task was deleted elsewhere: close this and look at the task list / true",
 		"gone, typed: This task was deleted elsewhere: close this and look at the task list",
 		"G1: none",

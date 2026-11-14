@@ -51,7 +51,7 @@ func TestUITaskSet(t *testing.T) { //nolint:paralleltest // the browser tests sh
 		names := make([]string, 0, 4)
 		for _, name := range []string{"#1", "#2", "#3"} {
 			if row, ok := all["proj"][name]; ok {
-				names = append(names, name+" "+row.State+" "+row.URL)
+				names = append(names, name+" "+row.State+" "+strings.Join(row.URLs, ","))
 			}
 		}
 		return strings.Join(names, "; ")
@@ -175,7 +175,7 @@ func TestUITaskSet(t *testing.T) { //nolint:paralleltest // the browser tests sh
 	// As it opens, no suggestions over the fields; a suggestion pressed, as a person does, goes in and closes; a tag's too.
 	dialog("b")
 	say("as it opens", "document.getElementById('set-task-names').matches(':popover-open')")
-	s.floe(t, "work", "--task", "#1", "--project", "proj", "--url", "https://example.com/a/one")
+	s.floe(t, "work", "--task", "#1", "--project", "proj", "--remove-url", "https://example.com/later")
 	s.floe(t, "work", "--task", "#2", "--project", "proj", "--url", "https://example.com/a/two")
 	b.eval("document.getElementById('set-dialog').close()")
 	b.navigate("/?project=proj")
@@ -349,14 +349,14 @@ new task: {"task":"#3","category":"first","pin":true}
 #1 todo https://example.com/a/one; #2 todo ; #3 todo 
 a page of a task: #1 / design / out true
 written meanwhile: Failed to save: task #1 has changed since it was read; the tasks are read again, so check and save again
-written meanwhile, saved: #1 todo https://example.com/later; #2 todo ; #3 todo 
+written meanwhile, saved: #1 todo https://example.com/a/one,https://example.com/later; #2 todo ; #3 todo 
 refused: true Failed to save: no
 an empty name: true true 0
 a name of spaces: true Write more than spaces 3 0
-the page refused: #1 todo https://example.com/later; #2 todo ; #3 todo  | {"task":"#2","category":"build"}
+the page refused: #1 todo https://example.com/a/one,https://example.com/later; #2 todo ; #3 todo  | {"task":"#2","category":"build"}
 saved again: {"task":"#2","category":"review"}
 off: {"pin":true}
-#1 todo https://example.com/later; #2 todo ; #3 todo 
+#1 todo https://example.com/a/one,https://example.com/later; #2 todo ; #3 todo 
 off, no pin: null
 as it opens: false
 a suggestion pressed: #2 / design / out true

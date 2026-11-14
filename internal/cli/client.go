@@ -127,8 +127,8 @@ const projectGiven = "the project name (of the git remote, the repository's dire
 var sentAt = map[string]string{
 	"/path": "argument 1", "/file": "argument 1", "/slug": "--slug", "/title": "--title", "/description": "--description",
 	"/theme": "--theme", "/tags/add": "--add", "/tags/remove": "--remove",
-	"/state": "--state", "/url": "--url", "/categories": "--categories", "/parent": "--parent",
-	"/category": "--category", "/task": "--task", "/slugs": "a slug",
+	"/state": "--state", "/urls/add": "--url", "/urls/remove": "--remove-url", "/categories": "--categories",
+	"/parent": "--parent", "/category": "--category", "/task": "--task", "/slugs": "a slug",
 	"/project":     projectGiven,
 	"/taskProject": projectGiven,
 	"/repo":        "the file's repository name (of the git remote or the repository's directory)",

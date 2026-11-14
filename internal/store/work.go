@@ -3,6 +3,7 @@ package store
 import (
 	"cmp"
 	"encoding/json"
+	jsonv2 "encoding/json/v2"
 	"errors"
 	"fmt"
 	"io/fs"
@@ -105,7 +106,7 @@ type Task struct {
 	Title      string   `json:"title,omitempty"`
 	State      string   `json:"state"`
 	At         string   `json:"at"`
-	URL        string   `json:"url,omitempty"`
+	URLs       []string `json:"urls,omitempty"`
 	Categories []string `json:"categories,omitempty"`
 	Parent     string   `json:"parent,omitempty"`
 	// Rev counts the writes of the row, which a screen sends back as what it read: 0 of no row.
@@ -156,12 +157,12 @@ func (all Tasks) Open(project string) []NamedTask {
 	return open
 }
 
-// TaskEdit is what a write changes of a task's row, each left as it is when nil, as the API sends it. An empty URL or
+// TaskEdit is what a write changes of a task's row, each left as it is when nil, as the API sends it. An empty
 // Categories takes it off.
 type TaskEdit struct {
 	Title      *string   `json:"title,omitzero"`
 	State      *string   `json:"state,omitzero"`
-	URL        *string   `json:"url,omitzero"`
+	URLs       *URLsEdit `json:"urls,omitzero"`
 	Categories *[]string `json:"categories,omitzero"`
 	// An empty Parent takes it off.
 	Parent *string `json:"parent,omitzero"`
@@ -174,6 +175,17 @@ type TaskEdit struct {
 	ParentNew   *bool   `json:"parentNew,omitzero"`
 	ParentTitle *string `json:"parentTitle,omitzero"`
 }
+
+// URLsEdit changes a task's URLs as TagsEdit does a page's tags: those in Remove are taken off, then those in Add put
+// on at the end, so that one in both stays on. Only the URLs a writer changed are sent, so that one another wrote
+// since it read the row stays.
+type URLsEdit struct {
+	Add    []string `json:"add,omitzero"`
+	Remove []string `json:"remove,omitzero"`
+}
+
+// maxURLs is the most URLs a write may bring a task to.
+const maxURLs = 10
 
 func validState(name string) bool {
 	return slices.ContainsFunc(States, func(s State) bool { return s.Name == name })
@@ -205,7 +217,7 @@ func (s *Store) tasksFile() string {
 // LIMIT: a parent written by hand that childrenOfTask does not count is not refused, unlike a state: the writes that
 // would mend it read through here, and the page shows such a task as of no parent. Tell of it if hand edits come to
 // hide it.
-// LIMIT: a key of a row floe does not know is lost at the next write. Keep them if tasks.json comes to be hand-edited.
+// A key it does not know is refused, as it would be lost at the next write.
 func (s *Store) ReadTasks() (Tasks, error) {
 	b, _, err := files.Read(s.tasksFile())
 	if errors.Is(err, fs.ErrNotExist) {
@@ -218,7 +230,7 @@ func (s *Store) ReadTasks() (Tasks, error) {
 		return usererr.NewAt(s.tasksFile(), 0, 0, "store_tasks_broken", fmt.Sprintf(format, args...))
 	}
 	var all Tasks
-	if err := json.Unmarshal(b, &all); err != nil {
+	if err := jsonv2.Unmarshal(b, &all, jsonv2.RejectUnknownMembers(true)); err != nil {
 		return nil, broken("%s", err.Error())
 	}
 	if all == nil {
@@ -229,18 +241,28 @@ func (s *Store) ReadTasks() (Tasks, error) {
 			return nil, broken("project %s holds null, not its tasks", project)
 		}
 		for name, t := range rows {
-			if !validState(t.State) {
-				return nil, broken("task %s of project %s has the state %q", name, project, t.State)
-			}
-			if timeOf(t.At).IsZero() {
-				return nil, broken("task %s of project %s has the time %q, not one like 2026-01-02T15:04:05Z", name, project, t.At)
-			}
-			if t.URL != "" && !validURL(t.URL) {
-				return nil, broken("task %s of project %s has the URL %q, not http or https", name, project, t.URL)
+			if what := t.unwritable(); what != "" {
+				return nil, broken("task %s of project %s has %s", name, project, what)
 			}
 		}
 	}
 	return all, nil
+}
+
+// unwritable says what of t no write may hold, "" for nothing.
+func (t Task) unwritable() string {
+	if !validState(t.State) {
+		return fmt.Sprintf("the state %q", t.State)
+	}
+	if timeOf(t.At).IsZero() {
+		return fmt.Sprintf("the time %q, not one like 2026-01-02T15:04:05Z", t.At)
+	}
+	for _, u := range t.URLs {
+		if !validURL(u) {
+			return fmt.Sprintf("the URL %q, not http or https", u)
+		}
+	}
+	return ""
 }
 
 func (s *Store) writeTasks(all Tasks) error {
@@ -278,8 +300,12 @@ func checkTaskEdit(ed TaskEdit) error {
 	if ed.State != nil && !validState(*ed.State) {
 		return usererr.New("store_task_state", *ed.State, StateNames())
 	}
-	if ed.URL != nil && *ed.URL != "" && !validURL(*ed.URL) {
-		return usererr.New("store_task_url", *ed.URL)
+	if ed.URLs != nil {
+		for _, u := range ed.URLs.Add {
+			if !validURL(u) {
+				return usererr.New("store_task_url", u)
+			}
+		}
 	}
 	if !parentFieldsMatch(ed) {
 		return usererr.New("store_parent_fields")
@@ -400,7 +426,7 @@ func checkSeen(project string, rows map[string]Task, name string, ed TaskEdit) e
 // newTaskRow is the row a task starts with: of the state New, from now.
 func newTaskRow() Task {
 	fresh := States[slices.IndexFunc(States, func(s State) bool { return s.New })]
-	return Task{Title: "", State: fresh.Name, At: Now(), URL: "", Categories: nil, Parent: "", Rev: 0}
+	return Task{Title: "", State: fresh.Name, At: Now(), URLs: nil, Categories: nil, Parent: "", Rev: 0}
 }
 
 // categoriesOf is categories as a task keeps them: each trimmed, without the empty and a name twice, in the order
@@ -416,14 +442,36 @@ func categoriesOf(categories []string) []string {
 	return kept
 }
 
-// pastedURL is a URL with the spaces round it gone, as one pasted has them. Of spaces alone it stays, as checkTaskEdit
-// refuses it: "" is what takes a URL off.
-func pastedURL(raw *string) *string {
-	if raw == nil || strings.TrimSpace(*raw) == "" {
-		return raw
+// tidied is t with its URLs as a write leaves them: each once, none for an empty list.
+func (t Task) tidied() Task {
+	t.URLs = withURLs(t.URLs, URLsEdit{Add: nil, Remove: nil})
+	return t
+}
+
+// pastedURLs is ed with the spaces round each URL gone, as pasted ones have them.
+func pastedURLs(ed *URLsEdit) *URLsEdit {
+	if ed == nil {
+		return nil
 	}
-	trimmed := strings.TrimSpace(*raw)
-	return &trimmed
+	trim := func(urls []string) []string {
+		out := make([]string, len(urls))
+		for i, u := range urls {
+			out[i] = strings.TrimSpace(u)
+		}
+		return out
+	}
+	return &URLsEdit{Add: trim(ed.Add), Remove: trim(ed.Remove)}
+}
+
+// withURLs is urls as ed changes them, in order and each once.
+func withURLs(urls []string, ed URLsEdit) []string {
+	var kept []string
+	for _, u := range slices.Concat(urls, ed.Add) {
+		if !slices.Contains(kept, u) && (!slices.Contains(ed.Remove, u) || slices.Contains(ed.Add, u)) {
+			kept = append(kept, u)
+		}
+	}
+	return kept
 }
 
 // TaskWritten is a task's row as Work left it, under the project (ProjectKey) and name tasks.json keys it by, which a
@@ -447,8 +495,8 @@ func (t Task) edited(ed TaskEdit) Task {
 	if ed.Title != nil {
 		t.Title = strings.TrimSpace(*ed.Title)
 	}
-	if ed.URL != nil {
-		t.URL = *ed.URL
+	if ed.URLs != nil {
+		t.URLs = withURLs(t.URLs, *ed.URLs)
 	}
 	if ed.Categories != nil {
 		t.Categories = categoriesOf(*ed.Categories)

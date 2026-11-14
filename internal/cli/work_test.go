@@ -11,6 +11,7 @@ import (
 	"strings"
 	"testing"
 
+	"floe/internal/i18n"
 	"floe/internal/store"
 )
 
@@ -121,7 +122,7 @@ func TestWorkCommand(t *testing.T) {
 	run(0, "work", "a", "b", "c", "--state", "done", "--url", "https://example.com/a/b", "--title", "T")
 	for _, task := range []struct{ project, name string }{{"p", "#1"}, {"p", "#2"}, {"q", "#1"}} {
 		got := tasks()[task.project][task.name]
-		if got.State != "done" || got.URL != "https://example.com/a/b" || got.Title != "T" {
+		if got.State != "done" || !slices.Equal(got.URLs, []string{"https://example.com/a/b"}) || got.Title != "T" {
 			t.Errorf("%v: %+v", task, got)
 		}
 	}
@@ -196,6 +197,9 @@ func TestWorkCommand(t *testing.T) {
 	}
 	if got := run(1, "work", "--task", "#4", "--url", "ftp://x/y"); got != "floe: \"ftp://x/y\" is not an http or https URL\n" {
 		t.Errorf("a URL of none: %q", got)
+	}
+	if got := run(1, "work", "--task", "#4", "--url", ""); got != "floe: "+i18n.New("en").Msg("store_task_url", "")+"\n" {
+		t.Errorf("an empty URL: %q", got)
 	}
 
 	// Forgotten once no page is on it; none, and one with a page, say so.
@@ -308,14 +312,14 @@ func TestWorkCommand(t *testing.T) {
 	if got := run(2, "work", "a", "--pin", "--unpin"); !strings.Contains(got, "run floe --help") {
 		t.Errorf("--pin --unpin: %q", got)
 	}
-	if got := run(2, "work", "--task", "#1", "--forget", "--state", "done"); !strings.Contains(got, "run floe --help") {
-		t.Errorf("--forget --state: %q", got)
-	}
-	if got := run(2, "work", "--task", "#1", "--forget", "--parent", "x"); !strings.Contains(got, "run floe --help") {
-		t.Errorf("--forget --parent: %q", got)
-	}
-	if got := run(2, "work", "a", "--clear", "--parent", "x"); !strings.Contains(got, "run floe --help") {
-		t.Errorf("--clear --parent: %q", got)
+	// Each flag that writes a task's field goes with neither --forget nor --clear
+	for _, flag := range []string{"--state", "--url", "--remove-url", "--title", "--categories", "--parent"} {
+		if got := run(2, "work", "--task", "#1", "--forget", flag, "x"); !strings.Contains(got, "run floe --help") {
+			t.Errorf("--forget %s: %q", flag, got)
+		}
+		if got := run(2, "work", "a", "--clear", flag, "x"); !strings.Contains(got, "run floe --help") {
+			t.Errorf("--clear %s: %q", flag, got)
+		}
 	}
 	// The names categories had before are no flags.
 	for _, flag := range []string{"--step", "--steps"} {
@@ -356,8 +360,12 @@ func TestWorkSays(t *testing.T) {
 	say("task t1 in project p: unchanged; title \"the task\"\n", "work", "--task", "t1", "--title", "the task")
 	say("task t1 in project p: changed; state doing, categories \"design,build\"\n",
 		"work", "--task", "t1", "--state", "doing", "--categories", "design, build, design")
-	say("task t2 in no project: made; url \"https://example.com/2\", no parent\n",
-		"work", "--task", "t2", "--project", "", "--url", " https://example.com/2 ", "--parent", "")
+	say("task t2 in no project: made; urls \"https://example.com/2\" \"https://example.com/3\", no parent\n",
+		"work", "--task", "t2", "--project", "", "--url", " https://example.com/2 ", "--url", "https://example.com/3", "--parent", "")
+	// --remove-url alone is a write of the task
+	say("task t2 in no project: changed; urls \"https://example.com/3\"\n",
+		"work", "--task", "t2", "--project", "", "--remove-url", "https://example.com/2")
+	say("task t2 in no project: changed; no urls\n", "work", "--task", "t2", "--project", "", "--remove-url", "https://example.com/3")
 	// The task named is written, with nothing of it to change; a category is the page's alone.
 	// A task of a row, named, with nothing of it to change, is not told; a category among its categories adds none.
 	say("page a: task t1 in project p, category \"design\"\n", "work", "a", "--task", "t1", "--category", "design")
@@ -437,6 +445,7 @@ func TestWorkNotUTF8(t *testing.T) {
 	}{
 		{dir, []string{"work", "a", "--task", "t1", "--category", bad}, "--category"},
 		{dir, []string{"work", "a", "--task", "t1", "--url", bad}, "--url"},
+		{dir, []string{"work", "--task", "t1", "--remove-url", bad}, "--remove-url"},
 		{dir, []string{"work", "a", "--task", "t1", "--categories", "x," + bad}, "--categories"},
 		{dir, []string{"work", "--task", "t1", "--parent", bad}, "--parent"},
 		{dir, []string{"work", "--task", "t1", "--state", bad}, "--state"},
@@ -648,7 +657,7 @@ func TestWorkListsOpenTasks(t *testing.T) {
 	env, dir := served(t)
 	hand := `{
   "p": {
-    "T1": {"state": "doing", "at": "2026-11-12T10:00:00+09:00", "title": "Fix login", "url": "https://example.com/1", "parent": "#1", "categories": ["a", "b"]},
+    "T1": {"state": "doing", "at": "2026-11-12T10:00:00+09:00", "title": "Fix login", "urls": ["https://example.com/1", "https://example.com/2"], "parent": "#1", "categories": ["a", "b"]},
     "T2": {"state": "todo", "at": "2026-11-12T09:30:00Z"},
     "T3": {"state": "todo", "at": "2026-11-12T09:30:00.500Z", "title": "Third"},
     "#1": {"state": "todo", "at": "2026-11-11T09:00:00Z"},
@@ -681,7 +690,7 @@ func TestWorkListsOpenTasks(t *testing.T) {
 		return lines
 	}
 	want := told("p", "T3", "T2", "T1", "#1", "#10", "#2", "B", "Z9", "a")
-	if !strings.Contains(want, `title "Fix login", url "https://example.com/1", categories "a,b", parent "#1"`) {
+	if !strings.Contains(want, `title "Fix login", urls "https://example.com/1" "https://example.com/2", categories "a,b", parent "#1"`) {
 		t.Fatalf("the lines to compare have no task with every field: %s", want)
 	}
 	if code, out, errs := runIn(dir, env, "work"); code != 0 || out != want || errs != "" {
