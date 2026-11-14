@@ -231,6 +231,8 @@ func TestThemeAboutKeys(t *testing.T) {
 
 // floe task and floe publish say a page taken off its task in the same words: what publish says of it holds what floe
 // task says, in each language.
+//
+//nolint:paralleltest // reads the global catalogs, which other tests swap
 func TestOffTaskWords(t *testing.T) {
 	for _, lang := range Langs() {
 		c := New(lang)

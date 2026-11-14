@@ -308,13 +308,18 @@ func (s *Store) applyChange(all Tasks, w TaskChange, refs []taskRef, pages []cha
 		if err := s.WriteMeta(p.slug, p.meta); err != nil {
 			return TaskChangeResult{}, err
 		}
-		edited := Edited{Slug: p.slug, TaskProject: p.ref.project, Task: p.meta.Task, OffTask: "", OffCategory: ""}
-		if p.was.Name != "" && p.was.Name != p.ref.name {
-			edited.OffTask, edited.OffCategory = p.was.Name, p.was.Category
-		}
-		out.Pages = append(out.Pages, edited)
+		out.Pages = append(out.Pages, p.edited())
 	}
 	return out, nil
+}
+
+// edited is the page p as written, with the task and category it was on when it left that task, for another or none.
+func (p changedPage) edited() Edited {
+	e := Edited{Slug: p.slug, TaskProject: p.ref.project, Task: p.meta.Task, OffTask: "", OffCategory: ""}
+	if p.was.Name != "" && p.was.Name != p.ref.name {
+		e.OffTask, e.OffCategory = p.was.Name, p.was.Category
+	}
+	return e
 }
 
 // rowAfter is the row of the task ref as w leaves it: was, or a new one when it had none, with w's fields, and the
