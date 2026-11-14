@@ -19,16 +19,16 @@ func TestUITaskRev(t *testing.T) { //nolint:paralleltest // the browser tests sh
 	if _, err := st.Edit("pa", store.Edit{Project: &project}); err != nil {
 		t.Fatal(err)
 	}
-	s.floe(t, "work", "pa", "--task", "#130", "--state", "doing")
-	s.floe(t, "work", "--project", project, "--task", "#up", "--state", "doing")
-	s.floe(t, "work", "--project", project, "--task", "#kid", "--state", "doing", "--parent", "#up")
+	s.floe(t, "task", "--slug", "pa", "--task", "#130", "--state", "doing")
+	s.floe(t, "task", "--project", project, "--task", "#up", "--state", "doing")
+	s.floe(t, "task", "--project", project, "--task", "#kid", "--state", "doing", "--parent", "#up")
 
 	// The page's script: the looks stopped, every write to the store kept as sent; down fails every read, pageDown a page's write
 	const watch = `if (!window.realLoad) { window.realLoad = load; load = (polled) => (polled ? Promise.resolve() : realLoad(polled));
 		window.sent = []; window.realFetch = fetch; window.down = false; window.pageDown = false;
 		fetch = (u, o) => {
 			if (!o?.method && down) return Promise.reject(new TypeError('down'));
-			if (o?.method === 'PATCH' && pageDown && String(u).startsWith('/api/work') && String(o.body).includes('"slugs"')) return Promise.resolve(new Response('no', { status: 500 }));
+			if (o?.method === 'PATCH' && pageDown && String(u).startsWith('/api/tasks') && String(o.body).includes('"slugs"')) return Promise.resolve(new Response('no', { status: 500 }));
 			if (o?.method === 'PATCH') sent.push(String(u).split('?')[0] + ' ' + o.body);
 			return realFetch(u, o);
 		}; } 'watched'`
@@ -49,7 +49,7 @@ func TestUITaskRev(t *testing.T) { //nolint:paralleltest // the browser tests sh
 
 	// Written elsewhere since it was drawn: refused, read again, said
 	open("#130")
-	b.eval(`(async () => (await realFetch('/api/work', { method: 'PATCH', headers: { 'content-type': 'application/json' }, body: '{"taskProject":"proj","task":"#130","state":"done"}' })).status)()`)
+	b.eval(`(async () => (await realFetch('/api/tasks', { method: 'PATCH', headers: { 'content-type': 'application/json' }, body: '{"taskProject":"proj","task":"#130","state":"done"}' })).status)()`)
 	if got, err := st.ReadTasks(); err != nil || got["proj"]["#130"].Rev != 2 {
 		t.Fatalf("written elsewhere: %+v, %v", got["proj"]["#130"], err)
 	}
@@ -74,7 +74,7 @@ func TestUITaskRev(t *testing.T) { //nolint:paralleltest // the browser tests sh
 		return [sent.join(' ; '), tasksOf().find((x) => x.name === '#kid').parent || 'no parent', document.getElementById('error').hidden ? 'no error' : document.getElementById('error').textContent].join(' | '); })()`)
 
 	// The reads failing: each write is of the rev the one before it answered. The state twice, then the child off, back, and off again
-	s.floe(t, "work", "--project", project, "--task", "#kid", "--parent", "#up")
+	s.floe(t, "task", "--project", project, "--task", "#kid", "--parent", "#up")
 	open("#kid")
 	b.eval("down = true")
 	const twice = `(async () => { sent.length = 0; const sel = document.getElementById('task-state');
@@ -97,7 +97,7 @@ func TestUITaskRev(t *testing.T) { //nolint:paralleltest // the browser tests sh
 	b.eval("down = false; document.getElementById('toasts').replaceChildren()")
 
 	// The way back is of the screen as it was when taken off: a write since, its own state too, refuses it
-	s.floe(t, "work", "--project", project, "--task", "#kid", "--parent", "#up")
+	s.floe(t, "task", "--project", project, "--task", "#kid", "--parent", "#up")
 	open("#kid")
 	say("off, the state, back", `(async () => { sent.length = 0; showError('');
 		await unlinkTask(tasksOf().find((x) => x.name === '#kid'), '#up', false);
@@ -107,10 +107,11 @@ func TestUITaskRev(t *testing.T) { //nolint:paralleltest // the browser tests sh
 		return document.getElementById('error').textContent; })()`)
 
 	// Set the task, its page's write refused: saving again is of the rev written, refused when another wrote it since, and else saved; a page
-	// whole, which reads the tasks only as the dialog opens, too
+	// whole, which reads the tasks only as the dialog opens, too. Moved from another task, it is asked first, and Yes answered
 	const setSave = `(async () => { const at = document.getElementById('set-error').textContent; const n = sent.length; document.getElementById('set').requestSubmit();
 		const end = Date.now() + 5000;
-		await new Promise((r) => { const look = () => (Date.now() < end && document.getElementById('set-dialog').open && document.getElementById('set-error').textContent === at ? setTimeout(look, 10) : r()); setTimeout(look, 10); });
+		const yes = () => { if (document.getElementById('move-dialog').open) document.getElementById('move-yes').click(); };
+		await new Promise((r) => { const look = () => (yes(), Date.now() < end && document.getElementById('set-dialog').open && document.getElementById('set-error').textContent === at ? setTimeout(look, 10) : r()); setTimeout(look, 10); });
 		return document.getElementById('set-dialog').open ? document.getElementById('set-error').textContent + (Date.now() >= end ? ' (stuck: ' + sent.slice(n).join(' ; ') + ')' : '') : 'saved'; })()`
 	setOnce := func(where string) {
 		t.Helper()
@@ -125,7 +126,7 @@ func TestUITaskRev(t *testing.T) { //nolint:paralleltest // the browser tests sh
 	b.until("the list", "items.some((a) => a.slug === 'pa')")
 	setOnce("the list")
 	// Written since and read by the page, the dialog showing what it wrote: refused
-	s.floe(t, "work", "--project", project, "--task", "#130", "--title", "another's")
+	s.floe(t, "task", "--project", project, "--task", "#130", "--title", "another's")
 	b.eval("(async () => { await realLoad(); return 'read'; })()")
 	say("the list, written since", setSave)
 	b.eval("document.getElementById('set-dialog').close()")
@@ -142,13 +143,13 @@ func TestUITaskRev(t *testing.T) { //nolint:paralleltest // the browser tests sh
 	say("whole, again", setSave)
 
 	check(t, "task revs", out, strings.Join([]string{
-		`written since: /api/work {"taskProject":"proj","task":"#130","new":false,"rev":1,"state":"todo"} | done | done | Failed to change the state: task #130 has changed since it was read`,
-		`archived: /api/work {"taskProject":"proj","task":"#130","new":false,"rev":2,"state":"archived"} | archived | pa as it was`,
-		`given back: /api/work {"taskProject":"proj","task":"#130","new":false,"rev":3,"state":"done"} | done | pa as it was`,
+		`written since: /api/tasks {"taskProject":"proj","task":"#130","new":false,"rev":1,"state":"todo"} | done | done | Failed to change the state: task #130 has changed since it was read`,
+		`archived: /api/tasks {"taskProject":"proj","task":"#130","new":false,"rev":2,"state":"archived"} | archived | pa as it was`,
+		`given back: /api/tasks {"taskProject":"proj","task":"#130","new":false,"rev":3,"state":"done"} | done | pa as it was`,
 		`no rev: none | Failed to change the state: the version of the task shown is not known; load the page again`,
-		`then off its parent: /api/work {"taskProject":"proj","task":"#kid","new":false,"rev":2,"parent":""} | no parent | no error`,
-		`reads failing, the state twice: /api/work {"taskProject":"proj","task":"#kid","new":false,"rev":4,"state":"done"} ; /api/work {"taskProject":"proj","task":"#kid","new":false,"rev":5,"state":"doing"} | doing`,
-		`reads failing, off, back, off: /api/work {"taskProject":"proj","task":"#kid","new":false,"rev":6,"parent":""} ; /api/work {"taskProject":"proj","task":"#kid","new":false,"rev":7,"parent":"#up","parentNew":false} ; /api/work {"taskProject":"proj","task":"#kid","new":false,"rev":8,"parent":""} | no parent`,
+		`then off its parent: /api/tasks {"taskProject":"proj","task":"#kid","new":false,"rev":2,"parent":""} | no parent | no error`,
+		`reads failing, the state twice: /api/tasks {"taskProject":"proj","task":"#kid","new":false,"rev":4,"state":"done"} ; /api/tasks {"taskProject":"proj","task":"#kid","new":false,"rev":5,"state":"doing"} | doing`,
+		`reads failing, off, back, off: /api/tasks {"taskProject":"proj","task":"#kid","new":false,"rev":6,"parent":""} ; /api/tasks {"taskProject":"proj","task":"#kid","new":false,"rev":7,"parent":"#up","parentNew":false} ; /api/tasks {"taskProject":"proj","task":"#kid","new":false,"rev":8,"parent":""} | no parent`,
 		`off, the state, back: Failed to save: task #kid has changed since it was read`,
 		`the list, the page refused: Failed to save: no`,
 		`the list, written since: Failed to save: task #130 has changed since it was read; the tasks are read again, so check and save again`,

@@ -4,6 +4,7 @@ import (
 	jsonv2 "encoding/json/v2"
 	"os"
 	"path/filepath"
+	"strings"
 	"testing"
 )
 
@@ -40,8 +41,9 @@ func TestThemeDefaultCommand(t *testing.T) {
 	v2 := jsonv2.Unmarshal(broken, new(struct {
 		Theme string `json:"theme"`
 	}))
-	want := filepath.Join(store, "settings.json") + ": " + v2.Error() + "\n"
-	if code, out, errs := runEnv(tmp, env, "theme", "default"); code != 1 || out != "" || errs != want {
+	// v2's words at the file, then how to mend it
+	want := filepath.Join(store, "settings.json") + ": " + v2.Error() + ": "
+	if code, out, errs := runEnv(tmp, env, "theme", "default"); code != 1 || out != "" || !strings.HasPrefix(errs, want) || !strings.Contains(errs, "management page's settings") {
 		t.Errorf("broken: %d %q %q", code, out, errs)
 	}
 }

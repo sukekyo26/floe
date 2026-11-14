@@ -40,17 +40,23 @@ sections:
 - When a page is new or its project changes (it had none, it replaced another file's page, or `--move-project` moved it), `floe publish` prints the project on stderr after the URL (`page in project app`). If it is not the name of the repository the page is about, move to that repository and publish again with `--move-project`, but not for a `--link` page (next item).
 - A `--link` page is in the project of the linked file's directory (for a folder, the folder itself), not of where `floe publish` runs; linking it again keeps that project, and `--move-project` does not go with `--link`. To begin with, link a file inside the repository the page is about.
 - A page in the wrong project, of any kind, can have its project changed on the management page, the only way for a `--link` page. Tell the user how: the page's `…` menu (on its row in the list, or over the page when it is open), Edit, open Slug and project, which is folded, type the project's name in Project, and Save. The screen is in the browser's language: in Japanese these are 編集, URL 名とプロジェクト, プロジェクト and 保存.
-- `--move-project` takes the page off its task, as a task is of its project, and says so (`page in project app, off task #9`); the task stays in the old project without the page. Tell the user, who decides whether to put the page on a task (*Tasks*). The user can also change the project on the management page, as the item above says.
+- `--move-project` takes the page off its task, as a task is of its project, and says so (`page in project app, off task #9`); the task stays in the old project without the page. Tell the user, who decides whether to put the page on a task. The user can also change the project on the management page, as the item above says.
+- `floe info <slug>` prints a page's project, task, data file and the rest floe keeps of it, a name, a tab and a value a line, an empty value for none, and changes nothing: run it to check the project of a page you did not just publish.
 - floe knows a page by its data file, not by the directory floe runs in: publish the same file again, from any directory and without `--slug`, and it replaces its page, even after the user renamed the page on the management page.
 - A slug MUST NOT be that of another file's page (`slug "db-choice" was published from …: choose another slug`): rename your file (`db-choice-2.yaml`) or give another `--slug`, and publish again.
 
 ## Tasks
 
-The user may put pages on the tasks of the task list, and group a task's pages by category. Change them only when the user asks; `floe work --help` says how.
+When the user asks you to put a page on a task, or to read or change their tasks, read `floe task guide` first: it says how.
 
-- `floe work <slug>` prints the page's task with the task's project, its category and whether it is pinned, and changes nothing. A page on no task prints `page <slug>: no task`, without its project: `floe publish` tells the project.
-- `floe work` prints the todo and doing tasks of the working directory's project, the latest change first, a line each. `--project` names another project (`--project ""` for pages of no project).
-- Do not give `--category`, or change a page's category, unless the user asks: the user decides where a page stands among its task's pages.
+### Ask after publishing
+
+The user keeps a task list, and wants each new page put on a task.
+
+- When `floe publish` prints the page's project (`page in project app`), after `--move-project` too (`page in project app, off task #9`), ask the user whether to put the page on a task, in one question offering the tasks `floe task --project <project>` prints for that project, a new task, and none (`Put this page on a task? #12 Login screen / #15 Price table / a new task / none`). With no task open, offer a new task and none.
+- Put the page where the user answers, without reading `floe task guide`: `floe task --slug <slug> --task "<ID>"`, the ID as `floe task` printed it, `#` and all (`--task "#12"`), with `--title '<title>'` for a new task, whose ID and title the user gives.
+- When the user says not to use tasks, do not ask again in the conversation.
+- When your instructions (a CLAUDE.md, a skill) name the task a page goes on, put it there without asking.
 
 ## Themes
 

@@ -252,13 +252,14 @@ func TestFailureWords(t *testing.T) {
 	}
 }
 
-// A dialog's close button says Cancel where a submit button saves what is typed, which closing throws away, and Close where nothing is.
+// A dialog's close button says Cancel where a submit button saves what is typed, which closing throws away, and Close where nothing is;
+// a question's says No.
 // The page is read as the server renders it, in each language.
 func TestDialogCloseWords(t *testing.T) {
 	t.Parallel()
 
 	want := []string{
-		"filter-dialog", "find", "add-page-dialog", "settings", "keys", "add-dialog", "edit-dialog", "set-dialog", "edit-task-dialog", "kin-dialog",
+		"filter-dialog", "find", "add-page-dialog", "settings", "keys", "add-dialog", "edit-dialog", "set-dialog", "move-dialog", "edit-task-dialog", "kin-dialog",
 		"tag-dialog",
 	}
 	for _, lang := range i18n.Langs() {
@@ -294,6 +295,9 @@ func TestDialogCloseWords(t *testing.T) {
 			word := c.Msg("ui_close")
 			if submit {
 				word = c.Msg("ui_cancel")
+			}
+			if id == "move-dialog" {
+				word = c.Msg("ui_no")
 			}
 			if !slices.Equal(closers, []string{word}) {
 				t.Errorf("%s %s: close buttons %q, want one %q", lang, id, closers, word)
@@ -409,7 +413,7 @@ func text(n *html.Node) string {
 }
 
 // The tasks' rows are asked of the server in one place each: read by readTasks, removed by forgetTask, and pages and tasks written by
-// writeWork (as every screen's write of a task or a page's work goes, its rev with it); the methods are the browser tests'. The set dialog
+// changeTasks (as every screen's write of a task or a page's task goes, its rev with it); the methods are the browser tests'. The set dialog
 // has no field of a task's own, which its page writes.
 func TestTaskRequests(t *testing.T) {
 	t.Parallel()
@@ -431,11 +435,11 @@ func TestTaskRequests(t *testing.T) {
 		slices.Sort(got)
 		return got
 	}
-	if got, want := namedIn("/api/tasks"), []string{"forgetTask", "readTasks"}; !slices.Equal(got, want) {
+	if got, want := namedIn("/api/tasks"), []string{"changeTasks", "forgetTask", "readTasks"}; !slices.Equal(got, want) {
 		t.Errorf("/api/tasks is named in %v, want %v once each", got, want)
 	}
-	if got, want := namedIn("/api/work"), []string{"writeWork"}; !slices.Equal(got, want) {
-		t.Errorf("/api/work is named in %v, want %v once", got, want)
+	if got := namedIn("/api/work"); len(got) > 0 {
+		t.Errorf("/api/work, which is no more, is named in %v", got)
 	}
 	for _, id := range []string{`id="set-parent"`, `id="set-url"`} {
 		if strings.Contains(pageSource, id) {

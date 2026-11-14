@@ -716,7 +716,26 @@
   #settings .modal-body { display: flex; flex-direction: column; max-height: calc(100dvh - 34px); }
   #settings .modal-body > * { flex: none; }
   #settings .theme-grid { flex: 0 1 auto; min-height: 0; }
-  #settings h3 { margin: 0; font-size: var(--text); }
+  /* The list of the settings and the task mode: no cards, so the modal is narrower */
+  #settings.narrow { width: min(40rem, calc(100% - 32px)); }
+  .settings-back { display: inline-flex; align-items: center; gap: 0.2rem; align-self: start; padding: 0; border: 0; background: none; color: var(--muted); font: inherit; font-size: var(--text-small); cursor: pointer; }
+  .settings-back:hover { color: var(--fg); }
+  .settings-back svg { width: 14px; height: 14px; }
+  #settings-title:focus { outline: none; }
+  /* The list: a card a part, its icon, "part: its value" over what it is, and › */
+  .settings-list { display: grid; gap: 0.6rem; }
+  .settings-list[hidden] { display: none; }
+  .settings-item { display: flex; align-items: center; gap: 0.9rem; min-height: 4.5rem; padding: 0.9rem 1rem; border: 1px solid var(--line); border-radius: var(--corner-menu); background: var(--frame-bg); box-shadow: var(--shadow-sm); font: inherit; color: inherit; text-align: left; cursor: pointer; }
+  .settings-item:hover { background: var(--hover); border-color: var(--faint); }
+  .settings-item > svg { width: 18px; height: 18px; flex: none; color: var(--muted); }
+  .settings-dot { display: grid; place-items: center; width: 2.4rem; height: 2.4rem; flex: none; border-radius: 50%; background: var(--subtle); }
+  .settings-dot svg { width: 18px; height: 18px; }
+  .settings-what { display: grid; gap: 0.15rem; flex: 1; min-width: 0; }
+  .settings-what b { font-size: var(--text); }
+  .settings-what small { color: var(--muted); font-size: var(--text-small); }
+  .mode-card { display: flex; align-items: flex-start; gap: 0.8rem; padding: 0.9rem 1rem; border: 1px solid var(--line); border-radius: var(--corner-menu); background: var(--frame-bg); cursor: pointer; }
+  .mode-card[hidden] { display: none; }
+  .mode-card input { width: 18px; height: 18px; margin: 0.15rem 0 0; flex: none; }
   .theme-now { margin: 0; font-size: var(--text-small); color: var(--muted); }
   .theme-now b { color: var(--fg); }
   .theme-now .gone, .theme-broken { color: var(--danger); font-weight: 600; }
@@ -816,6 +835,8 @@
   .category-plus-row .text { flex: 1; height: auto; border: 0; border-radius: 0; box-shadow: none; padding-inline: 0.6rem; }
   .category-plus-row .text:focus-visible { outline-offset: -2px; }
   .category-said { margin: 0; font-weight: 400; color: var(--danger); }
+  .url-order li { font-weight: 400; }
+  .url-order .category-name { font-family: var(--mono); }
   .dialog-actions { display: flex; flex-wrap: wrap; justify-content: flex-end; gap: 0.5rem; padding-top: 1rem; margin-top: 0.25rem; border-top: 1px solid var(--line); }
   /* Only the rows of the filters scroll, their foot in sight: the height a dialog may have, of its own rule in the browser */
   #filter-box { grid-template-rows: auto minmax(0, 1fr) auto; max-height: calc(100dvh - 6px - 2rem); }
@@ -986,9 +1007,13 @@
   li.unseen .tname { color: var(--fg); }
   .task-pages { white-space: nowrap; }
   /* Above the title's hit area, as the row's controls are. Gray: blue is what is unseen alone */
-  .xlink { position: relative; z-index: 1; display: inline-flex; align-items: center; gap: 0.2rem; color: var(--muted); text-decoration: underline; text-underline-offset: 2px; font: var(--text-label) var(--mono); white-space: nowrap; }
+  .xlink { position: relative; z-index: 1; display: inline-flex; align-items: flex-start; gap: 0.2rem; max-width: 100%; color: var(--muted); text-decoration: underline; text-underline-offset: 2px; font: var(--text-label) var(--mono); overflow-wrap: anywhere; }
   .xlink:hover { color: var(--fg); }
-  .xlink svg { width: 12px; height: 12px; flex: none; }
+  /* A task's URLs under its state, one a line, each whole as written: a long one wraps in its line, as an ellipsis
+     would hide what tells the site */
+  .task-links { display: grid; justify-items: start; gap: 0.2rem; margin-top: 0.35rem; min-width: 0; }
+  .task-links[hidden] { display: none; }
+  .xlink svg { width: 12px; height: 12px; flex: none; margin-top: 0.2em; }
   .pins { flex: none; display: flex; flex-wrap: wrap; align-items: center; gap: 0.4rem 0.5rem; padding: 0.6rem 1rem; background: var(--bg); border-bottom: 1px solid var(--line); font-size: var(--text-small); }
   .pins > h2 { margin: 0 0.4rem 0 0; font: 600 var(--text-label)/1.2 var(--body); color: var(--muted); white-space: nowrap; }
   #pin-list { display: contents; }
@@ -1119,9 +1144,9 @@
         <div class="tstate">
           <select class="ver-pick st" id="task-state" aria-label="{{.Msg "ui_task_state"}}"><button><selectedcontent></selectedcontent></button></select><span class="kid-state" id="task-archived" hidden>{{.Msg "ui_state_archived"}}</span>
           <time id="task-at"></time>
-          <span id="task-link"></span>
           <span class="proj" id="task-project"></span>
         </div>
+        <div class="task-links" id="task-link" hidden></div>
         <div class="family" id="task-family" hidden>
           <div class="family-part" id="task-up-part" hidden>
             <div class="family-head"><h3><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m14 9-5-5-5 5"/><path d="M20 20h-7a4 4 0 0 1-4-4V4"/></svg>{{.Msg "ui_task_parent"}}</h3><button type="button" class="btn add-open" id="task-parent-add" aria-label="{{.Msg "ui_up_add_named"}}" hidden><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true"><path d="M12 5v14M5 12h14"/></svg>{{.Msg "ui_task_child_add"}}</button><button type="button" class="btn add-open" id="task-parent-change" aria-label="{{.Msg "ui_up_change_named"}}" hidden><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4 20h4L19 9a2.8 2.8 0 0 0-4-4L4 16v4Zm9.5-13.5 4 4"/></svg>{{.Msg "ui_task_up_change"}}</button></div>
@@ -1268,13 +1293,20 @@
 <template id="add-page-row"><li role="option"><span class="lead"></span><span class="title"></span><span class="time"><time></time></span><span class="sub"></span></li></template>
 <dialog id="settings" aria-labelledby="settings-title">
   <form class="modal-body" id="settings-form">
-    <div class="modal-head"><svg class="page-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" hidden><path d="M12 3a9 9 0 1 0 0 18c.9 0 1.6-.7 1.6-1.6 0-.4-.2-.8-.4-1.1-.3-.3-.4-.7-.4-1.1 0-.9.7-1.6 1.6-1.6H16a5 5 0 0 0 5-5c0-4.1-4-7.6-9-7.6Z"/><circle cx="7.5" cy="10.5" r="1"/><circle cx="10.5" cy="7" r="1"/><circle cx="15" cy="7.5" r="1"/></svg><svg class="settings-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.7 1.7 0 0 0 .3 1.8l.1.1a2 2 0 1 1-2.8 2.8l-.1-.1a1.7 1.7 0 0 0-1.8-.3 1.7 1.7 0 0 0-1 1.5V21a2 2 0 1 1-4 0v-.1a1.7 1.7 0 0 0-1.1-1.5 1.7 1.7 0 0 0-1.8.3l-.1.1a2 2 0 1 1-2.8-2.8l.1-.1a1.7 1.7 0 0 0 .3-1.8 1.7 1.7 0 0 0-1.5-1H3a2 2 0 1 1 0-4h.1a1.7 1.7 0 0 0 1.5-1.1 1.7 1.7 0 0 0-.3-1.8l-.1-.1a2 2 0 1 1 2.8-2.8l.1.1a1.7 1.7 0 0 0 1.8.3H9a1.7 1.7 0 0 0 1-1.5V3a2 2 0 1 1 4 0v.1a1.7 1.7 0 0 0 1 1.5 1.7 1.7 0 0 0 1.8-.3l.1-.1a2 2 0 1 1 2.8 2.8l-.1.1a1.7 1.7 0 0 0-.3 1.8V9a1.7 1.7 0 0 0 1.5 1H21a2 2 0 1 1 0 4h-.1a1.7 1.7 0 0 0-1.5 1Z"/></svg><div><h2 id="settings-title">{{.Msg "ui_settings"}}</h2><p class="lead" id="theme-page" hidden></p></div></div>
-    <h3 id="theme-title">{{.Msg "ui_theme_default"}}</h3>
-    <p class="theme-now" id="theme-now"></p>
-    <div class="theme-grid" id="theme-grid" role="radiogroup" aria-labelledby="theme-title"></div>
+    <button type="button" class="settings-back" id="settings-back" aria-label="{{.Msg "ui_settings_back"}}" hidden><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m15 6-6 6 6 6"/></svg>{{.Msg "ui_settings"}}</button>
+    <div class="modal-head"><svg class="page-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" hidden><path d="M12 3a9 9 0 1 0 0 18c.9 0 1.6-.7 1.6-1.6 0-.4-.2-.8-.4-1.1-.3-.3-.4-.7-.4-1.1 0-.9.7-1.6 1.6-1.6H16a5 5 0 0 0 5-5c0-4.1-4-7.6-9-7.6Z"/><circle cx="7.5" cy="10.5" r="1"/><circle cx="10.5" cy="7" r="1"/><circle cx="15" cy="7.5" r="1"/></svg><svg class="settings-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.7 1.7 0 0 0 .3 1.8l.1.1a2 2 0 1 1-2.8 2.8l-.1-.1a1.7 1.7 0 0 0-1.8-.3 1.7 1.7 0 0 0-1 1.5V21a2 2 0 1 1-4 0v-.1a1.7 1.7 0 0 0-1.1-1.5 1.7 1.7 0 0 0-1.8.3l-.1.1a2 2 0 1 1-2.8-2.8l.1-.1a1.7 1.7 0 0 0 .3-1.8 1.7 1.7 0 0 0-1.5-1H3a2 2 0 1 1 0-4h.1a1.7 1.7 0 0 0 1.5-1.1 1.7 1.7 0 0 0-.3-1.8l-.1-.1a2 2 0 1 1 2.8-2.8l.1.1a1.7 1.7 0 0 0 1.8.3H9a1.7 1.7 0 0 0 1-1.5V3a2 2 0 1 1 4 0v.1a1.7 1.7 0 0 0 1 1.5 1.7 1.7 0 0 0 1.8-.3l.1-.1a2 2 0 1 1 2.8 2.8l-.1.1a1.7 1.7 0 0 0-.3 1.8V9a1.7 1.7 0 0 0 1.5 1H21a2 2 0 1 1 0 4h-.1a1.7 1.7 0 0 0-1.5 1Z"/></svg><div><h2 id="settings-title" tabindex="-1">{{.Msg "ui_settings"}}</h2><p class="lead" id="theme-page" hidden></p></div></div>
+    <p class="theme-broken" id="settings-broken" hidden>{{.Msg "ui_settings_broken"}}</p>
+    <div class="settings-list" id="settings-list">
+      <button type="button" class="settings-item" data-panel="theme"><span class="settings-dot"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 3a9 9 0 1 0 0 18c.9 0 1.6-.7 1.6-1.6 0-.4-.2-.8-.4-1.1-.3-.3-.4-.7-.4-1.1 0-.9.7-1.6 1.6-1.6H16a5 5 0 0 0 5-5c0-4.1-4-7.6-9-7.6Z"/><circle cx="7.5" cy="10.5" r="1"/><circle cx="10.5" cy="7" r="1"/><circle cx="15" cy="7.5" r="1"/></svg></span><span class="settings-what"><b>{{.Msg "ui_settings_theme"}}{{.Msg "ui_settings_value_sep"}}<span id="settings-theme-now"></span></b><small>{{.Msg "ui_settings_theme_about"}}</small></span><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m9 6 6 6-6 6"/></svg></button>
+      <button type="button" class="settings-item" data-panel="mode"><span class="settings-dot"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M9 6h11M9 12h11M9 18h11"/><path d="m3 6 1.5 1.5L7 5M3 12l1.5 1.5L7 11M3 18l1.5 1.5L7 17"/></svg></span><span class="settings-what"><b>{{.Msg "ui_task_mode"}}{{.Msg "ui_settings_value_sep"}}<span id="settings-mode-now"></span></b><small>{{.Msg "ui_task_mode_about"}}</small></span><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m9 6 6 6-6 6"/></svg></button>
+    </div>
+    <p class="theme-now" id="theme-now" hidden></p>
+    <div class="theme-grid" id="theme-grid" role="radiogroup" aria-labelledby="settings-title" hidden></div>
+    <label class="mode-card" id="settings-mode" hidden><input type="checkbox" id="task-mode"><span class="settings-what"><b>{{.Msg "ui_task_mode"}}</b><span>{{.Msg "ui_task_mode_about"}}</span><small>{{.Msg "ui_task_mode_more"}}</small></span></label>
     <div class="dialog-actions">
       <button type="button" class="btn" data-close>{{.Msg "ui_cancel"}}</button>
-      <button type="submit" class="btn primary" id="theme-choose">{{.Msg "ui_select"}}</button>
+      <button type="submit" class="btn primary" id="theme-choose" hidden>{{.Msg "ui_select"}}</button>
+      <button type="submit" class="btn primary" id="mode-save" hidden>{{.Msg "ui_save"}}</button>
     </div>
   </form>
 </dialog>
@@ -1404,6 +1436,22 @@
     </div>
   </form>
 </dialog>
+<!-- Asked over Set the task or Add a page, before a page on another task is moved: No writes nothing -->
+<dialog id="move-dialog" aria-labelledby="move-title" aria-describedby="move-lead">
+  <div class="modal-body">
+    <div class="modal-head">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M9 6h11M9 12h11M9 18h11M4 6h.01M4 12h.01M4 18h.01"/></svg>
+      <div>
+        <h2 id="move-title">{{.Msg "ui_task_move_ask"}}</h2>
+        <p class="lead" id="move-lead"></p>
+      </div>
+    </div>
+    <div class="dialog-actions">
+      <button type="button" class="btn" id="move-no" data-close>{{.Msg "ui_no"}}</button>
+      <button type="button" class="btn primary" id="move-yes">{{.Msg "ui_yes"}}</button>
+    </div>
+  </div>
+</dialog>
 <dialog id="edit-task-dialog" aria-labelledby="edit-task-heading">
   <form class="modal-body" id="edit-task">
     <div class="modal-head">
@@ -1416,9 +1464,19 @@
     <label class="field">{{.Msg "ui_task_title"}}
       <input class="text" id="edit-task-title" autocomplete="off">
     </label>
-    <label class="field"><span>{{.Msg "ui_task_url"}} <small>{{.Msg "ui_optional"}}</small></span>
-      <input class="text path" id="edit-task-url" autocomplete="off" spellcheck="false" placeholder="https://">
-    </label>
+    <div class="field">
+      <span id="edit-urls-head">{{.Msg "ui_task_url"}} <small>{{.Msg "ui_optional"}}</small></span>
+      <div class="category-box">
+        <ol class="category-order url-order" id="edit-urls" aria-labelledby="edit-urls-head" hidden></ol>
+        <div class="category-plus-row">
+          <button type="button" class="category-plus" id="edit-url-plus"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true"><path d="M12 5v14M5 12h14"/></svg>{{.Msg "ui_url_add"}}</button>
+          <input class="text path" id="edit-url-new" hidden autocomplete="off" spellcheck="false" aria-label="{{.Msg "ui_url_add"}}" placeholder="{{.Msg "ui_url_new_hint"}}" aria-describedby="edit-url-said">
+        </div>
+      </div>
+      <p class="category-said" id="edit-url-said" aria-live="polite"></p>
+      <small id="edit-urls-hint"></small>
+      <p class="sr-only" id="edit-urls-said" aria-live="polite"></p>
+    </div>
     <div class="field">
       <span id="edit-categories-head">{{.Msg "ui_task_categories"}}</span>
       <p class="category-none" id="edit-categories-none" hidden>{{.Msg "ui_task_categories_none"}}</p>
@@ -1709,7 +1767,7 @@
   const TASKS_KEY = 'pages.tasks';
   const STATE_NAMES = STATES.map((s) => s.name);
   // What a task's state is changed to by hand and what has a dot on the shelf: the archive has its button for that, which writes its pages too
-  const WORK_STATES = STATES.filter((s) => s.name !== 'archived');
+  const UNARCHIVED_STATES = STATES.filter((s) => s.name !== 'archived');
   // The views the URL may name, and the one it leaves out
   const VIEWS = TASKS ? STATE_NAMES : ['new', 'fav', 'archived'];
   const FIRST_VIEW = TASKS ? STATES.find((s) => s.first).name : 'all';
@@ -2638,8 +2696,8 @@
     const pin = box.querySelector('.pin-item');
     // Archived it leaves the pins, and comes back with its pin as it is given back
     pin.hidden = Boolean(a.archived);
-    pin.querySelector('.label').textContent = t(a.work?.pin ? 'ui_unpin' : 'ui_pin');
-    pin.setAttribute('aria-label', t(a.work?.pin ? 'ui_unpin_named' : 'ui_pin_named', a.title));
+    pin.querySelector('.label').textContent = t(a.task?.pin ? 'ui_unpin' : 'ui_pin');
+    pin.setAttribute('aria-label', t(a.task?.pin ? 'ui_unpin_named' : 'ui_pin_named', a.title));
     pin.addEventListener('click', () => togglePin(a));
     const taskSet = box.querySelector('.task-set');
     taskSet.setAttribute('aria-label', t('ui_task_set_named', a.title));
@@ -2650,7 +2708,7 @@
     // Off its task at once, with the way back in the toast. The focus first on the menu's button, for the redraw to keep it, or move it
     // where a row gone leaves it; from the keys, to the way back
     const taskOut = box.querySelector('.task-out');
-    taskOut.hidden = !a.work?.task;
+    taskOut.hidden = !a.task?.name;
     taskOut.setAttribute('aria-label', t('ui_task_out_named', a.title));
     taskOut.addEventListener('click', async (e) => {
       const back = box.closest('#find') ? () => $('find-actions').querySelector('summary') : menuBack(box, () => a.slug);
@@ -2666,7 +2724,7 @@
     });
     // Of its task, unless this is that task's page
     const taskOpen = box.querySelector('.task-open');
-    const name = a.work?.task;
+    const name = a.task?.name;
     taskOpen.hidden = !name || (name === TASK_NAME && a.taskProject === project);
     if (name) {
       taskOpen.href = taskHref({ project: a.taskProject, name });
@@ -3084,9 +3142,9 @@
     const sub = li.querySelector('.sub');
     drawSub(sub, a, ranks, (put) => {
       // On the page list, the way to the task it is on, or to the task list it is pinned on
-      if (!TASKS && a.work?.task) sub.append(taskTag(taskHref({ project: a.taskProject, name: a.work.task }), t('ui_task_badge', a.work.task)));
+      if (!TASKS && a.task?.name) sub.append(taskTag(taskHref({ project: a.taskProject, name: a.task.name }), t('ui_task_badge', a.task.name)));
       if (TASK_PAGE && a.archived) put('badge', t('ui_archived_badge'));
-      if (!TASKS && a.work?.pin && !a.archived) sub.append(taskTag(`${TASKS_PATH}?${new URLSearchParams({ project: a.taskProject })}`, t('ui_pin_badge')));
+      if (!TASKS && a.task?.pin && !a.archived) sub.append(taskTag(`${TASKS_PATH}?${new URLSearchParams({ project: a.taskProject })}`, t('ui_pin_badge')));
       if (!a.tags?.length) return;
       const tags = put('tags', '');
       tags.append(...a.tags.map((name) => {
@@ -3557,7 +3615,7 @@
     }
     const taskAt = (project, name) => tasks.get(key(project, name));
     for (const a of items) {
-      const task = a.work?.task && taskAt(a.taskProject, a.work.task);
+      const task = a.task?.name && taskAt(a.taskProject, a.task.name);
       task?.[a.archived ? 'archived' : 'pages'].push(a);
     }
     // A child, as the store's childrenOfTask says: of a parent with a row of the same project and no parent itself
@@ -3584,16 +3642,19 @@
       return url;
     }
   }
-  // The way to a task's other place, above the row's own hit area
-  function xlink(url) {
+  // The way to a task's other place, above the row's own hit area: by words, the URL whole in its title when they are
+  // not all of it
+  function xlink(url, words) {
     const link = document.createElement('a');
     link.className = 'xlink';
     link.href = url;
     link.target = '_blank';
     link.rel = 'noopener';
-    link.title = url;
+    if (words !== url) link.title = url;
     link.innerHTML = EXTERNAL_MARK;
-    link.append(urlEnd(url));
+    const text = document.createElement('span');
+    text.textContent = words;
+    link.append(text);
     return link;
   }
 
@@ -3622,7 +3683,7 @@
     li.querySelector('.lead').innerHTML = leadOf({ news: unread > 0 });
     const link = li.querySelector('.title');
     link.href = taskHref(task);
-    link.title = [task.name, task.title, projectWord(task.project), task.url].filter(Boolean).join('\n');
+    link.title = [task.name, task.title, projectWord(task.project), ...(task.urls ?? [])].filter(Boolean).join('\n');
     link.append(tagged('span', 'tname', task.name), task.title ?? '');
     const time = li.querySelector('time');
     time.dateTime = task.at;
@@ -3631,7 +3692,7 @@
     sub.append(tagged('span', 'task-pages', t('ui_task_pages', task.pages.length)));
     if (task.archived.length > 0) sub.append(tagged('span', 'task-pages', t('ui_task_archived', task.archived.length)));
     if (unread > 0) sub.append(tagged('span', 'ver', t('ui_task_unread', unread)));
-    if (task.url) sub.append(xlink(task.url));
+    sub.append(...(task.urls ?? []).map((url) => xlink(url, urlEnd(url))));
     sub.append(...taskKin(task));
     return li;
   }
@@ -3673,7 +3734,7 @@
   // The pages pinned, which leave as they are archived, and how to pin one when none is
   // LIMIT: a folder pinned leads to the page list, where it opens (its URL), and not back here
   function drawPins() {
-    const pinned = items.filter((a) => a.work?.pin && !a.archived && a.taskProject === project);
+    const pinned = items.filter((a) => a.task?.pin && !a.archived && a.taskProject === project);
     const pins = pinned.map((a) => {
       const link = document.createElement('a');
       link.className = 'pin';
@@ -3707,7 +3768,7 @@
 
   // The projects there are for the task list: of its tasks, and of the pages pinned
   function taskProjects(tasks) {
-    return new Set([...tasks.map((task) => task.project), ...items.filter((a) => a.work?.pin && !a.archived).map((a) => a.taskProject)]);
+    return new Set([...tasks.map((task) => task.project), ...items.filter((a) => a.task?.pin && !a.archived).map((a) => a.taskProject)]);
   }
   // The viewer's last project, kept in the browser: whose it is, not the store's
   const PROJECT_KEY = 'pages.taskProject';
@@ -3797,8 +3858,8 @@
     const none = [];
     const order = categoryOrder(task);
     for (const a of everyPage(task).sort((x, y) => Boolean(x.archived) - Boolean(y.archived) || madeAt(x) - madeAt(y))) {
-      if (!order.includes(a.work.category)) none.push(a);
-      else categories.set(a.work.category, [...(categories.get(a.work.category) ?? []), a]);
+      if (!order.includes(a.task.category)) none.push(a);
+      else categories.set(a.task.category, [...(categories.get(a.task.category) ?? []), a]);
     }
     const groups = [{ entries: none }];
     for (const heading of order) groups.push({ heading, entries: categories.get(heading) ?? [], add: () => openAddPage(task, heading) });
@@ -3835,7 +3896,8 @@
       $('task-at').dateTime = task.at;
       $('task-at').textContent = ago(task.at);
     }
-    $('task-link').replaceChildren(...(task.url ? [xlink(task.url)] : []));
+    $('task-link').replaceChildren(...(task.urls ?? []).map((url) => xlink(url, url)));
+    $('task-link').hidden = !task.urls?.length;
     drawProject($('task-project'), projectWord(task.project), taskProjectColor(task.project));
     $('task-up').href = taskListHref(task);
     drawTaskFamily(task);
@@ -4058,8 +4120,8 @@
     $('kin-dialog').showModal();
   }
   // With no task anywhere there is no project on the screen to make it in: it is asked, of the projects the pages have, so that the name is
-  // the store's (taskProject) and not what was typed. One no page has is for floe work --project
-  // LIMIT: the first task made, the other projects are not on the screen to make one in: a page's "Set task" makes one in its project and floe work
+  // the store's (taskProject) and not what was typed. One no page has is for floe task --project
+  // LIMIT: the first task made, the other projects are not on the screen to make one in: a page's "Set task" makes one in its project and floe task
   // --project in any. Ask the project every time if that comes to trouble someone
   function openTaskAdd() {
     if (anyTasks()) {
@@ -4140,7 +4202,7 @@
     }
   }
 
-  // Archives the task, or gives it back, as drawn (rev): the task alone, as floe work --state writes it, its pages archived on their own. A
+  // Archives the task, or gives it back, as drawn (rev): the task alone, as floe task --state writes it, its pages archived on their own. A
   // second press of a double one would land on the button turned the other way
   // LIMIT: given back it is done, whatever it was: what it was before would be a state more to keep
   let archivingTask = false;
@@ -5090,12 +5152,12 @@
   }
 
   async function togglePin(a) {
-    const reason = await workOf(a.slug, { pin: !a.work?.pin });
+    const reason = await changePageTask(a.slug, { pin: !a.task?.pin });
     if (reason) {
       showError(t('ui_save_failed', reason));
       return;
     }
-    toast(t(a.work?.pin ? 'ui_unpinned' : 'ui_pinned', a.title));
+    toast(t(a.task?.pin ? 'ui_unpinned' : 'ui_pinned', a.title));
     await load();
   }
 
@@ -5113,11 +5175,11 @@
     if (framed) tasksRead = await readTasks();
     resetTaskForm($('set'));
     $('set-target').textContent = a.title;
-    $('set-task').value = a.work?.task ?? '';
-    $('set-category').value = a.work?.category ?? '';
+    $('set-task').value = a.task?.name ?? '';
+    $('set-category').value = a.task?.category ?? '';
     setOpened = { task: $('set-task').value };
     setTaskKnown();
-    $('set-out').hidden = !a.work?.task;
+    $('set-out').hidden = !a.task?.name;
     $('set-error').textContent = tasksRead.error ? t('ui_tasks_failed', tasksRead.error) : '';
     $('set-error').hidden = !tasksRead.error;
     $('set-dialog').showModal();
@@ -5153,29 +5215,31 @@
     blank.reportValidity();
     return false;
   }
-  // The one write of pages and their tasks (PATCH /api/work), from the screen, a modal, the state's choices or the archive button, which says
+  // The one write of pages and their tasks (PATCH /api/tasks), from the screen, a modal, the state's choices or the archive button, which says
   // whether it takes the task named to be new, and of one there the rev read: one of no rev is not sent, as JSON would drop it and the store
   // write it unchecked. Refused as stale (409), the tasks are read again, a page whole too, whose load reads none; stale is the refusal with
   // what to do next in a modal, which can save again. Written, every task the store answers goes in the tasks read, so that the next write
   // is of its rev, a read failing too; rev is the first one's
-  async function writeWork(body) {
-    if (body.new === false && !Number.isInteger(body.rev)) return { ok: false, status: 0, text: t('ui_task_no_rev'), rev: null, stale: '' };
-    const res = await api('/api/work', { method: 'PATCH', headers: { 'content-type': 'application/json' }, body: JSON.stringify(body) });
+  async function changeTasks(body) {
+    if (body.new === false && !Number.isInteger(body.rev)) return { ok: false, status: 0, text: t('ui_task_no_rev'), rev: null, stale: '', pages: [] };
+    const res = await api('/api/tasks', { method: 'PATCH', headers: { 'content-type': 'application/json' }, body: JSON.stringify(body) });
     const text = res.ok ? '' : await res.text();
     if (res.status === 409) {
       if (framed) tasksRead = await readTasks();
       await load();
     }
     let rev = null;
+    let pages = [];
     if (res.ok) {
       const written = await res.json();
       for (const task of written.tasks) (tasksRead.tasks[task.taskProject] ??= {})[task.task] = task.row;
       rev = written.tasks[0]?.row.rev ?? null;
+      pages = written.pages;
     }
-    return { ok: res.ok, status: res.status, text, rev, stale: t('ui_task_stale', text) };
+    return { ok: res.ok, status: res.status, text, rev, stale: t('ui_task_stale', text), pages };
   }
   // A write of the task (project, name) alone
-  const writeTask = (project, name, body) => writeWork({ taskProject: project, task: name, ...body });
+  const writeTask = (project, name, body) => changeTasks({ taskProject: project, task: name, ...body });
   // The rev of a task as this screen knows it: as read, or as it wrote it since; 0 of no row. A button drawn on the page sends it; what
   // shows a task held apart (the open choices, a dialog, a toast) sends the rev of what it shows, which its own write moves on
   function readRev(project, name) {
@@ -5185,19 +5249,37 @@
     $('set-error').textContent = t('ui_save_failed', reason);
     $('set-error').hidden = false;
   };
+  // Where a page was: its task, and the category on it when it had one. Said of the page the list has, and of the page a write took off a task
+  const leftPlace = (task, category) => (category ? t('ui_page_from_task_category', task, category) : task);
+  // Whether to put the page on the task name: asked when the list now has it on another task (the page as the dialog opened, when the list
+  // has it not), and at once yes when it is on none or on that one. The question is over the dialog it came from, which stays as it was
+  // LIMIT: a page put on another task since the list was read is moved unasked, which the toast after the write tells. Give page writes a
+  // rev if that comes to trouble someone
+  let moveYes = false;
+  function askMove(page, name) {
+    const listed = items.find((x) => x.slug === page.slug) ?? page;
+    const from = listed.task?.name?.trim() ?? '';
+    const to = name.trim();
+    if (!from || from === to) return Promise.resolve(true);
+    $('move-lead').textContent = t('ui_task_move_lead', listed.title, leftPlace(from, listed.task.category), to, from);
+    moveYes = false;
+    const dialog = $('move-dialog');
+    dialog.showModal();
+    $('move-no').focus();
+    return new Promise((resolve) => dialog.addEventListener('close', () => resolve(moveYes), { once: true }));
+  }
   // A page put on a category of a task in one write, with what the screen saw of the task (body): the store makes the task's row when it has
   // none and adds the category to its categories. The page's project is the task's
-  const putPageOn = (page, task, body, category) => writeWork({ slugs: [page.slug], task, category, ...body });
-  // A write of the page's own work alone (its pin, or off its task and back), told as patchOne tells a write: "" or the reason
-  async function workOf(slug, body) {
-    const res = await writeWork({ slugs: [slug], ...body });
+  const putPageOn = (page, task, body, category) => changeTasks({ slugs: [page.slug], task, category, ...body });
+  // A write of the page's own task alone (its pin, or off its task and back), told as patchOne tells a write: "" or the reason
+  async function changePageTask(slug, body) {
+    const res = await changeTasks({ slugs: [slug], ...body });
     return res.ok ? '' : t('ui_http_error', res.text, res.status);
   }
   // The task's own fields are its page's to write (openTaskEdit): this writes the page's category, and a new name's title
   async function saveTaskSet(e) {
     e.preventDefault();
     const btn = $('set-submit');
-    btn.disabled = true;
     // What was asked to be saved, whatever is typed while it goes
     const page = setPage;
     const task = $('set-task').value;
@@ -5209,17 +5291,28 @@
       // A task there is written as the dialog shows it (rev)
       new: fresh, ...(fresh ? { title: $('set-task-title').value.trim() } : { rev: setShown.rev }),
     };
+    // Asked once the form may be sent, not of what would be refused; No leaves the dialog as it was
+    if (!taskFormReady($('set'), $('set-error'))) return;
+    if (!(await askMove(page, task))) {
+      btn.focus();
+      return;
+    }
+    btn.disabled = true;
     try {
-      if (!taskFormReady($('set'), $('set-error'))) return;
       const res = await putPageOn(page, task, body, category);
       // Refused as stale: whether the name is of a task there, as read again, a title asked of a new one alone
       if (!res.ok) {
         if (res.status === 409) setTaskKnown();
         throw new Error(res.status === 409 ? res.stale : res.text);
       }
-      if (task.trim() === setOpened.task) toast(t('ui_saved'));
+      // The task it left, as the write found it, before what the dialog opened at: it may have been moved since
+      const left = res.pages[0]?.offTask;
+      if (!left && task.trim() === setOpened.task) toast(t('ui_saved'));
       else {
-        const to = tagged('a', 'toast-link', t('ui_task_put', task.trim(), t(VIEW_WORDS[state])));
+        const words = left
+          ? t('ui_task_put_moved', leftPlace(left, res.pages[0].offCategory), task.trim(), t(VIEW_WORDS[state]))
+          : t('ui_task_put', task.trim(), t(VIEW_WORDS[state]));
+        const to = tagged('a', 'toast-link', words);
         to.href = taskHref({ project: page.taskProject, name: task.trim() });
         toast('', { ms: 8000, button: to });
       }
@@ -5237,14 +5330,17 @@
   const sameCategories = (x, y) => x.join('\n') === y.join('\n');
   const editCategoriesNow = () => [...$('edit-categories').children].map((li) => li.dataset.category);
   // What the dialog shows of task, read now: the tasks read hold it as the page draws it
-  const editBase = (task) => ({ title: task.title ?? '', url: task.url ?? '', categories: categoryOrder(task) });
+  const editBase = (task) => ({ title: task.title ?? '', urls: [...new Set(task.urls ?? [])], categories: categoryOrder(task) });
   // Opened over the task as the tasks read now have it, its rev and fields of one read: the page drawn before may be older
   function openTaskEdit(drawnTask) {
     const task = tasksOf().find((x) => x.project === drawnTask.project && x.name === drawnTask.name) ?? drawnTask;
     taskEditing = { project: task.project, name: task.name, rev: readRev(task.project, task.name), base: editBase(task), gone: false };
     $('edit-task-target').textContent = task.name;
     $('edit-task-title').value = taskEditing.base.title;
-    $('edit-task-url').value = taskEditing.base.url;
+    drawEditURLs(taskEditing.base.urls);
+    $('edit-urls-hint').textContent = t('ui_task_urls_hint', MAX_URLS);
+    urlField(false);
+    $('edit-urls-said').textContent = '';
     drawEditCategories(task, taskEditing.base.categories);
     plusField(false);
     $('edit-task-error').hidden = true;
@@ -5252,8 +5348,82 @@
     $('edit-categories-said').textContent = '';
     $('edit-task-dialog').showModal();
   }
+  // The icons of the dialog's row buttons, drawn in lines. A row's URL and category are taken off by the one x, as both are the same act
+  const lineIcon = (path) => `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">${path}</svg>`;
+  const DROP_PATH = '<path d="M6 6l12 12M18 6 6 18"/>';
+  const UP_PATH = '<path d="M12 19V5"/><path d="m5 12 7-7 7 7"/>';
+  const DOWN_PATH = '<path d="M12 5v14"/><path d="m19 12-7 7-7-7"/>';
+  // A button of a row of the dialog's lists: an icon named by its label
+  function rowButton(cls, label, path) {
+    const b = tagged('button', `icon-btn ${cls}`);
+    b.type = 'button';
+    b.innerHTML = lineIcon(path);
+    b.setAttribute('aria-label', label);
+    b.title = label;
+    return b;
+  }
+  // The grip a row of the dialog's lists is dragged by
+  function rowGrip() {
+    const grip = tagged('span', 'category-grip');
+    grip.innerHTML = '<svg viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><circle cx="9" cy="6" r="1.5"/><circle cx="15" cy="6" r="1.5"/><circle cx="9" cy="12" r="1.5"/><circle cx="15" cy="12" r="1.5"/><circle cx="9" cy="18" r="1.5"/><circle cx="15" cy="18" r="1.5"/></svg>';
+    return grip;
+  }
+  // The URLs as rows, each with its URL and the button that takes it off; nothing is sent until saving
+  const editURLsNow = () => [...$('edit-urls').children].map((li) => li.dataset.url);
+  function drawEditURLs(urls) {
+    $('edit-urls').replaceChildren(...urls.map(urlRow));
+    $('edit-urls').hidden = urls.length === 0;
+    markURLEnds();
+  }
+  function urlRow(url) {
+    const li = document.createElement('li');
+    li.dataset.url = url;
+    li.append(rowGrip(), tagged('span', 'category-name', url), tagged('span', 'category-moves'));
+    li.lastChild.append(
+      rowButton('category-up', t('ui_url_up_named', url), UP_PATH),
+      rowButton('category-down', t('ui_url_down_named', url), DOWN_PATH),
+      rowButton('url-drop', t('ui_url_drop_named', url), DROP_PATH),
+    );
+    return li;
+  }
+  // The last row: the button that adds a URL, or the field it turns into, empty as it turns back
+  function urlField(on) {
+    $('edit-url-plus').hidden = on;
+    $('edit-url-new').hidden = !on;
+    if (on) return;
+    $('edit-url-new').value = '';
+    $('edit-url-new').setCustomValidity('');
+    $('edit-url-said').textContent = '';
+  }
+  // The URL typed goes last, and the field stays, empty, for the next; the store says whether it is one it takes
+  const MAX_URLS = {{.MaxURLs}};
+  function addURL() {
+    const input = $('edit-url-new');
+    const url = input.value.trim();
+    input.setCustomValidity('');
+    const urls = editURLsNow();
+    const why = !url ? t('ui_url_blank') : urls.includes(url) ? t('ui_url_there', url) : urls.length >= MAX_URLS ? t('ui_url_max', MAX_URLS) : '';
+    $('edit-url-said').textContent = why;
+    if (why) return;
+    $('edit-urls').append(urlRow(url));
+    $('edit-urls').hidden = false;
+    markURLEnds();
+    input.value = '';
+    $('edit-urls-said').textContent = t('ui_url_added', url);
+  }
+  // The focus goes to the x of the row after it, or before it, else to the way to add one
+  function dropURL(li) {
+    const rows = [...$('edit-urls').children];
+    const at = rows.indexOf(li);
+    li.remove();
+    $('edit-urls').hidden = $('edit-urls').children.length === 0;
+    markURLEnds();
+    $('edit-urls-said').textContent = t('ui_url_dropped', li.dataset.url);
+    const near = rows[at + 1] ?? rows[at - 1];
+    (near?.querySelector('.url-drop') ?? ($('edit-url-new').hidden ? $('edit-url-plus') : $('edit-url-new'))).focus();
+  }
   // The categories as rows, each with its name, whether no page is under it, and its buttons up, down and to remove it; the grip drags it
-  const pagedOf = (task) => new Set(everyPage(task).map((a) => a.work.category).filter(Boolean));
+  const pagedOf = (task) => new Set(everyPage(task).map((a) => a.task.category).filter(Boolean));
   function drawEditCategories(task, order) {
     const paged = pagedOf(task);
     $('edit-categories').replaceChildren(...order.map((name) => categoryRow(name, paged.has(name))));
@@ -5264,24 +5434,14 @@
   function categoryRow(name, paged) {
     const li = document.createElement('li');
     li.dataset.category = name;
-    const grip = tagged('span', 'category-grip');
-    grip.innerHTML = '<svg viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><circle cx="9" cy="6" r="1.5"/><circle cx="15" cy="6" r="1.5"/><circle cx="9" cy="12" r="1.5"/><circle cx="15" cy="12" r="1.5"/><circle cx="9" cy="18" r="1.5"/><circle cx="15" cy="18" r="1.5"/></svg>';
     const word = tagged('span', 'category-name', name);
     if (!paged) word.append(' ', tagged('small', '', t('ui_category_no_pages')));
-    const button = (cls, label, path) => {
-      const b = tagged('button', `icon-btn ${cls}`);
-      b.type = 'button';
-      b.innerHTML = `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">${path}</svg>`;
-      b.setAttribute('aria-label', label);
-      b.title = label;
-      return b;
-    };
-    const drop = button('category-drop', t(paged ? 'ui_category_drop_paged' : 'ui_category_drop_named', name), '<path d="M4 7h16M10 11v6m4-6v6M6 7l1 12h10l1-12M9 7V4h6v3"/>');
+    const drop = rowButton('category-drop', t(paged ? 'ui_category_drop_paged' : 'ui_category_drop_named', name), DROP_PATH);
     if (paged) drop.setAttribute('aria-disabled', 'true');
-    li.append(grip, word, tagged('span', 'category-moves'));
+    li.append(rowGrip(), word, tagged('span', 'category-moves'));
     li.lastChild.append(
-      button('category-up', t('ui_category_up_named', name), '<path d="M12 19V5"/><path d="m5 12 7-7 7 7"/>'),
-      button('category-down', t('ui_category_down_named', name), '<path d="M12 5v14"/><path d="m19 12-7 7-7-7"/>'),
+      rowButton('category-up', t('ui_category_up_named', name), UP_PATH),
+      rowButton('category-down', t('ui_category_down_named', name), DOWN_PATH),
       drop,
     );
     return li;
@@ -5330,37 +5490,109 @@
     const to = near && ['.category-drop', '.category-up', '.category-down'].map((on) => near.querySelector(on)).find(pressable);
     (to ?? ($('edit-category-new').hidden ? $('edit-category-plus') : $('edit-category-new'))).focus();
   }
-  // The categories of the dialog as the task is read again (now): unchanged, as read; else as the person left them (mine), without those another
-  // deleted and with those another added, after them. One the person deleted stays out: one that has come to have pages meanwhile, the store
-  // refuses to leave out, and the dialog says so
-  function mergeCategories(mine, was, now) {
+  // The categories or URLs of the dialog as the task is read again (now): unchanged, as read; else as the person left them (mine), without those
+  // another removed and with those another added, after them. A category the person deleted stays out: one that has come to have pages
+  // meanwhile, the store refuses to leave out, and the dialog says so
+  function mergeLists(mine, was, now) {
     if (sameCategories(mine, was)) return now;
     return [
       ...mine.filter((x) => !was.includes(x) || now.includes(x)),
       ...now.filter((x) => !was.includes(x) && !mine.includes(x)),
     ];
   }
-  // The first row's up and the last row's down move nothing
-  function markCategoryEnds() {
-    const rows = [...$('edit-categories').children];
-    rows.forEach((li, i) => {
-      li.querySelector('.category-up').disabled = i === 0;
-      li.querySelector('.category-down').disabled = i === rows.length - 1;
+  // The URLs as saving sends them when their order is not changed: those read, without those taken off, and those added after them
+  const editedURLs = (read, mine) => [...read.filter((u) => mine.includes(u)), ...mine.filter((u) => !read.includes(u))];
+  // The URLs of the dialog as the task is read again: as read now, with the person's changes, when they did not reorder them, so that
+  // an order another saved meanwhile stays; else as mergeLists has them
+  function mergeURLs(mine, was, now) {
+    if (!sameCategories(mine, editedURLs(was, mine))) return mergeLists(mine, was, now);
+    const added = mine.filter((u) => !was.includes(u));
+    return [...now.filter((u) => !was.includes(u) || mine.includes(u)), ...added.filter((u) => !now.includes(u))];
+  }
+  // Makes the rows of list reordered by their buttons up and down, and by a drag from the grip where there is a pointer that hovers: the row
+  // goes before the row it is dropped on, or after it in its lower half. Each list holds its own drag, so that a row of one is not dropped
+  // in another. nameOf reads a row's name, which said tells where it went by movedKey. Returns what marks the ends, the first row's up and
+  // the last row's down moving nothing, for the list's own drawing to call
+  function sortable(list, { nameOf, said, movedKey }) {
+    const markEnds = () => {
+      const rows = [...list.children];
+      rows.forEach((li, i) => {
+        li.querySelector('.category-up').disabled = i === 0;
+        li.querySelector('.category-down').disabled = i === rows.length - 1;
+      });
+    };
+    // Moves the row li before ref (null: last), says where it went, and gives the focus back to the button pressed, as moving the row drops
+    // it: or to the row's other button, the one pressed moving nothing more
+    const move = (li, ref, pressed) => {
+      if (ref === li) return;
+      list.insertBefore(li, ref);
+      markEnds();
+      const rows = [...list.children];
+      said.textContent = t(movedKey, nameOf(li), rows.indexOf(li) + 1, rows.length);
+      if (!pressed) return;
+      const on = li.querySelector(pressed);
+      (on.disabled ? li.querySelector(pressed === '.category-up' ? '.category-down' : '.category-up') : on).focus();
+    };
+    const rowOf = (node) => {
+      const li = node instanceof Element ? node.closest('li') : null;
+      return li?.parentElement === list ? li : null;
+    };
+    list.addEventListener('click', (e) => {
+      const btn = e.target.closest('.category-up, .category-down');
+      if (!btn || btn.disabled) return;
+      const li = rowOf(btn);
+      const up = btn.classList.contains('category-up');
+      move(li, up ? li.previousElementSibling : li.nextElementSibling?.nextElementSibling ?? null, up ? '.category-up' : '.category-down');
     });
+    let dragged = null;
+    const dropMarks = () => { for (const li of list.children) li.classList.remove('drop-before', 'drop-after'); };
+    const dropAt = (e) => {
+      const li = rowOf(e.target);
+      if (!li || li === dragged) return null;
+      const box = li.getBoundingClientRect();
+      return { li, after: e.clientY > box.top + box.height / 2 };
+    };
+    list.addEventListener('pointerdown', (e) => {
+      const li = rowOf(e.target.closest('.category-grip'));
+      if (li) li.draggable = true;
+    });
+    // A press let go without a drag, anywhere, leaves no row draggable from anywhere but its grip; the row dragged is let go by dragend.
+    // Not on pointercancel, which a browser may send before dragstart, and the drag would not start
+    // LIMIT: a press cancelled without a drag (pointercancel alone) leaves its row draggable till the next press is let go or the dialog is drawn again
+    document.addEventListener('pointerup', () => {
+      for (const li of list.children) if (li !== dragged) li.draggable = false;
+    });
+    list.addEventListener('dragstart', (e) => {
+      // A drag of words selected starts at a text node; a row's own drag only from its grip
+      const li = rowOf(e.target);
+      if (!li?.draggable) return;
+      dragged = li;
+      e.dataTransfer.effectAllowed = 'move';
+      e.dataTransfer.setData('text/plain', nameOf(li));
+    });
+    list.addEventListener('dragover', (e) => {
+      if (!dragged) return;
+      e.preventDefault();
+      dropMarks();
+      const at = dropAt(e);
+      at?.li.classList.add(at.after ? 'drop-after' : 'drop-before');
+    });
+    list.addEventListener('drop', (e) => {
+      if (!dragged) return;
+      e.preventDefault();
+      const at = dropAt(e);
+      if (at) move(dragged, at.after ? at.li.nextElementSibling : at.li, null);
+    });
+    list.addEventListener('dragend', () => {
+      if (dragged) dragged.draggable = false;
+      dragged = null;
+      dropMarks();
+    });
+    return markEnds;
   }
-  // Moves the row li before ref (null: last), says where it went, and gives the focus back to the button pressed, as moving the row drops it:
-  // or to the row's other button, the one pressed moving nothing more
-  function moveCategory(li, ref, pressed) {
-    if (ref === li) return;
-    $('edit-categories').insertBefore(li, ref);
-    markCategoryEnds();
-    const rows = [...$('edit-categories').children];
-    $('edit-categories-said').textContent = t('ui_category_moved', li.dataset.category, rows.indexOf(li) + 1, rows.length);
-    if (!pressed) return;
-    const on = li.querySelector(pressed);
-    (on.disabled ? li.querySelector(pressed === '.category-up' ? '.category-down' : '.category-up') : on).focus();
-  }
-  // The dialog over the task as read again: refused as stale, what was changed in it stays, and the rest is as read now (mergeCategories). A row
+  const markCategoryEnds = sortable($('edit-categories'), { nameOf: (li) => li.dataset.category, said: $('edit-categories-said'), movedKey: 'ui_category_moved' });
+  const markURLEnds = sortable($('edit-urls'), { nameOf: (li) => li.dataset.url, said: $('edit-urls-said'), movedKey: 'ui_url_moved' });
+  // The dialog over the task as read again: refused as stale, what was changed in it stays, and the rest is as read now (mergeLists). A row
   // removed meanwhile is not made again: the dialog says so
   function refillTaskEdit() {
     const task = tasksOf().find((x) => x.project === taskEditing.project && x.name === taskEditing.name);
@@ -5374,8 +5606,8 @@
     const was = taskEditing.base;
     const now = editBase(task);
     if ($('edit-task-title').value.trim() === was.title) $('edit-task-title').value = now.title;
-    if ($('edit-task-url').value.trim() === was.url) $('edit-task-url').value = now.url;
-    drawEditCategories(task, mergeCategories(editCategoriesNow(), was.categories, now.categories));
+    drawEditURLs(mergeURLs(editURLsNow(), was.urls, now.urls));
+    drawEditCategories(task, mergeLists(editCategoriesNow(), was.categories, now.categories));
     taskEditing = { ...taskEditing, rev: readRev(task.project, task.name), base: now };
     return true;
   }
@@ -5390,12 +5622,28 @@
       left.reportValidity();
       return;
     }
+    const leftURL = $('edit-url-new');
+    const leftAt = leftURL.value.trim();
+    if (!leftURL.hidden && leftAt) {
+      leftURL.setCustomValidity(t(editURLsNow().includes(leftAt) ? 'ui_url_there' : 'ui_url_unadded', leftAt));
+      leftURL.reportValidity();
+      return;
+    }
     if (!taskFormReady($('edit-task'), $('edit-task-error'))) return;
     const { base } = taskEditing;
     const title = $('edit-task-title').value.trim();
-    const url = $('edit-task-url').value.trim();
+    const urls = editURLsNow();
+    // Only what the person changed, from the URLs last read, so that one another added or removed meanwhile is left as it is
+    const added = urls.filter((u) => !base.urls.includes(u));
+    const removed = base.urls.filter((u) => !urls.includes(u));
+    const ordered = !sameCategories(urls, editedURLs(base.urls, urls));
+    const urlsEdit = { ...(added.length > 0 ? { add: added } : {}), ...(removed.length > 0 ? { remove: removed } : {}), ...(ordered ? { order: urls } : {}) };
     const categories = editCategoriesNow();
-    const changed = { ...(title !== base.title ? { title } : {}), ...(url !== base.url ? { url } : {}), ...(!sameCategories(categories, base.categories) ? { categories } : {}) };
+    const changed = {
+      ...(title !== base.title ? { title } : {}),
+      ...(Object.keys(urlsEdit).length > 0 ? { urls: urlsEdit } : {}),
+      ...(!sameCategories(categories, base.categories) ? { categories } : {}),
+    };
     const body = { new: false, rev: taskEditing.rev, ...changed };
     if (Object.keys(changed).length === 0) {
       $('edit-task-dialog').close();
@@ -5453,13 +5701,14 @@
   // makes the row again when the task went meanwhile; Escape on it leaves the focus on back (the menu it came from),
   // the row after it, its category's add button, or the task's edit button
   // LIMIT: a page's write has no rev, so the way back writes over what was written to the page since, as the archive's does. Give page writes a rev if that comes to trouble someone
+  // LIMIT: put on another task since, the page is moved back unasked, the toast not saying the task it left. Ask and say it as Set the task does if that comes to trouble someone
   async function takePageOff(a, back) {
-    const name = a.work.task;
-    const category = a.work.category ?? '';
+    const name = a.task.name;
+    const category = a.task.category ?? '';
     const rows = listRows().filter((li) => !li.classList.contains('group') && li.querySelector('.title'));
     const at = rows.findIndex((li) => li.dataset.key === `entry:${a.slug}`);
     const next = at === -1 ? null : (rows[at + 1] ?? rows[at - 1])?.dataset.key;
-    const reason = await workOf(a.slug, { task: '', category: '' });
+    const reason = await changePageTask(a.slug, { task: '', category: '' });
     if (reason) return { reason };
     // The way back is of the task as the toast shows it: its rev as read now, or new when it has no row. A page whole's load reads no tasks
     if (framed) tasksRead = await readTasks();
@@ -5483,23 +5732,23 @@
   let addShown = [];
   let addSlug = null;
   const addHits = () => {
-    const all = items.filter((a) => a.taskProject === addTo.project && !a.archived && !(a.work?.task === addTo.name && (a.work?.category ?? '') === addTo.category));
+    const all = items.filter((a) => a.taskProject === addTo.project && !a.archived && !(a.task?.name === addTo.name && (a.task?.category ?? '') === addTo.category));
     return { all, hits: searched($('add-page-q'), all) };
   };
   // Where a page comes from, as said of it: this task's other category, another task's, or none
   const pageFrom = (a) => {
-    const { task, category } = a.work ?? {};
+    const { name: task, category } = a.task ?? {};
     if (!task) return '';
     if (task === addTo.name) return category ? t('ui_page_from_category', category) : t('ui_page_from_no_category');
-    return category ? t('ui_page_from_task_category', task, category) : task;
+    return leftPlace(task, category);
   };
   function drawAddPage() {
     const { all, hits } = addHits();
     addShown = hits.slice(0, FIND_ROWS);
     // Of one project, the task's: no pill, as on the task's page
     $('add-page-list').replaceChildren(...addShown.map((a, i) => hitRow($('add-page-row'), `add-page-${i}`, a, new Map(), (put) => {
-      if (!a.work?.task) return;
-      put('badge', a.work.task === addTo.name ? t('ui_page_here_category', a.work.category || t('ui_page_from_no_category')) : [a.work.task, a.work.category].filter(Boolean).join(' · '));
+      if (!a.task?.name) return;
+      put('badge', a.task.name === addTo.name ? t('ui_page_here_category', a.task.category || t('ui_page_from_no_category')) : [a.task.name, a.task.category].filter(Boolean).join(' · '));
     })));
     const none = hits.length === 0;
     $('add-page-list').hidden = none;
@@ -5542,6 +5791,11 @@
       $('add-page-error').hidden = false;
     };
     try {
+      // No leaves the modal as it was, the page still marked: its rows take no focus (listKeys), so the search box has it
+      if (!(await askMove(a, to.name))) {
+        $('add-page-q').focus();
+        return;
+      }
       let res;
       try {
         res = await putPageOn(a, to.name, { new: false, rev: to.rev }, to.category);
@@ -5558,7 +5812,11 @@
         failed(res.status === 409 ? res.stale : res.text);
         return;
       }
-      toast(from ? t('ui_page_moved', a.title, from, to.category) : t('ui_page_added', a.title, to.category));
+      // Of another task, as the write found it; of another category of this one, as the list had it. The list's other task is not said: the
+      // write found the page off it
+      const off = res.pages[0];
+      const said = off?.offTask ? leftPlace(off.offTask, off.offCategory) : (a.task?.name === to.name ? from : '');
+      toast(said ? t('ui_page_moved', a.title, said, to.category) : t('ui_page_added', a.title, to.category));
       await load();
       $('add-page-dialog').close();
     } finally {
@@ -5807,30 +6065,80 @@
     $('find-q').focus();
   }
 
-  // The themes, of the settings (the default of new pages) or of the page a, a row of the list, opened from its menu, whose
-  // focus goes back by back: GET /api/themes lists the themes and the default chosen, or the mistake that keeps them from being
-  // read (one's own parts, themes or templates, which stop every drawing, or settings.json, which choosing writes whole)
+  // The settings, opened on their list (the default theme, the task mode), or the themes of the page a, a row of the list,
+  // opened from its menu, whose focus goes back by back: GET /api/themes lists the themes, the default chosen and the task
+  // mode, or the mistake that keeps them from being read (one's own parts, themes or templates, which stop every drawing,
+  // or settings.json, which saving either writes whole)
   let themesRead = null;
   let themesPage = null;
   let themesBack = null;
   let themesOwn = '';
+  // Why the settings could not be read this time, '' when they were or are being read; and which opening this is, so that
+  // what was asked in one closed since (a read, a save) leaves the modal open now alone
+  let themesFailed = '';
+  let themesOpened = 0;
+  // The part of the settings shown: list, theme or mode; a page's themes are theme alone, with no way to the list
+  const SETTINGS_TITLES = { list: 'ui_settings', theme: 'ui_settings_theme', mode: 'ui_settings_mode' };
+  function showSettings(panel) {
+    $('settings').dataset.panel = panel;
+    $('settings').classList.toggle('narrow', panel !== 'theme');
+    $('settings-title').textContent = t(themesPage ? 'ui_theme_page' : SETTINGS_TITLES[panel]);
+    $('settings-back').hidden = Boolean(themesPage) || panel === 'list';
+    $('settings-list').hidden = panel !== 'list';
+    // A read that failed is said on the list and the mode's part, which cannot be saved then; a settings.json that cannot
+    // be read, on the list alone
+    $('settings-broken').hidden = !(themesFailed ? panel !== 'theme' : panel === 'list' && themesRead?.settings);
+    $('theme-now').hidden = panel !== 'theme';
+    $('theme-grid').hidden = panel !== 'theme';
+    $('theme-choose').hidden = panel !== 'theme';
+    $('settings-mode').hidden = panel !== 'mode';
+    $('mode-save').hidden = panel !== 'mode';
+    // The list saves nothing: Close; a part with its button that saves: Cancel
+    $('settings').querySelector('[data-close]').textContent = t(panel === 'list' ? 'ui_close' : 'ui_cancel');
+    if (panel === 'mode') drawTaskMode();
+  }
+  // A part of the list gone into, its heading focused; back to the list, the row of the part it came from
+  function settingsTo(panel) {
+    const from = $('settings').dataset.panel;
+    showSettings(panel);
+    if (panel === 'list') $('settings-list').querySelector(`[data-panel="${from}"]`)?.focus();
+    else $('settings-title').focus();
+  }
+  // The task mode as read; until it is read (or when it cannot be), not to be saved, as saving would write what it does
+  // not know
+  function drawTaskMode() {
+    $('task-mode').checked = Boolean(themesRead?.taskMode);
+    $('mode-save').disabled = !themesRead;
+  }
+  // The values the list shows, as read, and the task mode's part, if it is open
+  function drawSettingsList(got) {
+    $('settings-theme-now').textContent = got.settings ? '—' : got.default || 'default';
+    $('settings-mode-now').textContent = got.settings ? '—' : t(got.taskMode ? 'ui_mode_on' : 'ui_mode_off');
+    $('settings-broken').hidden = $('settings').dataset.panel !== 'list' || !got.settings;
+    if ($('settings').dataset.panel === 'mode') drawTaskMode();
+  }
   async function openThemes(a = null, back = null) {
     if (document.querySelector('dialog[open]')) return;
     themesPage = a;
     themesBack = back;
-    $('settings-title').textContent = t(a ? 'ui_theme_page' : 'ui_settings');
+    themesRead = null;
+    themesFailed = '';
+    const opened = ++themesOpened;
+    $('settings-theme-now').textContent = '';
+    $('settings-mode-now').textContent = '';
+    $('settings-broken').textContent = t('ui_settings_broken');
+    showSettings(a ? 'theme' : 'list');
     $('theme-page').hidden = !a;
     $('theme-page').textContent = a?.title ?? '';
     // An svg has no hidden property: the attribute
     $('settings').querySelector('.page-icon').toggleAttribute('hidden', !a);
     $('settings').querySelector('.settings-icon').toggleAttribute('hidden', Boolean(a));
-    // A page's modal is headed by its own title, which labels the cards
-    $('theme-title').hidden = Boolean(a);
-    $('theme-grid').setAttribute('aria-labelledby', a ? 'settings-title' : 'theme-title');
     const grid = $('theme-grid');
     grid.replaceChildren();
     $('theme-now').textContent = '';
     $('theme-choose').disabled = true;
+    // A save's toast shows in it, as the list stays open: the top layer hides the rest
+    $('settings').append($('toasts'));
     $('settings').showModal();
     // The theme a page shows in without its own theme, told on its first card: none when it cannot be read
     const own = a ? api(`${PAGES_API}/${encodeURIComponent(a.slug)}/theme`).then((r) => (r.ok ? r.json() : {})).then((o) => o.own ?? '', () => '') : '';
@@ -5840,12 +6148,50 @@
       if (!res.ok) throw new Error(t('ui_http_error', await res.text(), res.status));
       got = await res.json();
     } catch (e) {
-      $('theme-now').textContent = t('ui_theme_load_failed', e.message);
+      if (opened !== themesOpened) return;
+      themesFailed = t('ui_theme_load_failed', e.message);
+      $('theme-now').textContent = themesFailed;
+      $('settings-broken').textContent = themesFailed;
+      $('settings-broken').hidden = $('settings').dataset.panel === 'theme';
+      $('settings-theme-now').textContent = '—';
+      $('settings-mode-now').textContent = '—';
       return;
     }
+    const pageOwn = await own;
+    if (opened !== themesOpened) return;
     themesRead = got;
-    themesOwn = await own;
+    themesOwn = pageOwn;
     drawThemes(got);
+    drawSettingsList(got);
+  }
+
+  // The task mode as checked, written alone: the default theme stays as it is
+  async function saveTaskMode() {
+    const opened = themesOpened;
+    const on = $('task-mode').checked;
+    $('mode-save').disabled = true;
+    let why = '';
+    try {
+      const res = await api('/api/settings', { method: 'PUT', headers: { 'content-type': 'application/json' }, body: JSON.stringify({ taskMode: on }) });
+      if (!res.ok) why = t('ui_http_error', await res.text(), res.status);
+    } catch (e) {
+      why = e.message;
+    }
+    // Closed meanwhile: what was saved is told, the modal opened since left as it is
+    if (opened !== themesOpened) {
+      toast(why ? t('ui_task_mode_failed', why) : t(on ? 'ui_task_mode_set_on' : 'ui_task_mode_set_off'));
+      return;
+    }
+    $('mode-save').disabled = false;
+    if (why) {
+      toast(t('ui_task_mode_failed', why));
+      return;
+    }
+    // Back on the list, its row of the mode told anew and focused
+    themesRead = { ...themesRead, taskMode: on, settings: undefined };
+    drawSettingsList(themesRead);
+    settingsTo('list');
+    toast(t(on ? 'ui_task_mode_set_on' : 'ui_task_mode_set_off'));
   }
 
   // Told mistakes, one a line, at their places as the CLI words them
@@ -5953,6 +6299,7 @@
     if (!picked) return;
     const theme = picked.value;
     const a = themesPage;
+    const opened = themesOpened;
     $('theme-choose').disabled = true;
     let why = '';
     try {
@@ -5966,17 +6313,29 @@
     } catch (e) {
       why = e.message;
     }
+    const done = why ? t(a ? 'ui_theme_page_failed' : 'ui_theme_set_failed', why) : a ? (theme ? t('ui_theme_page_set', theme) : t('ui_theme_page_unset')) : t('ui_theme_set', theme);
+    // Closed meanwhile: what was saved is told, the modal opened since left as it is
+    if (opened !== themesOpened) {
+      toast(done);
+      if (a && !why) await load();
+      return;
+    }
     $('theme-choose').disabled = false;
     if (why) {
-      toast(t(a ? 'ui_theme_page_failed' : 'ui_theme_set_failed', why));
+      toast(done);
+      return;
+    }
+    if (!a) {
+      // Back on the list, its row of the theme told anew and focused
+      themesRead = { ...themesRead, default: theme, settings: undefined };
+      drawThemes(themesRead);
+      drawSettingsList(themesRead);
+      settingsTo('list');
+      toast(done);
       return;
     }
     $('settings').close();
-    if (!a) {
-      toast(t('ui_theme_set', theme));
-      return;
-    }
-    toast(theme ? t('ui_theme_page_set', theme) : t('ui_theme_page_unset'));
+    toast(done);
     await load();
   }
 
@@ -6124,6 +6483,30 @@
   $('edit-task').addEventListener('submit', saveTaskEdit);
   // Typing again lets a refusal go, but not that the task is gone, which no typing changes
   $('edit-task').addEventListener('input', () => { if (!taskEditing?.gone) $('edit-task-error').hidden = true; });
+  $('edit-url-plus').addEventListener('click', () => {
+    urlField(true);
+    $('edit-url-new').focus();
+  });
+  // As a category's field: Enter adds, Escape turns it back to the button
+  $('edit-url-new').addEventListener('keydown', (e) => {
+    if (composing(e)) return;
+    if (e.key === 'Enter') {
+      e.preventDefault();
+      addURL();
+    } else if (e.key === 'Escape') {
+      e.preventDefault();
+      e.stopPropagation();
+      urlField(false);
+      $('edit-url-plus').focus();
+    }
+  });
+  $('edit-url-new').addEventListener('focusout', () => {
+    if (!$('edit-url-new').value.trim()) urlField(false);
+  });
+  $('edit-urls').addEventListener('click', (e) => {
+    const drop = e.target.closest('.url-drop');
+    if (drop) dropURL(drop.closest('li'));
+  });
   $('edit-category-plus').addEventListener('click', () => {
     plusField(true);
     $('edit-category-new').focus();
@@ -6147,61 +6530,9 @@
   });
   $('edit-categories').addEventListener('click', (e) => {
     const drop = e.target.closest('.category-drop');
-    if (drop) {
-      if (pressable(drop)) dropCategory(drop.closest('li'));
-      else $('edit-category-said').textContent = drop.getAttribute('aria-label');
-      return;
-    }
-    const btn = e.target.closest('.category-up, .category-down');
-    if (!btn || btn.disabled) return;
-    const li = btn.closest('li');
-    moveCategory(li, btn.classList.contains('category-up') ? li.previousElementSibling : li.nextElementSibling?.nextElementSibling ?? null, btn.classList.contains('category-up') ? '.category-up' : '.category-down');
-  });
-  // A drag of a category's grip: the row goes before the row it is dropped on, or after it in its lower half. Only the grip makes a row draggable,
-  // and a screen without a pointer that hovers shows none
-  let dragged = null;
-  const dropMarks = () => { for (const li of $('edit-categories').children) li.classList.remove('drop-before', 'drop-after'); };
-  const dropAt = (e) => {
-    const li = e.target.closest?.('#edit-categories > li');
-    if (!li || li === dragged) return null;
-    const box = li.getBoundingClientRect();
-    return { li, after: e.clientY > box.top + box.height / 2 };
-  };
-  $('edit-categories').addEventListener('pointerdown', (e) => {
-    const li = e.target.closest('.category-grip')?.closest('li');
-    if (li) li.draggable = true;
-  });
-  // A press let go without a drag leaves no row draggable from anywhere but its grip; the row dragged is let go by dragend. Not on
-  // pointercancel, which a browser may send before dragstart, and the drag would not start
-  // LIMIT: a press cancelled without a drag (pointercancel alone) leaves its row draggable till the next press is let go or the dialog is drawn again
-  $('edit-categories').addEventListener('pointerup', () => {
-    for (const li of $('edit-categories').children) if (li !== dragged) li.draggable = false;
-  });
-  $('edit-categories').addEventListener('dragstart', (e) => {
-    // A drag of words selected starts at a text node; a row's own drag only from its grip
-    const li = e.target instanceof Element ? e.target.closest('#edit-categories > li') : null;
-    if (!li?.draggable) return;
-    dragged = li;
-    e.dataTransfer.effectAllowed = 'move';
-    e.dataTransfer.setData('text/plain', dragged.dataset.category);
-  });
-  $('edit-categories').addEventListener('dragover', (e) => {
-    if (!dragged) return;
-    e.preventDefault();
-    dropMarks();
-    const at = dropAt(e);
-    at?.li.classList.add(at.after ? 'drop-after' : 'drop-before');
-  });
-  $('edit-categories').addEventListener('drop', (e) => {
-    if (!dragged) return;
-    e.preventDefault();
-    const at = dropAt(e);
-    if (at) moveCategory(dragged, at.after ? at.li.nextElementSibling : at.li, null);
-  });
-  $('edit-categories').addEventListener('dragend', () => {
-    if (dragged) dragged.draggable = false;
-    dragged = null;
-    dropMarks();
+    if (!drop) return;
+    if (pressable(drop)) dropCategory(drop.closest('li'));
+    else $('edit-category-said').textContent = drop.getAttribute('aria-label');
   });
   $('set-task').addEventListener('input', setTaskKnown);
   // Offers tasks of a project by name, as the fields that name a task do: what each is in, which a long title does not cut (a task done is
@@ -6244,6 +6575,10 @@
     return task ? categoryOrder(task) : [];
   }, (name) => { $('set-category').value = name; });
   for (const b of document.querySelectorAll('[data-close]')) b.addEventListener('click', () => b.closest('dialog').close());
+  $('move-yes').addEventListener('click', () => {
+    moveYes = true;
+    $('move-dialog').close();
+  });
   // A click on the backdrop (the dialog itself) closes it, as Escape does: not one closedby none holds; the form fills the dialog, so
   // clicks inside never land here
   for (const d of document.querySelectorAll('dialog')) {
@@ -6330,7 +6665,7 @@
       $('manage').classList.add('task-page');
       $('task-up').href = taskListHref();
       $('task-missing-up').href = $('task-up').href;
-      $('task-state').append(...WORK_STATES.map(({ name }) => {
+      $('task-state').append(...UNARCHIVED_STATES.map(({ name }) => {
         const o = tagged('option', '', t(`ui_state_${name}`));
         o.value = name;
         return o;
@@ -6352,7 +6687,7 @@
     if (TASK_LIST) {
       // The shelf's views are the task's states, and only they and the project narrow it
       for (const b of document.querySelectorAll('.views button[data-view]:not([data-view="archived"])')) b.remove();
-      document.querySelector('.views button[data-view="archived"]').before(...WORK_STATES.map(({ name }) => {
+      document.querySelector('.views button[data-view="archived"]').before(...UNARCHIVED_STATES.map(({ name }) => {
         const b = tagged('button');
         b.type = 'button';
         b.dataset.view = name;
@@ -6517,8 +6852,22 @@
   $('keys-open').addEventListener('click', () => openKeys('about'));
   for (const button of document.querySelectorAll('.help-switch .btn')) button.addEventListener('click', () => showHelp(button.dataset.help));
   $('settings-open').addEventListener('click', () => openThemes());
-  $('settings').addEventListener('close', () => themesBack?.()?.focus());
-  $('settings-form').addEventListener('submit', chooseTheme);
+  // This comes after the closing, when it may have been opened again
+  $('settings').addEventListener('close', () => {
+    if ($('settings').open) return;
+    document.body.append($('toasts'));
+    themesBack?.()?.focus();
+  });
+  $('settings-form').addEventListener('submit', (e) => {
+    if ($('settings').dataset.panel !== 'mode') return chooseTheme(e);
+    e.preventDefault();
+    return saveTaskMode();
+  });
+  $('settings-list').addEventListener('click', (e) => {
+    const item = e.target.closest('.settings-item');
+    if (item) settingsTo(item.dataset.panel);
+  });
+  $('settings-back').addEventListener('click', () => settingsTo('list'));
   // On a Mac the key that goes with k is written as there
   if (/Mac/.test(navigator.platform)) {
     for (const e of $('keys').querySelectorAll('.mod')) e.textContent = '⌘';

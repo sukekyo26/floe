@@ -9,7 +9,6 @@ import (
 	"floe/docs"
 	"floe/internal/files"
 	"floe/internal/kit"
-	"floe/internal/store"
 	"floe/internal/tmpl"
 	"floe/internal/usererr"
 )
@@ -238,14 +237,9 @@ it is first stored and names no theme, or nothing when none is chosen (floe's de
 the other commands send to (FLOE_DIR) without starting the server.`,
 		Args: cobra.NoArgs,
 		RunE: func(_ *cobra.Command, _ []string) error {
-			root, err := a.storeDir()
+			set, err := a.settings()
 			if err != nil {
 				return err
-			}
-			// The store a server for these commands holds: daemon refuses one of another (daemon_other_root).
-			set, err := store.New(root.dir).ReadSettings()
-			if err != nil {
-				return err //nolint:wrapcheck // mistakes for the user as they are
 			}
 			if set.Theme != "" {
 				a.print("%s", set.Theme)

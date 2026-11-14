@@ -3,6 +3,7 @@ package store
 import (
 	"cmp"
 	"encoding/json"
+	jsonv2 "encoding/json/v2"
 	"errors"
 	"fmt"
 	"io/fs"
@@ -34,6 +35,11 @@ func ProjectKey(project string) string {
 	return project
 }
 
+// IsNoProject reports whether key, a project as tasks.json has it (ProjectKey), is that of pages of no project.
+func IsNoProject(key string) bool {
+	return key == noProject
+}
+
 // TaskName is the name of a page's task as written: trimmed, "" taking the page off its task. A name of spaces alone is
 // no way to say that, and is refused.
 func TaskName(name string) (string, error) {
@@ -55,34 +61,35 @@ func TaskProject(project string) (string, error) {
 	return ProjectKey(project), nil
 }
 
-// Work is what a page holds of its place on the task list: the task it is on, its category there, whether it is pinned.
-type Work struct {
-	Task     string `json:"task,omitempty"`
+// PageTask is what a page holds of its place on the task list: the task it is on, its category there, whether it is
+// pinned.
+type PageTask struct {
+	Name     string `json:"name,omitempty"`
 	Category string `json:"category,omitempty"`
 	Pin      bool   `json:"pin,omitempty"`
 }
 
-// WorkEdit is what a write changes of a page's Work, each left as it is when nil.
-type WorkEdit struct {
-	Task     *string
+// PageTaskEdit is what a write changes of a page's PageTask, each left as it is when nil.
+type PageTaskEdit struct {
+	Name     *string
 	Category *string
 	Pin      *bool
 }
 
-// setWork applies ed to m. A category is of its task: a page that moves to another task leaves it, unless ed gives the
-// category it takes there; a page off a task has none, and one neither on a task nor pinned has no Work. TaskName has
-// checked ed.
-func setWork(m *Meta, ed *WorkEdit) {
-	var w Work
-	if m.Work != nil {
-		w = *m.Work
+// setPageTask applies ed to m. A category is of its task: a page that moves to another task leaves it, unless ed gives
+// the category it takes there; a page off a task has none, and one neither on a task nor pinned has no PageTask.
+// TaskName has checked ed.
+func setPageTask(m *Meta, ed *PageTaskEdit) {
+	var w PageTask
+	if m.Task != nil {
+		w = *m.Task
 	}
-	if ed.Task != nil {
-		name := strings.TrimSpace(*ed.Task)
-		if name != w.Task {
+	if ed.Name != nil {
+		name := strings.TrimSpace(*ed.Name)
+		if name != w.Name {
 			w.Category = ""
 		}
-		w.Task = name
+		w.Name = name
 	}
 	if ed.Category != nil {
 		w.Category = strings.TrimSpace(*ed.Category)
@@ -90,22 +97,22 @@ func setWork(m *Meta, ed *WorkEdit) {
 	if ed.Pin != nil {
 		w.Pin = *ed.Pin
 	}
-	if w.Task == "" {
+	if w.Name == "" {
 		w.Category = ""
 	}
-	m.Work = &w
-	if w.Task == "" && !w.Pin {
-		m.Work = nil
+	m.Task = &w
+	if w.Name == "" && !w.Pin {
+		m.Task = nil
 	}
 }
 
 // Task is a task's row of tasks.json. At is when it was made or its state last changed; Parent the task it is a child
-// of, of the same project (childrenOfTask). A page's category is the page's alone (Work).
+// of, of the same project (childrenOfTask). A page's category is the page's alone (PageTask).
 type Task struct {
 	Title      string   `json:"title,omitempty"`
 	State      string   `json:"state"`
 	At         string   `json:"at"`
-	URL        string   `json:"url,omitempty"`
+	URLs       []string `json:"urls,omitempty"`
 	Categories []string `json:"categories,omitempty"`
 	Parent     string   `json:"parent,omitempty"`
 	// Rev counts the writes of the row, which a screen sends back as what it read: 0 of no row.
@@ -116,7 +123,7 @@ type Task struct {
 type Tasks map[string]map[string]Task
 
 // State is a state a task can be in: whether a task new or of no row is in it, whether the task list opens on it, and
-// whether a task in it is open, not yet done, which floe work tells (Open is for the CLI; the management page is not
+// whether a task in it is open, not yet done, which floe task tells (Open is for the CLI; the management page is not
 // given it).
 type State struct {
 	Name  string `json:"name"`
@@ -156,12 +163,12 @@ func (all Tasks) Open(project string) []NamedTask {
 	return open
 }
 
-// TaskEdit is what a write changes of a task's row, each left as it is when nil, as the API sends it. An empty URL or
+// TaskEdit is what a write changes of a task's row, each left as it is when nil, as the API sends it. An empty
 // Categories takes it off.
 type TaskEdit struct {
 	Title      *string   `json:"title,omitzero"`
 	State      *string   `json:"state,omitzero"`
-	URL        *string   `json:"url,omitzero"`
+	URLs       *URLsEdit `json:"urls,omitzero"`
 	Categories *[]string `json:"categories,omitzero"`
 	// An empty Parent takes it off.
 	Parent *string `json:"parent,omitzero"`
@@ -174,6 +181,20 @@ type TaskEdit struct {
 	ParentNew   *bool   `json:"parentNew,omitzero"`
 	ParentTitle *string `json:"parentTitle,omitzero"`
 }
+
+// URLsEdit changes a task's URLs as TagsEdit does a page's tags: those in Remove are taken off, and those in Add the
+// row has not put on at the end; one in both stays on, where the row has it. Only the URLs a writer changed are sent,
+// so that one another wrote since it read the row stays. Order then puts those of its URLs the row has first, in its
+// order, and the others after them as they were: one another added stays, at the end, and one the row has not is let
+// be.
+type URLsEdit struct {
+	Add    []string `json:"add,omitzero"`
+	Remove []string `json:"remove,omitzero"`
+	Order  []string `json:"order,omitzero"`
+}
+
+// MaxURLs is the most URLs a write may bring a task to.
+const MaxURLs = 10
 
 func validState(name string) bool {
 	return slices.ContainsFunc(States, func(s State) bool { return s.Name == name })
@@ -205,7 +226,7 @@ func (s *Store) tasksFile() string {
 // LIMIT: a parent written by hand that childrenOfTask does not count is not refused, unlike a state: the writes that
 // would mend it read through here, and the page shows such a task as of no parent. Tell of it if hand edits come to
 // hide it.
-// LIMIT: a key of a row floe does not know is lost at the next write. Keep them if tasks.json comes to be hand-edited.
+// A key it does not know is refused, as it would be lost at the next write.
 func (s *Store) ReadTasks() (Tasks, error) {
 	b, _, err := files.Read(s.tasksFile())
 	if errors.Is(err, fs.ErrNotExist) {
@@ -218,7 +239,7 @@ func (s *Store) ReadTasks() (Tasks, error) {
 		return usererr.NewAt(s.tasksFile(), 0, 0, "store_tasks_broken", fmt.Sprintf(format, args...))
 	}
 	var all Tasks
-	if err := json.Unmarshal(b, &all); err != nil {
+	if err := jsonv2.Unmarshal(b, &all, jsonv2.RejectUnknownMembers(true)); err != nil {
 		return nil, broken("%s", err.Error())
 	}
 	if all == nil {
@@ -229,18 +250,28 @@ func (s *Store) ReadTasks() (Tasks, error) {
 			return nil, broken("project %s holds null, not its tasks", project)
 		}
 		for name, t := range rows {
-			if !validState(t.State) {
-				return nil, broken("task %s of project %s has the state %q", name, project, t.State)
-			}
-			if timeOf(t.At).IsZero() {
-				return nil, broken("task %s of project %s has the time %q, not one like 2026-01-02T15:04:05Z", name, project, t.At)
-			}
-			if t.URL != "" && !validURL(t.URL) {
-				return nil, broken("task %s of project %s has the URL %q, not http or https", name, project, t.URL)
+			if what := t.unwritable(); what != "" {
+				return nil, broken("task %s of project %s has %s", name, project, what)
 			}
 		}
 	}
 	return all, nil
+}
+
+// unwritable says what of t no write may hold, "" for nothing.
+func (t Task) unwritable() string {
+	if !validState(t.State) {
+		return fmt.Sprintf("the state %q", t.State)
+	}
+	if timeOf(t.At).IsZero() {
+		return fmt.Sprintf("the time %q, not one like 2026-01-02T15:04:05Z", t.At)
+	}
+	for _, u := range t.URLs {
+		if !validURL(u) {
+			return fmt.Sprintf("the URL %q, not http or https", u)
+		}
+	}
+	return ""
 }
 
 func (s *Store) writeTasks(all Tasks) error {
@@ -278,8 +309,12 @@ func checkTaskEdit(ed TaskEdit) error {
 	if ed.State != nil && !validState(*ed.State) {
 		return usererr.New("store_task_state", *ed.State, StateNames())
 	}
-	if ed.URL != nil && *ed.URL != "" && !validURL(*ed.URL) {
-		return usererr.New("store_task_url", *ed.URL)
+	if ed.URLs != nil {
+		for _, u := range ed.URLs.Add {
+			if !validURL(u) {
+				return usererr.New("store_task_url", u)
+			}
+		}
 	}
 	if !parentFieldsMatch(ed) {
 		return usererr.New("store_parent_fields")
@@ -326,13 +361,8 @@ func checkParent(project string, rows map[string]Task, name string, ed TaskEdit)
 		return nil
 	}
 	parent := *ed.Parent
+	// Taken off: of a task of no row, which it does not make (makesRow), it is not found there
 	if parent == "" {
-		// What the screen saw is no change: a task of no row taken off its parent, and nothing else, is not found still
-		var nothing TaskEdit
-		ed.Parent, ed.Rev, ed.ParentNew, ed.ParentTitle = nil, nil, nil, nil
-		if _, had := rows[name]; !had && ed == nothing {
-			return ErrNotFound
-		}
 		return nil
 	}
 	// A parent made (ParentNew true) has no row yet, nor a parent of its own
@@ -400,7 +430,7 @@ func checkSeen(project string, rows map[string]Task, name string, ed TaskEdit) e
 // newTaskRow is the row a task starts with: of the state New, from now.
 func newTaskRow() Task {
 	fresh := States[slices.IndexFunc(States, func(s State) bool { return s.New })]
-	return Task{Title: "", State: fresh.Name, At: Now(), URL: "", Categories: nil, Parent: "", Rev: 0}
+	return Task{Title: "", State: fresh.Name, At: Now(), URLs: nil, Categories: nil, Parent: "", Rev: 0}
 }
 
 // categoriesOf is categories as a task keeps them: each trimmed, without the empty and a name twice, in the order
@@ -416,19 +446,47 @@ func categoriesOf(categories []string) []string {
 	return kept
 }
 
-// pastedURL is a URL with the spaces round it gone, as one pasted has them. Of spaces alone it stays, as checkTaskEdit
-// refuses it: "" is what takes a URL off.
-func pastedURL(raw *string) *string {
-	if raw == nil || strings.TrimSpace(*raw) == "" {
-		return raw
-	}
-	trimmed := strings.TrimSpace(*raw)
-	return &trimmed
+// tidied is t with its URLs as a write leaves them: each once, none for an empty list.
+func (t Task) tidied() Task {
+	t.URLs = withURLs(t.URLs, URLsEdit{Add: nil, Remove: nil, Order: nil})
+	return t
 }
 
-// TaskWritten is a task's row as Work left it, under the project (ProjectKey) and name tasks.json keys it by, which a
-// screen puts in place of the row it read. Made is whether the task had no row before this write, and Wrote whether
-// its row was written: not when it came out as it was, unless a parent was made with it.
+// pastedURLs is ed with the spaces round each URL gone, as pasted ones have them.
+func pastedURLs(ed *URLsEdit) *URLsEdit {
+	if ed == nil {
+		return nil
+	}
+	trim := func(urls []string) []string {
+		out := make([]string, len(urls))
+		for i, u := range urls {
+			out[i] = strings.TrimSpace(u)
+		}
+		return out
+	}
+	return &URLsEdit{Add: trim(ed.Add), Remove: trim(ed.Remove), Order: trim(ed.Order)}
+}
+
+// withURLs is urls as ed changes them, each once.
+func withURLs(urls []string, ed URLsEdit) []string {
+	var kept []string
+	for _, u := range slices.Concat(urls, ed.Add) {
+		if !slices.Contains(kept, u) && (!slices.Contains(ed.Remove, u) || slices.Contains(ed.Add, u)) {
+			kept = append(kept, u)
+		}
+	}
+	var first []string
+	for _, u := range ed.Order {
+		if slices.Contains(kept, u) && !slices.Contains(first, u) {
+			first = append(first, u)
+		}
+	}
+	return slices.Concat(first, slices.DeleteFunc(kept, func(u string) bool { return slices.Contains(first, u) }))
+}
+
+// TaskWritten is a task's row as ChangeTasks left it, under the project (ProjectKey) and name tasks.json keys it by,
+// which a screen puts in place of the row it read. Made is whether the task had no row before this write, and Wrote
+// whether its row was written: not when it came out as it was, unless a parent was made with it.
 type TaskWritten struct {
 	TaskProject string `json:"taskProject"`
 	Task        string `json:"task"`
@@ -447,8 +505,8 @@ func (t Task) edited(ed TaskEdit) Task {
 	if ed.Title != nil {
 		t.Title = strings.TrimSpace(*ed.Title)
 	}
-	if ed.URL != nil {
-		t.URL = *ed.URL
+	if ed.URLs != nil {
+		t.URLs = withURLs(t.URLs, *ed.URLs)
 	}
 	if ed.Categories != nil {
 		t.Categories = categoriesOf(*ed.Categories)
@@ -482,7 +540,7 @@ func (s *Store) eachPageOn(project, name string, on func(slug string, m *Meta) b
 	}
 	for _, slug := range slugs {
 		m := s.ReadMeta(slug)
-		if m != nil && m.Work != nil && m.Work.Task == name && ProjectKey(m.Project) == project && !on(slug, m) {
+		if m != nil && m.Task != nil && m.Task.Name == name && ProjectKey(m.Project) == project && !on(slug, m) {
 			return nil
 		}
 	}

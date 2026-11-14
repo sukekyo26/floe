@@ -223,8 +223,8 @@ func TestUIFocusRing(t *testing.T) { //nolint:paralleltest // the browser tests 
 	// A task's family, in its card: the parent's row, its button and the change over it on the child's page; the add over the
 	// children on the parent's.
 	b.unstub()
-	s.floe(t, "work", "--project", "proj", "--task", "#1", "--title", "up")
-	s.floe(t, "work", "--project", "proj", "--task", "#2", "--title", "down", "--parent", "#1")
+	s.floe(t, "task", "--project", "proj", "--task", "#1", "--title", "up")
+	s.floe(t, "task", "--project", "proj", "--task", "#2", "--title", "down", "--parent", "#1")
 	b.navigate("/tasks?project=proj&task=%232")
 	b.until("the family", "document.querySelector('#task-up-rows .kin-row')")
 	out = append(out[:0], tabTo("#task-parent-change"), tabTo("#task-up-rows .kin-row"), tabTo("#task-up-rows .unlink"))

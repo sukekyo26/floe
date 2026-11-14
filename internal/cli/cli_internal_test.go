@@ -39,10 +39,11 @@ func TestEncode(t *testing.T) {
 		t.Errorf("encoded %s, %v", b, err)
 	}
 	// Every text a command line gives, a string or strings, by its JSON pointer: the bodies of publish and link, the
-	// tags of floe tag, and the task's and the page's of floe work, down through their JSON names. These never reach
+	// tags of floe tag, and the task's and the page's of floe task, down through their JSON names. These never reach
 	// encode with a text no UTF-8, each for its reason.
 	unreached := map[string]string{
 		"/parentTitle": "the management page alone sends it",
+		"/urls/order":  "the management page alone sends it",
 	}
 	var texts func(typ reflect.Type, at string)
 	texts = func(typ reflect.Type, at string) {
@@ -71,7 +72,7 @@ func TestEncode(t *testing.T) {
 	tags, _ := reflect.TypeFor[server.Edit]().FieldByName("Tags")
 	name, _, _ := strings.Cut(tags.Tag.Get("json"), ",")
 	texts(tags.Type, "/"+name)
-	texts(reflect.TypeFor[store.WorkWrite](), "")
+	texts(reflect.TypeFor[store.TaskChange](), "")
 	// v2 still tells bytes no UTF-8 as notUTF8 matches them.
 	if _, err := jsonv2.Marshal("a\xffb"); !notUTF8(err) {
 		t.Errorf("encoding/json/v2 tells bytes no UTF-8 by %v, which notUTF8 does not match", err)

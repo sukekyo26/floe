@@ -12,11 +12,11 @@ import (
 	"floe/internal/store"
 )
 
-// taskWork is tasks.json of TestUITaskList: each state's order by its times, tasks of no page, one project of no page, and
+// tasksJSON is tasks.json of TestUITaskList: each state's order by its times, tasks of no page, one project of no page, and
 // the project of none. #6 is archived, #3 in progress with archived pages alone, and #8 done with one page left.
-const taskWork = `{
+const tasksJSON = `{
   "shop": {
-    "#1": {"title": "One", "state": "doing", "at": "2026-01-02T00:00:00Z", "url": "https://example.com/a/b/c"},
+    "#1": {"title": "One", "state": "doing", "at": "2026-01-02T00:00:00Z", "urls": ["https://example.com/a/b/c", "https://example.com/pull/9"]},
     "#2": {"title": "Two", "state": "doing", "at": "2026-01-01T00:00:00Z"},
     "#4": {"state": "todo", "at": "2026-01-01T00:00:00Z"},
     "#5": {"state": "todo", "at": "2026-01-02T00:00:00Z"},
@@ -49,25 +49,25 @@ func mustInt(t *testing.T, s string) int {
 	return n
 }
 
-// handWork writes the project, archived and work of the page slug into its meta.json, as a hand edit or an older floe
+// handMeta writes the project, archived and task of the page slug into its meta.json, as a hand edit or an older floe
 // leaves it: no task's row is made, which the test writes itself.
-func handWork(t *testing.T, st *store.Store, slug, project string, archived bool, task, category string, pin bool) {
+func handMeta(t *testing.T, st *store.Store, slug, project string, archived bool, task, category string, pin bool) {
 	t.Helper()
 
 	m := st.ReadMeta(slug)
 	if m == nil {
 		t.Fatalf("no page %s", slug)
 	}
-	m.Project, m.Archived, m.Work = project, archived, nil
+	m.Project, m.Archived, m.Task = project, archived, nil
 	if task != "" || pin {
-		m.Work = &store.Work{Task: task, Category: category, Pin: pin}
+		m.Task = &store.PageTask{Name: task, Category: category, Pin: pin}
 	}
 	if err := st.WriteMeta(slug, m); err != nil {
 		t.Fatal(err)
 	}
 }
 
-// taskPages publishes the pages of taskWork, each by its project, task, category and whether archived.
+// taskPages publishes the pages of tasksJSON, each by its project, task, category and whether archived.
 func taskPages(t *testing.T, s *site) {
 	t.Helper()
 
@@ -90,7 +90,7 @@ func taskPages(t *testing.T, s *site) {
 		{"pinonly", "pin", "", "", false, true},
 	} {
 		s.floe(t, "publish", s.page(t, p.slug+".yaml", p.slug, ""), "--slug", p.slug)
-		handWork(t, st, p.slug, p.project, p.archived, p.task, p.category, p.pin)
+		handMeta(t, st, p.slug, p.project, p.archived, p.task, p.category, p.pin)
 	}
 }
 
@@ -101,7 +101,7 @@ func TestUIStorageKeys(t *testing.T) { //nolint:paralleltest // the browser test
 	s := newSite(t)
 	b := s.b
 	taskPages(t, s)
-	if err := os.WriteFile(filepath.Join(s.Env["FLOE_DIR"], "tasks.json"), []byte(taskWork), 0o600); err != nil { //nolint:gosec // G703: a path the test names
+	if err := os.WriteFile(filepath.Join(s.Env["FLOE_DIR"], "tasks.json"), []byte(tasksJSON), 0o600); err != nil { //nolint:gosec // G703: a path the test names
 		t.Fatal(err)
 	}
 	out := make([]string, 0, 8)
@@ -158,7 +158,7 @@ func TestUITaskList(t *testing.T) { //nolint:paralleltest // the browser tests s
 	say("no work, tasks: shelf shown", "document.getElementById('shelf').offsetParent !== null")
 
 	taskPages(t, s)
-	writeTasks(taskWork)
+	writeTasks(tasksJSON)
 
 	// Opened with no project: the one where a task in progress changed last, written in the URL with no entry of its own, and kept.
 	b.navigate("/")
@@ -176,7 +176,8 @@ func TestUITaskList(t *testing.T) { //nolint:paralleltest // the browser tests s
 	say("pins", "[...document.querySelectorAll('.pin')].map((p) => p.textContent + ' ' + p.getAttribute('href')).join(', ')")
 	say("hrefs", "[...document.querySelectorAll('#list > li .title')].map((a) => a.getAttribute('href')).join(' ')")
 	say("a row's project, in its title alone", "document.querySelector('#list > li .title').title.replaceAll('\\n', ' / ')")
-	say("link", "(() => { const a = document.querySelector('.xlink'); return [a.textContent, a.href, a.target, a.rel, a.title].join(' '); })()")
+	// A link of each URL, in order
+	say("link", "[...document.querySelector('#list > li').querySelectorAll('.xlink')].map((a) => [a.textContent, a.href, a.target, a.rel, a.title].join(' ')).join(' | ')")
 	say("current", "document.getElementById('to-tasks').getAttribute('aria-current')")
 	say("search shown", "document.getElementById('search').hidden + ' ' + (document.getElementById('find-open').offsetParent !== null)")
 	say("chips", "[...document.querySelectorAll('#chips .chip')].map((c) => c.textContent + ' ' + c.getAttribute('aria-pressed') + ' ' + c.style.getPropertyValue('--c')).join(', ')")
@@ -252,17 +253,17 @@ func TestUITaskList(t *testing.T) { //nolint:paralleltest // the browser tests s
 	b.until("a project", "location.search.includes('project=')")
 	say("the kept gone", "location.search")
 	b.eval("localStorage.removeItem(PROJECT_KEY)")
-	writeTasks(strings.ReplaceAll(taskWork, `"doing"`, `"todo"`))
+	writeTasks(strings.ReplaceAll(tasksJSON, `"doing"`, `"todo"`))
 	b.navigate("/tasks")
 	b.until("a project", "location.search.includes('project=')")
 	say("none in progress", "location.search")
 	// With the latest change in progress in another project than the shelf's first, that one.
 	b.eval("localStorage.removeItem(PROJECT_KEY)")
-	writeTasks(strings.ReplaceAll(taskWork, "2025-12-03T00:00:00Z\"}},", "2027-01-03T00:00:00Z\"}},"))
+	writeTasks(strings.ReplaceAll(tasksJSON, "2025-12-03T00:00:00Z\"}},", "2027-01-03T00:00:00Z\"}},"))
 	b.navigate("/tasks")
 	b.until("a project", "location.search.includes('project=')")
 	say("changed last", "location.search")
-	writeTasks(taskWork)
+	writeTasks(tasksJSON)
 
 	// The way up of a task's page opened by its URL: its project's list, at the task's view, whatever list was last seen.
 	const up = "document.getElementById('task-up').getAttribute('href')"
@@ -325,6 +326,11 @@ func TestUITaskList(t *testing.T) { //nolint:paralleltest // the browser tests s
 		b.pressKey("\x1b")
 		b.until("Esc to close", "!"+tip)
 	}
+	// A link of long words wraps within its row, narrow too
+	b.eval("document.querySelector('#list > li .xlink span').textContent = 'x'.repeat(200)")
+	if got := b.eval("(() => { const a = document.querySelector('#list > li .xlink span'); return a.getBoundingClientRect().right <= a.closest('li').getBoundingClientRect().right + 0.5 && a.scrollWidth <= a.clientWidth + 1; })()"); got != "true" {
+		t.Errorf("a long link goes out of its row")
+	}
 	b.size(1440, 800, false)
 
 	// What cannot be read says so on the task list alone, and goes when mended. The project in use stays, not called gone, and the one
@@ -346,7 +352,7 @@ func TestUITaskList(t *testing.T) { //nolint:paralleltest // the browser tests s
 	b.navigate("/tasks")
 	b.until("the error", "!document.getElementById('error').hidden")
 	say("broken, none kept", "location.search + ' ' + document.getElementById('pins').hidden")
-	writeTasks(taskWork)
+	writeTasks(tasksJSON)
 	b.until("mended", "document.getElementById('error').hidden && "+rowsDrawn)
 	say("mended", "location.search + ' ' + document.getElementById('tasks-failed').hidden")
 	// The kept one written nowhere while unreadable, so that the project mended is the one the tasks choose.
@@ -355,7 +361,7 @@ func TestUITaskList(t *testing.T) { //nolint:paralleltest // the browser tests s
 	b.navigate("/tasks")
 	b.until("the error", "!document.getElementById('error').hidden")
 	say("broken, gone kept", "location.search + ' ' + sessionStorage.getItem(TASKS_KEY) + ' ' + localStorage.getItem(PROJECT_KEY)")
-	writeTasks(taskWork)
+	writeTasks(tasksJSON)
 	b.until("mended", "document.getElementById('error').hidden && "+rowsDrawn)
 	say("mended, chosen anew", "location.search + ' ' + localStorage.getItem(PROJECT_KEY)")
 
@@ -365,7 +371,7 @@ func TestUITaskList(t *testing.T) { //nolint:paralleltest // the browser tests s
 	b.navigate("/tasks")
 	b.until("the error", "!document.getElementById('error').hidden && document.querySelector('.chip[data-project=blog]')")
 	b.eval("document.querySelector('.chip[data-project=blog]').click()")
-	writeTasks(taskWork)
+	writeTasks(tasksJSON)
 	b.until("mended", "document.getElementById('error').hidden && "+rowsDrawn)
 	say("pressed while unreadable", "location.search")
 
@@ -379,8 +385,8 @@ func TestUITaskList(t *testing.T) { //nolint:paralleltest // the browser tests s
 	b.navigate("/tasks")
 	b.until("the guide", "!document.getElementById('tasks-empty').hidden")
 	s.floe(t, "publish", s.page(t, "p1.yaml", "p1", ""), "--slug", "p1")
-	s.floe(t, "work", "p1", "--task", "#1", "--state", "done")
-	writeTasks(taskWork)
+	s.floe(t, "task", "--slug", "p1", "--task", "#1", "--state", "done")
+	writeTasks(tasksJSON)
 
 	if got, want := strings.Join(out, "\n"), taskListWant; got != want {
 		t.Errorf("the task list:\n%s\nwant:\n%s", got, want)
@@ -434,13 +440,13 @@ func TestUITaskList(t *testing.T) { //nolint:paralleltest // the browser tests s
 // taskListWant is what TestUITaskList reads of the list, in the order it reads it.
 const taskListWant = `no work, tasks: shelf shown: false
 opened: ?project=shop shop
-doing: #1One [2 page(s), 2 unread, b/c]; #2Two [0 page(s)]
+doing: #1One [2 page(s), 2 unread, b/c, pull/9]; #2Two [0 page(s)]
 views: todo 2, doing 2, done 2, archived 1
 head: 2 · latest change first
 pins: pinned /a/pinned/
 hrefs: /tasks?project=shop&task=%231 /tasks?project=shop&task=%232
-a row's project, in its title alone: #1 / One / shop / https://example.com/a/b/c
-link: b/c https://example.com/a/b/c _blank noopener https://example.com/a/b/c
+a row's project, in its title alone: #1 / One / shop / https://example.com/a/b/c / https://example.com/pull/9
+link: b/c https://example.com/a/b/c _blank noopener https://example.com/a/b/c | pull/9 https://example.com/pull/9 _blank noopener https://example.com/pull/9
 current: page
 search shown: true true
 chips: shop2 true var(--pc0), blog1 false var(--pc1), pin0 false var(--pc2), solo1 false var(--pc3), Not set1 false var(--faint)
@@ -466,7 +472,7 @@ the first view is left out: ?project=shop
 to blog: ?project=blog blog
 blog again: ?project=blog true
 the one kept, the view kept: ?view=done&project=blog
-?project=shop: #1One [2 page(s), 2 unread, b/c]; #2Two [0 page(s)]
+?project=shop: #1One [2 page(s), 2 unread, b/c, pull/9]; #2Two [0 page(s)]
 ?project=shop none: 
 ?project=shop pins: pinned | undefined
 ?project=shop kept: shop
