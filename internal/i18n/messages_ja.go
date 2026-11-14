@@ -470,6 +470,7 @@ var messagesJA = map[string]string{
 	"ui_settings_broken":       "設定の読み込みに失敗しました。どれかを保存すると、設定を書き直します",
 	"ui_settings_theme":        "全体テーマ",
 	"ui_settings_theme_about":  "新しく保存するページのテーマ",
+	"ui_settings_value_sep":    "：",
 	"ui_settings_mode":         "モード",
 	"ui_task_mode":             "タスクモード",
 	"ui_task_mode_about":       "エージェントが、ページをタスク一覧に載せながら作業します。",

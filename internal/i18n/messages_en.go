@@ -481,6 +481,7 @@ var messagesEN = map[string]string{
 	"ui_settings_broken":       "Failed to read the settings. Saving one writes them again",
 	"ui_settings_theme":        "Theme",
 	"ui_settings_theme_about":  "The theme of the pages stored from now on",
+	"ui_settings_value_sep":    ": ",
 	"ui_settings_mode":         "Mode",
 	"ui_task_mode":             "Task mode",
 	"ui_task_mode_about":       "Agents work with the task list, putting pages on tasks.",
