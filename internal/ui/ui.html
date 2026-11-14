@@ -1002,7 +1002,9 @@
   /* Above the title's hit area, as the row's controls are. Gray: blue is what is unseen alone */
   .xlink { position: relative; z-index: 1; display: inline-flex; align-items: center; gap: 0.2rem; color: var(--muted); text-decoration: underline; text-underline-offset: 2px; font: var(--text-label) var(--mono); white-space: nowrap; }
   .xlink:hover { color: var(--fg); }
-  #task-link { display: inline-flex; flex-wrap: wrap; gap: 0.2rem 0.6rem; }
+  /* A task's URLs under its state, one a line: a few at most, none folded */
+  .task-links { display: grid; justify-items: start; gap: 0.2rem; margin-top: 0.35rem; }
+  .task-links[hidden] { display: none; }
   .xlink svg { width: 12px; height: 12px; flex: none; }
   .pins { flex: none; display: flex; flex-wrap: wrap; align-items: center; gap: 0.4rem 0.5rem; padding: 0.6rem 1rem; background: var(--bg); border-bottom: 1px solid var(--line); font-size: var(--text-small); }
   .pins > h2 { margin: 0 0.4rem 0 0; font: 600 var(--text-label)/1.2 var(--body); color: var(--muted); white-space: nowrap; }
@@ -1134,9 +1136,9 @@
         <div class="tstate">
           <select class="ver-pick st" id="task-state" aria-label="{{.Msg "ui_task_state"}}"><button><selectedcontent></selectedcontent></button></select><span class="kid-state" id="task-archived" hidden>{{.Msg "ui_state_archived"}}</span>
           <time id="task-at"></time>
-          <span id="task-link"></span>
           <span class="proj" id="task-project"></span>
         </div>
+        <div class="task-links" id="task-link" hidden></div>
         <div class="family" id="task-family" hidden>
           <div class="family-part" id="task-up-part" hidden>
             <div class="family-head"><h3><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m14 9-5-5-5 5"/><path d="M20 20h-7a4 4 0 0 1-4-4V4"/></svg>{{.Msg "ui_task_parent"}}</h3><button type="button" class="btn add-open" id="task-parent-add" aria-label="{{.Msg "ui_up_add_named"}}" hidden><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" aria-hidden="true"><path d="M12 5v14M5 12h14"/></svg>{{.Msg "ui_task_child_add"}}</button><button type="button" class="btn add-open" id="task-parent-change" aria-label="{{.Msg "ui_up_change_named"}}" hidden>{{.Msg "ui_task_up_change"}}</button></div>
@@ -3868,6 +3870,7 @@
       $('task-at').textContent = ago(task.at);
     }
     $('task-link').replaceChildren(...(task.urls ?? []).map(xlink));
+    $('task-link').hidden = !task.urls?.length;
     drawProject($('task-project'), projectWord(task.project), taskProjectColor(task.project));
     $('task-up').href = taskListHref(task);
     drawTaskFamily(task);

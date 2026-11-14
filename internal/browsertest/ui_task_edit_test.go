@@ -203,6 +203,11 @@ func TestUITaskEdit(t *testing.T) { //nolint:paralleltest // the browser tests s
 	say("sent the URLs", "sent.join(' ; ')")
 	b.until("the links", "document.querySelectorAll('#task-link a').length === 2")
 	say("links", "[...document.querySelectorAll('#task-link a')].map((a) => a.href).join(',')")
+	// Under the state's line, one a line, at one left edge
+	say("links stacked", `(() => {
+		const r = [...document.querySelectorAll('#task-link a')].map((a) => a.getBoundingClientRect()), state = document.querySelector('#task-head .tstate').getBoundingClientRect();
+		return [r[0].top >= state.bottom, r[1].top >= r[0].bottom, r[0].left === r[1].left, document.getElementById('task-link').hidden].join(' ');
+	})()`)
 	// At 10, one more is said and not added
 	open("S300")
 	for i := 3; i <= 11; i++ {
@@ -230,6 +235,7 @@ func TestUITaskEdit(t *testing.T) { //nolint:paralleltest // the browser tests s
 	save("saved empty")
 	closed("closed")
 	out = append(out, "emptied: "+row("S300"))
+	b.until("no links", "document.getElementById('task-link').hidden && document.getElementById('task-link').getClientRects().length === 0")
 	// Opened over the task drawn before the tasks were read again: its fields and rev are of the one read now, not of what was drawn.
 	b.eval("window.drawnTask = tasksOf().find((x) => x.name === 'S300')")
 	s.floe(t, "work", "--project", "proj", "--task", "S300", "--title", "Later")
@@ -317,6 +323,7 @@ func TestUITaskEdit(t *testing.T) { //nolint:paralleltest // the browser tests s
 		"urls: 9 New title https://example.com/489,https://example.com/pull/9 [リリース,設計,レビュー,実装,案]",
 		`sent the URLs: {"taskProject":"proj","task":"S300","new":false,"rev":8,"urls":{"add":["https://example.com/pull/9"]}}`,
 		"links: https://example.com/489,https://example.com/pull/9",
+		"links stacked: true true true false",
 		"an 11th: 10 / A task holds 10 URLs at most: take one off first / http or https URLs, 10 at most",
 		`refused: Failed to save: "ftp://x" is not an http or https URL / true`,
 		"not reached: Failed to save: Failed to fetch / true",
