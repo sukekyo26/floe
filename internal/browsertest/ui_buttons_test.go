@@ -5,6 +5,7 @@ import (
 	"strings"
 	"testing"
 
+	"floe/internal/i18n"
 	"floe/internal/store"
 )
 
@@ -29,7 +30,7 @@ func TestUIButtons(t *testing.T) { //nolint:paralleltest // the browser tests sh
 		}
 	}
 	// A title that takes a toast's words over lines, its button wider than the room left beside them
-	s.floe(t, "publish", s.page(t, "c.yaml", "A title long enough to take the words of its toast over three lines or more", ""), "--slug", "c")
+	s.floe(t, "publish", s.page(t, "c.yaml", "トーストの字が三行より長くなるほどに長いページの題をここに書いておく", ""), "--slug", "c")
 	if _, err := st.Edit("c", store.Edit{Project: &project}); err != nil {
 		t.Fatal(err)
 	}
@@ -131,7 +132,10 @@ func TestUIButtons(t *testing.T) { //nolint:paralleltest // the browser tests sh
 	b.until("the rows", "document.querySelector('#list li[data-slug=a]')")
 	modal("filter-dialog", "document.getElementById('narrow-filter').click()")
 
-	// Narrow: a row of buttons goes onto another line, and a button wider than its line keeps its words to one
+	// Narrow, in Japanese, whose words break between any two characters: a row of buttons goes onto another line, and a
+	// button wider than its line keeps its words to one
+	b = newBrowser(t, s.Base, i18n.Lang("ja"))
+	ja := i18n.New(i18n.Lang("ja"))
 	b.size(280, 800, false)
 	b.navigate("/?project=proj")
 	b.until("the rows", "document.querySelector('#list li[data-slug=c]')")
@@ -159,7 +163,7 @@ func TestUIButtons(t *testing.T) { //nolint:paralleltest // the browser tests sh
 	b.navigate("/tasks?project=proj&task=%231")
 	b.until("the head", "!"+archive+".hidden")
 	check("a narrow task done")
-	pressTaskArchive(b, "Restore")
+	pressTaskArchive(b, ja.Msg("ui_unarchive"))
 	check("a narrow task archived")
 
 	// The diff and a page not found, last: publishing a again may take it off its task
