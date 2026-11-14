@@ -221,7 +221,7 @@ func TestTaskAPI(t *testing.T) {
 	if code, _ := forget("shop", "#2"); code != http.StatusNotFound {
 		t.Errorf("no task = %d", code)
 	}
-	if got := page(`{"slugs":["d"],"task":""}`); got != `{"slug":"d","taskProject":"shop"}` {
+	if got := page(`{"slugs":["d"],"task":""}`); got != `{"slug":"d","taskProject":"shop","offTask":"#1","offCategory":"s"}` {
 		t.Errorf("the answer of an edit taking the page off its task: %s", got)
 	}
 	// The query's old key reads as no project, and removes nothing: the task is still there for the next to remove
