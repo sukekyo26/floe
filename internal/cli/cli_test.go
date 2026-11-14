@@ -7,6 +7,7 @@ import (
 	"testing"
 
 	"floe/internal/cli"
+	"floe/internal/licenses"
 	"floe/internal/version"
 )
 
@@ -23,6 +24,8 @@ func TestRun(t *testing.T) {
 		{[]string{"version"}, 0, v, ""},
 		{[]string{"--version"}, 0, v, ""},
 		{[]string{"version", "x"}, 2, "", "floe: unknown command \"x\" for \"floe version\": run floe --help\n"},
+		{[]string{"licenses"}, 0, string(licenses.Notices), ""},
+		{[]string{"licenses", "x"}, 2, "", "floe: unknown command \"x\" for \"floe licenses\": run floe --help\n"},
 		{[]string{"nope"}, 2, "", "floe: unknown command \"nope\" for \"floe\": run floe --help\n"},
 		{[]string{"part", "nope"}, 2, "", "floe: unknown command \"nope\" for \"floe part\": run floe --help\n"},
 		{[]string{"template", "nope"}, 2, "", "floe: unknown command \"nope\" for \"floe template\": run floe --help\n"},
@@ -137,6 +140,7 @@ func TestHelp(t *testing.T) {
 		"guide\tPrint the guide for agents: how to write, check and publish a page\n" +
 		"help\tHelp about any command\n" +
 		"icons\tKeep icon sets for the icon parts of diagrams, and search them\n" +
+		"licenses\tPrint the license notices of floe and of the code built into it\n" +
 		"list\tList pages, newest first (updated, slug, title, linked path; tab-separated), archived ones left out\n" +
 		"part\tList the parts, show one, make one of your own, and check yours\n" +
 		"publish\tStore a page drawn from a data file (or --link an HTML file or a folder in place) and print its URL\n" +

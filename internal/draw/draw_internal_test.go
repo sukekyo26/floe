@@ -164,7 +164,8 @@ func TestRefusalWords(t *testing.T) {
 }
 
 // text/template's mistake of running a part.html of floe's is told there too, as one of a part of one's own:
-// drawPart parts them not. The value is one the part's schema would refuse, drawn unchecked.
+// drawPart parts them not. A value the function a part.html calls cannot read is told at the value, as the
+// function's other mistakes are. The values are ones the parts' schemas would refuse, drawn unchecked.
 func TestFloePartExecPlaced(t *testing.T) {
 	t.Parallel()
 
@@ -176,11 +177,15 @@ func TestFloePartExecPlaced(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	it := schema.Item{At: []string{"b"}, Part: "code", Format: "", Value: "x"}
-	_, err = drawPart(k, d, it, "x", newItems(nil, "", nil, nil))
-	want := `parts/code/part.html:1:16: executing "part.html" at <.text>: can't evaluate field text in type string`
-	if got := usererr.Tell(i18n.EnglishCatalog(), err).Render(""); got != want {
-		t.Errorf("told %q, want %q", got, want)
+	for _, tt := range []struct{ part, want string }{
+		{"facts", "parts/facts/part.html:2:11: "},
+		{"code", "d.yaml:2:4: "},
+	} {
+		it := schema.Item{At: []string{"b"}, Part: tt.part, Format: "", Value: "x"}
+		_, err = drawPart(k, d, it, "x", newItems(nil, "", nil, nil))
+		if got := usererr.Tell(i18n.EnglishCatalog(), err).Render(""); !strings.HasPrefix(got, tt.want) || strings.Contains(got, "\n") {
+			t.Errorf("%s: told %q, want one at %q", tt.part, got, tt.want)
+		}
 	}
 }
 

@@ -1,4 +1,4 @@
-{{- $c := chart . -}}
+{{- $c := chart -}}
 <figure data-floe-part="chart">
 <figcaption class="head"><span class="title">{{$c.Title}}</span>{{with $c.Unit}}<span class="unit">{{.}}</span>{{end}}
 <ul class="legend">{{range $c.Series}}<li class="s{{.N}}"><span class="key"></span>{{.Name}}</li>{{end}}</ul></figcaption>

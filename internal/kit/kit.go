@@ -464,6 +464,7 @@ func pageFuncs() template.FuncMap {
 func partFuncsAll() template.FuncMap {
 	fns := maps.Clone(funcs)
 	maps.Copy(fns, partFuncs)
+	maps.Copy(fns, boundFuncs)
 	return fns
 }
 

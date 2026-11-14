@@ -46,7 +46,7 @@ $ floe task --slug old-notes
 page old-notes: no task
 ```
 
-A page on no task prints `page <slug>: no task`, without its project: `floe publish` prints the project. A project of no open task prints `no open task in project floe`. A page published by `--link` is in the project of the linked file, and `floe publish --link` does not print it: run `floe task` in that file's repository, or give `--project` that repository's name.
+A page on no task prints `page <slug>: no task`, without its project: `floe publish` prints the project. A project of no open task prints `no open task in project floe`. A page published by `--link` is in the project of the linked file: run `floe task` in that file's repository, or give `--project` that repository's name.
 
 ## Put pages on a task
 
