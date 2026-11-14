@@ -772,6 +772,7 @@ var messagesJA = map[string]string{
 	"ui_url_new_hint":            "https://（Enter で追加）",
 	"ui_url_blank":               "URL を書いてください",
 	"ui_url_there":               "「%s」はもう並びにあります",
+	"ui_url_max":                 "URL は %d 個までです。足す前に 1 つ外してください",
 	"ui_url_unadded":             "「%s」はまだ追加していません。Enter で追加するか、欄を空にしてください",
 	"ui_url_added":               "「%s」を追加しました",
 	"ui_url_drop_named":          "「%s」を外す",

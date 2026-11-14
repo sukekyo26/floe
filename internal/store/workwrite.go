@@ -217,8 +217,9 @@ func checkURLCount(t Task, name string, ed *URLsEdit) error {
 	if ed == nil {
 		return nil
 	}
-	after := withURLs(t.URLs, *ed)
-	if len(after) > len(t.URLs) && len(after) > maxURLs {
+	// Counted each once, as a write leaves them: a row written by hand may hold one twice
+	before, after := withURLs(t.URLs, URLsEdit{Add: nil, Remove: nil}), withURLs(t.URLs, *ed)
+	if len(after) > len(before) && len(after) > maxURLs {
 		return usererr.New("store_task_urls_max", name, len(after), maxURLs)
 	}
 	return nil
