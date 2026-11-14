@@ -191,7 +191,7 @@ func TestUITaskEdit(t *testing.T) { //nolint:paralleltest // the browser tests s
 	addURL("https://example.com/pull/9")
 	say("added twice", urls+" + ' / ' + document.getElementById('edit-url-said').textContent")
 	// A URL's row and a category's are taken off by one icon, drawn alike
-	say("one bin", `(() => {
+	say("one x", `(() => {
 		const d = (on) => [...document.querySelectorAll(on + ' svg path')].map((p) => p.getAttribute('d')).join(' ');
 		const url = document.querySelector('#edit-urls .url-drop svg'), category = document.querySelector('#edit-categories .category-drop svg');
 		return [d('#edit-urls li:first-child .url-drop') === d('#edit-categories li:first-child .category-drop'), url.getAttribute('stroke-width') === category.getAttribute('stroke-width')].join(' ');
@@ -333,7 +333,7 @@ func TestUITaskEdit(t *testing.T) { //nolint:paralleltest // the browser tests s
 		"drag: 8 New title https://example.com/489 [リリース,設計,レビュー,実装,案]",
 		"no grip without hover: true",
 		"added twice: https://example.com/489,https://example.com/pull/9 / https://example.com/pull/9 is already among the URLs",
-		"one bin: true true",
+		"one x: true true",
 		"typed, not added: https://example.com/left is not added yet: press Enter to add it, or empty the field / true",
 		"dropped: https://example.com/pull/9 / Take off https://example.com/pull/9 / Took off https://example.com/489",
 		"urls: 9 New title https://example.com/489,https://example.com/pull/9 [リリース,設計,レビュー,実装,案]",
