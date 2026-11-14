@@ -108,6 +108,7 @@ var messagesJA = map[string]string{
 	"kit_image_path":             "「%[1]s」は floe が %[2]s のディレクトリの下で読むパスではありません。そのディレクトリからの相対で、名前の間に / を 1 つずつ書き、./（./pic.png は pic.png に）、..、両端の / を書かないでください",
 	"kit_image_type":             "「%s」は floe が扱う画像ではありません。png・jpeg・gif・webp・svg を使ってください",
 	"kit_image_not_file":         "「%s」は画像のファイルではなく、ディレクトリなどです。画像のふつうのファイルを指してください",
+	"kit_part_value":             "%[1]s は部品の値の %[2]s を JSON の %[3]s として読みます。そう書いてください。部品を作った人は、schema.json で %[2]s に \"type\": \"%[3]s\" を書いてください",
 	"kit_image_unread":           "画像「%[2]s」を読めません（%[1]s）",
 	"kit_image_large":            "画像「%s」は %s バイトで、画像の上限の %s バイト（%s）を超えています。小さくしてください",
 	"kit_script_end":             "js がその <script> を早く終わらせるか、終わりを動かします（</script か、<script の前の <!-- があります）。文字列なら '<' + '/script' のように分けてください",

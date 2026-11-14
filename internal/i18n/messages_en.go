@@ -114,6 +114,7 @@ var messagesEN = map[string]string{
 	"kit_image_path":             `"%[1]s" is not a path floe reads under the directory of %[2]s: write it relative to that directory, with one / between names, without ./ (write pic.png for ./pic.png), .., or a / at either end`,
 	"kit_image_type":             `"%s" is not an image floe takes: use png, jpeg, gif, webp or svg`,
 	"kit_image_not_file":         `"%s" is not a file of an image, but a directory or the like: name a regular file of the image`,
+	"kit_part_value":             `%[1]s reads %[2]s, the part's value, as a JSON %[3]s: write it so; if you made the part, have its schema.json give %[2]s "type": "%[3]s"`,
 	"kit_image_unread":           `the image "%[2]s" cannot be read (%[1]s)`,
 	"kit_image_large":            `the image "%s" is %s bytes, over the %s bytes (%s) an image may be; make it smaller`,
 	"kit_script_end":             "js would end its <script> early, or move where it ends, as it holds </script, or <!-- before a <script: split them in a string, as '<' + '/script'",

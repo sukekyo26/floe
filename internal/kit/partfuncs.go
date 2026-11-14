@@ -24,9 +24,8 @@ import (
 // partFuncs are the functions floe's parts draw with, besides those of page.html and over them: markdown draws in a
 // text's box, as all a part holds of Markdown is (MarkdownFlow).
 var partFuncs = template.FuncMap{
-	"bars": barsOf, "chart": chartOf, "code": codeOf, "copyButton": copyButtonOf, "diagram": diagramOf, "diff": diffOf,
-	"markdown": MarkdownFlow, "script": scriptOf, "stats": statsOf, "tree": treeOf, "written": writtenOf,
-	"zoom": zoomScript,
+	"copyButton": copyButtonOf, "diagram": diagramOf, "diff": diffOf, "markdown": MarkdownFlow, "tree": treeOf,
+	"written": writtenOf, "zoom": zoomScript,
 }
 
 // zoomScript is the function zoom of a part.html: the script that zooms the frames of class floe-zoom, as the
@@ -126,9 +125,7 @@ type bar struct {
 
 // barsOf gives each of the items of a bars part, each written as keys and values, a label, a value no less than 0
 // and an of above 0 and no less than the value, or none (nil: Walk sets a key the schema declares and the data
-// leaves out to nil, as null), its width. It tells the mistakes of every item.
-// LIMIT: the mistakes are at the part's value, not at the item, told by the item's number in the list given to bars
-// and its label: bars knows not where in the part's value the list is. Place them at the item if that misleads.
+// leaves out to nil, as null), its width. It tells the mistakes of every item, each at the key of the item it is of.
 // LIMIT: an item with of and no label, which floe's bars refuses by its schema, is a progressbar of no name; refuse
 // it here if a part of one's own comes to draw one.
 // LIMIT: a unit is a bar's own, so a bar without of, whose width is a share of the longest value, is not refused for a
@@ -139,11 +136,15 @@ func barsOf(items []any) ([]bar, error) {
 	var found usererr.List
 	longest := 0.0
 	for i, item := range items {
-		b, err := barOf(i, item)
-		if failed := found.Add(err); failed != nil {
-			return nil, failed
-		}
+		b, key, err := barOf(i, item)
 		if err != nil {
+			at := "#/" + strconv.Itoa(i)
+			if key != "" {
+				at += "/" + key
+			}
+			if failed := found.Add(placed(err, at)); failed != nil {
+				return nil, failed
+			}
 			continue
 		}
 		if b.Of == nil {
@@ -162,11 +163,12 @@ func barsOf(items []any) ([]bar, error) {
 	return bars, nil
 }
 
-// barOf reads the item at i of a bars part: its width is its value, or a percentage of its of, when written.
-func barOf(i int, item any) (bar, error) {
+// barOf reads the item at i of a bars part: its width is its value, or a percentage of its of, when written. A
+// mistake comes with the key of the item it is of, "" for the item itself.
+func barOf(i int, item any) (bar, string, error) {
 	m, ok := item.(map[string]any)
 	if !ok {
-		return bar{}, usererr.New("kit_bar_item", "bars", i+1)
+		return bar{}, "", usererr.New("kit_bar_item", "bars", i+1)
 	}
 	b := bar{
 		Label: stringOf(m["label"]), Tone: stringOf(m["tone"]), Unit: stringOf(m["unit"]),
@@ -175,46 +177,47 @@ func barOf(i int, item any) (bar, error) {
 	name := fmt.Sprintf("bars: bar %d %q", i+1, b.Label)
 	// A unit of a part of one's own, whose schema does not say it is text, would be read as none by stringOf.
 	if _, text := m["unit"].(string); !text && m["unit"] != nil {
-		return bar{}, usererr.New("kit_not_text", name+"'s unit", fmt.Sprint(m["unit"]))
+		return bar{}, "unit", usererr.New("kit_not_text", name+"'s unit", fmt.Sprint(m["unit"]))
 	}
 	n, err := float(name+"'s value", b.Value)
 	if err != nil {
-		return bar{}, err
+		return bar{}, "value", err
 	}
 	// Its width is a share: one below 0 would be no width, which CSS drops, drawing the bar whole.
 	if n < 0 {
-		return bar{}, usererr.New("kit_below_zero", name+"'s value", fmt.Sprint(b.Value))
+		return bar{}, "value", usererr.New("kit_below_zero", name+"'s value", fmt.Sprint(b.Value))
 	}
 	b.Width = max(n, 0) // -0, which n < 0 lets through, as 0
 	if b.Of == nil {
-		return b, nil
+		return b, "", nil
 	}
 	of, err := float(name+"'s of", b.Of)
 	if err != nil {
-		return bar{}, err
+		return bar{}, "of", err
 	}
 	// An of of 0 would make the width infinite, one below 0 below 0, and one below the value wider than the track.
 	if of <= 0 {
-		return bar{}, usererr.New("kit_bar_of", name+"'s of", fmt.Sprint(b.Of))
+		return bar{}, "of", usererr.New("kit_bar_of", name+"'s of", fmt.Sprint(b.Of))
 	}
 	if over(b.Value, b.Of, n, of) {
 		var value, whole string
 		if value, err = decimal(name+"'s value", b.Value, 0); err != nil {
-			return bar{}, err
+			return bar{}, "value", err
 		}
 		if whole, err = decimal(name+"'s of", b.Of, 0); err != nil {
-			return bar{}, err
+			return bar{}, "of", err
 		}
-		return bar{}, usererr.New("kit_bar_over", name, value, whole)
+		// The value is what to lower, as the mistake says.
+		return bar{}, "value", usererr.New("kit_bar_over", name, value, whole)
 	}
 	b.Width = b.Width / of * 100
 	if b.Now, err = plain(name+"'s value", b.Value, 0); err != nil {
-		return bar{}, err
+		return bar{}, "value", err
 	}
 	if b.Max, err = plain(name+"'s of", b.Of, 0); err != nil {
-		return bar{}, err
+		return bar{}, "of", err
 	}
-	return b, nil
+	return b, "", nil
 }
 
 // over is whether a bar's value v, read as n, goes past its of w, read as of: compared as integers when both are
@@ -302,7 +305,6 @@ var newlines = strings.NewReplacer("\r\n", "\n", "\r", "\n")
 // lines mark, nil or a list, names by those numbers. It tells every wrong number of mark.
 // LIMIT: a number no line has marks nothing, and a start changed alone moves what mark names: the page shows both. Tell
 // them apart here, which counts the lines, if the page comes not to be looked at.
-// LIMIT: the mistakes are at the part's value, not at the number: codeOf knows not where in it the values are.
 // LIMIT: the range of a number is the schema's, as the part code's is. A part of one's own with no such schema may
 // number from 0, or past a CSS counter's end near 2^31, where its lines would all show one number: the page shows it.
 // A number past an int (start: 18446744073709551615) reads as another, and a start below 0 may show more digits than
@@ -313,7 +315,7 @@ func codeOf(text string, start, mark any) (codeText, error) {
 	first := 1
 	if start != nil {
 		n, err := lineNumber("start", start)
-		if failed := found.Add(err); failed != nil {
+		if failed := found.Add(placed(err, "#/start")); failed != nil {
 			return c, failed
 		}
 		first, c.Numbered = n, true
@@ -321,13 +323,13 @@ func codeOf(text string, start, mark any) (codeText, error) {
 	marks := map[int]bool{}
 	list, isList := mark.([]any)
 	if mark != nil && !isList {
-		if failed := found.Add(usererr.New("kit_code_mark", fmt.Sprint(mark))); failed != nil {
+		if failed := found.Add(usererr.New("kit_code_mark", fmt.Sprint(mark)).PlacedIn("#/mark")); failed != nil {
 			return c, failed
 		}
 	}
-	for _, v := range list {
+	for k, v := range list {
 		n, err := lineNumber("mark", v)
-		if failed := found.Add(err); failed != nil {
+		if failed := found.Add(placed(err, "#/mark/"+strconv.Itoa(k))); failed != nil {
 			return c, failed
 		}
 		marks[n] = true
@@ -470,7 +472,7 @@ func scriptOf(js string, data any) (template.HTML, error) {
 	body := "{const floeScript = " + js + "\n" +
 		";floeScript(document.currentScript.previousElementSibling, JSON.parse(" + string(text) + "));}"
 	if !wholeScript(body) {
-		return "", usererr.New("kit_script_end")
+		return "", usererr.New("kit_script_end").PlacedIn("#/js")
 	}
 	//nolint:gosec // G203: read whole as a script's text
 	return template.HTML("<div></div><script>" + body + "</script>"), nil
