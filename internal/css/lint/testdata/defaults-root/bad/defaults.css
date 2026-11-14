@@ -4,3 +4,4 @@
 :root { --x: 1px; } /* want "--x on :root; set only --floe-* variables in defaults.css" */
 @media print { :root { --floe-room: 0; } } /* want "@media: write no at-rule in defaults.css" */
 :root { .a { --floe-pad-block: 0; } } /* want "--floe-pad-block in :root { .a; set only a plain :root in defaults.css" */
+:root { @media print { --floe-x: 0; } } /* want "@media: write no at-rule in defaults.css" */

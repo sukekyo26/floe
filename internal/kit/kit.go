@@ -80,12 +80,15 @@ var floe = sync.OnceValues(func() (*Kit, error) {
 	if err != nil {
 		return nil, err
 	}
-	for file, to := range map[string]*[]byte{"base.css": &k.baseCSS, "defaults.css": &k.defaultsCSS} {
-		src, err := floeFiles.ReadFile(path.Join("floe", file))
+	for _, f := range []struct {
+		name string
+		to   *[]byte
+	}{{"base.css", &k.baseCSS}, {"defaults.css", &k.defaultsCSS}} {
+		src, err := floeFiles.ReadFile(path.Join("floe", f.name))
 		if err != nil {
-			return nil, fmt.Errorf("kit: floe's %s: %w", file, err)
+			return nil, fmt.Errorf("kit: floe's %s: %w", f.name, err)
 		}
-		*to = css.Preprocess(bom.Trim(src))
+		*f.to = css.Preprocess(bom.Trim(src))
 	}
 	return k, nil
 })

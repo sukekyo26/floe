@@ -28,4 +28,7 @@ func TestRenderedDefaults(t *testing.T) { //nolint:paralleltest // the browser t
 	defer s.b.media("")
 	s.b.navigate("/a/inpalette/?raw")
 	check(t, "inpalette on paper", []string{s.b.eval(read)}, "0.7rem | 0.5rem | 0px")
+	// LIMIT (defaults.css): base.css's :scope is a layer over floe's print, so its room holds on paper too.
+	s.b.navigate("/a/inbase/?raw")
+	check(t, "inbase on paper", []string{s.b.eval(read)}, "0.7rem | 0.5rem | 5px")
 }

@@ -1,1 +1,4 @@
 @property --floe-inset { syntax: "*"; inherits: false; initial-value: 0 0 #0000; }
+@media print { :root { --floe-room: 0px; --floe-copy-room: 0px; } }
+:root { --not-floe: 1px; }
+.a { --floe-room: 9rem; }
