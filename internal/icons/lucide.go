@@ -29,7 +29,7 @@ var lucide = kit{
 	builtin: true,
 	packages: []pack{{
 		what:   "the lucide-icons zip",
-		link:   regexp.MustCompile(`^$`),
+		link:   nil, // never fetched
 		iconOf: lucideIconOf,
 	}},
 	version: nil,

@@ -421,7 +421,7 @@ func TestShortNames(t *testing.T) {
 	}
 }
 
-// An icon a word names whole comes first, then the rest by name as before, in a set of azure's shape too: the
+// An icon a word names whole, but for its folder, comes first, then the rest by name as before, in a set of azure's shape too: the
 // short names keep their place among those first.
 func TestSearchNamedWhole(t *testing.T) {
 	t.Parallel()
@@ -432,7 +432,8 @@ func TestSearchNamedWhole(t *testing.T) {
 		t.Fatal(err)
 	}
 	idx := `{"version": "1", "sources": [], "icons": {"a-virtual-machine": {}, "virtual-machine": {}, ` +
-		`"virtual-machine-scale-sets": {}, "virtual-networks": {}, "kubernetes-services": {}, "aks-engine": {}}}`
+		`"virtual-machine-scale-sets": {}, "virtual-networks": {}, "kubernetes-services": {}, "aks-engine": {}, ` +
+		`"managed-disks": {}, "res/disks": {}}}`
 	if err := os.WriteFile(filepath.Join(dir, "index.json"), []byte(idx), 0o600); err != nil {
 		t.Fatal(err)
 	}
@@ -445,6 +446,8 @@ func TestSearchNamedWhole(t *testing.T) {
 		// No name is the word whole: by name, as before.
 		{[]string{"virtual"}, []string{"azure/a-virtual-machine", "azure/virtual-machine", "azure/virtual-machine-scale-sets", "azure/virtual-networks"}},
 		{[]string{"vnet"}, []string{"azure/virtual-networks"}},
+		// A name in a folder is named whole by its last part.
+		{[]string{"disks"}, []string{"azure/res/disks", "azure/managed-disks"}},
 		{[]string{"aks"}, []string{"azure/kubernetes-services", "azure/aks-engine"}},
 	} {
 		hits, err := set.Search("azure", c.words)

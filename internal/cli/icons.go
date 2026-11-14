@@ -83,7 +83,7 @@ func (a *app) iconsSearchCmd() *cobra.Command {
 		Long: `List the icons of the set (lucide, aws, gcp, azure) whose name contains every word, one per line as
 the name to give an icon part (lucide/…, aws/…, gcp/…, azure/…) and its category, tab-separated. lucide is
 built into floe: every icon of Lucide 1.72.0, drawn in the text colour or a tone, which needs no fetch.
-An icon whose name is a word whole (user for lucide/user) comes first, as does a common short name of a
+An icon whose name, but for its folder, is a word (user for lucide/user) comes first, as does a common short name of a
 service in the set (alb, s3, gke, aks, vnet), or of a thing in lucide (db, person, browser), then the
 service's resources. A set not fetched is told with how to fetch it.
 

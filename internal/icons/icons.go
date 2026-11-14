@@ -229,7 +229,8 @@ func (s *Store) readIndex(k *kit) (*index, error) {
 		return idx, nil
 	}
 	if k.builtin {
-		// LIMIT: lucide is the one set built in; keep an index for each if another comes.
+		// LIMIT: lucide is the one set built in, and the one of lines (Mono reads the same mark); keep an index for
+		// each, and a mark of lines apart, if another comes.
 		return lucideIndex()
 	}
 	if s.none != nil {
@@ -794,9 +795,9 @@ type Hit struct {
 }
 
 // Search returns the icons of set whose name (set/name) contains every word, or, for a word that is a short name of
-// the set (alb, gke), the name of an icon it means: the icons a word means or names whole (user for lucide/user)
-// first, then the rest, each by name, so that a first line is what was asked for. A set not fetched is told so,
-// with how to fetch it.
+// the set (alb, gke), the name of an icon it means: the icons a word means or names whole but for its folder (user
+// for lucide/user, server for aws/res/server) first, then the rest, each by name, so that a first line is what was
+// asked for. A set not fetched is told so, with how to fetch it.
 func (s *Store) Search(set string, words []string) ([]Hit, error) {
 	if err := CheckSet(set); err != nil {
 		return nil, err
@@ -818,7 +819,8 @@ func (s *Store) Search(set string, words []string) ([]Hit, error) {
 		if slices.ContainsFunc(terms, func(t string) bool { return !strings.Contains(full, t) && !k.holdsMeant(t, name) }) {
 			continue
 		}
-		if slices.ContainsFunc(terms, func(t string) bool { return t == name || slices.Contains(k.short[t], name) }) {
+		named := func(t string) bool { return t == path.Base(name) || slices.Contains(k.short[t], name) }
+		if slices.ContainsFunc(terms, named) {
 			meant = append(meant, Hit{Name: full, Category: e.Category})
 		} else {
 			rest = append(rest, Hit{Name: full, Category: e.Category})
