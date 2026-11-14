@@ -465,6 +465,7 @@ func TestCheckSearch(t *testing.T) {
 		{nil, "icons_search_words"},
 		{[]string{"storage"}, "icons_search_words"},
 		{[]string{"gcp"}, "icons_search_words"},
+		{[]string{"lucide", " ", ""}, "icons_search_words"},
 		{[]string{"ibm", "x"}, "icons_unknown_set"},
 		{[]string{"gcp", "storage"}, ""},
 	} {
