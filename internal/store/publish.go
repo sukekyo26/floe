@@ -57,7 +57,7 @@ func sameFile(m *Meta, repo, place string) bool {
 	return m.PublishedFile != "" && m.PublishedFile == place && (filepath.IsAbs(place) || m.PublishedFrom == repo)
 }
 
-// ownSlug is the slug of a publish without --slug, of the file whose entries own tells, named base: base when its entry
+// ownSlug is the slug of a publish without --slug, of file, whose entries own tells, named base: base when its entry
 // is the file's, else the first of the file's entries by slug, else base, which a link takes when free, else base-2,
 // base-3 … so that two index.html files never take over each other. base is checked only then: a file whose name
 // makes no slug still finds its page.
@@ -65,7 +65,7 @@ func sameFile(m *Meta, repo, place string) bool {
 // slugs of the files apart if publishing slows.
 // LIMIT: of two pages of one file (a publish with --slug, or one before publishes found the file's page), base's is
 // written and the other is left as it was, to be floe rm'd.
-func (s *Store) ownSlug(base string, own func(*Meta) bool, link bool) (string, error) {
+func (s *Store) ownSlug(base, file string, own func(*Meta) bool, link bool) (string, error) {
 	if m := s.ReadMeta(base); m != nil && own(m) {
 		return base, nil
 	}
@@ -77,6 +77,9 @@ func (s *Store) ownSlug(base string, own func(*Meta) bool, link bool) (string, e
 		if m := s.ReadMeta(slug); m != nil && own(m) {
 			return slug, nil
 		}
+	}
+	if base == "" {
+		return "", usererr.NewAt(file, 0, 0, "store_slug_unnamed")
 	}
 	slug := base
 	for n := 2; link && s.ReadMeta(slug) != nil; n++ {
@@ -170,6 +173,8 @@ type Entry struct {
 	// named is what a publish without --slug is named after, for Save to pick its slug again ("" for a name that makes
 	// none).
 	named string
+	// file is the file as the publisher named it, where a name that makes no slug is told.
+	file string
 	// created is the default theme the page was drawn with, which settle keeps for a new page, or one replacing
 	// another file's, as its CreatedTheme: read before the drawing, not at Save, so that the two agree.
 	created string
@@ -306,7 +311,7 @@ func (s *Store) dataSlug(up Upload, opts Options) (slug, named string, err error
 		return *opts.Slug, "", nil
 	}
 	named = files.SlugFromFile(up.File)
-	slug, err = s.ownSlug(named, owns("", up.Repo, up.Place), false)
+	slug, err = s.ownSlug(named, up.File, owns("", up.Repo, up.Place), false)
 	return slug, named, err
 }
 
@@ -333,7 +338,7 @@ func (s *Store) storedPage(slug, named string, up Upload, src []byte, opts Optio
 	e := &Entry{
 		Slug: slug, Meta: seedMeta("", up.File, src, opts.theme()), Source: src, Page: nil, Images: nil, Prev: nil,
 		OffTask: "", Warnings: nil, opts: opts, project: up.Project, repo: up.Repo, place: up.Place, named: named,
-		created: "",
+		file: up.File, created: "",
 	}
 	if err := e.settle(s.ReadMeta(e.Slug)); err != nil {
 		return nil, err
@@ -372,7 +377,7 @@ func (s *Store) PrepareLink(
 	} else if opts.Slug == nil {
 		named = linkName(file, cwd)
 	}
-	slug, err := s.linkSlug(named, path, opts)
+	slug, err := s.linkSlug(named, file, path, opts)
 	if err != nil {
 		return nil, err
 	}
@@ -403,7 +408,8 @@ func (s *Store) PrepareLink(
 	}
 	e := &Entry{
 		Slug: slug, Meta: seedMeta(path, path, data, opts.theme()), Source: nil, Page: nil, Images: nil, Prev: nil,
-		OffTask: "", Warnings: warnings, opts: opts, project: from, repo: "", place: "", named: named, created: created,
+		OffTask: "", Warnings: warnings, opts: opts, project: from, repo: "", place: "", named: named, file: file,
+		created: created,
 	}
 	e.Meta.Folder = folder
 	// A folder's own title, as a data file's title: is: where it is in its repository, its repository's name at its
@@ -571,12 +577,12 @@ func newMeta(opts Options, path, project, repo, place string, base *Meta, own, s
 
 // linkSlug is the slug of a link to path: the one given, which Accept checked, else the slug of the link to path,
 // else one free made of named.
-func (s *Store) linkSlug(named, path string, opts Options) (string, error) {
+func (s *Store) linkSlug(named, file, path string, opts Options) (string, error) {
 	if opts.Slug != nil {
 		return *opts.Slug, nil
 	}
 	// Named after the given file, not the symlink's target.
-	return s.ownSlug(named, owns(path, "", ""), true)
+	return s.ownSlug(named, file, owns(path, "", ""), true)
 }
 
 // slugMistake is the mistake of slug if it cannot be one, nil else.
@@ -745,7 +751,7 @@ func (s *Store) pickAgain(e *Entry) error {
 	if (e.Prev == nil && m == nil) || (e.Prev != nil && own(e.Prev) && m != nil && own(m)) {
 		return nil
 	}
-	slug, err := s.ownSlug(e.named, own, e.Meta.IsLink())
+	slug, err := s.ownSlug(e.named, e.file, own, e.Meta.IsLink())
 	if err != nil {
 		return err
 	}

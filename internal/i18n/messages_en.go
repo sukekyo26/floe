@@ -5,6 +5,9 @@ func init() {
 }
 
 // messagesEN is the reference catalog: every other language has exactly its keys.
+// noIconEN is said whatever the set; a set of category icons adds how to draw a product without its own.
+const noIconEN = "no %[2]s icon name contains all of %[1]s; try fewer words, or a word of the full name (floe icons search %[2]s %[2]s lists every one)"
+
 var messagesEN = map[string]string{
 	// LIMIT: a library's own words, English in every language; floe words only what it checks itself
 	"library": "%s",
@@ -204,6 +207,7 @@ var messagesEN = map[string]string{
 
 	// store: publishing and editing pages
 	"store_invalid_slug":      `invalid slug "%s": use 1 to 64 lowercase letters, digits and hyphens, starting and ending with a letter or digit`,
+	"store_slug_unnamed":      "no slug can be made of this name, as it has no letter a to z or digit: pass --slug, or rename it",
 	"store_slug_is_page":      `slug "%s" is used by a stored page: choose another slug`,
 	"store_slug_is_link":      `slug "%s" is used by a linked file: choose another slug`,
 	"store_slug_linked":       `slug "%s" is linked to %s: choose another slug`,
@@ -277,6 +281,7 @@ var messagesEN = map[string]string{
 	// LIMIT: the first %s of icons_broken, icons_download, icons_page_download, icons_bad_zip and
 	// icons_previous_left is encoding/json's, net/http's, archive/zip's or the system's English
 	"icons_unknown_set":        "unknown icon set \"%s\"; use %s",
+	"icons_builtin":            "%[1]s icons are built into floe, so there is nothing to fetch; search them with: floe icons search %[1]s <word>",
 	"dir_relative":             "%s is %s, a relative path; set it to an absolute path",
 	"icons_no_dir":             "there is no directory for icons, as HOME is not an absolute path; set FLOE_ICONS_DIR to an absolute path",
 	"icons_not_fetched":        "%[1]s icons are not in %[2]s; run \"floe icons fetch %[3]s\" (downloads about %[4]s from %[5]s) and try again",
@@ -294,7 +299,8 @@ var messagesEN = map[string]string{
 	"icons_too_many":           "holds over %d icons, far more than an icon package; check that it is the right file",
 	"icons_written_too_large":  "the icons in it come to over %dMB, far more than an icon package; check that it is the right file",
 	"icons_none_in_zip":        "holds no %s icons; pass %s from %s: %s",
-	"icons_no_match":           "no %[2]s icon name contains all of %[1]s; try fewer words, or a word of the full name (floe icons search %[2]s %[2]s lists every one)",
+	"icons_no_match":           noIconEN,
+	"icons_no_match_category":  noIconEN + "; a product without an icon of its own is drawn with its category's icon and its name as the label (floe icons search %[2]s category lists them)",
 	"icons_fetched":            "fetched %d %s icons (%s) into %s",
 	"icons_already":            "%s icons %s are already in %s (add --force to fetch them again)",
 	"icons_search_words":       "name the icon set and a word to search for: floe icons search <set> <word>... (sets: %s)",
@@ -333,6 +339,7 @@ var messagesEN = map[string]string{
 	"diagram_label_no_room":      "%s finds no room inside %s and outside the other circles: make that area larger, or the text shorter",
 	"diagram_raw_element":        "raw SVG holds <%s>, which a diagram may not hold: leave it out, and draw the looks with SVG's shapes and attributes (fill= and the like)",
 	"diagram_icon_set":           "%s: \"%s\" needs its icon set in front (%s), like aws/amazon-ec2 (search with: floe icons search <set> <word>)",
+	"diagram_icon_tone":          "%s: %s draws in its own colours and takes no tone; remove tone (only lucide icons take one)",
 	"diagram_icon_unknown":       "%s: no icon \"%s\" (search with: floe icons search %s <word>)",
 	"copy_button":                "Copy",
 	"copy_failed":                "Could not copy",

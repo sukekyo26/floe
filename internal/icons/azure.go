@@ -16,7 +16,9 @@ var azure = kit{
 		link:   nil,
 		iconOf: azureIconOf,
 	}},
-	version: nil,
+	version:     nil,
+	builtin:     false,
+	categorized: false,
 	short: map[string][]string{
 		"acr":   {"container-registries"},
 		"afd":   {"front-door-and-cdn-profiles"},

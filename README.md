@@ -85,4 +85,4 @@ data file's mistakes, is in English or Japanese, by the browser's language.
 
 ## License
 
-[MIT](LICENSE)
+[MIT](LICENSE). The [Lucide](https://lucide.dev) icons floe ships for diagrams (`lucide/…`) are under the ISC License, some of them under the MIT License too: [internal/icons/lucide/LICENSE](internal/icons/lucide/LICENSE).

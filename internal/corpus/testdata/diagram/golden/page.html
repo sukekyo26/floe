@@ -363,6 +363,7 @@ blockquote::before { content: "“"; content: "“" / ""; display: block; font: 
 /* A frame's dashes are a little darker than the secondary text. Without color-mix, --muted stays */
 .dg .frame rect { fill: none; stroke: var(--muted); stroke: color-mix(in srgb, var(--muted) 75%, var(--fg)); stroke-width: 1.2; stroke-dasharray: 5 4; }
 .dg .frame.accent rect { stroke: var(--accent); }
+.dg .frame rect.icon-ground { fill: var(--bg); stroke: none; }
 .dg .frame text { fill: var(--muted); font-size: 12px; font-weight: 700; }
 .dg .frame.grouped text { fill: var(--fg); font-size: 13px; }
 .dg .edge { fill: none; stroke: var(--tone, var(--muted)); stroke-width: 1.5; }
@@ -376,6 +377,8 @@ blockquote::before { content: "“"; content: "“" / ""; display: block; font: 
 .dg .dot { fill: var(--tone, var(--muted)); stroke: var(--tone, var(--muted)); }
 .dg .dot.hollow { fill: var(--bg); stroke-width: 2; }
 .dg .bar { fill: var(--tone, var(--muted)); }
+/* An icon of lines (lucide) is a mask over currentColor, which only the color of its <use> reaches */
+.dg use.icon { color: var(--tone, var(--fg)); }
 .dg .axis { stroke: var(--muted); stroke-width: 1.2; }
 .dg .grid { stroke: var(--line); }
 .dg .venn { fill: var(--tone-soft, var(--accent-soft)); fill-opacity: 0.6; stroke: var(--tone, var(--accent)); stroke-width: 1.5; }
@@ -419,6 +422,7 @@ blockquote::before { content: "“"; content: "“" / ""; display: block; font: 
 /* A frame's dashes are a little darker than the secondary text. Without color-mix, --muted stays */
 .dg .frame rect { fill: none; stroke: var(--muted); stroke: color-mix(in srgb, var(--muted) 75%, var(--fg)); stroke-width: 1.2; stroke-dasharray: 5 4; }
 .dg .frame.accent rect { stroke: var(--accent); }
+.dg .frame rect.icon-ground { fill: var(--bg); stroke: none; }
 .dg .frame text { fill: var(--muted); font-size: 12px; font-weight: 700; }
 .dg .frame.grouped text { fill: var(--fg); font-size: 13px; }
 .dg .edge { fill: none; stroke: var(--tone, var(--muted)); stroke-width: 1.5; }
@@ -432,6 +436,8 @@ blockquote::before { content: "“"; content: "“" / ""; display: block; font: 
 .dg .dot { fill: var(--tone, var(--muted)); stroke: var(--tone, var(--muted)); }
 .dg .dot.hollow { fill: var(--bg); stroke-width: 2; }
 .dg .bar { fill: var(--tone, var(--muted)); }
+/* An icon of lines (lucide) is a mask over currentColor, which only the color of its <use> reaches */
+.dg use.icon { color: var(--tone, var(--fg)); }
 .dg .axis { stroke: var(--muted); stroke-width: 1.2; }
 .dg .grid { stroke: var(--line); }
 .dg .venn { fill: var(--tone-soft, var(--accent-soft)); fill-opacity: 0.6; stroke: var(--tone, var(--accent)); stroke-width: 1.5; }
@@ -1006,7 +1012,7 @@ main > .body, .body > .sections { display: grid; gap: 2.5rem; grid-template-colu
   const init = () => document.querySelectorAll('.' + frameClass).forEach(setup);
   if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', init);
   else init();
-})({"frame":"floe-zoom","tools":"floe-zoom-tools","words":{"en":{"zoom_fit":"Fit","zoom_fit_label":"Show the whole figure","zoom_frame":"Zoomable figure","zoom_hint":"Ctrl / ⌘ + wheel or pinch to zoom. Click or Tab to the figure, then + - 0 to zoom in, out and fit. Drag or use the arrow keys to move while zoomed","zoom_in":"Zoom in","zoom_one":"1:1","zoom_one_label":"Show at actual size","zoom_out":"Zoom out"},"ja":{"zoom_fit":"全体","zoom_fit_label":"全体を表示","zoom_frame":"拡大できる図","zoom_hint":"Ctrl / ⌘ + ホイール・ピンチで拡大。クリックか Tab で図を選ぶと + - 0 で拡大・縮小・全体。拡大中はドラッグか矢印キーで移動","zoom_in":"拡大","zoom_one":"原寸","zoom_one_label":"原寸で表示","zoom_out":"縮小"}}});</script><div class="floe-zoom" style="aspect-ratio: 200 / 120; max-height: min(85vh, 148px)"><svg viewBox="0 0 200 120" class="dg" role="img" aria-label="Lambda"><defs><image id="dg2-ec31a3_icon-0" href="data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHZpZXdCb3g9IjAgMCA0OCA0OCI+PHJlY3Qgd2lkdGg9IjQ4IiBoZWlnaHQ9IjQ4IiBmaWxsPSIjZWQ3MTAwIi8+PC9zdmc+Cg==" width="48" height="48"></image></defs><use href="#dg2-ec31a3_icon-0" x="76" y="20"></use><rect x="59" y="71" width="82" height="18" class="label-bg"></rect><text x="100" y="80" text-anchor="middle" class="label">AWS Lambda</text></svg></div></div>
+})({"frame":"floe-zoom","tools":"floe-zoom-tools","words":{"en":{"zoom_fit":"Fit","zoom_fit_label":"Show the whole figure","zoom_frame":"Zoomable figure","zoom_hint":"Ctrl / ⌘ + wheel or pinch to zoom. Click or Tab to the figure, then + - 0 to zoom in, out and fit. Drag or use the arrow keys to move while zoomed","zoom_in":"Zoom in","zoom_one":"1:1","zoom_one_label":"Show at actual size","zoom_out":"Zoom out"},"ja":{"zoom_fit":"全体","zoom_fit_label":"全体を表示","zoom_frame":"拡大できる図","zoom_hint":"Ctrl / ⌘ + ホイール・ピンチで拡大。クリックか Tab で図を選ぶと + - 0 で拡大・縮小・全体。拡大中はドラッグか矢印キーで移動","zoom_in":"拡大","zoom_one":"原寸","zoom_one_label":"原寸で表示","zoom_out":"縮小"}}});</script><div class="floe-zoom" style="aspect-ratio: 200 / 120; max-height: min(85vh, 148px)"><svg viewBox="0 0 200 120" class="dg" role="img" aria-label="Lambda"><defs><image id="dg2-319f68_icon-0" href="data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHZpZXdCb3g9IjAgMCA0OCA0OCI+PHJlY3Qgd2lkdGg9IjQ4IiBoZWlnaHQ9IjQ4IiBmaWxsPSIjZWQ3MTAwIi8+PC9zdmc+Cg==" width="48" height="48"></image></defs><use href="#dg2-319f68_icon-0" x="76" y="20" class="icon"></use><rect x="59" y="71" width="82" height="18" class="label-bg"></rect><text x="100" y="80" text-anchor="middle" class="label">AWS Lambda</text></svg></div></div>
 </section>
 <section>
 <h2 id="タブと折りたたみ">タブと折りたたみ</h2>

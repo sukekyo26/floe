@@ -352,6 +352,7 @@ func TestSearchShort(t *testing.T) {
 		{"two meant, by name", []string{"asg"}, []string{"aws/amazon-ec2-auto-scaling", "aws/aws-auto-scaling"}},
 		{"meant and held, once", []string{"nat"}, []string{"aws/res/amazon-vpc-nat-gateway", "aws/res/amazon-nat-other", "aws/res/amazon-vpc-nat-gateway-spare"}},
 		{"every word holds", []string{"s3", "outposts"}, []string{"aws/amazon-s3-on-outposts"}},
+		{"words in one argument", []string{"NAT  gateway "}, []string{"aws/res/amazon-vpc-nat-gateway", "aws/res/amazon-vpc-nat-gateway-spare"}},
 		{"one word meant is first", []string{"s3", "amazon"}, []string{s3, "aws/amazon-s3-on-outposts", bucket}},
 		{"a target not in the set", []string{"alb"}, []string{"aws/res/zz-alb-in-its-name"}},
 		{"not the whole word", []string{"aws/s3"}, nil},
@@ -418,5 +419,45 @@ func TestShortNames(t *testing.T) {
 	}
 	if checked == 0 {
 		t.Skipf("no set is fetched in %s", root)
+	}
+}
+
+// An icon a word names whole, but for its folder, comes first, then the rest by name as before, in a set of azure's shape too: the
+// short names keep their place among those first.
+func TestSearchNamedWhole(t *testing.T) {
+	t.Parallel()
+
+	root := t.TempDir()
+	dir := filepath.Join(root, "azure")
+	if err := os.MkdirAll(dir, 0o700); err != nil {
+		t.Fatal(err)
+	}
+	idx := `{"version": "1", "sources": [], "icons": {"a-virtual-machine": {}, "virtual-machine": {}, ` +
+		`"virtual-machine-scale-sets": {}, "virtual-networks": {}, "kubernetes-services": {}, "aks-engine": {}, ` +
+		`"managed-disks": {}, "res/disks": {}}}`
+	if err := os.WriteFile(filepath.Join(dir, "index.json"), []byte(idx), 0o600); err != nil {
+		t.Fatal(err)
+	}
+	set := New(root, false, "")
+	for _, c := range []struct {
+		words []string
+		want  []string
+	}{
+		{[]string{"virtual-machine"}, []string{"azure/virtual-machine", "azure/a-virtual-machine", "azure/virtual-machine-scale-sets"}},
+		// No name is the word whole: by name, as before.
+		{[]string{"virtual"}, []string{"azure/a-virtual-machine", "azure/virtual-machine", "azure/virtual-machine-scale-sets", "azure/virtual-networks"}},
+		{[]string{"vnet"}, []string{"azure/virtual-networks"}},
+		// A name in a folder is named whole by its last part.
+		{[]string{"disks"}, []string{"azure/res/disks", "azure/managed-disks"}},
+		{[]string{"aks"}, []string{"azure/kubernetes-services", "azure/aks-engine"}},
+	} {
+		hits, err := set.Search("azure", c.words)
+		var got []string
+		for _, h := range hits {
+			got = append(got, h.Name)
+		}
+		if err != nil || !reflect.DeepEqual(got, c.want) {
+			t.Errorf("Search azure %v = %v, %v; want %v", c.words, got, err, c.want)
+		}
 	}
 }

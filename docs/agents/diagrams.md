@@ -17,8 +17,8 @@ A diagram is drawn from a spec: a canvas, and the parts placed on it. A page dra
     title: 'How the API is laid out'
     parts:
       - frame: { x: 16, y: 16, w: 608, h: 168, label: VPC }
-      - box: { name: alb, x: 40, y: 72, tone: accent, rows: [[ALB, 'main code'], 'public entry'] }
-      - box: { name: api, x: 400, y: 72, rows: ['API server', ECS] }
+      - icon: { name: alb, x: 60, y: 72, icon: aws/res/elastic-load-balancing-application-load-balancer, label: ALB }
+      - box: { name: api, x: 400, y: 72, tone: accent, rows: [['API server', 'main code'], 'our Go service'] }
       - edge: { from: alb, to: api, label: HTTPS }
 ```
 
@@ -46,7 +46,7 @@ A diagram is drawn from a spec: a canvas, and the parts placed on it. A page dra
 
 ## Placing parts by hand
 
-Run `floe diagram inspect` on the data file after every few parts. It prints where each part went (`box "alb" 240,90 144x29`), and each refusal at the line to change. Place the next part by the sizes it prints.
+Run `floe diagram inspect` on the data file after every few parts. It prints where each part went (`box "api" 400,72 136x46`), and each refusal at the line to change. Place the next part by the sizes it prints.
 
 - Leave `w` and `h` out to let floe size a box to its text; write them when boxes must align. A `w` too small is refused with the one it needs: `box "a": "A long title here" needs w: <n> or more`.
 - Leave these spaces:
@@ -62,19 +62,22 @@ Run `floe diagram inspect` on the data file after every few parts. It prints whe
 - To fix a label that sticks out on the left (`label "HTTPS-LONG-LABEL" sticks out of the <w>x<h> canvas`), move the line to the right or shorten the label: a `width` only widens the canvas to the right.
 - Write an edge as `{ from, to }` and let floe route it. Use `via`, `fromSide` or `toSide` only when you need to control its path (*Edges written by hand*). floe refuses an edge with a box between its ends (`edge "a"→"c" runs through box "b"; move one of them, or go round it by via`): move a box, or write `via`.
 
-## Cloud icons
+## Icons
 
-Draw each service of AWS, Google Cloud or Azure that a diagram shows, in an architecture or a flow or any other diagram, as its cloud's icon. Do not draw a box around an icon (an Azure service is a box until its set is kept: step 1). floe ships no icons: it uses each cloud's official icon set, kept once on each machine.
+Draw each service of AWS, Google Cloud or Azure as its cloud's icon, in an architecture, a flow or any other diagram. Draw each other thing that has an icon (users, a browser, a smartphone, a server, a database, a file, a key, mail) with the cloud's set's icon where it holds the thing (`aws/res/users`), else as a `lucide` icon, not a box. A step, a check, a state or a component of the system you draw stays a box. Do not draw a box around an icon (an Azure service is a box until its set is kept: step 1). floe ships `lucide`, every icon of Lucide 1.72.0, built in. It ships no cloud's icons: it uses each cloud's official icon set, kept once on each machine.
 
 | Set | How it is kept | Names |
 |---|---|---|
 | `aws` | `floe icons fetch aws` (about 14MB, from aws.amazon.com) | `aws/amazon-rds`, `aws/res/…` (resources), `aws/group/…` (the AWS group icons) |
 | `gcp` | `floe icons fetch gcp` (two zips, about 1MB, from services.google.com) | `gcp/cloud-run` (a core product), `gcp/category/networking` (a product category). Draw a product without an icon of its own with its category's icon, and its own name as the label (Google's guide) |
 | `azure` | `floe icons fetch azure <zip>`, with the zip the user downloads (step 1) | `azure/virtual-machine` |
+| `lucide` | Built into floe: nothing to keep | `lucide/users`, `lucide/database`, `lucide/server` |
 
-1. Keep the set of the cloud you draw. Without it, `floe check`, `floe diagram render` and `floe diagram inspect` refuse a diagram that holds one of its icons (`inspect` prints where the parts went first): `floe: AWS icons are not in <dir>/aws; run "floe icons fetch aws"…`. Azure icons need the user's agreement to Microsoft's terms, so ask the user to open `https://learn.microsoft.com/azure/architecture/icons/`, agree, download the zip, and tell you where it is. Then run `floe icons fetch azure <zip>` with that path. The zip may be anywhere, and may be removed afterwards (floe keeps the icons it holds in a directory of its own). Until then, draw an Azure service as a box, publish, and tell the user; change it to its icon once the set is kept.
-2. Find the name with `floe icons search <set> <word>`, naming the set of the cloud you draw: it lists the names of the set's icons that hold the word, each with its group. `floe icons search aws alb` lists `aws/res/elastic-load-balancing-application-load-balancer`, and `floe icons search gcp storage` lists `gcp/category/storage` and `gcp/cloud-storage`. A short name such as `alb`, `gke` or `vnet` works. Write the name as it is printed, with its set in front: floe refuses `amazon-ec2` and an icon that is not in the set.
+1. Keep the set of the cloud you draw (`lucide` needs none). Without it, `floe check`, `floe diagram render` and `floe diagram inspect` refuse a diagram that holds one of its icons (`inspect` prints where the parts went first): `floe: AWS icons are not in <dir>/aws; run "floe icons fetch aws"…`.
+   - Azure icons need the user's agreement to Microsoft's terms, so ask the user to open `https://learn.microsoft.com/azure/architecture/icons/`, agree, download the zip, and tell you where it is. Then run `floe icons fetch azure <zip>` with that path. The zip may be anywhere, and may be removed afterwards (floe keeps the icons it holds in a directory of its own). Until then, draw an Azure service as a box, publish, and tell the user; change it to its icon once the set is kept.
+2. Find the name with `floe icons search <set> <word>`, naming the set (`lucide`, or the cloud's you draw): it lists the names of the set's icons that hold the word, each with its group. `floe icons search aws alb` lists `aws/res/elastic-load-balancing-application-load-balancer`, `floe icons search gcp storage` lists `gcp/category/storage` and `gcp/cloud-storage`, and `floe icons search lucide user` lists `lucide/user` first, then the icons whose name holds `user`. A short name such as `alb`, `gke`, `vnet` or `db` works. Write the name as it is printed, with its set in front: floe refuses `amazon-ec2` and an icon that is not in the set.
 3. Write the icon as an `icon` part with `x`, `y` and its name in `icon`, and join icons by edges that name their `name`s. Or write it as an `icon` node of a `graph`, which floe places (`floe diagram example aws-graph` is one). A frame takes an `icon` of its own in its corner, which may be any icon of a set: `floe icons search aws group` lists the AWS group icons (`aws/group/region`, `aws/group/virtual-private-cloud-vpc`), a service's icon such as `aws/aws-step-functions` works too, and `azure/resource-groups` and `azure/virtual-networks` frame an Azure resource group and virtual network.
+4. A `lucide` icon draws its lines in the diagram's text colour, or in its `tone`'s colour. A cloud's icon keeps its own colours: floe refuses a `tone` on it.
 
 ```yaml
 - diagram:
@@ -104,7 +107,7 @@ A box around other parts. Its label sits inside the top left corner.
 | `name` | a name | none | The name an edge can end at |
 | `accent` | `true`, `false` | `false` | Draws the frame in the accent colour |
 | `square` | `true`, `false` | `false` | No rounded corners |
-| `icon` | an icon of a set, such as `aws/group/region` | none | The icon stands in the corner and the label right of it. Any icon of a set works (*Cloud icons*) |
+| `icon` | an icon of a set, such as `aws/group/region` | none | The icon stands in the corner and the label right of it. Any icon of a set works (*Icons*) |
 
 Place a frame's contents at or below the bottom edge of its heading and of its icon (*Placing parts by hand*).
 
@@ -144,7 +147,7 @@ The heading is 30 tall, a row 22 and a separator 9, and 6 more stand under the l
 
 ### icon
 
-An icon of an icon set (*Cloud icons*).
+An icon of an icon set (*Icons*).
 
 | Key | Takes | Default | What it does |
 |---|---|---|---|
@@ -152,6 +155,7 @@ An icon of an icon set (*Cloud icons*).
 | `icon` | the set and the name in it, required | — | Like `aws/amazon-ec2` or `gcp/cloud-run` (`floe icons search` finds a name) |
 | `label` | text | none | Centred below the icon, 3 under it and 18 tall; an edge at the icon's bottom side ends under the label |
 | `size` | a size | 48 | The icon's width and height |
+| `tone` | a tone | none (the text colour) | The colour of a `lucide/…` icon's lines; an icon of another set keeps its own colours, and floe refuses a `tone` on it |
 | `name` | a name | none | The name an edge can end at |
 
 ### edge
@@ -294,6 +298,7 @@ An icon with its label below and no box round it.
 | `icon` | the set and the name in it, required | — | Like `aws/amazon-ec2` |
 | `with` | the name of a box or icon of the graph | none | Stands this icon in the rank of that one (*Ranks*) |
 | `label` | text | none | Below the icon |
+| `tone` | a tone | none | As for the part `icon` |
 
 #### A group of a graph
 
@@ -305,7 +310,7 @@ Boxes, icons and groups framed together.
 | `name` | a name | none | The name an edge's `from` and `to` give |
 | `label` | text | none | The heading, in the frame's top left corner |
 | `accent` | `true`, `false` | `false` | As a frame's |
-| `icon` | an icon of a set, such as `aws/group/region` | none | The icon in the frame's corner, the label right of it. Any icon of a set works (*Cloud icons*) |
+| `icon` | an icon of a set, such as `aws/group/region` | none | The icon in the frame's corner, the label right of it. Any icon of a set works (*Icons*) |
 
 #### An edge of a graph
 
@@ -346,7 +351,7 @@ SVG that no part can draw, of SVG's elements alone, not laid out or checked.
 - Do not take the faces, sizes or shadows that palette.css holds (`fill="var(--font)"` is drawn black, as a font is not a colour), nor a variable that a theme alone sets (`--accent-fill` and the other `--*-fill`, which palette.css does not define: drawn black).
 - For a tone, write `data-floe-tone` on the element, or on a `<g>` around it within the raw SVG, and read `var(--tone)`, `var(--tone-soft)` and, for a fill, `var(--tone-fill)`: the diagram's root clears any tone from outside it.
 - Give text a colour and a size, as the parts' text is 12 to 13: `<text fill="currentColor" font-size="12">` (`currentColor` is `--fg`).
-- Do not write a part's classes, `data-floe-look` or `data-floe-part` on an element: floe's own styles reach it (`class="edge"` draws no fill and a grey line).
+- Do not write a part's classes, `data-floe-look` or `data-floe-part` on an element: floe's own styles reach it (`class="edge"` draws no fill and a grey line, and a `<use class="icon">` is drawn in the text colour (or its tone's), whatever `color` it is given).
 - floe does not tell these, and draws them black: a variable that is not there, a tone that is not there (`var(--tone)` with no tone), and text without `fill` (at the page's size).
 
 ## Graph
@@ -532,7 +537,7 @@ floe refuses a diagram that holds any of these, mostly at the line of the part t
 - Two parts, rows or nodes of one name.
 - A `label` in a Venn diagram that names a circle that is none, that stands where it is not all inside its circles and outside the others, or that has no space inside them: make the area larger or the text shorter.
 - A `raw` SVG that holds an element a diagram may not hold.
-- An icon named without its set, or not in the set (*Cloud icons*).
+- An icon named without its set, or not in the set (*Icons*).
 - An `example` that is not one of the kinds `floe diagram example` lists.
 - The refusals of a graph (*Graph*): a name that no box, icon or group of it has, an edge that ends at a lane or joins a group with what it holds, `with` and `level` mistakes, a graph past its limits, and graphs that overlap, cross or straddle one another or stand off the canvas.
 

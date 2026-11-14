@@ -133,8 +133,8 @@ func TestReadGuideDocLinks(t *testing.T) {
 	}
 }
 
-// The table of icon sets in diagrams.md, the table whose first heading is Set, names the sets floe icons fetch keeps,
-// in its order. The table is read from the Markdown's tree, as the page reads it.
+// The table of icon sets in diagrams.md, the table whose first heading is Set, names the sets floe knows (built in or
+// fetched), in its order. The table is read from the Markdown's tree, as the page reads it.
 func TestGuideIconSets(t *testing.T) {
 	t.Parallel()
 
@@ -159,7 +159,7 @@ func TestGuideIconSets(t *testing.T) {
 		t.Fatal(err)
 	}
 	if len(tables) != 1 || !slices.Equal(tables[0], icons.Sets()) {
-		t.Errorf("%s: its tables of icon sets name %q; want one naming %q, the sets floe icons fetch keeps", diagramGuide, tables, icons.Sets())
+		t.Errorf("%s: its tables of icon sets name %q; want one naming %q, the sets floe knows (built in or fetched)", diagramGuide, tables, icons.Sets())
 	}
 }
 

@@ -166,7 +166,7 @@
     },
     "icon": {
       "type": "object",
-      "description": "An icon of an icon set (aws/…, gcp/…, azure/…, found with floe icons search) with its top left at x, y; with a label, its bottom side, where an edge ends, is under the label",
+      "description": "An icon of an icon set (lucide/…, built in; aws/…, gcp/…, azure/…, fetched; found with floe icons search) with its top left at x, y; with a label, its bottom side, where an edge ends, is under the label",
       "required": ["icon", "x", "y"],
       "additionalProperties": false,
       "properties": {
@@ -174,7 +174,8 @@
         "icon": { "type": "string" },
         "x": { "$ref": "#/$defs/coord" }, "y": { "$ref": "#/$defs/coord" },
         "label": { "$ref": "#/$defs/nonEmptyText" },
-        "size": { "$ref": "#/$defs/size" }
+        "size": { "$ref": "#/$defs/size" },
+        "tone": { "$ref": "#/$defs/tone", "description": "The colour of a lucide icon's lines, drawn in the text colour without one; an icon of another set draws in its own colours and takes none" }
       }
     },
     "edge": {
@@ -347,7 +348,8 @@
         "name": { "$ref": "#/$defs/name" },
         "with": { "$ref": "#/$defs/graphWith" },
         "icon": { "type": "string", "minLength": 1, "description": "The icon's name, as for the part icon" },
-        "label": { "$ref": "#/$defs/nonEmptyText" }
+        "label": { "$ref": "#/$defs/nonEmptyText" },
+        "tone": { "$ref": "#/$defs/tone", "description": "As for the part icon" }
       }
     },
     "graphWith": {

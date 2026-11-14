@@ -4,6 +4,9 @@ func init() {
 	register("ja", messagesJA)
 }
 
+// noIconJA is said whatever the set; a set of category icons adds how to draw a product without its own.
+const noIconJA = "%[1]s をすべて含む %[2]s のアイコンの名前はありません。語を減らすか、正式な名前の語で試してください（floe icons search %[2]s %[2]s で全部出ます）"
+
 var messagesJA = map[string]string{
 	"library": "%s",
 
@@ -195,6 +198,7 @@ var messagesJA = map[string]string{
 
 	// store
 	"store_invalid_slug":      "URL 名「%s」は使えません。英小文字・数字・ハイフンの 1〜64 文字で、先頭と末尾は英小文字か数字にしてください",
+	"store_slug_unnamed":      "この名前には英字・数字が無いので、URL 名を作れません。--slug で URL 名を渡すか、名前を変えてください",
 	"store_slug_is_page":      "URL 名「%s」は保存したページで使われています。別の URL 名にしてください",
 	"store_slug_is_link":      "URL 名「%s」はリンクで使われています。別の URL 名にしてください",
 	"store_slug_linked":       "URL 名「%s」は %s のリンクで使われています。別の URL 名にしてください",
@@ -266,6 +270,7 @@ var messagesJA = map[string]string{
 
 	// icons
 	"icons_unknown_set":        "アイコン集 \"%s\" はありません。%s を使ってください",
+	"icons_builtin":            "%[1]s のアイコンは floe に入っているので、取ってくる必要はありません。floe icons search %[1]s <語> で探せます",
 	"dir_relative":             "%s が相対パス %s です。絶対パスにしてください",
 	"icons_no_dir":             "HOME が絶対パスでないので、アイコンのディレクトリがありません。FLOE_ICONS_DIR に絶対パスを設定してください",
 	"icons_not_fetched":        "%[1]s のアイコンが %[2]s にありません。floe icons fetch %[3]s を実行してから（%[5]s から約 %[4]s を取得します）、やり直してください",
@@ -283,7 +288,8 @@ var messagesJA = map[string]string{
 	"icons_too_many":           "アイコンが %d 個を超え、アイコン集よりはるかに多いです。ファイルが正しいか確かめてください",
 	"icons_written_too_large":  "中のアイコンの合計が %dMB を超え、アイコン集よりはるかに大きいです。ファイルが正しいか確かめてください",
 	"icons_none_in_zip":        "%[1]s のアイコンがありません。%[3]s の %[2]s を渡してください：%[4]s",
-	"icons_no_match":           "%[1]s をすべて含む %[2]s のアイコンの名前はありません。語を減らすか、正式な名前の語で試してください（floe icons search %[2]s %[2]s で全部出ます）",
+	"icons_no_match":           noIconJA,
+	"icons_no_match_category":  noIconJA + "。自分のアイコンを持たない製品は、カテゴリのアイコンと製品名のラベルで描きます（floe icons search %[2]s category で出ます）",
 	"icons_fetched":            "%[2]s のアイコン %[1]d 個（%[3]s）を %[4]s に取得しました",
 	"icons_already":            "%s のアイコン %s はすでに %s にあります（取り直すなら --force を付けてください）",
 	"icons_search_words":       "アイコン集の名前と、探す語を書いてください：floe icons search <集> <語>...（集：%s）",
@@ -322,6 +328,7 @@ var messagesJA = map[string]string{
 	"diagram_label_no_room":      "%sを置く場所が%sの内側とほかの円の外側にありません。その領域を広げるか、文字を短くしてください",
 	"diagram_raw_element":        "raw の SVG に <%s> があります。図には書けない要素なので、消してください。見た目は SVG の図形と属性（fill= など）で書きます",
 	"diagram_icon_set":           "%s: 「%s」にはアイコン集の名前（%s）を前に付けてください（aws/amazon-ec2 のように。floe icons search <集> <語> で探せます）",
+	"diagram_icon_tone":          "%s: %s は絵の色のまま描くので tone を付けられません。tone を消してください（tone を付けられるのは lucide のアイコンだけです）",
 	"diagram_icon_unknown":       "%s: アイコン「%s」はありません（floe icons search %s <語> で探せます）",
 	"copy_button":                "コピー",
 	"copy_failed":                "コピーできませんでした",
