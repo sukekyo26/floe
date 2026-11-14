@@ -59,9 +59,7 @@ func check(k *Kit) error {
 			return err
 		}
 	}
-	if k.base != nil {
-		found = append(found, ownCSS(k)...)
-	}
+	found = append(found, ownCSS(k)...)
 	return found.Sorted().Err()
 }
 
@@ -73,6 +71,9 @@ func check(k *Kit) error {
 // LIMIT: a part of one's own that reads its --radius-pill as it is (border-radius: var(--radius-pill)) would draw two
 // lengths, and is refused too: whether a pill or a bar of floe's is in it is the data's, which the CSS does not tell.
 func ownCSS(k *Kit) usererr.List {
+	if k.base == nil {
+		return nil
+	}
 	var found usererr.List
 	refuse := func(file string, src []byte) {
 		for _, c := range css.RadiusLength(src) {

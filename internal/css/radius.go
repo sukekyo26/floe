@@ -64,52 +64,70 @@ func RadiusLength(src []byte) []Corner {
 	begins := true
 	for i := 0; i < len(toks); i++ {
 		t := toks[i]
-		switch {
-		case t.Type == css.WhitespaceToken || t.Type == css.CommentToken:
+		switch t.Type {
+		case css.WhitespaceToken, css.CommentToken:
 			continue
-		case t.Type == css.LeftBraceToken || t.Type == css.SemicolonToken || t.Type == css.RightBraceToken:
+		case css.LeftBraceToken, css.SemicolonToken, css.RightBraceToken:
 			begins = true
 			continue
+		default:
 		}
 		starts := begins
 		begins = false
 		if !starts || t.Type != css.CustomPropertyNameToken || !slices.Contains(oneCorner, string(t.Data)) {
 			continue
 		}
-		j := next(toks, i+1)
-		if j == len(toks) || toks[j].Type != css.ColonToken {
-			continue
+		value, end, ok := valueOf(toks, i)
+		if ok && len(Items(value)) != 1 {
+			line := bytes.Count(src[:t.At], []byte("\n")) + 1
+			found = append(found, Corner{Line: line, Name: string(t.Data), Value: written(src, value)})
 		}
-		var value []Token
-		prelude := false
-		for j++; j < len(toks); j++ {
-			v := toks[j]
-			if v.Depth == t.Depth && v.Type == css.SemicolonToken || v.Depth < t.Depth {
-				break
-			}
-			if v.Depth == t.Depth && v.Type == css.LeftBraceToken {
-				prelude = true
-				break
-			}
-			if v.Type != css.WhitespaceToken && v.Type != css.CommentToken {
-				value = append(value, v)
-			}
-		}
-		if n := len(value); n >= 2 && value[n-2].Type == css.DelimToken && string(value[n-2].Data) == "!" &&
-			value[n-1].Type == css.IdentToken && strings.EqualFold(string(value[n-1].Data), "important") {
-			value = value[:n-2]
-		}
-		if !prelude && len(Items(value)) != 1 {
-			c := Corner{Line: bytes.Count(src[:t.At], []byte("\n")) + 1, Name: string(t.Data), Value: ""}
-			if len(value) > 0 {
-				last := value[len(value)-1]
-				c.Value = string(src[value[0].At : last.At+len(last.Data)])
-			}
-			found = append(found, c)
-		}
-		i = j - 1
+		i = end - 1
 	}
 	return found
+}
+
+// valueOf returns the value of the declaration whose name is toks[i], without whitespace, comments and !important, and
+// the place of the token that ends it, the ; or } of the name's depth; not ok when no colon follows the name, or a { of
+// its depth comes first (a nested rule's prelude).
+func valueOf(toks []Token, i int) ([]Token, int, bool) {
+	depth := toks[i].Depth
+	j := next(toks, i+1)
+	if j == len(toks) || toks[j].Type != css.ColonToken {
+		return nil, j, false
+	}
+	var value []Token
+	for j++; j < len(toks); j++ {
+		v := toks[j]
+		if v.Depth == depth && v.Type == css.SemicolonToken || v.Depth < depth {
+			break
+		}
+		if v.Depth == depth && v.Type == css.LeftBraceToken {
+			return nil, j, false
+		}
+		if v.Type != css.WhitespaceToken && v.Type != css.CommentToken {
+			value = append(value, v)
+		}
+	}
+	return unimportant(value), j, true
+}
+
+// unimportant returns value without the !important at its end.
+func unimportant(value []Token) []Token {
+	if n := len(value); n >= 2 && value[n-2].Type == css.DelimToken && string(value[n-2].Data) == "!" &&
+		value[n-1].Type == css.IdentToken && strings.EqualFold(string(value[n-1].Data), "important") {
+		return value[:n-2]
+	}
+	return value
+}
+
+// written returns value as src writes it, from its first token to its last, "" for none.
+func written(src []byte, value []Token) string {
+	if len(value) == 0 {
+		return ""
+	}
+	last := value[len(value)-1]
+	return string(src[value[0].At : last.At+len(last.Data)])
 }
 
 // next returns the place of the first token from i that is no whitespace nor comment, len(toks) for none.
