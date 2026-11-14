@@ -34,7 +34,7 @@ None of these writes anything.
 | `floe task` | The open tasks (`todo` and `doing`) of the working directory's project, the latest change first, a line each |
 | `floe task --project app` | Those of another project; `--project ""` for pages of no project |
 | `floe task --task "#130"` | One task, of any state |
-| `floe task --slug design-notes` | The page's task, category and pin |
+| `floe task --slug design-notes` | The page's task with its project, category and pin |
 
 ```text
 $ floe task
@@ -43,10 +43,10 @@ task #131 in project floe: state todo, title "Price table"
 $ floe task --slug design-notes
 page design-notes: task #130 in project floe, category "designs"
 $ floe task --slug old-notes
-page old-notes: no task
+page old-notes: no task, in project floe
 ```
 
-A page on no task prints `page <slug>: no task`, without its project: `floe publish` prints the project. A project of no open task prints `no open task in project floe`. A page published by `--link` is in the project of the linked file: run `floe task` in that file's repository, or give `--project` that repository's name.
+A page on no task prints its project after `no task` (`page old-notes: no task, in project floe`), and a page of no project prints `page <slug>: no task` alone. A project of no open task prints `no open task in project floe`. A page published by `--link` is in the project of the linked file. `floe info <slug>` prints the rest floe keeps of a page: its title, URL, tags, data file or linked path, and whether it is archived.
 
 ## Put pages on a task
 
@@ -122,7 +122,7 @@ page api-notes: task #132 in project floe
 $ floe task --task "#132" --state doing
 task #132 in project floe: changed; state doing
 $ floe task --slug api-notes --task ""
-page api-notes: no task
+page api-notes: no task, in project floe
 $ floe task --task "#132" --forget
 task #132 in project floe: forgotten
 ```

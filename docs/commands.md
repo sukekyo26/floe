@@ -31,6 +31,7 @@ Flags are in each command's section below.
 | `floe theme guide` | Print how to make a theme of your own |
 | `floe theme default` | Print the default theme chosen in the management page's settings |
 | `floe list` | List pages, newest first |
+| `floe info <slug>` | Print a page's project, task, data file and the rest floe keeps of it |
 | `floe rm <slug>...` | Delete pages |
 | `floe archive <slug>...` | Take pages off the lists, keeping them; they can be given back |
 | `floe tag <slug>...` | Put tags on pages and take them off |
@@ -235,6 +236,28 @@ Print a template, a part (a look or a shared schema too) or a theme, floe's or y
 
 Print the pages, newest first, as the server lists them (it is started when it is not running). Each line holds four tab-separated columns: the update time (local, `YYYY-MM-DD HH:MM`), the slug, the title and the linked path (empty for a stored page). Archived pages are left out; `--archived` lists them too, with a fifth column on every line: `archived`, or empty.
 
+## `floe info <slug>`
+
+Print the page as the server keeps it (it is started when it is not running), and write nothing: a tab-separated name and value a line, the same 14 names in the same order each time, an empty value for none. Text values are quoted as Go quotes them (`title`, `project`, `task`, `category`, `repository`, `source`, and each of `tags`, one after another with a space); `slug`, `url`, `kind`, `pinned`, `archived`, `version` and `updated` are not. `project` is empty for a page of no project and, unquoted, is what `--project` of `floe task` takes. `kind` is `data`, `link` or `folder`. `source` is the data file's path from the root of `repository`, or its real path when `repository` is empty, or the linked file's or folder's real path. `version` is empty for a link. `updated` is the time, local, as `floe list` prints it. An archived page is told too, with `archived true`; a slug of no page is refused.
+
+```text
+$ floe info design-notes
+slug	design-notes
+title	"Design notes"
+url	http://127.0.0.1:7325/a/design-notes/
+kind	data
+project	"floe"
+task	"#130"
+category	"designs"
+pinned	false
+tags	"plans" "cli, api"
+archived	false
+repository	"floe"
+source	"docs/design-notes.yaml"
+version	3
+updated	2026-11-15 10:20
+```
+
 ## `floe rm <slug>...`
 
 Delete the pages in order through the server (it is started when it is not running), stopping at the first failure (such as a page that does not exist). A linked file itself is left alone; only its registration is removed.
@@ -272,9 +295,9 @@ floe task --task "#130" --forget                                    # the task's
 floe task --slug design-notes                                       # the page told as it is, nothing written
 ```
 
-Each task and page written is told on a line of its own, as the store left it: a task `made` (it had no row), `changed` or `unchanged` (a field was given, its value as it was), with the fields given, and its categories when a page's was added to them; then a page with its task, category and pin. A task the write left as it was, with no field given, is not told. A task of no project is `in no project`. With `--slug` and no other flag, each page is told so as it is and nothing is written, not even the row of a task it names that has none; a slug of no page is refused before any page is told. With `--task` and no field, without `--slug`, the task is told as it is (its state, and its title, URLs, categories and parent when it has them; the URLs each quoted, `urls "https://…" "https://…"`, and `no urls` when a write took the last off) and nothing is written; a task of no row is refused.
+Each task and page written is told on a line of its own, as the store left it: a task `made` (it had no row), `changed` or `unchanged` (a field was given, its value as it was), with the fields given, and its categories when a page's was added to them; then a page with its task, category and pin. A task the write left as it was, with no field given, is not told. A task of no project is `in no project`. A page on no task is told with its project after `no task` (`page design-notes: no task, in project floe`), and a page of no project with `no task` alone. With `--slug` and no other flag, each page is told so as it is and nothing is written, not even the row of a task it names that has none; a slug of no page is refused before any page is told. With `--task` and no field, without `--slug`, the task is told as it is (its state, and its title, URLs, categories and parent when it has them; the URLs each quoted, `urls "https://…" "https://…"`, and `no urls` when a write took the last off) and nothing is written; a task of no row is refused.
 
-With no flag but `--project`, the open tasks of a project are told, the states `todo` and `doing`, a line each as `--task` tells a task, and nothing is written. The one whose state changed last comes first, and those that changed at the same time go by name; done and archived tasks are left out (`floe task --task <ID>` tells one of any state). The project is the working directory's when `--project` is left out, the one `floe publish` puts a data file's page in; `""` is no project. A page published by `--link` is in the project of the linked file, which `floe publish --link` does not print: give `--project` the name of that file's repository, or run `floe task` there. A project with no open task is told `no open task in project floe`, which is not a refusal. A flag but `--project` with no `--task` and no `--slug` is refused, as it changes a task or pages that are not named.
+With no flag but `--project`, the open tasks of a project are told, the states `todo` and `doing`, a line each as `--task` tells a task, and nothing is written. The one whose state changed last comes first, and those that changed at the same time go by name; done and archived tasks are left out (`floe task --task <ID>` tells one of any state). The project is the working directory's when `--project` is left out, the one `floe publish` puts a data file's page in; `""` is no project. A page published by `--link` is in the project of the linked file, which `floe task --slug` and `floe info` print, and `floe publish` too when the page is new or moved. A project with no open task is told `no open task in project floe`, which is not a refusal. A flag but `--project` with no `--task` and no `--slug` is refused, as it changes a task or pages that are not named.
 
 ```text
 $ floe task
@@ -289,7 +312,7 @@ page design-notes: task #130 in project floe
 $ floe task --task "#130"
 task #130 in project floe: state doing
 $ floe task --slug design-notes --task ""
-page design-notes: no task
+page design-notes: no task, in project floe
 $ floe task --task "#130" --forget
 task #130 in project floe: forgotten
 ```

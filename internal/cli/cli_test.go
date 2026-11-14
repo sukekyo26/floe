@@ -140,6 +140,7 @@ func TestHelp(t *testing.T) {
 		"guide\tPrint the guide for agents: how to write, check and publish a page\n" +
 		"help\tHelp about any command\n" +
 		"icons\tKeep icon sets for the icon parts of diagrams, and search them\n" +
+		"info\tPrint a page's project, task, data file and the rest floe keeps of it, a name and a value a line\n" +
 		"licenses\tPrint the license notices of floe and of the code built into it\n" +
 		"list\tList pages, newest first (updated, slug, title, linked path; tab-separated), archived ones left out\n" +
 		"part\tList the parts, show one, make one of your own, and check yours\n" +
