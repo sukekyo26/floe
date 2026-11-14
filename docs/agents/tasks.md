@@ -38,7 +38,7 @@ None of these writes anything.
 
 ```text
 $ floe task
-task #130 in project floe: state doing, title "Fix login", urls "https://example.com/issues/482"
+task #130 in project floe: state doing, title "Fix login", urls "https://example.com/issues/482", categories "designs"
 task #131 in project floe: state todo, title "Price table"
 $ floe task --slug design-notes
 page design-notes: task #130 in project floe, category "designs"
