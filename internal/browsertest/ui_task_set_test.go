@@ -345,7 +345,7 @@ pinned: {"pin":true}
 a page of none:  /  / out false
 no parent nor URL: null
 offered: Create #3 as a new task
-new task: {"task":"#3","category":"first","pin":true}
+new task: {"name":"#3","category":"first","pin":true}
 #1 todo https://example.com/a/one; #2 todo ; #3 todo 
 a page of a task: #1 / design / out true
 written meanwhile: Failed to save: task #1 has changed since it was read; the tasks are read again, so check and save again
@@ -353,8 +353,8 @@ written meanwhile, saved: #1 todo https://example.com/a/one,https://example.com/
 refused: true Failed to save: no
 an empty name: true true 0
 a name of spaces: true Write more than spaces 3 0
-the page refused: #1 todo https://example.com/a/one,https://example.com/later; #2 todo ; #3 todo  | {"task":"#2","category":"build"}
-saved again: {"task":"#2","category":"review"}
+the page refused: #1 todo https://example.com/a/one,https://example.com/later; #2 todo ; #3 todo  | {"name":"#2","category":"build"}
+saved again: {"name":"#2","category":"review"}
 off: {"pin":true}
 #1 todo https://example.com/a/one,https://example.com/later; #2 todo ; #3 todo 
 off, no pin: null
@@ -371,8 +371,8 @@ escape: false true
 read again: true #2
 under the field once still: yes
 saved: #1 todo https://example.com/a/one; #2 todo https://example.com/a/two; #3 todo 
-nothing changed: #1 todo https://example.com/a/one; #2 todo https://example.com/a/two; #3 todo  | {"task":"#1","category":"design"}
-typed while saving: {"task":"#1","category":"design"}
+nothing changed: #1 todo https://example.com/a/one; #2 todo https://example.com/a/two; #3 todo  | {"name":"#1","category":"design"}
+typed while saving: {"name":"#1","category":"design"}
 an archived page: true 0
 pinned, told: Pinned “T b” to the task list
 refused, told: Failed to save: HTTP 500: no
