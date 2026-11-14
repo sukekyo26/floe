@@ -8,6 +8,7 @@ paths:
 
 # タスク
 
+- **名前は CLI が task、ほかは work**：CLI は `floe task`（`internal/cli/task.go`）、API（`/api/work`）・store（`Work`）・meta.json（`work`）は `work` のまま
 - **タスクは tasks.json 1 つ**：タスクの状態・カテゴリの順・URL は tasks.json に持ち、書くのは store の lock の中だけ。状態の値は `store.States` 1 つから作る。タスクの一覧の置き場所は状態だけで決まり、ページの印から計算しない。ページがどのタスクのどのカテゴリにあるかは meta.json の `work` だけが持つ。ページが名指すタスクとカテゴリには必ず記録があり、記録の無いものを推して扱わない（読むときは断らない）。タスクとページのアーカイブは別々で、どの入口も片方しか書かない
 - **タスクの URL は足す・外す・並べ替えで書く**：行の `urls` は `URLsEdit` の `add`・`remove`・`order` だけで変える。足す・外すは変えた URL だけを送る。`order` は前に置く順で、書かない URL は今の順のまま後ろに残る。画面は順を変えたときだけ `order` を送る。上限は、足して増える書き込みだけを断る（`checkURLCount`）
 - **ページとタスクは 1 つの操作で書く**：ページの `work` とタスクの記録を書くのは `Store.Work`（API は `PATCH /api/work`）1 つで、同じ lock の中で全部を確かめてから、tasks.json、meta.json の順に書く。名指すタスクの記録が無ければ作り、カテゴリが無ければ `categories` の末尾に足し、記録が変われば `rev` を進め、答えで触ったタスクを全部返す。ページのプロジェクトが変わる書き込み（`Store.Edit`・publish の `commit`）は、同じ lock の中でページをタスクから外し、タスクは書かない。ページの編集（`PATCH /api/pages`）は `work` を持たない
