@@ -85,4 +85,4 @@ data file's mistakes, is in English or Japanese, by the browser's language.
 
 ## License
 
-[MIT](LICENSE). The [Lucide](https://lucide.dev) icons floe ships for diagrams (`lucide/…`) are under the ISC License, some of them under the MIT License too: [internal/icons/lucide/LICENSE](internal/icons/lucide/LICENSE).
+[MIT](LICENSE). A floe binary holds the Go standard library and Go modules of others under their own licenses: `floe licenses` prints floe's license and theirs, kept in [internal/licenses/NOTICES.txt](internal/licenses/NOTICES.txt). The [Lucide](https://lucide.dev) icons floe ships for diagrams (`lucide/…`) are under the ISC License, some of them under the MIT License too: [internal/icons/lucide/LICENSE](internal/icons/lucide/LICENSE).
