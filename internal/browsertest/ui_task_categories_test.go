@@ -207,6 +207,15 @@ func TestUITaskCategories(t *testing.T) { //nolint:paralleltest // the browser t
 	b.until("closed", "!document.getElementById('add-page-dialog').open")
 	say("moved from a category", lastToast)
 	say("moved, groups", groups)
+	// The list read before the page left another task: asked as the list has it, and told as the write found it, not of the task it left
+	b.eval("items.find((x) => x.slug === 'other-a').task = { name: 'S301', category: '設計' }")
+	add("案")
+	query("other")
+	b.pressKey(kb.ArrowDown)
+	b.pressKey(kb.Enter)
+	b.moveYes()
+	b.until("closed", "!document.getElementById('add-page-dialog').open")
+	say("moved since, told", lastToast)
 	// A narrow screen: the modal fits.
 	b.size(390, 844, true)
 	add("リリース")
@@ -310,6 +319,7 @@ func TestUITaskCategories(t *testing.T) { //nolint:paralleltest // the browser t
 		"moved from a task: Moved T other-a from S301's 設計 to 案",
 		"moved from a category: Moved T build-a from 実装 to リリース",
 		"moved, groups: [案+] plan-a note-a other-a old-a [実装+ none] [リリース+] build-a memo-a check-a [レビュー+] review-a",
+		"moved since, told: Put T other-a under 案",
 		"narrow: true",
 		`off: /api/tasks {"slugs":["review-a"],"task":"","category":""}`,
 		"off, told: Took T review-a off task S300Undo",
