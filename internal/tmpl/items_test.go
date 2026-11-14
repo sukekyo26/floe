@@ -606,8 +606,8 @@ func TestPartCodePlaced(t *testing.T) {
 	for _, tt := range []struct{ data, want string }{
 		{"c:\n  text: a\n  mark: [1, x]\n", "d.yaml:5:13: code's mark takes a whole number, not x"},
 		{"c:\n  text: a\n  start: x\n", "d.yaml:5:10: code's start takes a whole number, not x"},
-		{"c:\n  text: 3\n", `d.yaml:4:9: code reads .text, the part's value, as a JSON string: write it so; if you made the part, have its schema.json give .text "type": "string"`},
-		{"c: [a]\n", `d.yaml:3:1: code reads ., the part's value, as a JSON object: write it so; if you made the part, have its schema.json give . "type": "object"`},
+		{"c:\n  text: 3\n", `d.yaml:4:9: code reads .text as a JSON string (. being the part's value): write it so; if you made the part, have its schema.json give .text "type": "string"`},
+		{"c: [a]\n", `d.yaml:3:1: code reads . as a JSON object (. being the part's value): write it so; if you made the part, have its schema.json give . "type": "object"`},
 	} {
 		if got := drawn(t, k, "lang: en\ntemplate: mine\n"+tt.data, none); got != tt.want {
 			t.Errorf("%q: told %q, want %q", tt.data, got, tt.want)
