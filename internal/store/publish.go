@@ -1083,8 +1083,11 @@ type Edited struct {
 	Slug        string    `json:"slug"`
 	TaskProject string    `json:"taskProject"`
 	Task        *PageTask `json:"task,omitzero"`
-	// OffTask is the task the page was taken off, as its project changed, "" for none.
+	// OffTask is the task the page was on and left: its project changed (Edit), or ChangeTasks put it on another task
+	// or none; "" for none.
 	OffTask string `json:"offTask,omitempty"`
+	// OffCategory is the page's category on OffTask as ChangeTasks found it, "" for none.
+	OffCategory string `json:"offCategory,omitempty"`
 }
 
 // Edit applies ed to slug and returns the page as it left it. updatedAt stays, so neither the order of
@@ -1130,7 +1133,7 @@ func (s *Store) Edit(slug string, ed Edit) (Edited, error) {
 		}
 		s.moveRead(slug, to)
 	}
-	return Edited{Slug: to, TaskProject: ProjectKey(m.Project), Task: m.Task, OffTask: off}, nil
+	return Edited{Slug: to, TaskProject: ProjectKey(m.Project), Task: m.Task, OffTask: off, OffCategory: ""}, nil
 }
 
 // setProject sets the project ed names of m, taking m off its task when it moves it: it returns the task taken off,

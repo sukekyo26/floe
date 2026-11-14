@@ -107,11 +107,13 @@ func deref(p *string) string {
 	return *p
 }
 
-// changedPage is a page of a TaskChange: its meta as it comes to be, and the task it comes to be on.
+// changedPage is a page of a TaskChange: its meta as it comes to be, the task it comes to be on, and its task as read
+// before the change.
 type changedPage struct {
 	slug string
 	meta *Meta
 	ref  taskRef
+	was  PageTask
 }
 
 // changedPages reads the pages of w, each once, and makes their task as w leaves it.
@@ -128,6 +130,10 @@ func (s *Store) changedPages(w TaskChange) ([]changedPage, error) {
 		if m == nil {
 			return nil, usererr.New("store_no_page", slug)
 		}
+		var was PageTask
+		if m.Task != nil {
+			was = *m.Task
+		}
 		if w.Clear {
 			empty, off := "", false
 			setPageTask(m, &PageTaskEdit{Name: &empty, Category: &empty, Pin: &off})
@@ -137,7 +143,7 @@ func (s *Store) changedPages(w TaskChange) ([]changedPage, error) {
 		if m.Task != nil {
 			ref.name = m.Task.Name
 		}
-		pages = append(pages, changedPage{slug: slug, meta: m, ref: ref})
+		pages = append(pages, changedPage{slug: slug, meta: m, ref: ref, was: was})
 	}
 	return pages, nil
 }
@@ -302,9 +308,18 @@ func (s *Store) applyChange(all Tasks, w TaskChange, refs []taskRef, pages []cha
 		if err := s.WriteMeta(p.slug, p.meta); err != nil {
 			return TaskChangeResult{}, err
 		}
-		out.Pages = append(out.Pages, Edited{Slug: p.slug, TaskProject: p.ref.project, Task: p.meta.Task, OffTask: ""})
+		out.Pages = append(out.Pages, p.edited())
 	}
 	return out, nil
+}
+
+// edited is the page p as written, with the task and category it was on when it left that task, for another or none.
+func (p changedPage) edited() Edited {
+	e := Edited{Slug: p.slug, TaskProject: p.ref.project, Task: p.meta.Task, OffTask: "", OffCategory: ""}
+	if p.was.Name != "" && p.was.Name != p.ref.name {
+		e.OffTask, e.OffCategory = p.was.Name, p.was.Category
+	}
+	return e
 }
 
 // rowAfter is the row of the task ref as w leaves it: was, or a new one when it had none, with w's fields, and the

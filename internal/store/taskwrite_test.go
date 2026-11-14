@@ -135,6 +135,41 @@ func TestTaskWriteOne(t *testing.T) {
 	}
 }
 
+// A page that leaves its task, for another or none, is answered with the task and category it left; one that stays on
+// its task, or comes from none, with none.
+func TestTaskWriteOffTask(t *testing.T) {
+	t.Parallel()
+
+	root := filepath.Join(t.TempDir(), "S")
+	s := store.New(root)
+	pageIn(t, s, root, "a", "p")
+	off := func(w store.TaskChange) string {
+		t.Helper()
+		got, err := s.ChangeTasks(w)
+		if err != nil {
+			t.Fatal(err)
+		}
+		return got.Pages[0].OffTask + "/" + got.Pages[0].OffCategory
+	}
+	for _, c := range []struct {
+		name string
+		w    store.TaskChange
+		want string
+	}{
+		{"from no task", store.TaskChange{Slugs: []string{"a"}, Task: ptr("#1"), Category: ptr("x")}, "/"},
+		{"the same task, another category", store.TaskChange{Slugs: []string{"a"}, Task: ptr(" #1 "), Category: ptr("y")}, "/"},
+		{"its pin", store.TaskChange{Slugs: []string{"a"}, Pin: ptr(true)}, "/"},
+		{"another task, a category of the same name", store.TaskChange{Slugs: []string{"a"}, Task: ptr("#2"), Category: ptr("y")}, "#1/y"},
+		{"another task, no category", store.TaskChange{Slugs: []string{"a"}, Task: ptr("#3")}, "#2/y"},
+		{"off its task", store.TaskChange{Slugs: []string{"a"}, Task: ptr("")}, "#3/"},
+		{"cleared, from no task", store.TaskChange{Slugs: []string{"a"}, Clear: true}, "/"},
+	} {
+		if got := off(c.w); got != c.want {
+			t.Errorf("%s: %q, want %q", c.name, got, c.want)
+		}
+	}
+}
+
 // A page whose project changes is taken off its task, its pin kept, the tasks as they were; put on a task again, it is
 // one of the new project.
 func TestEditProjectTakesOffTask(t *testing.T) {

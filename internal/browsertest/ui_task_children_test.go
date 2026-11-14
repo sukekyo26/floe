@@ -495,7 +495,7 @@ func TestUITaskSetTitle(t *testing.T) { //nolint:paralleltest // the browser tes
 		t.Helper()
 		// A new task asks a title: one is given where none is typed, the asking itself tested apart
 		b.eval("const ti = document.getElementById('set-task-title'); if (!ti.closest('[hidden]') && !ti.value) ti.value = 'a title'")
-		b.eval("document.getElementById('set').requestSubmit()")
+		b.eval(submitSet)
 		b.until("saved", "!document.getElementById('set-dialog').open")
 	}
 
@@ -519,7 +519,7 @@ func TestUITaskSetTitle(t *testing.T) { //nolint:paralleltest // the browser tes
 	dialog("b")
 	field("set-task", "#77")
 	field("set-task-title", "   ")
-	b.eval("document.getElementById('set').requestSubmit()")
+	b.eval(submitSet)
 	if got := b.eval("document.getElementById('set-task-title').validationMessage + '|' + " + shown); got != "Write more than spaces|true" {
 		t.Errorf("a title of spaces: %q", got)
 	}
@@ -549,7 +549,7 @@ func TestUITaskSetTitle(t *testing.T) { //nolint:paralleltest // the browser tes
 		field("set-task", name)
 		field("set-task-title", made)
 		then()
-		b.eval("document.getElementById('set').requestSubmit()")
+		b.eval(submitSet)
 		b.until("refused", "!document.getElementById('set-error').hidden")
 		if got := b.eval("document.getElementById('set-error').textContent"); !strings.Contains(got, gone) {
 			t.Errorf("%s: %q", name, got)
@@ -580,7 +580,7 @@ func TestUITaskSetTitle(t *testing.T) { //nolint:paralleltest // the browser tes
 	s.floe(t, "task", "--project", project, "--task", "#93", "--title", "theirs", "--url", "https://example.com/theirs", "--parent", "#1")
 	b.eval("load()")
 	b.until("#93 read", "tasksOf().some((x) => x.name === '#93')")
-	b.eval("document.getElementById('set').requestSubmit()")
+	b.eval(submitSet)
 	b.until("refused", "!document.getElementById('set-error').hidden")
 	if got := b.eval("document.getElementById('set-error').textContent.includes('task #93 is there already') + '|' + " + shown); got != "true|false" {
 		t.Errorf("made meanwhile: %q", got)
@@ -595,7 +595,7 @@ func TestUITaskSetTitle(t *testing.T) { //nolint:paralleltest // the browser tes
 	field("set-task", "#92")
 	field("set-task-title", "mine")
 	s.floe(t, "task", "--project", project, "--task", "#92", "--state", "todo")
-	b.eval("document.getElementById('set').requestSubmit()")
+	b.eval(submitSet)
 	b.until("refused", "!document.getElementById('set-error').hidden")
 	save()
 
@@ -612,7 +612,7 @@ func TestUITaskSetTitle(t *testing.T) { //nolint:paralleltest // the browser tes
 	b.until("unreadable", "tasksRead.error")
 	dialog("c")
 	field("set-task", "#93")
-	b.eval("document.getElementById('set').requestSubmit()")
+	b.eval(submitSet)
 	if got := b.eval("document.getElementById('set-dialog').open + '|' + !document.getElementById('set-error').hidden + '|' + document.getElementById('set-task-title').required"); got != "true|true|false" {
 		t.Errorf("unreadable: %q", got)
 	}
