@@ -41,8 +41,8 @@ Flags are in each command's section below.
 | `floe diagram inspect <spec.yaml\|data.yaml>...` | Check diagrams, of specs or of data files, and print where each part went |
 | `floe diagram example [kind]` | List the example specs, or print one |
 | `floe diagram guide` | Print how to write a diagram, by hand or as a graph |
-| `floe icons fetch <set> [zip-or-url...]` | Keep an icon set (`aws`, `gcp`, `azure`) for the `icon` parts of diagrams |
-| `floe icons search <set> <word>...` | List the icons of a fetched set whose name contains every word, or a short name such as `alb` |
+| `floe icons fetch <set> [zip-or-url...]` | Keep an icon set (`aws`, `gcp`, `azure`) for the `icon` parts of diagrams; `lucide` is built in |
+| `floe icons search <set> <word>...` | List the icons of a set, `lucide` or a fetched one, whose name contains every word, or a short name such as `alb` |
 | `floe completion <shell>` | Print the completion script for a shell (Cobra builtin) |
 | `floe version` | Print the version (also `floe --version`) |
 | `floe help [command]` | Print help (Cobra builtin) |
@@ -376,7 +376,7 @@ Print how to write a diagram, [diagrams.md](agents/diagrams.md), whole: the two 
 
 ## `floe icons fetch <set> [zip-or-url...]`
 
-Keep an icon set in `FLOE_ICONS_DIR/<set>` for the `icon` parts of diagrams. floe does not ship icons; each machine fetches a set once. The sets:
+Keep an icon set in `FLOE_ICONS_DIR/<set>` for the `icon` parts of diagrams. floe ships only `lucide` (*`floe icons search`*), which is never fetched: `floe icons fetch lucide` is refused. The clouds' icons it does not ship; each machine fetches a set once. The sets:
 
 | Set | Icons |
 |---|---|
@@ -395,7 +395,7 @@ Keep an icon set in `FLOE_ICONS_DIR/<set>` for the `icon` parts of diagrams. flo
 
 ## `floe icons search <set> <word>...`
 
-List the icons of the set (`aws`, `gcp`, `azure`) whose name contains every word (case does not matter), one per line: the name to give an `icon` part (`aws/…`, `gcp/…`, `azure/…`) and its category, tab-separated. A common short name of a service (`alb`, `s3`, `gke`, `aks`, `vnet`) finds the service first, then its resources (`s3 bucket`); floe keeps a short list of these, and any other word is matched only against the names. A short name finds the services of the set named alone (`k8s` is EKS in `aws`, GKE in `gcp`, AKS in `azure`). The set is needed (`floe icons search gcp storage`), so that a diagram of one cloud does not take another's icon; a set not fetched is told with how to fetch it.
+List the icons of the set (`lucide`, `aws`, `gcp`, `azure`) whose name contains every word (case does not matter), one per line: the name to give an `icon` part (`lucide/…`, `aws/…`, `gcp/…`, `azure/…`) and its category, tab-separated. `lucide` is built into floe: a hundred icons of [Lucide](https://lucide.dev) 1.72.0 (ISC) of the things any diagram shows, such as `lucide/users`, `lucide/database` and `lucide/server`, searched with no fetch and no `FLOE_ICONS_DIR`. Its lines draw in the diagram's text colour, or in the `tone` of the `icon` part. A common short name of a service (`alb`, `s3`, `gke`, `aks`, `vnet`), or of a thing (`db`, `person`, `browser` in `lucide`), finds the service first, then its resources (`s3 bucket`); floe keeps a short list of these, and any other word is matched only against the names. A short name finds the services of the set named alone (`k8s` is EKS in `aws`, GKE in `gcp`, AKS in `azure`). The set is needed (`floe icons search gcp storage`), so that a diagram of one cloud does not take another's icon; a set not fetched is told with how to fetch it.
 
 ---
 
@@ -428,7 +428,7 @@ List the icons of the set (`aws`, `gcp`, `azure`) whose name contains every word
 |---|---|
 | `FLOE_DIR` | Where pages are stored. Defaults to `$XDG_DATA_HOME/floe`, else `~/.local/share/floe`. |
 | `FLOE_PORT` | The port (default `7325`). A decimal number from 1 to 65535. |
-| `FLOE_ICONS_DIR` | Where `floe icons fetch` keeps icon sets, a directory each (`aws`, `gcp`, `azure`). Defaults to `$XDG_DATA_HOME/floe-icons`, else `~/.local/share/floe-icons`. |
+| `FLOE_ICONS_DIR` | Where `floe icons fetch` keeps icon sets, a directory each (`aws`, `gcp`, `azure`); the built-in `lucide` needs none. Defaults to `$XDG_DATA_HOME/floe-icons`, else `~/.local/share/floe-icons`. |
 | `FLOE_TEMPLATES_DIR` | Where templates of your own are, a directory each ([templates.md](agents/templates.md)). Defaults to `$XDG_CONFIG_HOME/floe/templates`, else `~/.config/floe/templates`. |
 | `FLOE_PARTS_DIR` | Where parts, looks and shared schemas of your own are ([parts.md](agents/parts.md)). Defaults to `$XDG_CONFIG_HOME/floe/parts`, else `~/.config/floe/parts`. |
 | `FLOE_THEMES_DIR` | Where themes of your own are, a directory each ([themes.md](agents/themes.md)). Defaults to `$XDG_CONFIG_HOME/floe/themes`, else `~/.config/floe/themes`. |

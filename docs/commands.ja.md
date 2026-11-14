@@ -41,8 +41,8 @@
 | `floe diagram inspect <spec.yaml\|data.yaml>...` | spec かデータファイルの図を確かめ、各部品の置かれた所を出す |
 | `floe diagram example [種類]` | 見本の spec を並べる、または 1 つ出す |
 | `floe diagram guide` | 図の書き方（手書きか graph か）を出す |
-| `floe icons fetch <セット> [zip か URL...]` | 図の `icon` の部品が使うアイコンのセット（`aws`・`gcp`・`azure`）を手元に置く |
-| `floe icons search <セット> <語>...` | 取ってきたセットのアイコンのうち、名前がどの語も含むものを並べる（`alb` のような略語でも探せる） |
+| `floe icons fetch <セット> [zip か URL...]` | 図の `icon` の部品が使うアイコンのセット（`aws`・`gcp`・`azure`）を手元に置く。`lucide` は floe に入っている |
+| `floe icons search <セット> <語>...` | `lucide` か取ってきたセットのアイコンのうち、名前がどの語も含むものを並べる（`alb` のような略語でも探せる） |
 | `floe completion <シェル>` | シェルの補完のスクリプトを出す（Cobra の組み込み） |
 | `floe version` | 版を出す（`floe --version` も） |
 | `floe help [コマンド]` | ヘルプを出す（Cobra の組み込み） |
@@ -376,7 +376,7 @@ edge [60,10]→[60,120] M60,10 V120
 
 ## `floe icons fetch <セット> [zip か URL...]`
 
-図の `icon` の部品のため、アイコンのセットを `FLOE_ICONS_DIR/<セット>` に置きます。floe はアイコンを同梱しないので、マシンごとに 1 回取ってきます。セット：
+図の `icon` の部品のため、アイコンのセットを `FLOE_ICONS_DIR/<セット>` に置きます。floe が同梱するのは `lucide`（*`floe icons search`*）だけで、取ってくることはありません（`floe icons fetch lucide` は断ります）。クラウドのアイコンは同梱しないので、マシンごとに 1 回取ってきます。セット：
 
 | セット | アイコン |
 |---|---|
@@ -395,7 +395,7 @@ edge [60,10]→[60,120] M60,10 V120
 
 ## `floe icons search <セット> <語>...`
 
-セット（`aws`・`gcp`・`azure`）のアイコンのうち、名前がどの語も含むもの（大文字と小文字は区別しない）を 1 行ずつ出します。`icon` の部品に書く名前（`aws/…`・`gcp/…`・`azure/…`）と分類を、タブで区切ります。サービスのよく使う略語（`alb`、`s3`、`gke`、`aks`、`vnet`）では、そのサービスのアイコンを先頭に出し、続けてその資源も出します（`s3 bucket`）。略語は floe が短い表で持ち、ほかの語は名前とだけ比べます。略語は名指したセットの中だけで引きます（`k8s` は `aws` なら EKS、`gcp` なら GKE、`azure` なら AKS）。あるクラウドの図に別のクラウドのアイコンを置かないよう、セットは必ず名指します（`floe icons search gcp storage`）。取っていないセットは、その取り方を言います。
+セット（`lucide`・`aws`・`gcp`・`azure`）のアイコンのうち、名前がどの語も含むもの（大文字と小文字は区別しない）を 1 行ずつ出します。`icon` の部品に書く名前（`lucide/…`・`aws/…`・`gcp/…`・`azure/…`）と分類を、タブで区切ります。`lucide` は floe に入っています。[Lucide](https://lucide.dev) 1.72.0（ISC）から、どの図にも出てくる物の 100 個（`lucide/users`・`lucide/database`・`lucide/server` など）を選んだもので、取ってこなくても `FLOE_ICONS_DIR` が無くても探せます。線は図の字の色で、`icon` の部品の `tone` を書けばその色で描きます。サービスのよく使う略語（`alb`、`s3`、`gke`、`aks`、`vnet`）や、物の略語（`lucide` の `db`・`person`・`browser`）では、そのサービスのアイコンを先頭に出し、続けてその資源も出します（`s3 bucket`）。略語は floe が短い表で持ち、ほかの語は名前とだけ比べます。略語は名指したセットの中だけで引きます（`k8s` は `aws` なら EKS、`gcp` なら GKE、`azure` なら AKS）。あるクラウドの図に別のクラウドのアイコンを置かないよう、セットは必ず名指します（`floe icons search gcp storage`）。取っていないセットは、その取り方を言います。
 
 ---
 
@@ -428,7 +428,7 @@ edge [60,10]→[60,120] M60,10 V120
 |---|---|
 | `FLOE_DIR` | ページの保存先。既定は `$XDG_DATA_HOME/floe`、無ければ `~/.local/share/floe`。 |
 | `FLOE_PORT` | ポート（既定は `7325`）。1〜65535 の 10 進の数。 |
-| `FLOE_ICONS_DIR` | `floe icons fetch` がアイコンのセットを 1 つずつディレクトリ（`aws`・`gcp`・`azure`）で置く所。既定は `$XDG_DATA_HOME/floe-icons`、無ければ `~/.local/share/floe-icons`。 |
+| `FLOE_ICONS_DIR` | `floe icons fetch` がアイコンのセットを 1 つずつディレクトリ（`aws`・`gcp`・`azure`）で置く所。組み込みの `lucide` には要らない。既定は `$XDG_DATA_HOME/floe-icons`、無ければ `~/.local/share/floe-icons`。 |
 | `FLOE_TEMPLATES_DIR` | 自分のテンプレートを 1 つずつディレクトリで置く所（[templates.md](agents/templates.md)）。既定は `$XDG_CONFIG_HOME/floe/templates`、無ければ `~/.config/floe/templates`。 |
 | `FLOE_PARTS_DIR` | 自分の部品・見た目・共有の schema の置き場所（[parts.md](agents/parts.md)）。既定は `$XDG_CONFIG_HOME/floe/parts`、無ければ `~/.config/floe/parts`。 |
 | `FLOE_THEMES_DIR` | 自分のテーマを 1 つずつディレクトリで置く所（[themes.md](agents/themes.md)）。既定は `$XDG_CONFIG_HOME/floe/themes`、無ければ `~/.config/floe/themes`。 |
