@@ -102,7 +102,7 @@ Each item of `parts` is one key naming the part. `floe part list` gives each par
 
 ## Diagrams
 
-Read `floe diagram guide` before writing a diagram: it says how to write one, what floe refuses, and the icons of AWS, Google Cloud and Azure to draw their services with.
+Read `floe diagram guide` before writing a diagram: it says how to write one, what floe refuses, and the icons to draw with: `lucide`, built in, for users, servers, databases and the other things any diagram shows, and those of AWS, Google Cloud and Azure for their services.
 
 ## YAML that floe reads as you meant
 

@@ -18,6 +18,7 @@ var aws = kit{
 		iconOf: awsIconOf,
 	}},
 	version: regexp.MustCompile(`Icon-package_(\d{8})`),
+	builtin: false,
 	short: map[string][]string{
 		"acm":   {"aws-certificate-manager"},
 		"alb":   {"res/elastic-load-balancing-application-load-balancer"},

@@ -1376,6 +1376,7 @@ blockquote::before { content: "“"; content: "“" / ""; display: block; font: 
 /* A frame's dashes are a little darker than the secondary text. Without color-mix, --muted stays */
 .dg .frame rect { fill: none; stroke: var(--muted); stroke: color-mix(in srgb, var(--muted) 75%, var(--fg)); stroke-width: 1.2; stroke-dasharray: 5 4; }
 .dg .frame.accent rect { stroke: var(--accent); }
+.dg .frame rect.icon-ground { fill: var(--bg); stroke: none; }
 .dg .frame text { fill: var(--muted); font-size: 12px; font-weight: 700; }
 .dg .frame.grouped text { fill: var(--fg); font-size: 13px; }
 .dg .edge { fill: none; stroke: var(--tone, var(--muted)); stroke-width: 1.5; }
@@ -1389,6 +1390,8 @@ blockquote::before { content: "“"; content: "“" / ""; display: block; font: 
 .dg .dot { fill: var(--tone, var(--muted)); stroke: var(--tone, var(--muted)); }
 .dg .dot.hollow { fill: var(--bg); stroke-width: 2; }
 .dg .bar { fill: var(--tone, var(--muted)); }
+/* An icon of lines (lucide) is a mask over currentColor, which only the color of its <use> reaches */
+.dg use.icon { color: var(--tone, var(--fg)); }
 .dg .axis { stroke: var(--muted); stroke-width: 1.2; }
 .dg .grid { stroke: var(--line); }
 .dg .venn { fill: var(--tone-soft, var(--accent-soft)); fill-opacity: 0.6; stroke: var(--tone, var(--accent)); stroke-width: 1.5; }

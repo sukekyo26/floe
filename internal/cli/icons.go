@@ -34,6 +34,9 @@ func (a *app) iconsFetchCmd() *cobra.Command {
   azure  the Azure architecture icons; their page lets the zip be downloaded only after
          agreeing to its terms, so floe does not download it: pass the zip or its URL
 
+lucide, every icon of Lucide 1.72.0 (lucide/users, lucide/database), is built into floe and
+never fetched: search it with floe icons search lucide <word>.
+
 Without a zip, the set's packages are found on its official page; downloaded zips or their
 URLs can be given instead, one for each package of the set (gcp takes both of its zips).
 The icons are replaced as a whole, and the previous ones stay if that fails. A version
@@ -53,7 +56,7 @@ $XDG_DATA_HOME/floe-icons, or ~/.local/share/floe-icons.`,
 					errs = append(errs, p.err)
 				}
 			}
-			at, dirErr := a.iconsDir()
+			at, dirErr := a.iconsDirFor(args[0])
 			if err := usererr.Collect(append(errs, dirErr)...); err != nil {
 				return err //nolint:wrapcheck // mistakes for the user as they are
 			}
@@ -76,16 +79,22 @@ $XDG_DATA_HOME/floe-icons, or ~/.local/share/floe-icons.`,
 func (a *app) iconsSearchCmd() *cobra.Command {
 	return &cobra.Command{
 		Use:   "search <set> <word>...",
-		Short: "List the icons of a fetched set whose name contains every word, or a short name such as alb",
-		Long: `List the icons of the set (aws, gcp, azure) whose name contains every word, one per line as the
-name to give an icon part (aws/…, gcp/…, azure/…) and its category, tab-separated. A common short name of
-a service in the set (alb, s3, gke, aks, vnet) finds the service first, then its resources. A set not
-fetched is told with how to fetch it.
+		Short: "List the icons of a set, lucide or one fetched, whose name holds every word, or a short name such as alb",
+		Long: `List the icons of the set (lucide, aws, gcp, azure) whose name contains every word, one per line as
+the name to give an icon part (lucide/…, aws/…, gcp/…, azure/…) and its category, tab-separated. lucide is
+built into floe: every icon of Lucide 1.72.0, drawn in the text colour or a tone, which needs no fetch.
+An icon whose name, but for its folder, is a word (user for lucide/user) comes first, as does a common short name of a
+service in the set (alb, s3, gke, aks, vnet), or of a thing in lucide (db, person, browser), then the
+service's resources. A set not fetched is told with how to fetch it.
 
   floe icons search gcp storage`,
 		Args: cobra.ArbitraryArgs,
 		RunE: func(_ *cobra.Command, args []string) error {
-			at, dirErr := a.iconsDir()
+			var set string
+			if len(args) > 0 {
+				set = args[0]
+			}
+			at, dirErr := a.iconsDirFor(set)
 			if err := usererr.Collect(icons.CheckSearch(args), dirErr); err != nil {
 				return err //nolint:wrapcheck // mistakes for the user as they are
 			}
@@ -111,17 +120,28 @@ func (a *app) iconsDir() (dataPlace, error) {
 	return p, err
 }
 
+// iconsDirFor is the directory of the icon sets for a command on set: a set built in needs none, so that the
+// directory's mistake is not told for it.
+func (a *app) iconsDirFor(set string) (dataPlace, error) {
+	p, err := a.iconsDir()
+	if icons.IsBuiltin(set) {
+		err = nil
+	}
+	return p, err
+}
+
 // iconsIn is the store at p: one whose default cannot be holds no set, and a fetch into it tells why.
 func iconsIn(p dataPlace) *icons.Store {
 	return icons.New(p.dir, p.unusable != nil, p.setting())
 }
 
 // iconStore returns the icons the diagrams of one command show: those of iconsDir, or, without a directory for
-// them, none, which a diagram with an icon is told. Made once for the command: a Store keeps the indexes it read.
+// them, those built in, a diagram with another icon told why. Made once for the command: a Store keeps the indexes
+// it read.
 func (a *app) iconStore() diagram.Icons {
 	at, err := a.iconsDir()
 	if err != nil {
-		return diagram.NoIcons{Err: err}
+		return icons.Without(err)
 	}
 	return iconsIn(at)
 }

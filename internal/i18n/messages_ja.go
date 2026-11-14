@@ -266,6 +266,7 @@ var messagesJA = map[string]string{
 
 	// icons
 	"icons_unknown_set":        "アイコン集 \"%s\" はありません。%s を使ってください",
+	"icons_builtin":            "%[1]s のアイコンは floe に入っているので、取ってくる必要はありません。floe icons search %[1]s <語> で探せます",
 	"dir_relative":             "%s が相対パス %s です。絶対パスにしてください",
 	"icons_no_dir":             "HOME が絶対パスでないので、アイコンのディレクトリがありません。FLOE_ICONS_DIR に絶対パスを設定してください",
 	"icons_not_fetched":        "%[1]s のアイコンが %[2]s にありません。floe icons fetch %[3]s を実行してから（%[5]s から約 %[4]s を取得します）、やり直してください",
@@ -322,6 +323,7 @@ var messagesJA = map[string]string{
 	"diagram_label_no_room":      "%sを置く場所が%sの内側とほかの円の外側にありません。その領域を広げるか、文字を短くしてください",
 	"diagram_raw_element":        "raw の SVG に <%s> があります。図には書けない要素なので、消してください。見た目は SVG の図形と属性（fill= など）で書きます",
 	"diagram_icon_set":           "%s: 「%s」にはアイコン集の名前（%s）を前に付けてください（aws/amazon-ec2 のように。floe icons search <集> <語> で探せます）",
+	"diagram_icon_tone":          "%s: %s は絵の色のまま描くので tone を付けられません。tone を消してください（tone を付けられるのは lucide のアイコンだけです）",
 	"diagram_icon_unknown":       "%s: アイコン「%s」はありません（floe icons search %s <語> で探せます）",
 	"copy_button":                "コピー",
 	"copy_failed":                "コピーできませんでした",
