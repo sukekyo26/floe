@@ -32,7 +32,10 @@ type pageRead struct {
 	Before *pageRead `json:"before,omitempty"`
 }
 
-// viewerReads is what reads.json keeps of a viewer: since, when floe first served them, and the pages read, by slug.
+// viewerReads is what reads.json keeps of a viewer: since, when floe first served them, and the pages read, by their
+// meta.json's id, which a rename does not change.
+// LIMIT: the record of a page removed by hand, or replaced while its meta.json could not be read, stays, of no page.
+// Drop those of no id there is in Begin if the size of reads.json comes to matter.
 type viewerReads struct {
 	Since string              `json:"since,omitempty"`
 	Pages map[string]pageRead `json:"pages,omitempty"`
@@ -138,13 +141,13 @@ func (m *Meta) LastNumber() int {
 	return m.Versions[len(m.Versions)-1].N
 }
 
-// taken is the number of the version of the page slug, whose meta.json is m, the reader takes as read: the one on
-// record (0 for one marked unread), else, of a page from before since, the last made by then; 0 for none.
-// LIMIT: a record that is of none of m's versions is no record (a page removed and made again, one replaced, a version
-// dropped past keepVersions), so that a page whose version read was dropped is new again. Keep a mark of the page if
-// that comes to matter.
-func (r *reader) taken(slug string, m *Meta) int {
-	if rec, ok := r.pages[slug]; ok && (rec.N == 0 || m.hasVersion(rec.N, rec.At)) {
+// taken is the number of the version of the page whose meta.json is m the reader takes as read: the one on record (0
+// for one marked unread), else, of a page from before since, the last made by then; 0 for none.
+// LIMIT: a record that is of none of m's versions is no record (one dropped past keepVersions, or a last one that could
+// not be read, which nextVersion drops), so that a page whose version read was dropped is new again. Keep the number
+// alone if that comes to matter.
+func (r *reader) taken(m *Meta) int {
+	if rec, ok := r.pages[m.ID]; ok && (rec.N == 0 || m.hasVersion(rec.N, rec.At)) {
 		return rec.N
 	}
 	if timeOf(m.CreatedAt).After(r.since) {
@@ -159,21 +162,20 @@ func (r *reader) taken(slug string, m *Meta) int {
 	return n
 }
 
-// ReadBefore is the number of the version of the stored page slug, whose meta.json is m, viewer read before the last:
-// the one taken as
-// read, or as that is the last, the one before reading it, as opening a page reads it at once. 0 for none, never the
-// last.
-func (s *Store) ReadBefore(viewer, slug string, m *Meta) int {
+// ReadBefore is the number of the version of the stored page whose meta.json is m viewer read before the last: the one
+// taken as read, or as that is the last, the one before reading it, as opening a page reads it at once. 0 for none,
+// never the last.
+func (s *Store) ReadBefore(viewer string, m *Meta) int {
 	all, _ := s.readReads() //nolint:errcheck // what cannot be read is nothing read, as the list has it
 	r := readerIn(all, viewer)
 	if r == nil || m.IsLink() {
 		return 0
 	}
-	n := r.taken(slug, m)
+	n := r.taken(m)
 	if n != m.LastNumber() {
 		return n
 	}
-	rec, ok := r.pages[slug]
+	rec, ok := r.pages[m.ID]
 	if !ok || !m.hasVersion(rec.N, rec.At) || rec.Before == nil || !m.hasVersion(rec.Before.N, rec.Before.At) {
 		return 0
 	}
@@ -181,8 +183,8 @@ func (s *Store) ReadBefore(viewer, slug string, m *Meta) int {
 }
 
 // takenRead is the record of what taken says, nil for nothing read.
-func (r *reader) takenRead(slug string, m *Meta) *pageRead {
-	n := r.taken(slug, m)
+func (r *reader) takenRead(m *Meta) *pageRead {
+	n := r.taken(m)
 	at := slices.IndexFunc(m.Versions, func(v Version) bool { return v.N == n })
 	if at < 0 {
 		return nil
@@ -190,16 +192,15 @@ func (r *reader) takenRead(slug string, m *Meta) *pageRead {
 	return &pageRead{N: n, At: m.Versions[at].At, Before: nil}
 }
 
-// news is what the reader has not seen of the stored page slug, whose meta.json is m: "" for nothing, or for a nil
-// reader.
+// news is what the reader has not seen of the stored page whose meta.json is m: "" for nothing, or for a nil reader.
 // LIMIT: a reads.json that goes bad while the server runs has no reader: every page counts as read, rather than all as
 // new, until floe serve starts again and writes it anew.
-func (r *reader) news(slug string, m *Meta) string {
+func (r *reader) news(m *Meta) string {
 	if r == nil || len(m.Versions) == 0 {
 		return ""
 	}
-	n := r.taken(slug, m)
-	rec, kept := r.pages[slug]
+	n := r.taken(m)
+	rec, kept := r.pages[m.ID]
 	unread := kept && rec.N == 0
 	switch {
 	case n == m.LastNumber():
@@ -219,11 +220,11 @@ func (s *Store) MarkRead(viewer, slug string, n int, at string) (bool, error) {
 	cleared := false
 	err := s.changeRead(viewer, slug, func(r *reader, m *Meta) *pageRead {
 		cleared = false
-		if !m.hasVersion(n, at) || r.taken(slug, m) >= n {
+		if !m.hasVersion(n, at) || r.taken(m) >= n {
 			return nil
 		}
 		cleared = n == m.LastNumber()
-		return &pageRead{N: n, At: at, Before: r.takenRead(slug, m)}
+		return &pageRead{N: n, At: at, Before: r.takenRead(m)}
 	})
 	return cleared, err
 }
@@ -233,10 +234,10 @@ func (s *Store) MarkRead(viewer, slug string, n int, at string) (bool, error) {
 // LIMIT: one step back alone: what was read before the before is not kept. Keep more if that comes to matter.
 func (s *Store) MarkUnread(viewer, slug string) error {
 	return s.changeRead(viewer, slug, func(r *reader, m *Meta) *pageRead {
-		if r.news(slug, m) != "" {
+		if r.news(m) != "" {
 			return nil
 		}
-		rec, ok := r.pages[slug]
+		rec, ok := r.pages[m.ID]
 		if ok && rec.Before != nil && m.hasVersion(rec.N, rec.At) && m.hasVersion(rec.Before.N, rec.Before.At) {
 			return rec.Before
 		}
@@ -250,7 +251,7 @@ type nextRecord func(*reader, *Meta) *pageRead
 // changeRead keeps what next says viewer's record of slug comes to. One that changes nothing takes no lock, as a page
 // read before is passed over often.
 func (s *Store) changeRead(viewer, slug string, next nextRecord) error {
-	if _, rec, err := s.nextRead(viewer, slug, next); err != nil || rec == nil {
+	if _, _, rec, err := s.nextRead(viewer, slug, next); err != nil || rec == nil {
 		return err
 	}
 	unlock, err := s.lock(false)
@@ -261,8 +262,8 @@ func (s *Store) changeRead(viewer, slug string, next nextRecord) error {
 		return err
 	}
 	defer unlock()
-	// Again, under the lock: another save may have come since.
-	all, rec, err := s.nextRead(viewer, slug, next)
+	// Again, under the lock: another save may have come since, one replacing the page with another of another id too.
+	all, m, rec, err := s.nextRead(viewer, slug, next)
 	if err != nil || rec == nil {
 		return err
 	}
@@ -270,54 +271,54 @@ func (s *Store) changeRead(viewer, slug string, next nextRecord) error {
 	if v.Pages == nil {
 		v.Pages = map[string]pageRead{}
 	}
-	v.Pages[slug] = *rec
+	v.Pages[m.ID] = *rec
 	all[viewer] = v
 	return s.writeReads(all)
 }
 
-// nextRead is reads.json, and what next says of the stored page slug.
-func (s *Store) nextRead(viewer, slug string, next nextRecord) (map[string]viewerReads, *pageRead, error) {
+// nextRead is reads.json, the meta.json of the stored page slug, and what next says of it. A page of no id, as
+// none floe stores, keeps no record, as a link.
+func (s *Store) nextRead(viewer, slug string, next nextRecord) (map[string]viewerReads, *Meta, *pageRead, error) {
 	m := s.ReadMeta(slug)
-	if m == nil || m.IsLink() {
-		return nil, nil, ErrNotFound
+	if m == nil || m.IsLink() || m.ID == "" {
+		return nil, nil, nil, ErrNotFound
 	}
 	all, err := s.readReads()
 	if err != nil && !errors.Is(err, fs.ErrNotExist) && !errors.Is(err, errReadsBroken) {
-		return nil, nil, usererr.CannotRead(s.readsFile(), err) //nolint:wrapcheck // the system's words, at the file
+		return nil, nil, nil, usererr.CannotRead(s.readsFile(), err) //nolint:wrapcheck // the system's words, at the file
 	}
 	r := readerIn(all, viewer)
 	if r == nil {
-		return nil, nil, usererr.NewAt(s.readsFile(), 0, 0, "store_reads_unset")
+		return nil, nil, nil, usererr.NewAt(s.readsFile(), 0, 0, "store_reads_unset")
 	}
-	return all, next(r, m), nil
+	return all, m, next(r, m), nil
 }
 
-// moveRead moves what each viewer read of the page from to the page to, or forgets it ("" for to), and what they read
-// of an earlier page to. It is called under the lock, after the rename or removal, which is done whatever comes of it.
-// LIMIT: one that cannot be written leaves the page as if read by no one, and a key that no version of a later page of
-// that slug matches. Tell it if that comes to matter.
-func (s *Store) moveRead(from, to string) {
+// forgetRead drops what each viewer read of the page whose meta.json is m, which is going. It is called under the
+// lock, before the page goes, so that one that cannot be written stops it. A reads.json missing or broken keeps no
+// record to drop; one that cannot be read may, once mended, so it is told.
+func (s *Store) forgetRead(m *Meta) error {
+	if m.IsLink() || m.ID == "" {
+		return nil
+	}
 	all, err := s.readReads()
+	if errors.Is(err, fs.ErrNotExist) || errors.Is(err, errReadsBroken) {
+		return nil
+	}
 	if err != nil {
-		return
+		return usererr.CannotRead(s.readsFile(), err) //nolint:wrapcheck // the system's words, at the file
 	}
 	changed := false
 	for _, v := range all {
-		rec, had := v.Pages[from]
-		_, stale := v.Pages[to]
-		if !had && !stale {
-			continue
-		}
-		changed = true
-		delete(v.Pages, to)
-		delete(v.Pages, from)
-		if had && to != "" {
-			v.Pages[to] = rec
+		if _, ok := v.Pages[m.ID]; ok {
+			delete(v.Pages, m.ID)
+			changed = true
 		}
 	}
-	if changed {
-		_ = s.writeReads(all) //nolint:errcheck // as above
+	if !changed {
+		return nil
 	}
+	return s.writeReads(all)
 }
 
 // ReadMark is the version n of the stored page slug, whose meta.json is m, as a viewer reads it, 0 for its last: false
