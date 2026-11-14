@@ -478,8 +478,8 @@ func TestWorkNotUTF8(t *testing.T) {
 	}
 }
 
-// floe task with --slug and no flag tells each page as it is, as a write tells it, and writes nothing; a slug of no page
-// is refused before any page is told.
+// floe task with --slug and no other flag tells each page as it is, as a write tells it, and writes nothing, not even
+// the row of a task a page names that has none; a slug of no page is refused before any page is told.
 func TestWorkReadsPages(t *testing.T) {
 	t.Parallel()
 
@@ -515,6 +515,10 @@ func TestWorkReadsPages(t *testing.T) {
 	run(0, "task", "--slug", "a", "--task", "#1", "--category", "designs", "--pin")
 	run(0, "task", "--slug", "c", "--task", "#1")
 	run(0, "archive", "c")
+	// The pages name a task of no row, as a hand edit leaves: a write would make it, a read leaves it out.
+	if err := os.Remove(filepath.Join(env["FLOE_DIR"], "tasks.json")); err != nil {
+		t.Fatal(err)
+	}
 
 	before := written()
 	want := "page a: task #1 in project p, category \"designs\", pinned\n" +
