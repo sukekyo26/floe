@@ -91,7 +91,7 @@ A file or directory of any other name MUST NOT be in a template: floe refuses it
 
 - Write `len`, `index` and `slice` of an item the data may leave out inside `with`, as `{{with .Data.done}}{{len .}}{{else}}0{{end}}` (an item the data leaves out, a key of an object in a list too, is nil, and those three refuse nil).
 - Link to ids you write, not to those floe makes (floe gives each heading, `<h1>` to `<h6>`, that has no `id` one made of its text, as `#1-what-happens`, and `-1` to the later of two of one text: the id changes with the text).
-- A page drawn from a data file holds all it shows, and its scripts cannot send what it holds out: its CSP lets it load only images, fonts and media of data URIs, inline styles and scripts, Google Fonts, and libraries from cdnjs, jsDelivr and unpkg. `fetch`, XHR, an image from elsewhere and a form are blocked. The CSP guards against a slip, not a hostile template: use templates you trust.
+- A page drawn from a data file holds all it shows, and its scripts cannot send what it holds out: its CSP lets it load only images, fonts and media of data and blob URIs, inline styles and scripts, Google Fonts, and libraries from cdnjs, jsDelivr and unpkg. `fetch`, XHR, an image from elsewhere and a form are blocked. The CSP guards against a slip, not a hostile template: use templates you trust.
 
 ## page.css
 
