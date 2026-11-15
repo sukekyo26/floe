@@ -12,7 +12,7 @@ adheres to [Semantic Versioning](https://semver.org/).
 
 ### Fixed
 
-- Fix refusals of a task of no project, which said `project /`: `floe task` and the management page now say `no project` (in Japanese `プロジェクト未設定`, as the task list says it), and `--parent` naming a task of no row says `no task #42 in project app can be a parent`.
+- Fix refusals of a task of no project, which said `project /`: `floe task` and the management page now say `no project` (in Japanese `プロジェクト未設定`, after the task list's `未設定`; a named project is now `プロジェクト「floe」` there), and `--parent` naming a task of no row says `no task #42 in project app can be a parent`.
 
 ## [0.1.0] - 2026-11-16
 
