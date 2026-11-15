@@ -4,17 +4,13 @@ package yamlpos
 
 import (
 	"bytes"
-	"cmp"
 	"errors"
 	"fmt"
+	"io"
 	"strings"
 	"unicode/utf8"
 
-	"github.com/goccy/go-yaml"
-	"github.com/goccy/go-yaml/ast"
-	"github.com/goccy/go-yaml/lexer"
-	"github.com/goccy/go-yaml/parser"
-	"github.com/goccy/go-yaml/token"
+	"go.yaml.in/yaml/v4"
 
 	"floe/internal/bom"
 	"floe/internal/textpos"
@@ -24,24 +20,6 @@ import (
 // Pos is a line and column of a YAML file, both from 1.
 type Pos struct {
 	Line, Column int
-}
-
-// writtenAt returns where n, which must not be nil, was written: a mapping at its first key, so that it
-// points at text rather than the indentation before it.
-func writtenAt(n ast.Node) Pos {
-	if m, ok := n.(*ast.MappingNode); ok && len(m.Values) > 0 {
-		n = m.Values[0].Key
-	}
-	p := n.GetToken().Position
-	return Pos{Line: p.Line, Column: p.Column}
-}
-
-// keyOf returns the key of v, the text after ? for an explicit key.
-func keyOf(v *ast.MappingValueNode) ast.Node {
-	if k, ok := v.Key.(*ast.MappingKeyNode); ok {
-		return k.Value
-	}
-	return v.Key
 }
 
 // Style is how a scalar is written, as the parser read it.
@@ -55,16 +33,29 @@ const (
 	Folded               // a > text
 )
 
-// quoteOf returns how n is quoted: Plain, Double or Single.
-func quoteOf(n ast.Node) Style {
-	switch n.GetToken().Type {
-	case token.DoubleQuoteType:
+// styleOf returns how n, a scalar, is written.
+func styleOf(n *yaml.Node) Style {
+	switch {
+	case n.Style&yaml.DoubleQuotedStyle != 0:
 		return Double
-	case token.SingleQuoteType:
+	case n.Style&yaml.SingleQuotedStyle != 0:
 		return Single
-	default:
-		return Plain
+	case n.Style&yaml.LiteralStyle != 0:
+		return Literal
+	case n.Style&yaml.FoldedStyle != 0:
+		return Folded
 	}
+	return Plain
+}
+
+// unwritten reports whether n is a value with nothing written: go.yaml.in/yaml/v4 gives it as a plain null, empty.
+func unwritten(n *yaml.Node) bool {
+	return n.Kind == yaml.ScalarNode && n.Style == 0 && n.Value == "" && n.Tag == "!!null" && n.Anchor == ""
+}
+
+// at returns where n is written.
+func at(n *yaml.Node) Pos {
+	return Pos{Line: n.Line, Column: n.Column}
 }
 
 // New returns the mistake worded by the catalog message key with args, at at in file.
@@ -72,17 +63,20 @@ func New(file string, at Pos, key string, args ...any) *usererr.Error {
 	return usererr.NewAt(file, at.Line, at.Column, key, args...)
 }
 
-// library returns the mistake goccy/go-yaml told in err, in its words, at its token in file (without a
-// place when it has none). Any other error is returned as it is: floe's failure.
-func library(file string, err error) error {
-	var ye yaml.Error
-	if !errors.As(err, &ye) {
-		return err
+// library returns the mistake go.yaml.in/yaml/v4 told in err, its words as they are (its Message, without the
+// context it adds before them), at its place: its line and column, or, where it gives none (the mistakes of its
+// reader, a control character), its byte in src, the bytes it read. Any other error is returned as it is: floe's
+// failure.
+func library(file string, src []byte, err error) error {
+	var le *yaml.LoadError
+	if !errors.As(err, &le) {
+		return fmt.Errorf("yamlpos: read YAML: %w", err)
 	}
-	if tk := ye.GetToken(); tk != nil {
-		return usererr.LibraryAt(file, tk.Position.Line, tk.Position.Column, ye.GetMessage())
+	line, column := le.Mark.Line, le.Mark.Column
+	if line == 0 {
+		line, column = textpos.Of(src, min(max(le.Mark.Index, 0), len(src)))
 	}
-	return usererr.LibraryAt(file, 0, 0, ye.GetMessage())
+	return usererr.LibraryAt(file, line, column, le.Message)
 }
 
 // ErrEmpty is returned by Parse for a file without a document, for the caller to word.
@@ -105,229 +99,64 @@ func ParseMap(file string, src []byte) (*Node, map[string]any, error) {
 	return body, values, nil
 }
 
-// Parse reads src as one YAML document and returns its body, or ErrEmpty when src holds none. A byte order
-// mark at its start is left out, as YAML 1.2 reads it. Before it is parsed, a file over 1 MiB is refused alone,
-// else a byte order mark past the start, a byte that is no UTF-8 and U+0085, U+2028 and U+2029 (bytesOf), and
-// then a comment in { } or [ ] (flowComments). A syntax error is goccy/go-yaml's (library). A second document,
-// or text a second --- drops, is refused at its start, and nothing in it is walked.
-// Else one walk of the body refuses, all together, sorted: anchors, aliases, merge keys and tags, not
-// walking what they hold; a key that is not text, as goccy/go-yaml or YAML 1.2 reads it; a value or a text
-// key out of { } and [ ] a comment may have cut short; a key in { } without a value, but one refused as not
-// text; and a plain value that YAML 1.2 reads otherwise than goccy/go-yaml (017, 1e3), or as a number JSON has
-// none for (.inf, .nan) or floe cannot hold.
+// Parse reads src as one YAML document with go.yaml.in/yaml/v4 and returns its body, or ErrEmpty when src holds
+// none. A byte order mark at its start is left out, as YAML 1.2 reads it. Before it is read, a file over 1 MiB is
+// refused alone, else a byte order mark past the start, a byte that is no UTF-8 and U+0085, U+2028 and U+2029
+// (bytesOf). A syntax error, and a nesting past go.yaml.in/yaml/v4's depth, is its own (library). A second document
+// is refused at its start.
+// Else one walk of the body refuses, all together, sorted: anchors, aliases, merge keys and tags, not walking what
+// they hold; a key that is not text as YAML 1.2 reads it, and a key written twice in one mapping; a key in { }
+// without a value; and a plain value YAML 1.2 reads as a number JSON has none for (.inf, .nan) or floe cannot hold.
 func Parse(file string, src []byte) (*Node, error) {
 	body, err := document(file, src)
 	if err != nil {
 		return nil, err
 	}
-	w := &walk{file: file, found: nil, failed: nil}
-	w.node(body, 0)
-	if w.failed != nil {
-		return nil, w.failed
-	}
+	w := &walk{file: file, src: bom.Trim(src), found: nil}
+	w.node(body)
 	if err := w.found.Sorted().Err(); err != nil {
 		return nil, err //nolint:wrapcheck // the mistakes of src
 	}
-	return newNode(body)
+	return newNode(body), nil
 }
 
-// document returns the body of the one document of src. A document of a directive (%YAML) alone is no
-// document: it heads the one after it. Before it is parsed, src is held to the bytes floe reads (bytesOf).
-// LIMIT: a control character (NUL) and UTF-16 without a mark are UTF-8 and left to goccy/go-yaml, which reads a
-// NUL in a value; refuse what YAML 1.2 does not print if one comes to matter.
-// LIMIT: a lone surrogate escaped in double quotes ("\udc00") goccy/go-yaml reads as U+FFFD, telling only a high
-// one with nothing after it; refuse them if goccy/go-yaml comes to tell them, or one comes to matter.
-func document(file string, src []byte) (ast.Node, error) {
+// document returns the body of the one document of src, held first to the bytes floe reads (bytesOf). A document
+// with nothing written (--- at the end, or two in a row) is no document, as YAML 1.2 reads it as null, which floe
+// has no use for: a second is told only when it holds something. A directive (%YAML 1.1) heads the document after
+// it.
+// LIMIT: a surrogate escaped in double quotes, lone or of a pair ("\udc00", "\ud83d\ude00"), go.yaml.in/yaml/v4
+// refuses in its words, which do not say to write the character itself; word it if one comes to matter.
+func document(file string, src []byte) (*yaml.Node, error) {
 	src, err := bytesOf(file, src)
 	if err != nil {
 		return nil, err
 	}
-	// Read once, for blockTabs, the parser and dropped: the parser changes its nodes, not the tokens' types
-	// and places, which dropped reads after it.
-	tks := lexer.Tokenize(string(src))
-	// blockTabs first: past a text it refuses, goccy/go-yaml reads the lines after it otherwise, some as comments.
-	// LIMIT: so the comments in flows are not told with its mistakes, but once they are mended, as the tokens past
-	// them cannot be trusted; nothing gathers them.
-	if err = blockTabs(file, src, tks); err != nil {
-		return nil, err
-	}
-	places := textpos.Each(src, starts(src, tks))
-	if err = flowComments(file, tks, places); err != nil {
-		return nil, err
-	}
-	doc, err := parser.Parse(tks, 0)
+	l, err := yaml.NewLoader(bytes.NewReader(src))
 	if err != nil {
-		// LIMIT: goccy/go-yaml's own mistake keeps its place, which drifts as starts tells: its words hold places
-		// it counts (already defined at [3:1]), which the place would be counted otherwise than.
-		return nil, library(file, err)
+		return nil, fmt.Errorf("yamlpos: make a YAML loader: %w", err)
 	}
-	// After the parser, which reads goccy/go-yaml's columns to tell the indentation.
-	mend(tks, places)
-	var body ast.Node
-	var head *Pos // a directive heads the document after it
-	for _, d := range doc.Docs {
-		switch b := d.Body.(type) {
-		case *ast.DirectiveNode:
-			at := startOf(d, writtenAt(b))
-			head = &at
-			continue
-		case nil:
-			// An empty document: --- at the end, or one goccy/go-yaml left empty after a second ---,
-			// dropping what followed.
-			if d.Start != nil {
-				if at, ok := dropped(tks, d.Start.Position); ok {
-					return nil, New(file, at, "yaml_documents")
-				}
-			}
+	var body *yaml.Node
+	for {
+		var doc yaml.Node
+		err := l.Load(&doc)
+		if errors.Is(err, io.EOF) {
+			break
+		}
+		if err != nil {
+			return nil, library(file, src, err)
+		}
+		if len(doc.Content) == 0 || unwritten(doc.Content[0]) {
 			continue
 		}
 		if body != nil {
-			at := startOf(d, writtenAt(d.Body))
-			if head != nil {
-				at = *head
-			}
-			return nil, New(file, at, "yaml_documents")
+			return nil, New(file, at(&doc), "yaml_documents")
 		}
-		body, head = d.Body, nil
+		body = doc.Content[0]
 	}
 	if body == nil {
 		return nil, ErrEmpty
 	}
 	return body, nil
-}
-
-// blockTabs refuses each | or > text of tks without an indentation indicator whose first line not of spaces
-// alone begins with spaces and a tab, a tab alone too: YAML 1.2 indents with spaces alone, the tab being text,
-// but goccy/go-yaml counts it into the indentation, reading the lines after it a space short and dropping
-// those it then reads as comments, or failing at one of them. A text it reads right (of one line) is refused
-// alike, as the mending (|2) is one. A tab with no space before it goccy/go-yaml refuses itself.
-// It runs before the parser, whose mistake past such a text is the misreading's, at another line.
-// LIMIT: past a text refused, goccy/go-yaml may read a | in what YAML 1.2 reads as its text as a header, which
-// is refused too; read it otherwise if that comes to mislead.
-// LIMIT: a header goccy/go-yaml places off (after a tab before it, a quoted text over CRLF lines) is not judged.
-// LIMIT: At counts each header from src's start; go on from the one before if a file of many comes to be slow.
-func blockTabs(file string, src []byte, tks token.Tokens) error {
-	var found usererr.List
-	for _, t := range tks {
-		if t.Type != token.LiteralType && t.Type != token.FoldedType || strings.ContainsAny(t.Value, "123456789") {
-			continue
-		}
-		// Where goccy/go-yaml's line and column put the header: its Offset counts runes, and drifts more.
-		at := textpos.At(src, t.Position.Line, t.Position.Column)
-		if at < 0 || !bytes.HasPrefix(src[at:], []byte(t.Value)) {
-			continue
-		}
-		for line := textpos.NextLine(src, at); line < len(src); line = textpos.NextLine(src, line) {
-			spaces := len(src[line:]) - len(bytes.TrimLeft(src[line:], " "))
-			end := line + spaces
-			if end == len(src) || src[end] == '\n' || src[end] == '\r' {
-				continue
-			}
-			if spaces > 0 && src[end] == '\t' {
-				l, c := textpos.Of(src, end)
-				found = append(found, usererr.NewAt(file, l, c, "yaml_block_tab"))
-			}
-			break
-		}
-	}
-	return found.Sorted().Err()
-}
-
-// flowComments refuses each comment in a { } or [ ], before the parser, as blockTabs: YAML reads a # there as a
-// comment to the line's end, taking a flow's end with it when one is on the line, which goccy/go-yaml then refuses
-// as missing, not where it went. One a flow holds right is refused too, for one rule, and one past a flow whose
-// end was left out, which the mistake tells by where the innermost flow it is in opens. A flow is closed by its own
-// end, and a document's --- or ... leaves those open. Past an end of the other kind, or with none open, nothing is
-// told: goccy/go-yaml's lexer reads the ends after it otherwise (an end as text), so what follows is left to its
-// parser to refuse. Places are those of places, goccy/go-yaml's without them.
-// LIMIT: a file it refuses is not parsed, so the mistakes the walk finds (a # in a value out of a flow, a number,
-// a key) are told once these are mended, as past blockTabs; tell them at once if one comes to need it.
-func flowComments(file string, tks token.Tokens, places []textpos.Place) error {
-	place := func(i int) (int, int) {
-		if i < len(places) {
-			return places[i].Line, places[i].Column
-		}
-		return tks[i].Position.Line, tks[i].Position.Column
-	}
-	var found usererr.List
-	var open []int // the token of each flow open
-	for i, tk := range tks {
-		switch tk.Type { //nolint:exhaustive // the flows' starts and ends, documents' bounds, and comments
-		case token.MappingStartType, token.SequenceStartType:
-			open = append(open, i)
-		case token.MappingEndType, token.SequenceEndType:
-			n := len(open)
-			if n == 0 || !closes(tks[open[n-1]].Type, tk.Type) {
-				return found.Err()
-			}
-			open = open[:n-1]
-		case token.DocumentHeaderType, token.DocumentEndType:
-			open = nil
-		case token.CommentType:
-			if n := len(open); n > 0 {
-				l, c := place(i)
-				ol, oc := place(open[n-1])
-				found = append(found, usererr.NewAt(file, l, c, "yaml_flow_comment", ol, oc))
-			}
-		}
-	}
-	return found.Err()
-}
-
-// closes is whether end is the end of a flow that start begins.
-func closes(start, end token.Type) bool {
-	return start == token.MappingStartType && end == token.MappingEndType ||
-		start == token.SequenceStartType && end == token.SequenceEndType
-}
-
-// starts returns the byte of src each of tks begins at, or nil when the text of one is not there: goccy/go-yaml's
-// own lines and columns drift (a tab it does not count, the spaces it drops after a plain value, a CRLF in a
-// comment or in quotes counted twice). A token's Origin is the spaces and line breaks before it and the text it
-// read; nothing else is between tokens but the spaces and tabs before a line break that goccy/go-yaml leaves out
-// of a plain value's Origin, which are passed only where the text goes on otherwise. A token without text (an
-// empty block) begins where the next one does, as goccy/go-yaml places it too.
-// LIMIT: a file with a token whose Origin is not its text keeps goccy/go-yaml's places: the hex digits of \x, \u
-// and \U in double quotes left out, or a tab in { } that goccy/go-yaml makes no token of the : after (which it
-// refuses too, keeping its places as for any of its mistakes).
-func starts(src []byte, tks token.Tokens) []int {
-	begins := make([]int, len(tks))
-	c := 0
-	for i, t := range tks {
-		c = len(src) - len(bytes.TrimLeft(src[c:], " \t\r\n"))
-		begins[i] = c
-		text := strings.TrimLeft(t.Origin, " \t\r\n")
-		for j := 0; j < len(text); {
-			if c < len(src) && src[c] == text[j] {
-				c, j = c+1, j+1
-				continue
-			}
-			end := len(src) - len(bytes.TrimLeft(src[c:], " \t"))
-			if end == c || end < len(src) && src[end] != '\n' && src[end] != '\r' {
-				return nil
-			}
-			c = end
-		}
-	}
-	return begins
-}
-
-// mend writes over the line and column of each of tks with its place, none for no places.
-// LIMIT: a token the parser makes, copying a place (a null left out, the value of a tag), keeps goccy/go-yaml's
-// place. OfValue tells a null left out under a key at its key, and floe refuses tags; but a null left out as an item
-// of a sequence is placed at its own token, which drifts where starts tells (after a quoted value over CRLF lines it
-// can name a line the file does not have). v4's places are textpos's, which ends this with S362's child 6.
-func mend(tks token.Tokens, places []textpos.Place) {
-	for i, p := range places {
-		tks[i].Position.Line, tks[i].Position.Column = p.Line, p.Column
-	}
-}
-
-// startOf returns where d starts: at its ---, or at at without one.
-func startOf(d *ast.DocumentNode, at Pos) Pos {
-	if d.Start != nil {
-		return Pos{Line: d.Start.Position.Line, Column: d.Start.Position.Column}
-	}
-	return at
 }
 
 // notUTF8 refuses src, file, at its first byte that is no UTF-8: once, as the one way to mend it is to save the
@@ -352,12 +181,13 @@ func notUTF8(file string, src []byte) error {
 // the memory goes as the file's size. Refuse it where it is read if reading a very large file comes to matter.
 const maxSize = 1 << 20
 
-// bytesOf returns src, file, without the byte order mark at its start, which YAML 1.2 allows and goccy/go-yaml
-// reads as part of the first key: the parser and dropped read it so, so that their places agree.
+// bytesOf returns src, file, without the byte order mark at its start, which YAML 1.2 allows: go.yaml.in/yaml/v4,
+// textpos and floe's checks all read src so, so that their places agree.
 // A file over maxSize is refused alone, at the file, before anything reads it. Else bytesOf refuses, together,
 // each byte order mark past the start, and either the first byte that is no UTF-8 or, in UTF-8 alone, each
-// U+0085, U+2028 and U+2029: goccy/go-yaml reads a mark as a character of a key or a value, and a byte that is
-// no UTF-8 as U+FFFD, or fails on them where it does not.
+// U+0085, U+2028 and U+2029. A mark past the start would be read as a character of a key or a value.
+// go.yaml.in/yaml/v4 reads UTF-16 with a mark without a mistake, which floe's checks of bytes and places, all of
+// UTF-8, would miss: a byte that is no UTF-8 is refused before it reads.
 // The three characters are looked for only in UTF-8: in another encoding (Shift_JIS) their bytes come inside
 // other characters, and would be told where no such character is.
 func bytesOf(file string, src []byte) ([]byte, error) {
@@ -395,139 +225,111 @@ func lineSeparators(file string, src []byte) usererr.List {
 	return found
 }
 
-// dropped finds text after the --- at start, which goccy/go-yaml reads as an empty document and
-// loses: a second --- with text after it. ok is false when only comments and ... follow.
-func dropped(tks token.Tokens, start *token.Position) (Pos, bool) {
-	for _, t := range tks {
-		p := t.Position
-		if p.Line < start.Line || p.Line == start.Line && p.Column <= start.Column {
-			continue
-		}
-		if t.Type != token.CommentType && t.Type != token.DocumentEndType {
-			return Pos{Line: p.Line, Column: p.Column}, true
-		}
-	}
-	return Pos{Line: 0, Column: 0}, false
-}
-
 // walk goes through a body once and notes what floe refuses in it.
 type walk struct {
-	file   string
-	found  usererr.List
-	failed error // floe's failure, which stops the walk's mistakes from being told
+	file  string
+	src   []byte // the bytes go.yaml.in/yaml/v4 read, to show a key it gives no text of
+	found usererr.List
 }
 
-// wrapper refuses n when it is an anchor, alias or tag, and reports it: what it holds is not walked, to be
-// judged once written out.
-func (w *walk) wrapper(n ast.Node) bool {
-	switch n.(type) {
-	case *ast.AnchorNode, *ast.AliasNode, *ast.TagNode:
-		w.found = append(w.found, New(w.file, writtenAt(n), "yaml_no_anchors"))
-		return true
-	}
-	return false
-}
-
-// node walks n, whose owner is the column of the key or - it is the value of, 0 for the body.
-// LIMIT: a , in [ ] ends a plain text too, [1,500 words] being two items, which is not caught: either half
-// is an item as right as any. Nor is a , in { } before a rest with ": " in it ({ label: 1,500 words: many }
-// reads a key 500 words of the value many). Catch them if a schema comes to take such text.
-func (w *walk) node(n ast.Node, owner int) {
+// node walks n.
+// LIMIT: a , in [ ] ends a plain text too, [1,500 words] being two items, which is not caught: either half is an item
+// as right as any; nor is a plain text in [ ] or { } over lines, which YAML 1.2 reads as one text with a space
+// (a: [x, then y] on the next line is "x y"), where a , was left out. Nor is a , in { } before a rest with ": "
+// ({ label: 1,500 words: many } reads a key 500 words of the value many). Catch them if a schema comes to take
+// such text.
+func (w *walk) node(n *yaml.Node) {
 	if w.wrapper(n) {
 		return
 	}
-	switch n := n.(type) {
-	case *ast.MappingNode:
-		for _, v := range n.Values {
-			w.pair(v, n.IsFlowStyle)
+	switch n.Kind {
+	case yaml.MappingNode:
+		first := map[string]*yaml.Node{}
+		for i := 0; i+1 < len(n.Content); i += 2 {
+			w.pair(n.Style&yaml.FlowStyle != 0, n.Content[i], n.Content[i+1], first)
 		}
-	case *ast.SequenceNode:
-		for i, v := range n.Values {
-			// A flow item's Start is a , or nil, and no comment comes after it: flowComments refuses one first.
-			item := owner
-			if i < len(n.Entries) && n.Entries[i].Start != nil {
-				item = n.Entries[i].Start.Position.Column
-			}
-			w.node(v, item)
+	case yaml.SequenceNode:
+		for _, item := range n.Content {
+			w.node(item)
 		}
-	case *ast.LiteralNode:
-		w.cut(n.Value, owner)
-	case *ast.IntegerNode, *ast.FloatNode, *ast.InfinityNode, *ast.NanNode, *ast.StringNode:
-		// A number refused may have been cut short too: quoting it as told would drop the comment unseen.
-		refused := w.number(n)
-		if _, isText := n.(*ast.StringNode); isText || refused {
-			w.cut(n, owner)
-		}
+	case yaml.ScalarNode:
+		w.number(n)
+	case yaml.DocumentNode, yaml.AliasNode, yaml.StreamNode:
 	}
 }
 
-// number refuses n, a plain scalar a number can start, and reports it, when YAML 1.2 reads it otherwise than
-// goccy/go-yaml, or as a number floe does not take.
-func (w *walk) number(n ast.Node) bool {
-	want, ok := plainNumber(n)
-	if !ok {
+// wrapper refuses n when it is an anchor, alias or tag, and reports it: what it holds is not walked, to be
+// judged once written out. A tag of ! alone go.yaml.in/yaml/v4 gives without TaggedStyle, as the tag itself.
+func (w *walk) wrapper(n *yaml.Node) bool {
+	if n.Anchor == "" && n.Kind != yaml.AliasNode && n.Style&yaml.TaggedStyle == 0 && n.Tag != "!" {
 		return false
 	}
-	err := numberMistake(w.file, n, want, goccy(n))
-	if failed := w.found.Add(err); failed != nil {
-		w.failed = cmp.Or(w.failed, failed)
-	}
-	return err != nil
-}
-
-// pair walks a key and its value. A merge key is refused with its value, which is not walked. A key is a
-// name: one that is not text (0x10, ~, 1.0), or that YAML 1.2 reads as a number (1e3, 08), would be read as
-// another name than the one written. It is judged as a key alone, and for a comment that cut it short; a key
-// of a { } written without a ":" after it, which YAML gives an empty value ({ a, b: 1 }), unless refused as not
-// text.
-func (w *walk) pair(v *ast.MappingValueNode, flow bool) {
-	if _, merge := v.Key.(*ast.MergeKeyNode); merge {
-		w.found = append(w.found, New(w.file, writtenAt(v.Key), "yaml_no_anchors"))
-		return
-	}
-	key := keyOf(v)
-	owner := v.Key.GetToken().Position.Column
-	text, isText := key.(*ast.StringNode)
-	switch {
-	case w.wrapper(key):
-	case !isText || number12(text):
-		w.found = append(w.found, New(w.file, writtenAt(key), "yaml_key_not_text", key.GetToken().Value))
-	case w.cut(text, owner):
-	default:
-		if flow && v.Start.Type != token.MappingValueType {
-			w.found = append(w.found, New(w.file, writtenAt(key), "yaml_flow_key_alone", Head(key.GetToken().Value)))
-		}
-	}
-	w.node(v.Value, owner)
-}
-
-// cut refuses n, a text, and reports it, when the comment right after it is deeper than owner, the column of
-// its key (its ? when written with one) or -, which may have cut it short. YAML reads " #" in a plain value as
-// the start of a comment, ending the value, and a # line shallower than a | or > text's indentation as a
-// comment after it, ending the text; no later check sees either is short. A line deeper than owner is one YAML
-// 1.2 could have read as part of the value, so the rule needs no context. The comment may be the author's, on
-// the value's line or indented deeper on one of its own, which floe cannot tell from text cut short, so either
-// is refused. A comment after a quoted value cuts nothing. A value in { } or [ ] has no comment after it here:
-// flowComments refuses one before the parser.
-// LIMIT: only the comment right after the value is judged: one after a comment no deeper than owner
-// (t: |, "    a", "# real", "  # h") passes; judge the comments after it too if text is lost so.
-// LIMIT: the caller gives it text, and a number it refused, not a number, true or ~ it takes, after which a
-// comment is not judged: an item that takes text refuses such a value by its type.
-// LIMIT: text cut to a number both read alike (title: 2024 #1) passes; catch it if a schema takes such text.
-// LIMIT: a body of text alone (x, then "# c") has no key, so the comment cannot be written shallower as told,
-// only left out; the files floe reads have keys at their top.
-func (w *walk) cut(n ast.Node, owner int) bool {
-	tk := n.GetToken()
-	if quoteOf(n) != Plain || tk.Next == nil || tk.Next.Type != token.CommentType ||
-		tk.Next.Position.Column <= owner {
-		return false
-	}
-	c := tk.Next.Position
-	w.found = append(w.found, usererr.NewAt(w.file, c.Line, c.Column, "yaml_comment_cut", endOf(tk.Value)))
+	w.found = append(w.found, New(w.file, at(n), "yaml_no_anchors"))
 	return true
 }
 
-// shownEnd is how many characters of a value cut short its mistake shows: its end, where the cut is.
+// pair walks a key and its value; first holds the keys of their mapping met before, by name. A merge key is
+// refused with its value, which is not walked. A key is a name: one that is not text as YAML 1.2 reads it (0x10,
+// ~, true, a list) would be read as another name than the one written, and one written twice keeps only one of
+// its values, which go.yaml.in/yaml/v4 does not tell. A key of a { } with no value written ({a, b: 1}, {a: }) is
+// refused: a , in text may have ended the text before it.
+func (w *walk) pair(flow bool, key, value *yaml.Node, first map[string]*yaml.Node) {
+	if key.Tag == "!!merge" {
+		w.found = append(w.found, New(w.file, at(key), "yaml_no_anchors"))
+		return
+	}
+	switch {
+	case w.wrapper(key):
+	case key.Kind != yaml.ScalarNode || styleOf(key) == Plain && read12(key.Value).kind != kindText:
+		w.found = append(w.found, New(w.file, at(key), "yaml_key_not_text", w.name(key)))
+	default:
+		if before, twice := first[key.Value]; twice {
+			w.found = append(w.found, New(w.file, at(key), "yaml_key_twice", Head(key.Value), before.Line))
+		} else {
+			first[key.Value] = key
+		}
+		if flow && unwritten(value) {
+			w.found = append(w.found, New(w.file, at(key), "yaml_flow_key_alone", Head(key.Value)))
+		}
+	}
+	w.node(value)
+}
+
+// name returns key as its mistake shows it: its text, or, for a key that has none (a list, keys and values, or
+// nothing written), the head of the line it is written on, shown alone and judged by nothing.
+func (w *walk) name(key *yaml.Node) string {
+	if key.Value != "" {
+		return Head(key.Value)
+	}
+	start := textpos.At(w.src, key.Line, key.Column)
+	if start < 0 {
+		return ""
+	}
+	return Head(strings.TrimRight(string(w.src[start:textpos.NextLine(w.src, start)]), "\r\n"))
+}
+
+// number refuses n, a scalar, when it is plain and YAML 1.2 reads it as a number floe does not take: a float past
+// float64, one that is not finite, or an integer past int64 and uint64.
+func (w *walk) number(n *yaml.Node) {
+	if styleOf(n) != Plain {
+		return
+	}
+	r := read12(n.Value)
+	var key string
+	switch {
+	case r.outside:
+		key = "yaml_number_outside_float"
+	case !r.finite():
+		key = "yaml_not_finite"
+	case r.kind == kindInt && !r.fits():
+		key = "yaml_number_too_big"
+	default:
+		return
+	}
+	w.found = append(w.found, New(w.file, at(n), key, n.Value))
+}
+
+// shownEnd is how many characters of a text its mistake shows, from its head.
 const shownEnd = 40
 
 // Head returns the head of text, such as the rest of text a , may have ended, to show in a mistake on one line:
@@ -538,15 +340,4 @@ func Head(text string) string {
 		return string(r)
 	}
 	return string(r[:shownEnd]) + "…"
-}
-
-// endOf returns the end of value, a value cut short, to show in its mistake on one line: a line break,
-// which a blank line in a value over lines makes, as a space, and only the last shownEnd characters
-// after "…" of a longer one.
-func endOf(value string) string {
-	r := []rune(strings.ReplaceAll(strings.TrimRight(value, "\n"), "\n", " "))
-	if len(r) <= shownEnd {
-		return string(r)
-	}
-	return "…" + string(r[len(r)-shownEnd:])
 }

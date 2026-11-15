@@ -2,13 +2,11 @@ package yamlpos
 
 import (
 	"bytes"
-	"fmt"
 	"slices"
 	"strconv"
 	"strings"
 
-	"github.com/goccy/go-yaml/ast"
-	"github.com/goccy/go-yaml/token"
+	"go.yaml.in/yaml/v4"
 
 	"floe/internal/bom"
 	"floe/internal/textpos"
@@ -46,81 +44,33 @@ type Pair struct {
 	Key, Value *Node
 }
 
-// newNode returns n, a body Parse walked without a mistake, as a Node; err is floe's failure.
-func newNode(n ast.Node) (*Node, error) {
-	tk := n.GetToken()
+// newNode returns n, a body Parse walked without a mistake, as a Node.
+func newNode(n *yaml.Node) *Node {
 	out := &Node{
 		Kind: Scalar, Pairs: nil, Items: nil, Value: "", Style: Plain, Null: false,
-		at: writtenAt(n), start: Pos{Line: tk.Position.Line, Column: tk.Position.Column}, flow: false, unwritten: false,
-		text: false,
+		at: at(n), start: at(n), flow: n.Style&yaml.FlowStyle != 0, unwritten: false, text: false,
 	}
-	var err error
-	switch n := n.(type) {
-	case *ast.MappingNode:
-		out.Kind, out.flow = Mapping, n.IsFlowStyle
-		out.Pairs, err = newPairs(n.Values)
-	case *ast.SequenceNode:
-		out.Kind, out.flow = Sequence, n.IsFlowStyle
-		out.Items, err = newItems(n.Values)
-	default:
-		err = out.scalar(n)
-	}
-	if err != nil {
-		return nil, err
-	}
-	return out, nil
-}
-
-func newPairs(values []*ast.MappingValueNode) ([]Pair, error) {
-	pairs := make([]Pair, 0, len(values))
-	for _, v := range values {
-		key, err := newNode(keyOf(v))
-		if err != nil {
-			return nil, err
+	switch n.Kind {
+	case yaml.MappingNode:
+		out.Kind = Mapping
+		for i := 0; i+1 < len(n.Content); i += 2 {
+			out.Pairs = append(out.Pairs, Pair{Key: newNode(n.Content[i]), Value: newNode(n.Content[i+1])})
 		}
-		value, err := newNode(v.Value)
-		if err != nil {
-			return nil, err
+		if len(out.Pairs) > 0 {
+			out.at = out.Pairs[0].Key.at // a { } at its first key too
 		}
-		pairs = append(pairs, Pair{Key: key, Value: value})
+	case yaml.SequenceNode:
+		out.Kind = Sequence
+		for _, item := range n.Content {
+			out.Items = append(out.Items, newNode(item))
+		}
+	case yaml.ScalarNode, yaml.DocumentNode, yaml.AliasNode, yaml.StreamNode:
+		r := read12(n.Value)
+		out.Value, out.Style, out.unwritten = n.Value, styleOf(n), unwritten(n)
+		out.Null = out.Style == Plain && r.kind == kindNull
+		out.text = out.Style != Plain || r.kind == kindText
 	}
-	return pairs, nil
-}
-
-func newItems(values []ast.Node) ([]*Node, error) {
-	items := make([]*Node, 0, len(values))
-	for _, v := range values {
-		item, err := newNode(v)
-		if err != nil {
-			return nil, err
-		}
-		items = append(items, item)
-	}
-	return items, nil
-}
-
-// scalar reads n, a scalar, into out.
-func (out *Node) scalar(n ast.Node) error {
-	tk := n.GetToken()
-	switch n := n.(type) {
-	case *ast.StringNode:
-		out.Value, out.Style, out.text = n.Value, quoteOf(n), true
-	case *ast.LiteralNode:
-		out.Value, out.Style, out.text = n.Value.Value, Literal, true
-		if strings.HasPrefix(n.Start.Value, ">") {
-			out.Style = Folded
-		}
-	case *ast.NullNode:
-		out.Null, out.unwritten = true, tk.Type == token.ImplicitNullType
-		if !out.unwritten {
-			out.Value = tk.Value // goccy/go-yaml's token of nothing written holds null
-		}
-	case *ast.IntegerNode, *ast.FloatNode, *ast.BoolNode, *ast.InfinityNode, *ast.NanNode:
-		out.Value = tk.Value
-	default:
-		return fmt.Errorf("yamlpos: a value of the type %T", n) //nolint:err113 // floe's own
-	}
-	return nil
+	return out
 }
 
 // Of returns where n, which must not be nil, was written: a mapping at its first key, so that it points at text
@@ -148,8 +98,8 @@ func Text(n *Node) (string, bool) {
 // is: at the key for a mapping or a sequence (zz: with y: 1 below it, 3:1), at the value for a scalar (zz: 1, 3:5).
 // A data file's mistake could go to the key itself, as schema.Validate has the file's nodes, but a diagram spec's
 // comes as a JSON pointer (schema.ValidateAt), which cannot name a key apart from its value: both are placed alike.
-// LIMIT: a pair in [ ] written without { } (a: [b: 1]) is a mapping goccy/go-yaml reads as not in flow style, with no
-// { to point at: it is placed at its first key, which is where it starts too.
+// A pair in [ ] written without { } (a: [b: 1]) is a mapping in flow style with no { to point at: it is placed where
+// it starts, at its key.
 func OfValue(key, value *Node) Pos {
 	switch {
 	case key != nil && (value.Kind != Scalar || value.unwritten):
@@ -209,8 +159,7 @@ func Locate(root *Node, at []string) (Pos, *Node) {
 // any other. The characters of src are only compared with the value read, which tells where they are: nothing is
 // judged by reading src.
 // LIMIT: a value whose characters are not written as read is not placed inside: an escape in double quotes, two
-// single quotes, a value over lines, a > text, a | text whose indentation is text too, a plain value goccy/go-yaml
-// reads without its tabs, and any value of a file whose places goccy/go-yaml counts otherwise (starts). Map the
+// single quotes, a value over lines, a > text, and a | text whose indentation is text too. Map the
 // characters read to those written if a place inside such a value comes to matter.
 func Written(src []byte, n *Node) (Pos, bool) {
 	none := Pos{Line: 0, Column: 0}

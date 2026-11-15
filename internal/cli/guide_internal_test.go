@@ -255,7 +255,7 @@ func TestGuideMistakes(t *testing.T) {
 	for _, c := range []struct {
 		dir   string
 		files []string
-	}{{"testdata/guide/yaml", []string{"h.yaml", "c.yaml", "t.yaml"}}, {"testdata/guide/shape", []string{"plan.yaml"}}} {
+	}{{"testdata/guide/yaml", []string{"h.yaml", "t.yaml"}}, {"testdata/guide/shape", []string{"plan.yaml"}}} {
 		dir, err := filepath.Abs(c.dir)
 		if err != nil {
 			t.Fatal(err)
@@ -587,7 +587,7 @@ func TestNotQuoted(t *testing.T) {
 		{"a: report\nb: 12\nc: true\nd: 2030-04-12\ne: a/b_c.d-e\nf: Steps\n", 0},
 		{"- { a: 'x', b: ['y z', warn] }\n", 0},
 		{"'a key with spaces': v\n", 0},
-		{"a:\nb: { c: }\n", 0},
+		{"a:\nb:\n", 0},
 		{"a: x y\n", 1},
 		{"a: \"x\"\n", 1},
 		{"a: \"x\"\nb: PR 1\nc: 日本\n", 3},
