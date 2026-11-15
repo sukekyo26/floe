@@ -575,7 +575,7 @@ func TestPartBarsRefused(t *testing.T) {
 	for _, tt := range []struct{ item, want string }{
 		{"{label: b, value: -2}", `d.yaml:5:23: bars: bar 2 "b"'s value takes a number of 0 or more, not -2`},
 		{"{label: b, value: x}", `d.yaml:5:23: bars: bar 2 "b"'s value takes a number, not "x"`},
-		{"{label: b}", `d.yaml:5:3: bars: bar 2 "b"'s value takes a number; none is written, or it is null`},
+		{"{label: b}", `d.yaml:5:5: bars: bar 2 "b"'s value takes a number; none is written, or it is null`},
 		{"{label: b, value: null}", `d.yaml:5:23: bars: bar 2 "b"'s value takes a number; none is written, or it is null`},
 		{"{label: b, value: 0}", ""},
 		{"{label: b, value: 1, of: null}", ""},
@@ -763,7 +763,7 @@ func TestPartStatsRefused(t *testing.T) {
 		{"3", "d.yaml:4:5: stats takes items written as keys and values (label, value and the like); item 1 is not"},
 		{"{label: a, value: '1', from: 'x', better: lower}", "d.yaml:4:34: " + head + "from is not so"},
 		{"{label: a, value: 'x', from: '1', better: lower}", "d.yaml:4:23: " + head + "value is not so"},
-		{"{label: a, value: '1', from: '2'}", "d.yaml:4:3: " + head + "better is not so"},
+		{"{label: a, value: '1', from: '2'}", "d.yaml:4:5: " + head + "better is not so"},
 		{"{label: a, value: '1', from: '2', better: down}", "d.yaml:4:47: " + head + "better is not so"},
 		{"{label: a, value: 3, from: 2, better: lower}", "d.yaml:4:23: " + head + "value is not so\nd.yaml:4:32: " + head + "from is not so"},
 		{"{label: a, value: 3}", ""},

@@ -502,12 +502,12 @@ func readLooks(file string, k, value *yamlpos.Node) ([]taken, usererr.List) {
 	}
 	looks := make([]taken, 0, len(value.Items))
 	var found usererr.List
-	for i, v := range value.Items {
+	for _, v := range value.Items {
 		if name, ok := yamlpos.Text(v); ok && name != "" {
 			looks = append(looks, taken{name: name, file: file, at: yamlpos.Of(v)})
 			continue
 		}
-		found = append(found, yamlpos.New(file, yamlpos.OfValue(yamlpos.EntryKey(value, i), v), "kit_part_yaml_looks"))
+		found = append(found, yamlpos.New(file, yamlpos.OfValue(nil, v), "kit_part_yaml_looks"))
 	}
 	return looks, found
 }

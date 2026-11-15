@@ -324,7 +324,9 @@ func starts(src []byte, tks token.Tokens) []int {
 
 // mend writes over the line and column of each of tks with its place, none for no places.
 // LIMIT: a token the parser makes, copying a place (a null left out, the value of a tag), keeps goccy/go-yaml's
-// place; OfValue tells a null left out at its key, and floe refuses tags.
+// place. OfValue tells a null left out under a key at its key, and floe refuses tags; but a null left out as an item
+// of a sequence is placed at its own token, which drifts where starts tells (after a quoted value over CRLF lines it
+// can name a line the file does not have). v4's places are textpos's, which ends this with S362's child 6.
 func mend(tks token.Tokens, places []textpos.Place) {
 	for i, p := range places {
 		tks[i].Position.Line, tks[i].Position.Column = p.Line, p.Column
