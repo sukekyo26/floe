@@ -488,7 +488,7 @@ var messagesJA = map[string]string{
 	"ui_settings_mode":         "モード",
 	"ui_task_mode":             "タスクモード",
 	"ui_task_mode_about":       "エージェントが、ページをタスク一覧に載せながら作業します。",
-	"ui_task_mode_more":        "エージェントは、新しいページを publish するたびに、タスクに付けるかをあなたに聞きます（付け先を選ぶのはいつもあなたです）。切り替えは、エージェントが手引き（floe guide）を読み直した後から効きます。",
+	"ui_task_mode_more":        "エージェントは、新しいページを publish するたびに、どのタスクのどのカテゴリに置くかをあなたに聞きます（付け先を選ぶのはいつもあなたです）。切り替えは、エージェントが手引き（floe guide）を読み直した後から効きます。",
 	"ui_mode_on":               "入",
 	"ui_mode_off":              "切",
 	"ui_task_mode_set_on":      "タスクモードを入にしました",
