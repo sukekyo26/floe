@@ -22,17 +22,31 @@ type Place struct {
 	Line, Column int
 }
 
-// Each returns the place of each byte of ats, which go up, as Of tells it, reading src once.
+// Each returns the place of each byte of ats, which go up, as Of tells it, reading src once: the column goes on
+// from the place before on the same line.
 func Each(src []byte, ats []int) []Place {
 	places := make([]Place, 0, len(ats))
 	line, start, i := 1, 0, 0
+	cur, runes := 0, 0 // the runes of src[start:cur], as RuneCount reads src[start:at]
 	for _, at := range ats {
 		for ; i < at; i++ {
 			if breaks(src, i) {
 				line, start = line+1, i+1
 			}
 		}
-		places = append(places, Place{Line: line, Column: utf8.RuneCount(src[start:at]) + 1})
+		if cur < start {
+			cur, runes = start, 0
+		}
+		// Only a character whole before at: RuneCount counts one at cuts byte by byte.
+		for cur < at {
+			_, size := utf8.DecodeRune(src[cur:])
+			if cur+size > at {
+				break
+			}
+			cur += size
+			runes++
+		}
+		places = append(places, Place{Line: line, Column: runes + utf8.RuneCount(src[cur:at]) + 1})
 	}
 	return places
 }
