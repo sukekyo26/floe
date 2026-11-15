@@ -108,22 +108,24 @@ func ParseMap(file string, src []byte) (*Node, map[string]any, error) {
 // they hold; a key that is not text as YAML 1.2 reads it, and a key written twice in one mapping; a key in { }
 // without a value; and a plain value YAML 1.2 reads as a number JSON has none for (.inf, .nan) or floe cannot hold.
 func Parse(file string, src []byte) (*Node, error) {
-	body, err := document(file, src)
+	doc, err := document(file, src)
 	if err != nil {
 		return nil, err
 	}
+	body := doc.Content[0]
 	w := &walk{file: file, src: bom.Trim(src), found: nil}
 	w.node(body)
+	w.comments(doc)
 	if err := w.found.Sorted().Err(); err != nil {
 		return nil, err //nolint:wrapcheck // the mistakes of src
 	}
 	return newNode(body), nil
 }
 
-// document returns the body of the one document of src, held first to the bytes floe reads (bytesOf). A document
-// with nothing written (--- at the end, or two in a row) is no document, as YAML 1.2 reads it as null, which floe
-// has no use for: a second is told only when it holds something. A directive (%YAML 1.1) heads the document after
-// it.
+// document returns the one document of src (its body is its Content[0]), src held first to the bytes floe reads
+// (bytesOf). A document with nothing written (--- at the end, or two in a row) is no document, as YAML 1.2 reads it
+// as null, which floe has no use for: a second is told only when it holds something. A directive (%YAML 1.1) heads
+// the document after it.
 // LIMIT: a surrogate escaped in double quotes, lone or of a pair ("\udc00", "\ud83d\ude00"), go.yaml.in/yaml/v4
 // refuses in its words, which do not say to write the character itself; word it if one comes to matter.
 func document(file string, src []byte) (*yaml.Node, error) {
@@ -151,7 +153,7 @@ func document(file string, src []byte) (*yaml.Node, error) {
 		if body != nil {
 			return nil, New(file, at(&doc), "yaml_documents")
 		}
-		body = doc.Content[0]
+		body = &doc
 	}
 	if body == nil {
 		return nil, ErrEmpty
@@ -329,7 +331,8 @@ func (w *walk) number(n *yaml.Node) {
 	w.found = append(w.found, New(w.file, at(n), key, n.Value))
 }
 
-// shownEnd is how many characters of a text its mistake shows, from its head.
+// shownEnd is how many characters of a text its mistake shows: the head of one (Head), the end of one cut short
+// (endOf).
 const shownEnd = 40
 
 // Head returns the head of text, such as the rest of text a , may have ended, to show in a mistake on one line:

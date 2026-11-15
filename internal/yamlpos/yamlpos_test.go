@@ -776,3 +776,62 @@ func TestParseEscapedLineSeparator(t *testing.T) {
 		t.Errorf("read %q", got)
 	}
 }
+
+// A comment that may have cut a value short is refused at the value's start, once a value: on the line of a plain
+// value read as text, and right after a | or > text (the forms of its right place too, which v4's tree cannot tell
+// apart). A key's comment, one in a | text, after a number or a quoted value, and on a line of its own after a
+// plain value pass.
+func TestParseComments(t *testing.T) {
+	t.Parallel()
+
+	for _, tt := range []struct{ src, want string }{
+		// On the line of a plain text value, in a flow too, at the end of a value over lines.
+		{"title: Plan #1 draft\n", "1:8 yaml_comment_cut"},
+		{"lead: PR #100\n", "1:7 yaml_comment_cut"},
+		{"a: b\t#c\n", "1:4 yaml_comment_cut"},
+		{"title: Plan\n  draft #1\n", "1:8 yaml_comment_cut"},
+		{"x: [a, # c\n  b]\n", "1:5 yaml_comment_cut"},
+		{"sections:\n  - heading: Step #2\n", "2:14 yaml_comment_cut"},
+		{"- uses: actions/checkout@abc # v4\n", "1:9 yaml_comment_cut"},
+		// Right after a | or > text: the next key's head, a key's foot, an item, the document's foot.
+		{"t: |\n    a\n  # h\nb: 1\n", "1:4 yaml_comment_after_block"},
+		{"t: |\n  a\n # h\nb: 1\n", "1:4 yaml_comment_after_block"},
+		{"t: >\n    a\n  # h\n", "1:4 yaml_comment_after_block"},
+		{"t: |-\n    a\n  # h\nb: 1\n", "1:4 yaml_comment_after_block"},
+		{"t: |+\n    a\n\n  # h\nb: 1\n", "1:4 yaml_comment_after_block"},
+		{"- |\n    a\n  # h\n", "1:3 yaml_comment_after_block"},
+		{"m:\n  t: |\n      a\n    # h\n    # i\n  b: 1\n", "2:6 yaml_comment_after_block"},
+		{"a: |\n\n# c\nb: 1\n", "1:4 yaml_comment_after_block"},
+		// LIMIT: the right place of a comment after a text, the next item's -, and after --- (the user decided).
+		{"a: |\n  text\n# c\nb: 1\n", "1:4 yaml_comment_after_block"},
+		{"- t: |\n    x\n- # c\n  t: y\n", "1:6 yaml_comment_after_block"},
+		{"a: |\n  t\n---\n# c\n", "1:4 yaml_comment_after_block"},
+		// Once a value, at two places too.
+		{"a:\n  t: |\n    x\n  # c1\n# c2\nb: 1\n", "2:6 yaml_comment_after_block"},
+		{"a: Plan #1\nb: |\n  x\n# c\n", "1:4 yaml_comment_cut\n2:4 yaml_comment_after_block"},
+		// They pass.
+		{"a: # c\n  k: v\n", ""},
+		{"parts: # note\n  - text: x\n", ""},
+		{"? a # c\n: x\n", ""},
+		{"t: | # note\n  body\n", ""},
+		{"t: |\n  para\n  # Heading in the text\n  more\nb: 1\n", ""},
+		{"a: b\n# section\nc: d\n", ""},
+		{"a: b\n\n# section\nc: d\n", ""},
+		{"l:\n  - a\n  # between\n  - b\n", ""},
+		{"a: b\n# end\n", ""},
+		{"a: 1 # c\nb: 'q' # c\nc: true # c\nd: ~ # c\ne: \"x\" # c\n", ""},
+		{"# top\na: |\n  t\nb: 1\n", ""},
+		{"lang: en\n---\n# c\n", ""},
+		{"a: |\n  t\nb: x\n# after a plain value\nc: 1\n", ""},
+		{"x:\n  t: |\n    a\n  u: b\n  # c\ny: 1\n", ""},
+		{"ports: [\n  8080,  # admin\n  9090,\n]\n", ""},
+		{"title: 'Plan #1 draft'\n", ""},
+		// LIMIT: on a line of its own after a plain value, deeper than its key, as the LIMIT of comments tells.
+		{"a: b\n   # c\nb: 1\n", ""},
+	} {
+		_, err := yamlpos.Parse("a.yaml", []byte(tt.src))
+		if got := placed(err); got != tt.want {
+			t.Errorf("Parse(%q) told\n%s\nwant\n%s", tt.src, got, tt.want)
+		}
+	}
+}
