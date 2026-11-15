@@ -19,14 +19,14 @@ jobs:
       tag: ${{ steps.version.outputs.tag }}
       changed: ${{ steps.version.outputs.changed }}
     steps:
-      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
-
       # workflow_dispatch can pick any ref: a release is cut from main alone.
       - name: Require main
         if: github.ref != 'refs/heads/main'
         run: |
           echo "::error::release runs on main, not ${GITHUB_REF}; run it again on main" >&2
           exit 1
+
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
 
       # Decide by the release, not the tag: a run that pushed the tag but failed
       # to publish must be re-runnable instead of being skipped forever.
@@ -94,6 +94,15 @@ jobs:
 
       - uses: ./.github/actions/setup-just
 
+      # Before the build, so that a broken key stops the run before an attestation is made.
+      - name: Import GPG signing key
+        uses: crazy-max/ghaction-import-gpg@2dc316deee8e90f13e1a351ab510b4d5bc0c82cd # v7.0.0
+        with:
+          gpg_private_key: ${{ secrets.GPG_PRIVATE_KEY }}
+          passphrase: ${{ secrets.GPG_PASSPHRASE }}
+          git_user_signingkey: true
+          git_tag_gpgsign: true
+
       - name: Build release assets
         env:
           VERSION: ${{ needs.check-version.outputs.version }}
@@ -108,14 +117,6 @@ jobs:
             bin/floe-darwin-amd64
             bin/floe-darwin-arm64
             bin/SHA256SUMS
-
-      - name: Import GPG signing key
-        uses: crazy-max/ghaction-import-gpg@2dc316deee8e90f13e1a351ab510b4d5bc0c82cd # v7.0.0
-        with:
-          gpg_private_key: ${{ secrets.GPG_PRIVATE_KEY }}
-          passphrase: ${{ secrets.GPG_PASSPHRASE }}
-          git_user_signingkey: true
-          git_tag_gpgsign: true
 
       # Reuse the tag a failed earlier run already pushed, but never one that
       # points at another commit.
