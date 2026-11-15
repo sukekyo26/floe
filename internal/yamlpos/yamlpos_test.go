@@ -506,21 +506,22 @@ func TestParsePlaces(t *testing.T) {
 	}
 }
 
-// Quote tells a quoted scalar as the parser read it: a no-break space or an ideographic space before a quote
-// is part of a plain scalar.
-func TestQuote(t *testing.T) {
+// Style tells how a scalar is written, as the parser read it: a no-break space or an ideographic space before a
+// quote is part of a plain scalar.
+func TestStyle(t *testing.T) {
 	t.Parallel()
 
-	for src, want := range map[string]yamlpos.Quote{
+	for src, want := range map[string]yamlpos.Style{
 		"\"x\"": yamlpos.Double, "'x'": yamlpos.Single, "x": yamlpos.Plain, "\u00a0'": yamlpos.Plain,
-		"\u3000'x": yamlpos.Plain, "1": yamlpos.Plain, "|\n  x\n": yamlpos.Plain,
+		"\u3000'x": yamlpos.Plain, "1": yamlpos.Plain, "|\n  x\n": yamlpos.Literal, "|-\n  x\n": yamlpos.Literal,
+		">\n  x\n": yamlpos.Folded,
 	} {
 		n, err := yamlpos.Parse("a.yaml", []byte("v: "+src+"\n"))
 		if err != nil {
 			t.Fatalf("Parse(%q): %s", src, told(err))
 		}
-		if _, v := yamlpos.Find(n, []string{"v"}); v.Quote != want {
-			t.Errorf("Quote of %q = %d, want %d", src, v.Quote, want)
+		if _, v := yamlpos.Find(n, []string{"v"}); v.Style != want {
+			t.Errorf("Style of %q = %d, want %d", src, v.Style, want)
 		}
 	}
 }
@@ -574,6 +575,8 @@ func TestWritten(t *testing.T) {
 		{"v: \"abc\"\n", yamlpos.Pos{Line: 1, Column: 5}},
 		{"v: \"\\x41\"\n", none},
 		{"v: 'a''b'\n", none},
+		{"v: 'a'''\n", none},
+		{"v: \"a\\\\\"\n", none},
 		{"v: a\n  b\n", none},
 		{"v: 'a\n  b'\n", none},
 		{"v: |\n  x\n  y\n", yamlpos.Pos{Line: 2, Column: 3}},
@@ -593,5 +596,52 @@ func TestWritten(t *testing.T) {
 		if got != tt.want || ok != (tt.want != none) {
 			t.Errorf("Written(%q) = %v, %v; want %v", tt.src, got, ok, tt.want)
 		}
+	}
+}
+
+// Parse gives each value as a Node: its kind, its value as written, how it is written and whether it is null;
+// empty and nested flow ones, and a key in quotes, by its name.
+func TestNode(t *testing.T) {
+	t.Parallel()
+
+	body, err := yamlpos.Parse("a.yaml", []byte("a: ~\nb:\nc: null\nd: 1.10\ne: 'q'\nf: {}\ng: []\n"+
+		"h: {i: [1, {j: x}]}\n'1': x\nk: |\n  t\n"))
+	if err != nil {
+		t.Fatal(told(err))
+	}
+	names := make([]string, 0, len(body.Pairs))
+	for _, p := range body.Pairs {
+		names = append(names, p.Name())
+	}
+	if got := strings.Join(names, " "); got != "a b c d e f g h 1 k" {
+		t.Errorf("the keys are %q", got)
+	}
+	value := func(at ...string) *yamlpos.Node {
+		_, v := yamlpos.Find(body, at)
+		return v
+	}
+	for at, want := range map[string]struct {
+		value string
+		null  bool
+	}{"a": {"~", true}, "b": {"", true}, "c": {"null", true}, "d": {"1.10", false}} {
+		if v := value(at); v.Kind != yamlpos.Scalar || v.Value != want.value || v.Null != want.null {
+			t.Errorf("%s: %d %q null %v, want %q null %v", at, v.Kind, v.Value, v.Null, want.value, want.null)
+		}
+		if _, ok := yamlpos.Text(value(at)); ok {
+			t.Errorf("%s is text", at)
+		}
+	}
+	if v := value("e"); v.Style != yamlpos.Single || v.Value != "q" {
+		t.Errorf("e: %d %q", v.Style, v.Value)
+	}
+	if f, g := value("f"), value("g"); f.Kind != yamlpos.Mapping || len(f.Pairs) != 0 || g.Kind != yamlpos.Sequence || len(g.Items) != 0 {
+		t.Errorf("f: %d %d, g: %d %d", f.Kind, len(f.Pairs), g.Kind, len(g.Items))
+	}
+	if i := value("h", "i"); i.Kind != yamlpos.Sequence || len(i.Items) != 2 || i.Items[1].Kind != yamlpos.Mapping ||
+		i.Items[1].Pairs[0].Name() != "j" {
+		t.Errorf("h.i: %+v", i)
+	}
+	if text, ok := yamlpos.Text(value("k")); !ok || text != "t\n" || value("k").Style != yamlpos.Literal {
+		t.Errorf("k: %q %v", text, ok)
 	}
 }

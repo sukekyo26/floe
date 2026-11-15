@@ -90,6 +90,7 @@ func TestReadChecks(t *testing.T) {
 		{"| block over CRLF lines", "- expr: |\r\n    doc.a <\r\n  message: m\r\n", "t1/checks.yaml:2:12: unexpected token EOF"},
 		{"| block with its indentation written", "- expr: |2\n    doc.a <\n  message: m\n", "t1/checks.yaml:2:12: unexpected token EOF"},
 		{"| block with its indentation written, deeper than it", "- expr: |1\n    doc.a <\n  message: m\n", "t1/checks.yaml:1:9: unexpected token EOF"},
+		{"a tab in a plain value, which goccy/go-yaml reads without it", "- expr: item.what\t<\n  message: m\n", "t1/checks.yaml:1:9: unexpected token EOF"},
 		{"> block", "- expr: >\n    doc.a < 1 &&\n    doc.b <\n  message: m\n", "t1/checks.yaml:1:9: unexpected token EOF"},
 		{"spaces after it", "- expr:   zzz < 1   \n  message: m\n", "t1/checks.yaml:1:11: unknown name zzz"},
 		{"a tab before it", "- expr:\tdoc.a <\n  message: m\n", "t1/checks.yaml:1:15: unexpected token EOF"},

@@ -120,9 +120,7 @@ func placeOfName(root *yamlpos.Node, depth int, name string) yamlpos.Pos {
 		case yamlpos.Scalar:
 		}
 	}
-	if root != nil { // a file of nothing
-		walk(root, depth, true)
-	}
+	walk(root, depth, true)
 	if len(found) == 1 {
 		return yamlpos.Of(found[0].Key)
 	}

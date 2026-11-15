@@ -233,7 +233,8 @@ func (c check) failure(d *doc.Data, at []string, err error) *usererr.Error {
 	var shown string
 	pos, value := yamlpos.Locate(d.Root, at)
 	place := func(key string, args ...any) *usererr.Error { return yamlpos.New(d.File, pos, key, args...) }
-	if value != nil && value.Kind == yamlpos.Scalar && !value.Null && !value.Block {
+	if value != nil && value.Kind == yamlpos.Scalar && !value.Null && value.Style != yamlpos.Literal &&
+		value.Style != yamlpos.Folded {
 		shown = value.Value
 	}
 	var nf *notFinite

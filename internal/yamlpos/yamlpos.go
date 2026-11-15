@@ -43,17 +43,19 @@ func keyOf(v *ast.MappingValueNode) ast.Node {
 	return v.Key
 }
 
-// Quote is how a scalar is quoted, as the parser read it.
-type Quote int
+// Style is how a scalar is written, as the parser read it.
+type Style int
 
 const (
-	Plain Quote = iota // not quoted, or not a scalar
-	Double
-	Single
+	Plain   Style = iota // not quoted, or not a scalar
+	Double               // in "…"
+	Single               // in '…'
+	Literal              // a | text
+	Folded               // a > text
 )
 
-// quoteOf returns how n is quoted.
-func quoteOf(n ast.Node) Quote {
+// quoteOf returns how n is quoted: Plain, Double or Single.
+func quoteOf(n ast.Node) Style {
 	switch n.GetToken().Type {
 	case token.DoubleQuoteType:
 		return Double
