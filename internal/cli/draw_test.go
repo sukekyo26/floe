@@ -1,6 +1,8 @@
 package cli_test
 
 import (
+	"errors"
+	"io/fs"
 	"os"
 	"path/filepath"
 	"runtime"
@@ -230,6 +232,76 @@ func TestRenderCaseIsTheSystems(t *testing.T) {
 	dir := write(t, map[string]string{"a.yaml": good, "A.yaml": good})
 	if code, stdout, stderr := run(dir, "render", "a.yaml", "A.yaml"); code != 0 || stdout != "a.html\nA.html\n" || stderr != "" {
 		t.Errorf("floe render = %d, %q, %q", code, stdout, stderr)
+	}
+}
+
+// Names are one only when they are one entry of one directory, letter for letter: hard links whose names differ
+// only in case are two, each with its page, its mistakes and its diagram; one file named twice, through ./ or a
+// symlinked directory, is one; other names of one file, linked hard or symbolically, are two.
+func TestRenderNamesOnce(t *testing.T) {
+	t.Parallel()
+
+	if runtime.GOOS != "linux" {
+		t.Skip("d.yaml and D.yaml are two names on Linux, one on macOS")
+	}
+	dir := write(t, map[string]string{"d.yaml": good, "x.yaml": "lang: en\ntemplate: nope\n"})
+	_, spec, _ := run(dir, "diagram", "example", "er")
+	if err := os.WriteFile(filepath.Join(dir, "s.diagram.yaml"), []byte(spec), 0o600); err != nil {
+		t.Fatal(err)
+	}
+	for _, l := range [][2]string{{"d.yaml", "D.yaml"}, {"d.yaml", "e.yaml"}, {"x.yaml", "X.yaml"}, {"s.diagram.yaml", "S.diagram.yaml"}} {
+		if err := os.Link(filepath.Join(dir, l[0]), filepath.Join(dir, l[1])); err != nil {
+			t.Fatal(err)
+		}
+	}
+	if err := os.Symlink("d.yaml", filepath.Join(dir, "l.yaml")); err != nil {
+		t.Fatal(err)
+	}
+	for _, d := range []string{"a", "sub"} {
+		if err := os.Mkdir(filepath.Join(dir, d), 0o700); err != nil {
+			t.Fatal(err)
+		}
+	}
+	if err := os.Symlink("..", filepath.Join(dir, "sub", "up")); err != nil {
+		t.Fatal(err)
+	}
+	clean := func() {
+		for _, page := range []string{"d.html", "D.html", "e.html", "l.html"} {
+			if err := os.Remove(filepath.Join(dir, page)); err != nil && !errors.Is(err, fs.ErrNotExist) {
+				t.Fatal(err)
+			}
+		}
+	}
+	for _, tt := range []struct {
+		args []string
+		want string
+	}{
+		{[]string{"d.yaml", "D.yaml"}, "d.html\nD.html\n"},
+		{[]string{"d.yaml", "a/../D.yaml"}, "d.html\na/../D.html\n"},
+		{[]string{"d.yaml", "e.yaml"}, "d.html\ne.html\n"},
+		{[]string{"d.yaml", "l.yaml"}, "d.html\nl.html\n"},
+		{[]string{"d.yaml", "d.yaml"}, "d.html\n"},
+		{[]string{"./d.yaml", "d.yaml"}, "d.html\n"},
+		{[]string{"d.yaml", "sub/up/d.yaml"}, "d.html\n"},
+	} {
+		clean()
+		if code, stdout, stderr := run(dir, append([]string{"render"}, tt.args...)...); code != 0 || stdout != tt.want || stderr != "" {
+			t.Errorf("floe render %v = %d, %q, %q; want %q", tt.args, code, stdout, stderr, tt.want)
+		}
+	}
+	clean()
+	if code, _, _ := run(dir, "render", "d.yaml"); code != 0 {
+		t.Fatalf("floe render d.yaml = %d", code)
+	}
+	if code, _, stderr := run(dir, "render", "--check", "d.yaml", "D.yaml"); code != 1 || !strings.Contains(stderr, "D.html is missing") {
+		t.Errorf("floe render --check d.yaml D.yaml = %d, %q; want D.html missing", code, stderr)
+	}
+	if code, _, stderr := run(dir, "check", "x.yaml", "X.yaml"); code != 1 ||
+		!strings.Contains(stderr, "x.yaml:2:11: ") || !strings.Contains(stderr, "X.yaml:2:11: ") {
+		t.Errorf("floe check x.yaml X.yaml = %d, %q; want the mistake of each", code, stderr)
+	}
+	if _, stdout, _ := run(dir, "diagram", "render", "--no-assets", "s.diagram.yaml", "S.diagram.yaml"); strings.Count(stdout, "<svg ") != 2 {
+		t.Errorf("floe diagram render of two names drew %d diagrams, want 2", strings.Count(stdout, "<svg "))
 	}
 }
 
