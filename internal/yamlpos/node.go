@@ -231,7 +231,8 @@ func Written(src []byte, n *Node) (Pos, bool) {
 			return Pos{Line: n.at.Line, Column: n.at.Column + 1}, true
 		}
 	case Double:
-		// An escape is longer written than read, so that the " after the value read meets a character of it.
+		// A value written with an escape does not match: at the first escape, src has a \ where the value read has
+		// another character, or, for \\, one more \, which the next character of the value or the " then meets.
 		if bytes.HasPrefix(rest, []byte(`"`+n.Value+`"`)) {
 			return Pos{Line: n.at.Line, Column: n.at.Column + 1}, true
 		}
