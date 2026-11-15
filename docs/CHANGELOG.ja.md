@@ -6,6 +6,8 @@ floe の主要な変更を記録します。フォーマットは
 
 ## [Unreleased]
 
+## [0.1.0] - 2026-11-16
+
 ### 追加
 
 - 追加：`floe publish`。データファイル（YAML）からテンプレートでページを描き、ローカルのサーバー（`http://127.0.0.1:7325`、動いていなければ起動する）で見せる。`--link` は自分の HTML のファイルやフォルダをそのまま見せる。
@@ -23,3 +25,6 @@ floe の主要な変更を記録します。フォーマットは
 - 追加：エージェントの手引き `floe guide` と、`floe task guide`・`floe diagram guide`・`floe part guide`・`floe template guide`・`floe theme guide`、エージェントのスキルからそれを指す `floe skill install`。
 - 追加：ページの CSP とサンドボックス。ページの script を floe のものだけにする。
 - 追加：`floe licenses`。floe と、floe に入っているもののライセンスを出す。
+
+[Unreleased]: https://github.com/sukekyo26/floe/compare/v0.1.0...HEAD
+[0.1.0]: https://github.com/sukekyo26/floe/releases/tag/v0.1.0

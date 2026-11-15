@@ -6,6 +6,8 @@ adheres to [Semantic Versioning](https://semver.org/).
 
 ## [Unreleased]
 
+## [0.1.0] - 2026-11-16
+
 ### Added
 
 - Add `floe publish`, which draws a page from a data file (YAML) with a template and shows it on a local server (`http://127.0.0.1:7325`), started when it is not running; `--link` shows an HTML file or a folder of your own as it is.
@@ -23,3 +25,6 @@ adheres to [Semantic Versioning](https://semver.org/).
 - Add `floe guide`, the guide for agents, with `floe task guide`, `floe diagram guide`, `floe part guide`, `floe template guide` and `floe theme guide`, and `floe skill install`, which points an agent's skill to it.
 - Add a page's CSP and sandbox, which keep its scripts to floe's own.
 - Add `floe licenses`, which prints the licenses of floe and of what is built into it.
+
+[Unreleased]: https://github.com/sukekyo26/floe/compare/v0.1.0...HEAD
+[0.1.0]: https://github.com/sukekyo26/floe/releases/tag/v0.1.0
