@@ -1,6 +1,8 @@
 package cli_test
 
 import (
+	"errors"
+	"io/fs"
 	"os"
 	"path/filepath"
 	"runtime"
@@ -230,6 +232,102 @@ func TestRenderCaseIsTheSystems(t *testing.T) {
 	dir := write(t, map[string]string{"a.yaml": good, "A.yaml": good})
 	if code, stdout, stderr := run(dir, "render", "a.yaml", "A.yaml"); code != 0 || stdout != "a.html\nA.html\n" || stderr != "" {
 		t.Errorf("floe render = %d, %q, %q", code, stdout, stderr)
+	}
+}
+
+// renderLine is a command line of floe render and what it prints.
+type renderLine struct {
+	args []string
+	want string
+}
+
+// renderEach renders each command line of tt in dir, its pages removed first, and wants what it prints.
+func renderEach(t *testing.T, dir string, tt []renderLine) {
+	t.Helper()
+	for _, c := range tt {
+		args, want := c.args, c.want
+		for _, page := range []string{"d.html", "D.html", "e.html", "l.html"} {
+			if err := os.Remove(filepath.Join(dir, page)); err != nil && !errors.Is(err, fs.ErrNotExist) {
+				t.Fatal(err)
+			}
+		}
+		if code, stdout, stderr := run(dir, append([]string{"render"}, args...)...); code != 0 || stdout != want || stderr != "" {
+			t.Errorf("floe render %v = %d, %q, %q; want %q", args, code, stdout, stderr, want)
+		}
+	}
+}
+
+// One file named twice, as it is, through ./ or through a symlinked directory, is read once; other names of one
+// file, linked hard or symbolically, are two, each with its page.
+func TestRenderNamesOnce(t *testing.T) {
+	t.Parallel()
+
+	dir := write(t, map[string]string{"d.yaml": good})
+	if err := os.Link(filepath.Join(dir, "d.yaml"), filepath.Join(dir, "e.yaml")); err != nil {
+		t.Fatal(err)
+	}
+	if err := os.Symlink("d.yaml", filepath.Join(dir, "l.yaml")); err != nil {
+		t.Fatal(err)
+	}
+	if err := os.Mkdir(filepath.Join(dir, "sub"), 0o700); err != nil {
+		t.Fatal(err)
+	}
+	if err := os.Symlink("..", filepath.Join(dir, "sub", "up")); err != nil {
+		t.Fatal(err)
+	}
+	renderEach(t, dir, []renderLine{
+		{[]string{"d.yaml", "e.yaml"}, "d.html\ne.html\n"},
+		{[]string{"d.yaml", "l.yaml"}, "d.html\nl.html\n"},
+		{[]string{"d.yaml", "d.yaml"}, "d.html\n"},
+		{[]string{"./d.yaml", "d.yaml"}, "d.html\n"},
+		{[]string{"d.yaml", "sub/up/d.yaml"}, "d.html\n"},
+	})
+}
+
+// Hard links whose names differ only in case are two names, each with its page, its mistakes and its diagram:
+// floe does not guess the file system ignores case. Where it does, the second link cannot be made, and the test
+// is skipped.
+func TestRenderCaseNames(t *testing.T) {
+	t.Parallel()
+
+	dir := write(t, map[string]string{"d.yaml": good, "x.yaml": "lang: en\ntemplate: nope\n"})
+	code, spec, stderr := run(dir, "diagram", "example", "er")
+	if code != 0 {
+		t.Fatalf("floe diagram example er = %d, %q", code, stderr)
+	}
+	if err := os.WriteFile(filepath.Join(dir, "s.diagram.yaml"), []byte(spec), 0o600); err != nil {
+		t.Fatal(err)
+	}
+	for _, l := range [][2]string{{"d.yaml", "D.yaml"}, {"x.yaml", "X.yaml"}, {"s.diagram.yaml", "S.diagram.yaml"}} {
+		err := os.Link(filepath.Join(dir, l[0]), filepath.Join(dir, l[1]))
+		if errors.Is(err, fs.ErrExist) {
+			t.Skip("the file system here ignores case: " + l[1] + " is " + l[0])
+		}
+		if err != nil {
+			t.Fatal(err)
+		}
+	}
+	if err := os.Mkdir(filepath.Join(dir, "a"), 0o700); err != nil {
+		t.Fatal(err)
+	}
+	renderEach(t, dir, []renderLine{
+		{[]string{"d.yaml", "D.yaml"}, "d.html\nD.html\n"},
+		{[]string{"d.yaml", "a/../D.yaml"}, "d.html\na/../D.html\n"},
+	})
+	// d.html there, D.html not.
+	if err := os.Remove(filepath.Join(dir, "D.html")); err != nil && !errors.Is(err, fs.ErrNotExist) {
+		t.Fatal(err)
+	}
+	if code, _, stderr = run(dir, "render", "--check", "d.yaml", "D.yaml"); code != 1 || !strings.Contains(stderr, "D.html") {
+		t.Errorf("floe render --check d.yaml D.yaml = %d, %q; want D.html told", code, stderr)
+	}
+	if code, _, stderr = run(dir, "check", "x.yaml", "X.yaml"); code != 1 ||
+		!strings.Contains(stderr, "x.yaml:2:11: ") || !strings.Contains(stderr, "X.yaml:2:11: ") {
+		t.Errorf("floe check x.yaml X.yaml = %d, %q; want the mistake of each", code, stderr)
+	}
+	code, stdout, stderr := run(dir, "diagram", "render", "--no-assets", "s.diagram.yaml", "S.diagram.yaml")
+	if n := strings.Count(stdout, "<svg "); code != 0 || n != 2 {
+		t.Errorf("floe diagram render of two names = %d, %q, drew %d diagrams; want 0 and 2", code, stderr, n)
 	}
 }
 

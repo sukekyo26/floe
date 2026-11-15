@@ -111,7 +111,7 @@ Check each data file as its page is drawn: its YAML, its template and theme, the
 - Nothing is printed when every file is right and has no warning (exit code 0).
 - Nothing is written, and the server is not started, so a repository's CI can run it over its data files.
 - A file that is not a data file (`.yaml`, `.yml`) is refused.
-- A data file named twice (by two globs, through a symlinked directory, or in another case on macOS) is checked once, and told by the path it was first given as.
+- A data file named twice (by two globs, or through a symlinked directory) is checked once, and told by the path it was first given as. Names that differ only in case are two names, even on a file system that ignores case.
 
 ## `floe render <data.yaml>...`
 
