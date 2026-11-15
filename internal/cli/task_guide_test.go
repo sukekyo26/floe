@@ -7,6 +7,7 @@ import (
 	"strings"
 	"testing"
 
+	"floe/internal/cli"
 	"floe/internal/servetest"
 )
 
@@ -51,7 +52,6 @@ func TestTaskGuideExamples(t *testing.T) {
 	if len(blocks) < 2 {
 		t.Fatalf("tasks.md: %d text blocks", len(blocks))
 	}
-	command := regexp.MustCompile(`"[^"]*"|\S+`)
 	for _, b := range blocks {
 		var args []string
 		var want strings.Builder
@@ -70,10 +70,7 @@ func TestTaskGuideExamples(t *testing.T) {
 				continue
 			}
 			check()
-			args = command.FindAllString(strings.TrimSpace(cmd), -1)
-			for i, a := range args {
-				args[i] = strings.Trim(a, `"`)
-			}
+			args = cli.ShellWords(cmd)
 			want.Reset()
 		}
 		check()
