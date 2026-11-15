@@ -808,8 +808,9 @@ func TestParseComments(t *testing.T) {
 		{"a: |\n  t\n---\n# c\n", "1:4 yaml_comment_after_block"},
 		{"a: |\n  t\n...\n# c\n", "1:4 yaml_comment_after_block"},
 		{"k:\n- |\n  x\n- []\n# c\n- y\n", "2:3 yaml_comment_after_block"},
-		// An anchor, alias or tag is refused as such, not for its comment.
+		// An anchor, alias, tag or merge key is refused as such, not for its comment.
 		{"a: !!str b # c\nb: &x c # c\n", "1:4 yaml_no_anchors\n2:4 yaml_no_anchors"},
+		{"x:\n  <<: b # c\n", "2:3 yaml_no_anchors"},
 		// Once a value, at two places too.
 		{"a:\n  t: |\n    x\n  # c1\n# c2\nb: 1\n", "2:6 yaml_comment_after_block"},
 		{"a: Plan #1\nb: |\n  x\n# c\n", "1:4 yaml_comment_cut\n2:4 yaml_comment_after_block"},
