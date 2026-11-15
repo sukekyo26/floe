@@ -1,0 +1,2 @@
+/* bars comes before cards, which writes the row's 0.4rem */
+:scope { --cards-gap: 0.5rem; }

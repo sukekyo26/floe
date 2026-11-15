@@ -1,0 +1,7 @@
+:scope { --tabs-gap: 0.35rem; --tabs-face-bg: var(--on-face); --tabs-face-fg: var(--face); }
+@media screen {
+  :scope > label:has(:checked) {
+    background: var(--tabs-face-bg, var(--tabs-picked-bg, var(--accent-soft))); color: var(--tabs-face-fg, var(--tabs-picked-fg, var(--accent)));
+    box-shadow: var(--tabs-picked-ring, none);
+  }
+}

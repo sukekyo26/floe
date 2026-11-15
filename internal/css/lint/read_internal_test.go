@@ -177,22 +177,88 @@ func cutSlash(value []token) (before, after []token, ok bool) {
 // reads returns the variables src reads by var(), its first argument.
 func reads(src []byte) map[string]bool {
 	found := map[string]bool{}
+	for _, r := range varReads(src) {
+		found[r.name] = true
+	}
+	return found
+}
+
+// varRead is a var() of a sheet: the variable it reads, and its default, the tokens after its comma up to the ) that
+// closes it, whitespace collapsed ("" for none, and for an empty one).
+type varRead struct{ name, def string }
+
+// varReads returns each var() of src, a nested one too, in order.
+func varReads(src []byte) []varRead {
+	var out []varRead
 	toks := tokensOf(src)
 	for i, t := range toks {
 		if t.Type != css.FunctionToken || !strings.EqualFold(string(t.Data), "var(") {
 			continue
 		}
-		for j := i + 1; j < len(toks); j++ {
-			if skipped(toks[j]) {
-				continue
+		j := i + 1
+		for j < len(toks) && skipped(toks[j]) {
+			j++
+		}
+		if j == len(toks) || toks[j].Type != css.CustomPropertyNameToken && (toks[j].Type != css.IdentToken || !strings.HasPrefix(string(toks[j].Data), "--")) {
+			continue
+		}
+		r := varRead{name: string(toks[j].Data)}
+		k := j + 1
+		for k < len(toks) && skipped(toks[k]) {
+			k++
+		}
+		if k < len(toks) && toks[k].Type == css.CommaToken {
+			var def []token
+			for k++; k < len(toks) && toks[k].Depth > t.Depth; k++ {
+				def = append(def, toks[k])
 			}
-			if toks[j].Type == css.CustomPropertyNameToken || toks[j].Type == css.IdentToken && strings.HasPrefix(string(toks[j].Data), "--") {
-				found[string(toks[j].Data)] = true
+			for len(def) > 0 && skipped(def[0]) {
+				def = def[1:]
 			}
-			break
+			for len(def) > 0 && skipped(def[len(def)-1]) {
+				def = def[:len(def)-1]
+			}
+			r.def = strings.Join(strings.Fields(text(src, def)), " ")
+		}
+		out = append(out, r)
+	}
+	return out
+}
+
+// rootValues returns the variables of src that want takes, declared in a rule of no rule or at-rule around it whose
+// prelude is root (":root" or ":scope") followed by classes alone (:scope.numbered), with the value of each such
+// declaration in order: what rootOf reads as on the root, but for an at-rule around it and what narrows the root by other
+// tokens (:scope:has(…), :scope[open]), a state rather than a default.
+func rootValues(src []byte, root string, want func(name string) bool) map[string][]string {
+	out := map[string][]string{}
+	for name, ds := range declarations(src, want) {
+		for _, d := range ds {
+			if len(d.value) > 0 && classedRoot(d.rule, root) {
+				out[name] = append(out[name], strings.Join(strings.Fields(text(src, d.value)), " "))
+			}
 		}
 	}
-	return found
+	return out
+}
+
+// classedRoot reports whether rule, the preludes of a declaration's rules, is one prelude of root and classes alone, by
+// its tokens.
+func classedRoot(rule, root string) bool {
+	if strings.Contains(rule, " { ") || rootOf(rule, root) != onTheRoot {
+		return false
+	}
+	var toks []token
+	for _, t := range trimmed(rule) {
+		if !skipped(t) {
+			toks = append(toks, t)
+		}
+	}
+	for i := 2; i < len(toks); i += 2 {
+		if i+1 >= len(toks) || toks[i].Type != css.DelimToken || string(toks[i].Data) != "." || toks[i+1].Type != css.IdentToken {
+			return false
+		}
+	}
+	return len(toks) >= 2
 }
 
 // rootAtRules are the rules a declaration on a root may stand in and still be on it: they choose when it holds, not
@@ -491,5 +557,52 @@ func TestUIParts(t *testing.T) {
 	}
 	if want := []int{0, 3, 5}; !slices.Equal(got, want) {
 		t.Errorf("lines before the sheets %v, want %v", got, want)
+	}
+}
+
+// TestVarReads reads each var(), a nested one too, with its default up to the ) that closes it: none without a comma or
+// after an empty one, a comma within a function of the default kept, comments at its ends left out.
+func TestVarReads(t *testing.T) {
+	t.Parallel()
+
+	for src, want := range map[string]string{
+		"a { b: var(--a, var(--b, x)) }":                            "--a=var(--b, x) --b=x",
+		"a { b: var(--a) var(--b,) }":                               "--a= --b=",
+		"a { b: var(--a, color-mix(in srgb, a 5%, b)) }":            "--a=color-mix(in srgb, a 5%, b)",
+		"a { b: var( /* c */ --a /* c */ , /* c */ 1px /* c */ ) }": "--a=1px",
+		"a { b: var(--a,\n  1px   2px) }":                           "--a=1px 2px",
+		"a { b: f(var(--a, 1px), 2px) }":                            "--a=1px",
+	} {
+		var got []string
+		for _, r := range varReads([]byte(src)) {
+			got = append(got, r.name+"="+r.def)
+		}
+		if strings.Join(got, " ") != want {
+			t.Errorf("%s: %q, want %q", src, got, want)
+		}
+	}
+}
+
+// TestRootValues takes the values on the root and on the root with classes alone, and none narrowed otherwise, in an
+// at-rule or nested, or past the root.
+func TestRootValues(t *testing.T) {
+	t.Parallel()
+
+	for src, want := range map[string]string{
+		":scope { --x: 1px }":                         "1px",
+		":scope.numbered { --x: 1px }":                "1px",
+		":scope.a.b { --x: 1px } :scope { --x: 2px }": "1px 2px",
+		":scope:has(a) { --x: 1px }":                  "",
+		":scope[x] { --x: 1px }":                      "",
+		":scope:where(.a) { --x: 1px }":               "",
+		"@media print { :scope { --x: 1px } }":        "",
+		":scope .a { --x: 1px }":                      "",
+		":scope { &.a { --x: 1px } }":                 "",
+		":scope { --x: }":                             "",
+	} {
+		got := rootValues([]byte(src), ":scope", func(p string) bool { return p == "--x" })["--x"]
+		if strings.Join(got, " ") != want {
+			t.Errorf("%s: %q, want %q", src, got, want)
+		}
 	}
 }

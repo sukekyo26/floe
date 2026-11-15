@@ -1,0 +1,3 @@
+/* a default that differs, read before the one the row writes: the last alone is the row's */
+@media print { :scope thead { border-bottom: var(--table-rule, none); } }
+:scope thead { border-bottom: var(--table-rule, 1px solid var(--line)); background: var(--table-head-bg, var(--surface)); }
