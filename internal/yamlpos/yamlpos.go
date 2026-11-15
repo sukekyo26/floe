@@ -263,11 +263,16 @@ func (w *walk) node(n *yaml.Node) {
 // wrapper refuses n when it is an anchor, alias or tag, and reports it: what it holds is not walked, to be
 // judged once written out. A tag of ! alone go.yaml.in/yaml/v4 gives without TaggedStyle, as the tag itself.
 func (w *walk) wrapper(n *yaml.Node) bool {
-	if n.Anchor == "" && n.Kind != yaml.AliasNode && n.Style&yaml.TaggedStyle == 0 && n.Tag != "!" {
+	if !wrapped(n) {
 		return false
 	}
 	w.found = append(w.found, New(w.file, at(n), "yaml_no_anchors"))
 	return true
+}
+
+// wrapped is whether n is an anchor, alias or tag.
+func wrapped(n *yaml.Node) bool {
+	return n.Anchor != "" || n.Kind == yaml.AliasNode || n.Style&yaml.TaggedStyle != 0 || n.Tag == "!"
 }
 
 // pair walks a key and its value; first holds the keys of their mapping met before, by name. A merge key is

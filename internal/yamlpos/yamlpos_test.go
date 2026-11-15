@@ -806,6 +806,10 @@ func TestParseComments(t *testing.T) {
 		{"a: |\n  text\n# c\nb: 1\n", "1:4 yaml_comment_after_block"},
 		{"- t: |\n    x\n- # c\n  t: y\n", "1:6 yaml_comment_after_block"},
 		{"a: |\n  t\n---\n# c\n", "1:4 yaml_comment_after_block"},
+		{"a: |\n  t\n...\n# c\n", "1:4 yaml_comment_after_block"},
+		{"k:\n- |\n  x\n- []\n# c\n- y\n", "2:3 yaml_comment_after_block"},
+		// An anchor, alias or tag is refused as such, not for its comment.
+		{"a: !!str b # c\nb: &x c # c\n", "1:4 yaml_no_anchors\n2:4 yaml_no_anchors"},
 		// Once a value, at two places too.
 		{"a:\n  t: |\n    x\n  # c1\n# c2\nb: 1\n", "2:6 yaml_comment_after_block"},
 		{"a: Plan #1\nb: |\n  x\n# c\n", "1:4 yaml_comment_cut\n2:4 yaml_comment_after_block"},
@@ -825,13 +829,29 @@ func TestParseComments(t *testing.T) {
 		{"a: |\n  t\nb: x\n# after a plain value\nc: 1\n", ""},
 		{"x:\n  t: |\n    a\n  u: b\n  # c\ny: 1\n", ""},
 		{"ports: [\n  8080,  # admin\n  9090,\n]\n", ""},
+		{"- text: |\n    one\n- text: | # note on two\n    two\n", ""},
 		{"title: 'Plan #1 draft'\n", ""},
 		// LIMIT: on a line of its own after a plain value, deeper than its key, as the LIMIT of comments tells.
 		{"a: b\n   # c\nb: 1\n", ""},
+		{"a: Plan\n  draft\n  #1 of series\nb: 1\n", ""},
 	} {
 		_, err := yamlpos.Parse("a.yaml", []byte(tt.src))
 		if got := placed(err); got != tt.want {
 			t.Errorf("Parse(%q) told\n%s\nwant\n%s", tt.src, got, tt.want)
 		}
+	}
+}
+
+// The end of an empty | or > text is shown as its mark.
+func TestParseCommentEmptyBlock(t *testing.T) {
+	t.Parallel()
+
+	_, err := yamlpos.Parse("a.yaml", []byte("a: |\n\n# c\nb: >\n\n# d\nc: 1\n"))
+	var found usererr.List
+	if failed := found.Add(err); failed != nil {
+		t.Fatal(failed)
+	}
+	if len(found) != 2 || fmt.Sprint(found[0].Args) != "[|]" || fmt.Sprint(found[1].Args) != "[>]" {
+		t.Errorf("told %s", told(err))
 	}
 }

@@ -117,7 +117,7 @@ Read `floe diagram guide` before writing a diagram: it says how to write one, wh
 Write so:
 
 - Write a text value in `'…'`, or over several lines as a `|` block, without judging whether it needs quotes: `heading: 'Step 1: plan'`, ``text: '`algorithms` fixes the methods.'``. In `'…'`, write a `'` as `''`; nothing else is special, a `\` and a `"` included. In a `|` block, write the text as it is. Leave bare only a number, `true` or `false`, and a word that starts with an ASCII letter or digit, holds only ASCII letters, digits, `_`, `.`, `/` and `-`, and does not read as a number (`template: report`, `tone: warn`; not `1.10` or `08`, as below).
-- Write a comment on a line of its own, before the key it is about: not on a value's line, and not right after a `|` block, even at its key's depth.
+- Write a comment on a line of its own, before the key it is about: not on a value's line, and not right after a `|` block, even at its key's depth. A comment on a `|` block goes on its `|` line (`text: | # note`), which also serves where `|` blocks follow each other.
 - In a `|` block, indent the first line as the lines after it, with spaces only.
 
 floe refuses these:

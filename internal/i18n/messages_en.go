@@ -20,7 +20,7 @@ var messagesEN = map[string]string{
 	"yaml_too_large":            "this YAML file is %d bytes, and floe reads up to %d bytes: make it smaller, a page's data by splitting it into several pages",
 	"yaml_no_anchors":           "anchors, aliases, merge keys (<<) and tags are not supported; write the value out",
 	"yaml_comment_cut":          "a # on the line of this value not in quotes begins a YAML comment, which may have cut the value short, to %s: if the # is part of the value, put the value in quotes; else write the comment on a line of its own",
-	"yaml_comment_after_block":  "a YAML comment comes right after this | or > text, which may have cut the text short, to %s: if it is a line of the text, indent it as the text; else remove the comment, or move it above the text's key",
+	"yaml_comment_after_block":  "a YAML comment comes right after this | or > text, which may have cut the text short, to %s: if it is a line of the text, indent it as the text; else remove the comment, or write it on the line of the | or > (text: | # note)",
 	"yaml_flow_key_alone":       "%q is a key with no value written in { } or [ ]: write its value after the \":\"; if a , in text ended the text before it, put that text in quotes",
 	"yaml_key_twice":            "%q is written twice in these keys and values (first on line %d): write each key once",
 	"yaml_top_not_keys":         "the top of this file is not keys and values: write it as keys and values (key: value)",

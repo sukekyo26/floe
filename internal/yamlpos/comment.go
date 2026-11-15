@@ -15,11 +15,15 @@ import (
 // LIMIT: a comment after a | or > text at its right place, as deep as its key or shallower (t: |, "  x", "# c"),
 // and one after the - of the next item (- # c), are refused too: v4's tree gives them as it gives one that cut the
 // text, and floe refuses the one form alike (the user decided).
+// LIMIT: a comment right after a | or > text past --- or ... ("---", "# c"), or after an empty | text, is refused
+// too, and so is one after an empty [] or {} item that follows the text (- |, x, - [], "# c"): the walk follows
+// scalars alone.
 // LIMIT: a comment on a line of its own, deeper than the key of a plain value before it (a: b, then "   # c"), passes:
-// YAML 1.2 reads it as a comment, and a plain value goes on over lines only where the line does not start with #.
+// YAML 1.2 reads it as a comment, and a plain value goes on over lines only where the line does not start with #,
+// so a line of such a value over lines that starts with # ends it with no mistake (a: Plan, "  draft", "  #1").
 func (w *walk) comments(doc *yaml.Node) {
 	c := &cuts{w: w, told: map[*yaml.Node]bool{}, prev: nil}
-	c.walk(doc, nil, false)
+	c.walk(doc, nil)
 }
 
 // cuts is a walk of a document for the comments that may have cut a value short.
@@ -29,25 +33,31 @@ type cuts struct {
 	prev *yaml.Node          // the scalar before, in the order written
 }
 
-// walk walks n, the key of value when value is not nil, or a key itself (key).
-func (c *cuts) walk(n, value *yaml.Node, key bool) {
+// walk walks n, the key of value when value is not nil. An anchor, alias or tag, refused as such, is not walked.
+func (c *cuts) walk(n, value *yaml.Node) {
 	if n.HeadComment != "" {
 		c.after(c.prev)
 	}
+	if wrapped(n) {
+		return
+	}
 	if n.Kind == yaml.ScalarNode {
-		if !key && n.LineComment != "" && styleOf(n) == Plain && read12(n.Value).kind == kindText {
+		if value == nil && n.LineComment != "" && styleOf(n) == Plain && read12(n.Value).kind == kindText {
 			c.tell(n, "yaml_comment_cut")
 		}
 		c.prev = n
 	}
 	if n.Kind == yaml.MappingNode {
 		for i := 0; i+1 < len(n.Content); i += 2 {
-			c.walk(n.Content[i], n.Content[i+1], true)
-			c.walk(n.Content[i+1], nil, false)
+			if n.Content[i].Tag == "!!merge" {
+				continue
+			}
+			c.walk(n.Content[i], n.Content[i+1])
+			c.walk(n.Content[i+1], nil)
 		}
 	} else {
 		for _, item := range n.Content {
-			c.walk(item, nil, false)
+			c.walk(item, nil)
 		}
 	}
 	if n.FootComment != "" {
@@ -66,12 +76,17 @@ func (c *cuts) after(n *yaml.Node) {
 	}
 }
 
-// tell refuses value with key, once.
+// tell refuses value with key, once; an empty | or > text is shown as its mark.
 func (c *cuts) tell(value *yaml.Node, key string) {
-	if !c.told[value] {
-		c.told[value] = true
-		c.w.found = append(c.w.found, New(c.w.file, at(value), key, endOf(value.Value)))
+	if c.told[value] {
+		return
 	}
+	c.told[value] = true
+	end := endOf(value.Value)
+	if end == "" {
+		end = map[Style]string{Literal: "|", Folded: ">"}[styleOf(value)]
+	}
+	c.w.found = append(c.w.found, New(c.w.file, at(value), key, end))
 }
 
 // lastScalar is the last scalar under n in the order written, n itself for a scalar; nil for none.
