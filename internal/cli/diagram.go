@@ -135,7 +135,7 @@ func (a *app) diagrams(
 // default's palette and the tones' colours on the diagrams' roots alone, in its layer, and the CSS of floe's look
 // zoom and part diagram, unscoped, as a page without floe's parts takes it.
 // LIMIT: a browser that does not read @scope drops the palette, and the diagrams are drawn without colours; the
-// docs ask for the browsers the README names.
+// docs ask for the browsers docs/commands.md names.
 func diagramAssets() (string, error) {
 	script, err := zoom.Script()
 	if err != nil {
