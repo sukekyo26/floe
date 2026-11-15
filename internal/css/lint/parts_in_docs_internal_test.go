@@ -48,12 +48,13 @@ var byPart = []string{"--floe-mark", "--floe-mark-gap"}
 // name a table holds is one the CSS gives a default, and the row's Default column (code) writes that default, each file's
 // alike, part by part for byPart; a table of a missing names every variable it says. Part variables names every
 // variable a part or a look of floe's sets on its :scope or reads with a default, but floe's own (floesOwn) and the rule's
-// exceptions, which a theme does not set.
-// LIMIT: a value on the root in an at-rule (@media print { :scope { --x: … } }), and one on a root narrowed otherwise
-// than by classes (:scope:has(…)), are no default and are not held; read them if a part comes to have a theme set them.
+// exceptions, which a theme does not set; an exception named in a table (Code's look names code's) is held all the same.
+// LIMIT: a value on the root in an at-rule (@media print { :scope { --x: … } }) is no default and is not held; read it if
+// a part comes to have a theme set a value it puts on its root in an at-rule.
+// LIMIT: a value on a root narrowed otherwise than by classes (:scope:has(…), :scope[open]) is a state, no default, and is
+// not held; read it if a table comes to write a value of a state.
 // LIMIT: what themes and templates read with a default is not read (none today); read it if one comes to read a part's
 // variable so.
-// LIMIT: a variable of the exceptions is not compared even when a table names it (none does); hold it if one does.
 // LIMIT: a row may name several variables, its Default giving each its own in order: a row of two variables of one
 // description passes, `| --floe-pad-block, --floe-pad-inline | … | A box's padding above and below its text | 1.1rem,
 // 1.3rem |`, where parts.md writes a variable to a row. Refuse it in parts.md again if such a row comes.
@@ -75,11 +76,16 @@ var partsInDocs = Rule{Name: "parts-in-docs", Allow: []Allow{
 }, Check: func(in *Input) []Finding {
 	var found []Finding
 	trees := map[string]*html.Node{}
+	unread := map[string]bool{} // a doc that cannot be read, told once
 	for _, table := range varDocs {
+		if unread[table.doc] {
+			continue
+		}
 		root, ok := trees[table.doc]
 		if !ok {
 			var err string
 			if root, err = docTree(in.Docs(), table.doc); err != "" {
+				unread[table.doc] = true
 				found = append(found, Finding{table.doc, 0, "parts-in-docs", err})
 				continue
 			}
@@ -98,7 +104,7 @@ var partsInDocs = Rule{Name: "parts-in-docs", Allow: []Allow{
 		for _, row := range rows {
 			keep := func(name string) bool {
 				_, ok := values[name]
-				return strings.HasPrefix(name, table.names) && ok && !in.Allowed(name)
+				return strings.HasPrefix(name, table.names) && ok
 			}
 			for _, name := range row.names {
 				if !strings.HasPrefix(name, table.names) {
@@ -143,7 +149,12 @@ func rowDefaults(row paletteRow, values map[string][]held, keep func(name string
 	var out []string
 	if !row.hasDefault || len(row.defaults) == 0 {
 		for _, name := range kept {
-			out = append(out, "gives "+name+" no default: write `"+values[name][0].value+"` in code, in its Default column")
+			h := values[name][0]
+			if slices.Contains(byPart, name) {
+				out = append(out, "gives "+name+" no default: write each part's default after its name, as "+partOf(h)+" `"+h.value+"`, in its Default column")
+			} else {
+				out = append(out, "gives "+name+" no default: write `"+h.value+"` in code, in its Default column")
+			}
 		}
 		return out
 	}
@@ -185,12 +196,6 @@ func rowDefaults(row paletteRow, values map[string][]held, keep func(name string
 // partDefaultsAmiss returns what is amiss of the row of name, a variable of byPart, against its defaults, by its part
 // `value` pairs: the part of a default is the file's part or look, or the file for base.css.
 func partDefaultsAmiss(name string, row paletteRow, defaults []held) []string {
-	partOf := func(h held) string {
-		if h.owner == "" {
-			return h.file
-		}
-		return h.owner
-	}
 	type pair struct{ part, value string }
 	written := map[pair]bool{}
 	firstOf := map[string]string{} // a part's first value in the row
@@ -205,6 +210,9 @@ func partDefaultsAmiss(name string, row paletteRow, defaults []held) []string {
 	told := map[string]bool{}
 	for _, h := range defaults {
 		p := pair{partOf(h), h.value}
+		if actual[p] {
+			continue // a part that sets it and reads it with the same default
+		}
 		actual[p] = true
 		switch first, ok := firstOf[p.part]; {
 		case written[p]:
@@ -230,6 +238,14 @@ func partDefaultsAmiss(name string, row paletteRow, defaults []held) []string {
 		}
 	}
 	return out
+}
+
+// partOf returns the part of a default: its file's part or look, or the file for base.css.
+func partOf(h held) string {
+	if h.owner == "" {
+		return h.file
+	}
+	return h.owner
 }
 
 // unnamed returns what is amiss of a table that names every variable of values: each it does not name.

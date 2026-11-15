@@ -234,7 +234,7 @@ func rootValues(src []byte, root string, want func(name string) bool) map[string
 	for name, ds := range declarations(src, want) {
 		for _, d := range ds {
 			if len(d.value) > 0 && classedRoot(d.rule, root) {
-				out[name] = append(out[name], strings.Join(strings.Fields(text(src, d.value)), " "))
+				out[name] = append(out[name], valueOf(src, d))
 			}
 		}
 	}
@@ -247,12 +247,7 @@ func classedRoot(rule, root string) bool {
 	if strings.Contains(rule, " { ") || rootOf(rule, root) != onTheRoot {
 		return false
 	}
-	var toks []token
-	for _, t := range trimmed(rule) {
-		if !skipped(t) {
-			toks = append(toks, t)
-		}
-	}
+	toks := trimmed(rule)
 	for i := 2; i < len(toks); i += 2 {
 		if i+1 >= len(toks) || toks[i].Type != css.DelimToken || string(toks[i].Data) != "." || toks[i+1].Type != css.IdentToken {
 			return false

@@ -197,13 +197,8 @@ func labelsIn(n *html.Node) (codes, labels []string) {
 
 // codeIn returns the text of each code element in n, whitespace collapsed to single spaces.
 func codeIn(n *html.Node) []string {
-	var out []string
-	for c := range n.Descendants() {
-		if c.DataAtom == atom.Code {
-			out = append(out, strings.Join(strings.Fields(textOf(c)), " "))
-		}
-	}
-	return out
+	codes, _ := labelsIn(n)
+	return codes
 }
 
 // TestLabelsIn reads the name before each code of a cell, from the code before it, its spaces and commas at its ends cut,

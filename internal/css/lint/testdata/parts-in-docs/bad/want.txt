@@ -1,3 +1,4 @@
+agents/parts.md "Code's look: gives --floe-code-pad the default 9rem, which parts/code/part.css writes as 1.1rem"
 agents/parts.md "Code's look: names no --floe-code-room, which floe's CSS sets: write `--floe-code-room` in its table"
 agents/parts.md "Variables floe sets: gives --floe-copy-room the default 0px, which defaults.css writes as calc(var(--floe-copy-size) + 2 * var(--floe-copy-gap))"
 agents/parts.md "Variables floe sets: gives --floe-inset no default: write `0 0 #0000` in code, in its Default column"

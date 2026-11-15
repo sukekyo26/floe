@@ -15,6 +15,6 @@
 
 | Variable | Set in | What it is | Default |
 |---|---|---|---|
-| `--floe-code-pad` | `code`'s root | The room at a line's sides | `1.1rem` |
+| `--floe-code-pad` | `code`'s root | The room at a line's sides | `9rem` |
 
 The look styles `.lines`, `.names` and `.ghost` in a part, and `.lines pre` and `<code class="lines">` are not names alone.
