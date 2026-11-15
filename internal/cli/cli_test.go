@@ -119,9 +119,11 @@ func TestHelp(t *testing.T) {
 		{{"help", "render"}, {"render", "--help"}},
 		{{"--help", "render"}, {"render", "--help"}},
 		{{"-h", "render"}, {"render", "--help"}},
-		// Help is answered before the flags' groups are asked of: a page and none of tag's flags, task's flags that conflict.
+		// Help is answered before the flags' groups are asked of: a page and none of tag's flags, task's and publish's
+		// flags that conflict.
 		{{"help", "tag"}, {"tag", "d", "--help"}},
 		{{"help", "task"}, {"task", "--slug", "p", "--pin", "--unpin", "--help"}},
+		{{"help", "publish"}, {"publish", "--help", "--link", "page.html", "--move-project"}},
 	} {
 		code, got, errs := run("", same[0]...)
 		_, want, _ := run("", same[1]...)
