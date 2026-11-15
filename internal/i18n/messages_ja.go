@@ -668,7 +668,7 @@ var messagesJA = map[string]string{
 	"ui_state_archived":        "アーカイブ",
 	"ui_pins":                  "ページのピン止め",
 	"ui_pins_none":             "なし",
-	"ui_tasks_head_newest":     "%[1]d 件 · 状態が変わった新しい順",
+	"ui_tasks_head_newest":     "%[1]d 件 · 変えた新しい順",
 	"ui_task_pages":            "ページ %d",
 	"ui_task_archived":         "アーカイブ %d",
 	"ui_task_unread":           "未読 %d",

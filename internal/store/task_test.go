@@ -39,7 +39,7 @@ func taskIn(t *testing.T, s *store.Store, project string) store.Task {
 	return row
 }
 
-// A new task is todo; its time moves with its state alone, its category with what is not empty; a key it does not set is
+// A new task is todo; its time moves with each write that changes it, its category with what is not empty; a key it does not set is
 // written back; an order of categories is kept clean, and an empty order takes it off.
 func TestTaskWrite(t *testing.T) {
 	t.Parallel()
@@ -66,27 +66,40 @@ func TestTaskWrite(t *testing.T) {
 		t.Fatal(err)
 	}
 	row := taskIn(t, s, "p")
-	if row.Title != "T" || row.At != long {
+	if row.Title != "T" || row.At == long {
 		t.Errorf("after a title: %+v", row)
 	}
-	// The same state leaves its time.
+	// The time put back by hand before each, so that a write in the same millisecond is not taken for none: the same
+	// state leaves it, another state alone moves it.
+	aged := func() {
+		t.Helper()
+		hand := fmt.Sprintf(`{"p": {"#1": {"title": "T", "state": "doing", "at": %q, "parent": "#0"}}}`, long)
+		if err := os.WriteFile(filepath.Join(root, "tasks.json"), []byte(hand), 0o600); err != nil {
+			t.Fatal(err)
+		}
+	}
+	aged()
 	if _, err := editTask(s, "p", "#1", store.TaskEdit{State: ptr("doing")}); err != nil {
 		t.Fatal(err)
 	}
 	if row = taskIn(t, s, "p"); row.At != long {
 		t.Errorf("after the same state: %+v", row)
 	}
+	aged()
+	if _, err := editTask(s, "p", "#1", store.TaskEdit{State: ptr("done")}); err != nil {
+		t.Fatal(err)
+	}
+	if row = taskIn(t, s, "p"); row.State != "done" || row.At == long {
+		t.Errorf("the state's time stayed: %+v", row)
+	}
 	if _, err := editTask(s, "p", "#1", store.TaskEdit{
-		State: ptr("done"), URLs: &store.URLsEdit{Add: []string{"HTTPS://example.com/a"}}, Categories: ptr([]string{" 設計", "実装", "", "設計"}),
+		URLs: &store.URLsEdit{Add: []string{"HTTPS://example.com/a"}}, Categories: ptr([]string{" 設計", "実装", "", "設計"}),
 	}); err != nil {
 		t.Fatal(err)
 	}
 	row = taskIn(t, s, "p")
 	if row.State != "done" || row.Parent != "#0" || !slices.Equal(row.URLs, []string{"HTTPS://example.com/a"}) || !slices.Equal(row.Categories, []string{"設計", "実装"}) {
 		t.Errorf("after the state: %+v", row)
-	}
-	if row.At == long {
-		t.Error("the state's time stayed")
 	}
 	if _, err := editTask(s, "p", "#1", store.TaskEdit{URLs: &store.URLsEdit{Remove: []string{"HTTPS://example.com/a"}}, Categories: ptr([]string{""})}); err != nil {
 		t.Fatal(err)
@@ -719,20 +732,38 @@ func TestTaskParent(t *testing.T) {
 	if after, read := s.ReadTasks(); read != nil || after["p"]["#6"].State != "" {
 		t.Errorf(`"" and a URL taken off, of no row, made: %+v, %v`, after["p"]["#6"], read)
 	}
-	// The same again, to another parent, and off, of a task with none too.
-	at := all["p"]["#2"].At
-	for _, c := range []struct{ name, parent, want string }{
-		{"#2", "#1", "#1"}, {"#2", "#9", "#9"}, {"#2", "", ""}, {"#2", "", ""},
+	// The same again, to another parent, and off, of a task with none too: each change moves its time, and the same
+	// again does not. Of an hour no write makes, so that a write in the same millisecond is not taken
+	// for none.
+	long := hour(1)
+	for _, c := range []struct {
+		name, parent, want string
+		moves              bool
+	}{
+		{"#2", "#1", "#1", false}, {"#2", "#9", "#9", true}, {"#2", "", "", true}, {"#2", "", "", false},
 	} {
+		if all, err = s.ReadTasks(); err != nil {
+			t.Fatal(err)
+		}
+		row := all["p"]["#2"]
+		row.At = long
+		all["p"]["#2"] = row
+		text, marshal := json.Marshal(all)
+		if marshal != nil {
+			t.Fatal(marshal)
+		}
+		if err = os.WriteFile(filepath.Join(root, "tasks.json"), text, 0o600); err != nil {
+			t.Fatal(err)
+		}
 		if _, wrote := editTask(s, "p", c.name, store.TaskEdit{Parent: &c.parent}); wrote != nil {
 			t.Errorf("%s under %q: %v", c.name, c.parent, wrote)
 		}
 		if got := parentOf(c.name); got != c.want {
 			t.Errorf("%s under %q came to be under %q", c.name, c.parent, got)
 		}
-	}
-	if all, err = s.ReadTasks(); err != nil || all["p"]["#2"].At != at {
-		t.Errorf("its time moved with its parent: %v, %v", all["p"]["#2"], err)
+		if all, err = s.ReadTasks(); err != nil || (all["p"]["#2"].At != long) != c.moves {
+			t.Errorf("%s under %q: its time %s, moved %v; %v", c.name, c.parent, all["p"]["#2"].At, c.moves, err)
+		}
 	}
 }
 

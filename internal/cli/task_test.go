@@ -389,10 +389,10 @@ func TestTaskSays(t *testing.T) {
 	say("task t2 in no project: changed; urls \"https://example.com/3\"\n",
 		"task", "--task", "t2", "--project", "", "--remove-url", "https://example.com/2")
 	say("task t2 in no project: changed; no urls\n", "task", "--task", "t2", "--project", "", "--remove-url", "https://example.com/3")
-	// The task named is written, with nothing of it to change; a category is the page's alone.
-	// A task of a row, named, with nothing of it to change, is not told; a category among its categories adds none.
-	say("page a: task t1 in project p, category \"design\"\n", "task", "--slug", "a", "--task", "t1", "--category", "design")
-	say("page a: task t1 in project p, category \"build\"\n", "task", "--slug", "a", "--category", "build")
+	// A task a page comes to, or changes its category on, is written and told changed, with no field; a category among
+	// its categories adds none, and a pin alone writes no task.
+	say("task t1 in project p: changed\npage a: task t1 in project p, category \"design\"\n", "task", "--slug", "a", "--task", "t1", "--category", "design")
+	say("task t1 in project p: changed\npage a: task t1 in project p, category \"build\"\n", "task", "--slug", "a", "--category", "build")
 	say("page a: task t1 in project p, category \"build\", pinned\n", "task", "--slug", "a", "--pin")
 	// A page that leaves a task is told with the task and category it left, of the same name as its new one too.
 	say("task t5 in project p: made; categories \"build\"\npage a: task t5 in project p, category \"build\", pinned; moved from task t1, category \"build\"\n",
@@ -401,7 +401,7 @@ func TestTaskSays(t *testing.T) {
 	say("task t1 in project p: forgotten\n", "task", "--task", " t1 ", "--forget")
 	say("task t3 in project p: made\npage a: task t3 in project p, pinned\n", "task", "--slug", "a", "--task", "t3")
 	say("task t4 in project p: made; parent \"t3\"\n", "task", "--task", "t4", "--parent", "t3")
-	say("page a: task t4 in project p, pinned; moved from task t3\n", "task", "--slug", "a", "--task", "t4")
+	say("task t4 in project p: changed\npage a: task t4 in project p, pinned; moved from task t3\n", "task", "--slug", "a", "--task", "t4")
 }
 
 // A page that cannot be written, as the system refuses it after the checks, leaves its task's row written, which a
@@ -439,7 +439,7 @@ func TestTaskCommandOrder(t *testing.T) {
 		t.Fatal(err)
 	}
 	if code, out, errs := runIn(dir, env, "task", "--slug", "a", "--task", "#1", "--state", "done"); code != 0 ||
-		out != "task #1 in project p: unchanged; state done\npage a: task #1 in project p\n" {
+		out != "task #1 in project p: changed; state done\npage a: task #1 in project p\n" {
 		t.Fatalf("given again = %d, %q, %q", code, out, errs)
 	}
 	if got := pageTaskOf(t, env, "a"); got != `{"name":"#1"}` {
@@ -873,5 +873,5 @@ func TestTaskCategoriesEachQuoted(t *testing.T) {
 	}
 	run("task #1 in project p: changed; categories \"設計　見本\"\npage a: task #1 in project p, category \"設計　見本\"\n",
 		"task", "--slug", "a", "--task", "#1", "--category", "設計　見本")
-	run("page a: task #2 in project p; moved from task #1, category \"設計　見本\"\n", "task", "--slug", "a", "--task", "#2")
+	run("task #2 in project p: changed\npage a: task #2 in project p; moved from task #1, category \"設計　見本\"\n", "task", "--slug", "a", "--task", "#2")
 }

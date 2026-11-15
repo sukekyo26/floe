@@ -58,7 +58,7 @@ func (ed TaskEdit) makesRow() bool {
 // ChangeTasks writes w under one lock: the pages are read, each one's task as it comes to be, and the tasks it comes to
 // be on (the task named without pages), are checked, and only then tasks.json and the pages' meta.json are written, in
 // that order, so that a refusal writes nothing, and a task a page names always has a row and the page's category among
-// its categories. A row that changes moves its Rev on.
+// its categories. A row that changes, or that a page comes to or changes its category on, moves its At and Rev on.
 // LIMIT: a row written by hand keeps its Rev, and one forgotten and made again starts it again: a screen that read it
 // before may write over it. Count them apart if hand edits come to be done while screens are open
 func (s *Store) ChangeTasks(w TaskChange) (TaskChangeResult, error) {
@@ -273,7 +273,10 @@ func projectsOf(refs []taskRef) int {
 }
 
 // applyChange writes w, checked: each task's row made when there is none, its fields, the categories of its pages it
-// has not added at the end, and its Rev moved on when it changed; tasks.json, then the pages.
+// has not added at the end, and its At made now and its Rev moved on when it changed or a page came to it or changed
+// its category on it; tasks.json, then the pages.
+// LIMIT: an undo on the screen (a page put back, a parent put back) is a write as any, so the task comes first again,
+// not back to where it stood. Keep the time it had in the undo if that comes to mislead.
 // LIMIT: a page the system refuses to write after tasks.json stops the write there: the rows and the pages before it
 // stay written, which keeps every task a page names of a row, and the same write given again finishes it. Write the
 // pages to new files first and rename them after if a half-done write comes to mislead.
@@ -296,11 +299,12 @@ func (s *Store) applyChange(all Tasks, w TaskChange, refs []taskRef, pages []cha
 		t := rowAfter(was, had, w, ref, pages)
 		// Compared with the URLs as a write leaves them, so that a row written by hand ([] or one twice) is not taken
 		// to change, and its rev move, by a write that changes nothing of it
-		wrote := !had || parentMade || !reflect.DeepEqual(t.tidied(), was.tidied())
+		wrote := !had || parentMade || pageCame(ref, pages) || !reflect.DeepEqual(t.tidied(), was.tidied())
 		added := slices.DeleteFunc(slices.Clone(t.Categories), func(c string) bool {
 			return slices.Contains(was.Categories, c) || (w.Categories != nil && slices.Contains(categoriesOf(*w.Categories), c))
 		})
 		if wrote {
+			t.At = Now()
 			t.Rev++
 			rows[ref.name] = t
 			changed = true
@@ -330,6 +334,13 @@ func (p changedPage) edited() Edited {
 		e.OffTask, e.OffCategory = p.was.Name, p.was.Category
 	}
 	return e
+}
+
+// pageCame is whether a page of the write comes to the task ref, or changes its category on it; a pin alone does not.
+func pageCame(ref taskRef, pages []changedPage) bool {
+	return slices.ContainsFunc(pages, func(p changedPage) bool {
+		return p.ref == ref && p.meta.Task != nil && (p.was.Name != ref.name || p.was.Category != p.meta.Task.Category)
+	})
 }
 
 // rowAfter is the row of the task ref as w leaves it: was, or a new one when it had none, with w's fields, and the
