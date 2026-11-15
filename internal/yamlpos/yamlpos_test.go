@@ -416,8 +416,8 @@ func TestParseFlowComments(t *testing.T) {
 	}
 }
 
-// Find follows keys and indexes to a value and its key, the - of an entry of a block sequence, and stops at the
-// last node it reaches; OfValue places a mapping or a sequence at that key, or at its { or [ when it has none.
+// Find follows keys and indexes to a value and its key, none for an item of a sequence, and stops at the last node it
+// reaches; OfValue places a mapping or a sequence at that key, and an item at itself (a { or [ in flow).
 func TestFind(t *testing.T) {
 	t.Parallel()
 
@@ -433,7 +433,7 @@ func TestFind(t *testing.T) {
 		{nil, yamlpos.Pos{Line: 1, Column: 1}},
 		{[]string{"a", "b"}, yamlpos.Pos{Line: 2, Column: 6}},
 		{[]string{"a", "c", "0"}, yamlpos.Pos{Line: 4, Column: 7}},
-		{[]string{"a", "c", "1"}, yamlpos.Pos{Line: 5, Column: 5}},
+		{[]string{"a", "c", "1"}, yamlpos.Pos{Line: 5, Column: 6}},
 		{[]string{"d", "1"}, yamlpos.Pos{Line: 6, Column: 8}},
 		{[]string{"a"}, yamlpos.Pos{Line: 1, Column: 1}},
 		{[]string{"a", "c"}, yamlpos.Pos{Line: 3, Column: 3}},
@@ -444,7 +444,7 @@ func TestFind(t *testing.T) {
 		{[]string{"f", "0", "j"}, yamlpos.Pos{Line: 8, Column: 9}},
 		{[]string{"f", "1"}, yamlpos.Pos{Line: 8, Column: 13}},
 		{[]string{"g"}, yamlpos.Pos{Line: 9, Column: 1}},
-		{[]string{"i", "0"}, yamlpos.Pos{Line: 11, Column: 3}},
+		{[]string{"i", "0"}, yamlpos.Pos{Line: 11, Column: 5}},
 		{[]string{"i", "0", "k"}, yamlpos.Pos{Line: 11, Column: 8}},
 		// An empty entry of a flow sequence is where it is written: goccy/go-yaml gives a flow sequence entries
 		// too, whose token is the , before each, nil for the first, not the entry.
@@ -655,6 +655,30 @@ func TestWritten(t *testing.T) {
 		got, ok := yamlpos.Written([]byte(tt.src), v)
 		if got != tt.want || ok != (tt.want != none) {
 			t.Errorf("Written(%q) = %v, %v; want %v", tt.src, got, ok, tt.want)
+		}
+	}
+}
+
+// An item of a sequence is placed at itself, not at its -: a mapping at its first key, a sequence at its first -,
+// one in flow at its { or [, and one left out where the parser puts it, after the -.
+func TestItemPlace(t *testing.T) {
+	t.Parallel()
+
+	for src, want := range map[string]yamlpos.Pos{
+		"l:\n  - x: 1\n":          {Line: 2, Column: 5},
+		"l:\n  -   text: a\n":     {Line: 2, Column: 7},
+		"l:\n  -\n    text: a\n":  {Line: 3, Column: 5},
+		"l:\n  - # c\n    k: v\n": {Line: 3, Column: 5},
+		"l:\n  - - x\n":           {Line: 2, Column: 5},
+		"l:\n  - [x]\n":           {Line: 2, Column: 5},
+		"l:\n  -\n  - x\n":        {Line: 2, Column: 4},
+	} {
+		body, err := yamlpos.Parse("a.yaml", []byte(src))
+		if err != nil {
+			t.Fatalf("Parse(%q): %s", src, told(err))
+		}
+		if got, _ := yamlpos.Locate(body, []string{"l", "0"}); got != want {
+			t.Errorf("%q: the item at %v, want %v", src, got, want)
 		}
 	}
 }

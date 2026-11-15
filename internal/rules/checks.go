@@ -52,8 +52,8 @@ func ReadChecks(file string, src []byte) (*Checks, error) {
 	if body.Kind != yamlpos.Sequence {
 		found = append(found, yamlpos.New(file, yamlpos.Of(body), "rules_checks_yaml"))
 	} else {
-		for i, n := range body.Items {
-			one, mistakes := readCheck(file, src, yamlpos.EntryKey(body, i), n)
+		for _, n := range body.Items {
+			one, mistakes := readCheck(file, src, n)
 			found = append(found, mistakes...)
 			if mistakes == nil {
 				c.list = append(c.list, one)
@@ -66,12 +66,12 @@ func ReadChecks(file string, src []byte) (*Checks, error) {
 	return c, nil
 }
 
-// readCheck reads the check n of file, whose YAML is src, the entry of the list at entry (its -, nil in [ ]): all the
-// mistakes of its keys, and of its expression when it is text.
-func readCheck(file string, src []byte, entry, n *yamlpos.Node) (check, usererr.List) {
+// readCheck reads the check n of file, whose YAML is src, an item of the list: all the mistakes of its keys, and of its
+// expression when it is text.
+func readCheck(file string, src []byte, n *yamlpos.Node) (check, usererr.List) {
 	c := check{For: "", Field: "", Message: "", forAt: yamlpos.Pos{Line: 0, Column: 0}, prog: nil}
 	if n.Kind != yamlpos.Mapping {
-		return c, usererr.List{yamlpos.New(file, yamlpos.OfValue(entry, n), "rules_checks_yaml")}
+		return c, usererr.List{yamlpos.New(file, yamlpos.OfValue(nil, n), "rules_checks_yaml")}
 	}
 	var found usererr.List
 	var e expression
@@ -103,7 +103,7 @@ func readCheck(file string, src []byte, entry, n *yamlpos.Node) (check, usererr.
 			found = append(found, yamlpos.New(file, written, "rules_checks_missing", key))
 		case !slices.ContainsFunc(n.Pairs, func(kv yamlpos.Pair) bool { return kv.Name() == key }):
 			// One that is not text is told as such.
-			found = append(found, yamlpos.New(file, yamlpos.OfValue(entry, n), "rules_checks_missing", key))
+			found = append(found, yamlpos.New(file, yamlpos.OfValue(nil, n), "rules_checks_missing", key))
 		}
 	}
 	for _, key := range []string{"for", "field"} {

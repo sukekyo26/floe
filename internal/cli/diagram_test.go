@@ -39,7 +39,7 @@ func TestDiagram(t *testing.T) {
 	}
 	// What Inspect tells of a diagram the checks refuse does not come out here: nothing is drawn until all are fixed.
 	code, page0, errs := runIn(dir, env, "diagram", "render", "--no-assets", "a.yaml", "o.yaml")
-	if want := "o.yaml:4:3: box \"a\" overlaps box \"b\"\n"; code != 1 || page0 != "" || errs != want {
+	if want := "o.yaml:4:5: box \"a\" overlaps box \"b\"\n"; code != 1 || page0 != "" || errs != want {
 		t.Errorf("render of a right spec and a wrong one = %d, %q, %q, want %q", code, page0, errs, want)
 	}
 	code, _, errs = runIn(dir, nil, "diagram", "render", "b.yaml", "c.yaml", "gone.yaml")
@@ -150,19 +150,19 @@ func TestInspectData(t *testing.T) {
 			[]string{"keysbad.yaml"},
 			1,
 			"keysbad.yaml:3:1: diagram \"T\" 80x61\nbox \"a\" 10,10 48x29\nbox \"b\" 12,12 48x29\nkeysbad.yaml:8:1: diagram \"M\" 80x61\nbox \"a\" 10,10 48x29\nbox \"b\" 12,12 48x29\n",
-			"keysbad.yaml:7:5: box \"a\" overlaps box \"b\"\nkeysbad.yaml:12:5: box \"a\" overlaps box \"b\"\n",
+			"keysbad.yaml:7:7: box \"a\" overlaps box \"b\"\nkeysbad.yaml:12:7: box \"a\" overlaps box \"b\"\n",
 		},
 		{
 			"a spec the checks refuse",
 			[]string{"over.yaml"},
 			1,
-			"over.yaml: diagram \"O\" 80x61\nbox \"a\" 10,10 48x29\nbox \"b\" 12,12 48x29\n", "over.yaml:4:3: box \"a\" overlaps box \"b\"\n",
+			"over.yaml: diagram \"O\" 80x61\nbox \"a\" 10,10 48x29\nbox \"b\" 12,12 48x29\n", "over.yaml:4:5: box \"a\" overlaps box \"b\"\n",
 		},
 		{
 			"a page's diagram the checks refuse",
 			[]string{"overpage.yaml"},
 			1,
-			"overpage.yaml:7:9: diagram \"O\" 80x61\nbox \"a\" 10,10 48x29\nbox \"b\" 12,12 48x29\n", "overpage.yaml:11:13: box \"a\" overlaps box \"b\"\n",
+			"overpage.yaml:7:9: diagram \"O\" 80x61\nbox \"a\" 10,10 48x29\nbox \"b\" 12,12 48x29\n", "overpage.yaml:11:15: box \"a\" overlaps box \"b\"\n",
 		},
 		{"a shape gets no layout", []string{"shape.yaml"}, 1, "", "shape.yaml:3:5: additional properties 'boxx' not allowed\n"},
 		{
@@ -176,7 +176,7 @@ func TestInspectData(t *testing.T) {
 			[]string{"over.yaml", "goodpage.yaml", "good.yaml"},
 			1,
 			"over.yaml: diagram \"O\" 80x61\nbox \"a\" 10,10 48x29\nbox \"b\" 12,12 48x29\ngoodpage.yaml:7:9: diagram \"Right\" 78x59\nbox \"a\" 10,10 48x29\ngood.yaml: diagram \"G\" 78x59\nbox \"k\" 10,10 48x29\n",
-			"over.yaml:4:3: box \"a\" overlaps box \"b\"\n",
+			"over.yaml:4:5: box \"a\" overlaps box \"b\"\n",
 		},
 		{"a page of no diagram", []string{"none.yaml"}, 0, "", ""},
 		{"a mistake off the diagrams stops it", []string{"other.yaml"}, 1, "", "other.yaml:7:16: additional properties 'textt' not allowed\n"},
