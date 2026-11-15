@@ -16,9 +16,7 @@ import (
 	"testing"
 
 	"floe/docs"
-	"floe/internal/bom"
 	"floe/internal/kit"
-	"floe/internal/textpos"
 	"floe/internal/usererr"
 	"floe/internal/yamlpos"
 )
@@ -458,9 +456,9 @@ func (u *unquoted) walk(n *yamlpos.Node) {
 func (u *unquoted) scalar(n *yamlpos.Node) {
 	text, isText := yamlpos.Text(n)
 	switch {
-	case n.Folded:
+	case n.Style == yamlpos.Folded:
 		u.report(n, "write a text of several lines as a | block, not >")
-	case n.Block:
+	case n.Style == yamlpos.Literal:
 		if !strings.Contains(strings.TrimSpace(text), "\n") {
 			u.report(n, "write a text of one line in '...', not as a | block")
 		}
@@ -470,30 +468,21 @@ func (u *unquoted) scalar(n *yamlpos.Node) {
 		}
 	case !isText:
 	default:
-		if n.Quote != yamlpos.Double && !u.oneLine(n, text) {
+		// Written tells a value on one line, but not one with two single quotes, which passes here, nor one with an
+		// escape in double quotes, which is told as written over lines.
+		if _, oneLine := yamlpos.Written(u.src, n); !oneLine && !strings.Contains(text, "'") {
 			u.report(n, "write a text on one line in '...', or over lines as a | block")
 		}
-		switch n.Quote {
+		switch n.Style {
 		case yamlpos.Double:
 			u.report(n, "write the text in '...', not in double quotes: a \\ in them is read as an escape, mostly with no mistake")
 		case yamlpos.Plain:
 			if !identifier.MatchString(n.Value) {
 				u.report(n, "write the text "+strconv.Quote(n.Value)+" in '...'")
 			}
-		case yamlpos.Single:
+		case yamlpos.Single, yamlpos.Literal, yamlpos.Folded:
 		}
 	}
-}
-
-// oneLine reports whether text, the value of the scalar n, plain or in single quotes, is written on one line: its
-// characters, and the quotes around them, are there as read. A value in double quotes is told as such.
-func (u *unquoted) oneLine(n *yamlpos.Node, text string) bool {
-	at := yamlpos.Of(n)
-	rest := u.src[textpos.At(u.src, at.Line, at.Column):]
-	if n.Quote == yamlpos.Single {
-		return bytes.HasPrefix(rest, []byte("'"+strings.ReplaceAll(text, "'", "''")+"'"))
-	}
-	return bytes.HasPrefix(rest, []byte(text))
 }
 
 // notQuoted returns what is not written as the guide teaches in src, a YAML document, each at name's line and column.
@@ -502,7 +491,7 @@ func notQuoted(name string, src []byte) ([]string, error) {
 	if err != nil {
 		return nil, fmt.Errorf("%s: %w", name, err)
 	}
-	u := &unquoted{file: name, src: bom.Trim(src), told: map[yamlpos.Pos]bool{}, found: nil}
+	u := &unquoted{file: name, src: src, told: map[yamlpos.Pos]bool{}, found: nil}
 	u.walk(body)
 	return u.found, nil
 }

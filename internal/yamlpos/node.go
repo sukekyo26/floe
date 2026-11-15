@@ -7,7 +7,6 @@ import (
 	"strconv"
 	"strings"
 
-	"github.com/goccy/go-yaml"
 	"github.com/goccy/go-yaml/ast"
 	"github.com/goccy/go-yaml/token"
 
@@ -31,17 +30,15 @@ type Node struct {
 	Items []*Node // of a Sequence
 	// Value is a Scalar as the parser read it: text without its quotes, a number or true as written (1.10), "" for
 	// nothing written.
-	Value  string
-	Quote  Quote
-	Block  bool // a | or > text
-	Folded bool // a > text
-	Null   bool // null, ~ or nothing written
+	Value string
+	Style Style
+	Null  bool // null, ~ or nothing written
 
 	at        Pos // where Of places it
 	start     Pos // its first character: the { or [ of a flow mapping or sequence
 	flow      bool
-	unwritten bool    // a null with nothing written
-	text      *string // Text's, for a text scalar
+	unwritten bool // a null with nothing written
+	text      bool // a text scalar
 	node      ast.Node
 }
 
@@ -54,9 +51,9 @@ type Pair struct {
 func newNode(n ast.Node) (*Node, error) {
 	tk := n.GetToken()
 	out := &Node{
-		Kind: Scalar, Pairs: nil, Items: nil, Value: "", Quote: Plain, Block: false, Folded: false, Null: false,
+		Kind: Scalar, Pairs: nil, Items: nil, Value: "", Style: Plain, Null: false,
 		at: writtenAt(n), start: Pos{Line: tk.Position.Line, Column: tk.Position.Column}, flow: false, unwritten: false,
-		text: nil, node: n,
+		text: false, node: n,
 	}
 	var err error
 	switch n := n.(type) {
@@ -107,15 +104,12 @@ func newItems(values []ast.Node) ([]*Node, error) {
 func (out *Node) scalar(n ast.Node) error {
 	tk := n.GetToken()
 	switch n := n.(type) {
-	case *ast.StringNode, *ast.LiteralNode:
-		var text string
-		if err := yaml.NodeToValue(n, &text); err != nil {
-			return fmt.Errorf("yamlpos: decode a text: %w", err)
-		}
-		out.Value, out.Quote, out.text = tk.Value, quoteOf(n), &text
-		if l, ok := n.(*ast.LiteralNode); ok {
-			out.Block, out.Folded = true, strings.HasPrefix(l.Start.Value, ">")
-			out.Value = text // its token is the | or >
+	case *ast.StringNode:
+		out.Value, out.Style, out.text = n.Value, quoteOf(n), true
+	case *ast.LiteralNode:
+		out.Value, out.Style, out.text = n.Value.Value, Literal, true
+		if strings.HasPrefix(n.Start.Value, ">") {
+			out.Style = Folded
 		}
 	case *ast.NullNode:
 		out.Null, out.unwritten = true, tk.Type == token.ImplicitNullType
@@ -140,10 +134,10 @@ func Of(n *Node) Pos {
 // it, a block keeping the line breaks its end keeps (| one, |+ all, |- none). A number, true, false or null is not
 // text: YAML would read 1.10 as 1.1.
 func Text(n *Node) (string, bool) {
-	if n.text == nil {
+	if !n.text {
 		return "", false
 	}
-	return *n.text, true
+	return n.Value, true
 }
 
 // OfValue returns where the value of key is written, ~ and null too: a scalar at itself; a mapping or a sequence,
@@ -213,33 +207,40 @@ func Locate(root *Node, at []string) (Pos, *Node) {
 // Written returns where the characters of n, a scalar of src, the YAML file Parse read, start when they are
 // written there as YAML reads them, for a place inside the value: a plain or quoted value on one line, at its first
 // character after the quote; a | text, at the first character of its first line, past the indentation; false for
-// any other, or when they are not written so (an escape, a ” in single quotes, a > text, a | text whose
-// indentation is text too).
-// The characters of src are only compared with the value read, which tells where they are: nothing is judged by
-// reading src.
+// any other. The characters of src are only compared with the value read, which tells where they are: nothing is
+// judged by reading src.
+// LIMIT: a value whose characters are not written as read is not placed inside: an escape in double quotes, two
+// single quotes, a value over lines, a > text, a | text whose indentation is text too, a plain value goccy/go-yaml
+// reads without its tabs, and any value of a file whose places goccy/go-yaml counts otherwise (starts). Map the
+// characters read to those written if a place inside such a value comes to matter.
 func Written(src []byte, n *Node) (Pos, bool) {
+	none := Pos{Line: 0, Column: 0}
 	src = bom.Trim(src)
-	value, isText := Text(n)
-	if !isText {
-		value = n.Value
-	}
 	at := textpos.At(src, n.at.Line, n.at.Column)
 	if n.Kind != Scalar || at < 0 {
-		return Pos{Line: 0, Column: 0}, false
+		return none, false
 	}
 	rest := src[at:]
-	switch {
-	case n.Folded:
-	case n.Block:
-		return blockWritten(src, n.at.Line, rest, value)
-	case strings.Contains(value, "\n"):
-	case n.Quote == Plain && bytes.HasPrefix(rest, []byte(value)):
-		return n.at, true
-	case n.Quote == Single && !strings.Contains(value, "'") && bytes.HasPrefix(rest, []byte("'"+value+"'")),
-		n.Quote == Double && !strings.ContainsAny(value, `\"`) && bytes.HasPrefix(rest, []byte(`"`+value+`"`)):
-		return Pos{Line: n.at.Line, Column: n.at.Column + 1}, true
+	switch n.Style {
+	case Plain:
+		if bytes.HasPrefix(rest, []byte(n.Value)) {
+			return n.at, true
+		}
+	case Single:
+		// One ' read is written as two: 'a''' (read a') would match 'a''.
+		if !strings.Contains(n.Value, "'") && bytes.HasPrefix(rest, []byte("'"+n.Value+"'")) {
+			return Pos{Line: n.at.Line, Column: n.at.Column + 1}, true
+		}
+	case Double:
+		// An escape is longer written than read, so that the " after the value read meets a character of it.
+		if bytes.HasPrefix(rest, []byte(`"`+n.Value+`"`)) {
+			return Pos{Line: n.at.Line, Column: n.at.Column + 1}, true
+		}
+	case Literal:
+		return blockWritten(src, n.at.Line, rest, n.Value)
+	case Folded:
 	}
-	return Pos{Line: 0, Column: 0}, false
+	return none, false
 }
 
 // blockWritten returns where value, a | text whose header (rest on) is on the line header of src, starts: on the line
