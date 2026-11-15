@@ -62,21 +62,24 @@ func TestInstall(t *testing.T) {
 	notDir := write(t, filepath.Join(root, "file"), "")
 
 	tests := []struct {
-		name, os, arch, api, assets, version, dir, path string
-		want                                            string // the asset installed, or "" when it fails
-		says                                            []string
+		name, os, arch, api, assets, version, dir string
+		shasum                                    bool   // only shasum on PATH, not sha256sum
+		readOnly                                  bool   // the install directory is there but not writable
+		want                                      string // the asset installed, or "" when it fails
+		says                                      []string
 	}{
 		{name: "latest", os: "Linux", arch: "x86_64", api: pretty, want: "floe-linux-amd64"},
 		{name: "latest one line", os: "Darwin", arch: "arm64", api: compact, want: "floe-darwin-arm64"},
 		{name: "pinned", os: "Linux", arch: "aarch64", version: "0.1.0", want: "floe-linux-arm64"},
 		{name: "pinned with v", os: "Linux", arch: "amd64", version: "v0.1.0", want: "floe-linux-amd64"},
-		{name: "shasum", os: "Darwin", arch: "x86_64", version: "0.1.0", path: withShasum, want: "floe-darwin-amd64"},
+		{name: "shasum", os: "Darwin", arch: "x86_64", version: "0.1.0", shasum: true, want: "floe-darwin-amd64"},
 		{name: "checksum mismatch", os: "Linux", arch: "x86_64", version: "0.1.0", assets: bad, says: []string{"checksum mismatch"}},
 		{name: "no release", os: "Linux", arch: "x86_64", says: []string{"FLOE_VERSION", "try again later"}},
 		{name: "no such version", os: "Linux", arch: "x86_64", version: "0.9.9", says: []string{"download failed", "v0.9.9/floe-linux-amd64"}},
 		{name: "arch", os: "Linux", arch: "armv7l", says: []string{"armv7l", "amd64 and arm64"}},
 		{name: "os", os: "FreeBSD", arch: "amd64", says: []string{"freebsd", "linux and darwin"}},
 		{name: "dir not writable", os: "Linux", arch: "x86_64", version: "0.1.0", dir: filepath.Join(notDir, "bin"), says: []string{"FLOE_INSTALL_DIR"}},
+		{name: "dir read-only", os: "Linux", arch: "x86_64", version: "0.1.0", readOnly: true, says: []string{"FLOE_INSTALL_DIR"}},
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
@@ -90,9 +93,20 @@ func TestInstall(t *testing.T) {
 			if from == "" {
 				from = assets
 			}
-			path := tt.path
-			if path == "" {
-				path = withSum
+			if tt.readOnly {
+				if os.Geteuid() == 0 {
+					t.Skip("root writes to a read-only directory")
+				}
+				if err := os.Mkdir(dir, 0o500); err != nil {
+					t.Fatal(err)
+				}
+			}
+			path := withSum
+			if tt.shasum {
+				if withShasum == "" {
+					t.Skip("shasum is not on PATH")
+				}
+				path = withShasum
 			}
 			cmd := exec.CommandContext(t.Context(), "sh")
 			cmd.Stdin = bytes.NewReader(script)
@@ -137,7 +151,8 @@ func TestInstall(t *testing.T) {
 }
 
 // tools makes a directory of the fakes and links to the tools install.sh and the fakes run, with sum as the one
-// SHA-256 tool, so that the script sees only that one.
+// SHA-256 tool, so that the script sees only that one. It returns "" when sum is shasum and the host has none; any
+// other tool missing fails, so that the test does not skip itself away on a machine that lost one.
 func tools(t *testing.T, dir, sum string) string {
 	t.Helper()
 
@@ -152,7 +167,10 @@ func tools(t *testing.T, dir, sum string) string {
 	for _, name := range []string{"mktemp", "tr", "sed", "head", "grep", "awk", "mkdir", "mv", "chmod", "rm", "cat", "cp", sum} {
 		at, err := exec.LookPath(name)
 		if err != nil {
-			t.Skipf("%s is not on PATH: %v", name, err)
+			if name == "shasum" {
+				return ""
+			}
+			t.Fatalf("%s is not on PATH: %v", name, err)
 		}
 		if err := os.Symlink(at, filepath.Join(dir, name)); err != nil {
 			t.Fatal(err)
@@ -178,6 +196,9 @@ func release(t *testing.T, dir, broken string) {
 			body += "x"
 		}
 		sum := sha256.Sum256([]byte(body))
+		// Lines of other names holding this one come first, so that a loose match picks a wrong sum.
+		other := hex.EncodeToString(make([]byte, sha256.Size))
+		sums.WriteString(other + "  " + name + ".sig\n" + other + "  x" + name + "\n")
 		sums.WriteString(hex.EncodeToString(sum[:]) + "  " + name + "\n")
 	}
 	write(t, filepath.Join(tag, "SHA256SUMS"), sums.String())
