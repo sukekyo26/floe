@@ -5,7 +5,6 @@ import (
 	"io"
 	"os"
 	"path/filepath"
-	"strings"
 
 	"floe/internal/dirs"
 	"floe/internal/files"
@@ -90,9 +89,9 @@ func (p arg) read() ([]byte, error) {
 }
 
 // once is the args given, in order, each once, by the path it was first given as: two paths that name one
-// entry of one directory (./a.yaml and a.yaml, through a symlinked directory, in another case on macOS) are
-// read and told once. A link of another name or in another directory, symbolic or hard, is one of its own,
-// as its name names its page.
+// entry of one directory (./a.yaml and a.yaml, through a symlinked directory) are read and told once. A link of
+// another name or in another directory, symbolic or hard, is one of its own, as its name names its page; so is a
+// name that differs only in case.
 // LIMIT: each file is compared with each kept; enough for the files of a command line.
 func once(given []arg) []arg {
 	var named []arg
@@ -111,36 +110,35 @@ next:
 	return named
 }
 
-// entry is a path as a name in a directory: its absolute path, its directory and itself, nil when they
-// cannot be read.
+// entry is a path as a name in a directory: its absolute path, and its directory, nil when it cannot be read.
 type entry struct {
-	abs       string
-	dir, info os.FileInfo
+	abs string
+	dir os.FileInfo
 }
 
 func entryOf(p arg) entry {
 	if p.err != nil {
 		// Nowhere, by its name: the command refuses it, and nothing is looked up for it.
-		return entry{abs: p.name, dir: nil, info: nil}
+		return entry{abs: p.name, dir: nil}
 	}
-	e := entry{abs: p.abs, dir: nil, info: nil}
+	e := entry{abs: p.abs, dir: nil}
 	if dir, err := os.Stat(dirs.Dir(e.abs)); err == nil {
 		e.dir = dir
-	}
-	if info, err := os.Lstat(e.abs); err == nil {
-		e.info = info
 	}
 	return e
 }
 
-// same reports whether e and o name one entry of one directory: one directory, and one name, or names that
-// differ only in case for one file (on a file system that ignores case). Without a directory, one path.
-// LIMIT: on a case-sensitive file system, two hard links in one directory whose names differ only in case are one.
+// same reports whether e and o name one entry of one directory: one directory (os.SameFile), and one name, letter
+// for letter, case too. When either directory cannot be read, one absolute path. Whether two names are one file
+// is left to what writes it (render's targetAt asks the system).
+// LIMIT: on a file system that ignores case (macOS, a casefold directory on Linux, exFAT, WSL's drvfs), one file
+// named twice in two cases is read as two, as names in NFC and NFD are: check tells its mistakes and warnings
+// twice, diagram render draws it twice, and render, when its page is not there yet, draws it twice and writes it
+// again only when the titles come from the names and differ, else refuses with cli_render_same_file, whose "rename
+// one of them" does not fit. Read the directory's names to ask the system if such command lines come up.
 func (e entry) same(o entry) bool {
 	if e.dir == nil || o.dir == nil {
 		return e.abs == o.abs
 	}
-	x, y := filepath.Base(e.abs), filepath.Base(o.abs)
-	return os.SameFile(e.dir, o.dir) &&
-		(x == y || strings.EqualFold(x, y) && e.info != nil && o.info != nil && os.SameFile(e.info, o.info))
+	return os.SameFile(e.dir, o.dir) && filepath.Base(e.abs) == filepath.Base(o.abs)
 }
