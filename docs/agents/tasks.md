@@ -121,6 +121,7 @@ $ floe task --slug api-notes --task "#132" --title "API notes"
 task #132 in project floe: made; title "API notes"
 page api-notes: task #132 in project floe
 $ floe task --slug design-notes --task "#132"
+task #132 in project floe: changed
 page design-notes: task #132 in project floe; moved from task #130, category "designs"
 $ floe task --task "#132" --state doing
 task #132 in project floe: changed; state doing
