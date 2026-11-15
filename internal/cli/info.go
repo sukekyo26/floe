@@ -62,7 +62,7 @@ func infoLines(page store.Listed, url string) []string {
 	}
 	tags := make([]string, len(page.Tags))
 	for i, t := range page.Tags {
-		tags[i] = strconv.Quote(t)
+		tags[i] = strconv.QuoteToGraphic(t)
 	}
 	version := ""
 	if page.Version > 0 {
@@ -70,7 +70,7 @@ func infoLines(page store.Listed, url string) []string {
 	}
 	fields := [][2]string{
 		{"slug", page.Slug},
-		{"title", strconv.Quote(page.Title)},
+		{"title", strconv.QuoteToGraphic(page.Title)},
 		{"url", url},
 		{"kind", kind},
 		{"project", quoted(project)},
@@ -91,10 +91,11 @@ func infoLines(page store.Listed, url string) []string {
 	return lines
 }
 
-// quoted is s quoted as Go quotes it, or empty for none.
+// quoted is s quoted as Go quotes it but for printable characters such as a full-width space, as floe task quotes,
+// or empty for none.
 func quoted(s string) string {
 	if s == "" {
 		return ""
 	}
-	return strconv.Quote(s)
+	return strconv.QuoteToGraphic(s)
 }
