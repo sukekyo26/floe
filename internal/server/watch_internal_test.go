@@ -14,6 +14,7 @@ import (
 	"testing"
 	"time"
 
+	"floe/internal/files"
 	"floe/internal/kit"
 	"floe/internal/store"
 )
@@ -54,7 +55,7 @@ func watched(t *testing.T, link bool) (*Server, string) {
 			return store.Drawing{Kit: nil, Icons: nil, Err: nil}, err
 		}
 		none := kit.Dir{FS: nil, Name: ""}
-		k, err := kit.Load(floe, kit.Sources{Parts: none, Themes: none, Templates: kit.Dir{FS: os.DirFS(tpl), Name: tpl}})
+		k, err := kit.Load(floe, kit.Sources{Parts: none, Themes: none, Templates: kit.Dir{FS: files.DirFS(tpl), Name: tpl}})
 		return store.Drawing{Kit: k, Icons: nil, Err: nil}, err
 	}
 	s := New(Config{

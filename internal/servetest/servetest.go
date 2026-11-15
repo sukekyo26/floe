@@ -12,6 +12,7 @@ import (
 	"testing"
 
 	"floe/internal/daemon"
+	"floe/internal/files"
 	"floe/internal/kit"
 	"floe/internal/server"
 	"floe/internal/store"
@@ -27,9 +28,9 @@ type Site struct {
 	Env map[string]string
 }
 
-// Start writes files (paths under the temporary directory, slash-separated) and starts a server there that reads
+// Start writes written (paths under the temporary directory, slash-separated) and starts a server there that reads
 // templates, parts and themes of its own from templates/, parts/ and themes/. It serves until the test ends.
-func Start(t *testing.T, files map[string]string) *Site {
+func Start(t *testing.T, written map[string]string) *Site {
 	t.Helper()
 
 	// Real, as link.Check compares the real paths of home and the file linked.
@@ -44,7 +45,7 @@ func Start(t *testing.T, files map[string]string) *Site {
 			t.Fatal(err)
 		}
 	}
-	for name, text := range files {
+	for name, text := range written {
 		at := filepath.Join(tmp, filepath.FromSlash(name))
 		if err = os.MkdirAll(filepath.Dir(at), 0o700); err != nil {
 			t.Fatal(err)
@@ -71,7 +72,7 @@ func Start(t *testing.T, files map[string]string) *Site {
 	if err != nil {
 		t.Fatal(err)
 	}
-	own := func(name string) kit.Dir { return kit.Dir{FS: os.DirFS(dir(name)), Name: dir(name)} }
+	own := func(name string) kit.Dir { return kit.Dir{FS: files.DirFS(dir(name)), Name: dir(name)} }
 	st := store.New(dir("store"))
 	if err = st.Begin(server.Viewer, store.Now()); err != nil {
 		t.Fatal(err)

@@ -2,12 +2,14 @@ package files
 
 import (
 	"errors"
+	"io"
 	"io/fs"
 	"os"
 	"path/filepath"
 	"syscall"
 	"testing"
 
+	"floe/internal/timebox"
 	"floe/internal/usererr"
 )
 
@@ -24,9 +26,20 @@ func (s swapped) OpenFile(name string, flag int, perm fs.FileMode) (*os.File, er
 	return s.Opener.OpenFile(name, flag, perm) //nolint:wrapcheck // the system's
 }
 
-// A regular file made a FIFO between what Open looks at and what it opens is refused unread, at a path and under
-// an os.Root alike: the open does not block, and what was opened is looked at again. Another regular file put in
-// its place, as a save by rename does, is read.
+// readAll reads name of o through openRead, which Root and DirFS open through.
+func readAll(o Opener, name string) ([]byte, fs.FileInfo, error) {
+	f, err := openRead(o, name)
+	if err != nil {
+		return nil, nil, err
+	}
+	defer f.Close()
+	b, err := io.ReadAll(f)
+	return b, nil, err //nolint:wrapcheck // the system's
+}
+
+// A regular file made a FIFO between what Open (ReadIn) or openRead looks at and what it opens is refused unread,
+// at a path, under a DirFS and under an os.Root alike: the open does not block, and what was opened is looked at
+// again. Another regular file put in its place, as a save by rename does, is read.
 func TestOpenSwapped(t *testing.T) {
 	t.Parallel()
 
@@ -48,7 +61,14 @@ func TestOpenSwapped(t *testing.T) {
 			via  string
 			o    Opener
 			name string
-		}{{"a path", paths{}, filepath.Join(dir, "a.yaml")}, {"an os.Root", root, "a.yaml"}} {
+			read func(Opener, string) ([]byte, fs.FileInfo, error)
+		}{
+			{"ReadIn at a path", paths{}, filepath.Join(dir, "a.yaml"), ReadIn},
+			{"ReadIn under an os.Root", root, "a.yaml", ReadIn},
+			// openRead takes a name under a directory, as fs.ValidPath does.
+			{"openRead under a DirFS", dirFS(dir), "a.yaml", readAll},
+			{"openRead under an os.Root", root, "a.yaml", readAll},
+		} {
 			path := filepath.Join(dir, "a.yaml")
 			if err := os.WriteFile(path, []byte("x"), 0o600); err != nil {
 				t.Fatal(err)
@@ -59,10 +79,12 @@ func TestOpenSwapped(t *testing.T) {
 				}
 				return tt.swap(path)
 			}}
-			b, _, err := ReadIn(s, o.name)
-			if !errors.Is(err, tt.want) || tt.want == nil && (err != nil || string(b) != "y") {
-				t.Errorf("ReadIn via %s of a file made %s = %q, %v, want %v", o.via, tt.name, b, err, tt.want)
-			}
+			timebox.Within(t, o.via, func() {
+				b, _, err := o.read(s, o.name)
+				if !errors.Is(err, tt.want) || tt.want == nil && (err != nil || string(b) != "y") {
+					t.Errorf("%s of a file made %s = %q, %v, want %v", o.via, tt.name, b, err, tt.want)
+				}
+			})
 			if err := os.Remove(path); err != nil {
 				t.Fatal(err)
 			}

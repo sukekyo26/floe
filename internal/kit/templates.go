@@ -415,7 +415,8 @@ func (a *assetsOf) placed(p string, err error) error {
 }
 
 // sub is the directory dir of an FS as an FS of its own, its Stat the FS's: fs.Sub's opens a file to stat it,
-// which blocks on a FIFO and fails on a file that cannot be read.
+// which refuses a FIFO (files.Root, files.DirFS), not to be told as no image, and fails on a file that cannot be
+// read.
 type sub struct {
 	fs.FS
 	dir string

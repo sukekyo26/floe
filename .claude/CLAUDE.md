@@ -25,7 +25,7 @@ floe が入力を断る検査は、次の 4 つのどれかに当たるものだ
 - **外の振る舞いを真似ない**：HTML・CSS・URL・JSON Schema などは、本物のパーサやライブラリを使う。自分で読む作りにしない。仕様が規範として定める表をそのまま写すのは、真似でなく文脈の要らない決まりで、よい（今は yamlpos の数の読みが、YAML 1.2 の core schema の表の正規表現を写し、draw が select の中で断る要素の並びが、HTML の断片を読む algorithm の表を写す）
 - **受け入れた退行**：上に当たらない漏れは、`LIMIT:` のコメントと PR の本文に書く。検査は足さない
 
-- **ユーザーのパスはふつうのファイルだけ読む**：ユーザーが渡したパス（データファイル・spec・zip・ページ・publish のリンク）から読むのは、ふつうのファイルだけで、`files.Open`・`files.Read` を通す。開く前に種類を見て、FIFO・デバイス・socket は開かない（開くと止まる、開くこと自体に副作用がある）
+- **ユーザーのパスはふつうのファイルだけ読む**：ユーザーが渡したパス（データファイル・spec・zip・ページ・publish のリンク）から読むのは、ふつうのファイルだけで、`files.Open`・`files.Read` を通す。開く前に種類を見て、FIFO・デバイス・socket は開かない（開くと止まる、開くこと自体に副作用がある）。ディスクのディレクトリを `fs.FS` にするのは `files.Root`（外へ出ない）と `files.DirFS`（symlink をたどる）だけ（forbidigo が `os.DirFS`・`os.Root.FS` を断る）
 - **自分のものの置き場所は重ねない**：部品・テーマ・テンプレートの置き場所の重なりは、`app.kit` が開く前に、字でなく OS の実体（`resolve`・`within`）で比べて `dir_overlap` で断り、重なった置き場所は開かない。`newOwn` も作る前に比べる
 - **render が書くのはページだけ**：書くページのリンクはたどり、たどった先の名前が .html（`files.IsPage`）でなければ、何も書かずに断る。データファイルやリポジトリの外のファイルを書き換えない
 - **YAML は yamlpos だけが読む**：YAML のバイト列を goccy に渡すのは `yamlpos` だけ。`yamlpos` の外（テストを除く）から import できる goccy のパッケージは `ast` だけ（depguard の規則 `goccy-in-yamlpos`）。値にするのも `yamlpos.Decode`
