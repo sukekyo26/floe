@@ -106,7 +106,7 @@ func setPageTask(m *Meta, ed *PageTaskEdit) {
 	}
 }
 
-// Task is a task's row of tasks.json. At is when it was made or its state last changed; Parent the task it is a child
+// Task is a task's row of tasks.json. At is when it was last written (applyChange); Parent the task it is a child
 // of, of the same project (childrenOfTask). A page's category is the page's alone (PageTask).
 type Task struct {
 	Title      string   `json:"title,omitempty"`
@@ -147,8 +147,8 @@ type NamedTask struct {
 	Task
 }
 
-// Open is the tasks of project (a ProjectKey) in an open state (States), the one whose state changed last first, and
-// by name (byte order) among those that changed at the same time. A time is compared as a time, so that the times
+// Open is the tasks of project (a ProjectKey) in an open state (States), the one written last first, and by name
+// (byte order) among those written at the same time. A time is compared as a time, so that the times
 // written by hand (RFC 3339 with or without a fraction, in any zone) are put in their order.
 func (all Tasks) Open(project string) []NamedTask {
 	var open []NamedTask
@@ -500,7 +500,7 @@ type TaskWritten struct {
 // edited is t as ed changes it, which has been checked.
 func (t Task) edited(ed TaskEdit) Task {
 	if ed.State != nil && *ed.State != t.State {
-		t.State, t.At = *ed.State, Now()
+		t.State = *ed.State
 	}
 	if ed.Title != nil {
 		t.Title = strings.TrimSpace(*ed.Title)
