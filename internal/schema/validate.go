@@ -7,7 +7,6 @@ import (
 	"slices"
 	"strings"
 
-	"github.com/goccy/go-yaml/ast"
 	"github.com/santhosh-tekuri/jsonschema/v6"
 	"github.com/santhosh-tekuri/jsonschema/v6/kind"
 
@@ -96,14 +95,14 @@ func instancePath(e *jsonschema.ValidationError) []string {
 // LIMIT: jsonschema v6.0.3 shares the slice of InstanceLocation with later checks, which change what it holds
 // (upstream #276, #269): only its length is right. Go back to the library's place once it is fixed; the
 // mistakes told at the file alone then move, and the golden files change.
-func placeOfName(root *ast.MappingNode, depth int, name string) yamlpos.Pos {
-	var found []*ast.MappingValueNode
-	var walk func(n ast.Node, depth int, top bool)
-	walk = func(n ast.Node, depth int, top bool) {
-		switch n := n.(type) {
-		case *ast.MappingNode:
-			for _, v := range n.Values {
-				key := yamlpos.KeyName(v)
+func placeOfName(root *yamlpos.Node, depth int, name string) yamlpos.Pos {
+	var found []yamlpos.Pair
+	var walk func(n *yamlpos.Node, depth int, top bool)
+	walk = func(n *yamlpos.Node, depth int, top bool) {
+		switch n.Kind {
+		case yamlpos.Mapping:
+			for _, v := range n.Pairs {
+				key := v.Name()
 				switch {
 				case top && slices.Contains(doc.Shared, key):
 				case depth == 0 && key == name:
@@ -112,17 +111,18 @@ func placeOfName(root *ast.MappingNode, depth int, name string) yamlpos.Pos {
 					walk(v.Value, depth-1, false)
 				}
 			}
-		case *ast.SequenceNode:
+		case yamlpos.Sequence:
 			if depth > 0 {
-				for _, v := range n.Values {
+				for _, v := range n.Items {
 					walk(v, depth-1, false)
 				}
 			}
+		case yamlpos.Scalar:
 		}
 	}
 	walk(root, depth, true)
 	if len(found) == 1 {
-		return yamlpos.Of(yamlpos.KeyOf(found[0]))
+		return yamlpos.Of(found[0].Key)
 	}
 	pos, _ := yamlpos.Locate(root, nil)
 	return pos

@@ -4,8 +4,6 @@ import (
 	"slices"
 	"strings"
 
-	"github.com/goccy/go-yaml/ast"
-
 	"floe/internal/usererr"
 )
 
@@ -14,7 +12,7 @@ import (
 // alone when it leads to no value written under root, or root is nil, a file of nothing), its pointer dropped, and
 // the mistakes Sorted. A mistake with a file of its own, or
 // with no pointer (of the whole output), is kept as it is; a failure is returned as it is.
-func Place(err error, file string, root *ast.MappingNode, prefix []string) error {
+func Place(err error, file string, root *Node, prefix []string) error {
 	var found usererr.List
 	if failed := found.Add(err); failed != nil {
 		return failed

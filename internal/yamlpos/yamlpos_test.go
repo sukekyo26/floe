@@ -6,8 +6,6 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/goccy/go-yaml/ast"
-
 	"floe/internal/i18n"
 	"floe/internal/usererr"
 	"floe/internal/yamlpos"
@@ -408,9 +406,9 @@ func TestLocate(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	root, _ := body.(*ast.MappingNode) //nolint:errcheck // keys and values just above
+	root := body
 	for _, tt := range []struct {
-		root *ast.MappingNode
+		root *yamlpos.Node
 		at   []string
 		want yamlpos.Pos
 	}{
@@ -508,21 +506,22 @@ func TestParsePlaces(t *testing.T) {
 	}
 }
 
-// QuoteOf tells a quoted scalar as the parser read it: a no-break space or an ideographic space before a quote
-// is part of a plain scalar.
-func TestQuoteOf(t *testing.T) {
+// Style tells how a scalar is written, as the parser read it: a no-break space or an ideographic space before a
+// quote is part of a plain scalar.
+func TestStyle(t *testing.T) {
 	t.Parallel()
 
-	for src, want := range map[string]yamlpos.Quote{
+	for src, want := range map[string]yamlpos.Style{
 		"\"x\"": yamlpos.Double, "'x'": yamlpos.Single, "x": yamlpos.Plain, "\u00a0'": yamlpos.Plain,
-		"\u3000'x": yamlpos.Plain, "1": yamlpos.Plain, "|\n  x\n": yamlpos.Plain,
+		"\u3000'x": yamlpos.Plain, "1": yamlpos.Plain, "|\n  x\n": yamlpos.Literal, "|-\n  x\n": yamlpos.Literal,
+		">\n  x\n": yamlpos.Folded,
 	} {
 		n, err := yamlpos.Parse("a.yaml", []byte("v: "+src+"\n"))
 		if err != nil {
 			t.Fatalf("Parse(%q): %s", src, told(err))
 		}
-		if _, v := yamlpos.Find(n, []string{"v"}); yamlpos.QuoteOf(v) != want {
-			t.Errorf("QuoteOf(%q) = %d, want %d", src, yamlpos.QuoteOf(v), want)
+		if _, v := yamlpos.Find(n, []string{"v"}); v.Style != want {
+			t.Errorf("Style of %q = %d, want %d", src, v.Style, want)
 		}
 	}
 }
@@ -554,13 +553,95 @@ func TestText(t *testing.T) {
 		if err != nil {
 			t.Fatal(told(err))
 		}
-		m, isMap := body.(*ast.MappingNode)
-		if !isMap {
-			t.Fatalf("%q: the body is %T", tt.src, body)
+		if got, ok := yamlpos.Text(body.Pairs[0].Value); got != tt.want || ok != tt.ok {
+			t.Errorf("Text(%q) = %q, %v; want %q, %v", tt.src, got, ok, tt.want, tt.ok)
 		}
-		got, ok, err := yamlpos.Text(m.Values[0].Value)
-		if err != nil || got != tt.want || ok != tt.ok {
-			t.Errorf("Text(%q) = %q, %v, %v; want %q, %v", tt.src, got, ok, err, tt.want, tt.ok)
+	}
+}
+
+// Written finds a value's characters where they are written as read, and nothing where they are not.
+func TestWritten(t *testing.T) {
+	t.Parallel()
+
+	none := yamlpos.Pos{}
+	for _, tt := range []struct {
+		src  string
+		want yamlpos.Pos
+	}{
+		{"v: abc\n", yamlpos.Pos{Line: 1, Column: 4}},
+		{"v: 1.10\n", yamlpos.Pos{Line: 1, Column: 4}},
+		{"\ufeffv: abc\n", yamlpos.Pos{Line: 1, Column: 4}},
+		{"v: 'abc'\n", yamlpos.Pos{Line: 1, Column: 5}},
+		{"v: \"abc\"\n", yamlpos.Pos{Line: 1, Column: 5}},
+		{"v: \"\\x41\"\n", none},
+		{"v: 'a''b'\n", none},
+		{"v: 'a'''\n", none},
+		{"v: \"a\\\\\"\n", none},
+		{"v: a\n  b\n", none},
+		{"v: 'a\n  b'\n", none},
+		{"v: |\n  x\n  y\n", yamlpos.Pos{Line: 2, Column: 3}},
+		{"v: |-\n    x\n", yamlpos.Pos{Line: 2, Column: 5}},
+		{"v: |\n\n  x\n", yamlpos.Pos{Line: 2, Column: 3}},
+		{"v: |\r\n  x\r\n", yamlpos.Pos{Line: 2, Column: 3}},
+		{"v: |2\n   x\n", none},
+		{"v: >\n  x\n", none},
+		{"v: [a]\n", none},
+	} {
+		body, err := yamlpos.Parse("a.yaml", []byte(tt.src))
+		if err != nil {
+			t.Fatalf("Parse(%q): %s", tt.src, told(err))
 		}
+		_, v := yamlpos.Find(body, []string{"v"})
+		got, ok := yamlpos.Written([]byte(tt.src), v)
+		if got != tt.want || ok != (tt.want != none) {
+			t.Errorf("Written(%q) = %v, %v; want %v", tt.src, got, ok, tt.want)
+		}
+	}
+}
+
+// Parse gives each value as a Node: its kind, its value as written, how it is written and whether it is null;
+// empty and nested flow ones, and a key in quotes, by its name.
+func TestNode(t *testing.T) {
+	t.Parallel()
+
+	body, err := yamlpos.Parse("a.yaml", []byte("a: ~\nb:\nc: null\nd: 1.10\ne: 'q'\nf: {}\ng: []\n"+
+		"h: {i: [1, {j: x}]}\n'1': x\nk: |\n  t\n"))
+	if err != nil {
+		t.Fatal(told(err))
+	}
+	names := make([]string, 0, len(body.Pairs))
+	for _, p := range body.Pairs {
+		names = append(names, p.Name())
+	}
+	if got := strings.Join(names, " "); got != "a b c d e f g h 1 k" {
+		t.Errorf("the keys are %q", got)
+	}
+	value := func(at ...string) *yamlpos.Node {
+		_, v := yamlpos.Find(body, at)
+		return v
+	}
+	for at, want := range map[string]struct {
+		value string
+		null  bool
+	}{"a": {"~", true}, "b": {"", true}, "c": {"null", true}, "d": {"1.10", false}} {
+		if v := value(at); v.Kind != yamlpos.Scalar || v.Value != want.value || v.Null != want.null {
+			t.Errorf("%s: %d %q null %v, want %q null %v", at, v.Kind, v.Value, v.Null, want.value, want.null)
+		}
+		if _, ok := yamlpos.Text(value(at)); ok {
+			t.Errorf("%s is text", at)
+		}
+	}
+	if v := value("e"); v.Style != yamlpos.Single || v.Value != "q" {
+		t.Errorf("e: %d %q", v.Style, v.Value)
+	}
+	if f, g := value("f"), value("g"); f.Kind != yamlpos.Mapping || len(f.Pairs) != 0 || g.Kind != yamlpos.Sequence || len(g.Items) != 0 {
+		t.Errorf("f: %d %d, g: %d %d", f.Kind, len(f.Pairs), g.Kind, len(g.Items))
+	}
+	if i := value("h", "i"); i.Kind != yamlpos.Sequence || len(i.Items) != 2 || i.Items[1].Kind != yamlpos.Mapping ||
+		i.Items[1].Pairs[0].Name() != "j" {
+		t.Errorf("h.i: %+v", i)
+	}
+	if text, ok := yamlpos.Text(value("k")); !ok || text != "t\n" || value("k").Style != yamlpos.Literal {
+		t.Errorf("k: %q %v", text, ok)
 	}
 }

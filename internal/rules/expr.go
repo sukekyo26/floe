@@ -9,13 +9,11 @@ import (
 	"fmt"
 	"math"
 	"slices"
-	"strings"
 
 	"github.com/expr-lang/expr"
 	"github.com/expr-lang/expr/file"
 	"github.com/expr-lang/expr/vm"
 	"github.com/expr-lang/expr/vm/runtime"
-	"github.com/goccy/go-yaml/ast"
 
 	"floe/internal/usererr"
 	"floe/internal/yamlpos"
@@ -56,8 +54,9 @@ func finite(name, op string, f func(a, b any) float64) expr.Option {
 type expression struct {
 	src   string
 	file  string
-	key   ast.Node // the key it is the value of
-	value ast.Node
+	yaml  []byte        // the file's YAML, which value was read from
+	key   *yamlpos.Node // the key it is the value of
+	value *yamlpos.Node
 }
 
 // compile compiles e for env with opts: its mistake in expr's words, at its place in the expression.
@@ -76,54 +75,20 @@ func (e expression) start() yamlpos.Pos {
 }
 
 // place returns where in the file the mistake err of expr is: its line and column in the expression added to
-// where the expression is written, in a scalar on one line (after its quote) and in a | block; else, and for
-// a mistake without a place, where the expression is written.
-// LIMIT: a quoted scalar with an escape (a backslash in double quotes, two single quotes in single quotes) is
-// told where it is written, as the text expr read is not the text written; so is a > block, and a | block with
-// an indentation indicator.
+// where the expression's characters start, when they are written as read (yamlpos.Written); else, and for a mistake
+// without a place, where the expression is written.
 func (e expression) place(err error) yamlpos.Pos {
 	at := e.start()
 	var fe *file.Error
 	if !errors.As(err, &fe) || fe.Line == 0 {
 		return at
 	}
-	switch v := e.value.(type) {
-	case *ast.LiteralNode:
-		// expr's lines are those of the block's text, which starts on the line after its |.
-		indent, ok := blockIndent(v)
-		if !ok {
-			return at
-		}
-		return yamlpos.Pos{Line: at.Line + fe.Line, Column: indent + 1 + fe.Column}
-	case ast.ScalarNode:
-		written := strings.TrimSpace(v.GetToken().Origin)
-		quote := yamlpos.QuoteOf(v)
-		switch {
-		case fe.Line != 1 || strings.Contains(written, "\n"):
-			return at
-		case quote == yamlpos.Double && strings.Contains(written, `\`),
-			quote == yamlpos.Single && strings.Contains(written[1:len(written)-1], "''"):
-			return at
-		case quote != yamlpos.Plain:
-			at.Column++
-		}
-		at.Column += fe.Column
+	written, ok := yamlpos.Written(e.yaml, e.value)
+	if !ok {
+		return at
 	}
-	return at
-}
-
-// blockIndent returns the indentation of the | block v, the spaces before its first line that holds text,
-// and false for a > block or one with an indentation indicator (|2), whose text is not as written.
-func blockIndent(v *ast.LiteralNode) (int, bool) {
-	if v.Start.Value != "|" && v.Start.Value != "|-" && v.Start.Value != "|+" {
-		return 0, false
-	}
-	for line := range strings.SplitSeq(v.Value.GetToken().Origin, "\n") {
-		if strings.TrimSpace(line) != "" {
-			return len(line) - len(strings.TrimLeft(line, " ")), true
-		}
-	}
-	return 0, false
+	// expr counts lines from 1 and columns from 0.
+	return yamlpos.Pos{Line: written.Line + fe.Line - 1, Column: written.Column + fe.Column}
 }
 
 // brief words a mistake of expr on one line, without the place and snippet it draws under the message.
@@ -136,17 +101,15 @@ func brief(err error) string {
 }
 
 // text returns the value n as written: text as yamlpos.Text reads it, a number or true as its characters (1.10,
-// not 1.1), and "" for one left empty or null; false for a list or keys and values. err is floe's failure.
-func text(n ast.Node) (string, bool, error) {
-	s, ok, err := yamlpos.Text(n)
-	switch _, null := n.(*ast.NullNode); {
-	case err != nil || ok:
-		return s, ok, err //nolint:wrapcheck // floe's failure, which says what failed
-	case null:
-		return "", true, nil
+// not 1.1), and "" for one left empty or null; false for a list or keys and values.
+func text(n *yamlpos.Node) (string, bool) {
+	switch s, ok := yamlpos.Text(n); {
+	case ok:
+		return s, true
+	case n.Kind != yamlpos.Scalar:
+		return "", false
+	case n.Null:
+		return "", true
 	}
-	if _, scalar := n.(ast.ScalarNode); scalar {
-		return n.GetToken().Value, true, nil
-	}
-	return "", false, nil
+	return n.Value, true
 }

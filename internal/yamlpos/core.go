@@ -91,7 +91,7 @@ func startsNumber(text string) bool {
 // plainNumber returns how YAML 1.2 reads n when it is a plain scalar a number can start, false else.
 func plainNumber(n ast.Node) (reading, bool) {
 	tk := n.GetToken()
-	if QuoteOf(n) != Plain || !startsNumber(tk.Value) {
+	if quoteOf(n) != Plain || !startsNumber(tk.Value) {
 		return reading{kind: kindText, i: nil, f: 0, outside: false}, false
 	}
 	return read12(tk.Value), true
@@ -167,7 +167,7 @@ func (r reading) shown() string {
 // as not finite, or as an integer floe cannot hold, or that the two read otherwise, worded by how they differ,
 // with a way of writing it both read alike. Two numbers read otherwise but as octal are floe's failure.
 func numberMistake(file string, n ast.Node, want, got reading) error {
-	written, at := n.GetToken().Value, Of(n)
+	written, at := n.GetToken().Value, writtenAt(n)
 	switch {
 	case want.outside:
 		return New(file, at, "yaml_number_outside_float", written)
