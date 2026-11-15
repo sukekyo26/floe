@@ -32,8 +32,9 @@ type reading struct {
 }
 
 // core is the Core Schema of YAML 1.2.2, 10.3.2 Tag Resolution: the regular expressions of its rows, in its order,
-// as the specification writes them without the spaces it adds to be read, each matching a whole value. It is a rule
-// the specification sets, not a guess at how a parser reads.
+// as the specification writes them without the spaces it adds to be read, each matching a whole value; its null row
+// and its row of an empty value are one here, and its bool row is two, true and false, which read the same texts.
+// It is a rule the specification sets, not a guess at how a parser reads.
 var core = []struct {
 	read func(text string) reading
 	re   *regexp.Regexp

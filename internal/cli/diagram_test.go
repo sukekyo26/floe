@@ -5,6 +5,8 @@ import (
 	"path/filepath"
 	"strings"
 	"testing"
+
+	"floe/internal/i18n"
 )
 
 // floe diagram render, inspect and example: specs checked and drawn in the language asked for, every mistake of
@@ -61,10 +63,9 @@ func TestDiagram(t *testing.T) {
 	}
 	// A top that is not keys and values is refused as in a data file, at its start: one mistake a file.
 	code, _, errs = runIn(dir, env, "diagram", "inspect", "l.yaml", "t.yaml", "n.yaml")
-	told := strings.Split(strings.TrimSuffix(errs, "\n"), "\n")
-	if code != 1 || len(told) != 3 || !strings.HasPrefix(told[0], "l.yaml:2:1: ") ||
-		!strings.HasPrefix(told[1], "t.yaml:1:1: ") || !strings.HasPrefix(told[2], "n.yaml:1:1: ") {
-		t.Errorf("inspect of a top not keys and values = %d, %q", code, errs)
+	top := i18n.EnglishCatalog().Msg("yaml_top_not_keys")
+	if want := "l.yaml:2:1: " + top + "\nt.yaml:1:1: " + top + "\nn.yaml:1:1: " + top + "\n"; code != 1 || errs != want {
+		t.Errorf("inspect of a top not keys and values = %d, %q, want %q", code, errs, want)
 	}
 	// A diagram shows no spec: source is no key of it, and nothing is drawn.
 	code, page, errs := runIn(dir, env, "diagram", "render", "--no-assets", "s.yaml")
