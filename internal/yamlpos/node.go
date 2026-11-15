@@ -42,7 +42,6 @@ type Node struct {
 	flow      bool
 	unwritten bool    // a null with nothing written
 	text      *string // Text's, for a text scalar
-	entries   []*Node // the - of each item of a block sequence, for EntryKey
 	node      ast.Node
 }
 
@@ -57,7 +56,7 @@ func newNode(n ast.Node) (*Node, error) {
 	out := &Node{
 		Kind: Scalar, Pairs: nil, Items: nil, Value: "", Quote: Plain, Block: false, Folded: false, Null: false,
 		at: writtenAt(n), start: Pos{Line: tk.Position.Line, Column: tk.Position.Column}, flow: false, unwritten: false,
-		text: nil, entries: nil, node: n,
+		text: nil, node: n,
 	}
 	var err error
 	switch n := n.(type) {
@@ -66,7 +65,7 @@ func newNode(n ast.Node) (*Node, error) {
 		out.Pairs, err = newPairs(n.Values)
 	case *ast.SequenceNode:
 		out.Kind, out.flow = Sequence, n.IsFlowStyle
-		out.Items, out.entries, err = newItems(n)
+		out.Items, err = newItems(n.Values)
 	default:
 		err = out.scalar(n)
 	}
@@ -92,23 +91,16 @@ func newPairs(values []*ast.MappingValueNode) ([]Pair, error) {
 	return pairs, nil
 }
 
-// newItems returns the items of seq, and the - of each in a block sequence.
-func newItems(seq *ast.SequenceNode) (items, entries []*Node, err error) {
-	for i, v := range seq.Values {
+func newItems(values []ast.Node) ([]*Node, error) {
+	items := make([]*Node, 0, len(values))
+	for _, v := range values {
 		item, err := newNode(v)
 		if err != nil {
-			return nil, nil, err
+			return nil, err
 		}
 		items = append(items, item)
-		if !seq.IsFlowStyle && len(seq.Entries) == len(seq.Values) {
-			entries = append(entries, &Node{
-				Kind: Scalar, Pairs: nil, Items: nil, Value: "", Quote: Plain, Block: false, Folded: false, Null: false,
-				at: writtenAt(seq.Entries[i]), start: Pos{Line: 0, Column: 0}, flow: false, unwritten: false,
-				text: nil, entries: nil, node: nil,
-			})
-		}
 	}
-	return items, entries, nil
+	return items, nil
 }
 
 // scalar reads n, a scalar, into out.
@@ -156,8 +148,9 @@ func Text(n *Node) (string, bool) {
 
 // OfValue returns where the value of key is written, ~ and null too: a scalar at itself; a mapping or a sequence,
 // or a value left out, at key, the line it starts on (a mapping at its first key would read as that key's, and an
-// empty value has no text to point at); with no key (an entry of [ ]), a mapping or a sequence in { } or [ ] at its
-// { or [.
+// empty value has no text to point at). With no key, an item of a sequence is at itself: a mapping or a sequence in
+// { } or [ ] at its { or [, any other at where it starts (a mapping at its first key), as YAML 1.2 parsers do not all
+// tell where its - is.
 // LIMIT: a mistake about one key placed by the path to it (additionalProperties naming one) lands where its value
 // is: at the key for a mapping or a sequence (zz: with y: 1 below it, 3:1), at the value for a scalar (zz: 1, 3:5).
 // A data file's mistake could go to the key itself, as schema.Validate has the file's nodes, but a diagram spec's
@@ -174,23 +167,13 @@ func OfValue(key, value *Node) Pos {
 	return value.at
 }
 
-// EntryKey returns the - of the entry i of seq, where an entry left empty is; nil in a flow sequence, whose
-// entries have no -.
-func EntryKey(seq *Node, i int) *Node {
-	if i >= len(seq.entries) {
-		return nil
-	}
-	return seq.entries[i]
-}
-
 // Name returns the name of the key of p.
 func (p Pair) Name() string {
 	return p.Key.Value
 }
 
 // find follows at, keys of mappings and indexes of sequences, from root. It returns the key node of the last
-// step (the - of an entry of a block sequence; nil at root or in a flow sequence) and its value node. It
-// stops at the last node it can reach.
+// step (nil at root or for an item of a sequence) and its value node. It stops at the last node it can reach.
 func find(root *Node, at []string) (key, value *Node) {
 	value = root
 	for _, step := range at {
@@ -206,7 +189,7 @@ func find(root *Node, at []string) (key, value *Node) {
 			if err != nil || i < 0 || i >= len(value.Items) {
 				return key, value
 			}
-			key, value = EntryKey(value, i), value.Items[i]
+			key, value = nil, value.Items[i]
 		default:
 			return key, value
 		}

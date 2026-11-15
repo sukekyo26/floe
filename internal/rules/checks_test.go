@@ -52,8 +52,8 @@ func TestReadChecks(t *testing.T) {
 		{"a map", "expr: true\n", "t1/checks.yaml:1:1: write checks.yaml as a list of checks, each with expr and message (and for and field if you like)"},
 		{"a scalar item", "- true\n", "t1/checks.yaml:1:3: write checks.yaml as a list of checks, each with expr and message (and for and field if you like)"},
 		{"text as written", "- expr: true\n  message: 3\n", ""},
-		// An item that is a list or that lacks a key is told at its -, or at its { or [ in [ ].
-		{"a list item", "- [x]\n", "t1/checks.yaml:1:1: write checks.yaml as a list of checks, each with expr and message (and for and field if you like)"},
+		// An item that is a list or that lacks a key is told at itself: at its { or [ in flow, else where it starts.
+		{"a list item", "- [x]\n", "t1/checks.yaml:1:3: write checks.yaml as a list of checks, each with expr and message (and for and field if you like)"},
 		{"items in [ ]", "[[x], {expr: true}]\n", lines(
 			"t1/checks.yaml:1:2: write checks.yaml as a list of checks, each with expr and message (and for and field if you like)",
 			"t1/checks.yaml:1:7: write message in the check",
@@ -62,7 +62,7 @@ func TestReadChecks(t *testing.T) {
 			"the shape, together",
 			"- expr: doc.a\n- bogus: 1\n  expr: true\n  message: m\n- for: \"\"\n  expr: \"1 +\"\n  message: m\n- expr: [1]\n  message: m\n",
 			lines(
-				"t1/checks.yaml:1:1: write message in the check",
+				"t1/checks.yaml:1:3: write message in the check",
 				"t1/checks.yaml:2:3: bogus is not a key of a check; use for, field, expr and message",
 				"t1/checks.yaml:5:8: for is empty: write the path of the list to check, or leave for out to check the whole",
 				"t1/checks.yaml:6:12: unexpected token EOF",
@@ -117,14 +117,14 @@ func TestChecksRun(t *testing.T) {
 			"for", "- for: items\n  field: price\n  expr: item.price * item.qty < 4\n  message: line total under 4\n", items,
 			`d.yaml:5:13: line total under 4 ("4")`,
 		},
-		{"flow item", "- for: items\n  expr: item.price < 4\n  message: m\n", items, "d.yaml:5:3: m"},
+		{"flow item", "- for: items\n  expr: item.price < 4\n  message: m\n", items, "d.yaml:5:5: m"},
 		{"the whole", "- expr: doc.a > 5\n  message: a over 5\n", "a: 2\n", "d.yaml: a over 5"},
 		{"a key not there", "- field: name\n  expr: doc.name != nil\n  message: write a name\n", "a: 1\n", "d.yaml: write a name"},
 		{"an empty file", "- expr: false\n  message: m\n", "", "d.yaml: m"},
 		{
 			"a key not there in an item", "- for: items\n  field: cost\n  expr: item.cost < 10\n  message: cost under 10\n", items,
-			lines("d.yaml:4:3: cost under 10 (the check could not run: invalid operation: <nil> < int)",
-				"d.yaml:5:3: cost under 10 (the check could not run: invalid operation: <nil> < int)"),
+			lines("d.yaml:4:5: cost under 10 (the check could not run: invalid operation: <nil> < int)",
+				"d.yaml:5:5: cost under 10 (the check could not run: invalid operation: <nil> < int)"),
 		},
 		{"not true or false", "- expr: doc.a + 1\n  message: m\n", "a: 1\n", "d.yaml: m (the check could not run: invalid operation: bool(int))"},
 		{"nil", "- expr: doc.opt > 1\n  message: m\n", "a: 1\n", "d.yaml: m (the check could not run: invalid operation: <nil> > int)"},

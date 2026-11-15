@@ -268,7 +268,7 @@ func TestReadMistakes(t *testing.T) {
 		)},
 		// A look written as keys and values is told at its -, or at its { in [ ].
 		{"looks of keys and values", part(map[string]string{"part.yaml": "looks:\n  - {a: 1}\n  - b\nmarks: [{a: 1}]\n"}), lines(
-			"parts/p/part.yaml:2:3: write looks: as a list of the names of parts or looks, each as text (in quotes where YAML would read a number, true, false or null), like looks: [panel]",
+			"parts/p/part.yaml:2:5: write looks: as a list of the names of parts or looks, each as text (in quotes where YAML would read a number, true, false or null), like looks: [panel]",
 			"parts/p/part.yaml:4:1: write marks: as box (the part's box is a row with a mark at its left), items (each li of the box is one) or joined (items, a line joining each to the next)",
 		)},
 		{

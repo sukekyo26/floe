@@ -196,7 +196,7 @@ parts:
 		{"to a lane", lane("{ from: ask, to: dev }"), `s.yaml:16:28: edge "ask"→"dev": "dev" is a lane, from end to end of the graph; end the edge at a box, an icon or a group in it`},
 		{"from a lane to a lane", lane("{ from: user, to: dev }"), `s.yaml:16:19: edge "user"→"dev": "user" is a lane, from end to end of the graph; end the edge at a box, an icon or a group in it`},
 		{"from a lane to a box it holds", lane("{ from: dev, to: build }"), `s.yaml:16:28: edge "dev"→"build": both ends are group "dev" or inside it; end the edge at a box, an icon or another group outside "dev"`},
-		{"a box among the lanes", strings.Replace(lanes, "      lanes:\n", "      lanes:\n        - box: { name: z, rows: [Z] }\n", 1), "s.yaml:7:9: missing property 'nodes'\ns.yaml:7:11: additional properties 'box' not allowed"},
+		{"a box among the lanes", strings.Replace(lanes, "      lanes:\n", "      lanes:\n        - box: { name: z, rows: [Z] }\n", 1), "s.yaml:7:11: additional properties 'box' not allowed\ns.yaml:7:11: missing property 'nodes'"},
 		{"to a group in a lane", lane("{ from: ask, to: tools }"), ""},
 		{"nodes beside lanes", strings.Replace(lanes, "      edges:\n", "      nodes:\n        - box: { name: z, rows: [Z] }\n      edges:\n", 1), `s.yaml:14:7: additional properties 'nodes' not allowed`},
 		{
@@ -267,7 +267,7 @@ func TestGraphBlame(t *testing.T) {
 		},
 	} {
 		lines := strings.Count(c.graph, "\n") + 1
-		if _, got := draw(t, c.graph+c.part, inspect); got != strings.ReplaceAll(fmt.Sprintf("s.yaml:%d:3: ", lines)+c.want, "@", fmt.Sprintf("s.yaml:%d:3", lines)) {
+		if _, got := draw(t, c.graph+c.part, inspect); got != strings.ReplaceAll(fmt.Sprintf("s.yaml:%d:5: ", lines)+c.want, "@", fmt.Sprintf("s.yaml:%d:5", lines)) {
 			t.Errorf("%s:\n  told %q\n  want at line %d %q", c.name, got, lines, c.want)
 		}
 		// The part by hand first, at line 3, and the graph after it: told at the same part, its words in the order
@@ -275,7 +275,7 @@ func TestGraphBlame(t *testing.T) {
 		first := "title: T\nparts:\n" + c.part + strings.TrimPrefix(c.graph, "title: T\nparts:\n")
 		_, got := draw(t, first, inspect)
 		told := strings.Split(got, "\n")
-		if len(told) != strings.Count(c.want, "\n")+1 || slices.ContainsFunc(told, func(s string) bool { return !strings.HasPrefix(s, "s.yaml:3:3: ") }) {
+		if len(told) != strings.Count(c.want, "\n")+1 || slices.ContainsFunc(told, func(s string) bool { return !strings.HasPrefix(s, "s.yaml:3:5: ") }) {
 			t.Errorf("%s, written first:\n  told %q\n  want each at line 3", c.name, got)
 		}
 	}
@@ -515,7 +515,7 @@ parts:
       edges:
         - { from: a, to: b, level: true }
         - { from: a, to: b }
-`, `s.yaml:11:9: edge "a"→"b": "a" and "b" stand in one rank by level edges, so this edge cannot run from one rank to another; end it elsewhere, or drop level from the edges joining them`},
+`, `s.yaml:11:11: edge "a"→"b": "a" and "b" stand in one rank by level edges, so this edge cannot run from one rank to another; end it elsewhere, or drop level from the edges joining them`},
 		{"a box of the block written between", `title: T
 parts:
   - graph:
@@ -904,7 +904,7 @@ func TestGraphHeadRoomByHand(t *testing.T) {
 	const src = "width: 500\nheight: 300\ntitle: T\nparts:\n  - graph:\n      x: 20\n      y: 60\n      nodes:\n" +
 		"        - group: { name: g, label: A long heading of the frame here, nodes: [{ box: { name: a, rows: [a] } }] }\n" +
 		"  - edge: { from: [300, 0], to: a%s }\n"
-	want := `s.yaml:10:3: edge [300,0]→"a" runs through the heading of frame "g"; move one of them, or go round it by via`
+	want := `s.yaml:10:5: edge [300,0]→"a" runs through the heading of frame "g"; move one of them, or go round it by via`
 	if _, told := draw(t, fmt.Sprintf(src, ""), inspect); told != want {
 		t.Errorf("told %q, want %q", told, want)
 	}
