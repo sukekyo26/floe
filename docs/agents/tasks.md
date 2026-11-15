@@ -32,7 +32,7 @@ None of these writes anything.
 
 | Command | Prints |
 |---|---|
-| `floe task` | The open tasks (`todo` and `doing`) of the working directory's project, the latest change first, a line each |
+| `floe task` | The open tasks (`todo` and `doing`) of the working directory's project, the latest change first (made, a field changed, or a page come to it or moved to another of its categories), a line each |
 | `floe task --project app` | Those of another project; `--project ""` for pages of no project |
 | `floe task --task "#130"` | One task, of any state |
 | `floe task --slug design-notes` | The page's task with its project, category and pin |
@@ -114,7 +114,7 @@ floe checks the whole command before it writes, so a refused command writes noth
 
 ## What it prints
 
-Each task and page written is printed on a line of its own, as the store left it: a task `made` (it had no row), `changed` or `unchanged` (a field was given, its value as it was), then each page with its task, category and pin, and, when it left a task, the task and category it was on.
+Each task and page written is printed on a line of its own, as the store left it: a task `made` (it had no row), `changed` (a field changed, or a page came to it or moved to another of its categories) or `unchanged` (a field was given, its value as it was), then each page with its task, category and pin, and, when it left a task, the task and category it was on.
 
 ```text
 $ floe task --slug api-notes --task "#132" --title "API notes"

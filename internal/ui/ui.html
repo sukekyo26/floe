@@ -3763,7 +3763,7 @@
     drawChips(pinned, pins);
   }
 
-  // Tasks by when their state last changed, the latest first, then by name
+  // Tasks by when they were last written (a page come to one too), the latest first, then by name
   const taskOrder = (x, y) => Date.parse(y.at) - Date.parse(x.at) || x.name.localeCompare(y.name, LANG);
 
   // The projects there are for the task list: of its tasks, and of the pages pinned
@@ -3789,7 +3789,7 @@
   }
   let projectKept = false;
   let borrowed = false;
-  // The project the task list opens with no project named: the one kept while it is there, or where a task in progress changed last, or the
+  // The project the task list opens with no project named: the one kept while it is there, or where a task in progress was written last, or the
   // shelf's first. Unreadable, tasks are not known, so that only what was kept can be said
   function openingProject(tasks, there, ranks) {
     const kept = keptProject();

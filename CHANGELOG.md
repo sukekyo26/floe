@@ -6,6 +6,10 @@ adheres to [Semantic Versioning](https://semver.org/).
 
 ## [Unreleased]
 
+### Changed
+
+- `floe task` and the task list put first the task changed last: a field changed, or a page put on it or moved to another of its categories, not only its state; the time a task shows is of that change.
+
 ## [0.1.0] - 2026-11-16
 
 ### Added
