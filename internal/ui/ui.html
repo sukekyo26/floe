@@ -5702,6 +5702,7 @@
   // the row after it, its category's add button, or the task's edit button
   // LIMIT: a page's write has no rev, so the way back writes over what was written to the page since, as the archive's does. Give page writes a rev if that comes to trouble someone
   // LIMIT: put on another task since, the page is moved back unasked, the toast not saying the task it left. Ask and say it as Set the task does if that comes to trouble someone
+  // LIMIT: a write of the screen's own since, a page put on the task say, refuses it too. Take back the screen's own writes too if that comes to trouble someone
   async function takePageOff(a, back) {
     const name = a.task.name;
     const category = a.task.category ?? '';

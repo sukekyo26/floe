@@ -9,7 +9,7 @@ adheres to [Semantic Versioning](https://semver.org/).
 ### Changed
 
 - Change the task mode's ask in `floe guide`: agents ask the user in a dialog of choices (a reply of only the question where they have none) which task to put each new page on, the first two open tasks, a new task or none, then which of its categories.
-- Change the order of `floe task` and the task list: the task changed last comes first, a field changed or a page put on it or moved to another of its categories, not only its state; the time a task shows is of that change.
+- Change the order of `floe task` and the task list: the task changed last comes first, a field changed or a page put on it or moved to another of its categories, not only its state; the time a task shows is of that change. `floe task --slug … --task …` now tells such a task `changed` on a line of its own when the page alone was written.
 
 ### Fixed
 

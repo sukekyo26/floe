@@ -499,7 +499,8 @@ func withURLs(urls []string, ed URLsEdit) []string {
 
 // TaskWritten is a task's row as ChangeTasks left it, under the project (ProjectKey) and name tasks.json keys it by,
 // which a screen puts in place of the row it read. Made is whether the task had no row before this write, and Wrote
-// whether its row was written: not when it came out as it was, unless a parent was made with it.
+// whether its row was written: not when it came out as it was, unless a parent was made with it or a page came to it
+// or changed its category on it.
 type TaskWritten struct {
 	TaskProject string `json:"taskProject"`
 	Task        string `json:"task"`

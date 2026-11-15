@@ -57,7 +57,7 @@ func (ed TaskEdit) makesRow() bool {
 // ChangeTasks writes w under one lock: the pages are read, each one's task as it comes to be, and the tasks it comes to
 // be on (the task named without pages), are checked, and only then tasks.json and the pages' meta.json are written, in
 // that order, so that a refusal writes nothing, and a task a page names always has a row and the page's category among
-// its categories. A row that changes moves its Rev on.
+// its categories. A row that changes, or that a page comes to or changes its category on, moves its At and Rev on.
 // LIMIT: a row written by hand keeps its Rev, and one forgotten and made again starts it again: a screen that read it
 // before may write over it. Count them apart if hand edits come to be done while screens are open
 func (s *Store) ChangeTasks(w TaskChange) (TaskChangeResult, error) {
