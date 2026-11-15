@@ -145,8 +145,8 @@ func TestParseLibraryWords(t *testing.T) {
 }
 
 // A byte order mark past the start and a byte that is no UTF-8 are refused where they are, the one and the
-// other together and before goccy/go-yaml reads the file: it would read them as characters of a key or a value,
-// or fail on them in its own words. The mark is refused in quotes and comments too; an escape of it is no mark.
+// other together and before go.yaml.in/yaml/v4 reads the file, which would read a mark as a character of a key
+// or a value. The mark is refused in quotes and comments too; an escape of it is no mark.
 // The first byte that is no UTF-8 is told once, a U+FFFD written in UTF-8 being a character.
 func TestParseMarksAndUTF8(t *testing.T) {
 	t.Parallel()
@@ -341,8 +341,7 @@ func TestFind(t *testing.T) {
 		{[]string{"g"}, yamlpos.Pos{Line: 9, Column: 1}},
 		{[]string{"i", "0"}, yamlpos.Pos{Line: 11, Column: 5}},
 		{[]string{"i", "0", "k"}, yamlpos.Pos{Line: 11, Column: 8}},
-		// An empty entry of a flow sequence is where it is written: goccy/go-yaml gives a flow sequence entries
-		// too, whose token is the , before each, nil for the first, not the entry.
+		// An empty entry of a flow sequence is where it is written.
 		{[]string{"e", "0"}, yamlpos.Pos{Line: 7, Column: 5}},
 		{[]string{"e", "2"}, yamlpos.Pos{Line: 7, Column: 11}},
 	} {
@@ -405,8 +404,7 @@ func TestOfValue(t *testing.T) {
 }
 
 // A value is placed at its first character as textpos counts it: after a tab, with spaces after it at a line's
-// end, after a comment or quotes over CRLF lines, after \x (goccy/go-yaml placed each of these off), and
-// go.yaml.in/yaml/v4's own mistakes too.
+// end, after a comment or quotes over CRLF lines, after \x; go.yaml.in/yaml/v4's own mistakes too.
 func TestParsePlaces(t *testing.T) {
 	t.Parallel()
 
@@ -697,7 +695,8 @@ func TestParseNullItems(t *testing.T) {
 		{"a:\n  - -\n", []string{"a", "0", "0"}, yamlpos.Pos{Line: 2, Column: 6}},
 		{
 			"template: report\r\nlang: en\r\ntitle: 'x\r\n\r\n  y'\r\nsections:\r\n  - heading: h\r\n    parts:\r\n      -\r\n      - text: a\r\n",
-			[]string{"sections", "0", "parts", "0"}, yamlpos.Pos{Line: 9, Column: 8},
+			[]string{"sections", "0", "parts", "0"},
+			yamlpos.Pos{Line: 9, Column: 8},
 		},
 	} {
 		body, err := yamlpos.Parse("a.yaml", []byte(tt.src))

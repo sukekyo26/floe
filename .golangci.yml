@@ -141,14 +141,16 @@ linters:
           deny:
             - pkg: "log"
               desc: "use log/slog instead of the standard log package"
-        goccy-in-yamlpos:
+        yaml-in-yamlpos:
           list-mode: lax
           files:
             - "$all"
             - "!**/internal/yamlpos/**"
           deny:
-            - pkg: "github.com/goccy/go-yaml"
+            - pkg: "go.yaml.in/yaml"
               desc: "read YAML through internal/yamlpos, which reads it as YAML 1.2 does, past a byte order mark, into its own Node"
+            - pkg: "github.com/goccy/go-yaml"
+              desc: "floe reads YAML with go.yaml.in/yaml/v4, through internal/yamlpos"
         jsonschema-in-schema:
           list-mode: lax
           files:

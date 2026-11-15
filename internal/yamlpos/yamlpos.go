@@ -176,8 +176,9 @@ func notUTF8(file string, src []byte) error {
 }
 
 // bytesOf refuses, together, each byte order mark of src past its start (src is without the first), and either
-// the first byte that is no UTF-8 or, in UTF-8 alone, each U+0085, U+2028 and U+2029: goccy/go-yaml reads a mark
-// as a character of a key or a value, and a byte that is no UTF-8 as U+FFFD, or fails on them where it does not.
+// the first byte that is no UTF-8 or, in UTF-8 alone, each U+0085, U+2028 and U+2029. A mark past the start would be
+// read as a character of a key or a value. go.yaml.in/yaml/v4 reads UTF-16 with a mark without a mistake, which
+// floe's checks of bytes and places, all of UTF-8, would miss: a byte that is no UTF-8 is refused before it reads.
 // The three characters are looked for only in UTF-8: in another encoding (Shift_JIS) their bytes come inside
 // other characters, and would be told where no such character is.
 func bytesOf(file string, src []byte) error {
@@ -234,7 +235,7 @@ func (w *walk) node(n *yaml.Node) {
 		}
 	case yaml.ScalarNode:
 		w.number(n)
-	case yaml.DocumentNode, yaml.AliasNode:
+	case yaml.DocumentNode, yaml.AliasNode, yaml.StreamNode:
 	}
 }
 

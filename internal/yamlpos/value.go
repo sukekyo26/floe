@@ -2,8 +2,8 @@ package yamlpos
 
 // Decode returns the value of n, a node Parse returned: keys and values as map[string]any, items as []any, and a
 // scalar as YAML 1.2's core schema reads it (core): a plain one as null (nil), true or false, a whole number (int,
-// or uint64 past int64), a float64, or else text; one in quotes or a | or > text as text. goccy/go-yaml's and
-// YAML 1.1's readings (a date, 017 as octal) are not taken.
+// or uint64 past int64), a float64, or else text; one in quotes or a | or > text as text. go.yaml.in/yaml/v4's
+// tags, which keep readings of YAML 1.1 (017 as octal, a date), are not taken.
 func Decode(n *Node) any {
 	switch n.Kind {
 	case Mapping:

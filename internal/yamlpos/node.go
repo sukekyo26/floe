@@ -64,7 +64,7 @@ func newNode(n *yaml.Node) *Node {
 		for _, item := range n.Content {
 			out.Items = append(out.Items, newNode(item))
 		}
-	case yaml.ScalarNode, yaml.DocumentNode, yaml.AliasNode:
+	case yaml.ScalarNode, yaml.DocumentNode, yaml.AliasNode, yaml.StreamNode:
 		r := read12(n.Value)
 		out.Value, out.Style, out.unwritten = n.Value, styleOf(n), unwritten(n)
 		out.Null = out.Style == Plain && r.kind == kindNull
@@ -98,8 +98,8 @@ func Text(n *Node) (string, bool) {
 // is: at the key for a mapping or a sequence (zz: with y: 1 below it, 3:1), at the value for a scalar (zz: 1, 3:5).
 // A data file's mistake could go to the key itself, as schema.Validate has the file's nodes, but a diagram spec's
 // comes as a JSON pointer (schema.ValidateAt), which cannot name a key apart from its value: both are placed alike.
-// LIMIT: a pair in [ ] written without { } (a: [b: 1]) is a mapping goccy/go-yaml reads as not in flow style, with no
-// { to point at: it is placed at its first key, which is where it starts too.
+// A pair in [ ] written without { } (a: [b: 1]) is a mapping in flow style with no { to point at: it is placed where
+// it starts, at its key.
 func OfValue(key, value *Node) Pos {
 	switch {
 	case key != nil && (value.Kind != Scalar || value.unwritten):
@@ -159,8 +159,7 @@ func Locate(root *Node, at []string) (Pos, *Node) {
 // any other. The characters of src are only compared with the value read, which tells where they are: nothing is
 // judged by reading src.
 // LIMIT: a value whose characters are not written as read is not placed inside: an escape in double quotes, two
-// single quotes, a value over lines, a > text, a | text whose indentation is text too, a plain value goccy/go-yaml
-// reads without its tabs, and any value of a file whose places goccy/go-yaml counts otherwise (starts). Map the
+// single quotes, a value over lines, a > text, and a | text whose indentation is text too. Map the
 // characters read to those written if a place inside such a value comes to matter.
 func Written(src []byte, n *Node) (Pos, bool) {
 	none := Pos{Line: 0, Column: 0}
