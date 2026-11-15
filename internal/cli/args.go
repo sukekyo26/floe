@@ -132,10 +132,10 @@ func entryOf(p arg) entry {
 // for letter, case too. When either directory cannot be read, one absolute path. Whether two names are one file
 // is left to what writes it (render's targetAt asks the system).
 // LIMIT: on a file system that ignores case (macOS, a casefold directory on Linux, exFAT, WSL's drvfs), one file
-// named twice in two cases is read as two, as names in NFC and NFD are: check tells its mistakes twice, and render
-// writes it twice when its page is not there yet (the later title kept when the titles come from the names), else
-// refuses with cli_render_same_file, whose "rename one of them" does not fit. Read the directory's names to ask
-// the system if such command lines come up.
+// named twice in two cases is read as two, as names in NFC and NFD are: check tells its mistakes and warnings
+// twice, diagram render draws it twice, and render, when its page is not there yet, draws it twice and writes it
+// again only when the titles come from the names and differ, else refuses with cli_render_same_file, whose "rename
+// one of them" does not fit. Read the directory's names to ask the system if such command lines come up.
 func (e entry) same(o entry) bool {
 	if e.dir == nil || o.dir == nil {
 		return e.abs == o.abs
