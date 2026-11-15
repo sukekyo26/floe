@@ -69,30 +69,37 @@ func TestTaskWrite(t *testing.T) {
 	if row.Title != "T" || row.At == long {
 		t.Errorf("after a title: %+v", row)
 	}
-	// The same state leaves its time.
-	at := row.At
+	// The time put back by hand before each, so that a write in the same millisecond is not taken for none: the same
+	// state leaves it, another state alone moves it.
+	aged := func() {
+		t.Helper()
+		hand := fmt.Sprintf(`{"p": {"#1": {"title": "T", "state": "doing", "at": %q, "parent": "#0"}}}`, long)
+		if err := os.WriteFile(filepath.Join(root, "tasks.json"), []byte(hand), 0o600); err != nil {
+			t.Fatal(err)
+		}
+	}
+	aged()
 	if _, err := editTask(s, "p", "#1", store.TaskEdit{State: ptr("doing")}); err != nil {
 		t.Fatal(err)
 	}
-	if row = taskIn(t, s, "p"); row.At != at {
+	if row = taskIn(t, s, "p"); row.At != long {
 		t.Errorf("after the same state: %+v", row)
 	}
-	// Of an hour no write makes again, so that a write in the same millisecond is not taken for none.
-	hand = fmt.Sprintf(`{"p": {"#1": {"title": "T", "state": "doing", "at": %q, "parent": "#0"}}}`, long)
-	if err := os.WriteFile(filepath.Join(root, "tasks.json"), []byte(hand), 0o600); err != nil {
+	aged()
+	if _, err := editTask(s, "p", "#1", store.TaskEdit{State: ptr("done")}); err != nil {
 		t.Fatal(err)
 	}
+	if row = taskIn(t, s, "p"); row.State != "done" || row.At == long {
+		t.Errorf("the state's time stayed: %+v", row)
+	}
 	if _, err := editTask(s, "p", "#1", store.TaskEdit{
-		State: ptr("done"), URLs: &store.URLsEdit{Add: []string{"HTTPS://example.com/a"}}, Categories: ptr([]string{" 設計", "実装", "", "設計"}),
+		URLs: &store.URLsEdit{Add: []string{"HTTPS://example.com/a"}}, Categories: ptr([]string{" 設計", "実装", "", "設計"}),
 	}); err != nil {
 		t.Fatal(err)
 	}
 	row = taskIn(t, s, "p")
 	if row.State != "done" || row.Parent != "#0" || !slices.Equal(row.URLs, []string{"HTTPS://example.com/a"}) || !slices.Equal(row.Categories, []string{"設計", "実装"}) {
 		t.Errorf("after the state: %+v", row)
-	}
-	if row.At == long {
-		t.Error("the state's time stayed")
 	}
 	if _, err := editTask(s, "p", "#1", store.TaskEdit{URLs: &store.URLsEdit{Remove: []string{"HTTPS://example.com/a"}}, Categories: ptr([]string{""})}); err != nil {
 		t.Fatal(err)
