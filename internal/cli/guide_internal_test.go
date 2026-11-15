@@ -468,8 +468,9 @@ func (u *unquoted) scalar(n *yamlpos.Node) {
 		}
 	case !isText:
 	default:
-		// Written tells a value on one line, but not one with two single quotes, which passes here, nor one with an
-		// escape in double quotes, which is told as written over lines.
+		// Written tells a value on one line; one with an escape in double quotes is told as written over lines.
+		// LIMIT: a value with two single quotes passes, written over lines too ('it''s, then "  over lines'), as
+		// Written does not place it; tell its lines otherwise if the guide comes to show such a value.
 		if _, oneLine := yamlpos.Written(u.src, n); !oneLine && !strings.Contains(text, "'") {
 			u.report(n, "write a text on one line in '...', or over lines as a | block")
 		}
