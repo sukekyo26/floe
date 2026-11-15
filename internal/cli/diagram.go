@@ -6,12 +6,10 @@ import (
 	"strings"
 	"sync"
 
-	"github.com/goccy/go-yaml/ast"
 	"github.com/spf13/cobra"
 
 	"floe/docs"
 	"floe/internal/diagram"
-	"floe/internal/doc"
 	"floe/internal/draw"
 	"floe/internal/i18n"
 	"floe/internal/kit"
@@ -177,13 +175,13 @@ func diagramOf(d *diagram.Drawer, p arg, o diagram.Options) (string, error) {
 	if err != nil {
 		return "", err
 	}
-	svg, err := d.Draw(doc.Ints(v), o)
+	svg, err := d.Draw(v, o)
 	return string(svg), yamlpos.Place(err, p.name, root, nil) //nolint:wrapcheck // mistakes placed
 }
 
 // specOf reads the file p as doc.Read reads a data file: a file of nothing is a spec of nothing, whose lacks the schema
 // tells.
-func specOf(p arg) ([]byte, *ast.MappingNode, map[string]any, error) {
+func specOf(p arg) ([]byte, *yamlpos.Node, map[string]any, error) {
 	src, err := p.read()
 	if err != nil {
 		return nil, nil, nil, err
@@ -205,7 +203,7 @@ func inspectFile(d *diagram.Drawer, own func() (*kit.Kit, error), p arg, o diagr
 		return "", err
 	}
 	if _, isData := v["template"]; !isData {
-		got, mistakes := d.Inspect(doc.Ints(v), o)
+		got, mistakes := d.Inspect(v, o)
 		pos, _ := yamlpos.Locate(root, nil)
 		//nolint:wrapcheck // mistakes placed
 		return placedAt(p.name, pos, got), yamlpos.Place(mistakes, p.name, root, nil)

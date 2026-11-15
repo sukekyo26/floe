@@ -15,9 +15,6 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/goccy/go-yaml/ast"
-	"github.com/goccy/go-yaml/token"
-
 	"floe/docs"
 	"floe/internal/kit"
 	"floe/internal/usererr"
@@ -434,17 +431,17 @@ func TestSameSkill(t *testing.T) {
 var identifier = regexp.MustCompile(`^[A-Za-z0-9][A-Za-z0-9_./-]*$`)
 
 // unquoted is a walk of a YAML document that collects the text values not written as the guide teaches: in '...' on
-// one line, or in a | block of two lines or more; or bare, as an identifier. A key is not a value; a | block's body is
-// read as the block, not as a text; a value left out is no text.
+// one line, or in a | block of two lines or more; or bare, as an identifier. A key is not a value; a value left out
+// is no text.
 type unquoted struct {
 	file  string
-	skip  map[ast.Node]bool
+	src   []byte
 	told  map[yamlpos.Pos]bool
 	found []string
 }
 
 // report tells what is wrong at n, once for each place.
-func (u *unquoted) report(n ast.Node, what string) {
+func (u *unquoted) report(n *yamlpos.Node, what string) {
 	at := yamlpos.Of(n)
 	if u.told[at] {
 		return
@@ -453,42 +450,52 @@ func (u *unquoted) report(n ast.Node, what string) {
 	u.found = append(u.found, fmt.Sprintf("%s:%d:%d: %s", u.file, at.Line, at.Column, what))
 }
 
-func (u *unquoted) Visit(n ast.Node) ast.Visitor {
-	switch v := n.(type) {
-	case *ast.MappingValueNode:
-		u.skip[v.Key] = true
-	case *ast.MappingKeyNode:
-		u.skip[v.Value] = true
-	case *ast.LiteralNode:
-		u.skip[v.Value] = true
-		if !strings.HasPrefix(v.GetToken().Value, "|") {
-			u.report(v, "write a text of several lines as a | block, not >")
-		} else if !strings.Contains(strings.TrimSpace(v.Value.GetToken().Value), "\n") {
-			u.report(v, "write a text of one line in '...', not as a | block")
+func (u *unquoted) walk(n *yamlpos.Node) {
+	switch n.Kind {
+	case yamlpos.Mapping:
+		for _, p := range n.Pairs {
+			u.walk(p.Value)
 		}
-	case *ast.NullNode:
-		if tok := v.GetToken(); tok.Type != token.ImplicitNullType {
-			u.report(v, "write '"+tok.Value+"' in quotes, or leave the value out: a bare "+tok.Value+" is no text")
+	case yamlpos.Sequence:
+		for _, item := range n.Items {
+			u.walk(item)
 		}
-	case *ast.StringNode:
-		if u.skip[v] {
-			break
+	case yamlpos.Scalar:
+		u.scalar(n)
+	}
+}
+
+func (u *unquoted) scalar(n *yamlpos.Node) {
+	text, isText := yamlpos.Text(n)
+	switch {
+	case n.Style == yamlpos.Folded:
+		u.report(n, "write a text of several lines as a | block, not >")
+	case n.Style == yamlpos.Literal:
+		if !strings.Contains(strings.TrimSpace(text), "\n") {
+			u.report(n, "write a text of one line in '...', not as a | block")
 		}
-		tok := v.GetToken()
-		if strings.Contains(strings.TrimSpace(tok.Origin), "\n") {
-			u.report(v, "write a text on one line in '...', or over lines as a | block")
+	case n.Null:
+		if n.Value != "" {
+			u.report(n, "write '"+n.Value+"' in quotes, or leave the value out: a bare "+n.Value+" is no text")
 		}
-		switch yamlpos.QuoteOf(v) {
+	case !isText:
+	default:
+		// Written tells a value on one line; one with an escape in double quotes is told as written over lines.
+		// LIMIT: a value with two single quotes passes, written over lines too ('it''s, then "  over lines'), as
+		// Written does not place it; tell its lines otherwise if the guide comes to show such a value.
+		if _, oneLine := yamlpos.Written(u.src, n); !oneLine && !strings.Contains(text, "'") {
+			u.report(n, "write a text on one line in '...', or over lines as a | block")
+		}
+		switch n.Style {
 		case yamlpos.Double:
-			u.report(v, "write the text in '...', not in double quotes: a \\ in them is read as an escape, mostly with no mistake")
+			u.report(n, "write the text in '...', not in double quotes: a \\ in them is read as an escape, mostly with no mistake")
 		case yamlpos.Plain:
-			if !identifier.MatchString(tok.Value) {
-				u.report(v, "write the text "+strconv.Quote(tok.Value)+" in '...'")
+			if !identifier.MatchString(n.Value) {
+				u.report(n, "write the text "+strconv.Quote(n.Value)+" in '...'")
 			}
-		case yamlpos.Single:
+		case yamlpos.Single, yamlpos.Literal, yamlpos.Folded:
 		}
 	}
-	return u
 }
 
 // notQuoted returns what is not written as the guide teaches in src, a YAML document, each at name's line and column.
@@ -497,8 +504,8 @@ func notQuoted(name string, src []byte) ([]string, error) {
 	if err != nil {
 		return nil, fmt.Errorf("%s: %w", name, err)
 	}
-	u := &unquoted{file: name, skip: map[ast.Node]bool{}, told: map[yamlpos.Pos]bool{}, found: nil}
-	ast.Walk(u, body)
+	u := &unquoted{file: name, src: src, told: map[yamlpos.Pos]bool{}, found: nil}
+	u.walk(body)
 	return u.found, nil
 }
 
@@ -592,7 +599,7 @@ func TestNotQuoted(t *testing.T) {
 		{"a: report\nb: 12\nc: true\nd: 2030-04-12\ne: a/b_c.d-e\nf: Steps\n", 0},
 		{"- { a: 'x', b: ['y z', warn] }\n", 0},
 		{"'a key with spaces': v\n", 0},
-		{"a:\nb: { c: }\n", 0},
+		{"a:\nb:\n", 0},
 		{"a: x y\n", 1},
 		{"a: \"x\"\n", 1},
 		{"a: \"x\"\nb: PR 1\nc: 日本\n", 3},

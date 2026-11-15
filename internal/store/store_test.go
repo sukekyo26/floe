@@ -517,6 +517,44 @@ func TestPrepareLink(t *testing.T) {
 	}
 }
 
+// A linked data file that grew over the size floe reads is still listed, without the title it cannot read.
+func TestListLinkTooLarge(t *testing.T) {
+	t.Parallel()
+
+	s, root := newStore(t)
+	home := filepath.Dir(root)
+	dir := filepath.Join(home, "proj")
+	if err := os.MkdirAll(dir, 0o700); err != nil {
+		t.Fatal(err)
+	}
+	file := filepath.Join(dir, "d.yaml")
+	if err := os.WriteFile(file, []byte(titled("Small")), 0o600); err != nil {
+		t.Fatal(err)
+	}
+	if err := os.WriteFile(filepath.Join(dir, "a.png"), png, 0o600); err != nil {
+		t.Fatal(err)
+	}
+	e, err := s.PrepareLink(t.Context(), picKit(t, "", ""), file, store.Options{}, "", home)
+	if err != nil {
+		t.Fatal(told(err, root))
+	}
+	if err = s.Save(e); err != nil {
+		t.Fatal(err)
+	}
+	big := titled("Big")
+	big += "#" + strings.Repeat("x", 1<<20-len(big)) + "\n"
+	if err = os.WriteFile(file, []byte(big), 0o600); err != nil {
+		t.Fatal(err)
+	}
+	list, err := s.List("local")
+	if err != nil || len(list) != 1 {
+		t.Fatalf("List = %+v, %v", list, err)
+	}
+	if l := list[0]; l.Title == "Big" || l.Missing == nil || *l.Missing {
+		t.Errorf("listed %q, missing %v; want no title of the file, not missing", l.Title, l.Missing)
+	}
+}
+
 // Owners: a page of another file (of another repository, at the same path), or a link of another file, is refused
 // without --force; a page and a link
 // do not take each other's slug.

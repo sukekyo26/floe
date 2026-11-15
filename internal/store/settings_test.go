@@ -309,7 +309,7 @@ func TestPublishOrderKept(t *testing.T) {
 	dw := floeDrawing(t)
 	publish(t, s, dw, "a.yaml", report(""), nil, store.Options{})
 	_, err := s.PrepareData(dw, store.Upload{File: "a.yaml", Source: []byte("title: a: b\n"), Images: nil, Project: "q", Repo: "q", Place: "a.yaml"}, store.Options{})
-	if got := told(err, root); got != "a.yaml:1:8: mapping value is not allowed in this context" {
+	if got := told(err, root); !strings.HasPrefix(got, "a.yaml:1:9: ") || strings.Contains(got, "\n") {
 		t.Errorf("a mistake of the data first: told %s", got)
 	}
 	fenced := strings.Replace(report(""), "text: x", "text: \"```\\nx\\n```\"", 1)

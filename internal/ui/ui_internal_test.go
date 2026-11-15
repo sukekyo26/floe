@@ -9,7 +9,6 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/goccy/go-yaml/ast"
 	"golang.org/x/net/html"
 	"golang.org/x/net/html/atom"
 
@@ -76,21 +75,16 @@ func englishOfWords(t *testing.T, name, src string) string {
 	if err != nil {
 		t.Fatalf("%s: %v", name, err)
 	}
-	top, ok := body.(*ast.MappingNode)
-	if !ok {
+	if body.Kind != yamlpos.Mapping {
 		t.Fatalf("%s is not a mapping", name)
 	}
 	english := commentRe.FindAllString(src, -1)
-	for _, v := range top.Values {
-		words, ok := v.Value.(*ast.MappingNode)
-		if i18n.Tag(yamlpos.KeyName(v)) != i18n.English || !ok {
+	for _, v := range body.Pairs {
+		if i18n.Tag(v.Name()) != i18n.English || v.Value.Kind != yamlpos.Mapping {
 			continue
 		}
-		for _, w := range words.Values {
-			text, _, err := yamlpos.Text(w.Value)
-			if err != nil {
-				t.Fatalf("%s: %v", name, err)
-			}
+		for _, w := range v.Value.Pairs {
+			text, _ := yamlpos.Text(w.Value)
 			english = append(english, text)
 		}
 	}

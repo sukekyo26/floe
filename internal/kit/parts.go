@@ -10,8 +10,6 @@ import (
 	"slices"
 	"strings"
 
-	"github.com/goccy/go-yaml/ast"
-
 	"floe/internal/bom"
 	"floe/internal/rules"
 	"floe/internal/schema"
@@ -429,14 +427,12 @@ func readPartYAML(d Dir, dir string, look bool) ([]taken, string, taken, error) 
 	var looks []taken
 	var about string
 	var found usererr.List
-	for _, kv := range m.Values {
-		k := yamlpos.KeyOf(kv)
-		switch key := k.GetToken().Value; key {
+	for _, kv := range m.Pairs {
+		k := kv.Key
+		switch key := kv.Name(); key {
 		case "looks":
 			var more usererr.List
-			if looks, more, err = readLooks(file, k, kv.Value); err != nil {
-				return nil, "", marks, err
-			}
+			looks, more = readLooks(file, k, kv.Value)
 			found = append(found, more...)
 		case "description":
 			if !look {
@@ -444,15 +440,11 @@ func readPartYAML(d Dir, dir string, look bool) ([]taken, string, taken, error) 
 				continue
 			}
 			var more usererr.List
-			if about, more, err = readAbout(file, k, kv.Value, "kit_part_yaml_about"); err != nil {
-				return nil, "", marks, err
-			}
+			about, more = readAbout(file, k, kv.Value, "kit_part_yaml_about")
 			found = append(found, more...)
 		case "marks":
 			var more usererr.List
-			if marks, more, err = readMarks(file, k, kv.Value); err != nil {
-				return nil, "", marks, err
-			}
+			marks, more = readMarks(file, k, kv.Value)
 			found = append(found, more...)
 		default:
 			found = append(found, yamlpos.New(file, yamlpos.Of(k), "kit_part_yaml_key", key))
@@ -463,7 +455,7 @@ func readPartYAML(d Dir, dir string, look bool) ([]taken, string, taken, error) 
 
 // readKeys reads the YAML file name of the directory dir of d as keys and values: nil when it is missing or empty,
 // refused with the key notMap when it is not a mapping.
-func readKeys(d Dir, dir, name, notMap string) (*ast.MappingNode, error) {
+func readKeys(d Dir, dir, name, notMap string) (*yamlpos.Node, error) {
 	file := path.Join(d.Name, dir, name)
 	src, ok, err := readFile(d, dir, name)
 	if !ok || err != nil {
@@ -476,61 +468,49 @@ func readKeys(d Dir, dir, name, notMap string) (*ast.MappingNode, error) {
 	case err != nil:
 		return nil, err //nolint:wrapcheck // mistakes at their lines and columns, or floe's failure
 	}
-	m, ok := body.(*ast.MappingNode)
-	if !ok {
+	if body.Kind != yamlpos.Mapping {
 		return nil, yamlpos.New(file, yamlpos.Of(body), notMap)
 	}
-	return m, nil
+	return body, nil
 }
 
 // readAbout reads the description: the YAML file, file, gives the key k: text, refused with the key notText.
-func readAbout(file string, k, value ast.Node, notText string) (string, usererr.List, error) {
-	about, ok, err := yamlpos.Text(value)
-	if err != nil {
-		return "", nil, err //nolint:wrapcheck // floe's failure, which says what failed
-	}
+func readAbout(file string, k, value *yamlpos.Node, notText string) (string, usererr.List) {
+	about, ok := yamlpos.Text(value)
 	if !ok {
-		return "", usererr.List{yamlpos.New(file, yamlpos.OfValue(k, value), notText)}, nil
+		return "", usererr.List{yamlpos.New(file, yamlpos.OfValue(k, value), notText)}
 	}
-	return about, nil, nil
+	return about, nil
 }
 
 // markKinds are the values of part.yaml's marks:, which elements of a part are rows with a mark.
 var markKinds = []string{"box", "items", "joined"}
 
 // readMarks reads the marks: part.yaml, file, gives the key k: one of markKinds.
-func readMarks(file string, k, value ast.Node) (taken, usererr.List, error) {
+func readMarks(file string, k, value *yamlpos.Node) (taken, usererr.List) {
 	marks := taken{name: "", file: file, at: yamlpos.Of(k)}
-	name, ok, err := yamlpos.Text(value)
-	if err != nil {
-		return marks, nil, err //nolint:wrapcheck // floe's failure, which says what failed
-	}
+	name, ok := yamlpos.Text(value)
 	if !ok || !slices.Contains(markKinds, name) {
-		return marks, usererr.List{yamlpos.New(file, yamlpos.OfValue(k, value), "kit_part_yaml_marks")}, nil
+		return marks, usererr.List{yamlpos.New(file, yamlpos.OfValue(k, value), "kit_part_yaml_marks")}
 	}
 	marks.name = name
-	return marks, nil, nil
+	return marks, nil
 }
 
 // readLooks reads the looks part.yaml, file, gives the key k: a list of names, each text, as a key is (YAML
 // would read a name of digits, 1.10, as the number 1.1); or floe's failure.
-func readLooks(file string, k, value ast.Node) ([]taken, usererr.List, error) {
-	seq, ok := value.(*ast.SequenceNode)
-	if !ok {
-		return nil, usererr.List{yamlpos.New(file, yamlpos.OfValue(k, value), "kit_part_yaml_looks")}, nil
+func readLooks(file string, k, value *yamlpos.Node) ([]taken, usererr.List) {
+	if value.Kind != yamlpos.Sequence {
+		return nil, usererr.List{yamlpos.New(file, yamlpos.OfValue(k, value), "kit_part_yaml_looks")}
 	}
-	looks := make([]taken, 0, len(seq.Values))
+	looks := make([]taken, 0, len(value.Items))
 	var found usererr.List
-	for i, v := range seq.Values {
-		name, ok, err := yamlpos.Text(v)
-		switch {
-		case err != nil:
-			return nil, nil, err //nolint:wrapcheck // floe's failure, which says what failed
-		case !ok || name == "":
-			found = append(found, yamlpos.New(file, yamlpos.OfValue(yamlpos.EntryKey(seq, i), v), "kit_part_yaml_looks"))
-		default:
+	for _, v := range value.Items {
+		if name, ok := yamlpos.Text(v); ok && name != "" {
 			looks = append(looks, taken{name: name, file: file, at: yamlpos.Of(v)})
+			continue
 		}
+		found = append(found, yamlpos.New(file, yamlpos.OfValue(nil, v), "kit_part_yaml_looks"))
 	}
-	return looks, found, nil
+	return looks, found
 }

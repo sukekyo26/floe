@@ -4,8 +4,6 @@ import (
 	"errors"
 	"testing"
 
-	"github.com/goccy/go-yaml/ast"
-
 	"floe/internal/i18n"
 	"floe/internal/usererr"
 	"floe/internal/yamlpos"
@@ -20,7 +18,7 @@ func TestPlace(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	root, _ := body.(*ast.MappingNode) //nolint:errcheck // keys and values just above
+	root := body
 	err = usererr.Collect(
 		usererr.NewIn("", "#/parts/0/box/x", "library", "bad x"),
 		usererr.NewIn("", "#/a~1b", "library", "bad a/b"),

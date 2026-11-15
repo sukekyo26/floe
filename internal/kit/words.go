@@ -4,8 +4,6 @@ import (
 	"cmp"
 	"errors"
 
-	"github.com/goccy/go-yaml/ast"
-
 	"floe/internal/i18n"
 	"floe/internal/usererr"
 	"floe/internal/yamlpos"
@@ -27,22 +25,18 @@ func readWords(file string, src []byte) (words, error) {
 	case err != nil:
 		return nil, err //nolint:wrapcheck // mistakes at their lines and columns, or floe's failure
 	}
-	top, ok := body.(*ast.MappingNode)
-	if !ok {
+	if body.Kind != yamlpos.Mapping {
 		return nil, yamlpos.New(file, yamlpos.Of(body), "kit_words_yaml")
 	}
 	w := words{}
 	var tags []string
 	var found usererr.List
-	for _, v := range top.Values {
-		key := yamlpos.KeyOf(v)
-		tag := key.GetToken().Value
+	for _, v := range body.Pairs {
+		key := v.Key
+		tag := v.Name()
 		tags = append(tags, tag)
 		// Its words are read whatever else is wrong, so that their mistakes are told in the same run.
-		ws, more, err := readLang(file, tag, key, v.Value)
-		if err != nil {
-			return nil, err
-		}
+		ws, more := readLang(file, tag, key, v.Value)
 		found = append(found, more...)
 		if first := i18n.Again(tags, len(tags)-1); first != "" {
 			// A tag's case and _ mean nothing to the lookup: EN after en would take its place unseen.
@@ -57,28 +51,22 @@ func readWords(file string, src []byte) (words, error) {
 	return w, nil
 }
 
-// readLang reads n, the words of the language tag written as key: names and their text, or floe's failure.
-func readLang(file, tag string, key, n ast.Node) (map[string]string, usererr.List, error) {
-	m, ok := n.(*ast.MappingNode)
-	if !ok {
-		return nil, usererr.List{yamlpos.New(file, yamlpos.OfValue(key, n), "kit_words_lang_not_mapping", tag)}, nil
+// readLang reads n, the words of the language tag written as key: names and their text.
+func readLang(file, tag string, key, n *yamlpos.Node) (map[string]string, usererr.List) {
+	if n.Kind != yamlpos.Mapping {
+		return nil, usererr.List{yamlpos.New(file, yamlpos.OfValue(key, n), "kit_words_lang_not_mapping", tag)}
 	}
 	ws := map[string]string{}
 	var found usererr.List
-	for _, v := range m.Values {
-		name := yamlpos.KeyName(v)
-		text, ok, err := yamlpos.Text(v.Value)
-		switch {
-		case err != nil:
-			return nil, nil, err //nolint:wrapcheck // floe's failure, which says what failed
-		case ok:
+	for _, v := range n.Pairs {
+		name := v.Name()
+		if text, ok := yamlpos.Text(v.Value); ok {
 			ws[name] = text
-		default:
-			at := yamlpos.OfValue(yamlpos.KeyOf(v), v.Value)
-			found = append(found, yamlpos.New(file, at, "kit_words_not_text", tag, name))
+			continue
 		}
+		found = append(found, yamlpos.New(file, yamlpos.OfValue(v.Key, v.Value), "kit_words_not_text", tag, name))
 	}
-	return ws, found, nil
+	return ws, found
 }
 
 // lang returns the language of w a page of the language tag, as i18n.Tag reads it, is drawn in: the first of

@@ -141,18 +141,16 @@ linters:
           deny:
             - pkg: "log"
               desc: "use log/slog instead of the standard log package"
-        # Tests are left out: they read YAML to check their own inputs, not a data file floe reads.
-        goccy-in-yamlpos:
+        yaml-in-yamlpos:
           list-mode: lax
           files:
             - "$all"
-            - "!$test"
             - "!**/internal/yamlpos/**"
-          allow:
-            - "github.com/goccy/go-yaml/ast$"
           deny:
+            - pkg: "go.yaml.in/yaml"
+              desc: "read YAML through internal/yamlpos, which reads it as YAML 1.2 does, past a byte order mark, into its own Node"
             - pkg: "github.com/goccy/go-yaml"
-              desc: "read YAML through internal/yamlpos, which reads it as YAML 1.2 does, past a byte order mark; outside it use only goccy's ast"
+              desc: "floe reads YAML with go.yaml.in/yaml/v4, through internal/yamlpos"
         jsonschema-in-schema:
           list-mode: lax
           files:
