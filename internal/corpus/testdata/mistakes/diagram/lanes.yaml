@@ -1,0 +1,24 @@
+template: report
+lang: en
+title: Lanes of a graph
+sections:
+  - heading: Diagram
+    parts:
+      - diagram:
+          title: A box among the lanes
+          parts:
+            - graph:
+                x: 20
+                y: 20
+                lanes:
+                  - box: { name: a, rows: [A] }
+                  - { name: l1, nodes: [{ box: { name: b, rows: [B] } }] }
+      - diagram:
+          title: Lanes as a flag, the way before
+          parts:
+            - graph:
+                x: 20
+                y: 20
+                lanes: true
+                nodes:
+                  - group: { name: l1, nodes: [{ box: { name: b, rows: [B] } }] }

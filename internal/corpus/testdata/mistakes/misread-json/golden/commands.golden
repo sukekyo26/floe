@@ -1,0 +1,14 @@
+$ floe part check
+exit 0
+$ floe template check
+exit 1
+--- stderr
+$SAMPLE/own/templates/lone/schema.json:2:34: invalid surrogate pair "\\ud800\"}}}\n" in string
+$ floe check lone.yaml
+exit 1
+--- stderr
+$SAMPLE/own/templates/lone/schema.json:2:34: invalid surrogate pair "\\ud800\"}}}\n" in string
+$ floe render --out-dir $TMP/pages/lone.yaml lone.yaml
+exit 1
+--- stderr
+$SAMPLE/own/templates/lone/schema.json:2:34: invalid surrogate pair "\\ud800\"}}}\n" in string

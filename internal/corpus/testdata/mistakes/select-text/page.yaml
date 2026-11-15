@@ -1,0 +1,7 @@
+template: report
+lang: en
+title: A select that hides a meta
+sections:
+  - heading: Form
+    parts:
+      - html: '<select><xmp><keygen><meta http-equiv=refresh content=0></xmp></select>'

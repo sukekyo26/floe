@@ -1,0 +1,516 @@
+package kit
+
+import (
+	"bytes"
+	"errors"
+	"html/template"
+	"maps"
+	"path"
+	"regexp"
+	"slices"
+	"strings"
+
+	"floe/internal/bom"
+	"floe/internal/rules"
+	"floe/internal/schema"
+	"floe/internal/usererr"
+	"floe/internal/yamlpos"
+)
+
+// Part is a part read: what draws an item of its schema.
+type Part struct {
+	name    string
+	dir     string // as its mistakes name it
+	looks   []taken
+	marks   taken // part.yaml's marks:, its name none for none
+	css     []byte
+	hasCSS  bool
+	checks  *rules.Checks // nil for none
+	words   words
+	pages   pages // nil without a part.html
+	pageSrc []byte
+	unread  []string         // the files of its directory it does not read, for the check of what it holds
+	schema  *schema.Compiled // its schema as a root
+	files   []Source         // the files of partFiles it read, for floe part show
+}
+
+// taken is a name a part.yaml writes, a look it takes or its marks:, and where it writes it.
+type taken struct {
+	name string
+	file string
+	at   yamlpos.Pos
+}
+
+func names(looks []taken) []string {
+	out := make([]string, len(looks))
+	for i, l := range looks {
+		out[i] = l.name
+	}
+	return out
+}
+
+// Name returns the name of p.
+func (p *Part) Name() string { return p.name }
+
+// Looks returns the names of the looks p takes, in order.
+func (p *Part) Looks() []string { return names(p.looks) }
+
+// CSS returns the part.css of p, none for one left out.
+func (p *Part) CSS() []byte { return bytes.Clone(p.css) }
+
+// Unread returns the files of the directory of p it does not read.
+func (p *Part) Unread() []string { return slices.Clone(p.unread) }
+
+// Checks returns the checks of p, nil for none.
+func (p *Part) Checks() *rules.Checks { return p.checks }
+
+// Page returns a copy of the part.html of p, parsed, in the language tag of a page, to draw, as Template.Page
+// does, its copyButton in that language.
+func (p *Part) Page(lang string) (*template.Template, error) {
+	page, err := p.pages.copyOf(p.words, lang)
+	if err != nil {
+		return nil, err
+	}
+	return page.Funcs(template.FuncMap{"copyButton": copyButton(lang)}), nil
+}
+
+// File returns the file name of p as its mistakes name it.
+func (p *Part) File(name string) string { return path.Join(p.dir, name) }
+
+// PageSource returns the part.html of p as read: where a mistake of drawing it is.
+func (p *Part) PageSource() []byte { return bytes.Clone(p.pageSrc) }
+
+// Look is a look read: CSS that parts and HTML take without being its box.
+type Look struct {
+	name   string
+	dir    string
+	about  string
+	looks  []taken
+	marks  taken
+	css    []byte
+	hasCSS bool
+	unread []string // the files of its directory it does not read, part.html, checks.yaml and words.yaml too
+	files  []Source // the files of lookFiles it read, for floe part show
+}
+
+// Name returns the name of l.
+func (l *Look) Name() string { return l.name }
+
+// About returns what l is, its part.yaml's description.
+func (l *Look) About() string { return l.about }
+
+// Looks returns the names of the looks l takes, in order.
+func (l *Look) Looks() []string { return names(l.looks) }
+
+// CSS returns the part.css of l.
+func (l *Look) CSS() []byte { return bytes.Clone(l.css) }
+
+// Unread returns the files of the directory of l it does not read.
+func (l *Look) Unread() []string { return slices.Clone(l.unread) }
+
+// partURL is where floe holds the schema of the part, or the shared schema, named so.
+func partURL(name string) string { return "floe:///parts/" + name + ".json" }
+
+// readParts reads into k the parts and looks of d, each a directory, a part one with a schema.json, and the
+// schemas the parts share, <name>.json beside them. A part, a look and a shared schema of one name, here or in
+// the base but of the same kind, are refused (clashes).
+func (k *Kit) readParts(d Dir) error {
+	dirs, err := entries(d, ".", true)
+	if err != nil {
+		return err
+	}
+	// LIMIT: a file right in the directory of parts but a <name>.json is not read, and nothing says so; refuse one if a
+	// part's files put there come to go unseen.
+	files, err := entries(d, ".", false)
+	if err != nil {
+		return err
+	}
+	var shared []string
+	for _, file := range files {
+		if name, ok := strings.CutSuffix(file, ".json"); ok {
+			shared = append(shared, name)
+		}
+	}
+	found := k.clashes(d, dirs, shared)
+	for _, name := range dirs {
+		if !refused(found, d, name) {
+			if failed := found.Add(k.readPart(d, name)); failed != nil {
+				return failed
+			}
+		}
+	}
+	for _, name := range shared {
+		if !refused(found, d, name+".json") {
+			if failed := found.Add(k.readShared(d, name)); failed != nil {
+				return failed
+			}
+		}
+	}
+	return found.Sorted().Err()
+}
+
+// compileParts compiles each part and shared schema of k's own, all read without a mistake (a $ref to one not read
+// would be told missing), at its own file: a template compiled with it would tell a mistake of it at the template.
+// Each keeps its schema compiled, for check.
+func (k *Kit) compileParts() error {
+	var found usererr.List
+	for _, name := range slices.Sorted(maps.Keys(k.parts)) {
+		c, err := schema.CompilePart(partURL(name), k.resources)
+		if failed := found.Add(err); failed != nil {
+			return failed
+		}
+		if err == nil {
+			k.parts[name].schema = c
+		}
+	}
+	for _, name := range slices.Sorted(maps.Keys(k.shared)) {
+		c, err := schema.CompilePart(partURL(name), k.resources)
+		if failed := found.Add(err); failed != nil {
+			return failed
+		}
+		if err == nil {
+			k.shared[name].schema = c
+		}
+	}
+	return found.Sorted().Err()
+}
+
+// clashes refuses each of the parts and looks (dirs) and the shared schemas of d whose name refusedName
+// refuses. Each is told at it.
+func (k *Kit) clashes(d Dir, dirs, shared []string) usererr.List {
+	var found usererr.List
+	for _, name := range dirs {
+		if e := k.refusedName(d.Name, KindPart, name, false); e != nil {
+			found = append(found, e)
+		}
+	}
+	for _, name := range shared {
+		if e := k.refusedName(d.Name, KindShared, name, slices.Contains(dirs, name)); e != nil {
+			found = append(found, e)
+		}
+	}
+	return found
+}
+
+// Kind is a kind of the things of one's own, each a directory or a file in the directory of its kind.
+type Kind int
+
+// The kinds of one's own: a part or a look (a directory of the parts), a schema the parts share (<name>.json
+// beside them), a theme and a template.
+const (
+	KindPart Kind = iota
+	KindShared
+	KindTheme
+	KindTemplate
+)
+
+// NameMistake returns the mistake Load would tell of a part or a look (KindPart), or a template, of one's own
+// named name made in dir, the directory of its kind as it is named, over k: nil for none.
+func (k *Kit) NameMistake(dir string, kind Kind, name string) error {
+	// A part beside a shared schema of its name, which k holds only of its own.
+	r, have := k.resources[partURL(name)]
+	_, floes := k.baseDir(name)
+	twice := kind == KindPart && have && r.Kind == schema.Shared && !floes
+	if e := k.refusedName(dir, kind, name, twice); e != nil {
+		return e
+	}
+	return nil
+}
+
+// refusedName returns the mistake of the name of one's own of the kind in dir, nil for none: a name floe does
+// not take (validName); a part's or a look's that is a theme's file (base, palette, markdown); one a part or a look and
+// a shared schema of dir both have (twice); and a part's, a look's, a shared schema's or a theme's that the
+// base has: floe's templates and parts would go on reading the base's, compiled with it, and a theme of one's
+// own would hide floe's whole. It is told at the entry.
+func (k *Kit) refusedName(dir string, kind Kind, name string, twice bool) *usererr.Error {
+	at := path.Join(dir, name)
+	if kind == KindShared {
+		at += ".json"
+	}
+	switch {
+	case !validName(name):
+		return usererr.NewAt(at, 0, 0, "kit_bad_name")
+	case kind == KindPart && (name == "base" || name == "palette" || name == "markdown"):
+		return usererr.NewAt(at, 0, 0, "kit_name_theme_file", name)
+	case twice:
+		return usererr.NewAt(at, 0, 0, "kit_name_twice", name, path.Join(dir, name), path.Join(dir, name+".json"))
+	}
+	var other string
+	var ok bool
+	switch kind {
+	case KindPart, KindShared:
+		other, ok = k.baseDir(name)
+	case KindTheme:
+		if k.base != nil {
+			var t *Theme
+			if t, ok = k.base.Theme(name); ok {
+				other = t.dir
+			}
+		}
+	case KindTemplate:
+	}
+	if ok {
+		return usererr.NewAt(at, 0, 0, "kit_name_floe", name, other)
+	}
+	return nil
+}
+
+// validName reports whether name is one floe takes for a part, a look, a shared schema, a theme or a template:
+// it goes in a URL (floe:///parts/<name>.json, floe://templates/<name>/) and a CSS selector.
+func validName(name string) bool {
+	return nameRe.MatchString(name)
+}
+
+var nameRe = regexp.MustCompile(`^[a-z0-9][a-z0-9_-]*$`)
+
+// refused reports whether found refuses the entry name of d.
+func refused(found usererr.List, d Dir, name string) bool {
+	return slices.ContainsFunc(found, func(e *usererr.Error) bool { return e.File() == path.Join(d.Name, name) })
+}
+
+// readShared reads into k the schema the parts of d share, name.json.
+func (k *Kit) readShared(d Dir, name string) error {
+	src, _, err := readFile(d, "", name+".json")
+	if err != nil {
+		return err
+	}
+	r, err := schema.NewResource(partURL(name), path.Join(d.Name, name+".json"), src, schema.Shared)
+	if err != nil {
+		return err //nolint:wrapcheck // its mistakes, or floe's failure
+	}
+	k.resources[r.URL] = r
+	files := []Source{{Name: name + ".json", Text: bom.Trim(src)}}
+	k.shared[name] = &shared{name: name, file: r.File, schema: nil, files: files}
+	return nil
+}
+
+// The files a part and a look read, in the order floe part show prints them: what a data file may hold first.
+var (
+	partFiles = []string{"schema.json", "checks.yaml", "part.yaml", "part.html", "part.css", "words.yaml"}
+	lookFiles = []string{"part.yaml", "part.css"}
+)
+
+// readPart reads into k the part or look of d named name, its directory.
+func (k *Kit) readPart(d Dir, name string) error {
+	d = d.recording()
+	dir := path.Join(d.Name, name)
+	schemaSrc, isPart, err := readFile(d, name, "schema.json")
+	if err != nil {
+		return err
+	}
+	css, hasCSS, err := readCSS(d, name, "part.css")
+	if err != nil {
+		return err
+	}
+	looks, about, marks, yamlErr := readPartYAML(d, name, !isPart)
+	if !isPart {
+		if yamlErr == nil {
+			unread, failed := unreadIn(d, name, lookFiles...)
+			if failed != nil {
+				return failed
+			}
+			k.looks[name] = &Look{
+				name: name, dir: dir, about: about, looks: looks, marks: marks, css: css, hasCSS: hasCSS, unread: unread,
+				files: inOrder(lookFiles, d),
+			}
+		}
+		return yamlErr
+	}
+	var found usererr.List
+	if failed := found.Add(yamlErr); failed != nil {
+		return failed
+	}
+	r, err := schema.NewResource(partURL(name), path.Join(dir, "schema.json"), schemaSrc, schema.Part)
+	if failed := found.Add(err); failed != nil {
+		return failed
+	}
+	checks, err := readChecks(d, name)
+	if failed := found.Add(err); failed != nil {
+		return failed
+	}
+	w, err := readWordsIn(d, name)
+	if failed := found.Add(err); failed != nil {
+		return failed
+	}
+	ps, pageSrc, err := readPages(d, name, "part.html", partFuncsAll(), w)
+	if failed := found.Add(err); failed != nil {
+		return failed
+	}
+	if found != nil {
+		return found.Sorted().Err()
+	}
+	k.resources[r.URL] = r
+	unread, err := unreadIn(d, name, partFiles...)
+	if err != nil {
+		return err
+	}
+	k.parts[name] = &Part{
+		name: name, dir: dir, looks: looks, marks: marks, css: css, hasCSS: hasCSS, checks: checks, words: w, pages: ps,
+		pageSrc: pageSrc, unread: unread, schema: nil,
+		files: inOrder(partFiles, d),
+	}
+	return nil
+}
+
+// unreadIn returns the files and directories (with a / after) of the directory dir of d but read, sorted.
+func unreadIn(d Dir, dir string, read ...string) ([]string, error) {
+	files, err := entries(d, dir, false)
+	if err != nil {
+		return nil, err
+	}
+	dirs, err := entries(d, dir, true)
+	if err != nil {
+		return nil, err
+	}
+	for _, sub := range dirs {
+		files = append(files, sub+"/")
+	}
+	files = slices.DeleteFunc(files, func(f string) bool { return slices.Contains(read, f) })
+	slices.Sort(files)
+	return files, nil
+}
+
+// baseDir returns the file of the part, look or shared schema of the base of k named so, and false for none.
+func (k *Kit) baseDir(name string) (string, bool) {
+	if k.base == nil {
+		return "", false
+	}
+	if p, ok := k.base.Part(name); ok {
+		return p.dir, true
+	}
+	if l, ok := k.base.Look(name); ok {
+		return l.dir, true
+	}
+	if r, ok := k.base.resources[partURL(name)]; ok {
+		return r.File, true
+	}
+	// A key a section of floe's templates takes (html, which no part has) is floe's name too: one's own named so
+	// would stand for floe's key in floe part show, while a section reads floe's.
+	if r, ok := k.base.resources[partURL("any")]; ok && sectionKey(k.base, name) {
+		return r.File, true
+	}
+	return "", false
+}
+
+// sectionKey reports whether name is a key of floe's shared schema any, under k.
+func sectionKey(k *Kit, name string) bool {
+	s := k.root().shared["any"]
+	if s == nil {
+		return false
+	}
+	_, ok := s.schema.Follow(s.schema.Root).Props[name]
+	return ok
+}
+
+// readPages parses the HTML file of the directory dir of d with fns and the words w, and returns it with its
+// text, both without a byte order mark at its start, so that places told in the text agree; nil without one.
+func readPages(d Dir, dir, file string, fns template.FuncMap, w words) (pages, []byte, error) {
+	src, ok, err := readFile(d, dir, file)
+	if !ok || err != nil {
+		return nil, nil, err
+	}
+	src = bom.Trim(src)
+	ps, err := parsePages(path.Join(d.Name, dir, file), src, fns, w)
+	return ps, src, err
+}
+
+// readPartYAML reads the part.yaml of the directory dir of d, of a look alone when look: the looks it takes,
+// a look's description and its marks:; none without one. A part's description is its schema's. Its mistakes are told
+// all together.
+func readPartYAML(d Dir, dir string, look bool) ([]taken, string, taken, error) {
+	var marks taken
+	file := path.Join(d.Name, dir, "part.yaml")
+	m, err := readKeys(d, dir, "part.yaml", "kit_part_yaml")
+	if m == nil || err != nil {
+		return nil, "", marks, err
+	}
+	var looks []taken
+	var about string
+	var found usererr.List
+	for _, kv := range m.Pairs {
+		k := kv.Key
+		switch key := kv.Name(); key {
+		case "looks":
+			var more usererr.List
+			looks, more = readLooks(file, k, kv.Value)
+			found = append(found, more...)
+		case "description":
+			if !look {
+				found = append(found, yamlpos.New(file, yamlpos.Of(k), "kit_part_yaml_description"))
+				continue
+			}
+			var more usererr.List
+			about, more = readAbout(file, k, kv.Value, "kit_part_yaml_about")
+			found = append(found, more...)
+		case "marks":
+			var more usererr.List
+			marks, more = readMarks(file, k, kv.Value)
+			found = append(found, more...)
+		default:
+			found = append(found, yamlpos.New(file, yamlpos.Of(k), "kit_part_yaml_key", key))
+		}
+	}
+	return looks, about, marks, found.Sorted().Err()
+}
+
+// readKeys reads the YAML file name of the directory dir of d as keys and values: nil when it is missing or empty,
+// refused with the key notMap when it is not a mapping.
+func readKeys(d Dir, dir, name, notMap string) (*yamlpos.Node, error) {
+	file := path.Join(d.Name, dir, name)
+	src, ok, err := readFile(d, dir, name)
+	if !ok || err != nil {
+		return nil, err
+	}
+	body, err := yamlpos.Parse(file, src)
+	switch {
+	case errors.Is(err, yamlpos.ErrEmpty):
+		return nil, nil //nolint:nilnil // an empty file writes nothing, as a missing one
+	case err != nil:
+		return nil, err //nolint:wrapcheck // mistakes at their lines and columns, or floe's failure
+	}
+	if body.Kind != yamlpos.Mapping {
+		return nil, yamlpos.New(file, yamlpos.Of(body), notMap)
+	}
+	return body, nil
+}
+
+// readAbout reads the description: the YAML file, file, gives the key k: text, refused with the key notText.
+func readAbout(file string, k, value *yamlpos.Node, notText string) (string, usererr.List) {
+	about, ok := yamlpos.Text(value)
+	if !ok {
+		return "", usererr.List{yamlpos.New(file, yamlpos.OfValue(k, value), notText)}
+	}
+	return about, nil
+}
+
+// markKinds are the values of part.yaml's marks:, which elements of a part are rows with a mark.
+var markKinds = []string{"box", "items", "joined"}
+
+// readMarks reads the marks: part.yaml, file, gives the key k: one of markKinds.
+func readMarks(file string, k, value *yamlpos.Node) (taken, usererr.List) {
+	marks := taken{name: "", file: file, at: yamlpos.Of(k)}
+	name, ok := yamlpos.Text(value)
+	if !ok || !slices.Contains(markKinds, name) {
+		return marks, usererr.List{yamlpos.New(file, yamlpos.OfValue(k, value), "kit_part_yaml_marks")}
+	}
+	marks.name = name
+	return marks, nil
+}
+
+// readLooks reads the looks part.yaml, file, gives the key k: a list of names, each text, as a key is (YAML
+// would read a name of digits, 1.10, as the number 1.1); or floe's failure.
+func readLooks(file string, k, value *yamlpos.Node) ([]taken, usererr.List) {
+	if value.Kind != yamlpos.Sequence {
+		return nil, usererr.List{yamlpos.New(file, yamlpos.OfValue(k, value), "kit_part_yaml_looks")}
+	}
+	looks := make([]taken, 0, len(value.Items))
+	var found usererr.List
+	for _, v := range value.Items {
+		if name, ok := yamlpos.Text(v); ok && name != "" {
+			looks = append(looks, taken{name: name, file: file, at: yamlpos.Of(v)})
+			continue
+		}
+		found = append(found, yamlpos.New(file, yamlpos.OfValue(nil, v), "kit_part_yaml_looks"))
+	}
+	return looks, found
+}

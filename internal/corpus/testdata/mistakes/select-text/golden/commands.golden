@@ -1,0 +1,8 @@
+$ floe check page.yaml
+exit 1
+--- stderr
+page.yaml:1:11: the page drawn from this file has <xmp> inside a <select>, which may hold no element whose content is read as text, nor svg or math: move it out of the <select>
+$ floe render --out-dir $TMP/pages/page.yaml page.yaml
+exit 1
+--- stderr
+page.yaml:1:11: the page drawn from this file has <xmp> inside a <select>, which may hold no element whose content is read as text, nor svg or math: move it out of the <select>

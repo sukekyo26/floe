@@ -1,0 +1,50 @@
+template: report
+lang: ja
+title: 図の例
+lead: floe diagram example の 15 種を、名前で描く（floe-diagram-examples の参照の形）。
+sections:
+  - heading: architecture
+    parts:
+      - diagram: { example: architecture }
+  - heading: aws
+    parts:
+      - diagram: { example: aws }
+  - heading: aws-graph
+    parts:
+      - diagram: { example: aws-graph }
+  - heading: class
+    parts:
+      - diagram: { example: class }
+  - heading: er
+    parts:
+      - diagram: { example: er }
+  - heading: flow
+    parts:
+      - diagram: { example: flow }
+  - heading: gantt
+    parts:
+      - diagram: { example: gantt }
+  - heading: git
+    parts:
+      - diagram: { example: git }
+  - heading: org
+    parts:
+      - diagram: { example: org }
+  - heading: quadrant
+    parts:
+      - diagram: { example: quadrant }
+  - heading: sequence
+    parts:
+      - diagram: { example: sequence }
+  - heading: state
+    parts:
+      - diagram: { example: state }
+  - heading: swimlane
+    parts:
+      - diagram: { example: swimlane }
+  - heading: timeline
+    parts:
+      - diagram: { example: timeline }
+  - heading: venn
+    parts:
+      - diagram: { example: venn }

@@ -1,0 +1,731 @@
+package server_test
+
+import (
+	"encoding/json"
+	"io"
+	"maps"
+	"net/http"
+	"net/http/httptest"
+	"os"
+	"path/filepath"
+	"regexp"
+	"slices"
+	"strings"
+	"sync"
+	"testing"
+
+	"golang.org/x/sys/unix"
+
+	"floe/internal/files"
+	"floe/internal/kit"
+	"floe/internal/link"
+	"floe/internal/server"
+	"floe/internal/store"
+)
+
+const (
+	port   = 7325
+	origin = "http://127.0.0.1:7325"
+)
+
+// env is a server on a store in a temporary directory, its own templates under tpl, and home, under which links go.
+type env struct {
+	srv        *server.Server
+	h          http.Handler
+	root, home string
+	tpl        string
+}
+
+// pic is a template of one's own: a page of its title, its note and its images.
+const pic = `{"$schema": "https://json-schema.org/draft/2020-12/schema", "type": "object",
+"properties": {"note": {"type": "string"}, "i": {"type": "array", "items": {"type": "string", "format": "image"}}}}`
+
+func newEnv(t *testing.T) env {
+	t.Helper()
+
+	tmp, err := filepath.EvalSymlinks(t.TempDir())
+	if err != nil {
+		t.Fatal(err)
+	}
+	e := env{root: filepath.Join(tmp, "store"), home: filepath.Join(tmp, "home"), tpl: filepath.Join(tmp, "tpl")}
+	writeFiles(t, e.tpl, map[string]string{
+		"pic/page.html": "<!doctype html>\n<html lang=\"{{.Lang}}\"><head><title>{{.Title}}</title></head><body>" +
+			"{{with .Data.note}}{{.}}{{end}}{{range .Data.i}}<img src=\"{{.}}\">{{end}}</body></html>\n",
+		"pic/schema.json":  pic,
+		"pic/example.yaml": "lang: en\ntemplate: pic\n",
+	})
+	if err := os.MkdirAll(e.home, 0o700); err != nil {
+		t.Fatal(err)
+	}
+	drawing := func() (store.Drawing, error) {
+		floe, err := kit.Floe()
+		if err != nil {
+			return store.Drawing{}, err //nolint:exhaustruct // none
+		}
+		none := kit.Dir{FS: nil, Name: ""}
+		k, err := kit.Load(floe, kit.Sources{Parts: none, Themes: none, Templates: kit.Dir{FS: files.DirFS(e.tpl), Name: e.tpl}})
+		if err != nil {
+			return store.Drawing{}, err //nolint:exhaustruct // none
+		}
+		return store.Drawing{Kit: k, Icons: nil, Err: nil}, nil
+	}
+	e.srv = server.New(server.Config{
+		Store: store.New(e.root), Port: port, Build: "test", Drawing: drawing, Templates: e.tpl, Parts: "", Themes: "",
+		Icons: "", Home: e.home,
+	})
+	e.h = e.srv.Handler()
+	return e
+}
+
+func writeFiles(t *testing.T, dir string, files map[string]string) {
+	t.Helper()
+
+	for name, text := range files {
+		p := filepath.Join(dir, name)
+		if err := os.MkdirAll(filepath.Dir(p), 0o700); err != nil {
+			t.Fatal(err)
+		}
+		if err := os.WriteFile(p, []byte(text), 0o600); err != nil {
+			t.Fatal(err)
+		}
+	}
+}
+
+// do sends a request of method to path with body (nil for none) and the headers given as name, value pairs; the
+// Host is the server's.
+func (e env) do(t *testing.T, method, path, body string, headers ...string) *httptest.ResponseRecorder {
+	t.Helper()
+
+	var r io.Reader
+	if body != "" {
+		r = strings.NewReader(body)
+	}
+	req := httptest.NewRequestWithContext(t.Context(), method, path, r)
+	req.Host = "127.0.0.1:7325"
+	for i := 0; i+1 < len(headers); i += 2 {
+		req.Header.Set(headers[i], headers[i+1])
+	}
+	w := httptest.NewRecorder()
+	e.h.ServeHTTP(w, req)
+	return w
+}
+
+// write sends a write as the CLI does: from the server's origin, as JSON, taking a report as JSON.
+func (e env) write(t *testing.T, method, path string, body any) *httptest.ResponseRecorder {
+	t.Helper()
+
+	b, err := json.Marshal(body)
+	if err != nil {
+		t.Fatal(err)
+	}
+	return e.do(t, method, path, string(b), "Origin", origin, "Content-Type", "application/json", "Accept", "application/json")
+}
+
+// publish publishes src as slug, from project p, with the images given.
+func (e env) publish(t *testing.T, slug, src string, images map[string][]byte) *httptest.ResponseRecorder {
+	t.Helper()
+
+	return e.write(t, http.MethodPost, "/api/pages/data",
+		server.Upload{File: slug + ".yaml", Source: []byte(src), Images: images, Project: "p", Repo: "p", Place: slug + ".yaml", Slug: &slug}) //nolint:exhaustruct // the rest not given
+}
+
+func want(t *testing.T, w *httptest.ResponseRecorder, status int, body string) {
+	t.Helper()
+
+	if w.Code != status || !strings.Contains(w.Body.String(), body) {
+		t.Errorf("answered %d %q, want %d with %q", w.Code, w.Body.String(), status, body)
+	}
+}
+
+// The paths the API had before it named its pages so (/api/artifacts, and /pages for the HTML files of a folder) are no
+// routes: every method answers as any path the server does not know, and /api/pages answers.
+func TestOldPathsGone(t *testing.T) {
+	t.Parallel()
+
+	e := newEnv(t)
+	// A page and a folder there are, so that a route kept under an old name would answer for them, not as for a slug that is none.
+	docs := filepath.Join(e.home, "proj", "docs")
+	writeFiles(t, filepath.Dir(docs), map[string]string{"docs/index.html": "<title>i</title>"})
+	want(t, e.write(t, http.MethodPost, "/api/pages", server.Link{Path: docs}), http.StatusCreated, `"slug":"docs"`)
+	want(t, e.publish(t, "d", "lang: en\ntemplate: pic\n", nil), http.StatusCreated, `"slug":"d"`)
+	for _, path := range []string{
+		"/api/artifacts", "/api/artifacts/data", "/api/artifacts/d", "/api/artifacts/d/read", "/api/artifacts/d/theme",
+		"/api/artifacts/d/download", "/api/artifacts/d/versions", "/api/artifacts/d/diff", "/api/artifacts/docs/pages",
+		"/api/pages/docs/pages",
+	} {
+		for _, method := range []string{http.MethodGet, http.MethodPost, http.MethodPatch, http.MethodPut, http.MethodDelete} {
+			want(t, e.do(t, method, path, ""), http.StatusNotFound, "not found")
+		}
+	}
+	want(t, e.do(t, http.MethodGet, "/api/pages", ""), http.StatusOK, `"slug":"d"`)
+	want(t, e.do(t, http.MethodGet, "/api/pages/docs/files", ""), http.StatusOK, `"files":[`)
+}
+
+// What no request should see is refused as the protocol is, in fixed English: another host, another origin, a
+// body that is not JSON as mime reads its type.
+func TestProtocol(t *testing.T) {
+	t.Parallel()
+
+	e := newEnv(t)
+	req := httptest.NewRequestWithContext(t.Context(), http.MethodGet, "/api/pages", nil)
+	req.Host = "evil.example:7325"
+	w := httptest.NewRecorder()
+	e.h.ServeHTTP(w, req)
+	want(t, w, http.StatusForbidden, "forbidden host")
+	want(t, e.do(t, http.MethodDelete, "/api/pages/x", ""), http.StatusForbidden, "forbidden origin")
+	e.publish(t, "d", "lang: en\ntemplate: pic\n", nil)
+	for typ, status := range map[string]int{
+		"text/plain": 415, "application/jsonx": 415, "application/json-seq": 415, "application/json; charset": 415,
+		"Application/JSON; charset=utf-8": 200, "application/json": 200,
+	} {
+		w := e.do(t, http.MethodPatch, "/api/pages/d", `{"favorite": true}`, "Origin", origin, "Content-Type", typ)
+		if w.Code != status {
+			t.Errorf("Content-Type %q: %d, want %d", typ, w.Code, status)
+		}
+	}
+	// Another site cannot tell whether a page is there.
+	want(t, e.do(t, http.MethodPatch, "/api/pages/none", "{}", "Origin", "http://evil.example", "Content-Type", "application/json"),
+		http.StatusForbidden, "forbidden origin")
+	want(t, e.do(t, http.MethodPatch, "/api/pages/none", "{}", "Origin", origin, "Content-Type", "application/json"), http.StatusNotFound, "not found")
+	want(t, e.do(t, http.MethodPatch, "/api/pages/Bad%20slug", "x", "Origin", origin, "Content-Type", "text/plain"), http.StatusNotFound, "not found")
+	want(t, e.do(t, http.MethodGet, "/a/x/%2e%2e/y", ""), http.StatusNotFound, "not found")
+	want(t, e.write(t, http.MethodPost, "/api/pages", map[string]any{"path": "/x", "bogus": 1}), http.StatusBadRequest,
+		`unknown object member name "bogus"`)
+	want(t, e.write(t, http.MethodPost, "/api/pages/data", map[string]any{
+		"file": "x.yaml", "source": []byte("a"), "place": "x.yaml", "repo": "r",
+		"images": map[string][]byte{"../e.png": nil},
+	}), http.StatusBadRequest, "send each image by a slash-separated path")
+	// A place from a repository's root comes with its repository, and a real path with none.
+	for _, key := range []map[string]any{{"place": "docs/x.yaml", "repo": ""}, {"place": "/home/x.yaml", "repo": "r"}} {
+		body := map[string]any{"file": "x.yaml", "source": []byte("a")}
+		maps.Copy(body, key)
+		want(t, e.write(t, http.MethodPost, "/api/pages/data", body), http.StatusBadRequest,
+			"send the repository with a place from its root, and none with a real path")
+	}
+}
+
+// A publish is 201, again 200, of another file 409, its mistakes 400; a report as JSON only for an Accept of JSON
+// exactly.
+func TestPublish(t *testing.T) {
+	t.Parallel()
+
+	e := newEnv(t)
+	want(t, e.publish(t, "d", "lang: en\ntemplate: pic\ntitle: T\n", nil), http.StatusCreated, `"slug":"d"`)
+	want(t, e.publish(t, "d", "lang: en\ntemplate: pic\ntitle: T\n", nil), http.StatusOK, `"prev":{"title":"T"`)
+	other := e.write(t, http.MethodPost, "/api/pages/data", server.Upload{File: "d.yaml", Source: []byte("lang: en\ntemplate: pic\n"), Project: "q", Repo: "q", Place: "d.yaml"}) //nolint:exhaustruct // the rest not given
+	want(t, other, http.StatusConflict, `{"mistakes":[{"text":"slug \"d\" was published from d.yaml in repository p: choose another slug"}]}`)
+	want(t, e.publish(t, "e", "lang: en\ntemplate: nope\n", nil), http.StatusBadRequest, `unknown template \"nope\"`)
+	asText := e.do(t, http.MethodPost, "/api/pages", `{"path": "rel.html"}`, "Origin", origin, "Content-Type", "application/json",
+		"Accept", "application/json, text/plain")
+	want(t, asText, http.StatusBadRequest, "rel.html is not an absolute path")
+	if strings.HasPrefix(asText.Body.String(), "{") {
+		t.Errorf("a report as JSON to an Accept that is not JSON exactly: %s", asText.Body)
+	}
+	need := e.publish(t, "f", "lang: en\ntemplate: pic\ni: [img/a.png, img/b.png]\n", nil)
+	want(t, need, http.StatusUnprocessableEntity, `{"images":[{"name":"img/a.png","places":[{"line":3,"column":5}]},{"name":"img/b.png","places":[{"line":3,"column":16}]}]}`)
+	png := []byte("\x89PNG\r\n\x1a\n0000")
+	want(t, e.publish(t, "f", "lang: en\ntemplate: pic\ni: [img/a.png]\n", map[string][]byte{"img/a.png": png}), http.StatusCreated, `"slug":"f"`)
+	// Renamed, f.yaml's page is found without a slug, the images asked for and sent again.
+	want(t, e.write(t, http.MethodPatch, "/api/pages/f", map[string]any{"slug": "f-b"}), http.StatusOK, `"slug":"f-b"`)
+	up := server.Upload{File: "f.yaml", Source: []byte("lang: en\ntemplate: pic\ni: [img/a.png]\ntitle: two\n"), Project: "p", Repo: "p", Place: "f.yaml"} //nolint:exhaustruct // the rest not given
+	want(t, e.write(t, http.MethodPost, "/api/pages/data", up), http.StatusUnprocessableEntity, `{"images":[{"name":"img/a.png","places":[{"line":3,"column":5}]}]}`)
+	up.Images = map[string][]byte{"img/a.png": png}
+	want(t, e.write(t, http.MethodPost, "/api/pages/data", up), http.StatusOK, `"slug":"f-b"`)
+	want(t, e.write(t, http.MethodPut, "/api/pages/f-b", up), http.StatusNotFound, "not found")
+}
+
+// A publish answers the project the page was kept in, and the one of the page it replaced, as tasks.json says it: one
+// of no project is "/", and a project emptied on the management page is replaced by the project published from.
+func TestPublishTaskProject(t *testing.T) {
+	t.Parallel()
+
+	e := newEnv(t)
+	const src = "lang: en\ntemplate: pic\ntitle: T\n"
+	want(t, e.publish(t, "d", src, nil), http.StatusCreated, `"prev":null,"taskProject":"p"}`)
+	none := e.write(t, http.MethodPost, "/api/pages/data", server.Upload{File: "n.yaml", Source: []byte(src), Project: "", Repo: "n", Place: "n.yaml"}) //nolint:exhaustruct // the rest not given
+	want(t, none, http.StatusCreated, `"prev":null,"taskProject":"/"}`)
+	want(t, e.write(t, http.MethodPatch, "/api/pages/d", map[string]any{"project": "moved"}), http.StatusOK, `"taskProject":"moved"`)
+	want(t, e.publish(t, "d", src, nil), http.StatusOK, `"taskProject":"moved"},"taskProject":"moved"}`)
+	want(t, e.write(t, http.MethodPatch, "/api/pages/d", map[string]any{"project": ""}), http.StatusOK, `"taskProject":"/"`)
+	want(t, e.publish(t, "d", src, nil), http.StatusOK, `"taskProject":"/"},"taskProject":"p"}`)
+}
+
+// A publish with moveProject puts the page in the project it sends, though it is in another; one without keeps the project
+// the page is in. A link takes no such key.
+func TestPublishMoveProject(t *testing.T) {
+	t.Parallel()
+
+	e := newEnv(t)
+	const src = "lang: en\ntemplate: pic\ntitle: T\n"
+	send := func(project string, move bool) *httptest.ResponseRecorder {
+		slug := "d"
+		return e.write(t, http.MethodPost, "/api/pages/data",
+			server.Upload{File: "d.yaml", Source: []byte(src), Project: project, Repo: "p", Place: "d.yaml", Slug: &slug, MoveProject: move}) //nolint:exhaustruct // the rest not given
+	}
+	want(t, send("p", false), http.StatusCreated, `"taskProject":"p"}`)
+	want(t, send("q", false), http.StatusOK, `"taskProject":"p"},"taskProject":"p"}`)
+	want(t, send("q", true), http.StatusOK, `"taskProject":"p"},"taskProject":"q"}`)
+	want(t, send("q", true), http.StatusOK, `"taskProject":"q"},"taskProject":"q"}`)
+	want(t, send("q", false), http.StatusOK, `"taskProject":"q"},"taskProject":"q"}`)
+	// From a place with no project the page would be emptied of its project, which a publish from another place fills again.
+	want(t, send("", true), http.StatusBadRequest, "run it in the repository the page is about")
+	want(t, e.do(t, http.MethodPost, "/api/pages", `{"path": "/x.html", "moveProject": true}`, "Origin", origin, "Content-Type", "application/json",
+		"Accept", "application/json"), http.StatusBadRequest, "moveProject")
+}
+
+// A stored page is the page drawn when published, its bytes as kept, in the sandbox and cut off, with the script
+// that reloads it; a template changed since draws it no other, until a rebuild.
+func TestStoredPage(t *testing.T) {
+	t.Parallel()
+
+	e := newEnv(t)
+	e.publish(t, "d", "lang: en\ntemplate: pic\ntitle: T\nnote: one\n", nil)
+	m := store.New(e.root).ReadMeta("d")
+	kept, err := os.ReadFile(filepath.Join(e.root, "d", m.Source, "page.html"))
+	if err != nil {
+		t.Fatal(err)
+	}
+	w := e.do(t, http.MethodGet, "/a/d/?raw", "")
+	// It asks every second whether it changed, each ask cut off after 5 s, holding no connection.
+	if !strings.HasPrefix(w.Body.String(), string(kept)) || !strings.Contains(w.Body.String(), "window.AbortSignal.timeout(5000)") ||
+		!strings.Contains(w.Body.String(), "window.setInterval(look, 1000)") || strings.Contains(w.Body.String(), "EventSource") ||
+		!strings.Contains(w.Body.String(), "pageOpen") {
+		t.Errorf("served\n%s", w.Body)
+	}
+	csp := w.Header().Get("Content-Security-Policy")
+	if !strings.HasPrefix(csp, "sandbox allow-scripts") || !strings.Contains(csp, "connect-src http://127.0.0.1:7325/api/changed/") {
+		t.Errorf("CSP %q", csp)
+	}
+	if w.Header().Get("X-Content-Type-Options") != "nosniff" {
+		t.Error("no nosniff")
+	}
+	download := e.do(t, http.MethodGet, "/api/pages/d/download", "")
+	if !strings.Contains(download.Body.String(), `http-equiv="Content-Security-Policy"`) || strings.Contains(download.Body.String(), "/api/changed/") {
+		t.Errorf("downloaded\n%s", download.Body)
+	}
+}
+
+// A page asks whether it changed since the version it was served from: "same" to that version, "changed" after a
+// publish and to any other, and "changed" for no page whatever it gives, so that whether a slug is there is not told.
+func TestChanged(t *testing.T) {
+	t.Parallel()
+
+	e := newEnv(t)
+	e.publish(t, "d", "lang: en\ntemplate: pic\ntitle: T\nnote: one\n", nil)
+	since := func() string {
+		m := regexp.MustCompile(`/api/changed/d\?since=([^"]*)`).FindStringSubmatch(e.do(t, http.MethodGet, "/a/d/?raw", "").Body.String())
+		if m == nil {
+			t.Fatal("no since in the page")
+		}
+		return m[1]
+	}
+	ask := func(path string) string {
+		w := e.do(t, http.MethodGet, path, "")
+		h := w.Header()
+		if w.Code != http.StatusOK || h.Get("Access-Control-Allow-Origin") != "null" || h.Get("Cache-Control") != "no-store" ||
+			h.Get("Content-Type") != "text/plain; charset=utf-8" {
+			t.Errorf("%s: %d %v", path, w.Code, h)
+		}
+		return w.Body.String()
+	}
+	first := since()
+	got := make([]string, 0, 6)
+	got = append(got, ask("/api/changed/d?since="+first), ask("/api/changed/d?since=other"))
+	e.publish(t, "d", "lang: en\ntemplate: pic\ntitle: T\nnote: two\n", nil)
+	got = append(got, ask("/api/changed/d?since="+first), ask("/api/changed/d?since="+since()),
+		ask("/api/changed/none?since="), ask("/api/changed/none?since=x"))
+	if want := "same changed changed same changed changed"; strings.Join(got, " ") != want {
+		t.Errorf("answers %q, want %q", strings.Join(got, " "), want)
+	}
+	if w := e.do(t, http.MethodGet, "/api/changed/Bad_Slug?since=", ""); w.Code != http.StatusNotFound {
+		t.Errorf("a slug that cannot be one: %d", w.Code)
+	}
+}
+
+// The management page and a page's URL are the frame, in the reader's language, which only the management page and
+// VS Code may frame; a page not there is the frame with 404.
+func TestManagementPageAndFrame(t *testing.T) {
+	t.Parallel()
+
+	e := newEnv(t)
+	e.publish(t, "d", "lang: en\ntemplate: pic\n", nil)
+	// A stored page whose page.html is gone is not there, as ?raw finds it.
+	e.publish(t, "gone", "lang: en\ntemplate: pic\n", nil)
+	if err := os.Remove(filepath.Join(e.root, "gone", store.New(e.root).ReadMeta("gone").Source, "page.html")); err != nil {
+		t.Fatal(err)
+	}
+	frame := "frame-ancestors 'self' vscode-webview: vscode-file:"
+	// The task list is the same page, with the states of a task for it to read when tasks.json cannot be; /tasks/ is no path.
+	want(t, e.do(t, http.MethodGet, "/tasks", ""), http.StatusOK, `const STATES = [{"name":"todo"`)
+	want(t, e.do(t, http.MethodGet, "/tasks/", ""), http.StatusNotFound, "not found")
+	for target, status := range map[string]int{
+		"/": http.StatusOK, "/a/d/": http.StatusOK, "/a/none/": http.StatusNotFound, "/a/Bad_Slug/": http.StatusNotFound,
+		"/a/gone/": http.StatusNotFound,
+	} {
+		w := e.do(t, http.MethodGet, target, "")
+		// The frame is drawn as one from the start, its slug for the script.
+		html := `<html lang="en">`
+		if slug := strings.Trim(strings.TrimPrefix(target, "/a/"), "/"); target != "/" {
+			html = `<html lang="en" class="framed" data-slug="` + slug + `">`
+		}
+		want(t, w, status, html)
+		if got := w.Header().Get("Content-Security-Policy"); got != frame {
+			t.Errorf("GET %s: CSP %q", target, got)
+		}
+		want(t, e.do(t, http.MethodGet, target, "", "Accept-Language", "ja,en;q=0.5"), status, "一覧へ戻る")
+	}
+	// The slug as the server read it, unescaped, is escaped in the HTML.
+	want(t, e.do(t, http.MethodGet, "/a/x%22%3E%3C%3Fy/", ""), http.StatusNotFound, `data-slug="x&#34;&gt;&lt;?y"`)
+	// Not the frame, whose messages say "not found" too.
+	for _, w := range []*httptest.ResponseRecorder{
+		e.do(t, http.MethodPost, "/", ""), e.do(t, http.MethodGet, "/a/none/?raw", ""), e.do(t, http.MethodGet, "/a/gone/?raw", ""),
+	} {
+		if w.Code != http.StatusNotFound || w.Body.String() != "not found" {
+			t.Errorf("answered %d %.40q, want 404 not found", w.Code, w.Body)
+		}
+	}
+	// The query is kept, so that /a/d?raw stays the page, not its frame.
+	for target, to := range map[string]string{"/a/d": "/a/d/", "/a/d?raw": "/a/d/?raw"} {
+		if w := e.do(t, http.MethodGet, target, ""); w.Code != http.StatusMovedPermanently || w.Header().Get("Location") != to {
+			t.Errorf("GET %s = %d to %q, want 301 to %q", target, w.Code, w.Header().Get("Location"), to)
+		}
+	}
+}
+
+// A linked data file is drawn each time it is opened; with mistakes it is the page of them in the reader's
+// language, which a download refuses.
+func TestLinkedData(t *testing.T) {
+	t.Parallel()
+
+	e := newEnv(t)
+	data := filepath.Join(e.home, "proj", "d.yaml")
+	writeFiles(t, filepath.Dir(data), map[string]string{"d.yaml": "lang: en\ntemplate: pic\nnote: one\n", "h.html": "<title>h</title><p>x</p>", "s.css": "p{}"})
+	want(t, e.write(t, http.MethodPost, "/api/pages", server.Link{Path: data}), http.StatusCreated, `"slug":"d"`) //nolint:exhaustruct // the rest not given
+	want(t, e.do(t, http.MethodGet, "/a/d/?raw", ""), http.StatusOK, "one")
+	writeFiles(t, filepath.Dir(data), map[string]string{"d.yaml": "lang: en\ntemplate: pic\nnote: two\n"})
+	want(t, e.do(t, http.MethodGet, "/a/d/?raw", ""), http.StatusOK, "two")
+	// An image that cannot be read is told at each item naming it.
+	writeFiles(t, filepath.Dir(data), map[string]string{"d.yaml": "lang: en\ntemplate: pic\ni: [img/none.png, img/none.png]\n"})
+	unread := `: the image "img/none.png" cannot be read (no such file or directory)`
+	gone := e.do(t, http.MethodGet, "/api/pages/d/download", "")
+	want(t, gone, http.StatusBadRequest, "d.yaml:3:5"+unread+"\n"+data+":3:19"+unread)
+	writeFiles(t, filepath.Dir(data), map[string]string{"d.yaml": "lang: en\ntemplate: nope\n"})
+	want(t, e.do(t, http.MethodGet, "/a/d/?raw", "", "Accept-Language", "ja"), http.StatusOK, "データファイルに誤りがあります")
+	want(t, e.do(t, http.MethodGet, "/api/pages/d/download", ""), http.StatusBadRequest, `unknown template "nope"`)
+	want(t, e.write(t, http.MethodPost, "/api/pages", server.Link{Path: filepath.Join(e.home, "proj", "h.html")}), http.StatusCreated, `"slug":"h"`) //nolint:exhaustruct // the rest not given
+	want(t, e.do(t, http.MethodGet, "/a/h/s.css", ""), http.StatusOK, "p{}")
+	want(t, e.do(t, http.MethodGet, "/a/h/nope.css", ""), http.StatusNotFound, "not found")
+	// What is not a regular file is not served, so that a FIFO does not block the server.
+	if err := unix.Mkfifo(filepath.Join(e.home, "proj", "f.css"), 0o600); err != nil {
+		t.Fatal(err)
+	}
+	want(t, e.do(t, http.MethodGet, "/a/h/f.css", ""), http.StatusNotFound, "not found")
+	if err := os.Remove(data); err != nil {
+		t.Fatal(err)
+	}
+	if err := unix.Mkfifo(data, 0o600); err != nil {
+		t.Fatal(err)
+	}
+	want(t, e.do(t, http.MethodGet, "/api/pages/d/download", ""), http.StatusNotFound, "not found")
+	plain := e.do(t, http.MethodGet, "/api/pages/h/download", "")
+	if plain.Body.String() != "<title>h</title><p>x</p>" {
+		t.Errorf("a linked HTML file downloaded as %q", plain.Body)
+	}
+}
+
+// A folder is linked as a link is; its URL leads to the list with it open, its pages are framed at ?file= and served
+// under it as a linked file's directory is, and its directories are listed one at a time.
+func TestFolder(t *testing.T) {
+	t.Parallel()
+
+	e := newEnv(t)
+	docs := filepath.Join(e.home, "proj", "docs")
+	writeFiles(t, filepath.Dir(docs), map[string]string{
+		"docs/index.html": "<title>i</title>", "docs/guide/setup.html": "<p>s</p>", "docs/s.css": "p{}", "docs/.git/config": "x",
+		"sibling.html": "beside",
+	})
+	want(t, e.write(t, http.MethodPost, "/api/pages", server.Link{Path: docs}), http.StatusCreated, `"slug":"docs","title":"","prev":null,"folder":true,"taskProject":"docs"}`) //nolint:exhaustruct // the rest not given
+	if w := e.do(t, http.MethodGet, "/a/docs/", ""); w.Code != http.StatusSeeOther || w.Header().Get("Location") != "/?kind=folder&open=docs" {
+		t.Errorf("GET /a/docs/ = %d to %q, want 303 to the list with it open", w.Code, w.Header().Get("Location"))
+	}
+	// The frame of a page the server found says so, for the frame to show it whatever its directory's list holds.
+	want(t, e.do(t, http.MethodGet, "/a/docs/?file=guide%2Fsetup.html", ""), http.StatusOK, `data-slug="docs" data-served>`)
+	want(t, e.do(t, http.MethodGet, "/a/docs/?file=nope.html", ""), http.StatusNotFound, `data-slug="docs">`)
+	for target, status := range map[string]int{
+		"/a/docs/?file=guide%2Fsetup.html": http.StatusOK, "/a/docs/?file=guide/setup.html": http.StatusOK,
+		"/a/docs/?file=..%2Fsibling.html": http.StatusNotFound, "/a/docs/?file=.git%2Fconfig": http.StatusNotFound,
+		"/a/docs/?file=%252e%252e%2Fsibling.html": http.StatusNotFound, "/a/docs/?file=nope.html": http.StatusNotFound,
+		"/a/docs/?file=guide": http.StatusNotFound,
+	} {
+		want(t, e.do(t, http.MethodGet, target, ""), status, `class="framed" data-slug="docs"`)
+	}
+	page := e.do(t, http.MethodGet, "/a/docs/guide/setup.html", "")
+	want(t, page, http.StatusOK, "<p>s</p>")
+	if got := page.Header().Get("Content-Security-Policy"); !strings.HasPrefix(got, "sandbox allow-scripts") {
+		t.Errorf("a folder's page is served with CSP %q", got)
+	}
+	want(t, e.do(t, http.MethodGet, "/a/docs/s.css", ""), http.StatusOK, "p{}")
+	for _, target := range []string{
+		"/a/docs/?raw", "/api/pages/docs/download", "/a/docs/.git/config", "/api/pages/docs/files?dir=..",
+		"/api/pages/docs/files?dir=.git", "/api/pages/docs/files?dir=nope", "/api/pages/none/files",
+	} {
+		want(t, e.do(t, http.MethodGet, target, ""), http.StatusNotFound, "not found")
+	}
+	top := e.do(t, http.MethodGet, "/api/pages/docs/files", "")
+	// The answer names the HTML files `files`, as its path does, and not `pages`.
+	if body := top.Body.String(); !strings.Contains(body, `"files":[`) || strings.Contains(body, `"pages"`) {
+		t.Errorf("the keys of the listing = %s", body)
+	}
+	var l link.Listing
+	if err := json.Unmarshal(top.Body.Bytes(), &l); err != nil || top.Code != http.StatusOK || !slices.Equal(l.Dirs, []string{"guide"}) ||
+		len(l.Files) != 1 || l.Files[0].File != "index.html" || l.More != 0 {
+		t.Errorf("files of the top = %d %s", top.Code, top.Body)
+	}
+	want(t, e.do(t, http.MethodGet, "/api/pages/docs/files?dir=guide", ""), http.StatusOK, `{"dirs":[],"files":[{"file":"guide/setup.html","updatedAt":"`)
+	// An archived folder's URL leads to the archived list.
+	want(t, e.write(t, http.MethodPatch, "/api/pages/docs", map[string]any{"archived": true}), http.StatusOK, `"slug":"docs"`)
+	if w := e.do(t, http.MethodGet, "/a/docs/", ""); w.Header().Get("Location") != "/?kind=folder&open=docs&view=archived" {
+		t.Errorf("GET /a/docs/ archived leads to %q", w.Header().Get("Location"))
+	}
+	// A file's link has no directories to list.
+	want(t, e.write(t, http.MethodPost, "/api/pages", server.Link{Path: filepath.Join(e.home, "proj", "sibling.html")}), http.StatusCreated, `"slug":"sibling"`) //nolint:exhaustruct // the rest not given
+	want(t, e.do(t, http.MethodGet, "/api/pages/sibling/files", ""), http.StatusNotFound, "not found")
+	want(t, e.do(t, http.MethodGet, "/a/sibling/?file=sibling.html", ""), http.StatusNotFound, `data-slug="sibling"`)
+}
+
+// An edit archives a page as true or false, which the list then carries; favorite and archived null are not
+// changed, as anything else are refused as encoding/json words it, and a page that is not there is not found.
+func TestEditArchived(t *testing.T) {
+	t.Parallel()
+
+	e := newEnv(t)
+	e.publish(t, "d", "lang: en\ntemplate: pic\n", nil)
+	want(t, e.write(t, http.MethodPatch, "/api/pages/d", map[string]any{"archived": true}), http.StatusOK, `{"slug":"d",`)
+	want(t, e.do(t, http.MethodGet, "/api/pages", ""), http.StatusOK, `"archived":true`)
+	// encoding/json/v2 says "cannot" or "unable to" as the process falls: what follows the verb is told.
+	for body, told := range map[string]string{
+		`{"archived":"yes"}`: `unmarshal JSON string into Go bool within "/archived"`,
+		`{"archived":1}`:     `unmarshal JSON number into Go bool within "/archived"`,
+		`{"favorite":"yes"}`: `unmarshal JSON string into Go bool within "/favorite"`,
+	} {
+		w := e.write(t, http.MethodPatch, "/api/pages/d", json.RawMessage(body))
+		if w.Code != http.StatusBadRequest || !strings.Contains(w.Body.String(), told) {
+			t.Errorf("%s: answered %d %q, want %q", body, w.Code, w.Body.String(), told)
+		}
+	}
+	want(t, e.write(t, http.MethodPatch, "/api/pages/d", map[string]any{"archived": false}), http.StatusOK, `{"slug":"d",`)
+	if w := e.do(t, http.MethodGet, "/api/pages", ""); strings.Contains(w.Body.String(), "archived") {
+		t.Errorf("given back, still listed archived: %s", w.Body.String())
+	}
+	want(t, e.write(t, http.MethodPatch, "/api/pages/none", map[string]any{"archived": true}), http.StatusNotFound, "not found")
+}
+
+// An edit changes each field by its own key and no other; a field null is not changed. A key it does not know is
+// refused with nothing changed, even beside one it knows and before the page is looked for.
+func TestEditKeys(t *testing.T) {
+	t.Parallel()
+
+	e := newEnv(t)
+	e.publish(t, "d", "lang: en\ntemplate: pic\ntitle: T\n", nil)
+	type fields struct {
+		title, description, project string
+		favorite, archived          bool
+		// The tags joined by NUL, which no tag sent here holds: a comma would tell ["a,b"] from ["a","b"] no more.
+		tags string
+	}
+	look := func(slug string) fields {
+		t.Helper()
+
+		m := store.New(e.root).ReadMeta(slug)
+		if m == nil {
+			t.Fatalf("no page %q", slug)
+		}
+		return fields{m.Title, m.Description, m.Project, m.Favorite, m.Archived, strings.Join(m.Tags, "\x00")}
+	}
+	now := look("d")
+	for _, c := range []struct {
+		body   string
+		change func(*fields)
+	}{
+		{`{"title":"N"}`, func(f *fields) { f.title = "N" }},
+		{`{"description":"D"}`, func(f *fields) { f.description = "D" }},
+		{`{"project":"q"}`, func(f *fields) { f.project = "q" }},
+		{`{"favorite":true}`, func(f *fields) { f.favorite = true }},
+		{`{"archived":true}`, func(f *fields) { f.archived = true }},
+		{`{"archived":null}`, func(*fields) {}},
+		{`{"tags":{"add":["b"," a ","b",""]}}`, func(f *fields) { f.tags = "b\x00a" }},
+		{`{"tags":{"remove":["b"],"add":["a,b"]}}`, func(f *fields) { f.tags = "a\x00a,b" }},
+		{`{"tags":null}`, func(*fields) {}},
+		{`{"tags":{}}`, func(*fields) {}},
+		{`{"tags":{"add":null}}`, func(*fields) {}},
+		{`{"tags":{"remove":["a","a,b"]}}`, func(f *fields) { f.tags = "" }},
+		// Cleared, the title is the data file's again and the project is dropped.
+		{`{"title":""}`, func(f *fields) { f.title = "T" }},
+		{`{"project":""}`, func(f *fields) { f.project = "" }},
+		// Kept on, for the rename below to keep.
+		{`{"tags":{"add":["k"]}}`, func(f *fields) { f.tags = "k" }},
+	} {
+		want(t, e.write(t, http.MethodPatch, "/api/pages/d", json.RawMessage(c.body)), http.StatusOK, `{"slug":"d",`)
+		c.change(&now)
+		if got := look("d"); got != now {
+			t.Errorf("%s: %+v, want %+v", c.body, got, now)
+		}
+	}
+	for _, body := range []string{`{"archivd":true}`, `{"title":"T2","color":"red"}`} {
+		want(t, e.write(t, http.MethodPatch, "/api/pages/d", json.RawMessage(body)), http.StatusBadRequest,
+			"unknown object member name")
+		if got := look("d"); got != now {
+			t.Errorf("%s changed the page: %+v, want %+v", body, got, now)
+		}
+	}
+	for body, told := range map[string]string{
+		`{"tags":["a"]}`:         `unmarshal JSON array into Go store.TagsEdit within "/tags"`,
+		`{"tags":{"add":"a"}}`:   `unmarshal JSON string into Go []string within "/tags/add"`,
+		`{"tags":{"add":[1]}}`:   `unmarshal JSON number into Go string within "/tags/add/0"`,
+		`{"tags":{"put":["a"]}}`: `unknown object member name "put" within "/tags"`,
+	} {
+		want(t, e.write(t, http.MethodPatch, "/api/pages/d", json.RawMessage(body)), http.StatusBadRequest, told)
+	}
+	want(t, e.write(t, http.MethodPatch, "/api/pages/none", json.RawMessage(`{"x":1}`)), http.StatusBadRequest,
+		`unknown object member name "x"`)
+	want(t, e.write(t, http.MethodPatch, "/api/pages/d", json.RawMessage(`{"slug":"e"}`)), http.StatusOK, `{"slug":"e",`)
+	if got := look("e"); got != now {
+		t.Errorf("renamed: %+v, want %+v", got, now)
+	}
+	// floe archive sends archived alone.
+	yes := true
+	if b, err := json.Marshal(server.Edit{Archived: &yes}); err != nil || string(b) != `{"archived":true}` {
+		t.Errorf("floe archive sends %s, %v", b, err)
+	}
+	// floe tag sends only the names given, none of them as nothing.
+	if b, err := json.Marshal(server.Edit{Tags: &store.TagsEdit{Add: []string{"a"}}}); err != nil || string(b) != `{"tags":{"add":["a"]}}` {
+		t.Errorf("a tag added sent as %s, %v", b, err)
+	}
+	if b, err := json.Marshal(server.Edit{Tags: &store.TagsEdit{}}); err != nil || string(b) != `{"tags":{}}` {
+		t.Errorf("no names sent as %s, %v", b, err)
+	}
+}
+
+// Every write refuses a body that is not one object, null too, in one sentence.
+func TestNotObject(t *testing.T) {
+	t.Parallel()
+
+	e := newEnv(t)
+	e.publish(t, "d", "lang: en\ntemplate: pic\n", nil)
+	for _, to := range []struct{ method, path string }{
+		{http.MethodPost, "/api/pages"},
+		{http.MethodPost, "/api/pages/data"},
+		{http.MethodPatch, "/api/pages/d"},
+		{http.MethodPost, "/api/rebuild"},
+	} {
+		for _, body := range []string{"null", "1", `"s"`, "[1]", "x", "", "   "} {
+			w := e.do(t, to.method, to.path, body, "Origin", origin, "Content-Type", "application/json")
+			if w.Code != http.StatusBadRequest || w.Body.String() != "cannot read the request: send a JSON object" {
+				t.Errorf("%s %s %s: answered %d %q", to.method, to.path, body, w.Code, w.Body.String())
+			}
+		}
+	}
+	for body, told := range map[string]string{
+		"{}{}": "jsontext: invalid character '{' after top-level value", "{": "jsontext: unexpected EOF",
+	} {
+		want(t, e.do(t, http.MethodPatch, "/api/pages/d", body, "Origin", origin, "Content-Type", "application/json"),
+			http.StatusBadRequest, "cannot read the request: "+told)
+	}
+}
+
+// Every write reads keys by their case and refuses a key sent twice, in a map in it too; an edit refuses a string
+// that is no UTF-8 or holds a lone surrogate, and a publish base64 with a newline. Nothing refused is changed.
+func TestStrictKeys(t *testing.T) {
+	t.Parallel()
+
+	e := newEnv(t)
+	e.publish(t, "d", "lang: en\ntemplate: pic\ntitle: T\n", nil)
+	src := `"bGFuZzogZW4KdGVtcGxhdGU6IHBpYwo="` // lang: en, template: pic
+	for _, c := range []struct{ method, path, body, told string }{
+		{http.MethodPost, "/api/pages", `{"Path":"/x"}`, `unknown object member name "Path"`},
+		{http.MethodPost, "/api/pages/data", `{"File":"e.yaml","source":` + src + `}`, `unknown object member name "File"`},
+		{http.MethodPatch, "/api/pages/d", `{"Archived":true}`, `unknown object member name "Archived"`},
+		{http.MethodPost, "/api/pages", `{"path":"/a","path":"/b"}`, `duplicate object member name "path"`},
+		{
+			http.MethodPost, "/api/pages/data", `{"file":"e.yaml","file":"f.yaml","source":` + src + `}`,
+			`duplicate object member name "file"`,
+		},
+		{
+			http.MethodPost, "/api/pages/data", `{"file":"e.yaml","source":` + src + `,"images":{"x.png":"YQ==","x.png":"Yg=="}}`,
+			`duplicate object member name "x.png" within "/images"`,
+		},
+		{http.MethodPatch, "/api/pages/d", `{"title":"a","title":"b"}`, `duplicate object member name "title"`},
+		// rebuild has no field: the first x is unknown before the second is seen.
+		{http.MethodPost, "/api/rebuild", `{"x":1,"x":1}`, `unknown object member name "x"`},
+		{http.MethodPost, "/api/pages", `{"path":"/a\ud800"}`, "invalid surrogate pair"},
+		{http.MethodPost, "/api/pages/data", `{"file":"e\ud800.yaml","source":` + src + `}`, "invalid surrogate pair"},
+		{http.MethodPatch, "/api/pages/d", `{"title":"\ud800"}`, "invalid surrogate pair"},
+		{http.MethodPost, "/api/rebuild", `{"\ud800":1}`, "invalid surrogate pair"},
+		{http.MethodPost, "/api/pages", "{\"path\":\"/a\xff\"}", "invalid UTF-8"},
+		{http.MethodPost, "/api/pages/data", "{\"file\":\"e\xff.yaml\",\"source\":" + src + "}", "invalid UTF-8"},
+		{
+			http.MethodPost, "/api/pages/data", "{\"file\":\"e.yaml\",\"source\":" + src + ",\"images\":{\"a\xff.png\":\"YQ==\"}}",
+			"invalid UTF-8",
+		},
+		{http.MethodPatch, "/api/pages/d", "{\"title\":\"a\xffb\"}", "invalid UTF-8"},
+		{http.MethodPost, "/api/rebuild", "{\"a\xff\":1}", "invalid UTF-8"},
+		{http.MethodPost, "/api/pages/data", `{"file":"e.yaml","source":"bGFuZzogZW4KdGVtcGxhdGU6IHBpYwo=\n"}`, `within "/source"`},
+	} {
+		w := e.do(t, c.method, c.path, c.body, "Origin", origin, "Content-Type", "application/json")
+		if w.Code != http.StatusBadRequest || !strings.HasPrefix(w.Body.String(), "cannot read the request: ") ||
+			!strings.Contains(w.Body.String(), c.told) {
+			t.Errorf("%s %s %s: answered %d %q, want %q", c.method, c.path, c.body, w.Code, w.Body.String(), c.told)
+		}
+	}
+	m := store.New(e.root)
+	if d := m.ReadMeta("d"); d.Title != "T" || d.Archived {
+		t.Errorf("refused edits changed the page: %+v", d)
+	}
+	if m.ReadMeta("e") != nil {
+		t.Error("a refused publish stored e")
+	}
+}
+
+// A page not there is 404 to remove; one that cannot be removed is told why.
+func TestRemove(t *testing.T) {
+	t.Parallel()
+
+	if os.Geteuid() == 0 {
+		t.Skip("root removes what it may not")
+	}
+	e := newEnv(t)
+	want(t, e.do(t, http.MethodDelete, "/api/pages/none", "", "Origin", origin), http.StatusNotFound, "not found")
+	e.publish(t, "d", "lang: en\ntemplate: pic\n", nil)
+	dir := filepath.Join(e.root, "d")
+	m := store.New(e.root).ReadMeta("d")
+	if err := os.Chmod(filepath.Join(dir, m.Source), 0o500); err != nil {
+		t.Fatal(err)
+	}
+	t.Cleanup(func() { _ = os.Chmod(filepath.Join(dir, m.Source), 0o700) }) //nolint:errcheck // told already
+	want(t, e.do(t, http.MethodDelete, "/api/pages/d", "", "Origin", origin), http.StatusBadRequest, "cannot be written (permission denied)")
+	want(t, e.do(t, http.MethodGet, "/api/pages", ""), http.StatusOK, `"slug":"d"`)
+	if err := os.Chmod(filepath.Join(dir, m.Source), 0o700); err != nil {
+		t.Fatal(err)
+	}
+	want(t, e.do(t, http.MethodDelete, "/api/pages/d", "", "Origin", origin), http.StatusNoContent, "")
+	want(t, e.do(t, http.MethodGet, "/api/pages", ""), http.StatusOK, "[]")
+}
+
+// Requests in parallel, of every kind, share the drawing (go test -race).
+func TestParallel(t *testing.T) {
+	t.Parallel()
+
+	e := newEnv(t)
+	data := filepath.Join(e.home, "proj", "d.yaml")
+	writeFiles(t, filepath.Dir(data), map[string]string{"d.yaml": "lang: en\ntemplate: pic\nnote: one\n"})
+	e.write(t, http.MethodPost, "/api/pages", server.Link{Path: data}) //nolint:exhaustruct // the rest not given
+	var wg sync.WaitGroup
+	for range 8 {
+		wg.Go(func() {
+			e.do(t, http.MethodGet, "/a/d/?raw", "")
+			e.publish(t, "s", "lang: en\ntemplate: pic\n", nil)
+			e.do(t, http.MethodGet, "/api/pages", "")
+		})
+	}
+	wg.Wait()
+}

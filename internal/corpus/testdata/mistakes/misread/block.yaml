@@ -1,0 +1,10 @@
+template: report
+lang: en
+title: A comment after a text
+sections:
+  - heading: h
+    parts:
+      - text: |
+          para
+        # h2
+      - text: more

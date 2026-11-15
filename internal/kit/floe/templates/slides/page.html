@@ -1,0 +1,35 @@
+<!doctype html>
+<html lang="{{.Lang}}"{{with .Data.direction}} data-direction="{{.}}"{{end}}>
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>{{.Title}}</title>
+</head>
+<body>
+<header class="slide cover" data-floe-look="band">
+<h1>{{.Title}}</h1>
+{{- with .Data.subtitle}}<p class="subtitle">{{markdownLine .}}</p>{{end}}
+<p class="hint">{{if eq (or .Data.direction "down") "across"}}{{word "hint_across"}}{{else}}{{word "hint_down"}}{{end}}</p>
+</header>
+{{- /* The number of a slide is the list's counter, and the count of them each slide's data-total, which CSS reads.
+   role="list" keeps it a list to Safari and VoiceOver, which drop the list of one without its marks.
+   LIMIT: the slides down are moved by the scroll alone, not by the ← and → keys, which would need a script; across
+   takes those keys */}}
+{{- $total := len .Data.slides}}
+<main>
+<ol class="slides" role="list">
+{{- range .Data.slides}}{{$divider := not .parts}}
+<li class="slide{{if $divider}} divider{{end}}" data-total="{{$total}}"{{if $divider}} data-floe-look="band"{{end}}>
+<h2>{{markdownLine .heading}}</h2>
+{{- with .parts}}
+<div class="content">
+{{- range .}}{{range .}}{{with .}}
+{{.}}{{end}}{{end}}{{end}}
+</div>
+{{- end}}
+</li>
+{{- end}}
+</ol>
+</main>
+</body>
+</html>

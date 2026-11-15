@@ -1,0 +1,36 @@
+$ floe check anchors.yaml keys.yaml
+exit 1
+--- stderr
+anchors.yaml:3:8: anchors, aliases, merge keys (<<) and tags are not supported; write the value out
+anchors.yaml:5:14: anchors, aliases, merge keys (<<) and tags are not supported; write the value out
+anchors.yaml:7:15: anchors, aliases, merge keys (<<) and tags are not supported; write the value out
+anchors.yaml:8:15: anchors, aliases, merge keys (<<) and tags are not supported; write the value out
+keys.yaml:4:1: a key is a name: write 1 as text, in quotes
+keys.yaml:9:32: .inf is not a value a YAML file can hold; write a number in digits, or quote it as text
+keys.yaml:10:32: .nan is not a value a YAML file can hold; write a number in digits, or quote it as text
+keys.yaml:12:5: a key is a name: write true as text, in quotes
+$ floe render --out-dir $TMP/pages/anchors.yaml anchors.yaml
+exit 1
+--- stderr
+anchors.yaml:3:8: anchors, aliases, merge keys (<<) and tags are not supported; write the value out
+anchors.yaml:5:14: anchors, aliases, merge keys (<<) and tags are not supported; write the value out
+anchors.yaml:7:15: anchors, aliases, merge keys (<<) and tags are not supported; write the value out
+anchors.yaml:8:15: anchors, aliases, merge keys (<<) and tags are not supported; write the value out
+$ floe render --out-dir $TMP/pages/keys.yaml keys.yaml
+exit 1
+--- stderr
+keys.yaml:4:1: a key is a name: write 1 as text, in quotes
+keys.yaml:9:32: .inf is not a value a YAML file can hold; write a number in digits, or quote it as text
+keys.yaml:10:32: .nan is not a value a YAML file can hold; write a number in digits, or quote it as text
+keys.yaml:12:5: a key is a name: write true as text, in quotes
+$ floe render --out-dir $TMP/together anchors.yaml keys.yaml
+exit 1
+--- stderr
+anchors.yaml:3:8: anchors, aliases, merge keys (<<) and tags are not supported; write the value out
+anchors.yaml:5:14: anchors, aliases, merge keys (<<) and tags are not supported; write the value out
+anchors.yaml:7:15: anchors, aliases, merge keys (<<) and tags are not supported; write the value out
+anchors.yaml:8:15: anchors, aliases, merge keys (<<) and tags are not supported; write the value out
+keys.yaml:4:1: a key is a name: write 1 as text, in quotes
+keys.yaml:9:32: .inf is not a value a YAML file can hold; write a number in digits, or quote it as text
+keys.yaml:10:32: .nan is not a value a YAML file can hold; write a number in digits, or quote it as text
+keys.yaml:12:5: a key is a name: write true as text, in quotes

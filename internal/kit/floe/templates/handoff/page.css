@@ -1,0 +1,33 @@
+/* The colours and faces are the theme's palette; the page lays them out: a band of the counts, what to decide, and
+   a board of what is done, in progress and next, each in the column every template centres its page in.
+   LIMIT: the board puts its sections side by side while each has 16rem; a width where they wrap is not looked at */
+body { line-height: 1.7; padding-block: 0 4rem; }
+.band { padding-block: 1.8rem 1.6rem; }
+.band .floe-column { display: grid; gap: 0.5rem; justify-items: start; }
+h1 { font-size: clamp(1.7rem, 4vw, 2.2rem); font-weight: 800; }
+.when { display: flex; flex-wrap: wrap; gap: 0.3rem 0.9rem; align-items: baseline; }
+.date { font-family: var(--mono); }
+.counts { list-style: none; padding: 0; margin-top: 0.4rem; display: flex; flex-wrap: wrap; gap: 0.8rem; }
+.counts li { min-width: 7.5rem; border: 1px solid currentColor; border-radius: var(--radius-small); }
+/* Not a face (base.css): a link fills its box, so its ring is outside it, on the band */
+.counts a { color: inherit; text-decoration: none; }
+.counts li > a, .counts li:not(:has(a)) { display: grid; padding: 0.5rem 1rem; font-size: 0.85rem; }
+.counts b { font-family: var(--mono); font-size: 2rem; line-height: 1.1; }
+.counts li.hot { background: var(--tone-soft); color: var(--tone); border-color: var(--tone-soft); }
+main { display: grid; gap: 2rem; padding-block: 2rem; }
+main h2 { font-size: 1.15rem; }
+.asks { display: grid; gap: var(--floe-room); }
+.asks h2 { color: var(--warn); font-size: 1.3rem; }
+/* As many columns as the sections written, side by side while each has 16rem */
+.board { display: grid; grid-template-columns: repeat(auto-fit, minmax(min(16rem, 100%), 1fr)); gap: 1rem; align-items: start; }
+.board section { padding: var(--floe-pad-block) var(--floe-pad-inline); display: grid; gap: 0.6rem; }
+.board ul, .board ol { gap: 0.6rem; }
+.doing { list-style: none; padding: 0; }
+/* A tick as the look marked places a row's sign */
+.done > li::before { content: "✓"; content: "✓" / ""; color: var(--good); }
+.ref, .where { display: block; color: var(--muted); font-size: 0.88rem; }
+.doing li { display: grid; grid-template-columns: auto 1fr; gap: 0.1rem 0.6rem; align-items: baseline; }
+.doing .what, .doing .where { grid-column: 1 / -1; }
+.state { justify-self: start; }
+.notes { display: grid; gap: 0.6rem; }
+main > section { display: grid; gap: var(--floe-room); }

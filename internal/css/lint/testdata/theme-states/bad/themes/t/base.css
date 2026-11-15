@@ -1,0 +1,4 @@
+:scope label:has(:checked) { color: red; } /* want ":checked paints a state; set the part's variable for it (--tabs-picked-bg)" */
+:scope input:CHECKED { color: red; } /* want ":checked paints a state; set the part's variable for it (--tabs-picked-bg)" */
+@media print { :scope { color: red; } } /* want "@media print styles paper; a theme styles the screen and paper alike" */
+@media screen, PRINT { :scope { color: red; } } /* want "@media print styles paper; a theme styles the screen and paper alike" */

@@ -1,0 +1,2 @@
+/* The ring of a title follows the panel's hand-drawn corners */
+:scope > summary:focus-visible { border-radius: var(--nb-hand); }

@@ -1,0 +1,128 @@
+package kit
+
+import (
+	"encoding/base64"
+	"errors"
+	"html/template"
+	"io"
+	"io/fs"
+	"path"
+	"strconv"
+	"strings"
+
+	"floe/internal/files"
+	"floe/internal/usererr"
+)
+
+// maxImage is the size an image may be.
+// LIMIT: 1 MiB an image, and no bound on how many a page holds, as every image goes into the page. Raise the
+// one, or bound the other, if pages come to need it.
+const maxImage = 1 << 20
+
+// imageTypes are the images floe takes, by the extension of their name: the type of their data URI.
+var imageTypes = map[string]string{
+	".png": "image/png", ".jpg": "image/jpeg", ".jpeg": "image/jpeg", ".gif": "image/gif", ".webp": "image/webp",
+	".svg": "image/svg+xml",
+}
+
+// ReadImage reads the image name of fsys, the directory dir as its mistakes name it, that of the file of, as a
+// data URI, as ImageFile reads it.
+func ReadImage(fsys fs.FS, name, dir, of string) (template.URL, error) {
+	b, typ, err := ImageFile(fsys, name, dir, of)
+	if err != nil {
+		return "", err
+	}
+	//nolint:gosec // G203: an image of a type floe takes, as a data URI
+	return template.URL("data:" + typ + ";base64," + base64.StdEncoding.EncodeToString(b)), nil
+}
+
+// ImageFile reads the image name of fsys, the directory dir as its mistakes name it, that of the file of, and
+// returns it with the type of its data URI: what a page shows, and what the command line sends a server to draw
+// with. Its mistakes are of the name, without a place, for the caller to put where the name was written: a name
+// floe does not read (told relative to the directory of of), an extension of no image floe takes, a file that is
+// not a regular one, one over maxImage, and one that cannot be read, in the system's words (kit_image_unread).
+// Only a directory that cannot be opened is told at it (dir), once.
+// LIMIT: a file is taken by its name's type, what it holds unchecked: one that holds another shows broken.
+func ImageFile(fsys fs.FS, name, dir, of string) ([]byte, string, error) {
+	typ, err := imageStat(fsys, name, dir, of)
+	if err != nil {
+		return nil, "", err
+	}
+	f, err := fsys.Open(name)
+	switch {
+	case errors.Is(err, usererr.ErrNotFile):
+		// Made a FIFO or the like since the Stat: files.Root and files.DirFS refuse it unopened.
+		return nil, "", usererr.New("kit_image_not_file", name)
+	case err != nil:
+		return nil, "", imageUnread(name, err)
+	}
+	defer f.Close()
+	fi, err := f.Stat()
+	switch {
+	case err != nil:
+		return nil, "", imageUnread(name, err)
+	case !fi.Mode().IsRegular():
+		return nil, "", usererr.New("kit_image_not_file", name)
+	case fi.Size() > maxImage:
+		return nil, "", tooLarge(name, fi.Size())
+	}
+	b, err := io.ReadAll(io.LimitReader(f, maxImage+1))
+	switch {
+	case err != nil:
+		return nil, "", imageUnread(name, err)
+	case len(b) > maxImage:
+		return nil, "", tooLarge(name, int64(len(b)))
+	}
+	return b, typ, nil
+}
+
+// imageStat checks the image name of fsys, the directory dir, as ReadImage does without reading it: a name floe
+// reads, an extension of an image floe takes, a regular file, of maxImage at most. It returns the type of its
+// data URI.
+func imageStat(fsys fs.FS, name, dir, of string) (string, error) {
+	// files.Root and files.DirFS say only "invalid argument" of such a name.
+	if !fs.ValidPath(name) || name == "." {
+		return "", usererr.New("kit_image_path", name, of)
+	}
+	typ, ok := imageTypes[strings.ToLower(path.Ext(name))]
+	if !ok {
+		return "", usererr.New("kit_image_type", name)
+	}
+	fi, err := fs.Stat(fsys, name)
+	switch {
+	case err != nil:
+		// A directory that cannot be opened is told once, at it, not at each image under it.
+		if de, ok := errors.AsType[*files.DirError](err); ok {
+			return "", usererr.CannotRead(dir, de.Err) //nolint:wrapcheck // the system's words, at the directory
+		}
+		return "", imageUnread(name, err)
+	case !fi.Mode().IsRegular():
+		// No image, told before it is opened; one swapped in after this check is told the same way when it is opened.
+		return "", usererr.New("kit_image_not_file", name)
+	case fi.Size() > maxImage:
+		return "", tooLarge(name, fi.Size())
+	}
+	return typ, nil
+}
+
+// imageUnread is err, of reading the image name, a mistake of the name in the system's words.
+func imageUnread(name string, err error) error {
+	return usererr.InSystemWordsOf("kit_image_unread", name, err) //nolint:wrapcheck // the system's words, of the name
+}
+
+// tooLarge refuses the image name of size bytes, saying by how much: one just over the limit would be 1 MiB as
+// bytes writes it.
+func tooLarge(name string, size int64) *usererr.Error {
+	grouped := func(n int64) string {
+		s, err := decimal("bytes", n, 0)
+		if err != nil {
+			return strconv.FormatInt(n, 10)
+		}
+		return s
+	}
+	limit, err := formatBytes(int64(maxImage))
+	if err != nil {
+		limit = strconv.Itoa(maxImage) + " B"
+	}
+	return usererr.New("kit_image_large", name, grouped(size), grouped(maxImage), limit)
+}

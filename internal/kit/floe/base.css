@@ -1,0 +1,121 @@
+/* What every page starts from, under the template's CSS and the parts': its ground, colour and face on the root, which a
+   template's :scope sets over, and its text, lists, links, code and quotes, inside the parts too */
+* { box-sizing: border-box; }
+/* A long word, a path or a URL breaks at any character, so that no box it is in overflows, however narrow; a part
+   that scrolls sideways on screen instead, as a table does, keeps its words whole there, and folds its lines on paper.
+   LIMIT: a word only a little wider than its column, which spilled over the box's padding before, breaks too, and a short
+   label beside a long text in a row of flex breaks unless it keeps from shrinking (flex: none), as code's language and
+   diff's counts do; a pill (cell), kept on one line unless what holds it sets --floe-pill-wrap: normal, still overflows.
+   Give such a part a layout for narrow screens, as keys has */
+/* Print keeps every ground, the page's too, as the screen draws it: a light text on a fill would be lost on white
+   paper. The prefixed name is for a Chromium before 136, as a VS Code's may be.
+   LIMIT: no test fails without the prefixed name, as the Chrome of the tests reads both */
+:root { background: var(--page-bg); color: var(--fg); font-family: var(--font); overflow-wrap: anywhere; -webkit-print-color-adjust: exact; print-color-adjust: exact; }
+h1, h2, h3 { margin: 0; font-family: var(--display); font-weight: 700; line-height: 1.35; text-wrap: balance; }
+h3 { font-size: 1.05rem; }
+/* A heading in a part, a text or a template's own Markdown is the author's, as a part draws none and a template names
+   its own outside the box of its Markdown: in Markdown's sizes, smaller than a template's title.
+   LIMIT: 1.2em is larger than the section headings of adr (1.1rem) and postmortem (1.15rem), and 1.1em as large as
+   adr's (and near postmortem's), its h2 told from them by nothing; lower them if that matters */
+:where([data-floe-part], [data-floe-text], [data-floe-markdown]) h1 { font-size: 1.2em; }
+:where([data-floe-part], [data-floe-text], [data-floe-markdown]) h2 { font-size: 1.1em; }
+p, ul, ol { margin: 0; }
+/* The other blocks with a browser's own margins, so that what places them spaces them, wherever they stand */
+h4, h5, h6, hr, figure, dl, form, menu, fieldset { margin: 0; }
+ul, ol { padding-left: 1.3rem; display: grid; gap: 0.3rem; }
+/* A face that fills itself and holds text (a band, a filled note, a quote in ink, code's box) sets its ground in
+   --face and its text's colour in --on-face, and paints itself with them: links, a line's code (framed, on no ground of
+   its own) and the focus ring in it take them, as the accent and its soft ground would sink into the fill. What a part
+   holds draws on the part's own ground, without them, nor a --floe-pill-wrap set around the part; the part's box stays
+   in the face, its ring too. An element that paints a light ground of its own (a panel, a note) sets its text's colour
+   with it and takes no face either, and a theme that takes the ground away gives both back; one that sets a colour on
+   no ground of its own writes it as var(--on-face, …) */
+:where([data-floe-part]) > * { --face: initial; --on-face: initial; --floe-pill-wrap: initial; }
+/* Markdown a part holds, a text's too, in a box of no part (MarkdownFlow), and a template's own Markdown in a box of
+   its own (Markdown): its blocks stand --floe-room apart, as parts do, and what places the box spaces it alone, not
+   its blocks; empty Markdown draws no box. page.css reaches in a template's box, to arrange it, not in a
+   text's. What a quote or a list holds is spaced below.
+   LIMIT: a template's Markdown placed in a part's box (a note of its own) is spaced so too, not as the part spaces
+   what it holds, and page.css stops at the part's box there; floe's templates place none so */
+[data-floe-text], [data-floe-markdown] { display: grid; grid-template-columns: minmax(0, 1fr); gap: var(--floe-room); }
+a { color: var(--on-face, var(--accent)); }
+/* LIMIT: a part draws a ring of focus or a pick by outline on its box (options' cards): a theme that draws a
+   decoration there by outline loses it to the ring. Nothing checks it; a theme draws such a decoration by --floe-inset
+   or ::before */
+:focus-visible { outline: 2px solid var(--on-face, var(--accent)); outline-offset: 2px; }
+/* What a browser draws in its own monospace stays the page's size: with no font size set on the page, a browser sizes
+   monospace alone from 13px, and the same named twice from the page's */
+kbd, samp, tt { font-family: monospace, monospace; }
+code { font-family: var(--mono); font-size: 0.86em; background: var(--face, var(--accent-soft)); box-shadow: inset 0 0 0 1px color-mix(in srgb, var(--on-face, transparent) 55%, transparent); padding: 0.1em 0.35em; border-radius: var(--radius-small); }
+/* On screen, a box that scrolls sideways tells nothing of its content's width outside (contain: inline-size), so that
+   a long line or a wide table scrolls in it and widens no grid or flex item around it, nor the page; every rule writes
+   overflow-x: auto with it, under @media screen. On paper, where what scrolls is not read, nothing scrolls: pre folds
+   its lines, and a part that scrolls on screen folds what it holds within the paper's width.
+   LIMIT: what folds no word on paper (a table's heads and cells, a column of numbers or of pills, a tree's note and its
+   depth, a field's name, a finding's level) reaches past the paper when its longest words are wider, and Chrome prints
+   the whole page smaller. In a grid's column of a fixed least width (cards side by side, columns) it reaches past its
+   card or column instead, over the next or out of the theme's frame, the page no wider until it reaches past the paper
+   there, when the whole page prints smaller again.
+   LIMIT: a box a grid's item holds (cards', or columns' long code or table), sent on to the next page at a page's end,
+   leaves the item as short as before, and what follows is drawn over it; a grid's fragmentation, not a box's scrolling.
+   LIMIT: such a box shrinks to its border and padding (code's pre, which leaves its padding to its lines, to its border
+   alone) on screen where its content sets the width; give the place a width if floe places one so.
+   Such places: an inline-block, a float, an absolute or other shrink-to-fit box, a width of min-content, max-content
+   or fit-content, a table's cell of auto width, justify-items or justify-self start in a grid, an item of a flex row
+   on flex-basis auto, a grid's auto column sized by its content. No part or template of floe's places one so: tree's list
+   is fit-content on screen but holds no box that scrolls. chart, keys and timeline (container-type: inline-size, to lay
+   out by their own width) shrink so in such a place too, to their padding */
+pre {
+  margin: 0; background: var(--surface); color: var(--fg); border: 1px solid var(--line); border-radius: var(--radius-small);
+  padding: 0.9rem 1rem; font-family: var(--mono); font-size: 0.875rem; line-height: 1.65;
+}
+@media screen { pre { overflow-x: auto; contain: inline-size; } }
+@media print { pre { white-space: pre-wrap; overflow-wrap: break-word; } }
+pre code { font-size: inherit; background: none; box-shadow: none; padding: 0; }
+blockquote { margin: 0; padding-left: 1rem; border-left: 3px solid var(--line); color: var(--on-face, var(--muted)); }
+blockquote > * + * { margin-top: 0.6rem; }
+@media (prefers-reduced-motion: reduce) { * { animation: none !important; transition: none !important; } }
+/* The copy button a part draws with copyButton, the same in every part: round, in the colours of code on its ground
+   (--code-ground, which a theme sets where it gives code a ground of its own), its icon a check once it copied. Above
+   what it lies over, which may draw above it otherwise (a block that scrolls): a part
+   holding it isolates its box (isolation: isolate), so that it stays under the page outside. Its ring is
+   inside it, in the code's colour, which the accent is too faint on. Its status is for screen readers alone. Its size,
+   the room a part leaves around it and what text keeps clear of it at its right are defaults.css's alone: a part that
+   lies text under it keeps --floe-copy-room after its longest line, as code does */
+.floe-copy {
+  position: relative; z-index: 1; display: grid; place-items: center; width: var(--floe-copy-size); height: var(--floe-copy-size); padding: 0;
+  border: 0; border-radius: 999px; cursor: pointer;
+  background: var(--code-ground, var(--code-bg)); color: color-mix(in srgb, var(--code-fg) 70%, var(--code-ground, var(--code-bg)));
+}
+.floe-copy:hover { background: color-mix(in srgb, var(--code-fg) 12%, var(--code-ground, var(--code-bg))); }
+.floe-copy:focus-visible { outline: 2px solid var(--code-fg); outline-offset: -2px; }
+.floe-copy svg { grid-area: 1 / 1; width: 16px; height: 16px; }
+.floe-copy svg + svg, .floe-copy.copied svg:first-child { display: none; }
+.floe-copy.copied svg + svg { display: block; color: var(--code-add); }
+/* Text a screen reader reads that the page does not show: the copy button's status, and .floe-hidden, the words that
+   tell what a mark of CSS means (a step done, a pro, a file added), which the mark itself is not read for (/ "").
+   It stands at the corner of what places it, or the page's, so that where its text would run widens no page.
+   LIMIT: text selected on the page and copied takes these words too; add user-select: none if that comes to matter.
+   LIMIT: a phone's screen reader (VoiceOver, TalkBack) moves its highlight onto the box it reads, so at each hidden word
+   the page may jump to that corner; floe's pages are read in a desktop's browser. Place each beside its text (its
+   ancestor positioned) if a phone's screen reader comes to be used */
+.floe-copy-status, .floe-hidden { position: absolute; top: 0; left: 0; width: 1px; height: 1px; overflow: hidden; clip-path: inset(50%); white-space: nowrap; }
+@media print { .floe-copy { display: none; } :root { --floe-copy-room: 0px; } }
+/* Between parts that stand one after another (a template's sections, a stack, the panel of tabs, columns, a column's
+   title and parts, cards) floe leaves --floe-room, and what a box draws outside itself (its shadow, a pseudo-element, an outline) reaches no further on any
+   side, so that it never meets another box nor the page's edge: nothing makes room for it. A box casts its theme's one
+   shadow, --floe-shadow-x, -y, -blur and -spread (inherited from the palette, in px or rem), in the colour
+   --floe-shadow-color set on that box alone, and draws within itself --floe-inset, set on it alone (initial clears it;
+   none is no shadow and voids them both). box-shadow on a part's box, a look's element and a quote is written here alone.
+   LIMIT: a box-shadow written on such a box elsewhere wins over this and silently drops its shadow and --floe-inset; a
+   length in em scales with the box's font, and a percentage leaves it no shadow. TestLookRule/shadow-cast measures, no rule refuses.
+   LIMIT: a part spaces its Markdown's box from its own elements and edge (a title above, its padding below) under
+   --floe-room, so a theme's quote shadowed as far as that, first or last in a part's Markdown, may reach the title or
+   leave the part's box */
+@property --floe-shadow-color { syntax: "<color>"; inherits: false; initial-value: transparent; }
+@property --floe-inset { syntax: "*"; inherits: false; initial-value: 0 0 #0000; }
+[data-floe-part], [data-floe-look], blockquote {
+  box-shadow:
+    var(--floe-shadow-x, 0px) var(--floe-shadow-y, 0px) var(--floe-shadow-blur, 0px) var(--floe-shadow-spread, 0px) var(--floe-shadow-color),
+    var(--floe-inset);
+}

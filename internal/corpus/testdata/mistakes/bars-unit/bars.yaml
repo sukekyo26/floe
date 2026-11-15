@@ -1,0 +1,11 @@
+# A unit that is empty or not text is refused, each at its own place.
+lang: en
+template: report
+title: Bars
+sections:
+  - heading: a
+    parts:
+      - bars:
+          - { label: a, value: 5, unit: '' }
+          - { label: b, value: 1, unit: 3 }
+          - { label: c, value: 2, unit: pages per hour }

@@ -1,0 +1,23 @@
+# Loops on a graph's boxes, right: two nested on a hexagon, their labels one after another beside the outer loop, one
+# on a pill and one on a state, a loop with no label, and a label wider in Japanese.
+title: { en: Loops, ja: 自分に戻る線 }
+parts:
+  - graph:
+      x: 20
+      y: 20
+      direction: right
+      nodes:
+        - box: { name: wait, rows: [{ en: Waiting, ja: 待っている }] }
+        - box: { name: work, shape: hex, rows: [{ en: Working, ja: 作業中 }] }
+        - box: { name: retry, shape: pill, rows: [{ en: Retrying, ja: やり直し中 }] }
+        - box: { name: done, shape: state, tone: good, rows: [{ en: Done, ja: 終わった }] }
+      edges:
+        - { from: wait, to: work, label: { en: go, ja: 始める } }
+        - { from: wait, to: retry }
+        - { from: work, to: work, label: { en: next item, ja: 次の項目 } }
+        - { from: work, to: work, label: { en: retry, ja: 同じ項目をもう一度 } }
+        - { from: retry, to: retry }
+        - { from: retry, to: done }
+        - { from: work, to: done, label: { en: done, ja: 終わり } }
+        - { from: done, to: done, label: { en: tick, ja: 時を刻む } }
+        - { from: wait, to: wait }

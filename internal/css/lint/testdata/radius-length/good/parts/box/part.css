@@ -1,0 +1,1 @@
+:scope { --radius-pill: min(4px, 2vw); border-radius: var(--radius-pill); }

@@ -1,0 +1,21 @@
+template: report
+lang: en
+title: Two diagrams
+sections:
+  - heading: A
+    parts:
+      - diagram:
+          width: 200
+          height: 100
+          title: One
+          parts:
+            - icon: { icon: aws/res/aws-lambda, x: 10, y: 10 }
+      - diagram:
+          width: 200
+          height: 100
+          title: Two
+          parts:
+            - box: { x: 20, y: 20, w: 60, h: 40, rows: [A] }
+            - box: { x: 50, y: 30, w: 60, h: 40, rows: [B] }
+            - icon: { icon: aws/res/amazon-ec2, x: 120, y: 10 }
+            - icon: { icon: nope/x, x: 160, y: 10 }

@@ -1,0 +1,179 @@
+package files_test
+
+import (
+	"errors"
+	"io/fs"
+	"net"
+	"os"
+	"path/filepath"
+	"syscall"
+	"testing"
+	"testing/fstest"
+
+	"golang.org/x/sys/unix"
+
+	"floe/internal/files"
+	"floe/internal/timebox"
+	"floe/internal/usererr"
+)
+
+// fsOf returns the directory dir as a files.Root, closed at the end of the test, and as a files.DirFS.
+func fsOf(t *testing.T, dir string) map[string]fs.FS {
+	t.Helper()
+	root := files.NewRoot(dir)
+	t.Cleanup(func() { _ = root.Close() })
+	return map[string]fs.FS{"Root": root, "DirFS": files.DirFS(dir)}
+}
+
+// Both keep to what an fs.FS promises, as testing/fstest checks it.
+func TestFSContract(t *testing.T) {
+	t.Parallel()
+
+	dir := t.TempDir()
+	for name, b := range map[string]string{"a.yaml": "a", "sub/b.png": "b"} {
+		if err := os.MkdirAll(filepath.Dir(filepath.Join(dir, name)), 0o700); err != nil {
+			t.Fatal(err)
+		}
+		if err := os.WriteFile(filepath.Join(dir, name), []byte(b), 0o600); err != nil {
+			t.Fatal(err)
+		}
+	}
+	for via, fsys := range fsOf(t, dir) {
+		if err := fstest.TestFS(fsys, "a.yaml", "sub/b.png"); err != nil {
+			t.Errorf("%s: %v", via, err)
+		}
+		// fstest.TestFS tries bad names on Open and ReadFile alone.
+		if _, err := fs.Stat(fsys, "../x"); !errors.Is(err, fs.ErrInvalid) {
+			t.Errorf("%s: Stat(../x) = %v, want fs.ErrInvalid", via, err)
+		}
+	}
+}
+
+// What both open, a file or a directory, is opened without blocking (O_NONBLOCK), as files.Open opens it: that
+// is what lets the open of a FIFO return.
+func TestFSOpensWithoutBlocking(t *testing.T) {
+	t.Parallel()
+
+	dir := t.TempDir()
+	if err := os.WriteFile(filepath.Join(dir, "a.yaml"), []byte("a"), 0o600); err != nil {
+		t.Fatal(err)
+	}
+	for via, fsys := range fsOf(t, dir) {
+		for _, name := range []string{"a.yaml", "."} {
+			f, err := fsys.Open(name)
+			if err != nil {
+				t.Fatalf("%s: Open(%s) = %v", via, name, err)
+			}
+			of, ok := f.(*os.File)
+			if !ok {
+				t.Fatalf("%s: Open(%s) = %T, want an *os.File", via, name, f)
+			}
+			// Not Fd, which makes the file blocking.
+			var flags int
+			var flagErr error
+			rc, err := of.SyscallConn()
+			if err == nil {
+				err = rc.Control(func(fd uintptr) { flags, flagErr = unix.FcntlInt(fd, unix.F_GETFL, 0) })
+			}
+			if err = errors.Join(err, flagErr); err != nil {
+				t.Fatal(err)
+			}
+			if flags&unix.O_NONBLOCK == 0 {
+				t.Errorf("%s: Open(%s) opened it blocking", via, name)
+			}
+			_ = f.Close()
+		}
+	}
+}
+
+// A FIFO or a socket is refused by a read or a listing through either, unopened; a Stat tells of it without
+// opening it.
+func TestFSNotFiles(t *testing.T) {
+	t.Parallel()
+
+	dir := t.TempDir()
+	if err := syscall.Mkfifo(filepath.Join(dir, "f"), 0o600); err != nil {
+		t.Fatal(err)
+	}
+	ln, err := (&net.ListenConfig{}).Listen(t.Context(), "unix", filepath.Join(dir, "s"))
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer ln.Close()
+	for via, fsys := range fsOf(t, dir) {
+		for _, name := range []string{"f", "s"} {
+			timebox.Within(t, via+" "+name, func() {
+				if _, err := fs.ReadFile(fsys, name); !errors.Is(err, usererr.ErrNotFile) {
+					t.Errorf("%s: ReadFile(%s) = %v, want ErrNotFile", via, name, err)
+				}
+				if _, err := fs.ReadDir(fsys, name); !errors.Is(err, usererr.ErrNotFile) {
+					t.Errorf("%s: ReadDir(%s) = %v, want ErrNotFile", via, name, err)
+				}
+				if fi, err := fs.Stat(fsys, name); err != nil || fi.Mode().IsRegular() || fi.IsDir() {
+					t.Errorf("%s: Stat(%s) = %v, %v, want what it is", via, name, fi, err)
+				}
+			})
+		}
+	}
+}
+
+// DirFS follows links as os.DirFS does, out of its directory too, and puts names after its directory by their
+// letters, for the system to resolve link/.. as os.ReadDir does; Root keeps to its directory.
+func TestFSLinks(t *testing.T) {
+	t.Parallel()
+
+	tmp := t.TempDir()
+	for _, d := range []string{"home", "real/inner", "out"} {
+		if err := os.MkdirAll(filepath.Join(tmp, d), 0o700); err != nil {
+			t.Fatal(err)
+		}
+	}
+	for name, b := range map[string]string{"home/x": "home", "real/x": "real", "out/o.yaml": "o"} {
+		if err := os.WriteFile(filepath.Join(tmp, name), []byte(b), 0o600); err != nil {
+			t.Fatal(err)
+		}
+	}
+	if err := os.Symlink(filepath.Join(tmp, "real", "inner"), filepath.Join(tmp, "home", "link")); err != nil {
+		t.Fatal(err)
+	}
+	if err := os.Symlink(filepath.Join(tmp, "out", "o.yaml"), filepath.Join(tmp, "home", "o.yaml")); err != nil {
+		t.Fatal(err)
+	}
+	// By its letters: filepath.Join would fold link/.. itself.
+	if b, err := fs.ReadFile(files.DirFS(filepath.Join(tmp, "home", "link")+"/.."), "x"); err != nil || string(b) != "real" {
+		t.Errorf("DirFS(home/link/..) read x = %q, %v; want real, as os.ReadDir reads it", b, err)
+	}
+	home := fsOf(t, filepath.Join(tmp, "home"))
+	if b, err := fs.ReadFile(home["DirFS"], "o.yaml"); err != nil || string(b) != "o" {
+		t.Errorf("DirFS read a link out = %q, %v", b, err)
+	}
+	if _, err := fs.ReadFile(home["Root"], "o.yaml"); err == nil {
+		t.Error("Root read a link out of it")
+	}
+}
+
+// DirFS("") opens nothing and says why, as os.DirFS("") does.
+func TestDirFSEmpty(t *testing.T) {
+	t.Parallel()
+
+	if _, err := fs.ReadFile(files.DirFS(""), "a.yaml"); err == nil {
+		t.Error("DirFS(\"\") read a.yaml")
+	}
+	if _, err := fs.Stat(files.DirFS(""), "a.yaml"); err == nil {
+		t.Error("DirFS(\"\") stat a.yaml")
+	}
+}
+
+// A Root whose directory cannot be opened says so (DirError), at an Open and a Stat alike.
+func TestRootDirError(t *testing.T) {
+	t.Parallel()
+
+	root := files.NewRoot(filepath.Join(t.TempDir(), "none"))
+	defer root.Close()
+	if _, err := root.Open("a.png"); !errors.As(err, new(*files.DirError)) {
+		t.Errorf("Open = %v, want a DirError", err)
+	}
+	if _, err := root.Stat("a.png"); !errors.As(err, new(*files.DirError)) {
+		t.Errorf("Stat = %v, want a DirError", err)
+	}
+}

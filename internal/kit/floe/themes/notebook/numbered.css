@@ -1,0 +1,3 @@
+/* A filled ring takes the tone's highlighter, as a pill does */
+:scope > li:where([data-floe-mark=solid])::before { background: var(--tone-fill); color: var(--fg); }
+:scope > li:where([data-floe-mark=solid])::after { background: var(--tone-fill); }

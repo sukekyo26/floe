@@ -1,0 +1,538 @@
+package diagram
+
+import (
+	"fmt"
+	"iter"
+	"math"
+	"slices"
+	"strconv"
+	"strings"
+)
+
+// check reports the layout's mistakes: text too wide or tall for its box or frame (as it was laid out), parts
+// (edges, lines and axes too) sticking out of the canvas, overlapping (frame headings too), boxes, marks and the
+// labels kept off a frame's edge straddling it, edges running through boxes, labels or frame headings, and edges
+// crossing. A frame's own box is compared with no other frame's, and a frame's heading is not
+// kept within the frame's height or a canvas written (its width is, by addFrame): frames may cross on purpose (a group
+// over two columns, bands that cross), and on the page a heading out of its frame shows below it, one out of a canvas
+// written cut short or gone (a canvas left out reaches it). A frame's icon is a box and its heading a text, each
+// checked as those are.
+func (l *layout) check() {
+	l.checkPlacement()
+	l.checkEdges()
+	l.checkCrossings()
+}
+
+// checked checks l (see check), but a layout that failed, and returns floe's failure in laying it out or checking
+// it (two things of one graph that meet), the mistakes left in l.problems.
+func (l *layout) checked() error {
+	if l.failure == nil {
+		l.check()
+	}
+	return l.failure
+}
+
+// checkPlacement reports parts sticking out of the canvas; boxes (a frame's icon among them), marks, labels and
+// frame headings overlapping; and boxes, marks and the labels kept off a frame's edge (offEdge: the ones their writer
+// put where they stand, a label part at an x and y and an edge's at at; and the ones of a part that may not straddle a
+// frame itself, an icon and a bar) straddling a frame, told once for each edge crossed, a label by its box (5 wider
+// each side than its text, with no background too, as for overlaps). Frames are not compared with one another, so a
+// label heading a band across frames that cross it straddles them, as a box there does.
+// LIMIT: the other labels are not kept off a frame's edge: an edge's with no at (in the middle of the edge, which may
+// cross frames), an axis's (which may too), a graph edge's, and a label part's in its region of a Venn diagram, minding
+// only circles. Keep them off too if one strays.
+// LIMIT: the numbers told are rounded by num to 2 places, so with coordinates of 3 places or more an edge within 0.005
+// of a part's end reads as that end (at x 140, spanning 140 to 180), and a frame written to the numbers told may still
+// be refused; round the coordinates to mend it. Tell more places if writers come to need them.
+// LIMIT: the edges one part crosses are told in the order of their words (usererr.Sorted compares text), so at x 140
+// comes before at x 20. Sort them by number if the order comes to matter.
+func (l *layout) checkPlacement() {
+	canvas := l.canvas()
+	for _, r := range slices.Concat(l.boxes, l.marks, l.labels, l.frames, l.areas, l.strokes) {
+		if !r.inside(canvas) {
+			l.tell("diagram_outside", []placed{{r.at, r.graph}}, r.what, num(l.w), num(l.h))
+		}
+	}
+	for _, r := range l.strays {
+		l.problem(r.at, "diagram_outside", r.what, num(l.w), num(l.h))
+	}
+	solids := slices.Concat(l.boxes, l.marks, l.labels, l.heads)
+	// LIMIT: every pair is compared (O(n²)), here and for edges. If diagrams of hundreds of parts get slow,
+	// compare only the parts that share a cell of a grid.
+	for i, a := range solids {
+		for _, b := range solids[i+1:] {
+			if a.overlaps(b) {
+				l.tell("diagram_overlap", []placed{{a.at, a.graph}, {b.at, b.graph}}, a.what, b.what)
+			}
+		}
+	}
+	offEdge := slices.DeleteFunc(slices.Clone(l.labels), func(r rect) bool { return !r.offEdge })
+	for _, b := range slices.Concat(l.boxes, l.marks, offEdge) {
+		for _, f := range l.frames {
+			if !b.overlaps(f) {
+				continue
+			}
+			things := []placed{{b.at, b.graph}, {f.at, f.graph}}
+			for _, c := range edgesCrossed(b, f) {
+				l.tell("diagram_straddle", things, b.what, f.what, c.axis, num(c.at), num(c.lo), num(c.hi))
+			}
+		}
+	}
+}
+
+// edgeCrossed is an edge of a frame across a part: where it stands on axis, and where the part spans on it.
+type edgeCrossed struct {
+	axis       string
+	at, lo, hi float64
+}
+
+// edgesCrossed are the edges of frame f that a, overlapping f, runs across. An end within eps of an edge does not cross
+// it: a frame written to the numbers told must pass, though a sum of a label's place and width is off them by float
+// error.
+func edgesCrossed(a, f rect) []edgeCrossed {
+	var out []edgeCrossed
+	for axis, name := range []string{"x", "y"} {
+		lo, hi := a.lo(axis), a.lo(axis)+a.size(axis)
+		for _, at := range []float64{f.lo(axis), f.lo(axis) + f.size(axis)} {
+			if lo < at-eps && at+eps < hi {
+				out = append(out, edgeCrossed{name, at, lo, hi})
+			}
+		}
+	}
+	return out
+}
+
+// checkEdges reports edges running through boxes, labels or frame headings: an edge across a label hides part
+// of it behind the label's background, and one across text without a background strikes through it. An edge sharing a
+// line with another's label passes (sharesLabel).
+func (l *layout) checkEdges() {
+	for _, p := range l.paths {
+		for _, r := range l.throughs(p) {
+			if l.sharesLabel(p, r) {
+				continue
+			}
+			l.tell("diagram_runs_through", []placed{{p.at, p.graph}, {r.at, r.graph}}, p.what, r.what)
+		}
+	}
+}
+
+// throughs are the parts, then the texts but its own label, that p runs through.
+func (l *layout) throughs(p path) []rect {
+	var out []rect
+	for _, b := range l.boxes {
+		if p.runsThrough(b) {
+			out = append(out, b)
+		}
+	}
+	for i, r := range l.labels {
+		if i != p.own && p.runsThrough(r) {
+			out = append(out, r)
+		}
+	}
+	for _, r := range l.heads {
+		if p.runsThrough(r) {
+			out = append(out, r)
+		}
+	}
+	return out
+}
+
+// sharesLabel reports whether p may run through r: r is the label of another edge written by hand, the two go to one
+// part named alike or come from one, p's ends stand off r, and all of p in r lies on a run of the other from side to
+// side of r, unless the other edge's runs meet a label of p, when neither label could be told from the other. Only the
+// final check asks: an edge floe moves still keeps off every label.
+// LIMIT: the label of a shared run reads as either edge's, as its writer asked. Refuse it if that comes to mislead.
+// LIMIT: edges from one part that meet, share a run and part again pass too, though no join or parting. Refuse them if
+// their labels come to mislead.
+// LIMIT: only runs across and down on exactly one line, along one run of the label's edge: a slanting run, or a label
+// over a point of via, is refused. Take them in if writers come to need them.
+// LIMIT: a label left by an edge floe moves off it refuses the other in the usual words, not saying the move: a via
+// keeps the edge there. Say the move if writers come to miss that.
+func (l *layout) sharesLabel(p path, r rect) bool {
+	i := slices.Index(l.labels, r)
+	if i < 0 {
+		return false
+	}
+	at := slices.IndexFunc(l.paths, func(o path) bool { return o.own == i })
+	if at < 0 {
+		return false
+	}
+	own := l.paths[at]
+	if !p.sameWay(own) || (p.own >= 0 && own.runsThrough(l.labels[p.own])) {
+		return false
+	}
+	return p.endsOff(r) && !slices.ContainsFunc(p.segs, func(s seg) bool {
+		return crossedBy(s, r) && !slices.ContainsFunc(own.segs, func(o seg) bool { return onOwnRun(s, o, r) })
+	})
+}
+
+// sameWay reports whether p and q go to one name or come from one: never an edge of a graph or tree, ending at points.
+func (p path) sameWay(q path) bool {
+	return (p.ends[0] != "" && p.ends[0] == q.ends[0]) || (p.ends[1] != "" && p.ends[1] == q.ends[1])
+}
+
+// onOwnRun reports whether s and o lie on one line across or down, o from side to side of r as crossedBy measures it.
+func onOwnRun(s, o seg, r rect) bool {
+	a := runAlong(s)
+	start, size := r.x, r.w
+	if a == 1 {
+		start, size = r.y, r.h
+	}
+	return s[3-a] == s[1-a] && o[1-a] == s[1-a] && o[3-a] == s[1-a] &&
+		min(o[a], o[a+2]) <= start+1 && max(o[a], o[a+2]) >= start+size-1
+}
+
+// endsOff reports whether p's two ends stand off r by the longest marker's length, so that no marker hides behind it.
+func (p path) endsOff(r rect) bool {
+	m := longestMark()
+	off := func(x, y float64) bool { return x <= r.x-m || x >= r.x+r.w+m || y <= r.y-m || y >= r.y+r.h+m }
+	first, last := p.segs[0], p.segs[len(p.segs)-1]
+	return off(first[0], first[1]) && off(last[2], last[3])
+}
+
+// canvas is the canvas as a rect, for what must stay within it.
+func (l *layout) canvas() rect {
+	return rect{x: 0, y: 0, w: l.w, h: l.h, what: "", at: ""}
+}
+
+// checkCrossings reports edges crossing like an X, unless one of them allows it.
+// LIMIT: edges overlapping along a stretch pass (a ↔ drawn on purpose); refuse them if accidental overlaps mislead.
+func (l *layout) checkCrossings() {
+	for a, b := range l.crossPairs() {
+		if x, y, ok := firstCrossing(a, b); ok {
+			l.tell("diagram_crossing", []placed{{a.at, a.graph}, {b.at, b.graph}}, a.what, b.what, num(x), num(y))
+		}
+	}
+}
+
+// crossPairs are the pairs of edges checkCrossings compares, one at a time: not two of one graph, whose crossings
+// its layout keeps to those of its ranks' order, nor one allowed to cross.
+func (l *layout) crossPairs() iter.Seq2[path, path] {
+	return func(yield func(path, path) bool) {
+		for i, a := range l.paths {
+			for _, b := range l.paths[i+1:] {
+				if !crossable(a, b) {
+					continue
+				}
+				if !yield(a, b) {
+					return
+				}
+			}
+		}
+	}
+}
+
+// crossable reports whether a and b are told when they cross: not two of one graph, whose crossings its layout
+// keeps to those of its ranks' order, nor one allowed to cross.
+func crossable(a, b path) bool {
+	return !a.crossing && !b.crossing && (a.graph == "" || a.graph != b.graph)
+}
+
+// crosses reports whether a crosses b, as checkCrossings tells it.
+func crosses(a, b path) bool {
+	if !crossable(a, b) {
+		return false
+	}
+	_, _, ok := firstCrossing(a, b)
+	return ok
+}
+
+// placed is where a thing is written, and the graph that laid it out ("" for one written by hand).
+type placed struct{ at, graph string }
+
+// graphKeys are the words of the mistakes that only things graphs laid out make: their writer cannot move them,
+// but only the graphs, by their x and y.
+var graphKeys = map[string]string{
+	"diagram_outside":      "diagram_graph_outside",
+	"diagram_overlap":      "diagram_graph_overlap",
+	"diagram_runs_through": "diagram_graph_through",
+	"diagram_crossing":     "diagram_graph_crossing",
+	"diagram_straddle":     "diagram_graph_straddle",
+}
+
+// tell tells the mistake of key that things make: at the one written by hand (no graph's nor tree's) written last, of
+// the greatest part (of one part, the first given), as the one added or moved last most often made it; with none,
+// at the one a tree laid out written last so; when graphs laid them all out, at the first's graph, in the words that
+// say to move it. Two things or more of one graph meet only by a fault of its layout, which no writer can mend:
+// floe's failure.
+// LIMIT: a mistake two things make named in the same words twice (two boxes of one text) told at one place is told
+// once (usererr.Tell), where it was told at each before; name them if one comes to need both.
+func (l *layout) tell(key string, things []placed, args ...any) {
+	at, hand, last := -1, false, 0
+	for i, t := range things {
+		if t.graph != "" {
+			continue
+		}
+		part, tree, err := partOf(t.at)
+		if err != nil {
+			if l.failure == nil {
+				l.failure = err
+			}
+			return
+		}
+		if at < 0 || !tree && !hand || !tree == hand && part > last {
+			at, hand, last = i, !tree, part
+		}
+	}
+	if at >= 0 {
+		l.problem(things[at].at, key, args...)
+		return
+	}
+	if len(things) > 1 && !slices.ContainsFunc(things, func(t placed) bool { return t.graph != things[0].graph }) {
+		if l.failure == nil {
+			l.failure = fmt.Errorf("diagram: the graph at %s laid out a mistake of its own, %s %v", //nolint:err113 // floe's own
+				things[0].graph, key, args)
+		}
+		return
+	}
+	l.problem(things[0].graph, graphKeys[key], args...)
+}
+
+// partOf is the index of the part at points to, a JSON pointer floe made under #/parts, and whether a tree laid it out;
+// a pointer of no part is floe's failure.
+func partOf(at string) (part int, tree bool, err error) {
+	rest, ok := strings.CutPrefix(at, "#/parts/")
+	n, more, _ := strings.Cut(rest, "/")
+	part, err = strconv.Atoi(n)
+	if !ok || err != nil {
+		return 0, false, fmt.Errorf("diagram: a mistake at %q, of no part", at) //nolint:err113 // floe's own
+	}
+	return part, more == "tree" || strings.HasPrefix(more, "tree/"), nil
+}
+
+func (p path) runsThrough(r rect) bool {
+	return slices.ContainsFunc(p.segs, func(s seg) bool { return crossedBy(s, r) })
+}
+
+// firstCrossing finds where a run of a first crosses a run of b, rounded to whole units.
+func firstCrossing(a, b path) (x, y float64, ok bool) {
+	for _, s := range a.segs {
+		for _, q := range b.segs {
+			if x, y, ok := crossing(s, q); ok {
+				return math.Floor(x + 0.5), math.Floor(y + 0.5), true
+			}
+		}
+	}
+	return 0, 0, false
+}
+
+// crossing returns where two runs cross like an X. Parallel runs (sharing a stretch included) and runs touching
+// at an end (a branch, a join, a corner) do not cross.
+func crossing(s, q seg) (x, y float64, ok bool) {
+	x1, y1, x2, y2 := s[0], s[1], s[2], s[3]
+	x3, y3, x4, y4 := q[0], q[1], q[2], q[3]
+	den := (x2-x1)*(y4-y3) - (y2-y1)*(x4-x3)
+	if math.Abs(den) < 1e-9 {
+		return 0, 0, false
+	}
+	t := ((x3-x1)*(y4-y3) - (y3-y1)*(x4-x3)) / den
+	u := ((x3-x1)*(y2-y1) - (y3-y1)*(x2-x1)) / den
+	const e = 1e-6
+	if t <= e || t >= 1-e || u <= e || u >= 1-e {
+		return 0, 0, false
+	}
+	return x1 + t*(x2-x1), y1 + t*(y2-y1), true
+}
+
+// region is an area of a Venn diagram: inside the circles of in, outside the others.
+type region struct {
+	in, out []circle
+}
+
+// roomOf is how far inside the region r is: the least of R less the distance of each corner, for each circle of
+// in, and of the distance of r's nearest point, less R, for each of out; negative when it is outside.
+func (g region) roomOf(r rect) float64 {
+	least := math.Inf(1)
+	for _, c := range g.in {
+		for _, p := range [4][2]float64{{r.x, r.y}, {r.x + r.w, r.y}, {r.x, r.y + r.h}, {r.x + r.w, r.y + r.h}} {
+			least = min(least, c.R-math.Hypot(p[0]-c.CX, p[1]-c.CY))
+		}
+	}
+	for _, c := range g.out {
+		nx, ny := min(max(c.CX, r.x), r.x+r.w), min(max(c.CY, r.y), r.y+r.h)
+		least = min(least, math.Hypot(nx-c.CX, ny-c.CY)-c.R)
+	}
+	return least
+}
+
+// regionOf is the region of the circles named in, telling a name that is no circle; false when there is one.
+func (l *layout) regionOf(at string, in []string) (region, bool) {
+	var g region
+	ok := true
+	for _, name := range in {
+		c, found := l.circles[name]
+		if !found {
+			l.problem(at, "diagram_label_not_circle", name)
+			ok = false
+			continue
+		}
+		g.in = append(g.in, c)
+	}
+	// Every other circle is outside the region, one of no name too.
+	for _, p := range l.s.Parts {
+		if c := p.Circle; c != nil && (c.Name == "" || !slices.Contains(in, c.Name)) {
+			g.out = append(g.out, *c)
+		}
+	}
+	return g, ok
+}
+
+// addLabel places a label: where it says, or, with in alone, in its region of a Venn diagram, below the labels
+// placed there before it; one at a place that says in is checked to be in that region, all of it. One with in stands
+// on a circle's colour, so it has no box unless it says plain: false.
+// LIMIT: a line one may cross (a divider, a lifeline) or raw's shape over a label with no box runs over its text, as
+// only edges are told running through labels; tell them too if they are drawn there.
+func (l *layout) addLabel(lb *label, at string) {
+	anchor := cmpOr(lb.Anchor, "middle")
+	plain := lb.In != nil
+	if lb.Plain != nil {
+		plain = *lb.Plain
+	}
+	var g region
+	if lb.In != nil {
+		var ok bool
+		if g, ok = l.regionOf(at, lb.In); !ok {
+			return
+		}
+	}
+	if lb.X != nil {
+		i := l.label(at, lb.Text, *lb.X, *lb.Y, anchor, plain, lb.Strong)
+		// One out of its region is told so, and not again for a frame's edge it straddles.
+		if lb.In != nil && g.roomOf(l.labels[i]) < -eps {
+			l.problem(at, "diagram_label_region", l.labels[i].what, strings.Join(lb.In, ", "))
+			return
+		}
+		l.labels[i].offEdge = true
+		return
+	}
+	names := strings.Join(lb.In, ", ")
+	x, y, st := l.place(lb, g)
+	who := "label " + words(lb.Text, labelClass(lb.Strong))
+	switch {
+	case !st.tried:
+		l.strays = append(l.strays, rect{x: 0, y: 0, w: 0, h: 0, what: who, at: at})
+		return
+	case !st.found:
+		l.problem(at, "diagram_label_no_room", who, names)
+		return
+	}
+	l.label(at, lb.Text, x, y, "middle", plain, lb.Strong)
+}
+
+// place finds where a label placed by its region goes: the labels of one region are stacked, the first above,
+// and placed as one block where it keeps the most room; the block is placed once, for its first label.
+// LIMIT: points 4 apart are tried, and at most 501 a side of where the circles all are within the canvas; try
+// them closer if a region narrow enough to slip between comes to matter.
+func (l *layout) place(lb *label, g region) (x, y float64, st stack) {
+	key := regionKey(lb.In)
+	st = l.stacks[key]
+	if st.next == 0 {
+		w := 0.0
+		for _, m := range st.labels {
+			w = max(w, labelWidth(m.Text, m.Strong))
+		}
+		h := labelH * float64(len(st.labels))
+		// The points of a grid over where the circles of in all are (their boxes' overlap, in no order of in),
+		// those within the canvas alone: a label sticks out when none of it has room in the canvas. Circles
+		// whose boxes do not overlap hold no room, wherever they are.
+		x0, y0, x1, y1 := math.Inf(-1), math.Inf(-1), math.Inf(1), math.Inf(1)
+		for _, c := range g.in {
+			x0, y0, x1, y1 = max(x0, c.CX-c.R), max(y0, c.CY-c.R), min(x1, c.CX+c.R), min(y1, c.CY+c.R)
+		}
+		st.tried = x0 >= x1 || y0 >= y1 ||
+			max(x0, 0) < min(x1, l.w) && max(y0, 0) < min(y1, l.h)
+		mx, my := (x0+x1)/2, (y0+y1)/2
+		xs, ys := grid(x0, x1, mx, l.w), grid(y0, y1, my, l.h)
+		var best float64
+		best, st.x, st.top = g.most(xs, ys, w, h, mx, my)
+		// A region whose most room is eps or less holds no label: floe places none touching an edge.
+		st.found = best > eps
+	}
+	n := st.next
+	st.next++
+	l.stacks[key] = st
+	return st.x, st.top + labelH*float64(n) + labelH/2, st
+}
+
+// grid is at most 501 points from lo to hi within 0 and size, step apart, step being 4 or more: counted from mid,
+// the middle of lo and hi, so that mid is one when the canvas holds it, and the canvas cutting the range moves no
+// point while step is 4; or, when the range the canvas leaves holds no point mid and whole steps away, the one
+// point where the canvas cuts it.
+// LIMIT: step grows with the range within the canvas past 2000, so the canvas cutting it moves the points there.
+func grid(lo, hi, mid, size float64) []float64 {
+	from, to := max(lo, 0), min(hi, size)
+	if from > to {
+		return nil
+	}
+	step := max(4, (to-from)/500)
+	// Each point is mid and a whole number of steps, so that mid itself is one exactly.
+	first := math.Ceil((from - mid) / step)
+	if mid+first*step > to {
+		return []float64{from}
+	}
+	var out []float64
+	for i := range 501 {
+		p := mid + (first+float64(i))*step
+		if p > to {
+			break
+		}
+		out = append(out, p)
+	}
+	return out
+}
+
+// most is the room of the point of xs and ys where a block w by h, centred on it, keeps the most room, and where
+// the block goes then (its middle and top), 0 for none of room: of points of one room, the one nearest mx, my,
+// the middle of the circles' boxes, as room told by the point of a box nearest a circle is one while the box
+// covers its centre, and a label stays on the axis of a Venn diagram of one, the middle being a point of the grid.
+// LIMIT: the label stands on the axis only when the circles in and out of its region are all symmetric about it and
+// the most room is not split into two points either side of it: then the left one is picked, off the axis. Pick
+// the point nearer the axis among those if diagrams need it.
+func (g region) most(xs, ys []float64, w, h, mx, my float64) (best, x, top float64) {
+	tries := make([]try, 0, len(xs)*len(ys))
+	for _, px := range xs {
+		for _, py := range ys {
+			box := rect{x: px - w/2, y: py - h/2, w: w, h: h, what: "", at: ""}
+			tries = append(tries, try{x: px, y: py, room: g.roomOf(box)})
+		}
+	}
+	best, x, y := pick(tries, mx, my)
+	return best, x, y - h/2
+}
+
+// try is a point a block is tried centred on, and the room it keeps there.
+type try struct{ x, y, room float64 }
+
+// pick is the most room of tries (0 when none has more) and the first try of the nearest to mx, my of those within
+// eps of it: room and nearness less than eps apart are one, measured from the most and the nearest, so that neither
+// a float's rounding nor the order the tries come in picks one.
+func pick(tries []try, mx, my float64) (best, x, y float64) {
+	for _, s := range tries {
+		best = max(best, s.room)
+	}
+	near := math.Inf(1)
+	for _, s := range tries {
+		if s.room >= best-eps {
+			near = min(near, math.Hypot(s.x-mx, s.y-my))
+		}
+	}
+	for _, s := range tries {
+		if s.room >= best-eps && math.Hypot(s.x-mx, s.y-my) <= near+eps {
+			return best, s.x, s.y
+		}
+	}
+	return best, 0, 0
+}
+
+// stack is the labels of one region of a Venn diagram placed by it, and where their block went.
+type stack struct {
+	labels []*label
+	next   int
+	x, top float64
+	tried  bool // false when the box of where the circles all are has no area in the canvas: the label sticks out
+	found  bool
+}
+
+func regionKey(in []string) string {
+	return strings.Join(slices.Sorted(slices.Values(in)), "\x00")
+}

@@ -1,0 +1,14 @@
+template: report
+lang: en
+title: A Venn label over a circle it is not in
+sections:
+  - heading: Diagram
+    parts:
+      - diagram:
+          width: 300
+          height: 300
+          title: A small circle in the middle
+          parts:
+            - circle: { name: a, cx: 150, cy: 150, r: 140 }
+            - circle: { name: b, cx: 150, cy: 150, r: 8 }
+            - label: { text: only in a, in: [a], x: 150, y: 150 }

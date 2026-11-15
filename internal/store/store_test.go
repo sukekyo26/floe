@@ -1,0 +1,1024 @@
+package store_test
+
+import (
+	"errors"
+	"fmt"
+	"maps"
+	"os"
+	"os/exec"
+	"path/filepath"
+	"slices"
+	"strings"
+	"testing"
+	"testing/fstest"
+
+	"floe/internal/i18n"
+	"floe/internal/kit"
+	"floe/internal/store"
+	"floe/internal/usererr"
+)
+
+func ptr[T any](v T) *T {
+	return &v
+}
+
+// told words err as the command line does, the store's path as "S".
+func told(err error, root string) string {
+	return strings.ReplaceAll(usererr.Tell(i18n.EnglishCatalog(), err).Render("floe: "), root, "S")
+}
+
+const picSchema = `{"$schema": "https://json-schema.org/draft/2020-12/schema", "type": "object",
+"properties": {"i": {"type": "array", "items": {"type": "string", "format": "image"}}, "need": {},
+"d": {"$ref": "floe:///parts/diagram.json"}}}`
+
+// picKit is floe's own with a template pic of its own, which shows the images of i, its page.html opened by head
+// and its schema.json schema (picSchema for "").
+func picKit(t *testing.T, head, schema string) store.Drawing {
+	t.Helper()
+
+	floe, err := kit.Floe()
+	if err != nil {
+		t.Fatal(err)
+	}
+	page := "<!doctype html>\n<html lang=\"{{.Lang}}\"><head><title>{{.Title}}</title></head>\n<body>" + head +
+		"{{range .Data.i}}<img src=\"{{.}}\">{{end}}{{with .Data.d}}{{.}}{{end}}</body></html>\n"
+	files := fstest.MapFS{
+		"pic/page.html":    {Data: []byte(page)},
+		"pic/schema.json":  {Data: []byte(cmpOr(schema, picSchema))},
+		"pic/example.yaml": {Data: []byte("lang: en\ntemplate: pic\n")},
+	}
+	none := kit.Dir{FS: nil, Name: ""}
+	k, err := kit.Load(floe, kit.Sources{Parts: none, Themes: none, Templates: kit.Dir{FS: files, Name: "templates"}})
+	if err != nil {
+		t.Fatal(err)
+	}
+	return store.Drawing{Kit: k, Icons: nil, Err: nil}
+}
+
+func cmpOr(a, b string) string {
+	if a != "" {
+		return a
+	}
+	return b
+}
+
+func newStore(t *testing.T) (*store.Store, string) {
+	t.Helper()
+
+	tmp, err := filepath.EvalSymlinks(t.TempDir())
+	if err != nil {
+		t.Fatal(err)
+	}
+	root := filepath.Join(tmp, "store")
+	return store.New(root), root
+}
+
+var png = []byte("\x89PNG\r\n\x1a\n0000")
+
+// publish prepares and saves the data src as file, the images sent with it, from project p.
+func publish(t *testing.T, s *store.Store, dw store.Drawing, file, src string, images map[string][]byte, o store.Options) *store.Entry {
+	t.Helper()
+
+	e, err := s.PrepareData(dw, store.Upload{File: file, Source: []byte(src), Images: images, Project: "p", Repo: "p", Place: file}, o)
+	if err != nil {
+		t.Fatalf("PrepareData: %v", err)
+	}
+	if err := s.Save(e); err != nil {
+		t.Fatalf("Save: %v", err)
+	}
+	return e
+}
+
+// entries counts the entries of dir.
+func entries(t *testing.T, dir string) int {
+	t.Helper()
+
+	got, err := os.ReadDir(dir)
+	if err != nil {
+		t.Fatal(err)
+	}
+	return len(got)
+}
+
+func read(t *testing.T, path string) string {
+	t.Helper()
+
+	b, err := os.ReadFile(path)
+	if err != nil {
+		t.Fatal(err)
+	}
+	return string(b)
+}
+
+// copyOf is the directory of the copy of the stored page slug.
+func copyOf(t *testing.T, s *store.Store, root, slug string) string {
+	t.Helper()
+
+	m := s.ReadMeta(slug)
+	if m == nil {
+		t.Fatalf("no meta.json of %s", slug)
+	}
+	return filepath.Join(root, slug, m.Source)
+}
+
+// files lists the files under dir, by their slash-separated paths.
+func files(t *testing.T, dir string) []string {
+	t.Helper()
+
+	var got []string
+	err := filepath.WalkDir(dir, func(p string, d os.DirEntry, err error) error {
+		if err == nil && !d.IsDir() {
+			rel, relErr := filepath.Rel(dir, p)
+			got = append(got, filepath.ToSlash(rel))
+			return relErr
+		}
+		return err
+	})
+	if err != nil {
+		t.Fatal(err)
+	}
+	return got
+}
+
+// A stored page keeps the data file, the page drawn, without its CSP, and the images it read, under images/ at
+// the names the data gives them: data.yaml/ among them. An image sent that it did not read is not kept. A
+// publish again replaces the copy.
+func TestPublishCopy(t *testing.T) {
+	t.Parallel()
+
+	s, root := newStore(t)
+	dw := picKit(t, "", "")
+	src := "lang: en\ntemplate: pic\ntitle: P\ni: [a.png, data.yaml/b.png]\n"
+	images := map[string][]byte{"a.png": png, "data.yaml/b.png": png, "unread.png": png, "../evil.png": png}
+	e := publish(t, s, dw, "d.yaml", src, images, store.Options{})
+	dir := copyOf(t, s, root, "d")
+	if got, want := files(t, dir), []string{"data.yaml", "images/a.png", "images/data.yaml/b.png", "page.html"}; !slices.Equal(got, want) {
+		t.Errorf("files %v, want %v", got, want)
+	}
+	if page := read(t, filepath.Join(dir, "page.html")); page != string(e.Page) || strings.Contains(page, "Content-Security-Policy") {
+		t.Errorf("page.html is not the page drawn without its CSP:\n%s", page)
+	}
+	if got := read(t, filepath.Join(dir, "data.yaml")); got != src {
+		t.Errorf("data.yaml %q", got)
+	}
+	if file, ok := s.File("d", s.ReadMeta("d"), ""); !ok || file != filepath.Join(dir, "page.html") {
+		t.Errorf("File = %s, %v", file, ok)
+	}
+	publish(t, s, dw, "d.yaml", "lang: en\ntemplate: pic\n", nil, store.Options{})
+	if n := entries(t, filepath.Join(root, "d")); n != 3 {
+		t.Errorf("%d entries under d, want meta.json, one copy and versions/", n)
+	}
+	if got := files(t, copyOf(t, s, root, "d")); !slices.Equal(got, []string{"data.yaml", "page.html"}) {
+		t.Errorf("files %v, want no image", got)
+	}
+	// A copy without its page has none to serve.
+	if err := os.Remove(filepath.Join(copyOf(t, s, root, "d"), "page.html")); err != nil {
+		t.Fatal(err)
+	}
+	if file, ok := s.File("d", s.ReadMeta("d"), ""); ok {
+		t.Errorf("File = %s with page.html gone", file)
+	}
+	if fi, err := os.Stat(filepath.Join(copyOf(t, s, root, "d"), "images")); err != nil || !fi.IsDir() {
+		t.Errorf("images/ of a page of no image: %v", err)
+	}
+}
+
+// With no images sent, the images the data reads are asked for, after the slug's owner, each with every place
+// that names it, and not a name floe does not read; a mistake before the drawing is told without asking. With
+// some sent, or none in an empty map, one not sent is a mistake.
+func TestNeedImages(t *testing.T) {
+	t.Parallel()
+
+	s, root := newStore(t)
+	dw := picKit(t, "", "")
+	two := "lang: en\ntemplate: pic\ni: [img/a.png, img/b.png, img/a.png, img/n.txt]\n"
+	_, err := s.PrepareData(dw, store.Upload{File: "d.yaml", Source: []byte(two), Images: nil, Project: "p", Repo: "p", Place: "d.yaml"}, store.Options{})
+	need, ok := errors.AsType[*store.NeedImages](err)
+	if want := "[{img/a.png [{3 5} {3 27}]} {img/b.png [{3 16}]}]"; !ok || fmt.Sprint(need.Images) != want {
+		t.Errorf("PrepareData = %v, want NeedImages %s", err, want)
+	}
+	schema := "lang: en\ntemplate: pic\ni: [img/a.png]\nx: 1\nj: 2\n"
+	_, err = s.PrepareData(picKit(t, "", `{"$schema": "https://json-schema.org/draft/2020-12/schema", "type": "object",
+"properties": {"i": {"type": "array", "items": {"type": "string", "format": "image"}}}, "additionalProperties": false}`),
+		store.Upload{File: "d.yaml", Source: []byte(schema), Images: nil, Project: "p", Repo: "p", Place: "d.yaml"}, store.Options{})
+	if _, ok := errors.AsType[*store.NeedImages](err); ok || err == nil {
+		t.Errorf("a mistake of the schema: PrepareData = %v", err)
+	}
+	for _, sent := range []map[string][]byte{{"img/a.png": png}, {}} {
+		_, err = s.PrepareData(dw, store.Upload{File: "d.yaml", Source: []byte(two), Images: sent, Project: "p", Repo: "p", Place: "d.yaml"}, store.Options{})
+		if got := told(err, root); !strings.Contains(got, `d.yaml:3:16: the image "img/b.png" cannot be read (file does not exist)`) {
+			t.Errorf("sent %v: told\n%s", sent, got)
+		}
+	}
+	publish(t, s, dw, "d.yaml", "lang: en\ntemplate: pic\n", nil, store.Options{})
+	_, err = s.PrepareData(dw, store.Upload{File: "d.yaml", Source: []byte(two), Images: nil, Project: "q", Repo: "q", Place: "d.yaml"}, store.Options{})
+	if got, want := told(err, root), `floe: slug "d" was published from d.yaml in repository p: choose another slug`; got != want {
+		t.Errorf("told\n%s\nwant\n%s", got, want)
+	}
+}
+
+// The images of report's part image, in a section or in tabs, are asked for and kept as those of an item of
+// format image: only those read, and drawn again from the copy.
+func TestImagePartPublished(t *testing.T) {
+	t.Parallel()
+
+	s, root := newStore(t)
+	dw := picKit(t, "", "")
+	src := "lang: en\ntemplate: report\nsections:\n  - parts:\n      - image: { file: img/a.png, alt: a }\n" +
+		"      - tabs:\n          - { title: b, parts: [{ image: { file: img/b.png, alt: b } }] }\n          - { title: c, parts: [{ text: c }] }\n"
+	_, err := s.PrepareData(dw, store.Upload{File: "d.yaml", Source: []byte(src), Images: nil, Project: "p", Repo: "p", Place: "d.yaml"}, store.Options{})
+	if need, ok := errors.AsType[*store.NeedImages](err); !ok || fmt.Sprint(need.Images) != "[{img/a.png [{5 24}]} {img/b.png [{7 50}]}]" {
+		t.Fatalf("PrepareData = %v, want NeedImages of img/a.png and img/b.png", err)
+	}
+	publish(t, s, dw, "d.yaml", src, map[string][]byte{"img/a.png": png, "img/b.png": png, "img/c.png": png}, store.Options{})
+	want := []string{"data.yaml", "images/img/a.png", "images/img/b.png", "page.html"}
+	if got := files(t, copyOf(t, s, root, "d")); !slices.Equal(got, want) {
+		t.Errorf("files %v, want %v", got, want)
+	}
+	if err := s.Rebuild(picKit(t, "v2", "")); err != nil {
+		t.Fatal(told(err, root))
+	}
+	dir := copyOf(t, s, root, "d")
+	if got := files(t, dir); !slices.Equal(got, want) {
+		t.Errorf("rebuilt: files %v, want %v", got, want)
+	}
+	if n := strings.Count(read(t, filepath.Join(dir, "page.html")), `<img src="data:image/png;base64,`); n != 2 {
+		t.Errorf("rebuilt: %d images in page.html, want 2", n)
+	}
+}
+
+// A title or a theme given empty is not given; a slug is checked as given.
+func TestAccept(t *testing.T) {
+	t.Parallel()
+
+	o, err := store.Accept("a.yaml", false, store.Options{Title: ptr(" "), Theme: ptr(""), Description: ptr(" ")})
+	if err != nil || o.Title != nil || o.Theme != nil || o.Description == nil || *o.Description != "" || o.Slug != nil {
+		t.Errorf("Accept = %+v, %v", o, err)
+	}
+	for _, slug := range []string{"Foo", "foo ", "-a", strings.Repeat("a", 65)} {
+		_, err := store.Accept("a.yaml", false, store.Options{Slug: ptr(slug)})
+		want := `floe: invalid slug "` + slug + `": use 1 to 64 lowercase letters, digits and hyphens, starting and ending with a letter or digit`
+		if got := told(err, "\x00"); got != want {
+			t.Errorf("told\n%s\nwant\n%s", got, want)
+		}
+	}
+	if _, err := store.Accept("a.yaml", false, store.Options{Slug: ptr("a--b")}); err != nil {
+		t.Errorf("a--b: %v", err)
+	}
+}
+
+// A title kept on the management page stays over a publish without --title, and an empty one too.
+func TestPublishKeepsTitle(t *testing.T) {
+	t.Parallel()
+
+	s, _ := newStore(t)
+	dw := picKit(t, "", "")
+	publish(t, s, dw, "d.yaml", "lang: en\ntemplate: pic\ntitle: Data\n", nil, store.Options{})
+	if _, err := s.Edit("d", store.Edit{Title: ptr("Kept")}); err != nil {
+		t.Fatal(err)
+	}
+	e := publish(t, s, dw, "d.yaml", "lang: en\ntemplate: pic\ntitle: Data\n", nil, store.Options{Title: ptr("")})
+	if m := s.ReadMeta("d"); m.Title != "Kept" || !strings.Contains(string(e.Page), "<title>Data</title>") {
+		t.Errorf("title %q, page %s", m.Title, e.Page)
+	}
+}
+
+// An edit keeps tags trimmed, without the empty and the second of a name, in the order sent; an edit without them
+// (archiving too) leaves them, publishing again and renaming keep them, and removing every one clears them off meta.json.
+func TestEditTags(t *testing.T) {
+	t.Parallel()
+
+	s, root := newStore(t)
+	dw := picKit(t, "", "")
+	publish(t, s, dw, "d.yaml", "lang: en\ntemplate: pic\n", nil, store.Options{})
+	want := []string{"設計", "計画"}
+	edits := []store.Edit{{Tags: &store.TagsEdit{Add: []string{"設計", " 計画 ", "設計", ""}}}, {Favorite: ptr(true)}, {Archived: ptr(true)}}
+	for _, ed := range edits {
+		if _, err := s.Edit("d", ed); err != nil {
+			t.Fatal(err)
+		}
+		if m := s.ReadMeta("d"); !slices.Equal(m.Tags, want) {
+			t.Errorf("%+v: tags %q, want %q", ed, m.Tags, want)
+		}
+	}
+	publish(t, s, dw, "d.yaml", "lang: en\ntemplate: pic\n", nil, store.Options{})
+	if m := s.ReadMeta("d"); !slices.Equal(m.Tags, want) {
+		t.Errorf("published again: tags %q", m.Tags)
+	}
+	if _, err := s.Edit("d", store.Edit{Slug: ptr("e")}); err != nil {
+		t.Fatal(err)
+	}
+	if m := s.ReadMeta("e"); m == nil || !slices.Equal(m.Tags, want) {
+		t.Errorf("renamed: %+v", m)
+	}
+	if _, err := s.Edit("e", store.Edit{Tags: &store.TagsEdit{Remove: []string{"設計", " 計画"}}}); err != nil {
+		t.Fatal(err)
+	}
+	if meta := read(t, filepath.Join(root, "e", "meta.json")); strings.Contains(meta, "tags") {
+		t.Errorf("cleared, meta.json still has tags: %s", meta)
+	}
+}
+
+// An edit takes the names to remove off the page's tags, trimmed and as written, then puts those to add on, so that each
+// writer's change keeps the others'.
+func TestEditTagsAddRemove(t *testing.T) {
+	t.Parallel()
+
+	s, _ := newStore(t)
+	dw := picKit(t, "", "")
+	publish(t, s, dw, "d.yaml", "lang: en\ntemplate: pic\n", nil, store.Options{})
+	for _, c := range []struct {
+		add, remove, want []string
+	}{
+		{[]string{"CLI"}, nil, []string{"設計", "図", "CLI"}},
+		{[]string{"設計"}, nil, []string{"設計", "図"}},
+		{[]string{" 設計 "}, nil, []string{"設計", "図"}},
+		{[]string{"Design"}, nil, []string{"設計", "図", "Design"}},
+		{nil, []string{"図"}, []string{"設計"}},
+		{nil, []string{"無い"}, []string{"設計", "図"}},
+		{nil, []string{" 図 "}, []string{"設計"}},
+		{nil, []string{""}, []string{"設計", "図"}},
+		{[]string{"設計"}, []string{"設計"}, []string{"図", "設計"}},
+		{[]string{"設計、実装"}, nil, []string{"設計", "図", "設計、実装"}},
+		{[]string{""}, nil, []string{"設計", "図"}},
+		{nil, nil, []string{"設計", "図"}},
+	} {
+		if _, err := s.Edit("d", store.Edit{Tags: &store.TagsEdit{Remove: []string{"設計", "図", "CLI", "Design", "設計、実装"}}}); err != nil {
+			t.Fatal(err)
+		}
+		if _, err := s.Edit("d", store.Edit{Tags: &store.TagsEdit{Add: []string{"設計", "図"}}}); err != nil {
+			t.Fatal(err)
+		}
+		if _, err := s.Edit("d", store.Edit{Tags: &store.TagsEdit{Add: c.add, Remove: c.remove}}); err != nil {
+			t.Fatal(err)
+		}
+		if got := s.ReadMeta("d").Tags; !slices.Equal(got, c.want) {
+			t.Errorf("add %q, remove %q: %q, want %q", c.add, c.remove, got, c.want)
+		}
+	}
+	// Two writers, each sending its own change, keep both.
+	if _, err := s.Edit("d", store.Edit{Tags: &store.TagsEdit{Add: []string{"a"}}}); err != nil {
+		t.Fatal(err)
+	}
+	if _, err := s.Edit("d", store.Edit{Tags: &store.TagsEdit{Add: []string{"b"}}}); err != nil {
+		t.Fatal(err)
+	}
+	if got := s.ReadMeta("d").Tags; !slices.Equal(got, []string{"設計", "図", "a", "b"}) {
+		t.Errorf("two writers: %q", got)
+	}
+}
+
+// An edit archives a page and gives it back, its updatedAt kept, and a rename keeps it archived; publishing again,
+// a stored page or a link, gives it back to the list but keeps it a favourite.
+func TestArchive(t *testing.T) {
+	t.Parallel()
+
+	s, root := newStore(t)
+	dw := picKit(t, "", "")
+	publish(t, s, dw, "d.yaml", "lang: en\ntemplate: pic\n", nil, store.Options{})
+	before := s.ReadMeta("d").UpdatedAt
+	for _, v := range []bool{true, true, false, true} {
+		if _, err := s.Edit("d", store.Edit{Archived: ptr(v)}); err != nil {
+			t.Fatal(err)
+		}
+		if m := s.ReadMeta("d"); m.Archived != v || m.UpdatedAt != before {
+			t.Errorf("archived %v: %+v", v, m)
+		}
+	}
+	if _, err := s.Edit("d", store.Edit{Slug: ptr("e"), Favorite: ptr(true)}); err != nil {
+		t.Fatal(err)
+	}
+	if m := s.ReadMeta("e"); m == nil || !m.Archived {
+		t.Errorf("renamed: %+v", m)
+	}
+	publish(t, s, dw, "d.yaml", "lang: en\ntemplate: pic\n", nil, store.Options{})
+	if m := s.ReadMeta("e"); m.Archived || !m.Favorite {
+		t.Errorf("published again: %+v", m)
+	}
+
+	home := filepath.Dir(root)
+	dir := filepath.Join(home, "h")
+	if err := os.Mkdir(dir, 0o700); err != nil {
+		t.Fatal(err)
+	}
+	if err := os.WriteFile(filepath.Join(dir, "h.html"), []byte("<title>H</title>"), 0o600); err != nil {
+		t.Fatal(err)
+	}
+	link := func() {
+		t.Helper()
+		e, err := s.PrepareLink(t.Context(), dw, filepath.Join(dir, "h.html"), store.Options{}, "", home)
+		if err == nil {
+			err = s.Save(e)
+		}
+		if err != nil {
+			t.Fatal(told(err, root))
+		}
+	}
+	link()
+	if _, err := s.Edit("h", store.Edit{Archived: ptr(true)}); err != nil {
+		t.Fatal(err)
+	}
+	link()
+	if m := s.ReadMeta("h"); m.Archived {
+		t.Errorf("linked again: %+v", m)
+	}
+}
+
+// A slug that cannot be one is no page, whatever reads or writes it: none leads out of the store.
+func TestSlugIsNoPath(t *testing.T) {
+	t.Parallel()
+
+	s, root := newStore(t)
+	if err := os.MkdirAll(root, 0o700); err != nil {
+		t.Fatal(err)
+	}
+	if err := os.WriteFile(filepath.Join(root, "..", "meta.json"), []byte(`{"updatedAt": "x"}`), 0o600); err != nil {
+		t.Fatal(err)
+	}
+	for _, slug := range []string{"..", ".", "", "a/b", "/", "A"} {
+		if s.ReadMeta(slug) != nil {
+			t.Errorf("ReadMeta(%q) read a meta.json", slug)
+		}
+		if err := s.WriteMeta(slug, &store.Meta{}); err == nil {
+			t.Errorf("WriteMeta(%q) wrote", slug)
+		}
+		if _, ok := s.File(slug, &store.Meta{Source: "source-1"}, ""); ok {
+			t.Errorf("File(%q) gave a file", slug)
+		}
+		if _, err := s.Edit(slug, store.Edit{}); !errors.Is(err, store.ErrNotFound) {
+			t.Errorf("Edit(%q) = %v", slug, err)
+		}
+		if err := s.Remove(slug); !errors.Is(err, store.ErrNotFound) {
+			t.Errorf("Remove(%q) = %v", slug, err)
+		}
+	}
+	if list, err := s.List("local"); err != nil || len(list) != 0 {
+		t.Errorf("List = %v, %v", list, err)
+	}
+}
+
+// A copy a meta.json names is one a save gives, or none: one that leads out of the page's directory is no page,
+// to serve or to draw again.
+func TestCopyIsUnderItsPage(t *testing.T) {
+	t.Parallel()
+
+	s, root := newStore(t)
+	dw := picKit(t, "", "")
+	publish(t, s, dw, "d.yaml", "lang: en\ntemplate: pic\n", nil, store.Options{})
+	m := s.ReadMeta("d")
+	for _, source := range []string{"../x", "/x", "source-a/../..", "", "x"} {
+		m.Source = source
+		if err := s.WriteMeta("d", m); err != nil {
+			t.Fatal(err)
+		}
+		if _, ok := s.File("d", m, ""); ok {
+			t.Errorf("File with source %q gave a file", source)
+		}
+		if err := s.Rebuild(picKit(t, "v2", "")); err != nil {
+			t.Errorf("Rebuild with source %q: %s", source, told(err, root))
+		}
+	}
+}
+
+// A link to an index.html is named after its directory, on Save too; HTML takes no theme; a data file linked
+// is drawn once, its mistakes refusing it.
+func TestPrepareLink(t *testing.T) {
+	t.Parallel()
+
+	s, root := newStore(t)
+	home := filepath.Dir(root)
+	dir := filepath.Join(home, "proj", "sub")
+	if err := os.MkdirAll(dir, 0o700); err != nil {
+		t.Fatal(err)
+	}
+	for name, text := range map[string]string{"index.html": "<title>i</title>", "bad.yaml": "lang: en\ntemplate: nope\n"} {
+		if err := os.WriteFile(filepath.Join(dir, name), []byte(text), 0o600); err != nil {
+			t.Fatal(err)
+		}
+	}
+	dw := picKit(t, "", "")
+	e, err := s.PrepareLink(t.Context(), dw, "sub/index.html", store.Options{}, filepath.Join(home, "proj"), home)
+	if err != nil {
+		t.Fatal(told(err, root))
+	}
+	if err = s.Save(e); err != nil || e.Slug != "sub" {
+		t.Errorf("Save: %v, slug %s", err, e.Slug)
+	}
+	_, err = s.PrepareLink(t.Context(), dw, filepath.Join(dir, "index.html"), store.Options{Theme: ptr("ink")}, "", home)
+	if got := told(err, root); got != "floe: --theme picks the theme of a page drawn from a data file: a linked file is shown as it is" {
+		t.Errorf("told %s", got)
+	}
+	_, err = s.PrepareLink(t.Context(), dw, filepath.Join(dir, "bad.yaml"), store.Options{}, "", home)
+	if got := told(err, root); !strings.Contains(got, `unknown template "nope"`) {
+		t.Errorf("told %s", got)
+	}
+	if list, err := s.List("local"); err != nil || len(list) != 1 || list[0].Title != "i" {
+		t.Errorf("List = %+v, %v", list, err)
+	}
+}
+
+// A linked data file that grew over the size floe reads is still listed, without the title it cannot read.
+func TestListLinkTooLarge(t *testing.T) {
+	t.Parallel()
+
+	s, root := newStore(t)
+	home := filepath.Dir(root)
+	dir := filepath.Join(home, "proj")
+	if err := os.MkdirAll(dir, 0o700); err != nil {
+		t.Fatal(err)
+	}
+	file := filepath.Join(dir, "d.yaml")
+	if err := os.WriteFile(file, []byte(titled("Small")), 0o600); err != nil {
+		t.Fatal(err)
+	}
+	if err := os.WriteFile(filepath.Join(dir, "a.png"), png, 0o600); err != nil {
+		t.Fatal(err)
+	}
+	e, err := s.PrepareLink(t.Context(), picKit(t, "", ""), file, store.Options{}, "", home)
+	if err != nil {
+		t.Fatal(told(err, root))
+	}
+	if err = s.Save(e); err != nil {
+		t.Fatal(err)
+	}
+	big := titled("Big")
+	big += "#" + strings.Repeat("x", 1<<20-len(big)) + "\n"
+	if err = os.WriteFile(file, []byte(big), 0o600); err != nil {
+		t.Fatal(err)
+	}
+	list, err := s.List("local")
+	if err != nil || len(list) != 1 {
+		t.Fatalf("List = %+v, %v", list, err)
+	}
+	if l := list[0]; l.Title == "Big" || l.Missing == nil || *l.Missing {
+		t.Errorf("listed %q, missing %v; want no title of the file, not missing", l.Title, l.Missing)
+	}
+}
+
+// Owners: a page of another file (of another repository, at the same path), or a link of another file, is refused
+// without --force; a page and a link
+// do not take each other's slug.
+func TestOwners(t *testing.T) {
+	t.Parallel()
+
+	s, root := newStore(t)
+	dw := picKit(t, "", "")
+	publish(t, s, dw, "same.yaml", "lang: en\ntemplate: pic\n", nil, store.Options{})
+	if _, err := s.Edit("same", store.Edit{Tags: &store.TagsEdit{Add: []string{"a"}}}); err != nil {
+		t.Fatal(err)
+	}
+	_, err := s.PrepareData(dw, store.Upload{File: "same.yaml", Source: []byte("lang: en\ntemplate: pic\n"), Images: map[string][]byte{}, Project: "q", Repo: "q", Place: "same.yaml"}, store.Options{})
+	if got := told(err, root); got != `floe: slug "same" was published from same.yaml in repository p: choose another slug` {
+		t.Errorf("told %s", got)
+	}
+	up := store.Upload{File: "same.yaml", Source: []byte("lang: en\ntemplate: pic\n"), Images: map[string][]byte{}, Project: "q", Repo: "q", Place: "same.yaml"}
+	e, err := s.PrepareData(dw, up, store.Options{Force: true})
+	if err != nil {
+		t.Fatalf("--force: %v", err)
+	}
+	// Replaced, the page starts afresh: the tags of the one before do not stay.
+	if err = s.Save(e); err != nil {
+		t.Fatal(err)
+	}
+	if m := s.ReadMeta("same"); m.Tags != nil {
+		t.Errorf("--force kept tags %q", m.Tags)
+	}
+	home := filepath.Dir(root)
+	html := filepath.Join(home, "proj", "z.html")
+	if err = os.MkdirAll(filepath.Dir(html), 0o700); err != nil {
+		t.Fatal(err)
+	}
+	if err = os.WriteFile(html, []byte("<title>z</title>"), 0o600); err != nil {
+		t.Fatal(err)
+	}
+	_, err = s.PrepareLink(t.Context(), dw, html, store.Options{Slug: ptr("same")}, "", home)
+	if got := told(err, root); got != `floe: slug "same" is used by a stored page: choose another slug` {
+		t.Errorf("told %s", got)
+	}
+}
+
+// A slug in use is refused saying what uses it and to choose another slug, never to remove or replace it, in each
+// language: --force and floe rm would drop another's page and its versions. A page and a link do not take each
+// other's slug even with --force.
+func TestSlugRefusals(t *testing.T) {
+	t.Parallel()
+
+	s, root := newStore(t)
+	dw := picKit(t, "", "")
+	publish(t, s, dw, "pg.yaml", "lang: en\ntemplate: pic\n", nil, store.Options{})
+	home := filepath.Dir(root)
+	html := func(name string) string {
+		file := filepath.Join(home, "proj", name)
+		if err := os.MkdirAll(filepath.Dir(file), 0o700); err != nil {
+			t.Fatal(err)
+		}
+		if err := os.WriteFile(file, []byte("<title>x</title>"), 0o600); err != nil {
+			t.Fatal(err)
+		}
+		return file
+	}
+	z, y := html("z.html"), html("y.html")
+	e, err := s.PrepareLink(t.Context(), dw, z, store.Options{Slug: ptr("lk")}, "", home)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if err = s.Save(e); err != nil {
+		t.Fatal(err)
+	}
+	data := func(slug, project string, force bool) error {
+		up := store.Upload{File: slug + ".yaml", Source: []byte("lang: en\ntemplate: pic\n"), Images: map[string][]byte{}, Project: project, Repo: project, Place: slug + ".yaml"}
+		_, err := s.PrepareData(dw, up, store.Options{Force: force})
+		return err
+	}
+	link := func(file, slug string, force bool) error {
+		_, err := s.PrepareLink(t.Context(), dw, file, store.Options{Slug: ptr(slug), Force: force}, "", home)
+		return err
+	}
+	// A page of a file by its key: repo and place, the project published from apart.
+	keyed := func(slug, project, repo, place string) error {
+		up := store.Upload{File: "x.yaml", Source: []byte("lang: en\ntemplate: pic\n"), Images: map[string][]byte{}, Project: project, Repo: repo, Place: place}
+		_, err := s.PrepareData(dw, up, store.Options{Slug: ptr(slug)})
+		return err
+	}
+	for _, page := range []struct{ slug, repo, place string }{{"rel", "r", "docs/x.yaml"}, {"ab", "", filepath.Join(home, "x.yaml")}} {
+		up := store.Upload{File: "x.yaml", Source: []byte("lang: en\ntemplate: pic\n"), Images: map[string][]byte{}, Project: "a", Repo: page.repo, Place: page.place}
+		e, err := s.PrepareData(dw, up, store.Options{Slug: ptr(page.slug)})
+		if err != nil {
+			t.Fatal(err)
+		}
+		if err = s.Save(e); err != nil {
+			t.Fatal(err)
+		}
+	}
+	// A page that kept no file, as pages published before keys were the file's: compared by the project published from.
+	old := store.Upload{File: "old.yaml", Source: []byte("lang: en\ntemplate: pic\n"), Images: map[string][]byte{}, Project: "p", Repo: "p", Place: ""}
+	if e, err := s.PrepareData(dw, old, store.Options{}); err != nil {
+		t.Fatal(err)
+	} else if err = s.Save(e); err != nil {
+		t.Fatal(err)
+	}
+	_, taken := s.Edit("lk", store.Edit{Slug: ptr("pg")})
+	ja := i18n.New("ja")
+	for _, tt := range []struct {
+		name   string
+		err    error
+		en, ja string
+	}{
+		{
+			"owned, a page that kept no file", data("old", "q", false),
+			`slug "old" was published from project p: choose another slug`,
+			`URL 名「old」はプロジェクト p から公開されています。別の URL 名にしてください`,
+		},
+		{
+			"placed, by the file's repository, not the project published from", keyed("rel", "a", "s", "docs/x.yaml"),
+			`slug "rel" was published from docs/x.yaml in repository r: choose another slug`,
+			`URL 名「rel」はリポジトリ r の docs/x.yaml から公開されています。別の URL 名にしてください`,
+		},
+		{
+			"placed alone, by a real path", keyed("ab", "a", "", filepath.Join(home, "y.yaml")),
+			`slug "ab" was published from H/x.yaml: choose another slug`,
+			`URL 名「ab」は H/x.yaml から公開されています。別の URL 名にしてください`,
+		},
+		{
+			"linked", link(y, "lk", false),
+			`slug "lk" is linked to H/proj/z.html: choose another slug`,
+			`URL 名「lk」は H/proj/z.html のリンクで使われています。別の URL 名にしてください`,
+		},
+		{
+			"is_page, --force too", link(z, "pg", true),
+			`slug "pg" is used by a stored page: choose another slug`,
+			`URL 名「pg」は保存したページで使われています。別の URL 名にしてください`,
+		},
+		{
+			"is_link, --force too", data("lk", "p", true),
+			`slug "lk" is used by a linked file: choose another slug`,
+			`URL 名「lk」はリンクで使われています。別の URL 名にしてください`,
+		},
+		{
+			"taken", taken,
+			`slug "pg" is already in use: choose another slug`,
+			`URL 名「pg」は使われています。別の URL 名にしてください`,
+		},
+	} {
+		if got := strings.ReplaceAll(told(tt.err, root), home, "H"); got != "floe: "+tt.en {
+			t.Errorf("%s: told %s, want %s", tt.name, got, tt.en)
+		}
+		if got := strings.ReplaceAll(usererr.Tell(ja, tt.err).Render(""), home, "H"); got != tt.ja {
+			t.Errorf("%s in ja: told %s, want %s", tt.name, got, tt.ja)
+		}
+	}
+}
+
+// A stored page is its file's: another file of the same repository is refused unless --force, in each language, by
+// its path and repository, before the images are asked for; the same file passes. A file outside a repository is
+// named by its real path alone.
+func TestPagePlace(t *testing.T) {
+	t.Parallel()
+
+	s, root := newStore(t)
+	dw := picKit(t, "", "")
+	const src = "lang: en\ntemplate: pic\n"
+	put := func(repo, place string, force bool, data string) error {
+		up := store.Upload{File: "plan.yaml", Source: []byte(data), Images: map[string][]byte{}, Project: "w", Repo: repo, Place: place}
+		e, err := s.PrepareData(dw, up, store.Options{Slug: ptr("plan"), Force: force})
+		if err != nil {
+			return err
+		}
+		return s.Save(e)
+	}
+	ja := i18n.New("ja")
+	if err := put("p", "docs/plan.yaml", false, src); err != nil {
+		t.Fatal(told(err, root))
+	}
+	err := put("p", "notes/plan.yaml", false, src)
+	if got, want := told(err, root), `floe: slug "plan" was published from docs/plan.yaml in repository p: choose another slug`; got != want {
+		t.Errorf("another file: told %s, want %s", got, want)
+	}
+	if got, want := usererr.Tell(ja, err).Render(""), "URL 名「plan」はリポジトリ p の docs/plan.yaml から公開されています。別の URL 名にしてください"; got != want {
+		t.Errorf("another file in ja: told %s, want %s", got, want)
+	}
+	_, err = s.PrepareData(dw, store.Upload{File: "plan.yaml", Source: []byte(src + "i: [a.png]\n"), Images: nil, Project: "w", Repo: "p", Place: "notes/plan.yaml"}, store.Options{Slug: ptr("plan")})
+	if _, asked := errors.AsType[*store.NeedImages](err); asked || !strings.Contains(told(err, root), "was published from docs/plan.yaml") {
+		t.Errorf("before the images: %v, want the refusal", err)
+	}
+	_, err = s.PrepareData(dw, store.Upload{File: "plan.yaml", Source: []byte(src + "i: [a.png]\n"), Images: nil, Project: "w", Repo: "p", Place: "docs/plan.yaml"}, store.Options{Slug: ptr("plan")})
+	if _, asked := errors.AsType[*store.NeedImages](err); !asked {
+		t.Errorf("the same file before the images: %v, want them asked for", err)
+	}
+	if err = put("p", "docs/plan.yaml", false, src+"title: again\n"); err != nil {
+		t.Errorf("the same file: %s", told(err, root))
+	}
+	if err = put("p", "notes/plan.yaml", true, src); err != nil {
+		t.Errorf("--force: %s", told(err, root))
+	}
+	if got := s.ReadMeta("plan").PublishedFile; got != "notes/plan.yaml" {
+		t.Errorf("--force kept %q, want notes/plan.yaml", got)
+	}
+	// Outside a repository, by the real path alone.
+	x, y := filepath.Join(filepath.Dir(root), "x.yaml"), filepath.Join(filepath.Dir(root), "y.yaml")
+	if err = put("", x, true, src); err != nil {
+		t.Fatal(told(err, root))
+	}
+	err = put("", y, false, src)
+	home := filepath.Dir(root)
+	if got, want := strings.ReplaceAll(told(err, root), home, "H"), `floe: slug "plan" was published from H/x.yaml: choose another slug`; got != want {
+		t.Errorf("another real path: told %s, want %s", got, want)
+	}
+	if got, want := strings.ReplaceAll(usererr.Tell(ja, err).Render(""), home, "H"), "URL 名「plan」は H/x.yaml から公開されています。別の URL 名にしてください"; got != want {
+		t.Errorf("another real path in ja: told %s, want %s", got, want)
+	}
+}
+
+// Images sent one under another, which a disk cannot hold, are refused before they are saved, at the data file.
+func TestImageUnderImage(t *testing.T) {
+	t.Parallel()
+
+	s, root := newStore(t)
+	src := "lang: en\ntemplate: pic\ni: [a.png, a.png/b.png]\n"
+	_, err := s.PrepareData(picKit(t, "", ""), store.Upload{File: "d.yaml", Source: []byte(src), Images: map[string][]byte{"a.png": png, "a.png/b.png": png}, Project: "p", Repo: "p", Place: "d.yaml"}, store.Options{})
+	want := `d.yaml: the image "a.png/b.png" is under "a.png", which is an image too, and a stored page cannot keep both: rename one of them`
+	if got := told(err, root); got != want {
+		t.Errorf("told\n%s\nwant\n%s", got, want)
+	}
+}
+
+// A failure of floe's in drawing is told before the images are asked for.
+func TestFailureBeforeNeedImages(t *testing.T) {
+	t.Parallel()
+
+	s, _ := newStore(t)
+	dw := picKit(t, "", "")
+	dw.Icons = failing{}
+	src := "lang: en\ntemplate: pic\ni: [a.png]\nd: {width: 300, height: 100, title: i, parts: [{icon: {icon: aws/res/aws-lambda, x: 10, y: 10}}]}\n"
+	_, err := s.PrepareData(dw, store.Upload{File: "d.yaml", Source: []byte(src), Images: nil, Project: "p", Repo: "p", Place: "d.yaml"}, store.Options{})
+	var found usererr.List
+	if _, ok := errors.AsType[*store.NeedImages](err); ok || found.Add(err) == nil {
+		t.Errorf("PrepareData = %v, want floe's failure", err)
+	}
+}
+
+type failing struct{}
+
+func (failing) Lookup(string) ([]byte, error) { return nil, errors.New("boom") } //nolint:err113 // the test's
+
+// A store that cannot be looked into is told at it.
+func TestStoreUnreadable(t *testing.T) {
+	t.Parallel()
+
+	if os.Geteuid() == 0 {
+		t.Skip("root reads what it may not")
+	}
+	s, root := newStore(t)
+	parent := filepath.Dir(root)
+	if err := os.Chmod(parent, 0o000); err != nil {
+		t.Fatal(err)
+	}
+	t.Cleanup(func() { _ = os.Chmod(parent, 0o700) }) //nolint:errcheck // the test is told already
+	if got, want := told(s.Remove("a"), "\x00"), root+": permission denied"; got != want {
+		t.Errorf("told\n%s\nwant\n%s", got, want)
+	}
+}
+
+// A stored page is listed under its data's title:, kept as its own to give back when a title pinned is cleared;
+// one of none under its slug.
+func TestPublishTitle(t *testing.T) {
+	t.Parallel()
+
+	s, _ := newStore(t)
+	dw := picKit(t, "", "")
+	publish(t, s, dw, "d.yaml", "lang: en\ntemplate: pic\ntitle: Data\n", nil, store.Options{})
+	if m := s.ReadMeta("d"); m.Title != "Data" || m.DataTitle != "Data" {
+		t.Errorf("title %q, data's %q", m.Title, m.DataTitle)
+	}
+	if _, err := s.Edit("d", store.Edit{Title: ptr("X")}); err != nil {
+		t.Fatal(err)
+	}
+	if _, err := s.Edit("d", store.Edit{Title: ptr("")}); err != nil || s.ReadMeta("d").Title != "Data" {
+		t.Errorf("cleared: %q, %v", s.ReadMeta("d").Title, err)
+	}
+	publish(t, s, dw, "e.yaml", "lang: en\ntemplate: pic\n", nil, store.Options{})
+	if m := s.ReadMeta("e"); m.Title != "e" || m.DataTitle != "" {
+		t.Errorf("title %q, data's %q", m.Title, m.DataTitle)
+	}
+}
+
+// A name in use is a Conflict, alone, its mistake told as it is; no page to remove is ErrNotFound.
+func TestConflict(t *testing.T) {
+	t.Parallel()
+
+	s, root := newStore(t)
+	dw := picKit(t, "", "")
+	publish(t, s, dw, "same.yaml", "lang: en\ntemplate: pic\n", nil, store.Options{})
+	_, err := s.PrepareData(dw, store.Upload{File: "same.yaml", Source: []byte("lang: en\ntemplate: pic\n"), Images: nil, Project: "q", Repo: "q", Place: "same.yaml"}, store.Options{})
+	if _, ok := errors.AsType[*store.Conflict](err); !ok {
+		t.Errorf("PrepareData = %v, want a Conflict", err)
+	}
+	if got := told(err, root); got != `floe: slug "same" was published from same.yaml in repository p: choose another slug` {
+		t.Errorf("told %s", got)
+	}
+	_, err = s.PrepareData(dw, store.Upload{File: "same.yaml", Source: []byte("lang: en\ntemplate: nope\n"), Images: nil, Project: "p", Repo: "p", Place: "same.yaml"}, store.Options{})
+	if _, ok := errors.AsType[*store.Conflict](err); ok {
+		t.Errorf("a mistake of the data is a Conflict: %v", err)
+	}
+	if err := s.Remove("none"); !errors.Is(err, store.ErrNotFound) {
+		t.Errorf("Remove of no page = %v", err)
+	}
+}
+
+// A folder is linked as itself: its name, extension and all, names it; it stays a folder when linked again, so that it
+// serves only what is under it; and its directories are read when they are asked for, not when it is listed.
+func TestPrepareLinkFolder(t *testing.T) {
+	t.Parallel()
+
+	s, root := newStore(t)
+	home := filepath.Dir(root)
+	proj := filepath.Join(home, "proj")
+	for name, text := range map[string]string{
+		"docs/index.html":       "<title>i</title>",
+		"docs/guide/setup.html": "s",
+		"sibling.html":          "beside the folder",
+		"config.yml/a.html":     "a folder named as a data file",
+	} {
+		if err := os.MkdirAll(filepath.Dir(filepath.Join(proj, name)), 0o700); err != nil {
+			t.Fatal(err)
+		}
+		if err := os.WriteFile(filepath.Join(proj, name), []byte(text), 0o600); err != nil {
+			t.Fatal(err)
+		}
+	}
+	dw := picKit(t, "", "")
+	link := func(file, cwd string, o store.Options) *store.Entry {
+		t.Helper()
+		e, err := s.PrepareLink(t.Context(), dw, file, o, cwd, home)
+		if err != nil {
+			t.Fatal(told(err, root))
+		}
+		if err = s.Save(e); err != nil {
+			t.Fatal(err)
+		}
+		return e
+	}
+	for _, again := range []string{"docs", filepath.Join(proj, "docs") + "/", "."} {
+		cwd := proj
+		if again == "." {
+			cwd = filepath.Join(proj, "docs")
+		}
+		if e := link(again, cwd, store.Options{}); e.Slug != "docs" {
+			t.Errorf("link %q: slug %s, want docs", again, e.Slug)
+		}
+		m := s.ReadMeta("docs")
+		if !m.Folder || m.Path != filepath.Join(proj, "docs") {
+			t.Fatalf("meta.json after linking %q = %+v, want the folder", again, m)
+		}
+		if file, ok := s.File("docs", m, "../sibling.html"); ok {
+			t.Errorf("the folder serves %s beside it", file)
+		}
+		if file, ok := s.File("docs", m, ""); ok {
+			t.Errorf("the folder serves %s as its page", file)
+		}
+		if file, ok := s.File("docs", m, "guide/setup.html"); !ok || file != filepath.Join(proj, "docs/guide/setup.html") {
+			t.Errorf("File(guide/setup.html) = %s, %v", file, ok)
+		}
+	}
+	if e := link("config.yml", proj, store.Options{}); e.Slug != "config-yml" || !e.Meta.Folder || e.Meta.IsData() {
+		t.Errorf("config.yml: slug %s, %+v", e.Slug, e.Meta)
+	}
+	_, err := s.PrepareLink(t.Context(), dw, "config.yml", store.Options{Theme: ptr("ink")}, proj, home)
+	if got := told(err, root); got != "floe: --theme picks the theme of a page drawn from a data file: a linked file is shown as it is" {
+		t.Errorf("a folder with --theme: told %s", got)
+	}
+
+	list, err := s.List("local")
+	if err != nil {
+		t.Fatal(err)
+	}
+	got := map[string]string{}
+	for _, l := range list {
+		got[l.Slug] = fmt.Sprintf("%s missing=%v", l.Title, *l.Missing)
+	}
+	if want := map[string]string{"docs": "docs missing=false", "config-yml": "config.yml missing=false"}; !maps.Equal(got, want) {
+		t.Errorf("List = %v, want %v", got, want)
+	}
+
+	top, err := s.Files("docs", "")
+	if err != nil || !slices.Equal(top.Dirs, []string{"guide"}) || len(top.Files) != 1 || top.Files[0].File != "index.html" ||
+		top.Files[0].Modified.IsZero() {
+		t.Errorf("Files(docs) = %+v, %v", top, err)
+	}
+	if err = os.WriteFile(filepath.Join(proj, "docs/guide/new.html"), nil, 0o600); err != nil {
+		t.Fatal(err)
+	}
+	if err = os.Rename(filepath.Join(proj, "docs/guide/setup.html"), filepath.Join(proj, "docs/guide/start.html")); err != nil {
+		t.Fatal(err)
+	}
+	guide, err := s.Files("docs", "guide")
+	if err != nil || len(guide.Files) != 2 || guide.Files[0].File != "guide/new.html" || guide.Files[1].File != "guide/start.html" {
+		t.Errorf("Files(docs, guide) after a change = %+v, %v", guide, err)
+	}
+	for _, c := range []struct{ slug, dir string }{{"docs", ".."}, {"docs", "nope"}, {"nope", ""}} {
+		if _, got := s.Files(c.slug, c.dir); !errors.Is(got, store.ErrNotFound) {
+			t.Errorf("Files(%s, %q) = %v, want ErrNotFound", c.slug, c.dir, got)
+		}
+	}
+	if err = os.RemoveAll(filepath.Join(proj, "docs")); err != nil {
+		t.Fatal(err)
+	}
+	list, err = s.List("local")
+	if err != nil || !*list[slices.IndexFunc(list, func(l store.Listed) bool { return l.Slug == "docs" })].Missing {
+		t.Errorf("a folder gone is not missing (%v)", err)
+	}
+}
+
+// A folder in a repository is named by its project and where it is in it, and titled by the latter, so that folders of
+// one name in two repositories differ by their URL; outside one, by its name alone. A file's link keeps its own naming.
+func TestFolderNames(t *testing.T) {
+	t.Parallel()
+
+	s, root := newStore(t)
+	home := filepath.Dir(root)
+	for _, d := range []string{"api-docs/docs/v1", "design-notes/docs", "handbook", "api-docs/specs"} {
+		if err := os.MkdirAll(filepath.Join(home, d), 0o700); err != nil {
+			t.Fatal(err)
+		}
+	}
+	for _, repo := range []string{"api-docs", "design-notes"} {
+		cmd := exec.CommandContext(t.Context(), "git", "init", "-q")
+		cmd.Dir = filepath.Join(home, repo)
+		if out, err := cmd.CombinedOutput(); err != nil {
+			t.Fatalf("git init: %v %s", err, out)
+		}
+	}
+	if err := os.WriteFile(filepath.Join(home, "api-docs/specs/index.html"), []byte("<title>Specs</title>"), 0o600); err != nil {
+		t.Fatal(err)
+	}
+	dw := picKit(t, "", "")
+	linked := []string{"api-docs/docs", "design-notes/docs", "api-docs/docs/v1", "api-docs", "handbook", "api-docs/specs/index.html"}
+	got := make([]string, 0, len(linked))
+	for _, file := range linked {
+		e, err := s.PrepareLink(t.Context(), dw, filepath.Join(home, file), store.Options{}, "", home)
+		if err != nil {
+			t.Fatal(told(err, root))
+		}
+		if err = s.Save(e); err != nil {
+			t.Fatal(err)
+		}
+		got = append(got, e.Slug)
+	}
+	list, err := s.List("local")
+	if err != nil {
+		t.Fatal(err)
+	}
+	titles := map[string]string{}
+	for _, l := range list {
+		titles[l.Slug] = l.Title
+	}
+	if want := []string{"api-docs-docs", "design-notes-docs", "api-docs-docs-v1", "api-docs", "handbook", "specs"}; !slices.Equal(got, want) {
+		t.Errorf("slugs = %q, want %q", got, want)
+	}
+	if want := map[string]string{
+		"api-docs-docs": "docs", "design-notes-docs": "docs", "api-docs-docs-v1": "docs/v1", "api-docs": "api-docs",
+		"handbook": "handbook", "specs": "Specs",
+	}; !maps.Equal(titles, want) {
+		t.Errorf("titles = %v, want %v", titles, want)
+	}
+}

@@ -1,0 +1,8 @@
+.a { text-transform: uppercase; } /* want "text-transform: uppercase in .a; draw the text as written, and write capitals as capitals" */
+.b { text-transform: capitalize; } /* want "text-transform: capitalize in .b; draw the text as written, and write capitals as capitals" */
+.c { text-transform: lowercase; } /* want "text-transform: lowercase in .c; draw the text as written, and write capitals as capitals" */
+.d { text-transform: full-width; } /* want "text-transform: full-width in .d; draw the text as written, and write capitals as capitals" */
+.e { TEXT-TRANSFORM: uppercase; } /* want "text-transform: uppercase in .e; draw the text as written, and write capitals as capitals" */
+.f { text-transform: var(--case); } /* want "text-transform: var(--case) in .f; draw the text as written, and write capitals as capitals" */
+.g { text-transform: none uppercase; } /* want "text-transform: none uppercase in .g; draw the text as written, and write capitals as capitals" */
+.h { text-transform/**/: uppercase; } /* want "text-transform: uppercase in .h; draw the text as written, and write capitals as capitals" */

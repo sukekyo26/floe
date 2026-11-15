@@ -1,0 +1,17 @@
+template: report
+lang: ja
+title: 見本のページ
+eyebrow: 計画 · 2026-11-09
+lead: テーマは、色・字・枠・余白を変えます。データは同じです。
+sections:
+  - heading: 進み
+    parts:
+      - stats:
+          - { label: 終えたこと, value: '12' }
+          - { label: 残り, value: '3' }
+          - { label: 週, value: '2' }
+      - table:
+          columns: [作業, { title: 状態, pills: { 済: good, 途中: warn } }, 担当]
+          rows: [[設計, 済, 田中], [実装, 途中, 佐藤]]
+      - note: { title: 注, text: '**太字**と`コード`と[リンク](https://example.com/)。' }
+      - code: { file: page.yaml, lang: yaml, text: "theme: ink\n" }

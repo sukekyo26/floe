@@ -1,0 +1,27 @@
+template: report
+lang: en
+title: Venn diagrams at the far ends of their numbers
+sections:
+  - heading: Diagram
+    parts:
+      - diagram:
+          width: 1000000
+          height: 300
+          title: Far from 0
+          parts:
+            - circle: { name: a, cx: 999000, cy: 150, r: 100 }
+            - label: { text: A, in: [a] }
+      - diagram:
+          width: 400
+          height: 300
+          title: Touching the canvas
+          parts:
+            - circle: { name: a, cx: -100.5, cy: 150, r: 100.5 }
+            - label: { text: A, in: [a] }
+      - diagram:
+          width: 400
+          height: 300
+          title: Two pixels in the canvas
+          parts:
+            - circle: { name: a, cx: 0.5, cy: 150, r: 1.5 }
+            - label: { text: A, in: [a] }

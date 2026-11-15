@@ -1,0 +1,21 @@
+# A key a part takes but not in a case is told by name, at the part's value: min on a bar chart, nodes beside lanes;
+# min on a line chart, a bar chart of no min, a graph of lanes alone and one of nodes alone pass.
+lang: en
+template: report
+title: Keys
+sections:
+  - heading: a
+    parts:
+      - chart: { kind: line, title: A, min: 1, x: [a, b], series: [{ name: C, values: [1, 2] }] }
+      - chart: { kind: bar, title: B, min: 1, x: [a, b], series: [{ name: C, values: [1, 2] }] }
+      - chart: { kind: bar, title: C, x: [a, b], series: [{ name: C, values: [1, 2] }] }
+      - diagram:
+          title: D
+          parts:
+            - graph: { x: 10, y: 10, lanes: [{ name: team, nodes: [{ box: { name: a, rows: [a] } }] }] }
+            - graph: { x: 10, y: 200, nodes: [{ box: { name: b, rows: [b] } }] }
+            - graph:
+                x: 10
+                y: 400
+                lanes: [{ name: crew, nodes: [{ box: { name: c, rows: [c] } }] }]
+                nodes: [{ box: { name: d, rows: [d] } }]

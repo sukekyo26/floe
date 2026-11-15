@@ -1,0 +1,7 @@
+template: report
+lang: en
+title: A comment on a value's line
+sections:
+  - heading: PR #100 is out
+    parts:
+      - text: x

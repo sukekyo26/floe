@@ -1,0 +1,2 @@
+blockquote { border: 0; padding: 0; color: var(--on-face, var(--fg)); font-size: 1.15rem; font-weight: 700; }
+blockquote > p { display: inline; background: linear-gradient(transparent 62%, var(--face, var(--nb-yellow)) 62%); }

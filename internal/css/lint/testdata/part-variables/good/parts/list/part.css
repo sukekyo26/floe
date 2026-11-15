@@ -1,0 +1,6 @@
+:scope.big { --list-mark: 2rem; }
+@media (max-width: 30rem) { :scope { --list-mark: 1rem; } }
+:scope:has(> li.on) { --list-mark: 3rem; }
+:scope li::before { width: var(--list-mark); }
+:scope li.on { --list-c: red; }
+:scope { --face: var(--bg); }

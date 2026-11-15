@@ -1,0 +1,9 @@
+<!doctype html><html><head><style>
+:root { --accent: #06c; }
+.a { color: #333; }
+.b { background: rgb(0 0 0); }
+.c { color/**/: #fff; }
+.proj-tint { background: color-mix(in srgb, #f00 20%, white); }
+.d { background: color-mix(in srgb, var(--accent) 20%, white); }
+:root:has(.busy) { color: #f00; }
+</style></head><body><svg><rect fill="#f00"/></svg><div style="color: #000"></div></body></html>

@@ -1,0 +1,3 @@
+:root { color: var(--fg); }
+@media print { :root { --floe-copy-room: 0px; } }
+:where(.a) { --floe-pill-wrap: normal; }

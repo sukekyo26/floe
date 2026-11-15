@@ -1,0 +1,12 @@
+$ floe check warnings.yaml
+exit 0
+--- stderr
+warnings.yaml:7:15: warning: this text holds a fenced block of code on its line 3, drawn as plain code: write code in a code part and commands in a terminal part, which show them under their file or prompt with a copy button
+warnings.yaml:17:21: warning: this text holds a fenced block of code on its line 1, drawn as plain code: write code in a code part and commands in a terminal part, which show them under their file or prompt with a copy button
+$ floe render --out-dir $TMP/pages/warnings.yaml warnings.yaml
+exit 0
+--- stdout
+$TMP/pages/warnings.yaml/warnings.html
+--- stderr
+warnings.yaml:7:15: warning: this text holds a fenced block of code on its line 3, drawn as plain code: write code in a code part and commands in a terminal part, which show them under their file or prompt with a copy button
+warnings.yaml:17:21: warning: this text holds a fenced block of code on its line 1, drawn as plain code: write code in a code part and commands in a terminal part, which show them under their file or prompt with a copy button

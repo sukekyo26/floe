@@ -1,0 +1,525 @@
+// Package server serves the pages and the API on 127.0.0.1: the pages stored as they were drawn when published,
+// linked files as they are, and linked data files drawn each time they are opened.
+package server
+
+import (
+	"context"
+	"crypto/rand"
+	"encoding/json"
+	"errors"
+	"fmt"
+	"io"
+	"log/slog"
+	"net"
+	"net/http"
+	"os"
+	"path"
+	"strconv"
+	"strings"
+	"sync"
+	"sync/atomic"
+	"time"
+
+	"floe/internal/i18n"
+	"floe/internal/pagediff"
+	"floe/internal/store"
+	"floe/internal/ui"
+	"floe/internal/usererr"
+)
+
+// App is the name /api/health answers with, so that a client can tell floe from another program.
+const App = "floe"
+
+// Config is what a server serves.
+type Config struct {
+	Store *store.Store
+	Port  int
+	// Build identifies the running binary; a publish from another build restarts the server.
+	Build string
+	// Drawing reads what pages are drawn with: one's own parts, themes and templates over floe's, and the icons.
+	// The server reads it once, and again when Parts, Themes, Templates or Icons change.
+	Drawing func() (store.Drawing, error)
+	// Templates, Parts and Themes are the directories of one's own, and Icons that of the icon sets ("" for none):
+	// what the server draws with, which /api/health tells and the server watches.
+	Templates, Parts, Themes, Icons string
+	// Home is the user's home directory, which bounds what may be linked.
+	Home string
+	// Log is where the server writes what happens to it (OpenLog); nil writes nowhere, for a test.
+	Log io.Writer
+}
+
+// Server handles the requests.
+type Server struct {
+	cfg     Config
+	hosts   map[string]bool
+	origins map[string]bool
+	// every is how often the drawing is watched, and grace how long Shutdown waits for the requests under way.
+	every, grace time.Duration
+	// id is this server's, new each start: in each version, so that a tab open across a restart reloads.
+	id string
+	// stopping is done when the server is asked to stop (/api/stop, which calls halt).
+	stopping context.Context
+	halt     context.CancelFunc
+	// stopAsked is set by the first request to stop that names this server: only that one is answered 204.
+	stopAsked atomic.Bool
+	// log writes to cfg.Log (newLog).
+	log *slog.Logger
+
+	// looking lets one look run at a time (look).
+	looking sync.Mutex
+	mu      sync.Mutex
+	drawing store.Drawing
+	gen     int    // how many times the drawing has been read
+	mark    string // what the directories it was read from were then
+	// fresh is whether the drawing is of mark: false before it is read, and after floe's failure, to read it again.
+	fresh bool
+
+	// diffs is the last pair of versions compared, which /diff and the page of the diff both ask of one diff.
+	diffs lastDiff
+}
+
+// lastDiff is the comparison of the last pair of versions asked, by the page's slug, the pair's key (store.PairKey,
+// which another publish or rebuild changes) and the language of the words the page is marked with.
+// LIMIT: one pair: two diffs opened in turn compare each time. Keep more if that comes to weigh.
+// LIMIT: compared out of the lock, so that one large diff does not hold up the others: the same pair asked at once is
+// compared twice.
+type lastDiff struct {
+	sync.Mutex
+	key string
+	diffAnswer
+}
+
+// diffAnswer is a comparison of two versions: the pair's key (store.PairKey), what differs and the later page marked.
+type diffAnswer struct {
+	key    string
+	result pagediff.Result
+	page   []byte
+}
+
+// compared is the comparison of the versions from and to of the page slug, whose meta.json is m, its words in the
+// language of c: of the last one asked when it is of the same page, pair and words, which reads neither version. False
+// when m lists one of them not, or one cannot be read.
+func (s *Server) compared(slug string, m *store.Meta, from, to int, c *i18n.Catalog) (diffAnswer, bool, error) {
+	var none diffAnswer
+	pairKey := s.cfg.Store.PairKey(slug, m, from, to)
+	if pairKey == "" {
+		return none, false, nil
+	}
+	key := slug + "\x00" + pairKey + "\x00" + string(c.Lang())
+	s.diffs.Lock()
+	if s.diffs.key == key {
+		got := s.diffs.diffAnswer
+		s.diffs.Unlock()
+		return got, true, nil
+	}
+	s.diffs.Unlock()
+	pair, ok := s.cfg.Store.VersionPair(slug, m, from, to)
+	if !ok {
+		return none, false, nil
+	}
+	words := pagediff.Words{Gone: c.Msg("diff_page_gone"), Before: c.Msg("diff_page_before")}
+	result, page, err := pagediff.Diff(pair.Pages[0], pair.Pages[1], words)
+	if err != nil {
+		return none, false, err //nolint:wrapcheck // the library's words
+	}
+	got := diffAnswer{key: pair.Key, result: result, page: page}
+	s.diffs.Lock()
+	s.diffs.key, s.diffs.diffAnswer = key, got
+	s.diffs.Unlock()
+	return got, true, nil
+}
+
+// New returns a server for cfg, the drawing read.
+func New(cfg Config) *Server {
+	out := cfg.Log
+	if out == nil {
+		out = io.Discard
+	}
+	s := &Server{
+		cfg: cfg, hosts: map[string]bool{}, origins: map[string]bool{}, every: time.Second, grace: 10 * time.Second,
+		id: rand.Text()[:8], stopping: nil, halt: nil, stopAsked: atomic.Bool{}, log: newLog(out),
+		looking: sync.Mutex{}, mu: sync.Mutex{},
+		drawing: store.Drawing{Kit: nil, Icons: nil, Err: nil}, gen: 0, mark: "",
+		diffs: lastDiff{Mutex: sync.Mutex{}, key: "", diffAnswer: diffAnswer{key: "", page: nil, result: pagediff.Result{
+			Counts: pagediff.Counts{Changed: 0, Added: 0, Removed: 0, Same: 0}, Sections: nil, Places: nil,
+		}}},
+		fresh: false,
+	}
+	s.stopping, s.halt = context.WithCancel(context.Background())
+	// Requests under another name are refused against DNS rebinding.
+	for _, h := range []string{"localhost", "127.0.0.1"} {
+		host := net.JoinHostPort(h, strconv.Itoa(cfg.Port))
+		s.hosts[host] = true
+		s.origins["http://"+host] = true
+	}
+	s.look()
+	return s
+}
+
+// look reads the drawing again when the directories it is read from changed since it was read, or was never read.
+// Their mark is taken before the drawing is read: a change while it is read is told by the next look. One runs at a
+// time: a request's look waits for the one running, so that the drawing it takes after is of no older a mark than
+// its own. Without that, the watch's look of the mark before a save could write its drawing over the request's, and
+// the request draw with the old one (the lock is not for the writes, which are under mu).
+func (s *Server) look() {
+	s.looking.Lock()
+	defer s.looking.Unlock()
+	m := s.marks()
+	s.mu.Lock()
+	same := s.fresh && m == s.mark
+	s.mu.Unlock()
+	if same {
+		return
+	}
+	d, err := s.cfg.Drawing()
+	if err != nil {
+		d = store.Drawing{Kit: nil, Icons: nil, Err: err}
+	}
+	// A failure of floe's (too many files open) is not of what it read: read it again next time.
+	var mistakes usererr.List
+	fresh := err == nil || mistakes.Add(err) == nil
+	s.mu.Lock()
+	s.drawing, s.mark, s.fresh = d, m, fresh
+	s.gen++
+	s.mu.Unlock()
+}
+
+// now returns the drawing and its generation, taken together: the drawing of the last look. A request that draws
+// what the watch cannot mend after (to store, or a download kept as a file) uses latest; now only draws that the
+// watch mends after (a page drawn when opened, which its version reloads).
+func (s *Server) now() (store.Drawing, int) {
+	s.mu.Lock()
+	defer s.mu.Unlock()
+	return s.drawing, s.gen
+}
+
+// latest is the drawing of what the directories hold now: looked at first, for a request that draws to store,
+// which the watch would mend only after it is stored.
+// LIMIT: the wait for a running look does not see the request's context end, so that a request gone waits behind
+// the watch's read; watch the context too if cfg.Drawing comes to be slow.
+func (s *Server) latest() store.Drawing {
+	s.look()
+	d, _ := s.now()
+	return d
+}
+
+// Handler returns the routes behind the request checks, and under recovered, which answers a request that panics:
+// inside the checks, so that a request they refuse is never told where the log is.
+func (s *Server) Handler() http.Handler {
+	mux := http.NewServeMux()
+	mux.HandleFunc("GET /{$}", serveUI)
+	mux.HandleFunc("GET /tasks", serveUI)
+	mux.HandleFunc("GET /api/health", s.health)
+	mux.HandleFunc("GET /api/pages", s.list)
+	mux.HandleFunc("POST /api/pages", s.addLink)
+	mux.HandleFunc("POST /api/pages/data", s.save)
+	mux.HandleFunc("PATCH /api/pages/{slug}", s.edit)
+	mux.HandleFunc("DELETE /api/pages/{slug}", s.remove)
+	mux.HandleFunc("POST /api/pages/{slug}/read", s.markRead)
+	mux.HandleFunc("DELETE /api/pages/{slug}/read", s.markUnread)
+	mux.HandleFunc("GET /api/tasks", s.tasks)
+	mux.HandleFunc("PATCH /api/tasks", s.changeTasks)
+	mux.HandleFunc("DELETE /api/tasks", s.forgetTask)
+	mux.HandleFunc("POST /api/rebuild", s.rebuild)
+	mux.HandleFunc("GET /api/pages/{slug}/theme", s.ownTheme)
+	mux.HandleFunc("PUT /api/pages/{slug}/theme", s.pickTheme)
+	mux.HandleFunc("PUT /api/settings", s.putSettings)
+	mux.HandleFunc("GET /api/themes", s.themes)
+	mux.HandleFunc("GET /api/themes/{name}/sample", s.themeSample)
+	mux.HandleFunc("POST /api/stop", s.stop)
+	mux.HandleFunc("GET /api/pages/{slug}/download", s.download)
+	mux.HandleFunc("GET /api/pages/{slug}/files", s.files)
+	mux.HandleFunc("GET /api/pages/{slug}/versions", s.versions)
+	mux.HandleFunc("GET /api/pages/{slug}/diff", s.diff)
+	mux.HandleFunc("GET /api/changed/{slug}", s.changed)
+	mux.HandleFunc("GET /api/changed/{slug}/{rest...}", s.changed)
+	mux.HandleFunc("GET /a/{slug}", s.redirect)
+	// /a/{slug}/ and /a/{slug}/{rest...} would both match /a/x/, so one route takes both.
+	mux.HandleFunc("GET /a/{slug}/{rest...}", s.servePage)
+	// Everything else, other methods included, is 404 rather than ServeMux's 405.
+	mux.HandleFunc("/", func(w http.ResponseWriter, _ *http.Request) { notFound(w) })
+	return s.check(s.recovered(mux))
+}
+
+// check refuses what no route should see. A malformed request target (//) is a client error. A path
+// that is not clean (.., // or an encoded dot segment after decoding) is 404 here, because ServeMux
+// would redirect it to its cleaned form: path safety is link.Resolve's job, not the router's.
+func (s *Server) check(next http.Handler) http.Handler {
+	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		if !s.hosts[r.Host] {
+			send(w, http.StatusForbidden, "forbidden host")
+			return
+		}
+		if strings.HasPrefix(r.RequestURI, "//") || !strings.HasPrefix(r.URL.Path, "/") {
+			send(w, http.StatusBadRequest, "bad request")
+			return
+		}
+		if r.URL.Path != cleanPath(r.URL.Path) {
+			notFound(w)
+			return
+		}
+		next.ServeHTTP(w, r)
+	})
+}
+
+func cleanPath(p string) string {
+	clean := path.Clean(p)
+	if strings.HasSuffix(p, "/") && clean != "/" {
+		clean += "/"
+	}
+	return clean
+}
+
+// protocolText is the text of a refusal of the protocol, fixed and in plain English (forbidden origin, not
+// found), which neither the management page nor the CLI sends when right. The user's mistakes and floe's
+// failures go through refuse instead: a text made at run time takes a conversion to be sent with send.
+type protocolText string
+
+const textType = "text/plain; charset=utf-8"
+
+// send answers body as text: a refusal of the protocol, or an empty body. It is the one way in for a refusal
+// as text; refuse and sendJSON's failure write theirs with sendBytes.
+func send(w http.ResponseWriter, status int, body protocolText) {
+	sendBytes(w, status, textType, []byte(body))
+}
+
+func sendBytes(w http.ResponseWriter, status int, contentType string, body []byte) {
+	w.Header().Set("Content-Type", contentType)
+	w.Header().Set("Cache-Control", "no-store")
+	w.WriteHeader(status)
+	//nolint:errcheck,gosec // the client hung up; G705: a page is served in the sandbox (pageCSP)
+	_, _ = w.Write(body)
+}
+
+func sendJSON(w http.ResponseWriter, status int, v any) {
+	b, err := json.Marshal(v)
+	if err != nil {
+		// Not through refuse, which answers with sendJSON.
+		sendBytes(w, http.StatusInternalServerError, textType, []byte(err.Error()))
+		return
+	}
+	sendBytes(w, status, "application/json", b)
+}
+
+func notFound(w http.ResponseWriter) {
+	send(w, http.StatusNotFound, "not found")
+}
+
+func serveUI(w http.ResponseWriter, r *http.Request) {
+	sendUI(w, r, http.StatusOK, "", "")
+}
+
+// sendUI answers with the management page in the reader's language: the frame around the page framed, a slug, or
+// the list for "".
+func sendUI(w http.ResponseWriter, r *http.Request, status int, framed, version string) {
+	// A folder's page is framed by what the server serves, which a list of its directory cut at its bound may leave out
+	served := framed != "" && status == http.StatusOK && r.URL.Query().Get("file") != ""
+	page, err := ui.Page(catalog(r), framed, served, version)
+	if err != nil {
+		refuse(w, r, err)
+		return
+	}
+	w.Header().Set("Content-Security-Policy", uiCSP)
+	sendBytes(w, status, htmlType, page)
+}
+
+// catalog is the language of the reader of a response, from Accept-Language.
+func catalog(r *http.Request) *i18n.Catalog {
+	return i18n.New(i18n.FromAcceptLanguage(r.Header.Get("Accept-Language")))
+}
+
+func (s *Server) health(w http.ResponseWriter, _ *http.Request) {
+	sendJSON(w, http.StatusOK, Health{
+		App: App, PID: os.Getpid(), Root: s.cfg.Store.Root(), Build: s.cfg.Build, Templates: s.cfg.Templates,
+		Parts: s.cfg.Parts, Themes: s.cfg.Themes, Icons: s.cfg.Icons,
+	})
+}
+
+// Health is the answer of /api/health.
+type Health struct {
+	App   string `json:"app"`
+	PID   int    `json:"pid"`
+	Root  string `json:"root"`
+	Build string `json:"build"`
+	// Templates, Parts, Themes and Icons are the directories of templates, parts and themes of one's own and
+	// of icons it draws pages with.
+	Templates string `json:"templates"`
+	Parts     string `json:"parts"`
+	Themes    string `json:"themes"`
+	Icons     string `json:"icons"`
+}
+
+func (s *Server) list(w http.ResponseWriter, r *http.Request) {
+	list, err := s.cfg.Store.List(Viewer)
+	if err != nil {
+		refuse(w, r, err)
+		return
+	}
+	sendJSON(w, http.StatusOK, list)
+}
+
+// files answers the directory ?dir= ("" for the top) of the folder slug links, which the management page reads
+// when it is opened.
+func (s *Server) files(w http.ResponseWriter, r *http.Request) {
+	l, err := s.cfg.Store.Files(r.PathValue("slug"), r.URL.Query().Get("dir"))
+	if errors.Is(err, store.ErrNotFound) {
+		notFound(w)
+		return
+	}
+	if err != nil {
+		refuse(w, r, err)
+		return
+	}
+	sendJSON(w, http.StatusOK, l)
+}
+
+// versions answers the versions of the page slug, oldest first, none for a link or a page of none yet, and the one read
+// before the
+// last (store.ReadBefore), which a comparison starts from.
+func (s *Server) versions(w http.ResponseWriter, r *http.Request) {
+	slug := r.PathValue("slug")
+	m := s.cfg.Store.ReadMeta(slug)
+	if m == nil {
+		notFound(w)
+		return
+	}
+	versions := m.Versions
+	if versions == nil {
+		versions = []store.Version{}
+	}
+	sendJSON(w, http.StatusOK, struct {
+		Versions []store.Version `json:"versions"`
+		Read     int             `json:"read"`
+	}{Versions: versions, Read: s.cfg.Store.ReadBefore(Viewer, m)})
+}
+
+// diff answers what differs between the versions from and to of the stored page slug, from before to as the page of
+// the diff marks them, by their words alone: not found for none of them, or a link. It reads nothing as read. A
+// version whose copy a publish removed after its meta.json was read is read once more.
+// LIMIT: it looks at no Origin and counts none running at once, so that a sandboxed page or another site, which cannot
+// read the answer,
+// can still ask it as often as they will. One viewer, on their own machine: put a bound on it if the load comes to
+// trouble someone.
+func (s *Server) diff(w http.ResponseWriter, r *http.Request) {
+	slug, q := r.PathValue("slug"), r.URL.Query()
+	from, fromOK := versionNumber(q.Get("from"))
+	to, toOK := versionNumber(q.Get("to"))
+	if !fromOK || !toOK || from >= to {
+		send(w, http.StatusBadRequest, "from and to must be numbers of versions, from before to")
+		return
+	}
+	var got diffAnswer
+	var versions [2]store.Version
+	ok := false
+	// Read once more for a copy a publish removed after its meta.json was read.
+	// LIMIT: that second read is not tested, as nothing can put a publish in the middle of it.
+	for range 2 {
+		m := s.cfg.Store.ReadMeta(slug)
+		if m == nil {
+			break
+		}
+		var err error
+		if got, ok, err = s.compared(slug, m, from, to, catalog(r)); err != nil {
+			refuse(w, r, err)
+			return
+		}
+		if ok {
+			versions[0], _ = s.cfg.Store.ReadMark(slug, m, from)
+			versions[1], _ = s.cfg.Store.ReadMark(slug, m, to)
+			break
+		}
+	}
+	if !ok {
+		notFound(w)
+		return
+	}
+	sendJSON(w, http.StatusOK, struct {
+		From Read   `json:"from"`
+		To   Read   `json:"to"`
+		Key  string `json:"key"`
+		pagediff.Result
+	}{
+		From: Read{N: from, At: versions[0].At}, To: Read{N: to, At: versions[1].At}, Key: got.key, Result: got.result,
+	})
+}
+
+func (*Server) redirect(w http.ResponseWriter, r *http.Request) {
+	slug := r.PathValue("slug")
+	if !store.ValidSlug(slug) {
+		notFound(w)
+		return
+	}
+	// The query kept: /a/x?raw is the page, not its frame.
+	to := "/a/" + slug + "/"
+	if r.URL.RawQuery != "" {
+		to += "?" + r.URL.RawQuery
+	}
+	w.Header().Set("Location", to)
+	send(w, http.StatusMovedPermanently, "")
+}
+
+// Serve serves on ln until ctx is done or the server is asked to stop, then stops once the requests under way are
+// done, watching the drawing every s.every until then. It writes to the log that it serves, why it stops (before it
+// stops listening: the next server starts after that) and that it has stopped, or the mistake that ended it.
+func (s *Server) Serve(ctx context.Context, ln net.Listener) (err error) {
+	s.log.Info("serving", slog.String("root", s.cfg.Store.Root()), slog.String("addr", ln.Addr().String()),
+		slog.String("build", s.cfg.Build))
+	defer func() {
+		if err != nil {
+			s.log.Error("stopped", slog.Any("error", err))
+			return
+		}
+		s.log.Info("stopped")
+	}()
+	// The watching ends however serving does.
+	ctx, cancel := context.WithCancel(ctx)
+	defer cancel()
+	srv := &http.Server{
+		Handler:           s.Handler(),
+		ErrorLog:          slog.NewLogLogger(s.log.Handler(), slog.LevelError),
+		ReadHeaderTimeout: 10 * time.Second,
+		// Not ctx: the requests Shutdown waits for go on once it is done (a link's git).
+		BaseContext: func(net.Listener) context.Context { return context.WithoutCancel(ctx) },
+	}
+	go s.watchDrawing(ctx)
+	errc := make(chan error, 1)
+	go func() { errc <- srv.Serve(ln) }()
+	select {
+	case err := <-errc:
+		return fmt.Errorf("serve: %w", err)
+	case <-ctx.Done():
+		s.log.Info("stopping", slog.String("why", "a signal"))
+	case <-s.stopping.Done():
+		s.log.Info("stopping", slog.String("why", "asked to stop"))
+	}
+	// The watching ends.
+	cancel()
+	// LIMIT: a request still running after s.grace (10 s) is cut off, and a connection opened but sent nothing (a
+	// browser's preconnect) is waited for 5 s. Wait longer if a save comes to take that.
+	done, stop := context.WithTimeout(context.WithoutCancel(ctx), s.grace)
+	defer stop()
+	if err := srv.Shutdown(done); err != nil {
+		s.log.Warn("cutting off what was under way", slog.Any("error", err))
+		if err = srv.Close(); err != nil {
+			return fmt.Errorf("close: %w", err)
+		}
+	}
+	if err := <-errc; !errors.Is(err, http.ErrServerClosed) {
+		return fmt.Errorf("serve: %w", err)
+	}
+	return nil
+}
+
+// watchDrawing looks at the drawing every s.every until ctx is done.
+func (s *Server) watchDrawing(ctx context.Context) {
+	ticker := time.NewTicker(s.every)
+	defer ticker.Stop()
+	for {
+		select {
+		case <-ctx.Done():
+			return
+		case <-ticker.C:
+			s.look()
+		}
+	}
+}

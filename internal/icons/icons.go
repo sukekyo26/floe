@@ -1,0 +1,891 @@
+// Package icons keeps icon sets on the user's machine and finds their icons by name. floe ships only Lucide's
+// (ISC), built in; the clouds' it does not ship (that would redistribute them): each user fetches a set's official
+// package once. An icon is named by its set and its name in the set, like aws/amazon-ec2 or lucide/database.
+package icons
+
+import (
+	"archive/zip"
+	"bytes"
+	"cmp"
+	"context"
+	"crypto/sha256"
+	"encoding/hex"
+	"encoding/json"
+	"errors"
+	"fmt"
+	"io"
+	"io/fs"
+	"maps"
+	"net/url"
+	"os"
+	"path"
+	"path/filepath"
+	"regexp"
+	"slices"
+	"strings"
+	"sync"
+	"syscall"
+
+	"floe/internal/dirs"
+	"floe/internal/files"
+	"floe/internal/textpos"
+	"floe/internal/usererr"
+)
+
+// kit is what differs between icon sets: where their packages are and which of their files are icons.
+type kit struct {
+	name       string              // the head of the set's icon names, and its directory under the root
+	title      string              // the set as messages name it
+	page       string              // the page that links the packages
+	host, size string              // where the packages download from and about how large they are
+	terms      bool                // its page asks to agree to terms before the download: Fetch downloads none
+	packages   []pack              // the zips that hold the set, each needed
+	version    *regexp.Regexp      // the package's version in its URL; nil: the icons' hash is their version
+	short      map[string][]string // the icons a word means as a service's short name
+	// builtin: its icons are in floe (builtinFS), never fetched, and lines in currentColor, which a diagram paints
+	// in the text colour or a tone (Mono). Split it in two if a built-in set of colours or a fetched one of lines
+	// comes.
+	builtin bool
+	// categorized: a product without an icon of its own is drawn with its category's icon (Google's guide), which a
+	// search finding nothing points to.
+	categorized bool
+}
+
+// pack is a zip of a set: its link on the set's page, and which of its paths are icons.
+type pack struct {
+	what   string // as messages name it: "the Icon package zip"
+	link   *regexp.Regexp
+	iconOf func(path string) (packed, bool)
+}
+
+// iconOf is the icon at path of a package of the set, and the index of the pack it is of.
+func (k *kit) iconOf(path string) (packed, int, bool) {
+	for i, p := range k.packages {
+		if icon, ok := p.iconOf(path); ok {
+			return icon, i, true
+		}
+	}
+	return packed{version: "", name: "", category: "", dark: false}, 0, false
+}
+
+// zips names the set's zips for messages: "the core product icons zip and the product category icons zip".
+func (k *kit) zips() string {
+	return whats(k.packages)
+}
+
+func whats(packs []pack) string {
+	names := make([]string, len(packs))
+	for i, p := range packs {
+		names[i] = p.what
+	}
+	return strings.Join(names, " and ")
+}
+
+// usage is the command that fetches the set from its zips: floe icons fetch gcp <path-or-url> <path-or-url>.
+func (k *kit) usage() string {
+	return "floe icons fetch " + k.name + strings.Repeat(" <path-or-url>", len(k.packages))
+}
+
+// again is the command that fetches the set again over what is there; a set behind terms only from its zips.
+func (k *kit) again() string {
+	if k.terms {
+		return k.usage() + " --force"
+	}
+	return "floe icons fetch " + k.name + " --force"
+}
+
+// packed is an icon in a package: dark marks its variant for dark backgrounds, kept only for an icon
+// without a light one.
+type packed struct {
+	version, name, category string
+	dark                    bool
+}
+
+var kits = []*kit{&aws, &gcp, &azure, &lucide}
+
+var (
+	// ErrNoSet is a name without a known set in front (aws/…).
+	ErrNoSet = errors.New("no icon set in front")
+	// ErrNoIcon is a name its set does not hold.
+	ErrNoIcon = errors.New("no such icon")
+)
+
+var slugRe = regexp.MustCompile(`[^a-z0-9.]+`)
+
+// rename moves the new icons into place; a test makes it fail.
+var rename = os.Rename
+
+// Sets are the names of the icon sets floe knows: those it fetches and those built in.
+func Sets() []string {
+	names := make([]string, len(kits))
+	for i, k := range kits {
+		names[i] = k.name
+	}
+	return names
+}
+
+// CheckSet refuses a set that floe does not know, naming the ones it does: those it fetches and those built in.
+func CheckSet(set string) error {
+	if kitOf(set) == nil {
+		return usererr.New("icons_unknown_set", set, strings.Join(Sets(), ", "))
+	}
+	return nil
+}
+
+// Fetchable are the names of the icon sets floe fetches: all but those built in.
+func Fetchable() []string {
+	var names []string
+	for _, k := range kits {
+		if !k.builtin {
+			names = append(names, k.name)
+		}
+	}
+	return names
+}
+
+// IsBuiltin reports whether set is built into floe, needing no directory of icons.
+func IsBuiltin(set string) bool {
+	k := kitOf(set)
+	return k != nil && k.builtin
+}
+
+// Mono reports whether the icon of name, its set in front, is of a set of lines in currentColor, which a diagram
+// paints in the text colour or a tone; false for a name of no set.
+func Mono(name string) bool {
+	set, _, _ := strings.Cut(name, "/")
+	return IsBuiltin(set)
+}
+
+// CheckSearch refuses the arguments of a search, a set and the words to search it for: without both, that alone is
+// told, with the sets; else a set floe does not know.
+func CheckSearch(args []string) error {
+	// Search splits the words at spaces: words of spaces alone are no word.
+	if len(args) < 2 || len(strings.Fields(strings.Join(args[1:], " "))) == 0 {
+		return usererr.New("icons_search_words", strings.Join(Sets(), ", "))
+	}
+	return CheckSet(args[0])
+}
+
+// checkSources refuses n zips or URLs to fetch set from when the set holds fewer packages: zips of two versions
+// would mix under one. A set built in or unknown is checkFetchable's to tell.
+func checkSources(set string, n int) error {
+	k := kitOf(set)
+	if k == nil || n <= len(k.packages) {
+		return nil
+	}
+	return usererr.New("icons_too_many_zips", k.title, k.zips(), k.usage())
+}
+
+func kitOf(set string) *kit {
+	i := slices.IndexFunc(kits, func(k *kit) bool { return k.name == set })
+	if i < 0 {
+		return nil
+	}
+	return kits[i]
+}
+
+// Store is the icon sets kept under a root, a directory each, and those built in.
+type Store struct {
+	none    error // the mistake that the store has no root (Without); a set to fetch then holds no icon
+	root    string
+	absent  bool   // root cannot be there (a default under a file), so that it holds no set
+	setting string // the setting that names root, "" for the default: root's own mistakes are told for it
+	// The indexes of the sets read so far, by set: a diagram looks up many icons.
+	mu      sync.Mutex
+	indexes map[string]*index
+}
+
+// New returns the store under root, an absolute path; absent when root cannot be there, holding no set; setting,
+// the setting that names root, "" for the default.
+func New(root string, absent bool, setting string) *Store {
+	return &Store{none: nil, root: root, absent: absent, setting: setting, mu: sync.Mutex{}, indexes: map[string]*index{}}
+}
+
+// Without returns a store with no root, as there is no directory for icons, err says why (icons_no_dir for nil):
+// the sets built in are there, and a set to fetch is told err.
+func Without(err error) *Store {
+	if err == nil {
+		err = usererr.NewWhole("icons_no_dir")
+	}
+	return &Store{none: err, root: "", absent: true, setting: "", mu: sync.Mutex{}, indexes: map[string]*index{}}
+}
+
+func (s *Store) dir(k *kit) string {
+	return filepath.Join(s.root, k.name)
+}
+
+type index struct {
+	Version string           `json:"version"`
+	Sources []string         `json:"sources"`
+	Icons   map[string]entry `json:"icons"`
+}
+
+type entry struct {
+	Category string `json:"category"`
+}
+
+// readIndex returns nil when the set has not been fetched. One that cannot be read is told in the system's
+// words; one that is no index, as a fetch again replaces it.
+func (s *Store) readIndex(k *kit) (*index, error) {
+	s.mu.Lock()
+	defer s.mu.Unlock()
+	if idx := s.indexes[k.name]; idx != nil {
+		return idx, nil
+	}
+	if k.builtin {
+		// LIMIT: lucide is the one set built in, and the one of lines (Mono reads the same mark); keep an index for
+		// each, and a mark of lines apart, if another comes.
+		return lucideIndex()
+	}
+	if s.none != nil {
+		return nil, s.none
+	}
+	file := filepath.Join(s.dir(k), "index.json")
+	if s.absent {
+		return nil, nil //nolint:nilnil // not fetched is not an error to fetch
+	}
+	b, _, err := files.Read(file)
+	if errors.Is(err, fs.ErrNotExist) {
+		return nil, nil //nolint:nilnil // not fetched is not an error to fetch
+	}
+	if err != nil {
+		return nil, s.cannotRead(file, err, k)
+	}
+	idx, err := parseIndex(file, b, k)
+	if err != nil {
+		return nil, err
+	}
+	s.indexes[k.name] = idx
+	return idx, nil
+}
+
+// lucideIndex is the index of lucide, the one set built in, read once for every store: a server makes a store at
+// each change it watches.
+var lucideIndex = sync.OnceValues(func() (*index, error) { return builtinIndex(&lucide) })
+
+// builtinIndex reads the index of k, a set built in. One that cannot be read is floe's failure: a fetch cannot
+// mend it.
+func builtinIndex(k *kit) (*index, error) {
+	file := k.name + "/index.json"
+	b, err := fs.ReadFile(builtinFS, file)
+	if err != nil {
+		return nil, fmt.Errorf("read the built-in %s: %w", file, err)
+	}
+	var idx index
+	if err := json.Unmarshal(b, &idx); err != nil {
+		return nil, fmt.Errorf("read the built-in %s: %w", file, err)
+	}
+	if idx.Version == "" {
+		return nil, fmt.Errorf("read the built-in %s: it holds no version", file) //nolint:err113 // floe's own failure
+	}
+	return &idx, nil
+}
+
+// parseIndex is the index file holding b.
+func parseIndex(file string, b []byte, k *kit) (*index, error) {
+	var idx index
+	if err := json.Unmarshal(b, &idx); err != nil {
+		return nil, broken(file, b, err, k)
+	}
+	// JSON of another shape (null, {}) is no index a fetch wrote: each holds its version.
+	if idx.Version == "" {
+		return nil, usererr.NewAt(file, 0, 0, "icons_index_no_version", k.again())
+	}
+	return &idx, nil
+}
+
+// broken is err, of reading b, the index file, as JSON: in encoding/json's words, at the place it names.
+func broken(file string, b []byte, err error, k *kit) error {
+	var at int64
+	var syntax *json.SyntaxError
+	var typed *json.UnmarshalTypeError
+	switch {
+	case errors.As(err, &syntax):
+		at = syntax.Offset
+	case errors.As(err, &typed):
+		at = typed.Offset
+	default:
+		return fmt.Errorf("read %s: %w", file, err)
+	}
+	line, column := textpos.Ending(b, int(at))
+	return libraryAt(file, line, column, "icons_broken", err, k.again())
+}
+
+// libraryAt is the mistake a library told in err, its words the first argument of the catalog message key and
+// args after them, at the line and column of file, 0 for none.
+func libraryAt(file string, line, column int, key string, err error, args ...any) error {
+	e := usererr.LibraryWith(key, err)
+	e.Args = append(e.Args, args...)
+	return e.PlacedAt(file, line, column)
+}
+
+// cannotRead is err, of reading the file or the directory of the set k at path, under the store: to fetch the set
+// again when that mends it, else as it is (CannotRead).
+func (s *Store) cannotRead(path string, err error, k *kit) error {
+	// A path that is no directory on the way is the store's (a file, or under one) or the set's.
+	storeIsDir := !errors.Is(err, syscall.ENOTDIR) || s.rootIsDir()
+	switch {
+	case !mendable(path, err, storeIsDir):
+		if !storeIsDir {
+			return usererr.SettingDir(s.setting, s.root, err, usererr.CannotRead(path, err))
+		}
+		return usererr.CannotRead(path, err)
+	case errors.Is(err, usererr.ErrNotFile):
+		return usererr.NewAt(path, 0, 0, "icons_not_file", k.again())
+	}
+	return usererr.InSystemWords("icons_broken", path, err, k.again())
+}
+
+// mendable reports whether a fetch of the set mends err, of reading path under the store, which writes the set's
+// directory whole: none there, what is no regular file (a FIFO, a directory), the set's directory a file, or what
+// leads out of it (os.Root refuses a path that the system finds outside). A store that is no directory
+// (storeIsDir false), and what the system does not let floe read, a fetch cannot mend: it fails there too.
+func mendable(path string, err error, storeIsDir bool) bool {
+	switch {
+	case errors.Is(err, fs.ErrPermission):
+		return false
+	case errors.Is(err, fs.ErrNotExist), errors.Is(err, usererr.ErrNotFile), errors.Is(err, syscall.EISDIR):
+		return true
+	case errors.Is(err, syscall.ENOTDIR):
+		return storeIsDir
+	}
+	// The system finds it where os.Root does not let it be read: outside the set's directory.
+	_, statErr := os.Stat(path)
+	return statErr == nil
+}
+
+func (s *Store) loadIndex(k *kit) (*index, error) {
+	idx, err := s.readIndex(k)
+	if err != nil {
+		return nil, err
+	}
+	if idx == nil {
+		return nil, s.notFetched(k)
+	}
+	return idx, nil
+}
+
+func (s *Store) notFetched(k *kit) *usererr.Error {
+	if k.terms {
+		return usererr.NewWhole("icons_not_fetched_terms", k.title, s.dir(k), k.page, k.usage())
+	}
+	return usererr.NewWhole("icons_not_fetched", k.title, s.dir(k), k.name, k.size, k.host)
+}
+
+// rootIsDir reports whether the store's root is a directory now.
+func (s *Store) rootIsDir() bool {
+	fi, err := os.Stat(s.root)
+	return err == nil && fi.IsDir()
+}
+
+// checkWritable refuses the root, the directory a fetch makes, when it cannot be one: a file, or under a file.
+// LIMIT: a directory above it that cannot be written is told only by the MkdirAll after the network; check its
+// permission too if that comes to be asked.
+func (s *Store) checkWritable() error {
+	fi, err := os.Stat(s.root)
+	switch {
+	case err == nil && !fi.IsDir():
+		// What making it would say.
+		return s.cannotWrite(&fs.PathError{Op: "mkdir", Path: s.root, Err: syscall.ENOTDIR})
+	case err != nil && !errors.Is(err, fs.ErrNotExist):
+		return s.cannotWrite(err)
+	}
+	return nil
+}
+
+// cannotWrite is err, of writing in the root: told for the setting that names it, if one does.
+func (s *Store) cannotWrite(err error) error {
+	return usererr.SettingDir(s.setting, s.root, err, usererr.CannotWrite(s.root, err))
+}
+
+// Source is a package to fetch: At, a URL or an absolute path, and Name, as it was written, which its mistakes
+// are told at. Without one, the package is the one the set's page links.
+type Source struct {
+	Name, At string
+}
+
+// Fetched is what Fetch did: kept Count icons of Version in Dir, or found Version already there.
+type Fetched struct {
+	Title   string // the set as messages name it
+	Dir     string
+	Version string
+	Count   int
+	Already bool
+}
+
+// Fetch keeps the icons of set (one of Fetchable) from its package zips in its directory, replacing what is there as
+// a whole: from the zips or URLs of from, or, with none, those the set's page links. A version already there is
+// kept unless force; without force, the index there is read to tell it, and one that cannot be read stops the
+// fetch, as it stops a search.
+func (s *Store) Fetch(ctx context.Context, set string, from []Source, force bool) (Fetched, error) {
+	if err := CheckFetch(set, len(from)); err != nil {
+		return Fetched{}, err //nolint:exhaustruct // nothing fetched
+	}
+	k := kitOf(set)
+	got := Fetched{Title: k.title, Dir: s.dir(k), Version: "", Count: 0, Already: false}
+	// Before the network, so that a store that cannot be written is told for it; made only with the icons.
+	if err := s.checkWritable(); err != nil {
+		return got, err
+	}
+	if len(from) == 0 {
+		var err error
+		if from, err = k.packageURLs(ctx); err != nil {
+			return got, err
+		}
+	}
+	if !force {
+		current, err := s.readIndex(k)
+		if err != nil {
+			return got, err
+		}
+		if current != nil {
+			got.Version = current.Version
+		}
+	}
+	if len(from) == 1 && k.tells(from[0].At, got.Version) {
+		got.Already = true
+		return got, nil
+	}
+	if err := os.MkdirAll(s.root, 0o700); err != nil {
+		return got, s.cannotWrite(err)
+	}
+	tmp, err := os.MkdirTemp(s.root, k.name+".tmp-")
+	if err != nil {
+		return got, s.cannotWrite(err)
+	}
+	defer os.RemoveAll(tmp) //nolint:errcheck // a leftover is harmless
+	idx, err := k.fetch(ctx, from, tmp)
+	if err != nil {
+		return got, err
+	}
+	if idx.Version == got.Version {
+		got.Already = true
+		return got, nil
+	}
+	if err = replace(tmp, got.Dir); err != nil {
+		return got, err
+	}
+	s.mu.Lock()
+	s.indexes[k.name] = idx
+	s.mu.Unlock()
+	got.Version, got.Count = idx.Version, len(idx.Icons)
+	return got, nil
+}
+
+// checkFetchable refuses a set built in, which is never fetched, and one floe does not know, naming those it fetches.
+func checkFetchable(set string) error {
+	k := kitOf(set)
+	switch {
+	case k == nil:
+		return usererr.New("icons_unknown_set", set, strings.Join(Fetchable(), ", "))
+	case k.builtin:
+		return usererr.New("icons_builtin", k.name)
+	}
+	return nil
+}
+
+// CheckFetch refuses to fetch set from n zips or URLs, before anything is done: a set built in or floe does not
+// know, more zips than it has packages, or none of a set whose page asks to agree to terms first.
+func CheckFetch(set string, n int) error {
+	if err := checkFetchable(set); err != nil {
+		return err
+	}
+	if err := checkSources(set, n); err != nil {
+		return err
+	}
+	if k := kitOf(set); n == 0 && k.terms {
+		return usererr.New("icons_terms", k.title, k.page, k.zips(), k.usage())
+	}
+	return nil
+}
+
+// tells reports whether at, the package's URL, tells it is of version: a URL may tell its version, which saves
+// the download; a path or another URL is opened to tell it.
+func (k *kit) tells(at, version string) bool {
+	u, err := url.Parse(at)
+	if err != nil || !downloadable(u) || k.version == nil {
+		return false
+	}
+	m := k.version.FindStringSubmatch(path.Base(u.Path))
+	return m != nil && version != "" && m[1] == version
+}
+
+// fetch writes the icons of the packages at from to dir.
+func (k *kit) fetch(ctx context.Context, from []Source, dir string) (*index, error) {
+	zips := make([]opened, 0, len(from))
+	closers := make([]io.Closer, 0, len(from))
+	defer func() {
+		for _, c := range closers {
+			_ = c.Close() //nolint:errcheck // read only
+		}
+	}()
+	for _, f := range from {
+		zr, closer, err := k.open(ctx, f)
+		if err != nil {
+			return nil, err
+		}
+		closers = append(closers, closer)
+		zips = append(zips, opened{from: f, zr: zr})
+	}
+	return k.extract(zips, dir)
+}
+
+// IsURL tells a source that Fetch downloads from one it reads as a path.
+func IsURL(source string) bool {
+	u, err := url.Parse(source)
+	return err == nil && downloadable(u)
+}
+
+// downloadable reports whether u is one to download: http or https, with a host (http:icons.zip is a file's name).
+func downloadable(u *url.URL) bool {
+	return (u.Scheme == "https" || u.Scheme == "http") && u.Host != ""
+}
+
+// replace puts the icons in tmp in place of dir as a whole. When that fails, the previous icons stay.
+// LIMIT: a fetch stopped on its way leaves its directories beside the set, and between the two renames the
+// previous icons in tmp-old with the set gone; nothing clears them, as another fetch may be running. Clear them
+// under a lock, or swap a symlink in one rename, if leftovers come to matter.
+func replace(tmp, dir string) error {
+	old := tmp + "-old"
+	hadOld := true
+	if err := os.Rename(dir, old); errors.Is(err, fs.ErrNotExist) {
+		hadOld = false
+	} else if err != nil {
+		return usererr.CannotWrite(dir, err)
+	}
+	if err := rename(tmp, dir); err != nil {
+		if hadOld {
+			if back := os.Rename(old, dir); back != nil {
+				return usererr.InSystemWords("icons_previous_left", dir, err, old)
+			}
+		}
+		return usererr.CannotWrite(dir, err)
+	}
+	// The new icons are in place: a previous one left behind is harmless.
+	_ = os.RemoveAll(old) //nolint:errcheck // see above
+	return nil
+}
+
+// opened is a package's zip, read from from.
+type opened struct {
+	from Source
+	zr   *zip.Reader
+}
+
+// open reads the zip at from: downloaded, or the file opened, which the closer closes.
+func (k *kit) open(ctx context.Context, from Source) (*zip.Reader, io.Closer, error) {
+	if IsURL(from.At) {
+		b, err := k.download(ctx, from.At, "icons_download")
+		if err != nil {
+			return nil, nil, err
+		}
+		zr, err := k.zipOf(bytes.NewReader(b), int64(len(b)), from)
+		return zr, io.NopCloser(nil), err
+	}
+	f, info, err := files.Open(from.At)
+	if err != nil {
+		return nil, nil, usererr.CannotRead(from.Name, err)
+	}
+	zr, err := k.zipOf(f, info.Size(), from)
+	if err != nil {
+		_ = f.Close() //nolint:errcheck // read only
+		return nil, nil, err
+	}
+	return zr, f, nil
+}
+
+// zipOf reads r, of size bytes, from from, as a zip.
+func (k *kit) zipOf(r io.ReaderAt, size int64, from Source) (*zip.Reader, error) {
+	zr, err := zip.NewReader(r, size)
+	if errors.Is(err, zip.ErrFormat) {
+		return nil, usererr.NewAt(from.Name, 0, 0, "icons_not_zip", k.zips(), k.page, k.usage())
+	}
+	if err != nil {
+		return nil, zipMistake(from, err)
+	}
+	return zr, nil
+}
+
+// extract writes the set's icons in zips to dir, with their index.json. Its limits count the icons of all the
+// zips together, as one package's.
+func (k *kit) extract(zips []opened, dir string) (*index, error) {
+	x := extraction{
+		k: k, dir: dir, light: k.lightOnes(zips), sums: map[string][sha256.Size]byte{},
+		found: make([]bool, len(k.packages)), version: "", written: 0,
+		idx: &index{Version: "", Sources: make([]string, len(zips)), Icons: map[string]entry{}},
+	}
+	for i, z := range zips {
+		x.idx.Sources[i] = z.from.At
+		if err := x.add(z); err != nil {
+			return nil, err
+		}
+	}
+	var missing []pack
+	for p, ok := range x.found {
+		if !ok {
+			missing = append(missing, k.packages[p])
+		}
+	}
+	if len(missing) > 0 {
+		return nil, usererr.New("icons_pack_missing", k.title, whats(missing), k.zips(), k.page, k.usage())
+	}
+	x.idx.Version = x.version
+	if k.version == nil {
+		x.idx.Version = hashOf(x.idx.Icons, x.sums)
+	}
+	return x.idx, writeIndex(x.idx, dir)
+}
+
+// extraction is what extract has kept so far, of all the zips.
+type extraction struct {
+	k       *kit
+	dir     string
+	idx     *index
+	light   map[string]bool
+	sums    map[string][sha256.Size]byte // each icon's content, for the version of a set without one
+	found   []bool                       // the set's packs any icon was of
+	version string                       // the first icon's version
+	written int64
+}
+
+// add keeps the icons of z; a zip holding none of the set's is told for itself.
+func (x *extraction) add(z opened) error {
+	hits := 0
+	for _, f := range z.zr.File {
+		icon, p, ok := x.k.iconOf(f.Name)
+		if !ok {
+			continue
+		}
+		hits++
+		x.found[p] = true
+		// A service in two categories (only the background differs) keeps the first with a light variant, or the
+		// first if it has none.
+		if _, kept := x.idx.Icons[icon.name]; kept || icon.dark && x.light[icon.name] {
+			continue
+		}
+		if err := x.keep(z.from, f, icon); err != nil {
+			return err
+		}
+	}
+	if hits == 0 {
+		return usererr.NewAt(z.from.Name, 0, 0, "icons_none_in_zip", x.k.title, x.k.zips(), x.k.page, x.k.usage())
+	}
+	return nil
+}
+
+// keep writes the icon of f, an entry of the zip from, within the limits.
+func (x *extraction) keep(from Source, f *zip.File, icon packed) error {
+	if len(x.idx.Icons) == maxIcons {
+		return usererr.NewAt(from.Name, 0, 0, "icons_too_many", maxIcons)
+	}
+	b, err := readEntry(f)
+	if errors.Is(err, errTooLarge) {
+		return usererr.NewAt(from.Name, 0, 0, "icons_icon_too_large", f.Name, maxIcon>>20)
+	}
+	if err != nil {
+		return zipMistake(from, err)
+	}
+	if x.written += int64(len(b)); x.written > maxPackage {
+		return usererr.NewAt(from.Name, 0, 0, "icons_written_too_large", maxPackage>>20)
+	}
+	if err = keep(x.dir, icon, b); err != nil {
+		return err
+	}
+	x.version = cmp.Or(x.version, icon.version)
+	x.idx.Icons[icon.name] = entry{Category: icon.category}
+	x.sums[icon.name] = sha256.Sum256(b)
+	return nil
+}
+
+// hashOf is the version of icons whose package holds none: of their names, categories and contents, in the order
+// of their names, so that the same icons are the same version whatever order their zips came in.
+func hashOf(icons map[string]entry, sums map[string][sha256.Size]byte) string {
+	h := sha256.New()
+	for _, name := range slices.Sorted(maps.Keys(icons)) {
+		sum := sums[name]
+		h.Write([]byte(name + "\x00" + icons[name].Category + "\x00"))
+		h.Write(sum[:])
+	}
+	return hex.EncodeToString(h.Sum(nil))[:8]
+}
+
+// lightOnes are the names of the icons of zips with a light variant: the package's order of the variants is not
+// fixed, so they are found before any is kept.
+func (k *kit) lightOnes(zips []opened) map[string]bool {
+	light := map[string]bool{}
+	for _, z := range zips {
+		for _, f := range z.zr.File {
+			if icon, _, ok := k.iconOf(f.Name); ok && !icon.dark {
+				light[icon.name] = true
+			}
+		}
+	}
+	return light
+}
+
+// zipMistake is err, of reading the zip from past its start: one that cannot be read in the system's words, or
+// one archive/zip cannot read (an entry's header, its size or its checksum) in its words.
+func zipMistake(from Source, err error) error {
+	if errors.As(err, new(*fs.PathError)) {
+		return usererr.CannotRead(from.Name, err)
+	}
+	return libraryAt(from.Name, 0, 0, "icons_bad_zip", err)
+}
+
+func readEntry(f *zip.File) ([]byte, error) {
+	r, err := f.Open()
+	if err != nil {
+		return nil, err //nolint:wrapcheck // worded by the caller
+	}
+	defer r.Close() //nolint:errcheck // read only
+	// An entry may inflate far beyond its size in the zip.
+	return readAtMost(r, maxIcon)
+}
+
+// keep writes the icon b to dir as name.svg.
+func keep(dir string, icon packed, b []byte) error {
+	name := icon.name + ".svg"
+	// A name holds no slash but those its kit puts in (TestIconOfStaysInside); this keeps it so.
+	if !filepath.IsLocal(name) {
+		return fmt.Errorf("keep the icon %s: not a name inside the set", icon.name) //nolint:err113 // floe's own mistake
+	}
+	path := filepath.Join(dir, name)
+	if err := os.MkdirAll(filepath.Dir(path), 0o700); err != nil {
+		return usererr.CannotWrite(filepath.Dir(path), err)
+	}
+	if err := os.WriteFile(path, b, 0o600); err != nil {
+		return usererr.CannotWrite(path, err)
+	}
+	return nil
+}
+
+func writeIndex(idx *index, dir string) error {
+	var out bytes.Buffer
+	enc := json.NewEncoder(&out)
+	enc.SetEscapeHTML(false)
+	enc.SetIndent("", " ")
+	if err := enc.Encode(idx); err != nil {
+		return fmt.Errorf("write the icons' index: %w", err)
+	}
+	file := filepath.Join(dir, "index.json")
+	if err := os.WriteFile(file, out.Bytes(), 0o600); err != nil {
+		return usererr.CannotWrite(file, err)
+	}
+	return nil
+}
+
+// slug is s as a name: lower case, each run of what is not a letter, a digit or a dot one dash, none at its ends.
+func slug(s string) string {
+	return strings.Trim(slugRe.ReplaceAllString(strings.ToLower(s), "-"), "-")
+}
+
+// named is icon named prefix and the slug of raw. A raw name of no letter, digit or dot names nothing, and its path
+// is not read.
+// LIMIT: such a path is passed over unseen, as is one whose slug another took first (none in the packages of
+// 2026-11); refuse the package if one comes up.
+func named(icon packed, prefix, raw string) (packed, bool) {
+	s := slug(raw)
+	if s == "" {
+		return icon, false
+	}
+	icon.name = prefix + s
+	return icon, true
+}
+
+// Hit is an icon found by Search.
+type Hit struct {
+	Name     string // with its set in front
+	Category string
+}
+
+// Search returns the icons of set whose name (set/name) contains every word, or, for a word that is a short name of
+// the set (alb, gke), the name of an icon it means: the icons a word means or names whole but for its folder (user
+// for lucide/user, server for aws/res/server) first, then the rest, each by name, so that a first line is what was
+// asked for. A set not fetched is told so, with how to fetch it.
+func (s *Store) Search(set string, words []string) ([]Hit, error) {
+	if err := CheckSet(set); err != nil {
+		return nil, err
+	}
+	k := kitOf(set)
+	idx, err := s.loadIndex(k)
+	if err != nil {
+		return nil, err
+	}
+	// Names hold no spaces, so a word of two ("api gateway") is searched as its words.
+	terms := strings.Fields(strings.ToLower(strings.Join(words, " ")))
+	// LIMIT: short names are kept by hand; a renamed icon loses its short name, unnoticed (no real set in CI).
+	var meant, rest []Hit
+	for name, e := range idx.Icons {
+		// Matched as printed, set and all, so that a name copied from a spec finds itself.
+		full := k.name + "/" + name
+		if slices.ContainsFunc(terms, func(t string) bool { return !strings.Contains(full, t) && !k.holdsMeant(t, name) }) {
+			continue
+		}
+		named := func(t string) bool { return t == path.Base(name) || slices.Contains(k.short[t], name) }
+		if slices.ContainsFunc(terms, named) {
+			meant = append(meant, Hit{Name: full, Category: e.Category})
+		} else {
+			rest = append(rest, Hit{Name: full, Category: e.Category})
+		}
+	}
+	if len(meant)+len(rest) == 0 {
+		key := "icons_no_match"
+		if k.categorized {
+			key = "icons_no_match_category"
+		}
+		return nil, usererr.New(key, `"`+strings.Join(terms, `" "`)+`"`, k.name)
+	}
+	byName := func(a, b Hit) int { return strings.Compare(a.Name, b.Name) }
+	slices.SortFunc(meant, byName)
+	slices.SortFunc(rest, byName)
+	return slices.Concat(meant, rest), nil
+}
+
+// holdsMeant is whether name holds the name, its folder aside, of an icon word means: the service's own resources.
+// LIMIT: resources named otherwise than the icon are not found (iam: identity-access, not identity-and-access).
+func (k *kit) holdsMeant(word, name string) bool {
+	return slices.ContainsFunc(k.short[word], func(m string) bool {
+		return strings.Contains(name, strings.TrimPrefix(m, "res/"))
+	})
+}
+
+// Lookup returns the SVG of the icon of name, its set in front (aws/amazon-ec2). A name without a known set in
+// front is ErrNoSet, and one its set does not hold ErrNoIcon, for the caller to tell where it was written.
+func (s *Store) Lookup(name string) ([]byte, error) {
+	set, rest, _ := strings.Cut(name, "/")
+	k := kitOf(set)
+	if k == nil {
+		return nil, ErrNoSet
+	}
+	idx, err := s.loadIndex(k)
+	if err != nil {
+		return nil, err
+	}
+	// Only a name in the index is read, and only inside the set's directory: an index or a link edited to lead
+	// out of it is refused by the system. Opened for each icon and closed: a Store a server keeps would else hold
+	// the directory open, and read on in the one a fetch --force replaced.
+	// LIMIT: a link to a file of the set by its absolute path is refused too (os.Root takes it as leading out); a
+	// fetch writes none, so make links relative, or resolve them in Lookup, if a set made by hand comes to need it.
+	if _, ok := idx.Icons[rest]; !ok {
+		return nil, ErrNoIcon
+	}
+	if k.builtin {
+		b, readErr := fs.ReadFile(builtinFS, k.name+"/"+rest+".svg")
+		if readErr != nil {
+			return nil, fmt.Errorf("read the built-in icon %s: %w", name, readErr)
+		}
+		return b, nil
+	}
+	dir := s.dir(k)
+	root, err := os.OpenRoot(dir)
+	if err != nil {
+		return nil, s.cannotRead(dir, err, k)
+	}
+	defer root.Close() //nolint:errcheck // read only
+	b, _, err := files.ReadIn(root, rest+".svg")
+	if err != nil {
+		// At the name as the index holds it, not cleaned to where it leads.
+		return nil, s.cannotRead(dirs.Join(dir, rest+".svg"), err, k)
+	}
+	return b, nil
+}

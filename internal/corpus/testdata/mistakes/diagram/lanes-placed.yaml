@@ -1,0 +1,22 @@
+template: report
+lang: en
+title: Mistakes in lanes, told where written
+sections:
+  - heading: Diagram
+    parts:
+      - diagram:
+          title: Mistakes in lanes, told where written
+          parts:
+            - graph:
+                x: 20
+                y: 20
+                lanes:
+                  - name: l1
+                    nodes:
+                      - box: { name: a, rows: [A] }
+                  - name: l1
+                    nodes:
+                      - box: { name: a, rows: [B] }
+                      - box: { name: c, rows: [C] }
+                edges:
+                  - { from: c, to: l1 }

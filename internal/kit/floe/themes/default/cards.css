@@ -1,0 +1,11 @@
+/* The grey panel around the cards: a ground, so it takes no face from around it (a band's), for what it holds */
+:scope { background: var(--default-panel); color: var(--fg); --face: initial; --on-face: initial; --quiet: var(--surface); border-radius: var(--radius); padding: var(--floe-room); }
+/* A tile of the surface on the panel of the cards */
+.card {
+  background: var(--surface); --quiet: var(--default-panel); --default-quote: var(--default-panel);
+  --default-quote-quiet: var(--surface); border-radius: calc(var(--radius) - var(--floe-room)); }
+:scope.numbered { --floe-mark: auto; }
+:scope.numbered > .card::before {
+  content: counter(floe-card, decimal-leading-zero); content: counter(floe-card, decimal-leading-zero) / counter(floe-card, decimal-leading-zero); background: none;
+  font-family: var(--mono); font-size: var(--floe-text-small); font-weight: 400;
+}

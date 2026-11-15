@@ -1,0 +1,25 @@
+/* A mark of the tone stands at the left, the box a row (marks: box) that floe lays out, drawn by the style and
+   silent to a screen reader, to which the hidden word at the box's head tells the tone instead: its Markdown stands in a
+   text's box after the title, and what a note drawn in HTML holds is counted from after the word.
+   LIMIT: i is a letter in the CSS, past words.yaml, so it stays in English on a page in any language (washi's seal
+   too); make it a mark or a word of the page's language once a part's CSS can take its text from words.yaml */
+:scope {
+  --floe-mark: 1.6rem; --floe-mark-gap: 0.85rem; background: var(--tone-soft); color: var(--fg); padding: var(--floe-pad-block) var(--floe-pad-inline); border-radius: var(--radius); max-width: var(--text-width);
+}
+:scope::before {
+  content: "i"; content: "i" / ""; border-radius: 50%;
+  background: var(--tone); color: var(--on-fill); font-size: var(--floe-text-small); font-weight: 700; line-height: 1;
+}
+/* A tone's mark, no more specific than the mark's own rule, so that a theme's :scope::before (content: none) wins */
+:scope:where([data-floe-tone=good])::before { content: "✓"; content: "✓" / ""; }
+:scope:where([data-floe-tone=warn])::before { content: "!"; content: "!" / ""; }
+:scope:where([data-floe-tone=bad])::before { content: "×"; content: "×" / ""; }
+/* The gap between what a note drawn in HTML holds (a template's caution, a data item's note); a note of Markdown has its
+   title next to its text's box, and the box spaces its Markdown. It wins over a part's box held in it, whose other
+   margins stay its own */
+:scope > :not(.floe-hidden) + * { margin-top: 0.5rem; }
+.title { display: block; font-size: var(--floe-text-aside); color: var(--tone); }
+:scope > .title + * { margin-top: 0.1rem; }
+/* A part's box stands --floe-room from what is next to it, as what it draws outside itself reaches that far */
+:scope > :is([data-floe-part], [data-floe-look]) + *, :scope > :not(.floe-hidden) + :is([data-floe-part], [data-floe-look]) { margin-top: var(--floe-room); }
+:scope code { background: var(--face, var(--surface)); }

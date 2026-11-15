@@ -1,0 +1,463 @@
+package server
+
+import (
+	"encoding/json/jsontext"
+	jsonv2 "encoding/json/v2"
+	"errors"
+	"io"
+	"io/fs"
+	"mime"
+	"net/http"
+	"os"
+	"path/filepath"
+
+	"floe/internal/store"
+	"floe/internal/usererr"
+)
+
+// LIMIT: json/v2 and jsontext are outside the Go 1 promise; if a release drops them, use go-json-experiment/json.
+
+const maxBody = 64 << 10
+
+// MaxUpload is the size of a publish of a data file, its images in it as base64.
+// LIMIT: 32 MiB a publish, while an image may be 1 MiB and a page may show any number of them. Raise
+// it, or send the images apart, if pages come to need more.
+const MaxUpload = 32 << 20
+
+// jsonType is the media type of a write, and the one Accept names for a report as JSON.
+const jsonType = "application/json"
+
+// readBody reads a write from the management page or the CLI, of up to limit bytes, for decodeStrict to read. Other
+// sites and the sandboxed pages are refused by the exact Origin and by requiring JSON (which needs a
+// CORS preflight), its Content-Type read as mime reads it: one whose parameters cannot be read is refused too.
+// On refusal it has answered and returns false.
+// LIMIT: 127.0.0.1 is open to every user of the machine, and anyone can fake Origin. Do not run floe
+// on a shared machine.
+func (s *Server) readBody(w http.ResponseWriter, r *http.Request, limit int64) ([]byte, bool) {
+	if !s.origins[r.Header.Get("Origin")] {
+		send(w, http.StatusForbidden, "forbidden origin")
+		return nil, false
+	}
+	if typ, _, err := mime.ParseMediaType(r.Header.Get("Content-Type")); err != nil || typ != jsonType {
+		send(w, http.StatusUnsupportedMediaType, "send application/json")
+		return nil, false
+	}
+	body, err := io.ReadAll(http.MaxBytesReader(w, r.Body, limit))
+	if _, tooLarge := errors.AsType[*http.MaxBytesError](err); tooLarge {
+		send(w, http.StatusRequestEntityTooLarge, "request body too large")
+		return nil, false
+	}
+	if err != nil {
+		send(w, http.StatusBadRequest, "cannot read the request")
+		return nil, false
+	}
+	return body, true
+}
+
+// refuse answers err told in the reader's language (usererr.Report): 500 for floe's failure, 409 for a name in use
+// (store.Conflict, which comes alone), 400 for the user's other mistakes. A reader whose Accept is JSON exactly
+// (the CLI) gets the report itself, which it lays out as it does its own mistakes; another, the management page,
+// its text.
+func refuse(w http.ResponseWriter, r *http.Request, err error) {
+	report := usererr.Tell(catalog(r), err)
+	status := http.StatusBadRequest
+	if _, conflict := errors.AsType[*store.Conflict](err); conflict {
+		status = http.StatusConflict
+	}
+	if report.Failure != "" {
+		status = http.StatusInternalServerError
+	}
+	if r.Header.Get("Accept") != jsonType {
+		// The management page shows no warnings: they are the writer's, whom the command line tells.
+		report.Warnings = nil
+		sendBytes(w, status, textType, []byte(report.Render("")))
+		return
+	}
+	sendJSON(w, status, report)
+}
+
+// Link is a link to add, as the management page and floe publish --link send it: a field sent is given,
+// empty or not, and one left out or null is not.
+type Link struct {
+	Path        string  `json:"path"`
+	Slug        *string `json:"slug,omitzero"`
+	Title       *string `json:"title,omitzero"`
+	Description *string `json:"description,omitzero"`
+	Theme       *string `json:"theme,omitzero"`
+	Force       bool    `json:"force,omitzero"`
+}
+
+// addLink registers a linked file, from the management page or floe publish --link. The management
+// page sends no force: a URL name another file uses is refused (409) so that a typo never replaces
+// another link.
+func (s *Server) addLink(w http.ResponseWriter, r *http.Request) {
+	body, ok := s.readBody(w, r, maxBody)
+	if !ok {
+		return
+	}
+	in := decodeStrict[Link](w, body)
+	if in == nil {
+		return
+	}
+	opts := store.Options{
+		Slug: in.Slug, Title: in.Title, Description: in.Description, Theme: in.Theme, Force: in.Force, MoveProject: false,
+	}
+	drawing := s.latest()
+	// The path as sent: the CLI sends it as given, where a file name may start or end with a space (the
+	// management page trims it). There is no directory to read a relative one in, which PrepareLink refuses
+	// with the other mistakes.
+	entry, err := s.cfg.Store.PrepareLink(r.Context(), drawing, in.Path, opts, "", s.cfg.Home)
+	if err == nil {
+		err = usererr.WithWarnings(s.cfg.Store.Save(entry), entry.Warnings)
+	}
+	if err != nil {
+		refuse(w, r, err)
+		return
+	}
+	sendSaved(w, r, entry)
+}
+
+// decodeStrict reads body as a T as encoding/json/v2 does, the one reading of a write: refusing anything but an
+// object (null too), a mistake of its syntax, a key T does not have (of other case too) and a key sent twice; nil
+// when it has answered a refusal. A field null is one not sent.
+func decodeStrict[T any](w http.ResponseWriter, body []byte) *T {
+	if jsontext.Value(body).Kind() != '{' {
+		send(w, http.StatusBadRequest, "cannot read the request: send a JSON object")
+		return nil
+	}
+	var v T
+	if err := jsonv2.Unmarshal(body, &v, jsonv2.RejectUnknownMembers(true)); err != nil {
+		// What encoding/json/v2 or jsontext could not read, its syntax too, in words that may quote the body: the CLI
+		// sends none, the management page only a string holding a lone surrogate (half of an emoji pasted).
+		// LIMIT: in v2's English, as the protocol's refusals are; word it if a reader comes to see it.
+		send(w, http.StatusBadRequest, protocolText("cannot read the request: "+err.Error()))
+		return nil
+	}
+	return &v
+}
+
+// Upload is a publish of a data file, as the CLI sends it: see store.Upload. Images left out or null asks which
+// images the data reads.
+type Upload struct {
+	File        string            `json:"file"`
+	Source      []byte            `json:"source"`
+	Images      map[string][]byte `json:"images"`
+	Project     string            `json:"project"`
+	Repo        string            `json:"repo"`
+	Place       string            `json:"place"`
+	Slug        *string           `json:"slug,omitzero"`
+	Title       *string           `json:"title"`
+	Description *string           `json:"description"`
+	Theme       *string           `json:"theme"`
+	Force       bool              `json:"force"`
+	// MoveProject puts the page in Project, though it is in another.
+	MoveProject bool `json:"moveProject,omitzero"`
+}
+
+// Saved is a page a publish or an added link stored, what it replaced (nil for a new slug), and the warnings of
+// the page drawn, told in the reader's language.
+type Saved struct {
+	Slug  string     `json:"slug"`
+	Title string     `json:"title"`
+	Prev  *SavedPrev `json:"prev"`
+	// Folder tells a folder's link, which the management page opens once added.
+	Folder   bool           `json:"folder,omitempty"`
+	Warnings []usererr.Told `json:"warnings,omitempty"`
+	// TaskProject is the page's project as tasks.json has it (store.ProjectKey), as the store kept it.
+	TaskProject string `json:"taskProject"`
+	// OffTask is the task the page was taken off, as its project changed, "" for none.
+	OffTask string `json:"offTask,omitempty"`
+}
+
+// SavedPrev is the page a publish replaced.
+type SavedPrev struct {
+	Title     string `json:"title"`
+	UpdatedAt string `json:"updatedAt"`
+	// TaskProject is the project the replaced page was in, as Saved's is.
+	TaskProject string `json:"taskProject"`
+}
+
+// ImagesNeeded answers a publish without images whose data reads some: the images to send.
+type ImagesNeeded struct {
+	Images []NeededImage `json:"images"`
+}
+
+// NeededImage is an image to send, by its name, with the line and column of each item naming it in the data file
+// sent: the publisher tells a mistake of reading it there, in the file as it named it.
+type NeededImage struct {
+	Name   string       `json:"name"`
+	Places []ImagePlace `json:"places"`
+}
+
+// ImagePlace is a line and a column of the data file sent.
+type ImagePlace struct {
+	Line   int `json:"line"`
+	Column int `json:"column"`
+}
+
+// imagesNeeded is need as the publisher reads it.
+func imagesNeeded(need *store.NeedImages) ImagesNeeded {
+	images := make([]NeededImage, len(need.Images))
+	for i, n := range need.Images {
+		places := make([]ImagePlace, len(n.Places))
+		for j, p := range n.Places {
+			places[j] = ImagePlace{Line: p.Line, Column: p.Column}
+		}
+		images[i] = NeededImage{Name: n.Name, Places: places}
+	}
+	return ImagesNeeded{Images: images}
+}
+
+// sendSaved answers the entry a write of r saved: 201 for a new slug, 200 for one replaced.
+func sendSaved(w http.ResponseWriter, r *http.Request, entry *store.Entry) {
+	status := http.StatusOK
+	var prev *SavedPrev
+	if entry.Prev == nil {
+		status = http.StatusCreated
+	} else {
+		prev = &SavedPrev{
+			Title: entry.Prev.Title, UpdatedAt: entry.Prev.UpdatedAt, TaskProject: store.ProjectKey(entry.Prev.Project),
+		}
+	}
+	warnings := usererr.Warn(catalog(r), entry.Warnings)
+	sendJSON(w, status, Saved{
+		Slug: entry.Slug, Title: entry.Meta.Title, Prev: prev, Folder: entry.Meta.Folder, Warnings: warnings,
+		TaskProject: store.ProjectKey(entry.Meta.Project), OffTask: entry.OffTask,
+	})
+}
+
+// save stores the data file the CLI sends as a page, at the slug sent or the one the store picks: 201 for a new slug,
+// 200 for one replaced, and 422 with the images to send when it reads some and sent none.
+func (s *Server) save(w http.ResponseWriter, r *http.Request) {
+	body, ok := s.readBody(w, r, MaxUpload)
+	if !ok {
+		return
+	}
+	in := decodeStrict[Upload](w, body)
+	if in == nil {
+		return
+	}
+	if in.File == "" || in.Source == nil || in.Place == "" {
+		send(w, http.StatusBadRequest, "send file, source and place")
+		return
+	}
+	// A place from a repository's root names the file with its repository alone, and a real path with none.
+	if filepath.IsAbs(in.Place) == (in.Repo != "") {
+		send(w, http.StatusBadRequest, "send the repository with a place from its root, and none with a real path")
+		return
+	}
+	for name := range in.Images {
+		if !fs.ValidPath(name) || name == "." {
+			send(w, http.StatusBadRequest, "send each image by a slash-separated path under the data file's directory")
+			return
+		}
+	}
+	// A slug not given is the store's to pick, the page of the file sent if it has one.
+	up := store.Upload{
+		File: in.File, Source: in.Source, Images: in.Images, Project: in.Project, Repo: in.Repo, Place: in.Place,
+	}
+	opts := store.Options{
+		Slug: in.Slug, Title: in.Title, Description: in.Description, Theme: in.Theme, Force: in.Force,
+		MoveProject: in.MoveProject,
+	}
+	drawing := s.latest()
+	entry, err := s.cfg.Store.PrepareData(drawing, up, opts)
+	if need, ok := errors.AsType[*store.NeedImages](err); ok {
+		sendJSON(w, http.StatusUnprocessableEntity, imagesNeeded(need))
+		return
+	}
+	if err == nil {
+		err = usererr.WithWarnings(s.cfg.Store.Save(entry), entry.Warnings)
+	}
+	if err != nil {
+		refuse(w, r, err)
+		return
+	}
+	sendSaved(w, r, entry)
+}
+
+// rebuild draws every stored page again with the drawing of now (store.Rebuild): 204, or its mistakes.
+func (s *Server) rebuild(w http.ResponseWriter, r *http.Request) {
+	body, ok := s.readBody(w, r, maxBody)
+	if !ok || decodeStrict[struct{}](w, body) == nil {
+		return
+	}
+	drawing := s.latest()
+	if err := s.cfg.Store.Rebuild(drawing); err != nil {
+		refuse(w, r, err)
+		return
+	}
+	w.Header().Set("Cache-Control", "no-store")
+	w.WriteHeader(http.StatusNoContent)
+}
+
+// Viewer is who reads the pages, the one key of reads.json until viewers are told apart.
+const Viewer = "local"
+
+// Read is the version of a stored page a viewer was served, as the page tells its frame and the frame sends it.
+type Read struct {
+	N  int    `json:"n"`
+	At string `json:"at"`
+}
+
+// readAnswer says whether a read took the page up to its last version, which it had not been at.
+type readAnswer struct {
+	Cleared bool `json:"cleared"`
+}
+
+// markRead keeps that the viewer read a version of the stored page slug, and says what came of it: 404 for a link, a
+// folder or no page, which have no unread. A version the page does not have is kept by nobody, and asks nothing to be
+// mended.
+func (s *Server) markRead(w http.ResponseWriter, r *http.Request) {
+	slug := r.PathValue("slug")
+	if !store.ValidSlug(slug) {
+		notFound(w)
+		return
+	}
+	// Origin is checked before the page is looked for, as in edit.
+	body, ok := s.readBody(w, r, maxBody)
+	if !ok {
+		return
+	}
+	in := decodeStrict[Read](w, body)
+	if in == nil {
+		return
+	}
+	cleared, err := s.cfg.Store.MarkRead(Viewer, slug, in.N, in.At)
+	if errors.Is(err, store.ErrNotFound) {
+		notFound(w)
+		return
+	}
+	if err != nil {
+		refuse(w, r, err)
+		return
+	}
+	w.Header().Set("Cache-Control", "no-store")
+	sendJSON(w, http.StatusOK, readAnswer{Cleared: cleared})
+}
+
+// markUnread takes a stored page back to what the viewer had read before: 204, also for one with news, and 404 for a
+// link, a folder or no page. Only the management page's own controls call it: the sandboxed pages (Origin: null) are
+// refused, and no message of a page leads here. It takes no body, as remove.
+func (s *Server) markUnread(w http.ResponseWriter, r *http.Request) {
+	if !s.origins[r.Header.Get("Origin")] {
+		send(w, http.StatusForbidden, "forbidden origin")
+		return
+	}
+	slug := r.PathValue("slug")
+	if !store.ValidSlug(slug) {
+		notFound(w)
+		return
+	}
+	err := s.cfg.Store.MarkUnread(Viewer, slug)
+	if errors.Is(err, store.ErrNotFound) {
+		notFound(w)
+		return
+	}
+	if err != nil {
+		refuse(w, r, err)
+		return
+	}
+	w.Header().Set("Cache-Control", "no-store")
+	w.WriteHeader(http.StatusNoContent)
+}
+
+// Stop is the request to stop the server whose pid is PID, as floe stop and the replacing of a server of another
+// build send it, naming the server they saw: one started after it is not stopped.
+type Stop struct {
+	PID int `json:"pid"`
+}
+
+// stop answers 204 to the first Stop that names this server, then ends Serve once the requests under way are done;
+// one naming another is 409, for the server a command saw may be gone and this one started after it, and so is one
+// that comes after the first, the server stopping already.
+func (s *Server) stop(w http.ResponseWriter, r *http.Request) {
+	body, ok := s.readBody(w, r, maxBody)
+	if !ok {
+		return
+	}
+	in := decodeStrict[Stop](w, body)
+	if in == nil {
+		return
+	}
+	if in.PID != os.Getpid() {
+		send(w, http.StatusConflict, "another server: not the pid asked to stop")
+		return
+	}
+	// 204 to the first request only, so that the one command it answers is the one that stopped the server: another's,
+	// that came while it stops, is told 409 as one for a server gone.
+	if !s.stopAsked.CompareAndSwap(false, true) {
+		send(w, http.StatusConflict, "already stopping")
+		return
+	}
+	w.Header().Set("Cache-Control", "no-store")
+	w.WriteHeader(http.StatusNoContent)
+	_ = http.NewResponseController(w).Flush() //nolint:errcheck // the client hung up: it waits for the server to go
+	s.halt()
+}
+
+// Edit is a change of a page, as the management page, floe archive and floe tag send it: store.Edit with its keys,
+// which edit converts to it (a field the two do not share fails the build). A field left out or null is not changed.
+type Edit struct {
+	Title       *string         `json:"title,omitzero"`
+	Description *string         `json:"description,omitzero"`
+	Project     *string         `json:"project,omitzero"`
+	Slug        *string         `json:"slug,omitzero"`
+	Favorite    *bool           `json:"favorite,omitzero"`
+	Archived    *bool           `json:"archived,omitzero"`
+	Tags        *store.TagsEdit `json:"tags,omitzero"`
+}
+
+// edit changes a page as Edit, from the management page, floe archive or floe tag, sends: its title, description,
+// project, URL name, favourite, archived, or the tags it adds and removes.
+func (s *Server) edit(w http.ResponseWriter, r *http.Request) {
+	slug := r.PathValue("slug")
+	if !store.ValidSlug(slug) {
+		notFound(w)
+		return
+	}
+	// Origin is checked before the page is looked for, so that another site cannot tell which pages there are.
+	body, ok := s.readBody(w, r, maxBody)
+	if !ok {
+		return
+	}
+	in := decodeStrict[Edit](w, body)
+	if in == nil {
+		return
+	}
+	if s.cfg.Store.ReadMeta(slug) == nil {
+		notFound(w)
+		return
+	}
+	edited, err := s.cfg.Store.Edit(slug, store.Edit(*in))
+	if errors.Is(err, store.ErrNotFound) {
+		notFound(w)
+		return
+	}
+	if err != nil {
+		refuse(w, r, err)
+		return
+	}
+	sendJSON(w, http.StatusOK, edited)
+}
+
+// remove deletes a page: 404 for none, its mistake for one that cannot be removed. Other sites and the sandboxed
+// pages (Origin: null) are refused. It takes no body: the management page sends none, so requiring JSON would
+// make deleting impossible.
+func (s *Server) remove(w http.ResponseWriter, r *http.Request) {
+	if !s.origins[r.Header.Get("Origin")] {
+		send(w, http.StatusForbidden, "forbidden origin")
+		return
+	}
+	err := s.cfg.Store.Remove(r.PathValue("slug"))
+	if errors.Is(err, store.ErrNotFound) {
+		notFound(w)
+		return
+	}
+	if err != nil {
+		refuse(w, r, err)
+		return
+	}
+	w.Header().Set("Cache-Control", "no-store")
+	w.WriteHeader(http.StatusNoContent)
+}

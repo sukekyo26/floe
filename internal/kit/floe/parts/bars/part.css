@@ -1,0 +1,18 @@
+/* A bar's length is set on it, as a share of its of or of the longest. The label and the value take up to 40% each,
+   wrapping, so that the bar keeps the rest less the two gaps.
+   LIMIT: no word breaks, so a word wider than 40% widens its column, and in a place under 10rem the bar is none */
+:scope { display: grid; grid-template-columns: fit-content(40%) minmax(0, 1fr) fit-content(40%); gap: 0.6rem 1rem; align-items: center; padding: var(--floe-pad-block) var(--floe-pad-inline); }
+:scope > div { display: contents; color: var(--tone); }
+:scope .label { color: var(--fg); font-size: var(--floe-text-small); }
+/* The track is the quiet ground (--quiet), as a table's head and a keycap's.
+   LIMIT: a quiet ground melting into its box's ground is seen, not measured; a theme that paints a box near --quiet
+   sets --quiet on that box */
+:scope .track { height: 0.85rem; border-radius: var(--radius-small); background: var(--quiet); }
+:scope .track > span { display: block; height: 100%; min-width: 2px; border-radius: var(--radius-small); background: currentColor; }
+:scope .value {
+  text-align: right; font-size: var(--floe-text-small); color: var(--fg); font-variant-numeric: tabular-nums;
+  font-family: var(--mono);
+}
+/* As stats' unit: apart by a margin, in the text face the mono value is taken back from. A short unit in Japanese is kept
+   whole by keep-all; anywhere lets a long one wrap in its column instead of widening it (the least width counts) */
+:scope .unit { margin-left: 0.3em; color: var(--muted); font-family: var(--font); word-break: keep-all; overflow-wrap: anywhere; }

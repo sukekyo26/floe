@@ -1,0 +1,37 @@
+title: detour r1
+parts:
+  - graph:
+      x: 16
+      y: 16
+      direction: right
+      nodes:
+        - box: { name: users, rows: [users] }
+        - box: { name: cdn, rows: [cdn] }
+        - group:
+            name: vpc
+            label: VPC
+            nodes:
+              - box: { name: alb, rows: [alb] }
+              - group:
+                  name: az-a
+                  label: AZ a
+                  nodes:
+                    - box: { name: nat-a, rows: [nat-a] }
+                    - box: { name: api-a, rows: [api-a] }
+                    - box: { name: db-a, rows: [db-a] }
+              - group:
+                  name: az-c
+                  label: AZ c
+                  nodes:
+                    - box: { name: nat-c, rows: [nat-c] }
+                    - box: { name: api-c, rows: [api-c] }
+                    - box: { name: db-c, rows: [db-c] }
+      edges:
+        - { from: users, to: cdn }
+        - { from: users, to: nat-a }
+        - { from: cdn, to: alb }
+        - { from: alb, to: api-a }
+        - { from: alb, to: api-c }
+        - { from: nat-a, to: api-a }
+        - { from: api-a, to: db-a }
+        - { from: api-c, to: db-c }

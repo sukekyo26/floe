@@ -1,0 +1,23 @@
+:scope { content: "QUOTE"; } /* want "\"QUOTE\" writes a word; write a mark" */
+:scope { content: "\201C"; } /* want "\"\\201C\" writes an escape; write the character" */
+:scope { content: attr(data-floe-tone); } /* want "content: attr(data-floe-tone) shows an attribute's text; write a mark" */
+:scope { quotes: "QUOTE" ""; } /* want "\"QUOTE\" writes a word; write a mark" */
+:scope { list-style-type: "Q"; } /* want "\"Q\" writes a word; write a mark" */
+:scope { list-style-type: cjk-decimal; } /* want "list-style-type: cjk-decimal counts in cjk-decimal; count in digits" */
+:scope { text-emphasis: "x"; } /* want "\"x\" writes a word; write a mark" */
+:scope { hyphenate-character: "x"; } /* want "\"x\" writes a word; write a mark" */
+:scope { text-overflow: "more"; } /* want "\"more\" writes a word; write a mark" */
+:scope { --label: "Fig."; } /* want "\"Fig.\" writes a word; write a mark" */
+:scope { content: counter(c, cjk-decimal); } /* want "content: counter(c, cjk-decimal) counts in cjk-decimal; count in digits" */
+:scope { content: counters(c, ".", lower-roman); } /* want "content: counters(c, \".\", lower-roman) counts in lower-roman; count in digits" */
+:scope { content: counter(c, var(--style)); } /* want "content: counter(c, var(--style)) counts by a variable; count in digits" */
+:scope { list-style-type: var(--style); } /* want "list-style-type: var(--style) counts by a variable; count in digits" */
+:scope { --x: attr(data-x); } /* want "--x: attr(data-x) shows an attribute's text; write a mark" */
+:scope { --s: counter(c, upper-alpha); } /* want "--s: counter(c, upper-alpha) counts in upper-alpha; count in digits" */
+:scope { --t: counters(c, ".", lower-roman); } /* want "--t: counters(c, \".\", lower-roman) counts in lower-roman; count in digits" */
+:scope { --v: counter(c, var(--t)); } /* want "--v: counter(c, var(--t)) counts by a variable; count in digits" */
+:scope { --display: attr(data-x); } /* want "--display: attr(data-x) shows an attribute's text; write a mark" */
+:scope { --FONT: "Fig."; } /* want "\"Fig.\" writes a word; write a mark" */
+:scope { --Display: "Fig."; } /* want "\"Fig.\" writes a word; write a mark" */
+@counter-style kanji { system: fixed; symbols: '一'; } /* want "'一' writes a word; write a mark" "@counter-style counts in a style of its own; count in digits" */
+:scope { offset-path: path("M0 0"); } /* want "\"M0 0\" writes a word; write a mark" */

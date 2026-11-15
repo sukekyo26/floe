@@ -1,0 +1,398 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "diagram",
+  "description": "A diagram, drawn as inline SVG and checked for overlaps and overflowing text (frames may cross, and a frame's label is held to the frame's width, not its height or a canvas written): its title, what it shows for a reader who cannot see it, and a canvas of width by height (either left out, as far as what is drawn reaches and 20 more) with the parts placed on it, a graph of boxes and edges that floe lays out among them; or example, the name of a built-in one, which floe diagram example lists; floe diagram guide says how to write a diagram",
+  "type": "object",
+  "if": { "required": ["example"] },
+  "then": {
+    "additionalProperties": false,
+    "properties": {
+      "example": { "type": "string", "minLength": 1, "description": "A kind of diagram floe diagram example lists, drawn in the page's language" }
+    }
+  },
+  "else": {
+    "required": ["title", "parts"],
+    "additionalProperties": false,
+    "properties": {
+      "width": { "$ref": "#/$defs/canvas", "description": "Left out, as far right as what is drawn reaches and 20 more; raw SVG is not measured, so write it with raw" },
+      "height": { "$ref": "#/$defs/canvas", "description": "Left out, as far down as what is drawn reaches and 20 more; raw SVG is not measured, so write it with raw" },
+      "title": { "$ref": "#/$defs/nonEmptyText", "description": "What the diagram shows, for a reader who cannot see it" },
+      "parts": {
+        "type": "array",
+        "items": {
+          "type": "object",
+          "description": "One key naming the kind of the part",
+          "minProperties": 1,
+          "maxProperties": 1,
+          "additionalProperties": false,
+          "properties": {
+            "frame": { "$ref": "#/$defs/frame" },
+            "box": { "$ref": "#/$defs/box" },
+            "table": { "$ref": "#/$defs/table" },
+            "icon": { "$ref": "#/$defs/icon" },
+            "edge": { "$ref": "#/$defs/edge" },
+            "dot": { "$ref": "#/$defs/dot" },
+            "bar": { "$ref": "#/$defs/bar" },
+            "axis": { "$ref": "#/$defs/axis" },
+            "circle": { "$ref": "#/$defs/circle" },
+            "label": { "$ref": "#/$defs/label" },
+            "line": { "$ref": "#/$defs/line" },
+            "raw": { "$ref": "#/$defs/raw" },
+            "tree": { "$ref": "#/$defs/tree" },
+            "graph": { "$ref": "#/$defs/graph" }
+          }
+        }
+      }
+    }
+  },
+  "$defs": {
+    "size": { "type": "number", "minimum": 1, "maximum": 1000000 },
+    "canvas": {
+      "type": "number",
+      "minimum": 1,
+      "maximum": 10000000,
+      "description": "Up to ten million, past where coordinates and sizes written reach (two million), so that a canvas floe tells can be written"
+    },
+    "coord": {
+      "type": "number",
+      "minimum": -1000000,
+      "maximum": 1000000,
+      "description": "A coordinate, within a million either way, so that what floe works out from it stays finite and of a sane size"
+    },
+    "text": {
+      "description": "Text, or its words in each language by tag, English among them: {en: …, ja: …}",
+      "type": ["string", "object"],
+      "required": ["en"],
+      "additionalProperties": { "type": "string" }
+    },
+    "nonEmptyText": {
+      "$ref": "#/$defs/text",
+      "description": "Text, empty in no language",
+      "minLength": 1,
+      "additionalProperties": { "minLength": 1 }
+    },
+    "name": { "type": "string", "minLength": 1, "description": "The name an edge's from or to, or a graph's with, gives, unique in the diagram" },
+    "tone": { "$ref": "floe:///parts/tone.json" },
+    "point": { "type": "array", "prefixItems": [{ "$ref": "#/$defs/coord" }, { "$ref": "#/$defs/coord" }], "minItems": 2, "maxItems": 2 },
+    "viaPoint": {
+      "description": "A point to turn at, [x, y], or one axis, { x } or { y }: the other is the point before's, the first point's the centre of the edge's start",
+      "type": ["array", "object"],
+      "prefixItems": [{ "$ref": "#/$defs/coord" }, { "$ref": "#/$defs/coord" }],
+      "minItems": 2,
+      "maxItems": 2,
+      "properties": { "x": { "$ref": "#/$defs/coord" }, "y": { "$ref": "#/$defs/coord" } },
+      "additionalProperties": false,
+      "minProperties": 1
+    },
+    "side": { "enum": ["top", "right", "bottom", "left"] },
+    "origin": { "enum": ["left", "centre"], "description": "What x is: the left edge (the default) or the centre" },
+    "end": {
+      "description": "The name of a part, a named row or a node, or a point [x, y]",
+      "type": ["string", "array"],
+      "minLength": 1,
+      "prefixItems": [{ "$ref": "#/$defs/coord" }, { "$ref": "#/$defs/coord" }],
+      "minItems": 2,
+      "maxItems": 2
+    },
+    "marker": { "enum": ["none", "arrow", "triangle", "diamond", "odiamond", "one", "many", "zero-one", "zero-many"] },
+    "frame": {
+      "type": "object",
+      "description": "A box around other parts, its label inside the top left corner, or right of its icon. Frames are not checked against one another, so they may cross, and a frame's label is held to the frame's width, not its height or a canvas written",
+      "required": ["x", "y", "w", "h"],
+      "additionalProperties": false,
+      "properties": {
+        "name": { "$ref": "#/$defs/name" },
+        "x": { "$ref": "#/$defs/coord" }, "y": { "$ref": "#/$defs/coord" }, "w": { "$ref": "#/$defs/size" }, "h": { "$ref": "#/$defs/size" },
+        "label": { "$ref": "#/$defs/nonEmptyText" },
+        "accent": { "type": "boolean" },
+        "icon": { "type": "string", "description": "An icon in the corner, its label to the right of it" },
+        "square": { "type": "boolean" }
+      }
+    },
+    "box": {
+      "type": "object",
+      "description": "A box of centred rows of text, as wide and tall as they need when w and h are left out",
+      "required": ["x", "y", "rows"],
+      "additionalProperties": false,
+      "properties": {
+        "name": { "$ref": "#/$defs/name" },
+        "x": { "$ref": "#/$defs/coord" }, "y": { "$ref": "#/$defs/coord" }, "origin": { "$ref": "#/$defs/origin" },
+        "w": { "$ref": "#/$defs/size" }, "h": { "$ref": "#/$defs/size" },
+        "rows": {
+          "type": "array",
+          "minItems": 1,
+          "description": "Each a text, or [text, style]; without a style the first is main and the rest sub",
+          "items": {
+            "type": ["string", "object", "array"],
+            "required": ["en"],
+            "additionalProperties": { "type": "string" },
+            "prefixItems": [{ "$ref": "#/$defs/text" }, { "enum": ["main", "sub", "main code", "sub code"] }],
+            "minItems": 2,
+            "maxItems": 2
+          }
+        },
+        "tone": { "$ref": "#/$defs/tone" },
+        "shape": { "enum": ["rect", "pill", "hex", "state"] }
+      }
+    },
+    "table": {
+      "type": "object",
+      "description": "A heading over rows of a name and a type (an ER entity, a class)",
+      "required": ["x", "y", "title", "rows"],
+      "additionalProperties": false,
+      "properties": {
+        "name": { "$ref": "#/$defs/name" },
+        "x": { "$ref": "#/$defs/coord" }, "y": { "$ref": "#/$defs/coord" }, "origin": { "$ref": "#/$defs/origin" },
+        "w": { "$ref": "#/$defs/size" },
+        "title": { "$ref": "#/$defs/text" },
+        "rows": {
+          "type": "array",
+          "description": "Each [name, type] or [name], --- for a separator, or {name, cells: [name, type]} for a row an edge can end at",
+          "items": {
+            "type": ["string", "array", "object"],
+            "minItems": 1,
+            "maxItems": 2,
+            "items": { "$ref": "#/$defs/text" },
+            "required": ["name", "cells"],
+            "additionalProperties": false,
+            "properties": {
+              "name": { "$ref": "#/$defs/name" },
+              "cells": { "type": "array", "minItems": 1, "maxItems": 2, "items": { "$ref": "#/$defs/text" } }
+            }
+          }
+        },
+        "tone": { "$ref": "#/$defs/tone" }
+      }
+    },
+    "icon": {
+      "type": "object",
+      "description": "An icon of an icon set (lucide/…, built in; aws/…, gcp/…, azure/…, fetched; found with floe icons search) with its top left at x, y; with a label, its bottom side, where an edge ends, is under the label",
+      "required": ["icon", "x", "y"],
+      "additionalProperties": false,
+      "properties": {
+        "name": { "$ref": "#/$defs/name" },
+        "icon": { "type": "string" },
+        "x": { "$ref": "#/$defs/coord" }, "y": { "$ref": "#/$defs/coord" },
+        "label": { "$ref": "#/$defs/nonEmptyText" },
+        "size": { "$ref": "#/$defs/size" },
+        "tone": { "$ref": "#/$defs/tone", "description": "The colour of a lucide icon's lines, drawn in the text colour without one; an icon of another set draws in its own colours and takes none" }
+      }
+    },
+    "edge": {
+      "type": "object",
+      "description": "A line from one end to another: right-angled through via, or straight from point to point with straight",
+      "required": ["from", "to"],
+      "additionalProperties": false,
+      "properties": {
+        "from": { "$ref": "#/$defs/end" }, "to": { "$ref": "#/$defs/end" },
+        "fromSide": { "$ref": "#/$defs/side" }, "toSide": { "$ref": "#/$defs/side" },
+        "via": { "type": "array", "items": { "$ref": "#/$defs/viaPoint" } },
+        "straight": { "type": "boolean" },
+        "label": { "$ref": "#/$defs/nonEmptyText" },
+        "at": { "$ref": "#/$defs/point" },
+        "dashed": { "type": "boolean" }, "bold": { "type": "boolean" },
+        "tone": { "$ref": "#/$defs/tone" },
+        "start": { "$ref": "#/$defs/marker" }, "end": { "$ref": "#/$defs/marker" },
+        "crossing": { "type": "boolean", "description": "Lets this edge cross another" }
+      }
+    },
+    "dot": {
+      "type": "object",
+      "description": "A circle (a commit, a milestone, a start state); an edge naming it ends at its outline",
+      "required": ["cx", "cy"],
+      "additionalProperties": false,
+      "properties": {
+        "name": { "$ref": "#/$defs/name" },
+        "cx": { "$ref": "#/$defs/coord" }, "cy": { "$ref": "#/$defs/coord" }, "r": { "$ref": "#/$defs/size" },
+        "tone": { "$ref": "#/$defs/tone" }, "hollow": { "type": "boolean" }
+      }
+    },
+    "bar": {
+      "type": "object",
+      "description": "A horizontal span (a timeline period), its label to the right",
+      "required": ["x1", "x2", "y"],
+      "additionalProperties": false,
+      "properties": {
+        "name": { "$ref": "#/$defs/name" },
+        "x1": { "$ref": "#/$defs/coord" }, "x2": { "$ref": "#/$defs/coord" }, "y": { "$ref": "#/$defs/coord" },
+        "tone": { "$ref": "#/$defs/tone" }, "label": { "$ref": "#/$defs/nonEmptyText" }
+      }
+    },
+    "axis": {
+      "type": "object",
+      "description": "A time axis with labelled ticks, and grid lines up to grid; a tick's text is drawn at it, or between it and the next tick (labels: between); a tick of empty text is a mark alone",
+      "required": ["x1", "x2", "y", "ticks"],
+      "additionalProperties": false,
+      "properties": {
+        "x1": { "$ref": "#/$defs/coord" }, "x2": { "$ref": "#/$defs/coord" }, "y": { "$ref": "#/$defs/coord" },
+        "ticks": {
+          "type": "array",
+          "items": { "type": "array", "prefixItems": [{ "$ref": "#/$defs/coord" }, { "$ref": "#/$defs/text" }], "minItems": 2, "maxItems": 2 }
+        },
+        "grid": { "$ref": "#/$defs/coord" },
+        "labels": { "enum": ["at", "between"], "description": "Where a tick's text goes: at the tick (the default), or halfway between it and the next tick on its right, or x2 past the last" }
+      }
+    },
+    "circle": {
+      "type": "object",
+      "description": "A translucent circle that may overlap others (a Venn diagram)",
+      "required": ["cx", "cy", "r"],
+      "additionalProperties": false,
+      "properties": {
+        "name": { "$ref": "#/$defs/name" },
+        "cx": { "$ref": "#/$defs/coord" }, "cy": { "$ref": "#/$defs/coord" }, "r": { "$ref": "#/$defs/size" },
+        "tone": { "$ref": "#/$defs/tone" }
+      }
+    },
+    "label": {
+      "type": "object",
+      "description": "Text at x, y, or in the area of a Venn diagram inside the circles of in and outside the others",
+      "required": ["text"],
+      "additionalProperties": false,
+      "if": { "required": ["in"] },
+      "then": { "dependentRequired": { "x": ["y"], "y": ["x"], "anchor": ["x"] } },
+      "else": { "required": ["x", "y"] },
+      "properties": {
+        "text": { "$ref": "#/$defs/nonEmptyText" },
+        "x": { "$ref": "#/$defs/coord" }, "y": { "$ref": "#/$defs/coord" },
+        "anchor": { "enum": ["middle", "start", "end"], "description": "Only where x and y place the label; with in alone, leave it out" },
+        "plain": { "type": "boolean", "description": "No background, for text on a coloured area: the default for a label with in, which stands on a circle; false gives one a background" },
+        "strong": { "type": "boolean" },
+        "in": { "type": "array", "minItems": 1, "items": { "$ref": "#/$defs/name" } }
+      }
+    },
+    "line": {
+      "type": "object",
+      "description": "A line without arrows: a line, a lifeline or a divider",
+      "required": ["x1", "y1", "x2", "y2"],
+      "additionalProperties": false,
+      "properties": {
+        "x1": { "$ref": "#/$defs/coord" }, "y1": { "$ref": "#/$defs/coord" }, "x2": { "$ref": "#/$defs/coord" }, "y2": { "$ref": "#/$defs/coord" },
+        "kind": { "enum": ["line", "lifeline", "divider"] }
+      }
+    },
+    "tree": {
+      "type": "object",
+      "description": "A tree of boxes, its root's centre at x and top at y: floe places each node under its parent and draws the edges",
+      "required": ["x", "y", "root"],
+      "additionalProperties": false,
+      "properties": { "x": { "$ref": "#/$defs/coord" }, "y": { "$ref": "#/$defs/coord" }, "root": { "$ref": "#/$defs/node" } }
+    },
+    "node": {
+      "type": "object",
+      "required": ["rows"],
+      "additionalProperties": false,
+      "properties": {
+        "name": { "$ref": "#/$defs/name" },
+        "rows": { "$ref": "#/$defs/box/properties/rows" },
+        "tone": { "$ref": "#/$defs/tone" },
+        "shape": { "$ref": "#/$defs/box/properties/shape" },
+        "children": { "type": "array", "items": { "$ref": "#/$defs/node" } }
+      }
+    },
+    "graph": {
+      "type": "object",
+      "description": "Boxes and the edges between them, which floe lays out in ranks, the top left of all of it at x and y; the edges of one graph may cross one another",
+      "required": ["x", "y"],
+      "$comment": "LIMIT: neither nodes nor lanes is told only as missing nodes, both (or lanes: true with nodes) only as an additional property nodes, naming no lanes: the library tells one rule's words, and oneOf or anyOf tell none of theirs",
+      "if": { "required": ["lanes"] },
+      "then": {
+        "$comment": "LIMIT: the keys every graph takes but nodes, copied: add a key to properties here too, or a graph of lanes refuses it as an additional property. A mistake is told at the graph, not at its nodes, and a misspelt key beside nodes is told twice, here and by the graph's own additionalProperties",
+        "properties": { "x": true, "y": true, "direction": true, "lanes": true, "edges": true },
+        "additionalProperties": false
+      },
+      "else": { "required": ["nodes"] },
+      "additionalProperties": false,
+      "properties": {
+        "x": { "$ref": "#/$defs/coord" },
+        "y": { "$ref": "#/$defs/coord" },
+        "direction": { "enum": ["down", "right"], "description": "Which way the edges run: down (the default) or right" },
+        "lanes": { "type": "array", "minItems": 1, "maxItems": 200, "items": { "$ref": "#/$defs/graphGroup" }, "description": "In place of nodes: lanes, each a group, a band from end to end of the graph along its edges, in the order written; a graph holds 200 boxes, icons, groups and lanes at most, all counted together through its groups and lanes" },
+        "nodes": { "$ref": "#/$defs/graphNodes" },
+        "edges": { "type": "array", "maxItems": 400, "items": { "$ref": "#/$defs/graphEdge" } }
+      }
+    },
+    "graphNodes": {
+      "type": "array",
+      "description": "Boxes, icons and groups of them; a graph holds 200 boxes, icons, groups and lanes at most, all counted together through its groups and lanes",
+      "minItems": 1,
+      "maxItems": 200,
+      "items": {
+        "type": "object",
+        "description": "One key naming the kind of the node",
+        "minProperties": 1,
+        "maxProperties": 1,
+        "additionalProperties": false,
+        "properties": { "box": { "$ref": "#/$defs/graphBox" }, "icon": { "$ref": "#/$defs/graphIcon" }, "group": { "$ref": "#/$defs/graphGroup" } }
+      }
+    },
+    "graphGroup": {
+      "type": "object",
+      "description": "Boxes and groups kept side by side in every rank, framed, its label in the frame's top left corner; an edge of the graph may end at it by its name, at the frame's top or bottom, unless it is a lane",
+      "required": ["nodes"],
+      "additionalProperties": false,
+      "properties": {
+        "name": { "$ref": "#/$defs/name" },
+        "label": { "$ref": "#/$defs/nonEmptyText" },
+        "accent": { "type": "boolean" },
+        "icon": { "type": "string", "minLength": 1, "description": "An icon in the frame's corner, its label to the right of it" },
+        "nodes": { "$ref": "#/$defs/graphNodes" }
+      }
+    },
+    "graphIcon": {
+      "type": "object",
+      "description": "An icon of the graph, 48 square with its label below, with no box round it; the n edges at a side end at the points that part it into n+1 equal parts, the icon's own side, or under its label",
+      "required": ["name", "icon"],
+      "additionalProperties": false,
+      "properties": {
+        "name": { "$ref": "#/$defs/name" },
+        "with": { "$ref": "#/$defs/graphWith" },
+        "icon": { "type": "string", "minLength": 1, "description": "The icon's name, as for the part icon" },
+        "label": { "$ref": "#/$defs/nonEmptyText" },
+        "tone": { "$ref": "#/$defs/tone", "description": "As for the part icon" }
+      }
+    },
+    "graphWith": {
+      "$ref": "#/$defs/name",
+      "description": "The box or icon of the graph this one stands in one rank with, an edge drawn or not. An edge from a box into this one then does not decide ranks, and runs up or down as the ranks fall"
+    },
+    "graphBox": {
+      "type": "object",
+      "description": "A box of the graph, as wide and tall as its rows need, or wider for the edges at a side",
+      "required": ["name", "rows"],
+      "additionalProperties": false,
+      "properties": {
+        "name": { "$ref": "#/$defs/name" },
+        "with": { "$ref": "#/$defs/graphWith" },
+        "rows": { "$ref": "#/$defs/box/properties/rows" },
+        "tone": { "$ref": "#/$defs/tone" },
+        "shape": { "$ref": "#/$defs/box/properties/shape" }
+      }
+    },
+    "graphEdge": {
+      "type": "object",
+      "description": "An edge between boxes or groups of the graph, by name; from and to the same box, a loop out of the side the graph's edges between ranks do not use (an edge written level may not take that side); at a group, it ends at the frame's top or bottom",
+      "required": ["from", "to"],
+      "additionalProperties": false,
+      "properties": {
+        "from": { "$ref": "#/$defs/name" },
+        "to": { "$ref": "#/$defs/name" },
+        "label": { "$ref": "#/$defs/nonEmptyText", "description": "Words on the edge, cutting it; the drawing grows where they lack room, the ranks and the order as with no label" },
+        "dashed": { "type": "boolean" },
+        "bold": { "type": "boolean" },
+        "tone": { "$ref": "#/$defs/tone" },
+        "start": { "$ref": "#/$defs/graphMarker" },
+        "end": { "$ref": "#/$defs/graphMarker" },
+        "level": { "type": "boolean", "description": "Whether its two boxes stand in one rank, the edge straight between their facing sides (or bent, at an icon with more than one edge on a side, whose point stands off its line): two boxes of one group, standing as written, or directly in two lanes, at their lanes' ends towards each other; on a loop it changes nothing" }
+      }
+    },
+    "graphMarker": { "enum": ["none", "arrow"], "description": "An arrowhead or none: the others are wider than the room the edges of a graph keep between them" },
+    "raw": {
+      "type": "object",
+      "description": "SVG no part draws, of SVG's elements alone, without script or foreignObject (which a page takes elsewhere) or an element a page refuses, left out of the checks. Colour it with the variables of the palette's table in the docs (fill=\"var(--accent)\"), and in a tone by data-floe-tone on it or on a <g> around it within the raw SVG and var(--tone). Give text fill=\"currentColor\" (--fg) and font-size=\"12\": without them it draws black at the page's size. A part's classes, data-floe-look and data-floe-part are floe's own",
+      "required": ["svg"],
+      "additionalProperties": false,
+      "properties": { "svg": { "type": "string" } }
+    }
+  }
+}

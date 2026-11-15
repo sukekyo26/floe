@@ -1,0 +1,17 @@
+$ floe part check
+exit 0
+$ floe template check
+exit 1
+--- stderr
+$SAMPLE/own/templates/memo/checks.yaml:1:8: for itemz: the schema allows no itemz there; write a path of keys its schema declares
+$SAMPLE/own/templates/memo/checks.yaml:4:8: for items.wat: the schema allows no wat there; write a path of keys its schema declares
+$ floe check memo.yaml
+exit 1
+--- stderr
+$SAMPLE/own/templates/memo/checks.yaml:1:8: for itemz: the schema allows no itemz there; write a path of keys its schema declares
+$SAMPLE/own/templates/memo/checks.yaml:4:8: for items.wat: the schema allows no wat there; write a path of keys its schema declares
+$ floe render --out-dir $TMP/pages/memo.yaml memo.yaml
+exit 1
+--- stderr
+$SAMPLE/own/templates/memo/checks.yaml:1:8: for itemz: the schema allows no itemz there; write a path of keys its schema declares
+$SAMPLE/own/templates/memo/checks.yaml:4:8: for items.wat: the schema allows no wat there; write a path of keys its schema declares

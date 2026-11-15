@@ -1,0 +1,16 @@
+$ floe check ex.yaml icon.yaml
+exit 1
+--- stderr
+$SAMPLE/.icons/aws/index.json:1:1: cannot be read (unexpected end of JSON input); run "floe icons fetch aws --force" to fetch the icons again
+$ floe render --out-dir $TMP/pages/ex.yaml ex.yaml
+exit 1
+--- stderr
+$SAMPLE/.icons/aws/index.json:1:1: cannot be read (unexpected end of JSON input); run "floe icons fetch aws --force" to fetch the icons again
+$ floe render --out-dir $TMP/pages/icon.yaml icon.yaml
+exit 1
+--- stderr
+$SAMPLE/.icons/aws/index.json:1:1: cannot be read (unexpected end of JSON input); run "floe icons fetch aws --force" to fetch the icons again
+$ floe render --out-dir $TMP/together ex.yaml icon.yaml
+exit 1
+--- stderr
+$SAMPLE/.icons/aws/index.json:1:1: cannot be read (unexpected end of JSON input); run "floe icons fetch aws --force" to fetch the icons again

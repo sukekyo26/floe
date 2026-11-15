@@ -1,0 +1,230 @@
+name: Go CI
+
+on:
+  # Topic branches are covered by pull_request, which also fires on every push
+  # to an open PR (synchronize), into any base: develop, main, and the parent
+  # branch of a feature split over several PRs, whatever its name. develop
+  # pushes re-validate the integrated state after a squash merge; main stays
+  # PR-only because the develop -> main release PR reruns the suite.
+  push:
+    branches: [develop]
+  pull_request:
+  schedule:
+    # Weekly so govulncheck catches newly published advisories with no commit
+    # to trigger a run.
+    - cron: "0 6 * * 1"
+  workflow_dispatch:
+  workflow_call:
+
+# event_name is in the key so the weekly run and release.yml's workflow_call on
+# the default branch do not cancel each other.
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref_name }}-${{ github.event_name }}
+  cancel-in-progress: true
+
+permissions:
+  contents: read
+
+env:
+  # The Chrome for Testing the browser tests run, in the browser jobs.
+  # LIMIT: Chrome is pinned, raised by hand. Raise it when floe's CSS or scripts need a newer Chrome, when the pinned one can no longer be fetched, or when users' Chrome (the Stable of Chrome for Testing) is two major versions ahead.
+  CHROME_VERSION: 156.0.8078.47
+
+jobs:
+  # Says whether a pull request changes only files that the jobs below need not run for, for them to skip their work and
+  # report success under the names the ruleset requires; any other event runs all. A failure here leaves the outputs
+  # empty, so everything runs.
+  # LIMIT: the files are named one by one from what //go:embed, the tests and the screens read. Add one only when a grep
+  # shows it: at level 1 nothing builds or tests it; at level 2 no browser test reads it and no screen shows it.
+  changes:
+    name: Changed files
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    outputs:
+      skip: ${{ steps.files.outputs.skip }}
+      skip_browser: ${{ steps.files.outputs.skip_browser }}
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          fetch-depth: 2
+      - id: files
+        env:
+          EVENT: ${{ github.event_name }}
+        run: |
+          level() {
+            case "$1" in
+              CHANGELOG.md | docs/CHANGELOG.ja.md | .claude/CLAUDE.md) echo 1 ;;
+              docs/agents/guide.md | docs/agents/diagrams.md | docs/agents/parts.md | docs/agents/templates.md | \
+                docs/agents/themes.md | docs/commands.md | docs/commands.ja.md | docs/pages.md | docs/pages.ja.md | \
+                docs/links.md | docs/links.ja.md | README.md | docs/README.ja.md) echo 2 ;;
+              *) echo 3 ;;
+            esac
+          }
+          top=3
+          if [ "$EVENT" = pull_request ]; then
+            # The checkout is the merge of the pull request into its base, whose first parent is the base. The diff is
+            # read whole first, so that a failing git stops the step. A renamed file counts by both its names.
+            changed=$(git diff --name-only --no-renames HEAD^1 HEAD)
+            if [ -n "$changed" ]; then
+              top=1
+              while IFS= read -r file; do
+                l=$(level "$file")
+                if [ "$l" -gt "$top" ]; then top=$l; fi
+              done <<< "$changed"
+            fi
+          fi
+          echo "level $top"
+          skip=false
+          skip_browser=false
+          if [ "$top" -le 1 ]; then skip=true; fi
+          if [ "$top" -le 2 ]; then skip_browser=true; fi
+          echo "skip=$skip" >> "$GITHUB_OUTPUT"
+          echo "skip_browser=$skip_browser" >> "$GITHUB_OUTPUT"
+
+  lint:
+    name: Lint (golangci-lint v2)
+    needs: changes
+    if: ${{ !cancelled() && needs.changes.outputs.skip != 'true' }}
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+      - uses: actions/setup-go@b7ad1dad31e06c5925ef5d2fc7ad053ef454303e # v7.0.0
+        with:
+          go-version-file: go.mod
+          cache: true
+      - uses: ./.github/actions/setup-just
+      # golangci-lint is cached on the version the justfile pins, so a hit skips GitHub's release download.
+      # GOBIN is unset here, so `just setup` installs into GOPATH/bin, which setup-go puts on PATH.
+      - id: golangci
+        run: |
+          echo "version=$(just --evaluate golangci_version)" >> "$GITHUB_OUTPUT"
+          echo "bin=$(go env GOPATH | cut -d: -f1)/bin/golangci-lint" >> "$GITHUB_OUTPUT"
+      - id: golangci-cache
+        uses: actions/cache@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
+        with:
+          path: ${{ steps.golangci.outputs.bin }}
+          key: golangci-lint-${{ runner.os }}-${{ runner.arch }}-${{ steps.golangci.outputs.version }}
+      - if: steps.golangci-cache.outputs.cache-hit != 'true'
+        run: just setup
+      - run: just lint
+      - run: just fmt-check
+
+  test:
+    name: Test (race + shuffle)
+    needs: changes
+    if: ${{ !cancelled() && needs.changes.outputs.skip != 'true' }}
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+      - uses: actions/setup-go@b7ad1dad31e06c5925ef5d2fc7ad053ef454303e # v7.0.0
+        with:
+          go-version-file: go.mod
+          cache: true
+      - uses: ./.github/actions/setup-just
+      - run: just vet
+      - run: just mod-verify
+      - run: just mod-tidy-check
+      # The browser tests run in the browser jobs, on machines of their own.
+      - run: just test-race-core
+
+  browser:
+    name: Browser (${{ matrix.part }})
+    needs: changes
+    # It always runs, so that the matrix names its checks as the ruleset requires them; its steps skip instead.
+    if: ${{ !cancelled() }}
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    strategy:
+      fail-fast: false
+      matrix:
+        part: [looks, rest]
+    steps:
+      - if: ${{ needs.changes.outputs.skip_browser != 'true' }}
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+      - if: ${{ needs.changes.outputs.skip_browser != 'true' }}
+        uses: actions/setup-go@b7ad1dad31e06c5925ef5d2fc7ad053ef454303e # v7.0.0
+        with:
+          go-version-file: go.mod
+          cache: true
+      - if: ${{ needs.changes.outputs.skip_browser != 'true' }}
+        uses: ./.github/actions/setup-just
+      - if: ${{ needs.changes.outputs.skip_browser != 'true' }}
+        uses: browser-actions/setup-chrome@48ad923757ca74d66703209fe939badbdf80f2f4 # v2.2.0
+        id: chrome
+        with:
+          chrome-version: ${{ env.CHROME_VERSION }}
+          # The runner image holds Chrome's libraries; installing them ran an apt-get update that waited minutes on DNS.
+          # LIMIT: if the image drops one, Chrome fails to start and every browser test fails: set it back to true.
+          install-dependencies: false
+      - if: ${{ needs.changes.outputs.skip_browser != 'true' }}
+        run: just test-browser ${{ matrix.part }}
+        # The browser tests run the pinned Chrome; on CI they fail without it.
+        env:
+          FLOE_CHROME: ${{ steps.chrome.outputs.chrome-path }}
+
+  coverage:
+    name: Coverage gate (>= 90%)
+    needs: changes
+    if: ${{ !cancelled() && needs.changes.outputs.skip != 'true' }}
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+      - uses: actions/setup-go@b7ad1dad31e06c5925ef5d2fc7ad053ef454303e # v7.0.0
+        with:
+          go-version-file: go.mod
+          cache: true
+      - uses: ./.github/actions/setup-just
+      - run: just cover-check
+
+  vuln:
+    name: govulncheck
+    needs: changes
+    if: ${{ !cancelled() && needs.changes.outputs.skip != 'true' }}
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+      - uses: actions/setup-go@b7ad1dad31e06c5925ef5d2fc7ad053ef454303e # v7.0.0
+        with:
+          go-version-file: go.mod
+          cache: true
+      - uses: ./.github/actions/setup-just
+      - run: just vuln
+
+  build:
+    name: Release assets (linux/darwin x amd64/arm64)
+    needs: changes
+    if: ${{ !cancelled() && needs.changes.outputs.skip != 'true' }}
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+      - uses: actions/setup-go@b7ad1dad31e06c5925ef5d2fc7ad053ef454303e # v7.0.0
+        with:
+          go-version-file: go.mod
+          cache: true
+      - uses: ./.github/actions/setup-just
+      - run: just release-assets
+      - name: Run the host binary
+        run: ./bin/floe-linux-amd64 version
+
+  shell:
+    name: Shell (shellcheck + shfmt)
+    needs: changes
+    if: ${{ !cancelled() && needs.changes.outputs.skip != 'true' }}
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+      # shfmt runs through `go tool`, pinned in go.mod.
+      - uses: actions/setup-go@b7ad1dad31e06c5925ef5d2fc7ad053ef454303e # v7.0.0
+        with:
+          go-version-file: go.mod
+          cache: true
+      - uses: ./.github/actions/setup-just
+      # shellcheck is preinstalled on ubuntu-latest.
+      - run: just shellcheck
+      - run: just shfmt-check

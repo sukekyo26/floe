@@ -1,0 +1,6 @@
+- for: itemz
+  expr: item.what != ""
+  message: write what the item is
+- for: items.wat
+  expr: false
+  message: m

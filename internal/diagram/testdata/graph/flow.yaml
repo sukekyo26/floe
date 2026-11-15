@@ -1,0 +1,17 @@
+title: { en: Publish a page, ja: ページを公開する }
+parts:
+  - graph:
+      x: 20
+      y: 20
+      nodes:
+        - box: { name: write, rows: [{ en: Write the data, ja: データを書く }] }
+        - box: { name: check, shape: hex, rows: [{ en: Checks pass?, ja: 検査を通るか }] }
+        - box: { name: fix, rows: [{ en: Fix the mistakes, ja: 誤りを直す }] }
+        - box: { name: publish, rows: [{ en: Publish, ja: 公開する }, [floe publish, sub code]] }
+        - box: { name: show, shape: pill, tone: good, rows: [{ en: Show the page, ja: ページを見せる }] }
+      edges:
+        - { from: write, to: check }
+        - { from: check, to: fix }
+        - { from: fix, to: write, dashed: true }
+        - { from: check, to: publish }
+        - { from: publish, to: show }

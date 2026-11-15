@@ -1,0 +1,41 @@
+package yamlpos
+
+import (
+	"slices"
+	"strings"
+
+	"floe/internal/usererr"
+)
+
+// Place returns err with each mistake of no file at a JSON pointer (usererr.Error's At) placed in file instead: at
+// the line and column of the value the pointer leads to from prefix under root, as Locate places it (the file
+// alone when it leads to no value written under root, or root is nil, a file of nothing), its pointer dropped, and
+// the mistakes Sorted. A mistake with a file of its own, or
+// with no pointer (of the whole output), is kept as it is; a failure is returned as it is.
+func Place(err error, file string, root *Node, prefix []string) error {
+	var found usererr.List
+	if failed := found.Add(err); failed != nil {
+		return failed
+	}
+	for i, e := range found {
+		if e.File() != "" || e.At() == "" {
+			continue
+		}
+		at, _ := Locate(root, slices.Concat(prefix, steps(e.At())))
+		found[i] = e.PlacedAt(file, at.Line, at.Column)
+	}
+	return found.Sorted().Err()
+}
+
+// steps are the keys and indexes of the JSON pointer at ("#/a/0"), unescaped as RFC 6901 says: ~1 then ~0.
+func steps(at string) []string {
+	rest, ok := strings.CutPrefix(at, "#/")
+	if !ok {
+		return nil
+	}
+	parts := strings.Split(rest, "/")
+	for i, p := range parts {
+		parts[i] = strings.ReplaceAll(strings.ReplaceAll(p, "~1", "/"), "~0", "~")
+	}
+	return parts
+}

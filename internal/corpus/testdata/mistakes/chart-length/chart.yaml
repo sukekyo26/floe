@@ -1,0 +1,15 @@
+# Each series with a number of values other than x's is told, at its values.
+lang: en
+template: report
+title: Chart
+sections:
+  - heading: a
+    parts:
+      - chart:
+          kind: line
+          title: T
+          x: [a, b, c]
+          series:
+            - { name: top, values: [1, 2, 3] }
+            - { name: mid, values: [1, 2] }
+            - { name: low, values: [1, 2, 3, 4] }

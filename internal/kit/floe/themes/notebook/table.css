@@ -1,0 +1,2 @@
+:scope { --table-head-bg: none; --table-head-fg: var(--fg); --table-rule: none; }
+:scope thead th { border-bottom: 3px double var(--fg); font-size: 0.9rem; font-weight: 700; }

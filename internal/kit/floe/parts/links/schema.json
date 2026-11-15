@@ -1,0 +1,17 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "links",
+  "description": "Links to pages, pull requests and papers that bear on this one, each a row of its title and a few words, its URL under them",
+  "type": "array",
+  "minItems": 1,
+  "items": {
+    "type": "object",
+    "properties": {
+      "title": { "type": "string", "minLength": 1 },
+      "url": { "type": "string", "minLength": 1, "description": "A URL of http, https or mailto, or a path with no ':' before its first '/'" },
+      "text": { "type": "string", "minLength": 1, "description": "A few words on what it is" }
+    },
+    "required": ["title", "url"],
+    "additionalProperties": false
+  }
+}

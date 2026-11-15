@@ -1,0 +1,4 @@
+.a { padding: 4px; } /* want "padding: 4px in .a; read code's --floe-code-* rather than copy its numbers" */
+.b { color: color-mix(in srgb, var(--fg) 60%, transparent); } /* want "color: color-mix(in srgb, var(--fg) 60%, transparent) in .b; read code's --floe-code-* rather than copy its numbers" */
+.c .floe-copy { right: 0; } /* want "names .floe-copy; code sets the room for the copy button in --floe-code-room" */
+.d { padding/**/: 2px; } /* want "padding: 2px in .d; read code's --floe-code-* rather than copy its numbers" */

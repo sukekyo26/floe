@@ -1,0 +1,160 @@
+package browsertest_test
+
+import (
+	"path/filepath"
+	"strings"
+	"testing"
+
+	"github.com/chromedp/cdproto/emulation"
+)
+
+// colorsList is the list the stub answers for the colors: a favourite, a description, tags, links (one whose file is
+// gone), a project of its own, what is new, templates, and enough rows to scroll.
+const colorsList = `[
+	{ slug: 'a', title: 'Alpha', description: 'about alpha', tags: ['plan', 'design'], project: 'p', news: 'version', version: 3, template: 'report', createdAt: at(1), updatedAt: at(9), favorite: true },
+	{ slug: 'b', title: 'Beta', description: '', tags: ['plan'], project: 'q', news: 'new', template: 'design', createdAt: at(1), updatedAt: at(8) },
+	{ slug: 'l', title: 'Linked', description: '', path: '/tmp/x/l.html', createdAt: at(1), updatedAt: at(1) },
+	{ slug: 'm', title: 'Missing', description: '', path: '/tmp/x/m.html', missing: true, createdAt: at(1), updatedAt: at(1) },
+	...Array.from({ length: 10 }, (_, i) => ({ slug: ` + "`p${i}`" + `, title: ` + "`P${i}`" + `, description: '', createdAt: at(2), updatedAt: at(2) })),
+]`
+
+// measureFields measures what measureContrast leaves out: the value of a field and its placeholder, each against the
+// field's own ground. It returns one line for each below 4.5:1.
+const measureFields = `(() => {
+  const rgb = (c) => c.match(/[\d.]+/g).slice(0, 3).map(Number);
+  const lum = (c) => { const [r, g, b] = rgb(c).map((v) => { v /= 255; return v <= 0.03928 ? v / 12.92 : ((v + 0.055) / 1.055) ** 2.4; }); return 0.2126 * r + 0.7152 * g + 0.0722 * b; };
+  const ratio = (a, b) => { const [x, y] = [lum(a), lum(b)].sort((p, q) => q - p); return (x + 0.05) / (y + 0.05); };
+  const low = [];
+  for (const [what, e, pseudo] of [['#q', '#q', ''], ['#q::placeholder', '#q', '::placeholder']]) {
+    const el = document.querySelector(e);
+    const r = ratio(getComputedStyle(el, pseudo || null).color, getComputedStyle(el).backgroundColor);
+    if (r < 4.5) low.push(what + ' ' + r.toFixed(2));
+  }
+  return low.join('\n');
+})()`
+
+// TestUIColors draws the management page and the frame light whatever the OS prefers, leaves the page in the frame to
+// the OS's preference, and measures that every text and field reads, the colors copied into data URIs held.
+func TestUIColors(t *testing.T) { //nolint:paralleltest // the browser tests share one Chrome, one at a time
+	s := newSite(t)
+	b := s.b
+	s.floe(t, "publish", s.page(t, "scheme.yaml", "Scheme", "<script>setInterval(() => parent.postMessage(matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light', '*'), 100)</script>"), "--slug", "scheme")
+	// The OS's preference, and no motion: a row rising in is faded while it does.
+	media := func(medium, scheme string) {
+		t.Helper()
+
+		b.media(medium, &emulation.MediaFeature{Name: "prefers-color-scheme", Value: scheme}, &emulation.MediaFeature{Name: "prefers-reduced-motion", Value: "reduce"})
+	}
+	const ground = "getComputedStyle(document.body).backgroundColor"
+	s.floe(t, "publish", s.page(t, "p.yaml", "P", "<p>p</p>"), "--slug", "p")
+
+	out := make([]string, 0, 16)
+	for _, scheme := range []string{"dark", "light"} {
+		// The server's list for the pages first, the list stubbed after.
+		b.unstub()
+		media("", scheme)
+		// Light whatever the OS prefers: the list, a page's frame and a missing page's; the page in the frame reads the
+		// OS's preference.
+		for _, path := range []string{"/", "/a/p/", "/a/none/", "/a/scheme/"} {
+			b.navigate(path)
+			out = append(out, b.eval(ground))
+		}
+		out = append(out, b.until("the page's scheme", listening))
+
+		// Every text and field: a list with all it can show, its menus open, two rows selected, the bulk delete armed and
+		// an error; the links; the edit dialog; the bulk tags dialog with a tag on all, some and none.
+		b.navigate("about:blank")
+		b.stub(colorsList)
+		b.navigate("/")
+		b.eval("for (const s of [...document.querySelectorAll('#list li:not(.group) .sel')].slice(0, 2)) s.click(); " +
+			"document.getElementById('bulk-delete').click(); showError('failed'); document.getElementById('q').value = ''")
+		measure := func(where string) {
+			t.Helper()
+
+			if low := b.eval(measureContrast); low != "" {
+				t.Errorf("OS %s, %s: text that cannot be read:\n%s", scheme, where, low)
+			}
+		}
+		measure("the list")
+		if low := b.eval(measureFields); low != "" {
+			t.Errorf("OS %s: fields that cannot be read:\n%s", scheme, low)
+		}
+		// The data URI holds the color it copies: the tick --on-ink.
+		out = append(out, b.eval("(() => { const root = getComputedStyle(document.documentElement); "+
+			"const holds = (selector, color) => getComputedStyle(document.querySelector(selector)).backgroundImage.includes(root.getPropertyValue(color).replace('#', '%23')); "+
+			"return holds('#list .sel:checked', '--on-ink'); })()"))
+		b.eval("document.getElementById('bulk-tag').click()")
+		measure("the tags dialog")
+		// The tag on some, given to all and then to none, keeps its count: on the filled chip, then on the plain one.
+		for _, mark := range []string{"all", "none"} {
+			b.eval("[...document.querySelectorAll('.tag-box')].find((l) => l.querySelector('.n')).querySelector('input').click()")
+			measure("the tags dialog, a tag on some given to " + mark)
+		}
+		b.eval("document.querySelector('#tag-dialog [data-close]').click(); document.querySelector('#list li:not(.group) .edit').click()")
+		measure("the edit dialog")
+		b.eval("document.querySelector('#edit-dialog [data-close]').click(); document.getElementById('bulk-clear').click()")
+		// The bulk bar on the ground of the rows selected, its delete waiting or not; the window that finds, a row reached, an
+		// archived one and none; the window of the keys and of the help of the screen.
+		b.eval("for (const s of [...document.querySelectorAll('#list li:not(.group) .sel')].slice(0, 2)) s.click()")
+		measure("the bulk bar")
+		b.eval("document.getElementById('bulk-delete').click()")
+		measure("the bulk bar, its delete waiting")
+		b.eval("document.getElementById('bulk-clear').click(); openFind()")
+		measure("the window that finds")
+		b.eval("document.querySelector('#find-actions summary').click()")
+		measure("the window that finds, its menu open")
+		b.eval("closeMenus(null); document.getElementById('find-q').value = 'nothing like it'; document.getElementById('find-q').dispatchEvent(new Event('input'))")
+		measure("the window that finds, none")
+		b.eval("document.getElementById('find').close(); openKeys()")
+		measure("the window of the keys")
+		b.eval("document.getElementById('keys').close(); openKeys('about')")
+		measure("the window of the help of the screen")
+		b.eval("document.getElementById('keys').close()")
+		b.eval("readDone(items[0].slug)")
+		measure("the toast to mark a page unread")
+		b.eval("document.querySelector('.toast.page').remove()")
+		// The row chosen, its version's mark on its ground, the bar over its page, and the words of a link gone beside the list.
+		b.size(1440, 900, false)
+		b.eval("document.querySelector('#list li[data-slug=a] .title').click()")
+		measure("the page beside the list")
+		b.eval("document.querySelector('#list li[data-slug=m] .title').click()")
+		measure("a link gone beside the list")
+		// The rest of the shelf in its dialog, on a narrow screen, the row of views over the list, one pressed.
+		b.size(390, 844, true)
+		b.eval("document.getElementById('narrow-filter').click()")
+		measure("the narrow shelf's dialog")
+		b.eval("document.querySelector('#filter-dialog [data-close]').click()")
+		measure("the narrow list")
+		b.unsize()
+		// A folder open, its rows of each kind, and one of its pages in the frame under its title: the folder is the server's
+		// too, which frames the page it finds.
+		s.write(t, "f/index.html", "<p>f</p>")
+		s.floe(t, "publish", "--link", filepath.Join(s.Env["HOME"], "f"), "--slug", "f", "--force")
+		b.stub(colorsList[:strings.LastIndex(colorsList, "]")] + "{ slug: 'f', title: 'Folder', description: '', path: '/tmp/x/f', folder: true, createdAt: at(1), updatedAt: at(1) }]")
+		b.navigate("/?kind=folder&open=f")
+		b.until("the folder open", "document.querySelectorAll('#list li.tree').length === 3")
+		measure("the folders")
+		b.navigate("/a/f/?file=index.html")
+		b.until("the folder's page", "!document.getElementById('frame').hidden")
+		measure("a folder's page in the frame")
+		// The frame's bar, its menu open.
+		b.navigate("/a/a/")
+		b.until("the title", "document.getElementById('frame-title').textContent")
+		b.eval("document.querySelector('#frame-actions summary').click()")
+		measure("the frame's bar")
+		// What a frame prints: the note naming the page alone, with the error under a failed read, and a missing page's.
+		media("print", scheme)
+		b.eval("showError('failed')")
+		measure("the frame printed")
+		b.navigate("/a/none/")
+		b.until("the missing page", "!document.getElementById('notfound').hidden")
+		measure("a missing page's frame printed")
+		media("", scheme)
+	}
+
+	const light = "rgb(244, 243, 240)"
+	check(t, "colors", out, strings.Join([]string{
+		light, light, light, light, "dark", "true",
+		light, light, light, light, "light", "true",
+	}, "|"))
+}

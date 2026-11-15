@@ -1,0 +1,355 @@
+## h0 
+  [p] Plan · 2030-04
+## h1 Every part
+  [p] The wiki moves to the new host in two weekends, with the old one read-only in between.
+## h2 At a glance
+  [dt] Pages
+  [dd] 1,840
+  [dt] Broken links
+  [dd] 120
+  [dd] -35 since the last check
+  [dt] Downtime
+  [dd] 0 hours
+  [dt] Slow pages
+  [dd] Before 9 → After 4
+  [dd] -5 better
+  [dt] Copied
+  [dd] Before 95.5 → After 80 %
+  [dd] -15.5 worse
+  [dt] Owners
+  [dd] Before 3 → After 3
+  [dd] no change
+  [dd] The same three
+  [dt] Spaces
+  [dd] 12
+  [dt] Owners left
+  [dd] 3
+  [dt] Lost pages
+  [dd] 1
+  [dt] Skipped
+  [dd] 2
+  [dd] left for later
+## h2 Steps
+  [p] The pages move over one weekend; the old wiki stays readable until the new one opens.
+  [p] Read-only means read-only: the freeze covers comments too.
+  [tr] Day | What
+  [tr] Saturday | copy the pages
+  [p] <div>Raw HTML, drawn as the text written</div>
+  [li] Done: Freeze edits on the old wiki
+  [div] PR #428 merged
+  [p] On Friday evening.
+  [tr] Day | Pages
+  [tr] Friday | 1,840
+  [p] Nothing is edited after.
+  [li] Copy the pages and check the links
+  [div] PR #431 after #428 linkcheck waiting
+  [p] Broken links first: the report.
+  [li] Point the team's bookmarks at the new host
+  [li] Close the old server
+  [figcaption] bash
+  [pre] Command: wiki export --all --out pages/
+  [pre] 1840 pages written to pages/
+  [pre] Command: linkcheck pages/
+  [figcaption] zsh
+  [pre] Command: wiki status
+  [figcaption] sh
+  [pre] Command: wiki status
+  [figcaption] PowerShell
+  [pre] Command: wiki status
+  [figcaption] cmd
+  [pre] Command: wiki status
+  [figcaption] old-wiki.conf
+  [pre] # Read-only from Friday evening
+  [pre] read_only = true
+  [pre] banner = "This wiki has moved to the new host."
+  [figcaption] The line that turns the wiki read-only new-wiki.conf ini
+  [pre] # Read-only from Friday evening
+  [pre] Marked line: read_only = true
+  [pre] rsync --archive --delete --exclude '*.tmp' --exclude 'cache/' --log-file=copy.log old-wiki:/srv/wiki/pages/ /srv/new-wiki/pages/
+## h2 Risks
+  [tr] Risk | Likelihood | Pages | What we do (a check, linkcheck) | State
+  [tr] Broken links | High | 120 | A link check after the copy | watching
+  [tr] Lost attachments | Low | 8 | Keep the old host for a month | covered
+  [tr] Slow search | Unknown | - | Rebuild the index on Sunday | open
+  [tr] New host | Low | 0 | Nothing | ready
+  [tr] State | What | Who | Pages
+  [tr] open | The copy | Ann | 12
+  [tr] done | The index | Ben | 
+  [tr] late | The links |  | 
+  [tr]  | No state written | Cy | 
+  [tr] open | On two lines |  | 
+  [tr] By a key | Its title alone | A dot | A slash
+  [tr] in order | of the columns | c | d
+  [tr] by key |  | dot | slash
+  [tr] Change | Size | Note | Urgency
+  [tr] A word of the column | 1 | mid | mid
+  [tr] Its pill as an object | 2 | a note | mid
+  [tr] Holding a word | mid | mid-week | middle
+  [tr] After a space | 3 | high | high
+  [tr] Its tone | 6 | a note | high
+  [tr] Changed by Markdown and HTML | 4 | done | **done**
+  [tr] An ampersand | 5 | A&B | A&B
+  [tr] A quiet one | 7 | a note | later
+  [tr] Another table
+  [tr] mid
+  [div] Warning: Heads up
+  [p] Anyone editing during the freeze loses their changes; the plan and freeze.sh say when.
+  [p] Saved drafts are lost too: the drafts and drafts.sh.
+  [div] Note:
+  [p] The new host is ready; the host and host.sh.
+  [div] Problem:
+  [p] Attachments over 1 MB failed; the list names each, and retry.sh sends them again.
+  [div] Note:
+  [p] The old wiki stays read-only; the wiki and wiki.sh.
+  [div] Note:
+  [p] The banner goes up on Friday; the banner and banner.sh.
+  [p] A quote with a link and quote.sh.
+## h2 Progress
+  [div] Copied 1,840 pages
+  [div] Checked 1,200
+  [div] Moved 900
+  [div] Pending 400
+  [div] Broken 120
+  [div] Skipped 60
+  [div] Pages 1,200 / 1,840
+  [div] Images 30 / 30
+  [div] Spaces 4 / 12
+  [div] Owners 1 / 4
+  [div] Links 10 / 120
+  [div] Drafts 2 / 6
+  [div] Words 1,500,000 / 2,000,000 words
+  [div] Kept 2
+  [div] Moved 4
+  [div] Copied 30 / 40 pages per day
+  [figcaption] Pages copied pages
+  [li] Copied
+  [li] Checked
+  [li] Failed
+  [li] Skipped
+  [svg] 0 / 500 / 1,000 / 1,500 / Mon / Tue / Wed / Thu / Fri / Copied 1,200 / Checked 950 / Failed 20 / Skipped 100
+  [summary] The numbers
+  [tr] Name | Copied | Checked | Failed | Skipped
+  [tr] Mon | 120 | 80 | 10 | 5
+  [tr] Tue | 340 | 200 | 30 | 15
+  [tr] Wed | 610 | 400 | 25 | 60
+  [tr] Thu | 980 | 700 | 40 | 80
+  [tr] Fri | 1,200 | 950 | 20 | 100
+  [figcaption] Attachments by size
+  [li] Files
+  [svg] 0 / 100 / 200 / 300 / 400 / 500 / Small / Medium / Large / 420 / 180 / 35
+  [summary] The numbers
+  [tr] Name | Files
+  [tr] Small | 420
+  [tr] Medium | 180
+  [tr] Large | 35
+  [li] Done: Freeze edits
+  [li] Not done: Copy the attachments
+  [li] 2030-04-05
+  [div] Freeze
+  [p] Edits stop.
+  [tr] From | To
+  [tr] 18:00 | Monday
+  [p] The banner says so.
+  [li] 2030-04-06
+  [div] Copy
+  [li] 2030-04-07
+  [div] Open
+  [li] 2030-04-08
+  [div] Rollback window ends
+  [li] 2030-04-20
+  [div] Old links checked
+  [li] 2030-04-30
+  [div] Old server off
+## h2 Choices
+  [div] Copy in one go Recommended
+  [img] The old host's pages moved in one go
+  [p] Two days of read-only, as the plan says: export --all.
+  [li] Pro: Simple
+  [li] Con: Longer freeze
+  [div] Copy by space
+  [div] Docs first
+  [p] The most read space.
+  [div] By size
+  [p] The smallest space first.
+  [div] Docs 400 / 1,840
+  [p] Each space is copied apart:
+  [li] Docs first
+  [li] Then the rest, as the plan says: export --space
+  [li] Pro: Short freezes
+  [li] Con: Links break between spaces
+  [li] Con: Twice the work
+  [p] decided 2030-03-28
+  [div] The wiki moves to the new host
+  [p] The old server is out of support in May.
+  [tr] Host | Support
+  [tr] Old | May
+  [p] The new host is supported for five years.
+  [p] Set aside
+  [li] Stay on the old server
+  [li] Move to a hosted wiki
+## h2 Reference
+  [dt] Owner
+  [dd] The platform team
+  [dt] State
+  [dd] on track
+  [tr] read_only required bool | Refuses edits Default: false
+  [tr] banner string | Shown on every page
+  [tr] port number | Default: 8080
+  [dt] export
+  [dd] Runs nightly wiki.conf on track done
+  [p] Writes every page as Markdown, with its history, into pages/.
+## h4 Left out
+  [li] Pages under drafts are left out
+  [li] Images go to pages/images/
+  [dt] Search index
+  [dd] by hand blocked next
+  [p] Rebuilt by hand after the copy; the steps.
+  [dt] Old links
+  [dt] A step with its command
+  [p] Run it from the wiki's folder.
+  [figcaption] wiki.conf ini
+  [pre] mode = read-only
+  [figcaption] bash
+  [pre] Command: wiki freeze
+  [div] The freeze What it stops
+  [li] https://example.com/freeze
+  [summary] The whole command
+  [figcaption] sh
+  [pre] wiki freeze --all --banner
+  [dt] Parts alone, in the last row
+  [p] Text among parts, as tall as an item's.
+  [figcaption] sh
+  [pre] wiki status
+  [dt] Ctrl + K
+  [dd] Search the wiki
+  [dt] g + h
+  [dd] Go home
+  [summary] Can I edit during the freeze?
+  [p] No: edits are lost.
+  [tr] Edit | Kept
+  [tr] Page | no
+  [p] Wait for the new host.
+  [div] Migration guide How the copy works
+  [li] https://example.com/guide
+  [div] Old wiki
+  [li] https://wiki.example.com/
+  [li] pages/ what export writes
+  [li] home.md (changed)
+  [li] old.md (removed)
+  [li] new/
+  [li] index.md (added)
+  [figcaption] wiki.conf +1 −1 ini
+  [pre] @@ -1,2 +1,2 @@
+  [pre] -read_only = false
+  [pre] +read_only = true
+  [pre]  banner = "Moved"
+## h2 Folded
+  [summary] The whole log
+  [figcaption] Copied by hour
+  [li] Pages
+  [svg] 0 / 100 / 200 / 300 / 400 / 500 / 1:00 / 2:00 / 420 / 180
+  [summary] The numbers
+  [tr] Name | Pages
+  [tr] 1:00 | 420
+  [tr] 2:00 | 180
+  [p] What the copy printed.
+  [p] Every page, with the count and count.sh.
+  [pre] Command: wiki export
+  [pre] done
+  [figcaption] +1 −1
+  [pre] +a
+  [pre] -b
+  [dt] Copied
+  [dd] 412 pages
+  [p] Every page but the drafts.
+  [img] The wiki after the move
+  [figcaption] Figure 1: the wiki on the new host, at wiki.example.com
+  [dt] Copied
+  [dd] Before 1200 → After 1840
+  [dd] +640 better
+  [li] Done: Export
+  [li] Import
+  [li] Done: Count the pages
+  [div] Q Copy in one go?
+  [li] One go Recommended
+  [li] By space, with sync --space
+  [p] Two days of read-only
+  [p] Who decides: The platform team
+  [div] Q Keep the old host?
+  [div] Decided
+  [svg] 
+  [li] A month Decided
+  [li] For good
+  [div] Q Who writes the notice?
+  [div] Q Which day?
+  [div] Decided
+  [svg] 
+  [p] Decision: Sunday
+  [p] Recommended: A Saturday
+  [p] 3 Pass 2 Fail 1 Not checked
+  [div] Pass
+  [div] Do names in Japanese go through?
+  [p] Saved as UTF-8, and found by a search.
+  [p] How: curl, adding and searching
+  [div] Fail
+  [div] Does it run in an old browser?
+  [p] Safari 15 has no :has(), and the rows of the list break:
+  [li] from Safari 16 they are right
+  [li] a fifth of the machines are on 15
+  [p] How: By hand in each browser
+  [div] Pass
+  [div] Can the old data be read?
+  [p] The export of 2023 reads, its dates converted.
+  [figcaption] sh
+  [pre] wiki import old.zip --date-format legacy
+  [dt] Ctrl + I
+  [dd] Import again
+  [div] Q Keep the old dates?
+  [li] As they are
+  [li] Converted Recommended
+  [p] 1 Pass 0 Fail 0 Not checked
+  [div] Pass
+  [div] Do the dates read?
+  [p] All of them.
+  [div] Fail
+  [div] Does a wrong password stop after five?
+  [p] After four; >= is written for >.
+  [div] Pass
+  [div] Does the search answer in a second?
+  [p] 420 ms on average.
+  [div] Not checked
+  [div] Does it go through the proxy?
+  [p] Not from here; the network team was asked.
+  [div] Before
+  [p] The list before.
+  [figcaption] bash
+  [pre] export WIKI=old
+  [p] A column with no title.
+  [div] After
+  [div] Good: Done
+  [p] The list after.
+  [p] decided
+  [div] Keep the list
+  [p] It reads well.
+  [tr] list bool | Default: true
+  [li] 2030-04-07
+  [div] Listed
+  [label] bash
+  [figcaption] bash
+  [pre] export WIKI=new
+  [label] PowerShell
+  [figcaption] powershell
+  [pre] $env:WIKI = 'new'
+  [dt] New window
+  [dd] PowerShell 7
+  [p] The variable holds in that window alone.
+  [div] Good:
+  [p] Run it in a new window; the steps and run.sh.
+  [tr] Shell | Lines
+  [tr] PowerShell | 1
+  [dt] Shell
+  [dd] PowerShell 7
+  [li] profile.ps1 (changed)
+  [summary] What the freeze covers
+  [p] Edits, comments and uploads.
+  [svg] Old server / read-only / Copy the pages / New host

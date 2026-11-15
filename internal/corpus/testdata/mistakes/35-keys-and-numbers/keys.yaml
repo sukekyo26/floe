@@ -1,0 +1,12 @@
+template: report
+lang: en
+title: t
+1: a
+sections:
+  - heading: h
+    parts:
+      - stats:
+          - { label: a, value: .inf }
+          - { label: b, value: .nan }
+      - text: hi
+    true: b

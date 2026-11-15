@@ -1,0 +1,2 @@
+"list --list-c" the colour of each row, switched between them
+"grid --list-c" the colour of each cell, switched between them

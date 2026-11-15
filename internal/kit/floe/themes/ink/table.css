@@ -1,0 +1,4 @@
+/* Ink and paper: a table's heading in ink, states filled with their colour, frames drawn sharp */
+/* The panel's thin frame, not the ink's */
+:scope { border: 1px solid var(--line); --table-head-bg: var(--fg); --table-head-fg: var(--bg); }
+:scope thead th { --face: var(--table-head-bg); --on-face: var(--table-head-fg); }

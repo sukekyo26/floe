@@ -1,0 +1,6 @@
+.a { text-transform: none; }
+.b { text-transform: NONE; }
+.c { text-transform: None; }
+.d { text-transform: none !important; }
+.e { --case: uppercase; }
+.f { font-variant-caps: all-small-caps; }

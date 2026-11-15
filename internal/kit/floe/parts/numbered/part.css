@@ -1,0 +1,21 @@
+/* Items of a list numbered in rings, a line joining each to the next: each item is a row (marks: joined), which floe
+   lays out. An item's ring takes one of three forms: by default a ring of the line's colour; data-floe-mark="ring"
+   rings it in its tone, its own or around it; data-floe-mark="solid" fills it and the line from it in that tone.
+   LIMIT: text written straight in an item breaks into a grid item a run, as an element of it does: write an item's
+   text in an element. An item whose first child has no baseline (an image, an empty block) has its ring at that
+   child's bottom.
+   LIMIT: an older browser that reads no anchor positioning misplaces the line alone; the ring and the text stand.
+   LIMIT: what takes the look and sets its rings' colours over ::before or ::after, rather than by the tone and
+   data-floe-mark, is not refused: told apart from writing a ring's content (a tick) it is not, by the CSS's words */
+:scope { --floe-mark: 2rem; --floe-mark-gap: 1rem; counter-reset: floe-step; }
+:scope > li { counter-increment: floe-step; padding: 0.2rem 0 1.3rem; }
+:scope > li:last-child { padding-bottom: 0.2rem; }
+:scope > li > * + * { margin-top: 0.15rem; }
+:scope > li::before {
+  content: counter(floe-step); content: counter(floe-step) / counter(floe-step); border-radius: 50%; font-size: var(--floe-text-small); font-weight: 700; line-height: 1;
+  background: var(--surface); color: var(--muted); box-shadow: inset 0 0 0 1.5px var(--line);
+}
+:scope > li::after { border-radius: 999px; background: var(--line); }
+:scope > li:where([data-floe-mark="ring"])::before { background: var(--tone-soft); color: var(--tone); box-shadow: inset 0 0 0 1.5px var(--tone); }
+:scope > li:where([data-floe-mark="solid"])::before { background: var(--tone); color: var(--on-fill); box-shadow: none; }
+:scope > li:where([data-floe-mark="solid"])::after { background: var(--tone); }

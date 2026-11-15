@@ -1,0 +1,11 @@
+# Every bar over its of is told, each by its label, at the part's value.
+lang: en
+template: report
+title: Bars
+sections:
+  - heading: a
+    parts:
+      - bars:
+          - { label: a, value: 5, of: 3 }
+          - { label: b, value: 1, of: 2 }
+          - { label: c, value: 9, of: 4 }

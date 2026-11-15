@@ -1,0 +1,2 @@
+pages/p.html "list sets --list-x in an element's style: a style wins over a theme's value; set it on its :scope, or, made from the data on each element, make it an exception of this rule, \"list --list-x\", with its reason"
+pages/p.html "the marks floe lays out set --list-mark: a mark's variables are the parts'"

@@ -1,0 +1,10 @@
+# With from, from and value are digits alone: the function of stats refuses others at the value.
+lang: en
+template: report
+title: Stats
+sections:
+  - heading: a
+    parts:
+      - stats:
+          - { label: e, value: '14.9k', from: '2', better: lower }
+          - { label: f, value: '1', from: '1,234', better: lower }

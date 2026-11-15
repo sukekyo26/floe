@@ -1,0 +1,5 @@
+:scope {
+  background: var(--surface); color: var(--fg); border: 2px solid var(--tone);
+  border-radius: var(--nb-hand); --floe-mark: 1.85rem;
+}
+:scope::before { background: none; border: 2px solid currentColor; border-radius: var(--nb-round); color: var(--tone); }

@@ -1,0 +1,19 @@
+{{- /* LIMIT: a cell of a pills column differing from a word only in case or in spaces around it (Done for done, ' high') is drawn as text, silently. Fold them if writers come to miss it */ -}}
+<div data-floe-part="table"><table>
+<thead><tr>{{range .columns}}{{$title := .}}{{$num := false}}{{if ne (printf "%T" .) "string"}}{{$title = .title}}{{$num = .num}}{{end -}}
+<th scope="col"{{if $num}} class="num"{{end}}>{{markdownLine $title}}</th>{{end}}</tr></thead>
+<tbody>
+{{- /* The pills of a column are found by the cell as written, and its word drawn as text, as cell draws a pill: . holds the cells as cell drew them */}}
+{{- $rows := (written).rows}}
+{{- range $r, $row := .rows}}
+{{- $keyed := ne (printf "%T" $row) "[]interface {}"}}
+<tr>{{range $i, $col := $.columns}}{{$num := false}}{{$pills := false}}{{$id := false}}{{if ne (printf "%T" $col) "string"}}{{$num = $col.num}}{{$pills = $col.pills}}{{$id = $col.id}}{{end}}
+{{- $cell := ""}}{{$word := ""}}{{if not $keyed}}{{$cell = index $row $i}}{{$word = index $rows $r $i}}{{else if $id}}{{$cell = index $row $id}}{{$word = index $rows $r $id}}{{end}}
+{{- $tone := ""}}{{if and $pills (eq (printf "%T" $word) "string")}}{{$tone = index $pills $word}}{{end -}}
+<td{{if $num}} class="num"{{end}}>
+{{- /* The pill as cell's part.html draws one */}}
+{{- if $tone}}<span data-floe-tone="{{$tone}}" data-floe-part="cell">{{$word}}</span>{{else}}{{$cell}}{{end -}}
+</td>{{end}}</tr>
+{{- end}}
+</tbody>
+</table></div>

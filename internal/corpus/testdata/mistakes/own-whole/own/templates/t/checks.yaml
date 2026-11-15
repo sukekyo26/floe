@@ -1,0 +1,5 @@
+- expr: doc.n >= 0
+  message: neg
+- for: xs
+  expr: item < 10
+  message: big

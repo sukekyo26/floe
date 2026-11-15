@@ -1,0 +1,10 @@
+template: report
+lang: en
+title: Example
+sections:
+  - heading: A
+    parts:
+      - diagram:
+          example: aws
+      - diagram:
+          example: aws

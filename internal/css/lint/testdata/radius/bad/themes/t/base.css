@@ -1,0 +1,2 @@
+@mediafoo { :scope { --c2: 1px; } }
+:scope { &.x { --nest: 1px; } }

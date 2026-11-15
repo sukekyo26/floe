@@ -1,0 +1,2 @@
+:scope { --tabs-picked-bg: var(--nb-yellow); --tabs-picked-fg: var(--fg); }
+:scope > label { border-radius: var(--nb-pill); }

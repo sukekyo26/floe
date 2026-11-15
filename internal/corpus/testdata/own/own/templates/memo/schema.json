@@ -1,0 +1,20 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["items"],
+  "properties": {
+    "logo": { "type": "string" },
+    "flow": { "$ref": "floe:///parts/diagram.json" },
+    "badges": { "type": "array", "items": { "$ref": "floe:///parts/badge.json" } },
+    "items": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": ["what"],
+        "properties": { "what": { "type": "string" }, "done": { "type": "boolean" } }
+      }
+    }
+  }
+}

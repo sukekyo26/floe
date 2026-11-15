@@ -1,0 +1,25 @@
+# PRs target develop (the integration branch); main only receives changes via
+# the develop → main release PR, so dependency bumps must land on develop first.
+version: 2
+updates:
+  - package-ecosystem: "github-actions"
+    # "/" covers .github/workflows only; the local composite actions are listed apart.
+    directories: ["/", "/.github/actions/*"]
+    target-branch: "develop"
+    schedule:
+      interval: "weekly"
+    groups:
+      github-actions:
+        patterns: ["*"]
+    commit-message:
+      prefix: "ci"
+  - package-ecosystem: "gomod"
+    directory: "/"
+    target-branch: "develop"
+    schedule:
+      interval: "weekly"
+    groups:
+      go-modules:
+        patterns: ["*"]
+    commit-message:
+      prefix: "chore"

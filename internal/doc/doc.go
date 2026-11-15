@@ -1,0 +1,149 @@
+// Package doc reads a data file: its values and where each is written, and the keys every template
+// shares (lang, template, theme, title), which floe reads itself.
+package doc
+
+import (
+	"math"
+	"strings"
+
+	"floe/internal/i18n"
+	"floe/internal/usererr"
+	"floe/internal/yamlpos"
+)
+
+// Data is a data file read: its values as written, and the keys every template shares read from them.
+type Data struct {
+	File                         string
+	Lang, Template, Theme, Title string         // "" for one left out or refused; each trimmed of spaces
+	ThemeGiven                   bool           // the theme given to draw with, in Theme, not written in the file
+	Values                       map[string]any // as written, the shared keys too but those that name none
+	Root                         *yamlpos.Node  // the top, keys and values; nil for an empty file
+	// where each shared key is written: its value, its key when the value is left out; line 0, the file alone,
+	// for one left out
+	Where map[string]yamlpos.Pos
+}
+
+// PosOf returns where the value at the path at (keys and indexes) is written in d, as yamlpos.Locate places it; no
+// line, for the file alone, where it leads to no value written.
+func (d *Data) PosOf(at []string) yamlpos.Pos {
+	pos, _ := yamlpos.Locate(d.Root, at)
+	return pos
+}
+
+// PlaceItem places the mistakes of the item at the path at in d, a part's value: one of no file and no pointer at the
+// value (one of the whole output takes no place), one at a JSON pointer at what it leads to from the value.
+func (d *Data) PlaceItem(at []string, mistakes usererr.List) error {
+	pos := d.PosOf(at)
+	for i, e := range mistakes {
+		if e.File() == "" && e.At() == "" {
+			mistakes[i] = e.PlacedAt(d.File, pos.Line, pos.Column)
+		}
+	}
+	return yamlpos.Place(mistakes.Err(), d.File, d.Root, at) //nolint:wrapcheck // mistakes placed
+}
+
+// Shared are the keys of a data file floe reads itself, in every template, which the template's schema neither
+// declares nor checks.
+var Shared = []string{"lang", "template", "theme", "title"}
+
+// Read reads the data file src, file in its mistakes: yamlpos.ParseMap, and only when it refused nothing, the
+// shared keys, each text, and lang: written and not empty or spaces. An empty file, or one of comments alone, reads
+// as {}, its mistakes at the file alone, as it has no node to place them at. A theme given ("" or spaces for none)
+// is drawn with instead of the data's: theme: is then neither read nor refused, and Values holds the theme given,
+// read as one written, so that every layer sees the theme the page is drawn with.
+func Read(file string, src []byte, theme string) (*Data, error) {
+	root, values, err := yamlpos.ParseMap(file, src)
+	if err != nil {
+		return nil, err //nolint:wrapcheck // mistakes at their lines and columns, or floe's failure
+	}
+	// A theme given is read as one written, spaces naming none.
+	given := strings.TrimSpace(theme) != ""
+	d := &Data{
+		File: file, Lang: "", Template: "", Theme: "", Title: "", ThemeGiven: given, Values: values, Root: root,
+		Where: map[string]yamlpos.Pos{},
+	}
+	if given {
+		values["theme"] = theme
+	}
+	return d, d.readShared()
+}
+
+// Ints turns the whole numbers in v that fit into int, in place, and returns v, so that every layer sees one type of
+// them, as yamlpos.Decode gives them: expr gives some of its values as int64 (date(…).Unix()). A type of its own
+// (time.Duration) stays as it is.
+// LIMIT: a whole number above 9.2e18 stays uint64, which expr's - still wraps around (-a < 0 does not hold).
+func Ints(v any) any {
+	switch v := v.(type) {
+	case int64:
+		return int(v)
+	case uint64:
+		if v <= math.MaxInt64 {
+			return int(v)
+		}
+	case map[string]any:
+		for k, item := range v {
+			v[k] = Ints(item)
+		}
+	case []any:
+		for i, item := range v {
+			v[i] = Ints(item)
+		}
+	}
+	return v
+}
+
+// sharedMistake returns the message key of what is wrong with v, the value of the shared key, written or not
+// (ok), "" for none: one written that is not text, and a lang that is none.
+func sharedMistake(key string, v any, ok bool) string {
+	_, text := v.(string)
+	switch {
+	case ok && !text:
+		return "doc_not_text"
+	case key == "lang" && !ok:
+		// The page's <html lang> is the data's own, so that every way of drawing it gives the same page.
+		return "doc_no_lang"
+	}
+	return ""
+}
+
+// readShared reads the keys every template shares from d.Values into d, leaving them in d.Values as written but
+// those null, empty or of spaces, which are none written, and notes where each is written; theme: is not read
+// with a theme given, which d takes.
+func (d *Data) readShared() error {
+	top := d.PosOf(nil)
+	pairs := map[string]yamlpos.Pair{}
+	if d.Root != nil {
+		for _, v := range d.Root.Pairs {
+			pairs[v.Name()] = v
+		}
+	}
+	to := map[string]*string{"lang": &d.Lang, "template": &d.Template, "theme": &d.Theme, "title": &d.Title}
+	var found usererr.List
+	for _, key := range Shared {
+		d.Where[key] = top
+		if p, ok := pairs[key]; ok {
+			d.Where[key] = yamlpos.OfValue(p.Key, p.Value)
+		}
+		v, ok := d.Values[key]
+		if s, text := v.(string); ok && (v == nil || text && strings.TrimSpace(s) == "") {
+			// Null, empty or spaces (lang:, lang: ~, lang: "") is none written, for every reader of d.Values:
+			// these are keys floe reads itself, while the other values are the schema's, which tells a null as it is.
+			delete(d.Values, key)
+			v, ok = nil, false
+		}
+		mistake := sharedMistake(key, v, ok)
+		switch {
+		case mistake == "doc_no_lang":
+			found = append(found, yamlpos.New(d.File, d.Where[key], mistake))
+		case mistake != "":
+			found = append(found, yamlpos.New(d.File, d.Where[key], mistake, key))
+		case ok:
+			s, _ := v.(string) //nolint:errcheck // sharedMistake refuses one that is not text
+			*to[key] = strings.TrimSpace(s)
+			d.Values[key] = *to[key]
+		}
+	}
+	// Read once as every lookup of it and the page's <html lang> take it: BCP 47 in lower case, JA and ja_JP ja's.
+	d.Lang = string(i18n.Tag(d.Lang))
+	return found.Sorted().Err()
+}

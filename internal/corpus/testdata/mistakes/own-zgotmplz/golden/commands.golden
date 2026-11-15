@@ -1,0 +1,14 @@
+$ floe part check
+exit 0
+$ floe template check
+exit 1
+--- stderr
+$SAMPLE/own/templates/tint/example.yaml:2:11: the page drawn from this file has ZgotmplZ in <p style="color: ZgotmplZ">: html/template wrote it for a value it does not take there; change the value, or where the template puts it
+$ floe check tint.yaml
+exit 1
+--- stderr
+tint.yaml:2:11: the page drawn from this file has ZgotmplZ in <p style="color: ZgotmplZ">: html/template wrote it for a value it does not take there; change the value, or where the template puts it
+$ floe render --out-dir $TMP/pages/tint.yaml tint.yaml
+exit 1
+--- stderr
+tint.yaml:2:11: the page drawn from this file has ZgotmplZ in <p style="color: ZgotmplZ">: html/template wrote it for a value it does not take there; change the value, or where the template puts it

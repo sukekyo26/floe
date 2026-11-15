@@ -1,0 +1,442 @@
+package kit
+
+import (
+	"bytes"
+	"errors"
+	"html/template"
+	"io/fs"
+	"maps"
+	"path"
+	"slices"
+	"strings"
+	"sync"
+
+	"floe/internal/rules"
+	"floe/internal/schema"
+	"floe/internal/usererr"
+	"floe/internal/yamlpos"
+)
+
+// DefaultTheme is the theme of a page whose data names none, whose palette defines every variable, under any
+// other theme's.
+const DefaultTheme = "default"
+
+// Theme is a theme read: its CSS by file, without the .css.
+type Theme struct {
+	name     string
+	dir      string
+	about    string            // the description: of its theme.yaml, "" for none
+	base     []byte            // base.css, nil for none
+	markdown []byte            // markdown.css, nil for none
+	palette  []byte            // palette.css, nil for none
+	partsCSS map[string][]byte // <part or look>.css by its name
+	unread   []string          // the files of its directory it does not read: of no part or look of the Kit
+	files    []Source          // the files it read, theme.yaml, palette.css, base.css and markdown.css first, for show
+}
+
+// Name returns the name of t.
+func (t *Theme) Name() string { return t.name }
+
+// Base returns the base.css of t, nil for none.
+func (t *Theme) Base() []byte { return bytes.Clone(t.base) }
+
+// Markdown returns the markdown.css of t, nil for none: the look of Markdown, wherever it stands.
+func (t *Theme) Markdown() []byte { return bytes.Clone(t.markdown) }
+
+// Palette returns the palette.css of t, nil for none.
+func (t *Theme) Palette() []byte { return bytes.Clone(t.palette) }
+
+// CSS returns the CSS t gives the part or look named so, nil for none.
+func (t *Theme) CSS(name string) []byte { return bytes.Clone(t.partsCSS[name]) }
+
+// Unread returns the files of the directory of t it does not read.
+func (t *Theme) Unread() []string { return slices.Clone(t.unread) }
+
+// readThemes reads into k the themes of d, each a directory: theme.yaml, base.css, palette.css, and a file of CSS
+// for a part or a look of k, named so. A file of another name is not read. The mistakes of all are told together.
+func (k *Kit) readThemes(d Dir) error {
+	// LIMIT: a file right in the directory of themes is not read, and nothing says so; refuse one if a theme's files
+	// put there come to go unseen.
+	dirs, err := entries(d, ".", true)
+	if err != nil {
+		return err
+	}
+	var found usererr.List
+	for _, name := range dirs {
+		if e := k.refusedName(d.Name, KindTheme, name, false); e != nil {
+			found = append(found, e)
+			continue
+		}
+		t, err := k.readTheme(d, name)
+		if failed := found.Add(err); failed != nil {
+			return failed
+		}
+		if err == nil {
+			k.themes[name] = t
+		}
+	}
+	return found.Sorted().Err()
+}
+
+// readTheme reads the theme of d named name, its directory.
+func (k *Kit) readTheme(d Dir, name string) (*Theme, error) {
+	t := &Theme{
+		name: name, dir: path.Join(d.Name, name), about: "", base: nil, markdown: nil, palette: nil,
+		partsCSS: map[string][]byte{}, unread: nil, files: nil,
+	}
+	d = d.recording()
+	all, err := entries(d, name, false)
+	if err != nil {
+		return nil, err
+	}
+	if t.about, err = readThemeYAML(d, name); err != nil {
+		return nil, err
+	}
+	read := []string{themeYAML}
+	for _, file := range all {
+		stem, ok := strings.CutSuffix(file, ".css")
+		if !ok || stem != "base" && stem != "palette" && stem != "markdown" && !k.isPartOrLook(stem) {
+			continue
+		}
+		read = append(read, file)
+		src, _, failed := readCSS(d, name, file)
+		if failed != nil {
+			return nil, failed
+		}
+		switch stem {
+		case "base":
+			t.base = src
+		case "palette":
+			t.palette = src
+		case "markdown":
+			t.markdown = src
+		default:
+			t.partsCSS[stem] = src
+		}
+	}
+	if t.unread, err = unreadIn(d, name, read...); err != nil {
+		return nil, err
+	}
+	slices.SortStableFunc(read, func(a, b string) int { return themeRank(a) - themeRank(b) })
+	t.files = inOrder(read, d)
+	return t, nil
+}
+
+// themeYAML is the file of a theme's description.
+const themeYAML = "theme.yaml"
+
+// readThemeYAML reads the theme.yaml of the theme dir of d: its description, "" without one.
+func readThemeYAML(d Dir, dir string) (string, error) {
+	file := path.Join(d.Name, dir, themeYAML)
+	m, err := readKeys(d, dir, themeYAML, "kit_theme_yaml")
+	if m == nil || err != nil {
+		return "", err
+	}
+	var about string
+	var found usererr.List
+	for _, kv := range m.Pairs {
+		k := kv.Key
+		if key := kv.Name(); key != "description" {
+			found = append(found, yamlpos.New(file, yamlpos.Of(k), "kit_theme_yaml_key", key))
+			continue
+		}
+		var more usererr.List
+		about, more = readAbout(file, k, kv.Value, "kit_theme_yaml_about")
+		found = append(found, more...)
+	}
+	return about, found.Sorted().Err()
+}
+
+// themeRank places theme.yaml, palette.css, base.css and markdown.css before the CSS of the parts, as floe theme
+// show prints them.
+func themeRank(file string) int {
+	switch file {
+	case themeYAML:
+		return 0
+	case "palette.css":
+		return 1
+	case "base.css":
+		return 2
+	case "markdown.css":
+		return 3
+	}
+	return 4
+}
+
+// Template is a template read: page.html and the schema of its data, and what goes with them.
+type Template struct {
+	name      string
+	dir       string
+	schema    *schema.Compiled // nil without a schema.json
+	css       []byte
+	checks    *rules.Checks   // nil for none
+	computed  *rules.Computed // nil for none
+	words     words
+	pages     pages // nil without a page.html
+	pageSrc   []byte
+	schemaSrc []byte // the schema.json read, nil for none: compiled again over one's own parts
+	example   []byte
+	hasSchema bool
+	unread    []string
+	assets    map[string]func() (template.URL, error) // by the path under assets/, read once when named
+	files     []Source                                // the files of templateFiles it read, for floe template show
+}
+
+// Name returns the name of t.
+func (t *Template) Name() string { return t.name }
+
+// Schema returns the schema of t compiled, nil without one.
+func (t *Template) Schema() *schema.Compiled { return t.schema }
+
+// Page returns a copy of the page.html of t, parsed, in the language tag of a page (as i18n.Tag reads it), to
+// draw: t's is never drawn, as drawing changes a template (its escaping), which then cannot be copied.
+func (t *Template) Page(lang string) (*template.Template, error) {
+	return t.pages.copyOf(t.words, lang)
+}
+
+// CSS returns the page.css of t, nil for none.
+func (t *Template) CSS() []byte { return bytes.Clone(t.css) }
+
+// Checks returns the checks of t, nil for none.
+func (t *Template) Checks() *rules.Checks { return t.checks }
+
+// Computed returns the computed values of t, nil for none.
+func (t *Template) Computed() *rules.Computed { return t.computed }
+
+// Example returns the example.yaml of t, nil for none.
+func (t *Template) Example() []byte { return bytes.Clone(t.example) }
+
+// Unread returns the files of the directory of t it does not read.
+func (t *Template) Unread() []string { return slices.Clone(t.unread) }
+
+// File returns the file name of t as its mistakes name it.
+func (t *Template) File(name string) string { return path.Join(t.dir, name) }
+
+// PageSource returns the page.html of t as read, nil without one: where a mistake of drawing it is.
+func (t *Template) PageSource() []byte { return bytes.Clone(t.pageSrc) }
+
+// templatesURL is where floe holds the schemas of the templates: floe://templates/<name>/schema.json. Its
+// host keeps a template's relative $id and $ref under it, off floe:///parts/.
+const templatesURL = "floe://templates/"
+
+// readTemplates reads into k the templates of d, each a directory, their schemas compiled with the resources
+// of k when partsRead: one would be told missing when a part could not be read.
+func (k *Kit) readTemplates(d Dir, partsRead bool) error {
+	// LIMIT: a file right in the directory of templates is not read, and nothing says so until a page names the template
+	// it was meant for (unknown template); refuse one if that comes to cost more than a README of a repository there.
+	dirs, err := entries(d, ".", true)
+	if err != nil {
+		return err
+	}
+	var found usererr.List
+	for _, name := range dirs {
+		if e := k.refusedName(d.Name, KindTemplate, name, false); e != nil {
+			found = append(found, e)
+			continue
+		}
+		if failed := found.Add(k.readTemplate(d, name, partsRead)); failed != nil {
+			return failed
+		}
+	}
+	return found.Sorted().Err()
+}
+
+// templateFiles are the files a template reads, in the order floe template show prints them: what a data file
+// may hold and its example first. assets/, its images, is not printed.
+var templateFiles = []string{
+	"schema.json", "checks.yaml", "computed.yaml", "example.yaml", "page.html", "page.css", "words.yaml", "assets/",
+}
+
+// readTemplate reads into k the template of d named name, its directory, its schema compiled when partsRead.
+func (k *Kit) readTemplate(d Dir, name string, partsRead bool) error {
+	d = d.recording()
+	t := &Template{
+		name: name, dir: path.Join(d.Name, name), schema: nil, css: nil, checks: nil, computed: nil, words: nil, pages: nil,
+		pageSrc: nil, schemaSrc: nil, example: nil, hasSchema: false, unread: nil, assets: nil, files: nil,
+	}
+	var found usererr.List
+	var err error
+	t.words, err = readWordsIn(d, name)
+	if failed := found.Add(err); failed != nil {
+		return failed
+	}
+	t.assets, err = readAssets(d, name)
+	if failed := found.Add(err); failed != nil {
+		return failed
+	}
+	fns := pageFuncs()
+	fns["asset"] = t.asset
+	t.pages, t.pageSrc, err = readPages(d, name, "page.html", fns, t.words)
+	if failed := found.Add(err); failed != nil {
+		return failed
+	}
+	if t.css, _, err = readCSS(d, name, "page.css"); err != nil {
+		return err
+	}
+	if t.example, _, err = readFile(d, name, "example.yaml"); err != nil {
+		return err
+	}
+	t.checks, err = readChecks(d, name)
+	if failed := found.Add(err); failed != nil {
+		return failed
+	}
+	if partsRead {
+		err = k.compileTemplate(d, t)
+		if failed := found.Add(err); failed != nil {
+			return failed
+		}
+	}
+	if found != nil {
+		return found.Sorted().Err()
+	}
+	if t.unread, err = unreadIn(d, name, templateFiles...); err != nil {
+		return err
+	}
+	t.files = inOrder(templateFiles, d)
+	k.templates[name] = t
+	return nil
+}
+
+// compileTemplate compiles the schema.json of t, in d, with the resources of k, and reads its computed.yaml,
+// whose expressions see the items the schema declares at its top; none without a schema.json.
+func (k *Kit) compileTemplate(d Dir, t *Template) error {
+	src, ok, err := readFile(d, t.name, "schema.json")
+	if !ok || err != nil {
+		return err
+	}
+	t.hasSchema = true
+	t.schemaSrc = src
+	c, err := k.compileSchema(t, src)
+	if err != nil {
+		return err //nolint:wrapcheck // its mistakes, or floe's failure
+	}
+	t.schema = c
+	computed, ok, err := readFile(d, t.name, "computed.yaml")
+	if !ok || err != nil {
+		return err
+	}
+	names := slices.Sorted(maps.Keys(c.Follow(c.Root).Props))
+	t.computed, err = rules.ReadComputed(path.Join(t.dir, "computed.yaml"), computed, names)
+	return err //nolint:wrapcheck // its mistakes, or floe's failure
+}
+
+// compileSchema compiles src, the schema.json of t, with the resources of k: when t is read, and when it is
+// compiled again over one's own parts.
+func (k *Kit) compileSchema(t *Template, src []byte) (*schema.Compiled, error) {
+	//nolint:wrapcheck // its mistakes, or floe's failure
+	return schema.Compile(templatesURL+t.name+"/schema.json", t.File("schema.json"), src, k.Resources())
+}
+
+// asset returns the image of the assets of t at the path name under assets/, as a data URI, read the first
+// time it is named.
+// LIMIT: a name from the data is told at page.html (asset gets text alone); place it at the data if such get common.
+func (t *Template) asset(name string) (template.URL, error) {
+	read, ok := t.assets[name]
+	if !ok {
+		return "", usererr.New("kit_asset_unknown", name)
+	}
+	return read()
+}
+
+// readAssets checks the files under the assets/ of the template of d named name, every directory down, as
+// images floe takes (imageStat), without reading them; and returns a read of each, once, by its path under
+// assets/. None without assets/.
+func readAssets(d Dir, name string) (map[string]func() (template.URL, error), error) {
+	there, err := has(d, name, "assets")
+	if !there || err != nil {
+		return nil, err
+	}
+	a := assetsOf{
+		files: sub{FS: d.FS, dir: path.Join(name, "assets")}, dir: path.Join(d.Name, name, "assets"),
+		reads: map[string]func() (template.URL, error){}, found: nil,
+	}
+	if err := a.walk("."); err != nil {
+		return nil, err
+	}
+	return a.reads, a.found.Sorted().Err()
+}
+
+// assetsOf is the assets of a template being read: their files, the directory their mistakes name, a read of
+// each file checked, and the mistakes found.
+type assetsOf struct {
+	files fs.FS
+	dir   string
+	reads map[string]func() (template.URL, error)
+	found usererr.List
+}
+
+// walk checks the files of the directory at under the assets, then those of its directories.
+func (a *assetsOf) walk(at string) error {
+	d := Dir{FS: a.files, Name: a.dir, read: nil}
+	names, err := entries(d, at, false)
+	if failed := a.found.Add(err); failed != nil {
+		return failed
+	}
+	for _, file := range names {
+		if failed := a.found.Add(a.check(path.Join(at, file))); failed != nil {
+			return failed
+		}
+	}
+	subs, err := entries(d, at, true)
+	if failed := a.found.Add(err); failed != nil {
+		return failed
+	}
+	for _, s := range subs {
+		if err := a.walk(path.Join(at, s)); err != nil {
+			return err
+		}
+	}
+	return nil
+}
+
+// check checks the file p of the assets as an image floe takes, its mistake at it, and keeps a read of it, whose
+// mistake is at it too: page.html's asset reads it when drawn.
+func (a *assetsOf) check(p string) error {
+	if _, err := imageStat(a.files, p, a.dir, "assets/"); err != nil {
+		return a.placed(p, err)
+	}
+	a.reads[p] = sync.OnceValues(func() (template.URL, error) {
+		uri, err := ReadImage(a.files, p, a.dir, "assets/")
+		return uri, a.placed(p, err)
+	})
+	return nil
+}
+
+// placed is err, of the file p of the assets: a mistake of its name at it; err as it is when it has a place (the
+// directory that cannot be opened) or is floe's failure.
+func (a *assetsOf) placed(p string, err error) error {
+	var e *usererr.Error
+	if errors.As(err, &e) && e.File() == "" {
+		return e.PlacedAt(path.Join(a.dir, p), 0, 0)
+	}
+	return err
+}
+
+// sub is the directory dir of an FS as an FS of its own, its Stat the FS's: fs.Sub's opens a file to stat it,
+// which refuses a FIFO (files.Root, files.DirFS), not to be told as no image, and fails on a file that cannot be
+// read.
+type sub struct {
+	fs.FS
+	dir string
+}
+
+func (s sub) Open(name string) (fs.File, error) {
+	if !fs.ValidPath(name) {
+		return nil, &fs.PathError{Op: "open", Path: name, Err: fs.ErrInvalid}
+	}
+	return s.FS.Open(path.Join(s.dir, name)) //nolint:wrapcheck // the FS's error, of the file named
+}
+
+func (s sub) Stat(name string) (fs.FileInfo, error) {
+	if !fs.ValidPath(name) {
+		return nil, &fs.PathError{Op: "stat", Path: name, Err: fs.ErrInvalid}
+	}
+	return fs.Stat(s.FS, path.Join(s.dir, name)) //nolint:wrapcheck // as Open
+}
+
+func (s sub) ReadDir(name string) ([]fs.DirEntry, error) {
+	if !fs.ValidPath(name) {
+		return nil, &fs.PathError{Op: "readdir", Path: name, Err: fs.ErrInvalid}
+	}
+	return fs.ReadDir(s.FS, path.Join(s.dir, name)) //nolint:wrapcheck // as Open
+}

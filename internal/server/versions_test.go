@@ -1,0 +1,345 @@
+package server_test
+
+import (
+	"bytes"
+	"encoding/json"
+	"errors"
+	"fmt"
+	"io/fs"
+	"net/http"
+	"os"
+	"path/filepath"
+	"regexp"
+	"strconv"
+	"strings"
+	"testing"
+
+	"floe/internal/pagediff"
+	"floe/internal/server"
+	"floe/internal/store"
+)
+
+func noted(note string) string {
+	return "lang: en\ntemplate: pic\ntitle: T\nnote: " + note + "\n"
+}
+
+// The versions of a page are its meta.json's, oldest first; a link and a page of none have none; a slug of no page
+// is not found. The list carries no versions.
+func TestVersionsAPI(t *testing.T) {
+	t.Parallel()
+
+	e := newEnv(t)
+	e.publish(t, "d", noted("one"), nil)
+	e.publish(t, "d", noted("two"), nil)
+	b, err := json.Marshal(store.New(e.root).ReadMeta("d").Versions)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if w, wantBody := e.do(t, http.MethodGet, "/api/pages/d/versions", ""), `{"versions":`+string(b)+`,"read":0}`; w.Code != http.StatusOK ||
+		w.Body.String() != wantBody || !strings.Contains(w.Body.String(), `{"n":2,"at":"`) {
+		t.Errorf("versions %d %s, want %s", w.Code, w.Body, wantBody)
+	}
+	writeFiles(t, filepath.Join(e.home, "proj"), map[string]string{"h.html": "<title>h</title>"})
+	want(t, e.write(t, http.MethodPost, "/api/pages", server.Link{Path: filepath.Join(e.home, "proj", "h.html")}), http.StatusCreated, `"slug":"h"`) //nolint:exhaustruct // the rest not given
+	if w := e.do(t, http.MethodGet, "/api/pages/h/versions", ""); w.Code != http.StatusOK || w.Body.String() != `{"versions":[],"read":0}` {
+		t.Errorf("a link's versions %d %s", w.Code, w.Body)
+	}
+	for _, slug := range []string{"none", "Bad_Slug", "..%2Fd"} {
+		want(t, e.do(t, http.MethodGet, "/api/pages/"+slug+"/versions", ""), http.StatusNotFound, "not found")
+	}
+	if w := e.do(t, http.MethodGet, "/api/pages", ""); strings.Contains(w.Body.String(), `"versions"`) ||
+		!strings.Contains(w.Body.String(), `"versionCount":2`) {
+		t.Errorf("the list carries versions, or not how many: %s", w.Body)
+	}
+}
+
+// The difference of two versions is of the sections by their words, of a stored page alone, and reads nothing as read. from and to
+// are numbers of versions, in either order; the same one differs in nothing.
+func TestDiffAPI(t *testing.T) {
+	t.Parallel()
+
+	e := newEnv(t)
+	e.publish(t, "d", noted("one two three"), nil)
+	e.publish(t, "d", noted("one two four"), nil)
+	reads := filepath.Join(e.root, "reads.json")
+	before, err := os.ReadFile(reads)
+	if err != nil && !errors.Is(err, fs.ErrNotExist) {
+		t.Fatal(err)
+	}
+	type answer struct {
+		From, To struct {
+			N int
+		}
+		Key      string
+		Counts   pagediff.Counts
+		Sections []pagediff.Section
+		Places   []int
+	}
+	get := func(query string) answer {
+		t.Helper()
+
+		w := e.do(t, http.MethodGet, "/api/pages/d/diff?"+query, "")
+		if w.Code != http.StatusOK {
+			t.Fatalf("%s: %d %s", query, w.Code, w.Body)
+		}
+		var a answer
+		if err = json.Unmarshal(w.Body.Bytes(), &a); err != nil {
+			t.Fatal(err)
+		}
+		return a
+	}
+	// The words marked on the page of the diff the answer names by its key
+	ops := func(a answer) string {
+		w := e.do(t, http.MethodGet, fmt.Sprintf("/a/d/?raw&v=%d&from=%d&key=%s", a.To.N, a.From.N, a.Key), "")
+		var b strings.Builder
+		for _, m := range regexp.MustCompile(`<(del|ins) class="floe-diff-(?:del|ins)">([^<]*)<`).FindAllStringSubmatch(w.Body.String(), -1) {
+			b.WriteString(m[1] + ":" + m[2] + " ")
+		}
+		return b.String()
+	}
+	a := get("from=1&to=2")
+	if a.From.N != 1 || a.To.N != 2 || a.Counts.Changed != 1 || len(a.Places) != 1 || ops(a) != "del:three ins:four " {
+		t.Errorf("from 1 to 2: %+v, %s", a, ops(a))
+	}
+	after, err := os.ReadFile(reads)
+	if err != nil && !errors.Is(err, fs.ErrNotExist) {
+		t.Fatal(err)
+	}
+	if !bytes.Equal(before, after) {
+		t.Errorf("reads.json changed: %s", after)
+	}
+
+	// As the page of a diff, which marks a version against one before it alone.
+	for _, query := range []string{
+		"", "from=1", "to=2", "from=abc&to=2", "from=0&to=2", "from=01&to=2", "from=-1&to=2", "from=1&to=2x", "from=2&to=1", "from=2&to=2",
+	} {
+		want(t, e.do(t, http.MethodGet, "/api/pages/d/diff?"+query, ""), http.StatusBadRequest, "from and to must be")
+	}
+	want(t, e.do(t, http.MethodGet, "/api/pages/d/diff?from=1&to=3", ""), http.StatusNotFound, "not found")
+	want(t, e.do(t, http.MethodGet, "/api/pages/none/diff?from=1&to=2", ""), http.StatusNotFound, "not found")
+	writeFiles(t, filepath.Join(e.home, "proj"), map[string]string{"h.html": "<title>h</title>"})
+	want(t, e.write(t, http.MethodPost, "/api/pages", server.Link{Path: filepath.Join(e.home, "proj", "h.html")}), http.StatusCreated, `"slug":"h"`)
+	want(t, e.do(t, http.MethodGet, "/api/pages/h/diff?from=1&to=2", ""), http.StatusNotFound, "not found")
+}
+
+// ?raw&v=<n> of a stored page is its version n, served as the page is; any other number is not found. Elsewhere, ?v=
+// is a file's own (against a cache), as it was.
+func TestServeVersion(t *testing.T) {
+	t.Parallel()
+
+	e := newEnv(t)
+	e.publish(t, "d", noted("one"), nil)
+	e.publish(t, "d", noted("two"), nil)
+	s := store.New(e.root)
+	page := e.do(t, http.MethodGet, "/a/d/?raw", "")
+	for n, note := range map[int]string{1: "one", 2: "two"} {
+		w := e.do(t, http.MethodGet, "/a/d/?raw&v="+strconv.Itoa(n), "")
+		kept, _ := s.VersionPage("d", s.ReadMeta("d"), n)
+		if w.Code != http.StatusOK || !strings.HasPrefix(w.Body.String(), string(kept)) || !strings.Contains(string(kept), note) ||
+			!strings.Contains(w.Body.String(), `\u0026v=`+strconv.Itoa(n)+`"`) {
+			t.Errorf("v=%d: %d\n%s", n, w.Code, w.Body)
+		}
+		for _, h := range []string{"Content-Security-Policy", "X-Content-Type-Options", "Cache-Control", "Content-Type"} {
+			if w.Header().Get(h) != page.Header().Get(h) {
+				t.Errorf("v=%d: %s %q, the page's %q", n, h, w.Header().Get(h), page.Header().Get(h))
+			}
+		}
+	}
+	for _, v := range []string{"01", "%2B1", "0", "-1", "1.0", "x", "", "99"} {
+		want(t, e.do(t, http.MethodGet, "/a/d/?raw&v="+v, ""), http.StatusNotFound, "not found")
+	}
+	writeFiles(t, filepath.Join(e.home, "proj"), map[string]string{"h.html": "<title>h</title>", "s.css": "p{}", "docs/a.html": "<p>a</p>"})
+	want(t, e.write(t, http.MethodPost, "/api/pages", server.Link{Path: filepath.Join(e.home, "proj", "h.html")}), http.StatusCreated, `"slug":"h"`)  //nolint:exhaustruct // the rest not given
+	want(t, e.write(t, http.MethodPost, "/api/pages", server.Link{Path: filepath.Join(e.home, "proj", "docs")}), http.StatusCreated, `"slug":"docs"`) //nolint:exhaustruct // the rest not given
+	for target, body := range map[string]string{
+		"/a/h/?raw&v=1": "<title>h</title>", "/a/h/s.css?v=3": "p{}", "/a/h/s.css?v=1.2.0": "p{}", "/a/docs/a.html?v=2": "<p>a</p>",
+	} {
+		want(t, e.do(t, http.MethodGet, target, ""), http.StatusOK, body)
+	}
+}
+
+// A version's page asks of that version, which stays "same" until it is no longer what it was served as: a version
+// before stays, the last changes with its copy; one of another page under the slug, after a removal or a rename, is
+// another. A slug of no page, or a file under it, is "changed".
+func TestVersionTabMark(t *testing.T) {
+	t.Parallel()
+
+	e := newEnv(t)
+	since := func(n int) string {
+		v := strconv.Itoa(n)
+		m := regexp.MustCompile(`/api/changed/d\?since=([^"\\]*)\\u0026v=` + v + `"`).FindStringSubmatch(e.do(t, http.MethodGet, "/a/d/?raw&v="+v, "").Body.String())
+		if m == nil {
+			t.Fatalf("no since in version %s", v)
+		}
+		return m[1]
+	}
+	ask := func(path string) string {
+		return e.do(t, http.MethodGet, path, "").Body.String()
+	}
+	e.publish(t, "d", noted("one"), nil)
+	e.publish(t, "d", noted("two"), nil)
+	one, two := since(1), since(2)
+	got := make([]string, 0, 11)
+	got = append(got, ask("/api/changed/d?since="+one+"&v=1"), ask("/api/changed/d?since="+two+"&v=2"))
+	e.publish(t, "d", noted("three"), nil)
+	three := since(3)
+	got = append(got, ask("/api/changed/d?since="+one+"&v=1"), ask("/api/changed/d?since="+two+"&v=2"))
+	writeFiles(t, e.tpl, map[string]string{"pic/page.html": "<!doctype html>\n<html lang=\"{{.Lang}}\"><head><title>{{.Title}}</title></head><body>v2</body></html>\n"})
+	want(t, e.write(t, http.MethodPost, "/api/rebuild", struct{}{}), http.StatusNoContent, "")
+	got = append(got, ask("/api/changed/d?since="+one+"&v=1"), ask("/api/changed/d?since="+three+"&v=3"),
+		ask("/api/changed/d/x?since="+one+"&v=1"), ask("/api/changed/nope?since="+one+"&v=1"))
+	want(t, e.do(t, http.MethodDelete, "/api/pages/d", "", "Origin", origin), http.StatusNoContent, "")
+	// Each v1 a version before the last, whose mark has no copy in it.
+	e.publish(t, "d", noted("one"), nil)
+	e.publish(t, "d", noted("two"), nil)
+	got = append(got, ask("/api/changed/d?since="+one+"&v=1"))
+	one = since(1)
+	want(t, e.do(t, http.MethodDelete, "/api/pages/d", "", "Origin", origin), http.StatusNoContent, "")
+	e.publish(t, "o", noted("one"), nil)
+	e.publish(t, "o", noted("two"), nil)
+	want(t, e.write(t, http.MethodPatch, "/api/pages/o", map[string]any{"slug": "d"}), http.StatusOK, `"slug":"d"`)
+	got = append(got, ask("/api/changed/d?since="+one+"&v=1"))
+	one = since(1)
+	// d, renamed from o, is o.yaml's: published again from it without a slug, it is found.
+	for i := range 20 {
+		up := server.Upload{File: "o.yaml", Source: []byte(noted("n" + strconv.Itoa(i))), Project: "p", Repo: "p", Place: "o.yaml"} //nolint:exhaustruct // the rest not given
+		want(t, e.write(t, http.MethodPost, "/api/pages/data", up), http.StatusOK, `"slug":"d"`)
+	}
+	got = append(got, ask("/api/changed/d?since="+one+"&v=1"))
+	want := "same same same changed same changed changed changed changed changed changed"
+	if strings.Join(got, " ") != want {
+		t.Errorf("answers %q, want %q", strings.Join(got, " "), want)
+	}
+}
+
+// The frame says what its ?v= asks, as versionParam reads it: a version of a stored page, 0 for its last, gone for what is
+// none; nothing where ?v= is not a version's, or there is no page.
+func TestFrameVersion(t *testing.T) {
+	t.Parallel()
+
+	e := newEnv(t)
+	e.publish(t, "d", noted("one"), nil)
+	e.publish(t, "d", noted("two"), nil)
+	e.publish(t, "only", noted("one"), nil)
+	writeFiles(t, filepath.Join(e.home, "proj"), map[string]string{"h.html": "<title>h</title>", "docs/a.html": "<p>a</p>"})
+	want(t, e.write(t, http.MethodPost, "/api/pages", server.Link{Path: filepath.Join(e.home, "proj", "h.html")}), http.StatusCreated, `"slug":"h"`)  //nolint:exhaustruct // the rest not given
+	want(t, e.write(t, http.MethodPost, "/api/pages", server.Link{Path: filepath.Join(e.home, "proj", "docs")}), http.StatusCreated, `"slug":"docs"`) //nolint:exhaustruct // the rest not given
+	said := regexp.MustCompile(`data-version="([^"]*)"`)
+	for _, c := range []struct {
+		target string
+		status int
+		want   string
+	}{
+		{"/a/d/", http.StatusOK, ""},
+		{"/a/d/?v=1", http.StatusOK, "1"},
+		{"/a/d/?v=2", http.StatusOK, "0"},
+		{"/a/d/?v=99", http.StatusOK, "gone"},
+		{"/a/d/?v=abc", http.StatusOK, "gone"},
+		{"/a/d/?v=01", http.StatusOK, "gone"},
+		{"/a/d/?v=", http.StatusOK, "gone"},
+		{"/a/d/?v=0", http.StatusOK, "gone"},
+		{"/a/d/?diff&v=1", http.StatusOK, "1"},
+		{"/a/only/?v=1", http.StatusOK, "0"},
+		{"/a/only/?v=2", http.StatusOK, "gone"},
+		{"/a/h/?v=3", http.StatusOK, ""},
+		{"/a/docs/?file=a.html&v=3", http.StatusOK, ""},
+		{"/a/none/?v=3", http.StatusNotFound, ""},
+	} {
+		w := e.do(t, http.MethodGet, c.target, "")
+		got := ""
+		if m := said.FindStringSubmatch(w.Body.String()); m != nil {
+			got = m[1]
+		}
+		if w.Code != c.status || got != c.want {
+			t.Errorf("%s: %d data-version %q; want %d %q", c.target, w.Code, got, c.status, c.want)
+		}
+	}
+}
+
+// A download's ?v= asks a version as the page's does, saved under a name of its own; under a link it is not a version's.
+func TestDownloadVersion(t *testing.T) {
+	t.Parallel()
+
+	e := newEnv(t)
+	e.publish(t, "d", noted("one"), nil)
+	e.publish(t, "d", noted("two"), nil)
+	writeFiles(t, filepath.Join(e.home, "proj"), map[string]string{"h.html": "<title>h</title>"})
+	want(t, e.write(t, http.MethodPost, "/api/pages", server.Link{Path: filepath.Join(e.home, "proj", "h.html")}), http.StatusCreated, `"slug":"h"`) //nolint:exhaustruct // the rest not given
+	for target, c := range map[string]struct{ name, body string }{
+		"/api/pages/d/download":     {"d.html", "two"},
+		"/api/pages/d/download?v=1": {"d-v1.html", "one"},
+		"/api/pages/d/download?v=2": {"d-v2.html", "two"},
+		"/api/pages/h/download?v=3": {"h.html", "<title>h</title>"},
+	} {
+		w := e.do(t, http.MethodGet, target, "")
+		want(t, w, http.StatusOK, c.body)
+		if got := w.Header().Get("Content-Disposition"); got != `attachment; filename="`+c.name+`"` {
+			t.Errorf("%s: %s; want %s", target, got, c.name)
+		}
+	}
+	for _, v := range []string{"99", "abc", "01", "", "0"} {
+		want(t, e.do(t, http.MethodGet, "/api/pages/d/download?v="+v, ""), http.StatusNotFound, "not found")
+	}
+}
+
+// ?raw&v=<n>&from=<m>&key=<k> is version n marked against version m, served in the sandbox as the page is and read as
+// nothing; any other pair, or a key the versions no longer have, is not found.
+func TestDiffPage(t *testing.T) {
+	t.Parallel()
+
+	e := newEnv(t)
+	e.publish(t, "d", noted("one two three"), nil)
+	e.publish(t, "d", noted("one two four"), nil)
+	var a struct{ Key string }
+	if err := json.Unmarshal(e.do(t, http.MethodGet, "/api/pages/d/diff?from=1&to=2", "").Body.Bytes(), &a); err != nil {
+		t.Fatal(err)
+	}
+	page := "/a/d/?raw&v=2&from=1&key=" + a.Key
+	w := e.do(t, http.MethodGet, page, "")
+	plain := e.do(t, http.MethodGet, "/a/d/?raw&v=2", "")
+	body := w.Body.String()
+	if w.Code != http.StatusOK || !strings.Contains(body, `id="floe-diff.0"`) || strings.Contains(body, "pageServed") ||
+		w.Header().Get("Content-Security-Policy") != plain.Header().Get("Content-Security-Policy") {
+		t.Errorf("%s: %d %s %q", page, w.Code, w.Header().Get("Content-Security-Policy"), body)
+	}
+	for _, query := range []string{"v=2&from=2&key=" + a.Key, "v=2&from=3&key=" + a.Key, "v=2&from=x&key=" + a.Key, "v=2&from=1&key=other", "from=1&key=" + a.Key} {
+		want(t, e.do(t, http.MethodGet, "/a/d/?raw&"+query, ""), http.StatusNotFound, "not found")
+	}
+	// A version published after: the last no longer the same, the key of the pair is no longer theirs.
+	e.publish(t, "d", noted("one two five"), nil)
+	want(t, e.do(t, http.MethodGet, page, ""), http.StatusNotFound, "not found")
+}
+
+// What the script floe adds to a page it serves tells its frame is told by the page's names, whatever the page is: a stored page's own
+// messages (open, keys, the version served, where it is), a diff's (its versions changed), and the diff of a key no longer the pair's,
+// which is not found. Each is looked for as the key it sends (pageKey: key, not pageKey, which pageKeysWanted holds too). None says
+// artifact, which these were called, whether or not it says the new name too.
+func TestServedScriptNames(t *testing.T) {
+	t.Parallel()
+
+	e := newEnv(t)
+	e.publish(t, "d", noted("one two three"), nil)
+	e.publish(t, "d", noted("one two four"), nil)
+	var a struct{ Key string }
+	if err := json.Unmarshal(e.do(t, http.MethodGet, "/api/pages/d/diff?from=1&to=2", "").Body.Bytes(), &a); err != nil {
+		t.Fatal(err)
+	}
+	for _, c := range []struct {
+		path  string
+		names []string
+	}{
+		{"/a/d/?raw", []string{"pageOpen:", "pageHash:", "pagePath:", "pageServed:", "pageKey: key", "pageKeysWanted === true"}},
+		{"/a/d/?raw&v=2&from=1&key=" + a.Key, []string{"pageChanged:", "pagePath:"}},
+		{"/a/d/?raw&v=2&from=1&key=other", []string{"pageChanged:", "pagePath:"}},
+	} {
+		body := e.do(t, http.MethodGet, c.path, "").Body.String()
+		for _, name := range c.names {
+			if !strings.Contains(body, name) {
+				t.Errorf("%s does not tell %s: %q", c.path, name, body)
+			}
+		}
+		if strings.Contains(strings.ToLower(body), "artifact") {
+			t.Errorf("%s still says artifact: %q", c.path, body)
+		}
+	}
+}

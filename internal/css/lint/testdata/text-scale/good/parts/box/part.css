@@ -1,0 +1,10 @@
+.a { font-size: var(--floe-text-small); }
+.b { font: 700 var(--floe-text-small)/1.4 sans-serif; }
+.c { font: inherit; }
+.d { font: 1.1rem serif; }
+.e { font: oblique 10deg var(--floe-text-aside) serif; }
+.f { font-size: INHERIT; }
+.g { font-size: var( --floe-text-small ); }
+.h { font-size: 1rem !important; }
+.i { font-size: 2em; }
+.j { font-size: 11px; }

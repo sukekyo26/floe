@@ -1,0 +1,14 @@
+$ floe part check
+exit 0
+$ floe template check
+exit 1
+--- stderr
+$SAMPLE/own/templates/memo/schema.json:11:9: the key "required" is in this object already: only the last would be read; keep one
+$ floe check memo.yaml
+exit 1
+--- stderr
+$SAMPLE/own/templates/memo/schema.json:11:9: the key "required" is in this object already: only the last would be read; keep one
+$ floe render --out-dir $TMP/pages/memo.yaml memo.yaml
+exit 1
+--- stderr
+$SAMPLE/own/templates/memo/schema.json:11:9: the key "required" is in this object already: only the last would be read; keep one

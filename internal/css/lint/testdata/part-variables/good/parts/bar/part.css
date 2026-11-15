@@ -1,0 +1,2 @@
+:scope { --list-c: red; }
+:scope > .fill { background: var(--list-c); }

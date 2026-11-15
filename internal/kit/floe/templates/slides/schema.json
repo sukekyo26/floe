@@ -1,0 +1,51 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "slides",
+  "description": "Slides to show one at a time, each as large as the screen: down, one under the next and moved by the scroll, or across, side by side and moved by the ← and → keys or a swipe; a cover of the title, then slides of a heading over parts, a slide of a heading alone standing between parts of the talk.",
+  "type": "object",
+  "properties": {
+    "direction": {
+      "enum": [
+        "down",
+        "across"
+      ],
+      "description": "How the slides are laid out and moved: down (when left out), one under the next, moved by the scroll; across, side by side, moved by the ← and → keys or a swipe"
+    },
+    "subtitle": {
+      "type": "string",
+      "minLength": 1,
+      "description": "A line under the title on the cover, such as who speaks and when; a line of Markdown"
+    },
+    "slides": {
+      "type": "array",
+      "minItems": 1,
+      "description": "The slides in order",
+      "items": {
+        "type": "object",
+        "properties": {
+          "heading": {
+            "type": "string",
+            "minLength": 1,
+            "description": "A line of Markdown"
+          },
+          "parts": {
+            "type": "array",
+            "minItems": 1,
+            "description": "The parts of the slide, as report's; left out, the slide is a heading alone, between parts of the talk",
+            "items": {
+              "$ref": "floe:///parts/any.json"
+            }
+          }
+        },
+        "required": [
+          "heading"
+        ],
+        "additionalProperties": false
+      }
+    }
+  },
+  "required": [
+    "slides"
+  ],
+  "additionalProperties": false
+}

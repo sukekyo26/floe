@@ -1,0 +1,20 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "asks",
+  "description": "What the reader is asked to decide, numbered Q1, Q2 and on: each a question, its options, the one recommended and why, who is to decide, and what was decided once it is. For the options of one decision with their pros and cons, write options; for the record of a decision with its reasons, decision",
+  "type": "array",
+  "minItems": 1,
+  "items": {
+    "type": "object",
+    "properties": {
+      "question": { "type": "string", "minLength": 1, "description": "A line of Markdown" },
+      "options": { "type": "array", "minItems": 2, "items": { "type": "string", "minLength": 1, "description": "A line of Markdown" } },
+      "recommend": { "type": "string", "minLength": 1, "description": "The option recommended, marked among the options when written the same, else on a line of its own; a line of Markdown" },
+      "why": { "type": "string", "minLength": 1, "description": "Why it is recommended; a line of Markdown" },
+      "by": { "type": "string", "minLength": 1, "description": "Who is to decide" },
+      "decided": { "type": "string", "minLength": 1, "description": "What was decided, marked among the options when written the same, else on a line of its own; a line of Markdown" }
+    },
+    "required": ["question"],
+    "additionalProperties": false
+  }
+}

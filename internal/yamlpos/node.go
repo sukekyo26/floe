@@ -1,0 +1,220 @@
+package yamlpos
+
+import (
+	"bytes"
+	"slices"
+	"strconv"
+	"strings"
+
+	"go.yaml.in/yaml/v4"
+
+	"floe/internal/bom"
+	"floe/internal/textpos"
+)
+
+// Kind is what a Node holds.
+type Kind int
+
+const (
+	Scalar   Kind = iota // text, a number, true or false, or null
+	Mapping              // keys and values
+	Sequence             // items
+)
+
+// Node is a value of a YAML file Parse read, and where it is written.
+type Node struct {
+	Kind  Kind
+	Pairs []Pair  // of a Mapping, as written
+	Items []*Node // of a Sequence
+	// Value is a Scalar as the parser read it: text without its quotes, a number or true as written (1.10), "" for
+	// nothing written.
+	Value string
+	Style Style
+	Null  bool // null, ~ or nothing written
+
+	at        Pos // where Of places it
+	start     Pos // its first character: the { or [ of a flow mapping or sequence
+	flow      bool
+	unwritten bool // a null with nothing written
+	text      bool // a text scalar
+}
+
+// Pair is a key and its value.
+type Pair struct {
+	Key, Value *Node
+}
+
+// newNode returns n, a body Parse walked without a mistake, as a Node.
+func newNode(n *yaml.Node) *Node {
+	out := &Node{
+		Kind: Scalar, Pairs: nil, Items: nil, Value: "", Style: Plain, Null: false,
+		at: at(n), start: at(n), flow: n.Style&yaml.FlowStyle != 0, unwritten: false, text: false,
+	}
+	switch n.Kind {
+	case yaml.MappingNode:
+		out.Kind = Mapping
+		for i := 0; i+1 < len(n.Content); i += 2 {
+			out.Pairs = append(out.Pairs, Pair{Key: newNode(n.Content[i]), Value: newNode(n.Content[i+1])})
+		}
+		if len(out.Pairs) > 0 {
+			out.at = out.Pairs[0].Key.at // a { } at its first key too
+		}
+	case yaml.SequenceNode:
+		out.Kind = Sequence
+		for _, item := range n.Content {
+			out.Items = append(out.Items, newNode(item))
+		}
+	case yaml.ScalarNode, yaml.DocumentNode, yaml.AliasNode, yaml.StreamNode:
+		r := read12(n.Value)
+		out.Value, out.Style, out.unwritten = n.Value, styleOf(n), unwritten(n)
+		out.Null = out.Style == Plain && r.kind == kindNull
+		out.text = out.Style != Plain || r.kind == kindText
+	}
+	return out
+}
+
+// Of returns where n, which must not be nil, was written: a mapping at its first key, so that it points at text
+// rather than the indentation before it.
+func Of(n *Node) Pos {
+	return n.at
+}
+
+// Text returns n as text when it is a text scalar: a string, quoted or not, or a | or > block, read as YAML reads
+// it, a block keeping the line breaks its end keeps (| one, |+ all, |- none). A number, true, false or null is not
+// text: YAML would read 1.10 as 1.1.
+func Text(n *Node) (string, bool) {
+	if !n.text {
+		return "", false
+	}
+	return n.Value, true
+}
+
+// OfValue returns where the value of key is written, ~ and null too: a scalar at itself; a mapping or a sequence,
+// or a value left out, at key, the line it starts on (a mapping at its first key would read as that key's, and an
+// empty value has no text to point at). With no key, an item of a sequence is at itself: a mapping or a sequence in
+// { } or [ ] at its { or [, any other at where it starts (a mapping at its first key), as YAML 1.2 parsers do not all
+// tell where its - is.
+// LIMIT: a mistake about one key placed by the path to it (additionalProperties naming one) lands where its value
+// is: at the key for a mapping or a sequence (zz: with y: 1 below it, 3:1), at the value for a scalar (zz: 1, 3:5).
+// A data file's mistake could go to the key itself, as schema.Validate has the file's nodes, but a diagram spec's
+// comes as a JSON pointer (schema.ValidateAt), which cannot name a key apart from its value: both are placed alike.
+// A pair in [ ] written without { } (a: [b: 1]) is a mapping in flow style with no { to point at: it is placed where
+// it starts, at its key.
+func OfValue(key, value *Node) Pos {
+	switch {
+	case key != nil && (value.Kind != Scalar || value.unwritten):
+		return key.at
+	case value.Kind != Scalar && value.flow:
+		return value.start
+	}
+	return value.at
+}
+
+// Name returns the name of the key of p.
+func (p Pair) Name() string {
+	return p.Key.Value
+}
+
+// find follows at, keys of mappings and indexes of sequences, from root. It returns the key node of the last
+// step (nil at root or for an item of a sequence) and its value node. It stops at the last node it can reach.
+func find(root *Node, at []string) (key, value *Node) {
+	value = root
+	for _, step := range at {
+		switch value.Kind {
+		case Mapping:
+			i := slices.IndexFunc(value.Pairs, func(p Pair) bool { return p.Name() == step })
+			if i < 0 {
+				return key, value
+			}
+			key, value = value.Pairs[i].Key, value.Pairs[i].Value
+		case Sequence:
+			i, err := strconv.Atoi(step)
+			if err != nil || i < 0 || i >= len(value.Items) {
+				return key, value
+			}
+			key, value = nil, value.Items[i]
+		default:
+			return key, value
+		}
+	}
+	return key, value
+}
+
+// Locate finds the value at the path at under root, and returns where it is written, as OfValue places it, and its
+// node; at the last value it reaches when the path goes on past it. When it reaches none under root (at is empty,
+// its first key is not written, or root is nil, a file of nothing), it returns no line and no node: the mistake is
+// placed at the file alone, as at the first key it would read as that key's.
+func Locate(root *Node, at []string) (Pos, *Node) {
+	if root != nil {
+		if key, value := find(root, at); value != root {
+			return OfValue(key, value), value
+		}
+	}
+	return Pos{Line: 0, Column: 0}, nil
+}
+
+// Written returns where the characters of n, a scalar of src, the YAML file Parse read, start when they are
+// written there as YAML reads them, for a place inside the value: a plain or quoted value on one line, at its first
+// character after the quote; a | text, at the first character of its first line, past the indentation; false for
+// any other. The characters of src are only compared with the value read, which tells where they are: nothing is
+// judged by reading src.
+// LIMIT: a value whose characters are not written as read is not placed inside: an escape in double quotes, two
+// single quotes, a value over lines, a > text, and a | text whose indentation is text too. Map the
+// characters read to those written if a place inside such a value comes to matter.
+func Written(src []byte, n *Node) (Pos, bool) {
+	none := Pos{Line: 0, Column: 0}
+	src = bom.Trim(src)
+	at := textpos.At(src, n.at.Line, n.at.Column)
+	if n.Kind != Scalar || at < 0 {
+		return none, false
+	}
+	rest := src[at:]
+	switch n.Style {
+	case Plain:
+		if bytes.HasPrefix(rest, []byte(n.Value)) {
+			return n.at, true
+		}
+	case Single:
+		// One ' read is written as two: 'a''' (read a') would match 'a''.
+		if !strings.Contains(n.Value, "'") && bytes.HasPrefix(rest, []byte("'"+n.Value+"'")) {
+			return Pos{Line: n.at.Line, Column: n.at.Column + 1}, true
+		}
+	case Double:
+		// A value written with an escape does not match: at the first escape, src has a \ where the value read has
+		// another character, or, for \\, one more \, which the next character of the value or the " then meets.
+		if bytes.HasPrefix(rest, []byte(`"`+n.Value+`"`)) {
+			return Pos{Line: n.at.Line, Column: n.at.Column + 1}, true
+		}
+	case Literal:
+		return blockWritten(src, n.at.Line, rest, n.Value)
+	case Folded:
+	}
+	return none, false
+}
+
+// blockWritten returns where value, a | text whose header (rest on) is on the line header of src, starts: on the line
+// after the header, past the spaces before its first line that holds text, which must be that line of value, as the
+// same line of the text.
+func blockWritten(src []byte, header int, rest []byte, value string) (Pos, bool) {
+	none := Pos{Line: 0, Column: 0}
+	lines := strings.Split(value, "\n")
+	first := slices.IndexFunc(lines, func(l string) bool { return strings.TrimSpace(l) != "" })
+	if first < 0 {
+		return none, false
+	}
+	at := textpos.NextLine(src, len(src)-len(rest))
+	for at < len(src) {
+		end := textpos.NextLine(src, at)
+		line := strings.TrimRight(string(src[at:end]), "\r\n")
+		if strings.TrimSpace(line) == "" {
+			at = end
+			continue
+		}
+		indent := len(line) - len(strings.TrimLeft(line, " "))
+		if line[indent:] != lines[first] {
+			return none, false
+		}
+		return Pos{Line: header + 1, Column: indent + 1}, true
+	}
+	return none, false
+}

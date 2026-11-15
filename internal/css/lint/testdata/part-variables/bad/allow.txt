@@ -1,0 +1,1 @@
+"list --list-c" the colour of each row, switched between them

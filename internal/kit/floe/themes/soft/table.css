@@ -1,0 +1,4 @@
+/* Soft stripes: no rules between rows, every other row tinted faintly with the accent, the head more so */
+:scope { --table-rule: none; --table-head-bg: color-mix(in srgb, var(--accent-soft) 70%, var(--surface)); --table-head-fg: var(--accent); border-color: color-mix(in srgb, var(--line) 60%, var(--surface)); }
+:scope thead th { --face: var(--table-head-bg); --on-face: var(--table-head-fg); }
+:scope tbody tr:nth-child(even) td { background: color-mix(in srgb, var(--accent-soft) 30%, var(--surface)); }

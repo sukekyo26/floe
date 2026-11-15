@@ -1,0 +1,7 @@
+template: adr
+lang: en
+theme: retro
+title: The retro theme in a record
+status: accepted
+context: A page drawn in a panel, its headings with the stripes.
+decision: Keep sessions in the database.

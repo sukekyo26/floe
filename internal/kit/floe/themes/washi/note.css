@@ -1,0 +1,8 @@
+:scope {
+  background: var(--surface); color: var(--fg); border: 0; border-top: 2px solid var(--tone);
+  --floe-mark: 2rem; --floe-mark-gap: 0.75rem;
+}
+/* The seal holds the note's own mark of its tone */
+:scope::before { border-radius: var(--radius-small); background: var(--tone); color: var(--on-fill); font-size: 1.05rem; }
+.title { letter-spacing: 0.1em; }
+:scope code { background: var(--face, color-mix(in srgb, var(--fg) 6%, transparent)); }

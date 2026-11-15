@@ -1,0 +1,13 @@
+template: report
+lang: en
+title: Raw SVG that writes what no page takes
+sections:
+  - heading: Diagram
+    parts:
+      - diagram:
+          width: 300
+          height: 120
+          title: Raw SVG
+          parts:
+            - raw: { svg: '<noscript><circle r="3"/></noscript>' }
+            - raw: { svg: '<base href="https://x"/>' }

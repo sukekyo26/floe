@@ -1,0 +1,35 @@
+# Groups of a graph's boxes, down: one nested in another, a heading wider in Japanese, edges to groups in, out and
+# between them, a loop and labels.
+title: { en: Groups, ja: まとまり }
+parts:
+  - graph:
+      x: 20
+      y: 20
+      nodes:
+        - box: { name: cli, rows: [{ en: floe publish, ja: floe publish を実行 }] }
+        - group:
+            name: server
+            label: { en: Local server, ja: 127.0.0.1:7325 のローカルサーバー }
+            nodes:
+              - box: { name: api, rows: [API] }
+              - group:
+                  name: data
+                  label: { en: Data, ja: データ }
+                  nodes:
+                    - box: { name: store, rows: [{ en: Store, ja: 保存先 }] }
+                    - box: { name: cache, rows: [Cache] }
+        - box: { name: page, rows: [{ en: Page, ja: ページ }] }
+        - group:
+            name: db
+            label: { en: Database, ja: データベース }
+            nodes:
+              - box: { name: disk, rows: [Disk] }
+      edges:
+        - { from: cli, to: api }
+        - { from: api, to: store }
+        - { from: api, to: cache, label: { en: warm, ja: 温める } }
+        - { from: store, to: page, label: { en: render, ja: 描く } }
+        - { from: cli, to: server, label: { en: health, ja: 起動確認 } }
+        - { from: server, to: db }
+        - { from: data, to: page }
+        - { from: cache, to: cache, label: { en: expire, ja: 期限切れ } }

@@ -1,0 +1,7 @@
+﻿﻿template: report
+lang: en
+title: A second mark
+sections:
+  - heading: h
+    parts:
+      - text: "x"

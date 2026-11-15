@@ -1,0 +1,389 @@
+template: report
+lang: en
+title: Every part
+eyebrow: Plan · 2030-04
+lead: The wiki moves to the new host in two weekends, with the old one read-only in between.
+sections:
+  - heading: At a glance
+    parts:
+      - stats:
+          - { label: Pages, value: '1,840' }
+          - { label: Broken links, value: '120', note: '-35 since the last check', tone: good }
+          - { label: Downtime, value: '0', unit: hours }
+          - { label: Slow pages, value: '4', from: '9', better: lower }
+          - { label: Copied, value: '80', from: '95.5', unit: '%', better: higher }
+          - { label: Owners, value: '3', from: '3', better: higher, note: The same three }
+          - { label: Spaces, value: '12', tone: accent }
+          - { label: Owners left, value: '3', tone: warn }
+          - { label: Lost pages, value: '1', tone: bad }
+          - { label: Skipped, value: '2', note: left for later, tone: muted }
+  - heading: Steps
+    parts:
+      - text: |
+          The pages move over **one weekend**; the old wiki stays readable until the new one opens.
+
+          > Read-only means read-only: [the freeze](https://example.com/freeze) covers `comments` too.
+
+          | Day | What |
+          | --- | --- |
+          | Saturday | copy the pages |
+      - text: <div>Raw HTML, drawn as the text written</div>
+      - steps:
+          - { title: Freeze edits on the old wiki, text: "On **Friday evening**.\n\n| Day | Pages |\n| --- | --- |\n| Friday | 1,840 |\n\nNothing is edited after.", state: done, tags: ['[PR #428](https://example.com/428)', { pill: merged, tone: good }] }
+          - { title: Copy the pages and check the links, text: '> Broken links first: [the report](https://example.com/report).', state: doing, tags: ['[PR #431](https://example.com/431)', 'after #428', '`linkcheck`', { pill: waiting }] }
+          - { title: Point the team's bookmarks at the new host, state: todo }
+          - title: Close the old server
+      - terminal:
+          shell: bash
+          steps:
+            - run: wiki export --all --out pages/
+              out: 1840 pages written to pages/
+            - run: linkcheck pages/
+      - terminal: { shell: zsh, steps: [{ run: wiki status }] }
+      - terminal: { shell: sh, steps: [{ run: wiki status }] }
+      - terminal: { shell: powershell, steps: [{ run: wiki status }] }
+      - terminal: { shell: cmd, steps: [{ run: wiki status }] }
+      - code:
+          file: old-wiki.conf
+          text: |
+            # Read-only from Friday evening
+            read_only = true
+            banner = "This wiki has moved to the new host."
+      - code:
+          title: The line that turns the wiki read-only
+          file: new-wiki.conf
+          lang: ini
+          start: 41
+          mark: [42]
+          text: |
+            # Read-only from Friday evening
+            read_only = true
+      - code: { text: "rsync --archive --delete --exclude '*.tmp' --exclude 'cache/' --log-file=copy.log old-wiki:/srv/wiki/pages/ /srv/new-wiki/pages/\n" }
+  - heading: Risks
+    parts:
+      - table:
+          columns:
+            - Risk
+            - Likelihood
+            - { title: Pages, num: true }
+            - What we do ([a check](https://example.com/linkcheck), `linkcheck`)
+            - State
+          rows:
+            - [Broken links, High, '120', A link check after the copy, { pill: watching, tone: warn }]
+            - [Lost attachments, Low, '8', Keep the old host for **a month**, { pill: covered, tone: good }]
+            - [Slow search, Unknown, "-", Rebuild the index on `Sunday`, { pill: open }]
+            - [New host, Low, '0', Nothing, { pill: ready, tone: accent }]
+      - table:
+          columns:
+            - { id: state, title: State, pills: { done: good, open: accent } }
+            - { id: what, title: What }
+            - { id: who, title: Who }
+            - { id: pages, title: Pages, num: true }
+          rows:
+            - { state: open, what: 'The `copy`', who: Ann, pages: '12' }
+            - { who: Ben, state: done, what: '**The index**' }
+            - { state: { pill: late, tone: bad }, what: The links }
+            - { what: No state written, who: Cy }
+            - state: open
+              what: On two lines
+      - table:
+          columns:
+            - { id: a, title: By a key }
+            - Its title alone
+            - { id: a.b, title: A dot }
+            - { id: 'x/y', title: A slash }
+          rows:
+            - [in order, of the columns, c, d]
+            - { a: by key, a.b: dot, 'x/y': slash }
+      - table:
+          columns:
+            - Change
+            - { title: Size, num: true }
+            - Note
+            - { title: Urgency, pills: { mid: warn, high: bad, '**done**': good, 'A&B': accent, later: muted } }
+          rows:
+            - [A word of the column, '1', mid, mid]
+            - [Its pill as an object, '2', a note, { pill: mid, tone: warn }]
+            - [Holding a word, mid, mid-week, middle]
+            - [After a space, '3', high, ' high']
+            - [Its tone, '6', a note, high]
+            - [Changed by Markdown and HTML, '4', '**done**', '**done**']
+            - [An ampersand, '5', 'A&B', 'A&B']
+            - [A quiet one, '7', a note, later]
+      - table:
+          columns: [Another table]
+          rows: [[mid]]
+      - note:
+          tone: warn
+          title: Heads up
+          text: |
+            Anyone editing during the freeze loses their changes; [the plan](https://example.com/plan) and `freeze.sh` say when.
+
+            > Saved drafts are lost too: [the drafts](https://example.com/drafts) and `drafts.sh`.
+      - note: { text: 'The new host is ready; [the host](https://example.com/host) and `host.sh`.', tone: accent }
+      - note: { text: 'Attachments over 1 MB failed; [the list](https://example.com/failed) names each, and `retry.sh` sends them again.', tone: bad }
+      - note: { text: 'The old wiki stays read-only; [the wiki](https://example.com/wiki) and `wiki.sh`.', tone: muted }
+      - note: { text: 'The banner goes up on Friday; [the banner](https://example.com/banner) and `banner.sh`.' }
+      - text: '> A quote with [a link](https://example.com/quote) and `quote.sh`.'
+  - heading: Progress
+    parts:
+      - bars:
+          - { label: Copied, value: 1840, unit: pages, tone: good }
+          - { label: Checked, value: 1200 }
+          - { label: Moved, value: 900, tone: accent }
+          - { label: Pending, value: 400, tone: warn }
+          - { label: Broken, value: 120, tone: bad }
+          - { label: Skipped, value: 60, tone: muted }
+      - bars:
+          - { label: Pages, value: 1200, of: 1840 }
+          - { label: Images, value: 30, of: 30, tone: good }
+          - { label: Spaces, value: 4, of: 12, tone: accent }
+          - { label: Owners, value: 1, of: 4, tone: warn }
+          - { label: Links, value: 10, of: 120, tone: bad }
+          - { label: Drafts, value: 2, of: 6, tone: muted }
+          - { label: Words, value: 1500000, of: 2000000, unit: words }
+      - bars:
+          - { label: Kept, value: 2 }
+          - { label: Moved, value: 4 }
+          - { label: Copied, value: 30, of: 40, unit: pages per day, tone: good }
+      - chart:
+          kind: line
+          title: Pages copied
+          unit: pages
+          x: [Mon, Tue, Wed, Thu, Fri]
+          series:
+            - { name: Copied, values: [120, 340, 610, 980, 1200] }
+            - { name: Checked, values: [80, 200, 400, 700, 950] }
+            - { name: Failed, values: [10, 30, 25, 40, 20] }
+            - { name: Skipped, values: [5, 15, 60, 80, 100] }
+      - chart:
+          kind: bar
+          title: Attachments by size
+          x: [Small, Medium, Large]
+          series:
+            - { name: Files, values: [420, 180, 35] }
+      - checklist:
+          - { text: Freeze edits, done: true }
+          - text: Copy the **attachments**
+      - timeline:
+          - { date: 2030-04-05, title: Freeze, text: "Edits stop.\n\n| From | To |\n| --- | --- |\n| 18:00 | Monday |\n\nThe banner says so.", tone: warn }
+          - { date: 2030-04-06, title: Copy, tone: accent }
+          - { date: 2030-04-07, title: Open, tone: good }
+          - { date: 2030-04-08, title: Rollback window ends, tone: bad }
+          - { date: 2030-04-20, title: Old links checked, tone: muted }
+          - { date: 2030-04-30, title: Old server off }
+  - heading: Choices
+    parts:
+      - options:
+          - title: Copy in one go
+            parts:
+              - image: { file: shots/moved.png, alt: The old host's pages moved in one go }
+            text: 'Two days of read-only, as [the plan](https://example.com/plan) says: `export --all`.'
+            pros: [Simple]
+            cons: [Longer freeze]
+            pick: Recommended
+          - title: Copy by space
+            parts:
+              - options:
+                  - { title: Docs first, text: The most read space. }
+                  - { title: By size, text: The smallest space first. }
+              - bars:
+                  - { label: Docs, value: 400, of: 1840 }
+            text: |
+              Each space is copied apart:
+
+              - Docs first
+              - Then the rest, as [the plan](https://example.com/plan) says: `export --space`
+            pros: [Short freezes]
+            cons: [Links break between spaces, Twice the work]
+      - decision:
+          title: The wiki moves to the new host
+          status: { pill: decided, tone: good }
+          date: 2030-03-28
+          text: "The old server is out of support in **May**.\n\n| Host | Support |\n| --- | --- |\n| Old | May |\n\nThe new host is supported for five years."
+          rejected: [Stay on the old server, Move to a hosted wiki]
+  - heading: Reference
+    parts:
+      - facts:
+          - { name: Owner, value: The platform team }
+          - { name: State, value: { pill: on track, tone: good } }
+      - fields:
+          - { name: read_only, type: bool, required: true, text: Refuses edits, default: false }
+          - { name: banner, type: string, text: Shown on every page }
+          - { name: port, type: number, default: '8080' }
+      - entries:
+          - title: '`export`'
+            tags: [Runs nightly, '`wiki.conf`', { pill: on track }, { pill: done, tone: good }]
+            text: |
+              Writes every page as Markdown, with its history, into `pages/`.
+
+              #### Left out
+
+              - Pages under **drafts** are left out
+              - Images go to `pages/images/`
+          - title: Search index
+            tags: [{ pill: by hand, tone: warn }, { pill: blocked, tone: bad }, { pill: next, tone: accent }]
+            text: Rebuilt by hand after the copy; [the steps](https://example.com/steps).
+          - title: Old links
+          - title: A step with its command
+            text: Run it from the wiki's folder.
+            parts:
+              - code: { file: wiki.conf, lang: ini, text: "mode = read-only" }
+              - terminal: { shell: bash, steps: [{ run: wiki freeze }] }
+              - links:
+                  - { title: The freeze, url: 'https://example.com/freeze', text: What it stops }
+              - details:
+                  title: The whole command
+                  parts:
+                    - code: { lang: sh, text: "wiki freeze --all --banner" }
+          - title: Parts alone, in the last row
+            parts:
+              - text: Text among parts, as tall as an item's.
+              - code: { lang: sh, text: wiki status }
+      - keys:
+          - { keys: [Ctrl, K], text: Search the wiki }
+          - { keys: [g, h], text: Go home }
+      - details:
+          title: Can I edit during the freeze?
+          open: true
+          parts:
+            - text: "No: edits are lost.\n\n| Edit | Kept |\n| --- | --- |\n| Page | no |\n\nWait for the new host."
+      - links:
+          - { title: Migration guide, url: 'https://example.com/guide', text: How the copy works }
+          - { title: Old wiki, url: 'https://wiki.example.com/' }
+      - tree:
+          - { path: pages/, note: what export writes }
+          - { path: pages/home.md, change: changed }
+          - { path: pages/old.md, change: removed }
+          - { path: pages/new/index.md, change: added }
+      - diff:
+          file: wiki.conf
+          lang: ini
+          text: |
+            @@ -1,2 +1,2 @@
+            -read_only = false
+            +read_only = true
+             banner = "Moved"
+  - heading: Folded
+    parts:
+      - details:
+          title: The whole log
+          open: true
+          parts:
+            - chart: { kind: bar, title: Copied by hour, x: ['1:00', '2:00'], series: [ { name: Pages, values: [420, 180] } ] }
+            - text: |
+                What the copy printed.
+
+                > Every page, with [the count](https://example.com/count) and `count.sh`.
+            - terminal:
+                steps:
+                  - { run: wiki export, out: done }
+            - diff: { text: "+a\n-b\n" }
+            - entries:
+                - { title: Copied, tags: [412 pages], text: Every page but the drafts. }
+            - image: { file: shots/moved.png, alt: The wiki after the move, caption: "Figure 1: the wiki on the new host, at `wiki.example.com`" }
+            - stats:
+                - { label: Copied, value: '1840', from: '1200', better: higher }
+            - steps:
+                - { title: Export, state: done }
+                - { title: Import, state: doing }
+            - checklist:
+                - { text: Count the pages, done: true }
+      - asks:
+          - question: Copy in one go?
+            options: [One go, 'By space, with `sync --space`']
+            recommend: One go
+            why: Two days of read-only
+            by: The platform team
+          - question: Keep the old host?
+            options: [A month, For good]
+            decided: A month
+          - question: Who writes the notice?
+          - question: Which day?
+            recommend: A Saturday
+            decided: Sunday
+      - checks:
+          - title: Do names in Japanese go through?
+            result: ok
+            actual: Saved as UTF-8, and found by a search.
+            how: '`curl`, adding and searching'
+          - title: Does it run in an old browser?
+            result: ng
+            actual: |
+              Safari 15 has no `:has()`, and the rows of the list break:
+
+              - from Safari 16 they are right
+              - a fifth of the machines are on 15
+            how: By hand in each browser
+          - title: Can the old data be read?
+            result: ok
+            actual: The export of 2023 reads, its dates converted.
+            parts:
+              - code: { lang: sh, text: "wiki import old.zip --date-format legacy\n" }
+              - keys:
+                  - { keys: [Ctrl, I], text: Import again }
+              - asks:
+                  - { question: Keep the old dates?, options: [As they are, Converted], recommend: Converted }
+              - checks:
+                  - { title: Do the dates read?, result: ok, actual: All of them. }
+          - title: Does a wrong password stop after five?
+            result: ng
+            actual: After four; `>=` is written for `>`.
+          - title: Does the search answer in a second?
+            result: ok
+            actual: 420 ms on average.
+          - title: Does it go through the proxy?
+            result: unchecked
+            actual: Not from here; the network team was asked.
+      - columns:
+          - title: Before
+            parts:
+              - text: The list before.
+              - code: { lang: bash, text: "export WIKI=old" }
+          - parts:
+              - text: A column with no title.
+          - title: After
+            parts:
+              - note: { tone: good, title: Done, text: The list after. }
+              - decision: { title: Keep the list, status: { pill: decided, tone: good }, text: It reads well. }
+              - fields:
+                  - { name: list, type: bool, default: 'true' }
+              - timeline:
+                  - { date: 2030-04-07, title: Listed }
+      - tabs:
+          - title: bash
+            parts:
+              - code: { lang: bash, text: "export WIKI=new" }
+          - title: PowerShell
+            parts:
+              - code: { lang: powershell, text: "$env:WIKI = 'new'" }
+              - entries:
+                  - { title: New window, tags: [PowerShell 7], text: The variable holds in that window alone. }
+              - note: { text: 'Run it in a new window; [the steps](https://example.com/steps) and `run.sh`.', tone: good }
+              - table:
+                  columns: [Shell, { title: Lines, num: true }]
+                  rows: [[PowerShell, '1']]
+              - facts:
+                  - { name: Shell, value: PowerShell 7 }
+              - tree:
+                  - { path: profile.ps1, change: changed }
+      - html: <details><summary>What the freeze covers</summary><p>Edits, <span data-floe-tone="good" data-floe-part="cell">comments</span> and uploads.</p></details>
+      - script:
+          data: { pages: 1840, "__proto__": "<b>" }
+          js: |
+            function (el, data) {
+              el.textContent = `${data.pages} pages`;
+            }
+      - diagram:
+          title: The pages from the old server to the new host
+          parts:
+            - graph:
+                x: 20
+                y: 20
+                nodes:
+                  - box: { name: old, rows: [Old server, [read-only, sub]] }
+                  - box: { name: copy, tone: accent, rows: [Copy the pages] }
+                  - box: { name: new, tone: good, rows: [New host] }
+                edges:
+                  - { from: old, to: copy }
+                  - { from: copy, to: new }

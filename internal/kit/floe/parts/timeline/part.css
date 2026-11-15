@@ -1,0 +1,36 @@
+/* The date at the left of a dot on a line that runs down to the next, each item a row (marks: joined) that floe lays
+   out, over the title where the part is narrow (its own width, as in details or a card). Where it is wide the list holds
+   the three columns (date, dot, text) and each row borrows them by subgrid, so the date's column is as wide as the
+   longest date and the dots stand in one line; the rows hold the names of the row lines. */
+/* LIMIT: a date up to 14rem (about 29 mono characters) stays on one line, a longer one folds within 14rem (one with no
+   space breaks anywhere), and one long date widens the column of every row, narrowing the text (20rem at a width of 36rem) */
+/* LIMIT: a browser with no anchor positioning misplaces the line alone; one with no subgrid leaves a row in floe.marks's
+   two columns, and the date, placed by the names of lines it has not, goes right of the text */
+:scope {
+  container-type: inline-size; --floe-mark: 0.7rem; --floe-mark-gap: 0.65rem; padding: var(--floe-pad-block) var(--floe-pad-inline);
+  grid-template-columns: [date-start] auto [date-end mark-start] auto [mark-end text-start] minmax(0, 1fr) [text-end];
+}
+:scope > li {
+  grid-column: 1 / -1; grid-template-columns: subgrid; grid-template-rows: [mark-start] auto [mark-end];
+  padding-bottom: 1.1rem;
+}
+:scope > li:last-child { padding-bottom: 0; }
+/* The title and the text stand in the text's column, the title in the dot's row */
+:scope > li > div { display: contents; }
+:scope > li > div > * { grid-column: text; align-self: first baseline; }
+:scope > li > div > * + * { margin-top: 0.15rem; }
+:scope > li::before {
+  content: "\200b"; content: "\200b" / ""; overflow: hidden; border-radius: 50%; background: var(--tone);
+}
+:scope .date {
+  grid-area: mark / date; align-self: first baseline; max-width: 14rem; margin-inline-end: 0.65rem; text-align: right;
+  font-size: var(--floe-text-small); line-height: 1.9; color: var(--muted); font-variant-numeric: tabular-nums; font-family: var(--mono);
+}
+:scope > li::after { background: var(--line); }
+:scope li > div > :not(strong) { color: var(--on-face, var(--muted)); font-size: var(--floe-text-aside); }
+@container (max-width: 36rem) {
+  :scope > li {
+    grid-template: auto [mark-start] auto [mark-end] / [mark-start] auto [mark-end text-start] minmax(0, 1fr) [text-end];
+  }
+  :scope .date { grid-area: 1 / text; max-width: none; margin-inline-end: 0; text-align: left; }
+}

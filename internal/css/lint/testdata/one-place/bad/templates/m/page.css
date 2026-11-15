@@ -1,0 +1,1 @@
+:scope { --text-width: 40rem; } /* want "sets --text-width, which palette alone sets" */

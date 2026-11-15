@@ -1,0 +1,13 @@
+# A step's tags are one or more, each a line of Markdown or a pill, as entries' tags are.
+lang: en
+template: report
+title: Steps
+sections:
+  - heading: a
+    parts:
+      - steps:
+          - { title: a, tags: [] }
+          - { title: b, tags: '#428' }
+          - { title: c, tags: [428] }
+          - { title: d, tags: [{ pill: '' }] }
+          - { title: e, tags: [{ pill: x, tone: red }] }

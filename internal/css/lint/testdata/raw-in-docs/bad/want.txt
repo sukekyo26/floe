@@ -1,0 +1,3 @@
+agents/diagrams.md "the table of colours names --nope, which the default palette does not set: remove the row"
+agents/diagrams.md "names no --fg, which the default palette sets: write a row for it in the table of colours, or, if raw SVG is not to take it, allow it in the rule with why"
+agents/diagrams.md "names no --good, which the default palette sets: write a row for it in the table of colours, or, if raw SVG is not to take it, allow it in the rule with why"

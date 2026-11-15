@@ -1,0 +1,7 @@
+template: report
+lang: en
+title: T
+sections:
+  - heading: Step 1: plan
+    parts:
+      - text: x

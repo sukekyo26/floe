@@ -1,0 +1,16 @@
+$ floe check stats.yaml
+exit 1
+--- stderr
+stats.yaml:9:13: properties 'better' required, if 'from' exists
+stats.yaml:10:13: properties 'from' required, if 'better' exists
+stats.yaml:11:56: value must be one of 'lower', 'higher'
+stats.yaml:12:32: got number, want string
+stats.yaml:12:41: got number, want string
+$ floe render --out-dir $TMP/pages/stats.yaml stats.yaml
+exit 1
+--- stderr
+stats.yaml:9:13: properties 'better' required, if 'from' exists
+stats.yaml:10:13: properties 'from' required, if 'better' exists
+stats.yaml:11:56: value must be one of 'lower', 'higher'
+stats.yaml:12:32: got number, want string
+stats.yaml:12:41: got number, want string

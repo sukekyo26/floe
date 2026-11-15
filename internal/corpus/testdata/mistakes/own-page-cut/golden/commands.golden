@@ -1,0 +1,14 @@
+$ floe part check
+exit 0
+$ floe template check
+exit 1
+--- stderr
+$SAMPLE/own/templates/cut/example.yaml:2:11: the page drawn was cut short: HTML's reader leaves out the rest of a page past a <template> inside an <svg> or a <math>; take the <template> out of it (page.html, a part.html or an item of format html)
+$ floe check cut.yaml
+exit 1
+--- stderr
+cut.yaml:2:11: the page drawn was cut short: HTML's reader leaves out the rest of a page past a <template> inside an <svg> or a <math>; take the <template> out of it (page.html, a part.html or an item of format html)
+$ floe render --out-dir $TMP/pages/cut.yaml cut.yaml
+exit 1
+--- stderr
+cut.yaml:2:11: the page drawn was cut short: HTML's reader leaves out the rest of a page past a <template> inside an <svg> or a <math>; take the <template> out of it (page.html, a part.html or an item of format html)

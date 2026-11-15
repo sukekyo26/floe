@@ -1,0 +1,30 @@
+template: report
+lang: fr
+title: Words in fr
+sections:
+  - heading: Words of the parts
+    parts:
+      - fields:
+          - { name: port, type: number, required: true, default: '8080' }
+      - decision: { title: Move, status: decided, date: 2030-03-28, rejected: [Stay] }
+      - checks:
+          - { title: One, result: ok, actual: It held., how: By hand }
+          - { title: Two, result: ng, actual: It broke. }
+          - { title: Three, result: unchecked, actual: Not yet. }
+      - chart:
+          kind: line
+          title: Pages
+          x: [a, b]
+          series:
+            - { name: Copied, values: [1, 2] }
+      - chart:
+          kind: bar
+          title: Pages
+          x: [a, b]
+          series:
+            - { name: Copied, values: [1, 2] }
+      - stats:
+          - { label: Pages, value: '1', from: '2', better: lower }
+          - { label: Pages, value: '3', from: '2', better: lower }
+          - { label: Pages, value: '2', from: '2', better: lower }
+      - code: { title: Lignes, start: 3, mark: [4], text: "a\nb\n" }

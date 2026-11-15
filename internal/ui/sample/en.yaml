@@ -1,0 +1,17 @@
+template: report
+lang: en
+title: A sample page
+eyebrow: Plan · 2026-11-09
+lead: A theme changes the colours, the type, the frames and the space. The data stays the same.
+sections:
+  - heading: Progress
+    parts:
+      - stats:
+          - { label: Done, value: '12' }
+          - { label: Left, value: '3' }
+          - { label: Weeks, value: '2' }
+      - table:
+          columns: [Work, { title: State, pills: { done: good, doing: warn } }, Who]
+          rows: [[Design, done, Ana], [Build, doing, Ben]]
+      - note: { title: Note, text: '**Bold**, `code` and a [link](https://example.com/).' }
+      - code: { file: page.yaml, lang: yaml, text: "theme: ink\n" }

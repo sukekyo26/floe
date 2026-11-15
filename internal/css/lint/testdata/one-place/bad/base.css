@@ -1,0 +1,1 @@
+:root { --floe-text-small: 0.8rem; } /* want "sets --floe-text-small, which defaults.css alone sets" */

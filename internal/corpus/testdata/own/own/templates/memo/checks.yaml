@@ -1,0 +1,4 @@
+- for: items
+  field: what
+  expr: item.what != ""
+  message: write what the item is

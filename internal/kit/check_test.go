@@ -1,0 +1,281 @@
+package kit_test
+
+import (
+	"html/template"
+	"io"
+	"slices"
+	"strings"
+	"testing"
+	"testing/fstest"
+
+	"floe/internal/kit"
+)
+
+// floe's own pass every check: the test that stands for checking them at every run (judgement 1).
+func TestCheckFloe(t *testing.T) {
+	t.Parallel()
+
+	if err := kit.Check(floe(t)); err != nil {
+		t.Error(told(err))
+	}
+}
+
+const (
+	partFiles  = "a part holds schema.json, part.html and part.css, and a look alone part.css without the other two (and part.yaml if it takes looks or has rows with a mark, marks:); add what it lacks, or remove what a look has no use for"
+	lookUnread = "floe reads no file but part.css and part.yaml in a look, a directory without a schema.json: remove it, or add the schema.json to make it a part"
+	braceTold  = "this } closes no block: floe puts this CSS in a layer, which it would close, leaving the rules after it out of the layer and over the parts' styles"
+)
+
+// mapFS makes the files of a directory, name to text.
+func mapFS(files map[string]string) fstest.MapFS {
+	fsys := fstest.MapFS{}
+	for name, src := range files {
+		fsys[name] = &fstest.MapFile{Data: []byte(src)}
+	}
+	return fsys
+}
+
+// Check tells the mistakes of what a Kit read itself, over floe's, all together; floe's own are not told
+// again.
+func TestCheckMistakes(t *testing.T) {
+	t.Parallel()
+
+	part := map[string]string{
+		"p/schema.json": `{"type": "object"}`, "p/part.html": `<div data-floe-part="p"></div>`, "p/part.css": "div { margin: 0 }\n",
+	}
+	with := func(more map[string]string, without ...string) map[string]string {
+		files := map[string]string{}
+		for k, v := range part {
+			files[k] = v
+		}
+		for k, v := range more {
+			files[k] = v
+		}
+		for _, k := range without {
+			delete(files, k)
+		}
+		return files
+	}
+	for _, tt := range []struct {
+		name                    string
+		parts, themes, template map[string]string
+		want                    string
+	}{
+		{"right", part, nil, nil, ""},
+		{"no part.css", with(nil, "p/part.css"), nil, nil, "own/parts/p: " + partFiles},
+		{"a look with a part.html", with(map[string]string{"lk/part.css": "a{}", "lk/part.html": "x", "lk/checks.yaml": ""}), nil, nil, lines(
+			"own/parts/lk/checks.yaml: "+lookUnread, "own/parts/lk/part.html: "+lookUnread)},
+		{
+			"a file a part does not read", with(map[string]string{"p/notes.txt": ""}), nil, nil,
+			"own/parts/p/notes.txt: floe reads no file of this name in a part: a part holds schema.json, part.html and part.css, and part.yaml, checks.yaml and words.yaml if it likes; remove it",
+		},
+		{
+			"a file a theme does not read", part,
+			map[string]string{"t/tabel.css": "a{}"},
+			nil,
+			"own/themes/t/tabel.css: floe reads no file of this name in a theme: a theme holds theme.yaml (its description:), base.css, markdown.css, palette.css and a <part>.css for each part or look it styles; rename it after one, or remove it",
+		},
+		{"part.css", with(map[string]string{"p/part.css": "}\n@import \"x\";\n"}), nil, nil, lines(
+			"own/parts/p/part.css:1:1: "+braceTold,
+			"own/parts/p/part.css:2:1: floe puts this CSS in a layer, where a browser reads no @import: load the stylesheet with a <link> in page.html",
+		)},
+		{
+			"a part's schema with floe's format where floe does not follow", with(map[string]string{"p/schema.json": `{"type": "object", "properties": {"h": {"anyOf": [{"type": "string", "format": "html"}]}}}`}), nil, nil,
+			"own/parts/p/schema.json: #/properties/h/anyOf/0: the format html marks an item to draw; declare it under properties, additionalProperties or items, which floe follows",
+		},
+		{
+			"escaping", with(map[string]string{"p/part.html": `<div data-floe-part="p"><a href="{{.t}}>x</a></div>`}), nil, nil,
+			"own/parts/p/part.html: ends in a non-text context: {stateURL delimDoubleQuote urlPartPreQuery jsCtxRegexp [] attrURL elementNone <nil>}",
+		},
+		// Without a node html/template names a line of the file, as text/template counts them, {{define}}d ones too.
+		{
+			"escaping a range's re-entry", with(map[string]string{"p/part.html": "<div data-floe-part=\"p\">\n{{range .}}<a href={{end}}</div>"}), nil, nil,
+			"own/parts/p/part.html:2: on range loop re-entry: \"<\" in unquoted attr: \"<a\"",
+		},
+		{
+			"escaping a range's break", with(map[string]string{"p/part.html": "<div data-floe-part=\"p\">\n{{range .}}<p {{.}}{{break}}{{end}}</div>"}), nil, nil,
+			"own/parts/p/part.html:2: at range loop break: at range loop break: at range loop break: at range loop break: \"<\" in attribute name: \"<p \"",
+		},
+		{
+			"escaping in a define", with(map[string]string{"p/part.html": "{{define \"d\"}}\n\n{{range .}}<a href={{end}}{{end}}<div data-floe-part=\"p\">{{template \"d\" .}}</div>"}), nil, nil,
+			"own/parts/p/part.html:3: on range loop re-entry: \"<\" in unquoted attr: \"<a\"",
+		},
+		{
+			"escaping after a CR alone", with(map[string]string{"p/part.html": "<div data-floe-part=\"p\">\r\r\n{{range .}}<a href={{end}}</div>"}), nil, nil,
+			"own/parts/p/part.html:3: on range loop re-entry: \"<\" in unquoted attr: \"<a\"", // text/template says 2: a CR alone ends a line too
+		},
+		{
+			"an unknown look", with(map[string]string{"p/part.yaml": "looks: [panel, nope]\n"}), nil, nil,
+			"own/parts/p/part.yaml:1:16: looks names \"nope\", which is no part or look: name one floe or your own parts hold",
+		},
+		{
+			"looks named as text", with(map[string]string{"p/part.yaml": "looks:\n  - \"404\"\n  - |\n    panel\n"}), nil, nil,
+			lines(
+				"own/parts/p/part.yaml:2:5: looks names \"404\", which is no part or look: name one floe or your own parts hold",
+				"own/parts/p/part.yaml:3:5: looks names \"panel\\n\", which is no part or look: name one floe or your own parts hold",
+			),
+		},
+		{
+			"a look taking itself", with(map[string]string{"lk/part.css": "a{}", "lk/part.yaml": "looks: [lk]\n"}), nil, nil,
+			"own/parts/lk/part.yaml:1:9: the look lk takes itself (lk → lk), which floe would follow forever; fix its part.yaml",
+		},
+		{
+			"a part's cycle", with(map[string]string{"p/part.yaml": "looks: [zl]\n", "zl/part.css": "a{}", "zl/part.yaml": "looks: [p]\n"}), nil, nil,
+			"own/parts/p/part.yaml:1:9: the part p takes its own look (p → zl → p), which floe would follow forever; fix its part.yaml",
+		},
+		{
+			"marks: in the part and a look it takes", with(map[string]string{"p/part.yaml": "marks: box\nlooks: [numbered]\n"}), nil, nil,
+			"own/parts/p/part.yaml:1:1: p and the looks it takes write marks: twice (p and numbered), though one chain of looks writes it once: remove p's own marks:, or take one look that writes it",
+		},
+		{
+			"marks: in two looks taken", with(map[string]string{"p/part.yaml": "looks: [panel, numbered, marked]\n"}), nil, nil,
+			"own/parts/p/part.yaml:1:26: p and the looks it takes write marks: twice (numbered and marked), though one chain of looks writes it once: remove p's own marks:, or take one look that writes it",
+		},
+		// h takes g alone, which holds both itself: g is told, h not.
+		{
+			"marks: in two looks a taken look takes",
+			with(map[string]string{"g/part.css": "a{}", "g/part.yaml": "looks: [numbered, marked]\n", "h/part.css": "a{}", "h/part.yaml": "looks: [g]\n"}), nil, nil,
+			"own/parts/g/part.yaml:1:19: g and the looks it takes write marks: twice (numbered and marked), though one chain of looks writes it once: remove g's own marks:, or take one look that writes it",
+		},
+		{"marks: once down the looks", with(map[string]string{
+			"p/part.yaml": "marks: items\nlooks: [rows]\n", "foo/part.css": "a{}", "foo/part.yaml": "looks: [numbered]\n",
+			"bar/part.css": "a{}", "bar/part.yaml": "looks: [panel, marked]\n",
+		}), nil, nil, ""},
+		// The files in the order they come: palette.css, base.css, then the parts' files.
+		{"a theme", part, map[string]string{"t/palette.css": ":root { --a: 1 }\n}\n", "t/base.css": "}", "t/markdown.css": "}", "t/p.css": "@import \"x\";"}, nil, lines(
+			"own/themes/t/palette.css:2:1: "+braceTold,
+			"own/themes/t/base.css:1:1: "+braceTold,
+			"own/themes/t/markdown.css:1:1: "+braceTold,
+			"own/themes/t/p.css:1:1: floe puts this CSS in a layer, where a browser reads no @import: load the stylesheet with a <link> in page.html",
+		)},
+		{"a template without its files", part, nil, map[string]string{
+			"t/page.css": "}", "t/pgae.html": "", "t/computed.yaml": "n: [",
+		}, lines(
+			"own/templates/t: example.yaml is missing: a template has page.html, schema.json and example.yaml",
+			"own/templates/t: page.html is missing: a template has page.html, schema.json and example.yaml",
+			"own/templates/t: schema.json is missing: a template has page.html, schema.json and example.yaml",
+			"own/templates/t/page.css:1:1: "+braceTold,
+			"own/templates/t/pgae.html: floe reads no file of this name in a template: a template holds page.html, schema.json and example.yaml, and page.css, computed.yaml, checks.yaml, words.yaml and assets/ if it likes; rename it after one, or remove it",
+		)},
+	} {
+		src := kit.Sources{Parts: kit.Dir{FS: mapFS(tt.parts), Name: "own/parts"}}
+		if tt.themes != nil {
+			src.Themes = kit.Dir{FS: mapFS(tt.themes), Name: "own/themes"}
+		}
+		if tt.template != nil {
+			src.Templates = kit.Dir{FS: mapFS(tt.template), Name: "own/templates"}
+		}
+		k, err := kit.Read(floe(t), src)
+		if err != nil {
+			t.Fatalf("%s: %s", tt.name, told(err))
+		}
+		if got := told(kit.Check(k)); got != tt.want {
+			t.Errorf("%s: told\n%s\nwant\n%s", tt.name, got, tt.want)
+		}
+	}
+}
+
+// Drawing with floe's own, from the copies of their pages, leaves them as read: they check after, the escaping
+// of each page too.
+func TestCheckAfterDrawing(t *testing.T) {
+	t.Parallel()
+
+	k, err := kit.Floe()
+	if err != nil {
+		t.Fatal(err)
+	}
+	parts, _, _, templates := k.Names()
+	pages := make([]interface {
+		Page(lang string) (*template.Template, error)
+	}, 0, len(parts)+len(templates))
+	for _, name := range parts {
+		p, _ := k.Part(name)
+		pages = append(pages, p)
+	}
+	for _, name := range templates {
+		tm, _, err := k.Template(name)
+		if err != nil {
+			t.Fatal(err)
+		}
+		pages = append(pages, tm)
+	}
+	for _, p := range pages {
+		page, err := p.Page("en")
+		if err != nil {
+			t.Fatal(err)
+		}
+		// Its drawing of nothing may fail: what is asked is that it ran, which escapes it.
+		_ = page.Execute(io.Discard, nil) //nolint:errcheck // see above
+	}
+	if err := kit.Check(k); err != nil {
+		t.Errorf("Check after drawing: %v", err)
+	}
+}
+
+// corners returns the lines of told that refuse a corner of two items, kit_css_radius_length, by file:line:column and name, in
+// order.
+func corners(told string) []string {
+	var out []string
+	for line := range strings.Lines(told) {
+		if strings.Contains(line, "is read as one corner") {
+			where, rest, _ := strings.Cut(line, ": ")
+			name, _, _ := strings.Cut(rest, " ")
+			out = append(out, where+" "+name)
+		}
+	}
+	slices.Sort(out)
+	return out
+}
+
+// TestOwnCSS refuses a --radius-small or --radius-pill of more than one item in one's own themes, parts, looks and
+// templates, where it is, read over floe's: the theme and part checks read no template, so a page.css is told by those
+// that do. A value of one item, --radius of two and what is no corner pass.
+func TestOwnCSS(t *testing.T) {
+	t.Parallel()
+
+	parts := map[string]string{
+		"p/schema.json": `{"type": "object"}`, "p/part.html": `<div data-floe-part="p"></div>`,
+		"p/part.css":  ":scope {\n  --radius-pill: 5px 3px;\n  border-radius: var(--radius-pill);\n}\n",
+		"lk/part.css": ":scope { --radius-small: calc(2px + 1px); --radius-pill: var(--hand, 4px); }\n",
+	}
+	themes := map[string]string{
+		"t/palette.css": ":scope { --radius: 5px 3px; --radius-pill: 999px 4px; --radius-small: min(4px, 2vw); }\n",
+		"t/cards.css":   ".card { opacity: .5; text-transform: uppercase; border-radius: 4px; }\n:scope {\n  --radius-small: 5px / 3px !important;\n}\n",
+	}
+	templates := map[string]string{"m/page.css": ":scope { --radius-small: 4px 2px; }\n"}
+	themesParts := kit.Sources{
+		Parts: kit.Dir{FS: mapFS(parts), Name: "own/parts"}, Themes: kit.Dir{FS: mapFS(themes), Name: "own/themes"},
+	}
+	all := themesParts
+	all.Templates = kit.Dir{FS: mapFS(templates), Name: "own/templates"}
+	for _, tt := range []struct {
+		name string
+		src  kit.Sources
+		want []string
+	}{
+		{"floe theme check, floe part check", themesParts, []string{
+			"own/parts/p/part.css:2:18 --radius-pill", "own/themes/t/cards.css:3:19 --radius-small", "own/themes/t/palette.css:1:44 --radius-pill",
+		}},
+		{"floe template check, render, check, the server", all, []string{
+			"own/parts/p/part.css:2:18 --radius-pill", "own/templates/m/page.css:1:26 --radius-small", "own/themes/t/cards.css:3:19 --radius-small",
+			"own/themes/t/palette.css:1:44 --radius-pill",
+		}},
+	} {
+		k, err := kit.Read(floe(t), tt.src)
+		if err != nil {
+			t.Fatalf("%s: %s", tt.name, told(err))
+		}
+		if got := corners(told(kit.Check(k))); !slices.Equal(got, tt.want) {
+			t.Errorf("%s:\n got %v\nwant %v", tt.name, got, tt.want)
+		}
+	}
+
+	// Over none, as internal/css/lint reads its examples, the corners are not read.
+	k, err := kit.Read(nil, themesParts)
+	if err != nil {
+		t.Fatal(told(err))
+	}
+	if got := corners(told(kit.Check(k))); got != nil {
+		t.Errorf("over none: got %v, want none", got)
+	}
+}

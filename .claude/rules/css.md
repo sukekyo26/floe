@@ -1,0 +1,67 @@
+---
+paths:
+  - "**/*.css"
+  - "internal/kit/floe/**"
+  - "internal/draw/style.go"
+  - "internal/css/lint/**"
+---
+
+# CSS（変数の一覧と細かい形は docs/agents/parts.md・docs/agents/themes.md・docs/agents/templates.md）
+
+- **CSS の決まりは一覧の 1 行** [rule-lists]：CSS の字で読む決まりは `internal/css/lint` の `Rules` に 1 行足し、`testdata/<名前>/bad`（違反の行に want）と `good` を置き、行の終わりに `TestLintRule/<名前>` を書く。見た目を測る決まりは `internal/browsertest` の `looks` に 1 行足し、floe のページを測る `floe` と、書き手が書ける CSS（`!important` も）でその決まりを 1 か所だけ破るページを測る `broken` を持たせ、行の終わりに `TestLookRule/<名前>` を書く。自分のテーマ・部品・テンプレートが書くと値が黙って消え、値の字句だけで分かる決まりは、`internal/css` に置いて check でも断る（今は radius-length）。（判断）
+- **行の余白は `--floe-row-pad` と `--floe-pad-inline`** [row-pad]：線で区切った行の上下と左右の余白はこの 2 つだけが決める。見た目 rows を借りる側は行の余白を書かず、テーマは替えない。`TestLookRule/row-pad`
+- **箱の中の余白は `--floe-pad-block` と `--floe-pad-inline`** [box-pad]：部品の間に地や枠を持つ箱を描くときは、縁から字までをこの 2 つで書き、数で書かない（箱の中の小さな升、行、code の行は外）。見た目 panel 自身は余白を持たない。テーマは置き直さず、箱の余白を書かない。`TestLookRule/box-pad`
+- **部品の小さい字は 2 つの段** [text-scale]：部品と見た目の、本文より小さい字は数で書かず、`--floe-text-small`（札・印と名前・付記）か `--floe-text-aside`（添えの文・小さな題）で書く。`TestLintRule/text-scale`
+- **折り返す並びは、並びの位置で描き分けない** [wrapped-alike]：幅で折り返す並びの子の形（枠・余白）を `:first-child`・`:nth-child` などで描き分けない（どの子が行の先頭になるかは幅で決まる）。並んだ順に地の色を替えるのはよい。`TestLookRule/wrapped-alike`
+- **写すボタンは `copyButton` 1 つ** [copy-button]：part.html の `{{copyButton}}` だけが描き、写す要素は `data-floe-copy` で決める。部品ごとに script・ボタン・言葉・ボタンの形を書かない。部品の CSS が決めるのは置き場所だけで、大きさと間は defaults.css の `--floe-copy-*`。（判断）
+- **拡大は `zoom` 1 つ** [zoom]：枠の中で拡大する図と絵は、`part.html` の `{{zoom}}` と、見た目 `zoom` の枠 `.floe-zoom` で描く。部品ごとに script・道具の並び・言葉を書かない。部品の CSS が書くのは枠の大きさと中身の形だけ。（判断）
+- **code の一族は code の変数で描く** [code-look]：code の見た目を借りる部品（diff・terminal）は、余白と薄い字を code が根に置く `--floe-code-*` で描き、数と `.floe-copy` を写さない。`TestLintRule/code-look`
+- **code の一族の行** [code-lines]：行は `pre` の子の要素か、`<code class="lines">` の子の要素にし、行に padding を書かず、`:has(> .floe-copy)` を写さない（行に書くと code の余白が黙って消える）。テーマは `--floe-code-*` を置き直さない。（判断）
+- **目次は見た目 `toc` 1 つ** [toc]：テンプレートの目次は `data-floe-look="toc"` で借り、今の節は一覧のすぐ後の `{{contents}}` が付ける。page.css は置き場所と貼り付きを書き、見た目を変えるときは page.css で上書きして、見た目 `toc` の規則を書き写さない。（判断）
+- **CSS の記号は読ませず、数は読ませてよい** [speech-css]：`content` は `/` の後ろに読み上げを書く。記号は `/ ""`、数は前の `counter()` の並びで、字の文字列は書かない。`TestLintRule/speech-css`
+- **記号だけが持つ意味は見えない字で** [speech-read]：記号だけが持つ意味は `.floe-hidden` の見えない字で書く（言葉は words.yaml）。描いた印の読み上げは、字と見えない字のとおりになる。`TestLookRule/speech-read`
+- **本文の列は `.floe-column`** [column]：テンプレートの本文の列は class で付け、列の字（max-width・margin-inline・padding-inline）を page.css に書かない。幅は `--column-width` で決める。字の大きさはページで決めない。列は見た目にしない。（判断）
+- **パレットの無いページでも図は同じ色** [fragment-alone]：`floe diagram render` の切れ端は、パレットの無いページと shadow root でも、floe のページと同じ色で描く（図の根に置くパレットと tones だけで塗る）。`TestLookRule/fragment-alone`
+- **パレットの無いページへ出す CSS は自分の根だけに** [fragment-outside]：切れ端の CSS は自分の根だけに当て、まわりのページの見た目を変えない（`diagramAssets`）。`TestLookRule/fragment-outside`
+- **パレットの変数は docs の表に名前で書く** [palette-in-docs]：default の palette.css の変数は、docs/agents/templates.md の「The palette」と docs/agents/themes.md の「Palette」の表に、まとめずに名前を字のまま書き、既定の値も default の palette.css と同じに書く（raw と自分のテーマが頼る約束なので）。`TestLintRule/palette-in-docs`
+- **CSS の変数は docs の表に値で書く** [parts-in-docs]：defaults.css が `:root` に置く `--floe-*` と、base.css が `@property` で置く既定と、code の part.css が置く `--floe-code-*` は、docs/agents/parts.md の表に名前を字のまま書き、既定の値も実物と同じに書く（自分の部品が頼る約束なので）。floe の部品・見た目が `:scope` に置くか、既定付き（`var(--x, 既定)`）で読む変数は、docs/agents/themes.md の Part variables の表に、既定の値も実物と同じに書く。テーマが置かない変数は、規則の `Allow` に理由を書く。「Code's look」の節が単独の code で挙げる `.クラス` は、code の part.css のセレクタにある。`TestLintRule/parts-in-docs`
+- **raw の色の表は palette と照らす** [raw-in-docs]：docs/agents/diagrams.md の raw の節の表には、default の palette.css の変数の全部から、規則の `Allow` が理由つきで外すもの（字・大きさ・角・影など）を除いたものを、名前を字のまま書く。palette に変数を足したら、表か `Allow` に足す。`TestLintRule/raw-in-docs`
+- **tone は `data-floe-tone` と、floe が tone.json から組み立てる変数** [tone]：tone の印は class でなく `data-floe-tone`。名前を色に写すのは style.go の `Tones` だけで、部品・テーマ・テンプレートは `--tone`・`--tone-soft`・`--tone-fill` を読む。tone ごとのセレクタは tone の色でないものにだけ書く。テーマが自分の色で塗るときはパレットに `--<tone>-fill` を置く。`TestLookRule/tone`
+- **部品の箱と見た目の並びは floe が外す** [lists-off]：`ul`・`ol`・`menu` の印・左の余白・項目の間は style.go の `boxes` が外し、grid で並べる。`TestLookRule/lists-off`
+- **部品の箱と見た目の並びは印を出さない** [lists-marked]：部品の箱か見た目である `ul`・`ol`・`menu` は、どのテーマ・テンプレートでも印を出さない。`TestLookRule/lists-marked`
+- **色で塗った帯は見た目 `band` 1 つ** [band]：テンプレートは、`--accent` で塗った帯を page.css に書かず、`data-floe-look="band"` で借りる。page.css が書くのは帯の余白と中の並びだけ。（判断）
+- **塗った面は `--face` と `--on-face`** [face]：地と字の色を自分で決め、中にリンク・行の code・フォーカスの輪が来る面は、2 つの変数を置いて `background: var(--face); color: var(--on-face)` で塗る。中の色は base.css 1 か所が決め、面ごとに書かない。部品の中身は base.css が変数を外すので、部品の根を面にするときは根と根の子に置く。自分の地を塗る見た目・部品は、地と一緒に `color: var(--fg)` を書き、面の変数を外す。地を塗らずに字や輪の色を書くときは、面の中に来うるなら `var(--on-face, …)` で書く。部品の箱の字の色を外から直す規則は書かない。（判断）
+- **字は読める** [contrast-text]：floe のページ（帯の中も）の字は WCAG AA で、下の地から読める。`TestLookRule/contrast-text`
+- **フォーカスの輪は見える** [contrast-ring]：floe のページ（帯の中も）のフォーカスの輪は 3:1 で下の地から見える。`TestLookRule/contrast-ring`
+- **帯の中の部品は面の色で描く** [band-face]：帯の中に置いた部品・見た目・Markdown は帯の面の色で描く。地を持つもの（note・カード）は自分の地を持ち、持たないもの（text）は帯の字の色。行の code だけを枠で囲み、見出しに印を付けず、選んだタブの地は帯の地から 3:1 離す。`TestLookRule/band-face`
+- **CSS の勝ち負けは層で決まる** [layers]：セレクタの詳しさでなく、floe が並べる層で決まる（順は `draw.pageStyle` のコメント）。部品・見た目の名前に `base`・`palette`・`markdown` は使えない。`TestLookRule/layers`
+- **入れ子では外が勝つ** [nesting]：部品や見た目の中の部品の箱は、入れ子の外の規則に負け、同じ形に描く。`TestLookRule/nesting`
+- **Markdown の見た目は markdown.css** [markdown-css]：テーマの base.css はページの段で部品の箱と text の外枠で止まり、Markdown の見た目は markdown.css に書く（ページ全体に届くので、部品が描かない要素だけ）。（判断）
+- **状態と頭はテーマが変数で塗る** [states]：表の頭、選んだタブ、code の頭は、部品が `var(--x, 既定)` で読む変数をテーマが塗る。画面だけの状態は部品が `@media screen` で塗る。（判断）
+- **テーマは状態と印刷を書かない** [theme-states]：floe のテーマは `:checked` と `@media print` を書かない。`TestLintRule/theme-states`
+- **テンプレートが部品の形で描くものは、部品の箱として置く** [template-boxes]：札や注意の囲みは見た目として借りず、page.html に部品の箱（`data-floe-part="cell"`・`"note"`）で置き、色は `data-floe-tone`。page.css は箱の置き場所だけを書く。書き手の自由な字は cell にしない（長さに上限が無い）。札の形は `TestRenderedPills` が測る。（判断）
+- **番号と線の手順は見た目 `numbered` 1 つ** [numbered]：丸い番号と線を part.css・page.css に書かず、`numbered` を借りる。丸の色は tone と `data-floe-mark` で決め、`::before`・`::after` の色を上書きしない。（判断）
+- **項目に添える短い値の並びは見た目 `tags`** [tags]：部品の 1 つの項目に、cell の書き方の値の配列を並べるときは、間・折り返し・字の形を part.css に書かず `data-floe-look="tags"` を借り、値を 1 つずつ `<span>` に包む（pill は cell の箱のまま）。表の行、floe が組み立てる並び、配列でない値の組は外。（判断）
+- **テーマはカードの中の間を `--cards-gap` で変える** [cards-gap]：テーマは `.card` に gap を書かず、`--cards-gap` で変える。`TestLookRule/cards-gap`
+- **カードの中の間は `var(--cards-gap)`** [cards-gap-var]：見た目 cards のカード（それを借りる部品のカードも）の中の間は `var(--cards-gap)` で書き、0.4rem を写さず、部品ごとの間も決めない。`TestLookRule/cards-gap-var`
+- **テーマが変える部品の変数は根に置く** [part-variables]：部品・見た目は変数を `:scope` に置き、テーマはその変数を置くか読む部品・見た目のファイルの `:scope` に置く。どちらも `!important` にしない。`TestLintRule/part-variables`
+- **行の印は floe が floe.marks に 1 つ並べる** [marks]：左に印のある行は part.yaml の `marks:` 1 つ（`box`・`items`・`joined`）で言い、HTML に class を書かない。floe が書くのは置き場所と大きさだけで、色・丸さ・中身は部品・見た目・テンプレートが書く。上の層で行の `display`・`gap`・`grid-template` を書かない（黙って勝つ）。中身の間は `> * + *` の `margin-top`。テーマは印を `content: none` で消し、大きさと間は `--floe-mark`・`--floe-mark-gap` で変える。1 つの字・題の前の飾り、`::marker`、code の行の番号と線（floe が選ぶ行は部品の根か `> li` で、`<code>` の中に届かない）、中に部品を持つ行の左の線は外。`TestLookRule/marks`
+- **横に流れる箱は、画面で中身の幅を外へ言わない** [scroll-contain]：画面で横に流れる箱は `contain: inline-size` を持つ（`overflow-x: auto` と一緒に `@media screen` に書く。例は base.css）。`TestLookRule/scroll-contain`
+- **横に流れる箱の地は中身の端まで** [scroll-ground]：横に流れる箱の中で地を塗る要素は、中身の端まで伸びる。`TestLookRule/scroll-ground`
+- **部品は狭い画面でも自分の場所に収まる** [scroll-wrap]：狭い画面で、部品の箱は自分の場所からはみ出さず、狭い列の語は途中で折れない。`TestLookRule/scroll-wrap`
+- **横に流れる箱は幅の決まった所に置く** [scroll-place]：横に流れる箱を、中身で幅が決まる所（inline-block・fit-content・flex の auto など）に置かない。置くと画面で潰れる（例は base.css）。（判断）
+- **紙では中身を折り返す** [paper-wrap]：紙では横に流れる箱も中身を折り返し、紙の幅からはみ出さない。`TestLookRule/paper-wrap`
+- **印刷で地を落とさない** [paper-ground]：印刷の地は base.css の `print-color-adjust` 1 か所が残し、ほかで替えない。`TestLookRule/paper-ground`
+- **紙ではタブの札を同じに描く** [print-tabs]：紙ではどのタブも札の下に出るので、選んだ札だけを違う形に描かない（画面だけの形は `@media screen` に）。`TestLookRule/print-tabs`
+- **部品の間は `--floe-room`** [room]：部品が並ぶ所と Markdown のブロックの間は `var(--floe-room)` で、数で書かない。部品の根は margin を書かない。部品の中の Markdown は `MarkdownFlow`、テンプレート自身のものは `kit.Markdown` が包むので、部品は流れの中の間を書かない。`TestLookRule/room`
+- **箱の外へ出る飾りは `--floe-room` 以下** [shadows]：箱の外へ描く飾りは四方とも `--floe-room` 以下で、傾きや拡大を使わず、場所を空けない。中に部品を持つ行の左の線を枠で描かない（行が箱になり、中の部品の影が外へ出る）。`TestLookRule/shadows`
+- **影は base.css の 1 つの規則が描く** [shadow-cast]：部品の箱・見た目の要素・引用の `box-shadow` は base.css の 1 つの規則だけが書き（ほかで書くと影が黙って消える）、テーマはパレットの `--floe-shadow-*` と箱の `--floe-shadow-color`・`--floe-inset` で描く。`TestLookRule/shadow-cast`
+- **テンプレートの見出しは包みの外の形で指す** [template-markdown]：page.css は自分の見出しの規則を包みの外の形（`header h1`・`section > h2`）で指し、テンプレートの Markdown の見出しは text の中と同じに描く。`TestLookRule/template-markdown`
+- **角の丸さはパレットの 3 つの変数** [radius]：角は `--radius`・`--radius-small`・`--radius-pill` を読むか、形（`0`・`50%`・`999px`）だけを書く。縁に沿う内の箱は、余白の変数を引く（`calc(var(--radius) - var(--pad))`）。4 つの角が違う形はテーマの自分の変数に置く。角が読むほかの変数は、パレット、テーマの base.css の `:scope`、floe の defaults.css の `:root` だけが置く。`TestLintRule/radius`
+- **pill と小さな角は 1 つの項** [radius-length]：`--radius-small`・`--radius-pill` の値は 1 つの長さか 1 つの関数（棒の `rx` と pill の `min()` が読み、2 つの項は黙って無効になる）。自分のテーマ・部品・テンプレートも check が断る。`TestLintRule/radius-length`
+- **1 つの所だけが置く変数** [one-place]：`--page-width`・`--text-width`・`--page-pad`・`--radius`・`--radius-small`・`--radius-pill` はパレット（`--radius` は 1 つの長さ）、`--column-width` はテンプレートの page.css、`--floe-text-` で始まる変数は floe の defaults.css だけが置く。`TestLintRule/one-place`
+- **floe の根の変数の既定値は defaults.css** [defaults-root]：floe が根に置く `--floe-*` の既定値は、一番下の層 `floe.defaults` に入る defaults.css だけが置く（テーマの palette.css と base.css が勝つ）。defaults.css は何も付かない `:root` の `--floe-*` の宣言だけで、`!important` と at-rule を書かない。floe の base.css は、at-rule の外の `:root` に `--floe-*` を置かない。`TestLintRule/defaults-root`
+- **静かな地は `--quiet`** [quiet]：箱の中の静かな地はパレットの `--quiet` を読み、部品が割合を混ぜない。テーマだけの変数はパレットか base.css の `:scope` に置く（default の palette.css はどのテーマの下にも入るので、default だけのものは base.css に）。（判断）
+- **テーマの飾りは場所を取らない** [room-free]：padding を広げず、地の色や透明の枠で場所を作らず、今ある余白の上に重ねて描く（地、`--floe-inset`、`::before`）。部品が輪や印を outline で描く箱に、飾りの outline を書かない（輪に置き換わって消える）。（判断）
+- **テーマの飾りは言葉を書かない** [theme-marks]：テーマの CSS は受ける形だけを書く：文字列は記号だけで、字は書体の名前にだけ（CSS の字は words.yaml を通らない）、数え方は decimal の類と形だけ。`TestLintRule/theme-marks`
+- **字の大文字と小文字は変えない** [text-case]：floe の CSS（部品・見た目・テーマ・テンプレート）は `text-transform` を `none` のほか書かない。大文字にしたい字は字そのもので書く。`TestLintRule/text-case`

@@ -1,0 +1,2 @@
+:scope > .cell.on { --list-c: blue; }
+:scope > .cell { color: var(--list-c); }

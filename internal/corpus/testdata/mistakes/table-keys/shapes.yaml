@@ -1,0 +1,18 @@
+# What the schema refuses of an id and of a row by keys, at the value, a key of a slash too.
+lang: en
+template: report
+title: Shapes
+sections:
+  - heading: a
+    parts:
+      - table:
+          columns:
+            - { id: 'x/y', title: Slash }
+            - { id: 1, title: A number }
+            - { id: '', title: Empty }
+            - { id: d }
+          rows:
+            - {}
+            - { 'x/y': null }
+            - { 'x/y': { pill: x, tone: pink } }
+            - plain

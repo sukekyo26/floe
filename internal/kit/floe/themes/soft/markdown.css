@@ -1,0 +1,2 @@
+blockquote > * { --face: initial; --on-face: initial; --quiet: var(--surface); }
+blockquote { color: var(--muted); border: 0; padding: 0.9rem 1.25rem; border-radius: var(--radius); background: var(--quiet); }

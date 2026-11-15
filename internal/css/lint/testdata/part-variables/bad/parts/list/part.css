@@ -1,0 +1,7 @@
+:scope li { --list-mark: 2rem; } /* want "list sets --list-mark on :scope li: set it on its :scope, which a theme's value on the root then reaches; a variable that switches between elements is an exception of this rule, \"list --list-mark\", with its reason" */
+:scope { --list-gap: 1rem !important; } /* want "list sets --list-gap !important on :scope, which a theme's value cannot win over: leave !important out" */
+:scope { &.big { --list-big: 1rem; } } /* want "list sets --list-big on :scope { &.big: write it unnested, as :scope.big { … }" */
+@scope (li) { :scope { --list-s: 1px; } } /* want "list sets --list-s on @scope (li) { :scope: move it out of that rule: only @media, @supports, @layer and @container keep it on the root" */
+:scope li { --list-mark/**/: 1rem; } /* want "list sets --list-mark on :scope li: set it on its :scope, which a theme's value on the root then reaches; a variable that switches between elements is an exception of this rule, \"list --list-mark\", with its reason" */
+:scope li.on { --list-c: red; }
+:scope li::before { width: var(--list-mark); }

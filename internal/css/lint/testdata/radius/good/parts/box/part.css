@@ -1,0 +1,7 @@
+.a { border-radius: var(--radius); }
+.b { border-radius: 0; }
+.c { border-radius: 50%; }
+.d { border-radius: calc(var(--radius) - var(--floe-room)); }
+.e { border-top-left-radius: min(var(--radius-pill), var(--corner-x)); }
+.f { border-radius: var(--corner-y); }
+.g { rx: 999px; }

@@ -1,0 +1,9 @@
+template: report
+lang: en
+title: Script
+sections:
+  - heading: A
+    parts:
+      - script:
+          js: "(el, d) => { el.textContent = '</script>' }"
+          data: { a: 1 }

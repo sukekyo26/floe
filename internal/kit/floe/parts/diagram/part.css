@@ -1,0 +1,53 @@
+/* Diagrams take the colours of the page's CSS variables, so they follow the theme. text-anchor is
+   set as an attribute: in CSS it would win over the attribute and undo each text's own anchor */
+/* The frame spans the body's width. Its height follows the diagram's aspect ratio, capped by the
+   screen's height and by max-height (how far it may grow), with the diagram centred in it. It paints its own ground,
+   --bg, the one what hides the lines under it (a label's box, a hollow end or dot) is painted: CSS cannot read the
+   ground outside it. Its colour is --fg, for raw's currentColor */
+/* LIMIT: the ground is flat, so a theme's pattern on the page (aurora's, notebook's, blueprint's) does not run through a
+   diagram, and a fragment of floe diagram render on another page paints default's --bg, a light box on a dark page
+   (its docs tell to set --bg on the roots); to let the ground through, cut the lines under what hides them (a mask)
+   instead of painting one */
+.floe-zoom { width: 100%; color: var(--fg); background: var(--bg); border: 1px solid var(--line); border-radius: var(--radius-small); }
+/* What has no tone draws in its shape's own colours, written after var(): the diagram's root holds no tone, unlike
+   a part's box, and what has one (data-floe-tone) takes its colours */
+.dg { --tone: initial; --tone-soft: initial; position: absolute; inset: 0; display: block; width: 100%; height: 100%; font-family: var(--font); }
+.dg text { dominant-baseline: central; }
+.dg .main { fill: var(--fg); font-size: 13px; font-weight: 700; }
+.dg .sub { fill: var(--muted); font-size: 12px; }
+.dg .code { font-family: var(--mono); font-size: 12px; }
+.dg .box rect, .dg .box path { fill: var(--tone-soft, var(--surface)); stroke: var(--tone, var(--line)); stroke-width: 1.2; }
+.dg .box[data-floe-tone=bad] text { fill: var(--tone); }
+.dg .table .bg { fill: var(--surface); }
+.dg .table .head { fill: var(--tone-soft, var(--surface)); }
+.dg .table .outline { fill: none; stroke: var(--tone, var(--line)); stroke-width: 1.2; }
+.dg .table .sep { stroke: var(--line); }
+.dg .cell { fill: var(--fg); }
+.dg .type { fill: var(--muted); font-size: 12px; }
+/* A frame's dashes are a little darker than the secondary text. Without color-mix, --muted stays */
+.dg .frame rect { fill: none; stroke: var(--muted); stroke: color-mix(in srgb, var(--muted) 75%, var(--fg)); stroke-width: 1.2; stroke-dasharray: 5 4; }
+.dg .frame.accent rect { stroke: var(--accent); }
+.dg .frame rect.icon-ground { fill: var(--bg); stroke: none; }
+.dg .frame text { fill: var(--muted); font-size: 12px; font-weight: 700; }
+.dg .frame.grouped text { fill: var(--fg); font-size: 13px; }
+.dg .edge { fill: none; stroke: var(--tone, var(--muted)); stroke-width: 1.5; }
+.dg .line { fill: none; stroke: var(--muted); stroke-width: 1.5; }
+.dg .edge.dashed { stroke-dasharray: 5 4; }
+.dg .edge.bold { stroke-width: 3; }
+/* An edge's ends take its colour (context-stroke). Without it, --muted stays */
+.dg .mk-fill { fill: var(--muted); fill: context-stroke; }
+.dg .mk-hollow { fill: var(--bg); stroke: var(--muted); stroke: context-stroke; stroke-width: 1.2; }
+.dg .mk-line { fill: none; stroke: var(--muted); stroke: context-stroke; stroke-width: 1.5; }
+.dg .dot { fill: var(--tone, var(--muted)); stroke: var(--tone, var(--muted)); }
+.dg .dot.hollow { fill: var(--bg); stroke-width: 2; }
+.dg .bar { fill: var(--tone, var(--muted)); }
+/* An icon of lines (lucide) is a mask over currentColor, which only the color of its <use> reaches */
+.dg use.icon { color: var(--tone, var(--fg)); }
+.dg .axis { stroke: var(--muted); stroke-width: 1.2; }
+.dg .grid { stroke: var(--line); }
+.dg .venn { fill: var(--tone-soft, var(--accent-soft)); fill-opacity: 0.6; stroke: var(--tone, var(--accent)); stroke-width: 1.5; }
+.dg .label-bg { fill: var(--bg); }
+.dg .label { fill: var(--fg); font-size: 12px; }
+.dg .label.strong { font-size: 13px; font-weight: 700; }
+.dg .lifeline { stroke: var(--muted); stroke-width: 1.2; stroke-dasharray: 6 4; }
+.dg .divider { stroke: var(--muted); stroke-width: 1.2; stroke-dasharray: 12 6; }

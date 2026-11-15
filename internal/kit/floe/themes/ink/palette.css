@@ -1,0 +1,14 @@
+:scope {
+  --chart-1: #3f58a8; --chart-2: #b0531f; --chart-3: #00908a; --chart-4: #8f4fc0;
+ 
+  /* Width and style of this theme's box frames, and of lines drawn inside boxes alike */
+  --ink-frame: 1.5px solid;
+  --bg: #fafaf7; --surface: #fff; --fg: #141414; --muted: #5a5a5a; --line: #d9d9d4;
+  --accent: #2b3a67; --accent-soft: #e3e7f1;
+  --good: #1e6b43; --good-soft: #dcebe2; --warn: #8a5a10; --warn-soft: #f3e7d1; --bad: #a8261e; --bad-soft: #f6e0de;
+  --code-bg: #141414; --code-fg: #ececec; --code-prompt: #9fb4e6;
+  --rule: 2px solid var(--fg);
+  /* The hard shadow of its cards, falling right and down */
+  --floe-shadow-x: 4px; --floe-shadow-y: 4px;
+  --radius: 14px; --radius-pill: 6px;
+}

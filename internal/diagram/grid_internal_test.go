@@ -1,0 +1,86 @@
+package diagram
+
+import (
+	"math"
+	"slices"
+	"testing"
+)
+
+// grid gives at most 501 points, each within the range, the first, each next and the last at most step from where
+// the one before is, one at least for a range there is, at the ends of what may be written too, and the middle of the
+// range when it is in the canvas.
+func TestGridBounded(t *testing.T) {
+	t.Parallel()
+
+	for _, tt := range []struct {
+		name         string
+		lo, hi, size float64
+		n            int     // the points
+		last         float64 // the last point, NaN for any
+	}{
+		{"far from 0", 999000 - 100, 999000 + 100, 1e7, 51, 999100},
+		{"the largest radius", -2e6, 2e6, 1e7, 501, 2e6},
+		{"to a point", 817.1, 1045.1, 1907, 57, 1043.1},
+		{"to hi", 0, 8, 100, 3, 8},
+		{"one point", 10, 10, 100, 1, 10},
+		{"narrower than step", -1, 2, 100, 1, 0.5},
+		{"no point the canvas leaves", -100, 2, 100, 1, 0},
+		{"no range", 50, 10, 100, 0, math.NaN()},
+		{"out of the canvas", 120, 130, 100, 0, math.NaN()},
+	} {
+		mid := (tt.lo + tt.hi) / 2
+		got := grid(tt.lo, tt.hi, mid, tt.size)
+		last := math.NaN()
+		if len(got) > 0 {
+			last = got[len(got)-1]
+		}
+		if len(got) != tt.n || !math.IsNaN(tt.last) && last != tt.last {
+			t.Errorf("%s: grid gives %d points, the last %v; want %d, %v", tt.name, len(got), last, tt.n, tt.last)
+		}
+		if why := gridBroken(got, tt.lo, tt.hi, tt.size); why != "" {
+			t.Errorf("%s: grid(%v, %v, %v, %v) %s", tt.name, tt.lo, tt.hi, mid, tt.size, why)
+		}
+		from, to := max(tt.lo, 0), min(tt.hi, tt.size)
+		onMid := func(p float64) bool { return math.Abs(p-mid) <= rounding(from, to) }
+		if mid >= from && mid <= to && !slices.ContainsFunc(got, onMid) {
+			t.Errorf("%s: grid has no point at the middle %v", tt.name, mid)
+		}
+	}
+}
+
+// gridBroken tells how points, of grid(lo, hi, mid, size), break its rules; "" for none, with room for rounding.
+func gridBroken(points []float64, lo, hi, size float64) string {
+	from, to := max(lo, 0), min(hi, size)
+	switch {
+	case !(from <= to):
+		if len(points) > 0 {
+			return "has points for no range"
+		}
+		return ""
+	case len(points) == 0:
+		return "has no point"
+	case len(points) > 501:
+		return "has over 501 points"
+	}
+	most := max(4, (to-from)/500) + rounding(from, to)
+	at := from
+	for _, p := range points {
+		switch {
+		case !(p >= from && p <= to):
+			return "has a point out of the range"
+		case p-at > most:
+			return "leaves a gap over step"
+		}
+		at = p
+	}
+	if to-at > most {
+		return "ends over step before the range does"
+	}
+	return ""
+}
+
+// rounding is the room left for rounding in a grid from from to to: four of the float's spacing at its ends.
+func rounding(from, to float64) float64 {
+	edge := max(math.Abs(from), math.Abs(to))
+	return 4 * (math.Nextafter(edge, math.Inf(1)) - edge)
+}

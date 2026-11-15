@@ -1,0 +1,15 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "decision",
+  "description": "A decision: its title large, why in Markdown text, and the options set aside, under its status and date",
+  "type": "object",
+  "properties": {
+    "title": { "type": "string", "minLength": 1, "description": "What was decided, as a sentence" },
+    "status": { "$ref": "floe:///parts/cell.json", "description": "Such as { pill: decided, tone: good }." },
+    "date": { "type": "string", "minLength": 1 },
+    "text": { "type": "string", "minLength": 1, "description": "Why; Markdown" },
+    "rejected": { "type": "array", "minItems": 1, "items": { "type": "string", "minLength": 1, "description": "An option set aside, and why; a line of Markdown" } }
+  },
+  "required": ["title"],
+  "additionalProperties": false
+}

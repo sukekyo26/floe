@@ -1,0 +1,1 @@
+".proj-tint" a project's colour is each row's, mixed with :root's outside it
