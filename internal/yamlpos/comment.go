@@ -18,6 +18,9 @@ import (
 // LIMIT: a comment right after a | or > text past --- or ... ("---", "# c"), or after an empty | text, is refused
 // too, and so is one after an empty [] or {} item that follows the text (- |, x, - [], "# c"): the walk follows
 // scalars alone.
+// LIMIT: a comment right after a | or > text that v4 gives as the foot of the next item's first key passes, as the
+// walk looks for the text under that key alone: one with a blank line and an item at its depth after it (- text: |,
+// "    one", "  # c", "", "  - text: more"), or one followed by an empty item (- |, "  x", " # c", -).
 // LIMIT: a comment on a line of its own, deeper than the key of a plain value before it (a: b, then "   # c"), passes:
 // YAML 1.2 reads it as a comment, and a plain value goes on over lines only where the line does not start with #,
 // so a line of such a value over lines that starts with # ends it with no mistake (a: Plan, "  draft", "  #1").
