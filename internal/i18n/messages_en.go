@@ -17,6 +17,7 @@ var messagesEN = map[string]string{
 	"yaml_not_utf8":             "this byte is not UTF-8: save the file as UTF-8",
 	"text_bom":                  "a byte order mark (U+FEFF) is here, which is read as a character: remove it, or write \\ufeff in a double-quoted string where the text needs one",
 	"yaml_line_separator":       "%s is here, which is read as a line break: remove it, or write %s in a double-quoted string where the text needs it",
+	"yaml_too_large":            "this YAML file is %d bytes, and floe reads up to %d bytes: make it smaller, a page's data by splitting it into several pages",
 	"yaml_no_anchors":           "anchors, aliases, merge keys (<<) and tags are not supported; write the value out",
 	"yaml_comment_cut":          "a # began a YAML comment, which may have cut the value short, to %s: if the # is part of the value, put the value in quotes, or, in a | or > text, indent all its lines alike, the # line too, or write its indentation after the | or > (like |2); else write the comment on a line of its own, no deeper than the value's key (or the - of an item)",
 	"yaml_flow_key_alone":       "%q is a key with no value written in { }: write its value after the \":\"; if a , in text ended the text before it, put that text in quotes",

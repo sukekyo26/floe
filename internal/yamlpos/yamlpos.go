@@ -100,14 +100,14 @@ func ParseMap(file string, src []byte) (*Node, map[string]any, error) {
 }
 
 // Parse reads src as one YAML document with go.yaml.in/yaml/v4 and returns its body, or ErrEmpty when src holds
-// none. A byte order mark at its start is left out, as YAML 1.2 reads it. Before it is read, a byte order mark past
-// the start, a byte that is no UTF-8 and U+0085, U+2028 and U+2029 are refused (bytesOf). A syntax error, and a
-// nesting past go.yaml.in/yaml/v4's depth, is its own (library). A second document is refused at its start.
+// none. A byte order mark at its start is left out, as YAML 1.2 reads it. Before it is read, a file over 1 MiB is
+// refused alone, else a byte order mark past the start, a byte that is no UTF-8 and U+0085, U+2028 and U+2029
+// (bytesOf). A syntax error, and a nesting past go.yaml.in/yaml/v4's depth, is its own (library). A second document
+// is refused at its start.
 // Else one walk of the body refuses, all together, sorted: anchors, aliases, merge keys and tags, not walking what
 // they hold; a key that is not text as YAML 1.2 reads it, and a key written twice in one mapping; a key in { }
 // without a value; and a plain value YAML 1.2 reads as a number JSON has none for (.inf, .nan) or floe cannot hold.
 func Parse(file string, src []byte) (*Node, error) {
-	src = bom.Trim(src)
 	body, err := document(file, src)
 	if err != nil {
 		return nil, err
@@ -127,7 +127,8 @@ func Parse(file string, src []byte) (*Node, error) {
 // LIMIT: a lone surrogate escaped in double quotes ("\udc00") go.yaml.in/yaml/v4 refuses with its words, which do
 // not say which escape; word it if one comes to matter.
 func document(file string, src []byte) (*yaml.Node, error) {
-	if err := bytesOf(file, src); err != nil {
+	src, err := bytesOf(file, src)
+	if err != nil {
 		return nil, err
 	}
 	l, err := yaml.NewLoader(bytes.NewReader(src))
@@ -175,18 +176,30 @@ func notUTF8(file string, src []byte) error {
 	return nil
 }
 
-// bytesOf refuses, together, each byte order mark of src past its start (src is without the first), and either
-// the first byte that is no UTF-8 or, in UTF-8 alone, each U+0085, U+2028 and U+2029. A mark past the start would be
-// read as a character of a key or a value. go.yaml.in/yaml/v4 reads UTF-16 with a mark without a mistake, which
-// floe's checks of bytes and places, all of UTF-8, would miss: a byte that is no UTF-8 is refused before it reads.
+// maxSize is the size of a YAML file floe reads, as the bytes of the file.
+// LIMIT: 1 MiB, past the largest page's data seen (326 KB), and the file is read whole before it is refused:
+// the memory goes as the file's size. Refuse it where it is read if reading a very large file comes to matter.
+const maxSize = 1 << 20
+
+// bytesOf returns src, file, without the byte order mark at its start, which YAML 1.2 allows: go.yaml.in/yaml/v4,
+// textpos and floe's checks all read src so, so that their places agree.
+// A file over maxSize is refused alone, at the file, before anything reads it. Else bytesOf refuses, together,
+// each byte order mark past the start, and either the first byte that is no UTF-8 or, in UTF-8 alone, each
+// U+0085, U+2028 and U+2029. A mark past the start would be read as a character of a key or a value.
+// go.yaml.in/yaml/v4 reads UTF-16 with a mark without a mistake, which floe's checks of bytes and places, all of
+// UTF-8, would miss: a byte that is no UTF-8 is refused before it reads.
 // The three characters are looked for only in UTF-8: in another encoding (Shift_JIS) their bytes come inside
 // other characters, and would be told where no such character is.
-func bytesOf(file string, src []byte) error {
+func bytesOf(file string, src []byte) ([]byte, error) {
+	if len(src) > maxSize {
+		return nil, New(file, Pos{Line: 0, Column: 0}, "yaml_too_large", len(src), maxSize)
+	}
+	src = bom.Trim(src)
 	read := notUTF8(file, src)
 	if read == nil {
 		read = lineSeparators(file, src).Err()
 	}
-	return usererr.Collect(bom.Refuse(file, src).Err(), read) //nolint:wrapcheck // the mistakes of src
+	return src, usererr.Collect(bom.Refuse(file, src).Err(), read) //nolint:wrapcheck // the mistakes of src
 }
 
 // lineSeparators refuses each U+0085, U+2028 and U+2029 of src, file, valid UTF-8, at its line and column, in

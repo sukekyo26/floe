@@ -225,6 +225,31 @@ func TestParseLineSeparators(t *testing.T) {
 	}
 }
 
+// A file over 1 MiB is refused at the file alone, counted as its bytes with the byte order mark at its start, and
+// before what else is refused of its bytes.
+func TestParseSize(t *testing.T) {
+	t.Parallel()
+
+	of := func(size int, head string) string {
+		return head + "a: 1\n#" + strings.Repeat("x", size-len(head)-len("a: 1\n#\n")) + "\n"
+	}
+	tooLarge := func(size int) string {
+		return "a.yaml: " + i18n.EnglishCatalog().Msg("yaml_too_large", size, 1<<20)
+	}
+	for _, tt := range []struct{ name, src, want string }{
+		{"1 MiB", of(1<<20, ""), ""},
+		{"1 MiB with a mark", of(1<<20, bom), ""},
+		{"a byte over", of(1<<20+1, ""), tooLarge(1<<20 + 1)},
+		{"a byte over with a mark", of(1<<20+1, bom), tooLarge(1<<20 + 1)},
+		{"over, not UTF-8", of(1<<20+1, "b: \xc3\n"), tooLarge(1<<20 + 1)},
+	} {
+		_, err := yamlpos.Parse("a.yaml", []byte(tt.src))
+		if got := told(err); got != tt.want {
+			t.Errorf("%s: Parse of %d bytes told\n%s\nwant\n%s", tt.name, len(tt.src), got, tt.want)
+		}
+	}
+}
+
 // A tab is a character of a value as YAML 1.2 reads it: after the indentation of a | or > text (with spaces before
 // it or not, on its first line or after), and inside a plain value (S370). One where indentation goes is
 // go.yaml.in/yaml/v4's mistake.
