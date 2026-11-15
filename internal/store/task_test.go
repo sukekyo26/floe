@@ -460,7 +460,7 @@ func TestTaskForget(t *testing.T) {
 		taskIn(t, s, project)
 	}
 	refused("p", "task #1 of project p still has 1 page(s), such as kept")
-	refused("/", "task #1 of project / still has 1 page(s), such as none")
+	refused("/", "task #1 of no project still has 1 page(s), such as none")
 	refused("spaced", "task #1 of project spaced still has 1 page(s), such as spaced")
 	if err := os.RemoveAll(filepath.Join(root, "kept")); err != nil {
 		t.Fatal(err)
@@ -698,8 +698,8 @@ func TestTaskParent(t *testing.T) {
 		name, parent, want string
 	}{
 		{"#1", " #1 ", "task #1 cannot be its own parent"},
-		{"#4", "#7", "project p has no task #7 that can be a parent"},
-		{"#4", "#8", "project p has no task #8 that can be a parent"},
+		{"#4", "#7", "no task #7 in project p can be a parent"},
+		{"#4", "#8", "no task #8 in project p can be a parent"},
 		{"#4", "#2", "task #2 has a parent itself (#1), so it cannot be a parent"},
 		{"#1", "#2", "task #2 has a parent itself (#1), so it cannot be a parent"},
 		{"#1", "#9", "task #1 has child tasks, such as #2, so it cannot have a parent"},
@@ -977,11 +977,11 @@ func TestTaskParentNew(t *testing.T) {
 		{name: "a title alone", rows: []row{{"#130", ""}}, task: "#130", ed: store.TaskEdit{ParentTitle: ptr("pay")}, want: "parentNew and parentTitle go with a parent"},
 		{name: "taken off, said new", rows: []row{{"#123", ""}, {"#130", "#123"}}, task: "#130", ed: store.TaskEdit{Parent: ptr(""), ParentNew: &no}, want: "parentNew and parentTitle go with a parent"},
 		// Of no row, it can be no parent.
-		{name: "the parent gone", rows: []row{{"#130", ""}}, task: "#130", ed: store.TaskEdit{New: &no, Rev: ptr(1), Parent: ptr("#180"), ParentNew: &no}, want: "project p has no task #180 that can be a parent"},
+		{name: "the parent gone", rows: []row{{"#130", ""}}, task: "#130", ed: store.TaskEdit{New: &no, Rev: ptr(1), Parent: ptr("#180"), ParentNew: &no}, want: "no task #180 in project p can be a parent"},
 		{name: "taken off, moved meanwhile", rows: []row{{"#123", ""}, {"#180", ""}, {"#130", "#180"}}, task: "#130", ed: store.TaskEdit{New: &no, Rev: ptr(0), Parent: ptr("")}, want: "task #130 has changed since it was read", stale: true},
 		{name: "taken off", rows: []row{{"#123", ""}, {"#130", "#123"}}, task: "#130", ed: store.TaskEdit{New: &no, Rev: ptr(1), Parent: ptr("")}, after: map[string]string{"#123": "", "#130": ""}},
 		{name: "a URL alone", rows: []row{{"#123", ""}, {"#130", "#123"}}, task: "#130", ed: adding("https://example.com/b"), after: map[string]string{"#123": "", "#130": "#123"}},
-		{name: "as the CLI, of none", rows: []row{{"#130", ""}}, task: "#130", ed: store.TaskEdit{Parent: ptr("#200")}, want: "project p has no task #200 that can be a parent"},
+		{name: "as the CLI, of none", rows: []row{{"#130", ""}}, task: "#130", ed: store.TaskEdit{Parent: ptr("#200")}, want: "no task #200 in project p can be a parent"},
 	} {
 		t.Run(c.name, func(t *testing.T) {
 			t.Parallel()

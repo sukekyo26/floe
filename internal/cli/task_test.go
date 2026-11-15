@@ -230,6 +230,9 @@ func TestTaskCommand(t *testing.T) {
 	if got := run(1, "task", "--task", "#4", "--forget"); got != "floe: no task #4 in project p: check the ID, or name its project with --project\n" {
 		t.Errorf("no task: %q", got)
 	}
+	if got := run(1, "task", "--project", "", "--task", "#4", "--forget"); got != "floe: no task #4 in no project: check the ID, or name its project with --project\n" {
+		t.Errorf("no task of no project, as the server refused it: %q", got)
+	}
 	if got := run(1, "task", "--task", "#1", "--forget"); !strings.HasPrefix(got, "floe: task #1 of project p still has 1 page(s), such as a:") {
 		t.Errorf("a task with a page: %q", got)
 	}
@@ -250,7 +253,7 @@ func TestTaskCommand(t *testing.T) {
 	if got := run(1, "task", "--task", "#22", "--parent", ""); got != "floe: no task #22 in project p: check the ID, or name its project with --project\n" {
 		t.Errorf(`--parent "" of no row: %q`, got)
 	}
-	if got := run(1, "task", "--task", "#22", "--parent", "#7"); !strings.Contains(got, "project p has no task #7 that can be a parent") {
+	if got := run(1, "task", "--task", "#22", "--parent", "#7"); !strings.Contains(got, "no task #7 in project p can be a parent") {
 		t.Errorf("a parent of no row: %q", got)
 	}
 	run(0, "task", "--task", "#22", "--title", "t", "--parent", "")
@@ -268,7 +271,7 @@ func TestTaskCommand(t *testing.T) {
 	if got := pageTaskOf(t, env, "b"); got != `{"name":"#31"}` {
 		t.Errorf("--parent with a page put it on: %s", got)
 	}
-	if got := run(1, "task", "--slug", "b", "--task", "#32", "--parent", "#7"); !strings.Contains(got, "project p has no task #7 that can be a parent") {
+	if got := run(1, "task", "--slug", "b", "--task", "#32", "--parent", "#7"); !strings.Contains(got, "no task #7 in project p can be a parent") {
 		t.Errorf("a parent of no row with a page: %q", got)
 	}
 	if got := pageTaskOf(t, env, "b"); got != `{"name":"#31"}` {
@@ -647,6 +650,10 @@ func TestTaskReadsTask(t *testing.T) {
 	if code, out, errs := runIn(dir, env, "task", "--task", "#1"); code != 1 || out != "" ||
 		errs != "floe: no task #1 in project p: check the ID, or name its project with --project\n" {
 		t.Errorf("no row = %d, %q, %q", code, out, errs)
+	}
+	if code, out, errs := runIn(dir, env, "task", "--project", "", "--task", "#1"); code != 1 || out != "" ||
+		errs != "floe: no task #1 in no project: check the ID, or name its project with --project\n" {
+		t.Errorf("no row of no project, as the list has none = %d, %q, %q", code, out, errs)
 	}
 	if got := tasksFile(); got != "" {
 		t.Errorf("reading made a row: %s", got)

@@ -249,7 +249,7 @@ func (s *Store) checkPaged(ref taskRef, categories []string, pages []changedPage
 			return true
 		}
 		if c := m.Task.Category; c != "" && !slices.Contains(categories, c) {
-			refused = usererr.New("store_category_paged", c, ref.name, ref.project, slug)
+			refused = usererr.New("store_category_paged", c, ref.name, Project(ref.project), slug)
 			return false
 		}
 		return true
