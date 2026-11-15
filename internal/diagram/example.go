@@ -7,7 +7,6 @@ import (
 	"strings"
 	"sync"
 
-	"floe/internal/doc"
 	"floe/internal/usererr"
 	"floe/internal/yamlpos"
 )
@@ -38,11 +37,7 @@ var Examples = sync.OnceValues(func() ([]Example, error) {
 		if err != nil {
 			return nil, fmt.Errorf("diagram: read the example %s: %w", e.Name(), err)
 		}
-		root, err := yamlpos.Parse(file, src)
-		var v any
-		if err == nil {
-			err = yamlpos.Decode(file, root, &v)
-		}
+		_, v, err := yamlpos.ParseMap(file, src)
 		if err != nil {
 			// In words, not wrapped: a mistake of floe's own example is no mistake of the user's.
 			//nolint:err113,errorlint // see above
@@ -50,7 +45,7 @@ var Examples = sync.OnceValues(func() ([]Example, error) {
 		}
 		first, _, _ := strings.Cut(string(src), "\n")
 		name, summary := strings.TrimSuffix(e.Name(), ".yaml"), strings.TrimPrefix(first, "# ")
-		out = append(out, Example{Name: name, Summary: summary, Spec: src, value: doc.Ints(v)})
+		out = append(out, Example{Name: name, Summary: summary, Spec: src, value: v})
 	}
 	return out, nil
 })

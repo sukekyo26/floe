@@ -13,7 +13,6 @@ import (
 	"testing"
 
 	"floe/internal/diagram"
-	"floe/internal/doc"
 	"floe/internal/i18n"
 	"floe/internal/icons"
 	"floe/internal/kit"
@@ -61,7 +60,7 @@ func draw(t *testing.T, src string, how func(d *diagram.Drawer, v any) (string, 
 	if err != nil {
 		t.Fatal(err)
 	}
-	out, err := how(drawer(t), doc.Ints(v))
+	out, err := how(drawer(t), v)
 	if err = yamlpos.Place(err, "s.yaml", root, nil); err != nil {
 		return "", usererr.Tell(i18n.EnglishCatalog(), err).Render("floe: ")
 	}
@@ -75,7 +74,7 @@ func toldInJapanese(t *testing.T, src string) string {
 	if err != nil {
 		t.Fatal(err)
 	}
-	_, err = render("ja")(drawer(t), doc.Ints(v))
+	_, err = render("ja")(drawer(t), v)
 	return usererr.Tell(i18n.New("ja"), yamlpos.Place(err, "s.yaml", root, nil)).Render("floe: ")
 }
 
@@ -484,7 +483,7 @@ func TestLayoutMistakes(t *testing.T) {
 	none := failing{missing}
 	src := head + "  - icon: { icon: aws/a, x: 10, y: 10 }\n  - icon: { icon: aws/b, x: 100, y: 10 }\n"
 	root, v, _ := yamlpos.ParseMap("s.yaml", []byte(src)) //nolint:errcheck // read just above
-	_, err := drawer(t).Draw(doc.Ints(v), diagram.Options{Lang: "en", Icons: none, Seq: 1})
+	_, err := drawer(t).Draw(v, diagram.Options{Lang: "en", Icons: none, Seq: 1})
 	r := usererr.Tell(i18n.EnglishCatalog(), yamlpos.Place(err, "s.yaml", root, nil))
 	if len(r.Mistakes) != 1 || r.Mistakes[0].File != "" {
 		t.Errorf("icons not fetched = %q, want it once, at no place", r.Render("floe: "))

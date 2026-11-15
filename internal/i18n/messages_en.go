@@ -22,6 +22,7 @@ var messagesEN = map[string]string{
 	"yaml_comment_cut":          "a # began a YAML comment, which may have cut the value short, to %s: if the # is part of the value, put the value in quotes, or, in a | or > text, indent all its lines alike, the # line too, or write its indentation after the | or > (like |2); else write the comment on a line of its own, no deeper than the value's key (or the - of an item)",
 	"yaml_flow_comment":         "a # in { } or [ ] begins a YAML comment, which floe does not take there (in the { } or [ ] opened at %d:%d): put the value in quotes if the # is part of it, move the comment out of the { } or [ ], or close the { } or [ ] if it was left open",
 	"yaml_flow_key_alone":       "%q is a key without a value in { }: write its value after a \":\", or, if a , in text ended the text before it, put that text in quotes",
+	"yaml_top_not_keys":         "the top of this file is not keys and values: write it as keys and values (key: value)",
 	"yaml_key_not_text":         "a key is a name: write %s as text, in quotes",
 	"yaml_not_finite":           "%s is not a value a YAML file can hold; write a number in digits, or quote it as text",
 	"yaml_number_not_number":    "%[1]s reads as the number %[2]s here, but as text in YAML 1.2: write %[2]s for the number, or put %[1]s in quotes for text",
