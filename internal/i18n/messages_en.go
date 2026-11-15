@@ -16,6 +16,7 @@ var messagesEN = map[string]string{
 	"yaml_documents":            "a YAML file holds one document: write it as one, without --- between parts",
 	"yaml_not_utf8":             "this byte is not UTF-8: save the file as UTF-8",
 	"text_bom":                  "a byte order mark (U+FEFF) is here, which is read as a character: remove it, or write \\ufeff in a double-quoted string where the text needs one",
+	"yaml_line_separator":       "%s is here, which is read as a line break: remove it, or write %s in a double-quoted string where the text needs it",
 	"yaml_no_anchors":           "anchors, aliases, merge keys (<<) and tags are not supported; write the value out",
 	"yaml_block_tab":            "a line of a | or > text begins with spaces and a tab, which YAML 1.2 reads as text, but floe as indentation, reading the lines after it otherwise: begin the line without the tab, or write the text's indentation after the | or > (like |2)",
 	"yaml_comment_cut":          "a # began a YAML comment, which may have cut the value short, to %s: if the # is part of the value, put the value in quotes, or, in a | or > text, indent all its lines alike, the # line too, or write its indentation after the | or > (like |2); else write the comment on a line of its own, no deeper than the value's key (or the - of an item)",
