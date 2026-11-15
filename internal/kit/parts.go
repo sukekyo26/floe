@@ -483,11 +483,14 @@ func readAbout(file string, k, value *yamlpos.Node, notText string) (string, use
 	return about, nil
 }
 
-// readMarks reads the marks: part.yaml, file, gives the key k: box, items or joined.
+// markKinds are the values of part.yaml's marks:, which elements of a part are rows with a mark.
+var markKinds = []string{"box", "items", "joined"}
+
+// readMarks reads the marks: part.yaml, file, gives the key k: one of markKinds.
 func readMarks(file string, k, value *yamlpos.Node) (taken, usererr.List) {
 	marks := taken{name: "", file: file, at: yamlpos.Of(k)}
 	name, ok := yamlpos.Text(value)
-	if !ok || !slices.Contains([]string{"box", "items", "joined"}, name) {
+	if !ok || !slices.Contains(markKinds, name) {
 		return marks, usererr.List{yamlpos.New(file, yamlpos.OfValue(k, value), "kit_part_yaml_marks")}
 	}
 	marks.name = name

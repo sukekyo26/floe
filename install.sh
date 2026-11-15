@@ -44,14 +44,14 @@ arch=$(uname -m)
 case "$arch" in
   x86_64 | amd64) arch=amd64 ;;
   aarch64 | arm64) arch=arm64 ;;
-  *) die "unsupported architecture: $arch" ;;
+  *) die "unsupported architecture: $arch (floe supports amd64 and arm64)" ;;
 esac
 
 if [ "$VERSION" = "latest" ]; then
   # Capture first: POSIX sh has no pipefail, so a failed curl would be masked by the pipeline.
   releases_url="https://api.github.com/repos/$REPO/releases/latest"
   api_response=$(curl -fsSL --proto '=https' --tlsv1.2 "$releases_url") ||
-    die "failed to fetch release metadata: $releases_url"
+    die "failed to fetch release metadata: $releases_url (no release yet, or GitHub's API rate limit); try again later, or set FLOE_VERSION to a version, which skips the API"
   tag=$(printf '%s' "$api_response" | sed -n 's/.*"tag_name": *"\(v\{0,1\}[^"]*\)".*/\1/p' | head -n1)
   [ -n "$tag" ] || die "could not parse tag_name from $releases_url"
 else
@@ -75,8 +75,9 @@ expected=$(grep "  $asset\$" "$tmp/SHA256SUMS" | awk '{print $1}')
 actual=$(sha256 "$tmp/$asset" | awk '{print $1}')
 [ "$expected" = "$actual" ] || die "checksum mismatch ($actual != $expected)"
 
-mkdir -p "$INSTALL_DIR"
-mv "$tmp/$asset" "$INSTALL_DIR/floe"
+cannot_write="cannot write to $INSTALL_DIR; set FLOE_INSTALL_DIR to a directory you can write to"
+mkdir -p "$INSTALL_DIR" || die "$cannot_write"
+mv "$tmp/$asset" "$INSTALL_DIR/floe" || die "$cannot_write"
 chmod +x "$INSTALL_DIR/floe"
 
 printf 'floe-install: installed floe %s to %s/floe\n' "${tag#v}" "$INSTALL_DIR" >&2
