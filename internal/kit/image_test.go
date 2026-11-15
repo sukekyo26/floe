@@ -10,6 +10,7 @@ import (
 
 	"floe/internal/files"
 	"floe/internal/kit"
+	"floe/internal/timebox"
 	"floe/internal/usererr"
 )
 
@@ -51,10 +52,12 @@ func TestImageMadeFIFO(t *testing.T) {
 		if !ok {
 			t.Fatalf("%s is no fs.StatFS", via)
 		}
-		_, _, err := kit.ImageFile(fifoAfterStat{StatFS: fsys, path: path}, "a.png", dir, "d.yaml")
-		var e *usererr.Error
-		if !errors.As(err, &e) || e.Key != "kit_image_not_file" {
-			t.Errorf("%s: ImageFile of a file made a FIFO = %v, want kit_image_not_file", via, err)
-		}
+		timebox.Within(t, via, func() {
+			_, _, err := kit.ImageFile(fifoAfterStat{StatFS: fsys, path: path}, "a.png", dir, "d.yaml")
+			var e *usererr.Error
+			if !errors.As(err, &e) || e.Key != "kit_image_not_file" {
+				t.Errorf("%s: ImageFile of a file made a FIFO = %v, want kit_image_not_file", via, err)
+			}
+		})
 	}
 }

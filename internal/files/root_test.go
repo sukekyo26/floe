@@ -9,11 +9,11 @@ import (
 	"syscall"
 	"testing"
 	"testing/fstest"
-	"time"
 
 	"golang.org/x/sys/unix"
 
 	"floe/internal/files"
+	"floe/internal/timebox"
 	"floe/internal/usererr"
 )
 
@@ -23,21 +23,6 @@ func fsOf(t *testing.T, dir string) map[string]fs.FS {
 	root := files.NewRoot(dir)
 	t.Cleanup(func() { _ = root.Close() })
 	return map[string]fs.FS{"Root": root, "DirFS": files.DirFS(dir)}
-}
-
-// within runs f, failing the test when it has not returned in two seconds: a read that blocks.
-func within(t *testing.T, what string, f func()) {
-	t.Helper()
-	done := make(chan struct{})
-	go func() {
-		defer close(done)
-		f()
-	}()
-	select {
-	case <-done:
-	case <-time.After(2 * time.Second):
-		t.Fatalf("%s blocked", what)
-	}
 }
 
 // Both keep to what an fs.FS promises, as testing/fstest checks it.
@@ -117,7 +102,7 @@ func TestFSNotFiles(t *testing.T) {
 	defer ln.Close()
 	for via, fsys := range fsOf(t, dir) {
 		for _, name := range []string{"f", "s"} {
-			within(t, via+" "+name, func() {
+			timebox.Within(t, via+" "+name, func() {
 				if _, err := fs.ReadFile(fsys, name); !errors.Is(err, usererr.ErrNotFile) {
 					t.Errorf("%s: ReadFile(%s) = %v, want ErrNotFile", via, name, err)
 				}
@@ -164,6 +149,18 @@ func TestFSLinks(t *testing.T) {
 	}
 	if _, err := fs.ReadFile(home["Root"], "o.yaml"); err == nil {
 		t.Error("Root read a link out of it")
+	}
+}
+
+// DirFS("") opens nothing and says why, as os.DirFS("") does.
+func TestDirFSEmpty(t *testing.T) {
+	t.Parallel()
+
+	if _, err := fs.ReadFile(files.DirFS(""), "a.yaml"); err == nil {
+		t.Error("DirFS(\"\") read a.yaml")
+	}
+	if _, err := fs.Stat(files.DirFS(""), "a.yaml"); err == nil {
+		t.Error("DirFS(\"\") stat a.yaml")
 	}
 }
 

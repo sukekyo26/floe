@@ -1,6 +1,7 @@
 package files
 
 import (
+	"errors"
 	"io/fs"
 	"os"
 	"sync"
@@ -50,13 +51,13 @@ func (r *Root) Open(name string) (fs.File, error) {
 	return openRead(r.root, name)
 }
 
-// Stat tells of name under the directory without opening it, so that a FIFO does not block.
+// Stat tells of name under the directory without opening it: of a FIFO too, which Open refuses.
 func (r *Root) Stat(name string) (fs.FileInfo, error) {
 	if err := r.ready(); err != nil {
 		return nil, err
 	}
-	if !fs.ValidPath(name) {
-		return nil, &fs.PathError{Op: "stat", Path: name, Err: fs.ErrInvalid}
+	if err := checkName("stat", name); err != nil {
+		return nil, err
 	}
 	return r.root.Stat(name) //nolint:wrapcheck // the system's error, at name
 }
@@ -71,7 +72,7 @@ func (r *Root) Close() error {
 
 // DirFS returns the directory dir as an fs.FS whose files are opened as Open opens a path, links followed as
 // os.DirFS follows them, out of it too: the name is put after dir by its letters, for the system to resolve.
-// dir is not "": its callers leave out a directory not set. Nothing is held open, so there is nothing to close.
+// Of dir "", as of os.DirFS(""), every name is an error. Nothing is held open, so there is nothing to close.
 func DirFS(dir string) fs.FS {
 	return dirFS(dir)
 }
@@ -85,33 +86,54 @@ func (d dirFS) Open(name string) (fs.File, error) {
 }
 
 func (d dirFS) Stat(name string) (fs.FileInfo, error) {
-	if !fs.ValidPath(name) {
-		return nil, &fs.PathError{Op: "stat", Path: name, Err: fs.ErrInvalid}
+	p, err := d.join("stat", name)
+	if err != nil {
+		return nil, err
 	}
-	return os.Stat(d.join(name)) //nolint:wrapcheck // the system's
+	return os.Stat(p) //nolint:wrapcheck // the system's
 }
 
 func (d dirFS) OpenFile(name string, flag int, perm fs.FileMode) (*os.File, error) {
-	return os.OpenFile(d.join(name), flag, perm) //nolint:wrapcheck,gosec // the system's; G304: under the caller's dir
+	p, err := d.join("open", name)
+	if err != nil {
+		return nil, err
+	}
+	return os.OpenFile(p, flag, perm) //nolint:wrapcheck,gosec // the system's; G304: under the caller's dir
 }
+
+// errNoDir is the error of every name of DirFS(""), as os.DirFS has one.
+var errNoDir = errors.New("DirFS of no directory")
 
 // join puts name after d as os.DirFS does, by its letters: filepath.Join would fold link/.. in d by its letters,
 // where the system follows the link.
-func (d dirFS) join(name string) string {
-	if os.IsPathSeparator(d[len(d)-1]) {
-		return string(d) + name
+func (d dirFS) join(op, name string) (string, error) {
+	switch err := checkName(op, name); {
+	case err != nil:
+		return "", err
+	case d == "":
+		return "", &fs.PathError{Op: op, Path: name, Err: errNoDir}
+	case os.IsPathSeparator(d[len(d)-1]):
+		return string(d) + name, nil
 	}
-	return string(d) + string(os.PathSeparator) + name
+	return string(d) + string(os.PathSeparator) + name, nil
 }
 
 // openRead opens name of o, a slash-separated path under it that fs.ValidPath takes, to read as Open opens a path.
 func openRead(o Opener, name string) (fs.File, error) {
-	if !fs.ValidPath(name) {
-		return nil, &fs.PathError{Op: "open", Path: name, Err: fs.ErrInvalid}
+	if err := checkName("open", name); err != nil {
+		return nil, err
 	}
 	f, _, err := openWith(o, name, os.O_RDONLY, 0)
 	if err != nil {
 		return nil, err
 	}
 	return f, nil
+}
+
+// checkName refuses name, of the operation op, unless fs.ValidPath takes it, as an fs.FS does.
+func checkName(op, name string) error {
+	if !fs.ValidPath(name) {
+		return &fs.PathError{Op: op, Path: name, Err: fs.ErrInvalid}
+	}
+	return nil
 }
