@@ -88,30 +88,21 @@ func library(file string, err error) error {
 // ErrEmpty is returned by Parse for a file without a document, for the caller to word.
 var ErrEmpty = errors.New("no YAML document")
 
-// ParseMap reads src as Parse does, and its values into a map as Decode does: goccy/go-yaml refuses a top that is
-// not keys and values (library). A file without a document reads as {} under a root of nil, for the schema to tell
-// what it lacks.
+// ParseMap reads src as Parse does, and its values as Decode does, refusing a top that is not keys and values at
+// its start: the files floe reads are keys and values. A file without a document reads as {} under a root of nil,
+// for the schema to tell what it lacks.
 func ParseMap(file string, src []byte) (*Node, map[string]any, error) {
-	values := map[string]any{}
 	body, err := Parse(file, src)
 	switch {
 	case errors.Is(err, ErrEmpty):
-		return nil, values, nil
+		return nil, map[string]any{}, nil
 	case err != nil:
 		return nil, nil, err
+	case body.Kind != Mapping:
+		return nil, nil, New(file, Of(body), "yaml_top_not_keys")
 	}
-	if err = Decode(file, body, &values); err != nil {
-		return nil, nil, err
-	}
+	values, _ := Decode(body).(map[string]any) //nolint:errcheck // a mapping, just above
 	return body, values, nil
-}
-
-// Decode reads the values of n, a node Parse returned, into v. Its mistake is goccy/go-yaml's (library).
-func Decode(file string, n *Node, v any) error {
-	if err := yaml.NodeToValue(n.node, v); err != nil {
-		return library(file, err)
-	}
-	return nil
 }
 
 // Parse reads src as one YAML document and returns its body, or ErrEmpty when src holds none. A byte order

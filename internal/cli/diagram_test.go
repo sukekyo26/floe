@@ -5,6 +5,8 @@ import (
 	"path/filepath"
 	"strings"
 	"testing"
+
+	"floe/internal/i18n"
 )
 
 // floe diagram render, inspect and example: specs checked and drawn in the language asked for, every mistake of
@@ -59,11 +61,10 @@ func TestDiagram(t *testing.T) {
 	if want := "w.yaml: missing properties 'title', 'parts'\n"; code != 1 || errs != want {
 		t.Errorf("inspect of a spec lacking keys = %d, %q, want %q", code, errs, want)
 	}
-	// A top that is not keys and values is refused as goccy/go-yaml refuses it in a data file, at its place.
+	// A top that is not keys and values is refused as in a data file, at its start: one mistake a file.
 	code, _, errs = runIn(dir, env, "diagram", "inspect", "l.yaml", "t.yaml", "n.yaml")
-	if want := "l.yaml:2:1: sequence was used where mapping is expected\n" +
-		"t.yaml:1:1: string was used where mapping is expected\n" +
-		"n.yaml:1:1: null was used where mapping is expected\n"; code != 1 || errs != want {
+	top := i18n.EnglishCatalog().Msg("yaml_top_not_keys")
+	if want := "l.yaml:2:1: " + top + "\nt.yaml:1:1: " + top + "\nn.yaml:1:1: " + top + "\n"; code != 1 || errs != want {
 		t.Errorf("inspect of a top not keys and values = %d, %q, want %q", code, errs, want)
 	}
 	// A diagram shows no spec: source is no key of it, and nothing is drawn.

@@ -39,7 +39,6 @@ type Node struct {
 	flow      bool
 	unwritten bool // a null with nothing written
 	text      bool // a text scalar
-	node      ast.Node
 }
 
 // Pair is a key and its value.
@@ -53,7 +52,7 @@ func newNode(n ast.Node) (*Node, error) {
 	out := &Node{
 		Kind: Scalar, Pairs: nil, Items: nil, Value: "", Style: Plain, Null: false,
 		at: writtenAt(n), start: Pos{Line: tk.Position.Line, Column: tk.Position.Column}, flow: false, unwritten: false,
-		text: false, node: n,
+		text: false,
 	}
 	var err error
 	switch n := n.(type) {

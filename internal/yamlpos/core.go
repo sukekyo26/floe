@@ -16,6 +16,9 @@ type kind int
 
 const (
 	kindText kind = iota
+	kindNull
+	kindTrue
+	kindFalse
 	kindInt
 	kindFloat
 )
@@ -28,20 +31,27 @@ type reading struct {
 	outside bool // a float of the Number row past float64: ±Inf, or 0 for one that is not 0
 }
 
-// core is the Core Schema of YAML 1.2.2, 10.3.2 Tag Resolution: the regular expressions of its int and float
-// rows, in its order, as the specification writes them without the spaces it adds to be read, each matching a
-// whole value. It is a rule the specification sets, not a guess at how a parser reads; its null and bool rows
-// are left out, as goccy/go-yaml reads them alike.
+// core is the Core Schema of YAML 1.2.2, 10.3.2 Tag Resolution: the regular expressions of its rows, in its order,
+// as the specification writes them without the spaces it adds to be read, each matching a whole value; its null row
+// and its row of an empty value are one here, and its bool row is two, true and false, which read the same texts.
+// It is a rule the specification sets, not a guess at how a parser reads.
 var core = []struct {
 	read func(text string) reading
 	re   *regexp.Regexp
 }{
+	{reads(kindNull), regexp.MustCompile(`^(?:null|Null|NULL|~|)$`)},
+	{reads(kindTrue), regexp.MustCompile(`^(?:true|True|TRUE)$`)},
+	{reads(kindFalse), regexp.MustCompile(`^(?:false|False|FALSE)$`)},
 	{base(10, ""), regexp.MustCompile(`^(?:[-+]?[0-9]+)$`)},
 	{base(8, "0o"), regexp.MustCompile(`^(?:0o[0-7]+)$`)},
 	{base(16, "0x"), regexp.MustCompile(`^(?:0x[0-9a-fA-F]+)$`)},
 	{number, regexp.MustCompile(`^(?:[-+]?(?:\.[0-9]+|[0-9]+(?:\.[0-9]*)?)(?:[eE][-+]?[0-9]+)?)$`)},
 	{infinity, regexp.MustCompile(`^(?:[-+]?(?:\.inf|\.Inf|\.INF))$`)},
 	{notANumber, regexp.MustCompile(`^(?:\.nan|\.NaN|\.NAN)$`)},
+}
+
+func reads(k kind) func(string) reading {
+	return func(string) reading { return reading{kind: k, i: nil, f: 0, outside: false} }
 }
 
 func base(b int, prefix string) func(string) reading {

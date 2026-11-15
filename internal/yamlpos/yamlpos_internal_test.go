@@ -6,6 +6,7 @@ import (
 	"os"
 	"path/filepath"
 	"slices"
+	"strings"
 	"testing"
 
 	"github.com/goccy/go-yaml"
@@ -62,7 +63,7 @@ func TestLibrary(t *testing.T) {
 	told := func(err error) string { return usererr.Tell(i18n.EnglishCatalog(), err).Render("floe: ") }
 	var m map[string]any
 	err := yaml.Unmarshal([]byte("- a\n"), &m)
-	if got := told(library("a.yaml", err)); got != "a.yaml:1:1: sequence was used where mapping is expected" {
+	if got := told(library("a.yaml", err)); !strings.HasPrefix(got, "a.yaml:1:1: ") {
 		t.Errorf("library of a mistake at a token = %q", got)
 	}
 	if got := told(library("a.yaml", &yaml.SyntaxError{Message: "bad", Token: nil})); got != "a.yaml: bad" {

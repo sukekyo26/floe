@@ -10,7 +10,6 @@ import (
 
 	"floe/docs"
 	"floe/internal/diagram"
-	"floe/internal/doc"
 	"floe/internal/draw"
 	"floe/internal/i18n"
 	"floe/internal/kit"
@@ -176,7 +175,7 @@ func diagramOf(d *diagram.Drawer, p arg, o diagram.Options) (string, error) {
 	if err != nil {
 		return "", err
 	}
-	svg, err := d.Draw(doc.Ints(v), o)
+	svg, err := d.Draw(v, o)
 	return string(svg), yamlpos.Place(err, p.name, root, nil) //nolint:wrapcheck // mistakes placed
 }
 
@@ -204,7 +203,7 @@ func inspectFile(d *diagram.Drawer, own func() (*kit.Kit, error), p arg, o diagr
 		return "", err
 	}
 	if _, isData := v["template"]; !isData {
-		got, mistakes := d.Inspect(doc.Ints(v), o)
+		got, mistakes := d.Inspect(v, o)
 		pos, _ := yamlpos.Locate(root, nil)
 		//nolint:wrapcheck // mistakes placed
 		return placedAt(p.name, pos, got), yamlpos.Place(mistakes, p.name, root, nil)
