@@ -173,50 +173,62 @@ var placeholders = map[string]string{"<template>": "report", "<part>": "note", "
 // readOnly are the commands a test runs as the guide writes them: they read, write nothing and ask no server.
 var readOnly = [][]string{{"guide"}, {"task", "guide"}, {"template"}, {"part", "guide"}, {"part", "list"}, {"part", "show"}, {"part", "check"}, {"diagram", "example"}, {"diagram", "guide"}, {"theme", "default"}, {"theme", "show"}, {"theme", "list"}, {"theme", "check"}}
 
-// Each floe command the docs of commandDocs name is one floe reads, its flags too; those that only read run and end
-// well (themes.md names floe's themes' files, which this keeps real).
+// Each floe command the docs of commandDocs name, in code or as a line of an sh block, is one floe reads, its flags too;
+// those that only read run and end well (themes.md names floe's themes' files, which this keeps real).
+// LIMIT: a command's name and flags alone are read (readable): a positional argument it takes not, or one it lacks,
+// passes. Read them if a doc comes to give a command a wrong one.
 // LIMIT: the names of parts in the guide's prose (entries, steps, …) are not checked: a PR renaming a part changes
 // any.json and docs, and greps the guide there.
 func TestGuideCommands(t *testing.T) {
 	t.Parallel()
 
+	shLines := 0
 	for _, path := range commandDocs {
 		guide := readGuide(t, path)
 		named := regexp.MustCompile("`floe ([^`]*)`").FindAllStringSubmatch(guide, -1)
 		if len(named) < 10 {
 			t.Fatalf("%s: %d commands found", path, len(named))
 		}
-		for _, m := range named {
-			args := strings.Fields(m[1])
+		check := func(command string, args []string) {
 			for i, word := range args {
 				if strings.HasPrefix(word, "<") {
 					w, ok := placeholders[word]
 					if !ok {
-						t.Fatalf("%s: floe %s: no word for %s in placeholders", path, m[1], word)
+						t.Fatalf("%s: floe %s: no word for %s in placeholders", path, command, word)
 					}
 					args[i] = w
 				}
 			}
 			env := guideEnv(t, t.TempDir())
 			if err := readable(env, args); err != nil {
-				t.Errorf("%s: floe %s: %v (fix %s)", path, m[1], err, path)
-				continue
+				t.Errorf("%s: floe %s: %v (fix %s)", path, command, err, path)
+				return
 			}
 			root, _ := newRoot(env, io.Discard)
 			if cmd, _, err := root.Find(args); err != nil || cmd == root && len(args) > 0 && !strings.HasPrefix(args[0], "-") {
-				t.Errorf("%s: floe %s names no command (fix %s)", path, m[1], path)
-				continue
+				t.Errorf("%s: floe %s names no command (fix %s)", path, command, path)
+				return
 			}
 			ro := slices.Contains(args, "--help") || slices.ContainsFunc(readOnly, func(c []string) bool {
 				return len(args) >= len(c) && slices.Equal(args[:len(c)], c)
 			})
 			if !ro {
-				continue
+				return
 			}
 			if code, _, errs := runIn(env, args...); code != 0 {
-				t.Errorf("%s: floe %s = %d, %s (fix %s)", path, m[1], code, errs, path)
+				t.Errorf("%s: floe %s = %d, %s (fix %s)", path, command, code, errs, path)
 			}
 		}
+		for _, m := range named {
+			check(m[1], strings.Fields(m[1]))
+		}
+		for _, command := range shCommands(guide) {
+			shLines++
+			check(command, shellWords(command))
+		}
+	}
+	if shLines < 10 {
+		t.Fatalf("the docs' sh blocks hold %d floe commands: read the blocks as the docs write them", shLines)
 	}
 }
 
