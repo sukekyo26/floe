@@ -335,8 +335,7 @@ func (a *app) tagCmd() *cobra.Command {
 		Long: `Add tags to pages and remove tags from them, in order, stopping at the first failure. A name is taken
 as written, trimmed, commas and all; one on a page already is kept once. The names given to --remove
 are taken off first, then those given to --add are put on, so a name given to both stays on the page.`,
-		Args:    usage(cobra.MinimumNArgs(1)),
-		PreRunE: flagGroups,
+		Args: usage(cobra.MinimumNArgs(1)),
 		RunE: func(cmd *cobra.Command, args []string) error {
 			body := server.Edit{
 				Title: nil, Description: nil, Project: nil, Slug: nil, Favorite: nil, Archived: nil,
