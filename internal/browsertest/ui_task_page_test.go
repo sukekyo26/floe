@@ -55,7 +55,7 @@ func TestUITaskPage(t *testing.T) { //nolint:paralleltest // the browser tests s
 	page("r1", "--task", "#130", "--category", "review")
 	page("i1", "--task", "#130", "--category", "build")
 	// Before #142's page: the list goes by the last write, and j j below stops on #130
-	s.floe(t, "task", "--task", "#130", "--project", "proj", "--categories", "design,build,review,nothing")
+	s.floe(t, "task", "--task", "#130", "--project", "proj", "--categories", "design", "--categories", "build", "--categories", "review", "--categories", "nothing")
 	page("y1", "--task", "#142", "--state", "doing")
 	page("x1", "--task", "#120", "--state", "done")
 	page("p1", "--pin")

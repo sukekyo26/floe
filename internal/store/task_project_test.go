@@ -58,7 +58,7 @@ func TestTaskRefusalsOfNoProject(t *testing.T) {
 			}
 			_, err := editTask(s, "/", "#1", store.TaskEdit{Categories: &[]string{}})
 			return err
-		}, "category c of task #1 in no project has pages (a)", "タスク #1（プロジェクト未設定）のカテゴリ c にはページがあります"},
+		}, `category "c" of task #1 in no project has pages (a)`, `タスク #1（プロジェクト未設定）のカテゴリ "c" にはページがあります`},
 	} {
 		t.Run(c.name, func(t *testing.T) {
 			t.Parallel()

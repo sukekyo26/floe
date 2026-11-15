@@ -9,7 +9,9 @@ import (
 	"strings"
 	"testing"
 
+	"floe/internal/i18n"
 	"floe/internal/store"
+	"floe/internal/usererr"
 )
 
 // pageIn writes a page of project, on no task.
@@ -111,7 +113,7 @@ func TestTaskWriteOne(t *testing.T) {
 		want     string
 		conflict bool
 	}{
-		{"a category with pages left out", store.TaskChange{TaskEdit: store.TaskEdit{Categories: &[]string{"y"}}, TaskProject: ptr("p"), Task: ptr("#9")}, "category z of task #9 in project p has pages (a)", false},
+		{"a category with pages left out", store.TaskChange{TaskEdit: store.TaskEdit{Categories: &[]string{"y"}}, TaskProject: ptr("p"), Task: ptr("#9")}, "category \"z\" of task #9 in project p has pages (a)", false},
 		// Both tasks are there, as the screen says of one: the pages moved meanwhile, so it reads again
 		{"what the screen saw, of two tasks", store.TaskChange{TaskEdit: store.TaskEdit{New: &no}, Slugs: []string{"a", "b"}}, "task #9 has changed since it was read", true},
 		{"a parent of two projects", store.TaskChange{TaskEdit: store.TaskEdit{Parent: ptr("#1")}, Slugs: []string{"a", "b"}, Task: ptr("#9")}, "a parent goes with one task, and the pages are on tasks of 2 projects", false},
@@ -301,5 +303,42 @@ func TestTaskParentOfPages(t *testing.T) {
 	}
 	if all["p"]["#1"].Parent != "#P" || all["p"]["#2"].Parent != "#P" {
 		t.Errorf("two tasks of one project: %v", all["p"])
+	}
+}
+
+// A category with pages, left out of the order, is named quoted in the refusal, in either language, so that a name
+// with a comma or a space ends where it does; a full-width space is said as it is.
+func TestCategoryPagedNamed(t *testing.T) {
+	t.Parallel()
+
+	for _, c := range []struct{ name, en, ja string }{
+		{"Designs, v2", `category "Designs, v2" of task #1 in project p has pages (a)`, `のカテゴリ "Designs, v2" にはページがあります`},
+		{"設計　見本", `category "設計　見本" of task #1 in project p has pages (a)`, `のカテゴリ "設計　見本" にはページがあります`},
+	} {
+		t.Run(c.name, func(t *testing.T) {
+			t.Parallel()
+
+			root := filepath.Join(t.TempDir(), "S")
+			s := store.New(root)
+			if _, err := editTask(s, "p", "#1", store.TaskEdit{Categories: &[]string{c.name}}); err != nil {
+				t.Fatal(err)
+			}
+			pageOn(t, s, root, "a", "p", false)
+			m := s.ReadMeta("a")
+			m.Task.Category = c.name
+			if err := s.WriteMeta("a", m); err != nil {
+				t.Fatal(err)
+			}
+			_, err := editTask(s, "p", "#1", store.TaskEdit{Categories: &[]string{}})
+			if err == nil {
+				t.Fatal("written")
+			}
+			if en := err.Error(); !strings.Contains(en, c.en) {
+				t.Errorf("in English: %q, want %q", en, c.en)
+			}
+			if ja := usererr.Tell(i18n.New("ja"), err).Render(""); !strings.Contains(ja, c.ja) {
+				t.Errorf("in Japanese: %q, want %q", ja, c.ja)
+			}
+		})
 	}
 }

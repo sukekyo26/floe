@@ -3,6 +3,7 @@ package store
 import (
 	"reflect"
 	"slices"
+	"strconv"
 	"strings"
 
 	"floe/internal/usererr"
@@ -249,7 +250,7 @@ func (s *Store) checkPaged(ref taskRef, categories []string, pages []changedPage
 			return true
 		}
 		if c := m.Task.Category; c != "" && !slices.Contains(categories, c) {
-			refused = usererr.New("store_category_paged", c, ref.name, Project(ref.project), slug)
+			refused = usererr.New("store_category_paged", strconv.QuoteToGraphic(c), ref.name, Project(ref.project), slug)
 			return false
 		}
 		return true

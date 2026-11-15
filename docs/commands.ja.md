@@ -242,7 +242,7 @@ floe のものか自分のものの、テンプレート・部品（見た目と
 
 ## `floe info <slug>`
 
-サーバーが持つとおりにページを出します（動いていなければ起こす）。何も書きません。1 行に、名前と値をタブで区切って 1 つずつ出し、毎回同じ 14 個の名前を同じ順に出します。無い値は空です。字の値（`title`・`project`・`task`・`category`・`repository`・`source` と、`tags` の 1 つずつ。タグは空白で並べる）は Go の書き方で引用符に囲み、`slug`・`url`・`kind`・`pinned`・`archived`・`version`・`updated` は囲みません。`project` はプロジェクトの無いページでは空で、引用符を外すと `floe task` の `--project` にそのまま渡せます。`kind` は `data`・`link`・`folder` のどれかです。`source` は、データファイルの `repository` の根からのパス（`repository` が空なら実際のパス）か、リンクしたファイル・フォルダの実際のパスです。`version` はリンクでは空です。`updated` は `floe list` と同じ、手元の時刻です。アーカイブしたページも出し、`archived true` と言います。無い slug は断ります。
+サーバーが持つとおりにページを出します（動いていなければ起こす）。何も書きません。1 行に、名前と値をタブで区切って 1 つずつ出し、毎回同じ 14 個の名前を同じ順に出します。無い値は空です。字の値（`title`・`project`・`task`・`category`・`repository`・`source` と、`tags` の 1 つずつ。タグは空白で並べる）は Go の書き方で引用符に囲み（全角空白などの空白の字はそのまま）、`slug`・`url`・`kind`・`pinned`・`archived`・`version`・`updated` は囲みません。`project` はプロジェクトの無いページでは空で、引用符を外すと `floe task` の `--project` にそのまま渡せます。`kind` は `data`・`link`・`folder` のどれかです。`source` は、データファイルの `repository` の根からのパス（`repository` が空なら実際のパス）か、リンクしたファイル・フォルダの実際のパスです。`version` はリンクでは空です。`updated` は `floe list` と同じ、手元の時刻です。アーカイブしたページも出し、`archived true` と言います。無い slug は断ります。
 
 ```text
 $ floe info design-notes
@@ -292,14 +292,14 @@ floe task --task "#130" --state doing                               # タスク�
 floe task --task "#130" --url https://example.com/issues/482        # タスクにリンクを足す
 floe task --task "#130" --remove-url https://example.com/issues/482 # 外す
 floe task --slug design-notes --category designs                    # タスクの中のページのカテゴリ
-floe task --task "#130" --categories proposals,designs,samples      # カテゴリを見せる順
+floe task --task "#130" --categories proposals --categories designs --categories samples   # カテゴリを見せる順
 floe task --slug design-notes --pin                                 # タスクによらずピン止め
 floe task --slug design-notes --task "#131" --parent "#130"         # #130 の子のタスクにページを付ける
 floe task --task "#130" --forget                                    # タスクの行を消す
 floe task --slug design-notes                                       # ページの今を言い、何も書かない
 ```
 
-書いたタスクとページを 1 行ずつ、store が残した値で言います。タスクは `made`（行が無かった）・`changed`（欄が変わった、ページがそのタスクに来たか、そのタスクの別のカテゴリへ移った）・`unchanged`（欄を書いたが同じ値だった）と書いた欄、ページのカテゴリを足したときはカテゴリの並び、その後にページのタスク・カテゴリ・ピンです。何も変わらず欄も書いていないタスクは言いません。プロジェクトの無いタスクは `in no project` です。タスクに無いページは、`no task` の後にプロジェクトを言い（`page design-notes: no task, in project floe`）、プロジェクトの無いページは `no task` だけです。`--slug` だけでほかのフラグが無ければ、各ページを今の値で同じように言い、何も書きません（ページが名指すタスクに行が無くても、行を作りません）。無いページの `--slug` があれば、どのページも言う前に断ります。`--slug` が無く `--task` だけなら、タスクを今の値（状態と、あれば題・URL・カテゴリ・親。URL は 1 つずつ引用符で `urls "https://…" "https://…"`、書き込みで最後の 1 つを外したら `no urls`）で言い、何も書きません。行の無いタスクは断ります。
+書いたタスクとページを 1 行ずつ、store が残した値で言います。タスクは `made`（行が無かった）・`changed`（欄が変わった、ページがそのタスクに来たか、そのタスクの別のカテゴリへ移った）・`unchanged`（欄を書いたが同じ値だった）と書いた欄、ページのカテゴリを足したときはカテゴリの並び、その後にページのタスク・カテゴリ・ピンです。何も変わらず欄も書いていないタスクは言いません。プロジェクトの無いタスクは `in no project` です。タスクに無いページは、`no task` の後にプロジェクトを言い（`page design-notes: no task, in project floe`）、プロジェクトの無いページは `no task` だけです。`--slug` だけでほかのフラグが無ければ、各ページを今の値で同じように言い、何も書きません（ページが名指すタスクに行が無くても、行を作りません）。無いページの `--slug` があれば、どのページも言う前に断ります。`--slug` が無く `--task` だけなら、タスクを今の値（状態と、あれば題・URL・カテゴリ・親。URL とカテゴリは 1 つずつ引用符で `urls "https://…" "https://…"`・`categories "designs" "samples"`、書き込みで最後の 1 つを外したら `no urls`・`no categories`）で言い、何も書きません。行の無いタスクは断ります。
 
 `--project` 以外のフラグが無ければ、プロジェクトの着手前・作業中（状態が `todo` か `doing`）のタスクを、`--task` がタスクを言うのと同じ行で 1 つずつ言い、何も書きません。最後に変えたもの（作った、欄を変えた、ページがそのタスクに来たか、そのタスクの別のカテゴリへ移った。管理ページの「元に戻す」も）が先で、同じ時刻のものは名前順です。完了とアーカイブのタスクは出しません（どの状態のタスクも、`floe task --task <ID>` で言えます）。プロジェクトは、`--project` を省くとカレントディレクトリのもの（`floe publish` がデータファイルのページを入れるプロジェクトと同じ）で、`""` は無しです。`--link` で publish したページは、リンク先のファイルのプロジェクトに入ります。そのプロジェクトは `floe task --slug` と `floe info` が言い、ページが新しいときと移ったときは `floe publish` も言います。着手前・作業中のタスクが無いプロジェクトは `no open task in project floe` と言い、断りではありません。`--task` も `--slug` も無く `--project` 以外のフラグがあれば、名指されていないタスクやページを変えることになるので断ります。
 
@@ -334,7 +334,7 @@ task #130 in project floe: forgotten
 | `--remove-url <URL>` | タスク | リンクを外す。何度も書ける。無いリンクを外しても誤りにならない。`--url` と両方に書いたリンクは残る。行の無いタスクには作らず、そのタスクが無いと言う |
 | `--parent <タスク ID>` | タスク | `--slug` と一緒なら `--task` も書き、ページを付ける 1 つのタスクの親になる。同じプロジェクトに行があり、親を持たないタスク。子を持つタスクには付けられない（親子は 1 段だけ）。`""` で外す |
 | `--title <タイトル>` | タスク | `""` で外す |
-| `--categories a,b,c` | タスク | カテゴリの順（書いたとおり）。並びに無いページのカテゴリは末尾に足し、ページのあるカテゴリを落とすと断る。ここではカテゴリの名前に `,` を書けない。`""` で外す |
+| `--categories <名前>` | タスク | タスクのカテゴリ。1 つごとに繰り返し、カテゴリの順（書いたとおり）にする。並びに無いページのカテゴリは末尾に足し、ページのあるカテゴリを落とすと断る。`""` で全部外す |
 | `--pin`・`--unpin` | ページ | `--slug` があるときだけ |
 | `--clear` | ページ | タスクから外し、ピン止めも外す。タスクは残す |
 | `--forget` | タスク | `--slug` が無いときだけ。ページが載っている間（アーカイブしたページも）と、子のタスクが残っている間は断る |

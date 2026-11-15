@@ -83,7 +83,7 @@ func TestAgentDocQuotes(t *testing.T) {
 		{taskGuidePath, usage(english.Msg("cli_task_no_pages", "forget")), 1},
 		{taskGuidePath, english.Msg("cli_task_no_row", "#130", store.Project("floe")), 1},
 		{taskGuidePath, english.Msg("cli_task_no_row", "#99", store.Project(store.ProjectKey(""))), 1},
-		{taskGuidePath, english.Msg("store_category_paged", "designs", "#130", store.Project("floe"), "design-notes"), 1},
+		{taskGuidePath, english.Msg("store_category_paged", strconv.QuoteToGraphic("designs"), "#130", store.Project("floe"), "design-notes"), 1},
 		{taskGuidePath, english.Msg("store_task_pages", "#130", store.Project("floe"), 1, "design-notes"), 1},
 		{taskGuidePath, english.Msg("store_parent_none", "#42", store.Project("floe")), 1},
 		{taskGuidePath, english.Msg("store_parent_nested", "#130", "#120"), 1},
