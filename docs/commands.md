@@ -2,6 +2,10 @@
 
 Reference for every command of the `floe` binary. How to write a data file is in [pages.md](pages.md).
 
+## Install
+
+The [README](../README.md#install) gives the command that installs floe. Set `FLOE_VERSION` to pin a release and `FLOE_INSTALL_DIR` to change the destination (default `~/.local/bin`). The binary is verified against the release's `SHA256SUMS`.
+
 ## Quick reference
 
 Flags are in each command's section below.

@@ -26,7 +26,7 @@ floe skill install <agent>   # 対応するエージェントは floe skill inst
 To show the user a page, use floe: run `floe guide` first and follow it. It is the guide of the floe installed, so read it each time rather than from memory.
 ```
 
-コマンドの一覧は `floe --help`。詳しくは [docs](.)。
+コマンドの一覧は `floe --help`。コマンドと設定は [commands.ja.md](commands.ja.md) にあります。
 
 ## ライセンス
 

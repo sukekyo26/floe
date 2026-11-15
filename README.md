@@ -26,7 +26,7 @@ For an agent not listed, put this line in its instructions (AGENTS.md or the lik
 To show the user a page, use floe: run `floe guide` first and follow it. It is the guide of the floe installed, so read it each time rather than from memory.
 ```
 
-`floe --help` lists the commands. More in [docs](docs/).
+`floe --help` lists the commands; [docs/commands.md](docs/commands.md) covers commands and settings.
 
 ## License
 
