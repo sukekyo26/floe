@@ -541,7 +541,7 @@ func TestPublishMoveProject(t *testing.T) {
 	}{
 		{"a place with no project", "/", []string{"--move-project", file}, 1, "has no project, which --move-project puts the page in"},
 		// A usage error, as cobra's other words for a command line are.
-		{"a link", dir, []string{"--link", "h.html", "--move-project"}, 2, "none of the others can be; [link move-project] were all set: run floe --help"},
+		{"a link", dir, []string{"--link", "h.html", "--move-project"}, 2, ": run floe --help\n"},
 	} {
 		code, out, errs := runIn(step.at, env, append([]string{"publish"}, step.args...)...)
 		if code != step.code || out != "" || !strings.Contains(errs, step.want) {

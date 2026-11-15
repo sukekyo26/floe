@@ -192,7 +192,8 @@ that points your agent to it (floe skill install --help lists the agents).`,
 		if c.Args != nil {
 			c.Args = usage(c.Args)
 		}
-		// LIMIT: a command's own PreRunE is replaced; chain it after flagGroups when one needs it.
+		// LIMIT: a command's own PreRunE and PreRun are replaced (cobra runs PreRun only without a PreRunE); chain
+		// them after flagGroups when one needs them.
 		c.PreRunE = flagGroups
 		c.InitDefaultHelpFlag()
 		c.InitDefaultVersionFlag()
