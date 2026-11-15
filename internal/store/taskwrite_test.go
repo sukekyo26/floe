@@ -110,7 +110,7 @@ func TestTaskWriteOne(t *testing.T) {
 		want     string
 		conflict bool
 	}{
-		{"a category with pages left out", store.TaskChange{TaskEdit: store.TaskEdit{Categories: &[]string{"y"}}, TaskProject: ptr("p"), Task: ptr("#9")}, "category z of task #9 in project p has pages (a)", false},
+		{"a category with pages left out", store.TaskChange{TaskEdit: store.TaskEdit{Categories: &[]string{"y"}}, TaskProject: ptr("p"), Task: ptr("#9")}, "category \"z\" of task #9 in project p has pages (a)", false},
 		// Both tasks are there, as the screen says of one: the pages moved meanwhile, so it reads again
 		{"what the screen saw, of two tasks", store.TaskChange{TaskEdit: store.TaskEdit{New: &no}, Slugs: []string{"a", "b"}}, "task #9 has changed since it was read", true},
 		{"a parent of two projects", store.TaskChange{TaskEdit: store.TaskEdit{Parent: ptr("#1")}, Slugs: []string{"a", "b"}, Task: ptr("#9")}, "a parent goes with one task, and the pages are on tasks of 2 projects", false},

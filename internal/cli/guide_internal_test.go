@@ -302,7 +302,7 @@ func TestGuideQuotes(t *testing.T) {
 		"`page in project app, off task #9`":             english.Msg("cli_page_off_task", store.Project("app"), "#9") == "page in project app, off task #9",
 		"`page in no project`":                           english.Msg("cli_page_project", store.Project(store.ProjectKey(""))) == "page in no project",
 		"`no task #20 in project app`":                   strings.HasPrefix(english.Msg("cli_task_no_row", "#20", store.Project("app")), "no task #20 in project app:"),
-		"`categories \"Designs,Samples,Ideas\"`":         strings.HasSuffix(taskLine("#12", "app", store.Task{State: "todo", Categories: []string{"Designs", "Samples", "Ideas"}}), `, categories "Designs,Samples,Ideas"`),
+		"`categories \"Designs\" \"Samples\" \"Ideas\"`": strings.HasSuffix(taskLine("#12", "app", store.Task{State: "todo", Categories: []string{"Designs", "Samples", "Ideas"}}), `, categories "Designs" "Samples" "Ideas"`),
 		"`page <slug>: no task`":                         english.Msg("cli_task_page", "<slug>", english.Msg("cli_task_page_off")) == "page <slug>: no task",
 		"`page old-notes: no task, in project floe`":     english.Msg("cli_task_page", "old-notes", english.Msg("cli_task_page_off_in", store.Project("floe"))) == "page old-notes: no task, in project floe",
 		"`moved from task …`":                            english.Msg("cli_task_page_moved", "…") == "moved from task …",

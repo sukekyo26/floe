@@ -46,7 +46,7 @@ func TestUITaskCategories(t *testing.T) { //nolint:paralleltest // the browser t
 	if _, err := st.Edit("old-a", store.Edit{Archived: &yes}); err != nil {
 		t.Fatal(err)
 	}
-	s.floe(t, "task", "--project", "proj", "--task", "S300", "--title", "Categories", "--categories", "案,実装,リリース,レビュー")
+	s.floe(t, "task", "--project", "proj", "--task", "S300", "--title", "Categories", "--categories", "案", "--categories", "実装", "--categories", "リリース", "--categories", "レビュー")
 	// G2 has no row, as a hand edit leaves it: its page says it, and no task is listed of it
 	handMeta(t, st, "g-a", "proj", false, "G2", "x", false)
 	b.size(1400, 900, false)

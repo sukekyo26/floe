@@ -28,7 +28,7 @@ func TestUITaskEdit(t *testing.T) { //nolint:paralleltest // the browser tests s
 			s.floe(t, "task", "--slug", p[0], "--task", "S300", "--category", p[1])
 		}
 	}
-	s.floe(t, "task", "--project", "proj", "--task", "S300", "--title", "Edit the task", "--url", "https://example.com/489", "--categories", "案,設計,実装,リリース,レビュー")
+	s.floe(t, "task", "--project", "proj", "--task", "S300", "--title", "Edit the task", "--url", "https://example.com/489", "--categories", "案", "--categories", "設計", "--categories", "実装", "--categories", "リリース", "--categories", "レビュー")
 	s.floe(t, "task", "--slug", "gone-a", "--task", "G1", "--category", "x")
 	b.size(1400, 900, false)
 	defer b.unsize()
@@ -360,7 +360,7 @@ func TestUITaskEdit(t *testing.T) { //nolint:paralleltest // the browser tests s
 	// Reordered while a category of no page was taken off: the order stays, without it.
 	open("S300")
 	press("実装", "down")
-	s.floe(t, "task", "--project", "proj", "--task", "S300", "--categories", "案,設計,実装,レビュー")
+	s.floe(t, "task", "--project", "proj", "--task", "S300", "--categories", "案", "--categories", "設計", "--categories", "実装", "--categories", "レビュー")
 	save("stale order")
 	say("stale order", categories)
 	save("saved the order again")

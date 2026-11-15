@@ -44,7 +44,7 @@ func TestUITaskArchivedInCategory(t *testing.T) { //nolint:paralleltest // the b
 	if _, err := st.ChangeTasks(store.TaskChange{Slugs: []string{"fold"}, Task: ptrTo("T1")}); err != nil {
 		t.Fatal(err)
 	}
-	s.floe(t, "task", "--project", "proj", "--task", "T1", "--categories", "案,設計,旧,新")
+	s.floe(t, "task", "--project", "proj", "--task", "T1", "--categories", "案", "--categories", "設計", "--categories", "旧", "--categories", "新")
 	// Read: o1 and n1 as they are, v1 and v0 before a new version of each
 	for _, slug := range []string{"o1", "n1", "v1", "v0"} {
 		readWhole(slug)
