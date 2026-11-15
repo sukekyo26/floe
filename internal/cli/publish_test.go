@@ -536,14 +536,16 @@ func TestPublishMoveProject(t *testing.T) {
 	for _, step := range []struct {
 		what, at string
 		args     []string
+		code     int
 		want     string
 	}{
-		{"a place with no project", "/", []string{"--move-project", file}, "has no project, which --move-project puts the page in"},
-		{"a link", dir, []string{"--link", "h.html", "--move-project"}, "none of the others can be"},
+		{"a place with no project", "/", []string{"--move-project", file}, 1, "has no project, which --move-project puts the page in"},
+		// A usage error, as cobra's other words for a command line are.
+		{"a link", dir, []string{"--link", "h.html", "--move-project"}, 2, "none of the others can be; [link move-project] were all set: run floe --help"},
 	} {
 		code, out, errs := runIn(step.at, env, append([]string{"publish"}, step.args...)...)
-		if code != 1 || out != "" || !strings.Contains(errs, step.want) {
-			t.Errorf("%s: floe publish %v = %d, %q, %q; want 1, nothing and %q", step.what, step.args, code, out, errs, step.want)
+		if code != step.code || out != "" || !strings.Contains(errs, step.want) {
+			t.Errorf("%s: floe publish %v = %d, %q, %q; want %d, nothing and %q", step.what, step.args, code, out, errs, step.code, step.want)
 		}
 	}
 	if projectOfPage() != "p" || s.ReadMeta("h") != nil {
