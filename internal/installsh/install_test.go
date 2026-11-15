@@ -113,7 +113,7 @@ func TestInstall(t *testing.T) {
 				if err == nil {
 					t.Fatalf("install.sh succeeded, want it to fail:\n%s", stderr.String())
 				}
-				if _, err := os.Stat(filepath.Join(dir, "floe")); err == nil {
+				if _, statErr := os.Stat(filepath.Join(dir, "floe")); statErr == nil {
 					t.Error("floe is installed although install.sh failed")
 				}
 				return
