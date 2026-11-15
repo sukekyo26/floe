@@ -185,6 +185,7 @@ var readOnly = [][]string{{"guide"}, {"task", "guide"}, {"template"}, {"part", "
 func TestGuideCommands(t *testing.T) {
 	t.Parallel()
 
+	shLines := 0
 	for _, path := range commandDocs {
 		guide := readGuide(t, path)
 		named := regexp.MustCompile("`floe ([^`]*)`").FindAllStringSubmatch(guide, -1)
@@ -225,8 +226,12 @@ func TestGuideCommands(t *testing.T) {
 			check(m[1], strings.Fields(m[1]))
 		}
 		for _, command := range shCommands(guide) {
-			check(command, ShellWords(command))
+			shLines++
+			check(command, shellWords(command))
 		}
+	}
+	if shLines < 10 {
+		t.Fatalf("the docs' sh blocks hold %d floe commands: read the blocks as the docs write them", shLines)
 	}
 }
 

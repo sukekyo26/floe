@@ -26,10 +26,12 @@ const (
 // shellWord is a word of a command line in a doc, as a shell splits it: a run in double quotes, or of no space.
 var shellWord = regexp.MustCompile(`"[^"]*"|\S+`)
 
-// ShellWords returns the words of line, a command line of a doc without its program's name, as a shell reads them:
-// split at spaces but in double quotes, up to a word that starts a comment (#), each word's quotes taken off. The
-// comment is cut before the quotes come off, so that --task "#130" keeps its value.
-func ShellWords(line string) []string {
+// shellWords returns the words of line, a command line of a doc without its program's name: split at spaces but in
+// double quotes, up to a word that starts with # (a comment), each word's double quotes taken off. The comment is cut
+// before the quotes come off, so that --task "#130" keeps its value.
+// LIMIT: double quotes and # alone are read: single quotes, --flag="a b", a pipe and a line ending in \ are split
+// otherwise than a shell does (the docs write none). Read them if a doc comes to.
+func shellWords(line string) []string {
 	var words []string
 	for _, w := range shellWord.FindAllString(line, -1) {
 		if strings.HasPrefix(w, "#") {
@@ -104,8 +106,11 @@ func TestAgentDocQuotes(t *testing.T) {
 		{themeDocPath, ownPlaceQuote(t, "themes"), 1},
 	}
 	for _, q := range quotes {
-		if got := strings.Count(readGuide(t, q.doc), q.text); got != q.times {
+		switch got := strings.Count(readGuide(t, q.doc), q.text); {
+		case got < q.times:
 			t.Errorf("%s holds %q %d times, floe makes it %d: write it as floe says it", q.doc, q.text, got, q.times)
+		case got > q.times:
+			t.Errorf("%s holds %q %d times, the test %d: write it as floe says it, or, if the doc now says it more often, change its count in the test", q.doc, q.text, got, q.times)
 		}
 	}
 }
@@ -156,7 +161,9 @@ func ownPlaceQuote(t *testing.T, kind string) string {
 
 // Every flag floe task takes is named in the doc of tasks, as `--name` or `--name …`: a flag a PR adds is told there.
 // LIMIT: one way alone, as no table is read here: a flag the doc's tables still name after floe dropped it passes,
-// unless a command of the doc gives it (TestGuideCommands).
+// unless a command of the doc gives it (TestGuideCommands); and a row of a flag's table taken out passes while the doc
+// names the flag elsewhere (each flag is named twice or more). Read the tables if a flag comes to be left in a table
+// alone, or out of one.
 func TestTaskGuideFlags(t *testing.T) {
 	t.Parallel()
 
@@ -171,7 +178,7 @@ func TestTaskGuideFlags(t *testing.T) {
 			return // cobra's
 		}
 		if name := "`--" + f.Name; !strings.Contains(doc, name+"`") && !strings.Contains(doc, name+" ") {
-			t.Errorf("%s names no --%s, a flag of floe task: write it in the table of its flags", taskGuidePath, f.Name)
+			t.Errorf("%s names no --%s, a flag of floe task: name it in the doc", taskGuidePath, f.Name)
 		}
 	})
 }
