@@ -859,4 +859,9 @@ func TestTaskCategoriesEachQuoted(t *testing.T) {
 	run("task #1 in project p: changed; categories \"a\"\n", "task", "--task", "#1", "--categories", "a", "--categories", "")
 	run("task #1 in project p: changed; no categories\n", "task", "--task", "#1", "--categories", "")
 	run("task #1 in project p: state todo\n", "task")
+	// A full-width space is printed as it is, as are the other printable characters, so that the name read back is
+	// the one written; a title is quoted the same.
+	run("task #2 in project p: made; title \"設計　見本\", categories \"設計　見本\" \"a\\tb\"\n",
+		"task", "--task", "#2", "--title", "設計　見本", "--categories", "設計　見本", "--categories", "a\tb")
+	run("task #2 in project p: changed; categories \"設計　見本\"\n", "task", "--task", "#2", "--categories", "設計　見本")
 }

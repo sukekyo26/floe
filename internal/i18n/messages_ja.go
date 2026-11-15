@@ -232,7 +232,7 @@ var messagesJA = map[string]string{
 	"store_page_no_task":      "ページ %s はタスクに付いていません。カテゴリとタスクの欄にはタスクが要ります",
 	"store_task_off":          "ページをタスクから外す書き込みでは、タスクを変えられません",
 	"store_parent_projects":   "親は 1 つのタスクに付けます。ページは %d 個のプロジェクトのタスクにいます",
-	"store_category_paged":    "タスク %[2]s（%[3]s）のカテゴリ %[1]q にはページがあります（%[4]s）。先にページを外すか、並びに残してください",
+	"store_category_paged":    "タスク %[2]s（%[3]s）のカテゴリ %[1]s にはページがあります（%[4]s）。先にページを外すか、並びに残してください",
 	"store_parent_self":       "タスク %s は自分の親になれません",
 	"store_parent_none":       "%[2]sに、親にできるタスク %[1]s がありません",
 	"store_parent_nested":     "タスク %[1]s には親（%[2]s）があるので、親にできません。親子は 1 段だけです",

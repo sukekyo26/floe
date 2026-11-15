@@ -4,7 +4,6 @@ import (
 	"context"
 	"encoding/json/jsontext"
 	"errors"
-	"fmt"
 	"net/http"
 	"net/url"
 	"slices"
@@ -249,16 +248,16 @@ func (a *app) listTasks(cmd *cobra.Command, f taskFlags) error {
 func taskLine(name, project string, row store.Task) string {
 	fields := []string{"state " + row.State}
 	if row.Title != "" {
-		fields = append(fields, fmt.Sprintf("title %q", row.Title))
+		fields = append(fields, "title "+strconv.QuoteToGraphic(row.Title))
 	}
 	if len(row.URLs) > 0 {
-		fields = append(fields, quotedField("urls", "no urls", row.URLs))
+		fields = append(fields, quotedField("urls", "", row.URLs))
 	}
 	if len(row.Categories) > 0 {
-		fields = append(fields, quotedField("categories", "no categories", row.Categories))
+		fields = append(fields, quotedField("categories", "", row.Categories))
 	}
 	if row.Parent != "" {
-		fields = append(fields, fmt.Sprintf("parent %q", row.Parent))
+		fields = append(fields, "parent "+strconv.QuoteToGraphic(row.Parent))
 	}
 	return english.Msg("cli_task_page_task", name, store.Project(project)) + ": " + strings.Join(fields, ", ")
 }
@@ -284,7 +283,7 @@ func (a *app) tellTask(w store.TaskWritten, ed store.TaskEdit) {
 func taskFields(row store.Task, ed store.TaskEdit, added bool) string {
 	var fields []string
 	if ed.Title != nil {
-		fields = append(fields, fmt.Sprintf("title %q", row.Title))
+		fields = append(fields, "title "+strconv.QuoteToGraphic(row.Title))
 	}
 	if ed.State != nil {
 		fields = append(fields, "state "+row.State)
@@ -298,7 +297,7 @@ func taskFields(row store.Task, ed store.TaskEdit, added bool) string {
 	if ed.Parent != nil {
 		parent := "no parent"
 		if row.Parent != "" {
-			parent = fmt.Sprintf("parent %q", row.Parent)
+			parent = "parent " + strconv.QuoteToGraphic(row.Parent)
 		}
 		fields = append(fields, parent)
 	}
@@ -306,14 +305,14 @@ func taskFields(row store.Task, ed store.TaskEdit, added bool) string {
 }
 
 // quotedField is a task's field of many values, the URLs or the categories, as a line tells it: its name and the
-// values, each quoted, or none for no value.
+// values, each quoted as Go quotes it but for printable characters such as a full-width space, or none for no value.
 func quotedField(name, none string, values []string) string {
 	if len(values) == 0 {
 		return none
 	}
 	quoted := make([]string, len(values))
 	for i, v := range values {
-		quoted[i] = strconv.Quote(v)
+		quoted[i] = strconv.QuoteToGraphic(v)
 	}
 	return name + " " + strings.Join(quoted, " ")
 }
@@ -333,7 +332,7 @@ func (a *app) tellPage(page store.Edited) {
 		parts = append(parts, english.Msg("cli_task_page_task", on.Name, store.Project(page.TaskProject)))
 	}
 	if on != nil && on.Category != "" {
-		parts = append(parts, fmt.Sprintf("category %q", on.Category))
+		parts = append(parts, "category "+strconv.QuoteToGraphic(on.Category))
 	}
 	if on != nil && on.Pin {
 		parts = append(parts, "pinned")
@@ -346,7 +345,7 @@ func (a *app) tellPage(page store.Edited) {
 		}
 		line += "; " + english.Msg(key, page.OffTask)
 		if page.OffCategory != "" {
-			line += fmt.Sprintf(", category %q", page.OffCategory)
+			line += ", category " + strconv.QuoteToGraphic(page.OffCategory)
 		}
 	}
 	a.print("%s", line)
