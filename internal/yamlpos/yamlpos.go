@@ -106,10 +106,10 @@ func ParseMap(file string, src []byte) (*Node, map[string]any, error) {
 }
 
 // Parse reads src as one YAML document and returns its body, or ErrEmpty when src holds none. A byte order
-// mark at its start is left out, as YAML 1.2 reads it. Before it is parsed, a byte order mark past the start, a
-// byte that is no UTF-8 and U+0085, U+2028 and U+2029 are refused (bytesOf), and then a comment in { } or [ ]
-// (flowComments). A syntax error is goccy/go-yaml's (library). A second document, or text a second --- drops,
-// is refused at its start, and nothing in it is walked.
+// mark at its start is left out, as YAML 1.2 reads it. Before it is parsed, a file over 1 MiB is refused alone,
+// else a byte order mark past the start, a byte that is no UTF-8 and U+0085, U+2028 and U+2029 (bytesOf), and
+// then a comment in { } or [ ] (flowComments). A syntax error is goccy/go-yaml's (library). A second document,
+// or text a second --- drops, is refused at its start, and nothing in it is walked.
 // Else one walk of the body refuses, all together, sorted: anchors, aliases, merge keys and tags, not
 // walking what they hold; a key that is not text, as goccy/go-yaml or YAML 1.2 reads it; a value or a text
 // key out of { } and [ ] a comment may have cut short; a key in { } without a value, but one refused as not
@@ -138,10 +138,8 @@ func Parse(file string, src []byte) (*Node, error) {
 // LIMIT: a lone surrogate escaped in double quotes ("\udc00") goccy/go-yaml reads as U+FFFD, telling only a high
 // one with nothing after it; refuse them if goccy/go-yaml comes to tell them, or one comes to matter.
 func document(file string, src []byte) (ast.Node, error) {
-	// YAML 1.2 allows a byte order mark at the start, which goccy/go-yaml reads as part of the first key.
-	// src is left without it for both the parser and dropped, so that their places agree.
-	src = bom.Trim(src)
-	if err := bytesOf(file, src); err != nil {
+	src, err := bytesOf(file, src)
+	if err != nil {
 		return nil, err
 	}
 	// Read once, for blockTabs, the parser and dropped: the parser changes its nodes, not the tokens' types
@@ -150,11 +148,11 @@ func document(file string, src []byte) (ast.Node, error) {
 	// blockTabs first: past a text it refuses, goccy/go-yaml reads the lines after it otherwise, some as comments.
 	// LIMIT: so the comments in flows are not told with its mistakes, but once they are mended, as the tokens past
 	// them cannot be trusted; nothing gathers them.
-	if err := blockTabs(file, src, tks); err != nil {
+	if err = blockTabs(file, src, tks); err != nil {
 		return nil, err
 	}
 	places := textpos.Each(src, starts(src, tks))
-	if err := flowComments(file, tks, places); err != nil {
+	if err = flowComments(file, tks, places); err != nil {
 		return nil, err
 	}
 	doc, err := parser.Parse(tks, 0)
@@ -349,17 +347,29 @@ func notUTF8(file string, src []byte) error {
 	return nil
 }
 
-// bytesOf refuses, together, each byte order mark of src past its start (src is without the first), and either
-// the first byte that is no UTF-8 or, in UTF-8 alone, each U+0085, U+2028 and U+2029: goccy/go-yaml reads a mark
-// as a character of a key or a value, and a byte that is no UTF-8 as U+FFFD, or fails on them where it does not.
+// maxSize is the size of a YAML file floe reads, as the bytes of the file.
+// LIMIT: 1 MiB, past the largest page's data seen (326 KB), and the file is read whole before it is refused:
+// the memory goes as the file's size. Refuse it where it is read if reading a very large file comes to matter.
+const maxSize = 1 << 20
+
+// bytesOf returns src, file, without the byte order mark at its start, which YAML 1.2 allows and goccy/go-yaml
+// reads as part of the first key: the parser and dropped read it so, so that their places agree.
+// A file over maxSize is refused alone, at the file, before anything reads it. Else bytesOf refuses, together,
+// each byte order mark past the start, and either the first byte that is no UTF-8 or, in UTF-8 alone, each
+// U+0085, U+2028 and U+2029: goccy/go-yaml reads a mark as a character of a key or a value, and a byte that is
+// no UTF-8 as U+FFFD, or fails on them where it does not.
 // The three characters are looked for only in UTF-8: in another encoding (Shift_JIS) their bytes come inside
 // other characters, and would be told where no such character is.
-func bytesOf(file string, src []byte) error {
+func bytesOf(file string, src []byte) ([]byte, error) {
+	if len(src) > maxSize {
+		return nil, New(file, Pos{Line: 0, Column: 0}, "yaml_too_large", len(src), maxSize)
+	}
+	src = bom.Trim(src)
 	read := notUTF8(file, src)
 	if read == nil {
 		read = lineSeparators(file, src).Err()
 	}
-	return usererr.Collect(bom.Refuse(file, src).Err(), read) //nolint:wrapcheck // the mistakes of src
+	return src, usererr.Collect(bom.Refuse(file, src).Err(), read) //nolint:wrapcheck // the mistakes of src
 }
 
 // lineSeparators refuses each U+0085, U+2028 and U+2029 of src, file, valid UTF-8, at its line and column, in

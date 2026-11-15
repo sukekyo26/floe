@@ -272,6 +272,31 @@ func TestParseLineSeparators(t *testing.T) {
 	}
 }
 
+// A file over 1 MiB is refused at the file alone, counted as its bytes with the byte order mark at its start, and
+// before what else is refused of its bytes.
+func TestParseSize(t *testing.T) {
+	t.Parallel()
+
+	of := func(size int, head string) string {
+		return head + "a: 1\n#" + strings.Repeat("x", size-len(head)-len("a: 1\n#\n")) + "\n"
+	}
+	tooLarge := func(size int) string {
+		return "a.yaml: " + i18n.EnglishCatalog().Msg("yaml_too_large", size, 1<<20)
+	}
+	for _, tt := range []struct{ name, src, want string }{
+		{"1 MiB", of(1<<20, ""), ""},
+		{"1 MiB with a mark", of(1<<20, bom), ""},
+		{"a byte over", of(1<<20+1, ""), tooLarge(1<<20 + 1)},
+		{"a byte over with a mark", of(1<<20+1, bom), tooLarge(1<<20 + 1)},
+		{"over, not UTF-8", of(1<<20+1, "b: \xc3\n"), tooLarge(1<<20 + 1)},
+	} {
+		_, err := yamlpos.Parse("a.yaml", []byte(tt.src))
+		if got := told(err); got != tt.want {
+			t.Errorf("%s: Parse of %d bytes told\n%s\nwant\n%s", tt.name, len(tt.src), got, tt.want)
+		}
+	}
+}
+
 // A | or > text without an indentation indicator whose first line not of spaces alone begins with spaces and a
 // tab is refused at the tab, each of a file, whatever its line breaks and what comes before it: goccy/go-yaml
 // counts the tab into the indentation, reading the lines after it otherwise than YAML 1.2 (dropping the "# h"
