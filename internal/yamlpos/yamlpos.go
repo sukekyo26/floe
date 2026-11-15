@@ -156,11 +156,11 @@ func document(file string, src []byte) (ast.Node, error) {
 	// blockTabs first: past a text it refuses, goccy/go-yaml reads the lines after it otherwise, some as comments.
 	// LIMIT: so the comments in flows are not told with its mistakes, but once they are mended, as the tokens past
 	// them cannot be trusted; nothing gathers them.
-	if err := blockTabs(file, src, tks); err != nil {
+	if err = blockTabs(file, src, tks); err != nil {
 		return nil, err
 	}
 	places := textpos.Each(src, starts(src, tks))
-	if err := flowComments(file, tks, places); err != nil {
+	if err = flowComments(file, tks, places); err != nil {
 		return nil, err
 	}
 	doc, err := parser.Parse(tks, 0)
