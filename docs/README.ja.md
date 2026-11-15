@@ -2,11 +2,9 @@
 
 [English README](../README.md)
 
-エージェントのためのローカルのページサーバーです。Go の単一バイナリで配布します。
-エージェントはページをデータ（YAML）で書き、floe がテンプレートで描きます。HTML のファイルは
-リンクしてそのまま表示します。どちらも `http://127.0.0.1:7325` で、自動で再読み込みし、
-管理ページとともに配信します。図は spec から inline SVG で描き、描く前に、字のはみ出し・重なり・
-線の交差を確かめます。
+AI エージェントのためのローカルのページサーバーです。エージェントがページを YAML のデータで書くと、floe がテンプレートで描き、`http://127.0.0.1:7325` で見せます。
+
+> **試作の段階です。** floe はまだ大きく変わります。版が上がると、コマンド・データファイル・テンプレートが、移行の手順なしに変わることがあります。試すのは自由ですが、広く使ってもらう段階ではありません。
 
 ## インストール
 
@@ -16,62 +14,19 @@ linux と macOS（amd64 / arm64）:
 curl -fsSL https://raw.githubusercontent.com/sukekyo26/floe/main/install.sh | sh
 ```
 
-`FLOE_VERSION` でリリースを固定し、`FLOE_INSTALL_DIR` でインストール先（既定は
-`~/.local/bin`）を変えられます。バイナリはリリースの `SHA256SUMS` で検証します。
-
-## はじめる
+## 使う
 
 ```sh
-floe guide                   # エージェントがページを書き、検査し、出す手引き
-floe template list          # floe のテンプレート（report・design・handoff・adr・postmortem・runbook・slides）と自分のもの
-floe template show report   # report のファイルの並び。データファイルに書けるものが先
-floe template show report example.yaml   # 書き始めの見本
-floe check plan.yaml        # データファイルを確かめる（誤りと警告を出すか、何も出さない）
-floe publish plan.yaml      # ページを保存し、URL を出して開く
-floe publish --link out/index.html   # HTML のファイルをそのまま見せる
-floe publish --link docs             # フォルダの下の HTML を並べる
-floe list                   # ページの一覧（新しい順）
-floe archive old-plan       # ページを消さずに一覧から外す
-floe tag old-plan --add 設計     # ページにタグを付ける
-floe stop                   # 裏で動くサーバーを止める
+floe skill install <agent>   # 対応するエージェントは floe skill install --help
 ```
 
-サーバーは最初の publish で起動し、`floe stop` まで動き続けます。
-`http://127.0.0.1:7325` を開くと管理ページです。
-ページは、新しい版の Chrome・Safari（26 以降）・Firefox（147 以降）で見るのを勧めます。
-
-## エージェントのために
-
-`floe guide` は、エージェントがページを書き、検査し、出すための手引きを出します。`floe skill install <agent>` は、そのエージェントが全部のプロジェクトのスキルを読む所に、手引きを指すスキルを書きます。エージェントの名前と置き場所は `floe skill install --help` が並べます。Cursor を使うなら、Cursor は `~/.claude/skills` と `~/.agents/skills` の両方を読み、両方にあるとスキルが 2 つ並びますが、害はありません。スキルを消すには、書いた `floe` のディレクトリを消します。
-
-並んでいないエージェントには、次の 1 行を指示（AGENTS.md など）に書きます：
+載っていないエージェントには、次の 1 行を指示（AGENTS.md など）に書きます：
 
 ```markdown
 To show the user a page, use floe: run `floe guide` first and follow it. It is the guide of the floe installed, so read it each time rather than from memory.
 ```
 
-## ドキュメント
-
-| したいこと | 読む | English |
-|---|---|---|
-| エージェントが最初に読む（`floe guide`） | — | [guide.md](agents/guide.md) |
-| ページを作る（データファイルを書く） | [pages.ja.md](pages.ja.md) | [pages.md](pages.md) |
-| 自分のテンプレートを作る（`floe template guide`） | — | [templates.md](agents/templates.md) |
-| 自分の部品を作る（`floe part guide`） | — | [parts.md](agents/parts.md) |
-| 自分のテーマを作る（`floe theme guide`） | — | [themes.md](agents/themes.md) |
-| 図を描く | — | [diagrams.md](agents/diagrams.md) |
-| HTML のファイルやフォルダをそのまま見せる | [links.ja.md](links.ja.md) | [links.md](links.md) |
-| コマンド・設定を調べる | [commands.ja.md](commands.ja.md) | [commands.md](commands.md) |
-| 変わったことを見る | [CHANGELOG.ja.md](CHANGELOG.ja.md) | [CHANGELOG.md](../CHANGELOG.md) |
-
-## 言語
-
-コマンドラインは、環境の言語によらず英語で話します（エージェントが読むため）。
-ブラウザが見せるもの（管理ページと、データファイルの誤りのページ）は、ブラウザの言語で英語か日本語になります。
-
-## 開発
-
-`just ci` で CI と同じ検査を走らせます。ただし、テストは race の見張りなしで走らせます。CI は race の見張り付きで走らせ、ブラウザのテストは 2 つの別のジョブ（`just test-browser looks`・`rest`）に分けるので、race は CI で初めて分かります。race の見張り付きでは、`internal/diagram` の重いランダムのテストの図は 1/5 になります。カバレッジのジョブで落ちた図は、見張りなしで再現します。ブラウザのテストは Chrome を `FLOE_CHROME`、無ければ `PATH` で探し、見つからなければ飛ばします。
+コマンドの一覧は `floe --help`。コマンドと設定は [commands.ja.md](commands.ja.md) にあります。
 
 ## ライセンス
 
