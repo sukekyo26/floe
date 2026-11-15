@@ -115,10 +115,10 @@ func Decode(file string, n *Node, v any) error {
 }
 
 // Parse reads src as one YAML document and returns its body, or ErrEmpty when src holds none. A byte order
-// mark at its start is left out, as YAML 1.2 reads it. Before it is parsed, a byte order mark past the start, a
-// byte that is no UTF-8 and U+0085, U+2028 and U+2029 are refused (bytesOf), and then a comment in { } or [ ]
-// (flowComments). A syntax error is goccy/go-yaml's (library). A second document, or text a second --- drops,
-// is refused at its start, and nothing in it is walked.
+// mark at its start is left out, as YAML 1.2 reads it. Before it is parsed, a file over 1 MiB is refused alone,
+// else a byte order mark past the start, a byte that is no UTF-8 and U+0085, U+2028 and U+2029 (bytesOf), and
+// then a comment in { } or [ ] (flowComments). A syntax error is goccy/go-yaml's (library). A second document,
+// or text a second --- drops, is refused at its start, and nothing in it is walked.
 // Else one walk of the body refuses, all together, sorted: anchors, aliases, merge keys and tags, not
 // walking what they hold; a key that is not text, as goccy/go-yaml or YAML 1.2 reads it; a value or a text
 // key out of { } and [ ] a comment may have cut short; a key in { } without a value, but one refused as not
@@ -371,7 +371,7 @@ const maxSize = 1 << 20
 // other characters, and would be told where no such character is.
 func bytesOf(file string, src []byte) ([]byte, error) {
 	if len(src) > maxSize {
-		return nil, New(file, Pos{Line: 0, Column: 0}, "yaml_too_large", len(src))
+		return nil, New(file, Pos{Line: 0, Column: 0}, "yaml_too_large", len(src), maxSize)
 	}
 	src = bom.Trim(src)
 	read := notUTF8(file, src)

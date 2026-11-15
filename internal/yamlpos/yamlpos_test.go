@@ -280,7 +280,7 @@ func TestParseSize(t *testing.T) {
 		return head + "a: 1\n#" + strings.Repeat("x", size-len(head)-len("a: 1\n#\n")) + "\n"
 	}
 	tooLarge := func(size int) string {
-		return "a.yaml: " + i18n.EnglishCatalog().Msg("yaml_too_large", size)
+		return "a.yaml: " + i18n.EnglishCatalog().Msg("yaml_too_large", size, 1<<20)
 	}
 	for _, tt := range []struct{ name, src, want string }{
 		{"1 MiB", of(1<<20, ""), ""},
