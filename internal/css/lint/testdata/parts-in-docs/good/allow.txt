@@ -1,0 +1,5 @@
+"--floe-code-pad" code's
+"--floe-code-room" code's
+"--tabs-gap" tabs' own
+"--tabs-face-bg" tabs' own
+"--tabs-face-fg" tabs' own

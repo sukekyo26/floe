@@ -1,0 +1,2 @@
+:scope { --floe-mark: 1.6rem; --floe-mark-gap: 0.85rem; color: var(--on-face, var(--fg)); }
+:scope .title { color: var(--on-face, var(--muted)); }

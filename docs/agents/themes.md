@@ -57,7 +57,7 @@ Set in `palette.css`. A palette may set properties of the root too (`default` se
 
 ### floe's own variables
 
-A theme sets these on the element that needs them, in any file (`--tone` and the two after it are read, not set).
+A theme sets these on the element that needs them, in any file (`--tone`, `--tone-soft`, `--tone-fill`, `--floe-room` and `--floe-pill-end` are read, not set).
 
 | Variable | What it changes | Default |
 |---|---|---|
@@ -65,6 +65,8 @@ A theme sets these on the element that needs them, in any file (`--tone` and the
 | `--floe-inset` | A shadow drawn within the box. `initial` clears it; `none` voids the box's shadow too | `0 0 #0000` |
 | `--face`, `--on-face` | The background and the text colour of a box filled with colours of its own | not set (`initial` on what a part's box holds) |
 | `--tone`, `--tone-soft`, `--tone-fill` | The colours of the tone of the element they are read in (`data-floe-tone`; accent's outside a tone). floe builds them from the palette's tone colours. They are read, not set: `background: var(--tone-soft); color: var(--tone)` | built from the palette |
+| `--floe-room` | The space between parts, which a `gap` on the root of `cards.css` or `tabs.css` changes; what a box draws outside itself stays within it | `0.75rem` |
+| `--floe-pill-end` | The most a pill that wraps rounds its corners: `min(var(--radius-pill), var(--floe-pill-end))` | `0.75lh` |
 
 ### Padding and text size
 
@@ -83,7 +85,7 @@ Set a part's variable on the root `:scope` of the theme's file of that part, or 
 
 | Variable | Set in | What it changes | Default |
 |---|---|---|---|
-| `--floe-mark` | The file of the part or look that draws the row | The size of a row's marker, its frame within | note `1.6rem`, numbered `2rem`, links `1lh`, marked `1.15rem`, timeline `0.7rem`, a card's number `1.75rem` (on `:scope.numbered`) |
+| `--floe-mark` | The file of the part or look that draws the row | The size of a row's marker, its frame within | note `1.6rem`, numbered `2rem`, links `1lh`, marked `1.15rem`, timeline `0.7rem`, cards `1.75rem` (a card's number, on :scope.numbered) |
 | `--floe-mark-gap` | The same file | The gap between a row's marker and its text | note `0.85rem`, numbered `1rem`, links `0.25rem`, marked `0.3rem`, checklist `0.65rem`, timeline `0.65rem` |
 | `--cards-gap` | `cards.css` | The space between what a card holds | `0.4rem` |
 | `--checks-gap` | `checks.css` | The space between what an item of `checks` holds | `0.35rem` |
@@ -123,9 +125,9 @@ Each item gives the action, then the reason in parentheses.
 
 - Give a shadow with `--floe-shadow-x`, `--floe-shadow-y`, `--floe-shadow-blur`, `--floe-shadow-spread` in `palette.css`, `--floe-shadow-color` on the element that casts it (`.card { --floe-shadow-color: var(--fg); }` in `cards.css`, where the cards are inside the root) and `--floe-inset` for one within the box (floe's base writes `box-shadow` from them).
 - Do not write `box-shadow` on a part's box, a look's element or a blockquote (it is written over floe's and drops the shadow and the inset).
-- Keep what a box draws outside itself within `--floe-room` (0.75rem) (a shadow, a pseudo-element standing out or an outline that reaches further meets the next box or the page's edge; a shadow reaches blur + spread + its offset towards a side, and a tilt or a scale reaches further the bigger the box).
+- Keep what a box draws outside itself within `--floe-room` (a shadow, a pseudo-element standing out or an outline that reaches further meets the next box or the page's edge; a shadow reaches blur + spread + its offset towards a side, and a tilt or a scale reaches further the bigger the box).
 - Draw a decoration on a box that has a focus ring or a selected option (the cards of `options`) with `--floe-inset` or `::before`, as in `.card { --floe-inset: inset 0 0 0 2px var(--surface); }` in `cards.css` (the ring is an `outline`, and takes the place of one a theme writes).
-- Leave the space between parts to `--floe-room` (floe sets it on `:root`, 0.75rem; a `gap` on the root of `cards.css` or `tabs.css` changes it).
+- Leave the space between parts to `--floe-room` (floe sets it on `:root`; a `gap` on the root of `cards.css` or `tabs.css` changes it).
 - Do not write a word in a `content` string; use symbols (CSS text does not pass `words.yaml`, so a word stays in one language whatever the page's).
 
 ### Rows: note, numbered, timeline, links, marked
@@ -169,7 +171,7 @@ In `cards.css`, `:scope` is the cards as a whole (the part's root) and `.card` i
 
 - `--radius-small` and `--radius-pill` MUST each be one item, a length or one function: `var()`, `calc()` and `min()` pass (refused: two lengths or a `/` void a bar's `rx` and a pill's `min()`, without a word).
 - Give `--radius` one length too (floe's parts read it as it is, but a rule of yours that reads it in `calc()` or as one corner is void).
-- Make a pill that wraps round no more than `--floe-pill-end` (`0.75lh`) with `min(var(--radius-pill), var(--floe-pill-end))`.
+- Make a pill that wraps round no more than `--floe-pill-end` with `min(var(--radius-pill), var(--floe-pill-end))`.
 - Name corners of other shapes with variables of your own, as in `:scope { --hand: 14px 6px 12px 8px / 8px 12px 6px 14px; }`.
 
 ## What `floe theme check` refuses

@@ -1,0 +1,2 @@
+:scope { --cards-gap: 0.4rem; }
+:scope.numbered { --floe-mark: 1.75rem; }

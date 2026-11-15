@@ -1,0 +1,5 @@
+@media print { :scope { --table-rule: none; } }
+:scope:has(caption) { --table-rule: none; }
+:scope thead { background: var(--table-head-bg, var(--quiet)); }
+:scope tr { border-bottom: var(--table-rule, 1px solid var(--line)); }
+:scope td { color: var(--table-cell,); }
