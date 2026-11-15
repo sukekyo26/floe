@@ -142,9 +142,9 @@ func (a *app) tellSaved(ctx context.Context, u string, saved server.Saved) {
 	switch {
 	case saved.OffTask != "":
 		// a page's task is of its project: moved, it was taken off it, a link's too
-		a.warn("cli_page_off_task", inProject(saved.TaskProject), saved.OffTask)
+		a.warn("cli_page_off_task", store.Project(saved.TaskProject), saved.OffTask)
 	case saved.Prev == nil || saved.Prev.TaskProject != saved.TaskProject:
-		a.warn("cli_page_project", inProject(saved.TaskProject))
+		a.warn("cli_page_project", store.Project(saved.TaskProject))
 	}
 }
 

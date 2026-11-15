@@ -102,9 +102,10 @@ floe checks the whole command before it writes, so a refused command writes noth
 | `--category`, `--pin` or `--unpin` with `--task` and no `--slug` | `--pin changes pages: name them with --slug: run floe --help` |
 | `--forget` or `--project` with `--slug` | `--forget goes with a task alone, not with pages: give it without --slug: run floe --help` |
 | `--task` of a task of no row, alone, with `--forget`, or with `--remove-url` alone (a mistyped ID makes no task) | `no task #130 in project floe: check the ID, or name its project with --project` |
+| The same, of a task of no project (`--project ""`) | `no task #99 in no project: check the ID, or name its project with --project` |
 | A category with pages left out of `--categories` | `category designs of task #130 in project floe has pages (design-notes): take them off it first, or keep it in the order` |
 | `--forget` of a task a page or a child task is on | `task #130 of project floe still has 1 page(s), such as design-notes: take them off it or delete them first` |
-| `--parent` naming a task of no row | `project floe has no task #42 that can be a parent` |
+| `--parent` naming a task of no row | `no task #42 in project floe can be a parent` |
 | `--parent` naming a task with a parent | `task #130 has a parent itself (#120), so it cannot be a parent: tasks have one level of children` |
 | `--parent` given to a task with children | `task #42 has child tasks, such as #41, so it cannot have a parent: tasks have one level of children` |
 | `--parent` with `--slug` but no `--task` | `--parent with --slug goes with --task: name the one task the pages go on: run floe --help` |

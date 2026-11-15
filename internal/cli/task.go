@@ -184,13 +184,13 @@ func (a *app) changeTask(cmd *cobra.Command, f taskFlags) error {
 		return a.readTask(ctx, c, t)
 	}
 	if re, ok := errors.AsType[*remoteError](err); ok && re.status == http.StatusNotFound {
-		return usererr.New("cli_task_no_row", t.name, t.project)
+		return usererr.New("cli_task_no_row", t.name, store.Project(t.project))
 	}
 	if err != nil {
 		return err
 	}
 	if f.forget {
-		a.print("%s", english.Msg("cli_task_forgotten", t.name, inProject(t.project)))
+		a.print("%s", english.Msg("cli_task_forgotten", t.name, store.Project(t.project)))
 	}
 	return nil
 }
@@ -203,7 +203,7 @@ func (a *app) readTask(ctx context.Context, c client, t taskOf) error {
 	}
 	row, ok := all[t.project][t.name]
 	if !ok {
-		return usererr.New("cli_task_no_row", t.name, t.project)
+		return usererr.New("cli_task_no_row", t.name, store.Project(t.project))
 	}
 	a.print("%s", taskLine(t.name, t.project, row))
 	return nil
@@ -237,7 +237,7 @@ func (a *app) listTasks(cmd *cobra.Command, f taskFlags) error {
 	}
 	open := all.Open(key)
 	if len(open) == 0 {
-		a.print("%s", english.Msg("cli_task_none_open", inProject(key)))
+		a.print("%s", english.Msg("cli_task_none_open", store.Project(key)))
 	}
 	for _, t := range open {
 		a.print("%s", taskLine(t.Name, key, t.Task))
@@ -261,7 +261,7 @@ func taskLine(name, project string, row store.Task) string {
 	if row.Parent != "" {
 		fields = append(fields, fmt.Sprintf("parent %q", row.Parent))
 	}
-	return english.Msg("cli_task_page_task", name, inProject(project)) + ": " + strings.Join(fields, ", ")
+	return english.Msg("cli_task_page_task", name, store.Project(project)) + ": " + strings.Join(fields, ", ")
 }
 
 // tellTask says the task written: made, changed or as it was, and the fields ed asked for as the store left them, with
@@ -274,7 +274,7 @@ func (a *app) tellTask(w store.TaskWritten, ed store.TaskEdit) {
 	case w.Wrote:
 		key = "cli_task_changed"
 	}
-	line := english.Msg(key, w.Task, inProject(w.TaskProject))
+	line := english.Msg(key, w.Task, store.Project(w.TaskProject))
 	if fields := taskFields(w.Row, ed, len(w.Added) > 0); fields != "" {
 		line += "; " + fields
 	}
@@ -326,11 +326,11 @@ func (a *app) tellPage(page store.Edited) {
 	if on == nil || on.Name == "" {
 		off := english.Msg("cli_task_page_off")
 		if !store.IsNoProject(page.TaskProject) {
-			off = english.Msg("cli_task_page_off_in", inProject(page.TaskProject))
+			off = english.Msg("cli_task_page_off_in", store.Project(page.TaskProject))
 		}
 		parts = append(parts, off)
 	} else {
-		parts = append(parts, english.Msg("cli_task_page_task", on.Name, inProject(page.TaskProject)))
+		parts = append(parts, english.Msg("cli_task_page_task", on.Name, store.Project(page.TaskProject)))
 	}
 	if on != nil && on.Category != "" {
 		parts = append(parts, fmt.Sprintf("category %q", on.Category))
