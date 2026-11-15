@@ -231,9 +231,7 @@ func Parse(file string, src []byte) (ast.Node, error) {
 }
 
 // document returns the body of the one document of src. A document of a directive (%YAML) alone is no
-// document: it heads the one after it. src is read as UTF-8 without U+0085, U+2028 and U+2029, and a byte order
-// mark past its start is refused with it, before it is parsed: goccy/go-yaml reads the one and the other as characters of a key or a value
-// (U+FFFD for a byte that is no UTF-8), and fails on them where it does not.
+// document: it heads the one after it. Before it is parsed, src is held to the bytes floe reads (bytesOf).
 // LIMIT: a control character (NUL) and UTF-16 without a mark are UTF-8 and left to goccy/go-yaml, which reads a
 // NUL in a value; refuse what YAML 1.2 does not print if one comes to matter.
 // LIMIT: a lone surrogate escaped in double quotes ("\udc00") goccy/go-yaml reads as U+FFFD, telling only a high
@@ -242,12 +240,8 @@ func document(file string, src []byte) (ast.Node, error) {
 	// YAML 1.2 allows a byte order mark at the start, which goccy/go-yaml reads as part of the first key.
 	// src is left without it for both the parser and dropped, so that their places agree.
 	src = bom.Trim(src)
-	bytesErr := notUTF8(file, src)
-	if bytesErr == nil {
-		bytesErr = lineSeparator(file, src)
-	}
-	if err := usererr.Collect(bom.Refuse(file, src).Err(), bytesErr); err != nil {
-		return nil, err //nolint:wrapcheck // the mistakes of src
+	if err := bytesOf(file, src); err != nil {
+		return nil, err
 	}
 	// Read once, for blockTabs, the parser and dropped: the parser changes its nodes, not the tokens' types
 	// and places, which dropped reads after it.
@@ -450,6 +444,17 @@ func notUTF8(file string, src []byte) error {
 		at += size
 	}
 	return nil
+}
+
+// bytesOf refuses, together, each byte order mark of src, file without its first, and the first byte that is no
+// UTF-8 or, in UTF-8, the first U+0085, U+2028 or U+2029: goccy/go-yaml reads a mark as a character of a key or
+// a value, and a byte that is no UTF-8 as U+FFFD, or fails on them where it does not.
+func bytesOf(file string, src []byte) error {
+	read := notUTF8(file, src)
+	if read == nil {
+		read = lineSeparator(file, src)
+	}
+	return usererr.Collect(bom.Refuse(file, src).Err(), read) //nolint:wrapcheck // the mistakes of src
 }
 
 // lineSeparator refuses src, file, valid UTF-8, at its first U+0085, U+2028 or U+2029, in quotes and comments
