@@ -70,8 +70,7 @@ it among its pages, which the user decides.
   floe task --slug design-notes --task "#131" --parent "#130"
   floe task --slug design-notes --pin
   floe task --task "#130" --forget`,
-		Args:    cobra.NoArgs,
-		PreRunE: flagGroups,
+		Args: cobra.NoArgs,
 		RunE: func(cmd *cobra.Command, _ []string) error {
 			// A category of spaces is the empty one from here on, as the server reads it.
 			f.category = strings.TrimSpace(f.category)
