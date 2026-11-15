@@ -46,19 +46,16 @@ func (d *Data) PlaceItem(at []string, mistakes usererr.List) error {
 // declares nor checks.
 var Shared = []string{"lang", "template", "theme", "title"}
 
-// Read reads the data file src, file in its mistakes: yamlpos.Parse, and only when it refused nothing,
-// goccy/go-yaml's reading of the values (its mistake for a top that is not keys and values), then the
-// shared keys, each text, and lang: written and not empty or spaces. An empty file, or one of comments
-// alone, reads as {}, its mistakes at the file alone, as it has no node to place them at. Its whole numbers are made
-// int (Ints). A theme given ("" or spaces for none) is drawn with instead of the
-// data's: theme: is then neither read nor refused, and Values holds the theme given, read as one written, so
-// that every layer sees the theme the page is drawn with.
+// Read reads the data file src, file in its mistakes: yamlpos.ParseMap, and only when it refused nothing, the
+// shared keys, each text, and lang: written and not empty or spaces. An empty file, or one of comments alone, reads
+// as {}, its mistakes at the file alone, as it has no node to place them at. A theme given ("" or spaces for none)
+// is drawn with instead of the data's: theme: is then neither read nor refused, and Values holds the theme given,
+// read as one written, so that every layer sees the theme the page is drawn with.
 func Read(file string, src []byte, theme string) (*Data, error) {
 	root, values, err := yamlpos.ParseMap(file, src)
 	if err != nil {
 		return nil, err //nolint:wrapcheck // mistakes at their lines and columns, or floe's failure
 	}
-	Ints(values)
 	// A theme given is read as one written, spaces naming none.
 	given := strings.TrimSpace(theme) != ""
 	d := &Data{
@@ -72,9 +69,8 @@ func Read(file string, src []byte, theme string) (*Data, error) {
 }
 
 // Ints turns the whole numbers in v that fit into int, in place, and returns v, so that every layer sees one type of
-// them: goccy/go-yaml reads one above 0 as uint64, which expr negates by wrapping around (-3 / 2 is 9.2e18), and
-// one below 0 as int64, as expr gives some of its values (date(…).Unix()). A type of its own (time.Duration)
-// stays as it is.
+// them, as yamlpos.Decode gives them: expr gives some of its values as int64 (date(…).Unix()). A type of its own
+// (time.Duration) stays as it is.
 // LIMIT: a whole number above 9.2e18 stays uint64, which expr's - still wraps around (-a < 0 does not hold).
 func Ints(v any) any {
 	switch v := v.(type) {

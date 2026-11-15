@@ -1,10 +1,12 @@
 package doc_test
 
 import (
+	"errors"
 	"maps"
 	"reflect"
 	"slices"
 	"strconv"
+	"strings"
 	"testing"
 
 	"floe/internal/doc"
@@ -114,8 +116,6 @@ func TestReadMistakes(t *testing.T) {
 		{"", "a.yaml: " + noLang},
 		{"# just a note\n", "a.yaml: " + noLang},
 		{"&top\ntitle: 3\n", "a.yaml:1:1: anchors, aliases, merge keys (<<) and tags are not supported; write the value out"},
-		{"- a\n- b\n", "a.yaml:1:1: sequence was used where mapping is expected"},
-		{"~\n", "a.yaml:1:1: null was used where mapping is expected"},
 		// The byte order mark at the start is no part of the first key.
 		{"\xef\xbb\xbflang: en\ntitle: 1\n", "a.yaml:2:8: title must be text"},
 		{"\xef\xbb\xbftitle: 1\nlang: en\n", "a.yaml:1:8: title must be text"},
@@ -131,8 +131,21 @@ func TestReadMistakes(t *testing.T) {
 	}
 }
 
-// A whole number that fits an int is read as one, in lists and keys and values too, above 0 (which goccy reads as
-// uint64, which expr wraps around when it negates it) and below 0 (int64); one past it stays uint64.
+// A top that is not keys and values is refused at its start, whatever it is.
+func TestReadTopNotKeys(t *testing.T) {
+	t.Parallel()
+
+	for _, src := range []string{"- a\n- b\n", "~\n", "x\n", "42\n", "true\n", "  [a]\n"} {
+		_, err := doc.Read("a.yaml", []byte(src), "")
+		var e *usererr.Error
+		if !errors.As(err, &e) || e.Key != "yaml_top_not_keys" || e.Line() != 1 || e.Column() != strings.Index(src, strings.TrimSpace(src))+1 {
+			t.Errorf("Read(%q) = %v, want yaml_top_not_keys at its start", src, err)
+		}
+	}
+}
+
+// A whole number that fits an int is read as one, in lists and keys and values too, above 0 and below 0; one past it
+// is uint64.
 func TestReadInts(t *testing.T) {
 	t.Parallel()
 

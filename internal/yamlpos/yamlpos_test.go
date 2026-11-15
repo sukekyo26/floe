@@ -3,6 +3,7 @@ package yamlpos_test
 import (
 	"errors"
 	"fmt"
+	"reflect"
 	"strings"
 	"testing"
 
@@ -667,5 +668,29 @@ func TestNode(t *testing.T) {
 	}
 	if text, ok := yamlpos.Text(value("k")); !ok || text != "t\n" || value("k").Style != yamlpos.Literal {
 		t.Errorf("k: %q %v", text, ok)
+	}
+}
+
+// Decode reads a plain scalar by YAML 1.2's core schema, and a quoted one or a | text as text; a whole number is
+// an int, or uint64 past int64.
+func TestDecode(t *testing.T) {
+	t.Parallel()
+
+	for src, want := range map[string]any{
+		"~": nil, "null": nil, "Null": nil, "NULL": nil, "": nil, "'~'": "~", "nul": "nul",
+		"true": true, "True": true, "TRUE": true, "false": false, "FALSE": false, "yes": "yes", "tRue": "tRue",
+		"0": 0, "-3": -3, "+3": 3, "0o17": 15, "0x1F": 31, "9223372036854775807": 9223372036854775807,
+		"9223372036854775808": uint64(9223372036854775808), "1.5": 1.5, "-.5": -0.5, "1.": 1.0,
+		"2030-04-12": "2030-04-12", "'1'": "1", "\"true\"": "true", "|\n  1\n": "1\n", "a b": "a b",
+		"[1, x]": []any{1, "x"}, "{a: ~}": map[string]any{"a": nil},
+	} {
+		body, err := yamlpos.Parse("a.yaml", []byte("v: "+src+"\n"))
+		if err != nil {
+			t.Fatalf("Parse(%q): %s", src, told(err))
+		}
+		got, _ := yamlpos.Decode(body).(map[string]any) //nolint:errcheck // a nil map holds no v, told below
+		if !reflect.DeepEqual(got["v"], want) {
+			t.Errorf("Decode(%q) = %#v, want %#v", src, got["v"], want)
+		}
 	}
 }
