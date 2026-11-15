@@ -3,8 +3,10 @@ package textpos_test
 import (
 	"errors"
 	"io"
+	"strings"
 	"testing"
 	"text/template"
+	"time"
 	"unicode/utf8"
 
 	"floe/internal/textpos"
@@ -33,6 +35,8 @@ func TestOf(t *testing.T) {
 		{"\tx", 1, 1, 2},
 		{"\xff\xfex", 2, 1, 3},
 		{"ab\r", 3, 2, 1},
+		{"é", 1, 1, 2},  // in a character: the byte before is one
+		{"日x", 2, 1, 3}, // two bytes of a character cut short, each one
 	} {
 		if line, column := textpos.Of([]byte(tt.src), tt.at); line != tt.line || column != tt.column {
 			t.Errorf("Of(%q, %d) = %d:%d, want %d:%d", tt.src, tt.at, line, column, tt.line, tt.column)
@@ -166,5 +170,51 @@ func TestEach(t *testing.T) {
 		if got[i] != (textpos.Place{Line: line, Column: column}) {
 			t.Errorf("Each at %d = %+v, Of = %d:%d", at, got[i], line, column)
 		}
+	}
+}
+
+// Each, going on from the place before on a line, tells each place as counting from the line's start does: at
+// every byte, in a character too, a place twice and the end, among bytes that are no UTF-8 and line breaks.
+func TestEachEveryByte(t *testing.T) {
+	t.Parallel()
+
+	src := []byte("aé日😀\xc3\xe3\x81x\xff\r\nb日\rc\n\x80é\n😀z")
+	ats := make([]int, 0, 2*(len(src)+1))
+	for at := range len(src) + 1 {
+		ats = append(ats, at, at)
+	}
+	got := textpos.Each(src, ats)
+	for i, at := range ats {
+		// Counted afresh from the line's start, as a plain reference.
+		line, start := 1, 0
+		for j := range at {
+			if src[j] == '\n' || src[j] == '\r' && (j+1 >= len(src) || src[j+1] != '\n') {
+				line, start = line+1, j+1
+			}
+		}
+		want := textpos.Place{Line: line, Column: utf8.RuneCount(src[start:at]) + 1}
+		if got[i] != want {
+			t.Errorf("Each at %d = %+v, want %+v", at, got[i], want)
+		}
+	}
+}
+
+// Each reads a long line once, not from its start for each place: a line of 1 MiB with 500,000 places.
+func TestEachLinear(t *testing.T) { //nolint:paralleltest // it measures time, alone
+	src := []byte(strings.Repeat("1,", 1<<19))
+	ats := make([]int, 0, len(src)/2)
+	for at := 0; at < len(src); at += 2 {
+		ats = append(ats, at)
+	}
+	done := make(chan []textpos.Place, 1)
+	go func() { done <- textpos.Each(src, ats) }()
+	// Waited for apart, so that one counting from the line's start (minutes) fails here, not at go test's timeout.
+	select {
+	case got := <-done:
+		if last := got[len(got)-1]; last != (textpos.Place{Line: 1, Column: len(src) - 1}) {
+			t.Errorf("last place %+v", last)
+		}
+	case <-time.After(10 * time.Second):
+		t.Fatal("Each took over 10s")
 	}
 }
