@@ -42,13 +42,14 @@ func TestAgentDocLists(t *testing.T) {
 	}
 
 	takes := "a number, " + canvasRange(t)
+	rows := docTables(t, "diagrams.md")["The spec"]
 	for _, key := range []string{"width", "height"} {
-		i := slices.IndexFunc(docTables(t, "diagrams.md")["The spec"], func(r docKeyRow) bool { return slices.Equal(r.keys, []string{key}) })
+		i := slices.IndexFunc(rows, func(r docKeyRow) bool { return slices.Equal(r.keys, []string{key}) })
 		switch {
 		case i < 0:
 			t.Errorf("docs/agents/diagrams.md has no row of %s in the table of The spec", key)
-		case docTables(t, "diagrams.md")["The spec"][i].takes != takes:
-			t.Errorf("docs/agents/diagrams.md, \"The spec\": %s takes %q, the schema %q", key, docTables(t, "diagrams.md")["The spec"][i].takes, takes)
+		case rows[i].takes != takes:
+			t.Errorf("docs/agents/diagrams.md, \"The spec\": %s takes %q, the schema %q", key, rows[i].takes, takes)
 		}
 	}
 }
