@@ -83,9 +83,9 @@ func (a *app) guideCmd() *cobra.Command {
 		Use:   "guide",
 		Short: "Print the guide for agents: how to write, check and publish a page",
 		Long: `Print the guide for agents: how to write, check and publish a page. Its Tasks section points to floe task
-guide; the part of it that has the agent ask which task and category to put each new page in is printed only when
-the task mode is on in the management page's settings, read from the store the other commands send to (FLOE_DIR)
-without starting the server.`,
+guide; the part of it that has the agent ask which task to put each new page on, and under which category, is printed
+only when the task mode is on in the management page's settings, read from the store the other commands send to
+(FLOE_DIR) without starting the server.`,
 		Args: cobra.NoArgs,
 		RunE: func(_ *cobra.Command, _ []string) error {
 			set, err := a.settings()

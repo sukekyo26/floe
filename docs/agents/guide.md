@@ -56,7 +56,7 @@ The user keeps a task list, and wants each new page put on a task, under one of 
 #### How to ask
 
 - When `floe publish` prints the page's project (`page in project app`, or `page in no project`), after `--move-project` too (`page in project app, off task #9`), ask which task to put the page on, then, if it goes on one, which of its categories.
-- Below, `<project>` is the name after `page in project`, or `""` for no project.
+- Below, `<project>` is the name after `page in project`, up to a comma if any, or `""` for no project.
 - Ask in a dialog of choices if you have one (Claude Code's `AskUserQuestion`), not in your reply's text: the user does not see your reply while the dialog is open. With no such dialog, ask in a reply that holds nothing but the question, its choices listed last.
 - Either way, write in the question all the user needs, the page's title and URL first, and offer four choices at most.
 - When the user picks `A new task` or `A new category` without typing its ID and title or its name, ask for them in a reply that holds nothing but the question, the page's title and URL first: a dialog needs two choices or more.
