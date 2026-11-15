@@ -6,6 +6,10 @@ adheres to [Semantic Versioning](https://semver.org/).
 
 ## [Unreleased]
 
+### Fixed
+
+- Fix `floe publish --link` with `--move-project` refusing them without `run floe --help` and with exit code 1; it now exits 2, as other command line mistakes do.
+
 ## [0.1.0] - 2026-11-16
 
 ### Added
