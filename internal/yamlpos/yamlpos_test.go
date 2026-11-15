@@ -281,7 +281,7 @@ func TestParseSize(t *testing.T) {
 }
 
 // A tab is a character of a value as YAML 1.2 reads it: after the indentation of a | or > text (with spaces before
-// it or not, on its first line or after), and inside a plain value (S370). One where indentation goes is
+// it or not, on its first line or after), and inside a plain value. One where indentation goes is
 // go.yaml.in/yaml/v4's mistake.
 func TestParseTabs(t *testing.T) {
 	t.Parallel()
@@ -309,8 +309,8 @@ func TestParseTabs(t *testing.T) {
 	}
 }
 
-// A comment in { } or [ ] is no mistake of yamlpos's here (S362's child 7 judges what a # cuts on go.yaml.in/yaml/v4's
-// tree); a flow left open is go.yaml.in/yaml/v4's own mistake, at its place.
+// A # in { } or [ ] that took a flow's end leaves it open, go.yaml.in/yaml/v4's own mistake, at its place; a comment
+// after a number or on a line of its own passes.
 func TestParseFlowComments(t *testing.T) {
 	t.Parallel()
 
@@ -724,7 +724,7 @@ func TestParseControlAndUTF16(t *testing.T) {
 }
 
 // A nesting past go.yaml.in/yaml/v4's depth is its mistake, at its line and column, read in memory as the input
-// grows (S234).
+// grows.
 func TestParseDeep(t *testing.T) {
 	t.Parallel()
 
@@ -832,8 +832,11 @@ func TestParseComments(t *testing.T) {
 		{"ports: [\n  8080,  # admin\n  9090,\n]\n", ""},
 		{"- text: |\n    one\n- text: | # note on two\n    two\n", ""},
 		{"title: 'Plan #1 draft'\n", ""},
-		// LIMIT: on a line of its own after a plain value, deeper than its key, as the LIMIT of comments tells.
+		// LIMIT: on a line of its own after a plain value, deeper than its key, and right after a text where v4 gives it to
+		// the next item, as the LIMITs of comments tell.
 		{"a: b\n   # c\nb: 1\n", ""},
+		{"p:\n  - text: |\n      one\n  # Next\n\n  - text: more\n", ""},
+		{"x:\n- |\n  x\n # c\n-\n", ""},
 		{"a: Plan\n  draft\n  #1 of series\nb: 1\n", ""},
 	} {
 		_, err := yamlpos.Parse("a.yaml", []byte(tt.src))

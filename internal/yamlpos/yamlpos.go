@@ -104,9 +104,10 @@ func ParseMap(file string, src []byte) (*Node, map[string]any, error) {
 // refused alone, else a byte order mark past the start, a byte that is no UTF-8 and U+0085, U+2028 and U+2029
 // (bytesOf). A syntax error, and a nesting past go.yaml.in/yaml/v4's depth, is its own (library). A second document
 // is refused at its start.
-// Else one walk of the body refuses, all together, sorted: anchors, aliases, merge keys and tags, not walking what
-// they hold; a key that is not text as YAML 1.2 reads it, and a key written twice in one mapping; a key in { }
-// without a value; and a plain value YAML 1.2 reads as a number JSON has none for (.inf, .nan) or floe cannot hold.
+// Else walks of the body refuse, all together, sorted: anchors, aliases, merge keys and tags, not walking what
+// they hold; a key that is not text as YAML 1.2 reads it, and a key written twice in one mapping; a key in { } or
+// [ ] without a value; a plain value YAML 1.2 reads as a number JSON has none for (.inf, .nan) or floe cannot hold;
+// and a comment that may have cut a value short (comments).
 func Parse(file string, src []byte) (*Node, error) {
 	doc, err := document(file, src)
 	if err != nil {
