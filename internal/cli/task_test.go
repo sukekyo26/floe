@@ -864,4 +864,14 @@ func TestTaskCategoriesEachQuoted(t *testing.T) {
 	run("task #2 in project p: made; title \"設計　見本\", categories \"設計　見本\" \"a\\tb\"\n",
 		"task", "--task", "#2", "--title", "設計　見本", "--categories", "設計　見本", "--categories", "a\tb")
 	run("task #2 in project p: changed; categories \"設計　見本\"\n", "task", "--task", "#2", "--categories", "設計　見本")
+	// So are a parent's name, told by the write and by the read, and a page's category, on the task and left.
+	run("task 親　1 in project p: made; title \"p\"\n", "task", "--task", "親　1", "--title", "p")
+	run("task #3 in project p: made; parent \"親　1\"\n", "task", "--task", "#3", "--parent", "親　1")
+	run("task #3 in project p: state todo, parent \"親　1\"\n", "task", "--task", "#3")
+	if code, out, errs := runIn(dir, env, "publish", "d.yaml", "--slug", "a"); code != 0 {
+		t.Fatalf("publish = %d, %q, %q", code, out, errs)
+	}
+	run("task #1 in project p: changed; categories \"設計　見本\"\npage a: task #1 in project p, category \"設計　見本\"\n",
+		"task", "--slug", "a", "--task", "#1", "--category", "設計　見本")
+	run("page a: task #2 in project p; moved from task #1, category \"設計　見本\"\n", "task", "--slug", "a", "--task", "#2")
 }

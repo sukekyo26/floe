@@ -242,7 +242,7 @@ floe のものか自分のものの、テンプレート・部品（見た目と
 
 ## `floe info <slug>`
 
-サーバーが持つとおりにページを出します（動いていなければ起こす）。何も書きません。1 行に、名前と値をタブで区切って 1 つずつ出し、毎回同じ 14 個の名前を同じ順に出します。無い値は空です。字の値（`title`・`project`・`task`・`category`・`repository`・`source` と、`tags` の 1 つずつ。タグは空白で並べる）は Go の書き方で引用符に囲み（全角空白などの印字できる字はそのまま）、`slug`・`url`・`kind`・`pinned`・`archived`・`version`・`updated` は囲みません。`project` はプロジェクトの無いページでは空で、引用符を外すと `floe task` の `--project` にそのまま渡せます。`kind` は `data`・`link`・`folder` のどれかです。`source` は、データファイルの `repository` の根からのパス（`repository` が空なら実際のパス）か、リンクしたファイル・フォルダの実際のパスです。`version` はリンクでは空です。`updated` は `floe list` と同じ、手元の時刻です。アーカイブしたページも出し、`archived true` と言います。無い slug は断ります。
+サーバーが持つとおりにページを出します（動いていなければ起こす）。何も書きません。1 行に、名前と値をタブで区切って 1 つずつ出し、毎回同じ 14 個の名前を同じ順に出します。無い値は空です。字の値（`title`・`project`・`task`・`category`・`repository`・`source` と、`tags` の 1 つずつ。タグは空白で並べる）は Go の書き方で引用符に囲み（全角空白などの空白の字はそのまま）、`slug`・`url`・`kind`・`pinned`・`archived`・`version`・`updated` は囲みません。`project` はプロジェクトの無いページでは空で、引用符を外すと `floe task` の `--project` にそのまま渡せます。`kind` は `data`・`link`・`folder` のどれかです。`source` は、データファイルの `repository` の根からのパス（`repository` が空なら実際のパス）か、リンクしたファイル・フォルダの実際のパスです。`version` はリンクでは空です。`updated` は `floe list` と同じ、手元の時刻です。アーカイブしたページも出し、`archived true` と言います。無い slug は断ります。
 
 ```text
 $ floe info design-notes

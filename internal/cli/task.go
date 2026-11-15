@@ -305,7 +305,7 @@ func taskFields(row store.Task, ed store.TaskEdit, added bool) string {
 }
 
 // quotedField is a task's field of many values, the URLs or the categories, as a line tells it: its name and the
-// values, each quoted as Go quotes it but for printable characters such as a full-width space, or none for no value.
+// values, each quoted as Go quotes it but with a space such as a full-width space as it is, or none for no value.
 func quotedField(name, none string, values []string) string {
 	if len(values) == 0 {
 		return none
