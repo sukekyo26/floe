@@ -18,7 +18,7 @@
 | Variable | Set in | What it changes | Default |
 |---|---|---|---|
 | `--floe-mark` | The part's file | A mark's size | note `1.5rem`, tabs `1rem`, `2rem` |
-| `--floe-mark-gap` | The same | The gap | note `0.85rem` (on its title) |
+| `--floe-mark-gap` | The same | The gap | not set |
 | `--cards-gap` | `cards.css` | The space in a card | `0.4rem` |
 | `--table-head-bg` | `table.css` | A head's background | `var(--quiet)` |
 | `--table-rule` | `table.css` | The rule | `1px solid var(--line)` |

@@ -20,3 +20,4 @@ agents/themes.md "Part variables: names --gone, which floe's parts and looks nei
 agents/themes.md "Part variables: names no --cards-pad, which parts/cards/part.css sets on its :scope: write a row for it, or allow it in the rule with why a theme does not set it"
 agents/themes.md "Part variables: the row of --tabs-picked-bg names 2 variables and gives 1 defaults: give each its default in code, in order"
 agents/themes.md "floe's own variables: gives --floe-inset the default none, which base.css writes as 0 0 #0000"
+agents/themes.md "Part variables: gives --floe-mark-gap no default: write each part's default after its name, as note `0.85rem`, in its Default column"

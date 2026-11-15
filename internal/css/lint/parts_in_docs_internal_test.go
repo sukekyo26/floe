@@ -113,7 +113,7 @@ var partsInDocs = Rule{Name: "parts-in-docs", Allow: []Allow{
 				named[name] = true
 				if _, ok := values[name]; !ok {
 					say("names " + name + ", which " + table.nowhere + ": remove its row, or set it")
-				} else if keep(name) {
+				} else {
 					in.Saw()
 				}
 			}

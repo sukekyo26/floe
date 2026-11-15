@@ -591,6 +591,8 @@ func TestRootValues(t *testing.T) {
 		":scope[x] { --x: 1px }":                      "",
 		":scope:where(.a) { --x: 1px }":               "",
 		"@media print { :scope { --x: 1px } }":        "",
+		":scope .a.b { --x: 1px }":                    "",
+		":scope/**/.a { --x: 1px }":                   "1px",
 		":scope .a { --x: 1px }":                      "",
 		":scope { &.a { --x: 1px } }":                 "",
 		":scope { --x: }":                             "",
