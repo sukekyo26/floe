@@ -3,8 +3,9 @@ package lint
 import (
 	"io/fs"
 	"slices"
-	"strconv"
 	"strings"
+	"testing"
+	"unicode"
 
 	"golang.org/x/net/html"
 	"golang.org/x/net/html/atom"
@@ -39,10 +40,10 @@ var paletteInDocs = Rule{Name: "palette-in-docs", Check: func(in *Input) []Findi
 		}
 	}
 	slices.Sort(set)
-	values := map[string]string{}
+	values := map[string][]held{}
 	for name, ds := range declarations(palette.Src, func(p string) bool { return strings.HasPrefix(p, "--") }) {
 		if d := ds[len(ds)-1]; len(d.value) > 0 {
-			values[name] = valueOf(palette.Src, d)
+			values[name] = []held{{file: palette.File, value: valueOf(palette.Src, d)}}
 		}
 	}
 	if len(set) == 0 {
@@ -67,15 +68,8 @@ var paletteInDocs = Rule{Name: "palette-in-docs", Check: func(in *Input) []Findi
 			if !row.hasDefault {
 				continue
 			}
-			held := slices.ContainsFunc(row.names, func(n string) bool { _, ok := values[n]; return ok })
-			if held && len(row.defaults) != len(row.names) {
-				found = append(found, Finding{doc.file, 0, "palette-in-docs", "the row of " + row.names[0] + " names " + strconv.Itoa(len(row.names)) + " variables and gives " + strconv.Itoa(len(row.defaults)) + " defaults: give each its default in code, in order"})
-				continue
-			}
-			for i, name := range row.names {
-				if want, ok := values[name]; ok && row.defaults[i] != want {
-					found = append(found, Finding{doc.file, 0, "palette-in-docs", "gives " + name + " the default " + row.defaults[i] + ", which " + palette.File + " writes as " + want})
-				}
+			for _, text := range rowDefaults(row, values, func(n string) bool { _, ok := values[n]; return ok }) {
+				found = append(found, Finding{doc.file, 0, "palette-in-docs", doc.heading + ": " + text})
 			}
 		}
 		for _, name := range names {
@@ -93,10 +87,10 @@ var paletteInDocs = Rule{Name: "palette-in-docs", Check: func(in *Input) []Findi
 }}
 
 // paletteRow is a row of the table of the palette: the code in its first column, and, when the table has a Default
-// column, the code in that cell.
+// column, the code in that cell, each with the text before it there (labelsIn).
 type paletteRow struct {
-	names, defaults []string
-	hasDefault      bool
+	names, defaults, labels []string
+	hasDefault              bool
 }
 
 // docTree returns the doc file of docs, Markdown, as floe draws it, as an HTML tree, or why it cannot.
@@ -160,7 +154,7 @@ func paletteTable(root *html.Node, heading, what string) ([]paletteRow, string) 
 		row := paletteRow{names: codeIn(cells[0])}
 		if defaultAt >= 0 && defaultAt < len(cells) {
 			row.hasDefault = true
-			row.defaults = codeIn(cells[defaultAt])
+			row.defaults, row.labels = labelsIn(cells[defaultAt])
 		}
 		rows = append(rows, row)
 	}
@@ -177,13 +171,63 @@ func textOf(n *html.Node) string {
 	return b.String()
 }
 
-// codeIn returns the text of each code element in n, whitespace collapsed to single spaces.
-func codeIn(n *html.Node) []string {
-	var out []string
-	for c := range n.Descendants() {
-		if c.DataAtom == atom.Code {
-			out = append(out, strings.Join(strings.Fields(textOf(c)), " "))
+// labelsIn returns the text of each code element in n, as codeIn does, and the text before each, from the code before
+// it or n's start, its spaces and commas at its ends cut: a part's name in "note `1.6rem`, cards `1.75rem` (a card's
+// number)". The text after the last code is read by neither.
+func labelsIn(n *html.Node) (codes, labels []string) {
+	var before strings.Builder
+	var walk func(*html.Node)
+	walk = func(n *html.Node) {
+		for c := n.FirstChild; c != nil; c = c.NextSibling {
+			switch {
+			case c.DataAtom == atom.Code:
+				codes = append(codes, strings.Join(strings.Fields(textOf(c)), " "))
+				labels = append(labels, strings.TrimFunc(before.String(), func(r rune) bool { return unicode.IsSpace(r) || r == ',' }))
+				before.Reset()
+			case c.Type == html.TextNode:
+				before.WriteString(c.Data)
+			default:
+				walk(c)
+			}
 		}
 	}
-	return out
+	walk(n)
+	return codes, labels
+}
+
+// codeIn returns the text of each code element in n, whitespace collapsed to single spaces.
+func codeIn(n *html.Node) []string {
+	codes, _ := labelsIn(n)
+	return codes
+}
+
+// TestLabelsIn reads the name before each code of a cell, from the code before it, its spaces and commas at its ends cut,
+// and leaves the text after the last code out.
+func TestLabelsIn(t *testing.T) {
+	t.Parallel()
+
+	for cell, want := range map[string]string{
+		"note `1rem`, cards `2rem` (on x)":        "note=1rem cards=2rem",
+		"`2rem`, note `1rem`":                     "=2rem note=1rem",
+		"(on x) cards `2rem`":                     "(on x) cards=2rem",
+		"a card's number `1rem`,\n  links `2rem`": "a card's number=1rem links=2rem",
+		"**note** `1rem`":                         "note=1rem",
+	} {
+		drawn, err := kit.Markdown(cell)
+		if err != nil {
+			t.Fatal(err)
+		}
+		root, err := html.Parse(strings.NewReader(string(drawn)))
+		if err != nil {
+			t.Fatal(err)
+		}
+		codes, labels := labelsIn(root)
+		var got []string
+		for i := range codes {
+			got = append(got, labels[i]+"="+codes[i])
+		}
+		if strings.Join(got, " ") != want {
+			t.Errorf("%q: %q, want %q", cell, got, want)
+		}
+	}
 }
