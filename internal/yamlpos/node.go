@@ -270,7 +270,7 @@ func blockWritten(src []byte, header int, rest []byte, value string) (Pos, bool)
 		return none, false
 	}
 	at := textpos.NextLine(src, len(src)-len(rest))
-	for i := 0; at < len(src); i++ {
+	for at < len(src) {
 		end := textpos.NextLine(src, at)
 		line := strings.TrimRight(string(src[at:end]), "\r\n")
 		if strings.TrimSpace(line) == "" {
@@ -278,7 +278,7 @@ func blockWritten(src []byte, header int, rest []byte, value string) (Pos, bool)
 			continue
 		}
 		indent := len(line) - len(strings.TrimLeft(line, " "))
-		if i != first || line[indent:] != lines[first] {
+		if line[indent:] != lines[first] {
 			return none, false
 		}
 		return Pos{Line: header + 1, Column: indent + 1}, true
