@@ -14,6 +14,7 @@ import (
 	"unicode/utf8"
 
 	"floe/internal/files"
+	"floe/internal/i18n"
 	"floe/internal/usererr"
 )
 
@@ -38,6 +39,18 @@ func ProjectKey(project string) string {
 // IsNoProject reports whether key, a project as tasks.json has it (ProjectKey), is that of pages of no project.
 func IsNoProject(key string) bool {
 	return key == noProject
+}
+
+// Project is a project as tasks.json has it (ProjectKey), worded in a message as the catalog it is told in says:
+// named, or none for the key of pages of no project.
+type Project string
+
+// Phrase words p in c.
+func (p Project) Phrase(c *i18n.Catalog) string {
+	if IsNoProject(string(p)) {
+		return c.Msg("store_no_project")
+	}
+	return c.Msg("store_project", string(p))
 }
 
 // TaskName is the name of a page's task as written: trimmed, "" taking the page off its task. A name of spaces alone is
@@ -369,7 +382,7 @@ func checkParent(project string, rows map[string]Task, name string, ed TaskEdit)
 	if ed.ParentNew == nil || !*ed.ParentNew {
 		up, ok := rows[parent]
 		if !ok {
-			return usererr.New("store_parent_none", parent, project)
+			return usererr.New("store_parent_none", parent, Project(project))
 		}
 		if up.Parent != "" {
 			return usererr.New("store_parent_nested", parent, up.Parent)
@@ -422,7 +435,7 @@ func checkSeen(project string, rows map[string]Task, name string, ed TaskEdit) e
 	// LIMIT: a parent taken to be there and gone meanwhile is refused as no parent (400), not as stale: the screen
 	// does not read the tasks again. Tell it apart by its pages, read under the lock, if that comes to mislead
 	if _, ok := rows[parent]; !ok && ed.ParentNew != nil && !*ed.ParentNew {
-		return usererr.New("store_parent_none", parent, project)
+		return usererr.New("store_parent_none", parent, Project(project))
 	}
 	return checkThere(rows, parent, ed.ParentNew)
 }
@@ -575,10 +588,10 @@ func (s *Store) ForgetTask(project, name string) error {
 	}
 	var kept usererr.List
 	if count > 0 {
-		kept = append(kept, usererr.New("store_task_pages", name, project, count, first))
+		kept = append(kept, usererr.New("store_task_pages", name, Project(project), count, first))
 	}
 	if children := childrenOfTask(all[project], name); len(children) > 0 {
-		kept = append(kept, usererr.New("store_task_children", name, project, len(children), children[0]))
+		kept = append(kept, usererr.New("store_task_children", name, Project(project), len(children), children[0]))
 	}
 	if err = kept.Sorted().Err(); err != nil {
 		return err

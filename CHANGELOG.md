@@ -10,6 +10,10 @@ adheres to [Semantic Versioning](https://semver.org/).
 
 - Change the task mode's ask in `floe guide`: agents ask the user in a dialog of choices (a reply of only the question where they have none) which task to put each new page on, the first two open tasks, a new task or none, then which of its categories.
 
+### Fixed
+
+- Fix refusals of a task of no project, which said `project /`: `floe task` and the management page now say `no project` (in Japanese `プロジェクト未設定`, after the task list's `未設定`; a named project is now `プロジェクト「floe」` there), and `--parent` naming a task of no row says `no task #42 in project app can be a parent`.
+
 ## [0.1.0] - 2026-11-16
 
 ### Added
