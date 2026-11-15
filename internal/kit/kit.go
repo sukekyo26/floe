@@ -374,6 +374,9 @@ func (k *Kit) isPartOrLook(name string) bool {
 // itself), those starting with a dot left out, sorted; none without an FS. A symlink to a file is that file,
 // as the system follows it (dotfiles link files into a directory of their own); one to a directory is
 // refused, as floe reads the directories it holds as they are; one that leads nowhere cannot be read.
+// LIMIT: a directory to list that is a FIFO or the like is told by kit_not_file, whose "put a regular file here"
+// does not fit where a directory belongs: as it is, only a template's assets/; made so since it was looked at, any
+// directory listed. Pass CannotRead the kind of what belongs there if a message asking for a directory is needed.
 func entries(d Dir, dir string, dirs bool) ([]string, error) {
 	if d.FS == nil {
 		return nil, nil
@@ -412,14 +415,10 @@ func entries(d Dir, dir string, dirs bool) ([]string, error) {
 
 // readFile returns the file name of the directory dir of d as it is, and false when there is none: the byte
 // order mark at its start is left to the reader of its kind. One that cannot be read is told in the system's
-// words, at it. What is neither a regular file nor a directory (a FIFO, a link to a device) is refused unread,
-// as reading it may block or never end.
+// words, at it. What is neither a regular file nor a directory (a FIFO, a link to a device) is refused unread by
+// the FS of one's own (files.DirFS), as reading it may block or never end.
 func readFile(d Dir, dir, name string) ([]byte, bool, error) {
 	at := path.Join(d.Name, dir, name)
-	// LIMIT: a file made a FIFO between the Stat and the read blocks it; open it without blocking if it comes to.
-	if fi, err := fs.Stat(d.FS, path.Join(dir, name)); err == nil && files.IsNotFile(fi) {
-		return nil, false, usererr.CannotRead(at, usererr.ErrNotFile)
-	}
 	src, err := fs.ReadFile(d.FS, path.Join(dir, name))
 	switch {
 	case errors.Is(err, fs.ErrNotExist):

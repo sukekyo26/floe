@@ -11,6 +11,7 @@ import (
 	"testing"
 
 	"floe/internal/cli"
+	"floe/internal/timebox"
 )
 
 // runEnv runs floe with args in dir, with the environment env alone, and returns its exit code, stdout and
@@ -406,6 +407,27 @@ func TestAssetUnreadable(t *testing.T) {
 	if code, _, stderr := runEnv(dir, env, "template", "check"); code != 1 || stderr != file+": the image \"a.svg\" cannot be read (permission denied)\n" {
 		t.Errorf("floe template check = %d, %q", code, stderr)
 	}
+}
+
+// A template's assets/ that is a FIFO is refused as what is no regular file nor directory, not listed for ever.
+func TestAssetsFIFO(t *testing.T) {
+	t.Parallel()
+
+	dir := write(t, map[string]string{
+		"templates/memo/schema.json":  `{"$schema": "https://json-schema.org/draft/2020-12/schema", "type": "object"}`,
+		"templates/memo/page.html":    "<!doctype html><html><head><title>t</title></head><body></body></html>",
+		"templates/memo/example.yaml": "lang: en\ntemplate: memo\n",
+	})
+	assets := filepath.Join(dir, "templates/memo/assets")
+	if err := syscall.Mkfifo(assets, 0o600); err != nil {
+		t.Fatal(err)
+	}
+	env := map[string]string{"FLOE_TEMPLATES_DIR": filepath.Join(dir, "templates")}
+	timebox.Within(t, "floe template check", func() {
+		if code, _, stderr := runEnv(dir, env, "template", "check"); code != 1 || !strings.HasPrefix(stderr, assets+": this is neither a regular file nor a directory") {
+			t.Errorf("floe template check = %d, %q", code, stderr)
+		}
+	})
 }
 
 // In assets/ too, a link to a file is read and a link to a directory refused.

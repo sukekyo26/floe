@@ -10,7 +10,7 @@ import (
 )
 
 // marks is what the directories of the drawing are now: those of one's own parts, themes and templates, each
-// walked whole as kit reads it (os.DirFS, so that one that is a symlink is walked into, and leaving the names
+// walked whole as kit reads it (files.DirFS, so that one that is a symlink is walked into, and leaving the names
 // files.Hidden leaves), and that of the icon sets, with each set and its index.json: floe icons fetch writes a set
 // to a directory of its own and renames it in.
 // LIMIT: an icon of a set edited in place is not seen: only the sets and their index.json are. Walk the sets too
@@ -23,7 +23,7 @@ func (s *Server) marks() string {
 		}
 		b.WriteString(root + "=" + files.Mark(root) + "\n")
 		//nolint:errcheck // what cannot be walked is left out, its directory's mark telling it changed
-		_ = fs.WalkDir(os.DirFS(root), ".", func(p string, d fs.DirEntry, err error) error {
+		_ = fs.WalkDir(files.DirFS(root), ".", func(p string, d fs.DirEntry, err error) error {
 			switch {
 			case err != nil || p == ".":
 				return nil //nolint:nilerr // as above
