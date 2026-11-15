@@ -436,7 +436,7 @@ func TestTaskCommandOrder(t *testing.T) {
 		t.Fatal(err)
 	}
 	if code, out, errs := runIn(dir, env, "task", "--slug", "a", "--task", "#1", "--state", "done"); code != 0 ||
-		out != "task #1 in project p: unchanged; state done\npage a: task #1 in project p\n" {
+		out != "task #1 in project p: changed; state done\npage a: task #1 in project p\n" {
 		t.Fatalf("given again = %d, %q, %q", code, out, errs)
 	}
 	if got := pageTaskOf(t, env, "a"); got != `{"name":"#1"}` {

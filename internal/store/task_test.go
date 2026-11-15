@@ -725,15 +725,15 @@ func TestTaskParent(t *testing.T) {
 	if after, read := s.ReadTasks(); read != nil || after["p"]["#6"].State != "" {
 		t.Errorf(`"" and a URL taken off, of no row, made: %+v, %v`, after["p"]["#6"], read)
 	}
-	// The same again, to another parent, and off, of a task with none too: each change moves its time, and the last,
-	// which changes nothing, does not. Of an hour no write makes, so that a write in the same millisecond is not taken
+	// The same again, to another parent, and off, of a task with none too: each change moves its time, and the same
+	// again does not. Of an hour no write makes, so that a write in the same millisecond is not taken
 	// for none.
 	long := hour(1)
 	for _, c := range []struct {
 		name, parent, want string
 		moves              bool
 	}{
-		{"#2", "#1", "#1", true}, {"#2", "#9", "#9", true}, {"#2", "", "", true}, {"#2", "", "", false},
+		{"#2", "#1", "#1", false}, {"#2", "#9", "#9", true}, {"#2", "", "", true}, {"#2", "", "", false},
 	} {
 		if all, err = s.ReadTasks(); err != nil {
 			t.Fatal(err)
