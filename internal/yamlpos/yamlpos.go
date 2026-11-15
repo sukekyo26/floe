@@ -459,9 +459,9 @@ func bytesOf(file string, src []byte) error {
 
 // lineSeparator refuses src, file, valid UTF-8, at its first U+0085, U+2028 or U+2029, in quotes and comments
 // too: YAML 1.2 reads them as characters, but go.yaml.in/yaml/v4 as line breaks, ending a value or a comment
-// there. Only the first is told, as for notUTF8. An escape in double quotes (" ") is no such character.
+// there. Only the first is told, as for notUTF8. An escape in double quotes ("\u2028") is no such character.
 func lineSeparator(file string, src []byte) error {
-	at := bytes.IndexAny(src, "\u0085  ")
+	at := bytes.IndexAny(src, "\u0085\u2028\u2029")
 	if at < 0 {
 		return nil
 	}
