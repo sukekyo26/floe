@@ -238,9 +238,9 @@ func TestParseMarksAndUTF8(t *testing.T) {
 	}
 }
 
-// U+0085, U+2028 and U+2029 written as they are are refused at the first of a file, in quotes and comments too,
-// with a byte order mark past the start, but not in a file that is no UTF-8: go.yaml.in/yaml/v4 reads them as
-// line breaks. An escape of one is no such character.
+// U+0085, U+2028 and U+2029 written as they are are refused at each place, in quotes, keys and comments too,
+// in the order of places with a byte order mark past the start, but not in a file that is no UTF-8:
+// go.yaml.in/yaml/v4 reads them as line breaks. An escape of one is no such character.
 func TestParseLineSeparators(t *testing.T) {
 	t.Parallel()
 
@@ -257,9 +257,12 @@ func TestParseLineSeparators(t *testing.T) {
 		{"in double quotes", "note: \"x" + nel + "\"\n", "a.yaml:1:9: " + sep("U+0085", `\u0085`)},
 		{"in a comment", "a: 1\n# a note " + ps + "b: 2\n", "a.yaml:2:10: " + sep("U+2029", `\u2029`)},
 		{"in a block", "note: |\n  aaa\n  b" + ls + "c\n", "a.yaml:3:4: " + sep("U+2028", `\u2028`)},
-		{"the first of a file", "a: x" + ps + "\nb: y" + nel + "\n", "a.yaml:1:5: " + sep("U+2029", `\u2029`)},
+		{"each place", "a: x" + ps + "\nb: y" + nel + "\n", "a.yaml:1:5: " + sep("U+2029", `\u2029`) + "\na.yaml:2:5: " + sep("U+0085", `\u0085`)},
+		{"in a key", "a" + ls + "b: 1\n", "a.yaml:1:2: " + sep("U+2028", `\u2028`)},
+		{"with CRLF", "a: 1\r\nb: x" + ls + "\r\n", "a.yaml:2:5: " + sep("U+2028", `\u2028`)},
 		{"after the first mark", bom + "note: a" + ls + "\n", "a.yaml:1:8: " + sep("U+2028", `\u2028`)},
 		{"with a mark inside", "a: " + bom + "x\nb: " + ls + "\n", "a.yaml:1:4: " + mark + "\na.yaml:2:4: " + sep("U+2028", `\u2028`)},
+		{"before a mark inside", "a: " + ls + "\nb: " + bom + "x\n", "a.yaml:1:4: " + sep("U+2028", `\u2028`) + "\na.yaml:2:4: " + mark},
 		{"in a file not UTF-8", "a: \xc3\nb: " + ls + "\n", "a.yaml:1:4: " + i18n.EnglishCatalog().Msg("yaml_not_utf8")},
 		{"escapes", "note: \"\\u0085 \\u2028 \\u2029 \\N \\L \\P\"\n", ""},
 	} {

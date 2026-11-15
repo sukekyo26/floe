@@ -209,7 +209,8 @@ func Text(n ast.Node) (text string, ok bool, err error) {
 }
 
 // Parse reads src as one YAML document and returns its body, or ErrEmpty when src holds none. A byte order
-// mark at its start is left out, as YAML 1.2 reads it. Before it is parsed, a comment in { } or [ ] is refused
+// mark at its start is left out, as YAML 1.2 reads it. Before it is parsed, a byte order mark past the start, a
+// byte that is no UTF-8 and U+0085, U+2028 and U+2029 are refused (bytesOf), and then a comment in { } or [ ]
 // (flowComments). A syntax error is goccy/go-yaml's (library). A second document, or text a second --- drops,
 // is refused at its start, and nothing in it is walked.
 // Else one walk of the body refuses, all together, sorted: anchors, aliases, merge keys and tags, not
@@ -446,28 +447,40 @@ func notUTF8(file string, src []byte) error {
 	return nil
 }
 
-// bytesOf refuses, together, each byte order mark of src, file without its first, and the first byte that is no
-// UTF-8 or, in UTF-8, the first U+0085, U+2028 or U+2029: goccy/go-yaml reads a mark as a character of a key or
-// a value, and a byte that is no UTF-8 as U+FFFD, or fails on them where it does not.
+// bytesOf refuses, together, each byte order mark of src past its start (src is without the first), and either
+// the first byte that is no UTF-8 or, in UTF-8 alone, each U+0085, U+2028 and U+2029: goccy/go-yaml reads a mark
+// as a character of a key or a value, and a byte that is no UTF-8 as U+FFFD, or fails on them where it does not.
+// The three characters are looked for only in UTF-8: in another encoding (Shift_JIS) their bytes come inside
+// other characters, and would be told where no such character is.
 func bytesOf(file string, src []byte) error {
 	read := notUTF8(file, src)
 	if read == nil {
-		read = lineSeparator(file, src)
+		read = lineSeparators(file, src).Err()
 	}
 	return usererr.Collect(bom.Refuse(file, src).Err(), read) //nolint:wrapcheck // the mistakes of src
 }
 
-// lineSeparator refuses src, file, valid UTF-8, at its first U+0085, U+2028 or U+2029, in quotes and comments
-// too: YAML 1.2 reads them as characters, but go.yaml.in/yaml/v4 as line breaks, ending a value or a comment
-// there. Only the first is told, as for notUTF8. An escape in double quotes ("\u2028") is no such character.
-func lineSeparator(file string, src []byte) error {
-	at := bytes.IndexAny(src, "\u0085\u2028\u2029")
-	if at < 0 {
-		return nil
+// lineSeparators refuses each U+0085, U+2028 and U+2029 of src, file, valid UTF-8, at its line and column, in
+// quotes and comments too: YAML 1.2 reads them as characters, but go.yaml.in/yaml/v4 as line breaks, ending a
+// value or a comment there. An escape in double quotes ("\u2028") is no such character.
+func lineSeparators(file string, src []byte) usererr.List {
+	var ats []int
+	for at := 0; ; {
+		i := bytes.IndexAny(src[at:], "\u0085\u2028\u2029")
+		if i < 0 {
+			break
+		}
+		ats = append(ats, at+i)
+		_, size := utf8.DecodeRune(src[at+i:])
+		at += i + size
 	}
-	r, _ := utf8.DecodeRune(src[at:])
-	line, column := textpos.Of(src, at)
-	return usererr.NewAt(file, line, column, "yaml_line_separator", fmt.Sprintf("U+%04X", r), fmt.Sprintf(`\u%04x`, r))
+	found := make(usererr.List, 0, len(ats))
+	for k, p := range textpos.Each(src, ats) {
+		r, _ := utf8.DecodeRune(src[ats[k]:])
+		found = append(found, usererr.NewAt(file, p.Line, p.Column, "yaml_line_separator",
+			fmt.Sprintf("U+%04X", r), fmt.Sprintf(`\u%04x`, r)))
+	}
+	return found
 }
 
 // dropped finds text after the --- at start, which goccy/go-yaml reads as an empty document and
