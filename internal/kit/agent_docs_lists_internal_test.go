@@ -1,9 +1,7 @@
 package kit
 
 import (
-	"encoding/json"
 	"errors"
-	"os"
 	"slices"
 	"strings"
 	"testing"
@@ -16,6 +14,8 @@ import (
 // The tables of names in the docs for agents name what floe holds, each in its first column and no other: the keys
 // every data file shares, the files of a part and of a template, the values of marks:, which the table of part.yaml
 // names in its row of marks: too; and the widths a spec's width and height take.
+// LIMIT: a table's first column alone is held, and the second where said: what the other columns say of a file
+// (required, In a look) is not. Hold them if a doc's column comes to go wrong.
 func TestAgentDocLists(t *testing.T) {
 	t.Parallel()
 
@@ -42,9 +42,13 @@ func TestAgentDocLists(t *testing.T) {
 	}
 
 	takes := "a number, " + canvasRange(t)
-	for _, row := range docTables(t, "diagrams.md")["The spec"] {
-		if (slices.Equal(row.keys, []string{"width"}) || slices.Equal(row.keys, []string{"height"})) && row.takes != takes {
-			t.Errorf("docs/agents/diagrams.md, \"The spec\": %s takes %q, the schema %q", row.keys[0], row.takes, takes)
+	for _, key := range []string{"width", "height"} {
+		i := slices.IndexFunc(docTables(t, "diagrams.md")["The spec"], func(r docKeyRow) bool { return slices.Equal(r.keys, []string{key}) })
+		switch {
+		case i < 0:
+			t.Errorf("docs/agents/diagrams.md has no row of %s in the table of The spec", key)
+		case docTables(t, "diagrams.md")["The spec"][i].takes != takes:
+			t.Errorf("docs/agents/diagrams.md, \"The spec\": %s takes %q, the schema %q", key, docTables(t, "diagrams.md")["The spec"][i].takes, takes)
 		}
 	}
 }
@@ -58,13 +62,7 @@ func canvasRange(t *testing.T) string {
 			Canvas struct{ Minimum, Maximum float64 } `json:"canvas"`
 		} `json:"$defs"`
 	}
-	raw, err := os.ReadFile("floe/parts/diagram/schema.json")
-	if err != nil {
-		t.Fatal(err)
-	}
-	if err := json.Unmarshal(raw, &schema); err != nil {
-		t.Fatal(err)
-	}
+	schemaOf(t, "floe/parts/diagram/schema.json", &schema)
 	return numOf(t, schema.Defs.Canvas.Minimum) + " to " + numOf(t, schema.Defs.Canvas.Maximum)
 }
 
@@ -90,11 +88,21 @@ func TestAgentDocReadNames(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
+	for _, table := range [][2]string{{"themes.md", "Files"}, {"parts.md", "part.yaml"}} {
+		for _, row := range docTables(t, table[0])[table[1]] {
+			if len(row.keys) == 0 {
+				t.Errorf("docs/agents/%s: a row of the table of %s names nothing in code in its first column, which this reads", table[0], table[1])
+			}
+		}
+	}
 	theme := fstest.MapFS{}
 	for _, name := range docFirstColumn(t, "themes.md", "Files") {
 		if !strings.Contains(name, "<") {
 			theme["mine/"+name] = &fstest.MapFile{Data: nil}
 		}
+	}
+	if len(theme) == 0 {
+		t.Error("docs/agents/themes.md names no file of a theme in the table of Files")
 	}
 	if _, err := Load(base, Sources{Themes: Dir{FS: theme, Name: "themes"}}); err != nil {
 		t.Errorf("a theme of the files docs/agents/themes.md names is refused: %s", told(err))

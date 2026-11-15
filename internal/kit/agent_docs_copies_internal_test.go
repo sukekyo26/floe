@@ -24,6 +24,10 @@ func TestAgentDocQuotes(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
+	image, err := formatBytes(maxImage)
+	if err != nil {
+		t.Fatal(err)
+	}
 	marks := "`" + strings.Join(markKinds[:len(markKinds)-1], "`, `") + "` or `" + markKinds[len(markKinds)-1] + "`"
 	unknown, _, _ := strings.Cut(i18n.EnglishCatalog().Msg("kit_asset_unknown", ".x/a.png"), ": ")
 	var code struct {
@@ -51,11 +55,11 @@ func TestAgentDocQuotes(t *testing.T) {
 		{"templates.md", "`{{.Calc.total \\| num}}` is `" + numOf(t, 1234567) + "`", 1},
 		{"templates.md", "`{{.Calc.rate \\| num 3}}` is `" + numOf(t, 3, 0.0064812) + "`", 1},
 		{"templates.md", "`{{.Calc.size \\| bytes}}` is `" + bytes + "`", 1},
-		{"parts.md", "1536 is `" + bytes + "`", 1},
-		{"templates.md", "at most " + strconv.Itoa(maxImage>>20) + " MiB", 1},
+		{"parts.md", "(1536 is `" + bytes + "`)", 1},
+		{"templates.md", "at most " + image + ".", 1},
 		{"templates.md", unknown, 1},
 		{"parts.md", marks, 2},
-		{"parts.md", "from " + numOf(t, code.Properties.Start.Minimum) + " to " + numOf(t, code.Properties.Start.Maximum), 1},
+		{"parts.md", "(from " + numOf(t, code.Properties.Start.Minimum) + " to " + numOf(t, code.Properties.Start.Maximum) + ")", 1},
 		{"diagrams.md", "more than " + strconv.Itoa(diagram.Defs.Graph.Properties.Edges.MaxItems) + " edges", 1},
 	} {
 		src, err := os.ReadFile("../../docs/agents/" + q.file)
@@ -68,7 +72,8 @@ func TestAgentDocQuotes(t *testing.T) {
 	}
 }
 
-// schemaOf reads the schema file into v, for the values a doc copies from it.
+// schemaOf reads the schema file into v, for the values a doc copies from it. A test reads it by encoding/json, as
+// it reads no schema floe compiles (schema's read is for those; depguard leaves tests out).
 func schemaOf(t *testing.T, file string, v any) {
 	t.Helper()
 	raw, err := os.ReadFile(file)
@@ -81,7 +86,8 @@ func schemaOf(t *testing.T, file string, v any) {
 }
 
 // The blocks of code the docs copy from floe's files are copies: each line of templates.md's css block is a line of
-// report's page.css, and parts.md's json block is the items of bars' schema without their descriptions.
+// report's page.css, and parts.md's json block, items alone, is the items of bars' schema without their descriptions.
+// LIMIT: an item named description is taken out too (bars has none); keep it if a part comes to name one so.
 func TestAgentDocCopies(t *testing.T) {
 	t.Parallel()
 
@@ -107,18 +113,16 @@ func TestAgentDocCopies(t *testing.T) {
 	if len(blocks) != 1 {
 		t.Fatalf("docs/agents/parts.md has %d json blocks, want 1", len(blocks))
 	}
-	var shown struct {
-		Items any `json:"items"`
-	}
-	if err := json.Unmarshal([]byte("{"+blocks[0]+"}"), &shown); err != nil {
-		t.Fatalf("docs/agents/parts.md: the json block is not \"items\": {…}: %v", err)
+	var shown map[string]any
+	if err := json.Unmarshal([]byte("{"+blocks[0]+"}"), &shown); err != nil || len(shown) != 1 || shown["items"] == nil {
+		t.Fatalf("docs/agents/parts.md: the json block is not \"items\": {…} alone: %v", err)
 	}
 	var bars struct {
 		Items any `json:"items"`
 	}
 	schemaOf(t, "floe/parts/bars/schema.json", &bars)
-	if want := withoutDescriptions(bars.Items); !reflect.DeepEqual(shown.Items, want) {
-		t.Errorf("docs/agents/parts.md: the json block is not bars' items without their descriptions:\n%v\nwant\n%v", shown.Items, want)
+	if want := withoutDescriptions(bars.Items); !reflect.DeepEqual(shown["items"], want) {
+		t.Errorf("docs/agents/parts.md: the json block is not bars' items without their descriptions:\n%v\nwant\n%v", shown["items"], want)
 	}
 }
 
