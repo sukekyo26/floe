@@ -97,7 +97,7 @@ func imageStat(fsys fs.FS, name, dir, of string) (string, error) {
 		}
 		return "", imageUnread(name, err)
 	case !fi.Mode().IsRegular():
-		// No image, told before it is opened; ImageFile tells one made so since as no image too.
+		// No image, told before it is opened; one swapped in after this check is told the same way when it is opened.
 		return "", usererr.New("kit_image_not_file", name)
 	case fi.Size() > maxImage:
 		return "", tooLarge(name, fi.Size())
