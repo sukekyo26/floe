@@ -153,7 +153,8 @@ func TestUITaskEditCategories(t *testing.T) { //nolint:paralleltest // the brows
 	closed("closed")
 	say("unchanged", "sent.length")
 
-	// A category removed that came to have a page meanwhile: the save is refused, as the category has pages, and said; nothing written.
+	// A category removed that came to have a page meanwhile: the page's coming wrote the task, so the save is refused as stale
+	// and said; nothing written. The store's refusal of a category with pages is ChangeTasks's (TestTaskWriteOne).
 	s.floe(t, "task", "--project", "proj", "--task", "S300", "--categories", "案,設計,実装,リリース,レビュー")
 	open("S300")
 	drop("リリース")
@@ -204,10 +205,10 @@ func TestUITaskEditCategories(t *testing.T) { //nolint:paralleltest // the brows
 		"saved: 6 [案,設計,実装,レビュー]",
 		`sent: {"taskProject":"proj","task":"S300","new":false,"rev":5,"categories":["案","設計","実装","レビュー"]}`,
 		"unchanged: 0",
-		"paged meanwhile: Failed to save: category リリース of task S300 in project proj has pages (memo-a): take them off it first, or keep it in the order",
-		"paged meanwhile, written: 7 [案,設計,実装,リリース,レビュー]",
+		"paged meanwhile: Failed to save: task S300 has changed since it was read; the tasks are read again, so check and save again",
+		"paged meanwhile, written: 8 [案,設計,実装,リリース,レビュー]",
 		"stale, added: 案x,設計x,実装x,リリースx,レビューx,公開d",
-		"saved again: 10 [案,設計,実装,リリース,レビュー,公開]",
+		"saved again: 11 [案,設計,実装,リリース,レビュー,公開]",
 		"no categories: true / false / plus / edit-task-title",
 		"first: 2 [案]",
 	}, "|"))
