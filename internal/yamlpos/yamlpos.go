@@ -231,8 +231,8 @@ func Parse(file string, src []byte) (ast.Node, error) {
 }
 
 // document returns the body of the one document of src. A document of a directive (%YAML) alone is no
-// document: it heads the one after it. src is read as UTF-8, and a byte order mark past its start is refused
-// with it, before it is parsed: goccy/go-yaml reads the one and the other as characters of a key or a value
+// document: it heads the one after it. src is read as UTF-8 without U+0085, U+2028 and U+2029, and a byte order
+// mark past its start is refused with it, before it is parsed: goccy/go-yaml reads the one and the other as characters of a key or a value
 // (U+FFFD for a byte that is no UTF-8), and fails on them where it does not.
 // LIMIT: a control character (NUL) and UTF-16 without a mark are UTF-8 and left to goccy/go-yaml, which reads a
 // NUL in a value; refuse what YAML 1.2 does not print if one comes to matter.
@@ -242,7 +242,11 @@ func document(file string, src []byte) (ast.Node, error) {
 	// YAML 1.2 allows a byte order mark at the start, which goccy/go-yaml reads as part of the first key.
 	// src is left without it for both the parser and dropped, so that their places agree.
 	src = bom.Trim(src)
-	if err := usererr.Collect(bom.Refuse(file, src).Err(), notUTF8(file, src)); err != nil {
+	bytesErr := notUTF8(file, src)
+	if bytesErr == nil {
+		bytesErr = lineSeparator(file, src)
+	}
+	if err := usererr.Collect(bom.Refuse(file, src).Err(), bytesErr); err != nil {
 		return nil, err //nolint:wrapcheck // the mistakes of src
 	}
 	// Read once, for blockTabs, the parser and dropped: the parser changes its nodes, not the tokens' types
@@ -446,6 +450,19 @@ func notUTF8(file string, src []byte) error {
 		at += size
 	}
 	return nil
+}
+
+// lineSeparator refuses src, file, valid UTF-8, at its first U+0085, U+2028 or U+2029, in quotes and comments
+// too: YAML 1.2 reads them as characters, but go.yaml.in/yaml/v4 as line breaks, ending a value or a comment
+// there. Only the first is told, as for notUTF8. An escape in double quotes (" ") is no such character.
+func lineSeparator(file string, src []byte) error {
+	at := bytes.IndexAny(src, "\u0085  ")
+	if at < 0 {
+		return nil
+	}
+	r, _ := utf8.DecodeRune(src[at:])
+	line, column := textpos.Of(src, at)
+	return usererr.NewAt(file, line, column, "yaml_line_separator", fmt.Sprintf("U+%04X", r), fmt.Sprintf(`\u%04x`, r))
 }
 
 // dropped finds text after the --- at start, which goccy/go-yaml reads as an empty document and
