@@ -255,7 +255,7 @@ func TestGuideMistakes(t *testing.T) {
 	for _, c := range []struct {
 		dir   string
 		files []string
-	}{{"testdata/guide/yaml", []string{"h.yaml", "t.yaml"}}, {"testdata/guide/shape", []string{"plan.yaml"}}} {
+	}{{"testdata/guide/yaml", []string{"h.yaml", "c.yaml", "t.yaml"}}, {"testdata/guide/shape", []string{"plan.yaml"}}} {
 		dir, err := filepath.Abs(c.dir)
 		if err != nil {
 			t.Fatal(err)

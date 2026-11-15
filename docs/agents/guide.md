@@ -117,13 +117,13 @@ Read `floe diagram guide` before writing a diagram: it says how to write one, wh
 Write so:
 
 - Write a text value in `'…'`, or over several lines as a `|` block, without judging whether it needs quotes: `heading: 'Step 1: plan'`, ``text: '`algorithms` fixes the methods.'``. In `'…'`, write a `'` as `''`; nothing else is special, a `\` and a `"` included. In a `|` block, write the text as it is. Leave bare only a number, `true` or `false`, and a word that starts with an ASCII letter or digit, holds only ASCII letters, digits, `_`, `.`, `/` and `-`, and does not read as a number (`template: report`, `tone: warn`; not `1.10` or `08`, as below).
-- Write a comment on a line of its own, no deeper than the key of the value above it (or the `-` of a list item).
+- Write a comment on a line of its own, before the key it is about: not on a value's line, and not right after a `|` block, even at its key's depth. A comment on a `|` block goes on its `|` line (`text: | # note`), which also serves where `|` blocks follow each other.
 - In a `|` block, indent the first line as the lines after it, with spaces only.
 
 floe refuses these:
 
 - A text MUST NOT be left bare where YAML reads it as something else: with a `: ` (a key) or a ` #` (a comment) in it, starting with a backtick or `%`, or reading as a number, `null` or `~` where only text goes (`'42'` in a table's cell, `'0x1F'`, `'null'`, `'-'`).
-- A comment MUST NOT stand in `{ }` or `[ ]`. The first line of a `|` block MUST NOT be deeper than the next.
+- A comment MUST NOT follow a bare text on its line, in `{ }` or `[ ]` too, nor come right after a `|` or `>` block. The first line of a `|` block MUST NOT be deeper than the next.
 - A file MUST be one document (no `---`), with no anchors, aliases, merge keys (`<<`) or tags, and each key written once in its keys and values.
 
 These pass `floe check` and change what you wrote:
@@ -133,10 +133,11 @@ These pass `floe check` and change what you wrote:
 - Do not use `"…"`: a `\` in it is an escape, mostly with no mistake (`\_` is a no-break space).
 - Beside Japanese, Chinese or Korean letters, `**`, `*` and `~~` mark text across punctuation too (`**「題」**に` is bold): write a `*` meant as a character there as `\*` or in backticks.
 
-`heading: Step 1: plan` and `42` in a table's cell are refused so:
+`heading: Step 1: plan`, `lead: PR #100` and `42` in a table's cell are refused so:
 
 ```text
 h.yaml:5:20: mapping values are not allowed in this context
+c.yaml:4:7: a # on the line of this value not in quotes begins a YAML comment, which may have cut the value short, to PR: if the # is part of the value, put the value in quotes; else write the comment on a line of its own
 t.yaml:10:16: got number, want string or object
 ```
 
