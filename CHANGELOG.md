@@ -6,6 +6,10 @@ adheres to [Semantic Versioning](https://semver.org/).
 
 ## [Unreleased]
 
+### Changed
+
+- Change the task mode's ask in `floe guide`: agents ask the user in a dialog of choices (a reply of only the question where they have none) which task to put each new page on, the first two open tasks, a new task or none, then which of its categories.
+
 ### Fixed
 
 - Fix `floe publish --link` with `--move-project` refusing them without `run floe --help` and with exit code 1; it now exits 2, as other command line mistakes do.

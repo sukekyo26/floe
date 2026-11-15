@@ -499,7 +499,7 @@ var messagesEN = map[string]string{
 	"ui_settings_mode":         "Mode",
 	"ui_task_mode":             "Task mode",
 	"ui_task_mode_about":       "Agents work with the task list, putting pages on tasks.",
-	"ui_task_mode_more":        "An agent asks you, as it publishes each new page, whether to put it on a task; you always choose where. A change works once the agent reads its guide (floe guide) again.",
+	"ui_task_mode_more":        "An agent asks you, as it publishes each new page, which task to put it on and under which category; you always choose where. A change works once the agent reads its guide (floe guide) again.",
 	"ui_mode_on":               "On",
 	"ui_mode_off":              "Off",
 	"ui_task_mode_set_on":      "Turned the task mode on",
