@@ -43,14 +43,17 @@ func ReadImage(fsys fs.FS, name, dir, of string) (template.URL, error) {
 // not a regular one, one over maxImage, and one that cannot be read, in the system's words (kit_image_unread).
 // Only a directory that cannot be opened is told at it (dir), once.
 // LIMIT: a file is taken by its name's type, what it holds unchecked: one that holds another shows broken.
-// LIMIT: a file made a FIFO between the Stat and the Open blocks the read; open it without blocking if it comes to.
 func ImageFile(fsys fs.FS, name, dir, of string) ([]byte, string, error) {
 	typ, err := imageStat(fsys, name, dir, of)
 	if err != nil {
 		return nil, "", err
 	}
 	f, err := fsys.Open(name)
-	if err != nil {
+	switch {
+	case errors.Is(err, usererr.ErrNotFile):
+		// Made a FIFO or the like since the Stat: files.Root and files.DirFS refuse it unopened.
+		return nil, "", usererr.New("kit_image_not_file", name)
+	case err != nil:
 		return nil, "", imageUnread(name, err)
 	}
 	defer f.Close()
@@ -77,7 +80,7 @@ func ImageFile(fsys fs.FS, name, dir, of string) ([]byte, string, error) {
 // reads, an extension of an image floe takes, a regular file, of maxImage at most. It returns the type of its
 // data URI.
 func imageStat(fsys fs.FS, name, dir, of string) (string, error) {
-	// os.Root's FS says only "invalid argument" of such a name.
+	// files.Root and files.DirFS say only "invalid argument" of such a name.
 	if !fs.ValidPath(name) || name == "." {
 		return "", usererr.New("kit_image_path", name, of)
 	}
@@ -94,7 +97,7 @@ func imageStat(fsys fs.FS, name, dir, of string) (string, error) {
 		}
 		return "", imageUnread(name, err)
 	case !fi.Mode().IsRegular():
-		// A FIFO would block the read.
+		// Told here as not an image, rather than in the system's words when it is opened.
 		return "", usererr.New("kit_image_not_file", name)
 	case fi.Size() > maxImage:
 		return "", tooLarge(name, fi.Size())

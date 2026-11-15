@@ -16,6 +16,7 @@ import (
 
 	"golang.org/x/sys/unix"
 
+	"floe/internal/files"
 	"floe/internal/kit"
 	"floe/internal/link"
 	"floe/internal/server"
@@ -62,7 +63,7 @@ func newEnv(t *testing.T) env {
 			return store.Drawing{}, err //nolint:exhaustruct // none
 		}
 		none := kit.Dir{FS: nil, Name: ""}
-		k, err := kit.Load(floe, kit.Sources{Parts: none, Themes: none, Templates: kit.Dir{FS: os.DirFS(e.tpl), Name: e.tpl}})
+		k, err := kit.Load(floe, kit.Sources{Parts: none, Themes: none, Templates: kit.Dir{FS: files.DirFS(e.tpl), Name: e.tpl}})
 		if err != nil {
 			return store.Drawing{}, err //nolint:exhaustruct // none
 		}

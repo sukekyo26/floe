@@ -120,6 +120,10 @@ linters:
           msg: "do not panic; return an error from internal/ packages"
         - pattern: ^fmt\.Print(f|ln)?$
           msg: "do not write to stdout via fmt.Print*; write to an injected io.Writer"
+        - pattern: ^os\.DirFS$
+          msg: "use files.DirFS, which opens a file without blocking on a FIFO"
+        - pattern: ^os\.Root\.FS$
+          msg: "use files.Root, which opens a file without blocking on a FIFO"
       analyze-types: true
       exclude-godoc-examples: true
     depguard:

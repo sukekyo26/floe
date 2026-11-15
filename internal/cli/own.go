@@ -10,6 +10,7 @@ import (
 	"syscall"
 
 	"floe/internal/dirs"
+	"floe/internal/files"
 	"floe/internal/kit"
 	"floe/internal/usererr"
 )
@@ -110,7 +111,7 @@ func ownDir(p dataPlace) (kit.Dir, error) {
 		}
 		return none, usererr.SettingDir(p.setting(), dir, err, usererr.CannotRead(dir, err))
 	}
-	return kit.Dir{FS: os.DirFS(dir), Name: dir}, nil
+	return kit.Dir{FS: files.DirFS(dir), Name: dir}, nil
 }
 
 // kit returns floe's own with one's own over them, templates too when templates: what a page is drawn with. A

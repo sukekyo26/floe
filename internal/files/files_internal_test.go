@@ -2,6 +2,7 @@ package files
 
 import (
 	"errors"
+	"io"
 	"io/fs"
 	"os"
 	"path/filepath"
@@ -101,5 +102,54 @@ func TestOpenAppendSwapped(t *testing.T) {
 	}
 	if !errors.Is(err, usererr.ErrNotFile) {
 		t.Errorf("openWith of a file made a FIFO = %v, want ErrNotFile", err)
+	}
+}
+
+// openRead, which Root and DirFS open through, refuses a regular file made a FIFO between what it looks at and
+// what it opens, unread, and reads another regular file put in its place, under a directory and an os.Root alike.
+func TestOpenReadSwapped(t *testing.T) {
+	t.Parallel()
+
+	dir := t.TempDir()
+	root, err := os.OpenRoot(dir)
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer root.Close()
+	path := filepath.Join(dir, "a.yaml")
+	for _, tt := range []struct {
+		name string
+		swap func(path string) error
+		want error
+	}{
+		{"a FIFO", func(path string) error { return syscall.Mkfifo(path, 0o600) }, usererr.ErrNotFile},
+		{"a regular file", func(path string) error { return os.WriteFile(path, []byte("y"), 0o600) }, nil},
+	} {
+		for _, o := range []struct {
+			via string
+			o   Opener
+		}{{"a DirFS", dirFS(dir)}, {"an os.Root", root}} {
+			if err := os.WriteFile(path, []byte("x"), 0o600); err != nil {
+				t.Fatal(err)
+			}
+			s := swapped{Opener: o.o, swap: func(string) error {
+				if err := os.Remove(path); err != nil {
+					return err //nolint:wrapcheck // the test's
+				}
+				return tt.swap(path)
+			}}
+			f, err := openRead(s, "a.yaml")
+			var b []byte
+			if err == nil {
+				b, err = io.ReadAll(f)
+				_ = f.Close()
+			}
+			if !errors.Is(err, tt.want) || tt.want == nil && (err != nil || string(b) != "y") {
+				t.Errorf("openRead via %s of a file made %s = %q, %v, want %v", o.via, tt.name, b, err, tt.want)
+			}
+			if err := os.Remove(path); err != nil {
+				t.Fatal(err)
+			}
+		}
 	}
 }
