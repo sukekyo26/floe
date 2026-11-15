@@ -179,7 +179,7 @@ func TestEachEveryByte(t *testing.T) {
 	t.Parallel()
 
 	src := []byte("aé日😀\xc3\xe3\x81x\xff\r\nb日\rc\n\x80é\n😀z")
-	var ats []int
+	ats := make([]int, 0, 2*(len(src)+1))
 	for at := range len(src) + 1 {
 		ats = append(ats, at, at)
 	}
