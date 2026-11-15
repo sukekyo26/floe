@@ -19,6 +19,13 @@ jobs:
       tag: ${{ steps.version.outputs.tag }}
       changed: ${{ steps.version.outputs.changed }}
     steps:
+      # workflow_dispatch can pick any ref: a release is cut from main alone.
+      - name: Require main
+        if: github.ref != 'refs/heads/main'
+        run: |
+          echo "::error::release runs on main, not ${GITHUB_REF}; run it again on main" >&2
+          exit 1
+
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
 
       # Decide by the release, not the tag: a run that pushed the tag but failed
@@ -39,6 +46,22 @@ jobs:
             echo "changed=true" >> "$GITHUB_OUTPUT"
           else
             echo "::error::could not look up release ${tag}: ${out}" >&2
+            exit 1
+          fi
+
+      # Release tags are GPG-signed and the release fails closed without a key, checked
+      # before the build so that a missing key leaves no attestation of an unreleased version.
+      # Provision once as repo secrets: GPG_PRIVATE_KEY (ASCII-armored, required)
+      # and GPG_PASSPHRASE (only if the key is protected).
+      - name: Require a signing key
+        if: steps.version.outputs.changed == 'true'
+        env:
+          GPG_PRIVATE_KEY: ${{ secrets.GPG_PRIVATE_KEY }}
+        run: |
+          if [ -z "${GPG_PRIVATE_KEY:-}" ]; then
+            echo "::error::GPG_PRIVATE_KEY secret is not set — release tags must be signed." >&2
+            echo "Add the ASCII-armored signing key as the GPG_PRIVATE_KEY repository secret" >&2
+            echo "(and GPG_PASSPHRASE if the key is passphrase-protected), then re-run." >&2
             exit 1
           fi
 
@@ -71,6 +94,15 @@ jobs:
 
       - uses: ./.github/actions/setup-just
 
+      # Before the build, so that a broken key stops the run before an attestation is made.
+      - name: Import GPG signing key
+        uses: crazy-max/ghaction-import-gpg@2dc316deee8e90f13e1a351ab510b4d5bc0c82cd # v7.0.0
+        with:
+          gpg_private_key: ${{ secrets.GPG_PRIVATE_KEY }}
+          passphrase: ${{ secrets.GPG_PASSPHRASE }}
+          git_user_signingkey: true
+          git_tag_gpgsign: true
+
       - name: Build release assets
         env:
           VERSION: ${{ needs.check-version.outputs.version }}
@@ -85,28 +117,6 @@ jobs:
             bin/floe-darwin-amd64
             bin/floe-darwin-arm64
             bin/SHA256SUMS
-
-      # Release tags are GPG-signed and the release fails closed without a key.
-      # Provision once as repo secrets: GPG_PRIVATE_KEY (ASCII-armored, required)
-      # and GPG_PASSPHRASE (only if the key is protected).
-      - name: Require a signing key
-        env:
-          GPG_PRIVATE_KEY: ${{ secrets.GPG_PRIVATE_KEY }}
-        run: |
-          if [ -z "${GPG_PRIVATE_KEY:-}" ]; then
-            echo "::error::GPG_PRIVATE_KEY secret is not set — release tags must be signed." >&2
-            echo "Add the ASCII-armored signing key as the GPG_PRIVATE_KEY repository secret" >&2
-            echo "(and GPG_PASSPHRASE if the key is passphrase-protected), then re-run." >&2
-            exit 1
-          fi
-
-      - name: Import GPG signing key
-        uses: crazy-max/ghaction-import-gpg@2dc316deee8e90f13e1a351ab510b4d5bc0c82cd # v7.0.0
-        with:
-          gpg_private_key: ${{ secrets.GPG_PRIVATE_KEY }}
-          passphrase: ${{ secrets.GPG_PASSPHRASE }}
-          git_user_signingkey: true
-          git_tag_gpgsign: true
 
       # Reuse the tag a failed earlier run already pushed, but never one that
       # points at another commit.
@@ -137,4 +147,5 @@ jobs:
             bin/floe-darwin-arm64
             bin/SHA256SUMS
             install.sh
-          generate_release_notes: true
+          # GitHub's generated notes list every merged PR's title, most of them internal; CHANGELOG says what changed.
+          body: "See [CHANGELOG.md](https://github.com/${{ github.repository }}/blob/${{ needs.check-version.outputs.tag }}/CHANGELOG.md) for what changed."
