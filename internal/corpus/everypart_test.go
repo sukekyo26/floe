@@ -10,12 +10,12 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/goccy/go-yaml"
 	"golang.org/x/net/html"
 
 	"floe/internal/cli"
 	"floe/internal/draw"
 	"floe/internal/kit"
+	"floe/internal/yamlpos"
 )
 
 // everyPart is the sample of every part, which the browser's test of the colours draws in every theme: what it
@@ -76,8 +76,8 @@ func TestEveryPartDrawsEveryPart(t *testing.T) {
 			}
 		}
 	}
-	var data any
-	if err = yaml.Unmarshal(src, &data); err != nil {
+	_, data, err := yamlpos.ParseMap("every-part.yaml", src)
+	if err != nil {
 		t.Fatal(err)
 	}
 	parts := readParts(t)

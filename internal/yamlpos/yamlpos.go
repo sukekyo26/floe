@@ -6,9 +6,6 @@ import (
 	"bytes"
 	"cmp"
 	"errors"
-	"fmt"
-	"slices"
-	"strconv"
 	"strings"
 	"unicode/utf8"
 
@@ -28,9 +25,9 @@ type Pos struct {
 	Line, Column int
 }
 
-// Of returns where n, which must not be nil, was written: a mapping at its first key, so that it
+// writtenAt returns where n, which must not be nil, was written: a mapping at its first key, so that it
 // points at text rather than the indentation before it.
-func Of(n ast.Node) Pos {
+func writtenAt(n ast.Node) Pos {
 	if m, ok := n.(*ast.MappingNode); ok && len(m.Values) > 0 {
 		n = m.Values[0].Key
 	}
@@ -38,17 +35,12 @@ func Of(n ast.Node) Pos {
 	return Pos{Line: p.Line, Column: p.Column}
 }
 
-// KeyOf returns the key of v, the text after ? for an explicit key.
-func KeyOf(v *ast.MappingValueNode) ast.Node {
+// keyOf returns the key of v, the text after ? for an explicit key.
+func keyOf(v *ast.MappingValueNode) ast.Node {
 	if k, ok := v.Key.(*ast.MappingKeyNode); ok {
 		return k.Value
 	}
 	return v.Key
-}
-
-// KeyName returns the name of the key of v, as KeyOf reads it.
-func KeyName(v *ast.MappingValueNode) string {
-	return KeyOf(v).GetToken().Value
 }
 
 // Quote is how a scalar is quoted, as the parser read it.
@@ -60,8 +52,8 @@ const (
 	Single
 )
 
-// QuoteOf returns how n is quoted.
-func QuoteOf(n ast.Node) Quote {
+// quoteOf returns how n is quoted.
+func quoteOf(n ast.Node) Quote {
 	switch n.GetToken().Type {
 	case token.DoubleQuoteType:
 		return Double
@@ -70,78 +62,6 @@ func QuoteOf(n ast.Node) Quote {
 	default:
 		return Plain
 	}
-}
-
-// OfValue returns where the value of key is written, ~ and null too: a scalar at itself; a mapping or a sequence,
-// or a value left out, at key, the line it starts on (a mapping at its first key would read as that key's, and an
-// empty value has no text to point at); with no key (an entry of [ ]), a mapping or a sequence in { } or [ ] at its
-// { or [.
-// LIMIT: a mistake about one key placed by the path to it (additionalProperties naming one) lands where its value
-// is: at the key for a mapping or a sequence (zz: with y: 1 below it, 3:1), at the value for a scalar (zz: 1, 3:5).
-// A data file's mistake could go to the key itself, as schema.Validate has the file's nodes, but a diagram spec's
-// comes as a JSON pointer (schema.ValidateAt), which cannot name a key apart from its value: both are placed alike.
-// LIMIT: a pair in [ ] written without { } (a: [b: 1]) is a mapping goccy/go-yaml reads as not in flow style, with no
-// { to point at: it is placed at its first key, which is where it starts too.
-func OfValue(key, value ast.Node) Pos {
-	m, mapping := value.(*ast.MappingNode)
-	s, sequence := value.(*ast.SequenceNode)
-	n, null := value.(*ast.NullNode)
-	switch {
-	case key != nil && (mapping || sequence || null && n.GetToken().Type == token.ImplicitNullType):
-		return Of(key)
-	case mapping && m.IsFlowStyle || sequence && s.IsFlowStyle:
-		p := value.GetToken().Position // its { or [: Of takes a mapping at its first key
-		return Pos{Line: p.Line, Column: p.Column}
-	}
-	return Of(value)
-}
-
-// EntryKey returns the - of the entry i of seq, where an entry left empty is; nil in a flow sequence, whose
-// entries goccy/go-yaml gives the , before each (nil for the first).
-func EntryKey(seq *ast.SequenceNode, i int) ast.Node {
-	if seq.IsFlowStyle || len(seq.Entries) != len(seq.Values) {
-		return nil
-	}
-	return seq.Entries[i]
-}
-
-// find follows at, keys of mappings and indexes of sequences, from root. It returns the key node of the last
-// step (the - of an entry of a block sequence; nil at root or in a flow sequence) and its value node. It
-// stops at the last node it can reach.
-func find(root ast.Node, at []string) (key, value ast.Node) {
-	value = root
-	for _, step := range at {
-		switch n := value.(type) {
-		case *ast.MappingNode:
-			i := slices.IndexFunc(n.Values, func(v *ast.MappingValueNode) bool { return KeyName(v) == step })
-			if i < 0 {
-				return key, value
-			}
-			key, value = KeyOf(n.Values[i]), n.Values[i].Value
-		case *ast.SequenceNode:
-			i, err := strconv.Atoi(step)
-			if err != nil || i < 0 || i >= len(n.Values) {
-				return key, value
-			}
-			key, value = EntryKey(n, i), n.Values[i]
-		default:
-			return key, value
-		}
-	}
-	return key, value
-}
-
-// Locate finds the value at the path at under root, and returns where it is written, as OfValue places it, and its
-// node; at the last value it reaches when the path goes on past it. When it reaches none under root (at is empty,
-// its first key is not written, or root is nil, a file of nothing), it returns no line and no node: the mistake is
-// placed at the file alone, as at the first key it would read as that key's.
-func Locate(root *ast.MappingNode, at []string) (Pos, ast.Node) {
-	if root != nil {
-		if key, value := find(root, at); value != ast.Node(root) {
-			return OfValue(key, value), value
-		}
-	}
-	return Pos{Line: 0, Column: 0}, nil
 }
 
 // New returns the mistake worded by the catalog message key with args, at at in file.
@@ -168,7 +88,7 @@ var ErrEmpty = errors.New("no YAML document")
 // ParseMap reads src as Parse does, and its values into a map as Decode does: goccy/go-yaml refuses a top that is
 // not keys and values (library). A file without a document reads as {} under a root of nil, for the schema to tell
 // what it lacks.
-func ParseMap(file string, src []byte) (*ast.MappingNode, map[string]any, error) {
+func ParseMap(file string, src []byte) (*Node, map[string]any, error) {
 	values := map[string]any{}
 	body, err := Parse(file, src)
 	switch {
@@ -180,32 +100,15 @@ func ParseMap(file string, src []byte) (*ast.MappingNode, map[string]any, error)
 	if err = Decode(file, body, &values); err != nil {
 		return nil, nil, err
 	}
-	// goccy/go-yaml read the values into a map: the top is keys and values.
-	root, _ := body.(*ast.MappingNode) //nolint:errcheck // see above
-	return root, values, nil
+	return body, values, nil
 }
 
 // Decode reads the values of n, a node Parse returned, into v. Its mistake is goccy/go-yaml's (library).
-func Decode(file string, n ast.Node, v any) error {
-	if err := yaml.NodeToValue(n, v); err != nil {
+func Decode(file string, n *Node, v any) error {
+	if err := yaml.NodeToValue(n.node, v); err != nil {
 		return library(file, err)
 	}
 	return nil
-}
-
-// Text returns n as text when it is a text scalar: a string, quoted or not, or a | or > block, read as YAML reads
-// it, a block keeping the line breaks its end keeps (| one, |+ all, |- none). A number, true, false or null is not
-// text: YAML would read 1.10 as 1.1. err is floe's failure: a text scalar of a node Parse returned decodes.
-func Text(n ast.Node) (text string, ok bool, err error) {
-	switch n.(type) {
-	case *ast.StringNode, *ast.LiteralNode:
-	default:
-		return "", false, nil
-	}
-	if err := yaml.NodeToValue(n, &text); err != nil {
-		return "", false, fmt.Errorf("yamlpos: decode a text: %w", err)
-	}
-	return text, true, nil
 }
 
 // Parse reads src as one YAML document and returns its body, or ErrEmpty when src holds none. A byte order
@@ -217,7 +120,7 @@ func Text(n ast.Node) (text string, ok bool, err error) {
 // key out of { } and [ ] a comment may have cut short; a key in { } without a value, but one refused as not
 // text; and a plain value that YAML 1.2 reads otherwise than goccy/go-yaml (017, 1e3), or as a number JSON has
 // none for (.inf, .nan) or floe cannot hold.
-func Parse(file string, src []byte) (ast.Node, error) {
+func Parse(file string, src []byte) (*Node, error) {
 	body, err := document(file, src)
 	if err != nil {
 		return nil, err
@@ -227,7 +130,10 @@ func Parse(file string, src []byte) (ast.Node, error) {
 	if w.failed != nil {
 		return nil, w.failed
 	}
-	return body, w.found.Sorted().Err()
+	if err := w.found.Sorted().Err(); err != nil {
+		return nil, err //nolint:wrapcheck // the mistakes of src
+	}
+	return newNode(body)
 }
 
 // document returns the body of the one document of src. A document of a directive (%YAML) alone is no
@@ -271,7 +177,7 @@ func document(file string, src []byte) (ast.Node, error) {
 	for _, d := range doc.Docs {
 		switch b := d.Body.(type) {
 		case *ast.DirectiveNode:
-			at := startOf(d, Of(b))
+			at := startOf(d, writtenAt(b))
 			head = &at
 			continue
 		case nil:
@@ -285,7 +191,7 @@ func document(file string, src []byte) (ast.Node, error) {
 			continue
 		}
 		if body != nil {
-			at := startOf(d, Of(d.Body))
+			at := startOf(d, writtenAt(d.Body))
 			if head != nil {
 				at = *head
 			}
@@ -475,7 +381,7 @@ type walk struct {
 func (w *walk) wrapper(n ast.Node) bool {
 	switch n.(type) {
 	case *ast.AnchorNode, *ast.AliasNode, *ast.TagNode:
-		w.found = append(w.found, New(w.file, Of(n), "yaml_no_anchors"))
+		w.found = append(w.found, New(w.file, writtenAt(n), "yaml_no_anchors"))
 		return true
 	}
 	return false
@@ -535,20 +441,20 @@ func (w *walk) number(n ast.Node) bool {
 // text.
 func (w *walk) pair(v *ast.MappingValueNode, flow bool) {
 	if _, merge := v.Key.(*ast.MergeKeyNode); merge {
-		w.found = append(w.found, New(w.file, Of(v.Key), "yaml_no_anchors"))
+		w.found = append(w.found, New(w.file, writtenAt(v.Key), "yaml_no_anchors"))
 		return
 	}
-	key := KeyOf(v)
+	key := keyOf(v)
 	owner := v.Key.GetToken().Position.Column
 	text, isText := key.(*ast.StringNode)
 	switch {
 	case w.wrapper(key):
 	case !isText || number12(text):
-		w.found = append(w.found, New(w.file, Of(key), "yaml_key_not_text", key.GetToken().Value))
+		w.found = append(w.found, New(w.file, writtenAt(key), "yaml_key_not_text", key.GetToken().Value))
 	case w.cut(text, owner):
 	default:
 		if flow && v.Start.Type != token.MappingValueType {
-			w.found = append(w.found, New(w.file, Of(key), "yaml_flow_key_alone", Head(key.GetToken().Value)))
+			w.found = append(w.found, New(w.file, writtenAt(key), "yaml_flow_key_alone", Head(key.GetToken().Value)))
 		}
 	}
 	w.node(v.Value, owner)
@@ -571,7 +477,7 @@ func (w *walk) pair(v *ast.MappingValueNode, flow bool) {
 // only left out; the files floe reads have keys at their top.
 func (w *walk) cut(n ast.Node, owner int) bool {
 	tk := n.GetToken()
-	if QuoteOf(n) != Plain || tk.Next == nil || tk.Next.Type != token.CommentType ||
+	if quoteOf(n) != Plain || tk.Next == nil || tk.Next.Type != token.CommentType ||
 		tk.Next.Position.Column <= owner {
 		return false
 	}

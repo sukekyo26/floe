@@ -8,7 +8,6 @@ import (
 
 	"github.com/expr-lang/expr"
 	"github.com/expr-lang/expr/vm"
-	"github.com/goccy/go-yaml/ast"
 
 	"floe/internal/doc"
 	"floe/internal/usererr"
@@ -50,15 +49,11 @@ func ReadChecks(file string, src []byte) (*Checks, error) {
 	}
 	c := &Checks{file: file, list: nil}
 	var found usererr.List
-	seq, ok := body.(*ast.SequenceNode)
-	if !ok {
+	if body.Kind != yamlpos.Sequence {
 		found = append(found, yamlpos.New(file, yamlpos.Of(body), "rules_checks_yaml"))
 	} else {
-		for i, n := range seq.Values {
-			one, mistakes, err := readCheck(file, yamlpos.EntryKey(seq, i), n)
-			if err != nil {
-				return nil, err
-			}
+		for i, n := range body.Items {
+			one, mistakes := readCheck(file, src, yamlpos.EntryKey(body, i), n)
 			found = append(found, mistakes...)
 			if mistakes == nil {
 				c.list = append(c.list, one)
@@ -71,36 +66,32 @@ func ReadChecks(file string, src []byte) (*Checks, error) {
 	return c, nil
 }
 
-// readCheck reads the check n of file, the entry of the list at entry (its -, nil in [ ]): all the mistakes of its
-// keys, and of its expression when it is text; or floe's failure.
-func readCheck(file string, entry, n ast.Node) (check, usererr.List, error) {
+// readCheck reads the check n of file, whose YAML is src, the entry of the list at entry (its -, nil in [ ]): all the
+// mistakes of its keys, and of its expression when it is text.
+func readCheck(file string, src []byte, entry, n *yamlpos.Node) (check, usererr.List) {
 	c := check{For: "", Field: "", Message: "", forAt: yamlpos.Pos{Line: 0, Column: 0}, prog: nil}
-	m, ok := n.(*ast.MappingNode)
-	if !ok {
-		return c, usererr.List{yamlpos.New(file, yamlpos.OfValue(entry, n), "rules_checks_yaml")}, nil
+	if n.Kind != yamlpos.Mapping {
+		return c, usererr.List{yamlpos.New(file, yamlpos.OfValue(entry, n), "rules_checks_yaml")}
 	}
 	var found usererr.List
-	var src expression
+	var e expression
 	at := map[string]yamlpos.Pos{} // where each key is written as text
-	to := map[string]*string{"for": &c.For, "field": &c.Field, "expr": &src.src, "message": &c.Message}
-	for _, kv := range m.Values {
-		k := yamlpos.KeyOf(kv)
-		key := k.GetToken().Value
+	to := map[string]*string{"for": &c.For, "field": &c.Field, "expr": &e.src, "message": &c.Message}
+	for _, kv := range n.Pairs {
+		k := kv.Key
+		key := kv.Name()
 		dst, ok := to[key]
 		if !ok {
 			found = append(found, yamlpos.New(file, yamlpos.Of(k), "rules_checks_key", key))
 			continue
 		}
-		var err error
-		if *dst, ok, err = text(kv.Value); err != nil {
-			return c, nil, err
-		} else if !ok {
+		if *dst, ok = text(kv.Value); !ok {
 			found = append(found, yamlpos.New(file, yamlpos.OfValue(k, kv.Value), "rules_checks_value", key))
 			continue
 		}
 		at[key] = yamlpos.OfValue(k, kv.Value)
 		if key == "expr" {
-			src = expression{src: *dst, file: file, key: k, value: kv.Value}
+			e = expression{src: *dst, file: file, yaml: src, key: k, value: kv.Value}
 		}
 	}
 	c.forAt = at["for"]
@@ -110,11 +101,9 @@ func readCheck(file string, entry, n ast.Node) (check, usererr.List, error) {
 		case *to[key] != "":
 		case ok:
 			found = append(found, yamlpos.New(file, written, "rules_checks_missing", key))
-		case !slices.ContainsFunc(m.Values, func(kv *ast.MappingValueNode) bool {
-			return yamlpos.KeyName(kv) == key
-		}):
+		case !slices.ContainsFunc(n.Pairs, func(kv yamlpos.Pair) bool { return kv.Name() == key }):
 			// One that is not text is told as such.
-			found = append(found, yamlpos.New(file, yamlpos.OfValue(entry, m), "rules_checks_missing", key))
+			found = append(found, yamlpos.New(file, yamlpos.OfValue(entry, n), "rules_checks_missing", key))
 		}
 	}
 	for _, key := range []string{"for", "field"} {
@@ -122,13 +111,13 @@ func readCheck(file string, entry, n ast.Node) (check, usererr.List, error) {
 			found = append(found, pathMistakes(file, written, key, *to[key])...)
 		}
 	}
-	if src.src != "" {
-		var e *usererr.Error
-		if c.prog, e = src.compile(scope{Item: nil, Doc: nil}, expr.AsBool()); e != nil {
-			found = append(found, e)
+	if e.src != "" {
+		var mistake *usererr.Error
+		if c.prog, mistake = e.compile(scope{Item: nil, Doc: nil}, expr.AsBool()); mistake != nil {
+			found = append(found, mistake)
 		}
 	}
-	return c, found, nil
+	return c, found
 }
 
 // pathMistakes refuses path, the for or field (key) of a check written at at in file, written empty or with an
@@ -244,10 +233,8 @@ func (c check) failure(d *doc.Data, at []string, err error) *usererr.Error {
 	var shown string
 	pos, value := yamlpos.Locate(d.Root, at)
 	place := func(key string, args ...any) *usererr.Error { return yamlpos.New(d.File, pos, key, args...) }
-	switch value.(type) {
-	case *ast.NullNode, *ast.LiteralNode:
-	case ast.ScalarNode:
-		shown = value.GetToken().Value
+	if value != nil && value.Kind == yamlpos.Scalar && !value.Null && !value.Block {
+		shown = value.Value
 	}
 	var nf *notFinite
 	switch {

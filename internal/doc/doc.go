@@ -6,8 +6,6 @@ import (
 	"math"
 	"strings"
 
-	"github.com/goccy/go-yaml/ast"
-
 	"floe/internal/i18n"
 	"floe/internal/usererr"
 	"floe/internal/yamlpos"
@@ -16,10 +14,10 @@ import (
 // Data is a data file read: its values as written, and the keys every template shares read from them.
 type Data struct {
 	File                         string
-	Lang, Template, Theme, Title string           // "" for one left out or refused; each trimmed of spaces
-	ThemeGiven                   bool             // the theme given to draw with, in Theme, not written in the file
-	Values                       map[string]any   // as written, the shared keys too but those that name none
-	Root                         *ast.MappingNode // nil for an empty file
+	Lang, Template, Theme, Title string         // "" for one left out or refused; each trimmed of spaces
+	ThemeGiven                   bool           // the theme given to draw with, in Theme, not written in the file
+	Values                       map[string]any // as written, the shared keys too but those that name none
+	Root                         *yamlpos.Node  // the top, keys and values; nil for an empty file
 	// where each shared key is written: its value, its key when the value is left out; line 0, the file alone,
 	// for one left out
 	Where map[string]yamlpos.Pos
@@ -117,18 +115,18 @@ func sharedMistake(key string, v any, ok bool) string {
 // with a theme given, which d takes.
 func (d *Data) readShared() error {
 	top := d.PosOf(nil)
-	pairs := map[string]*ast.MappingValueNode{}
+	pairs := map[string]yamlpos.Pair{}
 	if d.Root != nil {
-		for _, v := range d.Root.Values {
-			pairs[yamlpos.KeyName(v)] = v
+		for _, v := range d.Root.Pairs {
+			pairs[v.Name()] = v
 		}
 	}
 	to := map[string]*string{"lang": &d.Lang, "template": &d.Template, "theme": &d.Theme, "title": &d.Title}
 	var found usererr.List
 	for _, key := range Shared {
 		d.Where[key] = top
-		if p := pairs[key]; p != nil {
-			d.Where[key] = yamlpos.OfValue(yamlpos.KeyOf(p), p.Value)
+		if p, ok := pairs[key]; ok {
+			d.Where[key] = yamlpos.OfValue(p.Key, p.Value)
 		}
 		v, ok := d.Values[key]
 		if s, text := v.(string); ok && (v == nil || text && strings.TrimSpace(s) == "") {

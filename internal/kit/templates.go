@@ -134,16 +134,14 @@ func readThemeYAML(d Dir, dir string) (string, error) {
 	}
 	var about string
 	var found usererr.List
-	for _, kv := range m.Values {
-		k := yamlpos.KeyOf(kv)
-		if key := k.GetToken().Value; key != "description" {
+	for _, kv := range m.Pairs {
+		k := kv.Key
+		if key := kv.Name(); key != "description" {
 			found = append(found, yamlpos.New(file, yamlpos.Of(k), "kit_theme_yaml_key", key))
 			continue
 		}
 		var more usererr.List
-		if about, more, err = readAbout(file, k, kv.Value, "kit_theme_yaml_about"); err != nil {
-			return "", err
-		}
+		about, more = readAbout(file, k, kv.Value, "kit_theme_yaml_about")
 		found = append(found, more...)
 	}
 	return about, found.Sorted().Err()

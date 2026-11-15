@@ -6,7 +6,6 @@ import (
 	"strings"
 	"sync"
 
-	"github.com/goccy/go-yaml/ast"
 	"github.com/spf13/cobra"
 
 	"floe/docs"
@@ -183,7 +182,7 @@ func diagramOf(d *diagram.Drawer, p arg, o diagram.Options) (string, error) {
 
 // specOf reads the file p as doc.Read reads a data file: a file of nothing is a spec of nothing, whose lacks the schema
 // tells.
-func specOf(p arg) ([]byte, *ast.MappingNode, map[string]any, error) {
+func specOf(p arg) ([]byte, *yamlpos.Node, map[string]any, error) {
 	src, err := p.read()
 	if err != nil {
 		return nil, nil, nil, err

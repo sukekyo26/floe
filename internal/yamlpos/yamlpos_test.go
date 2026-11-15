@@ -6,8 +6,6 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/goccy/go-yaml/ast"
-
 	"floe/internal/i18n"
 	"floe/internal/usererr"
 	"floe/internal/yamlpos"
@@ -408,9 +406,9 @@ func TestLocate(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	root, _ := body.(*ast.MappingNode) //nolint:errcheck // keys and values just above
+	root := body
 	for _, tt := range []struct {
-		root *ast.MappingNode
+		root *yamlpos.Node
 		at   []string
 		want yamlpos.Pos
 	}{
@@ -508,9 +506,9 @@ func TestParsePlaces(t *testing.T) {
 	}
 }
 
-// QuoteOf tells a quoted scalar as the parser read it: a no-break space or an ideographic space before a quote
+// Quote tells a quoted scalar as the parser read it: a no-break space or an ideographic space before a quote
 // is part of a plain scalar.
-func TestQuoteOf(t *testing.T) {
+func TestQuote(t *testing.T) {
 	t.Parallel()
 
 	for src, want := range map[string]yamlpos.Quote{
@@ -521,8 +519,8 @@ func TestQuoteOf(t *testing.T) {
 		if err != nil {
 			t.Fatalf("Parse(%q): %s", src, told(err))
 		}
-		if _, v := yamlpos.Find(n, []string{"v"}); yamlpos.QuoteOf(v) != want {
-			t.Errorf("QuoteOf(%q) = %d, want %d", src, yamlpos.QuoteOf(v), want)
+		if _, v := yamlpos.Find(n, []string{"v"}); v.Quote != want {
+			t.Errorf("Quote of %q = %d, want %d", src, v.Quote, want)
 		}
 	}
 }
@@ -554,13 +552,46 @@ func TestText(t *testing.T) {
 		if err != nil {
 			t.Fatal(told(err))
 		}
-		m, isMap := body.(*ast.MappingNode)
-		if !isMap {
-			t.Fatalf("%q: the body is %T", tt.src, body)
+		if got, ok := yamlpos.Text(body.Pairs[0].Value); got != tt.want || ok != tt.ok {
+			t.Errorf("Text(%q) = %q, %v; want %q, %v", tt.src, got, ok, tt.want, tt.ok)
 		}
-		got, ok, err := yamlpos.Text(m.Values[0].Value)
-		if err != nil || got != tt.want || ok != tt.ok {
-			t.Errorf("Text(%q) = %q, %v, %v; want %q, %v", tt.src, got, ok, err, tt.want, tt.ok)
+	}
+}
+
+// Written finds a value's characters where they are written as read, and nothing where they are not.
+func TestWritten(t *testing.T) {
+	t.Parallel()
+
+	none := yamlpos.Pos{}
+	for _, tt := range []struct {
+		src  string
+		want yamlpos.Pos
+	}{
+		{"v: abc\n", yamlpos.Pos{Line: 1, Column: 4}},
+		{"v: 1.10\n", yamlpos.Pos{Line: 1, Column: 4}},
+		{"\ufeffv: abc\n", yamlpos.Pos{Line: 1, Column: 4}},
+		{"v: 'abc'\n", yamlpos.Pos{Line: 1, Column: 5}},
+		{"v: \"abc\"\n", yamlpos.Pos{Line: 1, Column: 5}},
+		{"v: \"\\x41\"\n", none},
+		{"v: 'a''b'\n", none},
+		{"v: a\n  b\n", none},
+		{"v: 'a\n  b'\n", none},
+		{"v: |\n  x\n  y\n", yamlpos.Pos{Line: 2, Column: 3}},
+		{"v: |-\n    x\n", yamlpos.Pos{Line: 2, Column: 5}},
+		{"v: |\n\n  x\n", yamlpos.Pos{Line: 2, Column: 3}},
+		{"v: |\r\n  x\r\n", yamlpos.Pos{Line: 2, Column: 3}},
+		{"v: |2\n   x\n", none},
+		{"v: >\n  x\n", none},
+		{"v: [a]\n", none},
+	} {
+		body, err := yamlpos.Parse("a.yaml", []byte(tt.src))
+		if err != nil {
+			t.Fatalf("Parse(%q): %s", tt.src, told(err))
+		}
+		_, v := yamlpos.Find(body, []string{"v"})
+		got, ok := yamlpos.Written([]byte(tt.src), v)
+		if got != tt.want || ok != (tt.want != none) {
+			t.Errorf("Written(%q) = %v, %v; want %v", tt.src, got, ok, tt.want)
 		}
 	}
 }

@@ -15,7 +15,6 @@ import (
 	"github.com/expr-lang/expr/builtin"
 	"github.com/expr-lang/expr/parser"
 	"github.com/expr-lang/expr/vm"
-	"github.com/goccy/go-yaml/ast"
 
 	"floe/internal/cycle"
 	"floe/internal/doc"
@@ -99,9 +98,9 @@ func ReadComputed(file string, src []byte, names []string) (*Computed, error) {
 		return nil, err //nolint:wrapcheck // mistakes at their lines and columns, or floe's failure
 	}
 	var found usererr.List
-	var keys map[string]ast.Node
+	var keys map[string]*yamlpos.Node
 	if body != nil {
-		if keys, err = c.readExprs(file, body, &found); err != nil {
+		if keys, err = c.readExprs(file, src, body, &found); err != nil {
 			return nil, err
 		}
 	}
@@ -165,28 +164,26 @@ func withShared(names []string) []string {
 	return names
 }
 
-// readExprs reads into c the expressions of body, the top of the computed.yaml file, adding to found those
-// that are not text or are left empty, and returns the key of each name, those among them; the mistake of a
-// top that is not names and expressions, or floe's failure.
-func (c *Computed) readExprs(file string, body ast.Node, found *usererr.List) (map[string]ast.Node, error) {
-	m, ok := body.(*ast.MappingNode)
-	if !ok {
+// readExprs reads into c the expressions of body, the top of the computed.yaml file whose YAML is src, adding to
+// found those that are not text or are left empty, and returns the key of each name, those among them; the mistake
+// of a top that is not names and expressions.
+func (c *Computed) readExprs(
+	file string, src []byte, body *yamlpos.Node, found *usererr.List,
+) (map[string]*yamlpos.Node, error) {
+	if body.Kind != yamlpos.Mapping {
 		return nil, yamlpos.New(file, yamlpos.Of(body), "rules_computed_yaml")
 	}
-	keys := map[string]ast.Node{}
-	for _, kv := range m.Values {
-		k := yamlpos.KeyOf(kv)
-		n := k.GetToken().Value
+	keys := map[string]*yamlpos.Node{}
+	for _, kv := range body.Pairs {
+		k := kv.Key
+		n := kv.Name()
 		keys[n] = k
-		s, ok, err := text(kv.Value)
-		if err != nil {
-			return nil, err
-		}
+		s, ok := text(kv.Value)
 		if !ok || s == "" {
 			*found = append(*found, yamlpos.New(file, yamlpos.OfValue(k, kv.Value), "rules_computed_yaml"))
 			continue
 		}
-		c.exprs[n] = expression{src: s, file: file, key: k, value: kv.Value}
+		c.exprs[n] = expression{src: s, file: file, yaml: src, key: k, value: kv.Value}
 	}
 	return keys, nil
 }
