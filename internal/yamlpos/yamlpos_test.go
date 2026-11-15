@@ -12,31 +12,7 @@ import (
 	"floe/internal/yamlpos"
 )
 
-const (
-	anchors = "anchors, aliases, merge keys (<<) and tags are not supported; write the value out"
-	cutAt   = "a # began a YAML comment, which may have cut the value short, to %s: if the # is part of the value, put the value in quotes, or, in a | or > text, indent all its lines alike, the # line too, or write its indentation after the | or > (like |2); else write the comment on a line of its own, no deeper than the value's key (or the - of an item)"
-	bom     = "\xef\xbb\xbf"
-)
-
-func notNumber(written, number string) string {
-	return fmt.Sprintf("%[1]s reads as the number %[2]s here, but as text in YAML 1.2: write %[2]s for the number, or put %[1]s in quotes for text", written, number)
-}
-
-func notText(written, shown, number string) string {
-	return fmt.Sprintf("%s reads as text here, but as the number %s in YAML 1.2: write %s for the number, or put %s in quotes for text", written, shown, number, written)
-}
-
-func octal(written, read, want, octal string) string {
-	return fmt.Sprintf("%s reads as the octal number %s here, but as %s in YAML 1.2: write %s for the decimal number, or %s for the octal one", written, read, want, want, octal)
-}
-
-func outsideFloat(written string) string {
-	return written + " is a number in YAML 1.2 that a float64 cannot hold: put it in quotes to keep it as text"
-}
-
-func tooBig(written string) string {
-	return written + " is a number in YAML 1.2, too large for floe to read: put it in quotes to keep it as text"
-}
+const bom = "\xef\xbb\xbf"
 
 func told(err error) string {
 	if err == nil {
@@ -45,149 +21,126 @@ func told(err error) string {
 	return usererr.Tell(i18n.EnglishCatalog(), err).Render("floe: ")
 }
 
+// placed is each mistake of err as its line, column and catalog key, a line each, in order; a failure as such.
+func placed(err error) string {
+	var found usererr.List
+	if failed := found.Add(err); failed != nil {
+		return "failure: " + failed.Error()
+	}
+	lines := make([]string, len(found))
+	for i, e := range found {
+		lines[i] = fmt.Sprintf("%d:%d %s", e.Line(), e.Column(), e.Key)
+	}
+	return strings.Join(lines, "\n")
+}
+
 // Parse refuses what floe does not read as written, each where it is written, all of a file at once in the
 // order of its lines, walking neither what an anchor, alias or tag holds nor a second document; it passes
-// what YAML reads as written.
+// what YAML 1.2 reads as written.
 func TestParse(t *testing.T) {
 	t.Parallel()
 
 	for _, tt := range []struct{ src, want string }{
-		// goccy/go-yaml's own words, at its place.
-		{"title: a: b\n", "a.yaml:1:8: mapping value is not allowed in this context"},
-		{"title: `x`\n", "a.yaml:1:8: '`' is a reserved character"},
-		{"lang: en\nlang: ja\n", `a.yaml:2:1: mapping key "lang" already defined at [1:1]`},
-		// A | text whose first line is deeper ends before a shallower line, which goccy/go-yaml refuses as
-		// YAML 1.2 does: were it read silently, it would be a misreading to refuse.
-		{"t: |\n    a\n  b\n", "a.yaml:3:3: value is not allowed in this context. map key-value is pre-defined"},
-		// One document.
-		{"lang: en\n---\ntitle: x\n", "a.yaml:2:1: a YAML file holds one document: write it as one, without --- between parts"},
-		{"lang: en\n---\nx: &a 1\n", "a.yaml:2:1: a YAML file holds one document: write it as one, without --- between parts"},
-		{"%YAML 1.2\n---\nlang: en\n---\nx: 1\n", "a.yaml:4:1: a YAML file holds one document: write it as one, without --- between parts"},
-		{"a: 1\n...\n%YAML 1.2\n---\nb: 2\n", "a.yaml:3:1: a YAML file holds one document: write it as one, without --- between parts"},
-		{"a: 1\n---\n%YAML 1.2\n---\nb: 2\n", "a.yaml:2:1: a YAML file holds one document: write it as one, without --- between parts"},
-		// goccy/go-yaml reads a second --- as an empty document and drops what follows it.
-		{"a: 1\n---\n---\nb: 2\n", "a.yaml:3:1: a YAML file holds one document: write it as one, without --- between parts"},
-		{"---\n---\nid: d\n", "a.yaml:2:1: a YAML file holds one document: write it as one, without --- between parts"},
-		// Anchors, aliases, merge keys and tags, not what they hold.
-		{"x: &a 1\ny: *a\n", "a.yaml:1:4: " + anchors + "\na.yaml:2:4: " + anchors},
-		{"title: !!str 3\n", "a.yaml:1:8: " + anchors},
-		{"&k x: 1\n", "a.yaml:1:1: " + anchors},
-		{"k: &a key\n*a : 1\n", "a.yaml:1:4: " + anchors + "\na.yaml:2:1: " + anchors},
-		{"!!str 0x10: 1\n", "a.yaml:1:1: " + anchors},
-		{"m: &m {a: 1}\nx:\n  <<: *m\n", "a.yaml:1:4: " + anchors + "\na.yaml:3:3: " + anchors},
-		{"--- !!map\nlang: en\n", "a.yaml:1:5: " + anchors},
-		{"&top\nlang: en\n", "a.yaml:1:1: " + anchors},
-		{"x: &a Plan #1 draft\n", "a.yaml:1:4: " + anchors},
-		{"x: {a: 1, &b c}\n", "a.yaml:1:11: " + anchors},
-		// Keys, as keys.
-		{"0x10: a\n~: 1\ntrue: 1\n", "a.yaml:1:1: a key is a name: write 0x10 as text, in quotes\na.yaml:2:1: a key is a name: write ~ as text, in quotes\na.yaml:3:1: a key is a name: write true as text, in quotes"},
-		{".inf: 1\n", "a.yaml:1:1: a key is a name: write .inf as text, in quotes"},
-		{"x: {a: 1, 5}\n", "a.yaml:1:11: a key is a name: write 5 as text, in quotes"},
-		{"? Plan #1\n: x\n", "a.yaml:1:8: " + fmt.Sprintf(cutAt, "Plan")},
-		// Values.
-		{"x: .inf\n", "a.yaml:1:4: .inf is not a value a YAML file can hold; write a number in digits, or quote it as text"},
-		{"x: [.NaN, -.Inf]\n", "a.yaml:1:5: .NaN is not a value a YAML file can hold; write a number in digits, or quote it as text\na.yaml:1:11: -.Inf is not a value a YAML file can hold; write a number in digits, or quote it as text"},
-		{"title: Plan #1 draft\n", "a.yaml:1:13: " + fmt.Sprintf(cutAt, "Plan")},
-		{"sections:\n  - heading: Step #2\n", "a.yaml:2:19: " + fmt.Sprintf(cutAt, "Step")},
-		// A plain value over lines is cut where its last line holds the comment.
-		{"title: Plan\n  draft #1\n", "a.yaml:2:9: " + fmt.Sprintf(cutAt, "Plan draft")},
-		{"x: {a, b: 1}\n", `a.yaml:1:5: "a" is a key without a value in { }: write its value after a ":", or, if a , in text ended the text before it, put that text in quotes`},
-		// A long one shows its end, where the cut is, or its head.
-		{"lead: " + strings.Repeat("a", 50) + "bcd # c\n", "a.yaml:1:61: " + fmt.Sprintf(cutAt, "…"+strings.Repeat("a", 37)+"bcd")},
-		{"a: { " + strings.Repeat("b", 50) + " }\n", "a.yaml:1:6: \"" + strings.Repeat("b", 40) + "…\" is a key without a value in { }: write its value after a \":\", or, if a , in text ended the text before it, put that text in quotes"},
-		// All of a file at once, in the order of its lines.
-		{"title: Plan #1 draft\nx: &a 1\n0x10: a\n", "a.yaml:1:13: " + fmt.Sprintf(cutAt, "Plan") + "\na.yaml:2:4: " + anchors + "\na.yaml:3:1: a key is a name: write 0x10 as text, in quotes"},
-		// What YAML reads as written passes.
-		{"title: 'Plan #1 draft'\n", ""},
-		{"title: Plan#1\n", ""},
-		{"lead: |\n  Plan #1 draft\n", ""},
-		{"# a note\nsections: []  # trailing\n", ""},
-		{"x: {a: , b: 1}\n", ""},
-		{"\"0x10\": a\nx: \".inf\"\n", ""},
+		// go.yaml.in/yaml/v4's own mistakes, at its place.
+		{"title: a: b\n", "1:9 library"},
+		{"title: `x`\n", "1:8 library"},
+		{"t: |\n    a\n  b\n", "3:3 library"},
+		{"title: %y\n", "1:8 library"},
+		{"%YAML 1.2\n---\nlang: en\n", "1:1 library"},
+		{"%FOO bar\n---\nlang: en\n", "1:5 library"},
+		{"x: \"" + `\ud83d\ude00` + "\"\n", "1:7 library"},
+		{"x: \"abc\ny: 1\n", "3:1 library"},
+		{"x: [1, 2\ny: 3\n", "2:2 library"},
+		// One document: a second one holding something, at its start.
+		{"lang: en\n---\ntitle: x\n", "2:1 yaml_documents"},
+		{"lang: en\n---\nx: &a 1\n", "2:1 yaml_documents"},
+		{"%YAML 1.1\n---\nlang: en\n---\nx: 1\n", "4:1 yaml_documents"},
+		{"a: 1\n---\n---\nb: 2\n", "3:1 yaml_documents"},
+		{"a: 1\n---\n~\n", "2:1 yaml_documents"},
+		{"a: 1\n--- null\n", "2:1 yaml_documents"},
+		{"a: 1\n--- ''\n", "2:1 yaml_documents"},
+		{"a: 1\n--- !!null\n", "2:1 yaml_documents"},
+		{"a: 1\n--- |\n", "2:1 yaml_documents"},
+		// A document with nothing written is none.
+		{"---\n---\nid: d\n", ""},
+		{"lang: en\n---\n---\n---\n", ""},
+		{bom + "---\n---\nlang: en\n", ""},
 		{"---\nlang: en\n...\n", ""},
 		{"lang: en\n---\n", ""},
 		{"a: 1\n---\n# c\n", ""},
 		{"a: 1\r\n---\r\n\r\n", ""},
 		{"a: 1\n---\n... # end\n", ""},
-		{"%YAML 1.2\n---\nlang: en\n", ""},
-		// A byte order mark at the start is left out: the first line's columns are an editor's.
-		{bom + "title: Plan #1 draft\n", "a.yaml:1:13: " + fmt.Sprintf(cutAt, "Plan")},
-		{bom + "%YAML 1.2\n---\nlang: en\n", ""},
-		{bom + "---\n---\n", "a.yaml:2:1: a YAML file holds one document: write it as one, without --- between parts"},
-		// LIMIT: text a , cut, as the LIMIT of node tells.
-		{"x: [1,500 words]\n", ""},
-		// A plain value YAML 1.2 reads otherwise than goccy/go-yaml, told with a way both read alike.
-		{"x: 017\n", "a.yaml:1:4: " + octal("017", "15", "17", "0o17")},
-		{"x: -017\n", "a.yaml:1:4: " + octal("-017", "-15", "-17", "-15")},
-		{"x: 0b101\n", "a.yaml:1:4: " + notNumber("0b101", "5")},
-		{"x: 1_000\n", "a.yaml:1:4: " + notNumber("1_000", "1000")},
-		{"x: -0x1F\n", "a.yaml:1:4: " + notNumber("-0x1F", "-31")},
-		{"x: +-1\n", "a.yaml:1:4: " + notNumber("+-1", "1")},
-		{"x: 1_0.0\n", "a.yaml:1:4: " + notNumber("1_0.0", "10.0")},
-		{"x: 1_000_000_000_000_000_000_000.0\n", "a.yaml:1:4: " + notNumber("1_000_000_000_000_000_000_000.0", "1.0e+21")},
-		{"x: 1e3\n", "a.yaml:1:4: " + notText("1e3", "1000", "1000.0")},
-		{"x: 012e3\n", "a.yaml:1:4: " + notText("012e3", "12000", "12000.0")},
-		{"x: 08\n", "a.yaml:1:4: " + notText("08", "8", "8")},
-		{"x: 99999999999999999999\n", "a.yaml:1:4: " + tooBig("99999999999999999999")},
-		{"x: -9223372036854775809\n", "a.yaml:1:4: " + tooBig("-9223372036854775809")},
-		{"x: 030000000000000000000\n", "a.yaml:1:4: " + tooBig("030000000000000000000")},
-		{"x: +.inf\n", "a.yaml:1:4: +.inf is not a value a YAML file can hold; write a number in digits, or quote it as text"},
-		{"x: 1e400\n", "a.yaml:1:4: " + outsideFloat("1e400")},
-		{"a: 1e-400\nb: 1.0e-400\nc: -1e-400\n", "a.yaml:1:4: " + outsideFloat("1e-400") + "\na.yaml:2:4: " + outsideFloat("1.0e-400") + "\na.yaml:3:4: " + outsideFloat("-1e-400")},
-		// A true 0 is no float64 left behind: goccy/go-yaml reads 0e-400 as text, as it does 1e3.
-		{"a: 0e-400\n", "a.yaml:1:4: " + notText("0e-400", "0", "0.0")},
-		{"a: 0.0e-400\nb: -0.0e-400\n", ""},
-		{"x: [017, 0x1F, 1e3]\n", "a.yaml:1:5: " + octal("017", "15", "17", "0o17") + "\na.yaml:1:16: " + notText("1e3", "1000", "1000.0")},
-		{"x: {a: 0b101, b: 12}\n", "a.yaml:1:8: " + notNumber("0b101", "5")},
-		{"1e3: a\n08: b\n", "a.yaml:1:1: a key is a name: write 1e3 as text, in quotes\na.yaml:2:1: a key is a name: write 08 as text, in quotes"},
-		// A number refused is judged for a comment that cut it short too: quoting it as told would drop the rest.
-		{"title: 1e3 #1 draft\n", "a.yaml:1:8: " + notText("1e3", "1000", "1000.0") + "\na.yaml:1:12: " + fmt.Sprintf(cutAt, "1e3")},
-		{"x: 017 #1 draft\n", "a.yaml:1:4: " + octal("017", "15", "17", "0o17") + "\na.yaml:1:8: " + fmt.Sprintf(cutAt, "017")},
-		// Read alike, or not plain, or not a number at its start, it passes.
+		{"%YAML 1.1\n---\nlang: en\n", ""},
+		// Anchors, aliases, merge keys and tags, not what they hold; a tag of ! alone too.
+		{"x: &a 1\ny: *a\n", "1:4 yaml_no_anchors\n2:4 yaml_no_anchors"},
+		{"title: !!str 3\n", "1:8 yaml_no_anchors"},
+		{"title: ! 3\n", "1:8 yaml_no_anchors"},
+		{"&k x: 1\n", "1:1 yaml_no_anchors"},
+		{"k: &a key\n*a : 1\n", "1:4 yaml_no_anchors\n2:1 yaml_no_anchors"},
+		{"!!str 0x10: 1\n", "1:1 yaml_no_anchors"},
+		{"m: {a: 1}\nx:\n  <<: {b: 2}\n", "3:3 yaml_no_anchors"},
+		{"--- !!map\nlang: en\n", "1:5 yaml_no_anchors"},
+		{"&top\nlang: en\n", "1:1 yaml_no_anchors"},
+		{"x: {a: 1, &b c}\n", "1:11 yaml_no_anchors"},
+		// Keys, as keys: text as YAML 1.2 reads it, and each once in its mapping.
+		{"0x10: a\n~: 1\ntrue: 1\n", "1:1 yaml_key_not_text\n2:1 yaml_key_not_text\n3:1 yaml_key_not_text"},
+		{".inf: 1\n1e3: a\n08: b\n", "1:1 yaml_key_not_text\n2:1 yaml_key_not_text\n3:1 yaml_key_not_text"},
+		{"x: {a: 1, 5}\n", "1:11 yaml_key_not_text"},
+		{"[a]: 1\n", "1:1 yaml_key_not_text"},
+		{"lang: en\nlang: ja\n", "2:1 yaml_key_twice"},
+		{"x: {a: 1, a: 2}\ny:\n  a: 1\n  b: 2\n  a: 3\n", "1:11 yaml_key_twice\n5:3 yaml_key_twice"},
+		{"\"a\": 1\na: 2\n", "2:1 yaml_key_twice"},
+		{"a: 1\nb:\n  a: 2\n", ""},
+		{"\"0x10\": a\n\"1e3\": a\n", ""},
+		// A key in { } with no value written.
+		{"x: {a, b: 1}\n", "1:5 yaml_flow_key_alone"},
+		{"x: {a: , b: 1}\n", "1:5 yaml_flow_key_alone"},
+		{"x: {text: Hello, world}\n", "1:18 yaml_flow_key_alone"},
+		{"x: [k: ]\n", "1:5 yaml_flow_key_alone"},
+		{"x: {a: ~, b: null, c: ''}\n", ""},
+		// Values YAML 1.2 reads as numbers floe does not take.
+		{"x: .inf\n", "1:4 yaml_not_finite"},
+		{"x: [.NaN, -.Inf]\n", "1:5 yaml_not_finite\n1:11 yaml_not_finite"},
+		{"x: 99999999999999999999\n", "1:4 yaml_number_too_big"},
+		{"x: -9223372036854775809\n", "1:4 yaml_number_too_big"},
+		{"x: 030000000000000000000\n", "1:4 yaml_number_too_big"},
+		{"x: 1e400\n", "1:4 yaml_number_outside_float"},
+		{"a: 1e-400\nb: 1.0e-400\nc: -1e-400\n", "1:4 yaml_number_outside_float\n2:4 yaml_number_outside_float\n3:4 yaml_number_outside_float"},
+		{"a: 0e-400\nb: 0.0e-400\nc: -0.0e-400\n", ""},
+		// All of a file at once, in the order of its lines.
+		{"x: &a 1\n0x10: a\nx: 2\n", "1:4 yaml_no_anchors\n2:1 yaml_key_not_text\n3:1 yaml_key_twice"},
+		// What YAML 1.2 reads as written passes: numbers YAML 1.1 reads otherwise, a tab in a | text.
+		{"a: 017\nb: -017\nc: 0b101\nd: 1_000\ne: -0x1F\nf: +-1\ng: 1e3\nh: 012e3\ni: 08\n", ""},
 		{"a: 0o17\nb: 0x1F\nc: +1\nd: 0\ne: 00\nf: .5\ng: 1.0\nh: 1.\ni: 012.5\nj: 18446744073709551615\n", ""},
-		{"a: 1000.0\nb: 12000.0\nc: 1.0e+20\nd: -0.0\ne: 1.5e3\n", ""},
 		{"a: \"017\"\nb: '1e3'\nc: Plan 2026\nd: v1.0\ne: 2026-10-26\nf: 1.2.3\ng: 1,000\nh: +.nan\n", ""},
-		{"\"1e3\": a\n", ""},
-		{"x: 0x1F #1 draft\n", ""},
-		// A comment after a number, true or ~ cuts no text; text cut to a number is the schema's, by its type.
-		{"enabled: true  # turn on\nx: 3 #c\ny: ~ #c\n", ""},
-		{"title: 2024 #1\n", ""},
-		// A comment right after a value, deeper than its key or -, on a line of its own: a # line shallower than a
-		// | or > text's indentation, the first line deeper or not, or a line of a plain value over lines.
-		{"t: |\n    a\n  # h\nb: 1\n", "a.yaml:3:3: " + fmt.Sprintf(cutAt, "a")},
-		{"t: |\n  a\n # h\nb: 1\n", "a.yaml:3:2: " + fmt.Sprintf(cutAt, "a")},
-		{"t: >\n    a\n  # h\n", "a.yaml:3:3: " + fmt.Sprintf(cutAt, "a")},
-		{"t: |+\n    a\n\n  # h\nb: 1\n", "a.yaml:4:3: " + fmt.Sprintf(cutAt, "a")},
-		{"- |\n    a\n  # h\n", "a.yaml:3:3: " + fmt.Sprintf(cutAt, "a")},
-		{"m:\n  t: |\n      a\n    # h\n    # i\n  b: 1\n", "a.yaml:4:5: " + fmt.Sprintf(cutAt, "a")},
-		{"a:\n  - x\n    # c\n", "a.yaml:3:5: " + fmt.Sprintf(cutAt, "x")},
-		{"title: Plan\n  #1 draft\nb: 1\n", "a.yaml:2:3: " + fmt.Sprintf(cutAt, "Plan")},
-		{"title: Plan\n  draft\n  #2\n", "a.yaml:3:3: " + fmt.Sprintf(cutAt, "Plan draft")},
-		{"title: Plan\r  draft #1\rb: 1\r", "a.yaml:2:9: " + fmt.Sprintf(cutAt, "Plan draft")},
-		{"? Plan #1\n: x\n", "a.yaml:1:8: " + fmt.Sprintf(cutAt, "Plan")},
-		{"? a\n: x\n  # c\n", "a.yaml:3:3: " + fmt.Sprintf(cutAt, "x")},
-		// A comment no deeper than the key or - cuts nothing, nor a # line a text holds.
-		{"t: |\n  a\n# real\nb: 1\n", ""},
-		{"m:\n  t: |\n    a\n  # real\n  b: 1\n", ""},
-		{"a:\n  - x\n  # c\n", ""},
-		{"t: |\n  a\n  # in text\n", ""},
-		{"t: |2\n    a\n  # in text\n", ""},
-		{"t: |+\n\n\n  # h\n", ""},
-		{"q: \"a\"\n  # after\n", ""},
-		{"n: 3\n  # after\n", ""},
-		{"t: |\n", ""},
-		// LIMIT: only the comment right after the value, as the LIMIT of cut tells.
-		{"t: |\n    a\n# real\n  # h\n", ""},
+		{"c: |\n  \tx\n  b\n", ""},
+		{"x: \"a\tb\n\tc\"\n", ""},
+		{"title: 'Plan #1 draft'\n", ""},
+		{"title: Plan#1\n", ""},
+		{"# a note\nsections: []  # trailing\n", ""},
+		{"a:\n-\nb: 1\n", ""},
+		// LIMIT: text a , cut, as the LIMIT of pair tells.
+		{"x: [1,500 words]\n", ""},
 	} {
 		_, err := yamlpos.Parse("a.yaml", []byte(tt.src))
-		if got := told(err); got != tt.want {
+		if got := placed(err); got != tt.want {
 			t.Errorf("Parse(%q) told\n%s\nwant\n%s", tt.src, got, tt.want)
 		}
 	}
-	for _, src := range []string{"", "# just a note\n", bom, bom + "# just a note\n"} {
+	for _, src := range []string{"", "# just a note\n", bom, bom + "# just a note\n", "---\n", "---\n...\n", bom + "---\n---\n"} {
 		if _, err := yamlpos.Parse("a.yaml", []byte(src)); !errors.Is(err, yamlpos.ErrEmpty) {
 			t.Errorf("Parse(%q) = %v, want ErrEmpty", src, err)
 		}
+	}
+}
+
+// go.yaml.in/yaml/v4's mistake is told in its words alone, without the context it puts before them.
+func TestParseLibraryWords(t *testing.T) {
+	t.Parallel()
+
+	_, err := yamlpos.Parse("a.yaml", []byte("t: |\n    a\n  b\n"))
+	if got := told(err); got != "a.yaml:3:3: did not find expected key" {
+		t.Errorf("told %q", got)
 	}
 }
 
@@ -272,122 +225,88 @@ func TestParseLineSeparators(t *testing.T) {
 	}
 }
 
-// A | or > text without an indentation indicator whose first line not of spaces alone begins with spaces and a
-// tab is refused at the tab, each of a file, whatever its line breaks and what comes before it: goccy/go-yaml
-// counts the tab into the indentation, reading the lines after it otherwise than YAML 1.2 (dropping the "# h"
-// below, or a space of "y"), or failing at one of them. A text of one line, which it reads right, is refused
-// alike. With an indicator, a tab past the first line, or a tab without spaces before it, it passes or is
-// goccy/go-yaml's to tell.
-func TestParseBlockTabs(t *testing.T) {
+// A tab is a character of a value as YAML 1.2 reads it: after the indentation of a | or > text (with spaces before
+// it or not, on its first line or after), and inside a plain value (S370). One where indentation goes is
+// go.yaml.in/yaml/v4's mistake.
+func TestParseTabs(t *testing.T) {
 	t.Parallel()
 
-	tab := i18n.EnglishCatalog().Msg("yaml_block_tab")
-	for _, tt := range []struct{ name, src, want string }{
-		{"a line after it", "c: |\n  \tx\n  b\n", "a.yaml:2:3: " + tab},
-		{"a comment after it", "c: |\n  \tx\n  # h\n", "a.yaml:2:3: " + tab},
-		{"a deeper line after it", "c: |\n  \tx\n     y\n", "a.yaml:2:3: " + tab},
-		{"one line", "c: |\n  \tx\n", "a.yaml:2:3: " + tab},
-		{"one line, a key after it", "c: |\n  \tx\nd: 1\n", "a.yaml:2:3: " + tab},
-		{"folded", "c: >\n  \tx\n  # h\n", "a.yaml:2:3: " + tab},
-		{"strip", "c: |-\n  \tx\n  # h\n", "a.yaml:2:3: " + tab},
-		{"keep", "c: |+\n  \tx\n", "a.yaml:2:3: " + tab},
-		{"a comment on the header", "c: | # n\n  \tx\n  # h\n", "a.yaml:2:3: " + tab},
-		{"an empty line first", "c: |\n\n  \tx\n  # h\n", "a.yaml:3:3: " + tab},
-		{"nested", "a:\n  c: |\n    \tx\n    # h\n", "a.yaml:3:5: " + tab},
-		{"an item", "- |\n  \tx\n  # h\n", "a.yaml:2:3: " + tab},
-		{"a key of an item", "a:\n  - c: |\n      \tx\n      # h\n", "a.yaml:3:7: " + tab},
-		{"a tab alone", "c: |\n  \t\n  b\n", "a.yaml:2:3: " + tab},
-		{"a space after the tab", "c: |\n \t \n  b\n", "a.yaml:2:2: " + tab},
-		{"as deep as its key", "x:\n  a: |\n  \t# note\n  b: 1\n", "a.yaml:3:3: " + tab},
-		{"CRLF", "c: |\r\n  \tx\r\n  # h\r\n", "a.yaml:2:3: " + tab},
-		{"CR alone", "a: 1\rb: 2\rc: |\r  \tx\r  # h\r", "a.yaml:4:3: " + tab},
-		{"line breaks mixed", "a: 1\rb: 2\r\nc: |\n  \tx\r  # h\n", "a.yaml:4:3: " + tab},
-		{"after Japanese", "t: あ\nc: |\n  \tx\n  # h\n", "a.yaml:3:3: " + tab},
-		{"after a text read right", "a: |\n  x\nb: |\n  \tz\n  # h\n", "a.yaml:4:3: " + tab},
-		{"two", "c: |\n  \tx\nd: >\n  \ty\n", "a.yaml:2:3: " + tab + "\na.yaml:4:3: " + tab},
-		{"an indicator", "c: |2\n  \tx\n  # h\n", ""},
-		{"an indicator, strip", "c: |-2\n  \tx\n  # h\n", ""},
-		{"strip, an indicator", "c: |2-\n  \tx\n  # h\n", ""},
-		{"a tab past the first line", "c: |\n  x\n  \ty\n", ""},
-		{"a tab alone past the first line", "c: |\n  x\n  \t\n", ""},
-		{"no tab", "c: |\n  x\n  # h\n", ""},
-		{"no spaces before the tab", "c: |\n\tx\n", "a.yaml:2:1: found a tab character where an indentation space is expected"},
-		// LIMIT: a header goccy/go-yaml places off is not judged, and does not stop the file.
-		{"a tab before the header", "a:\t|\n  z\n", ""},
-		{"a tab before the header of an item", "- \t|\n  z\n", ""},
-		{"after quotes over CRLF lines", "a: 'x\r\n  y'\r\nb: |\r\n  z\r\n", ""},
-		// A file whose places are not mended (\x) is judged at goccy/go-yaml's.
-		{"after \\x", "a: \"\\x41\"\nb: |\n  \tx\n  y\n", "a.yaml:3:3: " + tab},
-		// goccy/go-yaml's own mistake, as on a file without the check.
-		{"after a tab in double quotes", "a: \"\tx\"\nb: |\n  z\n", "a.yaml:1:9: value is not allowed in this context. map key-value is pre-defined"},
+	for src, want := range map[string]string{
+		"c: |\n  \tx\n  b\n":   "\tx\nb\n",
+		"c: |\n  \tx\n  # h\n": "\tx\n# h\n",
+		"c: >\n  \tx\n":        "\tx\n",
+		"c: |\r\n  \tx\r\n":    "\tx\n",
+		"c: |\n  x\n  \ty\n":   "x\n\ty\n",
+		"c: |2\n  \tx\n":       "\tx\n",
+		"c: a\t\tb\n":          "a\t\tb",
+		"c: \"\tx\"\n":         "\tx",
 	} {
-		_, err := yamlpos.Parse("a.yaml", []byte(tt.src))
-		if got := told(err); got != tt.want {
-			t.Errorf("%s: Parse(%q) told\n%s\nwant\n%s", tt.name, tt.src, got, tt.want)
+		body, err := yamlpos.Parse("a.yaml", []byte(src))
+		if err != nil {
+			t.Fatalf("Parse(%q): %s", src, told(err))
 		}
+		if got, _ := yamlpos.Text(body.Pairs[0].Value); got != want {
+			t.Errorf("Parse(%q) reads %q, want %q", src, got, want)
+		}
+	}
+	if _, err := yamlpos.Parse("a.yaml", []byte("c: |\n\tx\n")); placed(err) != "2:1 library" {
+		t.Errorf("a tab as indentation: %q", placed(err))
 	}
 }
 
-// A comment in { } or [ ] is refused at its #, before the parser, telling where the innermost flow it is in
-// opens: in a flow closed or left open, a comment that took an end or not. Out of a flow it is the walk's. Past an
-// end that does not close the flow open, or with none, goccy/go-yaml's lexer reads the ends after it otherwise,
-// so those are goccy/go-yaml's.
+// A comment in { } or [ ] is no mistake of yamlpos's here (S362's child 7 judges what a # cuts on go.yaml.in/yaml/v4's
+// tree); a flow left open is go.yaml.in/yaml/v4's own mistake, at its place.
 func TestParseFlowComments(t *testing.T) {
 	t.Parallel()
 
-	at := func(line, column, openLine, openColumn int) string {
-		return fmt.Sprintf("a.yaml:%d:%d: %s", line, column, i18n.EnglishCatalog().Msg("yaml_flow_comment", openLine, openColumn))
-	}
 	for _, tt := range []struct{ name, src, want string }{
-		{"a comma's", "x: [a, # c ]\n", at(1, 8, 1, 4)},
-		{"one a flow over lines holds right", "ports: [\n  8080,  # admin\n  9090,\n]\n", at(2, 10, 1, 8)},
-		{"one on a line of its own", "x: [\n  # c\n  a,\n]\n", at(2, 3, 1, 4)},
-		{"one that took the end of the innermost, at its start", "items: [\n  {name: Issue #1},\n]\n", at(2, 16, 2, 3)},
-		{"one on a later line that took the end", "tags: [\n  a, Issue #1]\ny: 1\n", at(2, 12, 1, 7)},
-		{"one that took two ends", "x: [\n  {a: 1,\n   b: Issue #1}]\ny: 1\n", at(3, 13, 2, 3)},
-		{"one in a sequence", "x: [a, PR #378, c]\ny: 1\n", at(1, 11, 1, 4)},
-		{"one with a # in it", "x: [a, PR #1 and #2, c]\ny: 1\n", at(1, 11, 1, 4)},
-		{"each of two flows", "x: [a #1]\ny: [b #2]\nz: 1\n", at(1, 7, 1, 4) + "\n" + at(2, 7, 2, 4)},
-		{"over CRLF lines and a tab", "# c\r\nx: [a\tb, Issue #1]\r\ny: 1\r\n", at(2, 16, 2, 4)},
-		{"one without a space before it", "x: [a,#c]\n", at(1, 7, 1, 4)},
-		{"one after an alias", "x: [*a #1]\n", at(1, 8, 1, 4)},
-		{"one in a flow closed", "x: {a #c\n , b: 1}\n", at(1, 7, 1, 4)},
-		{"one before an end left out", "x: [a, b #note\ny: 1\n", at(1, 10, 1, 4)},
-		{"one of the author's before an end left out", "x: [a #1\n  , b\ny: 1\n", at(1, 7, 1, 4)},
-		{"one with flows in it", "x: [a #see {b}\ny: 1\n", at(1, 7, 1, 4)},
-		{"one with quotes in it", "x: [a, b # 'quoted]\ny: 1\n", at(1, 10, 1, 4)},
-		{"one with ends of the other kind in it", "x: [a, b # see [doc}\ny: 1\n", at(1, 10, 1, 4)},
-		{"one past an end goccy/go-yaml reads as text", "x: {a: b}}\ny: [c #1\n", at(2, 7, 2, 4)},
-		{"one far past an end left out", "x: [a\ny: 1\nz: 2  # next\n", at(3, 7, 1, 4)},
-		{"one on a line past an end left out", "x: [a\ny: 1 # next\nz: 2\n", at(2, 6, 1, 4)},
-		{"one past a flow closed in one left open", "x: [a\n- [b] #c\n", at(2, 7, 1, 4)},
-		{"one on a later line of a flow left open", "x: [\n  a, # c\n  b\ny: 1\n", at(2, 6, 1, 4)},
-		{"one before ...", "x: [a #1]\n...\ny: [b\n", at(1, 7, 1, 4)},
-		{"one in a flow past ---", "--- [a\n--- [b #c]\n", at(2, 8, 2, 5)},
-		{"one in a second document, before it is refused", "x: 1\n---\ny: [a #c]\n", at(3, 7, 3, 4)},
-		{"one with a mistake of the walk", "title: Plan #1\nx: [a #2]\n", at(2, 7, 2, 4)},
-		{"one before an end that closes, and one in the flow after it", "x: [a #1\ny: ]\nz: [b #2]\n", at(1, 7, 1, 4) + "\n" + at(3, 7, 3, 4)},
-		{"a file whose places are not mended (\\x), at goccy/go-yaml's", "x: \"\\x41\"\ny: [a #c]\n", at(2, 7, 2, 4)},
-		// What is out of a flow, or no comment, passes.
+		{"a comma's", "x: [a, # c ]\n", "2:1 library"},
+		{"one a flow over lines holds right", "ports: [\n  8080,  # admin\n  9090,\n]\n", ""},
+		{"one on a line of its own", "x: [\n  # c\n  a,\n]\n", ""},
+		{"one that took the end of the innermost, at its start", "items: [\n  {name: Issue #1},\n]\n", "3:1 library"},
+		{"one on a later line that took the end", "tags: [\n  a, Issue #1]\ny: 1\n", "3:1 library"},
+		{"one that took two ends", "x: [\n  {a: 1,\n   b: Issue #1}]\ny: 1\n", "4:1 library"},
+		{"one in a sequence", "x: [a, PR #378, c]\ny: 1\n", "2:1 library"},
+		{"one with a # in it", "x: [a, PR #1 and #2, c]\ny: 1\n", "2:1 library"},
+		{"each of two flows", "x: [a #1]\ny: [b #2]\nz: 1\n", "2:1 library"},
+		{"over CRLF lines and a tab", "# c\r\nx: [a\tb, Issue #1]\r\ny: 1\r\n", "3:1 library"},
+		{"one without a space before it", "x: [a,#c]\n", "1:7 library"},
+		{"one after an alias", "x: [*a #1]\n", "1:5 library"},
+		{"one in a flow closed", "x: {a #c\n , b: 1}\n", "1:5 yaml_flow_key_alone"},
+		{"one before an end left out", "x: [a, b #note\ny: 1\n", "2:1 library"},
+		{"one of the author's before an end left out", "x: [a #1\n  , b\ny: 1\n", "3:2 library"},
+		{"one with flows in it", "x: [a #see {b}\ny: 1\n", "2:1 library"},
+		{"one with quotes in it", "x: [a, b # 'quoted]\ny: 1\n", "2:1 library"},
+		{"one with ends of the other kind in it", "x: [a, b # see [doc}\ny: 1\n", "2:1 library"},
+		{"one past an end too many", "x: {a: b}}\ny: [c #1\n", "1:10 library"},
+		{"one far past an end left out", "x: [a\ny: 1\nz: 2  # next\n", "2:2 library"},
+		{"one on a line past an end left out", "x: [a\ny: 1 # next\nz: 2\n", "2:2 library"},
+		{"one past a flow closed in one left open", "x: [a\n- [b] #c\n", "2:3 library"},
+		{"one on a later line of a flow left open", "x: [\n  a, # c\n  b\ny: 1\n", "4:2 library"},
+		{"one before ...", "x: [a #1]\n...\ny: [b\n", "2:1 library"},
+		{"one in a flow past ---", "--- [a\n--- [b #c]\n", "2:1 library"},
+		{"one in a second document, before it is refused", "x: 1\n---\ny: [a #c]\n", "4:1 library"},
+		{"one with a mistake of the walk", "title: Plan #1\nx: [a #2]\n", "3:1 library"},
+		{"one before an end that closes, and one in the flow after it", "x: [a #1\ny: ]\nz: [b #2]\n", "2:1 library"},
+		{"a file with \\x", "x: \"\\x41\"\ny: [a #c]\n", "3:1 library"},
 		{"a # in quotes", "x: [\"Issue #1\", b]\n", ""},
 		{"a # with no space before it", "x: [Issue#1]\n", ""},
 		{"a comment after a flow", "x: [a] # out\n", ""},
 		{"a comment on a line of its own out of a flow", "# out\nx: [a]\n", ""},
 		{"a [ in quotes", "x: \"[a #1\"\n", ""},
 		{"a [ in a | text", "x: |\n  [a #1\n", ""},
-		// goccy/go-yaml's own mistake.
-		{"past --- that leaves a flow", "--- [a\n--- #c\nx: 1\n", "a.yaml:1:5: sequence end token ']' not found"},
-		{"past ... that leaves a flow", "x: [a\n...\n# c\n", "a.yaml:1:4: sequence end token ']' not found"},
-		{"an end too many", "x: [a]]\n", "a.yaml:1:7: value is not allowed in this context"},
-		{"an end left out, no comment", "x: [a\ny: 1\n", "a.yaml:2:1: ',' or ']' must be specified"},
-		{"an end left out over CRLF lines and a tab, at goccy/go-yaml's", "# c\r\nx: [a\tb, c\r\ny: 1\r\n", "a.yaml:4:1: ',' or ']' must be specified"},
-		{"a comment past an end too many", "x: [a]]\ny: [b, c]\nz: 1 # d\n", "a.yaml:1:7: value is not allowed in this context"},
-		{"a comment past an end with none open", "x: ]\ny: [b]\nz: 1 # d\n", "a.yaml:1:4: could not find '[' character corresponding to ']'"},
-		{"a comment past an end of the other kind", "x: {a: [b}, c #d\n", "a.yaml:1:10: ',' or ']' must be specified"},
+		{"past --- that leaves a flow", "--- [a\n--- #c\nx: 1\n", "2:1 library"},
+		{"past ... that leaves a flow", "x: [a\n...\n# c\n", "2:1 library"},
+		{"an end too many", "x: [a]]\n", "1:7 library"},
+		{"an end left out, no comment", "x: [a\ny: 1\n", "2:2 library"},
+		{"an end left out over CRLF lines and a tab", "# c\r\nx: [a\tb, c\r\ny: 1\r\n", "3:2 library"},
+		{"a comment past an end too many", "x: [a]]\ny: [b, c]\nz: 1 # d\n", "1:7 library"},
+		{"a comment past an end with none open", "x: ]\ny: [b]\nz: 1 # d\n", "1:4 library"},
+		{"a comment past an end of the other kind", "x: {a: [b}, c #d\n", "1:10 library"},
 	} {
 		_, err := yamlpos.Parse("a.yaml", []byte(tt.src))
-		if got := told(err); got != tt.want {
-			t.Errorf("%s: Parse(%q) told\n%s\nwant\n%s", tt.name, tt.src, got, tt.want)
+		if got := placed(err); got != tt.want {
+			t.Errorf("%s: Parse(%q) = %q, want %q", tt.name, tt.src, got, tt.want)
 		}
 	}
 }
@@ -485,10 +404,9 @@ func TestOfValue(t *testing.T) {
 	}
 }
 
-// A value is placed at its first character as textpos counts it, though goccy/go-yaml places it off: after a
-// tab, which it does not count; with spaces after it at a line's end, which it adds; after a comment or quotes
-// over CRLF lines, which it counts twice. Its places are kept for a file whose text Origin does not hold (the
-// hex digits of \x), as for its own mistakes.
+// A value is placed at its first character as textpos counts it: after a tab, with spaces after it at a line's
+// end, after a comment or quotes over CRLF lines, after \x (goccy/go-yaml placed each of these off), and
+// go.yaml.in/yaml/v4's own mistakes too.
 func TestParsePlaces(t *testing.T) {
 	t.Parallel()
 
@@ -497,7 +415,6 @@ func TestParsePlaces(t *testing.T) {
 		at        []string
 		want      yamlpos.Pos
 	}{
-		// goccy/go-yaml places these off.
 		{"spaces after it", "- expr:   zzz < 1   \n", []string{"0", "expr"}, yamlpos.Pos{Line: 1, Column: 11}},
 		{"a tab before it", "a:\tx\n", []string{"a"}, yamlpos.Pos{Line: 1, Column: 4}},
 		{"two tabs before it", "a:\t\tx\n", []string{"a"}, yamlpos.Pos{Line: 1, Column: 5}},
@@ -506,14 +423,12 @@ func TestParsePlaces(t *testing.T) {
 		{"after quotes over CRLF", "a: \"x\r\n  y\"\r\nb: 1\r\n", []string{"b"}, yamlpos.Pos{Line: 3, Column: 4}},
 		{"after spaces kept at a block's line end", "a: |\n  x  \n  y\nb:\t1\n", []string{"b"}, yamlpos.Pos{Line: 4, Column: 4}},
 		{"after spaces kept at a comment's end", "a: 'x' # c  \nb:\t2\n", []string{"b"}, yamlpos.Pos{Line: 2, Column: 4}},
-		// goccy/go-yaml places these right too.
 		{"after an escaped line break", "a: \"x\\\n  y\"\nb: 1\n", []string{"b"}, yamlpos.Pos{Line: 3, Column: 4}},
 		{"CR alone", "a: x\rb: 1\r", []string{"b"}, yamlpos.Pos{Line: 2, Column: 4}},
 		{"a block over CR alone", "a: |\r  x\rb: 1\r", []string{"b"}, yamlpos.Pos{Line: 3, Column: 4}},
 		{"after an empty block", "a: |\nb: 1\n", []string{"b"}, yamlpos.Pos{Line: 2, Column: 4}},
-		// LIMIT: Origin holds no hex digits of \x: the file keeps goccy/go-yaml's places.
-		{"before \\x", "a:\t\"\\x41\"\nb:\t1\n", []string{"a"}, yamlpos.Pos{Line: 1, Column: 3}},
-		{"after \\x", "a:\t\"\\x41\"\nb:\t1\n", []string{"b"}, yamlpos.Pos{Line: 2, Column: 3}},
+		{"before \\x", "a:\t\"\\x41\"\nb:\t1\n", []string{"a"}, yamlpos.Pos{Line: 1, Column: 4}},
+		{"after \\x", "a:\t\"\\x41\"\nb:\t1\n", []string{"b"}, yamlpos.Pos{Line: 2, Column: 4}},
 	} {
 		body, err := yamlpos.Parse("a.yaml", []byte(tt.src))
 		if err != nil {
@@ -527,17 +442,16 @@ func TestParsePlaces(t *testing.T) {
 	if _, err := yamlpos.Parse("a.yaml", []byte("# c\r\na: |\r\n---\r\n")); err != nil {
 		t.Errorf("an empty block before ---: %v", err)
 	}
-	// goccy/go-yaml's own mistakes keep its places, which its words count too.
+	// go.yaml.in/yaml/v4's own mistakes, where it tells them; tabs YAML 1.2 takes in quotes and between items pass.
 	for src, want := range map[string]string{
-		"a: \"x\t\n\ty\"\n":       "a.yaml:2:1: tab character cannot be used for indentation in double-quoted text",
-		"a:\n\t- x\n":             "a.yaml:2:1: found character '\t' that cannot start any token",
-		"a: \"\\q\"\n":            "a.yaml:1:6: found unknown escape character 'q'",
-		"# c\r\na: 1\r\na: 2\r\n": `a.yaml:4:1: mapping key "a" already defined at [3:1]`,
-		// A tab in { } whose Origin is not its text, as for \x.
-		"{a: 1,\tb:\t2}\n": "a.yaml:1:8: tab character cannot use as a map key directly",
+		"a: \"x\t\n\ty\"\n":       "",
+		"a:\n\t- x\n":             "2:1 library",
+		"a: \"\\q\"\n":            "1:5 library",
+		"# c\r\na: 1\r\na: 2\r\n": "3:1 yaml_key_twice",
+		"{a: 1,\tb:\t2}\n":        "",
 	} {
-		if _, err := yamlpos.Parse("a.yaml", []byte(src)); told(err) != want {
-			t.Errorf("Parse(%q) told\n%s\nwant\n%s", src, told(err), want)
+		if _, err := yamlpos.Parse("a.yaml", []byte(src)); placed(err) != want {
+			t.Errorf("Parse(%q) = %q, want %q", src, placed(err), want)
 		}
 	}
 }
@@ -727,5 +641,84 @@ func TestDecode(t *testing.T) {
 		if !reflect.DeepEqual(got["v"], want) {
 			t.Errorf("Decode(%q) = %#v, want %#v", src, got["v"], want)
 		}
+	}
+}
+
+// A control character is go.yaml.in/yaml/v4's mistake, at its byte, a byte order mark before it or not; UTF-16 with
+// a mark, or of letters beyond ASCII, is no UTF-8 (yaml_not_utf8), and of ASCII alone without a mark it is UTF-8
+// with NUL bytes, refused at the first.
+func TestParseControlAndUTF16(t *testing.T) {
+	t.Parallel()
+
+	for src, want := range map[string]string{
+		"heading: x\x01y\n":                  "1:11 library",
+		bom + "heading: x\x01y\n":            "1:11 library",
+		"a: 1\nheading: x\x00y\n":            "2:11 library",
+		"heading: x\x1by\n":                  "1:11 library",
+		"heading: x\xef\xbf\xbey\n":          "1:11 library",
+		"heading: x\xef\xbf\xbfy\n":          "1:11 library",
+		"\xff\xfea\x00:\x00 \x001\x00\n\x00": "1:1 yaml_not_utf8",
+		"\xfe\xff\x00a\x00:\x00 \x001\x00\n": "1:1 yaml_not_utf8",
+		"a\x00:\x00 \x001\x00\n\x00":         "1:2 library",
+		"\x00a\x00:\x00 \x001\x00\n":         "1:1 library",
+		"a\x00:\x00 \x00\xe5\x65\n\x00":      "1:7 yaml_not_utf8",
+	} {
+		_, err := yamlpos.Parse("a.yaml", []byte(src))
+		if got := placed(err); got != want {
+			t.Errorf("Parse(%q) = %q, want %q", src, got, want)
+		}
+	}
+}
+
+// A nesting past go.yaml.in/yaml/v4's depth is its mistake, at its line and column, read in memory as the input
+// grows (S234).
+func TestParseDeep(t *testing.T) {
+	t.Parallel()
+
+	src := "x: " + strings.Repeat("[", 12000) + strings.Repeat("]", 12000) + "\n"
+	if got := placed(func() error { _, err := yamlpos.Parse("a.yaml", []byte(src)); return err }()); got != "1:10004 library" {
+		t.Errorf("12000 [ = %q", got)
+	}
+}
+
+// An item with nothing written is placed where go.yaml.in/yaml/v4 puts it, after its -, at the end of a file too,
+// and after quotes over CRLF lines.
+func TestParseNullItems(t *testing.T) {
+	t.Parallel()
+
+	for _, tt := range []struct {
+		src  string
+		at   []string
+		want yamlpos.Pos
+	}{
+		{"a:\n  -\n", []string{"a", "0"}, yamlpos.Pos{Line: 2, Column: 4}},
+		{"a:\n  -", []string{"a", "0"}, yamlpos.Pos{Line: 2, Column: 4}},
+		{"a:\n-\n", []string{"a", "0"}, yamlpos.Pos{Line: 2, Column: 2}},
+		{"a:\n  - -\n", []string{"a", "0", "0"}, yamlpos.Pos{Line: 2, Column: 6}},
+		{
+			"template: report\r\nlang: en\r\ntitle: 'x\r\n\r\n  y'\r\nsections:\r\n  - heading: h\r\n    parts:\r\n      -\r\n      - text: a\r\n",
+			[]string{"sections", "0", "parts", "0"}, yamlpos.Pos{Line: 9, Column: 8},
+		},
+	} {
+		body, err := yamlpos.Parse("a.yaml", []byte(tt.src))
+		if err != nil {
+			t.Fatalf("Parse(%q): %s", tt.src, told(err))
+		}
+		if got, _ := yamlpos.Locate(body, tt.at); got != tt.want {
+			t.Errorf("%q: %v at %v, want %v", tt.src, tt.at, got, tt.want)
+		}
+	}
+}
+
+// An escape of U+2028 in double quotes passes, and the value holds the character.
+func TestParseEscapedLineSeparator(t *testing.T) {
+	t.Parallel()
+
+	body, err := yamlpos.Parse("a.yaml", []byte("x: \"a\\"+"u2028b\"\n"))
+	if err != nil {
+		t.Fatal(told(err))
+	}
+	if got, _ := yamlpos.Text(body.Pairs[0].Value); got != "a"+string(rune(0x2028))+"b" {
+		t.Errorf("read %q", got)
 	}
 }
