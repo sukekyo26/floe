@@ -154,7 +154,7 @@ func TestUITaskEditCategories(t *testing.T) { //nolint:paralleltest // the brows
 	say("unchanged", "sent.length")
 
 	// A category removed that came to have a page meanwhile: the page's coming wrote the task, so the save is refused as stale
-	// and said; nothing written. The store's refusal of a category with pages is ChangeTasks's (TestTaskWriteOne).
+	// and said; nothing written.
 	s.floe(t, "task", "--project", "proj", "--task", "S300", "--categories", "案,設計,実装,リリース,レビュー")
 	open("S300")
 	drop("リリース")
@@ -164,6 +164,19 @@ func TestUITaskEditCategories(t *testing.T) { //nolint:paralleltest // the brows
 	b.pressKey(kb.Escape)
 	closed("closed")
 	out = append(out, "paged meanwhile, written: "+row("S300"))
+	// The same of the rev written since, as a modal that read the task after the page came would send: refused, not as stale but
+	// as the category has pages, and said; nothing written.
+	s.floe(t, "task", "--slug", "memo-a", "--task", "")
+	s.floe(t, "task", "--project", "proj", "--task", "S300", "--categories", "案,設計,実装,リリース,レビュー")
+	open("S300")
+	drop("リリース")
+	s.floe(t, "task", "--slug", "memo-a", "--task", "S300", "--category", "リリース")
+	b.eval("taskEditing.rev = " + strings.Fields(row("S300"))[0])
+	save("paged since read")
+	say("paged since read", "document.getElementById('edit-task-error').textContent")
+	b.pressKey(kb.Escape)
+	closed("closed")
+	out = append(out, "paged since read, written: "+row("S300"))
 	// Stale, a category added while another removed one of no page: the one added stays, the other goes.
 	s.floe(t, "task", "--project", "proj", "--task", "S300", "--categories", "案,設計,実装,リリース,検証,レビュー")
 	open("S300")
@@ -207,8 +220,10 @@ func TestUITaskEditCategories(t *testing.T) { //nolint:paralleltest // the brows
 		"unchanged: 0",
 		"paged meanwhile: Failed to save: task S300 has changed since it was read; the tasks are read again, so check and save again",
 		"paged meanwhile, written: 8 [案,設計,実装,リリース,レビュー]",
+		"paged since read: Failed to save: category リリース of task S300 in project proj has pages (memo-a): take them off it first, or keep it in the order",
+		"paged since read, written: 9 [案,設計,実装,リリース,レビュー]",
 		"stale, added: 案x,設計x,実装x,リリースx,レビューx,公開d",
-		"saved again: 11 [案,設計,実装,リリース,レビュー,公開]",
+		"saved again: 12 [案,設計,実装,リリース,レビュー,公開]",
 		"no categories: true / false / plus / edit-task-title",
 		"first: 2 [案]",
 	}, "|"))
