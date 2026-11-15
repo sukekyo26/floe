@@ -69,7 +69,7 @@ func TestUITaskPage(t *testing.T) { //nolint:paralleltest // the browser tests s
 		t.Fatal(err)
 	}
 	s.floe(t, "task", "--task", "#1", "--project", "proj", "--state", "done")
-	s.floe(t, "task", "--task", "#130", "--project", "proj", "--categories", "design,build,review,nothing")
+	s.floe(t, "task", "--task", "#130", "--project", "proj", "--categories", "design", "--categories", "build", "--categories", "review", "--categories", "nothing")
 	s.floe(t, "task", "--task", "#99", "--project", "proj", "--state", "todo")
 
 	var out []string

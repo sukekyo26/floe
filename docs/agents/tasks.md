@@ -21,7 +21,7 @@ A task is named by its project and its ID (`#130`, `S12`); floe does not read wh
 | state | `todo`, `doing`, `done` or `archived`; a new task is `todo` | `--state` |
 | title | Text | `--title`; `""` takes it off |
 | links | `http` or `https` URLs, 10 at most, in order | `--url` adds one at the end, `--remove-url` takes one off |
-| categories | Names in order: the headings the task's page groups its pages under | `--categories`, and a page's `--category` |
+| categories | Names in order: the headings the task's page groups its pages under; printed each quoted (`categories "designs" "samples"`) | `--categories`, given again for each, and a page's `--category` |
 | parent | Another task of its project, with no parent of its own (one level) | `--parent`; `""` takes it off |
 
 A page is on one task at most, with a category of that task's and a pin of its own.
@@ -84,7 +84,7 @@ floe task --task "#131" --parent "#130"
 | `--url <url>` | Adds a link at the end; give it again for more. One the task has stays where it is |
 | `--remove-url <url>` | Takes a link off; give it again for more. One the task does not have is no mistake |
 | `--parent "<ID>"` | The parent; `""` takes it off |
-| `--categories a,b,c` | The order of its categories, whole; `""` takes it off |
+| `--categories <name>` | A category of the task, in order; give it again for each, the whole order (`--categories designs --categories samples`); `""` takes them all off |
 | `--forget` | Removes the task; without `--slug` |
 
 Without `--slug`, `--task` names the task in `--project` (the working directory's project when left out). With `--slug` and `--task`, these but `--forget` change the task the pages go on; with `--slug` alone, each page's own task, but for `--parent`, which needs `--task`.
@@ -103,7 +103,7 @@ floe checks the whole command before it writes, so a refused command writes noth
 | `--forget` or `--project` with `--slug` | `--forget goes with a task alone, not with pages: give it without --slug: run floe --help` |
 | `--task` of a task of no row, alone, with `--forget`, or with `--remove-url` alone (a mistyped ID makes no task) | `no task #130 in project floe: check the ID, or name its project with --project` |
 | The same, of a task of no project (`--project ""`) | `no task #99 in no project: check the ID, or name its project with --project` |
-| A category with pages left out of `--categories` | `category designs of task #130 in project floe has pages (design-notes): take them off it first, or keep it in the order` |
+| A category with pages left out of `--categories` | `category "designs" of task #130 in project floe has pages (design-notes): take them off it first, or keep it in the order` |
 | `--forget` of a task a page or a child task is on | `task #130 of project floe still has 1 page(s), such as design-notes: take them off it or delete them first` |
 | `--parent` naming a task of no row | `no task #42 in project floe can be a parent` |
 | `--parent` naming a task with a parent | `task #130 has a parent itself (#120), so it cannot be a parent: tasks have one level of children` |
@@ -125,6 +125,8 @@ $ floe task --slug design-notes --task "#132"
 page design-notes: task #132 in project floe; moved from task #130, category "designs"
 $ floe task --task "#132" --state doing
 task #132 in project floe: changed; state doing
+$ floe task --task "#132" --categories designs --categories "Designs, v2"
+task #132 in project floe: changed; categories "designs" "Designs, v2"
 $ floe task --slug api-notes --slug design-notes --task ""
 page api-notes: no task, in project floe; off task #132
 page design-notes: no task, in project floe; off task #132

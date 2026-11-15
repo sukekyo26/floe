@@ -32,8 +32,9 @@ func setMeta(t *testing.T, env map[string]string, slug, key string, value any) {
 	}
 }
 
-// floe info prints the same names in the same order for every kind of page, text values quoted and none empty,
-// the project as floe task takes it, and writes nothing.
+// floe info prints the same names in the same order for every kind of page, text values quoted as floe task quotes
+// them, a full-width space as it is and a tab escaped, and none empty, the project as floe task takes it, and writes
+// nothing.
 func TestInfo(t *testing.T) {
 	t.Parallel()
 
@@ -42,7 +43,7 @@ func TestInfo(t *testing.T) {
 	if err := os.MkdirAll(filepath.Join(repo, "docs"), 0o750); err != nil {
 		t.Fatal(err)
 	}
-	if err := os.WriteFile(filepath.Join(repo, "docs", "d.yaml"), []byte("lang: en\ntemplate: pic\ntitle: \"D\\tE\"\n"), 0o600); err != nil {
+	if err := os.WriteFile(filepath.Join(repo, "docs", "d.yaml"), []byte("lang: en\ntemplate: pic\ntitle: \"D\\tE\\u3000F\"\n"), 0o600); err != nil {
 		t.Fatal(err)
 	}
 	for _, args := range [][]string{{"init", "-q"}, {"remote", "add", "origin", "https://example.com/o/named.git"}} {
@@ -62,8 +63,8 @@ func TestInfo(t *testing.T) {
 		return out + errs
 	}
 	run(repo, 0, "publish", "docs/d.yaml", "--slug", "a")
-	run(repo, 0, "task", "--slug", "a", "--task", "#1", "--category", "designs")
-	run(repo, 0, "tag", "a", "--add", "plans", "--add", "a, b")
+	run(repo, 0, "task", "--slug", "a", "--task", "#1", "--category", "設計　見本")
+	run(repo, 0, "tag", "a", "--add", "plans", "--add", "a, b", "--add", "見本　案")
 	run(home, 0, "publish", "--link", "h.html", "--slug", "l")
 	run(home, 0, "task", "--slug", "l", "--pin")
 	run(home, 0, "publish", "--link", "docs", "--slug", "f")
@@ -84,8 +85,8 @@ func TestInfo(t *testing.T) {
 			"\nsource\t" + source + "\nversion\t1\n"
 	}
 	for slug, want := range map[string]string{
-		"a": "slug\ta\ntitle\t\"D\\tE\"\nurl\t" + base + "a/\nkind\tdata\nproject\t\"named\"\ntask\t\"#1\"\n" +
-			"category\t\"designs\"\npinned\tfalse\ntags\t\"plans\" \"a, b\"\narchived\tfalse\nrepository\t\"named\"\n" +
+		"a": "slug\ta\ntitle\t\"D\\tE　F\"\nurl\t" + base + "a/\nkind\tdata\nproject\t\"named\"\ntask\t\"#1\"\n" +
+			"category\t\"設計　見本\"\npinned\tfalse\ntags\t\"plans\" \"a, b\" \"見本　案\"\narchived\tfalse\nrepository\t\"named\"\n" +
 			"source\t\"docs/d.yaml\"\nversion\t1\n",
 		"l": "slug\tl\ntitle\t\"H\"\nurl\t" + base + "l/\nkind\tlink\nproject\t\"p\"\ntask\t\ncategory\t\npinned\ttrue\n" +
 			"tags\t\narchived\tfalse\nrepository\t\nsource\t\"" + filepath.Join(actual, "h.html") + "\"\nversion\t\n",

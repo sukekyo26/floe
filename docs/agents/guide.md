@@ -71,8 +71,8 @@ The user keeps a task list, and wants each new page put on a task, under one of 
 
 #### The category
 
-- Offer the first two of the task's categories, named as they are, then `A new category` and `None`; a new task, or one with no category, gets `A new category` and `None`.
-- `floe task` prints a task's categories in order after `categories`, in one quoted text with commas between (`categories "Designs,Samples,Ideas"`).
+- `floe task` prints a task's categories in order after `categories`, each a Go string literal, with spaces between (`categories "Designs" "Samples" "Ideas"`): read each name as Go reads the literal, without its quotes, `\t` a tab, `\"` a `"` and `\\` a `\` (`"A \"B\""` is `A "B"`).
+- Offer the first two of the task's categories, each named as read so, then `A new category` and `None`; a new task, or one with no category, gets `A new category` and `None`.
 - Say in the question that the user can type instead a new category's name, and, when the task has more categories, another of them, naming them all.
 - The first time in the conversation, also say in the question what a category is: a heading on the task's page that its pages are listed under (`Designs`, `Samples`); a page of no category is listed above the headings.
 
@@ -80,7 +80,7 @@ The user keeps a task list, and wants each new page put on a task, under one of 
 
 - Take a task's ID, a new task's title and a category's name from the user's answers. When the user types words of a task's title, find the task in what `floe task --project <project>` prints, and ask again if none or several match.
 - When the user types an ID, run `floe task --project <project> --task "<ID>"`, which tells a task in any state: it is a new task only when floe says there is none (`no task #20 in project app`). For a task there is, leave the words after its ID unused.
-- A category name the user types that is one of the task's categories but for upper and lower case is that category, named as `floe task` prints it; one that matches none is a new category.
+- A category name the user types that is one of the task's categories but for upper and lower case is that category, named as read from `floe task`; one that matches none is a new category.
 - Put the page there without reading `floe task guide`: `floe task --slug <slug> --task "<ID>"`, the ID `#` and all (`--task "#12"`), with `--category '<name>'` for a category.
 - Give `--title '<title>'` for a new task only: given for a task there is, it changes that task's title.
 
