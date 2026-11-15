@@ -1,11 +1,14 @@
 package yamlpos_test
 
 import (
+	"bytes"
 	"errors"
 	"fmt"
 	"reflect"
 	"strings"
 	"testing"
+
+	"go.yaml.in/yaml/v4"
 
 	"floe/internal/i18n"
 	"floe/internal/usererr"
@@ -119,8 +122,9 @@ func TestParse(t *testing.T) {
 		{"title: Plan#1\n", ""},
 		{"# a note\nsections: []  # trailing\n", ""},
 		{"a:\n-\nb: 1\n", ""},
-		// LIMIT: text a , cut, as the LIMIT of pair tells.
+		// LIMIT: text a , cut, or a , left out over lines, as the LIMIT of node tells.
 		{"x: [1,500 words]\n", ""},
+		{"x: [a\n  b]\n", ""},
 	} {
 		_, err := yamlpos.Parse("a.yaml", []byte(tt.src))
 		if got := placed(err); got != tt.want {
@@ -138,9 +142,35 @@ func TestParse(t *testing.T) {
 func TestParseLibraryWords(t *testing.T) {
 	t.Parallel()
 
-	_, err := yamlpos.Parse("a.yaml", []byte("t: |\n    a\n  b\n"))
-	if got := told(err); got != "a.yaml:3:3: did not find expected key" {
-		t.Errorf("told %q", got)
+	src := []byte("t: |\n    a\n  b\n")
+	l, err := yaml.NewLoader(bytes.NewReader(src))
+	if err != nil {
+		t.Fatal(err)
+	}
+	var le *yaml.LoadError
+	if !errors.As(l.Load(new(yaml.Node)), &le) || le.ContextMsg == "" {
+		t.Fatalf("go.yaml.in/yaml/v4 gives no mistake with a context for %q", src)
+	}
+	_, err = yamlpos.Parse("a.yaml", src)
+	if got, want := told(err), fmt.Sprintf("a.yaml:%d:%d: %s", le.Mark.Line, le.Mark.Column, le.Message); got != want {
+		t.Errorf("told %q, want %q", got, want)
+	}
+}
+
+// A key that is not text is named in its mistake: by its text, or by the line it is written on when it has none.
+func TestParseKeyNames(t *testing.T) {
+	t.Parallel()
+
+	for src, at := range map[string]string{
+		"[a]: 1\n": "1:1", "{a: 1}: 1\n": "1:1", "? [a]\n: 1\n": "1:3", "? a: 1\n: x\n": "1:3", "x:\n  : 1\n": "2:3",
+		"0x10: a\n": "1:1",
+	} {
+		_, err := yamlpos.Parse("a.yaml", []byte(src))
+		var found usererr.List
+		if failed := found.Add(err); failed != nil || len(found) != 1 || found[0].Key != "yaml_key_not_text" ||
+			fmt.Sprintf("%d:%d", found[0].Line(), found[0].Column()) != at || fmt.Sprint(found[0].Args[0]) == "" {
+			t.Errorf("Parse(%q) = %v, want yaml_key_not_text at %s with its name", src, err, at)
+		}
 	}
 }
 

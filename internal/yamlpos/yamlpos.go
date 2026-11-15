@@ -112,7 +112,7 @@ func Parse(file string, src []byte) (*Node, error) {
 	if err != nil {
 		return nil, err
 	}
-	w := &walk{file: file, found: nil}
+	w := &walk{file: file, src: bom.Trim(src), found: nil}
 	w.node(body)
 	if err := w.found.Sorted().Err(); err != nil {
 		return nil, err //nolint:wrapcheck // the mistakes of src
@@ -124,8 +124,8 @@ func Parse(file string, src []byte) (*Node, error) {
 // with nothing written (--- at the end, or two in a row) is no document, as YAML 1.2 reads it as null, which floe
 // has no use for: a second is told only when it holds something. A directive (%YAML 1.1) heads the document after
 // it.
-// LIMIT: a lone surrogate escaped in double quotes ("\udc00") go.yaml.in/yaml/v4 refuses with its words, which do
-// not say which escape; word it if one comes to matter.
+// LIMIT: a surrogate escaped in double quotes, lone or of a pair ("\udc00", "\ud83d\ude00"), go.yaml.in/yaml/v4
+// refuses in its words, which do not say to write the character itself; word it if one comes to matter.
 func document(file string, src []byte) (*yaml.Node, error) {
 	src, err := bytesOf(file, src)
 	if err != nil {
@@ -228,10 +228,16 @@ func lineSeparators(file string, src []byte) usererr.List {
 // walk goes through a body once and notes what floe refuses in it.
 type walk struct {
 	file  string
+	src   []byte // the bytes go.yaml.in/yaml/v4 read, to show a key it gives no text of
 	found usererr.List
 }
 
 // node walks n.
+// LIMIT: a , in [ ] ends a plain text too, [1,500 words] being two items, which is not caught: either half is an item
+// as right as any; nor is a plain text in [ ] or { } over lines, which YAML 1.2 reads as one text with a space
+// (a: [x, then y] on the next line is "x y"), where a , was left out. Nor is a , in { } before a rest with ": "
+// ({ label: 1,500 words: many } reads a key 500 words of the value many). Catch them if a schema comes to take
+// such text.
 func (w *walk) node(n *yaml.Node) {
 	if w.wrapper(n) {
 		return
@@ -275,10 +281,10 @@ func (w *walk) pair(flow bool, key, value *yaml.Node, first map[string]*yaml.Nod
 	switch {
 	case w.wrapper(key):
 	case key.Kind != yaml.ScalarNode || styleOf(key) == Plain && read12(key.Value).kind != kindText:
-		w.found = append(w.found, New(w.file, at(key), "yaml_key_not_text", key.Value))
+		w.found = append(w.found, New(w.file, at(key), "yaml_key_not_text", w.name(key)))
 	default:
 		if before, twice := first[key.Value]; twice {
-			w.found = append(w.found, New(w.file, at(key), "yaml_key_twice", key.Value, before.Line))
+			w.found = append(w.found, New(w.file, at(key), "yaml_key_twice", Head(key.Value), before.Line))
 		} else {
 			first[key.Value] = key
 		}
@@ -287,6 +293,19 @@ func (w *walk) pair(flow bool, key, value *yaml.Node, first map[string]*yaml.Nod
 		}
 	}
 	w.node(value)
+}
+
+// name returns key as its mistake shows it: its text, or, for a key that has none (a list, keys and values, or
+// nothing written), the head of the line it is written on, shown alone and judged by nothing.
+func (w *walk) name(key *yaml.Node) string {
+	if key.Value != "" {
+		return Head(key.Value)
+	}
+	start := textpos.At(w.src, key.Line, key.Column)
+	if start < 0 {
+		return ""
+	}
+	return Head(strings.TrimRight(string(w.src[start:textpos.NextLine(w.src, start)]), "\r\n"))
 }
 
 // number refuses n, a scalar, when it is plain and YAML 1.2 reads it as a number floe does not take: a float past
@@ -310,7 +329,7 @@ func (w *walk) number(n *yaml.Node) {
 	w.found = append(w.found, New(w.file, at(n), key, n.Value))
 }
 
-// shownEnd is how many characters of a value cut short its mistake shows: its end, where the cut is.
+// shownEnd is how many characters of a text its mistake shows, from its head.
 const shownEnd = 40
 
 // Head returns the head of text, such as the rest of text a , may have ended, to show in a mistake on one line:
