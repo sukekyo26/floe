@@ -111,8 +111,8 @@ func TestResolve(t *testing.T) {
 	t.Run("a FIFO", func(t *testing.T) {
 		t.Parallel()
 		mkfifo(t, filepath.Join(dir, "pipe.txt"))
-		if got, ok := link.Resolve(registered, false, "pipe.txt"); ok {
-			t.Errorf("Resolve(pipe.txt) = %q, a FIFO served", got)
+		if got, ok := link.Resolve(registered, false, "pipe.txt"); got != "" || ok {
+			t.Errorf("Resolve(pipe.txt) = %q, %v, a FIFO served", got, ok)
 		}
 	})
 }

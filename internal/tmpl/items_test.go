@@ -323,6 +323,26 @@ func TestImageItems(t *testing.T) {
 	); got != want {
 		t.Errorf("told\n%s\nwant\n%s", got, want)
 	}
+	// Every kind of mistake, told at once in the order written.
+	t.Run("all at once", func(t *testing.T) {
+		t.Parallel()
+		testfs.Mkfifo(t, filepath.Join(dir, "fifo.png"))
+		data := "lang: en\ntemplate: mine\ni:\n  - missing.png\n  - missing.png\n  - esc.png\n  - dir.png\n  - fifo.png\n  - x.bmp\n  - ./ok.png\n  - ../ok.png\n  - large.png\n"
+		_, _, err := tmpl.Draw(k, "x/d.yaml", []byte(data), o)
+		if got, want := told(err), lines(
+			"x/d.yaml:4:5: the image \"missing.png\" cannot be read (no such file or directory)",
+			"x/d.yaml:5:5: the image \"missing.png\" cannot be read (no such file or directory)",
+			"x/d.yaml:6:5: the image \"esc.png\" cannot be read (path escapes from parent)",
+			"x/d.yaml:7:5: \"dir.png\" is not a file of an image, but a directory or the like: name a regular file of the image",
+			"x/d.yaml:8:5: \"fifo.png\" is not a file of an image, but a directory or the like: name a regular file of the image",
+			"x/d.yaml:9:5: \"x.bmp\" is not an image floe takes: use png, jpeg, gif, webp or svg",
+			"x/d.yaml:10:5: \"./ok.png\" is not a path floe reads under the directory of x/d.yaml: write it relative to that directory, with one / between names, without ./ (write pic.png for ./pic.png), .., or a / at either end",
+			"x/d.yaml:11:5: \"../ok.png\" is not a path floe reads under the directory of x/d.yaml: write it relative to that directory, with one / between names, without ./ (write pic.png for ./pic.png), .., or a / at either end",
+			"x/d.yaml:12:5: the image \"large.png\" is 1,048,577 bytes, over the 1,048,576 bytes (1 MiB) an image may be; make it smaller",
+		); got != want {
+			t.Errorf("told\n%s\nwant\n%s", got, want)
+		}
+	})
 	t.Run("missing", func(t *testing.T) {
 		t.Parallel()
 		testfs.Pending(t, "S315-P7: system words")

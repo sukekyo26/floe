@@ -117,6 +117,7 @@ sections:
 	if got := drawn(t, floeKit(t), src, o); got != want {
 		t.Errorf("told\n%s\nwant\n%s", got, want)
 	}
+	// Images not there, told with the rest at once.
 	t.Run("not there", func(t *testing.T) {
 		t.Parallel()
 		testfs.Pending(t, "S315-P7: system words")
@@ -124,12 +125,28 @@ sections:
 template: report
 sections:
   - parts:
+      - image:
+          alt: one
+          file: ./shots/a.png
+      - image: { alt: two, file: shots/a.bmp }
+      - image: { alt: three, file: shots/a.bmp }
       - image: { alt: four, file: shots/none.png }
       - image: { alt: five, file: shots/none.png }
+      - image: { alt: six, file: dir.png }
+      - image: { alt: seven, file: shots/big.png }
+      - image: { alt: eight, file: shots/out.png }
+      - image: { alt: nine, file: ../a.png }
 `
 		want := lines(
-			`d.yaml:5:35: the image "shots/none.png" cannot be read (no such file or directory)`,
-			`d.yaml:6:35: the image "shots/none.png" cannot be read (no such file or directory)`,
+			path("7:17", "./shots/a.png"),
+			bmp("8:34"),
+			bmp("9:36"),
+			`d.yaml:10:35: the image "shots/none.png" cannot be read (no such file or directory)`,
+			`d.yaml:11:35: the image "shots/none.png" cannot be read (no such file or directory)`,
+			`d.yaml:12:34: "dir.png" is not a file of an image, but a directory or the like: name a regular file of the image`,
+			`d.yaml:13:36: the image "shots/big.png" is 1,048,577 bytes, over the 1,048,576 bytes (1 MiB) an image may be; make it smaller`,
+			`d.yaml:14:36: the image "shots/out.png" cannot be read (path escapes from parent)`,
+			path("15:35", "../a.png"),
 		)
 		if got := drawn(t, floeKit(t), src, o); got != want {
 			t.Errorf("told\n%s\nwant\n%s", got, want)
@@ -177,11 +194,12 @@ func TestOwnPartImages(t *testing.T) {
 	t.Run("not there", func(t *testing.T) {
 		t.Parallel()
 		testfs.Pending(t, "S315-P7: system words")
-		src := "lang: en\ntemplate: mine\nshots:\n  many: [gone.png, b.bmp]\nshot: none.png\n"
+		src := "lang: en\ntemplate: mine\nshots:\n  one: a.bmp\n  many: [gone.png, b.bmp]\nshot: none.png\n"
 		want := lines(
-			`d.yaml:4:10: the image "gone.png" cannot be read (no such file or directory)`,
-			`d.yaml:4:20: "b.bmp" is not an image floe takes: use png, jpeg, gif, webp or svg`,
-			`d.yaml:5:7: the image "none.png" cannot be read (no such file or directory)`,
+			`d.yaml:4:8: "a.bmp" is not an image floe takes: use png, jpeg, gif, webp or svg`,
+			`d.yaml:5:10: the image "gone.png" cannot be read (no such file or directory)`,
+			`d.yaml:5:20: "b.bmp" is not an image floe takes: use png, jpeg, gif, webp or svg`,
+			`d.yaml:6:7: the image "none.png" cannot be read (no such file or directory)`,
 		)
 		if got := drawn(t, k, src, o); got != want {
 			t.Errorf("told\n%s\nwant\n%s", got, want)
