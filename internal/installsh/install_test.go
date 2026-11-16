@@ -425,6 +425,51 @@ func first(t *testing.T, reader []string, rc, home, dir string, inHome bool) {
 	}
 }
 
+// TestInstallPS1Text is install.ps1's bytes: `irm | iex` stops at a BOM, and Windows PowerShell reads a script with no
+// BOM in the system's code page, so ASCII alone.
+func TestInstallPS1Text(t *testing.T) {
+	t.Parallel()
+
+	b, err := os.ReadFile("../../install.ps1")
+	if err != nil {
+		t.Fatal(err)
+	}
+	for i, c := range b {
+		if c > 0x7e || (c < 0x20 && c != '\n') {
+			t.Fatalf("install.ps1 has byte %#x at %d: write it in ASCII, with LF and no BOM", c, i)
+		}
+	}
+}
+
+// TestInstallPS1OffWindows is install.ps1 run by PowerShell on Linux or macOS: it stops before it asks for anything.
+func TestInstallPS1OffWindows(t *testing.T) {
+	t.Parallel()
+	testfs.UnixOnly(t, "install.ps1 refuses a system other than Windows")
+
+	pwsh, err := exec.LookPath("pwsh")
+	if err != nil {
+		if os.Getenv("GITHUB_ACTIONS") != "" {
+			t.Fatal("pwsh is not on PATH; CI's ubuntu has it")
+		}
+		t.Skip("pwsh is not on PATH")
+	}
+	script, err := filepath.Abs("../../install.ps1")
+	if err != nil {
+		t.Fatal(err)
+	}
+	//nolint:gosec // G204: pwsh and the repository's install.ps1
+	cmd := exec.CommandContext(t.Context(), pwsh, "-NoProfile", "-NonInteractive", "-Command",
+		"Get-Content -Raw -LiteralPath '"+strings.ReplaceAll(script, "'", "''")+"' | Invoke-Expression")
+	cmd.Env = []string{"PATH=" + os.Getenv("PATH"), "HOME=" + t.TempDir()}
+	out, err := cmd.CombinedOutput()
+	if err == nil {
+		t.Fatalf("install.ps1 succeeded off Windows:\n%s", out)
+	}
+	if !strings.Contains(string(out), "floe-install: install.ps1 installs floe on Windows") || !strings.Contains(string(out), "install.sh") {
+		t.Errorf("install.ps1 does not send to install.sh:\n%s", out)
+	}
+}
+
 // tools makes a directory of the fakes and links to the tools install.sh and the fakes run, with sum as the one
 // SHA-256 tool, so that the script sees only that one. It returns "" when sum is shasum and the host has none; any
 // other tool missing fails, so that the test does not skip itself away on a machine that lost one.
@@ -482,7 +527,7 @@ func asset(name string) string { return "binary " + name + "\n" }
 func write(t *testing.T, name, text string) string {
 	t.Helper()
 
-	if err := os.WriteFile(name, []byte(text), 0o600); err != nil {
+	if err := os.WriteFile(name, []byte(text), 0o600); err != nil { //nolint:gosec // G703: a path under the test's temporary folder
 		t.Fatal(err)
 	}
 	return name
