@@ -45,6 +45,15 @@ func TestRemoveKeepsTarget(t *testing.T) {
 			}
 			stays("RemoveAll of a directory holding a " + kind)
 
+			link(t, filepath.Join(dir, "gone"))
+			if err := files.RemoveAll(filepath.Join(dir, "gone")); err != nil {
+				t.Errorf("RemoveAll of a %s = %v", kind, err)
+			}
+			if _, err := os.Lstat(filepath.Join(dir, "gone")); !errors.Is(err, fs.ErrNotExist) {
+				t.Errorf("RemoveAll of a %s left it: %v", kind, err)
+			}
+			stays("RemoveAll of a " + kind)
+
 			link(t, filepath.Join(dir, "l"))
 			if err := files.Rename(dir, "l", "m"); err != nil {
 				t.Errorf("Rename of a %s = %v", kind, err)

@@ -90,20 +90,28 @@ func TestHeldOpen(t *testing.T) {
 	t.Parallel()
 
 	for _, h := range holders() {
+		// Renamed over, after its directory is refused a rename (the file is in it still).
 		dir, f := heldTree(t, h)
 		page := filepath.Join(dir, "sub", "page.html")
+		if err := files.Rename(dir, "sub", "moved"); !errors.Is(err, windows.ERROR_ACCESS_DENIED) {
+			t.Errorf("%s: Rename of its directory = %v, want Access is denied (the LIMIT)", h.name, err)
+		}
 		if err := files.WriteAtomic(page, []byte("new"), 0o600, nil); err != nil {
 			t.Errorf("%s: WriteAtomic over it = %v", h.name, err)
 		}
 		if got := readAll(t, f); got != "old" {
 			t.Errorf("%s: the holder reads %q after the write, want old", h.name, got)
 		}
-		if err := files.Rename(dir, "sub", "moved"); !errors.Is(err, windows.ERROR_ACCESS_DENIED) {
-			t.Errorf("%s: Rename of its directory = %v, want Access is denied (the LIMIT)", h.name, err)
-		}
-		if err := files.Remove(page); err != nil {
+		// Removed.
+		dir, f = heldTree(t, h)
+		if err := files.Remove(filepath.Join(dir, "sub", "page.html")); err != nil {
 			t.Errorf("%s: Remove of it = %v", h.name, err)
 		}
+		if got := readAll(t, f); got != "old" {
+			t.Errorf("%s: the holder reads %q after the removal, want old", h.name, got)
+		}
+		// Its directory removed.
+		dir, _ = heldTree(t, h)
 		if err := files.RemoveAll(filepath.Join(dir, "sub")); err != nil {
 			t.Errorf("%s: RemoveAll of its directory = %v", h.name, err)
 		}
