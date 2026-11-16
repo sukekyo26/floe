@@ -413,10 +413,10 @@ func TestLinkedData(t *testing.T) { //nolint:tparallel // the subtests go on fro
 	writeFiles(t, filepath.Dir(data), map[string]string{"d.yaml": "lang: en\ntemplate: pic\nnote: two\n"})
 	want(t, e.do(t, http.MethodGet, "/a/d/?raw", ""), http.StatusOK, "two")
 	t.Run("an image unread", func(t *testing.T) { //nolint:paralleltest // as above
-		testfs.Pending(t, "S315-P7: system words")
 		// An image that cannot be read is told at each item naming it.
 		writeFiles(t, filepath.Dir(data), map[string]string{"d.yaml": "lang: en\ntemplate: pic\ni: [img/none.png, img/none.png]\n"})
-		unread := `: the image "img/none.png" cannot be read (no such file or directory)`
+		_, _, none := files.Read(filepath.Join(filepath.Dir(data), "img", "none.png"))
+		unread := `: the image "img/none.png" cannot be read (` + testfs.Words(t, none) + `)`
 		gone := e.do(t, http.MethodGet, "/api/pages/d/download", "")
 		want(t, gone, http.StatusBadRequest, "d.yaml:3:5"+unread+"\n"+data+":3:19"+unread)
 	})
