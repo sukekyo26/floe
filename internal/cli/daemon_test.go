@@ -312,7 +312,6 @@ func TestRestartOnAnotherBuild(t *testing.T) { //nolint:tparallel // the race go
 	}
 	//nolint:paralleltest // the race goes on from the server the steps left
 	t.Run("two racing", func(t *testing.T) {
-		testfs.Pending(t, "S315-P5: a rename over a file open elsewhere is denied")
 		var wg sync.WaitGroup
 		results := make([]result, 2)
 		for i := range results {

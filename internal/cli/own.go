@@ -290,17 +290,31 @@ func (a *app) newOwn(of ownKind, name string) error {
 	if err = files.Mkdir(tmp, 0o755); err != nil { //nolint:gosec // G301: parts, themes and templates are not secret
 		return usererr.SettingDir(p.setting(), dir, err, usererr.CannotWrite(dir, err))
 	}
-	defer os.RemoveAll(tmp) //nolint:errcheck // gone once renamed; what is left is a dot directory, which Load skips
-	for file, text := range of.skeleton(name) {
-		//nolint:gosec // G306: parts, themes and templates are not secret
-		if err := os.WriteFile(filepath.Join(tmp, file), text, 0o644); err != nil {
-			return usererr.CannotWrite(filepath.Join(at, file), err)
-		}
+	defer files.RemoveAll(tmp) //nolint:errcheck // gone once renamed; what is left is a dot directory, which Load skips
+	if err := writeSkeleton(tmp, at, of.skeleton(name)); err != nil {
+		return err
 	}
-	if err := os.Rename(tmp, at); err != nil {
+	if err := files.Rename(dir, filepath.Base(tmp), name); err != nil {
 		return usererr.CannotWrite(at, err)
 	}
 	a.print("%s", english.Msg("cli_made", at))
+	return nil
+}
+
+// writeSkeleton writes each file of skeleton to tmp, the directory to be renamed to at: opened once, and closed before
+// it returns, as Windows renames no directory held open.
+func writeSkeleton(tmp, at string, skeleton map[string][]byte) error {
+	root, err := files.OpenRoot(tmp)
+	if err != nil {
+		return usererr.CannotWrite(at, err)
+	}
+	defer root.Close() //nolint:errcheck // what was written is checked as written
+	for file, text := range skeleton {
+		//nolint:gosec // G306: parts, themes and templates are not secret
+		if err := root.WriteFile(file, text, 0o644); err != nil {
+			return usererr.CannotWrite(filepath.Join(at, file), err)
+		}
+	}
 	return nil
 }
 

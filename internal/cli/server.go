@@ -2,6 +2,7 @@ package cli
 
 import (
 	"context"
+	"crypto/rand"
 	"errors"
 	"fmt"
 	"net"
@@ -211,12 +212,18 @@ func writable(dir string) error {
 	if err := files.MkdirAll(dir, 0o700); err != nil {
 		return err //nolint:wrapcheck // told at the store
 	}
-	f, err := os.CreateTemp(dir, ".check-")
+	root, err := files.OpenRoot(dir)
 	if err != nil {
 		return err //nolint:wrapcheck // as above
 	}
-	_ = f.Close()              //nolint:errcheck // nothing written
-	return os.Remove(f.Name()) //nolint:wrapcheck // as above
+	defer root.Close() //nolint:errcheck // only looked in
+	name := ".check-" + rand.Text()
+	f, err := root.OpenFile(name, os.O_WRONLY|os.O_CREATE|os.O_EXCL, 0o600)
+	if err != nil {
+		return err //nolint:wrapcheck // as above
+	}
+	_ = f.Close()            //nolint:errcheck // nothing written
+	return root.Remove(name) //nolint:wrapcheck // as above
 }
 
 // listen takes the listener the command that started this server bound for it, or binds the port.

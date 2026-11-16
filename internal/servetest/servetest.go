@@ -6,7 +6,7 @@ import (
 	"errors"
 	"net"
 	"net/http"
-	"os"
+	"path"
 	"path/filepath"
 	"strconv"
 	"testing"
@@ -48,15 +48,7 @@ func Start(t *testing.T, written map[string]string) *Site {
 			t.Fatal(err)
 		}
 	}
-	for name, text := range written {
-		at := filepath.Join(tmp, filepath.FromSlash(name))
-		if err = files.MkdirAll(filepath.Dir(at), 0o700); err != nil {
-			t.Fatal(err)
-		}
-		if err = os.WriteFile(at, []byte(text), 0o600); err != nil {
-			t.Fatal(err)
-		}
-	}
+	writeAll(t, tmp, written)
 	var lc net.ListenConfig
 	ln, err := lc.Listen(t.Context(), "tcp", "127.0.0.1:0")
 	if err != nil {
@@ -109,5 +101,23 @@ func Start(t *testing.T, written map[string]string) *Site {
 			"FLOE_PARTS_DIR": dir("parts"), "FLOE_THEMES_DIR": dir("themes"), "FLOE_ICONS_DIR": dir("icons"),
 			"BROWSER": "true",
 		},
+	}
+}
+
+// writeAll writes each of written, a slash-separated name under dir and its text.
+func writeAll(t *testing.T, dir string, written map[string]string) {
+	t.Helper()
+	root, err := files.OpenRoot(dir)
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer root.Close()
+	for name, text := range written {
+		if err = root.MkdirAll(path.Dir(name), 0o700); err != nil {
+			t.Fatal(err)
+		}
+		if err = root.WriteFile(name, []byte(text), 0o600); err != nil {
+			t.Fatal(err)
+		}
 	}
 }

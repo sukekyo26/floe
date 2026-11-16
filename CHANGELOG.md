@@ -14,6 +14,11 @@ adheres to [Semantic Versioning](https://semver.org/).
 - Change the refusal of a link that is not its real path, which named Go functions to call: it now asks for the whole path with its links and junctions followed, as the system names it.
 - Change what `install.sh` says when the install directory is not on `PATH`: it shows the command that adds it, to paste as it is, for zsh (`~/.zshrc`), bash on Linux (`~/.bashrc`) and fish (`fish_add_path`), and the line alone for other sh-like shells; it still changes neither `PATH` nor a file. A directory given as a relative path is told and compared by its absolute path, so a directory already on `PATH` is no longer told of.
 
+### Fixed
+
+- Fix a change of a page's slug that could not move the page: it saved the description, tags, project and title all the same and lost the rest. The page is now moved first and nothing is saved when it cannot be; one moved whose `meta.json` cannot then be written is moved back, or, when that fails too, refused with a mistake that says only the slug changed and the other changes are to be saved again.
+- Fix the server not starting when its log over 1 MiB could not be moved aside to `server.log.1` (a directory there, an older server still holding it): it now writes on in the log, with a line of why it was not moved, and tries again at the next start.
+
 ## [0.1.1] - 2026-11-16
 
 ### Changed

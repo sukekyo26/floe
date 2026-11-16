@@ -136,7 +136,11 @@ linters:
           msg: "use files.WriteAtomic: files refuses shares and devices before the system is called"
         - pattern: ^os\.OpenInRoot$
           msg: "use files.NewRoot: files refuses shares and devices before the system is called"
-        - pattern: ^os\.(CopyFS|Chmod|Chtimes)$
+        - pattern: ^os\.(Rename|Remove|RemoveAll|MkdirTemp)$
+          msg: "use files.Rename, Remove, RemoveAll or MkdirTemp: files refuses shares and devices before the system is called"
+        - pattern: ^os\.(WriteFile|CreateTemp)$
+          msg: "use files.WriteAtomic, or the WriteFile of a files.OpenRoot: files refuses shares and devices before the system is called"
+        - pattern: ^os\.(CopyFS|Chmod|Chtimes|Symlink|Link|Truncate|Chown|Lchown)$
           msg: "add a function to files for it first: files refuses shares and devices before the system is called"
         - pattern: ^filepath\.(Walk|WalkDir|Glob)$
           msg: "use files.ReadDir, or fs.WalkDir of files.DirFS: files refuses shares and devices before the system is called"
