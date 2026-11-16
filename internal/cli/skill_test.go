@@ -7,6 +7,7 @@ import (
 	"testing"
 	"time"
 
+	"floe/internal/dirs"
 	"floe/internal/files"
 	"floe/internal/testfs"
 )
@@ -20,7 +21,7 @@ func evalTemp(t *testing.T) string {
 	if err != nil {
 		t.Fatal(err)
 	}
-	return tmp
+	return dirs.Shown(tmp) // as a user writes it
 }
 
 func mustDo(t *testing.T, errs ...error) {

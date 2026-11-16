@@ -5,6 +5,7 @@ import (
 	"path/filepath"
 	"testing"
 
+	"floe/internal/dirs"
 	"floe/internal/files"
 	"floe/internal/testfs"
 )
@@ -28,10 +29,11 @@ func TestRenderLinksToNoPage(t *testing.T) { //nolint:tparallel // the device ca
 	}
 	link(t, "somedir", filepath.Join(dir, "s.html"))
 	// The page's link as the system resolves it: /private/var for /var on macOS.
-	resolved, err := files.Real(dir)
+	got, err := files.Real(dir)
 	if err != nil {
 		t.Fatal(err)
 	}
+	resolved := dirs.Shown(got) // as floe shows it
 	link(t, "y.html", filepath.Join(dir, "x.html"))
 	link(t, "a.yaml", filepath.Join(dir, "y.html"))
 	refused := func(page, to string) string {

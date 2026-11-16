@@ -119,11 +119,11 @@ func TestNewRefused(t *testing.T) { //nolint:tparallel // what was written is lo
 		errs string
 		why  string
 	}{
-		{nil, []string{"part", "new", "note"}, 1, filepath.Join(parts, "note") + ": note is the name of floe's " + filepath.Join("parts", "note") + ": give yours another name\n", ""},
+		{nil, []string{"part", "new", "note"}, 1, filepath.Join(parts, "note") + ": note is the name of floe's parts/note: give yours another name\n", ""},
 		{nil, []string{"part", "new", "Bad"}, 1, filepath.Join(parts, "Bad") + ": floe takes no such name: write lower case letters, digits, - and _, starting with a letter or a digit; rename it\n", ""},
 		{nil, []string{"part", "new", "palette"}, 1, filepath.Join(parts, "palette") + ": palette names a file of every theme (palette.css), which a theme's CSS for this part would be read as: give it another name\n", ""},
 		{nil, []string{"part", "new", "shr"}, 1, filepath.Join(parts, "shr") + ": shr names both " + filepath.Join(parts, "shr") + " and " + filepath.Join(parts, "shr.json") + ": give one of them another name\n", ""},
-		{nil, []string{"theme", "new", "default"}, 1, filepath.Join(themes, "default") + ": default is the name of floe's " + filepath.Join("themes", "default") + ": give yours another name\n", ""},
+		{nil, []string{"theme", "new", "default"}, 1, filepath.Join(themes, "default") + ": default is the name of floe's themes/default: give yours another name\n", ""},
 		{nil, []string{"theme", "new", "Bad"}, 1, filepath.Join(themes, "Bad") + ": floe takes no such name: write lower case letters, digits, - and _, starting with a letter or a digit; rename it\n", ""},
 		{nil, []string{"part", "new"}, 2, "floe: accepts 1 arg(s), received 0: run floe --help\n", ""},
 		{nil, []string{"part", "new", "x", "--from", "note"}, 2, "floe: unknown flag: --from: run floe --help\n", ""},
@@ -331,7 +331,7 @@ func TestPartListOwnHTML(t *testing.T) {
 		"parts/html/part.css":    "",
 	})
 	parts := filepath.Join(dir, "parts")
-	want := filepath.Join(parts, "html") + ": html is the name of floe's " + filepath.Join("parts", "any.json") + ": give yours another name\n"
+	want := filepath.Join(parts, "html") + ": html is the name of floe's parts/any.json: give yours another name\n"
 	for _, args := range [][]string{{"part", "list"}, {"part", "show", "html"}} {
 		if code, stdout, stderr := runEnv(dir, map[string]string{"FLOE_PARTS_DIR": parts}, args...); code != 1 || stdout != "" || stderr != want {
 			t.Errorf("floe %v = %d, %q, %q; want 1 and %q", args, code, stdout, stderr, want)

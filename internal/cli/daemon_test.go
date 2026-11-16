@@ -20,6 +20,7 @@ import (
 
 	"floe/internal/cli"
 	"floe/internal/daemon"
+	"floe/internal/dirs"
 	"floe/internal/files"
 	"floe/internal/server"
 	"floe/internal/servetest"
@@ -161,10 +162,11 @@ func newDenv(t *testing.T) *denv {
 func newDenvOn(t *testing.T, port int) *denv {
 	t.Helper()
 
-	tmp, err := files.Real(t.TempDir())
+	got, err := files.Real(t.TempDir())
 	if err != nil {
 		t.Fatal(err)
 	}
+	tmp := dirs.Shown(got) // as a user writes it
 	p := strconv.Itoa(port)
 	e := &denv{tmp: tmp, port: p, vars: map[string]string{
 		"HOME": filepath.Join(tmp, "home"), "FLOE_DIR": filepath.Join(tmp, "store"), "FLOE_PORT": p, "BROWSER": "true",

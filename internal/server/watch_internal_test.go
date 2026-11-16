@@ -14,6 +14,7 @@ import (
 	"testing"
 	"time"
 
+	"floe/internal/dirs"
 	"floe/internal/files"
 	"floe/internal/kit"
 	"floe/internal/store"
@@ -25,10 +26,12 @@ import (
 func watched(t *testing.T, link bool) (*Server, string) {
 	t.Helper()
 
-	tmp, err := files.Real(t.TempDir())
+	// Real, as the user would give it (no \\?\ on Windows): a root of settings and the store.
+	got, err := files.Real(t.TempDir())
 	if err != nil {
 		t.Fatal(err)
 	}
+	tmp := dirs.Shown(got)
 	dir := filepath.Join(tmp, "dir")
 	for name, text := range map[string]string{
 		"mine/page.html":    "<!doctype html>\n<html lang=\"{{.Lang}}\"><head><title>{{.Title}}</title></head><body>{{.Data.n}}</body></html>\n",

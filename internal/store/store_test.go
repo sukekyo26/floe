@@ -12,6 +12,7 @@ import (
 	"testing"
 	"testing/fstest"
 
+	"floe/internal/dirs"
 	floefiles "floe/internal/files"
 	"floe/internal/i18n"
 	"floe/internal/kit"
@@ -67,10 +68,12 @@ func cmpOr(a, b string) string {
 func newStore(t *testing.T) (*store.Store, string) {
 	t.Helper()
 
-	tmp, err := floefiles.Real(t.TempDir())
+	// Real, as the user would give it (no \\?\ on Windows): a root of settings and the store.
+	got, err := floefiles.Real(t.TempDir())
 	if err != nil {
 		t.Fatal(err)
 	}
+	tmp := dirs.Shown(got)
 	root := filepath.Join(tmp, "store")
 	return store.New(root), root
 }

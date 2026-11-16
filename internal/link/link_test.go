@@ -9,6 +9,7 @@ import (
 	"strings"
 	"testing"
 
+	"floe/internal/dirs"
 	"floe/internal/files"
 	"floe/internal/link"
 	"floe/internal/testfs"
@@ -320,8 +321,13 @@ func TestCheck(t *testing.T) {
 	symlink(t, realHome, home)
 	// A path through a symlink is refused, whatever it points at.
 	symlink(t, filepath.Join(realHome, ".secret"), filepath.Join(realHome, "proj", "alias"))
-	// So is one with .., which the string checks would misread too.
-	for _, p := range []string{realHome + "/proj/alias/x.html", realHome + "/proj/../top.html", ".secret/x.html", "top.html"} {
+	// So is one with .., which the string checks would misread too. Written as a user writes them (no \\?\ on
+	// Windows, where the system reads no .. after it), with the system's separator.
+	sep, written := string(filepath.Separator), dirs.Shown(realHome)
+	for _, p := range []string{
+		written + sep + "proj" + sep + "alias" + sep + "x.html", written + sep + "proj" + sep + ".." + sep + "top.html",
+		".secret/x.html", "top.html",
+	} {
 		if _, err := link.Check(p, home); err == nil || !strings.Contains(err.Error(), "is not its real path") {
 			t.Errorf("Check(%s) = %v, want it refused as not real", p, err)
 		}
@@ -337,7 +343,7 @@ func TestCheck(t *testing.T) {
 	// What home is under would serve every home's files: refused for a folder, and for a file in it.
 	write(t, filepath.Join(tmp, "beside.html"), "<p>x</p>")
 	for _, p := range []string{tmp, filepath.Join(tmp, "beside.html")} {
-		if _, err := link.Check(p, home); err == nil || !strings.Contains(err.Error(), "would expose all of "+tmp) {
+		if _, err := link.Check(p, home); err == nil || !strings.Contains(err.Error(), "would expose all of "+dirs.Shown(tmp)) {
 			t.Errorf("Check(%s) = %v, want it refused as exposing %s", p, err, tmp)
 		}
 	}
@@ -349,15 +355,15 @@ func TestCheck(t *testing.T) {
 		{"proj/ok.HTM", ""},
 		{"proj/spec.YML", ""},
 		{".secret/x.html", "is under a hidden directory of your home"},
-		{"top.html", "would expose all of " + realHome},
-		{".top.html", "would expose all of " + realHome},
+		{"top.html", "would expose all of " + dirs.Shown(realHome)},
+		{".top.html", "would expose all of " + dirs.Shown(realHome)},
 		{"proj/page.txt", "is not a regular HTML file (.html, .htm), data file (.yaml, .yml) or folder"},
 		{"proj/missing.html", "is not a regular HTML file (.html, .htm), data file (.yaml, .yml) or folder"},
 		// A folder is checked as the directory it exposes: its own.
 		{"proj", ""},
 		{"proj/dir.html", ""},
 		{"proj/.agents", ""},
-		{"", "would expose all of " + realHome},
+		{"", "would expose all of " + dirs.Shown(realHome)},
 		{".secret", "is under a hidden directory of your home"},
 		{".secret/sub", "is under a hidden directory of your home"},
 	}

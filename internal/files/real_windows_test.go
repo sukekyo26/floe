@@ -40,6 +40,9 @@ func TestRealWindows(t *testing.T) {
 	tmp := t.TempDir()
 	target := filepath.Join(tmp, "target")
 	file := filepath.Join(target, "a.html")
+	if err := os.Mkdir(target, 0o700); err != nil {
+		t.Fatal(err)
+	}
 	write(t, file, "a")
 	want := mustReal(t, file)
 	if !strings.HasPrefix(want, `\\?\`) {
@@ -104,6 +107,9 @@ func TestLongNameWindows(t *testing.T) {
 
 	tmp := t.TempDir()
 	secret := filepath.Join(tmp, ".secret")
+	if err := os.Mkdir(secret, 0o700); err != nil {
+		t.Fatal(err)
+	}
 	write(t, filepath.Join(secret, "id.html"), "s")
 	j := filepath.Join(tmp, "j")
 	testfs.Junction(t, j, secret)

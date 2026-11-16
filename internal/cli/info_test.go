@@ -10,6 +10,7 @@ import (
 	"strings"
 	"testing"
 
+	"floe/internal/dirs"
 	"floe/internal/files"
 )
 
@@ -76,10 +77,11 @@ func TestInfo(t *testing.T) {
 	setMeta(t, env, "n", "project", "")
 	run(home, 0, "publish", "d.yaml", "--slug", "s")
 	setMeta(t, env, "s", "project", " p ")
-	actual, err := files.Real(home)
+	got, err := files.Real(home)
 	if err != nil {
 		t.Fatal(err)
 	}
+	actual := dirs.Shown(got) // as floe shows it
 	before := storeWrites(t, env)
 	base := "http://127.0.0.1:" + env["FLOE_PORT"] + "/a/"
 	data := func(slug, title, project, repository, source string) string {
