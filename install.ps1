@@ -187,7 +187,7 @@
       # Also on Ctrl+C. What fails here is let go: the error that brought us here is the one to tell.
       if (-not $placed) {
         if ($moved -and -not (Test-Path -LiteralPath $exe)) {
-          try { Move-Item -LiteralPath $old -Destination $exe } catch { }
+          Move-Item -LiteralPath $old -Destination $exe -ErrorAction SilentlyContinue
         }
         Remove-Item -LiteralPath $new -Force -ErrorAction SilentlyContinue
       }
@@ -215,9 +215,9 @@
     # An x64 PowerShell on an arm64 machine sees AMD64 in both: the runtime knows better, where it is new enough.
     # LIMIT: amd64 runners never take this; it was seen once on windows-11-arm (run 43840628538).
     if ($arch -ceq 'amd64') {
-      try {
-        if ([Runtime.InteropServices.RuntimeInformation]::OSArchitecture -eq 'Arm64') { $arch = 'arm64' }
-      } catch { }
+      # .NET Framework before 4.7.1 has no RuntimeInformation.
+      $info = 'Runtime.InteropServices.RuntimeInformation' -as [type]
+      if ($info -and $info::OSArchitecture -eq 'Arm64') { $arch = 'arm64' }
     }
 
     $add = $env:FLOE_ADD_TO_PATH
