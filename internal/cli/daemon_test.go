@@ -384,6 +384,7 @@ func TestStoppedThenNotStarted(t *testing.T) {
 	if os.Geteuid() == 0 {
 		t.Skip("root writes where it is told not to")
 	}
+	testfs.UnixOnly(t, "chmod keeps a directory from being written")
 	e := newDenv(t)
 	wantRun(t, "publish from another build", e.exe(t, otherBuild, "publish", "page.yaml"), 0, e.base()+"/a/page/\n", projectLine)
 	old, _ := e.health(t.Context())

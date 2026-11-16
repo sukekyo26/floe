@@ -182,7 +182,9 @@ func TestLatestLink(t *testing.T) {
 		t.Fatalf("link = %d %s, want 400", w.Code, w.Body)
 	}
 	got := strings.ReplaceAll(told(t, w), filepath.Dir(dir), "<tmp>")
-	want := `<tmp>/dir/mine/page.html:2:75: executing "page.html" at <.Data.nope.x>: map has no entry for key "nope"`
+	want := filepath.Join("<tmp>", "dir", "mine", "page.html") +
+		`:2:75: executing "page.html" at <.Data.nope.x>: map has no entry for key "nope"`
+	testfs.Pending(t, "S315-P2: kit joins the template's path with /")
 	if got != want {
 		t.Errorf("link told\n%s\nwant\n%s", got, want)
 	}

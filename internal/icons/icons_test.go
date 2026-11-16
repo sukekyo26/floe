@@ -263,7 +263,7 @@ func TestFetchFromURL(t *testing.T) {
 // A store that cannot be written to is told before the download, as the store is written.
 func TestFetchCannotWrite(t *testing.T) {
 	t.Parallel()
-	testfs.UnixOnly(t, "chmod makes no directory unwritable")
+	testfs.UnixOnly(t, "chmod keeps a directory from being written")
 
 	var gets atomic.Int32
 	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
@@ -324,7 +324,7 @@ func TestSettingTold(t *testing.T) {
 	})
 	t.Run("cannot be written in", func(t *testing.T) {
 		t.Parallel()
-		testfs.UnixOnly(t, "chmod makes no directory unwritable")
+		testfs.UnixOnly(t, "chmod keeps a directory from being written")
 		_, err := icons.New(locked, false, "FLOE_ICONS_DIR").Fetch(context.Background(), "aws", []icons.Source{zip}, false)
 		if os.Geteuid() == 0 {
 			t.Skip("root writes to any directory")
@@ -589,7 +589,7 @@ func TestLookupStaysInside(t *testing.T) {
 	})
 	t.Run("not to be read", func(t *testing.T) {
 		t.Parallel()
-		testfs.UnixOnly(t, "chmod makes no file unreadable")
+		testfs.UnixOnly(t, "chmod keeps a file from being read")
 		// What the system does not let floe read a fetch cannot mend: it is told as it is.
 		locked := filepath.Join(dir, "locked.svg")
 		if err := os.WriteFile(locked, nil, 0o000); err != nil {

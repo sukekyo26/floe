@@ -333,7 +333,7 @@ func TestImageItems(t *testing.T) {
 // that names none draws.
 func TestImagesDirUnreadable(t *testing.T) {
 	t.Parallel()
-	testfs.UnixOnly(t, "chmod makes no directory unreadable")
+	testfs.UnixOnly(t, "chmod keeps a directory from being read")
 
 	if os.Geteuid() == 0 {
 		t.Skip("root opens a directory it may not read")
