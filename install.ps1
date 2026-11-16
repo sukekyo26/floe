@@ -5,7 +5,7 @@
 #
 # Environment overrides:
 #   FLOE_VERSION      Version to install (e.g. "0.2.0"); default "latest".
-#   FLOE_INSTALL_DIR  Where to put floe.exe; default "%LOCALAPPDATA%\Programs\floe".
+#   FLOE_INSTALL_DIR  Where to put floe.exe; default "%USERPROFILE%\.local\bin".
 #   FLOE_ADD_TO_PATH  "1" adds that folder to your user PATH; default leaves PATH alone.
 #
 # The binary's SHA-256 is verified against SHA256SUMS from the same release.
@@ -248,18 +248,20 @@
 
     $given = $env:FLOE_INSTALL_DIR
     if (-not $given) {
-      if (-not $env:LOCALAPPDATA) { throw 'LOCALAPPDATA is not set; set FLOE_INSTALL_DIR to a directory you can write to' }
-      $given = [IO.Path]::Combine($env:LOCALAPPDATA, 'Programs', 'floe')
+      if (-not $env:USERPROFILE) { throw 'USERPROFILE is not set; set FLOE_INSTALL_DIR to a directory you can write to' }
+      $given = [IO.Path]::Combine($env:USERPROFILE, '.local', 'bin')
     }
     # One absolute path, from where you are now: .NET would read a relative one from where PowerShell started.
     $provider = $null
     $drive = $null
     $dir = $ExecutionContext.SessionState.Path.GetUnresolvedProviderPathFromPSPath($given, [ref]$provider, [ref]$drive)
-    if ($provider.Name -cne 'FileSystem') { throw "FLOE_INSTALL_DIR must be a folder (got $given)" }
+    # One sentence for FLOE_INSTALL_DIR and for the default from USERPROFILE alike.
+    $notLocal = "the install folder must be a folder on a local drive (got $given); set FLOE_INSTALL_DIR to a local folder"
+    if ($provider.Name -cne 'FileSystem') { throw $notLocal }
     # The provider keeps / as written (//server/share too); Windows reads it as \.
     $dir = $dir.Replace('/', '\')
     # floe itself refuses UNC paths; \\?\ and \\.\ are in the same form.
-    if ($dir.StartsWith('\\', [StringComparison]::Ordinal)) { throw "FLOE_INSTALL_DIR must be on a local drive (got $given)" }
+    if ($dir.StartsWith('\\', [StringComparison]::Ordinal)) { throw $notLocal }
 
     $version = $env:FLOE_VERSION
     $tag = $null
