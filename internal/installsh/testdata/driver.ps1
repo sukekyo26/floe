@@ -14,6 +14,8 @@ function global:Invoke-WebRequest {
   foreach ($need in '-UseBasicParsing', '-OutFile', '-PassThru', '-MaximumRedirection') {
     if (-not ($args -contains $need)) { throw "the test's Invoke-WebRequest: called without $need" }
   }
+  $hops = $args[[array]::IndexOf($args, '-MaximumRedirection') + 1]
+  if ($hops -ne 0) { throw "the test's Invoke-WebRequest: -MaximumRedirection $hops, not 0" }
   if ($PSVersionTable.PSEdition -eq 'Desktop') {
     Microsoft.PowerShell.Utility\Invoke-WebRequest @args -Proxy $global:floeTest.proxy
   } else {
@@ -25,6 +27,13 @@ if ($floeTest.failMove) {
   function global:Move-Item([string]$LiteralPath, [string]$Destination) {
     if ((Split-Path -Leaf $LiteralPath) -like 'floe.exe.new-*') { throw "the test's Move-Item: refused $LiteralPath" }
     Microsoft.PowerShell.Management\Move-Item -LiteralPath $LiteralPath -Destination $Destination
+  }
+}
+if ($floeTest.failCopy) {
+  # The copy to the install folder is cut short: part of the file is written.
+  function global:Copy-Item([string]$LiteralPath, [string]$Destination) {
+    [IO.File]::WriteAllText($Destination, 'part')
+    throw "the test's Copy-Item: cut short at $Destination"
   }
 }
 if ($floeTest.failCleanup) {
@@ -73,6 +82,8 @@ $floeCheck.Close()
 
 $floeReport = [ordered]@{}
 try {
+  # Set here, not for the process: Add-Type above compiles in TEMP, and fails in some folders install.ps1 must take.
+  if ($floeTest.tmp) { $env:TMP = $floeTest.tmp; $env:TEMP = $floeTest.tmp }
   if ($floeTest.cd) { Set-Location -LiteralPath $floeTest.cd }
   if ($floeTest.strict) { Set-StrictMode -Version Latest }
   if ($floeTest.run) { Invoke-Expression $floeTest.run }

@@ -22,17 +22,24 @@
   $repo = 'sukekyo26/floe'
   # Run from a file, the block holds the file's path; from `irm | iex`, none.
   $self = $MyInvocation.MyCommand.ScriptBlock.File
+  # LIMIT: an alias the caller made with the name of a function here (Fetch, Place, Install, ...) is found before the
+  # function. No alias PowerShell makes has one of these names.
 
   # Windows PowerShell answers with a WebHeaderCollection, read by its index; PowerShell 7 with
-  # HttpResponseHeaders, which has no index but a Location.
+  # HttpResponseHeaders, which has no index but a Location. That is a Uri, read as it was written: its ToString()
+  # unescapes, and a lower-case %7c comes back as %7C, which a signed URL does not accept.
   function LocationOf($headers) {
     if ($headers -is [System.Net.WebHeaderCollection]) { return $headers['Location'] }
     if ($headers -is [System.Collections.IDictionary]) { return @($headers['Location'])[0] }
-    return $headers.Location
+    $to = $headers.Location
+    if ($to -is [uri]) { return $to.OriginalString }
+    return $to
   }
 
   # Every hop is asked for with no redirect followed, and only an https one is taken: left to itself
-  # Windows PowerShell follows https -> http -> https without a word.
+  # Windows PowerShell follows https -> http -> https without a word. A failure with an answer carries its status.
+  # LIMIT: TLS is not set: a Windows PowerShell on a .NET Framework whose default is not TLS 1.2 fails with "Could not
+  # create SSL/TLS secure channel". Only the runners' Windows Server 2022 and 2025 were tried.
   function Fetch([string]$Url, [string]$OutFile) {
     $at = [uri]$Url
     for ($hop = 0; $hop -le 10; $hop++) {
@@ -53,7 +60,11 @@
         $to = LocationOf $answer.Headers
       }
       if ($status -eq 200) { return }
-      if ($status -lt 300 -or $status -ge 400) { throw "download failed: $Url (status $status)" }
+      if ($status -lt 300 -or $status -ge 400) {
+        $failed = New-Object Exception "download failed: $Url (status $status)"
+        $failed.Data['status'] = $status
+        throw $failed
+      }
       if (-not $to) { throw "download failed: $Url (redirected to nowhere)" }
       $at = New-Object System.Uri($at, [string]$to)
     }
@@ -169,10 +180,11 @@
     $tag = [IO.Path]::GetRandomFileName()
     $new = "$exe.new-$tag"
     $old = "$exe.old-$tag"
-    try { Copy-Item -LiteralPath $file -Destination $new } catch { throw $cannotWrite }
     $placed = $false
     $moved = $false
     try {
+      # In the try: a copy cut short, or stopped by Ctrl+C, leaves no .new- behind.
+      try { Copy-Item -LiteralPath $file -Destination $new } catch { throw $cannotWrite }
       try {
         if (Test-Path -LiteralPath $exe) {
           Move-Item -LiteralPath $exe -Destination $old
@@ -251,6 +263,7 @@
         $api = "https://api.github.com/repos/$repo/releases/latest"
         $json = [IO.Path]::Combine($tmp, 'release.json')
         try { Fetch $api $json } catch {
+          if (-not $_.Exception.Data['status']) { throw }
           throw "$($_.Exception.Message); no release yet, or GitHub's API rate limit: try again later, or set FLOE_VERSION to a version, which skips the API"
         }
         try { $tag = ([IO.File]::ReadAllText($json) | ConvertFrom-Json).tag_name } catch { $tag = $null }

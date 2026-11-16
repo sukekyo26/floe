@@ -2,6 +2,7 @@ package installsh_test
 
 import (
 	"bytes"
+	"cmp"
 	"context"
 	"crypto/sha256"
 	"encoding/hex"
@@ -44,12 +45,36 @@ type ghRelease struct {
 	sums      string            // SHA256SUMS; "" makes it from files
 	serve     map[string]func(w http.ResponseWriter, r *http.Request, host string)
 	hits      atomic.Int32 // requests the server answered
+	plain     atomic.Int32 // of them, requests in plain http
 }
 
 const (
 	repoPath  = "/sukekyo26/floe/releases/download/"
 	githubURL = "https://github.com" + repoPath
 )
+
+var (
+	drivesMu sync.Mutex
+	drives   = map[string]bool{} // letters a running test has taken
+)
+
+// freeDrive is a letter no drive has and no other test has taken, held till t ends.
+func freeDrive(t *testing.T) string {
+	t.Helper()
+
+	drivesMu.Lock()
+	defer drivesMu.Unlock()
+	for _, l := range "QRSTUVWXYZ" {
+		d := string(l) + ":"
+		if _, err := os.Stat(d + `\`); err != nil && !drives[d] {
+			drives[d] = true
+			t.Cleanup(func() { drivesMu.Lock(); delete(drives, d); drivesMu.Unlock() })
+			return d
+		}
+	}
+	t.Fatal("no free drive letter in Q to Z")
+	return ""
+}
 
 var (
 	floeOnce sync.Once
@@ -122,10 +147,29 @@ func (r *ghRelease) sumsOf() string {
 	return b.String()
 }
 
-// site serves r as GitHub does, over TLS and through an HTTP proxy that tunnels every CONNECT to it; a plain request
-// to the proxy is served by r too. It returns the proxy's URL.
+// An http server's answers, which install.ps1 must never ask for: an older release, and on /hop/ a way back to https.
+const oldFloe = "floe 0.0.9 from http\n"
+
+// site serves r as GitHub does, over TLS and through an HTTP proxy that tunnels every CONNECT to it. A plain request
+// to the proxy is counted and answered as an http server would (oldFloe). It returns the proxy's URL.
 func site(t *testing.T, r *ghRelease) string {
 	t.Helper()
+
+	plain := http.HandlerFunc(func(w http.ResponseWriter, req *http.Request) {
+		r.hits.Add(1)
+		r.plain.Add(1)
+		name := req.URL.Path[strings.LastIndex(req.URL.Path, "/")+1:]
+		switch {
+		case strings.Contains(req.URL.Path, "/hop/"):
+			http.Redirect(w, req, githubURL+"real/"+name, http.StatusFound) //nolint:gosec // G710: the test's own server
+		case strings.HasSuffix(req.URL.Path, "/releases/latest"):
+			answer(w, `{"tag_name": "v0.0.9"}`)
+		case name == "SHA256SUMS":
+			answer(w, sumOf([]byte(oldFloe))+"  "+assetName("amd64")+"\n"+sumOf([]byte(oldFloe))+"  "+assetName("arm64")+"\n")
+		default:
+			answer(w, oldFloe)
+		}
+	})
 
 	handler := http.HandlerFunc(func(w http.ResponseWriter, req *http.Request) {
 		r.hits.Add(1)
@@ -163,7 +207,7 @@ func site(t *testing.T, r *ghRelease) string {
 
 	proxy := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, req *http.Request) {
 		if req.Method != http.MethodConnect {
-			handler(w, req)
+			plain(w, req)
 			return
 		}
 		up, err := (&net.Dialer{}).DialContext(req.Context(), "tcp", tlsServer.Listener.Addr().String())
@@ -217,6 +261,8 @@ type psCase struct {
 	Notice      bool   `json:"notice"`
 	FailMove    bool   `json:"failMove"`
 	FailCleanup bool   `json:"failCleanup"`
+	FailCopy    bool   `json:"failCopy"`
+	Tmp         string `json:"tmp"` // TMP and TEMP while install.ps1 runs; "" is base\tmp, for the driver too
 
 	env map[string]string // FLOE_* and the machine's variables; "" removes one
 }
@@ -244,7 +290,7 @@ func runPS(t *testing.T, shell, base string, c psCase) *psResult {
 	if err != nil {
 		t.Fatal(err)
 	}
-	res := &psResult{tmp: filepath.Join(base, "tmp")}
+	res := &psResult{tmp: cmp.Or(c.Tmp, filepath.Join(base, "tmp"))}
 	for _, dir := range []string{res.tmp, filepath.Join(base, "w")} {
 		if mkErr := os.MkdirAll(dir, 0o700); mkErr != nil {
 			t.Fatal(mkErr)
@@ -541,6 +587,14 @@ func testInstallPS1(t *testing.T, shell string) {
 		res, _ := install(t, r, psCase{env: map[string]string{"FLOE_INSTALL_DIR": dir}})
 		works(t, r, res, dir, host)
 	})
+	for _, name := range []string{"tmp[1]", "tmp[", "tmp]"} {
+		t.Run("TMP "+name, func(t *testing.T) {
+			t.Parallel()
+			r := goodRelease(t)
+			res, dir := install(t, r, psCase{Tmp: filepath.Join(t.TempDir(), name)})
+			works(t, r, res, dir, host)
+		})
+	}
 	for _, d := range []struct{ name, dir, says string }{
 		{"UNC", `\\localhost\c$\floe-install-test`, "local drive"},
 		{"a device path", `\\?\C:\floe-install-test`, "local drive"},
@@ -551,13 +605,8 @@ func testInstallPS1(t *testing.T, shell string) {
 			t.Parallel()
 			r := goodRelease(t)
 			if d.name == "no such drive" {
-				for _, l := range "QRSTUVWXYZ" {
-					if _, err := os.Stat(string(l) + `:\`); err != nil {
-						d.dir = string(l) + ":foo"
-						d.says = string(l)
-						break
-					}
-				}
+				d.says = freeDrive(t)
+				d.dir = d.says + "foo"
 			}
 			res, _ := install(t, r, psCase{env: map[string]string{"FLOE_INSTALL_DIR": d.dir}})
 			fails(t, res, t.TempDir(), d.says)
@@ -641,9 +690,9 @@ func testInstallPS1(t *testing.T, shell string) {
 		{"empty", asset, status(http.StatusOK, ""), "checksum mismatch"},
 		{"a page", asset, status(http.StatusOK, "<html><body>rate limited</body></html>"), "checksum mismatch"},
 		{"404", asset, status(http.StatusNotFound, "<html>Not Found</html>"), "(status 404)"},
-		{"the asset to http", asset, redirect("http://github.com" + repoPath + "v0.1.0/" + asset), "download failed: " + githubURL + "v0.1.0/" + asset},
-		{"SHA256SUMS to http", "SHA256SUMS", redirect("http://github.com" + repoPath + "v0.1.0/SHA256SUMS"), "download failed: " + githubURL + "v0.1.0/SHA256SUMS"},
-		{"http in the middle", asset, redirect("http://github.com" + repoPath + "hop/" + asset), "download failed"},
+		{"the asset to http", asset, redirect("http://github.com" + repoPath + "v0.1.0/" + asset), "download failed: " + githubURL + "v0.1.0/" + asset + " (redirected to http)"},
+		{"SHA256SUMS to http", "SHA256SUMS", redirect("http://github.com" + repoPath + "v0.1.0/SHA256SUMS"), "download failed: " + githubURL + "v0.1.0/SHA256SUMS (redirected to http)"},
+		{"http in the middle", asset, redirect("http://github.com" + repoPath + "hop/" + asset), "download failed: " + githubURL + "v0.1.0/" + asset + " (redirected to http)"},
 		{"to nowhere", asset, func(w http.ResponseWriter, _ *http.Request, _ string) { w.WriteHeader(http.StatusFound) }, "(redirected to nowhere)"},
 		{"a loop", asset, redirect(githubURL + "v0.1.0/" + asset), "(too many redirects)"},
 	} {
@@ -652,6 +701,9 @@ func testInstallPS1(t *testing.T, shell string) {
 			r := broken(t, b.file, b.serve)
 			res, dir := install(t, r, psCase{})
 			fails(t, res, dir, b.says)
+			if r.plain.Load() != 0 {
+				t.Errorf("%d requests in plain http", r.plain.Load())
+			}
 		})
 	}
 	for _, b := range []struct {
@@ -664,6 +716,8 @@ func testInstallPS1(t *testing.T, shell string) {
 		{"307", func(w http.ResponseWriter, r *http.Request, _ string) {
 			http.Redirect(w, r, "https://release-assets.githubusercontent.com"+repoPath+"real/"+asset, http.StatusTemporaryRedirect)
 		}},
+		// A signed URL is taken as it is written: PowerShell 7's Uri.ToString() would make it %7C.
+		{"an escape as written", redirect("https://release-assets.githubusercontent.com" + repoPath + "real/" + asset + "?sig=a%7cb")},
 	} {
 		t.Run("download redirected "+b.name, func(t *testing.T) {
 			t.Parallel()
@@ -677,6 +731,8 @@ func testInstallPS1(t *testing.T, shell string) {
 					redirect("https://release-assets.githubusercontent.com"+repoPath+"real/"+asset)(w, req, host)
 				case n.Add(1) == 1:
 					b.serve(w, req, host)
+				case req.URL.RawQuery != "" && req.URL.RawQuery != "sig=a%7cb":
+					http.Error(w, "the query is "+req.URL.RawQuery, http.StatusBadRequest)
 				default:
 					answer(w, string(good))
 				}
@@ -714,7 +770,29 @@ func testInstallPS1(t *testing.T, shell string) {
 		r.apiStatus, r.api = http.StatusFound, ""
 		r.serve = map[string]func(w http.ResponseWriter, req *http.Request, host string){"latest": redirect("http://api.github.com/repos/sukekyo26/floe/releases/latest")}
 		res, dir := install(t, r, psCase{})
+		fails(t, res, dir, "download failed: https://api.github.com/repos/sukekyo26/floe/releases/latest (redirected to http)")
+		if r.plain.Load() != 0 {
+			t.Errorf("%d requests in plain http", r.plain.Load())
+		}
+	})
+	t.Run("API no answer", func(t *testing.T) {
+		t.Parallel()
+		r := goodRelease(t)
+		r.serve = map[string]func(w http.ResponseWriter, req *http.Request, host string){"latest": func(w http.ResponseWriter, _ *http.Request, _ string) {
+			hijacker, ok := w.(http.Hijacker)
+			if !ok {
+				t.Error("the test's server cannot hijack")
+				return
+			}
+			if conn, _, err := hijacker.Hijack(); err == nil {
+				_ = conn.Close() //nolint:errcheck // closing is the answer
+			}
+		}}
+		res, dir := install(t, r, psCase{})
 		fails(t, res, dir, "download failed: https://api.github.com/repos/sukekyo26/floe/releases/latest")
+		if strings.Contains(res.err, "rate limit") {
+			t.Errorf("a failure with no answer is said to be a missing release or the rate limit:\n%s", res)
+		}
 	})
 	t.Run("strict mode, no tag_name", func(t *testing.T) {
 		t.Parallel()
@@ -856,6 +934,25 @@ func testPlacePS1(t *testing.T, install func(*testing.T, *ghRelease, psCase) (*p
 			t.Errorf("left %q after the old one ended", left)
 		}
 	})
+	t.Run("the copy cut short", func(t *testing.T) {
+		t.Parallel()
+		r := goodRelease(t)
+		dir := filepath.Join(t.TempDir(), "bin")
+		if err := os.Mkdir(dir, 0o700); err != nil {
+			t.Fatal(err)
+		}
+		write(t, filepath.Join(dir, "floe.exe"), "old")
+		res, _ := install(t, r, psCase{FailCopy: true, env: map[string]string{"FLOE_INSTALL_DIR": dir}})
+		if res.code != 1 || !strings.Contains(res.err, "cannot write") {
+			t.Errorf("want a failure that says cannot write:\n%s", res)
+		}
+		if got := string(installed(t, dir)); got != "old" {
+			t.Errorf("floe.exe holds %q, want the old one", got)
+		}
+		if left := leftovers(t, dir); len(left) != 0 {
+			t.Errorf("left %q", left)
+		}
+	})
 	t.Run("the temp folder held", func(t *testing.T) {
 		t.Parallel()
 		r := goodRelease(t)
@@ -920,20 +1017,12 @@ func testPathPS1(t *testing.T, shell string, install func(*testing.T, *ghRelease
 	t.Run("PATH a drive's root", func(t *testing.T) {
 		t.Parallel()
 		root := t.TempDir()
-		drive := ""
-		for _, l := range "QRSTUVWXYZ" {
-			if _, err := os.Stat(string(l) + `:\`); err != nil {
-				if exec.CommandContext(t.Context(), "subst", string(l)+":", root).Run() == nil { //nolint:gosec // G204: subst and a folder of the test
-					drive = string(l) + ":"
-					break
-				}
-			}
-		}
-		if drive == "" {
+		drive := freeDrive(t)
+		if out, err := exec.CommandContext(t.Context(), "subst", drive, root).CombinedOutput(); err != nil { //nolint:gosec // G204: subst and a folder of the test
 			if os.Getenv("CI") != "" {
-				t.Fatal("subst made no drive")
+				t.Fatalf("subst made no drive: %v %s", err, out)
 			}
-			t.Skip("subst made no drive")
+			t.Skipf("subst made no drive: %v %s", err, out)
 		}
 		t.Cleanup(func() {
 			if err := exec.CommandContext(context.Background(), "subst", drive, "/d").Run(); err != nil { //nolint:gosec // G204: as above
@@ -951,6 +1040,26 @@ func testPathPS1(t *testing.T, shell string, install func(*testing.T, *ghRelease
 		}
 	})
 
+	// A folder with ; or % cannot be one entry of the user's Path: Windows splits at ; and opens %VAR%.
+	for _, name := range []string{"a;b", "50%x%"} {
+		t.Run("PATH not one entry, "+name, func(t *testing.T) {
+			t.Parallel()
+			r := goodRelease(t)
+			dir := filepath.Join(t.TempDir(), name)
+			res, _ := install(t, r, psCase{PathKind: "ExpandString", Path: `C:\a`, env: map[string]string{"FLOE_INSTALL_DIR": dir, "x": "X"}})
+			works(t, r, res, dir, host)
+			if !strings.Contains(res.out, "cannot be written as one PATH entry") || strings.Contains(res.out, "To add it, run:") {
+				t.Errorf("want no line to run, and why:\n%s", res)
+			}
+			res, _ = install(t, r, psCase{PathKind: "ExpandString", Path: `C:\a`, env: map[string]string{"FLOE_INSTALL_DIR": dir, "x": "X", "FLOE_ADD_TO_PATH": "1"}})
+			if res.code != 1 || !strings.Contains(res.err, "could not add") || !strings.Contains(res.err, "one PATH entry") {
+				t.Errorf("want a failure to add it:\n%s", res)
+			}
+			if res.report.Path != `C:\a` || res.report.PathKind != "ExpandString" {
+				t.Errorf("the user's Path changed to %q (%s)", res.report.Path, res.report.PathKind)
+			}
+		})
+	}
 	t.Run("PATH not asked for", func(t *testing.T) {
 		t.Parallel()
 		r := goodRelease(t)
