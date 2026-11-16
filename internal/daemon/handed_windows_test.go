@@ -1,6 +1,7 @@
 package daemon_test
 
 import (
+	"syscall"
 	"testing"
 
 	"golang.org/x/sys/windows"
@@ -13,6 +14,9 @@ import (
 const wantAway = "unchecked"
 
 func awayNote() string { return "unchecked" }
+
+// deniedValue is the system's error of a port refused, for where none can be made.
+var deniedValue error = syscall.WSAEACCES
 
 // deniedListen is the system's error of a port refused (WSAEACCES): binding with SO_REUSEADDR a port a listener
 // holds.

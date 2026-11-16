@@ -4,6 +4,7 @@
 package testfs
 
 import (
+	"errors"
 	"os"
 	"testing"
 	"time"
@@ -36,8 +37,11 @@ func Mkfifo(tb testing.TB, path string) {
 	}
 }
 
+// ErrNoFIFO is MakeFIFO's error where there are no FIFOs (Windows), told apart from a failure to make one.
+var ErrNoFIFO = errors.New("there are no FIFOs on Windows")
+
 // MakeFIFO makes a FIFO at path, for what cannot skip a test (a goroutine, a function of an fs.FS); its test
-// skips first, with UnixOnly. On Windows it fails.
+// skips first, with UnixOnly. On Windows it fails with ErrNoFIFO.
 func MakeFIFO(path string) error {
 	return newFIFO(path)
 }

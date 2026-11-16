@@ -269,8 +269,10 @@ func FuzzResolve(f *testing.F) {
 	registered := site(f)
 	dir := filepath.Dir(registered)
 	// A FIFO where there are FIFOs; the rest is fuzzed on Windows too.
-	if err := testfs.MakeFIFO(filepath.Join(dir, "pipe.txt")); err != nil {
-		f.Logf("no FIFO: %v", err)
+	if err := testfs.MakeFIFO(filepath.Join(dir, "pipe.txt")); errors.Is(err, testfs.ErrNoFIFO) {
+		f.Log("no FIFO here; the rest is fuzzed")
+	} else if err != nil {
+		f.Fatal(err)
 	}
 	for _, seed := range []string{
 		"", "s.css", "sub/p.html", "../outside.txt", "sub/../../outside.txt", ".git/config",

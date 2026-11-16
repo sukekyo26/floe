@@ -257,6 +257,7 @@ func TestCannotListenWhy(t *testing.T) {
 	}{
 		{"in use", inUse, "daemon_port_in_use"},
 		{"refused", deniedListen(t), "daemon_cannot_listen"},
+		{"refused, as the system names it", deniedValue, "daemon_cannot_listen"},
 		{"too many files", syscall.EMFILE, ""},
 		{"no loopback", errors.New("no loopback"), ""},
 	} {

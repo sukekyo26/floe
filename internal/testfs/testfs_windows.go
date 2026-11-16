@@ -14,12 +14,9 @@ import (
 
 const isWindows = true
 
-var (
-	errNoFIFO       = errors.New("there are no FIFOs on Windows")
-	errNoAccessTime = errors.New("no Win32FileAttributeData")
-)
+var errNoAccessTime = errors.New("no Win32FileAttributeData")
 
-func newFIFO(string) error { return errNoFIFO }
+func newFIFO(string) error { return ErrNoFIFO }
 
 func lockNow(f *os.File) bool {
 	flags := uint32(windows.LOCKFILE_EXCLUSIVE_LOCK | windows.LOCKFILE_FAIL_IMMEDIATELY)
