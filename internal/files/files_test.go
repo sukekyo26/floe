@@ -105,7 +105,7 @@ func TestRead(t *testing.T) {
 	})
 	t.Run("a device", func(t *testing.T) {
 		t.Parallel()
-		testfs.Pending(t, "S315-P4: Windows devices")
+		testfs.UnixOnly(t, "a device told by its kind (Windows: TestAllowedDevice)")
 		readNotFile(t, "/dev/zero")
 	})
 }

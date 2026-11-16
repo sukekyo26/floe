@@ -124,3 +124,31 @@ func TestDriveRelative(t *testing.T) {
 		t.Errorf("floe check C:b.yaml = %d, %q, want path_drive_relative", code, stderr)
 	}
 }
+
+// A device, a share or a link to one is refused before it is opened (path_not_local), where Unix tells a device by its
+// kind: a part's file that is a link to a device, a data file on a share, and a page to write that is a link to a
+// device (which cannot be written, in the words of why).
+func TestNotLocalWindows(t *testing.T) {
+	t.Parallel()
+
+	parts := write(t, map[string]string{"mine/schema.json": ownSchema, "mine/part.html": ownPage})
+	css := filepath.Join(parts, "mine", "part.css")
+	link(t, `\\.\NUL`, css)
+	code, _, stderr := runEnv(t.TempDir(), map[string]string{"FLOE_PARTS_DIR": parts}, "part", "check")
+	if code != 1 || !strings.Contains(stderr, css+": this is not on a local drive under an ordinary name") {
+		t.Errorf("floe part check of a link to NUL = %d, %q, want path_not_local", code, stderr)
+	}
+
+	dir := write(t, map[string]string{"a.yaml": good, "e.yaml": good})
+	shared, _ := testfs.MapShare(t, dir)
+	on := filepath.Join(shared, "a.yaml")
+	if code, _, stderr := run(dir, "check", on); code != 1 || !strings.Contains(stderr, "this is not on a local drive") {
+		t.Errorf("floe check %s = %d, %q, want path_not_local", on, code, stderr)
+	}
+
+	link(t, `\\.\NUL`, filepath.Join(dir, "e.html"))
+	if code, _, stderr := run(dir, "render", "e.yaml"); code != 1 || !strings.Contains(stderr, "not on a local drive") ||
+		!strings.Contains(stderr, "e.html") {
+		t.Errorf("floe render of a page linked to NUL = %d, %q, want it not written, told", code, stderr)
+	}
+}

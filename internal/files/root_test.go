@@ -83,6 +83,14 @@ func TestFSNotFiles(t *testing.T) {
 	})
 }
 
+// pathOf is the path err's *fs.PathError names, "" of none.
+func pathOf(err error) string {
+	if pe, ok := errors.AsType[*fs.PathError](err); ok {
+		return pe.Path
+	}
+	return ""
+}
+
 // notFileIn checks a read, a listing and a Stat of name, under dir through either, as of no regular file.
 func notFileIn(t *testing.T, dir, name string) {
 	t.Helper()
@@ -90,6 +98,13 @@ func notFileIn(t *testing.T, dir, name string) {
 		timebox.Within(t, via+" "+name, func() {
 			if _, err := fs.ReadFile(fsys, name); !errors.Is(err, usererr.ErrNotFile) {
 				t.Errorf("%s: ReadFile(%s) = %v, want ErrNotFile", via, name, err)
+			}
+			// An fs.FS's errors name the name, not the directory's path.
+			if _, err := fsys.Open(name); pathOf(err) != name {
+				t.Errorf("%s: Open(%s) = %v, want the error at %s", via, name, err, name)
+			}
+			if _, err := fs.Stat(fsys, name+"x"); pathOf(err) != name+"x" {
+				t.Errorf("%s: Stat(%sx) = %v, want the error at %sx", via, name, err, name)
 			}
 			if _, err := fs.ReadDir(fsys, name); !errors.Is(err, usererr.ErrNotFile) {
 				t.Errorf("%s: ReadDir(%s) = %v, want ErrNotFile", via, name, err)

@@ -3,14 +3,24 @@ package files
 import "fmt"
 
 // Mark is what the file at path is now, to tell when it changes: its stamp (stampAt), and for a link the stamp of
-// what it leads to after ">", or ">-" when it leads nowhere; "-" for none there.
+// what it leads to after ">", or ">-" when it leads nowhere (or where allowed refuses); "-" for none there, or for
+// what allowed refuses.
 func Mark(path string) string {
-	m, link, ok := stampAt(path, false)
+	p, err := allowed(path, false)
+	if err != nil {
+		return "-"
+	}
+	m, link, ok := stampAt(p, false)
 	if !ok {
 		return "-"
 	}
 	if link {
-		to, _, ok := stampAt(path, true)
+		// Where it leads, looked at as a path: allowed refuses what it may not open (a share's, a pipe's).
+		q, err := allowed(path, true)
+		if err != nil {
+			return m + ">-"
+		}
+		to, _, ok := stampAt(q, true)
 		if !ok {
 			return m + ">-"
 		}

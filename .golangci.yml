@@ -126,10 +126,20 @@ linters:
           msg: "use files.Root, which opens a file without blocking on a FIFO"
         - pattern: ^filepath\.EvalSymlinks$
           msg: "use files.Real, which follows junctions on Windows and names the path as the system does"
-        - pattern: ^os\.(Stat|Lstat|ReadDir|ReadFile|Open|OpenFile|OpenRoot|OpenInRoot|Readlink|MkdirAll|Create|CopyFS|Chmod|Chtimes)$
-          msg: "go through files (Stat, Lstat, ReadDir, Read, Open, OpenRoot, MkdirAll, OpenLock): the one place that looks at a path before the system is called"
+        - pattern: ^os\.(Stat|Lstat|ReadDir|OpenRoot|Mkdir|MkdirAll)$
+          msg: "use files.Stat, Lstat, ReadDir, OpenRoot, Mkdir or MkdirAll: files refuses shares and devices before the system is called"
+        - pattern: ^os\.(ReadFile|Open|OpenFile)$
+          msg: "use files.Read, Open or OpenAppend (OpenLock for a lock): files refuses shares and devices before the system is called"
+        - pattern: ^os\.Readlink$
+          msg: "use files.Real for where a link leads: files refuses shares and devices before the system is called"
+        - pattern: ^os\.Create$
+          msg: "use files.WriteAtomic: files refuses shares and devices before the system is called"
+        - pattern: ^os\.OpenInRoot$
+          msg: "use files.NewRoot: files refuses shares and devices before the system is called"
+        - pattern: ^os\.(CopyFS|Chmod|Chtimes)$
+          msg: "add a function to files for it first: files refuses shares and devices before the system is called"
         - pattern: ^filepath\.(Walk|WalkDir|Glob)$
-          msg: "go through files (ReadDir, or fs.WalkDir of files.DirFS): the one place that looks at a path before the system is called"
+          msg: "use files.ReadDir, or fs.WalkDir of files.DirFS: files refuses shares and devices before the system is called"
       analyze-types: true
       exclude-godoc-examples: true
     depguard:
@@ -248,7 +258,7 @@ linters:
       - path: internal/(files|testfs)/
         linters:
           - forbidigo
-        text: the one place that looks at a path
+        text: files refuses shares and devices before the system is called
       # Tests get a relaxed profile but still benefit from bug catchers.
       - path: _test\.go
         linters:

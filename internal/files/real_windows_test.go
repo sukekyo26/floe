@@ -1,6 +1,7 @@
 package files_test
 
 import (
+	"errors"
 	"os"
 	"path/filepath"
 	"strings"
@@ -8,6 +9,7 @@ import (
 
 	"floe/internal/files"
 	"floe/internal/testfs"
+	"floe/internal/usererr"
 )
 
 // Real follows junctions, makes short names long and case as on disk, drops a trailing dot of a path without \\?\
@@ -98,11 +100,15 @@ func TestLongNameWindows(t *testing.T) {
 		{short, `\.secret`},
 		{`\\?\` + filepath.Join(short, "id.html"), `\.secret\id.html`},
 		{j, `\j`},
-		{short + "::$INDEX_ALLOCATION", `\` + filepath.Base(short) + "::$INDEX_ALLOCATION"},
-		{filepath.Join(short, "id.html") + "::$DATA", `\.secret\id.html::$DATA`},
 	} {
 		if got, err := files.LongName(tt.path); err != nil || !strings.HasSuffix(got, tt.suffix) {
 			t.Errorf("LongName(%q) = %q, %v, want it ending %q", tt.path, got, err, tt.suffix)
+		}
+	}
+	// A stream's name (W26) is refused before the system reads it: no ordinary name.
+	for _, p := range []string{short + "::$INDEX_ALLOCATION", filepath.Join(short, "id.html") + "::$DATA"} {
+		if got, err := files.LongName(p); !errors.Is(err, usererr.ErrNotLocal) {
+			t.Errorf("LongName(%q) = %q, %v, want ErrNotLocal", p, got, err)
 		}
 	}
 	// Over MAX_PATH, which takes the buffer made again: a short name under a long directory, given with \\?\ (Real's,
@@ -138,3 +144,7 @@ func TestRealAboveWindows(t *testing.T) {
 		}
 	}
 }
+
+// dotDotAbove is what RealAbove gives of base\x\new\..\parts, x not there: Windows folds .. by its letters before
+// it opens a path, so it is base\x\parts.
+func dotDotAbove(base string) string { return filepath.Join(base, "x", "parts") }

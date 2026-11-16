@@ -53,7 +53,7 @@ func TestReal(t *testing.T) {
 }
 
 // RealAbove takes a path not there as the real path of the directory above it that is, with the names after it as
-// written; a .. after a name not there gives false, after a / as after the system's separator.
+// written; a .. after a name not there gives false on Unix (dotDotAbove), after a / as after the system's separator.
 func TestRealAbove(t *testing.T) {
 	t.Parallel()
 
@@ -67,8 +67,8 @@ func TestRealAbove(t *testing.T) {
 		{"there", tmp, base, true},
 		{"names not there", filepath.Join(tmp, "x", "new"), filepath.Join(base, "x", "new"), true},
 		// x is not there either: on Windows, a .. after a name there is folded by its letters before it is opened.
-		{".. after a name not there, by the separator", tmp + sep + "x" + sep + "new" + sep + ".." + sep + "parts", "", false},
-		{".. after a name not there, by /", tmp + "/x/new/../parts", "", false},
+		{".. after a name not there, by the separator", tmp + sep + "x" + sep + "new" + sep + ".." + sep + "parts", dotDotAbove(base), dotDotAbove(base) != ""},
+		{".. after a name not there, by /", tmp + "/x/new/../parts", dotDotAbove(base), dotDotAbove(base) != ""},
 		{"empty", "", "", false},
 		{"relative", "parts", "", false},
 	} {

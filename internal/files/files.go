@@ -39,30 +39,60 @@ func IsNotFile(info fs.FileInfo) bool {
 	return !info.Mode().IsRegular() && !info.IsDir()
 }
 
-// Opener is where a file is looked at and opened: the system's paths (Open, Read), or an *os.Root, which keeps
-// them under it (ReadIn).
+// Opener is a directory a file is looked at and opened under: an *os.Root, which keeps them under it (ReadIn).
 type Opener interface {
 	Stat(name string) (fs.FileInfo, error)
 	OpenFile(name string, flag int, perm fs.FileMode) (*os.File, error)
 }
 
-// paths opens the system's paths.
-type paths struct{}
-
-func (paths) Stat(name string) (fs.FileInfo, error) { return os.Stat(name) } //nolint:wrapcheck // the system's
-
-func (paths) OpenFile(name string, flag int, perm fs.FileMode) (*os.File, error) {
-	return os.OpenFile(name, flag, perm) //nolint:wrapcheck,gosec // the system's; G304: the caller's path
+// target is one file to look at and open, once: a path allowed checked, or a name under an Opener.
+type target interface {
+	stat() (fs.FileInfo, error)
+	open(flag int, perm fs.FileMode) (*os.File, error)
+	name() string
 }
+
+// pathTarget is a path allowed checked, told as path, as given.
+type pathTarget struct {
+	p    checked
+	path string
+}
+
+func (t pathTarget) stat() (fs.FileInfo, error) {
+	fi, err := statAt(t.p)
+	return fi, asWritten(err, t.path)
+}
+
+func (t pathTarget) open(flag int, perm fs.FileMode) (*os.File, error) {
+	f, err := openAt(t.p, flag, perm)
+	return f, asWritten(err, t.path)
+}
+
+func (t pathTarget) name() string { return t.path }
+
+// rootTarget is the name n under o, which looks at it (os.Root keeps it under its directory).
+type rootTarget struct {
+	o Opener
+	n string
+}
+
+func (t rootTarget) stat() (fs.FileInfo, error) { return t.o.Stat(t.n) } //nolint:wrapcheck // the system's, at n
+
+func (t rootTarget) open(flag int, perm fs.FileMode) (*os.File, error) {
+	return t.o.OpenFile(t.n, flag, perm) //nolint:wrapcheck // as above
+}
+
+func (t rootTarget) name() string { return t.n }
 
 // Open opens the file path, a link followed, when it is a regular file or a directory, and returns what the system
 // says of it; else an *fs.PathError of usererr.ErrNotFile, the file unopened: a FIFO would block the open, and a
 // device may do more on it. What it opens without blocking (O_NONBLOCK, which a regular file's reads do not
 // take) is looked at again, so that one made such since is refused unread; another regular file put in its place
 // (a save by rename) is read. The system's errors are
-// *fs.PathError (fs.ErrNotExist for none); one of opening it comes with what the system said of it before.
+// *fs.PathError (fs.ErrNotExist for none); one of opening it comes with what the system said of it before. What
+// allowed refuses is not opened.
 func Open(path string) (*os.File, fs.FileInfo, error) {
-	return openWith(paths{}, path, os.O_RDONLY, 0)
+	return openPath(path, os.O_RDONLY, 0)
 }
 
 // OpenAppend opens the file path to append to, a link to a file followed (one to nowhere is not, so that the file is
@@ -71,36 +101,46 @@ func Open(path string) (*os.File, fs.FileInfo, error) {
 // *fs.PathError of usererr.ErrNotFile), which would block the open, and one made so since is refused after. A
 // directory is the system's to refuse (EISDIR). The info is of the file opened.
 func OpenAppend(path string) (*os.File, fs.FileInfo, error) {
-	return openWith(paths{}, path, os.O_WRONLY|os.O_APPEND|os.O_CREATE, 0o600)
+	return openPath(path, os.O_WRONLY|os.O_APPEND|os.O_CREATE, 0o600)
 }
 
-// openWith opens path with flag as Open and OpenAppend say; a file that is not there is made when flag has O_CREATE.
-func openWith(o Opener, path string, flag int, perm fs.FileMode) (*os.File, fs.FileInfo, error) {
-	before, err := o.Stat(path)
+// openPath opens path with flag as Open and OpenAppend say, once allowed has looked at it.
+func openPath(path string, flag int, perm fs.FileMode) (*os.File, fs.FileInfo, error) {
+	p, err := allowed(path, true)
+	if err != nil {
+		return nil, nil, told(err, "open", path, flag&os.O_CREATE != 0)
+	}
+	return openWith(pathTarget{p: p, path: path}, flag, perm)
+}
+
+// openWith opens t with flag as Open and OpenAppend say; a file that is not there is made when flag has O_CREATE.
+func openWith(t target, flag int, perm fs.FileMode) (*os.File, fs.FileInfo, error) {
+	before, err := t.stat()
 	creating := flag&os.O_CREATE != 0 && errors.Is(err, fs.ErrNotExist)
 	if err != nil && !creating {
-		return nil, nil, err //nolint:wrapcheck // the system's *fs.PathError, for the caller to tell
+		return nil, nil, err
 	}
 	if err == nil && IsNotFile(before) {
-		return nil, before, &fs.PathError{Op: "open", Path: path, Err: usererr.ErrNotFile}
+		return nil, before, &fs.PathError{Op: "open", Path: t.name(), Err: usererr.ErrNotFile}
 	}
 	if creating {
 		// A link to nowhere is not followed to make the file where it leads, out of its directory (ELOOP); a link to a
 		// file is followed, as it is to read.
 		flag |= noFollow
 	}
-	f, err := o.OpenFile(path, flag|openFlags, perm)
+	f, err := t.open(flag|openFlags, perm)
 	if err != nil {
-		return nil, before, err //nolint:wrapcheck // as above
+		return nil, before, err
 	}
 	info, err := f.Stat()
 	switch {
 	case err != nil:
 	case creating && info.Mode()&(fs.ModeSymlink|fs.ModeIrregular) != 0:
-		// Windows opens a link to nowhere itself (noFollow), where Unix refuses it: told alike.
-		err = &fs.PathError{Op: "open", Path: path, Err: syscall.ELOOP}
+		// Windows opens a link to nowhere itself (noFollow), where Unix refuses it: told alike. allowed tells such
+		// a link before; this is of one made so after it looked.
+		err = &fs.PathError{Op: "open", Path: t.name(), Err: syscall.ELOOP}
 	case IsNotFile(info):
-		err = &fs.PathError{Op: "open", Path: path, Err: usererr.ErrNotFile}
+		err = &fs.PathError{Op: "open", Path: t.name(), Err: usererr.ErrNotFile}
 	}
 	if err != nil {
 		_ = f.Close() //nolint:errcheck // not read
@@ -111,13 +151,17 @@ func openWith(o Opener, path string, flag int, perm fs.FileMode) (*os.File, fs.F
 
 // Read reads the file path as Open opens it, and returns what the system says of it too.
 func Read(path string) ([]byte, fs.FileInfo, error) {
-	return ReadIn(paths{}, path)
+	return readOpened(Open(path))
 }
 
 // ReadIn reads the file name of o as Read reads a path: under an *os.Root, the system refuses one that leads out
 // of it, by .. or by a link.
 func ReadIn(o Opener, name string) ([]byte, fs.FileInfo, error) {
-	f, info, err := openWith(o, name, os.O_RDONLY, 0)
+	return readOpened(openWith(rootTarget{o: o, n: name}, os.O_RDONLY, 0))
+}
+
+// readOpened reads f, opened with info, or tells err of opening it.
+func readOpened(f *os.File, info fs.FileInfo, err error) ([]byte, fs.FileInfo, error) {
 	if err != nil {
 		return nil, info, err
 	}
@@ -147,11 +191,14 @@ func Slug(name string) string {
 // own (O_EXCL, under a random name), so that one left there, or placed there, cannot keep its mode or lead the
 // write elsewhere. Its name is short, whatever the length of path's: a name the directory takes is written.
 func WriteAtomic(path string, data []byte, perm os.FileMode, old fs.FileInfo) error {
-	f, err := createNew(filepath.Join(filepath.Dir(path), ".floe-"), perm) // beside it: path is real, resolved
+	p, err := allowed(path, false)
 	if err != nil {
-		return fmt.Errorf("write %s: %w", path, err)
+		return fmt.Errorf("write %s: %w", path, told(err, "open", path, false))
 	}
-	tmp := f.Name()
+	f, tmp, err := createNew(p.dir(), perm) // beside it: path is real, resolved
+	if err != nil {
+		return fmt.Errorf("write %s: %w", path, asWritten(err, path))
+	}
 	if old != nil {
 		// Kept where the file system takes it: one that takes no mode (vfat) is written all the same.
 		_ = f.Chmod(old.Mode().Perm()) //nolint:errcheck // see above
@@ -161,23 +208,23 @@ func WriteAtomic(path string, data []byte, perm os.FileMode, old fs.FileInfo) er
 		err = closeErr
 	}
 	if err == nil {
-		err = os.Rename(tmp, path)
+		err = renameAt(tmp, p)
 	}
 	if err != nil {
-		_ = os.Remove(tmp) //nolint:errcheck // the write failed, which is what is told
-		return fmt.Errorf("write %s: %w", path, err)
+		_ = removeAt(tmp) //nolint:errcheck // the write failed, which is what is told
+		return fmt.Errorf("write %s: %w", path, asWritten(err, path))
 	}
 	return nil
 }
 
-// createNew creates a new file named prefix and a random suffix, with the mode perm less the umask (which
-// os.CreateTemp does not take), trying another name while one is taken.
-func createNew(prefix string, perm os.FileMode) (*os.File, error) {
+// createNew creates a new file in dir under a name of .floe- and a random suffix, with the mode perm less the umask
+// (which os.CreateTemp does not take), trying another name while one is taken.
+func createNew(dir checked, perm os.FileMode) (*os.File, checked, error) {
 	for {
-		name := prefix + rand.Text()
-		f, err := os.OpenFile(name, os.O_WRONLY|os.O_CREATE|os.O_EXCL, perm) //nolint:gosec // G304: beside the file written
+		name := dir.join(".floe-" + rand.Text())
+		f, err := openAt(name, os.O_WRONLY|os.O_CREATE|os.O_EXCL, perm)
 		if !errors.Is(err, fs.ErrExist) {
-			return f, err //nolint:wrapcheck // WriteAtomic says what it wrote
+			return f, name, err
 		}
 	}
 }

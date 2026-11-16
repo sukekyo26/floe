@@ -30,10 +30,6 @@ func Check(path, home string) (bool, error) {
 	if resolved, err := files.Real(path); err != nil || resolved != path {
 		return false, usererr.New("link_not_real", path)
 	}
-	// A share's files would be served from another machine (a network drive's too: its real path is \\?\UNC\…).
-	if !dirs.OnDrive(path) {
-		return false, usererr.New("link_share", path, filepath.VolumeName(path))
-	}
 	// A FIFO named .html would block its reader, so only regular files pass, and folders.
 	fi, err := files.Stat(path)
 	folder := err == nil && fi.IsDir()
@@ -50,9 +46,9 @@ func Check(path, home string) (bool, error) {
 // registered by an older floe is served on. Look again when it is served if that comes to matter.
 func exposes(path, home string, folder bool) error {
 	// path is real, so home must be too, or a symlinked $HOME would hide its hidden directories.
-	resolvedHome, ok := realDir(home)
-	if !ok {
-		return usererr.New("link_home_unresolved", home)
+	resolvedHome, err := realHome(home)
+	if err != nil {
+		return err
 	}
 	home = resolvedHome
 	dir := path
@@ -101,15 +97,17 @@ var appData = appDataDirs //nolint:gochecknoglobals // a test's seam
 
 // appDataAt reports, of the folders of application data the system names, whether path is one or in one (in), and
 // whether dir, the directory a link of path serves, holds one (holds): settings, caches and tokens of applications
-// live there, hidden or not, wherever home is (Q4). A folder not there (as files.Real tells) holds nothing and is left
-// out; one that cannot be told is an error, as what cannot be checked is not let through.
+// live there, hidden or not, wherever home is (Q4). A folder not there (as files.Real tells), or not on this
+// machine's drives (a roaming one redirected to a share), holds no local path and is left out; one that cannot be
+// told is an error, as what cannot be checked is not let through.
 func appDataAt(path, dir string) (in, holds bool, err error) {
 	for _, d := range appData() {
 		if d.err != nil {
 			return false, false, d.err
 		}
 		got, err := files.Real(d.path)
-		if errors.Is(err, fs.ErrNotExist) {
+		// One not on this machine's drives (a roaming folder redirected to a share) holds no local path either.
+		if errors.Is(err, fs.ErrNotExist) || errors.Is(err, usererr.ErrNotLocal) {
 			continue
 		}
 		if err != nil {
@@ -127,15 +125,19 @@ func exposedDir(dir, home string) bool {
 	return filepath.Dir(dir) == dir || dir == home || dirs.Holds(dir, home)
 }
 
-// realDir returns the real path of dir. A dir that cannot be resolved (missing, empty and so ".", or
-// not a directory) gives false: the checks that compare against it would be meaningless.
-func realDir(dir string) (string, bool) {
-	resolved, err := files.Real(dir)
-	if err != nil {
-		return "", false
+// realHome returns the real path of home. A home that cannot be resolved (missing, empty and so ".", not a
+// directory, or not local) is refused: the checks that compare against it would be meaningless.
+func realHome(home string) (string, error) {
+	resolved, err := files.Real(home)
+	if errors.Is(err, usererr.ErrNotLocal) {
+		return "", usererr.CannotRead(home, err)
 	}
-	fi, err := files.Stat(resolved)
-	return resolved, err == nil && fi.IsDir()
+	if err == nil {
+		if fi, err := files.Stat(resolved); err == nil && fi.IsDir() {
+			return resolved, nil
+		}
+	}
+	return "", usererr.New("link_home_unresolved", home)
 }
 
 // Resolve returns the file to serve for rest under the link registered as the real path registered, a folder
@@ -187,8 +189,6 @@ func IsFolder(folder string) bool {
 // served when its real path is under base (node_modules/x -> .pnpm/x).
 // LIMIT: on Windows, a short name is made long by listing its parent; under a parent that cannot be listed, the
 // files are not served, though they could be opened. Look again if links into such directories come up.
-// LIMIT: a link or junction under base to a share (\\host\share) is opened before it is refused: it may send the
-// user's credentials there. Refuse shares before they are opened, by their names, as S315's P4 plans.
 func within(base, rest string, dir bool) (string, fs.FileInfo, bool) {
 	// Localize reads rest as the system's names: it refuses what Windows reads otherwise (a stream after :, NUL, CON,
 	// \ as a separator) and, everywhere, empty and . and .. elements and what is not UTF-8.
@@ -249,7 +249,7 @@ var htmlName = regexp.MustCompile(`(?i)\.html?$`)
 // Dir lists the directory dir of the folder registered as the real path folder ("" for the folder itself): what
 // Resolve serves, of what is directly in it. It opens no file and walks no further down, so what it costs is that
 // of the directory alone.
-// LIMIT: os.ReadDir reads the whole directory, which MaxListed does not bound. Read it in parts (ReadDir(n), in
+// LIMIT: files.ReadDir reads the whole directory, which MaxListed does not bound. Read it in parts (ReadDir(n), in
 // the directory's own order) if a directory of hundreds of thousands of names comes up.
 func Dir(folder, dir string) (Listing, error) {
 	l := Listing{Dirs: []string{}, Files: []File{}, More: 0}
