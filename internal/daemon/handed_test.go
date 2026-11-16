@@ -90,8 +90,9 @@ func errKind(err error) string {
 }
 
 // startChild starts this test binary in mode, away from the test as start starts floe serve, with f handed down
-// when not nil, expecting a listener on port, and returns the lines it tells, once it is done.
-func startChild(t *testing.T, mode string, f *os.File, port int) []string {
+// when not nil, expecting a listener on port, and returns the lines it tells, once it is done. It asks the child
+// on port only when it serves: a port no child serves may be another test's.
+func startChild(t *testing.T, mode string, f *os.File, port int, serves bool) []string {
 	t.Helper()
 	report := filepath.Join(t.TempDir(), "report")
 	if err := os.WriteFile(report, nil, 0o600); err != nil {
@@ -114,7 +115,7 @@ func startChild(t *testing.T, mode string, f *os.File, port int) []string {
 	if f != nil {
 		_ = f.Close() // the child holds its own copy now
 	}
-	if mode == "take" {
+	if serves {
 		ask(t, port)
 	}
 	for end := time.Now().Add(30 * time.Second); time.Now().Before(end); time.Sleep(50 * time.Millisecond) {
@@ -126,7 +127,7 @@ func startChild(t *testing.T, mode string, f *os.File, port int) []string {
 	return nil
 }
 
-// ask connects to port, where a child may serve one connection; one refused is told by the child's lines.
+// ask connects to port, where a child serves one connection; one refused is told by the child's lines.
 func ask(t *testing.T, port int) {
 	t.Helper()
 	conn, err := (&net.Dialer{Timeout: 5 * time.Second}).DialContext(t.Context(), "tcp", daemon.Addr(port))
@@ -190,13 +191,13 @@ func TestStartServes(t *testing.T) {
 	t.Parallel()
 
 	f, port := listener(t)
-	got := strings.Join(startChild(t, "take", f, port), "\n")
+	got := strings.Join(startChild(t, "take", f, port, true), "\n")
 	want := strings.Join([]string{"away " + wantAway, "handed ok", "rebind ok", "done"}, "\n")
 	if got != want {
 		t.Errorf("the child told\n%s\nwant\n%s", got, want)
 	}
 	// What opens a browser starts it away too, with nothing handed down.
-	if got := startChild(t, "away", nil, 0); len(got) != 2 || got[0] != "away "+wantAway {
+	if got := startChild(t, "away", nil, 0, false); len(got) != 2 || got[0] != "away "+wantAway {
 		t.Errorf("a child started away with nothing handed down told %q", got)
 	}
 }
@@ -223,14 +224,14 @@ func TestHanded(t *testing.T) {
 	})
 	// What is taken and closed is a child's, as a server's is: never the test's own.
 	f, port := listener(t)
-	if got := startChild(t, "take", f, port+1); len(got) < 2 || got[1] != "handed another-address" {
+	if got := startChild(t, "take", f, port+1, false); len(got) < 2 || got[1] != "handed another-address" {
 		t.Errorf("Handed of a listener on another port told %q", got)
 	}
 	file, err := os.Create(filepath.Join(t.TempDir(), "a")) //nolint:gosec // G304: the test's own
 	if err != nil {
 		t.Fatal(err)
 	}
-	if got := startChild(t, "take", file, port); len(got) < 2 || got[1] != "handed refused" {
+	if got := startChild(t, "take", file, port, false); len(got) < 2 || got[1] != "handed refused" {
 		t.Errorf("Handed of a file that is no listener told %q", got)
 	}
 }
