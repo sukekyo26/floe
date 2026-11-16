@@ -36,12 +36,21 @@
     return $to
   }
 
+  # PowerShell 7.4 and later refuse a redirect from https to http even when told to follow none, saying only that
+  # the operation is not valid: with this they hand it back, and Fetch refuses it by name. Nothing is followed.
+  $insecure = @{}
+  if ((Get-Command Microsoft.PowerShell.Utility\Invoke-WebRequest).Parameters.ContainsKey('AllowInsecureRedirect')) {
+    $insecure['AllowInsecureRedirect'] = $true
+  }
+
   # Every hop is asked for with no redirect followed, and only an https one is taken: left to itself
   # Windows PowerShell follows https -> http -> https without a word. A failure with an answer carries its status.
   # LIMIT: TLS is not set: a Windows PowerShell on a .NET Framework whose default is not TLS 1.2 fails with "Could not
   # create SSL/TLS secure channel". Only the runners' Windows Server 2022 and 2025 were tried.
   function Fetch([string]$Url, [string]$OutFile) {
     $at = [uri]$Url
+    # Windows PowerShell reads -OutFile as a wildcard, and a [ or ] in TEMP is not found.
+    if ($PSVersionTable.PSEdition -ne 'Core') { $OutFile = [Management.Automation.WildcardPattern]::Escape($OutFile) }
     for ($hop = 0; $hop -le 10; $hop++) {
       if ($at.Scheme -cne 'https') { throw "download failed: $Url (redirected to $($at.Scheme))" }
       $status = 0; $to = $null; $problem = $null
@@ -49,7 +58,7 @@
         # Windows PowerShell hands a redirect back with an error that does not stop it;
         # PowerShell 7 throws it, the response inside.
         $got = Invoke-WebRequest -UseBasicParsing -Uri $at -OutFile $OutFile -PassThru `
-          -MaximumRedirection 0 -ErrorAction SilentlyContinue -ErrorVariable problem
+          -MaximumRedirection 0 -ErrorAction SilentlyContinue -ErrorVariable problem @insecure
         if ($null -eq $got) { throw $problem[0] }
         $status = [int]$got.StatusCode
         $to = LocationOf $got.Headers

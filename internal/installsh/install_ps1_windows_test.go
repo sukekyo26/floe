@@ -605,8 +605,9 @@ func testInstallPS1(t *testing.T, shell string) {
 			t.Parallel()
 			r := goodRelease(t)
 			if d.name == "no such drive" {
-				d.says = freeDrive(t)
-				d.dir = d.says + "foo"
+				drive := freeDrive(t)
+				d.dir = drive + "foo"
+				d.says = "'" + strings.TrimSuffix(drive, ":") + "'"
 			}
 			res, _ := install(t, r, psCase{env: map[string]string{"FLOE_INSTALL_DIR": d.dir}})
 			fails(t, res, t.TempDir(), d.says)
