@@ -14,7 +14,6 @@ import (
 
 	"floe/internal/kit"
 	"floe/internal/store"
-	"floe/internal/testfs"
 	"floe/internal/usererr"
 )
 
@@ -132,7 +131,6 @@ func TestLatestRebuild(t *testing.T) {
 		`:2:75: executing "page.html" at <.Data.nope.x>: map has no entry for key "nope"` + "\n" +
 		filepath.Join("<tmp>", "store", "m", "<source>", "data.yaml") +
 		`: page "m" keeps the page it had: fix the data file it was published from and publish it again, or fix the template`
-	testfs.Pending(t, "S315-P2: kit joins the template's path with /")
 	if got != want {
 		t.Errorf("rebuild told\n%s\nwant\n%s", got, want)
 	}
@@ -184,7 +182,6 @@ func TestLatestLink(t *testing.T) {
 	got := strings.ReplaceAll(told(t, w), filepath.Dir(dir), "<tmp>")
 	want := filepath.Join("<tmp>", "dir", "mine", "page.html") +
 		`:2:75: executing "page.html" at <.Data.nope.x>: map has no entry for key "nope"`
-	testfs.Pending(t, "S315-P2: kit joins the template's path with /")
 	if got != want {
 		t.Errorf("link told\n%s\nwant\n%s", got, want)
 	}

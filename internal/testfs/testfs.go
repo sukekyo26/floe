@@ -97,3 +97,47 @@ func CheckedOutLink(tb testing.TB, path string) {
 		tb.Skip(path + " was not checked out as a symlink (core.symlinks)")
 	}
 }
+
+// DenyList denies this user the listing and reading of dir (Windows' ACL, with icacls), and allows it again when tb
+// ends, before a t.TempDir made earlier is removed. It skips where the system lets this user list dir all the same
+// (an administrator, as on the CI's runner), and on Unix, where chmod does it (tests of that are UnixOnly).
+func DenyList(tb testing.TB, dir string) {
+	tb.Helper()
+	if !isWindows {
+		tb.Skip("denying a directory by its ACL is Windows'")
+	}
+	undo, err := aclDeny(dir)
+	if err != nil {
+		tb.Fatal(err)
+	}
+	tb.Cleanup(func() {
+		if err := undo(); err != nil {
+			tb.Logf("%s is left denied: %v", dir, err)
+		}
+	})
+	if _, err := os.ReadDir(dir); err == nil {
+		tb.Skip("the system lets this user list a directory denied to it (an administrator)")
+	}
+}
+
+// Subst makes a drive of dir with subst (Windows), a letter no volume has, and removes it when tb ends; it returns
+// the drive (Z:). It skips where no letter is free, and on Unix, which has no drives.
+func Subst(tb testing.TB, dir string) string {
+	tb.Helper()
+	if !isWindows {
+		tb.Skip("drives are Windows'")
+	}
+	drive, undo, err := makeDrive(dir)
+	if err != nil {
+		tb.Fatal(err)
+	}
+	if drive == "" {
+		tb.Skip("no drive letter is free")
+	}
+	tb.Cleanup(func() {
+		if err := undo(); err != nil {
+			tb.Logf("drive %s is left: %v", drive, err)
+		}
+	})
+	return drive
+}

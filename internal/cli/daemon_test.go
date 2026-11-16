@@ -20,6 +20,7 @@ import (
 
 	"floe/internal/cli"
 	"floe/internal/daemon"
+	"floe/internal/files"
 	"floe/internal/server"
 	"floe/internal/servetest"
 	"floe/internal/testfs"
@@ -160,7 +161,7 @@ func newDenv(t *testing.T) *denv {
 func newDenvOn(t *testing.T, port int) *denv {
 	t.Helper()
 
-	tmp, err := filepath.EvalSymlinks(t.TempDir())
+	tmp, err := files.Real(t.TempDir())
 	if err != nil {
 		t.Fatal(err)
 	}

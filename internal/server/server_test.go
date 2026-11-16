@@ -42,7 +42,7 @@ const pic = `{"$schema": "https://json-schema.org/draft/2020-12/schema", "type":
 func newEnv(t *testing.T) env {
 	t.Helper()
 
-	tmp, err := filepath.EvalSymlinks(t.TempDir())
+	tmp, err := files.Real(t.TempDir())
 	if err != nil {
 		t.Fatal(err)
 	}

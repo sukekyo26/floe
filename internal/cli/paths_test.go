@@ -5,6 +5,7 @@ import (
 	"path/filepath"
 	"testing"
 
+	"floe/internal/files"
 	"floe/internal/testfs"
 )
 
@@ -27,7 +28,7 @@ func TestRenderLinksToNoPage(t *testing.T) { //nolint:tparallel // the device ca
 	}
 	link(t, "somedir", filepath.Join(dir, "s.html"))
 	// The page's link as the system resolves it: /private/var for /var on macOS.
-	resolved, err := filepath.EvalSymlinks(dir)
+	resolved, err := files.Real(dir)
 	if err != nil {
 		t.Fatal(err)
 	}

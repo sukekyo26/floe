@@ -12,6 +12,7 @@ import (
 	"testing"
 	"testing/fstest"
 
+	floefiles "floe/internal/files"
 	"floe/internal/i18n"
 	"floe/internal/kit"
 	"floe/internal/store"
@@ -66,7 +67,7 @@ func cmpOr(a, b string) string {
 func newStore(t *testing.T) (*store.Store, string) {
 	t.Helper()
 
-	tmp, err := filepath.EvalSymlinks(t.TempDir())
+	tmp, err := floefiles.Real(t.TempDir())
 	if err != nil {
 		t.Fatal(err)
 	}

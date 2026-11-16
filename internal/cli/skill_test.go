@@ -7,6 +7,7 @@ import (
 	"testing"
 	"time"
 
+	"floe/internal/files"
 	"floe/internal/testfs"
 )
 
@@ -15,7 +16,7 @@ const skillBody = "---\nname: floe\n"
 
 func evalTemp(t *testing.T) string {
 	t.Helper()
-	tmp, err := filepath.EvalSymlinks(t.TempDir())
+	tmp, err := files.Real(t.TempDir())
 	if err != nil {
 		t.Fatal(err)
 	}

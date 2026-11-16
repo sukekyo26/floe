@@ -25,7 +25,7 @@ import (
 func watched(t *testing.T, link bool) (*Server, string) {
 	t.Helper()
 
-	tmp, err := filepath.EvalSymlinks(t.TempDir())
+	tmp, err := files.Real(t.TempDir())
 	if err != nil {
 		t.Fatal(err)
 	}

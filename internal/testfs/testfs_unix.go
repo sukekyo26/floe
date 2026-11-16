@@ -34,3 +34,9 @@ func atimeOf(path string) (time.Time, error) {
 	}
 	return time.Unix(st.Atim.Unix()), nil
 }
+
+func aclDeny(string) (func() error, error) { return nil, errNoACL }
+
+var errNoACL = errors.New("ACLs and drives are Windows'")
+
+func makeDrive(string) (string, func() error, error) { return "", nil, errNoACL }

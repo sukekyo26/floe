@@ -6,6 +6,8 @@ import (
 	"path/filepath"
 	"strings"
 	"testing"
+
+	"floe/internal/files"
 )
 
 // floe theme default prints the default theme chosen, default too, nothing for none, reading settings.json of the
@@ -13,7 +15,7 @@ import (
 func TestThemeDefaultCommand(t *testing.T) {
 	t.Parallel()
 
-	tmp, err := filepath.EvalSymlinks(t.TempDir())
+	tmp, err := files.Real(t.TempDir())
 	if err != nil {
 		t.Fatal(err)
 	}

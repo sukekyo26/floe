@@ -9,6 +9,8 @@ import (
 	"strconv"
 	"strings"
 	"testing"
+
+	"floe/internal/files"
 )
 
 // setMeta sets the key of the page slug's meta.json to value, as a hand edit does.
@@ -74,7 +76,7 @@ func TestInfo(t *testing.T) {
 	setMeta(t, env, "n", "project", "")
 	run(home, 0, "publish", "d.yaml", "--slug", "s")
 	setMeta(t, env, "s", "project", " p ")
-	actual, err := filepath.EvalSymlinks(home)
+	actual, err := files.Real(home)
 	if err != nil {
 		t.Fatal(err)
 	}
