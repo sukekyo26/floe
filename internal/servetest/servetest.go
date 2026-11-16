@@ -12,6 +12,7 @@ import (
 	"testing"
 
 	"floe/internal/daemon"
+	"floe/internal/dirs"
 	"floe/internal/files"
 	"floe/internal/kit"
 	"floe/internal/server"
@@ -33,11 +34,13 @@ type Site struct {
 func Start(t *testing.T, written map[string]string) *Site {
 	t.Helper()
 
-	// Real, as link.Check compares the real paths of home and the file linked.
-	tmp, err := files.Real(t.TempDir())
+	// Real, as link.Check compares the real paths of home and the file linked, in the form a user writes it (no
+	// \\?\ on Windows): the tests give it as a user would, as the working directory and in settings.
+	got, err := files.Real(t.TempDir())
 	if err != nil {
 		t.Fatal(err)
 	}
+	tmp := dirs.Shown(got)
 	dir := func(name string) string { return filepath.Join(tmp, name) }
 	// Each made: a publish asks the server for its directories and compares them, and a link needs its home.
 	for _, name := range []string{"home", "store", "templates", "parts", "themes", "icons"} {
