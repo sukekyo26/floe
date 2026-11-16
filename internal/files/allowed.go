@@ -28,9 +28,11 @@ func (p checked) join(name string) checked { return checked{s: filepath.Join(p.s
 const maxHops = 63
 
 // The kinds of drive GetDriveType tells that allowed refuses: a network drive (a share mapped, or substed), and
-// one the system cannot tell.
+// one the system cannot tell; and one not there, which allowed tells is not there without opening it (a network
+// drive remembered but not connected may answer so, and opening it would connect it again).
 const (
 	driveUnknown = 0
+	driveNoRoot  = 1
 	driveRemote  = 4
 )
 
@@ -113,6 +115,7 @@ type walker struct {
 	pending []step   // the names still to walk
 	outer   walked   // where the path's own link being followed began
 	hops    int
+	ended   bool // the walk stopped at a link's target not there
 	written string
 }
 
@@ -129,11 +132,14 @@ func walk(path string, last bool) (walked, error) {
 	if err != nil {
 		return walked{}, err
 	}
-	if err = localDrive(path, root); err != nil {
+	if missing, err := localDrive(path, root); missing || err != nil {
+		if missing {
+			err = &fs.PathError{Op: "open", Path: path, Err: fs.ErrNotExist}
+		}
 		return walked{}, err
 	}
 	w := &walker{
-		path: path, root: root, at: nil, pending: steps(names, false), hops: 0,
+		path: path, root: root, at: nil, pending: steps(names, false), hops: 0, ended: false,
 		outer:   walked{at: checked{s: ""}, rest: nil, dangling: false, written: ""},
 		written: filepath.Join(append([]string{root}, names...)...),
 	}
@@ -152,7 +158,7 @@ func walk(path string, last bool) (walked, error) {
 // result is what w found when it stopped at a name not there: the names after it as written, or, of a name of a
 // link's target, the place before the path's own link being followed (dangling).
 func (w *walker) result() walked {
-	if w.pending[0].link {
+	if w.ended {
 		o := w.outer
 		o.dangling, o.written = true, w.written
 		return o
@@ -167,6 +173,7 @@ func (w *walker) next() (done bool, err error) {
 	fi, err := os.Lstat(at)
 	switch {
 	case errors.Is(err, fs.ErrNotExist):
+		w.ended = n.link
 		return true, nil
 	case err != nil:
 		return false, errAt(w.path, "lstat", err)
@@ -183,13 +190,14 @@ func (w *walker) next() (done bool, err error) {
 	case err != nil:
 		return false, errAt(w.path, "readlink", err)
 	}
-	return false, w.follow(n, to)
+	return w.follow(n, to)
 }
 
-// follow puts the link n's target to in its place: its names, marked, before the names after n.
-func (w *walker) follow(n step, to string) error {
+// follow puts the link n's target to in its place: its names, marked, before the names after n. done when the
+// target's drive is not there.
+func (w *walker) follow(n step, to string) (done bool, err error) {
 	if w.hops++; w.hops > maxHops {
-		return &fs.PathError{Op: "open", Path: w.path, Err: syscall.ELOOP}
+		return false, &fs.PathError{Op: "open", Path: w.path, Err: syscall.ELOOP}
 	}
 	if !n.link {
 		w.outer = walked{at: checked{s: w.here()}, rest: namesOf(w.pending), dangling: false, written: ""}
@@ -197,19 +205,21 @@ func (w *walker) follow(n step, to string) error {
 	root, names, err := linkTarget(to)
 	switch {
 	case err != nil:
-		return &fs.PathError{Op: "open", Path: w.path, Err: err}
+		return false, &fs.PathError{Op: "open", Path: w.path, Err: err}
 	case root != "":
-		if err = localDrive(w.path, root); err != nil {
-			return err
+		missing, refused := localDrive(w.path, root)
+		if refused != nil {
+			return false, refused
 		}
+		w.ended = missing
 		w.root, w.at = root, nil
 	default:
 		if names, w.at, err = fold(names, w.at, to); err != nil {
-			return &fs.PathError{Op: "open", Path: w.path, Err: err}
+			return false, &fs.PathError{Op: "open", Path: w.path, Err: err}
 		}
 	}
 	w.pending = append(steps(names, true), w.pending[1:]...)
-	return nil
+	return w.ended, nil
 }
 
 // shape is path made the form the system takes as written: its drive's root (\\?\X:\) and its names, each an
@@ -342,17 +352,18 @@ func ordinary(names []string) error {
 	return nil
 }
 
-// localDrive refuses the drive of root (\\?\X:\) when it is a network drive or one the system cannot tell.
-func localDrive(path, root string) error {
+// localDrive refuses the drive of root (\\?\X:\) when it is a network drive or one the system cannot tell;
+// missing when it is not there.
+func localDrive(path, root string) (missing bool, err error) {
 	drive := root[len(`\\?\`) : len(`\\?\`)+2]
-	if refusedDrive(driveType(drive + `\`)) {
-		return notLocal(path, drive)
+	kind := driveType(drive + `\`)
+	if refusedDrive(kind) {
+		return false, notLocal(path, drive)
 	}
-	return nil
+	return kind == driveNoRoot, nil
 }
 
-// refusedDrive reports whether a drive of the kind GetDriveType tells is refused. One not there (1) is passed: the
-// system tells it is not there when it is opened.
+// refusedDrive reports whether a drive of the kind GetDriveType tells is refused.
 func refusedDrive(kind uint32) bool { return kind == driveUnknown || kind == driveRemote }
 
 // notLocal is ErrNotLocal at where, of path.

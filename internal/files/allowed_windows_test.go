@@ -310,12 +310,18 @@ func TestAllowedDangling(t *testing.T) {
 	t.Parallel()
 
 	making := map[string]bool{"OpenAppend": true, "OpenLock": true, "MkdirAll": true, "Mkdir": true}
+	free := testfs.FreeDrive(t)
 	for _, e := range entries() {
 		dir := t.TempDir()
 		nowhere := filepath.Join(t.TempDir(), "gone")
 		testfs.Symlink(t, filepath.Join(nowhere, "x"), filepath.Join(dir, "log"))
 		testfs.Symlink(t, nowhere, filepath.Join(dir, "d"))
-		for _, p := range []string{filepath.Join(dir, "log"), filepath.Join(dir, "d", "x")} {
+		testfs.Symlink(t, free+`\`, filepath.Join(dir, "q"))
+		// A drive not there is not there, told without opening it (R3), as a path and as a link's target.
+		if err := e.run(t, free+`\x`); err != nil && !errors.Is(err, fs.ErrNotExist) {
+			t.Errorf("%s of %s = %v, want it not there", e.name, free+`\x`, err)
+		}
+		for _, p := range []string{filepath.Join(dir, "log"), filepath.Join(dir, "d", "x"), filepath.Join(dir, "q", "x")} {
 			err := e.run(t, p)
 			if err != nil && strings.Contains(err.Error(), "a link to nothing") {
 				t.Errorf("%s of %s told files' own error: %v", e.name, p, err)

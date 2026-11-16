@@ -206,12 +206,18 @@ func PipeServer(tb testing.TB) (name string, connected func() int) {
 	if !isWindows {
 		tb.Skip("named pipes are Windows'")
 	}
-	name, connected, stop, err := servePipe()
+	name, count, stop, err := servePipe()
 	if err != nil {
 		tb.Fatal(err)
 	}
 	tb.Cleanup(stop)
-	return name, connected
+	return name, func() int {
+		n, err := count()
+		if err != nil {
+			tb.Fatal(err)
+		}
+		return n
+	}
 }
 
 // VolumeGUID is dir (C:\…) through its volume's GUID name (\\?\Volume{…}\…), which has no drive letter (Windows). It
@@ -226,6 +232,26 @@ func VolumeGUID(tb testing.TB, dir string) string {
 		tb.Fatal(err)
 	}
 	return vol + dir[len(`C:\`):]
+}
+
+// FreeDrive is a drive letter no volume has (Q:), not taken for the test: one another test or process makes
+// meanwhile is not looked at. It skips on Unix and where no letter is free (on the CI, CI set, it fails).
+func FreeDrive(tb testing.TB) string {
+	tb.Helper()
+	if !isWindows {
+		tb.Skip("drives are Windows'")
+	}
+	letters, err := freeDrives()
+	if err != nil {
+		tb.Fatal(err)
+	}
+	if len(letters) == 0 {
+		if os.Getenv("CI") != "" {
+			tb.Fatal("no drive letter is free on the CI")
+		}
+		tb.Skip("no drive letter is free")
+	}
+	return letters[len(letters)-1]
 }
 
 // driveMu keeps this process's tests from taking one letter at once.
