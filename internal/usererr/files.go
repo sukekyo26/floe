@@ -21,10 +21,8 @@ type NotLocal struct {
 	At string
 }
 
-func (e *NotLocal) Error() string {
-	return ErrNotLocal.Error() + ": it is or leads to " + e.At + ", a network share, a network drive, a volume " +
-		"without a drive letter, a device, a pipe, a stream's name or a link floe does not follow"
-}
+// Error is short: path_not_local tells what it may be and what to do.
+func (e *NotLocal) Error() string { return ErrNotLocal.Error() + ": " + e.At }
 
 // Is tells it is ErrNotLocal.
 func (*NotLocal) Is(target error) bool { return target == ErrNotLocal }
