@@ -914,7 +914,8 @@ func TestPrepareLinkFolder(t *testing.T) {
 			t.Errorf("link %q: slug %s, want docs", again, e.Slug)
 		}
 		m := s.ReadMeta("docs")
-		if !m.Folder || m.Path != filepath.Join(proj, "docs") {
+		// meta.json keeps the real path as it is (\\?\ on Windows): compared with Real's, not as a user writes it.
+		if want, err := floefiles.Real(filepath.Join(proj, "docs")); err != nil || !m.Folder || m.Path != want {
 			t.Fatalf("meta.json after linking %q = %+v, want the folder", again, m)
 		}
 		if file, ok := s.File("docs", m, "../sibling.html"); ok {
