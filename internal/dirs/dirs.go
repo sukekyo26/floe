@@ -88,9 +88,10 @@ func shownWith(path, prefix string) string {
 	return path
 }
 
-// OnDrive reports whether path, a path as files.Real gives it, is on a drive of this machine: on Windows \\?\C:\…,
-// not a share (\\?\UNC\…, a network drive's real path too) nor a volume without a letter; on Unix, which has no
-// volumes, always. Any other form (C:\… without \\?\, a relative path) is not files.Real's and gives false on Windows.
+// OnDrive reports whether path, a path as files.Real gives it, is on a drive of this machine: on Windows \\?\C:\…
+// (these four letters, not //?/), not a share (\\?\UNC\…, a network drive's real path too) nor a volume without a
+// letter (\\?\1:\ neither); on Unix, which has no volumes, always. Any other form (C:\… without \\?\, a relative
+// path) is not files.Real's and gives false on Windows.
 func OnDrive(path string) bool { return onDriveWith(path, verbatim) }
 
 // onDriveWith is OnDrive with the prefix of verbatim paths given, so that its cases are tried on every system.
@@ -99,8 +100,11 @@ func onDriveWith(path, prefix string) bool {
 	return prefix == "" || ok && driveRooted(rest)
 }
 
-// driveRooted reports whether rest starts as the root of a drive does: C:\.
-func driveRooted(rest string) bool { return len(rest) >= 3 && rest[1] == ':' && rest[2] == '\\' }
+// driveRooted reports whether rest starts as the root of a drive does: a letter, then :\ (C:\, d:\).
+func driveRooted(rest string) bool {
+	return len(rest) >= 3 && ('A' <= rest[0] && rest[0] <= 'Z' || 'a' <= rest[0] && rest[0] <= 'z') &&
+		rest[1] == ':' && rest[2] == '\\'
+}
 
 // Holds reports whether path is below dir, both cleaned: in it, or deeper. A root (/, \\?\C:\) holds all of its
 // volume's paths but itself, though it ends in a separator already.
