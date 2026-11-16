@@ -6,6 +6,8 @@ floe の主要な変更を記録します。フォーマットは
 
 ## [Unreleased]
 
+## [0.1.1] - 2026-11-16
+
 ### 変更
 
 - **BREAKING**: 変更：`floe task --categories` を、`--url` と同じくカテゴリ 1 つごとに繰り返す旗にした（`--categories designs --categories samples`）。名にカンマを使える。`--categories ""` で全部外すのは今のまま。`floe task` はカテゴリを URL と同じく 1 つずつ引用して出す：`categories "a,b"` でなく `categories "a" "b"`、書き込みで最後の 1 つを外した後は `categories ""` でなく `no categories`。ページのあるカテゴリの断りは名を引用符で囲む（`category "designs" of task …`）。その行と `floe info` の値（題・タスク・カテゴリ・タグなど）は、全角空白を `\u3000` でなくそのまま出す。
@@ -37,5 +39,6 @@ floe の主要な変更を記録します。フォーマットは
 - 追加：ページの CSP とサンドボックス。ページの script を floe のものだけにする。
 - 追加：`floe licenses`。floe と、floe に入っているもののライセンスを出す。
 
-[Unreleased]: https://github.com/sukekyo26/floe/compare/v0.1.0...HEAD
+[Unreleased]: https://github.com/sukekyo26/floe/compare/v0.1.1...HEAD
+[0.1.1]: https://github.com/sukekyo26/floe/compare/v0.1.0...v0.1.1
 [0.1.0]: https://github.com/sukekyo26/floe/releases/tag/v0.1.0

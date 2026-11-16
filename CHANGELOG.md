@@ -6,6 +6,8 @@ adheres to [Semantic Versioning](https://semver.org/).
 
 ## [Unreleased]
 
+## [0.1.1] - 2026-11-16
+
 ### Changed
 
 - **BREAKING**: Change `floe task --categories` to a flag given again for each category, as `--url` is (`--categories designs --categories samples`), so a name may hold a comma; `--categories ""` still takes them all off. `floe task` now prints the categories each quoted, as the URLs: `categories "a" "b"`, not `categories "a,b"`, and `no categories`, not `categories ""`, after a write took the last off. A refusal of a category with pages quotes its name (`category "designs" of task …`). Its lines, and `floe info`'s values (title, task, category, tags and the rest), print a full-width space as it is, not as `\u3000`.
@@ -37,5 +39,6 @@ adheres to [Semantic Versioning](https://semver.org/).
 - Add a page's CSP and sandbox, which keep its scripts to floe's own.
 - Add `floe licenses`, which prints the licenses of floe and of what is built into it.
 
-[Unreleased]: https://github.com/sukekyo26/floe/compare/v0.1.0...HEAD
+[Unreleased]: https://github.com/sukekyo26/floe/compare/v0.1.1...HEAD
+[0.1.1]: https://github.com/sukekyo26/floe/compare/v0.1.0...v0.1.1
 [0.1.0]: https://github.com/sukekyo26/floe/releases/tag/v0.1.0
