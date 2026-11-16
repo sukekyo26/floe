@@ -51,7 +51,7 @@ func TestNotDir(t *testing.T) {
 		if (got != nil) != c.notDir || got != nil && (!errors.Is(got, files.ErrNotDir) || errors.Is(got, fs.ErrNotExist)) {
 			t.Errorf("%s: NotDir(%s, %v) = %v", c.name, c.from, c.err, got)
 		}
-		if got != nil && got.Error() != c.err.(*fs.PathError).Op+" "+c.err.(*fs.PathError).Path+": not a directory" {
+		if pe, ok := errors.AsType[*fs.PathError](c.err); got != nil && (!ok || got.Error() != pe.Op+" "+pe.Path+": not a directory") {
 			t.Errorf("%s: told %q", c.name, got)
 		}
 	}
@@ -60,14 +60,14 @@ func TestNotDir(t *testing.T) {
 		t.Parallel()
 		dir := t.TempDir()
 		file := filepath.Join(dir, "sub", "x.yaml")
-		_, _, err := files.Read(file)
+		_, _, readErr := files.Read(file)
 		if err := os.Mkdir(filepath.Join(dir, "sub"), 0o700); err != nil {
 			t.Fatal(err)
 		}
 		if err := os.WriteFile(file, nil, 0o600); err != nil {
 			t.Fatal(err)
 		}
-		if got := files.NotDir(filepath.Dir(file), err); got != nil {
+		if got := files.NotDir(filepath.Dir(file), readErr); got != nil {
 			t.Errorf("NotDir of %s read before it was made = %v", file, got)
 		}
 	})
@@ -91,7 +91,7 @@ func TestNotDir(t *testing.T) {
 		if err := os.Chmod(locked, 0); err != nil {
 			t.Fatal(err)
 		}
-		t.Cleanup(func() { _ = os.Chmod(locked, 0o700) })
+		t.Cleanup(func() { _ = os.Chmod(locked, 0o700) }) //nolint:errcheck // for TempDir to remove it
 		if os.Geteuid() == 0 {
 			t.Skip("root looks in any directory")
 		}

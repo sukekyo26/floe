@@ -680,8 +680,9 @@ func TestBuiltin(t *testing.T) {
 	if _, err := icons.Without(noDir).Lookup("aws/aws-lambda"); !errors.Is(err, noDir) {
 		t.Errorf("Without(err): Lookup aws/aws-lambda = %v, want %v", err, noDir)
 	}
-	if _, err := icons.Without(nil).Lookup("aws/aws-lambda"); told(err) != "floe: "+i18n.EnglishCatalog().Msg("icons_no_dir") {
-		t.Errorf("Without(nil): Lookup aws/aws-lambda = %v, want icons_no_dir", err)
+	// What draws gives the icons it has: nil is a test's, whose set to fetch is floe's failure.
+	if _, err := icons.Without(nil).Lookup("aws/aws-lambda"); err == nil || errors.As(err, new(*usererr.Error)) {
+		t.Errorf("Without(nil): Lookup aws/aws-lambda = %v, want floe's failure", err)
 	}
 	for name, want := range map[string]bool{"lucide/users": true, "lucide/nope": true, "aws/aws-lambda": false, "users": false, "nope/x": false} {
 		if icons.Mono(name) != want {

@@ -7,21 +7,23 @@ import (
 	"os"
 	"path/filepath"
 	"strings"
-	"syscall"
 
 	"floe/internal/dirs"
 	"floe/internal/files"
 	"floe/internal/kit"
+	"floe/internal/link"
 	"floe/internal/usererr"
 )
 
 // dataPlace is a directory of floe's (dataDir): dir, "" for none; key, the setting that may name it, which a
-// mistake of no setting names too; whether it does; and why the default cannot be (under a file, HOME=/dev/null),
-// which a reader takes as none and a writer tells, nil else.
+// mistake of no setting names too; whether it does; from, the variable of the system that decides the default (HOME,
+// LOCALAPPDATA), which a mistake of none names; and why the default cannot be (under a file, HOME=/dev/null), which
+// a reader takes as none and a writer tells, nil else.
 type dataPlace struct {
 	dir      string
 	key      string
 	set      bool
+	from     string
 	unusable error
 }
 
@@ -41,34 +43,53 @@ func (p dataPlace) setting() string {
 	return ""
 }
 
-// dataDir is a directory of floe's: the setting key, else sub under the XDG base directory xdg, else under
-// home under HOME; "" when none is an absolute path. Each is an absolute path, so that floe reads one place
-// wherever it runs: a setting written relative (~/x in quotes too, which no shell read) is refused, and a
-// relative XDG base directory is none, as its spec says.
-func (a *app) dataDir(key, xdg, home, sub string) (dataPlace, error) {
+// base is where the defaults of a kind of floe's directories go: under the directory the variable key names, else,
+// with underHome, under that in the home (link.HomeKey); the values are the system's (places_unix.go,
+// places_windows.go).
+type base struct {
+	key, underHome string
+}
+
+// dataDir is a directory of floe's: the setting key, else sub under the base b (dataPlace); "" when none is an
+// absolute path. Each is an absolute path, so that floe reads one place wherever it runs: a setting written
+// relative (~/x in quotes too, which no shell read) is refused, and a relative base is none, as the XDG spec says.
+// LIMIT: on Windows the bits 0o600 and 0o700 floe writes with hide nothing; a directory is as private as the ACL it
+// inherits. The default places (%LOCALAPPDATA%, and %USERPROFILE% for skills) let only the user, SYSTEM and the
+// Administrators in, but a FLOE_* directory elsewhere (C:\x) lets other users read and change the pages (Q7: floe
+// writes no ACL). Write one when that is asked for.
+func (a *app) dataDir(key string, b base, sub string) (dataPlace, error) {
 	if setting := a.getenv(key); setting != "" {
 		if !filepath.IsAbs(setting) {
-			return dataPlace{dir: "", key: key, set: true, unusable: nil}, usererr.NewWhole("dir_relative", key, setting)
+			p := dataPlace{dir: "", key: key, set: true, from: "", unusable: nil}
+			return p, usererr.NewWhole("dir_relative", key, setting)
 		}
-		return dataPlace{dir: setting, key: key, set: true, unusable: nil}, nil
+		return dataPlace{dir: setting, key: key, set: true, from: "", unusable: nil}, nil
 	}
-	p := dataPlace{dir: "", key: key, set: false, unusable: nil}
-	switch base, h := a.getenv(xdg), a.getenv("HOME"); {
-	case filepath.IsAbs(base):
+	p := dataPlace{dir: "", key: key, set: false, from: b.key, unusable: nil}
+	if b.underHome != "" {
+		p.from = link.HomeKey
+	}
+	switch base, h := a.getenv(b.key), a.getenv(link.HomeKey); {
+	case b.key != "" && filepath.IsAbs(base):
 		p.dir = filepath.Join(base, sub)
-	case filepath.IsAbs(h):
-		p.dir = filepath.Join(h, home, sub)
+	case b.underHome != "" && filepath.IsAbs(h):
+		p.dir = filepath.Join(h, b.underHome, sub)
 	}
-	if _, err := files.Stat(p.dir); p.dir != "" && errors.Is(err, syscall.ENOTDIR) {
-		p.unusable = usererr.CannotWrite(p.dir, err)
+	if p.dir == "" {
+		return p, nil
+	}
+	if _, err := files.Stat(p.dir); err != nil {
+		if notDir := files.NotDir(p.dir, err); notDir != nil {
+			p.unusable = usererr.CannotWrite(p.dir, notDir)
+		}
 	}
 	return p, nil
 }
 
 // ownPlace is the directory of one's own of the kind (parts, themes, templates) as set: FLOE_<KIND>_DIR, else
-// floe/<kind> under the XDG config directory.
+// floe/<kind> under the base of the configuration (configBase).
 func (a *app) ownPlace(kind string) (dataPlace, error) {
-	return a.dataDir("FLOE_"+strings.ToUpper(kind)+"_DIR", "XDG_CONFIG_HOME", ".config", filepath.Join("floe", kind))
+	return a.dataDir("FLOE_"+strings.ToUpper(kind)+"_DIR", configBase, filepath.Join("floe", kind))
 }
 
 // ownKind is a kind of one's own: its name (ownPlace), its directory in the sources of a kit, its kind to the kit,
@@ -157,7 +178,8 @@ func (a *app) kit(templates bool) (*kit.Kit, error) {
 }
 
 // compared reports whether a reader compares p with the other places: a directory there, or a setting not
-// there. A default not there is none to a reader, and one there but no directory, ownDir tells.
+// there. A default not there is none to a reader, and one there but no directory, ownDir tells on Unix; Windows reads
+// one that is a file as none too (files.NotDir's LIMIT).
 func compared(p dataPlace) bool {
 	if p.dir == "" {
 		return false
@@ -230,7 +252,7 @@ func (a *app) newOwn(of ownKind, name string) error {
 	case p.unusable != nil:
 		return p.unusable
 	case p.dir == "":
-		return usererr.New("cli_new_no_dir", p.key)
+		return usererr.New("cli_new_no_dir", p.from, p.key)
 	}
 	dir := p.dir
 	k, err := a.kit(of.kind == kit.KindTemplate)

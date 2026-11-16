@@ -18,6 +18,7 @@ import (
 
 	"floe/internal/daemon"
 	"floe/internal/files"
+	"floe/internal/link"
 	"floe/internal/server"
 	"floe/internal/store"
 	"floe/internal/usererr"
@@ -30,22 +31,21 @@ var decimalRe = regexp.MustCompile(`^[0-9]+$`)
 
 // settingKeys are the environment variables the server's settings come from: a server a command starts takes
 // those the command read, so that it means the same directories.
-var settingKeys = []string{
-	"HOME", "XDG_DATA_HOME", "XDG_CONFIG_HOME", "FLOE_DIR", "FLOE_PORT", "FLOE_PARTS_DIR", "FLOE_THEMES_DIR",
+var settingKeys = slices.Compact([]string{
+	link.HomeKey, dataBase.key, configBase.key, "FLOE_DIR", "FLOE_PORT", "FLOE_PARTS_DIR", "FLOE_THEMES_DIR",
 	"FLOE_TEMPLATES_DIR", "FLOE_ICONS_DIR",
-}
+})
 
-// storeDir is the directory of the pages: FLOE_DIR, else floe under the XDG data directory, else under
-// ~/.local/share (dataDir).
+// storeDir is the directory of the pages: FLOE_DIR, else storeSub under the base of the data (dataDir).
 func (a *app) storeDir() (dataPlace, error) {
-	p, err := a.dataDir("FLOE_DIR", "XDG_DATA_HOME", ".local/share", "floe")
+	p, err := a.dataDir("FLOE_DIR", dataBase, storeSub)
 	switch {
 	case err != nil:
 		return p, err
 	case p.unusable != nil:
 		return p, p.unusable // the server writes there
 	case p.dir == "":
-		return p, usererr.New("store_no_dir")
+		return p, usererr.New("store_no_dir", p.from)
 	}
 	return p, nil
 }
@@ -98,7 +98,7 @@ func (a *app) serverConfig() (server.Config, dataPlace, error) {
 	if err := found.Err(); err != nil {
 		return cfg, root, err //nolint:wrapcheck // mistakes for the user as they are
 	}
-	cfg.Store, cfg.Port, cfg.Icons, cfg.Home = store.New(root.dir), port, icons.toRead(), a.getenv("HOME")
+	cfg.Store, cfg.Port, cfg.Icons, cfg.Home = store.New(root.dir), port, icons.toRead(), a.getenv(link.HomeKey)
 	cfg.Drawing = a.drawing
 	return cfg, root, nil
 }

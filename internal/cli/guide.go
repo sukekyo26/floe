@@ -9,7 +9,6 @@ import (
 	"path/filepath"
 	"slices"
 	"strings"
-	"syscall"
 
 	"github.com/spf13/cobra"
 
@@ -17,6 +16,7 @@ import (
 	"floe/internal/dirs"
 	"floe/internal/files"
 	"floe/internal/kit"
+	"floe/internal/link"
 	"floe/internal/store"
 	"floe/internal/usererr"
 )
@@ -225,14 +225,14 @@ func (a *app) installSkill(ag agent, force bool) error {
 // skillDir is the place of ag (p) and the directory of skills in it, which neither is made yet. Only the
 // directory a setting names is told for the setting; what is under it is told at its own path.
 func (a *app) skillDir(ag agent) (dataPlace, string, error) {
-	p, err := a.dataDir(ag.key, "", ag.home, "")
+	p, err := a.dataDir(ag.key, base{key: "", underHome: ag.home}, "")
 	switch {
 	case err != nil:
 		return p, "", err
 	case p.unusable != nil:
 		return p, "", p.unusable
 	case p.dir == "":
-		return p, "", usererr.New("cli_new_no_dir", "HOME")
+		return p, "", usererr.New("cli_new_no_dir", p.from, link.HomeKey)
 	}
 	dir := filepath.Join(p.dir, "skills")
 	if err = statDir(p.dir); err != nil {
@@ -269,7 +269,7 @@ func statDir(path string) error {
 	info, err := files.Stat(path)
 	switch {
 	case err == nil && !info.IsDir():
-		return &fs.PathError{Op: "mkdir", Path: path, Err: syscall.ENOTDIR}
+		return &fs.PathError{Op: "mkdir", Path: path, Err: files.ErrNotDir}
 	case err != nil && !errors.Is(err, fs.ErrNotExist):
 		return err //nolint:wrapcheck // the system's, told by the caller
 	}

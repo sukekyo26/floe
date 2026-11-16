@@ -130,6 +130,8 @@ linters:
           msg: "go through files (Stat, Lstat, ReadDir, Read, Open, OpenRoot, MkdirAll, OpenLock): the one place that looks at a path before the system is called"
         - pattern: ^filepath\.(Walk|WalkDir|Glob)$
           msg: "go through files (ReadDir, or fs.WalkDir of files.DirFS): the one place that looks at a path before the system is called"
+        - pattern: ^syscall\.ENOTDIR$
+          msg: "ask files.NotDir, and make the error with files.ErrNotDir: a file on a path's way is files' to tell (Windows says not there for it)"
       analyze-types: true
       exclude-godoc-examples: true
     depguard:
@@ -249,6 +251,11 @@ linters:
         linters:
           - forbidigo
         text: the one place that looks at a path
+      # files.NotDir is the one place that reads ENOTDIR, which Windows gives for a directory not there too.
+      - path: internal/files/
+        linters:
+          - forbidigo
+        text: "a file on a path's way is files' to tell"
       # Tests get a relaxed profile but still benefit from bug catchers.
       - path: _test\.go
         linters:
