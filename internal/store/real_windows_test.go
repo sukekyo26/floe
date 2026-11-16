@@ -98,7 +98,7 @@ func TestPrepareLinkShare(t *testing.T) {
 	}
 	dw := picKit(t, "", "")
 	shared, mapped := testfs.MapShare(t, tmp)
-	for _, p := range []string{shared, mapped, testfs.SubstShare(t, tmp)} {
+	for _, p := range []string{shared, mapped, testfs.SubstShare(t, tmp) + `\`} {
 		file := filepath.Join(p, "a.html")
 		if _, err := s.PrepareLink(t.Context(), dw, file, store.Options{}, home, home); keyOf(err) != "path_not_local" {
 			t.Errorf("link %s = %v, want path_not_local", file, err)

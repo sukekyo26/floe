@@ -261,7 +261,8 @@ func TestAllowedLinks(t *testing.T) {
 	if err := os.WriteFile(`\\?\`+filepath.Join(dir, "evil."), []byte("evil."), 0o600); err != nil {
 		t.Fatal(err)
 	}
-	testfs.Symlink(t, filepath.Join(dir, "evil."), filepath.Join(dir, "e.html"))
+	// Through \\?\: os.Symlink makes a target as Win32 reads it, its trailing dot dropped, otherwise.
+	testfs.Symlink(t, `\\?\`+filepath.Join(dir, "evil."), filepath.Join(dir, "e.html"))
 	for p, want := range map[string]string{
 		"abs.html": "a", "rel.html": "a", "up.html": "a", `jin\b.html`: "b", `jout\c.html`: "c", "chain.html": "a",
 		"e.html": "evil.",
