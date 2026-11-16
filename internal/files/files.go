@@ -12,6 +12,7 @@ import (
 	"path/filepath"
 	"regexp"
 	"strings"
+	"syscall"
 
 	"floe/internal/usererr"
 )
@@ -54,14 +55,26 @@ func (paths) OpenFile(name string, flag int, perm fs.FileMode) (*os.File, error)
 	return os.OpenFile(name, flag, perm) //nolint:wrapcheck,gosec // the system's; G304: the caller's path
 }
 
-// Open opens the file path, a link followed, when it is a regular file or a directory, and returns what the system
+// Open opens the file path, a link followed, to read it when it is a regular file, and returns what the system
 // says of it; else an *fs.PathError of usererr.ErrNotFile, the file unopened: a FIFO would block the open, and a
 // device may do more on it. What it opens without blocking (O_NONBLOCK, which a regular file's reads do not
 // take) is looked at again, so that one made such since is refused unread; another regular file put in its place
-// (a save by rename) is read. The system's errors are
+// (a save by rename) is read. A directory is refused once opened, with EISDIR. The system's errors are
 // *fs.PathError (fs.ErrNotExist for none); one of opening it comes with what the system said of it before.
 func Open(path string) (*os.File, fs.FileInfo, error) {
-	return openWith(paths{}, path, os.O_RDONLY, 0)
+	return openToRead(paths{}, path)
+}
+
+// openToRead opens the file name of o to read it, as Open opens a path: a directory, which Windows opens and then
+// reads as "Incorrect function.", is refused with what Unix says reading it (EISDIR). The directories fs.ReadDir
+// and fs.WalkDir open go through openRead instead.
+func openToRead(o Opener, name string) (*os.File, fs.FileInfo, error) {
+	f, info, err := openWith(o, name, os.O_RDONLY, 0)
+	if err == nil && info.IsDir() {
+		_ = f.Close() //nolint:errcheck // not read
+		return nil, info, &fs.PathError{Op: "read", Path: f.Name(), Err: syscall.EISDIR}
+	}
+	return f, info, err
 }
 
 // OpenAppend opens the file path to append to, a link to a file followed (one to nowhere is not, so that the file is
@@ -111,7 +124,7 @@ func Read(path string) ([]byte, fs.FileInfo, error) {
 // ReadIn reads the file name of o as Read reads a path: under an *os.Root, the system refuses one that leads out
 // of it, by .. or by a link.
 func ReadIn(o Opener, name string) ([]byte, fs.FileInfo, error) {
-	f, info, err := openWith(o, name, os.O_RDONLY, 0)
+	f, info, err := openToRead(o, name)
 	if err != nil {
 		return nil, info, err
 	}

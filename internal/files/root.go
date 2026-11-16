@@ -51,6 +51,14 @@ func (r *Root) Open(name string) (fs.File, error) {
 	return openRead(r.root, name)
 }
 
+// ReadFile reads the file name under the directory, as ReadIn reads one.
+func (r *Root) ReadFile(name string) ([]byte, error) {
+	if err := r.ready(); err != nil {
+		return nil, err
+	}
+	return readFileIn(r.root, name)
+}
+
 // Stat tells of name under the directory without opening it: of a FIFO too, which Open refuses.
 func (r *Root) Stat(name string) (fs.FileInfo, error) {
 	if err := r.ready(); err != nil {
@@ -77,12 +85,17 @@ func DirFS(dir string) fs.FS {
 	return dirFS(dir)
 }
 
-// dirFS is a DirFS. It has no ReadFile nor ReadDir, so that fs.ReadFile, fs.ReadDir and fs.WalkDir open through
-// Open.
+// dirFS is a DirFS. It has no ReadDir, so that fs.ReadDir and fs.WalkDir open through Open; ReadFile reads as
+// ReadIn does, so that a directory read as a file is refused.
 type dirFS string
 
 func (d dirFS) Open(name string) (fs.File, error) {
 	return openRead(d, name)
+}
+
+// ReadFile reads the file name, as ReadIn reads one.
+func (d dirFS) ReadFile(name string) ([]byte, error) {
+	return readFileIn(d, name)
 }
 
 func (d dirFS) Stat(name string) (fs.FileInfo, error) {
@@ -128,6 +141,15 @@ func openRead(o Opener, name string) (fs.File, error) {
 		return nil, err
 	}
 	return f, nil
+}
+
+// readFileIn reads name of o, a slash-separated path under it that fs.ValidPath takes, as ReadIn reads a file.
+func readFileIn(o Opener, name string) ([]byte, error) {
+	if err := checkName("open", name); err != nil {
+		return nil, err
+	}
+	b, _, err := ReadIn(o, name)
+	return b, err
 }
 
 // checkName refuses name, of the operation op, unless fs.ValidPath takes it, as an fs.FS does.
