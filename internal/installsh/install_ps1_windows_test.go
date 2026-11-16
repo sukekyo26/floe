@@ -416,7 +416,7 @@ func leftovers(t *testing.T, dir string) []string {
 	}
 	var got []string
 	for _, e := range entries {
-		if strings.HasPrefix(e.Name(), "floe.exe.") {
+		if strings.HasPrefix(e.Name(), "floe.exe.new-") || strings.HasPrefix(e.Name(), "floe.exe.old-") {
 			got = append(got, e.Name())
 		}
 	}
@@ -557,8 +557,42 @@ func testInstallPS1(t *testing.T, shell string) {
 		t.Parallel()
 		r := goodRelease(t)
 		base := t.TempDir()
+		dir := filepath.Join(base, "profile", ".local", "bin")
+		// The folder is shared with other programs: what is in it stays, names like floe's too.
+		others := map[string]string{"claude.exe": "c", "floe.exe.config": "f", "floe.exe.old": "o"}
+		if err := os.MkdirAll(dir, 0o700); err != nil {
+			t.Fatal(err)
+		}
+		for name, body := range others {
+			write(t, filepath.Join(dir, name), body)
+		}
 		res := runPS(t, shell, base, psCase{Proxy: site(t, r), env: map[string]string{"FLOE_INSTALL_DIR": ""}})
-		works(t, r, res, filepath.Join(base, "profile", ".local", "bin"), host)
+		works(t, r, res, dir, host)
+		for name, body := range others {
+			if b, err := os.ReadFile(filepath.Join(dir, name)); err != nil || string(b) != body {
+				t.Errorf("%s is %q (%v), want %q as it was", name, b, err, body)
+			}
+		}
+		// Not on PATH: the line shown names no folder, as the default is where it goes.
+		shown := after(strings.ReplaceAll(res.out, "\r\n", "\n"), "To add it, run:\n")
+		if !strings.Contains(shown, "$env:FLOE_ADD_TO_PATH = '1'; irm ") || strings.Contains(shown, "FLOE_INSTALL_DIR") {
+			t.Errorf("the line shown is %q, want FLOE_ADD_TO_PATH and irm, no FLOE_INSTALL_DIR:\n%s", shown, res)
+		}
+	})
+	t.Run("the default folder off a local drive", func(t *testing.T) {
+		t.Parallel()
+		r := goodRelease(t)
+		base := t.TempDir()
+		profile := `\\localhost\c$\floe-install-test-profile`
+		res := runPS(t, shell, base, psCase{Proxy: site(t, r), env: map[string]string{"FLOE_INSTALL_DIR": "", "USERPROFILE": profile}})
+		fails(t, res, filepath.Join(base, "profile", ".local", "bin"), "(got "+profile+`\.local\bin)`, "FLOE_INSTALL_DIR")
+		if r.hits.Load() != 0 {
+			t.Errorf("%d requests", r.hits.Load())
+		}
+		if at := `C:\floe-install-test-profile`; installed(t, filepath.Join(at, ".local", "bin")) != nil {
+			t.Errorf("floe.exe was put under %s", at)
+			_ = os.RemoveAll(at) //nolint:errcheck // what the failure left
+		}
 	})
 	t.Run("no USERPROFILE", func(t *testing.T) {
 		t.Parallel()
@@ -602,7 +636,7 @@ func testInstallPS1(t *testing.T, shell string) {
 		{"UNC with slashes", `//localhost/c$/floe-install-test-slashes`, "local drive", `C:\floe-install-test-slashes`},
 		{"a device path", `\\?\C:\floe-install-test-device`, "local drive", `C:\floe-install-test-device`},
 		{"no such drive", `Q:foo`, "Q", ""},
-		{"the registry", `HKCU:\floe-install-test`, "must be a folder", ""},
+		{"the registry", `HKCU:\floe-install-test`, "local drive", ""},
 	} {
 		t.Run("folder "+d.name, func(t *testing.T) {
 			t.Parallel()
