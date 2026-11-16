@@ -109,7 +109,7 @@ func TestFlagsReadOnce(t *testing.T) {
 	t.Parallel()
 
 	env := Env{Stdout: io.Discard, Stderr: io.Discard, Dir: "/", Getenv: func(k string) string {
-		return map[string]string{"HOME": "/h", "FLOE_PORT": "0x10"}[k]
+		return HomeEnv("/h", map[string]string{"FLOE_PORT": "0x10"})[k]
 	}}
 	root, _ := newRoot(env, io.Discard)
 	args := []string{"tag", "d", "--add", "a", "--add", "b", "--remove", "c"}

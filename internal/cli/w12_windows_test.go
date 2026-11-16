@@ -29,6 +29,14 @@ func TestW12OnWindows(t *testing.T) {
 			t.Errorf("floe skill install over a file floe = %d, %q, want 1 and cannot_write at %s", code, stderr, floe)
 		}
 	})
+	t.Run("a FLOE_DIR of a file", func(t *testing.T) {
+		t.Parallel()
+		file := fileIn(t)
+		code, _, stderr := runEnv(t.TempDir(), cli.HomeEnv(t.TempDir(), map[string]string{"FLOE_DIR": file}), "guide")
+		if code != 0 || stderr != "" {
+			t.Errorf("floe guide with FLOE_DIR a file = %d, %q, want 0 and nothing told (the default settings)", code, stderr)
+		}
+	})
 	t.Run("the default parts a file", func(t *testing.T) {
 		t.Parallel()
 		home := defaultAFile(t, "parts")

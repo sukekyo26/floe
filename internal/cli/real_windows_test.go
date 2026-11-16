@@ -6,6 +6,7 @@ import (
 	"strings"
 	"testing"
 
+	"floe/internal/cli"
 	"floe/internal/testfs"
 )
 
@@ -18,11 +19,10 @@ func TestOwnDirsJunction(t *testing.T) {
 	x, y := filepath.Join(dir, "x"), filepath.Join(dir, "y")
 	mkdirs(t, x, y)
 	testfs.Junction(t, filepath.Join(x, "j"), y)
-	env := map[string]string{
-		"HOME":            filepath.Join(dir, "home"),
+	env := cli.HomeEnv(filepath.Join(dir, "home"), map[string]string{
 		"FLOE_PARTS_DIR":  filepath.Join(x, "j", "new"),
 		"FLOE_THEMES_DIR": filepath.Join(y, "new"),
-	}
+	})
 	code, _, stderr := runEnv(dir, env, "part", "check")
 	if code != 1 || !strings.Contains(stderr, "are one directory, or one is in the other") ||
 		!strings.Contains(stderr, "FLOE_PARTS_DIR") || !strings.Contains(stderr, "FLOE_THEMES_DIR") {
@@ -38,11 +38,10 @@ func TestOwnDirsSubst(t *testing.T) {
 	dir := write(t, map[string]string{"d.yaml": good})
 	mkdirs(t, filepath.Join(dir, "pp"))
 	drive := testfs.Subst(t, dir)
-	env := map[string]string{
-		"HOME":            filepath.Join(dir, "home"),
+	env := cli.HomeEnv(filepath.Join(dir, "home"), map[string]string{
 		"FLOE_PARTS_DIR":  filepath.Join(dir, "pp", "new"),
 		"FLOE_THEMES_DIR": drive + `\pp\new`,
-	}
+	})
 	code, _, stderr := runEnv(dir, env, "part", "check")
 	if code != 1 || !strings.Contains(stderr, "are one directory, or one is in the other") {
 		t.Errorf("a place and its subst drive = %d, %q, want them told to overlap", code, stderr)
@@ -67,7 +66,7 @@ func TestSkillInstallShown(t *testing.T) {
 	t.Parallel()
 
 	home := t.TempDir()
-	env := map[string]string{"HOME": home}
+	env := cli.HomeVars(home)
 	for range 2 {
 		code, out, errs := runEnv(home, env, "skill", "install", "claude")
 		if code != 0 || errs != "" || strings.Contains(out, `\\?\`) || !strings.Contains(out, "SKILL.md") {
@@ -85,7 +84,7 @@ func TestSkillInstallCase(t *testing.T) {
 	if err := os.MkdirAll(filepath.Join(home, ".claude", "skills", "Floe"), 0o700); err != nil {
 		t.Fatal(err)
 	}
-	code, out, errs := runEnv(home, map[string]string{"HOME": home}, "skill", "install", "claude")
+	code, out, errs := runEnv(home, cli.HomeVars(home), "skill", "install", "claude")
 	if code != 0 || errs != "" || !strings.Contains(out, "SKILL.md") {
 		t.Errorf("floe skill install over skills\\Floe = %d, %q, %q, want it written", code, out, errs)
 	}
@@ -104,7 +103,7 @@ func TestSkillInstallJunction(t *testing.T) {
 		}
 	}
 	testfs.Junction(t, filepath.Join(skills, "floe"), other)
-	code, _, errs := runEnv(home, map[string]string{"HOME": home}, "skill", "install", "claude")
+	code, _, errs := runEnv(home, cli.HomeVars(home), "skill", "install", "claude")
 	if code != 1 || !strings.Contains(errs, "this is a link to") || !strings.Contains(errs, "not named floe") {
 		t.Errorf("floe skill install over a junction to other = %d, %q, want cli_skill_link", code, errs)
 	}
