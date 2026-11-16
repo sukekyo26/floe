@@ -48,8 +48,8 @@ func mkfifo(tb testing.TB, path string) {
 	testfs.Mkfifo(tb, path)
 }
 
-// site builds a linked directory with dot paths, an escaping symlink, a FIFO and a name that one more
-// decoding would turn into another file, and returns the registered file.
+// site builds a linked directory with dot paths, an escaping symlink and a name that one more decoding would turn
+// into another file, and returns the registered file.
 func site(tb testing.TB) string {
 	tb.Helper()
 
@@ -69,7 +69,6 @@ func site(tb testing.TB) string {
 	write(tb, filepath.Join(tmp, "outside.txt"), "outside")
 	symlink(tb, filepath.Join(tmp, "outside.txt"), filepath.Join(dir, "escape.txt"))
 	symlink(tb, filepath.Join(dir, "s.css"), filepath.Join(dir, "inside.css"))
-	mkfifo(tb, filepath.Join(dir, "pipe.txt"))
 	return filepath.Join(dir, "index.html")
 }
 
@@ -97,7 +96,6 @@ func TestResolve(t *testing.T) {
 		{"sub", ""},
 		{"sub/", ""},
 		{"sub//p.html", ""},
-		{"pipe.txt", ""},
 		{"nope.css", ""},
 	}
 	for _, tt := range tests {
@@ -110,6 +108,13 @@ func TestResolve(t *testing.T) {
 			t.Errorf("Resolve(%q) = %q, %v; want %q", tt.rest, got, ok, want)
 		}
 	}
+	t.Run("a FIFO", func(t *testing.T) {
+		t.Parallel()
+		mkfifo(t, filepath.Join(dir, "pipe.txt"))
+		if got, ok := link.Resolve(registered, false, "pipe.txt"); ok {
+			t.Errorf("Resolve(pipe.txt) = %q, a FIFO served", got)
+		}
+	})
 }
 
 func TestResolveFolder(t *testing.T) {
@@ -263,6 +268,10 @@ func TestResolveRefusesARegisteredPathThatIsNoLongerReal(t *testing.T) {
 func FuzzResolve(f *testing.F) {
 	registered := site(f)
 	dir := filepath.Dir(registered)
+	// A FIFO where there are FIFOs; the rest is fuzzed on Windows too.
+	if err := testfs.MakeFIFO(filepath.Join(dir, "pipe.txt")); err != nil {
+		f.Logf("no FIFO: %v", err)
+	}
 	for _, seed := range []string{
 		"", "s.css", "sub/p.html", "../outside.txt", "sub/../../outside.txt", ".git/config",
 		"sub/.git/config", "escape.txt", "pipe.txt", "a%41.html", "sub/", "/etc/passwd", "s.css\x00",
@@ -303,7 +312,6 @@ func TestCheck(t *testing.T) {
 			t.Fatal(err)
 		}
 	}
-	mkfifo(t, filepath.Join(realHome, "proj", "pipe.html"))
 	// $HOME is a symlink: the real paths under it must still meet the home checks.
 	symlink(t, realHome, home)
 	// A path through a symlink is refused, whatever it points at.
@@ -340,7 +348,6 @@ func TestCheck(t *testing.T) {
 		{"top.html", "would expose all of " + realHome},
 		{".top.html", "would expose all of " + realHome},
 		{"proj/page.txt", "is not a regular HTML file (.html, .htm), data file (.yaml, .yml) or folder"},
-		{"proj/pipe.html", "is not a regular HTML file (.html, .htm), data file (.yaml, .yml) or folder"},
 		{"proj/missing.html", "is not a regular HTML file (.html, .htm), data file (.yaml, .yml) or folder"},
 		// A folder is checked as the directory it exposes: its own.
 		{"proj", ""},
@@ -363,4 +370,14 @@ func TestCheck(t *testing.T) {
 			t.Errorf("Check(%s) = %v, want a usererr containing %q", tt.path, err, tt.want)
 		}
 	}
+	t.Run("a FIFO", func(t *testing.T) {
+		t.Parallel()
+		pipe := filepath.Join(realHome, "proj", "pipe.html")
+		mkfifo(t, pipe)
+		want := "is not a regular HTML file (.html, .htm), data file (.yaml, .yml) or folder"
+		_, err := link.Check(pipe, home)
+		if ue := (*usererr.Error)(nil); !errors.As(err, &ue) || !strings.Contains(ue.Error(), want) {
+			t.Errorf("Check(proj/pipe.html) = %v, want a usererr containing %q", err, want)
+		}
+	})
 }

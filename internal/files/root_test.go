@@ -26,7 +26,6 @@ func fsOf(t *testing.T, dir string) map[string]fs.FS {
 // Both keep to what an fs.FS promises, as testing/fstest checks it.
 func TestFSContract(t *testing.T) {
 	t.Parallel()
-	testfs.Pending(t, "S315-P4: Open takes sub\\b.png, for the names are not Localized")
 
 	dir := t.TempDir()
 	for name, b := range map[string]string{"a.yaml": "a", "sub/b.png": "b"} {
@@ -38,9 +37,13 @@ func TestFSContract(t *testing.T) {
 		}
 	}
 	for via, fsys := range fsOf(t, dir) {
-		if err := fstest.TestFS(fsys, "a.yaml", "sub/b.png"); err != nil {
-			t.Errorf("%s: %v", via, err)
-		}
+		t.Run(via, func(t *testing.T) {
+			t.Parallel()
+			testfs.Pending(t, "S315-P4: Open takes sub\\b.png, for the names are not Localized")
+			if err := fstest.TestFS(fsys, "a.yaml", "sub/b.png"); err != nil {
+				t.Error(err)
+			}
+		})
 		// fstest.TestFS tries bad names on Open and ReadFile alone.
 		if _, err := fs.Stat(fsys, "../x"); !errors.Is(err, fs.ErrInvalid) {
 			t.Errorf("%s: Stat(../x) = %v, want fs.ErrInvalid", via, err)
@@ -54,26 +57,34 @@ func TestFSNotFiles(t *testing.T) {
 	t.Parallel()
 
 	dir := t.TempDir()
-	testfs.Mkfifo(t, filepath.Join(dir, "f"))
 	ln, err := (&net.ListenConfig{}).Listen(t.Context(), "unix", filepath.Join(dir, "s"))
 	if err != nil {
 		t.Fatal(err)
 	}
-	defer ln.Close()
+	t.Cleanup(func() { _ = ln.Close() })
+	notFileIn(t, dir, "s")
+	t.Run("a FIFO", func(t *testing.T) {
+		t.Parallel()
+		testfs.Mkfifo(t, filepath.Join(dir, "f"))
+		notFileIn(t, dir, "f")
+	})
+}
+
+// notFileIn checks a read, a listing and a Stat of name, under dir through either, as of no regular file.
+func notFileIn(t *testing.T, dir, name string) {
+	t.Helper()
 	for via, fsys := range fsOf(t, dir) {
-		for _, name := range []string{"f", "s"} {
-			timebox.Within(t, via+" "+name, func() {
-				if _, err := fs.ReadFile(fsys, name); !errors.Is(err, usererr.ErrNotFile) {
-					t.Errorf("%s: ReadFile(%s) = %v, want ErrNotFile", via, name, err)
-				}
-				if _, err := fs.ReadDir(fsys, name); !errors.Is(err, usererr.ErrNotFile) {
-					t.Errorf("%s: ReadDir(%s) = %v, want ErrNotFile", via, name, err)
-				}
-				if fi, err := fs.Stat(fsys, name); err != nil || fi.Mode().IsRegular() || fi.IsDir() {
-					t.Errorf("%s: Stat(%s) = %v, %v, want what it is", via, name, fi, err)
-				}
-			})
-		}
+		timebox.Within(t, via+" "+name, func() {
+			if _, err := fs.ReadFile(fsys, name); !errors.Is(err, usererr.ErrNotFile) {
+				t.Errorf("%s: ReadFile(%s) = %v, want ErrNotFile", via, name, err)
+			}
+			if _, err := fs.ReadDir(fsys, name); !errors.Is(err, usererr.ErrNotFile) {
+				t.Errorf("%s: ReadDir(%s) = %v, want ErrNotFile", via, name, err)
+			}
+			if fi, err := fs.Stat(fsys, name); err != nil || fi.Mode().IsRegular() || fi.IsDir() {
+				t.Errorf("%s: Stat(%s) = %v, %v, want what it is", via, name, fi, err)
+			}
+		})
 	}
 }
 

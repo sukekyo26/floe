@@ -361,13 +361,24 @@ func TestRebuildImagesKept(t *testing.T) {
 		t.Fatal(err)
 	}
 	testfs.Symlink(t, "a.png", filepath.Join(images, "link.png"))
-	testfs.Mkfifo(t, filepath.Join(images, "fifo.png"))
 	if err := s.Rebuild(picKit(t, "v2", "")); err != nil {
 		t.Fatal(told(err, root))
 	}
 	if got, want := files(t, copyOf(t, s, root, "d")), []string{"data.yaml", "images/a.png", "images/sub/c.png", "page.html"}; !slices.Equal(got, want) {
 		t.Errorf("files %v, want %v", got, want)
 	}
+	t.Run("FIFO", func(t *testing.T) {
+		t.Parallel()
+		s, root := newStore(t)
+		publish(t, s, dw, "d.yaml", "lang: en\ntemplate: pic\ni: [a.png]\n", map[string][]byte{"a.png": png}, store.Options{})
+		testfs.Mkfifo(t, filepath.Join(copyOf(t, s, root, "d"), "images", "fifo.png"))
+		if err := s.Rebuild(picKit(t, "v2", "")); err != nil {
+			t.Fatal(told(err, root))
+		}
+		if got, want := files(t, copyOf(t, s, root, "d")), []string{"data.yaml", "images/a.png", "page.html"}; !slices.Equal(got, want) {
+			t.Errorf("files %v, want %v", got, want)
+		}
+	})
 }
 
 // An image of the copy that cannot be read is told at it, the page kept.

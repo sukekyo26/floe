@@ -295,7 +295,6 @@ func TestImageItems(t *testing.T) {
 	if err := os.Mkdir(filepath.Join(dir, "dir.png"), 0o755); err != nil {
 		t.Fatal(err)
 	}
-	testfs.Mkfifo(t, filepath.Join(dir, "fifo.png"))
 	k := ownKit(t, nil, mine(htmlPage(`{{range .Data.i}}<img src="{{.}}">{{end}}`), `{"$schema": "https://json-schema.org/draft/2020-12/schema", "type": "object",
 "properties": {"i": {"type": "array", "items": {"type": "string", "format": "image"}}}}`, nil))
 	images := files.NewRoot(dir)
@@ -312,21 +311,41 @@ func TestImageItems(t *testing.T) {
 	if got, want := told(err), "d.yaml:3:5: \"./ok.png\" is not a path floe reads under the directory of d.yaml: write it relative to that directory, with one / between names, without ./ (write pic.png for ./pic.png), .., or a / at either end"; got != want {
 		t.Errorf("told\n%s\nwant\n%s", got, want)
 	}
-	data := "lang: en\ntemplate: mine\ni:\n  - missing.png\n  - missing.png\n  - esc.png\n  - dir.png\n  - fifo.png\n  - x.bmp\n  - ./ok.png\n  - ../ok.png\n  - large.png\n"
+	data := "lang: en\ntemplate: mine\ni:\n  - esc.png\n  - dir.png\n  - x.bmp\n  - ./ok.png\n  - ../ok.png\n  - large.png\n"
 	_, _, err = tmpl.Draw(k, "x/d.yaml", []byte(data), o)
 	if got, want := told(err), lines(
-		"x/d.yaml:4:5: the image \"missing.png\" cannot be read (no such file or directory)",
-		"x/d.yaml:5:5: the image \"missing.png\" cannot be read (no such file or directory)",
-		"x/d.yaml:6:5: the image \"esc.png\" cannot be read (path escapes from parent)",
-		"x/d.yaml:7:5: \"dir.png\" is not a file of an image, but a directory or the like: name a regular file of the image",
-		"x/d.yaml:8:5: \"fifo.png\" is not a file of an image, but a directory or the like: name a regular file of the image",
-		"x/d.yaml:9:5: \"x.bmp\" is not an image floe takes: use png, jpeg, gif, webp or svg",
-		"x/d.yaml:10:5: \"./ok.png\" is not a path floe reads under the directory of x/d.yaml: write it relative to that directory, with one / between names, without ./ (write pic.png for ./pic.png), .., or a / at either end",
-		"x/d.yaml:11:5: \"../ok.png\" is not a path floe reads under the directory of x/d.yaml: write it relative to that directory, with one / between names, without ./ (write pic.png for ./pic.png), .., or a / at either end",
-		"x/d.yaml:12:5: the image \"large.png\" is 1,048,577 bytes, over the 1,048,576 bytes (1 MiB) an image may be; make it smaller",
+		"x/d.yaml:4:5: the image \"esc.png\" cannot be read (path escapes from parent)",
+		"x/d.yaml:5:5: \"dir.png\" is not a file of an image, but a directory or the like: name a regular file of the image",
+		"x/d.yaml:6:5: \"x.bmp\" is not an image floe takes: use png, jpeg, gif, webp or svg",
+		"x/d.yaml:7:5: \"./ok.png\" is not a path floe reads under the directory of x/d.yaml: write it relative to that directory, with one / between names, without ./ (write pic.png for ./pic.png), .., or a / at either end",
+		"x/d.yaml:8:5: \"../ok.png\" is not a path floe reads under the directory of x/d.yaml: write it relative to that directory, with one / between names, without ./ (write pic.png for ./pic.png), .., or a / at either end",
+		"x/d.yaml:9:5: the image \"large.png\" is 1,048,577 bytes, over the 1,048,576 bytes (1 MiB) an image may be; make it smaller",
 	); got != want {
 		t.Errorf("told\n%s\nwant\n%s", got, want)
 	}
+	t.Run("missing", func(t *testing.T) {
+		t.Parallel()
+		testfs.Pending(t, "S315-P7: system words")
+		_, _, err := tmpl.Draw(k, "x/d.yaml", []byte("lang: en\ntemplate: mine\ni:\n  - missing.png\n  - missing.png\n"), o)
+		if got, want := told(err), lines(
+			"x/d.yaml:4:5: the image \"missing.png\" cannot be read (no such file or directory)",
+			"x/d.yaml:5:5: the image \"missing.png\" cannot be read (no such file or directory)",
+		); got != want {
+			t.Errorf("told\n%s\nwant\n%s", got, want)
+		}
+	})
+	t.Run("FIFO", func(t *testing.T) {
+		t.Parallel()
+		fifo := t.TempDir()
+		testfs.Mkfifo(t, filepath.Join(fifo, "fifo.png"))
+		fifos := files.NewRoot(fifo)
+		t.Cleanup(func() { _ = fifos.Close() })
+		_, _, err := tmpl.Draw(k, "x/d.yaml", []byte("lang: en\ntemplate: mine\ni: [fifo.png]\n"),
+			tmpl.Options{Theme: "", Untitled: "", Images: fifos, ImagesDir: ""})
+		if got, want := told(err), "x/d.yaml:3:5: \"fifo.png\" is not a file of an image, but a directory or the like: name a regular file of the image"; got != want {
+			t.Errorf("told\n%s\nwant\n%s", got, want)
+		}
+	})
 }
 
 // A directory of images that cannot be opened is told once, at it, however many images the data names; a page

@@ -163,9 +163,8 @@ func TestFetchAndSearch(t *testing.T) {
 	}
 }
 
-func TestLookup(t *testing.T) {
+func TestLookup(t *testing.T) { //nolint:tparallel // the subtests check what the steps of the test left
 	t.Parallel()
-	testfs.Pending(t, "S315-P7: system words")
 
 	root := t.TempDir()
 	set := icons.New(root, false, "")
@@ -188,9 +187,13 @@ func TestLookup(t *testing.T) {
 	if err := os.Remove(svg); err != nil {
 		t.Fatal(err)
 	}
-	if _, err := set.Lookup("aws/aws-lambda"); told(err) != svg+": cannot be read (no such file or directory)"+again {
-		t.Errorf("Lookup of an icon gone = %s", told(err))
-	}
+	_, gone := set.Lookup("aws/aws-lambda")
+	t.Run("an icon gone", func(t *testing.T) { //nolint:paralleltest // as above
+		testfs.Pending(t, "S315-P7: system words")
+		if told(gone) != svg+": cannot be read (no such file or directory)"+again {
+			t.Errorf("Lookup of an icon gone = %s", told(gone))
+		}
+	})
 	// One the index or a link leads out of the set's directory is not read, told at the name the index holds.
 	outside := filepath.Join(t.TempDir(), "out.svg")
 	if err := os.WriteFile(outside, []byte(`<svg xmlns="http://www.w3.org/2000/svg"/>`), 0o600); err != nil {
@@ -214,9 +217,13 @@ func TestLookup(t *testing.T) {
 	if err := os.RemoveAll(filepath.Join(root, "aws")); err != nil {
 		t.Fatal(err)
 	}
-	if _, err := set.Lookup("aws/res/client"); told(err) != filepath.Join(root, "aws")+": cannot be read (no such file or directory)"+again {
-		t.Errorf("Lookup with the set's directory gone = %s", told(err))
-	}
+	_, setGone := set.Lookup("aws/res/client")
+	t.Run("the set's directory gone", func(t *testing.T) { //nolint:paralleltest // as above
+		testfs.Pending(t, "S315-P7: system words")
+		if told(setGone) != filepath.Join(root, "aws")+": cannot be read (no such file or directory)"+again {
+			t.Errorf("Lookup with the set's directory gone = %s", told(setGone))
+		}
+	})
 }
 
 func TestFetchFromURL(t *testing.T) {
@@ -373,9 +380,8 @@ func badZips(t *testing.T) (truncated, checksum string) {
 	return truncated, checksum
 }
 
-func TestFetchRefusals(t *testing.T) {
+func TestFetchRefusals(t *testing.T) { //nolint:tparallel // the refusals are done before what is left is checked
 	t.Parallel()
-	testfs.Pending(t, "S315-P7: system words, and a directory read as no zip (icons.go's EISDIR)")
 
 	root := t.TempDir()
 	set := icons.New(root, false, "")
@@ -389,20 +395,25 @@ func TestFetchRefusals(t *testing.T) {
 	folder := t.TempDir()
 	truncated, checksum := badZips(t)
 	for _, c := range []struct {
-		from icons.Source
-		want string
+		from          icons.Source
+		want, pending string
 	}{
-		{local(notZip), "page.html: is not a zip file; pass the Icon package zip from " + page + ": floe icons fetch aws <path-or-url>"},
-		{local(empty), "empty.zip: holds no AWS icons; pass the Icon package zip from " + page + ": floe icons fetch aws <path-or-url>"},
-		{local(missing), "none.zip: no such file or directory"},
-		{icons.Source{Name: "dir", At: folder}, "dir: is a directory"},
-		{local(checksum), "crc.zip: cannot be read as a zip (zip: checksum error); download it again"},
-		{local(truncated), "cut.zip: cannot be read as a zip (unexpected EOF); download it again"},
-		{local(lying(t)), "lie.zip: cannot be read as a zip (zip: not a valid zip file); download it again"},
+		{local(notZip), "page.html: is not a zip file; pass the Icon package zip from " + page + ": floe icons fetch aws <path-or-url>", ""},
+		{local(empty), "empty.zip: holds no AWS icons; pass the Icon package zip from " + page + ": floe icons fetch aws <path-or-url>", ""},
+		{local(missing), "none.zip: no such file or directory", "S315-P7: system words"},
+		{icons.Source{Name: "dir", At: folder}, "dir: is a directory", "S315-P7: a directory read as no zip (icons.go's EISDIR)"},
+		{local(checksum), "crc.zip: cannot be read as a zip (zip: checksum error); download it again", ""},
+		{local(truncated), "cut.zip: cannot be read as a zip (unexpected EOF); download it again", ""},
+		{local(lying(t)), "lie.zip: cannot be read as a zip (zip: not a valid zip file); download it again", ""},
 	} {
-		if _, err := set.Fetch(context.Background(), "aws", []icons.Source{c.from}, false); told(err) != c.want {
-			t.Errorf("Fetch %s = %s, want %s", c.from.Name, told(err), c.want)
-		}
+		t.Run(c.from.Name, func(t *testing.T) { //nolint:paralleltest // as above
+			if c.pending != "" {
+				testfs.Pending(t, c.pending)
+			}
+			if _, err := set.Fetch(context.Background(), "aws", []icons.Source{c.from}, false); told(err) != c.want {
+				t.Errorf("Fetch %s = %s, want %s", c.from.Name, told(err), c.want)
+			}
+		})
 	}
 	// Refusals leave nothing behind.
 	if entries, err := os.ReadDir(root); err != nil || len(entries) != 0 {
@@ -422,6 +433,7 @@ func TestFetchRefusals(t *testing.T) {
 		`run "floe icons fetch aws --force" to fetch the icons again`
 	_, serr := set.Search("aws", []string{"lambda"})
 	_, ferr := set.Fetch(context.Background(), "aws", []icons.Source{zipFile}, false)
+	//nolint:paralleltest // paralleltest places here the subtests of the refusals above, done before what is left is checked
 	for _, err := range []error{serr, ferr} {
 		if told(err) != want {
 			t.Errorf("a broken index = %s, want %s", told(err), want)
@@ -490,54 +502,64 @@ func TestBrokenIndex(t *testing.T) {
 			t.Errorf("index %s = %s, want %s", c.index, told(err), index+c.want)
 		}
 	}
-	// An index that is a FIFO is told to fetch the set again, unopened.
-	fifoRoot := t.TempDir()
-	if err := os.Mkdir(filepath.Join(fifoRoot, "aws"), 0o700); err != nil {
-		t.Fatal(err)
-	}
-	testfs.Mkfifo(t, filepath.Join(fifoRoot, "aws", "index.json"))
-	if _, err := icons.New(fifoRoot, false, "").Search("aws", []string{"x"}); told(err) != filepath.Join(fifoRoot, "aws", "index.json")+
-		`: is neither a regular file nor a directory (a FIFO, a device or the like), which floe does not open; run "floe icons fetch aws --force" to fetch the icons again` {
-		t.Errorf("an index that is a FIFO = %s", told(err))
-	}
-	// The set's directory a file, in a store that is one, a fetch mends.
-	fileSet := t.TempDir()
-	if err := os.WriteFile(filepath.Join(fileSet, "aws"), nil, 0o600); err != nil {
-		t.Fatal(err)
-	}
-	if _, err := icons.New(fileSet, false, "").Search("aws", []string{"x"}); told(err) != filepath.Join(fileSet, "aws", "index.json")+
-		`: cannot be read (not a directory); run "floe icons fetch aws --force" to fetch the icons again` {
-		t.Errorf("a set's directory that is a file = %s", told(err))
-	}
-	// A root that is a file: what is under it is no directory, told as it is (a fetch cannot mend it).
-	file := filepath.Join(t.TempDir(), "f")
-	if err := os.WriteFile(file, nil, 0o600); err != nil {
-		t.Fatal(err)
-	}
-	if _, err := icons.New(file, false, "").Search("aws", []string{"x"}); told(err) != file+"/aws/index.json: not a directory" {
-		t.Errorf("a root that is a file = %s", told(err))
-	}
-	// A store under a file is told as it is (the default one is none, which cli tells), and a fetch into one
-	// stops before the network (the context is done); one failing at the network makes nothing.
-	under := filepath.Join(file, "x")
-	if _, err := icons.New(under, false, "").Search("aws", []string{"x"}); told(err) != under+"/aws/index.json: not a directory" {
-		t.Errorf("a root under a file = %s", told(err))
-	}
+	t.Run("FIFO", func(t *testing.T) {
+		t.Parallel()
+		// An index that is a FIFO is told to fetch the set again, unopened.
+		fifoRoot := t.TempDir()
+		if err := os.Mkdir(filepath.Join(fifoRoot, "aws"), 0o700); err != nil {
+			t.Fatal(err)
+		}
+		testfs.Mkfifo(t, filepath.Join(fifoRoot, "aws", "index.json"))
+		if _, err := icons.New(fifoRoot, false, "").Search("aws", []string{"x"}); told(err) != filepath.Join(fifoRoot, "aws", "index.json")+
+			`: is neither a regular file nor a directory (a FIFO, a device or the like), which floe does not open; run "floe icons fetch aws --force" to fetch the icons again` {
+			t.Errorf("an index that is a FIFO = %s", told(err))
+		}
+	})
+	t.Run("under a file", func(t *testing.T) {
+		t.Parallel()
+		testfs.Pending(t, "S315-P7: a path under a file is read as not there (ENOTDIR, W12)")
+		// The set's directory a file, in a store that is one, a fetch mends.
+		fileSet := t.TempDir()
+		if err := os.WriteFile(filepath.Join(fileSet, "aws"), nil, 0o600); err != nil {
+			t.Fatal(err)
+		}
+		if _, err := icons.New(fileSet, false, "").Search("aws", []string{"x"}); told(err) != filepath.Join(fileSet, "aws", "index.json")+
+			`: cannot be read (not a directory); run "floe icons fetch aws --force" to fetch the icons again` {
+			t.Errorf("a set's directory that is a file = %s", told(err))
+		}
+		// A root that is a file: what is under it is no directory, told as it is (a fetch cannot mend it).
+		file := filepath.Join(t.TempDir(), "f")
+		if err := os.WriteFile(file, nil, 0o600); err != nil {
+			t.Fatal(err)
+		}
+		if _, err := icons.New(file, false, "").Search("aws", []string{"x"}); told(err) != file+"/aws/index.json: not a directory" {
+			t.Errorf("a root that is a file = %s", told(err))
+		}
+		// A store under a file is told as it is (the default one is none, which cli tells), and a fetch into one
+		// stops before the network (the context is done).
+		under := filepath.Join(file, "x")
+		if _, err := icons.New(under, false, "").Search("aws", []string{"x"}); told(err) != under+"/aws/index.json: not a directory" {
+			t.Errorf("a root under a file = %s", told(err))
+		}
+		done, cancel := context.WithCancel(context.Background())
+		cancel()
+		if _, err := icons.New(under, false, "").Fetch(done, "aws", nil, false); !strings.HasPrefix(told(err), under+": cannot be written (not a directory): check") {
+			t.Errorf("a fetch into a root under a file = %s", told(err))
+		}
+		_, err := icons.New(file, false, "").Fetch(context.Background(), "aws", []icons.Source{local(writeZip(t, "Icon-package.zip", packageFiles))}, true)
+		if want := file + ": cannot be written (not a directory): check"; !strings.HasPrefix(told(err), want) {
+			t.Errorf("a fetch --force into a root that is a file = %s, want %s…", told(err), want)
+		}
+	})
+	// A fetch failing at the network (the context is done) makes nothing.
 	done, cancel := context.WithCancel(context.Background())
 	cancel()
-	if _, err := icons.New(under, false, "").Fetch(done, "aws", nil, false); !strings.HasPrefix(told(err), under+": cannot be written (not a directory): check") {
-		t.Errorf("a fetch into a root under a file = %s", told(err))
-	}
 	typo := filepath.Join(t.TempDir(), "typo")
 	if _, err := icons.New(typo, false, "").Fetch(done, "aws", nil, false); err == nil {
 		t.Error("a fetch with its context done went on")
 	}
 	if _, err := os.Stat(typo); !errors.Is(err, os.ErrNotExist) {
 		t.Errorf("a fetch failing at the network left %s: %v", typo, err)
-	}
-	_, err := icons.New(file, false, "").Fetch(context.Background(), "aws", []icons.Source{local(writeZip(t, "Icon-package.zip", packageFiles))}, true)
-	if want := file + ": cannot be written (not a directory): check"; !strings.HasPrefix(told(err), want) {
-		t.Errorf("a fetch --force into a root that is a file = %s, want %s…", told(err), want)
 	}
 }
 

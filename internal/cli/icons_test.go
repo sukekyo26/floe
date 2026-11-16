@@ -23,9 +23,45 @@ func runIn(dir string, env map[string]string, args ...string) (int, string, stri
 // The icons are kept in FLOE_ICONS_DIR, else under XDG_DATA_HOME, else under HOME, each an absolute path
 // whatever the working directory; a relative one is refused, or is none for XDG_DATA_HOME, as its spec says.
 func TestIconsDir(t *testing.T) {
-	testfs.Pending(t, "S315-P7: Unix absolute paths")
 	t.Parallel()
 
+	t.Run("the places", func(t *testing.T) {
+		testfs.Pending(t, "S315-P7: Unix absolute paths")
+		t.Parallel()
+		places(t)
+	})
+	for _, c := range []struct {
+		env  map[string]string
+		want string
+	}{
+		{map[string]string{"FLOE_ICONS_DIR": "~/i", "HOME": "/h"}, "floe: FLOE_ICONS_DIR is ~/i, a relative path; set it to an absolute path\n"},
+		{map[string]string{"FLOE_ICONS_DIR": "i", "HOME": "/h"}, "floe: FLOE_ICONS_DIR is i, a relative path; set it to an absolute path\n"},
+		{map[string]string{"HOME": "h"}, "floe: there is no directory for icons, as HOME is not an absolute path; set FLOE_ICONS_DIR to an absolute path\n"},
+		{nil, "floe: there is no directory for icons, as HOME is not an absolute path; set FLOE_ICONS_DIR to an absolute path\n"},
+	} {
+		dirIn(t, c.env, c.want)
+	}
+	// A setting under a file is told for the setting.
+	t.Run("a setting under a file", func(t *testing.T) {
+		testfs.Pending(t, "S315-P7: Unix absolute paths")
+		t.Parallel()
+		dirIn(t, map[string]string{"FLOE_ICONS_DIR": "/dev/null/i", "HOME": "/h"}, "floe: FLOE_ICONS_DIR is /dev/null/i, which cannot be used as a directory (not a directory); make it a directory floe can use, or set FLOE_ICONS_DIR to another directory\n")
+	})
+}
+
+// dirIn checks that floe icons search tells want under env, in no directory and in one.
+func dirIn(t *testing.T, env map[string]string, want string) {
+	t.Helper()
+	for _, dir := range []string{"", t.TempDir()} {
+		if code, _, stderr := runIn(dir, env, "icons", "search", "aws", "x"); code != 1 || stderr != want {
+			t.Errorf("%v in %q: %d, %q, want 1, %q", env, dir, code, stderr, want)
+		}
+	}
+}
+
+// places checks where floe icons search looks for the icons.
+func places(t *testing.T) {
+	t.Helper()
 	for _, c := range []struct {
 		env  map[string]string
 		want string
@@ -43,23 +79,6 @@ func TestIconsDir(t *testing.T) {
 			"aws.amazon.com) and try again\n"
 		if stderr != want {
 			t.Errorf("%v: %q, want %q", c.env, stderr, want)
-		}
-	}
-	for _, c := range []struct {
-		env  map[string]string
-		want string
-	}{
-		{map[string]string{"FLOE_ICONS_DIR": "~/i", "HOME": "/h"}, "floe: FLOE_ICONS_DIR is ~/i, a relative path; set it to an absolute path\n"},
-		{map[string]string{"FLOE_ICONS_DIR": "i", "HOME": "/h"}, "floe: FLOE_ICONS_DIR is i, a relative path; set it to an absolute path\n"},
-		{map[string]string{"HOME": "h"}, "floe: there is no directory for icons, as HOME is not an absolute path; set FLOE_ICONS_DIR to an absolute path\n"},
-		{nil, "floe: there is no directory for icons, as HOME is not an absolute path; set FLOE_ICONS_DIR to an absolute path\n"},
-		// A setting under a file is told for the setting.
-		{map[string]string{"FLOE_ICONS_DIR": "/dev/null/i", "HOME": "/h"}, "floe: FLOE_ICONS_DIR is /dev/null/i, which cannot be used as a directory (not a directory); make it a directory floe can use, or set FLOE_ICONS_DIR to another directory\n"},
-	} {
-		for _, dir := range []string{"", t.TempDir()} {
-			if code, _, stderr := runIn(dir, c.env, "icons", "search", "aws", "x"); code != 1 || stderr != c.want {
-				t.Errorf("%v in %q: %d, %q, want 1, %q", c.env, dir, code, stderr, c.want)
-			}
 		}
 	}
 }

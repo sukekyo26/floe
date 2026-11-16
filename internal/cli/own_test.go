@@ -502,25 +502,32 @@ func TestAssetLinks(t *testing.T) {
 func TestOwnNotFiles(t *testing.T) {
 	t.Parallel()
 
-	fifo := write(t, map[string]string{"mine/schema.json": ownSchema, "mine/part.html": ownPage})
-	testfs.Mkfifo(t, filepath.Join(fifo, "mine", "part.css"))
-	zero := write(t, map[string]string{"mine/schema.json": ownSchema, "mine/part.html": ownPage})
-	link(t, "/dev/zero", filepath.Join(zero, "mine", "part.css"))
 	const notFile = ": this is neither a regular file nor a directory (a FIFO, a device or the like), which floe may never finish reading: put a regular file here\n"
-	config := write(t, map[string]string{"floe/parts": "a file"})
-	for _, tt := range []struct {
-		name string
-		env  map[string]string
-		errs string
-	}{
-		{"a FIFO", map[string]string{"FLOE_PARTS_DIR": fifo}, filepath.Join(fifo, "mine", "part.css") + notFile},
-		{"a link to a device", map[string]string{"FLOE_PARTS_DIR": zero}, filepath.Join(zero, "mine", "part.css") + notFile},
-		{"the default a file", map[string]string{"XDG_CONFIG_HOME": config}, filepath.Join(config, "floe", "parts") + ": not a directory\n"},
-	} {
-		if code, _, stderr := runEnv(t.TempDir(), tt.env, "part", "check"); code != 1 || stderr != tt.errs {
-			t.Errorf("%s: floe part check = %d, %q; want 1, %q", tt.name, code, stderr, tt.errs)
+	refused := func(t *testing.T, env map[string]string, errs string) {
+		t.Helper()
+		if code, _, stderr := runEnv(t.TempDir(), env, "part", "check"); code != 1 || stderr != errs {
+			t.Errorf("floe part check = %d, %q; want 1, %q", code, stderr, errs)
 		}
 	}
+	t.Run("a FIFO", func(t *testing.T) {
+		t.Parallel()
+		fifo := write(t, map[string]string{"mine/schema.json": ownSchema, "mine/part.html": ownPage})
+		testfs.Mkfifo(t, filepath.Join(fifo, "mine", "part.css"))
+		refused(t, map[string]string{"FLOE_PARTS_DIR": fifo}, filepath.Join(fifo, "mine", "part.css")+notFile)
+	})
+	t.Run("a link to a device", func(t *testing.T) {
+		testfs.Pending(t, "S315-P4: Windows devices")
+		t.Parallel()
+		zero := write(t, map[string]string{"mine/schema.json": ownSchema, "mine/part.html": ownPage})
+		link(t, "/dev/zero", filepath.Join(zero, "mine", "part.css"))
+		refused(t, map[string]string{"FLOE_PARTS_DIR": zero}, filepath.Join(zero, "mine", "part.css")+notFile)
+	})
+	t.Run("the default a file", func(t *testing.T) {
+		testfs.Pending(t, "S315-P7: system words")
+		t.Parallel()
+		config := write(t, map[string]string{"floe/parts": "a file"})
+		refused(t, map[string]string{"XDG_CONFIG_HOME": config}, filepath.Join(config, "floe", "parts")+": not a directory\n")
+	})
 }
 
 // A reads.json that cannot be set aside keeps floe serve from starting, told before it says it serves.

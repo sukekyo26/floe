@@ -33,23 +33,26 @@ func write(t *testing.T, files map[string]string) string {
 
 // floe check tells every mistake of every file, and nothing for files that are right.
 func TestCheck(t *testing.T) {
-	testfs.Pending(t, "S315-P7: system words")
 	t.Parallel()
 
 	dir := write(t, map[string]string{"a.yaml": good, "b.yaml": "lang: en\ntemplate: reprot\n", "c.yaml": "x: [\n", "page.html": ""})
 	if code, stdout, stderr := run(dir, "check", "a.yaml", "./a.yaml"); code != 0 || stdout != "" || stderr != "" {
 		t.Errorf("floe check a.yaml = %d, %q, %q", code, stdout, stderr)
 	}
-	code, _, stderr := run(dir, "check", "b.yaml", "a.yaml", "page.html", "", "gone.yaml", "c.yaml")
-	want := []string{
-		`b.yaml:2:11: unknown template "reprot"; use adr, design, handoff, postmortem, report, runbook, slides`,
-		"floe: page.html is not a data file (.yaml or .yml)",
-		"floe: argument 4 is an empty path; give a data file (.yaml or .yml), and check that a variable written for it is set",
-		"gone.yaml: no such file or directory",
-	}
-	if code != 1 || !strings.HasPrefix(stderr, strings.Join(want, "\n")+"\nc.yaml:") {
-		t.Errorf("floe check = %d, stderr\n%s\nwant first\n%s", code, stderr, strings.Join(want, "\n"))
-	}
+	t.Run("every mistake", func(t *testing.T) {
+		testfs.Pending(t, "S315-P7: system words")
+		t.Parallel()
+		code, _, stderr := run(dir, "check", "b.yaml", "a.yaml", "page.html", "", "gone.yaml", "c.yaml")
+		want := []string{
+			`b.yaml:2:11: unknown template "reprot"; use adr, design, handoff, postmortem, report, runbook, slides`,
+			"floe: page.html is not a data file (.yaml or .yml)",
+			"floe: argument 4 is an empty path; give a data file (.yaml or .yml), and check that a variable written for it is set",
+			"gone.yaml: no such file or directory",
+		}
+		if code != 1 || !strings.HasPrefix(stderr, strings.Join(want, "\n")+"\nc.yaml:") {
+			t.Errorf("floe check = %d, stderr\n%s\nwant first\n%s", code, stderr, strings.Join(want, "\n"))
+		}
+	})
 	if code, _, stderr := run("", "check", "a.yaml"); code != 1 || !strings.Contains(stderr, "the relative path a.yaml means nothing") {
 		t.Errorf("floe check under no directory = %d, %q", code, stderr)
 	}
@@ -372,7 +375,6 @@ func TestRefusedNamesDoNotClash(t *testing.T) {
 // A page that is a link to no file, or a loop of links, is not written over, written or checked: it cannot be
 // written, in the system's words.
 func TestCannotWriteThroughLinks(t *testing.T) {
-	testfs.Pending(t, "S315-P7: system words")
 	t.Parallel()
 
 	dir := write(t, map[string]string{"a.yaml": good, "b.yaml": good})
@@ -380,17 +382,29 @@ func TestCannotWriteThroughLinks(t *testing.T) {
 		testfs.Symlink(t, to, filepath.Join(dir, link))
 	}
 	tail := "): check that its directory exists and can be written to, and that its name is free and not too long\n"
-	for file, want := range map[string]string{
-		"a.yaml": "a.html: cannot be written (" + syscall.ENOENT.Error() + tail,
-		"b.yaml": "b.html: cannot be written (" + syscall.ELOOP.Error() + tail,
-	} {
+	words := map[string]string{"a.yaml": syscall.ENOENT.Error(), "b.yaml": syscall.ELOOP.Error()}
+	told := map[string]string{}
+	for file := range words {
 		for _, mode := range [][]string{{"render"}, {"render", "--check"}} {
 			args := append(slices.Clone(mode), file)
-			if code, _, stderr := run(dir, args...); code != 1 || stderr != want {
-				t.Errorf("floe %v = %d, %q, want %q", args, code, stderr, want)
+			code, _, stderr := run(dir, args...)
+			page := strings.TrimSuffix(file, ".yaml") + ".html"
+			if code != 1 || !strings.HasPrefix(stderr, page+": cannot be written (") || !strings.HasSuffix(stderr, tail) {
+				t.Errorf("floe %v = %d, %q", args, code, stderr)
 			}
+			told[strings.Join(args, " ")] = stderr
 		}
 	}
+	t.Run("in the system's words", func(t *testing.T) {
+		testfs.Pending(t, "S315-P7: system words")
+		t.Parallel()
+		for args, stderr := range told {
+			file := args[strings.LastIndex(args, " ")+1:]
+			if want := strings.TrimSuffix(file, ".yaml") + ".html: cannot be written (" + words[file] + tail; stderr != want {
+				t.Errorf("floe %s told %q, want %q", args, stderr, want)
+			}
+		}
+	})
 	for _, link := range []string{"a.html", "b.html"} {
 		if info, err := os.Lstat(filepath.Join(dir, link)); err != nil || info.Mode()&os.ModeSymlink == 0 {
 			t.Errorf("%s is no longer the link: %v, %v", link, info, err)

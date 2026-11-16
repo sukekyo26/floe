@@ -72,19 +72,12 @@ func TestRead(t *testing.T) {
 	t.Parallel()
 
 	dir := t.TempDir()
-	file, fifo := filepath.Join(dir, "a.yaml"), filepath.Join(dir, "f.yaml")
+	file := filepath.Join(dir, "a.yaml")
 	if err := os.WriteFile(file, []byte("x"), 0o600); err != nil {
 		t.Fatal(err)
 	}
-	testfs.Mkfifo(t, fifo)
 	if b, info, err := files.Read(file); err != nil || string(b) != "x" || info.Size() != 1 {
 		t.Errorf("Read(a regular file) = %q, %v, %v", b, info, err)
-	}
-	for _, path := range []string{fifo, "/dev/zero"} {
-		var pe *fs.PathError
-		if _, _, err := files.Read(path); !errors.Is(err, usererr.ErrNotFile) || !errors.As(err, &pe) {
-			t.Errorf("Read(%s) = %v, want an *fs.PathError of ErrNotFile", path, err)
-		}
 	}
 	if _, _, err := files.Read(filepath.Join(dir, "gone.yaml")); !errors.Is(err, fs.ErrNotExist) {
 		t.Errorf("Read(no file) = %v, want fs.ErrNotExist", err)
@@ -97,12 +90,32 @@ func TestRead(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	defer root.Close()
+	t.Cleanup(func() { _ = root.Close() })
 	if b, _, err := files.ReadIn(root, "a.yaml"); err != nil || string(b) != "x" {
 		t.Errorf("ReadIn(a regular file) = %q, %v", b, err)
 	}
-	if _, _, err := files.ReadIn(root, "f.yaml"); !errors.Is(err, usererr.ErrNotFile) {
-		t.Errorf("ReadIn(a FIFO) = %v, want ErrNotFile", err)
+	t.Run("a FIFO", func(t *testing.T) {
+		t.Parallel()
+		fifo := filepath.Join(dir, "f.yaml")
+		testfs.Mkfifo(t, fifo)
+		readNotFile(t, fifo)
+		if _, _, err := files.ReadIn(root, "f.yaml"); !errors.Is(err, usererr.ErrNotFile) {
+			t.Errorf("ReadIn(a FIFO) = %v, want ErrNotFile", err)
+		}
+	})
+	t.Run("a device", func(t *testing.T) {
+		t.Parallel()
+		testfs.Pending(t, "S315-P4: Windows devices")
+		readNotFile(t, "/dev/zero")
+	})
+}
+
+// readNotFile checks Read refuses path as no regular file, unopened, with an *fs.PathError.
+func readNotFile(t *testing.T, path string) {
+	t.Helper()
+	var pe *fs.PathError
+	if _, _, err := files.Read(path); !errors.Is(err, usererr.ErrNotFile) || !errors.As(err, &pe) {
+		t.Errorf("Read(%s) = %v, want an *fs.PathError of ErrNotFile", path, err)
 	}
 }
 
