@@ -30,7 +30,7 @@ func TestMarkFallbacks(t *testing.T) {
 	if err := os.WriteFile(path, []byte("a"), 0o600); err != nil {
 		t.Fatal(err)
 	}
-	f, ok := statOf(path, 0)
+	f, ok := statOf(checkedOf(t, path), 0)
 	if !ok || !f.hasChange {
 		t.Fatalf("a file just written is told %+v, %v: want its change time", f, ok)
 	}

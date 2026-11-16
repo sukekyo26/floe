@@ -758,7 +758,7 @@ func (s *Store) commit(e *Entry, mark string, pre *pressed) error {
 	if !ok {
 		return fmt.Errorf("store: save %q, which cannot be a slug", e.Slug) //nolint:err113 // floe's own mistake
 	}
-	made := os.Mkdir(dir, 0o700) == nil
+	made := files.Mkdir(dir, 0o700) == nil
 	if e.Meta.IsLink() {
 		// What it replaces is a link, or a page whose meta.json could not be read, whose copy and versions go.
 		if err = s.WriteMeta(e.Slug, &e.Meta); err == nil {
@@ -888,7 +888,7 @@ func (s *Store) writeVersion(slug string, m *Meta, kept *pressed) (func(), error
 		return nil, fmt.Errorf("store: keep version %d of %q, which meta.json names as none before its last", kept.n, slug)
 	}
 	dir := filepath.Dir(file)
-	made := os.Mkdir(dir, 0o700) == nil
+	made := files.Mkdir(dir, 0o700) == nil
 	unkeep := func() {
 		_ = os.Remove(file) //nolint:errcheck // the error is the write's
 		if made {

@@ -37,7 +37,7 @@ func (e *DirError) Unwrap() error { return e.Err }
 func (r *Root) ready() error {
 	r.once.Do(func() {
 		var err error
-		if r.root, err = os.OpenRoot(r.dir); err != nil {
+		if r.root, err = OpenRoot(r.dir); err != nil {
 			r.err = &DirError{Dir: r.dir, Err: err}
 		}
 	})
@@ -90,13 +90,29 @@ func DirFS(dir string) fs.FS {
 // ReadIn does, so that a directory read as a file is refused.
 type dirFS string
 
+// Open opens name under d as Open opens a path: d and name joined, then looked at by allowed once. Errors name
+// name, as an fs.FS's do.
 func (d dirFS) Open(name string) (fs.File, error) {
-	return openRead(d, name)
+	p, err := d.join("open", name)
+	if err != nil {
+		return nil, err
+	}
+	// openPath, not Open: a directory is opened, for fs.ReadDir and fs.WalkDir.
+	f, _, err := openPath(p, os.O_RDONLY, 0)
+	if err != nil {
+		return nil, asWritten(err, name)
+	}
+	return f, nil
 }
 
-// ReadFile reads the file name, as ReadIn reads one.
+// ReadFile reads the file name as Read reads a path, a directory refused; errors name name.
 func (d dirFS) ReadFile(name string) ([]byte, error) {
-	return readFileIn(d, name)
+	p, err := d.join("open", name)
+	if err != nil {
+		return nil, err
+	}
+	b, _, err := Read(p)
+	return b, asWritten(err, name)
 }
 
 func (d dirFS) Stat(name string) (fs.FileInfo, error) {
@@ -104,15 +120,8 @@ func (d dirFS) Stat(name string) (fs.FileInfo, error) {
 	if err != nil {
 		return nil, err
 	}
-	return os.Stat(p) //nolint:wrapcheck // the system's
-}
-
-func (d dirFS) OpenFile(name string, flag int, perm fs.FileMode) (*os.File, error) {
-	p, err := d.join("open", name)
-	if err != nil {
-		return nil, err
-	}
-	return os.OpenFile(p, flag, perm) //nolint:wrapcheck,gosec // the system's; G304: under the caller's dir
+	fi, err := Stat(p)
+	return fi, asWritten(err, name)
 }
 
 // errNoDir is the error of every name of DirFS(""), as os.DirFS has one.
@@ -137,12 +146,13 @@ func (d dirFS) join(op, name string) (string, error) {
 	return string(d) + string(os.PathSeparator) + local, nil
 }
 
-// openRead opens name of o, a slash-separated path under it that ValidName takes, to read as Open opens a path.
+// openRead opens name of o (an *os.Root), a slash-separated path under it that ValidName takes, to read as Open
+// opens a path.
 func openRead(o Opener, name string) (fs.File, error) {
 	if _, err := checkName("open", name); err != nil {
 		return nil, err
 	}
-	f, _, err := openWith(o, name, os.O_RDONLY, 0)
+	f, _, err := openWith(rootTarget{o: o, n: name}, os.O_RDONLY, 0)
 	if err != nil {
 		return nil, err
 	}

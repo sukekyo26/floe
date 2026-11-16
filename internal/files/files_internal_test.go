@@ -2,7 +2,6 @@ package files
 
 import (
 	"errors"
-	"io"
 	"io/fs"
 	"os"
 	"path/filepath"
@@ -13,32 +12,31 @@ import (
 	"floe/internal/usererr"
 )
 
-// swapped is an Opener that runs swap on the file between looking at it and opening it.
+// swapped is a target that runs swap on the file between looking at it and opening it.
 type swapped struct {
-	Opener
-	swap func(name string) error
+	target
+	swap func() error
 }
 
-func (s swapped) OpenFile(name string, flag int, perm fs.FileMode) (*os.File, error) {
-	if err := s.swap(name); err != nil {
+func (s swapped) open(flag int, perm fs.FileMode) (*os.File, error) {
+	if err := s.swap(); err != nil {
 		return nil, err
 	}
-	return s.Opener.OpenFile(name, flag, perm) //nolint:wrapcheck // the system's
+	return s.target.open(flag, perm)
 }
 
-// readAll reads name of o through openRead, which Root and DirFS open through.
-func readAll(o Opener, name string) ([]byte, fs.FileInfo, error) {
-	f, err := openRead(o, name)
+// checkedOf is path as allowed checks it, which t needs.
+func checkedOf(t *testing.T, path string) checked {
+	t.Helper()
+	p, err := allowed(path, true)
 	if err != nil {
-		return nil, nil, err
+		t.Fatal(err)
 	}
-	defer f.Close()
-	b, err := io.ReadAll(f)
-	return b, nil, err //nolint:wrapcheck // the system's
+	return p
 }
 
 // A regular file made a FIFO between what Open (ReadIn) or openRead looks at and what it opens is refused unread,
-// at a path, under a DirFS and under an os.Root alike: the open does not block, and what was opened is looked at
+// at a path (Open, and DirFS, which opens a path) and under an os.Root alike: the open does not block, and what was opened is looked at
 // again. Another regular file put in its place, as a save by rename does, is read.
 func TestOpenSwapped(t *testing.T) { //nolint:tparallel // the cases swap one file in turn
 	t.Parallel()
@@ -66,33 +64,28 @@ func TestOpenSwapped(t *testing.T) { //nolint:tparallel // the cases swap one fi
 	}
 }
 
-// openSwapped reads the file a.yaml of dir, which swap makes what it is named, through each opener.
+// openSwapped reads the file a.yaml of dir, which swap makes what it is named, at its path and under root.
 func openSwapped(t *testing.T, dir string, root *os.Root, name string, swap func(string) error, want error) {
 	t.Helper()
+	path := filepath.Join(dir, "a.yaml")
 	for _, o := range []struct {
-		via  string
-		o    Opener
-		name string
-		read func(Opener, string) ([]byte, fs.FileInfo, error)
+		via string
+		t   target
 	}{
-		{"ReadIn at a path", paths{}, filepath.Join(dir, "a.yaml"), ReadIn},
-		{"ReadIn under an os.Root", root, "a.yaml", ReadIn},
-		// openRead takes a name under a directory, as fs.ValidPath does.
-		{"openRead under a DirFS", dirFS(dir), "a.yaml", readAll},
-		{"openRead under an os.Root", root, "a.yaml", readAll},
+		{"a path", pathTarget{p: checkedOf(t, dir).join("a.yaml"), path: path}},
+		{"a name under an os.Root", rootTarget{o: root, n: "a.yaml"}},
 	} {
-		path := filepath.Join(dir, "a.yaml")
 		if err := os.WriteFile(path, []byte("x"), 0o600); err != nil {
 			t.Fatal(err)
 		}
-		s := swapped{Opener: o.o, swap: func(string) error {
+		s := swapped{target: o.t, swap: func() error {
 			if err := os.Remove(path); err != nil {
 				return err //nolint:wrapcheck // the test's
 			}
 			return swap(path)
 		}}
 		timebox.Within(t, o.via, func() {
-			b, _, err := o.read(s, o.name)
+			b, _, err := readOpened(openWith(s, os.O_RDONLY, 0))
 			if !errors.Is(err, want) || want == nil && (err != nil || string(b) != "y") {
 				t.Errorf("%s of a file made %s = %q, %v, want %v", o.via, name, b, err, want)
 			}
@@ -115,7 +108,7 @@ func TestOpenAppendSwapped(t *testing.T) {
 		t.Fatal(err)
 	}
 	var reader *os.File
-	s := swapped{Opener: paths{}, swap: func(string) error {
+	s := swapped{target: pathTarget{p: checkedOf(t, path), path: path}, swap: func() error {
 		if err := os.Remove(path); err != nil {
 			return err //nolint:wrapcheck // the test's
 		}
@@ -126,7 +119,7 @@ func TestOpenAppendSwapped(t *testing.T) {
 		reader, err = os.OpenFile(path, os.O_RDWR, 0) //nolint:gosec // G304: the test's own
 		return err                                    //nolint:wrapcheck // the test's
 	}}
-	f, _, err := openWith(s, path, os.O_WRONLY|os.O_APPEND|os.O_CREATE, 0o600)
+	f, _, err := openWith(s, os.O_WRONLY|os.O_APPEND|os.O_CREATE, 0o600)
 	if reader != nil {
 		defer reader.Close() //nolint:errcheck // test
 	}

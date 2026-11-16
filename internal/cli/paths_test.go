@@ -59,7 +59,7 @@ func TestRenderLinksToNoPage(t *testing.T) { //nolint:tparallel // the device ca
 	}
 	// In turn, before the checks below that nothing was written.
 	t.Run("a link to a device", func(t *testing.T) { //nolint:paralleltest // as above
-		testfs.Pending(t, "S315-P4: Windows devices")
+		testfs.UnixOnly(t, "a device told by its kind (Windows: TestNotLocalWindows)")
 		link(t, "/dev/zero", filepath.Join(dir, "e.html"))
 		renders(t, "e.yaml", refused("e.html", "/dev/zero"))
 	})

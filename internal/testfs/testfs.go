@@ -71,11 +71,12 @@ func TryLock(tb testing.TB, f *os.File) bool {
 }
 
 // Symlink makes the symlink at to old, or skips t where the system does not let this user make one (Windows,
-// without the developer mode or an administrator).
+// without the developer mode or an administrator); on the CI (CI set) that fails t, so that the tests of links are
+// known to run there.
 func Symlink(tb testing.TB, old, at string) {
 	tb.Helper()
 	err := os.Symlink(old, at)
-	if err != nil && privilegeNotHeld(err) {
+	if err != nil && privilegeNotHeld(err) && os.Getenv("CI") == "" {
 		tb.Skip("a symlink cannot be made here: " + err.Error())
 	}
 	if err != nil {
@@ -177,19 +178,95 @@ func MapShare(tb testing.TB, dir string) (shared, mapped string) {
 	if !isWindows {
 		tb.Skip("shares are Windows'")
 	}
+	root, rest := shareOf(tb, dir)
+	drive := newDrive(tb, func(drive string) error { return mapDrive(drive, root) }, unmapDrive)
+	return root + rest, drive + rest
+}
+
+// SubstShare makes a drive of dir through this machine's administrative share of its drive (subst Q:
+// \\127.0.0.1\C$\…), which the system tells a network drive, removed when tb ends; it returns the drive (Q:). It skips
+// as MapShare does.
+func SubstShare(tb testing.TB, dir string) string {
+	tb.Helper()
+	if !isWindows {
+		tb.Skip("shares are Windows'")
+	}
+	root, rest := shareOf(tb, dir)
+	return newDrive(tb, func(drive string) error { return substDrive(drive, root+rest) }, unsubstDrive)
+}
+
+// shareOf is the administrative share of dir's drive (\\127.0.0.1\C$) and the rest of dir after its drive. It skips
+// where the share cannot be reached (not an administrator); on the CI (CI set) that fails tb.
+func shareOf(tb testing.TB, dir string) (root, rest string) {
+	tb.Helper()
 	vol := filepath.VolumeName(dir)
 	if len(vol) != 2 || vol[1] != ':' {
 		tb.Fatalf("%s is not on a drive's letter", dir)
 	}
-	root := `\\127.0.0.1\` + vol[:1] + "$"
+	root = `\\127.0.0.1\` + vol[:1] + "$"
 	if _, err := os.Stat(root + `\`); err != nil {
 		if os.Getenv("CI") != "" {
 			tb.Fatalf("the share %s cannot be reached on the CI: %v", root, err)
 		}
 		tb.Skip("the share " + root + " cannot be reached: " + err.Error())
 	}
-	drive := newDrive(tb, func(drive string) error { return mapDrive(drive, root) }, unmapDrive)
-	return root + dir[len(vol):], drive + dir[len(vol):]
+	return root, dir[len(vol):]
+}
+
+// PipeServer serves a named pipe (Windows) for the test, counting each client that connects, and returns its name
+// (\\.\pipe\…) and what tells how many have connected so far. It stops when tb ends. It skips on Unix, which has no
+// pipes by name; on the CI (CI set) one that cannot be served fails tb.
+func PipeServer(tb testing.TB) (name string, connected func() int) {
+	tb.Helper()
+	if !isWindows {
+		tb.Skip("named pipes are Windows'")
+	}
+	name, count, stop, err := servePipe()
+	if err != nil {
+		tb.Fatal(err)
+	}
+	tb.Cleanup(stop)
+	return name, func() int {
+		n, err := count()
+		if err != nil {
+			tb.Fatal(err)
+		}
+		return n
+	}
+}
+
+// VolumeGUID is dir (C:\…) through its volume's GUID name (\\?\Volume{…}\…), which has no drive letter (Windows). It
+// skips on Unix.
+func VolumeGUID(tb testing.TB, dir string) string {
+	tb.Helper()
+	if !isWindows {
+		tb.Skip("volume names are Windows'")
+	}
+	vol, err := volumeName(filepath.VolumeName(dir) + `\`)
+	if err != nil {
+		tb.Fatal(err)
+	}
+	return vol + dir[len(`C:\`):]
+}
+
+// FreeDrive is a drive letter no volume has (Q:), not taken for the test: one another test or process makes
+// meanwhile is not looked at. It skips on Unix and where no letter is free (on the CI, CI set, it fails).
+func FreeDrive(tb testing.TB) string {
+	tb.Helper()
+	if !isWindows {
+		tb.Skip("drives are Windows'")
+	}
+	letters, err := freeDrives()
+	if err != nil {
+		tb.Fatal(err)
+	}
+	if len(letters) == 0 {
+		if os.Getenv("CI") != "" {
+			tb.Fatal("no drive letter is free on the CI")
+		}
+		tb.Skip("no drive letter is free")
+	}
+	return letters[len(letters)-1]
 }
 
 // driveMu keeps this process's tests from taking one letter at once.

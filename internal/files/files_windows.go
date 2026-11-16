@@ -15,7 +15,18 @@ const (
 	openFlags = 0
 	// noFollow opens a reparse point itself rather than where it leads, so that a file made anew is not made there.
 	noFollow = syscall.FILE_FLAG_OPEN_REPARSE_POINT
+	// checksPaths: allowed looks at a path before the system is called (shares, devices and pipes by name).
+	checksPaths = true
 )
+
+// driveType is the kind of drive at root (X:\), as GetDriveType tells it.
+func driveType(root string) uint32 {
+	p, err := windows.UTF16PtrFromString(root)
+	if err != nil {
+		return driveUnknown
+	}
+	return windows.GetDriveType(p)
+}
 
 // Lock locks f, a file of its own, for this process alone, waiting while another holds it, and returns what lets
 // the lock go and closes f: the lock is let go first, which closing may not do at once (LockFileEx). The system's
@@ -57,7 +68,7 @@ type fileIDInfo struct {
 // LIMIT: the file is opened (for its attributes alone) to be marked, every second for one's own directories; an
 // os.Rename over it at that moment (an editor's save) fails, though it is opened sharing delete. Only the renamer
 // can mend that, by renaming as os.Root does (POSIX semantics); an editor's save is out of floe's hands.
-func stampAt(path string, follow bool) (part string, link, ok bool) {
+func stampAt(path checked, follow bool) (part string, link, ok bool) {
 	flags := uint32(windows.FILE_FLAG_OPEN_REPARSE_POINT)
 	if follow {
 		flags = 0
@@ -79,8 +90,8 @@ func infoEx(h windows.Handle, class uint32, p unsafe.Pointer, n uintptr) error {
 }
 
 // openAttrs opens path for its attributes alone, all shared, a directory too, with the extra flags.
-func openAttrs(path string, flags uint32) (windows.Handle, error) {
-	p, err := windows.UTF16PtrFromString(path)
+func openAttrs(path checked, flags uint32) (windows.Handle, error) {
+	p, err := windows.UTF16PtrFromString(path.s)
 	if err != nil {
 		return 0, err //nolint:wrapcheck // the caller's to tell
 	}
@@ -91,7 +102,7 @@ func openAttrs(path string, flags uint32) (windows.Handle, error) {
 }
 
 // statOf tells the fields of path, opened with the extra flags, and false when it cannot be opened or told.
-func statOf(path string, flags uint32) (fields, bool) {
+func statOf(path checked, flags uint32) (fields, bool) {
 	h, err := openAttrs(path, flags)
 	if err != nil {
 		return noFields, false
@@ -129,13 +140,13 @@ const (
 
 // realOf is the final path of path: opened following its links and junctions, the name the system gives the
 // handle, \\?\C:\… or \\?\UNC\host\share\….
-func realOf(path string) (string, error) {
+func realOf(path checked) (string, error) {
 	h, err := openAttrs(path, 0)
 	if err != nil {
-		return "", &fs.PathError{Op: "open", Path: path, Err: err}
+		return "", &fs.PathError{Op: "open", Path: path.s, Err: err}
 	}
 	defer windows.CloseHandle(h) //nolint:errcheck // read only
-	return grown("GetFinalPathNameByHandle", path, func(buf []uint16) (uint32, error) {
+	return grown("GetFinalPathNameByHandle", path.s, func(buf []uint16) (uint32, error) {
 		//nolint:gosec // G115: a buffer's length
 		return windows.GetFinalPathNameByHandle(h, &buf[0], uint32(len(buf)), fileNameNormalized|volumeNameDOS)
 	})
@@ -143,12 +154,12 @@ func realOf(path string) (string, error) {
 
 // longNameOf is path with each short name (SECRET~1) made long, as the system names it; links and junctions are
 // not followed.
-func longNameOf(path string) (string, error) {
-	p, err := windows.UTF16PtrFromString(path)
+func longNameOf(path checked) (string, error) {
+	p, err := windows.UTF16PtrFromString(path.s)
 	if err != nil {
-		return "", &fs.PathError{Op: "GetLongPathName", Path: path, Err: err}
+		return "", &fs.PathError{Op: "GetLongPathName", Path: path.s, Err: err}
 	}
-	return grown("GetLongPathName", path, func(buf []uint16) (uint32, error) {
+	return grown("GetLongPathName", path.s, func(buf []uint16) (uint32, error) {
 		return windows.GetLongPathName(p, &buf[0], uint32(len(buf))) //nolint:gosec // G115: a buffer's length
 	})
 }

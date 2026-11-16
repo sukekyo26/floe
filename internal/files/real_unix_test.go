@@ -34,3 +34,7 @@ func TestRealUnix(t *testing.T) {
 		}
 	}
 }
+
+// dotDotAbove is what RealAbove gives of base\x\new\..\parts, x not there: nothing, for Unix cannot follow .. after
+// a name not there.
+func dotDotAbove(string) string { return "" }

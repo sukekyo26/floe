@@ -213,8 +213,8 @@ func (a *app) writePages(pages []rendered, out arg) error {
 	for _, p := range pages {
 		old, info, err := files.Read(p.real)
 		switch {
-		case errors.Is(err, usererr.ErrNotFile):
-			// Made so since drawPages looked: not written over.
+		case errors.Is(err, usererr.ErrNotFile), errors.Is(err, usererr.ErrNotLocal):
+			// Made so since drawPages looked (or made a link to a share, a pipe): not written over.
 			if failed := found.Add(usererr.CannotRead(p.to, err)); failed != nil {
 				return failed
 			}

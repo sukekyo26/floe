@@ -7,6 +7,7 @@ import (
 	"path/filepath"
 
 	"floe/internal/dirs"
+	"floe/internal/usererr"
 )
 
 // errNotAbs is Real's for a path that is not absolute: what the system would read it under is no one's choice.
@@ -20,7 +21,24 @@ func Real(path string) (string, error) {
 	if !filepath.IsAbs(path) {
 		return "", &fs.PathError{Op: "real", Path: path, Err: errNotAbs}
 	}
-	return realOf(path)
+	p, err := allowed(path, true)
+	if err != nil {
+		return "", told(err, "real", path, false)
+	}
+	return realOfChecked(p, path)
+}
+
+// realOfChecked is the real path of p, checked of path, which allowed looked at: one the system names off this
+// machine's drives (\\?\UNC\…, which a reparse point allowed reads no target of may lead to) is ErrNotLocal.
+func realOfChecked(p checked, path string) (string, error) {
+	got, err := realOf(p)
+	switch {
+	case err != nil:
+		return "", asWritten(err, path)
+	case !dirs.OnDrive(got):
+		return "", &fs.PathError{Op: "real", Path: path, Err: &usererr.NotLocal{At: got}}
+	}
+	return got, nil
 }
 
 // RealAbove is the real path of path, there or not: of a name not there, the nearest directory above it that is,
@@ -33,6 +51,9 @@ func Real(path string) (string, error) {
 func RealAbove(path string) (string, bool) {
 	if !filepath.IsAbs(path) {
 		return "", false
+	}
+	if checksPaths {
+		return realAboveWalked(path)
 	}
 	rest := ""
 	for at := path; ; {
@@ -58,8 +79,29 @@ func RealAbove(path string) (string, bool) {
 	}
 }
 
+// realAboveWalked is RealAbove where allowed walks the path (Windows): the part there, its links followed, Real,
+// with the names not there as written; for a link to nothing, the part before the path's own link being followed
+// and the names from it on. Whatever else allowed refuses (a share, a device, a loop, a name it cannot look at)
+// is false.
+func realAboveWalked(path string) (string, bool) {
+	w, err := walk(path, true)
+	if err != nil {
+		return "", false
+	}
+	got, err := realOfChecked(w.at, path)
+	if err != nil {
+		return "", false
+	}
+	return filepath.Join(append([]string{got}, w.rest...)...), true
+}
+
 // LongName is path with each short name made long (Windows: SECRET~1 is .secret), its links not followed: the
 // names as written, for what reads them, as the dot rule of a link does. It fails for a name not there.
 func LongName(path string) (string, error) {
-	return longNameOf(path)
+	p, err := allowedWritten(path)
+	if err != nil {
+		return "", told(err, "GetLongPathName", path, false)
+	}
+	got, err := longNameOf(p)
+	return got, asWritten(err, path)
 }

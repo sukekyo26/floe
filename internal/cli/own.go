@@ -274,7 +274,7 @@ func (a *app) newOwn(of ownKind, name string) error {
 	}
 	// Not MkdirTemp, which makes it 0700 whatever the umask.
 	tmp := filepath.Join(dir, ".new-"+rand.Text())
-	if err = os.Mkdir(tmp, 0o755); err != nil { //nolint:gosec // G301: parts, themes and templates are not secret
+	if err = files.Mkdir(tmp, 0o755); err != nil { //nolint:gosec // G301: parts, themes and templates are not secret
 		return usererr.SettingDir(p.setting(), dir, err, usererr.CannotWrite(dir, err))
 	}
 	defer os.RemoveAll(tmp) //nolint:errcheck // gone once renamed; what is left is a dot directory, which Load skips

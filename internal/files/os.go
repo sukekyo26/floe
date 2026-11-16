@@ -6,35 +6,94 @@ import (
 )
 
 // The system's calls on a path that the rest of floe makes through files alone (forbidigo refuses the os ones out of
-// it), so that what is looked at before the system is called is looked at in one place. Each is the os one as it is.
+// it), so that the path is looked at in one place before the system is called (allowed): each refuses what allowed
+// refuses, and gives the system the path allowed checked. Errors name the path as given.
 
 // Stat tells of the file at path, its links followed, as os.Stat does.
 func Stat(path string) (fs.FileInfo, error) {
-	return os.Stat(path) //nolint:wrapcheck // the system's, for the caller to tell
+	p, err := allowed(path, true)
+	if err != nil {
+		return nil, told(err, "stat", path, false)
+	}
+	fi, err := statAt(p)
+	return fi, asWritten(err, path)
 }
 
 // Lstat tells of the file at path itself, a link not followed, as os.Lstat does.
 func Lstat(path string) (fs.FileInfo, error) {
-	return os.Lstat(path) //nolint:wrapcheck // as above
+	p, err := allowed(path, false)
+	if err != nil {
+		return nil, told(err, "lstat", path, false)
+	}
+	fi, err := lstatAt(p)
+	return fi, asWritten(err, path)
 }
 
 // ReadDir lists the directory at path, sorted by name, as os.ReadDir does.
 func ReadDir(path string) ([]fs.DirEntry, error) {
-	return os.ReadDir(path) //nolint:wrapcheck // as above
+	p, err := allowed(path, true)
+	if err != nil {
+		return nil, told(err, "open", path, false)
+	}
+	entries, err := readDirAt(p)
+	return entries, asWritten(err, path)
 }
 
 // OpenRoot opens the directory at path as an *os.Root, as os.OpenRoot does.
 func OpenRoot(path string) (*os.Root, error) {
-	return os.OpenRoot(path) //nolint:wrapcheck // as above
+	p, err := allowed(path, true)
+	if err != nil {
+		return nil, told(err, "open", path, false)
+	}
+	root, err := openRootAt(p)
+	return root, asWritten(err, path)
 }
 
-// MkdirAll makes the directory at path and those above it that are not there, as os.MkdirAll does.
+// MkdirAll makes the directory at path and those above it that are not there, as os.MkdirAll does; not where a link
+// to nothing leads (ELOOP).
 func MkdirAll(path string, perm fs.FileMode) error {
-	return os.MkdirAll(path, perm) //nolint:wrapcheck // as above
+	p, err := allowed(path, true)
+	if err != nil {
+		return told(err, "mkdir", path, true)
+	}
+	return asWritten(mkdirAllAt(p, perm), path)
+}
+
+// Mkdir makes the directory at path, as os.Mkdir does; not where a link to nothing on the way leads (ELOOP).
+func Mkdir(path string, perm fs.FileMode) error {
+	p, err := allowed(path, false)
+	if err != nil {
+		return told(err, "mkdir", path, true)
+	}
+	return asWritten(mkdirAt(p, perm), path)
 }
 
 // OpenLock opens the lock file at path, made with the permissions 0600 (less the umask) when there is none, for Lock:
-// read only, for nothing is written to it.
+// read only, for nothing is written to it; not where a link to nothing leads (ELOOP).
 func OpenLock(path string) (*os.File, error) {
-	return os.OpenFile(path, os.O_RDONLY|os.O_CREATE, 0o600) //nolint:wrapcheck,gosec // as above; G304: the caller's lock
+	p, err := allowed(path, true)
+	if err != nil {
+		return nil, told(err, "open", path, true)
+	}
+	f, err := openAt(p, os.O_RDONLY|os.O_CREATE, 0o600)
+	return f, asWritten(err, path)
 }
+
+// The wrappers below are files' one way to the system's calls on a path: each takes a checked alone.
+
+func statAt(p checked) (fs.FileInfo, error)  { return os.Stat(p.s) }  //nolint:wrapcheck // told by the caller
+func lstatAt(p checked) (fs.FileInfo, error) { return os.Lstat(p.s) } //nolint:wrapcheck // as above
+
+func readDirAt(p checked) ([]fs.DirEntry, error) { return os.ReadDir(p.s) } //nolint:wrapcheck // as above
+
+func openRootAt(p checked) (*os.Root, error) { return os.OpenRoot(p.s) } //nolint:wrapcheck // as above
+
+func mkdirAllAt(p checked, perm fs.FileMode) error { return os.MkdirAll(p.s, perm) } //nolint:wrapcheck // as above
+func mkdirAt(p checked, perm fs.FileMode) error    { return os.Mkdir(p.s, perm) }    //nolint:wrapcheck // as above
+
+func openAt(p checked, flag int, perm fs.FileMode) (*os.File, error) {
+	return os.OpenFile(p.s, flag, perm) //nolint:wrapcheck,gosec // as above; G304: a path allowed looked at
+}
+
+func renameAt(from, to checked) error { return os.Rename(from.s, to.s) } //nolint:wrapcheck // as above
+func removeAt(p checked) error        { return os.Remove(p.s) }          //nolint:wrapcheck // as above

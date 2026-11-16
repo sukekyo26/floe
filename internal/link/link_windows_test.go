@@ -172,31 +172,6 @@ func TestCheckRoot(t *testing.T) {
 	}
 }
 
-// A file on a share is refused, as written with \\host\share and through a network drive (whose real path is the
-// share's), but not through a subst drive (whose real path is the drive's own).
-func TestCheckShare(t *testing.T) {
-	t.Parallel()
-
-	tmp := t.TempDir()
-	write(t, filepath.Join(tmp, "a.html"), "a")
-	home := filepath.Join(realTemp(t), "home")
-	if err := os.Mkdir(home, 0o700); err != nil {
-		t.Fatal(err)
-	}
-	shared, mapped := testfs.MapShare(t, tmp)
-	for _, p := range []string{shared, mapped} {
-		file := realOf(t, filepath.Join(p, "a.html"))
-		if _, err := link.Check(file, home); mistakeKey(err) != "link_share" {
-			t.Errorf("Check(%s, from %s) = %v, want link_share", file, p, err)
-		}
-	}
-	drive := testfs.Subst(t, tmp)
-	file := realOf(t, drive+`\a.html`)
-	if _, err := link.Check(file, home); err != nil {
-		t.Errorf("Check(%s, from %s) = %v, want it allowed", file, drive, err)
-	}
-}
-
 // A directory right under home with the hidden attribute is hidden, as a dot one is; one deeper, in a project, is not.
 func TestCheckHiddenAttr(t *testing.T) {
 	t.Parallel()

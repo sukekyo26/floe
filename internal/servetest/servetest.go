@@ -44,7 +44,7 @@ func Start(t *testing.T, written map[string]string) *Site {
 	dir := func(name string) string { return filepath.Join(tmp, name) }
 	// Each made: a publish asks the server for its directories and compares them, and a link needs its home.
 	for _, name := range []string{"home", "store", "templates", "parts", "themes", "icons"} {
-		if err = os.Mkdir(dir(name), 0o700); err != nil {
+		if err = files.Mkdir(dir(name), 0o700); err != nil {
 			t.Fatal(err)
 		}
 	}
