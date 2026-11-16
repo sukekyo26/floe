@@ -217,7 +217,8 @@ func TestOwnDirsOverlap(t *testing.T) {
 			nil,
 			unusable(parts, dir+"/d.yaml") + unusable(themes, dir+"/d.yaml/th"),
 		},
-		{"not there, then ..", map[string]string{parts: pp, themes: pp + "/none/.."}, nil, unusable(themes, pp+"/none/..")},
+		// Its words are taken where the test runs (Unix): Windows folds none/.. as written.
+		{"not there, then ..", map[string]string{parts: pp, themes: pp + "/none/.."}, nil, ""},
 		// A link to nothing is not followed (resolve), and is refused once what it leads to is there.
 		{"a link to nothing", map[string]string{parts: pp, themes: dir + "/dangling"}, nil, unusable(themes, dir+"/dangling")},
 	} {
@@ -225,6 +226,7 @@ func TestOwnDirsOverlap(t *testing.T) {
 			t.Parallel()
 			if tt.name == "not there, then .." {
 				testfs.UnixOnly(t, "Windows folds none/.. as written, though none is not there")
+				tt.errs = unusable(themes, pp+"/none/..")
 			}
 			env := cli.HomeEnv(home, tt.env)
 			args := tt.args

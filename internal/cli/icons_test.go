@@ -110,8 +110,11 @@ func places(t *testing.T) {
 func TestIconsFetchUnderFile(t *testing.T) {
 	t.Parallel()
 
+	// What making it says, as the system says it: Windows reads the path under a file as not there, and goes on to
+	// make it (W12).
 	file := fileIn(t)
-	want := cli.DefaultPlace(file, "icons") + ": cannot be written (not a directory): check that its directory exists and can be written to, and that its name is free and not too long\n"
+	place := cli.DefaultPlace(file, "icons")
+	want := place + ": cannot be written (" + testfs.Words(t, files.MkdirAll(place, 0o700)) + "): check that its directory exists and can be written to, and that its name is free and not too long\n"
 	if code, _, stderr := runIn("", cli.HomeEnv(file, map[string]string{"HTTPS_PROXY": "http://127.0.0.1:1"}), "icons", "fetch", "aws"); code != 1 || stderr != want {
 		t.Errorf("floe icons fetch aws = %d, %q, want 1, %q", code, stderr, want)
 	}
