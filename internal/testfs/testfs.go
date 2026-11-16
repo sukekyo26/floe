@@ -6,6 +6,7 @@ package testfs
 import (
 	"errors"
 	"os"
+	"path/filepath"
 	"testing"
 	"time"
 )
@@ -84,6 +85,27 @@ func Junction(tb testing.TB, link, target string) {
 	if err := makeJunction(link, target); err != nil {
 		tb.Fatal(err)
 	}
+}
+
+// ShortName is the 8.3 name of path (Windows), which may begin with \\?\ to be over MAX_PATH. It skips t on Unix,
+// which has none, and where the volume makes none; on the CI (CI set) such a volume fails t instead, so that the
+// tests of short names are known to run there.
+func ShortName(tb testing.TB, path string) string {
+	tb.Helper()
+	if !isWindows {
+		tb.Skip("short names are Windows'")
+	}
+	short, err := shortNameOf(path)
+	if err != nil {
+		tb.Fatal(err)
+	}
+	if filepath.Base(short) == filepath.Base(path) {
+		if os.Getenv("CI") != "" {
+			tb.Fatalf("%s has no short name on the CI", path)
+		}
+		tb.Skip("this volume makes no short names")
+	}
+	return short
 }
 
 // CheckedOutLink skips t on Windows when path, which may be a symlink in the repository, is a regular file: one

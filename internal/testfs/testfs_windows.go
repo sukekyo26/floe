@@ -97,3 +97,21 @@ func makeDrive(dir string) (string, func() error, error) {
 	}
 	return "", nil, nil
 }
+
+func shortNameOf(path string) (string, error) {
+	p, err := windows.UTF16PtrFromString(path)
+	if err != nil {
+		return "", err //nolint:wrapcheck // the test's failure
+	}
+	buf := make([]uint16, windows.MAX_PATH)
+	for {
+		n, err := windows.GetShortPathName(p, &buf[0], uint32(len(buf))) //nolint:gosec // G115: a buffer's length
+		if err != nil {
+			return "", err //nolint:wrapcheck // as above
+		}
+		if int(n) < len(buf) {
+			return windows.UTF16ToString(buf[:n]), nil
+		}
+		buf = make([]uint16, n)
+	}
+}

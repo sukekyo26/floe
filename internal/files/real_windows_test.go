@@ -6,30 +6,9 @@ import (
 	"strings"
 	"testing"
 
-	"golang.org/x/sys/windows"
-
 	"floe/internal/files"
 	"floe/internal/testfs"
 )
-
-// shortName is the 8.3 name of path, or skips t where the volume makes none.
-func shortName(tb testing.TB, path string) string {
-	tb.Helper()
-	p, err := windows.UTF16PtrFromString(path)
-	if err != nil {
-		tb.Fatal(err)
-	}
-	buf := make([]uint16, windows.MAX_PATH)
-	n, err := windows.GetShortPathName(p, &buf[0], windows.MAX_PATH)
-	if err != nil {
-		tb.Fatal(err)
-	}
-	short := windows.UTF16ToString(buf[:n])
-	if filepath.Base(short) == filepath.Base(path) {
-		tb.Skip("this volume makes no short names")
-	}
-	return short
-}
 
 // Real follows junctions, makes short names long and case as on disk, drops a trailing dot of a path without \\?\
 // (Windows drops it before it opens), gives a path with \\?\ and one without the same \\?\ real path, and fails for a
@@ -113,7 +92,7 @@ func TestLongNameWindows(t *testing.T) {
 	write(t, filepath.Join(secret, "id.html"), "s")
 	j := filepath.Join(tmp, "j")
 	testfs.Junction(t, j, secret)
-	short := shortName(t, secret)
+	short := testfs.ShortName(t, secret)
 	for _, tt := range []struct{ path, suffix string }{
 		{filepath.Join(short, "id.html"), `\.secret\id.html`},
 		{short, `\.secret`},
@@ -126,9 +105,36 @@ func TestLongNameWindows(t *testing.T) {
 			t.Errorf("LongName(%q) = %q, %v, want it ending %q", tt.path, got, err, tt.suffix)
 		}
 	}
+	// Over MAX_PATH, which takes the buffer made again: a short name under a long directory, given with \\?\ (Real's,
+	// whose names are long already).
+	long := mustReal(t, tmp)
+	for len(long) < 300 {
+		long = filepath.Join(long, strings.Repeat("d", 40))
+	}
+	deep := filepath.Join(long, ".secret")
+	if err := os.MkdirAll(deep, 0o700); err != nil {
+		t.Fatal(err)
+	}
+	write(t, filepath.Join(deep, "id.html"), "s")
+	in := filepath.Join(testfs.ShortName(t, deep), "id.html")
+	if got, err := files.LongName(in); err != nil || got != filepath.Join(deep, "id.html") {
+		t.Errorf("LongName(%q) = %q, %v, want %q", in, got, err, filepath.Join(deep, "id.html"))
+	}
 	for _, p := range []string{filepath.Join(j, "none"), filepath.Join(tmp, "none", "x.html"), short + ":x"} {
 		if got, err := files.LongName(p); err == nil {
 			t.Errorf("LongName(%q) = %q, want an error", p, got)
+		}
+	}
+}
+
+// RealAbove stops at a volume alone that cannot be opened (a share not there), which has no directory above it, and
+// takes a drive without its root (C:, relative to the drive's working directory) as no absolute path.
+func TestRealAboveWindows(t *testing.T) {
+	t.Parallel()
+
+	for _, p := range []string{`\\127.0.0.1\nosuchshare`, `\\127.0.0.1\nosuchshare\x`, `C:`, `C:x`} {
+		if got, ok := files.RealAbove(p); ok {
+			t.Errorf("RealAbove(%q) = %q, want false", p, got)
 		}
 	}
 }

@@ -135,18 +135,10 @@ func realOf(path string) (string, error) {
 		return "", &fs.PathError{Op: "open", Path: path, Err: err}
 	}
 	defer windows.CloseHandle(h) //nolint:errcheck // read only
-	buf := make([]uint16, windows.MAX_PATH)
-	for {
+	return grown("GetFinalPathNameByHandle", path, func(buf []uint16) (uint32, error) {
 		//nolint:gosec // G115: a buffer's length
-		n, err := windows.GetFinalPathNameByHandle(h, &buf[0], uint32(len(buf)), fileNameNormalized|volumeNameDOS)
-		if err != nil {
-			return "", &fs.PathError{Op: "GetFinalPathNameByHandle", Path: path, Err: err}
-		}
-		if int(n) < len(buf) {
-			return windows.UTF16ToString(buf[:n]), nil
-		}
-		buf = make([]uint16, n)
-	}
+		return windows.GetFinalPathNameByHandle(h, &buf[0], uint32(len(buf)), fileNameNormalized|volumeNameDOS)
+	})
 }
 
 // longNameOf is path with each short name (SECRET~1) made long, as the system names it; links and junctions are
@@ -156,11 +148,19 @@ func longNameOf(path string) (string, error) {
 	if err != nil {
 		return "", &fs.PathError{Op: "GetLongPathName", Path: path, Err: err}
 	}
+	return grown("GetLongPathName", path, func(buf []uint16) (uint32, error) {
+		return windows.GetLongPathName(p, &buf[0], uint32(len(buf))) //nolint:gosec // G115: a buffer's length
+	})
+}
+
+// grown is the name call writes into a buffer, of MAX_PATH first: call gives the name's length, or, when the
+// buffer is too short, the length it needs with the closing NUL, for which the buffer is made again.
+func grown(op, path string, call func(buf []uint16) (uint32, error)) (string, error) {
 	buf := make([]uint16, windows.MAX_PATH)
 	for {
-		n, err := windows.GetLongPathName(p, &buf[0], uint32(len(buf))) //nolint:gosec // G115: a buffer's length
+		n, err := call(buf)
 		if err != nil {
-			return "", &fs.PathError{Op: "GetLongPathName", Path: path, Err: err}
+			return "", &fs.PathError{Op: op, Path: path, Err: err}
 		}
 		if int(n) < len(buf) {
 			return windows.UTF16ToString(buf[:n]), nil

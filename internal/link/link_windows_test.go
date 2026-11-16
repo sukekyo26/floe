@@ -6,31 +6,10 @@ import (
 	"strings"
 	"testing"
 
-	"golang.org/x/sys/windows"
-
 	"floe/internal/files"
 	"floe/internal/link"
 	"floe/internal/testfs"
 )
-
-// shortBase is the 8.3 name of path's last name, or skips t where the volume makes none.
-func shortBase(tb testing.TB, path string) string {
-	tb.Helper()
-	p, err := windows.UTF16PtrFromString(path)
-	if err != nil {
-		tb.Fatal(err)
-	}
-	buf := make([]uint16, windows.MAX_PATH)
-	n, err := windows.GetShortPathName(p, &buf[0], windows.MAX_PATH)
-	if err != nil {
-		tb.Fatal(err)
-	}
-	short := filepath.Base(windows.UTF16ToString(buf[:n]))
-	if short == filepath.Base(path) {
-		tb.Skip("this volume makes no short names")
-	}
-	return short
-}
 
 // realOf is files.Real of path: the folder a link registers; the tests make the files under it by the plain path,
 // which cmd's mklink takes.
@@ -106,8 +85,8 @@ func TestResolveShortName(t *testing.T) {
 			t.Errorf("Resolve(%q) = %q, want it served", rest, got)
 		}
 	}
-	secret := shortBase(t, filepath.Join(plain, ".secret"))
-	git := shortBase(t, filepath.Join(plain, "sub", ".git"))
+	secret := filepath.Base(testfs.ShortName(t, filepath.Join(plain, ".secret")))
+	git := filepath.Base(testfs.ShortName(t, filepath.Join(plain, "sub", ".git")))
 	for _, rest := range []string{secret + "/id.html", "sub/" + git + "/config"} {
 		if got, ok := link.Resolve(folder, true, rest); ok {
 			t.Errorf("Resolve(%q) = %q, want it refused as a dot name", rest, got)
