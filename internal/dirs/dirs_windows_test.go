@@ -30,3 +30,12 @@ var joinCases = []joinCase{
 	{`C:\w/`, "a.html", `C:\w/a.html`},
 	{`C:\w`, "a.html", `C:\w\a.html`},
 }
+
+var holdsCases = []holdsCase{
+	{`\\?\C:\w`, `\\?\C:\w\a.html`, true},
+	{`\\?\C:\w`, `\\?\C:\w`, false},
+	{`\\?\C:\w`, `\\?\C:\wx\a.html`, false},
+	{`\\?\C:\`, `\\?\C:\Users\u`, true},
+	{`\\?\C:\`, `\\?\C:\`, false},
+	{`\\?\C:\`, `\\?\D:\a.html`, false},
+}

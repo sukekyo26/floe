@@ -17,6 +17,11 @@ type underCase struct {
 type (
 	dirCase  struct{ path, want string }
 	joinCase struct{ dir, name, want string }
+	// holdsCase is a directory, a path and whether the path is below the directory.
+	holdsCase struct {
+		dir, path string
+		want      bool
+	}
 )
 
 func TestUnder(t *testing.T) {
@@ -50,5 +55,15 @@ func TestDirJoin(t *testing.T) {
 				t.Errorf("Join(%q, %q) = %q, want %q", tt.dir, tt.name, got, tt.want)
 			}
 		})
+	}
+}
+
+func TestHolds(t *testing.T) {
+	t.Parallel()
+
+	for _, tt := range holdsCases {
+		if got := dirs.Holds(tt.dir, tt.path); got != tt.want {
+			t.Errorf("Holds(%q, %q) = %v, want %v", tt.dir, tt.path, got, tt.want)
+		}
 	}
 }

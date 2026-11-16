@@ -26,3 +26,13 @@ var joinCases = []joinCase{
 	{"/", "a.html", "/a.html"},
 	{"a//", "b", "a//b"},
 }
+
+var holdsCases = []holdsCase{
+	{"/w", "/w/a.html", true},
+	{"/w", "/w/sub/a.html", true},
+	{"/w", "/w", false},
+	{"/w", "/wx/a.html", false},
+	{"/", "/a.html", true},
+	{"/", "/", false},
+	{"", "/a.html", false},
+}
