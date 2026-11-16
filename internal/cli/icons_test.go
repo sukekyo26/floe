@@ -32,16 +32,15 @@ func TestIconsDir(t *testing.T) {
 		places(t)
 	})
 	t.Run("XDG", func(t *testing.T) {
-		testfs.UnixOnly(t, "the XDG base directories")
 		t.Parallel()
 		home, data := t.TempDir(), t.TempDir()
 		for _, c := range []struct {
 			env  map[string]string
 			want string
 		}{
-			{map[string]string{"XDG_DATA_HOME": data, "HOME": home}, filepath.Join(data, "floe-icons", "aws")},
-			{map[string]string{"XDG_DATA_HOME": "~/d", "HOME": home}, filepath.Join(home, ".local", "share", "floe-icons", "aws")},
-			{map[string]string{"XDG_DATA_HOME": "d", "HOME": home}, filepath.Join(home, ".local", "share", "floe-icons", "aws")},
+			{cli.HomeEnv(home, map[string]string{"XDG_DATA_HOME": data}), filepath.Join(data, "floe-icons", "aws")},
+			{cli.HomeEnv(home, map[string]string{"XDG_DATA_HOME": "~/d"}), cli.DefaultPlace(home, "icons") + string(filepath.Separator) + "aws"},
+			{cli.HomeEnv(home, map[string]string{"XDG_DATA_HOME": "d"}), cli.DefaultPlace(home, "icons") + string(filepath.Separator) + "aws"},
 		} {
 			notIn(t, c.env, c.want)
 		}

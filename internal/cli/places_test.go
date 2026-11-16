@@ -9,10 +9,10 @@ import (
 	"floe/internal/cli"
 )
 
-// With no FLOE_DIR, floe publish, run as a process of its own, keeps the page in the default place of the system
-// (Windows: %LOCALAPPDATA%\floe\pages, its home's environment alone) and starts the server there, which stays after the
-// command ends and answers the next one, links a page by the same home, until floe stop stops it; part new makes in
-// the default place too.
+// With no FLOE_DIR, floe publish, run as a process of its own, keeps the page in the default place
+// (~/.local/share/floe, under %USERPROFILE% on Windows; its home's environment alone) and starts the server there,
+// which stays after the command ends and answers the next one, links a page by the same home, until floe stop stops
+// it; part new makes in the default place too.
 func TestDefaultPlaces(t *testing.T) {
 	t.Parallel()
 

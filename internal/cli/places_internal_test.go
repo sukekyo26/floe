@@ -1,16 +1,19 @@
-//go:build unix
-
 package cli
 
-import "path/filepath"
+import (
+	"path/filepath"
 
-// homeVars is the environment of a home at home and no other setting: on Unix, HOME alone.
+	"floe/internal/link"
+)
+
+// homeVars is the environment of a home at home and no other setting: the system's variable of the home alone
+// (HOME, Windows' USERPROFILE).
 func homeVars(home string) map[string]string {
-	return map[string]string{"HOME": home}
+	return map[string]string{link.HomeKey: home}
 }
 
 // defaultPlace is where floe keeps what (store, icons, parts, themes, templates) by default in the home of homeVars,
-// as Unix has it: under ~/.local/share and ~/.config.
+// on every system: under ~/.local/share and ~/.config.
 func defaultPlace(home, what string) string {
 	switch what {
 	case "store":
@@ -21,5 +24,5 @@ func defaultPlace(home, what string) string {
 	return filepath.Join(home, ".config", "floe", what)
 }
 
-// placeVar is the variable a mistake of no default place of what names (store, icons, parts, …, skills).
-func placeVar(string) string { return "HOME" }
+// placeVar is the variable a mistake of no default place names: the home's.
+func placeVar(string) string { return link.HomeKey }

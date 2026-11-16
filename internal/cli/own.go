@@ -16,8 +16,8 @@ import (
 )
 
 // dataPlace is a directory of floe's (dataDir): dir, "" for none; key, the setting that may name it, which a
-// mistake of no setting names too; whether it does; from, the variable of the system that decides the default (HOME,
-// LOCALAPPDATA), which a mistake of none names; and why the default cannot be (under a file, HOME=/dev/null), which
+// mistake of no setting names too; whether it does; from, the variable of the home that decides the default
+// (link.HomeKey), which a mistake of none names; and why the default cannot be (under a file, HOME=/dev/null), which
 // a reader takes as none and a writer tells, nil else.
 type dataPlace struct {
 	dir      string
@@ -43,20 +43,36 @@ func (p dataPlace) setting() string {
 	return ""
 }
 
-// base is where the defaults of a kind of floe's directories go: under the directory the variable key names, else,
-// with underHome, under that in the home (link.HomeKey); the values are the system's (places_unix.go,
-// places_windows.go).
+// base is where the defaults of a kind of floe's directories go: under the directory the variable key names, else
+// under underHome in the home (link.HomeKey).
 type base struct {
 	key, underHome string
 }
+
+// The places floe keeps its own in by default, on every system: under the XDG base directories, else under the home,
+// as on Linux (Windows' home is %USERPROFILE%). Not under %LOCALAPPDATA%: what an app installed as a package (the
+// Claude desktop app) makes there anew is put in the package's own folder, which a terminal does not see (S315's R4);
+// under the home it is not (R5).
+var (
+	dataBase   = base{key: "XDG_DATA_HOME", underHome: filepath.Join(".local", "share")}
+	configBase = base{key: "XDG_CONFIG_HOME", underHome: ".config"}
+)
+
+// storeSub and iconsSub are the store's and the icon sets' directories under the base of the data.
+const (
+	storeSub = "floe"
+	iconsSub = "floe-icons"
+)
 
 // dataDir is a directory of floe's: the setting key, else sub under the base b (dataPlace); "" when none is an
 // absolute path. Each is an absolute path, so that floe reads one place wherever it runs: a setting written
 // relative (~/x in quotes too, which no shell read) is refused, and a relative base is none, as the XDG spec says.
 // LIMIT: on Windows the bits 0o600 and 0o700 floe writes with hide nothing; a directory is as private as the ACL it
-// inherits. The default places (%LOCALAPPDATA%, and %USERPROFILE% for skills) let only the user, SYSTEM and the
-// Administrators in, but a FLOE_* directory elsewhere (C:\x) lets other users read and change the pages (Q7: floe
-// writes no ACL). Write one when that is asked for.
+// inherits. The default places, under %USERPROFILE%, let only the user, SYSTEM and the Administrators in, but a
+// FLOE_* directory elsewhere (C:\x) lets other users read and change the pages (Q7: floe writes no ACL). Write one
+// when that is asked for.
+// LIMIT: where the home is on a network (a share, a network drive), the default places are refused (path_not_local);
+// the FLOE_* settings name others. Look again if such PCs come to use floe.
 func (a *app) dataDir(key string, b base, sub string) (dataPlace, error) {
 	if setting := a.getenv(key); setting != "" {
 		if !filepath.IsAbs(setting) {

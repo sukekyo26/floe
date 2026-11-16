@@ -10,49 +10,43 @@ import (
 	"floe/internal/usererr"
 )
 
-// homeVars is the environment of a home at home and no other setting: on Windows, the profile and its
-// AppData\Local, as the system sets them.
-func homeVars(home string) map[string]string {
-	return map[string]string{"USERPROFILE": home, "LOCALAPPDATA": filepath.Join(home, "AppData", "Local")}
-}
-
-// defaultPlace is where floe keeps what (store, icons, parts, themes, templates) by default in the home of homeVars,
-// as Windows has it: all under %LOCALAPPDATA%\floe.
-func defaultPlace(home, what string) string {
-	local := filepath.Join(home, "AppData", "Local", "floe")
-	if what == "store" {
-		return filepath.Join(local, "pages")
-	}
-	return filepath.Join(local, what)
-}
-
-// placeVar is the variable a mistake of no default place of what names (store, icons, parts, …, skills).
-func placeVar(what string) string {
-	if what == "skills" {
-		return "USERPROFILE"
-	}
-	return "LOCALAPPDATA"
-}
-
-// Windows' default places come from LOCALAPPDATA alone: HOME, the XDG base directories and the profile do not stand in
-// for it, a relative one is none, and a setting is still an absolute path.
+// Windows' default places are under the profile (USERPROFILE), or the XDG base directories, as on Linux: HOME and
+// LOCALAPPDATA do not stand in for the profile, a relative one is none, and a setting is still an absolute path.
 func TestWindowsPlaces(t *testing.T) {
 	t.Parallel()
 
-	home := t.TempDir()
-	for name, env := range map[string]map[string]string{
-		"HOME, XDG and the profile":   {"HOME": home, "XDG_DATA_HOME": home, "XDG_CONFIG_HOME": home, "USERPROFILE": home},
-		"LOCALAPPDATA relative":       {"USERPROFILE": home, "LOCALAPPDATA": `AppData\Local`},
-		"LOCALAPPDATA drive-relative": {"USERPROFILE": home, "LOCALAPPDATA": `C:AppData`},
+	home, data, config := t.TempDir(), t.TempDir(), t.TempDir()
+	for name, c := range map[string]struct {
+		env          map[string]string
+		store, parts string
+	}{
+		"the profile": {
+			map[string]string{"USERPROFILE": home},
+			filepath.Join(home, `.local\share\floe`), filepath.Join(home, `.config\floe\parts`),
+		},
+		"XDG over the profile": {
+			map[string]string{"USERPROFILE": home, "XDG_DATA_HOME": data, "XDG_CONFIG_HOME": config},
+			filepath.Join(data, "floe"), filepath.Join(config, `floe\parts`),
+		},
+		"XDG relative": {
+			map[string]string{"USERPROFILE": home, "XDG_DATA_HOME": `d`, "XDG_CONFIG_HOME": `C:c`},
+			filepath.Join(home, `.local\share\floe`), filepath.Join(home, `.config\floe\parts`),
+		},
+		"HOME and LOCALAPPDATA alone": {map[string]string{"HOME": home, "LOCALAPPDATA": home}, "", ""},
+		"the profile relative":        {map[string]string{"USERPROFILE": `Users\u`, "HOME": home}, "", ""},
+		"the profile of no drive":     {map[string]string{"USERPROFILE": `\Users\u`, "LOCALAPPDATA": home}, "", ""},
+		"the profile, HOME elsewhere": {map[string]string{"USERPROFILE": home, "HOME": data}, filepath.Join(home, `.local\share\floe`), filepath.Join(home, `.config\floe\parts`)},
 	} {
-		a := with(env)
-		if _, err := a.storeDir(); !isKey(err, "store_no_dir") {
-			t.Errorf("%s: storeDir = %v, want store_no_dir", name, err)
+		a := with(c.env)
+		p, err := a.storeDir()
+		switch {
+		case c.store == "" && !isKey(err, "store_no_dir"):
+			t.Errorf("%s: storeDir = %+v, %v, want store_no_dir", name, p, err)
+		case c.store != "" && (err != nil || p.dir != c.store):
+			t.Errorf("%s: storeDir = %+v, %v, want %s", name, p, err, c.store)
 		}
-		for _, kind := range []string{"parts", "themes", "templates"} {
-			if p, err := a.ownPlace(kind); err != nil || p.dir != "" || p.from != "LOCALAPPDATA" {
-				t.Errorf("%s: ownPlace(%s) = %+v, %v, want none", name, kind, p, err)
-			}
+		if p, err := a.ownPlace("parts"); err != nil || p.dir != c.parts {
+			t.Errorf("%s: ownPlace(parts) = %+v, %v, want %q", name, p, err, c.parts)
 		}
 	}
 	if _, err := with(map[string]string{"FLOE_DIR": `floe\pages`}).storeDir(); !isKey(err, "dir_relative") {
