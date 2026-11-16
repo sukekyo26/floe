@@ -336,7 +336,7 @@ func runPS(t *testing.T, shell, base string, c psCase) *psResult {
 	}
 	set("TMP", filepath.Join(base, "tmp"))
 	set("TEMP", filepath.Join(base, "tmp"))
-	set("LOCALAPPDATA", filepath.Join(base, "localappdata"))
+	set("USERPROFILE", filepath.Join(base, "profile"))
 	set("PROCESSOR_ARCHITECTURE", strings.ToUpper(runtime.GOARCH))
 	set("PROCESSOR_ARCHITEW6432", "")
 	set("FLOE_TEST_CASE", string(js))
@@ -558,14 +558,14 @@ func testInstallPS1(t *testing.T, shell string) {
 		r := goodRelease(t)
 		base := t.TempDir()
 		res := runPS(t, shell, base, psCase{Proxy: site(t, r), env: map[string]string{"FLOE_INSTALL_DIR": ""}})
-		works(t, r, res, filepath.Join(base, "localappdata", "Programs", "floe"), host)
+		works(t, r, res, filepath.Join(base, "profile", ".local", "bin"), host)
 	})
-	t.Run("no LOCALAPPDATA", func(t *testing.T) {
+	t.Run("no USERPROFILE", func(t *testing.T) {
 		t.Parallel()
 		r := goodRelease(t)
 		base := t.TempDir()
-		res := runPS(t, shell, base, psCase{Proxy: site(t, r), env: map[string]string{"FLOE_INSTALL_DIR": "", "LOCALAPPDATA": ""}})
-		fails(t, res, filepath.Join(base, "localappdata", "Programs", "floe"), "LOCALAPPDATA", "FLOE_INSTALL_DIR")
+		res := runPS(t, shell, base, psCase{Proxy: site(t, r), env: map[string]string{"FLOE_INSTALL_DIR": "", "USERPROFILE": ""}})
+		fails(t, res, filepath.Join(base, "profile", ".local", "bin"), "USERPROFILE", "FLOE_INSTALL_DIR")
 	})
 	t.Run("relative, from where you are", func(t *testing.T) {
 		t.Parallel()
