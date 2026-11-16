@@ -26,24 +26,21 @@ func Lock(f *os.File) (func(), error) {
 	return func() { _ = f.Close() }, nil //nolint:errcheck // closing lets the lock go
 }
 
-// Mark is what the file at path is now, to tell when it changes: its kind, inode, size, mtime and ctime, as
-// lstat tells them, and as stat tells them for a symlink (what it leads to); "-" for none. ctime and the inode
-// tell what a mtime set back (touch -r, cp -p) or a file replaced by a rename would hide.
+// stampAt is the stamp of the file at path, as lstat tells it, or stat when follow (what a symlink leads to):
+// its kind, inode, size, mtime and ctime. ctime and the inode tell what a mtime set back (touch -r, cp -p) or a
+// file replaced by a rename would hide. It tells whether the file is a symlink, and false for none there.
 // LIMIT: a filesystem of times in whole seconds (FAT, some SMB or NFS) hides two writes of one size in one second
 // once the first was marked. Add a hash of the content if pages come to be kept on one.
-func Mark(path string) string {
+func stampAt(path string, follow bool) (part string, link, ok bool) {
 	var st unix.Stat_t
-	if unix.Lstat(path, &st) != nil {
-		return "-"
+	stat := unix.Lstat
+	if follow {
+		stat = unix.Stat
 	}
-	m := stamp(&st)
-	if st.Mode&unix.S_IFMT == unix.S_IFLNK {
-		if unix.Stat(path, &st) != nil {
-			return m + ">-"
-		}
-		m += ">" + stamp(&st)
+	if stat(path, &st) != nil {
+		return "", false, false
 	}
-	return m
+	return stamp(&st), st.Mode&unix.S_IFMT == unix.S_IFLNK, true
 }
 
 // stamp is st's part of a mark. A directory is its kind and inode alone: what is in it is marked by the walk,

@@ -49,26 +49,23 @@ type fileIDInfo struct {
 	FileID             [16]byte
 }
 
-// Mark is what the file at path is now, to tell when it changes: its attributes, ID, size, last write time and
-// change time, of the file itself, and of what it leads to for a reparse point (a symlink, a junction); "-" for none.
-// The change time tells what a write time set back would hide, the ID a file replaced by a rename.
+// stampAt is the stamp of the file at path, of the file itself, or of what it leads to when follow (a symlink, a
+// junction): its attributes, ID, size, last write time and change time. The change time tells what a write time
+// set back would hide, the ID a file replaced by a rename. It tells whether the file is a reparse point, and false
+// for none there.
 // LIMIT: the file is opened (for its attributes alone) to be marked, every second for one's own directories; an
 // os.Rename over it at that moment (an editor's save) fails, though it is opened sharing delete. Only the renamer
 // can mend that, by renaming as os.Root does (POSIX semantics); an editor's save is out of floe's hands.
-func Mark(path string) string {
-	f, ok := statOf(path, windows.FILE_FLAG_OPEN_REPARSE_POINT)
+func stampAt(path string, follow bool) (part string, link, ok bool) {
+	flags := uint32(windows.FILE_FLAG_OPEN_REPARSE_POINT)
+	if follow {
+		flags = 0
+	}
+	f, ok := statOf(path, flags)
 	if !ok {
-		return "-"
+		return "", false, false
 	}
-	m := stampOf(f)
-	if f.attrs&windows.FILE_ATTRIBUTE_REPARSE_POINT != 0 {
-		to, ok := statOf(path, 0)
-		if !ok {
-			return m + ">-"
-		}
-		m += ">" + stampOf(to)
-	}
-	return m
+	return stampOf(f), f.attrs&windows.FILE_ATTRIBUTE_REPARSE_POINT != 0, true
 }
 
 // noFields is the fields of no file.

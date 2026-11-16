@@ -2,6 +2,23 @@ package files
 
 import "fmt"
 
+// Mark is what the file at path is now, to tell when it changes: its stamp (stampAt), and for a link the stamp of
+// what it leads to after ">", or ">-" when it leads nowhere; "-" for none there.
+func Mark(path string) string {
+	m, link, ok := stampAt(path, false)
+	if !ok {
+		return "-"
+	}
+	if link {
+		to, _, ok := stampAt(path, true)
+		if !ok {
+			return m + ">-"
+		}
+		m += ">" + to
+	}
+	return m
+}
+
 // fields are what a mark is made of where the system tells them one by one (Windows), each there or not: a
 // filesystem that keeps no change time (FAT) or no 128-bit ID (FAT, some shares) still gives a mark of the rest.
 type fields struct {
