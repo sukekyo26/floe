@@ -1,12 +1,12 @@
 package testfs
 
 import (
+	"crypto/rand"
 	"errors"
 	"fmt"
 	"os"
 	"os/exec"
 	"path/filepath"
-	"strconv"
 	"strings"
 	"sync/atomic"
 	"syscall"
@@ -153,50 +153,89 @@ func shortNameOf(path string) (string, error) {
 	}
 }
 
-// servePipe serves a named pipe of its own name, counting each client that connects and letting it go at once, until
-// stop.
-func servePipe() (name string, connected func() int, stop func(), err error) {
-	name = `\\.\pipe\floe-test-` + strconv.FormatInt(time.Now().UnixNano(), 36)
+// pipeServer serves a named pipe, counting each client that connects and letting it go, until stopped. The next
+// instance is made before a client is handled, so none is turned away between two.
+type pipeServer struct {
+	name    *uint16
+	count   atomic.Int64
+	stopped atomic.Bool
+	marked  chan struct{}
+}
+
+func (s *pipeServer) instance() (windows.Handle, error) {
+	return windows.CreateNamedPipe( //nolint:wrapcheck // told by the caller
+		s.name, windows.PIPE_ACCESS_DUPLEX, windows.PIPE_TYPE_BYTE|windows.PIPE_WAIT,
+		windows.PIPE_UNLIMITED_INSTANCES, 512, 512, 0, nil)
+}
+
+// serve waits on h for a client, then on a new instance, until stopped.
+func (s *pipeServer) serve(h windows.Handle) {
+	for {
+		err := windows.ConnectNamedPipe(h, nil)
+		if s.stopped.Load() {
+			_ = windows.CloseHandle(h) //nolint:errcheck // done with
+			return
+		}
+		// ERROR_NO_DATA: a client that connected to the instance before it was waited on, and is gone.
+		if err == nil || errors.Is(err, windows.ERROR_PIPE_CONNECTED) || errors.Is(err, windows.ERROR_NO_DATA) {
+			s.count.Add(1)
+		}
+		next, err := s.instance()
+		go s.handle(h)
+		if err != nil {
+			return
+		}
+		h = next
+	}
+}
+
+// handle lets the client of h go; a marker, which writes m, is taken off the count and told.
+func (s *pipeServer) handle(h windows.Handle) {
+	var b [1]byte
+	var n uint32
+	if windows.ReadFile(h, b[:], &n, nil) == nil && n == 1 && b[0] == 'm' {
+		s.count.Add(-1)
+		s.marked <- struct{}{}
+	}
+	_ = windows.DisconnectNamedPipe(h) //nolint:errcheck // the client is let go
+	_ = windows.CloseHandle(h)         //nolint:errcheck // done with
+}
+
+// servePipe serves a named pipe of its own name until stop. connected marks its place with a client of its own:
+// once that is let go, each client before it has been counted (each was counted before the marker's instance was
+// made), the marker not.
+func servePipe() (name string, connected func() (int, error), stop func(), err error) {
+	name = `\\.\pipe\floe-test-` + rand.Text()
 	p, err := windows.UTF16PtrFromString(name)
 	if err != nil {
 		return "", nil, nil, fmt.Errorf("the pipe %s: %w", name, err)
 	}
-	var count atomic.Int64
-	var stopped atomic.Bool
-	instance := func() (windows.Handle, error) {
-		return windows.CreateNamedPipe(p, windows.PIPE_ACCESS_DUPLEX, windows.PIPE_TYPE_BYTE|windows.PIPE_WAIT,
-			windows.PIPE_UNLIMITED_INSTANCES, 512, 512, 0, nil)
-	}
-	h, err := instance()
+	s := &pipeServer{name: p, count: atomic.Int64{}, stopped: atomic.Bool{}, marked: make(chan struct{})}
+	h, err := s.instance()
 	if err != nil {
 		return "", nil, nil, fmt.Errorf("serve the pipe %s: %w", name, err)
 	}
-	go func() {
-		for {
-			err := windows.ConnectNamedPipe(h, nil)
-			if stopped.Load() {
-				_ = windows.CloseHandle(h) //nolint:errcheck // done with
-				return
-			}
-			if err == nil || errors.Is(err, windows.ERROR_PIPE_CONNECTED) {
-				count.Add(1)
-			}
-			_ = windows.DisconnectNamedPipe(h) //nolint:errcheck // the client is let go
-			_ = windows.CloseHandle(h)         //nolint:errcheck // a new instance is made
-			if h, err = instance(); err != nil {
-				return
-			}
-		}
-	}()
+	go s.serve(h)
 	stop = func() {
-		stopped.Store(true)
+		s.stopped.Store(true)
 		// A client of its own lets the waiting ConnectNamedPipe return.
 		if f, err := os.Open(name); err == nil {
 			_ = f.Close()
 		}
 	}
-	// The count is read after the connect is counted: a client that got through is counted before it returns.
-	return name, func() int { time.Sleep(50 * time.Millisecond); return int(count.Load()) }, stop, nil
+	connected = func() (int, error) {
+		f, err := os.OpenFile(name, os.O_WRONLY, 0)
+		if err != nil {
+			return 0, fmt.Errorf("mark the pipe %s: %w", name, err)
+		}
+		defer f.Close() //nolint:errcheck // written to already
+		if _, err := f.Write([]byte{'m'}); err != nil {
+			return 0, fmt.Errorf("mark the pipe %s: %w", name, err)
+		}
+		<-s.marked
+		return int(s.count.Load()), nil
+	}
+	return name, connected, stop, nil
 }
 
 // volumeName is the GUID name of the volume mounted at root (C:\), \\?\Volume{…}\.
