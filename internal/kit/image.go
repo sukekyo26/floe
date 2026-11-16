@@ -81,7 +81,7 @@ func ImageFile(fsys fs.FS, name, dir, of string) ([]byte, string, error) {
 // data URI.
 func imageStat(fsys fs.FS, name, dir, of string) (string, error) {
 	// files.Root and files.DirFS say only "invalid argument" of such a name.
-	if !fs.ValidPath(name) || name == "." {
+	if !files.ValidName(name) || name == "." {
 		return "", usererr.New("kit_image_path", name, of)
 	}
 	typ, ok := imageTypes[strings.ToLower(path.Ext(name))]

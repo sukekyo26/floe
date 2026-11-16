@@ -11,6 +11,7 @@ import (
 	"strings"
 	"sync"
 
+	"floe/internal/files"
 	"floe/internal/rules"
 	"floe/internal/schema"
 	"floe/internal/usererr"
@@ -421,21 +422,21 @@ type sub struct {
 }
 
 func (s sub) Open(name string) (fs.File, error) {
-	if !fs.ValidPath(name) {
+	if !files.ValidName(name) {
 		return nil, &fs.PathError{Op: "open", Path: name, Err: fs.ErrInvalid}
 	}
 	return s.FS.Open(path.Join(s.dir, name)) //nolint:wrapcheck // the FS's error, of the file named
 }
 
 func (s sub) Stat(name string) (fs.FileInfo, error) {
-	if !fs.ValidPath(name) {
+	if !files.ValidName(name) {
 		return nil, &fs.PathError{Op: "stat", Path: name, Err: fs.ErrInvalid}
 	}
 	return fs.Stat(s.FS, path.Join(s.dir, name)) //nolint:wrapcheck // as Open
 }
 
 func (s sub) ReadDir(name string) ([]fs.DirEntry, error) {
-	if !fs.ValidPath(name) {
+	if !files.ValidName(name) {
 		return nil, &fs.PathError{Op: "readdir", Path: name, Err: fs.ErrInvalid}
 	}
 	return fs.ReadDir(s.FS, path.Join(s.dir, name)) //nolint:wrapcheck // as Open

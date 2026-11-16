@@ -99,7 +99,7 @@ sections:
       - image: { alt: nine, file: ../a.png }
 `
 	path := func(at, name string) string {
-		return "d.yaml:" + at + `: "` + name + `" is not a path floe reads under the directory of d.yaml: write it relative to that directory, with one / between names, without ./ (write pic.png for ./pic.png), .., or a / at either end`
+		return "d.yaml:" + at + `: "` + name + `" is not a path floe reads under the directory of d.yaml: write it relative to that directory, with one / between names, without ./ (write pic.png for ./pic.png), .., or a / at either end (on Windows, also without \, : or a device's name such as NUL or CON)`
 	}
 	bmp := func(at string) string {
 		return "d.yaml:" + at + `: "shots/a.bmp" is not an image floe takes: use png, jpeg, gif, webp or svg`

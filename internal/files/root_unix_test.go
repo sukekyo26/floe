@@ -47,3 +47,8 @@ func TestFSOpensWithoutBlocking(t *testing.T) {
 		}
 	}
 }
+
+// osNameCases are the names Windows reads otherwise, which Unix takes as they are.
+var osNameCases = []nameCase{ //nolint:gochecknoglobals // a test's table
+	{`sub\b.png`, true}, {"a.png:x", true}, {"C:x", true}, {"NUL", true}, {"sub/CON", true},
+}

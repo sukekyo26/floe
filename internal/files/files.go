@@ -12,6 +12,7 @@ import (
 	"path/filepath"
 	"regexp"
 	"strings"
+	"syscall"
 
 	"floe/internal/usererr"
 )
@@ -93,7 +94,12 @@ func openWith(o Opener, path string, flag int, perm fs.FileMode) (*os.File, fs.F
 		return nil, before, err //nolint:wrapcheck // as above
 	}
 	info, err := f.Stat()
-	if err == nil && IsNotFile(info) {
+	switch {
+	case err != nil:
+	case creating && info.Mode()&(fs.ModeSymlink|fs.ModeIrregular) != 0:
+		// Windows opens a link to nowhere itself (noFollow), where Unix refuses it: told alike.
+		err = &fs.PathError{Op: "open", Path: path, Err: syscall.ELOOP}
+	case IsNotFile(info):
 		err = &fs.PathError{Op: "open", Path: path, Err: usererr.ErrNotFile}
 	}
 	if err != nil {

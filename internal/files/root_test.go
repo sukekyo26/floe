@@ -39,7 +39,6 @@ func TestFSContract(t *testing.T) {
 	for via, fsys := range fsOf(t, dir) {
 		t.Run(via, func(t *testing.T) {
 			t.Parallel()
-			testfs.Pending(t, "S315-P4: Open takes sub\\b.png, for the names are not Localized")
 			if err := fstest.TestFS(fsys, "a.yaml", "sub/b.png"); err != nil {
 				t.Error(err)
 			}
@@ -147,5 +146,33 @@ func TestRootDirError(t *testing.T) {
 	}
 	if _, err := root.Stat("a.png"); !errors.As(err, new(*files.DirError)) {
 		t.Errorf("Stat = %v, want a DirError", err)
+	}
+}
+
+// nameCase is a name and whether ValidName takes it; the rows that differ by system are in osNameCases.
+type nameCase struct {
+	name string
+	ok   bool
+}
+
+// ValidName takes the names an fs.FS takes and the system reads as names under the directory.
+func TestValidName(t *testing.T) {
+	t.Parallel()
+
+	for _, tt := range append([]nameCase{
+		{"a.png", true},
+		{"sub/b.png", true},
+		{".", true},
+		{"nul.txt", true},
+		{"a.png.", true},
+		{"", false},
+		{"../a.png", false},
+		{"/a.png", false},
+		{"sub//b.png", false},
+		{"a\x00.png", false},
+	}, osNameCases...) {
+		if got := files.ValidName(tt.name); got != tt.ok {
+			t.Errorf("ValidName(%q) = %v, want %v", tt.name, got, tt.ok)
+		}
 	}
 }

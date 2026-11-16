@@ -253,7 +253,11 @@ func followNamed(at, name string) (string, error) {
 	if err != nil {
 		return "", err
 	}
-	if filepath.Base(followed) != name {
+	// Only a link (a junction too, irregular) leads to another name: at itself, in another case on disk (Windows
+	// names it so), is the one asked for; one not there is made by its name.
+	info, lerr := files.Lstat(at)
+	link := lerr == nil && info.Mode()&(fs.ModeSymlink|fs.ModeIrregular) != 0
+	if link && filepath.Base(followed) != name {
 		return "", usererr.NewAt(at, 0, 0, "cli_skill_link", followed, name)
 	}
 	return followed, nil
