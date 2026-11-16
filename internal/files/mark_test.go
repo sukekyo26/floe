@@ -92,9 +92,8 @@ func TestMarkJunction(t *testing.T) {
 	}
 	link := filepath.Join(dir, "link")
 	testfs.Junction(t, link, to)
-	m := files.Mark(link)
-	if !strings.Contains(m, ">") || strings.HasSuffix(m, ">-") {
-		t.Errorf("a junction is marked %q, want what it leads to after >", m)
+	if m, want := files.Mark(link), files.Mark(to); !strings.HasSuffix(m, ">"+want) || want == "-" {
+		t.Errorf("a junction is marked %q, want %q after >", m, want)
 	}
 }
 
