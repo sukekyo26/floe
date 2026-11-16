@@ -20,15 +20,17 @@ func hidden(path string) (bool, error) {
 }
 
 // appDataDirs is where the system keeps applications' data of this user (RoamingAppData, LocalAppData,
-// LocalAppDataLow), as it answers this process, each there or not, or why it cannot tell one.
-// LIMIT: flag 0 answers a package's own folders to a process run as one (KF_FLAG_NO_PACKAGE_REDIRECTION would not);
+// LocalAppDataLow), as it answers this process, or why it cannot tell one. It does not look whether each is there
+// (KF_FLAG_DONT_VERIFY): one not there fails as the system's own failure code, which is no fs.ErrNotExist, so that
+// files.Real tells it instead.
+// LIMIT: a package's own folders are answered to a process run as one (KF_FLAG_NO_PACKAGE_REDIRECTION would not);
 // none was seen (S315's W28). Add the flag if floe comes to run as a package.
 func appDataDirs() []appDir {
 	found := make([]appDir, 0, 3)
 	for _, id := range []*windows.KNOWNFOLDERID{
 		windows.FOLDERID_RoamingAppData, windows.FOLDERID_LocalAppData, windows.FOLDERID_LocalAppDataLow,
 	} {
-		dir, err := windows.KnownFolderPath(id, 0)
+		dir, err := windows.KnownFolderPath(id, windows.KF_FLAG_DONT_VERIFY)
 		found = append(found, appDir{path: dir, err: err})
 	}
 	return found
