@@ -2,13 +2,13 @@ package corpus_test
 
 import (
 	"bytes"
-	"errors"
 	"flag"
 	"fmt"
 	"io/fs"
 	"maps"
 	"os"
 	"path/filepath"
+	"regexp"
 	"slices"
 	"strings"
 	"testing"
@@ -38,9 +38,6 @@ func TestCorpus(t *testing.T) {
 				t.Fatal(err)
 			}
 			golden := filepath.Join(dir, "golden")
-			if printsPaths(t, golden) {
-				testfs.Pending(t, "S315-P2: the golden files hold the paths floe prints with /")
-			}
 			got := runSample(t, name, dir)
 			if *update {
 				// A mistake of the run stays told here, not as bytes that differ on the next machine.
@@ -253,15 +250,25 @@ func (s *sample) run(t *testing.T, args ...string) int {
 	getenv := func(key string) string { return s.env[key] }
 	code := cli.Run(args, cli.Env{Stdout: &stdout, Stderr: &stderr, Dir: s.dir, Getenv: getenv})
 	stand := strings.NewReplacer(s.tmp, "$TMP", s.dir, "$SAMPLE")
-	out := stand.Replace(stdout.String())
+	out := slashed(stand.Replace(stdout.String()))
 	// The arguments are the test's own paths, joined with the system's separator: written with / alike.
 	fmt.Fprintf(&s.commands, "$ floe %s\nexit %d\n", filepath.ToSlash(stand.Replace(strings.Join(args, " "))), code)
-	for _, printed := range []struct{ name, text string }{{"stdout", out}, {"stderr", stand.Replace(stderr.String())}} {
+	for _, printed := range []struct{ name, text string }{{"stdout", out}, {"stderr", slashed(stand.Replace(stderr.String()))}} {
 		if printed.text != "" {
 			fmt.Fprintf(&s.commands, "--- %s\n%s", printed.name, printed.text)
 		}
 	}
 	return code
+}
+
+// placed is a path under the directories the test made, as run writes it: $SAMPLE or $TMP, and the rest of the path
+// up to a colon (a line and a column after it), a space or a quote.
+var placed = regexp.MustCompile(`\$(?:SAMPLE|TMP)[^:\s"']*`)
+
+// slashed is printed with the separators of each path under $SAMPLE and $TMP written /, as the golden files hold
+// them: floe prints the system's (\ on Windows), and a path the test made is the same wherever it runs.
+func slashed(printed string) string {
+	return placed.ReplaceAllStringFunc(printed, func(p string) string { return strings.ReplaceAll(p, `\`, "/") })
 }
 
 // drawn returns b, what floe drew (a page), as it is, and fails the test when it holds a directory of the
@@ -309,26 +316,6 @@ func (s *sample) glob(t *testing.T, pattern string, keep func(fs.FileInfo) bool)
 	}
 	slices.Sort(rel)
 	return rel
-}
-
-// printsPaths reports whether floe printed a path under $SAMPLE or $TMP in the commands.golden of golden, apart
-// from the commands themselves.
-func printsPaths(t *testing.T, golden string) bool {
-	t.Helper()
-
-	b, err := os.ReadFile(filepath.Join(golden, "commands.golden"))
-	if errors.Is(err, fs.ErrNotExist) {
-		return false // a new sample, written by -update
-	}
-	if err != nil {
-		t.Fatal(err)
-	}
-	for line := range strings.Lines(string(b)) {
-		if !strings.HasPrefix(line, "$ floe ") && (strings.Contains(line, "$SAMPLE/") || strings.Contains(line, "$TMP/")) {
-			return true
-		}
-	}
-	return false
 }
 
 // hidden reports whether name is one a system or an editor leaves, as macOS's .DS_Store.

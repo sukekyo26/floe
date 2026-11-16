@@ -12,6 +12,7 @@ import (
 	"io/fs"
 	"maps"
 	"path"
+	"path/filepath"
 	"slices"
 	"sync"
 	"sync/atomic"
@@ -48,6 +49,15 @@ type Dir struct {
 	FS   fs.FS
 	Name string
 	read map[string][]byte // the files readFile read, by name, when the Dir is recording
+}
+
+// path is the path, as shown, of the names (of d.FS, /-separated) in d.
+func (d Dir) path(names ...string) string { return under(d.Name, names...) }
+
+// under is the path, as shown, of the names (of an fs.FS, /-separated) in the directory dir as shown: in the
+// system's separators alone, so that a path of one's own is not shown half / and half \ (Windows).
+func under(dir string, names ...string) string {
+	return filepath.Join(dir, filepath.FromSlash(path.Join(names...)))
 }
 
 // recording returns d writing down the files readFile reads of it, as they are, for floe part show and the
@@ -383,7 +393,7 @@ func entries(d Dir, dir string, dirs bool) ([]string, error) {
 	}
 	all, err := fs.ReadDir(d.FS, dir)
 	if err != nil {
-		return nil, usererr.CannotRead(path.Join(d.Name, dir), err)
+		return nil, usererr.CannotRead(d.path(dir), err)
 	}
 	var names []string
 	var found usererr.List
@@ -391,7 +401,7 @@ func entries(d Dir, dir string, dirs bool) ([]string, error) {
 		if files.Hidden(e.Name()) {
 			continue
 		}
-		at := path.Join(d.Name, dir, e.Name())
+		at := d.path(dir, e.Name())
 		isDir := e.IsDir()
 		if e.Type()&fs.ModeSymlink != 0 {
 			fi, err := fs.Stat(d.FS, path.Join(dir, e.Name()))
@@ -418,7 +428,7 @@ func entries(d Dir, dir string, dirs bool) ([]string, error) {
 // words, at it. What is neither a regular file nor a directory (a FIFO, a link to a device) is refused unread by
 // the FS of one's own (files.DirFS), as reading it may block or never end.
 func readFile(d Dir, dir, name string) ([]byte, bool, error) {
-	at := path.Join(d.Name, dir, name)
+	at := d.path(dir, name)
 	src, err := fs.ReadFile(d.FS, path.Join(dir, name))
 	switch {
 	case errors.Is(err, fs.ErrNotExist):
@@ -449,7 +459,7 @@ func has(d Dir, dir, name string) (bool, error) {
 	case errors.Is(err, fs.ErrNotExist):
 		return false, nil
 	case err != nil:
-		return false, usererr.CannotRead(path.Join(d.Name, dir, name), err)
+		return false, usererr.CannotRead(d.path(dir, name), err)
 	}
 	return true, nil
 }
@@ -473,7 +483,7 @@ func readChecks(d Dir, dir string) (*rules.Checks, error) {
 	if !ok || err != nil {
 		return nil, err
 	}
-	return rules.ReadChecks(path.Join(d.Name, dir, "checks.yaml"), src) //nolint:wrapcheck // its mistakes
+	return rules.ReadChecks(d.path(dir, "checks.yaml"), src) //nolint:wrapcheck // its mistakes
 }
 
 // readWordsIn reads the words.yaml of the directory dir of d, none without one.
@@ -482,7 +492,7 @@ func readWordsIn(d Dir, dir string) (words, error) {
 	if !ok || err != nil {
 		return nil, err
 	}
-	return readWords(path.Join(d.Name, dir, "words.yaml"), src)
+	return readWords(d.path(dir, "words.yaml"), src)
 }
 
 // OwnTemplates returns the names of the templates k read itself, not its base's, sorted.
