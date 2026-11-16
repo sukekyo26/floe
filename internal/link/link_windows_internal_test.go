@@ -48,3 +48,27 @@ func TestAppDataKnown(t *testing.T) {
 		t.Errorf("the folders of application data = %v, want three, one of them LocalLow", got)
 	}
 }
+
+// A drive's root is too much to serve, the drive of home or another; the old check took \\?\C:\ for no root, and
+// compared it with home as \\?\C:\\.
+func TestExposedDir(t *testing.T) {
+	t.Parallel()
+
+	home := `\\?\C:\Users\u`
+	for _, tt := range []struct {
+		dir  string
+		want bool
+	}{
+		{`\\?\D:\`, true},
+		{`\\?\C:\`, true},
+		{`\\?\C:\Users`, true},
+		{home, true},
+		{`\\?\D:\docs`, false},
+		{`\\?\C:\Users\u\docs`, false},
+		{`\\?\C:\Users\v`, false},
+	} {
+		if got := exposedDir(tt.dir, home); got != tt.want {
+			t.Errorf("exposedDir(%s) = %v, want %v", tt.dir, got, tt.want)
+		}
+	}
+}
