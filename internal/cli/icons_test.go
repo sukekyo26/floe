@@ -9,6 +9,7 @@ import (
 	"testing"
 
 	"floe/internal/cli"
+	"floe/internal/files"
 	"floe/internal/testfs"
 )
 
@@ -20,33 +21,59 @@ func runIn(dir string, env map[string]string, args ...string) (int, string, stri
 	return code, stdout.String(), stderr.String()
 }
 
-// The icons are kept in FLOE_ICONS_DIR, else under XDG_DATA_HOME, else under HOME, each an absolute path
-// whatever the working directory; a relative one is refused, or is none for XDG_DATA_HOME, as its spec says.
+// The icons are kept in FLOE_ICONS_DIR, else in the default of the system (cli.DefaultPlace), each an absolute path
+// whatever the working directory; a relative one is refused, or is none for a base of the system, as the XDG spec
+// says.
 func TestIconsDir(t *testing.T) {
 	t.Parallel()
 
 	t.Run("the places", func(t *testing.T) {
-		testfs.Pending(t, "S315-P7: Unix absolute paths")
 		t.Parallel()
 		places(t)
+	})
+	t.Run("XDG", func(t *testing.T) {
+		testfs.UnixOnly(t, "the XDG base directories")
+		t.Parallel()
+		home, data := t.TempDir(), t.TempDir()
+		for _, c := range []struct {
+			env  map[string]string
+			want string
+		}{
+			{map[string]string{"XDG_DATA_HOME": data, "HOME": home}, filepath.Join(data, "floe-icons", "aws")},
+			{map[string]string{"XDG_DATA_HOME": "~/d", "HOME": home}, filepath.Join(home, ".local", "share", "floe-icons", "aws")},
+			{map[string]string{"XDG_DATA_HOME": "d", "HOME": home}, filepath.Join(home, ".local", "share", "floe-icons", "aws")},
+		} {
+			notIn(t, c.env, c.want)
+		}
 	})
 	for _, c := range []struct {
 		env  map[string]string
 		want string
 	}{
-		{map[string]string{"FLOE_ICONS_DIR": "~/i", "HOME": "/h"}, "floe: FLOE_ICONS_DIR is ~/i, a relative path; set it to an absolute path\n"},
-		{map[string]string{"FLOE_ICONS_DIR": "i", "HOME": "/h"}, "floe: FLOE_ICONS_DIR is i, a relative path; set it to an absolute path\n"},
-		{map[string]string{"HOME": "h"}, "floe: there is no directory for icons, as HOME is not an absolute path; set FLOE_ICONS_DIR to an absolute path\n"},
-		{nil, "floe: there is no directory for icons, as HOME is not an absolute path; set FLOE_ICONS_DIR to an absolute path\n"},
+		{cli.HomeEnv("/h", map[string]string{"FLOE_ICONS_DIR": "~/i"}), "floe: FLOE_ICONS_DIR is ~/i, a relative path; set it to an absolute path\n"},
+		{cli.HomeEnv("/h", map[string]string{"FLOE_ICONS_DIR": "i"}), "floe: FLOE_ICONS_DIR is i, a relative path; set it to an absolute path\n"},
+		{cli.HomeVars("h"), "floe: there is no directory for icons, as " + cli.PlaceVar("icons") + " is not an absolute path; set FLOE_ICONS_DIR to an absolute path\n"},
+		{nil, "floe: there is no directory for icons, as " + cli.PlaceVar("icons") + " is not an absolute path; set FLOE_ICONS_DIR to an absolute path\n"},
 	} {
 		dirIn(t, c.env, c.want)
 	}
-	// A setting under a file is told for the setting.
+	// A setting under a file is told for the setting; Windows reads it as none (W12, iconsUnderAFile).
 	t.Run("a setting under a file", func(t *testing.T) {
-		testfs.Pending(t, "S315-P7: Unix absolute paths")
+		testfs.UnixOnly(t, "a path under a file is read as not there on Windows (W12)")
 		t.Parallel()
-		dirIn(t, map[string]string{"FLOE_ICONS_DIR": "/dev/null/i", "HOME": "/h"}, "floe: FLOE_ICONS_DIR is /dev/null/i, which cannot be used as a directory (not a directory); make it a directory floe can use, or set FLOE_ICONS_DIR to another directory\n")
+		under := filepath.Join(fileIn(t), "i")
+		dirIn(t, cli.HomeEnv(t.TempDir(), map[string]string{"FLOE_ICONS_DIR": under}), "floe: FLOE_ICONS_DIR is "+under+", which cannot be used as a directory (not a directory); make it a directory floe can use, or set FLOE_ICONS_DIR to another directory\n")
 	})
+}
+
+// fileIn is an empty file in a new temporary directory.
+func fileIn(t *testing.T) string {
+	t.Helper()
+	file := filepath.Join(t.TempDir(), "file")
+	if err := os.WriteFile(file, nil, 0o600); err != nil {
+		t.Fatal(err)
+	}
+	return file
 }
 
 // dirIn checks that floe icons search tells want under env, in no directory and in one.
@@ -59,37 +86,33 @@ func dirIn(t *testing.T, env map[string]string, want string) {
 	}
 }
 
+// notIn checks that floe icons search under env says the AWS icons are not in the directory want.
+func notIn(t *testing.T, env map[string]string, want string) {
+	t.Helper()
+	_, _, stderr := runIn("", env, "icons", "search", "aws", "x")
+	if told := "floe: AWS icons are not in " + want + `; run "floe icons fetch aws" (downloads about 14MB from ` +
+		"aws.amazon.com) and try again\n"; stderr != told {
+		t.Errorf("%v: %q, want %q", env, stderr, told)
+	}
+}
+
 // places checks where floe icons search looks for the icons.
 func places(t *testing.T) {
 	t.Helper()
-	for _, c := range []struct {
-		env  map[string]string
-		want string
-	}{
-		{map[string]string{"FLOE_ICONS_DIR": "/i", "XDG_DATA_HOME": "/d", "HOME": "/h"}, "/i/aws"},
-		{map[string]string{"XDG_DATA_HOME": "/d", "HOME": "/h"}, "/d/floe-icons/aws"},
-		{map[string]string{"XDG_DATA_HOME": "~/d", "HOME": "/h"}, "/h/.local/share/floe-icons/aws"},
-		{map[string]string{"XDG_DATA_HOME": "d", "HOME": "/h"}, "/h/.local/share/floe-icons/aws"},
-		{map[string]string{"HOME": "/h"}, "/h/.local/share/floe-icons/aws"},
-		// The default under a file holds none.
-		{map[string]string{"HOME": "/dev/null"}, "/dev/null/.local/share/floe-icons/aws"},
-	} {
-		_, _, stderr := runIn("", c.env, "icons", "search", "aws", "x")
-		want := "floe: AWS icons are not in " + c.want + `; run "floe icons fetch aws" (downloads about 14MB from ` +
-			"aws.amazon.com) and try again\n"
-		if stderr != want {
-			t.Errorf("%v: %q, want %q", c.env, stderr, want)
-		}
-	}
+	icons, home, file := t.TempDir(), t.TempDir(), fileIn(t)
+	notIn(t, cli.HomeEnv(home, map[string]string{"FLOE_ICONS_DIR": icons}), filepath.Join(icons, "aws"))
+	notIn(t, cli.HomeVars(home), filepath.Join(cli.DefaultPlace(home, "icons"), "aws"))
+	// The default under a file holds none.
+	notIn(t, cli.HomeVars(file), filepath.Join(cli.DefaultPlace(file, "icons"), "aws"))
 }
 
 // floe icons fetch into the default under a file tells why before it reaches the network.
 func TestIconsFetchUnderFile(t *testing.T) {
-	testfs.Pending(t, "S315-P7: Unix absolute paths")
 	t.Parallel()
 
-	const want = "/dev/null/.local/share/floe-icons: cannot be written (not a directory): check that its directory exists and can be written to, and that its name is free and not too long\n"
-	if code, _, stderr := runIn("", map[string]string{"HOME": "/dev/null", "HTTPS_PROXY": "http://127.0.0.1:1"}, "icons", "fetch", "aws"); code != 1 || stderr != want {
+	file := fileIn(t)
+	want := cli.DefaultPlace(file, "icons") + ": cannot be written (not a directory): check that its directory exists and can be written to, and that its name is free and not too long\n"
+	if code, _, stderr := runIn("", cli.HomeEnv(file, map[string]string{"HTTPS_PROXY": "http://127.0.0.1:1"}), "icons", "fetch", "aws"); code != 1 || stderr != want {
 		t.Errorf("floe icons fetch aws = %d, %q, want 1, %q", code, stderr, want)
 	}
 }
@@ -133,9 +156,9 @@ func TestIconsFetchAndSearch(t *testing.T) {
 		}
 	}
 	t.Run("a zip not there", func(t *testing.T) {
-		testfs.Pending(t, "S315-P7: system words")
 		t.Parallel()
-		if code, stdout, stderr := runIn(dir, env, "icons", "fetch", "aws", "gone.zip"); code != 1 || stdout != "" || stderr != "gone.zip: no such file or directory\n" {
+		_, _, gone := files.Read(filepath.Join(dir, "gone.zip"))
+		if code, stdout, stderr := runIn(dir, env, "icons", "fetch", "aws", "gone.zip"); code != 1 || stdout != "" || stderr != "gone.zip: "+testfs.Words(t, gone)+"\n" {
 			t.Errorf("floe icons fetch aws gone.zip = %d, %q, %q", code, stdout, stderr)
 		}
 	})
