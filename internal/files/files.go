@@ -12,9 +12,6 @@ import (
 	"path/filepath"
 	"regexp"
 	"strings"
-	"syscall"
-
-	"golang.org/x/sys/unix"
 
 	"floe/internal/usererr"
 )
@@ -89,9 +86,9 @@ func openWith(o Opener, path string, flag int, perm fs.FileMode) (*os.File, fs.F
 	if creating {
 		// A link to nowhere is not followed to make the file where it leads, out of its directory (ELOOP); a link to a
 		// file is followed, as it is to read.
-		flag |= syscall.O_NOFOLLOW
+		flag |= noFollow
 	}
-	f, err := o.OpenFile(path, flag|syscall.O_NONBLOCK|syscall.O_NOCTTY, perm)
+	f, err := o.OpenFile(path, flag|openFlags, perm)
 	if err != nil {
 		return nil, before, err //nolint:wrapcheck // as above
 	}
@@ -183,33 +180,4 @@ func createNew(prefix string, perm os.FileMode) (*os.File, error) {
 // starting with a dot (.git, an editor's .part.html.swp, .DS_Store).
 func Hidden(name string) bool {
 	return strings.HasPrefix(name, ".")
-}
-
-// Mark is what the file at path is now, to tell when it changes: its kind, inode, size, mtime and ctime, as
-// lstat tells them, and as stat tells them for a symlink (what it leads to); "-" for none. ctime and the inode
-// tell what a mtime set back (touch -r, cp -p) or a file replaced by a rename would hide.
-// LIMIT: a filesystem of times in whole seconds (FAT, some SMB or NFS) hides two writes of one size in one second
-// once the first was marked. Add a hash of the content if pages come to be kept on one.
-func Mark(path string) string {
-	var st unix.Stat_t
-	if unix.Lstat(path, &st) != nil {
-		return "-"
-	}
-	m := stamp(&st)
-	if st.Mode&unix.S_IFMT == unix.S_IFLNK {
-		if unix.Stat(path, &st) != nil {
-			return m + ">-"
-		}
-		m += ">" + stamp(&st)
-	}
-	return m
-}
-
-// stamp is st's part of a mark. A directory is its kind and inode alone: what is in it is marked by the walk,
-// and its times change with every file made in it, a hidden one (an editor's .swp) too.
-func stamp(st *unix.Stat_t) string {
-	if st.Mode&unix.S_IFMT == unix.S_IFDIR {
-		return fmt.Sprintf("%o:%d", st.Mode, st.Ino)
-	}
-	return fmt.Sprintf("%o:%d:%d:%d:%d", st.Mode, st.Ino, st.Size, st.Mtim.Nano(), st.Ctim.Nano())
 }
