@@ -80,7 +80,6 @@ func TestSkillInstallShown(t *testing.T) {
 // the skill is written in it.
 func TestSkillInstallCase(t *testing.T) {
 	t.Parallel()
-	testfs.Pending(t, "S315-P4: followNamed takes the case on disk Real gives as a link to another name")
 
 	home := t.TempDir()
 	if err := os.MkdirAll(filepath.Join(home, ".claude", "skills", "Floe"), 0o700); err != nil {
@@ -89,6 +88,28 @@ func TestSkillInstallCase(t *testing.T) {
 	code, out, errs := runEnv(home, map[string]string{"HOME": home}, "skill", "install", "claude")
 	if code != 0 || errs != "" || !strings.Contains(out, "SKILL.md") {
 		t.Errorf("floe skill install over skills\\Floe = %d, %q, %q, want it written", code, out, errs)
+	}
+}
+
+// A skill's directory that is a junction to a directory of another name is a link as a symlink is: refused.
+func TestSkillInstallJunction(t *testing.T) {
+	t.Parallel()
+
+	home := t.TempDir()
+	skills := filepath.Join(home, ".claude", "skills")
+	other := filepath.Join(home, "other")
+	for _, d := range []string{skills, other} {
+		if err := os.MkdirAll(d, 0o700); err != nil {
+			t.Fatal(err)
+		}
+	}
+	testfs.Junction(t, filepath.Join(skills, "floe"), other)
+	code, _, errs := runEnv(home, map[string]string{"HOME": home}, "skill", "install", "claude")
+	if code != 1 || !strings.Contains(errs, "this is a link to") || !strings.Contains(errs, "not named floe") {
+		t.Errorf("floe skill install over a junction to other = %d, %q, want cli_skill_link", code, errs)
+	}
+	if _, err := os.Stat(filepath.Join(other, "SKILL.md")); err == nil {
+		t.Error("the skill was written where the junction leads")
 	}
 }
 

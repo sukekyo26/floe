@@ -193,10 +193,14 @@ func TestProtocol(t *testing.T) {
 	want(t, e.do(t, http.MethodGet, "/a/x/%2e%2e/y", ""), http.StatusNotFound, "not found")
 	want(t, e.write(t, http.MethodPost, "/api/pages", map[string]any{"path": "/x", "bogus": 1}), http.StatusBadRequest,
 		`unknown object member name "bogus"`)
-	want(t, e.write(t, http.MethodPost, "/api/pages/data", map[string]any{
-		"file": "x.yaml", "source": []byte("a"), "place": "x.yaml", "repo": "r",
-		"images": map[string][]byte{"../e.png": nil},
-	}), http.StatusBadRequest, "send each image by a slash-separated path")
+	// What the system reads as no name under the directory too: a NUL byte everywhere, and on Windows a \, a :
+	// or a device's name (osBadImageNames).
+	for _, name := range append([]string{"../e.png", "a\x00.png"}, osBadImageNames...) {
+		want(t, e.write(t, http.MethodPost, "/api/pages/data", map[string]any{
+			"file": "x.yaml", "source": []byte("a"), "place": "x.yaml", "repo": "r",
+			"images": map[string][]byte{name: nil},
+		}), http.StatusBadRequest, "send each image by a slash-separated path")
+	}
 	// A place from a repository's root comes with its repository, and a real path with none.
 	for _, key := range []map[string]any{
 		{"place": "docs/x.yaml", "repo": ""}, {"place": filepath.Join(t.TempDir(), "x.yaml"), "repo": "r"},

@@ -11,9 +11,6 @@ import (
 	"floe/internal/files"
 )
 
-// errLinkToNowhere is what OpenAppend of a link to nowhere returns: the system refuses to follow it (O_NOFOLLOW).
-var errLinkToNowhere = syscall.ELOOP
-
 // A new file takes perm less the umask; one written in place of another keeps that one's permissions, not its
 // setuid bit, under any umask.
 func TestWriteAtomicPermissions(t *testing.T) { //nolint:paralleltest // sets the umask of the process

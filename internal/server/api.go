@@ -5,12 +5,12 @@ import (
 	jsonv2 "encoding/json/v2"
 	"errors"
 	"io"
-	"io/fs"
 	"mime"
 	"net/http"
 	"os"
 	"path/filepath"
 
+	"floe/internal/files"
 	"floe/internal/store"
 	"floe/internal/usererr"
 )
@@ -247,7 +247,7 @@ func (s *Server) save(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	for name := range in.Images {
-		if !fs.ValidPath(name) || name == "." {
+		if !files.ValidName(name) || name == "." {
 			send(w, http.StatusBadRequest, "send each image by a slash-separated path under the data file's directory")
 			return
 		}

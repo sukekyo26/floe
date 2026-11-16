@@ -167,15 +167,16 @@ func TestOpenAppend(t *testing.T) {
 		t.Errorf("appended through a link = %q", b)
 	}
 
-	// A link to nowhere is not followed to make the file where it leads, out of the directory.
+	// A link to nowhere is not followed to make the file where it leads, out of the directory: ELOOP everywhere (Unix
+	// refuses it, Windows opens the link itself).
 	made := filepath.Join(t.TempDir(), "made.log")
 	nowhere := filepath.Join(dir, "nowhere.log")
 	testfs.Symlink(t, made, nowhere)
-	if f, _, err = files.OpenAppend(nowhere); err == nil || !errors.Is(err, errLinkToNowhere) {
+	if f, _, err = files.OpenAppend(nowhere); err == nil || !errors.Is(err, syscall.ELOOP) {
 		if f != nil {
 			_ = f.Close() //nolint:errcheck // not wanted
 		}
-		t.Errorf("OpenAppend of a link to nowhere = %v, want %v", err, errLinkToNowhere)
+		t.Errorf("OpenAppend of a link to nowhere = %v, want %v", err, syscall.ELOOP)
 	}
 	if _, err = os.Stat(made); err == nil {
 		t.Error("OpenAppend made the file where a link to nowhere leads")

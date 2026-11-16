@@ -8,6 +8,7 @@ import (
 	"path/filepath"
 	"testing"
 	"testing/fstest"
+	"time"
 
 	"floe/internal/files"
 	"floe/internal/testfs"
@@ -23,23 +24,35 @@ func fsOf(t *testing.T, dir string) map[string]fs.FS {
 	return map[string]fs.FS{"Root": root, "DirFS": files.DirFS(dir)}
 }
 
+// contractTree makes a.yaml and sub/b.png in a new directory, for fstest.TestFS. sub's times are set after: Windows
+// may update a directory's write time a moment after a file is made in it, which TestFS would find between the
+// directory's entry and its Stat.
+func contractTree(t *testing.T) string {
+	t.Helper()
+	dir := t.TempDir()
+	if err := os.Mkdir(filepath.Join(dir, "sub"), 0o700); err != nil {
+		t.Fatal(err)
+	}
+	for name, b := range map[string]string{"a.yaml": "a", "sub/b.png": "b"} {
+		if err := os.WriteFile(filepath.Join(dir, filepath.FromSlash(name)), []byte(b), 0o600); err != nil {
+			t.Fatal(err)
+		}
+	}
+	at := time.Date(2026, 1, 1, 0, 0, 0, 0, time.UTC)
+	if err := os.Chtimes(filepath.Join(dir, "sub"), at, at); err != nil {
+		t.Fatal(err)
+	}
+	return dir
+}
+
 // Both keep to what an fs.FS promises, as testing/fstest checks it.
 func TestFSContract(t *testing.T) {
 	t.Parallel()
 
-	dir := t.TempDir()
-	for name, b := range map[string]string{"a.yaml": "a", "sub/b.png": "b"} {
-		if err := os.MkdirAll(filepath.Dir(filepath.Join(dir, name)), 0o700); err != nil {
-			t.Fatal(err)
-		}
-		if err := os.WriteFile(filepath.Join(dir, name), []byte(b), 0o600); err != nil {
-			t.Fatal(err)
-		}
-	}
+	dir := contractTree(t)
 	for via, fsys := range fsOf(t, dir) {
 		t.Run(via, func(t *testing.T) {
 			t.Parallel()
-			testfs.Pending(t, "S315-P4: Open takes sub\\b.png, for the names are not Localized")
 			if err := fstest.TestFS(fsys, "a.yaml", "sub/b.png"); err != nil {
 				t.Error(err)
 			}
@@ -147,5 +160,47 @@ func TestRootDirError(t *testing.T) {
 	}
 	if _, err := root.Stat("a.png"); !errors.As(err, new(*files.DirError)) {
 		t.Errorf("Stat = %v, want a DirError", err)
+	}
+}
+
+// nameCase is a name and whether ValidName takes it; the rows that differ by system are in osNameCases.
+type nameCase struct {
+	name string
+	ok   bool
+}
+
+// ValidName takes the names an fs.FS takes and the system reads as names under the directory; Root and DirFS
+// refuse the others.
+func TestValidName(t *testing.T) {
+	t.Parallel()
+
+	dir := t.TempDir()
+	for _, tt := range append([]nameCase{
+		{"a.png", true},
+		{"sub/b.png", true},
+		{".", true},
+		{"nul.txt", true},
+		{"a.png.", true},
+		{"", false},
+		{"../a.png", false},
+		{"/a.png", false},
+		{"sub//b.png", false},
+		{"a\x00.png", false},
+	}, osNameCases...) {
+		if got := files.ValidName(tt.name); got != tt.ok {
+			t.Errorf("ValidName(%q) = %v, want %v", tt.name, got, tt.ok)
+		}
+		if tt.ok {
+			continue
+		}
+		// Root and DirFS refuse it alike, unopened.
+		for via, fsys := range fsOf(t, dir) {
+			if _, err := fsys.Open(tt.name); !errors.Is(err, fs.ErrInvalid) {
+				t.Errorf("%s: Open(%q) = %v, want fs.ErrInvalid", via, tt.name, err)
+			}
+			if _, err := fs.Stat(fsys, tt.name); !errors.Is(err, fs.ErrInvalid) {
+				t.Errorf("%s: Stat(%q) = %v, want fs.ErrInvalid", via, tt.name, err)
+			}
+		}
 	}
 }
