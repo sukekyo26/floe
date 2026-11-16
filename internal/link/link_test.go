@@ -358,7 +358,8 @@ func TestCheck(t *testing.T) {
 		{"top.html", "would expose all of " + dirs.Shown(realHome)},
 		{".top.html", "would expose all of " + dirs.Shown(realHome)},
 		{"proj/page.txt", "is not a regular HTML file (.html, .htm), data file (.yaml, .yml) or folder"},
-		{"proj/missing.html", "is not a regular HTML file (.html, .htm), data file (.yaml, .yml) or folder"},
+		// Real cannot tell where a file not there is (readLink, before, tells it cannot be read).
+		{"proj/missing.html", "is not its real path"},
 		// A folder is checked as the directory it exposes: its own.
 		{"proj", ""},
 		{"proj/dir.html", ""},

@@ -26,8 +26,8 @@ var linkable = regexp.MustCompile(`(?i)\.(html?|ya?ml)$`)
 // fine; Resolve never serves the dot paths under them. It reports whether path is a folder.
 func Check(path, home string) (bool, error) {
 	// The checks compare strings, so a relative path, a path through a symlink or a junction (~/proj -> ~/.ssh) or
-	// one with .. would slip past them.
-	if resolved, err := files.Real(path); !filepath.IsAbs(path) || err == nil && resolved != path {
+	// one with .. would slip past them; so would one Real cannot tell (Windows: a parent that cannot be opened).
+	if resolved, err := files.Real(path); err != nil || resolved != path {
 		return false, usererr.New("link_not_real", path)
 	}
 	// A FIFO named .html would block its reader, so only regular files pass, and folders.
