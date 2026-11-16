@@ -4,6 +4,7 @@ import (
 	"errors"
 	"io/fs"
 	"os"
+	"path/filepath"
 	"sync"
 )
 
@@ -56,7 +57,7 @@ func (r *Root) Stat(name string) (fs.FileInfo, error) {
 	if err := r.ready(); err != nil {
 		return nil, err
 	}
-	if err := checkName("stat", name); err != nil {
+	if _, err := checkName("stat", name); err != nil {
 		return nil, err
 	}
 	return r.root.Stat(name) //nolint:wrapcheck // the system's error, at name
@@ -104,23 +105,28 @@ func (d dirFS) OpenFile(name string, flag int, perm fs.FileMode) (*os.File, erro
 // errNoDir is the error of every name of DirFS(""), as os.DirFS has one.
 var errNoDir = errors.New("DirFS of no directory")
 
-// join puts name after d as os.DirFS does, by its letters: filepath.Join would fold link/.. in d by its letters,
-// where the system follows the link.
+// join puts name, as the system's names (Localize), after d as os.DirFS does, by its letters: filepath.Join would
+// fold link/.. in d by its letters, where the system follows the link. After \\?\ in d, Windows reads no / as a
+// separator, so name's are made the system's.
 func (d dirFS) join(op, name string) (string, error) {
-	switch err := checkName(op, name); {
+	local, err := checkName(op, name)
+	switch {
 	case err != nil:
 		return "", err
 	case d == "":
 		return "", &fs.PathError{Op: op, Path: name, Err: errNoDir}
+	case local == ".":
+		// d itself: after \\?\, Windows reads no . as the directory it is in.
+		return string(d), nil
 	case os.IsPathSeparator(d[len(d)-1]):
-		return string(d) + name, nil
+		return string(d) + local, nil
 	}
-	return string(d) + string(os.PathSeparator) + name, nil
+	return string(d) + string(os.PathSeparator) + local, nil
 }
 
-// openRead opens name of o, a slash-separated path under it that fs.ValidPath takes, to read as Open opens a path.
+// openRead opens name of o, a slash-separated path under it that ValidName takes, to read as Open opens a path.
 func openRead(o Opener, name string) (fs.File, error) {
-	if err := checkName("open", name); err != nil {
+	if _, err := checkName("open", name); err != nil {
 		return nil, err
 	}
 	f, _, err := openWith(o, name, os.O_RDONLY, 0)
@@ -130,10 +136,20 @@ func openRead(o Opener, name string) (fs.File, error) {
 	return f, nil
 }
 
-// checkName refuses name, of the operation op, unless fs.ValidPath takes it, as an fs.FS does.
-func checkName(op, name string) error {
-	if !fs.ValidPath(name) {
-		return &fs.PathError{Op: op, Path: name, Err: fs.ErrInvalid}
+// checkName refuses name, of the operation op, unless ValidName takes it, as an fs.FS does; it gives name as the
+// system's names.
+func checkName(op, name string) (string, error) {
+	local, err := filepath.Localize(name)
+	if err != nil {
+		return "", &fs.PathError{Op: op, Path: name, Err: fs.ErrInvalid}
 	}
-	return nil
+	return local, nil
+}
+
+// ValidName reports whether name, slash-separated, is one an fs.FS of floe's (Root, DirFS) reads: fs.ValidPath takes
+// it, and the system reads it as names under the directory (filepath.Localize). On Windows that refuses a \, a :
+// (a stream, a drive) and a device's name (NUL, CON); everywhere, a NUL byte.
+func ValidName(name string) bool {
+	_, err := checkName("", name)
+	return err == nil
 }

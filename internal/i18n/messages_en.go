@@ -111,7 +111,7 @@ var messagesEN = map[string]string{
 	"kit_words_lang_not_mapping": "%s: write the names of the words and their text",
 	"kit_words_not_text":         "%s.%s: write text, in quotes where YAML would read a number, true, false or null",
 	"lang_twice":                 "%s and %s are one language, as a tag's case, or _ for -, does not tell languages apart: keep one",
-	"kit_image_path":             `"%[1]s" is not a path floe reads under the directory of %[2]s: write it relative to that directory, with one / between names, without ./ (write pic.png for ./pic.png), .., or a / at either end`,
+	"kit_image_path":             `"%[1]s" is not a path floe reads under the directory of %[2]s: write it relative to that directory, with one / between names, without ./ (write pic.png for ./pic.png), .., or a / at either end (on Windows, also without \, : or a device's name such as NUL or CON)`,
 	"kit_image_type":             `"%s" is not an image floe takes: use png, jpeg, gif, webp or svg`,
 	"kit_image_not_file":         `"%s" is not a file of an image, but a directory or the like: name a regular file of the image`,
 	"kit_image_unread":           `the image "%[2]s" cannot be read (%[1]s)`,

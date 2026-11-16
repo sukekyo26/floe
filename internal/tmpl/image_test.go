@@ -99,7 +99,7 @@ sections:
       - image: { alt: nine, file: ../a.png }
 `
 	path := func(at, name string) string {
-		return "d.yaml:" + at + `: "` + name + `" is not a path floe reads under the directory of d.yaml: write it relative to that directory, with one / between names, without ./ (write pic.png for ./pic.png), .., or a / at either end`
+		return "d.yaml:" + at + `: "` + name + `" is not a path floe reads under the directory of d.yaml: write it relative to that directory, with one / between names, without ./ (write pic.png for ./pic.png), .., or a / at either end (on Windows, also without \, : or a device's name such as NUL or CON)`
 	}
 	bmp := func(at string) string {
 		return "d.yaml:" + at + `: "shots/a.bmp" is not an image floe takes: use png, jpeg, gif, webp or svg`
@@ -240,5 +240,22 @@ func TestImageReadOnce(t *testing.T) {
 	}
 	if images.opens["a.png"] != 1 || images.stats["a.png"] != 1 {
 		t.Errorf("a.png opened %d and stated %d times, want once each", images.opens["a.png"], images.stats["a.png"])
+	}
+}
+
+// An image named with a NUL byte is no path floe reads, on every system, though fs.ValidPath takes it.
+func TestImageNULName(t *testing.T) {
+	t.Parallel()
+
+	_, images := imagesIn(t, map[string][]byte{"a.png": png})
+	src := `lang: en
+template: report
+sections:
+  - parts:
+      - image: { alt: one, file: "a\0.png" }
+`
+	got := drawn(t, floeKit(t), src, tmpl.Options{Theme: "", Untitled: "x", Images: images, ImagesDir: ""})
+	if !strings.Contains(got, "a\x00.png\" is not a path floe reads") {
+		t.Errorf("told\n%q\nwant kit_image_path of a\\x00.png", got)
 	}
 }

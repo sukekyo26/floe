@@ -105,7 +105,7 @@ var messagesJA = map[string]string{
 	"kit_words_lang_not_mapping": "%s: 言葉の名前とその文字列を書いてください",
 	"kit_words_not_text":         "%s.%s: 文字列で書いてください。YAML が数・true・false・null と読むものは引用符で囲みます",
 	"lang_twice":                 "%s と %s は同じ言語です（言語タグは大文字と小文字、_ と - で区別しません）。どちらか 1 つにしてください",
-	"kit_image_path":             "「%[1]s」は floe が %[2]s のディレクトリの下で読むパスではありません。そのディレクトリからの相対で、名前の間に / を 1 つずつ書き、./（./pic.png は pic.png に）、..、両端の / を書かないでください",
+	"kit_image_path":             "「%[1]s」は floe が %[2]s のディレクトリの下で読むパスではありません。そのディレクトリからの相対で、名前の間に / を 1 つずつ書き、./（./pic.png は pic.png に）、..、両端の / を書かないでください（Windows では \\、:、NUL・CON などのデバイスの名前も書かないでください）",
 	"kit_image_type":             "「%s」は floe が扱う画像ではありません。png・jpeg・gif・webp・svg を使ってください",
 	"kit_image_not_file":         "「%s」は画像のファイルではなく、ディレクトリなどです。画像のふつうのファイルを指してください",
 	"kit_image_unread":           "画像「%[2]s」を読めません（%[1]s）",

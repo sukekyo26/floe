@@ -308,7 +308,7 @@ func TestImageItems(t *testing.T) {
 		t.Errorf("no data URI in\n%s", page)
 	}
 	_, _, err = tmpl.Draw(k, "d.yaml", []byte("lang: en\ntemplate: mine\ni: [./ok.png]\n"), o)
-	if got, want := told(err), "d.yaml:3:5: \"./ok.png\" is not a path floe reads under the directory of d.yaml: write it relative to that directory, with one / between names, without ./ (write pic.png for ./pic.png), .., or a / at either end"; got != want {
+	if got, want := told(err), "d.yaml:3:5: \"./ok.png\" is not a path floe reads under the directory of d.yaml: write it relative to that directory, with one / between names, without ./ (write pic.png for ./pic.png), .., or a / at either end (on Windows, also without \\, : or a device's name such as NUL or CON)"; got != want {
 		t.Errorf("told\n%s\nwant\n%s", got, want)
 	}
 	data := "lang: en\ntemplate: mine\ni:\n  - esc.png\n  - dir.png\n  - x.bmp\n  - ./ok.png\n  - ../ok.png\n  - large.png\n"
@@ -317,8 +317,8 @@ func TestImageItems(t *testing.T) {
 		"x/d.yaml:4:5: the image \"esc.png\" cannot be read (path escapes from parent)",
 		"x/d.yaml:5:5: \"dir.png\" is not a file of an image, but a directory or the like: name a regular file of the image",
 		"x/d.yaml:6:5: \"x.bmp\" is not an image floe takes: use png, jpeg, gif, webp or svg",
-		"x/d.yaml:7:5: \"./ok.png\" is not a path floe reads under the directory of x/d.yaml: write it relative to that directory, with one / between names, without ./ (write pic.png for ./pic.png), .., or a / at either end",
-		"x/d.yaml:8:5: \"../ok.png\" is not a path floe reads under the directory of x/d.yaml: write it relative to that directory, with one / between names, without ./ (write pic.png for ./pic.png), .., or a / at either end",
+		"x/d.yaml:7:5: \"./ok.png\" is not a path floe reads under the directory of x/d.yaml: write it relative to that directory, with one / between names, without ./ (write pic.png for ./pic.png), .., or a / at either end (on Windows, also without \\, : or a device's name such as NUL or CON)",
+		"x/d.yaml:8:5: \"../ok.png\" is not a path floe reads under the directory of x/d.yaml: write it relative to that directory, with one / between names, without ./ (write pic.png for ./pic.png), .., or a / at either end (on Windows, also without \\, : or a device's name such as NUL or CON)",
 		"x/d.yaml:9:5: the image \"large.png\" is 1,048,577 bytes, over the 1,048,576 bytes (1 MiB) an image may be; make it smaller",
 	); got != want {
 		t.Errorf("told\n%s\nwant\n%s", got, want)
@@ -336,8 +336,8 @@ func TestImageItems(t *testing.T) {
 			"x/d.yaml:7:5: \"dir.png\" is not a file of an image, but a directory or the like: name a regular file of the image",
 			"x/d.yaml:8:5: \"fifo.png\" is not a file of an image, but a directory or the like: name a regular file of the image",
 			"x/d.yaml:9:5: \"x.bmp\" is not an image floe takes: use png, jpeg, gif, webp or svg",
-			"x/d.yaml:10:5: \"./ok.png\" is not a path floe reads under the directory of x/d.yaml: write it relative to that directory, with one / between names, without ./ (write pic.png for ./pic.png), .., or a / at either end",
-			"x/d.yaml:11:5: \"../ok.png\" is not a path floe reads under the directory of x/d.yaml: write it relative to that directory, with one / between names, without ./ (write pic.png for ./pic.png), .., or a / at either end",
+			"x/d.yaml:10:5: \"./ok.png\" is not a path floe reads under the directory of x/d.yaml: write it relative to that directory, with one / between names, without ./ (write pic.png for ./pic.png), .., or a / at either end (on Windows, also without \\, : or a device's name such as NUL or CON)",
+			"x/d.yaml:11:5: \"../ok.png\" is not a path floe reads under the directory of x/d.yaml: write it relative to that directory, with one / between names, without ./ (write pic.png for ./pic.png), .., or a / at either end (on Windows, also without \\, : or a device's name such as NUL or CON)",
 			"x/d.yaml:12:5: the image \"large.png\" is 1,048,577 bytes, over the 1,048,576 bytes (1 MiB) an image may be; make it smaller",
 		); got != want {
 			t.Errorf("told\n%s\nwant\n%s", got, want)
