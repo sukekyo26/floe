@@ -915,7 +915,8 @@ func TestPrepareLinkFolder(t *testing.T) {
 		}
 		m := s.ReadMeta("docs")
 		// meta.json keeps the real path as it is (\\?\ on Windows): compared with Real's, not as a user writes it.
-		if want, err := floefiles.Real(filepath.Join(proj, "docs")); err != nil || !m.Folder || m.Path != want {
+		docs, err := floefiles.Real(filepath.Join(proj, "docs"))
+		if err != nil || !m.Folder || m.Path != docs {
 			t.Fatalf("meta.json after linking %q = %+v, want the folder", again, m)
 		}
 		if file, ok := s.File("docs", m, "../sibling.html"); ok {
@@ -924,7 +925,7 @@ func TestPrepareLinkFolder(t *testing.T) {
 		if file, ok := s.File("docs", m, ""); ok {
 			t.Errorf("the folder serves %s as its page", file)
 		}
-		if file, ok := s.File("docs", m, "guide/setup.html"); !ok || file != filepath.Join(proj, "docs/guide/setup.html") {
+		if file, ok := s.File("docs", m, "guide/setup.html"); !ok || file != filepath.Join(docs, "guide", "setup.html") {
 			t.Errorf("File(guide/setup.html) = %s, %v", file, ok)
 		}
 	}
