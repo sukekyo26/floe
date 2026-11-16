@@ -17,8 +17,6 @@ import (
 	"testing/fstest"
 	"time"
 
-	"golang.org/x/sys/unix"
-
 	"floe/internal/dirs"
 	"floe/internal/doc"
 	"floe/internal/files"
@@ -951,12 +949,12 @@ func (s *Store) lock(create bool) (func(), error) {
 	if err != nil {
 		return nil, usererr.CannotWrite(file, err) //nolint:wrapcheck // the system's words, at the lock
 	}
-	if err = unix.Flock(int(f.Fd()), unix.LOCK_EX); err != nil { //nolint:gosec // G115: a descriptor fits an int
+	unlock, err := files.Lock(f)
+	if err != nil {
 		_ = f.Close()                              //nolint:errcheck // nothing written
 		return nil, usererr.CannotWrite(file, err) //nolint:wrapcheck // the system's words, at the lock
 	}
-	// Closing it lets the lock go.
-	return func() { _ = f.Close() }, nil //nolint:errcheck // as above
+	return unlock, nil
 }
 
 // writeSource writes the copy of a stored page, the data file src, the page drawn from it and its images at

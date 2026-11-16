@@ -9,6 +9,8 @@ import (
 	"path/filepath"
 	"strings"
 	"testing"
+
+	"floe/internal/testfs"
 )
 
 // The fakes stand for the network and the machine: curl serves $FAKE_API for the API and
@@ -43,6 +45,7 @@ case "$1" in -s) echo "$FAKE_OS" ;; -m) echo "$FAKE_ARCH" ;; *) exit 1 ;; esac
 // TestInstall runs install.sh as `curl … | sh` runs it, with curl and uname faked and only the tools it needs on PATH.
 func TestInstall(t *testing.T) {
 	t.Parallel()
+	testfs.UnixOnly(t, "install.sh installs floe on Unix")
 
 	script, err := os.ReadFile("../../install.sh")
 	if err != nil {
@@ -172,9 +175,7 @@ func tools(t *testing.T, dir, sum string) string {
 			}
 			t.Fatalf("%s is not on PATH: %v", name, err)
 		}
-		if err := os.Symlink(at, filepath.Join(dir, name)); err != nil {
-			t.Fatal(err)
-		}
+		testfs.Symlink(t, at, filepath.Join(dir, name))
 	}
 	return dir
 }

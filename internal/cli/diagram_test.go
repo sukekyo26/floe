@@ -7,6 +7,7 @@ import (
 	"testing"
 
 	"floe/internal/i18n"
+	"floe/internal/testfs"
 )
 
 // floe diagram render, inspect and example: specs checked and drawn in the language asked for, every mistake of
@@ -44,13 +45,17 @@ func TestDiagram(t *testing.T) {
 	if want := "o.yaml:4:5: box \"a\" overlaps box \"b\"\n"; code != 1 || page0 != "" || errs != want {
 		t.Errorf("render of a right spec and a wrong one = %d, %q, %q, want %q", code, page0, errs, want)
 	}
-	code, _, errs = runIn(dir, nil, "diagram", "render", "b.yaml", "c.yaml", "gone.yaml")
-	want := "b.yaml:5:5: additional properties 'boxx' not allowed\n" +
-		"floe: there is no directory for icons, as HOME is not an absolute path; set FLOE_ICONS_DIR to an absolute path\n" +
-		"gone.yaml: no such file or directory\n"
-	if code != 1 || errs != want {
-		t.Errorf("render of mistakes = %d, %q, want %q", code, errs, want)
-	}
+	t.Run("mistakes", func(t *testing.T) {
+		testfs.Pending(t, "S315-P7: system words")
+		t.Parallel()
+		got, _, told := runIn(dir, nil, "diagram", "render", "b.yaml", "c.yaml", "gone.yaml")
+		want := "b.yaml:5:5: additional properties 'boxx' not allowed\n" +
+			"floe: there is no directory for icons, as HOME is not an absolute path; set FLOE_ICONS_DIR to an absolute path\n" +
+			"gone.yaml: no such file or directory\n"
+		if got != 1 || told != want {
+			t.Errorf("render of mistakes = %d, %q, want %q", got, told, want)
+		}
+	})
 	code, _, errs = runIn(dir, env, "diagram", "render", "b.yaml", "e.yaml")
 	if want := "b.yaml:5:5: additional properties 'boxx' not allowed\n" +
 		"e.yaml: missing properties 'title', 'parts'\n"; code != 1 || errs != want {

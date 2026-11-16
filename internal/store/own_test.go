@@ -9,6 +9,7 @@ import (
 	"testing"
 
 	"floe/internal/store"
+	"floe/internal/testfs"
 	"floe/internal/usererr"
 )
 
@@ -151,6 +152,7 @@ func TestOwnSlugOrder(t *testing.T) {
 // A store whose list cannot be read stops a publish without a slug, of a data file or a link, rather than take the name.
 func TestOwnSlugUnreadable(t *testing.T) {
 	t.Parallel()
+	testfs.UnixOnly(t, "chmod keeps a directory from being read")
 
 	if os.Geteuid() == 0 { // root reads what a mode keeps
 		t.Skip("root reads a directory of mode 0")

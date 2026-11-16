@@ -2,6 +2,7 @@ package corpus_test
 
 import (
 	"bytes"
+	"errors"
 	"flag"
 	"fmt"
 	"io/fs"
@@ -15,6 +16,7 @@ import (
 	"floe/internal/cli"
 	"floe/internal/files"
 	"floe/internal/kit"
+	"floe/internal/testfs"
 )
 
 var update = flag.Bool("update", false, "write the golden files of each sample anew")
@@ -35,8 +37,11 @@ func TestCorpus(t *testing.T) {
 			if err != nil {
 				t.Fatal(err)
 			}
-			got := runSample(t, name, dir)
 			golden := filepath.Join(dir, "golden")
+			if printsPaths(t, golden) {
+				testfs.Pending(t, "S315-P2: the golden files hold the paths floe prints with /")
+			}
+			got := runSample(t, name, dir)
 			if *update {
 				// A mistake of the run stays told here, not as bytes that differ on the next machine.
 				if !t.Failed() {
@@ -96,6 +101,7 @@ func runSample(t *testing.T, name, dir string) map[string][]byte {
 	// One's own parts, themes and templates, in own/: checked first, as an agent checks what it wrote.
 	own := false
 	for _, kind := range []string{"parts", "themes", "templates"} {
+		testfs.CheckedOutLink(t, filepath.Join(s.dir, "own", kind))
 		if fi, err := os.Stat(filepath.Join(s.dir, "own", kind)); err == nil && fi.IsDir() {
 			s.env["FLOE_"+strings.ToUpper(kind)+"_DIR"] = filepath.Join(s.dir, "own", kind)
 			own = true
@@ -248,7 +254,8 @@ func (s *sample) run(t *testing.T, args ...string) int {
 	code := cli.Run(args, cli.Env{Stdout: &stdout, Stderr: &stderr, Dir: s.dir, Getenv: getenv})
 	stand := strings.NewReplacer(s.tmp, "$TMP", s.dir, "$SAMPLE")
 	out := stand.Replace(stdout.String())
-	fmt.Fprintf(&s.commands, "$ floe %s\nexit %d\n", stand.Replace(strings.Join(args, " ")), code)
+	// The arguments are the test's own paths, joined with the system's separator: written with / alike.
+	fmt.Fprintf(&s.commands, "$ floe %s\nexit %d\n", filepath.ToSlash(stand.Replace(strings.Join(args, " "))), code)
 	for _, printed := range []struct{ name, text string }{{"stdout", out}, {"stderr", stand.Replace(stderr.String())}} {
 		if printed.text != "" {
 			fmt.Fprintf(&s.commands, "--- %s\n%s", printed.name, printed.text)
@@ -302,6 +309,26 @@ func (s *sample) glob(t *testing.T, pattern string, keep func(fs.FileInfo) bool)
 	}
 	slices.Sort(rel)
 	return rel
+}
+
+// printsPaths reports whether floe printed a path under $SAMPLE or $TMP in the commands.golden of golden, apart
+// from the commands themselves.
+func printsPaths(t *testing.T, golden string) bool {
+	t.Helper()
+
+	b, err := os.ReadFile(filepath.Join(golden, "commands.golden"))
+	if errors.Is(err, fs.ErrNotExist) {
+		return false // a new sample, written by -update
+	}
+	if err != nil {
+		t.Fatal(err)
+	}
+	for line := range strings.Lines(string(b)) {
+		if !strings.HasPrefix(line, "$ floe ") && (strings.Contains(line, "$SAMPLE/") || strings.Contains(line, "$TMP/")) {
+			return true
+		}
+	}
+	return false
 }
 
 // hidden reports whether name is one a system or an editor leaves, as macOS's .DS_Store.

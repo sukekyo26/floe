@@ -17,6 +17,7 @@ import (
 	"floe/internal/files"
 	"floe/internal/kit"
 	"floe/internal/store"
+	"floe/internal/testfs"
 )
 
 // watched is a server whose own templates are under tpl (a symlink to the directory dir when link), with one
@@ -29,13 +30,6 @@ func watched(t *testing.T, link bool) (*Server, string) {
 		t.Fatal(err)
 	}
 	dir := filepath.Join(tmp, "dir")
-	tpl := dir
-	if link {
-		tpl = filepath.Join(tmp, "tpl")
-		if err := os.Symlink(dir, tpl); err != nil {
-			t.Fatal(err)
-		}
-	}
 	for name, text := range map[string]string{
 		"mine/page.html":    "<!doctype html>\n<html lang=\"{{.Lang}}\"><head><title>{{.Title}}</title></head><body>{{.Data.n}}</body></html>\n",
 		"mine/schema.json":  `{"$schema": "https://json-schema.org/draft/2020-12/schema", "type": "object"}`,
@@ -48,6 +42,12 @@ func watched(t *testing.T, link bool) (*Server, string) {
 		if err := os.WriteFile(p, []byte(text), 0o600); err != nil {
 			t.Fatal(err)
 		}
+	}
+	// Made after dir, as Windows makes a link to a directory only when the directory is there.
+	tpl := dir
+	if link {
+		tpl = filepath.Join(tmp, "tpl")
+		testfs.Symlink(t, dir, tpl)
 	}
 	drawing := func() (store.Drawing, error) {
 		floe, err := kit.Floe()
@@ -116,18 +116,14 @@ func TestLook(t *testing.T) {
 			{"a file linked", func() {
 				write(t, filepath.Join(dir, "a.css"), "a {}")
 				write(t, filepath.Join(dir, "b.css"), "b {}")
-				if err := os.Symlink(filepath.Join(dir, "a.css"), filepath.Join(dir, "mine", "page.css")); err != nil {
-					t.Fatal(err)
-				}
+				testfs.Symlink(t, filepath.Join(dir, "a.css"), filepath.Join(dir, "mine", "page.css"))
 			}, true},
 			{"the link led elsewhere", func() {
 				at := filepath.Join(dir, "mine", "page.css")
 				if err := os.Remove(at); err != nil {
 					t.Fatal(err)
 				}
-				if err := os.Symlink(filepath.Join(dir, "b.css"), at); err != nil {
-					t.Fatal(err)
-				}
+				testfs.Symlink(t, filepath.Join(dir, "b.css"), at)
 			}, true},
 			{"the file it leads to written", func() { write(t, filepath.Join(dir, "b.css"), "b { color: red }") }, true},
 			{"the directory replaced by a copy", func() {

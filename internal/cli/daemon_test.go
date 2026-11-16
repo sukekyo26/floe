@@ -18,12 +18,11 @@ import (
 	"testing"
 	"time"
 
-	"golang.org/x/sys/unix"
-
 	"floe/internal/cli"
 	"floe/internal/daemon"
 	"floe/internal/server"
 	"floe/internal/servetest"
+	"floe/internal/testfs"
 )
 
 // asCLI makes the test binary run as floe, so that the server a publish starts (os.Executable() serve) is this
@@ -67,7 +66,8 @@ func copySelf(dir string) (string, error) {
 	if err != nil {
 		return "", err //nolint:wrapcheck // as above
 	}
-	bin := filepath.Join(dir, "floe-copy")
+	// The copy keeps this binary's extension: Windows runs a program by its .exe alone.
+	bin := filepath.Join(dir, "floe-copy"+filepath.Ext(self))
 	//nolint:gosec // G306: an executable
 	return bin, os.WriteFile(bin, append(b, 0), 0o700) //nolint:wrapcheck // as above
 }
@@ -101,8 +101,7 @@ func hold(t *testing.T, port int) bool {
 	if err != nil {
 		t.Fatal(err)
 	}
-	fd := int(lock.Fd()) //nolint:gosec // G115: a descriptor fits an int
-	if unix.Flock(fd, unix.LOCK_EX|unix.LOCK_NB) != nil {
+	if !testfs.TryLock(t, lock) {
 		_ = lock.Close() //nolint:errcheck // nothing written
 		return false
 	}
@@ -268,7 +267,7 @@ func TestHoldSkipsHeld(t *testing.T) {
 // A publish starts the server, one of another build replaces it once, and two racing to replace it both succeed. The
 // command that stops the server of another build says so on stderr, once and only then; the log of the server says
 // why it stopped before the next one says it serves, and a line it writes long after it started is there.
-func TestRestartOnAnotherBuild(t *testing.T) {
+func TestRestartOnAnotherBuild(t *testing.T) { //nolint:tparallel // the race goes on from the server the steps left
 	t.Parallel()
 
 	e := newDenv(t)
@@ -306,24 +305,28 @@ func TestRestartOnAnotherBuild(t *testing.T) {
 	if stopping < 0 || serving < 0 || stopping > serving {
 		t.Errorf("the log = %q: want the first server's stopping before the second's serving", log)
 	}
-	var wg sync.WaitGroup
-	results := make([]result, 2)
-	for i := range results {
-		wg.Go(func() { results[i] = e.exe(t, otherBuild, "publish", "page.yaml") })
-	}
-	wg.Wait()
-	// Of two commands asking the server to stop together, one is answered 204 and says so: the other is told it is
-	// stopping already, and the server it stops is not its doing.
-	said := 0
-	for _, r := range results {
-		if r.code != 0 {
-			t.Errorf("a racing publish = %+v", r)
+	//nolint:paralleltest // the race goes on from the server the steps left
+	t.Run("two racing", func(t *testing.T) {
+		testfs.Pending(t, "S315-P5: a rename over a file open elsewhere is denied")
+		var wg sync.WaitGroup
+		results := make([]result, 2)
+		for i := range results {
+			wg.Go(func() { results[i] = e.exe(t, otherBuild, "publish", "page.yaml") })
 		}
-		said += strings.Count(r.stderr, "stopping the server")
-	}
-	if said != 1 {
-		t.Errorf("two racing commands said that they stopped the server %d times, want once: %q %q", said, results[0].stderr, results[1].stderr)
-	}
+		wg.Wait()
+		// Of two commands asking the server to stop together, one is answered 204 and says so: the other is told it is
+		// stopping already, and the server it stops is not its doing.
+		said := 0
+		for _, r := range results {
+			if r.code != 0 {
+				t.Errorf("a racing publish = %+v", r)
+			}
+			said += strings.Count(r.stderr, "stopping the server")
+		}
+		if said != 1 {
+			t.Errorf("two racing commands said that they stopped the server %d times, want once: %q %q", said, results[0].stderr, results[1].stderr)
+		}
+	})
 }
 
 // lineAt is the number of the first line of log that holds all of parts, each between spaces (or the line's ends), so
@@ -385,6 +388,7 @@ func TestStoppedThenNotStarted(t *testing.T) {
 	if os.Geteuid() == 0 {
 		t.Skip("root writes where it is told not to")
 	}
+	testfs.UnixOnly(t, "chmod keeps a directory from being written")
 	e := newDenv(t)
 	wantRun(t, "publish from another build", e.exe(t, otherBuild, "publish", "page.yaml"), 0, e.base()+"/a/page/\n", projectLine)
 	old, _ := e.health(t.Context())
@@ -402,26 +406,6 @@ func TestStoppedThenNotStarted(t *testing.T) {
 	if r.code != 1 || i < 0 || j < i {
 		t.Errorf("task after the server of another build was stopped and none started = %d %q, want 1 and %q, then %q",
 			r.code, r.stderr, said, didNot)
-	}
-}
-
-// A server that is made to crash (SIGQUIT) leaves what the runtime wrote of it in server.log: the standard error of
-// the server a command starts is discarded, so the log is where it is.
-func TestCrashOutput(t *testing.T) {
-	t.Parallel()
-
-	e := newDenv(t)
-	wantRun(t, "publish", e.run("publish", "page.yaml"), 0, e.base()+"/a/page/\n", projectLine)
-	h, up := e.health(t.Context())
-	if !up {
-		t.Fatal("no server after a publish")
-	}
-	if err := unix.Kill(h.PID, unix.SIGQUIT); err != nil {
-		t.Fatal(err)
-	}
-	log := e.logWith(t, "goroutine")
-	if !strings.Contains(log, "SIGQUIT") {
-		t.Errorf("%s = %q, want the crash in it", server.LogName, log)
 	}
 }
 

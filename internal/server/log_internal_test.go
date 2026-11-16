@@ -13,11 +13,11 @@ import (
 	"strconv"
 	"strings"
 	"sync"
-	"syscall"
 	"testing"
 	"time"
 
 	"floe/internal/store"
+	"floe/internal/testfs"
 	"floe/internal/usererr"
 )
 
@@ -64,6 +64,25 @@ func fileMade(t *testing.T, path string, size int) {
 func TestOpenLog(t *testing.T) {
 	t.Parallel()
 
+	t.Run("no wider than 0600", func(t *testing.T) {
+		t.Parallel()
+		testfs.UnixOnly(t, "permission bits")
+
+		// Made, then opened again to append.
+		root := t.TempDir()
+		for range 2 {
+			f, err := OpenLog(root)
+			if err != nil {
+				t.Fatal(err)
+			}
+			info, err := f.Stat()
+			if err != nil || info.Mode().Perm()&^0o600 != 0 {
+				t.Errorf("log opened with permissions %v (%v), want no wider than 0600", info.Mode().Perm(), err)
+			}
+			_ = f.Close() //nolint:errcheck // test
+		}
+	})
+
 	t.Run("appended", func(t *testing.T) {
 		t.Parallel()
 
@@ -72,10 +91,6 @@ func TestOpenLog(t *testing.T) {
 			f, err := OpenLog(root)
 			if err != nil {
 				t.Fatal(err)
-			}
-			info, err := f.Stat()
-			if err != nil || info.Mode().Perm()&^0o600 != 0 {
-				t.Errorf("log made with permissions %v (%v), want no wider than 0600", info.Mode().Perm(), err)
 			}
 			if _, err = f.WriteString(text); err != nil {
 				t.Fatal(err)
@@ -129,9 +144,7 @@ func TestOpenLog(t *testing.T) {
 		if err := os.WriteFile(elsewhere, []byte("t"), 0o600); err != nil {
 			t.Fatal(err)
 		}
-		if err := os.Symlink(elsewhere, filepath.Join(root, LogName)); err != nil {
-			t.Fatal(err)
-		}
+		testfs.Symlink(t, elsewhere, filepath.Join(root, LogName))
 		f, err := OpenLog(root)
 		if err != nil {
 			t.Fatal(err)
@@ -147,9 +160,7 @@ func TestOpenLog(t *testing.T) {
 		t.Parallel()
 
 		root, made := t.TempDir(), filepath.Join(t.TempDir(), "made.log")
-		if err := os.Symlink(made, filepath.Join(root, LogName)); err != nil {
-			t.Fatal(err)
-		}
+		testfs.Symlink(t, made, filepath.Join(root, LogName))
 		f, err := OpenLog(root)
 		if f != nil {
 			_ = f.Close() //nolint:errcheck // not wanted
@@ -172,7 +183,7 @@ func TestOpenLog(t *testing.T) {
 			if kind == "a directory" {
 				err = os.Mkdir(log, 0o700)
 			} else {
-				err = syscall.Mkfifo(log, 0o600)
+				testfs.Mkfifo(t, log)
 			}
 			if err != nil {
 				t.Fatal(err)

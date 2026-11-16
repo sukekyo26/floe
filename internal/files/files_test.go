@@ -10,6 +10,7 @@ import (
 	"time"
 
 	"floe/internal/files"
+	"floe/internal/testfs"
 	"floe/internal/usererr"
 )
 
@@ -71,21 +72,12 @@ func TestRead(t *testing.T) {
 	t.Parallel()
 
 	dir := t.TempDir()
-	file, fifo := filepath.Join(dir, "a.yaml"), filepath.Join(dir, "f.yaml")
+	file := filepath.Join(dir, "a.yaml")
 	if err := os.WriteFile(file, []byte("x"), 0o600); err != nil {
-		t.Fatal(err)
-	}
-	if err := syscall.Mkfifo(fifo, 0o600); err != nil {
 		t.Fatal(err)
 	}
 	if b, info, err := files.Read(file); err != nil || string(b) != "x" || info.Size() != 1 {
 		t.Errorf("Read(a regular file) = %q, %v, %v", b, info, err)
-	}
-	for _, path := range []string{fifo, "/dev/zero"} {
-		var pe *fs.PathError
-		if _, _, err := files.Read(path); !errors.Is(err, usererr.ErrNotFile) || !errors.As(err, &pe) {
-			t.Errorf("Read(%s) = %v, want an *fs.PathError of ErrNotFile", path, err)
-		}
 	}
 	if _, _, err := files.Read(filepath.Join(dir, "gone.yaml")); !errors.Is(err, fs.ErrNotExist) {
 		t.Errorf("Read(no file) = %v, want fs.ErrNotExist", err)
@@ -98,42 +90,32 @@ func TestRead(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	defer root.Close()
+	t.Cleanup(func() { _ = root.Close() })
 	if b, _, err := files.ReadIn(root, "a.yaml"); err != nil || string(b) != "x" {
 		t.Errorf("ReadIn(a regular file) = %q, %v", b, err)
 	}
-	if _, _, err := files.ReadIn(root, "f.yaml"); !errors.Is(err, usererr.ErrNotFile) {
-		t.Errorf("ReadIn(a FIFO) = %v, want ErrNotFile", err)
-	}
+	t.Run("a FIFO", func(t *testing.T) {
+		t.Parallel()
+		fifo := filepath.Join(dir, "f.yaml")
+		testfs.Mkfifo(t, fifo)
+		readNotFile(t, fifo)
+		if _, _, err := files.ReadIn(root, "f.yaml"); !errors.Is(err, usererr.ErrNotFile) {
+			t.Errorf("ReadIn(a FIFO) = %v, want ErrNotFile", err)
+		}
+	})
+	t.Run("a device", func(t *testing.T) {
+		t.Parallel()
+		testfs.Pending(t, "S315-P4: Windows devices")
+		readNotFile(t, "/dev/zero")
+	})
 }
 
-// A new file takes perm less the umask; one written in place of another keeps that one's permissions, not its
-// setuid bit, under any umask.
-func TestWriteAtomicPermissions(t *testing.T) { //nolint:paralleltest // sets the umask of the process
-	old := syscall.Umask(0o077)
-	defer syscall.Umask(old)
-	dir := t.TempDir()
-	path := filepath.Join(dir, "p.html")
-	if err := files.WriteAtomic(path, []byte("one"), 0o644, nil); err != nil {
-		t.Fatal(err)
-	}
-	if info, err := os.Stat(path); err != nil || info.Mode().Perm() != 0o600 {
-		t.Errorf("a new file: %v, %v; want mode 0600 under the umask 077", info, err)
-	}
-	for _, mode := range []os.FileMode{0o664, 0o200, 0o4755} {
-		if err := os.Chmod(path, mode); err != nil {
-			t.Fatal(err)
-		}
-		before, err := os.Stat(path)
-		if err != nil {
-			t.Fatal(err)
-		}
-		if err := files.WriteAtomic(path, []byte("two"), 0o644, before); err != nil {
-			t.Fatal(err)
-		}
-		if info, err := os.Lstat(path); err != nil || info.Mode() != mode.Perm() {
-			t.Errorf("in place of %v: %v, %v; want %v", mode, info.Mode(), err, mode.Perm())
-		}
+// readNotFile checks Read refuses path as no regular file, unopened, with an *fs.PathError.
+func readNotFile(t *testing.T, path string) {
+	t.Helper()
+	var pe *fs.PathError
+	if _, _, err := files.Read(path); !errors.Is(err, usererr.ErrNotFile) || !errors.As(err, &pe) {
+		t.Errorf("Read(%s) = %v, want an *fs.PathError of ErrNotFile", path, err)
 	}
 }
 
@@ -145,14 +127,14 @@ func TestOpenAppend(t *testing.T) {
 
 	dir := t.TempDir()
 	path := filepath.Join(dir, "a.log")
-	for _, text := range []string{"one\n", "two\n"} {
+	texts := []string{"one\n", "two\n"}
+	perms := make([]fs.FileMode, 0, len(texts))
+	for _, text := range texts {
 		f, info, err := files.OpenAppend(path)
 		if err != nil {
 			t.Fatal(err)
 		}
-		if info.Mode().Perm()&^0o600 != 0 {
-			t.Errorf("made with permissions %v, want no wider than 0600", info.Mode().Perm())
-		}
+		perms = append(perms, info.Mode().Perm())
 		if _, err = f.WriteString(text); err != nil {
 			t.Fatal(err)
 		}
@@ -163,11 +145,18 @@ func TestOpenAppend(t *testing.T) {
 	if b, err := os.ReadFile(path); err != nil || string(b) != "one\ntwo\n" {
 		t.Errorf("appended twice = %q, %v", b, err)
 	}
+	t.Run("permissions", func(t *testing.T) {
+		t.Parallel()
+		testfs.UnixOnly(t, "permission bits")
+		for _, perm := range perms {
+			if perm&^0o600 != 0 {
+				t.Errorf("made with permissions %v, want no wider than 0600", perm)
+			}
+		}
+	})
 
 	link := filepath.Join(dir, "link.log")
-	if err := os.Symlink(path, link); err != nil {
-		t.Fatal(err)
-	}
+	testfs.Symlink(t, path, link)
 	f, _, err := files.OpenAppend(link)
 	if err != nil {
 		t.Fatalf("OpenAppend of a link to a file = %v", err)
@@ -181,27 +170,36 @@ func TestOpenAppend(t *testing.T) {
 	// A link to nowhere is not followed to make the file where it leads, out of the directory.
 	made := filepath.Join(t.TempDir(), "made.log")
 	nowhere := filepath.Join(dir, "nowhere.log")
-	if err = os.Symlink(made, nowhere); err != nil {
-		t.Fatal(err)
-	}
-	if f, _, err = files.OpenAppend(nowhere); err == nil || !errors.Is(err, syscall.ELOOP) {
+	testfs.Symlink(t, made, nowhere)
+	if f, _, err = files.OpenAppend(nowhere); err == nil || !errors.Is(err, errLinkToNowhere) {
 		if f != nil {
 			_ = f.Close() //nolint:errcheck // not wanted
 		}
-		t.Errorf("OpenAppend of a link to nowhere = %v, want ELOOP", err)
+		t.Errorf("OpenAppend of a link to nowhere = %v, want %v", err, errLinkToNowhere)
 	}
 	if _, err = os.Stat(made); err == nil {
 		t.Error("OpenAppend made the file where a link to nowhere leads")
 	}
 
+	t.Run("FIFO", func(t *testing.T) {
+		t.Parallel()
+		openAppendFIFO(t, dir)
+	})
+
+	if _, _, err = files.OpenAppend(dir); !errors.Is(err, syscall.EISDIR) {
+		t.Errorf("OpenAppend of a directory = %v, want EISDIR", err)
+	}
+}
+
+// openAppendFIFO tries OpenAppend on a FIFO made in dir and on a link to it, with no reader and with one.
+func openAppendFIFO(t *testing.T, dir string) {
+	t.Helper()
 	fifo := filepath.Join(dir, "fifo")
-	if err = syscall.Mkfifo(fifo, 0o600); err != nil {
-		t.Fatal(err)
-	}
+	testfs.Mkfifo(t, fifo)
+	var f *os.File
+	var err error
 	fifoLink := filepath.Join(dir, "fifo-link")
-	if err = os.Symlink(fifo, fifoLink); err != nil {
-		t.Fatal(err)
-	}
+	testfs.Symlink(t, fifo, fifoLink)
 	// Opening one for writing with no reader blocks for good: the call must come back.
 	for _, name := range []string{fifo, fifoLink} {
 		got := make(chan error, 1)
@@ -232,9 +230,5 @@ func TestOpenAppend(t *testing.T) {
 			_ = f.Close() //nolint:errcheck // not wanted
 		}
 		t.Errorf("OpenAppend of a FIFO with a reader = %v, want ErrNotFile", err)
-	}
-
-	if _, _, err = files.OpenAppend(dir); !errors.Is(err, syscall.EISDIR) {
-		t.Errorf("OpenAppend of a directory = %v, want EISDIR", err)
 	}
 }

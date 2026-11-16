@@ -14,6 +14,7 @@ import (
 
 	"floe/internal/kit"
 	"floe/internal/store"
+	"floe/internal/testfs"
 	"floe/internal/usererr"
 )
 
@@ -45,6 +46,17 @@ func publish(ctx context.Context, t *testing.T, h http.Handler) *httptest.Respon
 		t.Fatal(err)
 	}
 	return api(ctx, t, h, http.MethodPost, "/api/pages/data", string(b))
+}
+
+// linkBody is the body of a link of the file at path.
+func linkBody(t *testing.T, path string) string {
+	t.Helper()
+
+	b, err := json.Marshal(Link{Path: path}) //nolint:exhaustruct // none else
+	if err != nil {
+		t.Fatal(err)
+	}
+	return string(b)
 }
 
 // told is the report of w, laid out.
@@ -116,9 +128,11 @@ func TestLatestRebuild(t *testing.T) {
 	root := filepath.Dir(dir)
 	got := strings.ReplaceAll(told(t, w), root, "<tmp>")
 	got = strings.ReplaceAll(got, s.cfg.Store.ReadMeta("m").Source, "<source>")
-	want := `<tmp>/dir/mine/page.html:2:75: executing "page.html" at <.Data.nope.x>: map has no entry for key "nope"` + "\n" +
-		`<tmp>/store/m/<source>/data.yaml: page "m" keeps the page it had: fix the data file it was published from ` +
-		"and publish it again, or fix the template"
+	want := filepath.Join("<tmp>", "dir", "mine", "page.html") +
+		`:2:75: executing "page.html" at <.Data.nope.x>: map has no entry for key "nope"` + "\n" +
+		filepath.Join("<tmp>", "store", "m", "<source>", "data.yaml") +
+		`: page "m" keeps the page it had: fix the data file it was published from and publish it again, or fix the template`
+	testfs.Pending(t, "S315-P2: kit joins the template's path with /")
 	if got != want {
 		t.Errorf("rebuild told\n%s\nwant\n%s", got, want)
 	}
@@ -163,12 +177,14 @@ func TestLatestLink(t *testing.T) {
 	}
 	write(t, data, mineData)
 	mine(t, dir, "{{.Data.nope.x}}")
-	w := api(t.Context(), t, s.Handler(), http.MethodPost, "/api/pages", `{"path": "`+data+`"}`)
+	w := api(t.Context(), t, s.Handler(), http.MethodPost, "/api/pages", linkBody(t, data))
 	if w.Code != http.StatusBadRequest {
 		t.Fatalf("link = %d %s, want 400", w.Code, w.Body)
 	}
 	got := strings.ReplaceAll(told(t, w), filepath.Dir(dir), "<tmp>")
-	want := `<tmp>/dir/mine/page.html:2:75: executing "page.html" at <.Data.nope.x>: map has no entry for key "nope"`
+	want := filepath.Join("<tmp>", "dir", "mine", "page.html") +
+		`:2:75: executing "page.html" at <.Data.nope.x>: map has no entry for key "nope"`
+	testfs.Pending(t, "S315-P2: kit joins the template's path with /")
 	if got != want {
 		t.Errorf("link told\n%s\nwant\n%s", got, want)
 	}
@@ -186,7 +202,7 @@ func TestLatestDownload(t *testing.T) {
 		t.Fatal(err)
 	}
 	write(t, data, mineData)
-	if w := api(t.Context(), t, h, http.MethodPost, "/api/pages", `{"path": "`+data+`"}`); w.Code != http.StatusCreated {
+	if w := api(t.Context(), t, h, http.MethodPost, "/api/pages", linkBody(t, data)); w.Code != http.StatusCreated {
 		t.Fatalf("link = %d %s", w.Code, w.Body)
 	}
 	mine(t, dir, "{{.Data.n}} saved just now")

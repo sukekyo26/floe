@@ -8,8 +8,7 @@ import (
 	"path/filepath"
 	"testing"
 
-	"golang.org/x/sys/unix"
-
+	"floe/internal/files"
 	"floe/internal/store"
 )
 
@@ -103,7 +102,8 @@ func TestUIRead(t *testing.T) { //nolint:paralleltest // the browser tests share
 		t.Fatal(err)
 	}
 	defer lock.Close()
-	if err = unix.Flock(int(lock.Fd()), unix.LOCK_EX); err != nil {
+	unlock, err := files.Lock(lock)
+	if err != nil {
 		t.Fatal(err)
 	}
 	// Counted and watched from before the page's own script: how long the mark is out depends on the machine.
@@ -120,9 +120,7 @@ func TestUIRead(t *testing.T) { //nolint:paralleltest // the browser tests share
 	if got := b.eval("Boolean(window.wentDown) || document.getElementById('server').classList.contains('down')"); got != "false" {
 		t.Error("a request cut off by its time limit showed the server as not reached")
 	}
-	if err = unix.Flock(int(lock.Fd()), unix.LOCK_UN); err != nil {
-		t.Fatal(err)
-	}
+	unlock()
 
 	// Refused, the words show as the page's mistakes do, in no toast of success; and go when one is kept.
 	s.floe(t, "publish", s.page(t, "read/bad.yaml", "bad", "<p id=\"p\">bad</p>"), "--slug", "bad")

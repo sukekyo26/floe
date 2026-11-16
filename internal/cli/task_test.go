@@ -14,6 +14,7 @@ import (
 
 	"floe/internal/i18n"
 	"floe/internal/store"
+	"floe/internal/testfs"
 )
 
 func ptr[T any](v T) *T {
@@ -407,6 +408,7 @@ func TestTaskSays(t *testing.T) {
 // A page that cannot be written, as the system refuses it after the checks, leaves its task's row written, which a
 // page needs anyway: the write breaks no rule, and the same command given again finishes it.
 func TestTaskCommandOrder(t *testing.T) {
+	testfs.UnixOnly(t, "chmod keeps a directory from being written")
 	t.Parallel()
 
 	if os.Geteuid() == 0 {

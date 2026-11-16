@@ -7,6 +7,7 @@ import (
 	"testing"
 
 	"floe/internal/project"
+	"floe/internal/testfs"
 )
 
 func run(t *testing.T, dir string, args ...string) {
@@ -126,9 +127,7 @@ func TestPlace(t *testing.T) {
 	if err := os.MkdirAll(out, 0o750); err != nil {
 		t.Fatal(err)
 	}
-	if err := os.Symlink(filepath.Join(a, "docs"), filepath.Join(out, "linked")); err != nil {
-		t.Fatal(err)
-	}
+	testfs.Symlink(t, filepath.Join(a, "docs"), filepath.Join(out, "linked"))
 	if err := os.WriteFile(filepath.Join(out, "notes.yaml"), []byte("x"), 0o600); err != nil {
 		t.Fatal(err)
 	}
