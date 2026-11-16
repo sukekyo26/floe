@@ -269,6 +269,13 @@ func TestAllowedLinks(t *testing.T) {
 	} {
 		wantRead(t, filepath.Join(dir, p), want)
 	}
+	// A name ending in a separator is followed, as os.Lstat follows it: the junction's directory, not the junction.
+	if fi, err := files.Lstat(filepath.Join(dir, "jout") + `\`); err != nil || !fi.IsDir() {
+		t.Errorf("Lstat(jout\\) = %v, %v, want the directory it leads to", fi, err)
+	}
+	if fi, err := files.Lstat(filepath.Join(dir, "jout")); err != nil || fi.IsDir() {
+		t.Errorf("Lstat(jout) = %v, %v, want the junction itself", fi, err)
+	}
 	root := filepath.Join(t.TempDir(), "root")
 	testfs.Junction(t, root, filepath.VolumeName(dir)+`\`)
 	if _, err := files.ReadDir(root); err != nil {
