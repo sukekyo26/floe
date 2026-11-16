@@ -206,7 +206,7 @@ var messagesEN = map[string]string{
 	// link: which files may be linked
 	"link_not_real":        "%s is not its real path: give the whole path with its links and junctions followed, as the system names it",
 	"link_not_linkable":    "%s is not a regular HTML file (.html, .htm), data file (.yaml, .yml) or folder; only those can be linked",
-	"link_home_unresolved": `cannot resolve the home directory "%s"; set HOME to an existing absolute directory`,
+	"link_home_unresolved": `cannot resolve the home directory "%s"; set %s to an existing absolute directory`,
 	"link_hidden_home":     "%s is in a hidden directory of your home or a folder of application data (AppData on Windows), where settings and keys live; put it somewhere else, such as a project's folder, and link it there",
 	"link_share":           "%s is on a network share (%s): floe links only files on this machine's drives; copy it to a local folder and link it there",
 	"link_appdata_unknown": "%s cannot be checked: the system does not tell where its folders of application data are (%s); floe links nothing it cannot check",

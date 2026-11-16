@@ -6,6 +6,12 @@ import (
 	"golang.org/x/sys/windows"
 )
 
+// HomeKey is the environment variable of the user's home directory, the profile's (as os.UserHomeDir reads it):
+// Windows does not read HOME, which Git Bash and MSYS2 set each their own way.
+// LIMIT: a HOME of MSYS2 (C:\msys64\home\u) is no home to the links, so that registering it whole is not refused
+// (the dot names under it are, as anywhere). Count it too if that is asked for.
+const HomeKey = "USERPROFILE"
+
 // hidden reports whether the file or directory at path has the hidden attribute, or why it cannot be read.
 func hidden(path string) (bool, error) {
 	p, err := windows.UTF16PtrFromString(path)

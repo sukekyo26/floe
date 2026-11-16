@@ -2,6 +2,9 @@
 
 package link
 
+// HomeKey is the environment variable of the user's home directory.
+const HomeKey = "HOME"
+
 // hidden reports whether the file or directory at path is hidden by an attribute: Unix has none (a dot is a name).
 func hidden(string) (bool, error) { return false, nil }
 

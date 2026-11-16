@@ -52,7 +52,7 @@ func exposes(path, home string, folder bool) error {
 	// path is real, so home must be too, or a symlinked $HOME would hide its hidden directories.
 	resolvedHome, ok := realDir(home)
 	if !ok {
-		return usererr.New("link_home_unresolved", home)
+		return usererr.New("link_home_unresolved", home, HomeKey)
 	}
 	home = resolvedHome
 	dir := path
