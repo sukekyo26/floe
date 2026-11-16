@@ -126,6 +126,10 @@ linters:
           msg: "use files.Root, which opens a file without blocking on a FIFO"
         - pattern: ^filepath\.EvalSymlinks$
           msg: "use files.Real, which follows junctions on Windows and names the path as the system does"
+        - pattern: ^os\.(Stat|Lstat|ReadDir|ReadFile|Open|OpenFile|OpenRoot|OpenInRoot|Readlink|MkdirAll|Create|CopyFS|Chmod|Chtimes)$
+          msg: "go through files (Stat, Lstat, ReadDir, Read, Open, OpenRoot, MkdirAll, OpenLock): the one place that looks at a path before the system is called"
+        - pattern: ^filepath\.(Walk|WalkDir|Glob)$
+          msg: "go through files (ReadDir, or fs.WalkDir of files.DirFS): the one place that looks at a path before the system is called"
       analyze-types: true
       exclude-godoc-examples: true
     depguard:
@@ -240,6 +244,11 @@ linters:
         linters:
           - forbidigo
         text: EvalSymlinks
+      # files makes the system's calls on a path for the rest of floe; testfs makes tests' files.
+      - path: internal/(files|testfs)/
+        linters:
+          - forbidigo
+        text: the one place that looks at a path
       # Tests get a relaxed profile but still benefit from bug catchers.
       - path: _test\.go
         linters:

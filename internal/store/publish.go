@@ -918,7 +918,7 @@ func (s *Store) removeVersions(slug string, m *Meta) {
 		_ = os.RemoveAll(dir) //nolint:errcheck // as below
 		return
 	}
-	entries, err := os.ReadDir(dir)
+	entries, err := files.ReadDir(dir)
 	if err != nil {
 		return
 	}
@@ -939,16 +939,16 @@ func (s *Store) removeVersions(slug string, m *Meta) {
 // comes to see many saves at once.
 func (s *Store) lock(create bool) (func(), error) {
 	if create {
-		if err := os.MkdirAll(s.root, 0o700); err != nil {
+		if err := files.MkdirAll(s.root, 0o700); err != nil {
 			return nil, usererr.CannotWrite(s.root, err) //nolint:wrapcheck // the system's words, at the store
 		}
-	} else if _, err := os.Stat(s.root); errors.Is(err, fs.ErrNotExist) {
+	} else if _, err := files.Stat(s.root); errors.Is(err, fs.ErrNotExist) {
 		return nil, err //nolint:wrapcheck // for the caller to tell as it may
 	} else if err != nil {
 		return nil, usererr.CannotRead(s.root, err) //nolint:wrapcheck // the system's words, at the store
 	}
 	file := filepath.Join(s.root, ".lock")
-	f, err := os.OpenFile(file, os.O_RDONLY|os.O_CREATE, 0o600) //nolint:gosec // G304: the store's own
+	f, err := files.OpenLock(file)
 	if err != nil {
 		return nil, usererr.CannotWrite(file, err) //nolint:wrapcheck // the system's words, at the lock
 	}
@@ -977,7 +977,7 @@ func writeSource(dir string, src, page []byte, images map[string][]byte) (string
 
 // writeCopy writes the copy under dir, through os.Root so that nothing leads the writes out of it.
 func writeCopy(dir string, src, page []byte, images map[string][]byte) error {
-	root, err := os.OpenRoot(dir)
+	root, err := files.OpenRoot(dir)
 	if err != nil {
 		return usererr.CannotWrite(dir, err) //nolint:wrapcheck // the system's words, at the copy
 	}
@@ -1011,7 +1011,7 @@ func writeCopy(dir string, src, page []byte, images map[string][]byte) error {
 // removeSources removes the copies under dir but keep ("" for none): the ones a save replaced, or
 // left when it stopped halfway. The save is done by then: one that cannot go is left for the next.
 func removeSources(dir, keep string) {
-	entries, err := os.ReadDir(dir)
+	entries, err := files.ReadDir(dir)
 	if err != nil {
 		return
 	}
@@ -1051,7 +1051,7 @@ func (s *Store) Remove(slug string) error {
 // removePage removes dir, a page's directory, its meta.json last: one that cannot all be removed keeps it, listed
 // still, for floe rm to remove the rest. What cannot be removed is told at it.
 func removePage(dir string) error {
-	entries, err := os.ReadDir(dir)
+	entries, err := files.ReadDir(dir)
 	if err != nil {
 		return usererr.CannotWrite(dir, err) //nolint:wrapcheck // the system's words, at the page
 	}
@@ -1248,7 +1248,7 @@ func (s *Store) renameTo(slug string, to *string) (string, error) {
 		return "", mistake
 	}
 	dir, _ := s.dir(name)
-	if _, err := os.Lstat(dir); name != slug && !errors.Is(err, os.ErrNotExist) {
+	if _, err := files.Lstat(dir); name != slug && !errors.Is(err, os.ErrNotExist) {
 		return "", conflict(usererr.New("store_slug_taken", name))
 	}
 	return name, nil

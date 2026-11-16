@@ -59,7 +59,7 @@ func (a *app) dataDir(key, xdg, home, sub string) (dataPlace, error) {
 	case filepath.IsAbs(h):
 		p.dir = filepath.Join(h, home, sub)
 	}
-	if _, err := os.Stat(p.dir); p.dir != "" && errors.Is(err, syscall.ENOTDIR) {
+	if _, err := files.Stat(p.dir); p.dir != "" && errors.Is(err, syscall.ENOTDIR) {
 		p.unusable = usererr.CannotWrite(p.dir, err)
 	}
 	return p, nil
@@ -104,7 +104,7 @@ func ownDir(p dataPlace) (kit.Dir, error) {
 	if dir == "" {
 		return none, nil
 	}
-	if _, err := os.ReadDir(dir); err != nil {
+	if _, err := files.ReadDir(dir); err != nil {
 		// A default not there is none; one there that is no directory is told.
 		if !p.set && errors.Is(err, fs.ErrNotExist) {
 			return none, nil
@@ -162,7 +162,7 @@ func compared(p dataPlace) bool {
 	if p.dir == "" {
 		return false
 	}
-	fi, err := os.Stat(p.dir)
+	fi, err := files.Stat(p.dir)
 	if err != nil {
 		return p.set
 	}
@@ -202,12 +202,12 @@ func overlapping(found *usererr.List, spots []spot, pair func(i, j int) bool) ma
 // within reports whether a is b or is under it, both resolved: by their letters, as of names not there, or by
 // os.SameFile, as of a name of another case on macOS or a bind mount, for each directory up from a that is there.
 func within(a, b string) bool {
-	bi, berr := os.Stat(b)
+	bi, berr := files.Stat(b)
 	for dir := a; ; dir = filepath.Dir(dir) {
 		if dir == b {
 			return true
 		}
-		if di, err := os.Stat(dir); berr == nil && err == nil && os.SameFile(di, bi) {
+		if di, err := files.Stat(dir); berr == nil && err == nil && os.SameFile(di, bi) {
 			return true
 		}
 		if dir == filepath.Dir(dir) {
@@ -244,10 +244,10 @@ func (a *app) newOwn(of ownKind, name string) error {
 		return overlaps.Err()
 	}
 	at := filepath.Join(dir, name)
-	if _, err = os.Lstat(at); err == nil {
+	if _, err = files.Lstat(at); err == nil {
 		return usererr.NewAt(at, 0, 0, "cli_new_exists")
 	}
-	if err = os.MkdirAll(dir, 0o755); err != nil { //nolint:gosec // G301: parts, themes and templates are not secret
+	if err = files.MkdirAll(dir, 0o755); err != nil { //nolint:gosec // G301: parts, themes and templates are not secret
 		return usererr.SettingDir(p.setting(), dir, err, usererr.CannotWrite(dir, err))
 	}
 	// Not MkdirTemp, which makes it 0700 whatever the umask.

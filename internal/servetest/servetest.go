@@ -50,7 +50,7 @@ func Start(t *testing.T, written map[string]string) *Site {
 	}
 	for name, text := range written {
 		at := filepath.Join(tmp, filepath.FromSlash(name))
-		if err = os.MkdirAll(filepath.Dir(at), 0o700); err != nil {
+		if err = files.MkdirAll(filepath.Dir(at), 0o700); err != nil {
 			t.Fatal(err)
 		}
 		if err = os.WriteFile(at, []byte(text), 0o600); err != nil {

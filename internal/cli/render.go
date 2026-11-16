@@ -154,7 +154,7 @@ type target struct {
 }
 
 func targetOf(p rendered) target {
-	info, err := os.Stat(p.real)
+	info, err := files.Stat(p.real)
 	if err != nil {
 		info = nil
 	}
@@ -189,9 +189,9 @@ func realPath(abs, to string) (string, error) {
 	if err == nil {
 		return resolved, nil
 	}
-	if info, lerr := os.Lstat(abs); lerr == nil && info.Mode()&os.ModeSymlink != 0 {
+	if info, lerr := files.Lstat(abs); lerr == nil && info.Mode()&os.ModeSymlink != 0 {
 		// The system's words of why it leads nowhere, whatever files.Real says.
-		_, serr := os.Stat(abs)
+		_, serr := files.Stat(abs)
 		return "", usererr.CannotWrite(to, cmp.Or(serr, err))
 	}
 	if parent, err := files.Real(dirs.Dir(abs)); err == nil {
@@ -205,7 +205,7 @@ func realPath(abs, to string) (string, error) {
 func (a *app) writePages(pages []rendered, out arg) error {
 	if out.abs != "" {
 		// As the pages in it, for others to read.
-		if err := os.MkdirAll(out.abs, 0o755); err != nil { //nolint:gosec // G301: pages to share
+		if err := files.MkdirAll(out.abs, 0o755); err != nil { //nolint:gosec // G301: pages to share
 			return usererr.CannotWrite(out.name, err)
 		}
 	}

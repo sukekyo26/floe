@@ -350,7 +350,7 @@ func mendable(path string, err error, storeIsDir bool) bool {
 		return storeIsDir
 	}
 	// The system finds it where os.Root does not let it be read: outside the set's directory.
-	_, statErr := os.Stat(path)
+	_, statErr := files.Stat(path)
 	return statErr == nil
 }
 
@@ -374,7 +374,7 @@ func (s *Store) notFetched(k *kit) *usererr.Error {
 
 // rootIsDir reports whether the store's root is a directory now.
 func (s *Store) rootIsDir() bool {
-	fi, err := os.Stat(s.root)
+	fi, err := files.Stat(s.root)
 	return err == nil && fi.IsDir()
 }
 
@@ -382,7 +382,7 @@ func (s *Store) rootIsDir() bool {
 // LIMIT: a directory above it that cannot be written is told only by the MkdirAll after the network; check its
 // permission too if that comes to be asked.
 func (s *Store) checkWritable() error {
-	fi, err := os.Stat(s.root)
+	fi, err := files.Stat(s.root)
 	switch {
 	case err == nil && !fi.IsDir():
 		// What making it would say.
@@ -446,7 +446,7 @@ func (s *Store) Fetch(ctx context.Context, set string, from []Source, force bool
 		got.Already = true
 		return got, nil
 	}
-	if err := os.MkdirAll(s.root, 0o700); err != nil {
+	if err := files.MkdirAll(s.root, 0o700); err != nil {
 		return got, s.cannotWrite(err)
 	}
 	tmp, err := os.MkdirTemp(s.root, k.name+".tmp-")
@@ -750,7 +750,7 @@ func keep(dir string, icon packed, b []byte) error {
 		return fmt.Errorf("keep the icon %s: not a name inside the set", icon.name) //nolint:err113 // floe's own mistake
 	}
 	path := filepath.Join(dir, name)
-	if err := os.MkdirAll(filepath.Dir(path), 0o700); err != nil {
+	if err := files.MkdirAll(filepath.Dir(path), 0o700); err != nil {
 		return usererr.CannotWrite(filepath.Dir(path), err)
 	}
 	if err := os.WriteFile(path, b, 0o600); err != nil {
@@ -877,7 +877,7 @@ func (s *Store) Lookup(name string) ([]byte, error) {
 		return b, nil
 	}
 	dir := s.dir(k)
-	root, err := os.OpenRoot(dir)
+	root, err := files.OpenRoot(dir)
 	if err != nil {
 		return nil, s.cannotRead(dir, err, k)
 	}

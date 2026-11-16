@@ -5,7 +5,6 @@ package link
 import (
 	"errors"
 	"io/fs"
-	"os"
 	"path/filepath"
 	"regexp"
 	"slices"
@@ -36,7 +35,7 @@ func Check(path, home string) (bool, error) {
 		return false, usererr.New("link_share", path, filepath.VolumeName(path))
 	}
 	// A FIFO named .html would block its reader, so only regular files pass, and folders.
-	fi, err := os.Stat(path)
+	fi, err := files.Stat(path)
 	folder := err == nil && fi.IsDir()
 	if !folder && (!linkable.MatchString(path) || err != nil || !fi.Mode().IsRegular()) {
 		return false, usererr.New("link_not_linkable", path)
@@ -135,7 +134,7 @@ func realDir(dir string) (string, bool) {
 	if err != nil {
 		return "", false
 	}
-	fi, err := os.Stat(resolved)
+	fi, err := files.Stat(resolved)
 	return resolved, err == nil && fi.IsDir()
 }
 
@@ -154,7 +153,7 @@ func Resolve(registered string, folder bool, rest string) (string, bool) {
 			return "", false
 		}
 		// Reading a FIFO would block until a writer shows up.
-		fi, err := os.Stat(registered)
+		fi, err := files.Stat(registered)
 		return registered, err == nil && fi.Mode().IsRegular()
 	}
 	base := registered
@@ -177,7 +176,7 @@ func IsFolder(folder string) bool {
 	if !isReal(folder) {
 		return false
 	}
-	fi, err := os.Stat(folder)
+	fi, err := files.Stat(folder)
 	return err == nil && fi.IsDir()
 }
 
@@ -210,7 +209,7 @@ func within(base, rest string, dir bool) (string, fs.FileInfo, bool) {
 	if err != nil || !strings.HasPrefix(resolved, base+string(filepath.Separator)) {
 		return "", nil, false
 	}
-	fi, err := os.Stat(resolved)
+	fi, err := files.Stat(resolved)
 	if err != nil || (dir && !fi.IsDir()) || (!dir && !fi.Mode().IsRegular()) {
 		return "", nil, false
 	}
@@ -265,7 +264,7 @@ func Dir(folder, dir string) (Listing, error) {
 		}
 		prefix = dir + "/"
 	}
-	entries, err := os.ReadDir(path)
+	entries, err := files.ReadDir(path)
 	if err != nil {
 		return l, err //nolint:wrapcheck // the system's *fs.PathError, for the caller to tell at the folder
 	}

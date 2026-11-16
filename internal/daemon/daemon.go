@@ -18,6 +18,7 @@ import (
 	"strconv"
 	"time"
 
+	"floe/internal/files"
 	"floe/internal/i18n"
 	"floe/internal/server"
 	"floe/internal/usererr"
@@ -49,7 +50,7 @@ func Build() (string, error) {
 	if err != nil {
 		return "", fmt.Errorf("find the floe binary: %w", err)
 	}
-	fi, err := os.Stat(exe)
+	fi, err := files.Stat(exe)
 	if err != nil {
 		return "", fmt.Errorf("find the floe binary: %w", err)
 	}
@@ -277,8 +278,8 @@ func sameDir(a, b string) bool {
 	if filepath.Clean(a) == filepath.Clean(b) {
 		return true
 	}
-	x, errA := os.Stat(a)
-	y, errB := os.Stat(b)
+	x, errA := files.Stat(a)
+	y, errB := files.Stat(b)
 	return errA == nil && errB == nil && os.SameFile(x, y)
 }
 
@@ -290,8 +291,8 @@ func sameOrUnread(a, b string) bool {
 	if sameDir(a, b) {
 		return true
 	}
-	_, errA := os.Stat(a)
-	_, errB := os.Stat(b)
+	_, errA := files.Stat(a)
+	_, errB := files.Stat(b)
 	return errA != nil && errB != nil
 }
 

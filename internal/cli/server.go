@@ -17,6 +17,7 @@ import (
 	"github.com/spf13/cobra"
 
 	"floe/internal/daemon"
+	"floe/internal/files"
 	"floe/internal/server"
 	"floe/internal/store"
 	"floe/internal/usererr"
@@ -207,7 +208,7 @@ func (a *app) serve(ctx context.Context) error {
 
 // writable reports why dir, made when missing, cannot be written in: by making a file in it.
 func writable(dir string) error {
-	if err := os.MkdirAll(dir, 0o700); err != nil {
+	if err := files.MkdirAll(dir, 0o700); err != nil {
 		return err //nolint:wrapcheck // told at the store
 	}
 	f, err := os.CreateTemp(dir, ".check-")

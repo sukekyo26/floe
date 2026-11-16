@@ -127,7 +127,7 @@ func entryOf(p arg) entry {
 		return entry{abs: p.name, dir: nil}
 	}
 	e := entry{abs: p.abs, dir: nil}
-	if dir, err := os.Stat(dirs.Dir(e.abs)); err == nil {
+	if dir, err := files.Stat(dirs.Dir(e.abs)); err == nil {
 		e.dir = dir
 	}
 	return e
