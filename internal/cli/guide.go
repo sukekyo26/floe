@@ -15,6 +15,7 @@ import (
 	"github.com/spf13/cobra"
 
 	"floe/docs"
+	"floe/internal/dirs"
 	"floe/internal/files"
 	"floe/internal/kit"
 	"floe/internal/store"
@@ -193,7 +194,7 @@ func (a *app) installSkill(ag agent, force bool) error {
 	case err != nil:
 		return usererr.CannotRead(skillAt, err)
 	case there && same:
-		a.print("%s", english.Msg("cli_skill_same", realSkill))
+		a.print("%s", english.Msg("cli_skill_same", dirs.Shown(realSkill)))
 		return nil
 	case there && !force:
 		return usererr.NewAt(realSkill, 0, 0, "cli_skill_kept")
@@ -218,7 +219,7 @@ func (a *app) installSkill(ag agent, force bool) error {
 	if there {
 		key = "cli_skill_replaced"
 	}
-	a.print("%s", english.Msg(key, realSkill))
+	a.print("%s", english.Msg(key, dirs.Shown(realSkill)))
 	return nil
 }
 
