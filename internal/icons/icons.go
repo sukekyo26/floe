@@ -249,6 +249,8 @@ func (s *Store) readIndex(k *kit) (*index, error) {
 		return nil, nil //nolint:nilnil // not fetched is not an error to fetch
 	}
 	b, _, err := files.Read(file)
+	// LIMIT: Windows says not there for a file on the way too, so that a set's directory, or the root, that is a file
+	// is taken for a set not fetched here, before cannotRead asks files.NotDir (only Unix's ENOTDIR gets there).
 	if errors.Is(err, fs.ErrNotExist) {
 		return nil, nil //nolint:nilnil // not fetched is not an error to fetch
 	}

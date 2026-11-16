@@ -6,10 +6,10 @@ import (
 	"os"
 	"path/filepath"
 	"slices"
+	"syscall"
 	"testing"
 
 	"floe/internal/i18n"
-	"floe/internal/testfs"
 	"floe/internal/usererr"
 )
 
@@ -22,7 +22,8 @@ func TestCannotReadWrite(t *testing.T) {
 	_, rerr := os.ReadFile(filepath.Join(dir, "gone.yaml"))
 	werr := os.Rename(filepath.Join(dir, "gone"), filepath.Join(dir, "x"))
 	english := i18n.EnglishCatalog()
-	gone, moved := testfs.Words(t, rerr), testfs.Words(t, werr)
+	// What the system says of a name not there (ERROR_FILE_NOT_FOUND on Windows), whatever floe takes from the error.
+	gone, moved := syscall.ENOENT.Error(), syscall.ENOENT.Error()
 	for _, c := range []struct {
 		name string
 		err  error
@@ -82,7 +83,7 @@ func TestInSystemWordsOf(t *testing.T) {
 	}
 	t.Run("system words", func(t *testing.T) {
 		t.Parallel()
-		if len(e.Args) == 0 || e.Args[0] != testfs.Words(t, rerr) {
+		if len(e.Args) == 0 || e.Args[0] != syscall.ENOENT.Error() {
 			t.Errorf("made %s with %q, the system's words first", e.Key, e.Args)
 		}
 	})

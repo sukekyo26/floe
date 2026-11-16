@@ -70,6 +70,7 @@ func TestOwnDirs(t *testing.T) {
 		{"none set", nil, 0, ""},
 		{"the home a file", cli.HomeVars(filepath.Join(dir, "d.yaml")), 0, ""},
 		{"default not there", cli.HomeVars(filepath.Join(dir, "none")), 0, ""},
+		{"the XDG default not there", map[string]string{"XDG_CONFIG_HOME": filepath.Join(dir, "none")}, 0, ""},
 		{"files linked out", map[string]string{"FLOE_PARTS_DIR": parts}, 0, ""},
 		{"the directory a link", map[string]string{"FLOE_PARTS_DIR": filepath.Join(dir, "plink")}, 0, ""},
 		{"relative", map[string]string{"FLOE_PARTS_DIR": "parts"}, 1, "floe: FLOE_PARTS_DIR is parts, a relative path; set it to an absolute path\n"},
@@ -80,6 +81,9 @@ func TestOwnDirs(t *testing.T) {
 	} {
 		t.Run(tt.name, func(t *testing.T) {
 			t.Parallel()
+			if strings.HasPrefix(tt.name, "the XDG") {
+				testfs.UnixOnly(t, "the XDG base directories")
+			}
 			if tt.name == "the directory a link" {
 				link(t, parts, filepath.Join(dir, "plink"))
 			}
@@ -513,6 +517,9 @@ func TestOwnNotFiles(t *testing.T) {
 		t.Parallel()
 		home := defaultAFile(t, "parts")
 		refused(t, cli.HomeVars(home), cli.DefaultPlace(home, "parts")+": not a directory\n")
+		// The XDG base directory's default, which configBase reads before the home.
+		config := write(t, map[string]string{"floe/parts": "a file"})
+		refused(t, map[string]string{"XDG_CONFIG_HOME": config}, filepath.Join(config, "floe", "parts")+": not a directory\n")
 	})
 }
 
