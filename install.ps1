@@ -51,7 +51,7 @@
     $at = [uri]$Url
     for ($hop = 0; $hop -le 10; $hop++) {
       if ($at.Scheme -cne 'https') { throw "download failed: $Url (redirected to $($at.Scheme))" }
-      $status = 0; $to = $null; $problem = $null
+      $status = 0; $to = $null; $problem = $null; $got = $null
       try {
         # Windows PowerShell hands a redirect back with an error that does not stop it;
         # PowerShell 7 throws it, the response inside.

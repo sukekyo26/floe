@@ -290,8 +290,9 @@ func runPS(t *testing.T, shell, base string, c psCase) *psResult {
 	if err != nil {
 		t.Fatal(err)
 	}
+	// The process has base\tmp; the driver gives install.ps1 c.Tmp, if any.
 	res := &psResult{tmp: cmp.Or(c.Tmp, filepath.Join(base, "tmp"))}
-	for _, dir := range []string{res.tmp, filepath.Join(base, "w")} {
+	for _, dir := range []string{res.tmp, filepath.Join(base, "tmp"), filepath.Join(base, "w")} {
 		if mkErr := os.MkdirAll(dir, 0o700); mkErr != nil {
 			t.Fatal(mkErr)
 		}
@@ -333,8 +334,8 @@ func runPS(t *testing.T, shell, base string, c psCase) *psResult {
 		}
 		env[strings.ToUpper(k)] = k + "=" + v
 	}
-	set("TMP", res.tmp)
-	set("TEMP", res.tmp)
+	set("TMP", filepath.Join(base, "tmp"))
+	set("TEMP", filepath.Join(base, "tmp"))
 	set("LOCALAPPDATA", filepath.Join(base, "localappdata"))
 	set("PROCESSOR_ARCHITECTURE", strings.ToUpper(runtime.GOARCH))
 	set("PROCESSOR_ARCHITEW6432", "")
@@ -595,11 +596,13 @@ func testInstallPS1(t *testing.T, shell string) {
 			works(t, r, res, dir, host)
 		})
 	}
-	for _, d := range []struct{ name, dir, says string }{
-		{"UNC", `\\localhost\c$\floe-install-test`, "local drive"},
-		{"a device path", `\\?\C:\floe-install-test`, "local drive"},
-		{"no such drive", `Q:foo`, "Q"},
-		{"the registry", `HKCU:\floe-install-test`, "must be a folder"},
+	// at is where a refused folder would be on this machine: nothing may be put there.
+	for _, d := range []struct{ name, dir, says, at string }{
+		{"UNC", `\\localhost\c$\floe-install-test-unc`, "local drive", `C:\floe-install-test-unc`},
+		{"UNC with slashes", `//localhost/c$/floe-install-test-slashes`, "local drive", `C:\floe-install-test-slashes`},
+		{"a device path", `\\?\C:\floe-install-test-device`, "local drive", `C:\floe-install-test-device`},
+		{"no such drive", `Q:foo`, "Q", ""},
+		{"the registry", `HKCU:\floe-install-test`, "must be a folder", ""},
 	} {
 		t.Run("folder "+d.name, func(t *testing.T) {
 			t.Parallel()
@@ -613,6 +616,10 @@ func testInstallPS1(t *testing.T, shell string) {
 			fails(t, res, t.TempDir(), d.says)
 			if r.hits.Load() != 0 {
 				t.Errorf("%d requests", r.hits.Load())
+			}
+			if d.at != "" && installed(t, d.at) != nil {
+				t.Errorf("floe.exe was put at %s", d.at)
+				_ = os.RemoveAll(d.at) //nolint:errcheck // what the failure left
 			}
 		})
 	}
