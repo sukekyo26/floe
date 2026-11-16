@@ -9,16 +9,18 @@ import (
 	"strings"
 	"testing"
 
+	"floe/internal/files"
 	"floe/internal/link"
 	"floe/internal/testfs"
 	"floe/internal/usererr"
 )
 
-// realTemp returns a temporary directory by its real path; on macOS t.TempDir is under the /var symlink.
+// realTemp returns a temporary directory by its real path, as files.Real names it: on macOS t.TempDir is under the
+// /var symlink, and on Windows a link's paths are \\?\C:\….
 func realTemp(tb testing.TB) string {
 	tb.Helper()
 
-	dir, err := filepath.EvalSymlinks(tb.TempDir())
+	dir, err := files.Real(tb.TempDir())
 	if err != nil {
 		tb.Fatal(err)
 	}
@@ -382,4 +384,36 @@ func TestCheck(t *testing.T) {
 			t.Errorf("Check(proj/pipe.html) = %v, want a usererr containing %q", err, want)
 		}
 	})
+}
+
+// A folder whose own path has a dot directory (one under a project's .agents) serves its files: the dot rule reads
+// the names under the folder alone.
+func TestResolveDotBase(t *testing.T) {
+	t.Parallel()
+
+	folder := filepath.Join(realTemp(t), "proj", ".agents", "docs")
+	write(t, filepath.Join(folder, "a.html"), "a")
+	write(t, filepath.Join(folder, "sub", "b.html"), "b")
+	for _, rest := range []string{"a.html", "sub/b.html"} {
+		if got, ok := link.Resolve(folder, true, rest); !ok || got != filepath.Join(folder, filepath.FromSlash(rest)) {
+			t.Errorf("Resolve(%q) = %q, %v, want it served", rest, got, ok)
+		}
+	}
+	if _, err := link.Dir(folder, "sub"); err != nil {
+		t.Errorf("Dir(sub) = %v", err)
+	}
+}
+
+// A link under a folder to a dot file of it is served as the file it leads to: the dot rule reads the names as
+// written, not where a link leads (as node_modules/x -> .pnpm/x).
+func TestResolveLinkToDot(t *testing.T) {
+	t.Parallel()
+
+	folder := filepath.Join(realTemp(t), "f")
+	env := filepath.Join(folder, ".env")
+	write(t, env, "e")
+	symlink(t, env, filepath.Join(folder, "x"))
+	if got, ok := link.Resolve(folder, true, "x"); !ok || got != env {
+		t.Errorf("Resolve(x) = %q, %v, want %q", got, ok, env)
+	}
 }

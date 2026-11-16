@@ -6,6 +6,7 @@ import (
 	"path/filepath"
 	"testing"
 
+	"floe/internal/files"
 	"floe/internal/project"
 	"floe/internal/testfs"
 )
@@ -104,7 +105,7 @@ func TestNameOfNoDir(t *testing.T) {
 func TestPlace(t *testing.T) {
 	t.Parallel()
 
-	tmp, err := filepath.EvalSymlinks(t.TempDir())
+	tmp, err := files.Real(t.TempDir())
 	if err != nil {
 		t.Fatal(err)
 	}
