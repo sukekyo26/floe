@@ -66,7 +66,11 @@ func exposes(path, home string, folder bool) error {
 	}
 	// A hidden file right under home (~/.x.html) is not in a hidden directory; exposedDir refuses it.
 	sep := string(filepath.Separator)
-	rest, underHome := strings.CutPrefix(path, home+sep)
+	underHome, rest := dirs.Holds(home, path), ""
+	if underHome {
+		// Home may be a root (/), which ends in its separator already.
+		rest = strings.TrimPrefix(path[len(home):], sep)
+	}
 	first, _, deeper := strings.Cut(rest, sep)
 	if in || underHome && (folder || deeper) && hiddenName(home, first) {
 		return usererr.New("link_hidden_home", path)
@@ -98,13 +102,10 @@ var appData = appDataDirs //nolint:gochecknoglobals // a test's seam
 
 // appDataAt reports, of the folders of application data the system names, whether path is one or in one (in), and
 // whether dir, the directory a link of path serves, holds one (holds): settings, caches and tokens of applications
-// live there, hidden or not, wherever home is (Q4). A folder not there holds nothing and is left out; one that cannot
-// be told is an error, as what cannot be checked is not let through.
+// live there, hidden or not, wherever home is (Q4). A folder not there (as files.Real tells) holds nothing and is left
+// out; one that cannot be told is an error, as what cannot be checked is not let through.
 func appDataAt(path, dir string) (in, holds bool, err error) {
 	for _, d := range appData() {
-		if d.err != nil && errors.Is(d.err, fs.ErrNotExist) {
-			continue
-		}
 		if d.err != nil {
 			return false, false, d.err
 		}

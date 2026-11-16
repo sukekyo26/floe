@@ -2,8 +2,6 @@ package link
 
 import (
 	"errors"
-	"fmt"
-	"io/fs"
 	"os"
 	"path/filepath"
 	"strings"
@@ -118,15 +116,15 @@ func TestExposesAppData(t *testing.T) { //nolint:paralleltest // it swaps appDat
 			t.Errorf("exposes(%s) = %q, want %q", tt.path, got, tt.key)
 		}
 	}
-	appData = func() []appDir {
-		return []appDir{{path: "", err: fmt.Errorf("gone: %w", fs.ErrNotExist)}, {path: filepath.Join(tmp, "none"), err: nil}}
-	}
+	appData = func() []appDir { return []appDir{{path: filepath.Join(tmp, "none"), err: nil}} }
 	if err := exposes(filepath.Join(home, "docs", "a.html"), home, false); err != nil {
 		t.Errorf("exposes with folders not there = %v, want it allowed", err)
 	}
-	appData = func() []appDir { return []appDir{{path: "", err: errors.New("the system cannot tell")}} }
-	if got := keyOf(exposes(filepath.Join(home, "docs", "a.html"), home, false)); got != "link_appdata_unknown" {
-		t.Errorf("exposes with a folder not told = %q, want link_appdata_unknown", got)
+	for _, d := range []appDir{{path: "", err: errors.New("the system cannot tell")}, {path: "rel", err: nil}} {
+		appData = func() []appDir { return []appDir{d} }
+		if got := keyOf(exposes(filepath.Join(home, "docs", "a.html"), home, false)); got != "link_appdata_unknown" {
+			t.Errorf("exposes with a folder %+v = %q, want link_appdata_unknown", d, got)
+		}
 	}
 }
 
@@ -137,4 +135,29 @@ func keyOf(err error) string {
 		return ue.Key
 	}
 	return ""
+}
+
+// A home that is a root (HOME=/) still has its hidden directories right under it.
+func TestExposesRootHome(t *testing.T) { //nolint:paralleltest // it swaps appData, which the other tests read
+	tmp, err := files.Real(t.TempDir())
+	if err != nil {
+		t.Fatal(err)
+	}
+	was := appData
+	t.Cleanup(func() { appData = was })
+	appData = func() []appDir { return nil }
+	root := filepath.VolumeName(tmp) + string(filepath.Separator)
+	if got := keyOf(exposes(filepath.Join(root, ".ssh", "x.html"), root, false)); got != "link_hidden_home" {
+		t.Errorf("exposes(%s) with home %s = %q, want link_hidden_home", filepath.Join(root, ".ssh", "x.html"), root, got)
+	}
+}
+
+// A directory whose name home's starts with is no directory home is under.
+func TestExposedDirSibling(t *testing.T) {
+	t.Parallel()
+
+	tmp := t.TempDir()
+	if exposedDir(filepath.Join(tmp, "floe"), filepath.Join(tmp, "floe-home")) {
+		t.Errorf("exposedDir(floe) with home floe-home = true, want false")
+	}
 }
