@@ -260,7 +260,7 @@ func ReplaceFile(tb testing.TB, replaced, replacement string) error {
 }
 
 // AppExecLink is an app execution alias of the system (a reparse point that is no link, WindowsApps\*.exe). It skips
-// on Unix and where there is none.
+// on Unix and where there is none; on the CI (CI set) none fails tb.
 func AppExecLink(tb testing.TB) string {
 	tb.Helper()
 	if !isWindows {
@@ -274,6 +274,9 @@ func AppExecLink(tb testing.TB) string {
 				return filepath.Join(apps, e.Name())
 			}
 		}
+	}
+	if os.Getenv("CI") != "" {
+		tb.Fatal("no app execution alias on the CI")
 	}
 	tb.Skip("no app execution alias here")
 	return ""

@@ -70,17 +70,29 @@ func TestOpenSharedSame(t *testing.T) {
 	testfs.Symlink(t, filepath.Join(dir, "sub"), filepath.Join(dir, "ld"))
 	testfs.Symlink(t, filepath.Join(dir, "gone"), filepath.Join(dir, "lg"))
 	testfs.Junction(t, filepath.Join(dir, "j"), filepath.Join(dir, "sub"))
-	for _, path := range []string{
-		filepath.Join(dir, "a.yaml"), filepath.Join(dir, "sub"), filepath.Join(dir, "none"),
-		filepath.Join(dir, "none", "x"), filepath.Join(dir, "a.yaml", "x"), filepath.Join(dir, "lf"),
-		filepath.Join(dir, "ld"), filepath.Join(dir, "lg"), filepath.Join(dir, "j"), filepath.Join(long, "c.yaml"),
-		`\\?\` + filepath.Join(long, "c.yaml"), `\\?\` + filepath.Join(dir, "a.yaml"), `\\?\` + filepath.Join(dir, "sub"),
-		`\\?\` + filepath.VolumeName(dir) + `\`, testfs.AppExecLink(t),
-	} {
+	same := func(t *testing.T, name, path string) {
+		t.Helper()
 		plain := openedAs(func(p string) (*os.File, error) { return os.OpenFile(p, os.O_RDONLY, 0) }, path)
 		shared := openedAs(func(p string) (*os.File, error) { return openShared(checked{s: p}) }, path)
 		if shared != plain {
-			t.Errorf("%s:\n  openShared %s\n  os.OpenFile %s", path, shared, plain)
+			t.Errorf("%s:\n  openShared %s\n  os.OpenFile %s", name, shared, plain)
 		}
 	}
+	for name, path := range map[string]string{
+		"a file": filepath.Join(dir, "a.yaml"), "a directory": filepath.Join(dir, "sub"),
+		"none": filepath.Join(dir, "none"), "none's name": filepath.Join(dir, "none", "x"),
+		"a file's name": filepath.Join(dir, "a.yaml", "x"), "a symlink to a file": filepath.Join(dir, "lf"),
+		"a symlink to a directory": filepath.Join(dir, "ld"), "a symlink to nothing": filepath.Join(dir, "lg"),
+		"a junction": filepath.Join(dir, "j"), "a long path": filepath.Join(long, "c.yaml"),
+		`a long \\?\ path`: `\\?\` + filepath.Join(long, "c.yaml"), `a \\?\ file`: `\\?\` + filepath.Join(dir, "a.yaml"),
+		`a \\?\ directory`: `\\?\` + filepath.Join(dir, "sub"),
+		"the drive's root": `\\?\` + filepath.VolumeName(dir) + `\`,
+	} {
+		same(t, name, path)
+	}
+	// Of its own: where there is no alias, the rows above run all the same.
+	t.Run("an app alias", func(t *testing.T) {
+		t.Parallel()
+		same(t, "the AppExecLink", testfs.AppExecLink(t))
+	})
 }
