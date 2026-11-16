@@ -145,7 +145,7 @@ func DenyList(tb testing.TB, dir string) {
 }
 
 // Subst makes a drive of dir with subst (Windows), a letter no volume has, and removes it when tb ends; it returns
-// the drive (Z:). It skips where no letter is free, and on Unix, which has no drives.
+// the drive (Z:). It skips where no letter is free (on the CI it fails), and on Unix, which has no drives.
 func Subst(tb testing.TB, dir string) string {
 	tb.Helper()
 	if !isWindows {
@@ -181,7 +181,8 @@ func MapShare(tb testing.TB, dir string) (shared, mapped string) {
 var driveMu sync.Mutex //nolint:gochecknoglobals // one for the process
 
 // newDrive makes a drive with mk (subst, net use) on a letter no volume has, the next one when mk fails (another
-// process took the letter meanwhile), and removes it with undo when tb ends; it skips where no letter is free.
+// process took the letter meanwhile), and removes it with undo when tb ends; it skips where no letter is free (on
+// the CI, CI set, it fails instead).
 func newDrive(tb testing.TB, mk, undo func(drive string) error) string {
 	tb.Helper()
 	driveMu.Lock()
@@ -204,6 +205,9 @@ func newDrive(tb testing.TB, mk, undo func(drive string) error) string {
 	}
 	if failed != nil {
 		tb.Fatal(failed)
+	}
+	if os.Getenv("CI") != "" {
+		tb.Fatal("no drive letter is free on the CI")
 	}
 	tb.Skip("no drive letter is free")
 	return ""

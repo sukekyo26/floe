@@ -104,7 +104,11 @@ func unsubstDrive(drive string) error {
 	return nil
 }
 
-func mapDrive(drive, share string) error { return command("net", "use", drive, share) }
+// mapDrive maps drive to share for this logon only (/persistent:no): a test that stops before its cleanup leaves
+// nothing in the user's settings for the next logon.
+func mapDrive(drive, share string) error {
+	return command("net", "use", drive, share, "/persistent:no")
+}
 
 func unmapDrive(drive string) error {
 	if err := command("net", "use", drive, "/delete", "/y"); err != nil {
