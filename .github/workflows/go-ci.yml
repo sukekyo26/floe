@@ -149,6 +149,15 @@ jobs:
           go-version-file: go.mod
           cache: true
       - run: go vet ./...
+      # install.ps1, read by the version pinned here: a newer one may warn of more. Write-Host is how it talks.
+      - name: PSScriptAnalyzer
+        shell: pwsh
+        run: |
+          $ProgressPreference = 'SilentlyContinue'
+          $took = Measure-Command { Install-Module PSScriptAnalyzer -RequiredVersion 1.25.0 -Scope CurrentUser -Force }
+          'Install-Module took {0:N1} s' -f $took.TotalSeconds
+          Import-Module PSScriptAnalyzer -RequiredVersion 1.25.0
+          Invoke-ScriptAnalyzer -Path install.ps1 -Severity Warning, Error -ExcludeRule PSAvoidUsingWriteHost -EnableExit
       - name: Test
         shell: bash
         env:
