@@ -20,13 +20,14 @@ var (
 	errDenied error = syscall.WSAEACCES
 )
 
-// background makes cmd start away from this command, with no console of this one's (DETACHED_PROCESS), so that it
-// outlives this command and its terminal, and in a process group of its own, which a Ctrl+C at the terminal does
-// not reach; when f is not nil, it hands f's socket down to cmd: made inheritable, and named to os/exec, which
+// background makes cmd start away from this command, with a console of its own that no window shows
+// (CREATE_NO_WINDOW: DETACHED_PROCESS would leave it none, and each console program it starts, git, would make
+// one), so that it outlives this command and its terminal, and in a process group of its own, which a Ctrl+C at
+// the terminal does not reach; when f is not nil, it hands f's socket down to cmd: made inheritable, and named to os/exec, which
 // hands down only the handles it is named (PROC_THREAD_ATTRIBUTE_HANDLE_LIST). It returns the handle's number,
 // for ListenerEnv. The handle is f.Fd()'s, which takes it out of the I/O completion port.
 func background(cmd *exec.Cmd, f *os.File) (string, error) {
-	attr := &syscall.SysProcAttr{CreationFlags: windows.DETACHED_PROCESS | windows.CREATE_NEW_PROCESS_GROUP}
+	attr := &syscall.SysProcAttr{CreationFlags: windows.CREATE_NO_WINDOW | windows.CREATE_NEW_PROCESS_GROUP}
 	cmd.SysProcAttr = attr
 	if f == nil {
 		return "", nil
