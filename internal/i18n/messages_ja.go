@@ -213,6 +213,7 @@ var messagesJA = map[string]string{
 	"store_slug_placed":       "URL 名「%[1]s」はリポジトリ %[3]s の %[2]s から公開されています。別の URL 名にしてください",
 	"store_slug_placed_alone": "URL 名「%s」は %s から公開されています。別の URL 名にしてください",
 	"store_slug_taken":        "URL 名「%s」は使われています。別の URL 名にしてください",
+	"store_edit_renamed_only": "ページの URL 名は「%[2]s」に変わり、元に戻せませんでした（%[1]s）。ほかの変更は保存されていません。もう一度変更を保存してください",
 	"store_reads_unset":       "無いか、壊れているか、since がありません。floe stop の後に floe serve を起こすと書き直します",
 	"store_project_slash":     "プロジェクト名に / だけは使えません",
 	"store_project":           "プロジェクト「%s」",

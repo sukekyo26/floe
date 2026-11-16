@@ -770,7 +770,7 @@ func (s *Store) commit(e *Entry, mark string, pre *pressed) error {
 	// The directory this save made, left, would keep a rename off the slug from the management page, which
 	// does not list it. One that was there (its meta.json unreadable) stays.
 	if err != nil && made {
-		_ = os.RemoveAll(dir) //nolint:errcheck // the error is the save's
+		_ = files.RemoveAll(dir) //nolint:errcheck // the error is the save's
 	}
 	return err
 }
@@ -848,7 +848,7 @@ func (s *Store) keepCopy(slug string, m *Meta, src, page []byte, images map[stri
 		return err
 	}
 	undo := func() {
-		_ = os.RemoveAll(filepath.Join(dir, source)) //nolint:errcheck // the error is the write's
+		_ = files.RemoveAll(filepath.Join(dir, source)) //nolint:errcheck // the error is the write's
 	}
 	if kept != nil {
 		unkeep, err := s.writeVersion(slug, m, kept)
@@ -857,7 +857,7 @@ func (s *Store) keepCopy(slug string, m *Meta, src, page []byte, images map[stri
 			return err
 		}
 		undo = func() {
-			_ = os.RemoveAll(filepath.Join(dir, source)) //nolint:errcheck // as above
+			_ = files.RemoveAll(filepath.Join(dir, source)) //nolint:errcheck // as above
 			unkeep()
 		}
 	}
@@ -890,9 +890,9 @@ func (s *Store) writeVersion(slug string, m *Meta, kept *pressed) (func(), error
 	dir := filepath.Dir(file)
 	made := files.Mkdir(dir, 0o700) == nil
 	unkeep := func() {
-		_ = os.Remove(file) //nolint:errcheck // the error is the write's
+		_ = files.Remove(file) //nolint:errcheck // the error is the write's
 		if made {
-			_ = os.Remove(dir) //nolint:errcheck // as above
+			_ = files.Remove(dir) //nolint:errcheck // as above
 		}
 	}
 	if err := files.WriteAtomic(file, kept.gz, 0o600, nil); err != nil {
@@ -915,7 +915,7 @@ func (s *Store) removeVersions(slug string, m *Meta) {
 		}
 	}
 	if len(named) == 0 {
-		_ = os.RemoveAll(dir) //nolint:errcheck // as below
+		_ = files.RemoveAll(dir) //nolint:errcheck // as below
 		return
 	}
 	entries, err := files.ReadDir(dir)
@@ -924,7 +924,7 @@ func (s *Store) removeVersions(slug string, m *Meta) {
 	}
 	for _, d := range entries {
 		if !named[d.Name()] {
-			_ = os.RemoveAll(filepath.Join(dir, d.Name())) //nolint:errcheck // as above
+			_ = files.RemoveAll(filepath.Join(dir, d.Name())) //nolint:errcheck // as above
 		}
 	}
 }
@@ -964,12 +964,12 @@ func (s *Store) lock(create bool) (func(), error) {
 // the paths it names them by under images/ (made when there are none, for a rebuild to read), to a new
 // directory under dir, and returns its name. One left by a write that fails goes.
 func writeSource(dir string, src, page []byte, images map[string][]byte) (string, error) {
-	tmp, err := os.MkdirTemp(dir, sourcePrefix)
+	tmp, err := files.MkdirTemp(dir, sourcePrefix)
 	if err != nil {
 		return "", usererr.CannotWrite(dir, err) //nolint:wrapcheck // the system's words, at the page's directory
 	}
 	if err = writeCopy(tmp, src, page, images); err != nil {
-		_ = os.RemoveAll(tmp) //nolint:errcheck // the next save removes it otherwise
+		_ = files.RemoveAll(tmp) //nolint:errcheck // the next save removes it otherwise
 		return "", err
 	}
 	return filepath.Base(tmp), nil
@@ -1017,7 +1017,7 @@ func removeSources(dir, keep string) {
 	}
 	for _, d := range entries {
 		if name := d.Name(); strings.HasPrefix(name, sourcePrefix) && name != keep {
-			_ = os.RemoveAll(filepath.Join(dir, name)) //nolint:errcheck // as above
+			_ = files.RemoveAll(filepath.Join(dir, name)) //nolint:errcheck // as above
 		}
 	}
 }
@@ -1060,12 +1060,12 @@ func removePage(dir string) error {
 			continue
 		}
 		at := filepath.Join(dir, e.Name())
-		if err := os.RemoveAll(at); err != nil {
+		if err := files.RemoveAll(at); err != nil {
 			return usererr.CannotWrite(at, err) //nolint:wrapcheck // as above
 		}
 	}
 	for _, at := range []string{filepath.Join(dir, "meta.json"), dir} {
-		if err := os.Remove(at); err != nil {
+		if err := files.Remove(at); err != nil {
 			return usererr.CannotWrite(at, err) //nolint:wrapcheck // as above
 		}
 	}
@@ -1109,8 +1109,7 @@ type Edited struct {
 // Tags are changed under the lock, so that writers who send only their change keep each other's.
 // The page drawn stays as it is, its title and slug as when it was drawn.
 func (s *Store) Edit(slug string, ed Edit) (Edited, error) {
-	from, ok := s.dir(slug)
-	if !ok {
+	if _, ok := s.dir(slug); !ok {
 		return Edited{}, ErrNotFound
 	}
 	unlock, err := s.lock(false)
@@ -1135,19 +1134,33 @@ func (s *Store) Edit(slug string, ed Edit) (Edited, error) {
 		return Edited{}, err
 	}
 	editTitle(slug, to, m, ed.Title)
-	if err := s.WriteMeta(slug, m); err != nil {
+	if err := s.renameWriting(slug, to, m); err != nil {
 		return Edited{}, err
-	}
-	// Renaming moves the directory only; tabs open on the old URL show "not found".
-	if to != slug {
-		dest, _ := s.dir(to)
-		if err := os.Rename(from, dest); err != nil {
-			return Edited{}, usererr.CannotWrite(dest, err) //nolint:wrapcheck // the system's words, at the new name
-		}
 	}
 	return Edited{
 		Slug: to, TaskProject: ProjectKey(m.Project), Task: m.Task, OffTask: off.Name, OffCategory: off.Category,
 	}, nil
+}
+
+// renameWriting moves the page slug to the name to, when it changes, and then writes m there: one that cannot be moved
+// is left as it was, all of it; one moved whose meta.json cannot be written is moved back, or, when that fails too,
+// told as moved alone. Renaming moves the directory only; tabs open on the old URL show "not found".
+func (s *Store) renameWriting(slug, to string, m *Meta) error {
+	dest, _ := s.dir(to)
+	if to != slug {
+		if err := files.Rename(s.root, slug, to); err != nil {
+			return usererr.CannotWrite(dest, err) //nolint:wrapcheck // the system's words, at the new name
+		}
+	}
+	err := s.WriteMeta(to, m)
+	if err == nil || to == slug {
+		return err
+	}
+	if back := files.Rename(s.root, to, slug); back != nil {
+		//nolint:wrapcheck // the system's words, at the new name
+		return usererr.InSystemWords("store_edit_renamed_only", dest, back, to)
+	}
+	return err
 }
 
 // setProject sets the project ed names of m, taking m off its task when it moves it: it returns the task and category
