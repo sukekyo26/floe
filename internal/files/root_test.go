@@ -8,6 +8,7 @@ import (
 	"path/filepath"
 	"testing"
 	"testing/fstest"
+	"time"
 
 	"floe/internal/files"
 	"floe/internal/testfs"
@@ -23,19 +24,32 @@ func fsOf(t *testing.T, dir string) map[string]fs.FS {
 	return map[string]fs.FS{"Root": root, "DirFS": files.DirFS(dir)}
 }
 
+// contractTree makes a.yaml and sub/b.png in a new directory, for fstest.TestFS. sub's times are set after: Windows
+// may update a directory's write time a moment after a file is made in it, which TestFS would find between the
+// directory's entry and its Stat.
+func contractTree(t *testing.T) string {
+	t.Helper()
+	dir := t.TempDir()
+	if err := os.Mkdir(filepath.Join(dir, "sub"), 0o700); err != nil {
+		t.Fatal(err)
+	}
+	for name, b := range map[string]string{"a.yaml": "a", "sub/b.png": "b"} {
+		if err := os.WriteFile(filepath.Join(dir, filepath.FromSlash(name)), []byte(b), 0o600); err != nil {
+			t.Fatal(err)
+		}
+	}
+	at := time.Date(2026, 1, 1, 0, 0, 0, 0, time.UTC)
+	if err := os.Chtimes(filepath.Join(dir, "sub"), at, at); err != nil {
+		t.Fatal(err)
+	}
+	return dir
+}
+
 // Both keep to what an fs.FS promises, as testing/fstest checks it.
 func TestFSContract(t *testing.T) {
 	t.Parallel()
 
-	dir := t.TempDir()
-	for name, b := range map[string]string{"a.yaml": "a", "sub/b.png": "b"} {
-		if err := os.MkdirAll(filepath.Dir(filepath.Join(dir, name)), 0o700); err != nil {
-			t.Fatal(err)
-		}
-		if err := os.WriteFile(filepath.Join(dir, name), []byte(b), 0o600); err != nil {
-			t.Fatal(err)
-		}
-	}
+	dir := contractTree(t)
 	for via, fsys := range fsOf(t, dir) {
 		t.Run(via, func(t *testing.T) {
 			t.Parallel()

@@ -115,6 +115,9 @@ func (d dirFS) join(op, name string) (string, error) {
 		return "", err
 	case d == "":
 		return "", &fs.PathError{Op: op, Path: name, Err: errNoDir}
+	case local == ".":
+		// d itself: after \\?\, Windows reads no . as the directory it is in.
+		return string(d), nil
 	case os.IsPathSeparator(d[len(d)-1]):
 		return string(d) + local, nil
 	}

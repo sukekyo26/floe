@@ -1,8 +1,6 @@
 package files_test
 
 import (
-	"os"
-	"path/filepath"
 	"testing"
 	"testing/fstest"
 
@@ -25,16 +23,7 @@ var osNameCases = []nameCase{ //nolint:gochecknoglobals // a test's table
 func TestFSContractVerbatim(t *testing.T) {
 	t.Parallel()
 
-	dir := t.TempDir()
-	if err := os.MkdirAll(filepath.Join(dir, "sub"), 0o700); err != nil {
-		t.Fatal(err)
-	}
-	for _, name := range []string{"a.yaml", filepath.Join("sub", "b.png")} {
-		if err := os.WriteFile(filepath.Join(dir, name), []byte("x"), 0o600); err != nil {
-			t.Fatal(err)
-		}
-	}
-	verbatim, err := files.Real(dir)
+	verbatim, err := files.Real(contractTree(t))
 	if err != nil {
 		t.Fatal(err)
 	}
