@@ -207,7 +207,9 @@ var messagesEN = map[string]string{
 	"link_not_real":        "%s is not its real path: give the whole path with its links and junctions followed, as the system names it",
 	"link_not_linkable":    "%s is not a regular HTML file (.html, .htm), data file (.yaml, .yml) or folder; only those can be linked",
 	"link_home_unresolved": `cannot resolve the home directory "%s"; set HOME to an existing absolute directory`,
-	"link_hidden_home":     "%s is under a hidden directory of your home (settings and keys live there); move it out to link it",
+	"link_hidden_home":     "%s is in a hidden directory of your home or a folder of application data (AppData on Windows), where settings and keys live; put it somewhere else, such as a project's folder, and link it there",
+	"link_share":           "%s is on a network share (%s): floe links only files on this machine's drives; copy it to a local folder and link it there",
+	"link_appdata_unknown": "%s cannot be checked: the system does not tell where its folders of application data are (%s); floe links nothing it cannot check",
 	"link_exposes_dir":     "%s would expose all of %s; move it into a directory of its own and link it there",
 
 	// store: publishing and editing pages

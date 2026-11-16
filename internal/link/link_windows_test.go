@@ -2,6 +2,7 @@ package link_test
 
 import (
 	"errors"
+	"os"
 	"path/filepath"
 	"strings"
 	"testing"
@@ -9,6 +10,7 @@ import (
 	"floe/internal/files"
 	"floe/internal/link"
 	"floe/internal/testfs"
+	"floe/internal/usererr"
 )
 
 // realOf is files.Real of path: the folder a link registers; the tests make the files under it by the plain path,
@@ -108,5 +110,107 @@ func TestResolveTrailingDot(t *testing.T) {
 	}
 	if _, ok := link.Resolve(folder, true, "a.html"); !ok {
 		t.Error("Resolve(a.html) refused")
+	}
+	// A trailing space alike: none names a.html; made under \\?\, a file named so is its own, and served.
+	if got, ok := link.Resolve(folder, true, "a.html "); ok {
+		t.Errorf("Resolve(a.html ) = %q, want it refused while there is no such file", got)
+	}
+	write(t, filepath.Join(folder, "a.html "), "s")
+	if got, ok := link.Resolve(folder, true, "a.html "); !ok || filepath.Base(got) != "a.html " {
+		t.Errorf("Resolve(a.html ) = %q, %v, want the file named so", got, ok)
+	}
+}
+
+// Names Windows reads otherwise are not served: a stream after :, a reserved name (made as a plain file under \\?\),
+// \ as a separator, a drive, and bytes that are not UTF-8 (Windows makes such a name with U+FFFD). The short name
+// of a dot directory with a stream after it lists nothing (S315's W26). Reserved names with an extension are plain
+// names on this Windows (build 26100), and served.
+func TestResolveLocalize(t *testing.T) {
+	t.Parallel()
+
+	folder := filepath.Join(realTemp(t), "f")
+	for _, name := range []string{"a.html", "a.html:x", "NUL", "CON", `sub\a.html`, "NUL.html", "nul.txt", `.secret\id.html`} {
+		write(t, filepath.Join(folder, name), "x")
+	}
+	testfs.NotUTF8(t, folder, "a\xff.html", false)
+	for _, rest := range []string{"a.html:x", "a.html::$DATA", "NUL", "nul", "CON", `sub\a.html`, "C:x", "a\xff.html"} {
+		if got, ok := link.Resolve(folder, true, rest); ok {
+			t.Errorf("Resolve(%q) = %q, want it refused", rest, got)
+		}
+	}
+	for _, rest := range []string{"a.html", "sub/a.html", "NUL.html", "nul.txt", "a\uFFFD.html"} {
+		if got, ok := link.Resolve(folder, true, rest); !ok {
+			t.Errorf("Resolve(%q) = %q, want it served", rest, got)
+		}
+	}
+	short := filepath.Base(testfs.ShortName(t, filepath.Join(folder, ".secret")))
+	if l, err := link.Dir(folder, short+"::$INDEX_ALLOCATION"); !errors.Is(err, link.ErrNoDir) {
+		t.Errorf("Dir(%s::$INDEX_ALLOCATION) = %+v, %v, want ErrNoDir", short, l, err)
+	}
+}
+
+// mistakeKey is the key of the mistake err is, "" for none.
+func mistakeKey(err error) string {
+	var ue *usererr.Error
+	if errors.As(err, &ue) {
+		return ue.Key
+	}
+	return ""
+}
+
+// A drive's root is no folder to link: all of the drive would be served.
+func TestCheckRoot(t *testing.T) {
+	t.Parallel()
+
+	home := filepath.Join(realTemp(t), "home")
+	if err := os.Mkdir(home, 0o700); err != nil {
+		t.Fatal(err)
+	}
+	root := realOf(t, os.Getenv("SystemDrive")+`\`)
+	if _, err := link.Check(root, home); mistakeKey(err) != "link_exposes_dir" {
+		t.Errorf("Check(%s) = %v, want link_exposes_dir", root, err)
+	}
+}
+
+// A file on a share is refused, as written with \\host\share and through a network drive (whose real path is the
+// share's), but not through a subst drive (whose real path is the drive's own).
+func TestCheckShare(t *testing.T) {
+	t.Parallel()
+
+	tmp := t.TempDir()
+	write(t, filepath.Join(tmp, "a.html"), "a")
+	home := filepath.Join(realTemp(t), "home")
+	if err := os.Mkdir(home, 0o700); err != nil {
+		t.Fatal(err)
+	}
+	shared, mapped := testfs.MapShare(t, tmp)
+	for _, p := range []string{shared, mapped} {
+		file := realOf(t, filepath.Join(p, "a.html"))
+		if _, err := link.Check(file, home); mistakeKey(err) != "link_share" {
+			t.Errorf("Check(%s, from %s) = %v, want link_share", file, p, err)
+		}
+	}
+	drive := testfs.Subst(t, tmp)
+	file := realOf(t, drive+`\a.html`)
+	if _, err := link.Check(file, home); err != nil {
+		t.Errorf("Check(%s, from %s) = %v, want it allowed", file, drive, err)
+	}
+}
+
+// A directory right under home with the hidden attribute is hidden, as a dot one is; one deeper, in a project, is not.
+func TestCheckHiddenAttr(t *testing.T) {
+	t.Parallel()
+
+	home := filepath.Join(realTemp(t), "home")
+	notes, hid := filepath.Join(home, "notes"), filepath.Join(home, "proj", "hid")
+	write(t, filepath.Join(notes, "a.html"), "a")
+	write(t, filepath.Join(hid, "a.html"), "a")
+	testfs.Hide(t, notes)
+	testfs.Hide(t, hid)
+	if _, err := link.Check(filepath.Join(notes, "a.html"), home); mistakeKey(err) != "link_hidden_home" {
+		t.Errorf("Check(notes/a.html) = %v, want link_hidden_home", err)
+	}
+	if _, err := link.Check(filepath.Join(hid, "a.html"), home); err != nil {
+		t.Errorf("Check(proj/hid/a.html) = %v, want it allowed", err)
 	}
 }
