@@ -242,3 +242,20 @@ func TestImageReadOnce(t *testing.T) {
 		t.Errorf("a.png opened %d and stated %d times, want once each", images.opens["a.png"], images.stats["a.png"])
 	}
 }
+
+// An image named with a NUL byte is no path floe reads, on every system, though fs.ValidPath takes it.
+func TestImageNULName(t *testing.T) {
+	t.Parallel()
+
+	_, images := imagesIn(t, map[string][]byte{"a.png": png})
+	src := `lang: en
+template: report
+sections:
+  - parts:
+      - image: { alt: one, file: "a\0.png" }
+`
+	got := drawn(t, floeKit(t), src, tmpl.Options{Theme: "", Untitled: "x", Images: images, ImagesDir: ""})
+	if !strings.Contains(got, "a\x00.png\" is not a path floe reads") {
+		t.Errorf("told\n%q\nwant kit_image_path of a\\x00.png", got)
+	}
+}

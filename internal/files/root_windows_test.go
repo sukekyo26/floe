@@ -15,6 +15,8 @@ var osNameCases = []nameCase{ //nolint:gochecknoglobals // a test's table
 	{"C:x", false},
 	{"NUL", false},
 	{"sub/CON", false},
+	// An ordinary name since Windows 11 (Go asks RtlIsDosDeviceName_U of a reserved name with an extension): on
+	// Windows 10 it is a device, and this row fails.
 	{"COM1.png", true},
 }
 

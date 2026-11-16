@@ -27,6 +27,7 @@ sections:
 			t.Errorf("told\n%s\nwant %s", got, name)
 		}
 	}
+	// NUL.png is an ordinary name since Windows 11; on Windows 10 it is a device, and this fails.
 	if strings.Contains(got, `"NUL.png" is not a path`) {
 		t.Errorf("NUL.png, an ordinary name since Windows 11, refused:\n%s", got)
 	}

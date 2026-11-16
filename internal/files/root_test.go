@@ -169,10 +169,12 @@ type nameCase struct {
 	ok   bool
 }
 
-// ValidName takes the names an fs.FS takes and the system reads as names under the directory.
+// ValidName takes the names an fs.FS takes and the system reads as names under the directory; Root and DirFS
+// refuse the others.
 func TestValidName(t *testing.T) {
 	t.Parallel()
 
+	dir := t.TempDir()
 	for _, tt := range append([]nameCase{
 		{"a.png", true},
 		{"sub/b.png", true},
@@ -187,6 +189,18 @@ func TestValidName(t *testing.T) {
 	}, osNameCases...) {
 		if got := files.ValidName(tt.name); got != tt.ok {
 			t.Errorf("ValidName(%q) = %v, want %v", tt.name, got, tt.ok)
+		}
+		if tt.ok {
+			continue
+		}
+		// Root and DirFS refuse it alike, unopened.
+		for via, fsys := range fsOf(t, dir) {
+			if _, err := fsys.Open(tt.name); !errors.Is(err, fs.ErrInvalid) {
+				t.Errorf("%s: Open(%q) = %v, want fs.ErrInvalid", via, tt.name, err)
+			}
+			if _, err := fs.Stat(fsys, tt.name); !errors.Is(err, fs.ErrInvalid) {
+				t.Errorf("%s: Stat(%q) = %v, want fs.ErrInvalid", via, tt.name, err)
+			}
 		}
 	}
 }

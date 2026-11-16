@@ -150,6 +150,6 @@ func checkName(op, name string) (string, error) {
 // it, and the system reads it as names under the directory (filepath.Localize). On Windows that refuses a \, a :
 // (a stream, a drive) and a device's name (NUL, CON); everywhere, a NUL byte.
 func ValidName(name string) bool {
-	_, err := filepath.Localize(name)
+	_, err := checkName("", name)
 	return err == nil
 }
