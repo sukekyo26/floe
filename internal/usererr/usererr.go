@@ -274,6 +274,8 @@ func Warn(c *i18n.Catalog, warnings []*Error) []Told {
 
 // worded words l in the language of c, in order, each told once: one worded at the same place as one before it is
 // left out, wherever it was made. A path among its file and arguments is shown as people write it (dirs.Shown).
+// LIMIT: only a whole argument that starts as Real's path (\\?\C:\, \\?\UNC\) is shown so, any such argument alike;
+// a path inside one (a library's words) keeps its \\?\. Show it at the words' maker if one comes to be told so.
 func worded(c *i18n.Catalog, l List) []Told {
 	all := make([]Told, 0, len(l))
 	told := map[Told]bool{}

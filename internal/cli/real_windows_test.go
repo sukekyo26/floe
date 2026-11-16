@@ -1,6 +1,7 @@
 package cli_test
 
 import (
+	"os"
 	"path/filepath"
 	"strings"
 	"testing"
@@ -72,6 +73,22 @@ func TestSkillInstallShown(t *testing.T) {
 		if code != 0 || errs != "" || strings.Contains(out, `\\?\`) || !strings.Contains(out, "SKILL.md") {
 			t.Errorf("floe skill install = %d, %q, %q, want SKILL.md named without \\\\?\\", code, out, errs)
 		}
+	}
+}
+
+// A skill's directory there in another case (skills\Floe) is floe's own on Windows, which names files in any case:
+// the skill is written in it.
+func TestSkillInstallCase(t *testing.T) {
+	t.Parallel()
+	testfs.Pending(t, "S315-P4: followNamed takes the case on disk Real gives as a link to another name")
+
+	home := t.TempDir()
+	if err := os.MkdirAll(filepath.Join(home, ".claude", "skills", "Floe"), 0o700); err != nil {
+		t.Fatal(err)
+	}
+	code, out, errs := runEnv(home, map[string]string{"HOME": home}, "skill", "install", "claude")
+	if code != 0 || errs != "" || !strings.Contains(out, "SKILL.md") {
+		t.Errorf("floe skill install over skills\\Floe = %d, %q, %q, want it written", code, out, errs)
 	}
 }
 
