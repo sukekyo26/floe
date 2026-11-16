@@ -872,8 +872,6 @@ func TestConflict(t *testing.T) {
 	}
 }
 
-// A folder is linked as itself: its name, extension and all, names it; it stays a folder when linked again, so that it
-// serves only what is under it; and its directories are read when they are asked for, not when it is listed.
 // The root of the system (/, or a drive's on Windows) is no folder to link: all of it would be served.
 func TestPrepareLinkRoot(t *testing.T) {
 	t.Parallel()
@@ -887,6 +885,8 @@ func TestPrepareLinkRoot(t *testing.T) {
 	}
 }
 
+// A folder is linked as itself: its name, extension and all, names it; it stays a folder when linked again, so that it
+// serves only what is under it; and its directories are read when they are asked for, not when it is listed.
 func TestPrepareLinkFolder(t *testing.T) {
 	t.Parallel()
 
