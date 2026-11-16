@@ -22,10 +22,11 @@ die() {
 }
 
 # path_note says how to put the install directory on PATH, when it is not there. It is called with floe in place:
-# nothing in it fails the install.
+# nothing in it fails the install, and when a step of it fails it falls back to words alone.
 # LIMIT: the file is named for zsh and for bash on Linux alone, whose interactive shells always read it; a bash that
 # only ever runs as a login shell and whose ~/.bash_profile does not read ~/.bashrc misses the line. A zsh with
 # noclobber and no ~/.zshrc yet refuses the >> (it says so). fish older than 3.2 has no fish_add_path (it says so).
+# The line is added at the front of PATH each time the file is read, so a shell started in a shell has it twice.
 path_note() {
   # ./ in front of a relative one: cd then reads neither CDPATH nor a name like - or -x as its own.
   case "$INSTALL_DIR" in
@@ -33,16 +34,21 @@ path_note() {
     *) abs=./$INSTALL_DIR ;;
   esac
   abs=$(cd "$abs" 2>/dev/null && pwd) || abs=$INSTALL_DIR
-  case ":$PATH:" in
-    *:"$INSTALL_DIR":* | *:"$abs":* | *:"$abs/":*) return 0 ;;
-  esac
-  nl='
-'
+  # The name as given is looked at too: $(...) drops the line breaks it ends in. A control character (a CR going back
+  # to the start of the line) would also make the line shown on screen another than the one pasted.
   case "$abs" in
-    *:* | *"$nl"* | [!/]*)
-      printf 'floe-install: note: %s cannot be a PATH entry (PATH takes an absolute path without ":" or a line break); run floe by its full path, or set FLOE_INSTALL_DIR to another directory\n' "$abs" >&2
-      return 0
-      ;;
+    *:* | [!/]*) bad=1 ;;
+    *) bad= ;;
+  esac
+  case "$abs$INSTALL_DIR" in
+    *[[:cntrl:]]*) bad=1 ;;
+  esac
+  if [ -n "$bad" ]; then
+    printf 'floe-install: note: %s cannot be a PATH entry (PATH takes an absolute path without ":" or a control character); run floe by its full path, or set FLOE_INSTALL_DIR to another directory\n' "$(printf '%s' "$INSTALL_DIR" | tr '[:cntrl:]' '?')" >&2
+    return 0
+  fi
+  case ":$PATH:" in
+    *:"$abs":* | *:"$abs/":*) return 0 ;;
   esac
   home=${HOME-}
   home=${home%/}
@@ -65,10 +71,11 @@ path_note() {
     sh | dash | ash | ksh | mksh) how=posix ;;
     *) how= ;;
   esac
+  # Each sed on its own line, out of quotes: a sed that fails (none on PATH, or one that refuses the bytes) leaves
+  # words alone, not a line that adds "" or the working directory to PATH.
   case "$how" in
     fish)
-      printf 'floe-install: %s is not on your PATH. To add it, run:\n' "$abs" >&2
-      printf "  fish_add_path '%s'\n" "$(printf '%s\n' "$abs" | sed "s/[\\\\']/\\\\&/g")" >&2
+      fished=$(printf '%s\n' "$abs" | sed "s/[\\\\']/\\\\&/g") && [ -n "$fished" ] || how=
       ;;
     posix)
       prefix='' rest=$abs
@@ -77,11 +84,21 @@ path_note() {
         case "$abs" in "$home"/*) prefix='$HOME' rest=${abs#"$home"} ;; esac
       fi
       # In the file the directory is inside double quotes, where \ " $ ` are not themselves.
-      line="export PATH=\"$prefix$(printf '%s\n' "$rest" | sed 's/[\\"$`]/\\&/g'):\$PATH\""
+      escaped=$(printf '%s\n' "$rest" | sed 's/[\\"$`]/\\&/g') && [ -n "$escaped" ] || how=
+      line="export PATH=\"$prefix$escaped:\$PATH\""
+      quoted=$(printf '%s\n' "$line" | sed "s/'/'\\\\''/g") && [ -n "$quoted" ] || how=
+      ;;
+  esac
+  case "$how" in
+    fish)
+      printf 'floe-install: %s is not on your PATH. To add it, run:\n' "$abs" >&2
+      printf "  fish_add_path '%s'\n" "$fished" >&2
+      ;;
+    posix)
       if [ -n "$file" ]; then
         printf 'floe-install: %s is not on your PATH. To add it, run:\n' "$abs" >&2
         # The empty line first: a file whose last line has no line break would take ours onto that line.
-        printf "  printf '\\\\n%%s\\\\n' '%s' >> %s\n" "$(printf '%s\n' "$line" | sed "s/'/'\\\\''/g")" "$file" >&2
+        printf "  printf '\\\\n%%s\\\\n' '%s' >> %s\n" "$quoted" "$file" >&2
       else
         printf "floe-install: %s is not on your PATH. To add it, put this line in your shell's startup file:\n" "$abs" >&2
         printf '  %s\n' "$line" >&2
