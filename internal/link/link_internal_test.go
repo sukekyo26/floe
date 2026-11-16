@@ -8,6 +8,7 @@ import (
 	"testing"
 
 	"floe/internal/files"
+	"floe/internal/usererr"
 )
 
 // A name whose long form cannot be told (Windows: a parent that cannot be listed) is neither served nor listed, though
@@ -67,5 +68,96 @@ func TestWithinLongNameDotted(t *testing.T) { //nolint:paralleltest // it swaps 
 		if _, err := Dir(folder, "sub"); !errors.Is(err, ErrNoDir) {
 			t.Errorf("Dir(sub) = %v with sub long as %s, want ErrNoDir", err, long)
 		}
+	}
+}
+
+// The folders of application data are hidden wherever home is: what is one or in one is refused as hidden, a directory
+// holding one as exposing too much (as home or a root), and a folder that cannot be told refuses all. Where they are
+// is given, so that it runs on every system.
+func TestExposesAppData(t *testing.T) { //nolint:paralleltest // it swaps appData, which the other tests read
+	tmp, err := files.Real(t.TempDir())
+	if err != nil {
+		t.Fatal(err)
+	}
+	home := filepath.Join(tmp, "home")
+	roam := filepath.Join(home, "data", "roam")
+	away := filepath.Join(tmp, "away", "roam")
+	for _, dir := range []string{roam, away, filepath.Join(home, "docs")} {
+		if err := os.MkdirAll(dir, 0o700); err != nil {
+			t.Fatal(err)
+		}
+	}
+	was := appData
+	t.Cleanup(func() { appData = was })
+	appData = func() []appDir { return []appDir{{path: roam, err: nil}, {path: away, err: nil}} }
+	root := filepath.VolumeName(tmp) + string(filepath.Separator)
+	for _, tt := range []struct {
+		path   string
+		folder bool
+		key    string
+	}{
+		{filepath.Join(roam, "x", "a.html"), false, "link_hidden_home"},
+		{roam, true, "link_hidden_home"},
+		{filepath.Join(home, "data"), true, "link_exposes_dir"},
+		{filepath.Join(home, "data", "a.html"), false, "link_exposes_dir"},
+		{filepath.Join(home, "docs", "a.html"), false, ""},
+		{filepath.Join(home, "docs"), true, ""},
+		// A real home holds its folders of application data: still exposing too much, not hidden.
+		{home, true, "link_exposes_dir"},
+		{filepath.Join(home, "a.html"), false, "link_exposes_dir"},
+		{tmp, true, "link_exposes_dir"},
+		// Out of home, as Git Bash's home leaves C:\Users\u\AppData.
+		{filepath.Join(away, "x.html"), false, "link_hidden_home"},
+		{filepath.Join(tmp, "away"), true, "link_exposes_dir"},
+		// A file at the root: the root is served.
+		{root + "a.html", false, "link_exposes_dir"},
+	} {
+		if got := keyOf(exposes(tt.path, home, tt.folder)); got != tt.key {
+			t.Errorf("exposes(%s) = %q, want %q", tt.path, got, tt.key)
+		}
+	}
+	appData = func() []appDir { return []appDir{{path: filepath.Join(tmp, "none"), err: nil}} }
+	if err := exposes(filepath.Join(home, "docs", "a.html"), home, false); err != nil {
+		t.Errorf("exposes with folders not there = %v, want it allowed", err)
+	}
+	for _, d := range []appDir{{path: "", err: errors.New("the system cannot tell")}, {path: "rel", err: nil}} {
+		appData = func() []appDir { return []appDir{d} }
+		if got := keyOf(exposes(filepath.Join(home, "docs", "a.html"), home, false)); got != "link_appdata_unknown" {
+			t.Errorf("exposes with a folder %+v = %q, want link_appdata_unknown", d, got)
+		}
+	}
+}
+
+// keyOf is the key of the mistake err is, "" for none.
+func keyOf(err error) string {
+	var ue *usererr.Error
+	if errors.As(err, &ue) {
+		return ue.Key
+	}
+	return ""
+}
+
+// A home that is a root (HOME=/) still has its hidden directories right under it.
+func TestExposesRootHome(t *testing.T) { //nolint:paralleltest // it swaps appData, which the other tests read
+	tmp, err := files.Real(t.TempDir())
+	if err != nil {
+		t.Fatal(err)
+	}
+	was := appData
+	t.Cleanup(func() { appData = was })
+	appData = func() []appDir { return nil }
+	root := filepath.VolumeName(tmp) + string(filepath.Separator)
+	if got := keyOf(exposes(filepath.Join(root, ".ssh", "x.html"), root, false)); got != "link_hidden_home" {
+		t.Errorf("exposes(%s) with home %s = %q, want link_hidden_home", filepath.Join(root, ".ssh", "x.html"), root, got)
+	}
+}
+
+// A directory whose name home's starts with is no directory home is under.
+func TestExposedDirSibling(t *testing.T) {
+	t.Parallel()
+
+	tmp := t.TempDir()
+	if exposedDir(filepath.Join(tmp, "floe"), filepath.Join(tmp, "floe-home")) {
+		t.Errorf("exposedDir(floe) with home floe-home = true, want false")
 	}
 }

@@ -24,3 +24,31 @@ func TestShown(t *testing.T) {
 		}
 	}
 }
+
+// OnDrive takes files.Real's form only: a drive's path with \\?\ is on a drive, a share's or a volume's without a
+// letter is not, nor is a path in another form; with no prefix (Unix) every path is.
+func TestOnDrive(t *testing.T) {
+	t.Parallel()
+
+	for _, tt := range []struct {
+		path string
+		want bool
+	}{
+		{`\\?\C:\Users\u\a.html`, true},
+		{`\\?\C:\`, true},
+		{`\\?\UNC\srv\share\x.html`, false},
+		{`\\?\Volume{0b1c}\x.html`, false},
+		{`\\?\C:`, false},
+		{`C:\Users\u\a.html`, false},
+		{"", false},
+		{`a\b`, false},
+		{"/w/a.yaml", false},
+	} {
+		if got := onDriveWith(tt.path, `\\?\`); got != tt.want {
+			t.Errorf("onDrive %q = %v, want %v", tt.path, got, tt.want)
+		}
+		if !onDriveWith(tt.path, "") {
+			t.Errorf("onDrive with no prefix %q = false, want true", tt.path)
+		}
+	}
+}

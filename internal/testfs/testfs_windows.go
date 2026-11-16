@@ -71,31 +71,66 @@ func aclDeny(dir string) (func() error, error) {
 	}, nil
 }
 
-// makeDrive makes a drive of dir with subst, from Z down to M, and returns it and what removes it; "" when no letter is
-// free.
-func makeDrive(dir string) (string, func() error, error) {
+// freeDrives are the letters no volume has, from Z down to M.
+func freeDrives() ([]string, error) {
 	mask, err := windows.GetLogicalDrives()
 	if err != nil {
-		return "", nil, fmt.Errorf("GetLogicalDrives: %w", err)
+		return nil, fmt.Errorf("GetLogicalDrives: %w", err)
 	}
+	var free []string
 	for l := 'Z'; l >= 'M'; l-- {
-		if mask&(1<<uint(l-'A')) != 0 {
-			continue
+		if mask&(1<<uint(l-'A')) == 0 {
+			free = append(free, string(l)+":")
 		}
-		drive := string(l) + ":"
-		//nolint:gosec,noctx // G204: the test's directory; subst returns at once
-		if out, err := exec.Command("subst", drive, dir).CombinedOutput(); err != nil {
-			return "", nil, fmt.Errorf("subst %s %s: %w: %s", drive, dir, err, strings.TrimSpace(string(out)))
-		}
-		return drive, func() error {
-			//nolint:gosec,noctx // G204: as above
-			if out, err := exec.Command("subst", drive, "/d").CombinedOutput(); err != nil {
-				return fmt.Errorf("%w: %s; run  subst %s /d", err, strings.TrimSpace(string(out)), drive)
-			}
-			return nil
-		}, nil
 	}
-	return "", nil, nil
+	return free, nil
+}
+
+// command runs a command of the system that returns at once, its output in its error.
+func command(name string, args ...string) error {
+	//nolint:gosec,noctx // G204: the system's own, on the test's directories; it returns at once
+	if out, err := exec.Command(name, args...).CombinedOutput(); err != nil {
+		return fmt.Errorf("%s %s: %w: %s", name, strings.Join(args, " "), err, strings.TrimSpace(string(out)))
+	}
+	return nil
+}
+
+func substDrive(drive, dir string) error { return command("subst", drive, dir) }
+
+func unsubstDrive(drive string) error {
+	if err := command("subst", drive, "/d"); err != nil {
+		return fmt.Errorf("%w; run  subst %s /d", err, drive)
+	}
+	return nil
+}
+
+// mapDrive maps drive to share for this logon only (/persistent:no): a test that stops before its cleanup leaves
+// nothing in the user's settings for the next logon.
+func mapDrive(drive, share string) error {
+	return command("net", "use", drive, share, "/persistent:no")
+}
+
+func unmapDrive(drive string) error {
+	if err := command("net", "use", drive, "/delete", "/y"); err != nil {
+		return fmt.Errorf("%w; run  net use %s /delete", err, drive)
+	}
+	return nil
+}
+
+// hideAttr adds the hidden attribute to what is at path.
+func hideAttr(path string) error {
+	p, err := windows.UTF16PtrFromString(path)
+	if err != nil {
+		return fmt.Errorf("%s: %w", path, err)
+	}
+	a, err := windows.GetFileAttributes(p)
+	if err != nil {
+		return fmt.Errorf("GetFileAttributes %s: %w", path, err)
+	}
+	if err := windows.SetFileAttributes(p, a|windows.FILE_ATTRIBUTE_HIDDEN); err != nil {
+		return fmt.Errorf("SetFileAttributes %s: %w", path, err)
+	}
+	return nil
 }
 
 func shortNameOf(path string) (string, error) {
