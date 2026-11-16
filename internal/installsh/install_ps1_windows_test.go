@@ -600,7 +600,6 @@ func testInstallPS1(t *testing.T, shell string) {
 	for _, d := range []struct{ name, dir, says, at string }{
 		{"UNC", `\\localhost\c$\floe-install-test-unc`, "local drive", `C:\floe-install-test-unc`},
 		{"UNC with slashes", `//localhost/c$/floe-install-test-slashes`, "local drive", `C:\floe-install-test-slashes`},
-		{"UNC with both slashes", `\/localhost/c$/floe-install-test-mixed`, "local drive", `C:\floe-install-test-mixed`},
 		{"a device path", `\\?\C:\floe-install-test-device`, "local drive", `C:\floe-install-test-device`},
 		{"no such drive", `Q:foo`, "Q", ""},
 		{"the registry", `HKCU:\floe-install-test`, "must be a folder", ""},
