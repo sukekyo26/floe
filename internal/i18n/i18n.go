@@ -93,10 +93,22 @@ func EnglishCatalog() *Catalog {
 	return english
 }
 
-// Msg renders the message key with args (fmt verbs; %[n]s when a language reorders them). Every
-// message goes through fmt, with or without args, so a literal % is %% in every message.
+// Phrase is an argument of a message worded in the catalog it is rendered with, such as a project or none.
+type Phrase interface {
+	Phrase(c *Catalog) string
+}
+
+// Msg renders the message key with args (fmt verbs; %[n]s when a language reorders them), each Phrase among them
+// worded in c. Every message goes through fmt, with or without args, so a literal % is %% in every message.
 func (c *Catalog) Msg(key string, args ...any) string {
-	return fmt.Sprintf(c.lookup(key), args...)
+	// A copy: a mistake's own args are rendered again in another language.
+	worded := slices.Clone(args)
+	for i, a := range worded {
+		if p, ok := a.(Phrase); ok {
+			worded[i] = p.Phrase(c)
+		}
+	}
+	return fmt.Sprintf(c.lookup(key), worded...)
 }
 
 // Formats returns the unrendered messages whose keys start with prefix, with the same fallback as

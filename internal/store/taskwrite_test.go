@@ -1,6 +1,7 @@
 package store_test
 
 import (
+	"encoding/json"
 	"errors"
 	"os"
 	"path/filepath"
@@ -8,7 +9,9 @@ import (
 	"strings"
 	"testing"
 
+	"floe/internal/i18n"
 	"floe/internal/store"
+	"floe/internal/usererr"
 )
 
 // pageIn writes a page of project, on no task.
@@ -110,7 +113,7 @@ func TestTaskWriteOne(t *testing.T) {
 		want     string
 		conflict bool
 	}{
-		{"a category with pages left out", store.TaskChange{TaskEdit: store.TaskEdit{Categories: &[]string{"y"}}, TaskProject: ptr("p"), Task: ptr("#9")}, "category z of task #9 in project p has pages (a)", false},
+		{"a category with pages left out", store.TaskChange{TaskEdit: store.TaskEdit{Categories: &[]string{"y"}}, TaskProject: ptr("p"), Task: ptr("#9")}, "category \"z\" of task #9 in project p has pages (a)", false},
 		// Both tasks are there, as the screen says of one: the pages moved meanwhile, so it reads again
 		{"what the screen saw, of two tasks", store.TaskChange{TaskEdit: store.TaskEdit{New: &no}, Slugs: []string{"a", "b"}}, "task #9 has changed since it was read", true},
 		{"a parent of two projects", store.TaskChange{TaskEdit: store.TaskEdit{Parent: ptr("#1")}, Slugs: []string{"a", "b"}, Task: ptr("#9")}, "a parent goes with one task, and the pages are on tasks of 2 projects", false},
@@ -132,6 +135,68 @@ func TestTaskWriteOne(t *testing.T) {
 	// Nothing to write of a task of no row is not found, and makes none.
 	if _, err := s.ChangeTasks(store.TaskChange{TaskProject: ptr("p"), Task: ptr("#5")}); !errors.Is(err, store.ErrNotFound) {
 		t.Errorf("nothing of no row: %v", err)
+	}
+}
+
+// A task's time is its last write's: a page that comes to it or changes its category on it writes it, its time and rev
+// moving, as a field does; a pin, a write that changes nothing, and the task a page leaves keep theirs.
+func TestTaskWriteTime(t *testing.T) {
+	t.Parallel()
+
+	root := filepath.Join(t.TempDir(), "S")
+	s := store.New(root)
+	pageIn(t, s, root, "a", "p")
+	for _, name := range []string{"#1", "#2"} {
+		if _, err := s.ChangeTasks(store.TaskChange{TaskEdit: store.TaskEdit{Categories: &[]string{"x", "y"}}, TaskProject: ptr("p"), Task: ptr(name)}); err != nil {
+			t.Fatal(err)
+		}
+	}
+	long := hour(1)
+	for _, c := range []struct {
+		name         string
+		w            store.TaskChange
+		moved, still string
+	}{
+		{"a page come", store.TaskChange{Slugs: []string{"a"}, Task: ptr("#1"), Category: ptr("x")}, "#1", "#2"},
+		{"the same again", store.TaskChange{Slugs: []string{"a"}, Task: ptr("#1"), Category: ptr("x")}, "", "#1"},
+		{"another category of the task", store.TaskChange{Slugs: []string{"a"}, Category: ptr("y")}, "#1", "#2"},
+		{"its pin", store.TaskChange{Slugs: []string{"a"}, Pin: ptr(true)}, "", "#1"},
+		{"to another task", store.TaskChange{Slugs: []string{"a"}, Task: ptr("#2")}, "#2", "#1"},
+		{"a title", store.TaskChange{TaskEdit: store.TaskEdit{Title: ptr("T")}, TaskProject: ptr("p"), Task: ptr("#1")}, "#1", "#2"},
+	} {
+		// Of an hour no write makes, so that a write in the same millisecond is not taken for none
+		all, err := s.ReadTasks()
+		if err != nil {
+			t.Fatal(err)
+		}
+		for name, row := range all["p"] {
+			row.At = long
+			all["p"][name] = row
+		}
+		text, err := json.Marshal(all)
+		if err != nil {
+			t.Fatal(err)
+		}
+		if err = os.WriteFile(filepath.Join(root, "tasks.json"), text, 0o600); err != nil {
+			t.Fatal(err)
+		}
+		got, err := s.ChangeTasks(c.w)
+		if err != nil {
+			t.Fatal(err)
+		}
+		after, err := s.ReadTasks()
+		if err != nil {
+			t.Fatal(err)
+		}
+		if c.moved != "" {
+			wrote := slices.ContainsFunc(got.Tasks, func(w store.TaskWritten) bool { return w.Task == c.moved && w.Wrote })
+			if row := after["p"][c.moved]; row.At == long || row.Rev != all["p"][c.moved].Rev+1 || !wrote {
+				t.Errorf("%s: %s %+v, written %v", c.name, c.moved, row, wrote)
+			}
+		}
+		if row := after["p"][c.still]; row.At != long || row.Rev != all["p"][c.still].Rev {
+			t.Errorf("%s: %s moved: %+v", c.name, c.still, row)
+		}
 	}
 }
 
@@ -238,5 +303,42 @@ func TestTaskParentOfPages(t *testing.T) {
 	}
 	if all["p"]["#1"].Parent != "#P" || all["p"]["#2"].Parent != "#P" {
 		t.Errorf("two tasks of one project: %v", all["p"])
+	}
+}
+
+// A category with pages, left out of the order, is named quoted in the refusal, in either language, so that a name
+// with a comma or a space ends where it does; a full-width space is said as it is.
+func TestCategoryPagedNamed(t *testing.T) {
+	t.Parallel()
+
+	for _, c := range []struct{ name, en, ja string }{
+		{"Designs, v2", `category "Designs, v2" of task #1 in project p has pages (a)`, `のカテゴリ "Designs, v2" にはページがあります`},
+		{"設計　見本", `category "設計　見本" of task #1 in project p has pages (a)`, `のカテゴリ "設計　見本" にはページがあります`},
+	} {
+		t.Run(c.name, func(t *testing.T) {
+			t.Parallel()
+
+			root := filepath.Join(t.TempDir(), "S")
+			s := store.New(root)
+			if _, err := editTask(s, "p", "#1", store.TaskEdit{Categories: &[]string{c.name}}); err != nil {
+				t.Fatal(err)
+			}
+			pageOn(t, s, root, "a", "p", false)
+			m := s.ReadMeta("a")
+			m.Task.Category = c.name
+			if err := s.WriteMeta("a", m); err != nil {
+				t.Fatal(err)
+			}
+			_, err := editTask(s, "p", "#1", store.TaskEdit{Categories: &[]string{}})
+			if err == nil {
+				t.Fatal("written")
+			}
+			if en := err.Error(); !strings.Contains(en, c.en) {
+				t.Errorf("in English: %q, want %q", en, c.en)
+			}
+			if ja := usererr.Tell(i18n.New("ja"), err).Render(""); !strings.Contains(ja, c.ja) {
+				t.Errorf("in Japanese: %q, want %q", ja, c.ja)
+			}
+		})
 	}
 }

@@ -11,7 +11,6 @@ import (
 
 	"floe/internal/i18n"
 	"floe/internal/licenses"
-	"floe/internal/store"
 	"floe/internal/usererr"
 	"floe/internal/version"
 )
@@ -101,8 +100,9 @@ func (o *written) Write(p []byte) (int, error) {
 	return n, err //nolint:wrapcheck // kept as it is, for Run to tell
 }
 
-// flagGroups refuses flags given together that the command's groups do not take, as a usage error: a PreRunE, so that
-// cobra answers --help first, and asks before its own asking, which is unmarked as a usage error.
+// flagGroups refuses flags given together that the command's groups do not take, as a usage error: every command's
+// PreRunE (newRoot puts it), so that cobra answers --help first, and asks before its own asking, which is unmarked as
+// a usage error.
 var flagGroups = usage(func(cmd *cobra.Command, _ []string) error { return cmd.ValidateFlagGroups() })
 
 // usage marks the errors of an argument validator as usage errors, once.
@@ -118,14 +118,6 @@ func usage(validate cobra.PositionalArgs) cobra.PositionalArgs {
 
 // english is the language of the command line, whatever the environment's: an agent reads it.
 var english = i18n.EnglishCatalog()
-
-// inProject is a project of tasks.json (ProjectKey) as floe task and floe publish say it.
-func inProject(key string) string {
-	if store.IsNoProject(key) {
-		return english.Msg("cli_no_project")
-	}
-	return english.Msg("cli_project", key)
-}
 
 // named is floe's name before each mistake the command line tells.
 const named = "floe: "
@@ -191,6 +183,9 @@ that points your agent to it (floe skill install --help lists the agents).`,
 		if c.Args != nil {
 			c.Args = usage(c.Args)
 		}
+		// LIMIT: a command's own PreRunE and PreRun are replaced (cobra runs PreRun only without a PreRunE); chain
+		// them after flagGroups when one needs them.
+		c.PreRunE = flagGroups
 		c.InitDefaultHelpFlag()
 		c.InitDefaultVersionFlag()
 		for _, sub := range c.Commands() {

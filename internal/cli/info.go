@@ -13,14 +13,15 @@ func (a *app) infoCmd() *cobra.Command {
 	return &cobra.Command{
 		Use:   "info <slug>",
 		Short: "Print a page's project, task, data file and the rest floe keeps of it, a name and a value a line",
-		Long: `Print the page slug names, as the server keeps it (started when it is not running), and write
-nothing: a tab-separated name and value a line, the same names in the same order each time, an empty
-value for none. Text values are quoted as Go quotes them (title, project, task, category, repository,
-source, and each of tags, one after another with a space); slug, url, kind, pinned, archived, version
-and updated are not. project is empty for a page of no project and, unquoted, is what --project of
-floe task takes. kind is data, link or folder. source is the data file's path from the root of
-repository, or its real path when repository is empty, or the linked file's or folder's real path.
-version is empty for a link. updated is the time, local, as floe list prints it.`,
+		Long: `Print the page slug names, as the server keeps it (started when it is not running), and write nothing: a
+tab-separated name and value a line, the same names in the same order each time, an empty value for
+none. Text values are quoted as Go quotes them, but with a space such as a full-width space as it is
+(title, project, task, category, repository, source, and each of tags, one after another with a space);
+slug, url, kind, pinned, archived, version and updated are not. project is empty for a page of no
+project and, unquoted, is what --project of floe task takes. kind is data, link or folder. source is the
+data file's path from the root of repository, or its real path when repository is empty, or the linked
+file's or folder's real path. version is empty for a link. updated is the time, local, as floe list
+prints it.`,
 		Args: usage(cobra.ExactArgs(1)),
 		RunE: func(cmd *cobra.Command, args []string) error {
 			// LIMIT: every page is read to tell one, as floe task --slug does. Add GET /api/pages/{slug} if the
@@ -62,7 +63,7 @@ func infoLines(page store.Listed, url string) []string {
 	}
 	tags := make([]string, len(page.Tags))
 	for i, t := range page.Tags {
-		tags[i] = strconv.Quote(t)
+		tags[i] = strconv.QuoteToGraphic(t)
 	}
 	version := ""
 	if page.Version > 0 {
@@ -70,7 +71,7 @@ func infoLines(page store.Listed, url string) []string {
 	}
 	fields := [][2]string{
 		{"slug", page.Slug},
-		{"title", strconv.Quote(page.Title)},
+		{"title", strconv.QuoteToGraphic(page.Title)},
 		{"url", url},
 		{"kind", kind},
 		{"project", quoted(project)},
@@ -91,10 +92,11 @@ func infoLines(page store.Listed, url string) []string {
 	return lines
 }
 
-// quoted is s quoted as Go quotes it, or empty for none.
+// quoted is s quoted as Go quotes it but with a space such as a full-width space as it is, as floe task quotes, or
+// empty for none.
 func quoted(s string) string {
 	if s == "" {
 		return ""
 	}
-	return strconv.Quote(s)
+	return strconv.QuoteToGraphic(s)
 }

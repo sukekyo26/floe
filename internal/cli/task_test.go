@@ -150,7 +150,7 @@ func TestTaskCommand(t *testing.T) {
 		t.Errorf("a page's own task: %s", got)
 	}
 	// Named, all go to that task: of each page's project.
-	run(0, "task", "--slug", "a", "--slug", "c", "--task", "#3", "--categories", "設計,実装,,設計")
+	run(0, "task", "--slug", "a", "--slug", "c", "--task", "#3", "--categories", "設計", "--categories", "実装", "--categories", "", "--categories", "設計")
 	for _, project := range []string{"p", "q"} {
 		if got := tasks()[project]["#3"].Categories; !slices.Equal(got, []string{"設計", "実装"}) {
 			t.Errorf("%s: %v", project, got)
@@ -230,6 +230,9 @@ func TestTaskCommand(t *testing.T) {
 	if got := run(1, "task", "--task", "#4", "--forget"); got != "floe: no task #4 in project p: check the ID, or name its project with --project\n" {
 		t.Errorf("no task: %q", got)
 	}
+	if got := run(1, "task", "--project", "", "--task", "#4", "--forget"); got != "floe: no task #4 in no project: check the ID, or name its project with --project\n" {
+		t.Errorf("no task of no project, as the server refused it: %q", got)
+	}
 	if got := run(1, "task", "--task", "#1", "--forget"); !strings.HasPrefix(got, "floe: task #1 of project p still has 1 page(s), such as a:") {
 		t.Errorf("a task with a page: %q", got)
 	}
@@ -250,7 +253,7 @@ func TestTaskCommand(t *testing.T) {
 	if got := run(1, "task", "--task", "#22", "--parent", ""); got != "floe: no task #22 in project p: check the ID, or name its project with --project\n" {
 		t.Errorf(`--parent "" of no row: %q`, got)
 	}
-	if got := run(1, "task", "--task", "#22", "--parent", "#7"); !strings.Contains(got, "project p has no task #7 that can be a parent") {
+	if got := run(1, "task", "--task", "#22", "--parent", "#7"); !strings.Contains(got, "no task #7 in project p can be a parent") {
 		t.Errorf("a parent of no row: %q", got)
 	}
 	run(0, "task", "--task", "#22", "--title", "t", "--parent", "")
@@ -268,7 +271,7 @@ func TestTaskCommand(t *testing.T) {
 	if got := pageTaskOf(t, env, "b"); got != `{"name":"#31"}` {
 		t.Errorf("--parent with a page put it on: %s", got)
 	}
-	if got := run(1, "task", "--slug", "b", "--task", "#32", "--parent", "#7"); !strings.Contains(got, "project p has no task #7 that can be a parent") {
+	if got := run(1, "task", "--slug", "b", "--task", "#32", "--parent", "#7"); !strings.Contains(got, "no task #7 in project p can be a parent") {
 		t.Errorf("a parent of no row with a page: %q", got)
 	}
 	if got := pageTaskOf(t, env, "b"); got != `{"name":"#31"}` {
@@ -378,18 +381,18 @@ func TestTaskSays(t *testing.T) {
 	}
 	say("task t1 in project p: made; title \"the task\"\n", "task", "--task", "t1", "--title", "the task")
 	say("task t1 in project p: unchanged; title \"the task\"\n", "task", "--task", "t1", "--title", "the task")
-	say("task t1 in project p: changed; state doing, categories \"design,build\"\n",
-		"task", "--task", "t1", "--state", "doing", "--categories", "design, build, design")
+	say("task t1 in project p: changed; state doing, categories \"design\" \"build\"\n",
+		"task", "--task", "t1", "--state", "doing", "--categories", "design", "--categories", " build ", "--categories", "design")
 	say("task t2 in no project: made; urls \"https://example.com/2\" \"https://example.com/3\", no parent\n",
 		"task", "--task", "t2", "--project", "", "--url", " https://example.com/2 ", "--url", "https://example.com/3", "--parent", "")
 	// --remove-url alone is a write of the task
 	say("task t2 in no project: changed; urls \"https://example.com/3\"\n",
 		"task", "--task", "t2", "--project", "", "--remove-url", "https://example.com/2")
 	say("task t2 in no project: changed; no urls\n", "task", "--task", "t2", "--project", "", "--remove-url", "https://example.com/3")
-	// The task named is written, with nothing of it to change; a category is the page's alone.
-	// A task of a row, named, with nothing of it to change, is not told; a category among its categories adds none.
-	say("page a: task t1 in project p, category \"design\"\n", "task", "--slug", "a", "--task", "t1", "--category", "design")
-	say("page a: task t1 in project p, category \"build\"\n", "task", "--slug", "a", "--category", "build")
+	// A task a page comes to, or changes its category on, is written and told changed, with no field; a category among
+	// its categories adds none, and a pin alone writes no task.
+	say("task t1 in project p: changed\npage a: task t1 in project p, category \"design\"\n", "task", "--slug", "a", "--task", "t1", "--category", "design")
+	say("task t1 in project p: changed\npage a: task t1 in project p, category \"build\"\n", "task", "--slug", "a", "--category", "build")
 	say("page a: task t1 in project p, category \"build\", pinned\n", "task", "--slug", "a", "--pin")
 	// A page that leaves a task is told with the task and category it left, of the same name as its new one too.
 	say("task t5 in project p: made; categories \"build\"\npage a: task t5 in project p, category \"build\", pinned; moved from task t1, category \"build\"\n",
@@ -398,7 +401,7 @@ func TestTaskSays(t *testing.T) {
 	say("task t1 in project p: forgotten\n", "task", "--task", " t1 ", "--forget")
 	say("task t3 in project p: made\npage a: task t3 in project p, pinned\n", "task", "--slug", "a", "--task", "t3")
 	say("task t4 in project p: made; parent \"t3\"\n", "task", "--task", "t4", "--parent", "t3")
-	say("page a: task t4 in project p, pinned; moved from task t3\n", "task", "--slug", "a", "--task", "t4")
+	say("task t4 in project p: changed\npage a: task t4 in project p, pinned; moved from task t3\n", "task", "--slug", "a", "--task", "t4")
 }
 
 // A page that cannot be written, as the system refuses it after the checks, leaves its task's row written, which a
@@ -436,7 +439,7 @@ func TestTaskCommandOrder(t *testing.T) {
 		t.Fatal(err)
 	}
 	if code, out, errs := runIn(dir, env, "task", "--slug", "a", "--task", "#1", "--state", "done"); code != 0 ||
-		out != "task #1 in project p: unchanged; state done\npage a: task #1 in project p\n" {
+		out != "task #1 in project p: changed; state done\npage a: task #1 in project p\n" {
 		t.Fatalf("given again = %d, %q, %q", code, out, errs)
 	}
 	if got := pageTaskOf(t, env, "a"); got != `{"name":"#1"}` {
@@ -470,7 +473,7 @@ func TestTaskNotUTF8(t *testing.T) {
 		{dir, []string{"task", "--slug", "a", "--task", "t1", "--category", bad}, "--category"},
 		{dir, []string{"task", "--slug", "a", "--task", "t1", "--url", bad}, "--url"},
 		{dir, []string{"task", "--task", "t1", "--remove-url", bad}, "--remove-url"},
-		{dir, []string{"task", "--slug", "a", "--task", "t1", "--categories", "x," + bad}, "--categories"},
+		{dir, []string{"task", "--slug", "a", "--task", "t1", "--categories", "x", "--categories", bad}, "--categories"},
 		{dir, []string{"task", "--task", "t1", "--parent", bad}, "--parent"},
 		{dir, []string{"task", "--task", "t1", "--state", bad}, "--state"},
 		{dir, []string{"task", "--task", "t1", "--title", bad}, "--title"},
@@ -596,7 +599,7 @@ func TestTaskCategoryAdded(t *testing.T) {
 	if got := tasksFile(); got != before {
 		t.Errorf("--category among them wrote tasks.json:\n%s\nwant\n%s", got, before)
 	}
-	if got := run(0, "task", "--slug", "a", "--task", "#1", "--categories", "y", "--category", "z"); got != "task #1 in project p: changed; categories \"y,z\"\npage a: task #1 in project p, category \"z\"\n" {
+	if got := run(0, "task", "--slug", "a", "--task", "#1", "--categories", "y", "--category", "z"); got != "task #1 in project p: changed; categories \"y\" \"z\"\npage a: task #1 in project p, category \"z\"\n" {
 		t.Errorf("--categories with another --category = %q", got)
 	}
 	// The page moves in the same write: an order without its old category is written.
@@ -609,7 +612,7 @@ func TestTaskCategoryAdded(t *testing.T) {
 		t.Errorf("a category among them, with a field = %q", got)
 	}
 	before = tasksFile()
-	if got := run(1, "task", "--task", "#1", "--categories", "m"); !strings.Contains(got, "category n of task #1 in project p has pages (a)") {
+	if got := run(1, "task", "--task", "#1", "--categories", "m"); !strings.Contains(got, "category \"n\" of task #1 in project p has pages (a)") {
 		t.Errorf("a category with pages left out = %q", got)
 	}
 	if got := tasksFile(); got != before {
@@ -648,15 +651,19 @@ func TestTaskReadsTask(t *testing.T) {
 		errs != "floe: no task #1 in project p: check the ID, or name its project with --project\n" {
 		t.Errorf("no row = %d, %q, %q", code, out, errs)
 	}
+	if code, out, errs := runIn(dir, env, "task", "--project", "", "--task", "#1"); code != 1 || out != "" ||
+		errs != "floe: no task #1 in no project: check the ID, or name its project with --project\n" {
+		t.Errorf("no row of no project, as the list has none = %d, %q, %q", code, out, errs)
+	}
 	if got := tasksFile(); got != "" {
 		t.Errorf("reading made a row: %s", got)
 	}
-	if code, out, errs := runIn(dir, env, "task", "--task", "#1", "--title", "T", "--state", "doing", "--categories", "a,b"); code != 0 {
+	if code, out, errs := runIn(dir, env, "task", "--task", "#1", "--title", "T", "--state", "doing", "--categories", "a", "--categories", "b"); code != 0 {
 		t.Fatalf("written = %d, %q, %q", code, out, errs)
 	}
 	before := tasksFile()
 	if code, out, errs := runIn(dir, env, "task", "--task", "#1"); code != 0 ||
-		out != "task #1 in project p: state doing, title \"T\", categories \"a,b\"\n" || errs != "" {
+		out != "task #1 in project p: state doing, title \"T\", categories \"a\" \"b\"\n" || errs != "" {
 		t.Errorf("read = %d, %q, %q", code, out, errs)
 	}
 	if got := tasksFile(); got != before {
@@ -707,7 +714,7 @@ func TestTaskListsOpenTasks(t *testing.T) {
 		return lines
 	}
 	want := told("p", "T3", "T2", "T1", "#1", "#10", "#2", "B", "Z9", "a")
-	if !strings.Contains(want, `title "Fix login", urls "https://example.com/1" "https://example.com/2", categories "a,b", parent "#1"`) {
+	if !strings.Contains(want, `title "Fix login", urls "https://example.com/1" "https://example.com/2", categories "a" "b", parent "#1"`) {
 		t.Fatalf("the lines to compare have no task with every field: %s", want)
 	}
 	if code, out, errs := runIn(dir, env, "task"); code != 0 || out != want || errs != "" {
@@ -832,4 +839,39 @@ func TestTaskTakesNoArgs(t *testing.T) {
 	if _, err := os.Stat(filepath.Join(env["FLOE_DIR"], "tasks.json")); !errors.Is(err, fs.ErrNotExist) {
 		t.Errorf("an argument wrote tasks.json: %v", err)
 	}
+}
+
+// floe task takes the categories one a flag, a name with a comma as one, and tells them each quoted, as the URLs:
+// "" takes them all off, told as no categories by the write; the list tells nothing of the categories of a task of none.
+func TestTaskCategoriesEachQuoted(t *testing.T) {
+	t.Parallel()
+
+	env, dir := served(t)
+	run := func(want string, args ...string) {
+		t.Helper()
+		if code, out, errs := runIn(dir, env, args...); code != 0 || out != want || errs != "" {
+			t.Errorf("floe %q = %d, %q, %q; want %q", args, code, out, errs, want)
+		}
+	}
+	run("task #1 in project p: made; categories \"Designs, v2\" \"Samples\"\n",
+		"task", "--task", "#1", "--categories", "Designs, v2", "--categories", "Samples")
+	run("task #1 in project p: state todo, categories \"Designs, v2\" \"Samples\"\n", "task", "--task", "#1")
+	run("task #1 in project p: changed; categories \"a\"\n", "task", "--task", "#1", "--categories", "a", "--categories", "")
+	run("task #1 in project p: changed; no categories\n", "task", "--task", "#1", "--categories", "")
+	run("task #1 in project p: state todo\n", "task")
+	// A full-width space is printed as it is, as are the other printable characters, so that the name read back is
+	// the one written; a title is quoted the same.
+	run("task #2 in project p: made; title \"設計　見本\", categories \"設計　見本\" \"a\\tb\"\n",
+		"task", "--task", "#2", "--title", "設計　見本", "--categories", "設計　見本", "--categories", "a\tb")
+	run("task #2 in project p: changed; categories \"設計　見本\"\n", "task", "--task", "#2", "--categories", "設計　見本")
+	// So are a parent's name, told by the write and by the read, and a page's category, on the task and left.
+	run("task 親　1 in project p: made; title \"p\"\n", "task", "--task", "親　1", "--title", "p")
+	run("task #3 in project p: made; parent \"親　1\"\n", "task", "--task", "#3", "--parent", "親　1")
+	run("task #3 in project p: state todo, parent \"親　1\"\n", "task", "--task", "#3")
+	if code, out, errs := runIn(dir, env, "publish", "d.yaml", "--slug", "a"); code != 0 {
+		t.Fatalf("publish = %d, %q, %q", code, out, errs)
+	}
+	run("task #1 in project p: changed; categories \"設計　見本\"\npage a: task #1 in project p, category \"設計　見本\"\n",
+		"task", "--slug", "a", "--task", "#1", "--category", "設計　見本")
+	run("task #2 in project p: changed\npage a: task #2 in project p; moved from task #1, category \"設計　見本\"\n", "task", "--slug", "a", "--task", "#2")
 }

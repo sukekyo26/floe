@@ -67,6 +67,46 @@ func TestCatalogMsg(t *testing.T) {
 	}
 }
 
+// named is a Phrase worded by the message "named" of the catalog it is rendered with.
+type named string
+
+func (n named) Phrase(c *Catalog) string { return c.Msg("named", string(n)) }
+
+// greeting is a Phrase that words a message with a Phrase of its own.
+type greeting string
+
+func (g greeting) Phrase(c *Catalog) string { return c.Msg("hello", named(g)) }
+
+// A Phrase is worded in the catalog Msg renders with, in any place among the args and inside another Phrase, and the
+// args given are left as they were: a mistake is rendered again in another language.
+//
+//nolint:paralleltest // swaps the global catalogs
+func TestMsgPhrase(t *testing.T) {
+	withCatalogs(t, map[Lang]map[string]string{
+		English: {"named": "the %s", "hello": "hello %s", "pair": "%s then %s"},
+		"ja":    {"named": "「%s」", "hello": "こんにちは %s", "pair": "%[2]s の前に %[1]s"},
+	})
+	args := []any{"one", named("two")}
+	for _, c := range []struct {
+		lang      Lang
+		key, want string
+		args      []any
+	}{
+		{English, "pair", "one then the two", args},
+		{"ja", "pair", "one の前に 「two」", []any{named("two"), "one"}},
+		{"ja", "pair", "「two」 の前に one", args},
+		{English, "hello", "hello hello the Ann", []any{greeting("Ann")}},
+		{"ja", "hello", "こんにちは こんにちは 「Ann」", []any{greeting("Ann")}},
+	} {
+		if got := New(c.lang).Msg(c.key, c.args...); got != c.want {
+			t.Errorf("New(%q).Msg(%q, %v) = %q, want %q", c.lang, c.key, c.args, got, c.want)
+		}
+	}
+	if args[1] != named("two") {
+		t.Errorf("Msg changed the args given: %v", args)
+	}
+}
+
 var (
 	verbRe = regexp.MustCompile(`%(?:\[(\d+)\])?[-+# 0]*\d*(?:\.\d+)?([a-zA-Z%])`)
 	// starRe finds a width or precision taken from an argument (%*s, %.*f), which shifts the

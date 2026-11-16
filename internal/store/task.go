@@ -14,6 +14,7 @@ import (
 	"unicode/utf8"
 
 	"floe/internal/files"
+	"floe/internal/i18n"
 	"floe/internal/usererr"
 )
 
@@ -38,6 +39,18 @@ func ProjectKey(project string) string {
 // IsNoProject reports whether key, a project as tasks.json has it (ProjectKey), is that of pages of no project.
 func IsNoProject(key string) bool {
 	return key == noProject
+}
+
+// Project is a project as tasks.json has it (ProjectKey), worded in a message as the catalog it is told in says:
+// named, or none for the key of pages of no project.
+type Project string
+
+// Phrase words p in c.
+func (p Project) Phrase(c *i18n.Catalog) string {
+	if IsNoProject(string(p)) {
+		return c.Msg("store_no_project")
+	}
+	return c.Msg("store_project", string(p))
 }
 
 // TaskName is the name of a page's task as written: trimmed, "" taking the page off its task. A name of spaces alone is
@@ -106,7 +119,7 @@ func setPageTask(m *Meta, ed *PageTaskEdit) {
 	}
 }
 
-// Task is a task's row of tasks.json. At is when it was made or its state last changed; Parent the task it is a child
+// Task is a task's row of tasks.json. At is when it was last written (applyChange); Parent the task it is a child
 // of, of the same project (childrenOfTask). A page's category is the page's alone (PageTask).
 type Task struct {
 	Title      string   `json:"title,omitempty"`
@@ -147,8 +160,8 @@ type NamedTask struct {
 	Task
 }
 
-// Open is the tasks of project (a ProjectKey) in an open state (States), the one whose state changed last first, and
-// by name (byte order) among those that changed at the same time. A time is compared as a time, so that the times
+// Open is the tasks of project (a ProjectKey) in an open state (States), the one written last first, and by name
+// (byte order) among those written at the same time. A time is compared as a time, so that the times
 // written by hand (RFC 3339 with or without a fraction, in any zone) are put in their order.
 func (all Tasks) Open(project string) []NamedTask {
 	var open []NamedTask
@@ -369,7 +382,7 @@ func checkParent(project string, rows map[string]Task, name string, ed TaskEdit)
 	if ed.ParentNew == nil || !*ed.ParentNew {
 		up, ok := rows[parent]
 		if !ok {
-			return usererr.New("store_parent_none", parent, project)
+			return usererr.New("store_parent_none", parent, Project(project))
 		}
 		if up.Parent != "" {
 			return usererr.New("store_parent_nested", parent, up.Parent)
@@ -422,7 +435,7 @@ func checkSeen(project string, rows map[string]Task, name string, ed TaskEdit) e
 	// LIMIT: a parent taken to be there and gone meanwhile is refused as no parent (400), not as stale: the screen
 	// does not read the tasks again. Tell it apart by its pages, read under the lock, if that comes to mislead
 	if _, ok := rows[parent]; !ok && ed.ParentNew != nil && !*ed.ParentNew {
-		return usererr.New("store_parent_none", parent, project)
+		return usererr.New("store_parent_none", parent, Project(project))
 	}
 	return checkThere(rows, parent, ed.ParentNew)
 }
@@ -486,7 +499,8 @@ func withURLs(urls []string, ed URLsEdit) []string {
 
 // TaskWritten is a task's row as ChangeTasks left it, under the project (ProjectKey) and name tasks.json keys it by,
 // which a screen puts in place of the row it read. Made is whether the task had no row before this write, and Wrote
-// whether its row was written: not when it came out as it was, unless a parent was made with it.
+// whether its row was written: not when it came out as it was, unless a parent was made with it or a page came to it
+// or changed its category on it.
 type TaskWritten struct {
 	TaskProject string `json:"taskProject"`
 	Task        string `json:"task"`
@@ -500,7 +514,7 @@ type TaskWritten struct {
 // edited is t as ed changes it, which has been checked.
 func (t Task) edited(ed TaskEdit) Task {
 	if ed.State != nil && *ed.State != t.State {
-		t.State, t.At = *ed.State, Now()
+		t.State = *ed.State
 	}
 	if ed.Title != nil {
 		t.Title = strings.TrimSpace(*ed.Title)
@@ -575,10 +589,10 @@ func (s *Store) ForgetTask(project, name string) error {
 	}
 	var kept usererr.List
 	if count > 0 {
-		kept = append(kept, usererr.New("store_task_pages", name, project, count, first))
+		kept = append(kept, usererr.New("store_task_pages", name, Project(project), count, first))
 	}
 	if children := childrenOfTask(all[project], name); len(children) > 0 {
-		kept = append(kept, usererr.New("store_task_children", name, project, len(children), children[0]))
+		kept = append(kept, usererr.New("store_task_children", name, Project(project), len(children), children[0]))
 	}
 	if err = kept.Sorted().Err(); err != nil {
 		return err

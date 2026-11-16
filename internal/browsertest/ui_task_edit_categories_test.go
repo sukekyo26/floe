@@ -28,7 +28,7 @@ func TestUITaskEditCategories(t *testing.T) { //nolint:paralleltest // the brows
 			s.floe(t, "task", "--slug", p[0], "--task", "S300", "--category", p[1])
 		}
 	}
-	s.floe(t, "task", "--project", "proj", "--task", "S300", "--title", "Edit the task", "--categories", "案,設計,実装,リリース,レビュー")
+	s.floe(t, "task", "--project", "proj", "--task", "S300", "--title", "Edit the task", "--categories", "案", "--categories", "設計", "--categories", "実装", "--categories", "リリース", "--categories", "レビュー")
 	s.floe(t, "task", "--slug", "none-a", "--task", "N1")
 	// 実装's one page archived: a page all the same, so 実装 cannot be deleted
 	yes := true
@@ -153,8 +153,9 @@ func TestUITaskEditCategories(t *testing.T) { //nolint:paralleltest // the brows
 	closed("closed")
 	say("unchanged", "sent.length")
 
-	// A category removed that came to have a page meanwhile: the save is refused, as the category has pages, and said; nothing written.
-	s.floe(t, "task", "--project", "proj", "--task", "S300", "--categories", "案,設計,実装,リリース,レビュー")
+	// A category removed that came to have a page meanwhile: the page's coming wrote the task, so the save is refused as stale
+	// and said; nothing written.
+	s.floe(t, "task", "--project", "proj", "--task", "S300", "--categories", "案", "--categories", "設計", "--categories", "実装", "--categories", "リリース", "--categories", "レビュー")
 	open("S300")
 	drop("リリース")
 	s.floe(t, "task", "--slug", "memo-a", "--task", "S300", "--category", "リリース")
@@ -163,11 +164,24 @@ func TestUITaskEditCategories(t *testing.T) { //nolint:paralleltest // the brows
 	b.pressKey(kb.Escape)
 	closed("closed")
 	out = append(out, "paged meanwhile, written: "+row("S300"))
+	// The same of the rev written since, as a modal that read the task after the page came would send: refused, not as stale but
+	// as the category has pages, and said; nothing written.
+	s.floe(t, "task", "--slug", "memo-a", "--task", "")
+	s.floe(t, "task", "--project", "proj", "--task", "S300", "--categories", "案", "--categories", "設計", "--categories", "実装", "--categories", "リリース", "--categories", "レビュー")
+	open("S300")
+	drop("リリース")
+	s.floe(t, "task", "--slug", "memo-a", "--task", "S300", "--category", "リリース")
+	b.eval("taskEditing.rev = " + strings.Fields(row("S300"))[0])
+	save("paged since read")
+	say("paged since read", "document.getElementById('edit-task-error').textContent")
+	b.pressKey(kb.Escape)
+	closed("closed")
+	out = append(out, "paged since read, written: "+row("S300"))
 	// Stale, a category added while another removed one of no page: the one added stays, the other goes.
-	s.floe(t, "task", "--project", "proj", "--task", "S300", "--categories", "案,設計,実装,リリース,検証,レビュー")
+	s.floe(t, "task", "--project", "proj", "--task", "S300", "--categories", "案", "--categories", "設計", "--categories", "実装", "--categories", "リリース", "--categories", "検証", "--categories", "レビュー")
 	open("S300")
 	key("公開", "Enter", false)
-	s.floe(t, "task", "--project", "proj", "--task", "S300", "--categories", "案,設計,実装,リリース,レビュー")
+	s.floe(t, "task", "--project", "proj", "--task", "S300", "--categories", "案", "--categories", "設計", "--categories", "実装", "--categories", "リリース", "--categories", "レビュー")
 	save("stale, added")
 	say("stale, added", categories)
 	save("saved again")
@@ -204,10 +218,12 @@ func TestUITaskEditCategories(t *testing.T) { //nolint:paralleltest // the brows
 		"saved: 6 [案,設計,実装,レビュー]",
 		`sent: {"taskProject":"proj","task":"S300","new":false,"rev":5,"categories":["案","設計","実装","レビュー"]}`,
 		"unchanged: 0",
-		"paged meanwhile: Failed to save: category リリース of task S300 in project proj has pages (memo-a): take them off it first, or keep it in the order",
-		"paged meanwhile, written: 7 [案,設計,実装,リリース,レビュー]",
+		"paged meanwhile: Failed to save: task S300 has changed since it was read; the tasks are read again, so check and save again",
+		"paged meanwhile, written: 8 [案,設計,実装,リリース,レビュー]",
+		"paged since read: Failed to save: category \"リリース\" of task S300 in project proj has pages (memo-a): take them off it first, or keep it in the order",
+		"paged since read, written: 9 [案,設計,実装,リリース,レビュー]",
 		"stale, added: 案x,設計x,実装x,リリースx,レビューx,公開d",
-		"saved again: 10 [案,設計,実装,リリース,レビュー,公開]",
+		"saved again: 12 [案,設計,実装,リリース,レビュー,公開]",
 		"no categories: true / false / plus / edit-task-title",
 		"first: 2 [案]",
 	}, "|"))

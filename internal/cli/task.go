@@ -4,7 +4,6 @@ import (
 	"context"
 	"encoding/json/jsontext"
 	"errors"
-	"fmt"
 	"net/http"
 	"net/url"
 	"slices"
@@ -21,9 +20,9 @@ import (
 
 // taskFlags are the flags of floe task.
 type taskFlags struct {
-	task, project, category, state, title, categories, parent string
-	slugs, urls, removeURLs                                   []string
-	pin, unpin, clear, forget                                 bool
+	task, project, category, state, title, parent string
+	slugs, urls, removeURLs, categories           []string
+	pin, unpin, clear, forget                     bool
 }
 
 // taskFieldFlags are the flags that write a field of a task's row.
@@ -66,13 +65,12 @@ it among its pages, which the user decides.
   floe task --slug design-notes --category designs
   floe task --slug design-notes
     page design-notes: task #130 in project floe, category "designs"
-  floe task --task "#130" --categories proposals,designs,samples
+  floe task --task "#130" --categories proposals --categories designs --categories samples
   floe task --task "#130" --parent "#123"
   floe task --slug design-notes --task "#131" --parent "#130"
   floe task --slug design-notes --pin
   floe task --task "#130" --forget`,
-		Args:    cobra.NoArgs,
-		PreRunE: flagGroups,
+		Args: cobra.NoArgs,
 		RunE: func(cmd *cobra.Command, _ []string) error {
 			// A category of spaces is the empty one from here on, as the server reads it.
 			f.category = strings.TrimSpace(f.category)
@@ -92,7 +90,8 @@ it among its pages, which the user decides.
 	flags.StringArrayVar(&f.urls, "url", nil, "an outside link, http or https, to add to the task; give it again for more")
 	flags.StringArrayVar(&f.removeURLs, "remove-url", nil, "a link to take off the task's; give it again for more")
 	flags.StringVar(&f.title, "title", "", `the task's title; "" takes it off`)
-	flags.StringVar(&f.categories, "categories", "", `the task's categories in order, comma-separated; "" takes it off`)
+	flags.StringArrayVar(&f.categories, "categories", nil,
+		`a category of the task, in order; give it again for each, the whole order; "" takes them all off`)
 	flags.StringVar(&f.parent, "parent", "",
 		`the task's parent, of its project; with --slug, with --task; "" takes it off`)
 	flags.BoolVar(&f.pin, "pin", false, "pin the pages to the top of the task list")
@@ -128,10 +127,7 @@ func taskEdit(cmd *cobra.Command, f taskFlags) store.TaskEdit {
 		ed.URLs = &store.URLsEdit{Add: f.urls, Remove: f.removeURLs, Order: nil}
 	}
 	if cmd.Flags().Changed("categories") {
-		// LIMIT: a category's name with a comma cannot be written here. Take a list of the flag if such names come to
-		// matter.
-		categories := strings.Split(f.categories, ",")
-		ed.Categories = &categories
+		ed.Categories = &f.categories
 	}
 	if cmd.Flags().Changed("parent") {
 		ed.Parent = &f.parent
@@ -185,13 +181,13 @@ func (a *app) changeTask(cmd *cobra.Command, f taskFlags) error {
 		return a.readTask(ctx, c, t)
 	}
 	if re, ok := errors.AsType[*remoteError](err); ok && re.status == http.StatusNotFound {
-		return usererr.New("cli_task_no_row", t.name, t.project)
+		return usererr.New("cli_task_no_row", t.name, store.Project(t.project))
 	}
 	if err != nil {
 		return err
 	}
 	if f.forget {
-		a.print("%s", english.Msg("cli_task_forgotten", t.name, inProject(t.project)))
+		a.print("%s", english.Msg("cli_task_forgotten", t.name, store.Project(t.project)))
 	}
 	return nil
 }
@@ -204,7 +200,7 @@ func (a *app) readTask(ctx context.Context, c client, t taskOf) error {
 	}
 	row, ok := all[t.project][t.name]
 	if !ok {
-		return usererr.New("cli_task_no_row", t.name, t.project)
+		return usererr.New("cli_task_no_row", t.name, store.Project(t.project))
 	}
 	a.print("%s", taskLine(t.name, t.project, row))
 	return nil
@@ -238,7 +234,7 @@ func (a *app) listTasks(cmd *cobra.Command, f taskFlags) error {
 	}
 	open := all.Open(key)
 	if len(open) == 0 {
-		a.print("%s", english.Msg("cli_task_none_open", inProject(key)))
+		a.print("%s", english.Msg("cli_task_none_open", store.Project(key)))
 	}
 	for _, t := range open {
 		a.print("%s", taskLine(t.Name, key, t.Task))
@@ -251,18 +247,18 @@ func (a *app) listTasks(cmd *cobra.Command, f taskFlags) error {
 func taskLine(name, project string, row store.Task) string {
 	fields := []string{"state " + row.State}
 	if row.Title != "" {
-		fields = append(fields, fmt.Sprintf("title %q", row.Title))
+		fields = append(fields, "title "+strconv.QuoteToGraphic(row.Title))
 	}
 	if len(row.URLs) > 0 {
-		fields = append(fields, urlsField(row.URLs))
+		fields = append(fields, quotedField("urls", "", row.URLs))
 	}
 	if len(row.Categories) > 0 {
-		fields = append(fields, fmt.Sprintf("categories %q", strings.Join(row.Categories, ",")))
+		fields = append(fields, quotedField("categories", "", row.Categories))
 	}
 	if row.Parent != "" {
-		fields = append(fields, fmt.Sprintf("parent %q", row.Parent))
+		fields = append(fields, "parent "+strconv.QuoteToGraphic(row.Parent))
 	}
-	return english.Msg("cli_task_page_task", name, inProject(project)) + ": " + strings.Join(fields, ", ")
+	return english.Msg("cli_task_page_task", name, store.Project(project)) + ": " + strings.Join(fields, ", ")
 }
 
 // tellTask says the task written: made, changed or as it was, and the fields ed asked for as the store left them, with
@@ -275,7 +271,7 @@ func (a *app) tellTask(w store.TaskWritten, ed store.TaskEdit) {
 	case w.Wrote:
 		key = "cli_task_changed"
 	}
-	line := english.Msg(key, w.Task, inProject(w.TaskProject))
+	line := english.Msg(key, w.Task, store.Project(w.TaskProject))
 	if fields := taskFields(w.Row, ed, len(w.Added) > 0); fields != "" {
 		line += "; " + fields
 	}
@@ -286,37 +282,38 @@ func (a *app) tellTask(w store.TaskWritten, ed store.TaskEdit) {
 func taskFields(row store.Task, ed store.TaskEdit, added bool) string {
 	var fields []string
 	if ed.Title != nil {
-		fields = append(fields, fmt.Sprintf("title %q", row.Title))
+		fields = append(fields, "title "+strconv.QuoteToGraphic(row.Title))
 	}
 	if ed.State != nil {
 		fields = append(fields, "state "+row.State)
 	}
 	if ed.URLs != nil {
-		fields = append(fields, urlsField(row.URLs))
+		fields = append(fields, quotedField("urls", "no urls", row.URLs))
 	}
 	if ed.Categories != nil || added {
-		fields = append(fields, fmt.Sprintf("categories %q", strings.Join(row.Categories, ",")))
+		fields = append(fields, quotedField("categories", "no categories", row.Categories))
 	}
 	if ed.Parent != nil {
 		parent := "no parent"
 		if row.Parent != "" {
-			parent = fmt.Sprintf("parent %q", row.Parent)
+			parent = "parent " + strconv.QuoteToGraphic(row.Parent)
 		}
 		fields = append(fields, parent)
 	}
 	return strings.Join(fields, ", ")
 }
 
-// urlsField is a task's URLs as a line tells them, each quoted, or no urls.
-func urlsField(urls []string) string {
-	if len(urls) == 0 {
-		return "no urls"
+// quotedField is a task's field of many values, the URLs or the categories, as a line tells it: its name and the
+// values, each quoted as Go quotes it but with a space such as a full-width space as it is, or none for no value.
+func quotedField(name, none string, values []string) string {
+	if len(values) == 0 {
+		return none
 	}
-	quoted := make([]string, len(urls))
-	for i, u := range urls {
-		quoted[i] = strconv.Quote(u)
+	quoted := make([]string, len(values))
+	for i, v := range values {
+		quoted[i] = strconv.QuoteToGraphic(v)
 	}
-	return "urls " + strings.Join(quoted, " ")
+	return name + " " + strings.Join(quoted, " ")
 }
 
 // tellPage says the page as the store has it, written or read: its task and project, category and pin, and the task
@@ -327,14 +324,14 @@ func (a *app) tellPage(page store.Edited) {
 	if on == nil || on.Name == "" {
 		off := english.Msg("cli_task_page_off")
 		if !store.IsNoProject(page.TaskProject) {
-			off = english.Msg("cli_task_page_off_in", inProject(page.TaskProject))
+			off = english.Msg("cli_task_page_off_in", store.Project(page.TaskProject))
 		}
 		parts = append(parts, off)
 	} else {
-		parts = append(parts, english.Msg("cli_task_page_task", on.Name, inProject(page.TaskProject)))
+		parts = append(parts, english.Msg("cli_task_page_task", on.Name, store.Project(page.TaskProject)))
 	}
 	if on != nil && on.Category != "" {
-		parts = append(parts, fmt.Sprintf("category %q", on.Category))
+		parts = append(parts, "category "+strconv.QuoteToGraphic(on.Category))
 	}
 	if on != nil && on.Pin {
 		parts = append(parts, "pinned")
@@ -347,7 +344,7 @@ func (a *app) tellPage(page store.Edited) {
 		}
 		line += "; " + english.Msg(key, page.OffTask)
 		if page.OffCategory != "" {
-			line += fmt.Sprintf(", category %q", page.OffCategory)
+			line += ", category " + strconv.QuoteToGraphic(page.OffCategory)
 		}
 	}
 	a.print("%s", line)

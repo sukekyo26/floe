@@ -51,12 +51,38 @@ When the user asks you to put a page on a task, or to read or change their tasks
 
 ### Ask after publishing
 
-The user keeps a task list, and wants each new page put on a task.
+The user keeps a task list, and wants each new page put on a task, under one of its categories.
 
-- When `floe publish` prints the page's project (`page in project app`), after `--move-project` too (`page in project app, off task #9`), ask the user whether to put the page on a task, in one question offering the tasks `floe task --project <project>` prints for that project, a new task, and none (`Put this page on a task? #12 Login screen / #15 Price table / a new task / none`). With no task open, offer a new task and none.
-- Put the page where the user answers, without reading `floe task guide`: `floe task --slug <slug> --task "<ID>"`, the ID as `floe task` printed it, `#` and all (`--task "#12"`), with `--title '<title>'` for a new task, whose ID and title the user gives.
-- When the user says not to use tasks, do not ask again in the conversation.
-- When your instructions (a CLAUDE.md, a skill) name the task a page goes on, put it there without asking.
+#### How to ask
+
+- When `floe publish` prints the page's project (`page in project app`, or `page in no project`), after `--move-project` too (`page in project app, off task #9`), ask which task to put the page on, then, if it goes on one, which of its categories.
+- Below, `<project>` is the name after `page in project`, up to a comma if any, or `""` for no project.
+- Ask in a dialog of choices if you have one (Claude Code's `AskUserQuestion`), not in your reply's text: the user does not see your reply while the dialog is open. With no such dialog, ask in a reply that holds nothing but the question, its choices listed last.
+- Either way, write in the question all the user needs, the page's title and URL first, and offer four choices at most.
+- When the user picks `A new task` or `A new category` without typing its ID and title or its name, ask for them in a reply that holds nothing but the question, the page's title and URL first: a dialog needs two choices or more.
+- When the user says not to use tasks, do not ask again in the conversation; when the user says not to use categories, ask for the task alone.
+- When your instructions (a CLAUDE.md, a skill) name the task a page goes on, put it there without asking for the task, and ask for the category unless they name it too.
+
+#### The task
+
+- Offer the first two tasks `floe task --project <project>` prints, each named by its ID with its title as the choice's description in a dialog, and by its ID then its title with no dialog (`#12 Login screen`), then `A new task` and `None`; with fewer open tasks, those there are.
+- For example: `Put "Login design" (<its URL>) on a task? #12 Login screen / #15 Price table / A new task / None`.
+- Say in the question that the user can type instead another task's ID or words of its title, or a new task's ID and title (`#20 Search page`).
+
+#### The category
+
+- `floe task` prints a task's categories in order after `categories`, each a Go string literal, with spaces between (`categories "Designs" "Samples" "Ideas"`): read each name as Go reads the literal, without its quotes, `\t` a tab, `\"` a `"` and `\\` a `\` (`"A \"B\""` is `A "B"`).
+- Offer the first two of the task's categories, each named as read so, then `A new category` and `None`; a new task, or one with no category, gets `A new category` and `None`.
+- Say in the question that the user can type instead a new category's name, and, when the task has more categories, another of them, naming them all.
+- The first time in the conversation, also say in the question what a category is: a heading on the task's page that its pages are listed under (`Designs`, `Samples`); a page of no category is listed above the headings.
+
+#### Putting the page
+
+- Take a task's ID, a new task's title and a category's name from the user's answers. When the user types words of a task's title, find the task in what `floe task --project <project>` prints, and ask again if none or several match.
+- When the user types an ID, run `floe task --project <project> --task "<ID>"`, which tells a task in any state: it is a new task only when floe says there is none (`no task #20 in project app`). For a task there is, leave the words after its ID unused.
+- A category name the user types that is one of the task's categories but for upper and lower case is that category, named as read from `floe task`; one that matches none is a new category.
+- Put the page there without reading `floe task guide`: `floe task --slug <slug> --task "<ID>"`, the ID `#` and all (`--task "#12"`), with `--category '<name>'` for a category.
+- Give `--title '<title>'` for a new task only: given for a task there is, it changes that task's title.
 
 ## Themes
 

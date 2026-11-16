@@ -3763,7 +3763,7 @@
     drawChips(pinned, pins);
   }
 
-  // Tasks by when their state last changed, the latest first, then by name
+  // Tasks by when they were last written (a page come to one too), the latest first, then by name
   const taskOrder = (x, y) => Date.parse(y.at) - Date.parse(x.at) || x.name.localeCompare(y.name, LANG);
 
   // The projects there are for the task list: of its tasks, and of the pages pinned
@@ -3789,7 +3789,7 @@
   }
   let projectKept = false;
   let borrowed = false;
-  // The project the task list opens with no project named: the one kept while it is there, or where a task in progress changed last, or the
+  // The project the task list opens with no project named: the one kept while it is there, or where a task in progress was written last, or the
   // shelf's first. Unreadable, tasks are not known, so that only what was kept can be said
   function openingProject(tasks, there, ranks) {
     const kept = keptProject();
@@ -5702,6 +5702,7 @@
   // the row after it, its category's add button, or the task's edit button
   // LIMIT: a page's write has no rev, so the way back writes over what was written to the page since, as the archive's does. Give page writes a rev if that comes to trouble someone
   // LIMIT: put on another task since, the page is moved back unasked, the toast not saying the task it left. Ask and say it as Set the task does if that comes to trouble someone
+  // LIMIT: a write of the screen's own since, a page put on the task say, refuses it too. Take back the screen's own writes too if that comes to trouble someone
   async function takePageOff(a, back) {
     const name = a.task.name;
     const category = a.task.category ?? '';

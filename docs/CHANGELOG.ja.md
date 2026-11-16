@@ -6,6 +6,19 @@ floe の主要な変更を記録します。フォーマットは
 
 ## [Unreleased]
 
+## [0.1.1] - 2026-11-16
+
+### 変更
+
+- **BREAKING**: 変更：`floe task --categories` を、`--url` と同じくカテゴリ 1 つごとに繰り返す旗にした（`--categories designs --categories samples`）。名にカンマを使える。`--categories ""` で全部外すのは今のまま。`floe task` はカテゴリを URL と同じく 1 つずつ引用して出す：`categories "a,b"` でなく `categories "a" "b"`、書き込みで最後の 1 つを外した後は `categories ""` でなく `no categories`。ページのあるカテゴリの断りは名を引用符で囲む（`category "designs" of task …`）。その行と `floe info` の値（題・タスク・カテゴリ・タグなど）は、全角空白を `\u3000` でなくそのまま出す。
+- 変更：`floe guide` のタスクモードの問い。エージェントは新しいページを publish するたびに、どのタスク（開いたタスクの先頭 2 件・新しいタスク・無し）に置くかと、そのタスクのどのカテゴリに置くかを、質問ダイアログで（無ければ問いだけの返事で）ユーザーに聞く。
+- 変更：`floe task` とタスク一覧の並び。状態だけでなく、欄を変えたときや、ページを載せたか、そのタスクの別のカテゴリへ移したときも数え、最後に変えたタスクを先に並べる。タスクに出る時刻もその変更の時刻。ページだけを書いた `floe task --slug … --task …` も、そのタスクを `changed` の行で言う。
+
+### 修正
+
+- 修正：プロジェクトの無いタスクの断りが `project /` と言っていた。`floe task` と管理ページは、`no project`（日本語は、タスク一覧の「未設定」に合わせて `プロジェクト未設定`）と言う。管理ページの日本語の断りでは、名のあるプロジェクトも `プロジェクト「floe」` と囲む。無いタスクを `--parent` で名指したときは `no task #42 in project app can be a parent` と言う。
+- 修正：`floe publish` に `--link` と `--move-project` を一緒に渡したときの断りに `run floe --help` が付かず、終了コードが 1 だった。ほかのコマンド行の誤りと同じく、断りの末尾に `run floe --help` を付け、終了コードを 2 にした。
+
 ## [0.1.0] - 2026-11-16
 
 ### 追加
@@ -26,5 +39,6 @@ floe の主要な変更を記録します。フォーマットは
 - 追加：ページの CSP とサンドボックス。ページの script を floe のものだけにする。
 - 追加：`floe licenses`。floe と、floe に入っているもののライセンスを出す。
 
-[Unreleased]: https://github.com/sukekyo26/floe/compare/v0.1.0...HEAD
+[Unreleased]: https://github.com/sukekyo26/floe/compare/v0.1.1...HEAD
+[0.1.1]: https://github.com/sukekyo26/floe/compare/v0.1.0...v0.1.1
 [0.1.0]: https://github.com/sukekyo26/floe/releases/tag/v0.1.0
