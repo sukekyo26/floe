@@ -69,6 +69,8 @@ func TestRealAbove(t *testing.T) {
 		// x is not there either: on Windows, a .. after a name there is folded by its letters before it is opened.
 		{".. after a name not there, by the separator", tmp + sep + "x" + sep + "new" + sep + ".." + sep + "parts", "", false},
 		{".. after a name not there, by /", tmp + "/x/new/../parts", "", false},
+		{"empty", "", "", false},
+		{"relative", "parts", "", false},
 	} {
 		t.Run(tt.name, func(t *testing.T) {
 			t.Parallel()

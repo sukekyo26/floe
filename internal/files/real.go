@@ -31,6 +31,9 @@ func Real(path string) (string, error) {
 // LIMIT: the names not there are kept as written: a link to nothing, a short name, another case, or a directory
 // that cannot be opened is compared by its letters (macOS, Windows). Follow them if needed.
 func RealAbove(path string) (string, bool) {
+	if !filepath.IsAbs(path) {
+		return "", false
+	}
 	rest := ""
 	for at := path; ; {
 		got, err := Real(at)
@@ -39,11 +42,15 @@ func RealAbove(path string) (string, bool) {
 		}
 		// dirs.Dir, as written: filepath.Dir would fold sym/.. by its letters, and filepath.Split stays on a/.
 		up := dirs.Dir(at)
+		// At the root, or at a volume alone (\\host\share, which Dir gives as \\host\share.): nothing above.
+		if len(up) >= len(at) {
+			return "", false
+		}
 		name := at[len(up):]
 		for name != "" && os.IsPathSeparator(name[0]) {
 			name = name[1:]
 		}
-		if up == at || name == ".." {
+		if name == ".." {
 			return "", false
 		}
 		rest = filepath.Join(name, rest)
