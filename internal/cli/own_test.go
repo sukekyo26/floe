@@ -57,8 +57,7 @@ func TestOwnDirs(t *testing.T) {
 	dangling := write(t, map[string]string{"mine/schema.json": ownSchema, "mine/part.html": ownPage})
 	link(t, "gone.css", filepath.Join(dangling, "mine", "part.css"))
 	pending := map[string]string{
-		"set, not there": "S315-P7: system words", "set, a file": "S315-P7: system words", "a link to a directory": "S315-P2: separators in floe's paths",
-		"a link to nothing": "S315-P2: separators in floe's paths, S315-P7: system words",
+		"set, not there": "S315-P7: system words", "set, a file": "S315-P7: system words", "a link to nothing": "S315-P7: system words",
 	}
 	for _, tt := range []struct {
 		name string
@@ -284,7 +283,6 @@ func TestNewOwnOverlap(t *testing.T) {
 		t.Errorf("template new tp2 made no %s", filepath.Join(floe, "tp2", "page.html"))
 	}
 	t.Run("a name with ..", func(t *testing.T) {
-		testfs.Pending(t, "S315-P2: separators in floe's paths")
 		t.Parallel()
 		env := map[string]string{"FLOE_PARTS_DIR": filepath.Join(dir, "parts"), "FLOE_THEMES_DIR": filepath.Join(dir, "themes")}
 		want := filepath.Join(dir, "themes") + ": floe takes no such name: write lower case letters, digits, - and _, starting with a letter or a digit; rename it\n"
@@ -298,7 +296,6 @@ func TestNewOwnOverlap(t *testing.T) {
 // reads one's own, told at the file it is in: a part's $ref to no part at the part's schema.json, not at a
 // template's.
 func TestOwnStops(t *testing.T) {
-	testfs.Pending(t, "S315-P2: separators in floe's paths")
 	t.Parallel()
 
 	dir := write(t, map[string]string{
@@ -346,7 +343,6 @@ func TestOwnStops(t *testing.T) {
 // A part.html that does not parse is told at the line text/template's head names, as an editor counts it, without
 // the head: a CR alone ends a line too, and the end of the file is a place after its last line break.
 func TestOwnSyntax(t *testing.T) {
-	testfs.Pending(t, "S315-P2: separators in floe's paths")
 	t.Parallel()
 
 	for _, tt := range []struct{ page, want string }{
@@ -383,7 +379,6 @@ func TestTemplateCheck(t *testing.T) {
 	}
 	example := "lang: en\ntemplate: memo\ntitle: t\nitems: [1]\nlogo: img/a.svg\n"
 	at := func(dir, file string) string { return filepath.Join(dir, "templates/memo", file) }
-	pending := map[string]bool{"no such asset": true, "for through a key the schema forbids": true, "an example of another template": true, "a page cut short": true}
 	for _, tt := range []struct {
 		name  string
 		files map[string]string
@@ -407,9 +402,6 @@ func TestTemplateCheck(t *testing.T) {
 	} {
 		t.Run(tt.name, func(t *testing.T) {
 			t.Parallel()
-			if pending[tt.name] {
-				testfs.Pending(t, "S315-P2: separators in floe's paths")
-			}
 			dir := write(t, tt.files)
 			env := map[string]string{"FLOE_TEMPLATES_DIR": filepath.Join(dir, "templates")}
 			code, stdout, stderr := runEnv(dir, env, "template", "check")
@@ -487,7 +479,6 @@ func TestAssetLinks(t *testing.T) {
 		t.Errorf("a file linked in = %d, %q", code, stderr)
 	}
 	t.Run("a directory linked in", func(t *testing.T) {
-		testfs.Pending(t, "S315-P2: separators in floe's paths")
 		t.Parallel()
 		link(t, shared, filepath.Join(img, "more"))
 		want := filepath.Join(img, "more") + ": " + dirLink + "\n"
@@ -563,7 +554,6 @@ func TestThemeCheckIsPartCheck(t *testing.T) {
 	mkdirs(t, filepath.Join(dir, "ok", "th"))
 	// Each wants a piece of its own mistake, which a check that reads neither parts nor themes, or compares no
 	// places, does not print.
-	pending := map[string]bool{"a theme's mistake": true, "a file of no part": true, "a part's mistake": true}
 	for _, tt := range []struct {
 		name string
 		env  map[string]string
@@ -581,9 +571,6 @@ func TestThemeCheckIsPartCheck(t *testing.T) {
 	} {
 		t.Run(tt.name, func(t *testing.T) {
 			t.Parallel()
-			if pending[tt.name] {
-				testfs.Pending(t, "S315-P2: separators in floe's paths")
-			}
 			env := map[string]string{"HOME": filepath.Join(dir, "home")}
 			maps.Copy(env, tt.env)
 			code, stdout, stderr := runEnv(dir, env, "part", "check")

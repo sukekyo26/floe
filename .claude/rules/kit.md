@@ -27,3 +27,4 @@ paths:
 - **目次の id はテンプレートが付ける**：テンプレートが自分の段へリンクするときは、page.html が言語によらない決まった id を付け、floe が見出しの字から作る id に頼らない。見出しの字が決まっている段（design）は見出しに、書き手が見出しを書く段（report の節）は段の要素に、見出しの字から作れない `.` を含む id（`section.0`）で付ける
 - **部品とテーマは一緒に確かめる**：テーマの `<部品名>.css` は部品があることを前提にするので、`floe part check` と `floe theme check` は同じもの（部品とテーマ）を確かめる。`TestThemeCheckIsPartCheck`
 - **Go が写す CSS の値は 1 対 1**：部品の座標を Go で計算するときは、`part.css` の字の大きさ・高さ・幅の段を Go の定数に写し、片方を変えたら両方直す。今は `chart`（`chart.go`）。`TestRenderedChart`
+- **表示のパスは置き場所で決まる**：自分のもの（ディスクの置き場所）のパスは、`filepath.Join` と `filepath.FromSlash` で OS の区切りだけで書く。floe の埋め込みの名前（`fs.FS` の中の名前。`parts/table`）は OS によらず `/`。どちらも `kit` の `under` 1 つを通す。`fs.FS` に渡す名前は `path.Join`

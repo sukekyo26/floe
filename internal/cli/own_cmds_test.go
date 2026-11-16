@@ -58,7 +58,7 @@ func TestNewReads(t *testing.T) {
 	dir := write(t, map[string]string{"templates/memo/schema.json": "{}", "parts/bad/schema.json": ownSchema})
 	brokenTemplate := map[string]string{"HOME": filepath.Join(dir, "home"), "FLOE_TEMPLATES_DIR": filepath.Join(dir, "templates")}
 	brokenPart := map[string]string{"HOME": filepath.Join(dir, "home2"), "FLOE_PARTS_DIR": filepath.Join(dir, "parts")}
-	const w12, separators = "S315-P7: ENOTDIR read as none (W12)", "S315-P2: separators in floe's paths"
+	const w12 = "S315-P7: ENOTDIR read as none (W12)"
 	for _, tt := range []struct {
 		name string
 		env  map[string]string
@@ -69,8 +69,8 @@ func TestNewReads(t *testing.T) {
 	}{
 		{"part, a template broken", brokenTemplate, []string{"part", "new", "x"}, 0, "", w12},
 		{"theme, a template broken", brokenTemplate, []string{"theme", "new", "x"}, 0, "", w12},
-		{"template, a template broken", brokenTemplate, []string{"template", "new", "x"}, 1, filepath.Join(dir, "templates/memo"), separators},
-		{"part, a part broken", brokenPart, []string{"part", "new", "x"}, 1, filepath.Join(dir, "parts/bad"), separators},
+		{"template, a template broken", brokenTemplate, []string{"template", "new", "x"}, 1, filepath.Join(dir, "templates/memo"), ""},
+		{"part, a part broken", brokenPart, []string{"part", "new", "x"}, 1, filepath.Join(dir, "parts/bad"), ""},
 		{"theme, a part broken", brokenPart, []string{"theme", "new", "x"}, 1, filepath.Join(dir, "parts/bad"), w12},
 		{"template, a part broken", brokenPart, []string{"template", "new", "x"}, 1, filepath.Join(dir, "parts/bad"), w12},
 	} {
@@ -110,7 +110,7 @@ func TestNewRefused(t *testing.T) { //nolint:tparallel // what was written is lo
 
 	home := write(t, map[string]string{".config/floe/parts/shr.json": "{}"})
 	parts, themes := filepath.Join(home, ".config/floe/parts"), filepath.Join(home, ".config/floe/themes")
-	const separators, unixPaths = "S315-P2: separators in floe's paths", "S315-P7: Unix absolute paths"
+	const unixPaths = "S315-P7: Unix absolute paths"
 	//nolint:paralleltest // as the function
 	for _, tt := range []struct {
 		env  map[string]string
@@ -119,12 +119,12 @@ func TestNewRefused(t *testing.T) { //nolint:tparallel // what was written is lo
 		errs string
 		why  string
 	}{
-		{nil, []string{"part", "new", "note"}, 1, filepath.Join(parts, "note") + ": note is the name of floe's parts/note: give yours another name\n", separators},
-		{nil, []string{"part", "new", "Bad"}, 1, filepath.Join(parts, "Bad") + ": floe takes no such name: write lower case letters, digits, - and _, starting with a letter or a digit; rename it\n", separators},
-		{nil, []string{"part", "new", "palette"}, 1, filepath.Join(parts, "palette") + ": palette names a file of every theme (palette.css), which a theme's CSS for this part would be read as: give it another name\n", separators},
-		{nil, []string{"part", "new", "shr"}, 1, filepath.Join(parts, "shr") + ": shr names both " + filepath.Join(parts, "shr") + " and " + filepath.Join(parts, "shr.json") + ": give one of them another name\n", separators},
-		{nil, []string{"theme", "new", "default"}, 1, filepath.Join(themes, "default") + ": default is the name of floe's themes/default: give yours another name\n", separators},
-		{nil, []string{"theme", "new", "Bad"}, 1, filepath.Join(themes, "Bad") + ": floe takes no such name: write lower case letters, digits, - and _, starting with a letter or a digit; rename it\n", separators},
+		{nil, []string{"part", "new", "note"}, 1, filepath.Join(parts, "note") + ": note is the name of floe's parts/note: give yours another name\n", ""},
+		{nil, []string{"part", "new", "Bad"}, 1, filepath.Join(parts, "Bad") + ": floe takes no such name: write lower case letters, digits, - and _, starting with a letter or a digit; rename it\n", ""},
+		{nil, []string{"part", "new", "palette"}, 1, filepath.Join(parts, "palette") + ": palette names a file of every theme (palette.css), which a theme's CSS for this part would be read as: give it another name\n", ""},
+		{nil, []string{"part", "new", "shr"}, 1, filepath.Join(parts, "shr") + ": shr names both " + filepath.Join(parts, "shr") + " and " + filepath.Join(parts, "shr.json") + ": give one of them another name\n", ""},
+		{nil, []string{"theme", "new", "default"}, 1, filepath.Join(themes, "default") + ": default is the name of floe's themes/default: give yours another name\n", ""},
+		{nil, []string{"theme", "new", "Bad"}, 1, filepath.Join(themes, "Bad") + ": floe takes no such name: write lower case letters, digits, - and _, starting with a letter or a digit; rename it\n", ""},
 		{nil, []string{"part", "new"}, 2, "floe: accepts 1 arg(s), received 0: run floe --help\n", ""},
 		{nil, []string{"part", "new", "x", "--from", "note"}, 2, "floe: unknown flag: --from: run floe --help\n", ""},
 		{nil, []string{"template", "new", "a", "b"}, 2, "floe: accepts 1 arg(s), received 2: run floe --help\n", ""},
@@ -204,10 +204,6 @@ func TestListShow(t *testing.T) {
 		return strings.TrimSuffix(string(b), "\n")
 	}
 	allThemes := "app, aurora, blueprint, brutal, default, editorial, empty, ink, mine, notebook, retro, soft, swiss, washi"
-	separated := map[string]bool{
-		"part list --all": true, "part show mine": true, "template list": true, "template show memo": true,
-		"theme list": true, "theme show mine": true, "theme show empty": true,
-	}
 	for _, tt := range []struct {
 		args []string
 		code int
@@ -276,10 +272,6 @@ func TestListShow(t *testing.T) {
 	} {
 		t.Run(strings.Join(tt.args, " "), func(t *testing.T) {
 			t.Parallel()
-			// What prints where one's own is, its path.
-			if separated[strings.Join(tt.args, " ")] {
-				testfs.Pending(t, "S315-P2: separators in floe's paths")
-			}
 			if code, stdout, stderr := runEnv(dir, env, tt.args...); code != tt.code || !tt.out(stdout) || stderr != tt.errs {
 				t.Errorf("floe %v = %d, %q, %q; want %d, %q", tt.args, code, stdout, stderr, tt.code, tt.errs)
 			}
@@ -330,7 +322,6 @@ func TestShowEachFile(t *testing.T) {
 // A part of one's own named html, a key a section of floe's templates takes, is refused as one named as floe's
 // parts are: floe part list and show would tell of floe's html and one's own apart.
 func TestPartListOwnHTML(t *testing.T) {
-	testfs.Pending(t, "S315-P2: separators in floe's paths")
 	t.Parallel()
 
 	const schema = `{"$schema": "https://json-schema.org/draft/2020-12/schema", "description": "mine", "type": "object"}`

@@ -6,6 +6,7 @@ package testfs
 import (
 	"errors"
 	"os"
+	"path/filepath"
 	"testing"
 	"time"
 )
@@ -86,6 +87,27 @@ func Junction(tb testing.TB, link, target string) {
 	}
 }
 
+// ShortName is the 8.3 name of path (Windows), which may begin with \\?\ to be over MAX_PATH. It skips t on Unix,
+// which has none, and where the volume makes none; on the CI (CI set) such a volume fails t instead, so that the
+// tests of short names are known to run there.
+func ShortName(tb testing.TB, path string) string {
+	tb.Helper()
+	if !isWindows {
+		tb.Skip("short names are Windows'")
+	}
+	short, err := shortNameOf(path)
+	if err != nil {
+		tb.Fatal(err)
+	}
+	if filepath.Base(short) == filepath.Base(path) {
+		if os.Getenv("CI") != "" {
+			tb.Fatalf("%s has no short name on the CI", path)
+		}
+		tb.Skip("this volume makes no short names")
+	}
+	return short
+}
+
 // CheckedOutLink skips t on Windows when path, which may be a symlink in the repository, is a regular file: one
 // git checked out as the text of where it leads (Git for Windows with core.symlinks false).
 func CheckedOutLink(tb testing.TB, path string) {
@@ -96,4 +118,48 @@ func CheckedOutLink(tb testing.TB, path string) {
 	if fi, err := os.Lstat(path); err == nil && fi.Mode().IsRegular() {
 		tb.Skip(path + " was not checked out as a symlink (core.symlinks)")
 	}
+}
+
+// DenyList denies this user the listing and reading of dir (Windows' ACL, with icacls), and allows it again when tb
+// ends, before a t.TempDir made earlier is removed. It skips where the system lets this user list dir all the same
+// (an administrator, as on the CI's runner), and on Unix, where chmod does it (tests of that are UnixOnly).
+func DenyList(tb testing.TB, dir string) {
+	tb.Helper()
+	if !isWindows {
+		tb.Skip("denying a directory by its ACL is Windows'")
+	}
+	undo, err := aclDeny(dir)
+	if err != nil {
+		tb.Fatal(err)
+	}
+	tb.Cleanup(func() {
+		if err := undo(); err != nil {
+			tb.Logf("%s is left denied: %v", dir, err)
+		}
+	})
+	if _, err := os.ReadDir(dir); err == nil {
+		tb.Skip("the system lets this user list a directory denied to it (an administrator)")
+	}
+}
+
+// Subst makes a drive of dir with subst (Windows), a letter no volume has, and removes it when tb ends; it returns
+// the drive (Z:). It skips where no letter is free, and on Unix, which has no drives.
+func Subst(tb testing.TB, dir string) string {
+	tb.Helper()
+	if !isWindows {
+		tb.Skip("drives are Windows'")
+	}
+	drive, undo, err := makeDrive(dir)
+	if err != nil {
+		tb.Fatal(err)
+	}
+	if drive == "" {
+		tb.Skip("no drive letter is free")
+	}
+	tb.Cleanup(func() {
+		if err := undo(); err != nil {
+			tb.Logf("drive %s is left: %v", drive, err)
+		}
+	})
+	return drive
 }

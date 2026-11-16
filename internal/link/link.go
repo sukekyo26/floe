@@ -8,9 +8,11 @@ import (
 	"os"
 	"path/filepath"
 	"regexp"
+	"slices"
 	"strings"
 	"time"
 
+	"floe/internal/files"
 	"floe/internal/usererr"
 )
 
@@ -23,9 +25,9 @@ var linkable = regexp.MustCompile(`(?i)\.(html?|ya?ml)$`)
 // (~/.ssh, ~/.config) hold settings and keys. Hidden directories inside a project (.agents, .github) are
 // fine; Resolve never serves the dot paths under them. It reports whether path is a folder.
 func Check(path, home string) (bool, error) {
-	// The checks compare strings, so a relative path, a path through a symlink (~/proj -> ~/.ssh) or one
-	// with .. would slip past them. EvalSymlinks keeps a relative path relative, hence IsAbs.
-	if resolved, err := filepath.EvalSymlinks(path); !filepath.IsAbs(path) || err == nil && resolved != path {
+	// The checks compare strings, so a relative path, a path through a symlink or a junction (~/proj -> ~/.ssh) or
+	// one with .. would slip past them; so would one Real cannot tell (Windows: a parent that cannot be opened).
+	if resolved, err := files.Real(path); err != nil || resolved != path {
 		return false, usererr.New("link_not_real", path)
 	}
 	// A FIFO named .html would block its reader, so only regular files pass, and folders.
@@ -70,8 +72,8 @@ func exposedDir(dir, home string) bool {
 // realDir returns the real path of dir. A dir that cannot be resolved (missing, empty and so ".", or
 // not a directory) gives false: the checks that compare against it would be meaningless.
 func realDir(dir string) (string, bool) {
-	resolved, err := filepath.EvalSymlinks(dir)
-	if err != nil || !filepath.IsAbs(resolved) {
+	resolved, err := files.Real(dir)
+	if err != nil {
 		return "", false
 	}
 	fi, err := os.Stat(resolved)
@@ -106,7 +108,7 @@ func Resolve(registered string, folder bool, rest string) (string, bool) {
 
 // isReal reports whether path is its own real path.
 func isReal(path string) bool {
-	resolved, err := filepath.EvalSymlinks(path)
+	resolved, err := files.Real(path)
 	return err == nil && resolved == path
 }
 
@@ -122,15 +124,26 @@ func IsFolder(folder string) bool {
 
 // within returns the real path of rest under the real directory base, with what the system says of it, when it
 // is a directory (dir) or a regular file (else): the one gate of what a link serves and lists. It refuses empty
-// and dot elements (.git, .env, ..) and anything whose real path leaves base.
+// and dot elements (.git, .env, ..) of the names as written, a short one (SECRET~1, Windows) made long first, and
+// anything whose real path leaves base. Where a link or a junction under base leads is not read for dots: it is
+// served when its real path is under base (node_modules/x -> .pnpm/x).
+// LIMIT: on Windows, a short name is made long by listing its parent; under a parent that cannot be listed, the
+// files are not served, though they could be opened. Look again if links into such directories come up.
 func within(base, rest string, dir bool) (string, fs.FileInfo, bool) {
 	parts := strings.Split(rest, "/")
-	for _, p := range parts {
-		if p == "" || strings.HasPrefix(p, ".") {
-			return "", nil, false
-		}
+	if dotted(parts) {
+		return "", nil, false
 	}
-	resolved, err := filepath.EvalSymlinks(filepath.Join(append([]string{base}, parts...)...))
+	joined := filepath.Join(append([]string{base}, parts...)...)
+	long, err := longName(joined)
+	if err != nil {
+		return "", nil, false
+	}
+	written, err := filepath.Rel(base, long)
+	if err != nil || dotted(strings.Split(written, string(filepath.Separator))) {
+		return "", nil, false
+	}
+	resolved, err := files.Real(joined)
 	if err != nil || !strings.HasPrefix(resolved, base+string(filepath.Separator)) {
 		return "", nil, false
 	}
@@ -139,6 +152,14 @@ func within(base, rest string, dir bool) (string, fs.FileInfo, bool) {
 		return "", nil, false
 	}
 	return resolved, fi, true
+}
+
+// longName is files.LongName; a test makes it fail.
+var longName = files.LongName //nolint:gochecknoglobals // a test's seam
+
+// dotted reports whether any of names is empty or starts with a dot (.git, .env, ..).
+func dotted(names []string) bool {
+	return slices.ContainsFunc(names, func(p string) bool { return p == "" || strings.HasPrefix(p, ".") })
 }
 
 // MaxListed is how many entries Dir gives of one directory.

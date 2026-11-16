@@ -185,16 +185,16 @@ func (t target) same(o target) bool {
 // a loop of links) is not written over: it is told at to, the page as the user names it, as a page that cannot
 // be written, in the system's words. Whether the rest can be written is the system's to tell, as it writes.
 func realPath(abs, to string) (string, error) {
-	resolved, err := filepath.EvalSymlinks(abs)
+	resolved, err := files.Real(abs)
 	if err == nil {
 		return resolved, nil
 	}
 	if info, lerr := os.Lstat(abs); lerr == nil && info.Mode()&os.ModeSymlink != 0 {
-		// The system's words of why it leads nowhere, whatever EvalSymlinks says.
+		// The system's words of why it leads nowhere, whatever files.Real says.
 		_, serr := os.Stat(abs)
 		return "", usererr.CannotWrite(to, cmp.Or(serr, err))
 	}
-	if parent, err := filepath.EvalSymlinks(dirs.Dir(abs)); err == nil {
+	if parent, err := files.Real(dirs.Dir(abs)); err == nil {
 		return filepath.Join(parent, filepath.Base(abs)), nil
 	}
 	return abs, nil

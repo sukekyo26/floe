@@ -26,6 +26,7 @@ import (
 	"time"
 
 	"floe/internal/diagram"
+	"floe/internal/dirs"
 	"floe/internal/doc"
 	"floe/internal/files"
 	"floe/internal/kit"
@@ -428,6 +429,8 @@ func (s *Store) listed(slug string, m *Meta, r *reader) Listed {
 		Slug: slug, Meta: *m, TaskProject: ProjectKey(m.Project), News: "", Version: 0, VersionCount: 0, Missing: nil,
 		Themed: m.TakesTheme(),
 	}
+	// Shown as people write them; m keeps them as stored, for what reads them.
+	l.Path, l.PublishedFile = dirs.Shown(m.Path), dirs.Shown(m.PublishedFile)
 	// The list is read every few seconds: versions are asked for a page at a time.
 	l.Versions = nil
 	if !m.IsLink() {

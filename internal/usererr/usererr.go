@@ -11,6 +11,7 @@ import (
 	"strings"
 	"unicode/utf8"
 
+	"floe/internal/dirs"
 	"floe/internal/i18n"
 )
 
@@ -272,12 +273,20 @@ func Warn(c *i18n.Catalog, warnings []*Error) []Told {
 }
 
 // worded words l in the language of c, in order, each told once: one worded at the same place as one before it is
-// left out, wherever it was made.
+// left out, wherever it was made. A path among its file and arguments is shown as people write it (dirs.Shown).
+// LIMIT: only a whole argument that starts as Real's path (\\?\C:\, \\?\UNC\) is shown so, any such argument alike;
+// a path inside one (a library's words) keeps its \\?\. Show it at the words' maker if one comes to be told so.
 func worded(c *i18n.Catalog, l List) []Told {
 	all := make([]Told, 0, len(l))
 	told := map[Told]bool{}
 	for _, e := range l {
-		t := Told{File: e.file, Line: e.line, Column: e.column, At: e.at, Text: c.Msg(e.Key, e.Args...)}
+		args := slices.Clone(e.Args)
+		for i, a := range args {
+			if s, ok := a.(string); ok {
+				args[i] = dirs.Shown(s)
+			}
+		}
+		t := Told{File: dirs.Shown(e.file), Line: e.line, Column: e.column, At: e.at, Text: c.Msg(e.Key, args...)}
 		if !told[t] {
 			told[t] = true
 			all = append(all, t)

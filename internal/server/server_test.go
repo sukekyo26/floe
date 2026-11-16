@@ -14,6 +14,7 @@ import (
 	"sync"
 	"testing"
 
+	"floe/internal/dirs"
 	"floe/internal/files"
 	"floe/internal/kit"
 	"floe/internal/link"
@@ -42,10 +43,12 @@ const pic = `{"$schema": "https://json-schema.org/draft/2020-12/schema", "type":
 func newEnv(t *testing.T) env {
 	t.Helper()
 
-	tmp, err := filepath.EvalSymlinks(t.TempDir())
+	// Real, as the user would give it (no \\?\ on Windows): a root of settings and the store.
+	got, err := files.Real(t.TempDir())
 	if err != nil {
 		t.Fatal(err)
 	}
+	tmp := dirs.Shown(got)
 	e := env{root: filepath.Join(tmp, "store"), home: filepath.Join(tmp, "home"), tpl: filepath.Join(tmp, "tpl")}
 	writeFiles(t, e.tpl, map[string]string{
 		"pic/page.html": "<!doctype html>\n<html lang=\"{{.Lang}}\"><head><title>{{.Title}}</title></head><body>" +

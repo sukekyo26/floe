@@ -9,16 +9,19 @@ import (
 	"strings"
 	"testing"
 
+	"floe/internal/dirs"
+	"floe/internal/files"
 	"floe/internal/link"
 	"floe/internal/testfs"
 	"floe/internal/usererr"
 )
 
-// realTemp returns a temporary directory by its real path; on macOS t.TempDir is under the /var symlink.
+// realTemp returns a temporary directory by its real path, as files.Real names it: on macOS t.TempDir is under the
+// /var symlink, and on Windows a link's paths are \\?\C:\….
 func realTemp(tb testing.TB) string {
 	tb.Helper()
 
-	dir, err := filepath.EvalSymlinks(tb.TempDir())
+	dir, err := files.Real(tb.TempDir())
 	if err != nil {
 		tb.Fatal(err)
 	}
@@ -318,9 +321,14 @@ func TestCheck(t *testing.T) {
 	symlink(t, realHome, home)
 	// A path through a symlink is refused, whatever it points at.
 	symlink(t, filepath.Join(realHome, ".secret"), filepath.Join(realHome, "proj", "alias"))
-	// So is one with .., which the string checks would misread too.
-	for _, p := range []string{realHome + "/proj/alias/x.html", realHome + "/proj/../top.html", ".secret/x.html", "top.html"} {
-		if _, err := link.Check(p, home); err == nil || !strings.Contains(err.Error(), "is not its absolute real path") {
+	// So is one with .., which the string checks would misread too. Written as a user writes them (no \\?\ on
+	// Windows, where the system reads no .. after it), with the system's separator.
+	sep, written := string(filepath.Separator), dirs.Shown(realHome)
+	for _, p := range []string{
+		written + sep + "proj" + sep + "alias" + sep + "x.html", written + sep + "proj" + sep + ".." + sep + "top.html",
+		".secret/x.html", "top.html",
+	} {
+		if _, err := link.Check(p, home); err == nil || !strings.Contains(err.Error(), "is not its real path") {
 			t.Errorf("Check(%s) = %v, want it refused as not real", p, err)
 		}
 	}
@@ -335,7 +343,7 @@ func TestCheck(t *testing.T) {
 	// What home is under would serve every home's files: refused for a folder, and for a file in it.
 	write(t, filepath.Join(tmp, "beside.html"), "<p>x</p>")
 	for _, p := range []string{tmp, filepath.Join(tmp, "beside.html")} {
-		if _, err := link.Check(p, home); err == nil || !strings.Contains(err.Error(), "would expose all of "+tmp) {
+		if _, err := link.Check(p, home); err == nil || !strings.Contains(err.Error(), "would expose all of "+dirs.Shown(tmp)) {
 			t.Errorf("Check(%s) = %v, want it refused as exposing %s", p, err, tmp)
 		}
 	}
@@ -347,15 +355,16 @@ func TestCheck(t *testing.T) {
 		{"proj/ok.HTM", ""},
 		{"proj/spec.YML", ""},
 		{".secret/x.html", "is under a hidden directory of your home"},
-		{"top.html", "would expose all of " + realHome},
-		{".top.html", "would expose all of " + realHome},
+		{"top.html", "would expose all of " + dirs.Shown(realHome)},
+		{".top.html", "would expose all of " + dirs.Shown(realHome)},
 		{"proj/page.txt", "is not a regular HTML file (.html, .htm), data file (.yaml, .yml) or folder"},
-		{"proj/missing.html", "is not a regular HTML file (.html, .htm), data file (.yaml, .yml) or folder"},
+		// Real cannot tell where a file not there is (readLink, before, tells it cannot be read).
+		{"proj/missing.html", "is not its real path"},
 		// A folder is checked as the directory it exposes: its own.
 		{"proj", ""},
 		{"proj/dir.html", ""},
 		{"proj/.agents", ""},
-		{"", "would expose all of " + realHome},
+		{"", "would expose all of " + dirs.Shown(realHome)},
 		{".secret", "is under a hidden directory of your home"},
 		{".secret/sub", "is under a hidden directory of your home"},
 	}
@@ -382,4 +391,36 @@ func TestCheck(t *testing.T) {
 			t.Errorf("Check(proj/pipe.html) = %v, want a usererr containing %q", err, want)
 		}
 	})
+}
+
+// A folder whose own path has a dot directory (one under a project's .agents) serves its files: the dot rule reads
+// the names under the folder alone.
+func TestResolveDotBase(t *testing.T) {
+	t.Parallel()
+
+	folder := filepath.Join(realTemp(t), "proj", ".agents", "docs")
+	write(t, filepath.Join(folder, "a.html"), "a")
+	write(t, filepath.Join(folder, "sub", "b.html"), "b")
+	for _, rest := range []string{"a.html", "sub/b.html"} {
+		if got, ok := link.Resolve(folder, true, rest); !ok || got != filepath.Join(folder, filepath.FromSlash(rest)) {
+			t.Errorf("Resolve(%q) = %q, %v, want it served", rest, got, ok)
+		}
+	}
+	if _, err := link.Dir(folder, "sub"); err != nil {
+		t.Errorf("Dir(sub) = %v", err)
+	}
+}
+
+// A link under a folder to a dot file of it is served as the file it leads to: the dot rule reads the names as
+// written, not where a link leads (as node_modules/x -> .pnpm/x).
+func TestResolveLinkToDot(t *testing.T) {
+	t.Parallel()
+
+	folder := filepath.Join(realTemp(t), "f")
+	env := filepath.Join(folder, ".env")
+	write(t, env, "e")
+	symlink(t, env, filepath.Join(folder, "x"))
+	if got, ok := link.Resolve(folder, true, "x"); !ok || got != env {
+		t.Errorf("Resolve(x) = %q, %v, want %q", got, ok, env)
+	}
 }

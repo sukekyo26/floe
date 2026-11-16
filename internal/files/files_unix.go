@@ -5,6 +5,7 @@ package files
 import (
 	"fmt"
 	"os"
+	"path/filepath"
 	"syscall"
 
 	"golang.org/x/sys/unix"
@@ -51,3 +52,11 @@ func stamp(st *unix.Stat_t) string {
 	}
 	return fmt.Sprintf("%o:%d:%d:%d:%d", st.Mode, st.Ino, st.Size, st.Mtim.Nano(), st.Ctim.Nano())
 }
+
+// realOf is path with its symlinks followed.
+func realOf(path string) (string, error) {
+	return filepath.EvalSymlinks(path) //nolint:wrapcheck // the system's words, for the caller to tell
+}
+
+// longNameOf is path as written: there are no short names to make long.
+func longNameOf(path string) (string, error) { return path, nil }

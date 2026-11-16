@@ -6,6 +6,8 @@ import (
 	"path/filepath"
 	"testing"
 
+	"floe/internal/dirs"
+	"floe/internal/files"
 	"floe/internal/project"
 	"floe/internal/testfs"
 )
@@ -104,10 +106,12 @@ func TestNameOfNoDir(t *testing.T) {
 func TestPlace(t *testing.T) {
 	t.Parallel()
 
-	tmp, err := filepath.EvalSymlinks(t.TempDir())
+	// As a user writes it (no \\?\ on Windows), where git makes its worktree.
+	got, err := files.Real(t.TempDir())
 	if err != nil {
 		t.Fatal(err)
 	}
+	tmp := dirs.Shown(got)
 	a, b, out := filepath.Join(tmp, "a"), filepath.Join(tmp, "b"), filepath.Join(tmp, "out")
 	for _, f := range []string{"a/docs/plan.yaml", "a/plan.yaml", "b/docs/plan.yaml"} {
 		if err := os.MkdirAll(filepath.Dir(filepath.Join(tmp, f)), 0o750); err != nil {
@@ -138,7 +142,7 @@ func TestPlace(t *testing.T) {
 		{"a/.claude/worktrees/w/docs/plan.yaml", "a", "docs/plan.yaml"},
 		{"b/docs/plan.yaml", "b", "docs/plan.yaml"},
 		{"out/linked/plan.yaml", "a", "docs/plan.yaml"},
-		{"out/notes.yaml", "", filepath.Join(out, "notes.yaml")},
+		{"out/notes.yaml", "", filepath.Join(got, "out", "notes.yaml")},
 	} {
 		repo, place := project.Place(t.Context(), filepath.Join(tmp, tt.file))
 		if repo != tt.repo || place != tt.place {

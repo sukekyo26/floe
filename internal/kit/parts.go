@@ -5,7 +5,6 @@ import (
 	"errors"
 	"html/template"
 	"maps"
-	"path"
 	"regexp"
 	"slices"
 	"strings"
@@ -75,7 +74,7 @@ func (p *Part) Page(lang string) (*template.Template, error) {
 }
 
 // File returns the file name of p as its mistakes name it.
-func (p *Part) File(name string) string { return path.Join(p.dir, name) }
+func (p *Part) File(name string) string { return under(p.dir, name) }
 
 // PageSource returns the part.html of p as read: where a mistake of drawing it is.
 func (p *Part) PageSource() []byte { return bytes.Clone(p.pageSrc) }
@@ -223,7 +222,7 @@ func (k *Kit) NameMistake(dir string, kind Kind, name string) error {
 // base has: floe's templates and parts would go on reading the base's, compiled with it, and a theme of one's
 // own would hide floe's whole. It is told at the entry.
 func (k *Kit) refusedName(dir string, kind Kind, name string, twice bool) *usererr.Error {
-	at := path.Join(dir, name)
+	at := under(dir, name)
 	if kind == KindShared {
 		at += ".json"
 	}
@@ -233,7 +232,7 @@ func (k *Kit) refusedName(dir string, kind Kind, name string, twice bool) *usere
 	case kind == KindPart && (name == "base" || name == "palette" || name == "markdown"):
 		return usererr.NewAt(at, 0, 0, "kit_name_theme_file", name)
 	case twice:
-		return usererr.NewAt(at, 0, 0, "kit_name_twice", name, path.Join(dir, name), path.Join(dir, name+".json"))
+		return usererr.NewAt(at, 0, 0, "kit_name_twice", name, under(dir, name), under(dir, name+".json"))
 	}
 	var other string
 	var ok bool
@@ -265,7 +264,7 @@ var nameRe = regexp.MustCompile(`^[a-z0-9][a-z0-9_-]*$`)
 
 // refused reports whether found refuses the entry name of d.
 func refused(found usererr.List, d Dir, name string) bool {
-	return slices.ContainsFunc(found, func(e *usererr.Error) bool { return e.File() == path.Join(d.Name, name) })
+	return slices.ContainsFunc(found, func(e *usererr.Error) bool { return e.File() == d.path(name) })
 }
 
 // readShared reads into k the schema the parts of d share, name.json.
@@ -274,7 +273,7 @@ func (k *Kit) readShared(d Dir, name string) error {
 	if err != nil {
 		return err
 	}
-	r, err := schema.NewResource(partURL(name), path.Join(d.Name, name+".json"), src, schema.Shared)
+	r, err := schema.NewResource(partURL(name), d.path(name+".json"), src, schema.Shared)
 	if err != nil {
 		return err //nolint:wrapcheck // its mistakes, or floe's failure
 	}
@@ -293,7 +292,7 @@ var (
 // readPart reads into k the part or look of d named name, its directory.
 func (k *Kit) readPart(d Dir, name string) error {
 	d = d.recording()
-	dir := path.Join(d.Name, name)
+	dir := d.path(name)
 	schemaSrc, isPart, err := readFile(d, name, "schema.json")
 	if err != nil {
 		return err
@@ -320,7 +319,7 @@ func (k *Kit) readPart(d Dir, name string) error {
 	if failed := found.Add(yamlErr); failed != nil {
 		return failed
 	}
-	r, err := schema.NewResource(partURL(name), path.Join(dir, "schema.json"), schemaSrc, schema.Part)
+	r, err := schema.NewResource(partURL(name), under(dir, "schema.json"), schemaSrc, schema.Part)
 	if failed := found.Add(err); failed != nil {
 		return failed
 	}
@@ -410,7 +409,7 @@ func readPages(d Dir, dir, file string, fns template.FuncMap, w words) (pages, [
 		return nil, nil, err
 	}
 	src = bom.Trim(src)
-	ps, err := parsePages(path.Join(d.Name, dir, file), src, fns, w)
+	ps, err := parsePages(d.path(dir, file), src, fns, w)
 	return ps, src, err
 }
 
@@ -419,7 +418,7 @@ func readPages(d Dir, dir, file string, fns template.FuncMap, w words) (pages, [
 // all together.
 func readPartYAML(d Dir, dir string, look bool) ([]taken, string, taken, error) {
 	var marks taken
-	file := path.Join(d.Name, dir, "part.yaml")
+	file := d.path(dir, "part.yaml")
 	m, err := readKeys(d, dir, "part.yaml", "kit_part_yaml")
 	if m == nil || err != nil {
 		return nil, "", marks, err
@@ -456,7 +455,7 @@ func readPartYAML(d Dir, dir string, look bool) ([]taken, string, taken, error) 
 // readKeys reads the YAML file name of the directory dir of d as keys and values: nil when it is missing or empty,
 // refused with the key notMap when it is not a mapping.
 func readKeys(d Dir, dir, name, notMap string) (*yamlpos.Node, error) {
-	file := path.Join(d.Name, dir, name)
+	file := d.path(dir, name)
 	src, ok, err := readFile(d, dir, name)
 	if !ok || err != nil {
 		return nil, err

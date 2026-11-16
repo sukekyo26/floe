@@ -12,6 +12,8 @@ import (
 	"testing"
 	"testing/fstest"
 
+	"floe/internal/dirs"
+	floefiles "floe/internal/files"
 	"floe/internal/i18n"
 	"floe/internal/kit"
 	"floe/internal/store"
@@ -66,10 +68,12 @@ func cmpOr(a, b string) string {
 func newStore(t *testing.T) (*store.Store, string) {
 	t.Helper()
 
-	tmp, err := filepath.EvalSymlinks(t.TempDir())
+	// Real, as the user would give it (no \\?\ on Windows): a root of settings and the store.
+	got, err := floefiles.Real(t.TempDir())
 	if err != nil {
 		t.Fatal(err)
 	}
+	tmp := dirs.Shown(got)
 	root := filepath.Join(tmp, "store")
 	return store.New(root), root
 }
@@ -910,7 +914,9 @@ func TestPrepareLinkFolder(t *testing.T) {
 			t.Errorf("link %q: slug %s, want docs", again, e.Slug)
 		}
 		m := s.ReadMeta("docs")
-		if !m.Folder || m.Path != filepath.Join(proj, "docs") {
+		// meta.json keeps the real path as it is (\\?\ on Windows): compared with Real's, not as a user writes it.
+		docs, err := floefiles.Real(filepath.Join(proj, "docs"))
+		if err != nil || !m.Folder || m.Path != docs {
 			t.Fatalf("meta.json after linking %q = %+v, want the folder", again, m)
 		}
 		if file, ok := s.File("docs", m, "../sibling.html"); ok {
@@ -919,7 +925,7 @@ func TestPrepareLinkFolder(t *testing.T) {
 		if file, ok := s.File("docs", m, ""); ok {
 			t.Errorf("the folder serves %s as its page", file)
 		}
-		if file, ok := s.File("docs", m, "guide/setup.html"); !ok || file != filepath.Join(proj, "docs/guide/setup.html") {
+		if file, ok := s.File("docs", m, "guide/setup.html"); !ok || file != filepath.Join(docs, "guide", "setup.html") {
 			t.Errorf("File(guide/setup.html) = %s, %v", file, ok)
 		}
 	}

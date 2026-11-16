@@ -1,6 +1,7 @@
 package cli
 
 import (
+	"errors"
 	"fmt"
 	"io"
 	"os"
@@ -59,8 +60,12 @@ func (a *app) arg(path string, at place) arg {
 	if path == "" {
 		return arg{name: path, abs: "", err: usererr.New("cli_path_empty", at.name, english.Msg(at.wants))}
 	}
-	abs, ok := dirs.Under(a.env.Dir, path)
-	if !ok {
+	abs, err := dirs.Under(a.env.Dir, path)
+	if errors.Is(err, dirs.ErrDriveRelative) {
+		vol := filepath.VolumeName(path)
+		return arg{name: path, abs: "", err: usererr.New("path_drive_relative", path, vol, vol)}
+	}
+	if err != nil {
 		return arg{name: path, abs: "", err: usererr.New("cli_relative_no_cwd", path)}
 	}
 	return arg{name: path, abs: abs, err: nil}
