@@ -4,10 +4,12 @@ package link
 
 import (
 	"os"
+	"path/filepath"
 	"strings"
 	"testing"
 
 	"floe/internal/files"
+	"floe/internal/testfs"
 )
 
 // The system names three folders of application data: Go's own (Roaming, Local) and LocalLow, which Go does not name.
@@ -70,5 +72,25 @@ func TestExposedDir(t *testing.T) {
 		if got := exposedDir(tt.dir, home); got != tt.want {
 			t.Errorf("exposedDir(%s) = %v, want %v", tt.dir, got, tt.want)
 		}
+	}
+}
+
+// A folder of application data on a share (a roaming folder redirected to a server) is not on this machine's drives
+// and holds no local path: left out, as one not there is, so that links on the drives are not all refused.
+func TestExposesAppDataShare(t *testing.T) { //nolint:paralleltest // it swaps appData, which the other tests read
+	tmp, err := files.Real(t.TempDir())
+	if err != nil {
+		t.Fatal(err)
+	}
+	home := filepath.Join(tmp, "home")
+	if err := os.MkdirAll(filepath.Join(home, "docs"), 0o700); err != nil {
+		t.Fatal(err)
+	}
+	shared, _ := testfs.MapShare(t, t.TempDir())
+	was := appData
+	t.Cleanup(func() { appData = was })
+	appData = func() []appDir { return []appDir{{path: shared, err: nil}} }
+	if err := exposes(filepath.Join(home, "docs", "a.html"), home, false); err != nil {
+		t.Errorf("exposes with a folder of application data on a share = %v, want it allowed", err)
 	}
 }

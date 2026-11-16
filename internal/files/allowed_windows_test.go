@@ -187,6 +187,16 @@ func TestAllowedShare(t *testing.T) {
 	if _, err := fs.ReadFile(files.DirFS(other), "s/a.html"); !errors.Is(err, usererr.ErrNotLocal) {
 		t.Errorf("DirFS of a link to a share = %v, want ErrNotLocal", err)
 	}
+	// MkdirAll follows its last name (os.MkdirAll stats it first): a directory to make that is a link to a share.
+	if err := files.MkdirAll(filepath.Join(other, "s"), 0o700); !errors.Is(err, usererr.ErrNotLocal) {
+		t.Errorf("MkdirAll of a link to a share = %v, want ErrNotLocal", err)
+	}
+	// RealAbove does not climb above what allowed refuses.
+	for _, p := range []string{filepath.Join(shared, "a.html", "x"), filepath.Join(other, "s", "x")} {
+		if got, ok := files.RealAbove(p); ok {
+			t.Errorf("RealAbove(%s) = %q, want false", p, got)
+		}
+	}
 }
 
 // Volumes of no drive letter, \\?\ with a /, and the device of a drive are refused; \\?\X:\…, its root, a lower case
@@ -202,7 +212,7 @@ func TestAllowedVolume(t *testing.T) {
 	for _, p := range []string{
 		guid + `\a.html`, filepath.Join(j, "a.html"), `\\.\` + filepath.Join(dir, "a.html"), `1:\a.html`,
 		"//?/" + filepath.ToSlash(filepath.Join(dir, "a.html")), `\\?/` + filepath.Join(dir, "a.html"),
-		`\\?\` + filepath.VolumeName(dir),
+		`\\?\` + filepath.VolumeName(dir), `\??\` + filepath.Join(dir, "a.html"), `\??\pipe\x`,
 	} {
 		wantNotLocal(t, p)
 	}
