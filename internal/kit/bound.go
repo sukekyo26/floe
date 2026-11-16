@@ -4,7 +4,6 @@ import (
 	"fmt"
 	"html/template"
 	"maps"
-	"path"
 	"slices"
 	"text/template/parse"
 
@@ -97,7 +96,7 @@ func keyedText(fn string, value any, key string) (map[string]any, string, error)
 // boundFuncs given an argument, as an argument after it or a value piped into it, at its line and column: it would
 // be refused at each page it draws (wrong number of args), as text/template counts the arguments only then.
 func boundArgs(page *template.Template, src []byte, dir string) usererr.List {
-	file := path.Join(dir, "part.html")
+	file := under(dir, "part.html")
 	var found usererr.List
 	for _, t := range page.Templates() {
 		if t.Tree == nil {

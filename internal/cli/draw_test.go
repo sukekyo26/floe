@@ -115,7 +115,6 @@ func TestRender(t *testing.T) {
 		t.Errorf("floe render --check stale = %d, %q", code, stderr)
 	}
 	t.Run("out-dir", func(t *testing.T) {
-		testfs.Pending(t, "S315-P2: separators in floe's paths")
 		t.Parallel()
 		out := filepath.Join("pages", "x")
 		if code, _, stderr := run(dir, "render", "--out-dir", out, "a.yaml", "sub/a.yaml"); code != 1 ||

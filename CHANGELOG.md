@@ -8,6 +8,7 @@ adheres to [Semantic Versioning](https://semver.org/).
 
 ### Changed
 
+- Change the refusal of a link that is not its real path, which named Go functions to call: it now asks for the whole path with its links and junctions followed, as the system names it.
 - Change what `install.sh` says when the install directory is not on `PATH`: it shows the command that adds it, to paste as it is, for zsh (`~/.zshrc`), bash on Linux (`~/.bashrc`) and fish (`fish_add_path`), and the line alone for other sh-like shells; it still changes neither `PATH` nor a file. A directory given as a relative path is told and compared by its absolute path, so a directory already on `PATH` is no longer told of.
 
 ## [0.1.1] - 2026-11-16

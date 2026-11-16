@@ -124,6 +124,8 @@ linters:
           msg: "use files.DirFS, which opens a file without blocking on a FIFO"
         - pattern: ^os\.Root\.FS$
           msg: "use files.Root, which opens a file without blocking on a FIFO"
+        - pattern: ^filepath\.EvalSymlinks$
+          msg: "use files.Real, which follows junctions on Windows and names the path as the system does"
       analyze-types: true
       exclude-godoc-examples: true
     depguard:
@@ -233,6 +235,11 @@ linters:
         linters:
           - lll
           - dupl
+      # files.Real is the one place that follows symlinks (by EvalSymlinks on Unix).
+      - path: internal/files/files_unix\.go
+        linters:
+          - forbidigo
+        text: EvalSymlinks
       # Tests get a relaxed profile but still benefit from bug catchers.
       - path: _test\.go
         linters:

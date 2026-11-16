@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"os"
 	"os/exec"
+	"path/filepath"
 	"strings"
 	"syscall"
 	"time"
@@ -46,4 +47,71 @@ func atimeOf(path string) (time.Time, error) {
 		return time.Time{}, errNoAccessTime
 	}
 	return time.Unix(0, a.LastAccessTime.Nanoseconds()), nil
+}
+
+// aclDeny denies this user, as System32's whoami names it (DOMAIN\user; Git's whoami names the user alone), the
+// listing and reading of dir with icacls, and returns what allows it again.
+func aclDeny(dir string) (func() error, error) {
+	//nolint:gosec,noctx // G204: System32's own; it returns at once
+	who, err := exec.Command(filepath.Join(os.Getenv("SystemRoot"), "System32", "whoami.exe")).Output()
+	user := strings.TrimSpace(string(who))
+	if err != nil || user == "" {
+		return nil, fmt.Errorf("whoami: %w %q", err, user)
+	}
+	//nolint:gosec,noctx // G204: the test's directory; icacls returns at once
+	if out, err := exec.Command("icacls", dir, "/deny", user+":(RX)").CombinedOutput(); err != nil {
+		return nil, fmt.Errorf("icacls %s /deny: %w: %s", dir, err, strings.TrimSpace(string(out)))
+	}
+	return func() error {
+		//nolint:gosec,noctx // G204: as above
+		if out, err := exec.Command("icacls", dir, "/remove:d", user).CombinedOutput(); err != nil {
+			return fmt.Errorf("%w: %s; run  icacls \"%s\" /remove:d \"%s\"", err, strings.TrimSpace(string(out)), dir, user)
+		}
+		return nil
+	}, nil
+}
+
+// makeDrive makes a drive of dir with subst, from Z down to M, and returns it and what removes it; "" when no letter is
+// free.
+func makeDrive(dir string) (string, func() error, error) {
+	mask, err := windows.GetLogicalDrives()
+	if err != nil {
+		return "", nil, fmt.Errorf("GetLogicalDrives: %w", err)
+	}
+	for l := 'Z'; l >= 'M'; l-- {
+		if mask&(1<<uint(l-'A')) != 0 {
+			continue
+		}
+		drive := string(l) + ":"
+		//nolint:gosec,noctx // G204: the test's directory; subst returns at once
+		if out, err := exec.Command("subst", drive, dir).CombinedOutput(); err != nil {
+			return "", nil, fmt.Errorf("subst %s %s: %w: %s", drive, dir, err, strings.TrimSpace(string(out)))
+		}
+		return drive, func() error {
+			//nolint:gosec,noctx // G204: as above
+			if out, err := exec.Command("subst", drive, "/d").CombinedOutput(); err != nil {
+				return fmt.Errorf("%w: %s; run  subst %s /d", err, strings.TrimSpace(string(out)), drive)
+			}
+			return nil
+		}, nil
+	}
+	return "", nil, nil
+}
+
+func shortNameOf(path string) (string, error) {
+	p, err := windows.UTF16PtrFromString(path)
+	if err != nil {
+		return "", err //nolint:wrapcheck // the test's failure
+	}
+	buf := make([]uint16, windows.MAX_PATH)
+	for {
+		n, err := windows.GetShortPathName(p, &buf[0], uint32(len(buf))) //nolint:gosec // G115: a buffer's length
+		if err != nil {
+			return "", err //nolint:wrapcheck // as above
+		}
+		if int(n) < len(buf) {
+			return windows.UTF16ToString(buf[:n]), nil
+		}
+		buf = make([]uint16, n)
+	}
 }

@@ -81,7 +81,7 @@ func (k *Kit) readThemes(d Dir) error {
 // readTheme reads the theme of d named name, its directory.
 func (k *Kit) readTheme(d Dir, name string) (*Theme, error) {
 	t := &Theme{
-		name: name, dir: path.Join(d.Name, name), about: "", base: nil, markdown: nil, palette: nil,
+		name: name, dir: d.path(name), about: "", base: nil, markdown: nil, palette: nil,
 		partsCSS: map[string][]byte{}, unread: nil, files: nil,
 	}
 	d = d.recording()
@@ -127,7 +127,7 @@ const themeYAML = "theme.yaml"
 
 // readThemeYAML reads the theme.yaml of the theme dir of d: its description, "" without one.
 func readThemeYAML(d Dir, dir string) (string, error) {
-	file := path.Join(d.Name, dir, themeYAML)
+	file := d.path(dir, themeYAML)
 	m, err := readKeys(d, dir, themeYAML, "kit_theme_yaml")
 	if m == nil || err != nil {
 		return "", err
@@ -210,7 +210,7 @@ func (t *Template) Example() []byte { return bytes.Clone(t.example) }
 func (t *Template) Unread() []string { return slices.Clone(t.unread) }
 
 // File returns the file name of t as its mistakes name it.
-func (t *Template) File(name string) string { return path.Join(t.dir, name) }
+func (t *Template) File(name string) string { return under(t.dir, name) }
 
 // PageSource returns the page.html of t as read, nil without one: where a mistake of drawing it is.
 func (t *Template) PageSource() []byte { return bytes.Clone(t.pageSrc) }
@@ -251,7 +251,7 @@ var templateFiles = []string{
 func (k *Kit) readTemplate(d Dir, name string, partsRead bool) error {
 	d = d.recording()
 	t := &Template{
-		name: name, dir: path.Join(d.Name, name), schema: nil, css: nil, checks: nil, computed: nil, words: nil, pages: nil,
+		name: name, dir: d.path(name), schema: nil, css: nil, checks: nil, computed: nil, words: nil, pages: nil,
 		pageSrc: nil, schemaSrc: nil, example: nil, hasSchema: false, unread: nil, assets: nil, files: nil,
 	}
 	var found usererr.List
@@ -316,7 +316,7 @@ func (k *Kit) compileTemplate(d Dir, t *Template) error {
 		return err
 	}
 	names := slices.Sorted(maps.Keys(c.Follow(c.Root).Props))
-	t.computed, err = rules.ReadComputed(path.Join(t.dir, "computed.yaml"), computed, names)
+	t.computed, err = rules.ReadComputed(under(t.dir, "computed.yaml"), computed, names)
 	return err //nolint:wrapcheck // its mistakes, or floe's failure
 }
 
@@ -347,7 +347,7 @@ func readAssets(d Dir, name string) (map[string]func() (template.URL, error), er
 		return nil, err
 	}
 	a := assetsOf{
-		files: sub{FS: d.FS, dir: path.Join(name, "assets")}, dir: path.Join(d.Name, name, "assets"),
+		files: sub{FS: d.FS, dir: path.Join(name, "assets")}, dir: d.path(name, "assets"),
 		reads: map[string]func() (template.URL, error){}, found: nil,
 	}
 	if err := a.walk("."); err != nil {
@@ -407,7 +407,7 @@ func (a *assetsOf) check(p string) error {
 func (a *assetsOf) placed(p string, err error) error {
 	var e *usererr.Error
 	if errors.As(err, &e) && e.File() == "" {
-		return e.PlacedAt(path.Join(a.dir, p), 0, 0)
+		return e.PlacedAt(under(a.dir, p), 0, 0)
 	}
 	return err
 }

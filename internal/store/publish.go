@@ -35,7 +35,7 @@ func linkName(file, cwd string) string {
 	if !indexRe.MatchString(filepath.Base(file)) {
 		return files.SlugFromFile(file)
 	}
-	if abs, ok := dirs.Under(cwd, file); ok {
+	if abs, err := dirs.Under(cwd, file); err == nil {
 		file = abs
 	}
 	return files.Slug(filepath.Base(filepath.Dir(filepath.Clean(file))))
@@ -503,11 +503,14 @@ func readLink(file string, opts Options, cwd, home string) (string, []byte, bool
 		return "", nil, false, usererr.New("store_link_empty")
 	}
 	// The API gives no cwd: a relative link from it is the sender's mistake.
-	abs, ok := dirs.Under(cwd, file)
-	if !ok {
+	abs, err := dirs.Under(cwd, file)
+	if errors.Is(err, dirs.ErrDriveRelative) {
+		return "", nil, false, usererr.New("path_drive_relative", file, filepath.VolumeName(file), filepath.VolumeName(file))
+	}
+	if err != nil {
 		return "", nil, false, usererr.New("store_link_relative", file)
 	}
-	path, err := filepath.EvalSymlinks(abs)
+	path, err := files.Real(abs)
 	if err != nil {
 		return "", nil, false, usererr.CannotRead(file, err) //nolint:wrapcheck // the system's words, at the file
 	}
