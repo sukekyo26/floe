@@ -266,8 +266,12 @@ func (s *sample) run(t *testing.T, args ...string) int {
 var placed = regexp.MustCompile(`\$(?:SAMPLE|TMP)[^:\s"']*`)
 
 // slashed is printed with the separators of each path under $SAMPLE and $TMP written /, as the golden files hold
-// them: floe prints the system's (\ on Windows), and a path the test made is the same wherever it runs.
+// them: floe prints the system's (\ on Windows), and a path the test made is the same wherever it runs. Where the
+// separator is / it is printed as it is, so that a \ floe printed there is not mended into a match.
 func slashed(printed string) string {
+	if filepath.Separator == '/' {
+		return printed
+	}
 	return placed.ReplaceAllStringFunc(printed, func(p string) string { return strings.ReplaceAll(p, `\`, "/") })
 }
 
