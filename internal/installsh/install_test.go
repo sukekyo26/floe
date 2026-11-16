@@ -162,6 +162,7 @@ func TestInstall(t *testing.T) {
 // fish 4.2.1, for the directories below.
 func TestPathNote(t *testing.T) {
 	t.Parallel()
+	testfs.UnixOnly(t, "install.sh installs floe on Unix")
 
 	script, err := os.ReadFile("../../install.sh")
 	if err != nil {
