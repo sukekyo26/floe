@@ -584,14 +584,16 @@ func testInstallPS1(t *testing.T, shell string) {
 		r := goodRelease(t)
 		base := t.TempDir()
 		profile := `\\localhost\c$\floe-install-test-profile`
+		at := `C:\floe-install-test-profile`
+		// Also what an install that only made the folder would leave.
+		t.Cleanup(func() { _ = os.RemoveAll(at) }) //nolint:errcheck // a folder of the test's own
 		res := runPS(t, shell, base, psCase{Proxy: site(t, r), env: map[string]string{"FLOE_INSTALL_DIR": "", "USERPROFILE": profile}})
 		fails(t, res, filepath.Join(base, "profile", ".local", "bin"), "(got "+profile+`\.local\bin)`, "FLOE_INSTALL_DIR")
 		if r.hits.Load() != 0 {
 			t.Errorf("%d requests", r.hits.Load())
 		}
-		if at := `C:\floe-install-test-profile`; installed(t, filepath.Join(at, ".local", "bin")) != nil {
+		if installed(t, filepath.Join(at, ".local", "bin")) != nil {
 			t.Errorf("floe.exe was put under %s", at)
-			_ = os.RemoveAll(at) //nolint:errcheck // what the failure left
 		}
 	})
 	t.Run("no USERPROFILE", func(t *testing.T) {
