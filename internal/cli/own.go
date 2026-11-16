@@ -81,14 +81,11 @@ func (a *app) dataDir(key string, b base, sub string) (dataPlace, error) {
 		}
 		return dataPlace{dir: setting, key: key, set: true, from: "", unusable: nil}, nil
 	}
-	p := dataPlace{dir: "", key: key, set: false, from: b.key, unusable: nil}
-	if b.underHome != "" {
-		p.from = link.HomeKey
-	}
+	p := dataPlace{dir: "", key: key, set: false, from: link.HomeKey, unusable: nil}
 	switch base, h := a.getenv(b.key), a.getenv(link.HomeKey); {
 	case b.key != "" && filepath.IsAbs(base):
 		p.dir = filepath.Join(base, sub)
-	case b.underHome != "" && filepath.IsAbs(h):
+	case filepath.IsAbs(h):
 		p.dir = filepath.Join(h, b.underHome, sub)
 	}
 	if p.dir == "" {

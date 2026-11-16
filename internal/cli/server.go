@@ -31,10 +31,10 @@ var decimalRe = regexp.MustCompile(`^[0-9]+$`)
 
 // settingKeys are the environment variables the server's settings come from: a server a command starts takes
 // those the command read, so that it means the same directories.
-var settingKeys = slices.Compact([]string{
+var settingKeys = []string{
 	link.HomeKey, dataBase.key, configBase.key, "FLOE_DIR", "FLOE_PORT", "FLOE_PARTS_DIR", "FLOE_THEMES_DIR",
 	"FLOE_TEMPLATES_DIR", "FLOE_ICONS_DIR",
-})
+}
 
 // storeDir is the directory of the pages: FLOE_DIR, else storeSub under the base of the data (dataDir).
 func (a *app) storeDir() (dataPlace, error) {

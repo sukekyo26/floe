@@ -96,8 +96,8 @@ func Open(path string) (*os.File, fs.FileInfo, error) {
 }
 
 // refuseDir refuses what was opened to read as name when it is a directory, which Windows opens and then reads as
-// "Incorrect function.", with what Unix says reading one (EISDIR). The directories fs.ReadDir and fs.WalkDir open go
-// through openRead instead.
+// "Incorrect function.", with what Unix says reading one (EISDIR). The directories fs.ReadDir and fs.WalkDir open
+// do not come here: Root's go through openRead, DirFS's through openPath (dirFS.Open).
 func refuseDir(name string) func(*os.File, fs.FileInfo, error) (*os.File, fs.FileInfo, error) {
 	return func(f *os.File, info fs.FileInfo, err error) (*os.File, fs.FileInfo, error) {
 		if err == nil && info.IsDir() {
