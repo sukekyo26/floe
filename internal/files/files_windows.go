@@ -66,8 +66,10 @@ type fileIDInfo struct {
 // set back would hide, the ID a file replaced by a rename. It tells whether the file is a reparse point, and false
 // for none there.
 // LIMIT: the file is opened (for its attributes alone) to be marked, every second for one's own directories; an
-// os.Rename over it at that moment (an editor's save) fails, though it is opened sharing delete. Only the renamer
-// can mend that, by renaming as os.Root does (POSIX semantics); an editor's save is out of floe's hands.
+// os.Rename (MoveFileEx) over it at that moment (an editor's save) fails, though it is opened sharing delete, as it
+// does over an os.Stat or os.Lstat (looked at without a pause, 495 of 2000 such saves failed by Mark, 525 by Stat).
+// GetFileInformationByName stops none but is in Windows 11 24H2 on only, and allowed's Lstat stops as many. Only the
+// renamer can mend it, by renaming with POSIX semantics (ReplaceFile and os.Root do).
 func stampAt(path checked, follow bool) (part string, link, ok bool) {
 	flags := uint32(windows.FILE_FLAG_OPEN_REPARSE_POINT)
 	if follow {
@@ -87,6 +89,33 @@ var noFields fields //nolint:gochecknoglobals // a zero value, never written
 func infoEx(h windows.Handle, class uint32, p unsafe.Pointer, n uintptr) error {
 	//nolint:wrapcheck,gosec // the system's; G115: a struct's size
 	return windows.GetFileInformationByHandleEx(h, class, (*byte)(p), uint32(n))
+}
+
+// openShared opens path to read alone, sharing delete with others, so that a file floe reads may be renamed over and
+// its directory removed meanwhile (POSIX semantics, as on Unix); the system's error as os.OpenFile tells it.
+func openShared(path checked) (*os.File, error) {
+	p, err := windows.UTF16PtrFromString(path.s)
+	if err != nil {
+		return nil, &fs.PathError{Op: "open", Path: path.s, Err: err}
+	}
+	h, err := windows.CreateFile(p, windows.GENERIC_READ,
+		windows.FILE_SHARE_READ|windows.FILE_SHARE_WRITE|windows.FILE_SHARE_DELETE, nil, windows.OPEN_EXISTING,
+		windows.FILE_FLAG_BACKUP_SEMANTICS, 0)
+	if err != nil {
+		return nil, &fs.PathError{Op: "open", Path: path.s, Err: err}
+	}
+	return os.NewFile(uintptr(h), path.s), nil
+}
+
+// renameIn renames from to to, two names in dir, with POSIX semantics (os.Root's): over a file another holds open
+// sharing delete, where os.Rename (MoveFileEx) is denied.
+func renameIn(dir checked, from, to string) error {
+	root, err := openRootAt(dir)
+	if err != nil {
+		return err
+	}
+	defer root.Close()           //nolint:errcheck // only renamed in
+	return root.Rename(from, to) //nolint:wrapcheck // the system's, for the caller to tell
 }
 
 // openAttrs opens path for its attributes alone, all shared, a directory too, with the extra flags.

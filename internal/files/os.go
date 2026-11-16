@@ -1,8 +1,11 @@
 package files
 
 import (
+	"errors"
 	"io/fs"
 	"os"
+	"path/filepath"
+	"strings"
 )
 
 // The system's calls on a path that the rest of floe makes through files alone (forbidigo refuses the os ones out of
@@ -79,6 +82,79 @@ func OpenLock(path string) (*os.File, error) {
 	return f, asWritten(err, path)
 }
 
+// Remove removes the file or empty directory at path, as os.Remove does: a link itself, not where it leads.
+func Remove(path string) error {
+	p, err := allowed(path, false)
+	if err != nil {
+		return told(err, "remove", path, false)
+	}
+	return asWritten(removeAt(p), path)
+}
+
+// RemoveAll removes path and what it holds, as os.RemoveAll does: a link itself, not where it leads, and nil when
+// there is nothing.
+func RemoveAll(path string) error {
+	p, err := allowed(path, false)
+	if errors.Is(err, errDangling) || errors.Is(err, fs.ErrNotExist) {
+		// Nothing there to remove (a link to nothing, or no drive, on the way), as os.RemoveAll says of none.
+		return nil
+	}
+	if err != nil {
+		return told(err, "unlinkat", path, false)
+	}
+	return asWritten(removeAllAt(p), path)
+}
+
+// Rename renames from to to, two names in the directory dir (each a name alone, no separator), replacing what is at
+// to as os.Rename does: a link itself is moved, not where it leads. A file another holds open sharing delete (floe's
+// reads) is replaced, on Windows too (renameIn).
+// LIMIT: on Windows a directory with a file open in it, however opened, cannot be renamed (Access is denied): told as
+// the system's error and not tried again, as what holds it is anyone's (Q10). Rename no directory that is read while
+// it runs if that comes to matter.
+func Rename(dir, from, to string) error {
+	at := func(err error) error {
+		var pe *fs.PathError
+		var le *os.LinkError
+		switch {
+		case errors.As(err, &le):
+			err = le.Err
+		case errors.As(err, &pe):
+			err = pe.Err
+		}
+		return &os.LinkError{Op: "rename", Old: filepath.Join(dir, from), New: filepath.Join(dir, to), Err: err}
+	}
+	if !oneName(from) || !oneName(to) {
+		return at(fs.ErrInvalid)
+	}
+	d, err := allowed(dir, true)
+	if err != nil {
+		return at(told(err, "rename", dir, false))
+	}
+	if err := renameIn(d, from, to); err != nil {
+		return at(err)
+	}
+	return nil
+}
+
+// oneName reports whether name is one name of a directory's: not empty, no separator, no . nor .., local.
+func oneName(name string) bool {
+	return filepath.IsLocal(name) && name != "." && !strings.ContainsAny(name, `/\`)
+}
+
+// MkdirTemp makes a new directory in dir, named pattern with a random string put in place of its last *, as
+// os.MkdirTemp does; not where a link to nothing leads (ELOOP). It returns dir as given joined with the name made.
+func MkdirTemp(dir, pattern string) (string, error) {
+	d, err := allowed(dir, true)
+	if err != nil {
+		return "", told(err, "mkdirtemp", dir, true)
+	}
+	made, err := mkdirTempAt(d, pattern)
+	if err != nil {
+		return "", asWritten(err, dir)
+	}
+	return filepath.Join(dir, filepath.Base(made)), nil
+}
+
 // The wrappers below are files' one way to the system's calls on a path: each takes a checked alone.
 
 func statAt(p checked) (fs.FileInfo, error)  { return os.Stat(p.s) }  //nolint:wrapcheck // told by the caller
@@ -95,5 +171,9 @@ func openAt(p checked, flag int, perm fs.FileMode) (*os.File, error) {
 	return os.OpenFile(p.s, flag, perm) //nolint:wrapcheck,gosec // as above; G304: a path allowed looked at
 }
 
-func renameAt(from, to checked) error { return os.Rename(from.s, to.s) } //nolint:wrapcheck // as above
-func removeAt(p checked) error        { return os.Remove(p.s) }          //nolint:wrapcheck // as above
+func removeAt(p checked) error    { return os.Remove(p.s) }    //nolint:wrapcheck // as above
+func removeAllAt(p checked) error { return os.RemoveAll(p.s) } //nolint:wrapcheck // as above
+
+func mkdirTempAt(dir checked, pattern string) (string, error) {
+	return os.MkdirTemp(dir.s, pattern) //nolint:wrapcheck // as above
+}

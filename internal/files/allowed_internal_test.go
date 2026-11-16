@@ -27,11 +27,12 @@ var makers = []string{ //nolint:gochecknoglobals // a test's table
 // callers are where the system is called on a path in files: the wrappers that take a checked, allowed's walk, and
 // the files of each system, whose functions take a checked (osPaired).
 var callers = []string{ //nolint:gochecknoglobals // a test's table
-	"statAt", "lstatAt", "readDirAt", "openRootAt", "mkdirAllAt", "mkdirAt", "openAt", "renameAt", "removeAt", "next",
+	"statAt", "lstatAt", "readDirAt", "openRootAt", "mkdirAllAt", "mkdirAt", "openAt", "removeAt", "removeAllAt",
+	"mkdirTempAt", "next",
 }
 
 // osPaired are the functions of the files of each system that call the system on a path: each takes a checked.
-var osPaired = []string{"stampAt", "statOf", "openAttrs", "realOf", "longNameOf"} //nolint:gochecknoglobals // as above
+var osPaired = []string{"stampAt", "statOf", "openAttrs", "realOf", "longNameOf", "openShared", "renameIn"} //nolint:gochecknoglobals // as above
 
 // pathCalls are the calls on a path that the system makes.
 var pathCalls = map[string]bool{ //nolint:gochecknoglobals // as above

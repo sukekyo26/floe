@@ -53,8 +53,9 @@ var errDangling = errors.New("a link to nothing")
 // do not look.
 // LIMIT: a drive substed to a directory that holds a link, and a drive letter DefineDosDevice made, are taken as
 // the user's: allowed walks from the drive letter on.
-// LIMIT: each call Lstats every name from the root (a read 12 deep: 0.25ms, was 0.03ms). If the store's list turns
-// slow, open the store once as an os.Root and read in it (with P5, which moves its rename and RemoveAll there).
+// LIMIT: each call Lstats every name from the root (a read 12 deep: 0.25ms, was 0.03ms), so the watch of one's own
+// directories (Mark) and each Read pay it; the store's list reads under one os.Root instead. Do the same where a
+// read of many files turns slow.
 func allowed(path string, last bool) (checked, error) {
 	if !checksPaths {
 		return checked{s: path}, nil
