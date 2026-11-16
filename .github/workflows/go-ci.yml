@@ -134,6 +134,8 @@ jobs:
   # is marked one by one with internal/testfs's UnixOnly or Pending.
   windows:
     name: Test (windows)
+    # The tests' temporary directories are kept out of AppData: floe refuses to link what is in a folder of application
+    # data (S315-P3), and %TEMP% is one (AppData\Local\Temp).
     needs: changes
     if: ${{ !cancelled() && needs.changes.outputs.skip != 'true' }}
     runs-on: windows-latest
@@ -149,7 +151,12 @@ jobs:
       - run: go vet ./...
       - name: Test
         shell: bash
-        run: go test -count=1 -timeout 15m $(go list ./... | grep -v /internal/browsertest$)
+        env:
+          TMP: 'C:\floe-tmp'
+          TEMP: 'C:\floe-tmp'
+        run: |
+          mkdir -p /c/floe-tmp
+          go test -count=1 -timeout 15m $(go list ./... | grep -v /internal/browsertest$)
 
   browser:
     name: Browser (${{ matrix.part }})
