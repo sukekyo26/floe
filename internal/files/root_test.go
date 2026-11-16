@@ -98,7 +98,7 @@ func TestFSLinks(t *testing.T) {
 	t.Run("link/..", func(t *testing.T) {
 		t.Parallel()
 		// Win32 folds link\.. by its letters before it looks at the link, for os.ReadDir too.
-		testfs.UnixOnly(t, "link/.. is the parent of the link's target")
+		testfs.UnixOnly(t, "Windows folds link/.. as written, before the link")
 		// By its letters: filepath.Join would fold link/.. itself.
 		if b, err := fs.ReadFile(files.DirFS(filepath.Join(tmp, "home", "link")+"/.."), "x"); err != nil || string(b) != "real" {
 			t.Errorf("DirFS(home/link/..) read x = %q, %v; want real, as os.ReadDir reads it", b, err)
