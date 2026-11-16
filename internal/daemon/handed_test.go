@@ -245,24 +245,31 @@ func TestCannotListenWhy(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	defer held.Close()
+	t.Cleanup(func() { _ = held.Close() })
 	_, inUse := daemon.Listen(portOf(t, held))
+	if inUse == nil {
+		t.Fatal("a second Listen on a held port was not refused")
+	}
 	for _, c := range []struct {
-		err error
-		key string
+		name string
+		err  error
+		key  string
 	}{
-		{inUse, "daemon_port_in_use"},
-		{deniedListen(t), "daemon_cannot_listen"},
-		{syscall.EMFILE, ""},
-		{errors.New("no loopback"), ""},
+		{"in use", inUse, "daemon_port_in_use"},
+		{"refused", deniedListen(t), "daemon_cannot_listen"},
+		{"too many files", syscall.EMFILE, ""},
+		{"no loopback", errors.New("no loopback"), ""},
 	} {
-		if c.err == nil {
-			continue
-		}
-		err := daemon.CannotListen(7325, c.err)
-		var ue *usererr.Error
-		if ok := errors.As(err, &ue); ok != (c.key != "") || ok && ue.Key != c.key {
-			t.Errorf("CannotListen(%v) = %#v, want %q", c.err, err, c.key)
-		}
+		t.Run(c.name, func(t *testing.T) {
+			t.Parallel()
+			if c.err == nil {
+				t.Skip("no port is refused here: port 1 opens, to root or with no privileged ports")
+			}
+			err := daemon.CannotListen(7325, c.err)
+			var ue *usererr.Error
+			if ok := errors.As(err, &ue); ok != (c.key != "") || ok && ue.Key != c.key {
+				t.Errorf("CannotListen(%v) = %#v, want %q", c.err, err, c.key)
+			}
+		})
 	}
 }

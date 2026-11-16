@@ -3,7 +3,9 @@
 package daemon_test
 
 import (
+	"errors"
 	"os"
+	"syscall"
 	"testing"
 
 	"golang.org/x/sys/unix"
@@ -22,11 +24,15 @@ func awayNote() string {
 }
 
 // deniedListen is the system's error of a port refused: port 1, privileged; nil where it is not refused (root).
+// Any other error is nil too: TestCannotListen may hold port 1 where it opens, and that is no refusal.
 func deniedListen(t *testing.T) error {
 	t.Helper()
 	ln, err := daemon.Listen(1)
 	if err == nil {
 		_ = ln.Close()
+	}
+	if !errors.Is(err, syscall.EACCES) {
+		return nil
 	}
 	return err
 }
