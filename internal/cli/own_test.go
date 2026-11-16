@@ -7,10 +7,10 @@ import (
 	"path/filepath"
 	"strconv"
 	"strings"
-	"syscall"
 	"testing"
 
 	"floe/internal/cli"
+	"floe/internal/testfs"
 	"floe/internal/timebox"
 )
 
@@ -419,9 +419,7 @@ func TestAssetsFIFO(t *testing.T) {
 		"templates/memo/example.yaml": "lang: en\ntemplate: memo\n",
 	})
 	assets := filepath.Join(dir, "templates/memo/assets")
-	if err := syscall.Mkfifo(assets, 0o600); err != nil {
-		t.Fatal(err)
-	}
+	testfs.Mkfifo(t, assets)
 	env := map[string]string{"FLOE_TEMPLATES_DIR": filepath.Join(dir, "templates")}
 	timebox.Within(t, "floe template check", func() {
 		if code, _, stderr := runEnv(dir, env, "template", "check"); code != 1 || !strings.HasPrefix(stderr, assets+": this is neither a regular file nor a directory") {
@@ -462,9 +460,7 @@ func TestOwnNotFiles(t *testing.T) {
 	t.Parallel()
 
 	fifo := write(t, map[string]string{"mine/schema.json": ownSchema, "mine/part.html": ownPage})
-	if err := syscall.Mkfifo(filepath.Join(fifo, "mine", "part.css"), 0o600); err != nil {
-		t.Fatal(err)
-	}
+	testfs.Mkfifo(t, filepath.Join(fifo, "mine", "part.css"))
 	zero := write(t, map[string]string{"mine/schema.json": ownSchema, "mine/part.html": ownPage})
 	link(t, "/dev/zero", filepath.Join(zero, "mine", "part.css"))
 	const notFile = ": this is neither a regular file nor a directory (a FIFO, a device or the like), which floe may never finish reading: put a regular file here\n"

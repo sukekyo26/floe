@@ -14,13 +14,12 @@ import (
 	"sync"
 	"testing"
 
-	"golang.org/x/sys/unix"
-
 	"floe/internal/files"
 	"floe/internal/kit"
 	"floe/internal/link"
 	"floe/internal/server"
 	"floe/internal/store"
+	"floe/internal/testfs"
 )
 
 const (
@@ -416,16 +415,12 @@ func TestLinkedData(t *testing.T) {
 	want(t, e.do(t, http.MethodGet, "/a/h/s.css", ""), http.StatusOK, "p{}")
 	want(t, e.do(t, http.MethodGet, "/a/h/nope.css", ""), http.StatusNotFound, "not found")
 	// What is not a regular file is not served, so that a FIFO does not block the server.
-	if err := unix.Mkfifo(filepath.Join(e.home, "proj", "f.css"), 0o600); err != nil {
-		t.Fatal(err)
-	}
+	testfs.Mkfifo(t, filepath.Join(e.home, "proj", "f.css"))
 	want(t, e.do(t, http.MethodGet, "/a/h/f.css", ""), http.StatusNotFound, "not found")
 	if err := os.Remove(data); err != nil {
 		t.Fatal(err)
 	}
-	if err := unix.Mkfifo(data, 0o600); err != nil {
-		t.Fatal(err)
-	}
+	testfs.Mkfifo(t, data)
 	want(t, e.do(t, http.MethodGet, "/api/pages/d/download", ""), http.StatusNotFound, "not found")
 	plain := e.do(t, http.MethodGet, "/api/pages/h/download", "")
 	if plain.Body.String() != "<title>h</title><p>x</p>" {

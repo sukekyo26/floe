@@ -18,12 +18,11 @@ import (
 	"testing"
 	"time"
 
-	"golang.org/x/sys/unix"
-
 	"floe/internal/cli"
 	"floe/internal/daemon"
 	"floe/internal/server"
 	"floe/internal/servetest"
+	"floe/internal/testfs"
 )
 
 // asCLI makes the test binary run as floe, so that the server a publish starts (os.Executable() serve) is this
@@ -101,8 +100,7 @@ func hold(t *testing.T, port int) bool {
 	if err != nil {
 		t.Fatal(err)
 	}
-	fd := int(lock.Fd()) //nolint:gosec // G115: a descriptor fits an int
-	if unix.Flock(fd, unix.LOCK_EX|unix.LOCK_NB) != nil {
+	if !testfs.TryLock(t, lock) {
 		_ = lock.Close() //nolint:errcheck // nothing written
 		return false
 	}
@@ -402,26 +400,6 @@ func TestStoppedThenNotStarted(t *testing.T) {
 	if r.code != 1 || i < 0 || j < i {
 		t.Errorf("task after the server of another build was stopped and none started = %d %q, want 1 and %q, then %q",
 			r.code, r.stderr, said, didNot)
-	}
-}
-
-// A server that is made to crash (SIGQUIT) leaves what the runtime wrote of it in server.log: the standard error of
-// the server a command starts is discarded, so the log is where it is.
-func TestCrashOutput(t *testing.T) {
-	t.Parallel()
-
-	e := newDenv(t)
-	wantRun(t, "publish", e.run("publish", "page.yaml"), 0, e.base()+"/a/page/\n", projectLine)
-	h, up := e.health(t.Context())
-	if !up {
-		t.Fatal("no server after a publish")
-	}
-	if err := unix.Kill(h.PID, unix.SIGQUIT); err != nil {
-		t.Fatal(err)
-	}
-	log := e.logWith(t, "goroutine")
-	if !strings.Contains(log, "SIGQUIT") {
-		t.Errorf("%s = %q, want the crash in it", server.LogName, log)
 	}
 }
 

@@ -12,8 +12,7 @@ import (
 	"testing"
 	"time"
 
-	"golang.org/x/sys/unix"
-
+	floefiles "floe/internal/files" // store_test has a func files
 	"floe/internal/store"
 )
 
@@ -379,10 +378,12 @@ func holdLock(t *testing.T, root string) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	t.Cleanup(func() { _ = f.Close() })
-	if err := unix.Flock(int(f.Fd()), unix.LOCK_EX); err != nil {
+	unlock, err := floefiles.Lock(f)
+	if err != nil {
+		_ = f.Close()
 		t.Fatal(err)
 	}
+	t.Cleanup(unlock)
 }
 
 // A mark is kept only when it is of a version of the page after the one taken as read, and takes no lock when it is

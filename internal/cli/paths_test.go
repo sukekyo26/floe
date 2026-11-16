@@ -3,8 +3,9 @@ package cli_test
 import (
 	"os"
 	"path/filepath"
-	"syscall"
 	"testing"
+
+	"floe/internal/testfs"
 )
 
 const notFile = ": this is neither a regular file nor a directory (a FIFO, a device or the like), which floe may never finish reading: put a regular file here\n"
@@ -94,9 +95,7 @@ func TestFIFOsRefused(t *testing.T) {
 
 	dir := write(t, map[string]string{"a.yaml": good, "b.yaml": good})
 	for _, name := range []string{"a.html", "f.yaml", "z.zip"} {
-		if err := syscall.Mkfifo(filepath.Join(dir, name), 0o600); err != nil {
-			t.Fatal(err)
-		}
+		testfs.Mkfifo(t, filepath.Join(dir, name))
 	}
 	env := map[string]string{"FLOE_ICONS_DIR": filepath.Join(dir, "icons")}
 	for _, tt := range []struct {

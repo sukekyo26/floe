@@ -5,11 +5,11 @@ import (
 	"io/fs"
 	"os"
 	"path/filepath"
-	"syscall"
 	"testing"
 
 	"floe/internal/files"
 	"floe/internal/kit"
+	"floe/internal/testfs"
 	"floe/internal/timebox"
 	"floe/internal/usererr"
 )
@@ -25,7 +25,7 @@ func (f fifoAfterStat) Stat(name string) (fs.FileInfo, error) {
 	if rmErr := os.Remove(f.path); rmErr != nil {
 		return nil, rmErr //nolint:wrapcheck // the test's
 	}
-	if mkErr := syscall.Mkfifo(f.path, 0o600); mkErr != nil {
+	if mkErr := testfs.MakeFIFO(f.path); mkErr != nil {
 		return nil, mkErr //nolint:wrapcheck // the test's
 	}
 	return fi, err //nolint:wrapcheck // as the FS says

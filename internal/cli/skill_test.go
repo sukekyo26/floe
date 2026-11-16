@@ -4,9 +4,10 @@ import (
 	"os"
 	"path/filepath"
 	"strings"
-	"syscall"
 	"testing"
 	"time"
+
+	"floe/internal/testfs"
 )
 
 // skillBody is the start of floe's skill, which every write puts.
@@ -323,7 +324,8 @@ func fifoAt(rel string) func(t *testing.T, home string) map[string]string {
 	return func(t *testing.T, home string) map[string]string {
 		t.Helper()
 		at := filepath.Join(home, rel)
-		mustDo(t, os.MkdirAll(filepath.Dir(at), 0o700), syscall.Mkfifo(at, 0o600))
+		mustDo(t, os.MkdirAll(filepath.Dir(at), 0o700))
+		testfs.Mkfifo(t, at)
 		return nil
 	}
 }

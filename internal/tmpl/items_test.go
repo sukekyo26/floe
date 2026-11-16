@@ -7,11 +7,11 @@ import (
 	"slices"
 	"strconv"
 	"strings"
-	"syscall"
 	"testing"
 
 	"floe/internal/files"
 	"floe/internal/kit"
+	"floe/internal/testfs"
 	"floe/internal/tmpl"
 	"floe/internal/usererr"
 )
@@ -297,9 +297,7 @@ func TestImageItems(t *testing.T) {
 	if err := os.Mkdir(filepath.Join(dir, "dir.png"), 0o755); err != nil {
 		t.Fatal(err)
 	}
-	if err := syscall.Mkfifo(filepath.Join(dir, "fifo.png"), 0o600); err != nil {
-		t.Fatal(err)
-	}
+	testfs.Mkfifo(t, filepath.Join(dir, "fifo.png"))
 	k := ownKit(t, nil, mine(htmlPage(`{{range .Data.i}}<img src="{{.}}">{{end}}`), `{"$schema": "https://json-schema.org/draft/2020-12/schema", "type": "object",
 "properties": {"i": {"type": "array", "items": {"type": "string", "format": "image"}}}}`, nil))
 	images := files.NewRoot(dir)

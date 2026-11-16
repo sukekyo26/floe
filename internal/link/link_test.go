@@ -7,10 +7,10 @@ import (
 	"path/filepath"
 	"slices"
 	"strings"
-	"syscall"
 	"testing"
 
 	"floe/internal/link"
+	"floe/internal/testfs"
 	"floe/internal/usererr"
 )
 
@@ -47,9 +47,7 @@ func symlink(tb testing.TB, target, name string) {
 func mkfifo(tb testing.TB, path string) {
 	tb.Helper()
 
-	if err := syscall.Mkfifo(path, 0o600); err != nil {
-		tb.Fatal(err)
-	}
+	testfs.Mkfifo(tb, path)
 }
 
 // site builds a linked directory with dot paths, an escaping symlink, a FIFO and a name that one more

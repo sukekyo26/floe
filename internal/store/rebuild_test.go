@@ -5,10 +5,10 @@ import (
 	"path/filepath"
 	"slices"
 	"strings"
-	"syscall"
 	"testing"
 
 	"floe/internal/store"
+	"floe/internal/testfs"
 )
 
 // A page drawn again the same keeps its copy; one drawn otherwise gets a new copy, every image of the old one
@@ -321,9 +321,7 @@ func TestRebuildImagesKept(t *testing.T) {
 	if err := os.Symlink("a.png", filepath.Join(images, "link.png")); err != nil {
 		t.Fatal(err)
 	}
-	if err := syscall.Mkfifo(filepath.Join(images, "fifo.png"), 0o600); err != nil {
-		t.Fatal(err)
-	}
+	testfs.Mkfifo(t, filepath.Join(images, "fifo.png"))
 	if err := s.Rebuild(picKit(t, "v2", "")); err != nil {
 		t.Fatal(told(err, root))
 	}

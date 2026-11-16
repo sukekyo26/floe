@@ -16,11 +16,11 @@ import (
 	"strings"
 	"sync"
 	"sync/atomic"
-	"syscall"
 	"testing"
 
 	"floe/internal/i18n"
 	"floe/internal/icons"
+	"floe/internal/testfs"
 	"floe/internal/usererr"
 )
 
@@ -486,9 +486,7 @@ func TestBrokenIndex(t *testing.T) {
 	if err := os.Mkdir(filepath.Join(fifoRoot, "aws"), 0o700); err != nil {
 		t.Fatal(err)
 	}
-	if err := syscall.Mkfifo(filepath.Join(fifoRoot, "aws", "index.json"), 0o600); err != nil {
-		t.Fatal(err)
-	}
+	testfs.Mkfifo(t, filepath.Join(fifoRoot, "aws", "index.json"))
 	if _, err := icons.New(fifoRoot, false, "").Search("aws", []string{"x"}); told(err) != filepath.Join(fifoRoot, "aws", "index.json")+
 		`: is neither a regular file nor a directory (a FIFO, a device or the like), which floe does not open; run "floe icons fetch aws --force" to fetch the icons again` {
 		t.Errorf("an index that is a FIFO = %s", told(err))
@@ -564,9 +562,7 @@ func TestLookupStaysInside(t *testing.T) {
 			t.Fatal(err)
 		}
 	}
-	if err := syscall.Mkfifo(filepath.Join(dir, "fifo.svg"), 0o600); err != nil {
-		t.Fatal(err)
-	}
+	testfs.Mkfifo(t, filepath.Join(dir, "fifo.svg"))
 	if b, err := set.Lookup("aws/link"); err != nil || !strings.Contains(string(b), `id="in"`) {
 		t.Errorf("Lookup of a link inside = %q, %v", b, err)
 	}

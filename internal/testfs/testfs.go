@@ -11,7 +11,7 @@ import (
 
 // UnixOnly skips t on Windows, where what it expects (the umask, permission bits, root, a FIFO) does not hold;
 // for good. On Unix it does nothing.
-func UnixOnly(t *testing.T, why string) {
+func UnixOnly(t testing.TB, why string) {
 	t.Helper()
 	if isWindows {
 		t.Skip("Unix only: " + why)
@@ -20,7 +20,7 @@ func UnixOnly(t *testing.T, why string) {
 
 // Pending skips t on Windows until the pull request why names mends what it expects there; S315's last one
 // removes Pending, and every call left with it. On Unix it does nothing.
-func Pending(t *testing.T, why string) {
+func Pending(t testing.TB, why string) {
 	t.Helper()
 	if isWindows {
 		t.Skip("pending: " + why)
@@ -28,23 +28,29 @@ func Pending(t *testing.T, why string) {
 }
 
 // Mkfifo makes a FIFO at path, or skips t where there are none (Windows).
-func Mkfifo(t *testing.T, path string) {
+func Mkfifo(t testing.TB, path string) {
 	t.Helper()
 	UnixOnly(t, "a FIFO")
-	if err := mkfifo(path); err != nil {
+	if err := MakeFIFO(path); err != nil {
 		t.Fatal(err)
 	}
 }
 
+// MakeFIFO makes a FIFO at path, for what cannot skip a test (a goroutine, a function of an fs.FS); its test
+// skips first, with UnixOnly. On Windows it fails.
+func MakeFIFO(path string) error {
+	return mkfifo(path)
+}
+
 // TryLock reports whether f could be locked as files.Lock locks it, without waiting; the lock goes with f.
-func TryLock(t *testing.T, f *os.File) bool {
+func TryLock(t testing.TB, f *os.File) bool {
 	t.Helper()
 	return tryLock(f)
 }
 
 // Symlink makes the symlink at to old, or skips t where the system does not let this user make one (Windows,
 // without the developer mode or an administrator).
-func Symlink(t *testing.T, old, at string) {
+func Symlink(t testing.TB, old, at string) {
 	t.Helper()
 	err := os.Symlink(old, at)
 	if err != nil && privilegeNotHeld(err) {
@@ -56,7 +62,7 @@ func Symlink(t *testing.T, old, at string) {
 }
 
 // Junction makes a junction at link to the directory target, or skips t where there are none (Unix).
-func Junction(t *testing.T, link, target string) {
+func Junction(t testing.TB, link, target string) {
 	t.Helper()
 	if !isWindows {
 		t.Skip("junctions are Windows'")
@@ -68,7 +74,7 @@ func Junction(t *testing.T, link, target string) {
 
 // CheckedOutLink skips t on Windows when path, a symlink in the repository, was checked out as a regular file
 // holding where it leads (Git for Windows with core.symlinks false).
-func CheckedOutLink(t *testing.T, path string) {
+func CheckedOutLink(t testing.TB, path string) {
 	t.Helper()
 	if !isWindows {
 		return

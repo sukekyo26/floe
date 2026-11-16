@@ -13,11 +13,11 @@ import (
 	"strconv"
 	"strings"
 	"sync"
-	"syscall"
 	"testing"
 	"time"
 
 	"floe/internal/store"
+	"floe/internal/testfs"
 	"floe/internal/usererr"
 )
 
@@ -172,7 +172,7 @@ func TestOpenLog(t *testing.T) {
 			if kind == "a directory" {
 				err = os.Mkdir(log, 0o700)
 			} else {
-				err = syscall.Mkfifo(log, 0o600)
+				testfs.Mkfifo(t, log)
 			}
 			if err != nil {
 				t.Fatal(err)
