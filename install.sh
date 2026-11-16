@@ -22,11 +22,14 @@ die() {
 }
 
 # path_note says how to put the install directory on PATH, when it is not there. It is called with floe in place:
-# nothing in it fails the install, and when a step of it fails it falls back to words alone.
+# nothing in it fails the install, and when a sed of it fails it falls back to words alone.
 # LIMIT: the file is named for zsh and for bash on Linux alone, whose interactive shells always read it; a bash that
 # only ever runs as a login shell and whose ~/.bash_profile does not read ~/.bashrc misses the line. A zsh with
 # noclobber and no ~/.zshrc yet refuses the >> (it says so). fish older than 3.2 has no fish_add_path (it says so).
 # The line is added at the front of PATH each time the file is read, so a shell started in a shell has it twice.
+# Control characters are looked for byte by byte: a UTF-8 C1 one (U+0085, U+009B: C2 9B) is not refused by dash or a
+# bash under LC_ALL=C, nor turned into ? by tr. FLOE_INSTALL_DIR is the user's own; look at the characters, not the
+# bytes, if a directory is ever named by someone else.
 path_note() {
   # ./ in front of a relative one: cd then reads neither CDPATH nor a name like - or -x as its own.
   case "$INSTALL_DIR" in
