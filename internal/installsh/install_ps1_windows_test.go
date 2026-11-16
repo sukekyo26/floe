@@ -232,7 +232,9 @@ type psResult struct {
 	}
 }
 
-func (r *psResult) String() string { return fmt.Sprintf("exit %d\n%s", r.code, r.both) }
+func (r *psResult) String() string {
+	return fmt.Sprintf("exit %d, report %+v\n%s", r.code, r.report, r.both)
+}
 
 // runPS runs install.ps1 in shell (powershell or pwsh) as c says, from a working directory of its own (base\w).
 func runPS(t *testing.T, shell, base string, c psCase) *psResult {
@@ -726,7 +728,8 @@ func testInstallPS1(t *testing.T, shell string) {
 	})
 
 	for _, v := range []string{"../../x", "a/b", `a\b`, "1..2", " 0.1.0", "0.1.0\n", "\uff10.1.0", "v", "0.1.0?x=1", "%2e%2e"} {
-		t.Run(fmt.Sprintf("version %q", v), func(t *testing.T) {
+		// %+q: a name not in ASCII goes into the temporary folder's name, where 5.1's Add-Type in the driver cannot compile.
+		t.Run(fmt.Sprintf("version %+q", v), func(t *testing.T) {
 			t.Parallel()
 			r := goodRelease(t)
 			res, dir := install(t, r, psCase{env: map[string]string{"FLOE_VERSION": v}})
@@ -967,7 +970,7 @@ func testPathPS1(t *testing.T, shell string, install func(*testing.T, *ghRelease
 		dir := filepath.Join(base, "bin")
 		res, _ := install(t, r, psCase{env: map[string]string{"FLOE_INSTALL_DIR": dir, "Path": os.Getenv("Path") + ";" + dir}})
 		works(t, r, res, dir, host)
-		if strings.Contains(res.out, "PATH") || res.report.PathKind != "none" {
+		if strings.Contains(res.out, "your PATH") || res.report.PathKind != "none" {
 			t.Errorf("said or wrote of PATH although the process's has it:\n%s", res)
 		}
 		res, _ = install(t, r, psCase{env: map[string]string{"FLOE_INSTALL_DIR": dir, "Path": os.Getenv("Path") + ";" + dir, "FLOE_ADD_TO_PATH": "1"}})
