@@ -349,36 +349,37 @@ func TestCheck(t *testing.T) {
 	}
 	tests := []struct {
 		path string
-		want string // a part of the message, "" when allowed
+		key  string // the mistake's key, "" when allowed
+		part string // a part of its message that matters, if any
 	}{
-		{"proj/.agents/doc.html", ""},
-		{"proj/ok.HTM", ""},
-		{"proj/spec.YML", ""},
-		{".secret/x.html", "is under a hidden directory of your home"},
-		{"top.html", "would expose all of " + dirs.Shown(realHome)},
-		{".top.html", "would expose all of " + dirs.Shown(realHome)},
-		{"proj/page.txt", "is not a regular HTML file (.html, .htm), data file (.yaml, .yml) or folder"},
+		{"proj/.agents/doc.html", "", ""},
+		{"proj/ok.HTM", "", ""},
+		{"proj/spec.YML", "", ""},
+		{".secret/x.html", "link_hidden_home", ""},
+		{"top.html", "link_exposes_dir", "would expose all of " + dirs.Shown(realHome)},
+		{".top.html", "link_exposes_dir", "would expose all of " + dirs.Shown(realHome)},
+		{"proj/page.txt", "link_not_linkable", ""},
 		// Real cannot tell where a file not there is (readLink, before, tells it cannot be read).
-		{"proj/missing.html", "is not its real path"},
+		{"proj/missing.html", "link_not_real", ""},
 		// A folder is checked as the directory it exposes: its own.
-		{"proj", ""},
-		{"proj/dir.html", ""},
-		{"proj/.agents", ""},
-		{"", "would expose all of " + dirs.Shown(realHome)},
-		{".secret", "is under a hidden directory of your home"},
-		{".secret/sub", "is under a hidden directory of your home"},
+		{"proj", "", ""},
+		{"proj/dir.html", "", ""},
+		{"proj/.agents", "", ""},
+		{"", "link_exposes_dir", "would expose all of " + dirs.Shown(realHome)},
+		{".secret", "link_hidden_home", ""},
+		{".secret/sub", "link_hidden_home", ""},
 	}
 	for _, tt := range tests {
 		_, err := link.Check(filepath.Clean(filepath.Join(realHome, tt.path)), home)
-		if tt.want == "" {
+		if tt.key == "" {
 			if err != nil {
 				t.Errorf("Check(%s) = %v, want it allowed", tt.path, err)
 			}
 			continue
 		}
 		var ue *usererr.Error
-		if !errors.As(err, &ue) || !strings.Contains(ue.Error(), tt.want) {
-			t.Errorf("Check(%s) = %v, want a usererr containing %q", tt.path, err, tt.want)
+		if !errors.As(err, &ue) || ue.Key != tt.key || !strings.Contains(ue.Error(), tt.part) {
+			t.Errorf("Check(%s) = %v, want %s containing %q", tt.path, err, tt.key, tt.part)
 		}
 	}
 	t.Run("a FIFO", func(t *testing.T) {
@@ -422,5 +423,21 @@ func TestResolveLinkToDot(t *testing.T) {
 	symlink(t, env, filepath.Join(folder, "x"))
 	if got, ok := link.Resolve(folder, true, "x"); !ok || got != env {
 		t.Errorf("Resolve(x) = %q, %v, want %q", got, ok, env)
+	}
+}
+
+// A name that is not UTF-8 is not served nor listed by its bytes: the URL cannot name it. (A folder's listing gives it
+// with U+FFFD, as encoding/json writes it; Windows names it so on disk too.)
+func TestResolveInvalidUTF8(t *testing.T) {
+	t.Parallel()
+
+	folder := realTemp(t)
+	testfs.NotUTF8(t, folder, "a\xff.html", false)
+	testfs.NotUTF8(t, folder, "d\xff", true)
+	if got, ok := link.Resolve(folder, true, "a\xff.html"); ok {
+		t.Errorf("Resolve(a\\xff.html) = %q, want it refused", got)
+	}
+	if l, err := link.Dir(folder, "d\xff"); !errors.Is(err, link.ErrNoDir) {
+		t.Errorf("Dir(d\\xff) = %+v, %v, want ErrNoDir", l, err)
 	}
 }

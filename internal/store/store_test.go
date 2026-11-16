@@ -872,6 +872,19 @@ func TestConflict(t *testing.T) {
 	}
 }
 
+// The root of the system (/, or a drive's on Windows) is no folder to link: all of it would be served.
+func TestPrepareLinkRoot(t *testing.T) {
+	t.Parallel()
+
+	s, root := newStore(t)
+	home := filepath.Dir(root)
+	top := filepath.VolumeName(home) + string(filepath.Separator)
+	_, err := s.PrepareLink(t.Context(), picKit(t, "", ""), top, store.Options{}, home, home)
+	if l, ok := errors.AsType[usererr.List](err); !ok || len(l) != 1 || l[0].Key != "link_exposes_dir" {
+		t.Errorf("link %s = %v, want link_exposes_dir", top, err)
+	}
+}
+
 // A folder is linked as itself: its name, extension and all, names it; it stays a folder when linked again, so that it
 // serves only what is under it; and its directories are read when they are asked for, not when it is listed.
 func TestPrepareLinkFolder(t *testing.T) {
