@@ -182,6 +182,7 @@ var messagesJA = map[string]string{
 	"cli_task_task_off":        `--task "" はページをタスクから外すので、--%s と一緒には使えません`,
 	"cli_path_empty":           "%s が空のパスです。%s を渡し、そのために書いた変数が設定されているか確かめてください",
 	"cli_relative_no_cwd":      "作業ディレクトリを読めないので、相対パス %s は何も指しません。あるディレクトリから floe を走らせるか、絶対パスを渡してください",
+	"path_drive_relative":      "%s はドライブ %s の今のディレクトリからの相対パスで、floe は読みません。全体のパス（%s\\…）か、ここからの相対パスにしてください",
 	"cli_wants_data":           "データファイル（.yaml か .yml）",
 	"cli_wants_out_dir":        "ページを書くディレクトリ",
 	"cli_check_not_data":       "%s はデータファイル（.yaml か .yml）ではありません",
@@ -194,7 +195,7 @@ var messagesJA = map[string]string{
 
 	// files
 	// link
-	"link_not_real":        "%s は絶対パスの実パス（symlink を解決して正規化したパス）ではないので、登録できるかを確かめられません",
+	"link_not_real":        "%s は実のパスではありません。リンクと junction をたどった、システムの言う全体のパスを渡してください",
 	"link_not_linkable":    "%s は通常の HTML ファイル（.html / .htm）でもデータファイル（.yaml / .yml）でもフォルダでもないので、登録できません",
 	"link_home_unresolved": "ホームディレクトリ「%s」を解決できないので、登録できるかを確かめられません。HOME に存在するディレクトリの絶対パスを設定してください",
 	"link_hidden_home":     "%s はホーム直下の隠しディレクトリ（設定や鍵の置き場）の中にあるので、登録できません",

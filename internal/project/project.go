@@ -7,6 +7,8 @@ import (
 	"path/filepath"
 	"regexp"
 	"strings"
+
+	"floe/internal/files"
 )
 
 var separatorRe = regexp.MustCompile(`[/:]`)
@@ -72,7 +74,7 @@ func Within(ctx context.Context, dir string) string {
 // LIMIT: paths are compared as text, so a file named in another case on a filesystem that ignores case (darwin)
 // is another file: a key is kept across machines and worktrees, where no inode can compare it.
 func Place(ctx context.Context, file string) (repo, place string) {
-	actual, err := filepath.EvalSymlinks(file)
+	actual, err := files.Real(file)
 	if err != nil {
 		actual = file
 	}
@@ -91,7 +93,7 @@ func Place(ctx context.Context, file string) (repo, place string) {
 
 // resolved returns path with its symlinks resolved, path itself when that fails.
 func resolved(path string) string {
-	if actual, err := filepath.EvalSymlinks(path); err == nil {
+	if actual, err := files.Real(path); err == nil {
 		return actual
 	}
 	return path

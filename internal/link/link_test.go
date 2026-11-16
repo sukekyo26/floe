@@ -320,7 +320,7 @@ func TestCheck(t *testing.T) {
 	symlink(t, filepath.Join(realHome, ".secret"), filepath.Join(realHome, "proj", "alias"))
 	// So is one with .., which the string checks would misread too.
 	for _, p := range []string{realHome + "/proj/alias/x.html", realHome + "/proj/../top.html", ".secret/x.html", "top.html"} {
-		if _, err := link.Check(p, home); err == nil || !strings.Contains(err.Error(), "is not its absolute real path") {
+		if _, err := link.Check(p, home); err == nil || !strings.Contains(err.Error(), "is not its real path") {
 			t.Errorf("Check(%s) = %v, want it refused as not real", p, err)
 		}
 	}

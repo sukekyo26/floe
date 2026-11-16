@@ -211,7 +211,7 @@ func (a *app) installSkill(ag agent, force bool) error {
 	}
 	// Followed again: a directory on the way made just now may be a link's, which realPath could not follow
 	// before it was there.
-	if written, werr := filepath.EvalSymlinks(skillAt); werr == nil {
+	if written, werr := files.Real(skillAt); werr == nil {
 		realSkill = written
 	}
 	key := "cli_made"

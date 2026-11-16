@@ -2,6 +2,7 @@ package files
 
 import (
 	"fmt"
+	"io/fs"
 	"os"
 	"syscall"
 	"unsafe"
@@ -77,15 +78,21 @@ func infoEx(h windows.Handle, class uint32, p unsafe.Pointer, n uintptr) error {
 	return windows.GetFileInformationByHandleEx(h, class, (*byte)(p), uint32(n))
 }
 
-// statOf tells the fields of path, opened with the extra flags, and false when it cannot be opened or told.
-func statOf(path string, flags uint32) (fields, bool) {
+// openAttrs opens path for its attributes alone, all shared, a directory too, with the extra flags.
+func openAttrs(path string, flags uint32) (windows.Handle, error) {
 	p, err := windows.UTF16PtrFromString(path)
 	if err != nil {
-		return noFields, false
+		return 0, err //nolint:wrapcheck // the caller's to tell
 	}
-	h, err := windows.CreateFile(p, windows.FILE_READ_ATTRIBUTES,
+	//nolint:wrapcheck // the system's, for the caller to tell
+	return windows.CreateFile(p, windows.FILE_READ_ATTRIBUTES,
 		windows.FILE_SHARE_READ|windows.FILE_SHARE_WRITE|windows.FILE_SHARE_DELETE, nil, windows.OPEN_EXISTING,
 		windows.FILE_FLAG_BACKUP_SEMANTICS|flags, 0)
+}
+
+// statOf tells the fields of path, opened with the extra flags, and false when it cannot be opened or told.
+func statOf(path string, flags uint32) (fields, bool) {
+	h, err := openAttrs(path, flags)
 	if err != nil {
 		return noFields, false
 	}
@@ -111,4 +118,53 @@ func statOf(path string, flags uint32) (fields, bool) {
 		f.id = fmt.Sprintf("%x:%x", id.VolumeSerialNumber, id.FileID)
 	}
 	return f, true
+}
+
+// The flags of GetFinalPathNameByHandle, which x/sys does not name: the name normalized (long names, case as on
+// disk) with its drive letter (\\?\C:\…). Both are 0, as Go's internal/syscall/windows has them.
+const (
+	fileNameNormalized = 0x0
+	volumeNameDOS      = 0x0
+)
+
+// realOf is the final path of path: opened following its links and junctions, the name the system gives the
+// handle, \\?\C:\… or \\?\UNC\host\share\….
+func realOf(path string) (string, error) {
+	h, err := openAttrs(path, 0)
+	if err != nil {
+		return "", &fs.PathError{Op: "open", Path: path, Err: err}
+	}
+	defer windows.CloseHandle(h) //nolint:errcheck // read only
+	buf := make([]uint16, windows.MAX_PATH)
+	for {
+		//nolint:gosec // G115: a buffer's length
+		n, err := windows.GetFinalPathNameByHandle(h, &buf[0], uint32(len(buf)), fileNameNormalized|volumeNameDOS)
+		if err != nil {
+			return "", &fs.PathError{Op: "GetFinalPathNameByHandle", Path: path, Err: err}
+		}
+		if int(n) < len(buf) {
+			return windows.UTF16ToString(buf[:n]), nil
+		}
+		buf = make([]uint16, n)
+	}
+}
+
+// longNameOf is path with each short name (SECRET~1) made long, as the system names it; links and junctions are
+// not followed.
+func longNameOf(path string) (string, error) {
+	p, err := windows.UTF16PtrFromString(path)
+	if err != nil {
+		return "", &fs.PathError{Op: "GetLongPathName", Path: path, Err: err}
+	}
+	buf := make([]uint16, windows.MAX_PATH)
+	for {
+		n, err := windows.GetLongPathName(p, &buf[0], uint32(len(buf))) //nolint:gosec // G115: a buffer's length
+		if err != nil {
+			return "", &fs.PathError{Op: "GetLongPathName", Path: path, Err: err}
+		}
+		if int(n) < len(buf) {
+			return windows.UTF16ToString(buf[:n]), nil
+		}
+		buf = make([]uint16, n)
+	}
 }

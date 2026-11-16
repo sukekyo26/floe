@@ -189,6 +189,7 @@ var messagesEN = map[string]string{
 	"cli_task_task_off":        `--task "" takes the pages off their task, so it cannot go with --%s`,
 	"cli_path_empty":           "%s is an empty path; give %s, and check that a variable written for it is set",
 	"cli_relative_no_cwd":      "the working directory cannot be read, so the relative path %s means nothing; run floe from a directory that exists, or give an absolute path",
+	"path_drive_relative":      "%s is relative to the working directory of drive %s, which floe does not read: write the whole path (%s\\…) or one relative to here",
 	"cli_wants_data":           "a data file (.yaml or .yml)",
 	"cli_wants_out_dir":        "the directory to write the pages in",
 	"cli_check_not_data":       "%s is not a data file (.yaml or .yml)",
@@ -203,7 +204,7 @@ var messagesEN = map[string]string{
 	// LIMIT: the %s of cannot_write and the first of dir_setting are the system's English, as the system words why
 	// it cannot read or write
 	// link: which files may be linked
-	"link_not_real":        "%s is not its absolute real path; pass it through filepath.Abs and filepath.EvalSymlinks (symlinks resolved, path cleaned) first",
+	"link_not_real":        "%s is not its real path: give the whole path with its links and junctions followed, as the system names it",
 	"link_not_linkable":    "%s is not a regular HTML file (.html, .htm), data file (.yaml, .yml) or folder; only those can be linked",
 	"link_home_unresolved": `cannot resolve the home directory "%s"; set HOME to an existing absolute directory`,
 	"link_hidden_home":     "%s is under a hidden directory of your home (settings and keys live there); move it out to link it",

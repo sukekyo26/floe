@@ -34,7 +34,7 @@ func Start(t *testing.T, written map[string]string) *Site {
 	t.Helper()
 
 	// Real, as link.Check compares the real paths of home and the file linked.
-	tmp, err := filepath.EvalSymlinks(t.TempDir())
+	tmp, err := files.Real(t.TempDir())
 	if err != nil {
 		t.Fatal(err)
 	}

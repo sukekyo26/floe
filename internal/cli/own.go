@@ -183,7 +183,7 @@ func overlapping(found *usererr.List, spots []spot, pair func(i, j int) bool) ma
 	resolved := make([]string, len(spots))
 	ok := make([]bool, len(spots))
 	for i, s := range spots {
-		resolved[i], ok[i] = resolve(s.at)
+		resolved[i], ok[i] = files.RealAbove(s.at)
 	}
 	in := map[string]bool{}
 	for i, s := range spots {
@@ -197,28 +197,6 @@ func overlapping(found *usererr.List, spots []spot, pair func(i, j int) bool) ma
 		}
 	}
 	return in
-}
-
-// resolve returns the path the system takes dir for, as written: its links and ..s followed as the system does;
-// of one not there, the nearest directory above it that is, resolved, with the names after it. False when a ..
-// is among those names: the system cannot take a .. after a name not there. A link that leads nowhere is a
-// name not there, and a name not there is matched by its letters, so either is refused once it is there.
-// LIMIT: links to nothing are not followed, nor names not there matched by case (macOS); follow them if needed.
-func resolve(dir string) (string, bool) {
-	rest := ""
-	for at := dir; ; {
-		if to, err := filepath.EvalSymlinks(at); err == nil {
-			return filepath.Join(to, rest), true
-		}
-		// dirs.Dir, as written: filepath.Dir would fold sym/.. by its letters, and filepath.Split stays on a/.
-		up := dirs.Dir(at)
-		name := strings.TrimPrefix(at[len(up):], string(filepath.Separator))
-		if up == at || name == ".." {
-			return "", false
-		}
-		rest = filepath.Join(name, rest)
-		at = up
-	}
 }
 
 // within reports whether a is b or is under it, both resolved: by their letters, as of names not there, or by
