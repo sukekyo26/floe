@@ -225,10 +225,10 @@ func TestSkillInstall(t *testing.T) {
 		},
 	} {
 		t.Run(c.name, func(t *testing.T) {
+			t.Parallel()
 			if why := unixOnly[c.name]; why != "" {
 				testfs.UnixOnly(t, why)
 			}
-			t.Parallel()
 			home := evalTemp(t)
 			env := cli.HomeVars(home)
 			if c.setup != nil {

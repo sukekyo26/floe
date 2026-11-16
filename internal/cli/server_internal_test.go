@@ -36,8 +36,8 @@ func TestServerConfig(t *testing.T) {
 		}
 		// A default under a file is none to read, as a command reads it.
 		file := filepath.Join(t.TempDir(), "file")
-		if err := os.WriteFile(file, nil, 0o600); err != nil {
-			t.Fatal(err)
+		if werr := os.WriteFile(file, nil, 0o600); werr != nil {
+			t.Fatal(werr)
 		}
 		cfg, _, err = with(HomeEnv(file, map[string]string{"FLOE_DIR": store})).serverConfig()
 		if err != nil || cfg.Icons != "" || cfg.Parts != "" || cfg.Themes != "" || cfg.Templates != "" {
