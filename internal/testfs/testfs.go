@@ -7,8 +7,10 @@ import (
 	"errors"
 	"os"
 	"path/filepath"
+	"sync"
 	"testing"
 	"time"
+	"unicode/utf8"
 )
 
 // UnixOnly skips t on Windows, where what it expects (the umask, permission bits, root, a FIFO) does not hold;
@@ -149,17 +151,96 @@ func Subst(tb testing.TB, dir string) string {
 	if !isWindows {
 		tb.Skip("drives are Windows'")
 	}
-	drive, undo, err := makeDrive(dir)
+	return newDrive(tb, func(drive string) error { return substDrive(drive, dir) }, unsubstDrive)
+}
+
+// MapShare gives dir (C:\…) as a path through this machine's administrative share of its drive
+// (\\127.0.0.1\C$\…) and through a network drive mapped to that share with net use (Y:\…), removed when tb ends.
+// It skips on Unix and where the share cannot be reached (not an administrator); on the CI (CI set) that fails tb.
+func MapShare(tb testing.TB, dir string) (shared, mapped string) {
+	tb.Helper()
+	if !isWindows {
+		tb.Skip("shares are Windows'")
+	}
+	vol := filepath.VolumeName(dir)
+	if len(vol) != 2 || vol[1] != ':' {
+		tb.Fatalf("%s is not on a drive's letter", dir)
+	}
+	root := `\\127.0.0.1\` + vol[:1] + "$"
+	if _, err := os.Stat(root + `\`); err != nil {
+		if os.Getenv("CI") != "" {
+			tb.Fatalf("the share %s cannot be reached on the CI: %v", root, err)
+		}
+		tb.Skip("the share " + root + " cannot be reached: " + err.Error())
+	}
+	drive := newDrive(tb, func(drive string) error { return mapDrive(drive, root) }, unmapDrive)
+	return root + dir[len(vol):], drive + dir[len(vol):]
+}
+
+// driveMu keeps this process's tests from taking one letter at once.
+var driveMu sync.Mutex //nolint:gochecknoglobals // one for the process
+
+// newDrive makes a drive with mk (subst, net use) on a letter no volume has, the next one when mk fails (another
+// process took the letter meanwhile), and removes it with undo when tb ends; it skips where no letter is free.
+func newDrive(tb testing.TB, mk, undo func(drive string) error) string {
+	tb.Helper()
+	driveMu.Lock()
+	defer driveMu.Unlock()
+	letters, err := freeDrives()
 	if err != nil {
 		tb.Fatal(err)
 	}
-	if drive == "" {
-		tb.Skip("no drive letter is free")
-	}
-	tb.Cleanup(func() {
-		if err := undo(); err != nil {
-			tb.Logf("drive %s is left: %v", drive, err)
+	var failed error
+	for _, drive := range letters {
+		if failed = mk(drive); failed != nil {
+			continue
 		}
-	})
-	return drive
+		tb.Cleanup(func() {
+			if err := undo(drive); err != nil {
+				tb.Logf("drive %s is left: %v", drive, err)
+			}
+		})
+		return drive
+	}
+	if failed != nil {
+		tb.Fatal(failed)
+	}
+	tb.Skip("no drive letter is free")
+	return ""
+}
+
+// Hide gives the file or directory at path the hidden attribute (Windows). It skips on Unix, where a dot is all.
+func Hide(tb testing.TB, path string) {
+	tb.Helper()
+	if !isWindows {
+		tb.Skip("hidden attributes are Windows'")
+	}
+	if err := hideAttr(path); err != nil {
+		tb.Fatal(err)
+	}
+}
+
+// NotUTF8 makes, in parent, an empty file (or a directory, when dir) named name, which must not be UTF-8, and returns
+// its path as named (Windows makes the name with U+FFFD for each byte it cannot read). It skips where the system
+// refuses such a name (darwin's APFS); on the CI (CI set) that fails tb, so that the tests of such names are known
+// to run there.
+func NotUTF8(tb testing.TB, parent, name string, dir bool) string {
+	tb.Helper()
+	if utf8.ValidString(name) {
+		tb.Fatalf("%q is UTF-8", name)
+	}
+	path := filepath.Join(parent, name)
+	var err error
+	if dir {
+		err = os.Mkdir(path, 0o700)
+	} else {
+		err = os.WriteFile(path, nil, 0o600)
+	}
+	if err != nil {
+		if os.Getenv("CI") != "" {
+			tb.Fatalf("a name not UTF-8 cannot be made on the CI: %v", err)
+		}
+		tb.Skip("this system makes no name that is not UTF-8: " + err.Error())
+	}
+	return path
 }

@@ -37,8 +37,18 @@ func atimeOf(path string) (time.Time, error) {
 
 func aclDeny(string) (func() error, error) { return nil, errNoACL }
 
-var errNoACL = errors.New("ACLs and drives are Windows'")
+var errNoACL = errors.New("ACLs, drives and hidden attributes are Windows'")
 
-func makeDrive(string) (string, func() error, error) { return "", nil, errNoACL }
+func freeDrives() ([]string, error) { return nil, errNoACL }
+
+func substDrive(string, string) error { return errNoACL }
+
+func unsubstDrive(string) error { return errNoACL }
+
+func mapDrive(string, string) error { return errNoACL }
+
+func unmapDrive(string) error { return errNoACL }
+
+func hideAttr(string) error { return errNoACL }
 
 func shortNameOf(path string) (string, error) { return path, nil }
