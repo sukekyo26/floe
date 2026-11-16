@@ -74,9 +74,10 @@ func Within(ctx context.Context, dir string) string {
 // LIMIT: paths are compared as text, so a file named in another case on a filesystem that ignores case (darwin)
 // is another file: a key is kept across machines and worktrees, where no inode can compare it.
 func Place(ctx context.Context, file string) (repo, place string) {
-	actual, err := files.Real(file)
-	if err != nil {
-		actual = file
+	// Both sides of Rel real (on Windows, \\?\ and C:\ are not related): a file not there by its directory above.
+	actual, ok := files.RealAbove(file)
+	if !ok {
+		return "", file
 	}
 	at := filepath.Dir(actual)
 	got, err := git(ctx, at, "rev-parse", "--path-format=absolute", "--show-toplevel", "--git-common-dir")
@@ -84,19 +85,15 @@ func Place(ctx context.Context, file string) (repo, place string) {
 	if err != nil || len(lines) != 2 {
 		return "", actual
 	}
-	rel, err := filepath.Rel(resolved(lines[0]), actual)
+	root, err := files.Real(lines[0])
+	if err != nil {
+		return "", actual
+	}
+	rel, err := filepath.Rel(root, actual)
 	if err != nil || rel == ".." || strings.HasPrefix(rel, ".."+string(filepath.Separator)) {
 		return "", actual
 	}
 	return named(ctx, at, func() string { return lines[1] }), filepath.ToSlash(rel)
-}
-
-// resolved returns path with its symlinks resolved, path itself when that fails.
-func resolved(path string) string {
-	if actual, err := files.Real(path); err == nil {
-		return actual
-	}
-	return path
 }
 
 func base(dir string) string {
