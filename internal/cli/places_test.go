@@ -42,7 +42,10 @@ func TestDefaultPlaces(t *testing.T) {
 	if r := e.exe(t, self, "publish", "--link", filepath.Join("site", "h.html")); r.code != 0 || !strings.Contains(r.stdout, "/a/h/") {
 		t.Errorf("publish --link = %+v", r)
 	}
-	wantRun(t, "part new", e.exe(t, self, "part", "new", "mine"), 0, "made "+filepath.Join(cli.DefaultPlace(home, "parts"), "mine")+"\n", "")
+	// Its stderr is not looked at: under coverage, the process says GOCOVERDIR is not set.
+	if r := e.exe(t, self, "part", "new", "mine"); r.code != 0 || r.stdout != "made "+filepath.Join(cli.DefaultPlace(home, "parts"), "mine")+"\n" {
+		t.Errorf("part new = %+v", r)
+	}
 	if r := e.exe(t, self, "stop"); r.code != 0 || !strings.HasPrefix(r.stdout, "stopped server") {
 		t.Errorf("stop = %+v", r)
 	}
