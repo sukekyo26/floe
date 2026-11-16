@@ -14,31 +14,39 @@ import (
 
 const isWindows = true
 
-var errNoFIFO = errors.New("there are no FIFOs on Windows")
+var (
+	errNoFIFO       = errors.New("there are no FIFOs on Windows")
+	errNoAccessTime = errors.New("no Win32FileAttributeData")
+)
 
-func mkfifo(string) error { return errNoFIFO }
+func newFIFO(string) error { return errNoFIFO }
 
-func tryLock(f *os.File) bool {
-	return windows.LockFileEx(windows.Handle(f.Fd()), windows.LOCKFILE_EXCLUSIVE_LOCK|windows.LOCKFILE_FAIL_IMMEDIATELY,
-		0, ^uint32(0), ^uint32(0), new(windows.Overlapped)) == nil
+func lockNow(f *os.File) bool {
+	flags := uint32(windows.LOCKFILE_EXCLUSIVE_LOCK | windows.LOCKFILE_FAIL_IMMEDIATELY)
+	return windows.LockFileEx(windows.Handle(f.Fd()), flags, 0, ^uint32(0), ^uint32(0), new(windows.Overlapped)) == nil
 }
 
 func privilegeNotHeld(err error) bool { return errors.Is(err, windows.ERROR_PRIVILEGE_NOT_HELD) }
 
 // junction makes a junction with mklink /J, which needs no privilege: neither Go nor x/sys makes one (Go's own
 // tests use mklink too).
-func junction(link, target string) error {
-	out, err := exec.Command("cmd", "/c", "mklink", "/J", link, target).CombinedOutput() //nolint:gosec // G204: the test's paths
+func makeJunction(link, target string) error {
+	//nolint:gosec,noctx // G204: the test's paths; mklink returns at once
+	out, err := exec.Command("cmd", "/c", "mklink", "/J", link, target).CombinedOutput()
 	if err != nil {
 		return fmt.Errorf("mklink /J %s %s: %w: %s", link, target, err, strings.TrimSpace(string(out)))
 	}
 	return nil
 }
 
-func accessTime(path string) (time.Time, error) {
+func atimeOf(path string) (time.Time, error) {
 	fi, err := os.Stat(path)
 	if err != nil {
 		return time.Time{}, err //nolint:wrapcheck // the test's own
 	}
-	return time.Unix(0, fi.Sys().(*syscall.Win32FileAttributeData).LastAccessTime.Nanoseconds()), nil
+	a, ok := fi.Sys().(*syscall.Win32FileAttributeData)
+	if !ok {
+		return time.Time{}, errNoAccessTime
+	}
+	return time.Unix(0, a.LastAccessTime.Nanoseconds()), nil
 }

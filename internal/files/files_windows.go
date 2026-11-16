@@ -21,16 +21,19 @@ const (
 // error is returned as it is, for the caller to tell at the file.
 func Lock(f *os.File) (func(), error) {
 	h := windows.Handle(f.Fd())
-	if err := windows.LockFileEx(h, windows.LOCKFILE_EXCLUSIVE_LOCK, 0, ^uint32(0), ^uint32(0), new(windows.Overlapped)); err != nil {
+	err := windows.LockFileEx(h, windows.LOCKFILE_EXCLUSIVE_LOCK, 0, ^uint32(0), ^uint32(0), new(windows.Overlapped))
+	if err != nil {
 		return nil, err //nolint:wrapcheck // the system's words, for the caller to tell
 	}
 	return func() {
-		_ = windows.UnlockFileEx(h, 0, ^uint32(0), ^uint32(0), new(windows.Overlapped)) //nolint:errcheck // closing lets it go too
-		_ = f.Close()                                                                   //nolint:errcheck // as above
+		//nolint:errcheck // closing lets it go too
+		_ = windows.UnlockFileEx(h, 0, ^uint32(0), ^uint32(0), new(windows.Overlapped))
+		_ = f.Close() //nolint:errcheck // as above
 	}, nil
 }
 
-// fileBasicInfo is FILE_BASIC_INFO, which x/sys has no type of: as Go's internal/syscall/windows lays it out.
+// fileBasicInfo is FILE_BASIC_INFO, which x/sys has no type of: as Go's internal/syscall/windows lays it
+// out.
 type fileBasicInfo struct {
 	CreationTime   int64
 	LastAccessTime int64
@@ -67,36 +70,46 @@ func Mark(path string) string {
 	return m
 }
 
+// noFields is the fields of no file.
+var noFields fields //nolint:gochecknoglobals // a zero value, never written
+
+// infoEx reads the class of information of h into the n bytes at p.
+func infoEx(h windows.Handle, class uint32, p unsafe.Pointer, n uintptr) error {
+	//nolint:wrapcheck,gosec // the system's; G115: a struct's size
+	return windows.GetFileInformationByHandleEx(h, class, (*byte)(p), uint32(n))
+}
+
 // statOf tells the fields of path, opened with the extra flags, and false when it cannot be opened or told.
 func statOf(path string, flags uint32) (fields, bool) {
 	p, err := windows.UTF16PtrFromString(path)
 	if err != nil {
-		return fields{}, false
+		return noFields, false
 	}
 	h, err := windows.CreateFile(p, windows.FILE_READ_ATTRIBUTES,
 		windows.FILE_SHARE_READ|windows.FILE_SHARE_WRITE|windows.FILE_SHARE_DELETE, nil, windows.OPEN_EXISTING,
 		windows.FILE_FLAG_BACKUP_SEMANTICS|flags, 0)
 	if err != nil {
-		return fields{}, false
+		return noFields, false
 	}
 	defer windows.CloseHandle(h) //nolint:errcheck // read only
 	var bh windows.ByHandleFileInformation
 	if windows.GetFileInformationByHandle(h, &bh) != nil {
-		return fields{}, false
+		return noFields, false
 	}
 	f := fields{
-		dir:   bh.FileAttributes&windows.FILE_ATTRIBUTE_DIRECTORY != 0,
-		attrs: bh.FileAttributes,
-		id:    fmt.Sprintf("%x:%x%08x", bh.VolumeSerialNumber, bh.FileIndexHigh, bh.FileIndexLow),
-		size:  int64(bh.FileSizeHigh)<<32 | int64(bh.FileSizeLow),
-		write: bh.LastWriteTime.Nanoseconds(),
+		dir:    bh.FileAttributes&windows.FILE_ATTRIBUTE_DIRECTORY != 0,
+		attrs:  bh.FileAttributes,
+		id:     fmt.Sprintf("%x:%x%08x", bh.VolumeSerialNumber, bh.FileIndexHigh, bh.FileIndexLow),
+		size:   int64(bh.FileSizeHigh)<<32 | int64(bh.FileSizeLow),
+		write:  bh.LastWriteTime.Nanoseconds(),
+		change: 0, hasChange: false,
 	}
 	var basic fileBasicInfo
-	if windows.GetFileInformationByHandleEx(h, windows.FileBasicInfo, (*byte)(unsafe.Pointer(&basic)), uint32(unsafe.Sizeof(basic))) == nil {
+	if infoEx(h, windows.FileBasicInfo, unsafe.Pointer(&basic), unsafe.Sizeof(basic)) == nil {
 		f.change, f.hasChange = basic.ChangedTime, true
 	}
 	var id fileIDInfo
-	if windows.GetFileInformationByHandleEx(h, windows.FileIdInfo, (*byte)(unsafe.Pointer(&id)), uint32(unsafe.Sizeof(id))) == nil {
+	if infoEx(h, windows.FileIdInfo, unsafe.Pointer(&id), unsafe.Sizeof(id)) == nil {
 		f.id = fmt.Sprintf("%x:%x", id.VolumeSerialNumber, id.FileID)
 	}
 	return f, true

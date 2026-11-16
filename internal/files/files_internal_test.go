@@ -40,7 +40,7 @@ func readAll(o Opener, name string) ([]byte, fs.FileInfo, error) {
 // A regular file made a FIFO between what Open (ReadIn) or openRead looks at and what it opens is refused unread,
 // at a path, under a DirFS and under an os.Root alike: the open does not block, and what was opened is looked at
 // again. Another regular file put in its place, as a save by rename does, is read.
-func TestOpenSwapped(t *testing.T) {
+func TestOpenSwapped(t *testing.T) { //nolint:tparallel // the cases swap one file in turn
 	t.Parallel()
 
 	dir := t.TempDir()
@@ -49,7 +49,7 @@ func TestOpenSwapped(t *testing.T) {
 		t.Fatal(err)
 	}
 	defer root.Close()
-	for _, tt := range []struct {
+	for _, tt := range []struct { //nolint:paralleltest // as above
 		name string
 		swap func(path string) error
 		want error

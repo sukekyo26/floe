@@ -1,7 +1,6 @@
 package daemon_test
 
 import (
-	"net"
 	"testing"
 
 	"golang.org/x/sys/windows"
@@ -32,5 +31,5 @@ func deniedListen(t *testing.T) error {
 	if err := windows.SetsockoptInt(s, windows.SOL_SOCKET, windows.SO_REUSEADDR, 1); err != nil {
 		t.Fatal(err)
 	}
-	return windows.Bind(s, &windows.SockaddrInet4{Port: held.Addr().(*net.TCPAddr).Port, Addr: [4]byte{127, 0, 0, 1}})
+	return windows.Bind(s, &windows.SockaddrInet4{Port: portOf(t, held), Addr: [4]byte{127, 0, 0, 1}})
 }

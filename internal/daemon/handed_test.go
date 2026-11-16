@@ -2,6 +2,7 @@ package daemon_test
 
 import (
 	"bufio"
+	"context"
 	"errors"
 	"fmt"
 	"net"
@@ -38,7 +39,7 @@ func TestMain(m *testing.M) {
 // one connection, lets it go and binds its port again; "away" tells only whether it was started away. It tells
 // each step in the report file, a line each, and "done" last.
 func child(mode string) {
-	f, err := os.OpenFile(os.Getenv(reportEnv), os.O_WRONLY|os.O_APPEND, 0)
+	f, err := os.OpenFile(os.Getenv(reportEnv), os.O_WRONLY|os.O_APPEND, 0) //nolint:gosec // G304,G703: the test's own
 	if err != nil {
 		os.Exit(3)
 	}
@@ -49,20 +50,26 @@ func child(mode string) {
 	if mode != "take" {
 		return
 	}
-	port, _ := strconv.Atoi(os.Getenv(portEnv))
+	port, err := strconv.Atoi(os.Getenv(portEnv))
+	if err != nil {
+		say("port %v", err)
+		return
+	}
 	ln, err := daemon.Handed(os.Getenv, port)
 	if err != nil {
 		say("handed %s", errKind(err))
 		return
 	}
 	say("handed ok")
-	_ = ln.(*net.TCPListener).SetDeadline(time.Now().Add(20 * time.Second))
+	if tl, ok := ln.(*net.TCPListener); ok {
+		_ = tl.SetDeadline(time.Now().Add(20 * time.Second)) //nolint:errcheck // Accept tells
+	}
 	conn, err := ln.Accept()
 	if err != nil {
 		say("accept %v", err)
 		return
 	}
-	_, _ = conn.Write([]byte("served"))
+	_, _ = conn.Write([]byte("served")) //nolint:errcheck // the parent tells what it read
 	_ = conn.Close()
 	_ = ln.Close()
 	again, err := daemon.Listen(port)
@@ -90,7 +97,8 @@ func startChild(t *testing.T, mode string, f *os.File, port int) []string {
 	if err := os.WriteFile(report, nil, 0o600); err != nil {
 		t.Fatal(err)
 	}
-	cmd := exec.Command(os.Args[0], "-test.run=^$") //nolint:gosec // G204: this test binary
+	//nolint:gosec // G204: this test binary; not the test's context, which start does not take either
+	cmd := exec.CommandContext(context.WithoutCancel(t.Context()), os.Args[0], "-test.run=^$")
 	handed, err := daemon.Background(cmd, f)
 	if err != nil {
 		t.Fatal(err)
@@ -102,7 +110,7 @@ func startChild(t *testing.T, mode string, f *os.File, port int) []string {
 	if err := cmd.Start(); err != nil {
 		t.Fatal(err)
 	}
-	t.Cleanup(func() { _ = cmd.Process.Kill(); _ = cmd.Wait() })
+	t.Cleanup(func() { _, _ = cmd.Process.Kill(), cmd.Wait() }) //nolint:errcheck // done by now, or killed
 	if f != nil {
 		_ = f.Close() // the child holds its own copy now
 	}
@@ -121,14 +129,16 @@ func startChild(t *testing.T, mode string, f *os.File, port int) []string {
 // ask connects to port, where a child may serve one connection; one refused is told by the child's lines.
 func ask(t *testing.T, port int) {
 	t.Helper()
-	conn, err := net.DialTimeout("tcp", daemon.Addr(port), 5*time.Second)
+	conn, err := (&net.Dialer{Timeout: 5 * time.Second}).DialContext(t.Context(), "tcp", daemon.Addr(port))
 	if err != nil {
 		return
 	}
 	defer conn.Close()
-	_ = conn.SetDeadline(time.Now().Add(10 * time.Second))
+	if err := conn.SetDeadline(time.Now().Add(10 * time.Second)); err != nil {
+		t.Fatal(err)
+	}
 	b := make([]byte, 16)
-	n, _ := conn.Read(b)
+	n, _ := conn.Read(b) //nolint:errcheck // what it read is checked
 	if string(b[:n]) != "served" {
 		t.Errorf("the child answered %q", b[:n])
 	}
@@ -161,7 +171,17 @@ func listener(t *testing.T) (*os.File, int) {
 		t.Fatal(err)
 	}
 	_ = held.Close()
-	return f, held.Addr().(*net.TCPAddr).Port
+	return f, portOf(t, held)
+}
+
+// portOf is the port ln listens on.
+func portOf(t *testing.T, ln net.Listener) int {
+	t.Helper()
+	a, ok := ln.Addr().(*net.TCPAddr)
+	if !ok {
+		t.Fatalf("%v is not a TCP address", ln.Addr())
+	}
+	return a.Port
 }
 
 // A server started as start starts it takes the listener handed down and answers on it, started away from the
@@ -193,6 +213,7 @@ func TestHanded(t *testing.T) {
 		t.Error("Handed took a descriptor that is not a number")
 	}
 	t.Run("standard output", func(t *testing.T) {
+		t.Parallel()
 		testfs.UnixOnly(t, "descriptors below 3")
 		// Refused before it is taken, which would close it.
 		if _, err := daemon.Handed(func(string) string { return "1" }, 1); err == nil ||
@@ -224,7 +245,7 @@ func TestCannotListenWhy(t *testing.T) {
 		t.Fatal(err)
 	}
 	defer held.Close()
-	_, inUse := daemon.Listen(held.Addr().(*net.TCPAddr).Port)
+	_, inUse := daemon.Listen(portOf(t, held))
 	for _, c := range []struct {
 		err error
 		key string

@@ -1,7 +1,8 @@
+//go:build windows
+
 package files
 
 import (
-	"path/filepath"
 	"testing"
 	"unsafe"
 )
@@ -19,7 +20,7 @@ func TestMarkFallbacks(t *testing.T) {
 	if got := unsafe.Sizeof(fileIDInfo{}); got != 24 {
 		t.Errorf("FILE_ID_INFO is %d bytes, want 24", got)
 	}
-	if got := Mark(filepath.Join(t.TempDir())); got == "-" {
+	if got := Mark(t.TempDir()); got == "-" {
 		t.Error("a directory there is marked -")
 	}
 }
