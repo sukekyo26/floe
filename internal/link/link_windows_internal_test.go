@@ -3,6 +3,7 @@
 package link
 
 import (
+	"errors"
 	"os"
 	"path/filepath"
 	"strings"
@@ -10,6 +11,7 @@ import (
 
 	"floe/internal/files"
 	"floe/internal/testfs"
+	"floe/internal/usererr"
 )
 
 // The system names three folders of application data: Go's own (Roaming, Local) and LocalLow, which Go does not name.
@@ -92,5 +94,16 @@ func TestExposesAppDataShare(t *testing.T) { //nolint:paralleltest // it swaps a
 	appData = func() []appDir { return []appDir{{path: shared, err: nil}} }
 	if err := exposes(filepath.Join(home, "docs", "a.html"), home, false); err != nil {
 		t.Errorf("exposes with a folder of application data on a share = %v, want it allowed", err)
+	}
+}
+
+// A home on a share is refused as not local, at home, not as a home that is not there.
+func TestExposesHomeShare(t *testing.T) {
+	t.Parallel()
+
+	shared, _ := testfs.MapShare(t, t.TempDir())
+	err := exposes(`C:\docs\a.html`, shared, false)
+	if ue, ok := errors.AsType[*usererr.Error](err); !ok || ue.Key != "path_not_local" || ue.File() != shared {
+		t.Errorf("exposes with home on a share = %v, want path_not_local at %s", err, shared)
 	}
 }

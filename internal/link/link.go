@@ -46,9 +46,9 @@ func Check(path, home string) (bool, error) {
 // registered by an older floe is served on. Look again when it is served if that comes to matter.
 func exposes(path, home string, folder bool) error {
 	// path is real, so home must be too, or a symlinked $HOME would hide its hidden directories.
-	resolvedHome, ok := realDir(home)
-	if !ok {
-		return usererr.New("link_home_unresolved", home)
+	resolvedHome, err := realHome(home)
+	if err != nil {
+		return err
 	}
 	home = resolvedHome
 	dir := path
@@ -125,15 +125,19 @@ func exposedDir(dir, home string) bool {
 	return filepath.Dir(dir) == dir || dir == home || dirs.Holds(dir, home)
 }
 
-// realDir returns the real path of dir. A dir that cannot be resolved (missing, empty and so ".", or
-// not a directory) gives false: the checks that compare against it would be meaningless.
-func realDir(dir string) (string, bool) {
-	resolved, err := files.Real(dir)
-	if err != nil {
-		return "", false
+// realHome returns the real path of home. A home that cannot be resolved (missing, empty and so ".", not a
+// directory, or not local) is refused: the checks that compare against it would be meaningless.
+func realHome(home string) (string, error) {
+	resolved, err := files.Real(home)
+	if errors.Is(err, usererr.ErrNotLocal) {
+		return "", usererr.CannotRead(home, err)
 	}
-	fi, err := files.Stat(resolved)
-	return resolved, err == nil && fi.IsDir()
+	if err == nil {
+		if fi, err := files.Stat(resolved); err == nil && fi.IsDir() {
+			return resolved, nil
+		}
+	}
+	return "", usererr.New("link_home_unresolved", home)
 }
 
 // Resolve returns the file to serve for rest under the link registered as the real path registered, a folder
