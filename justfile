@@ -12,7 +12,9 @@ browser_looks := "TestLookRule|TestUITaskChildren|TestUIVersionGone|TestUITaskPa
 # Default version is the trimmed contents of VERSION; override with `VERSION=1.2.3 just build`.
 version    := env_var_or_default("VERSION", trim(`cat VERSION 2>/dev/null || echo 0.0.0-dev`))
 ldflags    := "-s -w -X floe/internal/version.Version=" + version
-targets    := "linux-amd64 linux-arm64 darwin-amd64 darwin-arm64"
+targets    := "linux-amd64 linux-arm64 darwin-amd64 darwin-arm64 windows-amd64 windows-arm64"
+# The file of each target in bin/: Windows runs a program only under a name that ends in .exe.
+assets     := replace_regex(replace_regex(targets, '\S+', 'floe-$0'), 'floe-windows-\S+', '$0.exe')
 
 # List available recipes
 default:
@@ -154,18 +156,20 @@ build-all:
     #!/usr/bin/env bash
     set -euo pipefail
     mkdir -p bin
-    for target in {{targets}}; do
+    for asset in {{assets}}; do
+        target="${asset#floe-}"
+        target="${target%.exe}"
         CGO_ENABLED=0 GOOS="${target%-*}" GOARCH="${target#*-}" \
-            go build -trimpath -buildvcs=false -ldflags "{{ldflags}}" -o "bin/floe-${target}" ./cmd/floe
+            go build -trimpath -buildvcs=false -ldflags "{{ldflags}}" -o "bin/${asset}" ./cmd/floe
     done
 
 # Fail when a release binary holds the owner's name: it is in the module path, so in every symbol, and in `go version -m`.
 check-no-repo-name: build-all
     #!/usr/bin/env bash
     set -euo pipefail
-    for target in {{targets}}; do
-        if grep -aq sukekyo26 "bin/floe-${target}"; then
-            echo "check-no-repo-name: bin/floe-${target} holds 'sukekyo26': see where with 'go version -m bin/floe-${target}' and 'strings bin/floe-${target} | grep sukekyo26'; the module in go.mod stays 'floe'" >&2
+    for asset in {{assets}}; do
+        if grep -aq sukekyo26 "bin/${asset}"; then
+            echo "check-no-repo-name: bin/${asset} holds 'sukekyo26': see where with 'go version -m bin/${asset}' and 'strings bin/${asset} | grep sukekyo26'; the module in go.mod stays 'floe'" >&2
             exit 1
         fi
     done
@@ -180,7 +184,7 @@ release-assets: check-no-repo-name
     elif command -v shasum >/dev/null 2>&1; then sum=(shasum -a 256)
     else echo "release-assets: install sha256sum (coreutils) or shasum (perl)" >&2; exit 1
     fi
-    "${sum[@]}" $(for t in {{targets}}; do printf 'floe-%s ' "$t"; done) > SHA256SUMS
+    "${sum[@]}" {{assets}} > SHA256SUMS
     echo "wrote bin/SHA256SUMS"
 
 # Run shellcheck on the shell scripts
