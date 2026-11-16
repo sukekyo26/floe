@@ -1,6 +1,7 @@
 package cli_test
 
 import (
+	"os"
 	"path/filepath"
 	"strings"
 	"testing"
@@ -13,6 +14,21 @@ import (
 func TestW12OnWindows(t *testing.T) {
 	t.Parallel()
 
+	t.Run("the skill's floe a file", func(t *testing.T) {
+		t.Parallel()
+		home := t.TempDir()
+		floe := filepath.Join(home, ".claude", "skills", "floe")
+		if err := os.MkdirAll(filepath.Dir(floe), 0o700); err != nil {
+			t.Fatal(err)
+		}
+		if err := os.WriteFile(floe, []byte("x"), 0o600); err != nil {
+			t.Fatal(err)
+		}
+		code, _, stderr := runEnv(home, cli.HomeVars(home), "skill", "install", "claude")
+		if code != 1 || !strings.HasPrefix(stderr, floe+": cannot be written (") {
+			t.Errorf("floe skill install over a file floe = %d, %q, want 1 and cannot_write at %s", code, stderr, floe)
+		}
+	})
 	t.Run("the default parts a file", func(t *testing.T) {
 		t.Parallel()
 		home := defaultAFile(t, "parts")

@@ -1,11 +1,14 @@
 package cli
 
+import "floe/internal/link"
+
 // ShellWords is shellWords, for the tests outside the package to split a doc's command line as the guide's tests do.
 var ShellWords = shellWords
 
 // HomeVars, DefaultPlace and PlaceVar are homeVars, defaultPlace and placeVar, for the tests outside the package: the
 // environment of a home, and the default places in it, as each system has them.
 var (
+	HomeKey      = link.HomeKey
 	HomeVars     = homeVars
 	DefaultPlace = defaultPlace
 	PlaceVar     = placeVar
