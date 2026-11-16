@@ -49,16 +49,15 @@
   # create SSL/TLS secure channel". Only the runners' Windows Server 2022 and 2025 were tried.
   function Fetch([string]$Url, [string]$OutFile) {
     $at = [uri]$Url
-    # Windows PowerShell reads -OutFile as a wildcard, and a [ or ] in TEMP is not found.
-    if ($PSVersionTable.PSEdition -ne 'Core') { $OutFile = [Management.Automation.WildcardPattern]::Escape($OutFile) }
     for ($hop = 0; $hop -le 10; $hop++) {
       if ($at.Scheme -cne 'https') { throw "download failed: $Url (redirected to $($at.Scheme))" }
       $status = 0; $to = $null; $problem = $null
       try {
         # Windows PowerShell hands a redirect back with an error that does not stop it;
         # PowerShell 7 throws it, the response inside.
-        $got = Invoke-WebRequest -UseBasicParsing -Uri $at -OutFile $OutFile -PassThru `
-          -MaximumRedirection 0 -ErrorAction SilentlyContinue -ErrorVariable problem @insecure
+        # No -OutFile: Windows PowerShell reads it as a wildcard, and a [ or ] in TEMP is not found, escaped or not.
+        $got = Invoke-WebRequest -UseBasicParsing -Uri $at -MaximumRedirection 0 `
+          -ErrorAction SilentlyContinue -ErrorVariable problem @insecure
         if ($null -eq $got) { throw $problem[0] }
         $status = [int]$got.StatusCode
         $to = LocationOf $got.Headers
@@ -68,7 +67,10 @@
         $status = [int]$answer.StatusCode
         $to = LocationOf $answer.Headers
       }
-      if ($status -eq 200) { return }
+      if ($status -eq 200) {
+        [IO.File]::WriteAllBytes($OutFile, $got.RawContentStream.ToArray())
+        return
+      }
       if ($status -lt 300 -or $status -ge 400) {
         $failed = New-Object Exception "download failed: $Url (status $status)"
         $failed.Data['status'] = $status

@@ -11,16 +11,20 @@ if ($PSVersionTable.PSEdition -eq 'Desktop') {
 # Refuses a call without what install.ps1 must give it: Windows PowerShell asks before it parses a page without
 # -UseBasicParsing, which nothing answers in a script.
 function global:Invoke-WebRequest {
-  foreach ($need in '-UseBasicParsing', '-OutFile', '-PassThru', '-MaximumRedirection') {
-    if (-not ($args -contains $need)) { throw "the test's Invoke-WebRequest: called without $need" }
+  # The arguments by name: $args passes "-Name:" and its value on as two, which the cmdlet then reads apart.
+  $named = @{}
+  for ($i = 0; $i -lt $args.Count; $i++) {
+    $name = ([string]$args[$i]).TrimStart('-').TrimEnd(':')
+    $next = $i + 1 -lt $args.Count -and -not ($args[$i + 1] -is [string] -and $args[$i + 1].StartsWith('-'))
+    if ($next) { $named[$name] = $args[$i + 1]; $i++ } else { $named[$name] = $true }
   }
-  $hops = $args[[array]::IndexOf($args, '-MaximumRedirection') + 1]
-  if ($hops -ne 0) { throw "the test's Invoke-WebRequest: -MaximumRedirection $hops, not 0" }
-  if ($PSVersionTable.PSEdition -eq 'Desktop') {
-    Microsoft.PowerShell.Utility\Invoke-WebRequest @args -Proxy $global:floeTest.proxy
-  } else {
-    Microsoft.PowerShell.Utility\Invoke-WebRequest @args -Proxy $global:floeTest.proxy -SkipCertificateCheck
+  foreach ($need in 'UseBasicParsing', 'MaximumRedirection') {
+    if (-not $named.ContainsKey($need)) { throw "the test's Invoke-WebRequest: called without -$need" }
   }
+  if ($named.MaximumRedirection -ne 0) { throw "the test's Invoke-WebRequest: -MaximumRedirection $($named.MaximumRedirection), not 0" }
+  $named.Proxy = $global:floeTest.proxy
+  if ($PSVersionTable.PSEdition -ne 'Desktop') { $named.SkipCertificateCheck = $true }
+  Microsoft.PowerShell.Utility\Invoke-WebRequest @named
 }
 if ($floeTest.failMove) {
   # The rename that puts the new file in place fails; the one that moves floe.exe aside, and the one back, do not.
