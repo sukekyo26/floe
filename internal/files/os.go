@@ -142,8 +142,13 @@ func oneName(name string) bool {
 }
 
 // MkdirTemp makes a new directory in dir, named pattern with a random string put in place of its last *, as
-// os.MkdirTemp does; not where a link to nothing leads (ELOOP). It returns dir as given joined with the name made.
+// os.MkdirTemp does; not where a link to nothing leads (ELOOP). It returns dir as given joined with the name made;
+// dir "" (os.TempDir to os.MkdirTemp) is fs.ErrInvalid.
 func MkdirTemp(dir, pattern string) (string, error) {
+	if dir == "" {
+		// os.MkdirTemp would make it in os.TempDir, whose name the one returned would not hold.
+		return "", &fs.PathError{Op: "mkdirtemp", Path: dir, Err: fs.ErrInvalid}
+	}
 	d, err := allowed(dir, true)
 	if err != nil {
 		return "", told(err, "mkdirtemp", dir, true)

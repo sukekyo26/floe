@@ -249,6 +249,36 @@ func VolumeGUID(tb testing.TB, dir string) string {
 	return vol + dir[len(`C:\`):]
 }
 
+// ReplaceFile saves replacement over replaced as an editor does with ReplaceFile (Windows), and returns the system's
+// error. It skips on Unix.
+func ReplaceFile(tb testing.TB, replaced, replacement string) error {
+	tb.Helper()
+	if !isWindows {
+		tb.Skip("ReplaceFile is Windows'")
+	}
+	return replaceAsEditor(replaced, replacement)
+}
+
+// AppExecLink is an app execution alias of the system (a reparse point that is no link, WindowsApps\*.exe). It skips
+// on Unix and where there is none.
+func AppExecLink(tb testing.TB) string {
+	tb.Helper()
+	if !isWindows {
+		tb.Skip("app execution aliases are Windows'")
+	}
+	apps := filepath.Join(os.Getenv("LOCALAPPDATA"), "Microsoft", "WindowsApps")
+	entries, err := os.ReadDir(apps)
+	if err == nil {
+		for _, e := range entries {
+			if filepath.Ext(e.Name()) == ".exe" {
+				return filepath.Join(apps, e.Name())
+			}
+		}
+	}
+	tb.Skip("no app execution alias here")
+	return ""
+}
+
 // FreeDrive is a drive letter no volume has (Q:), not taken for the test: one another test or process makes
 // meanwhile is not looked at. It skips on Unix and where no letter is free (on the CI, CI set, it fails).
 func FreeDrive(tb testing.TB) string {

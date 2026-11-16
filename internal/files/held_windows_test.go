@@ -7,11 +7,11 @@ import (
 	"os"
 	"path/filepath"
 	"testing"
-	"unsafe"
 
 	"golang.org/x/sys/windows"
 
 	"floe/internal/files"
+	"floe/internal/testfs"
 )
 
 // holder opens a file of dir/sub/page.html and keeps it open; parent is the directory a rename of which Windows
@@ -136,16 +136,7 @@ func TestHeldByEditor(t *testing.T) {
 	if err := os.WriteFile(saved, []byte("saved"), 0o600); err != nil {
 		t.Fatal(err)
 	}
-	replaced, err := windows.UTF16PtrFromString(page)
-	if err != nil {
-		t.Fatal(err)
-	}
-	replacement, err := windows.UTF16PtrFromString(saved)
-	if err != nil {
-		t.Fatal(err)
-	}
-	proc := windows.NewLazySystemDLL("kernel32.dll").NewProc("ReplaceFileW")
-	if r, _, err := proc.Call(uintptr(unsafe.Pointer(replaced)), uintptr(unsafe.Pointer(replacement)), 0, 0, 0, 0); r == 0 {
+	if err := testfs.ReplaceFile(t, page, saved); err != nil {
 		t.Errorf("ReplaceFile while floe reads the file = %v", err)
 	}
 	if b, err := os.ReadFile(page); err != nil || string(b) != "saved" {

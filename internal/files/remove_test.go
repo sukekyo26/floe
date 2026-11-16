@@ -113,4 +113,7 @@ func TestMkdirTemp(t *testing.T) {
 	if fi, err := os.Stat(got); err != nil || !fi.IsDir() {
 		t.Errorf("MkdirTemp made %v, %v", fi, err)
 	}
+	if got, err := files.MkdirTemp("", "t-"); !errors.Is(err, fs.ErrInvalid) {
+		t.Errorf(`MkdirTemp("") = %q, %v; want fs.ErrInvalid`, got, err)
+	}
 }

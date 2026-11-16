@@ -1160,6 +1160,11 @@ func (s *Store) renameWriting(slug, to string, m *Meta) error {
 		//nolint:wrapcheck // the system's words, at the new name
 		return usererr.InSystemWords("store_edit_renamed_only", dest, back, to)
 	}
+	// Moved back: told at the meta.json that is there, under the slug as it was.
+	if ue, ok := errors.AsType[*usererr.Error](err); ok && ue.File() != "" {
+		from, _ := s.dir(slug)
+		return ue.PlacedAt(filepath.Join(from, "meta.json"), 0, 0)
+	}
 	return err
 }
 

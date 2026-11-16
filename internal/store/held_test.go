@@ -82,8 +82,13 @@ func TestEditRenameFirst(t *testing.T) {
 			}
 			t.Cleanup(func() { _ = os.Chmod(dir, 0o700) })                               //nolint:errcheck // a temporary directory
 			_, err := s.Edit("plan", store.Edit{Slug: ptr("plan-b"), Title: ptr("New")}) //nolint:exhaustruct // none
-			if ue, ok := errors.AsType[*usererr.Error](err); !ok || ue.Key != "cannot_write" {
-				t.Errorf("Edit with %s read only = %v, want cannot_write", readOnly, err)
+			ue, ok := errors.AsType[*usererr.Error](err)
+			if !ok || ue.Key != "cannot_write" {
+				t.Fatalf("Edit with %s read only = %v, want cannot_write", readOnly, err)
+			}
+			// Moved back, it is told at the meta.json there is, under the slug as it was.
+			if want := filepath.Join(root, "plan", "meta.json"); readOnly == "the page" && ue.File() != want {
+				t.Errorf("Edit with the page read only is told at %s, want %s", ue.File(), want)
 			}
 			if m := s.ReadMeta("plan"); m == nil || m.Title == "New" {
 				t.Errorf("the page after the failed Edit = %+v, want it as it was", m)

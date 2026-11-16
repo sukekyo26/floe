@@ -1,6 +1,7 @@
 package files
 
 import (
+	"crypto/sha256"
 	"errors"
 	"fmt"
 	"io/fs"
@@ -30,12 +31,13 @@ func openedAs(open func(string) (*os.File, error), path string) string {
 	}
 	got := fmt.Sprintf("name %v, mode %v, size %d", f.Name() == path, fi.Mode(), fi.Size())
 	if fi.IsDir() {
+		// The names and kinds, summed: a drive's root names no file here.
 		entries, readErr := f.ReadDir(-1)
-		var names []string
+		sum := sha256.New()
 		for _, e := range entries {
-			names = append(names, e.Name()+" "+e.Type().String())
+			sum.Write([]byte(e.Name() + " " + e.Type().String() + "\n"))
 		}
-		return got + fmt.Sprintf(", entries %v, %v", names, readErr)
+		return got + fmt.Sprintf(", %d entries %x, %v", len(entries), sum.Sum(nil)[:8], readErr)
 	}
 	b := make([]byte, 8)
 	n, err := f.Read(b)
@@ -73,6 +75,7 @@ func TestOpenSharedSame(t *testing.T) {
 		filepath.Join(dir, "none", "x"), filepath.Join(dir, "a.yaml", "x"), filepath.Join(dir, "lf"),
 		filepath.Join(dir, "ld"), filepath.Join(dir, "lg"), filepath.Join(dir, "j"), filepath.Join(long, "c.yaml"),
 		`\\?\` + filepath.Join(long, "c.yaml"), `\\?\` + filepath.Join(dir, "a.yaml"), `\\?\` + filepath.Join(dir, "sub"),
+		`\\?\` + filepath.VolumeName(dir) + `\`, testfs.AppExecLink(t),
 	} {
 		plain := openedAs(func(p string) (*os.File, error) { return os.OpenFile(p, os.O_RDONLY, 0) }, path)
 		shared := openedAs(func(p string) (*os.File, error) { return openShared(checked{s: p}) }, path)
