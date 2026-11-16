@@ -82,7 +82,8 @@ func DirFS(dir string) fs.FS {
 // Open.
 type dirFS string
 
-// Open opens name under d as Open opens a path: d and name joined, then looked at by allowed once.
+// Open opens name under d as Open opens a path: d and name joined, then looked at by allowed once. Errors name
+// name, as an fs.FS's do.
 func (d dirFS) Open(name string) (fs.File, error) {
 	p, err := d.join("open", name)
 	if err != nil {
@@ -90,7 +91,7 @@ func (d dirFS) Open(name string) (fs.File, error) {
 	}
 	f, _, err := Open(p)
 	if err != nil {
-		return nil, err
+		return nil, asWritten(err, name)
 	}
 	return f, nil
 }
@@ -100,7 +101,8 @@ func (d dirFS) Stat(name string) (fs.FileInfo, error) {
 	if err != nil {
 		return nil, err
 	}
-	return Stat(p)
+	fi, err := Stat(p)
+	return fi, asWritten(err, name)
 }
 
 // errNoDir is the error of every name of DirFS(""), as os.DirFS has one.
