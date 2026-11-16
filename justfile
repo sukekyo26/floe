@@ -45,9 +45,12 @@ fmt:
 fmt-check:
     golangci-lint fmt --diff {{pkgs}}
 
-# Run golangci-lint with the strict config
+# Run golangci-lint with the strict config, on Linux and on Windows (whose files only build there), and vet Windows
+# on arm64, which no CI machine runs
 lint:
     golangci-lint run {{pkgs}}
+    GOOS=windows golangci-lint run {{pkgs}}
+    GOOS=windows GOARCH=arm64 go vet {{pkgs}}
 
 # Run `go vet`
 vet:
