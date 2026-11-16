@@ -256,6 +256,8 @@
     $drive = $null
     $dir = $ExecutionContext.SessionState.Path.GetUnresolvedProviderPathFromPSPath($given, [ref]$provider, [ref]$drive)
     if ($provider.Name -cne 'FileSystem') { throw "FLOE_INSTALL_DIR must be a folder (got $given)" }
+    # The provider keeps / as written (//server/share too); Windows reads it as \.
+    $dir = $dir.Replace('/', '\')
     # floe itself refuses UNC paths; \\?\ and \\.\ are in the same form.
     if ($dir.StartsWith('\\', [StringComparison]::Ordinal)) { throw "FLOE_INSTALL_DIR must be on a local drive (got $given)" }
 
