@@ -7,6 +7,7 @@ import (
 	"io/fs"
 	"os"
 	"testing"
+	"time"
 )
 
 // UnixOnly skips t on Windows, where what it expects (the umask, permission bits, root, a FIFO) does not hold;
@@ -59,6 +60,16 @@ func Symlink(t testing.TB, old, at string) {
 	if err != nil {
 		t.Fatal(err)
 	}
+}
+
+// AccessTime is the last access time of path, which os.FileInfo does not tell, for a test to set it back as it was.
+func AccessTime(t testing.TB, path string) time.Time {
+	t.Helper()
+	at, err := accessTime(path)
+	if err != nil {
+		t.Fatal(err)
+	}
+	return at
 }
 
 // Junction makes a junction at link to the directory target, or skips t where there are none (Unix).

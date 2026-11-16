@@ -6,6 +6,8 @@ import (
 	"os"
 	"os/exec"
 	"strings"
+	"syscall"
+	"time"
 
 	"golang.org/x/sys/windows"
 )
@@ -31,4 +33,12 @@ func junction(link, target string) error {
 		return fmt.Errorf("mklink /J %s %s: %w: %s", link, target, err, strings.TrimSpace(string(out)))
 	}
 	return nil
+}
+
+func accessTime(path string) (time.Time, error) {
+	fi, err := os.Stat(path)
+	if err != nil {
+		return time.Time{}, err //nolint:wrapcheck // the test's own
+	}
+	return time.Unix(0, fi.Sys().(*syscall.Win32FileAttributeData).LastAccessTime.Nanoseconds()), nil
 }

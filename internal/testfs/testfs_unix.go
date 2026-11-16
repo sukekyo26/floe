@@ -6,6 +6,7 @@ import (
 	"errors"
 	"os"
 	"syscall"
+	"time"
 
 	"golang.org/x/sys/unix"
 )
@@ -25,3 +26,11 @@ func privilegeNotHeld(error) bool { return false }
 var errNoJunction = errors.New("junctions are Windows'")
 
 func junction(string, string) error { return errNoJunction }
+
+func accessTime(path string) (time.Time, error) {
+	var st unix.Stat_t
+	if err := unix.Stat(path, &st); err != nil {
+		return time.Time{}, err //nolint:wrapcheck // the test's own
+	}
+	return time.Unix(st.Atim.Unix()), nil
+}
