@@ -2,7 +2,6 @@ package server
 
 import (
 	"io/fs"
-	"os"
 	"path/filepath"
 	"strings"
 
@@ -40,7 +39,7 @@ func (s *Server) marks() string {
 	}
 	if icons := s.cfg.Icons; icons != "" {
 		b.WriteString(icons + "=" + files.Mark(icons) + "\n")
-		sets, _ := os.ReadDir(icons) //nolint:errcheck // none to read is in the root's mark
+		sets, _ := files.ReadDir(icons) //nolint:errcheck // none to read is in the root's mark
 		for _, set := range sets {
 			if files.Hidden(set.Name()) {
 				continue

@@ -9,7 +9,6 @@ import (
 	"maps"
 	"net/http"
 	"net/url"
-	"os"
 	"time"
 	"unicode/utf8"
 
@@ -173,7 +172,7 @@ func (a *app) sent(ctx context.Context, p arg, link bool, opts store.Options) (s
 			Force: opts.Force,
 		}
 		// The server reads a link, as it draws it.
-		if _, statErr := os.Stat(p.abs); readable && statErr != nil {
+		if _, statErr := files.Stat(p.abs); readable && statErr != nil {
 			err = usererr.CannotRead(p.name, statErr)
 		}
 	} else {

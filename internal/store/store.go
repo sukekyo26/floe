@@ -308,7 +308,7 @@ func (s *Store) ReadMeta(slug string) *Meta {
 	if !ok {
 		return nil
 	}
-	b, err := os.ReadFile(filepath.Join(dir, "meta.json"))
+	b, _, err := files.Read(filepath.Join(dir, "meta.json"))
 	if err != nil {
 		return nil
 	}
@@ -358,7 +358,7 @@ func (s *Store) File(slug string, m *Meta, rest string) (string, bool) {
 		return "", false
 	}
 	page := filepath.Join(dir, pageName)
-	if info, err := os.Stat(page); err != nil || !info.Mode().IsRegular() {
+	if info, err := files.Stat(page); err != nil || !info.Mode().IsRegular() {
 		return "", false
 	}
 	return page, true
@@ -384,7 +384,7 @@ type Listed struct {
 
 // slugs returns the slugs of the store, in their order: the names under it that can be one.
 func (s *Store) slugs() ([]string, error) {
-	dirents, err := os.ReadDir(s.root)
+	dirents, err := files.ReadDir(s.root)
 	if errors.Is(err, os.ErrNotExist) {
 		return nil, nil
 	}
@@ -485,7 +485,7 @@ func (s *Store) Files(slug, dir string) (link.Listing, error) {
 
 // modTime is the mtime of file, or "" when it cannot be read.
 func modTime(file string) string {
-	fi, err := os.Stat(file)
+	fi, err := files.Stat(file)
 	if err != nil {
 		return ""
 	}

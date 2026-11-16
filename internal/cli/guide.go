@@ -6,7 +6,6 @@ import (
 	"fmt"
 	"io"
 	"io/fs"
-	"os"
 	"path/filepath"
 	"slices"
 	"strings"
@@ -199,11 +198,11 @@ func (a *app) installSkill(ag agent, force bool) error {
 	case there && !force:
 		return usererr.NewAt(realSkill, 0, 0, "cli_skill_kept")
 	}
-	if err = os.MkdirAll(p.dir, 0o755); err != nil { //nolint:gosec // G301: the agent's own directory, as it makes it
+	if err = files.MkdirAll(p.dir, 0o755); err != nil { //nolint:gosec // G301: the agent's own directory, as it makes it
 		return usererr.SettingDir(p.setting(), p.dir, err, usererr.CannotWrite(p.dir, err))
 	}
 	for _, d := range []string{dir, realFloe} {
-		if err = os.MkdirAll(d, 0o755); err != nil { //nolint:gosec // G301: as above
+		if err = files.MkdirAll(d, 0o755); err != nil { //nolint:gosec // G301: as above
 			return usererr.CannotWrite(d, err)
 		}
 	}
@@ -263,7 +262,7 @@ func followNamed(at, name string) (string, error) {
 // statDir is why path cannot be a directory to write in: nil when it is one or is not there (it is made then),
 // else the system's error, a file there as making a directory over it would say.
 func statDir(path string) error {
-	info, err := os.Stat(path)
+	info, err := files.Stat(path)
 	switch {
 	case err == nil && !info.IsDir():
 		return &fs.PathError{Op: "mkdir", Path: path, Err: syscall.ENOTDIR}
