@@ -43,6 +43,16 @@ func readFile(t *testing.T, path string) string {
 	return string(b)
 }
 
+// linkNowhereWords is what files.MkdirAll says of a link to nothing, "" where this user may make no link.
+func linkNowhereWords(t *testing.T) string {
+	t.Helper()
+	at := filepath.Join(t.TempDir(), "link")
+	if err := os.Symlink(filepath.Join(filepath.Dir(at), "gone"), at); err != nil {
+		return ""
+	}
+	return testfs.Words(t, files.MkdirAll(at, 0o700))
+}
+
 // floe skill install writes floe's skill where the agent named reads skills: made when none is there, left when
 // this floe's is, kept but for --force when another is; links are followed to a directory named floe and a file
 // named SKILL.md alone; only the directory a setting names is told for the setting.
@@ -55,8 +65,9 @@ func TestSkillInstall(t *testing.T) {
 		not  []string // parts it does not
 	}
 	unixOnly := map[string]string{"floe is a file": "a path under a file is read as not there on Windows (W12)"}
-	// What the system says making a directory where something is (a link to nothing too).
-	exists := testfs.Words(t, os.Mkdir(t.TempDir(), 0o700))
+	// What files says making a directory at a link to nothing (Unix: file exists; Windows: files refuses the link),
+	// taken where a link can be made: the rows of such links skip where none can.
+	exists := linkNowhereWords(t)
 	homeAFile := func(t *testing.T, _ string) map[string]string {
 		t.Helper()
 		return map[string]string{cli.HomeKey: fileIn(t)}
