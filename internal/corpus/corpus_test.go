@@ -15,6 +15,7 @@ import (
 	"floe/internal/cli"
 	"floe/internal/files"
 	"floe/internal/kit"
+	"floe/internal/testfs"
 )
 
 var update = flag.Bool("update", false, "write the golden files of each sample anew")
@@ -96,6 +97,7 @@ func runSample(t *testing.T, name, dir string) map[string][]byte {
 	// One's own parts, themes and templates, in own/: checked first, as an agent checks what it wrote.
 	own := false
 	for _, kind := range []string{"parts", "themes", "templates"} {
+		testfs.CheckedOutLink(t, filepath.Join(s.dir, "own", kind))
 		if fi, err := os.Stat(filepath.Join(s.dir, "own", kind)); err == nil && fi.IsDir() {
 			s.env["FLOE_"+strings.ToUpper(kind)+"_DIR"] = filepath.Join(s.dir, "own", kind)
 			own = true

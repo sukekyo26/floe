@@ -10,6 +10,8 @@ import (
 	"strings"
 	"syscall"
 	"testing"
+
+	"floe/internal/testfs"
 )
 
 const good = "lang: en\ntemplate: report\ntitle: A plan\nsections:\n  - heading: One\n    parts:\n      - text: Hello.\n"
@@ -161,9 +163,7 @@ func TestRenderThroughLink(t *testing.T) {
 
 	dir := write(t, map[string]string{"a.yaml": good, "b.yaml": good, "out/a.html": "old"})
 	for name, to := range map[string]string{"a.html": filepath.Join("out", "a.html"), "b.html": filepath.Join("out", "b.html")} {
-		if err := os.Symlink(to, filepath.Join(dir, name)); err != nil {
-			t.Fatal(err)
-		}
+		testfs.Symlink(t, to, filepath.Join(dir, name))
 	}
 	code, stdout, stderr := run(dir, "render", "a.yaml", "b.yaml")
 	if code != 1 || stdout != "" || !strings.HasPrefix(stderr, "b.html: cannot be written (") {
@@ -207,9 +207,7 @@ func TestDotDotAfterLink(t *testing.T) {
 	t.Parallel()
 
 	dir := write(t, map[string]string{"x.yaml": "lang: en\ntemplate: reprot\n", "real/x.yaml": good, "real/sub/y": ""})
-	if err := os.Symlink(filepath.Join("real", "sub"), filepath.Join(dir, "link")); err != nil {
-		t.Fatal(err)
-	}
+	testfs.Symlink(t, filepath.Join("real", "sub"), filepath.Join(dir, "link"))
 	file := "link/../x.yaml" // as written: filepath.Join would fold it
 	if code, _, stderr := run(dir, "check", file); code != 0 || stderr != "" {
 		t.Errorf("floe check %s = %d, %q: it read the x.yaml beside link, not real/x.yaml", file, code, stderr)
@@ -266,15 +264,11 @@ func TestRenderNamesOnce(t *testing.T) {
 	if err := os.Link(filepath.Join(dir, "d.yaml"), filepath.Join(dir, "e.yaml")); err != nil {
 		t.Fatal(err)
 	}
-	if err := os.Symlink("d.yaml", filepath.Join(dir, "l.yaml")); err != nil {
-		t.Fatal(err)
-	}
+	testfs.Symlink(t, "d.yaml", filepath.Join(dir, "l.yaml"))
 	if err := os.Mkdir(filepath.Join(dir, "sub"), 0o700); err != nil {
 		t.Fatal(err)
 	}
-	if err := os.Symlink("..", filepath.Join(dir, "sub", "up")); err != nil {
-		t.Fatal(err)
-	}
+	testfs.Symlink(t, "..", filepath.Join(dir, "sub", "up"))
 	renderEach(t, dir, []renderLine{
 		{[]string{"d.yaml", "e.yaml"}, "d.html\ne.html\n"},
 		{[]string{"d.yaml", "l.yaml"}, "d.html\nl.html\n"},
@@ -368,9 +362,7 @@ func TestCannotWriteThroughLinks(t *testing.T) {
 
 	dir := write(t, map[string]string{"a.yaml": good, "b.yaml": good})
 	for link, to := range map[string]string{"a.html": filepath.Join("out", "a.html"), "b.html": "b.html"} {
-		if err := os.Symlink(to, filepath.Join(dir, link)); err != nil {
-			t.Fatal(err)
-		}
+		testfs.Symlink(t, to, filepath.Join(dir, link))
 	}
 	tail := "): check that its directory exists and can be written to, and that its name is free and not too long\n"
 	for file, want := range map[string]string{

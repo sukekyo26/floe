@@ -134,9 +134,7 @@ func TestOpenAppend(t *testing.T) {
 	}
 
 	link := filepath.Join(dir, "link.log")
-	if err := os.Symlink(path, link); err != nil {
-		t.Fatal(err)
-	}
+	testfs.Symlink(t, path, link)
 	f, _, err := files.OpenAppend(link)
 	if err != nil {
 		t.Fatalf("OpenAppend of a link to a file = %v", err)
@@ -150,9 +148,7 @@ func TestOpenAppend(t *testing.T) {
 	// A link to nowhere is not followed to make the file where it leads, out of the directory.
 	made := filepath.Join(t.TempDir(), "made.log")
 	nowhere := filepath.Join(dir, "nowhere.log")
-	if err = os.Symlink(made, nowhere); err != nil {
-		t.Fatal(err)
-	}
+	testfs.Symlink(t, made, nowhere)
 	if f, _, err = files.OpenAppend(nowhere); err == nil || !errors.Is(err, syscall.ELOOP) {
 		if f != nil {
 			_ = f.Close() //nolint:errcheck // not wanted
@@ -166,9 +162,7 @@ func TestOpenAppend(t *testing.T) {
 	fifo := filepath.Join(dir, "fifo")
 	testfs.Mkfifo(t, fifo)
 	fifoLink := filepath.Join(dir, "fifo-link")
-	if err = os.Symlink(fifo, fifoLink); err != nil {
-		t.Fatal(err)
-	}
+	testfs.Symlink(t, fifo, fifoLink)
 	// Opening one for writing with no reader blocks for good: the call must come back.
 	for _, name := range []string{fifo, fifoLink} {
 		got := make(chan error, 1)

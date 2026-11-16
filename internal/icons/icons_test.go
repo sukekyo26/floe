@@ -195,9 +195,7 @@ func TestLookup(t *testing.T) {
 	if err := os.WriteFile(outside, []byte(`<svg xmlns="http://www.w3.org/2000/svg"/>`), 0o600); err != nil {
 		t.Fatal(err)
 	}
-	if err := os.Symlink(outside, svg); err != nil {
-		t.Fatal(err)
-	}
+	testfs.Symlink(t, outside, svg)
 	if b, err := set.Lookup("aws/aws-lambda"); told(err) != svg+": cannot be read (path escapes from parent)"+again {
 		t.Errorf("Lookup of a link out = %q, %s", b, told(err))
 	}
@@ -558,9 +556,7 @@ func TestLookupStaysInside(t *testing.T) {
 	// A link that stays in the set is read; one to a file of the set by its absolute path is not (LIMIT: in
 	// Lookup), nor is a FIFO, unopened.
 	for link, to := range map[string]string{"link.svg": "in.svg", "abs.svg": filepath.Join(dir, "in.svg")} {
-		if err := os.Symlink(to, filepath.Join(dir, link)); err != nil {
-			t.Fatal(err)
-		}
+		testfs.Symlink(t, to, filepath.Join(dir, link))
 	}
 	testfs.Mkfifo(t, filepath.Join(dir, "fifo.svg"))
 	if b, err := set.Lookup("aws/link"); err != nil || !strings.Contains(string(b), `id="in"`) {

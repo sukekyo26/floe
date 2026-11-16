@@ -12,6 +12,7 @@ import (
 	"testing/fstest"
 
 	"floe/internal/files"
+	"floe/internal/testfs"
 	"floe/internal/tmpl"
 )
 
@@ -82,9 +83,7 @@ func TestImagePartMistakes(t *testing.T) {
 	if err := os.Mkdir(filepath.Join(dir, "dir.png"), 0o755); err != nil {
 		t.Fatal(err)
 	}
-	if err := os.Symlink("/etc/hostname", filepath.Join(dir, "shots/out.png")); err != nil {
-		t.Fatal(err)
-	}
+	testfs.Symlink(t, "/etc/hostname", filepath.Join(dir, "shots/out.png"))
 	src := `lang: en
 template: report
 sections:

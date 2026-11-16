@@ -92,12 +92,8 @@ func TestFSLinks(t *testing.T) {
 			t.Fatal(err)
 		}
 	}
-	if err := os.Symlink(filepath.Join(tmp, "real", "inner"), filepath.Join(tmp, "home", "link")); err != nil {
-		t.Fatal(err)
-	}
-	if err := os.Symlink(filepath.Join(tmp, "out", "o.yaml"), filepath.Join(tmp, "home", "o.yaml")); err != nil {
-		t.Fatal(err)
-	}
+	testfs.Symlink(t, filepath.Join(tmp, "real", "inner"), filepath.Join(tmp, "home", "link"))
+	testfs.Symlink(t, filepath.Join(tmp, "out", "o.yaml"), filepath.Join(tmp, "home", "o.yaml"))
 	// By its letters: filepath.Join would fold link/.. itself.
 	if b, err := fs.ReadFile(files.DirFS(filepath.Join(tmp, "home", "link")+"/.."), "x"); err != nil || string(b) != "real" {
 		t.Errorf("DirFS(home/link/..) read x = %q, %v; want real, as os.ReadDir reads it", b, err)

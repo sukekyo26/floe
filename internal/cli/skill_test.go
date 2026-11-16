@@ -298,7 +298,7 @@ func linked(to string, made bool, rel string) func(t *testing.T, home string) ma
 		if made {
 			mustDo(t, os.MkdirAll(filepath.Join(home, to), 0o700))
 		}
-		mustDo(t, os.Symlink(filepath.Join(home, to), at))
+		testfs.Symlink(t, filepath.Join(home, to), at)
 		return nil
 	}
 }

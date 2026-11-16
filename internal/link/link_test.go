@@ -39,9 +39,7 @@ func write(tb testing.TB, path, body string) {
 func symlink(tb testing.TB, target, name string) {
 	tb.Helper()
 
-	if err := os.Symlink(target, name); err != nil {
-		tb.Fatal(err)
-	}
+	testfs.Symlink(tb, target, name)
 }
 
 func mkfifo(tb testing.TB, path string) {

@@ -31,9 +31,7 @@ const (
 
 func link(t *testing.T, to, at string) {
 	t.Helper()
-	if err := os.Symlink(to, at); err != nil {
-		t.Fatal(err)
-	}
+	testfs.Symlink(t, to, at)
 }
 
 // One's own directories: a setting must be an absolute directory that can be read; a default that is not there,

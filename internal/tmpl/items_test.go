@@ -290,9 +290,7 @@ func TestImageItems(t *testing.T) {
 		}
 	}
 	for _, link := range [][2]string{{"ok.png", "in.png"}, {"/etc/hostname", "esc.png"}} {
-		if err := os.Symlink(link[0], filepath.Join(dir, link[1])); err != nil {
-			t.Fatal(err)
-		}
+		testfs.Symlink(t, link[0], filepath.Join(dir, link[1]))
 	}
 	if err := os.Mkdir(filepath.Join(dir, "dir.png"), 0o755); err != nil {
 		t.Fatal(err)

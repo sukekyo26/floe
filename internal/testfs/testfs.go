@@ -4,7 +4,6 @@
 package testfs
 
 import (
-	"io/fs"
 	"os"
 	"testing"
 	"time"
@@ -83,14 +82,14 @@ func Junction(t testing.TB, link, target string) {
 	}
 }
 
-// CheckedOutLink skips t on Windows when path, a symlink in the repository, was checked out as a regular file
-// holding where it leads (Git for Windows with core.symlinks false).
+// CheckedOutLink skips t on Windows when path, which may be a symlink in the repository, is a regular file: one
+// git checked out as the text of where it leads (Git for Windows with core.symlinks false).
 func CheckedOutLink(t testing.TB, path string) {
 	t.Helper()
 	if !isWindows {
 		return
 	}
-	if fi, err := os.Lstat(path); err == nil && fi.Mode().Type() != fs.ModeSymlink {
+	if fi, err := os.Lstat(path); err == nil && fi.Mode().IsRegular() {
 		t.Skip(path + " was not checked out as a symlink (core.symlinks)")
 	}
 }

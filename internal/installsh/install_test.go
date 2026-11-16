@@ -9,6 +9,8 @@ import (
 	"path/filepath"
 	"strings"
 	"testing"
+
+	"floe/internal/testfs"
 )
 
 // The fakes stand for the network and the machine: curl serves $FAKE_API for the API and
@@ -172,9 +174,7 @@ func tools(t *testing.T, dir, sum string) string {
 			}
 			t.Fatalf("%s is not on PATH: %v", name, err)
 		}
-		if err := os.Symlink(at, filepath.Join(dir, name)); err != nil {
-			t.Fatal(err)
-		}
+		testfs.Symlink(t, at, filepath.Join(dir, name))
 	}
 	return dir
 }

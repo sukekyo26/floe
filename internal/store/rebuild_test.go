@@ -318,9 +318,7 @@ func TestRebuildImagesKept(t *testing.T) {
 	if err := os.WriteFile(filepath.Join(images, "sub", "c.png"), png, 0o600); err != nil {
 		t.Fatal(err)
 	}
-	if err := os.Symlink("a.png", filepath.Join(images, "link.png")); err != nil {
-		t.Fatal(err)
-	}
+	testfs.Symlink(t, "a.png", filepath.Join(images, "link.png"))
 	testfs.Mkfifo(t, filepath.Join(images, "fifo.png"))
 	if err := s.Rebuild(picKit(t, "v2", "")); err != nil {
 		t.Fatal(told(err, root))
