@@ -83,3 +83,30 @@ func TestLinkDeniedFolder(t *testing.T) {
 		t.Errorf("link of a denied folder = %v, want it refused in the system's words (CannotRead)", err)
 	}
 }
+
+// A file on a share is refused before it is opened, as written with \\host\share and through a network drive
+// (path_not_local, which files tells: a share is not opened to look at it), but not through a subst drive of a local
+// directory.
+func TestPrepareLinkShare(t *testing.T) {
+	t.Parallel()
+
+	s, root := newStore(t)
+	home := filepath.Dir(root)
+	tmp := t.TempDir()
+	if err := os.WriteFile(filepath.Join(tmp, "a.html"), []byte("<title>a</title>"), 0o600); err != nil {
+		t.Fatal(err)
+	}
+	dw := picKit(t, "", "")
+	shared, mapped := testfs.MapShare(t, tmp)
+	for _, p := range []string{shared, mapped, testfs.SubstShare(t, tmp)} {
+		file := filepath.Join(p, "a.html")
+		if _, err := s.PrepareLink(t.Context(), dw, file, store.Options{}, home, home); keyOf(err) != "path_not_local" {
+			t.Errorf("link %s = %v, want path_not_local", file, err)
+		}
+	}
+	drive := testfs.Subst(t, tmp)
+	file := drive + `\a.html`
+	if _, err := s.PrepareLink(t.Context(), dw, file, store.Options{}, home, home); err != nil {
+		t.Errorf("link %s = %v, want it linked", file, err)
+	}
+}

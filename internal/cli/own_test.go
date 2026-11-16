@@ -507,7 +507,7 @@ func TestOwnNotFiles(t *testing.T) {
 		refused(t, map[string]string{"FLOE_PARTS_DIR": fifo}, filepath.Join(fifo, "mine", "part.css")+notFile)
 	})
 	t.Run("a link to a device", func(t *testing.T) {
-		testfs.Pending(t, "S315-P4: Windows devices")
+		testfs.UnixOnly(t, "a device told by its kind (Windows: TestNotLocalWindows)")
 		t.Parallel()
 		zero := write(t, map[string]string{"mine/schema.json": ownSchema, "mine/part.html": ownPage})
 		link(t, "/dev/zero", filepath.Join(zero, "mine", "part.css"))

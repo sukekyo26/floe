@@ -6,7 +6,9 @@ import (
 	"os"
 	"os/exec"
 	"path/filepath"
+	"strconv"
 	"strings"
+	"sync/atomic"
 	"syscall"
 	"time"
 
@@ -149,4 +151,63 @@ func shortNameOf(path string) (string, error) {
 		}
 		buf = make([]uint16, n)
 	}
+}
+
+// servePipe serves a named pipe of its own name, counting each client that connects and letting it go at once, until
+// stop.
+func servePipe() (name string, connected func() int, stop func(), err error) {
+	name = `\\.\pipe\floe-test-` + strconv.FormatInt(time.Now().UnixNano(), 36)
+	p, err := windows.UTF16PtrFromString(name)
+	if err != nil {
+		return "", nil, nil, fmt.Errorf("the pipe %s: %w", name, err)
+	}
+	var count atomic.Int64
+	var stopped atomic.Bool
+	instance := func() (windows.Handle, error) {
+		return windows.CreateNamedPipe(p, windows.PIPE_ACCESS_DUPLEX, windows.PIPE_TYPE_BYTE|windows.PIPE_WAIT,
+			windows.PIPE_UNLIMITED_INSTANCES, 512, 512, 0, nil)
+	}
+	h, err := instance()
+	if err != nil {
+		return "", nil, nil, fmt.Errorf("serve the pipe %s: %w", name, err)
+	}
+	go func() {
+		for {
+			err := windows.ConnectNamedPipe(h, nil)
+			if stopped.Load() {
+				_ = windows.CloseHandle(h) //nolint:errcheck // done with
+				return
+			}
+			if err == nil || errors.Is(err, windows.ERROR_PIPE_CONNECTED) {
+				count.Add(1)
+			}
+			_ = windows.DisconnectNamedPipe(h) //nolint:errcheck // the client is let go
+			_ = windows.CloseHandle(h)         //nolint:errcheck // a new instance is made
+			if h, err = instance(); err != nil {
+				return
+			}
+		}
+	}()
+	stop = func() {
+		stopped.Store(true)
+		// A client of its own lets the waiting ConnectNamedPipe return.
+		if f, err := os.Open(name); err == nil {
+			_ = f.Close()
+		}
+	}
+	// The count is read after the connect is counted: a client that got through is counted before it returns.
+	return name, func() int { time.Sleep(50 * time.Millisecond); return int(count.Load()) }, stop, nil
+}
+
+// volumeName is the GUID name of the volume mounted at root (C:\), \\?\Volume{…}\.
+func volumeName(root string) (string, error) {
+	p, err := windows.UTF16PtrFromString(root)
+	if err != nil {
+		return "", fmt.Errorf("the volume of %s: %w", root, err)
+	}
+	buf := make([]uint16, windows.MAX_PATH)
+	if err := windows.GetVolumeNameForVolumeMountPoint(p, &buf[0], windows.MAX_PATH); err != nil {
+		return "", fmt.Errorf("the volume of %s: %w", root, err)
+	}
+	return windows.UTF16ToString(buf), nil
 }
