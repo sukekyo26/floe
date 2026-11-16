@@ -12,9 +12,10 @@ import (
 )
 
 // noPath are files' exported functions that call the system on no path: they look at names or at what is open, or
-// take a path under an *os.Root, which keeps it under its directory (ReadIn).
+// take a path under an *os.Root, which keeps it under its directory (ReadIn), or look at a path through Stat, an
+// entry (NotDir).
 var noPath = []string{ //nolint:gochecknoglobals // a test's table
-	"Hidden", "IsDataFile", "IsNotFile", "IsPage", "Lock", "ReadIn", "Slug", "SlugFromFile", "ValidName",
+	"Hidden", "IsDataFile", "IsNotFile", "IsPage", "Lock", "NotDir", "ReadIn", "Slug", "SlugFromFile", "ValidName",
 }
 
 // makers are where a checked may be made: allowed looks at the path first (or Unix gives it as it is), and a dir or

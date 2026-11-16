@@ -59,7 +59,7 @@ func fences(guide, lang string) []string {
 func guideEnv(t *testing.T, dir string) Env {
 	t.Helper()
 	tmp := t.TempDir()
-	vars := map[string]string{"HOME": tmp, "FLOE_DIR": filepath.Join(tmp, "store"), "FLOE_PORT": "1"}
+	vars := HomeEnv(tmp, map[string]string{"FLOE_DIR": filepath.Join(tmp, "store"), "FLOE_PORT": "1"})
 	for _, kind := range []string{"TEMPLATES", "PARTS", "THEMES", "ICONS"} {
 		own := filepath.Join(tmp, strings.ToLower(kind))
 		if err := os.Mkdir(own, 0o700); err != nil {
@@ -150,20 +150,20 @@ func TestGuide(t *testing.T) {
 	guide("off", env, string(off))
 	settings(`{"theme":"app","taskMode":true}`)
 	guide("on", env, whole)
-	vars := map[string]string{"HOME": "relative"}
+	vars := homeVars("relative")
 	guide("no store", Env{Stdout: nil, Stderr: nil, Dir: env.Dir, Getenv: func(key string) string { return vars[key] }}, string(off))
 	settings(`{"taskMode":1}`)
 	if code, _, errs := runIn(env, "guide"); code != 1 || !strings.Contains(errs, "settings.json: ") || !strings.Contains(errs, "ask the user to choose a setting again") {
 		t.Errorf("a broken settings.json: floe guide = %d, %q", code, errs)
 	}
 	t.Run("a FLOE_DIR of a file", func(t *testing.T) {
-		testfs.Pending(t, "S315-P7: ENOTDIR read as none (W12)")
+		testfs.UnixOnly(t, "a path under a file is read as not there on Windows (W12)")
 		t.Parallel()
 		file := filepath.Join(t.TempDir(), "file")
 		if err := os.WriteFile(file, nil, 0o600); err != nil {
 			t.Fatal(err)
 		}
-		vars := map[string]string{"HOME": t.TempDir(), "FLOE_DIR": file}
+		vars := HomeEnv(t.TempDir(), map[string]string{"FLOE_DIR": file})
 		if code, _, errs := runIn(Env{Stdout: nil, Stderr: nil, Dir: env.Dir, Getenv: func(key string) string { return vars[key] }}, "guide"); code != 1 || errs == "" {
 			t.Errorf("floe guide = %d, %q", code, errs)
 		}

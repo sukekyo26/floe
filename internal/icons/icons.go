@@ -201,14 +201,18 @@ func New(root string, absent bool, setting string) *Store {
 	return &Store{none: nil, root: root, absent: absent, setting: setting, mu: sync.Mutex{}, indexes: map[string]*index{}}
 }
 
-// Without returns a store with no root, as there is no directory for icons, err says why (icons_no_dir for nil):
-// the sets built in are there, and a set to fetch is told err.
+// Without returns a store with no root, as there is no directory for icons, err says why: the sets built in are
+// there, and a set to fetch is told err. Of nil, a set to fetch is floe's failure: what draws gives the icons it
+// has (the commands give one of their directory; nil is a test's, which draws the built-in sets alone).
 func Without(err error) *Store {
 	if err == nil {
-		err = usererr.NewWhole("icons_no_dir")
+		err = errNoSets
 	}
 	return &Store{none: err, root: "", absent: true, setting: "", mu: sync.Mutex{}, indexes: map[string]*index{}}
 }
+
+// errNoSets is the error of a set to fetch in a store Without(nil).
+var errNoSets = errors.New("no icon sets but the built-in ones are given to draw with")
 
 func (s *Store) dir(k *kit) string {
 	return filepath.Join(s.root, k.name)
@@ -245,11 +249,13 @@ func (s *Store) readIndex(k *kit) (*index, error) {
 		return nil, nil //nolint:nilnil // not fetched is not an error to fetch
 	}
 	b, _, err := files.Read(file)
+	// LIMIT: Windows says not there for a file on the way too, so that a set's directory, or the root, that is a file
+	// is taken for a set not fetched here, before cannotRead asks files.NotDir (only Unix's ENOTDIR gets there).
 	if errors.Is(err, fs.ErrNotExist) {
 		return nil, nil //nolint:nilnil // not fetched is not an error to fetch
 	}
 	if err != nil {
-		return nil, s.cannotRead(file, err, k)
+		return nil, s.cannotRead(file, filepath.Dir(file), err, k)
 	}
 	idx, err := parseIndex(file, b, k)
 	if err != nil {
@@ -320,10 +326,13 @@ func libraryAt(file string, line, column int, key string, err error, args ...any
 }
 
 // cannotRead is err, of reading the file or the directory of the set k at path, under the store: to fetch the set
-// again when that mends it, else as it is (CannotRead).
-func (s *Store) cannotRead(path string, err error, k *kit) error {
+// again when that mends it, else as it is (CannotRead). A file on the way is looked for from from (files.NotDir).
+func (s *Store) cannotRead(path, from string, err error, k *kit) error {
+	if notDir := files.NotDir(from, err); notDir != nil {
+		err = notDir
+	}
 	// A path that is no directory on the way is the store's (a file, or under one) or the set's.
-	storeIsDir := !errors.Is(err, syscall.ENOTDIR) || s.rootIsDir()
+	storeIsDir := !errors.Is(err, files.ErrNotDir) || s.rootIsDir()
 	switch {
 	case !mendable(path, err, storeIsDir):
 		if !storeIsDir {
@@ -346,7 +355,7 @@ func mendable(path string, err error, storeIsDir bool) bool {
 		return false
 	case errors.Is(err, fs.ErrNotExist), errors.Is(err, usererr.ErrNotFile), errors.Is(err, syscall.EISDIR):
 		return true
-	case errors.Is(err, syscall.ENOTDIR):
+	case errors.Is(err, files.ErrNotDir):
 		return storeIsDir
 	}
 	// The system finds it where os.Root does not let it be read: outside the set's directory.
@@ -386,7 +395,7 @@ func (s *Store) checkWritable() error {
 	switch {
 	case err == nil && !fi.IsDir():
 		// What making it would say.
-		return s.cannotWrite(&fs.PathError{Op: "mkdir", Path: s.root, Err: syscall.ENOTDIR})
+		return s.cannotWrite(&fs.PathError{Op: "mkdir", Path: s.root, Err: files.ErrNotDir})
 	case err != nil && !errors.Is(err, fs.ErrNotExist):
 		return s.cannotWrite(err)
 	}
@@ -879,13 +888,14 @@ func (s *Store) Lookup(name string) ([]byte, error) {
 	dir := s.dir(k)
 	root, err := files.OpenRoot(dir)
 	if err != nil {
-		return nil, s.cannotRead(dir, err, k)
+		return nil, s.cannotRead(dir, dir, err, k)
 	}
 	defer root.Close() //nolint:errcheck // read only
 	b, _, err := files.ReadIn(root, rest+".svg")
 	if err != nil {
 		// At the name as the index holds it, not cleaned to where it leads.
-		return nil, s.cannotRead(dirs.Join(dir, rest+".svg"), err, k)
+		at := dirs.Join(dir, rest+".svg")
+		return nil, s.cannotRead(at, filepath.Dir(at), err, k)
 	}
 	return b, nil
 }

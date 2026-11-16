@@ -345,11 +345,12 @@ func TestImageItems(t *testing.T) {
 	})
 	t.Run("missing", func(t *testing.T) {
 		t.Parallel()
-		testfs.Pending(t, "S315-P7: system words")
+		_, _, gone := files.Read(filepath.Join(dir, "missing.png"))
+		none := "cannot be read (" + testfs.Words(t, gone) + ")"
 		_, _, err := tmpl.Draw(k, "x/d.yaml", []byte("lang: en\ntemplate: mine\ni:\n  - missing.png\n  - missing.png\n"), o)
 		if got, want := told(err), lines(
-			"x/d.yaml:4:5: the image \"missing.png\" cannot be read (no such file or directory)",
-			"x/d.yaml:5:5: the image \"missing.png\" cannot be read (no such file or directory)",
+			"x/d.yaml:4:5: the image \"missing.png\" "+none,
+			"x/d.yaml:5:5: the image \"missing.png\" "+none,
 		); got != want {
 			t.Errorf("told\n%s\nwant\n%s", got, want)
 		}

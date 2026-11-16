@@ -5,6 +5,7 @@ package testfs
 
 import (
 	"errors"
+	"io/fs"
 	"os"
 	"path/filepath"
 	"sync"
@@ -29,6 +30,20 @@ func Pending(tb testing.TB, why string) {
 	if isWindows {
 		tb.Skip("pending: " + why)
 	}
+}
+
+// Words is the system's words in err, an error of a path (*fs.PathError, *os.LinkError), for a test to expect them
+// where floe tells them, as each system says them; it fails tb for another error.
+func Words(tb testing.TB, err error) string {
+	tb.Helper()
+	if pe, ok := errors.AsType[*fs.PathError](err); ok {
+		return pe.Err.Error()
+	}
+	if le, ok := errors.AsType[*os.LinkError](err); ok {
+		return le.Err.Error()
+	}
+	tb.Fatalf("%v is no error of a path", err)
+	return ""
 }
 
 // Mkfifo makes a FIFO at path, or skips t where there are none (Windows).

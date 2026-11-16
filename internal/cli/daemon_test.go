@@ -4,6 +4,7 @@ import (
 	"bytes"
 	"context"
 	"errors"
+	"maps"
 	"math/rand/v2"
 	"net"
 	"net/http"
@@ -168,10 +169,11 @@ func newDenvOn(t *testing.T, port int) *denv {
 	}
 	tmp := dirs.Shown(got) // as a user writes it
 	p := strconv.Itoa(port)
-	e := &denv{tmp: tmp, port: p, vars: map[string]string{
-		"HOME": filepath.Join(tmp, "home"), "FLOE_DIR": filepath.Join(tmp, "store"), "FLOE_PORT": p, "BROWSER": "true",
-	}}
-	if err := os.MkdirAll(e.vars["HOME"], 0o700); err != nil {
+	home := filepath.Join(tmp, "home")
+	e := &denv{tmp: tmp, port: p, vars: cli.HomeEnv(home, map[string]string{
+		"FLOE_DIR": filepath.Join(tmp, "store"), "FLOE_PORT": p, "BROWSER": "true",
+	})}
+	if err := os.MkdirAll(home, 0o700); err != nil {
 		t.Fatal(err)
 	}
 	if err := os.WriteFile(filepath.Join(tmp, "page.yaml"), []byte("lang: en\ntemplate: report\ntitle: P\nsections:\n  - heading: h\n    parts:\n      - text: x\n"), 0o600); err != nil {
@@ -451,7 +453,7 @@ func TestPublishOtherDirs(t *testing.T) {
 	}
 
 	n := newDenv(t)
-	n.vars["HOME"] = "rel"
+	maps.Copy(n.vars, cli.HomeVars("rel"))
 	wantRun(t, "publish with no place for the icons", n.run("publish", "page.yaml"), 0, n.base()+"/a/page/\n", projectLine)
 	if h, _ := n.health(t.Context()); h.Icons != "" {
 		t.Errorf("the server's icons are %q, want none", h.Icons)

@@ -18,6 +18,7 @@ import (
 	"sync/atomic"
 	"testing"
 
+	"floe/internal/files"
 	"floe/internal/i18n"
 	"floe/internal/icons"
 	"floe/internal/testfs"
@@ -188,9 +189,9 @@ func TestLookup(t *testing.T) { //nolint:tparallel // the subtests check what th
 		t.Fatal(err)
 	}
 	_, gone := set.Lookup("aws/aws-lambda")
+	_, _, svgGone := files.Read(svg)
 	t.Run("an icon gone", func(t *testing.T) { //nolint:paralleltest // as above
-		testfs.Pending(t, "S315-P7: system words")
-		if told(gone) != svg+": cannot be read (no such file or directory)"+again {
+		if told(gone) != svg+": cannot be read ("+testfs.Words(t, svgGone)+")"+again {
 			t.Errorf("Lookup of an icon gone = %s", told(gone))
 		}
 	})
@@ -218,9 +219,9 @@ func TestLookup(t *testing.T) { //nolint:tparallel // the subtests check what th
 		t.Fatal(err)
 	}
 	_, setGone := set.Lookup("aws/res/client")
+	_, rootGone := files.OpenRoot(filepath.Join(root, "aws"))
 	t.Run("the set's directory gone", func(t *testing.T) { //nolint:paralleltest // as above
-		testfs.Pending(t, "S315-P7: system words")
-		if told(setGone) != filepath.Join(root, "aws")+": cannot be read (no such file or directory)"+again {
+		if told(setGone) != filepath.Join(root, "aws")+": cannot be read ("+testfs.Words(t, rootGone)+")"+again {
 			t.Errorf("Lookup with the set's directory gone = %s", told(setGone))
 		}
 	})
@@ -316,15 +317,21 @@ func TestSettingTold(t *testing.T) {
 		return "floe: FLOE_ICONS_DIR is " + root + ", which cannot be used as a directory (" + why + "); make it a " +
 			"directory floe can use, or set FLOE_ICONS_DIR to another directory"
 	}
-	t.Run("no directory", func(t *testing.T) {
+	under := filepath.Join(file, "sub")
+	t.Run("no directory to search", func(t *testing.T) {
+		testfs.UnixOnly(t, "a path under a file is read as not there on Windows (W12)")
 		t.Parallel()
-		testfs.Pending(t, "S315-P7: a path under a file is read as not there (ENOTDIR, W12)")
-		for _, root := range []string{file, filepath.Join(file, "sub")} {
-			set := icons.New(root, false, "FLOE_ICONS_DIR")
-			if _, err := set.Search("aws", []string{"x"}); told(err) != want(root, "not a directory") {
+		for _, root := range []string{file, under} {
+			if _, err := icons.New(root, false, "FLOE_ICONS_DIR").Search("aws", []string{"x"}); told(err) != want(root, "not a directory") {
 				t.Errorf("Search in %s = %s", root, told(err))
 			}
-			if _, err := set.Fetch(context.Background(), "aws", []icons.Source{zip}, false); told(err) != want(root, "not a directory") {
+		}
+	})
+	t.Run("no directory to fetch into", func(t *testing.T) {
+		t.Parallel()
+		// Under a file, what making it says, as the system says it.
+		for root, why := range map[string]string{file: "not a directory", under: testfs.Words(t, files.MkdirAll(under, 0o700))} {
+			if _, err := icons.New(root, false, "FLOE_ICONS_DIR").Fetch(context.Background(), "aws", []icons.Source{zip}, false); told(err) != want(root, why) {
 				t.Errorf("Fetch into %s = %s", root, told(err))
 			}
 		}
@@ -392,24 +399,22 @@ func TestFetchRefusals(t *testing.T) { //nolint:tparallel // the refusals are do
 	}
 	empty := writeZip(t, "empty.zip", []string{"README.txt"})
 	missing := filepath.Join(t.TempDir(), "none.zip")
+	_, _, missingErr := files.Read(missing)
 	folder := t.TempDir()
 	truncated, checksum := badZips(t)
 	for _, c := range []struct {
-		from          icons.Source
-		want, pending string
+		from icons.Source
+		want string
 	}{
-		{local(notZip), "page.html: is not a zip file; pass the Icon package zip from " + page + ": floe icons fetch aws <path-or-url>", ""},
-		{local(empty), "empty.zip: holds no AWS icons; pass the Icon package zip from " + page + ": floe icons fetch aws <path-or-url>", ""},
-		{local(missing), "none.zip: no such file or directory", "S315-P7: system words"},
-		{icons.Source{Name: "dir", At: folder}, "dir: is a directory", "S315-P7: a directory read as no zip (icons.go's EISDIR)"},
-		{local(checksum), "crc.zip: cannot be read as a zip (zip: checksum error); download it again", ""},
-		{local(truncated), "cut.zip: cannot be read as a zip (unexpected EOF); download it again", ""},
-		{local(lying(t)), "lie.zip: cannot be read as a zip (zip: not a valid zip file); download it again", ""},
+		{local(notZip), "page.html: is not a zip file; pass the Icon package zip from " + page + ": floe icons fetch aws <path-or-url>"},
+		{local(empty), "empty.zip: holds no AWS icons; pass the Icon package zip from " + page + ": floe icons fetch aws <path-or-url>"},
+		{local(missing), "none.zip: " + testfs.Words(t, missingErr)},
+		{icons.Source{Name: "dir", At: folder}, "dir: is a directory"},
+		{local(checksum), "crc.zip: cannot be read as a zip (zip: checksum error); download it again"},
+		{local(truncated), "cut.zip: cannot be read as a zip (unexpected EOF); download it again"},
+		{local(lying(t)), "lie.zip: cannot be read as a zip (zip: not a valid zip file); download it again"},
 	} {
 		t.Run(c.from.Name, func(t *testing.T) { //nolint:paralleltest // as above
-			if c.pending != "" {
-				testfs.Pending(t, c.pending)
-			}
 			if _, err := set.Fetch(context.Background(), "aws", []icons.Source{c.from}, false); told(err) != c.want {
 				t.Errorf("Fetch %s = %s, want %s", c.from.Name, told(err), c.want)
 			}
@@ -516,8 +521,8 @@ func TestBrokenIndex(t *testing.T) {
 		}
 	})
 	t.Run("under a file", func(t *testing.T) {
+		testfs.UnixOnly(t, "a path under a file is read as not there on Windows (W12)")
 		t.Parallel()
-		testfs.Pending(t, "S315-P7: a path under a file is read as not there (ENOTDIR, W12)")
 		// The set's directory a file, in a store that is one, a fetch mends.
 		fileSet := t.TempDir()
 		if err := os.WriteFile(filepath.Join(fileSet, "aws"), nil, 0o600); err != nil {
@@ -545,6 +550,13 @@ func TestBrokenIndex(t *testing.T) {
 		cancel()
 		if _, err := icons.New(under, false, "").Fetch(done, "aws", nil, false); !strings.HasPrefix(told(err), under+": cannot be written (not a directory): check") {
 			t.Errorf("a fetch into a root under a file = %s", told(err))
+		}
+	})
+	t.Run("a fetch into a file", func(t *testing.T) {
+		t.Parallel()
+		file := filepath.Join(t.TempDir(), "f")
+		if err := os.WriteFile(file, nil, 0o600); err != nil {
+			t.Fatal(err)
 		}
 		_, err := icons.New(file, false, "").Fetch(context.Background(), "aws", []icons.Source{local(writeZip(t, "Icon-package.zip", packageFiles))}, true)
 		if want := file + ": cannot be written (not a directory): check"; !strings.HasPrefix(told(err), want) {
@@ -680,8 +692,9 @@ func TestBuiltin(t *testing.T) {
 	if _, err := icons.Without(noDir).Lookup("aws/aws-lambda"); !errors.Is(err, noDir) {
 		t.Errorf("Without(err): Lookup aws/aws-lambda = %v, want %v", err, noDir)
 	}
-	if _, err := icons.Without(nil).Lookup("aws/aws-lambda"); told(err) != "floe: "+i18n.EnglishCatalog().Msg("icons_no_dir") {
-		t.Errorf("Without(nil): Lookup aws/aws-lambda = %v, want icons_no_dir", err)
+	// What draws gives the icons it has: nil is a test's, whose set to fetch is floe's failure.
+	if _, err := icons.Without(nil).Lookup("aws/aws-lambda"); err == nil || errors.As(err, new(*usererr.Error)) {
+		t.Errorf("Without(nil): Lookup aws/aws-lambda = %v, want floe's failure", err)
 	}
 	for name, want := range map[string]bool{"lucide/users": true, "lucide/nope": true, "aws/aws-lambda": false, "users": false, "nope/x": false} {
 		if icons.Mono(name) != want {

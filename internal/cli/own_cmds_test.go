@@ -10,6 +10,8 @@ import (
 	"strings"
 	"testing"
 
+	"floe/internal/cli"
+	"floe/internal/files"
 	"floe/internal/kit"
 	"floe/internal/testfs"
 )
@@ -18,14 +20,13 @@ import (
 // which their checks take, of any name floe takes, YAML's null, true and 017 too, and one as long as a file's name may
 // be; once there, a name is refused and nothing changes.
 func TestNew(t *testing.T) {
-	testfs.Pending(t, "S315-P7: ENOTDIR read as none (W12)")
 	t.Parallel()
 
 	for _, name := range []string{"mine", "a-b_c", "null", "true", "017", strings.Repeat("a", 255)} {
 		home := t.TempDir()
-		env := map[string]string{"HOME": home}
+		env := cli.HomeVars(home)
 		for _, kind := range []string{"part", "theme", "template"} {
-			at := filepath.Join(home, ".config/floe", kind+"s", name)
+			at := filepath.Join(cli.DefaultPlace(home, kind+"s"), name)
 			if code, stdout, stderr := runEnv(home, env, kind, "new", name); code != 0 || stdout != "made "+at+"\n" || stderr != "" {
 				t.Errorf("floe %s new %s = %d, %q, %q", kind, name, code, stdout, stderr)
 			}
@@ -44,7 +45,7 @@ func TestNew(t *testing.T) {
 				t.Errorf("floe %s new %s again changed %v to %v", kind, name, before, after)
 			}
 		}
-		if leftover, err := filepath.Glob(filepath.Join(home, ".config/floe/*/.*")); err != nil || leftover != nil {
+		if leftover, err := filepath.Glob(filepath.Join(filepath.Dir(cli.DefaultPlace(home, "parts")), "*", ".*")); err != nil || leftover != nil {
 			t.Errorf("new left %v, %v", leftover, err)
 		}
 	}
@@ -56,26 +57,23 @@ func TestNewReads(t *testing.T) {
 	t.Parallel()
 
 	dir := write(t, map[string]string{"templates/memo/schema.json": "{}", "parts/bad/schema.json": ownSchema})
-	brokenTemplate := map[string]string{"HOME": filepath.Join(dir, "home"), "FLOE_TEMPLATES_DIR": filepath.Join(dir, "templates")}
-	brokenPart := map[string]string{"HOME": filepath.Join(dir, "home2"), "FLOE_PARTS_DIR": filepath.Join(dir, "parts")}
-	const w12 = "S315-P7: ENOTDIR read as none (W12)"
+	brokenTemplate := cli.HomeEnv(filepath.Join(dir, "home"), map[string]string{"FLOE_TEMPLATES_DIR": filepath.Join(dir, "templates")})
+	brokenPart := cli.HomeEnv(filepath.Join(dir, "home2"), map[string]string{"FLOE_PARTS_DIR": filepath.Join(dir, "parts")})
 	for _, tt := range []struct {
 		name string
 		env  map[string]string
 		args []string
 		code int
 		errs string
-		why  string
 	}{
-		{"part, a template broken", brokenTemplate, []string{"part", "new", "x"}, 0, "", w12},
-		{"theme, a template broken", brokenTemplate, []string{"theme", "new", "x"}, 0, "", w12},
-		{"template, a template broken", brokenTemplate, []string{"template", "new", "x"}, 1, filepath.Join(dir, "templates/memo"), ""},
-		{"part, a part broken", brokenPart, []string{"part", "new", "x"}, 1, filepath.Join(dir, "parts/bad"), ""},
-		{"theme, a part broken", brokenPart, []string{"theme", "new", "x"}, 1, filepath.Join(dir, "parts/bad"), w12},
-		{"template, a part broken", brokenPart, []string{"template", "new", "x"}, 1, filepath.Join(dir, "parts/bad"), w12},
+		{"part, a template broken", brokenTemplate, []string{"part", "new", "x"}, 0, ""},
+		{"theme, a template broken", brokenTemplate, []string{"theme", "new", "x"}, 0, ""},
+		{"template, a template broken", brokenTemplate, []string{"template", "new", "x"}, 1, filepath.Join(dir, "templates/memo")},
+		{"part, a part broken", brokenPart, []string{"part", "new", "x"}, 1, filepath.Join(dir, "parts/bad")},
+		{"theme, a part broken", brokenPart, []string{"theme", "new", "x"}, 1, filepath.Join(dir, "parts/bad")},
+		{"template, a part broken", brokenPart, []string{"template", "new", "x"}, 1, filepath.Join(dir, "parts/bad")},
 	} {
 		t.Run(tt.name, func(t *testing.T) {
-			testfs.Pending(t, tt.why)
 			t.Parallel()
 			code, _, stderr := runEnv(dir, tt.env, tt.args...)
 			if code != tt.code || !strings.HasPrefix(stderr, tt.errs) || (stderr == "") != (tt.errs == "") {
@@ -108,55 +106,49 @@ func texts(t *testing.T, dir string) map[string]string {
 func TestNewRefused(t *testing.T) { //nolint:tparallel // what was written is looked at after the commands
 	t.Parallel()
 
-	home := write(t, map[string]string{".config/floe/parts/shr.json": "{}"})
-	parts, themes := filepath.Join(home, ".config/floe/parts"), filepath.Join(home, ".config/floe/themes")
-	const unixPaths = "S315-P7: Unix absolute paths"
+	home := t.TempDir()
+	parts, themes := cli.DefaultPlace(home, "parts"), cli.DefaultPlace(home, "themes")
+	if err := os.MkdirAll(parts, 0o700); err != nil {
+		t.Fatal(err)
+	}
+	if err := os.WriteFile(filepath.Join(parts, "shr.json"), []byte("{}"), 0o600); err != nil {
+		t.Fatal(err)
+	}
+	nowhere, file := filepath.Join(t.TempDir(), "nowhere"), fileIn(t)
+	_, notThere := files.ReadDir(nowhere)
 	//nolint:paralleltest // as the function
 	for _, tt := range []struct {
 		env  map[string]string
 		args []string
 		code int
 		errs string
-		why  string
 	}{
-		{nil, []string{"part", "new", "note"}, 1, filepath.Join(parts, "note") + ": note is the name of floe's parts/note: give yours another name\n", ""},
-		{nil, []string{"part", "new", "Bad"}, 1, filepath.Join(parts, "Bad") + ": floe takes no such name: write lower case letters, digits, - and _, starting with a letter or a digit; rename it\n", ""},
-		{nil, []string{"part", "new", "palette"}, 1, filepath.Join(parts, "palette") + ": palette names a file of every theme (palette.css), which a theme's CSS for this part would be read as: give it another name\n", ""},
-		{nil, []string{"part", "new", "shr"}, 1, filepath.Join(parts, "shr") + ": shr names both " + filepath.Join(parts, "shr") + " and " + filepath.Join(parts, "shr.json") + ": give one of them another name\n", ""},
-		{nil, []string{"theme", "new", "default"}, 1, filepath.Join(themes, "default") + ": default is the name of floe's themes/default: give yours another name\n", ""},
-		{nil, []string{"theme", "new", "Bad"}, 1, filepath.Join(themes, "Bad") + ": floe takes no such name: write lower case letters, digits, - and _, starting with a letter or a digit; rename it\n", ""},
-		{nil, []string{"part", "new"}, 2, "floe: accepts 1 arg(s), received 0: run floe --help\n", ""},
-		{nil, []string{"part", "new", "x", "--from", "note"}, 2, "floe: unknown flag: --from: run floe --help\n", ""},
-		{nil, []string{"template", "new", "a", "b"}, 2, "floe: accepts 1 arg(s), received 2: run floe --help\n", ""},
-		{map[string]string{"FLOE_PARTS_DIR": "/nowhere"}, []string{"part", "new", "x"}, 1, "floe: FLOE_PARTS_DIR is /nowhere, which cannot be used as a directory (no such file or directory); make it a directory floe can use, or set FLOE_PARTS_DIR to another directory\n", unixPaths},
-		{map[string]string{}, []string{"part", "new", "x"}, 1, "floe: there is no default directory, as HOME is not an absolute path; set FLOE_PARTS_DIR to an absolute path\n", ""},
-		{map[string]string{}, []string{"template", "new", "x"}, 1, "floe: there is no default directory, as HOME is not an absolute path; set FLOE_TEMPLATES_DIR to an absolute path\n", ""},
+		{nil, []string{"part", "new", "note"}, 1, filepath.Join(parts, "note") + ": note is the name of floe's parts/note: give yours another name\n"},
+		{nil, []string{"part", "new", "Bad"}, 1, filepath.Join(parts, "Bad") + ": floe takes no such name: write lower case letters, digits, - and _, starting with a letter or a digit; rename it\n"},
+		{nil, []string{"part", "new", "palette"}, 1, filepath.Join(parts, "palette") + ": palette names a file of every theme (palette.css), which a theme's CSS for this part would be read as: give it another name\n"},
+		{nil, []string{"part", "new", "shr"}, 1, filepath.Join(parts, "shr") + ": shr names both " + filepath.Join(parts, "shr") + " and " + filepath.Join(parts, "shr.json") + ": give one of them another name\n"},
+		{nil, []string{"theme", "new", "default"}, 1, filepath.Join(themes, "default") + ": default is the name of floe's themes/default: give yours another name\n"},
+		{nil, []string{"theme", "new", "Bad"}, 1, filepath.Join(themes, "Bad") + ": floe takes no such name: write lower case letters, digits, - and _, starting with a letter or a digit; rename it\n"},
+		{nil, []string{"part", "new"}, 2, "floe: accepts 1 arg(s), received 0: run floe --help\n"},
+		{nil, []string{"part", "new", "x", "--from", "note"}, 2, "floe: unknown flag: --from: run floe --help\n"},
+		{nil, []string{"template", "new", "a", "b"}, 2, "floe: accepts 1 arg(s), received 2: run floe --help\n"},
+		{map[string]string{"FLOE_PARTS_DIR": nowhere}, []string{"part", "new", "x"}, 1, "floe: FLOE_PARTS_DIR is " + nowhere + ", which cannot be used as a directory (" + testfs.Words(t, notThere) + "); make it a directory floe can use, or set FLOE_PARTS_DIR to another directory\n"},
+		{map[string]string{}, []string{"part", "new", "x"}, 1, "floe: there is no default directory, as " + cli.PlaceVar("parts") + " is not an absolute path; set FLOE_PARTS_DIR to an absolute path\n"},
+		{map[string]string{}, []string{"template", "new", "x"}, 1, "floe: there is no default directory, as " + cli.PlaceVar("templates") + " is not an absolute path; set FLOE_TEMPLATES_DIR to an absolute path\n"},
 		{
-			map[string]string{"HOME": "/dev/null"},
+			cli.HomeVars(file),
 			[]string{"part", "new", "x"},
 			1,
-			"/dev/null/.config/floe/parts: cannot be written (not a directory): check that its directory exists and can be written to, and that its name is free and not too long\n",
-			unixPaths,
+			cli.DefaultPlace(file, "parts") + ": cannot be written (not a directory): check that its directory exists and can be written to, and that its name is free and not too long\n",
 		},
 	} {
 		env := tt.env
 		if env == nil {
-			env = map[string]string{"HOME": home}
+			env = cli.HomeVars(home)
 		}
-		check := func(t *testing.T) {
-			t.Helper()
-			if code, stdout, stderr := runEnv(home, env, tt.args...); code != tt.code || stdout != "" || stderr != tt.errs {
-				t.Errorf("floe %v = %d, %q, %q; want %d, %q", tt.args, code, stdout, stderr, tt.code, tt.errs)
-			}
+		if code, stdout, stderr := runEnv(home, env, tt.args...); code != tt.code || stdout != "" || stderr != tt.errs {
+			t.Errorf("floe %v = %d, %q, %q; want %d, %q", tt.args, code, stdout, stderr, tt.code, tt.errs)
 		}
-		if tt.why == "" {
-			check(t)
-			continue
-		}
-		t.Run(strings.Join(tt.args, " "), func(t *testing.T) {
-			testfs.Pending(t, tt.why)
-			check(t)
-		})
 	}
 	if got := texts(t, parts); len(got) != 1 {
 		t.Errorf("refused names wrote in %s: %v", parts, got)
@@ -293,7 +285,7 @@ func TestShowEachFile(t *testing.T) {
 		t.Fatal(err)
 	}
 	dir := t.TempDir()
-	env := map[string]string{"HOME": dir}
+	env := cli.HomeVars(dir)
 	for _, kind := range []struct {
 		name    string
 		entries []kit.Entry

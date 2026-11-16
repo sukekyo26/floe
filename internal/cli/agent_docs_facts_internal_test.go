@@ -105,7 +105,7 @@ func TestAgentDocQuotes(t *testing.T) {
 	}
 	docHolds(t, quotes)
 	t.Run("the places", func(t *testing.T) {
-		testfs.Pending(t, "S315-P7: the docs quote Unix places")
+		testfs.Pending(t, "S315-P8b: the docs quote the Windows places")
 		t.Parallel()
 		docHolds(t, []docQuote{
 			{diagramDocPath, iconsNotKept(t), 1},

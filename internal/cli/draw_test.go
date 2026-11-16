@@ -8,9 +8,9 @@ import (
 	"runtime"
 	"slices"
 	"strings"
-	"syscall"
 	"testing"
 
+	"floe/internal/files"
 	"floe/internal/testfs"
 )
 
@@ -40,14 +40,14 @@ func TestCheck(t *testing.T) {
 		t.Errorf("floe check a.yaml = %d, %q, %q", code, stdout, stderr)
 	}
 	t.Run("every mistake", func(t *testing.T) {
-		testfs.Pending(t, "S315-P7: system words")
 		t.Parallel()
+		_, _, gone := files.Read(filepath.Join(dir, "gone.yaml"))
 		code, _, stderr := run(dir, "check", "b.yaml", "a.yaml", "page.html", "", "gone.yaml", "c.yaml")
 		want := []string{
 			`b.yaml:2:11: unknown template "reprot"; use adr, design, handoff, postmortem, report, runbook, slides`,
 			"floe: page.html is not a data file (.yaml or .yml)",
 			"floe: argument 4 is an empty path; give a data file (.yaml or .yml), and check that a variable written for it is set",
-			"gone.yaml: no such file or directory",
+			"gone.yaml: " + testfs.Words(t, gone),
 		}
 		if code != 1 || !strings.HasPrefix(stderr, strings.Join(want, "\n")+"\nc.yaml:") {
 			t.Errorf("floe check = %d, stderr\n%s\nwant first\n%s", code, stderr, strings.Join(want, "\n"))
@@ -381,7 +381,12 @@ func TestCannotWriteThroughLinks(t *testing.T) {
 		testfs.Symlink(t, to, filepath.Join(dir, link))
 	}
 	tail := "): check that its directory exists and can be written to, and that its name is free and not too long\n"
-	words := map[string]string{"a.yaml": syscall.ENOENT.Error(), "b.yaml": syscall.ELOOP.Error()}
+	// The system's words of why each link leads nowhere (a directory not there, a loop), as it says them.
+	words := map[string]string{}
+	for file, link := range map[string]string{"a.yaml": "a.html", "b.yaml": "b.html"} {
+		_, err := files.Stat(filepath.Join(dir, link))
+		words[file] = testfs.Words(t, err)
+	}
 	told := map[string]string{}
 	for file := range words {
 		for _, mode := range [][]string{{"render"}, {"render", "--check"}} {
@@ -395,7 +400,6 @@ func TestCannotWriteThroughLinks(t *testing.T) {
 		}
 	}
 	t.Run("in the system's words", func(t *testing.T) {
-		testfs.Pending(t, "S315-P7: system words")
 		t.Parallel()
 		for args, stderr := range told {
 			file := args[strings.LastIndex(args, " ")+1:]

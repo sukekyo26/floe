@@ -52,6 +52,14 @@ func (r *Root) Open(name string) (fs.File, error) {
 	return openRead(r.root, name)
 }
 
+// ReadFile reads the file name under the directory, as ReadIn reads one.
+func (r *Root) ReadFile(name string) ([]byte, error) {
+	if err := r.ready(); err != nil {
+		return nil, err
+	}
+	return readFileIn(r.root, name)
+}
+
 // Stat tells of name under the directory without opening it: of a FIFO too, which Open refuses.
 func (r *Root) Stat(name string) (fs.FileInfo, error) {
 	if err := r.ready(); err != nil {
@@ -78,8 +86,8 @@ func DirFS(dir string) fs.FS {
 	return dirFS(dir)
 }
 
-// dirFS is a DirFS. It has no ReadFile nor ReadDir, so that fs.ReadFile, fs.ReadDir and fs.WalkDir open through
-// Open.
+// dirFS is a DirFS. It has no ReadDir, so that fs.ReadDir and fs.WalkDir open through Open; ReadFile reads as
+// ReadIn does, so that a directory read as a file is refused.
 type dirFS string
 
 // Open opens name under d as Open opens a path: d and name joined, then looked at by allowed once. Errors name
@@ -89,11 +97,22 @@ func (d dirFS) Open(name string) (fs.File, error) {
 	if err != nil {
 		return nil, err
 	}
-	f, _, err := Open(p)
+	// openPath, not Open: a directory is opened, for fs.ReadDir and fs.WalkDir.
+	f, _, err := openPath(p, os.O_RDONLY, 0)
 	if err != nil {
 		return nil, asWritten(err, name)
 	}
 	return f, nil
+}
+
+// ReadFile reads the file name as Read reads a path, a directory refused; errors name name.
+func (d dirFS) ReadFile(name string) ([]byte, error) {
+	p, err := d.join("open", name)
+	if err != nil {
+		return nil, err
+	}
+	b, _, err := Read(p)
+	return b, asWritten(err, name)
 }
 
 func (d dirFS) Stat(name string) (fs.FileInfo, error) {
@@ -138,6 +157,15 @@ func openRead(o Opener, name string) (fs.File, error) {
 		return nil, err
 	}
 	return f, nil
+}
+
+// readFileIn reads name of o, a slash-separated path under it that ValidName takes, as ReadIn reads a file.
+func readFileIn(o Opener, name string) ([]byte, error) {
+	if _, err := checkName("open", name); err != nil {
+		return nil, err
+	}
+	b, _, err := ReadIn(o, name)
+	return b, err
 }
 
 // checkName refuses name, of the operation op, unless ValidName takes it, as an fs.FS does; it gives name as the

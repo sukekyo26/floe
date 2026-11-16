@@ -103,7 +103,9 @@ func Start(t *testing.T, written map[string]string) *Site {
 	return &Site{
 		Base: "http://127.0.0.1:" + p, Dir: tmp,
 		Env: map[string]string{
-			"HOME": dir("home"), "FLOE_DIR": dir("store"), "FLOE_PORT": p, "FLOE_TEMPLATES_DIR": dir("templates"),
+			// Each system's home, so that a command reads none of the machine's.
+			"HOME": dir("home"), "USERPROFILE": dir("home"),
+			"FLOE_DIR": dir("store"), "FLOE_PORT": p, "FLOE_TEMPLATES_DIR": dir("templates"),
 			"FLOE_PARTS_DIR": dir("parts"), "FLOE_THEMES_DIR": dir("themes"), "FLOE_ICONS_DIR": dir("icons"),
 			"BROWSER": "true",
 		},

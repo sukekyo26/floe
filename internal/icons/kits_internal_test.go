@@ -332,7 +332,7 @@ func TestAgain(t *testing.T) {
 		wantMistake(t, c.k.name+" broken", err, "icons_broken", c.want)
 		_, err = parseIndex(file, []byte("{}"), c.k)
 		wantMistake(t, c.k.name+" without a version", err, "icons_index_no_version", c.want)
-		wantMistake(t, c.k.name+" not a file", (&Store{}).cannotRead(file, usererr.ErrNotFile, c.k), "icons_not_file", c.want)
+		wantMistake(t, c.k.name+" not a file", (&Store{}).cannotRead(file, filepath.Dir(file), usererr.ErrNotFile, c.k), "icons_not_file", c.want)
 	}
 }
 

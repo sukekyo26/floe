@@ -142,9 +142,9 @@ func TestRebuildUnreadable(t *testing.T) {
 			t.Fatal(err)
 		}
 		copyA := strings.Replace(copyOf(t, s, root, "a"), root, "S", 1)
-		want := lines(filepath.Join(copyA, "page.html")+": no such file or directory", filepath.Join(copyA, "data.yaml")+fmt.Sprintf(keeps, "a"))
+		_, gone := os.ReadFile(filepath.Join(copyOf(t, s, root, "a"), "page.html"))
+		want := lines(filepath.Join(copyA, "page.html")+": "+testfs.Words(t, gone), filepath.Join(copyA, "data.yaml")+fmt.Sprintf(keeps, "a"))
 		got := told(s.Rebuild(picKit(t, "v2", "")), root)
-		testfs.Pending(t, "S315-P7: system words")
 		if got != want {
 			t.Errorf("told\n%s\nwant\n%s", got, want)
 		}

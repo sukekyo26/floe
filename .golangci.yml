@@ -140,6 +140,8 @@ linters:
           msg: "add a function to files for it first: files refuses shares and devices before the system is called"
         - pattern: ^filepath\.(Walk|WalkDir|Glob)$
           msg: "use files.ReadDir, or fs.WalkDir of files.DirFS: files refuses shares and devices before the system is called"
+        - pattern: ^(syscall\.(ENOTDIR|ERROR_PATH_NOT_FOUND)|unix\.ENOTDIR|windows\.ERROR_PATH_NOT_FOUND)$
+          msg: "ask files.NotDir, and make the error with files.ErrNotDir: a file on a path's way is files' to tell (Windows says not there for it)"
       analyze-types: true
       exclude-godoc-examples: true
     depguard:
@@ -259,6 +261,11 @@ linters:
         linters:
           - forbidigo
         text: files refuses shares and devices before the system is called
+      # files.NotDir is the one place that reads ENOTDIR, which Windows gives for a directory not there too.
+      - path: internal/files/
+        linters:
+          - forbidigo
+        text: "a file on a path's way is files' to tell"
       # Tests get a relaxed profile but still benefit from bug catchers.
       - path: _test\.go
         linters:

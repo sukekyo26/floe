@@ -6,10 +6,10 @@ import (
 	"os"
 	"path/filepath"
 	"slices"
+	"syscall"
 	"testing"
 
 	"floe/internal/i18n"
-	"floe/internal/testfs"
 	"floe/internal/usererr"
 )
 
@@ -22,39 +22,34 @@ func TestCannotReadWrite(t *testing.T) {
 	_, rerr := os.ReadFile(filepath.Join(dir, "gone.yaml"))
 	werr := os.Rename(filepath.Join(dir, "gone"), filepath.Join(dir, "x"))
 	english := i18n.EnglishCatalog()
-	const words = "S315-P7: system words"
+	// What the system says of a name not there (ERROR_FILE_NOT_FOUND on Windows), whatever floe takes from the error.
+	gone, moved := syscall.ENOENT.Error(), syscall.ENOENT.Error()
 	for _, c := range []struct {
-		name    string
-		err     error
-		want    string
-		pending string
+		name string
+		err  error
+		want string
 	}{
-		{"read", usererr.CannotRead("gone.yaml", rerr), "gone.yaml: no such file or directory", words},
+		{"read", usererr.CannotRead("gone.yaml", rerr), "gone.yaml: " + gone},
 		{
 			"no file", usererr.CannotRead("f.yaml", &fs.PathError{Op: "open", Path: "/abs/f.yaml", Err: usererr.ErrNotFile}),
 			"f.yaml: this is neither a regular file nor a directory (a FIFO, a device or the like), which floe may never finish reading: put a regular file here",
-			"",
 		},
-		{"write", usererr.CannotWrite("out", werr), "out: cannot be written (no such file or directory): check that its " +
-			"directory exists and can be written to, and that its name is free and not too long", words},
-		{"in system words", usererr.InSystemWords("icons_previous_left", "out", werr, "out.old"), "out: cannot be written (no such file or " +
-			"directory), and the previous icons are left in out.old: move them back here, or fetch the icons again", words},
+		{"write", usererr.CannotWrite("out", werr), "out: cannot be written (" + moved + "): check that its " +
+			"directory exists and can be written to, and that its name is free and not too long"},
+		{"in system words", usererr.InSystemWords("icons_previous_left", "out", werr, "out.old"), "out: cannot be written (" + moved +
+			"), and the previous icons are left in out.old: move them back here, or fetch the icons again"},
 		// A directory a setting names is told for it; the default as it is told without one.
 		{"setting", usererr.SettingDir("FLOE_DIR", "/s", werr, usererr.CannotWrite("/s", werr)), "floe: FLOE_DIR is /s, which " +
-			"cannot be used as a directory (no such file or directory); make it a directory floe can use, or set " +
-			"FLOE_DIR to another directory", words},
+			"cannot be used as a directory (" + moved + "); make it a directory floe can use, or set " +
+			"FLOE_DIR to another directory"},
 		{"setting, no file", usererr.SettingDir("FLOE_DIR", "/s", usererr.ErrNotFile, nil), "floe: FLOE_DIR is /s, which cannot be used " +
 			"as a directory (neither a regular file nor a directory); make it a directory floe can use, or set " +
-			"FLOE_DIR to another directory", ""},
-		{"default", usererr.SettingDir("", "out", werr, usererr.CannotWrite("out", werr)), "out: cannot be written (no such " +
-			"file or directory): check that its directory exists and can be written to, and that its name is free " +
-			"and not too long", words},
+			"FLOE_DIR to another directory"},
+		{"default", usererr.SettingDir("", "out", werr, usererr.CannotWrite("out", werr)), "out: cannot be written (" + moved +
+			"): check that its directory exists and can be written to, and that its name is free and not too long"},
 	} {
 		t.Run(c.name, func(t *testing.T) {
 			t.Parallel()
-			if c.pending != "" {
-				testfs.Pending(t, c.pending)
-			}
 			if got := usererr.Tell(english, c.err).Render("floe: "); got != c.want {
 				t.Errorf("told %q, want %q", got, c.want)
 			}
@@ -88,8 +83,7 @@ func TestInSystemWordsOf(t *testing.T) {
 	}
 	t.Run("system words", func(t *testing.T) {
 		t.Parallel()
-		testfs.Pending(t, "S315-P7: system words")
-		if len(e.Args) == 0 || e.Args[0] != "no such file or directory" {
+		if len(e.Args) == 0 || e.Args[0] != syscall.ENOENT.Error() {
 			t.Errorf("made %s with %q, the system's words first", e.Key, e.Args)
 		}
 	})

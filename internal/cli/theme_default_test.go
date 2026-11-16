@@ -7,6 +7,7 @@ import (
 	"strings"
 	"testing"
 
+	"floe/internal/cli"
 	"floe/internal/dirs"
 	"floe/internal/files"
 )
@@ -22,7 +23,7 @@ func TestThemeDefaultCommand(t *testing.T) {
 	}
 	tmp := dirs.Shown(got) // as a user writes it
 	store := filepath.Join(tmp, "store")
-	env := map[string]string{"HOME": tmp, "FLOE_DIR": store, "FLOE_PORT": "1"}
+	env := cli.HomeEnv(tmp, map[string]string{"FLOE_DIR": store, "FLOE_PORT": "1"})
 	if code, out, errs := runEnv(tmp, env, "theme", "default"); code != 0 || out != "" || errs != "" {
 		t.Errorf("none chosen: %d %q %q", code, out, errs)
 	}

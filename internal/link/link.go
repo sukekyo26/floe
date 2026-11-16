@@ -137,7 +137,7 @@ func realHome(home string) (string, error) {
 			return resolved, nil
 		}
 	}
-	return "", usererr.New("link_home_unresolved", home)
+	return "", usererr.New("link_home_unresolved", home, HomeKey)
 }
 
 // Resolve returns the file to serve for rest under the link registered as the real path registered, a folder

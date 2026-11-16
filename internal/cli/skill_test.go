@@ -7,6 +7,7 @@ import (
 	"testing"
 	"time"
 
+	"floe/internal/cli"
 	"floe/internal/dirs"
 	"floe/internal/files"
 	"floe/internal/testfs"
@@ -42,6 +43,16 @@ func readFile(t *testing.T, path string) string {
 	return string(b)
 }
 
+// linkNowhereWords is what files.MkdirAll says of a link to nothing, "" where this user may make no link.
+func linkNowhereWords(t *testing.T) string {
+	t.Helper()
+	at := filepath.Join(t.TempDir(), "link")
+	if err := os.Symlink(filepath.Join(filepath.Dir(at), "gone"), at); err != nil {
+		return ""
+	}
+	return testfs.Words(t, files.MkdirAll(at, 0o700))
+}
+
 // floe skill install writes floe's skill where the agent named reads skills: made when none is there, left when
 // this floe's is, kept but for --force when another is; links are followed to a directory named floe and a file
 // named SKILL.md alone; only the directory a setting names is told for the setting.
@@ -53,12 +64,13 @@ func TestSkillInstall(t *testing.T) {
 		has  []string // parts the output (stdout, then stderr) holds
 		not  []string // parts it does not
 	}
-	words, unixPaths := "S315-P7: system words", "S315-P7: Unix absolute paths"
-	pending := map[string]string{
-		"floe is a file": "S315-P7: ENOTDIR read as none (W12)", ".claude is a file": words, ".agents is a file": words,
-		"skills is a file": words, "skills under CLAUDE_CONFIG_DIR is a file": words, "CLAUDE_CONFIG_DIR is a file": words,
-		".agents links nowhere": words, "skills links nowhere": words, "skills under CLAUDE_CONFIG_DIR links nowhere": words,
-		"SKILL.md is a directory": words, "HOME is a file": unixPaths, "HOME is a file codex": unixPaths,
+	unixOnly := map[string]string{"floe is a file": "a path under a file is read as not there on Windows (W12)"}
+	// What files says making a directory at a link to nothing (Unix: file exists; Windows: files refuses the link),
+	// taken where a link can be made: the rows of such links skip where none can.
+	exists := linkNowhereWords(t)
+	homeAFile := func(t *testing.T, _ string) map[string]string {
+		t.Helper()
+		return map[string]string{cli.HomeKey: fileIn(t)}
 	}
 	for _, c := range []struct {
 		name  string
@@ -165,7 +177,7 @@ func TestSkillInstall(t *testing.T) {
 		},
 		{
 			name: ".agents links nowhere", agent: "codex", setup: linked("gone", false, ".agents"),
-			want: check{1, []string{"/.agents: cannot be written (file exists)"}, nil},
+			want: check{1, []string{"/.agents: cannot be written (" + exists + ")"}, nil},
 		},
 		{
 			name: ".agents links to itself", agent: "copilot", setup: linked(".agents", false, ".agents"),
@@ -173,7 +185,7 @@ func TestSkillInstall(t *testing.T) {
 		},
 		{
 			name: "skills links nowhere", agent: "claude", setup: linked("gone", false, ".claude/skills"),
-			want: check{1, []string{"/.claude/skills: cannot be written (file exists)"}, nil},
+			want: check{1, []string{"/.claude/skills: cannot be written (" + exists + ")"}, nil},
 		},
 		{
 			name: ".claude links, no skills yet", agent: "claude", setup: linked("dot/claude", true, ".claude"),
@@ -189,7 +201,7 @@ func TestSkillInstall(t *testing.T) {
 		},
 		{
 			name: "skills under CLAUDE_CONFIG_DIR links nowhere", agent: "claude", setup: config("skills gone"),
-			want: check{1, []string{"/cfg/skills: cannot be written (file exists)"}, []string{"CLAUDE_CONFIG_DIR is"}},
+			want: check{1, []string{"/cfg/skills: cannot be written (" + exists + ")"}, []string{"CLAUDE_CONFIG_DIR is"}},
 		},
 		{
 			name: "SKILL.md under CLAUDE_CONFIG_DIR is a FIFO", agent: "claude", setup: config("fifo"),
@@ -205,33 +217,31 @@ func TestSkillInstall(t *testing.T) {
 			want:  check{1, []string{"CLAUDE_CONFIG_DIR is x, a relative path"}, nil},
 		},
 		{
-			name: "no HOME", agent: "claude",
-			setup: func(*testing.T, string) map[string]string { return map[string]string{"HOME": ""} },
-			want:  check{1, []string{"set HOME to an absolute path"}, []string{"CLAUDE_CONFIG_DIR"}},
+			name: "no home", agent: "claude",
+			setup: func(*testing.T, string) map[string]string { return map[string]string{cli.HomeKey: ""} },
+			want:  check{1, []string{"as " + cli.HomeKey + " is not an absolute path; set " + cli.HomeKey + " to an absolute path"}, []string{"CLAUDE_CONFIG_DIR"}},
 		},
 		{
-			name: "no HOME codex", agent: "codex",
-			setup: func(*testing.T, string) map[string]string { return map[string]string{"HOME": ""} },
-			want:  check{1, []string{"set HOME to an absolute path"}, nil},
+			name: "no home codex", agent: "codex",
+			setup: func(*testing.T, string) map[string]string { return map[string]string{cli.HomeKey: ""} },
+			want:  check{1, []string{"set " + cli.HomeKey + " to an absolute path"}, nil},
 		},
 		{
-			name: "HOME is a file", agent: "claude",
-			setup: func(*testing.T, string) map[string]string { return map[string]string{"HOME": "/dev/null"} },
-			want:  check{1, []string{"/dev/null/.claude: cannot be written (not a directory)"}, nil},
+			name: "the home is a file", agent: "claude", setup: homeAFile,
+			want: check{1, []string{"file/.claude: cannot be written (not a directory)"}, nil},
 		},
 		{
-			name: "HOME is a file codex", agent: "codex",
-			setup: func(*testing.T, string) map[string]string { return map[string]string{"HOME": "/dev/null"} },
-			want:  check{1, []string{"/dev/null/.agents: cannot be written (not a directory)"}, nil},
+			name: "the home is a file codex", agent: "codex", setup: homeAFile,
+			want: check{1, []string{"file/.agents: cannot be written (not a directory)"}, nil},
 		},
 	} {
 		t.Run(c.name, func(t *testing.T) {
 			t.Parallel()
-			if why := pending[c.name]; why != "" {
-				testfs.Pending(t, why)
+			if why := unixOnly[c.name]; why != "" {
+				testfs.UnixOnly(t, why)
 			}
 			home := evalTemp(t)
-			env := map[string]string{"HOME": home}
+			env := cli.HomeVars(home)
 			if c.setup != nil {
 				for k, v := range c.setup(t, home) {
 					env[k] = v
@@ -267,7 +277,7 @@ func TestSkillInstall(t *testing.T) {
 func installed(base string) func(t *testing.T, home string) map[string]string {
 	return func(t *testing.T, home string) map[string]string {
 		t.Helper()
-		code, _, errs := runEnv(home, map[string]string{"HOME": home}, "skill", "install", map[string]string{".claude": "claude", ".agents": "codex"}[base])
+		code, _, errs := runEnv(home, cli.HomeVars(home), "skill", "install", map[string]string{".claude": "claude", ".agents": "codex"}[base])
 		if code != 0 {
 			t.Fatal(errs)
 		}
@@ -374,7 +384,7 @@ func TestSkillInstallPermissions(t *testing.T) {
 			t.Skip("root reads and writes whatever its permissions")
 		}
 		home := evalTemp(t)
-		env := map[string]string{"HOME": home}
+		env := cli.HomeVars(home)
 		skills := filepath.Join(home, ".claude", "skills")
 		mustDo(t, os.MkdirAll(skills, 0o700), os.Chmod(skills, 0o500))
 		t.Cleanup(func() { mustDo(t, os.Chmod(skills, 0o700)) })
@@ -396,7 +406,7 @@ func TestSkillInstallPermissions(t *testing.T) {
 		}
 
 		home = evalTemp(t)
-		env = map[string]string{"HOME": home}
+		env = cli.HomeVars(home)
 		skill := filepath.Join(home, ".claude", "skills", "floe", "SKILL.md")
 		mustDo(t, os.MkdirAll(filepath.Dir(skill), 0o700), os.WriteFile(skill, []byte("x"), 0o200))
 		if code, out, errs := runEnv(home, env, "skill", "install", "claude"); code != 1 ||
@@ -406,7 +416,7 @@ func TestSkillInstallPermissions(t *testing.T) {
 	})
 
 	home := evalTemp(t)
-	env := map[string]string{"HOME": home}
+	env := cli.HomeVars(home)
 	if code, _, errs := runEnv(home, env, "skill", "install", "claude"); code != 0 {
 		t.Fatal(errs)
 	}
@@ -427,7 +437,7 @@ func TestSkillInstallNames(t *testing.T) {
 
 	home := evalTemp(t)
 	for _, args := range [][]string{{}, {"claude", "codex"}, {"claud"}} {
-		code, out, errs := runEnv(home, map[string]string{"HOME": home}, append([]string{"skill", "install"}, args...)...)
+		code, out, errs := runEnv(home, cli.HomeVars(home), append([]string{"skill", "install"}, args...)...)
 		if code != 2 || out != "" {
 			t.Errorf("%v: %d %q", args, code, out)
 		}
