@@ -26,6 +26,8 @@ var (
 // the terminal does not reach; when f is not nil, it hands f's socket down to cmd: made inheritable, and named
 // to os/exec, which hands down only the handles it is named (PROC_THREAD_ATTRIBUTE_HANDLE_LIST). It returns the
 // handle's number, for ListenerEnv. The handle is f.Fd()'s, which takes it out of the I/O completion port.
+// LIMIT: no test sees the creation flags (the child cannot tell them); CI passes without them. A real machine tried
+// them (S315's W18, W19, W22): try it again on one when they change.
 func background(cmd *exec.Cmd, f *os.File) (string, error) {
 	attr := &syscall.SysProcAttr{CreationFlags: windows.CREATE_NO_WINDOW | windows.CREATE_NEW_PROCESS_GROUP}
 	cmd.SysProcAttr = attr

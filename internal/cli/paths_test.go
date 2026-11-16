@@ -12,7 +12,7 @@ const notFile = ": this is neither a regular file nor a directory (a FIFO, a dev
 
 // A page that is a link to what is no .html file, a data file among them, is refused, and nothing is written:
 // not the file it leads to, nor the other pages. One to an .html file, in any case, and a hard link are written.
-func TestRenderLinksToNoPage(t *testing.T) {
+func TestRenderLinksToNoPage(t *testing.T) { //nolint:tparallel // the device case runs in turn, before the checks after it
 	t.Parallel()
 
 	dir := write(t, map[string]string{
@@ -54,9 +54,9 @@ func TestRenderLinksToNoPage(t *testing.T) {
 	} {
 		renders(t, tt.file, tt.want)
 	}
-	t.Run("a link to a device", func(t *testing.T) {
+	// In turn, before the checks below that nothing was written.
+	t.Run("a link to a device", func(t *testing.T) { //nolint:paralleltest // as above
 		testfs.Pending(t, "S315-P4: Windows devices")
-		t.Parallel()
 		link(t, "/dev/zero", filepath.Join(dir, "e.html"))
 		renders(t, "e.yaml", refused("e.html", "/dev/zero"))
 	})

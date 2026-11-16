@@ -68,15 +68,19 @@ func TestOpenLog(t *testing.T) {
 		t.Parallel()
 		testfs.UnixOnly(t, "permission bits")
 
-		f, err := OpenLog(t.TempDir())
-		if err != nil {
-			t.Fatal(err)
+		// Made, then opened again to append.
+		root := t.TempDir()
+		for range 2 {
+			f, err := OpenLog(root)
+			if err != nil {
+				t.Fatal(err)
+			}
+			info, err := f.Stat()
+			if err != nil || info.Mode().Perm()&^0o600 != 0 {
+				t.Errorf("log opened with permissions %v (%v), want no wider than 0600", info.Mode().Perm(), err)
+			}
+			_ = f.Close() //nolint:errcheck // test
 		}
-		info, err := f.Stat()
-		if err != nil || info.Mode().Perm()&^0o600 != 0 {
-			t.Errorf("log made with permissions %v (%v), want no wider than 0600", info.Mode().Perm(), err)
-		}
-		_ = f.Close() //nolint:errcheck // test
 	})
 
 	t.Run("appended", func(t *testing.T) {
