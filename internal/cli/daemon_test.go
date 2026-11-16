@@ -44,6 +44,9 @@ func TestMain(m *testing.M) {
 	if shared, err = os.MkdirTemp("", "floe-cli-test-"); err != nil {
 		panic(err)
 	}
+	if selfBin, err = os.Executable(); err != nil {
+		panic(err)
+	}
 	if otherBuild, err = copySelf(shared); err != nil {
 		panic(err)
 	}
@@ -51,6 +54,12 @@ func TestMain(m *testing.M) {
 	_ = os.RemoveAll(shared) //nolint:errcheck // a leftover temporary directory is harmless
 	os.Exit(code)
 }
+
+// selfBin is this test binary, which runs as floe (asCLI).
+var selfBin string
+
+// notStarted is what a command says when the server it started never answered (daemon_not_started).
+const notStarted = "the server did not start"
 
 // shared is a temporary directory of the whole run.
 var shared string
@@ -110,7 +119,7 @@ func hold(t *testing.T, port int) bool {
 	}
 	// Closing it lets the lock go, however the test ends from here.
 	t.Cleanup(func() { _ = lock.Close() }) //nolint:errcheck // as above
-	if !free(t, port) {
+	if !portFree(strconv.Itoa(port)) {
 		_ = lock.Close() //nolint:errcheck // as above; the cleanup's close then does nothing
 		return false
 	}
@@ -128,21 +137,6 @@ func portLocks(t *testing.T) string {
 		t.Fatal(err)
 	}
 	return dir
-}
-
-// free is whether nothing listens on port now.
-func free(t *testing.T, port int) bool {
-	t.Helper()
-
-	var lc net.ListenConfig
-	ln, err := lc.Listen(t.Context(), "tcp", net.JoinHostPort("127.0.0.1", strconv.Itoa(port)))
-	if err != nil {
-		return false
-	}
-	if ln.Close() != nil {
-		t.Fatal("no free port")
-	}
-	return true
 }
 
 // denv is a store, a home and a free port in a temporary directory, with the server a publish starts there
@@ -188,13 +182,15 @@ func (e *denv) base() string { return "http://127.0.0.1:" + e.vars["FLOE_PORT"] 
 type result struct {
 	code           int
 	stdout, stderr string
+	// why tells what was there when the server did not start (denv.why); nil for a run of no denv.
+	why func() string
 }
 
 // run runs floe in process, from tmp.
 func (e *denv) run(args ...string) result {
 	var stdout, stderr bytes.Buffer
 	code := cli.Run(args, cli.Env{Stdout: &stdout, Stderr: &stderr, Dir: e.tmp, Getenv: func(k string) string { return e.vars[k] }})
-	return result{code: code, stdout: stdout.String(), stderr: stderr.String()}
+	return result{code: code, stdout: stdout.String(), stderr: stderr.String(), why: func() string { return e.why(selfBin) }}
 }
 
 // exe runs the binary bin as floe in a process of its own, with only the settings of e.
@@ -216,7 +212,59 @@ func (e *denv) exe(t *testing.T, bin string, args ...string) result {
 	} else if err != nil {
 		t.Fatal(err)
 	}
-	return result{code: code, stdout: stdout.String(), stderr: stderr.String()}
+	return result{code: code, stdout: stdout.String(), stderr: stderr.String(), why: func() string { return e.why(bin) }}
+}
+
+// why is what tells a server that did not start apart, for the message of a test that failed on it: the port now (a
+// floe answers, another program has it, or it is free), the server's log, and what floe serve of bin says when run
+// here. The server a command starts writes its errors nowhere a test reads (daemon.start leaves its output unset).
+// LIMIT: it is looked at after the command ended, so that a server that came up late answers by then, and the floe
+// serve run here meets the port as it is now, not as it was; keep the server's output if that hides the cause.
+func (e *denv) why(bin string) string {
+	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
+	defer cancel()
+	port := e.vars["FLOE_PORT"]
+	var b strings.Builder
+	h, up := e.health(ctx)
+	switch {
+	case up:
+		b.WriteString("port " + port + ": a floe answers now, pid " + strconv.Itoa(h.PID) + "\n")
+	case portFree(port):
+		b.WriteString("port " + port + ": nothing listens now\n")
+	default:
+		b.WriteString("port " + port + ": taken, and no floe answers there\n")
+	}
+	log, err := os.ReadFile(filepath.Join(e.vars["FLOE_DIR"], server.LogName))
+	b.WriteString(server.LogName + ": " + strconv.Quote(string(log[max(0, len(log)-2000):])) + errText(err) + "\n")
+	// For 5 s at most: its error, or that it serves, until the context stops it.
+	cmd := exec.CommandContext(ctx, bin, "serve")
+	cmd.Dir = e.tmp
+	cmd.Env = []string{asCLI + "=1", "PATH=" + os.Getenv("PATH")}
+	for k, v := range e.vars {
+		cmd.Env = append(cmd.Env, k+"="+v)
+	}
+	out, err := cmd.CombinedOutput()
+	b.WriteString("floe serve run by the test: " + strconv.Quote(string(out)) + errText(err))
+	return b.String()
+}
+
+// errText is err for a message: "" when there is none.
+func errText(err error) string {
+	if err == nil {
+		return ""
+	}
+	return " (" + err.Error() + ")"
+}
+
+// portFree is whether nothing listens on port now.
+func portFree(port string) bool {
+	var lc net.ListenConfig
+	ln, err := lc.Listen(context.Background(), "tcp", net.JoinHostPort("127.0.0.1", port))
+	if err != nil {
+		return false
+	}
+	_ = ln.Close() //nolint:errcheck // only looked at
+	return true
 }
 
 func (e *denv) health(ctx context.Context) (server.Health, bool) {
@@ -255,6 +303,9 @@ func wantRun(t *testing.T, what string, got result, code int, stdout, stderr str
 
 	if got.code != code || got.stdout != stdout || !strings.Contains(got.stderr, stderr) || stderr == "" && got.stderr != "" {
 		t.Errorf("%s = %d %q %q, want %d %q and stderr containing %q", what, got.code, got.stdout, got.stderr, code, stdout, stderr)
+		if got.why != nil && strings.Contains(got.stderr, notStarted) {
+			t.Log("why the server did not start:\n" + got.why())
+		}
 	}
 }
 
