@@ -132,16 +132,20 @@ func TestReadDirectory(t *testing.T) {
 		}
 		return err
 	}
-	for name, err := range map[string]error{
-		"Open":               open(),
-		"Read":               func() error { _, _, err := files.Read(sub); return err }(),
-		"ReadIn":             func() error { _, _, err := files.ReadIn(osRoot, "sub"); return err }(),
-		"fs.ReadFile(DirFS)": func() error { _, err := fs.ReadFile(files.DirFS(d), "sub"); return err }(),
-		"fs.ReadFile(Root)":  func() error { _, err := fs.ReadFile(root, "sub"); return err }(),
+	// Each told at the name it was given: a path, or the name under the directory of an fs.FS.
+	for name, c := range map[string]struct {
+		err  error
+		path string
+	}{
+		"Open":               {open(), sub},
+		"Read":               {func() error { _, _, err := files.Read(sub); return err }(), sub},
+		"ReadIn":             {func() error { _, _, err := files.ReadIn(osRoot, "sub"); return err }(), "sub"},
+		"fs.ReadFile(DirFS)": {func() error { _, err := fs.ReadFile(files.DirFS(d), "sub"); return err }(), "sub"},
+		"fs.ReadFile(Root)":  {func() error { _, err := fs.ReadFile(root, "sub"); return err }(), "sub"},
 	} {
-		pe, ok := errors.AsType[*fs.PathError](err)
-		if !errors.Is(err, syscall.EISDIR) || !ok || pe.Err.Error() != "is a directory" {
-			t.Errorf("%s of a directory = %v, want EISDIR", name, err)
+		pe, ok := errors.AsType[*fs.PathError](c.err)
+		if !errors.Is(c.err, syscall.EISDIR) || !ok || pe.Err.Error() != "is a directory" || pe.Path != c.path {
+			t.Errorf("%s of a directory = %v, want EISDIR at %s", name, c.err, c.path)
 		}
 	}
 	for name, fsys := range map[string]fs.FS{"DirFS": files.DirFS(d), "Root": root} {
