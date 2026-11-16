@@ -709,6 +709,9 @@ func testInstallPS1(t *testing.T, shell string) {
 			r := broken(t, b.file, b.serve)
 			res, dir := install(t, r, psCase{})
 			fails(t, res, dir, b.says)
+			if b.name == "404" && !strings.Contains(res.err, "check that floe 0.1.0 has a Windows build: https://github.com/sukekyo26/floe/releases") {
+				t.Errorf("a missing floe.exe does not say to check the version has a Windows build:\n%s", res)
+			}
 			if r.plain.Load() != 0 {
 				t.Errorf("%d requests in plain http", r.plain.Load())
 			}

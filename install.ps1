@@ -288,7 +288,12 @@
       Write-Host "floe-install: downloading $asset@$shown"
       $file = [IO.Path]::Combine($tmp, $asset)
       $sums = [IO.Path]::Combine($tmp, 'SHA256SUMS')
-      Fetch "$base/$asset" $file
+      # Whatever went wrong, one plain hint: an old or mistyped version has no Windows build.
+      # LIMIT: Windows PowerShell with -MaximumRedirection 0 says github.com's 404 is a closed connection, not a status
+      # (run 43862510949); the hint is all that tells why.
+      try { Fetch "$base/$asset" $file } catch {
+        throw "$($_.Exception.Message); check that floe $shown has a Windows build: https://github.com/$repo/releases"
+      }
       Fetch "$base/SHA256SUMS" $sums
 
       # Our own release writes "<lowercase sha256>  <name>" lines, LF: that whole line, letter for letter, and
