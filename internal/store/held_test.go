@@ -33,10 +33,10 @@ func TestServeWhilePublish(t *testing.T) {
 		t.Fatal(err)
 	}
 	defer served.Close()
-	if _, err := put(t, s, dw, "plan.yaml", "plan.yaml", ownSrc+"title: Again\n", store.Options{}); err != nil { //nolint:exhaustruct // none
+	if _, err = put(t, s, dw, "plan.yaml", "plan.yaml", ownSrc+"title: Again\n", store.Options{}); err != nil { //nolint:exhaustruct // none
 		t.Fatalf("publish while the page is served = %v", told(err, root))
 	}
-	if _, err := os.Lstat(filepath.Join(root, "plan", m.Source)); !errors.Is(err, fs.ErrNotExist) {
+	if _, err = os.Lstat(filepath.Join(root, "plan", m.Source)); !errors.Is(err, fs.ErrNotExist) {
 		t.Errorf("the copy served is left after the publish: %v", err)
 	}
 	again, ok := s.File("plan", s.ReadMeta("plan"), "")
@@ -80,7 +80,7 @@ func TestEditRenameFirst(t *testing.T) {
 			if err := os.Chmod(dir, 0o500); err != nil {
 				t.Fatal(err)
 			}
-			t.Cleanup(func() { _ = os.Chmod(dir, 0o700) })
+			t.Cleanup(func() { _ = os.Chmod(dir, 0o700) })                               //nolint:errcheck // a temporary directory
 			_, err := s.Edit("plan", store.Edit{Slug: ptr("plan-b"), Title: ptr("New")}) //nolint:exhaustruct // none
 			if ue, ok := errors.AsType[*usererr.Error](err); !ok || ue.Key != "cannot_write" {
 				t.Errorf("Edit with %s read only = %v, want cannot_write", readOnly, err)
@@ -116,7 +116,7 @@ func TestListLeavesLinkOut(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	var slugs []string
+	slugs := make([]string, 0, len(list))
 	for _, l := range list {
 		slugs = append(slugs, l.Slug)
 	}
