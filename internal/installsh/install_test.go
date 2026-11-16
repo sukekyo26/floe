@@ -150,6 +150,229 @@ func TestInstall(t *testing.T) {
 	}
 }
 
+// TestPathNote is what install.sh says of a directory that is not on PATH. The line it shows to a zsh or a Linux
+// bash is run here, in sh, and the file it wrote is read as that shell reads it.
+// LIMIT: the line shown to fish is compared letter by letter, never run: CI has no fish. It was run once by hand, in
+// fish 4.2.1, for the directories below.
+func TestPathNote(t *testing.T) {
+	t.Parallel()
+
+	script, err := os.ReadFile("../../install.sh")
+	if err != nil {
+		t.Fatal(err)
+	}
+	root := t.TempDir()
+	path := tools(t, filepath.Join(root, "tools"), "sha256sum")
+	assets := filepath.Join(root, "assets")
+	release(t, assets, "")
+
+	const (
+		run    = "run"    // a command to paste, which is run here
+		fish   = "fish"   // fish's command, compared
+		line   = "line"   // the line alone, no file named
+		words  = "words"  // no command and no line
+		cannot = "cannot" // the directory cannot be on PATH
+		none   = "none"   // it is on PATH: nothing is said
+	)
+	tests := []struct {
+		name, os, shell string
+		dir             string // under the case's own directory when relative to it: H is its home, W where it runs
+		noHome, noShell bool
+		onPath          string // added to PATH, H and W read as in dir
+		cdpath          bool   // CDPATH names a directory that holds a bin too
+		before          string // what the startup file holds already
+		want            string
+		file            string // the startup file a run command writes, under the home
+		inHome          bool   // the line names the directory by $HOME
+	}{
+		{name: "zsh, the default directory", os: "Linux", shell: "/bin/zsh", dir: "H/.local/bin", want: run, file: ".zshrc", inHome: true},
+		{name: "zsh on macOS", os: "Darwin", shell: "/usr/bin/zsh", dir: "H/.local/bin", want: run, file: ".zshrc", inHome: true},
+		{name: "bash on Linux", os: "Linux", shell: "/usr/bin/bash", dir: "H/.local/bin", want: run, file: ".bashrc", inHome: true},
+		{name: "no line break at the file's end", os: "Linux", shell: "/bin/zsh", dir: "H/bin", before: "alias x=y", want: run, file: ".zshrc", inHome: true},
+		{name: "outside the home", os: "Linux", shell: "/bin/bash", dir: "W/opt/bin", want: run, file: ".bashrc"},
+		{name: "the home's neighbour", os: "Linux", shell: "/bin/bash", dir: "H2/bin", want: run, file: ".bashrc"},
+		{name: "the home itself", os: "Linux", shell: "/bin/bash", dir: "H", want: run, file: ".bashrc"},
+		{name: "a space", os: "Linux", shell: "/bin/zsh", dir: "W/my tools/bin", want: run, file: ".zshrc"},
+		{name: "a quote", os: "Linux", shell: "/bin/zsh", dir: "W/o'brien", want: run, file: ".zshrc"},
+		{name: "two quotes", os: "Linux", shell: "/bin/bash", dir: "W/''two", want: run, file: ".bashrc"},
+		{name: "a double quote", os: "Linux", shell: "/bin/bash", dir: `W/a"b`, want: run, file: ".bashrc"},
+		{name: "a dollar", os: "Linux", shell: "/bin/zsh", dir: "W/$HOME", want: run, file: ".zshrc"},
+		{name: "a dollar in the home", os: "Linux", shell: "/bin/zsh", dir: "H/a$b", want: run, file: ".zshrc", inHome: true},
+		{name: "backslashes", os: "Linux", shell: "/bin/bash", dir: `W/back\slash\n`, want: run, file: ".bashrc"},
+		{name: "a command in backquotes", os: "Linux", shell: "/bin/zsh", dir: "W/a`touch ran`b", want: run, file: ".zshrc"},
+		{name: "a command in $()", os: "Linux", shell: "/bin/bash", dir: "W/$(touch ran)", want: run, file: ".bashrc"},
+		{name: "relative", os: "Linux", shell: "/bin/bash", dir: "bin", want: run, file: ".bashrc"},
+		{name: "relative, CDPATH set", os: "Linux", shell: "/bin/bash", dir: "bin", cdpath: true, want: run, file: ".bashrc"},
+		{name: "fish", os: "Linux", shell: "/usr/bin/fish", dir: "W/o'brien\\x", want: fish},
+		{name: "bash on macOS", os: "Darwin", shell: "/bin/bash", dir: "H/.local/bin", want: line, inHome: true},
+		{name: "dash", os: "Linux", shell: "/bin/dash", dir: "W/a b", want: line},
+		{name: "ksh", os: "Linux", shell: "/bin/ksh", dir: "W/bin", want: line},
+		{name: "tcsh", os: "Linux", shell: "/bin/tcsh", dir: "W/bin", want: words},
+		{name: "SHELL empty", os: "Linux", dir: "W/bin", want: words},
+		{name: "no SHELL", os: "Linux", noShell: true, dir: "W/bin", want: words},
+		{name: "no HOME", os: "Linux", shell: "/bin/zsh", noHome: true, dir: "W/bin", want: run, file: ".zshrc"},
+		{name: "a colon", os: "Linux", shell: "/bin/zsh", dir: "W/a:b", want: cannot},
+		{name: "a line break", os: "Linux", shell: "/bin/zsh", dir: "W/a\nb", want: cannot},
+		{name: "on PATH", os: "Linux", shell: "/bin/zsh", dir: "W/bin", onPath: "W/bin", want: none},
+		{name: "on PATH, given relative", os: "Linux", shell: "/bin/zsh", dir: "bin", onPath: "W/bin", want: none},
+		{name: "on PATH with a slash", os: "Linux", shell: "/bin/zsh", dir: "W/bin", onPath: "W/bin/", want: none},
+		{name: "a longer one on PATH", os: "Linux", shell: "/bin/zsh", dir: "W/bin", onPath: "W/bin2", want: run, file: ".zshrc"},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			t.Parallel()
+
+			base := t.TempDir()
+			home, work := filepath.Join(base, "h"), filepath.Join(base, "w")
+			for _, dir := range []string{home, work, filepath.Join(base, "cd", "bin")} {
+				if err := os.MkdirAll(dir, 0o700); err != nil {
+					t.Fatal(err)
+				}
+			}
+			at := func(s string) string {
+				switch {
+				case strings.HasPrefix(s, "H"):
+					return home + s[1:]
+				case strings.HasPrefix(s, "W"):
+					return work + s[1:]
+				}
+				return s
+			}
+			dir := at(tt.dir)
+			abs := dir
+			if !filepath.IsAbs(dir) {
+				abs = filepath.Join(work, dir)
+			}
+
+			cmd := exec.CommandContext(t.Context(), "sh")
+			cmd.Stdin = bytes.NewReader(script)
+			cmd.Dir = work
+			cmd.Env = []string{
+				"TMPDIR=" + t.TempDir(), "FLOE_INSTALL_DIR=" + dir, "FLOE_VERSION=0.1.0",
+				"FAKE_OS=" + tt.os, "FAKE_ARCH=x86_64", "FAKE_ASSETS=" + assets,
+			}
+			if tt.onPath == "" {
+				cmd.Env = append(cmd.Env, "PATH="+path)
+			} else {
+				cmd.Env = append(cmd.Env, "PATH="+path+":"+at(tt.onPath))
+			}
+			if !tt.noHome {
+				cmd.Env = append(cmd.Env, "HOME="+home)
+			}
+			if !tt.noShell {
+				cmd.Env = append(cmd.Env, "SHELL="+tt.shell)
+			}
+			if tt.cdpath {
+				cmd.Env = append(cmd.Env, "CDPATH="+filepath.Join(base, "cd"))
+			}
+			var stderr bytes.Buffer
+			cmd.Stderr = &stderr
+			if err := cmd.Run(); err != nil {
+				t.Fatalf("install.sh: %v\n%s", err, stderr.String())
+			}
+			said := stderr.String()
+			if !strings.Contains(said, "for your agent") {
+				t.Errorf("install.sh stopped before its last line:\n%s", said)
+			}
+			shown := after(said, "To add it, run:\n")
+			put := after(said, "put this line in your shell's startup file:\n")
+			for what, has := range map[string]bool{
+				"a command": shown != "", "a line": put != "",
+				"that it cannot be on PATH": strings.Contains(said, "cannot be a PATH entry"),
+				"only words":                strings.Contains(said, "add it to the PATH your shell starts with"),
+			} {
+				want := map[string]string{"a command": run + fish, "a line": line, "that it cannot be on PATH": cannot, "only words": words}[what]
+				if has != strings.Contains(want, tt.want) {
+					t.Errorf("install.sh says %s: %v, for a case of %q:\n%s", what, has, tt.want, said)
+				}
+			}
+			if t.Failed() {
+				return
+			}
+			if again := strings.Contains(said, "then open a new terminal"); again != (tt.want == run || tt.want == line) {
+				t.Errorf("install.sh says to open a new terminal: %v:\n%s", again, said)
+			}
+			if tt.want != none && tt.want != cannot && !strings.Contains(said, abs+" is not on your PATH") {
+				t.Errorf("install.sh does not name %q as not on PATH:\n%s", abs, said)
+			}
+
+			switch tt.want {
+			case fish:
+				quoted := strings.NewReplacer(`\`, `\\`, `'`, `\'`).Replace(abs)
+				if want := "fish_add_path '" + quoted + "'"; shown != want {
+					t.Errorf("shown %q, want %q", shown, want)
+				}
+			case line:
+				if strings.Contains(said, ">>") {
+					t.Errorf("install.sh names a file to a shell whose file it cannot know:\n%s", said)
+				}
+				rc := filepath.Join(base, "rc")
+				write(t, rc, put+"\n")
+				first(t, rc, home, abs, tt.inHome)
+			case run:
+				rc := filepath.Join(home, tt.file)
+				if tt.before != "" {
+					write(t, rc, tt.before)
+				}
+				if !strings.HasSuffix(shown, " >> "+map[string]string{".zshrc": `"${ZDOTDIR:-$HOME}/.zshrc"`, ".bashrc": "~/.bashrc"}[tt.file]) {
+					t.Errorf("the command writes another file than %s: %s", tt.file, shown)
+				}
+				paste := exec.CommandContext(t.Context(), "sh", "-c", shown) //nolint:gosec // G204: the command install.sh shows, which is what is tested
+				paste.Dir = work
+				paste.Env = []string{"PATH=" + os.Getenv("PATH"), "HOME=" + home}
+				if out, err := paste.CombinedOutput(); err != nil {
+					t.Fatalf("the command shown fails: %v\n%s\n%s", err, shown, out)
+				}
+				got, err := os.ReadFile(rc)
+				if err != nil {
+					t.Fatal(err)
+				}
+				if tt.before != "" && !strings.HasPrefix(string(got), tt.before+"\n") {
+					t.Errorf("the file's own last line changed: %q", got)
+				}
+				first(t, rc, home, abs, tt.inHome)
+				if _, err := os.Stat(filepath.Join(work, "ran")); err == nil {
+					t.Error("a command in the directory's name ran")
+				}
+			}
+		})
+	}
+}
+
+// after is the line of said that follows the one ending in mark, without the two spaces it is set in by; "" when
+// said has no such line.
+func after(said, mark string) string {
+	_, rest, ok := strings.Cut(said, mark)
+	if !ok {
+		return ""
+	}
+	next, _, _ := strings.Cut(rest, "\n")
+	return strings.TrimPrefix(next, "  ")
+}
+
+// first reads the startup file rc as a shell does and fails t unless PATH then starts with dir. With inHome the file
+// names dir by $HOME, so that another home gives another directory.
+func first(t *testing.T, rc, home, dir string, inHome bool) {
+	t.Helper()
+
+	read := func(home string) string {
+		cmd := exec.CommandContext(t.Context(), "sh", "-c", `. "$1" && printf %s "$PATH"`, "sh", rc)
+		cmd.Env = []string{"PATH=/rest", "HOME=" + home}
+		out, err := cmd.CombinedOutput()
+		if err != nil {
+			t.Fatalf("reading %s: %v\n%s", rc, err, out)
+		}
+		return string(out)
+	}
+	if got, want := read(home), dir+":/rest"; got != want {
+		t.Errorf("PATH is %q after the file is read, want %q", got, want)
+	}
+	other := read("/another")
+	if moved := strings.HasPrefix(other, "/another/"); moved != inHome {
+		t.Errorf("with another home PATH is %q; the file names the directory by $HOME: want %v", other, inHome)
+	}
+}
+
 // tools makes a directory of the fakes and links to the tools install.sh and the fakes run, with sum as the one
 // SHA-256 tool, so that the script sees only that one. It returns "" when sum is shasum and the host has none; any
 // other tool missing fails, so that the test does not skip itself away on a machine that lost one.
