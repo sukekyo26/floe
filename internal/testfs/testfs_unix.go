@@ -56,3 +56,5 @@ func shortNameOf(path string) (string, error) { return path, nil }
 func servePipe() (string, func() (int, error), func(), error) { return "", nil, nil, errNoACL }
 
 func volumeName(string) (string, error) { return "", errNoACL }
+
+func replaceAsEditor(string, string) error { return errNoACL }

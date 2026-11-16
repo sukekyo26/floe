@@ -222,6 +222,7 @@ var messagesEN = map[string]string{
 	"store_slug_placed":       `slug "%s" was published from %s in repository %s: choose another slug`,
 	"store_slug_placed_alone": `slug "%s" was published from %s: choose another slug`,
 	"store_slug_taken":        `slug "%s" is already in use: choose another slug`,
+	"store_edit_renamed_only": `the page was moved to the slug "%[2]s" and could not be moved back (%[1]s); the other changes were not saved: save them again`,
 	"store_reads_unset":       "is missing, broken or has no since: run floe stop, then floe serve, which writes it anew",
 	"store_project_slash":     `a project name cannot be just "/"`,
 	"store_project":           "project %s",

@@ -21,6 +21,17 @@ const (
 	checksPaths = false
 )
 
+// openShared opens path to read alone, as os.OpenFile does: Unix lets a file open be renamed over and removed.
+func openShared(path checked) (*os.File, error) {
+	return os.OpenFile(path.s, os.O_RDONLY|openFlags, 0) //nolint:wrapcheck,gosec // the caller's to tell; G304: checked
+}
+
+// renameIn renames from to to, two names in dir.
+func renameIn(dir checked, from, to string) error {
+	//nolint:wrapcheck // the system's, for the caller to tell
+	return os.Rename(filepath.Join(dir.s, from), filepath.Join(dir.s, to))
+}
+
 // driveType is no kind of drive: Unix has none, and allowed does not ask.
 func driveType(string) uint32 { return driveUnknown }
 

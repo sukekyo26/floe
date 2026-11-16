@@ -113,7 +113,7 @@ var (
 var slugRe = regexp.MustCompile(`[^a-z0-9.]+`)
 
 // rename moves the new icons into place; a test makes it fail.
-var rename = os.Rename
+var rename = files.Rename
 
 // Sets are the names of the icon sets floe knows: those it fetches and those built in.
 func Sets() []string {
@@ -458,11 +458,11 @@ func (s *Store) Fetch(ctx context.Context, set string, from []Source, force bool
 	if err := files.MkdirAll(s.root, 0o700); err != nil {
 		return got, s.cannotWrite(err)
 	}
-	tmp, err := os.MkdirTemp(s.root, k.name+".tmp-")
+	tmp, err := files.MkdirTemp(s.root, k.name+".tmp-")
 	if err != nil {
 		return got, s.cannotWrite(err)
 	}
-	defer os.RemoveAll(tmp) //nolint:errcheck // a leftover is harmless
+	defer files.RemoveAll(tmp) //nolint:errcheck // a leftover is harmless
 	idx, err := k.fetch(ctx, from, tmp)
 	if err != nil {
 		return got, err
@@ -557,21 +557,22 @@ func downloadable(u *url.URL) bool {
 func replace(tmp, dir string) error {
 	old := tmp + "-old"
 	hadOld := true
-	if err := os.Rename(dir, old); errors.Is(err, fs.ErrNotExist) {
+	parent := filepath.Dir(dir)
+	if err := files.Rename(parent, filepath.Base(dir), filepath.Base(old)); errors.Is(err, fs.ErrNotExist) {
 		hadOld = false
 	} else if err != nil {
 		return usererr.CannotWrite(dir, err)
 	}
-	if err := rename(tmp, dir); err != nil {
+	if err := rename(parent, filepath.Base(tmp), filepath.Base(dir)); err != nil {
 		if hadOld {
-			if back := os.Rename(old, dir); back != nil {
+			if back := files.Rename(parent, filepath.Base(old), filepath.Base(dir)); back != nil {
 				return usererr.InSystemWords("icons_previous_left", dir, err, old)
 			}
 		}
 		return usererr.CannotWrite(dir, err)
 	}
 	// The new icons are in place: a previous one left behind is harmless.
-	_ = os.RemoveAll(old) //nolint:errcheck // see above
+	_ = files.RemoveAll(old) //nolint:errcheck // see above
 	return nil
 }
 
@@ -616,10 +617,16 @@ func (k *kit) zipOf(r io.ReaderAt, size int64, from Source) (*zip.Reader, error)
 }
 
 // extract writes the set's icons in zips to dir, with their index.json. Its limits count the icons of all the
-// zips together, as one package's.
+// zips together, as one package's. dir is opened once (an os.Root, which keeps the writes in it) and closed before
+// it returns: on Windows a directory held open cannot be renamed, as replace renames dir.
 func (k *kit) extract(zips []opened, dir string) (*index, error) {
+	root, err := files.OpenRoot(dir)
+	if err != nil {
+		return nil, usererr.CannotWrite(dir, err) //nolint:wrapcheck // the system's words, at the directory
+	}
+	defer root.Close() //nolint:errcheck // what was written is checked as written
 	x := extraction{
-		k: k, dir: dir, light: k.lightOnes(zips), sums: map[string][sha256.Size]byte{},
+		k: k, dir: dir, root: root, light: k.lightOnes(zips), sums: map[string][sha256.Size]byte{},
 		found: make([]bool, len(k.packages)), version: "", written: 0,
 		idx: &index{Version: "", Sources: make([]string, len(zips)), Icons: map[string]entry{}},
 	}
@@ -642,13 +649,14 @@ func (k *kit) extract(zips []opened, dir string) (*index, error) {
 	if k.version == nil {
 		x.idx.Version = hashOf(x.idx.Icons, x.sums)
 	}
-	return x.idx, writeIndex(x.idx, dir)
+	return x.idx, writeIndex(x.idx, root, dir)
 }
 
 // extraction is what extract has kept so far, of all the zips.
 type extraction struct {
 	k       *kit
 	dir     string
+	root    *os.Root // dir, opened
 	idx     *index
 	light   map[string]bool
 	sums    map[string][sha256.Size]byte // each icon's content, for the version of a set without one
@@ -697,7 +705,7 @@ func (x *extraction) keep(from Source, f *zip.File, icon packed) error {
 	if x.written += int64(len(b)); x.written > maxPackage {
 		return usererr.NewAt(from.Name, 0, 0, "icons_written_too_large", maxPackage>>20)
 	}
-	if err = keep(x.dir, icon, b); err != nil {
+	if err = keep(x.root, x.dir, icon, b); err != nil {
 		return err
 	}
 	x.version = cmp.Or(x.version, icon.version)
@@ -751,24 +759,25 @@ func readEntry(f *zip.File) ([]byte, error) {
 	return readAtMost(r, maxIcon)
 }
 
-// keep writes the icon b to dir as name.svg.
-func keep(dir string, icon packed, b []byte) error {
+// keep writes the icon b to root, the directory dir, as name.svg.
+func keep(root *os.Root, dir string, icon packed, b []byte) error {
 	name := icon.name + ".svg"
 	// A name holds no slash but those its kit puts in (TestIconOfStaysInside); this keeps it so.
 	if !filepath.IsLocal(name) {
 		return fmt.Errorf("keep the icon %s: not a name inside the set", icon.name) //nolint:err113 // floe's own mistake
 	}
 	path := filepath.Join(dir, name)
-	if err := files.MkdirAll(filepath.Dir(path), 0o700); err != nil {
+	if err := root.MkdirAll(filepath.Dir(name), 0o700); err != nil {
 		return usererr.CannotWrite(filepath.Dir(path), err)
 	}
-	if err := os.WriteFile(path, b, 0o600); err != nil {
+	if err := root.WriteFile(name, b, 0o600); err != nil {
 		return usererr.CannotWrite(path, err)
 	}
 	return nil
 }
 
-func writeIndex(idx *index, dir string) error {
+// writeIndex writes idx to root, the directory dir, as index.json.
+func writeIndex(idx *index, root *os.Root, dir string) error {
 	var out bytes.Buffer
 	enc := json.NewEncoder(&out)
 	enc.SetEscapeHTML(false)
@@ -777,7 +786,7 @@ func writeIndex(idx *index, dir string) error {
 		return fmt.Errorf("write the icons' index: %w", err)
 	}
 	file := filepath.Join(dir, "index.json")
-	if err := os.WriteFile(file, out.Bytes(), 0o600); err != nil {
+	if err := root.WriteFile("index.json", out.Bytes(), 0o600); err != nil {
 		return usererr.CannotWrite(file, err)
 	}
 	return nil

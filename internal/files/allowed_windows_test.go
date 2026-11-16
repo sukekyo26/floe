@@ -51,6 +51,10 @@ func entries() []entry {
 		{"MkdirAll", func(_ *testing.T, p string) error { return files.MkdirAll(p, 0o700) }},
 		{"Mkdir", func(_ *testing.T, p string) error { return files.Mkdir(p, 0o700) }},
 		{"WriteAtomic", func(_ *testing.T, p string) error { return files.WriteAtomic(p, []byte("w"), 0o600, nil) }},
+		{"Remove", func(_ *testing.T, p string) error { return files.Remove(p) }},
+		{"RemoveAll", func(_ *testing.T, p string) error { return files.RemoveAll(p) }},
+		{"Rename", func(_ *testing.T, p string) error { return files.Rename(p, "a", "b") }},
+		{"MkdirTemp", func(_ *testing.T, p string) error { _, err := files.MkdirTemp(p, "t-"); return err }},
 		{"NewRoot", func(t *testing.T, p string) error {
 			t.Helper()
 			r := files.NewRoot(filepath.Dir(p))
@@ -309,7 +313,7 @@ func TestAllowedLinks(t *testing.T) {
 func TestAllowedDangling(t *testing.T) {
 	t.Parallel()
 
-	making := map[string]bool{"OpenAppend": true, "OpenLock": true, "MkdirAll": true, "Mkdir": true}
+	making := map[string]bool{"OpenAppend": true, "OpenLock": true, "MkdirAll": true, "Mkdir": true, "MkdirTemp": true}
 	free := testfs.FreeDrive(t)
 	for _, e := range entries() {
 		dir := t.TempDir()

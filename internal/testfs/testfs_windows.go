@@ -11,6 +11,7 @@ import (
 	"sync/atomic"
 	"syscall"
 	"time"
+	"unsafe"
 
 	"golang.org/x/sys/windows"
 )
@@ -236,6 +237,23 @@ func servePipe() (name string, connected func() (int, error), stop func(), err e
 		return int(s.count.Load()), nil
 	}
 	return name, connected, stop, nil
+}
+
+// replaceAsEditor saves replacement over replaced by ReplaceFile, as an editor does.
+func replaceAsEditor(replaced, replacement string) error {
+	to, err := windows.UTF16PtrFromString(replaced)
+	if err != nil {
+		return err //nolint:wrapcheck // the caller's to tell
+	}
+	from, err := windows.UTF16PtrFromString(replacement)
+	if err != nil {
+		return err //nolint:wrapcheck // as above
+	}
+	proc := windows.NewLazySystemDLL("kernel32.dll").NewProc("ReplaceFileW")
+	if r, _, err := proc.Call(uintptr(unsafe.Pointer(to)), uintptr(unsafe.Pointer(from)), 0, 0, 0, 0); r == 0 {
+		return fmt.Errorf("ReplaceFile: %w", err)
+	}
+	return nil
 }
 
 // volumeName is the GUID name of the volume mounted at root (C:\), \\?\Volume{…}\.

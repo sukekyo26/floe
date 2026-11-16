@@ -5,7 +5,6 @@ import (
 	"errors"
 	"fmt"
 	"io/fs"
-	"os"
 	"path/filepath"
 	"slices"
 	"time"
@@ -88,7 +87,7 @@ func (s *Store) Begin(viewer, now string) error {
 	all, err := s.readReads()
 	if err != nil && !errors.Is(err, fs.ErrNotExist) {
 		broken := s.readsFile() + ".broken"
-		if err := os.Rename(s.readsFile(), broken); err != nil {
+		if err := files.Rename(s.root, readsName, readsName+".broken"); err != nil {
 			return usererr.CannotWrite(broken, err) //nolint:wrapcheck // the system's words, at where it goes
 		}
 	}

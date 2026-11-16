@@ -63,8 +63,15 @@ func (t pathTarget) stat() (fs.FileInfo, error) {
 	return fi, asWritten(err, t.path)
 }
 
+// open opens t with flag: to read alone (openFlags aside) sharing delete (openShared), else as os.OpenFile does.
 func (t pathTarget) open(flag int, perm fs.FileMode) (*os.File, error) {
-	f, err := openAt(t.p, flag, perm)
+	var f *os.File
+	var err error
+	if flag&^openFlags == os.O_RDONLY {
+		f, err = openShared(t.p)
+	} else {
+		f, err = openAt(t.p, flag, perm)
+	}
 	return f, asWritten(err, t.path)
 }
 
@@ -221,7 +228,7 @@ func WriteAtomic(path string, data []byte, perm os.FileMode, old fs.FileInfo) er
 		err = closeErr
 	}
 	if err == nil {
-		err = renameAt(tmp, p)
+		err = renameIn(p.dir(), filepath.Base(tmp.s), filepath.Base(p.s))
 	}
 	if err != nil {
 		_ = removeAt(tmp) //nolint:errcheck // the write failed, which is what is told
