@@ -54,9 +54,14 @@ type Dir struct {
 // path is the path, as shown, of the names (of d.FS, /-separated) in d.
 func (d Dir) path(names ...string) string { return under(d.Name, names...) }
 
-// under is the path, as shown, of the names (of an fs.FS, /-separated) in the directory dir as shown: in the
-// system's separators alone, so that a path of one's own is not shown half / and half \ (Windows).
+// under is the path, as shown, of the names (of an fs.FS, /-separated) in the directory dir as shown. One of one's
+// own is on the disk, and absolute (its setting must be): it is shown in the system's separators alone, so that it is
+// not half / and half \ (Windows). floe's own are names in its embedded files, relative: shown with /, as they are,
+// on every system.
 func under(dir string, names ...string) string {
+	if !filepath.IsAbs(dir) {
+		return path.Join(append([]string{dir}, names...)...)
+	}
 	return filepath.Join(dir, filepath.FromSlash(path.Join(names...)))
 }
 
