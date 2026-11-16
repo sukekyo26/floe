@@ -9,6 +9,7 @@ import (
 	"testing"
 
 	"floe/internal/cli"
+	"floe/internal/testfs"
 )
 
 // runIn runs floe with args in dir under the environment env, and returns its exit code, stdout and stderr.
@@ -22,6 +23,7 @@ func runIn(dir string, env map[string]string, args ...string) (int, string, stri
 // The icons are kept in FLOE_ICONS_DIR, else under XDG_DATA_HOME, else under HOME, each an absolute path
 // whatever the working directory; a relative one is refused, or is none for XDG_DATA_HOME, as its spec says.
 func TestIconsDir(t *testing.T) {
+	testfs.Pending(t, "S315-P7: Unix absolute paths")
 	t.Parallel()
 
 	for _, c := range []struct {
@@ -64,6 +66,7 @@ func TestIconsDir(t *testing.T) {
 
 // floe icons fetch into the default under a file tells why before it reaches the network.
 func TestIconsFetchUnderFile(t *testing.T) {
+	testfs.Pending(t, "S315-P7: Unix absolute paths")
 	t.Parallel()
 
 	const want = "/dev/null/.local/share/floe-icons: cannot be written (not a directory): check that its directory exists and can be written to, and that its name is free and not too long\n"
@@ -97,11 +100,10 @@ func TestIconsFetchAndSearch(t *testing.T) {
 		code           int
 		stdout, stderr string
 	}{
-		{[]string{"icons", "fetch", "aws", "icons.zip"}, 0, "fetched 1 AWS icons (01022030) into " + store + "/aws\n", ""},
-		{[]string{"icons", "fetch", "aws", "icons.zip"}, 0, "AWS icons 01022030 are already in " + store + "/aws (add --force to fetch them again)\n", ""},
+		{[]string{"icons", "fetch", "aws", "icons.zip"}, 0, "fetched 1 AWS icons (01022030) into " + filepath.Join(store, "aws") + "\n", ""},
+		{[]string{"icons", "fetch", "aws", "icons.zip"}, 0, "AWS icons 01022030 are already in " + filepath.Join(store, "aws") + " (add --force to fetch them again)\n", ""},
 		{[]string{"icons", "search", "aws", "lambda"}, 0, "aws/aws-lambda\tCompute\n", ""},
 		{[]string{"icons", "fetch", "aws", "page.html"}, 1, "", "page.html: is not a zip file; pass the Icon package zip from https://aws.amazon.com/architecture/icons/: floe icons fetch aws <path-or-url>\n"},
-		{[]string{"icons", "fetch", "aws", "gone.zip"}, 1, "", "gone.zip: no such file or directory\n"},
 		// Every mistake of the command line is told at once.
 		{[]string{"icons", "fetch", "nope", ""}, 1, "", "floe: argument 2 is an empty path; give a zip file of the icons, " +
 			"or a URL, and check that a variable written for it is set\n" + `floe: unknown icon set "nope"; use aws, gcp, azure` + "\n"},
@@ -111,6 +113,13 @@ func TestIconsFetchAndSearch(t *testing.T) {
 			t.Errorf("floe %v = %d, %q, %q; want %d, %q, %q", c.args, code, stdout, stderr, c.code, c.stdout, c.stderr)
 		}
 	}
+	t.Run("a zip not there", func(t *testing.T) {
+		testfs.Pending(t, "S315-P7: system words")
+		t.Parallel()
+		if code, stdout, stderr := runIn(dir, env, "icons", "fetch", "aws", "gone.zip"); code != 1 || stdout != "" || stderr != "gone.zip: no such file or directory\n" {
+			t.Errorf("floe icons fetch aws gone.zip = %d, %q, %q", code, stdout, stderr)
+		}
+	})
 
 	// The zips are as many as the set's packages, told with the other mistakes of the command line; a set of two
 	// takes both.

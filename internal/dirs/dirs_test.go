@@ -4,10 +4,12 @@ import (
 	"testing"
 
 	"floe/internal/dirs"
+	"floe/internal/testfs"
 )
 
 func TestUnder(t *testing.T) {
 	t.Parallel()
+	testfs.Pending(t, "S315-P2: Under takes / for no separator and /w for no absolute path")
 
 	for _, tt := range []struct {
 		cwd, path, abs string
@@ -28,6 +30,7 @@ func TestUnder(t *testing.T) {
 
 func TestDirJoin(t *testing.T) {
 	t.Parallel()
+	testfs.Pending(t, "S315-P2: Dir and Join take / for no separator")
 
 	for path, want := range map[string]string{"a.yaml": ".", "link/../a.yaml": "link/..", "/a.yaml": "/", "/w/a.yaml": "/w"} {
 		if got := dirs.Dir(path); got != want {

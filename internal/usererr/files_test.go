@@ -9,6 +9,7 @@ import (
 	"testing"
 
 	"floe/internal/i18n"
+	"floe/internal/testfs"
 	"floe/internal/usererr"
 )
 
@@ -16,6 +17,7 @@ import (
 // names; an error that is no path's is floe's failure.
 func TestCannotReadWrite(t *testing.T) {
 	t.Parallel()
+	testfs.Pending(t, "S315-P7: system words")
 
 	dir := t.TempDir()
 	_, rerr := os.ReadFile(filepath.Join(dir, "gone.yaml"))
@@ -65,6 +67,7 @@ func TestCannotReadWrite(t *testing.T) {
 // rest as arguments, for the caller to place.
 func TestInSystemWordsOf(t *testing.T) {
 	t.Parallel()
+	testfs.Pending(t, "S315-P7: system words")
 
 	_, rerr := os.ReadFile(filepath.Join(t.TempDir(), "gone.png"))
 	var e *usererr.Error

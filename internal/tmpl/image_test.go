@@ -78,6 +78,7 @@ sections:
 // once at each; one that cannot be read at its path, once.
 func TestImagePartMistakes(t *testing.T) {
 	t.Parallel()
+	testfs.Pending(t, "S315-P7: system words")
 
 	dir, images := imagesIn(t, map[string][]byte{"shots/a.png": png, "shots/a.bmp": png, "shots/big.png": bytes.Repeat([]byte{0}, 1<<20+1)})
 	if err := os.Mkdir(filepath.Join(dir, "dir.png"), 0o755); err != nil {
@@ -126,6 +127,7 @@ sections:
 // is not drawn when the image cannot be read, so that its part.html tells nothing of a value it never had.
 func TestOwnPartImages(t *testing.T) {
 	t.Parallel()
+	testfs.Pending(t, "S315-P7: system words")
 
 	k := ownKit(t, map[string]string{
 		"shots/schema.json": `{"$schema": "https://json-schema.org/draft/2020-12/schema", "type": "object",

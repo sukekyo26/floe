@@ -5,6 +5,7 @@ import (
 	"testing"
 
 	"floe/internal/i18n"
+	"floe/internal/testfs"
 	"floe/internal/usererr"
 )
 
@@ -16,6 +17,7 @@ func with(env map[string]string) *app {
 // The server's settings are read as a command reads them: no place for the icons is none (""), as a command
 // draws then, the same for floe serve and the command that finds it; any other mistake stops it.
 func TestServerConfig(t *testing.T) {
+	testfs.Pending(t, "S315-P7: Unix absolute paths")
 	t.Parallel()
 
 	cfg, _, err := with(map[string]string{"FLOE_DIR": "/s", "HOME": "rel"}).serverConfig()

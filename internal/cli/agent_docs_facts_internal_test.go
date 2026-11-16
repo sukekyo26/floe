@@ -13,6 +13,7 @@ import (
 	"floe/internal/files"
 	"floe/internal/i18n"
 	"floe/internal/store"
+	"floe/internal/testfs"
 )
 
 // The docs for agents but the guide and the doc of tasks (guidePath, taskGuidePath).
@@ -66,6 +67,7 @@ type docQuote struct {
 // LIMIT: a quote is held as written in the doc: a row of a table that floe no longer makes, and that no quote below
 // names, stays unseen; add its quote here when a doc quotes a new text of floe's.
 func TestAgentDocQuotes(t *testing.T) {
+	testfs.Pending(t, "S315-P7: the docs quote Unix places")
 	t.Parallel()
 
 	ja := i18n.New(i18n.Tag("ja"))

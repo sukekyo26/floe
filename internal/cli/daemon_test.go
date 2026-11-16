@@ -66,7 +66,8 @@ func copySelf(dir string) (string, error) {
 	if err != nil {
 		return "", err //nolint:wrapcheck // as above
 	}
-	bin := filepath.Join(dir, "floe-copy")
+	// The copy keeps this binary's extension: Windows runs a program by its .exe alone.
+	bin := filepath.Join(dir, "floe-copy"+filepath.Ext(self))
 	//nolint:gosec // G306: an executable
 	return bin, os.WriteFile(bin, append(b, 0), 0o700) //nolint:wrapcheck // as above
 }

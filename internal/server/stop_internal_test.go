@@ -160,7 +160,7 @@ func TestStopFinishesRequests(t *testing.T) {
 			defer cancel()
 			addr, done := serving(ctx, t, s)
 
-			body := `{"path": "` + data + `"}`
+			body := linkBody(t, data)
 			var d net.Dialer
 			conn, err := d.DialContext(t.Context(), "tcp", addr)
 			if err != nil {

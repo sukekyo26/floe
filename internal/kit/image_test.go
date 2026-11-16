@@ -35,6 +35,7 @@ func (f fifoAfterStat) Stat(name string) (fs.FileInfo, error) {
 // that is a FIFO when looked at: through a data file's directory (files.Root) and a template's own (files.DirFS).
 func TestImageMadeFIFO(t *testing.T) {
 	t.Parallel()
+	testfs.UnixOnly(t, "a FIFO")
 
 	for _, via := range []string{"Root", "DirFS"} {
 		dir := t.TempDir()

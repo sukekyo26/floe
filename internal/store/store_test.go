@@ -15,6 +15,7 @@ import (
 	"floe/internal/i18n"
 	"floe/internal/kit"
 	"floe/internal/store"
+	"floe/internal/testfs"
 	"floe/internal/usererr"
 )
 
@@ -659,6 +660,7 @@ func TestSlugRefusals(t *testing.T) {
 	}
 	_, taken := s.Edit("lk", store.Edit{Slug: ptr("pg")})
 	ja := i18n.New("ja")
+	hx, hz := filepath.Join("H", "x.yaml"), filepath.Join("H", "proj", "z.html")
 	for _, tt := range []struct {
 		name   string
 		err    error
@@ -676,13 +678,13 @@ func TestSlugRefusals(t *testing.T) {
 		},
 		{
 			"placed alone, by a real path", keyed("ab", "a", "", filepath.Join(home, "y.yaml")),
-			`slug "ab" was published from H/x.yaml: choose another slug`,
-			`URL 名「ab」は H/x.yaml から公開されています。別の URL 名にしてください`,
+			`slug "ab" was published from ` + hx + `: choose another slug`,
+			`URL 名「ab」は ` + hx + ` から公開されています。別の URL 名にしてください`,
 		},
 		{
 			"linked", link(y, "lk", false),
-			`slug "lk" is linked to H/proj/z.html: choose another slug`,
-			`URL 名「lk」は H/proj/z.html のリンクで使われています。別の URL 名にしてください`,
+			`slug "lk" is linked to ` + hz + `: choose another slug`,
+			`URL 名「lk」は ` + hz + ` のリンクで使われています。別の URL 名にしてください`,
 		},
 		{
 			"is_page, --force too", link(z, "pg", true),
@@ -761,10 +763,10 @@ func TestPagePlace(t *testing.T) {
 	}
 	err = put("", y, false, src)
 	home := filepath.Dir(root)
-	if got, want := strings.ReplaceAll(told(err, root), home, "H"), `floe: slug "plan" was published from H/x.yaml: choose another slug`; got != want {
+	if got, want := strings.ReplaceAll(told(err, root), home, "H"), `floe: slug "plan" was published from `+filepath.Join("H", "x.yaml")+`: choose another slug`; got != want {
 		t.Errorf("another real path: told %s, want %s", got, want)
 	}
-	if got, want := strings.ReplaceAll(usererr.Tell(ja, err).Render(""), home, "H"), "URL 名「plan」は H/x.yaml から公開されています。別の URL 名にしてください"; got != want {
+	if got, want := strings.ReplaceAll(usererr.Tell(ja, err).Render(""), home, "H"), "URL 名「plan」は "+filepath.Join("H", "x.yaml")+" から公開されています。別の URL 名にしてください"; got != want {
 		t.Errorf("another real path in ja: told %s, want %s", got, want)
 	}
 }
@@ -805,6 +807,7 @@ func (failing) Lookup(string) ([]byte, error) { return nil, errors.New("boom") }
 func TestStoreUnreadable(t *testing.T) {
 	t.Parallel()
 
+	testfs.UnixOnly(t, "chmod keeps a directory from being read")
 	if os.Geteuid() == 0 {
 		t.Skip("root reads what it may not")
 	}

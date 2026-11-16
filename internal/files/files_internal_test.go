@@ -107,6 +107,7 @@ func openSwapped(t *testing.T, dir string, root *os.Root, name string, swap func
 // through, is refused after it is opened: looking before is not enough.
 func TestOpenAppendSwapped(t *testing.T) {
 	t.Parallel()
+	testfs.UnixOnly(t, "a FIFO")
 
 	dir := t.TempDir()
 	path := filepath.Join(dir, "a.log")

@@ -64,6 +64,21 @@ func fileMade(t *testing.T, path string, size int) {
 func TestOpenLog(t *testing.T) {
 	t.Parallel()
 
+	t.Run("no wider than 0600", func(t *testing.T) {
+		t.Parallel()
+		testfs.UnixOnly(t, "permission bits")
+
+		f, err := OpenLog(t.TempDir())
+		if err != nil {
+			t.Fatal(err)
+		}
+		info, err := f.Stat()
+		if err != nil || info.Mode().Perm()&^0o600 != 0 {
+			t.Errorf("log made with permissions %v (%v), want no wider than 0600", info.Mode().Perm(), err)
+		}
+		_ = f.Close() //nolint:errcheck // test
+	})
+
 	t.Run("appended", func(t *testing.T) {
 		t.Parallel()
 
@@ -72,10 +87,6 @@ func TestOpenLog(t *testing.T) {
 			f, err := OpenLog(root)
 			if err != nil {
 				t.Fatal(err)
-			}
-			info, err := f.Stat()
-			if err != nil || info.Mode().Perm()&^0o600 != 0 {
-				t.Errorf("log made with permissions %v (%v), want no wider than 0600", info.Mode().Perm(), err)
 			}
 			if _, err = f.WriteString(text); err != nil {
 				t.Fatal(err)

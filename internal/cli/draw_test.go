@@ -33,6 +33,7 @@ func write(t *testing.T, files map[string]string) string {
 
 // floe check tells every mistake of every file, and nothing for files that are right.
 func TestCheck(t *testing.T) {
+	testfs.Pending(t, "S315-P7: system words")
 	t.Parallel()
 
 	dir := write(t, map[string]string{"a.yaml": good, "b.yaml": "lang: en\ntemplate: reprot\n", "c.yaml": "x: [\n", "page.html": ""})
@@ -110,14 +111,18 @@ func TestRender(t *testing.T) {
 		stderr != "floe: a.html is not what a.yaml draws: write it again with floe render\n" {
 		t.Errorf("floe render --check stale = %d, %q", code, stderr)
 	}
-	out := filepath.Join("pages", "x")
-	if code, _, stderr := run(dir, "render", "--out-dir", out, "a.yaml", "sub/a.yaml"); code != 1 ||
-		stderr != "floe: a.yaml and sub/a.yaml would both write "+filepath.Join(out, "a.html")+"; rename one of them\n" {
-		t.Errorf("floe render of one page twice = %d, %q", code, stderr)
-	}
-	if code, stdout, _ := run(dir, "render", "--out-dir", out, "sub/a.yaml"); code != 0 || stdout != filepath.Join(out, "a.html")+"\n" {
-		t.Errorf("floe render --out-dir = %d, %q", code, stdout)
-	}
+	t.Run("out-dir", func(t *testing.T) {
+		testfs.Pending(t, "S315-P2: separators in floe's paths")
+		t.Parallel()
+		out := filepath.Join("pages", "x")
+		if code, _, stderr := run(dir, "render", "--out-dir", out, "a.yaml", "sub/a.yaml"); code != 1 ||
+			stderr != "floe: a.yaml and sub/a.yaml would both write "+filepath.Join(out, "a.html")+"; rename one of them\n" {
+			t.Errorf("floe render of one page twice = %d, %q", code, stderr)
+		}
+		if code, stdout, _ := run(dir, "render", "--out-dir", out, "sub/a.yaml"); code != 0 || stdout != filepath.Join(out, "a.html")+"\n" {
+			t.Errorf("floe render --out-dir = %d, %q", code, stdout)
+		}
+	})
 	if code, _, stderr := run(dir, "render", "--out-dir", "", "a.yaml"); code != 1 ||
 		stderr != "floe: --out-dir is an empty path; give the directory to write the pages in, and check that a variable written for it is set\n" {
 		t.Errorf("floe render --out-dir \"\" = %d, %q", code, stderr)
@@ -133,27 +138,34 @@ func TestRenderCannotWrite(t *testing.T) {
 	long := strings.Repeat("x", 251) // .yml is a name the directory takes, .html one too long
 	fits := strings.Repeat("y", 250)
 	dir := write(t, map[string]string{"b.yaml": good, long + ".yml": good, fits + ".yaml": good, "b.html/x": "", "ro/c.yaml": good})
-	if err := os.Chmod(filepath.Join(dir, "ro"), 0o500); err != nil {
-		t.Fatal(err)
-	}
-	t.Cleanup(func() { _ = os.Chmod(filepath.Join(dir, "ro"), 0o700) }) //nolint:errcheck // for TempDir to remove it
 	if code, stdout, stderr := run(dir, "render", fits+".yaml"); code != 0 || stdout != fits+".html\n" {
 		t.Errorf("floe render of a name that fits = %d, %q, %q", code, stdout, stderr)
 	}
 	// The system's words differ from one system to another: what is told before them is floe's.
-	cases := []struct{ file, page string }{{"b.yaml", "b.html"}, {long + ".yml", long + ".html"}}
-	// root writes in a directory it may not.
-	if os.Geteuid() != 0 {
-		cases = append(cases, struct{ file, page string }{"ro/c.yaml", filepath.Join("ro", "c.html")})
-	}
-	for _, tt := range cases {
-		code, _, stderr := run(dir, "render", tt.file)
-		if code != 1 || !strings.HasPrefix(stderr, tt.page+": cannot be written (") ||
+	cannotWrite := func(t *testing.T, file, page string) {
+		t.Helper()
+		code, _, stderr := run(dir, "render", file)
+		if code != 1 || !strings.HasPrefix(stderr, page+": cannot be written (") ||
 			!strings.HasSuffix(stderr, "): check that its directory exists and can be written to, and that its name is free and not too long\n") ||
 			strings.Contains(stderr, dir) || strings.Count(stderr, "\n") != 1 {
-			t.Errorf("floe render %.20s = %d, stderr %q", tt.file, code, stderr)
+			t.Errorf("floe render %.20s = %d, stderr %q", file, code, stderr)
 		}
 	}
+	cannotWrite(t, "b.yaml", "b.html")
+	cannotWrite(t, long+".yml", long+".html")
+	t.Run("a directory it cannot write in", func(t *testing.T) {
+		testfs.UnixOnly(t, "chmod keeps a directory from being written")
+		t.Parallel()
+		// root writes in a directory it may not.
+		if os.Geteuid() == 0 {
+			t.Skip("root writes in a directory it may not")
+		}
+		if err := os.Chmod(filepath.Join(dir, "ro"), 0o500); err != nil {
+			t.Fatal(err)
+		}
+		t.Cleanup(func() { _ = os.Chmod(filepath.Join(dir, "ro"), 0o700) }) //nolint:errcheck // for TempDir to remove it
+		cannotWrite(t, "ro/c.yaml", filepath.Join("ro", "c.html"))
+	})
 }
 
 // A page that is a symlink is written where it leads; one that leads nowhere is refused as a page that cannot
@@ -184,6 +196,7 @@ func TestRenderThroughLink(t *testing.T) {
 
 // Every page that can be written is written, and every one that cannot is told.
 func TestRenderWritesTheOthers(t *testing.T) {
+	testfs.UnixOnly(t, "chmod keeps a directory from being written")
 	t.Parallel()
 
 	// root writes in a directory it may not.
@@ -204,6 +217,7 @@ func TestRenderWritesTheOthers(t *testing.T) {
 
 // A .. after a symlink leads where the system says: from where the link leads, not back from the link's name.
 func TestDotDotAfterLink(t *testing.T) {
+	testfs.UnixOnly(t, "Windows folds link/.. as written, before the link")
 	t.Parallel()
 
 	dir := write(t, map[string]string{"x.yaml": "lang: en\ntemplate: reprot\n", "real/x.yaml": good, "real/sub/y": ""})
@@ -358,6 +372,7 @@ func TestRefusedNamesDoNotClash(t *testing.T) {
 // A page that is a link to no file, or a loop of links, is not written over, written or checked: it cannot be
 // written, in the system's words.
 func TestCannotWriteThroughLinks(t *testing.T) {
+	testfs.Pending(t, "S315-P7: system words")
 	t.Parallel()
 
 	dir := write(t, map[string]string{"a.yaml": good, "b.yaml": good})

@@ -51,6 +51,13 @@ func TestSkillInstall(t *testing.T) {
 		has  []string // parts the output (stdout, then stderr) holds
 		not  []string // parts it does not
 	}
+	words, unixPaths := "S315-P7: system words", "S315-P7: Unix absolute paths"
+	pending := map[string]string{
+		"floe is a file": "S315-P7: ENOTDIR read as none (W12)", ".claude is a file": words, ".agents is a file": words,
+		"skills is a file": words, "skills under CLAUDE_CONFIG_DIR is a file": words, "CLAUDE_CONFIG_DIR is a file": words,
+		".agents links nowhere": words, "skills links nowhere": words, "skills under CLAUDE_CONFIG_DIR links nowhere": words,
+		"SKILL.md is a directory": words, "HOME is a file": unixPaths, "HOME is a file codex": unixPaths,
+	}
 	for _, c := range []struct {
 		name  string
 		agent string
@@ -218,6 +225,9 @@ func TestSkillInstall(t *testing.T) {
 	} {
 		t.Run(c.name, func(t *testing.T) {
 			t.Parallel()
+			if why := pending[c.name]; why != "" {
+				testfs.Pending(t, why)
+			}
 			home := evalTemp(t)
 			env := map[string]string{"HOME": home}
 			if c.setup != nil {
@@ -234,13 +244,14 @@ func TestSkillInstall(t *testing.T) {
 			if code != c.want.code {
 				t.Errorf("exit %d, want %d: %q", code, c.want.code, said)
 			}
+			// The parts are written with /, the system's separator in the output.
 			for _, part := range c.want.has {
-				if !strings.Contains(said, part) {
+				if part = filepath.FromSlash(part); !strings.Contains(said, part) {
 					t.Errorf("%q lacks %q", said, part)
 				}
 			}
 			for _, part := range c.want.not {
-				if strings.Contains(said, part) {
+				if part = filepath.FromSlash(part); strings.Contains(said, part) {
 					t.Errorf("%q holds %q", said, part)
 				}
 			}
@@ -353,47 +364,51 @@ func config(is string) func(t *testing.T, home string) map[string]string {
 // What cannot be read or written is told at its path, not as the setting's; the same skill is not written again.
 func TestSkillInstallPermissions(t *testing.T) {
 	t.Parallel()
-	if os.Geteuid() == 0 {
-		t.Skip("root reads and writes whatever its permissions")
-	}
+
+	t.Run("cannot be read or written", func(t *testing.T) {
+		testfs.UnixOnly(t, "chmod keeps a file or directory from being read or written")
+		t.Parallel()
+		if os.Geteuid() == 0 {
+			t.Skip("root reads and writes whatever its permissions")
+		}
+		home := evalTemp(t)
+		env := map[string]string{"HOME": home}
+		skills := filepath.Join(home, ".claude", "skills")
+		mustDo(t, os.MkdirAll(skills, 0o700), os.Chmod(skills, 0o500))
+		t.Cleanup(func() { mustDo(t, os.Chmod(skills, 0o700)) })
+		if code, out, errs := runEnv(home, env, "skill", "install", "claude"); code != 1 ||
+			!strings.Contains(errs, "/.claude/skills/floe: cannot be written (permission denied)") {
+			t.Errorf("unwritable skills: %d %q %q", code, out, errs)
+		}
+
+		cfg := filepath.Join(home, "ro", "cfg")
+		mustDo(t, os.MkdirAll(filepath.Dir(cfg), 0o500))
+		t.Cleanup(func() { mustDo(t, os.Chmod(filepath.Dir(cfg), 0o700)) })
+		env["CLAUDE_CONFIG_DIR"] = cfg
+		if code, out, errs := runEnv(home, env, "skill", "install", "claude"); code != 1 ||
+			!strings.Contains(errs, "floe: CLAUDE_CONFIG_DIR is "+cfg) || !strings.Contains(errs, "permission denied") {
+			t.Errorf("CLAUDE_CONFIG_DIR not to be made: %d %q %q", code, out, errs)
+		}
+		if _, err := os.Stat(cfg); err == nil {
+			t.Error("left a directory")
+		}
+
+		home = evalTemp(t)
+		env = map[string]string{"HOME": home}
+		skill := filepath.Join(home, ".claude", "skills", "floe", "SKILL.md")
+		mustDo(t, os.MkdirAll(filepath.Dir(skill), 0o700), os.WriteFile(skill, []byte("x"), 0o200))
+		if code, out, errs := runEnv(home, env, "skill", "install", "claude"); code != 1 ||
+			!strings.Contains(errs, "floe/SKILL.md: permission denied") {
+			t.Errorf("unreadable SKILL.md: %d %q %q", code, out, errs)
+		}
+	})
 
 	home := evalTemp(t)
 	env := map[string]string{"HOME": home}
-	skills := filepath.Join(home, ".claude", "skills")
-	mustDo(t, os.MkdirAll(skills, 0o700), os.Chmod(skills, 0o500))
-	t.Cleanup(func() { mustDo(t, os.Chmod(skills, 0o700)) })
-	if code, out, errs := runEnv(home, env, "skill", "install", "claude"); code != 1 ||
-		!strings.Contains(errs, "/.claude/skills/floe: cannot be written (permission denied)") {
-		t.Errorf("unwritable skills: %d %q %q", code, out, errs)
-	}
-
-	cfg := filepath.Join(home, "ro", "cfg")
-	mustDo(t, os.MkdirAll(filepath.Dir(cfg), 0o500))
-	t.Cleanup(func() { mustDo(t, os.Chmod(filepath.Dir(cfg), 0o700)) })
-	env["CLAUDE_CONFIG_DIR"] = cfg
-	if code, out, errs := runEnv(home, env, "skill", "install", "claude"); code != 1 ||
-		!strings.Contains(errs, "floe: CLAUDE_CONFIG_DIR is "+cfg) || !strings.Contains(errs, "permission denied") {
-		t.Errorf("CLAUDE_CONFIG_DIR not to be made: %d %q %q", code, out, errs)
-	}
-	if _, err := os.Stat(cfg); err == nil {
-		t.Error("left a directory")
-	}
-
-	home = evalTemp(t)
-	env = map[string]string{"HOME": home}
-	skill := filepath.Join(home, ".claude", "skills", "floe", "SKILL.md")
-	mustDo(t, os.MkdirAll(filepath.Dir(skill), 0o700), os.WriteFile(skill, []byte("x"), 0o200))
-	if code, out, errs := runEnv(home, env, "skill", "install", "claude"); code != 1 ||
-		!strings.Contains(errs, "floe/SKILL.md: permission denied") {
-		t.Errorf("unreadable SKILL.md: %d %q %q", code, out, errs)
-	}
-
-	home = evalTemp(t)
-	env = map[string]string{"HOME": home}
 	if code, _, errs := runEnv(home, env, "skill", "install", "claude"); code != 0 {
 		t.Fatal(errs)
 	}
-	skill = filepath.Join(home, ".claude", "skills", "floe", "SKILL.md")
+	skill := filepath.Join(home, ".claude", "skills", "floe", "SKILL.md")
 	old := time.Unix(1_000_000_000, 0)
 	mustDo(t, os.Chtimes(skill, old, old))
 	if code, _, errs := runEnv(home, env, "skill", "install", "claude", "--force"); code != 0 {

@@ -165,6 +165,7 @@ func TestFetchAndSearch(t *testing.T) {
 
 func TestLookup(t *testing.T) {
 	t.Parallel()
+	testfs.Pending(t, "S315-P7: system words")
 
 	root := t.TempDir()
 	set := icons.New(root, false, "")
@@ -262,6 +263,7 @@ func TestFetchFromURL(t *testing.T) {
 // A store that cannot be written to is told before the download, as the store is written.
 func TestFetchCannotWrite(t *testing.T) {
 	t.Parallel()
+	testfs.UnixOnly(t, "chmod makes no directory unwritable")
 
 	var gets atomic.Int32
 	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
@@ -307,22 +309,30 @@ func TestSettingTold(t *testing.T) {
 		return "floe: FLOE_ICONS_DIR is " + root + ", which cannot be used as a directory (" + why + "); make it a " +
 			"directory floe can use, or set FLOE_ICONS_DIR to another directory"
 	}
-	for _, root := range []string{file, filepath.Join(file, "sub")} {
-		set := icons.New(root, false, "FLOE_ICONS_DIR")
-		if _, err := set.Search("aws", []string{"x"}); told(err) != want(root, "not a directory") {
-			t.Errorf("Search in %s = %s", root, told(err))
+	t.Run("no directory", func(t *testing.T) {
+		t.Parallel()
+		testfs.Pending(t, "S315-P7: a path under a file is read as not there (ENOTDIR, W12)")
+		for _, root := range []string{file, filepath.Join(file, "sub")} {
+			set := icons.New(root, false, "FLOE_ICONS_DIR")
+			if _, err := set.Search("aws", []string{"x"}); told(err) != want(root, "not a directory") {
+				t.Errorf("Search in %s = %s", root, told(err))
+			}
+			if _, err := set.Fetch(context.Background(), "aws", []icons.Source{zip}, false); told(err) != want(root, "not a directory") {
+				t.Errorf("Fetch into %s = %s", root, told(err))
+			}
 		}
-		if _, err := set.Fetch(context.Background(), "aws", []icons.Source{zip}, false); told(err) != want(root, "not a directory") {
-			t.Errorf("Fetch into %s = %s", root, told(err))
+	})
+	t.Run("cannot be written in", func(t *testing.T) {
+		t.Parallel()
+		testfs.UnixOnly(t, "chmod makes no directory unwritable")
+		_, err := icons.New(locked, false, "FLOE_ICONS_DIR").Fetch(context.Background(), "aws", []icons.Source{zip}, false)
+		if os.Geteuid() == 0 {
+			t.Skip("root writes to any directory")
 		}
-	}
-	_, err := icons.New(locked, false, "FLOE_ICONS_DIR").Fetch(context.Background(), "aws", []icons.Source{zip}, false)
-	if os.Geteuid() == 0 {
-		t.Skip("root writes to any directory")
-	}
-	if told(err) != want(locked, "permission denied") {
-		t.Errorf("Fetch into %s = %s", locked, told(err))
-	}
+		if told(err) != want(locked, "permission denied") {
+			t.Errorf("Fetch into %s = %s", locked, told(err))
+		}
+	})
 }
 
 // badZips are a zip whose directory claims one record more than it holds (truncated), and one whose stored
@@ -365,6 +375,7 @@ func badZips(t *testing.T) (truncated, checksum string) {
 
 func TestFetchRefusals(t *testing.T) {
 	t.Parallel()
+	testfs.Pending(t, "S315-P7: system words, and a directory read as no zip (icons.go's EISDIR)")
 
 	root := t.TempDir()
 	set := icons.New(root, false, "")
@@ -549,39 +560,47 @@ func TestLookupStaysInside(t *testing.T) {
 		}
 	}
 	set := icons.New(root, false, "")
-	want := dir + `/../out.svg: cannot be read (path escapes from parent); run "floe icons fetch aws --force" to fetch the icons again`
+	const again = `; run "floe icons fetch aws --force" to fetch the icons again`
+	// The name of the index is joined to the set's directory as it is written.
+	want := dir + string(filepath.Separator) + "../out.svg: cannot be read (path escapes from parent)" + again
 	if b, err := set.Lookup("aws/../out"); told(err) != want {
 		t.Errorf("Lookup of ../out = %q, %s", b, told(err))
 	}
 	// A link that stays in the set is read; one to a file of the set by its absolute path is not (LIMIT: in
-	// Lookup), nor is a FIFO, unopened.
+	// Lookup).
 	for link, to := range map[string]string{"link.svg": "in.svg", "abs.svg": filepath.Join(dir, "in.svg")} {
 		testfs.Symlink(t, to, filepath.Join(dir, link))
 	}
-	testfs.Mkfifo(t, filepath.Join(dir, "fifo.svg"))
 	if b, err := set.Lookup("aws/link"); err != nil || !strings.Contains(string(b), `id="in"`) {
 		t.Errorf("Lookup of a link inside = %q, %v", b, err)
 	}
-	const again = `; run "floe icons fetch aws --force" to fetch the icons again`
-	for name, told2 := range map[string]string{
-		"abs":  "cannot be read (path escapes from parent)" + again,
-		"fifo": "is neither a regular file nor a directory (a FIFO, a device or the like), which floe does not open" + again,
-	} {
-		want := filepath.Join(dir, name) + ".svg: " + told2
-		if b, err := set.Lookup("aws/" + name); told(err) != want {
-			t.Errorf("Lookup of %s = %q, %s; want %s", name, b, told(err), want)
+	if b, err := set.Lookup("aws/abs"); told(err) != filepath.Join(dir, "abs.svg")+": cannot be read (path escapes from parent)"+again {
+		t.Errorf("Lookup of abs = %q, %s", b, told(err))
+	}
+	t.Run("FIFO", func(t *testing.T) {
+		t.Parallel()
+		// Nor is a FIFO, unopened.
+		testfs.Mkfifo(t, filepath.Join(dir, "fifo.svg"))
+		want := filepath.Join(dir, "fifo.svg") + ": is neither a regular file nor a directory (a FIFO, a device or the like), " +
+			"which floe does not open" + again
+		if b, err := set.Lookup("aws/fifo"); told(err) != want {
+			t.Errorf("Lookup of fifo = %q, %s; want %s", b, told(err), want)
 		}
-	}
-	// What the system does not let floe read a fetch cannot mend: it is told as it is.
-	locked := filepath.Join(dir, "locked.svg")
-	if err := os.WriteFile(locked, nil, 0o000); err != nil {
-		t.Fatal(err)
-	}
-	if os.Getuid() != 0 {
-		if _, err := set.Lookup("aws/locked"); told(err) != locked+": permission denied" {
-			t.Errorf("Lookup of a file not to be read = %s", told(err))
+	})
+	t.Run("not to be read", func(t *testing.T) {
+		t.Parallel()
+		testfs.UnixOnly(t, "chmod makes no file unreadable")
+		// What the system does not let floe read a fetch cannot mend: it is told as it is.
+		locked := filepath.Join(dir, "locked.svg")
+		if err := os.WriteFile(locked, nil, 0o000); err != nil {
+			t.Fatal(err)
 		}
-	}
+		if os.Getuid() != 0 {
+			if _, err := set.Lookup("aws/locked"); told(err) != locked+": permission denied" {
+				t.Errorf("Lookup of a file not to be read = %s", told(err))
+			}
+		}
+	})
 }
 
 // A set not fetched is told once, for goroutines looking up in one store at once too.

@@ -11,12 +11,14 @@ import (
 	"testing"
 
 	"floe/internal/kit"
+	"floe/internal/testfs"
 )
 
 // floe part new, theme new and template new write a part, a theme (an empty palette.css) and a template to fill in,
 // which their checks take, of any name floe takes, YAML's null, true and 017 too, and one as long as a file's name may
 // be; once there, a name is refused and nothing changes.
 func TestNew(t *testing.T) {
+	testfs.Pending(t, "S315-P7: ENOTDIR read as none (W12)")
 	t.Parallel()
 
 	for _, name := range []string{"mine", "a-b_c", "null", "true", "017", strings.Repeat("a", 255)} {
@@ -51,6 +53,7 @@ func TestNew(t *testing.T) {
 // new reads what its kind relies on before it makes one: a part and a theme the parts and themes, so that a broken
 // template does not stop them; a template all three. A broken part stops all three.
 func TestNewReads(t *testing.T) {
+	testfs.Pending(t, "S315-P2: separators in floe's paths, S315-P7: ENOTDIR read as none (W12)")
 	t.Parallel()
 
 	dir := write(t, map[string]string{"templates/memo/schema.json": "{}", "parts/bad/schema.json": ownSchema})
@@ -97,6 +100,7 @@ func texts(t *testing.T, dir string) map[string]string {
 // floe part new refuses a name as the kit of one's own would, and writes nothing; and a directory it cannot
 // make or write in is told.
 func TestNewRefused(t *testing.T) {
+	testfs.Pending(t, "S315-P2: separators in floe's paths, S315-P7: Unix absolute paths")
 	t.Parallel()
 
 	home := write(t, map[string]string{".config/floe/parts/shr.json": "{}"})
@@ -147,6 +151,7 @@ func TestNewRefused(t *testing.T) {
 // show lists the files it reads on a line, or prints the file named after alone, as it is; and refuses a name there
 // is not.
 func TestListShow(t *testing.T) {
+	testfs.Pending(t, "S315-P2: separators in floe's paths")
 	t.Parallel()
 
 	const schema = `{"$schema": "https://json-schema.org/draft/2020-12/schema", "description": "a\n\tb   c", "type": "object"}`
@@ -295,6 +300,7 @@ func TestShowEachFile(t *testing.T) {
 // A part of one's own named html, a key a section of floe's templates takes, is refused as one named as floe's
 // parts are: floe part list and show would tell of floe's html and one's own apart.
 func TestPartListOwnHTML(t *testing.T) {
+	testfs.Pending(t, "S315-P2: separators in floe's paths")
 	t.Parallel()
 
 	const schema = `{"$schema": "https://json-schema.org/draft/2020-12/schema", "description": "mine", "type": "object"}`

@@ -6,6 +6,7 @@ import (
 	"os/exec"
 	"path/filepath"
 	"regexp"
+	"strconv"
 	"strings"
 	"testing"
 )
@@ -89,12 +90,12 @@ func TestInfo(t *testing.T) {
 			"category\t\"設計　見本\"\npinned\tfalse\ntags\t\"plans\" \"a, b\" \"見本　案\"\narchived\tfalse\nrepository\t\"named\"\n" +
 			"source\t\"docs/d.yaml\"\nversion\t1\n",
 		"l": "slug\tl\ntitle\t\"H\"\nurl\t" + base + "l/\nkind\tlink\nproject\t\"p\"\ntask\t\ncategory\t\npinned\ttrue\n" +
-			"tags\t\narchived\tfalse\nrepository\t\nsource\t\"" + filepath.Join(actual, "h.html") + "\"\nversion\t\n",
+			"tags\t\narchived\tfalse\nrepository\t\nsource\t" + strconv.QuoteToGraphic(filepath.Join(actual, "h.html")) + "\nversion\t\n",
 		// A folder outside a repository is in the project of its own name.
 		"f": "slug\tf\ntitle\t\"docs\"\nurl\t" + base + "f/\nkind\tfolder\nproject\t\"docs\"\ntask\t\ncategory\t\npinned\tfalse\n" +
-			"tags\t\narchived\ttrue\nrepository\t\nsource\t\"" + filepath.Join(actual, "docs") + "\"\nversion\t\n",
-		"n": data("n", `"n"`, "", "", `"`+filepath.Join(actual, "w.yaml")+`"`),
-		"s": data("s", `"D"`, `"p"`, "", `"`+filepath.Join(actual, "d.yaml")+`"`),
+			"tags\t\narchived\ttrue\nrepository\t\nsource\t" + strconv.QuoteToGraphic(filepath.Join(actual, "docs")) + "\nversion\t\n",
+		"n": data("n", `"n"`, "", "", strconv.QuoteToGraphic(filepath.Join(actual, "w.yaml"))),
+		"s": data("s", `"D"`, `"p"`, "", strconv.QuoteToGraphic(filepath.Join(actual, "d.yaml"))),
 	} {
 		got := run(home, 0, "info", slug)
 		// The time is the server's own: told as floe list tells it.

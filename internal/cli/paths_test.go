@@ -22,7 +22,7 @@ func TestRenderLinksToNoPage(t *testing.T) {
 	if err := os.Mkdir(filepath.Join(dir, "somedir"), 0o755); err != nil {
 		t.Fatal(err)
 	}
-	for page, to := range map[string]string{"a.html": "a.yaml", "b.html": "c.yaml", "d.html": "x.txt", "e.html": "/dev/zero"} {
+	for page, to := range map[string]string{"a.html": "a.yaml", "b.html": "c.yaml", "d.html": "x.txt"} {
 		link(t, to, filepath.Join(dir, page))
 	}
 	link(t, "somedir", filepath.Join(dir, "s.html"))
@@ -36,21 +36,30 @@ func TestRenderLinksToNoPage(t *testing.T) {
 	refused := func(page, to string) string {
 		return page + ": this page is a link to " + to + ", which is no .html file: floe writes pages to .html files alone; point the link at one, or remove it\n"
 	}
+	renders := func(t *testing.T, file, want string) {
+		t.Helper()
+		for _, args := range [][]string{{"render", file}, {"render", "--check", file}, {"render", file, "c.yaml"}} {
+			if code, stdout, stderr := run(dir, args...); code != 1 || stdout != "" || stderr != want {
+				t.Errorf("floe %v = %d, %q, %q; want 1, %q", args, code, stdout, stderr, want)
+			}
+		}
+	}
 	for _, tt := range []struct {
 		file, want string
 	}{
 		{"a.yaml", refused("a.html", filepath.Join(resolved, "a.yaml"))},
 		{"b.yaml", refused("b.html", filepath.Join(resolved, "c.yaml"))},
 		{"d.yaml", refused("d.html", filepath.Join(resolved, "x.txt"))},
-		{"e.yaml", refused("e.html", "/dev/zero")},
 		{"x.yaml", refused("x.html", filepath.Join(resolved, "a.yaml"))},
 	} {
-		for _, args := range [][]string{{"render", tt.file}, {"render", "--check", tt.file}, {"render", tt.file, "c.yaml"}} {
-			if code, stdout, stderr := run(dir, args...); code != 1 || stdout != "" || stderr != tt.want {
-				t.Errorf("floe %v = %d, %q, %q; want 1, %q", args, code, stdout, stderr, tt.want)
-			}
-		}
+		renders(t, tt.file, tt.want)
 	}
+	t.Run("a link to a device", func(t *testing.T) {
+		testfs.Pending(t, "S315-P4: Windows devices")
+		t.Parallel()
+		link(t, "/dev/zero", filepath.Join(dir, "e.html"))
+		renders(t, "e.yaml", refused("e.html", "/dev/zero"))
+	})
 	if err := os.WriteFile(filepath.Join(dir, "s.yaml"), []byte(good), 0o600); err != nil {
 		t.Fatal(err)
 	}
@@ -118,6 +127,7 @@ func TestFIFOsRefused(t *testing.T) {
 
 // A page written again keeps its permissions, one that cannot be read too.
 func TestRenderKeepsPermissions(t *testing.T) {
+	testfs.UnixOnly(t, "permission bits")
 	t.Parallel()
 
 	for _, mode := range []os.FileMode{0o600, 0o664, 0o200} {

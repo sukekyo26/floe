@@ -45,6 +45,7 @@ case "$1" in -s) echo "$FAKE_OS" ;; -m) echo "$FAKE_ARCH" ;; *) exit 1 ;; esac
 // TestInstall runs install.sh as `curl … | sh` runs it, with curl and uname faked and only the tools it needs on PATH.
 func TestInstall(t *testing.T) {
 	t.Parallel()
+	testfs.UnixOnly(t, "install.sh installs floe on Unix")
 
 	script, err := os.ReadFile("../../install.sh")
 	if err != nil {

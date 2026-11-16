@@ -30,11 +30,6 @@ func watched(t *testing.T, link bool) (*Server, string) {
 		t.Fatal(err)
 	}
 	dir := filepath.Join(tmp, "dir")
-	tpl := dir
-	if link {
-		tpl = filepath.Join(tmp, "tpl")
-		testfs.Symlink(t, dir, tpl)
-	}
 	for name, text := range map[string]string{
 		"mine/page.html":    "<!doctype html>\n<html lang=\"{{.Lang}}\"><head><title>{{.Title}}</title></head><body>{{.Data.n}}</body></html>\n",
 		"mine/schema.json":  `{"$schema": "https://json-schema.org/draft/2020-12/schema", "type": "object"}`,
@@ -47,6 +42,12 @@ func watched(t *testing.T, link bool) (*Server, string) {
 		if err := os.WriteFile(p, []byte(text), 0o600); err != nil {
 			t.Fatal(err)
 		}
+	}
+	// Made after dir, as Windows makes a link to a directory only when the directory is there.
+	tpl := dir
+	if link {
+		tpl = filepath.Join(tmp, "tpl")
+		testfs.Symlink(t, dir, tpl)
 	}
 	drawing := func() (store.Drawing, error) {
 		floe, err := kit.Floe()

@@ -142,7 +142,7 @@ func TestResolveFolder(t *testing.T) {
 }
 
 // TestDir lists one directory of a folder at a time, as Resolve would serve it.
-func TestDir(t *testing.T) {
+func TestDir(t *testing.T) { //nolint:tparallel // the subtests change the folder in turn, before it is moved
 	t.Parallel()
 
 	tmp := realTemp(t)
@@ -156,7 +156,6 @@ func TestDir(t *testing.T) {
 		".x.html":           "hidden",
 		"guide/setup.html":  "in a directory",
 		"guide/deep/x.html": "deeper",
-		"a,b:c/odd.html":    "an odd name",
 		"assets/logo.svg":   "no page",
 	} {
 		write(t, filepath.Join(folder, path), body)
@@ -165,7 +164,6 @@ func TestDir(t *testing.T) {
 	symlink(t, filepath.Join(tmp, "secret.html"), filepath.Join(folder, "out.html"))
 	symlink(t, filepath.Join(folder, "index.html"), filepath.Join(folder, "in.html"))
 	symlink(t, filepath.Join(folder, "guide"), filepath.Join(folder, "linked-dir"))
-	mkfifo(t, filepath.Join(folder, "pipe.html"))
 
 	got, err := link.Dir(folder, "")
 	if err != nil {
@@ -178,7 +176,7 @@ func TestDir(t *testing.T) {
 		}
 		return out
 	}
-	if want := []string{"a,b:c", "assets", "guide"}; !slices.Equal(got.Dirs, want) || got.More != 0 {
+	if want := []string{"assets", "guide"}; !slices.Equal(got.Dirs, want) || got.More != 0 {
 		t.Errorf("Dir(top).Dirs = %q, more %d; want %q", got.Dirs, got.More, want)
 	}
 	if want := []string{"README.HTM", "in.html", "index.html"}; !slices.Equal(files(got), want) {
@@ -187,17 +185,30 @@ func TestDir(t *testing.T) {
 	if got.Files[0].Modified.IsZero() {
 		t.Error("a page's time is not given")
 	}
-	for dir, want := range map[string][]string{"guide": {"guide/setup.html"}, "a,b:c": {"a,b:c/odd.html"}} {
-		l, err := link.Dir(folder, dir)
-		if err != nil || !slices.Equal(files(l), want) {
-			t.Errorf("Dir(%q) = %q, %v; want %q", dir, files(l), err, want)
-		}
+	if l, err := link.Dir(folder, "guide"); err != nil || !slices.Equal(files(l), []string{"guide/setup.html"}) {
+		t.Errorf("Dir(guide) = %q, %v", files(l), err)
 	}
 	for _, dir := range []string{"..", ".drafts", "guide/../..", "nope", "index.html", "guide/", "/guide"} {
 		if _, err := link.Dir(folder, dir); !errors.Is(err, link.ErrNoDir) {
 			t.Errorf("Dir(%q) = %v, want ErrNoDir", dir, err)
 		}
 	}
+	t.Run("an odd name", func(t *testing.T) { //nolint:paralleltest // in the folder, before it is moved below
+		testfs.UnixOnly(t, "a name with : (Windows takes none)")
+		write(t, filepath.Join(folder, "a,b:c", "odd.html"), "an odd name")
+		if l, err := link.Dir(folder, ""); err != nil || !slices.Equal(l.Dirs, []string{"a,b:c", "assets", "guide"}) {
+			t.Errorf("Dir(top).Dirs = %q, %v", l.Dirs, err)
+		}
+		if l, err := link.Dir(folder, "a,b:c"); err != nil || !slices.Equal(files(l), []string{"a,b:c/odd.html"}) {
+			t.Errorf("Dir(a,b:c) = %q, %v", files(l), err)
+		}
+	})
+	t.Run("a FIFO", func(t *testing.T) { //nolint:paralleltest // as above
+		mkfifo(t, filepath.Join(folder, "pipe.html"))
+		if l, err := link.Dir(folder, ""); err != nil || !slices.Equal(files(l), []string{"README.HTM", "in.html", "index.html"}) {
+			t.Errorf("Dir(top).Files = %q, %v", files(l), err)
+		}
+	})
 	if err := os.Rename(folder, folder+"-moved"); err != nil {
 		t.Fatal(err)
 	}

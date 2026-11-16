@@ -56,6 +56,10 @@ func TestOwnDirs(t *testing.T) {
 	link(t, filepath.Join(repo, "mine"), filepath.Join(linked, "mine"))
 	dangling := write(t, map[string]string{"mine/schema.json": ownSchema, "mine/part.html": ownPage})
 	link(t, "gone.css", filepath.Join(dangling, "mine", "part.css"))
+	pending := map[string]string{
+		"set, not there": "S315-P7: system words", "set, a file": "S315-P7: system words", "a link to a directory": "S315-P2: separators in floe's paths",
+		"a link to nothing": "S315-P2: separators in floe's paths, S315-P7: system words",
+	}
 	for _, tt := range []struct {
 		name string
 		env  map[string]string
@@ -73,14 +77,20 @@ func TestOwnDirs(t *testing.T) {
 		{"a link to a directory", map[string]string{"FLOE_PARTS_DIR": linked}, 1, filepath.Join(linked, "mine") + ": " + dirLink + "\n"},
 		{"a link to nothing", map[string]string{"FLOE_PARTS_DIR": dangling}, 1, filepath.Join(dangling, "mine", "part.css") + ": no such file or directory\n"},
 	} {
-		if tt.name == "the directory a link" {
-			link(t, parts, filepath.Join(dir, "plink"))
-		}
-		for _, args := range [][]string{{"part", "check"}, {"check", "d.yaml"}} {
-			if code, stdout, stderr := runEnv(dir, tt.env, args...); code != tt.code || stdout != "" || stderr != tt.errs {
-				t.Errorf("%s: floe %v = %d, %q, %q; want %d, %q", tt.name, args, code, stdout, stderr, tt.code, tt.errs)
+		t.Run(tt.name, func(t *testing.T) {
+			t.Parallel()
+			if why := pending[tt.name]; why != "" {
+				testfs.Pending(t, why)
 			}
-		}
+			if tt.name == "the directory a link" {
+				link(t, parts, filepath.Join(dir, "plink"))
+			}
+			for _, args := range [][]string{{"part", "check"}, {"check", "d.yaml"}} {
+				if code, stdout, stderr := runEnv(dir, tt.env, args...); code != tt.code || stdout != "" || stderr != tt.errs {
+					t.Errorf("floe %v = %d, %q, %q; want %d, %q", args, code, stdout, stderr, tt.code, tt.errs)
+				}
+			}
+		})
 	}
 	if code, _, _ := runEnv(dir, nil, "part", "check", "x"); code != 2 {
 		t.Errorf("floe part check x = %d, want 2", code)
@@ -94,43 +104,45 @@ func TestDirSettingTold(t *testing.T) {
 
 	dir := write(t, map[string]string{"file": ""})
 	file := filepath.Join(dir, "file")
-	unread, unwritten := filepath.Join(dir, "unread"), filepath.Join(dir, "unwritten")
-	for d, mode := range map[string]os.FileMode{unread: 0, unwritten: 0o500} {
-		if err := os.Mkdir(d, 0o700); err != nil {
-			t.Fatal(err)
-		}
-		if err := os.Chmod(d, mode); err != nil {
-			t.Fatal(err)
-		}
-		t.Cleanup(func() { _ = os.Chmod(d, 0o700) }) //nolint:errcheck // for TempDir to remove it
-	}
 	told := func(key, value, why string) string {
 		return "floe: " + key + " is " + value + ", which cannot be used as a directory (" + why + "); make it a " +
 			"directory floe can use, or set " + key + " to another directory\n"
 	}
-	for _, tt := range []struct {
-		env    map[string]string
-		args   []string
-		code   int
-		errs   string
-		asRoot bool // root reads and writes any directory, so that the case is not one
-	}{
-		{map[string]string{"FLOE_PARTS_DIR": unread}, []string{"part", "check"}, 1, told("FLOE_PARTS_DIR", unread, "permission denied"), false},
-		{map[string]string{"FLOE_PARTS_DIR": unwritten}, []string{"part", "new", "x"}, 1, told("FLOE_PARTS_DIR", unwritten, "permission denied"), false},
-		{map[string]string{"FLOE_TEMPLATES_DIR": filepath.Join(dir, "none")}, []string{"part", "check"}, 0, "", true},
-		{map[string]string{"FLOE_ICONS_DIR": file}, []string{"icons", "search", "aws", "x"}, 1, told("FLOE_ICONS_DIR", file, "not a directory"), true},
-		{map[string]string{"FLOE_DIR": file}, []string{"serve"}, 1, told("FLOE_DIR", file, "not a directory"), true},
-		{map[string]string{"FLOE_DIR": unwritten}, []string{"serve"}, 1, told("FLOE_DIR", unwritten, "permission denied"), false},
-	} {
-		if !tt.asRoot && os.Geteuid() == 0 {
-			continue
-		}
+	tells := func(t *testing.T, set map[string]string, args []string, code int, errs string) {
+		t.Helper()
 		env := map[string]string{"HOME": filepath.Join(dir, "home"), "FLOE_PORT": "1"}
-		maps.Copy(env, tt.env)
-		if code, _, stderr := runEnv(dir, env, tt.args...); code != tt.code || stderr != tt.errs {
-			t.Errorf("%v floe %v = %d, %q; want %d, %q", tt.env, tt.args, code, stderr, tt.code, tt.errs)
+		maps.Copy(env, set)
+		if got, _, stderr := runEnv(dir, env, args...); got != code || stderr != errs {
+			t.Errorf("%v floe %v = %d, %q; want %d, %q", set, args, got, stderr, code, errs)
 		}
 	}
+	tells(t, map[string]string{"FLOE_TEMPLATES_DIR": filepath.Join(dir, "none")}, []string{"part", "check"}, 0, "")
+	t.Run("not a directory", func(t *testing.T) {
+		testfs.Pending(t, "S315-P7: system words, ENOTDIR read as none (W12)")
+		t.Parallel()
+		tells(t, map[string]string{"FLOE_ICONS_DIR": file}, []string{"icons", "search", "aws", "x"}, 1, told("FLOE_ICONS_DIR", file, "not a directory"))
+		tells(t, map[string]string{"FLOE_DIR": file}, []string{"serve"}, 1, told("FLOE_DIR", file, "not a directory"))
+	})
+	t.Run("cannot be read or written", func(t *testing.T) {
+		testfs.UnixOnly(t, "chmod keeps a directory from being read or written")
+		t.Parallel()
+		if os.Geteuid() == 0 {
+			t.Skip("root reads and writes any directory")
+		}
+		unread, unwritten := filepath.Join(dir, "unread"), filepath.Join(dir, "unwritten")
+		for d, mode := range map[string]os.FileMode{unread: 0, unwritten: 0o500} {
+			if err := os.Mkdir(d, 0o700); err != nil {
+				t.Fatal(err)
+			}
+			if err := os.Chmod(d, mode); err != nil {
+				t.Fatal(err)
+			}
+			t.Cleanup(func() { _ = os.Chmod(d, 0o700) }) //nolint:errcheck // for TempDir to remove it
+		}
+		tells(t, map[string]string{"FLOE_PARTS_DIR": unread}, []string{"part", "check"}, 1, told("FLOE_PARTS_DIR", unread, "permission denied"))
+		tells(t, map[string]string{"FLOE_PARTS_DIR": unwritten}, []string{"part", "new", "x"}, 1, told("FLOE_PARTS_DIR", unwritten, "permission denied"))
+		tells(t, map[string]string{"FLOE_DIR": unwritten}, []string{"serve"}, 1, told("FLOE_DIR", unwritten, "permission denied"))
+	})
 }
 
 // overlap is the mistake of the places of two kinds of one's own that are one directory, or one in the other.
@@ -173,6 +185,7 @@ func TestOwnDirsOverlap(t *testing.T) {
 			"make it a directory floe can use, or set " + key + " to another directory\n"
 	}
 	parts, themes, templates := "FLOE_PARTS_DIR", "FLOE_THEMES_DIR", "FLOE_TEMPLATES_DIR"
+	pending := map[string]string{"not there, out": "S315-P7: system words", "a file and under it": "S315-P7: system words", "a link to nothing": "S315-P7: system words"}
 	for _, tt := range []struct {
 		name string
 		env  map[string]string
@@ -210,16 +223,25 @@ func TestOwnDirsOverlap(t *testing.T) {
 		// A link to nothing is not followed (resolve), and is refused once what it leads to is there.
 		{"a link to nothing", map[string]string{parts: pp, themes: dir + "/dangling"}, nil, unusable(themes, dir+"/dangling")},
 	} {
-		env := map[string]string{"HOME": home}
-		maps.Copy(env, tt.env)
-		args := tt.args
-		if args == nil {
-			args = []string{"part", "check"}
-		}
-		code, stdout, stderr := runEnv(dir, env, args...)
-		if code != map[bool]int{true: 0, false: 1}[tt.errs == ""] || stdout != "" || stderr != tt.errs {
-			t.Errorf("%s: floe %v = %d, %q, %q; want %q", tt.name, args, code, stdout, stderr, tt.errs)
-		}
+		t.Run(tt.name, func(t *testing.T) {
+			t.Parallel()
+			if why := pending[tt.name]; why != "" {
+				testfs.Pending(t, why)
+			}
+			if tt.name == "not there, then .." {
+				testfs.UnixOnly(t, "Windows folds none/.. as written, though none is not there")
+			}
+			env := map[string]string{"HOME": home}
+			maps.Copy(env, tt.env)
+			args := tt.args
+			if args == nil {
+				args = []string{"part", "check"}
+			}
+			code, stdout, stderr := runEnv(dir, env, args...)
+			if code != map[bool]int{true: 0, false: 1}[tt.errs == ""] || stdout != "" || stderr != tt.errs {
+				t.Errorf("floe %v = %d, %q, %q; want %q", args, code, stdout, stderr, tt.errs)
+			}
+		})
 	}
 }
 
@@ -248,12 +270,6 @@ func TestNewOwnOverlap(t *testing.T) {
 		{in, []string{"template", "new", "parts"}, 1, byTemplates},
 		{in, []string{"theme", "new", "calm"}, 1, overlap("FLOE_THEMES_DIR", defaultThemes, "FLOE_TEMPLATES_DIR", floe)},
 		{in, []string{"template", "new", "tp2"}, 0, ""},
-		{
-			map[string]string{"FLOE_PARTS_DIR": filepath.Join(dir, "parts"), "FLOE_THEMES_DIR": filepath.Join(dir, "themes")},
-			[]string{"part", "new", "../themes"},
-			1,
-			filepath.Join(dir, "themes") + ": floe takes no such name: write lower case letters, digits, - and _, starting with a letter or a digit; rename it\n",
-		},
 	} {
 		if code, _, stderr := runEnv(dir, tt.env, tt.args...); code != tt.code || stderr != tt.errs {
 			t.Errorf("%v floe %v = %d, %q; want %d, %q", tt.env, tt.args, code, stderr, tt.code, tt.errs)
@@ -267,12 +283,22 @@ func TestNewOwnOverlap(t *testing.T) {
 	if _, err := os.Stat(filepath.Join(floe, "tp2", "page.html")); err != nil {
 		t.Errorf("template new tp2 made no %s", filepath.Join(floe, "tp2", "page.html"))
 	}
+	t.Run("a name with ..", func(t *testing.T) {
+		testfs.Pending(t, "S315-P2: separators in floe's paths")
+		t.Parallel()
+		env := map[string]string{"FLOE_PARTS_DIR": filepath.Join(dir, "parts"), "FLOE_THEMES_DIR": filepath.Join(dir, "themes")}
+		want := filepath.Join(dir, "themes") + ": floe takes no such name: write lower case letters, digits, - and _, starting with a letter or a digit; rename it\n"
+		if code, _, stderr := runEnv(dir, env, "part", "new", "../themes"); code != 1 || stderr != want {
+			t.Errorf("floe part new ../themes = %d, %q; want 1, %q", code, stderr, want)
+		}
+	})
 }
 
 // A mistake of one's own stops floe check and render, though the page does not use it, and every command that
 // reads one's own, told at the file it is in: a part's $ref to no part at the part's schema.json, not at a
 // template's.
 func TestOwnStops(t *testing.T) {
+	testfs.Pending(t, "S315-P2: separators in floe's paths")
 	t.Parallel()
 
 	dir := write(t, map[string]string{
@@ -301,7 +327,6 @@ func TestOwnStops(t *testing.T) {
 		{"template", "show", "report"},
 		{"template", "new", "x"},
 		{"theme", "check"},
-		{"theme", "new", "x"},
 		{"theme", "list"},
 		{"theme", "show", "ink"},
 	} {
@@ -309,11 +334,19 @@ func TestOwnStops(t *testing.T) {
 			t.Errorf("floe %v = %d, %q, %q; want 1, %q", args, code, stdout, stderr, want)
 		}
 	}
+	t.Run("theme new", func(t *testing.T) {
+		testfs.Pending(t, "S315-P7: ENOTDIR read as none (W12)")
+		t.Parallel()
+		if code, stdout, stderr := runEnv(dir, env, "theme", "new", "x"); code != 1 || stdout != "" || stderr != want {
+			t.Errorf("floe theme new x = %d, %q, %q; want 1, %q", code, stdout, stderr, want)
+		}
+	})
 }
 
 // A part.html that does not parse is told at the line text/template's head names, as an editor counts it, without
 // the head: a CR alone ends a line too, and the end of the file is a place after its last line break.
 func TestOwnSyntax(t *testing.T) {
+	testfs.Pending(t, "S315-P2: separators in floe's paths")
 	t.Parallel()
 
 	for _, tt := range []struct{ page, want string }{
@@ -350,6 +383,7 @@ func TestTemplateCheck(t *testing.T) {
 	}
 	example := "lang: en\ntemplate: memo\ntitle: t\nitems: [1]\nlogo: img/a.svg\n"
 	at := func(dir, file string) string { return filepath.Join(dir, "templates/memo", file) }
+	pending := map[string]bool{"no such asset": true, "for through a key the schema forbids": true, "an example of another template": true, "a page cut short": true}
 	for _, tt := range []struct {
 		name  string
 		files map[string]string
@@ -371,21 +405,28 @@ func TestTemplateCheck(t *testing.T) {
 			return at(dir, "example.yaml") + ":2:11: the page drawn was cut short: HTML's reader leaves out the rest of a page past a <template> inside an <svg> or a <math>; take the <template> out of it (page.html, a part.html or an item of format html)"
 		}},
 	} {
-		dir := write(t, tt.files)
-		env := map[string]string{"FLOE_TEMPLATES_DIR": filepath.Join(dir, "templates")}
-		code, stdout, stderr := runEnv(dir, env, "template", "check")
-		want := tt.want(dir)
-		if want != "" {
-			want += "\n"
-		}
-		if code != map[bool]int{true: 0, false: 1}[want == ""] || stdout != "" || stderr != want {
-			t.Errorf("%s: floe template check = %d, %q, %q; want %q", tt.name, code, stdout, stderr, want)
-		}
+		t.Run(tt.name, func(t *testing.T) {
+			t.Parallel()
+			if pending[tt.name] {
+				testfs.Pending(t, "S315-P2: separators in floe's paths")
+			}
+			dir := write(t, tt.files)
+			env := map[string]string{"FLOE_TEMPLATES_DIR": filepath.Join(dir, "templates")}
+			code, stdout, stderr := runEnv(dir, env, "template", "check")
+			want := tt.want(dir)
+			if want != "" {
+				want += "\n"
+			}
+			if code != map[bool]int{true: 0, false: 1}[want == ""] || stdout != "" || stderr != want {
+				t.Errorf("floe template check = %d, %q, %q; want %q", code, stdout, stderr, want)
+			}
+		})
 	}
 }
 
 // An asset floe cannot read when page.html names it is told at the asset's file.
 func TestAssetUnreadable(t *testing.T) {
+	testfs.UnixOnly(t, "chmod keeps a file from being read")
 	t.Parallel()
 
 	if os.Geteuid() == 0 {
@@ -445,11 +486,15 @@ func TestAssetLinks(t *testing.T) {
 	if code, _, stderr := runEnv(dir, env, "template", "check"); code != 0 || stderr != "" {
 		t.Errorf("a file linked in = %d, %q", code, stderr)
 	}
-	link(t, shared, filepath.Join(img, "more"))
-	want := filepath.Join(img, "more") + ": " + dirLink + "\n"
-	if code, _, stderr := runEnv(dir, env, "template", "check"); code != 1 || stderr != want {
-		t.Errorf("a directory linked in = %d, %q; want %q", code, stderr, want)
-	}
+	t.Run("a directory linked in", func(t *testing.T) {
+		testfs.Pending(t, "S315-P2: separators in floe's paths")
+		t.Parallel()
+		link(t, shared, filepath.Join(img, "more"))
+		want := filepath.Join(img, "more") + ": " + dirLink + "\n"
+		if code, _, stderr := runEnv(dir, env, "template", "check"); code != 1 || stderr != want {
+			t.Errorf("floe template check = %d, %q; want %q", code, stderr, want)
+		}
+	})
 }
 
 // What is neither a regular file nor a directory, a FIFO or a link to a device, is refused, not read for ever;
@@ -511,6 +556,7 @@ func TestThemeCheckIsPartCheck(t *testing.T) {
 	mkdirs(t, filepath.Join(dir, "ok", "th"))
 	// Each wants a piece of its own mistake, which a check that reads neither parts nor themes, or compares no
 	// places, does not print.
+	pending := map[string]bool{"a theme's mistake": true, "a file of no part": true, "a part's mistake": true}
 	for _, tt := range []struct {
 		name string
 		env  map[string]string
@@ -526,14 +572,20 @@ func TestThemeCheckIsPartCheck(t *testing.T) {
 			"and FLOE_THEMES_DIR (" + filepath.Join(dir, "ok", "th") + ") are one directory, or one is in the other",
 		},
 	} {
-		env := map[string]string{"HOME": filepath.Join(dir, "home")}
-		maps.Copy(env, tt.env)
-		code, stdout, stderr := runEnv(dir, env, "part", "check")
-		if code != map[bool]int{true: 0, false: 1}[tt.want == ""] || stdout != "" || !strings.Contains(stderr, tt.want) || (stderr == "") != (tt.want == "") {
-			t.Errorf("%s: floe part check = %d, %q, %q; want one with %q", tt.name, code, stdout, stderr, tt.want)
-		}
-		if themeCode, themeOut, themeErr := runEnv(dir, env, "theme", "check"); themeCode != code || themeOut != stdout || themeErr != stderr {
-			t.Errorf("%s: floe theme check = %d, %q, %q; want floe part check's %d, %q, %q", tt.name, themeCode, themeOut, themeErr, code, stdout, stderr)
-		}
+		t.Run(tt.name, func(t *testing.T) {
+			t.Parallel()
+			if pending[tt.name] {
+				testfs.Pending(t, "S315-P2: separators in floe's paths")
+			}
+			env := map[string]string{"HOME": filepath.Join(dir, "home")}
+			maps.Copy(env, tt.env)
+			code, stdout, stderr := runEnv(dir, env, "part", "check")
+			if code != map[bool]int{true: 0, false: 1}[tt.want == ""] || stdout != "" || !strings.Contains(stderr, tt.want) || (stderr == "") != (tt.want == "") {
+				t.Errorf("floe part check = %d, %q, %q; want one with %q", code, stdout, stderr, tt.want)
+			}
+			if themeCode, themeOut, themeErr := runEnv(dir, env, "theme", "check"); themeCode != code || themeOut != stdout || themeErr != stderr {
+				t.Errorf("floe theme check = %d, %q, %q; want floe part check's %d, %q, %q", themeCode, themeOut, themeErr, code, stdout, stderr)
+			}
+		})
 	}
 }

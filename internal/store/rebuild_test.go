@@ -1,6 +1,7 @@
 package store_test
 
 import (
+	"fmt"
 	"os"
 	"path/filepath"
 	"slices"
@@ -73,8 +74,8 @@ func TestRebuildKept(t *testing.T) {
 	err := s.Rebuild(needs)
 	copyA := strings.Replace(copyOf(t, s, root, "a"), root, "S", 1)
 	want := lines(
-		copyA+"/data.yaml: missing property 'need'",
-		copyA+`/data.yaml: page "a" keeps the page it had: fix the data file it was published from and publish it again, or fix the template`,
+		filepath.Join(copyA, "data.yaml")+": missing property 'need'",
+		filepath.Join(copyA, "data.yaml")+`: page "a" keeps the page it had: fix the data file it was published from and publish it again, or fix the template`,
 	)
 	if got := told(err, root); got != want {
 		t.Errorf("told\n%s\nwant\n%s", got, want)
@@ -112,8 +113,8 @@ func TestRebuildTooDeep(t *testing.T) {
 	pageA := read(t, filepath.Join(copyOf(t, s, root, "a"), "page.html"))
 	copyA := strings.Replace(copyOf(t, s, root, "a"), root, "S", 1)
 	want := lines(
-		copyA+"/data.yaml: html: open stack of elements exceeds 512 nodes",
-		copyA+`/data.yaml: page "a" keeps the page it had: fix the data file it was published from and publish it again, or fix the template`,
+		filepath.Join(copyA, "data.yaml")+": html: open stack of elements exceeds 512 nodes",
+		filepath.Join(copyA, "data.yaml")+`: page "a" keeps the page it had: fix the data file it was published from and publish it again, or fix the template`,
 	)
 	if got := told(s.Rebuild(deep), root); got != want {
 		t.Errorf("told\n%s\nwant\n%s", got, want)
@@ -131,37 +132,78 @@ func TestRebuildTooDeep(t *testing.T) {
 func TestRebuildUnreadable(t *testing.T) {
 	t.Parallel()
 
-	if os.Geteuid() == 0 {
-		t.Skip("root reads what it may not")
-	}
-	s, root := newStore(t)
-	dw := picKit(t, "", "")
-	publish(t, s, dw, "a.yaml", "lang: en\ntemplate: pic\n", nil, store.Options{})
-	publish(t, s, dw, "b.yaml", "lang: en\ntemplate: pic\ni: [x.png]\n", map[string][]byte{"x.png": png}, store.Options{})
-	if err := os.Remove(filepath.Join(copyOf(t, s, root, "a"), "page.html")); err != nil {
-		t.Fatal(err)
-	}
-	images := filepath.Join(copyOf(t, s, root, "b"), "images")
-	if err := os.Chmod(images, 0o311); err != nil {
-		t.Fatal(err)
-	}
-	t.Cleanup(func() { _ = os.Chmod(images, 0o700) }) //nolint:errcheck // the test is told already
-	copyA := strings.Replace(copyOf(t, s, root, "a"), root, "S", 1)
-	copyB := strings.Replace(copyOf(t, s, root, "b"), root, "S", 1)
-	want := lines(
-		copyA+"/page.html: no such file or directory",
-		copyA+`/data.yaml: page "a" keeps the page it had: fix the data file it was published from and publish it again, or fix the template`,
-		copyB+"/images: permission denied",
-		copyB+`/data.yaml: page "b" keeps the page it had: fix the data file it was published from and publish it again, or fix the template`,
-	)
-	if got := told(s.Rebuild(picKit(t, "v2", "")), root); got != want {
-		t.Errorf("told\n%s\nwant\n%s", got, want)
-	}
+	keeps := `: page "%s" keeps the page it had: fix the data file it was published from and publish it again, or fix the template`
+	t.Run("no page.html", func(t *testing.T) {
+		t.Parallel()
+
+		s, root := newStore(t)
+		publish(t, s, picKit(t, "", ""), "a.yaml", "lang: en\ntemplate: pic\n", nil, store.Options{})
+		if err := os.Remove(filepath.Join(copyOf(t, s, root, "a"), "page.html")); err != nil {
+			t.Fatal(err)
+		}
+		copyA := strings.Replace(copyOf(t, s, root, "a"), root, "S", 1)
+		want := lines(filepath.Join(copyA, "page.html")+": no such file or directory", filepath.Join(copyA, "data.yaml")+fmt.Sprintf(keeps, "a"))
+		got := told(s.Rebuild(picKit(t, "v2", "")), root)
+		testfs.Pending(t, "S315-P7: system words")
+		if got != want {
+			t.Errorf("told\n%s\nwant\n%s", got, want)
+		}
+	})
+	t.Run("images unreadable", func(t *testing.T) {
+		t.Parallel()
+		testfs.UnixOnly(t, "chmod keeps a directory from being read")
+		if os.Geteuid() == 0 {
+			t.Skip("root reads what it may not")
+		}
+
+		s, root := newStore(t)
+		publish(t, s, picKit(t, "", ""), "b.yaml", "lang: en\ntemplate: pic\ni: [x.png]\n", map[string][]byte{"x.png": png}, store.Options{})
+		images := filepath.Join(copyOf(t, s, root, "b"), "images")
+		if err := os.Chmod(images, 0o311); err != nil {
+			t.Fatal(err)
+		}
+		t.Cleanup(func() { _ = os.Chmod(images, 0o700) }) //nolint:errcheck // the test is told already
+		copyB := strings.Replace(copyOf(t, s, root, "b"), root, "S", 1)
+		want := lines(copyB+"/images: permission denied", copyB+"/data.yaml"+fmt.Sprintf(keeps, "b"))
+		if got := told(s.Rebuild(picKit(t, "v2", "")), root); got != want {
+			t.Errorf("told\n%s\nwant\n%s", got, want)
+		}
+	})
+	t.Run("both at once", func(t *testing.T) {
+		t.Parallel()
+		testfs.UnixOnly(t, "chmod keeps a directory from being read")
+		if os.Geteuid() == 0 {
+			t.Skip("root reads what it may not")
+		}
+
+		s, root := newStore(t)
+		dw := picKit(t, "", "")
+		publish(t, s, dw, "a.yaml", "lang: en\ntemplate: pic\n", nil, store.Options{})
+		publish(t, s, dw, "b.yaml", "lang: en\ntemplate: pic\ni: [x.png]\n", map[string][]byte{"x.png": png}, store.Options{})
+		if err := os.Remove(filepath.Join(copyOf(t, s, root, "a"), "page.html")); err != nil {
+			t.Fatal(err)
+		}
+		images := filepath.Join(copyOf(t, s, root, "b"), "images")
+		if err := os.Chmod(images, 0o311); err != nil {
+			t.Fatal(err)
+		}
+		t.Cleanup(func() { _ = os.Chmod(images, 0o700) }) //nolint:errcheck // the test is told already
+		copyA := strings.Replace(copyOf(t, s, root, "a"), root, "S", 1)
+		copyB := strings.Replace(copyOf(t, s, root, "b"), root, "S", 1)
+		want := lines(
+			copyA+"/page.html: no such file or directory", copyA+"/data.yaml"+fmt.Sprintf(keeps, "a"),
+			copyB+"/images: permission denied", copyB+"/data.yaml"+fmt.Sprintf(keeps, "b"),
+		)
+		if got := told(s.Rebuild(picKit(t, "v2", "")), root); got != want {
+			t.Errorf("told\n%s\nwant\n%s", got, want)
+		}
+	})
 }
 
 // What cannot be written is told at it: a save stops, a rebuild keeps the page and draws the next.
 func TestCannotWrite(t *testing.T) {
 	t.Parallel()
+	testfs.UnixOnly(t, "chmod keeps a directory from being written")
 
 	if os.Geteuid() == 0 {
 		t.Skip("root writes where it may not")
@@ -331,6 +373,7 @@ func TestRebuildImagesKept(t *testing.T) {
 // An image of the copy that cannot be read is told at it, the page kept.
 func TestRebuildImageUnreadable(t *testing.T) {
 	t.Parallel()
+	testfs.UnixOnly(t, "chmod keeps a file from being read")
 
 	if os.Geteuid() == 0 {
 		t.Skip("root reads what it may not")

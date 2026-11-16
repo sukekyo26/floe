@@ -114,14 +114,14 @@ func TestOpenAppend(t *testing.T) {
 
 	dir := t.TempDir()
 	path := filepath.Join(dir, "a.log")
-	for _, text := range []string{"one\n", "two\n"} {
+	texts := []string{"one\n", "two\n"}
+	perms := make([]fs.FileMode, 0, len(texts))
+	for _, text := range texts {
 		f, info, err := files.OpenAppend(path)
 		if err != nil {
 			t.Fatal(err)
 		}
-		if info.Mode().Perm()&^0o600 != 0 {
-			t.Errorf("made with permissions %v, want no wider than 0600", info.Mode().Perm())
-		}
+		perms = append(perms, info.Mode().Perm())
 		if _, err = f.WriteString(text); err != nil {
 			t.Fatal(err)
 		}
@@ -132,6 +132,15 @@ func TestOpenAppend(t *testing.T) {
 	if b, err := os.ReadFile(path); err != nil || string(b) != "one\ntwo\n" {
 		t.Errorf("appended twice = %q, %v", b, err)
 	}
+	t.Run("permissions", func(t *testing.T) {
+		t.Parallel()
+		testfs.UnixOnly(t, "permission bits")
+		for _, perm := range perms {
+			if perm&^0o600 != 0 {
+				t.Errorf("made with permissions %v, want no wider than 0600", perm)
+			}
+		}
+	})
 
 	link := filepath.Join(dir, "link.log")
 	testfs.Symlink(t, path, link)
@@ -149,18 +158,33 @@ func TestOpenAppend(t *testing.T) {
 	made := filepath.Join(t.TempDir(), "made.log")
 	nowhere := filepath.Join(dir, "nowhere.log")
 	testfs.Symlink(t, made, nowhere)
-	if f, _, err = files.OpenAppend(nowhere); err == nil || !errors.Is(err, syscall.ELOOP) {
+	if f, _, err = files.OpenAppend(nowhere); err == nil || !errors.Is(err, errLinkToNowhere) {
 		if f != nil {
 			_ = f.Close() //nolint:errcheck // not wanted
 		}
-		t.Errorf("OpenAppend of a link to nowhere = %v, want ELOOP", err)
+		t.Errorf("OpenAppend of a link to nowhere = %v, want %v", err, errLinkToNowhere)
 	}
 	if _, err = os.Stat(made); err == nil {
 		t.Error("OpenAppend made the file where a link to nowhere leads")
 	}
 
+	t.Run("FIFO", func(t *testing.T) {
+		t.Parallel()
+		openAppendFIFO(t, dir)
+	})
+
+	if _, _, err = files.OpenAppend(dir); !errors.Is(err, syscall.EISDIR) {
+		t.Errorf("OpenAppend of a directory = %v, want EISDIR", err)
+	}
+}
+
+// openAppendFIFO tries OpenAppend on a FIFO made in dir and on a link to it, with no reader and with one.
+func openAppendFIFO(t *testing.T, dir string) {
+	t.Helper()
 	fifo := filepath.Join(dir, "fifo")
 	testfs.Mkfifo(t, fifo)
+	var f *os.File
+	var err error
 	fifoLink := filepath.Join(dir, "fifo-link")
 	testfs.Symlink(t, fifo, fifoLink)
 	// Opening one for writing with no reader blocks for good: the call must come back.
@@ -193,9 +217,5 @@ func TestOpenAppend(t *testing.T) {
 			_ = f.Close() //nolint:errcheck // not wanted
 		}
 		t.Errorf("OpenAppend of a FIFO with a reader = %v, want ErrNotFile", err)
-	}
-
-	if _, _, err = files.OpenAppend(dir); !errors.Is(err, syscall.EISDIR) {
-		t.Errorf("OpenAppend of a directory = %v, want EISDIR", err)
 	}
 }

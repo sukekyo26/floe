@@ -255,7 +255,7 @@ func TestSettingsBrokenLinks(t *testing.T) {
 		t.Fatal(err)
 	}
 	_, err := s.PrepareData(dw, store.Upload{File: "b.yaml", Source: []byte(report("")), Images: nil, Project: "p", Repo: "p", Place: "b.yaml"}, store.Options{})
-	if got := told(err, root); !strings.HasPrefix(got, "S/settings.json: ") {
+	if got := told(err, root); !strings.HasPrefix(got, filepath.Join("S", "settings.json")+": ") {
 		t.Errorf("a new page: told %s", got)
 	}
 	publish(t, s, dw, "a.yaml", report(""), nil, store.Options{})
@@ -285,7 +285,7 @@ func TestSettingsBrokenLinks(t *testing.T) {
 	if err = os.WriteFile(data, []byte(report("")), 0o600); err != nil {
 		t.Fatal(err)
 	}
-	if _, err = s.PrepareLink(t.Context(), dw, data, store.Options{}, "", home); !strings.HasPrefix(told(err, root), "S/settings.json: ") {
+	if _, err = s.PrepareLink(t.Context(), dw, data, store.Options{}, "", home); !strings.HasPrefix(told(err, root), filepath.Join("S", "settings.json")+": ") {
 		t.Errorf("a data file linked: told %s", told(err, root))
 	}
 	if err = setTheme(s, "ink"); err != nil {

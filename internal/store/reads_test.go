@@ -14,12 +14,12 @@ import (
 
 	floefiles "floe/internal/files" // store_test has a func files
 	"floe/internal/store"
+	"floe/internal/testfs"
 )
 
-const (
-	viewer = "local"
-	unset  = "S/reads.json: is missing, broken or has no since: run floe stop, then floe serve, which writes it anew"
-)
+const viewer = "local"
+
+var unset = filepath.Join("S", "reads.json") + ": is missing, broken or has no since: run floe stop, then floe serve, which writes it anew"
 
 // hour is a time of a day, by its hour.
 func hour(h int) string {
@@ -307,7 +307,7 @@ func TestReadsBegin(t *testing.T) {
 	if err := os.MkdirAll(filepath.Join(root, "reads.json.broken", "x"), 0o700); err != nil {
 		t.Fatal(err)
 	}
-	if got := told(s.Begin(viewer, hour(1)), root); !strings.HasPrefix(got, "S/reads.json.broken: cannot be written (") {
+	if got := told(s.Begin(viewer, hour(1)), root); !strings.HasPrefix(got, filepath.Join("S", "reads.json.broken")+": cannot be written (") {
 		t.Errorf("told %s", got)
 	}
 
@@ -339,13 +339,17 @@ func TestReadsBegin(t *testing.T) {
 }
 
 // A reads.json that cannot be read is told in the system's words, not as one missing; the list counts every page as read.
-func TestReadsUnreadable(t *testing.T) {
+func TestReadsUnreadable(t *testing.T) { //nolint:tparallel // the subtest goes on from the store the test made
 	t.Parallel()
 
 	s, root := begun(t, hour(1))
 	m := made(t, s, root, "d", 2, 2)
 	file := filepath.Join(root, "reads.json")
-	if os.Geteuid() != 0 { // root reads what a mode keeps
+	t.Run("unreadable", func(t *testing.T) {
+		testfs.UnixOnly(t, "chmod keeps a file from being read")
+		if os.Geteuid() == 0 {
+			t.Skip("root reads what a mode keeps")
+		}
 		if err := os.Chmod(file, 0); err != nil {
 			t.Fatal(err)
 		}
@@ -358,14 +362,14 @@ func TestReadsUnreadable(t *testing.T) {
 		if err := os.Chmod(file, 0o600); err != nil {
 			t.Fatal(err)
 		}
-	}
+	})
 	if err := os.Remove(file); err != nil {
 		t.Fatal(err)
 	}
 	if err := os.Mkdir(file, 0o700); err != nil {
 		t.Fatal(err)
 	}
-	if got := told(markRead(s, 1, m.Versions[0].At), root); !strings.HasPrefix(got, "S/reads.json: ") || got == unset {
+	if got := told(markRead(s, 1, m.Versions[0].At), root); !strings.HasPrefix(got, filepath.Join("S", "reads.json")+": ") || got == unset {
 		t.Errorf("a directory: told %s", got)
 	}
 }
@@ -514,7 +518,7 @@ func TestReadsFollow(t *testing.T) {
 
 // A page removed takes what was read of it with it, first: a reads.json that cannot be read or written stops the
 // removal, one missing or broken does not, and a link or a page of no id has none to read.
-func TestReadsForget(t *testing.T) {
+func TestReadsForget(t *testing.T) { //nolint:tparallel // the subtest goes on from the store the test made
 	t.Parallel()
 
 	s, root := begun(t, hour(10))
@@ -537,7 +541,7 @@ func TestReadsForget(t *testing.T) {
 	if err := s.WriteMeta("l", &store.Meta{ID: "id-l", Path: "/x/y.html", CreatedAt: hour(11), UpdatedAt: hour(11)}); err != nil {
 		t.Fatal(err)
 	}
-	kept := func(what string, want ...string) {
+	kept := func(t *testing.T, what string, want ...string) {
 		t.Helper()
 
 		got := slices.Sorted(maps.Keys(keptReads(t, root)[viewer].Pages))
@@ -558,7 +562,7 @@ func TestReadsForget(t *testing.T) {
 	if got := remove("a"); got != "" {
 		t.Fatal(got)
 	}
-	kept("removed", "id-b", "id-c")
+	kept(t, "removed", "id-b", "id-c")
 	before := read(t, file)
 	if got := remove("none"); got != "" {
 		t.Fatal(got)
@@ -567,7 +571,11 @@ func TestReadsForget(t *testing.T) {
 		t.Error("a page read by no one: reads.json written")
 	}
 
-	if os.Geteuid() != 0 { // root reads and writes what a mode keeps
+	t.Run("reads.json unreadable, not writable", func(t *testing.T) {
+		testfs.UnixOnly(t, "chmod keeps a file from being read and a directory from being written")
+		if os.Geteuid() == 0 {
+			t.Skip("root reads and writes what a mode keeps")
+		}
 		if err := os.Chmod(file, 0); err != nil {
 			t.Fatal(err)
 		}
@@ -582,7 +590,7 @@ func TestReadsForget(t *testing.T) {
 		if err := os.Chmod(file, 0o600); err != nil {
 			t.Fatal(err)
 		}
-		kept("unreadable", "id-b", "id-c")
+		kept(t, "unreadable", "id-b", "id-c")
 
 		if err := os.Chmod(root, 0o500); err != nil {
 			t.Fatal(err)
@@ -594,8 +602,8 @@ func TestReadsForget(t *testing.T) {
 		if !strings.HasPrefix(got, "S/reads.json: cannot be written (") || s.ReadMeta("b") == nil {
 			t.Errorf("reads.json not writable: told %s", got)
 		}
-		kept("not writable", "id-b", "id-c")
-	}
+		kept(t, "not writable", "id-b", "id-c")
+	})
 
 	writeReads(t, root, `{`)
 	if got := remove("c"); got != "" || s.ReadMeta("c") != nil {
@@ -869,7 +877,7 @@ func TestMarkUnread(t *testing.T) {
 		t.Errorf("no page: %v", err)
 	}
 	made(t, s, root, "p", 1, 1)
-	if err := s.MarkUnread(viewer, "p"); told(err, root) != "S/reads.json: is missing, broken or has no since: run floe stop, then floe serve, which writes it anew" {
+	if err := s.MarkUnread(viewer, "p"); told(err, root) != unset {
 		t.Errorf("no since: %v", told(err, root))
 	}
 }
@@ -904,7 +912,7 @@ func TestMarkReadCleared(t *testing.T) {
 // A page marked unread stays so through a publish of the same content and a rebuild and a new version, and follows the
 // page to its new slug, with what it held. A page that replaces it is another, of another id: the record of the one it
 // replaces goes first, and one that cannot go stops it.
-func TestMarkUnreadKept(t *testing.T) {
+func TestMarkUnreadKept(t *testing.T) { //nolint:tparallel // the subtest goes on from the store the test made
 	t.Parallel()
 
 	s, root := begun(t, hour(0))
@@ -953,7 +961,7 @@ func TestMarkUnreadKept(t *testing.T) {
 		t.Fatal(err)
 	}
 	was := s.ReadMeta("d").ID
-	replace := func(file string) error {
+	replace := func(t *testing.T, file string) error {
 		t.Helper()
 
 		up := store.Upload{File: file, Source: []byte(titled(file)), Images: images, Project: "p", Repo: "p", Place: file}
@@ -963,12 +971,16 @@ func TestMarkUnreadKept(t *testing.T) {
 		}
 		return s.Save(e) //nolint:wrapcheck // for the test to look at
 	}
-	if os.Geteuid() != 0 { // root reads what a mode keeps
+	t.Run("reads.json unreadable", func(t *testing.T) {
+		testfs.UnixOnly(t, "chmod keeps a file from being read")
+		if os.Geteuid() == 0 {
+			t.Skip("root reads what a mode keeps")
+		}
 		file := filepath.Join(root, "reads.json")
 		if err := os.Chmod(file, 0); err != nil {
 			t.Fatal(err)
 		}
-		refused := replace("other.yaml")
+		refused := replace(t, "other.yaml")
 		if err := os.Chmod(file, 0o600); err != nil {
 			t.Fatal(err)
 		}
@@ -978,8 +990,8 @@ func TestMarkUnreadKept(t *testing.T) {
 		if _, ok := keptReads(t, root)[viewer].Pages[was]; !ok {
 			t.Error("reads.json unreadable: the record went")
 		}
-	}
-	if err := replace("third.yaml"); err != nil {
+	})
+	if err := replace(t, "third.yaml"); err != nil {
 		t.Fatal(err)
 	}
 	if _, ok := keptReads(t, root)[viewer].Pages[was]; ok || s.ReadMeta("d").ID == was {
