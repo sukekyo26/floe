@@ -330,3 +330,4 @@
   # an error that is not one ends `powershell -Command "irm ... | iex"` with exit code 0.
   try { Install } catch { throw ('floe-install: ' + $_.Exception.Message) }
 }
+$s396Unused = 1
