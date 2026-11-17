@@ -4,7 +4,7 @@ A template is the page a data file is drawn into: a directory that says what the
 
 ## Where templates are
 
-- A template is a directory in `FLOE_TEMPLATES_DIR` (default `$XDG_CONFIG_HOME/floe/templates`, else `~/.config/floe/templates`), named after the template. `floe template new memo` makes the smallest one, `memo`: a `page.html`, a `schema.json` and an `example.yaml` to fill in. A file directly in `FLOE_TEMPLATES_DIR` is ignored without a message: put a template's files in its directory.
+- A template is a directory in `FLOE_TEMPLATES_DIR` (default `$XDG_CONFIG_HOME/floe/templates`, else `~/.config/floe/templates`) (`~` is your home, `%USERPROFILE%` on Windows; floe does not expand `~`, so set the variable to a whole path), named after the template. `floe template new memo` makes the smallest one, `memo`: a `page.html`, a `schema.json` and an `example.yaml` to fill in. A file directly in `FLOE_TEMPLATES_DIR` is ignored without a message: put a template's files in its directory.
 - The name MUST be lower case letters, digits, `-` and `_`, starting with a letter or a digit.
 - Do not give a template the name of one of floe's, unless it is to replace it (a template of yours hides floe's of that name for every page that names it, and nothing says so).
 - A directory in `FLOE_TEMPLATES_DIR`, and anything in a template's directory, MUST NOT be a link to a directory (floe reads a link to a file). Every file there MUST be a regular file: floe refuses a FIFO or a device without reading it.
@@ -13,7 +13,7 @@ A template is the page a data file is drawn into: a directory that says what the
 
 ### Make one in another directory
 
-The server reads your templates again as soon as you save one, so a template half written stops the server's pages for everyone who uses it. Write a new template in another directory, and move it in once it is checked:
+The server reads your templates again as soon as you save one, so a template half written stops the server's pages for everyone who uses it. Write a new template in another directory, and move it in once it is checked (in sh, where the shell expands `~`):
 
 ```sh
 export FLOE_TEMPLATES_DIR=~/.config/floe/staging-templates
