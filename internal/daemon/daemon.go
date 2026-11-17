@@ -195,8 +195,8 @@ func (s Server) serves(ctx context.Context, p Status) error {
 // others (409, or no answer from a server that is gone) are not, though the server stops all the same.
 // LIMIT: it returns once the port is free, while the old process may finish the requests under way (10 s at most,
 // under the store's lock), then, stopped right after it started, its first read of the drawing, which nothing stops
-// (seconds, on Windows under load). A server in a container whose port is handed out stops, but the container's proxy may
-// keep the port bound, and the next command is told the port is silent. Two servers of one pid (of other
+// (seconds, on Windows under load). A server in a container whose port is handed out stops, but the container's
+// proxy may keep the port bound, and the next command is told the port is silent. Two servers of one pid (of other
 // namespaces, or a pid used again) are not told apart. Give the health an id of each start if waiting for the
 // process or telling them apart comes to matter.
 func Stop(ctx context.Context, port int, p Status) (Status, bool, error) {
