@@ -109,7 +109,7 @@ func RemoveAll(path string) error {
 // to as os.Rename does: a link itself is moved, not where it leads. A file another holds open sharing delete (floe's
 // reads) is replaced, on Windows too (renameIn).
 // LIMIT: on Windows a directory with a file open in it, however opened, cannot be renamed (Access is denied): told as
-// the system's error and not tried again, as what holds it is anyone's (Q10). Rename no directory that is read while
+// the system's error and not tried again, as what holds it is anyone's. Rename no directory that is read while
 // it runs if that comes to matter.
 func Rename(dir, from, to string) error {
 	at := func(err error) error {

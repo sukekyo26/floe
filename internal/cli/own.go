@@ -52,7 +52,7 @@ type base struct {
 // The places floe keeps its own in by default, on every system: under the XDG base directories, else under the home,
 // as on Linux (Windows' home is %USERPROFILE%). Not under %LOCALAPPDATA%: what an app installed as a package (the
 // Claude desktop app) makes there anew is put in the package's own folder, which a terminal does not see (S315's R4);
-// under the home it is not (R5).
+// under the home it is not (S315's R5).
 var (
 	dataBase   = base{key: "XDG_DATA_HOME", underHome: filepath.Join(".local", "share")}
 	configBase = base{key: "XDG_CONFIG_HOME", underHome: ".config"}
@@ -69,7 +69,7 @@ const (
 // relative (~/x in quotes too, which no shell read) is refused, and a relative base is none, as the XDG spec says.
 // LIMIT: on Windows the bits 0o600 and 0o700 floe writes with hide nothing; a directory is as private as the ACL it
 // inherits. The default places, under %USERPROFILE%, let only the user, SYSTEM and the Administrators in, but a
-// FLOE_* directory elsewhere (C:\x) lets other users read and change the pages (Q7: floe writes no ACL). Write one
+// FLOE_* directory elsewhere (C:\x) lets other users read and change the pages (floe writes no ACL). Write one
 // when that is asked for.
 // LIMIT: where the home is on a network (a share, a network drive), the default places are refused (path_not_local);
 // the FLOE_* settings name others. Look again if such PCs come to use floe.

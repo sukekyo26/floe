@@ -129,7 +129,7 @@ jobs:
       # The browser tests run in the browser jobs, on machines of their own.
       - run: just test-race-core
 
-  # The tests on Windows, without the race detector (it needs cgo there) and without the browser tests (S315 Q2):
+  # The tests on Windows, without the race detector (it needs cgo there) and without the browser tests (not run there):
   # internal/browsertest is left out as the justfile's core_pkgs leaves it out. A test that does not hold on Windows
   # is marked one by one with internal/testfs's UnixOnly.
   windows:

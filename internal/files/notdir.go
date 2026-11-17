@@ -14,7 +14,8 @@ var ErrNotDir = errors.New("not a directory")
 // none), or nil when it is not one. from is where to look up from: the directory of a file read, or the path of a
 // directory made or looked at, so that a file put at the name since is not taken for one on the way. Unix says so
 // itself (ENOTDIR); Windows says ERROR_PATH_NOT_FOUND, which Go reads both as ENOTDIR and as not there, for a file
-// on the way and for a directory not there alike (W12), and only then is it looked up, to the first that is there.
+// on the way and for a directory not there alike (S315's W12), and only then is it looked up, to the first that is
+// there.
 // LIMIT: only the branches that told ENOTDIR apart ask it; elsewhere Windows reads a path under a file as not there
 // and goes on as if it were (settings.json under a FLOE_DIR that is a file is none, as is a default place of one's
 // own that is a file, in ownDir; kit.has). Ask here where that comes to mislead.
