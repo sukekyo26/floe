@@ -97,7 +97,7 @@ var appData = appDataDirs //nolint:gochecknoglobals // a test's seam
 
 // appDataAt reports, of the folders of application data the system names, whether path is one or in one (in), and
 // whether dir, the directory a link of path serves, holds one (holds): settings, caches and tokens of applications
-// live there, hidden or not, wherever home is (Q4). A folder not there (as files.Real tells), or not on this
+// live there, hidden or not, wherever home is. A folder not there (as files.Real tells), or not on this
 // machine's drives (a roaming one redirected to a share), holds no local path and is left out; one that cannot be
 // told is an error, as what cannot be checked is not let through.
 func appDataAt(path, dir string) (in, holds bool, err error) {
