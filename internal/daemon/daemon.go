@@ -194,7 +194,8 @@ func (s Server) serves(ctx context.Context, p Status) error {
 // 204: a server answers 204 to one request only, so of commands that ask together one is told it did, and the
 // others (409, or no answer from a server that is gone) are not, though the server stops all the same.
 // LIMIT: it returns once the port is free, while the old process may finish the requests under way (10 s at most,
-// under the store's lock). A server in a container whose port is handed out stops, but the container's proxy may
+// under the store's lock), then the read of its drawing under way, which nothing stops (seconds, on Windows under
+// load). A server in a container whose port is handed out stops, but the container's proxy may
 // keep the port bound, and the next command is told the port is silent. Two servers of one pid (of other
 // namespaces, or a pid used again) are not told apart. Give the health an id of each start if waiting for the
 // process or telling them apart comes to matter.

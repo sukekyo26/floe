@@ -28,7 +28,8 @@ const logCap = 1 << 20
 // LIMIT: the size is looked at on opening only, so a server that runs on and panics on passes the cap, as does one
 // whose log could not be moved; and two servers
 // of one store (on two ports) that start at once with the log over the cap race between looking and moving: one's
-// first line may land in LogName+".1", or the generation before be lost. A server still stopping (10 s at most) when
+// first line may land in LogName+".1", or the generation before be lost. A server still stopping (10 s at most for the requests
+// under way, then the read of its drawing under way) when
 // the next one starts and moves the log writes its last lines (stopped, a panic) to LogName+".1", so that a log with a
 // "serving" and no "stopped" may have it there. Move it under the store's lock, or have the old server open the
 // log again, if that comes to matter.
