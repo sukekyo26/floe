@@ -147,6 +147,8 @@ func (a *app) skillCmd() *cobra.Command {
 		Long: `Write floe's skill, floe/SKILL.md, where the agent named reads the skills of all your projects:
 
 ` + table.String() + `
+~ is your home, %USERPROFILE% on Windows.
+
 Cursor reads ~/.claude/skills too. If you use Cursor, it reads both places, and shows the skill twice when it
 is in both; that does no harm. A skill under ~/.agents/skills is not copied to Cursor's Cloud Agents or remote
 SSH, which read ~/.cursor/skills alone.

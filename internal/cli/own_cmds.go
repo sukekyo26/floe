@@ -76,9 +76,9 @@ the byte order mark at its start: floe part show code part.html.`,
 	}, &cobra.Command{
 		Use:   "new <name>",
 		Short: "Make a part of your own: the smallest that floe part check takes, to fill in",
-		Long: `Make the part <name> in FLOE_PARTS_DIR (else floe/parts under XDG_CONFIG_HOME, or ~/.config): a
-schema.json, a part.html of its box and an empty part.css, which floe part check takes. Nothing is
-written over: with anything of that name there, nothing is made.`,
+		Long: `Make the part <name> in FLOE_PARTS_DIR (else floe/parts under XDG_CONFIG_HOME, or ~/.config;
+~ is %USERPROFILE% on Windows): a schema.json, a part.html of its box and an empty part.css, which
+floe part check takes. Nothing is written over: with anything of that name there, nothing is made.`,
 		Args: cobra.ExactArgs(1),
 		RunE: func(_ *cobra.Command, args []string) error {
 			return a.newOwn(ownParts, args[0])
@@ -87,8 +87,8 @@ written over: with anything of that name there, nothing is made.`,
 		Use:   "check",
 		Short: "Check the parts, looks, shared schemas and themes of your own",
 		Long: `Read the parts, looks and shared schemas under FLOE_PARTS_DIR and the themes under
-FLOE_THEMES_DIR (else floe/parts and floe/themes under XDG_CONFIG_HOME, or ~/.config), over
-floe's own, and print every mistake of them. The exit code is 1 when there is one; nothing is
+FLOE_THEMES_DIR (else floe/parts and floe/themes under XDG_CONFIG_HOME, or ~/.config; ~ is
+%USERPROFILE% on Windows), over floe's own, and print every mistake of them. The exit code is 1 when there is one; nothing is
 printed when they are right. A mistake of one of your own stops floe check and floe render too.
 With parts of your own, it compiles floe's templates with them too. floe theme check does the same:
 a theme's <part>.css needs its part, so parts and themes are checked together.`,
@@ -148,7 +148,7 @@ example.yaml.`,
 		Use:   "new <name>",
 		Short: "Make a template of your own to fill in: the smallest floe template check takes, with a viewport",
 		Long: `Make the template <name> in FLOE_TEMPLATES_DIR (else floe/templates under XDG_CONFIG_HOME, or
-~/.config): a page.html (with a viewport <meta>, so that a phone draws the page at its width), a
+~/.config; ~ is %USERPROFILE% on Windows): a page.html (with a viewport <meta>, so that a phone draws the page at its width), a
 schema.json and an example.yaml, which floe template check takes. Nothing is written over: with
 anything of that name there, nothing is made.`,
 		Args: cobra.ExactArgs(1),
@@ -159,7 +159,7 @@ anything of that name there, nothing is made.`,
 		Use:   "check",
 		Short: "Check the templates of your own, drawing each one's example.yaml",
 		Long: `Read the templates under FLOE_TEMPLATES_DIR (else floe/templates under XDG_CONFIG_HOME,
-or ~/.config) with the parts and themes of your own, as floe part check does, then draw the
+or ~/.config; ~ is %USERPROFILE% on Windows) with the parts and themes of your own, as floe part check does, then draw the
 example.yaml of each template of your own as floe check draws a data file. Every mistake is
 printed, and then the warnings of the examples drawn; the exit code is 1 when there is a
 mistake, and nothing is printed when they are right and have no warning.`,
@@ -213,8 +213,8 @@ print that file alone, as written but the byte order mark at its start: floe the
 	}, &cobra.Command{
 		Use:   "new <name>",
 		Short: "Make a theme of your own: the smallest that floe theme check takes, to fill in",
-		Long: `Make the theme <name> in FLOE_THEMES_DIR (else floe/themes under XDG_CONFIG_HOME, or ~/.config): an
-empty palette.css, which goes over floe's default palette (floe theme show default palette.css) and which
+		Long: `Make the theme <name> in FLOE_THEMES_DIR (else floe/themes under XDG_CONFIG_HOME, or ~/.config;
+~ is %USERPROFILE% on Windows): an empty palette.css, which goes over floe's default palette (floe theme show default palette.css) and which
 floe theme check takes. Nothing is written over: with anything of that name there, nothing is made.`,
 		Args: cobra.ExactArgs(1),
 		RunE: func(_ *cobra.Command, args []string) error {

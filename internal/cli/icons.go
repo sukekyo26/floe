@@ -43,7 +43,7 @@ The icons are replaced as a whole, and the previous ones stay if that fails. A v
 already there is kept unless --force.
 
 FLOE_ICONS_DIR is an absolute path; without it, the icons are kept in
-$XDG_DATA_HOME/floe-icons, or ~/.local/share/floe-icons.`,
+$XDG_DATA_HOME/floe-icons, or ~/.local/share/floe-icons (~ is %USERPROFILE% on Windows).`,
 		Args: cobra.MinimumNArgs(1),
 		RunE: func(cmd *cobra.Command, args []string) error {
 			from := make([]icons.Source, len(args)-1)
