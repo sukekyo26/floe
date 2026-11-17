@@ -233,6 +233,8 @@ func TestServeEnds(t *testing.T) {
 	done := make(chan error, 1)
 	go func() { done <- s.Serve(ctx, ln) }()
 	// The first read ends before the 5 s the end is waited for: Serve waits for it.
+	// LIMIT: with the watch of every millisecond, Serve's first may queue behind a watch's look and wait for its walk
+	// of marks once or twice inside the 5 s (first's LIMIT).
 	s.now()
 	time.Sleep(10 * time.Millisecond)
 	cancel()

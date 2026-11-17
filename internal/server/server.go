@@ -65,7 +65,7 @@ type Server struct {
 	// log writes to cfg.Log (newLog).
 	log *slog.Logger
 
-	// looking lets one look run at a time (look).
+	// looking lets one look or first read run at a time (look, first).
 	looking sync.Mutex
 	mu      sync.Mutex
 	drawing store.Drawing
@@ -174,8 +174,11 @@ func (s *Server) look() {
 	s.read(m)
 }
 
-// first is the first read of the drawing: one coming after it, or waiting for it, looks at nothing, so that once it
-// is done, what Serve waits for touches no file. What changed since is the watch's to read.
+// first is the first read of the drawing: one coming after it, or waiting for it, reads nothing, so that once it is
+// done, Serve's first reads nothing. What changed since is the watch's to read.
+// LIMIT: it takes looking before it looks at gen, so that Serve's first queued behind a watch's look waits for that
+// look's walk of marks (with the watch of every millisecond of TestServeEnds). Wait for the first read's end by a
+// signal rather than the lock if that wait comes to hold up Serve's end.
 func (s *Server) first() {
 	s.looking.Lock()
 	defer s.looking.Unlock()
@@ -487,9 +490,10 @@ func (*Server) redirect(w http.ResponseWriter, r *http.Request) {
 
 // Serve serves on ln until ctx is done or the server is asked to stop, then stops once the requests under way are
 // done, watching the drawing every s.every until then. It reads the drawing first once it answers (first), and
-// returns once that first read ends: done already, it waits for nothing that touches a file, and the watch's look
-// under way is not waited for. It writes to the log that it serves, why it stops (before it stops listening: the
-// next server starts after that) and that it has stopped, or the mistake that ended it.
+// returns once that first read ends: done already, it reads nothing, though it may wait for a watch's look queued
+// before it for the lock (first); the watch's look under way is not waited for. It writes to the log that it
+// serves, why it stops (before it stops listening: the next server starts after that) and that it has stopped, or
+// the mistake that ended it.
 func (s *Server) Serve(ctx context.Context, ln net.Listener) (err error) {
 	s.log.Info("serving", slog.String("root", s.cfg.Store.Root()), slog.String("addr", ln.Addr().String()),
 		slog.String("build", s.cfg.Build))
