@@ -12,6 +12,7 @@ adheres to [Semantic Versioning](https://semver.org/).
 
 ### Changed
 
+- Change the refusal of a command when the server on the port serves a store that is not an absolute path on this system (a server of another system, such as floe in WSL seen from Windows): it now says only to set `FLOE_PORT` to another port, and no longer to set `FLOE_DIR` to that store or to run `floe stop`.
 - Change `floe licenses` on every system to print the license of `github.com/inconshreveable/mousetrap` too, which the Windows builds hold.
 - Change `install.sh` on a system other than Linux and macOS to say that Windows installs with `install.ps1`, and how.
 - Change the refusal of an image path a data file names to say that on Windows a `\`, a `:` or a device's name such as `NUL` or `CON` is not taken either; an image name holding a NUL byte is now refused with it.

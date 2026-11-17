@@ -640,6 +640,28 @@ func TestPublishToAnotherServer(t *testing.T) {
 	}
 }
 
+// A server whose store is not an absolute path here (one of another system that the port reaches) is refused with
+// the one way that goes through: another FLOE_PORT, and neither FLOE_DIR nor floe stop.
+func TestAnotherSystemsServer(t *testing.T) {
+	t.Parallel()
+
+	for _, root := range []string{"", "relative/store", otherSystemsRoot} {
+		ln, port := holdPort(t)
+		e := newDenvOn(t, port)
+		servetest.Fake{PID: 4242, Root: root}.Serve(t, ln) //nolint:exhaustruct // the rest unset
+		r := e.run("list")
+		if r.code != 1 || r.stdout != "" || !strings.HasPrefix(r.stderr, "floe: ") || !strings.Contains(r.stderr, "port "+e.port) ||
+			!strings.Contains(r.stderr, "FLOE_PORT") || strings.Contains(r.stderr, "FLOE_DIR") || strings.Contains(r.stderr, "floe stop") {
+			t.Errorf("list to a server of %q = %+v, want a refusal that names port %s and FLOE_PORT, and not FLOE_DIR or floe stop",
+				root, r, e.port)
+		}
+		// The store the server serves, in Go's quotes.
+		if !strings.Contains(r.stderr, strconv.Quote(root)) {
+			t.Errorf("list to a server of %q = %+v, want the refusal to name that store", root, r)
+		}
+	}
+}
+
 // holdPort listens on a port the system picks, held until the test ends so that no other can take it, and
 // answers nothing until the test serves it.
 func holdPort(t *testing.T) (net.Listener, int) {

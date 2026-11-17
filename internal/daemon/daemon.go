@@ -174,13 +174,21 @@ func (s Server) serves(ctx context.Context, p Status) error {
 		return usererr.New("daemon_port_taken", s.Port)
 	case p.State == Down:
 		return usererr.New("daemon_not_started")
-	// LIMIT: a server that answers no Root, or a Root that sameDir cannot stat (it is gone), is refused as another store,
-	// though it may be this one; for no Root the message says FLOE_DIR is to be "", the default store again, so
-	// following it repeats the refusal.
+	// LIMIT: a Root that sameDir cannot stat (it is gone) is refused as another store, though it may be this one.
 	// LIMIT: the messages that name a path (this one, daemon_other_dirs) quote it with %q, which is Go's quoting and
 	// not a shell's: a character it cannot show (a wide space, a tab) is escaped, and a $, a backtick or a ! is
 	// expanded by the shell, so such a path does not go through when pasted as it is.
 	case !sameDir(p.Health.Root, s.Root):
+		// A Root that is not an absolute path here (none, too) is of a server of another system, or none floe's own:
+		// FLOE_DIR cannot be set to it, and floe stop may leave the port held by what reaches that server.
+		// LIMIT: a server of another system that names an absolute path here (two Linux containers sharing a port, a
+		// //tmp/x of WSL, which Windows reads as a share) gets daemon_other_root.
+		// LIMIT: on Windows, sameDir stats a Root of /home/u/x as \home\u\x of the current drive: when that is this store,
+		// a server of WSL is taken for this one and not refused, and, of another build, Ensure may stop it as outdated.
+		// LIMIT: floe serve on such a port is refused with daemon_port_in_use, which names floe stop all the same.
+		if !filepath.IsAbs(p.Health.Root) {
+			return usererr.New("daemon_root_not_absolute", s.Port, p.Health.Root)
+		}
 		return usererr.New("daemon_other_root", s.Port, p.Health.Root)
 	case s.AnyDirs:
 		return nil
