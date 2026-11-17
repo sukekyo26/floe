@@ -6,6 +6,7 @@ import (
 	"io"
 	"net"
 	"net/http"
+	"net/url"
 	"os"
 	"path/filepath"
 	"strings"
@@ -157,10 +158,11 @@ func TestOpenWaitsForRead(t *testing.T) {
 			switch {
 			case broken && !strings.Contains(body, "schema.json"):
 				t.Errorf("open = %d %s, want the mistake of schema.json", code, body)
-			case !broken && (code != http.StatusOK || !strings.Contains(body, "<body>1</body>")):
+			case !broken && (code != http.StatusOK || !strings.Contains(body, "<body>1")):
 				t.Errorf("open = %d %s, want the page drawn", code, body)
 			}
-			if !strings.Contains(body, since) {
+			// The version is in the page's script, as a URL's query.
+			if !strings.Contains(body, url.QueryEscape(since)) {
 				t.Errorf("open = %s, want the version %s", body, since)
 			}
 			if _, got := answer(t, changed); got != "same" {
