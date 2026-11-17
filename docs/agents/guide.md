@@ -44,7 +44,7 @@ sections:
 - `floe info <slug>` prints a page's project, task, data file and the rest floe keeps of it, a name, a tab and a value a line, an empty value for none, and changes nothing: run it to check the project of a page you did not just publish.
 - floe knows a page by its data file, not by the directory floe runs in: publish the same file again, from any directory and without `--slug`, and it replaces its page, even after the user renamed the page on the management page.
 - A slug MUST NOT be that of another file's page (`slug "db-choice" was published from …: choose another slug`): rename your file (`db-choice-2.yaml`) or give another `--slug`, and publish again.
-- On Windows, floe opens only files on a local drive: not on a network share or a network drive, nor through a link to one. A file to link (`--link`) MUST NOT be in `AppData`, `%TEMP%` included: write it in the repository the page is about.
+- On Windows, what floe reads and writes MUST be on a local drive: the data file, a file or folder to link, the repository, the store, and the directories of your own templates, parts and themes. Any local folder will do; a network share or a network drive will not, nor a symlink or junction that leads to one. A file to link (`--link`) MUST NOT be in `AppData`, `%TEMP%` included: write it in the repository the page is about.
 
 ## Tasks
 
