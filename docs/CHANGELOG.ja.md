@@ -6,6 +6,8 @@ floe の主要な変更を記録します。フォーマットは
 
 ## [Unreleased]
 
+## [0.2.0] - 2026-11-17
+
 ### 追加
 
 - 追加：Windows 11（amd64・arm64）のビルドと、それを入れる `install.ps1`（`irm https://raw.githubusercontent.com/sukekyo26/floe/main/install.ps1 | iex` で `%USERPROFILE%\.local\bin` に入る）。floe の置き場所は、Linux の `~` の下と同じく `%USERPROFILE%` の下。開くのは手元のドライブの上のふつうの名前のものだけで、ネットワークの共有・ネットワークドライブ・デバイス・パイプ・ストリームの名前を断り、`AppData` の下（`%TEMP%` も）のファイルのリンクも断る。ほかに違うことは docs/commands.ja.md の Windows の節にある。
@@ -60,6 +62,7 @@ floe の主要な変更を記録します。フォーマットは
 - 追加：ページの CSP とサンドボックス。ページの script を floe のものだけにする。
 - 追加：`floe licenses`。floe と、floe に入っているもののライセンスを出す。
 
-[Unreleased]: https://github.com/sukekyo26/floe/compare/v0.1.1...HEAD
+[Unreleased]: https://github.com/sukekyo26/floe/compare/v0.2.0...HEAD
+[0.2.0]: https://github.com/sukekyo26/floe/compare/v0.1.1...v0.2.0
 [0.1.1]: https://github.com/sukekyo26/floe/compare/v0.1.0...v0.1.1
 [0.1.0]: https://github.com/sukekyo26/floe/releases/tag/v0.1.0
