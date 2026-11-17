@@ -140,7 +140,7 @@ func TestNotLocalWindows(t *testing.T) {
 	}
 
 	dir := write(t, map[string]string{"a.yaml": good, "e.yaml": good})
-	shared, _ := testfs.MapShare(t, dir)
+	shared, mapped := testfs.MapShare(t, dir)
 	on := filepath.Join(shared, "a.yaml")
 	if code, _, stderr := run(dir, "check", on); code != 1 || !strings.Contains(stderr, "this is not on a local drive") {
 		t.Errorf("floe check %s = %d, %q, want path_not_local", on, code, stderr)
@@ -153,10 +153,9 @@ func TestNotLocalWindows(t *testing.T) {
 		t.Errorf("floe render of a page linked to NUL = %d, %q, want it not written, told", code, stderr)
 	}
 
-	out, mapped := testfs.MapShare(t, t.TempDir())
-	for _, to := range []string{out, mapped} {
+	// MkdirAll refuses the share first: nothing is made under dir.
+	for _, to := range []string{shared, mapped} {
 		code, _, stderr := run(dir, "render", "--out-dir", filepath.Join(to, "pages"), "a.yaml")
-		t.Logf("floe render --out-dir %s: %s", to, stderr)
 		if code != 1 || !strings.Contains(stderr, "not on a local drive") || !strings.Contains(stderr, "put it there") ||
 			strings.Contains(stderr, lookAtDir) {
 			t.Errorf("floe render --out-dir under %s = %d, %q, want it told as not local", to, code, stderr)

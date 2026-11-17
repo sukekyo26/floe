@@ -182,8 +182,8 @@ func (t target) same(o target) bool {
 
 // realPath is the absolute path abs with its symlinks resolved: those of its directory, and its own when it
 // is there, so that a page that is a symlink is written where it leads. A symlink that leads nowhere (no file,
-// a loop of links) is not written over: it is told at to, the page as the user names it, as a page that cannot
-// be written, in the system's words. Whether the rest can be written is the system's to tell, as it writes.
+// a loop of links, one to a share or a device) is not written over: it is told at to, the page as the user names
+// it, by CannotWrite. Whether the rest can be written is the system's to tell, as it writes.
 func realPath(abs, to string) (string, error) {
 	resolved, err := files.Real(abs)
 	if err == nil {
