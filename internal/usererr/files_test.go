@@ -55,6 +55,22 @@ func TestCannotReadWrite(t *testing.T) {
 			}
 		})
 	}
+	// Not local (Windows): told as a path to put on a local drive, written or read; a setting's directory for it.
+	notLocal := &fs.PathError{Op: "open", Path: `Z:\out`, Err: &usererr.NotLocal{At: "Z:"}}
+	for _, c := range []struct {
+		err       error
+		key, file string
+		args      []any
+	}{
+		{usererr.CannotWrite("out", notLocal), "path_not_local", "out", []any{"Z:"}},
+		{usererr.CannotRead("out", notLocal), "path_not_local", "out", []any{"Z:"}},
+		{usererr.SettingDir("FLOE_DIR", "/s", notLocal, nil), "dir_setting", "", []any{notLocal.Err.Error(), "FLOE_DIR", "/s"}},
+	} {
+		e, ok := errors.AsType[*usererr.Error](c.err)
+		if !ok || e.Key != c.key || e.File() != c.file || !slices.Equal(e.Args, c.args) {
+			t.Errorf("not local: %#v, want %s at %q of %v", c.err, c.key, c.file, c.args)
+		}
+	}
 	for _, err := range []error{
 		usererr.CannotRead("a", errors.New("odd")), usererr.CannotWrite("a", errors.New("odd")),
 		usererr.InSystemWords("icons_previous_left", "a", errors.New("odd"), "b"),

@@ -44,8 +44,12 @@ func CannotRead(name string, err error) error {
 }
 
 // CannotWrite is err, of writing the file or the directory named so, at it: floe's words that it cannot be
-// written, the system's words of why in them, and what to look at; any other error is floe's failure.
+// written, the system's words of why in them, and what to look at; ErrNotLocal as CannotRead tells it; any other
+// error is floe's failure.
 func CannotWrite(name string, err error) error {
+	if errors.Is(err, ErrNotLocal) {
+		return CannotRead(name, err)
+	}
 	return InSystemWords("cannot_write", name, err)
 }
 

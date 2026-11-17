@@ -125,8 +125,9 @@ func TestDriveRelative(t *testing.T) {
 }
 
 // A device, a share or a link to one is refused before it is opened (path_not_local), where Unix tells a device by its
-// kind: a part's file that is a link to a device, a data file on a share, and a page to write that is a link to a
-// device (which cannot be written, in the words of why).
+// kind: a part's file that is a link to a device, a data file on a share, a page to write that is a link to a
+// device, and pages to write on a share or a network drive (told to put them on a local drive, not to look at
+// their directory).
 func TestNotLocalWindows(t *testing.T) {
 	t.Parallel()
 
@@ -139,15 +140,25 @@ func TestNotLocalWindows(t *testing.T) {
 	}
 
 	dir := write(t, map[string]string{"a.yaml": good, "e.yaml": good})
-	shared, _ := testfs.MapShare(t, dir)
+	shared, mapped := testfs.MapShare(t, dir)
 	on := filepath.Join(shared, "a.yaml")
 	if code, _, stderr := run(dir, "check", on); code != 1 || !strings.Contains(stderr, "this is not on a local drive") {
 		t.Errorf("floe check %s = %d, %q, want path_not_local", on, code, stderr)
 	}
 
+	const lookAtDir = "check that its directory exists"
 	link(t, `\\.\NUL`, filepath.Join(dir, "e.html"))
 	if code, _, stderr := run(dir, "render", "e.yaml"); code != 1 || !strings.Contains(stderr, "not on a local drive") ||
-		!strings.Contains(stderr, "e.html") {
+		!strings.Contains(stderr, "e.html") || strings.Contains(stderr, lookAtDir) {
 		t.Errorf("floe render of a page linked to NUL = %d, %q, want it not written, told", code, stderr)
+	}
+
+	// MkdirAll refuses the share first: nothing is made under dir.
+	for _, to := range []string{shared, mapped} {
+		code, _, stderr := run(dir, "render", "--out-dir", filepath.Join(to, "pages"), "a.yaml")
+		if code != 1 || !strings.Contains(stderr, "not on a local drive") || !strings.Contains(stderr, "put it there") ||
+			strings.Contains(stderr, lookAtDir) {
+			t.Errorf("floe render --out-dir under %s = %d, %q, want it told as not local", to, code, stderr)
+		}
 	}
 }
