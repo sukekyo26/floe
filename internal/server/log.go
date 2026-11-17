@@ -25,10 +25,12 @@ const logCap = 1 << 20
 // not a regular file, and one over logCap is moved to LogName+".1" first, which replaces the generation before. It does
 // nothing else (debug.SetCrashOutput is for serve to call, once), so that opening it in a test changes nothing of the
 // process.
-// LIMIT: the size is looked at on opening only, so a server that runs on and panics on passes the cap; and two servers
+// LIMIT: the size is looked at on opening only, so a server that runs on and panics on passes the cap, as does one
+// whose log could not be moved; and two servers
 // of one store (on two ports) that start at once with the log over the cap race between looking and moving: one's
-// first line may land in LogName+".1", or the generation before be lost. A server still stopping (10 s at most) when
-// the next one starts and moves the log writes its last lines (stopped, a panic) to LogName+".1", so that a log with a
+// first line may land in LogName+".1", or the generation before be lost. A server still stopping (10 s at most for
+// the requests under way, then its first read of the drawing if it is stopped right after it started) when the next
+// one starts and moves the log writes its last lines (stopped, a panic) to LogName+".1", so that a log with a
 // "serving" and no "stopped" may have it there. Move it under the store's lock, or have the old server open the
 // log again, if that comes to matter.
 func OpenLog(root string) (*os.File, error) {
@@ -41,12 +43,14 @@ func OpenLog(root string) (*os.File, error) {
 		return f, nil
 	}
 	_ = f.Close() //nolint:errcheck // nothing written
-	// A link is moved itself, not what it leads to.
-	if err = os.Rename(name, name+".1"); err != nil {
-		return nil, usererr.CannotWrite(name+".1", err) //nolint:wrapcheck // as above
-	}
+	// A link is moved itself, not what it leads to. Moving the log aside is tidying: one that cannot be moved (an older
+	// server still holding it, on Windows) is written on, with a line of why, and moved by the next start.
+	moved := files.Rename(root, LogName, LogName+".1")
 	if f, _, err = files.OpenAppend(name); err != nil {
 		return nil, usererr.CannotWrite(name, err) //nolint:wrapcheck // as above
+	}
+	if moved != nil {
+		newLog(f).Info("log not moved aside", slog.String("to", LogName+".1"), slog.String("err", moved.Error()))
 	}
 	return f, nil
 }

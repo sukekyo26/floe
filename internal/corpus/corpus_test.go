@@ -8,6 +8,7 @@ import (
 	"maps"
 	"os"
 	"path/filepath"
+	"regexp"
 	"slices"
 	"strings"
 	"testing"
@@ -15,6 +16,7 @@ import (
 	"floe/internal/cli"
 	"floe/internal/files"
 	"floe/internal/kit"
+	"floe/internal/testfs"
 )
 
 var update = flag.Bool("update", false, "write the golden files of each sample anew")
@@ -35,8 +37,8 @@ func TestCorpus(t *testing.T) {
 			if err != nil {
 				t.Fatal(err)
 			}
-			got := runSample(t, name, dir)
 			golden := filepath.Join(dir, "golden")
+			got := runSample(t, name, dir)
 			if *update {
 				// A mistake of the run stays told here, not as bytes that differ on the next machine.
 				if !t.Failed() {
@@ -96,6 +98,7 @@ func runSample(t *testing.T, name, dir string) map[string][]byte {
 	// One's own parts, themes and templates, in own/: checked first, as an agent checks what it wrote.
 	own := false
 	for _, kind := range []string{"parts", "themes", "templates"} {
+		testfs.CheckedOutLink(t, filepath.Join(s.dir, "own", kind))
 		if fi, err := os.Stat(filepath.Join(s.dir, "own", kind)); err == nil && fi.IsDir() {
 			s.env["FLOE_"+strings.ToUpper(kind)+"_DIR"] = filepath.Join(s.dir, "own", kind)
 			own = true
@@ -247,14 +250,29 @@ func (s *sample) run(t *testing.T, args ...string) int {
 	getenv := func(key string) string { return s.env[key] }
 	code := cli.Run(args, cli.Env{Stdout: &stdout, Stderr: &stderr, Dir: s.dir, Getenv: getenv})
 	stand := strings.NewReplacer(s.tmp, "$TMP", s.dir, "$SAMPLE")
-	out := stand.Replace(stdout.String())
-	fmt.Fprintf(&s.commands, "$ floe %s\nexit %d\n", stand.Replace(strings.Join(args, " ")), code)
-	for _, printed := range []struct{ name, text string }{{"stdout", out}, {"stderr", stand.Replace(stderr.String())}} {
+	out := slashed(stand.Replace(stdout.String()))
+	// The arguments are the test's own paths, joined with the system's separator: written with / alike.
+	fmt.Fprintf(&s.commands, "$ floe %s\nexit %d\n", filepath.ToSlash(stand.Replace(strings.Join(args, " "))), code)
+	for _, printed := range []struct{ name, text string }{{"stdout", out}, {"stderr", slashed(stand.Replace(stderr.String()))}} {
 		if printed.text != "" {
 			fmt.Fprintf(&s.commands, "--- %s\n%s", printed.name, printed.text)
 		}
 	}
 	return code
+}
+
+// placed is a path under the directories the test made, as run writes it: $SAMPLE or $TMP, and the rest of the path
+// up to a colon (a line and a column after it), a space or a quote.
+var placed = regexp.MustCompile(`\$(?:SAMPLE|TMP)[^:\s"']*`)
+
+// slashed is printed with the separators of each path under $SAMPLE and $TMP written /, as the golden files hold
+// them: floe prints the system's (\ on Windows), and a path the test made is the same wherever it runs. Where the
+// separator is / it is printed as it is, so that a \ floe printed there is not mended into a match.
+func slashed(printed string) string {
+	if filepath.Separator == '/' {
+		return printed
+	}
+	return placed.ReplaceAllStringFunc(printed, func(p string) string { return strings.ReplaceAll(p, `\`, "/") })
 }
 
 // drawn returns b, what floe drew (a page), as it is, and fails the test when it holds a directory of the

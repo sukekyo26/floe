@@ -6,6 +6,29 @@ adheres to [Semantic Versioning](https://semver.org/).
 
 ## [Unreleased]
 
+## [0.2.0] - 2026-11-17
+
+### Added
+
+- Add Windows 11 (amd64, arm64) builds, with `install.ps1` to install them (`irm https://raw.githubusercontent.com/sukekyo26/floe/main/install.ps1 | iex`, into `%USERPROFILE%\.local\bin`). floe keeps its places under `%USERPROFILE%` as it does under `~` on Linux, and opens only what is on a local drive under an ordinary name: a network share or drive, a device, a pipe or a stream's name is refused, and so is linking a file in `AppData` (`%TEMP%` too). docs/commands.md's Windows section tells what else differs.
+
+### Changed
+
+- Change the refusal of a command when the server on the port serves a store that is not an absolute path on this system (a server of another system, such as floe in WSL seen from Windows): it now says only to set `FLOE_PORT` to another port, and no longer to set `FLOE_DIR` to that store or to run `floe stop`.
+- Change `floe licenses` on every system to print the license of `github.com/inconshreveable/mousetrap` too, which the Windows builds hold.
+- Change `install.sh` on a system other than Linux and macOS to say that Windows installs with `install.ps1`, and how.
+- Change the refusal of an image path a data file names to say that on Windows a `\`, a `:` or a device's name such as `NUL` or `CON` is not taken either; an image name holding a NUL byte is now refused with it.
+- Change a linked folder and the directory of a linked file to serve no file or directory whose name is not UTF-8: its URL now gets a 404.
+- Change the refusal of a link in a hidden directory of your home to name the folders of application data too, and to say where to put the file instead.
+- Change the refusal of a link that is not its real path, which named Go functions to call: it now asks for the whole path with its links and junctions followed, as the system names it.
+- Change what `install.sh` says when the install directory is not on `PATH`: it shows the command that adds it, to paste as it is, for zsh (`~/.zshrc`), bash on Linux (`~/.bashrc`) and fish (`fish_add_path`), and the line alone for other sh-like shells; it still changes neither `PATH` nor a file. A directory given as a relative path is told and compared by its absolute path, so a directory already on `PATH` is no longer told of.
+- Change `floe guide` to tell agents to fix a mistake without a place that is about what they gave the command (a path, a flag, a slug, a task, a `FLOE_…` they set themselves), and to tell the user of any other, changing none of the user's settings and stopping no server. It called every mistake without a place a failure to tell the user of.
+
+### Fixed
+
+- Fix a change of a page's slug that could not move the page: it saved the description, tags, project and title all the same and lost the rest. The page is now moved first and nothing is saved when it cannot be; one moved whose `meta.json` cannot then be written is moved back, or, when that fails too, refused with a mistake that says only the slug changed and the other changes are to be saved again.
+- Fix the server not starting when its log over 1 MiB could not be moved aside to `server.log.1` (a directory there, an older server still holding it): it now writes on in the log, with a line of why it was not moved, and tries again at the next start.
+
 ## [0.1.1] - 2026-11-16
 
 ### Changed
@@ -39,6 +62,7 @@ adheres to [Semantic Versioning](https://semver.org/).
 - Add a page's CSP and sandbox, which keep its scripts to floe's own.
 - Add `floe licenses`, which prints the licenses of floe and of what is built into it.
 
-[Unreleased]: https://github.com/sukekyo26/floe/compare/v0.1.1...HEAD
+[Unreleased]: https://github.com/sukekyo26/floe/compare/v0.2.0...HEAD
+[0.2.0]: https://github.com/sukekyo26/floe/compare/v0.1.1...v0.2.0
 [0.1.1]: https://github.com/sukekyo26/floe/compare/v0.1.0...v0.1.1
 [0.1.0]: https://github.com/sukekyo26/floe/releases/tag/v0.1.0

@@ -43,10 +43,14 @@ func TestPageTooDeep(t *testing.T) {
 			t.Errorf("%v = %d, %q", args, code, errs)
 		}
 	}
-	example := filepath.Join(dir, "templates", "deep", "example.yaml")
-	if code, _, errs := runIn(dir, env, "template", "check"); code != 1 || errs != example+": "+tooDeep {
-		t.Errorf("template check = %d, %q", code, errs)
-	}
+	templates, templatesEnv := dir, env
+	t.Run("template check", func(t *testing.T) {
+		t.Parallel()
+		example := filepath.Join(templates, "templates", "deep", "example.yaml")
+		if code, _, errs := runIn(templates, templatesEnv, "template", "check"); code != 1 || errs != example+": "+tooDeep {
+			t.Errorf("template check = %d, %q", code, errs)
+		}
+	})
 
 	quotes := "template: report\nlang: en\ntitle: A\nsections:\n  - heading: A\n    parts:\n      - text: \"" +
 		strings.Repeat("> ", 600) + "x\"\n"

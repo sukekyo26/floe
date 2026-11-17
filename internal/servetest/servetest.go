@@ -6,12 +6,13 @@ import (
 	"errors"
 	"net"
 	"net/http"
-	"os"
+	"path"
 	"path/filepath"
 	"strconv"
 	"testing"
 
 	"floe/internal/daemon"
+	"floe/internal/dirs"
 	"floe/internal/files"
 	"floe/internal/kit"
 	"floe/internal/server"
@@ -33,27 +34,21 @@ type Site struct {
 func Start(t *testing.T, written map[string]string) *Site {
 	t.Helper()
 
-	// Real, as link.Check compares the real paths of home and the file linked.
-	tmp, err := filepath.EvalSymlinks(t.TempDir())
+	// Real, as link.Check compares the real paths of home and the file linked, in the form a user writes it (no
+	// \\?\ on Windows): the tests give it as a user would, as the working directory and in settings.
+	got, err := files.Real(t.TempDir())
 	if err != nil {
 		t.Fatal(err)
 	}
+	tmp := dirs.Shown(got)
 	dir := func(name string) string { return filepath.Join(tmp, name) }
 	// Each made: a publish asks the server for its directories and compares them, and a link needs its home.
 	for _, name := range []string{"home", "store", "templates", "parts", "themes", "icons"} {
-		if err = os.Mkdir(dir(name), 0o700); err != nil {
+		if err = files.Mkdir(dir(name), 0o700); err != nil {
 			t.Fatal(err)
 		}
 	}
-	for name, text := range written {
-		at := filepath.Join(tmp, filepath.FromSlash(name))
-		if err = os.MkdirAll(filepath.Dir(at), 0o700); err != nil {
-			t.Fatal(err)
-		}
-		if err = os.WriteFile(at, []byte(text), 0o600); err != nil {
-			t.Fatal(err)
-		}
-	}
+	writeAll(t, tmp, written)
 	var lc net.ListenConfig
 	ln, err := lc.Listen(t.Context(), "tcp", "127.0.0.1:0")
 	if err != nil {
@@ -100,9 +95,29 @@ func Start(t *testing.T, written map[string]string) *Site {
 	return &Site{
 		Base: "http://127.0.0.1:" + p, Dir: tmp,
 		Env: map[string]string{
-			"HOME": dir("home"), "FLOE_DIR": dir("store"), "FLOE_PORT": p, "FLOE_TEMPLATES_DIR": dir("templates"),
+			// Each system's home, so that a command reads none of the machine's.
+			"HOME": dir("home"), "USERPROFILE": dir("home"),
+			"FLOE_DIR": dir("store"), "FLOE_PORT": p, "FLOE_TEMPLATES_DIR": dir("templates"),
 			"FLOE_PARTS_DIR": dir("parts"), "FLOE_THEMES_DIR": dir("themes"), "FLOE_ICONS_DIR": dir("icons"),
 			"BROWSER": "true",
 		},
+	}
+}
+
+// writeAll writes each of written, a slash-separated name under dir and its text.
+func writeAll(t *testing.T, dir string, written map[string]string) {
+	t.Helper()
+	root, err := files.OpenRoot(dir)
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer root.Close()
+	for name, text := range written {
+		if err = root.MkdirAll(path.Dir(name), 0o700); err != nil {
+			t.Fatal(err)
+		}
+		if err = root.WriteFile(name, []byte(text), 0o600); err != nil {
+			t.Fatal(err)
+		}
 	}
 }

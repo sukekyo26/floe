@@ -2,6 +2,7 @@ package cli
 
 import (
 	"context"
+	"crypto/rand"
 	"errors"
 	"fmt"
 	"net"
@@ -17,6 +18,8 @@ import (
 	"github.com/spf13/cobra"
 
 	"floe/internal/daemon"
+	"floe/internal/files"
+	"floe/internal/link"
 	"floe/internal/server"
 	"floe/internal/store"
 	"floe/internal/usererr"
@@ -30,21 +33,20 @@ var decimalRe = regexp.MustCompile(`^[0-9]+$`)
 // settingKeys are the environment variables the server's settings come from: a server a command starts takes
 // those the command read, so that it means the same directories.
 var settingKeys = []string{
-	"HOME", "XDG_DATA_HOME", "XDG_CONFIG_HOME", "FLOE_DIR", "FLOE_PORT", "FLOE_PARTS_DIR", "FLOE_THEMES_DIR",
+	link.HomeKey, dataBase.key, configBase.key, "FLOE_DIR", "FLOE_PORT", "FLOE_PARTS_DIR", "FLOE_THEMES_DIR",
 	"FLOE_TEMPLATES_DIR", "FLOE_ICONS_DIR",
 }
 
-// storeDir is the directory of the pages: FLOE_DIR, else floe under the XDG data directory, else under
-// ~/.local/share (dataDir).
+// storeDir is the directory of the pages: FLOE_DIR, else storeSub under the base of the data (dataDir).
 func (a *app) storeDir() (dataPlace, error) {
-	p, err := a.dataDir("FLOE_DIR", "XDG_DATA_HOME", ".local/share", "floe")
+	p, err := a.dataDir("FLOE_DIR", dataBase, storeSub)
 	switch {
 	case err != nil:
 		return p, err
 	case p.unusable != nil:
 		return p, p.unusable // the server writes there
 	case p.dir == "":
-		return p, usererr.New("store_no_dir")
+		return p, usererr.New("store_no_dir", p.from)
 	}
 	return p, nil
 }
@@ -97,7 +99,7 @@ func (a *app) serverConfig() (server.Config, dataPlace, error) {
 	if err := found.Err(); err != nil {
 		return cfg, root, err //nolint:wrapcheck // mistakes for the user as they are
 	}
-	cfg.Store, cfg.Port, cfg.Icons, cfg.Home = store.New(root.dir), port, icons.toRead(), a.getenv("HOME")
+	cfg.Store, cfg.Port, cfg.Icons, cfg.Home = store.New(root.dir), port, icons.toRead(), a.getenv(link.HomeKey)
 	cfg.Drawing = a.drawing
 	return cfg, root, nil
 }
@@ -207,15 +209,21 @@ func (a *app) serve(ctx context.Context) error {
 
 // writable reports why dir, made when missing, cannot be written in: by making a file in it.
 func writable(dir string) error {
-	if err := os.MkdirAll(dir, 0o700); err != nil {
+	if err := files.MkdirAll(dir, 0o700); err != nil {
 		return err //nolint:wrapcheck // told at the store
 	}
-	f, err := os.CreateTemp(dir, ".check-")
+	root, err := files.OpenRoot(dir)
 	if err != nil {
 		return err //nolint:wrapcheck // as above
 	}
-	_ = f.Close()              //nolint:errcheck // nothing written
-	return os.Remove(f.Name()) //nolint:wrapcheck // as above
+	defer root.Close() //nolint:errcheck // only looked in
+	name := ".check-" + rand.Text()
+	f, err := root.OpenFile(name, os.O_WRONLY|os.O_CREATE|os.O_EXCL, 0o600)
+	if err != nil {
+		return err //nolint:wrapcheck // as above
+	}
+	_ = f.Close()            //nolint:errcheck // nothing written
+	return root.Remove(name) //nolint:wrapcheck // as above
 }
 
 // listen takes the listener the command that started this server bound for it, or binds the port.

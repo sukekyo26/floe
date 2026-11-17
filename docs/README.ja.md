@@ -14,6 +14,14 @@ linux と macOS（amd64 / arm64）:
 curl -fsSL https://raw.githubusercontent.com/sukekyo26/floe/main/install.sh | sh
 ```
 
+Windows 11（amd64 / arm64）、PowerShell で:
+
+```powershell
+irm https://raw.githubusercontent.com/sukekyo26/floe/main/install.ps1 | iex
+```
+
+`floe.exe` は `%USERPROFILE%\.local\bin` に入ります。Windows で違うことは [commands.ja.md](commands.ja.md#windows) にあります。
+
 ## 使う
 
 ```sh

@@ -6,7 +6,10 @@ import (
 	"strings"
 	"testing"
 
+	"floe/internal/cli"
+	"floe/internal/files"
 	"floe/internal/i18n"
+	"floe/internal/testfs"
 )
 
 // floe diagram render, inspect and example: specs checked and drawn in the language asked for, every mistake of
@@ -31,7 +34,7 @@ func TestDiagram(t *testing.T) {
 			t.Fatal(err)
 		}
 	}
-	env := map[string]string{"HOME": "/h"}
+	env := cli.HomeVars("/h")
 	code, out, errs := runIn(dir, env, "diagram", "render", "--no-assets", "--lang", "ja", "a.yaml")
 	if code != 0 || errs != "" || !strings.Contains(out, ">はい</text>") || strings.Contains(out, "<script>") {
 		t.Errorf("render --lang ja = %d, %q, %q", code, out, errs)
@@ -44,13 +47,17 @@ func TestDiagram(t *testing.T) {
 	if want := "o.yaml:4:5: box \"a\" overlaps box \"b\"\n"; code != 1 || page0 != "" || errs != want {
 		t.Errorf("render of a right spec and a wrong one = %d, %q, %q, want %q", code, page0, errs, want)
 	}
-	code, _, errs = runIn(dir, nil, "diagram", "render", "b.yaml", "c.yaml", "gone.yaml")
-	want := "b.yaml:5:5: additional properties 'boxx' not allowed\n" +
-		"floe: there is no directory for icons, as HOME is not an absolute path; set FLOE_ICONS_DIR to an absolute path\n" +
-		"gone.yaml: no such file or directory\n"
-	if code != 1 || errs != want {
-		t.Errorf("render of mistakes = %d, %q, want %q", code, errs, want)
-	}
+	t.Run("mistakes", func(t *testing.T) {
+		t.Parallel()
+		_, _, gone := files.Read(filepath.Join(dir, "gone.yaml"))
+		got, _, told := runIn(dir, nil, "diagram", "render", "b.yaml", "c.yaml", "gone.yaml")
+		want := "b.yaml:5:5: additional properties 'boxx' not allowed\n" +
+			"floe: there is no directory for icons, as " + cli.PlaceVar("icons") + " is not an absolute path; set FLOE_ICONS_DIR to an absolute path\n" +
+			"gone.yaml: " + testfs.Words(t, gone) + "\n"
+		if got != 1 || told != want {
+			t.Errorf("render of mistakes = %d, %q, want %q", got, told, want)
+		}
+	})
 	code, _, errs = runIn(dir, env, "diagram", "render", "b.yaml", "e.yaml")
 	if want := "b.yaml:5:5: additional properties 'boxx' not allowed\n" +
 		"e.yaml: missing properties 'title', 'parts'\n"; code != 1 || errs != want {
@@ -131,7 +138,7 @@ func TestInspectData(t *testing.T) {
 		"templates/refusing/checks.yaml":  "- expr: false\n  message: refused by the template's checks\n",
 		"broken/parts/bad/schema.json":    "{",
 	})
-	env := map[string]string{"HOME": "/h", "FLOE_TEMPLATES_DIR": filepath.Join(dir, "templates")}
+	env := cli.HomeEnv("/h", map[string]string{"FLOE_TEMPLATES_DIR": filepath.Join(dir, "templates")})
 	const noExample = "no example nothing; use architecture, aws-graph, aws, class, er, flow, gantt, git, org, quadrant, sequence, state, swimlane, timeline, venn"
 	for _, c := range []struct {
 		name string
@@ -247,7 +254,7 @@ func TestInspectData(t *testing.T) {
 		t.Errorf("check of a page its checks refuse = %d, %q", code, errs)
 	}
 	// Parts of one's own are read for a data file alone: a broken one stops no spec.
-	broken := map[string]string{"HOME": "/h", "FLOE_PARTS_DIR": filepath.Join(dir, "broken", "parts")}
+	broken := cli.HomeEnv("/h", map[string]string{"FLOE_PARTS_DIR": filepath.Join(dir, "broken", "parts")})
 	if code, out, errs := runIn(dir, broken, "diagram", "inspect", "good.yaml"); code != 0 || errs != "" || out == "" {
 		t.Errorf("inspect of a spec with a part of one's own broken = %d, %q, %q", code, out, errs)
 	}

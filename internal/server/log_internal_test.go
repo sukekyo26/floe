@@ -13,11 +13,11 @@ import (
 	"strconv"
 	"strings"
 	"sync"
-	"syscall"
 	"testing"
 	"time"
 
 	"floe/internal/store"
+	"floe/internal/testfs"
 	"floe/internal/usererr"
 )
 
@@ -64,6 +64,25 @@ func fileMade(t *testing.T, path string, size int) {
 func TestOpenLog(t *testing.T) {
 	t.Parallel()
 
+	t.Run("no wider than 0600", func(t *testing.T) {
+		t.Parallel()
+		testfs.UnixOnly(t, "permission bits")
+
+		// Made, then opened again to append.
+		root := t.TempDir()
+		for range 2 {
+			f, err := OpenLog(root)
+			if err != nil {
+				t.Fatal(err)
+			}
+			info, err := f.Stat()
+			if err != nil || info.Mode().Perm()&^0o600 != 0 {
+				t.Errorf("log opened with permissions %v (%v), want no wider than 0600", info.Mode().Perm(), err)
+			}
+			_ = f.Close() //nolint:errcheck // test
+		}
+	})
+
 	t.Run("appended", func(t *testing.T) {
 		t.Parallel()
 
@@ -72,10 +91,6 @@ func TestOpenLog(t *testing.T) {
 			f, err := OpenLog(root)
 			if err != nil {
 				t.Fatal(err)
-			}
-			info, err := f.Stat()
-			if err != nil || info.Mode().Perm()&^0o600 != 0 {
-				t.Errorf("log made with permissions %v (%v), want no wider than 0600", info.Mode().Perm(), err)
 			}
 			if _, err = f.WriteString(text); err != nil {
 				t.Fatal(err)
@@ -122,6 +137,46 @@ func TestOpenLog(t *testing.T) {
 		}
 	})
 
+	// Moving aside is tidying: one that fails is written of in the log, which goes on, and the server starts.
+	t.Run("not moved aside", func(t *testing.T) {
+		t.Parallel()
+
+		root := t.TempDir()
+		log := filepath.Join(root, LogName)
+		fileMade(t, log, logCap+1)
+		if err := os.MkdirAll(filepath.Join(log+".1", "full"), 0o700); err != nil {
+			t.Fatal(err)
+		}
+		f, err := OpenLog(root)
+		if err != nil {
+			t.Fatalf("OpenLog with the log not to be moved = %v, want it opened", err)
+		}
+		_ = f.Close() //nolint:errcheck // test
+		b, err := os.ReadFile(log)
+		if err != nil || len(b) <= logCap || !strings.Contains(string(b), "log not moved aside") {
+			t.Errorf("the log = %d bytes, %v: want the old one written on, with why it was not moved", len(b), err)
+		}
+	})
+
+	// An older server still holding the log (Windows: opened without sharing delete) does not stop the next one.
+	t.Run("held by an older server", func(t *testing.T) {
+		t.Parallel()
+
+		root := t.TempDir()
+		fileMade(t, filepath.Join(root, LogName), logCap+1)
+		held, err := OpenLog(root)
+		if err != nil {
+			t.Fatal(err)
+		}
+		defer held.Close()
+		fileMade(t, filepath.Join(root, LogName), logCap+1)
+		f, err := OpenLog(root)
+		if err != nil {
+			t.Fatalf("OpenLog while an older server holds the log = %v, want it opened", err)
+		}
+		_ = f.Close() //nolint:errcheck // test
+	})
+
 	t.Run("a link is followed", func(t *testing.T) {
 		t.Parallel()
 
@@ -129,9 +184,7 @@ func TestOpenLog(t *testing.T) {
 		if err := os.WriteFile(elsewhere, []byte("t"), 0o600); err != nil {
 			t.Fatal(err)
 		}
-		if err := os.Symlink(elsewhere, filepath.Join(root, LogName)); err != nil {
-			t.Fatal(err)
-		}
+		testfs.Symlink(t, elsewhere, filepath.Join(root, LogName))
 		f, err := OpenLog(root)
 		if err != nil {
 			t.Fatal(err)
@@ -147,9 +200,7 @@ func TestOpenLog(t *testing.T) {
 		t.Parallel()
 
 		root, made := t.TempDir(), filepath.Join(t.TempDir(), "made.log")
-		if err := os.Symlink(made, filepath.Join(root, LogName)); err != nil {
-			t.Fatal(err)
-		}
+		testfs.Symlink(t, made, filepath.Join(root, LogName))
 		f, err := OpenLog(root)
 		if f != nil {
 			_ = f.Close() //nolint:errcheck // not wanted
@@ -172,7 +223,7 @@ func TestOpenLog(t *testing.T) {
 			if kind == "a directory" {
 				err = os.Mkdir(log, 0o700)
 			} else {
-				err = syscall.Mkfifo(log, 0o600)
+				testfs.Mkfifo(t, log)
 			}
 			if err != nil {
 				t.Fatal(err)

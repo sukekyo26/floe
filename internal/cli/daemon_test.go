@@ -4,6 +4,8 @@ import (
 	"bytes"
 	"context"
 	"errors"
+	"io"
+	"maps"
 	"math/rand/v2"
 	"net"
 	"net/http"
@@ -18,12 +20,13 @@ import (
 	"testing"
 	"time"
 
-	"golang.org/x/sys/unix"
-
 	"floe/internal/cli"
 	"floe/internal/daemon"
+	"floe/internal/dirs"
+	"floe/internal/files"
 	"floe/internal/server"
 	"floe/internal/servetest"
+	"floe/internal/testfs"
 )
 
 // asCLI makes the test binary run as floe, so that the server a publish starts (os.Executable() serve) is this
@@ -42,6 +45,9 @@ func TestMain(m *testing.M) {
 	if shared, err = os.MkdirTemp("", "floe-cli-test-"); err != nil {
 		panic(err)
 	}
+	if selfBin, err = os.Executable(); err != nil {
+		panic(err)
+	}
 	if otherBuild, err = copySelf(shared); err != nil {
 		panic(err)
 	}
@@ -49,6 +55,16 @@ func TestMain(m *testing.M) {
 	_ = os.RemoveAll(shared) //nolint:errcheck // a leftover temporary directory is harmless
 	os.Exit(code)
 }
+
+// selfBin is this test binary, which runs as floe (asCLI).
+var selfBin string
+
+// notStarted is what a command says when the server it started never answered (daemon_not_started).
+const notStarted = "the server did not start"
+
+// noServer are what a command says when it has no server of its own on the port: none answered (notStarted), or the
+// port is held by what does not answer (daemon_port_silent) or by another program (daemon_port_taken).
+var noServer = []string{notStarted, "nothing answers there", "is used by another program"}
 
 // shared is a temporary directory of the whole run.
 var shared string
@@ -67,7 +83,8 @@ func copySelf(dir string) (string, error) {
 	if err != nil {
 		return "", err //nolint:wrapcheck // as above
 	}
-	bin := filepath.Join(dir, "floe-copy")
+	// The copy keeps this binary's extension: Windows runs a program by its .exe alone.
+	bin := filepath.Join(dir, "floe-copy"+filepath.Ext(self))
 	//nolint:gosec // G306: an executable
 	return bin, os.WriteFile(bin, append(b, 0), 0o700) //nolint:wrapcheck // as above
 }
@@ -101,14 +118,13 @@ func hold(t *testing.T, port int) bool {
 	if err != nil {
 		t.Fatal(err)
 	}
-	fd := int(lock.Fd()) //nolint:gosec // G115: a descriptor fits an int
-	if unix.Flock(fd, unix.LOCK_EX|unix.LOCK_NB) != nil {
+	if !testfs.TryLock(t, lock) {
 		_ = lock.Close() //nolint:errcheck // nothing written
 		return false
 	}
 	// Closing it lets the lock go, however the test ends from here.
 	t.Cleanup(func() { _ = lock.Close() }) //nolint:errcheck // as above
-	if !free(t, port) {
+	if !portFree(strconv.Itoa(port)) {
 		_ = lock.Close() //nolint:errcheck // as above; the cleanup's close then does nothing
 		return false
 	}
@@ -126,21 +142,6 @@ func portLocks(t *testing.T) string {
 		t.Fatal(err)
 	}
 	return dir
-}
-
-// free is whether nothing listens on port now.
-func free(t *testing.T, port int) bool {
-	t.Helper()
-
-	var lc net.ListenConfig
-	ln, err := lc.Listen(t.Context(), "tcp", net.JoinHostPort("127.0.0.1", strconv.Itoa(port)))
-	if err != nil {
-		return false
-	}
-	if ln.Close() != nil {
-		t.Fatal("no free port")
-	}
-	return true
 }
 
 // denv is a store, a home and a free port in a temporary directory, with the server a publish starts there
@@ -161,15 +162,17 @@ func newDenv(t *testing.T) *denv {
 func newDenvOn(t *testing.T, port int) *denv {
 	t.Helper()
 
-	tmp, err := filepath.EvalSymlinks(t.TempDir())
+	got, err := files.Real(t.TempDir())
 	if err != nil {
 		t.Fatal(err)
 	}
+	tmp := dirs.Shown(got) // as a user writes it
 	p := strconv.Itoa(port)
-	e := &denv{tmp: tmp, port: p, vars: map[string]string{
-		"HOME": filepath.Join(tmp, "home"), "FLOE_DIR": filepath.Join(tmp, "store"), "FLOE_PORT": p, "BROWSER": "true",
-	}}
-	if err := os.MkdirAll(e.vars["HOME"], 0o700); err != nil {
+	home := filepath.Join(tmp, "home")
+	e := &denv{tmp: tmp, port: p, vars: cli.HomeEnv(home, map[string]string{
+		"FLOE_DIR": filepath.Join(tmp, "store"), "FLOE_PORT": p, "BROWSER": "true",
+	})}
+	if err := os.MkdirAll(home, 0o700); err != nil {
 		t.Fatal(err)
 	}
 	if err := os.WriteFile(filepath.Join(tmp, "page.yaml"), []byte("lang: en\ntemplate: report\ntitle: P\nsections:\n  - heading: h\n    parts:\n      - text: x\n"), 0o600); err != nil {
@@ -184,25 +187,24 @@ func (e *denv) base() string { return "http://127.0.0.1:" + e.vars["FLOE_PORT"] 
 type result struct {
 	code           int
 	stdout, stderr string
+	// why tells what was there when the server did not start (denv.why).
+	why func() string
 }
 
 // run runs floe in process, from tmp.
 func (e *denv) run(args ...string) result {
+	began := time.Now()
 	var stdout, stderr bytes.Buffer
 	code := cli.Run(args, cli.Env{Stdout: &stdout, Stderr: &stderr, Dir: e.tmp, Getenv: func(k string) string { return e.vars[k] }})
-	return result{code: code, stdout: stdout.String(), stderr: stderr.String()}
+	return result{code: code, stdout: stdout.String(), stderr: stderr.String(), why: func() string { return e.why(selfBin, began) }}
 }
 
 // exe runs the binary bin as floe in a process of its own, with only the settings of e.
 func (e *denv) exe(t *testing.T, bin string, args ...string) result {
 	t.Helper()
 
-	cmd := exec.CommandContext(t.Context(), bin, args...)
-	cmd.Dir = e.tmp
-	cmd.Env = []string{asCLI + "=1", "PATH=" + os.Getenv("PATH")}
-	for k, v := range e.vars {
-		cmd.Env = append(cmd.Env, k+"="+v)
-	}
+	began := time.Now()
+	cmd := e.command(t.Context(), bin, args...)
 	var stdout, stderr bytes.Buffer
 	cmd.Stdout, cmd.Stderr = &stdout, &stderr
 	err := cmd.Run()
@@ -212,12 +214,107 @@ func (e *denv) exe(t *testing.T, bin string, args ...string) result {
 	} else if err != nil {
 		t.Fatal(err)
 	}
-	return result{code: code, stdout: stdout.String(), stderr: stderr.String()}
+	return result{code: code, stdout: stdout.String(), stderr: stderr.String(), why: func() string { return e.why(bin, began) }}
+}
+
+// command is bin run as floe from tmp, with only the settings of e.
+func (e *denv) command(ctx context.Context, bin string, args ...string) *exec.Cmd {
+	cmd := exec.CommandContext(ctx, bin, args...)
+	cmd.Dir = e.tmp
+	cmd.Env = []string{asCLI + "=1", "PATH=" + os.Getenv("PATH")}
+	for k, v := range e.vars {
+		cmd.Env = append(cmd.Env, k+"="+v)
+	}
+	return cmd
+}
+
+// why is what tells a server that did not start apart, for the message of a test that failed on it: when the command
+// began and when this looks, how long the port takes to answer now (a slow server answers late, a stuck one not at
+// all) and what else holds it, the server's log (its times against the command's), and what floe serve of bin says
+// when run here. The server a command starts writes its errors nowhere a test reads (daemon.start leaves its output
+// unset).
+// LIMIT: it is looked at after the command ended, and the floe serve run here is not handed the command's listener:
+// an error in taking it, or a wait for the store's lock, is not told apart from slowness. Keep the started server's
+// output, or log once it listens, if that comes to hide the cause.
+func (e *denv) why(bin string, began time.Time) string {
+	const stamp = "2006-01-02T15:04:05.000Z07:00" // as server.log writes its times
+	port := e.vars["FLOE_PORT"]
+	var b strings.Builder
+	looked := time.Now()
+	b.WriteString("the command began " + began.Format(stamp) + "; looked at " + looked.Format(stamp) + "\n")
+	health, cancel := context.WithTimeout(context.Background(), 5*time.Second)
+	defer cancel()
+	for {
+		if h, up := e.health(health); up {
+			b.WriteString("port " + port + ": a floe answered after " + time.Since(looked).Round(time.Millisecond).String() + ", pid " + strconv.Itoa(h.PID) + "\n")
+			break
+		}
+		if health.Err() != nil {
+			taken := "nothing listens there"
+			if !portFree(port) {
+				taken = "something holds it"
+			}
+			b.WriteString("port " + port + ": no floe answered in 5s; " + taken + "\n")
+			break
+		}
+		time.Sleep(50 * time.Millisecond)
+	}
+	log, err := os.ReadFile(filepath.Join(e.vars["FLOE_DIR"], server.LogName))
+	b.WriteString(server.LogName + ": " + strconv.Quote(string(log[max(0, len(log)-2000):])) + errText(err) + "\n")
+	serve, stop := context.WithTimeout(context.Background(), 5*time.Second)
+	defer stop()
+	out, err := e.command(serve, bin, "serve").CombinedOutput()
+	if serve.Err() != nil {
+		err = errors.New("still running after 5s: the test stopped it")
+	}
+	b.WriteString("floe serve run by the test: " + strconv.Quote(string(out)) + errText(err))
+	return b.String()
+}
+
+// errText is err for a message: "" when there is none.
+func errText(err error) string {
+	if err == nil {
+		return ""
+	}
+	return " (" + err.Error() + ")"
+}
+
+// portFree is whether nothing listens on port now.
+func portFree(port string) bool {
+	var lc net.ListenConfig
+	ln, err := lc.Listen(context.Background(), "tcp", net.JoinHostPort("127.0.0.1", port))
+	if err != nil {
+		return false
+	}
+	_ = ln.Close() //nolint:errcheck // only looked at
+	return true
 }
 
 func (e *denv) health(ctx context.Context) (server.Health, bool) {
 	p := daemon.Probe(ctx, e.base())
 	return p.Health, p.State == daemon.Ours
+}
+
+// settled waits, with no time limit, for the server on e's port to end its first read of the drawing: GET /api/themes
+// looks first (latest), after the read under way. A server stopped during its first read goes on until that read
+// ends, holding its log open, which on Windows the cleanup of the test's directory could not remove.
+func (e *denv) settled(ctx context.Context, t *testing.T) {
+	t.Helper()
+
+	req, err := daemon.Request(ctx, e.base(), http.MethodGet, "/api/themes", nil)
+	if err != nil {
+		t.Fatal(err)
+	}
+	res, err := http.DefaultClient.Do(req)
+	if err != nil {
+		t.Errorf("themes: %v", err)
+		return
+	}
+	_, _ = io.Copy(io.Discard, res.Body) //nolint:errcheck // only waited for
+	_ = res.Body.Close()                 //nolint:errcheck // as above
+	if res.StatusCode != http.StatusOK {
+		t.Errorf("themes = %d", res.StatusCode)
+	}
 }
 
 // stop stops the server a test left on its port, and fails the test when the server outlives it. It runs as a
@@ -228,6 +325,10 @@ func (e *denv) stop(t *testing.T) {
 	ctx := context.WithoutCancel(t.Context())
 	e.vars["FLOE_PORT"] = e.port
 	if h, up := e.health(ctx); up && h.PID != os.Getpid() {
+		// floe's servers only: a fake (servetest.Fake) tells no build, and reads nothing.
+		if h.Build != "" {
+			e.settled(ctx, t)
+		}
 		if r := e.run("stop"); r.code != 0 {
 			t.Errorf("stop = %+v", r)
 		}
@@ -251,6 +352,9 @@ func wantRun(t *testing.T, what string, got result, code int, stdout, stderr str
 
 	if got.code != code || got.stdout != stdout || !strings.Contains(got.stderr, stderr) || stderr == "" && got.stderr != "" {
 		t.Errorf("%s = %d %q %q, want %d %q and stderr containing %q", what, got.code, got.stdout, got.stderr, code, stdout, stderr)
+		if slices.ContainsFunc(noServer, func(s string) bool { return strings.Contains(got.stderr, s) }) {
+			t.Log("why there is no server:\n" + got.why())
+		}
 	}
 }
 
@@ -268,7 +372,7 @@ func TestHoldSkipsHeld(t *testing.T) {
 // A publish starts the server, one of another build replaces it once, and two racing to replace it both succeed. The
 // command that stops the server of another build says so on stderr, once and only then; the log of the server says
 // why it stopped before the next one says it serves, and a line it writes long after it started is there.
-func TestRestartOnAnotherBuild(t *testing.T) {
+func TestRestartOnAnotherBuild(t *testing.T) { //nolint:tparallel // the race goes on from the server the steps left
 	t.Parallel()
 
 	e := newDenv(t)
@@ -306,24 +410,27 @@ func TestRestartOnAnotherBuild(t *testing.T) {
 	if stopping < 0 || serving < 0 || stopping > serving {
 		t.Errorf("the log = %q: want the first server's stopping before the second's serving", log)
 	}
-	var wg sync.WaitGroup
-	results := make([]result, 2)
-	for i := range results {
-		wg.Go(func() { results[i] = e.exe(t, otherBuild, "publish", "page.yaml") })
-	}
-	wg.Wait()
-	// Of two commands asking the server to stop together, one is answered 204 and says so: the other is told it is
-	// stopping already, and the server it stops is not its doing.
-	said := 0
-	for _, r := range results {
-		if r.code != 0 {
-			t.Errorf("a racing publish = %+v", r)
+	//nolint:paralleltest // the race goes on from the server the steps left
+	t.Run("two racing", func(t *testing.T) {
+		var wg sync.WaitGroup
+		results := make([]result, 2)
+		for i := range results {
+			wg.Go(func() { results[i] = e.exe(t, otherBuild, "publish", "page.yaml") })
 		}
-		said += strings.Count(r.stderr, "stopping the server")
-	}
-	if said != 1 {
-		t.Errorf("two racing commands said that they stopped the server %d times, want once: %q %q", said, results[0].stderr, results[1].stderr)
-	}
+		wg.Wait()
+		// Of two commands asking the server to stop together, one is answered 204 and says so: the other is told it is
+		// stopping already, and the server it stops is not its doing.
+		said := 0
+		for _, r := range results {
+			if r.code != 0 {
+				t.Errorf("a racing publish = %+v", r)
+			}
+			said += strings.Count(r.stderr, "stopping the server")
+		}
+		if said != 1 {
+			t.Errorf("two racing commands said that they stopped the server %d times, want once: %q %q", said, results[0].stderr, results[1].stderr)
+		}
+	})
 }
 
 // lineAt is the number of the first line of log that holds all of parts, each between spaces (or the line's ends), so
@@ -385,6 +492,7 @@ func TestStoppedThenNotStarted(t *testing.T) {
 	if os.Geteuid() == 0 {
 		t.Skip("root writes where it is told not to")
 	}
+	testfs.UnixOnly(t, "chmod keeps a directory from being written")
 	e := newDenv(t)
 	wantRun(t, "publish from another build", e.exe(t, otherBuild, "publish", "page.yaml"), 0, e.base()+"/a/page/\n", projectLine)
 	old, _ := e.health(t.Context())
@@ -397,31 +505,10 @@ func TestStoppedThenNotStarted(t *testing.T) {
 
 	r := e.run("task", "--project", "p", "--task", "t1", "--title", "x")
 	said := "stopping the server on port " + e.port + " (pid " + strconv.Itoa(old.PID) + "), which was of another build of floe"
-	didNot := "the server did not start"
-	i, j := strings.Index(r.stderr, said), strings.Index(r.stderr, didNot)
+	i, j := strings.Index(r.stderr, said), strings.Index(r.stderr, notStarted)
 	if r.code != 1 || i < 0 || j < i {
 		t.Errorf("task after the server of another build was stopped and none started = %d %q, want 1 and %q, then %q",
-			r.code, r.stderr, said, didNot)
-	}
-}
-
-// A server that is made to crash (SIGQUIT) leaves what the runtime wrote of it in server.log: the standard error of
-// the server a command starts is discarded, so the log is where it is.
-func TestCrashOutput(t *testing.T) {
-	t.Parallel()
-
-	e := newDenv(t)
-	wantRun(t, "publish", e.run("publish", "page.yaml"), 0, e.base()+"/a/page/\n", projectLine)
-	h, up := e.health(t.Context())
-	if !up {
-		t.Fatal("no server after a publish")
-	}
-	if err := unix.Kill(h.PID, unix.SIGQUIT); err != nil {
-		t.Fatal(err)
-	}
-	log := e.logWith(t, "goroutine")
-	if !strings.Contains(log, "SIGQUIT") {
-		t.Errorf("%s = %q, want the crash in it", server.LogName, log)
+			r.code, r.stderr, said, notStarted)
 	}
 }
 
@@ -464,7 +551,7 @@ func TestPublishOtherDirs(t *testing.T) {
 	}
 
 	n := newDenv(t)
-	n.vars["HOME"] = "rel"
+	maps.Copy(n.vars, cli.HomeVars("rel"))
 	wantRun(t, "publish with no place for the icons", n.run("publish", "page.yaml"), 0, n.base()+"/a/page/\n", projectLine)
 	if h, _ := n.health(t.Context()); h.Icons != "" {
 		t.Errorf("the server's icons are %q, want none", h.Icons)
@@ -549,6 +636,28 @@ func TestPublishToAnotherServer(t *testing.T) {
 	for _, name := range []string{"reads.json", server.LogName} {
 		if _, err := os.Stat(filepath.Join(o.vars["FLOE_DIR"], name)); err == nil {
 			t.Errorf("a floe that cannot serve wrote %s", name)
+		}
+	}
+}
+
+// A server whose store is not an absolute path here (one of another system that the port reaches) is refused with
+// the one way that goes through: another FLOE_PORT, and neither FLOE_DIR nor floe stop.
+func TestAnotherSystemsServer(t *testing.T) {
+	t.Parallel()
+
+	for _, root := range []string{"", "relative/store", otherSystemsRoot} {
+		ln, port := holdPort(t)
+		e := newDenvOn(t, port)
+		servetest.Fake{PID: 4242, Root: root}.Serve(t, ln) //nolint:exhaustruct // the rest unset
+		r := e.run("list")
+		if r.code != 1 || r.stdout != "" || !strings.HasPrefix(r.stderr, "floe: ") || !strings.Contains(r.stderr, "port "+e.port) ||
+			!strings.Contains(r.stderr, "FLOE_PORT") || strings.Contains(r.stderr, "FLOE_DIR") || strings.Contains(r.stderr, "floe stop") {
+			t.Errorf("list to a server of %q = %+v, want a refusal that names port %s and FLOE_PORT, and not FLOE_DIR or floe stop",
+				root, r, e.port)
+		}
+		// The store the server serves, in Go's quotes.
+		if !strings.Contains(r.stderr, strconv.Quote(root)) {
+			t.Errorf("list to a server of %q = %+v, want the refusal to name that store", root, r)
 		}
 	}
 }

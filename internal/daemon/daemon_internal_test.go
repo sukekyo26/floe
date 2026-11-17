@@ -4,6 +4,8 @@ import (
 	"os"
 	"path/filepath"
 	"testing"
+
+	"floe/internal/testfs"
 )
 
 // Two names of one directory are one: written otherwise, or through a symlink. Two of templates or icons
@@ -18,9 +20,7 @@ func TestSameDir(t *testing.T) {
 			t.Fatal(err)
 		}
 	}
-	if err := os.Symlink(dir, link); err != nil {
-		t.Fatal(err)
-	}
+	testfs.Symlink(t, dir, link)
 	file := filepath.Join(tmp, "file")
 	if err := os.WriteFile(file, nil, 0o600); err != nil {
 		t.Fatal(err)

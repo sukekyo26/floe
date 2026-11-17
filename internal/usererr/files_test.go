@@ -6,6 +6,7 @@ import (
 	"os"
 	"path/filepath"
 	"slices"
+	"syscall"
 	"testing"
 
 	"floe/internal/i18n"
@@ -21,32 +22,53 @@ func TestCannotReadWrite(t *testing.T) {
 	_, rerr := os.ReadFile(filepath.Join(dir, "gone.yaml"))
 	werr := os.Rename(filepath.Join(dir, "gone"), filepath.Join(dir, "x"))
 	english := i18n.EnglishCatalog()
+	// What the system says of a name not there (ERROR_FILE_NOT_FOUND on Windows), whatever floe takes from the error.
+	gone, moved := syscall.ENOENT.Error(), syscall.ENOENT.Error()
 	for _, c := range []struct {
+		name string
 		err  error
 		want string
 	}{
-		{usererr.CannotRead("gone.yaml", rerr), "gone.yaml: no such file or directory"},
+		{"read", usererr.CannotRead("gone.yaml", rerr), "gone.yaml: " + gone},
 		{
-			usererr.CannotRead("f.yaml", &fs.PathError{Op: "open", Path: "/abs/f.yaml", Err: usererr.ErrNotFile}),
+			"no file", usererr.CannotRead("f.yaml", &fs.PathError{Op: "open", Path: "/abs/f.yaml", Err: usererr.ErrNotFile}),
 			"f.yaml: this is neither a regular file nor a directory (a FIFO, a device or the like), which floe may never finish reading: put a regular file here",
 		},
-		{usererr.CannotWrite("out", werr), "out: cannot be written (no such file or directory): check that its " +
+		{"write", usererr.CannotWrite("out", werr), "out: cannot be written (" + moved + "): check that its " +
 			"directory exists and can be written to, and that its name is free and not too long"},
-		{usererr.InSystemWords("icons_previous_left", "out", werr, "out.old"), "out: cannot be written (no such file or " +
-			"directory), and the previous icons are left in out.old: move them back here, or fetch the icons again"},
+		{"in system words", usererr.InSystemWords("icons_previous_left", "out", werr, "out.old"), "out: cannot be written (" + moved +
+			"), and the previous icons are left in out.old: move them back here, or fetch the icons again"},
 		// A directory a setting names is told for it; the default as it is told without one.
-		{usererr.SettingDir("FLOE_DIR", "/s", werr, usererr.CannotWrite("/s", werr)), "floe: FLOE_DIR is /s, which " +
-			"cannot be used as a directory (no such file or directory); make it a directory floe can use, or set " +
+		{"setting", usererr.SettingDir("FLOE_DIR", "/s", werr, usererr.CannotWrite("/s", werr)), "floe: FLOE_DIR is /s, which " +
+			"cannot be used as a directory (" + moved + "); make it a directory floe can use, or set " +
 			"FLOE_DIR to another directory"},
-		{usererr.SettingDir("FLOE_DIR", "/s", usererr.ErrNotFile, nil), "floe: FLOE_DIR is /s, which cannot be used " +
+		{"setting, no file", usererr.SettingDir("FLOE_DIR", "/s", usererr.ErrNotFile, nil), "floe: FLOE_DIR is /s, which cannot be used " +
 			"as a directory (neither a regular file nor a directory); make it a directory floe can use, or set " +
 			"FLOE_DIR to another directory"},
-		{usererr.SettingDir("", "out", werr, usererr.CannotWrite("out", werr)), "out: cannot be written (no such " +
-			"file or directory): check that its directory exists and can be written to, and that its name is free " +
-			"and not too long"},
+		{"default", usererr.SettingDir("", "out", werr, usererr.CannotWrite("out", werr)), "out: cannot be written (" + moved +
+			"): check that its directory exists and can be written to, and that its name is free and not too long"},
 	} {
-		if got := usererr.Tell(english, c.err).Render("floe: "); got != c.want {
-			t.Errorf("told %q, want %q", got, c.want)
+		t.Run(c.name, func(t *testing.T) {
+			t.Parallel()
+			if got := usererr.Tell(english, c.err).Render("floe: "); got != c.want {
+				t.Errorf("told %q, want %q", got, c.want)
+			}
+		})
+	}
+	// Not local (Windows): told as a path to put on a local drive, written or read; a setting's directory for it.
+	notLocal := &fs.PathError{Op: "open", Path: `Z:\out`, Err: &usererr.NotLocal{At: "Z:"}}
+	for _, c := range []struct {
+		err       error
+		key, file string
+		args      []any
+	}{
+		{usererr.CannotWrite("out", notLocal), "path_not_local", "out", []any{"Z:"}},
+		{usererr.CannotRead("out", notLocal), "path_not_local", "out", []any{"Z:"}},
+		{usererr.SettingDir("FLOE_DIR", "/s", notLocal, nil), "dir_setting", "", []any{notLocal.Err.Error(), "FLOE_DIR", "/s"}},
+	} {
+		e, ok := errors.AsType[*usererr.Error](c.err)
+		if !ok || e.Key != c.key || e.File() != c.file || !slices.Equal(e.Args, c.args) {
+			t.Errorf("not local: %#v, want %s at %q of %v", c.err, c.key, c.file, c.args)
 		}
 	}
 	for _, err := range []error{
@@ -71,8 +93,14 @@ func TestInSystemWordsOf(t *testing.T) {
 	if !errors.As(usererr.InSystemWordsOf("kit_image_unread", "gone.png", rerr, "more"), &e) {
 		t.Fatal("not a mistake")
 	}
-	if e.Key != "kit_image_unread" || e.File() != "" || e.Line() != 0 ||
-		!slices.Equal(e.Args, []any{"no such file or directory", "gone.png", "more"}) {
+	if e.Key != "kit_image_unread" || e.File() != "" || e.Line() != 0 || len(e.Args) != 3 ||
+		!slices.Equal(e.Args[1:], []any{"gone.png", "more"}) {
 		t.Errorf("made %s at %q:%d with %q", e.Key, e.File(), e.Line(), e.Args)
 	}
+	t.Run("system words", func(t *testing.T) {
+		t.Parallel()
+		if len(e.Args) == 0 || e.Args[0] != syscall.ENOENT.Error() {
+			t.Errorf("made %s with %q, the system's words first", e.Key, e.Args)
+		}
+	})
 }

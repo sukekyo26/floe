@@ -5,12 +5,14 @@ package link
 import (
 	"errors"
 	"io/fs"
-	"os"
 	"path/filepath"
 	"regexp"
+	"slices"
 	"strings"
 	"time"
 
+	"floe/internal/dirs"
+	"floe/internal/files"
 	"floe/internal/usererr"
 )
 
@@ -23,13 +25,13 @@ var linkable = regexp.MustCompile(`(?i)\.(html?|ya?ml)$`)
 // (~/.ssh, ~/.config) hold settings and keys. Hidden directories inside a project (.agents, .github) are
 // fine; Resolve never serves the dot paths under them. It reports whether path is a folder.
 func Check(path, home string) (bool, error) {
-	// The checks compare strings, so a relative path, a path through a symlink (~/proj -> ~/.ssh) or one
-	// with .. would slip past them. EvalSymlinks keeps a relative path relative, hence IsAbs.
-	if resolved, err := filepath.EvalSymlinks(path); !filepath.IsAbs(path) || err == nil && resolved != path {
+	// The checks compare strings, so a relative path, a path through a symlink or a junction (~/proj -> ~/.ssh) or
+	// one with .. would slip past them; so would one Real cannot tell (Windows: a parent that cannot be opened).
+	if resolved, err := files.Real(path); err != nil || resolved != path {
 		return false, usererr.New("link_not_real", path)
 	}
 	// A FIFO named .html would block its reader, so only regular files pass, and folders.
-	fi, err := os.Stat(path)
+	fi, err := files.Stat(path)
 	folder := err == nil && fi.IsDir()
 	if !folder && (!linkable.MatchString(path) || err != nil || !fi.Mode().IsRegular()) {
 		return false, usererr.New("link_not_linkable", path)
@@ -37,45 +39,105 @@ func Check(path, home string) (bool, error) {
 	return folder, exposes(path, home, folder)
 }
 
-// exposes refuses the real path, a folder or a file, whose served directory would expose too much of home.
+// exposes refuses the real path, a folder or a file, whose served directory would expose too much: of home, the
+// hidden directories right under it (a dot, or the hidden attribute on Windows); of the system, the folders of
+// application data (wherever home is), and a directory holding one, the root, home or one home is under.
+// LIMIT: what is hidden is looked at when a link is registered alone: one hidden later, under a home changed later or
+// registered by an older floe is served on. Look again when it is served if that comes to matter.
 func exposes(path, home string, folder bool) error {
 	// path is real, so home must be too, or a symlinked $HOME would hide its hidden directories.
-	resolvedHome, ok := realDir(home)
-	if !ok {
-		return usererr.New("link_home_unresolved", home)
+	resolvedHome, err := realHome(home)
+	if err != nil {
+		return err
 	}
 	home = resolvedHome
-	// A hidden file right under home (~/.x.html) is not in a hidden directory; the next check refuses it.
-	rest, underHome := strings.CutPrefix(path, home+string(filepath.Separator))
-	if underHome && strings.HasPrefix(rest, ".") && (folder || strings.ContainsRune(rest, filepath.Separator)) {
-		return usererr.New("link_hidden_home", path)
-	}
 	dir := path
 	if !folder {
 		dir = filepath.Dir(path)
 	}
-	if exposedDir(dir, home) {
+	in, holds, err := appDataAt(path, dir)
+	if err != nil {
+		return usererr.New("link_appdata_unknown", path, err.Error())
+	}
+	// A hidden file right under home (~/.x.html) is not in a hidden directory; exposedDir refuses it.
+	sep := string(filepath.Separator)
+	underHome, rest := dirs.Holds(home, path), ""
+	if underHome {
+		// Home may be a root (/), which ends in its separator already.
+		rest = strings.TrimPrefix(path[len(home):], sep)
+	}
+	first, _, deeper := strings.Cut(rest, sep)
+	if in || underHome && (folder || deeper) && hiddenName(home, first) {
+		return usererr.New("link_hidden_home", path)
+	}
+	if exposedDir(dir, home) || holds {
 		return usererr.New("link_exposes_dir", path, dir)
 	}
 	return nil
 }
 
-// exposedDir reports whether serving the files under dir would expose too much: /, home, or a directory home is
-// under (/home, /Users), which would serve every home's files.
-func exposedDir(dir, home string) bool {
-	sep := string(filepath.Separator)
-	return dir == sep || dir == home || strings.HasPrefix(home, dir+sep)
+// hiddenName reports whether the name right under home is hidden: it starts with a dot, or (Windows) has the hidden
+// attribute, or its attributes cannot be read, as what is there and cannot be looked at is not let through.
+func hiddenName(home, name string) bool {
+	if strings.HasPrefix(name, ".") {
+		return true
+	}
+	h, err := hidden(filepath.Join(home, name))
+	return h || err != nil
 }
 
-// realDir returns the real path of dir. A dir that cannot be resolved (missing, empty and so ".", or
-// not a directory) gives false: the checks that compare against it would be meaningless.
-func realDir(dir string) (string, bool) {
-	resolved, err := filepath.EvalSymlinks(dir)
-	if err != nil || !filepath.IsAbs(resolved) {
-		return "", false
+// appDir is a folder of application data the system names, or why it cannot tell it.
+type appDir struct {
+	path string
+	err  error
+}
+
+// appData is appDataDirs; a test gives others.
+var appData = appDataDirs //nolint:gochecknoglobals // a test's seam
+
+// appDataAt reports, of the folders of application data the system names, whether path is one or in one (in), and
+// whether dir, the directory a link of path serves, holds one (holds): settings, caches and tokens of applications
+// live there, hidden or not, wherever home is. A folder not there (as files.Real tells), or not on this
+// machine's drives (a roaming one redirected to a share), holds no local path and is left out; one that cannot be
+// told is an error, as what cannot be checked is not let through.
+func appDataAt(path, dir string) (in, holds bool, err error) {
+	for _, d := range appData() {
+		if d.err != nil {
+			return false, false, d.err
+		}
+		got, err := files.Real(d.path)
+		// One not on this machine's drives (a roaming folder redirected to a share) holds no local path either.
+		if errors.Is(err, fs.ErrNotExist) || errors.Is(err, usererr.ErrNotLocal) {
+			continue
+		}
+		if err != nil {
+			return false, false, err //nolint:wrapcheck // the system's words, for the mistake to tell
+		}
+		in = in || path == got || dirs.Holds(got, path)
+		holds = holds || dirs.Holds(dir, got)
 	}
-	fi, err := os.Stat(resolved)
-	return resolved, err == nil && fi.IsDir()
+	return in, holds, nil
+}
+
+// exposedDir reports whether serving the files under dir would expose too much: a root (/, C:\), home, or a
+// directory home is under (/home, /Users), which would serve every home's files.
+func exposedDir(dir, home string) bool {
+	return filepath.Dir(dir) == dir || dir == home || dirs.Holds(dir, home)
+}
+
+// realHome returns the real path of home. A home that cannot be resolved (missing, empty and so ".", not a
+// directory, or not local) is refused: the checks that compare against it would be meaningless.
+func realHome(home string) (string, error) {
+	resolved, err := files.Real(home)
+	if errors.Is(err, usererr.ErrNotLocal) {
+		return "", usererr.CannotRead(home, err)
+	}
+	if err == nil {
+		if fi, err := files.Stat(resolved); err == nil && fi.IsDir() {
+			return resolved, nil
+		}
+	}
+	return "", usererr.New("link_home_unresolved", home, HomeKey)
 }
 
 // Resolve returns the file to serve for rest under the link registered as the real path registered, a folder
@@ -93,7 +155,7 @@ func Resolve(registered string, folder bool, rest string) (string, bool) {
 			return "", false
 		}
 		// Reading a FIFO would block until a writer shows up.
-		fi, err := os.Stat(registered)
+		fi, err := files.Stat(registered)
 		return registered, err == nil && fi.Mode().IsRegular()
 	}
 	base := registered
@@ -106,7 +168,7 @@ func Resolve(registered string, folder bool, rest string) (string, bool) {
 
 // isReal reports whether path is its own real path.
 func isReal(path string) bool {
-	resolved, err := filepath.EvalSymlinks(path)
+	resolved, err := files.Real(path)
 	return err == nil && resolved == path
 }
 
@@ -116,29 +178,50 @@ func IsFolder(folder string) bool {
 	if !isReal(folder) {
 		return false
 	}
-	fi, err := os.Stat(folder)
+	fi, err := files.Stat(folder)
 	return err == nil && fi.IsDir()
 }
 
 // within returns the real path of rest under the real directory base, with what the system says of it, when it
 // is a directory (dir) or a regular file (else): the one gate of what a link serves and lists. It refuses empty
-// and dot elements (.git, .env, ..) and anything whose real path leaves base.
+// and dot elements (.git, .env, ..) of the names as written, a short one (SECRET~1, Windows) made long first, and
+// anything whose real path leaves base. Where a link or a junction under base leads is not read for dots: it is
+// served when its real path is under base (node_modules/x -> .pnpm/x).
+// LIMIT: on Windows, a short name is made long by listing its parent; under a parent that cannot be listed, the
+// files are not served, though they could be opened. Look again if links into such directories come up.
 func within(base, rest string, dir bool) (string, fs.FileInfo, bool) {
-	parts := strings.Split(rest, "/")
-	for _, p := range parts {
-		if p == "" || strings.HasPrefix(p, ".") {
-			return "", nil, false
-		}
+	// Localize reads rest as the system's names: it refuses what Windows reads otherwise (a stream after :, NUL, CON,
+	// \ as a separator) and, everywhere, empty and . and .. elements and what is not UTF-8.
+	local, err := filepath.Localize(rest)
+	if err != nil || dotted(strings.Split(rest, "/")) {
+		return "", nil, false
 	}
-	resolved, err := filepath.EvalSymlinks(filepath.Join(append([]string{base}, parts...)...))
+	joined := filepath.Join(base, local)
+	long, err := longName(joined)
+	if err != nil {
+		return "", nil, false
+	}
+	written, err := filepath.Rel(base, long)
+	if err != nil || dotted(strings.Split(written, string(filepath.Separator))) {
+		return "", nil, false
+	}
+	resolved, err := files.Real(joined)
 	if err != nil || !strings.HasPrefix(resolved, base+string(filepath.Separator)) {
 		return "", nil, false
 	}
-	fi, err := os.Stat(resolved)
+	fi, err := files.Stat(resolved)
 	if err != nil || (dir && !fi.IsDir()) || (!dir && !fi.Mode().IsRegular()) {
 		return "", nil, false
 	}
 	return resolved, fi, true
+}
+
+// longName is files.LongName; a test makes it fail.
+var longName = files.LongName //nolint:gochecknoglobals // a test's seam
+
+// dotted reports whether any of names is empty or starts with a dot (.git, .env, ..).
+func dotted(names []string) bool {
+	return slices.ContainsFunc(names, func(p string) bool { return p == "" || strings.HasPrefix(p, ".") })
 }
 
 // MaxListed is how many entries Dir gives of one directory.
@@ -166,7 +249,7 @@ var htmlName = regexp.MustCompile(`(?i)\.html?$`)
 // Dir lists the directory dir of the folder registered as the real path folder ("" for the folder itself): what
 // Resolve serves, of what is directly in it. It opens no file and walks no further down, so what it costs is that
 // of the directory alone.
-// LIMIT: os.ReadDir reads the whole directory, which MaxListed does not bound. Read it in parts (ReadDir(n), in
+// LIMIT: files.ReadDir reads the whole directory, which MaxListed does not bound. Read it in parts (ReadDir(n), in
 // the directory's own order) if a directory of hundreds of thousands of names comes up.
 func Dir(folder, dir string) (Listing, error) {
 	l := Listing{Dirs: []string{}, Files: []File{}, More: 0}
@@ -181,7 +264,7 @@ func Dir(folder, dir string) (Listing, error) {
 		}
 		prefix = dir + "/"
 	}
-	entries, err := os.ReadDir(path)
+	entries, err := files.ReadDir(path)
 	if err != nil {
 		return l, err //nolint:wrapcheck // the system's *fs.PathError, for the caller to tell at the folder
 	}

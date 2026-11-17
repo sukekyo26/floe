@@ -154,7 +154,7 @@ type target struct {
 }
 
 func targetOf(p rendered) target {
-	info, err := os.Stat(p.real)
+	info, err := files.Stat(p.real)
 	if err != nil {
 		info = nil
 	}
@@ -182,19 +182,19 @@ func (t target) same(o target) bool {
 
 // realPath is the absolute path abs with its symlinks resolved: those of its directory, and its own when it
 // is there, so that a page that is a symlink is written where it leads. A symlink that leads nowhere (no file,
-// a loop of links) is not written over: it is told at to, the page as the user names it, as a page that cannot
-// be written, in the system's words. Whether the rest can be written is the system's to tell, as it writes.
+// a loop of links, one to a share or a device) is not written over: it is told at to, the page as the user names
+// it, by CannotWrite. Whether the rest can be written is the system's to tell, as it writes.
 func realPath(abs, to string) (string, error) {
-	resolved, err := filepath.EvalSymlinks(abs)
+	resolved, err := files.Real(abs)
 	if err == nil {
 		return resolved, nil
 	}
-	if info, lerr := os.Lstat(abs); lerr == nil && info.Mode()&os.ModeSymlink != 0 {
-		// The system's words of why it leads nowhere, whatever EvalSymlinks says.
-		_, serr := os.Stat(abs)
+	if info, lerr := files.Lstat(abs); lerr == nil && info.Mode()&os.ModeSymlink != 0 {
+		// The system's words of why it leads nowhere, whatever files.Real says.
+		_, serr := files.Stat(abs)
 		return "", usererr.CannotWrite(to, cmp.Or(serr, err))
 	}
-	if parent, err := filepath.EvalSymlinks(dirs.Dir(abs)); err == nil {
+	if parent, err := files.Real(dirs.Dir(abs)); err == nil {
 		return filepath.Join(parent, filepath.Base(abs)), nil
 	}
 	return abs, nil
@@ -205,7 +205,7 @@ func realPath(abs, to string) (string, error) {
 func (a *app) writePages(pages []rendered, out arg) error {
 	if out.abs != "" {
 		// As the pages in it, for others to read.
-		if err := os.MkdirAll(out.abs, 0o755); err != nil { //nolint:gosec // G301: pages to share
+		if err := files.MkdirAll(out.abs, 0o755); err != nil { //nolint:gosec // G301: pages to share
 			return usererr.CannotWrite(out.name, err)
 		}
 	}
@@ -213,8 +213,8 @@ func (a *app) writePages(pages []rendered, out arg) error {
 	for _, p := range pages {
 		old, info, err := files.Read(p.real)
 		switch {
-		case errors.Is(err, usererr.ErrNotFile):
-			// Made so since drawPages looked: not written over.
+		case errors.Is(err, usererr.ErrNotFile), errors.Is(err, usererr.ErrNotLocal):
+			// Made so since drawPages looked (or made a link to a share, a pipe): not written over.
 			if failed := found.Add(usererr.CannotRead(p.to, err)); failed != nil {
 				return failed
 			}

@@ -15,9 +15,11 @@ import (
 	"testing"
 
 	"floe/internal/cli"
+	"floe/internal/files"
 	"floe/internal/i18n"
 	"floe/internal/servetest"
 	"floe/internal/store"
+	"floe/internal/testfs"
 )
 
 // served is a server of floe with a template of its own that reads images, and data files in home/p for it:
@@ -58,15 +60,6 @@ func TestPublishThroughServer(t *testing.T) {
 	}{
 		{[]string{"publish", "d.yaml"}, 0, url + "/a/d/\n", ""},
 		{[]string{"publish", "d.yaml", "--title", "Kept"}, 0, url + "/a/d/\n", `, title "D")` + "\n" + `warning: the title changed from "D" to "Kept"` + "\n"},
-		{[]string{"publish", "gone.yaml"}, 1, "", `gone.yaml:3:5: the image "img/none.png" cannot be read (no such file or directory)` + "\n"},
-		// The images the CLI reads are told at each item naming them, in the order of the file, as floe check
-		// tells them, whatever the order of the keys.
-		{[]string{"publish", "order.yaml"}, 1, "", `order.yaml:3:7: the image "img/none.png" cannot be read (no such file or directory)
-order.yaml:4:5: "img/dir.png" is not a file of an image, but a directory or the like: name a regular file of the image
-order.yaml:4:18: the image "img/none.png" cannot be read (no such file or directory)
-order.yaml:5:8: the image "img/none.png" cannot be read (no such file or directory)
-`},
-		{[]string{"publish", "--link", "gone.yaml"}, 1, "", `gone.yaml:3:5: the image "img/none.png" cannot be read (no such file or directory)` + "\n"},
 		{[]string{"publish", "--link", "h.html"}, 0, url + "/a/h/\n", "page in project p\n"},
 		{[]string{"publish", "w.yaml"}, 0, url + "/a/w/\n", "w.yaml:5:15: warning: this text holds a fenced block of code on its line 1"},
 		{[]string{"publish", "--link", "w.yaml", "--slug", "wl"}, 0, url + "/a/wl/\n", "w.yaml:5:15: warning: this text holds a fenced block of code on its line 1"},
@@ -74,7 +67,7 @@ order.yaml:5:8: the image "img/none.png" cannot be read (no such file or directo
 		{[]string{"publish", "--link", "docs", "--theme", "ink"}, 1, "", "floe: --theme picks the theme of a page drawn from a data file: a linked file is shown as it is\n"},
 		{[]string{"publish", "--link", "h.html", "--theme", "ink"}, 1, "", "floe: --theme picks the theme of a page drawn from a data file: a linked file is shown as it is\n"},
 		{[]string{"list"}, 0, "\th\tH\t", ""},
-		{[]string{"list"}, 0, "\tdocs\tdocs\t" + dir + "/docs\n", ""},
+		{[]string{"list"}, 0, "\tdocs\tdocs\t" + filepath.Join(dir, "docs") + "\n", ""},
 		{[]string{"rebuild"}, 0, "", ""},
 		{[]string{"rm", "d", "none"}, 1, "", "floe: no page \"none\" (see floe list)\n"},
 		{[]string{"publish", "x.html"}, 1, "", "floe: x.html is not a data file: publish a page as a data file (.yaml or .yml) for a template such as report, or show HTML as it is with --link\n"},
@@ -84,6 +77,29 @@ order.yaml:5:8: the image "img/none.png" cannot be read (no such file or directo
 			t.Errorf("floe %v = %d, %q, %q; want %d, %q, %q", step.args, code, out, errs, step.code, step.out, step.errs)
 		}
 	}
+	t.Run("images not there", func(t *testing.T) {
+		t.Parallel()
+		_, _, gone := files.Read(filepath.Join(dir, "img", "none.png"))
+		none := "cannot be read (" + testfs.Words(t, gone) + ")"
+		for _, step := range []struct {
+			args []string
+			errs string
+		}{
+			{[]string{"publish", "gone.yaml"}, `gone.yaml:3:5: the image "img/none.png" ` + none + "\n"},
+			// The images the CLI reads are told at each item naming them, in the order of the file, as floe check
+			// tells them, whatever the order of the keys.
+			{[]string{"publish", "order.yaml"}, `order.yaml:3:7: the image "img/none.png" ` + none + `
+order.yaml:4:5: "img/dir.png" is not a file of an image, but a directory or the like: name a regular file of the image
+order.yaml:4:18: the image "img/none.png" ` + none + `
+order.yaml:5:8: the image "img/none.png" ` + none + `
+`},
+			{[]string{"publish", "--link", "gone.yaml"}, `gone.yaml:3:5: the image "img/none.png" ` + none + "\n"},
+		} {
+			if code, out, errs := runIn(dir, env, step.args...); code != 1 || out != "" || !strings.Contains(errs, step.errs) {
+				t.Errorf("floe %v = %d, %q, %q; want 1, %q", step.args, code, out, errs, step.errs)
+			}
+		}
+	})
 	if code, out, _ := runIn(dir, env, "list"); code != 0 || strings.Contains(out, "\td\t") {
 		t.Errorf("floe list after rm = %d, %q", code, out)
 	}
@@ -170,7 +186,7 @@ func TestArchiveThroughServer(t *testing.T) {
 		t.Errorf("floe list after archive: %v", listed)
 	}
 	all := rows(4, "--archived")
-	if !strings.HasSuffix(all["d"], "\tD\t\tarchived") || !strings.HasSuffix(all["h"], "/h.html\t") {
+	if !strings.HasSuffix(all["d"], "\tD\t\tarchived") || !strings.HasSuffix(all["h"], string(filepath.Separator)+"h.html\t") {
 		t.Errorf("floe list --archived: %v", all)
 	}
 	run(0, "archive", "--undo", "d")
@@ -236,7 +252,7 @@ func TestTagThroughServer(t *testing.T) {
 func TestTagNotUTF8NoServer(t *testing.T) {
 	t.Parallel()
 
-	env := map[string]string{"HOME": t.TempDir(), "FLOE_PORT": strconv.Itoa(freePort(t))}
+	env := cli.HomeEnv(t.TempDir(), map[string]string{"FLOE_PORT": strconv.Itoa(freePort(t))})
 	if code, _, errs := runIn("", env, "tag", "d", "--add", "a\xffb"); code != 1 || errs != notUTF8("--add") {
 		t.Errorf("floe tag d --add of no UTF-8 = %d, %q", code, errs)
 	}
@@ -249,16 +265,21 @@ func TestTagNotUTF8NoServer(t *testing.T) {
 func TestServerCommandsAlone(t *testing.T) {
 	t.Parallel()
 
-	free := map[string]string{"HOME": t.TempDir(), "FLOE_PORT": "1"}
+	// A port held for this test: on Windows a port below 1024 can be listened on, by a server another test started.
+	free := cli.HomeEnv(t.TempDir(), map[string]string{"FLOE_PORT": strconv.Itoa(freePort(t))})
 	if code, out, _ := runIn("", free, "stop"); code != 0 || out != "server is not running\n" {
 		t.Errorf("floe stop = %d, %q", code, out)
 	}
-	for _, args := range [][]string{{"list"}, {"rm", "x"}, {"archive", "x"}, {"rebuild"}, {"serve"}, {"stop"}} {
-		code, _, errs := runIn("/", map[string]string{"HOME": "/h", "FLOE_PORT": "0x10"}, args...)
-		if code != 1 || errs != "floe: invalid FLOE_PORT \"0x10\": use a port number from 1 to 65535\n" {
-			t.Errorf("floe %v = %d, %q", args, code, errs)
+	t.Run("a setting that cannot be read", func(t *testing.T) {
+		t.Parallel()
+		home := filepath.Join(t.TempDir(), "h")
+		for _, args := range [][]string{{"list"}, {"rm", "x"}, {"archive", "x"}, {"rebuild"}, {"serve"}, {"stop"}} {
+			code, _, errs := runIn(t.TempDir(), cli.HomeEnv(home, map[string]string{"FLOE_PORT": "0x10"}), args...)
+			if code != 1 || errs != "floe: invalid FLOE_PORT \"0x10\": use a port number from 1 to 65535\n" {
+				t.Errorf("floe %v = %d, %q", args, code, errs)
+			}
 		}
-	}
+	})
 }
 
 // notUTF8 is the line floe tells for a text sent that is no UTF-8, given at.
@@ -310,13 +331,20 @@ func TestPublishNotUTF8(t *testing.T) {
 		// The first that encoding/json/v2 meets.
 		{dir, notUTF8("--description"), []string{"publish", "d.yaml", "--description", "a\xffb", "--theme", "t\xff"}},
 		{dir, notUTF8("--title") + notData, []string{"publish", "x.txt", "--title", "a\xffb"}},
-		{dir, "none.yaml: no such file or directory\n" + notUTF8("--title"), []string{"publish", "none.yaml", "--title", "a\xffb"}},
-		{
-			dir, "gone.html: no such file or directory\n" + notUTF8("--title"),
-			[]string{"publish", "--link", "gone.html", "--title", "a\xffb"},
-		},
 		{dir, "floe: invalid slug \"a\xff\": use 1 to 64 lowercase letters, digits and hyphens, starting and ending with " +
 			"a letter or digit\n", []string{"publish", "--link", "h.html", "--slug", "a\xff"}},
+	})
+	t.Run("a file not there", func(t *testing.T) {
+		t.Parallel()
+		for file, args := range map[string][]string{
+			"none.yaml": {"publish", "none.yaml", "--title", "a\xffb"},
+			"gone.html": {"publish", "--link", "gone.html", "--title", "a\xffb"},
+		} {
+			_, _, gone := files.Read(filepath.Join(dir, file))
+			if code, _, errs := runIn(dir, env, args...); code != 1 || errs != file+": "+testfs.Words(t, gone)+"\n"+notUTF8("--title") {
+				t.Errorf("floe %q = %d, %q", args, code, errs)
+			}
+		}
 	})
 	runIn(dir, env, "publish", "--link", "h.html", "--description", "d")
 	runIn(dir, env, "publish", "--link", "h.html", "--description", "")
@@ -363,7 +391,7 @@ func TestPublishNotUTF8Alone(t *testing.T) {
 		t.Fatal(err)
 	}
 	// A port no test serves at: the server a mistake would start is refused there, as the store is made first.
-	env := map[string]string{"HOME": tmp, "FLOE_DIR": filepath.Join(tmp, "store"), "FLOE_PORT": "1", "BROWSER": "true"}
+	env := cli.HomeEnv(tmp, map[string]string{"FLOE_DIR": filepath.Join(tmp, "store"), "FLOE_PORT": "1", "BROWSER": "true"})
 	if code, _, errs := runIn(tmp, env, "publish", "d.yaml", "--title", "a\xffb"); code != 1 || errs != notUTF8("--title") {
 		t.Errorf("floe publish = %d, %q", code, errs)
 	}

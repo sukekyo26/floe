@@ -2,7 +2,6 @@ package kit
 
 import (
 	"maps"
-	"path"
 	"slices"
 	"strings"
 
@@ -39,7 +38,7 @@ func check(k *Kit) error {
 			found = append(found, usererr.NewAt(l.dir, 0, 0, "kit_part_files"))
 		}
 		found = append(found, unread(l.dir, l.unread, "kit_look_unread")...)
-		if err := add(css.Check(path.Join(l.dir, "part.css"), l.css)); err != nil {
+		if err := add(css.Check(under(l.dir, "part.css"), l.css)); err != nil {
 			return err
 		}
 	}
@@ -80,21 +79,21 @@ func ownCSS(k *Kit) usererr.List {
 	}
 	for _, name := range slices.Sorted(maps.Keys(k.themes)) {
 		t := k.themes[name]
-		refuse(path.Join(t.dir, "palette.css"), t.palette)
-		refuse(path.Join(t.dir, "base.css"), t.base)
-		refuse(path.Join(t.dir, "markdown.css"), t.markdown)
+		refuse(under(t.dir, "palette.css"), t.palette)
+		refuse(under(t.dir, "base.css"), t.base)
+		refuse(under(t.dir, "markdown.css"), t.markdown)
 		for _, of := range slices.Sorted(maps.Keys(t.partsCSS)) {
-			refuse(path.Join(t.dir, of+".css"), t.partsCSS[of])
+			refuse(under(t.dir, of+".css"), t.partsCSS[of])
 		}
 	}
 	for _, name := range slices.Sorted(maps.Keys(k.parts)) {
-		refuse(path.Join(k.parts[name].dir, "part.css"), k.parts[name].css)
+		refuse(under(k.parts[name].dir, "part.css"), k.parts[name].css)
 	}
 	for _, name := range slices.Sorted(maps.Keys(k.looks)) {
-		refuse(path.Join(k.looks[name].dir, "part.css"), k.looks[name].css)
+		refuse(under(k.looks[name].dir, "part.css"), k.looks[name].css)
 	}
 	for _, name := range slices.Sorted(maps.Keys(k.templates)) {
-		refuse(path.Join(k.templates[name].dir, "page.css"), k.templates[name].css)
+		refuse(under(k.templates[name].dir, "page.css"), k.templates[name].css)
 	}
 	return found
 }
@@ -108,9 +107,9 @@ func checkPart(p *Part) error {
 	}
 	found = append(found, unread(p.dir, p.unread, "kit_part_unread")...)
 	found = append(found, forMistakes(p.checks, p.schema)...)
-	errs := []error{css.Check(path.Join(p.dir, "part.css"), p.css), p.schema.CheckPart()}
+	errs := []error{css.Check(under(p.dir, "part.css"), p.css), p.schema.CheckPart()}
 	if p.pages != nil {
-		errs = append(errs, escapeMistake(p.pages[""], p.pageSrc, path.Join(p.dir, "part.html")))
+		errs = append(errs, escapeMistake(p.pages[""], p.pageSrc, under(p.dir, "part.html")))
 		found = append(found, boundArgs(p.pages[""], p.pageSrc, p.dir)...)
 	}
 	for _, err := range errs {
@@ -235,7 +234,7 @@ func (k *Kit) second(looks []taken) taken {
 func unread(dir string, files []string, key string) usererr.List {
 	found := make(usererr.List, 0, len(files))
 	for _, f := range files {
-		found = append(found, usererr.NewAt(path.Join(dir, f), 0, 0, key))
+		found = append(found, usererr.NewAt(under(dir, f), 0, 0, key))
 	}
 	return found
 }
@@ -257,16 +256,16 @@ func checkFloeCSS(k *Kit) error {
 func checkTheme(t *Theme) error {
 	errs := []error{unread(t.dir, t.unread, "kit_theme_unread").Err()}
 	if t.palette != nil {
-		errs = append(errs, css.Check(path.Join(t.dir, "palette.css"), t.palette))
+		errs = append(errs, css.Check(under(t.dir, "palette.css"), t.palette))
 	}
 	if t.base != nil {
-		errs = append(errs, css.Check(path.Join(t.dir, "base.css"), t.base))
+		errs = append(errs, css.Check(under(t.dir, "base.css"), t.base))
 	}
 	if t.markdown != nil {
-		errs = append(errs, css.Check(path.Join(t.dir, "markdown.css"), t.markdown))
+		errs = append(errs, css.Check(under(t.dir, "markdown.css"), t.markdown))
 	}
 	for _, name := range slices.Sorted(maps.Keys(t.partsCSS)) {
-		errs = append(errs, css.Check(path.Join(t.dir, name+".css"), t.partsCSS[name]))
+		errs = append(errs, css.Check(under(t.dir, name+".css"), t.partsCSS[name]))
 	}
 	return usererr.Collect(errs...)
 }
@@ -282,10 +281,10 @@ func checkTemplate(t *Template) error {
 		}
 	}
 	errs := []error{
-		found.Err(), exampleNames(t), forMistakes(t.checks, t.schema).Err(), css.Check(path.Join(t.dir, "page.css"), t.css),
+		found.Err(), exampleNames(t), forMistakes(t.checks, t.schema).Err(), css.Check(under(t.dir, "page.css"), t.css),
 	}
 	if t.pages != nil {
-		errs = append(errs, escapeMistake(t.pages[""], t.pageSrc, path.Join(t.dir, "page.html")))
+		errs = append(errs, escapeMistake(t.pages[""], t.pageSrc, under(t.dir, "page.html")))
 	}
 	errs = append(errs, unread(t.dir, t.unread, "kit_template_unread").Err())
 	return usererr.Collect(errs...)

@@ -12,7 +12,7 @@ func TestExampleMistakesSplit(t *testing.T) {
 	t.Parallel()
 
 	unknown := usererr.NewIn("", "#/parts/3/icon", "diagram_icon_unknown", "icon", "aws/x", "aws")
-	noDir := usererr.NewWhole("icons_no_dir")
+	noDir := usererr.NewWhole("icons_no_dir", "HOME")
 	broken := usererr.NewAt("/i/aws/index.json", 1, 1, "icons_index_no_version", "floe icons fetch aws --force")
 	mine, err := exampleMistakes("aws", usererr.List{unknown, noDir, broken})
 	if err != nil || len(mine) != 3 || mine[0].At() != "#" || mine[1] != noDir || mine[2] != broken {

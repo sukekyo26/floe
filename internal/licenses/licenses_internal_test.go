@@ -21,7 +21,7 @@ import (
 var update = flag.Bool("update", false, "write NOTICES.txt anew from go list -deps")
 
 // releaseTargets are the GOOS/GOARCH of the release binaries, the justfile's targets (TestReleaseTargets).
-var releaseTargets = []string{"linux/amd64", "linux/arm64", "darwin/amd64", "darwin/arm64"}
+var releaseTargets = []string{"linux/amd64", "linux/arm64", "darwin/amd64", "darwin/arm64", "windows/amd64", "windows/arm64"}
 
 const root = "../.."
 

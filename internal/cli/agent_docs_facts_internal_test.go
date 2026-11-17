@@ -12,6 +12,7 @@ import (
 
 	"floe/internal/files"
 	"floe/internal/i18n"
+	"floe/internal/link"
 	"floe/internal/store"
 )
 
@@ -101,11 +102,22 @@ func TestAgentDocQuotes(t *testing.T) {
 			ja.Msg("ui_save") + ".", 1},
 		{guidePath, "cut to " + strconv.Itoa(files.MaxSlugLen) + " characters", 1},
 		{guidePath, "MUST be 1 to " + strconv.Itoa(files.MaxSlugLen) + " lower case", 1},
-		{diagramDocPath, iconsNotKept(t), 1},
-		{partDocPath, ownPlaceQuote(t, "parts"), 1},
-		{templateDocPath, ownPlaceQuote(t, "templates"), 1},
-		{themeDocPath, ownPlaceQuote(t, "themes"), 1},
 	}
+	docHolds(t, quotes)
+	t.Run("the places", func(t *testing.T) {
+		t.Parallel()
+		docHolds(t, []docQuote{
+			{diagramDocPath, iconsNotKept(t), 1},
+			{partDocPath, ownPlaceQuote(t, "parts"), 1},
+			{templateDocPath, ownPlaceQuote(t, "templates"), 1},
+			{themeDocPath, ownPlaceQuote(t, "themes"), 1},
+		})
+	})
+}
+
+// docHolds checks that each doc holds its quote as many times as said.
+func docHolds(t *testing.T, quotes []docQuote) {
+	t.Helper()
 	for _, q := range quotes {
 		switch got := strings.Count(readGuide(t, q.doc), q.text); {
 		case got < q.times:
@@ -141,23 +153,26 @@ func iconsNotKept(t *testing.T) string {
 	if !ok {
 		t.Fatalf("floe diagram inspect of an AWS icon not kept printed %q", errs)
 	}
-	return text + `fetch aws"…`
+	// The docs write the place with / on every system; the message holds no other \.
+	return filepath.ToSlash(text) + `fetch aws"…`
 }
 
 // ownPlaceQuote returns how the docs say where one's own of kind are: its setting and its defaults, from the places
-// ownPlace makes with the XDG directory alone set, and with HOME alone.
+// ownPlace makes with the XDG directory alone set, and with the home alone, written with / as the docs write them.
 func ownPlaceQuote(t *testing.T, kind string) string {
 	t.Helper()
-	xdg, err := with(map[string]string{"XDG_CONFIG_HOME": "/X"}).ownPlace(kind)
+	root := filepath.VolumeName(t.TempDir()) + string(filepath.Separator)
+	x, h := filepath.Join(root, "X"), filepath.Join(root, "H")
+	xdg, err := with(map[string]string{"XDG_CONFIG_HOME": x}).ownPlace(kind)
 	if err != nil {
 		t.Fatal(err)
 	}
-	home, err := with(map[string]string{"HOME": "/H"}).ownPlace(kind)
+	home, err := with(map[string]string{link.HomeKey: h}).ownPlace(kind)
 	if err != nil {
 		t.Fatal(err)
 	}
-	return "`" + xdg.key + "` (default `" + strings.Replace(xdg.dir, "/X", "$XDG_CONFIG_HOME", 1) + "`, else `" +
-		strings.Replace(home.dir, "/H", "~", 1) + "`)"
+	return "`" + xdg.key + "` (default `" + filepath.ToSlash(strings.Replace(xdg.dir, x, "$XDG_CONFIG_HOME", 1)) +
+		"`, else `" + filepath.ToSlash(strings.Replace(home.dir, h, "~", 1)) + "`)"
 }
 
 // Every flag floe task takes is named in the doc of tasks, as `--name` or `--name …`: a flag a PR adds is told there.

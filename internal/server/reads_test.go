@@ -119,7 +119,7 @@ func TestReadAPI(t *testing.T) {
 	f := s.ReadMeta("f").Versions[0]
 	w := e.do(t, http.MethodPost, "/api/pages/f/read", `{"n":`+strconv.Itoa(f.N)+`,"at":"`+f.At+`"}`, "Origin", origin, "Content-Type", jsonType)
 	if text := strings.ReplaceAll(w.Body.String(), e.root, "S"); w.Code != http.StatusBadRequest ||
-		text != "S/reads.json: is missing, broken or has no since: run floe stop, then floe serve, which writes it anew" {
+		text != filepath.Join("S", "reads.json")+": is missing, broken or has no since: run floe stop, then floe serve, which writes it anew" {
 		t.Errorf("no since: %d %q", w.Code, text)
 	}
 	if w := e.do(t, http.MethodDelete, "/api/pages/f/read", "", "Origin", origin); w.Code != http.StatusBadRequest {

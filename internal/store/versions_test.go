@@ -11,6 +11,7 @@ import (
 	"testing"
 
 	"floe/internal/store"
+	"floe/internal/testfs"
 )
 
 // numbers are the numbers of the versions of the page d.
@@ -275,6 +276,7 @@ func TestSaveVersionFails(t *testing.T) {
 		}
 	}
 	try("versions is a file")
+	testfs.UnixOnly(t, "chmod keeps a directory from being written")
 	if os.Geteuid() == 0 {
 		t.Skip("root writes where it may not")
 	}

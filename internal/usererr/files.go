@@ -11,11 +11,30 @@ import (
 // reading it, and opening one may do more than open it.
 var ErrNotFile = errors.New("neither a regular file nor a directory")
 
+// ErrNotLocal is what is not on a local drive under an ordinary name (Windows): a share, a network drive, a volume
+// without a drive letter, a device, a pipe, a stream, or a link to one of them or of a form floe does not follow.
+// Opening one may reach another machine or a server. A *NotLocal is it, with where it was found.
+var ErrNotLocal = errors.New("not on a local drive under an ordinary name")
+
+// NotLocal is ErrNotLocal at At: the volume, the name or the link's target that is not local.
+type NotLocal struct {
+	At string
+}
+
+// Error is short: path_not_local tells what it may be and what to do.
+func (e *NotLocal) Error() string { return ErrNotLocal.Error() + ": " + e.At }
+
+// Is tells it is ErrNotLocal.
+func (*NotLocal) Is(target error) bool { return target == ErrNotLocal }
+
 // CannotRead is err, of reading the file named so, at it: the system's words, without the paths it was given,
-// which may be absolute, and floe's for ErrNotFile; any other error is floe's failure.
+// which may be absolute, and floe's for ErrNotFile and ErrNotLocal; any other error is floe's failure.
 func CannotRead(name string, err error) error {
 	if errors.Is(err, ErrNotFile) {
 		return NewAt(name, 0, 0, "kit_not_file")
+	}
+	if nl, ok := errors.AsType[*NotLocal](err); ok {
+		return NewAt(name, 0, 0, "path_not_local", nl.At)
 	}
 	words, ok := systemWords(err)
 	if !ok {
@@ -25,8 +44,12 @@ func CannotRead(name string, err error) error {
 }
 
 // CannotWrite is err, of writing the file or the directory named so, at it: floe's words that it cannot be
-// written, the system's words of why in them, and what to look at; any other error is floe's failure.
+// written, the system's words of why in them, and what to look at; ErrNotLocal as CannotRead tells it; any other
+// error is floe's failure.
 func CannotWrite(name string, err error) error {
+	if errors.Is(err, ErrNotLocal) {
+		return CannotRead(name, err)
+	}
 	return InSystemWords("cannot_write", name, err)
 }
 

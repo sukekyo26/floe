@@ -4,7 +4,7 @@ A theme is a directory of CSS files that changes a page's colours, typefaces and
 
 ## Where themes are
 
-- A theme is a directory in `FLOE_THEMES_DIR` (default `$XDG_CONFIG_HOME/floe/themes`, else `~/.config/floe/themes`), holding the theme's files. `floe theme new <name>` makes the smallest one: an empty `palette.css` to fill in. A file directly in `FLOE_THEMES_DIR` is ignored without a message.
+- A theme is a directory in `FLOE_THEMES_DIR` (default `$XDG_CONFIG_HOME/floe/themes`, else `~/.config/floe/themes`) (`~` is your home, `%USERPROFILE%` on Windows; floe does not expand `~`, so set the variable to a whole path), holding the theme's files. `floe theme new <name>` makes the smallest one: an empty `palette.css` to fill in. A file directly in `FLOE_THEMES_DIR` is ignored without a message.
 - The name MUST be lower case letters, digits, `-` and `_`, starting with a letter or a digit, and MUST NOT be the name of one of floe's themes.
 - A theme directory, and anything in it, MUST NOT be a link to a directory (a link to a file is read).
 - `FLOE_THEMES_DIR` MUST NOT be the directory of your parts or templates (`FLOE_PARTS_DIR`, `FLOE_TEMPLATES_DIR`), contain it, or be in it: floe would read the files of one as those of the other.

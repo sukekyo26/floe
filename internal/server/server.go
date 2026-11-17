@@ -65,7 +65,7 @@ type Server struct {
 	// log writes to cfg.Log (newLog).
 	log *slog.Logger
 
-	// looking lets one look run at a time (look).
+	// looking lets one look or first read run at a time (look, first).
 	looking sync.Mutex
 	mu      sync.Mutex
 	drawing store.Drawing
@@ -129,7 +129,8 @@ func (s *Server) compared(slug string, m *store.Meta, from, to int, c *i18n.Cata
 	return got, true, nil
 }
 
-// New returns a server for cfg, the drawing read.
+// New returns a server for cfg. The drawing is not read yet: Serve reads it once it answers, and a request that
+// draws before reads it first (now, latest).
 func New(cfg Config) *Server {
 	out := cfg.Log
 	if out == nil {
@@ -152,7 +153,6 @@ func New(cfg Config) *Server {
 		s.hosts[host] = true
 		s.origins["http://"+host] = true
 	}
-	s.look()
 	return s
 }
 
@@ -171,6 +171,28 @@ func (s *Server) look() {
 	if same {
 		return
 	}
+	s.read(m)
+}
+
+// first is the first read of the drawing: one coming after it, or waiting for it, reads nothing, so that once it is
+// done, Serve's first reads nothing. What changed since is the watch's to read.
+// LIMIT: it takes looking before it looks at gen, so that Serve's first queued behind a watch's look waits for that
+// look's walk of marks (with the watch of every millisecond of TestServeEnds). Wait for the first read's end by a
+// signal rather than the lock if that wait comes to hold up Serve's end.
+func (s *Server) first() {
+	s.looking.Lock()
+	defer s.looking.Unlock()
+	s.mu.Lock()
+	read := s.gen > 0
+	s.mu.Unlock()
+	if read {
+		return
+	}
+	s.read(s.marks())
+}
+
+// read reads the drawing, the directories' mark m taken before; the caller holds looking.
+func (s *Server) read(m string) {
 	d, err := s.cfg.Drawing()
 	if err != nil {
 		d = store.Drawing{Kit: nil, Icons: nil, Err: err}
@@ -186,8 +208,16 @@ func (s *Server) look() {
 
 // now returns the drawing and its generation, taken together: the drawing of the last look. A request that draws
 // what the watch cannot mend after (to store, or a download kept as a file) uses latest; now only draws that the
-// watch mends after (a page drawn when opened, which its version reloads).
+// watch mends after (a page drawn when opened, which its version reloads). Before the first read it reads first
+// (first), waiting for Serve's when that one runs.
+// LIMIT: like latest's, that wait does not see the request's context end.
 func (s *Server) now() (store.Drawing, int) {
+	s.mu.Lock()
+	read := s.gen > 0
+	s.mu.Unlock()
+	if !read {
+		s.first()
+	}
 	s.mu.Lock()
 	defer s.mu.Unlock()
 	return s.drawing, s.gen
@@ -459,8 +489,11 @@ func (*Server) redirect(w http.ResponseWriter, r *http.Request) {
 }
 
 // Serve serves on ln until ctx is done or the server is asked to stop, then stops once the requests under way are
-// done, watching the drawing every s.every until then. It writes to the log that it serves, why it stops (before it
-// stops listening: the next server starts after that) and that it has stopped, or the mistake that ended it.
+// done, watching the drawing every s.every until then. It reads the drawing first once it answers (first), and
+// returns once that first read ends: done already, it reads nothing, though it may wait for a watch's look queued
+// before it for the lock (first); the watch's look under way is not waited for. It writes to the log that it
+// serves, why it stops (before it stops listening: the next server starts after that) and that it has stopped, or
+// the mistake that ended it.
 func (s *Server) Serve(ctx context.Context, ln net.Listener) (err error) {
 	s.log.Info("serving", slog.String("root", s.cfg.Store.Root()), slog.String("addr", ln.Addr().String()),
 		slog.String("build", s.cfg.Build))
@@ -471,9 +504,14 @@ func (s *Server) Serve(ctx context.Context, ln net.Listener) (err error) {
 		}
 		s.log.Info("stopped")
 	}()
-	// The watching ends however serving does.
+	// The watching ends however serving does, and Serve returns once its first read ends. The watch is not waited
+	// for: its look of each second (seconds on Windows under load) would keep a stopped server on.
 	ctx, cancel := context.WithCancel(ctx)
-	defer cancel()
+	var bg sync.WaitGroup
+	defer func() {
+		cancel()
+		bg.Wait()
+	}()
 	srv := &http.Server{
 		Handler:           s.Handler(),
 		ErrorLog:          slog.NewLogLogger(s.log.Handler(), slog.LevelError),
@@ -481,6 +519,11 @@ func (s *Server) Serve(ctx context.Context, ln net.Listener) (err error) {
 		// Not ctx: the requests Shutdown waits for go on once it is done (a link's git).
 		BaseContext: func(net.Listener) context.Context { return context.WithoutCancel(ctx) },
 	}
+	// The first read is behind the answers: what starts the server waits for /api/health alone, and the read (the
+	// kit's, with Windows' checks of every name) can take seconds.
+	// LIMIT: a read that panics is floe's bug and is not recovered, as the watch's is not: it ends the process after
+	// the server answered, so the first request is cut off rather than the start told it did not start.
+	bg.Go(s.first)
 	go s.watchDrawing(ctx)
 	errc := make(chan error, 1)
 	go func() { errc <- srv.Serve(ln) }()
