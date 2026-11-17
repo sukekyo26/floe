@@ -170,7 +170,7 @@ t.yaml:10:16: got number, want string or object
 
 ## Reading mistakes
 
-- A mistake names a place in what you wrote, `file:line:column:` (or `file:` for the whole file): fix it there. Anything else is a failure, of floe or of the machine (a port in use, …): tell the user what floe printed.
+- A mistake names a place in what you wrote, `file:line:column:` (or `file:` for the whole file): fix it there. One without a place, about what you gave the command (a path, a flag, a slug, a task, a `FLOE_…` you set yourself): fix what you gave. Any other, about the user's settings (`FLOE_…` of their environment, the port), floe or the machine (a port in use, …): tell the user what floe printed, and change none of their settings and stop no server yourself.
 - `floe check` prints one mistake a line and exits with code 1. It checks in stages, so fixing the mistakes may bring out those of the next stage.
 - A key a part does not take, a key it needs left out, or a value of the wrong type is a mistake of the schema: read the schema (*Picking parts*).
 
