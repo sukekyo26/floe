@@ -4,7 +4,7 @@ floe はエージェントが書いたページをローカルサーバー（`ht
 
 - 検証は `just ci`（CI と同じ内容）。golangci-lint は `just setup` で入る。
 - **worktree は本体の中に作る**：`~/work/floe` で起動し、ブランチの worktree は `.claude/worktrees/<branch>` に作る。ここでは、決まりは本体の `.claude/CLAUDE.md` と `.claude/rules/` だけが届き、ブランチのものは届かない。本体に無い決まりと、外の worktree では、誤りも警告も出ずに届かないので、worktree を作る前に本体の develop を pull する。
-- 対応 OS は linux と darwin（amd64・arm64）。Windows はリンクのパス検査などの信頼境界を検証できないので対応しない。
+- 対応 OS は linux・darwin・windows（amd64・arm64）。OS で違うコードは `.claude/rules/os.md` に従う。
 - 決まりは、それを入れた PR がこのファイルに足す。足すのは、読まないと書くコードを誤ることだけで、1 つの決まりは数文にする。書き手に見える動きは docs に、理由と限界はコードのコメントと `LIMIT:` に、測れることはテストに書き、ここには書き写さない。触るときだけ要る決まりは `.claude/rules/` に置き、同じ決まりを 2 つのファイルに書かない。決まりや動きを変えたら docs も直す。
 
 ## 検査の方針
