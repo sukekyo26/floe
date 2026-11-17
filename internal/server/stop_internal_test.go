@@ -15,8 +15,8 @@ import (
 	"time"
 )
 
-// serving is started, its first read of the drawing ended: Serve waits for that read before it returns, which
-// would put the read's time inside the wait for Serve to end.
+// serving is started, its first read of the drawing done: Serve waits for that read before it returns, and once it
+// is done waits for nothing that touches a file, so that no read's time is inside the wait for Serve to end.
 func serving(ctx context.Context, t *testing.T, s *Server) (string, <-chan error) {
 	t.Helper()
 
