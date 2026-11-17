@@ -246,6 +246,25 @@ jobs:
           cache: true
       - uses: ./.github/actions/setup-just
       - run: just release-assets
+      # release.yml attests and publishes what just release-files lists, which runs only at a release: here it is
+      # checked to be every asset and SHA256SUMS, each a file. bash, which GitHub runs with pipefail, fails with just.
+      - name: Check the release files
+        shell: bash
+        run: |
+          files=$(just release-files)
+          want=$(($(just --evaluate assets | wc -w) + 1))
+          got=$(printf '%s\n' "$files" | wc -l)
+          if [ "$got" -ne "$want" ]; then
+            echo "just release-files lists $got files, want $want (each asset and bin/SHA256SUMS):" >&2
+            printf '%s\n' "$files" >&2
+            exit 1
+          fi
+          while IFS= read -r f; do
+            if [ ! -f "$f" ]; then
+              echo "just release-files lists $f, which just release-assets did not make" >&2
+              exit 1
+            fi
+          done <<< "$files"
       - name: Run the host binary
         run: ./bin/floe-linux-amd64 version
 
