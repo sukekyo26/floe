@@ -182,8 +182,9 @@ func (s Server) serves(ctx context.Context, p Status) error {
 		// A Root that is not an absolute path here (none, too) is of a server of another system, or none floe's own:
 		// FLOE_DIR cannot be set to it, and floe stop may leave the port held by what reaches that server.
 		// LIMIT: a server of another system that names an absolute path here (two Linux containers sharing a port, a
-		// //tmp/x of WSL, which Windows reads as a share) gets daemon_other_root. On Windows, /home/u/x is stat'ed as
-		// \home\u\x of the current drive, and one that is this store is taken for it.
+		// //tmp/x of WSL, which Windows reads as a share) gets daemon_other_root.
+		// LIMIT: on Windows, sameDir stats a Root of /home/u/x as \home\u\x of the current drive: when that is this store,
+		// a server of WSL is taken for this one and not refused, and, of another build, Ensure may stop it as outdated.
 		// LIMIT: floe serve on such a port is refused with daemon_port_in_use, which names floe stop all the same.
 		if !filepath.IsAbs(p.Health.Root) {
 			return usererr.New("daemon_root_not_absolute", s.Port, p.Health.Root)
