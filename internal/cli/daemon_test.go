@@ -4,6 +4,7 @@ import (
 	"bytes"
 	"context"
 	"errors"
+	"io"
 	"maps"
 	"math/rand/v2"
 	"net"
@@ -294,6 +295,28 @@ func (e *denv) health(ctx context.Context) (server.Health, bool) {
 	return p.Health, p.State == daemon.Ours
 }
 
+// settled waits, with no time limit, for the server on e's port to end its reads of the drawing: GET /api/themes
+// reads it first when it changed (latest), after the read under way. A server stopped while it reads goes on until the
+// read ends, holding its log open, which on Windows the cleanup of the test's directory could not remove.
+func (e *denv) settled(ctx context.Context, t *testing.T) {
+	t.Helper()
+
+	req, err := daemon.Request(ctx, e.base(), http.MethodGet, "/api/themes", nil)
+	if err != nil {
+		t.Fatal(err)
+	}
+	res, err := http.DefaultClient.Do(req)
+	if err != nil {
+		t.Errorf("themes: %v", err)
+		return
+	}
+	_, _ = io.Copy(io.Discard, res.Body) //nolint:errcheck // only waited for
+	_ = res.Body.Close()                 //nolint:errcheck // as above
+	if res.StatusCode != http.StatusOK {
+		t.Errorf("themes = %d", res.StatusCode)
+	}
+}
+
 // stop stops the server a test left on its port, and fails the test when the server outlives it. It runs as a
 // cleanup, after t.Context() is canceled, so it takes a context that is not.
 func (e *denv) stop(t *testing.T) {
@@ -302,6 +325,10 @@ func (e *denv) stop(t *testing.T) {
 	ctx := context.WithoutCancel(t.Context())
 	e.vars["FLOE_PORT"] = e.port
 	if h, up := e.health(ctx); up && h.PID != os.Getpid() {
+		// floe's servers only: a fake (servetest.Fake) tells no build, and reads nothing.
+		if h.Build != "" {
+			e.settled(ctx, t)
+		}
 		if r := e.run("stop"); r.code != 0 {
 			t.Errorf("stop = %+v", r)
 		}

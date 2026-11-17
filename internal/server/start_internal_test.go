@@ -27,10 +27,14 @@ type stall struct {
 	let              func()
 }
 
-// stalled makes s's next read of its drawing a stall's, the reads after it as they were.
+// stalled makes s's next read of its drawing a stall's, the reads after it as they were. The watch does not look
+// within the test, so that the read stalled is Serve's own first one.
+// A Serve that reads before it answers is not failed but stopped: its test waits on until go test's timeout, whose
+// goroutines name it.
 func stalled(t *testing.T, s *Server) *stall {
 	t.Helper()
 
+	s.every = time.Hour
 	st := &stall{entered: make(chan struct{}), release: make(chan struct{}), ended: atomic.Bool{}, let: nil}
 	var let sync.Once
 	st.let = func() { let.Do(func() { close(st.release) }) }
