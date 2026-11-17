@@ -6,8 +6,14 @@ floe の主要な変更を記録します。フォーマットは
 
 ## [Unreleased]
 
+### 追加
+
+- 追加：Windows 11（amd64・arm64）のビルドと、それを入れる `install.ps1`（`irm https://raw.githubusercontent.com/sukekyo26/floe/main/install.ps1 | iex` で `%USERPROFILE%\.local\bin` に入る）。floe の置き場所は、Linux の `~` の下と同じく `%USERPROFILE%` の下。開くのは手元のドライブの上のふつうの名前のものだけで、ネットワークの共有・ネットワークドライブ・デバイス・パイプ・ストリームの名前を断り、`AppData` の下（`%TEMP%` も）のファイルのリンクも断る。ほかに違うことは docs/commands.ja.md の Windows の節にある。
+
 ### 変更
 
+- 変更：`floe licenses` が、どの OS でも、Windows のビルドが持つ `github.com/inconshreveable/mousetrap` のライセンスも出すようにした。
+- 変更：Linux・macOS でない OS で `install.sh` を走らせると、Windows では `install.ps1` で入れることと、その入れ方を言うようにした。
 - 変更：データファイルが名指す画像のパスを断る文が、Windows では `\`、`:`、`NUL`・`CON` などのデバイスの名前も書けないと言うようにした。NUL の字を含む画像の名前も、この文で断るようにした。
 - 変更：リンクしたフォルダとリンクしたファイルのディレクトリで、名前が UTF-8 でないファイルとディレクトリを配信しないようにした。その URL は 404 になる。
 - 変更：ホームの隠しディレクトリの中のリンクを断る文が、アプリのデータの場所も言い、ファイルをどこに置けばよいかを言うようにした。
