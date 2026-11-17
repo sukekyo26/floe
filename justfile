@@ -187,6 +187,13 @@ release-assets: check-no-repo-name
     "${sum[@]}" {{assets}} > SHA256SUMS
     echo "wrote bin/SHA256SUMS"
 
+# List the files release-assets makes, a line each: what release.yml attests and publishes
+release-files:
+    #!/usr/bin/env bash
+    set -euo pipefail
+    for asset in {{assets}}; do echo "bin/${asset}"; done
+    echo bin/SHA256SUMS
+
 # Run shellcheck on the shell scripts
 shellcheck:
     shellcheck --severity=style install.sh

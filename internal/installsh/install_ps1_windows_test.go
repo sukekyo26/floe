@@ -33,9 +33,9 @@ func init() {
 }
 
 // LIMIT: the real Invoke-WebRequest is run, but against a server of the test, through a proxy of the test, with its
-// certificate trusted by the driver alone: GitHub itself and a certificate checked as it is are not (S315-P8a's
-// design, run G). The branch that tells an arm64 machine under an x64 PowerShell is not taken on amd64 runners. That
-// the change of PATH reaches other programs (the notice) is seen on a real machine alone.
+// certificate trusted by the driver alone: GitHub itself and a certificate checked as it is are not. The branch that
+// tells an arm64 machine under an x64 PowerShell is not taken on amd64 runners. That the change of PATH reaches other
+// programs (the notice) is seen on a real machine alone.
 
 // ghRelease is what the test's GitHub answers: the latest release's JSON, and the files of every tag.
 type ghRelease struct {

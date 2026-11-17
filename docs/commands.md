@@ -4,7 +4,7 @@ Reference for every command of the `floe` binary. How to write a data file is in
 
 ## Install
 
-The [README](../README.md#install) gives the command that installs floe. Set `FLOE_VERSION` to pin a release and `FLOE_INSTALL_DIR` to change the destination (default `~/.local/bin`). The binary is verified against the release's `SHA256SUMS`.
+The [README](../README.md#install) gives the command that installs floe. Set `FLOE_VERSION` to pin a release and `FLOE_INSTALL_DIR` to change the destination (default `~/.local/bin`; on Windows, see [Windows](#windows)). The binary is verified against the release's `SHA256SUMS`.
 
 ## Quick reference
 
@@ -58,7 +58,7 @@ Flags are in each command's section below.
 
 ## `floe guide`
 
-Print the guide for agents, [guide.md](agents/guide.md): how to write, check and publish a page, pick the template and the parts, write YAML that floe reads as meant, and read its mistakes. It is a summary of these docs, for an agent to read before it writes a page. Its Tasks section points to `floe task guide`; its Ask after publishing, which has the agent ask the user, in a dialog of choices, which task to put each new page on and under which of its categories, is printed only when the task mode is on in the management page's settings; it reads them from the store the other commands send to (`FLOE_DIR`) without starting the server. With no store to be had (`HOME` not an absolute path and no `FLOE_DIR`) it prints the guide without that section; a `settings.json` that cannot be read, or a `FLOE_DIR` that cannot be used, is refused as `floe theme default` refuses it. It takes no arguments.
+Print the guide for agents, [guide.md](agents/guide.md): how to write, check and publish a page, pick the template and the parts, write YAML that floe reads as meant, and read its mistakes. It is a summary of these docs, for an agent to read before it writes a page. Its Tasks section points to `floe task guide`; its Ask after publishing, which has the agent ask the user, in a dialog of choices, which task to put each new page on and under which of its categories, is printed only when the task mode is on in the management page's settings; it reads them from the store the other commands send to (`FLOE_DIR`) without starting the server. With no store to be had (`HOME`, `USERPROFILE` on Windows, not an absolute path and no `FLOE_DIR`) it prints the guide without that section; a `settings.json` that cannot be read, or a `FLOE_DIR` that cannot be used, is refused as `floe theme default` refuses it. It takes no arguments.
 
 ## `floe skill install <agent>`
 
@@ -66,7 +66,7 @@ Write floe's skill, `floe/SKILL.md`, where the agent named reads the skills of a
 
 ## `floe publish <data.yaml>` / `floe publish --link <file|folder>`
 
-Draw the page of a data file with the template it names, store the page as it was drawn, and print its URL (`http://127.0.0.1:7325/a/<slug>/`) on stdout, and the warnings of the page drawn on stderr, as `floe check` prints them; and, when the page is new or its project changed, a line of stderr that says it: `page in project floe`, or `page in no project`. If the server is not running, it is started in the background first. A new slug is also opened in the browser (`$BROWSER`, else `open`, `wslview` or `xdg-open`); a republished one is not, because the open tab reloads itself. Read the pages in a recent Chrome, Safari (26 or later) or Firefox (147 or later).
+Draw the page of a data file with the template it names, store the page as it was drawn, and print its URL (`http://127.0.0.1:7325/a/<slug>/`) on stdout, and the warnings of the page drawn on stderr, as `floe check` prints them; and, when the page is new or its project changed, a line of stderr that says it: `page in project floe`, or `page in no project`. If the server is not running, it is started in the background first. A new slug is also opened in the browser (`$BROWSER`, else `open` on macOS, the default browser on Windows, else `wslview` or `xdg-open`); a republished one is not, because the open tab reloads itself. Read the pages in a recent Chrome, Safari (26 or later) or Firefox (147 or later).
 
 Pages are drawn from data files (`.yaml`, `.yml`); [pages.md](pages.md) tells how to write one. The data file is copied to `<slug>/source-<id>/data.yaml` under `FLOE_DIR`, with the images it shows at the paths it names them by; take it back from there if the original is lost. Each publish writes a new copy and then removes the one before, so a publish that fails leaves the page as it was. A relative path is resolved against the working directory.
 
@@ -469,7 +469,7 @@ List the icons of the set (`lucide`, `aws`, `gcp`, `azure`) whose name contains 
 | `FLOE_TEMPLATES_DIR` | Where templates of your own are, a directory each ([templates.md](agents/templates.md)). Defaults to `$XDG_CONFIG_HOME/floe/templates`, else `~/.config/floe/templates`. |
 | `FLOE_PARTS_DIR` | Where parts, looks and shared schemas of your own are ([parts.md](agents/parts.md)). Defaults to `$XDG_CONFIG_HOME/floe/parts`, else `~/.config/floe/parts`. |
 | `FLOE_THEMES_DIR` | Where themes of your own are, a directory each ([themes.md](agents/themes.md)). Defaults to `$XDG_CONFIG_HOME/floe/themes`, else `~/.config/floe/themes`. |
-| `BROWSER` | The command that opens a new page. Defaults to `open` on macOS, else `wslview` or `xdg-open`. |
+| `BROWSER` | The command that opens a new page. Defaults to `open` on macOS, the default browser on Windows, else `wslview` or `xdg-open`. |
 
 Each `FLOE_*` directory is an absolute path. floe reads one place wherever it runs, so a relative one is refused, and so is one starting with `~`, which no shell read (`FLOE_PARTS_DIR is ~/x, a relative path; set it to an absolute path`). A relative `XDG_DATA_HOME` or `XDG_CONFIG_HOME` is ignored, as the XDG spec says.
 
@@ -481,12 +481,29 @@ floe: FLOE_PARTS_DIR is /tmp/t/missing, which cannot be used as a directory (no 
 
 - `FLOE_TEMPLATES_DIR`, `FLOE_PARTS_DIR` and `FLOE_THEMES_DIR` are used by every command that draws a page or reads your own (`floe check`, `floe render`, the `template` and `part` commands, and the server, which draws), so one set that is not there stops them. Their default that is not there is none: floe draws with its own alone. A default that is there but is no directory is refused.
 - `FLOE_DIR` is used by the server, and so by the commands [The server](#the-server) lists, and made when it is not there. `FLOE_ICONS_DIR` is used by the icons commands, which make it, and by the diagrams that show an icon, at the diagram.
-- Without `HOME` (or with one that is not an absolute path), a directory that has no other default is none: `floe check` runs with floe's templates, parts and themes alone, while a command that writes there (`floe template new`, `floe list` for `FLOE_DIR` …) asks for the variable to be set.
+- Without `HOME` (`USERPROFILE` on Windows; or with one that is not an absolute path), a directory that has no other default is none: `floe check` runs with floe's templates, parts and themes alone, while a command that writes there (`floe template new`, `floe list` for `FLOE_DIR` …) asks for the variable to be set.
 - Keep `FLOE_PARTS_DIR`, `FLOE_THEMES_DIR` and `FLOE_TEMPLATES_DIR` apart: two that are one directory, or one in the other (through a symlink too), are refused for their names before anything in them is read, a setting not there yet too. A command compares only the ones it reads, and a default only when it is there; `floe part new` and `floe template new` refuse to make what would be in, or hold, the directory of another kind.
 
 ```text
 floe: FLOE_PARTS_DIR (/tmp/pp) and FLOE_THEMES_DIR (/tmp/pp) are one directory, or one is in the other, where floe would read the files of one as those of the other; make FLOE_PARTS_DIR and FLOE_THEMES_DIR two directories, neither in the other
 ```
+
+## Windows
+
+floe runs on Windows 11 (amd64 and arm64; arm64 is built but not tried), on NTFS. Windows 10 is not supported: it takes a name such as `NUL.png` for a device, which Windows 11 takes for a file. ReFS and FAT are not tried, nor files inside a OneDrive folder.
+
+- Install: `irm https://raw.githubusercontent.com/sukekyo26/floe/main/install.ps1 | iex` in PowerShell (Windows PowerShell 5.1 or PowerShell 7) puts `floe.exe` in `%USERPROFILE%\.local\bin`. `FLOE_VERSION` and `FLOE_INSTALL_DIR` are as for `install.sh`; `FLOE_ADD_TO_PATH=1` adds the folder to your user `Path`, which is left alone otherwise.
+- `floe.exe` is not signed. Check where it came from with `gh attestation verify floe.exe --repo sukekyo26/floe`.
+- Places: as on Linux, under your home, which is `%USERPROFILE%` (`HOME` is not read): pages in `%USERPROFILE%\.local\share\floe`, icon sets in `%USERPROFILE%\.local\share\floe-icons`, your own templates, parts and themes in `%USERPROFILE%\.config\floe\templates`, `…\parts` and `…\themes`. `XDG_DATA_HOME`, `XDG_CONFIG_HOME` and the `FLOE_*` settings are read as on Linux, each an absolute path with its drive (`C:\floe\pages`). floe does not expand `~`, nor does PowerShell in quotes: `$env:FLOE_DIR = '~\x'` is refused (`FLOE_DIR is ~\x, a relative path; set it to an absolute path`); write `"$env:USERPROFILE\x"`.
+- floe writes no permissions: the default places are as private as your profile, but a `FLOE_*` directory elsewhere (`C:\floe`) may be read and changed by other users of the PC.
+- floe opens only what is on a local drive under an ordinary name. A network share (`\\server\share`, `\\wsl.localhost\…`), a network drive (`Z:` mapped to a share), a volume mounted in a folder without a drive letter, a device, a pipe, a stream's name (`a.yaml:x`), and a link to one, are refused (`this is not on a local drive under an ordinary name: …`), whether a data file, a repository, the store or a directory of your own. A path given or linked relative to a drive's working directory (`C:x`) is refused too: write the whole path. Where your profile is on a network, set the `FLOE_*` settings to a local drive. Keep `floe.exe` on a local drive too: from a network drive the commands that use the server cannot run.
+- Linking refuses, besides what it refuses everywhere, the root of a drive (`C:\`), a directory right under your home with the hidden attribute (one whose name starts with `.` is refused everywhere), and the folders of application data (`AppData`) with all under them, `%TEMP%` too: write a file you link in a project's folder.
+- An image path in a data file has no `\`, no `:` and no device's name (`NUL`, `CON`).
+- While another program holds a file in it open, a directory cannot be renamed: changing a page's slug or `floe icons fetch` may fail with `Access is denied`; close it and try again.
+- Where a file stands in the way of a setting or a default place, as the place itself or as a folder on its path, a command that only reads may take the place for one not there and go on without it; an icons command says the set is not fetched.
+- A new page opens in the default browser, unless `BROWSER` names a command.
+- floe in WSL listening on `127.0.0.1:7325` may be reached from Windows too. If you run floe on both, set `FLOE_PORT` to another port on one of them (`7326`).
+- Run the tests with `TMP` and `TEMP` out of `AppData` (`C:\floe-tmp`), as CI does: what is under `%TEMP%` cannot be linked.
 
 ## Exit codes
 

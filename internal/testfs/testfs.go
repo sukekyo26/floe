@@ -1,6 +1,5 @@
 // Package testfs holds what tests make that differs by system (a FIFO, a lock tried without waiting, a symlink, a
-// junction), and the marks of the tests that do not run on Windows: UnixOnly, of what holds on Unix alone, and
-// Pending, of what S315's later pull requests mend. Only tests import it.
+// junction), and UnixOnly, the mark of a test whose expectation holds on Unix alone. Only tests import it.
 package testfs
 
 import (
@@ -20,15 +19,6 @@ func UnixOnly(tb testing.TB, why string) {
 	tb.Helper()
 	if isWindows {
 		tb.Skip("Unix only: " + why)
-	}
-}
-
-// Pending skips t on Windows until the pull request why names mends what it expects there; S315's last one
-// removes Pending, and every call left with it. On Unix it does nothing.
-func Pending(tb testing.TB, why string) {
-	tb.Helper()
-	if isWindows {
-		tb.Skip("pending: " + why)
 	}
 }
 
