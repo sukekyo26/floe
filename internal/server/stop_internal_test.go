@@ -15,9 +15,19 @@ import (
 	"time"
 )
 
-// serving serves s on a port of its own until ctx is done, or the server is asked to stop; Serve's result comes on
-// the channel.
+// serving is started, its first read of the drawing ended: Serve waits for that read before it returns, which
+// would put the read's time inside the wait for Serve to end.
 func serving(ctx context.Context, t *testing.T, s *Server) (string, <-chan error) {
+	t.Helper()
+
+	addr, done := started(ctx, t, s)
+	s.now()
+	return addr, done
+}
+
+// started serves s on a port of its own until ctx is done, or the server is asked to stop; Serve's result comes on
+// the channel.
+func started(ctx context.Context, t *testing.T, s *Server) (string, <-chan error) {
 	t.Helper()
 
 	var lc net.ListenConfig

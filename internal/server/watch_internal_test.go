@@ -232,6 +232,8 @@ func TestServeEnds(t *testing.T) {
 	ctx, cancel := context.WithCancel(t.Context())
 	done := make(chan error, 1)
 	go func() { done <- s.Serve(ctx, ln) }()
+	// The first read ends before the 5 s the end is waited for: Serve waits for it.
+	s.now()
 	time.Sleep(10 * time.Millisecond)
 	cancel()
 	select {
