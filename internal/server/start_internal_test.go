@@ -226,3 +226,53 @@ func TestServeWaitsForRead(t *testing.T) {
 		t.Error("Serve returned before its first read ended")
 	}
 }
+
+// The first read is read once: a now() that comes while Serve's runs waits for it and reads nothing, and a first()
+// after it reads nothing, though what the drawing is read from changed (that is the watch's to read).
+func TestFirstReadOnce(t *testing.T) {
+	t.Parallel()
+
+	s, dir := watched(t, false)
+	s.every = time.Hour
+	read := s.cfg.Drawing
+	var calls atomic.Int32
+	entered, release := make(chan struct{}), make(chan struct{})
+	var let sync.Once
+	t.Cleanup(func() { let.Do(func() { close(release) }) })
+	s.cfg.Drawing = func() (store.Drawing, error) {
+		if calls.Add(1) == 1 {
+			close(entered)
+			<-release
+		}
+		return read()
+	}
+	ctx, cancel := context.WithCancel(t.Context())
+	_, done := started(ctx, t, s)
+	select {
+	case <-entered:
+	case <-time.After(10 * time.Second):
+		t.Fatal("the first read did not begin")
+	}
+	asked := make(chan struct{})
+	go func() {
+		s.now()
+		close(asked)
+	}()
+	// LIMIT: now() is given 100 ms to come to the read under way; a first() that looks at gen before it waits is
+	// missed if it comes later. One that waits passes however long it is.
+	time.Sleep(100 * time.Millisecond)
+	let.Do(func() { close(release) })
+	<-asked
+	if n := calls.Load(); n != 1 {
+		t.Errorf("the drawing was read %d times by Serve's first read and a now() during it, want once", n)
+	}
+	mine(t, dir, "changed after the first read")
+	s.first()
+	if _, gen := s.now(); calls.Load() != 1 || gen != 1 {
+		t.Errorf("first() after the first read: %d reads, generation %d; want 1 and 1", calls.Load(), gen)
+	}
+	cancel()
+	if err := <-done; err != nil {
+		t.Errorf("Serve = %v", err)
+	}
+}
