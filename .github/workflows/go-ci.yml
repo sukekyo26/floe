@@ -131,11 +131,11 @@ jobs:
 
   # The tests on Windows, without the race detector (it needs cgo there) and without the browser tests (S315 Q2):
   # internal/browsertest is left out as the justfile's core_pkgs leaves it out. A test that does not hold on Windows
-  # is marked one by one with internal/testfs's UnixOnly or Pending.
+  # is marked one by one with internal/testfs's UnixOnly.
   windows:
     name: Test (windows)
     # The tests' temporary directories are kept out of AppData: floe refuses to link what is in a folder of application
-    # data (S315-P3), and %TEMP% is one (AppData\Local\Temp).
+    # data, and %TEMP% is one (AppData\Local\Temp).
     needs: changes
     if: ${{ !cancelled() && needs.changes.outputs.skip != 'true' }}
     runs-on: windows-latest
@@ -233,7 +233,7 @@ jobs:
       - run: just vuln
 
   build:
-    name: Release assets (linux/darwin x amd64/arm64)
+    name: Release assets
     needs: changes
     if: ${{ !cancelled() && needs.changes.outputs.skip != 'true' }}
     runs-on: ubuntu-latest
