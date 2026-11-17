@@ -490,7 +490,7 @@ floe: FLOE_PARTS_DIR (/tmp/pp) and FLOE_THEMES_DIR (/tmp/pp) are one directory, 
 
 ## Windows
 
-floe runs on Windows 11 (amd64 and arm64; arm64 is built but not tried), on NTFS. Windows 10 is not supported: it takes a name such as `NUL.png` for a device, which Windows 11 takes for a file. ReFS and FAT are not tried. Files in a OneDrive folder are read and linked as elsewhere, ones kept online only too: OneDrive downloads such a file when floe reads it.
+floe runs on Windows 11 (amd64 and arm64; arm64 is built but not tried), on NTFS. Windows 10 is not supported: it takes a name such as `NUL.png` for a device, which Windows 11 takes for a file. ReFS and FAT are not tried. Files in a OneDrive folder are read and linked as elsewhere; one kept online only is read too: OneDrive downloads it when floe reads it.
 
 - Install: `irm https://raw.githubusercontent.com/sukekyo26/floe/main/install.ps1 | iex` in PowerShell (Windows PowerShell 5.1 or PowerShell 7) puts `floe.exe` in `%USERPROFILE%\.local\bin`. `FLOE_VERSION` and `FLOE_INSTALL_DIR` are as for `install.sh`; `FLOE_ADD_TO_PATH=1` adds the folder to your user `Path`, which is left alone otherwise.
 - `floe.exe` is not signed. Check where it came from with `gh attestation verify floe.exe --repo sukekyo26/floe`.
@@ -502,7 +502,7 @@ floe runs on Windows 11 (amd64 and arm64; arm64 is built but not tried), on NTFS
 - While another program holds a file in it open, a directory cannot be renamed: changing a page's slug or `floe icons fetch` may fail with `Access is denied`; close it and try again.
 - Where a file stands in the way of a setting or a default place, as the place itself or as a folder on its path, a command that only reads may take the place for one not there and go on without it; an icons command says the set is not fetched.
 - A new page opens in the default browser, unless `BROWSER` names a command.
-- floe in WSL listening on `127.0.0.1:7325` may be reached from Windows too, for one through a program that forwards the port (VS Code does, for a window on WSL); stopping that server may then leave the port held by that program. If you run floe on both, set `FLOE_PORT` to another port on one of them (`7326`).
+- floe in WSL listening on `127.0.0.1:7325` may be reached from Windows too, for example through a program that forwards the port (VS Code does, for a window on WSL); stopping that server may then leave the port held by that program. If you run floe on both, set `FLOE_PORT` to another port on one of them (`7326`).
 - Run the tests with `TMP` and `TEMP` out of `AppData` (`C:\floe-tmp`), as CI does: what is under `%TEMP%` cannot be linked.
 
 ## Exit codes

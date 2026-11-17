@@ -490,7 +490,7 @@ floe: FLOE_PARTS_DIR (/tmp/pp) and FLOE_THEMES_DIR (/tmp/pp) are one directory, 
 
 ## Windows
 
-floe は Windows 11（amd64・arm64。arm64 はビルドしているが試していない）の NTFS の上で動きます。Windows 10 は対応しません（`NUL.png` のような名前を、Windows 11 はファイルと読み、10 はデバイスと読みます）。ReFS・FAT は試していません。OneDrive のフォルダの中のファイルも、ほかと同じく読み、link できます。「オンラインのみ」のファイルも、floe が読むときに OneDrive がダウンロードします。
+floe は Windows 11（amd64・arm64。arm64 はビルドしているが試していない）の NTFS の上で動きます。Windows 10 は対応しません（`NUL.png` のような名前を、Windows 11 はファイルと読み、10 はデバイスと読みます）。ReFS・FAT は試していません。OneDrive のフォルダの中のファイルも、ほかと同じく読み、link できます。「オンラインのみ」のファイルも読めます。floe が読むときに OneDrive がダウンロードします。
 
 - インストール：PowerShell（Windows PowerShell 5.1 か PowerShell 7）で `irm https://raw.githubusercontent.com/sukekyo26/floe/main/install.ps1 | iex` を実行すると、`floe.exe` が `%USERPROFILE%\.local\bin` に入ります。`FLOE_VERSION`・`FLOE_INSTALL_DIR` は `install.sh` と同じです。`FLOE_ADD_TO_PATH=1` を付けるとそのフォルダをユーザーの `Path` に足し、付けなければ `Path` は変えません。
 - `floe.exe` には署名していません。出どころは `gh attestation verify floe.exe --repo sukekyo26/floe` で確かめられます。
