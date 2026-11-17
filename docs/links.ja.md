@@ -1,6 +1,6 @@
 # リンクしたファイルとフォルダ
 
-`floe publish --link` は、ページを保存せず、HTML のファイル・データファイル・フォルダをその場で登録します。登録できるもの、断るもの、付く slug は [commands.ja.md](commands.ja.md#リンクしたファイル) にあります。
+`floe publish --link` は、ページを保存せず、HTML のファイル・データファイル・フォルダをその場で登録します。登録できるもの、断るもの、付く slug は [commands.ja.md](commands.ja.md#リンクしたファイル) にあります。Windows ではほかにも断ります（[Windows](commands.ja.md#windows)）。
 
 ## HTML のファイル
 

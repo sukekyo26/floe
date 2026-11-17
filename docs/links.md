@@ -1,6 +1,6 @@
 # Linked files and folders
 
-`floe publish --link` registers an HTML file, a data file or a folder where it is, instead of storing a page. [commands.md](commands.md#linked-files) tells what can be linked, what is refused and the slug it takes.
+`floe publish --link` registers an HTML file, a data file or a folder where it is, instead of storing a page. [commands.md](commands.md#linked-files) tells what can be linked, what is refused and the slug it takes; on Windows more is refused ([Windows](commands.md#windows)).
 
 ## An HTML file
 

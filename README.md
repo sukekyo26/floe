@@ -14,6 +14,14 @@ linux and macOS (amd64 / arm64):
 curl -fsSL https://raw.githubusercontent.com/sukekyo26/floe/main/install.sh | sh
 ```
 
+Windows 11 (amd64 / arm64), in PowerShell:
+
+```powershell
+irm https://raw.githubusercontent.com/sukekyo26/floe/main/install.ps1 | iex
+```
+
+It puts `floe.exe` in `%USERPROFILE%\.local\bin`; [docs/commands.md](docs/commands.md#windows) tells what differs on Windows.
+
 ## Use
 
 ```sh
