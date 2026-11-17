@@ -6,6 +6,8 @@ adheres to [Semantic Versioning](https://semver.org/).
 
 ## [Unreleased]
 
+## [0.2.0] - 2026-11-17
+
 ### Added
 
 - Add Windows 11 (amd64, arm64) builds, with `install.ps1` to install them (`irm https://raw.githubusercontent.com/sukekyo26/floe/main/install.ps1 | iex`, into `%USERPROFILE%\.local\bin`). floe keeps its places under `%USERPROFILE%` as it does under `~` on Linux, and opens only what is on a local drive under an ordinary name: a network share or drive, a device, a pipe or a stream's name is refused, and so is linking a file in `AppData` (`%TEMP%` too). docs/commands.md's Windows section tells what else differs.
@@ -60,6 +62,7 @@ adheres to [Semantic Versioning](https://semver.org/).
 - Add a page's CSP and sandbox, which keep its scripts to floe's own.
 - Add `floe licenses`, which prints the licenses of floe and of what is built into it.
 
-[Unreleased]: https://github.com/sukekyo26/floe/compare/v0.1.1...HEAD
+[Unreleased]: https://github.com/sukekyo26/floe/compare/v0.2.0...HEAD
+[0.2.0]: https://github.com/sukekyo26/floe/compare/v0.1.1...v0.2.0
 [0.1.1]: https://github.com/sukekyo26/floe/compare/v0.1.0...v0.1.1
 [0.1.0]: https://github.com/sukekyo26/floe/releases/tag/v0.1.0
