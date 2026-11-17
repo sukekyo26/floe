@@ -18,6 +18,8 @@ import (
 // or with Answer when set. After a 204 it stops answering Linger later, unless Keeps.
 type Fake struct {
 	PID int
+	// Root is the store its health tells.
+	Root string
 	// Next is the pid its health tells after the first answer, when set: another server, started meanwhile.
 	Next   int
 	Answer int
@@ -40,7 +42,7 @@ func (f Fake) Serve(t *testing.T, ln net.Listener) func() []string {
 		defer mu.Unlock()
 		if r.URL.Path != "/api/stop" {
 			body, err := json.Marshal(server.Health{
-				App: server.App, PID: pid, Root: "", Build: "", Templates: "", Parts: "", Themes: "", Icons: "",
+				App: server.App, PID: pid, Root: f.Root, Build: "", Templates: "", Parts: "", Themes: "", Icons: "",
 			})
 			if err != nil {
 				t.Error(err)

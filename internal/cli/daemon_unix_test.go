@@ -11,6 +11,9 @@ import (
 	"floe/internal/server"
 )
 
+// otherSystemsRoot is the store a server of another system names: Windows's, seen from WSL.
+const otherSystemsRoot = `C:\Users\u\.local\share\floe`
+
 // A server that is made to crash (SIGQUIT) leaves what the runtime wrote of it in server.log: the standard error of
 // the server a command starts is discarded, so the log is where it is.
 func TestCrashOutput(t *testing.T) {
