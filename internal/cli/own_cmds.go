@@ -161,9 +161,9 @@ Nothing is written over: with anything of that name there, nothing is made.`,
 		Short: "Check the templates of your own, drawing each one's example.yaml",
 		Long: `Read the templates under FLOE_TEMPLATES_DIR (else floe/templates under XDG_CONFIG_HOME,
 or ~/.config; ~ is %USERPROFILE% on Windows) with the parts and themes of your own, as floe part
-check does, then draw the example.yaml of each template of your own as floe check draws a data file. Every mistake is
-printed, and then the warnings of the examples drawn; the exit code is 1 when there is a
-mistake, and nothing is printed when they are right and have no warning.`,
+check does, then draw the example.yaml of each template of your own as floe check draws a data
+file. Every mistake is printed, and then the warnings of the examples drawn; the exit code is 1
+when there is a mistake, and nothing is printed when they are right and have no warning.`,
 		Args: cobra.NoArgs,
 		RunE: func(_ *cobra.Command, _ []string) error {
 			return a.checkTemplates()
