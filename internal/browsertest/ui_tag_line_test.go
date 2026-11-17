@@ -196,6 +196,8 @@ func uiTagLine(t *testing.T, lang i18n.Lang, msg func(string, ...any) string) {
 	b.until("the dialog", "document.getElementById('tag-dialog').open")
 	b.eval(box("a2") + ".click()")
 	apply("applied from the menu")
+	// The focus goes back to the row's menu button as the dialog's close event comes, a frame after it closes.
+	b.until("the focus back", "document.getElementById('list').contains(document.activeElement)")
 	out = append(out, "sent from the menu: "+tags("one"))
 	say("the focus", "document.activeElement === document.querySelector('#list li[data-slug=one] .more > summary')")
 
