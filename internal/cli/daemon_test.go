@@ -655,6 +655,10 @@ func TestAnotherSystemsServer(t *testing.T) {
 			t.Errorf("list to a server of %q = %+v, want a refusal that names port %s and FLOE_PORT, and not FLOE_DIR or floe stop",
 				root, r, e.port)
 		}
+		// The store the server serves, in Go's quotes.
+		if !strings.Contains(r.stderr, strconv.Quote(root)) {
+			t.Errorf("list to a server of %q = %+v, want the refusal to name that store", root, r)
+		}
 	}
 }
 
