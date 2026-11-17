@@ -150,13 +150,38 @@ jobs:
           cache: true
       - run: go vet ./...
       # install.ps1, read by the version pinned here: a newer one may warn of more. Write-Host is how it talks.
-      - name: PSScriptAnalyzer
+      # LIMIT: PSScriptAnalyzer is pinned and raised by hand: change the number below. The cache keeps CI off the
+      # PowerShell Gallery, whose search failed with "No match was found"; a miss (a new number, or the cache gone
+      # after 7 unused days) saves it from the Gallery again, which may fail so.
+      # Caches are scoped by branch: a pull request reads its base's, so one into main and release.yml read main's, which
+      # only releases and the weekly run keep, so a release may go to the Gallery.
+      - id: pssa
         shell: pwsh
         run: |
+          "version=1.25.0" >> $env:GITHUB_OUTPUT
+          "path=$HOME\.floe-tools\psmodules" >> $env:GITHUB_OUTPUT
+      - id: pssa-cache
+        uses: actions/cache@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
+        with:
+          path: ${{ steps.pssa.outputs.path }}
+          key: psscriptanalyzer-${{ runner.os }}-${{ runner.arch }}-${{ steps.pssa.outputs.version }}
+      - if: steps.pssa-cache.outputs.cache-hit != 'true'
+        shell: pwsh
+        env:
+          PSSA_VERSION: ${{ steps.pssa.outputs.version }}
+          PSSA_PATH: ${{ steps.pssa.outputs.path }}
+        run: |
           $ProgressPreference = 'SilentlyContinue'
-          $took = Measure-Command { Install-Module PSScriptAnalyzer -RequiredVersion 1.25.0 -Scope CurrentUser -Force }
-          'Install-Module took {0:N1} s' -f $took.TotalSeconds
-          Import-Module PSScriptAnalyzer -RequiredVersion 1.25.0
+          # -Force makes the folder of -Path, which is an error without it.
+          Save-Module PSScriptAnalyzer -RequiredVersion $env:PSSA_VERSION -Path $env:PSSA_PATH -Force
+      - name: PSScriptAnalyzer
+        shell: pwsh
+        env:
+          PSSA_VERSION: ${{ steps.pssa.outputs.version }}
+          PSSA_PATH: ${{ steps.pssa.outputs.path }}
+        run: |
+          $m = Import-Module "$env:PSSA_PATH\PSScriptAnalyzer\$env:PSSA_VERSION\PSScriptAnalyzer.psd1" -PassThru
+          'PSScriptAnalyzer {0} from {1}' -f $m.Version, $m.ModuleBase
           Invoke-ScriptAnalyzer -Path install.ps1 -Severity Warning, Error -ExcludeRule PSAvoidUsingWriteHost -EnableExit
       - name: Test
         shell: bash
