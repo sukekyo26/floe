@@ -125,8 +125,9 @@ func TestDriveRelative(t *testing.T) {
 }
 
 // A device, a share or a link to one is refused before it is opened (path_not_local), where Unix tells a device by its
-// kind: a part's file that is a link to a device, a data file on a share, and a page to write that is a link to a
-// device (which cannot be written, in the words of why).
+// kind: a part's file that is a link to a device, a data file on a share, a page to write that is a link to a
+// device, and pages to write on a share or a network drive (told to put them on a local drive, not to look at
+// their directory).
 func TestNotLocalWindows(t *testing.T) {
 	t.Parallel()
 
@@ -145,9 +146,20 @@ func TestNotLocalWindows(t *testing.T) {
 		t.Errorf("floe check %s = %d, %q, want path_not_local", on, code, stderr)
 	}
 
+	const lookAtDir = "check that its directory exists"
 	link(t, `\\.\NUL`, filepath.Join(dir, "e.html"))
 	if code, _, stderr := run(dir, "render", "e.yaml"); code != 1 || !strings.Contains(stderr, "not on a local drive") ||
-		!strings.Contains(stderr, "e.html") {
+		!strings.Contains(stderr, "e.html") || strings.Contains(stderr, lookAtDir) {
 		t.Errorf("floe render of a page linked to NUL = %d, %q, want it not written, told", code, stderr)
+	}
+
+	out, mapped := testfs.MapShare(t, t.TempDir())
+	for _, to := range []string{out, mapped} {
+		code, _, stderr := run(dir, "render", "--out-dir", filepath.Join(to, "pages"), "a.yaml")
+		t.Logf("floe render --out-dir %s: %s", to, stderr)
+		if code != 1 || !strings.Contains(stderr, "not on a local drive") || !strings.Contains(stderr, "put it there") ||
+			strings.Contains(stderr, lookAtDir) {
+			t.Errorf("floe render --out-dir under %s = %d, %q, want it told as not local", to, code, stderr)
+		}
 	}
 }
