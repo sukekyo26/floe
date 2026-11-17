@@ -46,8 +46,6 @@ func TestDefaultPlaces(t *testing.T) {
 	if r := e.exe(t, self, "part", "new", "mine"); r.code != 0 || r.stdout != "made "+filepath.Join(cli.DefaultPlace(home, "parts"), "mine")+"\n" {
 		t.Errorf("part new = %+v", r)
 	}
-	// The part made changed what the server draws with: its read ends before it is stopped.
-	e.settled(t.Context(), t)
 	if r := e.exe(t, self, "stop"); r.code != 0 || !strings.HasPrefix(r.stdout, "stopped server") {
 		t.Errorf("stop = %+v", r)
 	}

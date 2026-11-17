@@ -295,9 +295,9 @@ func (e *denv) health(ctx context.Context) (server.Health, bool) {
 	return p.Health, p.State == daemon.Ours
 }
 
-// settled waits, with no time limit, for the server on e's port to end its reads of the drawing: GET /api/themes
-// reads it first when it changed (latest), after the read under way. A server stopped while it reads goes on until the
-// read ends, holding its log open, which on Windows the cleanup of the test's directory could not remove.
+// settled waits, with no time limit, for the server on e's port to end its first read of the drawing: GET /api/themes
+// looks first (latest), after the read under way. A server stopped during its first read goes on until that read
+// ends, holding its log open, which on Windows the cleanup of the test's directory could not remove.
 func (e *denv) settled(ctx context.Context, t *testing.T) {
 	t.Helper()
 
