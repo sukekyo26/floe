@@ -468,7 +468,8 @@ func (*Server) redirect(w http.ResponseWriter, r *http.Request) {
 
 // Serve serves on ln until ctx is done or the server is asked to stop, then stops once the requests under way are
 // done, watching the drawing every s.every until then; it reads the drawing first once it answers, and returns once
-// the reads it began end. It writes to the log that it serves, why it stops (before it
+// that first read ends (the watch's look under way is not waited for). It writes to the log that it serves, why it
+// stops (before it
 // stops listening: the next server starts after that) and that it has stopped, or the mistake that ended it.
 func (s *Server) Serve(ctx context.Context, ln net.Listener) (err error) {
 	s.log.Info("serving", slog.String("root", s.cfg.Store.Root()), slog.String("addr", ln.Addr().String()),
@@ -480,8 +481,8 @@ func (s *Server) Serve(ctx context.Context, ln net.Listener) (err error) {
 		}
 		s.log.Info("stopped")
 	}()
-	// The watching ends however serving does, and Serve returns once the reads it began end: cancel first, or a
-	// return on a mistake would wait for a watch that goes on.
+	// The watching ends however serving does, and Serve returns once its first read ends. The watch is not waited
+	// for: its look of each second (seconds on Windows under load) would keep a stopped server on.
 	ctx, cancel := context.WithCancel(ctx)
 	var bg sync.WaitGroup
 	defer func() {
@@ -500,7 +501,7 @@ func (s *Server) Serve(ctx context.Context, ln net.Listener) (err error) {
 	// LIMIT: a read that panics is floe's bug and is not recovered, as the watch's is not: it ends the process after
 	// the server answered, so the first request is cut off rather than the start told it did not start.
 	bg.Go(s.look)
-	bg.Go(func() { s.watchDrawing(ctx) })
+	go s.watchDrawing(ctx)
 	errc := make(chan error, 1)
 	go func() { errc <- srv.Serve(ln) }()
 	select {
