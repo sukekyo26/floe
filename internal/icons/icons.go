@@ -113,7 +113,7 @@ var (
 var slugRe = regexp.MustCompile(`[^a-z0-9.]+`)
 
 // rename moves the new icons into place; a test makes it fail.
-var rename = os.Rename
+var rename = files.Rename
 
 // Sets are the names of the icon sets floe knows: those it fetches and those built in.
 func Sets() []string {
@@ -201,14 +201,18 @@ func New(root string, absent bool, setting string) *Store {
 	return &Store{none: nil, root: root, absent: absent, setting: setting, mu: sync.Mutex{}, indexes: map[string]*index{}}
 }
 
-// Without returns a store with no root, as there is no directory for icons, err says why (icons_no_dir for nil):
-// the sets built in are there, and a set to fetch is told err.
+// Without returns a store with no root, as there is no directory for icons, err says why: the sets built in are
+// there, and a set to fetch is told err. Of nil, a set to fetch is floe's failure: what draws gives the icons it
+// has (the commands give one of their directory; nil is a test's, which draws the built-in sets alone).
 func Without(err error) *Store {
 	if err == nil {
-		err = usererr.NewWhole("icons_no_dir")
+		err = errNoSets
 	}
 	return &Store{none: err, root: "", absent: true, setting: "", mu: sync.Mutex{}, indexes: map[string]*index{}}
 }
+
+// errNoSets is the error of a set to fetch in a store Without(nil).
+var errNoSets = errors.New("no icon sets but the built-in ones are given to draw with")
 
 func (s *Store) dir(k *kit) string {
 	return filepath.Join(s.root, k.name)
@@ -245,11 +249,13 @@ func (s *Store) readIndex(k *kit) (*index, error) {
 		return nil, nil //nolint:nilnil // not fetched is not an error to fetch
 	}
 	b, _, err := files.Read(file)
+	// LIMIT: Windows says not there for a file on the way too, so that a set's directory, or the root, that is a file
+	// is taken for a set not fetched here, before cannotRead asks files.NotDir (only Unix's ENOTDIR gets there).
 	if errors.Is(err, fs.ErrNotExist) {
 		return nil, nil //nolint:nilnil // not fetched is not an error to fetch
 	}
 	if err != nil {
-		return nil, s.cannotRead(file, err, k)
+		return nil, s.cannotRead(file, filepath.Dir(file), err, k)
 	}
 	idx, err := parseIndex(file, b, k)
 	if err != nil {
@@ -320,10 +326,13 @@ func libraryAt(file string, line, column int, key string, err error, args ...any
 }
 
 // cannotRead is err, of reading the file or the directory of the set k at path, under the store: to fetch the set
-// again when that mends it, else as it is (CannotRead).
-func (s *Store) cannotRead(path string, err error, k *kit) error {
+// again when that mends it, else as it is (CannotRead). A file on the way is looked for from from (files.NotDir).
+func (s *Store) cannotRead(path, from string, err error, k *kit) error {
+	if notDir := files.NotDir(from, err); notDir != nil {
+		err = notDir
+	}
 	// A path that is no directory on the way is the store's (a file, or under one) or the set's.
-	storeIsDir := !errors.Is(err, syscall.ENOTDIR) || s.rootIsDir()
+	storeIsDir := !errors.Is(err, files.ErrNotDir) || s.rootIsDir()
 	switch {
 	case !mendable(path, err, storeIsDir):
 		if !storeIsDir {
@@ -346,11 +355,11 @@ func mendable(path string, err error, storeIsDir bool) bool {
 		return false
 	case errors.Is(err, fs.ErrNotExist), errors.Is(err, usererr.ErrNotFile), errors.Is(err, syscall.EISDIR):
 		return true
-	case errors.Is(err, syscall.ENOTDIR):
+	case errors.Is(err, files.ErrNotDir):
 		return storeIsDir
 	}
 	// The system finds it where os.Root does not let it be read: outside the set's directory.
-	_, statErr := os.Stat(path)
+	_, statErr := files.Stat(path)
 	return statErr == nil
 }
 
@@ -374,7 +383,7 @@ func (s *Store) notFetched(k *kit) *usererr.Error {
 
 // rootIsDir reports whether the store's root is a directory now.
 func (s *Store) rootIsDir() bool {
-	fi, err := os.Stat(s.root)
+	fi, err := files.Stat(s.root)
 	return err == nil && fi.IsDir()
 }
 
@@ -382,11 +391,11 @@ func (s *Store) rootIsDir() bool {
 // LIMIT: a directory above it that cannot be written is told only by the MkdirAll after the network; check its
 // permission too if that comes to be asked.
 func (s *Store) checkWritable() error {
-	fi, err := os.Stat(s.root)
+	fi, err := files.Stat(s.root)
 	switch {
 	case err == nil && !fi.IsDir():
 		// What making it would say.
-		return s.cannotWrite(&fs.PathError{Op: "mkdir", Path: s.root, Err: syscall.ENOTDIR})
+		return s.cannotWrite(&fs.PathError{Op: "mkdir", Path: s.root, Err: files.ErrNotDir})
 	case err != nil && !errors.Is(err, fs.ErrNotExist):
 		return s.cannotWrite(err)
 	}
@@ -446,14 +455,14 @@ func (s *Store) Fetch(ctx context.Context, set string, from []Source, force bool
 		got.Already = true
 		return got, nil
 	}
-	if err := os.MkdirAll(s.root, 0o700); err != nil {
+	if err := files.MkdirAll(s.root, 0o700); err != nil {
 		return got, s.cannotWrite(err)
 	}
-	tmp, err := os.MkdirTemp(s.root, k.name+".tmp-")
+	tmp, err := files.MkdirTemp(s.root, k.name+".tmp-")
 	if err != nil {
 		return got, s.cannotWrite(err)
 	}
-	defer os.RemoveAll(tmp) //nolint:errcheck // a leftover is harmless
+	defer files.RemoveAll(tmp) //nolint:errcheck // a leftover is harmless
 	idx, err := k.fetch(ctx, from, tmp)
 	if err != nil {
 		return got, err
@@ -548,21 +557,22 @@ func downloadable(u *url.URL) bool {
 func replace(tmp, dir string) error {
 	old := tmp + "-old"
 	hadOld := true
-	if err := os.Rename(dir, old); errors.Is(err, fs.ErrNotExist) {
+	parent := filepath.Dir(dir)
+	if err := files.Rename(parent, filepath.Base(dir), filepath.Base(old)); errors.Is(err, fs.ErrNotExist) {
 		hadOld = false
 	} else if err != nil {
 		return usererr.CannotWrite(dir, err)
 	}
-	if err := rename(tmp, dir); err != nil {
+	if err := rename(parent, filepath.Base(tmp), filepath.Base(dir)); err != nil {
 		if hadOld {
-			if back := os.Rename(old, dir); back != nil {
+			if back := files.Rename(parent, filepath.Base(old), filepath.Base(dir)); back != nil {
 				return usererr.InSystemWords("icons_previous_left", dir, err, old)
 			}
 		}
 		return usererr.CannotWrite(dir, err)
 	}
 	// The new icons are in place: a previous one left behind is harmless.
-	_ = os.RemoveAll(old) //nolint:errcheck // see above
+	_ = files.RemoveAll(old) //nolint:errcheck // see above
 	return nil
 }
 
@@ -607,10 +617,16 @@ func (k *kit) zipOf(r io.ReaderAt, size int64, from Source) (*zip.Reader, error)
 }
 
 // extract writes the set's icons in zips to dir, with their index.json. Its limits count the icons of all the
-// zips together, as one package's.
+// zips together, as one package's. dir is opened once (an os.Root, which keeps the writes in it) and closed before
+// it returns: on Windows a directory held open cannot be renamed, as replace renames dir.
 func (k *kit) extract(zips []opened, dir string) (*index, error) {
+	root, err := files.OpenRoot(dir)
+	if err != nil {
+		return nil, usererr.CannotWrite(dir, err) //nolint:wrapcheck // the system's words, at the directory
+	}
+	defer root.Close() //nolint:errcheck // what was written is checked as written
 	x := extraction{
-		k: k, dir: dir, light: k.lightOnes(zips), sums: map[string][sha256.Size]byte{},
+		k: k, dir: dir, root: root, light: k.lightOnes(zips), sums: map[string][sha256.Size]byte{},
 		found: make([]bool, len(k.packages)), version: "", written: 0,
 		idx: &index{Version: "", Sources: make([]string, len(zips)), Icons: map[string]entry{}},
 	}
@@ -633,13 +649,14 @@ func (k *kit) extract(zips []opened, dir string) (*index, error) {
 	if k.version == nil {
 		x.idx.Version = hashOf(x.idx.Icons, x.sums)
 	}
-	return x.idx, writeIndex(x.idx, dir)
+	return x.idx, writeIndex(x.idx, root, dir)
 }
 
 // extraction is what extract has kept so far, of all the zips.
 type extraction struct {
 	k       *kit
 	dir     string
+	root    *os.Root // dir, opened
 	idx     *index
 	light   map[string]bool
 	sums    map[string][sha256.Size]byte // each icon's content, for the version of a set without one
@@ -688,7 +705,7 @@ func (x *extraction) keep(from Source, f *zip.File, icon packed) error {
 	if x.written += int64(len(b)); x.written > maxPackage {
 		return usererr.NewAt(from.Name, 0, 0, "icons_written_too_large", maxPackage>>20)
 	}
-	if err = keep(x.dir, icon, b); err != nil {
+	if err = keep(x.root, x.dir, icon, b); err != nil {
 		return err
 	}
 	x.version = cmp.Or(x.version, icon.version)
@@ -742,24 +759,25 @@ func readEntry(f *zip.File) ([]byte, error) {
 	return readAtMost(r, maxIcon)
 }
 
-// keep writes the icon b to dir as name.svg.
-func keep(dir string, icon packed, b []byte) error {
+// keep writes the icon b to root, the directory dir, as name.svg.
+func keep(root *os.Root, dir string, icon packed, b []byte) error {
 	name := icon.name + ".svg"
 	// A name holds no slash but those its kit puts in (TestIconOfStaysInside); this keeps it so.
 	if !filepath.IsLocal(name) {
 		return fmt.Errorf("keep the icon %s: not a name inside the set", icon.name) //nolint:err113 // floe's own mistake
 	}
 	path := filepath.Join(dir, name)
-	if err := os.MkdirAll(filepath.Dir(path), 0o700); err != nil {
+	if err := root.MkdirAll(filepath.Dir(name), 0o700); err != nil {
 		return usererr.CannotWrite(filepath.Dir(path), err)
 	}
-	if err := os.WriteFile(path, b, 0o600); err != nil {
+	if err := root.WriteFile(name, b, 0o600); err != nil {
 		return usererr.CannotWrite(path, err)
 	}
 	return nil
 }
 
-func writeIndex(idx *index, dir string) error {
+// writeIndex writes idx to root, the directory dir, as index.json.
+func writeIndex(idx *index, root *os.Root, dir string) error {
 	var out bytes.Buffer
 	enc := json.NewEncoder(&out)
 	enc.SetEscapeHTML(false)
@@ -768,7 +786,7 @@ func writeIndex(idx *index, dir string) error {
 		return fmt.Errorf("write the icons' index: %w", err)
 	}
 	file := filepath.Join(dir, "index.json")
-	if err := os.WriteFile(file, out.Bytes(), 0o600); err != nil {
+	if err := root.WriteFile("index.json", out.Bytes(), 0o600); err != nil {
 		return usererr.CannotWrite(file, err)
 	}
 	return nil
@@ -877,15 +895,16 @@ func (s *Store) Lookup(name string) ([]byte, error) {
 		return b, nil
 	}
 	dir := s.dir(k)
-	root, err := os.OpenRoot(dir)
+	root, err := files.OpenRoot(dir)
 	if err != nil {
-		return nil, s.cannotRead(dir, err, k)
+		return nil, s.cannotRead(dir, dir, err, k)
 	}
 	defer root.Close() //nolint:errcheck // read only
 	b, _, err := files.ReadIn(root, rest+".svg")
 	if err != nil {
 		// At the name as the index holds it, not cleaned to where it leads.
-		return nil, s.cannotRead(dirs.Join(dir, rest+".svg"), err, k)
+		at := dirs.Join(dir, rest+".svg")
+		return nil, s.cannotRead(at, filepath.Dir(at), err, k)
 	}
 	return b, nil
 }

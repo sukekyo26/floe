@@ -7,21 +7,23 @@ import (
 	"os"
 	"path/filepath"
 	"strings"
-	"syscall"
 
 	"floe/internal/dirs"
 	"floe/internal/files"
 	"floe/internal/kit"
+	"floe/internal/link"
 	"floe/internal/usererr"
 )
 
 // dataPlace is a directory of floe's (dataDir): dir, "" for none; key, the setting that may name it, which a
-// mistake of no setting names too; whether it does; and why the default cannot be (under a file, HOME=/dev/null),
-// which a reader takes as none and a writer tells, nil else.
+// mistake of no setting names too; whether it does; from, the variable of the home that decides the default
+// (link.HomeKey), which a mistake of none names; and why the default cannot be (under a file, HOME=/dev/null), which
+// a reader takes as none and a writer tells, nil else.
 type dataPlace struct {
 	dir      string
 	key      string
 	set      bool
+	from     string
 	unusable error
 }
 
@@ -41,34 +43,66 @@ func (p dataPlace) setting() string {
 	return ""
 }
 
-// dataDir is a directory of floe's: the setting key, else sub under the XDG base directory xdg, else under
-// home under HOME; "" when none is an absolute path. Each is an absolute path, so that floe reads one place
-// wherever it runs: a setting written relative (~/x in quotes too, which no shell read) is refused, and a
-// relative XDG base directory is none, as its spec says.
-func (a *app) dataDir(key, xdg, home, sub string) (dataPlace, error) {
+// base is where the defaults of a kind of floe's directories go: under the directory the variable key names, else
+// under underHome in the home (link.HomeKey).
+type base struct {
+	key, underHome string
+}
+
+// The places floe keeps its own in by default, on every system: under the XDG base directories, else under the home,
+// as on Linux (Windows' home is %USERPROFILE%). Not under %LOCALAPPDATA%: what an app installed as a package (the
+// Claude desktop app) makes there anew is put in the package's own folder, which a terminal does not see (S315's R4);
+// under the home it is not (S315's R5).
+var (
+	dataBase   = base{key: "XDG_DATA_HOME", underHome: filepath.Join(".local", "share")}
+	configBase = base{key: "XDG_CONFIG_HOME", underHome: ".config"}
+)
+
+// storeSub and iconsSub are the store's and the icon sets' directories under the base of the data.
+const (
+	storeSub = "floe"
+	iconsSub = "floe-icons"
+)
+
+// dataDir is a directory of floe's: the setting key, else sub under the base b (dataPlace); "" when none is an
+// absolute path. Each is an absolute path, so that floe reads one place wherever it runs: a setting written
+// relative (~/x in quotes too, which no shell read) is refused, and a relative base is none, as the XDG spec says.
+// LIMIT: on Windows the bits 0o600 and 0o700 floe writes with hide nothing; a directory is as private as the ACL it
+// inherits. The default places, under %USERPROFILE%, let only the user, SYSTEM and the Administrators in, but a
+// FLOE_* directory elsewhere (C:\x) lets other users read and change the pages (floe writes no ACL). Write one
+// when that is asked for.
+// LIMIT: where the home is on a network (a share, a network drive), the default places are refused (path_not_local);
+// the FLOE_* settings name others. Look again if such PCs come to use floe.
+func (a *app) dataDir(key string, b base, sub string) (dataPlace, error) {
 	if setting := a.getenv(key); setting != "" {
 		if !filepath.IsAbs(setting) {
-			return dataPlace{dir: "", key: key, set: true, unusable: nil}, usererr.NewWhole("dir_relative", key, setting)
+			p := dataPlace{dir: "", key: key, set: true, from: "", unusable: nil}
+			return p, usererr.NewWhole("dir_relative", key, setting)
 		}
-		return dataPlace{dir: setting, key: key, set: true, unusable: nil}, nil
+		return dataPlace{dir: setting, key: key, set: true, from: "", unusable: nil}, nil
 	}
-	p := dataPlace{dir: "", key: key, set: false, unusable: nil}
-	switch base, h := a.getenv(xdg), a.getenv("HOME"); {
-	case filepath.IsAbs(base):
+	p := dataPlace{dir: "", key: key, set: false, from: link.HomeKey, unusable: nil}
+	switch base, h := a.getenv(b.key), a.getenv(link.HomeKey); {
+	case b.key != "" && filepath.IsAbs(base):
 		p.dir = filepath.Join(base, sub)
 	case filepath.IsAbs(h):
-		p.dir = filepath.Join(h, home, sub)
+		p.dir = filepath.Join(h, b.underHome, sub)
 	}
-	if _, err := os.Stat(p.dir); p.dir != "" && errors.Is(err, syscall.ENOTDIR) {
-		p.unusable = usererr.CannotWrite(p.dir, err)
+	if p.dir == "" {
+		return p, nil
+	}
+	if _, err := files.Stat(p.dir); err != nil {
+		if notDir := files.NotDir(p.dir, err); notDir != nil {
+			p.unusable = usererr.CannotWrite(p.dir, notDir)
+		}
 	}
 	return p, nil
 }
 
 // ownPlace is the directory of one's own of the kind (parts, themes, templates) as set: FLOE_<KIND>_DIR, else
-// floe/<kind> under the XDG config directory.
+// floe/<kind> under the base of the configuration (configBase).
 func (a *app) ownPlace(kind string) (dataPlace, error) {
-	return a.dataDir("FLOE_"+strings.ToUpper(kind)+"_DIR", "XDG_CONFIG_HOME", ".config", filepath.Join("floe", kind))
+	return a.dataDir("FLOE_"+strings.ToUpper(kind)+"_DIR", configBase, filepath.Join("floe", kind))
 }
 
 // ownKind is a kind of one's own: its name (ownPlace), its directory in the sources of a kit, its kind to the kit,
@@ -104,7 +138,7 @@ func ownDir(p dataPlace) (kit.Dir, error) {
 	if dir == "" {
 		return none, nil
 	}
-	if _, err := os.ReadDir(dir); err != nil {
+	if _, err := files.ReadDir(dir); err != nil {
 		// A default not there is none; one there that is no directory is told.
 		if !p.set && errors.Is(err, fs.ErrNotExist) {
 			return none, nil
@@ -157,12 +191,13 @@ func (a *app) kit(templates bool) (*kit.Kit, error) {
 }
 
 // compared reports whether a reader compares p with the other places: a directory there, or a setting not
-// there. A default not there is none to a reader, and one there but no directory, ownDir tells.
+// there. A default not there is none to a reader, and one there but no directory, ownDir tells on Unix; Windows reads
+// one that is a file as none too (files.NotDir's LIMIT).
 func compared(p dataPlace) bool {
 	if p.dir == "" {
 		return false
 	}
-	fi, err := os.Stat(p.dir)
+	fi, err := files.Stat(p.dir)
 	if err != nil {
 		return p.set
 	}
@@ -183,7 +218,7 @@ func overlapping(found *usererr.List, spots []spot, pair func(i, j int) bool) ma
 	resolved := make([]string, len(spots))
 	ok := make([]bool, len(spots))
 	for i, s := range spots {
-		resolved[i], ok[i] = resolve(s.at)
+		resolved[i], ok[i] = files.RealAbove(s.at)
 	}
 	in := map[string]bool{}
 	for i, s := range spots {
@@ -199,37 +234,15 @@ func overlapping(found *usererr.List, spots []spot, pair func(i, j int) bool) ma
 	return in
 }
 
-// resolve returns the path the system takes dir for, as written: its links and ..s followed as the system does;
-// of one not there, the nearest directory above it that is, resolved, with the names after it. False when a ..
-// is among those names: the system cannot take a .. after a name not there. A link that leads nowhere is a
-// name not there, and a name not there is matched by its letters, so either is refused once it is there.
-// LIMIT: links to nothing are not followed, nor names not there matched by case (macOS); follow them if needed.
-func resolve(dir string) (string, bool) {
-	rest := ""
-	for at := dir; ; {
-		if to, err := filepath.EvalSymlinks(at); err == nil {
-			return filepath.Join(to, rest), true
-		}
-		// dirs.Dir, as written: filepath.Dir would fold sym/.. by its letters, and filepath.Split stays on a/.
-		up := dirs.Dir(at)
-		name := strings.TrimPrefix(at[len(up):], string(filepath.Separator))
-		if up == at || name == ".." {
-			return "", false
-		}
-		rest = filepath.Join(name, rest)
-		at = up
-	}
-}
-
 // within reports whether a is b or is under it, both resolved: by their letters, as of names not there, or by
 // os.SameFile, as of a name of another case on macOS or a bind mount, for each directory up from a that is there.
 func within(a, b string) bool {
-	bi, berr := os.Stat(b)
+	bi, berr := files.Stat(b)
 	for dir := a; ; dir = filepath.Dir(dir) {
 		if dir == b {
 			return true
 		}
-		if di, err := os.Stat(dir); berr == nil && err == nil && os.SameFile(di, bi) {
+		if di, err := files.Stat(dir); berr == nil && err == nil && os.SameFile(di, bi) {
 			return true
 		}
 		if dir == filepath.Dir(dir) {
@@ -252,7 +265,7 @@ func (a *app) newOwn(of ownKind, name string) error {
 	case p.unusable != nil:
 		return p.unusable
 	case p.dir == "":
-		return usererr.New("cli_new_no_dir", p.key)
+		return usererr.New("cli_new_no_dir", p.from, p.key)
 	}
 	dir := p.dir
 	k, err := a.kit(of.kind == kit.KindTemplate)
@@ -266,28 +279,42 @@ func (a *app) newOwn(of ownKind, name string) error {
 		return overlaps.Err()
 	}
 	at := filepath.Join(dir, name)
-	if _, err = os.Lstat(at); err == nil {
+	if _, err = files.Lstat(at); err == nil {
 		return usererr.NewAt(at, 0, 0, "cli_new_exists")
 	}
-	if err = os.MkdirAll(dir, 0o755); err != nil { //nolint:gosec // G301: parts, themes and templates are not secret
+	if err = files.MkdirAll(dir, 0o755); err != nil { //nolint:gosec // G301: parts, themes and templates are not secret
 		return usererr.SettingDir(p.setting(), dir, err, usererr.CannotWrite(dir, err))
 	}
 	// Not MkdirTemp, which makes it 0700 whatever the umask.
 	tmp := filepath.Join(dir, ".new-"+rand.Text())
-	if err = os.Mkdir(tmp, 0o755); err != nil { //nolint:gosec // G301: parts, themes and templates are not secret
+	if err = files.Mkdir(tmp, 0o755); err != nil { //nolint:gosec // G301: parts, themes and templates are not secret
 		return usererr.SettingDir(p.setting(), dir, err, usererr.CannotWrite(dir, err))
 	}
-	defer os.RemoveAll(tmp) //nolint:errcheck // gone once renamed; what is left is a dot directory, which Load skips
-	for file, text := range of.skeleton(name) {
-		//nolint:gosec // G306: parts, themes and templates are not secret
-		if err := os.WriteFile(filepath.Join(tmp, file), text, 0o644); err != nil {
-			return usererr.CannotWrite(filepath.Join(at, file), err)
-		}
+	defer files.RemoveAll(tmp) //nolint:errcheck // gone once renamed; what is left is a dot directory, which Load skips
+	if err := writeSkeleton(tmp, at, of.skeleton(name)); err != nil {
+		return err
 	}
-	if err := os.Rename(tmp, at); err != nil {
+	if err := files.Rename(dir, filepath.Base(tmp), name); err != nil {
 		return usererr.CannotWrite(at, err)
 	}
 	a.print("%s", english.Msg("cli_made", at))
+	return nil
+}
+
+// writeSkeleton writes each file of skeleton to tmp, the directory to be renamed to at: opened once, and closed before
+// it returns, as Windows renames no directory held open.
+func writeSkeleton(tmp, at string, skeleton map[string][]byte) error {
+	root, err := files.OpenRoot(tmp)
+	if err != nil {
+		return usererr.CannotWrite(at, err)
+	}
+	defer root.Close() //nolint:errcheck // what was written is checked as written
+	for file, text := range skeleton {
+		//nolint:gosec // G306: parts, themes and templates are not secret
+		if err := root.WriteFile(file, text, 0o644); err != nil {
+			return usererr.CannotWrite(filepath.Join(at, file), err)
+		}
+	}
 	return nil
 }
 

@@ -117,7 +117,9 @@ func TestDiagramMistakes(t *testing.T) {
 		`d.yaml:7:110: box "A" overlaps box "B"`,
 		`floe: there is no directory for icons, as HOME is not an absolute path; set FLOE_ICONS_DIR to an absolute path`,
 	)
-	if got := drawn(t, k, src, none); got != want {
+	noDir := none
+	noDir.Icons = icons.Without(usererr.NewWhole("icons_no_dir", "HOME"))
+	if got := drawn(t, k, src, noDir); got != want {
 		t.Errorf("told\n%s\nwant\n%s", got, want)
 	}
 	o := none

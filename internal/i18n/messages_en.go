@@ -111,7 +111,7 @@ var messagesEN = map[string]string{
 	"kit_words_lang_not_mapping": "%s: write the names of the words and their text",
 	"kit_words_not_text":         "%s.%s: write text, in quotes where YAML would read a number, true, false or null",
 	"lang_twice":                 "%s and %s are one language, as a tag's case, or _ for -, does not tell languages apart: keep one",
-	"kit_image_path":             `"%[1]s" is not a path floe reads under the directory of %[2]s: write it relative to that directory, with one / between names, without ./ (write pic.png for ./pic.png), .., or a / at either end`,
+	"kit_image_path":             `"%[1]s" is not a path floe reads under the directory of %[2]s: write it relative to that directory, with one / between names, without ./ (write pic.png for ./pic.png), .., or a / at either end (on Windows, also without \, : or a device's name such as NUL or CON)`,
 	"kit_image_type":             `"%s" is not an image floe takes: use png, jpeg, gif, webp or svg`,
 	"kit_image_not_file":         `"%s" is not a file of an image, but a directory or the like: name a regular file of the image`,
 	"kit_image_unread":           `the image "%[2]s" cannot be read (%[1]s)`,
@@ -189,6 +189,8 @@ var messagesEN = map[string]string{
 	"cli_task_task_off":        `--task "" takes the pages off their task, so it cannot go with --%s`,
 	"cli_path_empty":           "%s is an empty path; give %s, and check that a variable written for it is set",
 	"cli_relative_no_cwd":      "the working directory cannot be read, so the relative path %s means nothing; run floe from a directory that exists, or give an absolute path",
+	"path_drive_relative":      "%s is relative to the working directory of drive %s, which floe does not read: write the whole path (%s\\…) or one relative to here",
+	"path_not_local":           "this is not on a local drive under an ordinary name: it is or leads to %s, a network share, a network drive, a volume without a drive letter, a device, a pipe, a stream's name or a link floe does not follow. floe opens only what is on a local drive; put it there under an ordinary name and use that path",
 	"cli_wants_data":           "a data file (.yaml or .yml)",
 	"cli_wants_out_dir":        "the directory to write the pages in",
 	"cli_check_not_data":       "%s is not a data file (.yaml or .yml)",
@@ -203,10 +205,11 @@ var messagesEN = map[string]string{
 	// LIMIT: the %s of cannot_write and the first of dir_setting are the system's English, as the system words why
 	// it cannot read or write
 	// link: which files may be linked
-	"link_not_real":        "%s is not its absolute real path; pass it through filepath.Abs and filepath.EvalSymlinks (symlinks resolved, path cleaned) first",
+	"link_not_real":        "%s is not its real path: give the whole path with its links and junctions followed, as the system names it",
 	"link_not_linkable":    "%s is not a regular HTML file (.html, .htm), data file (.yaml, .yml) or folder; only those can be linked",
-	"link_home_unresolved": `cannot resolve the home directory "%s"; set HOME to an existing absolute directory`,
-	"link_hidden_home":     "%s is under a hidden directory of your home (settings and keys live there); move it out to link it",
+	"link_home_unresolved": `cannot resolve the home directory "%s"; set %s to an existing absolute directory`,
+	"link_hidden_home":     "%s is in a hidden directory of your home or a folder of application data (AppData on Windows), where settings and keys live; put it somewhere else, such as a project's folder, and link it there",
+	"link_appdata_unknown": "%s cannot be checked: the system does not tell where its folders of application data are (%s); floe links nothing it cannot check",
 	"link_exposes_dir":     "%s would expose all of %s; move it into a directory of its own and link it there",
 
 	// store: publishing and editing pages
@@ -219,6 +222,7 @@ var messagesEN = map[string]string{
 	"store_slug_placed":       `slug "%s" was published from %s in repository %s: choose another slug`,
 	"store_slug_placed_alone": `slug "%s" was published from %s: choose another slug`,
 	"store_slug_taken":        `slug "%s" is already in use: choose another slug`,
+	"store_edit_renamed_only": `the page was moved to the slug "%[2]s" and could not be moved back (%[1]s); the other changes were not saved: save them again`,
 	"store_reads_unset":       "is missing, broken or has no since: run floe stop, then floe serve, which writes it anew",
 	"store_project_slash":     `a project name cannot be just "/"`,
 	"store_project":           "project %s",
@@ -278,7 +282,7 @@ var messagesEN = map[string]string{
 	"cli_not_utf8":          "%s is not UTF-8; the server takes only UTF-8: rename it, or give it in UTF-8",
 	"server_mistakes_head":  "The data file has mistakes",
 	"server_mistakes_lead":  "Fix them and save the file: this tab shows the page again.",
-	"store_no_dir":          "there is no directory for pages, as HOME is not an absolute path; set FLOE_DIR to an absolute path",
+	"store_no_dir":          "there is no directory for pages, as %s is not an absolute path; set FLOE_DIR to an absolute path",
 
 	"cannot_write": "cannot be written (%s): check that its directory exists and can be written to, and that its name is free and not too long",
 	"dir_setting":  "%[2]s is %[3]s, which cannot be used as a directory (%[1]s); make it a directory floe can use, or set %[2]s to another directory",
@@ -290,7 +294,7 @@ var messagesEN = map[string]string{
 	"icons_unknown_set":        "unknown icon set \"%s\"; use %s",
 	"icons_builtin":            "%[1]s icons are built into floe, so there is nothing to fetch; search them with: floe icons search %[1]s <word>",
 	"dir_relative":             "%s is %s, a relative path; set it to an absolute path",
-	"icons_no_dir":             "there is no directory for icons, as HOME is not an absolute path; set FLOE_ICONS_DIR to an absolute path",
+	"icons_no_dir":             "there is no directory for icons, as %s is not an absolute path; set FLOE_ICONS_DIR to an absolute path",
 	"icons_not_fetched":        "%[1]s icons are not in %[2]s; run \"floe icons fetch %[3]s\" (downloads about %[4]s from %[5]s) and try again",
 	"icons_not_file":           "is neither a regular file nor a directory (a FIFO, a device or the like), which floe does not open; run \"%s\" to fetch the icons again",
 	"icons_broken":             "cannot be read (%s); run \"%s\" to fetch the icons again",
@@ -364,7 +368,7 @@ var messagesEN = map[string]string{
 	"cli_unknown_part":           `unknown part "%s"; use %s`,
 	"cli_unknown_file":           `%s has no file "%s" (its files: %s)`,
 	"cli_new_exists":             "there is something of this name here already: pick another name, or remove it",
-	"cli_new_no_dir":             "there is no default directory, as HOME is not an absolute path; set %s to an absolute path",
+	"cli_new_no_dir":             "there is no default directory, as %s is not an absolute path; set %s to an absolute path",
 	"cli_made":                   "made %s",
 	"cli_skill_agent":            "name one agent to install floe's skill for: %s",
 	"cli_skill_same":             "%s is this floe's skill already",

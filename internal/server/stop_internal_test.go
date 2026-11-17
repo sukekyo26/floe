@@ -15,9 +15,20 @@ import (
 	"time"
 )
 
-// serving serves s on a port of its own until ctx is done, or the server is asked to stop; Serve's result comes on
-// the channel.
+// serving is started, its first read of the drawing done: Serve waits for that read before it returns, and once it
+// is done reads nothing, so that no read's time is inside the wait for Serve to end (a watch's walk queued before
+// Serve's first may be: first's LIMIT).
 func serving(ctx context.Context, t *testing.T, s *Server) (string, <-chan error) {
+	t.Helper()
+
+	addr, done := started(ctx, t, s)
+	s.now()
+	return addr, done
+}
+
+// started serves s on a port of its own until ctx is done, or the server is asked to stop; Serve's result comes on
+// the channel.
+func started(ctx context.Context, t *testing.T, s *Server) (string, <-chan error) {
 	t.Helper()
 
 	var lc net.ListenConfig
@@ -160,7 +171,7 @@ func TestStopFinishesRequests(t *testing.T) {
 			defer cancel()
 			addr, done := serving(ctx, t, s)
 
-			body := `{"path": "` + data + `"}`
+			body := linkBody(t, data)
 			var d net.Dialer
 			conn, err := d.DialContext(t.Context(), "tcp", addr)
 			if err != nil {

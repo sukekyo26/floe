@@ -14,13 +14,13 @@ import (
 	"sync"
 	"testing"
 
-	"golang.org/x/sys/unix"
-
+	"floe/internal/dirs"
 	"floe/internal/files"
 	"floe/internal/kit"
 	"floe/internal/link"
 	"floe/internal/server"
 	"floe/internal/store"
+	"floe/internal/testfs"
 )
 
 const (
@@ -43,10 +43,12 @@ const pic = `{"$schema": "https://json-schema.org/draft/2020-12/schema", "type":
 func newEnv(t *testing.T) env {
 	t.Helper()
 
-	tmp, err := filepath.EvalSymlinks(t.TempDir())
+	// Real, as the user would give it (no \\?\ on Windows): a root of settings and the store.
+	got, err := files.Real(t.TempDir())
 	if err != nil {
 		t.Fatal(err)
 	}
+	tmp := dirs.Shown(got)
 	e := env{root: filepath.Join(tmp, "store"), home: filepath.Join(tmp, "home"), tpl: filepath.Join(tmp, "tpl")}
 	writeFiles(t, e.tpl, map[string]string{
 		"pic/page.html": "<!doctype html>\n<html lang=\"{{.Lang}}\"><head><title>{{.Title}}</title></head><body>" +
@@ -191,12 +193,18 @@ func TestProtocol(t *testing.T) {
 	want(t, e.do(t, http.MethodGet, "/a/x/%2e%2e/y", ""), http.StatusNotFound, "not found")
 	want(t, e.write(t, http.MethodPost, "/api/pages", map[string]any{"path": "/x", "bogus": 1}), http.StatusBadRequest,
 		`unknown object member name "bogus"`)
-	want(t, e.write(t, http.MethodPost, "/api/pages/data", map[string]any{
-		"file": "x.yaml", "source": []byte("a"), "place": "x.yaml", "repo": "r",
-		"images": map[string][]byte{"../e.png": nil},
-	}), http.StatusBadRequest, "send each image by a slash-separated path")
+	// What the system reads as no name under the directory too: a NUL byte everywhere, and on Windows a \, a :
+	// or a device's name (osBadImageNames).
+	for _, name := range append([]string{"../e.png", "a\x00.png"}, osBadImageNames...) {
+		want(t, e.write(t, http.MethodPost, "/api/pages/data", map[string]any{
+			"file": "x.yaml", "source": []byte("a"), "place": "x.yaml", "repo": "r",
+			"images": map[string][]byte{name: nil},
+		}), http.StatusBadRequest, "send each image by a slash-separated path")
+	}
 	// A place from a repository's root comes with its repository, and a real path with none.
-	for _, key := range []map[string]any{{"place": "docs/x.yaml", "repo": ""}, {"place": "/home/x.yaml", "repo": "r"}} {
+	for _, key := range []map[string]any{
+		{"place": "docs/x.yaml", "repo": ""}, {"place": filepath.Join(t.TempDir(), "x.yaml"), "repo": "r"},
+	} {
 		body := map[string]any{"file": "x.yaml", "source": []byte("a")}
 		maps.Copy(body, key)
 		want(t, e.write(t, http.MethodPost, "/api/pages/data", body), http.StatusBadRequest,
@@ -394,7 +402,7 @@ func TestManagementPageAndFrame(t *testing.T) {
 
 // A linked data file is drawn each time it is opened; with mistakes it is the page of them in the reader's
 // language, which a download refuses.
-func TestLinkedData(t *testing.T) {
+func TestLinkedData(t *testing.T) { //nolint:tparallel // the subtests go on from the page the test linked
 	t.Parallel()
 
 	e := newEnv(t)
@@ -404,33 +412,34 @@ func TestLinkedData(t *testing.T) {
 	want(t, e.do(t, http.MethodGet, "/a/d/?raw", ""), http.StatusOK, "one")
 	writeFiles(t, filepath.Dir(data), map[string]string{"d.yaml": "lang: en\ntemplate: pic\nnote: two\n"})
 	want(t, e.do(t, http.MethodGet, "/a/d/?raw", ""), http.StatusOK, "two")
-	// An image that cannot be read is told at each item naming it.
-	writeFiles(t, filepath.Dir(data), map[string]string{"d.yaml": "lang: en\ntemplate: pic\ni: [img/none.png, img/none.png]\n"})
-	unread := `: the image "img/none.png" cannot be read (no such file or directory)`
-	gone := e.do(t, http.MethodGet, "/api/pages/d/download", "")
-	want(t, gone, http.StatusBadRequest, "d.yaml:3:5"+unread+"\n"+data+":3:19"+unread)
+	t.Run("an image unread", func(t *testing.T) { //nolint:paralleltest // as above
+		// An image that cannot be read is told at each item naming it.
+		writeFiles(t, filepath.Dir(data), map[string]string{"d.yaml": "lang: en\ntemplate: pic\ni: [img/none.png, img/none.png]\n"})
+		_, _, none := files.Read(filepath.Join(filepath.Dir(data), "img", "none.png"))
+		unread := `: the image "img/none.png" cannot be read (` + testfs.Words(t, none) + `)`
+		gone := e.do(t, http.MethodGet, "/api/pages/d/download", "")
+		want(t, gone, http.StatusBadRequest, "d.yaml:3:5"+unread+"\n"+data+":3:19"+unread)
+	})
 	writeFiles(t, filepath.Dir(data), map[string]string{"d.yaml": "lang: en\ntemplate: nope\n"})
 	want(t, e.do(t, http.MethodGet, "/a/d/?raw", "", "Accept-Language", "ja"), http.StatusOK, "データファイルに誤りがあります")
 	want(t, e.do(t, http.MethodGet, "/api/pages/d/download", ""), http.StatusBadRequest, `unknown template "nope"`)
 	want(t, e.write(t, http.MethodPost, "/api/pages", server.Link{Path: filepath.Join(e.home, "proj", "h.html")}), http.StatusCreated, `"slug":"h"`) //nolint:exhaustruct // the rest not given
 	want(t, e.do(t, http.MethodGet, "/a/h/s.css", ""), http.StatusOK, "p{}")
 	want(t, e.do(t, http.MethodGet, "/a/h/nope.css", ""), http.StatusNotFound, "not found")
-	// What is not a regular file is not served, so that a FIFO does not block the server.
-	if err := unix.Mkfifo(filepath.Join(e.home, "proj", "f.css"), 0o600); err != nil {
-		t.Fatal(err)
-	}
-	want(t, e.do(t, http.MethodGet, "/a/h/f.css", ""), http.StatusNotFound, "not found")
-	if err := os.Remove(data); err != nil {
-		t.Fatal(err)
-	}
-	if err := unix.Mkfifo(data, 0o600); err != nil {
-		t.Fatal(err)
-	}
-	want(t, e.do(t, http.MethodGet, "/api/pages/d/download", ""), http.StatusNotFound, "not found")
 	plain := e.do(t, http.MethodGet, "/api/pages/h/download", "")
 	if plain.Body.String() != "<title>h</title><p>x</p>" {
 		t.Errorf("a linked HTML file downloaded as %q", plain.Body)
 	}
+	// What is not a regular file is not served, so that a FIFO does not block the server.
+	t.Run("FIFO", func(t *testing.T) { //nolint:paralleltest // as above
+		testfs.Mkfifo(t, filepath.Join(e.home, "proj", "f.css"))
+		want(t, e.do(t, http.MethodGet, "/a/h/f.css", ""), http.StatusNotFound, "not found")
+		if err := os.Remove(data); err != nil {
+			t.Fatal(err)
+		}
+		testfs.Mkfifo(t, data)
+		want(t, e.do(t, http.MethodGet, "/api/pages/d/download", ""), http.StatusNotFound, "not found")
+	})
 }
 
 // A folder is linked as a link is; its URL leads to the list with it open, its pages are framed at ?file= and served
@@ -687,26 +696,28 @@ func TestStrictKeys(t *testing.T) {
 }
 
 // A page not there is 404 to remove; one that cannot be removed is told why.
-func TestRemove(t *testing.T) {
+func TestRemove(t *testing.T) { //nolint:tparallel // the subtest goes on from the page the test published
 	t.Parallel()
 
-	if os.Geteuid() == 0 {
-		t.Skip("root removes what it may not")
-	}
 	e := newEnv(t)
 	want(t, e.do(t, http.MethodDelete, "/api/pages/none", "", "Origin", origin), http.StatusNotFound, "not found")
 	e.publish(t, "d", "lang: en\ntemplate: pic\n", nil)
-	dir := filepath.Join(e.root, "d")
-	m := store.New(e.root).ReadMeta("d")
-	if err := os.Chmod(filepath.Join(dir, m.Source), 0o500); err != nil {
-		t.Fatal(err)
-	}
-	t.Cleanup(func() { _ = os.Chmod(filepath.Join(dir, m.Source), 0o700) }) //nolint:errcheck // told already
-	want(t, e.do(t, http.MethodDelete, "/api/pages/d", "", "Origin", origin), http.StatusBadRequest, "cannot be written (permission denied)")
-	want(t, e.do(t, http.MethodGet, "/api/pages", ""), http.StatusOK, `"slug":"d"`)
-	if err := os.Chmod(filepath.Join(dir, m.Source), 0o700); err != nil {
-		t.Fatal(err)
-	}
+	t.Run("cannot be removed", func(t *testing.T) {
+		testfs.UnixOnly(t, "chmod keeps a directory from being written")
+		if os.Geteuid() == 0 {
+			t.Skip("root removes what it may not")
+		}
+		source := filepath.Join(e.root, "d", store.New(e.root).ReadMeta("d").Source)
+		if err := os.Chmod(source, 0o500); err != nil {
+			t.Fatal(err)
+		}
+		t.Cleanup(func() { _ = os.Chmod(source, 0o700) }) //nolint:errcheck // told already
+		want(t, e.do(t, http.MethodDelete, "/api/pages/d", "", "Origin", origin), http.StatusBadRequest, "cannot be written (permission denied)")
+		want(t, e.do(t, http.MethodGet, "/api/pages", ""), http.StatusOK, `"slug":"d"`)
+		if err := os.Chmod(source, 0o700); err != nil {
+			t.Fatal(err)
+		}
+	})
 	want(t, e.do(t, http.MethodDelete, "/api/pages/d", "", "Origin", origin), http.StatusNoContent, "")
 	want(t, e.do(t, http.MethodGet, "/api/pages", ""), http.StatusOK, "[]")
 }

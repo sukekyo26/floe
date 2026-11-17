@@ -5,10 +5,10 @@ import (
 	"os"
 	"path/filepath"
 	"strings"
-	"syscall"
 	"testing"
 
 	"floe/internal/i18n"
+	"floe/internal/testfs"
 	"floe/internal/usererr"
 )
 
@@ -17,9 +17,7 @@ func TestPageMadeFIFO(t *testing.T) {
 	t.Parallel()
 
 	fifo := filepath.Join(t.TempDir(), "a.html")
-	if err := syscall.Mkfifo(fifo, 0o600); err != nil {
-		t.Fatal(err)
-	}
+	testfs.Mkfifo(t, fifo)
 	pages := []rendered{{from: "a.yaml", to: "a.html", real: fifo, page: []byte("page")}}
 	want := "a.html: this is neither a regular file nor a directory (a FIFO, a device or the like), which floe may never finish reading: put a regular file here"
 	var out bytes.Buffer

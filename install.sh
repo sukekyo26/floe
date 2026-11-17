@@ -128,7 +128,7 @@ fi
 os=$(uname -s | tr '[:upper:]' '[:lower:]')
 case "$os" in
   linux | darwin) ;;
-  *) die "unsupported OS: $os (floe supports linux and darwin)" ;;
+  *) die "unsupported OS: $os (install.sh installs floe on linux and darwin; on Windows, run install.ps1 in PowerShell: irm https://raw.githubusercontent.com/$REPO/main/install.ps1 | iex)" ;;
 esac
 
 arch=$(uname -m)

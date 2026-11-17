@@ -3,15 +3,18 @@ package cli_test
 import (
 	"os"
 	"path/filepath"
-	"syscall"
 	"testing"
+
+	"floe/internal/dirs"
+	"floe/internal/files"
+	"floe/internal/testfs"
 )
 
 const notFile = ": this is neither a regular file nor a directory (a FIFO, a device or the like), which floe may never finish reading: put a regular file here\n"
 
 // A page that is a link to what is no .html file, a data file among them, is refused, and nothing is written:
 // not the file it leads to, nor the other pages. One to an .html file, in any case, and a hard link are written.
-func TestRenderLinksToNoPage(t *testing.T) {
+func TestRenderLinksToNoPage(t *testing.T) { //nolint:tparallel // the device case runs in turn, before the checks after it
 	t.Parallel()
 
 	dir := write(t, map[string]string{
@@ -21,19 +24,28 @@ func TestRenderLinksToNoPage(t *testing.T) {
 	if err := os.Mkdir(filepath.Join(dir, "somedir"), 0o755); err != nil {
 		t.Fatal(err)
 	}
-	for page, to := range map[string]string{"a.html": "a.yaml", "b.html": "c.yaml", "d.html": "x.txt", "e.html": "/dev/zero"} {
+	for page, to := range map[string]string{"a.html": "a.yaml", "b.html": "c.yaml", "d.html": "x.txt"} {
 		link(t, to, filepath.Join(dir, page))
 	}
 	link(t, "somedir", filepath.Join(dir, "s.html"))
 	// The page's link as the system resolves it: /private/var for /var on macOS.
-	resolved, err := filepath.EvalSymlinks(dir)
+	got, err := files.Real(dir)
 	if err != nil {
 		t.Fatal(err)
 	}
+	resolved := dirs.Shown(got) // as floe shows it
 	link(t, "y.html", filepath.Join(dir, "x.html"))
 	link(t, "a.yaml", filepath.Join(dir, "y.html"))
 	refused := func(page, to string) string {
 		return page + ": this page is a link to " + to + ", which is no .html file: floe writes pages to .html files alone; point the link at one, or remove it\n"
+	}
+	renders := func(t *testing.T, file, want string) {
+		t.Helper()
+		for _, args := range [][]string{{"render", file}, {"render", "--check", file}, {"render", file, "c.yaml"}} {
+			if code, stdout, stderr := run(dir, args...); code != 1 || stdout != "" || stderr != want {
+				t.Errorf("floe %v = %d, %q, %q; want 1, %q", args, code, stdout, stderr, want)
+			}
+		}
 	}
 	for _, tt := range []struct {
 		file, want string
@@ -41,15 +53,16 @@ func TestRenderLinksToNoPage(t *testing.T) {
 		{"a.yaml", refused("a.html", filepath.Join(resolved, "a.yaml"))},
 		{"b.yaml", refused("b.html", filepath.Join(resolved, "c.yaml"))},
 		{"d.yaml", refused("d.html", filepath.Join(resolved, "x.txt"))},
-		{"e.yaml", refused("e.html", "/dev/zero")},
 		{"x.yaml", refused("x.html", filepath.Join(resolved, "a.yaml"))},
 	} {
-		for _, args := range [][]string{{"render", tt.file}, {"render", "--check", tt.file}, {"render", tt.file, "c.yaml"}} {
-			if code, stdout, stderr := run(dir, args...); code != 1 || stdout != "" || stderr != tt.want {
-				t.Errorf("floe %v = %d, %q, %q; want 1, %q", args, code, stdout, stderr, tt.want)
-			}
-		}
+		renders(t, tt.file, tt.want)
 	}
+	// In turn, before the checks below that nothing was written.
+	t.Run("a link to a device", func(t *testing.T) { //nolint:paralleltest // as above
+		testfs.UnixOnly(t, "a device told by its kind (Windows: TestNotLocalWindows)")
+		link(t, "/dev/zero", filepath.Join(dir, "e.html"))
+		renders(t, "e.yaml", refused("e.html", "/dev/zero"))
+	})
 	if err := os.WriteFile(filepath.Join(dir, "s.yaml"), []byte(good), 0o600); err != nil {
 		t.Fatal(err)
 	}
@@ -94,9 +107,7 @@ func TestFIFOsRefused(t *testing.T) {
 
 	dir := write(t, map[string]string{"a.yaml": good, "b.yaml": good})
 	for _, name := range []string{"a.html", "f.yaml", "z.zip"} {
-		if err := syscall.Mkfifo(filepath.Join(dir, name), 0o600); err != nil {
-			t.Fatal(err)
-		}
+		testfs.Mkfifo(t, filepath.Join(dir, name))
 	}
 	env := map[string]string{"FLOE_ICONS_DIR": filepath.Join(dir, "icons")}
 	for _, tt := range []struct {
@@ -119,6 +130,7 @@ func TestFIFOsRefused(t *testing.T) {
 
 // A page written again keeps its permissions, one that cannot be read too.
 func TestRenderKeepsPermissions(t *testing.T) {
+	testfs.UnixOnly(t, "permission bits")
 	t.Parallel()
 
 	for _, mode := range []os.FileMode{0o600, 0o664, 0o200} {

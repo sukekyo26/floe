@@ -105,7 +105,7 @@ var messagesJA = map[string]string{
 	"kit_words_lang_not_mapping": "%s: 言葉の名前とその文字列を書いてください",
 	"kit_words_not_text":         "%s.%s: 文字列で書いてください。YAML が数・true・false・null と読むものは引用符で囲みます",
 	"lang_twice":                 "%s と %s は同じ言語です（言語タグは大文字と小文字、_ と - で区別しません）。どちらか 1 つにしてください",
-	"kit_image_path":             "「%[1]s」は floe が %[2]s のディレクトリの下で読むパスではありません。そのディレクトリからの相対で、名前の間に / を 1 つずつ書き、./（./pic.png は pic.png に）、..、両端の / を書かないでください",
+	"kit_image_path":             "「%[1]s」は floe が %[2]s のディレクトリの下で読むパスではありません。そのディレクトリからの相対で、名前の間に / を 1 つずつ書き、./（./pic.png は pic.png に）、..、両端の / を書かないでください（Windows では \\、:、NUL・CON などのデバイスの名前も書かないでください）",
 	"kit_image_type":             "「%s」は floe が扱う画像ではありません。png・jpeg・gif・webp・svg を使ってください",
 	"kit_image_not_file":         "「%s」は画像のファイルではなく、ディレクトリなどです。画像のふつうのファイルを指してください",
 	"kit_image_unread":           "画像「%[2]s」を読めません（%[1]s）",
@@ -182,6 +182,8 @@ var messagesJA = map[string]string{
 	"cli_task_task_off":        `--task "" はページをタスクから外すので、--%s と一緒には使えません`,
 	"cli_path_empty":           "%s が空のパスです。%s を渡し、そのために書いた変数が設定されているか確かめてください",
 	"cli_relative_no_cwd":      "作業ディレクトリを読めないので、相対パス %s は何も指しません。あるディレクトリから floe を走らせるか、絶対パスを渡してください",
+	"path_drive_relative":      "%s はドライブ %s の今のディレクトリからの相対パスで、floe は読みません。全体のパス（%s\\…）か、ここからの相対パスにしてください",
+	"path_not_local":           "ここは、ローカルのドライブの上の、ふつうの名前の所ではありません。%s（ネットワークの共有・ネットワークドライブ・ドライブ文字の無いボリューム・デバイス・パイプ・ストリームの名前・floe がたどらない形のリンク）そのものか、そこへ行きます。floe はローカルのドライブの上のものだけを開きます。ローカルのドライブの上に、ふつうの名前で置いて、そのパスを使ってください",
 	"cli_wants_data":           "データファイル（.yaml か .yml）",
 	"cli_wants_out_dir":        "ページを書くディレクトリ",
 	"cli_check_not_data":       "%s はデータファイル（.yaml か .yml）ではありません",
@@ -194,10 +196,11 @@ var messagesJA = map[string]string{
 
 	// files
 	// link
-	"link_not_real":        "%s は絶対パスの実パス（symlink を解決して正規化したパス）ではないので、登録できるかを確かめられません",
+	"link_not_real":        "%s は実のパスではありません。リンクと junction をたどった、システムの言う全体のパスを渡してください",
 	"link_not_linkable":    "%s は通常の HTML ファイル（.html / .htm）でもデータファイル（.yaml / .yml）でもフォルダでもないので、登録できません",
-	"link_home_unresolved": "ホームディレクトリ「%s」を解決できないので、登録できるかを確かめられません。HOME に存在するディレクトリの絶対パスを設定してください",
-	"link_hidden_home":     "%s はホーム直下の隠しディレクトリ（設定や鍵の置き場）の中にあるので、登録できません",
+	"link_home_unresolved": "ホームディレクトリ「%s」を解決できないので、登録できるかを確かめられません。%s に存在するディレクトリの絶対パスを設定してください",
+	"link_hidden_home":     "%s はホームの隠しディレクトリかアプリのデータの場所（Windows の AppData）の中にあり、設定や鍵の置き場なので登録できません。プロジェクトのフォルダなど別の場所に置いてリンクしてください",
+	"link_appdata_unknown": "%s を確かめられません。システムがアプリのデータの場所を答えません（%s）。確かめられないものはリンクしません",
 	"link_exposes_dir":     "%[1]s を登録すると %[2]s 全体が公開されます。専用のディレクトリに置いてから登録してください",
 
 	// store
@@ -210,6 +213,7 @@ var messagesJA = map[string]string{
 	"store_slug_placed":       "URL 名「%[1]s」はリポジトリ %[3]s の %[2]s から公開されています。別の URL 名にしてください",
 	"store_slug_placed_alone": "URL 名「%s」は %s から公開されています。別の URL 名にしてください",
 	"store_slug_taken":        "URL 名「%s」は使われています。別の URL 名にしてください",
+	"store_edit_renamed_only": "ページの URL 名は「%[2]s」に変わり、元に戻せませんでした（%[1]s）。ほかの変更は保存されていません。もう一度変更を保存してください",
 	"store_reads_unset":       "無いか、壊れているか、since がありません。floe stop の後に floe serve を起こすと書き直します",
 	"store_project_slash":     "プロジェクト名に / だけは使えません",
 	"store_project":           "プロジェクト「%s」",
@@ -269,7 +273,7 @@ var messagesJA = map[string]string{
 	"cli_not_utf8":          "%s が UTF-8 ではありません。サーバーは UTF-8 しか受けません。名前を変えるか、UTF-8 で渡してください",
 	"server_mistakes_head":  "データファイルに誤りがあります",
 	"server_mistakes_lead":  "直してファイルを保存すると、このタブにページが戻ります。",
-	"store_no_dir":          "HOME が絶対パスでないので、ページの保存先がありません。FLOE_DIR に絶対パスを設定してください",
+	"store_no_dir":          "%s が絶対パスでないので、ページの保存先がありません。FLOE_DIR に絶対パスを設定してください",
 
 	"cannot_write": "書けません（%s）。ディレクトリがあって書けるか、名前が空いていて長すぎないかを確かめてください",
 	"dir_setting":  "%[2]s は %[3]s ですが、ディレクトリとして使えません（%[1]s）。そこを floe が使えるディレクトリにするか、%[2]s を別のディレクトリにしてください",
@@ -279,7 +283,7 @@ var messagesJA = map[string]string{
 	"icons_unknown_set":        "アイコン集 \"%s\" はありません。%s を使ってください",
 	"icons_builtin":            "%[1]s のアイコンは floe に入っているので、取ってくる必要はありません。floe icons search %[1]s <語> で探せます",
 	"dir_relative":             "%s が相対パス %s です。絶対パスにしてください",
-	"icons_no_dir":             "HOME が絶対パスでないので、アイコンのディレクトリがありません。FLOE_ICONS_DIR に絶対パスを設定してください",
+	"icons_no_dir":             "%s が絶対パスでないので、アイコンのディレクトリがありません。FLOE_ICONS_DIR に絶対パスを設定してください",
 	"icons_not_fetched":        "%[1]s のアイコンが %[2]s にありません。floe icons fetch %[3]s を実行してから（%[5]s から約 %[4]s を取得します）、やり直してください",
 	"icons_not_file":           "ふつうのファイルでもディレクトリでもない（FIFO やデバイスなど）ので、floe は開きません。%s でアイコンを取り直してください",
 	"icons_broken":             "読めません（%s）。%s でアイコンを取り直してください",
@@ -353,7 +357,7 @@ var messagesJA = map[string]string{
 	"cli_unknown_part":           `部品 "%s" はありません。%s から選んでください`,
 	"cli_unknown_file":           `%s にファイル "%s" はありません（ファイル: %s）`,
 	"cli_new_exists":             "ここにはこの名前のものがもうあります。別の名前にするか、それを消してください",
-	"cli_new_no_dir":             "HOME が絶対パスでないので、既定のディレクトリがありません。%s に絶対パスを設定してください",
+	"cli_new_no_dir":             "%s が絶対パスでないので、既定のディレクトリがありません。%s に絶対パスを設定してください",
 	"cli_made":                   "%s を作りました",
 	"cli_skill_agent":            "floe のスキルを入れるエージェントを 1 つ名指してください：%s",
 	"cli_skill_same":             "%s はもうこの floe のスキルです",

@@ -124,6 +124,28 @@ linters:
           msg: "use files.DirFS, which opens a file without blocking on a FIFO"
         - pattern: ^os\.Root\.FS$
           msg: "use files.Root, which opens a file without blocking on a FIFO"
+        - pattern: ^filepath\.EvalSymlinks$
+          msg: "use files.Real, which follows junctions on Windows and names the path as the system does"
+        - pattern: ^os\.(Stat|Lstat|ReadDir|OpenRoot|Mkdir|MkdirAll)$
+          msg: "use files.Stat, Lstat, ReadDir, OpenRoot, Mkdir or MkdirAll: files refuses shares and devices before the system is called"
+        - pattern: ^os\.(ReadFile|Open|OpenFile)$
+          msg: "use files.Read, Open or OpenAppend (OpenLock for a lock): files refuses shares and devices before the system is called"
+        - pattern: ^os\.Readlink$
+          msg: "use files.Real for where a link leads: files refuses shares and devices before the system is called"
+        - pattern: ^os\.Create$
+          msg: "use files.WriteAtomic: files refuses shares and devices before the system is called"
+        - pattern: ^os\.OpenInRoot$
+          msg: "use files.NewRoot: files refuses shares and devices before the system is called"
+        - pattern: ^os\.(Rename|Remove|RemoveAll|MkdirTemp)$
+          msg: "use files.Rename, Remove, RemoveAll or MkdirTemp: files refuses shares and devices before the system is called"
+        - pattern: ^os\.(WriteFile|CreateTemp)$
+          msg: "use files.WriteAtomic, or the WriteFile of a files.OpenRoot: files refuses shares and devices before the system is called"
+        - pattern: ^os\.(CopyFS|Chmod|Chtimes|Symlink|Link|Truncate|Chown|Lchown)$
+          msg: "add a function to files for it first: files refuses shares and devices before the system is called"
+        - pattern: ^filepath\.(Walk|WalkDir|Glob)$
+          msg: "use files.ReadDir, or fs.WalkDir of files.DirFS: files refuses shares and devices before the system is called"
+        - pattern: ^(syscall\.(ENOTDIR|ERROR_PATH_NOT_FOUND)|unix\.ENOTDIR|windows\.ERROR_PATH_NOT_FOUND)$
+          msg: "ask files.NotDir, and make the error with files.ErrNotDir: a file on a path's way is files' to tell (Windows says not there for it)"
       analyze-types: true
       exclude-godoc-examples: true
     depguard:
@@ -233,6 +255,21 @@ linters:
         linters:
           - lll
           - dupl
+      # files.Real is the one place that follows symlinks (by EvalSymlinks on Unix).
+      - path: internal/files/files_unix\.go
+        linters:
+          - forbidigo
+        text: EvalSymlinks
+      # files makes the system's calls on a path for the rest of floe; testfs makes tests' files.
+      - path: internal/(files|testfs)/
+        linters:
+          - forbidigo
+        text: files refuses shares and devices before the system is called
+      # files.NotDir is the one place that reads ENOTDIR, which Windows gives for a directory not there too.
+      - path: internal/files/
+        linters:
+          - forbidigo
+        text: "a file on a path's way is files' to tell"
       # Tests get a relaxed profile but still benefit from bug catchers.
       - path: _test\.go
         linters:

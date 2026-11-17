@@ -4,7 +4,6 @@ import (
 	"bytes"
 	"errors"
 	"io/fs"
-	"os"
 	"path/filepath"
 
 	"floe/internal/doc"
@@ -111,7 +110,7 @@ func (s *Store) keepDrawn(slug string, now *Meta, got *drawn, err error, changed
 // mistake, what it could read of the copy, or nil when it could not read the data file.
 func redraw(dw Drawing, slug string, m *Meta, dir string) (*drawn, error) {
 	data := filepath.Join(dir, dataName)
-	src, err := os.ReadFile(data) //nolint:gosec // G304: a copy of the store's own
+	src, _, err := files.Read(data)
 	if err != nil {
 		return nil, usererr.CannotRead(data, err) //nolint:wrapcheck // the system's words, at the copy
 	}
@@ -120,7 +119,7 @@ func redraw(dw Drawing, slug string, m *Meta, dir string) (*drawn, error) {
 		got.template = d.Template
 	}
 	had := filepath.Join(dir, pageName)
-	old, err := os.ReadFile(had) //nolint:gosec // G304: as above
+	old, _, err := files.Read(had)
 	if err != nil {
 		return got, usererr.CannotRead(had, err) //nolint:wrapcheck // as above
 	}

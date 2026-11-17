@@ -129,6 +129,44 @@ jobs:
       # The browser tests run in the browser jobs, on machines of their own.
       - run: just test-race-core
 
+  # The tests on Windows, without the race detector (it needs cgo there) and without the browser tests (not run there):
+  # internal/browsertest is left out as the justfile's core_pkgs leaves it out. A test that does not hold on Windows
+  # is marked one by one with internal/testfs's UnixOnly.
+  windows:
+    name: Test (windows)
+    # The tests' temporary directories are kept out of AppData: floe refuses to link what is in a folder of application
+    # data, and %TEMP% is one (AppData\Local\Temp).
+    needs: changes
+    if: ${{ !cancelled() && needs.changes.outputs.skip != 'true' }}
+    runs-on: windows-latest
+    timeout-minutes: 20
+    steps:
+      # The one symlink in the repository (a corpus sample's) is checked out as one: the runner may make symlinks.
+      - run: git config --global core.symlinks true
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+      - uses: actions/setup-go@b7ad1dad31e06c5925ef5d2fc7ad053ef454303e # v7.0.0
+        with:
+          go-version-file: go.mod
+          cache: true
+      - run: go vet ./...
+      # install.ps1, read by the version pinned here: a newer one may warn of more. Write-Host is how it talks.
+      - name: PSScriptAnalyzer
+        shell: pwsh
+        run: |
+          $ProgressPreference = 'SilentlyContinue'
+          $took = Measure-Command { Install-Module PSScriptAnalyzer -RequiredVersion 1.25.0 -Scope CurrentUser -Force }
+          'Install-Module took {0:N1} s' -f $took.TotalSeconds
+          Import-Module PSScriptAnalyzer -RequiredVersion 1.25.0
+          Invoke-ScriptAnalyzer -Path install.ps1 -Severity Warning, Error -ExcludeRule PSAvoidUsingWriteHost -EnableExit
+      - name: Test
+        shell: bash
+        env:
+          TMP: 'C:\floe-tmp'
+          TEMP: 'C:\floe-tmp'
+        run: |
+          mkdir -p /c/floe-tmp
+          go test -count=1 -timeout 15m $(go list ./... | grep -v /internal/browsertest$)
+
   browser:
     name: Browser (${{ matrix.part }})
     needs: changes
@@ -195,7 +233,7 @@ jobs:
       - run: just vuln
 
   build:
-    name: Release assets (linux/darwin x amd64/arm64)
+    name: Release assets
     needs: changes
     if: ${{ !cancelled() && needs.changes.outputs.skip != 'true' }}
     runs-on: ubuntu-latest
@@ -208,6 +246,26 @@ jobs:
           cache: true
       - uses: ./.github/actions/setup-just
       - run: just release-assets
+      # release.yml attests and publishes what just release-files lists, which runs only at a release: here the recipe
+      # is checked to list each of the justfile's assets under bin/ and SHA256SUMS, each a file just made (a wrong
+      # assets or targets is not told here: the count comes from assets too). bash runs with pipefail, failing with just.
+      - name: Check the release files
+        shell: bash
+        run: |
+          files=$(just release-files)
+          want=$(($(just --evaluate assets | wc -w) + 1))
+          got=$(printf '%s\n' "$files" | wc -l)
+          if [ "$got" -ne "$want" ]; then
+            echo "just release-files lists $got files, want $want (each asset and bin/SHA256SUMS):" >&2
+            printf '%s\n' "$files" >&2
+            exit 1
+          fi
+          while IFS= read -r f; do
+            if [ ! -f "$f" ]; then
+              echo "just release-files lists $f, which just release-assets did not make" >&2
+              exit 1
+            fi
+          done <<< "$files"
       - name: Run the host binary
         run: ./bin/floe-linux-amd64 version
 

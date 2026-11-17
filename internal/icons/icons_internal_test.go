@@ -41,13 +41,13 @@ func TestFetchRestoresPrevious(t *testing.T) { //nolint:paralleltest // replaces
 	if err := os.WriteFile(src, zipOf(t, map[string]int{"Architecture-Group-Icons_01022030/Region_32.svg": 1}), 0o600); err != nil {
 		t.Fatal(err)
 	}
-	rename = func(from, to string) error {
-		if to == dir {
+	rename = func(parent, from, to string) error {
+		if to == filepath.Base(dir) {
 			return &os.LinkError{Op: "rename", Old: from, New: to, Err: errors.New("injected")}
 		}
-		return os.Rename(from, to)
+		return files.Rename(parent, from, to)
 	}
-	t.Cleanup(func() { rename = os.Rename })
+	t.Cleanup(func() { rename = files.Rename })
 
 	_, err := set.Fetch(context.Background(), "aws", []Source{{Name: src, At: src}}, true)
 	if got := told(err); !strings.Contains(got, "cannot be written (injected)") {
@@ -74,15 +74,15 @@ func TestFetchLeavesPrevious(t *testing.T) { //nolint:paralleltest // replaces r
 		t.Fatal(err)
 	}
 	var old string
-	rename = func(from, to string) error {
-		old = from + "-old"
+	rename = func(parent, from, to string) error {
+		old = filepath.Join(parent, from) + "-old"
 		// Something takes the set's place, so the previous icons cannot go back either.
-		if err := os.MkdirAll(filepath.Join(to, "x"), 0o700); err != nil {
+		if err := os.MkdirAll(filepath.Join(parent, to, "x"), 0o700); err != nil {
 			return err
 		}
 		return &os.LinkError{Op: "rename", Old: from, New: to, Err: errors.New("injected")}
 	}
-	t.Cleanup(func() { rename = os.Rename })
+	t.Cleanup(func() { rename = files.Rename })
 
 	_, err := New(root, false, "").Fetch(context.Background(), "aws", []Source{{Name: src, At: src}}, true)
 	want := dir + ": cannot be written (injected), and the previous icons are left in " + old +

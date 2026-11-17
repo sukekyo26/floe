@@ -17,8 +17,6 @@ import (
 	"testing/fstest"
 	"time"
 
-	"golang.org/x/sys/unix"
-
 	"floe/internal/dirs"
 	"floe/internal/doc"
 	"floe/internal/files"
@@ -37,7 +35,7 @@ func linkName(file, cwd string) string {
 	if !indexRe.MatchString(filepath.Base(file)) {
 		return files.SlugFromFile(file)
 	}
-	if abs, ok := dirs.Under(cwd, file); ok {
+	if abs, err := dirs.Under(cwd, file); err == nil {
 		file = abs
 	}
 	return files.Slug(filepath.Base(filepath.Dir(filepath.Clean(file))))
@@ -505,11 +503,14 @@ func readLink(file string, opts Options, cwd, home string) (string, []byte, bool
 		return "", nil, false, usererr.New("store_link_empty")
 	}
 	// The API gives no cwd: a relative link from it is the sender's mistake.
-	abs, ok := dirs.Under(cwd, file)
-	if !ok {
+	abs, err := dirs.Under(cwd, file)
+	if errors.Is(err, dirs.ErrDriveRelative) {
+		return "", nil, false, usererr.New("path_drive_relative", file, filepath.VolumeName(file), filepath.VolumeName(file))
+	}
+	if err != nil {
 		return "", nil, false, usererr.New("store_link_relative", file)
 	}
-	path, err := filepath.EvalSymlinks(abs)
+	path, err := files.Real(abs)
 	if err != nil {
 		return "", nil, false, usererr.CannotRead(file, err) //nolint:wrapcheck // the system's words, at the file
 	}
@@ -757,7 +758,7 @@ func (s *Store) commit(e *Entry, mark string, pre *pressed) error {
 	if !ok {
 		return fmt.Errorf("store: save %q, which cannot be a slug", e.Slug) //nolint:err113 // floe's own mistake
 	}
-	made := os.Mkdir(dir, 0o700) == nil
+	made := files.Mkdir(dir, 0o700) == nil
 	if e.Meta.IsLink() {
 		// What it replaces is a link, or a page whose meta.json could not be read, whose copy and versions go.
 		if err = s.WriteMeta(e.Slug, &e.Meta); err == nil {
@@ -769,7 +770,7 @@ func (s *Store) commit(e *Entry, mark string, pre *pressed) error {
 	// The directory this save made, left, would keep a rename off the slug from the management page, which
 	// does not list it. One that was there (its meta.json unreadable) stays.
 	if err != nil && made {
-		_ = os.RemoveAll(dir) //nolint:errcheck // the error is the save's
+		_ = files.RemoveAll(dir) //nolint:errcheck // the error is the save's
 	}
 	return err
 }
@@ -847,7 +848,7 @@ func (s *Store) keepCopy(slug string, m *Meta, src, page []byte, images map[stri
 		return err
 	}
 	undo := func() {
-		_ = os.RemoveAll(filepath.Join(dir, source)) //nolint:errcheck // the error is the write's
+		_ = files.RemoveAll(filepath.Join(dir, source)) //nolint:errcheck // the error is the write's
 	}
 	if kept != nil {
 		unkeep, err := s.writeVersion(slug, m, kept)
@@ -856,7 +857,7 @@ func (s *Store) keepCopy(slug string, m *Meta, src, page []byte, images map[stri
 			return err
 		}
 		undo = func() {
-			_ = os.RemoveAll(filepath.Join(dir, source)) //nolint:errcheck // as above
+			_ = files.RemoveAll(filepath.Join(dir, source)) //nolint:errcheck // as above
 			unkeep()
 		}
 	}
@@ -887,11 +888,11 @@ func (s *Store) writeVersion(slug string, m *Meta, kept *pressed) (func(), error
 		return nil, fmt.Errorf("store: keep version %d of %q, which meta.json names as none before its last", kept.n, slug)
 	}
 	dir := filepath.Dir(file)
-	made := os.Mkdir(dir, 0o700) == nil
+	made := files.Mkdir(dir, 0o700) == nil
 	unkeep := func() {
-		_ = os.Remove(file) //nolint:errcheck // the error is the write's
+		_ = files.Remove(file) //nolint:errcheck // the error is the write's
 		if made {
-			_ = os.Remove(dir) //nolint:errcheck // as above
+			_ = files.Remove(dir) //nolint:errcheck // as above
 		}
 	}
 	if err := files.WriteAtomic(file, kept.gz, 0o600, nil); err != nil {
@@ -914,16 +915,16 @@ func (s *Store) removeVersions(slug string, m *Meta) {
 		}
 	}
 	if len(named) == 0 {
-		_ = os.RemoveAll(dir) //nolint:errcheck // as below
+		_ = files.RemoveAll(dir) //nolint:errcheck // as below
 		return
 	}
-	entries, err := os.ReadDir(dir)
+	entries, err := files.ReadDir(dir)
 	if err != nil {
 		return
 	}
 	for _, d := range entries {
 		if !named[d.Name()] {
-			_ = os.RemoveAll(filepath.Join(dir, d.Name())) //nolint:errcheck // as above
+			_ = files.RemoveAll(filepath.Join(dir, d.Name())) //nolint:errcheck // as above
 		}
 	}
 }
@@ -938,37 +939,37 @@ func (s *Store) removeVersions(slug string, m *Meta) {
 // comes to see many saves at once.
 func (s *Store) lock(create bool) (func(), error) {
 	if create {
-		if err := os.MkdirAll(s.root, 0o700); err != nil {
+		if err := files.MkdirAll(s.root, 0o700); err != nil {
 			return nil, usererr.CannotWrite(s.root, err) //nolint:wrapcheck // the system's words, at the store
 		}
-	} else if _, err := os.Stat(s.root); errors.Is(err, fs.ErrNotExist) {
+	} else if _, err := files.Stat(s.root); errors.Is(err, fs.ErrNotExist) {
 		return nil, err //nolint:wrapcheck // for the caller to tell as it may
 	} else if err != nil {
 		return nil, usererr.CannotRead(s.root, err) //nolint:wrapcheck // the system's words, at the store
 	}
 	file := filepath.Join(s.root, ".lock")
-	f, err := os.OpenFile(file, os.O_RDONLY|os.O_CREATE, 0o600) //nolint:gosec // G304: the store's own
+	f, err := files.OpenLock(file)
 	if err != nil {
 		return nil, usererr.CannotWrite(file, err) //nolint:wrapcheck // the system's words, at the lock
 	}
-	if err = unix.Flock(int(f.Fd()), unix.LOCK_EX); err != nil { //nolint:gosec // G115: a descriptor fits an int
+	unlock, err := files.Lock(f)
+	if err != nil {
 		_ = f.Close()                              //nolint:errcheck // nothing written
 		return nil, usererr.CannotWrite(file, err) //nolint:wrapcheck // the system's words, at the lock
 	}
-	// Closing it lets the lock go.
-	return func() { _ = f.Close() }, nil //nolint:errcheck // as above
+	return unlock, nil
 }
 
 // writeSource writes the copy of a stored page, the data file src, the page drawn from it and its images at
 // the paths it names them by under images/ (made when there are none, for a rebuild to read), to a new
 // directory under dir, and returns its name. One left by a write that fails goes.
 func writeSource(dir string, src, page []byte, images map[string][]byte) (string, error) {
-	tmp, err := os.MkdirTemp(dir, sourcePrefix)
+	tmp, err := files.MkdirTemp(dir, sourcePrefix)
 	if err != nil {
 		return "", usererr.CannotWrite(dir, err) //nolint:wrapcheck // the system's words, at the page's directory
 	}
 	if err = writeCopy(tmp, src, page, images); err != nil {
-		_ = os.RemoveAll(tmp) //nolint:errcheck // the next save removes it otherwise
+		_ = files.RemoveAll(tmp) //nolint:errcheck // the next save removes it otherwise
 		return "", err
 	}
 	return filepath.Base(tmp), nil
@@ -976,7 +977,7 @@ func writeSource(dir string, src, page []byte, images map[string][]byte) (string
 
 // writeCopy writes the copy under dir, through os.Root so that nothing leads the writes out of it.
 func writeCopy(dir string, src, page []byte, images map[string][]byte) error {
-	root, err := os.OpenRoot(dir)
+	root, err := files.OpenRoot(dir)
 	if err != nil {
 		return usererr.CannotWrite(dir, err) //nolint:wrapcheck // the system's words, at the copy
 	}
@@ -1010,13 +1011,13 @@ func writeCopy(dir string, src, page []byte, images map[string][]byte) error {
 // removeSources removes the copies under dir but keep ("" for none): the ones a save replaced, or
 // left when it stopped halfway. The save is done by then: one that cannot go is left for the next.
 func removeSources(dir, keep string) {
-	entries, err := os.ReadDir(dir)
+	entries, err := files.ReadDir(dir)
 	if err != nil {
 		return
 	}
 	for _, d := range entries {
 		if name := d.Name(); strings.HasPrefix(name, sourcePrefix) && name != keep {
-			_ = os.RemoveAll(filepath.Join(dir, name)) //nolint:errcheck // as above
+			_ = files.RemoveAll(filepath.Join(dir, name)) //nolint:errcheck // as above
 		}
 	}
 }
@@ -1050,7 +1051,7 @@ func (s *Store) Remove(slug string) error {
 // removePage removes dir, a page's directory, its meta.json last: one that cannot all be removed keeps it, listed
 // still, for floe rm to remove the rest. What cannot be removed is told at it.
 func removePage(dir string) error {
-	entries, err := os.ReadDir(dir)
+	entries, err := files.ReadDir(dir)
 	if err != nil {
 		return usererr.CannotWrite(dir, err) //nolint:wrapcheck // the system's words, at the page
 	}
@@ -1059,12 +1060,12 @@ func removePage(dir string) error {
 			continue
 		}
 		at := filepath.Join(dir, e.Name())
-		if err := os.RemoveAll(at); err != nil {
+		if err := files.RemoveAll(at); err != nil {
 			return usererr.CannotWrite(at, err) //nolint:wrapcheck // as above
 		}
 	}
 	for _, at := range []string{filepath.Join(dir, "meta.json"), dir} {
-		if err := os.Remove(at); err != nil {
+		if err := files.Remove(at); err != nil {
 			return usererr.CannotWrite(at, err) //nolint:wrapcheck // as above
 		}
 	}
@@ -1108,8 +1109,7 @@ type Edited struct {
 // Tags are changed under the lock, so that writers who send only their change keep each other's.
 // The page drawn stays as it is, its title and slug as when it was drawn.
 func (s *Store) Edit(slug string, ed Edit) (Edited, error) {
-	from, ok := s.dir(slug)
-	if !ok {
+	if _, ok := s.dir(slug); !ok {
 		return Edited{}, ErrNotFound
 	}
 	unlock, err := s.lock(false)
@@ -1134,19 +1134,38 @@ func (s *Store) Edit(slug string, ed Edit) (Edited, error) {
 		return Edited{}, err
 	}
 	editTitle(slug, to, m, ed.Title)
-	if err := s.WriteMeta(slug, m); err != nil {
+	if err := s.renameWriting(slug, to, m); err != nil {
 		return Edited{}, err
-	}
-	// Renaming moves the directory only; tabs open on the old URL show "not found".
-	if to != slug {
-		dest, _ := s.dir(to)
-		if err := os.Rename(from, dest); err != nil {
-			return Edited{}, usererr.CannotWrite(dest, err) //nolint:wrapcheck // the system's words, at the new name
-		}
 	}
 	return Edited{
 		Slug: to, TaskProject: ProjectKey(m.Project), Task: m.Task, OffTask: off.Name, OffCategory: off.Category,
 	}, nil
+}
+
+// renameWriting moves the page slug to the name to, when it changes, and then writes m there: one that cannot be moved
+// is left as it was, all of it; one moved whose meta.json cannot be written is moved back, or, when that fails too,
+// told as moved alone. Renaming moves the directory only; tabs open on the old URL show "not found".
+func (s *Store) renameWriting(slug, to string, m *Meta) error {
+	dest, _ := s.dir(to)
+	if to != slug {
+		if err := files.Rename(s.root, slug, to); err != nil {
+			return usererr.CannotWrite(dest, err) //nolint:wrapcheck // the system's words, at the new name
+		}
+	}
+	err := s.WriteMeta(to, m)
+	if err == nil || to == slug {
+		return err
+	}
+	if back := files.Rename(s.root, to, slug); back != nil {
+		//nolint:wrapcheck // the system's words, at the new name
+		return usererr.InSystemWords("store_edit_renamed_only", dest, back, to)
+	}
+	// Moved back: told at the meta.json that is there, under the slug as it was.
+	if ue, ok := errors.AsType[*usererr.Error](err); ok && ue.File() != "" {
+		from, _ := s.dir(slug)
+		return ue.PlacedAt(filepath.Join(from, "meta.json"), 0, 0)
+	}
+	return err
 }
 
 // setProject sets the project ed names of m, taking m off its task when it moves it: it returns the task and category
@@ -1247,7 +1266,7 @@ func (s *Store) renameTo(slug string, to *string) (string, error) {
 		return "", mistake
 	}
 	dir, _ := s.dir(name)
-	if _, err := os.Lstat(dir); name != slug && !errors.Is(err, os.ErrNotExist) {
+	if _, err := files.Lstat(dir); name != slug && !errors.Is(err, os.ErrNotExist) {
 		return "", conflict(usererr.New("store_slug_taken", name))
 	}
 	return name, nil

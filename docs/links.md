@@ -1,10 +1,10 @@
 # Linked files and folders
 
-`floe publish --link` registers an HTML file, a data file or a folder where it is, instead of storing a page. [commands.md](commands.md#linked-files) tells what can be linked, what is refused and the slug it takes.
+`floe publish --link` registers an HTML file, a data file or a folder where it is, instead of storing a page. [commands.md](commands.md#linked-files) tells what can be linked, what is refused and the slug it takes; on Windows more is refused ([Windows](commands.md#windows)).
 
 ## An HTML file
 
-An HTML file is shown as it is: floe adds nothing around it, so a page of your own or one another tool made shows as written. The files under its directory are served too, for its relative references (CSS, scripts, images). Saving the file reloads the open tab.
+An HTML file is shown as it is: floe adds nothing around it, so a page of your own or one another tool made shows as written. The files under its directory are served too, for its relative references (CSS, scripts, images); a file or directory whose name is not UTF-8 is not served nor opened, as no URL names it. Saving the file reloads the open tab.
 
 ## A data file
 

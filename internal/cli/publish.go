@@ -9,7 +9,6 @@ import (
 	"maps"
 	"net/http"
 	"net/url"
-	"os"
 	"time"
 	"unicode/utf8"
 
@@ -44,10 +43,10 @@ another (not with --link, nor where there is no project): publish again with it 
 page is about, to mend a page that went into the wrong project. A page renamed on the management page is
 its file's still: publishing that file again without --slug writes to its new slug. A page is in the
 language its data names (lang:), and in the theme its data names (theme:, else default), unless --theme
-names another. A new slug is also opened in the browser ($BROWSER, open, wslview, xdg-open). The page
-stays as it was drawn: floe rebuild draws the stored pages again with the templates of now. The warnings
-of the page drawn, advice on a better way to write it, are printed as file:line:column: warning:
-message.
+names another. A new slug is also opened in the browser ($BROWSER, else open on macOS, the default
+browser on Windows, wslview or xdg-open). The page stays as it was drawn: floe rebuild draws the stored
+pages again with the templates of now. The warnings of the page drawn, advice on a better way to write
+it, are printed as file:line:column: warning: message.
 
 --link registers a file in place instead of storing a page. An HTML file is shown as it is, and the
 files under its directory are served for its relative references. A data file is drawn each time
@@ -173,7 +172,7 @@ func (a *app) sent(ctx context.Context, p arg, link bool, opts store.Options) (s
 			Force: opts.Force,
 		}
 		// The server reads a link, as it draws it.
-		if _, statErr := os.Stat(p.abs); readable && statErr != nil {
+		if _, statErr := files.Stat(p.abs); readable && statErr != nil {
 			err = usererr.CannotRead(p.name, statErr)
 		}
 	} else {

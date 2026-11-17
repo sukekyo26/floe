@@ -6,17 +6,17 @@ import (
 	"fmt"
 	"io"
 	"io/fs"
-	"os"
 	"path/filepath"
 	"slices"
 	"strings"
-	"syscall"
 
 	"github.com/spf13/cobra"
 
 	"floe/docs"
+	"floe/internal/dirs"
 	"floe/internal/files"
 	"floe/internal/kit"
+	"floe/internal/link"
 	"floe/internal/store"
 	"floe/internal/usererr"
 )
@@ -147,6 +147,8 @@ func (a *app) skillCmd() *cobra.Command {
 		Long: `Write floe's skill, floe/SKILL.md, where the agent named reads the skills of all your projects:
 
 ` + table.String() + `
+~ is your home, %USERPROFILE% on Windows.
+
 Cursor reads ~/.claude/skills too. If you use Cursor, it reads both places, and shows the skill twice when it
 is in both; that does no harm. A skill under ~/.agents/skills is not copied to Cursor's Cloud Agents or remote
 SSH, which read ~/.cursor/skills alone.
@@ -193,16 +195,16 @@ func (a *app) installSkill(ag agent, force bool) error {
 	case err != nil:
 		return usererr.CannotRead(skillAt, err)
 	case there && same:
-		a.print("%s", english.Msg("cli_skill_same", realSkill))
+		a.print("%s", english.Msg("cli_skill_same", dirs.Shown(realSkill)))
 		return nil
 	case there && !force:
 		return usererr.NewAt(realSkill, 0, 0, "cli_skill_kept")
 	}
-	if err = os.MkdirAll(p.dir, 0o755); err != nil { //nolint:gosec // G301: the agent's own directory, as it makes it
+	if err = files.MkdirAll(p.dir, 0o755); err != nil { //nolint:gosec // G301: the agent's own directory, as it makes it
 		return usererr.SettingDir(p.setting(), p.dir, err, usererr.CannotWrite(p.dir, err))
 	}
 	for _, d := range []string{dir, realFloe} {
-		if err = os.MkdirAll(d, 0o755); err != nil { //nolint:gosec // G301: as above
+		if err = files.MkdirAll(d, 0o755); err != nil { //nolint:gosec // G301: as above
 			return usererr.CannotWrite(d, err)
 		}
 	}
@@ -211,28 +213,28 @@ func (a *app) installSkill(ag agent, force bool) error {
 	}
 	// Followed again: a directory on the way made just now may be a link's, which realPath could not follow
 	// before it was there.
-	if written, werr := filepath.EvalSymlinks(skillAt); werr == nil {
+	if written, werr := files.Real(skillAt); werr == nil {
 		realSkill = written
 	}
 	key := "cli_made"
 	if there {
 		key = "cli_skill_replaced"
 	}
-	a.print("%s", english.Msg(key, realSkill))
+	a.print("%s", english.Msg(key, dirs.Shown(realSkill)))
 	return nil
 }
 
 // skillDir is the place of ag (p) and the directory of skills in it, which neither is made yet. Only the
 // directory a setting names is told for the setting; what is under it is told at its own path.
 func (a *app) skillDir(ag agent) (dataPlace, string, error) {
-	p, err := a.dataDir(ag.key, "", ag.home, "")
+	p, err := a.dataDir(ag.key, base{key: "", underHome: ag.home}, "")
 	switch {
 	case err != nil:
 		return p, "", err
 	case p.unusable != nil:
 		return p, "", p.unusable
 	case p.dir == "":
-		return p, "", usererr.New("cli_new_no_dir", "HOME")
+		return p, "", usererr.New("cli_new_no_dir", p.from, link.HomeKey)
 	}
 	dir := filepath.Join(p.dir, "skills")
 	if err = statDir(p.dir); err != nil {
@@ -253,7 +255,11 @@ func followNamed(at, name string) (string, error) {
 	if err != nil {
 		return "", err
 	}
-	if filepath.Base(followed) != name {
+	// Only a link (a junction too, irregular) leads to another name: at itself, in another case on disk (Windows
+	// names it so), is the one asked for; one not there is made by its name.
+	info, lerr := files.Lstat(at)
+	link := lerr == nil && info.Mode()&(fs.ModeSymlink|fs.ModeIrregular) != 0
+	if link && filepath.Base(followed) != name {
 		return "", usererr.NewAt(at, 0, 0, "cli_skill_link", followed, name)
 	}
 	return followed, nil
@@ -262,10 +268,10 @@ func followNamed(at, name string) (string, error) {
 // statDir is why path cannot be a directory to write in: nil when it is one or is not there (it is made then),
 // else the system's error, a file there as making a directory over it would say.
 func statDir(path string) error {
-	info, err := os.Stat(path)
+	info, err := files.Stat(path)
 	switch {
 	case err == nil && !info.IsDir():
-		return &fs.PathError{Op: "mkdir", Path: path, Err: syscall.ENOTDIR}
+		return &fs.PathError{Op: "mkdir", Path: path, Err: files.ErrNotDir}
 	case err != nil && !errors.Is(err, fs.ErrNotExist):
 		return err //nolint:wrapcheck // the system's, told by the caller
 	}

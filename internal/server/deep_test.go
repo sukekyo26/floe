@@ -1,6 +1,7 @@
 package server_test
 
 import (
+	"encoding/json"
 	"net/http"
 	"path/filepath"
 	"strings"
@@ -43,7 +44,11 @@ func TestTooDeep(t *testing.T) {
 
 	other := filepath.Join(e.home, "proj", "n.yaml")
 	writeFiles(t, filepath.Dir(other), map[string]string{"n.yaml": src})
-	want(t, e.write(t, http.MethodPost, "/api/pages", server.Link{Path: other}), http.StatusBadRequest, `{"file":"`+other+`","text":"`+tooDeep+`"}`) //nolint:exhaustruct // the rest not given
+	mistake, err := json.Marshal(map[string]string{"file": other, "text": tooDeep})
+	if err != nil {
+		t.Fatal(err)
+	}
+	want(t, e.write(t, http.MethodPost, "/api/pages", server.Link{Path: other}), http.StatusBadRequest, string(mistake)) //nolint:exhaustruct // the rest not given
 	want(t, e.do(t, http.MethodGet, "/a/n/?raw", ""), http.StatusNotFound, "")
 }
 

@@ -7,18 +7,21 @@ import (
 	"path/filepath"
 	"slices"
 	"strings"
-	"syscall"
 	"testing"
 
+	"floe/internal/dirs"
+	"floe/internal/files"
 	"floe/internal/link"
+	"floe/internal/testfs"
 	"floe/internal/usererr"
 )
 
-// realTemp returns a temporary directory by its real path; on macOS t.TempDir is under the /var symlink.
+// realTemp returns a temporary directory by its real path, as files.Real names it: on macOS t.TempDir is under the
+// /var symlink, and on Windows a link's paths are \\?\C:\….
 func realTemp(tb testing.TB) string {
 	tb.Helper()
 
-	dir, err := filepath.EvalSymlinks(tb.TempDir())
+	dir, err := files.Real(tb.TempDir())
 	if err != nil {
 		tb.Fatal(err)
 	}
@@ -39,21 +42,17 @@ func write(tb testing.TB, path, body string) {
 func symlink(tb testing.TB, target, name string) {
 	tb.Helper()
 
-	if err := os.Symlink(target, name); err != nil {
-		tb.Fatal(err)
-	}
+	testfs.Symlink(tb, target, name)
 }
 
 func mkfifo(tb testing.TB, path string) {
 	tb.Helper()
 
-	if err := syscall.Mkfifo(path, 0o600); err != nil {
-		tb.Fatal(err)
-	}
+	testfs.Mkfifo(tb, path)
 }
 
-// site builds a linked directory with dot paths, an escaping symlink, a FIFO and a name that one more
-// decoding would turn into another file, and returns the registered file.
+// site builds a linked directory with dot paths, an escaping symlink and a name that one more decoding would turn
+// into another file, and returns the registered file.
 func site(tb testing.TB) string {
 	tb.Helper()
 
@@ -73,7 +72,6 @@ func site(tb testing.TB) string {
 	write(tb, filepath.Join(tmp, "outside.txt"), "outside")
 	symlink(tb, filepath.Join(tmp, "outside.txt"), filepath.Join(dir, "escape.txt"))
 	symlink(tb, filepath.Join(dir, "s.css"), filepath.Join(dir, "inside.css"))
-	mkfifo(tb, filepath.Join(dir, "pipe.txt"))
 	return filepath.Join(dir, "index.html")
 }
 
@@ -101,7 +99,6 @@ func TestResolve(t *testing.T) {
 		{"sub", ""},
 		{"sub/", ""},
 		{"sub//p.html", ""},
-		{"pipe.txt", ""},
 		{"nope.css", ""},
 	}
 	for _, tt := range tests {
@@ -114,6 +111,13 @@ func TestResolve(t *testing.T) {
 			t.Errorf("Resolve(%q) = %q, %v; want %q", tt.rest, got, ok, want)
 		}
 	}
+	t.Run("a FIFO", func(t *testing.T) {
+		t.Parallel()
+		mkfifo(t, filepath.Join(dir, "pipe.txt"))
+		if got, ok := link.Resolve(registered, false, "pipe.txt"); got != "" || ok {
+			t.Errorf("Resolve(pipe.txt) = %q, %v, a FIFO served", got, ok)
+		}
+	})
 }
 
 func TestResolveFolder(t *testing.T) {
@@ -146,7 +150,7 @@ func TestResolveFolder(t *testing.T) {
 }
 
 // TestDir lists one directory of a folder at a time, as Resolve would serve it.
-func TestDir(t *testing.T) {
+func TestDir(t *testing.T) { //nolint:tparallel // the subtests change the folder in turn, before it is moved
 	t.Parallel()
 
 	tmp := realTemp(t)
@@ -160,7 +164,6 @@ func TestDir(t *testing.T) {
 		".x.html":           "hidden",
 		"guide/setup.html":  "in a directory",
 		"guide/deep/x.html": "deeper",
-		"a,b:c/odd.html":    "an odd name",
 		"assets/logo.svg":   "no page",
 	} {
 		write(t, filepath.Join(folder, path), body)
@@ -169,7 +172,6 @@ func TestDir(t *testing.T) {
 	symlink(t, filepath.Join(tmp, "secret.html"), filepath.Join(folder, "out.html"))
 	symlink(t, filepath.Join(folder, "index.html"), filepath.Join(folder, "in.html"))
 	symlink(t, filepath.Join(folder, "guide"), filepath.Join(folder, "linked-dir"))
-	mkfifo(t, filepath.Join(folder, "pipe.html"))
 
 	got, err := link.Dir(folder, "")
 	if err != nil {
@@ -182,7 +184,7 @@ func TestDir(t *testing.T) {
 		}
 		return out
 	}
-	if want := []string{"a,b:c", "assets", "guide"}; !slices.Equal(got.Dirs, want) || got.More != 0 {
+	if want := []string{"assets", "guide"}; !slices.Equal(got.Dirs, want) || got.More != 0 {
 		t.Errorf("Dir(top).Dirs = %q, more %d; want %q", got.Dirs, got.More, want)
 	}
 	if want := []string{"README.HTM", "in.html", "index.html"}; !slices.Equal(files(got), want) {
@@ -191,17 +193,30 @@ func TestDir(t *testing.T) {
 	if got.Files[0].Modified.IsZero() {
 		t.Error("a page's time is not given")
 	}
-	for dir, want := range map[string][]string{"guide": {"guide/setup.html"}, "a,b:c": {"a,b:c/odd.html"}} {
-		l, err := link.Dir(folder, dir)
-		if err != nil || !slices.Equal(files(l), want) {
-			t.Errorf("Dir(%q) = %q, %v; want %q", dir, files(l), err, want)
-		}
+	if l, err := link.Dir(folder, "guide"); err != nil || !slices.Equal(files(l), []string{"guide/setup.html"}) {
+		t.Errorf("Dir(guide) = %q, %v", files(l), err)
 	}
 	for _, dir := range []string{"..", ".drafts", "guide/../..", "nope", "index.html", "guide/", "/guide"} {
 		if _, err := link.Dir(folder, dir); !errors.Is(err, link.ErrNoDir) {
 			t.Errorf("Dir(%q) = %v, want ErrNoDir", dir, err)
 		}
 	}
+	t.Run("an odd name", func(t *testing.T) { //nolint:paralleltest // in the folder, before it is moved below
+		testfs.UnixOnly(t, "a name with : (Windows takes none)")
+		write(t, filepath.Join(folder, "a,b:c", "odd.html"), "an odd name")
+		if l, err := link.Dir(folder, ""); err != nil || !slices.Equal(l.Dirs, []string{"a,b:c", "assets", "guide"}) {
+			t.Errorf("Dir(top).Dirs = %q, %v", l.Dirs, err)
+		}
+		if l, err := link.Dir(folder, "a,b:c"); err != nil || !slices.Equal(files(l), []string{"a,b:c/odd.html"}) {
+			t.Errorf("Dir(a,b:c) = %q, %v", files(l), err)
+		}
+	})
+	t.Run("a FIFO", func(t *testing.T) { //nolint:paralleltest // as above
+		mkfifo(t, filepath.Join(folder, "pipe.html"))
+		if l, err := link.Dir(folder, ""); err != nil || !slices.Equal(files(l), []string{"README.HTM", "in.html", "index.html"}) {
+			t.Errorf("Dir(top).Files = %q, %v", files(l), err)
+		}
+	})
 	if err := os.Rename(folder, folder+"-moved"); err != nil {
 		t.Fatal(err)
 	}
@@ -256,6 +271,12 @@ func TestResolveRefusesARegisteredPathThatIsNoLongerReal(t *testing.T) {
 func FuzzResolve(f *testing.F) {
 	registered := site(f)
 	dir := filepath.Dir(registered)
+	// A FIFO where there are FIFOs; the rest is fuzzed on Windows too.
+	if err := testfs.MakeFIFO(filepath.Join(dir, "pipe.txt")); errors.Is(err, testfs.ErrNoFIFO) {
+		f.Log("no FIFO here; the rest is fuzzed")
+	} else if err != nil {
+		f.Fatal(err)
+	}
 	for _, seed := range []string{
 		"", "s.css", "sub/p.html", "../outside.txt", "sub/../../outside.txt", ".git/config",
 		"sub/.git/config", "escape.txt", "pipe.txt", "a%41.html", "sub/", "/etc/passwd", "s.css\x00",
@@ -296,14 +317,18 @@ func TestCheck(t *testing.T) {
 			t.Fatal(err)
 		}
 	}
-	mkfifo(t, filepath.Join(realHome, "proj", "pipe.html"))
 	// $HOME is a symlink: the real paths under it must still meet the home checks.
 	symlink(t, realHome, home)
 	// A path through a symlink is refused, whatever it points at.
 	symlink(t, filepath.Join(realHome, ".secret"), filepath.Join(realHome, "proj", "alias"))
-	// So is one with .., which the string checks would misread too.
-	for _, p := range []string{realHome + "/proj/alias/x.html", realHome + "/proj/../top.html", ".secret/x.html", "top.html"} {
-		if _, err := link.Check(p, home); err == nil || !strings.Contains(err.Error(), "is not its absolute real path") {
+	// So is one with .., which the string checks would misread too. Written as a user writes them (no \\?\ on
+	// Windows, where the system reads no .. after it), with the system's separator.
+	sep, written := string(filepath.Separator), dirs.Shown(realHome)
+	for _, p := range []string{
+		written + sep + "proj" + sep + "alias" + sep + "x.html", written + sep + "proj" + sep + ".." + sep + "top.html",
+		".secret/x.html", "top.html",
+	} {
+		if _, err := link.Check(p, home); err == nil || !strings.Contains(err.Error(), "is not its real path") {
 			t.Errorf("Check(%s) = %v, want it refused as not real", p, err)
 		}
 	}
@@ -318,42 +343,101 @@ func TestCheck(t *testing.T) {
 	// What home is under would serve every home's files: refused for a folder, and for a file in it.
 	write(t, filepath.Join(tmp, "beside.html"), "<p>x</p>")
 	for _, p := range []string{tmp, filepath.Join(tmp, "beside.html")} {
-		if _, err := link.Check(p, home); err == nil || !strings.Contains(err.Error(), "would expose all of "+tmp) {
+		if _, err := link.Check(p, home); err == nil || !strings.Contains(err.Error(), "would expose all of "+dirs.Shown(tmp)) {
 			t.Errorf("Check(%s) = %v, want it refused as exposing %s", p, err, tmp)
 		}
 	}
 	tests := []struct {
 		path string
-		want string // a part of the message, "" when allowed
+		key  string // the mistake's key, "" when allowed
+		part string // a part of its message that matters, if any
 	}{
-		{"proj/.agents/doc.html", ""},
-		{"proj/ok.HTM", ""},
-		{"proj/spec.YML", ""},
-		{".secret/x.html", "is under a hidden directory of your home"},
-		{"top.html", "would expose all of " + realHome},
-		{".top.html", "would expose all of " + realHome},
-		{"proj/page.txt", "is not a regular HTML file (.html, .htm), data file (.yaml, .yml) or folder"},
-		{"proj/pipe.html", "is not a regular HTML file (.html, .htm), data file (.yaml, .yml) or folder"},
-		{"proj/missing.html", "is not a regular HTML file (.html, .htm), data file (.yaml, .yml) or folder"},
+		{"proj/.agents/doc.html", "", ""},
+		{"proj/ok.HTM", "", ""},
+		{"proj/spec.YML", "", ""},
+		{".secret/x.html", "link_hidden_home", ""},
+		{"top.html", "link_exposes_dir", "would expose all of " + dirs.Shown(realHome)},
+		{".top.html", "link_exposes_dir", "would expose all of " + dirs.Shown(realHome)},
+		{"proj/page.txt", "link_not_linkable", ""},
+		// Real cannot tell where a file not there is (readLink, before, tells it cannot be read).
+		{"proj/missing.html", "link_not_real", ""},
 		// A folder is checked as the directory it exposes: its own.
-		{"proj", ""},
-		{"proj/dir.html", ""},
-		{"proj/.agents", ""},
-		{"", "would expose all of " + realHome},
-		{".secret", "is under a hidden directory of your home"},
-		{".secret/sub", "is under a hidden directory of your home"},
+		{"proj", "", ""},
+		{"proj/dir.html", "", ""},
+		{"proj/.agents", "", ""},
+		{"", "link_exposes_dir", "would expose all of " + dirs.Shown(realHome)},
+		{".secret", "link_hidden_home", ""},
+		{".secret/sub", "link_hidden_home", ""},
 	}
 	for _, tt := range tests {
 		_, err := link.Check(filepath.Clean(filepath.Join(realHome, tt.path)), home)
-		if tt.want == "" {
+		if tt.key == "" {
 			if err != nil {
 				t.Errorf("Check(%s) = %v, want it allowed", tt.path, err)
 			}
 			continue
 		}
 		var ue *usererr.Error
-		if !errors.As(err, &ue) || !strings.Contains(ue.Error(), tt.want) {
-			t.Errorf("Check(%s) = %v, want a usererr containing %q", tt.path, err, tt.want)
+		if !errors.As(err, &ue) || ue.Key != tt.key || !strings.Contains(ue.Error(), tt.part) {
+			t.Errorf("Check(%s) = %v, want %s containing %q", tt.path, err, tt.key, tt.part)
 		}
+	}
+	t.Run("a FIFO", func(t *testing.T) {
+		t.Parallel()
+		pipe := filepath.Join(realHome, "proj", "pipe.html")
+		mkfifo(t, pipe)
+		want := "is not a regular HTML file (.html, .htm), data file (.yaml, .yml) or folder"
+		_, err := link.Check(pipe, home)
+		if ue := (*usererr.Error)(nil); !errors.As(err, &ue) || !strings.Contains(ue.Error(), want) {
+			t.Errorf("Check(proj/pipe.html) = %v, want a usererr containing %q", err, want)
+		}
+	})
+}
+
+// A folder whose own path has a dot directory (one under a project's .agents) serves its files: the dot rule reads
+// the names under the folder alone.
+func TestResolveDotBase(t *testing.T) {
+	t.Parallel()
+
+	folder := filepath.Join(realTemp(t), "proj", ".agents", "docs")
+	write(t, filepath.Join(folder, "a.html"), "a")
+	write(t, filepath.Join(folder, "sub", "b.html"), "b")
+	for _, rest := range []string{"a.html", "sub/b.html"} {
+		if got, ok := link.Resolve(folder, true, rest); !ok || got != filepath.Join(folder, filepath.FromSlash(rest)) {
+			t.Errorf("Resolve(%q) = %q, %v, want it served", rest, got, ok)
+		}
+	}
+	if _, err := link.Dir(folder, "sub"); err != nil {
+		t.Errorf("Dir(sub) = %v", err)
+	}
+}
+
+// A link under a folder to a dot file of it is served as the file it leads to: the dot rule reads the names as
+// written, not where a link leads (as node_modules/x -> .pnpm/x).
+func TestResolveLinkToDot(t *testing.T) {
+	t.Parallel()
+
+	folder := filepath.Join(realTemp(t), "f")
+	env := filepath.Join(folder, ".env")
+	write(t, env, "e")
+	symlink(t, env, filepath.Join(folder, "x"))
+	if got, ok := link.Resolve(folder, true, "x"); !ok || got != env {
+		t.Errorf("Resolve(x) = %q, %v, want %q", got, ok, env)
+	}
+}
+
+// A name that is not UTF-8 is not served nor listed by its bytes: the URL cannot name it. (A folder's listing gives it
+// with U+FFFD, as encoding/json writes it; Windows names it so on disk too.)
+func TestResolveInvalidUTF8(t *testing.T) {
+	t.Parallel()
+
+	folder := realTemp(t)
+	testfs.NotUTF8(t, folder, "a\xff.html", false)
+	testfs.NotUTF8(t, folder, "d\xff", true)
+	if got, ok := link.Resolve(folder, true, "a\xff.html"); ok {
+		t.Errorf("Resolve(a\\xff.html) = %q, want it refused", got)
+	}
+	if l, err := link.Dir(folder, "d\xff"); !errors.Is(err, link.ErrNoDir) {
+		t.Errorf("Dir(d\\xff) = %+v, %v, want ErrNoDir", l, err)
 	}
 }

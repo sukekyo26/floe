@@ -26,6 +26,7 @@ import (
 	"time"
 
 	"floe/internal/diagram"
+	"floe/internal/dirs"
 	"floe/internal/doc"
 	"floe/internal/files"
 	"floe/internal/kit"
@@ -307,10 +308,15 @@ func (s *Store) ReadMeta(slug string) *Meta {
 	if !ok {
 		return nil
 	}
-	b, err := os.ReadFile(filepath.Join(dir, "meta.json"))
+	b, _, err := files.Read(filepath.Join(dir, "meta.json"))
 	if err != nil {
 		return nil
 	}
+	return metaOf(b)
+}
+
+// metaOf is the meta.json read as b, or nil when it is broken.
+func metaOf(b []byte) *Meta {
 	var m *Meta
 	if json.Unmarshal(b, &m) != nil {
 		return nil
@@ -357,7 +363,7 @@ func (s *Store) File(slug string, m *Meta, rest string) (string, bool) {
 		return "", false
 	}
 	page := filepath.Join(dir, pageName)
-	if info, err := os.Stat(page); err != nil || !info.Mode().IsRegular() {
+	if info, err := files.Stat(page); err != nil || !info.Mode().IsRegular() {
 		return "", false
 	}
 	return page, true
@@ -383,7 +389,7 @@ type Listed struct {
 
 // slugs returns the slugs of the store, in their order: the names under it that can be one.
 func (s *Store) slugs() ([]string, error) {
-	dirents, err := os.ReadDir(s.root)
+	dirents, err := files.ReadDir(s.root)
 	if errors.Is(err, os.ErrNotExist) {
 		return nil, nil
 	}
@@ -400,8 +406,20 @@ func (s *Store) slugs() ([]string, error) {
 }
 
 // List returns the pages, newest first, with what viewer has not seen of them. Entries with a missing or broken
-// meta.json are skipped so that one of them does not break the whole list.
+// meta.json are skipped so that one of them does not break the whole list. The meta.json are read under the store
+// opened once (an os.Root), which looks at its path once rather than at each page's.
+// LIMIT: a page whose directory or meta.json is a link that os.Root refuses (out of the store, to an absolute path, a
+// junction, a reparse point no link) is left out of the list, though its URL serves it and publish and rm reach it.
+// floe makes neither a link; read such a page by its path if one put there by hand comes to matter.
 func (s *Store) List(viewer string) ([]Listed, error) {
+	root, err := files.OpenRoot(s.root)
+	if errors.Is(err, os.ErrNotExist) {
+		return []Listed{}, nil
+	}
+	if err != nil {
+		return nil, usererr.CannotRead(s.root, err) //nolint:wrapcheck // the system's words, at the store
+	}
+	defer root.Close() //nolint:errcheck // only read
 	slugs, err := s.slugs()
 	if err != nil {
 		return nil, err
@@ -411,7 +429,10 @@ func (s *Store) List(viewer string) ([]Listed, error) {
 	reader := readerIn(all, viewer)
 	list := []Listed{}
 	for _, slug := range slugs {
-		m := s.ReadMeta(slug)
+		var m *Meta
+		if b, _, err := files.ReadIn(root, slug+"/meta.json"); err == nil {
+			m = metaOf(b)
+		}
 		if m == nil || m.UpdatedAt == "" {
 			continue
 		}
@@ -428,6 +449,8 @@ func (s *Store) listed(slug string, m *Meta, r *reader) Listed {
 		Slug: slug, Meta: *m, TaskProject: ProjectKey(m.Project), News: "", Version: 0, VersionCount: 0, Missing: nil,
 		Themed: m.TakesTheme(),
 	}
+	// Shown as people write them; m keeps them as stored, for what reads them.
+	l.Path, l.PublishedFile = dirs.Shown(m.Path), dirs.Shown(m.PublishedFile)
 	// The list is read every few seconds: versions are asked for a page at a time.
 	l.Versions = nil
 	if !m.IsLink() {
@@ -482,7 +505,7 @@ func (s *Store) Files(slug, dir string) (link.Listing, error) {
 
 // modTime is the mtime of file, or "" when it cannot be read.
 func modTime(file string) string {
-	fi, err := os.Stat(file)
+	fi, err := files.Stat(file)
 	if err != nil {
 		return ""
 	}

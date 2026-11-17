@@ -4,7 +4,7 @@
 
 ## インストール
 
-インストールのコマンドは [README](README.ja.md#インストール) にあります。`FLOE_VERSION` でリリースを固定し、`FLOE_INSTALL_DIR` でインストール先（既定は `~/.local/bin`）を変えられます。バイナリはリリースの `SHA256SUMS` で検証します。
+インストールのコマンドは [README](README.ja.md#インストール) にあります。`FLOE_VERSION` でリリースを固定し、`FLOE_INSTALL_DIR` でインストール先（既定は `~/.local/bin`。Windows は [Windows](#windows)）を変えられます。バイナリはリリースの `SHA256SUMS` で検証します。
 
 ## 早見表
 
@@ -58,7 +58,7 @@
 
 ## `floe guide`
 
-エージェント向けの手引き [guide.md](agents/guide.md) を出します。ページの書き方・検査・出し方、テンプレートと部品の選び方、floe が書いたとおりに読む YAML、誤りの読み方です。この docs の要約で、エージェントがページを書く前に読みます。Tasks の節は `floe task guide` を指し、その中の Ask after publishing（新しいページを publish するたびに、どのタスクのどのカテゴリに置くかを、質問ダイアログでユーザーに聞く決まり）は、管理ページの設定でタスクモードが入のときだけ出します。設定は、ほかのコマンドが送る保存先（`FLOE_DIR`）から、サーバーを起こさずに読みます。保存先を決められないとき（`HOME` が絶対パスでなく、`FLOE_DIR` も無い）は、その節を除いて出します。`settings.json` を読めないとき、`FLOE_DIR` が使えないときは、`floe theme default` と同じく断ります。引数は取りません。
+エージェント向けの手引き [guide.md](agents/guide.md) を出します。ページの書き方・検査・出し方、テンプレートと部品の選び方、floe が書いたとおりに読む YAML、誤りの読み方です。この docs の要約で、エージェントがページを書く前に読みます。Tasks の節は `floe task guide` を指し、その中の Ask after publishing（新しいページを publish するたびに、どのタスクのどのカテゴリに置くかを、質問ダイアログでユーザーに聞く決まり）は、管理ページの設定でタスクモードが入のときだけ出します。設定は、ほかのコマンドが送る保存先（`FLOE_DIR`）から、サーバーを起こさずに読みます。保存先を決められないとき（`HOME`（Windows では `USERPROFILE`）が絶対パスでなく、`FLOE_DIR` も無い）は、その節を除いて出します。`settings.json` を読めないとき、`FLOE_DIR` が使えないときは、`floe theme default` と同じく断ります。引数は取りません。
 
 ## `floe skill install <agent>`
 
@@ -66,7 +66,7 @@ floe のスキル `floe/SKILL.md` を、名指したエージェントが全部�
 
 ## `floe publish <data.yaml>` / `floe publish --link <file|folder>`
 
-データファイルのページを、そこに書いたテンプレートで描き、描いたとおりに保存して、URL（`http://127.0.0.1:7325/a/<slug>/`）を標準出力に、描いたページの警告を `floe check` と同じに標準エラー出力に出します。ページが新しい、またはプロジェクトが変わったときは、それを言う 1 行（`page in project floe`、無ければ `page in no project`）も標準エラー出力に出します。サーバーが動いていなければ、先に裏で起こします。新しい slug はブラウザでも開きます（`$BROWSER`、無ければ `open`・`wslview`・`xdg-open`）。もう一度 publish したものは開きません。開いたタブが自分で読み直すからです。ページは、新しい版の Chrome・Safari（26 以降）・Firefox（147 以降）で見るのを勧めます。
+データファイルのページを、そこに書いたテンプレートで描き、描いたとおりに保存して、URL（`http://127.0.0.1:7325/a/<slug>/`）を標準出力に、描いたページの警告を `floe check` と同じに標準エラー出力に出します。ページが新しい、またはプロジェクトが変わったときは、それを言う 1 行（`page in project floe`、無ければ `page in no project`）も標準エラー出力に出します。サーバーが動いていなければ、先に裏で起こします。新しい slug はブラウザでも開きます（`$BROWSER`、無ければ macOS では `open`、Windows では既定のブラウザ、ほかは `wslview`・`xdg-open`）。もう一度 publish したものは開きません。開いたタブが自分で読み直すからです。ページは、新しい版の Chrome・Safari（26 以降）・Firefox（147 以降）で見るのを勧めます。
 
 ページはデータファイル（`.yaml`・`.yml`）から描きます。書き方は [pages.ja.md](pages.ja.md) にあります。データファイルは、見せる画像とともに（データファイルが名指すパスで）`FLOE_DIR` の下の `<slug>/source-<id>/data.yaml` に写します。元を失ったら、そこから取り戻せます。publish のたびに新しい写しを書いてから前のものを消すので、失敗した publish はページを前のままに残します。相対パスは作業ディレクトリから読みます。
 
@@ -361,7 +361,7 @@ task #130 in project floe: forgotten
 
 ## `floe serve`
 
-サーバーを `127.0.0.1` で、SIGTERM・SIGINT か `floe stop` まで前面で動かします。途中の要求を終えてから（長くて 10 秒）止まり、2 回目のシグナルではすぐ終わります。ポートを取ると、標準出力に `serving <保存先> at http://127.0.0.1:7325/` を出し（保存先は `FLOE_DIR`、ポートは `FLOE_PORT` のもの）、ほかは何も出しません。[サーバー](#サーバー) に挙げたコマンドは同じサーバーを裏で起こすので、これは主に、サーバーが起きない理由を見るためのものです（動いているサーバーに起きたことは、その `server.log` にあります）。裏のサーバーが起きなければ、`the server did not start; run "floe serve" to see the error` と言います。前面のサーバーの端末を閉じる（SIGHUP）と、2 回目のシグナルと同じくすぐ終わり、どちらも止まったことを書きません。
+サーバーを `127.0.0.1` で、SIGTERM・SIGINT か `floe stop` まで前面で動かします。途中の要求を終えてから（長くて 10 秒）止まります。起きた直後に止めたときは、続いて最初のテンプレート・部品・テーマ・アイコンの読みが終わるのも待ちます。2 回目のシグナルではすぐ終わります。ポートを取ると、標準出力に `serving <保存先> at http://127.0.0.1:7325/` を出し（保存先は `FLOE_DIR`、ポートは `FLOE_PORT` のもの）、ほかは何も出しません。[サーバー](#サーバー) に挙げたコマンドは同じサーバーを裏で起こすので、これは主に、サーバーが起きない理由を見るためのものです（動いているサーバーに起きたことは、その `server.log` にあります）。裏のサーバーが起きなければ、`the server did not start; run "floe serve" to see the error` と言います。前面のサーバーの端末を閉じる（SIGHUP）と、2 回目のシグナルと同じくすぐ終わり、どちらも止まったことを書きません。
 
 ## `floe stop`
 
@@ -441,7 +441,7 @@ edge [60,10]→[60,120] M60,10 V120
 - これらはサーバーに、ページを確かめ・保存し・描き・並べ・消すよう頼みます。保存先に書くのはサーバーだけです。publish はデータファイル（とサーバーが求める画像）を送り、サーバーが自分のテンプレート・部品・テーマ・アイコンで確かめて描きます。
 - floe を入れ直す（別の版、またはビルドし直したバイナリ）と、次のコマンドが動いているサーバーを止めて自分のものを起こし、標準エラーに `stopping the server on port 7325 (pid 1234), which was of another build of floe, to start this build's` と言います。そのあと新しいサーバーが起きなかったとき、サーバーが止まらなかったときも言います。いくつかが一緒に頼んだときは、サーバーが頼みを受けた 1 つが言います。
 - サーバーは `floe stop`、別のビルドのコマンドによる入れ替え、ログアウト、再起動まで動き続けます。
-- サーバーは自分に起きたことを、保存先（`FLOE_DIR`）の `server.log` に書きます。起きたこと、止まることとその理由（`floe stop` か別のビルドのコマンド、SIGTERM か SIGINT）、止まったこと、panic した要求（スタック付き）、落ちたときに runtime が書いたもの（この行には時刻も pid も付きません）です。行は `time=` と `pid=` のあとに `key=value` が並ぶ形で、スタックは 1 つの `stack=` の値に、改行を `\n` と書いて入ります。panic した要求には、スタックの場所を言う 500 で答え、サーバーは動き続けます。`server.log` が 1 MiB を超えていれば、次の起動で `server.log.1` に移し、前の `.1` は置き換わります。SIGKILL・SIGHUP・2 回目のシグナル・電源断で終わったサーバーは終わりを書かず、最後の行が、動いていると言う行になります。止まっている途中（長くて 10 秒）のサーバーがあるうちに次のサーバーが起きて server.log を回すと、その最後の行は `server.log.1` に書かれます。`server.log` がふつうのファイル（FIFO・ディレクトリなど）でないと、`floe serve` は始まりません。
+- サーバーは自分に起きたことを、保存先（`FLOE_DIR`）の `server.log` に書きます。起きたこと、止まることとその理由（`floe stop` か別のビルドのコマンド、SIGTERM か SIGINT）、止まったこと、panic した要求（スタック付き）、落ちたときに runtime が書いたもの（この行には時刻も pid も付きません）です。行は `time=` と `pid=` のあとに `key=value` が並ぶ形で、スタックは 1 つの `stack=` の値に、改行を `\n` と書いて入ります。panic した要求には、スタックの場所を言う 500 で答え、サーバーは動き続けます。`server.log` が 1 MiB を超えていれば、次の起動で `server.log.1` に移し、前の `.1` は置き換わります。SIGKILL・SIGHUP・2 回目のシグナル・電源断で終わったサーバーは終わりを書かず、最後の行が、動いていると言う行になります。止まっている途中（途中の要求に長くて 10 秒、起きた直後に止めたときは、その後に最初の読みが終わるまで）のサーバーがあるうちに次のサーバーが起きて server.log を回すと、その最後の行は `server.log.1` に書かれます。`server.log` がふつうのファイル（FIFO・ディレクトリなど）でないと、`floe serve` は始まりません。
 - サーバーは、起こしたコマンドの `FLOE_TEMPLATES_DIR`・`FLOE_PARTS_DIR`・`FLOE_THEMES_DIR`・`FLOE_ICONS_DIR` で描きます。1 つのコマンドにでなく、どのコマンドも受け取るシェルの環境に設定してください。
 - 違うものを使う `floe publish` と `floe rebuild` は、`floe stop` まで断ります。`floe list`・`floe rm`・`floe archive`・`floe tag`・`floe task` は描かないので、どれでも通ります。ただし、floe を入れ直した後にサーバーを置き換えるものは、新しいサーバーがそのコマンドのもので描くので、違うものでは断ります。
 - 1 つのサーバーは、そのポートで 1 つの保存先（`FLOE_DIR`）を配信します。動いている間、ほかの保存先へのコマンドは断り、サーバーが配信している保存先を伝えます（断りの文のパスは、シェルでなく Go の二重引用符で書かれます）。コマンドをそのサーバーに送るなら、`FLOE_DIR` をその保存先にしてください。そのあとは上の行のとおりです（`FLOE_TEMPLATES_DIR` などが違えば断り、別のビルドのサーバーは入れ替わります）。自分の保存先を使うなら、その保存先に別の `FLOE_PORT` を使うか（シェルの環境に置くと、どのコマンドにも渡ります）、`floe stop` を実行してからコマンドをもう一度実行してください。
@@ -469,7 +469,7 @@ edge [60,10]→[60,120] M60,10 V120
 | `FLOE_TEMPLATES_DIR` | 自分のテンプレートを 1 つずつディレクトリで置く所（[templates.md](agents/templates.md)）。既定は `$XDG_CONFIG_HOME/floe/templates`、無ければ `~/.config/floe/templates`。 |
 | `FLOE_PARTS_DIR` | 自分の部品・見た目・共有の schema の置き場所（[parts.md](agents/parts.md)）。既定は `$XDG_CONFIG_HOME/floe/parts`、無ければ `~/.config/floe/parts`。 |
 | `FLOE_THEMES_DIR` | 自分のテーマを 1 つずつディレクトリで置く所（[themes.md](agents/themes.md)）。既定は `$XDG_CONFIG_HOME/floe/themes`、無ければ `~/.config/floe/themes`。 |
-| `BROWSER` | 新しいページを開くコマンド。既定は macOS では `open`、ほかは `wslview` か `xdg-open`。 |
+| `BROWSER` | 新しいページを開くコマンド。既定は macOS では `open`、Windows では既定のブラウザ、ほかは `wslview` か `xdg-open`。 |
 
 `FLOE_*` のディレクトリは絶対パスにします。floe はどこで動かしても 1 つの所を読むので、相対パスは断り、どのシェルも読まなかった `~` で始まるものも断ります（`FLOE_PARTS_DIR is ~/x, a relative path; set it to an absolute path`）。相対の `XDG_DATA_HOME`・`XDG_CONFIG_HOME` は、XDG の決まりどおり無いものとします。
 
@@ -481,12 +481,29 @@ floe: FLOE_PARTS_DIR is /tmp/t/missing, which cannot be used as a directory (no 
 
 - `FLOE_TEMPLATES_DIR`・`FLOE_PARTS_DIR`・`FLOE_THEMES_DIR` は、ページを描くか自分のものを読むコマンド（`floe check`・`floe render`・`template` と `part` のコマンド、描くサーバー）が使うので、設定したものが無ければそれらを止めます。既定の場所が無ければ、自分のものは無いとし、floe のものだけで描きます。既定の場所があってもディレクトリでなければ断ります。
 - `FLOE_DIR` はサーバーと、それを使う [サーバー](#サーバー) に挙げたコマンドが使い、無ければ作ります。`FLOE_ICONS_DIR` は icons のコマンド（無ければ作る）と、アイコンを置いた図（その図の所で）が使います。
-- `HOME` が無い（または絶対パスでない）とき、ほかに既定の無いディレクトリは無いものとします。`floe check` は floe のテンプレート・部品・テーマだけで走り、そこに書くコマンド（`floe template new`、`FLOE_DIR` を使う `floe list` …）は変数を設定するよう求めます。
+- `HOME`（Windows では `USERPROFILE`）が無い（または絶対パスでない）とき、ほかに既定の無いディレクトリは無いものとします。`floe check` は floe のテンプレート・部品・テーマだけで走り、そこに書くコマンド（`floe template new`、`FLOE_DIR` を使う `floe list` …）は変数を設定するよう求めます。
 - `FLOE_PARTS_DIR`・`FLOE_THEMES_DIR`・`FLOE_TEMPLATES_DIR` は重ねません。2 つが同じディレクトリか、一方がもう一方の中にあれば（symlink を通しても）、中を読む前に、2 つの変数の名前で断ります。設定したものは、まだ無くても比べます。コマンドは自分が読むものだけを比べ、既定の場所は有るときだけ比べます。`floe part new`・`floe template new` は、作るものがほかの種類の置き場所の中に入るか、それを含むなら、作らずに断ります。
 
 ```text
 floe: FLOE_PARTS_DIR (/tmp/pp) and FLOE_THEMES_DIR (/tmp/pp) are one directory, or one is in the other, where floe would read the files of one as those of the other; make FLOE_PARTS_DIR and FLOE_THEMES_DIR two directories, neither in the other
 ```
+
+## Windows
+
+floe は Windows 11（amd64・arm64。arm64 はビルドしているが試していない）の NTFS の上で動きます。Windows 10 は対応しません（`NUL.png` のような名前を、Windows 11 はファイルと読み、10 はデバイスと読みます）。ReFS・FAT と、OneDrive のフォルダの中のファイルは試していません。
+
+- インストール：PowerShell（Windows PowerShell 5.1 か PowerShell 7）で `irm https://raw.githubusercontent.com/sukekyo26/floe/main/install.ps1 | iex` を実行すると、`floe.exe` が `%USERPROFILE%\.local\bin` に入ります。`FLOE_VERSION`・`FLOE_INSTALL_DIR` は `install.sh` と同じです。`FLOE_ADD_TO_PATH=1` を付けるとそのフォルダをユーザーの `Path` に足し、付けなければ `Path` は変えません。
+- `floe.exe` には署名していません。出どころは `gh attestation verify floe.exe --repo sukekyo26/floe` で確かめられます。
+- 置き場所：Linux と同じく、ホーム（`%USERPROFILE%`。`HOME` は読みません）の下です。ページは `%USERPROFILE%\.local\share\floe`、アイコンのセットは `%USERPROFILE%\.local\share\floe-icons`、自分のテンプレート・部品・テーマは `%USERPROFILE%\.config\floe\templates`・`…\parts`・`…\themes`。`XDG_DATA_HOME`・`XDG_CONFIG_HOME` と `FLOE_*` の設定は Linux と同じく読み、どれもドライブ付きの絶対パスにします（`C:\floe\pages`）。floe は `~` を開かず、PowerShell も引用符の中では開きません。`$env:FLOE_DIR = '~\x'` は断られます（`FLOE_DIR is ~\x, a relative path; set it to an absolute path`）。`"$env:USERPROFILE\x"` と書いてください。
+- floe は権限を書きません。既定の場所はプロファイルと同じく自分だけのものですが、ほかの所（`C:\floe`）に置いた `FLOE_*` のディレクトリは、その PC のほかの利用者が読み書きできることがあります。
+- floe が開くのは、手元のドライブの上のふつうの名前のものだけです。ネットワークの共有（`\\server\share`、`\\wsl.localhost\…`）、ネットワークドライブ（共有を割り当てた `Z:`）、ドライブ文字の無いフォルダにマウントしたボリューム、デバイス、パイプ、ストリームの名前（`a.yaml:x`）と、それらへのリンクは、データファイル・リポジトリ・保存先・自分のもののディレクトリのどれでも断ります。読むファイルは `this is not on a local drive under an ordinary name: …` で断ります。書く先（保存先、`floe render` の出力先、`floe skill install`、`floe part new` など、`floe icons fetch`）は、書けないという文の括弧の中に同じ理由を出し（`cannot be written (not on a local drive under an ordinary name: Z:): …`）、`FLOE_*` の設定が名指すディレクトリは、読むときも書くときも、その設定の文で断ります（`FLOE_DIR is Z:\x, which cannot be used as a directory (not on a local drive under an ordinary name: Z:); …`）。ドライブの今のディレクトリからの相対パス（`C:x`）で渡したもの・リンクしたものも断ります。パスを全部書いてください。プロファイルがネットワークの上にある PC では、`FLOE_*` の設定を手元のドライブにしてください。`floe.exe` も手元のドライブに置いてください。ネットワークドライブの上からは、サーバーを使うコマンドが動きません。
+- リンクは、どの OS でも断るものに加えて、ドライブの根（`C:\`）、ホームの直下の隠しの属性が付いたディレクトリ（`.` で始まる名前は、どの OS でも断ります）、アプリのデータのフォルダ（`AppData`）とその下の全部（`%TEMP%` も）を断ります。リンクするファイルはプロジェクトのフォルダに書いてください。
+- データファイルの画像のパスには、`\`・`:`・デバイスの名前（`NUL`・`CON`）を書けません。
+- ほかのプログラムが中のファイルを開いている間は、ディレクトリの名前を変えられません。ページの URL 名の変更や `floe icons fetch` が `Access is denied` で失敗することがあります。閉じてからもう一度実行してください。
+- 設定や既定の場所の所に（その場所そのものとして、またはその途中のフォルダとして）ファイルがあると、読むだけのコマンドはその場所を無いものと読んで、それ無しで進むことがあります。アイコンのコマンドは、そのセットを取っていないと言います。
+- 新しいページは既定のブラウザで開きます（`BROWSER` がコマンドを名指していればそれで）。
+- WSL の floe が `127.0.0.1:7325` で待っていると、Windows からも届くことがあります。両方で floe を使うなら、片方の `FLOE_PORT` を別のポート（`7326`）にしてください。
+- テストは、CI と同じく `TMP`・`TEMP` を `AppData` の外（`C:\floe-tmp`）にして走らせます。`%TEMP%` の下はリンクできないためです。
 
 ## 終了コード
 

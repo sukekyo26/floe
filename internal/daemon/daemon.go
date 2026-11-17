@@ -15,11 +15,10 @@ import (
 	"os"
 	"os/exec"
 	"path/filepath"
-	"runtime"
 	"strconv"
-	"syscall"
 	"time"
 
+	"floe/internal/files"
 	"floe/internal/i18n"
 	"floe/internal/server"
 	"floe/internal/usererr"
@@ -51,7 +50,7 @@ func Build() (string, error) {
 	if err != nil {
 		return "", fmt.Errorf("find the floe binary: %w", err)
 	}
-	fi, err := os.Stat(exe)
+	fi, err := files.Stat(exe)
 	if err != nil {
 		return "", fmt.Errorf("find the floe binary: %w", err)
 	}
@@ -195,8 +194,9 @@ func (s Server) serves(ctx context.Context, p Status) error {
 // 204: a server answers 204 to one request only, so of commands that ask together one is told it did, and the
 // others (409, or no answer from a server that is gone) are not, though the server stops all the same.
 // LIMIT: it returns once the port is free, while the old process may finish the requests under way (10 s at most,
-// under the store's lock). A server in a container whose port is handed out stops, but the container's proxy may
-// keep the port bound, and the next command is told the port is silent. Two servers of one pid (of other
+// under the store's lock), then, stopped right after it started, its first read of the drawing, which nothing stops
+// (seconds, on Windows under load). A server in a container whose port is handed out stops, but the container's
+// proxy may keep the port bound, and the next command is told the port is silent. Two servers of one pid (of other
 // namespaces, or a pid used again) are not told apart. Give the health an id of each start if waiting for the
 // process or telling them apart comes to matter.
 func Stop(ctx context.Context, port int, p Status) (Status, bool, error) {
@@ -279,8 +279,8 @@ func sameDir(a, b string) bool {
 	if filepath.Clean(a) == filepath.Clean(b) {
 		return true
 	}
-	x, errA := os.Stat(a)
-	y, errB := os.Stat(b)
+	x, errA := files.Stat(a)
+	y, errB := files.Stat(b)
 	return errA == nil && errB == nil && os.SameFile(x, y)
 }
 
@@ -292,8 +292,8 @@ func sameOrUnread(a, b string) bool {
 	if sameDir(a, b) {
 		return true
 	}
-	_, errA := os.Stat(a)
-	_, errB := os.Stat(b)
+	_, errA := files.Stat(a)
+	_, errB := files.Stat(b)
 	return errA != nil && errB != nil
 }
 
@@ -319,12 +319,6 @@ func startAndWait(ctx context.Context, s Server, p Status) (Status, error) {
 // ListenerEnv tells "floe serve" the file descriptor of the listener the command that started it bound.
 const ListenerEnv = "FLOE_SERVE_LISTENER"
 
-// listenerFD is the descriptor a started server takes its listener at: the first of cmd.ExtraFiles.
-const listenerFD = 3
-
-// errLowFD is a descriptor below those a command hands down.
-var errLowFD = errors.New("not a descriptor handed down")
-
 // ErrHandedAddr is a listener handed down on another address than the server's.
 var ErrHandedAddr = errors.New("the listener handed down is not on the server's address")
 
@@ -333,9 +327,9 @@ var ErrHandedAddr = errors.New("the listener handed down is not on the server's 
 // a port in use as another server's, and tells only the others so.
 func CannotListen(port int, err error) error {
 	switch {
-	case errors.Is(err, syscall.EADDRINUSE):
+	case errors.Is(err, errInUse):
 		return usererr.New("daemon_port_in_use", port)
-	case errors.Is(err, syscall.EACCES):
+	case errors.Is(err, errDenied):
 		return usererr.New("daemon_cannot_listen", port)
 	}
 	return fmt.Errorf("listen on %s: %w", Addr(port), err)
@@ -360,17 +354,16 @@ func Handed(getenv func(string) string, port int) (net.Listener, error) {
 	refuse := func(err error) error {
 		return fmt.Errorf("take the listener handed down (%s=%s): %w", ListenerEnv, v, err)
 	}
-	fd, err := strconv.Atoi(v)
+	n, err := strconv.ParseUint(v, 10, 64)
 	if err != nil {
 		return nil, refuse(err)
 	}
-	// Not standard input, output or error, which taking would close.
-	if fd < listenerFD {
-		return nil, refuse(errLowFD)
+	f, err := takeHanded(n)
+	if err != nil {
+		return nil, refuse(err)
 	}
-	f := os.NewFile(uintptr(fd), "listener") //nolint:gosec // G115: a descriptor the command wrote
-	defer f.Close()                          //nolint:errcheck // the listener holds its own copy
 	ln, err := net.FileListener(f)
+	release(f) // the listener holds its own copy
 	if err != nil {
 		return nil, refuse(err)
 	}
@@ -388,7 +381,7 @@ func Handed(getenv func(string) string, port int) (net.Listener, error) {
 // take the port once that one stops.
 func start(ctx context.Context, s Server) (bool, error) {
 	ln, err := Listen(s.Port)
-	if errors.Is(err, syscall.EADDRINUSE) {
+	if errors.Is(err, errInUse) {
 		return false, nil
 	}
 	if err != nil {
@@ -405,9 +398,11 @@ func start(ctx context.Context, s Server) (bool, error) {
 		return false, fmt.Errorf("find the floe binary: %w", err)
 	}
 	cmd := exec.CommandContext(context.WithoutCancel(ctx), exe, "serve") //nolint:gosec // G204: our own binary
-	cmd.Env = append(append([]string{}, s.Env...), ListenerEnv+"="+strconv.Itoa(listenerFD))
-	cmd.ExtraFiles = []*os.File{f}
-	cmd.SysProcAttr = &syscall.SysProcAttr{Setsid: true}
+	handed, err := background(cmd, f)
+	if err != nil {
+		return false, fmt.Errorf("hand the listener down: %w", err)
+	}
+	cmd.Env = append(append([]string{}, s.Env...), ListenerEnv+"="+handed)
 	if err := cmd.Start(); err != nil {
 		return false, fmt.Errorf("start the server: %w", err)
 	}
@@ -415,34 +410,22 @@ func start(ctx context.Context, s Server) (bool, error) {
 	return true, nil
 }
 
-// OpenBrowser opens url with $BROWSER (devcontainers point it at the host's browser), macOS's open,
-// wslview or xdg-open. Failing to open is ignored: the publish succeeded and the URL is printed.
-// Linux's /usr/bin/open is openvt, so open is used on macOS only.
+// OpenBrowser opens url with $BROWSER (devcontainers point it at the host's browser), else the system's own way
+// (openDefault). Failing to open is ignored: the publish succeeded and the URL is printed.
 // LIMIT: $BROWSER is a single command (a colon-separated list is not supported).
 func OpenBrowser(ctx context.Context, browser, url string) {
 	if browser == "" {
-		browser = opener()
-	}
-	if browser == "" {
+		openDefault(ctx, url)
 		return
 	}
 	//nolint:gosec // G204: the user's browser
-	cmd := exec.CommandContext(context.WithoutCancel(ctx), browser, url)
-	cmd.SysProcAttr = &syscall.SysProcAttr{Setsid: true}
-	if cmd.Start() != nil {
+	startAway(exec.CommandContext(context.WithoutCancel(ctx), browser, url))
+}
+
+// startAway starts cmd away from this process, as background does, and reaps it; a failure is ignored.
+func startAway(cmd *exec.Cmd) {
+	if _, err := background(cmd, nil); err != nil || cmd.Start() != nil {
 		return
 	}
 	go func() { _ = cmd.Wait() }() //nolint:errcheck // reaps the opener
-}
-
-func opener() string {
-	if runtime.GOOS == "darwin" {
-		return "open"
-	}
-	for _, name := range []string{"wslview", "xdg-open"} {
-		if _, err := exec.LookPath(name); err == nil {
-			return name
-		}
-	}
-	return ""
 }

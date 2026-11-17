@@ -4,7 +4,7 @@ import (
 	"fmt"
 	"html/template"
 	"maps"
-	"path"
+	"path/filepath"
 
 	"floe/internal/textpos"
 	"floe/internal/usererr"
@@ -18,10 +18,10 @@ type pages map[string]*template.Template
 // of w: html/template takes the functions before it parses. Its mistake is text/template's, in its words, at
 // the line its head says (textpos.OfTemplate).
 func parsePages(file string, src []byte, fns template.FuncMap, w words) (pages, error) {
-	base, err := template.New(path.Base(file)).Option("missingkey=error").Funcs(fns).
+	base, err := template.New(filepath.Base(file)).Option("missingkey=error").Funcs(fns).
 		Funcs(template.FuncMap{"word": w.word(file, "")}).Parse(string(src))
 	if err != nil {
-		line, column, words := textpos.OfTemplate(src, err.Error(), path.Base(file))
+		line, column, words := textpos.OfTemplate(src, err.Error(), filepath.Base(file))
 		return nil, usererr.LibraryAt(file, line, column, words)
 	}
 	ps := pages{"": base}

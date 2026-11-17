@@ -4,7 +4,7 @@ floe はエージェントが書いたページをローカルサーバー（`ht
 
 - 検証は `just ci`（CI と同じ内容）。golangci-lint は `just setup` で入る。
 - **worktree は本体の中に作る**：`~/work/floe` で起動し、ブランチの worktree は `.claude/worktrees/<branch>` に作る。ここでは、決まりは本体の `.claude/CLAUDE.md` と `.claude/rules/` だけが届き、ブランチのものは届かない。本体に無い決まりと、外の worktree では、誤りも警告も出ずに届かないので、worktree を作る前に本体の develop を pull する。
-- 対応 OS は linux と darwin（amd64・arm64）。Windows はリンクのパス検査などの信頼境界を検証できないので対応しない。
+- 対応 OS は linux・darwin・windows（amd64・arm64）。OS で違うコードは `.claude/rules/os.md` に従う。
 - 決まりは、それを入れた PR がこのファイルに足す。足すのは、読まないと書くコードを誤ることだけで、1 つの決まりは数文にする。書き手に見える動きは docs に、理由と限界はコードのコメントと `LIMIT:` に、測れることはテストに書き、ここには書き写さない。触るときだけ要る決まりは `.claude/rules/` に置き、同じ決まりを 2 つのファイルに書かない。決まりや動きを変えたら docs も直す。
 
 ## 検査の方針
@@ -26,8 +26,9 @@ floe が入力を断る検査は、次の 4 つのどれかに当たるものだ
 - **受け入れた退行**：上に当たらない漏れは、`LIMIT:` のコメントと PR の本文に書く。検査は足さない
 
 - **ユーザーのパスはふつうのファイルだけ読む**：ユーザーが渡したパス（データファイル・spec・zip・ページ・publish のリンク）から読むのは、ふつうのファイルだけで、`files.Open`・`files.Read` を通す。開く前に種類を見て、FIFO・デバイス・socket は開かない（開くと止まる、開くこと自体に副作用がある）。ディスクのディレクトリを `fs.FS` にするのは `files.Root`（外へ出ない）と `files.DirFS`（symlink をたどる）だけ（forbidigo が `os.DirFS`・`os.Root.FS` を断る）
-- **自分のものの置き場所は重ねない**：部品・テーマ・テンプレートの置き場所の重なりは、`app.kit` が開く前に、字でなく OS の実体（`resolve`・`within`）で比べて `dir_overlap` で断り、重なった置き場所は開かない。`newOwn` も作る前に比べる
+- **自分のものの置き場所は重ねない**：部品・テーマ・テンプレートの置き場所の重なりは、`app.kit` が開く前に、字でなく OS の実体（`files.RealAbove`・`within`）で比べて `dir_overlap` で断り、重なった置き場所は開かない。`newOwn` も作る前に比べる
 - **render が書くのはページだけ**：書くページのリンクはたどり、たどった先の名前が .html（`files.IsPage`）でなければ、何も書かずに断る。データファイルやリポジトリの外のファイルを書き換えない
+- **実のパスは files だけが求める**：リンクをたどった実のパスは `files.Real`（無い名前があれば `files.RealAbove`）で求め、`filepath.EvalSymlinks` は呼ばない（forbidigo が断る）。比べる・`filepath.Rel` を取るときは両側を実のパスにし、名前を足すのは `filepath.Join` だけ。Windows の実のパス（`\\?\C:\…`）はそのまま持ち、見せるときだけ `dirs.Shown` を通す
 - **YAML は yamlpos だけが読む**：YAML のバイト列を go.yaml.in/yaml/v4 に渡すのは `yamlpos` だけで、v4 を import できるのも `yamlpos` だけ（depguard の規則 `yaml-in-yamlpos`）。値にするのは `yamlpos.Decode` で、スカラーの値は YAML 1.2 の core schema の表で決める（v4 の `Node.Decode`・`Load` は使わない）
 - **schema の JSON は schema だけが読む**：schema.json などのバイト列を読むのは `schema` の `read` だけで、外からは `Compile`・`NewResource` に渡す。構文の誤りと黙った読み違いは、`read` が値にする前に断る（ライブラリは後の値や U+FFFD で読む）。jsonschema を import できるのは `internal/schema` だけ（depguard の規則 `jsonschema-in-schema`）
 - **Markdown は kit だけが読む**：goldmark と goldmark-cjk-friendly を import できるのは `internal/kit` だけ（depguard の規則 `goldmark-in-kit`）。生の HTML を出さない `markdown` を、どこも通る

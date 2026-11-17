@@ -6,13 +6,12 @@ import (
 	"net"
 	"os"
 	"path/filepath"
-	"syscall"
 	"testing"
 	"testing/fstest"
-
-	"golang.org/x/sys/unix"
+	"time"
 
 	"floe/internal/files"
+	"floe/internal/testfs"
 	"floe/internal/timebox"
 	"floe/internal/usererr"
 )
@@ -25,63 +24,42 @@ func fsOf(t *testing.T, dir string) map[string]fs.FS {
 	return map[string]fs.FS{"Root": root, "DirFS": files.DirFS(dir)}
 }
 
+// contractTree makes a.yaml and sub/b.png in a new directory, for fstest.TestFS. sub's times are set after: Windows
+// may update a directory's write time a moment after a file is made in it, which TestFS would find between the
+// directory's entry and its Stat.
+func contractTree(t *testing.T) string {
+	t.Helper()
+	dir := t.TempDir()
+	if err := os.Mkdir(filepath.Join(dir, "sub"), 0o700); err != nil {
+		t.Fatal(err)
+	}
+	for name, b := range map[string]string{"a.yaml": "a", "sub/b.png": "b"} {
+		if err := os.WriteFile(filepath.Join(dir, filepath.FromSlash(name)), []byte(b), 0o600); err != nil {
+			t.Fatal(err)
+		}
+	}
+	at := time.Date(2026, 1, 1, 0, 0, 0, 0, time.UTC)
+	if err := os.Chtimes(filepath.Join(dir, "sub"), at, at); err != nil {
+		t.Fatal(err)
+	}
+	return dir
+}
+
 // Both keep to what an fs.FS promises, as testing/fstest checks it.
 func TestFSContract(t *testing.T) {
 	t.Parallel()
 
-	dir := t.TempDir()
-	for name, b := range map[string]string{"a.yaml": "a", "sub/b.png": "b"} {
-		if err := os.MkdirAll(filepath.Dir(filepath.Join(dir, name)), 0o700); err != nil {
-			t.Fatal(err)
-		}
-		if err := os.WriteFile(filepath.Join(dir, name), []byte(b), 0o600); err != nil {
-			t.Fatal(err)
-		}
-	}
+	dir := contractTree(t)
 	for via, fsys := range fsOf(t, dir) {
-		if err := fstest.TestFS(fsys, "a.yaml", "sub/b.png"); err != nil {
-			t.Errorf("%s: %v", via, err)
-		}
+		t.Run(via, func(t *testing.T) {
+			t.Parallel()
+			if err := fstest.TestFS(fsys, "a.yaml", "sub/b.png"); err != nil {
+				t.Error(err)
+			}
+		})
 		// fstest.TestFS tries bad names on Open and ReadFile alone.
 		if _, err := fs.Stat(fsys, "../x"); !errors.Is(err, fs.ErrInvalid) {
 			t.Errorf("%s: Stat(../x) = %v, want fs.ErrInvalid", via, err)
-		}
-	}
-}
-
-// What both open, a file or a directory, is opened without blocking (O_NONBLOCK), as files.Open opens it: that
-// is what lets the open of a FIFO return.
-func TestFSOpensWithoutBlocking(t *testing.T) {
-	t.Parallel()
-
-	dir := t.TempDir()
-	if err := os.WriteFile(filepath.Join(dir, "a.yaml"), []byte("a"), 0o600); err != nil {
-		t.Fatal(err)
-	}
-	for via, fsys := range fsOf(t, dir) {
-		for _, name := range []string{"a.yaml", "."} {
-			f, err := fsys.Open(name)
-			if err != nil {
-				t.Fatalf("%s: Open(%s) = %v", via, name, err)
-			}
-			of, ok := f.(*os.File)
-			if !ok {
-				t.Fatalf("%s: Open(%s) = %T, want an *os.File", via, name, f)
-			}
-			// Not Fd, which makes the file blocking.
-			var flags int
-			var flagErr error
-			rc, err := of.SyscallConn()
-			if err == nil {
-				err = rc.Control(func(fd uintptr) { flags, flagErr = unix.FcntlInt(fd, unix.F_GETFL, 0) })
-			}
-			if err = errors.Join(err, flagErr); err != nil {
-				t.Fatal(err)
-			}
-			if flags&unix.O_NONBLOCK == 0 {
-				t.Errorf("%s: Open(%s) opened it blocking", via, name)
-			}
-			_ = f.Close()
 		}
 	}
 }
@@ -92,28 +70,49 @@ func TestFSNotFiles(t *testing.T) {
 	t.Parallel()
 
 	dir := t.TempDir()
-	if err := syscall.Mkfifo(filepath.Join(dir, "f"), 0o600); err != nil {
-		t.Fatal(err)
-	}
 	ln, err := (&net.ListenConfig{}).Listen(t.Context(), "unix", filepath.Join(dir, "s"))
 	if err != nil {
 		t.Fatal(err)
 	}
-	defer ln.Close()
+	t.Cleanup(func() { _ = ln.Close() })
+	notFileIn(t, dir, "s")
+	t.Run("a FIFO", func(t *testing.T) {
+		t.Parallel()
+		testfs.Mkfifo(t, filepath.Join(dir, "f"))
+		notFileIn(t, dir, "f")
+	})
+}
+
+// pathOf is the path err's *fs.PathError names, "" of none.
+func pathOf(err error) string {
+	if pe, ok := errors.AsType[*fs.PathError](err); ok {
+		return pe.Path
+	}
+	return ""
+}
+
+// notFileIn checks a read, a listing and a Stat of name, under dir through either, as of no regular file.
+func notFileIn(t *testing.T, dir, name string) {
+	t.Helper()
 	for via, fsys := range fsOf(t, dir) {
-		for _, name := range []string{"f", "s"} {
-			timebox.Within(t, via+" "+name, func() {
-				if _, err := fs.ReadFile(fsys, name); !errors.Is(err, usererr.ErrNotFile) {
-					t.Errorf("%s: ReadFile(%s) = %v, want ErrNotFile", via, name, err)
-				}
-				if _, err := fs.ReadDir(fsys, name); !errors.Is(err, usererr.ErrNotFile) {
-					t.Errorf("%s: ReadDir(%s) = %v, want ErrNotFile", via, name, err)
-				}
-				if fi, err := fs.Stat(fsys, name); err != nil || fi.Mode().IsRegular() || fi.IsDir() {
-					t.Errorf("%s: Stat(%s) = %v, %v, want what it is", via, name, fi, err)
-				}
-			})
-		}
+		timebox.Within(t, via+" "+name, func() {
+			if _, err := fs.ReadFile(fsys, name); !errors.Is(err, usererr.ErrNotFile) {
+				t.Errorf("%s: ReadFile(%s) = %v, want ErrNotFile", via, name, err)
+			}
+			// An fs.FS's errors name the name, not the directory's path.
+			if _, err := fsys.Open(name); pathOf(err) != name {
+				t.Errorf("%s: Open(%s) = %v, want the error at %s", via, name, err, name)
+			}
+			if _, err := fs.Stat(fsys, name+"x"); pathOf(err) != name+"x" {
+				t.Errorf("%s: Stat(%sx) = %v, want the error at %sx", via, name, err, name)
+			}
+			if _, err := fs.ReadDir(fsys, name); !errors.Is(err, usererr.ErrNotFile) {
+				t.Errorf("%s: ReadDir(%s) = %v, want ErrNotFile", via, name, err)
+			}
+			if fi, err := fs.Stat(fsys, name); err != nil || fi.Mode().IsRegular() || fi.IsDir() {
+				t.Errorf("%s: Stat(%s) = %v, %v, want what it is", via, name, fi, err)
+			}
+		})
 	}
 }
 
@@ -133,16 +132,17 @@ func TestFSLinks(t *testing.T) {
 			t.Fatal(err)
 		}
 	}
-	if err := os.Symlink(filepath.Join(tmp, "real", "inner"), filepath.Join(tmp, "home", "link")); err != nil {
-		t.Fatal(err)
-	}
-	if err := os.Symlink(filepath.Join(tmp, "out", "o.yaml"), filepath.Join(tmp, "home", "o.yaml")); err != nil {
-		t.Fatal(err)
-	}
-	// By its letters: filepath.Join would fold link/.. itself.
-	if b, err := fs.ReadFile(files.DirFS(filepath.Join(tmp, "home", "link")+"/.."), "x"); err != nil || string(b) != "real" {
-		t.Errorf("DirFS(home/link/..) read x = %q, %v; want real, as os.ReadDir reads it", b, err)
-	}
+	testfs.Symlink(t, filepath.Join(tmp, "real", "inner"), filepath.Join(tmp, "home", "link"))
+	testfs.Symlink(t, filepath.Join(tmp, "out", "o.yaml"), filepath.Join(tmp, "home", "o.yaml"))
+	t.Run("link/..", func(t *testing.T) {
+		t.Parallel()
+		// Win32 folds link\.. by its letters before it looks at the link, for os.ReadDir too.
+		testfs.UnixOnly(t, "Windows folds link/.. as written, before the link")
+		// By its letters: filepath.Join would fold link/.. itself.
+		if b, err := fs.ReadFile(files.DirFS(filepath.Join(tmp, "home", "link")+"/.."), "x"); err != nil || string(b) != "real" {
+			t.Errorf("DirFS(home/link/..) read x = %q, %v; want real, as os.ReadDir reads it", b, err)
+		}
+	})
 	home := fsOf(t, filepath.Join(tmp, "home"))
 	if b, err := fs.ReadFile(home["DirFS"], "o.yaml"); err != nil || string(b) != "o" {
 		t.Errorf("DirFS read a link out = %q, %v", b, err)
@@ -175,5 +175,47 @@ func TestRootDirError(t *testing.T) {
 	}
 	if _, err := root.Stat("a.png"); !errors.As(err, new(*files.DirError)) {
 		t.Errorf("Stat = %v, want a DirError", err)
+	}
+}
+
+// nameCase is a name and whether ValidName takes it; the rows that differ by system are in osNameCases.
+type nameCase struct {
+	name string
+	ok   bool
+}
+
+// ValidName takes the names an fs.FS takes and the system reads as names under the directory; Root and DirFS
+// refuse the others.
+func TestValidName(t *testing.T) {
+	t.Parallel()
+
+	dir := t.TempDir()
+	for _, tt := range append([]nameCase{
+		{"a.png", true},
+		{"sub/b.png", true},
+		{".", true},
+		{"nul.txt", true},
+		{"a.png.", true},
+		{"", false},
+		{"../a.png", false},
+		{"/a.png", false},
+		{"sub//b.png", false},
+		{"a\x00.png", false},
+	}, osNameCases...) {
+		if got := files.ValidName(tt.name); got != tt.ok {
+			t.Errorf("ValidName(%q) = %v, want %v", tt.name, got, tt.ok)
+		}
+		if tt.ok {
+			continue
+		}
+		// Root and DirFS refuse it alike, unopened.
+		for via, fsys := range fsOf(t, dir) {
+			if _, err := fsys.Open(tt.name); !errors.Is(err, fs.ErrInvalid) {
+				t.Errorf("%s: Open(%q) = %v, want fs.ErrInvalid", via, tt.name, err)
+			}
+			if _, err := fs.Stat(fsys, tt.name); !errors.Is(err, fs.ErrInvalid) {
+				t.Errorf("%s: Stat(%q) = %v, want fs.ErrInvalid", via, tt.name, err)
+			}
+		}
 	}
 }

@@ -43,7 +43,7 @@ The icons are replaced as a whole, and the previous ones stay if that fails. A v
 already there is kept unless --force.
 
 FLOE_ICONS_DIR is an absolute path; without it, the icons are kept in
-$XDG_DATA_HOME/floe-icons, or ~/.local/share/floe-icons.`,
+$XDG_DATA_HOME/floe-icons, or ~/.local/share/floe-icons (~ is %USERPROFILE% on Windows).`,
 		Args: cobra.MinimumNArgs(1),
 		RunE: func(cmd *cobra.Command, args []string) error {
 			from := make([]icons.Source, len(args)-1)
@@ -110,12 +110,12 @@ service's resources. A set not fetched is told with how to fetch it.
 	}
 }
 
-// iconsDir is the directory of the icon sets: FLOE_ICONS_DIR, else floe-icons under the XDG data directory,
-// else under ~/.local/share (dataDir). The icon sets need a place, and there is none without one.
+// iconsDir is the directory of the icon sets: FLOE_ICONS_DIR, else iconsSub under the base of the data
+// (dataDir). The icon sets need a place, and there is none without one.
 func (a *app) iconsDir() (dataPlace, error) {
-	p, err := a.dataDir("FLOE_ICONS_DIR", "XDG_DATA_HOME", ".local/share", "floe-icons")
+	p, err := a.dataDir("FLOE_ICONS_DIR", dataBase, iconsSub)
 	if err == nil && p.dir == "" {
-		err = usererr.NewWhole("icons_no_dir")
+		err = usererr.NewWhole("icons_no_dir", p.from)
 	}
 	return p, err
 }

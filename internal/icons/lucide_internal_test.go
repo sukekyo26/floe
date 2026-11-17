@@ -157,7 +157,12 @@ func writeLucide(t *testing.T) {
 		t.Fatalf("no category of Lucide's for %v: decide what they are in", slices.Sorted(slices.Values(none)))
 	}
 	idx.Version, idx.Sources = lucideVersion, []string{filepath.Base(zipPath)}
-	if err := writeIndex(idx, dir); err != nil {
+	root, err := os.OpenRoot(dir)
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer root.Close()
+	if err := writeIndex(idx, root, dir); err != nil {
 		t.Fatal(err)
 	}
 	// The build embeds what was there when it began, so what was written is checked by the next run.
