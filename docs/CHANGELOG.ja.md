@@ -12,6 +12,7 @@ floe の主要な変更を記録します。フォーマットは
 
 ### 変更
 
+- 変更：ポートのサーバーが配信する保存先がこのシステムの絶対パスでない（Windows から見た WSL の floe など、別のシステムのサーバー）ときのコマンドの断りが、`FLOE_PORT` を別のポートにすることだけを言い、`FLOE_DIR` をその保存先にすることと `floe stop` を勧めないようにした。
 - 変更：`floe licenses` が、どの OS でも、Windows のビルドが持つ `github.com/inconshreveable/mousetrap` のライセンスも出すようにした。
 - 変更：Linux・macOS でない OS で `install.sh` を走らせると、Windows では `install.ps1` で入れることと、その入れ方を言うようにした。
 - 変更：データファイルが名指す画像のパスを断る文が、Windows では `\`、`:`、`NUL`・`CON` などのデバイスの名前も書けないと言うようにした。NUL の字を含む画像の名前も、この文で断るようにした。
