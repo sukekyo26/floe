@@ -81,7 +81,7 @@ func TestInstall(t *testing.T) {
 		{name: "no release", os: "Linux", arch: "x86_64", says: []string{"FLOE_VERSION", "try again later"}},
 		{name: "no such version", os: "Linux", arch: "x86_64", version: "0.9.9", says: []string{"download failed", "v0.9.9/floe-linux-amd64"}},
 		{name: "arch", os: "Linux", arch: "armv7l", says: []string{"armv7l", "amd64 and arm64"}},
-		{name: "os", os: "FreeBSD", arch: "amd64", says: []string{"freebsd", "linux and darwin"}},
+		{name: "os", os: "FreeBSD", arch: "amd64", says: []string{"freebsd", "linux and darwin", "install.ps1"}},
 		{name: "dir not writable", os: "Linux", arch: "x86_64", version: "0.1.0", dir: filepath.Join(notDir, "bin"), says: []string{"FLOE_INSTALL_DIR"}},
 		{name: "dir read-only", os: "Linux", arch: "x86_64", version: "0.1.0", readOnly: true, says: []string{"FLOE_INSTALL_DIR"}},
 	}
