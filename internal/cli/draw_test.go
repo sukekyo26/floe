@@ -35,7 +35,7 @@ func write(t *testing.T, files map[string]string) string {
 func TestCheck(t *testing.T) {
 	t.Parallel()
 
-	dir := write(t, map[string]string{"a.yaml": good, "b.yaml": "lang: en\ntemplate: reprot\n", "c.yaml": "x: [\n", "page.html": ""})
+	dir := write(t, map[string]string{"a.yaml": good, "b.yaml": "lang: en\ntemplate: reprot\n", "c.yaml": "x: [\n", "page.html": "", "d.yaml": "a: |\n   one\n  two\n"})
 	if code, stdout, stderr := run(dir, "check", "a.yaml", "./a.yaml"); code != 0 || stdout != "" || stderr != "" {
 		t.Errorf("floe check a.yaml = %d, %q, %q", code, stdout, stderr)
 	}
@@ -53,6 +53,10 @@ func TestCheck(t *testing.T) {
 			t.Errorf("floe check = %d, stderr\n%s\nwant first\n%s", code, stderr, strings.Join(want, "\n"))
 		}
 	})
+	// A line less deep than the first of a | text: the library's words at its place, then how to mend the text.
+	if code, _, stderr := run(dir, "check", "d.yaml"); code != 1 || !strings.HasPrefix(stderr, "d.yaml:3:3: did not find expected key: the | or > text above ends before this line") {
+		t.Errorf("floe check d.yaml = %d, %q", code, stderr)
+	}
 	if code, _, stderr := run("", "check", "a.yaml"); code != 1 || !strings.Contains(stderr, "the relative path a.yaml means nothing") {
 		t.Errorf("floe check under no directory = %d, %q", code, stderr)
 	}
