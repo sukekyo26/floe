@@ -150,7 +150,7 @@ Write so:
 floe refuses these:
 
 - A text MUST NOT be left bare where YAML reads it as something else: with a `: ` (a key) or a ` #` (a comment) in it, starting with a backtick or `%`, or reading as a number, `null` or `~` where only text goes (`'42'` in a table's cell, `'0x1F'`, `'null'`, `'-'`).
-- A comment MUST NOT follow a bare text on its line, in `{ }` or `[ ]` too, nor come right after a `|` or `>` block. The first line of a `|` block MUST NOT be deeper than the next: the block ends before the first shallower line, which is read as YAML, refused at that line or one after it, or taken as a key or an item with no mistake when it reads as one. For text whose first line starts with spaces, write after the `|` how far the block is indented past its key (`|2`).
+- A comment MUST NOT follow a bare text on its line, in `{ }` or `[ ]` too, nor come right after a `|` or `>` block. The first line of a `|` block MUST NOT be deeper than the next: the block ends before the first shallower line, which is read as YAML, refused at that line or one after it, or, when it is as deep as the block's key or `-` and reads as a key or an item, taken as one with no mistake. For text whose first line starts with spaces, write after the `|` how far the block is indented past its key (`|2`).
 - A file MUST be one document (no `---`), with no anchors, aliases, merge keys (`<<`) or tags, and each key written once in its keys and values.
 
 These pass `floe check` and change what you wrote:
