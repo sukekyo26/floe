@@ -10,6 +10,10 @@ adheres to [Semantic Versioning](https://semver.org/).
 
 - Add `FLOE_INSTALL_TIMEOUT` to `install.sh` and `install.ps1`: how many seconds to wait for an answer while nothing comes, for each request (default 120).
 
+### Changed
+
+- Change a YAML mistake told on the line right after a `|` or `>` text, as when the text's first line is deeper than a line after it: after the YAML library's words, floe now says that the text ends before that line and how to mend it (indent the text's lines alike, or write its indentation as in `|2`). The words before and the place are as they were.
+
 ### Fixed
 
 - Fix `install.sh` and `install.ps1` waiting forever when the server or a proxy on the way went silent: they give up after 120 seconds without an answer, and say what they were fetching and what to do. The whole download has no time limit, so a slow one still finishes. A download that stops midway is given up on after 5 minutes by Windows PowerShell 5.1 and never by PowerShell 7.0 to 7.3.

@@ -90,7 +90,7 @@ func Library(err error) *Error {
 }
 
 // LibraryWith returns the mistake a library told in err, its words the argument of the catalog message key, which
-// tells what to do besides: the one way a library's words go into a message of floe's.
+// tells what to do besides: a library's words go into a message of floe's by it, or at a place by LibraryAtWith.
 func LibraryWith(key string, err error) *Error {
 	return New(key, valid(err.Error()))
 }
@@ -98,7 +98,13 @@ func LibraryWith(key string, err error) *Error {
 // LibraryAt returns the mistake a library told in text, in its own words, at the line and column of file
 // it gave, 0 for none.
 func LibraryAt(file string, line, column int, text string) *Error {
-	return NewAt(file, line, column, "library", valid(text))
+	return LibraryAtWith(file, line, column, "library", text)
+}
+
+// LibraryAtWith returns the mistake a library told in text at the line and column of file it gave, its words the
+// argument of the catalog message key, which tells what to do besides.
+func LibraryAtWith(file string, line, column int, key, text string) *Error {
+	return NewAt(file, line, column, key, valid(text))
 }
 
 // LibraryIn returns the mistake a library told in text, in its own words, at at, a JSON pointer, in file.
