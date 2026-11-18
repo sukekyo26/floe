@@ -856,7 +856,9 @@ func testInstallPS1(t *testing.T, shell string) {
 	// Read as letters, not as a number: what sh and PowerShell would read apart is refused by both alike, before
 	// anything is asked for.
 	for _, v := range []string{"abc", "0", "08", "-5", "+5", "1.5", "1e3", "0x10", " 5", "100000", "5\n", "\uff15"} {
-		t.Run(fmt.Sprintf("refuses to wait %q", v), func(t *testing.T) {
+		// %+q: the name is in the path of the run's temp folder, and Windows PowerShell's Add-Type (the driver's)
+		// finds no path with a letter outside the system's code page in it.
+		t.Run(fmt.Sprintf("refuses to wait %+q", v), func(t *testing.T) {
 			t.Parallel()
 			r := goodRelease(t)
 			res, dir := install(t, r, psCase{env: map[string]string{"FLOE_INSTALL_TIMEOUT": v}})

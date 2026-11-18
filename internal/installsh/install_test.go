@@ -254,7 +254,7 @@ func TestInstall(t *testing.T) {
 	tests = append(tests, fixed...)
 	for _, v := range unread {
 		tests = append(tests, installCase{
-			name: fmt.Sprintf("refuses to wait %q", v), os: "Linux", arch: "x86_64", api: pretty, timeout: v,
+			name: fmt.Sprintf("refuses to wait %+q", v), os: "Linux", arch: "x86_64", api: pretty, timeout: v,
 			says: []string{refused, "(got " + strings.TrimRight(v, "\n")},
 		})
 	}
