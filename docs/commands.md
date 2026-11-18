@@ -6,6 +6,8 @@ Reference for every command of the `floe` binary. How to write a data file is in
 
 The [README](../README.md#install) gives the command that installs floe. Set `FLOE_VERSION` to pin a release and `FLOE_INSTALL_DIR` to change the destination (default `~/.local/bin`; on Windows, see [Windows](#windows)). The binary is verified against the release's `SHA256SUMS`.
 
+A server or a proxy that goes silent is given up on: the installer waits `FLOE_INSTALL_TIMEOUT` seconds (default `120`; a whole number from `1` to `99999`) for an answer while nothing comes, then says what it was fetching and ends. The limit is for each request, of which there are about five (redirects count), so an install where each goes silent just short of it takes about ten minutes. The whole download has no time limit: one that is slow but still coming is not cut, and `install.sh` waits on for a server that keeps sending a byte a second or more.
+
 ## Quick reference
 
 Flags are in each command's section below.
@@ -492,7 +494,7 @@ floe: FLOE_PARTS_DIR (/tmp/pp) and FLOE_THEMES_DIR (/tmp/pp) are one directory, 
 
 floe runs on Windows 11 (amd64 and arm64; arm64 is built but not tried), on NTFS. Windows 10 is not supported: it takes a name such as `NUL.png` for a device, which Windows 11 takes for a file. ReFS and FAT are not tried. Files in a OneDrive folder are read and linked as elsewhere; one kept online only is read too: OneDrive downloads it when floe reads it.
 
-- Install: `irm https://raw.githubusercontent.com/sukekyo26/floe/main/install.ps1 | iex` in PowerShell (Windows PowerShell 5.1 or PowerShell 7) puts `floe.exe` in `%USERPROFILE%\.local\bin`. `FLOE_VERSION` and `FLOE_INSTALL_DIR` are as for `install.sh`; `FLOE_ADD_TO_PATH=1` adds the folder to your user `Path`, which is left alone otherwise.
+- Install: `irm https://raw.githubusercontent.com/sukekyo26/floe/main/install.ps1 | iex` in PowerShell (Windows PowerShell 5.1 or PowerShell 7) puts `floe.exe` in `%USERPROFILE%\.local\bin`. `FLOE_VERSION`, `FLOE_INSTALL_DIR` and `FLOE_INSTALL_TIMEOUT` are as for `install.sh`; `FLOE_ADD_TO_PATH=1` adds the folder to your user `Path`, which is left alone otherwise. A download that stops midway is given up on after `FLOE_INSTALL_TIMEOUT` seconds by PowerShell 7.4 and later; after 5 minutes by Windows PowerShell 5.1, whatever the setting; and never by PowerShell 7.0 to 7.3, which also do not say that the time ran out. A server that keeps sending, however little, before the limit each time is waited for.
 - `floe.exe` is not signed. Check where it came from with `gh attestation verify floe.exe --repo sukekyo26/floe`.
 - Places: as on Linux, under your home, which is `%USERPROFILE%` (`HOME` is not read): pages in `%USERPROFILE%\.local\share\floe`, icon sets in `%USERPROFILE%\.local\share\floe-icons`, your own templates, parts and themes in `%USERPROFILE%\.config\floe\templates`, `…\parts` and `…\themes`. `XDG_DATA_HOME`, `XDG_CONFIG_HOME` and the `FLOE_*` settings are read as on Linux, each an absolute path with its drive (`C:\floe\pages`). floe does not expand `~`, nor does PowerShell in quotes: `$env:FLOE_DIR = '~\x'` is refused (`FLOE_DIR is ~\x, a relative path; set it to an absolute path`); write `"$env:USERPROFILE\x"`.
 - floe writes no permissions: the default places are as private as your profile, but a `FLOE_*` directory elsewhere (`C:\floe`) may be read and changed by other users of the PC.

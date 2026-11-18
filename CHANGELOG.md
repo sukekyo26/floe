@@ -6,8 +6,13 @@ adheres to [Semantic Versioning](https://semver.org/).
 
 ## [Unreleased]
 
+### Added
+
+- Add `FLOE_INSTALL_TIMEOUT` to `install.sh` and `install.ps1`: how many seconds to wait for an answer while nothing comes, for each request (default 120).
+
 ### Fixed
 
+- Fix `install.sh` and `install.ps1` waiting forever when the server or a proxy on the way went silent: they give up after 120 seconds without an answer, and say what they were fetching and what to do. The whole download has no time limit, so a slow one still finishes. A download that stops midway is given up on after 5 minutes by Windows PowerShell 5.1 and never by PowerShell 7.0 to 7.3.
 - Fix a key pressed just after a modal of the management page closed reaching the closed modal: Enter right after Escape could save the change Escape cancelled in the edit modal, or open the page picked in the search modal. The focus now leaves the modal as it closes.
 - Fix Enter pressed right after Yes in the ask to move a page to another task: Yes could be lost, the page left where it was and the modals left open.
 - Fix a modal of the management page closed while it saved: the save went on and what came after it acted on whatever modal was open by then. It could close a modal opened again for another page, send that modal's next save to the page the first save renamed, so that page was renamed and retitled, or say a failure where it could not be seen. The modal now holds still while it saves and reads the list after: Escape, Cancel, a press outside and its buttons do nothing till the save is answered, and a failure is said in it. A save that never answers holds it till the page is loaded again (F5, Ctrl+R).

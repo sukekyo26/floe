@@ -139,21 +139,38 @@ func TestRunLimited(t *testing.T) {
 
 // The fakes stand for the network and the machine: curl serves $FAKE_API for the API and
 // $FAKE_ASSETS/<tag>/<name> for downloads, uname prints $FAKE_OS and $FAKE_ARCH. Neither reads
-// stdin, which holds install.sh.
+// stdin, which holds install.sh. curl takes no call without the limits on a silence, of $FAKE_TIMEOUT seconds (120
+// when unset); a URL that holds $FAKE_STALL ends as a real curl does at those limits; each URL asked for is written
+// to $FAKE_LOG.
 const (
 	fakeCurl = `#!/bin/sh
-out= url=
+out= url= connect= limit= time=
 while [ $# -gt 0 ]; do
   case "$1" in
     -o) out=$2; shift ;;
+    --connect-timeout) connect=$2; shift ;;
+    --speed-limit) limit=$2; shift ;;
+    --speed-time) time=$2; shift ;;
     https://*) url=$1 ;;
   esac
   shift
 done
+[ -z "$FAKE_LOG" ] || echo "$url" >> "$FAKE_LOG"
+want=${FAKE_TIMEOUT:-120}
+if [ "$connect" != "$want" ] || [ "$limit" != 1 ] || [ "$time" != "$want" ]; then
+  echo "fake curl: $url: --connect-timeout '$connect' --speed-limit '$limit' --speed-time '$time', want $want, 1 and $want" >&2
+  exit 99
+fi
+if [ -n "$FAKE_STALL" ]; then
+  case "$url" in *"$FAKE_STALL"*)
+    echo "curl: (28) Operation too slow. Less than 1 bytes/sec transferred the last $want seconds" >&2
+    exit 28 ;;
+  esac
+fi
 case "$url" in
   https://api.github.com/repos/sukekyo26/floe/releases/latest)
     [ -f "$FAKE_API" ] || { echo 'curl: (22) The requested URL returned error: 404' >&2; exit 22; }
-    cat "$FAKE_API" ;;
+    if [ -n "$out" ]; then cat "$FAKE_API" > "$out"; else cat "$FAKE_API"; fi ;;
   https://github.com/sukekyo26/floe/releases/download/*)
     src=$FAKE_ASSETS/${url#https://github.com/sukekyo26/floe/releases/download/}
     [ -f "$src" ] || { echo 'curl: (22) The requested URL returned error: 404' >&2; exit 22; }
@@ -188,13 +205,19 @@ func TestInstall(t *testing.T) {
 	compact := write(t, filepath.Join(root, "compact.json"), `{"url":"x","tag_name":"v0.1.0","assets":[{"name":"floe-linux-amd64"}]}`)
 	notDir := write(t, filepath.Join(root, "file"), "")
 
-	tests := []struct {
+	// What install.sh adds when curl gave up on a silence, and what it says of a FLOE_INSTALL_TIMEOUT it refuses.
+	const waited, refused = "check your network and proxy and run it again; FLOE_INSTALL_TIMEOUT sets how many seconds to wait for an answer", "FLOE_INSTALL_TIMEOUT must be"
+	type installCase struct {
 		name, os, arch, api, assets, version, dir string
 		shasum                                    bool   // only shasum on PATH, not sha256sum
 		readOnly                                  bool   // the install directory is there but not writable
+		timeout                                   string // FLOE_INSTALL_TIMEOUT
+		stall                                     string // a URL that holds it never answers
+		asks                                      int    // how many URLs curl is asked for; 0 is not looked at (a value refused is: none)
 		want                                      string // the asset installed, or "" when it fails
-		says                                      []string
-	}{
+		says, saysNot                             []string
+	}
+	fixed := []installCase{
 		{name: "latest", os: "Linux", arch: "x86_64", api: pretty, want: "floe-linux-amd64"},
 		{name: "latest one line", os: "Darwin", arch: "arm64", api: compact, want: "floe-darwin-arm64"},
 		{name: "pinned", os: "Linux", arch: "aarch64", version: "0.1.0", want: "floe-linux-arm64"},
@@ -207,6 +230,33 @@ func TestInstall(t *testing.T) {
 		{name: "os", os: "FreeBSD", arch: "amd64", says: []string{"freebsd", "linux and darwin", "install.ps1"}},
 		{name: "dir not writable", os: "Linux", arch: "x86_64", version: "0.1.0", dir: filepath.Join(notDir, "bin"), says: []string{"FLOE_INSTALL_DIR"}},
 		{name: "dir read-only", os: "Linux", arch: "x86_64", version: "0.1.0", readOnly: true, says: []string{"FLOE_INSTALL_DIR"}},
+		{name: "a second to wait", os: "Linux", arch: "x86_64", api: pretty, timeout: "1", asks: 3, want: "floe-linux-amd64"},
+		{name: "600 seconds to wait", os: "Linux", arch: "x86_64", api: pretty, timeout: "600", asks: 3, want: "floe-linux-amd64"},
+		{name: "99999 seconds to wait", os: "Linux", arch: "x86_64", version: "0.1.0", timeout: "99999", asks: 2, want: "floe-linux-amd64"},
+		{
+			name: "the API never answers", os: "Linux", arch: "x86_64", api: pretty, stall: "/releases/latest", asks: 1,
+			says:    []string{"download failed: https://api.github.com/repos/sukekyo26/floe/releases/latest", waited, "(now 120)"},
+			saysNot: []string{"rate limit", "try again later"},
+		},
+		{
+			name: "the binary never answers", os: "Linux", arch: "x86_64", version: "0.1.0", stall: "/floe-linux-amd64", asks: 1,
+			says: []string{"download failed: https://github.com/sukekyo26/floe/releases/download/v0.1.0/floe-linux-amd64", waited, "(now 120)"},
+		},
+		{
+			name: "SHA256SUMS never answers", os: "Linux", arch: "x86_64", version: "0.1.0", timeout: "7", stall: "/SHA256SUMS", asks: 2,
+			says: []string{"download failed: https://github.com/sukekyo26/floe/releases/download/v0.1.0/SHA256SUMS", waited, "(now 7)"},
+		},
+		{name: "no such version waits for nothing", os: "Linux", arch: "x86_64", version: "0.9.9", asks: 1, says: []string{"download failed"}, saysNot: []string{waited}},
+	}
+	// Read as letters, not as a number: what sh and PowerShell would read apart is refused by both alike.
+	unread := []string{"abc", "0", "08", "-5", "+5", "1.5", "1e3", "0x10", " 5", "100000", "5\n", "\uff15"}
+	tests := make([]installCase, 0, len(fixed)+len(unread))
+	tests = append(tests, fixed...)
+	for _, v := range unread {
+		tests = append(tests, installCase{
+			name: fmt.Sprintf("refuses to wait %+q", v), os: "Linux", arch: "x86_64", api: pretty, timeout: v,
+			says: []string{refused, "(got " + strings.TrimRight(v, "\n")},
+		})
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
@@ -235,12 +285,20 @@ func TestInstall(t *testing.T) {
 				}
 				path = withShasum
 			}
+			asked := filepath.Join(t.TempDir(), "asked")
 			cmd := exec.CommandContext(t.Context(), "sh")
 			cmd.Stdin = bytes.NewReader(script)
 			cmd.Env = []string{
 				"PATH=" + path, "HOME=" + t.TempDir(), "TMPDIR=" + t.TempDir(),
-				"FLOE_INSTALL_DIR=" + dir, "FLOE_VERSION=" + tt.version,
+				"FLOE_INSTALL_DIR=" + dir, "FLOE_VERSION=" + tt.version, "FLOE_INSTALL_TIMEOUT=" + tt.timeout,
 				"FAKE_OS=" + tt.os, "FAKE_ARCH=" + tt.arch, "FAKE_API=" + tt.api, "FAKE_ASSETS=" + from,
+				"FAKE_STALL=" + tt.stall, "FAKE_LOG=" + asked,
+			}
+			// The fake curl wants what install.sh must pass: the seconds given, where it takes them.
+			if slices.Contains(tt.says, refused) {
+				tt.asks = 0
+			} else if tt.timeout != "" {
+				cmd.Env = append(cmd.Env, "FAKE_TIMEOUT="+tt.timeout)
 			}
 			var stderr bytes.Buffer
 			cmd.Stderr = &stderr
@@ -249,6 +307,17 @@ func TestInstall(t *testing.T) {
 				if !strings.Contains(stderr.String(), s) {
 					t.Errorf("stderr does not say %q:\n%s", s, stderr.String())
 				}
+			}
+			for _, s := range tt.saysNot {
+				if strings.Contains(stderr.String(), s) {
+					t.Errorf("stderr says %q:\n%s", s, stderr.String())
+				}
+			}
+			if tt.stall != "" && strings.Count(stderr.String(), "failed") != 1 {
+				t.Errorf("install.sh told the failure other than once:\n%s", stderr.String())
+			}
+			if log, _ := os.ReadFile(asked); (tt.asks > 0 || slices.Contains(tt.says, refused)) && strings.Count(string(log), "\n") != tt.asks { //nolint:errcheck // no file is no URL
+				t.Errorf("curl was asked for %d URLs, want %d:\n%s", strings.Count(string(log), "\n"), tt.asks, log)
 			}
 			if tt.want == "" {
 				if err == nil {
