@@ -5707,12 +5707,15 @@
 
   // The dialog's way off the task: the dialog closed, its focus back on the menu (setBack), and from the keys then on the way back
   async function takeOffTask(e) {
+    const opened = setOpened;
     const res = await takePageOff(setPage, setBack);
     if (res.reason) {
       setFailed(res.reason);
       return;
     }
     await load();
+    // Closed meanwhile (Escape, say), or opened again since: the focus is where that left it
+    if (!$('set-dialog').open || setOpened !== opened) return;
     closeDialog($('set-dialog'));
     if (e.detail === 0) res.button.focus();
   }
