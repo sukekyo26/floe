@@ -100,7 +100,7 @@ func TestUIDialogClose(t *testing.T) { //nolint:paralleltest // the browser test
 		return "document.querySelector('#" + id + " [data-close]').click()"
 	}
 	backdrop := func(id string) string {
-		return "document.getElementById(" + js(id) + ").dispatchEvent(new MouseEvent('click', { bubbles: true }))"
+		return "(() => { const d = document.getElementById(" + js(id) + "); d.dispatchEvent(new PointerEvent('pointerdown', { bubbles: true })); d.dispatchEvent(new MouseEvent('click', { bubbles: true })); })()"
 	}
 	enter := func() {
 		t.Helper()

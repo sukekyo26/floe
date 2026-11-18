@@ -125,7 +125,7 @@ func TestUISettings(t *testing.T) { //nolint:paralleltest // the browser tests s
 			document.querySelector('.settings-item[data-panel=` + c.part + `]').click(); ` + c.save)
 		b.until("the save held", "window.held !== null")
 		b.pressKey(kb.Escape)
-		b.eval("document.getElementById('settings-back').click(); document.getElementById('settings').dispatchEvent(new MouseEvent('click', { bubbles: true }))")
+		b.eval("document.getElementById('settings-back').click(); document.getElementById('settings').dispatchEvent(new PointerEvent('pointerdown', { bubbles: true })); document.getElementById('settings').dispatchEvent(new MouseEvent('click', { bubbles: true }))")
 		out = append(out, b.eval("[document.getElementById('settings').open, document.getElementById('settings').dataset.panel, document.getElementById('settings-back').disabled].join(' ')"))
 		b.eval("window.fetch = window.realFetch")
 		b.eval("window.toldBefore = [...document.querySelectorAll('.toast')]; window.held()")

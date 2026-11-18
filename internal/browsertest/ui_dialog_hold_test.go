@@ -89,6 +89,16 @@ func TestUIDialogHold(t *testing.T) { //nolint:paralleltest // the browser tests
 		r := b.rect(expr)
 		b.click(r.X+r.Width/2, r.Y+r.Height/2)
 	}
+	// A press down or up alone, as a person's: the browser makes the click of the two
+	mouse := func(typ input.DispatchMouseEventType, x, y float64) {
+		t.Helper()
+		if typ == input.DispatchMouseEventTypeMousePressed {
+			b.painted()
+		}
+		if _, err := chromedp.Call(b.ctx, input.DispatchMouseEvent, input.DispatchMouseEventParams{Type: typ, X: x, Y: y, Button: input.MouseButtonLeft, ClickCount: 1}); err != nil {
+			t.Fatal(err)
+		}
+	}
 	// A key with modifiers (Ctrl 2), pressed as the browser's own: F5 or Ctrl+R
 	key := func(k, code string, vk, mods int64) {
 		t.Helper()
@@ -108,7 +118,7 @@ func TestUIDialogHold(t *testing.T) { //nolint:paralleltest // the browser tests
 		b.pressKey(kb.Enter)
 		b.pressKey(kb.Tab)
 		b.pressKey(" ")
-		b.eval("document.querySelector('#" + id + " [data-close]')?.click(); document.getElementById(" + js(id) + ").dispatchEvent(new MouseEvent('click', { bubbles: true })); true")
+		b.eval("document.querySelector('#" + id + " [data-close]')?.click(); document.getElementById(" + js(id) + ").dispatchEvent(new PointerEvent('pointerdown', { bubbles: true })); document.getElementById(" + js(id) + ").dispatchEvent(new MouseEvent('click', { bubbles: true })); true")
 		say(name+", held", "heldOf("+js(id)+") + ' / sent ' + sent.length")
 	}
 	type write struct {
@@ -199,7 +209,7 @@ func TestUIDialogHold(t *testing.T) { //nolint:paralleltest // the browser tests
 	}
 	again()
 
-	// T3 of the keys and presses: the suggestions and the add page's rows held too, and the focus given back after a Tab
+	// T3 of the keys and presses
 	open("/")
 	b.eval(rowMenu("plan-a", "task-set"))
 	until("set-dialog", true)
@@ -210,29 +220,53 @@ func TestUIDialogHold(t *testing.T) { //nolint:paralleltest // the browser tests
 	say("suggestions, before", suggested)
 	// In the task it is held in, before Chrome moves the focus off the disabled field a frame later, a key there reaches no listener of it
 	say("suggestions, a key as it is held", "(() => { const d = document.getElementById('set-dialog'); holdDialog(d, true); document.getElementById('set-task').dispatchEvent(new KeyboardEvent('keydown', { key: 'ArrowDown', bubbles: true, cancelable: true })); const now = "+suggested+"; holdDialog(d, false); return now; })()")
-	b.eval("holdOn('PATCH'); fail.PATCH = true; document.getElementById('set-out').focus(); document.getElementById('set-out').click(); true")
+	// Held, the focus is on the modal itself: the field left, its suggestions close; no key reaches the page's shortcuts nor leaves it by
+	// Tab; let go after a failure, the focus is back on the field
+	b.eval("holdOn('PATCH'); fail.PATCH = true; document.getElementById('set-out').click(); true")
 	b.until("sent", "sent.length === 1")
-	b.pressKey(kb.ArrowDown)
-	press("document.querySelectorAll('#set-task-names [role=option]')[1]")
-	say("suggestions, held", suggested)
+	say("suggestions, held", "document.getElementById('set-task-names').matches(':popover-open') + ' ' + where(document.activeElement)")
 	b.pressKey(kb.Tab)
+	b.pressKey(kb.ArrowDown)
+	say("suggestions, keys while held", suggested+" + ' ' + where(document.activeElement)")
 	b.eval("letGo()")
 	b.until("let go", "document.getElementById('set-dialog').getAttribute('closedby') === 'closerequest'")
 	say("the focus given back", "where(document.activeElement)")
 	b.pressKey(kb.Escape)
 	until("set-dialog", false)
-	open("/tasks?project=proj&task=S300")
+
+	// The page's shortcuts while held: a row picked beside the list stays picked, nothing else is written
+	open("/")
+	b.eval("document.querySelector('#list li[data-slug=check-a] .title').click(); true")
+	b.until("picked", "picked?.slug === 'check-a' && answered === sent.length")
 	b.eval("holdOn('PATCH')")
-	b.eval(writes[4].opens)
-	until("add-page-dialog", true)
-	b.eval("const q = document.getElementById('add-page-q'); q.value = 'memo'; q.dispatchEvent(new Event('input', { bubbles: true }))")
-	b.pressKey(kb.ArrowDown)
-	b.pressKey(kb.Enter)
-	b.until("sent", "sent.length === 1")
-	press("document.querySelector('#add-page-list li')")
-	say("add page, a row pressed while held", "sent.length")
+	b.eval(writes[1].opens)
+	until("edit-dialog", true)
+	b.eval(writes[1].sends)
+	b.until("sent", "sent.some((x) => x.startsWith('PATCH'))")
+	for _, k := range []string{"j", "k", "d", "f", kb.ArrowDown} {
+		b.pressKey(k)
+	}
+	say("shortcuts while held", "picked.slug + ' ' + sent.filter((x) => x.startsWith('PATCH')).length + ' ' + document.getElementById('edit-dialog').open")
 	b.eval("letGo()")
-	until("add-page-dialog", false)
+	until("edit-dialog", false)
+
+	// A press down while held and up once let go is no press on the backdrop, nor one down in a field and up outside
+	open("/")
+	b.eval("holdOn('PATCH'); fail.PATCH = true")
+	start(writes[1])
+	name := b.rect("document.getElementById('edit-name')")
+	mouse(input.DispatchMouseEventTypeMousePressed, name.X+10, name.Y+name.Height/2)
+	b.eval("letGo()")
+	b.until("let go", "document.getElementById('edit-dialog').getAttribute('closedby') === 'closerequest'")
+	mouse(input.DispatchMouseEventTypeMouseReleased, name.X+10, name.Y+name.Height/2)
+	say("a press down held, up let go", "document.getElementById('edit-dialog').open")
+	mouse(input.DispatchMouseEventTypeMousePressed, name.X+10, name.Y+name.Height/2)
+	mouse(input.DispatchMouseEventTypeMouseMoved, 5, 5)
+	mouse(input.DispatchMouseEventTypeMouseReleased, 5, 5)
+	say("a press down in a field, up outside", "document.getElementById('edit-dialog').open")
+	mouse(input.DispatchMouseEventTypeMousePressed, 5, 5)
+	mouse(input.DispatchMouseEventTypeMouseReleased, 5, 5)
+	say("a press on the backdrop", "document.getElementById('edit-dialog').open")
 
 	// What is neither a field nor a button stays focusable and pressable while held: no key or press reaches it, the edit's fold staying
 	// shut
@@ -313,9 +347,13 @@ var dialogHoldWant = []string{
 	"add link, failed: true closerequest / said true / add-dialog add-path",
 	"suggestions, before:   S300",
 	"suggestions, a key as it is held:   S300",
-	"suggestions, held:   S300",
-	"the focus given back: set-dialog set-out",
-	"add page, a row pressed while held: 1",
+	"suggestions, held: false set-dialog set-dialog",
+	"suggestions, keys while held:   S300 set-dialog set-dialog",
+	"the focus given back: set-dialog set-task",
+	"shortcuts while held: check-a 1 true",
+	"a press down held, up let go: true",
+	"a press down in a field, up outside: true",
+	"a press on the backdrop: false",
 	"fold, keys while held: false edit-dialog SUMMARY Slug and projectplan-a · proj",
 	"fold, pressed while held: false",
 	"page whole, the tasks unread: closerequest 1",
