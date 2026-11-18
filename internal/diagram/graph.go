@@ -388,7 +388,7 @@ func (o *graphOut) draw(gr *group, right bool) (*drawing, error) {
 		slid:  map[endAt]bool{},
 		moved: map[int]float64{}, settled: map[int]bool{}, off: false, offs: 0,
 		settling: settling{things: nil, sides: nil, runs: nil, labels: nil},
-		level:    map[int][2]string{}, taken: map[int]map[string]bool{}, kept: nil,
+		level:    map[int][2]string{}, taken: map[int]map[string]bool{}, kept: nil, bends: nil,
 	}
 	sides := map[int][2]float64{} // each group's left and right, as laid out down
 	for _, n := range gr.nodes {
@@ -511,6 +511,7 @@ type drawing struct {
 	offs     int                     // the edges offPoint stood on one line
 	level    map[int][2]string       // the level edges, and the sides of their boxes they take, from the box written first
 	taken    map[int]map[string]bool // the sides of each box level edges take
+	bends    map[endSide][]endAt     // the ends at each side of its icons, once its ends are settled (turnLine)
 }
 
 // spot is where a label stands, held to its run so that it moves with it: on run seg of edge's corners (its own edge's,
