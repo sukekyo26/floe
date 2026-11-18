@@ -446,3 +446,29 @@ func TestPageCutShort(t *testing.T) {
 		}
 	}
 }
+
+// An item prefixItems takes goes as written: items' part neither draws it nor runs its checks on it.
+func TestPrefixItemsAsWritten(t *testing.T) {
+	t.Parallel()
+
+	k := ownKit(t, map[string]string{
+		"box/schema.json": `{"$schema": "https://json-schema.org/draft/2020-12/schema", "type": "string"}`,
+		"box/part.html":   `<div data-floe-part="box"><b>{{.}}</b></div>`,
+		"box/part.css":    "",
+		"box/checks.yaml": "- expr: item != \"head\"\n  message: not the head\n",
+	}, mine("<!doctype html>\n<html lang=\"{{.Lang}}\"><head><title>{{.Title}}</title></head>\n<body>\n{{range .Data.x}}<p>{{.}}</p>{{end}}\n</body></html>\n",
+		`{"$schema": "https://json-schema.org/draft/2020-12/schema", "type": "object",
+"properties": {"x": {"prefixItems": [{"type": "string"}], "items": {"$ref": "floe:///parts/box.json"}}}}`, nil))
+	page, _, err := tmpl.Draw(k, "d.yaml", []byte("lang: en\ntemplate: mine\nx: [head, two]\n"), none)
+	if err != nil {
+		t.Fatal(told(err))
+	}
+	for _, want := range []string{"<p>head</p>", "<b>two</b>"} {
+		if !strings.Contains(string(page), want) {
+			t.Errorf("no %s in\n%s", want, page)
+		}
+	}
+	if strings.Contains(string(page), "<b>head</b>") {
+		t.Errorf("the head drawn by the part:\n%s", page)
+	}
+}

@@ -120,3 +120,105 @@ func TestWalkInPart(t *testing.T) {
 		t.Errorf("calls %v, want %v", calls, want)
 	}
 }
+
+// Walk takes items, as the library does, only for the items after the prefixItems of the schema items is of: those
+// before go as written, a key left out not made nil, and none at all are taken under items false.
+func TestWalkPrefixItems(t *testing.T) {
+	t.Parallel()
+
+	const (
+		s2020 = `"$schema": "https://json-schema.org/draft/2020-12/schema", "type": "object"`
+		s2019 = `"$schema": "https://json-schema.org/draft/2019-09/schema", "type": "object"`
+		md    = `{"type": "string", "format": "markdown"}`
+		str   = `{"type": "string"}`
+		p     = `"p": {"type": "object", "properties": {"t": {}, "note": {}, "more": {}}}`
+	)
+	two := []any{"**h**", "**i**"}
+	for _, tt := range []struct {
+		name, head, x, defs string
+		values              []any
+		calls               []string
+		ready               []any
+	}{
+		{
+			"items after prefixItems", s2020, `{"prefixItems": [` + str + `], "items": ` + md + `}`, "", two,
+			[]string{"x.1=markdown false"},
+			[]any{"**h**", "<x.1>"},
+		},
+		{
+			"a key left out of a prefixItems item", s2020,
+			`{"prefixItems": [{"$ref": "#/$defs/p", "required": ["note"]}], "items": {"$ref": "#/$defs/p"}}`, p,
+			[]any{map[string]any{"t": "head", "note": "n"}, map[string]any{"t": "two"}},
+			nil,
+			[]any{map[string]any{"t": "head", "note": "n"}, map[string]any{"t": "two", "note": nil, "more": nil}},
+		},
+		{
+			"fewer items than prefixItems", s2020, `{"prefixItems": [` + str + `, ` + str + `], "items": ` + md + `}`, "",
+			[]any{"**a**"},
+			nil,
+			[]any{"**a**"},
+		},
+		{
+			"both through a $ref", s2020, `{"$ref": "#/$defs/l"}`, `"l": {"prefixItems": [` + str + `], "items": ` + md + `}`,
+			two,
+			[]string{"x.1=markdown false"},
+			[]any{"**h**", "<x.1>"},
+		},
+		{
+			"prefixItems beside a $ref to items", s2020, `{"$ref": "#/$defs/l", "prefixItems": [` + str + `]}`,
+			`"l": {"items": ` + md + `}`, two,
+			[]string{"x.0=markdown false", "x.1=markdown false"},
+			[]any{"<x.0>", "<x.1>"},
+		},
+		{
+			"items beside a $ref to prefixItems", s2020, `{"$ref": "#/$defs/l", "items": ` + md + `}`,
+			`"l": {"prefixItems": [` + str + `, ` + str + `], "items": ` + str + `}`, two,
+			[]string{"x.0=markdown false", "x.1=markdown false"},
+			[]any{"<x.0>", "<x.1>"},
+		},
+		{
+			"items false beside a $ref to items", s2020, `{"$ref": "#/$defs/l", "prefixItems": [` + str + `], "items": false}`,
+			`"l": {"items": ` + md + `}`, two, nil, two,
+		},
+		{
+			"a part's root", s2020, `{"$ref": "floe:///parts/pre.json"}`, "", two,
+			[]string{"x.1=markdown true", "x=pre false"},
+			nil,
+		},
+		// 2019-09 has no prefixItems: the library leaves it out of the tree, and items takes every item.
+		{
+			"2019-09", s2019, `{"prefixItems": [` + str + `], "items": ` + md + `}`, "", two,
+			[]string{"x.0=markdown false", "x.1=markdown false"},
+			[]any{"<x.0>", "<x.1>"},
+		},
+	} {
+		res := resources(t)
+		pre, err := schema.NewResource("floe:///parts/pre.json", "parts/pre.json", []byte(`{"$schema": "https://json-schema.org/draft/2020-12/schema",
+"type": "array", "prefixItems": [`+str+`], "items": `+md+`}`), schema.Part)
+		if err != nil {
+			t.Fatal(err)
+		}
+		res["floe:///parts/pre.json"] = pre
+		c, err := schema.Compile(template, "schema.json",
+			[]byte("{"+tt.head+`, "properties": {"x": `+tt.x+`}, "$defs": {`+tt.defs+"}}"), res)
+		if c == nil {
+			t.Fatalf("%s: %s", tt.name, told(err))
+		}
+		var calls []string
+		ready, err := c.Walk(map[string]any{"x": tt.values}, func(it schema.Item, _ any) (any, error) {
+			calls = append(calls, strings.Join(it.At, ".")+"="+it.Part+it.Format+" "+strconv.FormatBool(it.InPart))
+			return "<" + strings.Join(it.At, ".") + ">", nil
+		})
+		if err != nil {
+			t.Fatal(err)
+		}
+		if !slices.Equal(calls, tt.calls) {
+			t.Errorf("%s: calls %v, want %v", tt.name, calls, tt.calls)
+		}
+		if tt.ready != nil {
+			if got := ready.(map[string]any)["x"]; !reflect.DeepEqual(got, tt.ready) { //nolint:errcheck,forcetypeassert // the root is an object
+				t.Errorf("%s: ready %#v, want %#v", tt.name, got, tt.ready)
+			}
+		}
+	}
+}
