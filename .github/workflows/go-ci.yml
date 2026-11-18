@@ -1,313 +1,88 @@
 name: Go CI
 
+# S394 probe (throwaway, never merged): before (probe/s394-before, develop 1bceb949) and after (this branch, PR #663),
+# built and measured in one run: the counts of probe/count.ps1, a control of its BROWSER, and S385's measure of the
+# start (two daemon tests alone 5 times and under the load of the whole suite 20 times).
 on:
-  # Topic branches are covered by pull_request, which also fires on every push
-  # to an open PR (synchronize), into any base: develop, main, and the parent
-  # branch of a feature split over several PRs, whatever its name. develop
-  # pushes re-validate the integrated state after a squash merge; main stays
-  # PR-only because the develop -> main release PR reruns the suite.
-  push:
-    branches: [develop]
   pull_request:
-  schedule:
-    # Weekly so govulncheck catches newly published advisories with no commit
-    # to trigger a run.
-    - cron: "0 6 * * 1"
-  workflow_dispatch:
-  workflow_call:
-
-# event_name is in the key so the weekly run and release.yml's workflow_call on
-# the default branch do not cancel each other.
-concurrency:
-  group: ${{ github.workflow }}-${{ github.ref_name }}-${{ github.event_name }}
-  cancel-in-progress: true
 
 permissions:
   contents: read
 
-env:
-  # The Chrome for Testing the browser tests run, in the browser jobs.
-  # LIMIT: Chrome is pinned, raised by hand. Raise it when floe's CSS or scripts need a newer Chrome, when the pinned one can no longer be fetched, or when users' Chrome (the Stable of Chrome for Testing) is two major versions ahead.
-  CHROME_VERSION: 156.0.8078.47
-
 jobs:
-  # Says whether a pull request changes only files that the jobs below need not run for, for them to skip their work and
-  # report success under the names the ruleset requires; any other event runs all. A failure here leaves the outputs
-  # empty, so everything runs.
-  # LIMIT: the files are named one by one from what //go:embed, the tests and the screens read. Add one only when a grep
-  # shows it: at level 1 nothing builds or tests it; at level 2 no browser test reads it and no screen shows it.
-  changes:
-    name: Changed files
-    runs-on: ubuntu-latest
-    timeout-minutes: 5
-    outputs:
-      skip: ${{ steps.files.outputs.skip }}
-      skip_browser: ${{ steps.files.outputs.skip_browser }}
-    steps:
-      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
-        with:
-          fetch-depth: 2
-      - id: files
-        env:
-          EVENT: ${{ github.event_name }}
-        run: |
-          level() {
-            case "$1" in
-              CHANGELOG.md | docs/CHANGELOG.ja.md | .claude/CLAUDE.md) echo 1 ;;
-              docs/agents/guide.md | docs/agents/diagrams.md | docs/agents/parts.md | docs/agents/templates.md | \
-                docs/agents/themes.md | docs/commands.md | docs/commands.ja.md | docs/pages.md | docs/pages.ja.md | \
-                docs/links.md | docs/links.ja.md | README.md | docs/README.ja.md) echo 2 ;;
-              *) echo 3 ;;
-            esac
-          }
-          top=3
-          if [ "$EVENT" = pull_request ]; then
-            # The checkout is the merge of the pull request into its base, whose first parent is the base. The diff is
-            # read whole first, so that a failing git stops the step. A renamed file counts by both its names.
-            changed=$(git diff --name-only --no-renames HEAD^1 HEAD)
-            if [ -n "$changed" ]; then
-              top=1
-              while IFS= read -r file; do
-                l=$(level "$file")
-                if [ "$l" -gt "$top" ]; then top=$l; fi
-              done <<< "$changed"
-            fi
-          fi
-          echo "level $top"
-          skip=false
-          skip_browser=false
-          if [ "$top" -le 1 ]; then skip=true; fi
-          if [ "$top" -le 2 ]; then skip_browser=true; fi
-          echo "skip=$skip" >> "$GITHUB_OUTPUT"
-          echo "skip_browser=$skip_browser" >> "$GITHUB_OUTPUT"
-
-  lint:
-    name: Lint (golangci-lint v2)
-    needs: changes
-    if: ${{ !cancelled() && needs.changes.outputs.skip != 'true' }}
-    runs-on: ubuntu-latest
-    timeout-minutes: 10
-    steps:
-      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
-      - uses: actions/setup-go@b7ad1dad31e06c5925ef5d2fc7ad053ef454303e # v7.0.0
-        with:
-          go-version-file: go.mod
-          cache: true
-      - uses: ./.github/actions/setup-just
-      # golangci-lint is cached on the version the justfile pins, so a hit skips GitHub's release download.
-      # GOBIN is unset here, so `just setup` installs into GOPATH/bin, which setup-go puts on PATH.
-      - id: golangci
-        run: |
-          echo "version=$(just --evaluate golangci_version)" >> "$GITHUB_OUTPUT"
-          echo "bin=$(go env GOPATH | cut -d: -f1)/bin/golangci-lint" >> "$GITHUB_OUTPUT"
-      - id: golangci-cache
-        uses: actions/cache@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
-        with:
-          path: ${{ steps.golangci.outputs.bin }}
-          key: golangci-lint-${{ runner.os }}-${{ runner.arch }}-${{ steps.golangci.outputs.version }}
-      - if: steps.golangci-cache.outputs.cache-hit != 'true'
-        run: just setup
-      - run: just lint
-      - run: just fmt-check
-
-  test:
-    name: Test (race + shuffle)
-    needs: changes
-    if: ${{ !cancelled() && needs.changes.outputs.skip != 'true' }}
-    runs-on: ubuntu-latest
-    timeout-minutes: 10
-    steps:
-      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
-      - uses: actions/setup-go@b7ad1dad31e06c5925ef5d2fc7ad053ef454303e # v7.0.0
-        with:
-          go-version-file: go.mod
-          cache: true
-      - uses: ./.github/actions/setup-just
-      - run: just vet
-      - run: just mod-verify
-      - run: just mod-tidy-check
-      # The browser tests run in the browser jobs, on machines of their own.
-      - run: just test-race-core
-
-  # The tests on Windows, without the race detector (it needs cgo there) and without the browser tests (not run there):
-  # internal/browsertest is left out as the justfile's core_pkgs leaves it out. A test that does not hold on Windows
-  # is marked one by one with internal/testfs's UnixOnly.
-  windows:
-    name: Test (windows)
-    # The tests' temporary directories are kept out of AppData: floe refuses to link what is in a folder of application
-    # data, and %TEMP% is one (AppData\Local\Temp).
-    needs: changes
-    if: ${{ !cancelled() && needs.changes.outputs.skip != 'true' }}
+  probe:
+    name: Probe S394 (windows)
     runs-on: windows-latest
-    timeout-minutes: 20
+    timeout-minutes: 90
+    env:
+      TMP: 'C:\floe-tmp'
+      TEMP: 'C:\floe-tmp'
     steps:
-      # The one symlink in the repository (a corpus sample's) is checked out as one: the runner may make symlinks.
       - run: git config --global core.symlinks true
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          fetch-depth: 0
       - uses: actions/setup-go@b7ad1dad31e06c5925ef5d2fc7ad053ef454303e # v7.0.0
         with:
           go-version-file: go.mod
           cache: true
-      - run: go vet ./...
-      # install.ps1, read by the version pinned here: a newer one may warn of more. Write-Host is how it talks.
-      # LIMIT: PSScriptAnalyzer is pinned and raised by hand: change the number below. The cache keeps CI off the
-      # PowerShell Gallery, whose search failed with "No match was found"; a miss (a new number, or the cache gone
-      # after 7 unused days) saves it from the Gallery again, which may fail so.
-      # Caches are scoped by branch: a pull request reads its base's, so one into main and release.yml read main's, which
-      # only releases and the weekly run keep, so a release may go to the Gallery.
-      - id: pssa
+      - name: Build both
         shell: pwsh
         run: |
-          "version=1.25.0" >> $env:GITHUB_OUTPUT
-          "path=$HOME\.floe-tools\psmodules" >> $env:GITHUB_OUTPUT
-      - id: pssa-cache
-        uses: actions/cache@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
-        with:
-          path: ${{ steps.pssa.outputs.path }}
-          key: psscriptanalyzer-${{ runner.os }}-${{ runner.arch }}-${{ steps.pssa.outputs.version }}
-      - if: steps.pssa-cache.outputs.cache-hit != 'true'
+          New-Item -ItemType Directory C:\floe-tmp, C:\s394-out | Out-Null
+          git fetch -q origin probe/s394-before
+          git worktree add --detach C:\s394-out\before origin/probe/s394-before
+          git worktree add --detach C:\s394-out\after HEAD
+          foreach ($v in 'before', 'after') {
+            go -C "C:\s394-out\$v" build -o "C:\s394-out\$v\floe-probe.exe" ./cmd/floe
+            if ($LASTEXITCODE) { throw "build $v" }
+          }
+      - name: Counts (count.ps1, as a real machine runs it)
         shell: pwsh
-        env:
-          PSSA_VERSION: ${{ steps.pssa.outputs.version }}
-          PSSA_PATH: ${{ steps.pssa.outputs.path }}
         run: |
-          $ProgressPreference = 'SilentlyContinue'
-          # -Force makes the folder of -Path, which is an error without it.
-          Save-Module PSScriptAnalyzer -RequiredVersion $env:PSSA_VERSION -Path $env:PSSA_PATH -Force
-      - name: PSScriptAnalyzer
+          foreach ($v in 'before', 'after') {
+            pwsh -NoProfile -File "C:\s394-out\$v\probe\count.ps1" -Exe "C:\s394-out\$v\floe-probe.exe" `
+              -Out "C:\s394-out\run-$v" -UserHome "C:\s394-out\home-$v" *> "C:\s394-out\$v.txt"
+            "== $v.txt (exit $LASTEXITCODE)"
+            Get-Content "C:\s394-out\$v.txt"
+          }
+      - name: Control of BROWSER (a new page without it starts the default way)
         shell: pwsh
-        env:
-          PSSA_VERSION: ${{ steps.pssa.outputs.version }}
-          PSSA_PATH: ${{ steps.pssa.outputs.path }}
         run: |
-          $m = Import-Module "$env:PSSA_PATH\PSScriptAnalyzer\$env:PSSA_VERSION\PSScriptAnalyzer.psd1" -PassThru
-          'PSScriptAnalyzer {0} from {1}' -f $m.Version, $m.ModuleBase
-          Invoke-ScriptAnalyzer -Path install.ps1 -Severity Warning, Error -ExcludeRule PSAvoidUsingWriteHost -EnableExit
-      - name: Test
-        shell: bash
-        env:
-          TMP: 'C:\floe-tmp'
-          TEMP: 'C:\floe-tmp'
+          $procs = @(Get-Process | ForEach-Object Name | Sort-Object -Unique)
+          $env:USERPROFILE = 'C:\s394-out\home-control'; $env:FLOE_PORT = '7393'
+          New-Item -ItemType Directory C:\s394-out\home-control, C:\s394-out\control | Out-Null
+          Set-Location C:\s394-out\control
+          "template: report`nlang: en`ntitle: 'C'`nsections:`n  - heading: One`n    parts:`n      - text: 'Hi.'`n" | Set-Content -NoNewline c.yaml
+          & C:\s394-out\after\floe-probe.exe publish c.yaml
+          Start-Sleep -Seconds 5
+          $new = @(Get-Process | ForEach-Object Name | Sort-Object -Unique | Where-Object { $procs -notcontains $_ })
+          "control new processes: $($new -join ' ')"
+          & C:\s394-out\after\floe-probe.exe stop
+      - name: Start (S385's measure)
+        shell: pwsh
         run: |
-          mkdir -p /c/floe-tmp
-          go test -count=1 -timeout 15m $(go list ./... | grep -v /internal/browsertest$)
-
-  browser:
-    name: Browser (${{ matrix.part }})
-    needs: changes
-    # It always runs, so that the matrix names its checks as the ruleset requires them; its steps skip instead.
-    if: ${{ !cancelled() }}
-    runs-on: ubuntu-latest
-    timeout-minutes: 10
-    strategy:
-      fail-fast: false
-      matrix:
-        part: [looks, rest]
-    steps:
-      - if: ${{ needs.changes.outputs.skip_browser != 'true' }}
-        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
-      - if: ${{ needs.changes.outputs.skip_browser != 'true' }}
-        uses: actions/setup-go@b7ad1dad31e06c5925ef5d2fc7ad053ef454303e # v7.0.0
-        with:
-          go-version-file: go.mod
-          cache: true
-      - if: ${{ needs.changes.outputs.skip_browser != 'true' }}
-        uses: ./.github/actions/setup-just
-      - if: ${{ needs.changes.outputs.skip_browser != 'true' }}
-        uses: browser-actions/setup-chrome@48ad923757ca74d66703209fe939badbdf80f2f4 # v2.2.0
-        id: chrome
-        with:
-          chrome-version: ${{ env.CHROME_VERSION }}
-          # The runner image holds Chrome's libraries; installing them ran an apt-get update that waited minutes on DNS.
-          # LIMIT: if the image drops one, Chrome fails to start and every browser test fails: set it back to true.
-          install-dependencies: false
-      - if: ${{ needs.changes.outputs.skip_browser != 'true' }}
-        run: just test-browser ${{ matrix.part }}
-        # The browser tests run the pinned Chrome; on CI they fail without it.
-        env:
-          FLOE_CHROME: ${{ steps.chrome.outputs.chrome-path }}
-
-  coverage:
-    name: Coverage gate (>= 90%)
-    needs: changes
-    if: ${{ !cancelled() && needs.changes.outputs.skip != 'true' }}
-    runs-on: ubuntu-latest
-    timeout-minutes: 10
-    steps:
-      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
-      - uses: actions/setup-go@b7ad1dad31e06c5925ef5d2fc7ad053ef454303e # v7.0.0
-        with:
-          go-version-file: go.mod
-          cache: true
-      - uses: ./.github/actions/setup-just
-      - run: just cover-check
-
-  vuln:
-    name: govulncheck
-    needs: changes
-    if: ${{ !cancelled() && needs.changes.outputs.skip != 'true' }}
-    runs-on: ubuntu-latest
-    timeout-minutes: 10
-    steps:
-      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
-      - uses: actions/setup-go@b7ad1dad31e06c5925ef5d2fc7ad053ef454303e # v7.0.0
-        with:
-          go-version-file: go.mod
-          cache: true
-      - uses: ./.github/actions/setup-just
-      - run: just vuln
-
-  build:
-    name: Release assets
-    needs: changes
-    if: ${{ !cancelled() && needs.changes.outputs.skip != 'true' }}
-    runs-on: ubuntu-latest
-    timeout-minutes: 10
-    steps:
-      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
-      - uses: actions/setup-go@b7ad1dad31e06c5925ef5d2fc7ad053ef454303e # v7.0.0
-        with:
-          go-version-file: go.mod
-          cache: true
-      - uses: ./.github/actions/setup-just
-      - run: just release-assets
-      # release.yml attests and publishes what just release-files lists, which runs only at a release: here the recipe
-      # is checked to list each of the justfile's assets under bin/ and SHA256SUMS, each a file just made (a wrong
-      # assets or targets is not told here: the count comes from assets too). bash runs with pipefail, failing with just.
-      - name: Check the release files
-        shell: bash
-        run: |
-          files=$(just release-files)
-          want=$(($(just --evaluate assets | wc -w) + 1))
-          got=$(printf '%s\n' "$files" | wc -l)
-          if [ "$got" -ne "$want" ]; then
-            echo "just release-files lists $got files, want $want (each asset and bin/SHA256SUMS):" >&2
-            printf '%s\n' "$files" >&2
-            exit 1
-          fi
-          while IFS= read -r f; do
-            if [ ! -f "$f" ]; then
-              echo "just release-files lists $f, which just release-assets did not make" >&2
-              exit 1
-            fi
-          done <<< "$files"
-      - name: Run the host binary
-        run: ./bin/floe-linux-amd64 version
-
-  shell:
-    name: Shell (shellcheck + shfmt)
-    needs: changes
-    if: ${{ !cancelled() && needs.changes.outputs.skip != 'true' }}
-    runs-on: ubuntu-latest
-    timeout-minutes: 10
-    steps:
-      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
-      # shfmt runs through `go tool`, pinned in go.mod.
-      - uses: actions/setup-go@b7ad1dad31e06c5925ef5d2fc7ad053ef454303e # v7.0.0
-        with:
-          go-version-file: go.mod
-          cache: true
-      - uses: ./.github/actions/setup-just
-      # shellcheck is preinstalled on ubuntu-latest.
-      - run: just shellcheck
-      - run: just shfmt-check
+          $tests = '^(TestRestartOnAnotherBuild|TestPublishOtherDirs)$'
+          foreach ($v in 'before', 'after') {
+            Set-Location "C:\s394-out\$v"
+            foreach ($m in 'alone', 'load') {
+              $times = "C:\s394-out\times-$v-$m.txt"; $log = "C:\s394-out\lstat-$v-$m.log"
+              $load = $null
+              if ($m -eq 'load') {
+                $pkgs = go list ./... | Where-Object { $_ -notmatch '/internal/browsertest$' }
+                $load = Start-Job -ScriptBlock { param($d, $p) Set-Location $d; go test -count=1 -timeout 30m @p *> $null } -ArgumentList "C:\s394-out\$v", $pkgs
+              }
+              $count = if ($m -eq 'load') { 20 } else { 5 }
+              $env:FLOE_PROBE_TIMES = $times; $env:FLOE_PROBE_LOG = $log
+              go test ./internal/cli/ -run $tests -count=$count -timeout 40m *> "C:\s394-out\test-$v-$m.txt"
+              "== $v $m: go test exit $LASTEXITCODE"
+              Remove-Item Env:FLOE_PROBE_TIMES, Env:FLOE_PROBE_LOG
+              if ($load) { Stop-Job $load; Remove-Job $load -Force }
+              Get-Content "C:\s394-out\test-$v-$m.txt" | Select-String -Pattern '^(--- FAIL|FAIL|ok)' | ForEach-Object Line
+              $ms = @(Get-Content $times | ForEach-Object { [int]($_.Split("`t")[2]) } | Sort-Object)
+              $testPid = (Get-Content $times -TotalCount 1).Split("`t")[0]
+              $server = @(Get-Content $log | Where-Object { $_.Split("`t")[1] -eq 'lstat' -and $_.Split("`t")[0] -ne $testPid })
+              $pids = @($server | ForEach-Object { $_.Split("`t")[0] } | Sort-Object -Unique).Count
+              "$v $m`: starts=$($ms.Count) median=$($ms[[int][math]::Floor($ms.Count / 2)]) max=$($ms[-1]) top5=$($ms[-5..-1] -join ' ') server-lstat=$($server.Count) servers=$pids"
+            }
+          }
