@@ -154,13 +154,32 @@ func shortNameOf(path string) (string, error) {
 	}
 }
 
-// pipeServer serves a named pipe, counting each client that connects and letting it go, until stopped. The next
-// instance is made before a client is handled, so none is turned away between two.
+// pipeServer serves a named pipe, counting each client that connects and letting it go, until stopped. One
+// instance waits at a time: the next is made once a client took the last, and until then the pipe turns a client
+// away (ERROR_PIPE_BUSY). Its own clients wait that out (dial). The marker is let go after the next instance is
+// made, so what connects right after connected returns is not turned away.
+// LIMIT: one instance waits, so a client not the server's own (the code under test, a Stat) that comes before the
+// next is made is turned away and not counted: of two right after each other, the second may be. Keep more
+// instances waiting if a test comes to count clients that connect in a row.
 type pipeServer struct {
+	path    string
 	name    *uint16
 	count   atomic.Int64
 	stopped atomic.Bool
 	marked  chan struct{}
+}
+
+// pipeBusyWait is how long dial waits for the server to make its next instance: far longer than it takes.
+const pipeBusyWait = 10 * time.Second
+
+// dial opens the pipe as a client of the server's own, trying again while no instance is free.
+func (s *pipeServer) dial(flag int) (*os.File, error) {
+	for end := time.Now().Add(pipeBusyWait); ; time.Sleep(time.Millisecond) {
+		f, err := os.OpenFile(s.path, flag, 0)
+		if !errors.Is(err, windows.ERROR_PIPE_BUSY) || time.Now().After(end) {
+			return f, err //nolint:wrapcheck // told by the caller
+		}
+	}
 }
 
 func (s *pipeServer) instance() (windows.Handle, error) {
@@ -202,41 +221,54 @@ func (s *pipeServer) handle(h windows.Handle) {
 	_ = windows.CloseHandle(h)         //nolint:errcheck // done with
 }
 
-// servePipe serves a named pipe of its own name until stop. connected marks its place with a client of its own:
-// once that is let go, each client before it has been counted (each was counted before the marker's instance was
-// made), the marker not.
-func servePipe() (name string, connected func() (int, error), stop func(), err error) {
-	name = `\\.\pipe\floe-test-` + rand.Text()
-	p, err := windows.UTF16PtrFromString(name)
+// newPipeServer makes a pipe server of a name of its own and its first instance, for serve to wait on.
+func newPipeServer() (*pipeServer, windows.Handle, error) {
+	path := `\\.\pipe\floe-test-` + rand.Text()
+	p, err := windows.UTF16PtrFromString(path)
 	if err != nil {
-		return "", nil, nil, fmt.Errorf("the pipe %s: %w", name, err)
+		return nil, 0, fmt.Errorf("the pipe %s: %w", path, err)
 	}
-	s := &pipeServer{name: p, count: atomic.Int64{}, stopped: atomic.Bool{}, marked: make(chan struct{})}
+	s := &pipeServer{path: path, name: p, count: atomic.Int64{}, stopped: atomic.Bool{}, marked: make(chan struct{})}
 	h, err := s.instance()
 	if err != nil {
-		return "", nil, nil, fmt.Errorf("serve the pipe %s: %w", name, err)
+		return nil, 0, fmt.Errorf("serve the pipe %s: %w", path, err)
+	}
+	return s, h, nil
+}
+
+// stop ends serve.
+func (s *pipeServer) stop() {
+	s.stopped.Store(true)
+	// A client of its own lets the waiting ConnectNamedPipe return.
+	if f, err := s.dial(os.O_RDONLY); err == nil {
+		_ = f.Close()
+	}
+}
+
+// connected is how many clients have connected so far. It marks its place with a client of its own: once that is let
+// go, each client before it has been counted (each was counted before the marker's instance was made), the marker
+// not.
+func (s *pipeServer) connected() (int, error) {
+	f, err := s.dial(os.O_WRONLY)
+	if err != nil {
+		return 0, fmt.Errorf("mark the pipe %s: %w", s.path, err)
+	}
+	defer f.Close() //nolint:errcheck // written to already
+	if _, err := f.Write([]byte{'m'}); err != nil {
+		return 0, fmt.Errorf("mark the pipe %s: %w", s.path, err)
+	}
+	<-s.marked
+	return int(s.count.Load()), nil
+}
+
+// servePipe serves a named pipe of its own name until stop.
+func servePipe() (name string, connected func() (int, error), stop func(), err error) {
+	s, h, err := newPipeServer()
+	if err != nil {
+		return "", nil, nil, err
 	}
 	go s.serve(h)
-	stop = func() {
-		s.stopped.Store(true)
-		// A client of its own lets the waiting ConnectNamedPipe return.
-		if f, err := os.Open(name); err == nil {
-			_ = f.Close()
-		}
-	}
-	connected = func() (int, error) {
-		f, err := os.OpenFile(name, os.O_WRONLY, 0)
-		if err != nil {
-			return 0, fmt.Errorf("mark the pipe %s: %w", name, err)
-		}
-		defer f.Close() //nolint:errcheck // written to already
-		if _, err := f.Write([]byte{'m'}); err != nil {
-			return 0, fmt.Errorf("mark the pipe %s: %w", name, err)
-		}
-		<-s.marked
-		return int(s.count.Load()), nil
-	}
-	return name, connected, stop, nil
+	return s.path, s.connected, s.stop, nil
 }
 
 // replaceAsEditor saves replacement over replaced by ReplaceFile, as an editor does.
