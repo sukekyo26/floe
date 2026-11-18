@@ -57,6 +57,7 @@ var errDangling = errors.New("a link to nothing")
 // directories (Mark) and each Read pay it; the store's list reads under one os.Root instead. Do the same where a
 // read of many files turns slow.
 func allowed(path string, last bool) (checked, error) {
+	probe(map[bool]string{true: "allowed-last", false: "allowed"}[last], path)
 	if !checksPaths {
 		return checked{s: path}, nil
 	}
@@ -74,6 +75,7 @@ func allowed(path string, last bool) (checked, error) {
 // allowed has looked at all of it: for LongName, which makes the names as written long and follows no link.
 // LIMIT: the system follows path's links here, where allowed looked: both read a link's target by its letters.
 func allowedWritten(path string) (checked, error) {
+	probe("allowedWritten", path)
 	if !checksPaths {
 		return checked{s: path}, nil
 	}
@@ -171,6 +173,7 @@ func (w *walker) result() walked {
 func (w *walker) next() (done bool, err error) {
 	n := w.pending[0]
 	at := filepath.Join(w.here(), n.name)
+	probe("lstat", at)
 	fi, err := os.Lstat(at)
 	switch {
 	case errors.Is(err, fs.ErrNotExist):

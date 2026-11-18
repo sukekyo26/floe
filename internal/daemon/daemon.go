@@ -312,10 +312,14 @@ func startAndWait(ctx context.Context, s Server, p Status) (Status, error) {
 	// waits for it.
 	for try := 0; try < 2 && p.State == Down && !started; try++ {
 		var err error
+		begun := time.Now()
 		if started, err = start(ctx, s); err != nil {
 			return p, err
 		}
 		p = waitWhile(ctx, Base(s.Port), p, func(q Status) bool { return q.State == Down })
+		if started && p.State != Down {
+			files.ProbeAnswered(time.Since(begun))
+		}
 	}
 	// Bound, but none answers: another command's server still starting, or a program that does not.
 	if p.State == Down && !started {

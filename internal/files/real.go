@@ -49,6 +49,7 @@ func realOfChecked(p checked, path string) (string, error) {
 // LIMIT: the names not there are kept as written: a link to nothing, a short name, another case, or a directory
 // that cannot be opened is compared by its letters (macOS, Windows). Follow them if needed.
 func RealAbove(path string) (string, bool) {
+	probe("realabove", path)
 	if !filepath.IsAbs(path) {
 		return "", false
 	}
@@ -84,6 +85,7 @@ func RealAbove(path string) (string, bool) {
 // and the names from it on. Whatever else allowed refuses (a share, a device, a loop, a name it cannot look at)
 // is false.
 func realAboveWalked(path string) (string, bool) {
+	probe("walk-realabove", path)
 	w, err := walk(path, true)
 	if err != nil {
 		return "", false
