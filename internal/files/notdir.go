@@ -19,20 +19,33 @@ var ErrNotDir = errors.New("not a directory")
 // LIMIT: only the branches that told ENOTDIR apart ask it; elsewhere Windows reads a path under a file as not there
 // and goes on as if it were (settings.json under a FLOE_DIR that is a file is none, as is a default place of one's
 // own that is a file, in ownDir; kit.has). Ask here where that comes to mislead.
+// LIMIT: when err is from's own, from is not looked at again but the directory above it: a file put at from between
+// the two looks is told as not there, not as not a directory. Look at from again if that comes to mislead.
 func NotDir(from string, err error) error {
+	return notDir(from, err, Stat)
+}
+
+// notDir is NotDir, looking with stat.
+func notDir(from string, err error, stat func(string) (fs.FileInfo, error)) error {
 	if !errors.Is(err, syscall.ENOTDIR) {
 		return nil
 	}
 	op, path := "stat", from
-	if pe, ok := errors.AsType[*fs.PathError](err); ok {
+	pe, named := errors.AsType[*fs.PathError](err)
+	if named {
 		op, path = pe.Op, pe.Path
 	}
 	told := &fs.PathError{Op: op, Path: path, Err: ErrNotDir}
 	if !errors.Is(err, fs.ErrNotExist) {
 		return told
 	}
-	for dir := from; ; {
-		info, serr := Stat(dir)
+	dir := from
+	if named && pe.Path == from {
+		// err tells of from already; at the root, its directory is itself, looked at once.
+		dir = filepath.Dir(from)
+	}
+	for {
+		info, serr := stat(dir)
 		switch {
 		case serr == nil && info.IsDir():
 			return nil
