@@ -234,6 +234,21 @@ func TestUIDialogHold(t *testing.T) { //nolint:paralleltest // the browser tests
 	b.pressKey(kb.Escape)
 	until("set-dialog", false)
 
+	// Saved by Enter in the category's field and failed: the focus given back there opens no suggestions over the mistake said
+	b.eval(rowMenu("plan-a", "task-set"))
+	until("set-dialog", true)
+	b.eval("document.getElementById('set-category').value = ''; document.getElementById('set-category').focus(); true")
+	b.until("its suggestions", "document.getElementById('set-category-names').matches(':popover-open')")
+	b.pressKey(kb.Escape)
+	b.eval("sent.length = 0; holdOn('PATCH'); fail.PATCH = true")
+	b.pressKey(kb.Enter)
+	b.until("sent", "sent.length === 1")
+	b.eval("letGo()")
+	b.until("let go", "document.getElementById('set-dialog').getAttribute('closedby') === 'closerequest'")
+	say("category, failed", "where(document.activeElement) + ' / suggestions ' + document.getElementById('set-category-names').matches(':popover-open') + ' / said ' + !document.getElementById('set-error').hidden")
+	b.pressKey(kb.Escape)
+	until("set-dialog", false)
+
 	// The page's shortcuts while held: a row picked beside the list stays picked, nothing else is written
 	open("/")
 	b.eval("document.querySelector('#list li[data-slug=check-a] .title').click(); true")
@@ -361,6 +376,7 @@ var dialogHoldWant = []string{
 	"suggestions, held: false set-dialog set-dialog",
 	"suggestions, keys while held:   S300 set-dialog set-dialog",
 	"the focus given back: set-dialog set-task",
+	"category, failed: set-dialog set-category / suggestions false / said true",
 	"shortcuts while held: check-a 1 true",
 	"closeDialog while held: true",
 	"shortcuts, a modal open, the focus on the body: check-a",
