@@ -154,14 +154,29 @@ func shortNameOf(path string) (string, error) {
 	}
 }
 
-// pipeServer serves a named pipe, counting each client that connects and letting it go, until stopped. The next
-// instance is made before a client is handled, so none is turned away between two.
+// pipeServer serves a named pipe, counting each client that connects and letting it go, until stopped. One
+// instance waits at a time: the next is made once a client took the last, and until then the pipe turns a client
+// away (ERROR_PIPE_BUSY). Its own clients wait that out (dial). The marker is let go after the next instance is
+// made, so what connects right after connected returns is not turned away.
 type pipeServer struct {
 	path    string
 	name    *uint16
 	count   atomic.Int64
 	stopped atomic.Bool
 	marked  chan struct{}
+}
+
+// pipeBusyWait is how long dial waits for the server to make its next instance: far longer than it takes.
+const pipeBusyWait = 10 * time.Second
+
+// dial opens the pipe as a client of the server's own, trying again while no instance is free.
+func (s *pipeServer) dial(flag int) (*os.File, error) {
+	for end := time.Now().Add(pipeBusyWait); ; time.Sleep(time.Millisecond) {
+		f, err := os.OpenFile(s.path, flag, 0)
+		if !errors.Is(err, windows.ERROR_PIPE_BUSY) || time.Now().After(end) {
+			return f, err //nolint:wrapcheck // told by the caller
+		}
+	}
 }
 
 func (s *pipeServer) instance() (windows.Handle, error) {
@@ -222,7 +237,7 @@ func newPipeServer() (*pipeServer, windows.Handle, error) {
 func (s *pipeServer) stop() {
 	s.stopped.Store(true)
 	// A client of its own lets the waiting ConnectNamedPipe return.
-	if f, err := os.Open(s.path); err == nil {
+	if f, err := s.dial(os.O_RDONLY); err == nil {
 		_ = f.Close()
 	}
 }
@@ -231,7 +246,7 @@ func (s *pipeServer) stop() {
 // go, each client before it has been counted (each was counted before the marker's instance was made), the marker
 // not.
 func (s *pipeServer) connected() (int, error) {
-	f, err := os.OpenFile(s.path, os.O_WRONLY, 0)
+	f, err := s.dial(os.O_WRONLY)
 	if err != nil {
 		return 0, fmt.Errorf("mark the pipe %s: %w", s.path, err)
 	}
