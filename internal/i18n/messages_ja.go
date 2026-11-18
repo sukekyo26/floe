@@ -93,7 +93,7 @@ var messagesJA = map[string]string{
 	"kit_chart_shape":            "chart は kind（line か bar）・x（名前）・series（name と、名前ごとの数の values）を取ります。%s がその形ではありません",
 	"kit_bar_over":               "%s：値 %s が of の %s を超えています。値は全体 of 以下にしてください",
 	"kit_example_name":           "example.yaml がテンプレート %s を名指しています。テンプレートのディレクトリの名前 %s にしてください",
-	"kit_for_undeclared":         "for %s：schema はそこに %s を許しません。schema が宣言する鍵の道を書いてください",
+	"kit_for_undeclared":         "for %s：schema がそこで許すどの値も %s を持てません。その値が持てる鍵の道を書いてください",
 	"kit_not_number":             "%s は数を取ります。%s は数ではありません",
 	"kit_num_digits":             "num だけか、num と 1 以上の有効数字の桁数を数の前に書いてください（num 3 のように）",
 	"kit_number_missing":         "%s は数を取ります。数が書かれていないか、null です",

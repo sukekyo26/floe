@@ -98,7 +98,7 @@ var messagesEN = map[string]string{
 	"kit_chart_shape":            "chart takes kind (line or bar), x (names) and series (each of name and values, a number for each name); %s is not so",
 	"kit_bar_over":               "%s: %s is over its of %s; write a value no greater than of, the whole",
 	"kit_example_name":           "example.yaml names the template %s; name it %s, after the template's directory",
-	"kit_for_undeclared":         "for %s: the schema allows no %s there; write a path of keys its schema declares",
+	"kit_for_undeclared":         "for %s: no value the schema allows there holds %s; write a path of keys those values may hold",
 	"kit_not_number":             "%s takes a number, not %s",
 	"kit_not_text":               "%s takes text, not %s",
 	"kit_num_digits":             "write num, or num and a count of significant digits from 1 before the number, like num 3",
