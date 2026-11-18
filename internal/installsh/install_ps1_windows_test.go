@@ -21,16 +21,7 @@ import (
 	"sync"
 	"sync/atomic"
 	"testing"
-	"time"
 )
-
-// A copy of the test binary run with this set sleeps: it is the floe.exe that runs while install.ps1 replaces it.
-func init() {
-	if os.Getenv("FLOE_INSTALL_TEST_SLEEP") != "" {
-		time.Sleep(time.Minute)
-		os.Exit(0)
-	}
-}
 
 // LIMIT: the real Invoke-WebRequest is run, but against a server of the test, through a proxy of the test, with its
 // certificate trusted by the driver alone: GitHub itself and a certificate checked as it is are not. The branch that
