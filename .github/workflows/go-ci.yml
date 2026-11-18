@@ -75,10 +75,12 @@ jobs:
               $count = if ($m -eq 'load') { 20 } else { 5 }
               $env:FLOE_PROBE_TIMES = $times; $env:FLOE_PROBE_LOG = $log
               go test ./internal/cli/ -run $tests -count=$count -timeout 40m *> "C:\s394-out\test-$v-$m.txt"
-              "== ${v} ${m}: go test exit $LASTEXITCODE"
+              $exit = $LASTEXITCODE
+              "== ${v} ${m}: go test exit $exit"
               Remove-Item Env:FLOE_PROBE_TIMES, Env:FLOE_PROBE_LOG
               if ($load) { Stop-Job $load; Remove-Job $load -Force }
               Get-Content "C:\s394-out\test-$v-$m.txt" | Select-String -Pattern '^(--- FAIL|FAIL|ok)' | ForEach-Object Line
+              if ($exit -or -not (Test-Path $times)) { Get-Content "C:\s394-out\test-$v-$m.txt" -Tail 40; continue }
               $ms = @(Get-Content $times | ForEach-Object { [int]($_.Split("`t")[2]) } | Sort-Object)
               $testPid = (Get-Content $times -TotalCount 1).Split("`t")[0]
               $server = @(Get-Content $log | Where-Object { $_.Split("`t")[1] -eq 'lstat' -and $_.Split("`t")[0] -ne $testPid })
