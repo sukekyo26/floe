@@ -59,8 +59,9 @@ func runLimited(parent context.Context, limit time.Duration, build func(context.
 		}
 		atLimit()
 		err := cmd.Process.Kill()
-		// LIMIT: Kill tells a child that ended (os.ErrProcessDone) only once Wait has taken it: one that ended by
-		// itself in that moment is told as killed.
+		// LIMIT: on Unix, Kill tells a child that ended (os.ErrProcessDone) only once Wait has taken it: one that
+		// ended by itself in that moment is told as killed. On Windows that Kill may fail instead (not tried), and
+		// os/exec's own error of it is returned.
 		over = err == nil
 		return err
 	}

@@ -249,6 +249,9 @@ func status(code int, body string) func(w http.ResponseWriter, r *http.Request, 
 
 // psLimit is how long one run of install.ps1 may take: Windows PowerShell stopped once for 13 minutes before it began
 // TLS through the proxy, and the package's 15 minutes ran out with nothing told of where.
+// LIMIT: go test without -v holds what a subtest told until TestInstallPS1 ends: when another run stops after one
+// was killed and the package's time runs out, none of it is shown. Write it to os.Stderr too when killing, if two
+// stop in one run.
 const psLimit = 5 * time.Minute
 
 // psCase is one run of install.ps1: what the driver does (testdata/driver.ps1) and the environment.
