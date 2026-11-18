@@ -75,7 +75,7 @@ jobs:
               $count = if ($m -eq 'load') { 20 } else { 5 }
               $env:FLOE_PROBE_TIMES = $times; $env:FLOE_PROBE_LOG = $log
               go test ./internal/cli/ -run $tests -count=$count -timeout 40m *> "C:\s394-out\test-$v-$m.txt"
-              "== $v $m: go test exit $LASTEXITCODE"
+              "== ${v} ${m}: go test exit $LASTEXITCODE"
               Remove-Item Env:FLOE_PROBE_TIMES, Env:FLOE_PROBE_LOG
               if ($load) { Stop-Job $load; Remove-Job $load -Force }
               Get-Content "C:\s394-out\test-$v-$m.txt" | Select-String -Pattern '^(--- FAIL|FAIL|ok)' | ForEach-Object Line
@@ -83,6 +83,6 @@ jobs:
               $testPid = (Get-Content $times -TotalCount 1).Split("`t")[0]
               $server = @(Get-Content $log | Where-Object { $_.Split("`t")[1] -eq 'lstat' -and $_.Split("`t")[0] -ne $testPid })
               $pids = @($server | ForEach-Object { $_.Split("`t")[0] } | Sort-Object -Unique).Count
-              "$v $m`: starts=$($ms.Count) median=$($ms[[int][math]::Floor($ms.Count / 2)]) max=$($ms[-1]) top5=$($ms[-5..-1] -join ' ') server-lstat=$($server.Count) servers=$pids"
+              "${v} ${m}: starts=$($ms.Count) median=$($ms[[int][math]::Floor($ms.Count / 2)]) max=$($ms[-1]) top5=$($ms[-5..-1] -join ' ') server-lstat=$($server.Count) servers=$pids"
             }
           }
