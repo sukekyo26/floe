@@ -147,6 +147,9 @@ type Item struct {
 // ready: the Items in it replaced by what fn returned for them. It returns values made ready so, each item
 // the schema declares but values leave out made nil, so that a template can test it under missingkey=error.
 // It is the one walk of values: what floe checks of the items and what it draws both come from it.
+// Parts whose roots lead back to each other through $refs alone would never end it: the schema's check refuses them
+// (schema_ref_cycle), so call it with schemas checked, as those of a Kit are (kit.Load checks one's own, the tests
+// floe's).
 // LIMIT: {{.x}} writes an object as Go's map, refused only if it holds html; give any.json's one part when needed
 func (c *Compiled) Walk(values any, fn func(it Item, ready any) (any, error)) (any, error) {
 	w := &walk{c: c, fn: fn}

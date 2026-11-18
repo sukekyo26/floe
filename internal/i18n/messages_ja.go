@@ -42,6 +42,7 @@ var messagesJA = map[string]string{
 	"schema_format_unreached": "format %s は描く項目の印です。floe が辿る properties・additionalProperties・items の下で宣言してください",
 	"schema_part_into":        "%s は floe の部品か部品が共有する schema の中を指していて、検査はされても書いたとおりには描かれません。全体の %s を指してください",
 	"schema_dynamic_ref":      "floe は %s をたどりません。$ref を書いてください",
+	"schema_ref_cycle":        "この $ref は自分に戻ります（%s）。この $ref を通る値はありません。ここに戻らない schema を指してください",
 	"schema_root_drawn":       "schema の根の全体を %s が描くことになります。ページの項目は properties の下に書き、部品はそのどれかの下で指してください",
 	"schema_shared_declared":  "%s は floe が自分で読む鍵です。schema の properties から消し、決まりを足すなら checks.yaml の check で書いてください",
 	"schema_root_rest":        "根の additionalProperties（%s）が部品か format の項目を持っています。floe が自分で読む鍵（lang・template・theme・title）まで描くことになるので、ページの項目は properties の下に書いてください",

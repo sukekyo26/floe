@@ -9,6 +9,7 @@ import (
 	"testing/fstest"
 
 	"floe/internal/kit"
+	"floe/internal/usererr"
 )
 
 // floe's own pass every check: the test that stands for checking them at every run (judgement 1).
@@ -277,5 +278,34 @@ func TestOwnCSS(t *testing.T) {
 	}
 	if got := corners(told(kit.Check(k))); got != nil {
 		t.Errorf("over none: got %v, want none", got)
+	}
+}
+
+// Check refuses parts of one's own whose roots lead back to each other through $refs, each in its own schema.json,
+// so that no Kit holding them is drawn with.
+func TestCheckRefCycle(t *testing.T) {
+	t.Parallel()
+
+	parts := map[string]string{}
+	for name, other := range map[string]string{"za": "zb", "zb": "za"} {
+		parts[name+"/schema.json"] = `{"$ref": "floe:///parts/` + other + `.json"}`
+		parts[name+"/part.html"] = `<div data-floe-part="` + name + `"></div>`
+		parts[name+"/part.css"] = ""
+	}
+	k, err := kit.Read(floe(t), kit.Sources{Parts: kit.Dir{FS: mapFS(parts), Name: "own/parts"}})
+	if err != nil {
+		t.Fatal(told(err))
+	}
+	var found usererr.List
+	if failed := found.Add(kit.Check(k)); failed != nil {
+		t.Fatal(failed)
+	}
+	var got []string
+	for _, e := range found {
+		got = append(got, e.File()+" "+e.Key)
+	}
+	want := []string{"own/parts/za/schema.json schema_ref_cycle", "own/parts/zb/schema.json schema_ref_cycle"}
+	if !slices.Equal(got, want) {
+		t.Errorf("told\n%s\nwant\n%s", lines(got...), lines(want...))
 	}
 }
