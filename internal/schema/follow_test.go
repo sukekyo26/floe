@@ -114,7 +114,8 @@ func TestForbidding(t *testing.T) {
 		// Of no type, rows may be an object with a.
 		{"closed items beside a $ref to prefixItems, of no type", `"properties": {"rows": {"$ref": "#/$defs/l", "items": {` + closed + `"properties": {"b": {}}}}}, "$defs": {"l": {"prefixItems": [` + objA + `]}}`, "rows.a", ""},
 		// LIMIT of Forbidding: a key no item may hold is not refused either.
-		{"a key no item holds, prefixItems before", `"properties": {"rows": {"prefixItems": [{` + closed + `"properties": {"p": {}}}], "items": {` + closed + `"properties": {"b": {}}}}}`, "rows.zzz", ""},
+		{"a key no item holds, prefixItems before", `"properties": {"rows": {"type": "array", "prefixItems": [{"type": "object", ` + closed + `"properties": {"p": {}}}], "items": {"type": "object", ` + closed + `"properties": {"b": {}}}}}`, "rows.zzz", ""},
+		{"a list, prefixItems before closed items", `"properties": {"rows": {"type": "array", "prefixItems": [` + shut + `], "items": ` + shut + `}}`, "rows.zz", ""},
 		// The value's shape is read from type: keys, a list, or both, which stops it.
 		{"items beside additionalProperties true", `"properties": {"rows": {"items": ` + shut + `, "additionalProperties": true}}`, "rows.foo", ""},
 		{"items, additionalProperties left out", `"properties": {"rows": {"items": ` + shut + `}}`, "rows.foo", ""},
@@ -127,6 +128,7 @@ func TestForbidding(t *testing.T) {
 		{"keys alone, declared beside items", `"properties": {"rows": {"type": "object", "properties": {"a": ` + shut + `}, "items": {"properties": {"a": {}}}}}`, "rows.a.zz", "zz"},
 		{"a list alone, declared", `"properties": {"rows": {"type": "array", "properties": {"a": {}}, "items": ` + shut + `}}`, "rows.a", "a"},
 		{"keys alone, closed, prefixItems", `"properties": {"x": {"type": "object", ` + closed + `"prefixItems": [{}]}}`, "x.a", "a"},
+		{"keys alone, closed, items", `"properties": {"x": {"type": "object", ` + closed + `"items": {}}}`, "x.a", "a"},
 		{"keys alone, items", `"properties": {"rows": {"type": "object", "items": ` + shut + `}}`, "rows.foo", ""},
 		{"a list alone, additionalProperties", `"properties": {"rows": {"type": "array", "additionalProperties": {}, "items": ` + shut + `}}`, "rows.foo", "foo"},
 		{"open, of no type", `"properties": {"o1": {"properties": {"a": ` + shut + `}}}`, "o1.a.zz", ""},
