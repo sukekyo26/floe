@@ -110,9 +110,41 @@ func TestPlaceLooks(t *testing.T) {
 	if n := own["newOwn"]["a.kit"]; n != 0 {
 		t.Errorf("newOwn names a.kit %d times, want 0", n)
 	}
+	newOwnRefusesFirst(t)
 	for _, fn := range []string{"dataDir", "compared", "overlapping", "compare", "newTower", "info", "within", "newOwn"} {
 		if _, ok := own[fn]; !ok {
 			t.Errorf("own.go has no %s, which the table names: %v", fn, slices.Sorted(maps.Keys(own)))
 		}
+	}
+}
+
+// newOwnRefusesFirst checks that newOwn makes the other places (a.ownPlaces) only after its last refusal of the place
+// it makes (cli_new_no_dir): a refusal there looks at no other place, as before S394.
+func newOwnRefusesFirst(t *testing.T) {
+	t.Helper()
+	f, err := parser.ParseFile(token.NewFileSet(), "own.go", nil, parser.SkipObjectResolution)
+	if err != nil {
+		t.Fatal(err)
+	}
+	var refused, others token.Pos
+	for _, d := range f.Decls {
+		if fn, ok := d.(*ast.FuncDecl); ok && fn.Name.Name == "newOwn" {
+			ast.Inspect(fn.Body, func(n ast.Node) bool {
+				switch n := n.(type) {
+				case *ast.BasicLit:
+					if n.Value == `"cli_new_no_dir"` {
+						refused = n.Pos()
+					}
+				case *ast.SelectorExpr:
+					if x, ok := n.X.(*ast.Ident); ok && x.Name == "a" && n.Sel.Name == "ownPlaces" {
+						others = n.Pos()
+					}
+				}
+				return true
+			})
+		}
+	}
+	if refused == token.NoPos || others == token.NoPos || others < refused {
+		t.Errorf("newOwn makes the other places at %d, its last refusal is at %d: want them made after it", others, refused)
 	}
 }
