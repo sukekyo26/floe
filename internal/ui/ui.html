@@ -784,6 +784,8 @@
   }
   dialog[open] { animation: pop 0.2s cubic-bezier(0.2, 0.8, 0.2, 1); }
   dialog::backdrop { background: var(--scrim); backdrop-filter: blur(3px); }
+  /* Held while it writes (holdDialog): no press reaches what is not a field or a button either, the suggestions' options and a row's grip */
+  dialog[closedby="none"] > * { pointer-events: none; }
   dialog[open]::backdrop { animation: fade 0.2s ease-out; }
   @keyframes pop { from { opacity: 0; transform: translateY(8px) scale(0.98); } }
   @keyframes fade { from { opacity: 0; } }
@@ -2244,10 +2246,39 @@
     'move-dialog': () => moveAnswer?.(moveYes),
   };
   function closeDialog(d) {
-    if (!d.open) return;
+    if (!d.open || d.getAttribute('closedby') === 'none') return;
     d.close();
     AFTER_CLOSE[d.id]?.();
     if (d.contains(document.activeElement)) document.activeElement.blur();
+  }
+  // While a modal's write and the read after it go, it holds still: no close request (closedby, which closeDialog and the dialog's keys
+  // and pointer see too), and every field and button that could be pressed is disabled, so that nothing closes it, sends again or starts
+  // another write; what follows the write is of the modal it was sent from, open as it was. Those disabled here alone are given back, and
+  // the focus, if it left the modal meanwhile
+  // LIMIT: a write that never answers (the store's lock held by a stopped process) holds the modal till the page is loaded again. Let a
+  // write be called off if that comes to trouble someone
+  const held = new WeakMap();
+  function holdDialog(d, on) {
+    if (on) {
+      const now = [...d.querySelectorAll('input, button, select, textarea')].filter((e) => !e.disabled);
+      for (const e of now) e.disabled = true;
+      held.set(d, { now, focus: document.activeElement });
+    } else {
+      const { now = [], focus } = held.get(d) ?? {};
+      for (const e of now) e.disabled = false;
+      held.delete(d);
+      if ((!d.contains(document.activeElement) || document.activeElement === d) && d.contains(focus)) focus.focus();
+    }
+    d.setAttribute('closedby', on ? 'none' : 'closerequest');
+  }
+  // The write held, and let go however it ends; the caller closes the modal after
+  async function whileHeld(d, write) {
+    holdDialog(d, true);
+    try {
+      return await write();
+    } finally {
+      holdDialog(d, false);
+    }
   }
 
   // Suggests names for a field, as a WAI-ARIA combobox: offer says those to show of what is written, each a name or { name, label }, and
@@ -2354,12 +2385,10 @@
   const showApply = () => {
     $('tag-apply').disabled = tagMarks.sending || [...tagMarks.want].every(([name, w]) => w === tagMarks.start.get(name));
   };
-  // While the tags are sent the dialog holds still, till it closes: no chip, find, cancel or apply, nor Escape. Escape is closedby's,
-  // as Chrome lets a cancel event be stopped only after a press in the dialog
+  // While the tags are sent the dialog holds still, as every modal does while it writes
   function holdTags(sending) {
     tagMarks.sending = sending;
-    $('tag-dialog').setAttribute('closedby', sending ? 'none' : 'closerequest');
-    for (const e of $('tag-form').querySelectorAll('input, button')) e.disabled = sending;
+    holdDialog($('tag-dialog'), sending);
     showApply();
   }
 
@@ -3508,13 +3537,35 @@
 
   async function saveEdit(e) {
     e.preventDefault();
-    const btn = $('edit-submit');
-    btn.disabled = true;
     const changes = Object.fromEntries(Object.entries(EDIT_FIELDS)
       .filter(([key, id]) => $(id).value.trim() !== (editing[key] ?? ''))
       .map(([key, id]) => [key, $(id).value]));
-    const { reason, edited } = await editOne(editing.slug, changes);
-    btn.disabled = false;
+    let reason = '';
+    let away = false;
+    await whileHeld($('edit-dialog'), async () => {
+      let edited;
+      ({ reason, edited } = await editOne(editing.slug, changes));
+      if (reason) return;
+      if (changes.slug) {
+        const was = editing.slug;
+        // The row it goes back to is under the new name
+        editing = { ...editing, slug: changes.slug };
+        // This frame's URL is the old name's, which is gone now; the page chosen beside the list is loaded under the new one
+        if (was === framed) {
+          renameKept(was, changes.slug);
+          location.replace(pageHref({ slug: changes.slug, v: frameAt.v }));
+          away = true;
+          return;
+        }
+        // Drawn with the list read below
+        if (picked?.slug === was) picked.slug = changes.slug;
+      }
+      // A page moved to another project is off its task, which is of its project
+      toast(edited?.offTask ? t('ui_saved_off_task', edited.offTask) : t('ui_saved'));
+      // Drawn before the dialog closes, which gives focus to the row's menu button as drawn
+      await load();
+    });
+    if (away) return;
     if (reason) {
       $('edit-error').textContent = t('ui_save_failed', reason);
       $('edit-error').hidden = false;
@@ -3528,23 +3579,6 @@
       }
       return;
     }
-    if (changes.slug) {
-      const was = editing.slug;
-      // The row it goes back to is under the new name
-      editing = { ...editing, slug: changes.slug };
-      // This frame's URL is the old name's, which is gone now; the page chosen beside the list is loaded under the new one
-      if (was === framed) {
-        renameKept(was, changes.slug);
-        location.replace(pageHref({ slug: changes.slug, v: frameAt.v }));
-        return;
-      }
-      // Drawn with the list read below
-      if (picked?.slug === was) picked.slug = changes.slug;
-    }
-    // A page moved to another project is off its task, which is of its project
-    toast(edited?.offTask ? t('ui_saved_off_task', edited.offTask) : t('ui_saved'));
-    // Drawn before the dialog closes, which gives focus to the row's menu button as drawn
-    await load();
     closeDialog($('edit-dialog'));
   }
 
@@ -4184,40 +4218,39 @@
   }
   async function saveKin(e) {
     e.preventDefault();
-    const btn = $('kin-submit');
-    btn.disabled = true;
     const { task, form } = kinOf;
     const name = $('kin-task').value.trim();
     const title = $('kin-title').value.trim();
-    try {
-      if (!taskFormReady($('kin'), $('kin-error'))) return;
-      const { x, act } = kinShown;
-      if (act === 'open') {
-        location.href = taskHref({ project: task.project, name });
-        return;
-      }
-      // Nothing to write, and so nothing to tell
-      if (act === 'none') {
-        closeDialog($('kin-dialog'));
-        form.back(task, name);
-        return;
-      }
-      const res = await form.write(task, name, x, title);
-      if (res.status === 409) {
-        kinTaskChanged();
-        throw new Error(res.stale);
-      }
-      if (!res.ok) throw new Error(res.text);
-      form.done(task, name, x, res);
-      await load();
+    if (!taskFormReady($('kin'), $('kin-error'))) return;
+    const { x, act } = kinShown;
+    if (act === 'open') {
+      location.href = taskHref({ project: task.project, name });
+      return;
+    }
+    // Nothing to write, and so nothing to tell
+    if (act === 'none') {
       closeDialog($('kin-dialog'));
       form.back(task, name);
+      return;
+    }
+    try {
+      await whileHeld($('kin-dialog'), async () => {
+        const res = await form.write(task, name, x, title);
+        if (res.status === 409) {
+          kinTaskChanged();
+          throw new Error(res.stale);
+        }
+        if (!res.ok) throw new Error(res.text);
+        form.done(task, name, x, res);
+        await load();
+      });
     } catch (err) {
       $('kin-error').textContent = t('ui_save_failed', err.message);
       $('kin-error').hidden = false;
-    } finally {
-      btn.disabled = false;
+      return;
     }
+    closeDialog($('kin-dialog'));
+    form.back(task, name);
   }
 
   // Archives the task, or gives it back, as drawn (rev): the task alone, as floe task --state writes it, its pages archived on their own. A
@@ -5321,32 +5354,32 @@
       btn.focus();
       return;
     }
-    btn.disabled = true;
     try {
-      const res = await putPageOn(page, task, body, category);
-      // Refused as stale: whether the name is of a task there, as read again, a title asked of a new one alone
-      if (!res.ok) {
-        if (res.status === 409) setTaskKnown();
-        throw new Error(res.status === 409 ? res.stale : res.text);
-      }
-      // The task it left, as the write found it, before what the dialog opened at: it may have been moved since
-      const left = res.pages[0]?.offTask;
-      if (!left && task.trim() === setOpened.task) toast(t('ui_saved'));
-      else {
-        const words = left
-          ? t('ui_task_put_moved', leftPlace(left, res.pages[0].offCategory), task.trim(), t(VIEW_WORDS[state]))
-          : t('ui_task_put', task.trim(), t(VIEW_WORDS[state]));
-        const to = tagged('a', 'toast-link', words);
-        to.href = taskHref({ project: page.taskProject, name: task.trim() });
-        toast('', { ms: 8000, button: to });
-      }
-      await load();
-      closeDialog($('set-dialog'));
+      await whileHeld($('set-dialog'), async () => {
+        const res = await putPageOn(page, task, body, category);
+        // Refused as stale: whether the name is of a task there, as read again, a title asked of a new one alone
+        if (!res.ok) {
+          if (res.status === 409) setTaskKnown();
+          throw new Error(res.status === 409 ? res.stale : res.text);
+        }
+        // The task it left, as the write found it, before what the dialog opened at: it may have been moved since
+        const left = res.pages[0]?.offTask;
+        if (!left && task.trim() === setOpened.task) toast(t('ui_saved'));
+        else {
+          const words = left
+            ? t('ui_task_put_moved', leftPlace(left, res.pages[0].offCategory), task.trim(), t(VIEW_WORDS[state]))
+            : t('ui_task_put', task.trim(), t(VIEW_WORDS[state]));
+          const to = tagged('a', 'toast-link', words);
+          to.href = taskHref({ project: page.taskProject, name: task.trim() });
+          toast('', { ms: 8000, button: to });
+        }
+        await load();
+      });
     } catch (err) {
       setFailed(err.message);
-    } finally {
-      btn.disabled = false;
+      return;
     }
+    closeDialog($('set-dialog'));
   }
   // The task edit dialog: an existing task's own fields, its title, URL and the order of its categories, as its page alone writes them; the
   // parent is the family card's. What it was opened over (base) is what saving compares with, and the rev it was read at
@@ -5673,49 +5706,48 @@
       closeDialog($('edit-task-dialog'));
       return;
     }
-    const btn = $('edit-task-submit');
-    btn.disabled = true;
     const failed = (reason) => {
       $('edit-task-error').textContent = t('ui_save_failed', reason);
       $('edit-task-error').hidden = false;
     };
     let gone = false;
-    try {
+    const saved = await whileHeld($('edit-task-dialog'), async () => {
       let res;
       try {
         res = await writeTask(taskEditing.project, taskEditing.name, body);
       } catch (err) {
         failed(err.message);
-        return;
+        return false;
       }
       if (res.status === 409) {
         gone = !refillTaskEdit();
         if (!gone) failed(res.stale);
-        return;
+        return false;
       }
       if (!res.ok) {
         failed(res.text);
-        return;
+        return false;
       }
       toast(t('ui_saved'));
       await load();
-      closeDialog($('edit-task-dialog'));
-    } finally {
-      if (!gone) btn.disabled = false;
-    }
+      return true;
+    });
+    // The task gone, there is nothing to save to
+    if (gone) $('edit-task-submit').disabled = true;
+    if (saved) closeDialog($('edit-task-dialog'));
   }
 
   // The dialog's way off the task: the dialog closed, its focus back on the menu (setBack), and from the keys then on the way back
   async function takeOffTask(e) {
-    const opened = setOpened;
-    const res = await takePageOff(setPage, setBack);
+    const res = await whileHeld($('set-dialog'), async () => {
+      const off = await takePageOff(setPage, setBack);
+      if (!off.reason) await load();
+      return off;
+    });
     if (res.reason) {
       setFailed(res.reason);
       return;
     }
-    await load();
-    // Closed meanwhile (Escape, say), or opened again since: the focus is where that left it
-    if (!$('set-dialog').open || setOpened !== opened) return;
     closeDialog($('set-dialog'));
     if (e.detail === 0) res.button.focus();
   }
@@ -5823,29 +5855,32 @@
         $('add-page-q').focus();
         return;
       }
-      let res;
-      try {
-        res = await putPageOn(a, to.name, { new: false, rev: to.rev }, to.category);
-      } catch (err) {
-        failed(err.message);
-        return;
-      }
-      // Refused as stale, the rev is the one read again
-      if (!res.ok) {
-        if (res.status === 409) {
-          to.rev = readRev(to.project, to.name);
-          drawAddPage();
+      const put = await whileHeld($('add-page-dialog'), async () => {
+        let res;
+        try {
+          res = await putPageOn(a, to.name, { new: false, rev: to.rev }, to.category);
+        } catch (err) {
+          failed(err.message);
+          return false;
         }
-        failed(res.status === 409 ? res.stale : res.text);
-        return;
-      }
-      // Of another task, as the write found it; of another category of this one, as the list had it. The list's other task is not said: the
-      // write found the page off it
-      const off = res.pages[0];
-      const said = off?.offTask ? leftPlace(off.offTask, off.offCategory) : (a.task?.name === to.name ? from : '');
-      toast(said ? t('ui_page_moved', a.title, said, to.category) : t('ui_page_added', a.title, to.category));
-      await load();
-      closeDialog($('add-page-dialog'));
+        // Refused as stale, the rev is the one read again
+        if (!res.ok) {
+          if (res.status === 409) {
+            to.rev = readRev(to.project, to.name);
+            drawAddPage();
+          }
+          failed(res.status === 409 ? res.stale : res.text);
+          return false;
+        }
+        // Of another task, as the write found it; of another category of this one, as the list had it. The list's other task is not said:
+        // the write found the page off it
+        const off = res.pages[0];
+        const said = off?.offTask ? leftPlace(off.offTask, off.offCategory) : (a.task?.name === to.name ? from : '');
+        toast(said ? t('ui_page_moved', a.title, said, to.category) : t('ui_page_added', a.title, to.category));
+        await load();
+        return true;
+      });
+      if (put) closeDialog($('add-page-dialog'));
     } finally {
       adding = false;
     }
@@ -5874,7 +5909,8 @@
   addEventListener('pointerup', () => { pressedAt = -Infinity; });
   // The tasks, which never fail a load: the list of pages goes on without them, and the task list says why
   // LIMIT: read at each look, as the list is, but for a page whole; a small JSON. Answer the two as one if that comes to weigh
-  async function readTasks(signal) {
+  // As long as a read of the list may take, unless the caller cuts it itself
+  async function readTasks(signal = AbortSignal.timeout(READ_MS)) {
     try {
       const res = await api('/api/tasks', { signal });
       const raw = await res.text();
@@ -6101,7 +6137,7 @@
   let themesBack = null;
   let themesOwn = '';
   // Why the settings could not be read this time, '' when they were or are being read; and which opening this is, so that
-  // what was asked in one closed since (a read, a save) leaves the modal open now alone
+  // a read asked in one closed since leaves the modal open now alone (a save holds it open: holdDialog)
   let themesFailed = '';
   let themesOpened = 0;
   // The part of the settings shown: list, theme or mode; a page's themes are theme alone, with no way to the list
@@ -6194,22 +6230,15 @@
 
   // The task mode as checked, written alone: the default theme stays as it is
   async function saveTaskMode() {
-    const opened = themesOpened;
     const on = $('task-mode').checked;
-    $('mode-save').disabled = true;
-    let why = '';
-    try {
-      const res = await api('/api/settings', { method: 'PUT', headers: { 'content-type': 'application/json' }, body: JSON.stringify({ taskMode: on }) });
-      if (!res.ok) why = t('ui_http_error', await res.text(), res.status);
-    } catch (e) {
-      why = e.message;
-    }
-    // Closed meanwhile: what was saved is told, the modal opened since left as it is
-    if (opened !== themesOpened) {
-      toast(why ? t('ui_task_mode_failed', why) : t(on ? 'ui_task_mode_set_on' : 'ui_task_mode_set_off'));
-      return;
-    }
-    $('mode-save').disabled = false;
+    const why = await whileHeld($('settings'), async () => {
+      try {
+        const res = await api('/api/settings', { method: 'PUT', headers: { 'content-type': 'application/json' }, body: JSON.stringify({ taskMode: on }) });
+        return res.ok ? '' : t('ui_http_error', await res.text(), res.status);
+      } catch (e) {
+        return e.message;
+      }
+    });
     if (why) {
       toast(t('ui_task_mode_failed', why));
       return;
@@ -6326,28 +6355,20 @@
     if (!picked) return;
     const theme = picked.value;
     const a = themesPage;
-    const opened = themesOpened;
-    $('theme-choose').disabled = true;
-    let why = '';
-    try {
-      const at = a ? `${PAGES_API}/${encodeURIComponent(a.slug)}/theme` : '/api/settings';
-      const res = await api(at, { method: 'PUT', headers: { 'content-type': 'application/json' }, body: JSON.stringify({ theme }) });
-      // A page's: changed meanwhile (409), or not drawn, its look kept (400: the theme, one's own things or the data); the
-      // server's words are of the command line
-      if (a && res.status === 409) why = t('ui_theme_page_changed');
-      else if (a && res.status === 400) why = t('ui_theme_page_undrawn');
-      else if (!res.ok) why = t('ui_http_error', await res.text(), res.status);
-    } catch (e) {
-      why = e.message;
-    }
+    const why = await whileHeld($('settings'), async () => {
+      try {
+        const at = a ? `${PAGES_API}/${encodeURIComponent(a.slug)}/theme` : '/api/settings';
+        const res = await api(at, { method: 'PUT', headers: { 'content-type': 'application/json' }, body: JSON.stringify({ theme }) });
+        // A page's: changed meanwhile (409), or not drawn, its look kept (400: the theme, one's own things or the data); the
+        // server's words are of the command line
+        if (a && res.status === 409) return t('ui_theme_page_changed');
+        if (a && res.status === 400) return t('ui_theme_page_undrawn');
+        return res.ok ? '' : t('ui_http_error', await res.text(), res.status);
+      } catch (e) {
+        return e.message;
+      }
+    });
     const done = why ? t(a ? 'ui_theme_page_failed' : 'ui_theme_set_failed', why) : a ? (theme ? t('ui_theme_page_set', theme) : t('ui_theme_page_unset')) : t('ui_theme_set', theme);
-    // Closed meanwhile: what was saved is told, the modal opened since left as it is
-    if (opened !== themesOpened) {
-      toast(done);
-      if (a && !why) await load();
-      return;
-    }
-    $('theme-choose').disabled = false;
     if (why) {
       toast(done);
       return;
@@ -6405,42 +6426,42 @@
 
   async function add(e) {
     e.preventDefault();
-    const btn = $('add-submit');
-    const error = $('add-error');
-    btn.disabled = true;
-    try {
-      // A field sent is given, empty or not: one left blank is left out
-      const body = {};
-      for (const [key, id] of [['path', 'add-path'], ['slug', 'add-slug'], ['description', 'add-desc']]) {
-        const value = $(id).value.trim();
-        if (value) body[key] = value;
-      }
-      const res = await api(PAGES_API, {
-        method: 'POST',
-        headers: { 'content-type': 'application/json' },
-        body: JSON.stringify(body),
-      });
-      // The server answers with the reasons as text, a line each
-      if (!res.ok) throw new Error(t('ui_http_error', await res.text(), res.status));
-      const { slug, folder } = await res.json();
-      $('add').reset();
-      closeDialog($('add-dialog'));
-      toast(t(folder ? 'ui_folder_added' : 'ui_link_added', slug));
-      // To the whole list, drawn once with it
-      $('q').value = '';
-      if (folder) {
-        opened.add(slug);
-        keepOpen();
-      }
-      filter({ view: 'all', ...NO_PICKS });
-      drawn = '';
-      await load();
-    } catch (err) {
-      error.textContent = t('ui_add_failed', err.message);
-      error.hidden = false;
-    } finally {
-      btn.disabled = false;
+    // A field sent is given, empty or not: one left blank is left out
+    const body = {};
+    for (const [key, id] of [['path', 'add-path'], ['slug', 'add-slug'], ['description', 'add-desc']]) {
+      const value = $(id).value.trim();
+      if (value) body[key] = value;
     }
+    let added;
+    try {
+      added = await whileHeld($('add-dialog'), async () => {
+        const res = await api(PAGES_API, {
+          method: 'POST',
+          headers: { 'content-type': 'application/json' },
+          body: JSON.stringify(body),
+        });
+        // The server answers with the reasons as text, a line each
+        if (!res.ok) throw new Error(t('ui_http_error', await res.text(), res.status));
+        return res.json();
+      });
+    } catch (err) {
+      $('add-error').textContent = t('ui_add_failed', err.message);
+      $('add-error').hidden = false;
+      return;
+    }
+    const { slug, folder } = added;
+    $('add').reset();
+    closeDialog($('add-dialog'));
+    toast(t(folder ? 'ui_folder_added' : 'ui_link_added', slug));
+    // To the whole list, drawn once with it
+    $('q').value = '';
+    if (folder) {
+      opened.add(slug);
+      keepOpen();
+    }
+    filter({ view: 'all', ...NO_PICKS });
+    drawn = '';
+    await load();
   }
 
   // One menu open at a time; Escape, a click elsewhere or an item done closes it, focus going back to its button rather than
@@ -6598,12 +6619,20 @@
     moveYes = true;
     closeDialog($('move-dialog'));
   });
-  // A click on the backdrop (the dialog itself) closes it, as Escape does: not one closedby none holds; the form fills the dialog, so
+  // A click on the backdrop (the dialog itself) closes it, as Escape does, one held excepted (closeDialog); the form fills the dialog, so
   // clicks inside never land here
   for (const d of document.querySelectorAll('dialog')) {
     d.addEventListener('click', (e) => {
-      if (e.target === d && d.getAttribute('closedby') !== 'none') closeDialog(d);
+      if (e.target === d) closeDialog(d);
     });
+    // Held (holdDialog), no key reaches what is in it, a disabled field's own listeners included: those with a modifier and the function
+    // keys go on to the browser, so that a page held by a write that never answers can still be loaded again (F5, Ctrl+R), and so do an
+    // input method's, its field disabled
+    d.addEventListener('keydown', (e) => {
+      if (d.getAttribute('closedby') !== 'none' || e.ctrlKey || e.metaKey || e.altKey || /^F\d+$/.test(e.key) || composing(e)) return;
+      e.preventDefault();
+      e.stopImmediatePropagation();
+    }, true);
     // Escape and the other close requests: the browser says when one closes a modal (not while a search field clears its words, nor
     // while closedby none holds) and fires cancel within the key's task, before the next key; closed here, the browser's own closing
     // finds it closed
