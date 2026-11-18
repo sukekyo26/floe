@@ -78,6 +78,7 @@ func TestForbidding(t *testing.T) {
 	t.Parallel()
 
 	const closed = `"additionalProperties": false, `
+	const objA = `{"type": "object", "properties": {"a": {"type": "array"}}}`
 	for _, tt := range []struct {
 		name, body, path, want string
 	}{
@@ -99,6 +100,13 @@ func TestForbidding(t *testing.T) {
 		{"another key, closed items, additionalProperties", `"properties": {"rows": {"items": {` + closed + `"properties": {"a": {}}}, "additionalProperties": {}}}`, "rows.foo", ""},
 		{"closed beside a $ref to additionalProperties", `"properties": {"a": {"$ref": "#/$defs/open", ` + closed + `"properties": {"k": {}}}}, "$defs": {"open": {"additionalProperties": {}}}`, "a.zz", "zz"},
 		{"keys and items", `"properties": {"rows": {"$ref": "#/$defs/c", "properties": {"k": {}}, "items": {"properties": {"k": {}}}}}, "$defs": {"c": {` + closed + `"properties": {}}}`, "rows.k", ""},
+		// Of the items items does not take, those before it by prefixItems, a key is not known.
+		{"prefixItems before closed items", `"properties": {"rows": {"prefixItems": [` + objA + `], "items": {` + closed + `"properties": {"b": {}}}}}`, "rows.a", ""},
+		{"prefixItems and no items, closed", `"properties": {"rows": {` + closed + `"prefixItems": [` + objA + `]}}`, "rows.a", ""},
+		{"prefixItems through a $ref, closed beside", `"properties": {"rows": {"$ref": "#/$defs/l", "additionalProperties": false}}, "$defs": {"l": {"prefixItems": [` + objA + `]}}`, "rows.a", ""},
+		{"closed items beside a $ref to prefixItems", `"properties": {"rows": {"$ref": "#/$defs/l", "items": {` + closed + `"properties": {"b": {}}}}}, "$defs": {"l": {"prefixItems": [` + objA + `]}}`, "rows.a", "a"},
+		// LIMIT of Forbidding: a key no item may hold is not refused either.
+		{"a key no item holds, prefixItems before", `"properties": {"rows": {"prefixItems": [{` + closed + `"properties": {"p": {}}}], "items": {` + closed + `"properties": {"b": {}}}}}`, "rows.zzz", ""},
 	} {
 		c, err := compile(t, tt.body)
 		if c == nil {

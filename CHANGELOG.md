@@ -12,11 +12,14 @@ adheres to [Semantic Versioning](https://semver.org/).
 
 ### Changed
 
+- Change an item that `prefixItems` takes in a list whose schema has `items` beside it (draft 2020-12): it now comes to `page.html` and `part.html` as written, as an item under `prefixItems` alone does, and a key the schema declares but the item leaves out is not there, not nil. Read such a key with `index` (`{{with index . "more"}}…{{end}}`): a page that read it as `.more` is now refused with `map has no entry`.
 - Change a YAML mistake told on the line right after a `|` or `>` text, as when the text's first line is deeper than a line after it: after the YAML library's words, floe now says that the text ends before that line and how to mend it (indent the text's lines alike, or write its indentation as in `|2`). The words before and the place are as they were.
 - Change `floe part check` and `floe template check` to refuse a `$ref` that leads back to itself through `$ref`s alone (a part's root naming a part whose root names it, a `$defs` naming itself), in the schema's file, at the `$ref`. No value passes such a `$ref`, which was told only once a data file wrote a value, at the data file's line. A schema of yours that holds one where no value reached it, or under `not`, `anyOf` or `if`, drew before and is refused now, by every command that reads your parts and templates.
 
 ### Fixed
 
+- Fix `items` beside `prefixItems` drawing the items `prefixItems` takes too: a part or a format of floe's in `items` drew every item of the list, though JSON Schema takes `items` only for those after `prefixItems`, and a value it did not check stopped the drawing at the data file's line. It now draws only the items after them.
+- Fix a `for` of a template's or a part's `checks.yaml` refused as a path of keys the schema does not allow, where it goes through a list whose first items `prefixItems` takes and `items` does not. Such a path is no longer refused, and a path of a key no item may hold is not refused there either.
 - Fix `install.sh` and `install.ps1` waiting forever when the server or a proxy on the way went silent: they give up after 120 seconds without an answer, and say what they were fetching and what to do. The whole download has no time limit, so a slow one still finishes. A download that stops midway is given up on after 5 minutes by Windows PowerShell 5.1 and never by PowerShell 7.0 to 7.3.
 - Fix a key pressed just after a modal of the management page closed reaching the closed modal: Enter right after Escape could save the change Escape cancelled in the edit modal, or open the page picked in the search modal. The focus now leaves the modal as it closes.
 - Fix Enter pressed right after Yes in the ask to move a page to another task: Yes could be lost, the page left where it was and the modals left open.

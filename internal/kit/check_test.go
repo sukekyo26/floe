@@ -63,6 +63,12 @@ func TestCheckMistakes(t *testing.T) {
 		want                    string
 	}{
 		{"right", part, nil, nil, ""},
+		// The part's for goes through Forbidding as a template's does: an item prefixItems takes may hold a.
+		{"a for through prefixItems", with(map[string]string{
+			"p/schema.json": `{"type": "array", "prefixItems": [{"type": "object", "properties": {"a": {"type": "array"}}}],
+"items": {"type": "object", "additionalProperties": false}}`,
+			"p/checks.yaml": "- for: a\n  expr: 'true'\n  message: m\n",
+		}), nil, nil, ""},
 		{"no part.css", with(nil, "p/part.css"), nil, nil, "own/parts/p: " + partFiles},
 		{"a look with a part.html", with(map[string]string{"lk/part.css": "a{}", "lk/part.html": "x", "lk/checks.yaml": ""}), nil, nil, lines(
 			"own/parts/lk/checks.yaml: "+lookUnread, "own/parts/lk/part.html: "+lookUnread)},
