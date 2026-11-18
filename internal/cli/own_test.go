@@ -11,6 +11,7 @@ import (
 
 	"floe/internal/cli"
 	"floe/internal/files"
+	"floe/internal/i18n"
 	"floe/internal/testfs"
 	"floe/internal/timebox"
 )
@@ -423,7 +424,7 @@ func TestTemplateCheck(t *testing.T) {
 			return at(dir, "page.html") + `:3:19: assets/ has no "img/z.svg": name a file under it, as a path from assets/ like img/logo.svg`
 		}},
 		{"for through a key the schema forbids", files("", example, "- for: itemz\n  expr: false\n  message: m\n"), func(dir string) string {
-			return at(dir, "checks.yaml") + ":1:8: for itemz: the schema allows no itemz there; write a path of keys its schema declares"
+			return at(dir, "checks.yaml") + ":1:8: " + i18n.EnglishCatalog().Msg("kit_for_undeclared", "itemz", "itemz")
 		}},
 		{"an example of another template", files("", strings.Replace(example, "template: memo", "template: report", 1), ""), func(dir string) string {
 			return at(dir, "example.yaml") + ":2:11: example.yaml names the template report; name it memo, after the template's directory"
