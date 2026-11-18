@@ -100,7 +100,7 @@ func TestUIDialogClose(t *testing.T) { //nolint:paralleltest // the browser test
 		return "document.querySelector('#" + id + " [data-close]').click()"
 	}
 	backdrop := func(id string) string {
-		return "document.getElementById(" + js(id) + ").dispatchEvent(new MouseEvent('click', { bubbles: true }))"
+		return "(() => { const d = document.getElementById(" + js(id) + "); d.dispatchEvent(new PointerEvent('pointerdown', { bubbles: true })); d.dispatchEvent(new MouseEvent('click', { bubbles: true })); })()"
 	}
 	enter := func() {
 		t.Helper()
@@ -317,18 +317,17 @@ func TestUIDialogClose(t *testing.T) { //nolint:paralleltest // the browser test
 		b.eval("load()")
 		b.until("on again", "items.find((a) => a.slug === 'plan-a').task?.name === 'S300'")
 	}
-	// Closed while it goes off, from the keys: the focus stays where Escape left it, not on the way back
+	// Off from the keys, Escape while it goes: held, it stays open; answered, the focus is on the way back
 	b.eval("window.hold = new Promise((go) => { window.letGo = go; }); true")
 	b.eval(rowMenu("plan-a", "task-set"))
 	until("set-dialog", true)
-	b.eval("document.getElementById('set-out').dispatchEvent(new MouseEvent('click', { bubbles: true, detail: 0 }))")
+	b.eval("window.off = takeOffTask(new MouseEvent('click', { detail: 0 })); true")
 	b.until("sent", "sent.length === 1")
 	b.pressKey(kb.Escape)
-	until("set-dialog", false)
-	b.eval("window.hold = null; window.letGo()")
-	b.until("off", "document.querySelector('.toast .undo') && items.find((a) => a.slug === 'plan-a').task === undefined")
-	say("set, off, closed meanwhile")
-	out = append(out, "set, off, closed meanwhile, focus: "+b.eval("where(document.activeElement)"))
+	out = append(out, "set, off, escape while held: "+b.eval("document.getElementById('set-dialog').open"))
+	b.eval("window.hold = null; window.letGo(); true")
+	out = append(out, "set, off, answered: "+b.eval("window.off.then(() => where(document.activeElement))"))
+	say("set, off, held")
 	onTask("plan-a", "S300", "案")
 	b.eval("load()")
 	b.until("on again", "items.find((a) => a.slug === 'plan-a').task?.name === 'S300'")
@@ -536,8 +535,9 @@ var dialogCloseWant = []string{
 	"set, row, escape: set-dialog > list More for T plan-a 4",
 	"set, off, detail 0: set-dialog > toast Undo / sent 1",
 	"set, off, detail 1: set-dialog > list More for T plan-a 4 / sent 1",
-	"set, off, closed meanwhile: set-dialog > list More for T plan-a 4 / sent 1",
-	"set, off, closed meanwhile, focus: list More for T plan-a 4",
+	"set, off, escape while held: true",
+	"set, off, answered: toast Undo",
+	"set, off, held: set-dialog > toast Undo / sent 1",
 	"set, search, escape: find > set-dialog set-task, set-dialog > body",
 	"move, yes, at once: true null",
 	"move, yes: move-dialog > set-dialog set-submit, set-dialog > list More for T plan-a 4 / sent 1",
