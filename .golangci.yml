@@ -215,6 +215,7 @@ linters:
         - errors.Join(
         # floe's own mistakes, worded and placed for the reader: wrapping them would change what they say.
         - usererr.LibraryAt(
+        - usererr.LibraryAtWith(
         - usererr.NewAt(
         - usererr.New(
         - usererr.CannotRead(

@@ -65,8 +65,9 @@ func New(file string, at Pos, key string, args ...any) *usererr.Error {
 
 // library returns the mistake go.yaml.in/yaml/v4 told in err, its words as they are (its Message, without the
 // context it adds before them), at its place: its line and column, or, where it gives none (the mistakes of its
-// reader, a control character), its byte in src, the bytes it read. Any other error is returned as it is: floe's
-// failure.
+// reader, a control character), its byte in src, the bytes it read. A mistake on a line it gives, right after a |
+// or > text (afterBlock), is told with how to mend the text's indentation after its words: they tell what the line
+// holds, not that the text ended before it. Any other error is returned as it is: floe's failure.
 func library(file string, src []byte, err error) error {
 	var le *yaml.LoadError
 	if !errors.As(err, &le) {
@@ -75,8 +76,58 @@ func library(file string, src []byte, err error) error {
 	line, column := le.Mark.Line, le.Mark.Column
 	if line == 0 {
 		line, column = textpos.Of(src, min(max(le.Mark.Index, 0), len(src)))
+		return usererr.LibraryAt(file, line, column, le.Message)
+	}
+	if afterBlock(src, line) {
+		return usererr.LibraryAtWith(file, line, column, "yaml_after_block", le.Message)
 	}
 	return usererr.LibraryAt(file, line, column, le.Message)
+}
+
+// afterBlock is whether a | or > text ends right before line of src, a line go.yaml.in/yaml/v4 told a mistake on:
+// whether what is written last in src before the line, read alone, is such a text. Such a text ends only before a
+// line indented less than it, so a line of it written less deep than its first is read as YAML out of the text.
+// No indentation is counted here.
+// LIMIT: a mistake told on a later line, where src before that line is not read either, passes: a shallower line
+// read as the start of what goes on over lines (one at no indentation that is no key, one starting with " or ').
+// So does one after a | or > text that is a key (? |).
+// LIMIT: the words added tell to indent the text's lines alike or to write its indentation, which does not mend a
+// first line starting with a tab (go.yaml.in/yaml/v4's words tell the tab), nor a text whose indentation is
+// written and too deep for its lines (a: |4 over three spaces).
+func afterBlock(src []byte, line int) bool {
+	start := textpos.At(src, line, 1)
+	if start < 0 {
+		return false
+	}
+	l, err := yaml.NewLoader(bytes.NewReader(src[:start]))
+	if err != nil {
+		return false
+	}
+	var last *yaml.Node
+	for {
+		var doc yaml.Node
+		err := l.Load(&doc)
+		if errors.Is(err, io.EOF) {
+			break
+		}
+		if err != nil {
+			return false
+		}
+		last = &doc
+	}
+	if last == nil {
+		return false
+	}
+	n := lastNode(last)
+	return n.Kind == yaml.ScalarNode && (styleOf(n) == Literal || styleOf(n) == Folded)
+}
+
+// lastNode is what is written last under n: n itself when it holds nothing, an empty [] or {} and an alias too.
+func lastNode(n *yaml.Node) *yaml.Node {
+	if len(n.Content) == 0 {
+		return n
+	}
+	return lastNode(n.Content[len(n.Content)-1])
 }
 
 // ErrEmpty is returned by Parse for a file without a document, for the caller to word.

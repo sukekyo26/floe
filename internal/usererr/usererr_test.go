@@ -28,10 +28,24 @@ func TestLibraryUTF8(t *testing.T) {
 		usererr.Library(errors.New("a\xff\xfeb 日")),
 		usererr.LibraryAt("f", 1, 2, "a\xff\xfeb 日"),
 		usererr.LibraryIn("f", "#/x", "a\xff\xfeb 日"),
+		usererr.LibraryAtWith("f", 1, 2, "yaml_after_block", "a\xff\xfeb 日"),
 	} {
 		if got := e.Args[0]; got != want {
 			t.Errorf("%+v holds %q, want %q", e, got, want)
 		}
+	}
+}
+
+// LibraryAtWith holds a library's words under the key given, at the place given, as LibraryAt does under library.
+func TestLibraryAtWith(t *testing.T) {
+	t.Parallel()
+
+	with, plain := usererr.LibraryAtWith("f", 3, 4, "yaml_after_block", "x"), usererr.LibraryAt("f", 3, 4, "x")
+	if with.Key != "yaml_after_block" || plain.Key != "library" {
+		t.Errorf("keys %q and %q, want yaml_after_block and library", with.Key, plain.Key)
+	}
+	if with.File() != "f" || with.Line() != 3 || with.Column() != 4 || with.Args[0] != plain.Args[0] {
+		t.Errorf("%+v is not at f:3:4 with the words of %+v", with, plain)
 	}
 }
 
