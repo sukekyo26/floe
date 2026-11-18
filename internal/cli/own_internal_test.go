@@ -112,8 +112,9 @@ func TestCompareLooks(t *testing.T) {
 	if looks, overlaps, _ := compareOf("a"); looks != 0 || overlaps != 0 {
 		t.Errorf("one place: %d looks, %d overlaps; want 0, 0", looks, overlaps)
 	}
-	la := len(newTower(resolved("a"), nil).dirs)
-	lb := len(newTower(resolved("b"), nil).dirs)
+	unlooked := func(string) (fs.FileInfo, error) { return nil, fs.ErrNotExist }
+	la := len(newTower(resolved("a"), unlooked).dirs)
+	lb := len(newTower(resolved("b"), unlooked).dirs)
 	// Each directory of each place once: within(a, b) looks at all of a's and b's own, within(b, a) at b's above.
 	if looks, overlaps, _ := compareOf("a", "b"); looks != la+lb || overlaps != 0 {
 		t.Errorf("two apart: %d looks, %d overlaps; want %d (before S394 %d), 0", looks, overlaps, la+lb, la+lb+2)
