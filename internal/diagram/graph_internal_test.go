@@ -1465,6 +1465,49 @@ func TestWireCases(t *testing.T) {
 	}
 }
 
+// nest stacks runs so that a run off a track cuts no run along one: the runs of S387 nest, a from at another's to goes
+// nearer, compared within eps both ways, as is the gap on a track; runs out of order part; a cycle of waits ends.
+func TestNest(t *testing.T) {
+	t.Parallel()
+
+	for _, c := range []struct {
+		name   string
+		runs   []nestRun
+		tracks []int
+		n      int
+	}{
+		{"S387's three", []nestRun{{52, 92}, {64, 104}, {76, 116}}, []int{2, 1, 0}, 3},
+		{"a from at the other's to", []nestRun{{318.07142857142856, 400}, {250, 318.0714285714286}}, []int{0, 1}, 2},
+		{"the same, the other way off", []nestRun{{318.0714285714286, 400}, {250, 318.07142857142856}}, []int{0, 1}, 2},
+		{"apart on a track", []nestRun{{0, 10}, {30, 40}}, []int{0, 0}, 1},
+		{"nearer than the gap", []nestRun{{0, 10}, {14, 20}}, []int{0, 1}, 2},
+		{"the gap less a rounding", []nestRun{{0, 10}, {16 - 1e-13, 20}}, []int{0, 0}, 1},
+		{"the gap more a rounding", []nestRun{{0, 10}, {16 + 1e-13, 20}}, []int{0, 0}, 1},
+		{"out of order", []nestRun{{172, 216}, {180, 192}}, []int{0, 1}, 2},
+		{"a cycle by the old rule", []nestRun{{135, 169}, {13, 159}, {93, 13}, {2, 93}, {126, 104}, {74, 83}, {195, 110}}, []int{0, 1, 0, 2, 0, 3, 2}, 4},
+	} {
+		tracks, n := nest(c.runs, keepApart)
+		if !slices.Equal(tracks, c.tracks) || n != c.n {
+			t.Errorf("%s: tracks %v of %d, want %v of %d", c.name, tracks, n, c.tracks, c.n)
+		}
+	}
+
+	// Runs that wait on one another, which no runs at an icon's side have made: each goes on a track, soon.
+	done := make(chan []int, 1)
+	go func() {
+		tracks, _ := nestFill([]nestRun{{0, 10}, {5, 15}}, []int{0, 1}, [][]int{{1}, {0}}, 0)
+		done <- tracks
+	}()
+	select {
+	case tracks := <-done:
+		if len(tracks) != 2 {
+			t.Errorf("a cycle: tracks %v", tracks)
+		}
+	case <-time.After(5 * time.Second):
+		t.Fatal("a cycle of waits does not end")
+	}
+}
+
 // A gap between straight entries without the columns for its links bends the straight entry closing it, on its
 // right (else its left), and no other.
 func TestWireBend(t *testing.T) {
