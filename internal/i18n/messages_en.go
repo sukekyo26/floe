@@ -46,6 +46,7 @@ var messagesEN = map[string]string{
 	"schema_format_unreached": "the format %s marks an item to draw; declare it under properties, additionalProperties or items, which floe follows",
 	"schema_part_into":        "%s points into a part of floe's or a schema the parts share, which would be checked but not drawn as written; refer to the whole of it, %s",
 	"schema_dynamic_ref":      "floe does not follow %s: write a $ref",
+	"schema_ref_cycle":        "this $ref leads back to itself (%s), so no value passes it; refer to a schema that does not lead back here",
 	"schema_root_drawn":       "the root of the schema is drawn whole by %s; declare the items of the page under properties, and name a part under one of them",
 	"schema_shared_declared":  "%s is read by floe itself: remove it from the schema's properties; to add a rule for it, write a check in checks.yaml",
 	"schema_root_rest":        "the additionalProperties of the root, %s, holds parts or items of floe's formats, which would draw the keys floe reads itself (lang, template, theme, title) too; declare the items of the page under properties",

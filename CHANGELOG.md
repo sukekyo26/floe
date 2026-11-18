@@ -13,6 +13,7 @@ adheres to [Semantic Versioning](https://semver.org/).
 ### Changed
 
 - Change a YAML mistake told on the line right after a `|` or `>` text, as when the text's first line is deeper than a line after it: after the YAML library's words, floe now says that the text ends before that line and how to mend it (indent the text's lines alike, or write its indentation as in `|2`). The words before and the place are as they were.
+- Change `floe part check` and `floe template check` to refuse a `$ref` that leads back to itself through `$ref`s alone (a part's root naming a part whose root names it, a `$defs` naming itself), in the schema's file, at the `$ref`. No value passes such a `$ref`, which was told only once a data file wrote a value, at the data file's line. A schema of yours that holds one where no value reached it, or under `not`, `anyOf` or `if`, drew before and is refused now, by every command that reads your parts and templates.
 
 ### Fixed
 
@@ -21,6 +22,7 @@ adheres to [Semantic Versioning](https://semver.org/).
 - Fix Enter pressed right after Yes in the ask to move a page to another task: Yes could be lost, the page left where it was and the modals left open.
 - Fix a modal of the management page closed while it saved: the save went on and what came after it acted on whatever modal was open by then. It could close a modal opened again for another page, send that modal's next save to the page the first save renamed, so that page was renamed and retitled, or say a failure where it could not be seen. The modal now holds still while it saves and reads the list after: Escape, Cancel, a press outside and its buttons do nothing till the save is answered, and a failure is said in it. A save that never answers holds it till the page is loaded again (F5, Ctrl+R).
 - Fix a press begun in a modal's field and let go outside it closing the modal as a press outside does: only a press that goes down outside closes it now.
+- Fix floe crashing (`fatal error: stack overflow`) while drawing a page with a list whose schema has `prefixItems` beside an `items` naming a part of yours, when that part's root and another's lead back to each other by `$ref`: such parts are now refused when they are read.
 
 ## [0.2.0] - 2026-11-17
 
