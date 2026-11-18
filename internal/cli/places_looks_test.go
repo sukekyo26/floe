@@ -111,6 +111,7 @@ func TestPlaceLooks(t *testing.T) {
 		t.Errorf("newOwn names a.kit %d times, want 0", n)
 	}
 	newOwnRefusesFirst(t)
+	dataDirLooksAbove(t)
 	for _, fn := range []string{"dataDir", "compared", "overlapping", "compare", "newTower", "info", "within", "newOwn"} {
 		if _, ok := own[fn]; !ok {
 			t.Errorf("own.go has no %s, which the table names: %v", fn, slices.Sorted(maps.Keys(own)))
@@ -147,4 +148,43 @@ func newOwnRefusesFirst(t *testing.T) {
 	if refused == token.NoPos || others == token.NoPos || others < refused {
 		t.Errorf("newOwn makes the other places at %d, its last refusal is at %d: want them made after it", others, refused)
 	}
+}
+
+// dataDirLooksAbove checks that dataDir hands files.NotDir the directory above the place its Stat failed on
+// (filepath.Dir): the place itself was just looked at.
+func dataDirLooksAbove(t *testing.T) {
+	t.Helper()
+	f, err := parser.ParseFile(token.NewFileSet(), "own.go", nil, parser.SkipObjectResolution)
+	if err != nil {
+		t.Fatal(err)
+	}
+	found := false
+	for _, d := range f.Decls {
+		fn, ok := d.(*ast.FuncDecl)
+		if !ok || fn.Name.Name != "dataDir" {
+			continue
+		}
+		ast.Inspect(fn.Body, func(n ast.Node) bool {
+			call, ok := n.(*ast.CallExpr)
+			if !ok || !isSel(call.Fun, "files", "NotDir") || len(call.Args) == 0 {
+				return true
+			}
+			arg, ok := call.Args[0].(*ast.CallExpr)
+			found = ok && isSel(arg.Fun, "filepath", "Dir")
+			return false
+		})
+	}
+	if !found {
+		t.Error("dataDir does not hand files.NotDir filepath.Dir of the place")
+	}
+}
+
+// isSel reports whether e is pkg.name.
+func isSel(e ast.Expr, pkg, name string) bool {
+	sel, ok := e.(*ast.SelectorExpr)
+	if !ok {
+		return false
+	}
+	x, ok := sel.X.(*ast.Ident)
+	return ok && x.Name == pkg && sel.Sel.Name == name
 }

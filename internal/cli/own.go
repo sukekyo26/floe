@@ -95,7 +95,8 @@ func (a *app) dataDir(key string, b base, sub string) (dataPlace, error) {
 	}
 	fi, err := files.Stat(p.dir)
 	if err != nil {
-		if notDir := files.NotDir(p.dir, err); notDir != nil {
+		// err is p.dir's Stat, which a file there passes: p.dir is not there, so the look starts above it.
+		if notDir := files.NotDir(filepath.Dir(p.dir), err); notDir != nil {
 			p.unusable = usererr.CannotWrite(p.dir, notDir)
 		}
 		return p, nil
