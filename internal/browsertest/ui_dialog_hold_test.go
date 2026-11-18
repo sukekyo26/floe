@@ -205,6 +205,8 @@ func TestUIDialogHold(t *testing.T) { //nolint:paralleltest // the browser tests
 	b.until("the suggestions", "document.getElementById('set-task-names').matches(':popover-open') && document.querySelectorAll('#set-task-names [role=option]').length > 1")
 	const suggested = "[document.getElementById('set-task').value, document.getElementById('set-task').getAttribute('aria-activedescendant'), setShown?.name ?? '-'].join(' ')"
 	say("suggestions, before", suggested)
+	// In the task it is held in, before Chrome moves the focus off the disabled field a frame later, a key there reaches no listener of it
+	say("suggestions, a key as it is held", "(() => { const d = document.getElementById('set-dialog'); holdDialog(d, true); document.getElementById('set-task').dispatchEvent(new KeyboardEvent('keydown', { key: 'ArrowDown', bubbles: true, cancelable: true })); const now = "+suggested+"; holdDialog(d, false); return now; })()")
 	b.eval("holdOn('PATCH'); fail.PATCH = true; document.getElementById('set-out').focus(); document.getElementById('set-out').click(); true")
 	b.until("sent", "sent.length === 1")
 	b.pressKey(kb.ArrowDown)
@@ -294,6 +296,7 @@ var dialogHoldWant = []string{
 	"task edit, failed: true closerequest / said true / edit-task-dialog edit-task-title",
 	"add link, failed: true closerequest / said true / add-dialog add-path",
 	"suggestions, before:   S300",
+	"suggestions, a key as it is held:   S300",
 	"suggestions, held:   S300",
 	"the focus given back: set-dialog set-out",
 	"add page, a row pressed while held: 1",
