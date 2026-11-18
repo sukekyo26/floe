@@ -212,11 +212,20 @@ func TestUIDialogClose(t *testing.T) { //nolint:paralleltest // the browser test
 		until("edit-dialog", false)
 		say("edit, row, " + c.name)
 	}
-	b.eval("(() => { const m = document.querySelector('#read-actions .more'); m.querySelector('summary').focus(); m.open = true; const i = m.querySelector('.menu .edit'); i.focus(); i.click(); })()")
-	until("edit-dialog", true)
-	b.pressKey(kb.Escape)
-	until("edit-dialog", false)
-	say("edit, bar, escape")
+	for _, c := range []struct{ name, close string }{
+		{"save", "document.getElementById('edit-desc').value = 'From the bar'; document.getElementById('edit-submit').click()"},
+		{"escape", ""},
+	} {
+		b.eval("(() => { const m = document.querySelector('#read-actions .more'); m.querySelector('summary').focus(); m.open = true; const i = m.querySelector('.menu .edit'); i.focus(); i.click(); })()")
+		until("edit-dialog", true)
+		if c.close == "" {
+			b.pressKey(kb.Escape)
+		} else {
+			b.eval(c.close)
+		}
+		until("edit-dialog", false)
+		say("edit, bar, " + c.name)
+	}
 	b.eval(rowMenu("plan-a", "edit"))
 	until("edit-dialog", true)
 	press("document.getElementById('edit-title')")
@@ -308,6 +317,21 @@ func TestUIDialogClose(t *testing.T) { //nolint:paralleltest // the browser test
 		b.eval("load()")
 		b.until("on again", "items.find((a) => a.slug === 'plan-a').task?.name === 'S300'")
 	}
+	// Closed while it goes off, from the keys: the focus stays where Escape left it, not on the way back
+	b.eval("window.hold = new Promise((go) => { window.letGo = go; }); true")
+	b.eval(rowMenu("plan-a", "task-set"))
+	until("set-dialog", true)
+	b.eval("document.getElementById('set-out').dispatchEvent(new MouseEvent('click', { bubbles: true, detail: 0 }))")
+	b.until("sent", "sent.length === 1")
+	b.pressKey(kb.Escape)
+	until("set-dialog", false)
+	b.eval("window.hold = null; window.letGo()")
+	b.until("off", "document.querySelector('.toast .undo') && items.find((a) => a.slug === 'plan-a').task === undefined")
+	say("set, off, closed meanwhile")
+	out = append(out, "set, off, closed meanwhile, focus: "+b.eval("where(document.activeElement)"))
+	onTask("plan-a", "S300", "案")
+	b.eval("load()")
+	b.until("on again", "items.find((a) => a.slug === 'plan-a').task?.name === 'S300'")
 	b.eval(fromFind("task-set"))
 	until("set-dialog", true)
 	b.pressKey(kb.Escape)
@@ -378,7 +402,8 @@ func TestUIDialogClose(t *testing.T) { //nolint:paralleltest // the browser test
 	say("add page, enter")
 	addTo("実装")
 	find("check")
-	b.eval("document.querySelector('#add-page-list li').click()")
+	b.pressKey(kb.ArrowDown)
+	b.pressKey(kb.Enter)
 	until("move-dialog", true)
 	b.eval("document.getElementById('move-yes').click()")
 	enter()
@@ -409,6 +434,11 @@ func TestUIDialogClose(t *testing.T) { //nolint:paralleltest // the browser test
 	b.pressKey(kb.Escape)
 	until("kin-dialog", false)
 	say("kin, escape")
+	b.eval("document.getElementById('task-child').focus(); document.getElementById('task-child').click()")
+	until("kin-dialog", true)
+	b.eval("const f = document.getElementById('kin-task'); f.value = 'S301'; f.dispatchEvent(new Event('input')); document.getElementById('kin').requestSubmit()")
+	until("kin-dialog", false)
+	say("kin, save")
 
 	// Settings: a page's theme from its menu, by each way of closing; the bar's button
 	open("/")
@@ -459,6 +489,13 @@ func TestUIDialogClose(t *testing.T) { //nolint:paralleltest // the browser test
 	b.pressKey(kb.Escape)
 	until("filter-dialog", false)
 	say("filter, escape")
+	b.eval("document.getElementById('narrow-filter').focus(); document.getElementById('narrow-filter').click()")
+	until("filter-dialog", true)
+	b.eval("document.getElementById('add-link').focus(); document.getElementById('add-link').click()")
+	until("add-dialog", true)
+	b.pressKey(kb.Escape)
+	until("add-dialog", false)
+	say("filter, a button of the shelf, then escape")
 
 	check(t, "closed", out, strings.Join(dialogCloseWant, "|"))
 }
@@ -482,6 +519,7 @@ var dialogCloseWant = []string{
 	"edit, row, cancel: edit-dialog > list More for T plan-a 2",
 	"edit, row, backdrop: edit-dialog > list More for T plan-a 2",
 	"edit, row, escape: edit-dialog > list More for T plan-a 2",
+	"edit, bar, save: edit-dialog > bar More for T plan-a 2 / sent 1",
 	"edit, bar, escape: edit-dialog > bar More for T plan-a 2",
 	"edit, heading pressed, escape: edit-dialog > list More for T plan-a 2",
 	"edit, search, save: find > edit-dialog edit-name, edit-dialog > body / sent 1",
@@ -498,6 +536,8 @@ var dialogCloseWant = []string{
 	"set, row, escape: set-dialog > list More for T plan-a 4",
 	"set, off, detail 0: set-dialog > toast Undo / sent 1",
 	"set, off, detail 1: set-dialog > list More for T plan-a 4 / sent 1",
+	"set, off, closed meanwhile: set-dialog > list More for T plan-a 4 / sent 1",
+	"set, off, closed meanwhile, focus: list More for T plan-a 4",
 	"set, search, escape: find > set-dialog set-task, set-dialog > body",
 	"move, yes, at once: true null",
 	"move, yes: move-dialog > set-dialog set-submit, set-dialog > list More for T plan-a 4 / sent 1",
@@ -514,6 +554,7 @@ var dialogCloseWant = []string{
 	"add page, escape: add-page-dialog > list Add a page to 案",
 	"edit task, escape: edit-task-dialog > task-edit",
 	"kin, escape: kin-dialog > task-child",
+	"kin, save: kin-dialog > task-child / sent 1",
 	"settings, page, save: settings > list More for T plan-a 4",
 	"settings, page, cancel: settings > list More for T plan-a 4",
 	"settings, page, backdrop: settings > list More for T plan-a 4",
@@ -524,4 +565,5 @@ var dialogCloseWant = []string{
 	"keys, escape: keys > keys-open",
 	"add-dialog, escape: add-dialog > add-link",
 	"filter, escape: filter-dialog > narrow-filter",
+	"filter, a button of the shelf, then escape: filter-dialog > add-dialog add-path, add-dialog > narrow-filter",
 }
