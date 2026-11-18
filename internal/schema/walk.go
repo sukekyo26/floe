@@ -406,14 +406,20 @@ func (w *walker) value(from *jsonschema.Schema, v reflect.Value) {
 	}
 }
 
-// Forbidding returns the first of steps, a path of keys from the root of c, that a schema on the way forbids
-// (Step.Forbids), and false for none. A list on the way is gone through by its items, the step kept, as a
-// check's for is; a part's value from its schema's root. Where the steps lead to what Follow does not know
-// (a format, a schema of neither the key nor items, one of additionalProperties, one met again in going through
-// items, a list of items that items does not take, before it by prefixItems), the rest is not known to be forbidden,
-// nor is a key declared where items are too, as the value may be a list.
+// Forbidding returns the first of steps, a path of keys from the root of c, that no value the schema allows there may
+// hold, and false for none. A part's value goes on from its schema's root. At each step, the types of the schemas
+// Follow goes through tell whether the value may be keys holding the key (none forbids it, Step.Forbids) and whether it
+// may be a list: of keys alone, a key declared goes on to its schema; of a list alone, its items, the step kept, as a
+// check's for is. A key is refused where the value may be neither and a closed schema forbids it. Where it may be
+// both, or the steps lead to what Follow does not know (a key not declared, a format, a list of no items or of items
+// that items does not take, before it by prefixItems, a schema met again in going through items), the rest is not
+// known to be forbidden.
 // LIMIT: in a list of items that items does not take, a key no item may hold is not refused either, and a check of it
 // finds no item; decide it by the schemas of prefixItems if floe comes to walk them.
+// LIMIT: the shape of a value is read from type alone: past a schema whose type lets the value be keys and a list
+// (none written too, a template's root as well), or a key its properties do not declare (additionalProperties or
+// patternProperties takes it), no for is refused; nor is what allOf and the like narrow read. Read them if a for
+// that passes so misleads.
 func (c *Compiled) Forbidding(steps []string) (string, bool) {
 	s := c.Root
 	for _, key := range steps {
@@ -426,25 +432,21 @@ func (c *Compiled) Forbidding(steps []string) (string, bool) {
 			seen[s] = true
 			st, through := c.stepClosed(s)
 			next, declared := st.Props[key]
+			keys := allows(through, "object") && !st.Forbids(key)
+			list := allows(through, "array")
 			switch {
 			case st.Part != "":
 				s = st.PartRoot
-			case untaken(st, through):
+			case keys && list:
 				return "", false
-			case declared && st.Items != nil:
-				// Keys and items: the value may be a list or an object, which lead on apart.
-				return "", false
-			case declared && st.Forbids(key):
-				// Declared beside a $ref to a schema of additionalProperties: false, which takes it not.
-				return key, true
-			case declared:
+			case list:
+				if untaken(st, through) || st.Items == nil {
+					return "", false
+				}
+				s = st.Items
+			case keys && declared:
 				s = next
 				break step
-			case st.Rest != nil && !st.Forbids(key):
-				// Undeclared where a value of keys takes any: known only by the value.
-				return "", false
-			case st.Items != nil:
-				s = st.Items
 			case st.Forbids(key):
 				return key, true
 			default:
@@ -453,4 +455,15 @@ func (c *Compiled) Forbidding(steps []string) (string, bool) {
 		}
 	}
 	return "", false
+}
+
+// allows reports whether the types of the schemas gone through let the value be of type t: each names no type, or t
+// among its types.
+func allows(through []*jsonschema.Schema, t string) bool {
+	for _, s := range through {
+		if s.Types != nil && !slices.Contains(s.Types.ToStrings(), t) {
+			return false
+		}
+	}
+	return true
 }

@@ -303,8 +303,8 @@ func exampleNames(t *Template) error {
 	return yamlpos.New(d.File, d.Where["template"], "kit_example_name", d.Template, t.name)
 }
 
-// forMistakes refuses each for of checks, of the schema c, through a key the schema forbids (S10): such a
-// check would find no items, and pass unseen.
+// forMistakes refuses each for of checks, of the schema c, through a key no value the schema allows there may hold
+// (S10, schema.Forbidding): such a check would find no items, and pass unseen.
 func forMistakes(checks *rules.Checks, c *schema.Compiled) usererr.List {
 	if checks == nil || c == nil {
 		return nil

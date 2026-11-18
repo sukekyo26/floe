@@ -16,6 +16,8 @@ adheres to [Semantic Versioning](https://semver.org/).
 - Change a YAML mistake told on the line right after a `|` or `>` text, as when the text's first line is deeper than a line after it: after the YAML library's words, floe now says that the text ends before that line and how to mend it (indent the text's lines alike, or write its indentation as in `|2`). The words before and the place are as they were.
 - Change `floe part check` and `floe template check` to refuse a `$ref` that leads back to itself through `$ref`s alone (a part's root naming a part whose root names it, a `$defs` naming itself), in the schema's file, at the `$ref`. No value passes such a `$ref`, which was told only once a data file wrote a value, at the data file's line. A schema of yours that holds one where no value reached it, or under `not`, `anyOf` or `if`, drew before and is refused now, by every command that reads your parts and templates.
 - Change how much room an icon of a `graph` takes along the ranks: it grows by 12 (6 on each side of the icon) for each edge past the first at the busier of its top and its bottom (with `right`, of its left and its right), so an icon with 3 edges at its bottom and 2 at its top grows by 24. A diagram whose icons have many edges is taller (with `right`, wider) than before, even where no edges shared a run.
+- Change `floe template check` and `floe part check` to read a schema's `type` in checking a `for` of `checks.yaml`: where the `type`s on the way leave the value only keys or only a list, the path is followed as that shape alone, and a key that shape may not hold is refused, where it was let pass as the value might have been of the other shape.
+- Change the words of a refused `for` to say that no value the schema allows there holds the key, and to ask for a path of keys such values may hold, as a declared key may be refused too.
 
 ### Fixed
 
@@ -29,6 +31,7 @@ adheres to [Semantic Versioning](https://semver.org/).
 - Fix floe crashing (`fatal error: stack overflow`) while drawing a page with a list whose schema has `prefixItems` beside an `items` naming a part of yours, when that part's root and another's lead back to each other by `$ref`: such parts are now refused when they are read.
 - Fix edges at one side of an icon of a `graph` turning beside the icon on one line, where they drew as one thick line that hid which edge went where (as three edges from one icon to boxes in two groups, laid out `right`). They now turn on lines 6 apart.
 - Fix an edge of a large `graph` left running through a frame that holds neither of its ends, where floe gave up looking for a way round it too soon. It now goes round in more diagrams; one that floe finds no way round still runs through.
+- Fix a `for` of a template's or a part's `checks.yaml` refused where the value may be keys or a list: under `items` beside `"additionalProperties": true` or no `additionalProperties` (`{}` let it pass), and under `"additionalProperties": false` with no `type`. From a schema of no `type` on the way, or of a `type` that lets the value be keys and a list, the path is not checked further: write `type` on every schema on it, the root too, to have it checked.
 
 ## [0.2.0] - 2026-11-17
 
