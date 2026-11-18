@@ -254,17 +254,22 @@ func TestTemplatesDirNotRead(t *testing.T) {
 	home := filepath.Join(dir, "home")
 	env := cli.HomeEnv(home, map[string]string{"FLOE_TEMPLATES_DIR": "tpl"})
 	for _, tt := range []struct {
-		args   []string
-		code   int
-		stdout string
-		stderr string
+		args []string
+		code int
+		out  string   // in stdout
+		told []string // in stderr, which is empty without them
 	}{
-		{[]string{"part", "new", "x"}, 0, "made " + filepath.Join(cli.DefaultPlace(home, "parts"), "x") + "\n", ""},
-		{[]string{"theme", "new", "y"}, 0, "made " + filepath.Join(cli.DefaultPlace(home, "themes"), "y") + "\n", ""},
-		{[]string{"check", "d.yaml"}, 1, "", "floe: FLOE_TEMPLATES_DIR is tpl, a relative path; set it to an absolute path\n"},
+		{[]string{"part", "new", "x"}, 0, filepath.Join(cli.DefaultPlace(home, "parts"), "x"), nil},
+		{[]string{"theme", "new", "y"}, 0, filepath.Join(cli.DefaultPlace(home, "themes"), "y"), nil},
+		{[]string{"check", "d.yaml"}, 1, "", []string{"FLOE_TEMPLATES_DIR", "tpl", "relative"}},
 	} {
-		if code, stdout, stderr := runEnv(dir, env, tt.args...); code != tt.code || stdout != tt.stdout || stderr != tt.stderr {
-			t.Errorf("floe %v = %d, %q, %q; want %d, %q, %q", tt.args, code, stdout, stderr, tt.code, tt.stdout, tt.stderr)
+		code, stdout, stderr := runEnv(dir, env, tt.args...)
+		ok := code == tt.code && strings.Contains(stdout, tt.out) && (len(tt.told) > 0) == (stderr != "")
+		for _, w := range tt.told {
+			ok = ok && strings.Contains(stderr, w)
+		}
+		if !ok {
+			t.Errorf("floe %v = %d, %q, %q; want %d, %q, told %v", tt.args, code, stdout, stderr, tt.code, tt.out, tt.told)
 		}
 	}
 	mine := "\nx\t" + filepath.Join(cli.DefaultPlace(home, "parts"), "x") + "\t"

@@ -235,7 +235,7 @@ func kitOf(places []ownAt, templates bool) (*kit.Kit, error) {
 // dataDir does not look at, is looked at here.
 // LIMIT: a default is seen at the start of the read, before the other places' dataDir: one made since, where it
 // overlaps another, is read with it unrefused, and one removed since is told overlapping (exit 1 where it was 0).
-// Look again here, as before S394, if that comes to matter.
+// Look again here if that comes to matter.
 func compared(p dataPlace) bool {
 	switch {
 	case p.dir == "":
@@ -306,8 +306,8 @@ func newTower(resolved string, stat func(string) (fs.FileInfo, error)) *tower {
 }
 
 // info is the Stat of the k-th directory of t, nil for one that cannot be looked at.
-// LIMIT: what a Stat told is kept for the read, a failure too: before S394 each pair looked again, so that a
-// passing failure could turn out otherwise for another pair. Look again if that comes to matter.
+// LIMIT: what a Stat told is kept for the read, a failure too: a passing failure holds for every pair the directory is
+// in. Look again for each pair if that comes to matter.
 func (t *tower) info(k int) fs.FileInfo {
 	if !t.looked[k] {
 		t.looked[k] = true

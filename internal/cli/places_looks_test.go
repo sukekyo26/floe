@@ -120,7 +120,7 @@ func TestPlaceLooks(t *testing.T) {
 }
 
 // newOwnRefusesFirst checks that newOwn makes the other places (a.ownPlaces) only after its last refusal of the place
-// it makes (cli_new_no_dir): a refusal there looks at no other place, as before S394.
+// it makes (cli_new_no_dir): a refusal there looks at no other place.
 func newOwnRefusesFirst(t *testing.T) {
 	t.Helper()
 	f, err := parser.ParseFile(token.NewFileSet(), "own.go", nil, parser.SkipObjectResolution)

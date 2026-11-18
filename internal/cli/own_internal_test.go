@@ -73,8 +73,8 @@ func TestOwnPlacesTakesMade(t *testing.T) {
 	}
 }
 
-// The overlap of places looks at each directory of a place once, when first needed, and no more than before S394,
-// whose within looked again for each pair: the counts are of each case's own shape.
+// The overlap of places looks at each directory of a place once, when first needed, and none it need not: the counts
+// are of each case's own shape.
 func TestCompareLooks(t *testing.T) {
 	t.Parallel()
 
@@ -117,15 +117,14 @@ func TestCompareLooks(t *testing.T) {
 	lb := len(newTower(resolved("b"), unlooked).dirs)
 	// Each directory of each place once: within(a, b) looks at all of a's and b's own, within(b, a) at b's above.
 	if looks, overlaps, _ := compareOf("a", "b"); looks != la+lb || overlaps != 0 {
-		t.Errorf("two apart: %d looks, %d overlaps; want %d (before S394 %d), 0", looks, overlaps, la+lb, la+lb+2)
+		t.Errorf("two apart: %d looks, %d overlaps; want %d, 0", looks, overlaps, la+lb)
 	}
-	// One directory three times: told by the letters, before any look (before S394, 3 looks).
+	// One directory three times: told by the letters, before any look.
 	if looks, overlaps, _ := compareOf("same", "same", "same"); looks != 0 || overlaps != 3 {
 		t.Errorf("one directory thrice: %d looks, %d overlaps; want 0, 3", looks, overlaps)
 	}
-	// The outer first: within(p, p/th) looks at all of p's and at p/th, within(p/th, p) at none more (before S394,
-	// L+3).
+	// The outer first: within(p, p/th) looks at all of p's and at p/th, within(p/th, p) at none more.
 	if looks, overlaps, l := compareOf("p", "p/th"); looks != l+1 || overlaps != 1 {
-		t.Errorf("one in the other: %d looks, %d overlaps; want %d (before S394 %d), 1", looks, overlaps, l+1, l+3)
+		t.Errorf("one in the other: %d looks, %d overlaps; want %d, 1", looks, overlaps, l+1)
 	}
 }
