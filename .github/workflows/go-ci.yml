@@ -63,7 +63,7 @@ jobs:
         shell: pwsh
         run: |
           $tests = '^(TestRestartOnAnotherBuild|TestPublishOtherDirs)$'
-          foreach ($v in 'before', 'after') {
+          foreach ($v in 'after', 'before') {
             Set-Location "C:\s394-out\$v"
             foreach ($m in 'alone', 'load') {
               $times = "C:\s394-out\times-$v-$m.txt"; $log = "C:\s394-out\lstat-$v-$m.log"
