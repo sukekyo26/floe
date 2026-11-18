@@ -193,7 +193,7 @@ func TestUITaskCategories(t *testing.T) { //nolint:paralleltest // the browser t
 	b.until("asked", "document.getElementById('move-dialog').open")
 	say("asked", "document.getElementById('move-lead').textContent + ' / ' + document.activeElement.id")
 	b.pressKey(kb.Escape)
-	// The answer is had once the dialog's close event is
+	// No answered as the dialog closes
 	b.until("no", "!document.getElementById('move-dialog').open && !adding")
 	say("no", "sent.length + ' ' + document.getElementById('add-page-dialog').open + ' ' + document.activeElement.id + ' ' + Boolean(document.getElementById('add-page-q').getAttribute('aria-activedescendant'))")
 	b.pressKey(kb.Enter)

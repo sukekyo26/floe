@@ -331,7 +331,7 @@ func TestUITaskSet(t *testing.T) { //nolint:paralleltest // the browser tests sh
 	b.until("asked", "document.getElementById('move-dialog').open")
 	say("asked", asked)
 	b.pressKey(kb.Escape)
-	// The answer is had once the dialog's close event is, which gives the focus back
+	// No answered as the dialog closes, which gives the focus back
 	b.until("no", "!document.getElementById('move-dialog').open && document.activeElement.id === 'set-submit'")
 	say("no", "document.getElementById('set-dialog').open + ' ' + document.activeElement.id + ' ' + document.getElementById('set-task').value")
 	out = append(out, "no, written: "+pageTask("c"))
