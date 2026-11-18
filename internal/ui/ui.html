@@ -786,6 +786,8 @@
   dialog::backdrop { background: var(--scrim); backdrop-filter: blur(3px); }
   /* Held while it writes (holdDialog): no press reaches what is not a field or a button either, the suggestions' options and a row's grip */
   dialog[closedby="none"] > * { pointer-events: none; }
+  /* It holds the focus meanwhile, unmarked: its buttons are what show it is held */
+  dialog[closedby="none"]:focus-visible { outline: none; }
   dialog[open]::backdrop { animation: fade 0.2s ease-out; }
   @keyframes pop { from { opacity: 0; transform: translateY(8px) scale(0.98); } }
   @keyframes fade { from { opacity: 0; } }
@@ -2253,20 +2255,29 @@
   }
   // While a modal's write and the read after it go, it holds still: no close request (closedby, which closeDialog and the dialog's keys
   // and pointer see too), and every field and button that could be pressed is disabled, so that nothing closes it, sends again or starts
-  // another write; what follows the write is of the modal it was sent from, open as it was. Those disabled here alone are given back, and
-  // the focus, if it left the modal meanwhile
+  // another write; what follows the write is of the modal it was sent from, open as it was. The focus is on the modal itself meanwhile, as
+  // Chrome would move it off a disabled field to the body, where keys reach the page's shortcuts and Tab the modal's summary; let go, it
+  // goes back where it was. Those disabled here alone are given back
   // LIMIT: a write that never answers (the store's lock held by a stopped process) holds the modal till the page is loaded again. Let a
   // write be called off if that comes to trouble someone
+  // LIMIT: a link in it is still pressed (the settings' toasts' .toast-link sets pointer-events itself), and leaves the page as a reload
+  // would. Hold links too if one comes to be in a modal that writes
+  // LIMIT: a browser without closedby closes the modal on Escape, held or not, as it did the tags'. The browser tests' Chrome has it
+  // LIMIT: a drag begun as the hold starts is not seen to: the tests' Chrome shows no grip (hover: none). The hold stops a press, so one
+  // can only have begun before the write was sent
   const held = new WeakMap();
   function holdDialog(d, on) {
     if (on) {
       const now = [...d.querySelectorAll('input, button, select, textarea')].filter((e) => !e.disabled);
-      for (const e of now) e.disabled = true;
       held.set(d, { now, focus: document.activeElement });
+      for (const e of now) e.disabled = true;
+      d.tabIndex = -1;
+      d.focus({ preventScroll: true });
     } else {
       const { now = [], focus } = held.get(d) ?? {};
       for (const e of now) e.disabled = false;
       held.delete(d);
+      d.removeAttribute('tabindex');
       if ((!d.contains(document.activeElement) || document.activeElement === d) && d.contains(focus)) focus.focus();
     }
     d.setAttribute('closedby', on ? 'none' : 'closerequest');
@@ -6619,11 +6630,15 @@
     moveYes = true;
     closeDialog($('move-dialog'));
   });
-  // A click on the backdrop (the dialog itself) closes it, as Escape does, one held excepted (closeDialog); the form fills the dialog, so
-  // clicks inside never land here
+  // A press on the backdrop (the dialog itself; the form fills it) closes it, as Escape does, one held excepted (closeDialog). A press is the
+  // backdrop's only if it went down there, the modal not held: a click lands on the dialog too when it went down in a field and up outside,
+  // or down while held (the form takes no press then) and up once it was let go
   for (const d of document.querySelectorAll('dialog')) {
+    let downOutside = false;
+    d.addEventListener('pointerdown', (e) => { downOutside = e.target === d && d.getAttribute('closedby') !== 'none'; });
     d.addEventListener('click', (e) => {
-      if (e.target === d) closeDialog(d);
+      if (e.target === d && downOutside) closeDialog(d);
+      downOutside = false;
     });
     // Held (holdDialog), no key reaches what is in it, a disabled field's own listeners included: those with a modifier and the function
     // keys go on to the browser, so that a page held by a write that never answers can still be loaded again (F5, Ctrl+R), and so do an
@@ -6641,7 +6656,8 @@
   // Not while typing or with a dialog open
   // The versions' choices take letters to find an item by, each starting with v: these go on as anywhere, with the focus left there
   const diffPickKey = (e) => !e.ctrlKey && !e.metaKey && !e.altKey && e.target.matches?.('#diff select, .ver-pick') && ['n', 'p', 'd', 'j', 'k'].includes(e.key);
-  const plainKey = (e) => !e.ctrlKey && !e.metaKey && !e.altKey && !e.target.closest('input:not([type="checkbox"]), textarea, select, [contenteditable], dialog');
+  // A dialog open is seen as such, not by where the key lands: one held while it writes has the focus off its disabled fields
+  const plainKey = (e) => !e.ctrlKey && !e.metaKey && !e.altKey && !document.querySelector('dialog[open]') && !e.target.closest('input:not([type="checkbox"]), textarea, select, [contenteditable]');
   // The search's words on a missing page's bar, and the bar's new pages, go to the list
   if (framed) {
     // The list and the iframe beside it are of the list's page alone
