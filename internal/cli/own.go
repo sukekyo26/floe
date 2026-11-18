@@ -186,11 +186,11 @@ func (a *app) ownPlaces(templates bool, made *ownAt) []ownAt {
 // kit returns floe's own with one's own over them, templates too when templates: what a page is drawn with. A
 // mistake of one's own, used or not, stops it.
 func (a *app) kit(templates bool) (*kit.Kit, error) {
-	return a.kitOf(a.ownPlaces(templates, nil), templates)
+	return kitOf(a.ownPlaces(templates, nil), templates)
 }
 
 // kitOf is kit of the places of one read (ownPlaces): templates' is told and read only when templates.
-func (a *app) kitOf(places []ownAt, templates bool) (*kit.Kit, error) {
+func kitOf(places []ownAt, templates bool) (*kit.Kit, error) {
 	floe, err := kit.Floe()
 	if err != nil {
 		return nil, err //nolint:wrapcheck // floe's own, which its tests check
@@ -352,7 +352,7 @@ func (a *app) newOwn(of ownKind, name string) error {
 	dir := p.dir
 	// The other places only once this one is usable: a refusal above looks at no other.
 	places := a.ownPlaces(true, &made)
-	k, err := a.kitOf(places, of.kind == kit.KindTemplate)
+	k, err := kitOf(places, of.kind == kit.KindTemplate)
 	if err != nil {
 		return err
 	}

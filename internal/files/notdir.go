@@ -22,11 +22,11 @@ var ErrNotDir = errors.New("not a directory")
 // LIMIT: when err is from's own, from is not looked at again but the directory above it: a file put at from between
 // the two looks is told as not there, not as not a directory. Look at from again if that comes to mislead.
 func NotDir(from string, err error) error {
-	return notDir(from, err, Stat)
+	return notDirWith(from, err, Stat)
 }
 
-// notDir is NotDir, looking with stat.
-func notDir(from string, err error, stat func(string) (fs.FileInfo, error)) error {
+// notDirWith is NotDir, looking with stat.
+func notDirWith(from string, err error, stat func(string) (fs.FileInfo, error)) error {
 	if !errors.Is(err, syscall.ENOTDIR) {
 		return nil
 	}
