@@ -2,17 +2,140 @@ package installsh_test
 
 import (
 	"bytes"
+	"context"
 	"crypto/sha256"
 	"encoding/hex"
+	"errors"
+	"fmt"
 	"os"
 	"os/exec"
 	"path/filepath"
 	"slices"
 	"strings"
 	"testing"
+	"time"
 
 	"floe/internal/testfs"
 )
+
+// A copy of the test binary run with FLOE_INSTALL_TEST_SLEEP set sleeps that long (1: a minute) and ends well: it is
+// the floe.exe that runs while install.ps1 replaces it, and the child TestRunLimited runs.
+func init() {
+	v := os.Getenv("FLOE_INSTALL_TEST_SLEEP")
+	if v == "" {
+		return
+	}
+	d := time.Minute
+	if v != "1" {
+		var err error
+		// Told and failed: left unread, the child would run the tests themselves.
+		if d, err = time.ParseDuration(v); err != nil {
+			fmt.Fprintln(os.Stderr, "FLOE_INSTALL_TEST_SLEEP:", err)
+			os.Exit(2)
+		}
+	}
+	time.Sleep(d)
+	os.Exit(0)
+}
+
+// errOverLimit is runLimited's for a child killed at its limit: no error of the child's own.
+var errOverLimit = errors.New("did not end in time and was killed")
+
+// runLimited runs the command build makes. When limit passes with the child still running, it calls atLimit and
+// then kills the child: atLimit sees the child alive, and what waits on it as it waits.
+// LIMIT: the limit is a guess (a child's time was not measured). When a child is killed with the servers' record
+// running up to the limit, it was slow, not stuck: raise the limit.
+// LIMIT: WaitDelay holds for a child that ended too: one that succeeded and left a child of its own holding its
+// output longer than that fails with exec.ErrWaitDelay. Raise it if a shell comes to leave one.
+func runLimited(parent context.Context, limit time.Duration, build func(context.Context) *exec.Cmd, atLimit func()) error {
+	ctx, cancel := context.WithTimeout(parent, limit)
+	defer cancel()
+	cmd := build(ctx)
+	over := false
+	// os/exec calls it once, when ctx ends before it saw the child end, and Run returns after it has.
+	cmd.Cancel = func() error {
+		if !errors.Is(ctx.Err(), context.DeadlineExceeded) {
+			return cmd.Process.Kill() // the test ended: as os/exec does
+		}
+		atLimit()
+		err := cmd.Process.Kill()
+		// LIMIT: on Unix, Kill tells a child that ended (os.ErrProcessDone) only once Wait has taken it: one that
+		// ended by itself in that moment is told as killed. On Windows that Kill may fail instead (not tried), and
+		// os/exec's own error of it is returned.
+		over = err == nil
+		return err
+	}
+	cmd.WaitDelay = 10 * time.Second
+	err := cmd.Run()
+	if over {
+		return fmt.Errorf("%w (after %v)", errOverLimit, limit)
+	}
+	return err
+}
+
+// A child over its limit is killed and told as that, not as a child that failed, after atLimit saw it alive; one
+// that ends in time is left alone.
+func TestRunLimited(t *testing.T) {
+	t.Parallel()
+
+	self, err := os.Executable()
+	if err != nil {
+		t.Fatal(err)
+	}
+	// sleeper is the test binary sleeping so long; ended is closed once it is gone: its end of stdout is closed
+	// then, and the read returns. Run closes the pipe under the reader, which os/exec warns of for the output that
+	// would be lost: there is none here, and the read returns either way.
+	sleeper := func(sleep string, ended chan<- struct{}) func(context.Context) *exec.Cmd {
+		return func(ctx context.Context) *exec.Cmd {
+			cmd := exec.CommandContext(ctx, self)
+			cmd.Env = append(os.Environ(), "FLOE_INSTALL_TEST_SLEEP="+sleep)
+			out, err := cmd.StdoutPipe()
+			if err != nil {
+				t.Error(err)
+				return cmd
+			}
+			go func() {
+				_, _ = out.Read(make([]byte, 1)) //nolint:errcheck // only that it returned
+				close(ended)
+			}()
+			return cmd
+		}
+	}
+
+	t.Run("over the limit", func(t *testing.T) {
+		t.Parallel()
+		ended := make(chan struct{})
+		called, alive := false, false
+		start := time.Now()
+		// atLimit runs on a goroutine of os/exec's: it only notes what it saw, read after Run returned.
+		err := runLimited(t.Context(), 2*time.Second, sleeper("2m", ended), func() {
+			called = true
+			select {
+			case <-ended:
+			case <-time.After(500 * time.Millisecond):
+				alive = true
+			}
+		})
+		var exit *exec.ExitError
+		if !errors.Is(err, errOverLimit) || errors.As(err, &exit) {
+			t.Errorf("runLimited = %v, want errOverLimit and no ExitError", err)
+		}
+		if !called || !alive {
+			t.Errorf("atLimit called %v, the child alive in it %v, want both", called, alive)
+		}
+		if took := time.Since(start); took > 30*time.Second {
+			t.Errorf("runLimited took %v", took)
+		}
+	})
+	t.Run("ends in time", func(t *testing.T) {
+		t.Parallel()
+		called := false
+		err := runLimited(t.Context(), 30*time.Second, sleeper("1s", make(chan struct{})), func() { called = true })
+		if err != nil || called {
+			t.Errorf("runLimited = %v, atLimit called %v, want neither", err, called)
+		}
+	})
+}
 
 // The fakes stand for the network and the machine: curl serves $FAKE_API for the API and
 // $FAKE_ASSETS/<tag>/<name> for downloads, uname prints $FAKE_OS and $FAKE_ARCH. Neither reads

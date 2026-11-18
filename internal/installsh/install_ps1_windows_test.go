@@ -17,20 +17,13 @@ import (
 	"os/exec"
 	"path/filepath"
 	"runtime"
+	"runtime/pprof"
 	"strings"
 	"sync"
 	"sync/atomic"
 	"testing"
 	"time"
 )
-
-// A copy of the test binary run with this set sleeps: it is the floe.exe that runs while install.ps1 replaces it.
-func init() {
-	if os.Getenv("FLOE_INSTALL_TEST_SLEEP") != "" {
-		time.Sleep(time.Minute)
-		os.Exit(0)
-	}
-}
 
 // LIMIT: the real Invoke-WebRequest is run, but against a server of the test, through a proxy of the test, with its
 // certificate trusted by the driver alone: GitHub itself and a certificate checked as it is are not. The branch that
@@ -152,10 +145,15 @@ const oldFloe = "floe 0.0.9 from http\n"
 
 // site serves r as GitHub does, over TLS and through an HTTP proxy that tunnels every CONNECT to it. A plain request
 // to the proxy is counted and answered as an http server would (oldFloe). It returns the proxy's URL.
+// Each tunnel and request is logged with its time, for a test that fails: a child killed at its limit is read by
+// them. Nothing is logged once a connection is hijacked: the servers' Close waits for the handlers before that only.
 func site(t *testing.T, r *ghRelease) string {
 	t.Helper()
 
+	began := time.Now()
+	seen := func(what string) { t.Logf("+%.1fs %s", time.Since(began).Seconds(), what) }
 	plain := http.HandlerFunc(func(w http.ResponseWriter, req *http.Request) {
+		seen("in plain http: " + req.Method + " " + req.URL.Path)
 		r.hits.Add(1)
 		r.plain.Add(1)
 		name := req.URL.Path[strings.LastIndex(req.URL.Path, "/")+1:]
@@ -172,6 +170,7 @@ func site(t *testing.T, r *ghRelease) string {
 	})
 
 	handler := http.HandlerFunc(func(w http.ResponseWriter, req *http.Request) {
+		seen(req.Method + " " + req.URL.Path)
 		r.hits.Add(1)
 		host := req.Host
 		name := req.URL.Path[strings.LastIndex(req.URL.Path, "/")+1:]
@@ -210,6 +209,7 @@ func site(t *testing.T, r *ghRelease) string {
 			plain(w, req)
 			return
 		}
+		seen("CONNECT " + req.Host)
 		up, err := (&net.Dialer{}).DialContext(req.Context(), "tcp", tlsServer.Listener.Addr().String())
 		if err != nil {
 			http.Error(w, err.Error(), http.StatusBadGateway)
@@ -221,14 +221,16 @@ func site(t *testing.T, r *ghRelease) string {
 			http.Error(w, "no hijacking", http.StatusInternalServerError)
 			return
 		}
-		conn, _, err := hijacker.Hijack()
+		conn, rw, err := hijacker.Hijack()
 		if err != nil {
 			_ = up.Close()
 			return
 		}
 		answer(conn, "HTTP/1.1 200 Connection established\r\n\r\n")
+		// What the client sent before the answer was read with its request: it is in rw, not on conn, and goes up first.
+		sent := io.MultiReader(io.LimitReader(rw.Reader, int64(rw.Reader.Buffered())), conn)
 		// A tunnel: either side may end it, so neither copy's error is a failure of the test.
-		go func() { _, _ = io.Copy(up, conn); _ = up.Close() }() //nolint:errcheck // see above
+		go func() { _, _ = io.Copy(up, sent); _ = up.Close() }() //nolint:errcheck // see above
 		_, _ = io.Copy(conn, up)                                 //nolint:errcheck // see above
 		_ = conn.Close()                                         //nolint:errcheck // see above
 	}))
@@ -244,6 +246,13 @@ func redirect(to string) func(w http.ResponseWriter, r *http.Request, host strin
 func status(code int, body string) func(w http.ResponseWriter, r *http.Request, host string) {
 	return func(w http.ResponseWriter, _ *http.Request, _ string) { w.WriteHeader(code); answer(w, body) }
 }
+
+// psLimit is how long one run of install.ps1 may take: Windows PowerShell stopped once for 13 minutes before it began
+// TLS through the proxy, and the package's 15 minutes ran out with nothing told of where.
+// LIMIT: go test without -v holds what a subtest told until TestInstallPS1 ends: when another run stops after one
+// was killed and the package's time runs out, none of it is shown. Write it to os.Stderr too when killing, if two
+// stop in one run.
+const psLimit = 5 * time.Minute
 
 // psCase is one run of install.ps1: what the driver does (testdata/driver.ps1) and the environment.
 type psCase struct {
@@ -344,17 +353,25 @@ func runPS(t *testing.T, shell, base string, c psCase) *psResult {
 		set(k, v)
 	}
 
-	//nolint:gosec // G204: powershell or pwsh, and the test's driver
-	cmd := exec.CommandContext(t.Context(), shell, "-NoProfile", "-NonInteractive", "-ExecutionPolicy", "Bypass",
-		"-Command", ". '"+strings.ReplaceAll(driver, "'", "''")+"'")
-	cmd.Dir = filepath.Join(base, "w")
-	for _, kv := range env {
-		cmd.Env = append(cmd.Env, kv)
+	var out, errb, both, waiting bytes.Buffer
+	err = runLimited(t.Context(), psLimit, func(ctx context.Context) *exec.Cmd {
+		//nolint:gosec // G204: powershell or pwsh, and the test's driver
+		cmd := exec.CommandContext(ctx, shell, "-NoProfile", "-NonInteractive", "-ExecutionPolicy", "Bypass",
+			"-Command", ". '"+strings.ReplaceAll(driver, "'", "''")+"'")
+		cmd.Dir = filepath.Join(base, "w")
+		for _, kv := range env {
+			cmd.Env = append(cmd.Env, kv)
+		}
+		cmd.Stdout = io.MultiWriter(&out, &both)
+		cmd.Stderr = io.MultiWriter(&errb, &both)
+		return cmd
+	}, func() {
+		// Before the child is killed: its end closes the tunnel, and what waited on it is gone from the list.
+		_ = pprof.Lookup("goroutine").WriteTo(&waiting, 2) //nolint:errcheck // a buffer takes it all
+	})
+	if errors.Is(err, errOverLimit) {
+		t.Fatalf("%s: %v\nits output so far:\n%s\nevery goroutine, before it was killed:\n%s", shell, err, both.String(), waiting.String())
 	}
-	var out, errb, both bytes.Buffer
-	cmd.Stdout = io.MultiWriter(&out, &both)
-	cmd.Stderr = io.MultiWriter(&errb, &both)
-	err = cmd.Run()
 	// Windows PowerShell folds a long error at the width of a console; the folds are taken out.
 	res.out, res.err, res.both = out.String(), strings.NewReplacer("\r\n", "", "\n", "").Replace(errb.String()), both.String()
 	var exit *exec.ExitError
