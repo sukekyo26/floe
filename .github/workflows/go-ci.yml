@@ -26,7 +26,7 @@ jobs:
           bash probe/summarize.sh /c/s394/logs > /c/s394/summary.tsv
           echo "== totals"; awk -F'\t' '{t[$1"\t"$2"\t"$3]+=$5} END{for(x in t) print x"\t"t[x]}' /c/s394/summary.tsv | sort
           echo "== summary"; cat /c/s394/summary.tsv
-          for f in b-check a-publish b-publish b-new-part; do
+          for f in c-check c-part-list b-check; do
             echo "== detail $f"
             awk -F'\t' '{n=split($4,c," < "); print $1"\t"$2"\t"$3"\t"c[1]" < "c[2]" < "c[3]}' /c/s394/logs/$f.log | sed 's/\\\\?\\//' | sort | uniq -c
           done
