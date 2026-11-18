@@ -204,6 +204,7 @@ func TestOwnDirsOverlap(t *testing.T) {
 		{"not there, in", map[string]string{parts: pp, themes: pp + "/none"}, nil, overlap(parts, pp, themes, pp+"/none")},
 		{"not there, ending in /", map[string]string{parts: pp, themes: pp + "/none/"}, nil, overlap(parts, pp, themes, pp+"/none/")},
 		{"not there, with //", map[string]string{parts: pp, themes: pp + "//none"}, nil, overlap(parts, pp, themes, pp+"//none")},
+		{"both not there, one in the other", map[string]string{parts: dir + "/gone", themes: dir + "/gone/th"}, nil, overlap(parts, dir+"/gone", themes, dir+"/gone/th")},
 		{"templates", map[string]string{parts: pp, templates: pp}, []string{"check", "d.yaml"}, overlap(parts, pp, templates, pp)},
 		{
 			"all three",
@@ -241,6 +242,34 @@ func TestOwnDirsOverlap(t *testing.T) {
 				t.Errorf("floe %v = %d, %q, %q; want %q", args, code, stdout, stderr, tt.errs)
 			}
 		})
+	}
+}
+
+// A mistake of the templates' setting stops the commands that read templates alone: part list, part new and theme new
+// read and make as before, check is stopped.
+func TestTemplatesDirNotRead(t *testing.T) {
+	t.Parallel()
+
+	dir := write(t, map[string]string{"d.yaml": good})
+	home := filepath.Join(dir, "home")
+	env := cli.HomeEnv(home, map[string]string{"FLOE_TEMPLATES_DIR": "tpl"})
+	for _, tt := range []struct {
+		args   []string
+		code   int
+		stdout string
+		stderr string
+	}{
+		{[]string{"part", "new", "x"}, 0, "made " + filepath.Join(cli.DefaultPlace(home, "parts"), "x") + "\n", ""},
+		{[]string{"theme", "new", "y"}, 0, "made " + filepath.Join(cli.DefaultPlace(home, "themes"), "y") + "\n", ""},
+		{[]string{"check", "d.yaml"}, 1, "", "floe: FLOE_TEMPLATES_DIR is tpl, a relative path; set it to an absolute path\n"},
+	} {
+		if code, stdout, stderr := runEnv(dir, env, tt.args...); code != tt.code || stdout != tt.stdout || stderr != tt.stderr {
+			t.Errorf("floe %v = %d, %q, %q; want %d, %q, %q", tt.args, code, stdout, stderr, tt.code, tt.stdout, tt.stderr)
+		}
+	}
+	mine := "\nx\t" + filepath.Join(cli.DefaultPlace(home, "parts"), "x") + "\t"
+	if code, stdout, stderr := runEnv(dir, env, "part", "list"); code != 0 || !strings.Contains(stdout, mine) || stderr != "" {
+		t.Errorf("floe part list = %d, %q, %q; want 0 with x", code, stdout, stderr)
 	}
 }
 
