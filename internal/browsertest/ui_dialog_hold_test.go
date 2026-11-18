@@ -229,6 +229,20 @@ func TestUIDialogHold(t *testing.T) { //nolint:paralleltest // the browser tests
 	b.eval("letGo()")
 	until("add-page-dialog", false)
 
+	// What is neither a field nor a button stays focusable and pressable while held: no key or press reaches it, the edit's fold staying
+	// shut
+	open("/")
+	b.eval("holdOn('PATCH')")
+	start(writes[1])
+	b.eval("document.querySelector('#edit-more > summary').focus(); true")
+	b.pressKey(kb.Enter)
+	b.pressKey(" ")
+	say("fold, keys while held", "document.getElementById('edit-more').open + ' ' + where(document.activeElement)")
+	press("document.querySelector('#edit-more > summary')")
+	say("fold, pressed while held", "document.getElementById('edit-more').open")
+	b.eval("letGo()")
+	until("edit-dialog", false)
+
 	// The browser's own keys go on while held: F5 and Ctrl+R load the page again, the way out of a write that never answers
 	for _, k := range []struct {
 		name, code string
@@ -283,6 +297,8 @@ var dialogHoldWant = []string{
 	"suggestions, held:   S300",
 	"the focus given back: set-dialog set-out",
 	"add page, a row pressed while held: 1",
+	"fold, keys while held: false edit-dialog SUMMARY Slug and projectplan-a · proj",
+	"fold, pressed while held: false",
 	"loaded again by F5",
 	"loaded again by r",
 }
