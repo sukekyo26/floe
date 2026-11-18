@@ -280,11 +280,9 @@ func TestUIFindActions(t *testing.T) { //nolint:paralleltest // the browser test
 	typeFind(b, "alpha")
 	b.eval("document.querySelector('" + menu + " summary').click(); document.querySelector('" + menu + " .edit').click()")
 	out = append(out, b.eval("document.getElementById('find').open + ' ' + document.getElementById('edit-dialog').open"))
-	// Another page's new name leaves this one here.
-	b.eval("document.getElementById('edit-slug').value = 'a2'; document.getElementById('edit-submit').click()")
-	b.until("the edit closed", "!document.getElementById('edit-dialog').open")
-	// The dialog's close comes after: wait for what it does.
-	out = append(out, b.eval("new Promise((go) => setTimeout(() => go(location.pathname + ' ' + window.errs), 100))"))
+	// Another page's new name leaves this one here. The save is the form's submit, called for its end: closed, or what it threw.
+	b.eval("document.getElementById('edit-slug').value = 'a2'")
+	out = append(out, b.eval("saveEdit(new SubmitEvent('submit', { cancelable: true })).then(() => location.pathname + ' ' + window.errs, (e) => 'threw ' + e.message)"))
 	// This page's: its URL moves, and deleted, it goes to the list.
 	keyDown(b, "key: 'k', ctrlKey: true")
 	typeFind(b, "gamma")

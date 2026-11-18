@@ -128,8 +128,7 @@ func TestUITaskCategories(t *testing.T) { //nolint:paralleltest // the browser t
 	say("narrowed", options)
 	b.pressKey(kb.ArrowDown)
 	b.pressKey(kb.Enter)
-	// The focus goes back to the category's button as the dialog's close event comes, a frame after it closes.
-	b.until("closed", "!document.getElementById('add-page-dialog').open && document.querySelector('#list li[data-slug=check-a]') && document.getElementById('list').contains(document.activeElement)")
+	b.until("closed", "!document.getElementById('add-page-dialog').open && document.querySelector('#list li[data-slug=check-a]')")
 	say("put", "sent.join(' ; ')")
 	say("put, told", lastToast)
 	say("put, focus", "document.activeElement.getAttribute('aria-label')")
