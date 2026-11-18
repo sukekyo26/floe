@@ -29,7 +29,7 @@ jobs:
       - name: Build both
         shell: pwsh
         run: |
-          New-Item -ItemType Directory C:\floe-tmp, C:\s394-out | Out-Null
+          New-Item -ItemType Directory -Force C:\floe-tmp, C:\s394-out | Out-Null
           git fetch -q origin probe/s394-before
           git worktree add --detach C:\s394-out\before origin/probe/s394-before
           git worktree add --detach C:\s394-out\after HEAD
