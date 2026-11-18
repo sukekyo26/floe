@@ -108,8 +108,8 @@ func TestUITaskArchivedInCategory(t *testing.T) { //nolint:paralleltest // the b
 	b.eval("document.getElementById('set-category').value = ''")
 	b.until("the categories", "document.getElementById('set-category-names').matches(':popover-open') || (document.getElementById('set-category').blur(), document.getElementById('set-category').focus(), false)")
 	say("set categories", "[...document.getElementById('set-category-names').children].map((e) => e.querySelector('.names-word')?.textContent ?? e.textContent).join(', ')")
-	b.eval("document.getElementById('set-dialog').close()")
-	// Closed, the focus goes back to the menu it came from, as the dialog's close does
+	// Closed, the focus goes back to the menu it came from
+	b.eval("closeDialog(document.getElementById('set-dialog'))")
 	b.until("closed", "!document.getElementById('set-dialog').open && document.activeElement.tagName === 'SUMMARY'")
 	b.eval("document.querySelector('#list li[data-slug=n1] .more').open = false")
 

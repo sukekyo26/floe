@@ -2232,6 +2232,24 @@
     return mark;
   }
 
+  // What follows as a modal closes, done in the same task as close(): Chrome sends the close event an animation frame later, and keys
+  // meanwhile reach the closed modal's field, or the one under it. The focus goes where its opener was if that is gone by then (an item
+  // of a closed menu, a button drawn anew); with none to go to, or one that takes no focus, it leaves the modal for the body
+  const AFTER_CLOSE = {
+    'tag-dialog': () => tagBack?.()?.focus(),
+    'edit-dialog': () => editBack?.()?.focus(),
+    'set-dialog': () => setBack?.()?.focus(),
+    'add-page-dialog': () => categoryAdd(addTo.category)?.focus(),
+    settings: () => themesBack?.()?.focus(),
+    'move-dialog': () => moveAnswer?.(moveYes),
+  };
+  function closeDialog(d) {
+    if (!d.open) return;
+    d.close();
+    AFTER_CLOSE[d.id]?.();
+    if (d.contains(document.activeElement)) document.activeElement.blur();
+  }
+
   // Suggests names for a field, as a WAI-ARIA combobox: offer says those to show of what is written, each a name or { name, label }, and
   // put puts one in. ↓ opens it, ↑↓ pick, Enter or a click puts it in, Escape closes it, as does leaving the field. Drawn only as the
   // field changes, so that the list read again neither closes it nor moves the name picked. onFocus tells whether being reached opens it
@@ -2476,7 +2494,7 @@
       else await send((slug) => patchOne(slug, { tags: { add, remove } }), done, failed, [...next]);
     } finally {
       holdTags(false);
-      $('tag-dialog').close();
+      closeDialog($('tag-dialog'));
     }
   }
 
@@ -2608,7 +2626,7 @@
   function fromShelf(open) {
     return () => {
       if ($('filter-dialog').open) {
-        $('filter-dialog').close();
+        closeDialog($('filter-dialog'));
         $('narrow-filter').focus();
       }
       open();
@@ -2670,7 +2688,7 @@
   // modal, which closes as no dialog goes over another, back where that modal took it from
   function menuBack(box, slug) {
     if (box.closest('#find')) {
-      $('find').close();
+      closeDialog($('find'));
       return null;
     }
     const bar = box.closest('#read-actions, #frame-actions')?.id;
@@ -3527,7 +3545,7 @@
     toast(edited?.offTask ? t('ui_saved_off_task', edited.offTask) : t('ui_saved'));
     // Drawn before the dialog closes, which gives focus to the row's menu button as drawn
     await load();
-    $('edit-dialog').close();
+    closeDialog($('edit-dialog'));
   }
 
   function render() {
@@ -4180,7 +4198,7 @@
       }
       // Nothing to write, and so nothing to tell
       if (act === 'none') {
-        $('kin-dialog').close();
+        closeDialog($('kin-dialog'));
         form.back(task, name);
         return;
       }
@@ -4192,7 +4210,7 @@
       if (!res.ok) throw new Error(res.text);
       form.done(task, name, x, res);
       await load();
-      $('kin-dialog').close();
+      closeDialog($('kin-dialog'));
       form.back(task, name);
     } catch (err) {
       $('kin-error').textContent = t('ui_save_failed', err.message);
@@ -5256,6 +5274,8 @@
   // LIMIT: a page put on another task since the list was read is moved unasked, which the toast after the write tells. Give page writes a
   // rev if that comes to trouble someone
   let moveYes = false;
+  // The answer's resolve, called once by closeDialog (AFTER_CLOSE) however the modal closes
+  let moveAnswer = null;
   function askMove(page, name) {
     const listed = items.find((x) => x.slug === page.slug) ?? page;
     const from = listed.task?.name?.trim() ?? '';
@@ -5263,10 +5283,14 @@
     if (!from || from === to) return Promise.resolve(true);
     $('move-lead').textContent = t('ui_task_move_lead', listed.title, leftPlace(from, listed.task.category), to, from);
     moveYes = false;
-    const dialog = $('move-dialog');
-    dialog.showModal();
+    $('move-dialog').showModal();
     $('move-no').focus();
-    return new Promise((resolve) => dialog.addEventListener('close', () => resolve(moveYes), { once: true }));
+    return new Promise((resolve) => {
+      moveAnswer = (yes) => {
+        moveAnswer = null;
+        resolve(yes);
+      };
+    });
   }
   // A page put on a category of a task in one write, with what the screen saw of the task (body): the store makes the task's row when it has
   // none and adds the category to its categories. The page's project is the task's
@@ -5317,7 +5341,7 @@
         toast('', { ms: 8000, button: to });
       }
       await load();
-      $('set-dialog').close();
+      closeDialog($('set-dialog'));
     } catch (err) {
       setFailed(err.message);
     } finally {
@@ -5646,7 +5670,7 @@
     };
     const body = { new: false, rev: taskEditing.rev, ...changed };
     if (Object.keys(changed).length === 0) {
-      $('edit-task-dialog').close();
+      closeDialog($('edit-task-dialog'));
       return;
     }
     const btn = $('edit-task-submit');
@@ -5675,7 +5699,7 @@
       }
       toast(t('ui_saved'));
       await load();
-      $('edit-task-dialog').close();
+      closeDialog($('edit-task-dialog'));
     } finally {
       if (!gone) btn.disabled = false;
     }
@@ -5683,15 +5707,17 @@
 
   // The dialog's way off the task: the dialog closed, its focus back on the menu (setBack), and from the keys then on the way back
   async function takeOffTask(e) {
+    const opened = setOpened;
     const res = await takePageOff(setPage, setBack);
     if (res.reason) {
       setFailed(res.reason);
       return;
     }
     await load();
-    // After the listener of setBack, which runs first as it was added first
-    if (e.detail === 0) $('set-dialog').addEventListener('close', () => res.button.focus(), { once: true });
-    $('set-dialog').close();
+    // Closed meanwhile (Escape, say), or opened again since: the focus is where that left it
+    if (!$('set-dialog').open || setOpened !== opened) return;
+    closeDialog($('set-dialog'));
+    if (e.detail === 0) res.button.focus();
   }
   // The list's rows: a page whole has no list
   const listRows = () => [...($('list')?.children ?? [])];
@@ -5761,7 +5787,7 @@
   const addMark = listKeys($('add-page-q'), {
     options: () => [...$('add-page-list').children],
     choose: (i) => addPageTo(addShown[i]),
-    close: () => $('add-page-dialog').close(),
+    close: () => closeDialog($('add-page-dialog')),
     open: () => {},
     shown: () => true,
     tab: () => {},
@@ -5819,7 +5845,7 @@
       const said = off?.offTask ? leftPlace(off.offTask, off.offCategory) : (a.task?.name === to.name ? from : '');
       toast(said ? t('ui_page_moved', a.title, said, to.category) : t('ui_page_added', a.title, to.category));
       await load();
-      $('add-page-dialog').close();
+      closeDialog($('add-page-dialog'));
     } finally {
       adding = false;
     }
@@ -5998,7 +6024,7 @@
       forgetOrder();
       location.href = $('find-list').children[i].querySelector('a').href;
     },
-    close: () => $('find').close(),
+    close: () => closeDialog($('find')),
     open: () => {},
     shown: () => true,
     tab: () => {},
@@ -6335,7 +6361,7 @@
       toast(done);
       return;
     }
-    $('settings').close();
+    closeDialog($('settings'));
     toast(done);
     await load();
   }
@@ -6368,7 +6394,7 @@
   const KEYS = {
     '/': () => ($('search').hidden ? openFind() : $('q').focus()),
     '?': openKeys,
-    'Ctrl+K': () => ($('find').open ? $('find').close() : openFind()),
+    'Ctrl+K': () => ($('find').open ? closeDialog($('find')) : openFind()),
   };
   const PAGE_KEYS = new Set(['j', 'k', 'h', 'n', 'p', 'd', '?', '/', 'Ctrl+K']);
   function pressKey(key) {
@@ -6398,7 +6424,7 @@
       if (!res.ok) throw new Error(t('ui_http_error', await res.text(), res.status));
       const { slug, folder } = await res.json();
       $('add').reset();
-      $('add-dialog').close();
+      closeDialog($('add-dialog'));
       toast(t(folder ? 'ui_folder_added' : 'ui_link_added', slug));
       // To the whole list, drawn once with it
       $('q').value = '';
@@ -6448,7 +6474,6 @@
     e.preventDefault();
     applyTags();
   });
-  $('tag-dialog').addEventListener('close', () => tagBack?.()?.focus());
   $('tag-find').addEventListener('input', drawTagBoxes);
   // Enter in the find field takes the one tag it leaves, as a field's suggestions did; else it makes the name a tag, rather than apply
   $('tag-find').addEventListener('keydown', (e) => {
@@ -6460,8 +6485,6 @@
   });
   $('tag-new').addEventListener('click', createTag);
   for (const id of ['read-tags', 'frame-tags']) $(id).append($('tag-line').content.cloneNode(true));
-  // The edit dialog closed, focus goes back to the menu's button it was opened from rather than to the closed menu's item
-  $('edit-dialog').addEventListener('close', () => editBack?.()?.focus());
   $('set').addEventListener('submit', saveTaskSet);
   // A field marked blank is free again as it is typed in
   for (const form of [$('set'), $('kin'), $('edit-task')]) form.addEventListener('input', (e) => e.target.setCustomValidity?.(''));
@@ -6476,11 +6499,6 @@
     const li = e.target.closest('#add-page-list > li');
     if (li) addPageTo(addShown[[...$('add-page-list').children].indexOf(li)]);
   });
-  // The button it was opened from may have been drawn anew meanwhile
-  $('add-page-dialog').addEventListener('close', () => {
-    if ($('add-page-dialog').contains(document.activeElement) || document.activeElement === document.body) categoryAdd(addTo.category)?.focus();
-  });
-  $('set-dialog').addEventListener('close', () => setBack?.()?.focus());
   $('edit-task').addEventListener('submit', saveTaskEdit);
   // Typing again lets a refusal go, but not that the task is gone, which no typing changes
   $('edit-task').addEventListener('input', () => { if (!taskEditing?.gone) $('edit-task-error').hidden = true; });
@@ -6575,17 +6593,21 @@
     const task = setTaskOf($('set-task').value);
     return task ? categoryOrder(task) : [];
   }, (name) => { $('set-category').value = name; });
-  for (const b of document.querySelectorAll('[data-close]')) b.addEventListener('click', () => b.closest('dialog').close());
+  for (const b of document.querySelectorAll('[data-close]')) b.addEventListener('click', () => closeDialog(b.closest('dialog')));
   $('move-yes').addEventListener('click', () => {
     moveYes = true;
-    $('move-dialog').close();
+    closeDialog($('move-dialog'));
   });
   // A click on the backdrop (the dialog itself) closes it, as Escape does: not one closedby none holds; the form fills the dialog, so
   // clicks inside never land here
   for (const d of document.querySelectorAll('dialog')) {
     d.addEventListener('click', (e) => {
-      if (e.target === d && d.getAttribute('closedby') !== 'none') d.close();
+      if (e.target === d && d.getAttribute('closedby') !== 'none') closeDialog(d);
     });
+    // Escape and the other close requests: the browser says when one closes a modal (not while a search field clears its words, nor
+    // while closedby none holds) and fires cancel within the key's task, before the next key; closed here, the browser's own closing
+    // finds it closed
+    d.addEventListener('cancel', () => closeDialog(d));
   }
   // Not while typing or with a dialog open
   // The versions' choices take letters to find an item by, each starting with v: these go on as anywhere, with the focus left there
@@ -6857,7 +6879,6 @@
   $('settings').addEventListener('close', () => {
     if ($('settings').open) return;
     document.body.append($('toasts'));
-    themesBack?.()?.focus();
   });
   $('settings-form').addEventListener('submit', (e) => {
     if ($('settings').dataset.panel !== 'mode') return chooseTheme(e);
