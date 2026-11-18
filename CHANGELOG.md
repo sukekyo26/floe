@@ -10,6 +10,8 @@ adheres to [Semantic Versioning](https://semver.org/).
 
 - Fix a key pressed just after a modal of the management page closed reaching the closed modal: Enter right after Escape could save the change Escape cancelled in the edit modal, or open the page picked in the search modal. The focus now leaves the modal as it closes.
 - Fix Enter pressed right after Yes in the ask to move a page to another task: Yes could be lost, the page left where it was and the modals left open.
+- Fix a modal of the management page closed while it saved: the save went on and what came after it acted on whatever modal was open by then. It could close a modal opened again for another page, send that modal's next save to the page the first save renamed, so that page was renamed and retitled, or say a failure where it could not be seen. The modal now holds still while it saves and reads the list after: Escape, Cancel, a press outside and its buttons do nothing till the save is answered, and a failure is said in it. A save that never answers holds it till the page is loaded again (F5, Ctrl+R).
+- Fix a press begun in a modal's field and let go outside it closing the modal as a press outside does: only a press that goes down outside closes it now.
 
 ## [0.2.0] - 2026-11-17
 
