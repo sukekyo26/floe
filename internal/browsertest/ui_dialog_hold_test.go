@@ -12,7 +12,7 @@ import (
 )
 
 // A modal's writes, and the read of the list after them, held back or failed by kind (hold.PATCH, fail.POST, hold.GET…); GET is the
-// list's and the tasks' reads alone. answered counts the writes answered.
+// list's and the tasks' reads alone (TASKS the tasks' alone). answered counts the writes answered.
 const dialogHoldJS = `(() => {
 window.where = (el) => {
   if (!el || el === document.body) return 'body';
@@ -30,7 +30,10 @@ window.fetch = (u, i) => {
   if (method === 'GET' && path !== '/api/pages' && path !== '/api/tasks') return window.realFetch(u, i);
   if (method !== 'GET') sent.push(method + ' ' + path);
   const go = method === 'GET' ? window.realFetch : (u2, i2) => (fail[method] ? Promise.resolve(new Response('refused here', { status: 500 })) : window.realFetch(u2, i2));
-  return Promise.resolve(hold[method]).then(() => go(u, i)).finally(() => { if (method !== 'GET') answered++; });
+  const held = Promise.resolve(path === '/api/tasks' && method === 'GET' ? hold.TASKS ?? hold.GET : hold[method]);
+  // Held, a read is still cut by its own time limit, as the server's answer would be
+  const cut = new Promise((_, no) => i?.signal?.addEventListener('abort', () => no(i.signal.reason)));
+  return Promise.race([held.then(() => go(u, i)), cut]).finally(() => { if (method !== 'GET') answered++; });
 };
 window.holdOn = (...methods) => { for (const m of methods) hold[m] = new Promise((go) => lets.push(go)); return true; };
 window.letGo = () => { hold = {}; for (const go of lets.splice(0)) go(); return true; };
@@ -245,6 +248,19 @@ func TestUIDialogHold(t *testing.T) { //nolint:paralleltest // the browser tests
 	b.eval("letGo()")
 	until("edit-dialog", false)
 
+	// A page whole reads the tasks after a write: a read that never answers is cut at the list's time limit, and the modal let go
+	b.navigate("/a/plan-a/")
+	b.until("the bar", "document.getElementById('frame-title').textContent")
+	b.eval(dialogHoldJS)
+	b.eval("(() => { const m = document.querySelector('#frame-actions .more'); m.open = true; m.querySelector('.menu .task-set').click(); })()")
+	until("set-dialog", true)
+	b.eval("READ_MS = 300; holdOn('TASKS')")
+	b.eval("document.getElementById('set-out').click()")
+	until("set-dialog", false)
+	say("page whole, the tasks unread", "document.getElementById('set-dialog').getAttribute('closedby') + ' ' + sent.filter((x) => x.startsWith('PATCH')).length")
+	b.eval("letGo()")
+	onTask("plan-a", "S300", "案")
+
 	// The browser's own keys go on while held: F5 and Ctrl+R load the page again, the way out of a write that never answers
 	for _, k := range []struct {
 		name, code string
@@ -302,6 +318,7 @@ var dialogHoldWant = []string{
 	"add page, a row pressed while held: 1",
 	"fold, keys while held: false edit-dialog SUMMARY Slug and projectplan-a · proj",
 	"fold, pressed while held: false",
+	"page whole, the tasks unread: closerequest 1",
 	"loaded again by F5",
 	"loaded again by r",
 }
