@@ -158,6 +158,9 @@ func shortNameOf(path string) (string, error) {
 // instance waits at a time: the next is made once a client took the last, and until then the pipe turns a client
 // away (ERROR_PIPE_BUSY). Its own clients wait that out (dial). The marker is let go after the next instance is
 // made, so what connects right after connected returns is not turned away.
+// LIMIT: one instance waits, so a client not the server's own (the code under test, a Stat) that comes before the
+// next is made is turned away and not counted: of two right after each other, the second may be. Keep more
+// instances waiting if a test comes to count clients that connect in a row.
 type pipeServer struct {
 	path    string
 	name    *uint16
