@@ -18,6 +18,7 @@ import (
 	"path/filepath"
 	"runtime"
 	"runtime/pprof"
+	"strconv"
 	"strings"
 	"sync"
 	"sync/atomic"
@@ -37,8 +38,9 @@ type ghRelease struct {
 	files     map[string][]byte // the body of each file, any tag
 	sums      string            // SHA256SUMS; "" makes it from files
 	serve     map[string]func(w http.ResponseWriter, r *http.Request, host string)
-	hits      atomic.Int32 // requests the server answered
-	plain     atomic.Int32 // of them, requests in plain http
+	mute      <-chan struct{} // not nil: the proxy answers a CONNECT and goes no further, until it is closed
+	hits      atomic.Int32    // requests the server answered
+	plain     atomic.Int32    // of them, requests in plain http
 }
 
 const (
@@ -227,6 +229,12 @@ func site(t *testing.T, r *ghRelease) string {
 			return
 		}
 		answer(conn, "HTTP/1.1 200 Connection established\r\n\r\n")
+		if r.mute != nil {
+			_ = up.Close()   //nolint:errcheck // nothing was sent on it
+			<-r.mute         // the client waits for a TLS that does not come
+			_ = conn.Close() //nolint:errcheck // the test is over
+			return
+		}
 		// What the client sent before the answer was read with its request: it is in rw, not on conn, and goes up first.
 		sent := io.MultiReader(io.LimitReader(rw.Reader, int64(rw.Reader.Buffered())), conn)
 		// A tunnel: either side may end it, so neither copy's error is a failure of the test.
@@ -273,7 +281,8 @@ type psCase struct {
 	FailCopy    bool   `json:"failCopy"`
 	Tmp         string `json:"tmp"` // TMP and TEMP while install.ps1 runs; "" is base\tmp, for the driver too
 
-	env map[string]string // FLOE_* and the machine's variables; "" removes one
+	env   map[string]string // FLOE_* and the machine's variables; "" removes one
+	limit time.Duration     // how long the run may take; 0 is psLimit
 }
 
 // psResult is what one run left.
@@ -349,12 +358,19 @@ func runPS(t *testing.T, shell, base string, c psCase) *psResult {
 	set("PROCESSOR_ARCHITECTURE", strings.ToUpper(runtime.GOARCH))
 	set("PROCESSOR_ARCHITEW6432", "")
 	set("FLOE_TEST_CASE", string(js))
+	// Longer than psLimit, unless the case says: a PowerShell that stops as it once did is then killed by the
+	// test, with what waited on it, before install.ps1 gives up by itself and tells less.
+	set("FLOE_INSTALL_TIMEOUT", "600")
 	for k, v := range c.env {
 		set(k, v)
 	}
 
+	limit := c.limit
+	if limit == 0 {
+		limit = psLimit
+	}
 	var out, errb, both, waiting bytes.Buffer
-	err = runLimited(t.Context(), psLimit, func(ctx context.Context) *exec.Cmd {
+	err = runLimited(t.Context(), limit, func(ctx context.Context) *exec.Cmd {
 		//nolint:gosec // G204: powershell or pwsh, and the test's driver
 		cmd := exec.CommandContext(ctx, shell, "-NoProfile", "-NonInteractive", "-ExecutionPolicy", "Bypass",
 			"-Command", ". '"+strings.ReplaceAll(driver, "'", "''")+"'")
@@ -583,7 +599,7 @@ func testInstallPS1(t *testing.T, shell string) {
 		for name, body := range others {
 			write(t, filepath.Join(dir, name), body)
 		}
-		res := runPS(t, shell, base, psCase{Proxy: site(t, r), env: map[string]string{"FLOE_INSTALL_DIR": ""}})
+		res := runPS(t, shell, base, psCase{Proxy: site(t, r), env: map[string]string{"FLOE_INSTALL_DIR": "", "FLOE_INSTALL_TIMEOUT": ""}})
 		works(t, r, res, dir, host)
 		for name, body := range others {
 			if b, err := os.ReadFile(filepath.Join(dir, name)); err != nil || string(b) != body {
@@ -592,8 +608,9 @@ func testInstallPS1(t *testing.T, shell string) {
 		}
 		// Not on PATH: the line shown names no folder, as the default is where it goes.
 		shown := after(strings.ReplaceAll(res.out, "\r\n", "\n"), "To add it, run:\n")
-		if !strings.Contains(shown, "$env:FLOE_ADD_TO_PATH = '1'; irm ") || strings.Contains(shown, "FLOE_INSTALL_DIR") {
-			t.Errorf("the line shown is %q, want FLOE_ADD_TO_PATH and irm, no FLOE_INSTALL_DIR:\n%s", shown, res)
+		if !strings.Contains(shown, "$env:FLOE_ADD_TO_PATH = '1'; irm ") || strings.Contains(shown, "FLOE_INSTALL_DIR") ||
+			strings.Contains(shown, "FLOE_INSTALL_TIMEOUT") {
+			t.Errorf("the line shown is %q, want FLOE_ADD_TO_PATH and irm, no FLOE_INSTALL_DIR nor FLOE_INSTALL_TIMEOUT:\n%s", shown, res)
 		}
 	})
 	t.Run("the default folder off a local drive", func(t *testing.T) {
@@ -770,6 +787,106 @@ func testInstallPS1(t *testing.T, shell string) {
 			}
 		})
 	}
+	// What install.ps1 adds when PowerShell gave up on a silence, and what it says of a FLOE_INSTALL_TIMEOUT it refuses.
+	const waited = "check your network and proxy and run it again; FLOE_INSTALL_TIMEOUT sets how many seconds to wait for an answer (now 3)"
+	const refused = "FLOE_INSTALL_TIMEOUT must be"
+	// A server or a proxy that goes silent is given up on after FLOE_INSTALL_TIMEOUT seconds, and told as that. A
+	// run that does not give up is killed at a minute, not at psLimit.
+	for _, s := range []struct {
+		name string
+		make func(t *testing.T, hold <-chan struct{}) *ghRelease
+		skip bool
+	}{
+		{"no answer to a request", func(t *testing.T, hold <-chan struct{}) *ghRelease {
+			t.Helper()
+			return broken(t, asset, func(http.ResponseWriter, *http.Request, string) { <-hold })
+		}, false},
+		{"no TLS behind the proxy", func(t *testing.T, hold <-chan struct{}) *ghRelease {
+			t.Helper()
+			r := goodRelease(t)
+			r.mute = hold
+			return r
+		}, false},
+		// LIMIT: Windows PowerShell has nothing to pass for a body that stops: .NET gives up on it after 5 minutes,
+		// whatever FLOE_INSTALL_TIMEOUT is (seen once, run 44263536485). Not run: it would take those.
+		{"a body that stops", func(t *testing.T, hold <-chan struct{}) *ghRelease {
+			t.Helper()
+			return broken(t, asset, func(w http.ResponseWriter, _ *http.Request, _ string) {
+				w.Header().Set("Content-Length", "100000")
+				answer(w, strings.Repeat("x", 1000))
+				if f, ok := w.(http.Flusher); ok {
+					f.Flush()
+				}
+				<-hold
+			})
+		}, shell == "powershell"},
+	} {
+		t.Run("silence: "+s.name, func(t *testing.T) {
+			t.Parallel()
+			if s.skip {
+				t.Skip("Windows PowerShell waits 5 minutes for a body that stops")
+			}
+			hold := make(chan struct{})
+			defer close(hold) // before the servers close, which wait for their handlers
+			r := s.make(t, hold)
+			res, dir := install(t, r, psCase{limit: time.Minute, env: map[string]string{"FLOE_INSTALL_TIMEOUT": "3"}})
+			fails(t, res, dir, "download failed: ", waited)
+		})
+	}
+	t.Run("slow, never silent", func(t *testing.T) {
+		t.Parallel()
+		// 14 seconds of a body under a limit of 10: the limit is on a silence, not on the whole download. A second
+		// between two writes is a tenth of it, so a runner that lags does not make one.
+		r := goodRelease(t)
+		body := r.files[asset]
+		r.serve = map[string]func(w http.ResponseWriter, r *http.Request, host string){asset: func(w http.ResponseWriter, _ *http.Request, _ string) {
+			w.Header().Set("Content-Length", strconv.Itoa(len(body)))
+			const parts = 14
+			for i := range parts {
+				_, _ = w.Write(body[len(body)*i/parts : len(body)*(i+1)/parts]) //nolint:errcheck // a client that went away fails the case by itself
+				if f, ok := w.(http.Flusher); ok {
+					f.Flush()
+				}
+				time.Sleep(time.Second)
+			}
+		}}
+		res, dir := install(t, r, psCase{env: map[string]string{"FLOE_INSTALL_TIMEOUT": "10"}})
+		works(t, r, res, dir, host)
+	})
+	// Read as letters, not as a number: what sh and PowerShell would read apart is refused by both alike, before
+	// anything is asked for.
+	for _, v := range []string{"abc", "0", "08", "-5", "+5", "1.5", "1e3", "0x10", " 5", "100000", "5\n", "\uff15"} {
+		t.Run(fmt.Sprintf("refuses to wait %q", v), func(t *testing.T) {
+			t.Parallel()
+			r := goodRelease(t)
+			res, dir := install(t, r, psCase{env: map[string]string{"FLOE_INSTALL_TIMEOUT": v}})
+			// Windows PowerShell writes a letter outside the console's code page as another: only ASCII is looked for.
+			got := "(got " + strings.TrimRight(v, "\n")
+			if v == "\uff15" {
+				got = "(got "
+			}
+			fails(t, res, dir, refused, got)
+			if n := r.hits.Load(); n != 0 {
+				t.Errorf("%d requests before FLOE_INSTALL_TIMEOUT was refused", n)
+			}
+		})
+	}
+	for _, v := range []string{"600", "99999", ""} {
+		t.Run(fmt.Sprintf("waits %q", v), func(t *testing.T) {
+			t.Parallel()
+			r := goodRelease(t)
+			res, dir := install(t, r, psCase{env: map[string]string{"FLOE_INSTALL_TIMEOUT": v}})
+			works(t, r, res, dir, host)
+		})
+	}
+	t.Run("a second to wait is taken", func(t *testing.T) {
+		t.Parallel()
+		// Whether every request answers in a second on a busy runner is not the test's to say: only that 1 is read.
+		res, _ := install(t, goodRelease(t), psCase{env: map[string]string{"FLOE_INSTALL_TIMEOUT": "1"}})
+		if strings.Contains(res.err, refused) {
+			t.Errorf("FLOE_INSTALL_TIMEOUT=1 is refused:\n%s", res)
+		}
+	})
 	for _, b := range []struct {
 		name  string
 		serve func(w http.ResponseWriter, r *http.Request, host string)
@@ -1238,6 +1355,10 @@ func testPathPS1(t *testing.T, shell string, install func(*testing.T, *ghRelease
 			shown = strings.TrimSuffix(shown, "\r")
 			if shown == "" {
 				t.Fatalf("no line shown:\n%s", res)
+			}
+			// The seconds to wait the run was given (runPS's) are in the line, as the folder and the version are.
+			if !strings.Contains(shown, "$env:FLOE_INSTALL_TIMEOUT = '600'; ") {
+				t.Errorf("the line shown is %q, want FLOE_INSTALL_TIMEOUT in it:\n%s", shown, res)
 			}
 			script, err := filepath.Abs(filepath.Join("..", "..", "install.ps1"))
 			if err != nil {
