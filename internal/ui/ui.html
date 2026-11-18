@@ -2262,10 +2262,13 @@
   // write be called off if that comes to trouble someone
   // LIMIT: a link in it is still pressed (the settings' toasts' .toast-link sets pointer-events itself), and leaves the page as a reload
   // would. Hold links too if one comes to be in a modal that writes
-  // LIMIT: a browser without closedby closes the modal on Escape, held or not, as it did the tags'. The browser tests' Chrome has it
+  // LIMIT: a browser without closedby closes the modal on Escape, held or not, as it did the tags'. The browser tests' Chrome has it. Hold
+  // Escape in the dialog's keydown too if a browser floe is used in comes to lack it
   // LIMIT: a drag begun as the hold starts is not seen to: the tests' Chrome shows no grip (hover: none). The hold stops a press, so one
-  // can only have begun before the write was sent
+  // can only have begun before the write was sent. Let go a drag as the hold starts if a category comes to move while it saves
   const held = new WeakMap();
+  // The focus given back is not a field reached: its suggestions stay shut, over the mistake said under it
+  let givingBack = false;
   function holdDialog(d, on) {
     if (on) {
       const now = [...d.querySelectorAll('input, button, select, textarea')].filter((e) => !e.disabled);
@@ -2278,7 +2281,11 @@
       for (const e of now) e.disabled = false;
       held.delete(d);
       d.removeAttribute('tabindex');
-      if ((!d.contains(document.activeElement) || document.activeElement === d) && d.contains(focus)) focus.focus();
+      if ((!d.contains(document.activeElement) || document.activeElement === d) && d.contains(focus)) {
+        givingBack = true;
+        focus.focus();
+        givingBack = false;
+      }
     }
     d.setAttribute('closedby', on ? 'none' : 'closerequest');
   }
@@ -2359,7 +2366,7 @@
     });
     input.addEventListener('input', open);
     // Pressed or reached, the names show at once; pressed, again once the caret is where it was pressed, which focus is before
-    if (onFocus) input.addEventListener('focus', open);
+    if (onFocus) input.addEventListener('focus', () => { if (!givingBack) open(); });
     input.addEventListener('click', open);
     input.addEventListener('blur', close);
   }
