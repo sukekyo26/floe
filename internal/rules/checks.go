@@ -202,7 +202,8 @@ func (c check) items(whole item) ([]item, bool) {
 // itemsAt adds to found the items of the lists at steps under v, v being at the path at: a list on the way is
 // gone through item by item. A list or value the data leaves out holds none, and so does an item of a list on
 // the way that is not keys and values or a list. It returns false when what is at steps is not a list.
-// LIMIT: for: itemz under an open object passes unseen (kit refuses keys forbidden alone); rework if one misleads.
+// LIMIT: a for of a key no value holds passes unseen where kit cannot tell it (schema.Forbidding: past a schema of no
+// type or of keys and a list, or a key not declared); rework if one misleads.
 func itemsAt(v any, steps, at []string, found *[]item) bool {
 	switch v := v.(type) {
 	case nil:
