@@ -448,7 +448,7 @@ func (d *drawing) bend(k int) {
 }
 
 // keepApart is how near a moved end at a box lets its runs stand beside another edge's: half the column the routes
-// keep.
+// keep. The edges that turn by an icon turn as far apart, and iconCell keeps room for them by it (turnLine).
 // straighten keeps edges written by hand as far apart.
 // LIMIT: not for ends at icons, whose 8 ends on a side stand 5.33 apart, so edges at icons may run closer. Look again
 // if a diagram comes to show it.
@@ -703,6 +703,11 @@ func (d *drawing) bendOf(e endAt) (nestRun, bool) {
 // arrowRun) stand nearer the icon than an arrow's length, or on it. Level edges and loops alone end there, and no
 // laid out graph bending two of them has been found.
 // LIMIT: the bends nest has no order for (nestAbove) may share a stretch.
+// LIMIT: the lines are found anew from the routes as they stand, so a label placed beside one (reseat) may find the
+// turns moved by a stretch made later for another; labels crossed by edges of random graphs number as when the turns
+// stood on the rectangle's side. Hold the lines from settleEnds on if a diagram comes to show it.
+// It is called once ends are settled: e, short of its point's line (bendOf, as reach finds it), is among its side's
+// bends, which settleEnds keeps of all the ends it places.
 func (d *drawing) turnLine(e endAt) float64 {
 	place := d.places[e]
 	side := endSide{d.ends[e.edge][e.end], place.side}

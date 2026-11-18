@@ -219,20 +219,24 @@ func reachFault(g *graph) string {
 	return ""
 }
 
-// touchesOutside counts the pairs of edges of g laid out as l touching outside every icon's rectangle.
-func touchesOutside(g *graph, l *layout) int {
+// iconCells is whether a point is within the rectangle of an icon of g as laid out, and false when g does not lay out.
+func iconCells(g *graph) (func([2]float64) bool, bool) {
 	o, _ := readGraph(g, "#/parts/0/graph", graphWay{(*drawing).settleEnds, false}) //nolint:errcheck // its mistakes are iconFault's
 	if _, _, err := o.items(); err != nil {                                         //nolint:errcheck // its mistakes are iconFault's
-		return 0
+		return nil, false
 	}
-	inside := func(p [2]float64) bool {
+	return func(p [2]float64) bool {
 		for i, n := range o.boxes {
 			if c := o.drawn[i].cell; n.box.icon != nil && p[0] >= c.x-eps && p[0] <= c.x+c.w+eps && p[1] >= c.y-eps && p[1] <= c.y+c.h+eps {
 				return true
 			}
 		}
 		return false
-	}
+	}, true
+}
+
+// touchesOutside counts the pairs of edges of l touching where inside, the icons' rectangles, does not hold.
+func touchesOutside(l *layout, inside func([2]float64) bool) int {
 	n := 0
 	for i, a := range l.paths {
 		for _, b := range l.paths[i+1:] {
@@ -325,10 +329,12 @@ func TestGraphIconsRandom(t *testing.T) {
 				if fault := cmp.Or(iconFault(g, l), reachFault(g), throughFault(g, l, o.stayed)); fault != "" {
 					t.Fatalf("seed %v, graph %d: %s", c.seed, i, fault)
 				}
-				touching += touchesOutside(g, l)
+				if inside, ok := iconCells(g); ok {
+					touching += touchesOutside(l, inside)
+					cells += cellCrossings(l, inside)
+				}
 				left += len(runThrough(g, l))
 				shared += sharedStretches(l)
-				cells += cellCrossings(g, l)
 				if short := shortArrows(g, l); len(short) > 0 {
 					t.Fatalf("seed %v, graph %d: arrows on runs too short: %v", c.seed, i, short)
 				}
@@ -777,26 +783,14 @@ func shortArrows(g *graph, l *layout) []string {
 	return short
 }
 
-// cellCrossings counts the crossings of two edges of g, laid out as l, within the rectangle of an icon.
-func cellCrossings(g *graph, l *layout) int {
-	o, _ := readGraph(g, "#/parts/0/graph", graphWay{(*drawing).settleEnds, false}) //nolint:errcheck // laid tells the mistakes
-	if _, _, err := o.items(); err != nil {                                         //nolint:errcheck // laid tells the mistakes
-		return 0
-	}
-	inCell := func(p [2]float64) bool {
-		for i, n := range o.boxes {
-			if c := o.drawn[i].cell; n.box.icon != nil && p[0] > c.x-eps && p[0] < c.x+c.w+eps && p[1] > c.y-eps && p[1] < c.y+c.h+eps {
-				return true
-			}
-		}
-		return false
-	}
+// cellCrossings counts the crossings of two edges of l where inside, the icons' rectangles, holds.
+func cellCrossings(l *layout, inside func([2]float64) bool) int {
 	n := 0
 	for i, a := range l.paths {
 		for _, b := range l.paths[i+1:] {
 			for _, s := range a.segs {
 				for _, q := range b.segs {
-					if x, y, ok := crossing(s, q); ok && inCell([2]float64{x, y}) {
+					if x, y, ok := crossing(s, q); ok && inside([2]float64{x, y}) {
 						n++
 					}
 				}

@@ -597,15 +597,16 @@ func nestAbove(runs []nestRun) [][]int {
 
 // nestFill puts runs, in order, on tracks from the first: each track takes the runs whose runs above stand on
 // tracks before it, past the run before it on the track by more than gap (within eps). When none of the runs left
-// can go on a track, they wait on one another (a cycle): the first of them goes on it all the same, so that nestFill
-// ends. It returns each run's track and how many it takes.
+// can go on a track, they wait on one another (a cycle): the first of them goes on it all the same, so that each
+// track takes one run at least, and nestFill takes len(runs) tracks at most. It returns each run's track and how many
+// it takes.
 // LIMIT: a run put on a track to end a cycle may cross or share a stretch with one it waited on. No runs of the
 // bends at an icon's side have made a cycle, compared within eps.
 func nestFill(runs []nestRun, order []int, above [][]int, gap float64) ([]int, int) {
 	track := make([]int, len(runs))
 	placed := map[int]int{}
 	t := 0
-	for ; len(order) > 0; t++ {
+	for ; len(order) > 0 && t < len(runs); t++ {
 		ready := func(l int) bool {
 			for _, a := range above[l] {
 				if p, ok := placed[a]; !ok || p >= t {
