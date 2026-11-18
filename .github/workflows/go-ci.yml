@@ -1,6 +1,7 @@
 name: Go CI
 
-# S394 probe (throwaway, never merged): counts of files.allowed and Lstat per entry on Windows.
+# S394 probe (throwaway, never merged): counts of files.allowed and Lstat per entry on Windows, with the script a
+# real machine runs (probe/count.ps1).
 on:
   pull_request:
 
@@ -18,15 +19,10 @@ jobs:
         with:
           go-version-file: go.mod
           cache: true
-      - run: go build -o floe-probe.exe ./cmd/floe
       - shell: pwsh
-        run: ./probe/count.ps1
-      - shell: bash
         run: |
-          bash probe/summarize.sh /c/s394/logs > /c/s394/summary.tsv
-          echo "== totals"; awk -F'\t' '{t[$1"\t"$2"\t"$3]+=$5} END{for(x in t) print x"\t"t[x]}' /c/s394/summary.tsv | sort
-          echo "== summary"; cat /c/s394/summary.tsv
-          for f in c-check c-part-list b-check; do
-            echo "== detail $f"
-            awk -F'\t' '{n=split($4,c," < "); print $1"\t"$2"\t"$3"\t"c[1]" < "c[2]" < "c[3]}' /c/s394/logs/$f.log | sed 's/\\\\?\\//' | sort | uniq -c
-          done
+          New-Item -ItemType Directory C:\s394-out\bin | Out-Null
+          go build -o C:\s394-out\bin\floe-probe.exe ./cmd/floe
+          pwsh -NoProfile -File probe/count.ps1 -Exe C:\s394-out\bin\floe-probe.exe -Out C:\s394-out\run-x -UserHome C:\s394-out\home-x *> C:\s394-out\x.txt
+          "exit=$LASTEXITCODE"
+          Get-Content C:\s394-out\x.txt
