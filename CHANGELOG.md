@@ -26,6 +26,7 @@ adheres to [Semantic Versioning](https://semver.org/).
 - Fix a modal of the management page closed while it saved: the save went on and what came after it acted on whatever modal was open by then. It could close a modal opened again for another page, send that modal's next save to the page the first save renamed, so that page was renamed and retitled, or say a failure where it could not be seen. The modal now holds still while it saves and reads the list after: Escape, Cancel, a press outside and its buttons do nothing till the save is answered, and a failure is said in it. A save that never answers holds it till the page is loaded again (F5, Ctrl+R).
 - Fix a press begun in a modal's field and let go outside it closing the modal as a press outside does: only a press that goes down outside closes it now.
 - Fix floe crashing (`fatal error: stack overflow`) while drawing a page with a list whose schema has `prefixItems` beside an `items` naming a part of yours, when that part's root and another's lead back to each other by `$ref`: such parts are now refused when they are read.
+- Fix an edge of a large `graph` left running through a frame that holds neither of its ends, where floe gave up looking for a way round it too soon. It now goes round in more diagrams; one that floe finds no way round still runs through.
 
 ## [0.2.0] - 2026-11-17
 
