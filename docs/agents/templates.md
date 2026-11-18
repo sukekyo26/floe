@@ -295,7 +295,9 @@ Relations between items that a schema cannot say, each checked on every item of 
 - A list on the way of `for` is gone through item by item: `sections.parts` checks the parts of every section, and a failure is reported at its item.
 - Without `for`, a check runs once, on the whole data file as `item` (`doc` too), and its failure has no line or column unless its `field` names a key the data writes.
 - `expr` is an expr expression that must hold. It sees the list's item as `item` and the data file's items as `doc`. Each item it fails for is reported at its `field`, with `message` (at the item itself when `field` is left out or the item lacks it).
-- The path of `for` MUST be one the schema declares; `field` is not checked against it.
+- The path of `for` MUST be of keys the values the schema allows there may hold; `field` is not checked against it.
+- To have the path checked, write `type` on every schema on it (the root's `"type": "object"`, a list's `"type": "array"` and its items' `"type": "object"`), close each object with `"additionalProperties": false`, and declare each of its keys in `properties`, there or in a schema its `$ref` names (`#/$defs/…`, a shared schema); what `allOf` and the like hold is not read.
+- floe refuses a `for` through a key no value the schema allows there may hold, but checks the path only so far: from a schema of no `type`, or of a `type` that lets the value be keys and a list, and from a key not declared in `properties` (one that `additionalProperties` or `patternProperties` takes), the rest passes unchecked.
 - A check runs only on data that passed `schema.json`: to refuse a missing key with a message of your own, leave it out of `required` and write the check here.
 - An expression with a ` #` in it (expr's `#` in `filter(xs, # > 1)`) MUST be in quotes: floe refuses a `#` that begins a YAML comment where it may have cut a value short.
 
@@ -334,7 +336,7 @@ An image is one of the data (an item of `"format": "image"`) or one of `assets/`
 - a name, a link, a file or a directory that breaks the rules of *Where templates are* and *Files*, a missing `page.html`, `schema.json` or `example.yaml`, and an `example.yaml` that names another template;
 - a `page.html` that does not parse (a syntax mistake, an unknown function), and what html/template's escaping refuses (`ZgotmplZ` in the page drawn, where it did not take a value);
 - a `schema.json` that breaks a rule of *schema.json*, and a mistake the JSON Schema library reports;
-- a `checks.yaml` that is not a list of checks of `expr` and `message` (and `for` and `field`), a check with an empty or missing part, and a `for` that goes through a key the schema does not declare or leads to no list in the data; a `computed.yaml` that breaks a rule of *computed.yaml*, `$env` in a `computed.yaml` expression, and an `expr` that does not parse (the expr library's words);
+- a `checks.yaml` that is not a list of checks of `expr` and `message` (and `for` and `field`), a check with an empty or missing part, and a `for` through a key no value the schema allows there may hold, up to a schema on the way of no `type` or of a `type` of keys and a list, or a key not declared in `properties` (*checks.yaml*), or that leads to no list in the data; a `computed.yaml` that breaks a rule of *computed.yaml*, `$env` in a `computed.yaml` expression, and an `expr` that does not parse (the expr library's words);
 - a `words.yaml` that is not language tags each with names and their text, a word that is not text, two language tags that are one, and a word `page.html` names that the example's language lacks;
 - an image of `assets/` that is not one floe takes, and an `asset` that names none;
 - CSS floe cannot read in `page.css` (*page.css*);
