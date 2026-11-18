@@ -300,7 +300,7 @@ func TestCheckRefCycle(t *testing.T) {
 	if failed := found.Add(kit.Check(k)); failed != nil {
 		t.Fatal(failed)
 	}
-	var got []string
+	got := make([]string, 0, len(found))
 	for _, e := range found {
 		got = append(got, e.File()+" "+e.Key)
 	}
