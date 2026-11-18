@@ -2403,13 +2403,6 @@
   const showApply = () => {
     $('tag-apply').disabled = tagMarks.sending || [...tagMarks.want].every(([name, w]) => w === tagMarks.start.get(name));
   };
-  // While the tags are sent the dialog holds still, as every modal does while it writes
-  function holdTags(sending) {
-    tagMarks.sending = sending;
-    holdDialog($('tag-dialog'), sending);
-    showApply();
-  }
-
   // The one dialog that changes tags, of the pages of slugs, under title(n of them): done(n) and failed(n, why) tell what came of it,
   // send writes them (actOn, or actOnSelected of the selected) and after(the pages to change) tidies what opened it, before
   function openTags(slugs, { title, done, failed, send = actOn, after }) {
@@ -2422,7 +2415,7 @@
     $('tag-title').textContent = title(pages.length);
     $('tag-find').value = '';
     drawTagBoxes();
-    holdTags(false);
+    showApply();
     $('tag-dialog').showModal();
   }
   function openSelectedTags() {
@@ -2526,21 +2519,25 @@
     const changed = (mark) => [...want].filter(([name, w]) => w === mark && start.get(name) !== mark).map(([name]) => name);
     const add = changed('all');
     const remove = changed('none');
-    holdTags(true);
+    tagMarks.sending = true;
+    showApply();
     // Whatever throws, the dialog is let go and closed
     try {
-      // Read again first: a page removed since is not sent, rather than be sent and not found
-      await load();
-      const next = new Set(slugs.filter((slug) => {
-        const a = items.find((x) => x.slug === slug);
-        const now = a?.tags ?? [];
-        return a && (add.some((name) => !now.includes(name)) || remove.some((name) => now.includes(name)));
-      }));
-      after?.(next);
-      if (next.size === 0) toast(t('ui_tag_bulk_none'));
-      else await send((slug) => patchOne(slug, { tags: { add, remove } }), done, failed, [...next]);
+      await whileHeld($('tag-dialog'), async () => {
+        // Read again first: a page removed since is not sent, rather than be sent and not found
+        await load();
+        const next = new Set(slugs.filter((slug) => {
+          const a = items.find((x) => x.slug === slug);
+          const now = a?.tags ?? [];
+          return a && (add.some((name) => !now.includes(name)) || remove.some((name) => now.includes(name)));
+        }));
+        after?.(next);
+        if (next.size === 0) toast(t('ui_tag_bulk_none'));
+        else await send((slug) => patchOne(slug, { tags: { add, remove } }), done, failed, [...next]);
+      });
     } finally {
-      holdTags(false);
+      tagMarks.sending = false;
+      showApply();
       closeDialog($('tag-dialog'));
     }
   }
