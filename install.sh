@@ -161,6 +161,8 @@ case "$arch" in
   *) die "unsupported architecture: $arch (floe supports amd64 and arm64)" ;;
 esac
 
+# LIMIT: only EXIT is trapped, which dash does not run when a signal ends it: Ctrl+C while a request waits leaves
+# the directory in TMPDIR (bash removes it). Trap INT and TERM too if that comes to matter, keeping the exit code.
 tmp=$(mktemp -d)
 trap 'rm -rf "$tmp"' EXIT
 

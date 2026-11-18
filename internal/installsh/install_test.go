@@ -213,7 +213,7 @@ func TestInstall(t *testing.T) {
 		readOnly                                  bool   // the install directory is there but not writable
 		timeout                                   string // FLOE_INSTALL_TIMEOUT
 		stall                                     string // a URL that holds it never answers
-		asks                                      int    // how many URLs curl is asked for; -1 is not looked at
+		asks                                      int    // how many URLs curl is asked for; 0 is not looked at (a value refused is: none)
 		want                                      string // the asset installed, or "" when it fails
 		says, saysNot                             []string
 	}
