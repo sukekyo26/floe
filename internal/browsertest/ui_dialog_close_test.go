@@ -326,7 +326,7 @@ func TestUIDialogClose(t *testing.T) { //nolint:paralleltest // the browser test
 		until("move-dialog", true)
 	}
 	toMove()
-	out = append(out, "move, yes, at once: "+b.eval("(async () => { document.getElementById('move-yes').click(); for (let i = 0; i < 5; i++) await null; return document.getElementById('set-submit').disabled + ' ' + moveAnswer; })()"))
+	out = append(out, "move, yes, at once: "+b.eval("(async () => { document.getElementById('move-yes').click(); for (let i = 0; i < 5; i++) await null; return document.getElementById('set-submit').disabled + ' ' + (typeof moveAnswer === 'undefined' ? '-' : moveAnswer); })()"))
 	until("set-dialog", false)
 	say("move, yes")
 	onTask("plan-a", "S300", "案")
