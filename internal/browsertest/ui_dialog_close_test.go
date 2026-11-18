@@ -137,13 +137,13 @@ func TestUIDialogClose(t *testing.T) { //nolint:paralleltest // the browser test
 	// The tag line's button; the selection's, all applied (the bar goes with it), one failed (it stays) and Escape; from the search modal
 	b.eval("document.querySelector('#list li[data-slug=plan-a] .title').click()")
 	b.until("picked", "!document.getElementById('read-tags').hidden")
-	for _, close := range []string{newTag, ""} {
+	for _, how := range []string{newTag, ""} {
 		b.eval("document.querySelector('#read-tags .tag-edit').focus(); document.querySelector('#read-tags .tag-edit').click()")
 		until("tag-dialog", true)
-		if close == "" {
+		if how == "" {
 			b.pressKey(kb.Escape)
 		} else {
-			b.eval(close)
+			b.eval(how)
 		}
 		until("tag-dialog", false)
 		say("tag, tag line")
