@@ -247,7 +247,18 @@ func TestUIDialogHold(t *testing.T) { //nolint:paralleltest // the browser tests
 		b.pressKey(k)
 	}
 	say("shortcuts while held", "picked.slug + ' ' + sent.filter((x) => x.startsWith('PATCH')).length + ' ' + document.getElementById('edit-dialog').open")
+	// closeDialog leaves a held modal open, whoever calls it
+	say("closeDialog while held", "(closeDialog(document.getElementById('edit-dialog')), document.getElementById('edit-dialog').open)")
 	b.eval("letGo()")
+	until("edit-dialog", false)
+	// Any modal open, held or not, the focus off it (on the body): still no shortcut
+	b.eval(writes[1].opens)
+	until("edit-dialog", true)
+	b.eval("document.activeElement.blur(); true")
+	b.pressKey("j")
+	say("shortcuts, a modal open, the focus on the body", "picked.slug")
+	b.pressKey(kb.Escape)
+	b.eval("closeDialog(document.getElementById('edit-dialog')); true")
 	until("edit-dialog", false)
 
 	// A press down while held and up once let go is no press on the backdrop, nor one down in a field and up outside
@@ -351,6 +362,8 @@ var dialogHoldWant = []string{
 	"suggestions, keys while held:   S300 set-dialog set-dialog",
 	"the focus given back: set-dialog set-task",
 	"shortcuts while held: check-a 1 true",
+	"closeDialog while held: true",
+	"shortcuts, a modal open, the focus on the body: check-a",
 	"a press down held, up let go: true",
 	"a press down in a field, up outside: true",
 	"a press on the backdrop: false",
