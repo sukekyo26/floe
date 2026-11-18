@@ -409,7 +409,7 @@ A `graph` specifies only how its boxes, icons and groups are joined, and floe pl
 
 - On a `box`, edges leave and enter at separate points of its side, so that no two share a run. A `box` widens (with `right`, grows taller) for many edges.
 - Edges of one graph may cross one another. An edge of a graph that crosses another part is checked as any edge.
-- An icon stays 48 square however many edges reach it. Do not put more than three edges on one side of an icon: four arrowheads touch at their bases, and five or more overlap.
+- An icon stays 48 square however many edges reach it. Edges that turn beside an icon turn on lines apart, and the icon takes more room along the ranks the more edges reach the busier of its top and its bottom (with `right`, of its left and its right), so a graph whose icons have many edges takes more room. Do not put more than three edges on one side of an icon: four arrowheads touch at their bases, and five or more overlap.
 
 ### Labels
 

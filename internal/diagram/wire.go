@@ -479,10 +479,8 @@ func (s entrySide) lay(straight []int, set bool) (int, bool) {
 	return 0, true
 }
 
-// track puts the bent links of the channel below rank r on tracks and returns how many it takes. Of two links
-// whose runs across overlap, the one whose exit is within the other's run, or
-// whose run holds the other's entry, goes on a track above, so that a run down does not cut a run across. Those
-// constraints follow the exits' order among links going one way, and none holds between links going opposite
+// track puts the bent links of the channel below rank r on tracks (nest) and returns how many it takes. On the grid
+// the constraints follow the exits' order among links going one way, and none holds between links going opposite
 // ways, so they make no cycle.
 func (gr *group) track(r int) int {
 	var bent []int
@@ -494,75 +492,146 @@ func (gr *group) track(r int) int {
 		}
 	}
 	above := gr.above(bent)
+	runs, at := gr.runs(bent)
 	slices.SortStableFunc(bent, func(a, b int) int {
-		alo, _ := gr.span(a)
-		blo, _ := gr.span(b)
+		alo, _ := nestSpan(runs[at[a]])
+		blo, _ := nestSpan(runs[at[b]])
 		return cmp.Or(cmp.Compare(alo, blo), gr.links[a].edge-gr.links[b].edge)
 	})
 	return gr.fill(bent, above)
 }
 
-// fill puts the links bent, in order, on tracks from the top: each track takes, left to right, the links whose links
-// above are on tracks before it, past the run before. It returns how many tracks it takes. Two runs on a track keep
-// half a column apart: their ends are exits at x ≡ 0 and entries at x ≡ 6, or a point's entry at x ≡ 0 that taken
-// keeps off every exit.
+// fill puts the links bent, in order, on tracks from the top (nestFill), and returns how many tracks it takes. Two
+// runs on a track keep half a column apart: their ends are exits at x ≡ 0 and entries at x ≡ 6, or a point's entry
+// at x ≡ 0 that taken keeps off every exit.
 func (gr *group) fill(bent []int, above map[int][]int) int {
-	placed := map[int]int{}
-	t := 0
-	for ; len(bent) > 0; t++ {
-		end := math.Inf(-1)
-		var rest []int
-		for _, l := range bent {
-			ready := true
-			for _, a := range above[l] {
-				if p, ok := placed[a]; !ok || p >= t {
-					ready = false
-				}
-			}
-			lo, hi := gr.span(l)
-			// The grid keeps two runs half a column apart (see fill).
-			if ready && lo > end {
-				gr.links[l].track, placed[l], end = t, t, hi
-				continue
-			}
-			rest = append(rest, l)
+	runs, at := gr.runs(bent)
+	ups := make([][]int, len(bent))
+	for i, l := range bent {
+		for _, a := range above[l] {
+			ups[i] = append(ups[i], at[a])
 		}
-		bent = rest
 	}
-	return t
+	tracks, n := nestFill(runs, allOf(len(runs)), ups, 0)
+	for i, l := range bent {
+		gr.links[l].track = tracks[i]
+	}
+	return n
 }
 
-// span is where link l runs across.
-func (gr *group) span(l int) (lo, hi float64) {
-	a := gr.links[l]
-	return min(a.exit, a.entry), max(a.exit, a.entry)
-}
-
-// above is, for each of the links bent, the links that must run on a track above it.
+// above is, for each of the links bent, the links that must run on a track above it (nestAbove).
 func (gr *group) above(bent []int) map[int][]int {
-	within := func(x float64, l int) bool {
-		lo, hi := gr.span(l)
-		return x > lo && x < hi
-	}
+	runs, _ := gr.runs(bent)
 	above := map[int][]int{}
-	for i, a := range bent {
-		for _, b := range bent[i+1:] {
-			alo, ahi := gr.span(a)
-			blo, bhi := gr.span(b)
-			if ahi < blo || bhi < alo {
+	for i, ups := range nestAbove(runs) {
+		for _, a := range ups {
+			above[bent[i]] = append(above[bent[i]], bent[a])
+		}
+	}
+	return above
+}
+
+// runs are the links bent as runs from their exits to their entries, and each link's index among them.
+func (gr *group) runs(bent []int) ([]nestRun, map[int]int) {
+	runs, at := make([]nestRun, len(bent)), map[int]int{}
+	for i, l := range bent {
+		runs[i], at[l] = nestRun{from: gr.links[l].exit, to: gr.links[l].entry}, i
+	}
+	return runs, at
+}
+
+// nestRun is a run across from one line to another: from a link's exit to its entry, or from an end's point on an
+// icon to where its route leaves the icon's rectangle.
+type nestRun struct{ from, to float64 }
+
+// nestSpan is where r runs.
+func nestSpan(r nestRun) (lo, hi float64) {
+	return min(r.from, r.to), max(r.from, r.to)
+}
+
+// nest puts runs on tracks, the first nearest their froms, so that a run off a track does not cut a run along one
+// (nestAbove), each track taking, in order of where they start, the runs past the one before by more than gap
+// (nestFill). It returns each run's track and how many it takes.
+func nest(runs []nestRun, gap float64) ([]int, int) {
+	order := allOf(len(runs))
+	slices.SortStableFunc(order, func(a, b int) int {
+		alo, _ := nestSpan(runs[a])
+		blo, _ := nestSpan(runs[b])
+		return cmp.Compare(alo, blo)
+	})
+	return nestFill(runs, order, nestAbove(runs), gap)
+}
+
+// nestAbove is, for each of runs, the runs that must stand on a track nearer their froms: of two runs that overlap,
+// the one whose from is within the other, whose span holds the other's to, or whose from is the other's to. All
+// three are compared within eps, as the ends of runs at an icon are its side's parts.
+// LIMIT: two runs each with its from within the other or at its to have no order and may share a stretch: a's from at
+// b's to with a's to and b's from on one side of it ([(4,3),(6,0),(3,5)]). Such froms come out of order with their
+// tos; no graph of the random tests has one. Ordering by the from at the to first makes cycles.
+func nestAbove(runs []nestRun) [][]int {
+	within := func(x float64, r nestRun) bool {
+		lo, hi := nestSpan(r)
+		return x > lo+eps && x < hi-eps
+	}
+	above := make([][]int, len(runs))
+	for i, a := range runs {
+		for j := i + 1; j < len(runs); j++ {
+			b := runs[j]
+			alo, ahi := nestSpan(a)
+			blo, bhi := nestSpan(b)
+			if ahi < blo-eps || bhi < alo-eps {
 				continue
 			}
-			aUp := within(gr.links[a].exit, b) || within(gr.links[b].entry, a)
-			bUp := within(gr.links[b].exit, a) || within(gr.links[a].entry, b)
+			aUp := within(a.from, b) || within(b.to, a) || near(a.from, b.to)
+			bUp := within(b.from, a) || within(a.to, b) || near(b.from, a.to)
 			switch {
 			case aUp && !bUp:
-				above[b] = append(above[b], a)
+				above[j] = append(above[j], i)
 			case bUp && !aUp:
-				above[a] = append(above[a], b)
+				above[i] = append(above[i], j)
 			}
 		}
 	}
 	return above
+}
+
+// nestFill puts runs, in order, on tracks from the first: each track takes the runs whose runs above stand on
+// tracks before it, past the run before it on the track by more than gap (within eps). When none of the runs left
+// can go on a track, they wait on one another (a cycle): the first of them goes on it all the same, so that each
+// track takes one run at least, and nestFill takes len(runs) tracks at most. It returns each run's track and how many
+// it takes.
+// LIMIT: a run put on a track to end a cycle may cross or share a stretch with one it waited on. No runs of the
+// bends at an icon's side have made a cycle, compared within eps.
+func nestFill(runs []nestRun, order []int, above [][]int, gap float64) ([]int, int) {
+	track := make([]int, len(runs))
+	placed := map[int]int{}
+	t := 0
+	for ; len(order) > 0 && t < len(runs); t++ {
+		ready := func(l int) bool {
+			for _, a := range above[l] {
+				if p, ok := placed[a]; !ok || p >= t {
+					return false
+				}
+			}
+			return true
+		}
+		force := -1
+		if !slices.ContainsFunc(order, ready) {
+			force = order[0]
+		}
+		end := math.Inf(-1)
+		var rest []int
+		for _, l := range order {
+			lo, hi := nestSpan(runs[l])
+			if (l == force || ready(l)) && lo > end+gap-eps {
+				track[l], placed[l], end = t, t, hi
+				continue
+			}
+			rest = append(rest, l)
+		}
+		order = rest
+	}
+	return track, t
 }
 
 // points are the corners of the edge of chain, top down, as drawn (turned for right), its ends on the sides of

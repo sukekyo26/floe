@@ -73,7 +73,7 @@ func (gr *group) size(right bool) {
 			graph: "", handSides: nil,
 		}, "")
 		if n.box.icon != nil {
-			r.w, r.h = iconCell(n.box.icon, right)
+			r.w, r.h = iconCell(n.box.icon, right, max(len(n.ins), len(n.outs)))
 		}
 		n.w, n.h = r.w, r.h
 		if right {

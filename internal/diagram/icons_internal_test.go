@@ -6,8 +6,11 @@ import (
 	"math"
 	"math/rand/v2"
 	"slices"
+	"strconv"
 	"strings"
 	"testing"
+
+	"floe/internal/yamlpos"
 )
 
 // anyIcon finds every icon.
@@ -216,20 +219,24 @@ func reachFault(g *graph) string {
 	return ""
 }
 
-// touchesOutside counts the pairs of edges of g laid out as l touching outside every icon's rectangle.
-func touchesOutside(g *graph, l *layout) int {
+// iconCells is whether a point is within the rectangle of an icon of g as laid out, and false when g does not lay out.
+func iconCells(g *graph) (func([2]float64) bool, bool) {
 	o, _ := readGraph(g, "#/parts/0/graph", graphWay{(*drawing).settleEnds, false}) //nolint:errcheck // its mistakes are iconFault's
 	if _, _, err := o.items(); err != nil {                                         //nolint:errcheck // its mistakes are iconFault's
-		return 0
+		return nil, false
 	}
-	inside := func(p [2]float64) bool {
+	return func(p [2]float64) bool {
 		for i, n := range o.boxes {
 			if c := o.drawn[i].cell; n.box.icon != nil && p[0] >= c.x-eps && p[0] <= c.x+c.w+eps && p[1] >= c.y-eps && p[1] <= c.y+c.h+eps {
 				return true
 			}
 		}
 		return false
-	}
+	}, true
+}
+
+// touchesOutside counts the pairs of edges of l touching where inside, the icons' rectangles, does not hold.
+func touchesOutside(l *layout, inside func([2]float64) bool) int {
 	n := 0
 	for i, a := range l.paths {
 		for _, b := range l.paths[i+1:] {
@@ -258,7 +265,8 @@ func touched(a, b path, inside func([2]float64) bool) bool {
 }
 
 // Random graphs with icons, down and right, lay out with no mistake, every end on its icon at the part of its side it
-// belongs to, a run an arrow can end, and labels beside their runs; almost no edges touch outside the icons' rectangles. The
+// belongs to, a run an arrow can end, and labels beside their runs; almost no edges touch outside the icons' rectangles,
+// none share a stretch, and few cross within them. The
 // graphs of TestGraphRandom hold for graphs of boxes alone that none touch.
 func TestGraphIconsRandom(t *testing.T) {
 	t.Parallel()
@@ -272,24 +280,25 @@ func TestGraphIconsRandom(t *testing.T) {
 		level     bool
 		touching  int
 		through   int   // the most edges left through a frame that holds neither end (throughFault), measured + 2
+		cells     int   // the most crossings within icons' rectangles (cellCrossings), measured + 15%, 2 at least
 		only      []int // the graphs to lay out, when any: the rest only take their turn of the random numbers
 	}{
-		{"", [2]uint64{31, 2}, 800, false, false, false, touchesPlain, 8, nil},
-		{"right", [2]uint64{33, 4}, 800, false, false, false, touchesPlain, 6, nil},
-		{"", [2]uint64{35, 6}, 150, true, false, false, touchesPlain, 3, nil},
-		{"right", [2]uint64{37, 8}, 150, true, false, false, touchesPlain, 0, nil},
+		{"", [2]uint64{31, 2}, 800, false, false, false, touchesPlain, 3, 1730, nil},
+		{"right", [2]uint64{33, 4}, 800, false, false, false, touchesPlain, 0, 1690, nil},
+		{"", [2]uint64{35, 6}, 150, true, false, false, touchesPlain, 0, 550, nil},
+		{"right", [2]uint64{37, 8}, 150, true, false, false, touchesPlain, 0, 500, nil},
 		// 717 has a label where a run stands once its ends settle, 54 a run a rounding off straight.
-		{"right", [2]uint64{777, 1517}, 720, true, false, false, touchesPlain, 0, []int{54, 717}},
-		{"", [2]uint64{39, 10}, 300, false, true, false, touchesPlain, 0, nil},
-		{"right", [2]uint64{41, 12}, 300, false, true, false, touchesPlain, 14, nil},
-		{"", [2]uint64{43, 14}, 150, false, false, true, touchesPlain, 0, nil},
-		{"right", [2]uint64{45, 16}, 150, false, false, true, touchesPlain, 0, nil},
+		{"right", [2]uint64{777, 1517}, 720, true, false, false, touchesPlain, 0, 5, []int{54, 717}},
+		{"", [2]uint64{39, 10}, 300, false, true, false, touchesPlain, 0, 300, nil},
+		{"right", [2]uint64{41, 12}, 300, false, true, false, touchesPlain, 8, 460, nil},
+		{"", [2]uint64{43, 14}, 150, false, false, true, touchesPlain, 0, 50, nil},
+		{"right", [2]uint64{45, 16}, 150, false, false, true, touchesPlain, 0, 18, nil},
 	} {
 		t.Run(fmt.Sprintf("%s-%d", cmpOr(c.direction, "down"), c.seed[0]), func(t *testing.T) {
 			t.Parallel()
 
 			rnd := rand.New(rand.NewPCG(c.seed[0], c.seed[1])) //nolint:gosec // G404: graphs to try, no secret
-			touching, left := 0, 0
+			touching, left, shared, cells := 0, 0, 0, 0
 			graphs := c.graphs
 			if c.only == nil { // a graph named by only must be reached under race too
 				graphs = tries(graphs)
@@ -320,8 +329,21 @@ func TestGraphIconsRandom(t *testing.T) {
 				if fault := cmp.Or(iconFault(g, l), reachFault(g), throughFault(g, l, o.stayed)); fault != "" {
 					t.Fatalf("seed %v, graph %d: %s", c.seed, i, fault)
 				}
-				touching += touchesOutside(g, l)
+				if inside, ok := iconCells(g); ok {
+					touching += touchesOutside(l, inside)
+					cells += cellCrossings(l, inside)
+				}
 				left += len(runThrough(g, l))
+				shared += sharedStretches(l)
+				if short := shortArrows(g, l); len(short) > 0 {
+					t.Fatalf("seed %v, graph %d: arrows on runs too short: %v", c.seed, i, short)
+				}
+			}
+			if shared > 0 {
+				t.Errorf("seed %v: %d pairs of edges share a stretch", c.seed, shared)
+			}
+			if cells > c.cells {
+				t.Errorf("seed %v: %d crossings within icons' rectangles, more than %d", c.seed, cells, c.cells)
 			}
 			if left > c.through {
 				t.Errorf("seed %v: %d edges run through a frame that holds neither end, more than %d", c.seed, left, c.through)
@@ -335,7 +357,7 @@ func TestGraphIconsRandom(t *testing.T) {
 
 // touchesPlain is how many pairs of edges of the graphs of a case of TestGraphIconsRandom may touch outside the icons'
 // rectangles: clear keeps moved runs off other edges, compared as they then stand, and later moves may meet them.
-// Within a rectangle they may touch (gathered).
+// Within a rectangle they may cross where they turn by the icon (cellCrossings), and share no stretch.
 const touchesPlain = 5
 
 // The n edges at a side end at the points that part it into n+1 equal parts, in the order of what they reach, and the
@@ -707,5 +729,189 @@ func TestGraphIconOffPointKeeps(t *testing.T) {
 				t.Errorf("%d edges turn more, %d fewer", more, fewer)
 			}
 		})
+	}
+}
+
+// sharedStretches counts the pairs of edges of l with a stretch of one line in common.
+func sharedStretches(l *layout) int {
+	n := 0
+	for i, a := range l.paths {
+		for _, b := range l.paths[i+1:] {
+			if slices.ContainsFunc(a.segs, func(s seg) bool {
+				return slices.ContainsFunc(b.segs, func(q seg) bool {
+					along := runAlong(s)
+					return along == runAlong(q) && near(s[1-along], q[1-along]) && overlap(s, q, along) > eps
+				})
+			}) {
+				n++
+			}
+		}
+	}
+	return n
+}
+
+// shortArrows are the edges of g, laid out as l, into an icon whose last run is shorter than an arrow's. It finds an
+// edge's path by its index, as l keeps g's edges in order, not by the names in its words.
+func shortArrows(g *graph, l *layout) []string {
+	icons := map[string]bool{}
+	var walk func(nodes []graphNode)
+	walk = func(nodes []graphNode) {
+		for _, n := range nodes {
+			if n.Icon != nil {
+				icons[n.Icon.Name] = true
+			}
+			if n.Group != nil {
+				walk(n.Group.Nodes)
+			}
+		}
+	}
+	walk(g.Nodes)
+	for _, ln := range g.Lanes {
+		walk(ln.Nodes)
+	}
+	var short []string
+	for k, e := range g.Edges {
+		p := l.paths[k]
+		if want := "edge " + strconv.Quote(e.From) + "→" + strconv.Quote(e.To); p.what != want {
+			return []string{fmt.Sprintf("path %d is %s, not %s", k, p.what, want)}
+		}
+		s := p.segs[len(p.segs)-1]
+		if icons[e.To] && math.Abs(s[0]-s[2])+math.Abs(s[1]-s[3]) < arrowRun-eps {
+			short = append(short, p.what)
+		}
+	}
+	return short
+}
+
+// cellCrossings counts the crossings of two edges of l where inside, the icons' rectangles, holds.
+func cellCrossings(l *layout, inside func([2]float64) bool) int {
+	n := 0
+	for i, a := range l.paths {
+		for _, b := range l.paths[i+1:] {
+			for _, s := range a.segs {
+				for _, q := range b.segs {
+					if x, y, ok := crossing(s, q); ok && inside([2]float64{x, y}) {
+						n++
+					}
+				}
+			}
+		}
+	}
+	return n
+}
+
+// The edges at an icon's side that turn beside it turn apart, each arrow on a run of its length: of one icon to three
+// boxes (S387), in and out at one side, two into one icon laid out right, and two into one icon laid out down.
+func TestGraphIconBends(t *testing.T) {
+	t.Parallel()
+
+	inOut := `title: in and out
+parts:
+  - graph:
+      x: 20
+      y: 20
+      nodes:
+        - icon: { name: n0, icon: lucide/server, label: wwwwwwwww }
+        - box: { name: n1, rows: [wwwwwwwwww] }
+        - icon: { name: n2, icon: lucide/server, label: wwwwwwwwwwwwww }
+        - box: { name: n3, rows: [wwwww], shape: pill }
+        - icon: { name: n4, icon: lucide/server, label: wwwwwwwwwwww }
+        - box: { name: n5, rows: [wwwwwwwwwwww], shape: pill }
+        - icon: { name: n6, icon: lucide/server, label: wwwww }
+        - box: { name: n7, rows: [ww] }
+        - icon: { name: n8, icon: lucide/server, label: wwwwwwwwwwww }
+      edges:
+        - { from: n7, to: n3 }
+        - { from: n5, to: n4 }
+        - { from: n6, to: n4 }
+        - { from: n4, to: n7 }
+        - { from: n1, to: n3 }
+        - { from: n0, to: n2 }
+        - { from: n2, to: n3 }
+        - { from: n3, to: n6 }
+        - { from: n4, to: n3 }
+        - { from: n5, to: n2 }
+        - { from: n8, to: n1 }
+`
+	intoRight := `title: into one icon
+parts:
+  - graph:
+      x: 20
+      y: 20
+      direction: right
+      nodes:
+        - icon: { name: n0, icon: lucide/server, label: wwwww }
+        - box: { name: n1, rows: [wwwwwwwwwwwww], shape: pill }
+        - icon: { name: n2, icon: lucide/server, label: wwwwwwwwww }
+        - box: { name: n3, rows: [wwwwwwwwwwww], shape: pill }
+        - icon: { name: n4, icon: lucide/server, label: w }
+        - box: { name: n5, rows: [wwwwww], shape: hex }
+      edges:
+        - { from: n0, to: n3 }
+        - { from: n4, to: n1 }
+        - { from: n4, to: n0 }
+        - { from: n4, to: n2 }
+        - { from: n3, to: n4 }
+        - { from: n2, to: n0 }
+        - { from: n5, to: n2 }
+        - { from: n1, to: n3 }
+        - { from: n1, to: n5 }
+`
+	s387 := `title: S387
+parts:
+  - graph:
+      x: 20
+      y: 20
+      direction: right
+      nodes:
+        - icon: { name: browser, icon: lucide/globe, label: Browser }
+        - group:
+            label: Windows
+            nodes:
+              - box: { name: winfloe, rows: [floe.exe] }
+              - box: { name: vscode, rows: [VS Code] }
+        - group:
+            label: WSL
+            nodes:
+              - box: { name: wslfloe, rows: [floe] }
+              - box: { name: store, rows: [store] }
+      edges:
+        - { from: browser, to: winfloe, label: http }
+        - { from: browser, to: vscode }
+        - { from: browser, to: wslfloe, label: http }
+        - { from: vscode, to: store }
+`
+	cases := map[string]*graph{}
+	for name, src := range map[string]string{"S387": s387, "in and out": inOut, "into one icon, right": intoRight} {
+		_, v, err := yamlpos.ParseMap("s.yaml", []byte(src))
+		if err != nil {
+			t.Fatal(err)
+		}
+		s, err := read(v)
+		if err != nil {
+			t.Fatal(err)
+		}
+		cases[name] = s.Parts[0].Graph
+	}
+	// Two into n0 at its bottom, drawn up against the ranks (n1→n0, n2→n0).
+	rnd := rand.New(rand.NewPCG(49, 20)) //nolint:gosec // G404: a graph to try, no secret
+	for i := range 41 {
+		g := randomGraph(rnd, "")
+		iconize(g)
+		if i == 40 {
+			cases["into one icon, down"] = g
+		}
+	}
+	for name, g := range cases {
+		l := laid(g)
+		if l.failure != nil || len(l.problems) > 0 {
+			t.Fatalf("%s: %v %v", name, l.failure, l.problems)
+		}
+		if n := sharedStretches(l); n > 0 {
+			t.Errorf("%s: %d pairs of edges share a stretch", name, n)
+		}
+		if short := shortArrows(g, l); len(short) > 0 {
+			t.Errorf("%s: arrows on runs too short: %v", name, short)
+		}
 	}
 }
