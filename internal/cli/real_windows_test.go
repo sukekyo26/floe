@@ -124,6 +124,27 @@ func TestDriveRelative(t *testing.T) {
 	}
 }
 
+// A place of one's own set on a share, on a network drive, or as a link to a share, is refused for its setting
+// (path_not_local), and compared with no other place: no overlap is told of it.
+func TestOwnPlaceNotLocal(t *testing.T) {
+	t.Parallel()
+
+	dir := write(t, map[string]string{"d.yaml": good, "parts/.keep": ""})
+	shared, mapped := testfs.MapShare(t, dir)
+	linked := filepath.Join(t.TempDir(), "linked")
+	link(t, filepath.Join(shared, "parts"), linked)
+	for _, at := range []string{filepath.Join(shared, "parts"), filepath.Join(mapped, "parts"), linked} {
+		env := map[string]string{"FLOE_PARTS_DIR": at, "FLOE_THEMES_DIR": filepath.Join(dir, "parts")}
+		for _, args := range [][]string{{"part", "check"}, {"check", "d.yaml"}} {
+			code, _, stderr := runEnv(dir, env, args...)
+			if code != 1 || !strings.Contains(stderr, "FLOE_PARTS_DIR") || !strings.Contains(stderr, "not on a local drive") ||
+				strings.Contains(stderr, "one is in the other") {
+				t.Errorf("FLOE_PARTS_DIR=%s floe %v = %d, %q; want path_not_local alone", at, args, code, stderr)
+			}
+		}
+	}
+}
+
 // A device, a share or a link to one is refused before it is opened (path_not_local), where Unix tells a device by its
 // kind: a part's file that is a link to a device, a data file on a share, a page to write that is a link to a
 // device, and pages to write on a share or a network drive (told to put them on a local drive, not to look at
