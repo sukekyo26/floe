@@ -2,7 +2,9 @@ package files_test
 
 import (
 	"errors"
+	"fmt"
 	"io/fs"
+	"os"
 	"path/filepath"
 	"testing"
 
@@ -97,5 +99,60 @@ func TestLongNameOfLong(t *testing.T) {
 	write(t, file, "a")
 	if got, err := files.LongName(file); err != nil || got != file {
 		t.Errorf("LongName(%q) = %q, %v, want it as it is", file, got, err)
+	}
+}
+
+// A link to nothing is followed to where it leads, a directory made there later being read through it: by an absolute
+// or a relative target (from where the link is, through a link to a directory too), through a link to nothing in
+// turn, and as a name in the middle of a path. Up to 63 links in a row; a loop gives what loopAbove says.
+func TestRealAboveLinkToNothing(t *testing.T) {
+	t.Parallel()
+
+	tmp := t.TempDir()
+	base := mustReal(t, tmp)
+	in := filepath.Join(tmp, "in")
+	if err := os.MkdirAll(filepath.Join(tmp, "q", "sub"), 0o755); err != nil {
+		t.Fatal(err)
+	}
+	if err := os.MkdirAll(filepath.Join(tmp, "b"), 0o755); err != nil {
+		t.Fatal(err)
+	}
+	if err := os.Mkdir(in, 0o755); err != nil {
+		t.Fatal(err)
+	}
+	testfs.Symlink(t, filepath.Join(tmp, "x"), filepath.Join(in, "abs"))
+	testfs.Symlink(t, filepath.Join("..", "b", "x"), filepath.Join(in, "rel"))
+	testfs.Symlink(t, filepath.Join(tmp, "q", "sub"), filepath.Join(in, "sym"))
+	testfs.Symlink(t, filepath.Join("..", "none"), filepath.Join(tmp, "q", "sub", "rel"))
+	testfs.Symlink(t, filepath.Join(tmp, "y"), filepath.Join(in, "c2"))
+	testfs.Symlink(t, filepath.Join(in, "c2"), filepath.Join(in, "c1"))
+	testfs.Symlink(t, filepath.Join(in, "l2"), filepath.Join(in, "l1"))
+	testfs.Symlink(t, filepath.Join(in, "l1"), filepath.Join(in, "l2"))
+	chain := func(name string, n int) string {
+		to := filepath.Join(tmp, name+"-end")
+		for i := range n {
+			at := filepath.Join(in, fmt.Sprintf("%s%d", name, i))
+			testfs.Symlink(t, to, at)
+			to = at
+		}
+		return to
+	}
+	loopWant, loopOK := loopAbove(mustReal(t, in))
+	for _, tt := range []struct {
+		name, path, want string
+		ok               bool
+	}{
+		{"absolute", filepath.Join(in, "abs"), filepath.Join(base, "x"), true},
+		{"relative", filepath.Join(in, "rel"), filepath.Join(base, "b", "x"), true},
+		{"relative, through a link to a directory", filepath.Join(in, "sym", "rel"), filepath.Join(base, "q", "none"), true},
+		{"a link to a link to nothing", filepath.Join(in, "c1"), filepath.Join(base, "y"), true},
+		{"in the middle", filepath.Join(in, "abs", "new"), filepath.Join(base, "x", "new"), true},
+		{"60 links", chain("s", 60), filepath.Join(base, "s-end"), true},
+		{"70 links", chain("m", 70), "", false},
+		{"a loop", filepath.Join(in, "l1"), loopWant, loopOK},
+	} {
+		if got, ok := files.RealAbove(tt.path); got != tt.want || ok != tt.ok {
+			t.Errorf("%s: RealAbove(%q) = %q, %v, want %q, %v", tt.name, tt.path, got, ok, tt.want, tt.ok)
+		}
 	}
 }

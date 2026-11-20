@@ -181,6 +181,9 @@ func TestOwnDirsOverlap(t *testing.T) {
 	link(t, pp, filepath.Join(dir, "same"))
 	link(t, filepath.Join(pp, "th"), filepath.Join(dir, "in"))
 	link(t, filepath.Join(pp, "gone"), filepath.Join(dir, "dangling"))
+	link(t, filepath.Join(dir, "elsewhere", "x"), filepath.Join(dir, "far"))
+	mkdirs(t, filepath.Join(dir, "pq"))
+	link(t, filepath.Join(dir, "elsewhere", "none"), filepath.Join(dir, "pq", "out"))
 	// What the system says listing value, which floe tells in its words.
 	unusable := func(key, value string) string {
 		_, err := files.ReadDir(value)
@@ -224,8 +227,11 @@ func TestOwnDirsOverlap(t *testing.T) {
 		},
 		// Its words are taken where the test runs (Unix): Windows folds none/.. as written.
 		{"not there, then ..", map[string]string{parts: pp, themes: pp + "/none/.."}, nil, ""},
-		// A link to nothing is not followed (resolve), and is refused once what it leads to is there.
-		{"a link to nothing", map[string]string{parts: pp, themes: dir + "/dangling"}, nil, unusable(themes, dir+"/dangling")},
+		// A link to nothing is compared where it leads, before what it leads to is there.
+		{"a link to nothing", map[string]string{parts: pp, themes: dir + "/dangling"}, nil, overlap(parts, pp, themes, dir+"/dangling")},
+		{"a link to nothing, out", map[string]string{parts: pp, themes: dir + "/far"}, nil, unusable(themes, dir+"/far")},
+		// Compared where it leads alone, not where it is (RealAbove's LIMIT).
+		{"a link to nothing in it, out", map[string]string{parts: dir + "/pq", themes: dir + "/pq/out"}, nil, unusable(themes, dir+"/pq/out")},
 	} {
 		t.Run(tt.name, func(t *testing.T) {
 			t.Parallel()
