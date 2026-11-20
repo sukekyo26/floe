@@ -899,7 +899,7 @@ func (d *drawing) framesTake(k int, at []int, axis int, q float64) bool {
 }
 
 // frameSpan is where on axis the end e at a frame may stand along its side: where the routes may place it, from the
-// frame as it now stands.
+// frame as it now stands. Ends at frames move only with straight runs across the ranks, so axis is the axis port keeps.
 func (d *drawing) frameSpan(e endAt, axis int) (lo, hi float64) {
 	p := d.ported[e]
 	f := d.frames[p.cl]

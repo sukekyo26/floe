@@ -9,6 +9,7 @@ import (
 	"strings"
 	"testing"
 
+	"floe/internal/usererr"
 	"floe/internal/yamlpos"
 )
 
@@ -1211,9 +1212,10 @@ func headedGraph(rnd *rand.Rand, direction string) *graph {
 		g.Edges = append(g.Edges, e)
 	}
 	iconize(g)
-	for _, c := range headedOver(g) {
-		if rnd.IntN(2) == 0 && len(c) > 0 {
-			c[0].Icon = ""
+	_, clusters, _ := flatten(g, "#") // in the order written, so that a seed and a graph's number make it again
+	for _, c := range clusters {
+		if rnd.IntN(2) == 0 {
+			c.g.Icon = ""
 		}
 	}
 	return g
@@ -1229,8 +1231,13 @@ func TestGraphIconFrameEndsRandom(t *testing.T) {
 		for i := range tries(2000) {
 			g := headedGraph(rnd, direction)
 			l := laid(g)
-			if len(l.problems) > 0 { // edges to the group its other end stands among, told
-				continue
+			if len(l.problems) > 0 {
+				if at := slices.IndexFunc(l.problems, func(p *usererr.Error) bool {
+					return p.Key != "diagram_graph_inside" && p.Key != "diagram_graph_among"
+				}); at >= 0 {
+					t.Fatalf("%q, graph %d: %s", direction, i, l.problems[at].Error())
+				}
+				continue // an edge between a group and what it holds, or what stands among its ranks: told
 			}
 			if fault := cmp.Or(iconFault(g, l), runsFault(g, routed(g))); fault != "" {
 				t.Fatalf("%q, graph %d: %s", direction, i, fault)

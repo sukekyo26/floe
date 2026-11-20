@@ -549,7 +549,9 @@ type headRoom struct {
 // its group's left mark and its heading's node (right), past the headings over it (headFloor), a gap short of its
 // group's right mark.
 // LIMIT: a heading's width is an estimate (textWidth): an end past it may stand by the words of a heading of bold Ws.
-// LIMIT: only the headings of its own rank: an edge to a frame further down may pass by a heading on its way.
+// Measure the words if a diagram comes to show it.
+// LIMIT: only the headings of its own rank: an edge to a frame further down may pass by a heading on its way. Keep the
+// edges clear of the headings they pass if that shows.
 func (gr *group) portRange(i int) (lo, hi float64) {
 	n := gr.nodes[i]
 	lo, hi = gr.headFloor(i), math.Inf(1)
