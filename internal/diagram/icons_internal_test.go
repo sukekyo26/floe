@@ -1193,6 +1193,27 @@ parts:
         - { from: n1, to: g0, label: ww }
         - { from: n2, to: g0 }
 `,
+		"by the heading of an unnamed group round it, down": `title: S418 F, g1 of no name
+parts:
+  - graph:
+      x: 20
+      y: 20
+      nodes:
+        - group:
+            label: wwwwwwwwwwwwwww
+            nodes:
+              - group:
+                  name: g0
+                  icon: lucide/box
+                  nodes:
+                    - icon: { name: n0, icon: lucide/server, label: ww }
+        - box: { name: n1, rows: [w] }
+        - icon: { name: n2, icon: lucide/server, label: wwwwwwwww }
+        - box: { name: n3, rows: [wwww] }
+      edges:
+        - { from: n1, to: g0, label: ww }
+        - { from: n2, to: g0 }
+`,
 	} {
 		g := graphOfSpec(t, src)
 		if fault := iconFault(g, laid(g)); fault != "" {
