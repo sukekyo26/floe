@@ -78,6 +78,51 @@ func shapesOf(g *graph) map[string]string {
 	return shapes
 }
 
+// headedOver are the groups of g by name, each with itself and the groups round it that have a heading.
+func headedOver(g *graph) map[string][]*graphGroup {
+	_, clusters, _ := flatten(g, "#")
+	out := map[string][]*graphGroup{}
+	for _, c := range clusters {
+		if c.lane {
+			continue
+		}
+		var heads []*graphGroup
+		for p := &c; ; p = &clusters[p.parent] {
+			if !p.lane && headed(p.g) {
+				heads = append(heads, p.g)
+			}
+			if p.parent < 0 {
+				break
+			}
+		}
+		out[c.g.Name] = heads
+	}
+	return out
+}
+
+// frameEndFault is what is wrong with an end at pt on frame f, as drawn in l, or "": off its sides, within inEnd of a
+// corner, or by a heading of its group or a group round it (heads): within a nodeGap below it and short of a nodeGap
+// past its right, or, laid out right, within a nodeGap right of it and short of a nodeGap below it.
+func frameEndFault(l *layout, heads []*graphGroup, f rect, pt [2]float64, right bool) string {
+	if !onFrameSide(f, pt, right) {
+		return "off the frame"
+	}
+	along := 0
+	if right {
+		along = 1
+	}
+	if pt[along] < f.lo(along)+inEnd-eps || pt[along] > f.lo(along)+f.size(along)-inEnd+eps {
+		return "within inEnd of a corner"
+	}
+	for _, gr := range heads {
+		h := headRect(l.names[gr.Name].r, headArea(gr))
+		if beside := pt[1-along] < h.lo(1-along)+h.size(1-along)+nodeGap-eps; beside && pt[along] < h.lo(along)+h.size(along)+nodeGap-eps {
+			return fmt.Sprintf("by the heading of %s at %v,%v %vx%v", gr.Name, h.x, h.y, h.w, h.h)
+		}
+	}
+	return ""
+}
+
 // sidePlace is where the end pt stands on icon t: its side, and how far along it. An end on no side of it is "".
 func sidePlace(t target, pt [2]float64) (string, float64) {
 	r, x, y := t.r, pt[0], pt[1]
@@ -156,7 +201,7 @@ func iconFault(g *graph, l *layout) string {
 // runsFault is the first run of an edge of g at an icon not straight or of no length, an end at a box or a group not
 // laid out as one, or an end at a box off its outline, or "".
 func runsFault(g *graph, l *layout) string {
-	shapes := shapesOf(g)
+	shapes, heads := shapesOf(g), headedOver(g)
 	for k, p := range l.paths {
 		for _, s := range p.segs {
 			if !near(s[0], s[2]) && !near(s[1], s[3]) || math.Abs(s[0]-s[2])+math.Abs(s[1]-s[3]) < 1e-6 {
@@ -172,11 +217,13 @@ func runsFault(g *graph, l *layout) string {
 		}{{from, [2]float64{first[0], first[1]}, [2]float64{first[2], first[3]}}, {to, [2]float64{last[2], last[3]}, [2]float64{last[0], last[1]}}} {
 			shape, isBox := shapes[e.name]
 			if !isBox {
-				if t := l.names[e.name]; t.kind != "frame" {
+				t := l.names[e.name]
+				if t.kind != "frame" {
 					return fmt.Sprintf("group %s is laid out as %q", e.name, t.kind)
 				}
-				// LIMIT: an end at a group's frame is not checked to stand on it: straightened, some stand off it (S418).
-				// Check it (onFrameSide) once that is fixed.
+				if fault := frameEndFault(l, heads[e.name], t.r, e.pt, g.Direction == "right"); fault != "" {
+					return fmt.Sprintf("%s ends at %v, %s of %s at %v", p.what, e.pt, fault, e.name, t.r)
+				}
 				continue
 			}
 			if shape == "icon" {
@@ -900,6 +947,294 @@ parts:
 		}
 		if n := sharedStretches(l); n > 0 {
 			t.Errorf("%s: %d pairs of edges share a stretch", name, n)
+		}
+	}
+}
+
+// An edge between an icon and a group ends on the group's frame, inEnd or more from its corners and clear of its heading
+// and the headings of the groups round it, however the icon's end moves it: straightened, slid with its label, or by a
+// heading.
+func TestGraphIconFrameEnds(t *testing.T) {
+	t.Parallel()
+
+	for name, src := range map[string]string{
+		"into a group, down": `title: S418
+parts:
+  - graph:
+      x: 20
+      y: 20
+      nodes:
+        - icon: { name: a, icon: lucide/server, label: wwwwwwwwwwwwwwww }
+        - icon: { name: b, icon: lucide/server, label: wwwwwwwww }
+        - icon: { name: c, icon: lucide/server, label: wwww }
+        - group:
+            name: g
+            icon: lucide/box
+            nodes:
+              - icon: { name: d, icon: lucide/server, label: wwwww }
+      edges:
+        - { from: c, to: a, label: wwwwwwww }
+        - { from: b, to: g, label: wwwwww }
+        - { from: a, to: g }
+`,
+		"out of a group, right": `title: S418 right
+parts:
+  - graph:
+      direction: right
+      x: 20
+      y: 20
+      nodes:
+        - box: { name: n3, rows: [wwwwwww] }
+        - icon: { name: n4, icon: lucide/server, label: wwwwwww }
+        - box: { name: n5, rows: [wwwwwwwwwwwwwww], shape: state }
+        - group:
+            name: g0
+            icon: lucide/box
+            nodes:
+              - icon: { name: n7, icon: lucide/server, label: wwwww }
+              - box: { name: n10, rows: [ww] }
+        - box: { name: n9, rows: [wwwwwwwwwwwwwww] }
+        - box: { name: n12, rows: [wwwwwwwwwwwwwww] }
+        - box: { name: n14, rows: [wwwwwww] }
+        - icon: { name: n15, icon: lucide/server, label: ww }
+        - box: { name: n16, rows: [wwwww] }
+      edges:
+        - { from: n12, to: n4 }
+        - { from: n3, to: n10 }
+        - { from: n12, to: n16 }
+        - { from: n9, to: n14 }
+        - { from: n16, to: n5 }
+        - { from: g0, to: n15 }
+        - { from: n10, to: n16 }
+        - { from: n14, to: n10 }
+        - { from: n16, to: n9 }
+        - { from: n5, to: g0 }
+`,
+		"a labelled edge slid, right": `title: S418 A
+parts:
+  - graph:
+      direction: right
+      x: 20
+      y: 20
+      nodes:
+        - icon: { name: n0, icon: lucide/server, label: www }
+        - group:
+            name: g0
+            label: wwww
+            icon: lucide/box
+            nodes:
+              - icon: { name: n1, icon: lucide/server, label: ww }
+        - group:
+            name: g2
+            label: wwwwwwwwww
+            icon: lucide/box
+            nodes:
+              - icon: { name: n2, icon: lucide/server, label: wwwwwwwwwwwwwww }
+              - box: { name: n4, rows: [wwwwwwwwwwwwwww] }
+              - icon: { name: n10, icon: lucide/server, label: wwww }
+              - box: { name: n15, rows: [ww], shape: state }
+        - box: { name: n3, rows: [wwwwwwwwww] }
+        - group:
+            name: g1
+            label: wwwwwwwwwwww
+            icon: lucide/box
+            nodes:
+              - icon: { name: n6, icon: lucide/server, label: w }
+        - box: { name: n8, rows: [wwwwwwwwwwwwww], shape: hex }
+        - icon: { name: n9, icon: lucide/server, label: wwwwwwwwwww }
+        - box: { name: n11, rows: [wwwww], shape: hex }
+        - box: { name: n13, rows: [www], shape: pill }
+      edges:
+        - { from: n0, to: n2, label: { en: wwwwwww, ja: 字字字 } }
+        - { from: n9, to: n3, label: { en: www } }
+        - { from: n9, to: n15, label: { en: wwwwwww, ja: 字字字字字字 } }
+        - { from: n0, to: n9, label: { en: ww, ja: 字字字字字字 } }
+        - { from: n3, to: n10, label: { en: wwwwwwwwww, ja: 字字字字字字 } }
+        - { from: n8, to: n15, label: { en: wwwwwwwwww, ja: 字字字 } }
+        - { from: n0, to: n10, label: { en: wwww, ja: 字字字字字字 } }
+        - { from: n13, to: g1, label: { en: w, ja: 字字字字字字字字字 } }
+        - { from: n1, to: g2, label: { en: wwwwww, ja: 字字字字字字字字字字字 } }
+        - { from: n6, to: g0, label: { en: wwwwwww, ja: 字字字 } }
+        - { from: n1, to: n2, label: { en: wwwwww, ja: 字字字 } }
+        - { from: n11, to: n0, label: { en: wwwww, ja: 字字字字字字字字字字 } }
+        - { from: n3, to: n6, label: { en: wwwwwwwwww, ja: 字 } }
+        - { from: n13, to: n2, label: { en: wwww, ja: 字字字字字字字字字字字字字字 } }
+        - { from: n10, to: n15, label: { en: w, ja: 字字字字字字 } }
+`,
+		"by the heading, down": `title: S418 B
+parts:
+  - graph:
+      x: 20
+      y: 20
+      nodes:
+        - group:
+            name: g0
+            label: wwwwwwwwwwww
+            icon: lucide/box
+            nodes:
+              - icon: { name: n0, icon: lucide/server, label: www }
+              - box: { name: n1, rows: [wwww] }
+        - box: { name: n2, rows: [www] }
+        - icon: { name: n7, icon: lucide/server, label: wwwwwwwwwww }
+      edges:
+        - { from: n7, to: g0, label: ww }
+        - { from: n2, to: n0 }
+        - { from: n2, to: n7, label: wwwwww }
+`,
+		"a reversed edge by the heading, down": `title: S418 C
+parts:
+  - graph:
+      x: 20
+      y: 20
+      nodes:
+        - group:
+            name: g0
+            label: wwwwwwwwwwwwwww
+            icon: lucide/box
+            nodes:
+              - icon: { name: n0, icon: lucide/server, label: wwww }
+        - box: { name: n1, rows: [www] }
+        - icon: { name: n2, icon: lucide/server, label: wwwwwwwwwww }
+        - box: { name: n3, rows: [wwwww] }
+        - icon: { name: n4, icon: lucide/server, label: wwwwwww }
+      edges:
+        - { from: n3, to: n0 }
+        - { from: g0, to: n1 }
+        - { from: n2, to: n0, label: { en: ww } }
+        - { from: n0, to: n4 }
+        - { from: g0, to: n2, label: { en: wwwwwwwww } }
+`,
+		"by the heading, right": `title: S418 D
+parts:
+  - graph:
+      direction: right
+      x: 20
+      y: 20
+      nodes:
+        - group:
+            name: g0
+            label: wwwwww
+            nodes:
+              - icon: { name: n0, icon: lucide/server, label: wwwwwwwwww }
+              - box: { name: n1, rows: [ww] }
+        - group:
+            name: g1
+            label: wwwwwww
+            nodes:
+              - icon: { name: n2, icon: lucide/server, label: wwwwww }
+        - icon: { name: n3, icon: lucide/server, label: wwwwww }
+        - box: { name: n4, rows: [wwwwwwww] }
+        - icon: { name: n5, icon: lucide/server, label: www }
+        - box: { name: n6, rows: [wwwwwwwwwwww] }
+      edges:
+        - { from: n2, to: n4 }
+        - { from: n2, to: g0 }
+        - { from: g1, to: n0, label: wwwwwwww }
+`,
+		"by the heading of a group round it, down": `title: S418 F
+parts:
+  - graph:
+      x: 20
+      y: 20
+      nodes:
+        - group:
+            name: g1
+            label: wwwwwwwwwwwwwww
+            nodes:
+              - group:
+                  name: g0
+                  icon: lucide/box
+                  nodes:
+                    - icon: { name: n0, icon: lucide/server, label: ww }
+        - box: { name: n1, rows: [w] }
+        - icon: { name: n2, icon: lucide/server, label: wwwwwwwww }
+        - box: { name: n3, rows: [wwww] }
+      edges:
+        - { from: n1, to: g0, label: ww }
+        - { from: n2, to: g0 }
+`,
+	} {
+		_, v, err := yamlpos.ParseMap("s.yaml", []byte(src))
+		if err != nil {
+			t.Fatal(err)
+		}
+		s, err := read(v)
+		if err != nil {
+			t.Fatal(err)
+		}
+		g := s.Parts[0].Graph
+		if fault := iconFault(g, laid(g)); fault != "" {
+			t.Errorf("%s: %s", name, fault)
+		}
+	}
+}
+
+// headedGraph is a graph of 3 to 8 nodes, every other an icon, at random from rnd: a group g0 of the first 1 to 3, its
+// label left out a time in four, and half the time a headed group g1 round g0 and the next node, or of the next 1 or 2;
+// their icons there or not; and 2 to 8 edges, half of them labelled and many to or from a group.
+func headedGraph(rnd *rand.Rand, direction string) *graph {
+	names := make([]string, 3+rnd.IntN(6))
+	for i := range names {
+		names[i] = fmt.Sprintf("n%d", i)
+	}
+	g := graphOf(names)
+	g.Direction = direction
+	for _, nd := range g.Nodes {
+		nd.Box.Rows[0].Text["en"] = strings.Repeat("w", 1+rnd.IntN(12))
+	}
+	size := 1 + rnd.IntN(3)
+	label := strings.Repeat("w", 1+rnd.IntN(16))
+	if rnd.IntN(4) == 0 { // a group headed by its icon alone, or not at all, beneath a headed one round it
+		label = ""
+	}
+	inGroup(g, "g0", label, names[:size]...)
+	ends, held := append(slices.Clone(names), "g0", "g0", "g0"), map[string][]string{"g0": names[:size]}
+	if rnd.IntN(2) == 0 && size+2 < len(names) {
+		members, holds := names[size:size+1+rnd.IntN(2)], []string{}
+		if rnd.IntN(2) == 0 {
+			members = []string{"g0", names[size]}
+			holds = append(holds, "g0")
+			holds = append(holds, names[:size]...)
+		}
+		inGroup(g, "g1", strings.Repeat("w", 1+rnd.IntN(16)), members...)
+		ends, held["g1"] = append(ends, "g1", "g1"), append(holds, members...)
+	}
+	for range 2 + rnd.IntN(7) {
+		a, b := ends[rnd.IntN(len(ends))], ends[rnd.IntN(len(ends))]
+		if a == b || slices.Contains(held[a], b) || slices.Contains(held[b], a) {
+			continue
+		}
+		e := graphEdge{From: a, To: b, Dashed: false, Bold: false, Tone: "", Start: nil, End: nil, Label: nil}
+		if rnd.IntN(2) == 0 {
+			e.Label = Text{"en": strings.Repeat("w", 1+rnd.IntN(10))}
+		}
+		g.Edges = append(g.Edges, e)
+	}
+	iconize(g)
+	for _, c := range headedOver(g) {
+		if rnd.IntN(2) == 0 && len(c) > 0 {
+			c[0].Icon = ""
+		}
+	}
+	return g
+}
+
+// Laid out, the ends at a headed group of random small graphs stand where the routes place them: on its frame, inEnd
+// from its corners, past its heading on the side the ranks enter it by. The routes place them so before any moves.
+func TestGraphIconFrameEndsRandom(t *testing.T) {
+	t.Parallel()
+
+	for _, direction := range []string{"", "right"} {
+		rnd := rand.New(rand.NewPCG(53, 18)) //nolint:gosec // G404: graphs to try, no secret
+		for i := range tries(2000) {
+			g := headedGraph(rnd, direction)
+			l := laid(g)
+			if len(l.problems) > 0 { // edges to the group its other end stands among, told
+				continue
+			}
+			if fault := cmp.Or(iconFault(g, l), runsFault(g, routed(g))); fault != "" {
+				t.Fatalf("%q, graph %d: %s", direction, i, fault)
+			}
 		}
 	}
 }

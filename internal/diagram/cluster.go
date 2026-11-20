@@ -545,6 +545,26 @@ type headRoom struct {
 	w    float64
 }
 
+// portRange is where port i, an edge's end at a frame, may stand across the ranks, as pack and wire keep it: a gap past
+// its group's left mark and its heading's node (right), past the headings over it (headFloor), a gap short of its
+// group's right mark.
+// LIMIT: a heading's width is an estimate (textWidth): an end past it may stand by the words of a heading of bold Ws.
+// LIMIT: only the headings of its own rank: an edge to a frame further down may pass by a heading on its way.
+func (gr *group) portRange(i int) (lo, hi float64) {
+	n := gr.nodes[i]
+	lo, hi = gr.headFloor(i), math.Inf(1)
+	for _, j := range gr.ranks[n.rank] {
+		switch m := gr.nodes[j]; {
+		case m.cl != n.cl:
+		case m.kind == kindLeft || m.kind == kindHeading:
+			lo = max(lo, m.x+gr.room(j)+gr.gap(j, i))
+		case m.kind == kindRight:
+			hi = min(hi, m.x-gr.gap(i, j))
+		}
+	}
+	return lo, hi
+}
+
 // clear is how far right of the frame's left what a line reaches from above stands.
 func (h headRoom) clear() float64 { return inEnd + h.w + nodeGap }
 

@@ -454,9 +454,13 @@ func (d *drawing) bend(k int) {
 // if a diagram comes to show it.
 const keepApart = column / 2
 
-// moveRun moves points at of edge k to q on axis, unless that lands on something or, for an end at a box, crosses more
-// than before or runs close beside another edge, and reports whether it did. An end at a box stays on its outline.
+// moveRun moves points at of edge k to q on axis, unless that lands on something, takes an end at a frame past where
+// the routes may place it (framesTake) or, for an end at a box, crosses more than before or runs close beside another
+// edge, and reports whether it did. An end at a box stays on its outline.
 func (d *drawing) moveRun(k int, at []int, axis int, q float64) bool {
+	if !d.framesTake(k, at, axis, q) {
+		return false
+	}
 	pts := d.routes[k]
 	was := make([][2]float64, len(at))
 	for j, i := range at {
@@ -788,6 +792,8 @@ func (d *drawing) lineRange(k, axis int, reach, spare func(i int) float64) (lo, 
 		i, e := d.ends[k][j], endAt{k, j}
 		switch {
 		case i < 0:
+			l, h := d.frameSpan(e, axis)
+			lo, hi = max(lo, l), min(hi, h)
 		case d.icons[i] == nil:
 			b := d.boxes[i]
 			lo, hi = max(lo, b.lo(axis)+inEnd), min(hi, b.lo(axis)+b.size(axis)-inEnd)
@@ -878,4 +884,24 @@ func allOf(n int) []int {
 		all[i] = i
 	}
 	return all
+}
+
+// framesTake is whether the frames at the ends of edge k among points at take them moved to q on axis (frameSpan).
+func (d *drawing) framesTake(k int, at []int, axis int, q float64) bool {
+	for j, i := range [2]int{0, len(d.routes[k]) - 1} {
+		if _, ok := d.ported[endAt{k, j}]; ok && slices.Contains(at, i) {
+			if lo, hi := d.frameSpan(endAt{k, j}, axis); q < lo-eps || q > hi+eps {
+				return false
+			}
+		}
+	}
+	return true
+}
+
+// frameSpan is where on axis the end e at a frame may stand along its side: where the routes may place it, from the
+// frame as it now stands.
+func (d *drawing) frameSpan(e endAt, axis int) (lo, hi float64) {
+	p := d.ported[e]
+	f := d.frames[p.cl]
+	return f.lo(axis) + p.in, f.lo(axis) + f.size(axis) - p.out
 }
