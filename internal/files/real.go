@@ -42,12 +42,15 @@ func realOfChecked(p checked, path string) (string, error) {
 }
 
 // RealAbove is the real path of path, there or not: of a name not there, the nearest directory above it that is,
-// Real, with the names after it as written. False when a .. is among those names, after a name not there: Unix
-// cannot follow it; Windows folds it by its letters before it opens a path, so one there is Real already. A link
-// that leads nowhere is a name not there, and a name not there is matched by its letters, so either is refused once
-// it is there.
-// LIMIT: the names not there are kept as written: a link to nothing, a short name, another case, or a directory
-// that cannot be opened is compared by its letters (macOS, Windows). Follow them if needed.
+// Real, with the names after it as written. A link whose target is not there is followed to it: a directory made
+// there later is read through the link. False when a .. is among those names, after a name not there: Unix
+// cannot follow it; Windows folds it by its letters before it opens a path, so one there is Real already.
+// LIMIT: the names not there are kept as written: a short name, another case, or a directory that cannot be
+// opened is compared by its letters (macOS, Windows); so, on Unix, is a link that cannot be followed for another
+// reason (a loop, a target that cannot be looked at), which Windows gives false for. Follow them if needed.
+// LIMIT: more than maxHops links to nothing in a row, a link to nothing whose target has .. after a name not
+// there (Unix), and a link to a drive not there (Windows, which is not opened) give false, compared with
+// nothing. Keep their letters if that comes to matter.
 func RealAbove(path string) (string, bool) {
 	if !filepath.IsAbs(path) {
 		return "", false
@@ -55,11 +58,18 @@ func RealAbove(path string) (string, bool) {
 	if checksPaths {
 		return realAboveWalked(path)
 	}
-	rest := ""
+	rest, hops := "", 0
 	for at := path; ; {
 		got, err := Real(at)
 		if err == nil {
 			return filepath.Join(got, rest), true
+		}
+		if to, ok := linkToNothing(at, err); ok {
+			if hops++; hops > maxHops {
+				return "", false
+			}
+			at, rest = joinWritten(to, rest), ""
+			continue
 		}
 		// dirs.Dir, as written: filepath.Dir would fold sym/.. by its letters, and filepath.Split stays on a/.
 		up := dirs.Dir(at)
@@ -79,13 +89,12 @@ func RealAbove(path string) (string, bool) {
 	}
 }
 
-// realAboveWalked is RealAbove where allowed walks the path (Windows): the part there, its links followed, Real,
-// with the names not there as written; for a link to nothing, the part before the path's own link being followed
-// and the names from it on. Whatever else allowed refuses (a share, a device, a loop, a name it cannot look at)
-// is false.
+// realAboveWalked is RealAbove where allowed walks the path (Windows): the part there, its links followed (to
+// nothing too), Real, with the names not there as written. A target on a drive not there, which is not opened, and
+// whatever else allowed refuses (a share, a device, a loop, a name it cannot look at) is false.
 func realAboveWalked(path string) (string, bool) {
 	w, err := walk(path, true)
-	if err != nil {
+	if err != nil || w.noDrive {
 		return "", false
 	}
 	got, err := realOfChecked(w.at, path)
@@ -93,6 +102,35 @@ func realAboveWalked(path string) (string, bool) {
 		return "", false
 	}
 	return filepath.Join(append([]string{got}, w.rest...)...), true
+}
+
+// linkToNothing is where the link at leads, as written, when Real failed for it with err as not there: a relative
+// target under at's directory as written, its .. left for Real, which follows the links before it. False when at is
+// no link, or Real failed for another reason (a loop, a target that cannot be looked at).
+func linkToNothing(at string, err error) (string, bool) {
+	if !errors.Is(err, fs.ErrNotExist) {
+		return "", false
+	}
+	p, err := allowed(at, false)
+	if err != nil {
+		return "", false
+	}
+	to, err := readlinkAt(p)
+	if err != nil {
+		return "", false
+	}
+	if !filepath.IsAbs(to) {
+		to = dirs.Join(dirs.Dir(at), to)
+	}
+	return to, true
+}
+
+// joinWritten is rest after to, as written: filepath.Join would fold lnk/.. by its letters.
+func joinWritten(to, rest string) string {
+	if rest == "" {
+		return to
+	}
+	return dirs.Join(to, rest)
 }
 
 // LongName is path with each short name made long (Windows: SECRET~1 is .secret), its links not followed: the
