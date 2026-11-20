@@ -2282,8 +2282,9 @@ parts:
 
 	// A loop's label stands beside its line, on no background.
 	loop := laid(labelled(graphOf([]string{"a"}, "a>a"), "again", 0))
-	if slices.ContainsFunc(loop.labelEls, func(el elem) bool { return el.Class == "label-bg" }) {
-		t.Errorf("a loop's label on a background: %v", loop.inspect())
+	if !slices.ContainsFunc(loop.labelEls, func(el elem) bool { return el.Kind == "text" && el.Text["en"] == "again" }) ||
+		slices.ContainsFunc(loop.labelEls, func(el elem) bool { return el.Class == "label-bg" }) {
+		t.Errorf("a loop's label not drawn, or on a background: %v", loop.inspect())
 	}
 }
 
