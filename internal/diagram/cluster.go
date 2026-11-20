@@ -545,6 +545,23 @@ type headRoom struct {
 	w    float64
 }
 
+// portRange is where port i, an edge's end at a frame, may stand across the ranks between its group's marks, as pack
+// and wire keep it: a gap in from each.
+func (gr *group) portRange(i int) (lo, hi float64) {
+	n := gr.nodes[i]
+	lo, hi = math.Inf(-1), math.Inf(1)
+	for _, j := range gr.ranks[n.rank] {
+		switch m := gr.nodes[j]; {
+		case m.cl != n.cl:
+		case m.kind == kindLeft:
+			lo = max(lo, m.x+gr.room(j)+gr.gap(j, i))
+		case m.kind == kindRight:
+			hi = min(hi, m.x-gr.gap(i, j))
+		}
+	}
+	return lo, hi
+}
+
 // clear is how far right of the frame's left what a line reaches from above stands.
 func (h headRoom) clear() float64 { return inEnd + h.w + nodeGap }
 
