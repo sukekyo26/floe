@@ -455,10 +455,11 @@ func (d *drawing) bend(k int) {
 const keepApart = column / 2
 
 // moveRun moves points at of edge k to q on axis, unless that lands on something, takes an end at a frame past where
-// the routes may place it (framesTake) or, for an end at a box, crosses more than before or runs close beside another
-// edge, and reports whether it did. An end at a box stays on its outline.
+// it may stand (framesTake), or moves an end at a box or a frame as endsKeep does not let it, and reports whether it
+// did. An end at a box stays on its outline.
 func (d *drawing) moveRun(k int, at []int, axis int, q float64) bool {
-	if !d.framesTake(k, at, axis, q) {
+	frameEnd, takes := d.framesTake(k, at, axis, q)
+	if !takes {
 		return false
 	}
 	pts := d.routes[k]
@@ -477,8 +478,7 @@ func (d *drawing) moveRun(k int, at []int, axis int, q float64) bool {
 			runs = append(runs, segAt(pts, i))
 		}
 	}
-	if d.clear(k, runs) && (d.loops[k] || d.labelFits(k)) &&
-		(!boxEnd || d.keepsApart(k, runs) && d.crossesBelow(k, segsOf(pts))) {
+	if d.clear(k, runs) && (d.loops[k] || d.labelFits(k)) && d.endsKeep(k, runs, boxEnd, frameEnd) {
 		return true
 	}
 
@@ -486,6 +486,16 @@ func (d *drawing) moveRun(k int, at []int, axis int, q float64) bool {
 		pts[i] = was[j]
 	}
 	return false
+}
+
+// endsKeep is whether runs of edge k, moved with an end at a box or a frame, keep apart from the other edges' runs and,
+// for an end at a box, cross no more of them than before. An end at a frame may cross more: counted, the crossings
+// would refuse the moves that straighten its edge, and more edges would bend.
+func (d *drawing) endsKeep(k int, runs []seg, boxEnd, frameEnd bool) bool {
+	if !boxEnd && !frameEnd {
+		return true
+	}
+	return d.keepsApart(k, runs) && (!boxEnd || d.crossesBelow(k, segsOf(d.routes[k])))
 }
 
 // ontoOutlines brings the ends at boxes among points at of edge k, moved to q, back onto their outlines, and reports
@@ -886,22 +896,40 @@ func allOf(n int) []int {
 	return all
 }
 
-// framesTake is whether the frames at the ends of edge k among points at take them moved to q on axis (frameSpan).
-func (d *drawing) framesTake(k int, at []int, axis int, q float64) bool {
+// framesTake reports whether points at of edge k hold an end at a frame, and whether the frames take them moved to q on
+// axis (frameSpan).
+func (d *drawing) framesTake(k int, at []int, axis int, q float64) (holds, takes bool) {
 	for j, i := range [2]int{0, len(d.routes[k]) - 1} {
 		if _, ok := d.ported[endAt{k, j}]; ok && slices.Contains(at, i) {
+			holds = true
 			if lo, hi := d.frameSpan(endAt{k, j}, axis); q < lo-eps || q > hi+eps {
-				return false
+				return true, false
 			}
 		}
 	}
-	return true
+	return holds, true
 }
 
-// frameSpan is where on axis the end e at a frame may stand along its side: where the routes may place it, from the
-// frame as it now stands. Ends at frames move only with straight runs across the ranks, so axis is the axis port keeps.
+// frameSpan is where on axis the end e at a frame may stand along its side: as far in from the frame's ends as the
+// routes keep it (port), and a nodeGap past the heading of its group or a group round it, as drawn, where it stands
+// within a nodeGap below it. Ends at frames move only with straight runs across the ranks, so axis is the axis port
+// keeps.
+// LIMIT: a heading's width is an estimate (textWidth): an end past it may stand by the words of a heading of bold Ws.
+// Measure the words if a diagram comes to show it.
+// LIMIT: only the headings an end stands by: an edge to a frame further down may pass by a heading on its way. Keep the
+// edges clear of the headings they pass if that shows.
 func (d *drawing) frameSpan(e endAt, axis int) (lo, hi float64) {
 	p := d.ported[e]
 	f := d.frames[p.cl]
-	return f.lo(axis) + p.in, f.lo(axis) + f.size(axis) - p.out
+	lo, hi = f.lo(axis)+p.in, f.lo(axis)+f.size(axis)-p.out
+	pts := d.routes[e.edge]
+	at := pts[e.end*(len(pts)-1)][1-axis]
+	for _, c := range p.round {
+		if head, ok := d.heads[c]; ok {
+			if h := headRect(d.frames[c], head); at < h.lo(1-axis)+h.size(1-axis)+nodeGap {
+				lo = max(lo, h.lo(axis)+h.size(axis)+nodeGap)
+			}
+		}
+	}
+	return lo, hi
 }

@@ -200,9 +200,16 @@ func iconFault(g *graph, l *layout) string {
 }
 
 // runsFault is the first run of an edge of g at an icon not straight or of no length, an end at a box or a group not
-// laid out as one, or an end at a box off its outline, or "".
+// laid out as one, an end at a box off its outline, or an end at a group's frame where it should not stand
+// (frameEndFault) or nearer than keepApart to another edge's end there, or "".
 func runsFault(g *graph, l *layout) string {
 	shapes, heads := shapesOf(g), headedOver(g)
+	type frameEnd struct {
+		name string
+		pt   [2]float64
+		k    int
+	}
+	var framed []frameEnd
 	for k, p := range l.paths {
 		for _, s := range p.segs {
 			if !near(s[0], s[2]) && !near(s[1], s[3]) || math.Abs(s[0]-s[2])+math.Abs(s[1]-s[3]) < 1e-6 {
@@ -225,6 +232,12 @@ func runsFault(g *graph, l *layout) string {
 				if fault := frameEndFault(l, heads[e.name], t.r, e.pt, g.Direction == "right"); fault != "" {
 					return fmt.Sprintf("%s ends at %v, %s of %s at %v", p.what, e.pt, fault, e.name, t.r)
 				}
+				for _, o := range framed {
+					if o.name == e.name && o.k != k && math.Hypot(o.pt[0]-e.pt[0], o.pt[1]-e.pt[1]) < keepApart-eps {
+						return fmt.Sprintf("%s ends at %v, by %s at %v on the frame of %s", p.what, e.pt, l.paths[o.k].what, o.pt, e.name)
+					}
+				}
+				framed = append(framed, frameEnd{e.name, e.pt, k})
 				continue
 			}
 			if shape == "icon" {
@@ -1155,15 +1168,7 @@ parts:
         - { from: n2, to: g0 }
 `,
 	} {
-		_, v, err := yamlpos.ParseMap("s.yaml", []byte(src))
-		if err != nil {
-			t.Fatal(err)
-		}
-		s, err := read(v)
-		if err != nil {
-			t.Fatal(err)
-		}
-		g := s.Parts[0].Graph
+		g := graphOfSpec(t, src)
 		if fault := iconFault(g, laid(g)); fault != "" {
 			t.Errorf("%s: %s", name, fault)
 		}
@@ -1242,6 +1247,62 @@ func TestGraphIconFrameEndsRandom(t *testing.T) {
 			if fault := cmp.Or(iconFault(g, l), runsFault(g, routed(g))); fault != "" {
 				t.Fatalf("%q, graph %d: %s", direction, i, fault)
 			}
+		}
+	}
+}
+
+// graphOfSpec is the graph of src, a diagram spec of one graph.
+func graphOfSpec(t *testing.T, src string) *graph {
+	t.Helper()
+	_, v, err := yamlpos.ParseMap("s.yaml", []byte(src))
+	if err != nil {
+		t.Fatal(err)
+	}
+	s, err := read(v)
+	if err != nil {
+		t.Fatal(err)
+	}
+	return s.Parts[0].Graph
+}
+
+// An edge into a group laid out right that runs straight past its heading stays straight: the heading is kept clear
+// of as drawn, a nodeGap below it.
+func TestGraphIconFrameEndsStraight(t *testing.T) {
+	t.Parallel()
+
+	g := graphOfSpec(t, `title: right 686
+parts:
+  - graph:
+      direction: right
+      x: 20
+      y: 20
+      nodes:
+        - group:
+            name: g0
+            label: wwwwwwwwwwwww
+            icon: lucide/box
+            nodes:
+              - icon: { name: n0, icon: lucide/server, label: ww }
+        - box: { name: n1, rows: [wwwwwwwwwwww] }
+        - icon: { name: n2, icon: lucide/server, label: wwwww }
+        - box: { name: n3, rows: [wwwwwwwwwww] }
+        - icon: { name: n4, icon: lucide/server, label: wwwwwwwwwwww }
+        - box: { name: n5, rows: [wwwwww] }
+        - icon: { name: n6, icon: lucide/server, label: w }
+        - box: { name: n7, rows: [wwwwwwwww] }
+      edges:
+        - { from: n2, to: n5 }
+        - { from: n6, to: g0, label: wwwwwwwwww }
+        - { from: n6, to: g0 }
+        - { from: n7, to: n0 }
+`)
+	l := laid(g)
+	if fault := iconFault(g, l); fault != "" {
+		t.Fatal(fault)
+	}
+	for k, e := range g.Edges {
+		if e.To == "g0" && len(l.paths[k].segs) != 1 {
+			t.Errorf("%s runs %v, want it straight", l.paths[k].what, l.paths[k].segs)
 		}
 	}
 }

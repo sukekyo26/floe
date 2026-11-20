@@ -455,18 +455,23 @@ func (d *drawing) keepEnds(gr *group, k int) {
 				across = 1
 			}
 			// From the frame's two ends: every stretch from here on moves on what lies past a point and grows a frame
-			// across it at its far side, so the distance from its heading's side holds.
-			d.ported[endAt{k, j}] = port{cl: n.cl, in: lo - f.lo(across), out: f.lo(across) + f.size(across) - hi}
+			// across it at its far side, so the end keeps its distance from the near end and keeps or grows it from the far.
+			var round []int
+			for c := n.cl; c >= 0; c = gr.out.clusters[c].parent {
+				round = append(round, c)
+			}
+			d.ported[endAt{k, j}] = port{cl: n.cl, in: lo - f.lo(across), out: f.lo(across) + f.size(across) - hi, round: round}
 		}
 	}
 	d.ends[k] = ends
 }
 
-// port is an edge's end at the frame of group cl: how far in from the frame's two ends along its side the routes may
-// place it (portRange), kept from the frame as the frame stretches.
+// port is an edge's end at the frame of group cl, round which stand the groups round (cl first): how far in from the
+// frame's two ends along its side the routes may place it (portRange), kept from the frame as the frame stretches.
 type port struct {
 	cl      int
 	in, out float64
+	round   []int
 }
 
 // addBox keeps box n as drawn.
