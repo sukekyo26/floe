@@ -97,6 +97,9 @@ func realAboveWalked(path string) (string, bool) {
 	if err != nil || w.noDrive {
 		return "", false
 	}
+	if w.dangling { // probe: no link to nothing followed (Windows)
+		return "", false
+	}
 	got, err := realOfChecked(w.at, path)
 	if err != nil {
 		return "", false
