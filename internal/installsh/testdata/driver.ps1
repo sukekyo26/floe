@@ -24,7 +24,34 @@ function global:Invoke-WebRequest {
   if ($named.MaximumRedirection -ne 0) { throw "the test's Invoke-WebRequest: -MaximumRedirection $($named.MaximumRedirection), not 0" }
   $named.Proxy = $global:floeTest.proxy
   if ($PSVersionTable.PSEdition -ne 'Desktop') { $named.SkipCertificateCheck = $true }
-  Microsoft.PowerShell.Utility\Invoke-WebRequest @named
+  # Windows PowerShell 5.1 now and then sends nothing on a tunnel the proxy opened, and the request times out without
+  # having reached the server (.NET Framework's own): such a request is sent once more, once in a run. See runPS.
+  # LIMIT: a request that reached the server on one tunnel while another .NET opened stayed silent, and then timed
+  # out, would be sent twice; a case that runs on psWait has a server that answers, so it does not time out.
+  for (;;) {
+    $last = if ($Error.Count) { $Error[0] } else { $null }
+    if ($global:floeTest.retryStop) { $silent = FloeSilent }
+    $got = $null; $failed = $null; $thrown = $false
+    try {
+      $got = Microsoft.PowerShell.Utility\Invoke-WebRequest @named
+      if ($Error.Count -and -not [object]::ReferenceEquals($Error[0], $last)) { $failed = $Error[0] }
+    } catch { $failed = $_; $thrown = $true }
+    # Windows PowerShell's time-out; PowerShell 7's is no WebException and is never sent again.
+    $timedOut = $null -ne $failed -and $failed.Exception -is [Net.WebException] -and $failed.Exception.Status -eq [Net.WebExceptionStatus]::Timeout
+    if ($global:floeTest.retryStop -and $global:floeRetried -eq 0 -and $null -eq $got -and $timedOut -and (FloeSilent) -gt $silent) {
+      $global:floeRetried++
+      continue
+    }
+    if ($thrown) { throw $failed }
+    return $got
+  }
+}
+$global:floeRetried = 0
+# The count of tunnels the test's proxy opened and heard nothing on (site in the test).
+function global:FloeSilent {
+  $client = New-Object Net.WebClient
+  $client.Proxy = $null
+  [int]$client.DownloadString($global:floeTest.proxy + '/floe-test/silent')
 }
 if ($floeTest.failMove) {
   # The rename that puts the new file in place fails; the one that moves floe.exe aside, and the one back, do not.
@@ -106,6 +133,7 @@ try {
   else { $floeReport.pathKind = '' + $floeEnv.GetValueKind('Path'); $floeReport.path = (@($floeValue) -join '|') }
   $floeReport.pathName = '' + ($floeEnv.GetValueNames() | Where-Object { $_ -ieq 'path' })
   $floeReport.notice = $null -ne $floeEnv.GetValue('FLOE_INSTALL_PATH_NOTICE')
+  $floeReport.retried = $global:floeRetried
   $floeEnv.Close()
   [void][FloeTestRegistry]::RegOverridePredefKey([FloeTestRegistry]::CurrentUser, [IntPtr]::Zero)
   $floeSoftware.DeleteSubKeyTree($floeKeyName, $false)

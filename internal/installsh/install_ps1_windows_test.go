@@ -41,11 +41,36 @@ type ghRelease struct {
 	mute      <-chan struct{} // not nil: the proxy answers a CONNECT and goes no further, until it is closed
 	hits      atomic.Int32    // requests the server answered
 	plain     atomic.Int32    // of them, requests in plain http
+
+	// lose names the CONNECTs the proxy loses, in order: one to lose[0] answers 200 and is never read from, the stop
+	// Windows PowerShell 5.1 makes now and then, made; loseClose closes it at once instead of when the test ends.
+	lose      []string
+	loseClose bool
+	loseMu    sync.Mutex
+	tunnels   atomic.Int32 // CONNECTs tunnelled on to the TLS server, or lost
+	spoken    atomic.Int32 // of them, ones a byte of the client's was read on
+}
+
+// firstRead calls seen once, at the first byte read.
+type firstRead struct {
+	r    io.Reader
+	once sync.Once
+	seen func()
+}
+
+func (f *firstRead) Read(p []byte) (int, error) {
+	n, err := f.r.Read(p)
+	if n > 0 {
+		f.once.Do(f.seen)
+	}
+	return n, err
 }
 
 const (
 	repoPath  = "/sukekyo26/floe/releases/download/"
 	githubURL = "https://github.com" + repoPath
+	// silentPath is where the proxy tells the driver how many tunnels it heard nothing on.
+	silentPath = "/floe-test/silent"
 )
 
 var (
@@ -206,8 +231,13 @@ func site(t *testing.T, r *ghRelease) string {
 	tlsServer.StartTLS()
 	t.Cleanup(tlsServer.Close)
 
+	ended := t.Context().Done()
 	proxy := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, req *http.Request) {
 		if req.Method != http.MethodConnect {
+			if req.URL.Path == silentPath { // the driver's, not install.ps1's: not counted
+				answer(w, strconv.Itoa(int(r.tunnels.Load()-r.spoken.Load())))
+				return
+			}
 			plain(w, req)
 			return
 		}
@@ -228,7 +258,24 @@ func site(t *testing.T, r *ghRelease) string {
 			_ = up.Close()
 			return
 		}
+		r.loseMu.Lock()
+		lost := len(r.lose) > 0 && r.lose[0] == req.Host
+		if lost {
+			r.lose = r.lose[1:]
+		}
+		r.loseMu.Unlock()
+		if r.mute == nil {
+			r.tunnels.Add(1) // before the 200: a client that has it sees the tunnel counted
+		}
 		answer(conn, "HTTP/1.1 200 Connection established\r\n\r\n")
+		if lost && r.mute == nil {
+			_ = up.Close() //nolint:errcheck // nothing was sent on it
+			if !r.loseClose {
+				<-ended // the client waits for a TLS that does not come, until it gives up
+			}
+			_ = conn.Close() //nolint:errcheck // nothing more is sent on it
+			return
+		}
 		if r.mute != nil {
 			_ = up.Close()   //nolint:errcheck // nothing was sent on it
 			<-r.mute         // the client waits for a TLS that does not come
@@ -238,9 +285,11 @@ func site(t *testing.T, r *ghRelease) string {
 		// What the client sent before the answer was read with its request: it is in rw, not on conn, and goes up first.
 		sent := io.MultiReader(io.LimitReader(rw.Reader, int64(rw.Reader.Buffered())), conn)
 		// A tunnel: either side may end it, so neither copy's error is a failure of the test.
-		go func() { _, _ = io.Copy(up, sent); _ = up.Close() }() //nolint:errcheck // see above
-		_, _ = io.Copy(conn, up)                                 //nolint:errcheck // see above
-		_ = conn.Close()                                         //nolint:errcheck // see above
+		// A tunnel the client sent nothing on is what the stop of Windows PowerShell 5.1 looks like (driver.ps1).
+		heard := &firstRead{r: sent, seen: func() { r.spoken.Add(1) }}
+		go func() { _, _ = io.Copy(up, heard); _ = up.Close() }() //nolint:errcheck // see above
+		_, _ = io.Copy(conn, up)                                  //nolint:errcheck // see above
+		_ = conn.Close()                                          //nolint:errcheck // see above
 	}))
 	t.Cleanup(proxy.Close)
 	return proxy.URL
@@ -262,6 +311,17 @@ func status(code int, body string) func(w http.ResponseWriter, r *http.Request, 
 // stop in one run.
 const psLimit = 5 * time.Minute
 
+// psWait is the seconds install.ps1 waits for an answer in a run whose case does not set them: long past what an
+// answer takes (a whole run took 21.5 seconds at most, 12 side by side), short of psLimit, for a request Windows
+// PowerShell lost to time out and be sent again (driver.ps1).
+// LIMIT: the time of a run on CI was not measured. A run that times out with the client heard from is not sent
+// again and fails: then raise it.
+const psWait = "60"
+
+// timeoutHint is what install.ps1 adds when PowerShell gave up on a silence: the cases look for it, not for the rest
+// of the words. Whether a request is sent again does not read it (driver.ps1).
+const timeoutHint = "FLOE_INSTALL_TIMEOUT sets how many seconds to wait for an answer"
+
 // psCase is one run of install.ps1: what the driver does (testdata/driver.ps1) and the environment.
 type psCase struct {
 	Proxy       string `json:"proxy"`
@@ -279,7 +339,10 @@ type psCase struct {
 	FailMove    bool   `json:"failMove"`
 	FailCleanup bool   `json:"failCleanup"`
 	FailCopy    bool   `json:"failCopy"`
-	Tmp         string `json:"tmp"` // TMP and TEMP while install.ps1 runs; "" is base\tmp, for the driver too
+	Tmp         string `json:"tmp"`       // TMP and TEMP while install.ps1 runs; "" is base\tmp, for the driver too
+	RetryStop   bool   `json:"retryStop"` // runPS's: the driver sends a request lost as Windows PowerShell does once more
+
+	madeStop bool // the case loses a request itself: a retry of it is not told in CI's summary
 
 	env   map[string]string // FLOE_* and the machine's variables; "" removes one
 	limit time.Duration     // how long the run may take; 0 is psLimit
@@ -293,6 +356,7 @@ type psResult struct {
 	report         struct {
 		Eap, Progress, PathKind, Path, PathName string
 		Strict, Notice                          bool
+		Retried                                 int
 	}
 }
 
@@ -332,6 +396,9 @@ func runPS(t *testing.T, shell, base string, c psCase) *psResult {
 	}
 	c.Home = base
 	c.Report = filepath.Join(base, "report.json")
+	// A case that sets the seconds to wait looks at time-outs itself: none of its requests is sent again.
+	_, own := c.env["FLOE_INSTALL_TIMEOUT"]
+	c.RetryStop = !own
 	js, err := json.Marshal(c)
 	if err != nil {
 		t.Fatal(err)
@@ -358,9 +425,7 @@ func runPS(t *testing.T, shell, base string, c psCase) *psResult {
 	set("PROCESSOR_ARCHITECTURE", strings.ToUpper(runtime.GOARCH))
 	set("PROCESSOR_ARCHITEW6432", "")
 	set("FLOE_TEST_CASE", string(js))
-	// Longer than psLimit, unless the case says: a PowerShell that stops as it once did is then killed by the
-	// test, with what waited on it, before install.ps1 gives up by itself and tells less.
-	set("FLOE_INSTALL_TIMEOUT", "600")
+	set("FLOE_INSTALL_TIMEOUT", psWait)
 	for k, v := range c.env {
 		set(k, v)
 	}
@@ -404,7 +469,35 @@ func runPS(t *testing.T, shell, base string, c psCase) *psResult {
 	if err := json.Unmarshal(b, &res.report); err != nil {
 		t.Fatalf("the driver's report %s: %v", b, err)
 	}
+	if res.report.Retried > 0 {
+		t.Logf("%s timed out on a tunnel it sent nothing on: the request was sent again", shell)
+		if !c.madeStop {
+			noteRetry(t)
+		}
+	}
 	return res
+}
+
+var summaryMu sync.Mutex
+
+// noteRetry adds a line for t to the summary of the CI step running it (GITHUB_STEP_SUMMARY): go test shows nothing
+// of a package that passed, and a retry is seen there. Elsewhere, with no such file, it does nothing.
+func noteRetry(t *testing.T) {
+	t.Helper()
+	path := os.Getenv("GITHUB_STEP_SUMMARY")
+	if path == "" {
+		return
+	}
+	summaryMu.Lock() // a line at a time: the runs go side by side
+	defer summaryMu.Unlock()
+	f, err := os.OpenFile(path, os.O_APPEND|os.O_WRONLY|os.O_CREATE, 0o600) //nolint:gosec // G304: the file CI names
+	if err == nil {
+		_, err = fmt.Fprintf(f, "- `%s`: Windows PowerShell sent nothing on a tunnel and timed out; the request was sent again\n", t.Name())
+		err = errors.Join(err, f.Close())
+	}
+	if err != nil {
+		t.Errorf("the retry could not be told in the step's summary: %v", err)
+	}
 }
 
 // shells are the PowerShells the test runs: Windows PowerShell is part of Windows; PowerShell 7 must be there on CI.
@@ -788,7 +881,7 @@ func testInstallPS1(t *testing.T, shell string) {
 		})
 	}
 	// What install.ps1 adds when PowerShell gave up on a silence, and what it says of a FLOE_INSTALL_TIMEOUT it refuses.
-	const waited = "check your network and proxy and run it again; FLOE_INSTALL_TIMEOUT sets how many seconds to wait for an answer (now 3)"
+	const waited = "check your network and proxy and run it again; " + timeoutHint + " (now 3)"
 	const refused = "FLOE_INSTALL_TIMEOUT must be"
 	// A server or a proxy that goes silent is given up on after FLOE_INSTALL_TIMEOUT seconds, and told as that. A
 	// run that does not give up is killed at a minute, not at psLimit.
@@ -831,6 +924,59 @@ func testInstallPS1(t *testing.T, shell string) {
 			r := s.make(t, hold)
 			res, dir := install(t, r, psCase{limit: time.Minute, env: map[string]string{"FLOE_INSTALL_TIMEOUT": "3"}})
 			fails(t, res, dir, "download failed: ", waited)
+			if res.report.Retried != 0 {
+				t.Errorf("a request was sent again %d times:\n%s", res.report.Retried, res)
+			}
+		})
+	}
+	// Windows PowerShell 5.1 now and then sends nothing on a tunnel the proxy opened, and the request times out
+	// (driver.ps1). Made by a proxy that loses the CONNECTs named, such a request is sent again: once in a run, in a
+	// case that does not set the wait, on that time-out, on a tunnel heard nothing on. PowerShell 7's time-out is
+	// not one of Windows PowerShell's, and none of its requests is sent again.
+	const api, gh = "api.github.com:443", "github.com:443"
+	for _, s := range []struct {
+		name    string
+		lose    []string
+		close   bool   // the lost tunnel is closed at once
+		deaf    bool   // the server does not answer for floe.exe
+		wait    string // FLOE_INSTALL_TIMEOUT; "" is runPS's
+		retried int    // in Windows PowerShell
+		works   bool   // in Windows PowerShell
+		says    string // what a failure says
+	}{
+		{"once, then it works", []string{gh}, false, false, "", 1, true, timeoutHint},
+		{"every time", []string{gh, gh}, false, false, "", 1, false, timeoutHint},
+		{"two requests", []string{api, gh}, false, false, "", 1, false, timeoutHint},
+		{"the tunnel closed", []string{gh}, true, false, "", 0, false, "download failed: "},
+		{"no tunnel left silent", nil, false, true, "", 0, false, timeoutHint},
+		{"a wait of its own", []string{gh}, false, false, "3", 0, false, timeoutHint},
+	} {
+		t.Run("stop: "+s.name, func(t *testing.T) {
+			t.Parallel()
+			hold := make(chan struct{})
+			defer close(hold) // before the servers close, which wait for their handlers
+			r := goodRelease(t)
+			if s.deaf {
+				r = broken(t, asset, func(http.ResponseWriter, *http.Request, string) { <-hold })
+			}
+			r.lose, r.loseClose = s.lose, s.close
+			c := psCase{madeStop: true}
+			if s.wait != "" {
+				c.env = map[string]string{"FLOE_INSTALL_TIMEOUT": s.wait}
+			}
+			res, dir := install(t, r, c)
+			retried, installs := s.retried, s.works
+			if shell != "powershell" {
+				retried, installs = 0, false
+			}
+			if res.report.Retried != retried {
+				t.Errorf("a request was sent again %d times, want %d:\n%s", res.report.Retried, retried, res)
+			}
+			if installs {
+				works(t, r, res, dir, host)
+			} else {
+				fails(t, res, dir, s.says)
+			}
 		})
 	}
 	t.Run("slow, never silent", func(t *testing.T) {
@@ -1359,7 +1505,7 @@ func testPathPS1(t *testing.T, shell string, install func(*testing.T, *ghRelease
 				t.Fatalf("no line shown:\n%s", res)
 			}
 			// The seconds to wait the run was given (runPS's) are in the line, as the folder and the version are.
-			if !strings.Contains(shown, "$env:FLOE_INSTALL_TIMEOUT = '600'; ") {
+			if !strings.Contains(shown, "$env:FLOE_INSTALL_TIMEOUT = '"+psWait+"'; ") {
 				t.Errorf("the line shown is %q, want FLOE_INSTALL_TIMEOUT in it:\n%s", shown, res)
 			}
 			script, err := filepath.Abs(filepath.Join("..", "..", "install.ps1"))
