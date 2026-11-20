@@ -3,6 +3,7 @@ package diagram
 import (
 	"cmp"
 	"fmt"
+	"maps"
 	"math"
 	"math/rand/v2"
 	"slices"
@@ -79,32 +80,11 @@ func shapesOf(g *graph) map[string]string {
 	return shapes
 }
 
-// headedOver are the groups of g by name, each with itself and the groups round it that have a heading.
-func headedOver(g *graph) map[string][]*graphGroup {
-	_, clusters, _ := flatten(g, "#")
-	out := map[string][]*graphGroup{}
-	for _, c := range clusters {
-		if c.lane {
-			continue
-		}
-		var heads []*graphGroup
-		for p := &c; ; p = &clusters[p.parent] {
-			if !p.lane && headed(p.g) {
-				heads = append(heads, p.g)
-			}
-			if p.parent < 0 {
-				break
-			}
-		}
-		out[c.g.Name] = heads
-	}
-	return out
-}
-
-// frameEndFault is what is wrong with an end at pt on frame f, as drawn in l, or "": off its sides, within inEnd of a
-// corner, or by a heading of its group or a group round it (heads): within a nodeGap below it and short of a nodeGap
-// past its right, or, laid out right, within a nodeGap right of it and short of a nodeGap below it.
-func frameEndFault(l *layout, heads []*graphGroup, f rect, pt [2]float64, right bool) string {
+// frameEndFault is what is wrong with an end at pt on the frame of group c of lg, or "": off its sides, within inEnd of a
+// corner, or by a heading of c or a group round it: within a nodeGap below it and short of a nodeGap past its right,
+// or, laid out right, within a nodeGap right of it and short of a nodeGap below it.
+func frameEndFault(lg laidGroups, c int, pt [2]float64, right bool) string {
+	f := lg.frames[c]
 	if !onFrameSide(f, pt, right) {
 		return "off the frame"
 	}
@@ -115,10 +95,14 @@ func frameEndFault(l *layout, heads []*graphGroup, f rect, pt [2]float64, right 
 	if pt[along] < f.lo(along)+inEnd-eps || pt[along] > f.lo(along)+f.size(along)-inEnd+eps {
 		return "within inEnd of a corner"
 	}
-	for _, gr := range heads {
-		h := headRect(l.names[gr.Name].r, headArea(gr))
+	for p := c; p >= 0; p = lg.clusters[p].parent {
+		gr := lg.clusters[p].g
+		if lg.clusters[p].lane || !headed(gr) {
+			continue
+		}
+		h := headRect(lg.frames[p], headArea(gr))
 		if beside := pt[1-along] < h.lo(1-along)+h.size(1-along)+nodeGap-eps; beside && pt[along] < h.lo(along)+h.size(along)+nodeGap-eps {
-			return fmt.Sprintf("by the heading of %s at %v,%v %vx%v", gr.Name, h.x, h.y, h.w, h.h)
+			return fmt.Sprintf("by the heading of group %d %q at %v,%v %vx%v", p, gr.Name, h.x, h.y, h.w, h.h)
 		}
 	}
 	return ""
@@ -130,7 +114,7 @@ func sidePlace(t target, pt [2]float64) (string, float64) {
 	switch {
 	case y == r.y && x > r.x && x < r.x+r.w:
 		return "top", x - r.x
-	case (y == r.y+r.h || y == r.y+r.h+t.under) && x > r.x && x < r.x+r.w:
+	case y == r.y+r.h+underAt(t, x) && x > r.x && x < r.x+r.w:
 		return "bottom", x - r.x
 	case x == r.x && y > r.y && y < r.y+r.h:
 		return "left", y - r.y
@@ -140,17 +124,18 @@ func sidePlace(t target, pt [2]float64) (string, float64) {
 	return "", 0
 }
 
+func underAt(t target, x float64) float64 {
+	if math.Abs(x-(t.r.x+t.r.w/2)) <= t.labelW/2 {
+		return t.under
+	}
+	return 0
+}
+
 // iconFault is what is wrong with g laid out as l, or "": a mistake told, a path not its edge's, an end at an icon not
 // laid out as one or off it, the ends on a side not parting it equally, a run at an icon too short for an arrow, or a
 // label not on a run of its edge.
 func iconFault(g *graph, l *layout) string {
-	if l.failure != nil {
-		return l.failure.Error()
-	}
-	if len(l.problems) > 0 {
-		return l.problems.Error()
-	}
-	if fault := edgesFault(g, l); fault != "" {
+	if fault := laidOutFault(g, l); fault != "" {
 		return fault
 	}
 	shapes := shapesOf(g)
@@ -183,12 +168,29 @@ func iconFault(g *graph, l *layout) string {
 			straight[place{e.name, side}] = len(p.segs) == 1
 		}
 	}
+	moves, fault := iconMoves(g, l)
+	if fault != "" {
+		return fault
+	}
+	for _, name := range slices.Sorted(maps.Keys(moves)) {
+		if m := moves[name]; math.Abs(m.moved) > m.may+1e-6 {
+			return fmt.Sprintf("icon %s moved %v, %v at most", name, m.moved, m.may)
+		}
+	}
+	endsAt := map[string]int{}
+	for at, ends := range on {
+		endsAt[at.name] += len(ends)
+	}
 	for at, ends := range on {
 		slices.Sort(ends)
 		for i, v := range ends {
 			size := l.names[at.name].r.size(sideAxis(at.side))
 			want := size * float64(i+1) / float64(len(ends)+1)
-			if len(ends) == 1 && straight[at] && math.Abs(v-want) <= max(0, min(iconSpareMost, size/2-inEnd))+1e-6 { // offPoint
+			m := moves[at.name]
+			// offPoint: an end alone on its side, straight, stands off its point only when its icon has other ends, which
+			// keep it where it is, or has moved as far as it may towards the line.
+			still := endsAt[at.name] > 1 || math.Abs(m.moved) > m.may-1e-6 && m.moved*(v-want) > 0
+			if len(ends) == 1 && straight[at] && still && math.Abs(v-want) <= max(0, min(iconSpareMost, size/2-inEnd))+1e-6 {
 				continue
 			}
 			if math.Abs(v-want) > 1e-6 {
@@ -203,7 +205,11 @@ func iconFault(g *graph, l *layout) string {
 // laid out as one, an end at a box off its outline, or an end at a group's frame where it should not stand
 // (frameEndFault) or nearer than keepApart to another edge's end there, or "".
 func runsFault(g *graph, l *layout) string {
-	shapes, heads := shapesOf(g), headedOver(g)
+	shapes := shapesOf(g)
+	lg, fault := groupsOf(g, l)
+	if fault != "" {
+		return fault
+	}
 	type frameEnd struct {
 		name string
 		pt   [2]float64
@@ -225,12 +231,13 @@ func runsFault(g *graph, l *layout) string {
 		}{{from, [2]float64{first[0], first[1]}, [2]float64{first[2], first[3]}}, {to, [2]float64{last[2], last[3]}, [2]float64{last[0], last[1]}}} {
 			shape, isBox := shapes[e.name]
 			if !isBox {
-				t := l.names[e.name]
-				if t.kind != "frame" {
-					return fmt.Sprintf("group %s is laid out as %q", e.name, t.kind)
+				c := lg.named(e.name)
+				if c < 0 {
+					return fmt.Sprintf("%s ends at %s, no box, icon or group of the graph", p.what, e.name)
 				}
-				if fault := frameEndFault(l, heads[e.name], t.r, e.pt, g.Direction == "right"); fault != "" {
-					return fmt.Sprintf("%s ends at %v, %s of %s at %v", p.what, e.pt, fault, e.name, t.r)
+				r := lg.frames[c]
+				if fault := frameEndFault(lg, c, e.pt, g.Direction == "right"); fault != "" {
+					return fmt.Sprintf("%s ends at %v, %s of %s at %v", p.what, e.pt, fault, e.name, r)
 				}
 				for _, o := range framed {
 					if o.name == e.name && o.k != k && math.Hypot(o.pt[0]-e.pt[0], o.pt[1]-e.pt[1]) < keepApart-eps {
@@ -276,34 +283,43 @@ func labelsOn(g *graph, l *layout) string {
 	return ""
 }
 
-// reachFault is the first icon of g moved past what it may, or "".
-func reachFault(g *graph) string {
-	o, _ := readGraph(g, "#/parts/0/graph", graphWay{(*drawing).settleEnds, false}) //nolint:errcheck // its mistakes are iconFault's
-	if _, _, err := o.items(); err != nil {                                         //nolint:errcheck // its mistakes are iconFault's
-		return ""
+// movedIcon is how far an icon stands from the middle of its rectangle across the ranks, and how far it may.
+type movedIcon struct{ moved, may float64 }
+
+// iconMoves is the move of each icon of g, laid out as l by laid, by its name, or what is wrong. It settles g's ends
+// as layoutWay does: with offPoint, unless that leaves a mistake.
+func iconMoves(g *graph, l *layout) (map[string]movedIcon, string) {
+	settle := (*drawing).settleOff
+	if off := laidWith(g, placing{(*layout).shareStraight, graphWay{settle, false}}); off.failure != nil || len(off.problems) > 0 {
+		settle = (*drawing).settleEnds
+	}
+	o, _ := readGraph(g, "#/parts/0/graph", graphWay{settle, false}) //nolint:errcheck // the same as items tells
+	_, told, err := o.items()
+	if err = cmp.Or(err, told.Err()); err != nil {
+		return nil, err.Error()
 	}
 	axis := 0
 	if g.Direction == "right" {
 		axis = 1
 	}
+	moves := map[string]movedIcon{}
 	for i, n := range o.boxes {
-		ic, r, at := n.box.icon, o.drawn[i].cell, o.drawn[i].icon
-		if ic == nil {
+		if n.box == nil || n.box.icon == nil {
 			continue
 		}
-		stands := iconWidest(ic)
-		if axis == 1 {
-			stands = iconSize(ic) + iconUnder(ic)
+		ic, r, at := n.box.icon, o.drawn[i].cell, o.drawn[i].icon
+		if t := l.names[n.box.Name].r; t.x != at.x || t.y != at.y {
+			return nil, fmt.Sprintf("icon %s stands at %v,%v, laid out at %v,%v", n.box.Name, at.x, at.y, t.x, t.y)
 		}
+		stands := iconWidest(ic)
 		moved := at.lo(axis) + at.size(axis)/2 - (r.lo(axis) + r.size(axis)/2)
 		if axis == 1 {
-			moved = at.y + (iconSize(ic)+iconUnder(ic))/2 - (r.y + r.h/2)
+			stands = iconSize(ic) + iconUnder(ic)
+			moved = at.y + stands/2 - (r.y + r.h/2)
 		}
-		if math.Abs(moved) > (r.size(axis)-stands)/2-arrowRun+1e-6 {
-			return fmt.Sprintf("icon %s moved %v in %v", ic.Name, moved, r)
-		}
+		moves[n.box.Name] = movedIcon{moved, (r.size(axis)-stands)/2 - arrowRun}
 	}
-	return ""
+	return moves, ""
 }
 
 // iconCells is whether a point is within the rectangle of an icon of g as laid out, and false when g does not lay out.
@@ -413,14 +429,18 @@ func TestGraphIconsRandom(t *testing.T) {
 				}
 				l := laid(g)
 				_, o, _ := groupedRound(g) //nolint:errcheck // iconFault tells the mistakes
-				if fault := cmp.Or(iconFault(g, l), reachFault(g), throughFault(g, l, o.stayed)); fault != "" {
+				if fault := cmp.Or(iconFault(g, l), throughFault(g, l, o.stayed)); fault != "" {
 					t.Fatalf("seed %v, graph %d: %s", c.seed, i, fault)
 				}
 				if inside, ok := iconCells(g); ok {
 					touching += touchesOutside(l, inside)
 					cells += cellCrossings(l, inside)
 				}
-				left += len(runThrough(g, l))
+				through, fault := runThrough(g, l)
+				if fault != "" {
+					t.Fatalf("seed %v, graph %d: %s", c.seed, i, fault)
+				}
+				left += len(through)
 				shared += sharedStretches(l)
 			}
 			if shared > 0 {
@@ -1153,6 +1173,27 @@ parts:
       nodes:
         - group:
             name: g1
+            label: wwwwwwwwwwwwwww
+            nodes:
+              - group:
+                  name: g0
+                  icon: lucide/box
+                  nodes:
+                    - icon: { name: n0, icon: lucide/server, label: ww }
+        - box: { name: n1, rows: [w] }
+        - icon: { name: n2, icon: lucide/server, label: wwwwwwwww }
+        - box: { name: n3, rows: [wwww] }
+      edges:
+        - { from: n1, to: g0, label: ww }
+        - { from: n2, to: g0 }
+`,
+		"by the heading of an unnamed group round it, down": `title: S418 F, g1 of no name
+parts:
+  - graph:
+      x: 20
+      y: 20
+      nodes:
+        - group:
             label: wwwwwwwwwwwwwww
             nodes:
               - group:
