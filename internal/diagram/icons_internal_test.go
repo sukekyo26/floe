@@ -175,7 +175,9 @@ func runsFault(g *graph, l *layout) string {
 				if t := l.names[e.name]; t.kind != "frame" {
 					return fmt.Sprintf("group %s is laid out as %q", e.name, t.kind)
 				}
-				continue // LIMIT: an end at a group's frame is not checked to stand on it (S418 checks it).
+				// LIMIT: an end at a group's frame is not checked to stand on it: straightened, some stand off it (S418).
+				// Check it (onFrameSide) once that is fixed.
+				continue
 			}
 			if shape == "icon" {
 				continue
@@ -184,14 +186,9 @@ func runsFault(g *graph, l *layout) string {
 			if t.kind != "box" {
 				return fmt.Sprintf("box %s is laid out as %q", e.name, t.kind)
 			}
-			side, along := "left", e.pt[1]
-			switch {
-			case e.pt[0] == e.next[0] && e.next[1] > e.pt[1]:
-				side, along = "bottom", e.pt[0]
-			case e.pt[0] == e.next[0]:
-				side, along = "top", e.pt[0]
-			case e.next[0] > e.pt[0]:
-				side = "right"
+			side, along := leaves(e.pt, e.next), e.pt[1]
+			if side == "top" || side == "bottom" {
+				along = e.pt[0]
 			}
 			want := outlineOf(t.r.w, t.r.h, shape).on(t.r, side, along)
 			if math.Abs(want[0]-e.pt[0])+math.Abs(want[1]-e.pt[1]) > 1e-6 {
@@ -898,7 +895,8 @@ parts:
 	for name, g := range cases {
 		l := laid(g)
 		if fault := iconFault(g, l); fault != "" {
-			t.Fatalf("%s: %s", name, fault)
+			t.Errorf("%s: %s", name, fault)
+			continue
 		}
 		if n := sharedStretches(l); n > 0 {
 			t.Errorf("%s: %d pairs of edges share a stretch", name, n)
