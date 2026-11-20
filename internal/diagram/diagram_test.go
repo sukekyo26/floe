@@ -1110,7 +1110,8 @@ func TestVennBounded(t *testing.T) {
 	})
 	f := regionFault(got, `label "xxxx"`, 400, 300, []disc{{90, 150, 101}, {250, 150, 101}}, nil)
 	if f != "" || strings.Contains(told, `label "xxxx"`) {
-		t.Errorf("a region in the canvas of circles out of it: %s\n%s%s", f, got, told)
+		t.Errorf("a region in the canvas of circles out of it: fault %q, told %q, want the label placed and not told\n%s",
+			f, told, got)
 	}
 	src = head + "  - circle: { name: c, cx: 900, cy: 100, r: 50 }\n  - label: { text: x, in: [c] }\n"
 	if _, got := draw(t, src, render("en")); !strings.Contains(got, `s.yaml:6:5: label "x" sticks out of the 400x200 canvas`) {
