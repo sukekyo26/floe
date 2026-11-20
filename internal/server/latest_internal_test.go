@@ -36,7 +36,7 @@ func api(ctx context.Context, t *testing.T, h http.Handler, method, path, body s
 	return w
 }
 
-// publish sends the data file mineData as the page m, of the project p.
+// publishPage sends the data file mineData as the page m, of the project p.
 func publishPage(ctx context.Context, t *testing.T, h http.Handler) *httptest.ResponseRecorder {
 	t.Helper()
 
