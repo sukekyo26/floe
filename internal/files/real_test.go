@@ -103,7 +103,7 @@ func TestLongNameOfLong(t *testing.T) {
 }
 
 // A link to nothing is followed to where it leads, a directory made there later being read through it: by an absolute
-// or a relative target, through a link to nothing in turn, and as a name in the middle of a path. Up to 63 links in
+// or a relative target (from where the link is, through a link to a directory too), through a link to nothing in turn, and as a name in the middle of a path. Up to 63 links in
 // a row; a loop gives what loopAbove says.
 func TestRealAboveLinkToNothing(t *testing.T) {
 	t.Parallel()
@@ -111,6 +111,9 @@ func TestRealAboveLinkToNothing(t *testing.T) {
 	tmp := t.TempDir()
 	base := mustReal(t, tmp)
 	in := filepath.Join(tmp, "in")
+	if err := os.MkdirAll(filepath.Join(tmp, "q", "sub"), 0o755); err != nil {
+		t.Fatal(err)
+	}
 	if err := os.MkdirAll(filepath.Join(tmp, "b"), 0o755); err != nil {
 		t.Fatal(err)
 	}
@@ -119,6 +122,8 @@ func TestRealAboveLinkToNothing(t *testing.T) {
 	}
 	testfs.Symlink(t, filepath.Join(tmp, "x"), filepath.Join(in, "abs"))
 	testfs.Symlink(t, filepath.Join("..", "b", "x"), filepath.Join(in, "rel"))
+	testfs.Symlink(t, filepath.Join(tmp, "q", "sub"), filepath.Join(in, "sym"))
+	testfs.Symlink(t, filepath.Join("..", "none"), filepath.Join(tmp, "q", "sub", "rel"))
 	testfs.Symlink(t, filepath.Join(tmp, "y"), filepath.Join(in, "c2"))
 	testfs.Symlink(t, filepath.Join(in, "c2"), filepath.Join(in, "c1"))
 	testfs.Symlink(t, filepath.Join(in, "l2"), filepath.Join(in, "l1"))
@@ -139,6 +144,7 @@ func TestRealAboveLinkToNothing(t *testing.T) {
 	}{
 		{"absolute", filepath.Join(in, "abs"), filepath.Join(base, "x"), true},
 		{"relative", filepath.Join(in, "rel"), filepath.Join(base, "b", "x"), true},
+		{"relative, through a link to a directory", filepath.Join(in, "sym", "rel"), filepath.Join(base, "q", "none"), true},
 		{"a link to a link to nothing", filepath.Join(in, "c1"), filepath.Join(base, "y"), true},
 		{"in the middle", filepath.Join(in, "abs", "new"), filepath.Join(base, "x", "new"), true},
 		{"60 links", chain("s", 60), filepath.Join(base, "s-end"), true},

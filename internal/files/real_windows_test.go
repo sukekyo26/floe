@@ -153,7 +153,7 @@ func dotDotAbove(base string) string { return filepath.Join(base, "x", "parts") 
 func loopAbove(string) (string, bool) { return "", false }
 
 // On Windows, a junction to nothing is followed as a link is; a link to a drive not there gives false (walk tells it
-// without opening it, TestWalkNoDrive).
+// without opening it, TestWalkNoDrive). A symlink made to nothing reads no directory made there later.
 func TestRealAboveLinkWindows(t *testing.T) {
 	t.Parallel()
 
@@ -163,6 +163,15 @@ func TestRealAboveLinkWindows(t *testing.T) {
 	testfs.Junction(t, j, filepath.Join(tmp, "x"))
 	if got, ok := files.RealAbove(j); got != filepath.Join(base, "x") || !ok {
 		t.Errorf("RealAbove of a junction to nothing = %q, %v, want %q", got, ok, filepath.Join(base, "x"))
+	}
+	// A symlink made to nothing is a file's: a directory made there later is not read through it (RealAbove's LIMIT).
+	later := filepath.Join(tmp, "later")
+	testfs.Symlink(t, later, filepath.Join(tmp, "s"))
+	if err := os.Mkdir(later, 0o755); err != nil {
+		t.Fatal(err)
+	}
+	if _, err := os.ReadDir(filepath.Join(tmp, "s")); err == nil {
+		t.Error("a directory was read through a symlink made to nothing")
 	}
 	z := filepath.Join(tmp, "z")
 	testfs.Symlink(t, testfs.FreeDrive(t)+`\x`, z)

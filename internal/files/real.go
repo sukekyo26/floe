@@ -48,9 +48,15 @@ func realOfChecked(p checked, path string) (string, error) {
 // LIMIT: the names not there are kept as written: a short name, another case, or a directory that cannot be
 // opened is compared by its letters (macOS, Windows); so, on Unix, is a link that cannot be followed for another
 // reason (a loop, a target that cannot be looked at), which Windows gives false for. Follow them if needed.
-// LIMIT: more than maxHops links to nothing in a row, a link to nothing whose target has .. after a name not
-// there (Unix), and a link to a drive not there (Windows, which is not opened) give false, compared with
-// nothing. Keep their letters if that comes to matter.
+// LIMIT: past maxHops links give false, compared with nothing: on Unix the links to nothing followed here, on
+// Windows every link walked, as allowed counts them. So do a link to nothing whose target has .. after a name not
+// there (Unix) and a link to a drive not there (Windows, which is not opened). Keep their letters if that comes to
+// matter.
+// LIMIT: a link to nothing is compared where it leads alone, not where it is: one in another place (FLOE_PARTS_DIR
+// holding the FLOE_TEMPLATES_DIR it is) overlaps none until it is made, as a link that leads somewhere does; that
+// place's read refuses it then (a link to a directory). Compare it at both if that comes to matter.
+// LIMIT: on Windows a symlink made to nothing is a file's, which a directory made there later is not read through;
+// it is compared where it leads all the same, refusing more than needed. Look at its kind if that comes to matter.
 func RealAbove(path string) (string, bool) {
 	if !filepath.IsAbs(path) {
 		return "", false
