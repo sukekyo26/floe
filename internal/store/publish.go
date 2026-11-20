@@ -373,17 +373,19 @@ func (s *Store) storedPage(slug, named string, up Upload, src []byte, opts Optio
 // Seed is what a publish read and drew of its file, for NewEntry to build the entry Save writes of. What a caller
 // keeps to:
 //   - Slug is *Options.Slug when given, else what OwnSlug returned for Named.
-//   - Named is the base OwnSlug was given; NewEntry drops it when Options.Slug is given.
+//   - Named is what a publish without --slug is named after, the base OwnSlug was given; NewEntry drops it when
+//     Options.Slug is given.
 //   - File is the file as the publisher named it, where a name that makes no slug is told.
 //   - Path is the real path of a link (files.Real), "" for a stored page, which is then of Data.
 //   - Folder tells a link to a folder (link.Check), and FolderTitle its own title: where it is in its repository, its
 //     repository's name, else its name. Both are read for a link alone.
 //   - Data is the data file drawn: nil for HTML or a folder, or for a stored page whose owner alone is checked.
 //   - Options are those Accept returned without a mistake.
-//   - Project is the project it is published from: a stored page's place's, a link's directory's.
+//   - Project is the project it is published from: a stored page's place's, a linked file's directory's, a linked
+//     folder's own.
 //   - Repo and Place are the key of a stored page's data file (project.Place), "" for a link.
-//   - Created is the created Themes returned for the same slug, path, project, repo and place, the default the page
-//     was drawn with; "" for a link to HTML or a folder, which takes no theme.
+//   - Created is the created Themes returned for the same slug, path, project, repo, place and Options.Force, the
+//     default the page was drawn with; "" for a link to HTML or a folder, which takes no theme.
 type Seed struct {
 	Slug        string
 	Named       string
@@ -400,7 +402,8 @@ type Seed struct {
 }
 
 // NewEntry builds the entry of in and checks it against the slug as it is now, without the lock: Save checks it
-// again under the lock (settle).
+// again under the lock (settle). The caller sets the entry's Page, Images and Warnings, and adds the page's warnings
+// to a mistake NewEntry returns (usererr.WithWarnings).
 func (s *Store) NewEntry(in Seed) (*Entry, error) {
 	named := in.Named
 	if in.Options.Slug != nil {
@@ -583,9 +586,10 @@ func readLink(file string, opts Options, cwd, home string) (string, []byte, bool
 
 // Themes returns the themes a page drawn from a data file at slug is drawn with: the one picked for it and the
 // default, none picked and the one settings.json chooses for a new page, or one replacing another file's (checkOwner),
-// else the page's own. It looks at meta.json without the lock, before the drawing: settle keeps the default returned
-// (Entry.created), so that the page drawn and its meta.json agree. A mistake of the owner is told by settle, after the
-// drawing, as without it.
+// else the page's own. path is the real path of a link, "" for a stored page; a link to HTML or a folder is drawn with
+// no theme and does not call it. It looks at meta.json without the lock, before the drawing: settle keeps the default
+// returned (Seed.Created), so that the page drawn and its meta.json agree. A mistake of the owner is told by settle,
+// after the drawing, as without it.
 // LIMIT: a page there when it is read, but replaced by another publish before Save, is kept as replacing with the
 // default it had, the one it was drawn with; refuse it at Save if that comes to matter.
 // LIMIT: a theme picked between the look and Save is kept, the page drawn in the one before it: the next publish or
