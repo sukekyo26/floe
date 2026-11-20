@@ -42,13 +42,13 @@ type ghRelease struct {
 	hits      atomic.Int32    // requests the server answered
 	plain     atomic.Int32    // of them, requests in plain http
 
-	// lose names the CONNECTs the proxy loses, in order: one to lose[0] answers 200 and is never read from, the stop
-	// Windows PowerShell 5.1 makes now and then, made; loseClose closes it at once instead of when the test ends.
-	lose      []string
-	loseClose bool
-	loseMu    sync.Mutex
-	tunnels   atomic.Int32 // CONNECTs tunnelled on to the TLS server, or lost
-	spoken    atomic.Int32 // of them, ones a byte of the client's was read on
+	// lose names the CONNECTs the proxy loses, in order: one to lose[0] answers 200 and is never read from, until
+	// the test ends, the stop Windows PowerShell 5.1 makes now and then, made. Closed at once instead, it is not:
+	// Windows PowerShell opens another tunnel by itself and is answered (seen on CI, run 44757137359).
+	lose    []string
+	loseMu  sync.Mutex
+	tunnels atomic.Int32 // CONNECTs tunnelled on to the TLS server, or lost
+	spoken  atomic.Int32 // of them, ones a byte of the client's was read on
 }
 
 // firstRead calls seen once, at the first byte read.
@@ -269,10 +269,8 @@ func site(t *testing.T, r *ghRelease) string {
 		}
 		answer(conn, "HTTP/1.1 200 Connection established\r\n\r\n")
 		if lost && r.mute == nil {
-			_ = up.Close() //nolint:errcheck // nothing was sent on it
-			if !r.loseClose {
-				<-ended // the client waits for a TLS that does not come, until it gives up
-			}
+			_ = up.Close()   //nolint:errcheck // nothing was sent on it
+			<-ended          // the client waits for a TLS that does not come, until it gives up
 			_ = conn.Close() //nolint:errcheck // nothing more is sent on it
 			return
 		}
@@ -932,24 +930,21 @@ func testInstallPS1(t *testing.T, shell string) {
 	// Windows PowerShell 5.1 now and then sends nothing on a tunnel the proxy opened, and the request times out
 	// (driver.ps1). Made by a proxy that loses the CONNECTs named, such a request is sent again: once in a run, in a
 	// case that does not set the wait, on that time-out, on a tunnel heard nothing on. PowerShell 7's time-out is
-	// not one of Windows PowerShell's, and none of its requests is sent again.
+	// not one of Windows PowerShell's: its cases are the ones that fail when any other time-out is sent again.
 	const api, gh = "api.github.com:443", "github.com:443"
 	for _, s := range []struct {
 		name    string
 		lose    []string
-		close   bool   // the lost tunnel is closed at once
 		deaf    bool   // the server does not answer for floe.exe
 		wait    string // FLOE_INSTALL_TIMEOUT; "" is runPS's
 		retried int    // in Windows PowerShell
-		works   bool   // in Windows PowerShell
-		says    string // what a failure says
+		works   bool   // in Windows PowerShell; a failure says timeoutHint
 	}{
-		{"once, then it works", []string{gh}, false, false, "", 1, true, timeoutHint},
-		{"every time", []string{gh, gh}, false, false, "", 1, false, timeoutHint},
-		{"two requests", []string{api, gh}, false, false, "", 1, false, timeoutHint},
-		{"the tunnel closed", []string{gh}, true, false, "", 0, false, "download failed: "},
-		{"no tunnel left silent", nil, false, true, "", 0, false, timeoutHint},
-		{"a wait of its own", []string{gh}, false, false, "3", 0, false, timeoutHint},
+		{"once, then it works", []string{gh}, false, "", 1, true},
+		{"every time", []string{gh, gh}, false, "", 1, false},
+		{"two requests", []string{api, gh}, false, "", 1, false},
+		{"no tunnel left silent", nil, true, "", 0, false},
+		{"a wait of its own", []string{gh}, false, "3", 0, false},
 	} {
 		t.Run("stop: "+s.name, func(t *testing.T) {
 			t.Parallel()
@@ -959,7 +954,7 @@ func testInstallPS1(t *testing.T, shell string) {
 			if s.deaf {
 				r = broken(t, asset, func(http.ResponseWriter, *http.Request, string) { <-hold })
 			}
-			r.lose, r.loseClose = s.lose, s.close
+			r.lose = s.lose
 			c := psCase{madeStop: true}
 			if s.wait != "" {
 				c.env = map[string]string{"FLOE_INSTALL_TIMEOUT": s.wait}
@@ -975,7 +970,7 @@ func testInstallPS1(t *testing.T, shell string) {
 			if installs {
 				works(t, r, res, dir, host)
 			} else {
-				fails(t, res, dir, s.says)
+				fails(t, res, dir, timeoutHint)
 			}
 		})
 	}
