@@ -103,8 +103,8 @@ func TestLongNameOfLong(t *testing.T) {
 }
 
 // A link to nothing is followed to where it leads, a directory made there later being read through it: by an absolute
-// or a relative target (from where the link is, through a link to a directory too), through a link to nothing in turn, and as a name in the middle of a path. Up to 63 links in
-// a row; a loop gives what loopAbove says.
+// or a relative target (from where the link is, through a link to a directory too), through a link to nothing in
+// turn, and as a name in the middle of a path. Up to 63 links in a row; a loop gives what loopAbove says.
 func TestRealAboveLinkToNothing(t *testing.T) {
 	t.Parallel()
 
