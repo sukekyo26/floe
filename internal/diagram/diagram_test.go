@@ -1970,23 +1970,23 @@ func TestGraphWith(t *testing.T) {
 		return top + nodes + "      edges:\n" + edges
 	}
 	e := func(from, to string) string { return "        - { from: " + from + ", to: " + to + " }\n" }
+	topOf := func(t *testing.T, tops map[string]string, name string) float64 {
+		t.Helper()
+		v, err := strconv.ParseFloat(tops[name], 64)
+		if err != nil {
+			t.Fatalf("the top of %s: %v", name, err)
+		}
+		return v
+	}
 	above := func(t *testing.T, tops map[string]string, hi, lo string) {
 		t.Helper()
-		h, err := strconv.ParseFloat(tops[hi], 64)
-		if err != nil {
-			t.Fatalf("%s: %v", hi, err)
-		}
-		l, err := strconv.ParseFloat(tops[lo], 64)
-		if err != nil {
-			t.Fatalf("%s: %v", lo, err)
-		}
-		if h >= l {
+		if topOf(t, tops, hi) >= topOf(t, tops, lo) {
 			t.Errorf("%s stands at %s, %s at %s, want it above", hi, tops[hi], lo, tops[lo])
 		}
 	}
 	level := func(t *testing.T, tops map[string]string, a, c string) {
 		t.Helper()
-		if tops[a] != tops[c] {
+		if topOf(t, tops, a) != topOf(t, tops, c) {
 			t.Errorf("%s stands at %s, %s at %s, want them in one rank", a, tops[a], c, tops[c])
 		}
 	}
