@@ -135,13 +135,7 @@ func underAt(t target, x float64) float64 {
 // laid out as one or off it, the ends on a side not parting it equally, a run at an icon too short for an arrow, or a
 // label not on a run of its edge.
 func iconFault(g *graph, l *layout) string {
-	if l.failure != nil {
-		return l.failure.Error()
-	}
-	if len(l.problems) > 0 {
-		return l.problems.Error()
-	}
-	if fault := edgesFault(g, l); fault != "" {
+	if fault := laidOutFault(g, l); fault != "" {
 		return fault
 	}
 	shapes := shapesOf(g)

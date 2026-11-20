@@ -199,8 +199,8 @@ func loopLabelFault(g *graph, l *layout, k int, r rect) string {
 	return ""
 }
 
-// handFault is a mistake of a label of g, laid out as l, with an edge written by hand from the middle of a side of a
-// box its edges do not use (left and right laid out down, top and bottom laid out right), 20 out, or "".
+// handFault is a mistake of g, laid out as l, with an edge written by hand from the middle of a side of each box its
+// edges do not use (left and right laid out down, top and bottom laid out right), 20 out, or "".
 func handFault(g *graph, l *layout) string {
 	parts := []part{{Graph: g}} //nolint:exhaustruct_v5 // one kind of part
 	for _, b := range graphBoxes(g) {
@@ -228,7 +228,7 @@ func handFault(g *graph, l *layout) string {
 		}
 	}
 	hands := newLayout(&spec{Width: 0, Height: 0, Title: Text{"en": "g"}, Parts: parts, Example: ""}, //nolint:exhaustruct_v5 // a graph and edges
-		Options{Lang: "en", Icons: icons.Without(nil), Seq: 1})
+		Options{Lang: "en", Icons: anyIcon{}, Seq: 1})
 	hands.check()
 	if hands.failure != nil {
 		return "edges written by hand: " + hands.failure.Error()
@@ -311,10 +311,11 @@ func settleFault(l, r *layout) string {
 }
 
 // boxParts counts the ends at the boxes of g laid out as l, no loop's or level edge's, and those of them at the part of
-// their side they belong to. Its share of 1/50 of a side is what a share read back from the drawing can be off by.
-func boxParts(g *graph, l *layout) (parted, all int) {
+// their side they belong to, or a box not laid out as one. Its share of 1/50 of a side is what a share read back from
+// the drawing can be off by.
+func boxParts(g *graph, l *layout) (parted, all int, fault string) {
 	type place struct{ name, side string }
-	on := map[place][]float64{}
+	on, shapes := map[place][]float64{}, shapesOf(g)
 	for k, e := range g.Edges {
 		if e.From == e.To || e.Level {
 			continue
@@ -322,9 +323,12 @@ func boxParts(g *graph, l *layout) (parted, all int) {
 		segs := l.paths[k].segs
 		first, last := segs[0], segs[len(segs)-1]
 		for j, name := range []string{e.From, e.To} {
-			t, ok := l.names[name]
-			if !ok || t.kind != "box" {
+			if shape, isBox := shapes[name]; !isBox || shape == "icon" {
 				continue
+			}
+			t := l.names[name]
+			if t.kind != "box" {
+				return 0, 0, fmt.Sprintf("box %s is laid out as %q", name, t.kind)
 			}
 			p, q := [2]float64{first[0], first[1]}, [2]float64{first[2], first[3]}
 			if j == 1 {
@@ -344,7 +348,7 @@ func boxParts(g *graph, l *layout) (parted, all int) {
 			}
 		}
 	}
-	return parted, all
+	return parted, all, ""
 }
 
 // graphFault is what is wrong with g laid out, or "": a mistake told, two of its edges sharing a run or touching,
@@ -396,13 +400,21 @@ func throughFault(g *graph, l *layout, stayed map[int]string) string {
 	return ""
 }
 
-// laidFault is graphFault of g, laid out as l.
-func laidFault(g *graph, l *layout) string {
+// laidOutFault is the mistake told of g laid out as l, or a path of l not its edge's (edgesFault), or "".
+func laidOutFault(g *graph, l *layout) string {
 	if l.failure != nil {
 		return l.failure.Error()
 	}
 	if len(l.problems) > 0 {
 		return l.problems.Error()
+	}
+	return edgesFault(g, l)
+}
+
+// laidFault is graphFault of g, laid out as l.
+func laidFault(g *graph, l *layout) string {
+	if fault := laidOutFault(g, l); fault != "" {
+		return fault
 	}
 	r := routed(g)
 	if fault := loopFault(g, r); fault != "" {
@@ -605,7 +617,11 @@ func clusterFault(g *graph, l *layout) string {
 	for c := range clusters {
 		f := frameOf(c)
 		for i, b := range boxes {
-			r := l.names[b.box.Name].r
+			t, ok := l.names[b.box.Name]
+			if !ok {
+				return fmt.Sprintf("box %s is not laid out", b.box.Name)
+			}
+			r := t.r
 			switch in := slices.Contains(clusters[c].boxes, i); {
 			case in && !within(r, f):
 				return fmt.Sprintf("the frame of group %d %v does not hold its box %s %v", c, f, b.box.Name, r)
@@ -614,7 +630,7 @@ func clusterFault(g *graph, l *layout) string {
 			}
 		}
 		for k, e := range g.Edges {
-			if k >= len(l.paths) || !held(c, e.From) || !held(c, e.To) {
+			if !held(c, e.From) || !held(c, e.To) {
 				continue
 			}
 			for _, s := range l.paths[k].segs {
@@ -997,7 +1013,10 @@ func TestGraphRandom(t *testing.T) {
 					t.Fatalf("seed %v, graph %d: %s", c.seed, i, fault)
 				}
 				if !underRace {
-					on, all := boxParts(g, l)
+					on, all, fault := boxParts(g, l)
+					if fault != "" {
+						t.Fatalf("seed %v, graph %d: %s", c.seed, i, fault)
+					}
 					parted, ends = parted+on, ends+all
 					clipped, labels := endsClipped(g, l)
 					short, written = short+clipped, written+labels
@@ -3388,6 +3407,9 @@ func TestGraphDetour(t *testing.T) {
 			}
 			g := s.Parts[0].Graph
 			l := laid(g)
+			if fault := laidOutFault(g, l); fault != "" {
+				t.Fatal(fault)
+			}
 			_, o, err := groupedRound(g)
 			if err != nil {
 				t.Fatal(err)
