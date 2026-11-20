@@ -60,8 +60,9 @@
   # sending, however little, sooner than the limit each time is waited for to the end. Each request has the limit
   # anew, a redirect's too: five or so that each go silent just short of it take ten minutes.
   # LIMIT: what Windows PowerShell does before a request turns asynchronous (the name, the proxy, the connection:
-  # .NET's BeginGetResponse) may not be under -TimeoutSec. A request .NET Framework now and then loses after the
-  # proxy's CONNECT, sending nothing more (run 44244107780), was given up on as a silence once (run 44694367866).
+  # .NET's BeginGetResponse) may not be under -TimeoutSec. A stop of the look of run 44244107780's (nothing sent
+  # after the proxy's CONNECT) ended once as a silence under it (run 44694367866); that every such stop does is not
+  # known. One seen to run past FLOE_INSTALL_TIMEOUT would call for a limit on the whole of a request.
   function Fetch([string]$Url, [string]$OutFile) {
     $limit = @{ TimeoutSec = $wait }
     if ($stalls) { $limit['OperationTimeoutSeconds'] = $wait }

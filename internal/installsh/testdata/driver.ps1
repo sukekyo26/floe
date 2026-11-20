@@ -26,11 +26,14 @@ function global:Invoke-WebRequest {
   if ($PSVersionTable.PSEdition -ne 'Desktop') { $named.SkipCertificateCheck = $true }
   # Windows PowerShell 5.1 now and then sends nothing on a tunnel the proxy opened, and the request times out without
   # having reached the server (.NET Framework's own): such a request is sent once more, once in a run. See runPS.
-  # LIMIT: a request that reached the server on one tunnel while another .NET opened stayed silent, and then timed
-  # out, would be sent twice; a case that runs on psWait has a server that answers, so it does not time out.
+  # LIMIT: a request that reached the server on one tunnel and timed out, while another tunnel .NET opened meanwhile
+  # stayed silent, would be sent again too. Only the case "stop: no tunnel left silent" times out on psWait with the
+  # server reached; a stop of Windows PowerShell's on a tunnel of its own in that minute fails it (Retried 1).
   for (;;) {
     $last = if ($Error.Count) { $Error[0] } else { $null }
-    if ($global:floeTest.retryStop) { $silent = FloeSilent }
+    # The count is read only where a request may be sent again: PowerShell 7's time-out never is.
+    $may = $global:floeTest.retryStop -and $global:floeRetried -eq 0 -and $PSVersionTable.PSEdition -eq 'Desktop'
+    if ($may) { $silent = FloeSilent }
     $got = $null; $failed = $null; $thrown = $false
     try {
       $got = Microsoft.PowerShell.Utility\Invoke-WebRequest @named
@@ -38,20 +41,32 @@ function global:Invoke-WebRequest {
     } catch { $failed = $_; $thrown = $true }
     # Windows PowerShell's time-out; PowerShell 7's is no WebException and is never sent again.
     $timedOut = $null -ne $failed -and $failed.Exception -is [Net.WebException] -and $failed.Exception.Status -eq [Net.WebExceptionStatus]::Timeout
-    if ($global:floeTest.retryStop -and $global:floeRetried -eq 0 -and $null -eq $got -and $timedOut -and (FloeSilent) -gt $silent) {
-      $global:floeRetried++
-      continue
+    if ($may -and $null -eq $got -and $timedOut -and $null -ne $silent) {
+      $now = FloeSilent
+      if ($null -ne $now -and $now -gt $silent) {
+        $global:floeRetried++
+        continue
+      }
     }
     if ($thrown) { throw $failed }
     return $got
   }
 }
 $global:floeRetried = 0
-# The count of tunnels the test's proxy opened and heard nothing on (site in the test).
+$global:floeSilentFailed = ''
+# The count of tunnels the test's proxy opened and heard nothing on (site in the test), or $null when it cannot be
+# read: then nothing is sent again, and the report tells why.
 function global:FloeSilent {
-  $client = New-Object Net.WebClient
-  $client.Proxy = $null
-  [int]$client.DownloadString($global:floeTest.proxy + '/floe-test/silent')
+  try {
+    $ask = [Net.WebRequest]::Create($global:floeTest.proxy + '/floe-test/silent')
+    $ask.Proxy = $null
+    $ask.Timeout = 10000
+    $answer = $ask.GetResponse()
+    try { [int](New-Object IO.StreamReader($answer.GetResponseStream())).ReadToEnd() } finally { $answer.Close() }
+  } catch {
+    $global:floeSilentFailed = "$_"
+    $null
+  }
 }
 if ($floeTest.failMove) {
   # The rename that puts the new file in place fails; the one that moves floe.exe aside, and the one back, do not.
@@ -134,6 +149,7 @@ try {
   $floeReport.pathName = '' + ($floeEnv.GetValueNames() | Where-Object { $_ -ieq 'path' })
   $floeReport.notice = $null -ne $floeEnv.GetValue('FLOE_INSTALL_PATH_NOTICE')
   $floeReport.retried = $global:floeRetried
+  $floeReport.silentFailed = $global:floeSilentFailed
   $floeEnv.Close()
   [void][FloeTestRegistry]::RegOverridePredefKey([FloeTestRegistry]::CurrentUser, [IntPtr]::Zero)
   $floeSoftware.DeleteSubKeyTree($floeKeyName, $false)

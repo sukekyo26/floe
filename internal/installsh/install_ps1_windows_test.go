@@ -318,7 +318,7 @@ const psWait = "60"
 
 // timeoutHint is what install.ps1 adds when PowerShell gave up on a silence: the cases look for it, not for the rest
 // of the words. Whether a request is sent again does not read it (driver.ps1).
-const timeoutHint = "FLOE_INSTALL_TIMEOUT sets how many seconds to wait for an answer"
+const timeoutHint = "FLOE_INSTALL_TIMEOUT sets how many seconds"
 
 // psCase is one run of install.ps1: what the driver does (testdata/driver.ps1) and the environment.
 type psCase struct {
@@ -355,6 +355,7 @@ type psResult struct {
 		Eap, Progress, PathKind, Path, PathName string
 		Strict, Notice                          bool
 		Retried                                 int
+		SilentFailed                            string // why the driver could not read the proxy's count
 	}
 }
 
@@ -467,27 +468,44 @@ func runPS(t *testing.T, shell, base string, c psCase) *psResult {
 	if err := json.Unmarshal(b, &res.report); err != nil {
 		t.Fatalf("the driver's report %s: %v", b, err)
 	}
+	if res.report.SilentFailed != "" {
+		t.Errorf("the driver could not read the proxy's count of silent tunnels, and sent nothing again: %s", res.report.SilentFailed)
+	}
 	if res.report.Retried > 0 {
 		t.Logf("%s timed out on a tunnel it sent nothing on: the request was sent again", shell)
 		if !c.madeStop {
-			noteRetry(t)
+			tellRetry(t)
 		}
 	}
 	return res
 }
 
-var summaryMu sync.Mutex
+// maxRetries is how many requests lost as Windows PowerShell 5.1 loses one may be sent again in a run of the
+// package: past it, a stop comes every time (install.ps1, the test's proxy), not now and then.
+// LIMIT: 3 in a run of some 100 Windows PowerShell runs, each lost about once in 4600 (seen on CI), come less than
+// once in 500000 runs of the package. Raise it if Windows PowerShell comes to lose more.
+const maxRetries = 2
 
-// noteRetry adds a line for t to the summary of the CI step running it (GITHUB_STEP_SUMMARY): go test shows nothing
-// of a package that passed, and a retry is seen there. Elsewhere, with no such file, it does nothing.
-func noteRetry(t *testing.T) {
+var (
+	retriesMu sync.Mutex
+	retries   int
+)
+
+// tellRetry counts a request sent again for t, failing t past maxRetries, and adds a line for it to the summary of
+// the CI step running it (GITHUB_STEP_SUMMARY): go test shows nothing of a package that passed. Elsewhere, with no
+// such file, it adds none.
+func tellRetry(t *testing.T) {
 	t.Helper()
+	retriesMu.Lock() // a line at a time: the runs go side by side
+	defer retriesMu.Unlock()
+	retries++
+	if retries > maxRetries {
+		t.Errorf("%d requests were sent again in this run, more than %d: Windows PowerShell loses one now and then, not so often", retries, maxRetries)
+	}
 	path := os.Getenv("GITHUB_STEP_SUMMARY")
 	if path == "" {
 		return
 	}
-	summaryMu.Lock() // a line at a time: the runs go side by side
-	defer summaryMu.Unlock()
 	f, err := os.OpenFile(path, os.O_APPEND|os.O_WRONLY|os.O_CREATE, 0o600) //nolint:gosec // G304: the file CI names
 	if err == nil {
 		_, err = fmt.Fprintf(f, "- `%s`: Windows PowerShell sent nothing on a tunnel and timed out; the request was sent again\n", t.Name())
@@ -879,7 +897,7 @@ func testInstallPS1(t *testing.T, shell string) {
 		})
 	}
 	// What install.ps1 adds when PowerShell gave up on a silence, and what it says of a FLOE_INSTALL_TIMEOUT it refuses.
-	const waited = "check your network and proxy and run it again; " + timeoutHint + " (now 3)"
+	const waited = "check your network and proxy and run it again; " + timeoutHint + " to wait for an answer (now 3)"
 	const refused = "FLOE_INSTALL_TIMEOUT must be"
 	// A server or a proxy that goes silent is given up on after FLOE_INSTALL_TIMEOUT seconds, and told as that. A
 	// run that does not give up is killed at a minute, not at psLimit.
@@ -938,14 +956,19 @@ func testInstallPS1(t *testing.T, shell string) {
 		deaf    bool   // the server does not answer for floe.exe
 		wait    string // FLOE_INSTALL_TIMEOUT; "" is runPS's
 		retried int    // in Windows PowerShell
-		works   bool   // in Windows PowerShell; a failure says timeoutHint
+		works   bool   // in Windows PowerShell; a failure is a time-out of floe.exe's request
+		pwsh    bool   // run in PowerShell 7 too, where nothing is sent again
 	}{
-		{"once, then it works", []string{gh}, false, "", 1, true},
-		{"every time", []string{gh, gh}, false, "", 1, false},
-		{"two requests", []string{api, gh}, false, "", 1, false},
-		{"no tunnel left silent", nil, true, "", 0, false},
-		{"a wait of its own", []string{gh}, false, "3", 0, false},
+		// In PowerShell 7, this one fails when a time-out that is not Windows PowerShell's is sent again.
+		{"once, then it works", []string{gh}, false, "", 1, true, true},
+		{"every time", []string{gh, gh}, false, "", 1, false, false},
+		{"two requests", []string{api, gh}, false, "", 1, false, false},
+		{"no tunnel left silent", nil, true, "", 0, false, false},
+		{"a wait of its own", []string{gh}, false, "3", 0, false, false},
 	} {
+		if shell != "powershell" && !s.pwsh {
+			continue
+		}
 		t.Run("stop: "+s.name, func(t *testing.T) {
 			t.Parallel()
 			hold := make(chan struct{})
@@ -970,7 +993,8 @@ func testInstallPS1(t *testing.T, shell string) {
 			if installs {
 				works(t, r, res, dir, host)
 			} else {
-				fails(t, res, dir, timeoutHint)
+				// floe.exe's: in "two requests" the API's, sent again, came back.
+				fails(t, res, dir, "download failed: "+githubURL+"v0.1.0/"+asset+" (", timeoutHint)
 			}
 		})
 	}
