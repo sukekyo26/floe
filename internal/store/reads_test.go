@@ -13,6 +13,7 @@ import (
 	"time"
 
 	floefiles "floe/internal/files" // store_test has a func files
+	floepublish "floe/internal/publish"
 	"floe/internal/store"
 	"floe/internal/testfs"
 )
@@ -201,8 +202,8 @@ func TestNewsPublished(t *testing.T) {
 	if _, err := s.MarkRead(viewer, "r", 1, rm.Versions[0].At); err != nil {
 		t.Fatal(err)
 	}
-	up := store.Upload{File: "r.yaml", Source: []byte(titled("r")), Images: images, Project: "q", Repo: "q", Place: "r.yaml"}
-	e, err := s.PrepareData(dw, up, store.Options{Force: true})
+	up := floepublish.Upload{File: "r.yaml", Source: []byte(titled("r")), Images: images, Project: "q", Repo: "q", Place: "r.yaml"}
+	e, err := floepublish.PrepareData(s, dw, up, store.Options{Force: true})
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -223,7 +224,7 @@ func TestNewsPublished(t *testing.T) {
 		}
 	}
 	for _, link := range []string{"h.html", "dir"} {
-		e, err := s.PrepareLink(t.Context(), dw, filepath.Join(home, "proj", link), store.Options{Slug: ptr("l-" + strings.TrimSuffix(link, ".html"))}, "", home)
+		e, err := floepublish.PrepareLink(t.Context(), s, dw, filepath.Join(home, "proj", link), store.Options{Slug: ptr("l-" + strings.TrimSuffix(link, ".html"))}, "", home)
 		if err != nil {
 			t.Fatal(told(err, root))
 		}
@@ -655,7 +656,7 @@ func TestListTimes(t *testing.T) {
 	}
 	dw := picKit(t, "", "")
 	for _, at := range []string{file, folder} {
-		e, err := s.PrepareLink(t.Context(), dw, at, store.Options{}, "", home)
+		e, err := floepublish.PrepareLink(t.Context(), s, dw, at, store.Options{}, "", home)
 		if err != nil {
 			t.Fatal(told(err, root))
 		}
@@ -769,7 +770,7 @@ func TestListTemplate(t *testing.T) {
 	data := write("l.yaml", "lang: en\ntemplate: pic\n")
 	html := write("h.html", "<title>h</title>")
 	for _, at := range []string{data, html, folder} {
-		e, err := s.PrepareLink(t.Context(), dw, at, store.Options{}, "", home)
+		e, err := floepublish.PrepareLink(t.Context(), s, dw, at, store.Options{}, "", home)
 		if err != nil {
 			t.Fatal(told(err, root))
 		}
@@ -964,8 +965,8 @@ func TestMarkUnreadKept(t *testing.T) { //nolint:tparallel // the subtest goes o
 	replace := func(t *testing.T, file string) error {
 		t.Helper()
 
-		up := store.Upload{File: file, Source: []byte(titled(file)), Images: images, Project: "p", Repo: "p", Place: file}
-		e, err := s.PrepareData(dw, up, store.Options{Slug: ptr("d"), Force: true})
+		up := floepublish.Upload{File: file, Source: []byte(titled(file)), Images: images, Project: "p", Repo: "p", Place: file}
+		e, err := floepublish.PrepareData(s, dw, up, store.Options{Slug: ptr("d"), Force: true})
 		if err != nil {
 			t.Fatal(err)
 		}
