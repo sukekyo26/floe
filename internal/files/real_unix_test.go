@@ -68,6 +68,7 @@ func TestRealAboveLinkUnix(t *testing.T) {
 		ok               bool
 	}{
 		{".. after a link", filepath.Join(tmp, "in", "up"), filepath.Join(base, "parts", "x"), true},
+		{".. after a link, a name under it", filepath.Join(tmp, "in", "up", "new"), filepath.Join(base, "parts", "x", "new"), true},
 		{".. after a name not there", filepath.Join(tmp, "in", "dotdot"), "", false},
 	} {
 		if got, ok := files.RealAbove(tt.path); got != tt.want || ok != tt.ok {
