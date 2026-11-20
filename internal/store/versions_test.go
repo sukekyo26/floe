@@ -10,6 +10,7 @@ import (
 	"strings"
 	"testing"
 
+	floepublish "floe/internal/publish"
 	"floe/internal/store"
 	"floe/internal/testfs"
 )
@@ -195,8 +196,8 @@ func TestVersionsNumbers(t *testing.T) {
 	dw := picKit(t, "", "")
 	publish(t, s, dw, "d.yaml", titled("A"), map[string][]byte{"a.png": png}, store.Options{})
 	publish(t, s, dw, "d.yaml", titled("B"), map[string][]byte{"a.png": png}, store.Options{})
-	up := store.Upload{File: "d.yaml", Source: []byte(titled("B")), Images: map[string][]byte{"a.png": png}, Project: "q", Repo: "q", Place: "d.yaml"}
-	e, err := s.PrepareData(dw, up, store.Options{Force: true})
+	up := floepublish.Upload{File: "d.yaml", Source: []byte(titled("B")), Images: map[string][]byte{"a.png": png}, Project: "q", Repo: "q", Place: "d.yaml"}
+	e, err := floepublish.PrepareData(s, dw, up, store.Options{Force: true})
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -260,8 +261,8 @@ func TestSaveVersionFails(t *testing.T) {
 		t.Helper()
 
 		before, meta := names(t, dir), read(t, filepath.Join(dir, "meta.json"))
-		up := store.Upload{File: "d.yaml", Source: []byte(titled(name)), Images: map[string][]byte{"a.png": png}, Project: "p", Repo: "p", Place: "d.yaml"}
-		e, err := s.PrepareData(dw, up, store.Options{})
+		up := floepublish.Upload{File: "d.yaml", Source: []byte(titled(name)), Images: map[string][]byte{"a.png": png}, Project: "p", Repo: "p", Place: "d.yaml"}
+		e, err := floepublish.PrepareData(s, dw, up, store.Options{})
 		if err != nil {
 			t.Fatal(err)
 		}
@@ -351,7 +352,7 @@ func TestVersionPage(t *testing.T) {
 	if err := os.WriteFile(html, []byte("<title>z</title>"), 0o600); err != nil {
 		t.Fatal(err)
 	}
-	e, err := s.PrepareLink(t.Context(), dw, html, store.Options{}, "", home)
+	e, err := floepublish.PrepareLink(t.Context(), s, dw, html, store.Options{}, "", home)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -426,7 +427,7 @@ func TestLinkLeavesNoVersions(t *testing.T) {
 	if err := os.WriteFile(html, []byte("<title>z</title>"), 0o600); err != nil {
 		t.Fatal(err)
 	}
-	e, err := s.PrepareLink(t.Context(), dw, html, store.Options{Slug: ptr("d")}, "", home)
+	e, err := floepublish.PrepareLink(t.Context(), s, dw, html, store.Options{Slug: ptr("d")}, "", home)
 	if err != nil {
 		t.Fatal(err)
 	}

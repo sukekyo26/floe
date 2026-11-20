@@ -36,8 +36,8 @@ func api(ctx context.Context, t *testing.T, h http.Handler, method, path, body s
 	return w
 }
 
-// publish sends the data file mineData as the page m, of the project p.
-func publish(ctx context.Context, t *testing.T, h http.Handler) *httptest.ResponseRecorder {
+// publishPage sends the data file mineData as the page m, of the project p.
+func publishPage(ctx context.Context, t *testing.T, h http.Handler) *httptest.ResponseRecorder {
 	t.Helper()
 
 	b, err := json.Marshal(Upload{File: "m.yaml", Source: []byte(mineData), Project: "p", Repo: "p", Place: "m.yaml"}) //nolint:exhaustruct // none else
@@ -84,18 +84,18 @@ func TestLatestPublish(t *testing.T) {
 
 	s, dir := watched(t, false)
 	h := s.Handler()
-	if w := publish(t.Context(), t, h); w.Code != http.StatusCreated {
+	if w := publishPage(t.Context(), t, h); w.Code != http.StatusCreated {
 		t.Fatalf("publish = %d %s", w.Code, w.Body)
 	}
 	_, gen := s.now()
-	if w := publish(t.Context(), t, h); w.Code != http.StatusOK {
+	if w := publishPage(t.Context(), t, h); w.Code != http.StatusOK {
 		t.Fatalf("publish again = %d %s", w.Code, w.Body)
 	}
 	if _, again := s.now(); again != gen {
 		t.Errorf("a publish with nothing changed read the drawing again: %d, then %d", gen, again)
 	}
 	mine(t, dir, "{{.Data.n}} saved just now")
-	if w := publish(t.Context(), t, h); w.Code != http.StatusOK {
+	if w := publishPage(t.Context(), t, h); w.Code != http.StatusOK {
 		t.Fatalf("publish after the save = %d %s", w.Code, w.Body)
 	}
 	if _, after := s.now(); after != gen+1 {
@@ -116,7 +116,7 @@ func TestLatestRebuild(t *testing.T) {
 
 	s, dir := watched(t, false)
 	h := s.Handler()
-	if w := publish(t.Context(), t, h); w.Code != http.StatusCreated {
+	if w := publishPage(t.Context(), t, h); w.Code != http.StatusCreated {
 		t.Fatalf("publish = %d %s", w.Code, w.Body)
 	}
 	mine(t, dir, "{{.Data.nope.x}}")
@@ -142,7 +142,7 @@ func TestLatestRebuildUnknownField(t *testing.T) {
 
 	s, dir := watched(t, false)
 	h := s.Handler()
-	if w := publish(t.Context(), t, h); w.Code != http.StatusCreated {
+	if w := publishPage(t.Context(), t, h); w.Code != http.StatusCreated {
 		t.Fatalf("publish = %d %s", w.Code, w.Body)
 	}
 	before := s.cfg.Store.ReadMeta("m").Source

@@ -359,7 +359,7 @@ func TestCheck(t *testing.T) {
 		{"top.html", "link_exposes_dir", "would expose all of " + dirs.Shown(realHome)},
 		{".top.html", "link_exposes_dir", "would expose all of " + dirs.Shown(realHome)},
 		{"proj/page.txt", "link_not_linkable", ""},
-		// Real cannot tell where a file not there is (readLink, before, tells it cannot be read).
+		// Real cannot tell where a file not there is (publishing a link, before, tells it cannot be read).
 		{"proj/missing.html", "link_not_real", ""},
 		// A folder is checked as the directory it exposes: its own.
 		{"proj", "", ""},
