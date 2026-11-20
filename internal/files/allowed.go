@@ -206,7 +206,7 @@ func (w *walker) follow(to string) (done bool, err error) {
 		if refused != nil {
 			return false, refused
 		}
-		w.ended = missing // probe: noDrive not told
+		w.ended, w.noDrive = missing, missing
 		w.root, w.at = root, nil
 	default:
 		if names, w.at, err = fold(names, w.at, to); err != nil {
