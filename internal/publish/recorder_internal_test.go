@@ -1,4 +1,4 @@
-package store
+package publish
 
 import (
 	"io/fs"

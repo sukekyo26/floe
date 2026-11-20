@@ -4,8 +4,6 @@ import (
 	"path/filepath"
 	"strconv"
 	"testing"
-
-	"floe/internal/kit"
 )
 
 // A save that another of the slug comes between, after it gzipped the page before outside the lock, keeps the page of
@@ -14,19 +12,18 @@ import (
 func TestSaveVersionRace(t *testing.T) {
 	t.Parallel()
 
-	floe, err := kit.Floe()
-	if err != nil {
-		t.Fatal(err)
-	}
-	dw := Drawing{Kit: floe, Icons: nil, Err: nil}
 	s := New(filepath.Join(t.TempDir(), "store"))
 	slug := "d"
+	// package store cannot import publish: the entry is built as publish.PrepareData builds it, its page told apart by n
+	// as its data (and so its contentMark) is.
 	prepare := func(n int) *Entry {
 		src := "lang: en\ntemplate: report\ntitle: T" + strconv.Itoa(n) + "\nsections:\n  - heading: H\n    parts:\n      - text: x\n"
-		e, err := s.PrepareData(dw, Upload{File: "d.yaml", Source: []byte(src), Images: map[string][]byte{}, Project: "p", Repo: "p", Place: "d.yaml"}, Options{Slug: &slug})
+		e, err := s.NewEntry(Seed{Slug: slug, Named: "", File: "d.yaml", Path: "", Folder: false, FolderTitle: "", Data: []byte(src), Options: Options{Slug: &slug}, Project: "p", Repo: "p", Place: "d.yaml", Created: ""})
 		if err != nil {
 			t.Fatal(err)
 		}
+		e.Page = []byte("<p>page " + strconv.Itoa(n) + "</p>")
+		e.Images = map[string][]byte{}
 		return e
 	}
 	drawn := map[int]string{}

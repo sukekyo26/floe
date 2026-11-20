@@ -7,6 +7,7 @@ import (
 	"strings"
 	"testing"
 
+	floepublish "floe/internal/publish"
 	"floe/internal/store"
 	"floe/internal/usererr"
 )
@@ -62,8 +63,8 @@ func TestPickTheme(t *testing.T) {
 	}
 	at("drawn the same", "washi", "washi")
 	// Replaced by another project's file: the pick goes.
-	up := store.Upload{File: "a.yaml", Source: []byte(report("")), Images: nil, Project: "q", Repo: "q", Place: "a.yaml"}
-	e, err := s.PrepareData(dw, up, store.Options{Force: true})
+	up := floepublish.Upload{File: "a.yaml", Source: []byte(report("")), Images: nil, Project: "q", Repo: "q", Place: "a.yaml"}
+	e, err := floepublish.PrepareData(s, dw, up, store.Options{Force: true})
 	if err != nil {
 		t.Fatal(told(err, root))
 	}
@@ -121,7 +122,7 @@ func TestPickThemeMeanwhile(t *testing.T) {
 		if werr := os.WriteFile(path, []byte(iconPage), 0o600); werr != nil {
 			t.Fatal(werr)
 		}
-		e, lerr := s.PrepareLink(t.Context(), dw, path, o, "", home)
+		e, lerr := floepublish.PrepareLink(t.Context(), s, dw, path, o, "", home)
 		if lerr != nil {
 			t.Fatal(told(lerr, root))
 		}
@@ -160,7 +161,7 @@ func TestPickThemeLinks(t *testing.T) {
 	}
 	slugs := map[string]string{}
 	for _, path := range []string{filepath.Join(dir, "z.html"), filepath.Join(dir, "page.yaml"), dir} {
-		e, err := s.PrepareLink(t.Context(), dw, path, store.Options{}, "", home)
+		e, err := floepublish.PrepareLink(t.Context(), s, dw, path, store.Options{}, "", home)
 		if err != nil {
 			t.Fatal(told(err, root))
 		}
@@ -233,7 +234,7 @@ func TestOwnTheme(t *testing.T) {
 		if err := os.WriteFile(path, []byte(src), 0o600); err != nil {
 			t.Fatal(err)
 		}
-		e, err := s.PrepareLink(t.Context(), dw, path, store.Options{}, "", home)
+		e, err := floepublish.PrepareLink(t.Context(), s, dw, path, store.Options{}, "", home)
 		if err != nil {
 			t.Fatal(told(err, root))
 		}

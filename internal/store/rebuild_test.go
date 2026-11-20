@@ -8,6 +8,7 @@ import (
 	"strings"
 	"testing"
 
+	floepublish "floe/internal/publish"
 	"floe/internal/store"
 	"floe/internal/testfs"
 )
@@ -217,7 +218,7 @@ func TestCannotWrite(t *testing.T) {
 		t.Fatal(err)
 	}
 	t.Cleanup(func() { _ = os.Chmod(dir, 0o700) }) //nolint:errcheck // the test is told already
-	e, err := s.PrepareData(dw, store.Upload{File: "a.yaml", Source: []byte("lang: en\ntemplate: pic\n"), Images: nil, Project: "p", Repo: "p", Place: "a.yaml"}, store.Options{})
+	e, err := floepublish.PrepareData(s, dw, floepublish.Upload{File: "a.yaml", Source: []byte("lang: en\ntemplate: pic\n"), Images: nil, Project: "p", Repo: "p", Place: "a.yaml"}, store.Options{})
 	if err != nil {
 		t.Fatal(err)
 	}

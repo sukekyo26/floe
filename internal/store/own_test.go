@@ -8,6 +8,7 @@ import (
 	"strconv"
 	"testing"
 
+	floepublish "floe/internal/publish"
 	"floe/internal/store"
 	"floe/internal/testfs"
 	"floe/internal/usererr"
@@ -19,8 +20,8 @@ const ownSrc = "lang: en\ntemplate: pic\n"
 func put(t *testing.T, s *store.Store, dw store.Drawing, file, place, src string, o store.Options) (*store.Entry, error) {
 	t.Helper()
 
-	up := store.Upload{File: file, Source: []byte(src), Images: map[string][]byte{}, Project: "p", Repo: "p", Place: place}
-	e, err := s.PrepareData(dw, up, o)
+	up := floepublish.Upload{File: file, Source: []byte(src), Images: map[string][]byte{}, Project: "p", Repo: "p", Place: place}
+	e, err := floepublish.PrepareData(s, dw, up, o)
 	if err != nil {
 		return nil, err
 	}
@@ -79,8 +80,8 @@ func TestPublishRenamedInBetween(t *testing.T) {
 			if _, err := put(t, s, dw, c.file, c.file, ownSrc, store.Options{Slug: ptr(c.slug)}); err != nil {
 				t.Fatal(told(err, root))
 			}
-			up := store.Upload{File: c.file, Source: []byte(ownSrc + "title: two\n"), Images: map[string][]byte{}, Project: "p", Repo: "p", Place: c.file}
-			e, err := s.PrepareData(dw, up, store.Options{})
+			up := floepublish.Upload{File: c.file, Source: []byte(ownSrc + "title: two\n"), Images: map[string][]byte{}, Project: "p", Repo: "p", Place: c.file}
+			e, err := floepublish.PrepareData(s, dw, up, store.Options{})
 			if err != nil {
 				t.Fatal(told(err, root))
 			}
@@ -126,8 +127,8 @@ func TestOwnSlugOrder(t *testing.T) {
 			s, root := newStore(t)
 			dw := picKit(t, "", "")
 			for _, p := range c.pages {
-				up := store.Upload{File: "x.yaml", Source: []byte(ownSrc), Images: map[string][]byte{}, Project: "p", Repo: p.repo, Place: p.place}
-				e, err := s.PrepareData(dw, up, store.Options{Slug: ptr(p.slug)})
+				up := floepublish.Upload{File: "x.yaml", Source: []byte(ownSrc), Images: map[string][]byte{}, Project: "p", Repo: p.repo, Place: p.place}
+				e, err := floepublish.PrepareData(s, dw, up, store.Options{Slug: ptr(p.slug)})
 				if err == nil {
 					err = s.Save(e)
 				}
@@ -171,7 +172,7 @@ func TestOwnSlugUnreadable(t *testing.T) {
 		t.Fatal(err)
 	}
 	_, dataErr := put(t, s, dw, "plan.yaml", "plan.yaml", ownSrc, store.Options{})
-	_, linkErr := s.PrepareLink(t.Context(), dw, html, store.Options{}, "", filepath.Dir(filepath.Dir(root)))
+	_, linkErr := floepublish.PrepareLink(t.Context(), s, dw, html, store.Options{}, "", filepath.Dir(filepath.Dir(root)))
 	for _, err := range []error{dataErr, linkErr} {
 		if u, ok := errors.AsType[*usererr.Error](err); !ok || u.File() != root {
 			t.Errorf("refused %v, want the store unread", err)
@@ -194,7 +195,7 @@ func TestOwnSlugUnnamed(t *testing.T) {
 		t.Fatal(err)
 	}
 	dw := picKit(t, "", "")
-	_, err := s.PrepareLink(t.Context(), dw, html, store.Options{}, "", filepath.Dir(home))
+	_, err := floepublish.PrepareLink(t.Context(), s, dw, html, store.Options{}, "", filepath.Dir(home))
 	if u, ok := errors.AsType[*usererr.Error](err); !ok || u.Key != "store_slug_unnamed" || u.File() != html {
 		t.Errorf("link refused %v, want store_slug_unnamed at %s", err, html)
 	}
@@ -216,7 +217,7 @@ func TestOwnSlugLink(t *testing.T) {
 	}
 	dw := picKit(t, "", "")
 	for _, slug := range []*string{nil, ptr("aa")} {
-		e, err := s.PrepareLink(t.Context(), dw, html, store.Options{Slug: slug}, "", filepath.Dir(home))
+		e, err := floepublish.PrepareLink(t.Context(), s, dw, html, store.Options{Slug: slug}, "", filepath.Dir(home))
 		if err == nil {
 			err = s.Save(e)
 		}
@@ -224,7 +225,7 @@ func TestOwnSlugLink(t *testing.T) {
 			t.Fatal(told(err, root))
 		}
 	}
-	e, err := s.PrepareLink(t.Context(), dw, html, store.Options{}, "", filepath.Dir(home))
+	e, err := floepublish.PrepareLink(t.Context(), s, dw, html, store.Options{}, "", filepath.Dir(home))
 	if err != nil || e.Slug != "page" {
 		t.Errorf("picked %v, %s; want page", e, told(err, root))
 	}
@@ -306,8 +307,8 @@ func TestSameFileAnyProject(t *testing.T) {
 	plans := filepath.Join(filepath.Dir(root), "plans", "db.yaml")
 	pub := func(project, repo, place string, o store.Options) string {
 		t.Helper()
-		up := store.Upload{File: "db.yaml", Source: []byte(ownSrc), Images: map[string][]byte{}, Project: project, Repo: repo, Place: place}
-		e, err := s.PrepareData(dw, up, o)
+		up := floepublish.Upload{File: "db.yaml", Source: []byte(ownSrc), Images: map[string][]byte{}, Project: project, Repo: repo, Place: place}
+		e, err := floepublish.PrepareData(s, dw, up, o)
 		if err != nil {
 			t.Fatalf("from %s: %s", project, told(err, root))
 		}
@@ -377,8 +378,8 @@ func TestSameFileAnyProject(t *testing.T) {
 
 	// A page that kept no file: compared by the project published from, then keyed.
 	pub("p", "p", "", store.Options{Slug: ptr("nofile")})
-	up := store.Upload{File: "n.yaml", Source: []byte(ownSrc), Images: map[string][]byte{}, Project: "q", Repo: "", Place: plans + "2"}
-	if _, err := s.PrepareData(dw, up, store.Options{Slug: ptr("nofile")}); err == nil {
+	up := floepublish.Upload{File: "n.yaml", Source: []byte(ownSrc), Images: map[string][]byte{}, Project: "q", Repo: "", Place: plans + "2"}
+	if _, err := floepublish.PrepareData(s, dw, up, store.Options{Slug: ptr("nofile")}); err == nil {
 		t.Error("a page that kept no file, from another project: no refusal")
 	}
 	pub("p", "", plans+"2", store.Options{Slug: ptr("nofile")})
