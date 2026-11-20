@@ -447,8 +447,8 @@ func (d *drawing) bend(k int) {
 	}
 }
 
-// keepApart is how near a moved end at a box lets its runs stand beside another edge's: half the column the routes
-// keep. The edges that turn by an icon turn as far apart, and iconCell keeps room for them by it (turnLine).
+// keepApart is how near a moved end at a box or a frame lets its runs stand beside another edge's: half the column the
+// routes keep. The edges that turn by an icon turn as far apart, and iconCell keeps room for them by it (turnLine).
 // straighten keeps edges written by hand as far apart.
 // LIMIT: not for ends at icons, whose 8 ends on a side stand 5.33 apart, so edges at icons may run closer. Look again
 // if a diagram comes to show it.
@@ -489,8 +489,12 @@ func (d *drawing) moveRun(k int, at []int, axis int, q float64) bool {
 }
 
 // endsKeep is whether runs of edge k, moved with an end at a box or a frame, keep apart from the other edges' runs and,
-// for an end at a box, cross no more of them than before. An end at a frame may cross more: counted, the crossings
-// would refuse the moves that straighten its edge, and more edges would bend.
+// for an end at a box, cross no more of them than before.
+// LIMIT: the other edges' runs are where they stand now, so a move of an end at a frame may be refused beside a run
+// that moves away later, and an edge that could run straight stays bent (some 0.04% of random graphs). Straighten such
+// an edge again once the others have settled if a diagram comes to show it.
+// LIMIT: an end at a frame may cross more, as counting the crossings would refuse the moves that straighten its edge,
+// and more edges would bend. Count them for ends at frames too if a diagram shows a crossing that need not be.
 func (d *drawing) endsKeep(k int, runs []seg, boxEnd, frameEnd bool) bool {
 	if !boxEnd && !frameEnd {
 		return true

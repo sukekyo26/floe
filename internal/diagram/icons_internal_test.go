@@ -1226,8 +1226,9 @@ func headedGraph(rnd *rand.Rand, direction string) *graph {
 	return g
 }
 
-// Laid out, the ends at a headed group of random small graphs stand where the routes place them: on its frame, inEnd
-// from its corners, past its heading on the side the ranks enter it by. The routes place them so before any moves.
+// Laid out, the ends at the headed groups of random small graphs stand on their frames, inEnd from the corners, a
+// nodeGap clear of the headings as drawn and keepApart from the other edges' ends (frameEndFault), and the routes place
+// them so before any moves.
 func TestGraphIconFrameEndsRandom(t *testing.T) {
 	t.Parallel()
 
