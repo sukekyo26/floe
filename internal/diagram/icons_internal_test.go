@@ -6,7 +6,6 @@ import (
 	"math"
 	"math/rand/v2"
 	"slices"
-	"strconv"
 	"strings"
 	"testing"
 
@@ -57,10 +56,26 @@ func iconize(g *graph) {
 	}
 }
 
-// names reads the two names of an edge's path.
-func pathEnds(p path) (from, to string) {
-	from, to, _ = strings.Cut(strings.TrimPrefix(p.what, "edge "), "→")
-	return from, to
+// edgesFault is "" when l keeps g's edges in order, path k drawing edge k, or what it keeps instead.
+func edgesFault(g *graph, l *layout) string {
+	if len(l.paths) != len(g.Edges) {
+		return fmt.Sprintf("%d paths for %d edges", len(l.paths), len(g.Edges))
+	}
+	for k, p := range l.paths {
+		if want := edgeAt("#/parts/0/graph", k); p.at != want {
+			return fmt.Sprintf("path %d is %s at %s, not at %s", k, p.what, p.at, want)
+		}
+	}
+	return ""
+}
+
+// shapesOf is the shape of each box of g by its name, "icon" for an icon's.
+func shapesOf(g *graph) map[string]string {
+	shapes := map[string]string{}
+	for _, b := range graphBoxes(g) {
+		shapes[b.Name] = b.Shape
+	}
+	return shapes
 }
 
 // sidePlace is where the end pt stands on icon t: its side, and how far along it. An end on no side of it is "".
@@ -79,8 +94,9 @@ func sidePlace(t target, pt [2]float64) (string, float64) {
 	return "", 0
 }
 
-// iconFault is what is wrong with g laid out as l, or "": a mistake told, an end at an icon off the icon, the ends on a
-// side not parting it equally, a run at an icon too short for an arrow, or a label not on a run of its edge.
+// iconFault is what is wrong with g laid out as l, or "": a mistake told, a path not its edge's, an end at an icon not
+// laid out as one or off it, the ends on a side not parting it equally, a run at an icon too short for an arrow, or a
+// label not on a run of its edge.
 func iconFault(g *graph, l *layout) string {
 	if l.failure != nil {
 		return l.failure.Error()
@@ -88,20 +104,27 @@ func iconFault(g *graph, l *layout) string {
 	if len(l.problems) > 0 {
 		return l.problems.Error()
 	}
+	if fault := edgesFault(g, l); fault != "" {
+		return fault
+	}
+	shapes := shapesOf(g)
 	type place struct{ name, side string }
 	on := map[place][]float64{}
 	straight := map[place]bool{}
-	for _, p := range l.paths {
-		from, to := pathEnds(p)
+	for k, p := range l.paths {
+		from, to := g.Edges[k].From, g.Edges[k].To
 		first, last := p.segs[0], p.segs[len(p.segs)-1]
 		for j, e := range [2]struct {
 			name string
 			pt   [2]float64
 			run  seg
 		}{{from, [2]float64{first[0], first[1]}, first}, {to, [2]float64{last[2], last[3]}, last}} {
-			t, ok := l.names[e.name]
-			if !ok || t.kind != "icon" {
+			if shapes[e.name] != "icon" {
 				continue
+			}
+			t := l.names[e.name]
+			if t.kind != "icon" {
+				return fmt.Sprintf("icon %s is laid out as %q", e.name, t.kind)
 			}
 			side, along := sidePlace(t, e.pt)
 			if side == "" {
@@ -130,20 +153,17 @@ func iconFault(g *graph, l *layout) string {
 	return cmpOr(runsFault(g, l), labelsOn(g, l))
 }
 
-// runsFault is the first run of an edge of g at an icon not straight or of no length, or an end at a box off its
-// outline, or "".
+// runsFault is the first run of an edge of g at an icon not straight or of no length, an end at a box or a group not
+// laid out as one, or an end at a box off its outline, or "".
 func runsFault(g *graph, l *layout) string {
-	shapes := map[string]string{}
-	for _, b := range graphBoxes(g) {
-		shapes[b.Name] = b.Shape
-	}
-	for _, p := range l.paths {
+	shapes := shapesOf(g)
+	for k, p := range l.paths {
 		for _, s := range p.segs {
 			if !near(s[0], s[2]) && !near(s[1], s[3]) || math.Abs(s[0]-s[2])+math.Abs(s[1]-s[3]) < 1e-6 {
 				return fmt.Sprintf("%s runs %v", p.what, s)
 			}
 		}
-		from, to := pathEnds(p)
+		from, to := g.Edges[k].From, g.Edges[k].To
 		first, last := p.segs[0], p.segs[len(p.segs)-1]
 		for _, e := range [2]struct {
 			name string
@@ -151,18 +171,24 @@ func runsFault(g *graph, l *layout) string {
 			next [2]float64
 		}{{from, [2]float64{first[0], first[1]}, [2]float64{first[2], first[3]}}, {to, [2]float64{last[2], last[3]}, [2]float64{last[0], last[1]}}} {
 			shape, isBox := shapes[e.name]
-			t, named := l.names[e.name]
-			if !isBox || !named || t.kind != "box" {
+			if !isBox {
+				if t := l.names[e.name]; t.kind != "frame" {
+					return fmt.Sprintf("group %s is laid out as %q", e.name, t.kind)
+				}
+				// LIMIT: an end at a group's frame is not checked to stand on it: straightened, some stand off it (S418).
+				// Check it (onFrameSide) once that is fixed.
 				continue
 			}
-			side, along := "left", e.pt[1]
-			switch {
-			case e.pt[0] == e.next[0] && e.next[1] > e.pt[1]:
-				side, along = "bottom", e.pt[0]
-			case e.pt[0] == e.next[0]:
-				side, along = "top", e.pt[0]
-			case e.next[0] > e.pt[0]:
-				side = "right"
+			if shape == "icon" {
+				continue
+			}
+			t := l.names[e.name]
+			if t.kind != "box" {
+				return fmt.Sprintf("box %s is laid out as %q", e.name, t.kind)
+			}
+			side, along := leaves(e.pt, e.next), e.pt[1]
+			if side == "top" || side == "bottom" {
+				along = e.pt[0]
 			}
 			want := outlineOf(t.r.w, t.r.h, shape).on(t.r, side, along)
 			if math.Abs(want[0]-e.pt[0])+math.Abs(want[1]-e.pt[1]) > 1e-6 {
@@ -335,9 +361,6 @@ func TestGraphIconsRandom(t *testing.T) {
 				}
 				left += len(runThrough(g, l))
 				shared += sharedStretches(l)
-				if short := shortArrows(g, l); len(short) > 0 {
-					t.Fatalf("seed %v, graph %d: arrows on runs too short: %v", c.seed, i, short)
-				}
 			}
 			if shared > 0 {
 				t.Errorf("seed %v: %d pairs of edges share a stretch", c.seed, shared)
@@ -750,39 +773,6 @@ func sharedStretches(l *layout) int {
 	return n
 }
 
-// shortArrows are the edges of g, laid out as l, into an icon whose last run is shorter than an arrow's. It finds an
-// edge's path by its index, as l keeps g's edges in order, not by the names in its words.
-func shortArrows(g *graph, l *layout) []string {
-	icons := map[string]bool{}
-	var walk func(nodes []graphNode)
-	walk = func(nodes []graphNode) {
-		for _, n := range nodes {
-			if n.Icon != nil {
-				icons[n.Icon.Name] = true
-			}
-			if n.Group != nil {
-				walk(n.Group.Nodes)
-			}
-		}
-	}
-	walk(g.Nodes)
-	for _, ln := range g.Lanes {
-		walk(ln.Nodes)
-	}
-	var short []string
-	for k, e := range g.Edges {
-		p := l.paths[k]
-		if want := "edge " + strconv.Quote(e.From) + "→" + strconv.Quote(e.To); p.what != want {
-			return []string{fmt.Sprintf("path %d is %s, not %s", k, p.what, want)}
-		}
-		s := p.segs[len(p.segs)-1]
-		if icons[e.To] && math.Abs(s[0]-s[2])+math.Abs(s[1]-s[3]) < arrowRun-eps {
-			short = append(short, p.what)
-		}
-	}
-	return short
-}
-
 // cellCrossings counts the crossings of two edges of l where inside, the icons' rectangles, holds.
 func cellCrossings(l *layout, inside func([2]float64) bool) int {
 	n := 0
@@ -904,14 +894,12 @@ parts:
 	}
 	for name, g := range cases {
 		l := laid(g)
-		if l.failure != nil || len(l.problems) > 0 {
-			t.Fatalf("%s: %v %v", name, l.failure, l.problems)
+		if fault := iconFault(g, l); fault != "" {
+			t.Errorf("%s: %s", name, fault)
+			continue
 		}
 		if n := sharedStretches(l); n > 0 {
 			t.Errorf("%s: %d pairs of edges share a stretch", name, n)
-		}
-		if short := shortArrows(g, l); len(short) > 0 {
-			t.Errorf("%s: arrows on runs too short: %v", name, short)
 		}
 	}
 }
