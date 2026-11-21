@@ -11,7 +11,7 @@ export interface GroupAdd {
   readonly onAdd: () => void;
 }
 
-// What Rows draws, in the order the caller arranged (arrange): a group's heading, or a row of an entry, which draw
+// What Rows draws, in the order the caller arranged (arrange): a group's heading, or a row of an entry, which render
 // makes, told whether it was drawn before
 export type RowItem =
   | {
@@ -25,7 +25,7 @@ export type RowItem =
       readonly kind: 'row';
       readonly key: string;
       readonly titled: boolean;
-      readonly draw: (kept: boolean) => ReactNode;
+      readonly render: (kept: boolean) => ReactNode;
     };
 
 export interface RowsProps {
@@ -133,7 +133,7 @@ export class Rows extends Component<RowsProps> {
           x.kind === 'group' ? (
             <Heading key={x.key} item={x} />
           ) : (
-            <Fragment key={x.key}>{x.draw(this.drawn.has(x.key))}</Fragment>
+            <Fragment key={x.key}>{x.render(this.drawn.has(x.key))}</Fragment>
           ),
         )}
       </ul>

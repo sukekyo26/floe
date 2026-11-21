@@ -2,6 +2,7 @@ package ui
 
 import (
 	"bytes"
+	"encoding/json"
 	"flag"
 	"io/fs"
 	"os"
@@ -100,5 +101,24 @@ func TestFetchInApiClient(t *testing.T) {
 
 	if got, want := namedIn(webSources(t), ".fetch("), []string{"lib/api-client.ts"}; !slices.Equal(got, want) {
 		t.Errorf(".fetch( is named in %v, want %v", got, want)
+	}
+}
+
+var gallery = flag.String("gallery", "", "write web/gallery/boot.json, the gallery's boot values, in this language (ja, en)")
+
+// TestGalleryBoot is no test: with -gallery it writes the boot values the gallery is served with (just web-gallery), a
+// file .gitignore leaves out, of the list screen in that language.
+func TestGalleryBoot(t *testing.T) {
+	t.Parallel()
+
+	if *gallery == "" {
+		t.Skip("writes web/gallery/boot.json with -gallery only")
+	}
+	b, err := json.Marshal(newBoot(i18n.New(i18n.Tag(*gallery)), List, "", false, ""))
+	if err != nil {
+		t.Fatal(err)
+	}
+	if err := os.WriteFile("web/gallery/boot.json", b, 0o644); err != nil { //nolint:gosec // a file of the repository
+		t.Fatal(err)
 	}
 }
