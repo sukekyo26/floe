@@ -131,7 +131,7 @@ test-browser part:
     #!/usr/bin/env bash
     set -euo pipefail
     part="{{part}}"
-    parts=$("{{just_executable()}}" --justfile "{{justfile()}}" browser-parts)
+    parts=$("{{just_executable()}}" --justfile "{{justfile()}}" browser_rest_jobs="{{browser_rest_jobs}}" browser-parts)
     if [[ $parts != *"\"$part\""* ]]; then
         echo "test-browser: no part $part; use one of $parts" >&2; exit 1
     fi
