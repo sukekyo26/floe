@@ -45,10 +45,10 @@ window.fetch = (u, i) => {
 func pressMenuItemFocused(b *browser, box, item string) {
 	b.t.Helper()
 
-	menu := box + " [data-testid=more]"
-	b.eval("(() => { const s = document.querySelector(" + js(menu+" > summary") + "); s.focus(); s.click(); })()")
-	got := "document.querySelector(" + js(menu+" [data-testid="+item+"]") + ")"
-	b.until("the item "+item, got+"?.checkVisibility()")
+	menu := "document.querySelector(" + js(box+" [data-testid=more]") + ")"
+	got := "document.querySelector(" + js(box+" [data-testid=more] [data-testid="+item+"]") + ")"
+	// Opened again while waited for, as pressMenuItem
+	b.until("the item "+item, "(() => { const m = "+menu+"; if (m && !m.open) { const s = m.querySelector('summary'); s.focus(); s.click(); } return "+got+"?.checkVisibility(); })()")
 	b.eval("(() => { const i = " + got + "; i.focus(); i.click(); })()")
 }
 

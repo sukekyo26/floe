@@ -56,13 +56,13 @@ func goneReads(b *browser, slug string) {
 	}); }`)
 }
 
-// pressMenuItem opens the "…" menu in box and presses its item named item (data-testid).
+// pressMenuItem opens the "…" menu in box and presses its item named item (data-testid). The menu is opened again while it is
+// waited for: the list's or the bar's first read may draw it anew, closed, just after it opened.
 func pressMenuItem(b *browser, box, item string) {
 	b.t.Helper()
-	menu := box + " [data-testid=more]"
-	b.eval("document.querySelector(" + js(menu+" > summary") + ").click()")
-	got := "document.querySelector(" + js(menu+" [data-testid="+item+"]") + ")"
-	b.until("the item "+item, got+"?.checkVisibility()")
+	menu := "document.querySelector(" + js(box+" [data-testid=more]") + ")"
+	got := "document.querySelector(" + js(box+" [data-testid=more] [data-testid="+item+"]") + ")"
+	b.until("the item "+item, "(() => { const m = "+menu+"; if (m && !m.open) m.querySelector('summary').click(); return "+got+"?.checkVisibility(); })()")
 	b.moving(got + ".click()")
 }
 

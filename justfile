@@ -7,8 +7,9 @@ core_pkgs  := "go list " + pkgs + " | grep -v /internal/browsertest$"
 # The browser tests CI runs on one machine (test-browser looks); the rest run on another. Chosen by adding the heaviest
 # first (go test -race -json, each test's time) while the sum nears half of all: choose again so when a test is added.
 # LIMIT: how even the two are is not checked; CI's two jobs' times show it. When one job passes 8 minutes (its timeout is
-# 15), split the tests into three jobs, and change the required checks of the develop ruleset with them.
-browser_looks := "TestLookRule|TestUITaskChildren|TestUIVersionGone|TestUITaskPage|TestUITaskArchive|TestUITaskParent|TestUIDiffNotice"
+# 15), move tests from it to the other; when both do, split the tests into three jobs, and change the required checks of the
+# develop ruleset with them.
+browser_looks := "TestLookRule|TestUITaskChildren|TestUIVersionGone|TestUITaskPage|TestUITaskArchive|TestUITaskParent|TestUIDiffNotice|TestUIRowAgainPressed|TestUITaskList|TestUIReader|TestUIFolderSide"
 # Default version is the trimmed contents of VERSION; override with `VERSION=1.2.3 just build`.
 version    := env_var_or_default("VERSION", trim(`cat VERSION 2>/dev/null || echo 0.0.0-dev`))
 ldflags    := "-s -w -X floe/internal/version.Version=" + version
