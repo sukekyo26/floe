@@ -321,15 +321,115 @@
       }
     },
     {
-      "files": [
-        "src/components/**",
-        "src/hooks/**",
-        "src/lib/**",
-        "src/stores/**",
-        "src/types/**",
-        "src/utils/**",
-        "src/config/**"
-      ],
+      "files": ["src/types/**"],
+      "rules": {
+        "no-restricted-imports": [
+          "error",
+          {
+            "patterns": [
+              {
+                "group": ["@/**", "!@/types/**"],
+                "message": "types import types alone"
+              }
+            ]
+          }
+        ]
+      }
+    },
+    {
+      "files": ["src/utils/**"],
+      "rules": {
+        "no-restricted-imports": [
+          "error",
+          {
+            "patterns": [
+              {
+                "group": ["@/**", "!@/utils/**", "!@/types/**"],
+                "message": "utils are pure: they import utils and types alone"
+              }
+            ]
+          }
+        ]
+      }
+    },
+    {
+      "files": ["src/config/**"],
+      "rules": {
+        "no-restricted-imports": [
+          "error",
+          {
+            "patterns": [
+              {
+                "group": ["@/**", "!@/config/**", "!@/types/**"],
+                "message": "config imports types alone"
+              }
+            ]
+          }
+        ]
+      }
+    },
+    {
+      "files": ["src/lib/**"],
+      "rules": {
+        "no-restricted-imports": [
+          "error",
+          {
+            "patterns": [
+              {
+                "group": ["@/features/**", "@/app/**"],
+                "message": "shared code imports no feature and no app"
+              },
+              {
+                "group": ["@/stores/**", "@/hooks/**", "@/components/**"],
+                "message": "lib imports no store, hook or component: a store calls lib"
+              }
+            ]
+          }
+        ]
+      }
+    },
+    {
+      "files": ["src/stores/**"],
+      "rules": {
+        "no-restricted-imports": [
+          "error",
+          {
+            "patterns": [
+              {
+                "group": ["@/features/**", "@/app/**"],
+                "message": "shared code imports no feature and no app"
+              },
+              {
+                "group": ["@/hooks/**", "@/components/**"],
+                "message": "stores import no hook or component"
+              }
+            ]
+          }
+        ]
+      }
+    },
+    {
+      "files": ["src/hooks/**"],
+      "rules": {
+        "no-restricted-imports": [
+          "error",
+          {
+            "patterns": [
+              {
+                "group": ["@/features/**", "@/app/**"],
+                "message": "shared code imports no feature and no app"
+              },
+              {
+                "group": ["@/components/**"],
+                "message": "hooks import no component"
+              }
+            ]
+          }
+        ]
+      }
+    },
+    {
+      "files": ["src/components/**"],
       "rules": {
         "no-restricted-imports": [
           "error",
