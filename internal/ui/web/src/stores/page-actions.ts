@@ -102,7 +102,7 @@ export function createPageActions({
         undo: true,
         // Not held: given back, its own toast goes, the focus on what came back if it was there
         holds: false,
-        onPress: () => setArchived(a, false, { ...call, focus: false }),
+        onPress: () => setArchived(a, false, call),
         onEscape: () => {
           toasts.remove(id);
           where.escape();

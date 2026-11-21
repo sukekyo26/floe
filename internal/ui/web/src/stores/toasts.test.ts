@@ -1,6 +1,6 @@
 import { describe, expect, it, vi } from 'vitest';
 
-import { createToasts } from '@/stores/toasts';
+import { createToasts, pressToastButton } from '@/stores/toasts';
 
 const texts = (t: ReturnType<typeof createToasts>) => t.shown.get().map((x) => x.text);
 
@@ -54,5 +54,22 @@ describe(createToasts, () => {
     // @ts-expect-error a toast with a button is given its time
     t.toast('no time', { button });
     expect(texts(t)).toStrictEqual(['second', 'no time']);
+  });
+});
+
+describe(pressToastButton, () => {
+  it('holds a button that holds until its press is done, and no other', async () => {
+    expect.assertions(3);
+    const held: boolean[] = [];
+    const hold = (on: boolean) => held.push(on);
+    const { promise: going, resolve: done } = Promise.withResolvers<undefined>();
+    pressToastButton({ label: 'Undo', undo: true, holds: true, onPress: () => going }, hold);
+    expect(held).toStrictEqual([true]);
+    done(undefined);
+    await going;
+    await Promise.resolve();
+    expect(held).toStrictEqual([true, false]);
+    pressToastButton({ label: 'Restore', undo: true, holds: false, onPress: () => Promise.resolve() }, hold);
+    expect(held).toStrictEqual([true, false]);
   });
 });

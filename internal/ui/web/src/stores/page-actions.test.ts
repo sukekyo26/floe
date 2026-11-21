@@ -32,6 +32,7 @@ interface Options {
   outcome?: ReadOutcome | null;
   known?: boolean;
   stale?: boolean;
+  screen?: string;
 }
 
 // made makes the actions over fakes that log, in order, what they were asked
@@ -42,9 +43,10 @@ function made({
   outcome = { kind: 'sent', cleared: false },
   known = true,
   stale = false,
+  screen = 'list',
 }: Options = {}) {
   const messages = new Proxy({} as Boot['messages'], { get: (_, key) => `${String(key)}:%s` });
-  const boot = { screen: 'list', framed, messages } as unknown as Boot;
+  const boot = { screen, framed, messages } as unknown as Boot;
   setBoot(boot);
   const log: string[] = [];
   const now = { refuse };
@@ -55,7 +57,10 @@ function made({
       log.push(`load after ${String(toasts.shown.get().length)} toasts`);
       return Promise.resolve();
     },
-    rereadTasks: () => Promise.resolve(),
+    rereadTasks: () => {
+      log.push('reread tasks');
+      return Promise.resolve();
+    },
     readRev: () => 7,
     state: createStore({ tasks: { tasks: { floe: known ? { '#1': { rev: 7 } } : {} } } }),
   } as unknown as Pages;
@@ -108,8 +113,9 @@ const prepared = (log: string[]) => (slug: string) => {
 
 describe(createPageActions, () => {
   it('says a star or a pin with a toast before the list is read, and a refusal on the error line alone', async () => {
-    expect.assertions(3);
+    expect.assertions(4);
     const ok = made();
+    ok.notice.say('before');
     await ok.actions.toggleFavorite(page);
     await ok.actions.togglePin(page);
     expect(ok.log).toStrictEqual([
@@ -118,6 +124,8 @@ describe(createPageActions, () => {
       'task a {"pin":true}',
       'load after 2 toasts',
     ]);
+    // A pin is a task's write, which leaves the error line to the page's writes
+    expect(ok.notice.said.get().message).toBe('before');
     const refused = made({ refuse: 'no' });
     await refused.actions.togglePin(page);
     expect(refused.toasts.shown.get()).toStrictEqual([]);
@@ -167,6 +175,13 @@ describe(createPageActions, () => {
     expect(log.slice(3)).toStrictEqual(['put #1 designs {"new":false,"rev":7}', 'load after 1 toasts', 'done']);
   });
 
+  it('reads the tasks again in a page whole before the way back reads its task', async () => {
+    expect.assertions(1);
+    const { actions, log } = made({ screen: 'frame' });
+    await actions.takePageOff(page, { prepare: prepared(log) });
+    expect(log).toStrictEqual(['prepare a', 'task a {"task":"","category":""}', 'reread tasks', 'load after 1 toasts']);
+  });
+
   it('puts a page back on a task with no row as new, says a stale way back as the store does, and a refused take-off', async () => {
     expect.assertions(3);
     const fresh = made({ known: false, stale: true });
@@ -185,6 +200,13 @@ describe(createPageActions, () => {
     await actions.removePage(page, () => log.push('removed'));
     expect(log).toStrictEqual(['delete a', 'removed', 'go /back']);
     expect(toasts.shown.get()).toStrictEqual([]);
+  });
+
+  it('says a page deleted from the list and reads the list after', async () => {
+    expect.assertions(1);
+    const { actions, log, toasts } = made();
+    await actions.removePage(page, () => log.push('removed'));
+    expect([log, texts(toasts)]).toStrictEqual([['delete a', 'removed', 'load after 1 toasts'], ['ui_delete_done:A']]);
   });
 
   it('says a page marked unread when it was sent, as the page’s toast for the page shown, the focus read first', async () => {

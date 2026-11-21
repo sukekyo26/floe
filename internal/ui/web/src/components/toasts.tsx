@@ -3,7 +3,13 @@ import { useLayoutEffect, useRef, useState } from 'react';
 import { Button } from '@/components/button';
 import { DoneIcon } from '@/components/icons';
 import { useStore } from '@/hooks/use-store';
-import { toasts as pageToasts, type Toast, type ToastButton, type Toasts as ToastStore } from '@/stores/toasts';
+import {
+  pressToastButton,
+  toasts as pageToasts,
+  type Toast,
+  type ToastButton,
+  type Toasts as ToastStore,
+} from '@/stores/toasts';
 
 // ToastAction is a toast's button: held while its press goes when it holds, Escape its own
 function ToastAction({ button }: { readonly button: ToastButton }) {
@@ -21,14 +27,7 @@ function ToastAction({ button }: { readonly button: ToastButton }) {
         label={button.name}
         disabled={going}
         onClick={() => {
-          if (!button.holds) {
-            void button.onPress();
-            return;
-          }
-          setGoing(true);
-          void Promise.resolve(button.onPress()).finally(() => {
-            setGoing(false);
-          });
+          pressToastButton(button, setGoing);
         }}
       >
         {button.label}

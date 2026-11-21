@@ -54,7 +54,7 @@ export interface PageMenuProps {
   readonly actions?: PageActions;
 }
 
-// copiedFor shows a copy button's done mark for 1.5 s
+// useCopied shows a copy button's done mark for 1.5 s
 export function useCopied(): [boolean, () => void] {
   const [copied, setCopied] = useState(false);
   useEffect(() => {
@@ -88,7 +88,7 @@ export function PageMenu({
   taskShown = null,
   actions = pageActionStore,
 }: PageMenuProps) {
-  const arm = useArm();
+  const arm = useArm(a.slug);
   const [copied, setCopied] = useCopied();
   const title = a.title ?? a.slug;
   const back = menuBack(menuId);

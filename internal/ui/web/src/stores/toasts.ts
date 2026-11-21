@@ -16,6 +16,18 @@ export interface ToastButton {
   onEscape?: () => void;
 }
 
+// pressToastButton presses a toast's button; one that holds is held (hold(true)) until its press is done
+export function pressToastButton(button: ToastButton, hold: (on: boolean) => void): void {
+  if (!button.holds) {
+    void button.onPress();
+    return;
+  }
+  hold(true);
+  void Promise.resolve(button.onPress()).finally(() => {
+    hold(false);
+  });
+}
+
 export interface Toast {
   id: number;
   text: string;

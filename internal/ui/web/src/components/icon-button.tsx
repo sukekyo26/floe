@@ -77,6 +77,7 @@ export function IconButton({
         target={newTab ? '_blank' : undefined}
         rel={newTab ? 'noreferrer' : undefined}
         download={download ? '' : undefined}
+        data-on={on ? 'true' : undefined}
         onClick={onClick}
       >
         {children}

@@ -53,7 +53,7 @@ describe(BarActions, () => {
   });
 
   it('opens the diff of a page of versions, and closes it in the diff', () => {
-    expect.assertions(3);
+    expect.assertions(4);
     expect(tagOf(bar('list', { slug: 'a', v: 2 }), 'diff-open')).toMatch(
       /href="\/a\/a\/\?diff&amp;from=2&amp;to=3"(?![^>]*hidden)/,
     );
@@ -61,5 +61,6 @@ describe(BarActions, () => {
     expect(tagOf(bar('frame', { slug: 'a' }, {}, true), 'diff-open')).toMatch(
       /href="\/a\/a\/".*data-testid="diff-open"|data-testid="diff-open".*href="\/a\/a\/"/,
     );
+    expect(tagOf(bar('frame', { slug: 'a' }, {}, true), 'diff-open')).toContain('data-on="true"');
   });
 });

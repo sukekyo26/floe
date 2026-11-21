@@ -14,7 +14,6 @@ export interface Undo {
 export interface UndoOptions {
   // focus: the change was made from the keys, and its way back takes the focus
   focus?: boolean;
-  slug?: string;
 }
 
 export type UndoToast = (said: string, how: Undo, options?: UndoOptions) => number;
@@ -28,13 +27,12 @@ interface Deps {
 // createUndoToast makes the toast with a way back (ui.html undoToast): pressed, it holds, writes what was there before
 // and goes whatever comes; a refusal (written meanwhile, say) is said as the store says it
 export function createUndoToast({ toasts = pageToasts, notice = pageNotice, pages = pagePages }: Deps = {}): UndoToast {
-  return (said, how, { focus = false, slug } = {}) => {
+  return (said, how, { focus = false } = {}) => {
     const id = toasts.toast(said, {
       ms: 8000,
       focus,
       button: {
         label: t('ui_undo'),
-        ...(slug === undefined ? {} : { slug }),
         undo: true,
         holds: true,
         onPress: async () => {
