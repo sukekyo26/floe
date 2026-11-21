@@ -20,7 +20,7 @@ const testids = (html: string) => [...html.matchAll(/data-testid="([^"]*)"/g)].m
 
 describe(RowSub, () => {
   it('tells a new version, the kind, the project of a colour, what the caller adds and the path, in that order', () => {
-    expect.assertions(2);
+    expect.assertions(3);
     testBoot();
     const link = renderToString(
       <RowSub
@@ -30,6 +30,8 @@ describe(RowSub, () => {
       />,
     );
     expect(testids(link)).toStrictEqual(['ver', 'kindof', 'proj', 'proj-name', 'badge', 'path']);
+    // The project's pill tells it is painted (P0's data-tint)
+    expect(link).toMatch(/data-testid="proj"[^>]*data-tint="true"/);
     // A file gone is said in the path's place; a project with no colour, an archived page's news and a page of no
     // template say nothing
     const gone = renderToString(

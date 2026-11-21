@@ -142,6 +142,8 @@ export function Dialog({
         // Closed from outside (close() called on the element, as a test may): the caller is told, as by a close button.
         // The event comes a frame after the close: one of a close by this modal finds open false, or, opened again
         // meanwhile (Ctrl+K twice), the element open, and is dropped
+        // LIMIT: closed and opened again in one task by script (close, open, close, open, at once), it stays closed: open
+        // ends as it began, and React draws nothing anew. A person's keys and presses are tasks of their own
         onClose={(e) => {
           if (open && !e.currentTarget.open) onClosed();
         }}
