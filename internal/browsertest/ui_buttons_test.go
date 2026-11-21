@@ -17,9 +17,9 @@ import (
 
 // notButtons are not buttons of words by the rule (.claude/rules/ui.md): the shelf's rows and the add buttons under them, in a
 // modal too on a narrow screen; the settings' rows and their way back; the "…" menu's items. Nor are the links of a row or a mark
-// (the brand, a row's title in the list and the search, a row's task, a task's parent and children, the diff's contents).
+// (the brand, a row's title in the list and the search, a row's task and tags, a task's parent and children, the diff's contents).
 const notButtons = "#shelf *, #filter-dialog #shelf-more *, [data-testid=settings-item], #settings-back, [data-testid=menu] *, " +
-	"[data-testid=brand], #list li [data-testid=title], #find-list li [data-testid=title], [data-testid=task-tag], [data-testid=kin-row], #diff-toc button"
+	"[data-testid=brand], #list li [data-testid=title], #find-list li [data-testid=title], [data-testid=task-tag], #list li [data-testid=tagpill], [data-testid=kin-row], #diff-toc button"
 
 // wordsOnly is a button of words in no form of .btn, measured for its words alone: the task's way back.
 const wordsOnly = "#task-up"
@@ -45,7 +45,8 @@ func TestUIButtons(t *testing.T) { //nolint:paralleltest // the browser tests sh
 	project := "proj"
 	for _, slug := range []string{"a", "b"} {
 		s.floe(t, "publish", s.page(t, slug+".yaml", "T "+slug, ""), "--slug", slug)
-		if _, err := st.Edit(slug, store.Edit{Project: &project}); err != nil {
+		// A tag on a row: a mark of the row, as its task is
+		if _, err := st.Edit(slug, store.Edit{Project: &project, Tags: &store.TagsEdit{Add: []string{"plan"}}}); err != nil {
 			t.Fatal(err)
 		}
 	}

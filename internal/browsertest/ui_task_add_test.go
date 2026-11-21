@@ -258,19 +258,19 @@ func TestUITaskAdd(t *testing.T) { //nolint:paralleltest // the browser tests sh
 
 	// A poll asked before the write and answered after it is of the tasks before: it draws neither the words of a list with none nor over the row.
 	// The save's load waits for it, so it is let go once the write is answered.
-	const holdReads = "window.realFetch ??= window.fetch; window.held = []; window.fetch = (u, o) => (o?.method ? window.realFetch(u, o) : window.realFetch(u, o).then((r) => new Promise((go) => { window.held.push(() => go(r)); })))"
 	s.floe(t, "task", "--project", "epsilon", "--task", "#60", "--state", "done")
 	b.navigate("/tasks?project=epsilon&view=done")
 	open("add-task")
 	b.eval("window.noneShown = false; new MutationObserver(() => { window.noneShown ||= !document.getElementById('tasks-none').hidden; }).observe(document.getElementById('tasks-none'), { attributes: true })")
-	b.eval(holdReads)
-	b.until("a poll held", "window.held.length >= 2")
+	b.eval("window.realFetch ??= window.fetch")
+	letGo := b.holdReads(unanswered, "/api/pages", "/api/tasks")
+	b.until("a poll held", "window.heldReads >= 2")
 	// The reads after go on; the save's answer is marked
 	b.eval("window.patched = false; window.fetch = (u, o) => (o?.method === 'PATCH' ? window.realFetch(u, o).then((r) => { window.patched = true; return r; }) : window.realFetch(u, o))")
 	name("#61", "late")
 	b.eval("document.getElementById('kin-submit').click()")
 	b.until("the write answered", "window.patched")
-	b.eval("window.held.forEach((go) => go()); true")
+	letGo()
 	b.until("saved", "!"+dialog+".open")
 	b.until("the row", "document.querySelector('#list li[data-fresh=true]')")
 	want("a poll late: the row and its mark stay", list, `?view=todo&project=epsilon #61 true Created task #61 /tasks?project=epsilon&task=%2361`)

@@ -111,13 +111,13 @@ func TestUIRead(t *testing.T) { //nolint:paralleltest // the browser tests share
 		window.cutOff = 0;
 		const f = window.fetch;
 		window.fetch = (u, i) => { const p = f(u, i); if (i?.method === 'POST') p.catch(() => { window.cutOff++; }); return p; };
-		addEventListener('DOMContentLoaded', () => new MutationObserver(() => { window.wentDown ||= document.getElementById('server').classList.contains('down'); })
+		addEventListener('DOMContentLoaded', () => new MutationObserver(() => { window.wentDown ||= document.getElementById('server').dataset.down === 'true'; })
 			.observe(document.getElementById('server'), { attributes: true }));
 	}`)
 	b.navigate("/a/held/")
-	b.until("the request to be cut off", "window.cutOff === 1 && readsGoing === false")
+	b.until("the request to be cut off", "window.cutOff === 1")
 	b.removeScript(watch)
-	if got := b.eval("Boolean(window.wentDown) || document.getElementById('server').classList.contains('down')"); got != "false" {
+	if got := b.eval("Boolean(window.wentDown) || document.getElementById('server').dataset.down === 'true'"); got != "false" {
 		t.Error("a request cut off by its time limit showed the server as not reached")
 	}
 	unlock()
@@ -138,7 +138,7 @@ func TestUIRead(t *testing.T) { //nolint:paralleltest // the browser tests share
 	if want := "Failed to mark as read: HTTP 400: " + reads + ": is missing, broken or has no since: run floe stop, then floe serve, which writes it anew"; got != want {
 		t.Errorf("shown %q, want %q", got, want)
 	}
-	if got := b.eval("document.querySelectorAll('.toast').length"); got != "0" {
+	if got := b.eval("document.querySelectorAll('[data-testid=toast]').length"); got != "0" {
 		t.Errorf("%s toasts of success", got)
 	}
 	if err = os.WriteFile(reads, kept, 0o600); err != nil { //nolint:gosec // G703: a path the test names

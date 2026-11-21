@@ -39,30 +39,15 @@ func unreadSite(t *testing.T) *site {
 
 const (
 	unreadRow    = "document.querySelector('#list li[data-slug=%s]')"
-	pageToastSay = "document.querySelector('.toast.page')?.firstChild && [...document.querySelector('.toast.page').childNodes].filter((n) => n.nodeType === 3).map((n) => n.textContent).join('')"
+	pageToastSay = "document.querySelector('[data-testid=toast][data-page]')?.firstChild && [...document.querySelector('[data-testid=toast][data-page]').childNodes].filter((n) => n.nodeType === 3).map((n) => n.textContent).join('')"
 )
-
-func pickUnread(b *browser, slug string) {
-	b.t.Helper()
-	b.moving(fmt.Sprintf(unreadRow, slug) + ".querySelector('.title').click()")
-}
-
-func isUnseen(b *browser, slug string, want bool) {
-	b.t.Helper()
-	b.until(fmt.Sprintf("%s unseen %v", slug, want), fmt.Sprintf(unreadRow, slug)+".classList.contains('unseen') === "+fmt.Sprint(want))
-}
 
 func unreadList(b *browser) {
 	b.t.Helper()
 	b.size(1440, 800, false)
 	b.navigate("/")
 	b.until("the rows", fmt.Sprintf(unreadRow, "p1"))
-}
-
-// sentAll waits for the line of requests to be done.
-func sentAll(b *browser) {
-	b.t.Helper()
-	b.eval("new Promise((go) => { const look = () => (readsGoing ? setTimeout(look, 10) : go()); look(); })")
+	b.eval(readMarks)
 }
 
 // TestUIUnread opens a new page beside the list: read, with a toast to take it back, whose press leaves the page where it is, and
@@ -73,45 +58,45 @@ func TestUIUnread(t *testing.T) { //nolint:paralleltest // the browser tests sha
 	unreadList(b)
 	b.eval("document.activeElement.blur(); window.loads = 0; document.getElementById('read-frame').addEventListener('load', () => { window.loads++; })")
 	out := make([]string, 0, 16)
-	pickUnread(b, "p1")
-	b.until("the toast", "document.querySelector('.toast.page .btn')")
-	isUnseen(b, "p1", false)
-	out = append(out, b.eval(pageToastSay), b.eval("document.querySelector('.toast.page .btn').textContent + ' / ' + document.querySelector('.toast.page .btn').getAttribute('aria-label')"),
-		b.eval("document.getElementById('toasts').getAttribute('role') + ' ' + document.activeElement.matches('.toast *')"))
+	openRowOf(b, "p1")
+	b.until("the toast", pageToastButton)
+	untilUnseen(b, "p1", false)
+	out = append(out, b.eval(pageToastSay), b.eval(pageToastButton+".textContent + ' / ' + "+pageToastButton+".getAttribute('aria-label')"),
+		b.eval("document.getElementById('toasts').getAttribute('role') + ' ' + document.activeElement.matches('[data-testid=toast] *')"))
 	b.until("the page in", "window.loads > 0")
 	loads := b.eval("window.loads")
 	// Pressed: the row new again, the count up, the page left as it is.
 	before := b.eval("document.getElementById('news-n').textContent")
-	b.eval("document.querySelector('.toast.page .btn').click()")
+	b.eval(pageToastButton + ".click()")
 	b.until("the words", pageToastSay+" === 'Marked as unread. It is marked as read when you open it again.'")
-	isUnseen(b, "p1", true)
-	out = append(out, b.eval("window.sent.join(',')"), b.eval("document.querySelectorAll('.toast.page .btn').length"),
+	untilUnseen(b, "p1", true)
+	out = append(out, b.eval("window.sent.join(',')"), b.eval("document.querySelectorAll('[data-testid=toast][data-page] button').length"),
 		b.eval("document.getElementById('news-n').textContent !== "+js(before)), b.eval("String(window.loads) === "+js(loads)))
 	// On to the next: one toast, of that page; back: read, with the toast.
-	pickUnread(b, "p2")
-	b.until("the next toast", "document.querySelector('.toast.page .btn')")
-	out = append(out, b.eval("document.querySelectorAll('.toast.page').length"))
-	pickUnread(b, "p1")
+	openRowOf(b, "p2")
+	b.until("the next toast", pageToastButton)
+	out = append(out, b.eval(pageToasts))
+	openRowOf(b, "p1")
 	b.until("read again", "window.sent.filter((x) => x === 'POST p1').length === 2")
-	b.until("its toast", "document.querySelector('.toast.page .btn')?.getAttribute('aria-label') === 'Mark Title p1 as unread'")
-	isUnseen(b, "p1", false)
+	b.until("its toast", pageToastButton+"?.getAttribute('aria-label') === 'Mark Title p1 as unread'")
+	untilUnseen(b, "p1", false)
 	// A page read, and a link: no toast, the one before gone.
-	pickUnread(b, "p2")
+	openRowOf(b, "p2")
 	b.until("told", "window.sent.filter((x) => x === 'POST p2').length === 2")
-	sentAll(b)
-	out = append(out, b.eval("document.querySelectorAll('.toast.page').length"))
-	pickUnread(b, "l")
-	b.until("the link", "picked?.slug === 'l'")
-	sentAll(b)
-	out = append(out, b.eval("document.querySelectorAll('.toast.page').length + ' ' + window.sent.includes('POST l')"))
+	b.marksDone(5) // POST p1, DELETE p1, POST p2, POST p1, POST p2
+	out = append(out, b.eval(pageToasts))
+	openRowOf(b, "l")
+	b.until("the link", besideSlug+" === 'l'")
+	b.marksDone(5)
+	out = append(out, b.eval(pageToasts+" + ' ' + window.sent.includes('POST l')"))
 	// A page of its own: the same, and loaded anew it is read again.
 	b.navigate("/a/p3/")
-	b.until("the toast whole", "document.querySelector('.toast.page .btn')")
-	b.eval("document.querySelector('.toast.page .btn').focus(); document.querySelector('.toast.page .btn').click()")
-	b.until("the words whole", "document.querySelector('.toast.page') && !document.querySelector('.toast.page .btn')")
+	b.until("the toast whole", pageToastButton)
+	b.eval(pageToastButton + ".focus(); " + pageToastButton + ".click()")
+	b.until("the words whole", "document.querySelector('[data-testid=toast][data-page]') && !"+pageToastButton)
 	out = append(out, b.eval("document.activeElement.matches('#frame-actions summary')"))
 	b.navigate("/a/p3/")
-	b.until("the toast again", "document.querySelector('.toast.page .btn')")
+	b.until("the toast again", pageToastButton)
 	check(t, "unread", out, strings.Join([]string{
 		"Marked as read", "Mark as unread / Mark Title p1 as unread", "status false",
 		"POST p1,DELETE p1", "0", "true", "true", "1", "0", "0 false", "true",
@@ -125,19 +110,22 @@ func TestUIRowAgainUnread(t *testing.T) { //nolint:paralleltest // the browser t
 	b := s.b
 	unreadList(b)
 	last := b.eval("[...document.querySelectorAll('#list li[data-slug]')].at(-1).dataset.slug")
-	pickUnread(b, last)
-	b.until("the toast", "document.querySelector('.toast.page .btn')")
-	b.eval("document.querySelector('.toast.page .btn').click()")
-	b.until("the words", "document.querySelector('.toast.page') && !document.querySelector('.toast.page .btn')")
-	isUnseen(b, last, true)
-	b.eval(fmt.Sprintf(unreadRow, last) + ".querySelector('.title').focus()")
+	openRowOf(b, last)
+	b.until("the toast", pageToastButton)
+	b.eval(pageToastButton + ".click()")
+	b.until("the words", "document.querySelector('[data-testid=toast][data-page]') && !"+pageToastButton)
+	untilUnseen(b, last, true)
+	b.marksDone(2) // POST, DELETE
+	b.eval(fmt.Sprintf(unreadRow, last) + ".querySelector('[data-testid=title]').focus()")
 	b.pressKey("j")
-	sentAll(b)
-	isUnseen(b, last, true)
-	check(t, "the last row kept", []string{b.eval("picked.slug === " + js(last) + " && keptUnread === " + js(last) + " && !document.querySelector('.toast.page .btn')")}, "true")
-	pickUnread(b, last)
+	begun := b.reread()
+	b.untilRead(begun, "a read after j", "true")
+	untilUnseen(b, last, true)
+	// Kept unread: no read sent after j.
+	check(t, "the last row kept", []string{b.eval(besideSlug + " === " + js(last) + " && window.marks.length === 2 && !" + pageToastButton)}, "true")
+	openRowOf(b, last)
 	b.until("whole", "location.pathname === "+js("/a/"+last+"/"))
-	b.until("its toast whole", "document.querySelector('.toast.page .btn')")
+	b.until("its toast whole", pageToastButton)
 }
 
 // The button of the toast of the page shown.
@@ -168,94 +156,132 @@ func TestUIReadRefused(t *testing.T) { //nolint:paralleltest // the browser test
 
 // TestUIUnreadKept keeps a page marked unread as it draws itself anew, whatever else goes on, until another page is opened; and a
 // page read as it draws itself anew says nothing.
+// LIMIT: a page marked unread while its read is on its way is not checked here: a person can press it only in a narrow case (a page
+// read, a newer version known by the 3 s poll, pressed before that version's mark is answered). The React rebuild's unit test of
+// features/reader (P4) checks that the read's answer does not take the mark away.
 func TestUIUnreadKept(t *testing.T) { //nolint:paralleltest // the browser tests share one Chrome, one at a time
 	s := unreadSite(t)
 	b := s.b
 	unreadList(b)
-	anew := func() {
+	// heard records the paths of the pages that told the frame they were served, heard here after the frame's own listener, which
+	// has by then sent its read or kept it back, or set it in the line.
+	const heard = "window.heard = []; addEventListener('message', (e) => { if (e.data?.pageServed) window.heard.push(e.data.pagePath); })"
+	heardOf := func(slug string) {
 		t.Helper()
-		// Heard here after the frame's own listener, which has by then sent it or kept it back.
-		b.eval(`window.heard = false; addEventListener('message', (e) => { if (e.data?.pageServed) window.heard = true; }, { once: false });
-			document.getElementById('read-frame').contentWindow.location.replace(readLoaded)`)
-		b.until("told anew", "window.heard")
-		sentAll(b)
+		b.until("told of "+slug, "window.heard.some((p) => p.startsWith("+js("/a/"+slug+"/")+"))")
+	}
+	// anew has the page beside the list draw itself anew, then waits for marks read marks in all.
+	anew := func(marks int) {
+		t.Helper()
+		b.eval("window.heard = []; document.getElementById('read-frame').contentWindow.location.replace(" + besideLoaded + ")")
+		b.until("told anew", "window.heard.length > 0")
+		b.marksDone(marks)
 	}
 	posts := func(slug string) string {
 		t.Helper()
 		return b.eval("window.sent.filter((x) => x === 'POST " + slug + "').length")
 	}
+	// open opens the row of slug, read, and waits for marks read marks in all.
+	open := func(slug string, marks int) {
+		t.Helper()
+		openRowOf(b, slug)
+		b.until(slug+" beside", besideSlug+" === "+js(slug))
+		b.marksDone(marks)
+	}
+	b.eval(heard)
 	out := make([]string, 0, 16)
+	// p2 and p3 read first, so that their rows' menus mark them unread.
+	open("p2", 1)
+	open("p3", 2)
 	// Marked unread and drawn anew: unread, told nothing. Another page marked from its row does not take that away, nor its failure.
-	pickUnread(b, "p1")
-	b.until("the toast", "document.querySelector('.toast.page .btn')")
-	b.eval("document.querySelector('.toast.page .btn').click()")
-	isUnseen(b, "p1", true)
-	anew()
+	openRowOf(b, "p1")
+	b.until("the toast", pageToastButton)
+	b.eval(pageToastButton + ".click()")
+	untilUnseen(b, "p1", true)
+	b.marksDone(4)
+	anew(4)
 	out = append(out, posts("p1"))
-	b.eval("markUnread('p2')")
-	sentAll(b)
-	anew()
+	pressMenuItem(b, "#list li[data-slug=p2]", "mark-unread")
+	b.marksDone(5)
+	anew(5)
 	out = append(out, posts("p1"))
-	b.eval("window.plan.DELETE = [500]; markUnread('p3')")
-	sentAll(b)
-	out = append(out, b.eval("(document.getElementById('error').textContent === 'Failed to mark as unread: HTTP 500: no') + ' ' + keptUnread"))
-	anew()
+	b.eval("window.plan.DELETE = [500]")
+	pressMenuItem(b, "#list li[data-slug=p3]", "mark-unread")
+	b.marksDone(6)
+	out = append(out, b.eval("document.getElementById('error').textContent === 'Failed to mark as unread: HTTP 500: no'"))
+	anew(6)
 	out = append(out, posts("p1"))
-	isUnseen(b, "p1", true)
-	// Pressed twice, the first failing: the error goes with the next that goes well, and it is still held.
-	b.eval("window.plan.DELETE = [500]; window.shut(); markUnread('p1'); markUnread('p1')")
+	untilUnseen(b, "p1", true)
+	// Read again with its toast, and pressed twice, the first failing: the error goes with the next that goes well, and it is still held.
+	open("p2", 7)
+	openRowOf(b, "p1")
+	b.until("the toast again", pageToastButton+"?.getAttribute('aria-label') === 'Mark Title p1 as unread'")
+	b.marksDone(8)
+	b.eval("window.plan.DELETE = [500]; window.shut(); " + pageToastButton + ".click(); " + pageToastButton + ".click()")
 	b.eval("window.open_()")
-	sentAll(b)
-	out = append(out, b.eval("keptUnread + ' ' + (document.getElementById('error').textContent === '')"))
-	// A failure of its own lets it go.
-	b.eval("window.plan.DELETE = ['throw']; markUnread('p1')")
-	sentAll(b)
-	out = append(out, b.eval("String(keptUnread) + ' ' + document.getElementById('error').textContent.includes('cut off')"))
-	// Pressed while the read is on its way: no words of being read.
-	unreadList(b)
-	b.eval("window.toasted = []; { const f = toast; toast = (m, o) => { window.toasted.push(m); f(m, o); }; }")
-	b.eval("window.shut()")
-	pickUnread(b, "p3")
-	b.until("the frame told", "readsGoing || readsWaiting.size > 0")
-	b.eval("markUnread('p3'); window.open_()")
-	sentAll(b)
-	isUnseen(b, "p3", true)
-	out = append(out, b.eval("window.toasted.join(',')"))
+	b.marksDone(10)
+	untilUnseen(b, "p1", true)
+	out = append(out, b.eval("document.getElementById('error').textContent === ''"))
+	anew(10)
+	out = append(out, posts("p1"))
+	// A failure of its own lets it go: drawn anew, it is read.
+	open("p2", 11)
+	openRowOf(b, "p1")
+	b.until("the toast once more", pageToastButton+"?.getAttribute('aria-label') === 'Mark Title p1 as unread'")
+	b.marksDone(12)
+	b.eval("window.plan.DELETE = ['throw']; " + pageToastButton + ".click()")
+	b.marksDone(13)
+	out = append(out, b.eval("document.getElementById('error').textContent.includes('cut off')"))
+	anew(14)
+	out = append(out, posts("p1"))
 	// The answer to a read comes after a move on: no toast of the page left.
 	unreadList(b)
-	b.eval("window.toasted = []; { const f = toast; toast = (m, o) => { window.toasted.push(m); f(m, o); }; }; window.shut()")
-	pickUnread(b, "p1")
-	b.until("told", "readsGoing")
-	pickUnread(b, "l")
+	b.eval(heard + `; window.toasted = [];
+		new MutationObserver((records) => records.forEach((r) => r.addedNodes.forEach((n) => {
+			if (n.dataset?.testid === 'toast') window.toasted.push([...n.childNodes].filter((c) => c.nodeType === 3).map((c) => c.textContent).join(''));
+		}))).observe(document.getElementById('toasts'), { childList: true });
+		window.shut()`)
+	openRowOf(b, "p1")
+	b.until("the mark held at the gate", "window.marks.length === 1")
+	openRowOf(b, "l")
 	b.eval("window.open_()")
-	sentAll(b)
+	b.marksDone(1)
 	out = append(out, b.eval("window.toasted.length + ' ' + window.sent.at(-1)"))
 	b.eval("window.toasted.length = 0")
 	// A page marked from its row, the mark waiting behind another, then opened: the read takes its place, with nothing said of it.
 	const said = "window.toasted.filter((m) => m === 'Marked as read').length + ' ' + (document.getElementById('error').textContent === '')"
-	for _, slug := range []string{"p2", "p1"} {
+	for i, slug := range []string{"p3", "p2", "p1"} {
 		was := posts(slug)
-		pickUnread(b, slug)
+		openRowOf(b, slug)
 		b.until("told of "+slug, "window.sent.filter((x) => x === 'POST "+slug+"').length > "+was)
-		sentAll(b)
+		b.marksDone(2 + i)
 	}
-	b.eval("window.toasted.length = 0; window.shut(); markUnread('p3'); markUnread('p2')")
-	pickUnread(b, "p2")
-	b.until("the read in its place", "readsWaiting.get('p2')?.read")
+	b.eval("window.toasted.length = 0; window.shut()")
+	pressMenuItem(b, "#list li[data-slug=p3]", "mark-unread")
+	pressMenuItem(b, "#list li[data-slug=p2]", "mark-unread")
+	b.eval("window.heard = []")
+	openRowOf(b, "p2")
+	heardOf("p2")
 	b.eval("window.open_()")
-	sentAll(b)
+	b.marksDone(6)
 	out = append(out, b.eval("window.sent.slice(-2).join(',')"), b.eval(said))
 	// The page shown, the mark waiting, away and back: the same, as it was opened last.
+	open("p3", 7)
+	open("p2", 8)
 	sent := b.eval("window.sent.length")
-	b.eval("window.toasted.length = 0; window.shut(); markUnread('p3'); markUnread('p2')")
-	pickUnread(b, "p1")
-	pickUnread(b, "p2")
-	b.until("the read in its place", "readsWaiting.get('p2')?.read")
+	b.eval("window.toasted.length = 0; window.shut()")
+	pressMenuItem(b, "#list li[data-slug=p3]", "mark-unread")
+	pressMenuItem(b, "#list li[data-slug=p2]", "mark-unread")
+	b.eval("window.heard = []")
+	openRowOf(b, "p1")
+	heardOf("p1")
+	openRowOf(b, "p2")
+	heardOf("p2")
 	b.eval("window.open_()")
-	sentAll(b)
+	b.marksDone(11)
 	out = append(out, b.eval("window.sent.slice("+sent+").filter((x) => x.endsWith('p2')).join(',')"), b.eval(said))
 	check(t, "kept", out, strings.Join([]string{
-		"1", "1", "true p1", "1", "p1 true", "null true", "Marked as unread. It is marked as read when you open it again.",
+		"1", "1", "true", "1", "true", "2", "true", "4",
 		"0 POST p1", "DELETE p3,POST p2", "0 true", "POST p2", "0 true",
 	}, "|"))
 }
@@ -265,18 +291,18 @@ func TestUIUnreadPublish(t *testing.T) { //nolint:paralleltest // the browser te
 	s := unreadSite(t)
 	b := s.b
 	unreadList(b)
-	pickUnread(b, "p1")
-	b.until("the toast", "document.querySelector('.toast.page .btn')")
-	b.eval("document.querySelector('.toast.page').remove()")
+	openRowOf(b, "p1")
+	b.until("the toast", pageToastButton)
+	b.eval(noPageToast)
 	s.floe(t, "publish", s.page(t, "unread/p1.yaml", "Title p1", "<p id=\"p\">p1, more</p>"), "--slug", "p1")
 	b.until("read as it drew itself", "window.sent.filter((x) => x === 'POST p1').length === 2")
-	sentAll(b)
-	isUnseen(b, "p1", false)
+	b.marksDone(2)
+	untilUnseen(b, "p1", false)
 	out := make([]string, 0, 2)
-	out = append(out, b.eval("document.querySelectorAll('.toast.page').length"))
-	b.eval("markUnread('p1')")
-	isUnseen(b, "p1", true)
-	out = append(out, b.eval(fmt.Sprintf(unreadRow, "p1")+".querySelector('.ver').textContent"))
+	out = append(out, b.eval(pageToasts))
+	pressMenuItem(b, "#list li[data-slug=p1]", "mark-unread")
+	untilUnseen(b, "p1", true)
+	out = append(out, b.eval(fmt.Sprintf(unreadRow, "p1")+".querySelector('[data-testid=ver]').textContent"))
 	check(t, "publish", out, "0|v2 · new version")
 }
 
