@@ -63,6 +63,31 @@ export const PlusIcon = () => (
     <path d="M12 5v14M5 12h14" />
   </Line>
 );
+// A stored page's mark among the shelf's kinds (ui.html PAGE_MARK)
+export const PageMark = () => (
+  <Line width={2}>
+    <path d="M6 3h8l4 4v14H6zM14 3v4h4M9 12h6M9 16h6" />
+  </Line>
+);
+// The star filled, of the shelf's view of favourites (ui.html STAR_MARK)
+export const StarMark = () => (
+  <svg viewBox="0 0 24 24" fill="currentColor" aria-hidden="true">
+    <path d="M12 3.5l2.6 5.3 5.9.9-4.3 4.1 1 5.8L12 16.9l-5.2 2.7 1-5.8-4.3-4.1 5.9-.9z" />
+  </svg>
+);
+// The shelf's way to its filters on a narrow screen
+export const FilterIcon = () => (
+  <Line width={2}>
+    <path d="M4 6h16M7 12h10M10 18h4" />
+  </Line>
+);
+// The search's mark, of the list's search and of the search over every page
+export const SearchIcon = () => (
+  <Line width={2}>
+    <circle cx="11" cy="11" r="7" />
+    <path d="m20 20-3.5-3.5" />
+  </Line>
+);
 // A link's and a folder's mark at the head of their row (ui.html LINK_MARK and FOLDER_MARK)
 export const LinkMark = () => (
   <Line width={2}>

@@ -1,4 +1,4 @@
-import { getBoot, type Boot } from '@/config/boot';
+import { getBoot, screenOf, type Boot } from '@/config/boot';
 import { local, readJSON, type Kept } from '@/lib/storage';
 import { createStore, type Store } from '@/lib/store';
 import { openPage as pageOpen, type OpenPage } from '@/stores/open-page';
@@ -61,9 +61,10 @@ export function createColumns({
       storage.write(COLUMNS_KEY, JSON.stringify(store().get()));
     },
     listOpen: () => {
-      const tasks = boot().screen === 'tasks';
-      const taskPage = tasks && new URLSearchParams(search()).has('task');
-      return (tasks && !taskPage) || store().get().listOpen || (taskPage && openPage.picked.get() === null);
+      const screen = screenOf(boot(), search());
+      return (
+        screen === 'taskList' || store().get().listOpen || (screen === 'taskPage' && openPage.picked.get() === null)
+      );
     },
   };
 }

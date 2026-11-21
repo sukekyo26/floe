@@ -1,4 +1,4 @@
-import { getBoot } from '@/config/boot';
+import { getBoot, screenOf } from '@/config/boot';
 import type { ArchiveFocus, TaskOutFocus } from '@/stores/page-actions';
 import { archiveEscapeTarget, rowAfter, rowNearby } from '@/utils/focus-targets';
 import type { RowSeen } from '@/utils/row-focus';
@@ -22,7 +22,7 @@ export const focusOn = (el: Element | null): boolean => {
 const focusRow = (key: string | null): boolean =>
   key !== null && focusOn(document.querySelector(`#list > li[data-key="${CSS.escape(key)}"] [data-testid=title]`));
 
-const onTaskPage = () => getBoot().screen === 'tasks' && new URLSearchParams(window.location.search).has('task');
+const onTaskPage = () => screenOf(getBoot(), window.location.search) === 'taskPage';
 const findOpen = () => document.querySelector('dialog#find[open]') !== null;
 const entry = (slug: string) => `entry:${slug}`;
 

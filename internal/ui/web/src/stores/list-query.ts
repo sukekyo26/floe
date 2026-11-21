@@ -1,4 +1,4 @@
-import { getBoot, type Boot } from '@/config/boot';
+import { getBoot, screenOf, type Boot } from '@/config/boot';
 import { session, type Kept } from '@/lib/storage';
 import { createStore, type Store } from '@/lib/store';
 import { folders as pageFolders, type Folders } from '@/stores/open-folders';
@@ -61,7 +61,7 @@ export function createListQuery({
   const views = () => (tasks() ? boot().states.map((s) => s.name) : ['new', 'fav', 'archived']);
   const firstView = () => (tasks() ? (boot().states.find((s) => s.first)?.name ?? '') : 'all');
   // The task list, not a task's page
-  const taskList = () => tasks() && !new URLSearchParams(search()).has('task');
+  const taskList = () => screenOf(boot(), search()) === 'taskList';
 
   function readState(text: string) {
     const p = new URLSearchParams(text);
