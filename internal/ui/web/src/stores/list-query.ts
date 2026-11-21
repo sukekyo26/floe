@@ -1,6 +1,7 @@
 import { getBoot, type Boot } from '@/config/boot';
 import { session, type Kept } from '@/lib/storage';
 import { createStore, type Store } from '@/lib/store';
+import { folders as pageFolders, type Folders } from '@/stores/open-folders';
 import type { ListState } from '@/utils/list-view';
 
 // The list's state (the shelf's picks and the search) lives in the URL, so a reload opens the same list. It is also kept
@@ -43,6 +44,7 @@ interface Deps {
   // replace writes url as this tab's URL, adding no history
   replace?: (url: string) => void;
   href?: () => string;
+  folders?: Pick<Folders, 'takeOpen'>;
 }
 
 export function createListQuery({
@@ -53,6 +55,7 @@ export function createListQuery({
     window.history.replaceState(null, '', url);
   },
   href = () => window.location.href,
+  folders = pageFolders,
 }: Deps = {}): ListQuery {
   const tasks = () => boot().screen === 'tasks';
   const views = () => (tasks() ? boot().states.map((s) => s.name) : ['new', 'fav', 'archived']);
@@ -105,6 +108,8 @@ export function createListQuery({
       if (!now.seen.has(slug)) store().set({ ...now, seen: new Set(now.seen).add(slug) });
     },
     sync: () => {
+      // open= opens folders once, as the page opens: taken before the URL is written without it
+      folders.takeOpen();
       const { seen: _seen, ...now } = store().get();
       const state = { ...now, view: now.view === firstView() ? '' : now.view, q: now.q.trim() };
       const url = new URL(href());

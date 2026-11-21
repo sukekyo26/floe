@@ -1,7 +1,7 @@
 import { describe, expect, it, vi } from 'vitest';
 
 import { setBoot, type Boot } from '@/config/boot';
-import { ago } from '@/lib/time';
+import { ago, fmt } from '@/lib/time';
 
 describe(ago, () => {
   it('says how long ago in its largest unit, just now under a minute, and nothing of what is no time', () => {
@@ -14,5 +14,12 @@ describe(ago, () => {
     expect(ago('2026-11-19T12:00:00Z')).toBe('2 days ago');
     expect(ago('')).toBe('');
     vi.useRealTimers();
+  });
+
+  it('writes nothing of what is no time, as fmt is drawn into a row of none', () => {
+    expect.assertions(2);
+    setBoot({ lang: 'en', messages: {} } as unknown as Boot);
+    expect(fmt('')).toBe('');
+    expect(fmt('2026-11-21T12:00:00Z')).not.toBe('');
   });
 });

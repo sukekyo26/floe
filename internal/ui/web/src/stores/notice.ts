@@ -25,7 +25,8 @@ export function createNotice(): Notice {
     say: (message, from = '') => {
       const now = said.get();
       if (message ? from !== '' && now.from === '' && now.message !== '' : now.from !== from) return;
-      said.set({ message, from: message ? from : '' });
+      const next: From = message ? from : '';
+      if (now.message !== message || now.from !== next) said.set({ message, from: next });
     },
   };
 }

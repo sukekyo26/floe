@@ -40,6 +40,8 @@ function server(auto = true) {
   const asked: { url: string; method: string; done: boolean; answer: (body: string, status?: number) => void }[] = [];
   let going = 0;
   let most = 0;
+  let listsGoing = 0;
+  let mostLists = 0;
   const state = { list: '[]', tasks: '{}', listStatus: 200, tasksStatus: 200 };
   const reply = (a: { url: string; method: string; answer: (body: string, status?: number) => void }) => {
     if (a.method !== 'GET') a.answer('{}');
@@ -50,6 +52,8 @@ function server(auto = true) {
   const fetch = (url: string, init?: RequestInit) => {
     going++;
     most = Math.max(most, going);
+    const list = url === '/api/pages';
+    if (list) mostLists = Math.max(mostLists, ++listsGoing);
     const answer = Promise.withResolvers<Response>();
     const ask = {
       url,
@@ -59,6 +63,7 @@ function server(auto = true) {
         if (ask.done) return;
         ask.done = true;
         going--;
+        if (list) listsGoing--;
         answer.resolve(new Response(body, { status }));
       },
     };
@@ -67,6 +72,7 @@ function server(auto = true) {
     init?.signal?.addEventListener('abort', () => {
       ask.done = true;
       going--;
+      if (list) listsGoing--;
       answer.reject(init.signal?.reason);
     });
     if (auto && ask.method === 'GET') reply(ask);
@@ -76,7 +82,7 @@ function server(auto = true) {
   const flush = () => {
     for (const a of asked) reply(a);
   };
-  return { fetch, asked, state, flush, most: () => most };
+  return { fetch, asked, state, flush, most: () => most, mostLists: () => mostLists };
 }
 
 const tick = () =>
@@ -117,7 +123,7 @@ function page() {
   };
 }
 
-function made(screen: Boot['screen'] = 'list', options: { search?: string; readMs?: number } = {}) {
+function made(screen: Boot['screen'] = 'list', options: { search?: string; readMs?: number; pressMs?: number } = {}) {
   // t() reads the messages of the boot values
   setBoot(boot(screen));
   const client = createClient();
@@ -134,6 +140,7 @@ function made(screen: Boot['screen'] = 'list', options: { search?: string; readM
     shown: () => shown.doc as unknown as Document,
     count: (begun, ended) => counts.push([begun, ended]),
     readMs: options.readMs ?? 10000,
+    pressMs: options.pressMs ?? 2000,
   });
   return { pages, notice, counts, shown, client };
 }
@@ -152,7 +159,7 @@ describe(createPages, () => {
     await tick();
     expect(lists()).toBe(1);
     await settle(s, Promise.all([first, joined]));
-    expect(lists()).toBe(2);
+    expect({ lists: lists(), atOnce: s.mostLists() }).toStrictEqual({ lists: 2, atOnce: 1 });
   });
 
   it('counts each read begun and ended, a failed one and one joined too, the ended never past the begun', async () => {
@@ -306,5 +313,41 @@ describe(createPages, () => {
     shown.show();
     expect(counts.at(-1)).toStrictEqual([2, 2]);
     vi.useRealTimers();
+  });
+
+  it('takes a poll answered once a press is past PRESS_MS, and meanwhile clears its read mistake alone', async () => {
+    expect.assertions(4);
+    const s = server();
+    vi.stubGlobal('fetch', s.fetch);
+    const { pages, notice } = made('list', { pressMs: 30 });
+    s.state.listStatus = 500;
+    await pages.load();
+    expect(notice.said.get()).toStrictEqual({ message: 'failed: HTTP 500', from: 'load' });
+    s.state.listStatus = 200;
+    s.state.list = '[{"slug":"a","description":"","createdAt":"","updatedAt":"","taskProject":""}]';
+    pages.pressed();
+    await pages.load(true);
+    expect(notice.said.get().message).toBe('');
+    expect(pages.state.get().entries).toHaveLength(0);
+    await new Promise((go) => {
+      setTimeout(go, 40);
+    });
+    await pages.load(true);
+    expect(pages.state.get().entries).toHaveLength(1);
+  });
+
+  it('knows a rev as read, as a write answered, and as read again alone in a frame', async () => {
+    expect.assertions(3);
+    const s = server();
+    s.state.tasks = '{"p":{"x":{"state":"todo","at":"t","rev":3}}}';
+    vi.stubGlobal('fetch', s.fetch);
+    const { pages } = made('tasks');
+    await pages.load();
+    expect(pages.readRev('p', 'x')).toBe(3);
+    pages.takeTasks([{ taskProject: 'p', task: 'x', row: { state: 'doing', at: 'u', rev: 5 } }]);
+    expect(pages.readRev('p', 'x')).toBe(5);
+    s.state.tasks = '{"p":{"x":{"state":"done","at":"v","rev":7}}}';
+    await pages.rereadTasks();
+    expect(pages.readRev('p', 'x')).toBe(7);
   });
 });

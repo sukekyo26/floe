@@ -18,4 +18,15 @@ describe(createNotice, () => {
     say('save failed again');
     expect(said.get()).toStrictEqual({ message: 'save failed again', from: '' });
   });
+
+  it('tells no one of the same mistake said again, as a load does every few seconds while the server is down', () => {
+    expect.assertions(1);
+    const { said, say } = createNotice();
+    say('failed', 'load');
+    let told = 0;
+    said.subscribe(() => told++);
+    say('failed', 'load');
+    say('failed', 'load');
+    expect(told).toBe(0);
+  });
 });

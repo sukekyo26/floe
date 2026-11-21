@@ -23,6 +23,9 @@ export interface Folders {
   readOpen: (list: readonly Page[], signal: AbortSignal) => Promise<(() => boolean) | null>;
   // readSide reads the tree's directories open, each under ones open, and the page's own, whatever is open; as readOpen
   readSide: (slug: string, file: string, signal: AbortSignal) => Promise<(() => boolean) | null>;
+  // takeOpen takes what is open from open= of the URL and from list.open, once: before anything writes the URL, which
+  // drops open= (stores/list-query's sync calls it first)
+  takeOpen: () => void;
   // toggle opens or closes the directory dir ('' for the top) of the folder slug in the list; closed, what is open
   // under it closes too
   toggle: (slug: string, dir: string) => Promise<void>;
@@ -183,7 +186,7 @@ export function createFolders({
     list.set({ opened: after.opened, listings: new Map(after.listings).set(key, l) });
   }
 
-  return { list, side, readOpen, readSide, toggle };
+  return { list, side, readOpen, readSide, takeOpen: start, toggle };
 }
 
 export const folders = createFolders();

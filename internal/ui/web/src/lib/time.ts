@@ -23,8 +23,11 @@ function formats() {
   return made;
 }
 
-// fmt is a time as the reader writes a date and time
-export const fmt = (iso: string): string => formats().date.format(new Date(iso));
+// fmt is a time as the reader writes a date and time; a value that is no time (a row that has none) gives nothing
+export const fmt = (iso: string): string => {
+  const ms = Date.parse(iso);
+  return Number.isNaN(ms) ? '' : formats().date.format(ms);
+};
 
 // ago is how long ago a time was, in its largest unit; a value that is no time (a row that has none, as a folder's)
 // gives nothing, not "just now"

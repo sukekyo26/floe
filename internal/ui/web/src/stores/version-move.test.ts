@@ -24,4 +24,12 @@ describe(createVersionMove, () => {
     move.keep(false, true);
     expect(move.take()).toStrictEqual({ focus: false, kept: true });
   });
+
+  it('leaves what is not JSON as it is', () => {
+    expect.assertions(2);
+    const held = new Map([['version.move', '{']]);
+    const move = createVersionMove({ boot: () => ({ framed: 'a' }) as Boot, storage: memory(held) });
+    expect(move.take()).toStrictEqual({ focus: false, kept: false });
+    expect(held.get('version.move')).toBe('{');
+  });
 });

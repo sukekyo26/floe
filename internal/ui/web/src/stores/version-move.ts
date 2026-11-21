@@ -1,5 +1,5 @@
 import { getBoot, type Boot } from '@/config/boot';
-import { readJSON, session, type Kept } from '@/lib/storage';
+import { session, type Kept } from '@/lib/storage';
 
 // What a move to another version of the frame's page carries over: the focus on the choice, and a page kept unread
 const VERSION_MOVE = 'version.move';
@@ -21,10 +21,16 @@ export function createVersionMove({ boot = getBoot, storage = session }: Deps = 
       storage.write(VERSION_MOVE, JSON.stringify({ slug: boot().framed, focus, kept }));
     },
     take: () => {
-      const move = readJSON(storage, VERSION_MOVE) as { slug?: unknown; focus?: unknown; kept?: unknown } | null;
+      let move: { slug?: unknown; focus?: unknown; kept?: unknown } | null;
+      try {
+        move = JSON.parse(storage.read(VERSION_MOVE) ?? 'null') as typeof move;
+      } catch {
+        // Something else than ours: left as it is
+        return { focus: false, kept: false };
+      }
       storage.remove(VERSION_MOVE);
-      const here = move?.slug === boot().framed;
-      return { focus: here && move.focus === true, kept: here && move.kept === true };
+      if (move?.slug !== boot().framed) return { focus: false, kept: false };
+      return { focus: move.focus === true, kept: move.kept === true };
     },
   };
 }

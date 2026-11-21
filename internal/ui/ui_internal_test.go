@@ -440,6 +440,8 @@ func TestTaskRequests(t *testing.T) {
 	if got, want := inPage("/api/tasks"), []string{"changeTasks", "forgetTask", "readTasks"}; !slices.Equal(got, want) {
 		t.Errorf("/api/tasks is named in %v, want %v once each", got, want)
 	}
+	// LIMIT: the text /api/tasks alone is looked for in web/src: one made of parts ('/api/' + 'tasks') passes. Read the
+	// TypeScript's tree if one comes to be written so.
 	if got, want := namedIn(webSources(t), "/api/tasks"), []string{"lib/tasks.ts"}; !slices.Equal(got, want) {
 		t.Errorf("/api/tasks is named in web/src's %v, want %v", got, want)
 	}

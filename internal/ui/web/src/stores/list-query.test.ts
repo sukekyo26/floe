@@ -39,6 +39,7 @@ function made(screen: Boot['screen'], search: string) {
     storage,
     replace: (url) => urls.push(url),
     href: () => `http://x/${screen === 'tasks' ? 'tasks' : ''}${search}`,
+    folders: { takeOpen: () => undefined },
   });
   return { query, storage, urls };
 }
