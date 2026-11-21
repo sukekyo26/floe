@@ -500,18 +500,17 @@ func TestUITaskSetTitle(t *testing.T) { //nolint:paralleltest // the browser tes
 		t.Helper()
 		b.navigate("/?project=proj")
 		b.until("the rows", "document.querySelector('#list li[data-slug="+slug+"]')")
-		b.eval("document.querySelector('#list li[data-slug=" + slug + "] .more').open = true")
-		b.eval("document.querySelector('#list li[data-slug=" + slug + "] .menu .task-set').click()")
+		pressMenuItem(b, "#list li[data-slug="+slug+"]", "task-set")
 		b.until("the dialog", "document.getElementById('set-dialog').open")
 	}
 	field := func(id, value string) {
 		t.Helper()
-		b.eval("document.getElementById(" + js(id) + ").value = " + js(value) + "; document.getElementById(" + js(id) + ").dispatchEvent(new Event('input', { bubbles: true }))")
+		b.fill("#"+id, value)
 	}
 	save := func() {
 		t.Helper()
 		// A new task asks a title: one is given where none is typed, the asking itself tested apart
-		b.eval("const ti = document.getElementById('set-task-title'); if (!ti.closest('[hidden]') && !ti.value) ti.value = 'a title'")
+		titleOpen(b)
 		b.eval(submitSet)
 		b.until("saved", "!document.getElementById('set-dialog').open")
 	}
@@ -521,7 +520,7 @@ func TestUITaskSetTitle(t *testing.T) { //nolint:paralleltest // the browser tes
 	if got := b.eval("[document.getElementById('set-task').placeholder, document.getElementById('set-task').closest('label').textContent.trim(), document.getElementById('set-task-title').closest('label').textContent.trim(), document.getElementById('set-category').placeholder, document.querySelectorAll('#set-dialog input').length].join('|')"); got != "e.g. #128|Task ID|Title|e.g. proposals, designs, samples|3" {
 		t.Errorf("the fields: %q", got)
 	}
-	b.eval("document.getElementById('set-dialog').close()")
+	closeSet(b)
 
 	// A new name is made, its title given.
 	dialog("a")
@@ -552,19 +551,21 @@ func TestUITaskSetTitle(t *testing.T) { //nolint:paralleltest // the browser tes
 	dialog("b")
 	field("set-task", "#88")
 	field("set-task-title", "typed")
-	b.eval("document.getElementById('set-dialog').close()")
+	closeSet(b)
 	dialog("c")
 	if got := b.eval("document.getElementById('set-task-title').value + '|' + " + shown); got != "|false" {
 		t.Errorf("opened again: %q", got)
 	}
-	b.eval("document.getElementById('set-dialog').close()")
+	closeSet(b)
 
 	// Stale either way: refused, read again, and saved as it is now at the second press.
 	stale := func(slug, name, made, gone string, then func()) {
 		t.Helper()
 		dialog(slug)
 		field("set-task", name)
-		field("set-task-title", made)
+		if made != "" {
+			field("set-task-title", made)
+		}
 		then()
 		b.eval(submitSet)
 		b.until("refused", "!document.getElementById('set-error').hidden")
@@ -577,8 +578,7 @@ func TestUITaskSetTitle(t *testing.T) { //nolint:paralleltest // the browser tes
 		s.floe(t, "task", "--project", project, "--task", "#90", "--title", "theirs")
 	})
 	s.floe(t, "task", "--project", project, "--task", "#91", "--state", "todo")
-	b.eval("load()")
-	b.until("#91 read", "tasksOf().some((x) => x.name === '#91')")
+	b.untilRead(b.reread(), "#91 read", "true")
 	stale("c", "#91", "", "task #91 is no longer there; the tasks are read again", func() {
 		s.floe(t, "task", "--project", project, "--task", "#91", "--forget")
 	})
@@ -595,19 +595,18 @@ func TestUITaskSetTitle(t *testing.T) { //nolint:paralleltest // the browser tes
 	field("set-task", "#93")
 	field("set-task-title", "mine")
 	s.floe(t, "task", "--project", project, "--task", "#93", "--title", "theirs", "--url", "https://example.com/theirs", "--parent", "#1")
-	b.eval("load()")
-	b.until("#93 read", "tasksOf().some((x) => x.name === '#93')")
+	b.untilRead(b.reread(), "#93 read", "true")
 	b.eval(submitSet)
 	b.until("refused", "!document.getElementById('set-error').hidden")
 	if got := b.eval("document.getElementById('set-error').textContent.includes('task #93 is there already') + '|' + " + shown); got != "true|false" {
 		t.Errorf("made meanwhile: %q", got)
 	}
-	b.eval("document.getElementById('set-dialog').close()")
+	closeSet(b)
 
 	// A page whole reads no tasks as its list is read: refused, it reads them itself.
 	b.navigate("/a/a/")
-	b.until("the bar", "document.querySelector('#frame-actions .task-set')")
-	b.eval("document.querySelector('#frame-actions .more').open = true; document.querySelector('#frame-actions .task-set').click()")
+	b.until("the bar", "document.querySelector('#frame-actions [data-testid=task-set]')")
+	pressMenuItem(b, "#frame-actions", "task-set")
 	b.until("the dialog", "document.getElementById('set-dialog').open")
 	field("set-task", "#92")
 	field("set-task-title", "mine")
@@ -625,15 +624,13 @@ func TestUITaskSetTitle(t *testing.T) { //nolint:paralleltest // the browser tes
 	if err = os.WriteFile(file, []byte("{ broken"), 0o600); err != nil { //nolint:gosec // G703: a path the test names
 		t.Fatal(err)
 	}
-	b.navigate("/?project=proj")
-	b.until("unreadable", "tasksRead.error")
 	dialog("c")
 	field("set-task", "#93")
 	b.eval(submitSet)
 	if got := b.eval("document.getElementById('set-dialog').open + '|' + !document.getElementById('set-error').hidden + '|' + document.getElementById('set-task-title').required"); got != "true|true|false" {
 		t.Errorf("unreadable: %q", got)
 	}
-	b.eval("document.getElementById('set-dialog').close()")
+	closeSet(b)
 	if err = os.WriteFile(file, good, 0o600); err != nil { //nolint:gosec // G703: a path the test names
 		t.Fatal(err)
 	}

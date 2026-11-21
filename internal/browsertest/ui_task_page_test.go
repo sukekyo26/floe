@@ -11,7 +11,7 @@ import (
 )
 
 // taskPageRows says the rows of a task's page: a category's heading in brackets, a page by its title.
-const taskPageRows = `[...document.querySelectorAll('#list > li')].map((li) => li.classList.contains('group') ? '[' + li.textContent + ']' : li.querySelector('.title').textContent).join(' | ')`
+const taskPageRows = `[...document.querySelectorAll('#list > li')].map((li) => li.dataset.testid === 'group' ? '[' + li.textContent + ']' : li.querySelector('[data-testid=title]').textContent).join(' | ')`
 
 // pressTaskArchive presses the task's archive button and waits until it says word and the pages are archived or given back
 // too: the words change before that, as archiveTask writes the task first.
@@ -26,7 +26,7 @@ func pressTaskArchive(b *browser, word string) {
 }
 
 // taskPageAt says where the focus and the page chosen are.
-const taskPageAt = `(document.activeElement.closest?.('li')?.querySelector('.title')?.textContent ?? 'none') + ' / ' + (picked?.slug ?? 'none')`
+const taskPageAt = `(document.activeElement.closest?.('li')?.querySelector('[data-testid=title]')?.textContent ?? 'none') + ' / ' + (document.getElementById('read-frame').dataset.slug ?? 'none')`
 
 // A task's page: nothing read as it opens, its pages under their categories in the order written, j and k through them, a page
 // whole back to where it came from; the state changed and what that does to the list and the focus on the way back; what is
@@ -84,7 +84,7 @@ func TestUITaskPage(t *testing.T) { //nolint:paralleltest // the browser tests s
 		t.Helper()
 		b.moving("document.activeElement.dispatchEvent(new KeyboardEvent('keydown', { key: 'Enter', bubbles: true, cancelable: true }))")
 	}
-	const whole = "document.getElementById('back').getAttribute('href') + ' ' + document.querySelector('.brand').getAttribute('href') + ' ' + sessionStorage.getItem(ORDER_KEY)"
+	const whole = "document.getElementById('back').getAttribute('href') + ' ' + document.querySelector('[data-testid=brand]').getAttribute('href') + ' ' + sessionStorage.getItem('pages.order')"
 	opened := func(task, path string) {
 		t.Helper()
 		b.navigate(path)
@@ -98,7 +98,7 @@ func TestUITaskPage(t *testing.T) { //nolint:paralleltest // the browser tests s
 	unread := b.eval("document.getElementById('news-n').textContent")
 	key("j")
 	key("j")
-	say("list j j", "document.activeElement.querySelector('.tname').textContent")
+	say("list j j", "document.activeElement.querySelector('[data-testid=tname]').textContent")
 	enter()
 	b.until("#130's page", "location.search === '?project=proj&task=%23130' && "+taskPageShown)
 
@@ -106,9 +106,9 @@ func TestUITaskPage(t *testing.T) { //nolint:paralleltest // the browser tests s
 	say("rows", taskPageRows)
 	say("nothing open", taskPageAt)
 	say("url", "location.pathname + location.search")
-	say("the list's keys", "sessionStorage.getItem(LIST_KEY) + ' ' + sessionStorage.getItem(TASKS_KEY)")
-	say("head", "[document.getElementById('task-title').textContent, document.getElementById('task-state').value, document.getElementById('task-state').className, document.getElementById('task-project').textContent, document.getElementById('task-archive').hidden, document.getElementById('task-up').getAttribute('href')].join(' / ')")
-	say("nothing to select", "document.querySelectorAll('#list .sel').length + ' ' + [...document.querySelectorAll('#list .menu .select')].every((e) => e.hidden)")
+	say("the list's keys", "sessionStorage.getItem('pages.list') + ' ' + sessionStorage.getItem('pages.tasks')")
+	say("head", "[document.getElementById('task-title').textContent, document.getElementById('task-state').value, document.getElementById('task-state').dataset.state, document.getElementById('task-project').textContent, document.getElementById('task-archive').hidden, document.getElementById('task-up').getAttribute('href')].join(' / ')")
+	say("nothing to select", "document.querySelectorAll('#list [data-testid=sel]').length + ' ' + [...document.querySelectorAll('#list [data-testid=menu] [data-testid=select]')].every((e) => e.hidden)")
 	b.still()
 	if got := b.eval("document.getElementById('news-n').textContent"); got != unread {
 		t.Errorf("opening the task read a page: %s, was %s", got, unread)
@@ -133,52 +133,56 @@ func TestUITaskPage(t *testing.T) { //nolint:paralleltest // the browser tests s
 	b.until("the task's page again", "location.search === '?project=proj&task=%23130' && "+taskPageShown)
 
 	// The state changed: back to the list of that state, the task's row with the focus.
-	b.eval("document.getElementById('task-state').focus(); document.getElementById('task-state').value = 'todo'; document.getElementById('task-state').dispatchEvent(new Event('change'))")
-	b.until("the state", "document.getElementById('task-state').className.includes('todo')")
+	b.eval("document.getElementById('task-state').focus()")
+	chooseValue(b, "task-state", "todo")
+	b.until("the state", "document.getElementById('task-state').dataset.state === 'todo'")
 	// By the keyboard, whose keys a select keeps: the focus has left it.
 	realKey(b, "h", 0)
 	b.until("the list", "location.pathname === '/tasks' && document.querySelector('#list > li') && document.activeElement.closest('#list')")
-	say("after the state changed", "location.search + ' ' + [...document.querySelectorAll('#list .tname')].map((e) => e.textContent).join(' | ') + ' focus ' + document.activeElement.querySelector('.tname').textContent")
+	say("after the state changed", "location.search + ' ' + [...document.querySelectorAll('#list [data-testid=tname]')].map((e) => e.textContent).join(' | ') + ' focus ' + document.activeElement.querySelector('[data-testid=tname]').textContent")
 	// A task of the same state, its row has the focus.
 	b.navigate("/tasks?project=proj")
 	b.until("the rows", "document.querySelector('#list > li')")
-	b.eval("document.querySelector('#list .title').focus()")
+	b.eval("document.querySelector('#list [data-testid=title]').focus()")
 	enter()
 	b.until("#142's page", "location.search === '?project=proj&task=%23142' && "+taskPageShown)
 	key("h")
 	b.until("the list", "location.pathname === '/tasks' && document.activeElement.closest('#list')")
-	say("the row come back to", "document.activeElement.querySelector('.tname').textContent")
+	say("the row come back to", "document.activeElement.querySelector('[data-testid=tname]').textContent")
 
 	// A pin: through the pins, back to the list with its filter.
 	b.navigate("/tasks?view=todo&project=proj")
 	b.until("the rows", "document.querySelector('#list > li')")
-	say("the list kept", "sessionStorage.getItem(TASKS_KEY)")
-	b.moving("document.querySelector('.pin').click()")
+	say("the list kept", "sessionStorage.getItem('pages.tasks')")
+	b.moving("document.querySelector('[data-testid=pin]').click()")
 	b.until("the pin whole", "location.pathname.startsWith('/a/p') && document.getElementById('frame-title').textContent")
 	say("pin", "location.pathname + ' ' + "+whole)
 	key("h")
 	b.until("the filtered list", "location.pathname + location.search === '/tasks?view=todo&project=proj'")
 	b.until("the rows", "document.querySelector('#list > li')")
-	b.moving("[...document.querySelectorAll('#list .title')].find((a) => a.textContent.startsWith('#130')).click()")
+	b.moving("[...document.querySelectorAll('#list [data-testid=title]')].find((a) => a.textContent.startsWith('#130')).click()")
 	b.until("the task's page", "location.search.includes('task=') && "+taskPageShown)
 	say("up goes to the task's state", "document.getElementById('task-up').getAttribute('href')")
 
 	// In a folder's tree on the task's page; a page named whole there; a page of no rows.
 	opened("#1", "/tasks?project=proj&task=%231")
-	b.eval("document.querySelector('#list li[data-slug=fold] .title').click()")
-	b.until("the tree", "document.querySelector('#list li.tree .title')")
-	b.eval("document.querySelector('#list li.tree .title').focus()")
+	b.eval("document.querySelector('#list li[data-slug=fold] [data-testid=title]').click()")
+	b.until("the tree", "document.querySelector('#list li[data-testid=tree] [data-testid=title]')")
+	b.eval("document.querySelector('#list li[data-testid=tree] [data-testid=title]').focus()")
 	enter()
 	b.until("the folder's page", "location.pathname === '/a/fold/' && location.search === '?file=one.html' && document.getElementById('frame-title').textContent")
 	say("in the folder", whole)
 	opened("#128", "/tasks?project=proj&task=%23128")
-	b.eval("document.querySelector('#list .title').focus()")
+	b.eval("document.querySelector('#list [data-testid=title]').focus()")
 	enter()
 	b.until("the page whole", "location.pathname === '/a/c1/' && document.getElementById('frame-title').textContent")
-	b.moving("openEdit(items.find((a) => a.slug === 'c1')); document.getElementById('edit-slug').value = 'c2'; document.getElementById('edit').requestSubmit()")
+	pressMenuItem(b, "#frame-actions", "edit")
+	openSlugField(b)
+	b.fill("#edit-slug", "c2")
+	b.moving("document.getElementById('edit-submit').click()")
 	b.until("the new name", "location.pathname === '/a/c2/' && document.getElementById('frame-title').textContent")
 	say("renamed whole", whole)
-	b.eval("sessionStorage.removeItem(ORDER_KEY)")
+	b.eval("sessionStorage.removeItem('pages.order')")
 	b.navigate("/a/loose/")
 	b.until("the bar", "document.getElementById('frame-title').textContent")
 	say("of no rows", whole)
@@ -191,7 +195,7 @@ func TestUITaskPage(t *testing.T) { //nolint:paralleltest // the browser tests s
 	say("archived", taskPageRows)
 	b.navigate("/tasks?view=archived")
 	b.until("the archive", "document.querySelector('#list > li')")
-	say("the shelf's archive", "[...document.querySelectorAll('#list .tname')].map((e) => e.textContent).join(' | ')")
+	say("the shelf's archive", "[...document.querySelectorAll('#list [data-testid=tname]')].map((e) => e.textContent).join(' | ')")
 	opened("#120", "/tasks?project=proj&task=%23120")
 	b.eval("document.getElementById('task-archive').click()")
 	b.until("given back", "document.getElementById('task-archive').textContent === 'Archive'")
@@ -200,8 +204,8 @@ func TestUITaskPage(t *testing.T) { //nolint:paralleltest // the browser tests s
 	b.eval("localStorage.setItem('list.columns', JSON.stringify({ listOpen: false }))")
 	opened("#128", "/tasks?project=proj&task=%23128")
 	say("folded, none chosen", "(document.getElementById('listcol').offsetParent !== null) + ' ' + document.getElementById('list-hide').hidden")
-	b.eval("document.querySelector('#list .title').click()")
-	b.until("the page chosen", "picked && document.getElementById('listcol').offsetParent === null")
+	b.eval("document.querySelector('#list [data-testid=title]').click()")
+	b.until("the page chosen", "document.getElementById('read-frame').dataset.slug && document.getElementById('listcol').offsetParent === null")
 	b.eval("localStorage.removeItem('list.columns')")
 
 	// A state changed while the choices are open is drawn once they close.
@@ -211,7 +215,7 @@ func TestUITaskPage(t *testing.T) { //nolint:paralleltest // the browser tests s
 	b.click(state.X+state.Width/2, state.Y+state.Height/2)
 	b.until("the choices", "document.getElementById('task-state').matches(':open')")
 	s.floe(t, "task", "--task", "#142", "--project", "proj", "--state", "done")
-	b.until("a look at the tasks", "tasksRead.raw.includes('done') && tasksRead.tasks.proj['#142'].state === 'done'")
+	b.untilRead(b.reread(), "a look at the tasks", "true")
 	say("while open", "document.getElementById('task-state').value")
 	b.pressKey("\x1b")
 	b.until("the choices closed", "!document.getElementById('task-state').matches(':open')")
@@ -219,8 +223,9 @@ func TestUITaskPage(t *testing.T) { //nolint:paralleltest // the browser tests s
 	s.floe(t, "task", "--task", "#142", "--project", "proj", "--state", "doing")
 
 	// A task of no pages is removed by two presses, its name and project whatever they hold.
-	s.floe(t, "task", "--task", "it's $(touch made)", "--project", "", "--state", "todo")
-	b.navigate("/tasks?project=%2F&task=" + url.QueryEscape("it's $(touch made)"))
+	const odd = "it's `touch made` $HOME; a|b"
+	s.floe(t, "task", "--task", odd, "--project", "", "--state", "todo")
+	b.navigate("/tasks?project=%2F&task=" + url.QueryEscape(odd))
 	b.until("no pages", "!document.getElementById('task-none').hidden")
 	for range 2 {
 		b.still()
@@ -237,7 +242,7 @@ func TestUITaskPage(t *testing.T) { //nolint:paralleltest // the browser tests s
 		t.Fatal(err)
 	}
 	opened("#142", "/tasks?project=proj&task=%23142")
-	say("a tag", "document.querySelector('#list .tagpill').tagName + ' ' + document.querySelector('#list .tagpill').textContent")
+	say("a tag", "document.querySelector('#list [data-testid=tagpill]').tagName + ' ' + document.querySelector('#list [data-testid=tagpill]').textContent")
 
 	// What is not there, and what cannot be written.
 	opened("#128", "/tasks?project=proj&task=%23128")
@@ -279,7 +284,7 @@ func TestUITaskPage(t *testing.T) { //nolint:paralleltest // the browser tests s
 	if err := os.WriteFile(filepath.Join(s.Env["FLOE_DIR"], "tasks.json"), []byte("{ broken"), 0o600); err != nil { //nolint:gosec // G703: a path the test names
 		t.Fatal(err)
 	}
-	b.eval("document.getElementById('task-state').value = 'done'; document.getElementById('task-state').dispatchEvent(new Event('change'))")
+	chooseValue(b, "task-state", "done")
 	b.until("the refusal", "!document.getElementById('error').hidden")
 	// The pages are told still, so a done task's archive can be pressed while its state cannot be read.
 	say("refused", "document.getElementById('task-state').value + ' ' + document.getElementById('task-state').hidden + ' ' + document.getElementById('error').textContent.includes('mend it by hand')")
@@ -315,7 +320,7 @@ rows: T n1 | [designAdd a page] | T d1 | [buildAdd a page] | T i1 | [reviewAdd a
 nothing open: none / none
 url: /tasks?project=proj&task=%23130
 the list's keys:  ?project=proj
-head: #130 / doing / ver-pick st doing / proj / true / /tasks?project=proj
+head: #130 / doing / doing / proj / true / /tasks?project=proj
 nothing to select: 0 true
 j: T n1 / n1, T d1 / d1, T i1 / i1, T r1 / r1
 whole: /tasks?project=proj&task=%23130 / {"order":["n1","d1","i1","r1"],"shown":["n1","d1","i1","r1"],"back":"/tasks?project=proj&task=%23130","at":{"slug":"r1","file":"","v":0}}
