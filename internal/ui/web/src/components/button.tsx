@@ -26,6 +26,8 @@ export interface ButtonProps {
   readonly wraps?: boolean;
   // slug names the page it acts on (data-slug), for it to be found again by its page
   readonly slug?: string | undefined;
+  // href makes it a link of the same shape (ui.html a.btn: the way back of a page not found)
+  readonly href?: string;
   readonly onClick?: MouseEventHandler<HTMLButtonElement>;
   readonly onKeyDown?: KeyboardEventHandler<HTMLButtonElement>;
 }
@@ -47,10 +49,26 @@ export function Button({
   focusOnOpen,
   wraps,
   slug,
+  href,
   onClick,
   onKeyDown,
 }: ButtonProps) {
   const size = named ?? use(ButtonSizeOf);
+  const className = `inline-flex items-center justify-center gap-1.25 rounded-small border no-underline transition-[background-color,border-color,filter] duration-150 disabled:cursor-progress disabled:opacity-60 [&_svg]:size-3.75 ${wraps ? 'min-h-8 px-2.5 py-1.25 text-start text-small wrap-anywhere' : size === 'foot' ? 'h-9 px-3.5 text-body whitespace-nowrap' : 'h-8 px-2.5 text-small whitespace-nowrap'} ${kind === 'primary' || pressed ? 'border-transparent bg-ink text-on-ink hover:bg-ink-hover' : 'border-line bg-panel text-fg hover:border-faint'} ${kind === 'primary' ? 'font-semibold' : ''}`;
+  if (href !== undefined)
+    return (
+      <a
+        id={id}
+        data-testid={testid}
+        aria-label={label}
+        title={label}
+        hidden={hidden}
+        href={href}
+        className={className}
+      >
+        {children}
+      </a>
+    );
   return (
     <button
       // oxlint-disable-next-line react/button-has-type -- type is one of the two a button may be
@@ -67,7 +85,7 @@ export function Button({
       hidden={hidden}
       onClick={onClick}
       onKeyDown={onKeyDown}
-      className={`inline-flex items-center justify-center gap-1.25 rounded-small border transition-[background-color,border-color,filter] duration-150 disabled:cursor-progress disabled:opacity-60 [&_svg]:size-3.75 ${wraps ? 'min-h-8 px-2.5 py-1.25 text-start text-small wrap-anywhere' : size === 'foot' ? 'h-9 px-3.5 text-body whitespace-nowrap' : 'h-8 px-2.5 text-small whitespace-nowrap'} ${kind === 'primary' || pressed ? 'border-transparent bg-ink text-on-ink hover:bg-ink-hover' : 'border-line bg-panel text-fg hover:border-faint'} ${kind === 'primary' ? 'font-semibold' : ''}`}
+      className={className}
     >
       {children}
     </button>
