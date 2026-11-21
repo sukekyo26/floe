@@ -193,10 +193,20 @@ export function DialogHead({ icon, titleId, title, lead }: DialogHeadProps) {
   );
 }
 
-// DialogActions is a modal's foot: its buttons, at the end of a line over it, of the foot's size unless they name one
-export function DialogActions({ children }: { readonly children: ReactNode }) {
+// DialogActions is a modal's foot: its buttons, at the end of a line over it, of the foot's size unless they name one.
+// A menu in it opens over it (the search's foot: relative); testid is the foot's name, as the tests read it
+export function DialogActions({
+  children,
+  testid = 'dialog-actions',
+}: {
+  readonly children: ReactNode;
+  readonly testid?: string;
+}) {
   return (
-    <div data-testid="dialog-actions" className="mt-1 flex flex-wrap justify-end gap-2 border-t border-line pt-4">
+    <div
+      data-testid={testid}
+      className="relative mt-1 flex flex-wrap items-center justify-end gap-2 border-t border-line pt-4"
+    >
       <ButtonSizeOf value="foot">{children}</ButtonSizeOf>
     </div>
   );
