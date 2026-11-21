@@ -7,8 +7,18 @@ import (
 	"strings"
 	"testing"
 
+	"github.com/chromedp/chromedp/kb"
+
 	"floe/internal/store"
 )
+
+// closeKin closes the child dialog by Escape, as a person does.
+func closeKin(b *browser) {
+	b.t.Helper()
+
+	b.pressKey(kb.Escape)
+	b.until("the child dialog to close", "!document.getElementById('kin-dialog').open")
+}
 
 // A task's family on the screens: a row says its parent or how many children, which change neither the rows nor their
 // number; a parent's page lists its children by their view, off the rows j and k go through; a child's page leads to its
@@ -58,11 +68,11 @@ func TestUITaskChildren(t *testing.T) { //nolint:paralleltest // the browser tes
 	rows := func(view string) string {
 		t.Helper()
 		b.navigate("/tasks?project=proj&view=" + view)
-		b.until("drawn", "!document.getElementById('tasks-none').hidden || document.querySelector('#list > li .tname')")
-		if count, shown := b.eval("document.querySelectorAll('#list > li').length + ''"), b.eval("document.querySelector('.views button[data-view="+js(view)+"]').textContent.match(/\\d+/)[0]"); count != shown {
+		b.until("drawn", "!document.getElementById('tasks-none').hidden || document.querySelector('#list > li [data-testid=tname]')")
+		if count, shown := b.eval("document.querySelectorAll('#list > li').length + ''"), b.eval("document.querySelector('#shelf [data-testid=views] button[data-view="+js(view)+"]').textContent.match(/\\d+/)[0]"); count != shown {
 			t.Errorf("%s: %s rows, %s on the shelf", view, count, shown)
 		}
-		return b.eval("[...document.querySelectorAll('#list > li')].map((li) => li.querySelector('.tname').textContent + [...li.querySelectorAll('.kin, .task-pages')].filter((e) => e.matches('.kin') || /child/.test(e.textContent)).map((e) => ' (' + e.textContent + ')').join('')).sort().join(', ')")
+		return b.eval("[...document.querySelectorAll('#list > li')].map((li) => li.querySelector('[data-testid=tname]').textContent + [...li.querySelectorAll('[data-testid=kin], [data-testid=task-pages]')].filter((e) => e.matches('[data-testid=kin]') || /child/.test(e.textContent)).map((e) => ' (' + e.textContent + ')').join('')).sort().join(', ')")
 	}
 	for _, c := range []struct{ view, want string }{
 		{"doing", "#1 (3 child task(s)), #2 (Parent#1the parent), #21 (Parent#20kept by its child), #31 (Parent#30), #4 (Parent#1the parent)"},
@@ -79,14 +89,14 @@ func TestUITaskChildren(t *testing.T) { //nolint:paralleltest // the browser tes
 		b.navigate("/tasks?project=proj&task=" + strings.ReplaceAll(name, "#", "%23"))
 		b.until("the head", "!document.getElementById('task-head').hidden")
 	}
-	const kids = "[...document.querySelectorAll('#task-family .kin-row')].map((e) => e.dataset.task + ' ' + e.querySelector('.kid-state').textContent).join(', ')"
+	const kids = "[...document.querySelectorAll('#task-family [data-testid=kin-row]')].map((e) => e.dataset.task + ' ' + e.querySelector('[data-testid=kid-state]').textContent).join(', ')"
 
 	// The children by view, the latest changed first within one; j and k stay on the pages, and a press goes to the child's page.
 	open("#1")
 	if got := b.eval(kids); got != "#4 In progress, #2 In progress, #3 Archive" {
 		t.Errorf("the children: %q", got)
 	}
-	b.eval("document.querySelector('#list a.title').focus()")
+	b.eval("document.querySelector('#list a[data-testid=title]').focus()")
 	b.pressKey("j")
 	b.pressKey("j")
 	b.pressKey("j")
@@ -95,8 +105,8 @@ func TestUITaskChildren(t *testing.T) { //nolint:paralleltest // the browser tes
 	}
 
 	// The focus stays on a child as the list is read again, and comes back when it is drawn anew.
-	b.eval("window.kidNode = document.querySelector('#task-family .kin-row[data-task=\"#4\"]'); window.kidNode.focus()")
-	b.eval("load()")
+	b.eval("window.kidNode = document.querySelector('#task-family [data-testid=kin-row][data-task=\"#4\"]'); window.kidNode.focus()")
+	b.untilRead(b.reread(), "the list read again", "true")
 	b.still()
 	if got := b.eval("(document.activeElement === window.kidNode) + ''"); got != "true" {
 		t.Error("a child drawn anew with nothing changed")
@@ -106,11 +116,11 @@ func TestUITaskChildren(t *testing.T) { //nolint:paralleltest // the browser tes
 	if got := b.eval("(document.activeElement.dataset.task ?? '') + ' ' + (document.activeElement === window.kidNode)"); got != "#4 false" {
 		t.Errorf("the focus after a change: %q", got)
 	}
-	b.eval("document.querySelector('#task-family .kin-row[data-task=\"#2\"]').click()")
+	b.eval("document.querySelector('#task-family [data-testid=kin-row][data-task=\"#2\"]').click()")
 	b.until("the child's page", "new URLSearchParams(location.search).get('task') === '#2' && !document.getElementById('task-family').hidden")
 
 	// A child leads up to its parent, and its way back is to its own state.
-	if got := b.eval("document.querySelector('#task-family h3').textContent + ' ' + document.querySelector('#task-family .kin-row').textContent + ' ' + document.querySelector('#task-family .kin-row').getAttribute('href') + ' ' + document.getElementById('task-up').getAttribute('href')"); got != "Parent task In progress#1the parent /tasks?project=proj&task=%231 /tasks?project=proj" {
+	if got := b.eval("document.querySelector('#task-family h3').textContent + ' ' + document.querySelector('#task-family [data-testid=kin-row]').textContent + ' ' + document.querySelector('#task-family [data-testid=kin-row]').getAttribute('href') + ' ' + document.getElementById('task-up').getAttribute('href')"); got != "Parent task In progress#1the parent /tasks?project=proj&task=%231 /tasks?project=proj" {
 		t.Errorf("a child's head: %q", got)
 	}
 
@@ -139,7 +149,9 @@ func TestUITaskChildren(t *testing.T) { //nolint:paralleltest // the browser tes
 		if title == "" {
 			title = "a title"
 		}
-		b.eval("document.getElementById('kin-task').value = " + js(name) + "; document.getElementById('kin-task').dispatchEvent(new Event('input', { bubbles: true })); document.getElementById('kin-title').value = " + js(title) + "; document.getElementById('kin').requestSubmit()")
+		b.fill("#kin-task", name)
+		b.fill("#kin-title", title)
+		b.eval("document.getElementById('kin-submit').click()")
 	}
 	open("#99")
 	if got := b.eval(adds); got != "false" {
@@ -148,8 +160,8 @@ func TestUITaskChildren(t *testing.T) { //nolint:paralleltest // the browser tes
 	openChild()
 	child(" #100 ", "made here")
 	b.until("saved", "!document.getElementById('kin-dialog').open")
-	b.until("its row", "document.querySelector('#task-family .kin-row[data-task=\"#100\"]')")
-	if got := b.eval("new URLSearchParams(location.search).get('task') + ' ' + document.querySelector('.toast-link').textContent + ' ' + document.querySelector('.toast-link').getAttribute('href')"); got != "#99 Created the child task #100 /tasks?project=proj&task=%23100" {
+	b.until("its row", "document.querySelector('#task-family [data-testid=kin-row][data-task=\"#100\"]')")
+	if got := b.eval("new URLSearchParams(location.search).get('task') + ' ' + document.querySelector('[data-testid=toast-link]').textContent + ' ' + document.querySelector('[data-testid=toast-link]').getAttribute('href')"); got != "#99 Created the child task #100 /tasks?project=proj&task=%23100" {
 		t.Errorf("after making: %q", got)
 	}
 	made, err := st.ReadTasks()
@@ -178,7 +190,7 @@ func TestUITaskChildren(t *testing.T) { //nolint:paralleltest // the browser tes
 	if _, ok := made["proj"]["#101"]; ok {
 		t.Error("the refused child has a row")
 	}
-	b.eval("document.getElementById('kin-dialog').close()")
+	closeKin(b)
 	task("proj", "#99", "--parent", "")
 
 	// By real presses: a new name makes a child, and the focus is back on the button.
@@ -195,13 +207,17 @@ func TestUITaskChildren(t *testing.T) { //nolint:paralleltest // the browser tes
 		t.Helper()
 		press("task-child")
 		b.until("the dialog", "document.getElementById('kin-dialog').open")
-		b.eval("document.getElementById('kin-task').value = " + js(name) + "; document.getElementById('kin-task').dispatchEvent(new Event('input', { bubbles: true })); document.getElementById('kin-title').value = " + js(title))
+		b.fill("#kin-task", name)
+		// The title asked of a new name alone: hidden, and not to be filled, for a task there
+		if title != "" {
+			b.fill("#kin-title", title)
+		}
 		press("kin-submit")
 	}
 	open("#99")
 	write("#103", "made")
 	b.until("saved", "!document.getElementById('kin-dialog').open")
-	b.until("its row", "document.querySelector('#task-family .kin-row[data-task=\"#103\"]')")
+	b.until("its row", "document.querySelector('#task-family [data-testid=kin-row][data-task=\"#103\"]')")
 	if got := b.eval("document.activeElement.id"); got != "task-child" {
 		t.Errorf("the focus after making one: %q", got)
 	}
@@ -214,10 +230,10 @@ func TestUITaskChildren(t *testing.T) { //nolint:paralleltest // the browser tes
 	}
 	field := func(value string) {
 		t.Helper()
-		b.eval("document.getElementById('kin-task').value = " + js(value) + "; document.getElementById('kin-task').dispatchEvent(new Event('input', { bubbles: true }))")
+		b.fill("#kin-task", value)
 	}
 	field("#")
-	offered := b.eval("[...document.getElementById('kin-task-names').children].map((e) => e.querySelector('.names-word').textContent.split(' ')[0]).join(' ')")
+	offered := b.eval("[...document.getElementById('kin-task-names').children].map((e) => e.querySelector('[data-testid=names-word]').textContent.split(' ')[0]).join(' ')")
 	for _, name := range []string{" #1 ", " #10 ", " #103 ", " #99 "} {
 		if strings.Contains(" "+offered+" ", name) {
 			t.Errorf("offered %s: %q", name, offered)
@@ -248,6 +264,8 @@ func TestUITaskChildren(t *testing.T) { //nolint:paralleltest // the browser tes
 	if got := b.eval(said); got != "false |  | Create | false" {
 		t.Errorf("a new name: %q", got)
 	}
+	// A title written for it, hidden as a task there is chosen, is not sent.
+	b.fill("#kin-title", "not sent")
 	// Chosen by a press, as typed.
 	field("#")
 	r := b.rect("[...document.getElementById('kin-task-names').children].find((e) => e.textContent.startsWith('#4'))")
@@ -255,10 +273,9 @@ func TestUITaskChildren(t *testing.T) { //nolint:paralleltest // the browser tes
 	if got := b.eval(said); got != "false | #4 doing child becomes a child, moving from its parent #1 | Make it a child | true" {
 		t.Errorf("#4 chosen: %q", got)
 	}
-	b.eval("document.getElementById('kin-title').value = 'not sent'")
 	press("kin-submit")
 	b.until("saved", "!document.getElementById('kin-dialog').open")
-	b.until("the toast", "document.querySelector('.toast-link')?.textContent === 'Made #4 a child task'")
+	b.until("the toast", "document.querySelector('[data-testid=toast-link]')?.textContent === 'Made #4 a child task'")
 	if made, err = st.ReadTasks(); err != nil {
 		t.Fatal(err)
 	}
@@ -270,7 +287,7 @@ func TestUITaskChildren(t *testing.T) { //nolint:paralleltest // the browser tes
 	open("#1")
 	write("#4", "")
 	b.until("closed", "!document.getElementById('kin-dialog').open")
-	if got := b.eval("(document.querySelector('.toast-link')?.textContent ?? '') + '|' + document.activeElement.id"); got != "|task-child" {
+	if got := b.eval("(document.querySelector('[data-testid=toast-link]')?.textContent ?? '') + '|' + document.activeElement.id"); got != "|task-child" {
 		t.Errorf("a child here already: %q", got)
 	}
 	press("task-child")
@@ -279,7 +296,7 @@ func TestUITaskChildren(t *testing.T) { //nolint:paralleltest // the browser tes
 	if got := b.eval(said); got != "false |  | Make it a child | true" {
 		t.Errorf("a child here already, typed: %q", got)
 	}
-	b.eval("document.getElementById('kin-dialog').close()")
+	closeKin(b)
 	open("#99")
 	write("#20", "")
 	b.until("refused", "!document.getElementById('kin-error').hidden")
@@ -287,20 +304,20 @@ func TestUITaskChildren(t *testing.T) { //nolint:paralleltest // the browser tes
 	if got := b.eval("[document.getElementById('kin-error').textContent, document.getElementById('kin-task').value, document.getElementById('kin-title').value, document.getElementById('kin-dialog').open].join(' | ')"); got != want {
 		t.Errorf("a task with children: %q", got)
 	}
-	b.eval("document.getElementById('kin-dialog').close()")
+	closeKin(b)
 	task("proj", "#103", "--forget")
 
 	// A new child asks a title: of spaces it is stopped, the spaces kept; opened again, nothing of that is left.
 	press("task-child")
 	b.until("the dialog", "document.getElementById('kin-dialog').open")
 	field("#105")
-	b.eval("document.getElementById('kin-title').value = '   '")
+	b.fill("#kin-title", "   ")
 	press("kin-submit")
 	const titleState = "(document.getElementById('kin-title').validity.customError ? document.getElementById('kin-title').validationMessage : '') + '|' + document.getElementById('kin-title').value + '|' + document.getElementById('kin-dialog').open"
 	if got := b.eval(titleState); got != "Write more than spaces|   |true" {
 		t.Errorf("a title of spaces: %q", got)
 	}
-	b.eval("document.getElementById('kin-dialog').close()")
+	closeKin(b)
 	press("task-child")
 	b.until("the dialog", "document.getElementById('kin-dialog').open")
 	if got := b.eval(titleState); got != "||true" {
@@ -308,7 +325,7 @@ func TestUITaskChildren(t *testing.T) { //nolint:paralleltest // the browser tes
 	}
 	// Made meanwhile under another parent: refused as stale, read again and said so; pressed again, it is taken.
 	field("#106")
-	b.eval("document.getElementById('kin-title').value = 'mine'")
+	b.fill("#kin-title", "mine")
 	task("proj", "#106", "--parent", "#1")
 	press("kin-submit")
 	b.until("refused", "!document.getElementById('kin-error').hidden")
@@ -327,26 +344,26 @@ func TestUITaskChildren(t *testing.T) { //nolint:paralleltest // the browser tes
 	task("proj", "#106", "--forget")
 	// Shown there, then gone and read before the press: sent as there, as shown, and refused, not made of no title.
 	task("proj", "#107", "--title", "theirs")
-	b.eval("load()")
-	b.until("#107 read", "tasksOf().some((x) => x.name === '#107')")
+	b.untilRead(b.reread(), "#107 read", "true")
 	press("task-child")
 	b.until("the dialog", "document.getElementById('kin-dialog').open")
+	field("#")
+	b.until("#107 offered", "[...document.getElementById('kin-task-names').children].some((e) => e.textContent.startsWith('#107'))")
 	field("#107")
 	task("proj", "#107", "--forget")
-	b.eval("load()")
-	b.until("#107 gone", "!tasksOf().some((x) => x.name === '#107')")
+	b.untilRead(b.reread(), "#107 gone", "true")
 	press("kin-submit")
 	b.until("refused", "!document.getElementById('kin-error').hidden")
 	if got := b.eval("document.getElementById('kin-error').textContent + '|' + document.getElementById('kin-title').closest('label').hidden"); got != "Failed to save: task #107 is no longer there; the tasks are read again, so check and save again|false" {
 		t.Errorf("gone meanwhile: %q", got)
 	}
-	b.eval("document.getElementById('kin-dialog').close()")
+	closeKin(b)
 
 	// Removed by two presses and back at the list; refused, it says why and stays. A task with children has no button.
 	pressForget := func() {
 		t.Helper()
 		press("task-delete")
-		b.until("armed", "document.getElementById('task-delete').classList.contains('armed')")
+		b.until("armed", "document.getElementById('task-delete').dataset.armed === 'true'")
 		press("task-delete")
 	}
 	task("proj", "#104", "--title", "to remove", "--state", "doing")

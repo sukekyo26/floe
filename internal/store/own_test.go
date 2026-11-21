@@ -47,7 +47,7 @@ func TestPublishFindsRenamedPage(t *testing.T) {
 		t.Fatal(told(err, root))
 	}
 	rename(t, s, "plan", "plan-b")
-	if _, err := s.Edit("plan-b", store.Edit{Archived: ptr(true)}); err != nil { //nolint:exhaustruct // archived alone
+	if _, err := s.Edit("plan-b", store.Edit{Archived: new(true)}); err != nil { //nolint:exhaustruct // archived alone
 		t.Fatal(err)
 	}
 	e, err := put(t, s, dw, "plan.yaml", "plan.yaml", ownSrc+"title: two\n", store.Options{})
@@ -77,7 +77,7 @@ func TestPublishRenamedInBetween(t *testing.T) {
 
 			s, root := newStore(t)
 			dw := picKit(t, "", "")
-			if _, err := put(t, s, dw, c.file, c.file, ownSrc, store.Options{Slug: ptr(c.slug)}); err != nil {
+			if _, err := put(t, s, dw, c.file, c.file, ownSrc, store.Options{Slug: new(c.slug)}); err != nil {
 				t.Fatal(told(err, root))
 			}
 			up := floepublish.Upload{File: c.file, Source: []byte(ownSrc + "title: two\n"), Images: map[string][]byte{}, Project: "p", Repo: "p", Place: c.file}
@@ -87,7 +87,7 @@ func TestPublishRenamedInBetween(t *testing.T) {
 			}
 			rename(t, s, c.slug, c.slug+"-b")
 			if c.taken {
-				if _, err = put(t, s, dw, "x.yaml", "docs/x.yaml", ownSrc, store.Options{Slug: ptr(c.slug)}); err != nil {
+				if _, err = put(t, s, dw, "x.yaml", "docs/x.yaml", ownSrc, store.Options{Slug: new(c.slug)}); err != nil {
 					t.Fatal(told(err, root))
 				}
 			}
@@ -128,7 +128,7 @@ func TestOwnSlugOrder(t *testing.T) {
 			dw := picKit(t, "", "")
 			for _, p := range c.pages {
 				up := floepublish.Upload{File: "x.yaml", Source: []byte(ownSrc), Images: map[string][]byte{}, Project: "p", Repo: p.repo, Place: p.place}
-				e, err := floepublish.PrepareData(s, dw, up, store.Options{Slug: ptr(p.slug)})
+				e, err := floepublish.PrepareData(s, dw, up, store.Options{Slug: new(p.slug)})
 				if err == nil {
 					err = s.Save(e)
 				}
@@ -199,7 +199,7 @@ func TestOwnSlugUnnamed(t *testing.T) {
 	if u, ok := errors.AsType[*usererr.Error](err); !ok || u.Key != "store_slug_unnamed" || u.File() != html {
 		t.Errorf("link refused %v, want store_slug_unnamed at %s", err, html)
 	}
-	_, err = put(t, s, dw, "日本語.yaml", "日本語.yaml", ownSrc, store.Options{Slug: ptr("")})
+	_, err = put(t, s, dw, "日本語.yaml", "日本語.yaml", ownSrc, store.Options{Slug: new("")})
 	if keyOf(err) != "store_invalid_slug" {
 		t.Errorf("empty slug refused %v, want store_invalid_slug", err)
 	}
@@ -216,7 +216,7 @@ func TestOwnSlugLink(t *testing.T) {
 		t.Fatal(err)
 	}
 	dw := picKit(t, "", "")
-	for _, slug := range []*string{nil, ptr("aa")} {
+	for _, slug := range []*string{nil, new("aa")} {
 		e, err := floepublish.PrepareLink(t.Context(), s, dw, html, store.Options{Slug: slug}, "", filepath.Dir(home))
 		if err == nil {
 			err = s.Save(e)
@@ -240,7 +240,7 @@ func TestPublishForceWithoutSlug(t *testing.T) {
 	if _, err := put(t, s, dw, "plan.yaml", "docs/plan.yaml", ownSrc, store.Options{}); err != nil {
 		t.Fatal(told(err, root))
 	}
-	if _, err := put(t, s, dw, "plan.yaml", "plan.yaml", ownSrc, store.Options{Slug: ptr("plan-b")}); err != nil {
+	if _, err := put(t, s, dw, "plan.yaml", "plan.yaml", ownSrc, store.Options{Slug: new("plan-b")}); err != nil {
 		t.Fatal(told(err, root))
 	}
 	e, err := put(t, s, dw, "plan.yaml", "plan.yaml", ownSrc+"title: two\n", store.Options{Force: true})
@@ -265,9 +265,9 @@ func TestEditRenameTitle(t *testing.T) {
 	}{
 		{"made of the slug", ownSrc, store.Options{}, store.Edit{}, "plan-b"},                    //nolint:exhaustruct // none
 		{"title:", ownSrc + "title: Plan\n", store.Options{}, store.Edit{}, "Plan"},              //nolint:exhaustruct // none
-		{"--title", ownSrc, store.Options{Title: ptr("Mine")}, store.Edit{}, "Mine"},             //nolint:exhaustruct // none
-		{"pinned", ownSrc, store.Options{}, store.Edit{Title: ptr("plan")}, "plan"},              //nolint:exhaustruct // none
-		{"given with the rename", ownSrc, store.Options{}, store.Edit{Title: ptr("New")}, "New"}, //nolint:exhaustruct // none
+		{"--title", ownSrc, store.Options{Title: new("Mine")}, store.Edit{}, "Mine"},             //nolint:exhaustruct // none
+		{"pinned", ownSrc, store.Options{}, store.Edit{Title: new("plan")}, "plan"},              //nolint:exhaustruct // none
+		{"given with the rename", ownSrc, store.Options{}, store.Edit{Title: new("New")}, "New"}, //nolint:exhaustruct // none
 	} {
 		t.Run(c.name, func(t *testing.T) {
 			t.Parallel()
@@ -283,7 +283,7 @@ func TestEditRenameTitle(t *testing.T) {
 				}
 				c.edit = store.Edit{} //nolint:exhaustruct // none
 			}
-			c.edit.Slug = ptr("plan-b")
+			c.edit.Slug = new("plan-b")
 			if _, err := s.Edit("plan", c.edit); err != nil {
 				t.Fatal(err)
 			}
@@ -353,7 +353,7 @@ func TestSameFileAnyProject(t *testing.T) {
 	check("renamed, from another project", "wiki", "a", []string{"wiki"})
 
 	// A path in a repository, the same from outside it.
-	if got := pub("r", "r", "docs/x.yaml", store.Options{Slug: ptr("x")}); got != "x" {
+	if got := pub("r", "r", "docs/x.yaml", store.Options{Slug: new("x")}); got != "x" {
 		t.Fatalf("wrote %s, want x", got)
 	}
 	rename(t, s, "x", "xr")
@@ -364,27 +364,27 @@ func TestSameFileAnyProject(t *testing.T) {
 
 	// A plans path kept with the project published from, before keys were the file's alone, renamed.
 	old := filepath.Join(filepath.Dir(root), "plans", "old.yaml")
-	pub("floe", "floe", old, store.Options{Slug: ptr("old")})
+	pub("floe", "floe", old, store.Options{Slug: new("old")})
 	rename(t, s, "old", "older")
 	if got := pub("b", "", old, store.Options{}); got != "older" {
 		t.Errorf("a plans path kept with its project, renamed: wrote %s, want older", got)
 	}
 
 	// A new page is in the project published from.
-	pub("w", "r", "docs/new.yaml", store.Options{Slug: ptr("new")})
+	pub("w", "r", "docs/new.yaml", store.Options{Slug: new("new")})
 	if m := s.ReadMeta("new"); m.Project != "w" || m.PublishedFrom != "r" {
 		t.Errorf("a new page: project %q, file's repository %q, want w and r", m.Project, m.PublishedFrom)
 	}
 
 	// A page that kept no file: compared by the project published from, then keyed.
-	pub("p", "p", "", store.Options{Slug: ptr("nofile")})
+	pub("p", "p", "", store.Options{Slug: new("nofile")})
 	up := floepublish.Upload{File: "n.yaml", Source: []byte(ownSrc), Images: map[string][]byte{}, Project: "q", Repo: "", Place: plans + "2"}
-	if _, err := floepublish.PrepareData(s, dw, up, store.Options{Slug: ptr("nofile")}); err == nil {
+	if _, err := floepublish.PrepareData(s, dw, up, store.Options{Slug: new("nofile")}); err == nil {
 		t.Error("a page that kept no file, from another project: no refusal")
 	}
-	pub("p", "", plans+"2", store.Options{Slug: ptr("nofile")})
+	pub("p", "", plans+"2", store.Options{Slug: new("nofile")})
 	if m := s.ReadMeta("nofile"); m.PublishedFrom != "" || m.PublishedFile != plans+"2" {
 		t.Errorf("a page that kept no file, published again: keyed %q %q", m.PublishedFrom, m.PublishedFile)
 	}
-	pub("q", "", plans+"2", store.Options{Slug: ptr("nofile")})
+	pub("q", "", plans+"2", store.Options{Slug: new("nofile")})
 }

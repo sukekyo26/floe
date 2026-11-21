@@ -108,20 +108,19 @@ func (b *browser) stub(list string) {
 	if b.eval("window.faked === true") != "true" {
 		b.t.Fatal("this page was opened before the first stub: stub on a blank tab before opening it")
 	}
-	b.eval(script)
-	b.loadStubbed()
+	gets, err := strconv.Atoi(b.eval(script + "; window.gets"))
+	if err != nil {
+		b.t.Fatal(err)
+	}
+	b.loadStubbed(b.reread(), gets)
 }
 
-// loadStubbed waits until the management page open, faked, has read the list stubbed and drawn it: its own load may
-// still be on the way after the page is loaded.
-func (b *browser) loadStubbed() {
+// loadStubbed waits until the management page open has read the list stubbed in a read begun after begun, its count of reads
+// stubbed past gets: its own first read (0, 0 on a page just opened), or one reread. A read that fails times out the wait.
+func (b *browser) loadStubbed(begun, gets int) {
 	b.t.Helper()
 
-	got := b.eval("(async () => { const n = window.gets; await load(); " +
-		"return window.gets > n || 'not read: ' + document.getElementById('error').textContent; })()")
-	if got != "true" {
-		b.t.Fatalf("the page did not load the list stubbed: %s", got)
-	}
+	b.untilRead(begun, "the page to read the list stubbed", "window.gets > "+strconv.Itoa(gets))
 }
 
 // unstub gives the pages this tab opens from now on the server's list again.
@@ -135,13 +134,86 @@ func (b *browser) unstub() {
 	b.faked = ""
 }
 
-// untilActed waits until expr is truthy and no archive or way back of a row is on its way, the read of the list after it included: a
-// redraw of the rows takes a press with them, and an answer come late shows there. A load the test starts itself is waited for by
-// eval, which awaits what it returns.
-func (b *browser) untilActed(what, expr string) {
+// acted runs js, which starts what reads the list (a press, a key), and returns how many reads had begun before it, read in the
+// same evaluation, so that no poll begins in between; js runs in a function of its own, a line comment at its end included.
+// untilRead waits for a read begun after it.
+// LIMIT: an element's click() presses what a person cannot (hidden, covered, inert); press by the input (click, pressKey) where it matters.
+func (b *browser) acted(js string) int {
 	b.t.Helper()
 
-	b.until(what, "archiving.size === 0 && ("+expr+")")
+	n, err := strconv.Atoi(b.eval("(() => { const begun = Number(document.documentElement.dataset.loadsBegun ?? 0); (() => { " + js + "\n})(); return begun; })()"))
+	if err != nil {
+		b.t.Fatal(err)
+	}
+	return n
+}
+
+// untilRead waits until a read of the list begun after begun has ended and expr is truthy: the reads end in the order they begin.
+// What runs after a read (the focus moved, a toast) is not waited for: wait for it in the DOM. After a write, wait for its record
+// too (calls, a count of the test's fetch): an action may read before it writes.
+func (b *browser) untilRead(begun int, what, expr string) {
+	b.t.Helper()
+
+	b.until(what, "Number(document.documentElement.dataset.loads ?? 0) > "+strconv.Itoa(begun)+" && ("+expr+")")
+}
+
+// reread has the page read the list again, as on coming back to its tab: a poll's read, which draws nothing for 2 s after a
+// press on the list. It returns the reads begun before it, for untilRead.
+func (b *browser) reread() int {
+	b.t.Helper()
+
+	return b.acted("document.dispatchEvent(new Event('visibilitychange'))")
+}
+
+// fill puts words in the field sel as a person types them, on any system: the field focused and its text selected, then the
+// words inserted (Input.insertText), or the selection deleted for none. A value set and an input event made reach no React field.
+func (b *browser) fill(sel, words string) {
+	b.t.Helper()
+
+	if b.eval("(() => { const e = document.querySelector("+js(sel)+"); e.focus(); e.select(); return document.activeElement === e; })()") != "true" {
+		b.t.Fatalf("%s does not take the focus (hidden or disabled): the words would go elsewhere", sel)
+	}
+	if words == "" {
+		b.pressKey(kb.Delete)
+		return
+	}
+	if _, err := chromedp.Call(b.ctx, input.InsertText, input.InsertTextParams{Text: words}); err != nil {
+		b.t.Fatal(err)
+	}
+}
+
+// chooseValue chooses value in the <select> id: the value set and a change sent, which bubbles as a person's choice does. Not fill,
+// which types into a field (.claude/rules/browsertest.md): React takes a select's change as it comes, watching no value of it, so
+// that this reaches a React select too. A press on the list's item would not do on a busy machine: the release lands on what lies
+// under the list once it has closed. The tests that choose so are listed in screenOnlySelects.
+func chooseValue(b *browser, id, value string) {
+	b.t.Helper()
+
+	b.moving("(() => { const s = document.getElementById(" + js(id) + "); s.value = " + js(value) + "; s.dispatchEvent(new Event('change', { bubbles: true })); })()")
+}
+
+// drag presses the middle of the element sel, moves halfway and then to x on the same line, and lets go.
+func (b *browser) drag(sel string, x float64) {
+	b.t.Helper()
+
+	r := b.rect("document.querySelector(" + js(sel) + ")")
+	from, y := r.X+r.Width/2, r.Y+r.Height/2
+	b.painted()
+	for _, at := range []struct {
+		kind    input.DispatchMouseEventType
+		x       float64
+		buttons int64
+	}{
+		{input.DispatchMouseEventTypeMousePressed, from, 1},
+		{input.DispatchMouseEventTypeMouseMoved, (from + x) / 2, 1},
+		{input.DispatchMouseEventTypeMouseMoved, x, 1},
+		{input.DispatchMouseEventTypeMouseReleased, x, 0},
+	} {
+		p := input.DispatchMouseEventParams{Type: at.kind, X: at.x, Y: y, Button: input.MouseButtonLeft, Buttons: at.buttons, ClickCount: 1}
+		if _, err := chromedp.Call(b.ctx, input.DispatchMouseEvent, p); err != nil {
+			b.t.Fatal(err)
+		}
+	}
 }
 
 func (b *browser) addScript(script string) page.ScriptIdentifier {
@@ -180,12 +252,12 @@ func uiExtras(t *testing.T, lang i18n.Lang, msg func(string, ...any) string) {
 	b := newBrowser(t, servetest.Start(t, nil).Base, lang)
 	b.stub(extrasList)
 	b.navigate("/")
-	const titles = "[...document.querySelectorAll('#list .title')].map((a) => a.textContent).join(',')"
+	const titles = "[...document.querySelectorAll('#list [data-testid=title]')].map((a) => a.textContent).join(',')"
 	// What the list counts, and the view in the URL: the kinds, the project chips and whether they show, the views,
 	// the head and the titles.
-	const counts = "[...document.querySelectorAll('#kinds .n')].map((n) => n.textContent)" +
-		".concat([...document.querySelectorAll('#chips .chip')].map((c) => c.textContent), document.getElementById('shelf-projects').hidden, " +
-		"[...document.querySelectorAll('.views .n')].map((n) => n.textContent).join(' '), document.getElementById('count').textContent, " + titles + ", " +
+	const counts = "[...document.querySelectorAll('#kinds [data-testid=n]')].map((n) => n.textContent)" +
+		".concat([...document.querySelectorAll('#chips > button')].map((c) => c.textContent), document.getElementById('shelf-projects').hidden, " +
+		"[...document.querySelectorAll('#shelf [data-testid=views] [data-testid=n]')].map((n) => n.textContent).join(' '), document.getElementById('count').textContent, " + titles + ", " +
 		"new URLSearchParams(location.search).get('view')).join(' ')"
 	// Which empty states show, and their words.
 	const empties = "['empty', 'all-archived', 'empty-new', 'empty-favorites', 'empty-archived', 'nomatch']" +
@@ -197,15 +269,15 @@ func uiExtras(t *testing.T, lang i18n.Lang, msg func(string, ...any) string) {
 	out := make([]string, 0, 32)
 	out = append(out, b.eval(titles))
 	// The shelf's favourites narrow to them (kept in the URL); a row's star sends the change.
-	b.eval("document.querySelector('.views [data-view=fav]').click()")
+	b.eval("document.querySelector('#shelf [data-view=fav]').click()")
 	out = append(out, b.eval(titles)+" "+b.eval("new URLSearchParams(location.search).get('view')"))
-	b.eval("document.querySelector('.views [data-view=all]').click()")
-	b.eval("document.querySelector('#list li:not(.group) .star').click()")
+	b.eval("document.querySelector('#shelf [data-view=all]').click()")
+	b.eval("document.querySelector('#list li:not([data-testid=group]) [data-testid=star]').click()")
 	out = append(out, b.until("the favourite", "calls.splice(0).join(',')"))
 	// The title's tooltip has both the creation and the update.
-	out = append(out, b.eval("document.querySelector('#list li:not(.group) .title').title.split('\\n').slice(1).map((l) => l.split(' ')[0]).join(' ')"))
+	out = append(out, b.eval("document.querySelector('#list li:not([data-testid=group]) [data-testid=title]').title.split('\\n').slice(1).map((l) => l.split(' ')[0]).join(' ')"))
 	// ↓ moves through the rows by focusing their titles, x selects the focused row, the check boxes showing from then on alone.
-	const boxes = "getComputedStyle(document.querySelector('#list li:not(.group) .pick')).display"
+	const boxes = "getComputedStyle(document.querySelector('#list li:not([data-testid=group]) [data-testid=pick]')).display"
 	out = append(out, b.eval(boxes))
 	key("ArrowDown")
 	key("ArrowDown")
@@ -214,70 +286,70 @@ func uiExtras(t *testing.T, lang i18n.Lang, msg func(string, ...any) string) {
 	out = append(out, b.eval("document.getElementById('bulk-count').textContent"), b.eval(boxes))
 	// With Beta selected too by a real mouse click (nothing may sit on top of the checkbox), the first
 	// click arms and the second deletes both.
-	r := b.rect("document.querySelector('#list li:not(.group) .sel')")
+	r := b.rect("document.querySelector('#list li:not([data-testid=group]) [data-testid=sel]')")
 	b.click(r.X+r.Width/2, r.Y+r.Height/2)
 	out = append(out, b.until("the mouse click to select",
-		"document.querySelector('#list li:not(.group) .sel').checked && document.getElementById('bulk-count').textContent"))
+		"document.querySelector('#list li:not([data-testid=group]) [data-testid=sel]').checked && document.getElementById('bulk-count').textContent"))
 	b.eval("document.getElementById('bulk-delete').click()")
 	out = append(out, b.eval("document.getElementById('bulk-delete').textContent"))
 	b.eval("document.getElementById('bulk-delete').click()")
 	b.until("the selection to clear", "document.getElementById('bulk').hidden")
 	out = append(out, b.eval("calls.splice(0).sort().join(',')"), b.eval(boxes))
 	// Links alone say they are unregistered.
-	b.eval("document.querySelector('#list li[data-slug=l] .sel').click()")
+	b.eval("document.querySelector('#list li[data-slug=l] [data-testid=sel]').click()")
 	out = append(out, b.eval("document.getElementById('bulk-delete').textContent"))
 	// The shelf's add button stays while rows are selected.
 	check(t, "selected", []string{b.eval("(document.getElementById('add-link').closest('[hidden]') === null) + ''")}, "true")
 	b.eval("document.getElementById('bulk-clear').click()")
 	// The pencil opens a modal with the current description; saving sends the new one.
-	b.eval("document.querySelector('#list li[data-slug=a] .edit').click()")
+	b.eval("document.querySelector('#list li[data-slug=a] [data-testid=edit]').click()")
 	out = append(out, b.eval("[document.getElementById('edit-dialog').open, document.getElementById('edit-desc').value].join(' ')"))
-	b.eval("document.getElementById('edit-desc').value = 'new'; document.getElementById('edit').requestSubmit()")
+	b.fill("#edit-desc", "new")
+	b.eval("document.getElementById('edit-submit').click()")
 	// Saved and closed, the focus back on the row's menu button as it closes.
 	b.until("the edit modal to close", "!document.getElementById('edit-dialog').open && document.activeElement.matches('#list li[data-slug=a] summary')")
 	out = append(out, b.eval("calls.splice(0).join(',')"),
 		b.eval("document.getElementById('toasts').textContent.includes("+js(msg("ui_saved"))+")"))
 	// Only linked files have a copy button for their path.
-	out = append(out, b.eval("document.querySelector('#list li[data-slug=a] .copy').hidden"))
-	b.eval("document.querySelector('#list li[data-slug=l] .copy').click()")
+	out = append(out, b.eval("document.querySelector('#list li[data-slug=a] [data-testid=copy]').hidden"))
+	b.eval("document.querySelector('#list li[data-slug=l] [data-testid=copy]').click()")
 	out = append(out, b.until("the copy", "calls.join(',')"),
 		b.eval("document.getElementById('toasts').textContent.includes("+js(msg("ui_path_copied"))+")"))
 	// A link whose file is gone has no href, but ↓ still reaches it.
-	b.eval("document.querySelector('#list li[data-slug=l] .title').focus()")
+	b.eval("document.querySelector('#list li[data-slug=l] [data-testid=title]').focus()")
 	key("ArrowDown")
 	out = append(out, b.eval("document.activeElement.textContent"))
 	// The add form sends only the fields filled in, trimmed: a field sent is given, empty or not.
-	b.eval(`(() => {
-		calls.length = 0;
-		document.getElementById('add-link').click();
-		document.getElementById('add-path').value = ' /tmp/x/n.html ';
-		document.getElementById('add-desc').value = ' a link ';
-		document.getElementById('add').requestSubmit();
-	})()`)
+	b.eval("calls.length = 0; document.getElementById('add-link').click()")
+	b.until("the add dialog", "document.getElementById('add-dialog').open")
+	b.fill("#add-path", " /tmp/x/n.html ")
+	b.fill("#add-desc", " a link ")
+	b.eval("document.getElementById('add-submit').click()")
 	out = append(out, b.until("the add to be sent", "calls.splice(0).join(',')"))
 	b.until("the add dialog to close", "!document.getElementById('add-dialog').open")
 
 	// The archived are off every count and list but their own, which the switch shows (kept in the URL); a row's
 	// button and the bulk bar send the change, to archive or to give back, and say which.
-	archiveWords := "(() => { const a = document.querySelector('#list li:not(.group) .actions > .archive'); document.getElementById('bulk-page').click(); " +
+	archiveWords := "(() => { const a = document.querySelector('#list li:not([data-testid=group]) [data-testid=actions] > [data-testid=archive]'); document.getElementById('bulk-page').click(); " +
 		"const words = [a.title, a.getAttribute('aria-label'), document.getElementById('bulk-archive').textContent]; " +
 		"document.getElementById('bulk-clear').click(); return words.join(' / '); })()"
-	const archiveRow = "document.querySelector('#list li:not(.group) .actions > .archive').click()"
+	const archiveButton = "document.querySelector('#list li:not([data-testid=group]) [data-testid=actions] > [data-testid=archive]')"
+	const archiveRow = archiveButton + ".click()"
 	out = append(out, b.eval(counts), b.eval(archiveWords))
-	b.eval(archiveRow)
-	out = append(out, b.until("the archive", "calls.splice(0).join(',')"), b.eval("document.querySelectorAll('#list .more[open]').length"),
+	begun := b.acted(archiveRow)
+	out = append(out, b.until("the archive", "calls.splice(0).join(',')"), b.eval("document.querySelectorAll('#list [data-testid=more][open]').length"),
 		// With the answer, before the list is read again; it goes after 8 seconds
 		b.until("the toast", "document.getElementById('toasts').textContent.includes("+js(msg("ui_archive_done", "Beta"))+")"))
-	b.untilActed("the archive done", "true")
-	b.eval("document.querySelector('.views [data-view=archived]').click()")
+	b.untilRead(begun, "the archive done", "true")
+	b.eval("document.querySelector('#shelf [data-view=archived]').click()")
 	out = append(out, b.eval(counts), b.eval(archiveWords))
-	b.eval(archiveRow)
+	begun = b.acted(archiveRow)
 	out = append(out, b.until("the give back", "calls.splice(0).join(',')"))
-	b.untilActed("the give back done", "true")
+	b.untilRead(begun, "the give back done", "true")
 	// The change failing, the row stays with the focus on its button.
-	b.eval("window.failWrites = true; document.querySelector('#list li:not(.group) .actions > .archive').focus(); document.querySelector('#list li:not(.group) .actions > .archive').click()")
+	b.eval("window.failWrites = true; " + archiveButton + ".focus(); " + archiveRow)
 	out = append(out, b.until("the give back to fail", "!document.getElementById('error').hidden && "+
-		"String(document.activeElement === document.querySelector('#list li:not(.group) .actions > .archive'))"))
+		"String(document.activeElement === "+archiveButton+")"))
 	b.eval("window.failWrites = false")
 	b.eval("document.getElementById('bulk-page').click()")
 	out = append(out, b.eval("document.getElementById('bulk-archive').textContent"))
@@ -290,7 +362,7 @@ func uiExtras(t *testing.T, lang i18n.Lang, msg func(string, ...any) string) {
 	out = append(out, b.eval(empties)+" "+b.eval("document.getElementById('add-link').hidden"))
 	// Its group goes with it, not to leave its room between the others.
 	check(t, "archived", []string{b.eval("document.getElementById('shelf-add').hidden + ''")}, "true")
-	b.eval("document.querySelector('.views [data-view=all]').click()")
+	b.eval("document.querySelector('#shelf [data-view=all]').click()")
 	out = append(out, b.eval("document.getElementById('add-link').hidden"))
 	// One kind, its group hidden: the button stays, under the group before it.
 	check(t, "one kind", []string{b.eval("[document.getElementById('shelf-kinds').hidden, document.getElementById('add-link').closest('[hidden]') === null].join(' ')")}, "true true")
@@ -302,19 +374,20 @@ func uiExtras(t *testing.T, lang i18n.Lang, msg func(string, ...any) string) {
 		const box = document.getElementById('shelf-more').getBoundingClientRect(), r = document.getElementById('add-link').getBoundingClientRect();
 		return [document.getElementById('shelf-projects').hidden, r.height > 0 && r.top >= box.top, document.activeElement.id !== 'add-link'].join(' ');
 	})()`)}, "false true true")
-	b.eval("document.getElementById('filter-dialog').close()")
+	b.pressKey(kb.Escape)
+	b.until("the filter dialog to close", "!document.getElementById('filter-dialog').open")
 	// A change that succeeds clears the error of one that failed before, a favourite's as an archive's.
-	b.eval("window.failWrites = true; document.querySelector('#list li:not(.group) .star').click()")
+	b.eval("window.failWrites = true; document.querySelector('#list li:not([data-testid=group]) [data-testid=star]').click()")
 	out = append(out, b.until("the favourite to fail", "!document.getElementById('error').hidden && document.getElementById('error').textContent"))
-	b.eval("window.failWrites = false; document.querySelector('#list li:not(.group) .star').click()")
+	b.eval("window.failWrites = false; document.querySelector('#list li:not([data-testid=group]) [data-testid=star]').click()")
 	out = append(out, b.until("the error to clear", "document.getElementById('error').hidden"))
 	b.stub(`[{ slug: 'z', title: 'Zeta', description: '', createdAt: at(2), updatedAt: at(6), archived: true }]`)
 	out = append(out, b.eval(empties))
 	b.eval("document.getElementById('show-archived').click()")
 	out = append(out, b.eval(titles+" + ' ' + new URLSearchParams(location.search).get('view')"))
-	b.eval("document.querySelector('.views [data-view=new]').click()")
+	b.eval("document.querySelector('#shelf [data-view=new]').click()")
 	out = append(out, b.eval(empties))
-	b.eval("document.querySelector('.views [data-view=all]').click()")
+	b.eval("document.querySelector('#shelf [data-view=all]').click()")
 	b.stub("[]")
 	out = append(out, b.eval(empties), b.eval("document.getElementById('add-empty').offsetParent !== null"))
 	// Nothing at all: the middle's button alone, not the shelf's too.
@@ -323,7 +396,9 @@ func uiExtras(t *testing.T, lang i18n.Lang, msg func(string, ...any) string) {
 	// The shelf at its narrowest holds each add button's words on one line, within it. Shown for the measure alone, in the
 	// same task: this list is empty, and the task list's is the other screen's.
 	b.size(1440, 800, false)
-	b.eval("setColumn('shelf', 0)")
+	was := b.rect("document.getElementById('shelf')").Width
+	b.drag("#shelf-grip", 0)
+	b.until("the shelf at its narrowest", "document.getElementById('shelf').getBoundingClientRect().width < "+strconv.FormatFloat(was, 'f', -1, 64))
 	check(t, "narrowest shelf", []string{b.eval(`(() => {
 		const shelf = Math.round(document.getElementById('shelf').getBoundingClientRect().width);
 		const lines = ['add-link', 'add-task'].map((id) => {
@@ -338,7 +413,6 @@ func uiExtras(t *testing.T, lang i18n.Lang, msg func(string, ...any) string) {
 		return [shelf, ...lines].join(' | ');
 	})()`)}, "160 | add-link 1 true | add-task 1 true")
 	b.unsize()
-	b.eval("setColumn('shelf', 200)")
 	// The time's tooltip lines start with the label of their format ("Created %s").
 	label := func(key string) string { return strings.Fields(msg(key, ""))[0] }
 	check(t, "extras", out, strings.Join([]string{
@@ -558,9 +632,9 @@ func uiShelf(t *testing.T, lang i18n.Lang, msg func(string, ...any) string) {
 	b.stub(extrasList)
 	b.navigate("/a/z/")
 	out = append(out, b.until("the frame's bar", "document.getElementById('frame-title').textContent && "+frame))
-	b.eval("document.querySelector('#frame-actions > .archive').click()")
+	begun := b.acted("document.querySelector('#frame-actions > .archive').click()")
 	out = append(out, b.until("the give back", "calls.splice(0).join(',')"))
-	b.untilActed("the give back done", "true")
+	b.untilRead(begun, "the give back done", "true")
 	// Given back, as the server now lists it: the menu says so.
 	b.eval("window.list = JSON.stringify(JSON.parse(window.list).map((a) => a.slug === 'z' ? { ...a, archived: false } : a)); load()")
 	out = append(out, b.until("the menu to say so", "document.getElementById('frame-archived').hidden && "+frame))
@@ -796,7 +870,7 @@ func TestUIShelfStays(t *testing.T) { //nolint:paralleltest // the browser tests
 	b.stub(manyPages(60))
 	b.navigate("/")
 	b.size(1440, 900, false)
-	const place = "['.shelf', '.reader', '.lhead'].map((s) => document.querySelector(s).getBoundingClientRect().top).join(' ')"
+	const place = "['#shelf', '#reader', '[data-testid=lhead]'].map((s) => document.querySelector(s).getBoundingClientRect().top).join(' ')"
 	out := make([]string, 0, 5)
 	out = append(out, b.eval("document.getElementById('list-body').scrollHeight > document.getElementById('list-body').clientHeight"),
 		b.eval("document.documentElement.scrollHeight === innerHeight"))
@@ -822,9 +896,9 @@ func TestUIShelfScrolls(t *testing.T) { //nolint:paralleltest // the browser tes
 	b.size(1440, 600, false)
 	const near = "const shelf = document.getElementById('shelf-body'); const r = shelf.getBoundingClientRect();"
 	out := make([]string, 0, 6)
-	out = append(out, b.eval("(() => { "+near+" return [Math.abs(document.querySelector('.shelf').getBoundingClientRect().bottom - innerHeight) <= 0.5, shelf.scrollHeight > shelf.clientHeight].join(' '); })()"))
+	out = append(out, b.eval("(() => { "+near+" return [Math.abs(document.getElementById('shelf').getBoundingClientRect().bottom - innerHeight) <= 0.5, shelf.scrollHeight > shelf.clientHeight].join(' '); })()"))
 	// The wheel scrolls the shelf, not the list.
-	sr := b.rect("document.querySelector('.shelf')")
+	sr := b.rect("document.getElementById('shelf')")
 	// The protocol wants deltaX sent, which a 0 is left out as: a sliver of a pixel moves nothing sideways.
 	e := input.DispatchMouseEventParams{Type: input.DispatchMouseEventTypeMouseWheel, X: sr.X + sr.Width/2, Y: sr.Y + sr.Height/2, DeltaX: 1e-6, DeltaY: 100}
 	if _, err := chromedp.Call(b.ctx, input.DispatchMouseEvent, e); err != nil {
@@ -832,23 +906,23 @@ func TestUIShelfScrolls(t *testing.T) { //nolint:paralleltest // the browser tes
 	}
 	out = append(out, b.until("the shelf to scroll", "document.getElementById('shelf-body').scrollTop > 0 && `list at ${document.getElementById('list-body').scrollTop}`"))
 	// The focus ring's room each side, and a long name on one line, cut off, not scrolling sideways.
-	out = append(out, b.eval("(() => { "+near+" const a = document.querySelector('.views button').getBoundingClientRect(); "+
-		"const long = document.querySelector('#tags .chip .name'); "+
+	out = append(out, b.eval("(() => { "+near+" const a = document.querySelector('#shelf [data-testid=views] button').getBoundingClientRect(); "+
+		"const long = document.querySelector('#tags > button [data-testid=name]'); "+
 		"return [a.left - r.left >= 4, r.left + shelf.clientWidth - a.right >= 4, shelf.scrollWidth === shelf.clientWidth, "+
 		"long.scrollWidth > long.clientWidth && long.getClientRects().length === 1].join(' '); })()"))
 	// Pointed at, the shelf is laid out again for Chrome to draw its thumb; nothing in it moves.
-	hover := "document.querySelector('.views button').getBoundingClientRect().right"
+	hover := "document.querySelector('#shelf [data-testid=views] button').getBoundingClientRect().right"
 	b.point(800, 300)
 	away := b.eval(hover)
 	b.point(sr.X+sr.Width/2, sr.Y+sr.Height/2)
-	on := b.until("the shelf to be pointed at", "document.querySelector('.shelf:hover') && ("+hover+")")
+	on := b.until("the shelf to be pointed at", "document.getElementById('shelf').matches(':hover') && ("+hover+")")
 	b.point(800, 300)
 	out = append(out, strconv.FormatBool(away == on))
 	// With the bulk bar, in the head over the list, the shelf keeps its height.
-	tall := b.eval("document.querySelector('.shelf').getBoundingClientRect().height")
-	b.eval("document.querySelector('#list li:not(.group) .sel').click()")
+	tall := b.eval("document.getElementById('shelf').getBoundingClientRect().height")
+	b.eval("document.querySelector('#list li:not([data-testid=group]) [data-testid=sel]').click()")
 	out = append(out, b.until("the bar to show", "(() => { const bar = document.getElementById('bulk').getBoundingClientRect(); "+
-		"return bar.height > 0 && `${document.getElementById('bulk').closest('.lhead') !== null} ${document.querySelector('.shelf').getBoundingClientRect().height === "+tall+"}`; })()"))
+		"return bar.height > 0 && `${document.getElementById('bulk').closest('[data-testid=lhead]') !== null} ${document.getElementById('shelf').getBoundingClientRect().height === "+tall+"}`; })()"))
 	b.eval("document.getElementById('bulk-clear').click()")
 	// A shelf that fits does not scroll.
 	b.size(1440, 900, false)
@@ -907,8 +981,8 @@ func TestUIStubSlowServer(t *testing.T) { //nolint:paralleltest // the browser t
 	}
 	b.stub(`[{ slug: 'a', title: 'Alpha', description: '', createdAt: at(1), updatedAt: at(1) }]`)
 	b.navigate("/")
-	b.eval("window.seen = new Set([...document.querySelectorAll('#list .title')].map((a) => a.textContent)); " +
-		"new MutationObserver(() => { for (const a of document.querySelectorAll('#list .title')) seen.add(a.textContent); })" +
+	b.eval("window.seen = new Set([...document.querySelectorAll('#list [data-testid=title]')].map((a) => a.textContent)); " +
+		"new MutationObserver(() => { for (const a of document.querySelectorAll('#list [data-testid=title]')) seen.add(a.textContent); })" +
 		".observe(document.getElementById('list'), { childList: true, subtree: true })")
 	// Past when the server's answer would have come, a poll between: the page's clock, from its start.
 	b.until("the server's answer to be late", "performance.now() > 5000 && window.gets >= 3")

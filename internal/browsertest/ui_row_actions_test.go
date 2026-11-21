@@ -84,16 +84,16 @@ func TestUIRowActions(t *testing.T) { //nolint:paralleltest // the browser tests
 	b.until("c archived", "!"+there("c")+" && document.activeElement.matches('.undo')")
 	b.pressKey(kb.Escape)
 	out = append(out, "left: "+b.until("the toast gone", undo("c")+" === null && "+focus))
-	b.eval(`fetch('/api/pages/c', { method: 'PATCH', headers: { 'Content-Type': 'application/json' }, body: '{"archived":false}' }).then(() => load())`)
-	b.untilActed("c back again", there("c"))
+	begun := b.acted(`fetch('/api/pages/c', { method: 'PATCH', headers: { 'Content-Type': 'application/json' }, body: '{"archived":false}' }).then(() => load())`)
+	b.untilRead(begun, "c back again", there("c"))
 
 	// The last row has none after it: the row that is last now takes the focus.
 	keys(archive("b"))
 	b.until("b archived", "!"+there("b")+" && document.activeElement.matches('.undo')")
 	b.pressKey(kb.Escape)
 	out = append(out, "left, the last: "+b.until("the toast gone", undo("b")+" === null && "+focus))
-	b.eval(`fetch('/api/pages/b', { method: 'PATCH', headers: { 'Content-Type': 'application/json' }, body: '{"archived":false}' }).then(() => load())`)
-	b.untilActed("b back", there("b"))
+	begun = b.acted(`fetch('/api/pages/b', { method: 'PATCH', headers: { 'Content-Type': 'application/json' }, body: '{"archived":false}' }).then(() => load())`)
+	b.untilRead(begun, "b back", there("b"))
 
 	// The way back fails: it stays to press again. The list slow to come: it can be pressed all the same.
 	mouse(archive("c"))
@@ -108,8 +108,8 @@ func TestUIRowActions(t *testing.T) { //nolint:paralleltest // the browser tests
 	b.until("b's way back, the list not read", undo("b"))
 	b.eval(undo("b") + ".click()")
 	out = append(out, "the list held: "+b.until("the way back asked", "window.patches.length === 2 && window.patches.join()"))
-	b.eval("window.release(); window.fetch = window.realFetch; " + undo("c") + ".click()")
-	b.untilActed("all back", there("b")+" && "+there("c"))
+	begun = b.acted("window.release(); window.fetch = window.realFetch; " + undo("c") + ".click()")
+	b.untilRead(begun, "all back", there("b")+" && "+there("c"))
 
 	// The archived.
 	mouse(archive("b"))

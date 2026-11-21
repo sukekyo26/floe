@@ -33,7 +33,7 @@ func TestPickTheme(t *testing.T) {
 	at("picked", "ink", "ink")
 	publish(t, s, dw, "a.yaml", report("washi"), nil, store.Options{})
 	at("published again", "ink", "ink")
-	publish(t, s, dw, "a.yaml", report(""), nil, store.Options{Theme: ptr("app")})
+	publish(t, s, dw, "a.yaml", report(""), nil, store.Options{Theme: new("app")})
 	at("published with --theme", "ink", "ink")
 	if err := s.Rebuild(dw); err != nil {
 		t.Fatal(told(err, root))
@@ -131,8 +131,8 @@ func TestPickThemeMeanwhile(t *testing.T) {
 		}
 	}
 	icons.then = nil
-	link("a.yaml", store.Options{Slug: ptr("l")})
-	icons.then = func() { link("b.yaml", store.Options{Slug: ptr("l"), Force: true}) }
+	link("a.yaml", store.Options{Slug: new("l")})
+	icons.then = func() { link("b.yaml", store.Options{Slug: new("l"), Force: true}) }
 	err = s.PickTheme(dw, "l", "ink")
 	if !errors.As(err, &conflict) {
 		t.Errorf("linked to another file meanwhile: told %s", told(err, root))
@@ -215,7 +215,7 @@ func TestOwnTheme(t *testing.T) {
 	}
 	publish(t, s, dw, "none.yaml", report(""), nil, store.Options{})
 	publish(t, s, dw, "data.yaml", report("washi"), nil, store.Options{})
-	publish(t, s, dw, "given.yaml", report("washi"), nil, store.Options{Theme: ptr("app")})
+	publish(t, s, dw, "given.yaml", report("washi"), nil, store.Options{Theme: new("app")})
 	if err := setTheme(s, "ink"); err != nil {
 		t.Fatal(err)
 	}

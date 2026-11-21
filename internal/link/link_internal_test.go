@@ -130,8 +130,7 @@ func TestExposesAppData(t *testing.T) { //nolint:paralleltest // it swaps appDat
 
 // keyOf is the key of the mistake err is, "" for none.
 func keyOf(err error) string {
-	var ue *usererr.Error
-	if errors.As(err, &ue) {
+	if ue, ok := errors.AsType[*usererr.Error](err); ok {
 		return ue.Key
 	}
 	return ""

@@ -835,7 +835,7 @@ func groupFault(gr *group) string {
 func shrunk(g *graph) *graph {
 	for changed := true; changed; {
 		changed = false
-		for i := len(g.Edges) - 1; i >= 0; i-- {
+		for i := range slices.Backward(g.Edges) {
 			try := *g
 			try.Edges = slices.Delete(slices.Clone(g.Edges), i, i+1)
 			if graphFault(&try) != "" {
