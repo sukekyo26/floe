@@ -6,7 +6,7 @@ import { createToasts } from '@/stores/toasts';
 
 describe(Toasts, () => {
   it('marks a toast timed and a page’s apart, and pads one with a button by one padding alone', () => {
-    expect.assertions(4);
+    expect.assertions(3);
     vi.useFakeTimers();
     const store = createToasts();
     store.toast('both', { ms: 8000, page: true, button: <button type="button">undo</button> });
@@ -15,7 +15,10 @@ describe(Toasts, () => {
     vi.useRealTimers();
     expect(html).toContain('id="toasts" aria-live="polite"');
     expect(html).toMatch(/data-testid="toast" data-timed="true" data-page="true"/);
-    expect(html).toMatch(/data-timed[^>]*py-1\.5(?![^"]*py-2\.5)/);
-    expect(html).toMatch(/data-testid="toast" class="[^"]*py-2\.5(?![^"]*py-1\.5)/);
+    const classes = [...html.matchAll(/data-testid="toast"[^>]*class="([^"]*)"/g)].map((m) => String(m[1]).split(' '));
+    expect(classes.map((c) => [c.includes('py-1.5'), c.includes('py-2.5')])).toStrictEqual([
+      [true, false],
+      [false, true],
+    ]);
   });
 });
