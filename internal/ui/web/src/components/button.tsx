@@ -1,10 +1,15 @@
-import type { KeyboardEventHandler, MouseEventHandler, ReactNode } from 'react';
+import { createContext, use, type KeyboardEventHandler, type MouseEventHandler, type ReactNode } from 'react';
+
+type ButtonSize = 'bar' | 'foot';
+
+// ButtonSizeOf is the size the buttons inside take when they name none: a modal's foot gives its own (DialogActions)
+export const ButtonSizeOf = createContext<ButtonSize>('bar');
 
 export interface ButtonProps {
   readonly children: ReactNode;
   readonly kind?: 'plain' | 'primary';
-  // bar: where it stands among the screen's; foot: a modal's foot, taller
-  readonly size?: 'bar' | 'foot';
+  // bar: where it stands among the screen's; foot: a modal's foot, taller. Left out, the size of where it is (ButtonSizeOf)
+  readonly size?: ButtonSize;
   readonly type?: 'button' | 'submit';
   // A button that toggles: whether it is on (aria-pressed); left out, it toggles nothing
   readonly pressed?: boolean;
@@ -25,7 +30,7 @@ export interface ButtonProps {
 export function Button({
   children,
   kind = 'plain',
-  size = 'bar',
+  size: named,
   type = 'button',
   pressed,
   disabled,
@@ -37,6 +42,7 @@ export function Button({
   onClick,
   onKeyDown,
 }: ButtonProps) {
+  const size = named ?? use(ButtonSizeOf);
   return (
     <button
       // oxlint-disable-next-line react/button-has-type -- type is one of the two a button may be
