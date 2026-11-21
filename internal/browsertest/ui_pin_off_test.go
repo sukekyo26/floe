@@ -6,6 +6,7 @@ import (
 	"testing"
 
 	"github.com/chromedp/cdproto/input"
+	"github.com/chromedp/chromedp/kb"
 
 	"floe/internal/store"
 )
@@ -48,16 +49,16 @@ func TestUIPinOff(t *testing.T) { //nolint:paralleltest // the browser tests sha
 	defer b.unsize()
 	b.size(1440, 900, false)
 	b.navigate("/tasks?project=proj")
-	b.until("the pins", "document.querySelectorAll('.pin-off').length === 8")
+	b.until("the pins", "document.querySelectorAll('#pin-list [data-testid=pin-off]').length === 8")
 
-	const chip = "document.querySelector('.pin-chip[data-slug=p2]')"
+	const chip = "document.querySelector('#pin-list > [data-slug=p2]')"
 	for _, width := range []int64{1440, 1100, 900, 800, 360} {
 		b.size(width, 900, width == 360)
 		b.until("the width", fmt.Sprintf("innerWidth === %d", width))
 		whole := b.eval(`(() => {
 			const chip = ` + chip + `.getBoundingClientRect();
-			const off = ` + chip + `.querySelector('.pin-off').getBoundingClientRect();
-			const words = ` + chip + `.querySelector('.pin-title');
+			const off = ` + chip + `.querySelector('[data-testid=pin-off]').getBoundingClientRect();
+			const words = ` + chip + `.querySelector('[data-testid=pin-title]');
 			return [off.width === 28, off.height === 28, off.right <= chip.right, off.left >= words.getBoundingClientRect().right, off.top >= chip.top, off.bottom <= chip.bottom,
 				words.scrollWidth > words.clientWidth, document.documentElement.scrollWidth <= innerWidth].join(' ');
 		})()`)
@@ -76,15 +77,15 @@ func TestUIPinOff(t *testing.T) { //nolint:paralleltest // the browser tests sha
 
 	var out []string
 	off := func(slug string) string {
-		return "document.querySelector('.pin-chip[data-slug=" + slug + "] .pin-off')"
+		return "document.querySelector('#pin-list > [data-slug=" + slug + "] [data-testid=pin-off]')"
 	}
 	gone := func(slug string) {
 		t.Helper()
-		b.until(slug+" off", "!document.querySelector('.pin-chip[data-slug="+slug+"]')")
+		b.until(slug+" off", "!document.querySelector('#pin-list > [data-slug="+slug+"]')")
 	}
 	say := func(what string) {
 		t.Helper()
-		out = append(out, what+": "+b.eval(`[[...document.querySelectorAll('.pin-chip')].map((c) => c.dataset.slug).join(), (document.activeElement.closest('.pin-chip')?.dataset.slug ?? '') + ' ' + (document.activeElement.id || document.activeElement.className || document.activeElement.tagName)].join(' | ')`))
+		out = append(out, what+": "+b.eval(`((e) => [[...document.querySelectorAll('#pin-list > [data-slug]')].map((c) => c.dataset.slug).join(), (e.closest('#pin-list > [data-slug]')?.dataset.slug ?? '') + ' ' + (e.id || (e.dataset.testid ? e.dataset.testid + (e.dataset.unread === 'true' ? ' unread' : '') : '') || e.tagName)].join(' | '))(document.activeElement)`))
 	}
 	press := func(slug string) {
 		t.Helper()
@@ -101,7 +102,7 @@ func TestUIPinOff(t *testing.T) { //nolint:paralleltest // the browser tests sha
 
 	press("p1")
 	say("the last, pressed")
-	out = append(out, "its toast: "+b.eval("[...document.querySelectorAll('.toast')].at(-1).textContent")+", stays on the list: "+b.eval("location.pathname"))
+	out = append(out, "its toast: "+b.eval("[...document.querySelectorAll('[data-testid=toast]')].at(-1).textContent")+", stays on the list: "+b.eval("location.pathname"))
 	press("p8")
 	say("the first, pressed")
 	byKey("p7", "\r")
@@ -121,30 +122,31 @@ func TestUIPinOff(t *testing.T) { //nolint:paralleltest // the browser tests sha
 	say("a double press")
 
 	// The focus elsewhere stays there.
-	b.eval("openFind()")
+	pressFindOpen(b)
 	b.until("the search", "document.activeElement.id === 'find-q'")
 	b.eval(off("p4") + ".click()")
 	gone("p4")
 	say("from the search")
-	b.eval("document.getElementById('find').close()")
+	b.pressKey(kb.Escape)
+	b.until("the search closed", "!document.getElementById('find').open")
 
 	// A refusal: the pin and the focus stay, and it is said where a reader of the screen hears it.
 	b.eval(`window.realFetch = fetch; fetch = (u, o) => (o?.method === 'PATCH' ? Promise.resolve(new Response('no such page', { status: 404 })) : realFetch(u, o)); ` + off("p3") + `.focus(); ` + off("p3") + `.click()`)
 	b.until("the refusal", "!document.getElementById('error').hidden")
 	say("refused")
 	out = append(out, "said: "+b.eval("document.getElementById('error').textContent + ' ' + document.getElementById('error').getAttribute('role')"))
-	b.eval("fetch = realFetch; showError('')")
+	b.eval("fetch = realFetch")
 
 	// Another session: nothing of the pins changed draws nothing; a pin changed draws them, with the focus back.
 	b.eval("window.was = document.activeElement")
 	publish("other", "T other", &project)
-	b.until("the other page", "items.some((a) => a.slug === 'other')")
+	b.untilRead(b.reread(), "the other page read", "true")
 	out = append(out, "nothing of the pins changed: "+b.eval("document.activeElement === window.was"))
 	title := "T p2"
 	if _, err := st.Edit("p2", store.Edit{Title: &title}); err != nil {
 		t.Fatal(err)
 	}
-	b.until("the pin drawn anew", "document.querySelector('.pin-chip[data-slug=p2]').textContent === 'T p2'")
+	b.until("the pin drawn anew", "document.querySelector('#pin-list > [data-slug=p2]').textContent === 'T p2'")
 	say("a pin changed")
 	out = append(out, "drawn anew: "+b.eval("document.activeElement !== window.was"))
 
@@ -157,8 +159,7 @@ func TestUIPinOff(t *testing.T) { //nolint:paralleltest // the browser tests sha
 	if _, err := st.Edit("p2", store.Edit{Title: &title}); err != nil {
 		t.Fatal(err)
 	}
-	b.eval("window.looked = false; load(true).then(() => { window.looked = true; })")
-	b.until("the look", "window.looked")
+	b.untilRead(b.reread(), "the look", "true")
 	out = append(out, "held down: "+b.eval("window.was.isConnected"))
 	b.mouse(input.DispatchMouseEventTypeMouseReleased, x, y, 1)
 	gone("p3")
@@ -166,7 +167,7 @@ func TestUIPinOff(t *testing.T) { //nolint:paralleltest // the browser tests sha
 
 	press("p2")
 	say("none left")
-	out = append(out, "says: "+b.eval("document.querySelector('.pins-none').textContent")+", the page's task: "+b.eval("items.find((a) => a.slug === 'p1').task.name"))
+	out = append(out, "says: "+b.eval("document.querySelector('[data-testid=pins-none]').textContent")+", the page's task: "+b.eval("fetch('/api/pages').then((r) => r.json()).then((l) => l.find((a) => a.slug === 'p1').task.name)"))
 
 	// A project of pins alone: the last gone, it is no project on the list.
 	b.navigate("/tasks?project=solo")
@@ -180,20 +181,20 @@ func TestUIPinOff(t *testing.T) { //nolint:paralleltest // the browser tests sha
 	}
 }
 
-const pinOffWant = `the last, pressed: p8,p7,p6,p5,p4,p3,p2 | p2 pin unseen
+const pinOffWant = `the last, pressed: p8,p7,p6,p5,p4,p3,p2 | p2 pin unread
 its toast: Took the pin off “T p1”, stays on the list: /tasks
-the first, pressed: p7,p6,p5,p4,p3,p2 | p7 pin unseen
-Enter: p6,p5,p4,p3,p2 | p6 pin unseen
-Space: p5,p4,p3,p2 | p5 pin unseen
-a double press: p4,p3,p2 | p4 icon-btn pin-off
+the first, pressed: p7,p6,p5,p4,p3,p2 | p7 pin unread
+Enter: p6,p5,p4,p3,p2 | p6 pin unread
+Space: p5,p4,p3,p2 | p5 pin unread
+a double press: p4,p3,p2 | p4 pin-off
 from the search: p3,p2 |  find-q
-refused: p3,p2 | p3 icon-btn pin-off
+refused: p3,p2 | p3 pin-off
 said: Failed to save: HTTP 404: no such page alert
 nothing of the pins changed: true
-a pin changed: p3,p2 | p3 icon-btn pin-off
+a pin changed: p3,p2 | p3 pin-off
 drawn anew: true
 held down: true
-let go: p2 | p2 pin unseen
+let go: p2 | p2 pin unread
 none left:  |  pins-help
 says: None, the page's task: #1
 the project's last: ?project=solo | No tasks in solo | false | pins-help`

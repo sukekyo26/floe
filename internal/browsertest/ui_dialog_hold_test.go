@@ -1,8 +1,10 @@
 package browsertest_test
 
 import (
+	"strconv"
 	"strings"
 	"testing"
+	"time"
 
 	"github.com/chromedp/cdproto/input"
 	"github.com/chromedp/chromedp"
@@ -18,7 +20,7 @@ window.where = (el) => {
   if (!el || el === document.body) return 'body';
   const d = el.closest('dialog');
   if (d && !d.open) return 'IN CLOSED ' + d.id;
-  if (el.closest('.toast')) return 'toast ' + el.textContent.trim();
+  if (el.closest('[data-testid=toast]')) return 'toast ' + el.textContent.trim();
   const at = el.closest('#list') ? 'list ' : el.closest('dialog') ? el.closest('dialog').id + ' ' : '';
   return at + (el.id || el.getAttribute('aria-label') || el.tagName + ' ' + el.textContent.trim());
 };
@@ -38,7 +40,7 @@ window.fetch = (u, i) => {
 window.holdOn = (...methods) => { for (const m of methods) hold[m] = new Promise((go) => lets.push(go)); return true; };
 window.letGo = () => { hold = {}; for (const go of lets.splice(0)) go(); return true; };
 // The modal held: open, its close request off, and nothing in it to press
-window.heldOf = (id) => { const d = document.getElementById(id); return [d.open, d.getAttribute('closedby'), [...d.querySelectorAll('input, button, select, textarea')].filter((e) => !e.disabled).length].join(' '); };
+window.heldOf = (id) => { const d = document.getElementById(id); return [d.open, d.getAttribute('closedby'), [...d.querySelectorAll('input, button, select, textarea')].filter((e) => !e.matches(':disabled')).length].join(' '); };
 })()`
 
 // TestUIDialogHold holds each modal's write, and the read after it: no key, press or close request closes the modal or sends again, the
@@ -108,8 +110,25 @@ func TestUIDialogHold(t *testing.T) { //nolint:paralleltest // the browser tests
 			}
 		}
 	}
-	rowMenu := func(slug, item string) string {
-		return "(() => { const m = document.querySelector('#list li[data-slug=" + slug + "] .more'); m.querySelector('summary').focus(); m.open = true; const i = m.querySelector('.menu ." + item + "'); i.focus(); i.click(); })()"
+	rowMenu := func(slug, item string) func() {
+		return func() {
+			t.Helper()
+			pressMenuItemFocused(b, "#list li[data-slug="+slug+"]", item)
+		}
+	}
+	run := func(expr string) func() {
+		return func() {
+			t.Helper()
+			b.eval(expr)
+		}
+	}
+	// Words typed in field, then what sends them pressed
+	typed := func(field, words, then string) func() {
+		return func() {
+			t.Helper()
+			b.fill(field, words)
+			b.eval(then)
+		}
 	}
 	// Every way to close or send again, while held: what is left of the modal, and the writes sent
 	tryAll := func(name, id string) {
@@ -122,21 +141,29 @@ func TestUIDialogHold(t *testing.T) { //nolint:paralleltest // the browser tests
 		say(name+", held", "heldOf("+js(id)+") + ' / sent ' + sent.length")
 	}
 	type write struct {
-		name, id, page, opens, sends string
-		closes                       bool // closes once answered; else stays open on its list (the settings' own)
+		name, id, page string
+		opens, sends   func()
+		closes         bool // closes once answered; else stays open on its list (the settings' own)
 	}
-	setAt := "const f = document.getElementById('set-category'); f.value = '実装';"
+	// Words not written before, so that each save changes something
+	n := 0
+	fresh := func() string {
+		n++
+		return strconv.Itoa(n)
+	}
 	writes := []write{
-		{"tags", "tag-dialog", "/", rowMenu("plan-a", "tag-item"), "const f = document.getElementById('tag-find'); f.value = 'n1'; f.dispatchEvent(new Event('input')); document.getElementById('tag-new').click(); document.getElementById('tag-apply').click()", true},
-		{"edit", "edit-dialog", "/", rowMenu("plan-a", "edit"), "document.getElementById('edit-desc').value = String(Math.random()); document.getElementById('edit-submit').click()", true},
-		{"set", "set-dialog", "/", rowMenu("plan-a", "task-set"), setAt + " document.getElementById('set-submit').click()", true},
-		{"off", "set-dialog", "/", rowMenu("check-a", "task-set"), "document.getElementById('set-out').click()", true},
-		{"add page", "add-page-dialog", "/tasks?project=proj&task=S300", "const a = document.querySelector('#list li[data-key=\"group:実装\"] .category-add'); a.focus(); a.click()", "const q = document.getElementById('add-page-q'); q.value = 'memo'; q.dispatchEvent(new Event('input', { bubbles: true })); document.querySelector('#add-page-list li').click()", true},
-		{"kin", "kin-dialog", "/tasks?project=proj&task=S300", "document.getElementById('task-child').focus(); document.getElementById('task-child').click()", "const f = document.getElementById('kin-task'); f.value = 'S301'; f.dispatchEvent(new Event('input')); document.getElementById('kin').requestSubmit()", true},
-		{"task edit", "edit-task-dialog", "/tasks?project=proj&task=S300", "document.getElementById('task-edit').focus(); document.getElementById('task-edit').click()", "document.getElementById('edit-task-title').value = 'Held ' + Math.random(); document.getElementById('edit-task-submit').click()", true},
-		{"add link", "add-dialog", "/", "document.getElementById('add-link').focus(); document.getElementById('add-link').click()", "document.getElementById('add-path').value = " + js(link) + "; document.getElementById('add-submit').click()", true},
-		{"page theme", "settings", "/", rowMenu("plan-a", "theme-item"), "(() => { const c = [...document.querySelectorAll('#theme-grid input')].find((i) => !i.checked && i.value); c.click(); document.getElementById('theme-choose').click(); })()", true},
-		{"mode", "settings", "/", "document.getElementById('settings-open').focus(); document.getElementById('settings-open').click()", "document.querySelector('.settings-item[data-panel=mode]').click(); document.getElementById('task-mode').checked = true; document.getElementById('mode-save').click()", false},
+		{"tags", "tag-dialog", "/", rowMenu("plan-a", "tag-item"), typed("#tag-find", "n1", "document.getElementById('tag-new').click(); document.getElementById('tag-apply').click()"), true},
+		{"edit", "edit-dialog", "/", rowMenu("plan-a", "edit"), func() { typed("#edit-desc", "d"+fresh(), "document.getElementById('edit-submit').click()")() }, true},
+		{"set", "set-dialog", "/", rowMenu("plan-a", "task-set"), typed("#set-category", "実装", "document.getElementById('set-submit').click()"), true},
+		{"off", "set-dialog", "/", rowMenu("check-a", "task-set"), run("document.getElementById('set-out').click()"), true},
+		{"add page", "add-page-dialog", "/tasks?project=proj&task=S300", run("const a = document.querySelector('#list li[data-key=\"group:実装\"] [data-testid=category-add]'); a.focus(); a.click()"), typed("#add-page-q", "memo", "document.querySelector('#add-page-list li').click()"), true},
+		{"kin", "kin-dialog", "/tasks?project=proj&task=S300", run("document.getElementById('task-child').focus(); document.getElementById('task-child').click()"), typed("#kin-task", "S301", "document.getElementById('kin-submit').click()"), true},
+		{"task edit", "edit-task-dialog", "/tasks?project=proj&task=S300", run("document.getElementById('task-edit').focus(); document.getElementById('task-edit').click()"), func() {
+			typed("#edit-task-title", "Held "+fresh(), "document.getElementById('edit-task-submit').click()")()
+		}, true},
+		{"add link", "add-dialog", "/", run("document.getElementById('add-link').focus(); document.getElementById('add-link').click()"), typed("#add-path", link, "document.getElementById('add-submit').click()"), true},
+		{"page theme", "settings", "/", rowMenu("plan-a", "theme-item"), run("(() => { const c = [...document.querySelectorAll('#theme-grid input')].find((i) => !i.checked && i.value); c.click(); document.getElementById('theme-choose').click(); })()"), true},
+		{"mode", "settings", "/", run("document.getElementById('settings-open').focus(); document.getElementById('settings-open').click()"), run("document.querySelector('#settings [data-panel=mode]').click(); if (!document.getElementById('task-mode').checked) document.getElementById('task-mode').click(); document.getElementById('mode-save').click()"), false},
 	}
 	ready := map[string]string{
 		"settings":   "document.querySelectorAll('#theme-grid input').length > 1 && document.getElementById('settings-mode-now').textContent",
@@ -144,12 +171,12 @@ func TestUIDialogHold(t *testing.T) { //nolint:paralleltest // the browser tests
 	}
 	start := func(w write) {
 		t.Helper()
-		b.eval(w.opens)
+		w.opens()
 		until(w.id, true)
 		if r, ok := ready[w.id]; ok {
 			b.until("ready", r)
 		}
-		b.eval(w.sends)
+		w.sends()
 		b.until("sent", "sent.length === 1")
 	}
 	ends := func(w write) {
@@ -177,9 +204,6 @@ func TestUIDialogHold(t *testing.T) { //nolint:paralleltest // the browser tests
 		b.eval("letGo()")
 		ends(w)
 		say(w.name+", answered", "heldOf("+js(w.id)+") + ' / ' + where(document.activeElement) + ' / sent ' + sent.length")
-		if w.closes {
-			b.eval("closeDialog(document.getElementById(" + js(w.id) + ")); true")
-		}
 	}
 	again()
 
@@ -211,18 +235,17 @@ func TestUIDialogHold(t *testing.T) { //nolint:paralleltest // the browser tests
 
 	// T3 of the keys and presses
 	open("/")
-	b.eval(rowMenu("plan-a", "task-set"))
+	rowMenu("plan-a", "task-set")()
 	until("set-dialog", true)
-	b.eval("document.getElementById('set-task').value = ''; document.getElementById('set-task').focus(); true")
-	b.pressKey(kb.ArrowDown)
+	b.fill("#set-task", "")
 	b.until("the suggestions", "document.getElementById('set-task-names').matches(':popover-open') && document.querySelectorAll('#set-task-names [role=option]').length > 1")
-	const suggested = "[document.getElementById('set-task').value, document.getElementById('set-task').getAttribute('aria-activedescendant'), setShown?.name ?? '-'].join(' ')"
+	// The words, the suggestion picked, and whether the modal takes the name for a task known (the new task's title not asked) or new
+	const suggested = "[document.getElementById('set-task').value, document.getElementById('set-task').getAttribute('aria-activedescendant'), document.getElementById('set-task-title').checkVisibility() ? 'new' : 'known'].join(' ')"
 	say("suggestions, before", suggested)
-	// In the task it is held in, before Chrome moves the focus off the disabled field a frame later, a key there reaches no listener of it
-	say("suggestions, a key as it is held", "(() => { const d = document.getElementById('set-dialog'); holdDialog(d, true); document.getElementById('set-task').dispatchEvent(new KeyboardEvent('keydown', { key: 'ArrowDown', bubbles: true, cancelable: true })); const now = "+suggested+"; holdDialog(d, false); return now; })()")
-	// Held, the focus is on the modal itself: the field left, its suggestions close; no key reaches the page's shortcuts nor leaves it by
-	// Tab; let go after a failure, the focus is back on the field
-	b.eval("holdOn('PATCH'); fail.PATCH = true; document.getElementById('set-out').click(); true")
+	// Held by the write itself, which holds the modal as it is pressed: in that task, before Chrome moves the focus off the disabled field a
+	// frame later, a key there reaches no listener of it. Then held, the focus is on the modal itself: the field left, its suggestions
+	// close; no key reaches the page's shortcuts nor leaves it by Tab; let go after a failure, the focus is back on the field
+	say("suggestions, a key as it is held", "(() => { holdOn('PATCH'); fail.PATCH = true; document.getElementById('set-out').click(); document.getElementById('set-task').dispatchEvent(new KeyboardEvent('keydown', { key: 'ArrowDown', bubbles: true, cancelable: true })); return "+suggested+"; })()")
 	b.until("sent", "sent.length === 1")
 	say("suggestions, held", "document.getElementById('set-task-names').matches(':popover-open') + ' ' + where(document.activeElement)")
 	b.pressKey(kb.Tab)
@@ -235,9 +258,9 @@ func TestUIDialogHold(t *testing.T) { //nolint:paralleltest // the browser tests
 	until("set-dialog", false)
 
 	// Saved by Enter in the category's field and failed: the focus given back there opens no suggestions over the mistake said
-	b.eval(rowMenu("plan-a", "task-set"))
+	rowMenu("plan-a", "task-set")()
 	until("set-dialog", true)
-	b.eval("document.getElementById('set-category').value = ''; document.getElementById('set-category').focus(); true")
+	b.fill("#set-category", "")
 	b.until("its suggestions", "document.getElementById('set-category-names').matches(':popover-open')")
 	b.pressKey(kb.Escape)
 	b.eval("sent.length = 0; holdOn('PATCH'); fail.PATCH = true")
@@ -251,29 +274,29 @@ func TestUIDialogHold(t *testing.T) { //nolint:paralleltest // the browser tests
 
 	// The page's shortcuts while held: a row picked beside the list stays picked, nothing else is written
 	open("/")
-	b.eval("document.querySelector('#list li[data-slug=check-a] .title').click(); true")
-	b.until("picked", "picked?.slug === 'check-a' && answered === sent.length")
+	const picked = "document.getElementById('read-frame').dataset.slug"
+	b.eval("document.querySelector('#list li[data-slug=check-a] [data-testid=title]').click(); true")
+	b.until("picked", picked+" === 'check-a' && answered === sent.length")
 	b.eval("holdOn('PATCH')")
-	b.eval(writes[1].opens)
+	writes[1].opens()
 	until("edit-dialog", true)
-	b.eval(writes[1].sends)
+	writes[1].sends()
 	b.until("sent", "sent.some((x) => x.startsWith('PATCH'))")
 	for _, k := range []string{"j", "k", "d", "f", kb.ArrowDown} {
 		b.pressKey(k)
 	}
-	say("shortcuts while held", "picked.slug + ' ' + sent.filter((x) => x.startsWith('PATCH')).length + ' ' + document.getElementById('edit-dialog').open")
-	// closeDialog leaves a held modal open, whoever calls it
-	say("closeDialog while held", "(closeDialog(document.getElementById('edit-dialog')), document.getElementById('edit-dialog').open)")
+	say("shortcuts while held", picked+" + ' ' + sent.filter((x) => x.startsWith('PATCH')).length + ' ' + document.getElementById('edit-dialog').open")
+	// Its cancel button leaves a held modal open, as do Escape and the backdrop (tryAll)
+	say("cancel while held", "(document.querySelector('#edit-dialog [data-close]').click(), document.getElementById('edit-dialog').open)")
 	b.eval("letGo()")
 	until("edit-dialog", false)
 	// Any modal open, held or not, the focus off it (on the body): still no shortcut
-	b.eval(writes[1].opens)
+	writes[1].opens()
 	until("edit-dialog", true)
 	b.eval("document.activeElement.blur(); true")
 	b.pressKey("j")
-	say("shortcuts, a modal open, the focus on the body", "picked.slug")
+	say("shortcuts, a modal open, the focus on the body", picked)
 	b.pressKey(kb.Escape)
-	b.eval("closeDialog(document.getElementById('edit-dialog')); true")
 	until("edit-dialog", false)
 
 	// A press down while held and up once let go is no press on the backdrop, nor one down in a field and up outside
@@ -312,11 +335,13 @@ func TestUIDialogHold(t *testing.T) { //nolint:paralleltest // the browser tests
 	b.navigate("/a/plan-a/")
 	b.until("the bar", "document.getElementById('frame-title').textContent")
 	b.eval(dialogHoldJS)
-	b.eval("(() => { const m = document.querySelector('#frame-actions .more'); m.open = true; m.querySelector('.menu .task-set').click(); })()")
+	b.untilRead(0, "the bar's actions", "!document.getElementById('frame-actions').hidden")
+	pressMenuItem(b, "#frame-actions", "task-set")
 	until("set-dialog", true)
-	b.eval("READ_MS = 300; holdOn('TASKS')")
+	b.eval("holdOn('TASKS')")
 	b.eval("document.getElementById('set-out').click()")
-	until("set-dialog", false)
+	// The page's own time limit, 10 s
+	b.untilWithin(20*time.Second, "the tasks' read cut", "!document.getElementById('set-dialog').open")
 	say("page whole, the tasks unread", "document.getElementById('set-dialog').getAttribute('closedby') + ' ' + sent.filter((x) => x.startsWith('PATCH')).length")
 	b.eval("letGo()")
 	onTask("plan-a", "S300", "案")
@@ -364,21 +389,21 @@ var dialogHoldWant = []string{
 	"add page, read, held: true none 0 / sent 1",
 	"kin, read, held: true none 0 / sent 1",
 	"task edit, read, held: true none 0 / sent 1",
-	"edit, failed: true closerequest / said true / edit-dialog edit-name",
-	"set, failed: true closerequest / said true / set-dialog set-task",
+	"edit, failed: true closerequest / said true / edit-dialog edit-desc",
+	"set, failed: true closerequest / said true / set-dialog set-category",
 	"off, failed: true closerequest / said true / set-dialog set-task",
 	"add page, failed: true closerequest / said true / add-page-dialog add-page-q",
 	"kin, failed: true closerequest / said true / kin-dialog kin-task",
 	"task edit, failed: true closerequest / said true / edit-task-dialog edit-task-title",
 	"add link, failed: true closerequest / said true / add-dialog add-path",
-	"suggestions, before:   S300",
-	"suggestions, a key as it is held:   S300",
+	"suggestions, before:   new",
+	"suggestions, a key as it is held:   new",
 	"suggestions, held: false set-dialog set-dialog",
-	"suggestions, keys while held:   S300 set-dialog set-dialog",
+	"suggestions, keys while held:   new set-dialog set-dialog",
 	"the focus given back: set-dialog set-task",
 	"category, failed: set-dialog set-category / suggestions false / said true",
 	"shortcuts while held: check-a 1 true",
-	"closeDialog while held: true",
+	"cancel while held: true",
 	"shortcuts, a modal open, the focus on the body: check-a",
 	"a press down held, up let go: true",
 	"a press down in a field, up outside: true",

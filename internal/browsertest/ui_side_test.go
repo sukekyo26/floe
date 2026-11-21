@@ -34,7 +34,7 @@ func TestUIFolderSide(t *testing.T) { //nolint:paralleltest // the browser tests
 	state := `[[...document.querySelectorAll('#side-tree > *')].map((e) => e.textContent + (e.getAttribute('aria-expanded') === 'true' ? '-' : e.getAttribute('aria-expanded') ? '+' : '') + (e.getAttribute('aria-current') ? '*' : '')).join(','),
 		['aria-valuenow', 'aria-valuemin', 'aria-valuemax'].map((a) => document.getElementById('side-grip').getAttribute(a)).join('/'),
 		getComputedStyle(document.getElementById('frame')).marginLeft].join(' ')`
-	shown := "[!document.getElementById('side').hidden, !document.getElementById('side-grip').hidden, !document.getElementById('side-show').hidden, document.getElementById('side').classList.contains('over')].join()"
+	shown := "[!document.getElementById('side').hidden, !document.getElementById('side-grip').hidden, !document.getElementById('side-show').hidden, document.getElementById('side').dataset.over === 'true'].join()"
 	kept := "localStorage.getItem('frame.side')"
 	key := func(k string) {
 		t.Helper()
@@ -90,7 +90,7 @@ func TestUIFolderSide(t *testing.T) { //nolint:paralleltest // the browser tests
 	out = append(out, b.until("the tree again", "!document.getElementById('side').hidden && "+state+" + ' ' + document.activeElement.id"))
 	// A directory of the tree opened, and a page of it opened from it. Only the rows under it are added, the others the same elements.
 	b.eval("window.marked = [...document.querySelectorAll('#side-tree > *')]")
-	b.eval("[...document.querySelectorAll('#side-tree button.dir')].find((d) => d.textContent === 'deep').click()")
+	b.eval("[...document.querySelectorAll('#side-tree > [aria-expanded]')].find((d) => d.textContent === 'deep').click()")
 	out = append(out, b.until("deep open", "document.querySelector('#side-tree [title=\"guide/deep/x.html\"]') && "+state),
 		b.eval("marked.every((e) => e.isConnected) + ' ' + [...document.querySelectorAll('#side-tree > *')].filter((e) => !marked.includes(e)).map((e) => e.title).join(',')"))
 	b.moving("document.querySelector('#side-tree [title=\"guide/start.html\"]').click()")
@@ -136,20 +136,19 @@ func TestUIFolderSide(t *testing.T) { //nolint:paralleltest // the browser tests
 	b.until("the tree", "document.querySelector('#side-tree [aria-current]')")
 	// Closed, only the rows under it go, the focus where it was.
 	b.eval(`window.marked = [...document.querySelectorAll('#side-tree > *')];
-		[...document.querySelectorAll('#side-tree button.dir')].find((d) => d.textContent === 'guide').focus()`)
-	b.eval("[...document.querySelectorAll('#side-tree button.dir')].find((d) => d.textContent === 'guide').click()")
+		[...document.querySelectorAll('#side-tree > [aria-expanded]')].find((d) => d.textContent === 'guide').focus()`)
+	b.eval("[...document.querySelectorAll('#side-tree > [aria-expanded]')].find((d) => d.textContent === 'guide').click()")
 	b.until("guide closed", "!document.querySelector('#side-tree [aria-current]')")
 	out = append(out, b.eval("marked.filter((e) => !e.isConnected).map((e) => e.title).join(',') + ' gone, focus ' + document.activeElement.title"))
 	b.eval("document.getElementById('side-hide').click()")
 	b.eval("document.getElementById('side-show').click()")
 	// A row with the focus keeps it as the tree is drawn anew; the title drawn is the folder's of now.
-	b.eval("[...document.querySelectorAll('#side-tree button.dir')].find((d) => d.textContent === 'api').focus()")
-	b.eval("items = items.map((x) => x.slug === 'docs' ? { ...x, title: 'Docs anew' } : x); renderFrame()")
+	b.eval("[...document.querySelectorAll('#side-tree > [aria-expanded]')].find((d) => d.textContent === 'api').focus()")
+	b.eval("fetch('/api/pages/docs', { method: 'PATCH', headers: { 'Content-Type': 'application/json' }, body: '{\"title\":\"Docs anew\"}' }).then((r) => r.status)")
+	b.reread()
+	b.until("the title anew", "document.getElementById('side-title').textContent === 'Docs anew'")
 	out = append(out, b.eval("document.activeElement.textContent + ' ' + document.getElementById('side-title').textContent"))
-	// A directory pressed draws the tree with the folder of now, not of when the button was made.
-	b.eval("items = items.map((x) => x.slug === 'docs' ? { ...x, title: 'Docs again' } : x)")
-	b.eval("document.activeElement.click()")
-	out = append(out, b.until("api open", "document.querySelector('#side-tree [title=\"api/many\"]') && document.getElementById('side-title').textContent"))
+	// "A directory pressed draws the tree with the folder of now" has no person's way here: a React unit test of page-tree checks it (S422 P5).
 	// The edge steps from the width shown, which a narrower window holds under the one kept.
 	b.eval("document.getElementById('side-grip').focus()")
 	if err := chromedp.Do(b.ctx, chromedp.KeyEvent(kb.End)); err != nil {
@@ -190,5 +189,5 @@ func TestUIFolderSide(t *testing.T) { //nolint:paralleltest // the browser tests
 		"api+,guide-,deep-,x.html,setup.html*,start.html,index.html 300/160/480 300px|true guide/deep/x.html|docs / guide/start.html|"+
 		"side-hide: "+ring+"|side-grip: "+ring+"|none,none,none|"+
 		"false,false,true,true|true,false,false,true 0px|true|true|guide/deep,guide/setup.html,guide/start.html gone, focus guide|"+
-		"api Docs anew|Docs again|334|side gone|page back|false,false,false,false")
+		"api Docs anew|334|side gone|page back|false,false,false,false")
 }
