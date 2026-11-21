@@ -98,15 +98,18 @@ function ToastView({ toast, store }: { readonly toast: Toast; readonly store: To
 export function Toasts({ store = pageToasts }: { readonly store?: ToastStore }) {
   const shown = useStore(store.shown);
   return (
-    // An output is a status region (role status), read as it changes: it is never drawn anew, only what is in it
-    <output
-      id="toasts"
-      aria-live="polite"
-      className="pointer-events-none fixed right-4 bottom-5 z-40 grid justify-items-end gap-2"
-    >
-      {shown.map((x) => (
-        <ToastView key={x.id} toast={x} store={store} />
-      ))}
-    </output>
+    // Its own box, always there: a modal open moves #toasts out of it and back into it (useMovedOverlay)
+    <div data-home="toasts" className="contents">
+      {/* An output is a status region (role status), read as it changes: it is never drawn anew, only what is in it */}
+      <output
+        id="toasts"
+        aria-live="polite"
+        className="pointer-events-none fixed right-4 bottom-5 z-40 grid justify-items-end gap-2"
+      >
+        {shown.map((x) => (
+          <ToastView key={x.id} toast={x} store={store} />
+        ))}
+      </output>
+    </div>
   );
 }

@@ -71,3 +71,6 @@ export const menuBack = (id: string) => (): boolean =>
 
 // rowMenuId is the id of a row's menu "…", by its page's slug: a page renamed is found again under its new one
 export const rowMenuId = (slug: string): string => `more:${slug}`;
+
+// barMenuId is the id of the menu "…" of the bar of id (over a page, in the frame, the search's foot)
+export const barMenuId = (id: string): string => `bar:${id}`;

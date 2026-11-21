@@ -26,6 +26,11 @@ import { createSaveEdit } from '@/features/page-edit/stores/save-edit';
 import { pageTags, TagDialog, type TagTarget } from '@/features/tags/components/tag-dialog';
 import { TagLine } from '@/features/tags/components/tag-line';
 import { createApplyTags } from '@/features/tags/stores/apply-tags';
+import { FindDialog } from '@/features/find/components/find-dialog';
+import type { ThemesRead } from '@/features/settings/api/themes';
+import { SettingsDialog, type SettingsTarget } from '@/features/settings/components/settings-dialog';
+import { createThemeWrites } from '@/features/settings/stores/choose-theme';
+import { createSettings } from '@/features/settings/stores/settings';
 import { useHold } from '@/hooks/use-hold';
 import { useKeys } from '@/hooks/use-keys';
 import { useOpenMenus } from '@/hooks/use-open-menu';
@@ -184,12 +189,68 @@ const actions = createPageActions({
 });
 // The modals the menus open, each held by the gallery as the app will hold it
 const tagTarget = createStore<TagTarget | null>(null);
+const settingsTarget = createStore<SettingsTarget | null>(null);
+// themesAs is what the fake /api/themes answers: the themes, one's own things broken, settings.json unreadable, or no
+// answer at all
+let themesAs: 'themes' | 'broken' | 'settings' | 'fails' = 'themes';
+const defaults = { theme: '', taskMode: false };
+const THEMES = [
+  { name: 'default', about: 'Plain, for any page', dir: '' },
+  { name: 'paper', about: 'Warm paper, serif headings', dir: '' },
+  { name: 'mine', about: 'One of my own', dir: '~/.config/floe/themes/mine' },
+];
+const gallerySettings = createSettings({
+  readThemes: () =>
+    new Promise<ThemesRead>((go, fail) => {
+      setTimeout(() => {
+        if (themesAs === 'fails') fail(new Error('connection refused'));
+        else
+          go({
+            themes: THEMES,
+            default: defaults.theme,
+            taskMode: defaults.taskMode,
+            ...(themesAs === 'settings' ? { settings: { errors: [] } } : {}),
+            ...(themesAs === 'broken'
+              ? {
+                  drawing: { mistakes: [{ file: 'parts/card/part.html', line: 3, column: 7, text: 'unexpected "}"' }] },
+                }
+              : {}),
+          });
+      }, 300);
+    }),
+  readPageTheme: () => Promise.resolve('default'),
+});
+// A write of the settings takes 0.8 s, to see the modal held
+const later = <T,>(value: () => T) =>
+  new Promise<T>((go) => {
+    setTimeout(() => {
+      go(value());
+    }, 800);
+  });
+const galleryThemeWrites = createThemeWrites({
+  putSettings: (body) =>
+    later(() => {
+      if (refuse) return 'refused (500)';
+      if ('theme' in body) defaults.theme = body.theme;
+      else defaults.taskMode = body.taskMode;
+      return '';
+    }),
+  putPageTheme: (slug, theme) =>
+    later(() => {
+      if (refuse) return 'refused (409)';
+      edit(slug, { pickedTheme: theme });
+      return '';
+    }),
+  pages: galleryPages,
+});
 const editTarget = createStore<EditTarget | null>(null);
 const openers: Openers = {
   onTags: (a, back) => {
     tagTarget.set(pageTags(a, back));
   },
-  onTheme: (a) => toasts.toast(`theme of ${a.slug}`),
+  onTheme: (a, back) => {
+    settingsTarget.set({ page: a, back });
+  },
   onEdit: (a, back) => {
     editTarget.set({ page: a, back });
   },
@@ -259,6 +320,9 @@ function Gallery() {
   const tagsOf = useStore(tagTarget);
   const editOf = useStore(editTarget);
   const [help, setHelp] = useState<HelpTab | null>(null);
+  const [finding, setFinding] = useState(false);
+  const settingsOf = useStore(settingsTarget);
+  const [themesNow, setThemesNow] = useState(themesAs);
   const [screen, setScreen] = useState<HelpScreen>('list');
   const [helpDiff, setHelpDiff] = useState(false);
   const [diffGo, setDiffGo] = useState(true);
@@ -463,6 +527,61 @@ function Gallery() {
             </Button>
           </div>
         </Section>
+        <Section title="Search (↑ ↓, Enter; the foot holds the row’s buttons; its … opens up)">
+          <div className="flex flex-wrap gap-2">
+            <Button
+              onClick={() => {
+                setFinding(true);
+              }}
+            >
+              Open the search
+            </Button>
+            <Button
+              onClick={() => {
+                // A way back that took the focus, as an archive from the keys gives
+                toasts.toast('Archived “A page read”', {
+                  ms: 8000,
+                  focus: true,
+                  button: { label: 'Undo', undo: true, holds: false, onPress: () => undefined },
+                });
+                setTimeout(() => {
+                  setFinding(true);
+                }, 500);
+              }}
+            >
+              A way back with the focus, then the search
+            </Button>
+          </div>
+        </Section>
+        <Section title="Settings (the list, a theme, the task mode; a page’s themes from a row’s …)">
+          <div className="flex flex-wrap gap-2">
+            <Button
+              onClick={() => {
+                settingsTarget.set({ page: null, back: null });
+              }}
+            >
+              Open the settings
+            </Button>
+            {(['themes', 'broken', 'settings', 'fails'] as const).map((as) => (
+              <Button
+                key={as}
+                pressed={themesNow === as}
+                onClick={() => {
+                  themesAs = as;
+                  setThemesNow(as);
+                }}
+              >
+                {as === 'themes'
+                  ? 'Read'
+                  : as === 'broken'
+                    ? 'Own things broken'
+                    : as === 'settings'
+                      ? 'settings.json unreadable'
+                      : 'Read fails'}
+              </Button>
+            ))}
+          </div>
+        </Section>
         <Section title="Tabs (← → between them; the narrow box wraps them)">
           {[26, 12].map((rem) => (
             <div key={rem} className="mb-3" style={{ width: `${String(rem)}rem` }}>
@@ -544,6 +663,26 @@ function Gallery() {
             </Button>
           </div>
         </Section>
+        <FindDialog
+          open={finding}
+          onClosed={() => {
+            setFinding(false);
+          }}
+          openers={openers}
+          pages={galleryPages}
+          order={{ forgetOrder: () => undefined } as unknown as Order}
+          go={(href) => {
+            toasts.toast(`would go to ${href}`);
+          }}
+        />
+        <SettingsDialog
+          target={settingsOf}
+          onClosed={() => {
+            settingsTarget.set(null);
+          }}
+          settings={gallerySettings}
+          writes={galleryThemeWrites}
+        />
         <TagDialog
           target={tagsOf}
           onClosed={() => {

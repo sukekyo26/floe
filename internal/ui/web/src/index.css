@@ -48,13 +48,6 @@
   --color-logo-face-back: #d3eaf4;
   --color-logo-face-front: #e8f5fa;
   --color-brand-glow: color-mix(in srgb, var(--color-logo-line) 35%, transparent);
-  /* The projects' colours, by projectOrder */
-  --color-pc0: #e5533d;
-  --color-pc1: #2f6bff;
-  --color-pc2: #16a37a;
-  --color-pc3: #b04fd6;
-  --color-pc4: #d99a00;
-  --color-pc5: #0f9bb5;
   /* Mixed of the colours above: a down server's frame, a primary button pointed at, a check box's frame, an armed delete's
      frame, a scroll bar's thumb */
   --color-down-line: color-mix(in srgb, var(--color-danger) 40%, var(--color-line));
@@ -142,6 +135,17 @@
       opacity: 0;
     }
   }
+}
+
+/* The projects' colours, by projectOrder: named in JS alone (projectColor), so written always (static), as Tailwind
+   writes only the theme's variables its classes use */
+@theme static {
+  --color-pc0: #e5533d;
+  --color-pc1: #2f6bff;
+  --color-pc2: #16a37a;
+  --color-pc3: #b04fd6;
+  --color-pc4: #d99a00;
+  --color-pc5: #0f9bb5;
 }
 
 /* Values that are not one token */

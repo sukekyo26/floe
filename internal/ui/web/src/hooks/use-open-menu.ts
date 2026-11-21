@@ -5,7 +5,7 @@ import { menusToClose } from '@/utils/menu';
 
 // closeMenu closes the menu id, the focus going back to its button if it was in it or nowhere (on the body), rather than
 // to the page: an item that opened a modal has moved it there
-function closeMenu(menus: Menus, id: string) {
+export function closeMenu(menus: Menus, id: string): void {
   const box = document.querySelector(`[data-menu-id="${CSS.escape(id)}"]`);
   const active = document.activeElement;
   const back = box !== null && (box.contains(active) || active === document.body);

@@ -112,7 +112,7 @@ export function PageMenu({
       id={menuId}
       label={t('ui_more_named', title)}
       size={place === 'row' ? 'row' : 'bar'}
-      folds={place === 'frame'}
+      opens={place === 'frame' ? 'folds' : place === 'find' ? 'up' : 'down'}
     >
       <MenuItem
         icon={<StarIcon />}
