@@ -15,8 +15,12 @@ describe(plainKey, () => {
     expect(plainKey({ ...press, target: at('textarea') }, false)).toBe(false);
     expect(plainKey({ ...press, target: at() }, true)).toBe(false);
     expect(plainKey({ ...press, ctrlKey: true, target: at() }, false)).toBe(false);
-    // The selector leaves a check box out: one that names no input field lets the key go to the page
-    expect(plainKey({ ...press, target: { closest: () => null } }, false)).toBe(true);
+    // A check box is in a selector of inputs only where check boxes are not left out of it
+    const checkBox: KeyTarget = {
+      closest: (selector) =>
+        selector.includes('input:not([type="checkbox"])') || !selector.includes('input') ? null : {},
+    };
+    expect(plainKey({ ...press, target: checkBox }, false)).toBe(true);
   });
 });
 
