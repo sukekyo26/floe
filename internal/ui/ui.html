@@ -1218,7 +1218,7 @@
       <span class="frame-actions" id="read-actions"></span>
     </div>
     <div class="tagline" id="read-tags" hidden></div>
-    <iframe class="read-frame" id="read-frame" allow="clipboard-write *; fullscreen *" hidden></iframe>
+    <iframe class="read-frame" id="read-frame" data-loaded="about:blank" allow="clipboard-write *; fullscreen *" hidden></iframe>
     <p class="read-blank" id="read-blank">{{.Msg "ui_read_blank"}}</p>
   </section>
 </main>
@@ -1834,6 +1834,8 @@
     history.replaceState(history.state, '', url);
   }
   const frameSrc = rawHref(frameAt);
+  // What the frame shows, told for the browser tests
+  if (framed) Object.assign($('frame').dataset, { slug: framed, version: frameAt.v });
   const isFramed = (x) => x.slug === framed && (x.file ?? '') === FILE;
   // The row whose page is open beside the list: its slug and, of a folder's page, its file; null for none
   let picked = null;
@@ -1987,6 +1989,15 @@
     btn.setAttribute('aria-label', label);
   }
 
+  // A state shown by a class, and told by an attribute too ("true", or none) for the browser tests, which read no class: the two
+  // always change together, here
+  const STATE_ATTRS = { picked: 'aria-current', unseen: 'data-unread', archived: 'data-archived', on: 'data-on', armed: 'data-armed', old: 'data-old', narrowed: 'data-narrowed', selecting: 'data-selecting' };
+  function markState(el, name, on) {
+    el.classList.toggle(name, Boolean(on));
+    if (on) el.setAttribute(STATE_ATTRS[name], 'true');
+    else el.removeAttribute(STATE_ATTRS[name]);
+  }
+
   const pageToast = () => document.querySelector('.toast.page');
   // ms gives it a time of its own, button a thing to press, which holds it while pointed at or focused; page makes it the one toast
   // of the page shown, which goes as another page is, and takes the place of the one before
@@ -2113,20 +2124,20 @@
   // A button that acts on the second click. The first click arms it and returns true; losing focus disarms it
   function arm(btn, armedLabel) {
     if (btn.classList.contains('armed')) return false;
-    btn.classList.add('armed');
+    markState(btn, 'armed', true);
     (btn.querySelector('.label') ?? btn).textContent = armedLabel;
     return true;
   }
 
   function disarmBulk() {
-    $('bulk-delete').classList.remove('armed');
+    markState($('bulk-delete'), 'armed', false);
     $('bulk-delete').querySelector('.label').textContent = t(`ui_${bulkKind()}`);
     $('bulk-archive').querySelector('.label').textContent = t(view === 'archived' ? 'ui_unarchive' : 'ui_archive');
   }
 
   function renderBulk() {
     $('bulk').hidden = selected.size === 0;
-    $('list').classList.toggle('selecting', selected.size > 0);
+    markState($('list'), 'selecting', selected.size > 0);
     $('bulk-n').textContent = t('ui_selected_n', selected.size);
     disarmBulk();
   }
@@ -2702,7 +2713,7 @@
     $('narrow-filter-name').textContent = TASK_LIST && project ? projectWord(project) : narrowed ? t('ui_narrow_n', narrowed) : t('ui_narrow');
     $('narrow-filter-n').textContent = narrowed || '';
     // Where the picks are in a dialog, this is what is lit of them
-    $('narrow-filter').classList.toggle('narrowed', narrowed > 0);
+    markState($('narrow-filter'), 'narrowed', narrowed > 0);
     const projectHead = TASK_LIST && project;
     $('narrow-filter').classList.toggle('proj-tint', Boolean(projectHead));
     if (projectHead) $('narrow-filter').style.setProperty('--c', taskProjectColor(project));
@@ -2854,12 +2865,22 @@
 
   // Whether a row of the entry a has a page to open beside the list
   const rowOpens = (li, a) => !oneColumn.matches && a && !li.classList.contains('dir') && (!a.folder || li.dataset.file);
+  // Every change of picked comes here, which tells it on the frame beside the list (data-slug, data-file, data-version) for the
+  // browser tests, which read no variable of the page
+  function setPicked(next) {
+    picked = next;
+    const frame = $('read-frame');
+    for (const [key, value] of Object.entries({ slug: next?.slug, file: next?.file, version: next?.v })) {
+      if (value === undefined) delete frame.dataset[key];
+      else frame.dataset[key] = value;
+    }
+  }
   // Opens the page of x beside the list, at its version or the latest
   function pickRow(x) {
     if (isPicked(x)) return;
-    picked = { slug: x.slug, file: x.file ?? '', v: x.v ?? 0 };
+    setPicked({ slug: x.slug, file: x.file ?? '', v: x.v ?? 0 });
     versionGone = false;
-    for (const li of $('list').children) li.classList.toggle('picked', li.dataset.slug === picked.slug && (li.dataset.file ?? '') === picked.file);
+    for (const li of $('list').children) markState(li, 'picked', li.dataset.slug === picked.slug && (li.dataset.file ?? '') === picked.file);
     drawReader();
   }
 
@@ -2898,7 +2919,7 @@
     // Its words tell what a press does, so that it is not told as pressed too
     const arc = box.querySelector('.archive');
     arc.hidden = Boolean(file);
-    arc.classList.toggle('on', Boolean(a.archived));
+    markState(arc, 'on', Boolean(a.archived));
     arc.title = drawArchive(arc, a);
     const slot = box.querySelector('.more-slot');
     const focused = slot.contains(document.activeElement);
@@ -2933,6 +2954,7 @@
   function readInto(href) {
     if (href === readLoaded) return;
     readLoaded = href;
+    $('read-frame').dataset.loaded = href;
     // A page marked unread holds through its versions, until another is open. picked is the new one by now
     if (picked?.slug !== readSlug) keptUnread = null;
     readSlug = picked?.slug;
@@ -2952,7 +2974,7 @@
   // file is gone. The page in the iframe stays loaded through the list's redraws, reloading itself as it changes
   function drawReader() {
     const a = picked && items.find((x) => x.slug === picked.slug);
-    if (!a) picked = null;
+    if (!a) setPicked(null);
     if (TASK_PAGE) layoutColumns();
     // Loaded only while it is there, as the frame's, so that a link's missing file is no 404 kept when the file is back
     readInto(a && !a.missing ? rawHref(picked) : 'about:blank');
@@ -3006,7 +3028,7 @@
       versionSlug = a?.slug;
       versionKey = '';
       sel.hidden = true;
-      sel.classList.remove('old');
+      markState(sel, 'old', false);
       delete sel.dataset.numbers;
       sel.replaceChildren(...sel.querySelectorAll(':scope > button'));
       drawVersionNote(a, x, []);
@@ -3014,7 +3036,7 @@
     if (!a) versionGone = false;
     if (!a || !x || x.file || DIFF || !(canDiff(a) || x.v)) {
       sel.hidden = true;
-      sel.classList.remove('old');
+      markState(sel, 'old', false);
       versionKey = '';
       drawVersionNote(a, x, []);
       return;
@@ -3062,7 +3084,7 @@
       for (const [i, o] of [...sel.options].entries()) o.querySelector('.ver-rest').textContent = ` · ${verRest(newest[i], versions, read)}`;
     }
     if (sel.value !== String(x.v || last)) sel.value = x.v || last;
-    sel.classList.toggle('old', x.v > 0);
+    markState(sel, 'old', x.v > 0);
     sel.hidden = !canDiff(a);
     if (versionFocus) {
       versionFocus = false;
@@ -3102,7 +3124,7 @@
       location.href = pageHref({ slug: framed, v });
       return;
     }
-    picked.v = v;
+    setPicked(Object.assign(picked, { v }));
     versionGone = false;
     drawReader();
     if (focus) sel.focus();
@@ -3181,10 +3203,10 @@
     li.style.setProperty('--i', Math.min(i, 30));
     li.dataset.key = `entry:${a.slug}`;
     li.dataset.slug = a.slug;
-    li.classList.toggle('unseen', unseen(a));
+    markState(li, 'unseen', unseen(a));
     li.classList.toggle('gone', Boolean(a.missing));
-    li.classList.toggle('archived', TASK_PAGE && Boolean(a.archived));
-    li.classList.toggle('picked', isPicked(a));
+    markState(li, 'archived', TASK_PAGE && Boolean(a.archived));
+    markState(li, 'picked', isPicked(a));
     li.querySelector('.lead').innerHTML = leadOf(a);
     const sel = li.querySelector('.sel');
     sel.checked = selected.has(a.slug);
@@ -3228,7 +3250,7 @@
     toggle(star, a.favorite, t('ui_favorite'), t('ui_favorite_named', a.title));
     star.addEventListener('click', () => toggleFavorite(a));
     const arc = li.querySelector('.actions > .archive');
-    arc.classList.toggle('on', Boolean(a.archived));
+    markState(arc, 'on', Boolean(a.archived));
     arc.title = drawArchive(arc, a, true);
     li.querySelector('.actions').append(moreMenu(a));
     // The way to the first row selected with no keys: the boxes show once one is
@@ -3284,7 +3306,7 @@
     const tree = (cls, key) => {
       const li = $('tree-row').content.firstElementChild.cloneNode(true);
       li.classList.add(...cls);
-      li.classList.toggle('archived', TASK_PAGE && Boolean(a.archived));
+      markState(li, 'archived', TASK_PAGE && Boolean(a.archived));
       li.style.setProperty('--d', d);
       li.dataset.d = d;
       li.dataset.slug = a.slug;
@@ -3323,7 +3345,7 @@
       const link = li.querySelector('.title');
       const x = { slug: a.slug, file: p.file };
       li.dataset.file = p.file;
-      li.classList.toggle('picked', isPicked(x));
+      markState(li, 'picked', isPicked(x));
       link.href = pageHref(x);
       link.innerHTML = PAGE_HEAD;
       link.append(name);
@@ -3573,7 +3595,7 @@
           return;
         }
         // Drawn with the list read below
-        if (picked?.slug === was) picked.slug = changes.slug;
+        if (picked?.slug === was) setPicked(Object.assign(picked, { slug: changes.slug }));
       }
       // A page moved to another project is off its task, which is of its project
       toast(edited?.offTask ? t('ui_saved_off_task', edited.offTask) : t('ui_saved'));
@@ -3746,7 +3768,7 @@
     li.style.setProperty('--i', Math.min(i, 30));
     li.dataset.key = taskRowKey(task.project, task.name);
     const unread = unreadOf(task);
-    li.classList.toggle('unseen', unread > 0);
+    markState(li, 'unseen', unread > 0);
     li.querySelector('.lead').innerHTML = leadOf({ news: unread > 0 });
     const link = li.querySelector('.title');
     link.href = taskHref(task);
@@ -3805,7 +3827,7 @@
     const pins = pinned.map((a) => {
       const link = document.createElement('a');
       link.className = 'pin';
-      link.classList.toggle('unseen', Boolean(a.news));
+      markState(link, 'unseen', Boolean(a.news));
       link.href = pageHref({ slug: a.slug });
       // j and k go through the pins, and the way back is to this list
       link.addEventListener('click', () => keepRows(pinned.filter((x) => !x.folder).map((x) => x.slug), pinned.map((x) => x.slug)));
@@ -4025,7 +4047,7 @@
     // Whole, as the row cuts a long name and title; read name first, as the row is drawn state first
     link.title = [x.name, x.title].filter(Boolean).join('\n');
     link.setAttribute('aria-label', t('ui_task_kin_row', [x.name, x.title].filter(Boolean).join(' '), t(VIEW_WORDS[x.state])));
-    link.classList.toggle('unseen', unreadOf(x) > 0);
+    markState(link, 'unseen', unreadOf(x) > 0);
     link.append(tagged('span', `kid-state ${x.state}`, t(VIEW_WORDS[x.state])), tagged('span', 'tname', x.name), tagged('span', 'kin-title', x.title ?? ''), tagged('span', unreadOf(x) > 0 ? 'dot' : 'ring'));
     const off = tagged('button', 'icon-btn unlink');
     off.type = 'button';
@@ -4343,7 +4365,7 @@
     }
   }
   function disarmForget() {
-    $('task-delete').classList.remove('armed');
+    markState($('task-delete'), 'armed', false);
     $('task-delete').querySelector('.label').textContent = t('ui_task_forget');
   }
 
@@ -5190,7 +5212,7 @@
   }
 
   function disarm(a, btn) {
-    btn.classList.remove('armed');
+    markState(btn, 'armed', false);
     btn.title = t(`ui_${removal(a)}`);
     btn.querySelector('.label').textContent = btn.title;
     btn.setAttribute('aria-label', t(`ui_${removal(a)}_named`, a.title));
@@ -5939,6 +5961,10 @@
   // overtakes another. await load() returns once a load begun after the call has drawn, failed, or, a poll's, given way to a press
   let loadWaiting = null;
   let loadLast = Promise.resolve();
+  // The reads begun and ended, told on <html> (data-loads-begun, data-loads) for the browser tests to wait on: one at a time, they
+  // end in the order they begin. Put by this script alone, never in the markup, so that one there tells the script has run
+  let loadsBegun = 0;
+  let loadsEnded = 0;
   function load(polled = false) {
     if (loadWaiting) {
       loadWaiting.polled &&= polled;
@@ -5948,8 +5974,9 @@
     loadWaiting = next;
     next.done = loadLast.then(() => {
       loadWaiting = null;
+      document.documentElement.dataset.loadsBegun = ++loadsBegun;
       return readAndDraw(next.polled);
-    });
+    }).finally(() => { document.documentElement.dataset.loads = ++loadsEnded; });
     loadLast = next.done.catch(() => {});
     return next.done;
   }
@@ -6051,8 +6078,8 @@
   function hitRow(template, id, a, ranks, middle) {
     const li = template.content.firstElementChild.cloneNode(true);
     li.id = id;
-    li.classList.toggle('unseen', unseen(a));
-    li.classList.toggle('archived', Boolean(a.archived));
+    markState(li, 'unseen', unseen(a));
+    markState(li, 'archived', Boolean(a.archived));
     li.querySelector('.lead').innerHTML = leadOf(a);
     const title = li.querySelector('.title');
     if (title instanceof HTMLAnchorElement) title.href = pageHref(a);
@@ -6815,7 +6842,7 @@
     // One column has nothing beside the list: what stays alive there would reload itself, and be told read unseen
     oneColumn.addEventListener('change', () => {
       if (!oneColumn.matches || !picked) return;
-      picked = null;
+      setPicked(null);
       render();
     });
     // The rest of the shelf goes into the dialog while it is open, on a screen with no room for it beside the list

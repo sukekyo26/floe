@@ -108,20 +108,19 @@ func (b *browser) stub(list string) {
 	if b.eval("window.faked === true") != "true" {
 		b.t.Fatal("this page was opened before the first stub: stub on a blank tab before opening it")
 	}
-	b.eval(script)
-	b.loadStubbed()
+	gets, err := strconv.Atoi(b.eval(script + "; window.gets"))
+	if err != nil {
+		b.t.Fatal(err)
+	}
+	b.loadStubbed(b.reread(), gets)
 }
 
-// loadStubbed waits until the management page open, faked, has read the list stubbed and drawn it: its own load may
-// still be on the way after the page is loaded.
-func (b *browser) loadStubbed() {
+// loadStubbed waits until the management page open has read the list stubbed in a read begun after begun, its count of reads
+// stubbed past gets: its own first read (0, 0 on a page just opened), or one reread. A read that fails times out the wait.
+func (b *browser) loadStubbed(begun, gets int) {
 	b.t.Helper()
 
-	got := b.eval("(async () => { const n = window.gets; await load(); " +
-		"return window.gets > n || 'not read: ' + document.getElementById('error').textContent; })()")
-	if got != "true" {
-		b.t.Fatalf("the page did not load the list stubbed: %s", got)
-	}
+	b.untilRead(begun, "the page to read the list stubbed", "window.gets > "+strconv.Itoa(gets))
 }
 
 // unstub gives the pages this tab opens from now on the server's list again.
@@ -135,13 +134,72 @@ func (b *browser) unstub() {
 	b.faked = ""
 }
 
-// untilActed waits until expr is truthy and no archive or way back of a row is on its way, the read of the list after it included: a
-// redraw of the rows takes a press with them, and an answer come late shows there. A load the test starts itself is waited for by
-// eval, which awaits what it returns.
-func (b *browser) untilActed(what, expr string) {
+// acted runs js, which starts what reads the list (a press, a key), and returns how many reads had begun before it, read in the
+// same evaluation, so that no poll begins in between; js runs in a function of its own, a line comment at its end included.
+// untilRead waits for a read begun after it.
+// LIMIT: an element's click() presses what a person cannot (hidden, covered, inert); press by the input (click, pressKey) where it matters.
+func (b *browser) acted(js string) int {
 	b.t.Helper()
 
-	b.until(what, "archiving.size === 0 && ("+expr+")")
+	n, err := strconv.Atoi(b.eval("(() => { const begun = Number(document.documentElement.dataset.loadsBegun ?? 0); (() => { " + js + "\n})(); return begun; })()"))
+	if err != nil {
+		b.t.Fatal(err)
+	}
+	return n
+}
+
+// untilRead waits until a read of the list begun after begun has ended and expr is truthy: the reads end in the order they begin.
+// What runs after a read (the focus moved, a toast) is not waited for: wait for it in the DOM. After a write, wait for its record
+// too (calls, a count of the test's fetch): an action may read before it writes.
+func (b *browser) untilRead(begun int, what, expr string) {
+	b.t.Helper()
+
+	b.until(what, "Number(document.documentElement.dataset.loads ?? 0) > "+strconv.Itoa(begun)+" && ("+expr+")")
+}
+
+// reread has the page read the list again, as on coming back to its tab: a poll's read, which draws nothing for 2 s after a
+// press on the list. It returns the reads begun before it, for untilRead.
+func (b *browser) reread() int {
+	b.t.Helper()
+
+	return b.acted("document.dispatchEvent(new Event('visibilitychange'))")
+}
+
+// fill puts words in the field sel as a person types them, on any system: the field focused and its text selected, then the
+// words inserted (Input.insertText), or the selection deleted for none. A value set and an input event made reach no React field.
+func (b *browser) fill(sel, words string) {
+	b.t.Helper()
+
+	if b.eval("(() => { const e = document.querySelector("+js(sel)+"); e.focus(); e.select(); return document.activeElement === e; })()") != "true" {
+		b.t.Fatalf("%s does not take the focus (hidden or disabled): the words would go elsewhere", sel)
+	}
+	if words == "" {
+		b.pressKey(kb.Delete)
+		return
+	}
+	if _, err := chromedp.Call(b.ctx, input.InsertText, input.InsertTextParams{Text: words}); err != nil {
+		b.t.Fatal(err)
+	}
+}
+
+// drag presses the middle of the element sel, moves halfway and then to x on the same line, and lets go.
+func (b *browser) drag(sel string, x float64) {
+	b.t.Helper()
+
+	r := b.rect("document.querySelector(" + js(sel) + ")")
+	from, y := r.X+r.Width/2, r.Y+r.Height/2
+	b.painted()
+	for _, at := range []struct {
+		kind    input.DispatchMouseEventType
+		x       float64
+		buttons int64
+	}{{input.DispatchMouseEventTypeMousePressed, from, 1}, {input.DispatchMouseEventTypeMouseMoved, (from + x) / 2, 1},
+		{input.DispatchMouseEventTypeMouseMoved, x, 1}, {input.DispatchMouseEventTypeMouseReleased, x, 0}} {
+		p := input.DispatchMouseEventParams{Type: at.kind, X: at.x, Y: y, Button: input.MouseButtonLeft, Buttons: at.buttons, ClickCount: 1}
+		if _, err := chromedp.Call(b.ctx, input.DispatchMouseEvent, p); err != nil {
+			b.t.Fatal(err)
+		}
+	}
 }
 
 func (b *browser) addScript(script string) page.ScriptIdentifier {
@@ -264,16 +322,16 @@ func uiExtras(t *testing.T, lang i18n.Lang, msg func(string, ...any) string) {
 		"document.getElementById('bulk-clear').click(); return words.join(' / '); })()"
 	const archiveRow = "document.querySelector('#list li:not(.group) .actions > .archive').click()"
 	out = append(out, b.eval(counts), b.eval(archiveWords))
-	b.eval(archiveRow)
+	begun := b.acted(archiveRow)
 	out = append(out, b.until("the archive", "calls.splice(0).join(',')"), b.eval("document.querySelectorAll('#list .more[open]').length"),
 		// With the answer, before the list is read again; it goes after 8 seconds
 		b.until("the toast", "document.getElementById('toasts').textContent.includes("+js(msg("ui_archive_done", "Beta"))+")"))
-	b.untilActed("the archive done", "true")
+	b.untilRead(begun, "the archive done", "true")
 	b.eval("document.querySelector('.views [data-view=archived]').click()")
 	out = append(out, b.eval(counts), b.eval(archiveWords))
-	b.eval(archiveRow)
+	begun = b.acted(archiveRow)
 	out = append(out, b.until("the give back", "calls.splice(0).join(',')"))
-	b.untilActed("the give back done", "true")
+	b.untilRead(begun, "the give back done", "true")
 	// The change failing, the row stays with the focus on its button.
 	b.eval("window.failWrites = true; document.querySelector('#list li:not(.group) .actions > .archive').focus(); document.querySelector('#list li:not(.group) .actions > .archive').click()")
 	out = append(out, b.until("the give back to fail", "!document.getElementById('error').hidden && "+
@@ -558,9 +616,9 @@ func uiShelf(t *testing.T, lang i18n.Lang, msg func(string, ...any) string) {
 	b.stub(extrasList)
 	b.navigate("/a/z/")
 	out = append(out, b.until("the frame's bar", "document.getElementById('frame-title').textContent && "+frame))
-	b.eval("document.querySelector('#frame-actions > .archive').click()")
+	begun := b.acted("document.querySelector('#frame-actions > .archive').click()")
 	out = append(out, b.until("the give back", "calls.splice(0).join(',')"))
-	b.untilActed("the give back done", "true")
+	b.untilRead(begun, "the give back done", "true")
 	// Given back, as the server now lists it: the menu says so.
 	b.eval("window.list = JSON.stringify(JSON.parse(window.list).map((a) => a.slug === 'z' ? { ...a, archived: false } : a)); load()")
 	out = append(out, b.until("the menu to say so", "document.getElementById('frame-archived').hidden && "+frame))

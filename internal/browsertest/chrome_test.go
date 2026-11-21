@@ -286,19 +286,25 @@ func (b *browser) navigate(path string) {
 	}
 	b.until(path+" to load", "!window.leaving && document.readyState === 'complete'")
 	if b.faked != "" && b.eval("window.faked === true") == "true" {
-		b.loadStubbed()
+		b.loadStubbed(0, 0) // a new document counts its reads from 0
 	}
 }
 
 // pressKey presses k as a keyboard does: its text on the key down, which a page's preventDefault then stops too
-// (chromedp.KeyEvent sends the text as an event of its own, which nothing stops). For Enter, space and the keys with no text.
-func (b *browser) pressKey(k string) {
+// (chromedp.KeyEvent sends the text as an event of its own, which nothing stops). For Enter, space and the keys with no text,
+// with the modifiers held.
+func (b *browser) pressKey(k string, mods ...kb.Modifier) {
 	b.t.Helper()
 
+	var held kb.Modifier
+	for _, m := range mods {
+		held |= m
+	}
 	for _, e := range kb.Encode([]rune(k)[0]) {
 		if e.Type == kb.KeyChar {
 			continue
 		}
+		e.Modifiers = int64(held)
 		if e.Type == kb.KeyDown {
 			e.Text = map[string]string{kb.Enter: "\r", " ": " "}[k]
 		}
