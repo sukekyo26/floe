@@ -5497,7 +5497,7 @@
   function urlRow(url) {
     const li = document.createElement('li');
     li.dataset.url = url;
-    li.append(rowGrip(), withTestid(tagged('span', 'category-name', url), 'category-name'), tagged('span', 'category-moves'));
+    li.append(rowGrip(), tagged('span', 'category-name', url), tagged('span', 'category-moves'));
     li.lastChild.append(
       rowButton('category-up', t('ui_url_up_named', url), UP_PATH),
       rowButton('category-down', t('ui_url_down_named', url), DOWN_PATH),
