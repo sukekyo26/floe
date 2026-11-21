@@ -9,6 +9,7 @@ import { taskWrites as pageTaskWrites, type TaskWrites } from '@/stores/tasks';
 import { toasts as pageToasts, type Toasts } from '@/stores/toasts';
 import { undoToast as pageUndoToast, type UndoToast } from '@/stores/undo-toast';
 import { openPage as pageOpen, type OpenPage } from '@/stores/open-page';
+import { pageNote as pagePageNote, type PageNote } from '@/stores/page-note';
 import type { Page } from '@/types/page';
 import { removal } from '@/utils/list-view';
 
@@ -56,6 +57,7 @@ interface Deps {
   undoToast?: UndoToast;
   order?: Order;
   openPage?: OpenPage;
+  note?: PageNote;
   boot?: () => Boot;
   // go leaves for href (a page whole deleted goes back where it came from)
   go?: (href: string) => void;
@@ -79,6 +81,7 @@ export function createPageActions({
   undoToast = pageUndoToast,
   order = pageOrder,
   openPage = pageOpen,
+  note = pagePageNote,
   boot = getBoot,
   go = (href) => {
     window.location.assign(href);
@@ -218,6 +221,8 @@ export function createPageActions({
     markUnreadSaid: async (slug, unreadFocus) => {
       const marked = reads.markUnread(slug);
       if (!marked) return;
+      // Of the page shown, the words of its versions go with what was read (ui.html markUnread: clearNotice)
+      if (slug === openPage.shownSlug()) note.clear();
       const outcome = await marked;
       if (outcome.kind !== 'sent') return;
       // Of the page shown as the answer comes it takes the place of its toast; of another, it leaves the toast of the
