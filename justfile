@@ -47,6 +47,45 @@ fmt:
 fmt-check:
     golangci-lint fmt --diff {{pkgs}}
 
+# LIMIT: internal/browsertest is left out (core_pkgs) while its tests are rewritten for the React management page; use pkgs once that is done.
+# LIMIT: the files of //go:build race are not read (no -race): four constants of 5 lines; add a -race run when one holds more.
+# LIMIT: core_pkgs lists the host GOOS's packages: a package of one OS alone fails the other GOOS's runs; list them per GOOS then.
+# LIMIT: just lint type-checks linux and windows only: when fix-check fails for darwin and just fix does not help, it is a type error of darwin's files.
+# LIMIT: the go fix of the Go on PATH runs: one newer than go.mod's may know more fixers and fail fix-check on a clean tree.
+# go fix reads one GOOS's files a run: the three floe runs on.
+fix_oses  := "linux darwin windows"
+# omitzero changes what encoding/json writes (a zero struct left out), so it is not applied.
+fix_flags := "-omitzero=false"
+
+# Rewrite Go to the newer forms go fix knows, for each GOOS, and format, until go fix changes nothing more
+fix:
+    #!/usr/bin/env bash
+    set -euo pipefail
+    fix_pkgs=$({{core_pkgs}})
+    for _ in 1 2 3 4 5; do
+        for os in {{fix_oses}}; do GOOS=$os go fix {{fix_flags}} $fix_pkgs; done
+        golangci-lint fmt {{pkgs}}
+        left=
+        for os in {{fix_oses}}; do
+            GOOS=$os go fix {{fix_flags}} -diff $fix_pkgs >/dev/null || left=1
+        done
+        if [ -z "$left" ]; then exit 0; fi
+    done
+    echo "fix: go fix still changes the code after 5 runs: read git diff" >&2
+    exit 1
+
+# Fail when go fix would change the code, for any GOOS
+fix-check:
+    #!/usr/bin/env bash
+    set -euo pipefail
+    fix_pkgs=$({{core_pkgs}})
+    for os in {{fix_oses}}; do
+        GOOS=$os go fix {{fix_flags}} -diff $fix_pkgs || {
+            echo "fix-check: go fix failed or would change the code for GOOS=$os: run 'just fix' for a diff above; with no diff, fix the compiler's errors above" >&2
+            exit 1
+        }
+    done
+
 # Run golangci-lint with the strict config, on Linux and on Windows (whose files only build there), and vet Windows
 # on arm64, which no CI machine runs
 lint:
@@ -242,7 +281,7 @@ web-build-check: web-install
 # LIMIT: test runs every package without the race detector; a race is told by CI alone (test-race-core and the two
 # browser jobs, all with -race).
 # Pre-push gate of CI's checks
-ci: fmt-check vet lint test cover-check vuln mod-verify mod-tidy-check shellcheck shfmt-check
+ci: fmt-check vet lint fix-check test cover-check vuln mod-verify mod-tidy-check shellcheck shfmt-check
 
 # Serve the gallery of the management page's shared components on 127.0.0.1:<port>, in lang (ja or en), for a person to
 # try them: go test writes its boot values, and Vite's dev server serves it. It is never built into dist

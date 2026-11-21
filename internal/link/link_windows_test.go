@@ -151,8 +151,7 @@ func TestResolveLocalize(t *testing.T) {
 
 // mistakeKey is the key of the mistake err is, "" for none.
 func mistakeKey(err error) string {
-	var ue *usererr.Error
-	if errors.As(err, &ue) {
+	if ue, ok := errors.AsType[*usererr.Error](err); ok {
 		return ue.Key
 	}
 	return ""

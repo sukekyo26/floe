@@ -17,10 +17,6 @@ import (
 	"floe/internal/testfs"
 )
 
-func ptr[T any](v T) *T {
-	return &v
-}
-
 // pageTaskOf is the task of the page slug in the store of env.
 func pageTaskOf(t *testing.T, env map[string]string, slug string) string {
 	t.Helper()
@@ -176,7 +172,7 @@ func TestTaskCommand(t *testing.T) {
 	}
 
 	// A page of no project: its task is that of "/".
-	if _, err := s.Edit("b", store.Edit{Project: ptr("")}); err != nil {
+	if _, err := s.Edit("b", store.Edit{Project: new("")}); err != nil {
 		t.Fatal(err)
 	}
 	run(0, "task", "--slug", "b", "--task", "#9", "--state", "done")
@@ -184,7 +180,7 @@ func TestTaskCommand(t *testing.T) {
 		t.Errorf("a page of no project: %v", tasks())
 	}
 	run(0, "task", "--slug", "b", "--task", "#2")
-	if _, err := s.Edit("b", store.Edit{Project: ptr("p")}); err != nil {
+	if _, err := s.Edit("b", store.Edit{Project: new("p")}); err != nil {
 		t.Fatal(err)
 	}
 
@@ -807,7 +803,7 @@ func TestLinkOffTask(t *testing.T) {
 		t.Fatalf("task = %d, %q, %q", code, out, errs)
 	}
 	s := store.New(env["FLOE_DIR"])
-	if _, err := s.Edit("l", store.Edit{Project: ptr("")}); err != nil {
+	if _, err := s.Edit("l", store.Edit{Project: new("")}); err != nil {
 		t.Fatal(err)
 	}
 	// The edit moved it to no project: off its task already; put back on that project's task

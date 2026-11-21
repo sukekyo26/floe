@@ -12,7 +12,7 @@ import (
 
 // frameBack says the back button of a page whole: where it goes, its word, what it says in full, the key's words.
 const frameBack = `(() => { const e = document.getElementById('back');
-  return [location.pathname, e.getAttribute('href'), document.getElementById('back-word').textContent, e.title, e.getAttribute('aria-label'), document.getElementById('keys-back').textContent, document.querySelector('.brand').getAttribute('href')].join(' | '); })()`
+  return [location.pathname, e.getAttribute('href'), document.getElementById('back-word').textContent, e.title, e.getAttribute('aria-label'), document.getElementById('keys-back').textContent, document.querySelector('[data-testid=brand]').getAttribute('href')].join(' | '); })()`
 
 // The back button of a page whole, by every way a page is opened whole: real presses, the row's press again and a double press, the
 // title over the page beside the rows, a pin, the page list's row; a reload keeps it, and a tab that kept nothing has the page list. h goes
@@ -42,8 +42,8 @@ func TestUIFrameBack(t *testing.T) { //nolint:paralleltest // the browser tests 
 	const task = "/tasks?project=proj&task=%23128"
 	row := func(slug string) rect {
 		t.Helper()
-		b.until("the row of "+slug, "document.querySelector('#list li[data-slug="+slug+"] .title')")
-		return b.rect("document.querySelector('#list li[data-slug=" + slug + "] .title')")
+		b.until("the row of "+slug, "document.querySelector('#list li[data-slug="+slug+"] [data-testid=title]')")
+		return b.rect("document.querySelector('#list li[data-slug=" + slug + "] [data-testid=title]')")
 	}
 	opened := func(path string) {
 		t.Helper()
@@ -55,7 +55,7 @@ func TestUIFrameBack(t *testing.T) { //nolint:paralleltest // the browser tests 
 	opened(task)
 	r := row("a")
 	b.click(r.X+10, r.Y+r.Height/2)
-	b.until("the page beside", "picked?.slug === 'a'")
+	b.until("the page beside", "document.getElementById('read-frame').dataset.slug === 'a'")
 	r = row("a")
 	b.click(r.X+10, r.Y+r.Height/2)
 	wholeAt("task row, pressed again", "/a/a/")
@@ -75,13 +75,13 @@ func TestUIFrameBack(t *testing.T) { //nolint:paralleltest // the browser tests 
 	opened(task)
 	r = row("a")
 	b.click(r.X+10, r.Y+r.Height/2)
-	b.until("the title", "picked?.slug === 'a' && document.getElementById('read-title').getAttribute('href')")
+	b.until("the title", "document.getElementById('read-frame').dataset.slug === 'a' && document.getElementById('read-title').getAttribute('href')")
 	b.moving("document.getElementById('read-title').click()")
 	wholeAt("the title over the page", "/a/a/")
 
 	// By Enter, and a reload there.
 	opened(task)
-	b.eval("document.querySelector('#list li[data-slug=b] .title').focus()")
+	b.eval("document.querySelector('#list li[data-slug=b] [data-testid=title]').focus()")
 	b.pressKey("\r")
 	wholeAt("task row, Enter", "/a/b/")
 	b.navigate("/a/b/")
@@ -89,8 +89,8 @@ func TestUIFrameBack(t *testing.T) { //nolint:paralleltest // the browser tests 
 
 	// A pin on the task list.
 	opened("/tasks?project=proj")
-	b.until("the pin", "document.querySelector('.pin')")
-	b.moving("document.querySelector('.pin').click()")
+	b.until("the pin", "document.querySelector('[data-testid=pin]')")
+	b.moving("document.querySelector('[data-testid=pin]').click()")
 	wholeAt("pin", "/a/pin/")
 	realKey(b, "h", 0)
 	b.until("h to the task list", "location.pathname + location.search === '/tasks?project=proj'")
@@ -99,7 +99,7 @@ func TestUIFrameBack(t *testing.T) { //nolint:paralleltest // the browser tests 
 	b.navigate("/?project=proj")
 	r = row("loose")
 	b.click(r.X+10, r.Y+r.Height/2)
-	b.until("the page beside", "picked?.slug === 'loose'")
+	b.until("the page beside", "document.getElementById('read-frame').dataset.slug === 'loose'")
 	r = row("loose")
 	b.click(r.X+10, r.Y+r.Height/2)
 	wholeAt("page list row", "/a/loose/")
@@ -115,7 +115,7 @@ func TestUIFrameBack(t *testing.T) { //nolint:paralleltest // the browser tests 
 	b.until("the bar", "document.getElementById('frame-title').textContent")
 	b.size(360, 800, true)
 	b.until("the narrow bar", "innerWidth === 360")
-	out = append(out, "phone: "+b.eval("(document.querySelector('.brand').offsetParent !== null) + ' ' + document.querySelector('.brand').getAttribute('href') + ' ' + (document.querySelector('.brand svg').getBoundingClientRect().width === 26) + ' ' + (document.getElementById('frame-actions').getBoundingClientRect().right <= innerWidth) + ' ' + (document.documentElement.scrollWidth <= innerWidth)"))
+	out = append(out, "phone: "+b.eval("(document.querySelector('[data-testid=brand]').offsetParent !== null) + ' ' + document.querySelector('[data-testid=brand]').getAttribute('href') + ' ' + (document.querySelector('[data-testid=brand] svg').getBoundingClientRect().width === 26) + ' ' + (document.getElementById('frame-actions').getBoundingClientRect().right <= innerWidth) + ' ' + (document.documentElement.scrollWidth <= innerWidth)"))
 	b.size(800, 800, false)
 	out = append(out, "narrow: "+b.eval("(document.getElementById('back').offsetParent !== null) + ' ' + (document.getElementById('back-word').offsetParent === null) + ' ' + document.getElementById('back').getAttribute('aria-label')"))
 	b.size(1400, 800, false)
@@ -126,7 +126,7 @@ func TestUIFrameBack(t *testing.T) { //nolint:paralleltest // the browser tests 
 		t.Fatal(err)
 	}
 	opened(task)
-	b.eval("document.querySelector('#list li[data-slug=b] .title').focus()")
+	b.eval("document.querySelector('#list li[data-slug=b] [data-testid=title]').focus()")
 	b.pressKey("\r")
 	wholeAt("a long title", "/a/b/")
 	for _, width := range []int64{1400, 1100, 900} {
@@ -140,7 +140,7 @@ func TestUIFrameBack(t *testing.T) { //nolint:paralleltest // the browser tests 
 
 	// The other ways a page whole may be: of a version, its diff, and with its name changed there.
 	opened(task)
-	b.eval("document.querySelector('#list li[data-slug=a] .title').focus()")
+	b.eval("document.querySelector('#list li[data-slug=a] [data-testid=title]').focus()")
 	b.pressKey("\r")
 	b.until("the page whole", "location.pathname === '/a/a/' && document.getElementById('frame-title').textContent")
 	s.floe(t, "publish", s.write(t, "a.yaml", "template: report\nlang: en\ntitle: T a\nsections:\n  - heading: two\n"), "--slug", "a")
@@ -151,13 +151,20 @@ func TestUIFrameBack(t *testing.T) { //nolint:paralleltest // the browser tests 
 	out = append(out, "its diff: "+b.eval(frameBack))
 	b.navigate("/a/a/")
 	b.until("the bar", "document.getElementById('frame-title').textContent")
-	b.moving("openEdit(items.find((a) => a.slug === 'a')); document.getElementById('edit-slug').value = 'a2'; document.getElementById('edit').requestSubmit()")
+	rename := func(slug string) {
+		t.Helper()
+		pressMenuItem(b, "#frame-actions", "edit")
+		openSlugField(b)
+		b.fill("#edit-slug", slug)
+		b.moving("document.getElementById('edit-submit').click()")
+	}
+	rename("a2")
 	wholeAt("renamed", "/a/a2/")
-	b.moving("openEdit(items.find((a) => a.slug === 'a2')); document.getElementById('edit-slug').value = 'a'; document.getElementById('edit').requestSubmit()")
+	rename("a")
 	wholeAt("named back", "/a/a/")
 
 	// Come back to from the browser's memory, what was kept since is drawn.
-	b.eval(`sessionStorage.setItem(ORDER_KEY, '{"order":["a"],"shown":["a"],"back":"/tasks?project=proj"}'); dispatchEvent(new PageTransitionEvent('pageshow', { persisted: true }))`)
+	b.eval(`sessionStorage.setItem('pages.order', '{"order":["a"],"shown":["a"],"back":"/tasks?project=proj"}'); dispatchEvent(new PageTransitionEvent('pageshow', { persisted: true }))`)
 	out = append(out, "from the browser's memory: "+b.eval(frameBack))
 
 	// A task of no project, and a list at a view.
@@ -168,20 +175,20 @@ func TestUIFrameBack(t *testing.T) { //nolint:paralleltest // the browser tests 
 	}
 	s.floe(t, "task", "--slug", "none", "--task", "#7", "--state", "doing")
 	opened("/tasks?project=%2F&task=%237")
-	b.eval("document.querySelector('#list li[data-slug=none] .title').focus()")
+	b.eval("document.querySelector('#list li[data-slug=none] [data-testid=title]').focus()")
 	b.pressKey("\r")
 	wholeAt("a task of no project", "/a/none/")
 	opened("/tasks?view=done&project=proj&task=%23128")
 	b.navigate("/tasks?view=done&project=proj")
-	b.until("the pin", "document.querySelector('.pin')")
-	b.moving("document.querySelector('.pin').click()")
+	b.until("the pin", "document.querySelector('[data-testid=pin]')")
+	b.moving("document.querySelector('[data-testid=pin]').click()")
 	wholeAt("a pin of a list at a view", "/a/pin/")
 
 	// A long name is cut, with nothing past the edge, down to the narrowest width that has the word.
 	long := "#" + strings.Repeat("a long task name ", 6)
 	s.floe(t, "task", "--slug", "a", "--task", long)
 	opened("/tasks?project=proj&task=" + url.QueryEscape(strings.TrimSpace(long)))
-	b.eval("document.querySelector('#list li[data-slug=a] .title').focus()")
+	b.eval("document.querySelector('#list li[data-slug=a] [data-testid=title]').focus()")
 	b.pressKey("\r")
 	b.until("the page whole", "location.pathname === '/a/a/' && document.getElementById('frame-title').textContent")
 	for _, width := range []int64{1400, 1100, 900} {
@@ -245,13 +252,13 @@ func TestUIFrameBackFocus(t *testing.T) { //nolint:paralleltest // the browser t
 	// whole waits for the page whole, read.
 	whole := func(slug string) {
 		t.Helper()
-		b.until("the page whole", "location.pathname === '/a/"+slug+"/' && document.getElementById('frame-title').textContent && !document.querySelector('#frame-actions .mark-unread').hidden")
+		b.until("the page whole", "location.pathname === '/a/"+slug+"/' && document.getElementById('frame-title').textContent && document.querySelector('#frame-actions [data-testid=mark-unread]')?.hidden === false")
 	}
 	// open opens the row whole by a double press, as a person does.
 	open := func(list, slug string) {
 		t.Helper()
 		b.navigate(list)
-		sel := "document.querySelector('#list li[data-slug=" + slug + "] .title')"
+		sel := "document.querySelector('#list li[data-slug=" + slug + "] [data-testid=title]')"
 		b.until("the row of "+slug, sel)
 		r := b.rect(sel)
 		for _, count := range []int{1, 2} {
@@ -264,8 +271,8 @@ func TestUIFrameBackFocus(t *testing.T) { //nolint:paralleltest // the browser t
 	read := func(what, list string) {
 		t.Helper()
 		b.until(what+": the list", "location.pathname + location.search === "+js(list)+" && document.querySelector('#list li[data-slug]')")
-		out = append(out, what+": "+b.eval(`[document.activeElement.closest?.('#list li')?.dataset.slug ?? 'no focus', picked?.slug ?? 'nothing picked',
-			[...document.querySelectorAll('#list li.picked')].map((li) => li.dataset.slug).join()].join(' | ')`))
+		out = append(out, what+": "+b.eval(`[document.activeElement.closest?.('#list li')?.dataset.slug ?? 'no focus', document.getElementById('read-frame').dataset.slug ?? 'nothing picked',
+			[...document.querySelectorAll('#list li[aria-current=true]')].map((li) => li.dataset.slug).join()].join(' | ')`))
 	}
 	pressBack := func() {
 		t.Helper()
@@ -309,15 +316,15 @@ func TestUIFrameBackFocus(t *testing.T) { //nolint:paralleltest // the browser t
 
 	// Marked unread there, it stays unread: the row has the focus, with nothing beside it to read it.
 	open(pages, "b")
-	b.eval("document.querySelector('#frame-actions .mark-unread').click()")
-	b.until("marked unread", "document.querySelector('#frame-actions .mark-unread').hidden")
+	pressMenuItem(b, "#frame-actions", "mark-unread")
+	b.until("marked unread", "document.querySelector('#frame-actions [data-testid=mark-unread]').hidden")
 	pressBack()
 	read("marked unread", pages)
 	// One column has nothing beside the list.
 	b.size(800, 800, false)
 	b.navigate(pages)
-	b.until("the row", "document.querySelector('#list li[data-slug=a] .title')")
-	b.eval("document.querySelector('#list li[data-slug=a] .title').focus()")
+	b.until("the row", "document.querySelector('#list li[data-slug=a] [data-testid=title]')")
+	b.eval("document.querySelector('#list li[data-slug=a] [data-testid=title]').focus()")
 	b.pressKey("\r")
 	whole("a")
 	b.moving("document.getElementById('back').click()")
@@ -326,16 +333,16 @@ func TestUIFrameBackFocus(t *testing.T) { //nolint:paralleltest // the browser t
 	// A pin has no page beside it: the pin has the focus.
 	s.floe(t, "task", "--slug", "a", "--pin")
 	b.navigate("/tasks?project=proj")
-	b.until("the pin", "document.querySelector('.pin')")
-	b.moving("document.querySelector('.pin').click()")
+	b.until("the pin", "document.querySelector('[data-testid=pin]')")
+	b.moving("document.querySelector('[data-testid=pin]').click()")
 	whole("a")
 	pressBack()
-	b.until("the task list", "location.pathname === '/tasks' && document.querySelector('.pin')")
+	b.until("the task list", "location.pathname === '/tasks' && document.querySelector('[data-testid=pin]')")
 	out = append(out, "a pin: "+b.eval("document.activeElement.getAttribute('href')"))
 
 	// The logo and a URL to the same list are no way back.
 	open(pages, "b")
-	r := b.rect("document.querySelector('.brand')")
+	r := b.rect("document.querySelector('[data-testid=brand]')")
 	b.click(r.X+r.Width/2, r.Y+r.Height/2)
 	read("the logo", pages)
 	open(pages, "b")
@@ -349,35 +356,35 @@ func TestUIFrameBackFocus(t *testing.T) { //nolint:paralleltest // the browser t
 	b.until("the version whole", "document.getElementById('frame-title').textContent")
 	pressBack()
 	read("of a version", pages)
-	b.until("the version beside", "readLoaded.endsWith('v=1')")
+	b.until("the version beside", "document.getElementById('read-frame').dataset.loaded.endsWith('v=1')")
 	// The versions to choose from are asked apart from the page
-	out = append(out, "its version: "+b.until("the versions", "document.getElementById('read-version').value && picked.v + ' ' + document.getElementById('read-version').value"))
+	out = append(out, "its version: "+b.until("the versions", "document.getElementById('read-version').value && document.getElementById('read-frame').dataset.version + ' ' + document.getElementById('read-version').value"))
 
 	// The list folded leaves when a row is open: the focus goes to what opens it.
 	b.navigate(task)
-	sel := "document.querySelector('#list li[data-slug=a] .title')"
+	sel := "document.querySelector('#list li[data-slug=a] [data-testid=title]')"
 	b.until("the row", sel)
 	r = b.rect(sel)
 	b.click(r.X+10, r.Y+r.Height/2)
-	b.until("the title", "picked?.slug === 'a' && document.getElementById('read-title').getAttribute('href')")
+	b.until("the title", "document.getElementById('read-frame').dataset.slug === 'a' && document.getElementById('read-title').getAttribute('href')")
 	b.eval("document.getElementById('list-hide').click()")
 	b.moving("document.getElementById('read-title').click()")
 	whole("a")
 	pressBack()
-	b.until("the list", "location.pathname === '/tasks' && picked?.slug === 'a'")
+	b.until("the list", "location.pathname === '/tasks' && document.getElementById('read-frame').dataset.slug === 'a'")
 	out = append(out, "folded: "+b.eval("document.activeElement.id + ' ' + document.getElementById('listcol').offsetParent"))
 	b.eval("document.getElementById('list-show').click()")
 
 	// Come back to from the browser's memory: the page whole knows it is there, and the list picks the row as any way back does.
 	b.navigate(pages)
-	b.eval(`sessionStorage.setItem(ORDER_KEY, '{"order":["a"],"shown":["a"],"back":"/?project=proj","at":{"slug":"c","file":"","v":0}}')`)
+	b.eval(`sessionStorage.setItem('pages.order', '{"order":["a"],"shown":["a"],"back":"/?project=proj","at":{"slug":"c","file":"","v":0}}')`)
 	b.navigate("/a/a/")
 	b.until("the bar", "document.getElementById('frame-title').textContent")
-	b.eval(`sessionStorage.setItem(ORDER_KEY, '{"order":["a"],"shown":["a"],"back":"/?project=proj","at":{"slug":"c","file":"","v":0}}'); dispatchEvent(new PageTransitionEvent('pageshow', { persisted: true }))`)
-	out = append(out, "whole, from the memory: "+b.eval("JSON.parse(sessionStorage.getItem(ORDER_KEY)).at.slug"))
+	b.eval(`sessionStorage.setItem('pages.order', '{"order":["a"],"shown":["a"],"back":"/?project=proj","at":{"slug":"c","file":"","v":0}}'); dispatchEvent(new PageTransitionEvent('pageshow', { persisted: true }))`)
+	out = append(out, "whole, from the memory: "+b.eval("JSON.parse(sessionStorage.getItem('pages.order')).at.slug"))
 	b.navigate(pages)
 	b.until("the rows", "document.querySelector('#list li[data-slug=a]')")
-	b.eval(`sessionStorage.setItem(ORDER_KEY, '{"order":["a"],"shown":["a"],"back":"/?project=proj","at":{"slug":"a","file":"","v":0}}'); dispatchEvent(new PageTransitionEvent('pageshow', { persisted: true }))`)
+	b.eval(`sessionStorage.setItem('pages.order', '{"order":["a"],"shown":["a"],"back":"/?project=proj","at":{"slug":"a","file":"","v":0}}'); dispatchEvent(new PageTransitionEvent('pageshow', { persisted: true }))`)
 	read("list, from the memory", pages)
 
 	if got := strings.Join(out, "\n"); got != frameBackFocusWant {

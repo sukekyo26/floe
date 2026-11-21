@@ -124,6 +124,7 @@ jobs:
         run: just setup
       - run: just lint
       - run: just fmt-check
+      - run: just fix-check
 
   test:
     name: Test (race + shuffle)

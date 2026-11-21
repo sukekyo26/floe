@@ -299,8 +299,7 @@ func (h *holes) hole(err error) (at string, tell, again bool) {
 	}
 	at = urlOf(err)
 	base, frag, _ := strings.Cut(at, "#")
-	var pointer *jsonschema.JSONPointerNotFoundError
-	if !errors.As(err, &pointer) {
+	if _, ok := errors.AsType[*jsonschema.JSONPointerNotFoundError](err); !ok {
 		return at, !h.refused[base], false
 	}
 	return at, !h.refused[base], h.fill(base, unescape(frag))
@@ -364,16 +363,16 @@ func (c *Compiled) compileMistake(err error) error {
 		base, frag, _ := strings.Cut(sve.URL, "#")
 		var found usererr.List
 		leaves(ve, func(e *jsonschema.ValidationError) {
-			at := "#" + unescape(frag)
+			var at strings.Builder
+			at.WriteString("#" + unescape(frag))
 			for _, step := range e.InstanceLocation {
-				at += "/" + escape(step)
+				at.WriteString("/" + escape(step))
 			}
-			found = append(found, usererr.LibraryIn(c.fileOf(base), at, e.ErrorKind.LocalizedString(english)))
+			found = append(found, usererr.LibraryIn(c.fileOf(base), at.String(), e.ErrorKind.LocalizedString(english)))
 		})
 		return found.Sorted().Err()
 	case errors.As(err, &load):
-		var refused *usererr.Error
-		if errors.As(load.Err, &refused) {
+		if refused, ok := errors.AsType[*usererr.Error](load.Err); ok {
 			return refused
 		}
 		return fmt.Errorf("schema: load %s: %w", load.URL, load.Err)

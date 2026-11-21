@@ -224,7 +224,7 @@ func TestNewsPublished(t *testing.T) {
 		}
 	}
 	for _, link := range []string{"h.html", "dir"} {
-		e, err := floepublish.PrepareLink(t.Context(), s, dw, filepath.Join(home, "proj", link), store.Options{Slug: ptr("l-" + strings.TrimSuffix(link, ".html"))}, "", home)
+		e, err := floepublish.PrepareLink(t.Context(), s, dw, filepath.Join(home, "proj", link), store.Options{Slug: new("l-" + strings.TrimSuffix(link, ".html"))}, "", home)
 		if err != nil {
 			t.Fatal(told(err, root))
 		}
@@ -484,7 +484,7 @@ func TestReadsFollow(t *testing.T) {
 	rename := func(from, to string) {
 		t.Helper()
 
-		if got, err := s.Edit(from, store.Edit{Slug: ptr(to)}); err != nil || got.Slug != to {
+		if got, err := s.Edit(from, store.Edit{Slug: new(to)}); err != nil || got.Slug != to {
 			t.Fatalf("renamed to %s: %v", got.Slug, err)
 		}
 	}
@@ -630,7 +630,7 @@ func TestUpdatedAtMovesWithVersions(t *testing.T) {
 	if got := s.ReadMeta("d").UpdatedAt; got != long {
 		t.Errorf("the same content: %s", got)
 	}
-	publish(t, s, dw, "d.yaml", titled("A"), images, store.Options{Theme: ptr("ink")})
+	publish(t, s, dw, "d.yaml", titled("A"), images, store.Options{Theme: new("ink")})
 	if got := s.ReadMeta("d"); got.UpdatedAt != long || got.Theme != "ink" {
 		t.Errorf("a theme: %+v", got)
 	}
@@ -947,13 +947,13 @@ func TestMarkUnreadKept(t *testing.T) { //nolint:tparallel // the subtest goes o
 	still("a rebuild")
 	publish(t, s, dw, "d.yaml", titled("t1"), images, store.Options{})
 	still("a new version")
-	if _, err := s.Edit("d", store.Edit{Slug: ptr("d2")}); err != nil {
+	if _, err := s.Edit("d", store.Edit{Slug: new("d2")}); err != nil {
 		t.Fatal(err)
 	}
 	if n, ok := recOf("d2"); !ok || n != 0 || listedOf(t, s, "d2").News != "new" {
 		t.Errorf("moved: kept %d %v, news %q", n, ok, listedOf(t, s, "d2").News)
 	}
-	if _, err := s.Edit("d2", store.Edit{Slug: ptr("d")}); err != nil {
+	if _, err := s.Edit("d2", store.Edit{Slug: new("d")}); err != nil {
 		t.Fatal(err)
 	}
 
@@ -966,7 +966,7 @@ func TestMarkUnreadKept(t *testing.T) { //nolint:tparallel // the subtest goes o
 		t.Helper()
 
 		up := floepublish.Upload{File: file, Source: []byte(titled(file)), Images: images, Project: "p", Repo: "p", Place: file}
-		e, err := floepublish.PrepareData(s, dw, up, store.Options{Slug: ptr("d"), Force: true})
+		e, err := floepublish.PrepareData(s, dw, up, store.Options{Slug: new("d"), Force: true})
 		if err != nil {
 			t.Fatal(err)
 		}
@@ -1089,15 +1089,15 @@ func TestMetaID(t *testing.T) {
 		t.Fatal(told(err, root))
 	}
 	stays("a theme picked", "a")
-	if _, err := s.Edit("a", store.Edit{Title: ptr("t"), Project: ptr("q")}); err != nil {
+	if _, err := s.Edit("a", store.Edit{Title: new("t"), Project: new("q")}); err != nil {
 		t.Fatal(err)
 	}
 	stays("edited", "a")
-	if _, err := s.ChangeTasks(store.TaskChange{Slugs: []string{"a"}, Task: ptr("#1")}); err != nil {
+	if _, err := s.ChangeTasks(store.TaskChange{Slugs: []string{"a"}, Task: new("#1")}); err != nil {
 		t.Fatal(told(err, root))
 	}
 	stays("put on a task", "a")
-	if _, err := s.Edit("a", store.Edit{Slug: ptr("b")}); err != nil {
+	if _, err := s.Edit("a", store.Edit{Slug: new("b")}); err != nil {
 		t.Fatal(err)
 	}
 	stays("renamed", "b")
@@ -1106,7 +1106,7 @@ func TestMetaID(t *testing.T) {
 	if got := s.ReadMeta("c").ID; got == "" || got == id {
 		t.Errorf("another page: id %q", got)
 	}
-	publish(t, s, dw, "other.yaml", report("washi"), nil, store.Options{Slug: ptr("b"), Force: true})
+	publish(t, s, dw, "other.yaml", report("washi"), nil, store.Options{Slug: new("b"), Force: true})
 	if got := s.ReadMeta("b").ID; got == "" || got == id {
 		t.Errorf("replaced: id %q", got)
 	}

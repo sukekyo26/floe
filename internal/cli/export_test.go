@@ -1,6 +1,10 @@
 package cli
 
-import "floe/internal/link"
+import (
+	"maps"
+
+	"floe/internal/link"
+)
 
 // ShellWords is shellWords, for the tests outside the package to split a doc's command line as the guide's tests do.
 var ShellWords = shellWords
@@ -17,8 +21,6 @@ var (
 // HomeEnv is the environment of homeVars(home) with vars over it.
 func HomeEnv(home string, vars map[string]string) map[string]string {
 	env := homeVars(home)
-	for k, v := range vars {
-		env[k] = v
-	}
+	maps.Copy(env, vars)
 	return env
 }

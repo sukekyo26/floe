@@ -120,10 +120,10 @@ func TestUIButtons(t *testing.T) { //nolint:paralleltest // the browser tests sh
 	b.eval("document.getElementById('bulk-delete').click()")
 	check("the delete asked again")
 	b.eval("document.getElementById('bulk-clear').click()")
-	b.eval("document.querySelector('#list li[data-slug=b] .actions > .archive').click()")
+	begun := b.acted("document.querySelector('#list li[data-slug=b] .actions > .archive').click()")
 	b.until("the toast", "document.querySelector('.toast .btn')")
 	// The toast comes before the list is read again, which draws the rows anew
-	b.untilActed("the archive done", "true")
+	b.untilRead(begun, "the archive done", "true")
 	check("the toast")
 
 	b.navigate("/tasks?project=proj&task=%231")
@@ -167,9 +167,9 @@ func TestUIButtons(t *testing.T) { //nolint:paralleltest // the browser tests sh
 	b.until("the new tag", "!document.getElementById('tag-new').hidden")
 	check("a long new tag")
 	b.eval("document.getElementById('tag-dialog').close(); document.getElementById('bulk-clear').click()")
-	b.eval("document.querySelector('#list li[data-slug=c] .actions > .archive').click()")
+	begun = b.acted("document.querySelector('#list li[data-slug=c] .actions > .archive').click()")
 	b.until("the toast", "document.querySelector('.toast .btn')")
-	b.untilActed("the archive done", "true")
+	b.untilRead(begun, "the archive done", "true")
 	check("the toast of a long title")
 
 	b.navigate("/tasks?project=proj&task=%233")

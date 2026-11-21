@@ -25,7 +25,8 @@ func TestUIUntilLoaded(t *testing.T) { //nolint:paralleltest // the browser test
 	}
 	b.moving("location.href = '/a/one/'")
 	b.until("the page", "location.pathname === '/a/one/'")
-	if got := b.eval("typeof ORDER_KEY"); got != "string" {
-		t.Errorf("the page's script after the wait: typeof ORDER_KEY = %q, want string", got)
+	// data-loads-begun is put by the page's script alone, never in the markup
+	if got := b.eval("document.documentElement.hasAttribute('data-loads-begun')"); got != "true" {
+		t.Errorf("the page's script after the wait: <html> has data-loads-begun = %s, want true", got)
 	}
 }

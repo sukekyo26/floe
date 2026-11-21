@@ -99,8 +99,7 @@ func (d *Drawer) layout(v any, opts Options) (*layout, error) {
 // example that its schema refuses is floe's failure.
 func (d *Drawer) example(s *spec) (*spec, error) {
 	e, err := ExampleOf(s.Example)
-	var none *usererr.Error
-	if errors.As(err, &none) {
+	if none, ok := errors.AsType[*usererr.Error](err); ok {
 		return nil, none.PlacedIn("#/example")
 	}
 	if err != nil {
@@ -155,8 +154,8 @@ type markerDef struct {
 func (l *layout) draw(lang i18n.Lang) (template.HTML, error) {
 	var elems []elem
 	elems = append(elems, l.areaEls...)
-	for i := len(l.gridEls) - 1; i >= 0; i-- {
-		elems = append(elems, l.gridEls[i])
+	for _, v := range slices.Backward(l.gridEls) {
+		elems = append(elems, v)
 	}
 	elems = append(append(append(elems, l.edgeEls...), l.boxEls...), l.labelEls...)
 	defs := make([]markerDef, 0, len(l.markers))
