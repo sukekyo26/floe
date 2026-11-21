@@ -71,6 +71,10 @@ export function FindDialog({
   const toastBox = useRef<HTMLDivElement>(null);
   const foot = useRef<HTMLSpanElement>(null);
   useMovedOverlay(open, { toasts: toastBox, error: errorBox });
+  // Opened, the field takes the focus (ui.html openFind), whatever had it: a toast moved in with the focus loses it
+  useLayoutEffect(() => {
+    if (open) focusOn(field.current);
+  }, [open]);
 
   const hits = findHits(words, entries);
   const shown = hits.slice(0, FIND_ROWS);

@@ -535,7 +535,9 @@ function Gallery() {
                   focus: true,
                   button: { label: 'Undo', undo: true, holds: false, onPress: () => undefined },
                 });
-                setFinding(true);
+                setTimeout(() => {
+                  setFinding(true);
+                }, 500);
               }}
             >
               A way back with the focus, then the search

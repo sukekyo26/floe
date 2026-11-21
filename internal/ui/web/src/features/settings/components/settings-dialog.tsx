@@ -112,7 +112,7 @@ export function SettingsDialog({
   const view = settingsView(panel, page !== null, read, failed, t('ui_settings_broken'));
   const unset = own ? t('ui_theme_unset_named', own) : t('ui_theme_unset_about');
   const cards = themeCards(read, failed, page ? (page.pickedTheme ?? '') : null, unset);
-  if (choice.of !== cards) setChoice({ of: cards, name: cards.checked });
+  if (choice.of !== read) setChoice({ of: read, name: cards.checked });
   if (modeOn.of !== read) setModeOn({ of: read, on: Boolean(read?.taskMode) });
   useShrink(grid, cards);
 
@@ -265,7 +265,7 @@ export function SettingsDialog({
               card={card}
               checked={choice.name === card.name}
               onPick={() => {
-                setChoice({ of: cards, name: card.name });
+                setChoice({ of: read, name: card.name });
               }}
             />
           ))}
