@@ -117,10 +117,10 @@ func lengthless(value []token) bool {
 
 // around returns the function a token of depth after before is right in, "" for none.
 func around(before []token, depth int) string {
-	for i := len(before) - 1; i >= 0; i-- {
-		if before[i].Depth < depth {
-			if before[i].Type == css.FunctionToken {
-				return string(before[i].Data)
+	for _, b := range slices.Backward(before) {
+		if b.Depth < depth {
+			if b.Type == css.FunctionToken {
+				return string(b.Data)
 			}
 			return ""
 		}

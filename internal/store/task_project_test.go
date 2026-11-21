@@ -25,26 +25,26 @@ func TestTaskRefusalsOfNoProject(t *testing.T) {
 	}{
 		{"a parent of no row, as the CLI names it", func(t *testing.T, s *store.Store, _ string) error {
 			t.Helper()
-			mustEdit(t, s, "#1", store.TaskEdit{Title: ptr("t")})
-			_, err := editTask(s, "/", "#1", store.TaskEdit{Parent: ptr("#42")})
+			mustEdit(t, s, "#1", store.TaskEdit{Title: new("t")})
+			_, err := editTask(s, "/", "#1", store.TaskEdit{Parent: new("#42")})
 			return err
 		}, "no task #42 in no project can be a parent", "プロジェクト未設定に、親にできるタスク #42 がありません"},
 		{"a parent of no row, as the screen read it", func(t *testing.T, s *store.Store, _ string) error {
 			t.Helper()
-			mustEdit(t, s, "#1", store.TaskEdit{Title: ptr("t")})
-			_, err := editTask(s, "/", "#1", store.TaskEdit{New: &no, Rev: ptr(1), Parent: ptr("#42"), ParentNew: &no})
+			mustEdit(t, s, "#1", store.TaskEdit{Title: new("t")})
+			_, err := editTask(s, "/", "#1", store.TaskEdit{New: &no, Rev: new(1), Parent: new("#42"), ParentNew: &no})
 			return err
 		}, "no task #42 in no project can be a parent", "プロジェクト未設定に、親にできるタスク #42 がありません"},
 		{"forgetting a task with a page", func(t *testing.T, s *store.Store, root string) error {
 			t.Helper()
-			mustEdit(t, s, "#1", store.TaskEdit{Title: ptr("t")})
+			mustEdit(t, s, "#1", store.TaskEdit{Title: new("t")})
 			pageOn(t, s, root, "a", "", false)
 			return s.ForgetTask("/", "#1")
 		}, "task #1 of no project still has 1 page(s), such as a", "プロジェクト未設定のタスク #1 には、まだ 1 枚のページがあります"},
 		{"forgetting a task with a child", func(t *testing.T, s *store.Store, _ string) error {
 			t.Helper()
-			mustEdit(t, s, "#1", store.TaskEdit{Title: ptr("t")})
-			mustEdit(t, s, "#2", store.TaskEdit{Parent: ptr("#1")})
+			mustEdit(t, s, "#1", store.TaskEdit{Title: new("t")})
+			mustEdit(t, s, "#2", store.TaskEdit{Parent: new("#1")})
 			return s.ForgetTask("/", "#1")
 		}, "task #1 of no project still has 1 child task(s), such as #2", "プロジェクト未設定のタスク #1 には、まだ 1 個の子のタスクがあります"},
 		{"a category with a page left out of the order", func(t *testing.T, s *store.Store, root string) error {

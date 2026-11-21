@@ -106,7 +106,7 @@ func deref(t *testing.T, def *schemaDef, doc any) *schemaDef {
 			return nil
 		}
 		node := doc
-		for _, seg := range strings.Split(strings.TrimPrefix(def.Ref, "#/"), "/") {
+		for seg := range strings.SplitSeq(strings.TrimPrefix(def.Ref, "#/"), "/") {
 			seg = strings.ReplaceAll(strings.ReplaceAll(seg, "~1", "/"), "~0", "~")
 			m, ok := node.(map[string]any)
 			if !ok || m[seg] == nil {
