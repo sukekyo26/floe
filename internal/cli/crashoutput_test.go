@@ -21,8 +21,14 @@ func TestSetCrashOutputOnlyInServe(t *testing.T) {
 	fset := token.NewFileSet()
 	for _, top := range []string{"..", filepath.Join("..", "..", "cmd")} {
 		err := filepath.WalkDir(top, func(path string, d fs.DirEntry, err error) error {
-			if err != nil || d.IsDir() || !strings.HasSuffix(path, ".go") || strings.HasSuffix(path, "_test.go") {
+			switch {
+			case err != nil:
 				return err
+			// The management page's packages, installed by hand (just web-install), are no code of floe's
+			case d.IsDir() && d.Name() == "node_modules":
+				return fs.SkipDir
+			case d.IsDir() || !strings.HasSuffix(path, ".go") || strings.HasSuffix(path, "_test.go"):
+				return nil
 			}
 			f, err := parser.ParseFile(fset, path, nil, parser.SkipObjectResolution)
 			if err != nil {

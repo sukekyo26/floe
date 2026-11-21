@@ -1,9 +1,11 @@
 package ui
 
 import (
+	"encoding/json"
 	"io/fs"
 	"os"
 	"path"
+	"reflect"
 	"regexp"
 	"slices"
 	"strings"
@@ -22,7 +24,7 @@ func TestPageRendersInTheReadersLanguage(t *testing.T) {
 	t.Parallel()
 
 	for lang, want := range map[i18n.Lang]string{"en": "Back to the page list", "ja": "ページ一覧へ戻る"} {
-		b, err := Page(i18n.New(lang), "", false, "")
+		b, err := Page(i18n.New(lang), List, "", false, "")
 		if err != nil {
 			t.Fatal(err)
 		}
@@ -108,20 +110,26 @@ func TestBuiltinsLoadNothingFromElsewhere(t *testing.T) {
 	}
 }
 
-// notFetched are the URLs the sources name only as identifiers.
+// notFetched are the URLs the sources name only as identifiers: namespaces, and the links React's and Tailwind's
+// builds name in an error and a license comment.
 var notFetched = map[string]bool{
 	"http://www.w3.org/2000/svg":                   true,
 	"https://json-schema.org/draft/2020-12/schema": true,
+	"http://www.w3.org/1998/Math/MathML":           true,
+	"http://www.w3.org/1999/xlink":                 true,
+	"http://www.w3.org/XML/1998/namespace":         true,
+	"https://react.dev/errors/":                    true,
+	"https://tailwindcss.com":                      true,
 }
 
-// builtinSources reads ui.html, floe's own templates, parts and themes (what template authors start from), and
+// builtinSources reads ui.html, the React build web/dist/index.html, floe's own templates, parts and themes (what template authors start from), and
 // the zoom script and the diagram's SVG every page with a diagram or image holds, by their names. They are read from
 // the source tree, not the embedded files: those of kit, zoom and diagram are not exported, and the tree holds all
 // that is embedded.
 func builtinSources(t *testing.T) map[string]string {
 	t.Helper()
 
-	sources := map[string]string{"ui.html": pageSource}
+	sources := map[string]string{"ui.html": pageSource, "web/dist/index.html": reactSource}
 	for _, dir := range []string{"kit/floe", "zoom"} {
 		root := os.DirFS("../" + dir)
 		n := 0
@@ -165,8 +173,8 @@ var (
 	jsVerbsRe  = regexp.MustCompile(`%(?:\[\d+\])?[sd%]`)
 	japaneseRe = regexp.MustCompile(`.{0,20}[\p{Hiragana}\p{Katakana}\p{Han}]+.{0,20}`)
 	// elsewhereRe finds URLs of other hosts, in full or scheme-relative ("//host", '//host', (//host
-	// or =//host), wherever a page might load them from: an attribute, CSS or a script.
-	elsewhereRe = regexp.MustCompile(`(?i)(?:https?:|["'(=])//[^\s"'()<>]+`)
+	// or =//host), wherever a page might load them from: an attribute, CSS or a script, its strings in any quotes.
+	elsewhereRe = regexp.MustCompile("(?i)(?:https?:|[\"'(=`])//[^\\s\"'()<>`]+")
 )
 
 // TestPageMessages keeps ui.html and the ui_ messages in step: every key the page names exists, every
@@ -258,7 +266,7 @@ func TestDialogCloseWords(t *testing.T) {
 	}
 	for _, lang := range i18n.Langs() {
 		c := i18n.New(lang)
-		b, err := Page(c, "", false, "")
+		b, err := Page(c, List, "", false, "")
 		if err != nil {
 			t.Fatal(err)
 		}
@@ -311,7 +319,7 @@ func TestHelpSections(t *testing.T) {
 
 	for _, lang := range i18n.Langs() {
 		c := i18n.New(lang)
-		b, err := Page(c, "", false, "")
+		b, err := Page(c, List, "", false, "")
 		if err != nil {
 			t.Fatal(err)
 		}
@@ -373,7 +381,7 @@ func TestPageFormats(t *testing.T) {
 	t.Parallel()
 
 	for _, lang := range i18n.Langs() {
-		b, err := Page(i18n.New(lang), "", false, "")
+		b, err := Page(i18n.New(lang), List, "", false, "")
 		if err != nil {
 			t.Fatal(err)
 		}
@@ -438,6 +446,100 @@ func TestTaskRequests(t *testing.T) {
 	for _, id := range []string{`id="set-parent"`, `id="set-url"`} {
 		if strings.Contains(pageSource, id) {
 			t.Errorf("the set dialog has %s, a task's own field, which its page writes", id)
+		}
+	}
+}
+
+// TestPageScreens keeps the choice of each screen's HTML to reactScreens: the React build for a screen in it,
+// ui.html for the others.
+func TestPageScreens(t *testing.T) {
+	t.Parallel()
+
+	for _, screen := range []Screen{List, Tasks, Frame} {
+		b, err := Page(i18n.New("en"), screen, "", false, "")
+		if err != nil {
+			t.Fatal(err)
+		}
+		react := strings.Contains(string(b), `id="boot">`)
+		old := strings.Contains(string(b), `id="screens"`)
+		if react != reactScreens[screen] || old == reactScreens[screen] {
+			t.Errorf("%s: served the React build %t and ui.html %t; reactScreens says %t", screen, react, old,
+				reactScreens[screen])
+		}
+	}
+}
+
+func TestNewBoot(t *testing.T) {
+	t.Parallel()
+
+	for _, lang := range []i18n.Lang{"en", "ja"} {
+		c := i18n.New(lang)
+		got := newBoot(c, Frame, "a", true, "3")
+		want := boot{
+			Screen: Frame, Lang: lang, Messages: c.Formats("ui_"), Framed: "a", Served: true, Version: "3",
+			States: store.States, MaxURLs: store.MaxURLs,
+		}
+		if !reflect.DeepEqual(got, want) {
+			t.Errorf("%s: newBoot gave %+v, want %+v", lang, got, want)
+		}
+	}
+}
+
+// TestReactPage fills the marks of the React build: the reader's language, and the boot values as JSON that no
+// text of theirs closes or breaks.
+func TestReactPage(t *testing.T) {
+	t.Parallel()
+
+	b := boot{
+		Screen: Tasks, Lang: "ja", Messages: map[string]string{"x": "</script><b>", "y": "a b"}, Framed: "f",
+		Served: true, Version: "2", States: store.States, MaxURLs: 7,
+	}
+	out, err := reactPage(b)
+	if err != nil {
+		t.Fatal(err)
+	}
+	page := string(out)
+	if !strings.Contains(page, `<html lang="ja">`) || strings.Contains(page, langMark) {
+		t.Error("the page's lang is not the reader's")
+	}
+	if got, want := strings.Count(page, "</script>"), strings.Count(reactSource, "</script>"); got != want {
+		t.Errorf("the page has %d </script>, the build %d: a value closed the script", got, want)
+	}
+	if strings.ContainsRune(page, ' ') {
+		t.Error("the page holds a raw U+2028")
+	}
+	_, rest, _ := strings.Cut(page, `<script type="application/json" id="boot">`)
+	j, _, _ := strings.Cut(rest, "</script>")
+	var read boot
+	if err := json.Unmarshal([]byte(j), &read); err != nil {
+		t.Fatalf("the boot values are not JSON: %v", err)
+	}
+	// Open is the server's own (json:"-"), which the page is not told
+	want := b
+	want.States = slices.Clone(b.States)
+	for i := range want.States {
+		want.States[i].Open = false
+	}
+	if !reflect.DeepEqual(read, want) {
+		t.Errorf("the boot values read %+v, want %+v", read, want)
+	}
+}
+
+func TestCutPage(t *testing.T) {
+	t.Parallel()
+
+	if _, err := cutPage("a" + langMark + "b" + bootMark + "c"); err != nil {
+		t.Errorf("a page with each mark once: %v", err)
+	}
+	for name, src := range map[string]string{
+		"no lang":    "a" + bootMark,
+		"no boot":    langMark + "a",
+		"two langs":  langMark + langMark + bootMark,
+		"two boots":  langMark + bootMark + bootMark,
+		"boot first": bootMark + langMark,
+	} {
+		if _, err := cutPage(src); err == nil {
+			t.Errorf("%s: cut with no error", name)
 		}
 	}
 }
