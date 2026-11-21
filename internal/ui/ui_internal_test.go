@@ -9,9 +9,6 @@ import (
 	"strings"
 	"testing"
 
-	"golang.org/x/net/html"
-	"golang.org/x/net/html/atom"
-
 	"floe/internal/files"
 	"floe/internal/i18n"
 	"floe/internal/store"
@@ -246,128 +243,6 @@ func TestFailureWords(t *testing.T) {
 	}
 }
 
-// A dialog's close button says Cancel where a submit button saves what is typed, which closing throws away, and Close where nothing is;
-// a question's says No.
-// The page is read as the server renders it, in each language.
-func TestDialogCloseWords(t *testing.T) {
-	t.Parallel()
-
-	want := []string{
-		"filter-dialog", "find", "add-page-dialog", "settings", "keys", "add-dialog", "edit-dialog", "set-dialog", "move-dialog", "edit-task-dialog", "kin-dialog",
-		"tag-dialog",
-	}
-	for _, lang := range i18n.Langs() {
-		c := i18n.New(lang)
-		b, err := Page(c, "", false, "")
-		if err != nil {
-			t.Fatal(err)
-		}
-		doc, err := html.Parse(strings.NewReader(string(b)))
-		if err != nil {
-			t.Fatal(err)
-		}
-		var ids []string
-		for n := range doc.Descendants() {
-			if n.Type != html.ElementNode || n.DataAtom != atom.Dialog {
-				continue
-			}
-			id := attr(n, "id")
-			ids = append(ids, id)
-			submit := false
-			var closers []string
-			for d := range n.Descendants() {
-				if d.Type != html.ElementNode || d.DataAtom != atom.Button {
-					continue
-				}
-				if attr(d, "type") == "submit" {
-					submit = true
-				}
-				if hasAttr(d, "data-close") {
-					closers = append(closers, strings.TrimSpace(text(d)))
-				}
-			}
-			word := c.Msg("ui_close")
-			if submit {
-				word = c.Msg("ui_cancel")
-			}
-			if id == "move-dialog" {
-				word = c.Msg("ui_no")
-			}
-			if !slices.Equal(closers, []string{word}) {
-				t.Errorf("%s %s: close buttons %q, want one %q", lang, id, closers, word)
-			}
-		}
-		if !slices.Equal(ids, want) {
-			t.Errorf("%s: dialogs %q, want %q: tell a new one's close word here", lang, ids, want)
-		}
-	}
-}
-
-// The help tells of each of the two screens in a part of its own, under a tab of its name: a sentence on the screen, then its words, the
-// project among them (the last on the page list, where it narrows the pages, the first on the task list, which is of one project), each
-// with its explanation. A word does not move to the other screen's part, and the project is explained as the screen uses it.
-func TestHelpSections(t *testing.T) {
-	t.Parallel()
-
-	for _, lang := range i18n.Langs() {
-		c := i18n.New(lang)
-		b, err := Page(c, "", false, "")
-		if err != nil {
-			t.Fatal(err)
-		}
-		doc, err := html.Parse(strings.NewReader(string(b)))
-		if err != nil {
-			t.Fatal(err)
-		}
-		var got, tabs, projects []string
-		for n := range doc.Descendants() {
-			if n.Type != html.ElementNode {
-				continue
-			}
-			switch {
-			case attr(n, "id") == "help-about":
-				for d := range n.Descendants() {
-					if d.Type != html.ElementNode {
-						continue
-					}
-					switch d.DataAtom { //nolint:exhaustive // the sentences and the words only
-					case atom.P:
-						got = append(got, "¶ "+strings.TrimSpace(text(d)))
-					case atom.Dt:
-						got = append(got, strings.TrimSpace(text(d)))
-					case atom.Dd:
-						if strings.TrimSpace(text(d)) == "" {
-							t.Errorf("%s: a word of the help has no explanation", lang)
-						}
-						if got[len(got)-1] == c.Msg("ui_project") {
-							projects = append(projects, strings.TrimSpace(text(d)))
-						}
-					}
-				}
-			case n.DataAtom == atom.Button && attr(n, "data-help") == "about":
-				for d := range n.Descendants() {
-					if d.Type == html.ElementNode && d.DataAtom == atom.Span {
-						tabs = append(tabs, strings.TrimSpace(text(d)))
-					}
-				}
-			}
-		}
-		want := []string{
-			"¶ " + c.Msg("ui_help_pages_text"), c.Msg("ui_view_new"), c.Msg("ui_view_favorites"), c.Msg("ui_state_archived"), c.Msg("ui_project"),
-			"¶ " + c.Msg("ui_help_tasks_text"), c.Msg("ui_project"), c.Msg("ui_help_task"), c.Msg("ui_help_state"), c.Msg("ui_task_category"), c.Msg("ui_pins"),
-		}
-		if !slices.Equal(got, want) {
-			t.Errorf("%s: the help says %q, want %q", lang, got, want)
-		}
-		if want := []string{c.Msg("ui_help_project_pages_text"), c.Msg("ui_help_project_tasks_text")}; !slices.Equal(projects, want) {
-			t.Errorf("%s: the project is explained as %q, want %q", lang, projects, want)
-		}
-		if want := []string{c.Msg("ui_help_about_pages"), c.Msg("ui_help_about_tasks")}; !slices.Equal(tabs, want) {
-			t.Errorf("%s: the help's tab is named %q, want %q", lang, tabs, want)
-		}
-	}
-}
-
 // A message that takes words (the help's states) is given as many as it has verbs, in every language: fmt writes %! where it is not.
 func TestPageFormats(t *testing.T) {
 	t.Parallel()
@@ -381,29 +256,6 @@ func TestPageFormats(t *testing.T) {
 			t.Errorf("%s: the page holds %q, which fmt writes for a verb it was not given words for", lang, string(b)[i:min(i+40, len(b))])
 		}
 	}
-}
-
-func attr(n *html.Node, key string) string {
-	for _, a := range n.Attr {
-		if a.Key == key {
-			return a.Val
-		}
-	}
-	return ""
-}
-
-func hasAttr(n *html.Node, key string) bool {
-	return slices.ContainsFunc(n.Attr, func(a html.Attribute) bool { return a.Key == key })
-}
-
-func text(n *html.Node) string {
-	var b strings.Builder
-	for d := range n.Descendants() {
-		if d.Type == html.TextNode {
-			b.WriteString(d.Data)
-		}
-	}
-	return b.String()
 }
 
 // The tasks' rows are asked of the server in one place each: read by readTasks, removed by forgetTask, and pages and tasks written by

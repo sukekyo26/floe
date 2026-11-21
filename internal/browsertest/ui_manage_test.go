@@ -1,6 +1,7 @@
 package browsertest_test
 
 import (
+	"encoding/json"
 	"fmt"
 	"runtime"
 	"strconv"
@@ -214,6 +215,167 @@ func (b *browser) drag(sel string, x float64) {
 			b.t.Fatal(err)
 		}
 	}
+}
+
+// holdReads holds the page's reads (GET) of the paths (as /api/pages) until the function it returns lets them go, when they are
+// sent. The answers are the server's, only later: no answer is made (.claude/rules/browsertest.md). It wraps the page's fetch of
+// now, the stub's too.
+// LIMIT: a read held keeps the page's time limit (READ_MS, 10 s): let it go before, or the page says the read was slow. While a
+// read of the list is held no read mark goes either (they wait for it): wait for marks after letting go.
+func (b *browser) holdReads(paths ...string) func() {
+	b.t.Helper()
+
+	quoted := make([]string, len(paths))
+	for i, p := range paths {
+		quoted[i] = js(p)
+	}
+	b.eval(`(() => {
+		const f = window.fetch, paths = [` + strings.Join(quoted, ", ") + `], held = [];
+		let on = true;
+		window.fetch = (url, init) => {
+			if (on && !init?.method && paths.includes(new URL(String(url), location.href).pathname)) {
+				return new Promise((go) => { held.push(() => go(f(url, init))); });
+			}
+			return f(url, init);
+		};
+		window.letReadsGo = () => { on = false; held.splice(0).forEach((go) => go()); };
+	})()`)
+	return func() {
+		b.t.Helper()
+		b.eval("window.letReadsGo()")
+	}
+}
+
+// staleReads answers the page's reads (GET) of path with the server's answer of now, changed by edit (a JS function of its
+// text, or "" for none), until the function it returns lets go: a poll draws nothing new. The first read begun after a write's
+// answer (PATCH) is sent, so that what a press draws comes of its own read; staleOwn checks that it was the press's. Install it
+// after any other wrapper of the test's that answers a write, so that it sees the write's answer.
+func (b *browser) staleReads(path, edit string) func() {
+	b.t.Helper()
+
+	if edit == "" {
+		edit = "(text) => text"
+	}
+	b.eval(`(async () => {
+		const f = window.fetch, path = ` + js(path) + `, html = document.documentElement;
+		const answer = (` + edit + `)(await (await f(path)).text());
+		const s = window.stale = { on: true, written: false, own: null, lastEnd: performance.now() };
+		new MutationObserver(() => { s.lastEnd = performance.now(); }).observe(html, { attributes: true, attributeFilter: ['data-loads'] });
+		window.fetch = (url, init) => {
+			if (init?.method === 'PATCH') return f(url, init).then((r) => { s.written = s.on; return r; });
+			if (s.on && !init?.method && new URL(String(url), location.href).pathname === path) {
+				if (!s.written) return Promise.resolve(new Response(answer));
+				s.written = false;
+				s.own = { begun: Number(html.dataset.loadsBegun ?? 0), since: performance.now() - s.lastEnd };
+			}
+			return f(url, init);
+		};
+	})()`)
+	return func() {
+		b.t.Helper()
+		b.eval("window.stale.on = false")
+	}
+}
+
+// pollEnded waits for the page's next read to end (a poll's, every 3 s) and returns the reads begun then: press at once after it,
+// and staleOwn tells the press's own read from the next poll.
+func (b *browser) pollEnded() int {
+	b.t.Helper()
+
+	ended := b.eval("document.documentElement.dataset.loads ?? 0")
+	b.until("a read to end", "Number(document.documentElement.dataset.loads ?? 0) > "+ended)
+	return b.loadsBegun()
+}
+
+// staleOwn waits for the read staleReads let through after a write, and checks that it was the press's own: the first begun after
+// begun (pollEnded's), and begun sooner after the read before than the next poll comes (POLL_MS, 3 s).
+func (b *browser) staleOwn(begun int) {
+	b.t.Helper()
+
+	b.until("the read after the write", "window.stale.own")
+	got := b.eval("JSON.stringify(window.stale.own)")
+	var own struct {
+		Begun int
+		Since float64
+	}
+	if err := json.Unmarshal([]byte(got), &own); err != nil {
+		b.t.Fatal(err)
+	}
+	if own.Begun != begun+1 {
+		b.t.Fatalf("the read after the write was not the first begun after the press (%d reads begun before it, %d before the press)", own.Begun, begun)
+	}
+	if own.Since >= 1500 {
+		b.t.Fatalf("the read after the write began %.0f ms after the read before: no telling it from a poll (every 3 s; a slow machine: run again)", own.Since)
+	}
+}
+
+// loadsBegun is how many reads of the list the page has begun.
+func (b *browser) loadsBegun() int {
+	b.t.Helper()
+
+	n, err := strconv.Atoi(b.eval("Number(document.documentElement.dataset.loadsBegun ?? 0)"))
+	if err != nil {
+		b.t.Fatal(err)
+	}
+	return n
+}
+
+// pressList presses the list (a pointerdown on it, as a person's press), runs then (JS: what lets a read go) in the same
+// evaluation, and waits there until a read ends: a press holds the list's polls for 2 s only (PRESS_MS), which round trips to the
+// browser could use up. It fails when the read ended later than that, having held nothing. letGoList lets go off the list.
+func (b *browser) pressList(then string) {
+	b.t.Helper()
+
+	took := b.eval(`(async () => {
+		const html = document.documentElement, ended = Number(html.dataset.loads ?? 0), from = performance.now();
+		document.getElementById('list').dispatchEvent(new PointerEvent('pointerdown', { bubbles: true }));
+		(() => { ` + then + "\n" + `})();
+		await new Promise((go) => { const look = () => (Number(html.dataset.loads ?? 0) > ended ? go() : setTimeout(look, 5)); look(); });
+		return performance.now() - from;
+	})()`)
+	ms, err := strconv.ParseFloat(took, 64)
+	if err != nil {
+		b.t.Fatal(err)
+	}
+	if ms >= 2000 {
+		b.t.Fatalf("the read ended %.0f ms after the press, which holds the polls for 2 s only: the press held nothing (a slow machine: run again)", ms)
+	}
+}
+
+// letGoList ends the press of pressList, off the list.
+func (b *browser) letGoList() {
+	b.t.Helper()
+
+	b.eval("document.dispatchEvent(new PointerEvent('pointerup', { bubbles: true }))")
+}
+
+// readMarks records in window.marks each read mark the page sends (POST or DELETE of /api/pages/<slug>/read) as { said: 'POST
+// slug', done, begun }, done once answered or failed, begun the reads begun then. Run it in the page, after it opened.
+const readMarks = `(() => {
+	const f = window.fetch, html = document.documentElement;
+	window.marks = [];
+	window.fetch = (url, init) => {
+		const m = /^\/api\/pages\/([^/]+)\/read$/.exec(new URL(String(url), location.href).pathname);
+		if (!m || !init?.method) return f(url, init);
+		const mark = { said: init.method + ' ' + decodeURIComponent(m[1]), done: false, begun: 0 };
+		window.marks.push(mark);
+		const done = () => { mark.done = true; mark.begun = Number(html.dataset.loadsBegun ?? 0); };
+		const p = f(url, init);
+		p.then(done, done);
+		return p;
+	};
+})()`
+
+// marksDone waits until n read marks are answered and the read of the list the page makes after them has ended.
+func (b *browser) marksDone(n int) {
+	b.t.Helper()
+
+	b.until(strconv.Itoa(n)+" read marks answered", "window.marks.length >= "+strconv.Itoa(n)+" && window.marks.every((m) => m.done)")
+	begun, err := strconv.Atoi(b.eval("Math.max(...window.marks.map((m) => m.begun))"))
+	if err != nil {
+		b.t.Fatal(err)
+	}
+	b.untilRead(begun, "the read after the marks", "true")
 }
 
 func (b *browser) addScript(script string) page.ScriptIdentifier {

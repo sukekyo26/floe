@@ -25,7 +25,7 @@ func TestUITaskArchivedInCategory(t *testing.T) { //nolint:paralleltest // the b
 	readWhole := func(slug string) {
 		t.Helper()
 		b.navigate("/a/" + slug + "/")
-		b.until(slug+" read", "document.querySelector('.toast.page')")
+		b.until(slug+" read", "document.querySelector('[data-testid=toast][data-page]')")
 	}
 	// In the order made, which orders the pages of a category: a0 is made after a1 and before a2, o1 before n1
 	for _, p := range [][2]string{{"a1", "案"}, {"a0", "案"}, {"a2", "案"}, {"o1", "旧"}, {"n1", "新"}, {"v1", "設計"}, {"v0", "設計"}} {
@@ -64,10 +64,10 @@ func TestUITaskArchivedInCategory(t *testing.T) { //nolint:paralleltest // the b
 		t.Helper()
 		out = append(out, what+": "+b.eval(expr))
 	}
-	const groups = "[...document.querySelectorAll('#list > li:not(.tree)')].map((li) => li.classList.contains('group') ? '[' + li.querySelector('[role=heading]').textContent + ']' : li.dataset.slug + (li.classList.contains('archived') ? '*' : '')).join(' ')"
+	const groups = "[...document.querySelectorAll('#list > li:not([data-testid=tree])')].map((li) => li.dataset.testid === 'group' ? '[' + li.querySelector('[role=heading]').textContent + ']' : li.dataset.slug + (li.dataset.archived === 'true' ? '*' : '')).join(' ')"
 	// A row's marks of what is unseen: its lead, the class, the title's weight, a new version's mark
 	marks := func(sel string) string {
-		return "(() => { const li = document.querySelector(" + js(sel) + "); return [li.querySelector('.lead span')?.className, li.classList.contains('unseen'), getComputedStyle(li.querySelector('.title')).fontWeight, Boolean(li.querySelector('.ver'))].join(' '); })()"
+		return "(() => { const li = document.querySelector(" + js(sel) + "); return [li.querySelector('[data-testid=lead] span')?.dataset.testid, li.dataset.unread === 'true', getComputedStyle(li.querySelector('[data-testid=title]')).fontWeight, Boolean(li.querySelector('[data-testid=ver]'))].join(' '); })()"
 	}
 	// Whether an element's colour is the palette's muted
 	const muted = "((e) => { const m = document.createElement('span'); m.style.color = 'var(--muted)'; document.body.append(m); const c = getComputedStyle(m).color; m.remove(); return getComputedStyle(e).color === c; })"
@@ -75,7 +75,7 @@ func TestUITaskArchivedInCategory(t *testing.T) { //nolint:paralleltest // the b
 	open := func() {
 		t.Helper()
 		b.navigate("/tasks?project=proj&task=T1")
-		b.until("the task's rows", "document.querySelector('#list li[data-slug=a1]') && document.querySelector('#list li.tree')")
+		b.until("the task's rows", "document.querySelector('#list li[data-slug=a1]') && document.querySelector('#list li[data-testid=tree]')")
 	}
 
 	// Under their categories, after the rest; a category of archived pages alone headed; dimmed, marked, never unseen; the folder's rows too.
@@ -86,56 +86,57 @@ func TestUITaskArchivedInCategory(t *testing.T) { //nolint:paralleltest // the b
 	say("a1", marks("#list li[data-slug=a1]"))
 	say("v0", marks("#list li[data-slug=v0]"))
 	say("v1", marks("#list li[data-slug=v1]"))
-	say("dimmed", "["+muted+"(document.querySelector('#list li[data-slug=a0] .title')), "+muted+"(document.querySelector('#list li[data-slug=a1] .title')), "+
-		"...[...document.querySelectorAll('#list li.tree .title')].map((e) => e.tagName + ' ' + "+muted+"(e))].join(', ')")
-	say("badge", badge+"(document.querySelector('#list li[data-slug=a0] .badge'))")
+	say("dimmed", "["+muted+"(document.querySelector('#list li[data-slug=a0] [data-testid=title]')), "+muted+"(document.querySelector('#list li[data-slug=a1] [data-testid=title]')), "+
+		"...[...document.querySelectorAll('#list li[data-testid=tree] [data-testid=title]')].map((e) => e.tagName + ' ' + "+muted+"(e))].join(', ')")
+	say("badge", badge+"(document.querySelector('#list li[data-slug=a0] [data-testid=badge]'))")
 	say("count", "document.getElementById('news-n').textContent")
 	// Unread is offered of a page read, not archived
-	say("mark unread", "['o1', 'n1'].map((slug) => document.querySelector('#list li[data-slug=' + slug + '] .mark-unread').hidden).join(' ')")
+	say("mark unread", "['o1', 'n1'].map((slug) => document.querySelector('#list li[data-slug=' + slug + '] [data-testid=mark-unread]').hidden).join(' ')")
 
 	// The search: the same marks, the badge of the same size.
-	b.eval("openFind()")
+	pressFindOpen(b)
 	b.until("the search", "document.getElementById('find').open")
-	b.eval("const q = document.getElementById('find-q'); q.value = 'T a0'; q.dispatchEvent(new Event('input', { bubbles: true }))")
+	b.fill("#find-q", "T a0")
 	b.until("the hit", "document.querySelector('#find-list li')")
-	say("find", "(() => { const li = document.querySelector('#find-list li'); return [li.querySelector('.lead span')?.className, li.classList.contains('unseen'), "+muted+"(li.querySelector('.title')), "+badge+"(li.querySelector('.badge'))].join(' '); })()")
+	say("find", "(() => { const li = document.querySelector('#find-list li'); return [li.querySelector('[data-testid=lead] span')?.dataset.testid, li.dataset.unread === 'true', "+muted+"(li.querySelector('[data-testid=title]')), "+badge+"(li.querySelector('[data-testid=badge]'))].join(' '); })()")
 	b.pressKey(kb.Escape)
 	b.until("the search closed", "!document.getElementById('find').open")
 
 	// The categories Set task offers are the page's: archived pages count, in the order they were made.
-	b.eval("const m = document.querySelector('#list li[data-slug=n1] .more'); m.open = true; m.querySelector('.task-set').click()")
+	pressMenuItem(b, "#list li[data-slug=n1]", "task-set")
 	b.until("the dialog", "document.getElementById('set-dialog').open")
-	b.eval("document.getElementById('set-category').value = ''")
+	b.fill("#set-category", "")
 	b.until("the categories", "document.getElementById('set-category-names').matches(':popover-open') || (document.getElementById('set-category').blur(), document.getElementById('set-category').focus(), false)")
-	say("set categories", "[...document.getElementById('set-category-names').children].map((e) => e.querySelector('.names-word')?.textContent ?? e.textContent).join(', ')")
+	say("set categories", "[...document.getElementById('set-category-names').children].map((e) => e.querySelector('[data-testid=names-word]')?.textContent ?? e.textContent).join(', ')")
 	// Closed, the focus goes back to the menu it came from
-	b.eval("closeDialog(document.getElementById('set-dialog'))")
+	b.eval("document.querySelector('#set-dialog [data-close]').click()")
 	b.until("closed", "!document.getElementById('set-dialog').open && document.activeElement.tagName === 'SUMMARY'")
-	b.eval("document.querySelector('#list li[data-slug=n1] .more').open = false")
+	b.eval("(() => { const m = document.querySelector('#list li[data-slug=n1] [data-testid=more]'); if (m.open) m.querySelector('summary').click(); })()")
 
 	// Archived from the keys and left dimmed: Escape on the way back goes back to its row, before the list is read again too.
-	b.eval("window.realLoad = load; load = async () => {}")
-	b.eval("const a = document.querySelector('#list li[data-slug=a1] .actions > .archive'); a.focus(); a.dispatchEvent(new MouseEvent('click', { bubbles: true, detail: 0 }))")
-	b.until("the way back", "document.activeElement.classList.contains('undo')")
+	release := b.holdReads("/api/pages", "/api/tasks")
+	b.eval("document.querySelector('#list li[data-slug=a1] [data-testid=actions] > [data-testid=archive]').focus()")
+	b.pressKey(kb.Enter)
+	b.until("the way back", "document.activeElement.dataset.testid === 'undo'")
 	b.pressKey(kb.Escape)
-	say("escape", "document.activeElement.closest('li')?.dataset.slug + ' ' + document.activeElement.className")
-	b.eval("load = window.realLoad; load()")
-	b.until("archived", "document.querySelector('#list li[data-slug=a1]')?.classList.contains('archived') && document.activeElement.closest('li')?.dataset.slug === 'a1'")
+	say("escape", "document.activeElement.closest('li')?.dataset.slug + ' ' + document.activeElement.dataset.testid")
+	release()
+	b.until("archived", "document.querySelector('#list li[data-slug=a1]')?.dataset.archived === 'true' && document.activeElement.closest('li')?.dataset.slug === 'a1'")
 	say("archived a1", groups)
 	// Archived by a pointer and staying where it was, v1 keeps the focus on its button.
-	b.eval("const a = document.querySelector('#list li[data-slug=v1] .actions > .archive'); a.focus(); a.dispatchEvent(new MouseEvent('click', { bubbles: true, detail: 1 }))")
-	b.until("v1 archived", "document.querySelector('#list li[data-slug=v1]').classList.contains('archived')")
-	say("stayed", groups+" + ' / ' + document.activeElement.closest('li')?.dataset.slug + ' ' + document.activeElement.matches('.actions > .archive')")
+	b.eval("const a = document.querySelector('#list li[data-slug=v1] [data-testid=actions] > [data-testid=archive]'); a.focus(); a.dispatchEvent(new MouseEvent('click', { bubbles: true, detail: 1 }))")
+	b.until("v1 archived", "document.querySelector('#list li[data-slug=v1]').dataset.archived === 'true'")
+	say("stayed", groups+" + ' / ' + document.activeElement.closest('li')?.dataset.slug + ' ' + document.activeElement.matches('[data-testid=actions] > [data-testid=archive]')")
 	// Given back by a pointer, a0 moves to the top of its category: the focus goes to the row that was after it.
-	b.eval("const a = document.querySelector('#list li[data-slug=a0] .actions > .archive'); a.focus(); a.dispatchEvent(new MouseEvent('click', { bubbles: true, detail: 1 }))")
-	b.until("given back", "!document.querySelector('#list li[data-slug=a0]').classList.contains('archived')")
+	b.eval("const a = document.querySelector('#list li[data-slug=a0] [data-testid=actions] > [data-testid=archive]'); a.focus(); a.dispatchEvent(new MouseEvent('click', { bubbles: true, detail: 1 }))")
+	b.until("given back", "document.querySelector('#list li[data-slug=a0]').dataset.archived !== 'true'")
 	say("given back", groups)
-	say("given back, focus", "document.activeElement.closest('li')?.dataset.slug + ' ' + document.activeElement.className")
+	say("given back, focus", "document.activeElement.closest('li')?.dataset.slug + ' ' + document.activeElement.dataset.testid")
 
 	// The archive's shelf: never unseen there either.
 	b.navigate("/?view=archived")
 	b.until("the archive", "document.querySelector('#list li[data-slug=v0]')")
-	say("shelf", marks("#list li[data-slug=v0]")+" + ' ' + document.querySelector('#list li[data-slug=v0]').classList.contains('archived')")
+	say("shelf", marks("#list li[data-slug=v0]")+" + ' ' + (document.querySelector('#list li[data-slug=v0]').dataset.archived === 'true')")
 
 	// Opened whole, an archived page is read with no way back to unread; its changes are told all the same. One not archived has both.
 	if _, err := st.Edit("v1", store.Edit{Archived: new(bool)}); err != nil {
@@ -143,17 +144,17 @@ func TestUITaskArchivedInCategory(t *testing.T) { //nolint:paralleltest // the b
 	}
 	for _, slug := range []string{"v1", "v0"} {
 		b.navigate("/a/" + slug + "/")
-		b.until(slug+" told", "document.querySelector('.dnote.page-note')")
-		say("opened "+slug, "Boolean(document.querySelector('.toast.page'))")
+		b.until(slug+" told", "document.querySelector('[data-testid=page-note]')")
+		say("opened "+slug, "Boolean(document.querySelector('[data-testid=toast][data-page]'))")
 	}
 	// The toast's way back to unread, pressed once the page is archived, does nothing.
 	b.navigate("/a/a2/")
-	b.until("the toast", "document.querySelector('.toast.page .btn')")
+	b.until("the toast", pageToastButton)
 	b.eval("window.deleted = 0; const was = window.fetch; window.fetch = (url, init) => { if (init?.method === 'DELETE') deleted += 1; return was(url, init); }")
-	b.eval("document.querySelector('#frame-actions > .archive').click()")
-	b.until("archived whole", "items.find((a) => a.slug === 'a2')?.archived")
-	b.eval("document.querySelector('.toast.page .btn').click()")
-	say("unread after archived", "deleted + ' ' + Boolean(items.find((a) => a.slug === 'a2').news)")
+	b.eval("document.querySelector('#frame-actions > [data-testid=archive]').click()")
+	b.until("archived whole", "document.querySelector('#frame-actions > [data-testid=archive]').dataset.on === 'true'")
+	b.eval(pageToastButton + ".click()")
+	say("unread after archived", "(async () => deleted + ' ' + Boolean(await "+pageNews("a2")+"))()")
 
 	check(t, "task archived in category", out, strings.Join([]string{
 		"groups: fold* [案] a1 a2 a0* [設計] v1 v0* [旧] o1* [新] n1",
