@@ -109,7 +109,7 @@ func TestUIHelpSections(t *testing.T) { //nolint:paralleltest // the browser tes
 					else if (!words) empty++;
 					else if (said.at(-1) === `+js(msg("ui_project"))+`) projects.push(words);
 				}
-				const tabs = [...document.querySelectorAll('#keys button[data-help=about] span')].map((s) => s.textContent.trim());
+				const tabs = [...document.querySelectorAll('#keys [data-help=about] span')].map((s) => s.textContent.trim());
 				return JSON.stringify({ said, projects, tabs, empty });
 			})()`)), &got); err != nil {
 				t.Fatal(err)

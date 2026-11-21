@@ -266,7 +266,7 @@ func TestUITaskCategories(t *testing.T) { //nolint:paralleltest // the browser t
 	b.navigate("/?project=proj")
 	b.until("the rows", "document.querySelector('#list li[data-slug=g-a]')")
 	record()
-	release = b.holdReads("/api/pages", "/api/tasks")
+	release = b.holdReads(unsent, "/api/pages", "/api/tasks")
 	menu("g-a", "task-out", false)
 	b.until("the way back", "document.querySelector('#toasts [data-testid=undo]')")
 	b.eval("document.querySelector('#toasts [data-testid=undo]').click()")

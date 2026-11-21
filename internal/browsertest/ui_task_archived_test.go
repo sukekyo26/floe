@@ -114,7 +114,7 @@ func TestUITaskArchivedInCategory(t *testing.T) { //nolint:paralleltest // the b
 	b.eval("(() => { const m = document.querySelector('#list li[data-slug=n1] [data-testid=more]'); if (m.open) m.querySelector('summary').click(); })()")
 
 	// Archived from the keys and left dimmed: Escape on the way back goes back to its row, before the list is read again too.
-	release := b.holdReads("/api/pages", "/api/tasks")
+	release := b.holdReads(unsent, "/api/pages", "/api/tasks")
 	b.eval("document.querySelector('#list li[data-slug=a1] [data-testid=actions] > [data-testid=archive]').focus()")
 	b.pressKey(kb.Enter)
 	b.until("the way back", "document.activeElement.dataset.testid === 'undo'")

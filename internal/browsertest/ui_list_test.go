@@ -628,10 +628,10 @@ func TestUIColumns(t *testing.T) { //nolint:paralleltest // the browser tests sh
 	b.until("the rows and the window", "document.querySelector('#list li[data-slug=long]') && getComputedStyle(document.documentElement).getPropertyValue('--list-width') === '408px'")
 	// Defaults and bounds go with the browser's text.
 	out := make([]string, 0, 24)
-	b.eval("document.documentElement.style.fontSize = '20px'; layoutColumns()")
+	b.eval("document.documentElement.style.fontSize = '20px'; dispatchEvent(new Event('resize'))")
 	out = append(out, b.eval("getComputedStyle(document.documentElement).getPropertyValue('--shelf-width') + ' ' + getComputedStyle(document.documentElement).getPropertyValue('--list-width') + ' ' + document.getElementById('list-grip').getAttribute('aria-valuemin')"))
-	b.eval("document.documentElement.style.fontSize = ''; layoutColumns()")
-	const widths = "[getComputedStyle(document.documentElement).getPropertyValue('--shelf-width'), getComputedStyle(document.documentElement).getPropertyValue('--list-width'), Math.round(document.querySelector('.shelf').getBoundingClientRect().width), Math.round(document.getElementById('listcol').getBoundingClientRect().width)].join(' ')"
+	b.eval("document.documentElement.style.fontSize = ''; dispatchEvent(new Event('resize'))")
+	const widths = "[getComputedStyle(document.documentElement).getPropertyValue('--shelf-width'), getComputedStyle(document.documentElement).getPropertyValue('--list-width'), Math.round(document.getElementById('shelf').getBoundingClientRect().width), Math.round(document.getElementById('listcol').getBoundingClientRect().width)].join(' ')"
 	mouse := func(grip string, to float64, release bool) {
 		t.Helper()
 
@@ -653,7 +653,7 @@ func TestUIColumns(t *testing.T) { //nolint:paralleltest // the browser tests sh
 		}
 	}
 	// How much of the path is cut, its box's whole width else.
-	const cut = "(() => { const p = document.querySelector('#list li[data-slug=long] .path'); return p.scrollWidth - p.clientWidth; })()"
+	const cut = "(() => { const p = document.querySelector('#list li[data-slug=long] [data-testid=path]'); return p.scrollWidth - p.clientWidth; })()"
 	out = append(out, b.eval(widths))
 	before, err := strconv.Atoi(b.eval(cut))
 	if err != nil || before <= 0 {
@@ -690,9 +690,9 @@ func TestUIColumns(t *testing.T) { //nolint:paralleltest // the browser tests sh
 	const whole = `(() => { const box = document.getElementById('listcol').getBoundingClientRect();
 		const within = (e) => { const r = e.getBoundingClientRect(); return r.left >= box.left - 0.5 && r.right <= box.right + 0.5; };
 		document.querySelector('#list li[data-slug=long] summary').click();
-		const menu = within(document.querySelector('#list li[data-slug=long] .menu'));
+		const menu = within(document.querySelector('#list li[data-slug=long] [data-testid=menu]'));
 		document.querySelector('#list li[data-slug=long] summary').click();
-		document.querySelector('#list li[data-slug=long] .sel').click();
+		document.querySelector('#list li[data-slug=long] [data-testid=sel]').click();
 		const bar = within(document.getElementById('bulk-clear'));
 		document.getElementById('bulk-clear').click();
 		return [menu, bar].join(' '); })()`
@@ -706,38 +706,41 @@ func TestUIColumns(t *testing.T) { //nolint:paralleltest // the browser tests sh
 	mouse("shelf-grip", 10, true)
 	out = append(out, b.eval(widths))
 	// Dragged, the page beside the list takes no pointer; let go, it does.
-	b.eval("document.querySelector('#list li[data-slug=a1] .title').click()")
+	b.eval("document.querySelector('#list li[data-slug=a1] [data-testid=title]').click()")
 	mouse("list-grip", 900, false)
-	out = append(out, b.eval("getComputedStyle(document.getElementById('read-frame')).pointerEvents + ' ' + document.getElementById('list-grip').classList.contains('dragging')"))
+	out = append(out, b.eval("getComputedStyle(document.getElementById('read-frame')).pointerEvents + ' ' + (document.getElementById('list-grip').dataset.dragging === 'true')"))
 	if err := chromedp.Do(b.ctx, chromedp.MouseEvent(chromedp.MouseReleased, 900, 300, chromedp.ButtonLeft, chromedp.ClickCount(1))); err != nil {
 		t.Fatal(err)
 	}
-	out = append(out, b.until("the edge let go", "!document.getElementById('list-grip').classList.contains('dragging') && getComputedStyle(document.getElementById('read-frame')).pointerEvents"))
+	out = append(out, b.until("the edge let go", "!document.getElementById('list-grip').dataset.dragging && getComputedStyle(document.getElementById('read-frame')).pointerEvents"))
 	// Folded and shown again, the focus on the other button, the two in one foot.
-	const shelf = "[getComputedStyle(document.querySelector('.shelf')).display, document.getElementById('shelf-show').hidden, document.getElementById('shelf-grip').hidden, document.activeElement.id, document.getElementById('shelf-show').getBoundingClientRect().right <= document.getElementById('list-hide').getBoundingClientRect().left].join(' ')"
+	const shelf = "[getComputedStyle(document.getElementById('shelf')).display, document.getElementById('shelf-show').hidden, document.getElementById('shelf-grip').hidden, document.activeElement.id, document.getElementById('shelf-show').getBoundingClientRect().right <= document.getElementById('list-hide').getBoundingClientRect().left].join(' ')"
 	b.eval("document.getElementById('shelf-hide').click()")
 	out = append(out, b.eval(shelf), b.eval("Math.round(document.getElementById('listcol').getBoundingClientRect().left)"))
 	// Folded, the head says what the filters narrow the list to, in its line beside the rest; pressed, they show.
-	const what = "[document.getElementById('shelf-what').hidden, document.getElementById('shelf-what').textContent, document.querySelector('.lhead').scrollWidth <= document.querySelector('.lhead').clientWidth].join(' ')"
+	const what = "[document.getElementById('shelf-what').hidden, document.getElementById('shelf-what').textContent, document.querySelector('[data-testid=lhead]').scrollWidth <= document.querySelector('[data-testid=lhead]').clientWidth].join(' ')"
 	out = append(out, b.eval(what))
-	b.eval("setColumn('list', 500); setView('archived'); refilter({ kind: 'link', tag: 'x' })")
+	// The list's width from where the list starts; a tag no page has, so no chip to press, from the URL (what is folded is kept).
+	listAt := func(w float64) float64 { return b.rect("document.getElementById('listcol')").X + w }
+	b.drag("#list-grip", listAt(500))
+	b.navigate("/?view=archived&kind=link&tag=x")
 	out = append(out, b.eval(what), b.eval("(() => { const e = document.getElementById('shelf-what'), r = document.createRange(); r.selectNodeContents(e); return r.getBoundingClientRect().width <= e.getBoundingClientRect().width + 0.5; })()"))
-	b.eval("setColumn('list', 740)")
+	b.drag("#list-grip", listAt(740))
 	b.eval("document.getElementById('shelf-what').click()")
-	out = append(out, b.eval("getComputedStyle(document.querySelector('.shelf')).display"))
-	b.eval("setView('all'); refilter({ kind: '', tag: '' }); document.getElementById('shelf-hide').click()")
+	out = append(out, b.eval("getComputedStyle(document.getElementById('shelf')).display"))
+	b.eval("document.querySelector('#shelf [data-view=all]').click(); document.getElementById('shelf-hide').click()")
 	// Folded across the widths: the row of the views and no button under 70rem, as a line of a list; folded still above it.
 	b.size(1000, 700, false)
-	const folded = "[getComputedStyle(document.querySelector('.shelf')).display, document.querySelector('.views').getClientRects().length, document.getElementById('shelf-show').getClientRects().length, document.getElementById('shelf-what').getClientRects().length, parseFloat(getComputedStyle(document.querySelector('.lhead')).paddingLeft), getComputedStyle(document.getElementById('manage')).gridTemplateColumns.split(' ').length].join(' ')"
+	const folded = "[getComputedStyle(document.getElementById('shelf')).display, document.querySelector('[data-testid=views]').getClientRects().length, document.getElementById('shelf-show').getClientRects().length, document.getElementById('shelf-what').getClientRects().length, parseFloat(getComputedStyle(document.querySelector('[data-testid=lhead]')).paddingLeft), getComputedStyle(document.getElementById('manage')).gridTemplateColumns.split(' ').length].join(' ')"
 	out = append(out, b.until("the row of the filters", "matchMedia('(max-width: 70rem)').matches && "+folded))
 	b.size(1600, 900, false)
 	out = append(out, b.until("the filters folded", "!matchMedia('(max-width: 70rem)').matches && "+folded))
 	// Kept across a reload, folded too.
 	kept := b.eval("localStorage.getItem('list.columns')")
 	b.navigate("/")
-	out = append(out, b.eval("localStorage.getItem('list.columns') === "+js(kept)), b.eval("getComputedStyle(document.querySelector('.shelf')).display"))
+	out = append(out, b.eval("localStorage.getItem('list.columns') === "+js(kept)), b.eval("getComputedStyle(document.getElementById('shelf')).display"))
 	b.eval("document.getElementById('shelf-show').click()")
-	out = append(out, b.eval("[getComputedStyle(document.querySelector('.shelf')).display, document.activeElement.id].join(' ')"), b.eval(widths))
+	out = append(out, b.eval("[getComputedStyle(document.getElementById('shelf')).display, document.activeElement.id].join(' ')"), b.eval(widths))
 	// A window narrower holds the list under what is kept, which stays.
 	b.size(1200, 800, false)
 	out = append(out, b.until("the list held", "getComputedStyle(document.documentElement).getPropertyValue('--list-width') === '520px' && '520px ' + JSON.parse(localStorage.getItem('list.columns')).list"))
@@ -752,12 +755,13 @@ func TestUIColumns(t *testing.T) { //nolint:paralleltest // the browser tests sh
 	b.until("the rows", "document.querySelector('#list li[data-slug=a1]')")
 	const list = "[getComputedStyle(document.getElementById('listcol')).display, document.getElementById('list-grip').hidden, document.getElementById('list-show').getClientRects().length, document.getElementById('read-head').hidden, document.activeElement.id, Math.round(document.getElementById('reader').getBoundingClientRect().left)].join(' ')"
 	out = append(out, b.eval(list))
-	b.eval("document.querySelector('#list li[data-slug=a1] .title').focus(); document.getElementById('list-hide').click()")
+	b.eval("document.querySelector('#list li[data-slug=a1] [data-testid=title]').focus(); document.getElementById('list-hide').click()")
 	out = append(out, b.eval(list), b.eval("document.getElementById('read-blank').hidden + ' ' + document.getElementById('read-actions').hidden + ' ' + document.getElementById('read-title').hidden"))
 	// A page chosen and gone leaves no link to it in the head.
-	b.eval("document.querySelector('#list li[data-slug=a2] .title').click()")
-	b.eval("window.fetch = ((f) => async (u, i) => { const r = await f(u, i); if (i?.method || String(u) !== '/api/pages') return r; return new Response(JSON.stringify((await r.json()).filter((a) => a.slug !== 'a2'))); })(window.fetch); load()")
-	out = append(out, b.until("the page gone", "!document.querySelector('#list li[data-slug=a2]') && [document.getElementById('read-title').getClientRects().length, picked].join(' ')"))
+	b.eval("document.querySelector('#list li[data-slug=a2] [data-testid=title]').click()")
+	b.eval("window.fetch = ((f) => async (u, i) => { const r = await f(u, i); if (i?.method || String(u) !== '/api/pages') return r; return new Response(JSON.stringify((await r.json()).filter((a) => a.slug !== 'a2'))); })(window.fetch)")
+	b.reread()
+	out = append(out, b.until("the page gone", "!document.querySelector('#list li[data-slug=a2]') && [document.getElementById('read-title').getClientRects().length, document.getElementById('read-frame').dataset.slug ?? ''].join(' ')"))
 	b.navigate("/")
 	b.until("the rows", "document.querySelector('#list li[data-slug=a2]')")
 	// Folded, j and k go on through the list, the page changing beside the place it was.
@@ -765,41 +769,47 @@ func TestUIColumns(t *testing.T) { //nolint:paralleltest // the browser tests sh
 		b.eval("document.body.dispatchEvent(new KeyboardEvent('keydown', { key: '" + k + "', bubbles: true }))")
 	}
 	key("j")
-	out = append(out, b.eval("picked.slug"))
+	out = append(out, b.eval("document.getElementById('read-frame').dataset.slug"))
 	key("j")
-	out = append(out, b.eval("picked.slug + ' ' + document.getElementById('read-actions').hidden"))
+	out = append(out, b.eval("document.getElementById('read-frame').dataset.slug + ' ' + document.getElementById('read-actions').hidden"))
 	// Both folded, both buttons over the page, told apart by their words; the page whole.
 	b.eval("document.getElementById('shelf-hide').click()")
-	out = append(out, b.eval("[...document.querySelectorAll('#manage > .side-show')].filter((e) => e.getClientRects().length).map((e) => e.id + ':' + (e.title === e.getAttribute('aria-label'))).join(' ') + ' ' + document.activeElement.id + ' ' + Math.round(document.getElementById('reader').getBoundingClientRect().left)"))
+	out = append(out, b.eval("[...document.querySelectorAll('#shelf-show, #list-show')].filter((e) => e.getClientRects().length).map((e) => e.id + ':' + (e.title === e.getAttribute('aria-label'))).join(' ') + ' ' + document.activeElement.id + ' ' + Math.round(document.getElementById('reader').getBoundingClientRect().left)"))
 	// Words of the filters in the page's head, however long, leave its buttons in it. The page list's words are a view and a
-	// count of picks, short: long ones are set here, in the same task as the measure (a render puts them back).
-	b.eval("filter({ tag: 'x' }); render()")
-	b.until("the words in the page's head", "document.getElementById('shelf-what').parentElement.id === 'read-head' && document.getElementById('shelf-what').getClientRects().length")
+	// count of picks, short: long ones are set here, in the same task as the measure (a render puts them back). A pick from the URL
+	// leaves the list folded; j opens its first row beside it, so the head has its buttons.
+	b.navigate("/?kind=page")
+	b.until("the rows", "document.querySelector('#list li[data-slug=a1]')")
+	key("j")
+	b.until("the words and the buttons in the page's head", "document.getElementById('shelf-what').parentElement.id === 'read-head' && document.getElementById('shelf-what').getClientRects().length && document.getElementById('read-frame').dataset.slug && !document.getElementById('read-actions').hidden")
 	check(t, "the page's head", []string{b.eval(`(() => {
 		document.getElementById('shelf-what').textContent = 'x'.repeat(300);
 		const head = document.getElementById('read-head').getBoundingClientRect();
 		const within = (e) => { const r = e.getBoundingClientRect(); return r.width > 0 && r.left >= head.left && r.right <= head.right + 0.5; };
-		return [...document.querySelectorAll('#read-actions > *')].filter((e) => e.getClientRects().length).every(within) + '';
-	})()`)}, "true")
-	b.eval("filter({ tag: '' }); render()")
+		const shown = [...document.querySelectorAll('#read-actions > *')].filter((e) => e.getClientRects().length);
+		return (shown.length > 0) + ' ' + shown.every(within);
+	})()`)}, "true true")
 	// Kept across a reload.
 	b.navigate("/")
 	b.until("the rows", "document.querySelector('#list li[data-slug=a1]')")
-	out = append(out, b.eval("document.getElementById('manage').className"))
+	const shows = "document.getElementById('shelf-show').hidden + ' ' + document.getElementById('list-show').hidden"
+	out = append(out, b.eval(shows))
 	b.eval("document.getElementById('list-show').click()")
-	out = append(out, b.eval("document.activeElement.id + ' ' + document.getElementById('manage').className + ' ' + document.getElementById('shelf-what').parentElement.className"))
+	out = append(out, b.eval("document.activeElement.id + ' ' + "+shows+" + ' ' + document.getElementById('shelf-what').parentElement.dataset.testid"))
 	b.eval("document.getElementById('shelf-show').click(); document.getElementById('list-hide').click()")
 	// What the filters pick shows: folded, the list opens; the search too.
-	b.eval("document.querySelector('.views [data-view=fav]').click()")
+	b.eval("document.querySelector('#shelf [data-view=fav]').click()")
 	out = append(out, b.eval("getComputedStyle(document.getElementById('listcol')).display"))
-	b.eval("setView('all'); document.getElementById('list-hide').click(); const q = document.getElementById('q'); q.value = 'a'; q.dispatchEvent(new Event('input'))")
+	b.eval("document.querySelector('#shelf [data-view=all]').click(); document.getElementById('list-hide').click()")
+	b.fill("#q", "a")
 	out = append(out, b.eval("getComputedStyle(document.getElementById('listcol')).display"))
-	b.eval("q.value = ''; q.dispatchEvent(new Event('input')); document.getElementById('list-hide').click()")
+	b.fill("#q", "")
+	b.eval("document.getElementById('list-hide').click()")
 	// Folded across the widths: the list as ever, no buttons, under 70rem; folded still above it.
 	// With a page chosen, its head shows.
 	b.size(1000, 700, false)
 	b.until("the list under 70rem", "matchMedia('(max-width: 70rem)').matches && getComputedStyle(document.getElementById('listcol')).display === 'flex'")
-	b.eval("document.querySelector('#list li[data-slug=a1] .title').click()")
+	b.eval("document.querySelector('#list li[data-slug=a1] [data-testid=title]').click()")
 	out = append(out, b.until("the head of the page", "document.getElementById('read-title').textContent && [getComputedStyle(document.getElementById('listcol')).display, ...['list-show', 'list-hide', 'list-grip'].map((id) => document.getElementById(id).getClientRects().length), document.getElementById('read-head').getClientRects().length].join(' ')"))
 	b.size(1600, 900, false)
 	out = append(out, b.until("the list folded", "!matchMedia('(max-width: 70rem)').matches && getComputedStyle(document.getElementById('listcol')).display"))
@@ -810,7 +820,7 @@ func TestUIColumns(t *testing.T) { //nolint:paralleltest // the browser tests sh
 	b.eval("localStorage.removeItem('list.columns')")
 	b.navigate("/")
 	b.until("the rows", "document.querySelector('#list li[data-slug=a1]')")
-	b.eval("document.querySelector('#list li[data-slug=a1] .title').click()")
+	b.eval("document.querySelector('#list li[data-slug=a1] [data-testid=title]').click()")
 	const lines = `((ids) => ids.map((s) => { const r = document.querySelector(s).getBoundingClientRect(); return r.top + r.height / 2; }).join(' '))`
 	open := b.eval(lines + "(['#shelf-hide', '#list-hide'])")
 	b.eval("document.getElementById('list-hide').click(); document.getElementById('shelf-hide').click()")
@@ -822,7 +832,7 @@ func TestUIColumns(t *testing.T) { //nolint:paralleltest // the browser tests sh
 	out = append(out, b.eval("[...document.styleSheets[0].cssRules].some((r) => r.media?.mediaText === 'not (max-width: 70rem)')"))
 
 	// Between the widths a zoomed window can fall, one set of rules or the other holds: not only "under 70rem", and not both.
-	out = append(out, b.eval("[matchMedia('(max-width: 70rem)').matches, WIDE.matches, WIDE.media].join(' ')"))
+	out = append(out, b.eval("[matchMedia('(max-width: 70rem)').matches, matchMedia('not (max-width: 70rem)').matches, matchMedia('not (max-width: 70rem)').media].join(' ')"))
 
 	// What is kept that cannot be a width is the default's, or within the bounds.
 	for _, kept := range []string{"not json", `{"shelf":"x","listOpen":0}`, "null"} {
@@ -847,7 +857,7 @@ func TestUIColumns(t *testing.T) { //nolint:paralleltest // the browser tests sh
 		"true", "none", "flex shelf-hide", "160px 740px 160 740",
 		"520px 740", "0 0 0 0", "flex false 0 true  608", "none true 1 true list-show 200", "false true true", "0 ",
 		"long", "a3 false", "shelf-show:true list-show:true shelf-show 0",
-		"shell shelf-closed list-closed", "list-hide shell shelf-closed lhead", "flex", "flex",
+		"false false", "list-hide false true lhead", "flex", "flex",
 		"flex 0 0 0 1", "none", "true", "true", "true", "false true not (max-width: 70rem)",
 		"200px true true", "200px true true", "200px true true", "320px 320px",
 	}, "|"))
@@ -905,7 +915,7 @@ func TestUIColumnFoot(t *testing.T) { //nolint:paralleltest // the browser tests
 	columns := func() string {
 		t.Helper()
 
-		return seams(".shelf", ".listcol", ".reader")
+		return seams("#shelf", "#listcol", "#reader")
 	}
 	out := make([]string, 0, 40)
 
@@ -920,14 +930,14 @@ func TestUIColumnFoot(t *testing.T) { //nolint:paralleltest // the browser tests
 
 	// A diff: the words take all the width, with room under their last line for what opens the contents.
 	openDiff(b, "/a/d/?diff")
-	out = append(out, at("diff-toc-hide"), seams(".dtoc", ".dbody"))
+	out = append(out, at("diff-toc-hide"), seams("#diff-toc-nav", "#diff-body"))
 	press("diff-toc-hide")
-	out = append(out, seams(".dtoc", ".dbody"), at("diff-toc-show"), face("diff-toc-show"), b.eval("(() => { const r = document.getElementById('diff-body'); return [r.getBoundingClientRect().left, r.getBoundingClientRect().width, getComputedStyle(r).paddingBottom, getComputedStyle(r).borderLeftWidth].join(' '); })()"))
+	out = append(out, seams("#diff-toc-nav", "#diff-body"), at("diff-toc-show"), face("diff-toc-show"), b.eval("(() => { const r = document.getElementById('diff-body'); return [r.getBoundingClientRect().left, r.getBoundingClientRect().width, getComputedStyle(r).paddingBottom, getComputedStyle(r).borderLeftWidth].join(' '); })()"))
 	press("diff-toc-show")
 	out = append(out, b.eval("document.getElementById('diff-toc-nav').hidden + ' ' + document.activeElement.id"))
 	// In a window too low for the contents and the words under them, the foot stays, and the page does not scroll.
 	b.size(1440, 260, false)
-	out = append(out, b.until("the low window", "innerHeight === 260 && (() => { const f = document.querySelector('.dtoc .col-foot').getBoundingClientRect(); return [f.bottom, document.scrollingElement.scrollHeight - innerHeight].join(' '); })()"))
+	out = append(out, b.until("the low window", "innerHeight === 260 && (() => { const f = document.querySelector('#diff-toc-nav [data-testid=col-foot]').getBoundingClientRect(); return [f.bottom, document.scrollingElement.scrollHeight - innerHeight].join(' '); })()"))
 	b.size(1440, 900, false)
 	// Narrower, the tree's button and what opens it stay in one place; under 40rem the tree goes over the page.
 	for _, width := range []int64{800, 400} {
@@ -951,7 +961,7 @@ func TestUIColumnFoot(t *testing.T) { //nolint:paralleltest // the browser tests
 	b.stub(manyPages(60))
 	defer b.unstub()
 	b.navigate("/")
-	b.until("the rows", "document.querySelector('#list li:not(.group)')")
+	b.until("the rows", "document.querySelector('#list li:not([data-testid=group])')")
 	// With no page chosen, folding the list leaves no head, but for the words of the filters to hold.
 	const head = "document.getElementById('read-head').getClientRects().length"
 	press("list-hide")
@@ -963,13 +973,13 @@ func TestUIColumnFoot(t *testing.T) { //nolint:paralleltest // the browser tests
 	press("shelf-show")
 	out = append(out, b.eval(head))
 	b.navigate("/")
-	b.until("the rows", "document.querySelector('#list li:not(.group)')")
+	b.until("the rows", "document.querySelector('#list li:not([data-testid=group])')")
 	press("list-show")
-	b.eval("document.querySelector('#list li:not(.group) .title').click()")
+	b.eval("document.querySelector('#list li:not([data-testid=group]) [data-testid=title]').click()")
 	b.until("the page", "!document.getElementById('read-frame').hidden")
 	out = append(out, at("shelf-hide"), at("list-hide"), columns())
 	out = append(out, b.eval(`(() => {
-		const body = document.getElementById('list-body'), col = document.getElementById('listcol'), foot = document.querySelector('.listcol > .col-foot').getBoundingClientRect();
+		const body = document.getElementById('list-body'), col = document.getElementById('listcol'), foot = document.querySelector('#listcol > [data-testid=col-foot]').getBoundingClientRect();
 		return [body.scrollHeight > body.clientHeight, foot.height, foot.bottom === innerHeight, body.getBoundingClientRect().bottom === foot.top, foot.right === col.getBoundingClientRect().left + col.clientLeft + col.clientWidth].join(' ');
 	})()`))
 	press("shelf-hide")
@@ -988,10 +998,10 @@ func TestUIColumnFoot(t *testing.T) { //nolint:paralleltest // the browser tests
 	b.media("")
 	// Nowhere to fold to, under 70rem: neither foot nor what opens, folded as they are kept.
 	b.size(1100, 800, false)
-	out = append(out, b.until("the one row of filters", "matchMedia('(max-width: 70rem)').matches && ['#shelf-show', '#list-show', '.shelf > .col-foot', '.listcol > .col-foot'].map((q) => document.querySelector(q).getClientRects().length).join(' ')"))
+	out = append(out, b.until("the one row of filters", "matchMedia('(max-width: 70rem)').matches && ['#shelf-show', '#list-show', '#shelf > [data-testid=col-foot]', '#listcol > [data-testid=col-foot]'].map((q) => document.querySelector(q).getClientRects().length).join(' ')"))
 	b.size(1440, 900, false)
 	press("list-show")
-	out = append(out, b.until("the list again", "!document.querySelector('.list-closed') && document.activeElement.id"))
+	out = append(out, b.until("the list again", "document.getElementById('list-show').hidden && document.activeElement.id"))
 
 	check(t, "feet", out, strings.Join([]string{
 		"6 863.5", "0 1 0", "0 0", "6 863.5", "panel shadow", "side-show 1440", "false side-hide",
@@ -1276,36 +1286,40 @@ func TestUIRowAgain(t *testing.T) { //nolint:paralleltest // the browser tests s
 	s := asideSite(t)
 	b := s.b
 	asideList(b)
+	b.eval(readMarks)
 	const a2 = "#list li[data-slug=a2]"
 	x, y := rowPoint(t, b, a2, false)
 	b.click(x, y)
-	b.until("picked", "picked?.slug === 'a2'")
+	b.until("picked", besideSlug+" === 'a2'")
 	out := make([]string, 0, 7)
 	out = append(out, b.eval(rowAgainPath))
 	// Read and drawn so, as a redraw closes a menu open.
-	b.until("read", "!document.querySelector("+js(a2)+").classList.contains('unseen') && !readsGoing")
-	b.eval("load().then(() => true)")
+	b.until("read", "document.querySelector("+js(a2)+").dataset.unread !== 'true'")
+	b.marksDone(1)
+	b.untilRead(b.reread(), "drawn", "true")
 
 	// A menu open, the press closes it.
-	b.eval("document.querySelector(" + js(a2+" .more") + ").open = true")
+	const menuOpen = "document.querySelector('#list [data-testid=more][open]')"
+	b.eval("document.querySelector(" + js(a2+" [data-testid=more] > summary") + ").click()")
+	b.until("the menu open", "document.querySelector("+js(a2+" [data-testid=delete]")+").checkVisibility()")
 	b.click(x, y)
-	b.until("the menu closed", "!document.querySelector('.more[open]')")
+	b.until("the menu closed", "!"+menuOpen)
 	out = append(out, b.eval(rowAgainPath))
 	// A delete waiting in it, the same.
-	b.eval("document.querySelector(" + js(a2+" .more") + ").open = true; document.querySelector(" + js(a2+" .delete") + ").click()")
-	b.until("armed", "document.querySelector("+js(a2+" .delete.armed")+")")
+	pressMenuItem(b, a2, "delete")
+	b.until("armed", menuOpen+" && document.querySelector("+js(a2+" [data-testid=delete][data-armed=true]")+")")
 	b.click(x, y)
-	b.until("the menu closed again", "!document.querySelector('.more[open]')")
+	b.until("the menu closed again", "!"+menuOpen)
 	out = append(out, b.eval(rowAgainPath))
 	// A row selected, the press leaves it selected.
-	b.eval("document.querySelector('#list li[data-slug=a1] .sel').click()")
+	b.eval("document.querySelector('#list li[data-slug=a1] [data-testid=sel]').click()")
 	x, y = rowPoint(t, b, a2, false)
 	b.click(x, y)
-	out = append(out, b.eval("[selected.size, picked.slug, "+rowAgainPath+"].join(' ')"))
-	b.eval("document.querySelector('#list li[data-slug=a1] .sel').click()")
+	out = append(out, b.eval("[document.querySelectorAll('#list [data-testid=sel]:checked').length, "+besideSlug+", "+rowAgainPath+"].join(' ')"))
+	b.eval("document.querySelector('#list li[data-slug=a1] [data-testid=sel]').click()")
 	// Modified, it is left to the link.
 	out = append(out, b.eval(`(() => {
-		const link = document.querySelector('#list li[data-slug=a2] .title');
+		const link = document.querySelector('#list li[data-slug=a2] [data-testid=title]');
 		let kept;
 		const note = (e) => { kept = !e.defaultPrevented; e.preventDefault(); };
 		document.addEventListener('click', note, { once: true });
@@ -1313,23 +1327,23 @@ func TestUIRowAgain(t *testing.T) { //nolint:paralleltest // the browser tests s
 		return kept;
 	})()`))
 	// No row past the one picked: k stays, and does not go whole.
-	b.eval("document.querySelector('#list li[data-slug=a3] .title').focus()")
+	b.eval("document.querySelector('#list li[data-slug=a3] [data-testid=title]').focus()")
 	b.pressKey("j")
-	b.until("back beside", "picked?.slug === 'a2'")
+	b.until("back beside", besideSlug+" === 'a2'")
 	b.pressKey("k")
-	b.until("the first", "picked?.slug === 'a3'")
+	b.until("the first", besideSlug+" === 'a3'")
 	b.pressKey("k")
-	out = append(out, b.eval("picked.slug + ' ' + "+rowAgainPath))
+	out = append(out, b.eval(besideSlug+" + ' ' + "+rowAgainPath))
 
 	// Pressed again, whole, the list's order kept for j.
 	x, y = rowPoint(t, b, a2, false)
 	b.click(x, y)
-	b.until("a2 again", "picked?.slug === 'a2'")
+	b.until("a2 again", besideSlug+" === 'a2'")
 	b.click(x, y)
 	b.until("whole", "location.pathname === '/a/a2/'")
 	// The URL is the new page's before its script has kept where it is; the frame's src comes after that
 	b.until("its bar", "document.getElementById('frame').hasAttribute('src')")
-	out = append(out, b.eval("sessionStorage.getItem(ORDER_KEY)"))
+	out = append(out, b.eval("sessionStorage.getItem('pages.order')"))
 	b.pressKey("j")
 	b.until("on through the list", "location.pathname === '/a/a1/'")
 
@@ -1337,7 +1351,7 @@ func TestUIRowAgain(t *testing.T) { //nolint:paralleltest // the browser tests s
 	asideList(b)
 	x, y = rowPoint(t, b, a2, true)
 	b.click(x, y)
-	b.until("picked by the margin", "picked?.slug === 'a2'")
+	b.until("picked by the margin", besideSlug+" === 'a2'")
 	b.click(x, y)
 	b.until("whole by the margin", "location.pathname === '/a/a2/'")
 
@@ -1410,36 +1424,90 @@ func TestUIRowAgainPressed(t *testing.T) { //nolint:paralleltest // the browser 
 	s := asideSite(t)
 	b := s.b
 	asideList(b)
+	b.eval(readMarks)
 	// Every page read and drawn so, so that nothing else is left to change the answer.
-	for _, slug := range []string{"a1", "a3", "a2"} {
+	for i, slug := range []string{"a1", "a3", "a2"} {
 		x, y := rowPoint(t, b, "#list li[data-slug="+slug+"]", false)
 		b.click(x, y)
-		b.until(slug+" read", "picked?.slug === "+js(slug)+" && !document.querySelector('#list li[data-slug="+slug+"]').classList.contains('unseen') && !readsGoing")
+		b.until(slug+" read", besideSlug+" === "+js(slug)+" && document.querySelector('#list li[data-slug="+slug+"]').dataset.unread !== 'true'")
+		b.marksDone(i + 1)
 	}
-	b.eval("load().then(() => true)")
-	// A load whose answer differs from what is drawn: true if it left items and the rows as they are.
-	loaded := func(call string) string {
+	b.untilRead(b.reread(), "drawn", "true")
+	// a1's title changes on the server (anew, which returns the JS that keeps the row of a2) before each read checked, so that its
+	// answer differs from what is drawn. window.served is the title the last answer gave, read from a copy of it.
+	b.eval(`(() => { const f = window.fetch; window.a1Title = null; window.served = null;
+		window.fetch = async (url, init) => {
+			const r = await f(url, init);
+			if (init?.method || new URL(String(url), location.href).pathname !== '/api/pages') return r;
+			window.served = (await r.clone().json()).find((a) => a.slug === 'a1').title;
+			return r;
+		}; })()`)
+	st := store.New(s.Env["FLOE_DIR"])
+	retitle := func(title string) {
 		t.Helper()
-		return b.eval("(async () => { const row = document.querySelector('#list li[data-slug=a2]'), had = items; drawn = ''; await " + call + "; return row.isConnected && items === had; })()")
+
+		if _, err := st.Edit("a1", store.Edit{Title: &title}); err != nil {
+			t.Fatal(err)
+		}
+	}
+	turn := 0
+	nextTitle := func() string {
+		t.Helper()
+
+		turn++
+		title := "a1 #" + strconv.Itoa(turn)
+		retitle(title)
+		return title
+	}
+	anew := func() string {
+		t.Helper()
+
+		return "window.rowBefore = document.querySelector('#list li[data-slug=a2]'); window.a1Title = " + js(nextTitle()) + "; "
+	}
+	const (
+		poll    = "document.dispatchEvent(new Event('visibilitychange'))"
+		a1Drawn = "document.querySelector('#list li[data-slug=a1] [data-testid=title]').textContent"
+	)
+	// After a read of an answer anew: true if it left the rows as they are, the answer not drawn.
+	held := func() string {
+		t.Helper()
+		got := b.eval("window.served !== window.a1Title ? 'no answer anew was read' : !document.getElementById('error').hidden ? document.getElementById('error').textContent : String(window.rowBefore.isConnected && " + a1Drawn + " !== window.a1Title)")
+		if got != "true" && got != "false" {
+			t.Fatal(got)
+		}
+		return got
+	}
+	polled := func() string {
+		t.Helper()
+		b.untilRead(b.acted(anew()+poll), "the poll read", "true")
+		return held()
 	}
 	const a3 = "#list li[data-slug=a3]"
-	out := make([]string, 0, 7)
+	out := make([]string, 0, 8)
 
 	// Released, nothing is held.
 	x, y := rowPoint(t, b, "#list li[data-slug=a1]", false)
 	b.click(x, y)
-	b.until("a1 picked", "picked?.slug === 'a1'")
-	out = append(out, loaded("load(true)"))
+	b.until("a1 picked", besideSlug+" === 'a1'")
+	out = append(out, polled())
 
 	x, y = rowPoint(t, b, a3, false)
 	// A press on the row of another, the focus elsewhere: the poll's answer held back; released, the press counts and the next poll draws.
-	b.eval("document.querySelector('#list li[data-slug=a1] .title').focus()")
+	b.eval("document.querySelector('#list li[data-slug=a1] [data-testid=title]').focus()")
+	b.pollEnded()
 	b.mouse(chromedp.MousePressed, x, y, 1)
-	out = append(out, loaded("load(true)"))
-	b.eval("window.heldRow = document.querySelector('#list li[data-slug=a2]')")
+	b.pressList(anew() + poll)
+	out = append(out, held())
+	// What is held does not reach what the page holds of the list either: the answers go back to what is drawn, and the search,
+	// drawn from what the page holds, lists the title drawn, not the one held.
+	retitle(b.eval(a1Drawn))
 	b.mouse(chromedp.MouseReleased, x, y, 1)
-	b.until("picked", "picked?.slug === 'a3'")
-	b.until("drawn by the next poll", "!window.heldRow.isConnected")
+	b.until("picked", besideSlug+" === 'a3'")
+	pressFindOpen(b)
+	out = append(out, b.eval("[...document.querySelectorAll('#find-list li [data-testid=title]')].map((e) => e.textContent).filter((t) => t.startsWith('a1')).join()"))
+	escapeDialog(b, "find")
+	b.eval("window.heldRow = document.querySelector('#list li[data-slug=a2]'); window.a1Title = " + js(nextTitle()))
+	b.until("drawn by the next poll", "!window.heldRow.isConnected && "+a1Drawn+" === window.a1Title")
 
 	// Outside the list, in the top document: an iframe's press does not reach it.
 	r := b.eval(`(() => {
@@ -1452,26 +1520,33 @@ func TestUIRowAgainPressed(t *testing.T) { //nolint:paralleltest // the browser 
 		t.Fatal(r)
 	}
 	b.mouse(chromedp.MousePressed, at.X, at.Y, 1)
-	out = append(out, loaded("load(true)"))
+	out = append(out, polled())
 	b.mouse(chromedp.MouseReleased, at.X, at.Y, 1)
 
-	// The second press, whose release may never come: an action's load goes on, and the poll's only until the time is up.
-	x, y = rowPoint(t, b, a3, false)
-	b.mouse(chromedp.MousePressed, x, y, 2)
-	out = append(out, loaded("load()"))
-	out = append(out, loaded("load(true)"))
-	b.until("the time up", "performance.now() - pressedAt > PRESS_MS")
-	out = append(out, loaded("load(true)"))
-	b.eval("drawn = ''; load().then(() => true)")
-	x, y = rowPoint(t, b, a3, false)
-	b.mouse(chromedp.MouseReleased, x, y, 2)
+	// A press whose release may never come: an action's load goes on (the star's, pressed again after to put it back), and the
+	// poll's only until the time is up, 2 s from the press (taken right after it).
+	const star = "document.querySelector('#list li[data-slug=a2] [data-testid=star]')"
+	starred := b.eval(star + ".getAttribute('aria-pressed')")
+	b.pollEnded()
+	b.pressList(anew() + "window.pressAt = performance.now(); " + star + ".click()")
+	out = append(out, held())
+	b.pollEnded()
+	b.pressList(anew() + "window.pressAt = performance.now(); " + poll)
+	out = append(out, held())
+	b.until("the time up", "performance.now() - window.pressAt > 2000")
+	out = append(out, polled())
+	b.eval(star + ".click()")
+	b.until("the star put back", star+".getAttribute('aria-pressed') === "+js(starred))
+	b.letGoList()
 
 	// Pressed again with the poll in the middle of it, the page opens whole.
 	x, y = rowPoint(t, b, a3, false)
+	b.pollEnded()
 	b.mouse(chromedp.MousePressed, x, y, 1)
-	out = append(out, loaded("load(true)"))
+	b.pressList(anew() + poll)
+	out = append(out, held())
 	b.mouse(chromedp.MouseReleased, x, y, 1)
 	b.until("whole", "location.pathname === '/a/a3/'")
 
-	check(t, "row again, pressed", out, "false|true|false|false|true|false|true")
+	check(t, "row again, pressed", out, "false|true|a1 #1|false|false|true|false|true")
 }

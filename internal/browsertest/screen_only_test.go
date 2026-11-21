@@ -13,46 +13,10 @@ import (
 	"testing"
 )
 
-// screenOnlyNotYet holds what each management page test not yet rewritten to the screen alone still uses (rewritten in S422-P0b):
-// "name:" a variable or function of the page, "class:" a class it selects by, "classState" a class it reads a state from, "value"
-// a value set or an input event made. A use not listed fails, and so does one listed but no longer used.
-var screenOnlyNotYet = map[string][]string{
-	"TestUIBarEnd":          {"class:bar-end", "class:bar-inner", "class:brand", "class:screens", "name:setServer"},
-	"TestUIColors":          {"class:edit", "class:group", "class:n", "class:page", "class:sel", "class:tag-box", "class:title", "class:toast", "class:tree", "name:closeMenus", "name:openFind", "name:openKeys", "name:readDone", "name:showError", "value"},
-	"TestUIColumnFoot":      {"class:col-foot", "class:dtoc", "class:group", "class:list-closed", "class:listcol", "class:title", "name:diffAnswer"},
-	"TestUIColumns":         {"class:lhead", "class:menu", "class:path", "class:sel", "class:shelf", "class:side-show", "class:title", "class:views", "classState", "name:WIDE", "name:filter", "name:layoutColumns", "name:load", "name:picked", "name:refilter", "name:render", "name:setColumn", "name:setView", "value"},
-	"TestUIDiff":            {"class:on", "name:diffAnswer", "name:diffPair", "name:drawn", "name:load"},
-	"TestUIDiffClose":       {"classState", "name:diffAnswer"},
-	"TestUIDiffContents":    {"class:dtoc-item", "class:on", "name:diffAnswer"},
-	"TestUIDiffFrame":       {"name:diffAnswer"},
-	"TestUIDiffNotice":      {"class:btn", "class:dnote", "class:page", "class:page-note", "class:title", "class:toast", "classState", "name:picked", "name:readsGoing"},
-	"TestUIDiffPick":        {"name:diffAnswer"},
-	"TestUIDiffPlaces":      {"class:diff-open", "class:keys-part", "class:title", "name:diffAnswer", "name:drawDiff", "name:openKeys", "name:picked"},
-	"TestUIDiffRead":        {"name:diffAnswer", "name:setServer", "value"},
-	"TestUIDiffScrolls":     {"name:diffAnswer", "name:drawDiff", "name:drawn", "name:load", "name:moveChange", "value"},
-	"TestUIDiffToc":         {"class:dtoc", "name:diffAnswer"},
-	"TestUIDiffURLs":        {"class:diff-open", "name:diffAnswer"},
-	"TestUIDiffWays":        {"class:btn", "class:closing", "class:diff-open", "class:dtoc", "class:page", "class:title", "class:toast", "name:ORDER_KEY", "name:diffAnswer", "name:picked"},
-	"TestUIFindActions":     {"class:archive", "class:armed", "class:label", "class:star", "class:toast", "classState", "name:drawn", "name:load", "name:saveEdit", "name:showError", "value"},
-	"TestUIFolderSide":      {"class:dir", "classState", "name:items", "name:renderFrame"},
-	"TestUIFolders":         {"class:copy", "class:folder", "class:group", "class:miss", "class:more-slot", "class:open", "class:star", "class:title", "class:tree", "classState", "name:openFind", "name:refreshTimes", "name:render", "value"},
-	"TestUIRead":            {"class:toast", "classState", "name:readsGoing"},
-	"TestUIRowAgain":        {"class:more", "class:sel", "class:title", "classState", "name:ORDER_KEY", "name:load", "name:picked", "name:selected"},
-	"TestUIRowAgainPressed": {"class:title", "classState", "name:drawn", "name:items", "name:load", "name:picked"},
-	"TestUIRowAgainUnread":  {"class:btn", "class:page", "class:title", "class:toast", "classState", "name:keptUnread", "name:picked"},
-	"TestUIShelf":           {"class:archive", "class:chip", "class:delete", "class:edit", "class:group", "class:lhead", "class:menu", "class:more", "class:open", "class:sel", "class:star", "class:title", "class:views", "classState", "name:load", "name:render", "name:toggleProject", "value"},
-	"TestUITagLine":         {"class:bar", "class:diff-open", "class:frame-actions", "class:icon-btn", "class:more", "class:name", "class:rhead", "class:sel", "class:tag-box", "class:tag-edit", "class:tag-item", "class:tagline-names", "class:tagpill", "class:toast", "classState", "name:actOn", "name:items", "name:load", "name:openPageTags", "name:pickRow", "name:picked", "name:selected", "name:taskHref", "value"},
-	"TestUITags":            {"class:chip", "class:edit", "class:group", "class:mark", "class:n", "class:name", "class:sel", "class:shelf", "class:tag-box", "class:tag-item", "class:tagpill", "class:tags", "class:views", "name:render", "value"},
-	"TestUIUnread":          {"class:btn", "class:page", "class:title", "class:toast", "classState", "name:picked"},
-	"TestUIUnreadKept":      {"class:btn", "class:page", "class:title", "class:toast", "classState", "name:markUnread", "name:readLoaded", "name:readsGoing", "name:readsWaiting", "name:toast"},
-	"TestUIUnreadPublish":   {"class:btn", "class:page", "class:title", "class:toast", "class:ver", "classState", "name:markUnread"},
-	"TestUIVersionGone":     {"class:dnote", "class:edit", "class:page", "class:title", "class:toast", "class:ver-note", "classState", "name:items", "name:load", "name:picked", "name:readLoaded", "value"},
-}
-
 // screenOnlySelects holds the tests that set a <select>'s value and send its change event (chooseValue): the one use of "value"
 // kept for good.
 var screenOnlySelects = map[string]bool{
-	"TestUITaskAdd": true, "TestUITaskEdit": true, "TestUITaskPage": true, "TestUITaskRev": true, "TestUITaskStateGone": true, "TestUITaskUp": true, "TestUIVersionAnswers": true, "TestUIVersionPick": true, "TestUIVersionPickAhead": true, "TestUIVersionURL": true,
+	"TestUIDiffPlaces": true, "TestUIDiffRead": true, "TestUIDiffScrolls": true, "TestUITaskAdd": true, "TestUITaskEdit": true, "TestUITaskPage": true, "TestUITaskRev": true, "TestUITaskStateGone": true, "TestUITaskUp": true, "TestUIVersionAnswers": true, "TestUIVersionGone": true, "TestUIVersionPick": true, "TestUIVersionPickAhead": true, "TestUIVersionURL": true,
 }
 
 var (
@@ -79,6 +43,8 @@ var (
 // declared by destructuring (let { view } = …) or below the top level of the script is missed, and so is one given to a name (x = name(…):
 // the match of x takes the space before it), and a class in a selector the test builds by joining text. A test missed fails in the PR that rebuilds its
 // screen.
+// LIMIT: an operation that changes the page's DOM (.remove(), .hidden =, .close(), onclick =) is not seen; a React screen may draw
+// over it, so the tests that do so are looked at again as their screens switch (S422-P9, P10).
 // LIMIT: the JS of the browser's and the site's methods (stub, until, …) is not read: they are the package's own, held by review.
 // LIMIT: a selector handed to a Go helper (b.fill(".x", …), b.drag) is read only where it stands beside querySelector in one text.
 // LIMIT: the names a test's JS declares (const row, (t) =>) are gathered from all its texts as one: a page's name of the same
@@ -138,30 +104,19 @@ func TestScreenOnly(t *testing.T) {
 	}
 	for _, name := range tests {
 		got := screenUses(funcs, consts, topLevel, name, pageNames, pageFuncs, string(html))
-		want := screenOnlyNotYet[name]
 		selects := screenOnlySelects[name]
 		if selects && !slices.Contains(got, "value") {
 			t.Errorf("%s sets no select's value: take it off screenOnlySelects", name)
 		}
 		for _, use := range got {
-			if !slices.Contains(want, use) && (use != "value" || !selects) {
+			if use != "value" || !selects {
 				t.Errorf("%s uses %s: test by the screen alone (.claude/rules/browsertest.md)", name, use)
-			}
-		}
-		for _, use := range want {
-			if !slices.Contains(got, use) {
-				t.Errorf("%s no longer uses %s: take it off screenOnlyNotYet", name, use)
 			}
 		}
 	}
 	for name := range screenOnlySelects {
 		if !slices.Contains(tests, name) {
 			t.Errorf("screenOnlySelects names %s, no TestUI… test: take it off", name)
-		}
-	}
-	for name := range screenOnlyNotYet {
-		if !slices.Contains(tests, name) {
-			t.Errorf("screenOnlyNotYet names %s, no TestUI… test: take it off", name)
 		}
 	}
 }

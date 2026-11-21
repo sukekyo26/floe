@@ -10,15 +10,18 @@ import (
 	"floe/internal/store"
 )
 
+// helpOn says whether a help switch ([data-help]) is the one chosen, a button pressed (aria-pressed) or a tab selected (aria-selected).
+const helpOn = "((e) => e.getAttribute('aria-pressed') === 'true' || e.getAttribute('aria-selected') === 'true')"
+
 // What the help shows: the button pressed, the panels in sight, and whether the focus is on the close button.
 const (
-	helpPressed = "[...document.querySelectorAll('#keys button[data-help]')].filter((b) => b.getAttribute('aria-pressed') === 'true').map((b) => b.dataset.help).join('')"
+	helpPressed = "[...document.querySelectorAll('#keys [data-help]')].filter(" + helpOn + ").map((b) => b.dataset.help).join('')"
 	helpPanels  = "['help-about', 'help-keys'].filter((id) => document.getElementById(id).offsetParent !== null).join(' ')"
 	helpOpen    = "document.getElementById('keys').open + ' ' + " + helpPressed + " + ' ' + " + helpPanels +
 		" + ' ' + (document.activeElement === document.querySelector('#keys [data-close]'))"
 	// Where the dialog stands and each button, to a tenth: the buttons must not move, nor change their width, as one panel goes for the other.
 	helpTops = `(() => { const r = (e) => { const b = e.getBoundingClientRect(); return [b.left, b.top, b.width].map((v) => Math.round(v * 10) / 10).join(','); };
-		return r(document.getElementById('keys')) + ' ' + [...document.querySelectorAll('#keys button[data-help]')].map(r).join(' '); })()`
+		return r(document.getElementById('keys')) + ' ' + [...document.querySelectorAll('#keys [data-help]')].map(r).join(' '); })()`
 	// The box of the panels, as the window leaves it.
 	helpBox = `(() => { const d = document.getElementById('keys'), p = document.querySelector('[data-testid=help-panels]'), r = d.getBoundingClientRect(),
 		c = document.querySelector('#keys [data-close]').getBoundingClientRect();
@@ -30,7 +33,7 @@ const (
 const helpAbout = "document.querySelector('#keys [data-help=about]').innerText + ' ' + " +
 	"[...document.querySelectorAll('#help-about [data-testid=help-lead]')].filter((p) => p.offsetParent !== null).length + ' ' + " +
 	"[...document.querySelectorAll('#help-about dl')].filter((d) => d.offsetParent !== null).map((d) => d.querySelectorAll('dt').length).join(',') + ' ' + " +
-	"document.querySelectorAll('#keys button[data-help]').length + ' ' + document.querySelectorAll('#keys [data-help][aria-controls]').length + ' ' + " +
+	"document.querySelectorAll('#keys [data-help]').length + ' ' + document.querySelectorAll('#keys [data-help][aria-controls]').length + ' ' + " +
 	"document.querySelectorAll('#help-about h3').length + ' ' + document.querySelectorAll('#help-about kbd').length"
 
 // TestUIHelp says how the help opens and what it shows: the bar's button opens the tab of the screen, ? the shortcuts, each with the focus on

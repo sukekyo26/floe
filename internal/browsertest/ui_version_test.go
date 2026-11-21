@@ -12,14 +12,6 @@ import (
 	"floe/internal/store"
 )
 
-// What the frame's choice and words say, the date in them left out as it changes.
-const (
-	noteWords = `(document.querySelector('.dnote.ver-note')?.textContent ?? '').replace(/\(.*?\)/, '(at)')`
-	frameSaid = `[location.search + location.hash, document.getElementById('frame').getAttribute('src'), document.getElementById('frame-version').hidden, ` + noteWords + `].join(' / ')`
-	readSaid  = `[readLoaded, document.getElementById('read-version').hidden, document.getElementById('read-version').classList.contains('old'), ` + noteWords + `].join(' / ')`
-	newsOfD   = "(items.find((a) => a.slug === 'd').news ?? '')"
-)
-
 // choose picks the version n in the select of id (chooseValue), once the list of versions has come: the choice is empty until then.
 func choose(b *browser, id string, n int) {
 	b.t.Helper()
@@ -37,25 +29,54 @@ const (
 	besideLoaded = "document.getElementById('read-frame').dataset.loaded"
 	readTold     = `[` + besideLoaded + `, document.getElementById('read-version').hidden, document.getElementById('read-version').dataset.old === 'true', ` + verWords + `].join(' / ')`
 	pageToasts   = "document.querySelectorAll('[data-testid=toast][data-page]').length"
-	noPageToast  = "document.querySelector('[data-testid=toast][data-page]')?.remove()"
+	// The page toasts come since pageToastsNow: each toast shown is a new element.
+	pageToastsNow = "window.pageToastsBefore = new Set(document.querySelectorAll('[data-testid=toast][data-page]'))"
+	newPageToasts = "[...document.querySelectorAll('[data-testid=toast][data-page]')].filter((x) => !window.pageToastsBefore.has(x)).length"
 )
 
-// newsOfDRow says what the row of d tells of its news: "" read, "version" a version not read, "new" a page never read.
-const newsOfDRow = "((r) => r?.dataset.unread !== 'true' ? '' : r.querySelector('[data-testid=ver]') ? 'version' : 'new')(document.querySelector('#list li[data-slug=d]'))"
+// newsOf says what the row of slug tells of its news: "" read, "version" a version not read, "new" a page never read.
+func newsOf(slug string) string {
+	return "((r) => r?.dataset.unread !== 'true' ? '' : r.querySelector('[data-testid=ver]') ? 'version' : 'new')(document.querySelector(" + js("#list li[data-slug="+slug+"]") + "))"
+}
 
 // pageNews is a promise of the news of slug as the server tells the list of pages: a page whole has no row to tell it.
 func pageNews(slug string) string {
 	return "fetch('/api/pages').then((r) => r.json()).then((l) => l.find((a) => a.slug === " + js(slug) + ")?.news ?? '')"
 }
 
-// pressMenuItem opens the "…" menu in box and presses its item named item (data-testid).
+// goneReads counts in window.versionsTaken, from 0, the answers to the reads of slug's versions that do not list v2, each once the page
+// has taken it: a read answered before v2 went is not counted.
+func goneReads(b *browser, slug string) {
+	b.t.Helper()
+	b.eval(`window.versionsTaken = 0; { const f = window.fetch; window.fetch = (u, i) => f(u, i).then((r) => {
+		if (new URL(String(u), location.href).pathname !== ` + js("/api/pages/"+slug+"/versions") + `) return r;
+		const json = r.json.bind(r);
+		r.json = () => json().then((v) => { if (!v.versions?.some((x) => x.n === 2)) setTimeout(() => { window.versionsTaken++; }); return v; });
+		return r;
+	}); }`)
+}
+
+// pressMenuItem opens the "…" menu in box and presses its item named item (data-testid). The menu is opened once more if it closes
+// while waited for: the list's or the bar's first read may draw it anew, closed, just after it opened. Closed twice fails: a read
+// that draws the same list anew each time.
 func pressMenuItem(b *browser, box, item string) {
 	b.t.Helper()
-	menu := box + " [data-testid=more]"
-	b.eval("document.querySelector(" + js(menu+" > summary") + ").click()")
-	got := "document.querySelector(" + js(menu+" [data-testid="+item+"]") + ")"
-	b.until("the item "+item, got+"?.checkVisibility()")
-	b.moving(got + ".click()")
+	menuItemShown(b, box, item, "")
+	b.moving("document.querySelector(" + js(box+" [data-testid=more] [data-testid="+item+"]") + ").click()")
+}
+
+// menuItemShown opens the "…" menu in box by its summary (first, JS run on the summary s before the press, as "s.focus();") and
+// waits until item shows in it, opening it once more if a redraw closed it.
+func menuItemShown(b *browser, box, item, first string) {
+	b.t.Helper()
+	menu := "document.querySelector(" + js(box+" [data-testid=more]") + ")"
+	got := "document.querySelector(" + js(box+" [data-testid=more] [data-testid="+item+"]") + ")"
+	b.eval("window.menuOpened = 0")
+	if b.until("the item "+item, "(() => { const m = "+menu+"; if (!m) return false; "+
+		"if (!m.open) { if (window.menuOpened++ > 1) return 'closed again'; const s = m.querySelector('summary'); "+first+" s.click(); } "+
+		"return "+got+"?.checkVisibility() && 'shown'; })()") != "shown" {
+		b.t.Fatalf("the menu in %s closed again as it was opened again: a read draws it anew each time", box)
+	}
 }
 
 // openSlugField unfolds the part of the edit modal that holds the URL name, once the modal is open.
@@ -78,9 +99,8 @@ func TestUIVersionPick(t *testing.T) { //nolint:paralleltest // the browser test
 	b.until("the rows", "document.querySelector('#list li[data-slug=d]')")
 	b.eval(title + ".click()")
 	b.until("the choice", "!document.getElementById('read-version').hidden")
-	b.until("read", "!("+newsOfDRow+")")
+	b.until("read", "!("+newsOf("d")+")")
 	out := make([]string, 0, 30)
-	b.eval(noPageToast)
 	out = append(out, b.eval("document.querySelector('#read-version selectedcontent').innerText.trim()"),
 		b.eval(`[...document.querySelectorAll('#read-version option')].map((o) => o.textContent.replace(/ · \d\d\/\d\d \d\d:\d\d/, '')).join(', ')`))
 
@@ -96,7 +116,7 @@ func TestUIVersionPick(t *testing.T) { //nolint:paralleltest // the browser test
 	out = append(out, b.until("the latest", besideLoaded+" === '/a/d/?raw' && document.querySelector('[data-testid=ver-note]') === null && document.activeElement.id"))
 	choose(b, "read-version", 2)
 	b.until("v2 again", besideLoaded+".endsWith('v=2') && document.querySelector('[data-testid=ver-note]')")
-	b.eval(noPageToast)
+	b.eval(pageToastsNow)
 	// Drawn anew, it stays; a version published, too, the words following, the row unread, no toast.
 	other := "One again"
 	if _, err := st.Edit("one", store.Edit{Title: &other}); err != nil {
@@ -107,7 +127,7 @@ func TestUIVersionPick(t *testing.T) { //nolint:paralleltest // the browser test
 	b.still()
 	out = append(out, b.eval(besideLoaded))
 	s.floe(t, "publish", s.page(t, "diff/d.yaml", "D", diffV3+"<p>four</p>"), "--slug", "d")
-	out = append(out, b.until("v4 told", verWords+".includes('v4') && "+readTold), b.eval(newsOfDRow), b.eval(pageToasts))
+	out = append(out, b.until("v4 told", verWords+".includes('v4') && "+readTold), b.eval(newsOf("d")), b.eval(newPageToasts))
 
 	// Pressed again and by Enter, the row opens the version shown; its link stays the latest's.
 	out = append(out, b.eval(title+".getAttribute('href')"))
@@ -128,8 +148,8 @@ func TestUIVersionPick(t *testing.T) { //nolint:paralleltest // the browser test
 	b.until("the rows", "document.querySelector('#list li[data-slug=d]')")
 	b.eval(title + ".click()")
 	b.until("the choice", "!document.getElementById('read-version').hidden")
-	b.until("read", "!("+newsOfDRow+")")
-	b.eval(noPageToast)
+	b.until("read", "!("+newsOf("d")+")")
+	b.eval(pageToastsNow)
 	choose(b, "read-version", 2)
 	b.until("v2", besideLoaded+".endsWith('v=2')")
 	b.eval("document.getElementById('read-version').focus()")
@@ -140,11 +160,11 @@ func TestUIVersionPick(t *testing.T) { //nolint:paralleltest // the browser test
 		window.heard = 0; addEventListener('message', (e) => { if (e.data?.pageServed) window.heard++; })`)
 	b.pressKey("k")
 	out = append(out, b.until("back", besideSlug+" === 'd' && "+besideLoaded))
-	b.until("read", "window.reads > 0 && !("+newsOfDRow+")")
+	b.until("read", "window.reads > 0 && !("+newsOf("d")+")")
 
 	// Marked unread: the versions gone through tell nothing, until another page has been open.
 	pressMenuItem(b, "#read-actions", "mark-unread")
-	b.until("unread", newsOfDRow)
+	b.until("unread", newsOf("d"))
 	// Counted once it is unread: a read told late of the page come back to is not of what is checked here
 	b.eval("window.reads = 0; window.heard = 0")
 	const shelfWord = "[...document.querySelectorAll('#read-version option')].find((o) => o.textContent.includes('v2')).textContent.includes('·')"
@@ -154,11 +174,11 @@ func TestUIVersionPick(t *testing.T) { //nolint:paralleltest // the browser test
 		choose(b, "read-version", n)
 		b.until("told", "window.heard > "+was)
 	}
-	out = append(out, b.eval("window.reads"), b.eval("Boolean("+newsOfDRow+")"))
+	out = append(out, b.eval("window.reads"), b.eval("Boolean("+newsOf("d")+")"))
 	b.pressKey("j")
 	b.until("the next row", "("+besideSlug+" ?? 'd') !== 'd'")
 	b.pressKey("k")
-	out = append(out, b.until("read again", besideSlug+" === 'd' && !("+newsOfDRow+") && "+pageToasts))
+	out = append(out, b.until("read again", besideSlug+" === 'd' && !("+newsOf("d")+") && "+newPageToasts))
 
 	// A read leaves the choice open, the focus on it, and its words told anew: the page marked unread by its toast's button, pressed with
 	// the choice open.
@@ -167,7 +187,7 @@ func TestUIVersionPick(t *testing.T) { //nolint:paralleltest // the browser test
 	b.click(r.X+r.Width/2, r.Y+r.Height/2)
 	b.until("open", "document.getElementById('read-version').matches(':open')")
 	b.eval("document.querySelector('[data-testid=toast][data-page] button').click()")
-	b.until("unread", newsOfDRow)
+	b.until("unread", newsOf("d"))
 	b.still()
 	out = append(out, b.eval("[window.kept === document.getElementById('read-version'), window.kept.contains(document.activeElement), window.kept.matches(':open')].join(' ')"))
 	b.pressKey(kb.Escape)
@@ -358,14 +378,14 @@ func TestUIVersionGone(t *testing.T) { //nolint:paralleltest // the browser test
 	b.navigate("/a/d/?v=2")
 	b.until("the choice", "!document.getElementById('frame-version').hidden")
 	s.floe(t, "publish", s.page(t, "diff/d.yaml", "D", diffV3+"<p>four</p>"), "--slug", "d")
-	out = append(out, b.until("v4 told", noteWords+".includes('v4') && "+frameSaid))
+	out = append(out, b.until("v4 told", verWords+".includes('v4') && "+frameTold))
 
 	// Pushed out by the versions after it, in the frame.
 	for i := range 20 {
 		s.floe(t, "publish", s.page(t, "diff/d.yaml", "D", diffV3+"<p>many "+strconv.Itoa(i)+"</p>"), "--slug", "d")
 	}
-	out = append(out, b.until("the latest", "location.search === '' && !document.getElementById('frame-version').hidden && "+noteWords+" === "+js(gone)+" && "+frameSaid),
-		b.eval("document.getElementById('print-raw').getAttribute('href').replace(location.origin, '')"), b.eval("document.querySelectorAll('.toast').length"))
+	out = append(out, b.until("the latest", "location.search === '' && !document.getElementById('frame-version').hidden && "+verWords+" === "+js(gone)+" && "+frameTold),
+		b.eval("document.getElementById('print-raw').getAttribute('href').replace(location.origin, '')"), b.eval("document.querySelectorAll('[data-testid=toast]').length"))
 
 	// One version left: no choice; of a page never read since, unread, marked as such.
 	s.floe(t, "publish", s.page(t, "diff/e.yaml", "E", "<p>one</p>"), "--slug", "e")
@@ -375,15 +395,15 @@ func TestUIVersionGone(t *testing.T) { //nolint:paralleltest // the browser test
 	b.until("the choice", "!document.getElementById('frame-version').hidden")
 	s.floe(t, "rm", "e")
 	s.floe(t, "publish", s.page(t, "diff/e.yaml", "E", "<p>again</p>"), "--slug", "e")
-	out = append(out, b.until("the latest", noteWords+" === "+js(gone)+" && "+frameSaid))
+	out = append(out, b.until("the latest", verWords+" === "+js(gone)+" && "+frameTold))
 	b.still()
-	out = append(out, b.eval("items.find((a) => a.slug === 'e').news ?? ''"), b.eval("document.querySelectorAll('.toast').length"))
+	out = append(out, b.eval(pageNews("e")), b.eval("document.querySelectorAll('[data-testid=toast]').length"))
 
 	// What was asked of a page gone goes with it.
 	b.navigate("/a/e/?v=99")
-	b.until("the words", noteWords+" === "+js(gone))
+	b.until("the words", verWords+" === "+js(gone))
 	s.floe(t, "rm", "e")
-	out = append(out, b.until("no page", "!document.getElementById('notfound').hidden && document.querySelector('.dnote.ver-note') === null"))
+	out = append(out, b.until("no page", "!document.getElementById('notfound').hidden && document.querySelector('[data-testid=ver-note]') === null"))
 
 	// The number shown come to be the latest's, after a removal: the latest in its place, with no words.
 	s.floe(t, "publish", s.page(t, "diff/h.yaml", "H", "<p>one</p>"), "--slug", "h")
@@ -392,7 +412,7 @@ func TestUIVersionGone(t *testing.T) { //nolint:paralleltest // the browser test
 	b.until("the choice", "!document.getElementById('frame-version').hidden")
 	s.floe(t, "rm", "h")
 	s.floe(t, "publish", s.page(t, "diff/h.yaml", "H", "<p>again</p>"), "--slug", "h")
-	out = append(out, b.until("the latest", "location.search === '' && document.getElementById('frame').hasAttribute('src') && "+frameSaid))
+	out = append(out, b.until("the latest", "location.search === '' && document.getElementById('frame').hasAttribute('src') && "+frameTold))
 
 	// What is typed in a modal stays: the page goes to the latest once it closes.
 	s.floe(t, "publish", s.page(t, "diff/m.yaml", "M", "<p>one</p>"), "--slug", "m")
@@ -400,14 +420,19 @@ func TestUIVersionGone(t *testing.T) { //nolint:paralleltest // the browser test
 	s.floe(t, "publish", s.page(t, "diff/m.yaml", "M", "<p>three</p>"), "--slug", "m")
 	b.navigate("/a/m/?v=2")
 	b.until("the choice", "!document.getElementById('frame-version').hidden")
-	b.eval("document.querySelector('#frame-actions .edit').click(); document.getElementById('edit-name').value = 'typed'")
+	pressMenuItem(b, "#frame-actions", "edit")
+	b.until("the edit modal", "document.getElementById('edit-dialog').open")
+	b.fill("#edit-name", "typed")
+	// The answers to the reads of m's versions that find v2 gone: such a read keeps the page while the modal is open, which nothing on
+	// screen tells.
+	goneReads(b, "m")
 	s.floe(t, "rm", "m")
 	s.floe(t, "publish", s.page(t, "diff/m.yaml", "M", "<p>again</p>"), "--slug", "m")
-	b.eval("load()")
-	b.until("the list", "versionWaits")
+	b.reread()
+	b.until("the versions read", "window.versionsTaken > 0")
 	out = append(out, b.eval("[document.getElementById('edit-dialog').open, document.getElementById('edit-name').value, location.search].join(' ')"))
-	b.moving("document.getElementById('edit-dialog').close()")
-	out = append(out, b.until("the latest", "location.search === '' && "+noteWords+" === "+js(gone)+" && "+frameSaid))
+	b.moving("document.querySelector('#edit-dialog [data-close]').click()")
+	out = append(out, b.until("the latest", "location.search === '' && "+verWords+" === "+js(gone)+" && "+frameTold))
 
 	// Beside the list, with the list's look held back across the removal, whose answer in between would let the row go.
 	s.floe(t, "publish", s.page(t, "diff/f.yaml", "F", "<p>one</p>"), "--slug", "f")
@@ -415,39 +440,45 @@ func TestUIVersionGone(t *testing.T) { //nolint:paralleltest // the browser test
 	s.floe(t, "publish", s.page(t, "diff/f.yaml", "F", "<p>three</p>"), "--slug", "f")
 	b.navigate("/")
 	b.until("the rows", "document.querySelector('#list li[data-slug=f]')")
-	b.eval("document.querySelector('#list li[data-slug=f] .title').click()")
-	b.until("the choice", "!document.getElementById('read-version').hidden && !items.find((a) => a.slug === 'f').news")
+	b.eval("document.querySelector('#list li[data-slug=f] [data-testid=title]').click()")
+	b.until("the choice", "!document.getElementById('read-version').hidden && "+newsOf("f")+" === ''")
 	choose(b, "read-version", 2)
-	b.until("v2", "readLoaded.endsWith('v=2')")
-	b.eval("window.look = load; load = () => {}")
+	b.until("v2", besideLoaded+".endsWith('v=2')")
+	// The words come before the versions read that finds v2 gone hides the choice; counted from before the removal, as that read may
+	// come at any time after it (the versions are not held)
+	goneReads(b, "f")
+	release := b.holdReads(unsent, "/api/pages")
 	s.floe(t, "rm", "f")
 	s.floe(t, "publish", s.page(t, "diff/f.yaml", "F", "<p>again</p>"), "--slug", "f")
-	b.eval("load = window.look; document.querySelector('.toast.page')?.remove(); load()")
-	out = append(out, b.until("the latest", noteWords+" === "+js(gone)+" && "+readSaid))
+	release()
+	b.eval(pageToastsNow)
+	b.reread()
+	b.until("the versions read", "window.versionsTaken > 0")
+	out = append(out, b.until("the latest", verWords+" === "+js(gone)+" && "+readTold))
 	b.still()
-	out = append(out, b.eval("items.find((a) => a.slug === 'f').news ?? ''"), b.eval("document.querySelectorAll('.toast.page').length"))
+	out = append(out, b.eval(newsOf("f")), b.eval(newPageToasts))
 	// Pushed out by the versions after it, others left: the choice stays, and a version chosen takes the place of the words.
 	s.floe(t, "publish", s.page(t, "diff/p.yaml", "P", "<p>one</p>"), "--slug", "p")
 	s.floe(t, "publish", s.page(t, "diff/p.yaml", "P", "<p>two</p>"), "--slug", "p")
 	b.until("the row", "document.querySelector('#list li[data-slug=p]')")
-	b.eval("document.querySelector('#list li[data-slug=p] .title').click()")
-	b.until("the choice", "picked.slug === 'p' && !document.getElementById('read-version').hidden && !items.find((a) => a.slug === 'p').news")
-	b.eval("document.querySelector('.toast.page')?.remove()")
+	b.eval("document.querySelector('#list li[data-slug=p] [data-testid=title]').click()")
+	b.until("the choice", besideSlug+" === 'p' && !document.getElementById('read-version').hidden && "+newsOf("p")+" === ''")
+	b.eval(pageToastsNow)
 	choose(b, "read-version", 1)
-	b.until("v1", "readLoaded.endsWith('v=1')")
+	b.until("v1", besideLoaded+".endsWith('v=1')")
 	for i := range 20 {
 		s.floe(t, "publish", s.page(t, "diff/p.yaml", "P", "<p>many "+strconv.Itoa(i)+"</p>"), "--slug", "p")
 	}
-	out = append(out, b.until("the latest", noteWords+" === "+js(gone)+" && "+readSaid))
+	out = append(out, b.until("the latest", verWords+" === "+js(gone)+" && "+readTold))
 	b.still()
-	out = append(out, b.eval("Boolean(items.find((a) => a.slug === 'p').news)"), b.eval("document.querySelectorAll('.toast.page').length"))
+	out = append(out, b.eval(newsOf("p")+" !== ''"), b.eval(newPageToasts))
 	choose(b, "read-version", 10)
-	out = append(out, b.until("v10", "readLoaded.endsWith('v=10') && "+noteWords+".includes('v10') && "+noteWords))
+	out = append(out, b.until("v10", besideLoaded+".endsWith('v=10') && "+verWords+".includes('v10') && "+verWords))
 	// Another page, and back: read, the words gone.
-	b.eval("document.querySelector('#list li[data-slug=d] .title').click()")
-	out = append(out, b.until("another", "picked.slug === 'd' && !document.querySelector('.dnote.ver-note') && 'no words'"))
-	b.eval("document.querySelector('#list li[data-slug=f] .title').click()")
-	out = append(out, b.until("read", "picked.slug === 'f' && !items.find((a) => a.slug === 'f').news && 'read'"))
+	b.eval("document.querySelector('#list li[data-slug=d] [data-testid=title]').click()")
+	out = append(out, b.until("another", besideSlug+" === 'd' && !document.querySelector('[data-testid=ver-note]') && 'no words'"))
+	b.eval("document.querySelector('#list li[data-slug=f] [data-testid=title]').click()")
+	out = append(out, b.until("read", besideSlug+" === 'f' && "+newsOf("f")+" === '' && 'read'"))
 
 	check(t, "gone", out, strings.Join([]string{
 		"?v=2 / /a/d/?raw&v=2 / false / Showing v2 (at). The latest is v4.Open the latest versionSee what differs from the latest",
@@ -495,7 +526,7 @@ func TestUIVersionPickAhead(t *testing.T) { //nolint:paralleltest // the browser
 	b.until("the row", "document.querySelector('#list li[data-slug=d]')")
 	b.eval("document.querySelector('#list li[data-slug=d] [data-testid=title]').click()")
 	b.until("the choice", "!document.getElementById('read-version').hidden")
-	b.until("read", "!("+newsOfDRow+")")
+	b.until("read", "!("+newsOf("d")+")")
 	b.eval("fetch('/api/pages').then((r) => r.text()).then((l) => { window.heldList = l; })")
 	s.floe(t, "publish", s.page(t, "diff/d.yaml", "D", diffV3+"<p>four</p>"), "--slug", "d")
 	// A version read has the versions read again, v4 among them, the list still at v3
@@ -539,7 +570,7 @@ func TestUIVersionAnswers(t *testing.T) { //nolint:paralleltest // the browser t
 	out = append(out, b.until("e's", "!document.getElementById('read-version').hidden && "+state))
 	// A read of a version between the last read and the latest moves the words, the list of pages saying nothing of it.
 	b.eval(row("d"))
-	b.until("d read", besideSlug+" === 'd' && !("+newsOfDRow+")")
+	b.until("d read", besideSlug+" === 'd' && !("+newsOf("d")+")")
 	choose(b, "read-version", 2)
 	b.until("v2", besideLoaded+".endsWith('v=2')")
 	s.floe(t, "publish", s.page(t, "diff/d.yaml", "D", diffV3+"<p>four</p>"), "--slug", "d")

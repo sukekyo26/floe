@@ -45,10 +45,8 @@ window.fetch = (u, i) => {
 func pressMenuItemFocused(b *browser, box, item string) {
 	b.t.Helper()
 
-	menu := box + " [data-testid=more]"
-	b.eval("(() => { const s = document.querySelector(" + js(menu+" > summary") + "); s.focus(); s.click(); })()")
-	got := "document.querySelector(" + js(menu+" [data-testid="+item+"]") + ")"
-	b.until("the item "+item, got+"?.checkVisibility()")
+	menuItemShown(b, box, item, "s.focus();")
+	got := "document.querySelector(" + js(box+" [data-testid=more] [data-testid="+item+"]") + ")"
 	b.eval("(() => { const i = " + got + "; i.focus(); i.click(); })()")
 }
 

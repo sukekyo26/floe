@@ -1079,7 +1079,7 @@
       <input type="search" id="q" placeholder="{{.Msg "ui_search_placeholder"}}" aria-label="{{.Msg "ui_search"}}" autocomplete="off">
       <kbd aria-hidden="true">/</kbd>
     </label>
-    <div class="bar-end">
+    <div class="bar-end" data-testid="bar-end">
       <span class="frame-actions" id="frame-actions" hidden></span>
       <a class="news" id="news" href="/?view=new" hidden><span class="dot" data-testid="dot"></span><span id="news-n"></span></a>
       <button type="button" class="icon-btn" id="find-open" aria-label="{{.Msg "ui_find"}}" title="{{.Msg "ui_find"}}"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true"><circle cx="11" cy="11" r="7"/><path d="m20 20-3.5-3.5"/></svg></button>
@@ -1096,7 +1096,7 @@
   <button type="button" class="icon-btn side-show" id="list-show" aria-expanded="false" aria-controls="listcol" title="{{.Msg "ui_list_show"}}" aria-label="{{.Msg "ui_list_show"}}" hidden><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linejoin="round" aria-hidden="true"><rect x="3" y="4" width="18" height="16" rx="2"/><path d="M9 4v16M15 4v16"/><path fill="currentColor" stroke="none" d="M9 4h6v16H9Z"/></svg></button>
   <!-- Buttons that switch the list. They do not implement WAI-ARIA tabs (arrow keys, tabpanel), so they use aria-pressed -->
   <nav class="shelf" id="shelf" aria-label="{{.Msg "ui_shelf"}}">
-    <div class="col-foot"><button type="button" class="icon-btn" id="shelf-hide" aria-expanded="true" aria-controls="shelf" title="{{.Msg "ui_shelf_hide"}}" aria-label="{{.Msg "ui_shelf_hide"}}"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linejoin="round" aria-hidden="true"><rect x="3" y="4" width="18" height="16" rx="2"/><path d="M9 4v16M15 4v16"/><path fill="currentColor" stroke="none" d="M3 6a2 2 0 0 1 2-2h4v16H5a2 2 0 0 1-2-2Z"/></svg></button></div>
+    <div class="col-foot" data-testid="col-foot"><button type="button" class="icon-btn" id="shelf-hide" aria-expanded="true" aria-controls="shelf" title="{{.Msg "ui_shelf_hide"}}" aria-label="{{.Msg "ui_shelf_hide"}}"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linejoin="round" aria-hidden="true"><rect x="3" y="4" width="18" height="16" rx="2"/><path d="M9 4v16M15 4v16"/><path fill="currentColor" stroke="none" d="M3 6a2 2 0 0 1 2-2h4v16H5a2 2 0 0 1-2-2Z"/></svg></button></div>
     <div class="shelf-body" id="shelf-body">
       <div class="views" data-testid="views" role="group" aria-label="{{.Msg "ui_shelf"}}">
         <button type="button" data-view="new"><span class="dot" data-testid="dot"></span><span class="label" data-testid="label">{{.Msg "ui_view_new"}}</span><span class="n" data-testid="n"></span></button>
@@ -1133,7 +1133,7 @@
   </nav>
   <div class="grip" id="shelf-grip" role="separator" aria-orientation="vertical" aria-controls="shelf" aria-label="{{.Msg "ui_shelf_width"}}" tabindex="0"></div>
   <section class="listcol" id="listcol">
-    <div class="col-foot"><button type="button" class="icon-btn" id="list-hide" aria-expanded="true" aria-controls="listcol" title="{{.Msg "ui_list_hide"}}" aria-label="{{.Msg "ui_list_hide"}}"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linejoin="round" aria-hidden="true"><rect x="3" y="4" width="18" height="16" rx="2"/><path d="M9 4v16M15 4v16"/><path fill="currentColor" stroke="none" d="M9 4h6v16H9Z"/></svg></button></div>
+    <div class="col-foot" data-testid="col-foot"><button type="button" class="icon-btn" id="list-hide" aria-expanded="true" aria-controls="listcol" title="{{.Msg "ui_list_hide"}}" aria-label="{{.Msg "ui_list_hide"}}"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linejoin="round" aria-hidden="true"><rect x="3" y="4" width="18" height="16" rx="2"/><path d="M9 4v16M15 4v16"/><path fill="currentColor" stroke="none" d="M9 4h6v16H9Z"/></svg></button></div>
     <div class="list-body" id="list-body">
       <!-- The way back stands in the markup: h may be pressed before the first answer -->
       <div class="thead" id="task-head" hidden>
@@ -1254,7 +1254,7 @@
   <p class="dnote" id="diff-url-note" hidden>{{.Msg "ui_diff_bad_url"}}</p>
   <div class="dmain" id="diff-main">
     <nav class="dtoc" id="diff-toc-nav" aria-labelledby="diff-toc-title">
-      <div class="col-foot"><button type="button" class="icon-btn" id="diff-toc-hide" aria-expanded="true" aria-controls="diff-toc-nav" title="{{.Msg "ui_diff_toc_hide"}}" aria-label="{{.Msg "ui_diff_toc_hide"}}"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linejoin="round" aria-hidden="true"><rect x="3" y="4" width="18" height="16" rx="2"/><path d="M9 4v16"/></svg></button></div>
+      <div class="col-foot" data-testid="col-foot"><button type="button" class="icon-btn" id="diff-toc-hide" aria-expanded="true" aria-controls="diff-toc-nav" title="{{.Msg "ui_diff_toc_hide"}}" aria-label="{{.Msg "ui_diff_toc_hide"}}"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linejoin="round" aria-hidden="true"><rect x="3" y="4" width="18" height="16" rx="2"/><path d="M9 4v16"/></svg></button></div>
       <div class="side-head"><h2 id="diff-toc-title">{{.Msg "ui_diff_toc"}}</h2></div>
       <div class="dtoc-list" id="diff-toc"></div>
       <p class="dkeys"><kbd>n</kbd>{{.Msg "ui_diff_next"}}<br><kbd>p</kbd>{{.Msg "ui_diff_prev"}}<br><kbd>d</kbd>{{.Msg "ui_diff_close"}}</p>
@@ -1879,7 +1879,7 @@
     $('server').textContent = ok ? '' : t('ui_server_down');
     $('server').title = label;
     $('server').setAttribute('aria-label', label);
-    $('server').classList.toggle('down', !ok);
+    markState($('server'), 'down', !ok);
   }
 
   // The writes (any request but a GET) sent, and those not answered yet: load reads the list only while none goes
@@ -1992,7 +1992,7 @@
 
   // A state shown by a class, and told by an attribute too ("true", or none) for the browser tests, which read no class: the two
   // always change together, here
-  const STATE_ATTRS = { picked: 'aria-current', unseen: 'data-unread', archived: 'data-archived', on: 'data-on', armed: 'data-armed', old: 'data-old', narrowed: 'data-narrowed', selecting: 'data-selecting', fresh: 'data-fresh', timed: 'data-timed', page: 'data-page', 'proj-tint': 'data-tint' };
+  const STATE_ATTRS = { picked: 'aria-current', unseen: 'data-unread', archived: 'data-archived', on: 'data-on', closing: 'data-on', armed: 'data-armed', old: 'data-old', narrowed: 'data-narrowed', selecting: 'data-selecting', fresh: 'data-fresh', timed: 'data-timed', page: 'data-page', 'proj-tint': 'data-tint', dragging: 'data-dragging', over: 'data-over', down: 'data-down', some: 'data-tagged' };
   function markState(el, name, on) {
     el.classList.toggle(name, Boolean(on));
     if (on) el.setAttribute(STATE_ATTRS[name], 'true');
@@ -2485,6 +2485,7 @@
       });
       const mark = document.createElement('span');
       mark.className = 'mark';
+      mark.dataset.testid = 'mark';
       mark.setAttribute('aria-hidden', 'true');
       const words = document.createElement('span');
       words.className = 'name';
@@ -2900,7 +2901,7 @@
     const closing = DIFF && box.id === 'frame-actions';
     open.hidden = !closing && (Boolean(x.file) || !canDiff(a));
     open.href = closing ? pageHref({ slug: a.slug }) : diffHref(a.slug, x.v, a.version);
-    open.classList.toggle('closing', closing);
+    markState(open, 'closing', closing);
     open.title = t(closing ? 'ui_diff_close_title' : 'ui_diff_title');
     open.setAttribute('aria-label', open.title);
     if (closing) $('diff-close').href = open.href;
@@ -2946,12 +2947,12 @@
     if (line.hidden) return;
     const tags = a.tags ?? [];
     line.querySelector('.tagline-names').replaceChildren(...tags.map((name) => {
-      const pill = tagged('span', 'tagpill', name);
+      const pill = withTestid(tagged('span', 'tagpill', name), 'tagpill');
       pill.title = name;
       return pill;
     }));
     const edit = line.querySelector('.tag-edit');
-    edit.classList.toggle('some', tags.length > 0);
+    markState(edit, 'some', tags.length > 0);
     edit.title = t(tags.length ? 'ui_tag_change_named' : 'ui_tag_add_named', a.title);
     edit.setAttribute('aria-label', edit.title);
     edit.onclick = () => openPageTags(a, () => edit);
@@ -3216,6 +3217,7 @@
     li.style.setProperty('--i', Math.min(i, 30));
     li.dataset.key = `entry:${a.slug}`;
     li.dataset.slug = a.slug;
+    li.dataset.kind = kindOf(a);
     markState(li, 'unseen', unseen(a));
     li.classList.toggle('gone', Boolean(a.missing));
     markState(li, 'archived', TASK_PAGE && Boolean(a.archived));
@@ -4765,7 +4767,7 @@
     root.setProperty('--side-width', `${width}px`);
     root.setProperty('--side', open && !sideNarrow.matches ? `${width}px` : '0px');
     $('side').hidden = !open;
-    $('side').classList.toggle('over', sideNarrow.matches);
+    markState($('side'), 'over', sideNarrow.matches);
     $('side-grip').hidden = !open || sideNarrow.matches;
     edgeAt($('side-grip'), width, width, SIDE_MIN, sideMax());
     $('side-show').hidden = open;
@@ -4804,11 +4806,11 @@
       if (e.button) return;
       e.preventDefault();
       grip.setPointerCapture(e.pointerId);
-      grip.classList.add('dragging');
+      markState(grip, 'dragging', true);
     });
     grip.addEventListener('pointermove', (e) => { if (grip.hasPointerCapture(e.pointerId)) set(e.clientX - left()); });
     grip.addEventListener('lostpointercapture', () => {
-      grip.classList.remove('dragging');
+      markState(grip, 'dragging', false);
       keep();
     });
     grip.addEventListener('keydown', (e) => {
@@ -5127,7 +5129,7 @@
     });
   }
   function tocAt(i) {
-    for (const b of $('diff-toc').querySelectorAll('button')) b.classList.toggle('on', b.dataset.section === String(i));
+    for (const b of $('diff-toc').querySelectorAll('button')) markState(b, 'on', b.dataset.section === String(i));
     $('diff-toc').querySelector('.on')?.scrollIntoView({ block: 'nearest' });
   }
   // The contents' width and whether they show, within the tree's bounds. Kept apart from the tree's: closing one does not close the other

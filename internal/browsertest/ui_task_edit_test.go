@@ -344,7 +344,7 @@ func TestUITaskEdit(t *testing.T) { //nolint:paralleltest // the browser tests s
 	b.until("no links", "document.getElementById('task-link').hidden && document.getElementById('task-link').getClientRects().length === 0")
 	// Opened over the task drawn before the tasks were read again: its rev is of the one the page has now, not of what was drawn. The
 	// page's own write of the state has it first, by its answer, while the read after it, held, would draw it.
-	release := b.holdReads("/api/tasks")
+	release := b.holdReads(unsent, "/api/tasks")
 	n, err := strconv.Atoi(b.eval("window.answered"))
 	if err != nil {
 		t.Fatal(err)
