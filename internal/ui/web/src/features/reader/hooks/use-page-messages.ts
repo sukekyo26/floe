@@ -6,7 +6,9 @@ import { pageMessage, type FrameKind } from '@/features/reader/utils/page-messag
 export interface PageMessageCalls {
   // givenPath is the path this page gave the iframe now, null for none
   givenPath: () => string | null;
-  // keys are those a page may pass (PAGE_KEYS) that the screen's table has
+  // shown tells the iframe is on the screen now (ui.html takes the one shown alone); left out, it always is
+  shown?: () => boolean;
+  // keys are the screen's table of keys (pageMessage passes those of PAGE_KEYS alone)
   keys: ReadonlySet<string>;
   onKey: (key: string) => void;
   onOpen?: (href: string) => void;
@@ -26,7 +28,7 @@ export function usePageMessages(
     const f = frame.current;
     const actions = pageMessage(e.data, {
       frame: kind,
-      fromShown: f !== null && e.source === f.contentWindow,
+      fromShown: f !== null && e.source === f.contentWindow && (calls.shown?.() ?? true),
       origin: e.origin,
       givenPath: calls.givenPath(),
       focused: f !== null && document.activeElement === f,

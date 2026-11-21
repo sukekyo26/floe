@@ -21,7 +21,7 @@ interface ReaderPaneProps {
   readonly tags?: ReactNode;
   // what is the list's narrowing in words, shown in the head with the list folded (P9's), null for none
   readonly what?: ReactNode;
-  // keys are those a page may pass that the screen's table has; onKey presses one
+  // keys are the screen's table of keys (a page passes those of PAGE_KEYS alone); onKey presses one
   readonly keys: ReadonlySet<string>;
   readonly onKey: (key: string) => void;
   // onTitle is what pressing the title does first (the list's order goes on with j and k)
@@ -83,9 +83,8 @@ export function ReaderPane({
           {name}
         </a>
         {version}
-        <span id="read-actions" hidden={!a} className="ms-auto contents">
-          {a ? actions : null}
-        </span>
+        {/* The bar is BarActions, of its own id (read-actions); a box of none puts it on the right */}
+        {a ? <span className="ms-auto">{actions}</span> : null}
       </div>
       {tags}
       <PageNote slug={at?.slug} note={note} {...(onTitle ? { onGo: onTitle } : {})} />
@@ -95,6 +94,8 @@ export function ReaderPane({
       <iframe
         ref={frame}
         id="read-frame"
+        // Before any page, as ui.html's: useReplacedFrame writes each one loaded after
+        data-loaded="about:blank"
         title={name}
         data-slug={at?.slug}
         data-file={file === '' ? undefined : file}

@@ -357,6 +357,7 @@ function Gallery() {
   const [help, setHelp] = useState<HelpTab | null>(null);
   const [finding, setFinding] = useState(false);
   const picked = useStore(galleryOpen.picked);
+  const readPage = pagesNow.find((p) => p.slug === picked?.slug) ?? null;
   const [slowReads, setSlowReads] = useState(false);
   const settingsOf = useStore(settingsTarget);
   const [themesNow, setThemesNow] = useState(themesAs);
@@ -466,7 +467,7 @@ function Gallery() {
           {plain && folder && gone ? (
             <div className="grid gap-2">
               <BarActions
-                id="read-actions"
+                id="list-actions"
                 place="list"
                 page={plain}
                 at={{ slug: 'plain' }}
@@ -597,7 +598,19 @@ function Gallery() {
           <div className="flex h-96 flex-col overflow-hidden rounded-small border border-line bg-panel">
             <ReaderPane
               at={picked}
-              page={pagesNow.find((p) => p.slug === picked?.slug) ?? null}
+              page={readPage}
+              actions={
+                readPage && picked ? (
+                  <BarActions
+                    id="read-actions"
+                    place="list"
+                    page={readPage}
+                    at={picked}
+                    openers={openers}
+                    actions={actions}
+                  />
+                ) : null
+              }
               keys={new Set(['/', '?'])}
               onKey={(key) => {
                 toasts.toast(`key ${key} from the page`);

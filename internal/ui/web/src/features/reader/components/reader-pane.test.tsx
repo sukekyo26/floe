@@ -31,7 +31,7 @@ describe(ReaderPane, () => {
     expect.assertions(3);
     const html = pane({ at: { slug: 'a', file: '', v: 2 }, page: page() });
     expect(tag(html, '<iframe')).toMatch(
-      /id="read-frame" title="A" data-slug="a" data-version="2" allow="clipboard-write \*; fullscreen \*"(?![^>]*hidden)/,
+      /id="read-frame" data-loaded="about:blank" title="A" data-slug="a" data-version="2" allow="clipboard-write \*; fullscreen \*"(?![^>]*hidden)/,
     );
     expect(tag(html, '<iframe')).not.toMatch(/sandbox|data-file/);
     expect(tag(html, '<p id="read-blank"')).toContain('hidden=""');
@@ -48,6 +48,15 @@ describe(ReaderPane, () => {
     expect(pane({ at: { slug: 'a', file: '', v: 0 }, page: page({ missing: true, path: '/tmp/a.html' }) })).toMatch(
       /id="read-blank"[^>]*>ui_link_missing:\/tmp\/a.html/,
     );
+  });
+
+  it('puts the bar of the page shown on the right, of its own id alone, and none with no page', () => {
+    expect.assertions(2);
+    const bar = <span id="read-actions">x</span>;
+    expect(pane({ at: { slug: 'a', file: '', v: 0 }, page: page(), actions: bar })).toMatch(
+      /<span class="ms-auto"><span id="read-actions">x<\/span><\/span>/,
+    );
+    expect(pane({ actions: bar })).not.toContain('read-actions');
   });
 
   it('shows the head with the list’s narrowing in words though no page is chosen, a folder’s file by its name', () => {

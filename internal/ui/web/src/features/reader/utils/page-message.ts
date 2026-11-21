@@ -11,6 +11,9 @@ export type PageAction =
   | { kind: 'hash'; hash: string }
   | { kind: 'served'; mark: ReadMark };
 
+// PAGE_KEYS are the keys a page may pass, those that move or open a modal alone (ui.md): none that writes
+export const PAGE_KEYS: ReadonlySet<string> = new Set(['j', 'k', 'h', 'n', 'p', 'd', '?', '/', 'Ctrl+K']);
+
 export interface MessageFrom {
   frame: FrameKind;
   // fromShown tells the message came from the window of the iframe shown
@@ -20,7 +23,7 @@ export interface MessageFrom {
   givenPath: string | null;
   // focused tells the iframe has the focus, as a key pressed in the page is passed then alone
   focused: boolean;
-  // keys are those a page may pass (PAGE_KEYS) that the screen's table has
+  // keys are the screen's table of keys; a page passes those of PAGE_KEYS alone
   keys: ReadonlySet<string>;
   // here is this page's origin, to which a page may move the frame
   here: string;
@@ -48,7 +51,7 @@ export function pageMessage(data: unknown, from: MessageFrom): PageAction[] {
   if (!from.fromShown || from.origin !== 'null') return [];
   const d = record<PageData>(data);
   const actions: PageAction[] = [];
-  if (typeof d.pageKey === 'string' && from.keys.has(d.pageKey) && from.focused) {
+  if (typeof d.pageKey === 'string' && PAGE_KEYS.has(d.pageKey) && from.keys.has(d.pageKey) && from.focused) {
     actions.push({ kind: 'key', key: d.pageKey });
   }
   if (typeof d.pageOpen === 'string') {

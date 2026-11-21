@@ -57,6 +57,15 @@ const texts = (t: ReturnType<typeof createToasts>) => t.shown.get().map((x) => x
 const settle = () => new Promise((go) => setTimeout(go, 0));
 
 describe(createPageReads, () => {
+  it('takes the toast of the page shown before away as another opens, and no other', () => {
+    expect.assertions(1);
+    const { pr, toasts } = made();
+    toasts.toast('read', { page: true });
+    toasts.toast('saved');
+    pr.opened('b');
+    expect(texts(toasts)).toStrictEqual(['saved']);
+  });
+
   it('says the first read of a page opened, with a way back to unread and the words of its versions', async () => {
     expect.assertions(3);
     const { pr, log, toasts, answer } = made();

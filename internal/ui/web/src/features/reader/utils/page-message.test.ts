@@ -9,7 +9,7 @@ const from = (change: Partial<MessageFrom> = {}): MessageFrom => ({
   origin: 'null',
   givenPath: '/a/p/',
   focused: true,
-  keys: new Set(['/', '?']),
+  keys: new Set(['/', '?', 'a']),
   here,
   ...change,
 });
@@ -22,14 +22,16 @@ describe(pageMessage, () => {
     expect(pageMessage(served, from({ origin: here }))).toStrictEqual([]);
   });
 
-  it('passes a key of the table while the iframe has the focus, whatever path the page is at', () => {
+  it('passes a key of the table and of PAGE_KEYS while the iframe has the focus, whatever path the page is at', () => {
     expect.assertions(1);
     expect([
       pageMessage({ pageKey: '/', pagePath: '/elsewhere' }, from()),
       pageMessage({ pageKey: 'x' }, from()),
+      // In the table but no key a page may pass (archive)
+      pageMessage({ pageKey: 'a' }, from()),
       pageMessage({ pageKey: '/' }, from({ focused: false })),
       pageMessage({ pageKey: 1 }, from()),
-    ]).toStrictEqual([[{ kind: 'key', key: '/' }], [], [], []]);
+    ]).toStrictEqual([[{ kind: 'key', key: '/' }], [], [], [], []]);
   });
 
   it('moves to the list or a page whole of floe alone, and throws a message of no URL away whole', () => {
