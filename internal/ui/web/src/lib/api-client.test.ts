@@ -37,19 +37,20 @@ describe(createClient, () => {
     expect(asked).toStrictEqual(['first', 'second']);
   });
 
-  it('tells the server reached by an answer, an HTTP error too, and down by a throw but a time limit or a call off', async () => {
-    expect.assertions(4);
+  it('tells the server reached by an answer, an HTTP error too, down by a throw, and nothing by a time limit or a call off', async () => {
+    expect.assertions(5);
     const { api, reached } = createClient();
-    vi.stubGlobal('fetch', () => Promise.reject(new TypeError('Failed to fetch')));
-    await expect(api('/x')).rejects.toThrow('Failed to fetch');
-    vi.stubGlobal('fetch', () => Promise.reject(new DOMException('slow', 'TimeoutError')));
-    await expect(api('/x')).rejects.toThrow('slow');
-    const down = reached.get();
     vi.stubGlobal('fetch', () => Promise.resolve(new Response('no', { status: 500 })));
     await api('/x');
-    expect({ down, up: reached.get() }).toStrictEqual({ down: false, up: true });
+    vi.stubGlobal('fetch', () => Promise.reject(new DOMException('slow', 'TimeoutError')));
+    await expect(api('/x')).rejects.toThrow('slow');
     vi.stubGlobal('fetch', () => Promise.reject(new DOMException('off', 'AbortError')));
     await expect(api('/x')).rejects.toThrow('off');
+    const kept = reached.get();
+    vi.stubGlobal('fetch', () => Promise.reject(new TypeError('Failed to fetch')));
+    await expect(api('/x')).rejects.toThrow('Failed to fetch');
+    expect(kept).toBe(true);
+    expect(reached.get()).toBe(false);
   });
 
   it('holds noWrites until every write has read its answer, and counts no GET', async () => {
@@ -65,7 +66,9 @@ describe(createClient, () => {
     void waits?.then(() => {
       free = true;
     });
-    await Promise.resolve();
+    await new Promise((go) => {
+      setTimeout(go, 1);
+    });
     expect(free).toBe(false);
     body.resolve('done');
     await written;
