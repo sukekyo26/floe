@@ -25,7 +25,7 @@ function made(screen: Boot['screen'], answer: Response) {
     return Promise.resolve(answer);
   });
   const pages = {
-    state: createStore<PagesState>({ entries: [], tasks: { error: '', tasks: {}, raw: '' }, readWhy: '' }),
+    state: createStore<PagesState>({ entries: [], tasks: { error: '', tasks: {}, raw: '' }, readWhy: '', drawWhy: '' }),
     load: () => {
       called.push('load');
       return Promise.resolve();

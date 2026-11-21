@@ -243,3 +243,9 @@ web-build-check: web-install
 # browser jobs, all with -race).
 # Pre-push gate of CI's checks
 ci: fmt-check vet lint test cover-check vuln mod-verify mod-tidy-check shellcheck shfmt-check
+
+# Serve the gallery of the management page's shared components on 127.0.0.1:<port>, in lang (ja or en), for a person to
+# try them: go test writes its boot values, and Vite's dev server serves it. It is never built into dist
+web-gallery port lang="ja": web-install
+    go test ./internal/ui -run '^TestGalleryBoot$' -count=1 -gallery={{lang}}
+    cd {{web_dir}} && pnpm exec vite --config vite.config.ts gallery --host 127.0.0.1 --port {{port}} --strictPort
