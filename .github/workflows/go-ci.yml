@@ -193,7 +193,7 @@ jobs:
           mkdir -p /c/floe-tmp
           go test -count=1 -timeout 15m $(go list ./... | grep -v /internal/browsertest$)
 
-  # The browser jobs' parts, from the justfile (just browser-parts). If this fails, Browser fails: run the workflow again.
+  # The browser jobs' parts, from the justfile (just browser-parts). If this fails, Browser does not pass: run the workflow again.
   browser-parts:
     name: Browser parts
     runs-on: ubuntu-latest

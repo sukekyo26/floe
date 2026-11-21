@@ -8,8 +8,8 @@ core_pkgs  := "go list " + pkgs + " | grep -v /internal/browsertest$"
 # turn to rest-1 … rest-<browser_rest_jobs>. A part that takes over 8/10 of browser_timeout (seconds) gets a warning on CI.
 # LIMIT: how even the rest parts are is luck, and is not checked; the warning tells it. Then raise browser_rest_jobs by one;
 # if the heaviest part stays over, by one more; if still, split by each test's measured time instead. TestLookRule is one
-# test of 27 t.Run, which -run 'TestLookRule/…' can split when looks gets the warning. The time measured holds the -race
-# build (30-40 s), which -timeout does not, so the warning comes a little before 8/10 of -timeout.
+# test of 27 t.Run, which -run 'TestLookRule/…' can split when looks gets the warning. The time measured starts as -timeout
+# does, after the -race build, which go test -list has done.
 browser_rest_jobs := "2"
 browser_timeout   := "600"
 # Default version is the trimmed contents of VERSION; override with `VERSION=1.2.3 just build`.
