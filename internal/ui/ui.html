@@ -1298,7 +1298,7 @@
 <dialog id="settings" aria-labelledby="settings-title">
   <form class="modal-body" id="settings-form">
     <button type="button" class="settings-back" id="settings-back" aria-label="{{.Msg "ui_settings_back"}}" hidden><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m15 6-6 6 6 6"/></svg>{{.Msg "ui_settings"}}</button>
-    <div class="modal-head" data-testid="modal-head"><svg class="page-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" hidden><path d="M12 3a9 9 0 1 0 0 18c.9 0 1.6-.7 1.6-1.6 0-.4-.2-.8-.4-1.1-.3-.3-.4-.7-.4-1.1 0-.9.7-1.6 1.6-1.6H16a5 5 0 0 0 5-5c0-4.1-4-7.6-9-7.6Z"/><circle cx="7.5" cy="10.5" r="1"/><circle cx="10.5" cy="7" r="1"/><circle cx="15" cy="7.5" r="1"/></svg><svg class="settings-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.7 1.7 0 0 0 .3 1.8l.1.1a2 2 0 1 1-2.8 2.8l-.1-.1a1.7 1.7 0 0 0-1.8-.3 1.7 1.7 0 0 0-1 1.5V21a2 2 0 1 1-4 0v-.1a1.7 1.7 0 0 0-1.1-1.5 1.7 1.7 0 0 0-1.8.3l-.1.1a2 2 0 1 1-2.8-2.8l.1-.1a1.7 1.7 0 0 0 .3-1.8 1.7 1.7 0 0 0-1.5-1H3a2 2 0 1 1 0-4h.1a1.7 1.7 0 0 0 1.5-1.1 1.7 1.7 0 0 0-.3-1.8l-.1-.1a2 2 0 1 1 2.8-2.8l.1.1a1.7 1.7 0 0 0 1.8.3H9a1.7 1.7 0 0 0 1-1.5V3a2 2 0 1 1 4 0v.1a1.7 1.7 0 0 0 1 1.5 1.7 1.7 0 0 0 1.8-.3l.1-.1a2 2 0 1 1 2.8 2.8l-.1.1a1.7 1.7 0 0 0-.3 1.8V9a1.7 1.7 0 0 0 1.5 1H21a2 2 0 1 1 0 4h-.1a1.7 1.7 0 0 0-1.5 1Z"/></svg><div><h2 id="settings-title" tabindex="-1">{{.Msg "ui_settings"}}</h2><p class="lead" data-testid="lead" id="theme-page" hidden></p></div></div>
+    <div class="modal-head" data-testid="modal-head"><svg class="page-icon" data-testid="page-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" hidden><path d="M12 3a9 9 0 1 0 0 18c.9 0 1.6-.7 1.6-1.6 0-.4-.2-.8-.4-1.1-.3-.3-.4-.7-.4-1.1 0-.9.7-1.6 1.6-1.6H16a5 5 0 0 0 5-5c0-4.1-4-7.6-9-7.6Z"/><circle cx="7.5" cy="10.5" r="1"/><circle cx="10.5" cy="7" r="1"/><circle cx="15" cy="7.5" r="1"/></svg><svg class="settings-icon" data-testid="settings-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.7 1.7 0 0 0 .3 1.8l.1.1a2 2 0 1 1-2.8 2.8l-.1-.1a1.7 1.7 0 0 0-1.8-.3 1.7 1.7 0 0 0-1 1.5V21a2 2 0 1 1-4 0v-.1a1.7 1.7 0 0 0-1.1-1.5 1.7 1.7 0 0 0-1.8.3l-.1.1a2 2 0 1 1-2.8-2.8l.1-.1a1.7 1.7 0 0 0 .3-1.8 1.7 1.7 0 0 0-1.5-1H3a2 2 0 1 1 0-4h.1a1.7 1.7 0 0 0 1.5-1.1 1.7 1.7 0 0 0-.3-1.8l-.1-.1a2 2 0 1 1 2.8-2.8l.1.1a1.7 1.7 0 0 0 1.8.3H9a1.7 1.7 0 0 0 1-1.5V3a2 2 0 1 1 4 0v.1a1.7 1.7 0 0 0 1 1.5 1.7 1.7 0 0 0 1.8-.3l.1-.1a2 2 0 1 1 2.8 2.8l-.1.1a1.7 1.7 0 0 0-.3 1.8V9a1.7 1.7 0 0 0 1.5 1H21a2 2 0 1 1 0 4h-.1a1.7 1.7 0 0 0-1.5 1Z"/></svg><div><h2 id="settings-title" tabindex="-1">{{.Msg "ui_settings"}}</h2><p class="lead" data-testid="lead" id="theme-page" hidden></p></div></div>
     <p class="theme-broken" id="settings-broken" hidden>{{.Msg "ui_settings_broken"}}</p>
     <div class="settings-list" id="settings-list">
       <button type="button" class="settings-item" data-testid="settings-item" data-panel="theme"><span class="settings-dot"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 3a9 9 0 1 0 0 18c.9 0 1.6-.7 1.6-1.6 0-.4-.2-.8-.4-1.1-.3-.3-.4-.7-.4-1.1 0-.9.7-1.6 1.6-1.6H16a5 5 0 0 0 5-5c0-4.1-4-7.6-9-7.6Z"/><circle cx="7.5" cy="10.5" r="1"/><circle cx="10.5" cy="7" r="1"/><circle cx="15" cy="7.5" r="1"/></svg></span><span class="settings-what"><b>{{.Msg "ui_settings_theme"}}{{.Msg "ui_settings_value_sep"}}<span id="settings-theme-now"></span></b><small>{{.Msg "ui_settings_theme_about"}}</small></span><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m9 6 6 6-6 6"/></svg></button>
@@ -1324,11 +1324,11 @@
     <div class="help-panels" data-testid="help-panels">
       <div id="help-about" class="help-panel">
         <div class="help-panel help-pages">
-          <p class="help-lead">{{.Msg "ui_help_pages_text"}}</p>
+          <p class="help-lead" data-testid="help-lead">{{.Msg "ui_help_pages_text"}}</p>
           <dl><dt>{{.Msg "ui_view_new"}}</dt><dd>{{.Msg "ui_help_new_text"}}</dd><dt>{{.Msg "ui_view_favorites"}}</dt><dd>{{.Msg "ui_help_favorites_text"}}</dd><dt>{{.Msg "ui_state_archived"}}</dt><dd>{{.Msg "ui_help_archive_text"}}</dd><dt>{{.Msg "ui_project"}}</dt><dd>{{.Msg "ui_help_project_pages_text"}}</dd></dl>
         </div>
         <div class="help-panel help-tasks">
-          <p class="help-lead">{{.Msg "ui_help_tasks_text"}}</p>
+          <p class="help-lead" data-testid="help-lead">{{.Msg "ui_help_tasks_text"}}</p>
           {{/* LIMIT: the four states are named here: add a state that store.States comes to have */}}
           <dl><dt>{{.Msg "ui_project"}}</dt><dd>{{.Msg "ui_help_project_tasks_text"}}</dd><dt>{{.Msg "ui_help_task"}}</dt><dd>{{.Msg "ui_help_task_text"}}</dd><dt>{{.Msg "ui_help_state"}}</dt><dd>{{.Msg "ui_help_state_text" (.Msg "ui_state_todo") (.Msg "ui_state_doing") (.Msg "ui_state_done") (.Msg "ui_state_archived")}}</dd><dt>{{.Msg "ui_task_category"}}</dt><dd>{{.Msg "ui_help_category_text"}}</dd><dt>{{.Msg "ui_pins"}}</dt><dd>{{.Msg "ui_help_pin_text"}}</dd></dl>
         </div>
@@ -1563,7 +1563,7 @@
     <span class="lead" data-testid="lead"></span>
     <a class="title" data-testid="title"></a>
     <time></time>
-    <span class="sub"></span>
+    <span class="sub" data-testid="sub"></span>
     <div class="actions" data-testid="actions">
       <button type="button" class="icon-btn archive" data-testid="archive"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4 5h16v4H4zM5 9v10h14V9M10 13h4"/></svg></button>
       <button type="button" class="icon-btn star" data-testid="star">
@@ -1580,10 +1580,10 @@
           <button type="button" class="icon-btn fav-item" data-testid="fav-item"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 3.5l2.6 5.3 5.9.9-4.3 4.1 1 5.8L12 16.9l-5.2 2.7 1-5.8-4.3-4.1 5.9-.9z"/></svg><span class="label" data-testid="label"></span></button>
           <button type="button" class="icon-btn mark-unread" data-testid="mark-unread"><svg viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><circle cx="12" cy="12" r="4.5"/></svg><span class="label" data-testid="label">{{.Msg "ui_mark_unread"}}</span></button>
           <button type="button" class="icon-btn select" data-testid="select" hidden><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="4" y="4" width="16" height="16" rx="3"/><path d="m8.5 12 2.5 2.5 4.5-5"/></svg><span class="label" data-testid="label">{{.Msg "ui_select"}}</span></button>
-          <button type="button" class="icon-btn tag-item"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M3 12V4h8l9 9-8 8-9-9Z"/><circle cx="7.5" cy="8.5" r="1.2"/></svg>{{.Msg "ui_tags"}}</button>
+          <button type="button" class="icon-btn tag-item" data-testid="tag-item"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M3 12V4h8l9 9-8 8-9-9Z"/><circle cx="7.5" cy="8.5" r="1.2"/></svg>{{.Msg "ui_tags"}}</button>
           <button type="button" class="icon-btn theme-item" data-testid="theme-item"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 3a9 9 0 1 0 0 18c.9 0 1.6-.7 1.6-1.6 0-.4-.2-.8-.4-1.1-.3-.3-.4-.7-.4-1.1 0-.9.7-1.6 1.6-1.6H16a5 5 0 0 0 5-5c0-4.1-4-7.6-9-7.6Z"/><circle cx="7.5" cy="10.5" r="1"/><circle cx="10.5" cy="7" r="1"/><circle cx="15" cy="7.5" r="1"/></svg>{{.Msg "ui_theme_item"}}</button>
-          <button type="button" class="icon-btn pin-item"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M9 3h6l-1 7 4 4v2H6v-2l4-4zM12 16v5"/></svg><span class="label" data-testid="label"></span></button>
-          <button type="button" class="icon-btn task-set"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M9 6h11M9 12h11M9 18h11M4 6h.01M4 12h.01M4 18h.01"/></svg>{{.Msg "ui_task_set"}}</button>
+          <button type="button" class="icon-btn pin-item" data-testid="pin-item"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M9 3h6l-1 7 4 4v2H6v-2l4-4zM12 16v5"/></svg><span class="label" data-testid="label"></span></button>
+          <button type="button" class="icon-btn task-set" data-testid="task-set"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M9 6h11M9 12h11M9 18h11M4 6h.01M4 12h.01M4 18h.01"/></svg>{{.Msg "ui_task_set"}}</button>
           <button type="button" class="icon-btn task-out" hidden><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M9 6h11M9 12h11M4 6h.01M4 12h.01M14 18h6"/></svg>{{.Msg "ui_task_out"}}</button>
           <a class="icon-btn task-open" data-testid="task-open" hidden><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M5 12h14m-6-6 6 6-6 6"/></svg><span class="label" data-testid="label"></span></a>
           <button type="button" class="icon-btn edit" data-testid="edit"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4 20h4L19 9a2.8 2.8 0 0 0-4-4L4 16v4Zm9.5-13.5 4 4"/></svg>{{.Msg "ui_edit"}}</button>
@@ -1591,7 +1591,7 @@
           <a class="icon-btn open" data-testid="open" target="_blank" rel="noopener"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M14 4h6v6m0-6-8.5 8.5M18 14v5a1 1 0 0 1-1 1H5a1 1 0 0 1-1-1V7a1 1 0 0 1 1-1h5"/></svg>{{.Msg "ui_open_raw"}}</a>
           <a class="icon-btn download" data-testid="download"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 4v11m0 0-4.5-4.5M12 15l4.5-4.5M5 19h14"/></svg>{{.Msg "ui_download"}}</a>
           <button type="button" class="icon-btn archive" data-testid="archive"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4 5h16v4H4zM5 9v10h14V9M10 13h4"/></svg><span class="label" data-testid="label"></span></button>
-          <button type="button" class="icon-btn delete"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4 7h16M10 11v6m4-6v6M6 7l1 12h10l1-12M9 7V4h6v3"/></svg><span class="label" data-testid="label"></span></button>
+          <button type="button" class="icon-btn delete" data-testid="delete"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4 7h16M10 11v6m4-6v6M6 7l1 12h10l1-12M9 7V4h6v3"/></svg><span class="label" data-testid="label"></span></button>
         </div>
       </details>
 </template>
@@ -1977,6 +1977,7 @@
   // el as a project's pill, in its color: its words cut at the pill's end
   function drawProject(el, word, color) {
     el.classList.add('proj', 'proj-tint');
+    el.dataset.testid = 'proj';
     el.style.setProperty('--c', color);
     el.replaceChildren(withTestid(tagged('span', 'proj-name', word), 'proj-name'));
   }
@@ -1991,7 +1992,7 @@
 
   // A state shown by a class, and told by an attribute too ("true", or none) for the browser tests, which read no class: the two
   // always change together, here
-  const STATE_ATTRS = { picked: 'aria-current', unseen: 'data-unread', archived: 'data-archived', on: 'data-on', armed: 'data-armed', old: 'data-old', narrowed: 'data-narrowed', selecting: 'data-selecting' };
+  const STATE_ATTRS = { picked: 'aria-current', unseen: 'data-unread', archived: 'data-archived', on: 'data-on', armed: 'data-armed', old: 'data-old', narrowed: 'data-narrowed', selecting: 'data-selecting', fresh: 'data-fresh' };
   function markState(el, name, on) {
     el.classList.toggle(name, Boolean(on));
     if (on) el.setAttribute(STATE_ATTRS[name], 'true');
@@ -2471,6 +2472,7 @@
     const boxes = names.map((name) => {
       const label = document.createElement('label');
       label.className = 'tag-box';
+      label.dataset.testid = 'tag-box';
       const box = document.createElement('input');
       box.type = 'checkbox';
       const show = () => {
@@ -2573,6 +2575,7 @@
     const b = document.createElement('button');
     b.type = 'button';
     b.className = `chip ${extra}`;
+    b.dataset.testid = 'chip';
     b.title = label;
     b.setAttribute('aria-pressed', String(pressed));
     b.innerHTML = mark;
@@ -2729,6 +2732,7 @@
     // The filters folded, the head says what they narrow the list to: the view, and how many picks
     const what = [view === FIRST_VIEW ? '' : t(VIEW_WORDS[view]), narrowed ? t('ui_narrow_n', narrowed) : ''].filter(Boolean).join(' · ');
     $('shelf-what').classList.remove('proj', 'proj-tint');
+    delete $('shelf-what').dataset.testid;
     if (projectHead) drawProject($('shelf-what'), projectWord(project), taskProjectColor(project));
     else $('shelf-what').textContent = TASK_LIST ? '' : what;
   }
@@ -3119,7 +3123,9 @@
       return;
     }
     keptUnread = x.slug;
-    x.v = 0;
+    // x is picked, unless another row was picked while its versions were read
+    if (x === picked) setPicked(Object.assign(picked, { v: 0 }));
+    else x.v = 0;
     versionGone = gone;
     drawReader();
   }
@@ -3173,13 +3179,14 @@
   // What is unseen, as the count and the marks of a row have it: an archived page is not, as nothing counts it
   const unseen = (a) => Boolean(a.news) && !a.archived;
   // What a row's first column shows of a
-  const leadOf = (a) => (a.folder ? FOLDER_MARK : a.path ? LINK_MARK : `<span class="${unseen(a) ? 'dot' : 'ring'}"></span>`);
+  const leadOf = (a) => (a.folder ? FOLDER_MARK : a.path ? LINK_MARK : `<span class="${unseen(a) ? 'dot' : 'ring'}" data-testid="${unseen(a) ? 'dot' : 'ring'}"></span>`);
 
   // A row's second line of a, in sub; middle puts what the place it is in adds before the path
   function drawSub(sub, a, ranks, middle) {
     const put = (cls, text) => {
       const span = document.createElement('span');
       span.className = cls;
+      span.dataset.testid = cls;
       span.textContent = text;
       sub.append(span);
       return span;
@@ -4061,7 +4068,7 @@
     link.title = [x.name, x.title].filter(Boolean).join('\n');
     link.setAttribute('aria-label', t('ui_task_kin_row', [x.name, x.title].filter(Boolean).join(' '), t(VIEW_WORDS[x.state])));
     markState(link, 'unseen', unreadOf(x) > 0);
-    link.append(tagged('span', `kid-state ${x.state}`, t(VIEW_WORDS[x.state])), withTestid(tagged('span', 'tname', x.name), 'tname'), withTestid(tagged('span', 'kin-title', x.title ?? ''), 'kin-title'), tagged('span', unreadOf(x) > 0 ? 'dot' : 'ring'));
+    link.append(withTestid(tagged('span', `kid-state ${x.state}`, t(VIEW_WORDS[x.state])), 'kid-state'), withTestid(tagged('span', 'tname', x.name), 'tname'), withTestid(tagged('span', 'kin-title', x.title ?? ''), 'kin-title'), withTestid(tagged('span', unreadOf(x) > 0 ? 'dot' : 'ring'), unreadOf(x) > 0 ? 'dot' : 'ring'));
     const off = withTestid(tagged('button', 'icon-btn unlink'), 'unlink');
     off.type = 'button';
     off.dataset.task = x.name;
@@ -4207,7 +4214,10 @@
         filter({ project: task.project, view: STATES.find((s) => s.new).name });
         drawn = '';
       },
-      back: (task, name) => focusRow(taskRowKey(task.project, name))?.classList.add('fresh'),
+      back: (task, name) => {
+        const row = focusRow(taskRowKey(task.project, name));
+        if (row) markState(row, 'fresh', true);
+      },
     },
   };
   // The dialog's task and form and whether it asks the project; the task it last showed for the name, which saving sends as new or not, and
@@ -6398,7 +6408,7 @@
     if (isNow) nm.append(Object.assign(document.createElement('span'), { className: 'pill now', textContent: t('ui_theme_now') }));
     if (th.dir) nm.append(Object.assign(document.createElement('span'), { className: 'pill', textContent: t('ui_theme_own') }));
     label.append(input, shot, nm);
-    if (th.about) label.append(Object.assign(document.createElement('span'), { className: 'ds', textContent: th.about }));
+    if (th.about) label.append(withTestid(Object.assign(document.createElement('span'), { className: 'ds', textContent: th.about }), 'ds'));
     if (th.dir) label.append(Object.assign(document.createElement('span'), { className: 'wh', textContent: th.dir }));
     return label;
   }
