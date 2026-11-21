@@ -77,7 +77,7 @@ func TestUITaskAdd(t *testing.T) { //nolint:paralleltest // the browser tests sh
 	b.until("the words", "!document.getElementById('tasks-empty').hidden")
 	want("the words", "document.querySelector('#tasks-empty strong').textContent + ' | ' + document.querySelector('#tasks-empty p').textContent",
 		"No tasks yet | Create one with Create task.")
-	want("no command on the screens", "document.querySelectorAll('[data-testid=state] code').length + ''", "0")
+	want("no command on the screens", "document.querySelectorAll('[data-testid=state]').length > 0 && document.querySelectorAll('[data-testid=state] code').length + ''", "0")
 	want("the shelf's button with no task", shown("add-task"), "false")
 	want("the icon, the size of the others", "document.querySelector('#task-add-empty svg').getBoundingClientRect().width + ''", "13")
 
@@ -186,7 +186,7 @@ func TestUITaskAdd(t *testing.T) { //nolint:paralleltest // the browser tests sh
 	}
 	open("add-task")
 	name("#", "")
-	want("nothing suggested", "document.querySelectorAll('[data-testid=suggest]:popover-open').length + ''", "0")
+	want("nothing suggested", "document.querySelectorAll('[data-testid=suggest]').length > 0 && document.querySelectorAll('[data-testid=suggest]:popover-open').length + ''", "0")
 	name("#1", "")
 	want("an ID there", said, "Create task | Project: beta | #1 one is already there (To do) | - | title false | Open the task")
 	b.eval("document.getElementById('kin-submit').click()")

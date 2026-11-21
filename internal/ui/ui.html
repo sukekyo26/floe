@@ -1080,7 +1080,7 @@
       <kbd aria-hidden="true">/</kbd>
     </label>
     <div class="bar-end">
-      <span class="frame-actions" data-testid="frame-actions" id="frame-actions" hidden></span>
+      <span class="frame-actions" id="frame-actions" hidden></span>
       <a class="news" id="news" href="/?view=new" hidden><span class="dot" data-testid="dot"></span><span id="news-n"></span></a>
       <button type="button" class="icon-btn" id="find-open" aria-label="{{.Msg "ui_find"}}" title="{{.Msg "ui_find"}}"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true"><circle cx="11" cy="11" r="7"/><path d="m20 20-3.5-3.5"/></svg></button>
       <button type="button" class="icon-btn" id="keys-open" aria-label="{{.Msg "ui_help"}}" title="{{.Msg "ui_help"}}"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="9"/><path d="M9.6 9.4a2.5 2.5 0 0 1 4.8.8c0 1.7-2.4 2-2.4 3.6"/><path d="M12 17.2v.01"/></svg></button>
@@ -1095,7 +1095,7 @@
   <button type="button" class="icon-btn side-show" id="shelf-show" aria-expanded="false" aria-controls="shelf" title="{{.Msg "ui_shelf_show"}}" aria-label="{{.Msg "ui_shelf_show"}}" hidden><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linejoin="round" aria-hidden="true"><rect x="3" y="4" width="18" height="16" rx="2"/><path d="M9 4v16M15 4v16"/><path fill="currentColor" stroke="none" d="M3 6a2 2 0 0 1 2-2h4v16H5a2 2 0 0 1-2-2Z"/></svg></button>
   <button type="button" class="icon-btn side-show" id="list-show" aria-expanded="false" aria-controls="listcol" title="{{.Msg "ui_list_show"}}" aria-label="{{.Msg "ui_list_show"}}" hidden><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linejoin="round" aria-hidden="true"><rect x="3" y="4" width="18" height="16" rx="2"/><path d="M9 4v16M15 4v16"/><path fill="currentColor" stroke="none" d="M9 4h6v16H9Z"/></svg></button>
   <!-- Buttons that switch the list. They do not implement WAI-ARIA tabs (arrow keys, tabpanel), so they use aria-pressed -->
-  <nav class="shelf" data-testid="shelf" id="shelf" aria-label="{{.Msg "ui_shelf"}}">
+  <nav class="shelf" id="shelf" aria-label="{{.Msg "ui_shelf"}}">
     <div class="col-foot"><button type="button" class="icon-btn" id="shelf-hide" aria-expanded="true" aria-controls="shelf" title="{{.Msg "ui_shelf_hide"}}" aria-label="{{.Msg "ui_shelf_hide"}}"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linejoin="round" aria-hidden="true"><rect x="3" y="4" width="18" height="16" rx="2"/><path d="M9 4v16M15 4v16"/><path fill="currentColor" stroke="none" d="M3 6a2 2 0 0 1 2-2h4v16H5a2 2 0 0 1-2-2Z"/></svg></button></div>
     <div class="shelf-body" id="shelf-body">
       <div class="views" data-testid="views" role="group" aria-label="{{.Msg "ui_shelf"}}">
@@ -1134,7 +1134,7 @@
   <div class="grip" id="shelf-grip" role="separator" aria-orientation="vertical" aria-controls="shelf" aria-label="{{.Msg "ui_shelf_width"}}" tabindex="0"></div>
   <section class="listcol" id="listcol">
     <div class="col-foot"><button type="button" class="icon-btn" id="list-hide" aria-expanded="true" aria-controls="listcol" title="{{.Msg "ui_list_hide"}}" aria-label="{{.Msg "ui_list_hide"}}"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linejoin="round" aria-hidden="true"><rect x="3" y="4" width="18" height="16" rx="2"/><path d="M9 4v16M15 4v16"/><path fill="currentColor" stroke="none" d="M9 4h6v16H9Z"/></svg></button></div>
-    <div class="list-body" data-testid="list-body" id="list-body">
+    <div class="list-body" id="list-body">
       <!-- The way back stands in the markup: h may be pressed before the first answer -->
       <div class="thead" id="task-head" hidden>
         <div class="ttop">
@@ -1177,7 +1177,7 @@
           <button type="button" class="btn" id="bulk-tag"><span class="label" data-testid="label">{{.Msg "ui_tags"}}</span></button>
           <button type="button" class="btn" id="bulk-archive"><span class="label" data-testid="label"></span></button>
           <button type="button" class="btn danger" id="bulk-delete"><span class="label" data-testid="label"></span></button>
-          <button type="button" class="icon-btn clear" data-testid="clear" id="bulk-clear"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true"><path d="M6 6l12 12M18 6 6 18"/></svg><span class="label" data-testid="label">{{.Msg "ui_clear_selection"}}</span></button>
+          <button type="button" class="icon-btn clear" id="bulk-clear"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true"><path d="M6 6l12 12M18 6 6 18"/></svg><span class="label" data-testid="label">{{.Msg "ui_clear_selection"}}</span></button>
         </div>
       </div>
       <ul id="list"></ul>
@@ -1215,7 +1215,7 @@
     <div class="rhead" id="read-head" hidden>
       <a class="read-title" id="read-title"></a>
       <select class="ver-pick" id="read-version" aria-label="{{.Msg "ui_version"}}" hidden><button><selectedcontent></selectedcontent></button></select>
-      <span class="frame-actions" data-testid="frame-actions" id="read-actions"></span>
+      <span class="frame-actions" id="read-actions"></span>
     </div>
     <div class="tagline" id="read-tags" hidden></div>
     <iframe class="read-frame" id="read-frame" data-loaded="about:blank" allow="clipboard-write *; fullscreen *" hidden></iframe>
@@ -1251,7 +1251,7 @@
       <a class="btn" id="diff-close" title="{{.Msg "ui_diff_close_title"}}"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true"><path d="M6 6l12 12M18 6 6 18"/></svg>{{.Msg "ui_close"}}</a>
     </div>
   </div>
-  <p class="dnote" data-testid="dnote" id="diff-url-note" hidden>{{.Msg "ui_diff_bad_url"}}</p>
+  <p class="dnote" id="diff-url-note" hidden>{{.Msg "ui_diff_bad_url"}}</p>
   <div class="dmain" id="diff-main">
     <nav class="dtoc" id="diff-toc-nav" aria-labelledby="diff-toc-title">
       <div class="col-foot"><button type="button" class="icon-btn" id="diff-toc-hide" aria-expanded="true" aria-controls="diff-toc-nav" title="{{.Msg "ui_diff_toc_hide"}}" aria-label="{{.Msg "ui_diff_toc_hide"}}"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linejoin="round" aria-hidden="true"><rect x="3" y="4" width="18" height="16" rx="2"/><path d="M9 4v16"/></svg></button></div>
@@ -1279,7 +1279,7 @@
     <input class="text" data-testid="text" type="search" id="find-q" role="combobox" aria-expanded="true" aria-autocomplete="list" aria-controls="find-list" placeholder="{{.Msg "ui_find_placeholder"}}" aria-labelledby="find-title" autocomplete="off">
     <ul class="find-list" id="find-list" tabindex="-1" role="listbox" aria-labelledby="find-title"></ul>
     <div class="find-none" id="find-none" hidden><strong>{{.Msg "ui_nomatch"}}</strong>{{.Msg "ui_find_no_files"}}</div>
-    <div class="dialog-actions find-foot" data-testid="find-foot"><div class="find-acts" id="find-acts" hidden><span class="frame-actions" data-testid="frame-actions" id="find-actions"></span></div><button type="button" class="btn" data-close>{{.Msg "ui_close"}}</button></div>
+    <div class="dialog-actions find-foot" data-testid="find-foot"><div class="find-acts" id="find-acts" hidden><span class="frame-actions" id="find-actions"></span></div><button type="button" class="btn" data-close>{{.Msg "ui_close"}}</button></div>
   </div>
 </dialog>
 <template id="find-row"><li role="option"><span class="lead" data-testid="lead"></span><a class="title" data-testid="title" tabindex="-1"></a><span class="time"><time></time></span><span class="sub"></span></li></template>
@@ -1602,7 +1602,7 @@
 </template>
 <!-- The bar over a page, beside the list and in the frame -->
 <template id="page-actions">
-  <span class="frame-actions" data-testid="frame-actions">
+  <span class="frame-actions">
       <a class="icon-btn diff-open" data-testid="diff-open" hidden><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M3 4.5h7.5v15H3zM13.5 4.5H21v15h-7.5zM5.5 9h2.5M5.5 15h2.5M16 9h2.5M16 15h2.5"/></svg></a>
       <button type="button" class="icon-btn copy" data-testid="copy" title="{{.Msg "ui_copy_path"}}" aria-label="{{.Msg "ui_copy_path"}}"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M9 9h10v11H9zM5 15V4h10"/></svg><span class="done"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m5 12.5 4.5 4.5L19 7.5"/></svg></span></button>
       <a class="icon-btn download" data-testid="download"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 4v11m0 0-4.5-4.5M12 15l4.5-4.5M5 19h14"/></svg></a>
@@ -1977,7 +1977,6 @@
   // el as a project's pill, in its color: its words cut at the pill's end
   function drawProject(el, word, color) {
     el.classList.add('proj', 'proj-tint');
-    el.dataset.testid = 'proj';
     el.style.setProperty('--c', color);
     el.replaceChildren(withTestid(tagged('span', 'proj-name', word), 'proj-name'));
   }
@@ -2729,7 +2728,6 @@
     // The filters folded, the head says what they narrow the list to: the view, and how many picks
     const what = [view === FIRST_VIEW ? '' : t(VIEW_WORDS[view]), narrowed ? t('ui_narrow_n', narrowed) : ''].filter(Boolean).join(' · ');
     $('shelf-what').classList.remove('proj', 'proj-tint');
-    delete $('shelf-what').dataset.testid;
     if (projectHead) drawProject($('shelf-what'), projectWord(project), taskProjectColor(project));
     else $('shelf-what').textContent = TASK_LIST ? '' : what;
   }

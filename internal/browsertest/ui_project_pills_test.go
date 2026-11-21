@@ -56,12 +56,12 @@ func TestUIProjectPills(t *testing.T) { //nolint:paralleltest // the browser tes
 	s.floe(t, "task", "--slug", "a", "--task", "#1", "--category", "one")
 	b.navigate("/tasks?project=floe&task=%231")
 	b.until("the task's page", "document.querySelector('#list li[data-slug=a]') && document.querySelector('#task-project [data-testid=proj-name]')")
-	say("on a task's page", "document.querySelector('#task-project [data-testid=proj-name]').textContent+' '+document.querySelectorAll('#list li[data-slug] [data-testid=proj]').length")
+	say("on a task's page", "document.querySelector('#task-project [data-testid=proj-name]').textContent+' '+document.querySelectorAll('#list li[data-slug] [data-testid=proj-name]').length")
 
 	// The pages to add to it are of its project too: none has a pill.
 	b.eval("document.querySelector('#list li[data-key=\"group:one\"] [data-testid=category-add]').click()")
 	b.until("the candidates", "document.querySelectorAll('#add-page-list li').length === 2")
-	say("to add", "document.querySelectorAll('#add-page-list [data-testid=proj]').length")
+	say("to add", "document.querySelectorAll('#add-page-list [data-testid=proj-name]').length")
 
 	check(t, "project pills", out, "no page: true 0|no project: false 1 -,-,-|one project: false 1 floe,floe,floe floe|in the search: floe,floe,floe|on a task's page: floe 0|to add: 0")
 }

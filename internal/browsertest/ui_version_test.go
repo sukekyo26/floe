@@ -462,7 +462,7 @@ func TestUIVersionNotes(t *testing.T) { //nolint:paralleltest // the browser tes
 	b.until("v1 told read", pageNews("d")+".then((n) => n === 'version')")
 	b.navigate("/a/d/?v=99")
 	b.until("both", "document.querySelector('[data-testid=ver-note]') && document.querySelector('[data-testid=page-note]')")
-	order := b.eval(`[...document.querySelectorAll('[data-testid=ver-note], [data-testid=page-note], [data-testid=dnote]')].filter((e) => e.getClientRects().length)
+	order := b.eval(`[...document.querySelectorAll('[data-testid=ver-note], [data-testid=page-note]')].filter((e) => e.getClientRects().length)
 		.map((e) => e.dataset.testid === 'ver-note' ? 'version' : 'page').join(' ')`)
 	check(t, "notes", []string{order, b.eval(verWords)}, "version page|That version cannot be opened, so this shows the latest.")
 }

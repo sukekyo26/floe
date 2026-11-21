@@ -104,7 +104,7 @@ func TestUIHelp(t *testing.T) { //nolint:paralleltest // the browser tests share
 	b.until("the search", "document.getElementById('find').open")
 	b.eval("for (const e of document.querySelectorAll('#keys [data-testid=diff-go]')) e.hidden = false")
 	about()
-	out = append(out, b.eval("document.getElementById('keys').open + ' ' + "+helpPressed+" + ' ' + [...document.querySelectorAll('#keys [data-testid=diff-go]')].every((e) => !e.hidden)"))
+	out = append(out, b.eval("document.getElementById('keys').open + ' ' + "+helpPressed+" + ' ' + ((l) => l.length > 0 && l.every((e) => !e.hidden))([...document.querySelectorAll('#keys [data-testid=diff-go]')])"))
 	shut("find")
 
 	// The buttons stay as the panel changes, on the list and on the task list.
