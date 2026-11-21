@@ -136,8 +136,10 @@ func TestUITaskPage(t *testing.T) { //nolint:paralleltest // the browser tests s
 
 	// The state changed: back to the list of that state, the task's row with the focus.
 	b.eval("document.getElementById('task-state').focus()")
+	// The write's answer marks the state at once; the head and the list it leads back to are of the read after it
+	begun := b.pollEnded()
 	chooseValue(b, "task-state", "todo")
-	b.until("the state", "document.getElementById('task-state').dataset.state === 'todo'")
+	b.untilRead(begun, "the state read after its write", "document.getElementById('task-state').dataset.state === 'todo'")
 	// By the keyboard, whose keys a select keeps: the focus has left it.
 	realKey(b, "h", 0)
 	b.until("the list", "location.pathname === '/tasks' && document.querySelector('#list > li') && document.activeElement.closest('#list')")
@@ -407,8 +409,10 @@ func TestUITaskUp(t *testing.T) { //nolint:paralleltest // the browser tests sha
 	b.until("the rows", "document.querySelector('#list > li [data-testid=title]')")
 	press("document.querySelector('#list > li [data-testid=title]')")
 	b.until("the task's page", task1)
+	// As above: the way back is of the read after the write
+	begun := b.pollEnded()
 	chooseValue(b, "task-state", "done")
-	b.until("the state", "document.getElementById('task-state').dataset.state === 'done'")
+	b.untilRead(begun, "the state read after its write", "document.getElementById('task-state').dataset.state === 'done'")
 	say("the state changed")
 	out = append(out, "the tab's list: "+b.eval("document.getElementById('to-tasks').getAttribute('href')"))
 	realKey(b, "h", 0)

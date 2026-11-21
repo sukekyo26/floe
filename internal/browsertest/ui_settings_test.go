@@ -75,7 +75,7 @@ func TestUISettings(t *testing.T) { //nolint:paralleltest // the browser tests s
 	out = append(out, b.eval(seen), b.eval("document.getElementById('settings-theme-now').textContent"), b.eval(focused),
 		b.eval("document.getElementById('settings').contains(document.getElementById('toasts'))"), strings.TrimSpace(s.floe(t, "theme", "default")))
 	closeSettings(b)
-	out = append(out, b.until("the toasts back", "document.body === document.getElementById('toasts').parentElement"))
+	out = append(out, b.until("the toasts back", "!document.getElementById('toasts').closest('dialog')"))
 	// Escape from a part closes the modal, the focus back on its button
 	b.eval("document.getElementById('settings-open').focus(); document.getElementById('settings-open').click()")
 	b.until("the list's values", "document.getElementById('settings-mode-now').textContent !== ''")

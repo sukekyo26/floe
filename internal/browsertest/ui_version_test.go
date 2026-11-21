@@ -56,14 +56,27 @@ func goneReads(b *browser, slug string) {
 	}); }`)
 }
 
-// pressMenuItem opens the "…" menu in box and presses its item named item (data-testid). The menu is opened again while it is
-// waited for: the list's or the bar's first read may draw it anew, closed, just after it opened.
+// pressMenuItem opens the "…" menu in box and presses its item named item (data-testid). The menu is opened once more if it closes
+// while waited for: the list's or the bar's first read may draw it anew, closed, just after it opened. Closed twice fails: a read
+// that draws the same list anew each time.
 func pressMenuItem(b *browser, box, item string) {
+	b.t.Helper()
+	menuItemShown(b, box, item, "")
+	b.moving("document.querySelector(" + js(box+" [data-testid=more] [data-testid="+item+"]") + ").click()")
+}
+
+// menuItemShown opens the "…" menu in box by its summary (first, JS run on the summary s before the press, as "s.focus();") and
+// waits until item shows in it, opening it once more if a redraw closed it.
+func menuItemShown(b *browser, box, item, first string) {
 	b.t.Helper()
 	menu := "document.querySelector(" + js(box+" [data-testid=more]") + ")"
 	got := "document.querySelector(" + js(box+" [data-testid=more] [data-testid="+item+"]") + ")"
-	b.until("the item "+item, "(() => { const m = "+menu+"; if (m && !m.open) m.querySelector('summary').click(); return "+got+"?.checkVisibility(); })()")
-	b.moving(got + ".click()")
+	b.eval("window.menuOpened = 0")
+	if b.until("the item "+item, "(() => { const m = "+menu+"; if (!m) return false; "+
+		"if (!m.open) { if (window.menuOpened++ > 1) return 'closed again'; const s = m.querySelector('summary'); "+first+" s.click(); } "+
+		"return "+got+"?.checkVisibility() && 'shown'; })()") != "shown" {
+		b.t.Fatalf("the menu in %s closed again as it was opened again: a read draws it anew each time", box)
+	}
 }
 
 // openSlugField unfolds the part of the edit modal that holds the URL name, once the modal is open.
@@ -431,11 +444,12 @@ func TestUIVersionGone(t *testing.T) { //nolint:paralleltest // the browser test
 	b.until("the choice", "!document.getElementById('read-version').hidden && "+newsOf("f")+" === ''")
 	choose(b, "read-version", 2)
 	b.until("v2", besideLoaded+".endsWith('v=2')")
+	// The words come before the versions read that finds v2 gone hides the choice; counted from before the removal, as that read may
+	// come at any time after it (the versions are not held)
+	goneReads(b, "f")
 	release := b.holdReads(unsent, "/api/pages")
 	s.floe(t, "rm", "f")
 	s.floe(t, "publish", s.page(t, "diff/f.yaml", "F", "<p>again</p>"), "--slug", "f")
-	// The words come before the versions read that finds v2 gone hides the choice.
-	goneReads(b, "f")
 	release()
 	b.eval(pageToastsNow)
 	b.reread()
