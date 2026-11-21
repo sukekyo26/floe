@@ -17,19 +17,21 @@ import (
 
 // notButtons are not buttons of words by the rule (.claude/rules/ui.md): the shelf's rows and the add buttons under them, in a
 // modal too on a narrow screen; the settings' rows and their way back; the "…" menu's items. Nor are the links of a row or a mark
-// (the brand, a row's title in the list and the search, a row's task and tags, a task's parent and children, the diff's contents).
+// (the brand, a row's title in the list and the search, a row's task and tags, a task's parent and children, the diff's contents),
+// nor tabs (role=tab: the help's switches, as the React screen makes them).
 const notButtons = "#shelf *, #filter-dialog #shelf-more *, [data-testid=settings-item], #settings-back, [data-testid=menu] *, " +
-	"[data-testid=brand], #list li [data-testid=title], #find-list li [data-testid=title], [data-testid=task-tag], #list li [data-testid=tagpill], [data-testid=kin-row], #diff-toc button"
+	"[data-testid=brand], #list li [data-testid=title], #find-list li [data-testid=title], [data-testid=task-tag], #list li [data-testid=tagpill], [data-testid=kin-row], #diff-toc button, [role=tab]"
 
 // wordsOnly is a button of words in no form of .btn, measured for its words alone: the task's way back.
 const wordsOnly = "#task-up"
 
-// LIMIT: buttons of words in another form than .btn, neither a row nor a mark. The user's decision: they take the form of .btn
-// (S425). ui.html is not mended while it is rebuilt, so they pass while it is ui.html; each row goes as its React screen comes in
-// (one of the form fails "take it off the table" to tell so).
+// LIMIT: buttons of words in another form than .btn, neither a row nor a mark. The user's decision (S425): the bar's two ways to the
+// screens become tabs (role=tab, as the help's switches), the rest take the form of .btn. ui.html is not mended while it is
+// rebuilt, so they pass while it is ui.html; each row goes as its React screen comes in (one of the form, or a tab, fails "take it
+// off the table" to tell so).
 var otherForm = map[string]string{
-	"to-list":            "the bar's way to the page list, a round tab",
-	"to-tasks":           "the bar's way to the task list, a round tab",
+	"to-list":            "the bar's way to the page list: a tab in React",
+	"to-tasks":           "the bar's way to the task list: a tab in React",
 	"news":               "the bar's count of the unread, a mark and a number",
 	"bulk-clear":         "the bar of the selected: its round button that lets them go",
 	"back":               "the bar of a page whole: its round way back",
@@ -162,10 +164,10 @@ func TestUIButtons(t *testing.T) { //nolint:paralleltest // the browser tests sh
 		t.Helper()
 		modal("keys", press("#keys-open"))
 		b.eval("document.getElementById('keys-open').click()")
-		b.until("the help", "document.getElementById('keys').open && document.querySelector('#keys [data-help=about]').getAttribute('aria-pressed') === 'true'")
+		b.until("the help", "document.getElementById('keys').open && "+helpOn+"(document.querySelector('#keys [data-help=about]'))")
 		for _, part := range []string{"about", "keys"} {
 			b.eval("document.querySelector('#keys [data-help=" + part + "]').click()")
-			b.until("the part "+part, "document.querySelector('#keys [data-help="+part+"]').getAttribute('aria-pressed') === 'true'")
+			b.until("the part "+part, helpOn+"(document.querySelector('#keys [data-help="+part+"]'))")
 			if n := check(scene + ", help's " + part); n != 3 {
 				t.Errorf("%s, help's %s: %d of its 3 buttons of words measured", scene, part, n)
 			}
