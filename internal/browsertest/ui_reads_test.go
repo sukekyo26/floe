@@ -121,6 +121,13 @@ func TestUIRead(t *testing.T) { //nolint:paralleltest // the browser tests share
 		t.Error("a request cut off by its time limit showed the server as not reached")
 	}
 	unlock()
+	// Not reached at all, it does: the same mark read as shown
+	b.eval("window.reachedFetch = fetch; fetch = () => Promise.reject(new TypeError('Failed to fetch'))")
+	b.reread()
+	b.until("the server shown as not reached", "document.getElementById('server').dataset.down === 'true'")
+	b.eval("fetch = window.reachedFetch")
+	b.reread()
+	b.until("the server reached again", "document.getElementById('server').dataset.down !== 'true'")
 
 	// Refused, the words show as the page's mistakes do, in no toast of success; and go when one is kept.
 	s.floe(t, "publish", s.page(t, "read/bad.yaml", "bad", "<p id=\"p\">bad</p>"), "--slug", "bad")
