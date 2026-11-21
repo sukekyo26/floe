@@ -1,6 +1,9 @@
 package browsertest_test
 
-import "testing"
+import (
+	"maps"
+	"testing"
+)
 
 // cardsGapIn returns a measure that finds each element sel finds whose gap is not --cards-gap, read in it: a number
 // copied, 0.4rem, as a gap a part chooses of its own, and one of no length (normal). It returns {seen, amiss}: those it
@@ -53,9 +56,7 @@ func brokenCardsGapVar(t *testing.T, s *site) (string, measured) {
 	html := `<div data-floe-part="cardy"><div class="card"><p>a</p><p>b</p></div></div>`
 	own := ownPart("cardy", html, ":scope .card { gap: 0.4rem; }\n")
 	own["parts/cardy/part.yaml"] = "looks: [cards]\n"
-	for k, v := range gappedTheme {
-		own[k] = v
-	}
+	maps.Copy(own, gappedTheme)
 	s.brokenPage(t, own, htmlPage(html)+"theme: gapped\n")
 	return "cardy", s.b.measure("broken", measureCardsGap)
 }

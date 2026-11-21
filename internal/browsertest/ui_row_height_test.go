@@ -16,7 +16,7 @@ func TestUIRowHeight(t *testing.T) { //nolint:paralleltest // the browser tests 
 	b := s.b
 	st := store.New(s.Env["FLOE_DIR"])
 	s.floe(t, "publish", s.page(t, "plan.yaml", "Plan", "<p>x</p>"), "--slug", "plan")
-	if _, err := st.Edit("plan", store.Edit{Project: ptrTo("demo")}); err != nil {
+	if _, err := st.Edit("plan", store.Edit{Project: new("demo")}); err != nil {
 		t.Fatal(err)
 	}
 	s.floe(t, "task", "--slug", "plan", "--task", "S1", "--category", "design")

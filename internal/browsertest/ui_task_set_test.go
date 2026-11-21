@@ -218,7 +218,7 @@ func TestUITaskSet(t *testing.T) { //nolint:paralleltest // the browser tests sh
 	b.pressKey(kb.ArrowDown)
 	b.pressKey(kb.ArrowDown)
 	// Drawn anew: the list read with a title changed
-	if _, err := st.Edit("a", store.Edit{Title: ptrTo("T a again")}); err != nil {
+	if _, err := st.Edit("a", store.Edit{Title: new("T a again")}); err != nil {
 		t.Fatal(err)
 	}
 	b.reread()
