@@ -81,7 +81,7 @@ fix-check:
     fix_pkgs=$({{core_pkgs}})
     for os in {{fix_oses}}; do
         GOOS=$os go fix {{fix_flags}} -diff $fix_pkgs || {
-            echo "fix-check: go fix would change the code above for GOOS=$os: run 'just fix'" >&2
+            echo "fix-check: go fix failed or would change the code for GOOS=$os: run 'just fix' for a diff above; with no diff, fix the compiler's errors above" >&2
             exit 1
         }
     done
