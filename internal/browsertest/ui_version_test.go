@@ -146,9 +146,10 @@ func TestUIVersionPick(t *testing.T) { //nolint:paralleltest // the browser test
 	b.until("read", "window.reads > 0 && !("+rowNews("d")+")")
 
 	// Marked unread: the versions gone through tell nothing, until another page has been open.
-	b.eval("window.reads = 0; window.heard = 0")
 	pressMenuItem(b, "#read-actions", "mark-unread")
 	b.until("unread", rowNews("d"))
+	// Counted once it is unread: a read told late of the page come back to is not of what is checked here
+	b.eval("window.reads = 0; window.heard = 0")
 	const shelfWord = "[...document.querySelectorAll('#read-version option')].find((o) => o.textContent.includes('v2')).textContent.includes('·')"
 	out = append(out, b.eval(shelfWord))
 	for _, n := range []int{2, 4} {
@@ -289,10 +290,13 @@ func TestUIVersionURL(t *testing.T) { //nolint:paralleltest // the browser tests
 	// What a move kept of another page does not hold this one back.
 	s.floe(t, "publish", s.page(t, "diff/n.yaml", "N", "<p>n</p>"), "--slug", "n")
 	b.eval(`sessionStorage.setItem('version.move', JSON.stringify({ slug: 'other', focus: true, kept: true }))`)
+	// The toast goes after 3 s, which a slow machine may take to open the page: noted as it comes, by a script run before the page's
+	toastSeen := b.addScript(`addEventListener('DOMContentLoaded', () => new MutationObserver(() => {
+		if (document.querySelector('[data-testid=toast][data-page]')) window.pageToastSeen = true;
+	}).observe(document.body, { childList: true, subtree: true }))`)
 	b.navigate("/a/n/")
-	// The toast goes after 3 s, the menu's way back to unread comes with the next read: one after the other, not both at once
-	out = append(out, b.until("the page's toast", "document.querySelector('[data-testid=toast][data-page]') !== null"),
-		b.until("read as ever", unread+"?.hidden === false"))
+	out = append(out, b.until("the page's toast", "window.pageToastSeen === true"), b.until("read as ever", unread+"?.hidden === false"))
+	b.removeScript(toastSeen)
 
 	// A slug changed keeps the version.
 	open("/a/d/?v=2")
