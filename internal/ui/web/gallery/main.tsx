@@ -19,6 +19,12 @@ import { Rows, type RowItem } from '@/components/rows';
 import { ServerState } from '@/components/server-state';
 import { Toasts } from '@/components/toasts';
 import { setBoot, type Boot } from '@/config/boot';
+import { KeysDialog, type HelpScreen, type HelpTab } from '@/features/help/components/keys-dialog';
+import { EditDialog, type EditTarget } from '@/features/page-edit/components/edit-dialog';
+import { createSaveEdit } from '@/features/page-edit/stores/save-edit';
+import { pageTags, TagDialog, type TagTarget } from '@/features/tags/components/tag-dialog';
+import { TagLine } from '@/features/tags/components/tag-line';
+import { createApplyTags } from '@/features/tags/stores/apply-tags';
 import { useHold } from '@/hooks/use-hold';
 import { useKeys } from '@/hooks/use-keys';
 import { useOpenMenus } from '@/hooks/use-open-menu';
@@ -26,8 +32,13 @@ import { useStore } from '@/hooks/use-store';
 import { client } from '@/lib/api-client';
 import { createStore } from '@/lib/store';
 import { t } from '@/lib/t';
+import { isMac } from '@/lib/platform';
+import { createActOn } from '@/stores/act-on';
 import { notice } from '@/stores/notice';
+import type { OpenPage } from '@/stores/open-page';
+import type { Order } from '@/stores/order';
 import { createPageActions } from '@/stores/page-actions';
+import type { PageWrites } from '@/stores/page-writes';
 import type { Pages } from '@/stores/pages';
 import type { Reads } from '@/stores/reads';
 import type { TaskWrites } from '@/stores/tasks';
@@ -48,6 +59,7 @@ const PAGES: Page[] = [
     updatedAt: ago(32),
     taskProject: 'floe',
     template: 'design',
+    tags: ['design', 'floe'],
     task: { name: '#12', category: 'designs' },
     themed: true,
     version: 3,
@@ -61,6 +73,7 @@ const PAGES: Page[] = [
     createdAt: ago(90),
     updatedAt: ago(1),
     taskProject: 'floe',
+    tags: ['floe'],
     news: 'version',
   },
   {
@@ -71,6 +84,7 @@ const PAGES: Page[] = [
     createdAt: ago(900),
     updatedAt: ago(200),
     taskProject: 'demo',
+    tags: ['Foo', 'Foobar'],
     favorite: true,
   },
   {
@@ -109,14 +123,39 @@ const shownPages = createStore<Page[]>(PAGES);
 const edit = (slug: string, change: Partial<Page>) => {
   shownPages.set(shownPages.get().map((p) => (p.slug === slug ? { ...p, ...change } : p)));
 };
+// The list as a read of the fake server would give it: the pages as they are now
+const listed = createStore({ entries: PAGES, tasks: { error: '', tasks: {}, raw: '' }, readWhy: '', drawWhy: '' });
+shownPages.subscribe(() => {
+  listed.set({ ...listed.get(), entries: shownPages.get() });
+});
 // slow: the list's read after a write takes 1.5 s, to see the toast and its focus come before it
 let slow = false;
+// refuse: the next tag or edit writes are refused, as a server that says no would
+let refuse = false;
+const galleryPages = {
+  load: () =>
+    new Promise((go) => {
+      setTimeout(go, slow ? 1500 : 0);
+    }),
+  rereadTasks: () => Promise.resolve(),
+  readRev: () => 0,
+  state: listed,
+} as unknown as Pages;
+// A tag write adds and removes; any other is the fields it names
+const patched = (a: Page, body: unknown): Partial<Page> => {
+  const { tags } = body as { tags?: { add: string[]; remove: string[] } };
+  return tags
+    ? { tags: [...new Set([...(a.tags ?? []), ...tags.add])].filter((x) => !tags.remove.includes(x)) }
+    : (body as Partial<Page>);
+};
 const answered = { ok: true, status: 200, text: '', rev: 1, stale: '', pages: [], written: [] };
 const actions = createPageActions({
   writes: {
     writePage: () => Promise.resolve(''),
     patchPage: (slug, body) => {
-      edit(slug, body as Partial<Page>);
+      const a = shownPages.get().find((p) => p.slug === slug);
+      if (refuse) return Promise.resolve('refused (500)');
+      if (a) edit(slug, patched(a, body));
       return Promise.resolve('');
     },
     deletePage: (slug) => {
@@ -136,26 +175,60 @@ const actions = createPageActions({
       return Promise.resolve(answered);
     },
   } as unknown as TaskWrites,
-  pages: {
-    load: () =>
-      new Promise((go) => {
-        setTimeout(go, slow ? 1500 : 0);
-      }),
-    rereadTasks: () => Promise.resolve(),
-    readRev: () => 0,
-    state: createStore({ entries: [], tasks: { error: '', tasks: {}, raw: '' }, readWhy: '', drawWhy: '' }),
-  } as unknown as Pages,
+  pages: galleryPages,
   reads: { markUnread: () => Promise.resolve({ kind: 'sent', cleared: false }) } as unknown as Reads,
   go: (href) => {
     toasts.toast(`would go to ${href}`);
   },
 });
+// The modals the menus open, each held by the gallery as the app will hold it
+const tagTarget = createStore<TagTarget | null>(null);
+const editTarget = createStore<EditTarget | null>(null);
 const openers: Openers = {
-  onTags: (a) => toasts.toast(`tags of ${a.slug}`),
+  onTags: (a, back) => {
+    tagTarget.set(pageTags(a, back));
+  },
   onTheme: (a) => toasts.toast(`theme of ${a.slug}`),
-  onEdit: (a) => toasts.toast(`edit ${a.slug}`),
+  onEdit: (a, back) => {
+    editTarget.set({ page: a, back });
+  },
   onTaskSet: (a) => toasts.toast(`set the task of ${a.slug}`),
 };
+const applyTags = createApplyTags({
+  pages: galleryPages,
+  writes: {
+    patchPage: (slug: string, body: unknown) => {
+      const a = shownPages.get().find((p) => p.slug === slug);
+      if (refuse) return Promise.resolve('refused (500)');
+      if (a) edit(slug, patched(a, body));
+      return Promise.resolve('');
+    },
+  } as unknown as PageWrites,
+  actOn: createActOn({ pages: galleryPages }),
+});
+// whole: the edit is of the page open whole, which goes to its new name
+let whole = false;
+const saveEdit = createSaveEdit({
+  writes: {
+    writePage: (slug: string, init: RequestInit, options?: { answer?: (got: unknown) => void }) => {
+      const change = JSON.parse(init.body as string) as Partial<Page>;
+      const a = shownPages.get().find((p) => p.slug === slug);
+      if (refuse) return Promise.resolve('refused (409)');
+      if (a) edit(slug, change);
+      options?.answer?.({ offTask: change.project !== undefined && a?.task?.name ? a.task.name : '' });
+      return Promise.resolve('');
+    },
+  } as unknown as PageWrites,
+  pages: galleryPages,
+  openPage: {
+    frameAt: () => (whole ? { slug: editTarget.get()?.page.slug ?? '', file: '', v: 0 } : null),
+    picked: createStore(null),
+  } as unknown as OpenPage,
+  order: { renameKept: () => undefined } as unknown as Order,
+  go: (href) => {
+    toasts.toast(`would go to ${href}`);
+  },
+});
 
 function Section({ title, children }: { readonly title: string; readonly children: ReactNode }) {
   return (
@@ -180,6 +253,15 @@ function Gallery() {
   const folder = pagesNow.find((p) => p.slug === 'folder');
   const gone = pagesNow.find((p) => p.slug === 'gone');
   const [slowNow, setSlow] = useState(false);
+  const [refuseNow, setRefuse] = useState(false);
+  const [wholeNow, setWhole] = useState(false);
+  const tagsOf = useStore(tagTarget);
+  const editOf = useStore(editTarget);
+  const [help, setHelp] = useState<HelpTab | null>(null);
+  const [screen, setScreen] = useState<HelpScreen>('list');
+  const [helpDiff, setHelpDiff] = useState(false);
+  const [diffGo, setDiffGo] = useState(true);
+  const [mac, setMac] = useState(isMac());
   const [open, setOpen] = useState(false);
   const [width, setWidth] = useState(300);
   const hold = useHold();
@@ -324,6 +406,140 @@ function Gallery() {
             </div>
           ) : null}
         </Section>
+        <Section title="Tags: the line under a page’s bar, and the one modal (also from a row’s …)">
+          <div className="mb-2 flex flex-wrap gap-2">
+            <Button
+              onClick={() => {
+                tagTarget.set({
+                  slugs: ['plain', 'unread', 'picked'],
+                  title: (n) => t('ui_tag_bulk_title', n),
+                  done: (n) => t('ui_tag_bulk_done', n),
+                  failed: (n, why) => t('ui_tag_bulk_failed', n, why),
+                  back: null,
+                });
+              }}
+            >
+              Tags of three pages
+            </Button>
+            <Button
+              pressed={refuseNow}
+              onClick={() => {
+                refuse = !refuseNow;
+                setRefuse(refuse);
+              }}
+            >
+              Refuse the writes
+            </Button>
+          </div>
+          <div className="rounded-small border border-line">
+            <TagLine
+              page={plain ?? null}
+              hidden={false}
+              onEdit={(a, back) => {
+                tagTarget.set(pageTags(a, back));
+              }}
+            />
+            <TagLine
+              page={pagesNow.find((p) => p.slug === 'picked') ?? null}
+              hidden={false}
+              onEdit={(a, back) => {
+                tagTarget.set(pageTags(a, back));
+              }}
+            />
+          </div>
+        </Section>
+        <Section title="Edit (from a row’s …; Refuse the writes above says no)">
+          <div className="flex flex-wrap gap-2">
+            <Button
+              pressed={wholeNow}
+              onClick={() => {
+                whole = !wholeNow;
+                setWhole(whole);
+              }}
+            >
+              As the page open whole
+            </Button>
+          </div>
+        </Section>
+        <Section title="Help (? or the bar’s button)">
+          <div className="flex flex-wrap gap-2">
+            <Button
+              onClick={() => {
+                setHelp('about');
+              }}
+            >
+              The bar’s button
+            </Button>
+            <Button
+              onClick={() => {
+                setHelp('keys');
+              }}
+            >
+              ?
+            </Button>
+            {(['list', 'taskList', 'taskPage', 'frame'] as const).map((name) => (
+              <Button
+                key={name}
+                pressed={screen === name}
+                onClick={() => {
+                  setScreen(name);
+                }}
+              >
+                {name}
+              </Button>
+            ))}
+            <Button
+              pressed={helpDiff}
+              onClick={() => {
+                setHelpDiff(!helpDiff);
+              }}
+            >
+              A diff
+            </Button>
+            <Button
+              pressed={diffGo}
+              onClick={() => {
+                setDiffGo(!diffGo);
+              }}
+            >
+              d goes to a diff
+            </Button>
+            <Button
+              pressed={mac}
+              onClick={() => {
+                setMac(!mac);
+              }}
+            >
+              Mac
+            </Button>
+          </div>
+        </Section>
+        <TagDialog
+          target={tagsOf}
+          onClosed={() => {
+            tagTarget.set(null);
+          }}
+          pages={galleryPages}
+          apply={applyTags}
+        />
+        <EditDialog
+          target={editOf}
+          onClosed={() => {
+            editTarget.set(null);
+          }}
+          save={saveEdit}
+        />
+        <KeysDialog
+          open={help}
+          screen={screen}
+          diff={helpDiff}
+          diffGo={diffGo}
+          backWords=""
+          mac={mac}
+          onClosed={() => {
+            setHelp(null);
+          }}
+        />
         <Section title="Buttons">
           <div className="flex flex-wrap items-center gap-2">
             <Button>{t('ui_close')}</Button>

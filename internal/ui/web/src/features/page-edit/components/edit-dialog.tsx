@@ -1,4 +1,4 @@
-import { useRef, useState } from 'react';
+import { useLayoutEffect, useRef, useState } from 'react';
 
 import { Button } from '@/components/button';
 import { Dialog, DialogActions, DialogClose, DialogHead } from '@/components/dialog';
@@ -56,6 +56,16 @@ export function EditDialog({ target, onClosed, save = pageSave }: EditDialogProp
   const [slug, setSlug] = useState('');
   const slugField = useRef<HTMLInputElement>(null);
   const projectField = useRef<HTMLInputElement>(null);
+  const fold = useRef<HTMLDetailsElement>(null);
+  // The field a refusal sends the focus to, once the hold has let go (a disabled field takes no focus); this runs
+  // after the Dialog's, which gives the focus back to what had it
+  const refused = useRef<HTMLInputElement | null>(null);
+  useLayoutEffect(() => {
+    if (!refused.current || hold.held) return;
+    if (fold.current) fold.current.open = true;
+    refused.current.focus();
+    refused.current = null;
+  });
   if (target !== seen) {
     setSeen(target);
     if (target) {
@@ -103,8 +113,8 @@ export function EditDialog({ target, onClosed, save = pageSave }: EditDialogProp
             }
             setError(t('ui_save_failed', saved.reason));
             if (!saved.field) return;
+            refused.current = (saved.field === 'slug' ? slugField : projectField).current;
             setMore(true);
-            (saved.field === 'slug' ? slugField : projectField).current?.focus();
           });
         }}
       >
@@ -126,6 +136,7 @@ export function EditDialog({ target, onClosed, save = pageSave }: EditDialogProp
         </label>
         <details
           id="edit-more"
+          ref={fold}
           open={more}
           onToggle={(e) => {
             setMore(e.currentTarget.open);
