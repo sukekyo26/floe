@@ -25,15 +25,15 @@ func TestUIRowCards(t *testing.T) { //nolint:paralleltest // the browser tests s
 	// A file after the one chosen, so that the one chosen is not the card's last row
 	s.write(t, "fold/zz.html", "<title>zz</title><p>zz</p>")
 	s.floe(t, "publish", "--link", filepath.Join(s.Env["HOME"], "fold"), "--slug", "fold")
-	if _, err := st.Edit("fold", store.Edit{Project: ptrTo("demo")}); err != nil {
+	if _, err := st.Edit("fold", store.Edit{Project: new("demo")}); err != nil {
 		t.Fatal(err)
 	}
-	if _, err := st.ChangeTasks(store.TaskChange{Slugs: []string{"fold"}, Task: ptrTo("S1"), Category: ptrTo("one")}); err != nil {
+	if _, err := st.ChangeTasks(store.TaskChange{Slugs: []string{"fold"}, Task: new("S1"), Category: new("one")}); err != nil {
 		t.Fatal(err)
 	}
 	for _, p := range [][2]string{{"plan", "one"}, {"read", "two"}, {"notes", "two"}} {
 		s.floe(t, "publish", s.page(t, p[0]+".yaml", "T "+p[0], "<p>x</p>"), "--slug", p[0])
-		if _, err := st.Edit(p[0], store.Edit{Project: ptrTo("demo")}); err != nil {
+		if _, err := st.Edit(p[0], store.Edit{Project: new("demo")}); err != nil {
 			t.Fatal(err)
 		}
 		s.floe(t, "task", "--slug", p[0], "--task", "S1", "--category", p[1])
@@ -67,7 +67,7 @@ func TestUIRowCards(t *testing.T) { //nolint:paralleltest // the browser tests s
 	b.still()
 	b.eval("window.rose = []; document.getElementById('list').addEventListener('animationstart', (e) => rose.push(e.target.dataset.key))")
 	s.floe(t, "publish", s.page(t, "late.yaml", "T late", "<p>x</p>"), "--slug", "late")
-	if _, err := st.Edit("late", store.Edit{Project: ptrTo("demo")}); err != nil {
+	if _, err := st.Edit("late", store.Edit{Project: new("demo")}); err != nil {
 		t.Fatal(err)
 	}
 	b.until("the new card risen", "rose.includes('entry:late')")

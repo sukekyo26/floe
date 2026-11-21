@@ -64,10 +64,10 @@ func TestUITaskPage(t *testing.T) { //nolint:paralleltest // the browser tests s
 	s.floe(t, "task", "--slug", "loose", "--unpin")
 	s.write(t, "fold/one.html", "<title>one</title><p>one</p>")
 	s.floe(t, "publish", "--link", filepath.Join(s.Env["HOME"], "fold"), "--slug", "fold")
-	if _, err := st.Edit("fold", store.Edit{Project: ptrTo("proj")}); err != nil {
+	if _, err := st.Edit("fold", store.Edit{Project: new("proj")}); err != nil {
 		t.Fatal(err)
 	}
-	if _, err := st.ChangeTasks(store.TaskChange{Slugs: []string{"fold"}, Task: ptrTo("#1")}); err != nil {
+	if _, err := st.ChangeTasks(store.TaskChange{Slugs: []string{"fold"}, Task: new("#1")}); err != nil {
 		t.Fatal(err)
 	}
 	s.floe(t, "task", "--task", "#1", "--project", "proj", "--state", "done")
@@ -313,10 +313,6 @@ func TestUITaskPage(t *testing.T) { //nolint:paralleltest // the browser tests s
 
 // taskPageShown tells a task's page drew its rows.
 const taskPageShown = "!document.getElementById('task-head').hidden && document.querySelector('#list > li')"
-
-func ptrTo[T any](v T) *T {
-	return &v
-}
 
 // taskPageWant is what TestUITaskPage reads, in the order it reads it.
 const taskPageWant = `list j j: #130
