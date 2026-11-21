@@ -140,9 +140,10 @@ export function Dialog({
         // and not while closedby none holds it
         onCancel={close}
         // Closed from outside (close() called on the element, as a test may): the caller is told, as by a close button.
-        // Closed by close() or by open going false, open is false by the time the event comes, a frame later
-        onClose={() => {
-          if (open) onClosed();
+        // The event comes a frame after the close: one of a close by this modal finds open false, or, opened again
+        // meanwhile (Ctrl+K twice), the element open, and is dropped
+        onClose={(e) => {
+          if (open && !e.currentTarget.open) onClosed();
         }}
         onPointerDown={(e) => {
           down.current = { onDialog: e.target === e.currentTarget, held };

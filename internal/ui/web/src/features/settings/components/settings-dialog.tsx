@@ -1,4 +1,4 @@
-import { useEffect, useLayoutEffect, useRef, useState } from 'react';
+import { useLayoutEffect, useRef, useState } from 'react';
 
 import { Button } from '@/components/button';
 import { Dialog, DialogActions, DialogClose } from '@/components/dialog';
@@ -106,8 +106,9 @@ export function SettingsDialog({
       setBack(() => target.back);
     }
   }
-  // Read anew each opening, once (an effect: StrictMode's second run is the same opening, asking again harmlessly)
-  useEffect(() => {
+  // Read anew each opening, before it is drawn (a layout effect: the last opening's page and cards never show), once
+  // (StrictMode's second run is the same opening, asking again harmlessly)
+  useLayoutEffect(() => {
     if (target) void settings.open(target.page);
   }, [target, settings]);
   const open = target !== null;

@@ -59,6 +59,8 @@ export function FindDialog({
   // Opened again from closed, the foot is drawn anew: its menu shut, a delete armed let go (ui.html openFind)
   const [opened, setOpened] = useState(0);
   const [wasOpen, setWasOpen] = useState(false);
+  // The render that opens it sets the first row; holding the row of the words before would put the old one back
+  const opening = open && !wasOpen;
   if (open !== wasOpen) {
     setWasOpen(open);
     if (open) {
@@ -89,7 +91,7 @@ export function FindDialog({
   // The row reached is held by its page at once, as opened or typed too: read again, a new page at the top does not
   // take its place; gone, what came to its place is reached now (ui.html findMark → moved)
   const reachedNow = page?.slug ?? null;
-  if (reachedNow !== reached.slug) setReached({ slug: reachedNow, at: Math.max(at, 0) });
+  if (!opening && reachedNow !== reached.slug) setReached({ slug: reachedNow, at: Math.max(at, 0) });
   const ranks = projectOrder(entries);
   const count = findCount(words, hits.length);
 
@@ -267,7 +269,7 @@ export function FindDialog({
         hidden={shown.length > 0}
         className="grid h-[min(20rem,calc(100dvh-17rem))] place-content-center px-6 text-center text-muted"
       >
-        <strong className="text-base mb-1 block text-fg">{t('ui_nomatch')}</strong>
+        <strong className="mb-1 block text-[1rem] text-fg">{t('ui_nomatch')}</strong>
         {t('ui_find_no_files')}
       </div>
       <DialogActions testid="find-foot">
