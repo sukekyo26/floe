@@ -178,6 +178,7 @@ function Gallery() {
   const pagesNow = useStore(shownPages);
   const plain = pagesNow.find((p) => p.slug === 'plain');
   const folder = pagesNow.find((p) => p.slug === 'folder');
+  const gone = pagesNow.find((p) => p.slug === 'gone');
   const [slowNow, setSlow] = useState(false);
   const [open, setOpen] = useState(false);
   const [width, setWidth] = useState(300);
@@ -277,7 +278,7 @@ function Gallery() {
           <Rows items={items} selecting={selecting} />
         </Section>
         <Section title="The bars over a page: beside the list, in the frame (narrow the window under 40rem), a folder’s page, the diff">
-          {plain && folder ? (
+          {plain && folder && gone ? (
             <div className="grid gap-2">
               <BarActions
                 id="read-actions"
@@ -300,6 +301,14 @@ function Gallery() {
                 place="frame"
                 page={folder}
                 at={{ slug: 'folder', file: 'docs/index.html' }}
+                openers={openers}
+                actions={actions}
+              />
+              <BarActions
+                id="gone-actions"
+                place="frame"
+                page={gone}
+                at={{ slug: 'gone' }}
                 openers={openers}
                 actions={actions}
               />
