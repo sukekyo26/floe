@@ -56,37 +56,46 @@ func TestUITaskEditCategories(t *testing.T) { //nolint:paralleltest // the brows
 		return strconv.Itoa(r.Rev) + " [" + strings.Join(r.Categories, ",") + "]"
 	}
 	// Each category, d when its remove button may be pressed, x when not
-	const categories = "[...document.querySelectorAll('#edit-categories li')].map((li) => li.dataset.category + (li.querySelector('.category-drop').getAttribute('aria-disabled') === 'true' ? 'x' : 'd')).join(',')"
+	const categories = "[...document.querySelectorAll('#edit-categories li')].map((li) => li.dataset.category + (li.querySelector('[data-testid=category-drop]').getAttribute('aria-disabled') === 'true' ? 'x' : 'd')).join(',')"
 	const said = "document.getElementById('edit-category-said').textContent"
 	const last = "(document.getElementById('edit-category-plus').hidden ? 'field' : 'plus') + ' / ' + document.activeElement.id"
 	open := func(task string) {
 		t.Helper()
 		b.navigate("/tasks?project=proj&task=" + task)
 		b.until("the task's head", "!document.getElementById('task-head').hidden && document.getElementById('task-title').textContent.includes("+js(task)+")")
-		b.eval("window.sent = []; window.realFetch ??= window.fetch; window.fetch = (url, init) => { if (String(url).includes('/api/tasks') && init?.method === 'PATCH') sent.push(init.body); return window.realFetch(url, init); }")
+		// The test's script: every write of the task kept as sent and counted answered; revTo, when set, is the rev each sends
+		b.eval(`window.sent = []; window.answered = 0; window.revTo = null; window.realFetch ??= window.fetch;
+			window.fetch = (url, init) => {
+				if (!String(url).includes('/api/tasks') || init?.method !== 'PATCH') return window.realFetch(url, init);
+				if (window.revTo !== null) init = { ...init, body: JSON.stringify({ ...JSON.parse(init.body), rev: window.revTo }) };
+				window.sent.push(init.body);
+				return window.realFetch(url, init).finally(() => { window.answered++; });
+			}`)
 		b.eval("document.getElementById('task-edit').click()")
 		b.until("the dialog", "document.getElementById('edit-task-dialog').open")
 	}
-	// Types a name in the last row's field, as a person does (the field, not the button), and a key on it: composing, as the input method
-	// has it
+	// Types a name in the last row's field, as a person does (the field, not the button), and a key on it (Enter, Escape; "" none): composing,
+	// as the input method has it, a key made with isComposing, which no key of the keyboard gives
 	key := func(name, k string, composing bool) {
 		t.Helper()
-		b.eval(`(() => {
-			const input = document.getElementById('edit-category-new');
-			if (input.hidden) document.getElementById('edit-category-plus').click();
-			input.value = ` + js(name) + `;
-			input.dispatchEvent(new Event('input', { bubbles: true }));
-			input.dispatchEvent(new KeyboardEvent('keydown', { key: ` + js(k) + `, bubbles: true, cancelable: true, isComposing: ` + strconv.FormatBool(composing) + ` }));
-		})()`)
+		b.eval("if (document.getElementById('edit-category-new').hidden) document.getElementById('edit-category-plus').click()")
+		b.fill("#edit-category-new", name)
+		switch {
+		case composing:
+			b.eval("document.getElementById('edit-category-new').dispatchEvent(new KeyboardEvent('keydown', { key: " + js(k) + ", bubbles: true, cancelable: true, isComposing: true }))")
+		case k != "":
+			b.pressKey(map[string]string{"Enter": kb.Enter, "Escape": kb.Escape}[k])
+		}
 	}
 	drop := func(category string) {
 		t.Helper()
-		b.eval("[...document.querySelectorAll('#edit-categories li')].find((li) => li.dataset.category === " + js(category) + ").querySelector('.category-drop').click()")
+		b.eval("[...document.querySelectorAll('#edit-categories li')].find((li) => li.dataset.category === " + js(category) + ").querySelector('[data-testid=category-drop]').click()")
 	}
 	save := func(what string) {
 		t.Helper()
-		b.eval("document.getElementById('edit-task-error').hidden = true; document.getElementById('edit-task').requestSubmit()")
-		b.until(what, "!document.getElementById('edit-task-dialog').open || !document.getElementById('edit-task-error').hidden || document.getElementById('edit-category-new').validationMessage")
+		n := b.eval("window.answered")
+		b.eval("document.getElementById('edit-task-submit').click()")
+		b.until(what, "!document.getElementById('edit-task-dialog').open || document.getElementById('edit-category-new').validationMessage || (window.answered > "+n+" && !document.getElementById('edit-task-title').matches(':disabled'))")
 	}
 	closed := func(what string) {
 		t.Helper()
@@ -97,9 +106,9 @@ func TestUITaskEditCategories(t *testing.T) { //nolint:paralleltest // the brows
 	open("S300")
 	say("opened", categories+" + ' / ' + "+last)
 	say("plus", "document.getElementById('edit-category-plus').getAttribute('aria-label') + ' / ' + document.getElementById('edit-category-plus').title + ' / ' + document.getElementById('edit-categories-head').textContent")
-	say("names", "[...document.querySelectorAll('#edit-categories .category-drop')].map((b) => b.getAttribute('aria-label') + '=' + b.title).join(', ')")
+	say("names", "[...document.querySelectorAll('#edit-categories [data-testid=category-drop]')].map((b) => b.getAttribute('aria-label') + '=' + b.title).join(', ')")
 	// The remove button of a category with pages is reached by the keys; pressed, it says why under the rows and removes nothing.
-	b.eval("document.querySelector('#edit-categories li .category-down').focus()")
+	b.eval("document.querySelector('#edit-categories li [data-testid=category-down]').focus()")
 	b.pressKey(kb.Tab)
 	b.pressKey(kb.Enter)
 	say("paged pressed", "document.activeElement.getAttribute('aria-label') + ' / ' + "+categories+" + ' / ' + "+said)
@@ -123,19 +132,19 @@ func TestUITaskEditCategories(t *testing.T) { //nolint:paralleltest // the brows
 	// Left empty, the field turns back; with words in it, it stays.
 	b.eval("document.getElementById('edit-category-plus').click(); document.getElementById('edit-task-title').focus()")
 	say("left empty", last)
-	key("検証", "x", false)
+	key("検証", "", false)
 	b.eval("document.getElementById('edit-task-title').focus()")
 	say("left with words", last)
 	// Words left stop the save, said on the field, until typed again.
 	save("words left")
 	say("words left", "document.getElementById('edit-category-new').validationMessage + ' / ' + document.getElementById('edit-task-dialog').open + ' / ' + sent.length")
-	b.eval("const f = document.getElementById('edit-category-new'); f.value = ''; f.dispatchEvent(new Event('input', { bubbles: true }))")
+	b.fill("#edit-category-new", "")
 	say("typed again", "document.getElementById('edit-category-new').validationMessage === ''")
 	// A name there already, left in the field, stops the save saying it is there, not to press Enter.
-	b.eval("const f = document.getElementById('edit-category-new'); f.value = '設計'; f.dispatchEvent(new Event('input', { bubbles: true }))")
+	b.fill("#edit-category-new", "設計")
 	save("there left")
 	say("there left", "document.getElementById('edit-category-new').validationMessage + ' / ' + sent.length")
-	b.eval("const f = document.getElementById('edit-category-new'); f.value = ''; f.dispatchEvent(new Event('input', { bubbles: true }))")
+	b.fill("#edit-category-new", "")
 	// Removed: the focus on a button of the row after that can be pressed, or of the row before; said.
 	drop("リリース")
 	say("dropped", categories+" + ' / ' + document.activeElement.getAttribute('aria-label') + ' / ' + document.getElementById('edit-categories-said').textContent")
@@ -171,7 +180,7 @@ func TestUITaskEditCategories(t *testing.T) { //nolint:paralleltest // the brows
 	open("S300")
 	drop("リリース")
 	s.floe(t, "task", "--slug", "memo-a", "--task", "S300", "--category", "リリース")
-	b.eval("taskEditing.rev = " + strings.Fields(row("S300"))[0])
+	b.eval("window.revTo = " + strings.Fields(row("S300"))[0])
 	save("paged since read")
 	say("paged since read", "document.getElementById('edit-task-error').textContent")
 	b.pressKey(kb.Escape)

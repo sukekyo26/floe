@@ -1079,7 +1079,7 @@
       <input type="search" id="q" placeholder="{{.Msg "ui_search_placeholder"}}" aria-label="{{.Msg "ui_search"}}" autocomplete="off">
       <kbd aria-hidden="true">/</kbd>
     </label>
-    <div class="bar-end">
+    <div class="bar-end" data-testid="bar-end">
       <span class="frame-actions" id="frame-actions" hidden></span>
       <a class="news" id="news" href="/?view=new" hidden><span class="dot" data-testid="dot"></span><span id="news-n"></span></a>
       <button type="button" class="icon-btn" id="find-open" aria-label="{{.Msg "ui_find"}}" title="{{.Msg "ui_find"}}"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true"><circle cx="11" cy="11" r="7"/><path d="m20 20-3.5-3.5"/></svg></button>
@@ -1096,7 +1096,7 @@
   <button type="button" class="icon-btn side-show" id="list-show" aria-expanded="false" aria-controls="listcol" title="{{.Msg "ui_list_show"}}" aria-label="{{.Msg "ui_list_show"}}" hidden><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linejoin="round" aria-hidden="true"><rect x="3" y="4" width="18" height="16" rx="2"/><path d="M9 4v16M15 4v16"/><path fill="currentColor" stroke="none" d="M9 4h6v16H9Z"/></svg></button>
   <!-- Buttons that switch the list. They do not implement WAI-ARIA tabs (arrow keys, tabpanel), so they use aria-pressed -->
   <nav class="shelf" id="shelf" aria-label="{{.Msg "ui_shelf"}}">
-    <div class="col-foot"><button type="button" class="icon-btn" id="shelf-hide" aria-expanded="true" aria-controls="shelf" title="{{.Msg "ui_shelf_hide"}}" aria-label="{{.Msg "ui_shelf_hide"}}"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linejoin="round" aria-hidden="true"><rect x="3" y="4" width="18" height="16" rx="2"/><path d="M9 4v16M15 4v16"/><path fill="currentColor" stroke="none" d="M3 6a2 2 0 0 1 2-2h4v16H5a2 2 0 0 1-2-2Z"/></svg></button></div>
+    <div class="col-foot" data-testid="col-foot"><button type="button" class="icon-btn" id="shelf-hide" aria-expanded="true" aria-controls="shelf" title="{{.Msg "ui_shelf_hide"}}" aria-label="{{.Msg "ui_shelf_hide"}}"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linejoin="round" aria-hidden="true"><rect x="3" y="4" width="18" height="16" rx="2"/><path d="M9 4v16M15 4v16"/><path fill="currentColor" stroke="none" d="M3 6a2 2 0 0 1 2-2h4v16H5a2 2 0 0 1-2-2Z"/></svg></button></div>
     <div class="shelf-body" id="shelf-body">
       <div class="views" data-testid="views" role="group" aria-label="{{.Msg "ui_shelf"}}">
         <button type="button" data-view="new"><span class="dot" data-testid="dot"></span><span class="label" data-testid="label">{{.Msg "ui_view_new"}}</span><span class="n" data-testid="n"></span></button>
@@ -1133,7 +1133,7 @@
   </nav>
   <div class="grip" id="shelf-grip" role="separator" aria-orientation="vertical" aria-controls="shelf" aria-label="{{.Msg "ui_shelf_width"}}" tabindex="0"></div>
   <section class="listcol" id="listcol">
-    <div class="col-foot"><button type="button" class="icon-btn" id="list-hide" aria-expanded="true" aria-controls="listcol" title="{{.Msg "ui_list_hide"}}" aria-label="{{.Msg "ui_list_hide"}}"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linejoin="round" aria-hidden="true"><rect x="3" y="4" width="18" height="16" rx="2"/><path d="M9 4v16M15 4v16"/><path fill="currentColor" stroke="none" d="M9 4h6v16H9Z"/></svg></button></div>
+    <div class="col-foot" data-testid="col-foot"><button type="button" class="icon-btn" id="list-hide" aria-expanded="true" aria-controls="listcol" title="{{.Msg "ui_list_hide"}}" aria-label="{{.Msg "ui_list_hide"}}"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linejoin="round" aria-hidden="true"><rect x="3" y="4" width="18" height="16" rx="2"/><path d="M9 4v16M15 4v16"/><path fill="currentColor" stroke="none" d="M9 4h6v16H9Z"/></svg></button></div>
     <div class="list-body" id="list-body">
       <!-- The way back stands in the markup: h may be pressed before the first answer -->
       <div class="thead" id="task-head" hidden>
@@ -1145,7 +1145,7 @@
           </span>
         </div>
         <h2 id="task-title"></h2>
-        <div class="tstate">
+        <div class="tstate" data-testid="tstate">
           <select class="ver-pick st" id="task-state" aria-label="{{.Msg "ui_task_state"}}"><button><selectedcontent></selectedcontent></button></select><span class="kid-state" data-testid="kid-state" id="task-archived" hidden>{{.Msg "ui_state_archived"}}</span>
           <time id="task-at"></time>
           <span class="proj" id="task-project"></span>
@@ -1254,7 +1254,7 @@
   <p class="dnote" id="diff-url-note" hidden>{{.Msg "ui_diff_bad_url"}}</p>
   <div class="dmain" id="diff-main">
     <nav class="dtoc" id="diff-toc-nav" aria-labelledby="diff-toc-title">
-      <div class="col-foot"><button type="button" class="icon-btn" id="diff-toc-hide" aria-expanded="true" aria-controls="diff-toc-nav" title="{{.Msg "ui_diff_toc_hide"}}" aria-label="{{.Msg "ui_diff_toc_hide"}}"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linejoin="round" aria-hidden="true"><rect x="3" y="4" width="18" height="16" rx="2"/><path d="M9 4v16"/></svg></button></div>
+      <div class="col-foot" data-testid="col-foot"><button type="button" class="icon-btn" id="diff-toc-hide" aria-expanded="true" aria-controls="diff-toc-nav" title="{{.Msg "ui_diff_toc_hide"}}" aria-label="{{.Msg "ui_diff_toc_hide"}}"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linejoin="round" aria-hidden="true"><rect x="3" y="4" width="18" height="16" rx="2"/><path d="M9 4v16"/></svg></button></div>
       <div class="side-head"><h2 id="diff-toc-title">{{.Msg "ui_diff_toc"}}</h2></div>
       <div class="dtoc-list" id="diff-toc"></div>
       <p class="dkeys"><kbd>n</kbd>{{.Msg "ui_diff_next"}}<br><kbd>p</kbd>{{.Msg "ui_diff_prev"}}<br><kbd>d</kbd>{{.Msg "ui_diff_close"}}</p>
@@ -1584,7 +1584,7 @@
           <button type="button" class="icon-btn theme-item" data-testid="theme-item"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 3a9 9 0 1 0 0 18c.9 0 1.6-.7 1.6-1.6 0-.4-.2-.8-.4-1.1-.3-.3-.4-.7-.4-1.1 0-.9.7-1.6 1.6-1.6H16a5 5 0 0 0 5-5c0-4.1-4-7.6-9-7.6Z"/><circle cx="7.5" cy="10.5" r="1"/><circle cx="10.5" cy="7" r="1"/><circle cx="15" cy="7.5" r="1"/></svg>{{.Msg "ui_theme_item"}}</button>
           <button type="button" class="icon-btn pin-item" data-testid="pin-item"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M9 3h6l-1 7 4 4v2H6v-2l4-4zM12 16v5"/></svg><span class="label" data-testid="label"></span></button>
           <button type="button" class="icon-btn task-set" data-testid="task-set"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M9 6h11M9 12h11M9 18h11M4 6h.01M4 12h.01M4 18h.01"/></svg>{{.Msg "ui_task_set"}}</button>
-          <button type="button" class="icon-btn task-out" hidden><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M9 6h11M9 12h11M4 6h.01M4 12h.01M14 18h6"/></svg>{{.Msg "ui_task_out"}}</button>
+          <button type="button" class="icon-btn task-out" data-testid="task-out" hidden><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M9 6h11M9 12h11M4 6h.01M4 12h.01M14 18h6"/></svg>{{.Msg "ui_task_out"}}</button>
           <a class="icon-btn task-open" data-testid="task-open" hidden><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M5 12h14m-6-6 6 6-6 6"/></svg><span class="label" data-testid="label"></span></a>
           <button type="button" class="icon-btn edit" data-testid="edit"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4 20h4L19 9a2.8 2.8 0 0 0-4-4L4 16v4Zm9.5-13.5 4 4"/></svg>{{.Msg "ui_edit"}}</button>
           <button type="button" class="icon-btn copy" data-testid="copy" hidden><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M9 9h10v11H9zM5 15V4h10"/></svg><span class="done"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m5 12.5 4.5 4.5L19 7.5"/></svg></span>{{.Msg "ui_copy_path"}}</button>
@@ -1879,7 +1879,7 @@
     $('server').textContent = ok ? '' : t('ui_server_down');
     $('server').title = label;
     $('server').setAttribute('aria-label', label);
-    $('server').classList.toggle('down', !ok);
+    markState($('server'), 'down', !ok);
   }
 
   // The writes (any request but a GET) sent, and those not answered yet: load reads the list only while none goes
@@ -1976,7 +1976,8 @@
   const taskProjectColor = (name) => projectColor(name, projectOrder(taskProjects(tasksOf())));
   // el as a project's pill, in its color: its words cut at the pill's end
   function drawProject(el, word, color) {
-    el.classList.add('proj', 'proj-tint');
+    el.classList.add('proj');
+    markState(el, 'proj-tint', true);
     el.style.setProperty('--c', color);
     el.replaceChildren(withTestid(tagged('span', 'proj-name', word), 'proj-name'));
   }
@@ -1991,7 +1992,7 @@
 
   // A state shown by a class, and told by an attribute too ("true", or none) for the browser tests, which read no class: the two
   // always change together, here
-  const STATE_ATTRS = { picked: 'aria-current', unseen: 'data-unread', archived: 'data-archived', on: 'data-on', armed: 'data-armed', old: 'data-old', narrowed: 'data-narrowed', selecting: 'data-selecting', fresh: 'data-fresh', timed: 'data-timed', page: 'data-page' };
+  const STATE_ATTRS = { picked: 'aria-current', unseen: 'data-unread', archived: 'data-archived', on: 'data-on', closing: 'data-on', armed: 'data-armed', old: 'data-old', narrowed: 'data-narrowed', selecting: 'data-selecting', fresh: 'data-fresh', timed: 'data-timed', page: 'data-page', 'proj-tint': 'data-tint', dragging: 'data-dragging', over: 'data-over', down: 'data-down', some: 'data-tagged' };
   function markState(el, name, on) {
     el.classList.toggle(name, Boolean(on));
     if (on) el.setAttribute(STATE_ATTRS[name], 'true');
@@ -2362,7 +2363,7 @@
         const option = document.createElement('div');
         option.id = `${box.id}-${i}`;
         option.setAttribute('role', 'option');
-        option.append(withTestid(tagged('span', 'names-word', one.label), 'names-word'), ...(one.note ? [tagged('span', 'names-note', one.note)] : []));
+        option.append(withTestid(tagged('span', 'names-word', one.label), 'names-word'), ...(one.note ? [withTestid(tagged('span', 'names-note', one.note), 'names-note')] : []));
         option.title = [one.label, one.note].filter(Boolean).join(' ');
         // Pressed, the field keeps its focus
         option.addEventListener('mousedown', (e) => e.preventDefault());
@@ -2484,6 +2485,7 @@
       });
       const mark = document.createElement('span');
       mark.className = 'mark';
+      mark.dataset.testid = 'mark';
       mark.setAttribute('aria-hidden', 'true');
       const words = document.createElement('span');
       words.className = 'name';
@@ -2723,11 +2725,12 @@
     // Where the picks are in a dialog, this is what is lit of them
     markState($('narrow-filter'), 'narrowed', narrowed > 0);
     const projectHead = TASK_LIST && project;
-    $('narrow-filter').classList.toggle('proj-tint', Boolean(projectHead));
+    markState($('narrow-filter'), 'proj-tint', Boolean(projectHead));
     if (projectHead) $('narrow-filter').style.setProperty('--c', taskProjectColor(project));
     // The filters folded, the head says what they narrow the list to: the view, and how many picks
     const what = [view === FIRST_VIEW ? '' : t(VIEW_WORDS[view]), narrowed ? t('ui_narrow_n', narrowed) : ''].filter(Boolean).join(' · ');
-    $('shelf-what').classList.remove('proj', 'proj-tint');
+    $('shelf-what').classList.remove('proj');
+    markState($('shelf-what'), 'proj-tint', false);
     if (projectHead) drawProject($('shelf-what'), projectWord(project), taskProjectColor(project));
     else $('shelf-what').textContent = TASK_LIST ? '' : what;
   }
@@ -2898,7 +2901,7 @@
     const closing = DIFF && box.id === 'frame-actions';
     open.hidden = !closing && (Boolean(x.file) || !canDiff(a));
     open.href = closing ? pageHref({ slug: a.slug }) : diffHref(a.slug, x.v, a.version);
-    open.classList.toggle('closing', closing);
+    markState(open, 'closing', closing);
     open.title = t(closing ? 'ui_diff_close_title' : 'ui_diff_title');
     open.setAttribute('aria-label', open.title);
     if (closing) $('diff-close').href = open.href;
@@ -2944,12 +2947,12 @@
     if (line.hidden) return;
     const tags = a.tags ?? [];
     line.querySelector('.tagline-names').replaceChildren(...tags.map((name) => {
-      const pill = tagged('span', 'tagpill', name);
+      const pill = withTestid(tagged('span', 'tagpill', name), 'tagpill');
       pill.title = name;
       return pill;
     }));
     const edit = line.querySelector('.tag-edit');
-    edit.classList.toggle('some', tags.length > 0);
+    markState(edit, 'some', tags.length > 0);
     edit.title = t(tags.length ? 'ui_tag_change_named' : 'ui_tag_add_named', a.title);
     edit.setAttribute('aria-label', edit.title);
     edit.onclick = () => openPageTags(a, () => edit);
@@ -3214,6 +3217,7 @@
     li.style.setProperty('--i', Math.min(i, 30));
     li.dataset.key = `entry:${a.slug}`;
     li.dataset.slug = a.slug;
+    li.dataset.kind = kindOf(a);
     markState(li, 'unseen', unseen(a));
     li.classList.toggle('gone', Boolean(a.missing));
     markState(li, 'archived', TASK_PAGE && Boolean(a.archived));
@@ -3244,7 +3248,7 @@
       const tags = put('tags', '');
       tags.append(...a.tags.map((name) => {
         // On a task's page there is no list of a tag to go to
-        const b = tagged(TASK_PAGE ? 'span' : 'button', 'tagpill', name);
+        const b = withTestid(tagged(TASK_PAGE ? 'span' : 'button', 'tagpill', name), 'tagpill');
         b.title = name;
         if (TASK_PAGE) return b;
         b.type = 'button';
@@ -3495,7 +3499,7 @@
   // row on a task's page, which keeps it dimmed (drawn anew, it keeps its key), else on the one after it
   function archivedDone(a, focus) {
     const after = rowAfter(a)?.dataset.key;
-    const button = tagged('button', 'btn undo', t('ui_unarchive'));
+    const button = withTestid(tagged('button', 'btn undo', t('ui_unarchive')), 'undo');
     button.type = 'button';
     button.dataset.slug = a.slug;
     button.setAttribute('aria-label', t('ui_unarchive_named', a.title));
@@ -3682,7 +3686,7 @@
           button.title = button.getAttribute('aria-label');
           button.addEventListener('click', add);
           li.append(button);
-          if (entries.length === 0) li.append(tagged('p', 'category-empty', t('ui_category_empty')));
+          if (entries.length === 0) li.append(withTestid(tagged('p', 'category-empty', t('ui_category_empty')), 'category-empty'));
         }
         rows.push(li);
       }
@@ -3848,9 +3852,9 @@
       link.addEventListener('click', () => keepRows(pinned.filter((x) => !x.folder).map((x) => x.slug), pinned.map((x) => x.slug)));
       link.title = a.title;
       link.innerHTML = PIN_MARK;
-      link.append(tagged('span', 'pin-title', a.title));
+      link.append(withTestid(tagged('span', 'pin-title', a.title), 'pin-title'));
       if (a.news) link.append(withTestid(tagged('span', 'dot'), 'dot'));
-      const off = tagged('button', 'icon-btn pin-off');
+      const off = withTestid(tagged('button', 'icon-btn pin-off'), 'pin-off');
       off.type = 'button';
       off.innerHTML = PIN_OFF_MARK;
       off.title = t('ui_unpin_named', a.title);
@@ -4106,7 +4110,7 @@
   // the focus goes once it is back, how.away where Escape on it leaves the focus. Pressed, a refusal (written meanwhile, say) is said as the
   // store says it. The button, for the caller to focus when the change was made from the keys
   function undoToast(said, how) {
-    const button = tagged('button', 'btn undo', t('ui_undo'));
+    const button = withTestid(tagged('button', 'btn undo', t('ui_undo')), 'undo');
     button.type = 'button';
     button.addEventListener('click', async () => {
       button.disabled = true;
@@ -4763,7 +4767,7 @@
     root.setProperty('--side-width', `${width}px`);
     root.setProperty('--side', open && !sideNarrow.matches ? `${width}px` : '0px');
     $('side').hidden = !open;
-    $('side').classList.toggle('over', sideNarrow.matches);
+    markState($('side'), 'over', sideNarrow.matches);
     $('side-grip').hidden = !open || sideNarrow.matches;
     edgeAt($('side-grip'), width, width, SIDE_MIN, sideMax());
     $('side-show').hidden = open;
@@ -4802,11 +4806,11 @@
       if (e.button) return;
       e.preventDefault();
       grip.setPointerCapture(e.pointerId);
-      grip.classList.add('dragging');
+      markState(grip, 'dragging', true);
     });
     grip.addEventListener('pointermove', (e) => { if (grip.hasPointerCapture(e.pointerId)) set(e.clientX - left()); });
     grip.addEventListener('lostpointercapture', () => {
-      grip.classList.remove('dragging');
+      markState(grip, 'dragging', false);
       keep();
     });
     grip.addEventListener('keydown', (e) => {
@@ -5125,7 +5129,7 @@
     });
   }
   function tocAt(i) {
-    for (const b of $('diff-toc').querySelectorAll('button')) b.classList.toggle('on', b.dataset.section === String(i));
+    for (const b of $('diff-toc').querySelectorAll('button')) markState(b, 'on', b.dataset.section === String(i));
     $('diff-toc').querySelector('.on')?.scrollIntoView({ block: 'nearest' });
   }
   // The contents' width and whether they show, within the tree's bounds. Kept apart from the tree's: closing one does not close the other
@@ -5472,7 +5476,7 @@
   const DOWN_PATH = '<path d="M12 5v14"/><path d="m19 12-7 7-7-7"/>';
   // A button of a row of the dialog's lists: an icon named by its label
   function rowButton(cls, label, path) {
-    const b = tagged('button', `icon-btn ${cls}`);
+    const b = withTestid(tagged('button', `icon-btn ${cls}`), cls);
     b.type = 'button';
     b.innerHTML = lineIcon(path);
     b.setAttribute('aria-label', label);
@@ -5481,7 +5485,7 @@
   }
   // The grip a row of the dialog's lists is dragged by
   function rowGrip() {
-    const grip = tagged('span', 'category-grip');
+    const grip = withTestid(tagged('span', 'category-grip'), 'category-grip');
     grip.innerHTML = '<svg viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><circle cx="9" cy="6" r="1.5"/><circle cx="15" cy="6" r="1.5"/><circle cx="9" cy="12" r="1.5"/><circle cx="15" cy="12" r="1.5"/><circle cx="9" cy="18" r="1.5"/><circle cx="15" cy="18" r="1.5"/></svg>';
     return grip;
   }
@@ -5551,7 +5555,7 @@
   function categoryRow(name, paged) {
     const li = document.createElement('li');
     li.dataset.category = name;
-    const word = tagged('span', 'category-name', name);
+    const word = withTestid(tagged('span', 'category-name', name), 'category-name');
     if (!paged) word.append(' ', tagged('small', '', t('ui_category_no_pages')));
     const drop = rowButton('category-drop', t(paged ? 'ui_category_drop_paged' : 'ui_category_drop_named', name), DROP_PATH);
     if (paged) drop.setAttribute('aria-disabled', 'true');

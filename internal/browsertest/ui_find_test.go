@@ -37,7 +37,7 @@ func keyDown(b *browser, init string) {
 
 func typeFind(b *browser, words string) {
 	b.t.Helper()
-	b.eval("(() => { const q = document.getElementById('find-q'); q.value = " + js(words) + "; q.dispatchEvent(new Event('input')); })()")
+	b.fill("#find-q", words)
 }
 
 // pressFindOpen opens the search modal by the bar's button.
@@ -195,29 +195,30 @@ func TestUIFindActions(t *testing.T) { //nolint:paralleltest // the browser test
 	b.stub(findList)
 	b.navigate("/")
 	b.size(1440, 900, false)
-	b.eval("window.errs = []; addEventListener('error', (e) => window.errs.push(e.message))")
+	b.eval("window.errs = []; addEventListener('error', (e) => window.errs.push(e.message)); addEventListener('unhandledrejection', (e) => window.errs.push(String(e.reason)))")
 	if b.eval("matchMedia('(hover: hover)').matches") != "true" {
 		t.Fatal("this runs with a mouse")
 	}
 	change := func(slug, fields string) {
-		b.eval("window.list = JSON.stringify(JSON.parse(window.list).map((a) => a.slug === " + js(slug) + " ? { ...a, " + fields + " } : a)); drawn = ''; load()")
+		b.eval("window.list = JSON.stringify(JSON.parse(window.list).map((a) => a.slug === " + js(slug) + " ? { ...a, " + fields + " } : a))")
+		b.reread()
 	}
-	const menu = "#find-actions .more"
+	const menu = "#find-actions [data-testid=more]"
 	out := make([]string, 0, 24)
 	keyDown(b, "key: 'k', ctrlKey: true")
 	keyDown(b, "key: 'ArrowDown'") // b
 	// The star: the same button, the focus on it, what the row is told.
-	b.eval("(() => { const s = document.querySelector('#find-actions .star'); s.focus(); s.click(); })()")
+	b.eval("(() => { const s = document.querySelector('#find-actions [data-testid=star]'); s.focus(); s.click(); })()")
 	change("b", "favorite: false")
-	b.until("the star drawn", "document.querySelector('#find-actions .star').getAttribute('aria-pressed') === 'false'")
-	out = append(out, b.eval("document.activeElement.matches('#find-actions .star')"))
+	b.until("the star drawn", "document.querySelector('#find-actions [data-testid=star]').getAttribute('aria-pressed') === 'false'")
+	out = append(out, b.eval("document.activeElement.matches('#find-actions [data-testid=star]')"))
 	// The menu is whole, inside the window of any height it fits, and an answer does not close it.
 	typeFind(b, "beta") // one row: a window far shorter than the menu
 	for _, size := range [][2]int64{{1440, 900}, {400, 800}} {
 		b.size(size[0], size[1], false)
 		b.eval("document.querySelector('" + menu + " summary').click()")
-		out = append(out, b.eval(`(() => { const r = document.querySelector('`+menu+` .menu').getBoundingClientRect();
-			return r.bottom <= innerHeight && r.right <= innerWidth && r.left >= 0 && document.querySelector('`+menu+` .menu').contains(document.elementFromPoint(r.left + r.width / 2, r.bottom - 8)); })()`))
+		out = append(out, b.eval(`(() => { const r = document.querySelector('`+menu+` [data-testid=menu]').getBoundingClientRect();
+			return r.bottom <= innerHeight && r.right <= innerWidth && r.left >= 0 && document.querySelector('`+menu+` [data-testid=menu]').contains(document.elementFromPoint(r.left + r.width / 2, r.bottom - 8)); })()`))
 		b.eval("document.querySelector('" + menu + " summary').click()")
 	}
 	b.size(1440, 900, false)
@@ -239,70 +240,75 @@ func TestUIFindActions(t *testing.T) { //nolint:paralleltest // the browser test
 	keyDown(b, "key: 'k', ctrlKey: true")
 	keyDown(b, "key: 'ArrowDown'")
 	// Archived from the menu: the focus on the button of the menu as drawn, its words changed.
-	b.eval("document.querySelector('" + menu + " summary').focus(); document.querySelector('" + menu + " summary').click(); document.querySelector('" + menu + " .archive').click()")
+	b.eval("document.querySelector('" + menu + " summary').focus(); document.querySelector('" + menu + " summary').click(); document.querySelector('" + menu + " [data-testid=archive]').click()")
 	change("b", "archived: true")
-	b.until("the row moved", "document.querySelector('#find-actions .archive .label').textContent === 'Restore'")
+	b.until("the row moved", "document.querySelector('#find-actions [data-testid=archive] [data-testid=label]').textContent === 'Restore'")
 	out = append(out, b.eval("document.activeElement.matches('"+menu+" summary')"))
 	change("b", "archived: false")
-	b.until("the row back", "document.querySelector('#find-actions .archive .label').textContent === 'Archive'")
+	b.until("the row back", "document.querySelector('#find-actions [data-testid=archive] [data-testid=label]').textContent === 'Archive'")
 	// A delete waiting stays through an answer.
-	b.eval("document.querySelector('" + menu + " summary').click(); document.querySelector('" + menu + " .delete').focus(); document.querySelector('" + menu + " .delete').click()")
+	b.eval("document.querySelector('" + menu + " summary').click(); document.querySelector('" + menu + " [data-testid=delete]').focus(); document.querySelector('" + menu + " [data-testid=delete]').click()")
 	change("a", "title: 'Alpha plan'")
 	b.until("the rows drawn", "document.querySelector('#find-list a').textContent === 'Alpha plan'")
-	out = append(out, b.eval("document.querySelector('"+menu+" .delete').classList.contains('armed')"))
+	out = append(out, b.eval("document.querySelector('"+menu+" [data-testid=delete]').dataset.armed === 'true'"))
 
 	// Closed by its key with a delete waiting, on the row it opens on: it opens anew with the menu shut, nothing waiting.
 	typeFind(b, "")
-	b.eval("document.querySelector('" + menu + " summary').click(); document.querySelector('" + menu + " .delete').click()")
+	b.eval("document.querySelector('" + menu + " summary').click(); document.querySelector('" + menu + " [data-testid=delete]').click()")
 	keyDown(b, "key: 'k', ctrlKey: true")
 	keyDown(b, "key: 'k', ctrlKey: true")
-	out = append(out, b.eval("[document.querySelector('"+menu+"').open, document.querySelectorAll('#find-actions .armed').length].join(' ')"))
+	out = append(out, b.eval("[document.querySelector('"+menu+"').open, document.querySelectorAll('#find-actions [data-armed]').length].join(' ')"))
 	// What comes of the buttons shows over the rest: a toast, a mistake; and they go back with the window.
 	const seen = `((id) => { const e = document.getElementById(id); return document.getElementById('find').contains(e) && !e.hidden && e.getBoundingClientRect().height > 0; })`
-	b.eval("document.querySelector('#find-actions .star').click()")
-	b.until("the toast", seen+"('toasts') && document.querySelector('#toasts .toast')")
-	b.eval("window.failWrites = true; document.querySelector('#find-actions .star').click()")
+	b.eval("document.querySelector('#find-actions [data-testid=star]').click()")
+	b.until("the toast", seen+"('toasts') && document.querySelector('#toasts [data-testid=toast]')")
+	b.eval("window.failWrites = true; document.querySelector('#find-actions [data-testid=star]').click()")
 	b.until("the mistake", seen+"('error')")
 	out = append(out, b.eval(`(() => { const r = document.getElementById('error').getBoundingClientRect(); return document.getElementById('error').contains(document.elementFromPoint(r.left + r.width / 2, r.top + r.height / 2)); })()`))
-	b.eval("window.failWrites = false; document.getElementById('find').close()")
+	b.eval("window.failWrites = false")
+	escapeDialog(b, "find")
 	b.until("back", "!document.getElementById('find').contains(document.getElementById('error')) && !document.getElementById('find').contains(document.getElementById('toasts'))")
-	b.eval("showError('')")
 	// The buttons on a narrow whole page, where those of its bar go.
 	b.size(400, 800, false)
 	b.navigate("/a/c/")
 	b.until("the bar", "document.getElementById('frame-title').textContent")
 	keyDown(b, "key: 'k', ctrlKey: true")
-	out = append(out, b.eval("[getComputedStyle(document.getElementById('find-actions')).display !== 'none', getComputedStyle(document.querySelector('#frame-actions .star')).display].join(' ')"))
+	out = append(out, b.eval("[getComputedStyle(document.getElementById('find-actions')).display !== 'none', getComputedStyle(document.querySelector('#frame-actions [data-testid=star]')).display].join(' ')"))
 	b.size(1440, 900, false)
 	// From a whole page: a delete of another page stays there, the focus going to the field.
 	b.navigate("/a/c/")
 	b.until("the bar", "document.getElementById('frame-title').textContent")
-	b.eval("window.errs = []; addEventListener('error', (e) => window.errs.push(e.message))")
+	b.eval("window.errs = []; addEventListener('error', (e) => window.errs.push(e.message)); addEventListener('unhandledrejection', (e) => window.errs.push(String(e.reason)))")
 	keyDown(b, "key: 'k', ctrlKey: true")
 	typeFind(b, "beta")
-	b.eval("document.querySelector('" + menu + " summary').click(); document.querySelector('" + menu + " .delete').focus(); document.querySelector('" + menu + " .delete').click()")
+	b.eval("document.querySelector('" + menu + " summary').click(); document.querySelector('" + menu + " [data-testid=delete]').focus(); document.querySelector('" + menu + " [data-testid=delete]').click()")
 	b.eval("window.list = JSON.stringify(JSON.parse(window.list).filter((a) => a.slug !== 'b'))")
-	b.eval("document.querySelector('" + menu + " .delete').click()")
+	b.eval("document.querySelector('" + menu + " [data-testid=delete]').click()")
 	b.until("the row gone", "document.querySelectorAll('#find-list li').length === 0")
 	out = append(out, b.eval("[location.pathname, document.getElementById('find').open, document.activeElement.id].join(' ')"))
 	// The edit closes the window, no dialog going over another, and it goes back with no mistake.
 	typeFind(b, "alpha")
-	b.eval("document.querySelector('" + menu + " summary').click(); document.querySelector('" + menu + " .edit').click()")
+	b.eval("document.querySelector('" + menu + " summary').click(); document.querySelector('" + menu + " [data-testid=edit]').click()")
 	out = append(out, b.eval("document.getElementById('find').open + ' ' + document.getElementById('edit-dialog').open"))
-	// Another page's new name leaves this one here. The save is the form's submit, called for its end: closed, or what it threw.
-	b.eval("document.getElementById('edit-slug').value = 'a2'")
-	out = append(out, b.eval("saveEdit(new SubmitEvent('submit', { cancelable: true })).then(() => location.pathname + ' ' + window.errs, (e) => 'threw ' + e.message)"))
+	// Another page's new name leaves this one here. The save is the form's submit, waited for its end: closed, and what it threw.
+	openSlugField(b)
+	b.fill("#edit-slug", "a2")
+	begun := b.acted("document.getElementById('edit-submit').click()")
+	b.untilRead(begun, "the save's end", "!document.getElementById('edit-dialog').open")
+	out = append(out, b.eval("location.pathname + ' ' + window.errs"))
 	// This page's: its URL moves, and deleted, it goes to the list.
 	keyDown(b, "key: 'k', ctrlKey: true")
 	typeFind(b, "gamma")
-	b.eval("document.querySelector('" + menu + " summary').click(); document.querySelector('" + menu + " .edit').click()")
-	b.moving("document.getElementById('edit-slug').value = 'c2'; document.getElementById('edit-submit').click()")
+	b.eval("document.querySelector('" + menu + " summary').click(); document.querySelector('" + menu + " [data-testid=edit]').click()")
+	openSlugField(b)
+	b.fill("#edit-slug", "c2")
+	b.moving("document.getElementById('edit-submit').click()")
 	b.until("the new URL", "location.pathname === '/a/c2/'")
 	b.navigate("/a/c/")
 	b.until("the bar", "document.getElementById('frame-title').textContent")
 	keyDown(b, "key: 'k', ctrlKey: true")
 	typeFind(b, "gamma")
-	b.moving("document.querySelector('" + menu + " summary').click(); document.querySelector('" + menu + " .delete').focus(); document.querySelector('" + menu + " .delete').click(); document.querySelector('" + menu + " .delete').click()")
+	b.moving("document.querySelector('" + menu + " summary').click(); document.querySelector('" + menu + " [data-testid=delete]').focus(); document.querySelector('" + menu + " [data-testid=delete]').click(); document.querySelector('" + menu + " [data-testid=delete]').click()")
 	b.until("the list", "location.pathname === '/'")
 	check(t, "actions", out, strings.Join([]string{
 		"true", "true", "true", "true", "false true true", "false", "true", "true", "false 0", "true", "true none",

@@ -6,6 +6,7 @@ import (
 	"testing"
 
 	"github.com/chromedp/cdproto/emulation"
+	"github.com/chromedp/chromedp/kb"
 )
 
 // colorsList is the list the stub answers for the colors: a favourite, a description, tags, links (one whose file is
@@ -33,6 +34,27 @@ const measureFields = `(() => {
   return low.join('\n');
 })()`
 
+// failStar presses the star sel while every write fails, and waits for the page to say so in its error.
+func failStar(b *browser, sel string) {
+	b.t.Helper()
+
+	b.eval("window.failWrites = true; document.querySelector(" + js(sel) + ").click()")
+	b.until("the error", "!document.getElementById('error').hidden")
+	b.eval("window.failWrites = false")
+}
+
+// escapeDialog presses Escape until the modal id closes: the first may only clear the words of its search field.
+func escapeDialog(b *browser, id string) {
+	b.t.Helper()
+
+	open := "document.getElementById(" + js(id) + ").open"
+	b.pressKey(kb.Escape)
+	if b.eval(open) == "true" {
+		b.pressKey(kb.Escape)
+	}
+	b.until("the modal "+id+" to close", "!"+open)
+}
+
 // TestUIColors draws the management page and the frame light whatever the OS prefers, leaves the page in the frame to
 // the OS's preference, and measures that every text and field reads, the colors copied into data URIs held.
 func TestUIColors(t *testing.T) { //nolint:paralleltest // the browser tests share one Chrome, one at a time
@@ -47,6 +69,8 @@ func TestUIColors(t *testing.T) { //nolint:paralleltest // the browser tests sha
 	}
 	const ground = "getComputedStyle(document.body).backgroundColor"
 	s.floe(t, "publish", s.page(t, "p.yaml", "P", "<p>p</p>"), "--slug", "p")
+	// A real page a, for the frame beside the stubbed list to read and tell read.
+	s.floe(t, "publish", s.page(t, "a.yaml", "Alpha", "<p>a</p>"), "--slug", "a")
 
 	out := make([]string, 0, 16)
 	for _, scheme := range []string{"dark", "light"} {
@@ -66,8 +90,9 @@ func TestUIColors(t *testing.T) { //nolint:paralleltest // the browser tests sha
 		b.navigate("about:blank")
 		b.stub(colorsList)
 		b.navigate("/")
-		b.eval("for (const s of [...document.querySelectorAll('#list li:not(.group) .sel')].slice(0, 2)) s.click(); " +
-			"document.getElementById('bulk-delete').click(); showError('failed'); document.getElementById('q').value = ''")
+		b.eval("for (const s of [...document.querySelectorAll('#list li[data-slug] [data-testid=sel]')].slice(0, 2)) s.click(); " +
+			"document.getElementById('bulk-delete').click()")
+		failStar(b, "#list li[data-slug=b] [data-testid=star]")
 		measure := func(where string) {
 			t.Helper()
 
@@ -82,42 +107,52 @@ func TestUIColors(t *testing.T) { //nolint:paralleltest // the browser tests sha
 		// The data URI holds the color it copies: the tick --on-ink.
 		out = append(out, b.eval("(() => { const root = getComputedStyle(document.documentElement); "+
 			"const holds = (selector, color) => getComputedStyle(document.querySelector(selector)).backgroundImage.includes(root.getPropertyValue(color).replace('#', '%23')); "+
-			"return holds('#list .sel:checked', '--on-ink'); })()"))
+			"return holds('#list [data-testid=sel]:checked', '--on-ink'); })()"))
 		b.eval("document.getElementById('bulk-tag').click()")
 		measure("the tags dialog")
 		// The tag on some, given to all and then to none, keeps its count: on the filled chip, then on the plain one.
 		for _, mark := range []string{"all", "none"} {
-			b.eval("[...document.querySelectorAll('.tag-box')].find((l) => l.querySelector('.n')).querySelector('input').click()")
+			b.eval("[...document.querySelectorAll('[data-testid=tag-box]')].find((l) => l.querySelector('[data-testid=n]')).querySelector('input').click()")
 			measure("the tags dialog, a tag on some given to " + mark)
 		}
-		b.eval("document.querySelector('#tag-dialog [data-close]').click(); document.querySelector('#list li:not(.group) .edit').click()")
+		b.eval("document.querySelector('#tag-dialog [data-close]').click()")
+		pressMenuItem(b, "#list li[data-slug]", "edit")
 		measure("the edit dialog")
 		b.eval("document.querySelector('#edit-dialog [data-close]').click(); document.getElementById('bulk-clear').click()")
 		// The bulk bar on the ground of the rows selected, its delete waiting or not; the window that finds, a row reached, an
 		// archived one and none; the window of the keys and of the help of the screen.
-		b.eval("for (const s of [...document.querySelectorAll('#list li:not(.group) .sel')].slice(0, 2)) s.click()")
+		b.eval("for (const s of [...document.querySelectorAll('#list li[data-slug] [data-testid=sel]')].slice(0, 2)) s.click()")
 		measure("the bulk bar")
 		b.eval("document.getElementById('bulk-delete').click()")
 		measure("the bulk bar, its delete waiting")
-		b.eval("document.getElementById('bulk-clear').click(); openFind()")
+		b.eval("document.getElementById('bulk-clear').click()")
+		pressFindOpen(b)
 		measure("the window that finds")
 		b.eval("document.querySelector('#find-actions summary').click()")
 		measure("the window that finds, its menu open")
-		b.eval("closeMenus(null); document.getElementById('find-q').value = 'nothing like it'; document.getElementById('find-q').dispatchEvent(new Event('input'))")
+		b.eval("document.querySelector('#find-actions [data-testid=more] > summary').click()")
+		b.fill("#find-q", "nothing like it")
 		measure("the window that finds, none")
-		b.eval("document.getElementById('find').close(); openKeys()")
+		escapeDialog(b, "find")
+		b.pressKey("?")
+		b.until("the window of the keys", "document.getElementById('keys').open")
 		measure("the window of the keys")
-		b.eval("document.getElementById('keys').close(); openKeys('about')")
+		escapeDialog(b, "keys")
+		b.eval("document.getElementById('keys-open').click()")
+		b.until("the window of the help", "document.getElementById('keys').open")
 		measure("the window of the help of the screen")
-		b.eval("document.getElementById('keys').close()")
-		b.eval("readDone(items[0].slug)")
-		measure("the toast to mark a page unread")
-		b.eval("document.querySelector('.toast.page').remove()")
-		// The row chosen, its version's mark on its ground, the bar over its page, and the words of a link gone beside the list.
+		escapeDialog(b, "keys")
+		// The row chosen, its version's mark on its ground, the bar over its page, and the words of a link gone beside the list. The
+		// page read the first time, its mark answered as clearing what was new, says so in a toast to mark it unread again.
 		b.size(1440, 900, false)
-		b.eval("document.querySelector('#list li[data-slug=a] .title').click()")
-		measure("the page beside the list")
-		b.eval("document.querySelector('#list li[data-slug=m] .title').click()")
+		// The stub answers every POST {"slug":"n"} and the toast shows only on {"cleared":true}: this write's answer is made here.
+		b.eval(`(() => { const f = window.fetch;
+			window.fetch = (url, init) => (init?.method === 'POST' && String(url) === '/api/pages/a/read' ? Promise.resolve(new Response('{"cleared":true}')) : f(url, init)); })()`)
+		b.eval("document.querySelector('#list li[data-slug=a] [data-testid=title]').click()")
+		b.until("the toast to mark a page unread", "document.querySelector('[data-testid=toast][data-page] button')")
+		measure("the page beside the list, the toast to mark it unread")
+		// The page's toast goes as another page is shown.
+		b.eval("document.querySelector('#list li[data-slug=m] [data-testid=title]').click()")
 		measure("a link gone beside the list")
 		// The rest of the shelf in its dialog, on a narrow screen, the row of views over the list, one pressed.
 		b.size(390, 844, true)
@@ -132,7 +167,7 @@ func TestUIColors(t *testing.T) { //nolint:paralleltest // the browser tests sha
 		s.floe(t, "publish", "--link", filepath.Join(s.Env["HOME"], "f"), "--slug", "f", "--force")
 		b.stub(colorsList[:strings.LastIndex(colorsList, "]")] + "{ slug: 'f', title: 'Folder', description: '', path: '/tmp/x/f', folder: true, createdAt: at(1), updatedAt: at(1) }]")
 		b.navigate("/?kind=folder&open=f")
-		b.until("the folder open", "document.querySelectorAll('#list li.tree').length === 3")
+		b.until("the folder open", "document.querySelectorAll('#list li[data-testid=tree]').length === 3")
 		measure("the folders")
 		b.navigate("/a/f/?file=index.html")
 		b.until("the folder's page", "!document.getElementById('frame').hidden")
@@ -140,11 +175,11 @@ func TestUIColors(t *testing.T) { //nolint:paralleltest // the browser tests sha
 		// The frame's bar, its menu open.
 		b.navigate("/a/a/")
 		b.until("the title", "document.getElementById('frame-title').textContent")
-		b.eval("document.querySelector('#frame-actions summary').click()")
+		b.eval("document.querySelector('#frame-actions [data-testid=more] > summary').click()")
 		measure("the frame's bar")
-		// What a frame prints: the note naming the page alone, with the error under a failed read, and a missing page's.
+		// What a frame prints: the note naming the page alone, with the error under a failed write, and a missing page's.
 		media("print", scheme)
-		b.eval("showError('failed')")
+		failStar(b, "#frame-actions [data-testid=star]")
 		measure("the frame printed")
 		b.navigate("/a/none/")
 		b.until("the missing page", "!document.getElementById('notfound').hidden")

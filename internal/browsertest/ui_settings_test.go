@@ -75,7 +75,7 @@ func TestUISettings(t *testing.T) { //nolint:paralleltest // the browser tests s
 	out = append(out, b.eval(seen), b.eval("document.getElementById('settings-theme-now').textContent"), b.eval(focused),
 		b.eval("document.getElementById('settings').contains(document.getElementById('toasts'))"), strings.TrimSpace(s.floe(t, "theme", "default")))
 	closeSettings(b)
-	out = append(out, b.until("the toasts back", "document.body === document.getElementById('toasts').parentElement"))
+	out = append(out, b.until("the toasts back", "!document.getElementById('toasts').closest('dialog')"))
 	// Escape from a part closes the modal, the focus back on its button
 	b.eval("document.getElementById('settings-open').focus(); document.getElementById('settings-open').click()")
 	b.until("the list's values", "document.getElementById('settings-mode-now').textContent !== ''")
@@ -98,7 +98,7 @@ func TestUISettings(t *testing.T) { //nolint:paralleltest // the browser tests s
 		strings.TrimSpace(string(set)), strconv.FormatBool(strings.Contains(s.floe(t, "guide"), "\n### Ask after publishing\n")))
 	closeSettings(b)
 	// The mode's part opened before the settings are read: not checked as off, nor saved, till they are; read, it is on
-	const mode = "document.getElementById('task-mode').checked + ' ' + document.getElementById('mode-save').disabled"
+	const mode = "document.getElementById('task-mode').checked + ' ' + document.getElementById('mode-save').matches(':disabled')"
 	b.eval(`window.realFetch ??= window.fetch; window.held = null;
 		window.fetch = (u, i) => (String(u).startsWith('/api/themes') && !i?.method ? new Promise((go) => { window.held = () => go(window.realFetch(u, i)); }) : window.realFetch(u, i));
 		document.getElementById('settings-open').click(); document.querySelector('[data-testid=settings-item][data-panel=mode]').click()`)
@@ -148,7 +148,7 @@ func TestUISettings(t *testing.T) { //nolint:paralleltest // the browser tests s
 		b.until("the save held", "window.held !== null")
 		b.pressKey(kb.Escape)
 		b.eval("document.getElementById('settings-back').click(); document.getElementById('settings').dispatchEvent(new PointerEvent('pointerdown', { bubbles: true })); document.getElementById('settings').dispatchEvent(new MouseEvent('click', { bubbles: true }))")
-		out = append(out, b.eval("[document.getElementById('settings').open, document.getElementById('settings').dataset.panel, document.getElementById('settings-back').disabled].join(' ')"))
+		out = append(out, b.eval("[document.getElementById('settings').open, document.getElementById('settings').dataset.panel, document.getElementById('settings-back').matches(':disabled')].join(' ')"))
 		b.eval("window.fetch = window.realFetch")
 		b.eval("window.toldBefore = [...document.querySelectorAll('[data-testid=toast]')]; window.held()")
 		b.until("the save told", "[...document.querySelectorAll('[data-testid=toast]')].some((e) => e.textContent.includes("+js(c.told)+") && !window.toldBefore.includes(e))")

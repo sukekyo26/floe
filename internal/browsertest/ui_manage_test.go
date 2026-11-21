@@ -1,6 +1,7 @@
 package browsertest_test
 
 import (
+	"encoding/json"
 	"fmt"
 	"runtime"
 	"strconv"
@@ -214,6 +215,179 @@ func (b *browser) drag(sel string, x float64) {
 			b.t.Fatal(err)
 		}
 	}
+}
+
+// heldAt is where holdReads holds a read: before it is sent, its answer the server's as it is let go; or sent at once, its answer
+// held, the server's as it was asked (a poll asked before a write and answered after it, as TestUITaskAdd needs).
+type heldAt bool
+
+const (
+	unsent     heldAt = false
+	unanswered heldAt = true
+)
+
+// holdReads holds the page's reads (GET) of the paths (as /api/pages) where at says until the function it returns lets them go.
+// The answers are the server's, only later: no answer is made (.claude/rules/browsertest.md). window.heldReads counts those held.
+// It wraps the page's fetch of now, the stub's too.
+// LIMIT: a read held keeps the page's time limit (READ_MS, 10 s): let it go before, or the page says the read was slow. While a
+// read of the list is held no read mark goes either (they wait for it): wait for marks after letting go.
+func (b *browser) holdReads(at heldAt, paths ...string) func() {
+	b.t.Helper()
+
+	quoted := make([]string, len(paths))
+	for i, p := range paths {
+		quoted[i] = js(p)
+	}
+	b.eval(`(() => {
+		const f = window.fetch, paths = [` + strings.Join(quoted, ", ") + `], held = [], answered = ` + strconv.FormatBool(bool(at)) + `;
+		let on = true;
+		window.heldReads = 0;
+		window.fetch = (url, init) => {
+			if (on && !init?.method && paths.includes(new URL(String(url), location.href).pathname)) {
+				window.heldReads++;
+				if (answered) return f(url, init).then((r) => new Promise((go) => { held.push(() => go(r)); }));
+				return new Promise((go) => { held.push(() => go(f(url, init))); });
+			}
+			return f(url, init);
+		};
+		window.letReadsGo = () => { on = false; held.splice(0).forEach((go) => go()); };
+	})()`)
+	return func() {
+		b.t.Helper()
+		b.eval("window.letReadsGo()")
+	}
+}
+
+// staleReads answers the page's reads (GET) of path with the server's answer of now, changed by edit (a JS function of its
+// text, or "" for none), until the function it returns lets go: a poll draws nothing new. The first read begun after a write's
+// answer (PATCH) is sent, so that what a press draws comes of its own read; staleOwn checks that it was the press's. Install it
+// after any other wrapper of the test's that answers a write, so that it sees the write's answer.
+func (b *browser) staleReads(path, edit string) func() {
+	b.t.Helper()
+
+	if edit == "" {
+		edit = "(text) => text"
+	}
+	b.eval(`(async () => {
+		const f = window.fetch, path = ` + js(path) + `, html = document.documentElement;
+		const answer = (` + edit + `)(await (await f(path)).text());
+		const s = window.stale = { on: true, written: false, own: null, lastEnd: performance.now() };
+		new MutationObserver(() => { s.lastEnd = performance.now(); }).observe(html, { attributes: true, attributeFilter: ['data-loads'] });
+		window.fetch = (url, init) => {
+			if (init?.method === 'PATCH') return f(url, init).then((r) => { s.written = s.on; return r; });
+			if (s.on && !init?.method && new URL(String(url), location.href).pathname === path) {
+				if (!s.written) return Promise.resolve(new Response(answer));
+				s.written = false;
+				s.own = { begun: Number(html.dataset.loadsBegun ?? 0), since: performance.now() - s.lastEnd };
+			}
+			return f(url, init);
+		};
+	})()`)
+	return func() {
+		b.t.Helper()
+		b.eval("window.stale.on = false")
+	}
+}
+
+// pollEnded waits for the page's next read to end (a poll's, every 3 s) and returns the reads begun then: press at once after it,
+// and staleOwn tells the press's own read from the next poll.
+func (b *browser) pollEnded() int {
+	b.t.Helper()
+
+	ended := b.eval("document.documentElement.dataset.loads ?? 0")
+	b.until("a read to end", "Number(document.documentElement.dataset.loads ?? 0) > "+ended)
+	return b.loadsBegun()
+}
+
+// staleOwn waits for the read staleReads let through after a write, and checks that it was the press's own: the first begun after
+// begun (pollEnded's), and begun sooner after the read before than the next poll comes (POLL_MS, 3 s).
+func (b *browser) staleOwn(begun int) {
+	b.t.Helper()
+
+	b.until("the read after the write", "window.stale.own")
+	got := b.eval("JSON.stringify(window.stale.own)")
+	var own struct {
+		Begun int
+		Since float64
+	}
+	if err := json.Unmarshal([]byte(got), &own); err != nil {
+		b.t.Fatal(err)
+	}
+	if own.Begun != begun+1 {
+		b.t.Fatalf("the read after the write was not the first begun after the press (%d reads begun before it, %d before the press)", own.Begun, begun)
+	}
+	if own.Since >= 1500 {
+		b.t.Fatalf("the read after the write began %.0f ms after the read before: no telling it from a poll (every 3 s; a slow machine: run again)", own.Since)
+	}
+}
+
+// loadsBegun is how many reads of the list the page has begun.
+func (b *browser) loadsBegun() int {
+	b.t.Helper()
+
+	n, err := strconv.Atoi(b.eval("Number(document.documentElement.dataset.loadsBegun ?? 0)"))
+	if err != nil {
+		b.t.Fatal(err)
+	}
+	return n
+}
+
+// pressList presses the list (a pointerdown on it, as a person's press), runs then (JS: what lets a read go) in the same
+// evaluation, and waits there until a read ends: a press holds the list's polls for 2 s only (PRESS_MS), which round trips to the
+// browser could use up. It fails when the read ended later than that, having held nothing. letGoList lets go off the list.
+func (b *browser) pressList(then string) {
+	b.t.Helper()
+
+	took := b.eval(`(async () => {
+		const html = document.documentElement, ended = Number(html.dataset.loads ?? 0), from = performance.now();
+		document.getElementById('list').dispatchEvent(new PointerEvent('pointerdown', { bubbles: true }));
+		(() => { ` + then + "\n" + `})();
+		await new Promise((go) => { const look = () => (Number(html.dataset.loads ?? 0) > ended ? go() : setTimeout(look, 5)); look(); });
+		return performance.now() - from;
+	})()`)
+	ms, err := strconv.ParseFloat(took, 64)
+	if err != nil {
+		b.t.Fatal(err)
+	}
+	if ms >= 2000 {
+		b.t.Fatalf("the read ended %.0f ms after the press, which holds the polls for 2 s only: the press held nothing (a slow machine: run again)", ms)
+	}
+}
+
+// letGoList ends the press of pressList, off the list.
+func (b *browser) letGoList() {
+	b.t.Helper()
+
+	b.eval("document.dispatchEvent(new PointerEvent('pointerup', { bubbles: true }))")
+}
+
+// readMarks records in window.marks each read mark the page sends (POST or DELETE of /api/pages/<slug>/read) as { said: 'POST
+// slug', done, begun }, done once answered or failed, begun the reads begun then. Run it in the page, after it opened.
+const readMarks = `(() => {
+	const f = window.fetch, html = document.documentElement;
+	window.marks = [];
+	window.fetch = (url, init) => {
+		const m = /^\/api\/pages\/([^/]+)\/read$/.exec(new URL(String(url), location.href).pathname);
+		if (!m || !init?.method) return f(url, init);
+		const mark = { said: init.method + ' ' + decodeURIComponent(m[1]), done: false, begun: 0 };
+		window.marks.push(mark);
+		const done = () => { mark.done = true; mark.begun = Number(html.dataset.loadsBegun ?? 0); };
+		const p = f(url, init);
+		p.then(done, done);
+		return p;
+	};
+})()`
+
+// marksDone waits until n read marks are answered and the read of the list the page makes after them has ended.
+func (b *browser) marksDone(n int) {
+	b.t.Helper()
+
+	b.until(strconv.Itoa(n)+" read marks answered", "window.marks.length >= "+strconv.Itoa(n)+" && window.marks.every((m) => m.done)")
+	begun, err := strconv.Atoi(b.eval("Math.max(...window.marks.map((m) => m.begun))"))
+	if err != nil {
+		b.t.Fatal(err)
+	}
+	b.untilRead(begun, "the read after the marks", "true")
 }
 
 func (b *browser) addScript(script string) page.ScriptIdentifier {
@@ -448,6 +622,12 @@ func (b *browser) point(x, y float64) {
 	}
 }
 
+// listDraws counts in window.draws the times the list's rows are drawn anew, as the rows in #list are replaced, until
+// window.drawsSeen.disconnect(). Of uiShelf and uiTags.
+const listDraws = `window.draws = 0; window.drawsSeen = new MutationObserver((records) => {
+	window.draws += records.filter((r) => r.removedNodes.length > 0 && r.addedNodes.length > 0).length;
+}); window.drawsSeen.observe(document.getElementById('list'), { childList: true })`
+
 // TestUIShelf picks the list on the shelf, shows a row's actions where pointed at or reached, keeps a row's menu whole and
 // gives focus back from it, adds a link from any list, folds the shelf into a row and a dialog on a narrow screen, and acts
 // from the frame's bar, against a stubbed list.
@@ -468,18 +648,18 @@ func uiShelf(t *testing.T, lang i18n.Lang, msg func(string, ...any) string) {
 	key := func(k string) {
 		b.eval("document.body.dispatchEvent(new KeyboardEvent('keydown', { key: '" + k + "', bubbles: true }))")
 	}
-	const order = "[...document.getElementById('list').children].map((li) => li.classList.contains('group') ? 'H' : li.dataset.slug).join('')"
-	const views = "[...document.querySelectorAll('.views button')].filter((b) => b.getAttribute('aria-pressed') === 'true').map((b) => b.dataset.view).join('') + ' ' + location.search"
+	const order = "[...document.getElementById('list').children].map((li) => li.dataset.testid === 'group' ? 'H' : li.dataset.slug).join('')"
+	const views = "[...document.querySelectorAll('[data-testid=views] button')].filter((b) => b.getAttribute('aria-pressed') === 'true').map((b) => b.dataset.view).join('') + ' ' + location.search"
 
 	out := make([]string, 0, 40)
 	// A heading is no row for a screen reader.
-	out = append(out, b.eval(order), b.eval("[...document.querySelectorAll('#list li.group')].every((li) => "+
+	out = append(out, b.eval(order), b.eval("[...document.querySelectorAll('#list li[data-testid=group]')].every((li) => "+
 		"li.getAttribute('role') === 'none' && li.firstChild.getAttribute('role') === 'heading' && li.firstChild.getAttribute('aria-level') === '2')"))
-	b.eval("document.querySelector('.views [data-view=fav]').click()")
+	b.eval("document.querySelector('[data-testid=views] [data-view=fav]').click()")
 	out = append(out, b.eval(order)+" "+b.eval(views))
-	b.eval("document.querySelector('.views [data-view=archived]').click()")
+	b.eval("document.querySelector('[data-testid=views] [data-view=archived]').click()")
 	out = append(out, b.eval(order)+" "+b.eval(views))
-	b.eval("document.querySelector('.views [data-view=all]').click()")
+	b.eval("document.querySelector('[data-testid=views] [data-view=all]').click()")
 	// ↓ goes past a heading; selecting all selects its rows only.
 	key("ArrowDown")
 	key("ArrowDown")
@@ -487,52 +667,49 @@ func uiShelf(t *testing.T, lang i18n.Lang, msg func(string, ...any) string) {
 	b.eval("document.getElementById('bulk-page').click()")
 	out = append(out, b.eval("document.getElementById('bulk-count').textContent"))
 	// Shown before they hide, as on a slow machine, which clears the rows long after it selected them.
-	b.until("the selected rows' actions to show", "getComputedStyle(document.querySelector('#list li[data-slug=c] .more')).opacity === '1'")
+	b.until("the selected rows' actions to show", "getComputedStyle(document.querySelector('#list li[data-slug=c] [data-testid=more]')).opacity === '1'")
 	b.eval("document.getElementById('bulk-clear').click(); document.activeElement.blur()")
 	// With a mouse, a row's actions show only where pointed at, reached by keyboard, chosen or selected; a pressed star always.
-	out = append(out, b.settled("['b', 'c'].map((slug) => ['.star', '.more'].map((part) => "+
+	out = append(out, b.settled("['b', 'c'].map((slug) => ['[data-testid=star]', '[data-testid=more]'].map((part) => "+
 		"getComputedStyle(document.querySelector(`#list li[data-slug=${slug}] ${part}`)).opacity).join('')).join('')"))
 	r := b.rect("document.querySelector('#list li[data-slug=b]')")
 	b.point(r.X+r.Width/2, r.Y+r.Height/2)
-	out = append(out, b.until("the pointed row's actions", "getComputedStyle(document.querySelector('#list li[data-slug=b] .more')).opacity === '1' && 'shown'"))
+	out = append(out, b.until("the pointed row's actions", "getComputedStyle(document.querySelector('#list li[data-slug=b] [data-testid=more]')).opacity === '1' && 'shown'"))
 	b.point(0, 0)
-	b.until("the actions to hide", "getComputedStyle(document.querySelector('#list li[data-slug=b] .more')).opacity === '0'")
-	b.eval("document.querySelector('#list li[data-slug=c] .title').focus()")
-	out = append(out, b.until("the reached row's actions", "getComputedStyle(document.querySelector('#list li[data-slug=c] .more')).opacity === '1' && 'shown'"))
-	b.eval("document.activeElement.blur(); document.querySelector('#list li[data-slug=b] .sel').click()")
-	out = append(out, b.until("the selected row's actions", "getComputedStyle(document.querySelector('#list li[data-slug=b] .more')).opacity === '1' && 'shown'"))
+	b.until("the actions to hide", "getComputedStyle(document.querySelector('#list li[data-slug=b] [data-testid=more]')).opacity === '0'")
+	b.eval("document.querySelector('#list li[data-slug=c] [data-testid=title]').focus()")
+	out = append(out, b.until("the reached row's actions", "getComputedStyle(document.querySelector('#list li[data-slug=c] [data-testid=more]')).opacity === '1' && 'shown'"))
+	b.eval("document.activeElement.blur(); document.querySelector('#list li[data-slug=b] [data-testid=sel]').click()")
+	out = append(out, b.until("the selected row's actions", "getComputedStyle(document.querySelector('#list li[data-slug=b] [data-testid=more]')).opacity === '1' && 'shown'"))
 	b.eval("document.getElementById('bulk-clear').click()")
-	out = append(out, b.eval("[...document.querySelectorAll('#list li:not(.group)')].filter((li) => "+
-		"['.star', '.archive', '.more summary'].some((s) => !li.querySelector(s).getAttribute('aria-label'))).length"))
+	out = append(out, b.eval("[...document.querySelectorAll('#list li:not([data-testid=group])')].filter((li) => "+
+		"['[data-testid=star]', '[data-testid=archive]', '[data-testid=more] summary'].some((s) => !li.querySelector(s).getAttribute('aria-label'))).length"))
 	// The menu: its words, Escape and a click elsewhere close it, focus going back to its button.
 	b.eval("document.querySelector('#list li[data-slug=b] summary').click()")
 	out = append(out, b.eval("document.querySelector('#list li[data-slug=b] summary').getAttribute('aria-label')"),
-		b.eval("[...document.querySelectorAll('#list li[data-slug=b] .menu > *')].filter((e) => getComputedStyle(e).display !== 'none').map((e) => e.textContent.trim()).join(' / ')"))
-	b.eval("document.querySelector('#list li[data-slug=b] .edit').focus()")
+		b.eval("[...document.querySelectorAll('#list li[data-slug=b] [data-testid=menu] > *')].filter((e) => getComputedStyle(e).display !== 'none').map((e) => e.textContent.trim()).join(' / ')"))
+	b.eval("document.querySelector('#list li[data-slug=b] [data-testid=edit]').focus()")
 	key("Escape")
-	out = append(out, b.eval("[document.querySelector('#list li[data-slug=b] .more').open, "+
+	out = append(out, b.eval("[document.querySelector('#list li[data-slug=b] [data-testid=more]').open, "+
 		"document.activeElement === document.querySelector('#list li[data-slug=b] summary')].join(' ')"))
 	key("ArrowDown")
 	out = append(out, b.eval("document.activeElement.textContent"))
-	b.eval("document.querySelector('#list li[data-slug=b] summary').click(); document.querySelector('#list li[data-slug=b] .edit').focus()")
+	b.eval("document.querySelector('#list li[data-slug=b] summary').click(); document.querySelector('#list li[data-slug=b] [data-testid=edit]').focus()")
 	b.eval("document.getElementById('count').click()")
-	out = append(out, b.eval("[document.querySelector('#list li[data-slug=b] .more').open, "+
+	out = append(out, b.eval("[document.querySelector('#list li[data-slug=b] [data-testid=more]').open, "+
 		"document.activeElement === document.querySelector('#list li[data-slug=b] summary')].join(' ')"))
 	// One menu open at a time.
 	b.eval("document.querySelector('#list li[data-slug=b] summary').click(); document.querySelector('#list li[data-slug=a] summary').click()")
-	out = append(out, b.eval("[...document.querySelectorAll('#list .more')].filter((d) => d.open).length"))
+	out = append(out, b.eval("[...document.querySelectorAll('#list [data-testid=more]')].filter((d) => d.open).length"))
 	b.eval("document.querySelector('#list li[data-slug=a] summary').click()")
 	// An item closes its menu; the edit dialog, cancelled or saved, gives focus back to the row's menu button.
-	b.eval("document.querySelector('#list li[data-slug=b] summary').click(); document.querySelector('#list li[data-slug=b] .edit').click()")
-	out = append(out, b.eval("[document.querySelector('#list li[data-slug=b] .more').open, document.getElementById('edit-dialog').open].join(' ')"))
+	b.eval("document.querySelector('#list li[data-slug=b] summary').click(); document.querySelector('#list li[data-slug=b] [data-testid=edit]').click()")
+	out = append(out, b.eval("[document.querySelector('#list li[data-slug=b] [data-testid=more]').open, document.getElementById('edit-dialog').open].join(' ')"))
 	b.eval("document.querySelector('#edit-dialog [data-close]').click()")
 	out = append(out, b.eval("document.activeElement === document.querySelector('#list li[data-slug=b] summary')"))
-	b.eval(`(() => {
-		document.querySelector('#list li[data-slug=b] summary').click();
-		document.querySelector('#list li[data-slug=b] .edit').click();
-		document.getElementById('edit-desc').value = 'new';
-		document.getElementById('edit').requestSubmit();
-	})()`)
+	b.eval("document.querySelector('#list li[data-slug=b] summary').click(); document.querySelector('#list li[data-slug=b] [data-testid=edit]').click()")
+	b.fill("#edit-desc", "new")
+	b.eval("document.getElementById('edit-submit').click()")
 	out = append(out, b.until("the edit dialog to close", "!document.getElementById('edit-dialog').open && "+
 		"String(document.activeElement === document.querySelector('#list li[data-slug=b] summary'))"))
 	// A row's menu is not cut off by the list's box: with one row, the menu reaches below it, its delete the topmost at its
@@ -542,59 +719,58 @@ func uiShelf(t *testing.T, lang i18n.Lang, msg func(string, ...any) string) {
 	b.size(windowWidth, 800, false)
 	// Not scrollIntoView, which would scroll a box that cuts it off to bring it in.
 	b.eval("document.querySelector('#list > li:last-child summary').click()")
-	d := b.rect("document.querySelector('#list > li:last-child .delete')")
-	out = append(out, b.eval("Boolean(document.elementFromPoint("+js(fmt.Sprint(d.X+d.Width/2))+", "+js(fmt.Sprint(d.Y+d.Height/2))+")?.closest('.delete'))"))
-	b.eval("calls.length = 0; document.querySelector('#list > li:last-child .delete').click(); document.querySelector('#list > li:last-child .delete').click()")
+	d := b.rect("document.querySelector('#list > li:last-child [data-testid=delete]')")
+	out = append(out, b.eval("Boolean(document.elementFromPoint("+js(fmt.Sprint(d.X+d.Width/2))+", "+js(fmt.Sprint(d.Y+d.Height/2))+")?.closest('[data-testid=delete]'))"))
+	b.eval("calls.length = 0; document.querySelector('#list > li:last-child [data-testid=delete]').click(); document.querySelector('#list > li:last-child [data-testid=delete]').click()")
 	out = append(out, b.until("the delete", "calls.join(',')"))
 	b.unsize()
 	// The kinds show with two to choose between or one chosen, the projects and the templates with one.
 	b.stub(`[{ slug: 'a', title: 'Alpha', description: '', project: 'p', createdAt: at(1), updatedAt: at(8) }]`)
 	const shelves = "['shelf-projects', 'shelf-kinds', 'shelf-templates', 'shelf-tags'].map((id) => document.getElementById(id).hidden).join(' ')"
 	out = append(out, b.eval(shelves))
-	b.eval("toggleProject('p')")
+	const chipP = "document.querySelector('#chips [data-testid=chip][data-project=p]').click()"
+	b.eval(chipP)
 	out = append(out, b.eval(shelves))
-	b.eval("toggleProject('p')")
+	b.eval(chipP)
 	b.stub(`[{ slug: 'a', title: 'Alpha', description: '', project: 'p', template: 'report', createdAt: at(1), updatedAt: at(8) },
 		{ slug: 'l', title: 'L', description: '', path: '/tmp/x/l.yaml', template: 'report', createdAt: at(1), updatedAt: at(7) },
 		{ slug: 'd', title: 'D', description: '', template: 'design', createdAt: at(1), updatedAt: at(6) }]`)
-	out = append(out, b.eval(shelves), b.eval("[...document.querySelectorAll('#templates .chip')].map((c) => c.textContent).join(',')"))
+	out = append(out, b.eval(shelves), b.eval("[...document.querySelectorAll('#templates [data-testid=chip]')].map((c) => c.textContent).join(',')"))
 	// Each part picks one, picked again lets it go; the parts narrow together; all in the URL.
 	b.eval("document.querySelector('#templates [data-template=report]').click()")
 	out = append(out, b.eval(order)+" "+b.eval("location.search"))
 	b.eval("document.querySelector('#kinds [data-kind=link]').click()")
 	out = append(out, b.eval(order)+" "+b.eval("location.search"))
 	b.navigate("/?template=report&kind=link&view=fav&tab=links&sort=title&page=3")
-	out = append(out, b.eval("[view, kind, template].join(' ')"))
-	b.eval("document.querySelector('.views [data-view=fav]').click(); document.querySelector('#kinds [data-kind=link]').click(); document.querySelector('#templates [data-template=report]').click()")
+	out = append(out, b.eval("[['[data-testid=views]', 'view'], ['#kinds', 'kind'], ['#templates', 'template']].map(([box, key]) => document.querySelector(box + ' [aria-pressed=true]')?.dataset[key]).join(' ')"))
+	b.eval("document.querySelector('[data-testid=views] [data-view=fav]').click(); document.querySelector('#kinds [data-kind=link]').click(); document.querySelector('#templates [data-template=report]').click()")
 	out = append(out, b.eval(order)+" "+b.eval("location.search"))
 	// A project's dot is of its color by projectOrder: as many each, by name.
 	b.stub(`[{ slug: 'a', title: 'Alpha', description: '', project: 'p', createdAt: at(1), updatedAt: at(8) },
 		{ slug: 'b', title: 'Beta', description: '', project: 'floe', createdAt: at(1), updatedAt: at(7) }]`)
-	out = append(out, b.eval("[...document.querySelectorAll('#chips .chip')].map((c) => c.dataset.project + ':' + c.style.getPropertyValue('--c')).join(',')"))
+	out = append(out, b.eval("[...document.querySelectorAll('#chips [data-testid=chip]')].map((c) => c.dataset.project + ':' + c.style.getPropertyValue('--c')).join(',')"))
 	// The favourites count their own projects, and one is shown: a single one is chosen from, as on the whole list.
 	b.stub(`[{ slug: 'c', title: 'Gamma', description: '', project: 'p', createdAt: at(1), updatedAt: at(9), favorite: true },
 		{ slug: 'b', title: 'Beta', description: '', project: 'q', createdAt: at(1), updatedAt: at(8) }]`)
-	b.eval("document.querySelector('.views [data-view=fav]').click()")
+	b.eval("document.querySelector('[data-testid=views] [data-view=fav]').click()")
 	out = append(out, b.eval("document.getElementById('shelf-projects').hidden"))
 	const empties = "['empty', 'all-archived', 'empty-favorites', 'empty-archived', 'nomatch']" +
 		".filter((id) => !document.getElementById(id).hidden).join(' ')"
 	b.stub(`[{ slug: 'z', title: 'Zeta', description: '', createdAt: at(1), updatedAt: at(6), favorite: true, archived: true }]`)
 	out = append(out, b.eval(empties))
-	b.eval("document.querySelector('.views [data-view=all]').click()")
+	b.eval("document.querySelector('[data-testid=views] [data-view=all]').click()")
 	out = append(out, b.eval(empties))
 	b.eval("document.getElementById('show-archived').click()")
 	out = append(out, b.eval(views))
 	b.stub(extrasList)
 	// A link is added from any list but the archived, and then shown on the whole list, unfiltered by a project or a search it
 	// may not match, drawn once.
-	b.eval("document.querySelector('.views [data-view=all]').click()")
+	b.eval("document.querySelector('[data-testid=views] [data-view=all]').click()")
 	b.stub(`[{ slug: 'a', title: 'Alpha', description: '', project: 'p', createdAt: at(1), updatedAt: at(8) }]`)
 	out = append(out, b.eval("document.getElementById('add-link').hidden"))
-	b.eval("toggleProject('p'); (() => { const q = document.getElementById('q'); q.value = 'Al'; q.dispatchEvent(new Event('input')); })()")
-	b.eval(`(() => {
-		window.renders = 0;
-		window.draw = render;
-		render = () => { renders++; draw(); };
+	b.eval(chipP)
+	b.fill("#q", "Al")
+	b.eval(listDraws + `; (() => {
 		// The server lists the link added.
 		const post = window.fetch;
 		window.fetch = (url, init = {}) => {
@@ -602,56 +778,56 @@ func uiShelf(t *testing.T, lang i18n.Lang, msg func(string, ...any) string) {
 			return post(url, init);
 		};
 		document.getElementById('add-link').click();
-		document.getElementById('add-path').value = '/tmp/x/n.html';
-		document.getElementById('add').requestSubmit();
 	})()`)
+	b.fill("#add-path", "/tmp/x/n.html")
+	b.eval("document.getElementById('add-submit').click()")
 	// Waited for until drawn: the dialog closes before the list is fetched again.
 	b.until("the link to be added", "!document.getElementById('add-dialog').open && document.getElementById('q').value === '' && !location.search.includes('project')")
-	out = append(out, b.until("the link to show", "document.querySelector('#list li[data-slug=n]') && [location.search === '', renders, "+
-		"[...document.querySelectorAll('#list .title')].map((a) => a.textContent)].join(' ')"))
-	b.eval("render = draw")
-	b.eval("document.querySelector('.views [data-view=archived]').click()")
+	out = append(out, b.until("the link to show", "document.querySelector('#list li[data-slug=n]') && [location.search === '', window.draws, "+
+		"[...document.querySelectorAll('#list [data-testid=title]')].map((a) => a.textContent)].join(' ')"))
+	b.eval("window.drawsSeen.disconnect()")
+	b.eval("document.querySelector('[data-testid=views] [data-view=archived]').click()")
 	out = append(out, b.eval("document.getElementById('add-link').hidden"))
-	b.eval("document.querySelector('.views [data-view=all]').click()")
+	b.eval("document.querySelector('[data-testid=views] [data-view=all]').click()")
 	// An open menu passes under the head stuck at the top as the list scrolls, not over it.
 	b.stub(manyPages(60))
 	b.eval("document.querySelector('#list li[data-slug=p5] summary').click()")
 	out = append(out, b.eval(`(() => {
-		const bar = document.querySelector('.lhead').getBoundingClientRect();
-		document.getElementById('list-body').scrollBy(0, document.querySelector('#list li[data-slug=p5] .menu').getBoundingClientRect().top - bar.top - 5);
-		const menu = document.querySelector('#list li[data-slug=p5] .menu').getBoundingClientRect();
-		return Boolean(document.elementFromPoint(menu.left + menu.width / 2, bar.top + 10)?.closest('.lhead'));
+		const bar = document.querySelector('[data-testid=lhead]').getBoundingClientRect();
+		document.getElementById('list-body').scrollBy(0, document.querySelector('#list li[data-slug=p5] [data-testid=menu]').getBoundingClientRect().top - bar.top - 5);
+		const menu = document.querySelector('#list li[data-slug=p5] [data-testid=menu]').getBoundingClientRect();
+		return Boolean(document.elementFromPoint(menu.left + menu.width / 2, bar.top + 10)?.closest('[data-testid=lhead]'));
 	})()`))
 	b.eval("document.querySelector('#list li[data-slug=p5] summary').click(); document.getElementById('list-body').scrollTo(0, 0)")
 	b.unsize()
 	// The frame's bar: the title, archived or not, the star, and the same menu as a row's, which act as the list's do and tell
 	// their failure.
 	frame := "[document.getElementById('frame-title').textContent, document.getElementById('frame-archived').hidden, " +
-		"document.querySelector('#frame-actions .star').getAttribute('aria-pressed'), document.querySelector('#frame-actions .star').getAttribute('aria-label'), " +
-		"document.querySelector('#frame-actions .open').getAttribute('href'), document.querySelector('#frame-actions .menu .archive').textContent.trim()].join(' / ')"
+		"document.querySelector('#frame-actions [data-testid=star]').getAttribute('aria-pressed'), document.querySelector('#frame-actions [data-testid=star]').getAttribute('aria-label'), " +
+		"document.querySelector('#frame-actions [data-testid=open]').getAttribute('href'), document.querySelector('#frame-actions [data-testid=menu] [data-testid=archive]').textContent.trim()].join(' / ')"
 	b.stub(extrasList)
 	b.navigate("/a/z/")
 	out = append(out, b.until("the frame's bar", "document.getElementById('frame-title').textContent && "+frame))
-	begun := b.acted("document.querySelector('#frame-actions > .archive').click()")
+	begun := b.acted("document.querySelector('#frame-actions > [data-testid=archive]').click()")
 	out = append(out, b.until("the give back", "calls.splice(0).join(',')"))
 	b.untilRead(begun, "the give back done", "true")
 	// Given back, as the server now lists it: the menu says so.
-	b.eval("window.list = JSON.stringify(JSON.parse(window.list).map((a) => a.slug === 'z' ? { ...a, archived: false } : a)); load()")
+	b.eval("window.list = JSON.stringify(JSON.parse(window.list).map((a) => a.slug === 'z' ? { ...a, archived: false } : a))")
+	b.reread()
 	out = append(out, b.until("the menu to say so", "document.getElementById('frame-archived').hidden && "+frame))
-	b.eval("window.failWrites = true; document.querySelector('#frame-actions .star').click()")
+	b.eval("window.failWrites = true; document.querySelector('#frame-actions [data-testid=star]').click()")
 	out = append(out, b.until("the failure to show", "!document.getElementById('error').hidden && document.getElementById('error').offsetHeight > 0 && "+
 		"document.getElementById('error').textContent"))
 	b.eval("window.failWrites = false")
 	// Renamed in the frame, the tab goes to the new name; removed, to the list.
-	b.moving(`(() => {
-		document.querySelector('#frame-actions .edit').click();
-		document.getElementById('edit-slug').value = 'z2';
-		document.getElementById('edit').requestSubmit();
-	})()`)
+	pressMenuItem(b, "#frame-actions", "edit")
+	openSlugField(b)
+	b.fill("#edit-slug", "z2")
+	b.moving("document.getElementById('edit-submit').click()")
 	out = append(out, b.until("the new name", "location.pathname === '/a/z2/' && location.pathname"))
 	b.navigate("/a/b/")
 	b.until("the frame's bar", "document.getElementById('frame-title').textContent")
-	b.moving("document.querySelector('#frame-actions .delete').click(); document.querySelector('#frame-actions .delete').click()")
+	b.moving("document.querySelector('#frame-actions [data-testid=delete]').click(); document.querySelector('#frame-actions [data-testid=delete]').click()")
 	b.until("the list", "location.pathname === '/'")
 
 	check(t, "shelf", out, strings.Join([]string{
@@ -693,36 +869,37 @@ func uiTags(t *testing.T, lang i18n.Lang, msg func(string, ...any) string) {
 	b := newBrowser(t, servetest.Start(t, nil).Base, lang)
 	b.stub(tagsList)
 	b.navigate("/")
-	const rows = "[...document.querySelectorAll('#list li:not(.group)')].map((li) => li.dataset.slug).join('') + ' ' + (new URLSearchParams(location.search).get('tag') ?? '-')"
-	const shelf = "[...document.querySelectorAll('#tags .chip')].map((c) => c.textContent + ':' + c.getAttribute('aria-pressed')).join(',') + ' ' + document.getElementById('shelf-tags').hidden"
+	const rows = "[...document.querySelectorAll('#list li:not([data-testid=group])')].map((li) => li.dataset.slug).join('') + ' ' + (new URLSearchParams(location.search).get('tag') ?? '-')"
+	const shelf = "[...document.querySelectorAll('#tags [data-testid=chip]')].map((c) => c.textContent + ':' + c.getAttribute('aria-pressed')).join(',') + ' ' + document.getElementById('shelf-tags').hidden"
 	// Presses the shelf's tag plan, which picks it or lets it go.
 	pickPlan := func() {
-		b.eval("[...document.querySelectorAll('#tags .chip')].find((c) => c.dataset.tag === 'plan').click()")
+		b.eval("[...document.querySelectorAll('#tags [data-testid=chip]')].find((c) => c.dataset.tag === 'plan').click()")
 	}
 	search := func(q string) {
-		b.eval("(() => { const q = document.getElementById('q'); q.value = " + js(q) + "; q.dispatchEvent(new Event('input')); })()")
+		b.fill("#q", q)
 	}
 	press := b.pressKey
 	// The tag dialog's chips: name, state, the mark shown and count
-	const boxes = "[...document.querySelectorAll('#tag-boxes .tag-box')].map((l) => { const c = l.querySelector('input'); " +
-		"return [l.querySelector('.name').textContent, c.indeterminate ? 'some' : c.checked ? 'all' : 'none', " +
-		"getComputedStyle(l.querySelector('.mark'), '::before').content.replaceAll('\"', ''), l.querySelector('.n')?.textContent ?? ''].join(':'); }).join(',')"
-	const applies = "!document.getElementById('tag-apply').disabled"
+	// The mark's word is its text, or else the content of its ::before.
+	const boxes = "[...document.querySelectorAll('#tag-boxes [data-testid=tag-box]')].map((l) => { const c = l.querySelector('input'), m = l.querySelector('[data-testid=mark]'); " +
+		"return [l.querySelector('[data-testid=name]').textContent, c.indeterminate ? 'some' : c.checked ? 'all' : 'none', " +
+		"m.textContent.trim() || getComputedStyle(m, '::before').content.replaceAll('\"', ''), l.querySelector('[data-testid=n]')?.textContent ?? ''].join(':'); }).join(',')"
+	const applies = "!document.getElementById('tag-apply').matches(':disabled')"
 	selectOnly := func(slugs ...string) {
 		b.eval("document.getElementById('bulk-clear').click()")
 		for _, slug := range slugs {
-			b.eval("document.querySelector('#list li[data-slug=" + slug + "] .sel').click()")
+			b.eval("document.querySelector('#list li[data-slug=" + slug + "] [data-testid=sel]').click()")
 		}
 	}
 	box := func(name string) string {
-		return "[...document.querySelectorAll('#tag-boxes .tag-box')].find((l) => l.querySelector('.name').textContent === " + js(name) + ").querySelector('input')"
+		return "[...document.querySelectorAll('#tag-boxes [data-testid=tag-box]')].find((l) => l.querySelector('[data-testid=name]').textContent === " + js(name) + ").querySelector('input')"
 	}
 
 	out := make([]string, 0, 40)
 	// The shelf names the tags of the list looked at by name, with their counts.
 	out = append(out, b.eval(shelf), b.eval(rows),
-		b.eval("[...document.querySelectorAll('#list li[data-slug=a] .tagpill')].map((p) => p.textContent + ':' + p.getAttribute('aria-label')).join(',')"),
-		b.eval("document.querySelector('#list li[data-slug=d] .tags') === null"))
+		b.eval("[...document.querySelectorAll('#list li[data-slug=a] [data-testid=tagpill]')].map((p) => p.textContent + ':' + p.getAttribute('aria-label')).join(',')"),
+		b.eval("document.querySelector('#list li[data-slug=d] [data-testid=tags]') === null"))
 	// Picked, the rows are its pages, as when the URL has it; picked again it is let go.
 	pickPlan()
 	out = append(out, b.eval(rows), b.eval(shelf))
@@ -730,13 +907,13 @@ func uiTags(t *testing.T, lang i18n.Lang, msg func(string, ...any) string) {
 	out = append(out, b.eval(rows))
 	pickPlan()
 	out = append(out, b.eval(rows))
-	b.eval("document.querySelector('.views [data-view=archived]').click()")
+	b.eval("document.querySelector('[data-testid=views] [data-view=archived]').click()")
 	out = append(out, b.eval(shelf))
-	b.eval("document.querySelector('.views [data-view=all]').click()")
+	b.eval("document.querySelector('[data-testid=views] [data-view=all]').click()")
 	// A row's tag picks it; the tag picked already, the list stays, its selection too.
-	b.eval("document.querySelector('#list li[data-slug=c] .tagpill').click()")
+	b.eval("document.querySelector('#list li[data-slug=c] [data-testid=tagpill]').click()")
 	out = append(out, b.eval(rows))
-	b.eval("document.querySelector('#list li[data-slug=c] .sel').click(); document.querySelector('#list li[data-slug=c] .tagpill').click()")
+	b.eval("document.querySelector('#list li[data-slug=c] [data-testid=sel]').click(); document.querySelector('#list li[data-slug=c] [data-testid=tagpill]').click()")
 	out = append(out, b.eval("document.getElementById('bulk-count').textContent"))
 	b.eval("document.getElementById('bulk-clear').click()")
 	// Searching finds a page by its tags.
@@ -753,14 +930,16 @@ func uiTags(t *testing.T, lang i18n.Lang, msg func(string, ...any) string) {
 	b.stub(tagsList)
 
 	// A row's menu opens the tag dialog of its page alone, which sends a name with a comma whole; the edit dialog sends no tags.
-	b.eval("document.querySelector('#list li[data-slug=c] .tag-item').click()")
+	b.eval("document.querySelector('#list li[data-slug=c] [data-testid=tag-item]').click()")
 	b.until("the dialog", "document.getElementById('tag-dialog').open")
 	out = append(out, b.eval("document.getElementById('tag-title').textContent"), b.eval(boxes))
 	b.eval(box("old") + ".click(); document.getElementById('tag-apply').click()")
 	out = append(out, b.until("the tags to be sent", "!document.getElementById('tag-dialog').open && calls.splice(0).join(',')"),
 		b.eval("document.getElementById('edit-tags') === null"))
-	b.eval("document.querySelector('#list li[data-slug=c] .edit').click()")
-	b.eval("document.getElementById('edit-name').value = 'G2'; document.getElementById('edit').requestSubmit()")
+	b.eval("document.querySelector('#list li[data-slug=c] [data-testid=edit]').click()")
+	b.until("the edit dialog", "document.getElementById('edit-dialog').open")
+	b.fill("#edit-name", "G2")
+	b.eval("document.getElementById('edit-submit').click()")
 	b.until("the edit dialog to close", "!document.getElementById('edit-dialog').open")
 	out = append(out, b.eval("calls.splice(0).join(',')"))
 
@@ -772,8 +951,8 @@ func uiTags(t *testing.T, lang i18n.Lang, msg func(string, ...any) string) {
 	b.until("the find field to have focus", "document.activeElement.id === 'tag-find'")
 	press(kb.Tab)
 	// The chip reached shows the ring of its hidden box's focus.
-	out = append(out, b.eval("document.activeElement.closest('.tag-box').querySelector('.name').textContent + ' ' + "+
-		"getComputedStyle(document.activeElement.closest('.tag-box')).outlineStyle"))
+	out = append(out, b.eval("document.activeElement.closest('[data-testid=tag-box]').querySelector('[data-testid=name]').textContent + ' ' + "+
+		"getComputedStyle(document.activeElement.closest('[data-testid=tag-box]')).outlineStyle"))
 	marks := make([]string, 0, 4)
 	for range 4 {
 		press(" ")
@@ -788,11 +967,11 @@ func uiTags(t *testing.T, lang i18n.Lang, msg func(string, ...any) string) {
 	out = append(out, b.eval(boxes), b.eval(applies))
 	// Applied, each page the change would change is sent the names changed alone, drawn once by the list read again before
 	// (changed since).
-	b.eval("window.renders = 0; window.draw = render; render = () => { renders++; draw(); }; list = list.replace('Delta', 'Delta 1')")
+	b.eval(listDraws + "; list = list.replace('Delta', 'Delta 1')")
 	b.eval("document.getElementById('tag-apply').click()")
 	out = append(out, b.until("the tags to be applied", "document.getElementById('bulk').hidden && calls.splice(0).sort().join(',')"),
-		b.eval("document.getElementById('toasts').textContent.includes("+js(msg("ui_tag_bulk_done", 3))+")"), b.eval("renders"))
-	b.eval("render = draw")
+		b.eval("document.getElementById('toasts').textContent.includes("+js(msg("ui_tag_bulk_done", 3))+")"), b.eval("window.draws"))
+	b.eval("window.drawsSeen.disconnect()")
 	// A tag left on some is left as each page has it.
 	selectOnly("a", "c")
 	b.eval("document.getElementById('bulk-tag').click(); " + box("old") + ".click(); document.getElementById('tag-apply').click()")
@@ -801,9 +980,9 @@ func uiTags(t *testing.T, lang i18n.Lang, msg func(string, ...any) string) {
 	selectOnly("b")
 	b.eval("document.getElementById('bulk-tag').click()")
 	b.until("the find field to have focus", "document.activeElement.id === 'tag-find'")
-	b.eval("(() => { const f = document.getElementById('tag-find'); f.value = 'la'; f.dispatchEvent(new Event('input')); })()")
+	b.fill("#tag-find", "la")
 	out = append(out, b.eval(boxes)+" "+b.eval("document.getElementById('tag-new').hidden"))
-	b.eval("(() => { const f = document.getElementById('tag-find'); f.value = 'new'; f.dispatchEvent(new Event('input')); })()")
+	b.fill("#tag-find", "new")
 	out = append(out, b.eval("document.getElementById('tag-new').textContent"))
 	press(kb.Enter)
 	out = append(out, b.eval(boxes), b.eval("[document.getElementById('tag-dialog').open, calls.length, "+applies+"].join(' ')"))
@@ -822,8 +1001,8 @@ func uiTags(t *testing.T, lang i18n.Lang, msg func(string, ...any) string) {
 	// A narrow screen's dialog of the rest of the shelf has the tags, which pick and let go as the wide shelf's do.
 	b.size(390, 844, true)
 	b.eval("document.getElementById('narrow-filter').click()")
-	plan := "[...document.querySelectorAll('#tags .chip')].find((c) => c.dataset.tag === 'plan')"
-	out = append(out, b.eval("[...document.querySelectorAll('#tags .chip')].filter((c) => c.offsetParent).map((c) => c.dataset.tag).join(',')"))
+	plan := "[...document.querySelectorAll('#tags [data-testid=chip]')].find((c) => c.dataset.tag === 'plan')"
+	out = append(out, b.eval("[...document.querySelectorAll('#tags [data-testid=chip]')].filter((c) => c.offsetParent).map((c) => c.dataset.tag).join(',')"))
 	b.eval(plan + ".click()")
 	out = append(out, b.eval(rows), b.eval(plan+".getAttribute('aria-pressed')"))
 	out = append(out, b.eval("document.getElementById('narrow-filter-name').textContent"))
@@ -835,9 +1014,9 @@ func uiTags(t *testing.T, lang i18n.Lang, msg func(string, ...any) string) {
 
 	// A tag's name goes in as text, wherever it shows, and counts as any.
 	b.stub(`[{ slug: 'a', title: 'Alpha', description: '', tags: ['<b>x</b>', '__proto__'], createdAt: at(1), updatedAt: at(9) }]`)
-	out = append(out, b.eval("[...document.querySelectorAll('#tags .chip')].map((c) => c.textContent).sort().join(',')"),
-		b.eval("[...document.querySelectorAll('#list .tagpill')].map((p) => p.textContent).join(',')"),
-		b.eval("document.querySelectorAll('.shelf b, #list b').length"))
+	out = append(out, b.eval("[...document.querySelectorAll('#tags [data-testid=chip]')].map((c) => c.textContent).sort().join(',')"),
+		b.eval("[...document.querySelectorAll('#list [data-testid=tagpill]')].map((p) => p.textContent).join(',')"),
+		b.eval("document.querySelectorAll('#shelf b, #list b').length"))
 	selectOnly("a")
 	b.eval("document.getElementById('bulk-tag').click()")
 	out = append(out, b.eval(boxes)+" "+b.eval("document.querySelectorAll('#tag-boxes b').length"))
