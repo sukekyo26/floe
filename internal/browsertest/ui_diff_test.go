@@ -9,6 +9,8 @@ import (
 
 	"github.com/chromedp/chromedp"
 	"github.com/chromedp/chromedp/kb"
+
+	"floe/internal/store"
 )
 
 const (
@@ -94,21 +96,21 @@ func TestUIDiff(t *testing.T) { //nolint:paralleltest // the browser tests share
 	b.pressKey("p")
 	b.pressKey("n")
 	out = append(out, b.eval(diffAt+" + ' ' + document.activeElement.id + ' ' + document.querySelector('#diff-toc [data-on=true] > span').textContent"))
-	// Drawn once: the list read again leaves what was chosen, the scrolling and n's place. The list's answer is made to differ
-	// from what is drawn (a space after it, the same JSON), so that the read draws anew.
+	// Drawn once: the list read again leaves what was chosen, the scrolling and n's place. The page's title changes on the
+	// server, so that the read draws anew.
 	const state = "[" + diffPair + ", document.getElementById('diff-frame').src].join(' ')"
 	before := b.eval(state)
 	b.eval(`(() => {
 		const real = window.realFetch = window.fetch;
 		window.asked = [];
-		window.fetch = async (u, i) => {
-			window.asked.push(String(u));
-			const r = await real(u, i);
-			return String(u) === '/api/pages' ? new Response((await r.text()) + ' ', { status: r.status, headers: r.headers }) : r;
-		};
+		window.fetch = (u, i) => { window.asked.push(String(u)); return real(u, i); };
 	})()`)
+	title := "D again"
+	if _, err := store.New(s.Env["FLOE_DIR"]).Edit("d", store.Edit{Title: &title}); err != nil {
+		t.Fatal(err)
+	}
 	begun := b.reread()
-	b.untilRead(begun, "the list read again", "true")
+	b.untilRead(begun, "the list read again", "document.getElementById('frame-title').textContent === 'D again'")
 	got := b.eval("(() => { window.fetch = window.realFetch; return window.asked.filter((u) => u !== '/api/pages').join(' '); })()")
 	if after := b.eval(state); got != "" || after != before || !strings.HasSuffix(after, "#floe-diff.1") {
 		t.Errorf("the list read again asked %q: %s, was %s", got, after, before)
@@ -741,17 +743,14 @@ func TestUIDiffScrolls(t *testing.T) { //nolint:paralleltest // the browser test
 	}
 	b.size(1440, 900, false)
 	after("widened", "1")
-	// The list's answer made to differ from what is drawn (a space after it, the same JSON), so that the read draws anew.
-	b.eval(`(() => {
-		const real = window.realFetch = window.fetch;
-		window.fetch = async (u, i) => {
-			const r = await real(u, i);
-			return String(u) === '/api/pages' ? new Response((await r.text()) + ' ', { status: r.status, headers: r.headers }) : r;
-		};
-	})()`)
+	// The page's title changed on the server, so that the read draws anew.
+	title := "Z again"
+	if _, err := store.New(s.Env["FLOE_DIR"]).Edit("z", store.Edit{Title: &title}); err != nil {
+		t.Fatal(err)
+	}
 	begun := b.reread()
-	b.untilRead(begun, "the list read again", "true")
-	after("the list read again", "window.fetch = window.realFetch")
+	b.untilRead(begun, "the list read again", "document.getElementById('frame-title').textContent === 'Z again'")
+	after("the list read again", "1")
 }
 
 // TestUIDiffNotice says over a page newly at another version what changed since the one read, not over a page read the first time or

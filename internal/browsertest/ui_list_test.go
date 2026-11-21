@@ -776,16 +776,19 @@ func TestUIColumns(t *testing.T) { //nolint:paralleltest // the browser tests sh
 	b.eval("document.getElementById('shelf-hide').click()")
 	out = append(out, b.eval("[...document.querySelectorAll('#shelf-show, #list-show')].filter((e) => e.getClientRects().length).map((e) => e.id + ':' + (e.title === e.getAttribute('aria-label'))).join(' ') + ' ' + document.activeElement.id + ' ' + Math.round(document.getElementById('reader').getBoundingClientRect().left)"))
 	// Words of the filters in the page's head, however long, leave its buttons in it. The page list's words are a view and a
-	// count of picks, short: long ones are set here, in the same task as the measure (a render puts them back). A tag no page has,
-	// from the URL: the list stays folded.
-	b.navigate("/?tag=x")
-	b.until("the words in the page's head", "document.getElementById('shelf-what').parentElement.id === 'read-head' && document.getElementById('shelf-what').getClientRects().length")
+	// count of picks, short: long ones are set here, in the same task as the measure (a render puts them back). A pick from the URL
+	// leaves the list folded; j opens its first row beside it, so the head has its buttons.
+	b.navigate("/?kind=page")
+	b.until("the rows", "document.querySelector('#list li[data-slug=a1]')")
+	key("j")
+	b.until("the words and the buttons in the page's head", "document.getElementById('shelf-what').parentElement.id === 'read-head' && document.getElementById('shelf-what').getClientRects().length && document.getElementById('read-frame').dataset.slug && !document.getElementById('read-actions').hidden")
 	check(t, "the page's head", []string{b.eval(`(() => {
 		document.getElementById('shelf-what').textContent = 'x'.repeat(300);
 		const head = document.getElementById('read-head').getBoundingClientRect();
 		const within = (e) => { const r = e.getBoundingClientRect(); return r.width > 0 && r.left >= head.left && r.right <= head.right + 0.5; };
-		return [...document.querySelectorAll('#read-actions > *')].filter((e) => e.getClientRects().length).every(within) + '';
-	})()`)}, "true")
+		const shown = [...document.querySelectorAll('#read-actions > *')].filter((e) => e.getClientRects().length);
+		return (shown.length > 0) + ' ' + shown.every(within);
+	})()`)}, "true true")
 	// Kept across a reload.
 	b.navigate("/")
 	b.until("the rows", "document.querySelector('#list li[data-slug=a1]')")
@@ -1430,20 +1433,40 @@ func TestUIRowAgainPressed(t *testing.T) { //nolint:paralleltest // the browser 
 		b.marksDone(i + 1)
 	}
 	b.untilRead(b.reread(), "drawn", "true")
-	// The list's answers give a1 the title window.a1Title, once set: anew (answerAnew, with the row of a2 kept) before each read
-	// checked, so that its answer differs from what is drawn. window.served is the title the last answer gave.
-	b.eval(`(() => { const f = window.fetch; window.a1Title = null; window.served = null; window.a1Turn = 0;
+	// a1's title changes on the server (anew, which returns the JS that keeps the row of a2) before each read checked, so that its
+	// answer differs from what is drawn. window.served is the title the last answer gave, read from a copy of it.
+	b.eval(`(() => { const f = window.fetch; window.a1Title = null; window.served = null;
 		window.fetch = async (url, init) => {
 			const r = await f(url, init);
-			if (init?.method || new URL(String(url), location.href).pathname !== '/api/pages' || window.a1Title === null) return r;
-			const title = window.a1Title, list = await r.json();
-			window.served = title;
-			return new Response(JSON.stringify(list.map((a) => (a.slug === 'a1' ? { ...a, title } : a))));
+			if (init?.method || new URL(String(url), location.href).pathname !== '/api/pages') return r;
+			window.served = (await r.clone().json()).find((a) => a.slug === 'a1').title;
+			return r;
 		}; })()`)
+	st := store.New(s.Env["FLOE_DIR"])
+	retitle := func(title string) {
+		t.Helper()
+
+		if _, err := st.Edit("a1", store.Edit{Title: &title}); err != nil {
+			t.Fatal(err)
+		}
+	}
+	turn := 0
+	nextTitle := func() string {
+		t.Helper()
+
+		turn++
+		title := "a1 #" + strconv.Itoa(turn)
+		retitle(title)
+		return title
+	}
+	anew := func() string {
+		t.Helper()
+
+		return "window.rowBefore = document.querySelector('#list li[data-slug=a2]'); window.a1Title = " + js(nextTitle()) + "; "
+	}
 	const (
-		answerAnew = "window.rowBefore = document.querySelector('#list li[data-slug=a2]'); window.a1Title = 'a1 #' + (++window.a1Turn); "
-		poll       = "document.dispatchEvent(new Event('visibilitychange'))"
-		a1Drawn    = "document.querySelector('#list li[data-slug=a1] [data-testid=title]').textContent"
+		poll    = "document.dispatchEvent(new Event('visibilitychange'))"
+		a1Drawn = "document.querySelector('#list li[data-slug=a1] [data-testid=title]').textContent"
 	)
 	// After a read of an answer anew: true if it left the rows as they are, the answer not drawn.
 	held := func() string {
@@ -1456,7 +1479,7 @@ func TestUIRowAgainPressed(t *testing.T) { //nolint:paralleltest // the browser 
 	}
 	polled := func() string {
 		t.Helper()
-		b.untilRead(b.acted(answerAnew+poll), "the poll read", "true")
+		b.untilRead(b.acted(anew()+poll), "the poll read", "true")
 		return held()
 	}
 	const a3 = "#list li[data-slug=a3]"
@@ -1473,17 +1496,17 @@ func TestUIRowAgainPressed(t *testing.T) { //nolint:paralleltest // the browser 
 	b.eval("document.querySelector('#list li[data-slug=a1] [data-testid=title]').focus()")
 	b.pollEnded()
 	b.mouse(chromedp.MousePressed, x, y, 1)
-	b.pressList(answerAnew + poll)
+	b.pressList(anew() + poll)
 	out = append(out, held())
 	// What is held does not reach what the page holds of the list either: the answers go back to what is drawn, and the search,
 	// drawn from what the page holds, lists the title drawn, not the one held.
-	b.eval("window.a1Title = " + a1Drawn)
+	retitle(b.eval(a1Drawn))
 	b.mouse(chromedp.MouseReleased, x, y, 1)
 	b.until("picked", besideSlug+" === 'a3'")
 	pressFindOpen(b)
 	out = append(out, b.eval("[...document.querySelectorAll('#find-list li [data-testid=title]')].map((e) => e.textContent).filter((t) => t.startsWith('a1')).join()"))
 	escapeDialog(b, "find")
-	b.eval("window.heldRow = document.querySelector('#list li[data-slug=a2]'); window.a1Title = 'a1 #' + (++window.a1Turn)")
+	b.eval("window.heldRow = document.querySelector('#list li[data-slug=a2]'); window.a1Title = " + js(nextTitle()))
 	b.until("drawn by the next poll", "!window.heldRow.isConnected && "+a1Drawn+" === window.a1Title")
 
 	// Outside the list, in the top document: an iframe's press does not reach it.
@@ -1505,10 +1528,10 @@ func TestUIRowAgainPressed(t *testing.T) { //nolint:paralleltest // the browser 
 	const star = "document.querySelector('#list li[data-slug=a2] [data-testid=star]')"
 	starred := b.eval(star + ".getAttribute('aria-pressed')")
 	b.pollEnded()
-	b.pressList(answerAnew + "window.pressAt = performance.now(); " + star + ".click()")
+	b.pressList(anew() + "window.pressAt = performance.now(); " + star + ".click()")
 	out = append(out, held())
 	b.pollEnded()
-	b.pressList(answerAnew + "window.pressAt = performance.now(); " + poll)
+	b.pressList(anew() + "window.pressAt = performance.now(); " + poll)
 	out = append(out, held())
 	b.until("the time up", "performance.now() - window.pressAt > 2000")
 	out = append(out, polled())
@@ -1520,7 +1543,7 @@ func TestUIRowAgainPressed(t *testing.T) { //nolint:paralleltest // the browser 
 	x, y = rowPoint(t, b, a3, false)
 	b.pollEnded()
 	b.mouse(chromedp.MousePressed, x, y, 1)
-	b.pressList(answerAnew + poll)
+	b.pressList(anew() + poll)
 	out = append(out, held())
 	b.mouse(chromedp.MouseReleased, x, y, 1)
 	b.until("whole", "location.pathname === '/a/a3/'")

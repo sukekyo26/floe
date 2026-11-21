@@ -145,6 +145,7 @@ func TestUIColors(t *testing.T) { //nolint:paralleltest // the browser tests sha
 		// The row chosen, its version's mark on its ground, the bar over its page, and the words of a link gone beside the list. The
 		// page read the first time, its mark answered as clearing what was new, says so in a toast to mark it unread again.
 		b.size(1440, 900, false)
+		// The stub answers every POST {"slug":"n"} and the toast shows only on {"cleared":true}: this write's answer is made here.
 		b.eval(`(() => { const f = window.fetch;
 			window.fetch = (url, init) => (init?.method === 'POST' && String(url) === '/api/pages/a/read' ? Promise.resolve(new Response('{"cleared":true}')) : f(url, init)); })()`)
 		b.eval("document.querySelector('#list li[data-slug=a] [data-testid=title]').click()")
@@ -166,7 +167,7 @@ func TestUIColors(t *testing.T) { //nolint:paralleltest // the browser tests sha
 		s.floe(t, "publish", "--link", filepath.Join(s.Env["HOME"], "f"), "--slug", "f", "--force")
 		b.stub(colorsList[:strings.LastIndex(colorsList, "]")] + "{ slug: 'f', title: 'Folder', description: '', path: '/tmp/x/f', folder: true, createdAt: at(1), updatedAt: at(1) }]")
 		b.navigate("/?kind=folder&open=f")
-		b.until("the folder open", "document.querySelectorAll('#list li[data-d]').length === 3")
+		b.until("the folder open", "document.querySelectorAll('#list li[data-testid=tree]').length === 3")
 		measure("the folders")
 		b.navigate("/a/f/?file=index.html")
 		b.until("the folder's page", "!document.getElementById('frame').hidden")

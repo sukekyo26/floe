@@ -293,8 +293,8 @@ func TestUIFindActions(t *testing.T) { //nolint:paralleltest // the browser test
 	// Another page's new name leaves this one here. The save is the form's submit, waited for its end: closed, and what it threw.
 	openSlugField(b)
 	b.fill("#edit-slug", "a2")
-	b.moving("document.getElementById('edit-submit').click()")
-	b.until("the edit modal closed", "!document.getElementById('edit-dialog').open")
+	begun := b.acted("document.getElementById('edit-submit').click()")
+	b.untilRead(begun, "the save's end", "!document.getElementById('edit-dialog').open")
 	out = append(out, b.eval("location.pathname + ' ' + window.errs"))
 	// This page's: its URL moves, and deleted, it goes to the list.
 	keyDown(b, "key: 'k', ctrlKey: true")
