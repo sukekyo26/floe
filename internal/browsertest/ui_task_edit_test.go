@@ -301,7 +301,7 @@ func TestUITaskEdit(t *testing.T) { //nolint:paralleltest // the browser tests s
 	open("S300")
 	addURL("https://example.com/e")
 	reordered := store.URLsEdit{Order: []string{"https://example.com/pull/9"}}
-	if _, err := st.ChangeTasks(store.TaskChange{TaskEdit: store.TaskEdit{URLs: &reordered}, TaskProject: &project, Task: ptrTo("S300")}); err != nil {
+	if _, err := st.ChangeTasks(store.TaskChange{URLs: &reordered, TaskProject: &project, Task: new("S300")}); err != nil {
 		t.Fatal(err)
 	}
 	save("stale while reordered")
