@@ -32,6 +32,9 @@ export interface DialogProps {
   readonly hold?: Pick<Hold, 'held' | 'focus'>;
   readonly labelledBy: string;
   readonly describedBy?: string;
+  // tall is a modal of a long body (the help): high in the window, its body a column whose box of many lines scrolls
+  // alone, the head and the foot in sight
+  readonly tall?: boolean;
   readonly children: ReactNode;
 }
 
@@ -52,6 +55,7 @@ export function Dialog({
   hold = NOT_HELD,
   labelledBy,
   describedBy,
+  tall = false,
   children,
 }: DialogProps) {
   const ref = useRef<HTMLDialogElement>(null);
@@ -91,7 +95,11 @@ export function Dialog({
     was.current = { open, held };
     if (held && !before.held) d.focus({ preventScroll: true });
     if (!held && before.held && open) giveBack(d);
-    if (open && !d.open) d.showModal();
+    if (open && !d.open) {
+      d.showModal();
+      // React's autoFocus focuses on mounting, and a modal's parts are mounted closed: the one it names takes it here
+      d.querySelector<HTMLElement>('[data-autofocus]')?.focus();
+    }
     if (!open && d.open) shut(d);
   }, [open, held]);
 
@@ -121,9 +129,12 @@ export function Dialog({
           e.preventDefault();
           e.stopPropagation();
         }}
-        className="m-auto w-[min(32rem,calc(100%-32px))] rounded-corner border border-line bg-panel p-0 text-fg shadow-lg backdrop:bg-scrim backdrop:backdrop-blur-[3px] open:animate-pop open:backdrop:animate-fade [&[closedby=none]]:focus-visible:outline-none [&[closedby=none]>*]:pointer-events-none"
+        className={`${tall ? 'mx-auto mt-[6dvh] mb-auto max-h-[calc(94dvh-1rem)]' : 'm-auto'} w-[min(32rem,calc(100%-32px))] rounded-corner border border-line bg-panel p-0 text-fg shadow-lg backdrop:bg-scrim backdrop:backdrop-blur-[3px] open:animate-pop open:backdrop:animate-fade [&[closedby=none]]:focus-visible:outline-none [&[closedby=none]>*]:pointer-events-none`}
       >
-        <fieldset disabled={held} className="m-0 grid min-w-0 gap-4 border-0 px-6 pt-5.5 pb-5">
+        <fieldset
+          disabled={held}
+          className={`m-0 min-w-0 gap-4 border-0 px-6 pt-5.5 pb-5 ${tall ? 'flex max-h-[calc(94dvh-1rem-2px)] flex-col' : 'grid'}`}
+        >
           {children}
         </fieldset>
       </dialog>
@@ -169,10 +180,17 @@ export function DialogActions({ children }: { readonly children: ReactNode }) {
 }
 
 // DialogClose is a modal's close button: Close, or Cancel in a modal that sends (TestDialogCloseWords)
-export function DialogClose({ words = 'ui_close' }: { readonly words?: MessageKey }) {
+// focusOnOpen gives it the focus as the modal opens (the help's)
+export function DialogClose({
+  words = 'ui_close',
+  focusOnOpen = false,
+}: {
+  readonly words?: MessageKey;
+  readonly focusOnOpen?: boolean;
+}) {
   const { close } = useDialog();
   return (
-    <Button closes onClick={close}>
+    <Button closes focusOnOpen={focusOnOpen} onClick={close}>
       {t(words)}
     </Button>
   );
