@@ -9,11 +9,13 @@ import { folders as pageFolders, type Folders } from '@/stores/open-folders';
 import type { Page } from '@/types/page';
 import type { TaskWritten } from '@/types/task';
 
-// The list as last taken: the entries, the tasks (their error only the task screens say), and why the last read failed
+// The list as last taken: the entries, the tasks (their error only the task screens say), why the last read failed, and
+// why the screen failed to draw what it took
 export interface PagesState {
   entries: Page[];
   tasks: TasksRead;
   readWhy: string;
+  drawWhy: string;
 }
 
 export interface Pages {
@@ -36,6 +38,10 @@ export interface Pages {
   rereadTasks: () => Promise<void>;
   // readRev is the rev of a task as this screen knows it: as read, or as it wrote it since; 0 of no row
   readRev: (project: string, name: string) => number;
+  // ended counts the reads of the list ended, for a screen that failed to draw to try again after the next
+  ended: Store<number>;
+  // drawFailed says why the screen failed to draw ('' once it draws), after a read's mistake and before the tasks'
+  drawFailed: (why: string) => void;
 }
 
 // What a page is told of the reads of the list, for the browser tests to wait on: the reads begun and ended
@@ -76,7 +82,8 @@ export function createPages({
   pollMs = 3000,
   pressMs = 2000,
 }: Deps = {}): Pages {
-  const state = createStore<PagesState>({ entries: [], tasks: NO_TASKS, readWhy: '' });
+  const state = createStore<PagesState>({ entries: [], tasks: NO_TASKS, readWhy: '', drawWhy: '' });
+  const endedStore = createStore(0);
   // The text of the list and the tasks last taken: an unchanged answer is not taken again
   let taken = '';
   let begun = 0;
@@ -87,8 +94,9 @@ export function createPages({
   let pressedAt = -Infinity;
 
   const say = (readWhy: string) => {
-    const { tasks } = state.get();
-    const why = readWhy || (boot().screen === 'tasks' && tasks.error ? t('ui_tasks_failed', tasks.error) : '');
+    const { tasks, drawWhy } = state.get();
+    const why =
+      readWhy || drawWhy || (boot().screen === 'tasks' && tasks.error ? t('ui_tasks_failed', tasks.error) : '');
     notice.say(why, 'load');
   };
   const setWhy = (readWhy: string) => {
@@ -143,7 +151,7 @@ export function createPages({
     const text = list.text + (tasks?.raw ?? '');
     if (text !== taken) {
       taken = text;
-      state.set({ entries: list.entries, tasks: tasks ?? state.get().tasks, readWhy: '' });
+      state.set({ ...state.get(), entries: list.entries, tasks: tasks ?? state.get().tasks, readWhy: '' });
     }
     setWhy('');
   }
@@ -163,6 +171,7 @@ export function createPages({
       })
       .finally(() => {
         count(begun, ++ended);
+        endedStore.set(ended);
       });
     last = next.done.catch(() => undefined);
     return next.done;
@@ -207,6 +216,13 @@ export function createPages({
     takeTasks,
     rereadTasks,
     readRev: (project, name) => state.get().tasks.tasks[project]?.[name]?.rev ?? 0,
+    ended: endedStore,
+    drawFailed: (drawWhy) => {
+      // The same said again tells no one: a screen that draws tells it after every draw
+      if (state.get().drawWhy === drawWhy) return;
+      state.set({ ...state.get(), drawWhy });
+      say(state.get().readWhy);
+    },
   };
 }
 

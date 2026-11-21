@@ -360,4 +360,27 @@ describe(createPages, () => {
     await pages.rereadTasks();
     expect(pages.readRev('p', 'x')).toBe(7);
   });
+
+  it('says a draw that failed after a read that failed and before the tasks, takes it back alone, and tells no one of the same again', async () => {
+    expect.assertions(5);
+    const s = server();
+    s.state.tasksStatus = 500;
+    vi.stubGlobal('fetch', s.fetch);
+    const { pages, notice } = made('tasks');
+    await settle(s, pages.load());
+    pages.drawFailed('draw failed');
+    expect(notice.said.get().message).toBe('draw failed');
+    let told = 0;
+    pages.state.subscribe(() => told++);
+    pages.drawFailed('draw failed');
+    expect(told).toBe(0);
+    s.state.listStatus = 500;
+    await settle(s, pages.load());
+    expect(notice.said.get().message).toMatch(/^failed: /);
+    s.state.listStatus = 200;
+    await settle(s, pages.load());
+    pages.drawFailed('');
+    expect(notice.said.get().message).toMatch(/^tasks failed: /);
+    expect(pages.ended.get()).toBe(3);
+  });
 });

@@ -1,0 +1,52 @@
+import type { MouseEventHandler, ReactNode } from 'react';
+
+export interface ButtonProps {
+  readonly children: ReactNode;
+  readonly kind?: 'plain' | 'primary';
+  // bar: where it stands among the screen's; foot: a modal's foot, taller
+  readonly size?: 'bar' | 'foot';
+  readonly type?: 'button' | 'submit';
+  // A button that toggles: whether it is on (aria-pressed); left out, it toggles nothing
+  readonly pressed?: boolean;
+  readonly disabled?: boolean;
+  readonly id?: string;
+  readonly testid?: string;
+  readonly label?: string;
+  // closes marks a modal's close button (data-close), which the browser tests press
+  readonly closes?: boolean;
+  readonly onClick?: MouseEventHandler<HTMLButtonElement>;
+}
+
+// Button is the one button of words (ui.md: .btn), its words on one line; where they do not fit, the row of buttons
+// goes onto another
+export function Button({
+  children,
+  kind = 'plain',
+  size = 'bar',
+  type = 'button',
+  pressed,
+  disabled,
+  id,
+  testid,
+  label,
+  closes,
+  onClick,
+}: ButtonProps) {
+  return (
+    <button
+      // oxlint-disable-next-line react/button-has-type -- type is one of the two a button may be
+      type={type}
+      id={id}
+      data-testid={testid}
+      data-close={closes ? '' : undefined}
+      aria-label={label}
+      title={label}
+      aria-pressed={pressed}
+      disabled={disabled}
+      onClick={onClick}
+      className={`inline-flex items-center justify-center gap-1.25 rounded-small border whitespace-nowrap transition-[background-color,border-color,filter] duration-150 disabled:cursor-progress disabled:opacity-60 [&_svg]:size-3.75 ${size === 'foot' ? 'h-9 px-3.5 text-body' : 'h-8 px-2.5 text-small'} ${kind === 'primary' || pressed ? 'border-transparent bg-ink text-on-ink hover:bg-ink-hover' : 'border-line bg-panel text-fg hover:border-faint'} ${kind === 'primary' ? 'font-semibold' : ''}`}
+    >
+      {children}
+    </button>
+  );
+}
