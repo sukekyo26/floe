@@ -133,10 +133,7 @@ func TestUITaskAdd(t *testing.T) { //nolint:paralleltest // the browser tests sh
 	}
 	b.navigate("/tasks?project=alpha")
 	open("task-add-empty")
-	// Chosen by the arrow key on the field: the one above alpha.
-	// LIMIT: an arrow key changes a closed select on Linux and Windows; macOS opens its list instead. The browser tests run on Linux
-	b.eval("document.getElementById('kin-project').focus()")
-	b.pressKey(kb.ArrowUp)
+	chooseValue(b, "kin-project", "beta")
 	b.until("beta chosen", "document.getElementById('kin-project').value === 'beta'")
 	name("#1", "one")
 	saved()

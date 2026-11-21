@@ -402,7 +402,7 @@ func TestUITaskUp(t *testing.T) { //nolint:paralleltest // the browser tests sha
 	b.until("the rows", "document.querySelector('#list > li [data-testid=title]')")
 	press("document.querySelector('#list > li [data-testid=title]')")
 	b.until("the task's page", task1)
-	b.eval("document.getElementById('task-state').value = 'done'; document.getElementById('task-state').dispatchEvent(new Event('change', { bubbles: true }))")
+	chooseValue(b, "task-state", "done")
 	b.until("the state", "document.getElementById('task-state').dataset.state === 'done'")
 	say("the state changed")
 	out = append(out, "the tab's list: "+b.eval("document.getElementById('to-tasks').getAttribute('href')"))

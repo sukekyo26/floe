@@ -182,6 +182,16 @@ func (b *browser) fill(sel, words string) {
 	}
 }
 
+// chooseValue chooses value in the <select> id: the value set and a change sent, which bubbles as a person's choice does. Not fill,
+// which types into a field (.claude/rules/browsertest.md): React takes a select's change as it comes, watching no value of it, so
+// that this reaches a React select too. A press on the list's item would not do on a busy machine: the release lands on what lies
+// under the list once it has closed. The tests that choose so are listed in screenOnlySelects.
+func chooseValue(b *browser, id, value string) {
+	b.t.Helper()
+
+	b.moving("(() => { const s = document.getElementById(" + js(id) + "); s.value = " + js(value) + "; s.dispatchEvent(new Event('change', { bubbles: true })); })()")
+}
+
 // drag presses the middle of the element sel, moves halfway and then to x on the same line, and lets go.
 func (b *browser) drag(sel string, x float64) {
 	b.t.Helper()

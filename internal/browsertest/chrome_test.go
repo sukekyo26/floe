@@ -304,7 +304,7 @@ func (b *browser) pressKey(k string, mods ...kb.Modifier) {
 		if e.Type == kb.KeyChar {
 			continue
 		}
-		e.Modifiers = int64(held)
+		e.Modifiers |= int64(held)
 		if e.Type == kb.KeyDown {
 			e.Text = map[string]string{kb.Enter: "\r", " ": " "}[k]
 		}

@@ -632,8 +632,10 @@ func TestUIPageKeys(t *testing.T) { //nolint:paralleltest // the browser tests s
 	b.until("a key that is taken", "document.getElementById('find').open")
 	b.pressKey(kb.Escape)
 	b.until("the search closed", "!document.getElementById('find').open")
-	b.eval("document.getElementById('back').focus()")
+	b.eval("document.getElementById('back').focus(); window.got = []")
+	// The key is told before the page says it ran (one frame's messages come in order): read once it has come
 	inPage(b, "frame", "post", "['/']")
+	b.until("the key told", "window.got.includes('/')")
 	out = append(out, b.eval("window.starred + ' ' + document.getElementById('find').open"))
 	// Another iframe, framed by the frame but not its own: nothing is taken from the page, and nothing it sends is.
 	b.eval("window.got = []; window.seen = []; window.other = document.createElement('iframe'); other.id = 'other'; other.onload = () => { window.otherUp = true; }; other.src = '/a/d2/?raw'; other.style = 'position: fixed; inset: 0; width: 300px; height: 200px; z-index: 9'; document.body.append(other)")

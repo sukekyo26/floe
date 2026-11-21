@@ -5,6 +5,7 @@ import (
 	"strconv"
 	"strings"
 	"testing"
+	"time"
 
 	"github.com/chromedp/chromedp/kb"
 
@@ -19,12 +20,11 @@ const (
 	newsOfD   = "(items.find((a) => a.slug === 'd').news ?? '')"
 )
 
-// choose picks the version n in the select of id, as a press on its item does.
+// choose picks the version n in the select of id (chooseValue), once the list of versions has come: the choice is empty until then.
 func choose(b *browser, id string, n int) {
 	b.t.Helper()
-	// The list of versions comes after the page is picked, the choice empty until then
 	b.until("the option", "document.querySelector('#"+id+" option[value=\""+strconv.Itoa(n)+"\"]')")
-	b.moving("(() => { const s = document.getElementById(" + js(id) + "); s.value = " + strconv.Itoa(n) + "; s.dispatchEvent(new Event('change', { bubbles: true })); })()")
+	chooseValue(b, id, strconv.Itoa(n))
 }
 
 // The same, by the screen alone: the words over a page not the latest, what the frame and the page beside the list show, and the page
@@ -292,7 +292,22 @@ func TestUIVersionURL(t *testing.T) { //nolint:paralleltest // the browser tests
 		if (document.querySelector('[data-testid=toast][data-page]')) window.pageToastSeen = true;
 	}).observe(document.body, { childList: true, subtree: true }))`)
 	b.navigate("/a/n/")
-	out = append(out, b.until("the page's toast", "window.pageToastSeen === true"), b.until("read as ever", unread+"?.hidden === false"))
+	// Timed out, what was told says which way it went: the versions the frame said it served, the reads sent, the menu's way back
+	told := func(what, expr string) string {
+		t.Helper()
+		if got, err := b.try(expr); err == nil && truthy(got) {
+			return got
+		}
+		for deadline := time.Now().Add(waitLimit); time.Now().Before(deadline); time.Sleep(50 * time.Millisecond) {
+			if got, err := b.try(expr); err == nil && truthy(got) {
+				return got
+			}
+		}
+		t.Fatalf("timed out waiting for %s: %s", what, b.eval("JSON.stringify({ served: sessionStorage.getItem('served'), reads: sessionStorage.getItem('reads'), "+
+			"unreadHidden: "+unread+"?.hidden, toastSeen: window.pageToastSeen ?? false })"))
+		return ""
+	}
+	out = append(out, told("the page's toast", "window.pageToastSeen === true"), told("read as ever", unread+"?.hidden === false"))
 	b.removeScript(toastSeen)
 
 	// A slug changed keeps the version.

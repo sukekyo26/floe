@@ -66,15 +66,17 @@ var screenOnlyNotYet = map[string][]string{
 	"TestUIVersionGone":            {"class:dnote", "class:edit", "class:page", "class:title", "class:toast", "class:ver-note", "classState", "name:items", "name:load", "name:picked", "name:readLoaded", "value"},
 }
 
-// screenOnlySelects holds the tests that set a <select>'s value and send its change event, which React takes as it is (it watches
-// no value of a select): the one use of "value" kept for good.
+// screenOnlySelects holds the tests that set a <select>'s value and send its change event (chooseValue): the one use of "value"
+// kept for good.
 var screenOnlySelects = map[string]bool{
-	"TestUITaskUp": true, "TestUIVersionAnswers": true, "TestUIVersionPick": true, "TestUIVersionPickAhead": true, "TestUIVersionURL": true,
+	"TestUITaskAdd": true, "TestUITaskUp": true, "TestUIVersionAnswers": true, "TestUIVersionPick": true, "TestUIVersionPickAhead": true, "TestUIVersionURL": true,
 }
 
 var (
-	// The page's names: its script's top-level declarations, two spaces in.
+	// The page's names: its script's top-level declarations, two spaces in; its functions are window's too (window.load()).
 	pageNameRe = regexp.MustCompile(`(?m)^  (?:async )?(?:function|let|const) ([A-Za-z_$][\w$]*)`)
+	pageFuncRe = regexp.MustCompile(`(?m)^  (?:async )?function ([A-Za-z_$][\w$]*)`)
+	windowRe   = regexp.MustCompile(`\bwindow\.([A-Za-z_$][\w$]*)`)
 	// A name used as code: followed by what follows a name in code, not by a word as in an English description.
 	wordRe = regexp.MustCompile(`(^|[^\w.$'"#/=-])([A-Za-z_$][\w$]*)\s*(\(|\.|\[|\]|\?\.|=[^=>]|===|!==|&&|\|\||;|\))`)
 	// Names the test's JS gives itself: declared, or a function's parameters.
@@ -93,6 +95,10 @@ var (
 // LIMIT: a name is seen only when code follows it; one before a comma, in ${…}, after typeof, at the end of the text, as window['…'],
 // declared by destructuring (let { view } = …) or below the top level of the script is missed, and so is a class in a selector the
 // test builds by joining text. A test missed fails in the PR that rebuilds its screen.
+// LIMIT: the JS of the browser's and the site's methods (stub, until, …) is not read: they are the package's own, held by review.
+// LIMIT: a selector handed to a Go helper (b.fill(".x", …), b.drag) is read only where it stands beside querySelector in one text.
+// LIMIT: the names a test's JS declares (const row, (t) =>) are gathered from all its texts as one: a page's name of the same
+// spelling used elsewhere in the test passes.
 // LIMIT: the page's names are read from ui.html: drop that part with ui.html (S422-P11).
 func TestScreenOnly(t *testing.T) {
 	t.Parallel()
@@ -101,9 +107,12 @@ func TestScreenOnly(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	pageNames := map[string]bool{}
+	pageNames, pageFuncs := map[string]bool{}, map[string]bool{}
 	for _, m := range pageNameRe.FindAllSubmatch(html, -1) {
 		pageNames[string(m[1])] = true
+	}
+	for _, m := range pageFuncRe.FindAllSubmatch(html, -1) {
+		pageFuncs[string(m[1])] = true
 	}
 	files, err := filepath.Glob("*_test.go")
 	if err != nil {
@@ -144,13 +153,14 @@ func TestScreenOnly(t *testing.T) {
 		}
 	}
 	for _, name := range tests {
-		got := screenUses(funcs, consts, topLevel, name, pageNames, string(html))
+		got := screenUses(funcs, consts, topLevel, name, pageNames, pageFuncs, string(html))
 		want := screenOnlyNotYet[name]
-		if screenOnlySelects[name] {
-			want = append(slices.Clone(want), "value")
+		selects := screenOnlySelects[name]
+		if selects && !slices.Contains(got, "value") {
+			t.Errorf("%s sets no select's value: take it off screenOnlySelects", name)
 		}
 		for _, use := range got {
-			if !slices.Contains(want, use) {
+			if !slices.Contains(want, use) && (use != "value" || !selects) {
 				t.Errorf("%s uses %s: test by the screen alone (.claude/rules/browsertest.md)", name, use)
 			}
 		}
@@ -158,6 +168,11 @@ func TestScreenOnly(t *testing.T) {
 			if !slices.Contains(got, use) {
 				t.Errorf("%s no longer uses %s: take it off screenOnlyNotYet", name, use)
 			}
+		}
+	}
+	for name := range screenOnlySelects {
+		if !slices.Contains(tests, name) {
+			t.Errorf("screenOnlySelects names %s, no TestUI… test: take it off", name)
 		}
 	}
 	for name := range screenOnlyNotYet {
@@ -169,7 +184,7 @@ func TestScreenOnly(t *testing.T) {
 
 // screenUses returns, sorted, what test's JS uses of the page beyond the screen: its text and that of the package's functions,
 // constants and variables it names, through others.
-func screenUses(funcs map[string]*ast.FuncDecl, consts map[string][]ast.Expr, topLevel map[any]bool, test string, pageNames map[string]bool, html string) []string {
+func screenUses(funcs map[string]*ast.FuncDecl, consts map[string][]ast.Expr, topLevel map[any]bool, test string, pageNames, pageFuncs map[string]bool, html string) []string {
 	var texts []string
 	seen := map[string]bool{}
 	var walk func(name string)
@@ -221,6 +236,11 @@ func screenUses(funcs map[string]*ast.FuncDecl, consts map[string][]ast.Expr, to
 			// $ alone ends a regular expression's text, as in (\/|$): the page's $ is one called
 			if pageNames[m[2]] && !own[m[2]] && (m[2] != "$" || m[3] == "(") {
 				uses["name:"+m[2]] = true
+			}
+		}
+		for _, m := range windowRe.FindAllStringSubmatch(s, -1) {
+			if pageFuncs[m[1]] {
+				uses["name:"+m[1]] = true
 			}
 		}
 		for _, m := range selectorRe.FindAllStringSubmatch(s, -1) {
