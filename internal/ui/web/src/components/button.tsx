@@ -16,6 +16,8 @@ interface ButtonShape {
   readonly label?: string | undefined;
   // wraps lets words a person typed go over lines, shown whole (ui.md: #tag-new, the one .btn that wraps)
   readonly wraps?: boolean;
+  // place is how where it stands shows it, a width it hides at (the bar's new pages, which the shelf's views say there)
+  readonly place?: string;
 }
 
 interface ButtonActs {
@@ -34,35 +36,32 @@ interface ButtonActs {
 }
 
 // href makes it a link of the same shape (ui.html a.btn: the way back of a page not found), which takes none of what
-// a button does
-type ButtonLink = { readonly href: string } & { readonly [K in keyof ButtonActs]?: never };
+// a button does but a press (the bar's new pages: a link that, pressed plainly, narrows the list in place)
+type ButtonLink = { readonly href: string; readonly onClick?: MouseEventHandler<HTMLAnchorElement> } & Readonly<
+  Partial<Record<Exclude<keyof ButtonActs, 'onClick'>, never>>
+>;
 
 export type ButtonProps = ButtonShape & ((ButtonActs & { readonly href?: undefined }) | ButtonLink);
 
 // Button is the one button of words (ui.md: .btn), its words on one line; where they do not fit, the row of buttons
 // goes onto another
-export function Button({
-  children,
-  kind = 'plain',
-  size: named,
-  type = 'button',
-  pressed,
-  disabled,
-  hidden,
-  id,
-  testid,
-  label,
-  closes,
-  focusOnOpen,
-  wraps,
-  slug,
-  href,
-  onClick,
-  onKeyDown,
-}: ButtonProps) {
+export function Button(props: ButtonProps) {
+  const {
+    children,
+    kind = 'plain',
+    size: named,
+    type = 'button',
+    pressed,
+    disabled,
+    hidden,
+    id,
+    testid,
+    label,
+  } = props;
+  const { closes, focusOnOpen, wraps, slug, onKeyDown, place = '' } = props;
   const size = named ?? use(ButtonSizeOf);
-  const className = `inline-flex items-center justify-center gap-1.25 rounded-small border no-underline transition-[background-color,border-color,filter] duration-150 disabled:cursor-progress disabled:opacity-60 [&_svg]:size-3.75 ${wraps ? 'min-h-8 px-2.5 py-1.25 text-start text-small wrap-anywhere' : size === 'foot' ? 'h-9 px-3.5 text-body whitespace-nowrap' : 'h-8 px-2.5 text-small whitespace-nowrap'} ${kind === 'primary' || pressed ? 'border-transparent bg-ink text-on-ink hover:bg-ink-hover' : 'border-line bg-panel text-fg hover:border-faint'} ${kind === 'primary' ? 'font-semibold' : ''}`;
-  if (href !== undefined)
+  const className = `inline-flex items-center justify-center gap-1.25 rounded-small border no-underline transition-[background-color,border-color,filter] duration-150 disabled:cursor-progress disabled:opacity-60 [&_svg]:size-3.75 ${wraps ? 'min-h-8 px-2.5 py-1.25 text-start text-small wrap-anywhere' : size === 'foot' ? 'h-9 px-3.5 text-body whitespace-nowrap' : 'h-8 px-2.5 text-small whitespace-nowrap'} ${kind === 'primary' || pressed ? 'border-transparent bg-ink text-on-ink hover:bg-ink-hover' : 'border-line bg-panel text-fg hover:border-faint'} ${kind === 'primary' ? 'font-semibold' : ''} ${place}`;
+  if (props.href !== undefined)
     return (
       <a
         id={id}
@@ -70,7 +69,8 @@ export function Button({
         aria-label={label}
         title={label}
         hidden={hidden}
-        href={href}
+        href={props.href}
+        onClick={props.onClick}
         className={className}
       >
         {children}
@@ -90,7 +90,7 @@ export function Button({
       aria-pressed={pressed}
       disabled={disabled}
       hidden={hidden}
-      onClick={onClick}
+      onClick={props.onClick}
       onKeyDown={onKeyDown}
       className={className}
     >

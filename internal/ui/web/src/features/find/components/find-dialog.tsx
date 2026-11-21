@@ -2,6 +2,7 @@ import { useEffect, useEffectEvent, useLayoutEffect, useRef, useState } from 're
 
 import { Dialog, DialogActions, DialogClose, DialogHead } from '@/components/dialog';
 import { barMenuId, focusOn } from '@/components/focus-places';
+import { SearchIcon } from '@/components/icons';
 import { HitRow } from '@/components/hit-row';
 import { BarActions } from '@/components/page-actions';
 import type { Openers } from '@/components/page-menu';
@@ -21,12 +22,6 @@ import { projectOrder } from '@/utils/project-order';
 const FOOT = 'find-actions';
 const FOOT_MENU = barMenuId(FOOT);
 
-const SearchIcon = () => (
-  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" aria-hidden="true">
-    <circle cx="11" cy="11" r="7" />
-    <path d="m20 20-3.5-3.5" />
-  </svg>
-);
 const KBD = 'rounded-small border border-line bg-subtle px-1.5 py-0.75 font-mono text-label leading-none text-muted';
 
 interface FindDialogProps {

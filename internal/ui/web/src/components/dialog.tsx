@@ -39,6 +39,8 @@ export interface DialogProps {
   readonly body?: 'grid' | 'help' | 'fill';
   // panel is the part shown (data-panel), as the settings tell it
   readonly panel?: string | undefined;
+  // bodyId names the box that holds its head, body and foot (ui.html's .modal-body of an id: #filter-box)
+  readonly bodyId?: string;
   // raised goes up to the top in a narrow window (the search: its rows under the keyboard of a phone)
   readonly raised?: boolean;
   readonly children: ReactNode;
@@ -78,6 +80,7 @@ export function Dialog({
   body = 'grid',
   panel,
   raised = false,
+  bodyId,
   children,
 }: DialogProps) {
   const ref = useRef<HTMLDialogElement>(null);
@@ -163,6 +166,7 @@ export function Dialog({
         className={`${PLACE[body]} ${raised ? 'narrow:mt-4 narrow:mb-auto' : ''} ${WIDTH[width]} rounded-corner border border-line bg-panel p-0 text-fg shadow-lg backdrop:bg-scrim backdrop:backdrop-blur-[3px] open:animate-pop open:backdrop:animate-fade [&[closedby=none]]:focus-visible:outline-none [&[closedby=none]>*]:pointer-events-none`}
       >
         <fieldset
+          id={bodyId}
           disabled={held}
           className={`m-0 min-w-0 gap-4 border-0 px-6 pt-5.5 pb-5 ${body === 'grid' ? 'grid' : 'flex max-h-[calc(var(--tall)-2px)] flex-col'}`}
         >
