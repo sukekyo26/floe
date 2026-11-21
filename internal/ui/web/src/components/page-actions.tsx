@@ -1,4 +1,4 @@
-import { prepareArchive, restoreFocus } from '@/components/focus-places';
+import { prepareArchive, restoreFocus, rowMenuId } from '@/components/focus-places';
 import { IconButton } from '@/components/icon-button';
 import {
   ArchiveIcon,
@@ -72,7 +72,7 @@ export function RowActions({
         page={a}
         at={{ slug: a.slug }}
         place="row"
-        menuId={`more:${a.slug}`}
+        menuId={rowMenuId(a.slug)}
         openers={openers}
         {...(onPick ? { onPick } : {})}
         {...(onRemoved ? { onRemoved } : {})}

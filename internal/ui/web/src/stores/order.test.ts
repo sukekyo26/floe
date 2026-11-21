@@ -38,4 +38,18 @@ describe(createOrder, () => {
     storage.held.set('pages.order', '{"order":"a"}');
     expect(createOrder({ storage }).keptOrder()).toBeNull();
   });
+
+  it('keeps a page renamed whole of the rows that opened it, and the row it was at', () => {
+    expect.assertions(1);
+    const storage = memory();
+    const order = createOrder({ storage });
+    order.writeKept({ order: ['a', 'b'], shown: ['b', 'c'], back: '/', at: { slug: 'b', file: '' } });
+    order.renameKept('b', 'b2');
+    expect(order.keptOrder()).toStrictEqual({
+      order: ['a', 'b2'],
+      shown: ['b2', 'c'],
+      back: '/',
+      at: { slug: 'b2', file: '' },
+    });
+  });
 });

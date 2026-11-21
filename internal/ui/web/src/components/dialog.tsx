@@ -3,6 +3,8 @@ import { createContext, use, useEffectEvent, useLayoutEffect, useRef, type React
 import { Button, ButtonSizeOf } from '@/components/button';
 import type { Hold } from '@/hooks/use-hold';
 import { t } from '@/lib/t';
+import type { FocusBack } from '@/types/focus';
+import type { MessageKey } from '@/types/messages.gen';
 import { backdropCloses, heldKey, type PressDown } from '@/utils/dialog';
 
 interface DialogScope {
@@ -25,7 +27,7 @@ export interface DialogProps {
   readonly onClosed: () => void;
   // afterClose is where the focus goes as it closes, in the same task as close(): Chrome sends the close event an
   // animation frame later, and keys meanwhile would reach the closed modal's field, or the one under it
-  readonly afterClose?: () => HTMLElement | null | undefined;
+  readonly afterClose?: FocusBack | undefined;
   // hold holds it while it writes (useHold)
   readonly hold?: Pick<Hold, 'held' | 'focus'>;
   readonly labelledBy: string;
@@ -40,6 +42,8 @@ const NOT_HELD = { held: false, focus: { current: null } } as const;
 // is of the modal it was sent from, open as it was. Held, it takes no close request (closedby), no press (but on a link:
 // LIMIT, as in ui.html) and no key but those heldKey lets go, and the focus is on the modal itself, given back once
 // let go
+// LIMIT: opened and held in one render, d.focus() runs before showModal() and does nothing. No caller opens a modal
+// held; give the focus after showModal() if one comes to
 export function Dialog({
   id,
   open,
@@ -58,7 +62,7 @@ export function Dialog({
 
   const shutNow = (d: HTMLDialogElement) => {
     d.close();
-    afterClose?.()?.focus();
+    afterClose?.();
     if (d.contains(document.activeElement) && document.activeElement instanceof HTMLElement)
       document.activeElement.blur();
   };
@@ -164,12 +168,12 @@ export function DialogActions({ children }: { readonly children: ReactNode }) {
   );
 }
 
-// DialogClose is a modal's close button
-export function DialogClose() {
+// DialogClose is a modal's close button: Close, or Cancel in a modal that sends (TestDialogCloseWords)
+export function DialogClose({ words = 'ui_close' }: { readonly words?: MessageKey }) {
   const { close } = useDialog();
   return (
     <Button closes onClick={close}>
-      {t('ui_close')}
+      {t(words)}
     </Button>
   );
 }

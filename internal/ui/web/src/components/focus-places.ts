@@ -13,7 +13,7 @@ const rowsNow = (): RowSeen[] =>
   }));
 
 // focusOn gives el the focus, telling whether there was one to take it
-const focusOn = (el: Element | null): boolean => {
+export const focusOn = (el: Element | null): boolean => {
   if (!(el instanceof HTMLElement)) return false;
   el.focus();
   return true;
@@ -68,3 +68,6 @@ export const unreadFocus = (): void => {
 // menuBack gives the focus back to the menu id's button, telling whether it was there
 export const menuBack = (id: string) => (): boolean =>
   focusOn(document.querySelector(`[data-menu-id="${CSS.escape(id)}"] > summary`));
+
+// rowMenuId is the id of a row's menu "…", by its page's slug: a page renamed is found again under its new one
+export const rowMenuId = (slug: string): string => `more:${slug}`;
