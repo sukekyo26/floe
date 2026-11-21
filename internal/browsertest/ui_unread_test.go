@@ -141,7 +141,7 @@ func TestUIRowAgainUnread(t *testing.T) { //nolint:paralleltest // the browser t
 }
 
 // The button of the toast of the page shown.
-const pageToastButton = "document.querySelector('[data-testid=toast][data-kind~=page] button')"
+const pageToastButton = "document.querySelector('[data-testid=toast][data-page] button')"
 
 // openRowOf presses the title of the row of slug.
 func openRowOf(b *browser, slug string) {
@@ -293,7 +293,7 @@ func TestUIUnreadToast(t *testing.T) { //nolint:paralleltest // the browser test
 	unreadList(b)
 	const (
 		timers = "[...window.timers.values()].map((x) => x.ms).join(',')"
-		toast  = "[data-testid=toast][data-kind~=page]"
+		toast  = "[data-testid=toast][data-page]"
 	)
 	// p3 read first, a page read and not shown to mark unread below; the time of its toast, gone as p1's comes, is not this test's
 	openRowOf(b, "p3")
@@ -365,7 +365,7 @@ func TestUIUnreadToast(t *testing.T) { //nolint:paralleltest // the browser test
 	b.until("its toast", pageToastButton)
 	out = append(out, b.eval("getComputedStyle(document.querySelector("+js(toast)+")).pointerEvents"))
 	pressMenuItem(b, "#list li[data-slug=p3]", "mark-unread")
-	b.until("the words of another", "document.querySelectorAll('[data-testid=toast][data-kind~=timed]:not([data-kind~=page])').length === 1")
+	b.until("the words of another", "document.querySelectorAll('[data-testid=toast][data-timed]:not([data-page])').length === 1")
 	out = append(out, b.eval("document.querySelectorAll("+js(toast+" button")+").length"))
 	// In the search modal, on top and to be pressed; its focus goes back to the field.
 	b.pressKey("k", kb.ModifierCtrl)

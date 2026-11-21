@@ -1992,7 +1992,7 @@
 
   // A state shown by a class, and told by an attribute too ("true", or none) for the browser tests, which read no class: the two
   // always change together, here
-  const STATE_ATTRS = { picked: 'aria-current', unseen: 'data-unread', archived: 'data-archived', on: 'data-on', armed: 'data-armed', old: 'data-old', narrowed: 'data-narrowed', selecting: 'data-selecting', fresh: 'data-fresh' };
+  const STATE_ATTRS = { picked: 'aria-current', unseen: 'data-unread', archived: 'data-archived', on: 'data-on', armed: 'data-armed', old: 'data-old', narrowed: 'data-narrowed', selecting: 'data-selecting', fresh: 'data-fresh', timed: 'data-timed', page: 'data-page' };
   function markState(el, name, on) {
     el.classList.toggle(name, Boolean(on));
     if (on) el.setAttribute(STATE_ATTRS[name], 'true');
@@ -2007,11 +2007,8 @@
     const t = document.createElement('div');
     t.className = 'toast';
     t.dataset.testid = 'toast';
-    t.classList.toggle('timed', Boolean(ms));
-    t.classList.toggle('page', Boolean(page));
-    // Its kinds, the classes above, as the browser tests read them ([data-kind~=page])
-    const kinds = [ms && 'timed', page && 'page'].filter(Boolean).join(' ');
-    if (kinds) t.dataset.kind = kinds;
+    markState(t, 'timed', ms);
+    markState(t, 'page', page);
     t.innerHTML = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m5 12.5 4.5 4.5L19 7.5"/></svg>';
     t.append(msg);
     if (button) t.append(button);

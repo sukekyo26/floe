@@ -68,7 +68,9 @@ var screenOnlyNotYet = map[string][]string{
 
 // screenOnlySelects holds the tests that set a <select>'s value and send its change event, which React takes as it is (it watches
 // no value of a select): the one use of "value" kept for good.
-var screenOnlySelects = map[string]bool{"TestUITaskUp": true}
+var screenOnlySelects = map[string]bool{
+	"TestUITaskUp": true, "TestUIVersionAnswers": true, "TestUIVersionPick": true, "TestUIVersionPickAhead": true, "TestUIVersionURL": true,
+}
 
 var (
 	// The page's names: its script's top-level declarations, two spaces in.

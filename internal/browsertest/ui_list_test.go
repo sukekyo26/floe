@@ -1179,7 +1179,7 @@ func TestUIBarActions(t *testing.T) { //nolint:paralleltest // the browser tests
 	pressItem("#frame-actions", "mark-unread")
 	b.until("unread", serverNews("one"))
 	b.navigate("/a/one/")
-	const toastButton = "document.querySelector('[data-testid=toast][data-kind~=page] button')"
+	const toastButton = "document.querySelector('[data-testid=toast][data-page] button')"
 	b.until("the toast", toastButton)
 	b.eval(toastButton + ".focus(); " + toastButton + ".click()")
 	out = append(out, b.until("the focus on the menu", "document.activeElement.matches('#frame-actions summary') && 'on the menu'"))
