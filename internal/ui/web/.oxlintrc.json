@@ -250,7 +250,7 @@
   },
   "overrides": [
     {
-      "files": ["**/*.test.ts"],
+      "files": ["**/*.test.{ts,tsx}"],
       "rules": {
         "vitest/consistent-each-for": "error",
         "vitest/consistent-test-filename": "error",
