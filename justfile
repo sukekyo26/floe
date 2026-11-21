@@ -50,9 +50,7 @@ fmt:
 fmt-check:
     golangci-lint fmt --diff {{pkgs}}
 
-# LIMIT: internal/browsertest is left out (core_pkgs) while its tests are rewritten for the React management page; use pkgs once that is done.
 # LIMIT: the files of //go:build race are not read (no -race): four constants of 5 lines; add a -race run when one holds more.
-# LIMIT: core_pkgs lists the host GOOS's packages: a package of one OS alone fails the other GOOS's runs; list them per GOOS then.
 # LIMIT: just lint type-checks linux and windows only: when fix-check fails for darwin and just fix does not help, it is a type error of darwin's files.
 # LIMIT: the go fix of the Go on PATH runs: one newer than go.mod's may know more fixers and fail fix-check on a clean tree.
 # go fix reads one GOOS's files a run: the three floe runs on.
@@ -64,13 +62,12 @@ fix_flags := "-omitzero=false"
 fix:
     #!/usr/bin/env bash
     set -euo pipefail
-    fix_pkgs=$({{core_pkgs}})
     for _ in 1 2 3 4 5; do
-        for os in {{fix_oses}}; do GOOS=$os go fix {{fix_flags}} $fix_pkgs; done
+        for os in {{fix_oses}}; do GOOS=$os go fix {{fix_flags}} {{pkgs}}; done
         golangci-lint fmt {{pkgs}}
         left=
         for os in {{fix_oses}}; do
-            GOOS=$os go fix {{fix_flags}} -diff $fix_pkgs >/dev/null || left=1
+            GOOS=$os go fix {{fix_flags}} -diff {{pkgs}} >/dev/null || left=1
         done
         if [ -z "$left" ]; then exit 0; fi
     done
@@ -81,9 +78,8 @@ fix:
 fix-check:
     #!/usr/bin/env bash
     set -euo pipefail
-    fix_pkgs=$({{core_pkgs}})
     for os in {{fix_oses}}; do
-        GOOS=$os go fix {{fix_flags}} -diff $fix_pkgs || {
+        GOOS=$os go fix {{fix_flags}} -diff {{pkgs}} || {
             echo "fix-check: go fix failed or would change the code for GOOS=$os: run 'just fix' for a diff above; with no diff, fix the compiler's errors above" >&2
             exit 1
         }

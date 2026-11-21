@@ -30,7 +30,7 @@ func TestUITaskArchivedInCategory(t *testing.T) { //nolint:paralleltest // the b
 	// In the order made, which orders the pages of a category: a0 is made after a1 and before a2, o1 before n1
 	for _, p := range [][2]string{{"a1", "案"}, {"a0", "案"}, {"a2", "案"}, {"o1", "旧"}, {"n1", "新"}, {"v1", "設計"}, {"v0", "設計"}} {
 		publish(p[0], "one")
-		if _, err := st.Edit(p[0], store.Edit{Project: ptrTo("proj")}); err != nil {
+		if _, err := st.Edit(p[0], store.Edit{Project: new("proj")}); err != nil {
 			t.Fatal(err)
 		}
 		s.floe(t, "task", "--slug", p[0], "--task", "T1", "--category", p[1])
@@ -38,10 +38,10 @@ func TestUITaskArchivedInCategory(t *testing.T) { //nolint:paralleltest // the b
 	s.write(t, "fold/one.html", "<title>one</title><p>one</p>")
 	s.write(t, "fold/sub/two.html", "<title>two</title><p>two</p>")
 	s.floe(t, "publish", "--link", filepath.Join(s.Env["HOME"], "fold"), "--slug", "fold")
-	if _, err := st.Edit("fold", store.Edit{Project: ptrTo("proj")}); err != nil {
+	if _, err := st.Edit("fold", store.Edit{Project: new("proj")}); err != nil {
 		t.Fatal(err)
 	}
-	if _, err := st.ChangeTasks(store.TaskChange{Slugs: []string{"fold"}, Task: ptrTo("T1")}); err != nil {
+	if _, err := st.ChangeTasks(store.TaskChange{Slugs: []string{"fold"}, Task: new("T1")}); err != nil {
 		t.Fatal(err)
 	}
 	s.floe(t, "task", "--project", "proj", "--task", "T1", "--categories", "案", "--categories", "設計", "--categories", "旧", "--categories", "新")
