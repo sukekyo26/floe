@@ -42,7 +42,8 @@ describe(PageMenu, () => {
     expect(['mark-unread', 'theme-item', 'copy'].map((id) => hides(link, id))).toStrictEqual([true, false, false]);
     expect(['mark-unread', 'pin-item'].map((id) => hides(draw({ archived: true }), id))).toStrictEqual([true, true]);
     expect(['open', 'download'].map((id) => hides(draw({ folder: true }), id))).toStrictEqual([true, true]);
-    expect(hides(draw({ news: 'version' }), 'mark-unread')).toBe(true);
+    // A field written false does not stop the later ones from hiding it
+    expect(hides(draw({ folder: false, news: 'version' }), 'mark-unread')).toBe(true);
   });
 
   it('leaves out the way to the task whose page it is, and shows it of another', () => {
