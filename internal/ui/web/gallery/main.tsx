@@ -55,6 +55,7 @@ import { createPageReads } from '@/features/reader/stores/page-reads';
 import type { TaskWrites } from '@/stores/tasks';
 import { toasts } from '@/stores/toasts';
 import { createColumns } from '@/stores/columns';
+import { focusOn } from '@/components/focus-places';
 import { createListQuery } from '@/stores/list-query';
 import { ListCount, ListWhat } from '@/features/page-list/components/list-head';
 import { ListShelf } from '@/features/page-list/components/list-shelf';
@@ -591,6 +592,7 @@ function Gallery() {
             <span className="text-small text-muted">After (Button):</span>
             <News query={galleryQuery} pages={galleryPages} columns={galleryColumns} />
             <Button
+              id="fold-shelf"
               onClick={() => {
                 galleryColumns.set({ open: !galleryColumns.columns.get().open });
               }}
@@ -609,7 +611,15 @@ function Gallery() {
               columns={galleryColumns}
             />
             <div className="flex h-lhead items-center gap-2.5 border-b border-line px-4">
-              <ListWhat query={galleryQuery} columns={galleryColumns} />
+              <ListWhat
+                query={galleryQuery}
+                columns={galleryColumns}
+                onShow={() => {
+                  // As P5b's way to open the shelf will: open, the focus on what folds it (here, the button above)
+                  galleryColumns.set({ open: true });
+                  focusOn(document.getElementById('fold-shelf'));
+                }}
+              />
               <ListCount query={galleryQuery} pages={galleryPages} />
             </div>
           </div>

@@ -16,8 +16,8 @@ interface ButtonShape {
   readonly label?: string | undefined;
   // wraps lets words a person typed go over lines, shown whole (ui.md: #tag-new, the one .btn that wraps)
   readonly wraps?: boolean;
-  // place is how where it stands shows it, a width it hides at (the bar's new pages, which the shelf's views say there)
-  readonly place?: string;
+  // hideFrom is the width it is gone from (the bar's new pages, which the shelf's views say there)
+  readonly hideFrom?: 'wide';
 }
 
 interface ButtonActs {
@@ -58,9 +58,9 @@ export function Button(props: ButtonProps) {
     testid,
     label,
   } = props;
-  const { closes, focusOnOpen, wraps, slug, onKeyDown, place = '' } = props;
+  const { closes, focusOnOpen, wraps, slug, onKeyDown, hideFrom } = props;
   const size = named ?? use(ButtonSizeOf);
-  const className = `inline-flex items-center justify-center gap-1.25 rounded-small border no-underline transition-[background-color,border-color,filter] duration-150 disabled:cursor-progress disabled:opacity-60 [&_svg]:size-3.75 ${wraps ? 'min-h-8 px-2.5 py-1.25 text-start text-small wrap-anywhere' : size === 'foot' ? 'h-9 px-3.5 text-body whitespace-nowrap' : 'h-8 px-2.5 text-small whitespace-nowrap'} ${kind === 'primary' || pressed ? 'border-transparent bg-ink text-on-ink hover:bg-ink-hover' : 'border-line bg-panel text-fg hover:border-faint'} ${kind === 'primary' ? 'font-semibold' : ''} ${place}`;
+  const className = `inline-flex items-center justify-center gap-1.25 rounded-small border no-underline transition-[background-color,border-color,filter] duration-150 disabled:cursor-progress disabled:opacity-60 [&_svg]:size-3.75 ${wraps ? 'min-h-8 px-2.5 py-1.25 text-start text-small wrap-anywhere' : size === 'foot' ? 'h-9 px-3.5 text-body whitespace-nowrap' : 'h-8 px-2.5 text-small whitespace-nowrap'} ${kind === 'primary' || pressed ? 'border-transparent bg-ink text-on-ink hover:bg-ink-hover' : 'border-line bg-panel text-fg hover:border-faint'} ${kind === 'primary' ? 'font-semibold' : ''} ${hideFrom === 'wide' ? 'wide:hidden' : ''}`;
   if (props.href !== undefined)
     return (
       <a

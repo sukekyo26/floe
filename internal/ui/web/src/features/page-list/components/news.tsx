@@ -3,7 +3,7 @@ import type { MouseEventHandler } from 'react';
 import { Button } from '@/components/button';
 import { getBoot } from '@/config/boot';
 import { showResults } from '@/features/page-list/stores/show-results';
-import { newCount, newsClick, newsPress } from '@/features/page-list/utils/list-shelf';
+import { newCount, newsClick, newsPress, newsTaken } from '@/features/page-list/utils/list-shelf';
 import { useStore } from '@/hooks/use-store';
 import { t } from '@/lib/t';
 import { columns as pageColumns, type ColumnsStore } from '@/stores/columns';
@@ -23,7 +23,7 @@ export interface NewsProps {
 // a key held or another button, it is a link to that list. Up to 70rem the shelf's views say it
 export function News({ hidden = false, query = listQuery, pages = pagePages, columns = pageColumns }: NewsProps) {
   const n = newCount(useStore(pages.state).entries);
-  const onList = getBoot().screen === 'list';
+  const onList = newsTaken(getBoot().screen);
   const take: MouseEventHandler<HTMLAnchorElement> = (e) => {
     if (!newsClick(e)) return;
     e.preventDefault();
@@ -37,7 +37,7 @@ export function News({ hidden = false, query = listQuery, pages = pagePages, col
       id="news"
       href="/?view=new"
       hidden={hidden || n === 0}
-      place="wide:hidden"
+      hideFrom="wide"
       {...(onList ? { onClick: take } : {})}
     >
       <span data-testid="dot" className="size-2 flex-none rounded-full bg-new" />

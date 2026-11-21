@@ -1,3 +1,4 @@
+import type { Boot } from '@/config/boot';
 import { t } from '@/lib/t';
 import type { Page } from '@/types/page';
 import type { MessageKey } from '@/types/messages.gen';
@@ -54,6 +55,10 @@ export const chipPress = (state: ListState, part: Part, value: string): Partial<
 // newsPress is what the bar's new pages leave (ui.html 6844): every new one, as the bar counts all there is, so that
 // nothing narrows them, the search neither
 export const newsPress = (): { picks: Picks; q: string } => ({ picks: { view: 'new', ...NO_PICKS }, q: '' });
+
+// newsTaken tells whether the bar's new pages narrow the list in place on a screen: the page list's alone; elsewhere
+// they are a link to it
+export const newsTaken = (screen: Boot['screen']): boolean => screen === 'list';
 
 // newsClick tells whether a press on the bar's new pages is the page list's to take: a modified press, or of another
 // button, opens /?view=new in a tab of its own

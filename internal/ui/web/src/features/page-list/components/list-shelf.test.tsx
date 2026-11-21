@@ -2,10 +2,10 @@ import { renderToString } from 'react-dom/server';
 import { describe, expect, it } from 'vitest';
 
 import { testBoot } from '@/components/test-boot';
-import { setBoot, getBoot } from '@/config/boot';
 import { ListCount, ListWhat } from '@/features/page-list/components/list-head';
 import { ListShelf } from '@/features/page-list/components/list-shelf';
 import { News } from '@/features/page-list/components/news';
+import { newsTaken } from '@/features/page-list/utils/list-shelf';
 import { createStore } from '@/lib/store';
 import type { ColumnsStore } from '@/stores/columns';
 import type { ListQuery, Query } from '@/stores/list-query';
@@ -66,7 +66,7 @@ describe(ListShelf, () => {
 
 describe(News, () => {
   it('counts every unread page not archived, apart from the view New, and is gone at none', () => {
-    expect.assertions(3);
+    expect.assertions(4);
     testBoot();
     const items = [
       page('a', { news: 'new', tags: ['x'] }),
@@ -80,15 +80,17 @@ describe(News, () => {
     // The head counts the new ones the picks leave
     expect(renderToString(<ListCount {...some} />)).toContain('ui_list_head:1');
     expect(tag(renderToString(<News {...stores([page('a')])} />), '<a')).toContain('hidden=""');
+    // From 70rem the shelf's views say it
+    expect(tag(renderToString(<News {...some} />), '<a')).toContain('wide:hidden');
   });
 
-  it('is a link alone on the task screens, as on the page list (its press is the page list’s)', () => {
+  it('narrows the list in place on the page list alone, a link to it on the other screens', () => {
     expect.assertions(1);
-    testBoot();
-    setBoot({ ...getBoot(), screen: 'tasks' });
-    expect(tag(renderToString(<News {...stores([page('a', { news: 'new' })])} />), '<a')).toMatch(
-      /href="\/\?view=new"/,
-    );
+    expect((['list', 'tasks', 'frame'] as const).map((screen) => newsTaken(screen))).toStrictEqual([
+      true,
+      false,
+      false,
+    ]);
   });
 });
 
@@ -96,9 +98,13 @@ describe(ListWhat, () => {
   it('says the view and the picks with the shelf folded, and is hidden with it open or nothing to say', () => {
     expect.assertions(3);
     testBoot();
-    const folded = renderToString(<ListWhat {...stores([], { view: 'fav', tag: 'x' }, false)} />);
+    const folded = renderToString(<ListWhat onShow={none} {...stores([], { view: 'fav', tag: 'x' }, false)} />);
     expect(folded).toMatch(/id="shelf-what"(?![^>]*hidden="")[^>]*>ui_view_favorites:undefined · ui_narrow_n:1</);
-    expect(tag(renderToString(<ListWhat {...stores([], { view: 'fav' }, true)} />), '<button')).toContain('hidden=""');
-    expect(tag(renderToString(<ListWhat {...stores([], {}, false)} />), '<button')).toContain('hidden=""');
+    expect(tag(renderToString(<ListWhat onShow={none} {...stores([], { view: 'fav' }, true)} />), '<button')).toContain(
+      'hidden=""',
+    );
+    expect(tag(renderToString(<ListWhat onShow={none} {...stores([], {}, false)} />), '<button')).toContain(
+      'hidden=""',
+    );
   });
 });

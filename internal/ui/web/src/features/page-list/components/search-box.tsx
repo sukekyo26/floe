@@ -12,8 +12,9 @@ export interface SearchBoxProps {
   readonly columns?: ColumnsStore;
 }
 
-// SearchBox is the list's search in the bar (ui.html #search): each letter narrows the list, Escape empties it and
-// leaves it. Under 40rem it is its icon until it is reached or holds words
+// SearchBox is the list's search in the bar (ui.html #search, .bar-inner > .search): up to 34rem in the bar's middle,
+// each letter narrows the list, Escape empties it and leaves it. Under 40rem it is its icon until it is reached or
+// holds words
 export function SearchBox({ hidden = false, query = listQuery, columns = pageColumns }: SearchBoxProps) {
   const { q } = useStore(query.query);
   const words = (value: string) => {
@@ -24,7 +25,7 @@ export function SearchBox({ hidden = false, query = listQuery, columns = pageCol
     <label
       id="search"
       hidden={hidden}
-      className="group/search relative flex-[1_1_18rem] narrow:flex-[0_0_36px] narrow:transition-[flex-basis] narrow:duration-150 narrow:focus-within:flex-[1_1_auto] narrow:has-[input:not(:placeholder-shown)]:flex-[1_1_auto] [&>svg]:pointer-events-none [&>svg]:absolute [&>svg]:top-1/2 [&>svg]:left-3 [&>svg]:size-[15px] [&>svg]:-translate-y-1/2 [&>svg]:text-faint"
+      className="group/search relative mx-auto flex-[0_1_34rem] narrow:mx-0 narrow:flex-[0_0_36px] narrow:transition-[flex-basis] narrow:duration-150 narrow:focus-within:flex-[1_1_auto] narrow:has-[input:not(:placeholder-shown)]:flex-[1_1_auto] [&>svg]:pointer-events-none [&>svg]:absolute [&>svg]:top-1/2 [&>svg]:left-3 [&>svg]:size-[15px] [&>svg]:-translate-y-1/2 [&>svg]:text-faint"
     >
       <SearchIcon />
       <input

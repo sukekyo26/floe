@@ -13,22 +13,17 @@ export interface ListHeadProps {
 }
 
 // ListWhat is what the shelf narrows the page list to, with the shelf folded (ui.html drawViews, drawHead): the view and
-// how many picks. Pressed, the shelf opens. Where it stands, in the head of the list or of the page beside it, is the
+// how many picks. Pressed, the shelf opens by onShow, the one way the columns open it (P5b's, which gives the focus to
+// the button that folds it: this one hides). Where it stands, in the head of the list or of the page beside it, is the
 // screen's
-export function ListWhat({ query = listQuery, columns = pageColumns }: Omit<ListHeadProps, 'pages'>) {
+export function ListWhat({
+  onShow,
+  query = listQuery,
+  columns = pageColumns,
+}: Omit<ListHeadProps, 'pages'> & { readonly onShow: () => void }) {
   const { what } = narrowWords(useStore(query.query));
   const { open } = useStore(columns.columns);
-  return (
-    <ShelfWhat
-      words={what}
-      tint={null}
-      hidden={open || what === ''}
-      onShow={() => {
-        columns.set({ open: true });
-        columns.keep();
-      }}
-    />
-  );
+  return <ShelfWhat words={what} tint={null} hidden={open || what === ''} onShow={onShow} />;
 }
 
 // ListCount is the head of the list: how many new pages the view and the search leave (ui.html renderShelf #count)
