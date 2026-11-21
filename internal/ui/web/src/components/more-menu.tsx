@@ -12,15 +12,25 @@ export interface MoreMenuProps {
   readonly label: string;
   // row: a row's, its button 26 px; bar: the bar's over a page, 30 px
   readonly size?: 'row' | 'bar';
-  // folds: the frame's bar, whose menu under 40rem stands under the bar, in from the window's right, as under its own
-  // button it would run off the left of a narrow window (ui.html 898–899)
-  readonly folds?: boolean;
+  // opens: down under its button; folds, the frame's bar, whose menu under 40rem stands under the bar, in from the
+  // window's right, as under its own button it would run off the left of a narrow window (ui.html 898–899); up, the
+  // search's foot, whose menu stands over the foot from its left, over the rows (680–682)
+  // LIMIT: up, on a screen under some 320px high its first items are off it, with nothing to scroll (ui.html 6141)
+  readonly opens?: 'down' | 'folds' | 'up';
   readonly children: ReactNode;
 }
 
+const PLACE = { down: 'relative', folds: 'relative narrow:static', up: 'static' } as const;
+const MENU = {
+  down: 'top-[calc(100%+4px)] right-0 max-w-[calc(100vw-2rem)] min-w-70',
+  folds:
+    'top-[calc(100%+4px)] right-0 max-w-[calc(100vw-2rem)] min-w-70 narrow:right-4 narrow:min-w-[min(17.5rem,calc(100vw-2rem))]',
+  up: 'bottom-[calc(100%-0.5rem)] left-0 max-w-full min-w-[min(17.5rem,100%)]',
+} as const;
+
 // MoreMenu is the menu "…" of a row or of the bar over a page: a details whose open is the one open of stores/menus.ts.
 // What closes it (a click elsewhere, an item done, Escape, the window left) is useOpenMenus, one for the screen
-export function MoreMenu({ id, label, size = 'row', folds = false, children }: MoreMenuProps) {
+export function MoreMenu({ id, label, size = 'row', opens = 'down', children }: MoreMenuProps) {
   const open = useStore(menus.open) === id;
   return (
     <details
@@ -31,7 +41,7 @@ export function MoreMenu({ id, label, size = 'row', folds = false, children }: M
         if (e.currentTarget.open) menus.show(id);
         else menus.hide(id);
       }}
-      className={`relative flex [&>summary]:list-none [&>summary::-webkit-details-marker]:hidden ${folds ? 'narrow:static' : ''}`}
+      className={`flex [&>summary]:list-none [&>summary::-webkit-details-marker]:hidden ${PLACE[opens]}`}
     >
       <summary
         aria-label={label}
@@ -42,7 +52,7 @@ export function MoreMenu({ id, label, size = 'row', folds = false, children }: M
       </summary>
       <div
         data-testid="menu"
-        className={`absolute top-[calc(100%+4px)] right-0 z-30 grid max-w-[calc(100vw-2rem)] min-w-70 gap-0.5 rounded-menu border border-line bg-panel p-menu-pad shadow-md ${folds ? 'narrow:right-4 narrow:min-w-[min(17.5rem,calc(100vw-2rem))]' : ''}`}
+        className={`absolute z-30 grid gap-0.5 rounded-menu border border-line bg-panel p-menu-pad shadow-md ${MENU[opens]}`}
       >
         {children}
       </div>

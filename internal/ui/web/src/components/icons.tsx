@@ -1,9 +1,23 @@
 import type { ReactNode } from 'react';
 
 // The marks the shared components draw, as ui.html draws them (24 by 24, in the colour of their words)
-function Line({ children, width = 1.8 }: { readonly children: ReactNode; readonly width?: number }) {
+// A mark's own name and its hidden, where a test reads which mark shows (the settings' head)
+export interface IconProps {
+  readonly testid?: string;
+  readonly hidden?: boolean;
+}
+
+function Line({
+  children,
+  width = 1.8,
+  testid,
+  hidden,
+}: { readonly children: ReactNode; readonly width?: number } & IconProps) {
   return (
     <svg
+      data-testid={testid}
+      // An svg has no hidden in React's types, which the attribute has: given as it is (ui.html toggleAttribute)
+      {...(hidden ? ({ hidden: true } as object) : {})}
       viewBox="0 0 24 24"
       fill="none"
       stroke="currentColor"
@@ -77,8 +91,8 @@ export const TagIcon = () => (
     <circle cx="7.5" cy="8.5" r="1.2" />
   </Line>
 );
-export const ThemeIcon = () => (
-  <Line>
+export const ThemeIcon = (props: IconProps) => (
+  <Line {...props}>
     <path d="M12 3a9 9 0 1 0 0 18c.9 0 1.6-.7 1.6-1.6 0-.4-.2-.8-.4-1.1-.3-.3-.4-.7-.4-1.1 0-.9.7-1.6 1.6-1.6H16a5 5 0 0 0 5-5c0-4.1-4-7.6-9-7.6Z" />
     <circle cx="7.5" cy="10.5" r="1" />
     <circle cx="10.5" cy="7" r="1" />
@@ -150,5 +164,22 @@ export const HelpIcon = () => (
 export const ChevronIcon = () => (
   <Line width={2}>
     <path d="m9 6 6 6-6 6" />
+  </Line>
+);
+export const SettingsIcon = (props: IconProps) => (
+  <Line {...props}>
+    <circle cx="12" cy="12" r="3" />
+    <path d="M19.4 15a1.7 1.7 0 0 0 .3 1.8l.1.1a2 2 0 1 1-2.8 2.8l-.1-.1a1.7 1.7 0 0 0-1.8-.3 1.7 1.7 0 0 0-1 1.5V21a2 2 0 1 1-4 0v-.1a1.7 1.7 0 0 0-1.1-1.5 1.7 1.7 0 0 0-1.8.3l-.1.1a2 2 0 1 1-2.8-2.8l.1-.1a1.7 1.7 0 0 0 .3-1.8 1.7 1.7 0 0 0-1.5-1H3a2 2 0 1 1 0-4h.1a1.7 1.7 0 0 0 1.5-1.1 1.7 1.7 0 0 0-.3-1.8l-.1-.1a2 2 0 1 1 2.8-2.8l.1.1a1.7 1.7 0 0 0 1.8.3H9a1.7 1.7 0 0 0 1-1.5V3a2 2 0 1 1 4 0v.1a1.7 1.7 0 0 0 1 1.5 1.7 1.7 0 0 0 1.8-.3l.1-.1a2 2 0 1 1 2.8 2.8l-.1.1a1.7 1.7 0 0 0-.3 1.8V9a1.7 1.7 0 0 0 1.5 1H21a2 2 0 1 1 0 4h-.1a1.7 1.7 0 0 0-1.5 1Z" />
+  </Line>
+);
+export const TaskModeIcon = () => (
+  <Line>
+    <path d="M9 6h11M9 12h11M9 18h11" />
+    <path d="m3 6 1.5 1.5L7 5M3 12l1.5 1.5L7 11M3 18l1.5 1.5L7 17" />
+  </Line>
+);
+export const BackChevronIcon = () => (
+  <Line>
+    <path d="m15 6-6 6 6 6" />
   </Line>
 );

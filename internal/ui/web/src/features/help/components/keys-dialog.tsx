@@ -59,7 +59,7 @@ export function KeysDialog({ open, screen, diff, diffGo, backWords, mac, onClose
   const mod = mac ? '⌘' : 'Ctrl';
   const note = (key: 'ui_keys_note_list' | 'ui_keys_note_frame') => (mac ? t(key).replace('Ctrl+K', '⌘K') : t(key));
   return (
-    <Dialog id="keys" open={open !== null} onClosed={onClosed} labelledBy="keys-title" tall>
+    <Dialog id="keys" open={open !== null} onClosed={onClosed} labelledBy="keys-title" body="help">
       <DialogHead icon={<HelpIcon />} titleId="keys-title" title={t('ui_help')} />
       <TabList label={t('ui_help')}>
         {(['about', 'keys'] as const).map((name) => (
