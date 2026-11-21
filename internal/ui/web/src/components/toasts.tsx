@@ -1,21 +1,61 @@
-import { useRef } from 'react';
+import { useLayoutEffect, useRef, useState } from 'react';
 
+import { Button } from '@/components/button';
 import { DoneIcon } from '@/components/icons';
 import { useStore } from '@/hooks/use-store';
-import { toasts as pageToasts, type Toast, type Toasts as ToastStore } from '@/stores/toasts';
+import { toasts as pageToasts, type Toast, type ToastButton, type Toasts as ToastStore } from '@/stores/toasts';
+
+// ToastAction is a toast's button: held while its press goes when it holds, Escape its own
+function ToastAction({ button }: { readonly button: ToastButton }) {
+  const [going, setGoing] = useState(false);
+  return (
+    <span className="ml-2 flex">
+      <Button
+        onKeyDown={(e) => {
+          if (e.key !== 'Escape' || !button.onEscape) return;
+          e.stopPropagation();
+          button.onEscape();
+        }}
+        testid={button.undo ? 'undo' : undefined}
+        slug={button.slug}
+        label={button.name}
+        disabled={going}
+        onClick={() => {
+          if (!button.holds) {
+            void button.onPress();
+            return;
+          }
+          setGoing(true);
+          void Promise.resolve(button.onPress()).finally(() => {
+            setGoing(false);
+          });
+        }}
+      >
+        {button.label}
+      </Button>
+    </span>
+  );
+}
 
 // ToastView is a toast: one with a button holds while pointed at or focused, and has its whole time again after
 function ToastView({ toast, store }: { readonly toast: Toast; readonly store: ToastStore }) {
   // Not :hover, which stays on a touch screen after the finger has gone
   const over = useRef(false);
-  const holds = toast.button !== null;
+  const box = useRef<HTMLSpanElement>(null);
+  const { button } = toast;
+  // A change made from the keys gives its way back the focus as it is drawn, once: a toast drawn after takes nothing
+  useLayoutEffect(() => {
+    if (toast.focus) box.current?.querySelector('button')?.focus();
+    // oxlint-disable-next-line react-hooks/exhaustive-deps -- once, as it is first drawn
+  }, []);
   return (
     <span
+      ref={box}
       data-testid="toast"
       data-timed={toast.timed || undefined}
       data-page={toast.page || undefined}
       onPointerEnter={
-        holds
+        button
           ? () => {
               over.current = true;
               store.hold(toast.id);
@@ -23,7 +63,7 @@ function ToastView({ toast, store }: { readonly toast: Toast; readonly store: To
           : undefined
       }
       onPointerLeave={
-        holds
+        button
           ? (e) => {
               over.current = false;
               if (!e.currentTarget.contains(document.activeElement)) store.again(toast.id);
@@ -31,24 +71,26 @@ function ToastView({ toast, store }: { readonly toast: Toast; readonly store: To
           : undefined
       }
       onFocus={
-        holds
+        button
           ? () => {
+              store.focused.set(toast.id);
               store.hold(toast.id);
             }
           : undefined
       }
       onBlur={
-        holds
+        button
           ? () => {
+              if (store.focused.get() === toast.id) store.focused.set(null);
               if (!over.current) store.again(toast.id);
             }
           : undefined
       }
-      className={`flex items-center gap-2 rounded-corner border border-line bg-panel pl-3.75 text-small font-[550] text-fg shadow-md [&>svg]:size-4 [&>svg]:flex-none [&>svg]:text-good ${holds ? 'pointer-events-auto py-1.5 pr-1.5' : 'py-2.5 pr-3.75'} ${toast.timed ? 'max-w-[calc(100vw-32px)] animate-toast-in' : 'animate-toast'}`}
+      className={`flex items-center gap-2 rounded-corner border border-line bg-panel pl-3.75 text-small font-[550] text-fg shadow-md [&>svg]:size-4 [&>svg]:flex-none [&>svg]:text-good ${button ? 'pointer-events-auto py-1.5 pr-1.5' : 'py-2.5 pr-3.75'} ${toast.timed ? 'max-w-[calc(100vw-32px)] animate-toast-in' : 'animate-toast'}`}
     >
       <DoneIcon />
       {toast.text}
-      {holds ? <span className="ml-2 flex">{toast.button}</span> : null}
+      {button ? <ToastAction button={button} /> : null}
     </span>
   );
 }

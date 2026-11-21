@@ -25,7 +25,10 @@ describe(createToasts, () => {
     expect.assertions(3);
     vi.useFakeTimers();
     const t = createToasts();
-    const id = t.toast('held', { ms: 8000, button: 'undo' });
+    const id = t.toast('held', {
+      ms: 8000,
+      button: { label: 'undo', undo: true, holds: true, onPress: () => undefined },
+    });
     vi.advanceTimersByTime(7000);
     t.hold(id);
     vi.advanceTimersByTime(60000);
@@ -36,5 +39,20 @@ describe(createToasts, () => {
     vi.advanceTimersByTime(1);
     expect(texts(t)).toStrictEqual([]);
     vi.useRealTimers();
+  });
+
+  it('takes the focus a toast held away with it, and marks only the toast told to take the focus', () => {
+    expect.assertions(3);
+    const t = createToasts();
+    const button = { label: 'undo', undo: true, holds: false, onPress: () => undefined };
+    const first = t.toast('first', { ms: 8000, button, focus: true });
+    t.toast('second', { ms: 8000, button });
+    expect(t.shown.get().map((x) => x.focus)).toStrictEqual([true, false]);
+    t.focused.set(first);
+    t.remove(first);
+    expect(t.focused.get()).toBeNull();
+    // @ts-expect-error a toast with a button is given its time
+    t.toast('no time', { button });
+    expect(texts(t)).toStrictEqual(['second', 'no time']);
   });
 });
