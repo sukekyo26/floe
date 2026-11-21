@@ -44,7 +44,7 @@ export function ViewButton({
       data-view={view}
       aria-pressed={lit}
       onClick={onPress}
-      className={`group ${SHELF_ROW} ${SHELF_PRESSED} ${VIEW_PILL} ${markColor} text-fg`}
+      className={`group flex ${SHELF_ROW} ${SHELF_PRESSED} ${VIEW_PILL} ${markColor} text-fg`}
     >
       {mark}
       <span

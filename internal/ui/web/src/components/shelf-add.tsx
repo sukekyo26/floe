@@ -49,7 +49,7 @@ export function ShelfAddButton({ id, short, label, hidden, onAdd }: ShelfAddButt
         close();
         onAdd();
       }}
-      className={`${SHELF_ROW} ${SHELF_MARK} text-label text-muted`}
+      className={`flex ${SHELF_ROW} ${SHELF_MARK} text-label text-muted`}
     >
       <PlusIcon />
       {short}

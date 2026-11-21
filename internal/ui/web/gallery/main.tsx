@@ -54,6 +54,12 @@ import { ReaderPane } from '@/features/reader/components/reader-pane';
 import { createPageReads } from '@/features/reader/stores/page-reads';
 import type { TaskWrites } from '@/stores/tasks';
 import { toasts } from '@/stores/toasts';
+import { createColumns } from '@/stores/columns';
+import { createListQuery } from '@/stores/list-query';
+import { ListCount, ListWhat } from '@/features/page-list/components/list-head';
+import { ListShelf } from '@/features/page-list/components/list-shelf';
+import { News } from '@/features/page-list/components/news';
+import { SearchBox } from '@/features/page-list/components/search-box';
 import type { Page } from '@/types/page';
 
 // The boot values go test -gallery wrote (just web-gallery); none when it has not run
@@ -153,6 +159,13 @@ const galleryPages = {
   whileReading: () => null,
   state: listed,
 } as unknown as Pages;
+// The shelf's picks and the columns, as the page list keeps them, but in no URL
+const galleryQuery = createListQuery({
+  search: () => '',
+  replace: () => undefined,
+  folders: { takeOpen: () => undefined },
+});
+const galleryColumns = createColumns({ search: () => '' });
 // A tag write adds and removes; any other is the fields it names
 const patched = (a: Page, body: unknown): Partial<Page> => {
   const { tags } = body as { tags?: { add: string[]; remove: string[] } };
@@ -563,6 +576,42 @@ function Gallery() {
             >
               As the page open whole
             </Button>
+          </div>
+        </Section>
+        <Section title="Shelf: views, parts and the search (under 70rem the views are a row, the rest in the filters’ modal; the bar’s new pages: before → after)">
+          <div className="mb-3 flex flex-wrap items-center gap-4">
+            <span className="text-small text-muted">Before (ui.html a.news):</span>
+            <a
+              href="/?view=new"
+              className="inline-flex items-center gap-[0.4rem] font-bold whitespace-nowrap text-new no-underline hover:underline"
+            >
+              <span className="size-2 flex-none rounded-full bg-new" />
+              {t('ui_news', 2)}
+            </a>
+            <span className="text-small text-muted">After (Button):</span>
+            <News query={galleryQuery} pages={galleryPages} columns={galleryColumns} />
+            <Button
+              onClick={() => {
+                galleryColumns.set({ open: !galleryColumns.columns.get().open });
+              }}
+            >
+              Fold or open the shelf
+            </Button>
+          </div>
+          <div className="mb-3 flex max-w-xl items-center gap-2.5 rounded-small border border-line bg-panel p-2">
+            <SearchBox query={galleryQuery} columns={galleryColumns} />
+          </div>
+          <div className="grid h-[34rem] grid-cols-[15rem_minmax(0,1fr)] overflow-hidden rounded-small border border-line bg-bg wide:h-auto wide:grid-cols-1">
+            <ListShelf
+              onAdd={() => toasts.toast('Add a link (P5b’s modal)')}
+              query={galleryQuery}
+              pages={galleryPages}
+              columns={galleryColumns}
+            />
+            <div className="flex h-lhead items-center gap-2.5 border-b border-line px-4">
+              <ListWhat query={galleryQuery} columns={galleryColumns} />
+              <ListCount query={galleryQuery} pages={galleryPages} />
+            </div>
           </div>
         </Section>
         <Section title="Reading a page beside the list (the page tells its frame it was read; Slow answers waits 1.5 s)">

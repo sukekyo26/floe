@@ -3,9 +3,9 @@ import type { CSSProperties, ReactNode } from 'react';
 import type { CssVars } from '@/utils/css-vars';
 
 // A row of the shelf: a view, a chip or an add button, the width of the shelf, its mark in one column so that the words
-// of every row start at one x (their colours are each one's own). Pressed, it stands out filled
+// of every row start at one x (their colours and how they show are each one's own). Pressed, it stands out filled
 export const SHELF_ROW =
-  'flex w-full items-center gap-[0.55rem] rounded-menu border-0 bg-transparent px-[0.65rem] py-[0.42rem] text-start font-medium wrap-anywhere hover:bg-subtle [&_svg]:size-shelf-mark [&_svg]:flex-none';
+  'w-full items-center gap-[0.55rem] rounded-menu border-0 bg-transparent px-[0.65rem] py-[0.42rem] text-start font-medium wrap-anywhere hover:bg-subtle [&_svg]:size-shelf-mark [&_svg]:flex-none';
 // The marks' colour, where a row has none of its own (the star's)
 export const SHELF_MARK = '[&_svg]:text-muted';
 export const SHELF_PRESSED =
@@ -38,7 +38,7 @@ export function Chip({ label, n, pressed, onPick, mark, dot, data }: ChipProps) 
       aria-pressed={pressed}
       onClick={onPick}
       style={tint as CSSProperties}
-      className={`${SHELF_ROW} ${SHELF_PRESSED} ${SHELF_MARK} text-fg ${dot === undefined ? '' : "before:mx-[calc((var(--spacing-shelf-mark)-8px)/2)] before:size-2 before:flex-none before:rounded-full before:bg-(--c) before:content-['']"}`}
+      className={`flex ${SHELF_ROW} ${SHELF_PRESSED} ${SHELF_MARK} text-fg ${dot === undefined ? '' : "before:mx-[calc((var(--spacing-shelf-mark)-8px)/2)] before:size-2 before:flex-none before:rounded-full before:bg-(--c) before:content-['']"}`}
       {...data}
     >
       {mark}
