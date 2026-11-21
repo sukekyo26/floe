@@ -52,15 +52,15 @@ func TestUIRowCards(t *testing.T) { //nolint:paralleltest // the browser tests s
 	const card = `((li) => { const st = getComputedStyle(li); return [st.borderTopWidth, st.borderTopLeftRadius === ` + as + `('borderTopLeftRadius', 'var(--corner-menu)'), st.boxShadow === ` + as + `('boxShadow', 'var(--shadow-sm)')].join(' '); })`
 	// Each row's place after the one above: C a card, T a folder's row, G a heading, with the room between them
 	const gaps = `(() => { const rows = [...document.querySelectorAll('#list > li')], r = (e) => e.getBoundingClientRect();
-		return rows.slice(1).map((li, i) => (li.classList.contains('group') ? 'G' : li.classList.contains('tree') ? 'T' : 'C') + Math.round(r(li).top - r(rows[i]).bottom)).join(' '); })()`
-	const ground = `(getComputedStyle(document.querySelector('.list-body')).backgroundColor === ` + as + `('backgroundColor', 'var(--bg)'))`
+		return rows.slice(1).map((li, i) => (li.dataset.testid === 'group' ? 'G' : li.dataset.testid === 'tree' ? 'T' : 'C') + Math.round(r(li).top - r(rows[i]).bottom)).join(' '); })()`
+	const ground = `(getComputedStyle(document.getElementById('list-body')).backgroundColor === ` + as + `('backgroundColor', 'var(--bg)'))`
 
 	// The page list: a card; the row chosen edged in --new, no inset line; the ground.
 	b.navigate("/?project=demo")
 	b.until("the rows", "document.querySelector('#list li[data-slug=plan]')")
 	say("card", card+"(document.querySelector('#list li[data-slug=plan]'))")
-	b.eval("document.querySelector('#list li[data-slug=read] .title').click()")
-	b.until("chosen", "document.querySelector('#list li[data-slug=read].picked')")
+	b.eval("document.querySelector('#list li[data-slug=read] [data-testid=title]').click()")
+	b.until("chosen", "document.querySelector('#list li[data-slug=read][aria-current=true]')")
 	say("chosen", "(() => { const st = getComputedStyle(document.querySelector('#list li[data-slug=read]')); return [st.borderTopColor === "+as+"('borderTopColor', 'var(--new)'), st.boxShadow.includes('inset')].join(' '); })()")
 	say("ground", ground)
 	// A page published meanwhile: its card rises in, as a new row does, and those there do not (heard once they have risen in).
@@ -78,29 +78,29 @@ func TestUIRowCards(t *testing.T) { //nolint:paralleltest // the browser tests s
 	// pointed at within it.
 	b.eval("localStorage.setItem('list.open', JSON.stringify(['fold']))")
 	b.navigate("/tasks?project=demo&task=S1")
-	b.until("the folder's rows", "document.querySelectorAll('#list li.tree').length === 3")
+	b.until("the folder's rows", "document.querySelectorAll('#list li[data-testid=tree]').length === 3")
 	b.still()
 	say("gaps", gaps)
-	say("headings", `(() => { const r = (e) => e.getBoundingClientRect(), head = document.querySelector('#list li.group.adds'), first = document.querySelector('#list li[data-slug=plan]');
-		return [r(head.querySelector('[role=heading]')).left === r(first.querySelector('.lead')).left, r(head.querySelector('.category-add')).right === r(first).right,
+	say("headings", `(() => { const r = (e) => e.getBoundingClientRect(), head = document.querySelector('#list li[data-testid=group]:has([data-testid=category-add])'), first = document.querySelector('#list li[data-slug=plan]');
+		return [r(head.querySelector('[role=heading]')).left === r(first.querySelector('[data-testid=lead]')).left, r(head.querySelector('[data-testid=category-add]')).right === r(first).right,
 			getComputedStyle(head).borderTopWidth, getComputedStyle(head).boxShadow].join(' '); })()`)
-	say("folder", `(() => { const st = (e) => getComputedStyle(e), r = (e) => e.getBoundingClientRect(), f = document.querySelector('#list li[data-slug=fold]'), trees = [...document.querySelectorAll('#list li.tree')];
+	say("folder", `(() => { const st = (e) => getComputedStyle(e), r = (e) => e.getBoundingClientRect(), f = document.querySelector('#list li[data-slug=fold]'), trees = [...document.querySelectorAll('#list li[data-testid=tree]')];
 		const last = trees.at(-1);
 		return [st(f).borderBottomWidth, st(f).borderBottomLeftRadius, st(trees[0]).borderLeftWidth, st(trees[0]).borderBottomWidth, st(last).borderBottomWidth,
 			st(last).borderBottomLeftRadius === `+as+`('borderTopLeftRadius', 'var(--corner-menu)'), r(trees[0]).top - r(f).bottom, r(trees[0]).left - r(f).left, r(trees[0]).right - r(f).right].join(' '); })()`)
-	b.eval("[...document.querySelectorAll('#list li.tree .title')].find((e) => e.textContent.includes('one.html')).click()")
-	b.until("the file chosen", "document.querySelector('#list li.tree.picked')")
-	r := b.rect("document.querySelector('#list li.tree:not(.picked)')")
+	b.eval("[...document.querySelectorAll('#list li[data-testid=tree] [data-testid=title]')].find((e) => e.textContent.includes('one.html')).click()")
+	b.until("the file chosen", "document.querySelector('#list li[data-testid=tree][aria-current=true]')")
+	r := b.rect("document.querySelector('#list li[data-testid=tree]:not([aria-current=true])')")
 	if _, err := chromedp.Call(b.ctx, input.DispatchMouseEvent, input.DispatchMouseEventParams{Type: input.DispatchMouseEventTypeMouseMoved, X: r.X + 60, Y: r.Y + r.Height/2}); err != nil {
 		t.Fatal(err)
 	}
 	b.still()
-	say("within", "(() => { const bg = (e) => getComputedStyle(e).backgroundColor; return [bg(document.querySelector('#list li.tree.picked')) === "+as+"('backgroundColor', 'var(--new-soft)'), bg(document.querySelector('#list li.tree:not(.picked)')) === "+as+"('backgroundColor', 'var(--hover)'), getComputedStyle(document.querySelector('#list li[data-slug=fold]')).borderColor === "+as+"('borderColor', 'var(--line)'), getComputedStyle(document.querySelector('#list li.tree.picked')).boxShadow.includes('inset')].join(' '); })()")
+	say("within", "(() => { const bg = (e) => getComputedStyle(e).backgroundColor; return [bg(document.querySelector('#list li[data-testid=tree][aria-current=true]')) === "+as+"('backgroundColor', 'var(--new-soft)'), bg(document.querySelector('#list li[data-testid=tree]:not([aria-current=true])')) === "+as+"('backgroundColor', 'var(--hover)'), getComputedStyle(document.querySelector('#list li[data-slug=fold]')).borderColor === "+as+"('borderColor', 'var(--line)'), getComputedStyle(document.querySelector('#list li[data-testid=tree][aria-current=true]')).boxShadow.includes('inset')].join(' '); })()")
 
 	// Folded, the folder is a card as any.
 	b.eval("localStorage.setItem('list.open', '[]')")
 	b.navigate("/tasks?project=demo&task=S1")
-	b.until("the rows", "document.querySelector('#list li[data-slug=fold]') && !document.querySelector('#list li.tree')")
+	b.until("the rows", "document.querySelector('#list li[data-slug=fold]') && !document.querySelector('#list li[data-testid=tree]')")
 	say("folded", card+"(document.querySelector('#list li[data-slug=fold]')) + ' ' + getComputedStyle(document.querySelector('#list li[data-slug=fold]')).borderBottomWidth")
 
 	// A task of no page: no room left in the empty list; the task list's rows are cards too.

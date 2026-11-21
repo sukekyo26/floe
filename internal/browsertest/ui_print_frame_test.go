@@ -11,7 +11,7 @@ import (
 // note's words and URL: "name:shown" each, a word for each, then the words and the URL.
 const printed = `(() => {
   const shown = (s) => { const e = document.querySelector(s); return e !== null && e.getClientRects().length > 0; };
-  return [['bar', '.bar'], ['frame', '#frame'], ['error', '#error'], ['notfound', '#notfound'], ['note', '#print-alone']]
+  return [['bar', '[data-testid=bar]'], ['frame', '#frame'], ['error', '#error'], ['notfound', '#notfound'], ['note', '#print-alone']]
     .map(([n, s]) => n + ':' + shown(s)).join(' ') + ' | ' + (document.getElementById('print-alone-text')?.textContent ?? '') +
     ' | ' + (document.getElementById('print-raw')?.textContent ?? '');
 })()`

@@ -12,6 +12,7 @@ adheres to [Semantic Versioning](https://semver.org/).
 
 ### Changed
 
+- Change the row of the management page's list whose page is open beside the list: a screen reader now tells it as the current one (`aria-current`).
 - Change an item that `prefixItems` takes in a list whose schema has `items` beside it (draft 2020-12): it now comes to `page.html` and `part.html` as written, as an item under `prefixItems` alone does, and a key the schema declares but the item leaves out is not there, not nil. Read such a key with `index` (`{{with index . "more"}}…{{end}}`): a page that read it as `.more` is now refused with `map has no entry`.
 - Change a YAML mistake told on the line right after a `|` or `>` text, as when the text's first line is deeper than a line after it: after the YAML library's words, floe now says that the text ends before that line and how to mend it (indent the text's lines alike, or write its indentation as in `|2`). The words before and the place are as they were.
 - Change `floe part check` and `floe template check` to refuse a `$ref` that leads back to itself through `$ref`s alone (a part's root naming a part whose root names it, a `$defs` naming itself), in the schema's file, at the `$ref`. No value passes such a `$ref`, which was told only once a data file wrote a value, at the data file's line. A schema of yours that holds one where no value reached it, or under `not`, `anyOf` or `if`, drew before and is refused now, by every command that reads your parts and templates.
