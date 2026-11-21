@@ -315,11 +315,11 @@ describe(createPages, () => {
     vi.useRealTimers();
   });
 
-  it('takes a poll answered once a press is past PRESS_MS, and meanwhile clears its read mistake alone', async () => {
-    expect.assertions(4);
+  it('takes no poll answered within PRESS_MS of a press, and meanwhile clears its read mistake alone', async () => {
+    expect.assertions(3);
     const s = server();
     vi.stubGlobal('fetch', s.fetch);
-    const { pages, notice } = made('list', { pressMs: 30 });
+    const { pages, notice } = made();
     s.state.listStatus = 500;
     await pages.load();
     expect(notice.said.get()).toStrictEqual({ message: 'failed: HTTP 500', from: 'load' });
@@ -329,6 +329,16 @@ describe(createPages, () => {
     await pages.load(true);
     expect(notice.said.get().message).toBe('');
     expect(pages.state.get().entries).toHaveLength(0);
+  });
+
+  it('takes a poll answered once a press is past PRESS_MS', async () => {
+    expect.assertions(1);
+    const s = server();
+    s.state.list = '[{"slug":"a","description":"","createdAt":"","updatedAt":"","taskProject":""}]';
+    vi.stubGlobal('fetch', s.fetch);
+    const { pages } = made('list', { pressMs: 30 });
+    pages.pressed();
+    // Late as the machine may be, the wait is only ever longer than PRESS_MS
     await new Promise((go) => {
       setTimeout(go, 40);
     });
