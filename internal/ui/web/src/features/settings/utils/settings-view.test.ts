@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 
-import type { ThemesRead } from '@/features/settings/api/themes';
+import { pageThemeWords, type ThemesRead } from '@/features/settings/api/themes';
 import { settingsView, themeCards } from '@/features/settings/utils/settings-view';
 
 const read = (change: Partial<ThemesRead> = {}): ThemesRead => ({
@@ -53,7 +53,7 @@ describe(settingsView, () => {
       null,
       true,
     ]);
-    expect(values(settingsView('list', false, read({ settings: 'bad json' }), '', 'broken'))).toStrictEqual([
+    expect(values(settingsView('list', false, read({ settings: { errors: [] } }), '', 'broken'))).toStrictEqual([
       '—',
       '—',
       'broken',
@@ -86,7 +86,7 @@ describe(themeCards, () => {
 
   it('says settings.json unreadable with no card now, and one’s own things broken with their mistakes and no cards', () => {
     expect.assertions(2);
-    const settings = themeCards(read({ settings: 'bad' }), '', null, '');
+    const settings = themeCards(read({ settings: { errors: [] } }), '', null, '');
     expect([settings.now, settings.cards.some((c) => c.now)]).toStrictEqual([{ kind: 'settingsBroken' }, false]);
     const broken = themeCards(
       read({
@@ -117,5 +117,17 @@ describe(themeCards, () => {
     expect(themeCards(read(), '', 'mine', '').checked).toBe('mine');
     const gone = themeCards(read(), '', 'lost', '');
     expect([gone.now, gone.checked]).toStrictEqual([{ kind: 'pickedGone', name: 'lost' }, null]);
+  });
+});
+
+describe(pageThemeWords, () => {
+  it('says a page changed meanwhile and a page not drawn in the theme, and leaves any other answer to the server', () => {
+    expect.assertions(1);
+    expect([pageThemeWords(409), pageThemeWords(400), pageThemeWords(500), pageThemeWords(200)]).toStrictEqual([
+      'ui_theme_page_changed',
+      'ui_theme_page_undrawn',
+      null,
+      null,
+    ]);
   });
 });

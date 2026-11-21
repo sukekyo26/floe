@@ -120,7 +120,8 @@ export function BarActions({
   const title = a.title ?? a.slug;
   const folds = place === 'frame' && !file ? 'wide' : 'shown';
   return (
-    <span id={id} className="flex items-center gap-0.5">
+    // The search's foot tells whose its buttons are (ui.html drawFindBar)
+    <span id={id} data-slug={place === 'find' ? a.slug : undefined} className="flex items-center gap-0.5">
       <IconButton
         testid="diff-open"
         on={diffing}

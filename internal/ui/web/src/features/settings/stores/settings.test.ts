@@ -9,7 +9,7 @@ import { createToasts } from '@/stores/toasts';
 import type { Page } from '@/types/page';
 
 const messages = new Proxy({}, { get: (_, key) => `${String(key)}:%s` });
-const read: ThemesRead = { themes: [], default: 'mine', taskMode: false, settings: 'bad' };
+const read: ThemesRead = { themes: [], default: 'mine', taskMode: false, settings: { errors: [] } };
 const page = { slug: 'a', title: 'A' } as Page;
 
 describe(createSettings, () => {

@@ -139,6 +139,11 @@ export function Dialog({
         // Escape and the other close requests: the browser fires cancel within the key's task, before the next key,
         // and not while closedby none holds it
         onCancel={close}
+        // Closed from outside (close() called on the element, as a test may): the caller is told, as by a close button.
+        // Closed by close() or by open going false, open is false by the time the event comes, a frame later
+        onClose={() => {
+          if (open) onClosed();
+        }}
         onPointerDown={(e) => {
           down.current = { onDialog: e.target === e.currentTarget, held };
         }}

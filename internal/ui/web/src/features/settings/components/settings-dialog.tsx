@@ -1,4 +1,4 @@
-import { useLayoutEffect, useRef, useState } from 'react';
+import { useEffect, useLayoutEffect, useRef, useState } from 'react';
 
 import { Button } from '@/components/button';
 import { Dialog, DialogActions, DialogClose } from '@/components/dialog';
@@ -104,9 +104,12 @@ export function SettingsDialog({
     if (target) {
       setPanel(target.page ? 'theme' : 'list');
       setBack(() => target.back);
-      void settings.open(target.page);
     }
   }
+  // Read anew each opening, once (an effect: StrictMode's second run is the same opening, asking again harmlessly)
+  useEffect(() => {
+    if (target) void settings.open(target.page);
+  }, [target, settings]);
   const open = target !== null;
   useMovedOverlay(open, { toasts: toastBox });
   const view = settingsView(panel, page !== null, read, failed, t('ui_settings_broken'));
@@ -114,7 +117,7 @@ export function SettingsDialog({
   const cards = themeCards(read, failed, page ? (page.pickedTheme ?? '') : null, unset);
   if (choice.of !== read) setChoice({ of: read, name: cards.checked });
   if (modeOn.of !== read) setModeOn({ of: read, on: Boolean(read?.taskMode) });
-  useShrink(grid, cards);
+  useShrink(grid, read);
 
   useLayoutEffect(() => {
     const to = focusTo.current;
@@ -125,6 +128,8 @@ export function SettingsDialog({
   // A part gone into, its heading focused; back to the list, the row of the part it came from
   const goTo = (next: Panel) => {
     focusTo.current = next === 'list' ? panel : 'title';
+    // The task mode's part shows the mode as read, a check left unsaved gone (ui.html showSettings → drawTaskMode)
+    if (next === 'mode') setModeOn({ of: read, on: Boolean(read?.taskMode) });
     setPanel(next);
   };
 
@@ -188,12 +193,8 @@ export function SettingsDialog({
         </button>
         <div data-testid="modal-head" className="flex items-center gap-3.25">
           <span className="grid size-9.5 flex-none place-items-center rounded-full bg-sel p-2.25 text-fg [&_svg]:size-5">
-            <span data-testid="page-icon" hidden={!page} className="contents">
-              <ThemeIcon />
-            </span>
-            <span data-testid="settings-icon" hidden={page !== null} className="contents">
-              <SettingsIcon />
-            </span>
+            <ThemeIcon testid="page-icon" hidden={!page} />
+            <SettingsIcon testid="settings-icon" hidden={page !== null} />
           </span>
           <div>
             <h2

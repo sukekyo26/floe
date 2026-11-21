@@ -9,6 +9,7 @@ import { RowSub } from '@/components/row-sub';
 import { FIND_ROWS, findCount, findHits } from '@/features/find/utils/find-hits';
 import { FIRST, findKey, findReached, type Reached } from '@/features/find/utils/find-state';
 import { useMovedOverlay } from '@/hooks/use-moved-overlay';
+import { closeMenu } from '@/hooks/use-open-menu';
 import { useStore } from '@/hooks/use-store';
 import { t } from '@/lib/t';
 import { menus } from '@/stores/menus';
@@ -71,25 +72,30 @@ export function FindDialog({
   const toastBox = useRef<HTMLDivElement>(null);
   const foot = useRef<HTMLSpanElement>(null);
   useMovedOverlay(open, { toasts: toastBox, error: errorBox });
-  // Opened, the field takes the focus (ui.html openFind), whatever had it: a toast moved in with the focus loses it
+  // Opened, the foot's menu left open last time shuts and the field takes the focus (ui.html openFind), whatever had it:
+  // a toast moved in with the focus loses it
+  const footFor = useRef<string | null>(null);
   useLayoutEffect(() => {
-    if (open) focusOn(field.current);
+    if (!open) return;
+    menus.hide(FOOT_MENU);
+    footFor.current = null;
+    focusOn(field.current);
   }, [open]);
 
   const hits = findHits(words, entries);
   const shown = hits.slice(0, FIND_ROWS);
   const at = findReached(shown, reached);
   const page = shown[at] ?? null;
-  // The row reached has gone (read again): what came to its place is reached now
-  if (reached.slug !== null && page?.slug !== reached.slug)
-    setReached({ slug: page?.slug ?? null, at: Math.max(at, 0) });
+  // The row reached is held by its page at once, as opened or typed too: read again, a new page at the top does not
+  // take its place; gone, what came to its place is reached now (ui.html findMark → moved)
+  const reachedNow = page?.slug ?? null;
+  if (reachedNow !== reached.slug) setReached({ slug: reachedNow, at: Math.max(at, 0) });
   const ranks = projectOrder(entries);
   const count = findCount(words, hits.length);
 
   // The foot follows the row reached: another row's menu shuts; the focus goes to the field only where it would be
   // lost — in the menu of the row left, on a button the row reached has not, or in the foot of a row gone
   // byKey tells that the row changed by an arrow, not by the rows read again
-  const footFor = useRef<string | null>(null);
   const byKey = useRef(false);
   useLayoutEffect(() => {
     if (!open) return;
@@ -120,11 +126,14 @@ export function FindDialog({
     if (what === 'closeMenu') {
       e.preventDefault();
       e.stopPropagation();
-      menus.hide(FOOT_MENU);
+      // Its button takes the focus back, where the arrows reach the rows again
+      closeMenu(menus, FOOT_MENU);
     } else if (what === 'hold') e.stopPropagation();
     else if (what === 'move') {
       e.preventDefault();
       const next = nextReached(at, shown.length, e.key);
+      // No rows, or the one: nothing to move to (ui.html: else if (n))
+      if (shown.length === 0 || next === at) return;
       byKey.current = true;
       setReached({ slug: shown[next]?.slug ?? null, at: next });
     } else if (what === 'open' && page) {
@@ -258,7 +267,7 @@ export function FindDialog({
         hidden={shown.length > 0}
         className="grid h-[min(20rem,calc(100dvh-17rem))] place-content-center px-6 text-center text-muted"
       >
-        <strong>{t('ui_nomatch')}</strong>
+        <strong className="text-base mb-1 block text-fg">{t('ui_nomatch')}</strong>
         {t('ui_find_no_files')}
       </div>
       <DialogActions testid="find-foot">

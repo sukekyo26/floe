@@ -209,7 +209,7 @@ const gallerySettings = createSettings({
             themes: THEMES,
             default: defaults.theme,
             taskMode: defaults.taskMode,
-            ...(themesAs === 'settings' ? { settings: 'settings.json: unexpected end' } : {}),
+            ...(themesAs === 'settings' ? { settings: { errors: [] } } : {}),
             ...(themesAs === 'broken'
               ? {
                   drawing: { mistakes: [{ file: 'parts/card/part.html', line: 3, column: 7, text: 'unexpected "}"' }] },

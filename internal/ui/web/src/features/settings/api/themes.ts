@@ -1,5 +1,6 @@
 import type { Client } from '@/lib/api-client';
 import { t } from '@/lib/t';
+import type { MessageKey } from '@/types/messages.gen';
 import { PAGES_API } from '@/utils/page-urls';
 
 export interface Theme {
@@ -23,7 +24,8 @@ export interface ThemesRead {
   themes: Theme[];
   default: string;
   taskMode: boolean;
-  settings?: string;
+  // settings is the report of why settings.json could not be read (the server's usererr.Report)
+  settings?: object;
   drawing?: { mistakes?: Mistake[]; failure?: string };
 }
 
@@ -32,6 +34,11 @@ const json = (body: unknown): RequestInit => ({
   headers: { 'content-type': 'application/json' },
   body: JSON.stringify(body),
 });
+// pageThemeWords are the words of a page's theme refused: changed meanwhile (409), or not drawn in it, its look kept
+// (400: the theme, one's own things or the data); null for any other answer, said as the server words it
+export const pageThemeWords = (status: number): MessageKey | null =>
+  status === 409 ? 'ui_theme_page_changed' : status === 400 ? 'ui_theme_page_undrawn' : null;
+
 const reason = async (res: Response) => (res.ok ? '' : t('ui_http_error', await res.text(), res.status));
 
 // readThemes reads the themes, throwing what keeps them from being read
@@ -67,9 +74,8 @@ export async function putSettings(client: Client, body: { theme: string } | { ta
 export async function putPageTheme(client: Client, slug: string, theme: string): Promise<string> {
   try {
     const res = await client.api(`${PAGES_API}/${encodeURIComponent(slug)}/theme`, json({ theme }));
-    if (res.status === 409) return t('ui_theme_page_changed');
-    if (res.status === 400) return t('ui_theme_page_undrawn');
-    return await reason(res);
+    const words = pageThemeWords(res.status);
+    return words ? t(words) : await reason(res);
   } catch (err) {
     return err instanceof Error ? err.message : String(err);
   }
