@@ -471,7 +471,6 @@ function Gallery() {
                   <Tab
                     key={name}
                     id={`tab-${String(rem)}-${name}`}
-                    panel={`panel-${String(rem)}`}
                     selected={tabNow === name}
                     onSelect={() => {
                       setTabNow(name);

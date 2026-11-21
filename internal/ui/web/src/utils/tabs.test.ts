@@ -11,6 +11,9 @@ describe(nextTab, () => {
       nextTab(0, 2, 'ArrowLeft'),
       nextTab(1, 3, 'ArrowLeft'),
       nextTab(1, 2, 'Enter'),
-    ]).toStrictEqual([1, 0, 1, 0, 1]);
+      nextTab(1, 3, 'ArrowRight'),
+      nextTab(2, 3, 'ArrowRight'),
+      nextTab(0, 3, 'ArrowLeft'),
+    ]).toStrictEqual([1, 0, 1, 0, 1, 2, 0, 2]);
   });
 });

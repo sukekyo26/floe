@@ -60,7 +60,7 @@ describe(KeysDialog, () => {
   });
 
   it('marks the tab it opens on chosen, the other out of the Tab order, each panel labelled by its tab', () => {
-    expect.assertions(3);
+    expect.assertions(4);
     testBoot();
     const html = renderToString(
       <KeysDialog
@@ -80,7 +80,19 @@ describe(KeysDialog, () => {
       [true, true],
       [false, false],
     ]);
-    expect(tab('about')).toMatch(/role="tab" id="help-tab-about" aria-controls="help-about"/);
-    expect(html).toMatch(/<div id="help-about" role="tabpanel" aria-labelledby="help-tab-about"(?![^>]*hidden)/);
+    // Of the same weight whichever is chosen, and no aria-controls (the help's test counts none)
+    expect(
+      [tab('about'), tab('keys')].map((x) => [/font-(semibold|bold|medium)/.test(x), x.includes('aria-controls')]),
+    ).toStrictEqual([
+      [false, false],
+      [false, false],
+    ]);
+    const panel = (name: string) => String(new RegExp(`<div id="help-${name}"[^>]*>`).exec(html)?.[0]);
+    expect([panel('about'), panel('keys')].map((x) => /aria-labelledby="([^"]*)"/.exec(x)?.[1])).toStrictEqual([
+      'help-tab-about',
+      'help-tab-keys',
+    ]);
+    // The panel shown is where Tab goes from the tabs; the hidden one is not
+    expect([panel('about').includes('tabindex="0"'), panel('keys').includes('tabindex')]).toStrictEqual([true, false]);
   });
 });

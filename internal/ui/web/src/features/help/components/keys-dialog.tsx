@@ -66,7 +66,6 @@ export function KeysDialog({ open, screen, diff, diffGo, backWords, mac, onClose
           <Tab
             key={name}
             id={`help-tab-${name}`}
-            panel={`help-${name}`}
             help={name}
             selected={tab === name}
             onSelect={() => {
@@ -89,6 +88,7 @@ export function KeysDialog({ open, screen, diff, diffGo, backWords, mac, onClose
           id="help-about"
           role="tabpanel"
           aria-labelledby="help-tab-about"
+          tabIndex={tab === 'about' ? 0 : undefined}
           hidden={tab !== 'about'}
           className="grid gap-4"
         >
@@ -138,6 +138,7 @@ export function KeysDialog({ open, screen, diff, diffGo, backWords, mac, onClose
           id="help-keys"
           role="tabpanel"
           aria-labelledby="help-tab-keys"
+          tabIndex={tab === 'keys' ? 0 : undefined}
           hidden={tab !== 'keys'}
           className="grid gap-4"
         >
