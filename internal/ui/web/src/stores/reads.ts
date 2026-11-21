@@ -96,9 +96,13 @@ export function createReads({
 
   function tellRead(slug: string, told: Told): Promise<ReadOutcome> {
     return new Promise((done) => {
-      waiting.get(slug)?.done({ kind: 'dropped' });
+      const before = waiting.get(slug);
+      before?.done({ kind: 'dropped' });
+      // A read that replaces one to be said is said (S428: a page opened that reads itself anew at once tells twice, the
+      // second not to be said); a mark unread is its own. A mark already sent is not waiting, and is not said twice
+      const said = told && before?.told?.say === true ? { ...told, say: true } : told;
       // A page waiting keeps its place, as a Map's set does
-      waiting.set(slug, { told, done });
+      waiting.set(slug, { told: said, done });
       if (!going) void send();
     });
   }

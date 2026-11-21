@@ -85,6 +85,34 @@ describe(createReads, () => {
     expect(s.sent).toStrictEqual(['POST a']);
   });
 
+  it('says a read that replaces one to be said (S428), not an unread mark, and not twice once the first is out', async () => {
+    expect.assertions(4);
+    const s = server({ a: () => Promise.resolve(new Response('{"cleared":true}')) });
+    vi.stubGlobal('fetch', s.fetch);
+    const quiet = { read: { n: 3, at: 't2' }, say: false };
+    // Opened, the page reads itself anew at once: the second read waits in the first's place, and is said
+    const reading = Promise.withResolvers<undefined>();
+    const first = made(reading.promise);
+    const opened = first.reads.tellRead('a', READ);
+    const again = first.reads.tellRead('a', quiet);
+    reading.resolve(undefined);
+    expect([await opened, await again]).toStrictEqual([{ kind: 'dropped' }, { kind: 'sent', cleared: true }]);
+    // A mark unread in its place is its own
+    const held = Promise.withResolvers<undefined>();
+    const unread = made(held.promise);
+    void unread.reads.tellRead('a', READ);
+    const marked = unread.reads.tellRead('a', null);
+    held.resolve(undefined);
+    await expect(marked).resolves.toStrictEqual({ kind: 'sent', cleared: false });
+    // The first sent already, the second is not said again
+    const late = made();
+    const sent = late.reads.tellRead('a', READ);
+    await Promise.resolve();
+    const after = late.reads.tellRead('a', quiet);
+    await expect(sent).resolves.toStrictEqual({ kind: 'sent', cleared: true });
+    await expect(after).resolves.toStrictEqual({ kind: 'sent', cleared: false });
+  });
+
   it('says a refused mark on the error line, a read cut off not but an unread one, and passes a page gone', async () => {
     expect.assertions(4);
     const s = server({
