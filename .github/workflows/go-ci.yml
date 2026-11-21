@@ -32,7 +32,7 @@ env:
 
 jobs:
   # Says whether a pull request changes only files that the jobs below need not run for, for them to skip their work and
-  # report success under the names the ruleset requires; any other event runs all. A failure here leaves the outputs
+  # report success, under the names the ruleset requires or to Browser; any other event runs all. A failure here leaves the outputs
   # empty, so everything runs.
   # LIMIT: the files are named one by one from what //go:embed, the tests and the screens read. Add one only when a grep
   # shows it: at level 1 nothing builds or tests it; at level 2 no browser test reads it and no screen shows it.
@@ -193,9 +193,25 @@ jobs:
           mkdir -p /c/floe-tmp
           go test -count=1 -timeout 15m $(go list ./... | grep -v /internal/browsertest$)
 
+  # The browser jobs' parts, from the justfile (just browser-parts). If this fails, Browser fails: run the workflow again.
+  browser-parts:
+    name: Browser parts
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    outputs:
+      parts: ${{ steps.parts.outputs.parts }}
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+      - uses: ./.github/actions/setup-just
+      - id: parts
+        # Set apart from echo, so that a failing recipe fails the step.
+        run: |
+          parts=$(just browser-parts)
+          echo "parts=$parts" >> "$GITHUB_OUTPUT"
+
   browser:
     name: Browser (${{ matrix.part }})
-    needs: changes
+    needs: [changes, browser-parts]
     # It always runs, so that its checks report and Browser below reads success; its steps skip instead.
     if: ${{ !cancelled() }}
     runs-on: ubuntu-latest
@@ -203,7 +219,7 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        part: [looks, rest]
+        part: ${{ fromJSON(needs.browser-parts.outputs.parts) }}
     steps:
       - if: ${{ needs.changes.outputs.skip_browser != 'true' }}
         uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
@@ -229,7 +245,8 @@ jobs:
           FLOE_CHROME: ${{ steps.chrome.outputs.chrome-path }}
 
   # One check for all the browser jobs, so that the ruleset need not change when the matrix does. always(), not
-  # !cancelled(): a cancelled run would skip this job, and a skipped required check may count as passed.
+  # !cancelled(): a cancelled run would skip this job, and a skipped required check may count as passed. A cancelled run
+  # shows it failed.
   browser-done:
     name: Browser
     needs: browser
