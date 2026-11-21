@@ -17,11 +17,6 @@ import (
 	"floe/internal/testfs"
 )
 
-//go:fix inline
-func ptr[T any](v T) *T {
-	return new(v)
-}
-
 // pageTaskOf is the task of the page slug in the store of env.
 func pageTaskOf(t *testing.T, env map[string]string, slug string) string {
 	t.Helper()

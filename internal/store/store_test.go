@@ -22,11 +22,6 @@ import (
 	"floe/internal/usererr"
 )
 
-//go:fix inline
-func ptr[T any](v T) *T {
-	return new(v)
-}
-
 // told words err as the command line does, the store's path as "S".
 func told(err error, root string) string {
 	return strings.ReplaceAll(usererr.Tell(i18n.EnglishCatalog(), err).Render("floe: "), root, "S")
