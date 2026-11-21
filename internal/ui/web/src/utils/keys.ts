@@ -33,8 +33,3 @@ export const plainKey = (e: KeyPress & { target: KeyTarget | null }, dialogOpen:
 // start with v: the focus stays there
 export const diffPickKey = (e: KeyPress, onVersionPick: boolean): boolean =>
   !e.ctrlKey && !e.metaKey && !e.altKey && onVersionPick && ['n', 'p', 'd', 'j', 'k'].includes(e.key);
-
-// heldKey tells a key that goes on to the browser while a modal is held by a write: those with a modifier and the
-// function keys (a page held by a write that never answers can still be loaded again), and an input method's
-export const heldKey = (e: KeyPress & Pick<KeyboardEvent, 'isComposing' | 'keyCode'>): boolean =>
-  e.ctrlKey || e.metaKey || e.altKey || /^F\d+$/.test(e.key) || composing(e);

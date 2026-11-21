@@ -53,9 +53,10 @@ function Heading({ item }: { readonly item: Extract<RowItem, { kind: 'group' }> 
   return (
     <li
       data-key={item.key}
-      data-testid={item.add ? 'adds' : 'group'}
+      data-testid="group"
+      data-adds={item.add ? 'true' : undefined}
       role="none"
-      className={`px-[calc(1rem+1px)] pt-2.75 pb-1 text-small leading-[1.2] font-bold text-muted ${item.add ? 'grid grid-cols-[minmax(0,1fr)_auto] items-center gap-x-2 gap-y-1' : 'block'}`}
+      className={`ps-[calc(1rem+1px)] pe-0 pt-2.75 pb-1 text-small leading-[1.2] font-bold text-muted ${item.add ? 'grid grid-cols-[minmax(0,1fr)_auto] items-center gap-x-2 gap-y-1' : 'block'}`}
     >
       <h2 className="m-0">{item.heading}</h2>
       {item.add ? (

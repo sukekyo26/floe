@@ -17,7 +17,7 @@ describe(ServerState, () => {
     );
     client.reached.set(false);
     const down = renderToString(<ServerState client={client} host={() => 'h:1'} />);
-    expect(down).toContain('data-down=""');
+    expect(down).toContain('data-down="true"');
     expect(down).toMatch(/>ui_server_down:[^<]*<\/output>$/);
   });
 });

@@ -50,7 +50,7 @@ const PAGES: Page[] = [
     createdAt: ago(90),
     updatedAt: ago(1),
     taskProject: 'floe',
-    news: 'v2',
+    news: 'version',
   },
   {
     slug: 'picked',
@@ -318,7 +318,7 @@ function Gallery() {
         onSet={(w) => {
           setWidth(Math.min(Math.max(Math.round(w), 200), 600));
         }}
-        onKeep={() => toasts.toast(`kept ${String(width)}`)}
+        onKeep={() => toasts.toast('kept')}
       />
       <Toasts />
     </div>

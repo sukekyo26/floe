@@ -3,8 +3,7 @@ import { createContext, use, useEffectEvent, useLayoutEffect, useRef, type React
 import { Button } from '@/components/button';
 import type { Hold } from '@/hooks/use-hold';
 import { t } from '@/lib/t';
-import { backdropDown } from '@/utils/dialog';
-import { heldKey } from '@/utils/keys';
+import { backdropCloses, heldKey, type PressDown } from '@/utils/dialog';
 
 interface DialogScope {
   // close is the one way a modal closes (ui.md: closeDialog), for its close buttons
@@ -54,7 +53,7 @@ export function Dialog({
   const ref = useRef<HTMLDialogElement>(null);
   const was = useRef({ open: false, held: false });
   const giving = useRef(false);
-  const downOutside = useRef(false);
+  const down = useRef<PressDown | null>(null);
   const { held } = hold;
 
   const shutNow = (d: HTMLDialogElement) => {
@@ -107,11 +106,11 @@ export function Dialog({
         // and not while closedby none holds it
         onCancel={close}
         onPointerDown={(e) => {
-          downOutside.current = backdropDown(e.target === e.currentTarget, held);
+          down.current = { onDialog: e.target === e.currentTarget, held };
         }}
         onClick={(e) => {
-          if (e.target === e.currentTarget && downOutside.current) close();
-          downOutside.current = false;
+          if (backdropCloses(down.current, e.target === e.currentTarget)) close();
+          down.current = null;
         }}
         onKeyDownCapture={(e) => {
           if (!held || heldKey(e.nativeEvent)) return;

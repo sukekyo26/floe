@@ -14,10 +14,20 @@ describe(IconButton, () => {
     expect(bar).not.toContain('h-6.5');
   });
 
+  it('takes the gap of one size alone, a menu item’s wider', () => {
+    expect.assertions(2);
+    const gaps = (html: string) =>
+      String(/class="([^"]*)"/.exec(html)?.[1])
+        .split(' ')
+        .filter((c) => c.startsWith('gap-'));
+    expect(gaps(renderToString(<IconButton size="item">x</IconButton>))).toStrictEqual(['gap-2.5']);
+    expect(gaps(renderToString(<IconButton>x</IconButton>))).toStrictEqual(['gap-1.5']);
+  });
+
   it('tells a toggle pressed or not, a button that toggles nothing neither, and Restore on but not pressed', () => {
     expect.assertions(3);
     expect(renderToString(<IconButton pressed={false}>x</IconButton>)).toContain('aria-pressed="false"');
     expect(renderToString(<IconButton>x</IconButton>)).not.toContain(' aria-pressed=');
-    expect(renderToString(<IconButton on>x</IconButton>)).toMatch(/data-on=""(?![^>]* aria-pressed=)/);
+    expect(renderToString(<IconButton on>x</IconButton>)).toMatch(/data-on="true"(?![^>]* aria-pressed=)/);
   });
 });

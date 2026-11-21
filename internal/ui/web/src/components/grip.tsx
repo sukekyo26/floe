@@ -38,7 +38,7 @@ export function Grip({ id, label, controls, at, width, min, max, left = () => 0,
       aria-valuemax={max}
       tabIndex={0}
       hidden={hidden}
-      data-dragging={dragging ? '' : undefined}
+      data-dragging={dragging ? 'true' : undefined}
       style={{ left: `${at - 3}px` }}
       onPointerDown={(e) => {
         if (e.button) return;

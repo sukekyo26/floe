@@ -1,12 +1,25 @@
 import { describe, expect, it } from 'vitest';
 
-import { backdropDown } from '@/utils/dialog';
+import { backdropCloses, heldKey } from '@/utils/dialog';
 
-describe(backdropDown, () => {
-  it('counts a press down on the backdrop of a modal not held, and none in its body or while it is held', () => {
-    expect.assertions(3);
-    expect(backdropDown(true, false)).toBe(true);
-    expect(backdropDown(false, false)).toBe(false);
-    expect(backdropDown(true, true)).toBe(false);
+describe(backdropCloses, () => {
+  it('closes on a press down and up on the backdrop of a modal not held, and on no other', () => {
+    expect.assertions(5);
+    expect(backdropCloses({ onDialog: true, held: false }, true)).toBe(true);
+    expect(backdropCloses({ onDialog: true, held: false }, false)).toBe(false);
+    expect(backdropCloses({ onDialog: false, held: false }, true)).toBe(false);
+    expect(backdropCloses({ onDialog: true, held: true }, true)).toBe(false);
+    expect(backdropCloses(null, true)).toBe(false);
+  });
+});
+
+describe(heldKey, () => {
+  it('lets a held modal pass the keys with a modifier, the function keys and an input method’s, and no other', () => {
+    expect.assertions(4);
+    const key = { key: 'j', ctrlKey: false, metaKey: false, altKey: false, isComposing: false, keyCode: 0 };
+    expect(heldKey({ ...key, key: 'F5' })).toBe(true);
+    expect(heldKey({ ...key, key: 'r', ctrlKey: true })).toBe(true);
+    expect(heldKey({ ...key, key: 'Enter', isComposing: true })).toBe(true);
+    expect(heldKey({ ...key, key: 'Escape' })).toBe(false);
   });
 });

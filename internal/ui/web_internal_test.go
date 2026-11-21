@@ -114,7 +114,11 @@ func TestGalleryBoot(t *testing.T) {
 	if *gallery == "" {
 		t.Skip("writes web/gallery/boot.json with -gallery only")
 	}
-	b, err := json.Marshal(newBoot(i18n.New(i18n.Tag(*gallery)), List, "", false, ""))
+	lang := i18n.Lang(*gallery)
+	if !slices.Contains(i18n.Langs(), lang) {
+		t.Fatalf("-gallery=%s: not a language of floe's: %v", *gallery, i18n.Langs())
+	}
+	b, err := json.Marshal(newBoot(i18n.New(lang), List, "", false, ""))
 	if err != nil {
 		t.Fatal(err)
 	}

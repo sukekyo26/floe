@@ -252,7 +252,7 @@
       {
         "patterns": [
           {
-            "group": ["@/../**"],
+            "group": ["@/../**", "**/gallery/**"],
             "message": "src imports nothing outside src: the gallery is the gallery's alone"
           }
         ]
@@ -343,7 +343,7 @@
                 "message": "types import types alone"
               },
               {
-                "group": ["@/../**"],
+                "group": ["@/../**", "**/gallery/**"],
                 "message": "src imports nothing outside src: the gallery is the gallery's alone"
               }
             ]
@@ -363,7 +363,7 @@
                 "message": "utils are pure: they import utils and types alone"
               },
               {
-                "group": ["@/../**"],
+                "group": ["@/../**", "**/gallery/**"],
                 "message": "src imports nothing outside src: the gallery is the gallery's alone"
               }
             ]
@@ -383,7 +383,7 @@
                 "message": "config imports types alone"
               },
               {
-                "group": ["@/../**"],
+                "group": ["@/../**", "**/gallery/**"],
                 "message": "src imports nothing outside src: the gallery is the gallery's alone"
               }
             ]
@@ -407,7 +407,7 @@
                 "message": "lib imports no store, hook or component: a store calls lib"
               },
               {
-                "group": ["@/../**"],
+                "group": ["@/../**", "**/gallery/**"],
                 "message": "src imports nothing outside src: the gallery is the gallery's alone"
               }
             ]
@@ -431,7 +431,7 @@
                 "message": "stores import no hook or component"
               },
               {
-                "group": ["@/../**"],
+                "group": ["@/../**", "**/gallery/**"],
                 "message": "src imports nothing outside src: the gallery is the gallery's alone"
               }
             ]
@@ -455,7 +455,7 @@
                 "message": "hooks import no component"
               },
               {
-                "group": ["@/../**"],
+                "group": ["@/../**", "**/gallery/**"],
                 "message": "src imports nothing outside src: the gallery is the gallery's alone"
               }
             ]
@@ -475,7 +475,7 @@
                 "message": "shared code imports no feature and no app"
               },
               {
-                "group": ["@/../**"],
+                "group": ["@/../**", "**/gallery/**"],
                 "message": "src imports nothing outside src: the gallery is the gallery's alone"
               }
             ]
@@ -505,7 +505,7 @@
                 "message": "only app imports app"
               },
               {
-                "group": ["@/../**"],
+                "group": ["@/../**", "**/gallery/**"],
                 "message": "src imports nothing outside src: the gallery is the gallery's alone"
               }
             ]
@@ -529,7 +529,7 @@
                 "message": "only app imports app"
               },
               {
-                "group": ["@/../**"],
+                "group": ["@/../**", "**/gallery/**"],
                 "message": "src imports nothing outside src: the gallery is the gallery's alone"
               }
             ]
@@ -553,7 +553,7 @@
                 "message": "only app imports app"
               },
               {
-                "group": ["@/../**"],
+                "group": ["@/../**", "**/gallery/**"],
                 "message": "src imports nothing outside src: the gallery is the gallery's alone"
               }
             ]
@@ -577,7 +577,7 @@
                 "message": "only app imports app"
               },
               {
-                "group": ["@/../**"],
+                "group": ["@/../**", "**/gallery/**"],
                 "message": "src imports nothing outside src: the gallery is the gallery's alone"
               }
             ]
@@ -601,7 +601,7 @@
                 "message": "only app imports app"
               },
               {
-                "group": ["@/../**"],
+                "group": ["@/../**", "**/gallery/**"],
                 "message": "src imports nothing outside src: the gallery is the gallery's alone"
               }
             ]
@@ -625,7 +625,7 @@
                 "message": "only app imports app"
               },
               {
-                "group": ["@/../**"],
+                "group": ["@/../**", "**/gallery/**"],
                 "message": "src imports nothing outside src: the gallery is the gallery's alone"
               }
             ]
@@ -649,7 +649,7 @@
                 "message": "only app imports app"
               },
               {
-                "group": ["@/../**"],
+                "group": ["@/../**", "**/gallery/**"],
                 "message": "src imports nothing outside src: the gallery is the gallery's alone"
               }
             ]
@@ -673,7 +673,7 @@
                 "message": "only app imports app"
               },
               {
-                "group": ["@/../**"],
+                "group": ["@/../**", "**/gallery/**"],
                 "message": "src imports nothing outside src: the gallery is the gallery's alone"
               }
             ]
@@ -697,7 +697,7 @@
                 "message": "only app imports app"
               },
               {
-                "group": ["@/../**"],
+                "group": ["@/../**", "**/gallery/**"],
                 "message": "src imports nothing outside src: the gallery is the gallery's alone"
               }
             ]
@@ -721,7 +721,7 @@
                 "message": "only app imports app"
               },
               {
-                "group": ["@/../**"],
+                "group": ["@/../**", "**/gallery/**"],
                 "message": "src imports nothing outside src: the gallery is the gallery's alone"
               }
             ]

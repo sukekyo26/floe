@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 
-import { diffPickKey, heldKey, keyName, plainKey, type KeyTarget } from '@/utils/keys';
+import { diffPickKey, keyName, plainKey, type KeyTarget } from '@/utils/keys';
 
 const press = { key: 'j', ctrlKey: false, metaKey: false, altKey: false };
 // A target that is in what the selector names when it is one of in
@@ -39,16 +39,5 @@ describe(diffPickKey, () => {
     expect(diffPickKey({ ...press, key: 'n' }, true)).toBe(true);
     expect(diffPickKey({ ...press, key: 'v' }, true)).toBe(false);
     expect(diffPickKey({ ...press, key: 'n' }, false)).toBe(false);
-  });
-});
-
-describe(heldKey, () => {
-  it('lets a held modal pass the keys with a modifier, the function keys and an input method’s, and no other', () => {
-    expect.assertions(4);
-    const key = { ...press, isComposing: false, keyCode: 0 };
-    expect(heldKey({ ...key, key: 'F5' })).toBe(true);
-    expect(heldKey({ ...key, key: 'r', ctrlKey: true })).toBe(true);
-    expect(heldKey({ ...key, key: 'Enter', isComposing: true })).toBe(true);
-    expect(heldKey({ ...key, key: 'Escape' })).toBe(false);
   });
 });
