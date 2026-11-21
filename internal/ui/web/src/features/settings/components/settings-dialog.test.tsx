@@ -42,9 +42,15 @@ const radios = (html: string) =>
 
 describe(SettingsDialog, () => {
   it('opens on its list, with the values read and its part told, the theme chosen checked', () => {
-    expect.assertions(3);
+    expect.assertions(4);
     const html = draw({}, null);
     expect(attrs(html, '<dialog')).toMatch(/data-panel="list"[^>]*w-\[min\(40rem/);
+    // The head's two marks, by name on the svg itself, the page's hidden
+    expect(
+      [...html.matchAll(/<svg data-testid="([^"]*)"([^>]*)>/g)].map(
+        (m) => `${String(m[1])}:${String(m[2]?.includes('hidden=""'))}`,
+      ),
+    ).toStrictEqual(['page-icon:true', 'settings-icon:false']);
     expect(html).toMatch(/id="settings-theme-now"[^>]*>mine<.*id="settings-mode-now"[^>]*>ui_mode_on/s);
     expect(radios(html)).toStrictEqual(['default:false', 'mine:true']);
   });
