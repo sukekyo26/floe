@@ -41,7 +41,7 @@ const titleWords = (a: Page): string =>
     .join('\n');
 
 // What the row is: a folder's or a link's mark, or a page's dot (unread) or ring
-function Lead({ page, unread }: { readonly page: Page; readonly unread: boolean }) {
+export function Lead({ page, unread }: { readonly page: Page; readonly unread: boolean }) {
   if (page.folder) return <FolderMark />;
   if (page.path) return <LinkMark />;
   return unread ? (
