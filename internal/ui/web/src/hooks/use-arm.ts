@@ -9,6 +9,9 @@ export const armNext = (armedFor: string | null, key: string): { armedFor: strin
   act: armedFor === key,
 });
 
+// armedAt is whether the button shows armed for key: armed for another page, it shows unarmed
+export const armedAt = (armedFor: string | null, key: string): boolean => armedFor === key;
+
 export interface Arm {
   armed: boolean;
   // press arms the button and answers true, or, armed, answers false: the caller acts
@@ -21,7 +24,7 @@ export interface Arm {
 export function useArm(key: string): Arm {
   const [armedFor, setArmedFor] = useState<string | null>(null);
   return {
-    armed: armedFor === key,
+    armed: armedAt(armedFor, key),
     press: () => {
       const next = armNext(armedFor, key);
       setArmedFor(next.armedFor);

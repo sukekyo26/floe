@@ -22,6 +22,7 @@ import {
 import { MenuItem, MoreMenu } from '@/components/more-menu';
 import { useArm } from '@/hooks/use-arm';
 import { t } from '@/lib/t';
+import { closedThen, menus } from '@/stores/menus';
 import { pageActions as pageActionStore, type PageActions } from '@/stores/page-actions';
 import type { Page } from '@/types/page';
 import { hasPage, removal } from '@/utils/list-view';
@@ -261,7 +262,7 @@ export function PageMenu({
         onBlur={arm.disarm}
         onSelect={() => {
           if (arm.press()) return;
-          void actions.removePage(a, onRemoved);
+          void actions.removePage(a, closedThen(menus, menuId, onRemoved));
         }}
       >
         {t(arm.armed ? `ui_${kind}_confirm` : `ui_${kind}`)}

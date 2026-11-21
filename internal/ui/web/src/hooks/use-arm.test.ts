@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 
-import { armNext } from '@/hooks/use-arm';
+import { armedAt, armNext } from '@/hooks/use-arm';
 
 describe(armNext, () => {
   it('arms on the first press, acts on the second and stays armed after it', () => {
@@ -12,5 +12,12 @@ describe(armNext, () => {
   it('arms anew for another page rather than acting on it', () => {
     expect.assertions(1);
     expect(armNext('a', 'b')).toStrictEqual({ armedFor: 'b', act: false });
+  });
+});
+
+describe(armedAt, () => {
+  it('shows armed for its own page alone', () => {
+    expect.assertions(1);
+    expect([armedAt('a', 'a'), armedAt('a', 'b'), armedAt(null, 'a')]).toStrictEqual([true, false, false]);
   });
 });
