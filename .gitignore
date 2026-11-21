@@ -5,3 +5,6 @@
 
 # Worktrees inside the main checkout
 /.claude/worktrees/
+
+# The management page's packages (internal/ui/web)
+/internal/ui/web/node_modules/
