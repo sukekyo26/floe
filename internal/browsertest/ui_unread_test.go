@@ -8,6 +8,7 @@ import (
 	"github.com/chromedp/cdproto/emulation"
 	"github.com/chromedp/cdproto/input"
 	"github.com/chromedp/chromedp"
+	"github.com/chromedp/chromedp/kb"
 )
 
 // unreadSite is a site of three new pages, a link, and a script that notes what is sent of a read, and answers as a test plans:
@@ -139,13 +140,28 @@ func TestUIRowAgainUnread(t *testing.T) { //nolint:paralleltest // the browser t
 	b.until("its toast whole", "document.querySelector('.toast.page .btn')")
 }
 
+// The button of the toast of the page shown.
+const pageToastButton = "document.querySelector('[data-testid=toast][data-kind~=page] button')"
+
+// openRowOf presses the title of the row of slug.
+func openRowOf(b *browser, slug string) {
+	b.t.Helper()
+	b.moving(fmt.Sprintf(unreadRow, slug) + ".querySelector('[data-testid=title]').click()")
+}
+
+// untilUnseen waits until the row of slug is unseen, or not, as want says.
+func untilUnseen(b *browser, slug string, want bool) {
+	b.t.Helper()
+	b.until(fmt.Sprintf("%s unseen %v", slug, want), "("+fmt.Sprintf(unreadRow, slug)+".dataset.unread === 'true') === "+fmt.Sprint(want))
+}
+
 // TestUIReadRefused says a read the server refuses as a failure to mark the page read, the server's answer its reason.
 func TestUIReadRefused(t *testing.T) { //nolint:paralleltest // the browser tests share one Chrome, one at a time
 	s := unreadSite(t)
 	b := s.b
 	unreadList(b)
 	b.eval("window.plan.POST = [500]")
-	pickUnread(b, "p1")
+	openRowOf(b, "p1")
 	b.until("refused", "document.getElementById('error').textContent !== ''")
 	check(t, "refused", []string{b.eval("document.getElementById('error').textContent")}, "Failed to mark as read: HTTP 500: no")
 }
@@ -275,12 +291,20 @@ func TestUIUnreadToast(t *testing.T) { //nolint:paralleltest // the browser test
 		window.fire = () => { const [k, v] = [...window.timers][0]; window.timers.delete(k); v.f(); };
 	})()`)
 	unreadList(b)
-	const timers = "[...window.timers.values()].map((x) => x.ms).join(',')"
-	pickUnread(b, "p1")
-	b.until("the toast", "document.querySelector('.toast.page .btn')")
+	const (
+		timers = "[...window.timers.values()].map((x) => x.ms).join(',')"
+		toast  = "[data-testid=toast][data-kind~=page]"
+	)
+	// p3 read first, a page read and not shown to mark unread below; the time of its toast, gone as p1's comes, is not this test's
+	openRowOf(b, "p3")
+	b.until("p3's toast", pageToastButton)
+	untilUnseen(b, "p3", false)
+	b.eval("window.timers.clear()")
+	openRowOf(b, "p1")
+	b.until("the toast", pageToastButton+"?.getAttribute('aria-label') === 'Mark Title p1 as unread'")
 	b.still()
 	out := make([]string, 0, 13)
-	out = append(out, b.eval(timers), b.eval("getComputedStyle(document.querySelector('.toast.page')).animationName"))
+	out = append(out, b.eval(timers), b.eval("getComputedStyle(document.querySelector("+js(toast)+")).animationName"))
 	at := func(selector string) (float64, float64) {
 		t.Helper()
 		var x, y float64
@@ -295,17 +319,17 @@ func TestUIUnreadToast(t *testing.T) { //nolint:paralleltest // the browser test
 			t.Fatal(err)
 		}
 	}
-	x, y := at(".toast.page")
+	x, y := at(toast)
 	move(x, y)
 	b.until("held by the pointer", "window.timers.size === 0")
-	b.eval("document.querySelector('.toast.page .btn').focus()")
+	b.eval(pageToastButton + ".focus()")
 	move(5, 5)
 	b.eval("new Promise((go) => setTimeout(go, 50))")
 	out = append(out, b.eval(timers)) // the focus still holds it
 	b.eval("document.activeElement.blur()")
 	out = append(out, b.eval(timers))
 	// The focus alone holds it too.
-	b.eval("document.querySelector('.toast.page .btn').focus()")
+	b.eval(pageToastButton + ".focus()")
 	out = append(out, b.eval(timers))
 	b.eval("document.activeElement.blur()")
 	// By a finger: held only while it is down, though :hover stays.
@@ -317,7 +341,7 @@ func TestUIUnreadToast(t *testing.T) { //nolint:paralleltest // the browser test
 	}
 	touch(true)
 	defer touch(false)
-	x, y = at(".toast.page")
+	x, y = at(toast)
 	finger := func(kind input.DispatchTouchEventType, points ...*input.TouchPoint) {
 		t.Helper()
 		if _, err := chromedp.Call(b.ctx, input.DispatchTouchEvent, input.DispatchTouchEventParams{Type: kind, TouchPoints: points}); err != nil {
@@ -330,26 +354,27 @@ func TestUIUnreadToast(t *testing.T) { //nolint:paralleltest // the browser test
 	touch(false)
 	// When its time is up it goes. The words after a press, for 5 seconds.
 	b.eval("window.fire()")
-	out = append(out, b.eval("document.querySelectorAll('.toast.page').length"))
-	b.eval("markUnread('p1')")
-	b.until("the words", "document.querySelector('.toast.page')")
-	out = append(out, b.eval(timers), b.eval("getComputedStyle(document.querySelector('.toast.page')).animationName"))
+	out = append(out, b.eval("document.querySelectorAll("+js(toast)+").length"))
+	pressMenuItem(b, "#read-actions", "mark-unread")
+	b.until("the words", "document.querySelector("+js(toast)+")")
+	out = append(out, b.eval(timers), b.eval("getComputedStyle(document.querySelector("+js(toast)+")).animationName"))
 	// With no button it leaves the pointer to the page under it, which one with a button takes.
-	out = append(out, b.eval("getComputedStyle(document.querySelector('.toast.page')).pointerEvents"))
+	out = append(out, b.eval("getComputedStyle(document.querySelector("+js(toast)+")).pointerEvents"))
 	// Of a page not shown, the words stand beside the toast of the one shown.
-	pickUnread(b, "p2")
-	b.until("its toast", "document.querySelector('.toast.page .btn')")
-	out = append(out, b.eval("getComputedStyle(document.querySelector('.toast.page')).pointerEvents"))
-	b.eval("markUnread('p3')")
-	b.until("the words of another", "[...document.querySelectorAll('.toast.timed:not(.page)')].length === 1")
-	out = append(out, b.eval("document.querySelectorAll('.toast.page .btn').length"))
+	openRowOf(b, "p2")
+	b.until("its toast", pageToastButton)
+	out = append(out, b.eval("getComputedStyle(document.querySelector("+js(toast)+")).pointerEvents"))
+	pressMenuItem(b, "#list li[data-slug=p3]", "mark-unread")
+	b.until("the words of another", "document.querySelectorAll('[data-testid=toast][data-kind~=timed]:not([data-kind~=page])').length === 1")
+	out = append(out, b.eval("document.querySelectorAll("+js(toast+" button")+").length"))
 	// In the search modal, on top and to be pressed; its focus goes back to the field.
-	b.eval("openFind()")
+	b.pressKey("k", kb.ModifierCtrl)
+	b.until("the search", "document.getElementById('find').open")
 	b.still()
-	x, y = at(".toast.page .btn")
-	out = append(out, b.eval(fmt.Sprintf("document.elementFromPoint(%f, %f).matches('.toast.page .btn')", x, y)))
-	b.eval("document.querySelector('.toast.page .btn').focus(); document.querySelector('.toast.page .btn').click()")
-	b.until("the words in it", "!document.querySelector('.toast.page .btn')")
+	x, y = at(toast + " button")
+	out = append(out, b.eval(fmt.Sprintf("document.elementFromPoint(%f, %f) === %s", x, y, pageToastButton)))
+	b.eval(pageToastButton + ".focus(); " + pageToastButton + ".click()")
+	b.until("the words in it", "!"+pageToastButton)
 	out = append(out, b.eval("document.activeElement.id"))
 	check(t, "toast", out, strings.Join([]string{
 		"8000", "toast-in", "", "8000", "", "0", "5000", "toast-in", "none", "auto", "1", "true", "find-q",
@@ -363,30 +388,34 @@ func TestUIUnreadMenu(t *testing.T) { //nolint:paralleltest // the browser tests
 	unreadList(b)
 	item := func(box string) string {
 		t.Helper()
-		return b.eval("document.querySelector(" + js(box+" .mark-unread") + ").hidden")
+		return b.eval("document.querySelector(" + js(box+" [data-testid=mark-unread]") + ").hidden")
 	}
 	out := make([]string, 0, 10)
 	out = append(out, item("#list li[data-slug=p1]"), item("#list li[data-slug=l]"))
-	pickUnread(b, "p1")
-	isUnseen(b, "p1", false)
-	out = append(out, item("#list li[data-slug=p1]"), item("#read-actions"), b.eval("document.querySelector('#list li[data-slug=p1] .mark-unread').getAttribute('aria-label')"))
-	b.eval("openFind()")
+	openRowOf(b, "p1")
+	untilUnseen(b, "p1", false)
+	out = append(out, item("#list li[data-slug=p1]"), item("#read-actions"), b.eval("document.querySelector('#list li[data-slug=p1] [data-testid=mark-unread]').getAttribute('aria-label')"))
+	b.pressKey("k", kb.ModifierCtrl)
+	b.until("the search", "document.getElementById('find').open && document.querySelector('#find-actions [data-testid=mark-unread]')")
 	out = append(out, item("#find-actions")) // the first row, new
-	typeFind(b, "Title p1")
+	b.fill("#find-q", "Title p1")
 	out = append(out, item("#find-actions"))
-	b.eval("document.getElementById('find').close()")
+	b.pressKey(kb.Escape)
+	b.until("the search closed", "!document.getElementById('find').open")
 	// Pressed in a row's menu, the row drawn anew has the focus on its menu.
-	b.eval("(() => { const s = document.querySelector('#list li[data-slug=p1] summary'); s.focus(); s.click(); document.querySelector('#list li[data-slug=p1] .mark-unread').click(); })()")
-	isUnseen(b, "p1", true)
+	b.eval("(() => { const s = document.querySelector('#list li[data-slug=p1] summary'); s.focus(); s.click(); })()")
+	b.until("the item", "document.querySelector('#list li[data-slug=p1] [data-testid=mark-unread]').checkVisibility()")
+	b.eval("document.querySelector('#list li[data-slug=p1] [data-testid=mark-unread]').click()")
+	untilUnseen(b, "p1", true)
 	b.still()
 	out = append(out, b.eval("document.activeElement.matches('#list li[data-slug=p1] summary')"), item("#list li[data-slug=p1]"), item("#read-actions"))
 	// The bar of a page open whole.
 	b.navigate("/a/p1/")
-	b.until("the toast", "document.querySelector('.toast.page .btn')")
-	b.until("read in its bar", "!document.querySelector('#frame-actions .mark-unread').hidden")
-	b.eval("document.querySelector('#frame-actions summary').click(); document.querySelector('#frame-actions .mark-unread').click()")
-	b.until("the words", "!document.querySelector('.toast.page .btn')")
-	b.until("hidden in its bar", "document.querySelector('#frame-actions .mark-unread').hidden")
+	b.until("the toast", pageToastButton)
+	b.until("read in its bar", "document.querySelector('#frame-actions [data-testid=mark-unread]')?.hidden === false")
+	pressMenuItem(b, "#frame-actions", "mark-unread")
+	b.until("the words", "!"+pageToastButton)
+	b.until("hidden in its bar", "document.querySelector('#frame-actions [data-testid=mark-unread]').hidden")
 	check(t, "menu", out, strings.Join([]string{
 		"true", "true", "false", "false", "Mark Title p1 as unread", "true", "false", "true", "true", "true",
 	}, "|"))

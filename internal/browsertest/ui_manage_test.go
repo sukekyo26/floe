@@ -238,12 +238,12 @@ func uiExtras(t *testing.T, lang i18n.Lang, msg func(string, ...any) string) {
 	b := newBrowser(t, servetest.Start(t, nil).Base, lang)
 	b.stub(extrasList)
 	b.navigate("/")
-	const titles = "[...document.querySelectorAll('#list .title')].map((a) => a.textContent).join(',')"
+	const titles = "[...document.querySelectorAll('#list [data-testid=title]')].map((a) => a.textContent).join(',')"
 	// What the list counts, and the view in the URL: the kinds, the project chips and whether they show, the views,
 	// the head and the titles.
-	const counts = "[...document.querySelectorAll('#kinds .n')].map((n) => n.textContent)" +
-		".concat([...document.querySelectorAll('#chips .chip')].map((c) => c.textContent), document.getElementById('shelf-projects').hidden, " +
-		"[...document.querySelectorAll('.views .n')].map((n) => n.textContent).join(' '), document.getElementById('count').textContent, " + titles + ", " +
+	const counts = "[...document.querySelectorAll('#kinds [data-testid=n]')].map((n) => n.textContent)" +
+		".concat([...document.querySelectorAll('#chips > button')].map((c) => c.textContent), document.getElementById('shelf-projects').hidden, " +
+		"[...document.querySelectorAll('#shelf [data-testid=views] [data-testid=n]')].map((n) => n.textContent).join(' '), document.getElementById('count').textContent, " + titles + ", " +
 		"new URLSearchParams(location.search).get('view')).join(' ')"
 	// Which empty states show, and their words.
 	const empties = "['empty', 'all-archived', 'empty-new', 'empty-favorites', 'empty-archived', 'nomatch']" +
@@ -255,15 +255,15 @@ func uiExtras(t *testing.T, lang i18n.Lang, msg func(string, ...any) string) {
 	out := make([]string, 0, 32)
 	out = append(out, b.eval(titles))
 	// The shelf's favourites narrow to them (kept in the URL); a row's star sends the change.
-	b.eval("document.querySelector('.views [data-view=fav]').click()")
+	b.eval("document.querySelector('#shelf [data-view=fav]').click()")
 	out = append(out, b.eval(titles)+" "+b.eval("new URLSearchParams(location.search).get('view')"))
-	b.eval("document.querySelector('.views [data-view=all]').click()")
-	b.eval("document.querySelector('#list li:not(.group) .star').click()")
+	b.eval("document.querySelector('#shelf [data-view=all]').click()")
+	b.eval("document.querySelector('#list li:not([data-testid=group]) [data-testid=star]').click()")
 	out = append(out, b.until("the favourite", "calls.splice(0).join(',')"))
 	// The title's tooltip has both the creation and the update.
-	out = append(out, b.eval("document.querySelector('#list li:not(.group) .title').title.split('\\n').slice(1).map((l) => l.split(' ')[0]).join(' ')"))
+	out = append(out, b.eval("document.querySelector('#list li:not([data-testid=group]) [data-testid=title]').title.split('\\n').slice(1).map((l) => l.split(' ')[0]).join(' ')"))
 	// ↓ moves through the rows by focusing their titles, x selects the focused row, the check boxes showing from then on alone.
-	const boxes = "getComputedStyle(document.querySelector('#list li:not(.group) .pick')).display"
+	const boxes = "getComputedStyle(document.querySelector('#list li:not([data-testid=group]) [data-testid=pick]')).display"
 	out = append(out, b.eval(boxes))
 	key("ArrowDown")
 	key("ArrowDown")
@@ -272,70 +272,70 @@ func uiExtras(t *testing.T, lang i18n.Lang, msg func(string, ...any) string) {
 	out = append(out, b.eval("document.getElementById('bulk-count').textContent"), b.eval(boxes))
 	// With Beta selected too by a real mouse click (nothing may sit on top of the checkbox), the first
 	// click arms and the second deletes both.
-	r := b.rect("document.querySelector('#list li:not(.group) .sel')")
+	r := b.rect("document.querySelector('#list li:not([data-testid=group]) [data-testid=sel]')")
 	b.click(r.X+r.Width/2, r.Y+r.Height/2)
 	out = append(out, b.until("the mouse click to select",
-		"document.querySelector('#list li:not(.group) .sel').checked && document.getElementById('bulk-count').textContent"))
+		"document.querySelector('#list li:not([data-testid=group]) [data-testid=sel]').checked && document.getElementById('bulk-count').textContent"))
 	b.eval("document.getElementById('bulk-delete').click()")
 	out = append(out, b.eval("document.getElementById('bulk-delete').textContent"))
 	b.eval("document.getElementById('bulk-delete').click()")
 	b.until("the selection to clear", "document.getElementById('bulk').hidden")
 	out = append(out, b.eval("calls.splice(0).sort().join(',')"), b.eval(boxes))
 	// Links alone say they are unregistered.
-	b.eval("document.querySelector('#list li[data-slug=l] .sel').click()")
+	b.eval("document.querySelector('#list li[data-slug=l] [data-testid=sel]').click()")
 	out = append(out, b.eval("document.getElementById('bulk-delete').textContent"))
 	// The shelf's add button stays while rows are selected.
 	check(t, "selected", []string{b.eval("(document.getElementById('add-link').closest('[hidden]') === null) + ''")}, "true")
 	b.eval("document.getElementById('bulk-clear').click()")
 	// The pencil opens a modal with the current description; saving sends the new one.
-	b.eval("document.querySelector('#list li[data-slug=a] .edit').click()")
+	b.eval("document.querySelector('#list li[data-slug=a] [data-testid=edit]').click()")
 	out = append(out, b.eval("[document.getElementById('edit-dialog').open, document.getElementById('edit-desc').value].join(' ')"))
-	b.eval("document.getElementById('edit-desc').value = 'new'; document.getElementById('edit').requestSubmit()")
+	b.fill("#edit-desc", "new")
+	b.eval("document.getElementById('edit-submit').click()")
 	// Saved and closed, the focus back on the row's menu button as it closes.
 	b.until("the edit modal to close", "!document.getElementById('edit-dialog').open && document.activeElement.matches('#list li[data-slug=a] summary')")
 	out = append(out, b.eval("calls.splice(0).join(',')"),
 		b.eval("document.getElementById('toasts').textContent.includes("+js(msg("ui_saved"))+")"))
 	// Only linked files have a copy button for their path.
-	out = append(out, b.eval("document.querySelector('#list li[data-slug=a] .copy').hidden"))
-	b.eval("document.querySelector('#list li[data-slug=l] .copy').click()")
+	out = append(out, b.eval("document.querySelector('#list li[data-slug=a] [data-testid=copy]').hidden"))
+	b.eval("document.querySelector('#list li[data-slug=l] [data-testid=copy]').click()")
 	out = append(out, b.until("the copy", "calls.join(',')"),
 		b.eval("document.getElementById('toasts').textContent.includes("+js(msg("ui_path_copied"))+")"))
 	// A link whose file is gone has no href, but ↓ still reaches it.
-	b.eval("document.querySelector('#list li[data-slug=l] .title').focus()")
+	b.eval("document.querySelector('#list li[data-slug=l] [data-testid=title]').focus()")
 	key("ArrowDown")
 	out = append(out, b.eval("document.activeElement.textContent"))
 	// The add form sends only the fields filled in, trimmed: a field sent is given, empty or not.
-	b.eval(`(() => {
-		calls.length = 0;
-		document.getElementById('add-link').click();
-		document.getElementById('add-path').value = ' /tmp/x/n.html ';
-		document.getElementById('add-desc').value = ' a link ';
-		document.getElementById('add').requestSubmit();
-	})()`)
+	b.eval("calls.length = 0; document.getElementById('add-link').click()")
+	b.until("the add dialog", "document.getElementById('add-dialog').open")
+	b.fill("#add-path", " /tmp/x/n.html ")
+	b.fill("#add-desc", " a link ")
+	b.eval("document.getElementById('add-submit').click()")
 	out = append(out, b.until("the add to be sent", "calls.splice(0).join(',')"))
 	b.until("the add dialog to close", "!document.getElementById('add-dialog').open")
 
 	// The archived are off every count and list but their own, which the switch shows (kept in the URL); a row's
 	// button and the bulk bar send the change, to archive or to give back, and say which.
-	archiveWords := "(() => { const a = document.querySelector('#list li:not(.group) .actions > .archive'); document.getElementById('bulk-page').click(); " +
+	archiveWords := "(() => { const a = document.querySelector('#list li:not([data-testid=group]) [data-testid=actions] > [data-testid=archive]'); document.getElementById('bulk-page').click(); " +
 		"const words = [a.title, a.getAttribute('aria-label'), document.getElementById('bulk-archive').textContent]; " +
 		"document.getElementById('bulk-clear').click(); return words.join(' / '); })()"
-	const archiveRow = "document.querySelector('#list li:not(.group) .actions > .archive').click()"
+	const archiveButton = "document.querySelector('#list li:not([data-testid=group]) [data-testid=actions] > [data-testid=archive]')"
+	const archiveRow = archiveButton + ".click()"
 	out = append(out, b.eval(counts), b.eval(archiveWords))
 	begun := b.acted(archiveRow)
-	out = append(out, b.until("the archive", "calls.splice(0).join(',')"), b.eval("document.querySelectorAll('#list .more[open]').length"),
+	out = append(out, b.until("the archive", "calls.splice(0).join(',')"), b.eval("document.querySelectorAll('#list [data-testid=more][open]').length"),
 		// With the answer, before the list is read again; it goes after 8 seconds
 		b.until("the toast", "document.getElementById('toasts').textContent.includes("+js(msg("ui_archive_done", "Beta"))+")"))
 	b.untilRead(begun, "the archive done", "true")
-	b.eval("document.querySelector('.views [data-view=archived]').click()")
+	b.eval("document.querySelector('#shelf [data-view=archived]').click()")
 	out = append(out, b.eval(counts), b.eval(archiveWords))
 	begun = b.acted(archiveRow)
 	out = append(out, b.until("the give back", "calls.splice(0).join(',')"))
 	b.untilRead(begun, "the give back done", "true")
 	// The change failing, the row stays with the focus on its button.
-	b.eval("window.failWrites = true; document.querySelector('#list li:not(.group) .actions > .archive').focus(); document.querySelector('#list li:not(.group) .actions > .archive').click()")
+	b.eval("window.failWrites = true; " + archiveButton + ".focus(); " + archiveRow)
 	out = append(out, b.until("the give back to fail", "!document.getElementById('error').hidden && "+
-		"String(document.activeElement === document.querySelector('#list li:not(.group) .actions > .archive'))"))
+		"String(document.activeElement === "+archiveButton+")"))
 	b.eval("window.failWrites = false")
 	b.eval("document.getElementById('bulk-page').click()")
 	out = append(out, b.eval("document.getElementById('bulk-archive').textContent"))
@@ -348,7 +348,7 @@ func uiExtras(t *testing.T, lang i18n.Lang, msg func(string, ...any) string) {
 	out = append(out, b.eval(empties)+" "+b.eval("document.getElementById('add-link').hidden"))
 	// Its group goes with it, not to leave its room between the others.
 	check(t, "archived", []string{b.eval("document.getElementById('shelf-add').hidden + ''")}, "true")
-	b.eval("document.querySelector('.views [data-view=all]').click()")
+	b.eval("document.querySelector('#shelf [data-view=all]').click()")
 	out = append(out, b.eval("document.getElementById('add-link').hidden"))
 	// One kind, its group hidden: the button stays, under the group before it.
 	check(t, "one kind", []string{b.eval("[document.getElementById('shelf-kinds').hidden, document.getElementById('add-link').closest('[hidden]') === null].join(' ')")}, "true true")
@@ -360,19 +360,20 @@ func uiExtras(t *testing.T, lang i18n.Lang, msg func(string, ...any) string) {
 		const box = document.getElementById('shelf-more').getBoundingClientRect(), r = document.getElementById('add-link').getBoundingClientRect();
 		return [document.getElementById('shelf-projects').hidden, r.height > 0 && r.top >= box.top, document.activeElement.id !== 'add-link'].join(' ');
 	})()`)}, "false true true")
-	b.eval("document.getElementById('filter-dialog').close()")
+	b.pressKey(kb.Escape)
+	b.until("the filter dialog to close", "!document.getElementById('filter-dialog').open")
 	// A change that succeeds clears the error of one that failed before, a favourite's as an archive's.
-	b.eval("window.failWrites = true; document.querySelector('#list li:not(.group) .star').click()")
+	b.eval("window.failWrites = true; document.querySelector('#list li:not([data-testid=group]) [data-testid=star]').click()")
 	out = append(out, b.until("the favourite to fail", "!document.getElementById('error').hidden && document.getElementById('error').textContent"))
-	b.eval("window.failWrites = false; document.querySelector('#list li:not(.group) .star').click()")
+	b.eval("window.failWrites = false; document.querySelector('#list li:not([data-testid=group]) [data-testid=star]').click()")
 	out = append(out, b.until("the error to clear", "document.getElementById('error').hidden"))
 	b.stub(`[{ slug: 'z', title: 'Zeta', description: '', createdAt: at(2), updatedAt: at(6), archived: true }]`)
 	out = append(out, b.eval(empties))
 	b.eval("document.getElementById('show-archived').click()")
 	out = append(out, b.eval(titles+" + ' ' + new URLSearchParams(location.search).get('view')"))
-	b.eval("document.querySelector('.views [data-view=new]').click()")
+	b.eval("document.querySelector('#shelf [data-view=new]').click()")
 	out = append(out, b.eval(empties))
-	b.eval("document.querySelector('.views [data-view=all]').click()")
+	b.eval("document.querySelector('#shelf [data-view=all]').click()")
 	b.stub("[]")
 	out = append(out, b.eval(empties), b.eval("document.getElementById('add-empty').offsetParent !== null"))
 	// Nothing at all: the middle's button alone, not the shelf's too.
@@ -381,7 +382,9 @@ func uiExtras(t *testing.T, lang i18n.Lang, msg func(string, ...any) string) {
 	// The shelf at its narrowest holds each add button's words on one line, within it. Shown for the measure alone, in the
 	// same task: this list is empty, and the task list's is the other screen's.
 	b.size(1440, 800, false)
-	b.eval("setColumn('shelf', 0)")
+	was := b.rect("document.getElementById('shelf')").Width
+	b.drag("#shelf-grip", 0)
+	b.until("the shelf at its narrowest", "document.getElementById('shelf').getBoundingClientRect().width < "+strconv.FormatFloat(was, 'f', -1, 64))
 	check(t, "narrowest shelf", []string{b.eval(`(() => {
 		const shelf = Math.round(document.getElementById('shelf').getBoundingClientRect().width);
 		const lines = ['add-link', 'add-task'].map((id) => {
@@ -396,7 +399,6 @@ func uiExtras(t *testing.T, lang i18n.Lang, msg func(string, ...any) string) {
 		return [shelf, ...lines].join(' | ');
 	})()`)}, "160 | add-link 1 true | add-task 1 true")
 	b.unsize()
-	b.eval("setColumn('shelf', 200)")
 	// The time's tooltip lines start with the label of their format ("Created %s").
 	label := func(key string) string { return strings.Fields(msg(key, ""))[0] }
 	check(t, "extras", out, strings.Join([]string{
@@ -854,7 +856,7 @@ func TestUIShelfStays(t *testing.T) { //nolint:paralleltest // the browser tests
 	b.stub(manyPages(60))
 	b.navigate("/")
 	b.size(1440, 900, false)
-	const place = "['.shelf', '.reader', '.lhead'].map((s) => document.querySelector(s).getBoundingClientRect().top).join(' ')"
+	const place = "['#shelf', '#reader', '[data-testid=lhead]'].map((s) => document.querySelector(s).getBoundingClientRect().top).join(' ')"
 	out := make([]string, 0, 5)
 	out = append(out, b.eval("document.getElementById('list-body').scrollHeight > document.getElementById('list-body').clientHeight"),
 		b.eval("document.documentElement.scrollHeight === innerHeight"))
@@ -880,9 +882,9 @@ func TestUIShelfScrolls(t *testing.T) { //nolint:paralleltest // the browser tes
 	b.size(1440, 600, false)
 	const near = "const shelf = document.getElementById('shelf-body'); const r = shelf.getBoundingClientRect();"
 	out := make([]string, 0, 6)
-	out = append(out, b.eval("(() => { "+near+" return [Math.abs(document.querySelector('.shelf').getBoundingClientRect().bottom - innerHeight) <= 0.5, shelf.scrollHeight > shelf.clientHeight].join(' '); })()"))
+	out = append(out, b.eval("(() => { "+near+" return [Math.abs(document.getElementById('shelf').getBoundingClientRect().bottom - innerHeight) <= 0.5, shelf.scrollHeight > shelf.clientHeight].join(' '); })()"))
 	// The wheel scrolls the shelf, not the list.
-	sr := b.rect("document.querySelector('.shelf')")
+	sr := b.rect("document.getElementById('shelf')")
 	// The protocol wants deltaX sent, which a 0 is left out as: a sliver of a pixel moves nothing sideways.
 	e := input.DispatchMouseEventParams{Type: input.DispatchMouseEventTypeMouseWheel, X: sr.X + sr.Width/2, Y: sr.Y + sr.Height/2, DeltaX: 1e-6, DeltaY: 100}
 	if _, err := chromedp.Call(b.ctx, input.DispatchMouseEvent, e); err != nil {
@@ -890,23 +892,23 @@ func TestUIShelfScrolls(t *testing.T) { //nolint:paralleltest // the browser tes
 	}
 	out = append(out, b.until("the shelf to scroll", "document.getElementById('shelf-body').scrollTop > 0 && `list at ${document.getElementById('list-body').scrollTop}`"))
 	// The focus ring's room each side, and a long name on one line, cut off, not scrolling sideways.
-	out = append(out, b.eval("(() => { "+near+" const a = document.querySelector('.views button').getBoundingClientRect(); "+
-		"const long = document.querySelector('#tags .chip .name'); "+
+	out = append(out, b.eval("(() => { "+near+" const a = document.querySelector('#shelf [data-testid=views] button').getBoundingClientRect(); "+
+		"const long = document.querySelector('#tags > button [data-testid=name]'); "+
 		"return [a.left - r.left >= 4, r.left + shelf.clientWidth - a.right >= 4, shelf.scrollWidth === shelf.clientWidth, "+
 		"long.scrollWidth > long.clientWidth && long.getClientRects().length === 1].join(' '); })()"))
 	// Pointed at, the shelf is laid out again for Chrome to draw its thumb; nothing in it moves.
-	hover := "document.querySelector('.views button').getBoundingClientRect().right"
+	hover := "document.querySelector('#shelf [data-testid=views] button').getBoundingClientRect().right"
 	b.point(800, 300)
 	away := b.eval(hover)
 	b.point(sr.X+sr.Width/2, sr.Y+sr.Height/2)
-	on := b.until("the shelf to be pointed at", "document.querySelector('.shelf:hover') && ("+hover+")")
+	on := b.until("the shelf to be pointed at", "document.getElementById('shelf').matches(':hover') && ("+hover+")")
 	b.point(800, 300)
 	out = append(out, strconv.FormatBool(away == on))
 	// With the bulk bar, in the head over the list, the shelf keeps its height.
-	tall := b.eval("document.querySelector('.shelf').getBoundingClientRect().height")
-	b.eval("document.querySelector('#list li:not(.group) .sel').click()")
+	tall := b.eval("document.getElementById('shelf').getBoundingClientRect().height")
+	b.eval("document.querySelector('#list li:not([data-testid=group]) [data-testid=sel]').click()")
 	out = append(out, b.until("the bar to show", "(() => { const bar = document.getElementById('bulk').getBoundingClientRect(); "+
-		"return bar.height > 0 && `${document.getElementById('bulk').closest('.lhead') !== null} ${document.querySelector('.shelf').getBoundingClientRect().height === "+tall+"}`; })()"))
+		"return bar.height > 0 && `${document.getElementById('bulk').closest('[data-testid=lhead]') !== null} ${document.getElementById('shelf').getBoundingClientRect().height === "+tall+"}`; })()"))
 	b.eval("document.getElementById('bulk-clear').click()")
 	// A shelf that fits does not scroll.
 	b.size(1440, 900, false)
@@ -965,8 +967,8 @@ func TestUIStubSlowServer(t *testing.T) { //nolint:paralleltest // the browser t
 	}
 	b.stub(`[{ slug: 'a', title: 'Alpha', description: '', createdAt: at(1), updatedAt: at(1) }]`)
 	b.navigate("/")
-	b.eval("window.seen = new Set([...document.querySelectorAll('#list .title')].map((a) => a.textContent)); " +
-		"new MutationObserver(() => { for (const a of document.querySelectorAll('#list .title')) seen.add(a.textContent); })" +
+	b.eval("window.seen = new Set([...document.querySelectorAll('#list [data-testid=title]')].map((a) => a.textContent)); " +
+		"new MutationObserver(() => { for (const a of document.querySelectorAll('#list [data-testid=title]')) seen.add(a.textContent); })" +
 		".observe(document.getElementById('list'), { childList: true, subtree: true })")
 	// Past when the server's answer would have come, a poll between: the page's clock, from its start.
 	b.until("the server's answer to be late", "performance.now() > 5000 && window.gets >= 3")

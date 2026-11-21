@@ -160,9 +160,9 @@ func TestUIReadBeside(t *testing.T) { //nolint:paralleltest // the browser tests
 	s.floe(t, "publish", s.page(t, "read/side.yaml", "side", "<p>side</p>"), "--slug", "side")
 	b.navigate("/")
 	b.size(1440, 900, false)
-	b.until("the row", "document.querySelector('#list li[data-slug=side] .dot')")
-	b.eval("document.querySelector('#list li[data-slug=side] .title').click()")
-	b.until("the row read", "document.querySelector('#list li[data-slug=side] .ring') && document.querySelector('#list li.picked')?.dataset.slug === 'side'")
+	b.until("the row", "document.querySelector('#list li[data-slug=side][data-unread=true]')")
+	b.eval("document.querySelector('#list li[data-slug=side] [data-testid=title]').click()")
+	b.until("the row read", "document.querySelector('#list li[data-slug=side]:not([data-unread])') && document.querySelector('#list li[aria-current=true]')?.dataset.slug === 'side'")
 	check(t, "news", []string{b.eval("document.getElementById('news').hidden")}, "true")
 	b.unsize()
 }

@@ -401,22 +401,22 @@ func TestUITaskFamilyCard(t *testing.T) { //nolint:paralleltest // the browser t
   const hs = getComputedStyle(head), cs = getComputedStyle(card);
   const h = head.getBoundingClientRect(), c = card.getBoundingClientRect();
   const inside = c.left >= h.left + parseFloat(hs.paddingLeft) - 0.5 && c.right <= h.right - parseFloat(hs.paddingRight) + 0.5;
-  const rows = [...card.querySelectorAll('.kin-row')];
-  const ends = rows.every((r) => r.firstElementChild.matches('.kid-state') && r.lastElementChild.matches('.dot, .ring'));
-  const buttons = matchMedia('(hover: none)').matches ? 'touch ' + [...card.querySelectorAll('.unlink')].every((u) => getComputedStyle(u).opacity === '1') : 'mouse';
+  const rows = [...card.querySelectorAll('[data-testid=kin-row]')];
+  const ends = rows.every((r) => r.firstElementChild.matches('[data-testid=kid-state]') && r.lastElementChild.matches('[data-testid=dot], [data-testid=ring]'));
+  const buttons = matchMedia('(hover: none)').matches ? 'touch ' + [...card.querySelectorAll('[data-testid=unlink]')].every((u) => getComputedStyle(u).opacity === '1') : 'mouse';
   return [inside, cs.backgroundColor !== hs.backgroundColor && parseFloat(cs.borderTopWidth) > 0, ends, buttons].join(' ');
 })()`
 	// The children's rows: the states of one width, their words inside; the names in line; the long one cut at a fifth of
 	// the rows, its title seen and its row in the card; the link's title and name whole.
 	longRow := `(() => {
-  const rows = [...document.querySelectorAll('#task-family-rows .kin-row')];
-  const states = rows.map((r) => r.querySelector('.kid-state'));
+  const rows = [...document.querySelectorAll('#task-family-rows [data-testid=kin-row]')];
+  const states = rows.map((r) => r.querySelector('[data-testid=kid-state]'));
   const wide = new Set(states.map((e) => e.getBoundingClientRect().width.toFixed(1))).size === 1 && states.every((e) => e.scrollWidth <= e.clientWidth);
-  const names = new Set(rows.map((r) => r.querySelector('.tname').getBoundingClientRect().left.toFixed(1))).size === 1;
-  const row = document.querySelector('#task-family .kin-row[data-task="` + long + `"]'), name = row.querySelector('.tname');
+  const names = new Set(rows.map((r) => r.querySelector('[data-testid=tname]').getBoundingClientRect().left.toFixed(1))).size === 1;
+  const row = document.querySelector('#task-family [data-testid=kin-row][data-task="` + long + `"]'), name = row.querySelector('[data-testid=tname]');
   const cut = name.scrollWidth > name.clientWidth && name.getBoundingClientRect().width <= document.getElementById('task-family-rows').getBoundingClientRect().width / 5 + 0.5;
-  return [rows.length, wide, names, cut, row.querySelector('.kin-title').getBoundingClientRect().width > 20,
-    row.closest('.kin-line').getBoundingClientRect().right <= document.getElementById('task-family').getBoundingClientRect().right,
+  return [rows.length, wide, names, cut, row.querySelector('[data-testid=kin-title]').getBoundingClientRect().width > 20,
+    row.closest('[data-testid=kin-line]').getBoundingClientRect().right <= document.getElementById('task-family').getBoundingClientRect().right,
     row.title === ` + js(long+"\n"+longTitle) + `, row.getAttribute('aria-label') === ` + js(long+" "+longTitle+", Done") + `].join(' ')
 })()`
 	defer b.unsize()
@@ -426,7 +426,7 @@ func TestUITaskFamilyCard(t *testing.T) { //nolint:paralleltest // the browser t
 		touch(width == 400)
 		for _, name := range []string{"%231", "%232"} {
 			b.navigate("/tasks?project=proj&task=" + name)
-			b.until("the family", "document.querySelector('#task-family .kin-row')")
+			b.until("the family", "document.querySelector('#task-family [data-testid=kin-row]')")
 			b.still()
 			got := b.eval(card)
 			if name == "%231" {

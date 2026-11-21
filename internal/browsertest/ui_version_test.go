@@ -7,6 +7,8 @@ import (
 	"testing"
 
 	"github.com/chromedp/chromedp/kb"
+
+	"floe/internal/store"
 )
 
 // What the frame's choice and words say, the date in them left out as it changes.
@@ -25,98 +27,164 @@ func choose(b *browser, id string, n int) {
 	b.moving("(() => { const s = document.getElementById(" + js(id) + "); s.value = " + strconv.Itoa(n) + "; s.dispatchEvent(new Event('change', { bubbles: true })); })()")
 }
 
+// The same, by the screen alone: the words over a page not the latest, what the frame and the page beside the list show, and the page
+// beside the list (its slug, version and what it loaded).
+const (
+	verWords     = `(document.querySelector('[data-testid=ver-note]')?.textContent ?? '').replace(/\(.*?\)/, '(at)')`
+	frameTold    = `[location.search + location.hash, document.getElementById('frame').getAttribute('src'), document.getElementById('frame-version').hidden, ` + verWords + `].join(' / ')`
+	besideSlug   = "document.getElementById('read-frame').dataset.slug"
+	besideV      = "document.getElementById('read-frame').dataset.version"
+	besideLoaded = "document.getElementById('read-frame').dataset.loaded"
+	readTold     = `[` + besideLoaded + `, document.getElementById('read-version').hidden, document.getElementById('read-version').dataset.old === 'true', ` + verWords + `].join(' / ')`
+	pageToasts   = "document.querySelectorAll('[data-testid=toast][data-kind~=page]').length"
+	noPageToast  = "document.querySelector('[data-testid=toast][data-kind~=page]')?.remove()"
+)
+
+// rowNews says what the row of slug tells of its news: "" read, "version" a version not read, "new" a page never read.
+func rowNews(slug string) string {
+	return "((r) => r?.dataset.unread !== 'true' ? '' : r.querySelector('[data-testid=ver]') ? 'version' : 'new')(document.querySelector('#list li[data-slug=" +
+		slug + "]'))"
+}
+
+// pageNews is a promise of the news of slug as the server tells the list of pages: a page whole has no row to tell it.
+func pageNews(slug string) string {
+	return "fetch('/api/pages').then((r) => r.json()).then((l) => l.find((a) => a.slug === " + js(slug) + ")?.news ?? '')"
+}
+
+// chooseVersion opens the select of id and presses its version n, by the mouse.
+func chooseVersion(b *browser, id string, n int) {
+	b.t.Helper()
+	sel := "document.getElementById(" + js(id) + ")"
+	option := "document.querySelector('#" + id + " option[value=\"" + strconv.Itoa(n) + "\"]')"
+	// The list of versions comes after the page is picked, the choice empty until then
+	b.until("the option", option)
+	r := b.rect(sel)
+	b.click(r.X+r.Width/2, r.Y+r.Height/2)
+	b.until("open", sel+".matches(':open')")
+	o := b.rect(option)
+	b.click(o.X+o.Width/2, o.Y+o.Height/2)
+	b.until("closed", "!"+sel+".matches(':open')")
+}
+
+// pressMenuItem opens the "…" menu in box and presses its item named item (data-testid).
+func pressMenuItem(b *browser, box, item string) {
+	b.t.Helper()
+	menu := box + " [data-testid=more]"
+	b.eval("document.querySelector(" + js(menu+" > summary") + ").click()")
+	got := "document.querySelector(" + js(menu+" [data-testid="+item+"]") + ")"
+	b.until("the item "+item, got+"?.checkVisibility()")
+	b.moving(got + ".click()")
+}
+
+// openSlugField unfolds the part of the edit modal that holds the URL name, once the modal is open.
+func openSlugField(b *browser) {
+	b.t.Helper()
+	b.until("the edit modal", "document.getElementById('edit-dialog').open")
+	b.eval("if (!document.getElementById('edit-more').open) document.querySelector('#edit-more > summary').click()")
+}
+
 // TestUIVersionPick chooses a version of a page beside the list: it stays through the list drawn anew and a version published, the latest
 // not told read; the bar and the row's ways to open the page whole go with it; another page, and the latest chosen, leave it.
 func TestUIVersionPick(t *testing.T) { //nolint:paralleltest // the browser tests share one Chrome, one at a time
 	s := diffSite(t)
 	b := s.b
+	st := store.New(s.Env["FLOE_DIR"])
 	b.size(1440, 900, false)
 	defer b.unsize()
+	const title = "document.querySelector('#list li[data-slug=d] [data-testid=title]')"
 	b.navigate("/")
 	b.until("the rows", "document.querySelector('#list li[data-slug=d]')")
-	b.eval("document.querySelector('#list li[data-slug=d] .title').click()")
+	b.eval(title + ".click()")
 	b.until("the choice", "!document.getElementById('read-version').hidden")
-	b.until("read", "!("+newsOfD+")")
+	b.until("read", "!("+rowNews("d")+")")
 	out := make([]string, 0, 30)
-	const toast = "document.querySelectorAll('.toast.page').length"
-	b.eval("document.querySelector('.toast.page')?.remove()")
+	b.eval(noPageToast)
 	out = append(out, b.eval("document.querySelector('#read-version selectedcontent').innerText.trim()"),
 		b.eval(`[...document.querySelectorAll('#read-version option')].map((o) => o.textContent.replace(/ · \d\d\/\d\d \d\d:\d\d/, '')).join(', ')`))
 
-	choose(b, "read-version", 2)
-	out = append(out, b.until("v2 shown", "document.querySelector('.dnote.ver-note') && "+readSaid),
+	chooseVersion(b, "read-version", 2)
+	out = append(out, b.until("v2 shown", "document.querySelector('[data-testid=ver-note]') && "+readTold),
 		b.eval("document.querySelector('#read-version selectedcontent').innerText.trim()"),
 		b.eval("document.activeElement.tagName"),
-		b.eval(`[document.getElementById('read-title').getAttribute('href'), document.querySelector('#read-actions > .open').getAttribute('href'),
-			document.querySelector('#read-actions > .download').getAttribute('href'), document.querySelector('#read-actions > .download').hasAttribute('download'),
-			document.querySelector('#read-actions > .diff-open').getAttribute('href'), document.querySelector('#read-actions .menu .open').getAttribute('href')].join(' ')`))
+		b.eval(`[document.getElementById('read-title').getAttribute('href'), document.querySelector('#read-actions > [data-testid=open]').getAttribute('href'),
+			document.querySelector('#read-actions > [data-testid=download]').getAttribute('href'), document.querySelector('#read-actions > [data-testid=download]').hasAttribute('download'),
+			document.querySelector('#read-actions > [data-testid=diff-open]').getAttribute('href'), document.querySelector('#read-actions [data-testid=menu] [data-testid=open]').getAttribute('href')].join(' ')`))
 	// The words' way to the latest leaves the focus on the choice, the words gone.
-	b.eval("[...document.querySelectorAll('.dnote.ver-note a')].find((a) => a.textContent.includes('latest')).click()")
-	out = append(out, b.until("the latest", "readLoaded === '/a/d/?raw' && document.querySelector('.dnote.ver-note') === null && document.activeElement.id"))
-	choose(b, "read-version", 2)
-	b.until("v2 again", "readLoaded.endsWith('v=2') && document.querySelector('.dnote.ver-note')")
-	b.eval("document.querySelector('.toast.page')?.remove()")
+	b.eval("[...document.querySelectorAll('[data-testid=ver-note] a')].find((a) => a.textContent.includes('latest')).click()")
+	out = append(out, b.until("the latest", besideLoaded+" === '/a/d/?raw' && document.querySelector('[data-testid=ver-note]') === null && document.activeElement.id"))
+	chooseVersion(b, "read-version", 2)
+	b.until("v2 again", besideLoaded+".endsWith('v=2') && document.querySelector('[data-testid=ver-note]')")
+	b.eval(noPageToast)
 	// Drawn anew, it stays; a version published, too, the words following, the row unread, no toast.
-	b.eval("drawn = ''; load()")
+	other := "One again"
+	if _, err := st.Edit("one", store.Edit{Title: &other}); err != nil {
+		t.Fatal(err)
+	}
+	b.reread()
+	b.until("drawn anew", "document.querySelector('#list li[data-slug=one] [data-testid=title]').textContent.includes('One again')")
 	b.still()
-	out = append(out, b.eval("readLoaded"))
+	out = append(out, b.eval(besideLoaded))
 	s.floe(t, "publish", s.page(t, "diff/d.yaml", "D", diffV3+"<p>four</p>"), "--slug", "d")
-	out = append(out, b.until("v4 told", noteWords+".includes('v4') && "+readSaid), b.eval(newsOfD), b.eval(toast))
+	out = append(out, b.until("v4 told", verWords+".includes('v4') && "+readTold), b.eval(rowNews("d")), b.eval(pageToasts))
 
 	// Pressed again and by Enter, the row opens the version shown; its link stays the latest's.
-	out = append(out, b.eval("document.querySelector('#list li[data-slug=d] .title').getAttribute('href')"))
-	x, y := rowPoint(t, b, "#list li[data-slug=d]", false)
-	b.click(x, y)
+	out = append(out, b.eval(title+".getAttribute('href')"))
+	r := b.rect(title)
+	b.click(r.X+12, r.Y+6)
 	out = append(out, b.until("whole", "location.pathname === '/a/d/' && location.search"))
 	b.navigate("/")
 	b.until("the rows", "document.querySelector('#list li[data-slug=d]')")
-	b.eval("document.querySelector('#list li[data-slug=d] .title').click()")
+	b.eval(title + ".click()")
 	b.until("the choice", "!document.getElementById('read-version').hidden")
-	choose(b, "read-version", 2)
-	b.eval("document.querySelector('#list li[data-slug=d] .title').focus()")
+	chooseVersion(b, "read-version", 2)
+	b.eval(title + ".focus()")
 	b.pressKey(kb.Enter)
 	out = append(out, b.until("whole by the key", "location.pathname === '/a/d/' && location.search"))
 
 	// The keys go on from the choice.
 	b.navigate("/")
 	b.until("the rows", "document.querySelector('#list li[data-slug=d]')")
-	b.eval("document.querySelector('#list li[data-slug=d] .title').click()")
+	b.eval(title + ".click()")
 	b.until("the choice", "!document.getElementById('read-version').hidden")
-	b.until("read", "!("+newsOfD+")")
-	b.eval("document.querySelector('.toast.page')?.remove()")
-	choose(b, "read-version", 2)
-	b.until("v2", "readLoaded.endsWith('v=2')")
+	b.until("read", "!("+rowNews("d")+")")
+	b.eval(noPageToast)
+	chooseVersion(b, "read-version", 2)
+	b.until("v2", besideLoaded+".endsWith('v=2')")
 	b.eval("document.getElementById('read-version').focus()")
 	b.pressKey("j")
-	out = append(out, b.until("the next row", "picked.slug !== 'd' && [picked.v, document.querySelector('.dnote.ver-note') === null].join(' ')"))
+	out = append(out, b.until("the next row", "("+besideSlug+" ?? 'd') !== 'd' && ["+besideV+", document.querySelector('[data-testid=ver-note]') === null].join(' ')"))
+	// The reads told, counted from here: the page come back to is told read, before it is marked unread
+	b.eval(`window.reads = 0; window.fetch = ((f) => (u, i) => { if (i?.method === 'POST' && String(u).endsWith('/read')) window.reads++; return f(u, i); })(window.fetch);
+		window.heard = 0; addEventListener('message', (e) => { if (e.data?.pageServed) window.heard++; })`)
 	b.pressKey("k")
-	out = append(out, b.until("back", "picked.slug === 'd' && readLoaded"))
-	b.until("read", "!("+newsOfD+")")
+	out = append(out, b.until("back", besideSlug+" === 'd' && "+besideLoaded))
+	b.until("read", "window.reads > 0 && !("+rowNews("d")+")")
 
 	// Marked unread: the versions gone through tell nothing, until another page has been open.
-	b.eval(`window.reads = 0; window.fetch = ((f) => (u, i) => { if (i?.method === 'POST' && String(u).endsWith('/read')) window.reads++; return f(u, i); })(window.fetch);
-		window.heard = 0; addEventListener('message', (e) => { if (e.data?.pageServed) window.heard++; }); markUnread('d')`)
-	b.until("unread", newsOfD)
+	b.eval("window.reads = 0; window.heard = 0")
+	pressMenuItem(b, "#read-actions", "mark-unread")
+	b.until("unread", rowNews("d"))
 	const shelfWord = "[...document.querySelectorAll('#read-version option')].find((o) => o.textContent.includes('v2')).textContent.includes('·')"
 	out = append(out, b.eval(shelfWord))
 	for _, n := range []int{2, 4} {
 		was := b.eval("window.heard")
-		choose(b, "read-version", n)
+		chooseVersion(b, "read-version", n)
 		b.until("told", "window.heard > "+was)
 	}
-	out = append(out, b.eval("window.reads"), b.eval("Boolean("+newsOfD+")"))
+	out = append(out, b.eval("window.reads"), b.eval("Boolean("+rowNews("d")+")"))
 	b.pressKey("j")
-	b.until("the next row", "picked.slug !== 'd'")
+	b.until("the next row", "("+besideSlug+" ?? 'd') !== 'd'")
 	b.pressKey("k")
-	out = append(out, b.until("read again", "picked.slug === 'd' && !("+newsOfD+") && "+toast))
+	out = append(out, b.until("read again", besideSlug+" === 'd' && !("+rowNews("d")+") && "+pageToasts))
 
-	// A read leaves the choice open, the focus on it, and its words told anew.
-	b.eval("document.querySelector('.toast.page')?.remove(); window.kept = document.getElementById('read-version')")
-	r := b.rect("document.getElementById('read-version')")
+	// A read leaves the choice open, the focus on it, and its words told anew: the page marked unread by its toast's button, pressed with
+	// the choice open.
+	b.eval("window.kept = document.getElementById('read-version')")
+	r = b.rect("document.getElementById('read-version')")
 	b.click(r.X+r.Width/2, r.Y+r.Height/2)
 	b.until("open", "document.getElementById('read-version').matches(':open')")
-	b.eval("markUnread('d')")
-	b.until("unread", newsOfD)
+	b.eval("document.querySelector('[data-testid=toast][data-kind~=page] button').click()")
+	b.until("unread", rowNews("d"))
 	b.still()
 	out = append(out, b.eval("[window.kept === document.getElementById('read-version'), window.kept.contains(document.activeElement), window.kept.matches(':open')].join(' ')"))
 	b.pressKey(kb.Escape)
@@ -124,7 +192,7 @@ func TestUIVersionPick(t *testing.T) { //nolint:paralleltest // the browser test
 	check(t, "pick", out, strings.Join([]string{
 		"v3", "v3 · Latest, v2, v1",
 		"/a/d/?raw&v=2 / false / true / Showing v2 (at). The latest is v3.Open the latest versionSee what differs from the latest",
-		"v2", "BODY",
+		"v2", "SELECT",
 		"/a/d/?v=2 /a/d/?raw&v=2 /api/pages/d/download?v=2 true /a/d/?diff&from=2&to=3 /a/d/?raw&v=2",
 		"read-version",
 		"/a/d/?raw&v=2",
@@ -155,21 +223,25 @@ func TestUIVersionURL(t *testing.T) { //nolint:paralleltest // the browser tests
 		};
 		addEventListener('message', (e) => { if (e.data?.pageServed) sessionStorage.setItem('served', (sessionStorage.getItem('served') ?? '') + ' ' + e.data.pageServed.n); });
 	}`)
+	const (
+		diffOpen = "document.querySelector('#frame-actions [data-testid=diff-open]')"
+		unread   = "document.querySelector('#frame-actions [data-testid=mark-unread]')"
+	)
 	open := func(path string) string {
 		t.Helper()
 
 		b.navigate(path)
-		b.until("the bar", "!document.getElementById('frame-actions').hidden && document.querySelector('#frame-actions .diff-open')")
-		// The choice is drawn as the list of versions comes, after the bar
-		b.until("the versions", "(() => { const a = items.find((x) => x.slug === framed); return !a || !canDiff(a) || document.getElementById('frame-version').dataset.numbers; })()")
+		b.until("the bar", "!document.getElementById('frame-actions').hidden && "+diffOpen)
+		// The choice is drawn as the list of versions comes, after the bar; a page with no versions to choose has no diff either
+		b.until("the versions", diffOpen+".hidden || document.getElementById('frame-version').dataset.numbers")
 		b.still()
-		return b.eval(frameSaid)
+		return b.eval(frameTold)
 	}
 	out := make([]string, 0, 24)
 	// A page never read: at a version, that version is told read, and the latest is not.
 	out = append(out, open("/a/d/?v=2"))
-	out = append(out, b.until("v2 told read", newsOfD+" === 'version' && "+newsOfD), b.eval("document.querySelectorAll('.toast').length"), b.eval("document.getElementById('print-raw').getAttribute('href').replace(location.origin, '')"),
-		b.eval("sessionStorage.getItem('served')"))
+	out = append(out, b.until("v2 told read", pageNews("d")+".then((n) => n === 'version' && n)"), b.eval("document.querySelectorAll('[data-testid=toast]').length"),
+		b.eval("document.getElementById('print-raw').getAttribute('href').replace(location.origin, '')"), b.eval("sessionStorage.getItem('served')"))
 	// The version last read, told as it is read.
 	const words = "[...document.querySelectorAll('#frame-version option')].map((o) => o.textContent.replace(/ · \\d\\d\\/\\d\\d \\d\\d:\\d\\d/, '')).join(', ')"
 	out = append(out, b.until("last read", words+".includes('Last read') && "+words))
@@ -182,7 +254,7 @@ func TestUIVersionURL(t *testing.T) { //nolint:paralleltest // the browser tests
 	}
 	b.navigate("/a/d/?diff&v=2")
 	b.until("the diff", "document.querySelector('#diff-body > *')")
-	out = append(out, b.eval(frameSaid))
+	out = append(out, b.eval(frameTold))
 
 	// Chosen with the mouse and the keys: a move that Back undoes, the focus on the choice again.
 	open("/a/d/?v=2")
@@ -192,7 +264,7 @@ func TestUIVersionURL(t *testing.T) { //nolint:paralleltest // the browser tests
 	o := b.rect("[...document.querySelectorAll('#frame-version option')].find((o) => o.value === '1')")
 	b.click(o.X+o.Width/2, o.Y+o.Height/2)
 	b.until("v1", "location.search === '?v=1' && !document.getElementById('frame-version').hidden && document.activeElement.id === 'frame-version'")
-	out = append(out, b.eval(frameSaid))
+	out = append(out, b.eval(frameTold))
 	b.pressKey(kb.Enter)
 	b.until("open by the key", "document.getElementById('frame-version').matches(':open')")
 	b.pressKey(kb.ArrowUp)
@@ -200,14 +272,14 @@ func TestUIVersionURL(t *testing.T) { //nolint:paralleltest // the browser tests
 	b.until("v2 by the key", "location.search === '?v=2' && !document.getElementById('frame-version').hidden && document.activeElement.id === 'frame-version'")
 	b.moving("history.back()")
 	b.until("v1 back", "location.search === '?v=1' && !document.getElementById('frame-version').hidden")
-	out = append(out, b.eval("[document.getElementById('frame-version').value, frameAt.v].join(' ')"))
-	choose(b, "frame-version", 2)
+	out = append(out, b.eval("[document.getElementById('frame-version').value, document.getElementById('frame').dataset.version].join(' ')"))
+	chooseVersion(b, "frame-version", 2)
 	b.until("v2", "location.search === '?v=2' && !document.getElementById('frame-version').hidden")
-	choose(b, "frame-version", 1)
+	chooseVersion(b, "frame-version", 1)
 	b.until("v1", "location.search === '?v=1' && !document.getElementById('frame-version').hidden")
 	b.moving("history.back()")
 	b.until("back", "location.search === '?v=2' && !document.getElementById('frame-version').hidden")
-	out = append(out, b.eval(frameSaid))
+	out = append(out, b.eval(frameTold))
 	// Yellow, its words read and it takes the ring.
 	b.still()
 	if low := b.eval(measureContrast); low != "" {
@@ -219,24 +291,28 @@ func TestUIVersionURL(t *testing.T) { //nolint:paralleltest // the browser tests
 	b.eval("document.getElementById('frame-title').removeAttribute('tabindex')")
 	// The words' way to the latest; marked unread, moving among the versions tells nothing.
 	open("/a/d/")
-	b.until("read", "!("+newsOfD+") && !document.querySelector('#frame-actions .mark-unread').hidden")
-	b.eval(`markUnread('d'); sessionStorage.removeItem('reads')`)
-	b.until("unread", newsOfD)
-	choose(b, "frame-version", 2)
-	b.until("v2", "location.search === '?v=2' && document.querySelector('.dnote.ver-note')")
-	b.moving("[...document.querySelectorAll('.dnote.ver-note a')].find((a) => a.textContent.includes('latest')).click()")
+	b.until("read", unread+"?.hidden === false")
+	pressMenuItem(b, "#frame-actions", "mark-unread")
+	b.eval("sessionStorage.removeItem('reads')")
+	b.until("unread", unread+".hidden")
+	chooseVersion(b, "frame-version", 2)
+	b.until("v2", "location.search === '?v=2' && document.querySelector('[data-testid=ver-note]')")
+	b.moving("[...document.querySelectorAll('[data-testid=ver-note] a')].find((a) => a.textContent.includes('latest')).click()")
 	b.until("the latest", "location.search === '' && !document.getElementById('frame-version').hidden && document.activeElement.id === 'frame-version'")
 	b.still()
-	out = append(out, b.eval("Boolean("+newsOfD+")"), b.eval("document.querySelectorAll('.toast').length"), b.eval("sessionStorage.getItem('reads') ?? '0'"))
+	out = append(out, b.eval(unread+".hidden"), b.eval("document.querySelectorAll('[data-testid=toast]').length"), b.eval("sessionStorage.getItem('reads') ?? '0'"))
 	// What a move kept of another page does not hold this one back.
 	s.floe(t, "publish", s.page(t, "diff/n.yaml", "N", "<p>n</p>"), "--slug", "n")
 	b.eval(`sessionStorage.setItem('version.move', JSON.stringify({ slug: 'other', focus: true, kept: true }))`)
 	b.navigate("/a/n/")
-	out = append(out, b.until("read as ever", "items.find((a) => a.slug === 'n') && !items.find((a) => a.slug === 'n').news && document.querySelector('.toast.page') !== null"))
+	out = append(out, b.until("read as ever", unread+"?.hidden === false && document.querySelector('[data-testid=toast][data-kind~=page]') !== null"))
 
 	// A slug changed keeps the version.
 	open("/a/d/?v=2")
-	b.moving("document.querySelector('#frame-actions .edit').click(); document.getElementById('edit-slug').value = 'd3'; document.getElementById('edit').requestSubmit()")
+	pressMenuItem(b, "#frame-actions", "edit")
+	openSlugField(b)
+	b.fill("#edit-slug", "d3")
+	b.moving("document.getElementById('edit-submit').click()")
 	out = append(out, b.until("the new name", "location.pathname !== '/a/d/' && location.pathname + location.search"))
 
 	check(t, "url", out, strings.Join([]string{
@@ -392,28 +468,39 @@ func TestUIVersionNotes(t *testing.T) { //nolint:paralleltest // the browser tes
 	b.size(1440, 900, false)
 	defer b.unsize()
 	b.navigate("/a/d/?v=1")
-	b.until("v1 told read", "items.find((a) => a.slug === 'd')?.news === 'version'")
+	b.until("v1 told read", pageNews("d")+".then((n) => n === 'version')")
 	b.navigate("/a/d/?v=99")
-	b.until("both", "document.querySelector('.dnote.ver-note') && document.querySelector('.dnote.page-note')")
-	order := b.eval(`[...document.querySelectorAll('.dnote')].filter((e) => e.getClientRects().length).map((e) => e.classList.contains('ver-note') ? 'version' : 'page').join(' ')`)
-	check(t, "notes", []string{order, b.eval(noteWords)}, "version page|That version cannot be opened, so this shows the latest.")
+	b.until("both", "document.querySelector('[data-testid=ver-note]') && document.querySelector('[data-testid=page-note]')")
+	order := b.eval(`[...document.querySelectorAll('[data-testid=ver-note], [data-testid=page-note], [data-testid=dnote]')].filter((e) => e.getClientRects().length)
+		.map((e) => e.dataset.testid === 'ver-note' ? 'version' : 'page').join(' ')`)
+	check(t, "notes", []string{order, b.eval(verWords)}, "version page|That version cannot be opened, so this shows the latest.")
 }
 
 // TestUIVersionPickAhead chooses the version the list of pages still takes for the latest, that list read before one was published and the
-// choice after: it opens that version, not the latest, and does not tell the latest read.
+// choice after: it opens that version, not the latest, and does not tell the latest read. The list is held as it was read by the test's own
+// answer to its reads.
 func TestUIVersionPickAhead(t *testing.T) { //nolint:paralleltest // the browser tests share one Chrome, one at a time
 	s := diffSite(t)
 	b := s.b
 	b.size(1440, 900, false)
 	defer b.unsize()
+	b.addScript(`if (window.parent === window) {
+		const f = window.fetch;
+		window.fetch = (u, i) => (String(u) === '/api/pages' && window.heldList ? Promise.resolve(new Response(window.heldList, { headers: { 'Content-Type': 'application/json' } })) : f(u, i));
+	}`)
 	b.navigate("/")
 	b.until("the row", "document.querySelector('#list li[data-slug=d]')")
-	b.eval("document.querySelector('#list li[data-slug=d] .title').click()")
+	b.eval("document.querySelector('#list li[data-slug=d] [data-testid=title]').click()")
 	b.until("the choice", "!document.getElementById('read-version').hidden")
-	b.eval("items.find((a) => a.slug === 'd').version = 2")
-	choose(b, "read-version", 2)
-	b.until("v2", "readLoaded.endsWith('v=2')")
-	check(t, "picked", []string{b.eval("picked.v")}, "2")
+	b.until("read", "!("+rowNews("d")+")")
+	b.eval("fetch('/api/pages').then((r) => r.text()).then((l) => { window.heldList = l; })")
+	s.floe(t, "publish", s.page(t, "diff/d.yaml", "D", diffV3+"<p>four</p>"), "--slug", "d")
+	// A version read has the versions read again, v4 among them, the list still at v3
+	chooseVersion(b, "read-version", 2)
+	b.until("v4 in the choice", "document.querySelector('#read-version option[value=\"4\"]')")
+	chooseVersion(b, "read-version", 3)
+	b.until("v3", besideLoaded+".endsWith('v=3')")
+	check(t, "picked", []string{b.eval(besideV)}, "3")
 }
 
 // TestUIVersionAnswers: moving to another page takes the choice and words of the one before away at once, and an answer come late, of a page
@@ -428,20 +515,20 @@ func TestUIVersionAnswers(t *testing.T) { //nolint:paralleltest // the browser t
 	b.navigate("/")
 	b.until("the rows", "document.querySelector('#list li[data-slug=d]') && document.querySelector('#list li[data-slug=e]')")
 	row := func(slug string) string {
-		return "document.querySelector('#list li[data-slug=" + slug + "] .title').click()"
+		return "document.querySelector('#list li[data-slug=" + slug + "] [data-testid=title]').click()"
 	}
 	b.eval(row("d"))
 	b.until("the choice", "!document.getElementById('read-version').hidden")
-	choose(b, "read-version", 2)
-	b.until("v2", "readLoaded.endsWith('v=2') && document.querySelector('.dnote.ver-note')")
+	chooseVersion(b, "read-version", 2)
+	b.until("v2", besideLoaded+".endsWith('v=2') && document.querySelector('[data-testid=ver-note]')")
 	b.eval(`window.hold = new Promise((r) => { window.release = r; });
 		window.fetch = ((f) => async (u, i) => { if (String(u).endsWith('/e/versions')) { await window.hold; const r = await f(u, i); window.answeredAt = performance.now(); return r; } return f(u, i); })(window.fetch)`)
 	b.eval(row("e"))
-	const state = `[document.getElementById('read-version').hidden, document.getElementById('read-version').classList.contains('old'), document.querySelector('.dnote.ver-note') === null, [...document.querySelectorAll('#read-version option')].map((o) => o.value).join()].join(' ')`
+	const state = `[document.getElementById('read-version').hidden, document.getElementById('read-version').dataset.old === 'true', document.querySelector('[data-testid=ver-note]') === null, [...document.querySelectorAll('#read-version option')].map((o) => o.value).join()].join(' ')`
 	out := make([]string, 0, 5)
 	out = append(out, b.eval(state))
 	b.eval(row("d"))
-	b.until("d again", "picked.slug === 'd' && !document.getElementById('read-version').hidden")
+	b.until("d again", besideSlug+" === 'd' && !document.getElementById('read-version').hidden")
 	b.eval("window.release()")
 	b.until("the late answer, and time to draw it", "window.answeredAt && performance.now() - window.answeredAt > 200")
 	out = append(out, b.eval(state))
@@ -449,14 +536,14 @@ func TestUIVersionAnswers(t *testing.T) { //nolint:paralleltest // the browser t
 	out = append(out, b.until("e's", "!document.getElementById('read-version').hidden && "+state))
 	// A read of a version between the last read and the latest moves the words, the list of pages saying nothing of it.
 	b.eval(row("d"))
-	b.until("d read", "picked.slug === 'd' && !items.find((a) => a.slug === 'd').news")
-	choose(b, "read-version", 2)
-	b.until("v2", "readLoaded.endsWith('v=2')")
+	b.until("d read", besideSlug+" === 'd' && !("+rowNews("d")+")")
+	chooseVersion(b, "read-version", 2)
+	b.until("v2", besideLoaded+".endsWith('v=2')")
 	s.floe(t, "publish", s.page(t, "diff/d.yaml", "D", diffV3+"<p>four</p>"), "--slug", "d")
 	s.floe(t, "publish", s.page(t, "diff/d.yaml", "D", diffV3+"<p>five</p>"), "--slug", "d")
 	const lastRead = "[...document.querySelectorAll('#read-version option')].filter((o) => o.textContent.includes('Last read')).map((o) => o.value).join()"
 	out = append(out, b.until("v3 last read", "[...document.querySelectorAll('#read-version option')].length === 5 && "+lastRead))
-	choose(b, "read-version", 4)
+	chooseVersion(b, "read-version", 4)
 	out = append(out, b.until("v4 last read", lastRead+" === '4' && "+lastRead))
 	check(t, "answers", out, "true false true |false false true 3,2,1|false false true 2,1|3|4")
 }
