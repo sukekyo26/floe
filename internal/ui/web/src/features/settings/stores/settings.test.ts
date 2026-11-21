@@ -13,6 +13,22 @@ const read: ThemesRead = { themes: [], default: 'mine', taskMode: false, setting
 const page = { slug: 'a', title: 'A' } as Page;
 
 describe(createSettings, () => {
+  it('drops a refusal of an opening gone since', async () => {
+    expect.assertions(1);
+    setBoot({ messages } as unknown as Boot);
+    const { promise: late, reject } = Promise.withResolvers<ThemesRead>();
+    const answers = (function* answer() {
+      yield late;
+      for (;;) yield Promise.resolve(read);
+    })();
+    const s = createSettings({ readThemes: () => answers.next().value, readPageTheme: () => Promise.resolve('') });
+    const opening = s.open(null);
+    await s.open(null);
+    reject(new Error('lost'));
+    await opening;
+    expect([s.state.get().failed, s.state.get().read]).toStrictEqual(['', read]);
+  });
+
   it('drops the answer of an opening gone since, and says a read that failed', async () => {
     expect.assertions(3);
     setBoot({ messages } as unknown as Boot);
@@ -103,10 +119,13 @@ describe(createThemeWrites, () => {
     expect([mode.log.includes('saved'), texts(mode.toasts)]).toStrictEqual([false, ['ui_task_mode_failed:no']]);
   });
 
-  it('writes nothing for a second press while held', async () => {
-    expect.assertions(1);
-    const { writes, log, whileHeld, saved } = made('', true);
+  it('writes, tells and says nothing for a second press while held', async () => {
+    expect.assertions(2);
+    const { writes, log, toasts, whileHeld, saved } = made('', true);
     const got = await writes.chooseTheme({ page, theme: 'mine', whileHeld, saved });
     expect([log, got.ran]).toStrictEqual([[], false]);
+    await writes.chooseTheme({ page: null, theme: 'mine', whileHeld, saved });
+    await writes.saveTaskMode({ on: true, whileHeld, saved });
+    expect([log, texts(toasts)]).toStrictEqual([[], []]);
   });
 });
