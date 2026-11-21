@@ -165,6 +165,7 @@ export function TagDialog({ target, onClosed, pages = pagePages, apply = pageApp
           type="search"
           className="h-9 w-full min-w-0 rounded-small border border-line bg-panel px-3 text-fg shadow-sm placeholder:text-faint"
           aria-label={t('ui_tag_find')}
+          placeholder={t('ui_tag_find')}
           aria-controls="tag-boxes"
           autoComplete="off"
           value={find}

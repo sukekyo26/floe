@@ -53,7 +53,11 @@ export function EditDialog({ target, onClosed, save = pageSave }: EditDialogProp
   const [more, setMore] = useState(false);
   // The way back and the slug the page has as it closes (renamed, its row's menu is under the new one)
   const [back, setBack] = useState<EditTarget['back'] | null>(null);
+  // Set with onClosed() in one task, so drawn in the one render that closes it (React batches them): afterClose reads
+  // the slug as renamed
   const [slug, setSlug] = useState('');
+  // A refusal each: the effect below runs for every one, the same words again too
+  const [refusals, setRefusals] = useState(0);
   const slugField = useRef<HTMLInputElement>(null);
   const projectField = useRef<HTMLInputElement>(null);
   const fold = useRef<HTMLDetailsElement>(null);
@@ -65,7 +69,7 @@ export function EditDialog({ target, onClosed, save = pageSave }: EditDialogProp
     if (fold.current) fold.current.open = true;
     refused.current.focus();
     refused.current = null;
-  });
+  }, [refusals, hold.held]);
   if (target !== seen) {
     setSeen(target);
     if (target) {
@@ -115,6 +119,7 @@ export function EditDialog({ target, onClosed, save = pageSave }: EditDialogProp
             if (!saved.field) return;
             refused.current = (saved.field === 'slug' ? slugField : projectField).current;
             setMore(true);
+            setRefusals((n) => n + 1);
           });
         }}
       >

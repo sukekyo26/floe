@@ -37,8 +37,12 @@ describe(TagDialog, () => {
     expect(chipOf(html, 'x')).toMatch(/checked=""[^>]*>.*data-testid="mark"[^>]*>✓/);
     expect(chipOf(html, 'y')).toMatch(/data-testid="mark"[^>]*>−.*data-testid="n"[^>]*>1\/2/);
     expect(chipOf(html, 'z')).toMatch(/data-testid="mark"[^>]*>\+/);
-    // How many is told for some alone
-    expect(chipOf(html, 'x')).not.toContain('data-testid="n"');
+    // Checked is on all alone (some is indeterminate, set on the box itself), and how many is told for some alone
+    expect([
+      chipOf(html, 'y').includes('checked=""'),
+      chipOf(html, 'z').includes('checked=""'),
+      chipOf(html, 'x').includes('data-testid="n"'),
+    ]).toStrictEqual([false, false, false]);
     // Apply is for a change, none made yet
     expect(html).toMatch(/<button[^>]*id="tag-apply"[^>]*disabled=""/);
   });
@@ -50,9 +54,12 @@ describe(TagLine, () => {
     testBoot();
     const tagged = renderToString(<TagLine page={page('a', ['x', 'y'])} hidden={false} onEdit={none} />);
     expect([...tagged.matchAll(/data-testid="tagpill"[^>]*>([^<]*)</g)].map((m) => m[1])).toStrictEqual(['x', 'y']);
-    expect(renderToString(<TagLine page={page('a', [])} hidden={false} onEdit={none} />)).toContain(
-      'aria-label="ui_tag_add_named:A"',
-    );
+    const bare = renderToString(<TagLine page={page('a', [])} hidden={false} onEdit={none} />);
+    expect([
+      bare.includes('aria-label="ui_tag_add_named:A"'),
+      bare.includes('data-tagged'),
+      tagged.includes('data-tagged="true"'),
+    ]).toStrictEqual([true, false, true]);
     expect(renderToString(<TagLine page={null} hidden={false} onEdit={none} />)).toMatch(/^<div hidden=""/);
   });
 });

@@ -77,7 +77,7 @@ export function KeysDialog({ open, screen, diff, diffGo, backWords, mac, onClose
         {switchButton(
           'about',
           <>
-            <span hidden={frame || tasks}>{t('ui_help_about_pages')}</span>
+            <span hidden={tasks}>{t('ui_help_about_pages')}</span>
             <span hidden={!tasks}>{t('ui_help_about_tasks')}</span>
           </>,
         )}
@@ -85,7 +85,7 @@ export function KeysDialog({ open, screen, diff, diffGo, backWords, mac, onClose
       </div>
       <div ref={panels} data-testid="help-panels" className="min-h-0 overflow-y-auto">
         <div id="help-about" hidden={tab !== 'about'} className="grid gap-4">
-          <div hidden={frame || tasks} className="grid gap-4">
+          <div hidden={tasks} className="grid gap-4">
             <p data-testid="help-lead" className={NOTE}>
               {t('ui_help_pages_text')}
             </p>
@@ -167,10 +167,10 @@ export function KeysDialog({ open, screen, diff, diffGo, backWords, mac, onClose
             <section id="keys-row" hidden={screen === 'taskList'}>
               <h3 className={H3}>{t('ui_keys_row')}</h3>
               <dl className={KEYS_DL}>
-                <dt className="select-key" hidden={screen === 'taskPage'}>
+                <dt data-testid="select-key" hidden={screen === 'taskPage'}>
                   <Kbd>x</Kbd>
                 </dt>
-                <dd className="select-key" hidden={screen === 'taskPage'}>
+                <dd data-testid="select-key" hidden={screen === 'taskPage'}>
                   {t('ui_keys_select')}
                 </dd>
                 <dt>
@@ -239,22 +239,22 @@ export function KeysDialog({ open, screen, diff, diffGo, backWords, mac, onClose
                 <dd data-testid="diff-go" hidden={!diffGo}>
                   {t('ui_keys_diff')}
                 </dd>
-                <dt className="diff-key" hidden={!diff}>
+                <dt data-testid="diff-key" hidden={!diff}>
                   <Kbd>d</Kbd>
                 </dt>
-                <dd className="diff-key" hidden={!diff}>
+                <dd data-testid="diff-key" hidden={!diff}>
                   {t('ui_diff_close')}
                 </dd>
-                <dt className="diff-key" hidden={!diff}>
+                <dt data-testid="diff-key" hidden={!diff}>
                   <Kbd>n</Kbd>
                 </dt>
-                <dd className="diff-key" hidden={!diff}>
+                <dd data-testid="diff-key" hidden={!diff}>
                   {t('ui_diff_next')}
                 </dd>
-                <dt className="diff-key" hidden={!diff}>
+                <dt data-testid="diff-key" hidden={!diff}>
                   <Kbd>p</Kbd>
                 </dt>
-                <dd className="diff-key" hidden={!diff}>
+                <dd data-testid="diff-key" hidden={!diff}>
                   {t('ui_diff_prev')}
                 </dd>
               </dl>

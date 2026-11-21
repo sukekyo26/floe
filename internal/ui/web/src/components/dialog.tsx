@@ -129,11 +129,11 @@ export function Dialog({
           e.preventDefault();
           e.stopPropagation();
         }}
-        className={`${tall ? 'mx-auto mt-[6dvh] mb-auto max-h-[calc(94dvh-1rem)]' : 'm-auto'} w-[min(32rem,calc(100%-32px))] rounded-corner border border-line bg-panel p-0 text-fg shadow-lg backdrop:bg-scrim backdrop:backdrop-blur-[3px] open:animate-pop open:backdrop:animate-fade [&[closedby=none]]:focus-visible:outline-none [&[closedby=none]>*]:pointer-events-none`}
+        className={`${tall ? 'mx-auto mt-[6dvh] mb-auto max-h-(--tall) [--tall:calc(94dvh-1rem)]' : 'm-auto'} w-[min(32rem,calc(100%-32px))] rounded-corner border border-line bg-panel p-0 text-fg shadow-lg backdrop:bg-scrim backdrop:backdrop-blur-[3px] open:animate-pop open:backdrop:animate-fade [&[closedby=none]]:focus-visible:outline-none [&[closedby=none]>*]:pointer-events-none`}
       >
         <fieldset
           disabled={held}
-          className={`m-0 min-w-0 gap-4 border-0 px-6 pt-5.5 pb-5 ${tall ? 'flex max-h-[calc(94dvh-1rem-2px)] flex-col' : 'grid'}`}
+          className={`m-0 min-w-0 gap-4 border-0 px-6 pt-5.5 pb-5 ${tall ? 'flex max-h-[calc(var(--tall)-2px)] flex-col' : 'grid'}`}
         >
           {children}
         </fieldset>

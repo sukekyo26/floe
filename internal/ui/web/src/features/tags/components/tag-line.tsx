@@ -42,6 +42,7 @@ export function TagLine({ page: a, hidden, onEdit }: TagLineProps) {
       <IconButton
         ref={button}
         testid="tag-edit"
+        tagged={tags.length > 0}
         label={named}
         onClick={() => {
           if (a) onEdit(a, () => focusOn(button.current));

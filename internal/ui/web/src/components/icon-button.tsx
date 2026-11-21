@@ -19,6 +19,8 @@ export interface IconButtonProps {
   readonly on?: boolean | undefined;
   // armed: a delete waiting for its second press
   readonly armed?: boolean | undefined;
+  // tagged marks the tag line's button of a page with tags (data-tagged, P0b-2)
+  readonly tagged?: boolean | undefined;
   readonly tone?: 'star' | 'danger' | undefined;
   readonly href?: string | undefined;
   readonly newTab?: boolean | undefined;
@@ -50,6 +52,7 @@ export function IconButton({
   pressed,
   on,
   armed,
+  tagged,
   tone,
   href,
   newTab,
@@ -94,6 +97,7 @@ export function IconButton({
       aria-pressed={pressed}
       data-on={on ? 'true' : undefined}
       data-armed={armed ? 'true' : undefined}
+      data-tagged={tagged ? 'true' : undefined}
       disabled={disabled}
       onClick={onClick}
     >
