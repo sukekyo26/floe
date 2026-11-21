@@ -1,4 +1,4 @@
-import { prepareArchive, restoreFocus, rowMenuId } from '@/components/focus-places';
+import { barMenuId, prepareArchive, restoreFocus, rowMenuId } from '@/components/focus-places';
 import { IconButton } from '@/components/icon-button';
 import {
   ArchiveIcon,
@@ -197,7 +197,7 @@ export function BarActions({
             page={a}
             at={at}
             place={place}
-            menuId={`bar:${id}`}
+            menuId={barMenuId(id)}
             openers={openers}
             {...(onRemoved ? { onRemoved } : {})}
             taskShown={taskShown}
