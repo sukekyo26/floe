@@ -58,4 +58,29 @@ describe(KeysDialog, () => {
     expect(draw('taskPage')).toContain('ui_tasks_back');
     expect(draw('list', { mac: true })).toMatch(/data-testid="mod"[^>]*>⌘</);
   });
+
+  it('marks the tab it opens on chosen, the other out of the Tab order, each panel labelled by its tab', () => {
+    expect.assertions(3);
+    testBoot();
+    const html = renderToString(
+      <KeysDialog
+        open="about"
+        screen="list"
+        diff={false}
+        diffGo={false}
+        backWords=""
+        mac={false}
+        onClosed={() => undefined}
+      />,
+    );
+    const tab = (name: string) => String(new RegExp(`<button[^>]*data-help="${name}"[^>]*>`).exec(html)?.[0]);
+    expect(
+      [tab('about'), tab('keys')].map((x) => [x.includes('aria-selected="true"'), x.includes('tabindex="0"')]),
+    ).toStrictEqual([
+      [true, true],
+      [false, false],
+    ]);
+    expect(tab('about')).toMatch(/role="tab" id="help-tab-about" aria-controls="help-about"/);
+    expect(html).toMatch(/<div id="help-about" role="tabpanel" aria-labelledby="help-tab-about"(?![^>]*hidden)/);
+  });
 });

@@ -1,8 +1,8 @@
 import { useLayoutEffect, useRef, useState, type ReactNode } from 'react';
 
-import { Button } from '@/components/button';
 import { Dialog, DialogActions, DialogClose, DialogHead } from '@/components/dialog';
 import { HelpIcon } from '@/components/icons';
+import { Tab, TabList } from '@/components/tabs';
 import { t } from '@/lib/t';
 
 export type HelpTab = 'about' | 'keys';
@@ -58,33 +58,40 @@ export function KeysDialog({ open, screen, diff, diffGo, backWords, mac, onClose
   const frame = screen === 'frame';
   const mod = mac ? '⌘' : 'Ctrl';
   const note = (key: 'ui_keys_note_list' | 'ui_keys_note_frame') => (mac ? t(key).replace('Ctrl+K', '⌘K') : t(key));
-  const switchButton = (name: HelpTab, words: ReactNode) => (
-    <Button
-      pressed={tab === name}
-      help={name}
-      onClick={() => {
-        setTab(name);
-      }}
-    >
-      {words}
-    </Button>
-  );
-
   return (
     <Dialog id="keys" open={open !== null} onClosed={onClosed} labelledBy="keys-title" tall>
       <DialogHead icon={<HelpIcon />} titleId="keys-title" title={t('ui_help')} />
-      <div className="flex flex-wrap gap-1.5">
-        {switchButton(
-          'about',
-          <>
-            <span hidden={tasks}>{t('ui_help_about_pages')}</span>
-            <span hidden={!tasks}>{t('ui_help_about_tasks')}</span>
-          </>,
-        )}
-        {switchButton('keys', t('ui_keys'))}
-      </div>
+      <TabList label={t('ui_help')}>
+        {(['about', 'keys'] as const).map((name) => (
+          <Tab
+            key={name}
+            id={`help-tab-${name}`}
+            panel={`help-${name}`}
+            help={name}
+            selected={tab === name}
+            onSelect={() => {
+              setTab(name);
+            }}
+          >
+            {name === 'about' ? (
+              <>
+                <span hidden={tasks}>{t('ui_help_about_pages')}</span>
+                <span hidden={!tasks}>{t('ui_help_about_tasks')}</span>
+              </>
+            ) : (
+              t('ui_keys')
+            )}
+          </Tab>
+        ))}
+      </TabList>
       <div ref={panels} data-testid="help-panels" className="min-h-0 overflow-y-auto">
-        <div id="help-about" hidden={tab !== 'about'} className="grid gap-4">
+        <div
+          id="help-about"
+          role="tabpanel"
+          aria-labelledby="help-tab-about"
+          hidden={tab !== 'about'}
+          className="grid gap-4"
+        >
           <div hidden={tasks} className="grid gap-4">
             <p data-testid="help-lead" className={NOTE}>
               {t('ui_help_pages_text')}
@@ -127,7 +134,13 @@ export function KeysDialog({ open, screen, diff, diffGo, backWords, mac, onClose
             </dl>
           </div>
         </div>
-        <div id="help-keys" hidden={tab !== 'keys'} className="grid gap-4">
+        <div
+          id="help-keys"
+          role="tabpanel"
+          aria-labelledby="help-tab-keys"
+          hidden={tab !== 'keys'}
+          className="grid gap-4"
+        >
           <p id="keys-note-list" hidden={frame} className={NOTE}>
             {note('ui_keys_note_list')}
           </p>

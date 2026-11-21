@@ -16,6 +16,7 @@ import { BarActions, RowActions } from '@/components/page-actions';
 import type { Openers } from '@/components/page-menu';
 import { PageRow } from '@/components/page-row';
 import { Rows, type RowItem } from '@/components/rows';
+import { Tab, TabList } from '@/components/tabs';
 import { ServerState } from '@/components/server-state';
 import { Toasts } from '@/components/toasts';
 import { setBoot, type Boot } from '@/config/boot';
@@ -262,6 +263,7 @@ function Gallery() {
   const [helpDiff, setHelpDiff] = useState(false);
   const [diffGo, setDiffGo] = useState(true);
   const [mac, setMac] = useState(isMac());
+  const [tabNow, setTabNow] = useState<'one' | 'two'>('one');
   const [open, setOpen] = useState(false);
   const [width, setWidth] = useState(300);
   const hold = useHold();
@@ -460,6 +462,35 @@ function Gallery() {
               As the page open whole
             </Button>
           </div>
+        </Section>
+        <Section title="Tabs (← → between them; the narrow box wraps them)">
+          {[26, 12].map((rem) => (
+            <div key={rem} className="mb-3" style={{ width: `${String(rem)}rem` }}>
+              <TabList label="Tabs">
+                {(['one', 'two'] as const).map((name) => (
+                  <Tab
+                    key={name}
+                    id={`tab-${String(rem)}-${name}`}
+                    panel={`panel-${String(rem)}`}
+                    selected={tabNow === name}
+                    onSelect={() => {
+                      setTabNow(name);
+                    }}
+                  >
+                    {name === 'one' ? t('ui_help_about_tasks') : t('ui_keys')}
+                  </Tab>
+                ))}
+              </TabList>
+              <p
+                id={`panel-${String(rem)}`}
+                role="tabpanel"
+                aria-labelledby={`tab-${String(rem)}-${tabNow}`}
+                className="m-0 pt-2 text-small text-muted"
+              >
+                {tabNow}
+              </p>
+            </div>
+          ))}
         </Section>
         <Section title="Help (? or the bar’s button)">
           <div className="flex flex-wrap gap-2">

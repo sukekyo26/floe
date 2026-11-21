@@ -20,8 +20,6 @@ export interface ButtonProps {
   readonly label?: string | undefined;
   // closes marks a modal's close button (data-close), which the browser tests press
   readonly closes?: boolean;
-  // help names the help's tab it shows (data-help)
-  readonly help?: string;
   // focusOnOpen marks the button its modal focuses as it opens (data-autofocus: Dialog)
   readonly focusOnOpen?: boolean;
   // wraps lets words a person typed go over lines, shown whole (ui.md: #tag-new, the one .btn that wraps)
@@ -46,7 +44,6 @@ export function Button({
   testid,
   label,
   closes,
-  help,
   focusOnOpen,
   wraps,
   slug,
@@ -61,7 +58,6 @@ export function Button({
       id={id}
       data-testid={testid}
       data-close={closes ? '' : undefined}
-      data-help={help}
       data-autofocus={focusOnOpen ? '' : undefined}
       data-slug={slug}
       aria-label={label}
