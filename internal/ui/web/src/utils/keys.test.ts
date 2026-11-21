@@ -8,6 +8,10 @@ const at = (...in_: string[]): KeyTarget => ({
   closest: (selector) => (in_.some((x) => selector.includes(x)) ? {} : null),
 });
 
+const checkBox: KeyTarget = {
+  closest: (selector) => (selector.includes('input:not([type="checkbox"])') || !selector.includes('input') ? null : {}),
+};
+
 describe(plainKey, () => {
   it('takes a key on the page, not in a field, with a modal open or with a modifier, but in a check box', () => {
     expect.assertions(5);
@@ -16,10 +20,6 @@ describe(plainKey, () => {
     expect(plainKey({ ...press, target: at() }, true)).toBe(false);
     expect(plainKey({ ...press, ctrlKey: true, target: at() }, false)).toBe(false);
     // A check box is in a selector of inputs only where check boxes are not left out of it
-    const checkBox: KeyTarget = {
-      closest: (selector) =>
-        selector.includes('input:not([type="checkbox"])') || !selector.includes('input') ? null : {},
-    };
     expect(plainKey({ ...press, target: checkBox }, false)).toBe(true);
   });
 });
