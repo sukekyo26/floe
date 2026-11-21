@@ -31,9 +31,7 @@ func register(lang Lang, messages map[string]string) {
 		table = map[string]string{}
 		catalogs[lang] = table
 	}
-	for k, v := range messages {
-		table[k] = v
-	}
+	maps.Copy(table, messages)
 }
 
 // parent is tag without its last subtag, "" for one of none: zh-hant for zh-hant-tw.

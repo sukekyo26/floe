@@ -138,8 +138,7 @@ func (k *kit) download(ctx context.Context, at, failing string) ([]byte, error) 
 
 // unwrapped is err without the URL net/http puts before its words (*url.Error), as the mistake is at the URL.
 func unwrapped(err error) error {
-	var ue *url.Error
-	if errors.As(err, &ue) {
+	if ue, ok := errors.AsType[*url.Error](err); ok {
 		return ue.Err
 	}
 	return err

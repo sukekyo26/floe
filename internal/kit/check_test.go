@@ -3,6 +3,7 @@ package kit_test
 import (
 	"html/template"
 	"io"
+	"maps"
 	"slices"
 	"strings"
 	"testing"
@@ -46,12 +47,8 @@ func TestCheckMistakes(t *testing.T) {
 	}
 	with := func(more map[string]string, without ...string) map[string]string {
 		files := map[string]string{}
-		for k, v := range part {
-			files[k] = v
-		}
-		for k, v := range more {
-			files[k] = v
-		}
+		maps.Copy(files, part)
+		maps.Copy(files, more)
 		for _, k := range without {
 			delete(files, k)
 		}

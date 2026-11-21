@@ -267,7 +267,7 @@ func TestRebuildMeanwhile(t *testing.T) {
 	}{
 		{"edited", func(t *testing.T, s *store.Store, _ store.Drawing) {
 			t.Helper()
-			edit := store.Edit{Title: ptr("Kept"), Favorite: ptr(true), Archived: ptr(true), Description: ptr("about"), Tags: &store.TagsEdit{Add: []string{"a"}}}
+			edit := store.Edit{Title: new("Kept"), Favorite: new(true), Archived: new(true), Description: new("about"), Tags: &store.TagsEdit{Add: []string{"a"}}}
 			if _, err := s.Edit("d", edit); err != nil {
 				t.Fatal(err)
 			}
@@ -314,7 +314,7 @@ func TestRebuildMeanwhile(t *testing.T) {
 		}},
 		{"renamed", func(t *testing.T, s *store.Store, _ store.Drawing) {
 			t.Helper()
-			if _, err := s.Edit("d", store.Edit{Slug: ptr("z")}); err != nil {
+			if _, err := s.Edit("d", store.Edit{Slug: new("z")}); err != nil {
 				t.Fatal(err)
 			}
 		}, func(t *testing.T, s *store.Store, root, before string) {
