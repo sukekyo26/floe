@@ -422,7 +422,7 @@ func TestTaskRequests(t *testing.T) {
 
 	funcRe := regexp.MustCompile(`(?:async\s+)?function\s+(\w+)\(`)
 	starts := funcRe.FindAllStringSubmatchIndex(pageSource, -1)
-	namedIn := func(path string) []string {
+	inPage := func(path string) []string {
 		named := regexp.MustCompile("['`]"+regexp.QuoteMeta(path)).FindAllStringIndex(pageSource, -1)
 		got := make([]string, 0, len(named))
 		for _, at := range named {
@@ -437,10 +437,15 @@ func TestTaskRequests(t *testing.T) {
 		slices.Sort(got)
 		return got
 	}
-	if got, want := namedIn("/api/tasks"), []string{"changeTasks", "forgetTask", "readTasks"}; !slices.Equal(got, want) {
+	if got, want := inPage("/api/tasks"), []string{"changeTasks", "forgetTask", "readTasks"}; !slices.Equal(got, want) {
 		t.Errorf("/api/tasks is named in %v, want %v once each", got, want)
 	}
-	if got := namedIn("/api/work"); len(got) > 0 {
+	// LIMIT: the text /api/tasks alone is looked for in web/src: one made of parts ('/api/' + 'tasks') passes. Read the
+	// TypeScript's tree if one comes to be written so.
+	if got, want := namedIn(webSources(t), "/api/tasks"), []string{"lib/tasks.ts"}; !slices.Equal(got, want) {
+		t.Errorf("/api/tasks is named in web/src's %v, want %v", got, want)
+	}
+	if got := inPage("/api/work"); len(got) > 0 {
 		t.Errorf("/api/work, which is no more, is named in %v", got)
 	}
 	for _, id := range []string{`id="set-parent"`, `id="set-url"`} {

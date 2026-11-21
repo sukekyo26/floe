@@ -4,7 +4,7 @@
   "type": "module",
   "scripts": {
     "build": "vite build",
-    "check": "oxfmt --check . && tsc -b && oxlint --deny-warnings src && vitest run --passWithNoTests"
+    "check": "oxfmt --check . && tsc -b && oxlint --deny-warnings src && vitest run"
   },
   "dependencies": {
     "react": "19.3.1",
