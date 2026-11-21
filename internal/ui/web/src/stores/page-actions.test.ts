@@ -6,6 +6,7 @@ import type { TasksAnswer } from '@/lib/tasks';
 import { createNotice } from '@/stores/notice';
 import type { OpenPage } from '@/stores/open-page';
 import type { Order } from '@/stores/order';
+import type { PageNote } from '@/stores/page-note';
 import { createPageActions } from '@/stores/page-actions';
 import type { PageWrites } from '@/stores/page-writes';
 import type { Pages } from '@/stores/pages';
@@ -98,6 +99,7 @@ function made({
     undoToast: createUndoToast({ toasts, notice, pages }),
     order: { keptBack: () => '/back' } as unknown as Order,
     openPage: { shownSlug: () => shown } as unknown as OpenPage,
+    note: { clear: () => log.push('note cleared') } as unknown as PageNote,
     boot: () => boot,
     go: (href) => log.push(`go ${href}`),
     write: (text) => (text ? Promise.resolve() : Promise.reject(new Error('denied'))),
@@ -222,11 +224,12 @@ describe(createPageActions, () => {
     expect([texts(shown.toasts), shown.toasts.shown.get()[0]?.page, shown.log]).toStrictEqual([
       ['ui_unread_done:undefined'],
       true,
-      ['focus'],
+      ['note cleared', 'focus'],
     ]);
+    // Of a page not shown, the words over the page shown stay
     const dropped = made({ outcome: { kind: 'dropped' } });
     await dropped.actions.markUnreadSaid('a', () => undefined);
-    expect(dropped.toasts.shown.get()).toStrictEqual([]);
+    expect([dropped.toasts.shown.get(), dropped.log]).toStrictEqual([[], []]);
     const archived = made({ outcome: null });
     await archived.actions.markUnreadSaid('a', () => undefined);
     expect(archived.toasts.shown.get()).toStrictEqual([]);

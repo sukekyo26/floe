@@ -46,7 +46,12 @@ import type { Order } from '@/stores/order';
 import { createPageActions } from '@/stores/page-actions';
 import type { PageWrites } from '@/stores/page-writes';
 import type { Pages } from '@/stores/pages';
-import type { Reads } from '@/stores/reads';
+import { createOpenPage } from '@/stores/open-page';
+import { createPageNote } from '@/stores/page-note';
+import { createReads } from '@/stores/reads';
+import type { Client } from '@/lib/api-client';
+import { ReaderPane } from '@/features/reader/components/reader-pane';
+import { createPageReads } from '@/features/reader/stores/page-reads';
 import type { TaskWrites } from '@/stores/tasks';
 import { toasts } from '@/stores/toasts';
 import type { Page } from '@/types/page';
@@ -145,6 +150,7 @@ const galleryPages = {
     }),
   rereadTasks: () => Promise.resolve(),
   readRev: () => 0,
+  whileReading: () => null,
   state: listed,
 } as unknown as Pages;
 // A tag write adds and removes; any other is the fields it names
@@ -155,6 +161,26 @@ const patched = (a: Page, body: unknown): Partial<Page> => {
     : (body as Partial<Page>);
 };
 const answered = { ok: true, status: 200, text: '', rev: 1, stale: '', pages: [], written: [] };
+// The page beside the list: its marks go to a fake server, whose answers can be slowed, and the words of its versions
+// come from fake /versions and /diff
+let readsSlow = false;
+const readServer = {
+  api: (url: string, init?: RequestInit) =>
+    new Promise<Response>((go) => {
+      setTimeout(
+        () => {
+          if (url.endsWith('/versions')) go(new Response(JSON.stringify({ read: 1 })));
+          else if (url.includes('/diff'))
+            go(new Response(JSON.stringify({ counts: { changed: 2, added: 1, removed: 0 } })));
+          else go(init?.method === 'DELETE' ? new Response(null, { status: 204 }) : new Response('{"cleared":true}'));
+        },
+        readsSlow ? 1500 : 50,
+      );
+    }),
+} as unknown as Client;
+const galleryOpen = createOpenPage({ boot: () => ({ screen: 'list', framed: '' }) as Boot, search: () => '' });
+const galleryNote = createPageNote({ client: readServer });
+const galleryReads = createReads({ client: readServer, pages: galleryPages, openPage: galleryOpen });
 const actions = createPageActions({
   writes: {
     writePage: () => Promise.resolve(''),
@@ -182,12 +208,21 @@ const actions = createPageActions({
     },
   } as unknown as TaskWrites,
   pages: galleryPages,
-  reads: { markUnread: () => Promise.resolve({ kind: 'sent', cleared: false }) } as unknown as Reads,
+  reads: galleryReads,
+  openPage: galleryOpen,
+  note: galleryNote,
   go: (href) => {
     toasts.toast(`would go to ${href}`);
   },
 });
 // The modals the menus open, each held by the gallery as the app will hold it
+const galleryPageReads = createPageReads({
+  reads: galleryReads,
+  note: galleryNote,
+  pages: galleryPages,
+  openPage: galleryOpen,
+  actions,
+});
 const tagTarget = createStore<TagTarget | null>(null);
 const settingsTarget = createStore<SettingsTarget | null>(null);
 // themesAs is what the fake /api/themes answers: the themes, one's own things broken, settings.json unreadable, or no
@@ -321,6 +356,9 @@ function Gallery() {
   const editOf = useStore(editTarget);
   const [help, setHelp] = useState<HelpTab | null>(null);
   const [finding, setFinding] = useState(false);
+  const picked = useStore(galleryOpen.picked);
+  const readPage = pagesNow.find((p) => p.slug === picked?.slug) ?? null;
+  const [slowReads, setSlowReads] = useState(false);
   const settingsOf = useStore(settingsTarget);
   const [themesNow, setThemesNow] = useState(themesAs);
   const [screen, setScreen] = useState<HelpScreen>('list');
@@ -429,7 +467,7 @@ function Gallery() {
           {plain && folder && gone ? (
             <div className="grid gap-2">
               <BarActions
-                id="read-actions"
+                id="list-actions"
                 place="list"
                 page={plain}
                 at={{ slug: 'plain' }}
@@ -525,6 +563,61 @@ function Gallery() {
             >
               As the page open whole
             </Button>
+          </div>
+        </Section>
+        <Section title="Reading a page beside the list (the page tells its frame it was read; Slow answers waits 1.5 s)">
+          <div className="mb-2 flex flex-wrap gap-2">
+            {(['plain', 'unread', 'archived', 'gone'] as const).map((slug) => (
+              <Button
+                key={slug}
+                pressed={picked?.slug === slug}
+                onClick={() => {
+                  galleryOpen.picked.set({ slug, file: '', v: 0 });
+                }}
+              >
+                {slug}
+              </Button>
+            ))}
+            <Button
+              onClick={() => {
+                galleryOpen.picked.set(null);
+              }}
+            >
+              None
+            </Button>
+            <Button
+              pressed={slowReads}
+              onClick={() => {
+                readsSlow = !slowReads;
+                setSlowReads(readsSlow);
+              }}
+            >
+              Slow answers
+            </Button>
+          </div>
+          <div className="flex h-96 flex-col overflow-hidden rounded-small border border-line bg-panel">
+            <ReaderPane
+              at={picked}
+              page={readPage}
+              actions={
+                readPage && picked ? (
+                  <BarActions
+                    id="read-actions"
+                    place="list"
+                    page={readPage}
+                    at={picked}
+                    openers={openers}
+                    actions={actions}
+                  />
+                ) : null
+              }
+              keys={new Set(['/', '?'])}
+              onKey={(key) => {
+                toasts.toast(`key ${key} from the page`);
+              }}
+              reads={galleryPageReads}
+              note={galleryNote}
+            />
           </div>
         </Section>
         <Section title="Search (↑ ↓, Enter; the foot holds the row’s buttons; its … opens up)">
