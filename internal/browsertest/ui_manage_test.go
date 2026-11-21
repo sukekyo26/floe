@@ -193,8 +193,12 @@ func (b *browser) drag(sel string, x float64) {
 		kind    input.DispatchMouseEventType
 		x       float64
 		buttons int64
-	}{{input.DispatchMouseEventTypeMousePressed, from, 1}, {input.DispatchMouseEventTypeMouseMoved, (from + x) / 2, 1},
-		{input.DispatchMouseEventTypeMouseMoved, x, 1}, {input.DispatchMouseEventTypeMouseReleased, x, 0}} {
+	}{
+		{input.DispatchMouseEventTypeMousePressed, from, 1},
+		{input.DispatchMouseEventTypeMouseMoved, (from + x) / 2, 1},
+		{input.DispatchMouseEventTypeMouseMoved, x, 1},
+		{input.DispatchMouseEventTypeMouseReleased, x, 0},
+	} {
 		p := input.DispatchMouseEventParams{Type: at.kind, X: at.x, Y: y, Button: input.MouseButtonLeft, Buttons: at.buttons, ClickCount: 1}
 		if _, err := chromedp.Call(b.ctx, input.DispatchMouseEvent, p); err != nil {
 			b.t.Fatal(err)

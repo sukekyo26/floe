@@ -40,11 +40,8 @@ const (
 	noPageToast  = "document.querySelector('[data-testid=toast][data-page]')?.remove()"
 )
 
-// rowNews says what the row of slug tells of its news: "" read, "version" a version not read, "new" a page never read.
-func rowNews(slug string) string {
-	return "((r) => r?.dataset.unread !== 'true' ? '' : r.querySelector('[data-testid=ver]') ? 'version' : 'new')(document.querySelector('#list li[data-slug=" +
-		slug + "]'))"
-}
+// newsOfDRow says what the row of d tells of its news: "" read, "version" a version not read, "new" a page never read.
+const newsOfDRow = "((r) => r?.dataset.unread !== 'true' ? '' : r.querySelector('[data-testid=ver]') ? 'version' : 'new')(document.querySelector('#list li[data-slug=d]'))"
 
 // pageNews is a promise of the news of slug as the server tells the list of pages: a page whole has no row to tell it.
 func pageNews(slug string) string {
@@ -81,7 +78,7 @@ func TestUIVersionPick(t *testing.T) { //nolint:paralleltest // the browser test
 	b.until("the rows", "document.querySelector('#list li[data-slug=d]')")
 	b.eval(title + ".click()")
 	b.until("the choice", "!document.getElementById('read-version').hidden")
-	b.until("read", "!("+rowNews("d")+")")
+	b.until("read", "!("+newsOfDRow+")")
 	out := make([]string, 0, 30)
 	b.eval(noPageToast)
 	out = append(out, b.eval("document.querySelector('#read-version selectedcontent').innerText.trim()"),
@@ -110,7 +107,7 @@ func TestUIVersionPick(t *testing.T) { //nolint:paralleltest // the browser test
 	b.still()
 	out = append(out, b.eval(besideLoaded))
 	s.floe(t, "publish", s.page(t, "diff/d.yaml", "D", diffV3+"<p>four</p>"), "--slug", "d")
-	out = append(out, b.until("v4 told", verWords+".includes('v4') && "+readTold), b.eval(rowNews("d")), b.eval(pageToasts))
+	out = append(out, b.until("v4 told", verWords+".includes('v4') && "+readTold), b.eval(newsOfDRow), b.eval(pageToasts))
 
 	// Pressed again and by Enter, the row opens the version shown; its link stays the latest's.
 	out = append(out, b.eval(title+".getAttribute('href')"))
@@ -131,7 +128,7 @@ func TestUIVersionPick(t *testing.T) { //nolint:paralleltest // the browser test
 	b.until("the rows", "document.querySelector('#list li[data-slug=d]')")
 	b.eval(title + ".click()")
 	b.until("the choice", "!document.getElementById('read-version').hidden")
-	b.until("read", "!("+rowNews("d")+")")
+	b.until("read", "!("+newsOfDRow+")")
 	b.eval(noPageToast)
 	choose(b, "read-version", 2)
 	b.until("v2", besideLoaded+".endsWith('v=2')")
@@ -143,11 +140,11 @@ func TestUIVersionPick(t *testing.T) { //nolint:paralleltest // the browser test
 		window.heard = 0; addEventListener('message', (e) => { if (e.data?.pageServed) window.heard++; })`)
 	b.pressKey("k")
 	out = append(out, b.until("back", besideSlug+" === 'd' && "+besideLoaded))
-	b.until("read", "window.reads > 0 && !("+rowNews("d")+")")
+	b.until("read", "window.reads > 0 && !("+newsOfDRow+")")
 
 	// Marked unread: the versions gone through tell nothing, until another page has been open.
 	pressMenuItem(b, "#read-actions", "mark-unread")
-	b.until("unread", rowNews("d"))
+	b.until("unread", newsOfDRow)
 	// Counted once it is unread: a read told late of the page come back to is not of what is checked here
 	b.eval("window.reads = 0; window.heard = 0")
 	const shelfWord = "[...document.querySelectorAll('#read-version option')].find((o) => o.textContent.includes('v2')).textContent.includes('·')"
@@ -157,11 +154,11 @@ func TestUIVersionPick(t *testing.T) { //nolint:paralleltest // the browser test
 		choose(b, "read-version", n)
 		b.until("told", "window.heard > "+was)
 	}
-	out = append(out, b.eval("window.reads"), b.eval("Boolean("+rowNews("d")+")"))
+	out = append(out, b.eval("window.reads"), b.eval("Boolean("+newsOfDRow+")"))
 	b.pressKey("j")
 	b.until("the next row", "("+besideSlug+" ?? 'd') !== 'd'")
 	b.pressKey("k")
-	out = append(out, b.until("read again", besideSlug+" === 'd' && !("+rowNews("d")+") && "+pageToasts))
+	out = append(out, b.until("read again", besideSlug+" === 'd' && !("+newsOfDRow+") && "+pageToasts))
 
 	// A read leaves the choice open, the focus on it, and its words told anew: the page marked unread by its toast's button, pressed with
 	// the choice open.
@@ -170,7 +167,7 @@ func TestUIVersionPick(t *testing.T) { //nolint:paralleltest // the browser test
 	b.click(r.X+r.Width/2, r.Y+r.Height/2)
 	b.until("open", "document.getElementById('read-version').matches(':open')")
 	b.eval("document.querySelector('[data-testid=toast][data-page] button').click()")
-	b.until("unread", rowNews("d"))
+	b.until("unread", newsOfDRow)
 	b.still()
 	out = append(out, b.eval("[window.kept === document.getElementById('read-version'), window.kept.contains(document.activeElement), window.kept.matches(':open')].join(' ')"))
 	b.pressKey(kb.Escape)
@@ -483,7 +480,7 @@ func TestUIVersionPickAhead(t *testing.T) { //nolint:paralleltest // the browser
 	b.until("the row", "document.querySelector('#list li[data-slug=d]')")
 	b.eval("document.querySelector('#list li[data-slug=d] [data-testid=title]').click()")
 	b.until("the choice", "!document.getElementById('read-version').hidden")
-	b.until("read", "!("+rowNews("d")+")")
+	b.until("read", "!("+newsOfDRow+")")
 	b.eval("fetch('/api/pages').then((r) => r.text()).then((l) => { window.heldList = l; })")
 	s.floe(t, "publish", s.page(t, "diff/d.yaml", "D", diffV3+"<p>four</p>"), "--slug", "d")
 	// A version read has the versions read again, v4 among them, the list still at v3
@@ -527,7 +524,7 @@ func TestUIVersionAnswers(t *testing.T) { //nolint:paralleltest // the browser t
 	out = append(out, b.until("e's", "!document.getElementById('read-version').hidden && "+state))
 	// A read of a version between the last read and the latest moves the words, the list of pages saying nothing of it.
 	b.eval(row("d"))
-	b.until("d read", besideSlug+" === 'd' && !("+rowNews("d")+")")
+	b.until("d read", besideSlug+" === 'd' && !("+newsOfDRow+")")
 	choose(b, "read-version", 2)
 	b.until("v2", besideLoaded+".endsWith('v=2')")
 	s.floe(t, "publish", s.page(t, "diff/d.yaml", "D", diffV3+"<p>four</p>"), "--slug", "d")
