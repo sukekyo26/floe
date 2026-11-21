@@ -18,13 +18,11 @@ const taskPageRows = `[...document.querySelectorAll('#list > li')].map((li) => l
 func pressTaskArchive(b *browser, word string) {
 	b.t.Helper()
 
-	if got := b.eval("typeof archivingTask"); got != "boolean" {
-		b.t.Fatalf("archivingTask is %s: the page no longer tells when its archive is done", got)
-	}
+	begun := b.loadsBegun()
 	r := b.rect("document.getElementById('task-archive')")
 	b.click(r.X+r.Width/2, r.Y+r.Height/2)
-	b.until("the button says "+word, "document.getElementById('task-archive').textContent === "+js(word))
-	b.until("the press done", "!archivingTask")
+	// The press is done with the read after its write
+	b.untilRead(begun, "the button to say "+word, "document.getElementById('task-archive').textContent === "+js(word))
 }
 
 // taskPageAt says where the focus and the page chosen are.

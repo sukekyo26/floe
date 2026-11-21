@@ -93,8 +93,9 @@ var (
 // class to select by but those of the pages in its frames (none of ui.html), no class to read a state from, no value set. It opens
 // no Chrome itself.
 // LIMIT: a name is seen only when code follows it; one before a comma, in ${…}, after typeof, at the end of the text, as window['…'],
-// declared by destructuring (let { view } = …) or below the top level of the script is missed, and so is a class in a selector the
-// test builds by joining text. A test missed fails in the PR that rebuilds its screen.
+// declared by destructuring (let { view } = …) or below the top level of the script is missed, and so is one given to a name (x = name(…):
+// the match of x takes the space before it), and a class in a selector the test builds by joining text. A test missed fails in the PR that rebuilds its
+// screen.
 // LIMIT: the JS of the browser's and the site's methods (stub, until, …) is not read: they are the package's own, held by review.
 // LIMIT: a selector handed to a Go helper (b.fill(".x", …), b.drag) is read only where it stands beside querySelector in one text.
 // LIMIT: the names a test's JS declares (const row, (t) =>) are gathered from all its texts as one: a page's name of the same
