@@ -1,4 +1,4 @@
-import { getBoot, type Boot } from '@/config/boot';
+import { getBoot, screenOf, type Boot } from '@/config/boot';
 import { client as pageClient, type Client } from '@/lib/api-client';
 import { readPages } from '@/lib/pages';
 import { createStore, type Store } from '@/lib/store';
@@ -110,6 +110,7 @@ export function createPages({
   async function readAndTake(polled: boolean): Promise<void> {
     const { screen } = boot();
     const query = new URLSearchParams(search());
+    const shown = screenOf(boot(), search());
     let list: { text: string; entries: Page[] };
     let tasks: TasksRead | null;
     let keep: (() => boolean) | null = null;
@@ -133,8 +134,7 @@ export function createPages({
         // What is open of the folders, or the frame's tree, taken only with this list
         const file = query.get('file') ?? '';
         if (screen === 'frame' && file) keep = await folders.readSide(boot().framed, file, signal);
-        else if (screen === 'list' || (screen === 'tasks' && query.has('task')))
-          keep = await folders.readOpen(list.entries, signal);
+        else if (shown === 'list' || shown === 'taskPage') keep = await folders.readOpen(list.entries, signal);
         if (client.writesSent() === sent) break;
       }
     } catch (err) {

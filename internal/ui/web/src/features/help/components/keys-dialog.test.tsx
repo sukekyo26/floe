@@ -2,9 +2,10 @@ import { renderToString } from 'react-dom/server';
 import { describe, expect, it } from 'vitest';
 
 import { testBoot } from '@/components/test-boot';
-import { KeysDialog, type HelpScreen } from '@/features/help/components/keys-dialog';
+import type { Screen } from '@/config/boot';
+import { KeysDialog } from '@/features/help/components/keys-dialog';
 
-const draw = (screen: HelpScreen, { diff = false, diffGo = false, mac = false } = {}) => {
+const draw = (screen: Screen, { diff = false, diffGo = false, mac = false } = {}) => {
   testBoot();
   return renderToString(
     <KeysDialog
