@@ -27,7 +27,7 @@ const chipOf = (html: string, name: string) =>
 
 describe(TagDialog, () => {
   it('draws a chip each tag, marked on all, some or none of the pages, with how many for some', () => {
-    expect.assertions(4);
+    expect.assertions(5);
     testBoot();
     const pages = {
       state: createStore({ entries: [page('a', ['x', 'y']), page('b', ['x']), page('c', ['z'])] }),
@@ -37,6 +37,8 @@ describe(TagDialog, () => {
     expect(chipOf(html, 'x')).toMatch(/checked=""[^>]*>.*data-testid="mark"[^>]*>✓/);
     expect(chipOf(html, 'y')).toMatch(/data-testid="mark"[^>]*>−.*data-testid="n"[^>]*>1\/2/);
     expect(chipOf(html, 'z')).toMatch(/data-testid="mark"[^>]*>\+/);
+    // How many is told for some alone
+    expect(chipOf(html, 'x')).not.toContain('data-testid="n"');
     // Apply is for a change, none made yet
     expect(html).toMatch(/<button[^>]*id="tag-apply"[^>]*disabled=""/);
   });
