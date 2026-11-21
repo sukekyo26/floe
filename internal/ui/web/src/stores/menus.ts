@@ -21,4 +21,13 @@ export function createMenus(): Menus {
   };
 }
 
+// closedThen closes the menu id, then does then: a menu whose page went (deleted from it, kept open for the second
+// press) is not left open over the next page its place draws
+export const closedThen =
+  (store: Menus, id: string, then: () => void): (() => void) =>
+  () => {
+    store.hide(id);
+    then();
+  };
+
 export const menus = createMenus();

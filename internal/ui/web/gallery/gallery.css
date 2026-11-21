@@ -16,9 +16,3 @@
     outline-offset: 1px;
   }
 }
-
-/* ui.html's padding of a row's buttons (0.4rem), to set beside Tailwind's 6 px */
-.old-pad [data-testid='actions'] > :is(button, a),
-.old-pad [data-testid='actions'] summary {
-  padding-inline: 0.4rem;
-}

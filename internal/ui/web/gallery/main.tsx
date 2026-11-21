@@ -12,7 +12,8 @@ import { ErrorBar } from '@/components/error-bar';
 import { Grip } from '@/components/grip';
 import { IconButton } from '@/components/icon-button';
 import { ArchiveIcon, StarIcon } from '@/components/icons';
-import { MenuItem, MoreMenu } from '@/components/more-menu';
+import { BarActions, RowActions } from '@/components/page-actions';
+import type { Openers } from '@/components/page-menu';
 import { PageRow } from '@/components/page-row';
 import { Rows, type RowItem } from '@/components/rows';
 import { ServerState } from '@/components/server-state';
@@ -21,9 +22,15 @@ import { setBoot, type Boot } from '@/config/boot';
 import { useHold } from '@/hooks/use-hold';
 import { useKeys } from '@/hooks/use-keys';
 import { useOpenMenus } from '@/hooks/use-open-menu';
+import { useStore } from '@/hooks/use-store';
 import { client } from '@/lib/api-client';
+import { createStore } from '@/lib/store';
 import { t } from '@/lib/t';
 import { notice } from '@/stores/notice';
+import { createPageActions } from '@/stores/page-actions';
+import type { Pages } from '@/stores/pages';
+import type { Reads } from '@/stores/reads';
+import type { TaskWrites } from '@/stores/tasks';
 import { toasts } from '@/stores/toasts';
 import type { Page } from '@/types/page';
 
@@ -41,6 +48,10 @@ const PAGES: Page[] = [
     updatedAt: ago(32),
     taskProject: 'floe',
     template: 'design',
+    task: { name: '#12', category: 'designs' },
+    themed: true,
+    version: 3,
+    versionCount: 3,
   },
   {
     slug: 'unread',
@@ -60,6 +71,7 @@ const PAGES: Page[] = [
     createdAt: ago(900),
     updatedAt: ago(200),
     taskProject: 'demo',
+    favorite: true,
   },
   {
     slug: 'gone',
@@ -92,39 +104,58 @@ const PAGES: Page[] = [
   },
 ];
 
-function Actions({ page }: { readonly page: Page }) {
-  const [star, setStar] = useState(page.slug === 'picked');
-  return (
-    <>
-      <IconButton
-        size="row"
-        testid="archive"
-        label={t('ui_archive_named', page.title ?? '')}
-        on={page.archived === true}
-      >
-        <ArchiveIcon />
-      </IconButton>
-      <IconButton
-        size="row"
-        testid="star"
-        tone="star"
-        pressed={star}
-        label={t('ui_favorite_named', page.title ?? '')}
-        onClick={() => {
-          setStar(!star);
-        }}
-      >
-        <StarIcon />
-      </IconButton>
-      <MoreMenu id={`more:${page.slug}`} label={t('ui_more_named', page.title ?? '')}>
-        <MenuItem icon={<StarIcon />}>{t('ui_favorite')}</MenuItem>
-        <MenuItem icon={<ArchiveIcon />} keepsOpen tone="danger">
-          {t('ui_delete')} (keeps the menu open)
-        </MenuItem>
-      </MoreMenu>
-    </>
-  );
-}
+// The pages as the gallery's fake server keeps them: what the actions write changes them, as a read would show
+const shownPages = createStore<Page[]>(PAGES);
+const edit = (slug: string, change: Partial<Page>) => {
+  shownPages.set(shownPages.get().map((p) => (p.slug === slug ? { ...p, ...change } : p)));
+};
+// slow: the list's read after a write takes 1.5 s, to see the toast and its focus come before it
+let slow = false;
+const answered = { ok: true, status: 200, text: '', rev: 1, stale: '', pages: [], written: [] };
+const actions = createPageActions({
+  writes: {
+    writePage: () => Promise.resolve(''),
+    patchPage: (slug, body) => {
+      edit(slug, body as Partial<Page>);
+      return Promise.resolve('');
+    },
+    deletePage: (slug) => {
+      shownPages.set(shownPages.get().filter((p) => p.slug !== slug));
+      return Promise.resolve('');
+    },
+  },
+  tasks: {
+    changePageTask: (slug: string, body: { pin?: boolean; task?: string; category?: string }) => {
+      const a = shownPages.get().find((p) => p.slug === slug);
+      if ('pin' in body) edit(slug, { task: { ...a?.task, pin: body.pin ?? false } });
+      else edit(slug, { task: {} });
+      return Promise.resolve('');
+    },
+    putPageOn: (page: Page, task: string, _body: unknown, category: string) => {
+      edit(page.slug, { task: { name: task, category } });
+      return Promise.resolve(answered);
+    },
+  } as unknown as TaskWrites,
+  pages: {
+    load: () =>
+      new Promise((go) => {
+        setTimeout(go, slow ? 1500 : 0);
+      }),
+    rereadTasks: () => Promise.resolve(),
+    readRev: () => 0,
+    state: createStore({ entries: [], tasks: { error: '', tasks: {}, raw: '' }, readWhy: '', drawWhy: '' }),
+  } as unknown as Pages,
+  reads: { markUnread: () => Promise.resolve({ kind: 'sent', cleared: false }) } as unknown as Reads,
+  go: (href) => {
+    toasts.toast(`would go to ${href}`);
+  },
+});
+const openers: Openers = {
+  onTags: (a) => toasts.toast(`tags of ${a.slug}`),
+  onTheme: (a) => toasts.toast(`theme of ${a.slug}`),
+  onEdit: (a) => toasts.toast(`edit ${a.slug}`),
+  onTaskSet: (a) => toasts.toast(`set the task of ${a.slug}`),
+};
 
 function Section({ title, children }: { readonly title: string; readonly children: ReactNode }) {
   return (
@@ -144,13 +175,17 @@ function Gallery() {
   });
   const [selected, setSelected] = useState<ReadonlySet<string>>(new Set(['plain']));
   const [selecting, setSelecting] = useState(true);
-  const [oldPad, setOldPad] = useState(false);
+  const pagesNow = useStore(shownPages);
+  const plain = pagesNow.find((p) => p.slug === 'plain');
+  const folder = pagesNow.find((p) => p.slug === 'folder');
+  const gone = pagesNow.find((p) => p.slug === 'gone');
+  const [slowNow, setSlow] = useState(false);
   const [open, setOpen] = useState(false);
   const [width, setWidth] = useState(300);
   const hold = useHold();
   const items: RowItem[] = [
     { kind: 'group', key: 'group:Rows', heading: 'Today' },
-    ...PAGES.map((p, i): RowItem => ({
+    ...pagesNow.map((p, i): RowItem => ({
       kind: 'row',
       key: `entry:${p.slug}`,
       titled: true,
@@ -167,7 +202,16 @@ function Gallery() {
           sub={
             <span className="rounded-small border border-line px-1.25 whitespace-nowrap">{p.template ?? p.slug}</span>
           }
-          actions={<Actions page={p} />}
+          actions={
+            <RowActions
+              page={p}
+              openers={openers}
+              actions={actions}
+              onPick={() => {
+                setSelected(new Set([...selected, p.slug]));
+              }}
+            />
+          }
           onSelect={(on) => {
             const next = new Set(selected);
             if (on) next.add(p.slug);
@@ -222,17 +266,63 @@ function Gallery() {
               Selecting
             </Button>
             <Button
-              pressed={oldPad}
+              pressed={slowNow}
               onClick={() => {
-                setOldPad(!oldPad);
+                slow = !slowNow;
+                setSlow(!slowNow);
               }}
             >
-              ui.html’s 0.4rem padding of the row buttons
+              A slow read after each write (1.5 s)
             </Button>
           </div>
-          <div className={oldPad ? 'old-pad' : ''}>
-            <Rows items={items} selecting={selecting} />
-          </div>
+          <Rows items={items} selecting={selecting} />
+        </Section>
+        <Section title="The bars over a page: beside the list, in the frame (narrow the window under 40rem), a folder’s page, the diff">
+          {plain && folder && gone ? (
+            <div className="grid gap-2">
+              <BarActions
+                id="read-actions"
+                place="list"
+                page={plain}
+                at={{ slug: 'plain' }}
+                openers={openers}
+                actions={actions}
+              />
+              <BarActions
+                id="frame-actions"
+                place="frame"
+                page={plain}
+                at={{ slug: 'plain' }}
+                openers={openers}
+                actions={actions}
+              />
+              <BarActions
+                id="folder-actions"
+                place="frame"
+                page={folder}
+                at={{ slug: 'folder', file: 'docs/index.html' }}
+                openers={openers}
+                actions={actions}
+              />
+              <BarActions
+                id="gone-actions"
+                place="frame"
+                page={gone}
+                at={{ slug: 'gone' }}
+                openers={openers}
+                actions={actions}
+              />
+              <BarActions
+                id="diff-actions"
+                place="frame"
+                diffing
+                page={plain}
+                at={{ slug: 'plain' }}
+                openers={openers}
+                actions={actions}
+              />
+            </div>
+          ) : null}
         </Section>
         <Section title="Buttons">
           <div className="flex flex-wrap items-center gap-2">
@@ -291,7 +381,14 @@ function Gallery() {
                 toasts.toast(t('ui_read_done'), {
                   ms: 8000,
                   page: true,
-                  button: <Button>{t('ui_mark_unread')}</Button>,
+                  button: {
+                    label: t('ui_mark_unread'),
+                    undo: false,
+                    holds: false,
+                    onPress: () => {
+                      toasts.toast('pressed');
+                    },
+                  },
                 })
               }
             >

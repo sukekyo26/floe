@@ -1,6 +1,6 @@
 import { createContext, use, useEffectEvent, useLayoutEffect, useRef, type ReactNode } from 'react';
 
-import { Button } from '@/components/button';
+import { Button, ButtonSizeOf } from '@/components/button';
 import type { Hold } from '@/hooks/use-hold';
 import { t } from '@/lib/t';
 import { backdropCloses, heldKey, type PressDown } from '@/utils/dialog';
@@ -155,11 +155,11 @@ export function DialogHead({ icon, titleId, title, lead }: DialogHeadProps) {
   );
 }
 
-// DialogActions is a modal's foot: its buttons, at the end of a line over it
+// DialogActions is a modal's foot: its buttons, at the end of a line over it, of the foot's size unless they name one
 export function DialogActions({ children }: { readonly children: ReactNode }) {
   return (
     <div data-testid="dialog-actions" className="mt-1 flex flex-wrap justify-end gap-2 border-t border-line pt-4">
-      {children}
+      <ButtonSizeOf value="foot">{children}</ButtonSizeOf>
     </div>
   );
 }
@@ -168,7 +168,7 @@ export function DialogActions({ children }: { readonly children: ReactNode }) {
 export function DialogClose() {
   const { close } = useDialog();
   return (
-    <Button size="foot" closes onClick={close}>
+    <Button closes onClick={close}>
       {t('ui_close')}
     </Button>
   );

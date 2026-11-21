@@ -60,3 +60,83 @@ export const FolderMark = () => (
     <path d="M3 6.5A1.5 1.5 0 0 1 4.5 5H9l2 2.5h8.5A1.5 1.5 0 0 1 21 9v9.5a1.5 1.5 0 0 1-1.5 1.5h-15A1.5 1.5 0 0 1 3 18.5Z" />
   </Line>
 );
+export const UnreadIcon = () => (
+  <svg viewBox="0 0 24 24" fill="currentColor" aria-hidden="true">
+    <circle cx="12" cy="12" r="4.5" />
+  </svg>
+);
+export const SelectIcon = () => (
+  <Line>
+    <rect x="4" y="4" width="16" height="16" rx="3" />
+    <path d="m8.5 12 2.5 2.5 4.5-5" />
+  </Line>
+);
+export const TagIcon = () => (
+  <Line>
+    <path d="M3 12V4h8l9 9-8 8-9-9Z" />
+    <circle cx="7.5" cy="8.5" r="1.2" />
+  </Line>
+);
+export const ThemeIcon = () => (
+  <Line>
+    <path d="M12 3a9 9 0 1 0 0 18c.9 0 1.6-.7 1.6-1.6 0-.4-.2-.8-.4-1.1-.3-.3-.4-.7-.4-1.1 0-.9.7-1.6 1.6-1.6H16a5 5 0 0 0 5-5c0-4.1-4-7.6-9-7.6Z" />
+    <circle cx="7.5" cy="10.5" r="1" />
+    <circle cx="10.5" cy="7" r="1" />
+    <circle cx="15" cy="7.5" r="1" />
+  </Line>
+);
+export const PinIcon = () => (
+  <Line>
+    <path d="M9 3h6l-1 7 4 4v2H6v-2l4-4zM12 16v5" />
+  </Line>
+);
+export const TaskSetIcon = () => (
+  <Line>
+    <path d="M9 6h11M9 12h11M9 18h11M4 6h.01M4 12h.01M4 18h.01" />
+  </Line>
+);
+export const TaskOutIcon = () => (
+  <Line>
+    <path d="M9 6h11M9 12h11M4 6h.01M4 12h.01M14 18h6" />
+  </Line>
+);
+export const ToIcon = () => (
+  <Line>
+    <path d="M5 12h14m-6-6 6 6-6 6" />
+  </Line>
+);
+export const EditIcon = () => (
+  <Line>
+    <path d="M4 20h4L19 9a2.8 2.8 0 0 0-4-4L4 16v4Zm9.5-13.5 4 4" />
+  </Line>
+);
+export const CopyIcon = () => (
+  <Line>
+    <path d="M9 9h10v11H9zM5 15V4h10" />
+  </Line>
+);
+export const OpenIcon = () => (
+  <Line>
+    <path d="M14 4h6v6m0-6-8.5 8.5M18 14v5a1 1 0 0 1-1 1H5a1 1 0 0 1-1-1V7a1 1 0 0 1 1-1h5" />
+  </Line>
+);
+export const DownloadIcon = () => (
+  <Line>
+    <path d="M12 4v11m0 0-4.5-4.5M12 15l4.5-4.5M5 19h14" />
+  </Line>
+);
+export const DeleteIcon = () => (
+  <Line>
+    <path d="M4 7h16M10 11v6m4-6v6M6 7l1 12h10l1-12M9 7V4h6v3" />
+  </Line>
+);
+export const DiffIcon = () => (
+  <Line>
+    <path d="M3 4.5h7.5v15H3zM13.5 4.5H21v15h-7.5zM5.5 9h2.5M5.5 15h2.5M16 9h2.5M16 15h2.5" />
+  </Line>
+);
+export const CloseIcon = () => (
+  <Line width={2}>
+    <path d="M6 6l12 12M18 6 6 18" />
+  </Line>
+);
