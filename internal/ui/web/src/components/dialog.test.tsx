@@ -46,4 +46,28 @@ describe(DialogActions, () => {
     );
     expect(sizes(html)).toStrictEqual([false, true, false]);
   });
+
+  it('is as wide as asked, tells its part shown, and takes its column body and the narrow window’s top as asked', () => {
+    expect.assertions(3);
+    testBoot();
+    const draw = (props: Partial<Parameters<typeof Dialog>[0]>) =>
+      String(
+        /<dialog[^>]*>/.exec(
+          renderToString(
+            <Dialog id="d" open={false} onClosed={() => undefined} labelledBy="t" {...props}>
+              <p />
+            </Dialog>,
+          ),
+        )?.[0],
+      );
+    expect(
+      [draw({}), draw({ width: 'mid' }), draw({ width: 'wide' })].map((x) => /w-\[min\((\d+)rem/.exec(x)?.[1]),
+    ).toStrictEqual(['32', '40', '64']);
+    expect(draw({ panel: 'theme' })).toContain('data-panel="theme"');
+    expect([
+      draw({ body: 'fill' }).includes('100dvh-32px'),
+      draw({ raised: true }).includes('narrow:mt-4'),
+      draw({}).includes('narrow:mt-4'),
+    ]).toStrictEqual([true, true, false]);
+  });
 });

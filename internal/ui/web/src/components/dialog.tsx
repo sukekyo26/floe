@@ -32,11 +32,30 @@ export interface DialogProps {
   readonly hold?: Pick<Hold, 'held' | 'focus'>;
   readonly labelledBy: string;
   readonly describedBy?: string;
-  // tall is a modal of a long body (the help): high in the window, its body a column whose box of many lines scrolls
-  // alone, the head and the foot in sight
-  readonly tall?: boolean;
+  // width: base 32rem, mid 40rem (the settings' list), wide 64rem (the settings' themes)
+  readonly width?: 'base' | 'mid' | 'wide';
+  // body: grid, its parts one under another; help, high in the window, a column whose box of many lines scrolls alone;
+  // fill, in the middle up to the window's height less 32px, a column whose one box shrinks (the settings' cards)
+  readonly body?: 'grid' | 'help' | 'fill';
+  // panel is the part shown (data-panel), as the settings tell it
+  readonly panel?: string | undefined;
+  // raised goes up to the top in a narrow window (the search: its rows under the keyboard of a phone)
+  readonly raised?: boolean;
   readonly children: ReactNode;
 }
+
+const WIDTH = {
+  base: 'w-[min(32rem,calc(100%-32px))]',
+  mid: 'w-[min(40rem,calc(100%-32px))]',
+  wide: 'w-[min(64rem,calc(100%-32px))]',
+} as const;
+// Where it stands and how high it goes: --tall is the most the column bodies take, read again by the fieldset less
+// the dialog's border
+const PLACE = {
+  grid: 'm-auto',
+  help: 'mx-auto mt-[6dvh] mb-auto max-h-(--tall) [--tall:calc(94dvh-1rem)]',
+  fill: 'm-auto max-h-(--tall) [--tall:calc(100dvh-32px)]',
+} as const;
 
 const NOT_HELD = { held: false, focus: { current: null } } as const;
 
@@ -55,7 +74,10 @@ export function Dialog({
   hold = NOT_HELD,
   labelledBy,
   describedBy,
-  tall = false,
+  width = 'base',
+  body = 'grid',
+  panel,
+  raised = false,
   children,
 }: DialogProps) {
   const ref = useRef<HTMLDialogElement>(null);
@@ -129,11 +151,12 @@ export function Dialog({
           e.preventDefault();
           e.stopPropagation();
         }}
-        className={`${tall ? 'mx-auto mt-[6dvh] mb-auto max-h-(--tall) [--tall:calc(94dvh-1rem)]' : 'm-auto'} w-[min(32rem,calc(100%-32px))] rounded-corner border border-line bg-panel p-0 text-fg shadow-lg backdrop:bg-scrim backdrop:backdrop-blur-[3px] open:animate-pop open:backdrop:animate-fade [&[closedby=none]]:focus-visible:outline-none [&[closedby=none]>*]:pointer-events-none`}
+        data-panel={panel}
+        className={`${PLACE[body]} ${raised ? 'narrow:mt-4 narrow:mb-auto' : ''} ${WIDTH[width]} rounded-corner border border-line bg-panel p-0 text-fg shadow-lg backdrop:bg-scrim backdrop:backdrop-blur-[3px] open:animate-pop open:backdrop:animate-fade [&[closedby=none]]:focus-visible:outline-none [&[closedby=none]>*]:pointer-events-none`}
       >
         <fieldset
           disabled={held}
-          className={`m-0 min-w-0 gap-4 border-0 px-6 pt-5.5 pb-5 ${tall ? 'flex max-h-[calc(var(--tall)-2px)] flex-col' : 'grid'}`}
+          className={`m-0 min-w-0 gap-4 border-0 px-6 pt-5.5 pb-5 ${body === 'grid' ? 'grid' : 'flex max-h-[calc(var(--tall)-2px)] flex-col'}`}
         >
           {children}
         </fieldset>
