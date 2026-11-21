@@ -6,6 +6,7 @@ import { usePageMessages } from '@/features/reader/hooks/use-page-messages';
 import { useReplacedFrame } from '@/features/reader/hooks/use-replaced-frame';
 import { pageReads as sharedReads, type PageReads } from '@/features/reader/stores/page-reads';
 import { t } from '@/lib/t';
+import { pageNote as sharedNote, type PageNote as Notes } from '@/stores/page-note';
 import type { OpenAt } from '@/stores/open-page';
 import type { Page } from '@/types/page';
 import { pageHref, rawHref } from '@/utils/page-urls';
@@ -26,6 +27,7 @@ interface ReaderPaneProps {
   // onTitle is what pressing the title does first (the list's order goes on with j and k)
   readonly onTitle?: () => void;
   readonly reads?: PageReads;
+  readonly note?: Notes;
 }
 
 // ReaderPane is the page open beside the list (ui.html drawReader, readInto): its head, its tags, and the page in an
@@ -42,6 +44,7 @@ export function ReaderPane({
   onKey,
   onTitle,
   reads = sharedReads,
+  note = sharedNote,
 }: ReaderPaneProps) {
   const frame = useRef<HTMLIFrameElement>(null);
   const open = a !== null && at !== null && !a.missing;
@@ -85,7 +88,7 @@ export function ReaderPane({
         </span>
       </div>
       {tags}
-      <PageNote slug={at?.slug} {...(onTitle ? { onGo: onTitle } : {})} />
+      <PageNote slug={at?.slug} note={note} {...(onTitle ? { onGo: onTitle } : {})} />
       {/* No sandbox attribute: the server sandboxes the page by its header (ui.md), and allow lets its copy and
           fullscreen buttons work */}
       {/* oxlint-disable-next-line react/iframe-missing-sandbox -- sandboxed by the server's header */}
