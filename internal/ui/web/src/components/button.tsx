@@ -14,11 +14,16 @@ export interface ButtonProps {
   // A button that toggles: whether it is on (aria-pressed); left out, it toggles nothing
   readonly pressed?: boolean;
   readonly disabled?: boolean;
+  readonly hidden?: boolean;
   readonly id?: string;
   readonly testid?: string | undefined;
   readonly label?: string | undefined;
   // closes marks a modal's close button (data-close), which the browser tests press
   readonly closes?: boolean;
+  // focusOnOpen marks the button its modal focuses as it opens (data-autofocus: Dialog)
+  readonly focusOnOpen?: boolean;
+  // wraps lets words a person typed go over lines, shown whole (ui.md: #tag-new, the one .btn that wraps)
+  readonly wraps?: boolean;
   // slug names the page it acts on (data-slug), for it to be found again by its page
   readonly slug?: string | undefined;
   readonly onClick?: MouseEventHandler<HTMLButtonElement>;
@@ -34,10 +39,13 @@ export function Button({
   type = 'button',
   pressed,
   disabled,
+  hidden,
   id,
   testid,
   label,
   closes,
+  focusOnOpen,
+  wraps,
   slug,
   onClick,
   onKeyDown,
@@ -50,14 +58,16 @@ export function Button({
       id={id}
       data-testid={testid}
       data-close={closes ? '' : undefined}
+      data-autofocus={focusOnOpen ? '' : undefined}
       data-slug={slug}
       aria-label={label}
       title={label}
       aria-pressed={pressed}
       disabled={disabled}
+      hidden={hidden}
       onClick={onClick}
       onKeyDown={onKeyDown}
-      className={`inline-flex items-center justify-center gap-1.25 rounded-small border whitespace-nowrap transition-[background-color,border-color,filter] duration-150 disabled:cursor-progress disabled:opacity-60 [&_svg]:size-3.75 ${size === 'foot' ? 'h-9 px-3.5 text-body' : 'h-8 px-2.5 text-small'} ${kind === 'primary' || pressed ? 'border-transparent bg-ink text-on-ink hover:bg-ink-hover' : 'border-line bg-panel text-fg hover:border-faint'} ${kind === 'primary' ? 'font-semibold' : ''}`}
+      className={`inline-flex items-center justify-center gap-1.25 rounded-small border transition-[background-color,border-color,filter] duration-150 disabled:cursor-progress disabled:opacity-60 [&_svg]:size-3.75 ${wraps ? 'min-h-8 px-2.5 py-1.25 text-start text-small wrap-anywhere' : size === 'foot' ? 'h-9 px-3.5 text-body whitespace-nowrap' : 'h-8 px-2.5 text-small whitespace-nowrap'} ${kind === 'primary' || pressed ? 'border-transparent bg-ink text-on-ink hover:bg-ink-hover' : 'border-line bg-panel text-fg hover:border-faint'} ${kind === 'primary' ? 'font-semibold' : ''}`}
     >
       {children}
     </button>

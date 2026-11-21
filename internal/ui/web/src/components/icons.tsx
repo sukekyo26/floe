@@ -140,3 +140,15 @@ export const CloseIcon = () => (
     <path d="M6 6l12 12M18 6 6 18" />
   </Line>
 );
+export const HelpIcon = () => (
+  <Line>
+    <circle cx="12" cy="12" r="9" />
+    <path d="M9.6 9.4a2.5 2.5 0 0 1 4.8.8c0 1.7-2.4 2-2.4 3.6" />
+    <path d="M12 17.2v.01" />
+  </Line>
+);
+export const ChevronIcon = () => (
+  <Line width={2}>
+    <path d="m9 6 6 6-6 6" />
+  </Line>
+);

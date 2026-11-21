@@ -24,6 +24,8 @@ export interface Order {
   forgetOrder: () => void;
   // keptBack is where a page whole goes back to: the screen that opened it, or the page list
   keptBack: () => string;
+  // renameKept keeps a page renamed whole of the rows that opened it, under its new name (ui.html renameKept)
+  renameKept: (was: string, now: string) => void;
 }
 
 interface Deps {
@@ -49,13 +51,14 @@ export function createOrder({
   const writeKept = (kept: RowsKept) => {
     storage.write(ORDER_KEY, JSON.stringify(kept));
   };
+  const editKept = (change: (kept: RowsKept) => Partial<RowsKept>) => {
+    const kept = keptOrder();
+    if (kept) writeKept({ ...kept, ...change(kept) });
+  };
   return {
     keptOrder,
     writeKept,
-    editKept: (change) => {
-      const kept = keptOrder();
-      if (kept) writeKept({ ...kept, ...change(kept) });
-    },
+    editKept,
     keepRows: (order, shown) => {
       writeKept({ order, shown, back: here() });
     },
@@ -65,6 +68,17 @@ export function createOrder({
     keptBack: () => {
       const kept = keptOrder();
       return kept?.shown.includes(boot().framed) ? kept.back : `/${listQuery.savedList()}`;
+    },
+    renameKept: (was, now) => {
+      const named = (slug: string) => (slug === was ? now : slug);
+      editKept((kept) => {
+        const at = kept.at as { slug?: unknown } | undefined;
+        return {
+          order: kept.order.map(named),
+          shown: kept.shown.map(named),
+          ...(at && typeof at.slug === 'string' ? { at: { ...at, slug: named(at.slug) } } : {}),
+        };
+      });
     },
   };
 }

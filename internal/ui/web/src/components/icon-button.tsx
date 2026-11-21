@@ -1,4 +1,4 @@
-import type { FocusEventHandler, MouseEventHandler, ReactNode } from 'react';
+import type { FocusEventHandler, MouseEventHandler, ReactNode, Ref } from 'react';
 
 // Where it shows, by the bar's one rule of width (ui.md): shown; never (a menu's item a bar or a row shows, its CSS
 // hiding it); narrow (a menu's item shown only where the bar folds it, under 40rem); wide (a bar's, folded into its menu
@@ -19,6 +19,8 @@ export interface IconButtonProps {
   readonly on?: boolean | undefined;
   // armed: a delete waiting for its second press
   readonly armed?: boolean | undefined;
+  // tagged marks the tag line's button of a page with tags (data-tagged, P0b-2)
+  readonly tagged?: boolean | undefined;
   readonly tone?: 'star' | 'danger' | undefined;
   readonly href?: string | undefined;
   readonly newTab?: boolean | undefined;
@@ -29,6 +31,8 @@ export interface IconButtonProps {
   readonly disabled?: boolean | undefined;
   readonly onClick?: MouseEventHandler<HTMLElement> | undefined;
   readonly onBlur?: FocusEventHandler<HTMLElement> | undefined;
+  // ref holds a button the focus is given back to as it stays through redraws (the tag line's)
+  readonly ref?: Ref<HTMLButtonElement> | undefined;
 }
 
 const DISPLAY: Record<Display, string> = {
@@ -48,6 +52,7 @@ export function IconButton({
   pressed,
   on,
   armed,
+  tagged,
   tone,
   href,
   newTab,
@@ -56,6 +61,7 @@ export function IconButton({
   testid,
   hidden,
   disabled,
+  ref,
   onClick,
   onBlur,
 }: IconButtonProps) {
@@ -85,11 +91,13 @@ export function IconButton({
     );
   return (
     <button
+      ref={ref}
       {...common}
       type="button"
       aria-pressed={pressed}
       data-on={on ? 'true' : undefined}
       data-armed={armed ? 'true' : undefined}
+      data-tagged={tagged ? 'true' : undefined}
       disabled={disabled}
       onClick={onClick}
     >

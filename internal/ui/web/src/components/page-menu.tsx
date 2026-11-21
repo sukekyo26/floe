@@ -1,6 +1,13 @@
 import { useEffect, useState } from 'react';
 
-import { menuBack, prepareArchive, prepareTaskOut, restoreFocus, unreadFocus } from '@/components/focus-places';
+import {
+  menuBack,
+  prepareArchive,
+  prepareTaskOut,
+  restoreFocus,
+  rowMenuId,
+  unreadFocus,
+} from '@/components/focus-places';
 import {
   ArchiveIcon,
   CopyIcon,
@@ -24,6 +31,7 @@ import { useArm } from '@/hooks/use-arm';
 import { t } from '@/lib/t';
 import { closedThen, menus } from '@/stores/menus';
 import { pageActions as pageActionStore, type PageActions } from '@/stores/page-actions';
+import type { FocusBack } from '@/types/focus';
 import type { Page } from '@/types/page';
 import { hasPage, removal } from '@/utils/list-view';
 import { downloadHref, rawHref, taskHref, type PageAt } from '@/utils/page-urls';
@@ -33,10 +41,11 @@ export type Place = 'row' | 'list' | 'frame' | 'find';
 
 // What opens a modal of another feature on the page, given back the way to the menu's button as it closes
 export interface Openers {
-  onTags: (a: Page, back: () => boolean) => void;
-  onTheme: (a: Page, back: () => boolean) => void;
-  onEdit: (a: Page, back: () => boolean) => void;
-  onTaskSet: (a: Page, back: () => boolean) => void;
+  onTags: (a: Page, back: FocusBack) => void;
+  onTheme: (a: Page, back: FocusBack) => void;
+  // The edit is given the way back by the page's slug as it is then: renamed, its row's menu is under the new one
+  onEdit: (a: Page, back: (slug: string) => boolean) => void;
+  onTaskSet: (a: Page, back: FocusBack) => void;
 }
 
 export interface PageMenuProps {
@@ -199,7 +208,7 @@ export function PageMenu({
         testid="edit"
         label={t('ui_edit_named', title)}
         onSelect={() => {
-          openers.onEdit(a, back);
+          openers.onEdit(a, (slug) => menuBack(place === 'row' ? rowMenuId(slug) : menuId)());
         }}
       >
         {t('ui_edit')}
