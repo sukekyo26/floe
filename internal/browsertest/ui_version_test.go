@@ -313,6 +313,7 @@ func TestUIVersionURL(t *testing.T) { //nolint:paralleltest // the browser tests
 	}).observe(document.body, { childList: true, subtree: true }))`)
 	b.navigate("/a/n/")
 	// Timed out, what was told says which way it went: the versions the frame said it served, the reads sent, the menu's way back
+	// (two served, unreadHidden false and toastSeen false is ui.html's S428: a quick second pageServed drops the toast; React's P4c fixes it)
 	told := func(what, expr string) string {
 		t.Helper()
 		if got, err := b.try(expr); err == nil && truthy(got) {

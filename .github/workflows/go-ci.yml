@@ -196,7 +196,7 @@ jobs:
   browser:
     name: Browser (${{ matrix.part }})
     needs: changes
-    # It always runs, so that the matrix names its checks as the ruleset requires them; its steps skip instead.
+    # It always runs, so that its checks report and Browser below reads success; its steps skip instead.
     if: ${{ !cancelled() }}
     runs-on: ubuntu-latest
     timeout-minutes: 15
@@ -227,6 +227,23 @@ jobs:
         # The browser tests run the pinned Chrome; on CI they fail without it.
         env:
           FLOE_CHROME: ${{ steps.chrome.outputs.chrome-path }}
+
+  # One check for all the browser jobs, so that the ruleset need not change when the matrix does. always(), not
+  # !cancelled(): a cancelled run would skip this job, and a skipped required check may count as passed.
+  browser-done:
+    name: Browser
+    needs: browser
+    if: ${{ always() }}
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - env:
+          RESULT: ${{ needs.browser.result }}
+        run: |
+          if [ "$RESULT" != success ]; then
+            echo "the browser jobs ended $RESULT" >&2
+            exit 1
+          fi
 
   coverage:
     name: Coverage gate (>= 90%)
