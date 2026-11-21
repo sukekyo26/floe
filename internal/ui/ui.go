@@ -109,7 +109,7 @@ func reactPage(b boot) ([]byte, error) {
 	}
 	var out bytes.Buffer
 	out.WriteString(reactParts[0])
-	out.WriteString(`<html lang="` + string(b.Lang) + `">`)
+	out.WriteString(`<html lang="` + template.HTMLEscapeString(string(b.Lang)) + `">`)
 	out.WriteString(reactParts[1])
 	out.WriteString(`<script type="application/json" id="boot">`)
 	out.Write(j)

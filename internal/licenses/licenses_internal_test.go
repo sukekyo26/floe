@@ -455,19 +455,23 @@ func TestNoticesWeb(t *testing.T) {
 		}
 	}
 
-	for name, entry := range map[string]string{
-		"no name":    `{"version": "1", "text": "MIT"}`,
-		"no version": `{"name": "a", "text": "MIT"}`,
-		"no text":    `{"name": "a", "version": "1"}`,
+	// Each case changes one file of a build that is right
+	for name, changed := range map[string]map[string]string{
+		"no name":        {"dist/licenses.json": `[{"version": "1", "text": "MIT"}]`},
+		"no version":     {"dist/licenses.json": `[{"name": "a", "text": "MIT"}]`},
+		"no text":        {"dist/licenses.json": `[{"name": "a", "version": "1"}]`},
+		"no tailwindcss": {"package.json": `{"devDependencies": {}}`},
+		"empty license":  {"tailwindcss.LICENSE": ""},
 	} {
+		files := map[string]string{
+			"dist/licenses.json":  `[{"name": "a", "version": "1", "text": "MIT"}]`,
+			"package.json":        `{"devDependencies": {"tailwindcss": "4.3.5"}}`,
+			"tailwindcss.LICENSE": "MIT",
+		}
+		maps.Copy(files, changed)
 		dir := t.TempDir()
 		if err := os.Mkdir(filepath.Join(dir, "dist"), 0o755); err != nil {
 			t.Fatal(err)
-		}
-		files := map[string]string{
-			"dist/licenses.json":  "[" + entry + "]",
-			"package.json":        `{"devDependencies": {"tailwindcss": "4.3.5"}}`,
-			"tailwindcss.LICENSE": "MIT",
 		}
 		for path, body := range files {
 			if err := os.WriteFile(filepath.Join(dir, filepath.FromSlash(path)), []byte(body), 0o600); err != nil {

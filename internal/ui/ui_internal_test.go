@@ -525,6 +525,19 @@ func TestReactPage(t *testing.T) {
 	}
 }
 
+// The lang is written into an attribute escaped, whatever language a catalog comes to have.
+func TestReactPageLangEscaped(t *testing.T) {
+	t.Parallel()
+
+	out, err := reactPage(boot{Lang: `x"><b>`})
+	if err != nil {
+		t.Fatal(err)
+	}
+	if page := string(out); strings.Contains(page, `x"><b>`) || !strings.Contains(page, `<html lang="x&#34;&gt;&lt;b&gt;">`) {
+		t.Error("the lang is not escaped in the attribute")
+	}
+}
+
 func TestCutPage(t *testing.T) {
 	t.Parallel()
 
