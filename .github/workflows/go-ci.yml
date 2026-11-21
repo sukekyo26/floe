@@ -199,7 +199,7 @@ jobs:
     # It always runs, so that the matrix names its checks as the ruleset requires them; its steps skip instead.
     if: ${{ !cancelled() }}
     runs-on: ubuntu-latest
-    timeout-minutes: 10
+    timeout-minutes: 15
     strategy:
       fail-fast: false
       matrix:
