@@ -94,7 +94,7 @@ func TestSaveVersions(t *testing.T) {
 	for i, step := range steps {
 		o := store.Options{}
 		if step.theme != "" {
-			o.Theme = ptr(step.theme)
+			o.Theme = new(step.theme)
 		}
 		drawn[i] = string(publish(t, s, dw, "d.yaml", step.src, step.images, o).Page)
 		if got := numbers(t, s); !slices.Equal(got, step.want) {
@@ -301,13 +301,13 @@ func TestEditKeepsVersions(t *testing.T) {
 	publish(t, s, dw, "d.yaml", titled("A"), map[string][]byte{"a.png": png}, store.Options{})
 	publish(t, s, dw, "d.yaml", titled("B"), map[string][]byte{"a.png": png}, store.Options{})
 	before, first, last := s.ReadMeta("d").Versions, page(t, s, "d", 1), page(t, s, "d", 2)
-	if _, err := s.Edit("d", store.Edit{Title: ptr("T"), Archived: ptr(true)}); err != nil {
+	if _, err := s.Edit("d", store.Edit{Title: new("T"), Archived: new(true)}); err != nil {
 		t.Fatal(err)
 	}
 	if got := s.ReadMeta("d").Versions; !slices.Equal(got, before) {
 		t.Errorf("edited: versions %v, before %v", got, before)
 	}
-	if _, err := s.Edit("d", store.Edit{Slug: ptr("e")}); err != nil {
+	if _, err := s.Edit("d", store.Edit{Slug: new("e")}); err != nil {
 		t.Fatal(err)
 	}
 	if got := s.ReadMeta("e").Versions; !slices.Equal(got, before) || page(t, s, "e", 1) != first || page(t, s, "e", 2) != last {
@@ -427,7 +427,7 @@ func TestLinkLeavesNoVersions(t *testing.T) {
 	if err := os.WriteFile(html, []byte("<title>z</title>"), 0o600); err != nil {
 		t.Fatal(err)
 	}
-	e, err := floepublish.PrepareLink(t.Context(), s, dw, html, store.Options{Slug: ptr("d")}, "", home)
+	e, err := floepublish.PrepareLink(t.Context(), s, dw, html, store.Options{Slug: new("d")}, "", home)
 	if err != nil {
 		t.Fatal(err)
 	}

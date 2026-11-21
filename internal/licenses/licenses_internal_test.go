@@ -266,8 +266,7 @@ func run(t *testing.T, name string, args ...string) []byte {
 	cmd.Dir = root
 	out, err := cmd.Output()
 	if err != nil {
-		var exit *exec.ExitError
-		if errors.As(err, &exit) {
+		if exit, ok := errors.AsType[*exec.ExitError](err); ok {
 			t.Fatalf("%s %v: %v: %s", name, args, err, exit.Stderr)
 		}
 		t.Fatalf("%s %v: %v", name, args, err)

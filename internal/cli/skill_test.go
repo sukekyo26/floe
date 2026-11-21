@@ -1,6 +1,7 @@
 package cli_test
 
 import (
+	"maps"
 	"os"
 	"path/filepath"
 	"strings"
@@ -243,9 +244,7 @@ func TestSkillInstall(t *testing.T) {
 			home := evalTemp(t)
 			env := cli.HomeVars(home)
 			if c.setup != nil {
-				for k, v := range c.setup(t, home) {
-					env[k] = v
-				}
+				maps.Copy(env, c.setup(t, home))
 			}
 			args := []string{"skill", "install", c.agent}
 			if c.force {

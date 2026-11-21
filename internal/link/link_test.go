@@ -292,7 +292,7 @@ func FuzzResolve(f *testing.F) {
 		if err != nil || strings.HasPrefix(rel, "..") {
 			t.Fatalf("Resolve(%q) = %q, outside %s", rest, got, dir)
 		}
-		for _, p := range strings.Split(rest, "/") {
+		for p := range strings.SplitSeq(rest, "/") {
 			if p == "" && rest != "" || strings.HasPrefix(p, ".") {
 				t.Fatalf("Resolve(%q) = %q through an empty or dot element", rest, got)
 			}

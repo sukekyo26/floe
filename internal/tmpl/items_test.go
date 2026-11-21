@@ -2,6 +2,7 @@ package tmpl_test
 
 import (
 	"bytes"
+	"maps"
 	"os"
 	"path/filepath"
 	"slices"
@@ -213,9 +214,7 @@ func TestPartHTMLItems(t *testing.T) {
 	}
 	parts := func(ph, po string) map[string]string {
 		all := partFiles("ph", `{"h": {"type": "string", "format": "html"}, "md": {"type": "string", "format": "markdown"}}`, ph)
-		for k, v := range partFiles("po", `{"in": {"$ref": "floe:///parts/ph.json"}}`, po) {
-			all[k] = v
-		}
+		maps.Copy(all, partFiles("po", `{"in": {"$ref": "floe:///parts/ph.json"}}`, po))
 		return all
 	}
 	schema := head + `{"p": {"$ref": "floe:///parts/ph.json"}, "o": {"$ref": "floe:///parts/po.json"}}}`
