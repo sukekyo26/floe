@@ -220,18 +220,27 @@ const gallerySettings = createSettings({
     }),
   readPageTheme: () => Promise.resolve('default'),
 });
+// A write of the settings takes 0.8 s, to see the modal held
+const later = <T,>(value: () => T) =>
+  new Promise<T>((go) => {
+    setTimeout(() => {
+      go(value());
+    }, 800);
+  });
 const galleryThemeWrites = createThemeWrites({
-  putSettings: (body) => {
-    if (refuse) return Promise.resolve('refused (500)');
-    if ('theme' in body) defaults.theme = body.theme;
-    else defaults.taskMode = body.taskMode;
-    return Promise.resolve('');
-  },
-  putPageTheme: (slug, theme) => {
-    if (refuse) return Promise.resolve('refused (409)');
-    edit(slug, { pickedTheme: theme });
-    return Promise.resolve('');
-  },
+  putSettings: (body) =>
+    later(() => {
+      if (refuse) return 'refused (500)';
+      if ('theme' in body) defaults.theme = body.theme;
+      else defaults.taskMode = body.taskMode;
+      return '';
+    }),
+  putPageTheme: (slug, theme) =>
+    later(() => {
+      if (refuse) return 'refused (409)';
+      edit(slug, { pickedTheme: theme });
+      return '';
+    }),
   pages: galleryPages,
 });
 const editTarget = createStore<EditTarget | null>(null);
