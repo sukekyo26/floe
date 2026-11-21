@@ -35,7 +35,7 @@ func openScreen(b *browser, path string) {
 }
 
 // A dialog's close button says Cancel where a submit button saves what is typed, which closing throws away, and Close where nothing is;
-// a question's says No. The dialogs are read as each screen has them, in each language.
+// a question's says No. The dialogs are read on each screen, as it has them, in each language.
 // LIMIT: read as the screens hold them closed; a screen that puts a dialog in only as it opens would need it opened.
 func TestUIDialogCloseWords(t *testing.T) { //nolint:paralleltest // the browser tests share one Chrome, one at a time
 	want := []string{
@@ -46,11 +46,6 @@ func TestUIDialogCloseWords(t *testing.T) { //nolint:paralleltest // the browser
 		t.Helper()
 
 		s, screens := wordsSite(t, lang)
-		type dialog struct {
-			submit  bool
-			closers []string
-		}
-		seen := map[string]dialog{}
 		for _, path := range screens {
 			openScreen(s.b, path)
 			var got [][]json.RawMessage
@@ -59,32 +54,30 @@ func TestUIDialogCloseWords(t *testing.T) { //nolint:paralleltest // the browser
 				[...d.querySelectorAll('button[data-close]')].map((b) => b.textContent.trim())]))`)), &got); err != nil {
 				t.Fatal(err)
 			}
+			ids := make([]string, 0, len(got))
 			for _, g := range got {
 				var id string
-				var d dialog
-				if json.Unmarshal(g[0], &id) != nil || json.Unmarshal(g[1], &d.submit) != nil || json.Unmarshal(g[2], &d.closers) != nil {
+				var submit bool
+				var closers []string
+				if json.Unmarshal(g[0], &id) != nil || json.Unmarshal(g[1], &submit) != nil || json.Unmarshal(g[2], &closers) != nil {
 					t.Fatalf("%s: a dialog read as %s", path, g)
 				}
-				seen[id] = d
+				ids = append(ids, id)
+				word := msg("ui_close")
+				if submit {
+					word = msg("ui_cancel")
+				}
+				if id == "move-dialog" {
+					word = msg("ui_no")
+				}
+				if !slices.Equal(closers, []string{word}) {
+					t.Errorf("%s, %s: close buttons %q, want one %q", path, id, closers, word)
+				}
 			}
-		}
-		ids := make([]string, 0, len(seen))
-		for id, d := range seen {
-			ids = append(ids, id)
-			word := msg("ui_close")
-			if d.submit {
-				word = msg("ui_cancel")
+			slices.Sort(ids)
+			if !slices.Equal(ids, want) {
+				t.Errorf("%s: dialogs %q, want %q: tell a new one's close word here", path, ids, want)
 			}
-			if id == "move-dialog" {
-				word = msg("ui_no")
-			}
-			if !slices.Equal(d.closers, []string{word}) {
-				t.Errorf("%s: close buttons %q, want one %q", id, d.closers, word)
-			}
-		}
-		slices.Sort(ids)
-		if !slices.Equal(ids, want) {
-			t.Errorf("dialogs %q, want %q: tell a new one's close word here", ids, want)
 		}
 	})
 }

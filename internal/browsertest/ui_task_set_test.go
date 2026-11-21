@@ -254,7 +254,7 @@ func TestUITaskSet(t *testing.T) { //nolint:paralleltest // the browser tests sh
 	b.eval("document.getElementById('set-submit').click()")
 	b.until("the write answered", "window.letAnswer")
 	// The field cannot be typed in: it is disabled while the write goes
-	if got := b.eval("document.getElementById('set-task').disabled"); got != "true" {
+	if got := b.eval("document.getElementById('set-task').matches(':disabled')"); got != "true" {
 		t.Errorf("the name can be typed while saving: disabled %s", got)
 	}
 	b.eval("window.letAnswer()")

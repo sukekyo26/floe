@@ -305,7 +305,7 @@ func (b *browser) staleOwn(begun int) {
 		b.t.Fatalf("the read after the write was not the first begun after the press (%d reads begun before it, %d before the press)", own.Begun, begun)
 	}
 	if own.Since >= 1500 {
-		b.t.Fatalf("the read after the write began %.0f ms after the read before: no telling it from a poll (every 3 s)", own.Since)
+		b.t.Fatalf("the read after the write began %.0f ms after the read before: no telling it from a poll (every 3 s; a slow machine: run again)", own.Since)
 	}
 }
 

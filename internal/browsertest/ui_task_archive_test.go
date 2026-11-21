@@ -104,7 +104,7 @@ func TestUITaskArchive(t *testing.T) { //nolint:paralleltest // the browser test
 	b.eval("window.patches = 0; window.countFetch = fetch; fetch = (u, o) => { if (o?.method === 'PATCH') window.patches++; return countFetch(u, o); }")
 	r := b.rect(button)
 	x, y := r.X+r.Width/2, r.Y+r.Height/2
-	begun = b.loadsBegun()
+	begun = b.pollEnded()
 	b.mouse(input.DispatchMouseEventTypeMousePressed, x, y, 1)
 	b.mouse(input.DispatchMouseEventTypeMouseReleased, x, y, 1)
 	// The press is done with the read after its write
@@ -333,7 +333,8 @@ func TestUITaskStateGone(t *testing.T) { //nolint:paralleltest // the browser te
 	s.floe(t, "task", "--project", project, "--task", "#other", "--state", "todo")
 	begun := b.pollEnded()
 	chooseValue(b, "task-state", "doing")
-	b.until("the refusal", "!document.getElementById('error').hidden")
+	// Read as the refusal's own read drew it, before a poll draws the tasks as they were again
+	b.until("the refusal", "!document.getElementById('error').hidden && document.getElementById('task-state').value === 'todo'")
 	b.staleOwn(begun)
 	release()
 	if got, want := b.eval("document.getElementById('task-state').value + ' | ' + document.getElementById('error').textContent"), "todo | Failed to change the state: no"; got != want {
@@ -349,7 +350,7 @@ func TestUITaskStateGone(t *testing.T) { //nolint:paralleltest // the browser te
 	s.floe(t, "task", "--project", project, "--task", "#other", "--state", "todo")
 	begun = b.pollEnded()
 	b.eval("document.getElementById('task-archive').click()")
-	b.until("the refusal", "!document.getElementById('error').hidden")
+	b.until("the refusal", "!document.getElementById('error').hidden && document.getElementById('task-archive').hidden")
 	b.staleOwn(begun)
 	release()
 	if got, want := b.eval("document.getElementById('task-archive').hidden + ' | ' + document.getElementById('error').textContent"), "true | Failed to save: no"; got != want {

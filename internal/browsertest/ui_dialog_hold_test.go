@@ -40,7 +40,7 @@ window.fetch = (u, i) => {
 window.holdOn = (...methods) => { for (const m of methods) hold[m] = new Promise((go) => lets.push(go)); return true; };
 window.letGo = () => { hold = {}; for (const go of lets.splice(0)) go(); return true; };
 // The modal held: open, its close request off, and nothing in it to press
-window.heldOf = (id) => { const d = document.getElementById(id); return [d.open, d.getAttribute('closedby'), [...d.querySelectorAll('input, button, select, textarea')].filter((e) => !e.disabled).length].join(' '); };
+window.heldOf = (id) => { const d = document.getElementById(id); return [d.open, d.getAttribute('closedby'), [...d.querySelectorAll('input, button, select, textarea')].filter((e) => !e.matches(':disabled')).length].join(' '); };
 })()`
 
 // TestUIDialogHold holds each modal's write, and the read after it: no key, press or close request closes the modal or sends again, the

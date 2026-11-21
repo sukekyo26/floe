@@ -52,7 +52,7 @@ func TestUITaskEdit(t *testing.T) { //nolint:paralleltest // the browser tests s
 		}
 		return strconv.Itoa(r.Rev) + " " + r.Title + " " + strings.Join(r.URLs, ",") + " [" + strings.Join(r.Categories, ",") + "]"
 	}
-	const categories = "[...document.querySelectorAll('#edit-categories li')].map((li) => li.querySelector('[data-testid=category-name]').textContent + (li.querySelector('[data-testid=category-up]').disabled ? '^' : '') + (li.querySelector('[data-testid=category-down]').disabled ? 'v' : '')).join(',')"
+	const categories = "[...document.querySelectorAll('#edit-categories li')].map((li) => li.querySelector('[data-testid=category-name]').textContent + (li.querySelector('[data-testid=category-up]').matches(':disabled') ? '^' : '') + (li.querySelector('[data-testid=category-down]').matches(':disabled') ? 'v' : '')).join(',')"
 	const urls = "[...document.querySelectorAll('#edit-urls li')].map((li) => li.dataset.url).join(',')"
 	const fields = "[document.getElementById('edit-task-title').value, " + urls + "].join(' / ') + ' / ' + " + categories
 	const errorText = "(document.getElementById('edit-task-error').hidden ? '-' : document.getElementById('edit-task-error').textContent)"
@@ -94,7 +94,7 @@ func TestUITaskEdit(t *testing.T) { //nolint:paralleltest // the browser tests s
 		t.Helper()
 		n := b.eval("window.answered")
 		b.eval("document.getElementById('edit-task-submit').click()")
-		b.until(what, "!document.getElementById('edit-task-dialog').open || (window.answered > "+n+" && !document.getElementById('edit-task-title').disabled)")
+		b.until(what, "!document.getElementById('edit-task-dialog').open || (window.answered > "+n+" && !document.getElementById('edit-task-title').matches(':disabled'))")
 	}
 	closed := func(what string) {
 		t.Helper()
@@ -242,7 +242,7 @@ func TestUITaskEdit(t *testing.T) { //nolint:paralleltest // the browser tests s
 
 	// URLs are reordered as the categories are, by their buttons and by a drag of the grip, the ends moving no further; saving sends the
 	// order whole, and the task's page shows them in it (the list's row, as tasks.json has them: TestUITaskList). A row of one list dropped on the other moves nothing.
-	const urlRows = "[...document.querySelectorAll('#edit-urls li')].map((li) => li.dataset.url.slice(20) + (li.querySelector('[data-testid=category-up]').disabled ? '^' : '') + (li.querySelector('[data-testid=category-down]').disabled ? 'v' : '')).join(',')"
+	const urlRows = "[...document.querySelectorAll('#edit-urls li')].map((li) => li.dataset.url.slice(20) + (li.querySelector('[data-testid=category-up]').matches(':disabled') ? '^' : '') + (li.querySelector('[data-testid=category-down]').matches(':disabled') ? 'v' : '')).join(',')"
 	const urlSaid = "document.getElementById('edit-urls-said').textContent"
 	urlRow := func(url string) string {
 		return "[...document.querySelectorAll('#edit-urls li')].find((li) => li.dataset.url === " + js(url) + ")"
@@ -396,7 +396,7 @@ func TestUITaskEdit(t *testing.T) { //nolint:paralleltest // the browser tests s
 	s.floe(t, "task", "--project", "proj", "--task", "G1", "--forget")
 	field("edit-task-title", "Again")
 	save("gone")
-	say("gone", errorText+" + ' / ' + document.getElementById('edit-task-submit').disabled")
+	say("gone", errorText+" + ' / ' + document.getElementById('edit-task-submit').matches(':disabled')")
 	field("edit-task-title", "Again and again")
 	say("gone, typed", errorText)
 	out = append(out, "G1: "+row("G1"))

@@ -18,8 +18,10 @@ const taskPageRows = `[...document.querySelectorAll('#list > li')].map((li) => l
 func pressTaskArchive(b *browser, word string) {
 	b.t.Helper()
 
-	begun := b.loadsBegun()
 	r := b.rect("document.getElementById('task-archive')")
+	// A press of the input cannot go in the evaluation that counts the reads (acted): pressed as a poll's read has just ended, the
+	// next is 3 s away, so that the read waited for is the press's
+	begun := b.pollEnded()
 	b.click(r.X+r.Width/2, r.Y+r.Height/2)
 	// The press is done with the read after its write
 	b.untilRead(begun, "the button to say "+word, "document.getElementById('task-archive').textContent === "+js(word))

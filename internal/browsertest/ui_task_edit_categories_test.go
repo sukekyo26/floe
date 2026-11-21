@@ -95,7 +95,7 @@ func TestUITaskEditCategories(t *testing.T) { //nolint:paralleltest // the brows
 		t.Helper()
 		n := b.eval("window.answered")
 		b.eval("document.getElementById('edit-task-submit').click()")
-		b.until(what, "!document.getElementById('edit-task-dialog').open || document.getElementById('edit-category-new').validationMessage || (window.answered > "+n+" && !document.getElementById('edit-task-title').disabled)")
+		b.until(what, "!document.getElementById('edit-task-dialog').open || document.getElementById('edit-category-new').validationMessage || (window.answered > "+n+" && !document.getElementById('edit-task-title').matches(':disabled'))")
 	}
 	closed := func(what string) {
 		t.Helper()
