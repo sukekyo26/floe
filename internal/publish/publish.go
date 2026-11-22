@@ -6,20 +6,18 @@ import (
 	"cmp"
 	"context"
 	"errors"
-	"io/fs"
+	"maps"
 	"path"
 	"path/filepath"
 	"regexp"
 	"strings"
-	"testing/fstest"
-	"time"
 
 	"floe/internal/dirs"
+	"floe/internal/drawproc"
 	"floe/internal/files"
 	"floe/internal/link"
 	"floe/internal/project"
 	"floe/internal/store"
-	"floe/internal/tmpl"
 	"floe/internal/usererr"
 	"floe/internal/yamlpos"
 )
@@ -106,45 +104,13 @@ func (e *NeedImages) Error() string {
 	return "the data names images to be sent with it: " + strings.Join(names, ", ")
 }
 
-// recorder notes each name read of fsys, with Stat as with Open: kit.ReadImage stats an image before it opens
-// it, and an image that is not there fails the Stat. It notes too where the data names each image (at, as
-// tmpl.Options.ImageAt), which names it does not read as well: the publisher reads the images it is asked for
-// and tells its mistakes, which are of the names, at these places of its data file.
-type recorder struct {
-	fsys   fs.FS
-	names  []string
-	seen   map[string]bool
-	places map[string][]yamlpos.Pos
-}
-
-func (r *recorder) at(name string, line, column int) {
-	r.places[name] = append(r.places[name], yamlpos.Pos{Line: line, Column: column})
-}
-
-// needed is the images read of fsys, as NeedImages answers them.
-func (r *recorder) needed() []NeededImage {
-	images := make([]NeededImage, len(r.names))
-	for i, name := range r.names {
-		images[i] = NeededImage{Name: name, Places: r.places[name]}
+// needed is the images drew read of those sent, as NeedImages answers them.
+func needed(drew drawproc.Result) []NeededImage {
+	images := make([]NeededImage, len(drew.Read))
+	for i, name := range drew.Read {
+		images[i] = NeededImage{Name: name, Places: drew.Places[name]}
 	}
 	return images
-}
-
-func (r *recorder) note(name string) {
-	if !r.seen[name] {
-		r.seen[name] = true
-		r.names = append(r.names, name)
-	}
-}
-
-func (r *recorder) Open(name string) (fs.File, error) {
-	r.note(name)
-	return r.fsys.Open(name) //nolint:wrapcheck // as fsys says
-}
-
-func (r *recorder) Stat(name string) (fs.FileInfo, error) {
-	r.note(name)
-	return fs.Stat(r.fsys, name) //nolint:wrapcheck // as fsys says
 }
 
 // acceptData is Accept of the data file of up, which --move-project refuses to put in the project of a place with
@@ -162,7 +128,9 @@ func acceptData(up Upload, opts store.Options) (store.Options, error) {
 // images is answered NeedImages, once nothing that needs no image refuses the publish (the slug, the page's
 // owner) and before the mistakes of its drawing, which may be of the images not sent; a mistake before its
 // drawing (of the YAML, the schema, the checks) is told without asking.
-func PrepareData(s *store.Store, dw store.Drawing, up Upload, opts store.Options) (*store.Entry, error) {
+func PrepareData(
+	ctx context.Context, s *store.Store, dw store.Drawing, up Upload, opts store.Options,
+) (*store.Entry, error) {
 	opts, err := acceptData(up, opts)
 	if err != nil {
 		return nil, err
@@ -174,31 +142,31 @@ func PrepareData(s *store.Store, dw store.Drawing, up Upload, opts store.Options
 	if err != nil {
 		return nil, err
 	}
-	sent := fstest.MapFS{}
-	for name, b := range up.Images {
-		sent[name] = &fstest.MapFile{Data: b, Mode: 0, ModTime: time.Time{}, Sys: nil}
-	}
-	images := &recorder{fsys: sent, names: nil, seen: map[string]bool{}, places: map[string][]yamlpos.Pos{}}
 	picked, created, err := s.Themes(slug, "", up.Project, up.Repo, up.Place, opts.Force)
 	if err != nil {
 		return nil, err //nolint:wrapcheck // a usererr for the caller to show
 	}
-	o := tmpl.Options{
-		Theme: cmp.Or(picked, opts.GivenTheme()), Default: created, Untitled: slug, Images: images, ImagesDir: "",
-		ImageAt: images.at, Icons: dw.Icons, CutOff: false,
+	// The images sent, none (not nil) when none was.
+	sent := maps.Clone(up.Images)
+	if sent == nil {
+		sent = map[string][]byte{}
 	}
-	page, warnings, drawErr := tmpl.Draw(dw.Kit, up.File, up.Source, o)
+	drew := drawproc.Draw(ctx, dw.Draw, drawproc.Job{
+		File: up.File, Source: up.Source, Theme: cmp.Or(picked, opts.GivenTheme()), Default: created, Untitled: slug,
+		CutOff: false, ImagesRoot: "", Sent: sent, ImagesDir: "",
+	})
+	page, warnings, drawErr := drew.Page, drew.Warnings, drew.Err
 	var mistakes usererr.List
 	if failed := mistakes.Add(drawErr); failed != nil {
 		return nil, failed
 	}
 	// LIMIT: a template changed between the two puts to read another image too is told that image is not there,
 	// for this put sends the images the first asked (a map, not nil): publish again. Ask again if that comes to matter.
-	if up.Images == nil && len(images.names) > 0 {
+	if up.Images == nil && len(drew.Read) > 0 {
 		if _, refused := storedPage(s, slug, named, up, nil, opts, created); refused != nil {
 			return nil, usererr.WithWarnings(refused, warnings) //nolint:wrapcheck // its mistakes, with the page's warnings
 		}
-		return nil, &NeedImages{Images: images.needed()}
+		return nil, &NeedImages{Images: needed(drew)}
 	}
 	if drawErr != nil {
 		return nil, drawErr //nolint:wrapcheck // mistakes at their places, for the caller to show
@@ -210,7 +178,7 @@ func PrepareData(s *store.Store, dw store.Drawing, up Upload, opts store.Options
 	e.Page = page
 	e.Warnings = warnings
 	e.Images = map[string][]byte{}
-	for _, name := range images.names {
+	for _, name := range drew.Read {
 		if b, ok := up.Images[name]; ok {
 			e.Images[name] = b
 		}
@@ -307,13 +275,11 @@ func PrepareLink(
 			return nil, err //nolint:wrapcheck // a usererr for the caller to show
 		}
 		data = src
-		images := files.NewRoot(filepath.Dir(path))
-		o := tmpl.Options{
-			Theme: cmp.Or(picked, opts.GivenTheme()), Default: created, Untitled: slug, Images: images, ImagesDir: "",
-			ImageAt: nil, Icons: dw.Icons, CutOff: false,
-		}
-		_, warnings, err = tmpl.Draw(dw.Kit, path, src, o)
-		_ = images.Close() //nolint:errcheck // only read from
+		drew := drawproc.Draw(ctx, dw.Draw, drawproc.Job{
+			File: path, Source: src, Theme: cmp.Or(picked, opts.GivenTheme()), Default: created, Untitled: slug,
+			CutOff: false, ImagesRoot: filepath.Dir(path), Sent: nil, ImagesDir: "",
+		})
+		warnings, err = drew.Warnings, drew.Err
 		if err != nil {
 			return nil, err //nolint:wrapcheck // mistakes at their places, for the caller to show
 		}

@@ -2,14 +2,15 @@ package store
 
 import (
 	"cmp"
+	"context"
 	"errors"
 	"io/fs"
 	"path/filepath"
 
 	"floe/internal/doc"
+	"floe/internal/drawproc"
 	"floe/internal/files"
 	"floe/internal/kit"
-	"floe/internal/tmpl"
 	"floe/internal/usererr"
 )
 
@@ -18,7 +19,7 @@ import (
 // drawn from its copy, its page and the pick then written together; a linked data file, drawn each time it is opened,
 // only to be checked. A page published, picked or rebuilt while it was drawn is refused (Conflict), nothing written.
 // The page keeps the pick across publishes and rebuilds (GivenTheme).
-func (s *Store) PickTheme(dw Drawing, slug, theme string) error {
+func (s *Store) PickTheme(ctx context.Context, dw Drawing, slug, theme string) error {
 	if dw.Err != nil {
 		return dw.Err
 	}
@@ -31,7 +32,7 @@ func (s *Store) PickTheme(dw Drawing, slug, theme string) error {
 	}
 	picked := *m
 	picked.PickedTheme = theme
-	got, drawErr := s.drawPicked(dw, slug, &picked)
+	got, drawErr := s.drawPicked(ctx, dw, slug, &picked)
 	if errors.Is(drawErr, ErrNotFound) {
 		return drawErr
 	}
@@ -64,25 +65,27 @@ func (s *Store) PickTheme(dw Drawing, slug, theme string) error {
 
 // drawPicked draws the page slug, whose meta.json is m: a stored page from its copy (what redraw returns), a linked
 // data file only to be checked (nil). ErrNotFound for a page whose file or copy is not there.
-func (s *Store) drawPicked(dw Drawing, slug string, m *Meta) (*drawn, error) {
+func (s *Store) drawPicked(ctx context.Context, dw Drawing, slug string, m *Meta) (*drawn, error) {
 	if m.IsLink() {
 		file, ok := s.File(slug, m, "")
 		if !ok {
 			return nil, ErrNotFound
 		}
-		_, err := DrawLink(dw, slug, m, file, false)
+		_, err := DrawLink(ctx, dw, slug, m, file, false)
 		return nil, err
 	}
 	dir, ok := s.copyDir(slug, m)
 	if !ok {
 		return nil, ErrNotFound
 	}
-	return redraw(dw, slug, m, dir)
+	session := dw.Draw.Start(ctx)
+	defer session.Close()
+	return redraw(session, slug, m, dir)
 }
 
-// DrawLink draws the linked data file file of slug, whose meta.json is m, with dw: in its theme, under slug for a page
-// of no title, its images under its real directory, cut off (tmpl.Options.CutOff) when cut.
-func DrawLink(dw Drawing, slug string, m *Meta, file string, cut bool) ([]byte, error) {
+// DrawLink draws the linked data file file of slug, whose meta.json is m, with dw under ctx: in its theme, under slug
+// for a page of no title, its images under its real directory, cut off (tmpl.Options.CutOff) when cut.
+func DrawLink(ctx context.Context, dw Drawing, slug string, m *Meta, file string, cut bool) ([]byte, error) {
 	if dw.Err != nil {
 		return nil, dw.Err
 	}
@@ -90,16 +93,12 @@ func DrawLink(dw Drawing, slug string, m *Meta, file string, cut bool) ([]byte, 
 	if err != nil {
 		return nil, usererr.CannotRead(file, err) //nolint:wrapcheck // the system's words, at the file
 	}
-	images := files.NewRoot(filepath.Dir(file))
-	defer images.Close() //nolint:errcheck // only read from
-	o := tmpl.Options{
-		Theme: m.GivenTheme(), Default: m.CreatedTheme, Untitled: slug, Images: images, ImagesDir: "", ImageAt: nil,
-		Icons:  dw.Icons,
-		CutOff: cut,
-	}
 	// Its warnings are the writer's, whom publish and check tell; one who opens the page cannot mend them.
-	page, _, err := tmpl.Draw(dw.Kit, file, src, o)
-	return page, err //nolint:wrapcheck // its mistakes, or what failed
+	got := drawproc.Draw(ctx, dw.Draw, drawproc.Job{
+		File: file, Source: src, Theme: m.GivenTheme(), Default: m.CreatedTheme, Untitled: slug, CutOff: cut,
+		ImagesRoot: filepath.Dir(file), Sent: nil, ImagesDir: "",
+	})
+	return got.Page, got.Err
 }
 
 // OwnTheme is the theme the page slug drawn from a data file is drawn in without the theme picked for it: --theme, else

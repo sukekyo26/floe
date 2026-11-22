@@ -14,6 +14,7 @@ import (
 	"time"
 
 	"floe/internal/cli"
+	"floe/internal/guard"
 )
 
 // testLimit is the memory a guarded floe of these tests may hold: above what drawing a right page takes with the
@@ -35,11 +36,18 @@ const (
 func guardedFloe(t *testing.T, dir string, vars map[string]string, args ...string) (int, string) {
 	t.Helper()
 
+	return guardedFloeWith(t, testLimit, dir, vars, args...)
+}
+
+// guardedFloeWith is guardedFloe, its memory watched with limit.
+func guardedFloeWith(t *testing.T, limit int, dir string, vars map[string]string, args ...string) (int, string) {
+	t.Helper()
+
 	ctx, cancel := context.WithTimeout(t.Context(), time.Minute)
 	defer cancel()
 	cmd := exec.CommandContext(ctx, selfBin, args...)
 	cmd.Dir = dir
-	cmd.Env = []string{asCLI + "=1", guarded + "=" + strconv.Itoa(testLimit), "GOMEMLIMIT=2GiB", "PATH=" + os.Getenv("PATH")}
+	cmd.Env = []string{asCLI + "=1", guarded + "=" + strconv.Itoa(limit), "GOMEMLIMIT=2GiB", "PATH=" + os.Getenv("PATH")}
 	for k, v := range vars {
 		cmd.Env = append(cmd.Env, k+"="+v)
 	}
@@ -112,5 +120,53 @@ func TestDrawMemory(t *testing.T) {
 	}
 	if now := debug.SetMemoryLimit(-1); now != limit {
 		t.Errorf("floe in a test's process set the memory limit to %d, from %d", now, limit)
+	}
+}
+
+// A page drawn just under tmpl.MaxPage is drawn, and one just over it refused at its data file, alike by floe check
+// and by the server's floe __draw, both within the memory floe draws with: 780 and 880 rows of a text of 100,000
+// bytes, 78 and 88 MB of HTML.
+func TestPageSize(t *testing.T) {
+	t.Parallel()
+
+	if underRace {
+		// A page of 78 MB takes the race detector past the server's 30 seconds, and a hundred seconds for the test.
+		t.Skip("pages near the size floe draws are too slow to draw under the race detector")
+	}
+
+	e := newDenv(t)
+	page := func(rows int) string {
+		return "template: many\nlang: en\ntitle: T\nintro: " + strings.Repeat("x", 100000) + "\nrows:\n" +
+			strings.Repeat("  - 1\n", rows)
+	}
+	for name, text := range map[string]string{
+		"templates/many/schema.json":  repeatTemplate,
+		"templates/many/page.html":    repeatPage,
+		"templates/many/example.yaml": "template: many\nlang: en\n",
+		"under.yaml":                  page(780),
+		"over.yaml":                   page(880),
+		"parts/.keep":                 "",
+		"themes/.keep":                "",
+	} {
+		path := filepath.Join(e.tmp, filepath.FromSlash(name))
+		if err := os.MkdirAll(filepath.Dir(path), 0o755); err != nil {
+			t.Fatal(err)
+		}
+		if err := os.WriteFile(path, []byte(text), 0o600); err != nil {
+			t.Fatal(err)
+		}
+	}
+	e.vars["FLOE_TEMPLATES_DIR"] = filepath.Join(e.tmp, "templates")
+	e.vars["FLOE_PARTS_DIR"] = filepath.Join(e.tmp, "parts")
+	e.vars["FLOE_THEMES_DIR"] = filepath.Join(e.tmp, "themes")
+	e.vars[guarded] = strconv.Itoa(guard.Limit)
+	const told = "over.yaml: the page drawn is 84 MiB, over the 80 MiB a page may be"
+	for _, command := range []string{"check", "publish"} {
+		if r := e.exe(t, selfBin, command, "under.yaml"); r.code != 0 || strings.Contains(r.stderr, "drawing it") {
+			t.Errorf("floe %s under.yaml = %d, %q (%s)", command, r.code, r.stderr, r.why())
+		}
+		if r := e.exe(t, selfBin, command, "over.yaml"); r.code != 1 || !strings.Contains(r.stderr, told) {
+			t.Errorf("floe %s over.yaml = %d, %q; want 1 and %q (%s)", command, r.code, r.stderr, told, r.why())
+		}
 	}
 }

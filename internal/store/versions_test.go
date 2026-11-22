@@ -167,13 +167,13 @@ func TestRebuildKeepsVersions(t *testing.T) {
 		t.Fatal(err)
 	}
 	before, first := s.ReadMeta("d").Versions, page(t, s, "d", 1)
-	if err := s.Rebuild(dw); err != nil {
+	if err := s.Rebuild(t.Context(), dw); err != nil {
 		t.Fatal(told(err, root))
 	}
 	if got := gzips(t, root); !slices.Equal(got, []string{"1.html.gz", "9.html.gz"}) {
 		t.Errorf("drawn the same, versions/ %v", got)
 	}
-	if err := s.Rebuild(picKit(t, "v2", "")); err != nil {
+	if err := s.Rebuild(t.Context(), picKit(t, "v2", "")); err != nil {
 		t.Fatal(told(err, root))
 	}
 	if after := s.ReadMeta("d").Versions; !slices.Equal(after, before) {
@@ -197,7 +197,7 @@ func TestVersionsNumbers(t *testing.T) {
 	publish(t, s, dw, "d.yaml", titled("A"), map[string][]byte{"a.png": png}, store.Options{})
 	publish(t, s, dw, "d.yaml", titled("B"), map[string][]byte{"a.png": png}, store.Options{})
 	up := floepublish.Upload{File: "d.yaml", Source: []byte(titled("B")), Images: map[string][]byte{"a.png": png}, Project: "q", Repo: "q", Place: "d.yaml"}
-	e, err := floepublish.PrepareData(s, dw, up, store.Options{Force: true})
+	e, err := floepublish.PrepareData(t.Context(), s, dw, up, store.Options{Force: true})
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -262,7 +262,7 @@ func TestSaveVersionFails(t *testing.T) {
 
 		before, meta := names(t, dir), read(t, filepath.Join(dir, "meta.json"))
 		up := floepublish.Upload{File: "d.yaml", Source: []byte(titled(name)), Images: map[string][]byte{"a.png": png}, Project: "p", Repo: "p", Place: "d.yaml"}
-		e, err := floepublish.PrepareData(s, dw, up, store.Options{})
+		e, err := floepublish.PrepareData(t.Context(), s, dw, up, store.Options{})
 		if err != nil {
 			t.Fatal(err)
 		}

@@ -1,6 +1,7 @@
 package cli
 
 import (
+	"cmp"
 	"fmt"
 
 	"floe/internal/guard"
@@ -39,5 +40,5 @@ func (a *app) stopDrawing(file string) {
 		err = usererr.NewAt(file, 0, 0, "draw_memory", limit)
 	}
 	_, _ = fmt.Fprintln(a.env.Stderr, usererr.Tell(english, err).Render(named)) //nolint:errcheck // nowhere left to report
-	a.env.Exit(exitFail)
+	a.env.Exit(cmp.Or(a.stopCode, exitFail))
 }

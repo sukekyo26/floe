@@ -554,7 +554,7 @@ func TestPageTask(t *testing.T) {
 	if got := s.ReadMeta("d").Task; got == nil || got.Name != "#3" || got.Category != "s" {
 		t.Errorf("published again: %+v", got)
 	}
-	if err := s.Rebuild(picKit(t, "v2", "")); err != nil {
+	if err := s.Rebuild(t.Context(), picKit(t, "v2", "")); err != nil {
 		t.Fatal(err)
 	}
 	if got := s.ReadMeta("d").Task; got == nil || got.Name != "#3" {

@@ -206,6 +206,30 @@ linters:
           deny:
             - pkg: "github.com/sergi/go-diff"
               desc: "compare versions of a page through internal/pagediff, which reads them into their words"
+        tmpl-in-guarded:
+          list-mode: lax
+          files:
+            - "$all"
+            - "!**/internal/cli/**"
+            - "!**/internal/drawhere/**"
+            - "!**/internal/tmpl/**"
+            - "!**/internal/kit/*_test.go"
+          deny:
+            - pkg: "floe/internal/tmpl"
+              # The server imports internal/draw for CutOffPage (a download), so this rule does not keep it from
+              # calling draw.Page itself.
+              desc: "draw a page where its memory is watched: the CLI's commands that draw, or floe __draw through internal/drawproc"
+        drawhere-in-guarded:
+          list-mode: lax
+          files:
+            - "$all"
+            - "!$test"
+            - "!**/internal/cli/**"
+            - "!**/internal/drawhere/**"
+            - "!**/internal/servetest/**"
+          deny:
+            - pkg: "floe/internal/drawhere"
+              desc: "the server draws through internal/drawproc's floe __draw; drawhere draws unwatched, for floe __draw itself and tests"
         goldmark-in-kit:
           list-mode: lax
           files:

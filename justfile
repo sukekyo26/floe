@@ -50,7 +50,7 @@ fmt:
 fmt-check:
     golangci-lint fmt --diff {{pkgs}}
 
-# LIMIT: the files of //go:build race are not read (no -race): four constants of 5 lines; add a -race run when one holds more.
+# LIMIT: the files of //go:build race are not read (no -race): six constants of 5 lines; add a -race run when one holds more.
 # LIMIT: just lint type-checks linux and windows only: when fix-check fails for darwin and just fix does not help, it is a type error of darwin's files.
 # LIMIT: the go fix of the Go on PATH runs: one newer than go.mod's may know more fixers and fail fix-check on a clean tree.
 # go fix reads one GOOS's files a run: the three floe runs on.
