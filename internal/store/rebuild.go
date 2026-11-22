@@ -26,7 +26,8 @@ import (
 // store_rebuild_kept, with an indent, if that comes to confuse.
 // LIMIT: a template floe fails to compile again with one's own parts stops it at that template's first page, the
 // pages of other templates before it drawn again and written; floe's own failure alone, which its tests catch.
-// The pages are drawn one after another in one session of dw.Draw, under ctx.
+// The pages are drawn one after another in one session of dw.Draw, under ctx: once it ends (the command that asked is
+// stopped), the pages not drawn yet keep the page they had, and the mistakes told so far are returned.
 func (s *Store) Rebuild(ctx context.Context, dw Drawing) error {
 	if dw.Err != nil {
 		return dw.Err
@@ -39,7 +40,12 @@ func (s *Store) Rebuild(ctx context.Context, dw Drawing) error {
 	defer session.Close()
 	var found usererr.List
 	for _, slug := range slugs {
-		if failed := found.Add(s.rebuildPage(session, slug)); failed != nil {
+		err := s.rebuildPage(session, slug)
+		if ctx.Err() != nil {
+			// Stopped by the command that asked: the pages not drawn again keep the page they had, which is no mistake.
+			break
+		}
+		if failed := found.Add(err); failed != nil {
 			return failed
 		}
 	}

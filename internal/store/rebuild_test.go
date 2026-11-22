@@ -1,6 +1,7 @@
 package store_test
 
 import (
+	"context"
 	"fmt"
 	"os"
 	"path/filepath"
@@ -9,6 +10,7 @@ import (
 	"testing"
 
 	"floe/internal/drawhere"
+	"floe/internal/drawproc"
 	floepublish "floe/internal/publish"
 	"floe/internal/store"
 	"floe/internal/testfs"
@@ -405,5 +407,55 @@ func TestRebuildImageUnreadable(t *testing.T) {
 	)
 	if got := told(s.Rebuild(t.Context(), picKit(t, "v2", "")), root); got != want {
 		t.Errorf("told\n%s\nwant\n%s", got, want)
+	}
+}
+
+// counting is a drawproc.Drawer that counts the sessions it starts and closes, its pages drawn by d.
+type counting struct {
+	d               drawproc.Drawer
+	started, closed int
+}
+
+func (c *counting) Start(ctx context.Context) drawproc.Session {
+	c.started++
+	return &countingSession{c: c, s: c.d.Start(ctx)}
+}
+
+type countingSession struct {
+	c *counting
+	s drawproc.Session
+}
+
+func (s *countingSession) Draw(job drawproc.Job) drawproc.Result { return s.s.Draw(job) }
+
+func (s *countingSession) Close() {
+	s.s.Close()
+	s.c.closed++
+}
+
+// A rebuild whose command is stopped stops, its session closed, and the pages it did not draw again keep the page
+// they had: no mistake, nor floe's failure.
+func TestRebuildStopped(t *testing.T) {
+	t.Parallel()
+
+	s, root := newStore(t)
+	dw := picKit(t, "", "")
+	publish(t, s, dw, "a.yaml", "lang: en\ntemplate: pic\n", nil, store.Options{})
+	publish(t, s, dw, "b.yaml", "lang: en\ntemplate: pic\n", nil, store.Options{})
+	v2 := picKit(t, "v2", "")
+	c := &counting{d: v2.Draw, started: 0, closed: 0}
+	v2.Draw = c
+	ctx, cancel := context.WithCancel(t.Context())
+	cancel()
+	if err := s.Rebuild(ctx, v2); err != nil {
+		t.Errorf("a rebuild stopped = %s, want nothing", told(err, root))
+	}
+	if c.started != 1 || c.closed != 1 {
+		t.Errorf("%d sessions started and %d closed, want 1 and 1", c.started, c.closed)
+	}
+	for _, slug := range []string{"a", "b"} {
+		if page := read(t, filepath.Join(copyOf(t, s, root, slug), "page.html")); strings.Contains(page, "<body>v2") {
+			t.Errorf("%s drawn again by a rebuild stopped before it", slug)
+		}
 	}
 }

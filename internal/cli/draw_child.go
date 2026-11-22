@@ -49,7 +49,9 @@ func (a *app) drawChild() error {
 		if kitErr != nil {
 			return drawproc.Result{Page: nil, Warnings: nil, Err: kitErr, Read: nil, Places: nil}
 		}
+		// Watched while it draws alone, as the CLI's commands are: not while its answer is written.
 		a.watchDrawing(job.File)
+		defer a.drawn()
 		return drawhere.One(k, icons, job)
 	})
 }
