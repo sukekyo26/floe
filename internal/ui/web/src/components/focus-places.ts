@@ -29,8 +29,9 @@ export const focusOn = (el: Element | null): boolean => {
 };
 
 // drawThenFocus draws what apply changes at once, then gives the focus to the element of id: what a fold or an open
-// button does as it is pressed (ui.html showShelf, showList, showSide). Its callers are event handlers alone, never a
-// draw or an effect, where flushSync could not draw
+// button does as it is pressed (ui.html showShelf, showList, showSide, showToc). Its callers are event handlers alone,
+// never a draw or an effect, where flushSync could not draw. A column folded with no press (ShowButton) takes the
+// focus in an effect of its own
 export function drawThenFocus(apply: () => void, id: string): void {
   flushSync(apply);
   focusOn(document.getElementById(id));

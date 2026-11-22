@@ -1,6 +1,7 @@
 import { useEffect, useRef } from 'react';
 
-import { SHOW_BOTTOM } from '@/components/columns';
+import { ColumnFoot, HEAD_TITLE, SHOW_BOTTOM } from '@/components/columns';
+import { drawThenFocus } from '@/components/focus-places';
 import { Grip } from '@/components/grip';
 import { IconButton } from '@/components/icon-button';
 import { SideIcon } from '@/components/icons';
@@ -59,22 +60,18 @@ export function DiffToc({ sections, section, onPlace, width, innerWidth, toc = s
   const side = useStore(toc.side());
   const nav = useRef<HTMLElement>(null);
   const list = useRef<HTMLDivElement>(null);
-  const hide = useRef<HTMLButtonElement>(null);
-  const show = useRef<HTMLButtonElement>(null);
-  // The focus goes to the button that undoes it, as it is pressed (ui.html showToc): not as it is drawn first
-  const pressed = useRef(false);
   useEffect(() => {
     list.current?.querySelector('[data-on]')?.scrollIntoView({ block: 'nearest' });
   }, [section]);
-  useEffect(() => {
-    if (!pressed.current) return;
-    pressed.current = false;
-    (side.open ? hide : show).current?.focus();
-  }, [side.open]);
+  // The focus goes to the button that undoes it, as it is pressed (ui.html showToc): not as it is drawn first
   const setOpen = (open: boolean) => {
-    pressed.current = true;
-    toc.setOpen(open);
-    toc.keep();
+    drawThenFocus(
+      () => {
+        toc.setOpen(open);
+        toc.keep();
+      },
+      open ? 'diff-toc-hide' : 'diff-toc-show',
+    );
   };
   return (
     <>
@@ -85,12 +82,8 @@ export function DiffToc({ sections, section, onPlace, width, innerWidth, toc = s
         hidden={!side.open}
         className="flex min-h-0 flex-col text-small mid:hidden"
       >
-        <div
-          data-testid="col-foot"
-          className="order-1 flex h-foot flex-none items-center border-t border-line px-foot-pad"
-        >
+        <ColumnFoot always>
           <IconButton
-            ref={hide}
             id="diff-toc-hide"
             label={t('ui_diff_toc_hide')}
             expanded
@@ -101,12 +94,9 @@ export function DiffToc({ sections, section, onPlace, width, innerWidth, toc = s
           >
             <SideIcon />
           </IconButton>
-        </div>
+        </ColumnFoot>
         <div className="flex min-h-[2.6rem] flex-none items-center px-4 pt-[0.55rem] pb-[0.45rem]">
-          <h2
-            id="diff-toc-title"
-            className="m-0 min-w-0 flex-1 truncate font-mono text-label leading-[1.2] font-bold tracking-[0.06em] text-muted uppercase"
-          >
+          <h2 id="diff-toc-title" className={`m-0 ${HEAD_TITLE}`}>
             {t('ui_diff_toc')}
           </h2>
         </div>
@@ -172,11 +162,11 @@ export function DiffToc({ sections, section, onPlace, width, innerWidth, toc = s
           under 56rem */}
       <div hidden={side.open} className={`absolute ${SHOW_BOTTOM} left-foot-pad z-2 flex mid:hidden`}>
         <IconButton
-          ref={show}
           id="diff-toc-show"
           label={t('ui_diff_toc_show')}
           hidden={side.open}
           raised
+          display="screen"
           expanded={false}
           controls="diff-toc-nav"
           onClick={() => {

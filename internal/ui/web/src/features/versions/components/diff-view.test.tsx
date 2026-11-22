@@ -44,6 +44,18 @@ describe(DiffToc, () => {
     // Folded or not, the button that opens it is there, hidden while it shows
     expect(html).toMatch(/<button[^>]*id="diff-toc-show"[^>]*hidden=""/);
   });
+
+  it('keeps its foot at every width it shows at, and leaves what opens it out of print', () => {
+    expect.assertions(2);
+    testBoot();
+    const html = renderToString(
+      <DiffToc sections={[]} section={-1} onPlace={() => undefined} width={240} innerWidth={1200} toc={toc()} />,
+    );
+    expect(/<div data-testid="col-foot" class="([^"]*)"/.exec(html)?.[1]).toMatch(
+      /^(?!.*wide:hidden)(?=.*\bpe-foot-pad\b).*ps-foot-pad/,
+    );
+    expect(/<button[^>]*id="diff-toc-show"[^>]*class="([^"]*)"/.exec(html)?.[1]).toContain('print:hidden');
+  });
 });
 
 describe(DiffCount, () => {
