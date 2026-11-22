@@ -27,7 +27,7 @@ func TestServerDrawsApart(t *testing.T) {
 		"templates/slow/example.yaml": "template: slow\nlang: en\nn: 1\n",
 		"heavy.yaml":                  "template: many\nlang: en\ntitle: H\nn: 5000\n",
 		"light.yaml":                  "template: many\nlang: en\ntitle: L\nn: 1\n",
-		"slow.yaml":                   "template: slow\nlang: en\ntitle: S\nrows: [1, 2, 3, 4, 5]\n",
+		"slow.yaml":                   "template: slow\nlang: en\ntitle: S\nrows: [" + strings.TrimSuffix(strings.Repeat("1, ", 30), ", ") + "]\n",
 		"parts/.keep":                 "",
 		"themes/.keep":                "",
 	} {
@@ -43,13 +43,15 @@ func TestServerDrawsApart(t *testing.T) {
 	e.vars["FLOE_PARTS_DIR"] = filepath.Join(e.tmp, "parts")
 	e.vars["FLOE_THEMES_DIR"] = filepath.Join(e.tmp, "themes")
 	e.vars[guarded] = strconv.Itoa(testLimit)
-	e.vars[drawSeconds] = "1"
+	// Far past what the pages stopped by their memory take on a slow CI runner (over 1 second once), far below the slow
+	// page's 30 rows of about 2 seconds.
+	e.vars[drawSeconds] = "10"
 
 	for _, c := range []struct {
 		file, told string
 	}{
 		{"heavy.yaml", "heavy.yaml: drawing it needed more than 512 MiB of memory"},
-		{"slow.yaml", "slow.yaml: drawing it took more than 1 seconds"},
+		{"slow.yaml", "slow.yaml: drawing it took more than 10 seconds"},
 	} {
 		if r := e.exe(t, selfBin, "publish", c.file); r.code != 1 || !strings.Contains(r.stderr, c.told) {
 			t.Errorf("floe publish %s = %d, %q; want 1 and %q (%s)", c.file, r.code, r.stderr, c.told, r.why())
