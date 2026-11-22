@@ -9,6 +9,9 @@ import (
 	"floe/internal/drawproc"
 )
 
+// errNoStdin is floe __draw's failure without what to read what to draw from.
+var errNoStdin = errors.New("floe __draw reads what to draw on stdin, which it has none of")
+
 // drawChildCmd is floe __draw, which the server runs to draw its pages (drawproc), hidden: no one types it.
 func (a *app) drawChildCmd() *cobra.Command {
 	return &cobra.Command{
@@ -26,7 +29,7 @@ func (a *app) drawChildCmd() *cobra.Command {
 // the icons, as the server reads them, its memory watched: past the limit, it ends with drawproc.Stopped.
 func (a *app) drawChild() error {
 	if a.env.Stdin == nil {
-		return errors.New("floe __draw reads what to draw on stdin, which it has none of")
+		return errNoStdin
 	}
 	build, err := daemon.Build()
 	if err != nil {

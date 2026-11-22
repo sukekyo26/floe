@@ -1,6 +1,7 @@
 package usererr
 
 import (
+	"errors"
 	"fmt"
 	"reflect"
 )
@@ -24,6 +25,9 @@ type Arg struct {
 	Number *float64 `json:"number,omitzero"`
 }
 
+// errArgKind is the failure of copying an argument of a kind the catalog's verbs do not take.
+var errArgKind = errors.New("a kind of argument floe does not copy")
+
 // Copy is e as Copied, or floe's failure for an argument of another kind, which the copy would word otherwise.
 func Copy(e *Error) (Copied, error) {
 	c := Copied{
@@ -45,7 +49,7 @@ func Copy(e *Error) (Copied, error) {
 			f := v.Float()
 			c.Args[i].Number = &f
 		default:
-			return Copied{}, fmt.Errorf("copy the mistake %s: its argument %d is a %T", e.Key, i, a)
+			return Copied{}, fmt.Errorf("copy the mistake %s: its argument %d is a %T: %w", e.Key, i, a, errArgKind)
 		}
 	}
 	return c, nil

@@ -106,11 +106,14 @@ func (a *app) serverConfig() (server.Config, dataPlace, error) {
 	return cfg, root, nil
 }
 
+// errNoDrawer is the failure of a server that has not set what it draws with (serve sets it).
+var errNoDrawer = errors.New("the server has no floe __draw to draw with")
+
 // drawing is what the server draws pages with: one's own over floe's (kit) and the icons (iconStore), which floe
 // __draw reads as the server does and draws with (a.drawer, which serve sets).
 func (a *app) drawing() (store.Drawing, error) {
 	if a.drawer == nil {
-		return store.Drawing{Kit: nil, Icons: nil, Draw: nil, Err: nil}, errors.New("the server has no floe __draw to draw with")
+		return store.Drawing{Kit: nil, Icons: nil, Draw: nil, Err: nil}, errNoDrawer
 	}
 	k, err := a.kit(true)
 	if err != nil {

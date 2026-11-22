@@ -124,7 +124,7 @@ func (s *hereSession) Draw(job Job) Result {
 	return One(s.h.k, s.h.icons, job)
 }
 
-func (s *hereSession) Close() {}
+func (*hereSession) Close() {}
 
 // failed is a Result of floe's failure err.
 func failed(err error) Result {

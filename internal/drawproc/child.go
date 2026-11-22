@@ -245,7 +245,7 @@ func (p *proc) end(ctx context.Context, file string, limit time.Duration, err er
 	case errors.Is(err, errTooLarge):
 		return fmt.Errorf("draw %s: %w", file, errTooLarge)
 	}
-	return fmt.Errorf("draw %s: floe __draw ended (%v): %w: %s", file, waited, err, p.stderr.String())
+	return fmt.Errorf("draw %s: floe __draw ended (%w): %w: %s", file, waited, err, p.stderr.String())
 }
 
 // errTooLarge is the failure of an answer past answerLimit.

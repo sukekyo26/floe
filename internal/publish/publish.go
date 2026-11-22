@@ -128,7 +128,9 @@ func acceptData(up Upload, opts store.Options) (store.Options, error) {
 // images is answered NeedImages, once nothing that needs no image refuses the publish (the slug, the page's
 // owner) and before the mistakes of its drawing, which may be of the images not sent; a mistake before its
 // drawing (of the YAML, the schema, the checks) is told without asking.
-func PrepareData(ctx context.Context, s *store.Store, dw store.Drawing, up Upload, opts store.Options) (*store.Entry, error) {
+func PrepareData(
+	ctx context.Context, s *store.Store, dw store.Drawing, up Upload, opts store.Options,
+) (*store.Entry, error) {
 	opts, err := acceptData(up, opts)
 	if err != nil {
 		return nil, err

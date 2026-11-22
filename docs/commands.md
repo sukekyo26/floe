@@ -74,6 +74,8 @@ Pages are drawn from data files (`.yaml`, `.yml`); [pages.md](pages.md) tells ho
 
 The stored page stays as it was drawn: changing the template, a part or a theme changes it only when `floe rebuild` draws it again. A page that names no theme takes the default theme chosen in the management page's settings when it is first stored, and keeps it: choosing another default changes the pages stored from then on only. A theme picked for the page in its menu on the management page (Theme) draws it again at once, and wins over all of these, kept when it is published again. Another file, such as an HTML file, is not stored: link it with `--link` to show it as it is.
 
+The server draws each page in a process of its own, which may hold up to 512 MiB of memory and take up to 30 seconds for a page: past either, the page is refused at its data file (`page.yaml: drawing it needed more than 512 MiB of memory, …`, `page.yaml: drawing it took more than 30 seconds, …`), and the server serves on. So is a linked data file's page when it is opened, a page drawn in a theme picked for it, and a page `floe rebuild` draws again. Drawing in that process makes publishing, and opening a linked data file's page, about 0.1 seconds slower.
+
 ### Flags
 
 | Flag | Description |
@@ -148,7 +150,7 @@ floe render --check docs/*.yaml            # in CI: fails when a page was not wr
 
 Have the server draw every stored page again from the copy of its data file and images, with its templates, parts and themes of now, and keep the page where it changed. Run it after you change a template, part or theme of your own, or upgrade floe.
 
-- A page that no longer draws keeps the page it had, and its mistakes are told (exit code 1): fix the data file it was published from and publish it again, or fix the template.
+- A page that no longer draws keeps the page it had, and its mistakes are told (exit code 1): fix the data file it was published from and publish it again, or fix the template. One past the memory or the time of a page (see `floe publish`) is told so, and the other pages are drawn on.
 - Linked files are drawn each time they are opened, and are left alone.
 - The server is started when it is not running.
 
