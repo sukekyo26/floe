@@ -82,6 +82,14 @@ describe(holdProject, () => {
     expect(urls).toStrictEqual(['http://x/tasks?project=b']);
   });
 
+  it('keeps no project gone, asked for in the URL', () => {
+    expect.assertions(2);
+    const { query, keeps, read } = made('?project=gone', 'a');
+    read({ a: { '#1': row('doing', '2026-11-01T00:00:00Z') } });
+    expect(query.query.get().project).toBe('gone');
+    expect(keeps).toStrictEqual([]);
+  });
+
   it('writes the URL as the view changes once read, and not while unreadable', () => {
     expect.assertions(1);
     const { query, urls, read } = made('?project=a');

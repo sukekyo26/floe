@@ -68,7 +68,8 @@ export function useNameSuggest({ id, offers, put, onFocus = true }: NameSuggestW
       b.style.width = `${String(r.width)}px`;
     };
     at();
-    await Promise.all((input.closest('dialog')?.getAnimations() ?? []).map((a) => a.finished));
+    // Settled, not all: an animation cancelled (the modal closed while it opens) rejects its finished
+    await Promise.allSettled((input.closest('dialog')?.getAnimations() ?? []).map((a) => a.finished));
     at();
   };
   const close = () => {

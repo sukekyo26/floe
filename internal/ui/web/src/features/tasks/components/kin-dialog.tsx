@@ -1,9 +1,9 @@
-import { useRef, useState } from 'react';
+import { useLayoutEffect, useRef, useState } from 'react';
 
 import { Button } from '@/components/button';
 import { Dialog, DialogActions, DialogClose, DialogHead } from '@/components/dialog';
 import { FIELD, TEXT } from '@/components/fields';
-import { focusOn } from '@/components/focus-places';
+import { focusRow } from '@/components/focus-places';
 import { PlusIcon } from '@/components/icons';
 import { useNameSuggest } from '@/components/name-suggest';
 import { getBoot } from '@/config/boot';
@@ -13,11 +13,12 @@ import { askedProjects, KIN_FORMS, type KinFormName, type KinTask } from '@/feat
 import { taskNames, taskOffer } from '@/features/tasks/utils/task-names';
 import { useHold } from '@/hooks/use-hold';
 import { useStore } from '@/hooks/use-store';
+import { goTo } from '@/lib/platform';
 import { projectWord, t } from '@/lib/t';
 import { pages as pagePages, type Pages } from '@/stores/pages';
 import { nameOffers } from '@/utils/name-offers';
 import { taskHref } from '@/utils/page-urls';
-import { tasksFrom } from '@/utils/tasks-of';
+import { knownTasks } from '@/utils/tasks-of';
 
 // What opens the modal: its form, the task it is for and whether it asks the project (no task nor pin anywhere)
 export interface KinOpen {
@@ -34,10 +35,6 @@ export interface KinDialogProps {
   readonly fresh?: FreshTask;
   readonly assign?: (url: string) => void;
 }
-
-const goTo = (url: string) => {
-  window.location.assign(url);
-};
 
 // KinDialog is the modal of a task's family (ui.html #kin-dialog, openKin, saveKin): a new task on the task list, of one
 // form of fields whose form (KIN_FORMS) says what differs. The task is as the tasks read now have it, and so is the
@@ -74,7 +71,7 @@ export function KinDialog({
     }
   }
   const failed = Boolean(taken.error);
-  const tasks = failed ? [] : tasksFrom(entries, taken.tasks);
+  const tasks = knownTasks(entries, taken);
   const form = open ? KIN_FORMS[open.form] : null;
   const project = open?.ask ? asked : (open?.task.project ?? '');
   const task: KinTask = tasks.find((y) => y.project === project && y.name === open?.task.name) ?? {
@@ -87,6 +84,16 @@ export function KinDialog({
   // The title is asked of a new task alone: hidden, it is not required, nor marked blank. Unreadable, a task's being
   // there is not known, and nothing is asked: the save stops at what cannot be read
   const titleShown = there === null;
+  // A field's blank mark goes as the modal opens, and the title's as it hides (ui.html resetTaskForm, titleField): a
+  // field hidden still marked would stop every save, the browser's check failing on what cannot be seen
+  useLayoutEffect(() => {
+    if (open === null) return;
+    nameField.current?.setCustomValidity('');
+    titleField.current?.setCustomValidity('');
+  }, [open]);
+  useLayoutEffect(() => {
+    if (!titleShown) titleField.current?.setCustomValidity('');
+  }, [titleShown]);
   const suggest = useNameSuggest({
     id: 'kin-task',
     offers: (written, justTyped) =>
@@ -99,6 +106,8 @@ export function KinDialog({
           )
         : [],
     put: (n) => {
+      // What the field was told, of a name missing, no longer holds
+      nameField.current?.setCustomValidity('');
       setName(n);
       setError('');
     },
@@ -167,10 +176,7 @@ export function KinDialog({
       afterClose={() => {
         const key = saved.current;
         saved.current = null;
-        return (
-          key !== null &&
-          focusOn(document.querySelector(`#list > li[data-key="${CSS.escape(key)}"] [data-testid=title]`))
-        );
+        return key !== null && focusRow(key);
       }}
     >
       <form
@@ -198,6 +204,8 @@ export function KinDialog({
             data-autofocus={open?.ask ? '' : undefined}
             onChange={(e) => {
               setAsked(e.currentTarget.value);
+              // What was refused was of another project
+              setError('');
             }}
           >
             {projects.map((p) => (

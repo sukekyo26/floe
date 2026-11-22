@@ -9,7 +9,7 @@ import { ViewButton } from '@/components/shelf-views';
 import { getBoot } from '@/config/boot';
 import { projectKept as kept0, type ProjectKept } from '@/features/tasks/stores/project-kept';
 import { stateWord } from '@/features/tasks/utils/kin-forms';
-import { projectChips, stateCounts, taskProjects, taskRanks } from '@/features/tasks/utils/task-list';
+import { projectChips, projectPress, stateCounts, taskProjects, taskRanks } from '@/features/tasks/utils/task-list';
 import { projectWord, t } from '@/lib/t';
 import type { TaskOf } from '@/types/task';
 import type { Page } from '@/types/page';
@@ -56,8 +56,9 @@ export function TaskShelf({
     if (name !== view) query.filter({ view: name });
   };
   const pickProject = (name: string) => {
-    if (!failed) kept.keep(name);
-    if (name !== project) query.filter({ project: name });
+    const press = projectPress(name, project, failed);
+    if (press.keep) kept.keep(name);
+    if (press.show) query.filter({ project: name });
   };
   const views = (
     <>

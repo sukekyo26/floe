@@ -3,6 +3,7 @@ import { ReadMark } from '@/components/page-row';
 import { RowCard } from '@/components/row-card';
 import { NEW_PILL } from '@/components/row-sub';
 import { taskRowKey, unreadOf, urlEnd } from '@/features/tasks/utils/task-list';
+import { goTo } from '@/lib/platform';
 import { projectWord, t } from '@/lib/t';
 import type { TaskOf } from '@/types/task';
 import { taskHref } from '@/utils/page-urls';
@@ -69,10 +70,6 @@ export interface TaskRowProps {
   readonly fresh: boolean;
   readonly assign?: (url: string) => void;
 }
-
-const goTo = (url: string) => {
-  window.location.assign(url);
-};
 
 // TaskRow is a row of a task on the task list (ui.html taskRow), of the page's own form with nothing to select or do but
 // open it and its links. Enter on its title opens it, from the page's keys too (a key sent by a script, which opens no

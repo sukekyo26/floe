@@ -29,3 +29,7 @@ export function tasksFrom(entries: readonly Page[], read: Tasks): TaskOf[] {
   }
   return [...tasks.values()];
 }
+
+// knownTasks is the tasks of what was read: none while tasks.json is unreadable, as they are not known
+export const knownTasks = (entries: readonly Page[], taken: { error: string; tasks: Tasks }): TaskOf[] =>
+  taken.error ? [] : tasksFrom(entries, taken.tasks);

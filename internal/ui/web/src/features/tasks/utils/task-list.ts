@@ -129,3 +129,13 @@ export function urlEnd(url: string): string {
 
 // taskRowKey is the key of a task's row on the task list
 export const taskRowKey = (project: string, name: string): string => `task:${JSON.stringify([project, name])}`;
+
+// projectPress is what a press of a project's chip does (ui.html toggleProject): the list always shows one project, so
+// the one shown pressed again changes nothing; the project pressed is kept for the next opening once the tasks are
+// read, not while unreadable, when the projects there are not known
+// LIMIT: unreadable, ui.html keeps the project borrowed from what was kept as its chip is pressed again; this keeps
+// nothing then. They differ only for a kept project gone, which the next read lets go of either way
+export const projectPress = (name: string, shown: string, failed: boolean): { keep: boolean; show: boolean } => ({
+  keep: !failed,
+  show: name !== shown,
+});

@@ -4,6 +4,7 @@ import {
   listState,
   openingProject,
   openProject,
+  projectPress,
   projectChips,
   shownTasks,
   stateCounts,
@@ -136,6 +137,27 @@ describe(listState, () => {
       gone: false,
       addHidden: true,
     });
+  });
+});
+
+describe('listState of a project of pins alone', () => {
+  it('has something to list, read: no words of nothing anywhere, and the way to add', () => {
+    expect.assertions(1);
+    expect(listState([], [PIN], 'c', 'doing', false, 0)).toStrictEqual({
+      nothing: false,
+      none: true,
+      gone: false,
+      addHidden: false,
+    });
+  });
+});
+
+describe(projectPress, () => {
+  it('keeps the project pressed once read, not while unreadable, and shows it unless shown', () => {
+    expect.assertions(3);
+    expect(projectPress('b', 'a', false)).toStrictEqual({ keep: true, show: true });
+    expect(projectPress('b', 'a', true)).toStrictEqual({ keep: false, show: true });
+    expect(projectPress('a', 'a', false)).toStrictEqual({ keep: true, show: false });
   });
 });
 

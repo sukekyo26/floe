@@ -6,7 +6,7 @@ import { listQuery, type ListQuery } from '@/stores/list-query';
 import { pages as pagePages, type Pages } from '@/stores/pages';
 import type { Page } from '@/types/page';
 import type { TaskOf } from '@/types/task';
-import { tasksFrom } from '@/utils/tasks-of';
+import { knownTasks } from '@/utils/tasks-of';
 
 export interface TaskListView {
   read: boolean;
@@ -39,8 +39,8 @@ export function useTaskList({ query = listQuery, pages = pagePages, kept = kept0
   const { read, entries, tasks: taken } = useStore(pages.state);
   const { lang, states } = getBoot();
   const failed = Boolean(taken.error);
-  // Unreadable, tasks are not known: none is drawn, and only what was kept can be said of the project
-  const tasks = failed ? [] : tasksFrom(entries, taken.tasks);
+  // Unreadable, none is drawn, and only what was kept can be said of the project
+  const tasks = knownTasks(entries, taken);
   const first = states.find((s) => s.first)?.name ?? '';
   const project = openProject(asked, { tasks, entries, kept: kept.kept(), failed, first, lang });
   const shown = shownTasks(tasks, project, view, lang);

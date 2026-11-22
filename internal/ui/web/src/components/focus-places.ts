@@ -38,7 +38,8 @@ export function drawThenFocus(apply: () => void, id: string): void {
   focusOn(document.getElementById(id));
 }
 
-const focusRow = (key: string | null): boolean =>
+// focusRow gives the focus to the title of the row of key on #list, telling whether there was one
+export const focusRow = (key: string | null): boolean =>
   key !== null && focusOn(document.querySelector(`#list > li[data-key="${CSS.escape(key)}"] [data-testid=title]`));
 
 const onTaskPage = () => screenOf(getBoot(), window.location.search) === 'taskPage';

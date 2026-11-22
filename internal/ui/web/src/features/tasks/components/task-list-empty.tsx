@@ -1,31 +1,9 @@
-import type { ReactNode } from 'react';
-
 import { Button } from '@/components/button';
+import { EmptyState } from '@/components/empty-state';
 import { PlusIcon } from '@/components/icons';
 import { t } from '@/lib/t';
 
 const LINK = 'text-fg';
-
-function State({
-  id,
-  hidden,
-  children,
-}: {
-  readonly id: string;
-  readonly hidden: boolean;
-  readonly children: ReactNode;
-}) {
-  return (
-    <div
-      id={id}
-      data-testid="state"
-      hidden={hidden}
-      className="[&_strong]:text-base grid justify-items-center gap-2 px-6 py-14 text-center text-muted [&_p]:m-0 [&_p]:max-w-[34rem] [&_strong]:text-fg"
-    >
-      {children}
-    </div>
-  );
-}
 
 export interface TaskListEmptyProps {
   // nothing: no task nor pin anywhere; failed: the tasks unreadable; none: no task to show, its words those of none,
@@ -42,23 +20,23 @@ export interface TaskListEmptyProps {
 export function TaskListEmpty({ nothing, failed, none, other, onAdd }: TaskListEmptyProps) {
   return (
     <>
-      <State id="tasks-none" hidden={none === null}>
+      <EmptyState id="tasks-none" hidden={none === null}>
         <strong>{none ?? ''}</strong>
         <p>
           <a href="/tasks" id="tasks-other" hidden={!other} className={LINK}>
             {t('ui_tasks_other')}
           </a>
         </p>
-      </State>
-      <State id="tasks-failed" hidden={!failed}>
+      </EmptyState>
+      <EmptyState id="tasks-failed" hidden={!failed}>
         <strong>{t('ui_tasks_unreadable')}</strong>
         <p>
           <a href="/" className={LINK}>
             {t('ui_to_page_list')}
           </a>
         </p>
-      </State>
-      <State id="tasks-empty" hidden={!nothing}>
+      </EmptyState>
+      <EmptyState id="tasks-empty" hidden={!nothing}>
         <strong>{t('ui_tasks_empty')}</strong>
         <p>{t('ui_tasks_empty_hint')}</p>
         <p>
@@ -72,7 +50,7 @@ export function TaskListEmpty({ nothing, failed, none, other, onAdd }: TaskListE
             {t('ui_task_add')}
           </Button>
         </p>
-      </State>
+      </EmptyState>
     </>
   );
 }
