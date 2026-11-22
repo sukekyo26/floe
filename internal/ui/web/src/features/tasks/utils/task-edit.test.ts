@@ -2,13 +2,14 @@ import { describe, expect, it } from 'vitest';
 
 import { testBoot } from '@/components/test-boot';
 import {
+  boxSaid,
   categoryRefusal,
   editChange,
-  leftOver,
   mergeLists,
   mergeURLs,
   refillTitle,
   urlRefusal,
+  urlsFull,
 } from '@/features/tasks/utils/task-edit';
 
 const base = { title: 'T', urls: ['u1', 'u2'], categories: ['a', 'b'] };
@@ -77,12 +78,27 @@ describe(categoryRefusal, () => {
   });
 });
 
-describe(leftOver, () => {
-  it('stops saving words typed and not added, saying whether they are there already', () => {
+describe(urlsFull, () => {
+  it('is full at the most, which the refusal reads too', () => {
     expect.assertions(3);
     testBoot();
-    expect(leftOver('', ['a'], false)).toBe('');
-    expect(leftOver('a', ['a'], false)).toBe('ui_category_there:a');
-    expect(leftOver('https://c', [], true)).toBe('ui_url_unadded:https://c');
+    expect(urlsFull(['a'], 2)).toBe(false);
+    expect(urlsFull(['a', 'b'], 2)).toBe(true);
+    expect(urlRefusal('c', ['a', 'b'], 2)).toBe('ui_url_max:2');
+  });
+});
+
+describe(boxSaid, () => {
+  it('says why it was not done, and nothing once anything is done to the list after', () => {
+    expect.assertions(3);
+    testBoot();
+    expect(boxSaid({ act: 'full', max: 10 })).toBe('ui_url_max:10');
+    expect(boxSaid({ act: 'paged', name: '設計' })).toBe('ui_category_drop_paged:設計');
+    expect((['open', 'added', 'dropped', 'moved'] as const).map((act) => boxSaid({ act }))).toStrictEqual([
+      '',
+      '',
+      '',
+      '',
+    ]);
   });
 });
