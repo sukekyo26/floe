@@ -91,6 +91,7 @@ func (a *app) drawPages(k *kit.Kit, store diagram.Icons, paths []string, out arg
 	var first []target
 	for _, f := range a.args(paths, "cli_wants_data") {
 		p, at := pageOf(f, out)
+		a.watchDrawing(f.name)
 		page, warnings, err := drawFile(k, store, f)
 		a.warnings = append(a.warnings, warnings...)
 		if failed := found.Add(err); failed != nil {

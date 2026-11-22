@@ -28,6 +28,9 @@ type Env struct {
 	Stderr io.Writer
 	Dir    string                  // the working directory a relative path is under; "" when it cannot be read
 	Getenv func(key string) string // the environment; nil for none
+	// Exit ends the process with a code. When set, the commands that draw watch the process's memory (guard), as
+	// the process is floe's own: nil, as in a test that runs floe in its process, watches none.
+	Exit func(code int)
 }
 
 // usageError is a command line floe cannot read, or that lacks what it needs (exit 2).

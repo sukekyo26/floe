@@ -41,6 +41,7 @@ func (a *app) check(paths []string) error {
 	store := a.iconStore()
 	var found usererr.List
 	for _, p := range a.args(paths, "cli_wants_data") {
+		a.watchDrawing(p.name)
 		_, warnings, err := drawFile(k, store, p)
 		a.warnings = append(a.warnings, warnings...)
 		if failed := found.Add(err); failed != nil {

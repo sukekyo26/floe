@@ -9,6 +9,7 @@ import (
 
 	"floe/internal/dirs"
 	"floe/internal/files"
+	"floe/internal/guard"
 	"floe/internal/usererr"
 )
 
@@ -19,6 +20,7 @@ type app struct {
 	// The warnings of the pages drawn here, and those the server told of the pages it drew: Run tells them.
 	warnings []*usererr.Error
 	told     []usererr.Told
+	guard    *guard.Guard // the watch of the memory, from the first page drawn; nil without Env.Exit
 }
 
 // print writes a line to the command's output.

@@ -282,6 +282,7 @@ func (a *app) checkTemplates() error {
 		o := tmpl.Options{
 			Theme: "", Default: "", Untitled: name, Images: images, ImagesDir: "", ImageAt: nil, Icons: store, CutOff: false,
 		}
+		a.watchDrawing(file)
 		_, warnings, err := tmpl.Draw(k, file, t.Example(), o)
 		a.warnings = append(a.warnings, warnings...)
 		_ = images.Close() //nolint:errcheck // only read from
