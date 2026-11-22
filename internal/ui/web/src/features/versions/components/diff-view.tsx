@@ -14,7 +14,7 @@ import { useWindowWidth } from '@/hooks/use-window-width';
 import { t } from '@/lib/t';
 import type { KeptSide } from '@/stores/kept-side';
 import type { Page } from '@/types/page';
-import { shownSide } from '@/utils/edge';
+import { clampSide, shownSide } from '@/utils/edge';
 import { pageHref } from '@/utils/page-urls';
 
 interface DiffViewProps {
@@ -65,6 +65,8 @@ export function DiffView({ page, hidden, keys, onKey, diff = sharedDiff, toc = s
     },
   });
   const close = slug ? pageHref({ slug }) : undefined;
+  // The contents' width within bounds, which their grip tells folded too; the columns give them none folded
+  const tocWidth = clampSide(side.width, innerWidth);
   const tocShown = shownSide(side.open, side.width, innerWidth);
   return (
     <main
@@ -106,7 +108,7 @@ export function DiffView({ page, hidden, keys, onKey, diff = sharedDiff, toc = s
           sections={answer?.sections ?? []}
           section={state.section}
           onPlace={diff.place}
-          width={tocShown}
+          width={tocWidth}
           innerWidth={innerWidth}
           toc={toc}
         />

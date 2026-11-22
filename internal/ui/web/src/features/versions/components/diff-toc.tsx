@@ -43,7 +43,7 @@ interface DiffTocProps {
   // section is the one n, p or a press went to last, -1 for none
   readonly section: number;
   readonly onPlace: (i: number) => void;
-  // width is what the contents take, kept within bounds (shownSide); innerWidth the window's, for those bounds
+  // width is the contents' width kept within bounds (clampSide), folded too; innerWidth the window's, for those bounds
   readonly width: number;
   readonly innerWidth: number;
   readonly toc?: KeptSide;

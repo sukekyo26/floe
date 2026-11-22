@@ -104,4 +104,24 @@ describe(DiffView, () => {
     ).toStrictEqual([false, false, true, true]);
     expect(html).not.toMatch(/<iframe[^>]* src=/);
   });
+
+  it("tells the contents' width within bounds on their grip folded too, the columns giving them none", () => {
+    expect.assertions(2);
+    testBoot();
+    const folded: Kept = { read: () => '{"width":240,"open":false}', write: () => undefined, remove: () => undefined };
+    const diff = createDiff({ client: {} as Client, search: () => '', replace: () => undefined });
+    const html = renderToString(
+      <DiffView
+        page={null}
+        hidden={false}
+        keys={new Set()}
+        onKey={() => undefined}
+        diff={diff}
+        toc={createKeptSide('diff.toc', 240, { storage: folded })}
+      />,
+    );
+    // Drawn to a string the window is 0 wide: the bounds are 160 alone
+    expect(/id="diff-toc-grip"[^>]*aria-valuenow="(\d+)"/.exec(html)?.[1]).toBe('160');
+    expect(html).toContain('--toc:0px');
+  });
 });
