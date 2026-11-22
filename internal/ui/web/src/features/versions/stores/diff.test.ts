@@ -56,8 +56,18 @@ function made(search = '?diff') {
     },
   } as unknown as Client;
   const notice = createNotice();
+  // The URL's query follows what is written, as the browser's does
   const urls: string[] = [];
-  const diff = createDiff({ client, notice, search: () => search, replace: (href) => urls.push(href) });
+  let query = search;
+  const diff = createDiff({
+    client,
+    notice,
+    search: () => query,
+    replace: (href) => {
+      urls.push(href);
+      query = new URL(href, 'http://floe').search;
+    },
+  });
   // Answers the first read still going: one called off has failed already
   const answer = async (with_: unknown) => {
     const i = answers.findIndex((x) => !x.signal.aborted);
@@ -119,7 +129,8 @@ describe(createDiff, () => {
     const m = made();
     m.diff.open(page());
     m.diff.reopen(page());
-    expect(m.asked[0]?.signal.aborted).toBe(true);
+    await settle();
+    expect([m.asked[0]?.signal.aborted, m.notice.said.get().message]).toStrictEqual([true, '']);
     await m.answer(LIST);
     m.diff.choose('from', 1);
     expect(m.asked.filter((x) => x.url.includes('/diff')).map((x) => x.signal.aborted)).toStrictEqual([true, false]);
