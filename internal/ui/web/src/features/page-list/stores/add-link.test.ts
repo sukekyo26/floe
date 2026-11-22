@@ -60,10 +60,11 @@ describe(createAddLink, () => {
   });
 
   it('holds the modal for the write alone, then closes it, shows the list whole with the folder open, and reads it', async () => {
-    expect.assertions(2);
+    expect.assertions(3);
     const { add, did, held, close } = made(json({ slug: 'f', folder: true }));
     add.values.set({ path: '/a', slug: '', description: '' });
     await expect(add.send(held, close)).resolves.toBe('');
+    expect(add.values.get()).toStrictEqual({ path: '', slug: '', description: '' });
     expect(did).toStrictEqual([
       'hold',
       'let go',
