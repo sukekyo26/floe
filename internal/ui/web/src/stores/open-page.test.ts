@@ -23,9 +23,15 @@ describe(createOpenPage, () => {
   });
 
   it('reads no version of a diff, and tells a page picked by its slug and file', () => {
-    expect.assertions(3);
+    expect.assertions(4);
     const diff = createOpenPage({ boot: boot('frame', 'f', '3'), search: () => '?diff' });
     expect(diff.frameAt()?.v).toBe(0);
+    // A folder's file is no diff, ?diff or not; a list is none
+    const others = [
+      createOpenPage({ boot: boot('frame', 'f'), search: () => '?file=x.html&diff' }),
+      createOpenPage({ boot: boot('list', ''), search: () => '?diff' }),
+    ];
+    expect([diff.diff(), ...others.map((o) => o.diff())]).toStrictEqual([true, false, false]);
     diff.picked.set({ slug: 'a', file: 'b.html', v: 0 });
     expect(diff.isPicked({ slug: 'a', file: 'b.html' })).toBe(true);
     expect(diff.isPicked({ slug: 'a' })).toBe(false);
