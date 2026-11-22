@@ -15,6 +15,7 @@ import (
 	"time"
 
 	"floe/internal/dirs"
+	"floe/internal/drawproc"
 	"floe/internal/files"
 	"floe/internal/kit"
 	"floe/internal/publish"
@@ -56,11 +57,11 @@ func watched(t *testing.T, link bool) (*Server, string) {
 	drawing := func() (store.Drawing, error) {
 		floe, err := kit.Floe()
 		if err != nil {
-			return store.Drawing{Kit: nil, Icons: nil, Err: nil}, err
+			return store.Drawing{Kit: nil, Icons: nil, Draw: nil, Err: nil}, err
 		}
 		none := kit.Dir{FS: nil, Name: ""}
 		k, err := kit.Load(floe, kit.Sources{Parts: none, Themes: none, Templates: kit.Dir{FS: files.DirFS(tpl), Name: tpl}})
-		return store.Drawing{Kit: k, Icons: nil, Err: nil}, err
+		return store.Drawing{Kit: k, Icons: nil, Draw: drawproc.Here(k, nil), Err: nil}, err
 	}
 	s := New(Config{
 		Store: store.New(filepath.Join(tmp, "store")), Port: 7325, Build: "test", Drawing: drawing, Templates: tpl,
@@ -207,7 +208,7 @@ func TestVersion(t *testing.T) {
 	}
 	v = s.version("d", s.cfg.Store.ReadMeta("d"), "", 0, noDiff)
 	d, _ = s.now()
-	if err := s.cfg.Store.PickTheme(d, "d", "ink"); err != nil {
+	if err := s.cfg.Store.PickTheme(t.Context(), d, "d", "ink"); err != nil {
 		t.Fatal(err)
 	}
 	if s.version("d", s.cfg.Store.ReadMeta("d"), "", 0, noDiff) == v {
@@ -278,7 +279,7 @@ func TestLookFailure(t *testing.T) {
 	s.cfg.Drawing = func() (store.Drawing, error) {
 		calls++
 		if calls == 1 {
-			return store.Drawing{Kit: nil, Icons: nil, Err: nil}, os.ErrDeadlineExceeded
+			return store.Drawing{Kit: nil, Icons: nil, Draw: nil, Err: nil}, os.ErrDeadlineExceeded
 		}
 		return read()
 	}
@@ -303,7 +304,7 @@ func TestVersionOfContent(t *testing.T) {
 	s, _ := watched(t, false)
 	d, _ := s.now()
 	republish := func() *store.Meta {
-		e, err := publish.PrepareData(s.cfg.Store, d, publish.Upload{File: "p.yaml", Source: []byte("lang: en\ntemplate: mine\nn: 1\n"), Images: nil, Project: "p", Repo: "p", Place: "p.yaml"}, store.Options{}) //nolint:exhaustruct // none given
+		e, err := publish.PrepareData(t.Context(), s.cfg.Store, d, publish.Upload{File: "p.yaml", Source: []byte("lang: en\ntemplate: mine\nn: 1\n"), Images: nil, Project: "p", Repo: "p", Place: "p.yaml"}, store.Options{}) //nolint:exhaustruct // none given
 		if err != nil {
 			t.Fatal(err)
 		}

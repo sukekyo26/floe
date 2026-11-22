@@ -6,9 +6,9 @@ import (
 	"slices"
 	"strings"
 
+	"floe/internal/drawproc"
 	"floe/internal/i18n"
 	"floe/internal/store"
-	"floe/internal/tmpl"
 	"floe/internal/ui"
 	"floe/internal/usererr"
 )
@@ -99,7 +99,7 @@ func (s *Server) pickTheme(w http.ResponseWriter, r *http.Request) {
 		err = knownTheme(drawing, in.Theme)
 	}
 	if err == nil {
-		err = s.cfg.Store.PickTheme(drawing, slug, in.Theme)
+		err = s.cfg.Store.PickTheme(r.Context(), drawing, slug, in.Theme)
 	}
 	if errors.Is(err, store.ErrNotFound) {
 		notFound(w)
@@ -158,16 +158,16 @@ func (s *Server) themeSample(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	file, src := ui.Sample(i18n.FromAcceptLanguage(r.Header.Get("Accept-Language")))
-	o := tmpl.Options{
-		Theme: name, Default: "", Untitled: "", Images: nil, ImagesDir: "", ImageAt: nil, Icons: drawing.Icons, CutOff: false,
-	}
-	page, _, err := tmpl.Draw(drawing.Kit, file, src, o)
-	if err != nil {
-		refuse(w, r, err)
+	drew := drawproc.Draw(r.Context(), drawing.Draw, drawproc.Job{
+		File: file, Source: src, Theme: name, Default: "", Untitled: "", CutOff: false, ImagesRoot: "", Sent: nil,
+		ImagesDir: "",
+	})
+	if drew.Err != nil {
+		refuse(w, r, drew.Err)
 		return
 	}
 	pageHeaders(w, r, true)
-	sendBytes(w, http.StatusOK, htmlType, page)
+	sendBytes(w, http.StatusOK, htmlType, drew.Page)
 }
 
 // OwnTheme is the theme a page is drawn in without the theme picked for it, which the management page names on the card

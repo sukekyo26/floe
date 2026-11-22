@@ -24,6 +24,7 @@ const (
 
 // Env is what floe takes from its process.
 type Env struct {
+	Stdin  io.Reader // what floe __draw reads; nil for none
 	Stdout io.Writer
 	Stderr io.Writer
 	Dir    string                  // the working directory a relative path is under; "" when it cannot be read
@@ -160,9 +161,9 @@ that points your agent to it (floe skill install --help lists the agents).`,
 			return err //nolint:wrapcheck // a stdout write error needs no extra context
 		},
 	})
-	a := &app{env: env, out: out, warnings: nil, told: nil, guard: nil}
+	a := &app{env: env, out: out, warnings: nil, told: nil, guard: nil, stopCode: 0, drawer: nil}
 	root.AddCommand(
-		a.archiveCmd(), a.checkCmd(), a.diagramCmd(),
+		a.archiveCmd(), a.checkCmd(), a.diagramCmd(), a.drawChildCmd(),
 		a.guideCmd(),
 		a.iconsCmd(), a.infoCmd(), a.listCmd(), a.partCmd(), a.publishCmd(),
 		a.rebuildCmd(), a.renderCmd(), a.rmCmd(), a.serveCmd(), a.skillCmd(), a.stopCmd(), a.tagCmd(), a.taskCmd(),

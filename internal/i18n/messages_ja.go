@@ -159,6 +159,8 @@ var messagesJA = map[string]string{
 	"draw_page_cut":     "描いたページが途中で切れました。HTML の読み手は <svg> か <math> の中の <template> から後ろを読みません。その <template> を外に出してください（page.html・部品の part.html・format html の項目のどれか）",
 	"draw_html_placed":  "page.html か、その項目を持つ部品の part.html が、format html の項目 %[1]s を %[2]s の文字か属性の中に置いていて、そこでは HTML が働きません。その項目か、それを持つ部品を要素を置ける所に置くか、項目の format を変えてください",
 	"draw_memory":       "描くのに %s を超えるメモリが要ったので、floe は描くのを止めました。描く量を減らしてください（例えば、長い文字を項目ごとに繰り返さない）",
+	"draw_time":         "描くのに %s を超えたので、floe は描くのを止めました。描く量を減らしてください",
+	"draw_build":        "このサーバーが起きた後に floe が入れ直され、新しい floe でしか描けません。floe list などの floe のコマンドを走らせてください。サーバーが起き直します",
 
 	// cli: コマンド行（言うのは英語だけ。ほかの言語も、どの目録とも同じく鍵を持つ）
 	"cli_usage":                "%s: floe --help を見てください",

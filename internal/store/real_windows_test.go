@@ -36,7 +36,7 @@ func TestListedShown(t *testing.T) {
 	}
 	place := `\\?\` + filepath.Join(home, "d.yaml")
 	up := floepublish.Upload{File: "d.yaml", Source: []byte(ownSrc), Images: map[string][]byte{}, Project: "p", Repo: "", Place: place}
-	d, err := floepublish.PrepareData(s, dw, up, store.Options{})
+	d, err := floepublish.PrepareData(t.Context(), s, dw, up, store.Options{})
 	if err == nil {
 		err = s.Save(d)
 	}

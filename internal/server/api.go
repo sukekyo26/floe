@@ -262,7 +262,7 @@ func (s *Server) save(w http.ResponseWriter, r *http.Request) {
 		MoveProject: in.MoveProject,
 	}
 	drawing := s.latest()
-	entry, err := publish.PrepareData(s.cfg.Store, drawing, up, opts)
+	entry, err := publish.PrepareData(r.Context(), s.cfg.Store, drawing, up, opts)
 	if need, ok := errors.AsType[*publish.NeedImages](err); ok {
 		sendJSON(w, http.StatusUnprocessableEntity, imagesNeeded(need))
 		return
@@ -284,7 +284,7 @@ func (s *Server) rebuild(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	drawing := s.latest()
-	if err := s.cfg.Store.Rebuild(drawing); err != nil {
+	if err := s.cfg.Store.Rebuild(r.Context(), drawing); err != nil {
 		refuse(w, r, err)
 		return
 	}

@@ -39,7 +39,7 @@ const guarded = "FLOE_TEST_GUARD"
 func TestMain(m *testing.M) {
 	if os.Getenv(asCLI) == "1" {
 		dir, _ := os.Getwd() //nolint:errcheck // as main does
-		env := cli.Env{Stdout: os.Stdout, Stderr: os.Stderr, Dir: dir, Getenv: os.Getenv, Exit: nil}
+		env := cli.Env{Stdin: os.Stdin, Stdout: os.Stdout, Stderr: os.Stderr, Dir: dir, Getenv: os.Getenv, Exit: nil}
 		if limit, err := strconv.ParseUint(os.Getenv(guarded), 10, 64); err == nil {
 			// As main does, with the limit of the test.
 			cli.SetDrawLimit(limit)
