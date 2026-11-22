@@ -34,7 +34,7 @@ function drawn(folder: Page | null, kept = ''): string {
   testBoot();
   const folders = createFolders({ storage: memory('') });
   folders.side.set({
-    opened: new Set(['', 'guide']),
+    opened: new Set(['', 'api', 'guide']),
     listings: new Map<string, Listing | Error>([
       ['', listing(['api', 'guide'], ['index.html'])],
       ['guide', listing([], ['guide/setup.html', 'guide/start.html'])],
@@ -69,7 +69,8 @@ describe(SideTree, () => {
     expect.assertions(1);
     const rows = treeRows(drawn(docs));
     expect(rows).toStrictEqual([
-      'button api false',
+      'button api true',
+      'p',
       'button guide true',
       'a guide/setup.html page /a/docs/?file=guide%2Fsetup.html',
       'a guide/start.html /a/docs/?file=guide%2Fstart.html',

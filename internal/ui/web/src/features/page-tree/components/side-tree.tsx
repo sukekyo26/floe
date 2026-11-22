@@ -55,13 +55,14 @@ export function SideTree({ folder, file, folders = pageFolders, side = frameSide
     };
   }, []);
   const laid = sideLayout({ open: kept.open, over, narrow, width: kept.width, innerWidth });
-  const shown = folder !== null && laid.shown;
+  const found = folder !== null;
+  const shown = found && laid.shown;
   const items = folder === null ? [] : sideItems(folder.slug, opened, listings);
   useLayoutEffect(() => {
     const root = document.documentElement.style;
     root.setProperty('--side-width', `${laid.width}px`);
-    root.setProperty('--side', `${folder === null ? 0 : laid.take}px`);
-  }, [folder, laid.width, laid.take]);
+    root.setProperty('--side', `${found ? laid.take : 0}px`);
+  }, [found, laid.width, laid.take]);
   useLayoutEffect(
     () => () => {
       document.documentElement.style.setProperty('--side', '0px');

@@ -135,4 +135,20 @@ describe(createFolders, () => {
     expect(folders.side.get().opened.has('x')).toBe(true);
     expect(notice.said.get()).toStrictEqual({ message: 'failed: down', from: 'load' });
   });
+
+  it('takes the page own directory opened again as what j and k go through, none when it cannot be read', async () => {
+    expect.assertions(2);
+    const { folders } = made();
+    (await folders.readSide('f', 'a/b.html', signal()))?.();
+    await folders.toggleSide('f', 'a/b.html', 'a');
+    vi.stubGlobal('fetch', () =>
+      Promise.resolve(new Response('{"dirs":[],"files":[{"file":"a/c.html","updatedAt":""}],"more":0}')),
+    );
+    await folders.toggleSide('f', 'a/b.html', 'a');
+    expect(folders.side.get().fileListing?.files.map((p) => p.file)).toStrictEqual(['a/c.html']);
+    await folders.toggleSide('f', 'a/b.html', 'a');
+    vi.stubGlobal('fetch', () => Promise.resolve(new Response('no', { status: 500 })));
+    await folders.toggleSide('f', 'a/b.html', 'a');
+    expect(folders.side.get().fileListing).toBeUndefined();
+  });
 });

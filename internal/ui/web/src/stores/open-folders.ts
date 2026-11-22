@@ -214,7 +214,10 @@ export function createFolders({
     const after = side.get();
     // Closed while it was read; one gone for now stays open, as readSide's
     if (!after.opened.has(dir) || l === null) return;
-    side.set({ ...after, listings: new Map(after.listings).set(dir, l) });
+    const listings = new Map(after.listings).set(dir, l);
+    // The page's own directory read anew is what j and k go through, as readSide's
+    if (dir !== dirOf(file)) side.set({ ...after, listings });
+    else side.set({ opened: after.opened, listings, ...(l instanceof Error ? {} : { fileListing: l }) });
   }
 
   return { list, side, readOpen, readSide, takeOpen: start, toggle, toggleSide };
