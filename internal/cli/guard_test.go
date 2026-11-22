@@ -35,11 +35,18 @@ const (
 func guardedFloe(t *testing.T, dir string, vars map[string]string, args ...string) (int, string) {
 	t.Helper()
 
+	return guardedFloeWith(t, testLimit, dir, vars, args...)
+}
+
+// guardedFloeWith is guardedFloe, its memory watched with limit.
+func guardedFloeWith(t *testing.T, limit int, dir string, vars map[string]string, args ...string) (int, string) {
+	t.Helper()
+
 	ctx, cancel := context.WithTimeout(t.Context(), time.Minute)
 	defer cancel()
 	cmd := exec.CommandContext(ctx, selfBin, args...)
 	cmd.Dir = dir
-	cmd.Env = []string{asCLI + "=1", guarded + "=" + strconv.Itoa(testLimit), "GOMEMLIMIT=2GiB", "PATH=" + os.Getenv("PATH")}
+	cmd.Env = []string{asCLI + "=1", guarded + "=" + strconv.Itoa(limit), "GOMEMLIMIT=2GiB", "PATH=" + os.Getenv("PATH")}
 	for k, v := range vars {
 		cmd.Env = append(cmd.Env, k+"="+v)
 	}
@@ -112,5 +119,32 @@ func TestDrawMemory(t *testing.T) {
 	}
 	if now := debug.SetMemoryLimit(-1); now != limit {
 		t.Errorf("floe in a test's process set the memory limit to %d, from %d", now, limit)
+	}
+}
+
+// A page drawn larger than tmpl.MaxPage is refused at its data file, within the memory floe draws with: 680 rows of
+// a text of 100,000 bytes, 68 MB of HTML.
+func TestPageSize(t *testing.T) {
+	t.Parallel()
+
+	dir := write(t, map[string]string{
+		"templates/many/schema.json":  repeatTemplate,
+		"templates/many/page.html":    repeatPage,
+		"templates/many/example.yaml": "template: many\nlang: en\n",
+		"page.yaml": "template: many\nlang: en\ntitle: T\nintro: " + strings.Repeat("x", 100000) + "\nrows:\n" +
+			strings.Repeat("  - 1\n", 680),
+	})
+	vars := cli.HomeEnv(filepath.Join(dir, "home"), map[string]string{
+		"FLOE_TEMPLATES_DIR": filepath.Join(dir, "templates"), "FLOE_PARTS_DIR": filepath.Join(dir, "parts"),
+		"FLOE_THEMES_DIR": filepath.Join(dir, "themes"),
+	})
+	for _, d := range []string{"parts", "themes", "home"} {
+		if err := os.Mkdir(filepath.Join(dir, d), 0o755); err != nil {
+			t.Fatal(err)
+		}
+	}
+	const told = "page.yaml: the page drawn is 65 MiB, over the 64 MiB a page may be"
+	if code, stderr := guardedFloeWith(t, 1<<30, dir, vars, "check", "page.yaml"); code != 1 || !strings.Contains(stderr, told) {
+		t.Errorf("floe check page.yaml = %d, %q; want 1 and %q", code, stderr, told)
 	}
 }

@@ -24,6 +24,7 @@ adheres to [Semantic Versioning](https://semver.org/).
 
 ### Fixed
 
+- Fix a page drawn of any size: one larger than 64 MiB of HTML is now refused at its data file, by `floe check`, `floe render`, `floe template check` and the server alike (`the page drawn is 96 MiB, over the 64 MiB a page may be`).
 - Fix the server stopping, with every page, on a page whose expressions or `page.html` repeat a long text for each item: it draws each page in a process of its own, which may hold up to 512 MiB of memory and take up to 30 seconds; past either, that page is refused at its data file and the server serves on. This holds for publishing, opening a linked data file's page, picking a theme for a page and `floe rebuild`, which draws the other pages on. Publishing and opening a linked data file's page take about 0.1 seconds longer.
 - Fix `floe check`, `floe render`, `floe template check` and `floe diagram render` and `inspect` taking gigabytes of memory, or stopping with `fatal error: out of memory`, on a page whose expressions or `page.html` repeat a long text for each item: drawing may now hold up to 512 MiB of memory, and past it floe stops and says so at the file it was drawing (exit code 1).
 - Fix the diff of a version of a page cutting a line with characters of more than one byte (Japanese, for one) at the wrong place when a character is added next to the same one: when `はい あ漢` became `はい ああ漢`, it was shown as `はい あ`{+あ+}`漢`, and is now shown as `はい `{+あ+}`あ漢`, the added word starting where it does, as in a line of single-byte characters.

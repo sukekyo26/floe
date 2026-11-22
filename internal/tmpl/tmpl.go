@@ -35,7 +35,7 @@ type Options struct {
 // Draw draws the data file src, file in its mistakes, with the templates, parts and themes of k, as a page:
 // the data read, with the names of its template and theme; then checked against the template's schema; then
 // its checks, its parts' checks for each item they draw, and its computed values; then drawn (draw.Page), with
-// the warnings of the page drawn.
+// the warnings of the page drawn. A page drawn larger than MaxPage is refused at file.
 func Draw(k *kit.Kit, file string, src []byte, o Options) ([]byte, []*usererr.Error, error) {
 	d, t, theme, err := checked(k, file, src, o.Theme, o.Default)
 	if err != nil {
@@ -45,10 +45,17 @@ func Draw(k *kit.Kit, file string, src []byte, o Options) ([]byte, []*usererr.Er
 	if err != nil {
 		return nil, nil, err
 	}
-	//nolint:wrapcheck // mistakes of the page, or floe's failure
-	return draw.Page(k, t, theme, d, calc, cmp.Or(d.Title, o.Untitled), o.Images, o.ImagesDir, o.ImageAt, o.Icons,
-		o.CutOff)
+	page, warnings, err := draw.Page(k, t, theme, d, calc, cmp.Or(d.Title, o.Untitled), o.Images, o.ImagesDir,
+		o.ImageAt, o.Icons, o.CutOff)
+	if err == nil && len(page) > MaxPage {
+		return nil, nil, usererr.NewAt(file, 0, 0, "draw_page_size", (len(page)+1<<20-1)>>20, MaxPage>>20)
+	}
+	return page, warnings, err //nolint:wrapcheck // mistakes of the page, or floe's failure
 }
+
+// MaxPage is the largest page floe draws, its HTML: what a page that repeats a long text for each item draws within
+// the memory of guard.Limit (100 MB of a 85 KB data file), past three times the largest right page (20 MB).
+const MaxPage = 64 << 20
 
 // Diagrams returns the data file src, file in its mistakes, read and checked against its template's schema as Draw
 // does, and the values of its parts diagram in the order they are written (Walk goes by the keys' names). Nothing is

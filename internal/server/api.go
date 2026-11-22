@@ -1,6 +1,7 @@
 package server
 
 import (
+	"context"
 	"encoding/json/jsontext"
 	jsonv2 "encoding/json/v2"
 	"errors"
@@ -284,7 +285,8 @@ func (s *Server) rebuild(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	drawing := s.latest()
-	if err := s.cfg.Store.Rebuild(r.Context(), drawing); err != nil {
+	// Drawn to the end though the command that asked goes, as before floe __draw: each page still within its time.
+	if err := s.cfg.Store.Rebuild(context.WithoutCancel(r.Context()), drawing); err != nil {
 		refuse(w, r, err)
 		return
 	}

@@ -165,6 +165,7 @@ var messagesEN = map[string]string{
 	"draw_page_cut":     "the page drawn was cut short: HTML's reader leaves out the rest of a page past a <template> inside an <svg> or a <math>; take the <template> out of it (page.html, a part.html or an item of format html)",
 	"draw_html_placed":  "page.html, or the part.html of a part holding it, puts the item %[1]s of format html in a text or an attribute of %[2]s, where HTML does not work: put it, or the part holding it, where elements go, or give the item another format",
 	"draw_memory":       "drawing it needed more than %s of memory, so floe stopped: draw less, for example do not repeat a long text for each item",
+	"draw_page_size":    "the page drawn is %d MiB, over the %d MiB a page may be: draw less, for example do not repeat a long text for each item",
 	"draw_time":         "drawing it took more than %d seconds, so floe stopped: draw less",
 	"draw_build":        "floe was installed again after this server started, and draws with the new floe alone: run a floe command, such as floe list, which starts the server again",
 

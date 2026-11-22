@@ -74,7 +74,7 @@ Pages are drawn from data files (`.yaml`, `.yml`); [pages.md](pages.md) tells ho
 
 The stored page stays as it was drawn: changing the template, a part or a theme changes it only when `floe rebuild` draws it again. A page that names no theme takes the default theme chosen in the management page's settings when it is first stored, and keeps it: choosing another default changes the pages stored from then on only. A theme picked for the page in its menu on the management page (Theme) draws it again at once, and wins over all of these, kept when it is published again. Another file, such as an HTML file, is not stored: link it with `--link` to show it as it is.
 
-The server draws each page in a process of its own, which may hold up to 512 MiB of memory and take up to 30 seconds for a page: past either, the page is refused at its data file (`page.yaml: drawing it needed more than 512 MiB of memory, …`, `page.yaml: drawing it took more than 30 seconds, …`), and the server serves on. So is a linked data file's page when it is opened, a page drawn in a theme picked for it, and a page `floe rebuild` draws again. Drawing in that process makes publishing, and opening a linked data file's page, about 0.1 seconds slower.
+The server draws each page in a process of its own, which may hold up to 512 MiB of memory and take up to 30 seconds for a page, and refuses a page larger than 64 MiB as `floe check` does: past either, the page is refused at its data file (`page.yaml: drawing it needed more than 512 MiB of memory, …`, `page.yaml: drawing it took more than 30 seconds, …`), and the server serves on. So is a linked data file's page when it is opened, a page drawn in a theme picked for it, and a page `floe rebuild` draws again. Drawing in that process makes publishing, and opening a linked data file's page, about 0.1 seconds slower.
 
 ### Flags
 
@@ -118,7 +118,7 @@ Check each data file as its page is drawn: its YAML, its template and theme, the
 - The warnings of the pages drawn, advice on a better way to write them, are printed after the mistakes as `file:line:column: warning: message`; they leave the exit code as it is. [pages.md](pages.md#warnings) tells them.
 - Nothing is printed when every file is right and has no warning (exit code 0).
 - Nothing is written, and the server is not started, so a repository's CI can run it over its data files.
-- Drawing may hold up to 512 MiB of memory. Past it, floe stops and says so at the file it was drawing (`file: drawing it needed more than 512 MiB of memory, …`, exit code 1), without the mistakes of the files before it. A page that repeats a long text for each item, in an expression or in `page.html`, needs that much.
+- Drawing may hold up to 512 MiB of memory. Past it, floe stops and says so at the file it was drawing (`file: drawing it needed more than 512 MiB of memory, …`, exit code 1), without the mistakes of the files before it. A page that repeats a long text for each item, in an expression or in `page.html`, needs that much. A page drawn larger than 64 MiB of HTML is refused at its data file too (`file: the page drawn is 96 MiB, over the 64 MiB a page may be, …`).
 - A file that is not a data file (`.yaml`, `.yml`) is refused.
 - A data file named twice (by two globs, or through a symlinked directory) is checked once, and told by the path it was first given as. Names that differ only in case are two names, even on a file system that ignores case.
 
