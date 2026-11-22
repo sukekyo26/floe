@@ -122,8 +122,8 @@ func TestDrawMemory(t *testing.T) {
 	}
 }
 
-// A page drawn larger than tmpl.MaxPage is refused at its data file, within the memory floe draws with: 680 rows of
-// a text of 100,000 bytes, 68 MB of HTML.
+// A page drawn larger than tmpl.MaxPage is refused at its data file, within the memory floe draws with: 880 rows of
+// a text of 100,000 bytes, 88 MB of HTML.
 func TestPageSize(t *testing.T) {
 	t.Parallel()
 
@@ -132,7 +132,7 @@ func TestPageSize(t *testing.T) {
 		"templates/many/page.html":    repeatPage,
 		"templates/many/example.yaml": "template: many\nlang: en\n",
 		"page.yaml": "template: many\nlang: en\ntitle: T\nintro: " + strings.Repeat("x", 100000) + "\nrows:\n" +
-			strings.Repeat("  - 1\n", 680),
+			strings.Repeat("  - 1\n", 880),
 	})
 	vars := cli.HomeEnv(filepath.Join(dir, "home"), map[string]string{
 		"FLOE_TEMPLATES_DIR": filepath.Join(dir, "templates"), "FLOE_PARTS_DIR": filepath.Join(dir, "parts"),
@@ -143,7 +143,7 @@ func TestPageSize(t *testing.T) {
 			t.Fatal(err)
 		}
 	}
-	const told = "page.yaml: the page drawn is 65 MiB, over the 64 MiB a page may be"
+	const told = "page.yaml: the page drawn is 84 MiB, over the 80 MiB a page may be"
 	if code, stderr := guardedFloeWith(t, 1<<30, dir, vars, "check", "page.yaml"); code != 1 || !strings.Contains(stderr, told) {
 		t.Errorf("floe check page.yaml = %d, %q; want 1 and %q", code, stderr, told)
 	}

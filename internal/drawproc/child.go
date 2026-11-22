@@ -29,7 +29,7 @@ const ChildLimit = Limit + 10*time.Second
 // Children is how many floe __draw the server runs at once, and so twice the memory one may hold, at most.
 const Children = 2
 
-// The most of an answer read (a page of tmpl.MaxPage, 64 MiB, is 85 MiB in JSON's base64), and of the stderr of a
+// The most of an answer read (a page of tmpl.MaxPage, 80 MiB, is 107 MiB in JSON's base64), and of the stderr of a
 // child that failed kept for its failure.
 const (
 	answerLimit = 128 << 20

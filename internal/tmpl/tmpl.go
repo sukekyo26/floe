@@ -53,9 +53,11 @@ func Draw(k *kit.Kit, file string, src []byte, o Options) ([]byte, []*usererr.Er
 	return page, warnings, err //nolint:wrapcheck // mistakes of the page, or floe's failure
 }
 
-// MaxPage is the largest page floe draws, its HTML: what a page that repeats a long text for each item draws within
-// the memory of guard.Limit (100 MB of a 85 KB data file), past three times the largest right page (20 MB).
-const MaxPage = 64 << 20
+// MaxPage is the largest page floe draws, its HTML (the user's choice): below what the memory of guard.Limit lets
+// through without fail, so that a larger page is refused in the same words each time. Measured: 64 images of 1 MiB
+// (82 MiB of HTML) are drawn each time, 66 to 70 now drawn and now stopped, 72 and more stopped; a page that repeats a
+// long text for each item draws 96 MiB within the memory, which this refuses; the largest page stored was 10.5 MiB.
+const MaxPage = 80 << 20
 
 // Diagrams returns the data file src, file in its mistakes, read and checked against its template's schema as Draw
 // does, and the values of its parts diagram in the order they are written (Walk goes by the keys' names). Nothing is
