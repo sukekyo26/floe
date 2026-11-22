@@ -116,6 +116,7 @@ window.fetch = (input: string | URL | Request, init?: RequestInit) => {
 const SCENES = [
   ['?data=full&project=shop', 'shop'],
   ['?data=full&project=shop&view=todo', 'shop todo'],
+  ['?data=full&project=floe&view=todo', 'none of the view'],
   ['?data=full&project=solo-gone', 'a project gone'],
   ['?data=full&project=' + LONG, 'long project'],
   ['?data=nopins&project=shop', 'no pins'],
