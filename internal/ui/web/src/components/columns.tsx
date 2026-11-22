@@ -64,8 +64,8 @@ interface ShowButtonProps {
 }
 
 // ShowButton opens a column folded, where its button stood, on a ground of its own over whatever lies under it. Drawn
-// shown with the focus left in the column it hid (a row picked folds the list, or backToRow does), it takes the focus:
-// a press moves it in showColumn. The shelf folds by its button alone, so there it never takes it.
+// shown with the focus left in the column it hid (a row picked folds the list, or backToRow does), it takes the focus;
+// a press moves it in showColumn too, to this same button (the shelf folds by its button alone, so there that is all).
 // LIMIT: kept folded under 70rem, the column shows; the focus left in it falls to the body as the window widens, as
 // this button's hidden does not change. Take it on the width too if that comes to trouble someone
 function ShowButton({ name, hidden, raised, left, columns }: ShowButtonProps) {

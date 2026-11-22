@@ -95,6 +95,12 @@ describe(Columns, () => {
     expect(tag(drawn('taskPage', '{"listOpen":false}', true), 'listcol')).toContain('not-wide:hidden');
   });
 
+  it('prints neither button that opens a column, which lie over the words', () => {
+    expect.assertions(1);
+    const html = drawn('list', '{"open":false,"listOpen":false}');
+    expect(['shelf-show', 'list-show'].map((id) => tag(html, id).includes('print:hidden'))).toStrictEqual([true, true]);
+  });
+
   it('raises what opens the shelf only with the list folded too, where it lies over the page', () => {
     expect.assertions(2);
     const raised = (html: string) => tag(html, 'shelf-show').includes('bg-panel');
