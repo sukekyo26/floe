@@ -1,4 +1,4 @@
-import type { ReadMark } from '@/lib/pages';
+import type { ReadMark } from '@/types/page';
 import { t } from '@/lib/t';
 import { openPage as pageOpen, type OpenPage } from '@/stores/open-page';
 import { pageActions, type PageActions } from '@/stores/page-actions';

@@ -1,4 +1,4 @@
-import type { ReadMark } from '@/lib/pages';
+import type { ReadMark } from '@/types/page';
 
 // Which iframe shows the page: whole (the frame), beside (the list's), or diff (the diff's)
 export type FrameKind = 'whole' | 'beside' | 'diff';

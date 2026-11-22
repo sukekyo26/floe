@@ -6,11 +6,17 @@ const press = { key: 'j', ctrlKey: false, metaKey: false, altKey: false };
 // A target that is in what the selector names when it is one of in
 const at = (...in_: string[]): KeyTarget => ({
   closest: (selector) => (in_.some((x) => selector.includes(x)) ? {} : null),
+  matches: () => false,
 });
 
 const checkBox: KeyTarget = {
   closest: (selector) => (selector.includes('input:not([type="checkbox"])') || !selector.includes('input') ? null : {}),
+  matches: () => false,
 };
+
+// A choice of versions closed, the key on it; and one open, the key on its option, which is in it but no choice
+const choice: KeyTarget = { closest: () => ({}), matches: (selector) => selector.includes('[data-version-pick]') };
+const option: KeyTarget = { closest: () => ({}), matches: () => false };
 
 describe(plainKey, () => {
   it('takes a key on the page, not in a field, with a modal open or with a modifier, but in a check box', () => {
@@ -34,10 +40,11 @@ describe(keyName, () => {
 });
 
 describe(diffPickKey, () => {
-  it('lets the moves and d go on from a choice of versions alone', () => {
-    expect.assertions(3);
-    expect(diffPickKey({ ...press, key: 'n' }, true)).toBe(true);
-    expect(diffPickKey({ ...press, key: 'v' }, true)).toBe(false);
-    expect(diffPickKey({ ...press, key: 'n' }, false)).toBe(false);
+  it('lets the moves and d go on from a choice of versions closed alone, not from its list open', () => {
+    expect.assertions(4);
+    expect(diffPickKey({ ...press, key: 'n', target: choice })).toBe(true);
+    expect(diffPickKey({ ...press, key: 'v', target: choice })).toBe(false);
+    expect(diffPickKey({ ...press, key: 'd', target: option })).toBe(false);
+    expect(diffPickKey({ ...press, key: 'n', target: at() })).toBe(false);
   });
 });

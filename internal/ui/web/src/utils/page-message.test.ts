@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 
-import { pageMessage, type MessageFrom } from '@/features/reader/utils/page-message';
+import { pageMessage, type MessageFrom } from '@/utils/page-message';
 
 const here = 'http://127.0.0.1:7325';
 const from = (change: Partial<MessageFrom> = {}): MessageFrom => ({

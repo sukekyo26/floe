@@ -36,3 +36,9 @@ export interface Listing {
   files: { file: string; updatedAt: string }[];
   more: number;
 }
+
+// The version read of a page, as the server made its mark when it answered with the page
+export interface ReadMark {
+  n: number;
+  at: string;
+}

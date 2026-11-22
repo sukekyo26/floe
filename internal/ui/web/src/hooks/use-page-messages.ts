@@ -1,7 +1,7 @@
 import { useEffect, useEffectEvent, type RefObject } from 'react';
 
-import type { ReadMark } from '@/lib/pages';
-import { pageMessage, type FrameKind } from '@/features/reader/utils/page-message';
+import type { ReadMark } from '@/types/page';
+import { pageMessage, type FrameKind } from '@/utils/page-message';
 
 export interface PageMessageCalls {
   // givenPath is the path this page gave the iframe now, null for none
