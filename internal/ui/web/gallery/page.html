@@ -68,6 +68,10 @@
         document.getElementById('place').textContent = location.hash;
       });
       document.getElementById('changed').addEventListener('click', () => tell({ pageChanged: true }));
+      // The gallery asks it to tell, as a page that changed would: its frame takes it only while shown
+      addEventListener('message', (e) => {
+        if (e.data?.galleryTell === 'changed') tell({ pageChanged: true });
+      });
       document.getElementById('hash').addEventListener('click', () => {
         location.hash = '#part';
         tell({ pageHash: location.hash });

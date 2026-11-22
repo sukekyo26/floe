@@ -19,6 +19,8 @@ export interface IconButtonProps {
   readonly on?: boolean | undefined;
   // armed: a delete waiting for its second press
   readonly armed?: boolean | undefined;
+  // raised: on a ground of its own with a shadow, over whatever lies under it (a column folded, ui.html .side-show)
+  readonly raised?: boolean | undefined;
   // expanded tells whether what it folds and opens shows (aria-expanded), controls names that (aria-controls)
   readonly expanded?: boolean | undefined;
   readonly controls?: string | undefined;
@@ -56,6 +58,7 @@ export function IconButton({
   on,
   armed,
   tagged,
+  raised,
   expanded,
   controls,
   tone,
@@ -70,7 +73,7 @@ export function IconButton({
   onClick,
   onBlur,
 }: IconButtonProps) {
-  const className = `${DISPLAY[display]} items-center border border-transparent bg-transparent text-muted no-underline transition-colors duration-150 hover:bg-subtle disabled:cursor-default disabled:bg-transparent disabled:text-muted disabled:opacity-35 aria-pressed:[&_svg]:fill-current data-armed:border-armed-line data-armed:bg-danger-soft data-armed:font-[650] data-armed:text-danger data-on:bg-ink data-on:text-on-ink data-on:hover:bg-ink-hover data-on:hover:text-on-ink ${size === 'item' ? 'min-h-9 w-full justify-start gap-2.5 rounded-[calc(var(--radius-menu)-var(--spacing-menu-pad))] px-2.5 py-1.75 text-start text-small leading-[1.35] [&_svg]:size-4 [&_svg]:shrink-0' : `justify-center gap-1.5 rounded-full px-1.5 data-on:rounded-[50%] [&_svg]:size-4 ${size === 'row' ? 'h-6.5 min-w-6.5' : 'h-icon-btn min-w-icon-btn'}`} ${tone === 'star' ? 'hover:text-star aria-pressed:text-star' : tone === 'danger' ? 'hover:text-danger aria-pressed:text-fg' : 'hover:text-fg aria-pressed:text-fg'}`;
+  const className = `${DISPLAY[display]} items-center border border-transparent ${raised ? 'bg-panel shadow-sm ring-1 ring-line' : 'bg-transparent'} text-muted no-underline transition-colors duration-150 hover:bg-subtle disabled:cursor-default disabled:bg-transparent disabled:text-muted disabled:opacity-35 aria-pressed:[&_svg]:fill-current data-armed:border-armed-line data-armed:bg-danger-soft data-armed:font-[650] data-armed:text-danger data-on:bg-ink data-on:text-on-ink data-on:hover:bg-ink-hover data-on:hover:text-on-ink ${size === 'item' ? 'min-h-9 w-full justify-start gap-2.5 rounded-[calc(var(--radius-menu)-var(--spacing-menu-pad))] px-2.5 py-1.75 text-start text-small leading-[1.35] [&_svg]:size-4 [&_svg]:shrink-0' : `justify-center gap-1.5 rounded-full px-1.5 data-on:rounded-[50%] [&_svg]:size-4 ${size === 'row' ? 'h-6.5 min-w-6.5' : 'h-icon-btn min-w-icon-btn'}`} ${tone === 'star' ? 'hover:text-star aria-pressed:text-star' : tone === 'danger' ? 'hover:text-danger aria-pressed:text-fg' : 'hover:text-fg aria-pressed:text-fg'}`;
   const common = {
     id,
     'data-testid': testid,

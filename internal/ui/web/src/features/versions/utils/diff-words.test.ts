@@ -1,7 +1,14 @@
 import { describe, expect, it } from 'vitest';
 
 import { setBoot, type Boot } from '@/config/boot';
-import { countParts, levelOf, sectionName, type Section } from '@/features/versions/utils/diff-words';
+import {
+  countParts,
+  frameSrc,
+  levelOf,
+  sectionName,
+  type DiffAnswer,
+  type Section,
+} from '@/features/versions/utils/diff-words';
 
 const section = (state: Section['state'], heading: [string, string][], level = 2): Section => ({
   state,
@@ -40,5 +47,18 @@ describe(levelOf, () => {
   it('keeps a level within the three of the contents', () => {
     expect.assertions(1);
     expect([0, 1, 3, 5].map((level) => levelOf(section('same', [], level)))).toStrictEqual([1, 1, 3, 3]);
+  });
+});
+
+describe(frameSrc, () => {
+  it('loads the later version marked, at a place or its top, and nothing before an answer or of no page', () => {
+    expect.assertions(1);
+    const answer = { from: { n: 1 }, to: { n: 3 }, key: 'k 1' } as DiffAnswer;
+    expect([
+      frameSrc('a', answer, -1),
+      frameSrc('a', answer, 2),
+      frameSrc('a', null, 2),
+      frameSrc('', answer, 0),
+    ]).toStrictEqual(['/a/a/?raw&v=3&from=1&key=k%201', '/a/a/?raw&v=3&from=1&key=k%201#floe-diff.2', null, null]);
   });
 });

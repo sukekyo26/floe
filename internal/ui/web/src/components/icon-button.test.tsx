@@ -30,4 +30,19 @@ describe(IconButton, () => {
     expect(renderToString(<IconButton>x</IconButton>)).not.toContain(' aria-pressed=');
     expect(renderToString(<IconButton on>x</IconButton>)).toMatch(/data-on="true"(?![^>]* aria-pressed=)/);
   });
+
+  it('stands on a ground of its own with a shadow raised, transparent otherwise', () => {
+    expect.assertions(2);
+    const classes = (html: string) =>
+      String(/class="([^"]*)"/.exec(html)?.[1])
+        .split(' ')
+        .filter((c) => /^(bg-|shadow|ring)/.test(c));
+    expect(classes(renderToString(<IconButton raised>x</IconButton>))).toStrictEqual([
+      'bg-panel',
+      'shadow-sm',
+      'ring-1',
+      'ring-line',
+    ]);
+    expect(classes(renderToString(<IconButton>x</IconButton>))).toStrictEqual(['bg-transparent']);
+  });
 });

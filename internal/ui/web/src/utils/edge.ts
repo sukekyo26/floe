@@ -25,3 +25,7 @@ export const sideMax = (innerWidth: number): number => Math.max(SIDE_MIN, Math.m
 // clampSide is a side column's width kept within its bounds in a window innerWidth wide
 export const clampSide = (width: number, innerWidth: number): number =>
   Math.min(Math.max(Math.round(width), SIDE_MIN), sideMax(innerWidth));
+
+// shownSide is what a side column takes of the columns: its width within bounds, 0 folded
+export const shownSide = (open: boolean, width: number, innerWidth: number): number =>
+  open ? clampSide(width, innerWidth) : 0;

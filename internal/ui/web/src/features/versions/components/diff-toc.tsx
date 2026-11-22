@@ -6,7 +6,6 @@ import { SideIcon } from '@/components/icons';
 import { diffToc as sharedToc } from '@/features/versions/stores/diff-toc';
 import { levelOf, sectionName, type Section } from '@/features/versions/utils/diff-words';
 import { useStore } from '@/hooks/use-store';
-import { useWindowWidth } from '@/hooks/use-window-width';
 import { t } from '@/lib/t';
 import type { KeptSide } from '@/stores/kept-side';
 import { clampSide, SIDE_MIN, sideMax } from '@/utils/edge';
@@ -44,18 +43,20 @@ interface DiffTocProps {
   // section is the one n, p or a press went to last, -1 for none
   readonly section: number;
   readonly onPlace: (i: number) => void;
+  // width is what the contents take, kept within bounds (shownSide); innerWidth the window's, for those bounds
+  readonly width: number;
+  readonly innerWidth: number;
   readonly toc?: KeptSide;
 }
 
 const ITEM =
-  'flex min-h-7 w-full items-center gap-1.5 rounded-small px-2 py-0.5 text-muted [&>span:first-child]:min-w-0 [&>span:first-child]:truncate';
+  'flex min-h-7 w-full items-center gap-1.5 rounded-small px-2 py-0.5 [&>span:first-child]:min-w-0 [&>span:first-child]:truncate';
 
 // DiffToc is the contents of the later version, each section that has a place to go to a button, its width dragged
 // and kept, folded and opened (ui.html drawDiff, tocAt, layoutToc). Its own width is kept apart from the frame's tree
-export function DiffToc({ sections, section, onPlace, toc = sharedToc }: DiffTocProps) {
+export function DiffToc({ sections, section, onPlace, width, innerWidth, toc = sharedToc }: DiffTocProps) {
   const side = useStore(toc.side());
-  const innerWidth = useWindowWidth();
-  const width = clampSide(side.width, innerWidth);
+  const nav = useRef<HTMLElement>(null);
   const list = useRef<HTMLDivElement>(null);
   const hide = useRef<HTMLButtonElement>(null);
   const show = useRef<HTMLButtonElement>(null);
@@ -77,6 +78,7 @@ export function DiffToc({ sections, section, onPlace, toc = sharedToc }: DiffToc
   return (
     <>
       <nav
+        ref={nav}
         id="diff-toc-nav"
         aria-labelledby="diff-toc-title"
         hidden={!side.open}
@@ -115,7 +117,7 @@ export function DiffToc({ sections, section, onPlace, toc = sharedToc }: DiffToc
               // oxlint-disable-next-line react/no-array-index-key -- a section is its place in the answer, drawn anew with it
               <div key={i} className={LEVEL[levelOf(s)]}>
                 {s.place === undefined ? (
-                  <div className={ITEM}>
+                  <div className={`${ITEM} text-muted`}>
                     {name}
                     {mark}
                   </div>
@@ -153,6 +155,8 @@ export function DiffToc({ sections, section, onPlace, toc = sharedToc }: DiffToc
         label={t('ui_diff_toc_width')}
         controls="diff-toc-nav"
         place="box"
+        // The box's left, which the contents start at: the frame's is the window's
+        left={() => nav.current?.getBoundingClientRect().left ?? 0}
         at={width}
         width={width}
         min={SIDE_MIN}
@@ -167,13 +171,14 @@ export function DiffToc({ sections, section, onPlace, toc = sharedToc }: DiffToc
           under 56rem */}
       <div
         hidden={side.open}
-        className="absolute bottom-[calc((var(--spacing-foot)-1px-var(--spacing-icon-btn))/2)] left-foot-pad z-2 rounded-full bg-panel shadow-sm ring-1 ring-line mid:hidden"
+        className="absolute bottom-[calc((var(--spacing-foot)-1px-var(--spacing-icon-btn))/2)] left-foot-pad z-2 flex mid:hidden"
       >
         <IconButton
           ref={show}
           id="diff-toc-show"
           label={t('ui_diff_toc_show')}
           hidden={side.open}
+          raised
           expanded={false}
           controls="diff-toc-nav"
           onClick={() => {
@@ -186,7 +191,3 @@ export function DiffToc({ sections, section, onPlace, toc = sharedToc }: DiffToc
     </>
   );
 }
-
-// tocWidth is what the contents take of the diff's columns: their width kept within bounds, 0 folded
-export const tocWidth = (open: boolean, width: number, innerWidth: number): number =>
-  open ? clampSide(width, innerWidth) : 0;

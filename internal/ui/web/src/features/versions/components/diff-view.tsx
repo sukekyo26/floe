@@ -4,16 +4,18 @@ import { Button } from '@/components/button';
 import { CloseIcon, PageMark } from '@/components/icons';
 import { DiffCount } from '@/features/versions/components/diff-count';
 import { DiffPicks } from '@/features/versions/components/diff-picks';
-import { DiffToc, tocWidth } from '@/features/versions/components/diff-toc';
+import { DiffToc } from '@/features/versions/components/diff-toc';
 import { diff as sharedDiff, type Diff } from '@/features/versions/stores/diff';
 import { diffToc as sharedToc } from '@/features/versions/stores/diff-toc';
+import { frameSrc } from '@/features/versions/utils/diff-words';
 import { usePageMessages } from '@/hooks/use-page-messages';
 import { useStore } from '@/hooks/use-store';
 import { useWindowWidth } from '@/hooks/use-window-width';
 import { t } from '@/lib/t';
 import type { KeptSide } from '@/stores/kept-side';
 import type { Page } from '@/types/page';
-import { pageHref, rawHref } from '@/utils/page-urls';
+import { shownSide } from '@/utils/edge';
+import { pageHref } from '@/utils/page-urls';
 
 interface DiffViewProps {
   // page is the frame's page as the list of pages has it, once that list was read; hidden, the frame shows none
@@ -43,9 +45,8 @@ export function DiffView({ page, hidden, keys, onKey, diff = sharedDiff, toc = s
   // to is a move within it. None before an answer: the latest's page would be told read
   const { answer, at, turn } = state;
   useEffect(() => {
-    if (!answer || !frame.current) return;
-    const marked = rawHref({ slug, v: answer.to.n, from: answer.from.n, key: answer.key });
-    frame.current.src = at >= 0 ? `${marked}#floe-diff.${String(at)}` : marked;
+    const src = frameSrc(slug, answer, at);
+    if (src !== null && frame.current) frame.current.src = src;
   }, [slug, answer, at, turn]);
   // Of the one that scrolls at a phone's width, all of it: back to its top as an answer comes, not at a place
   useEffect(() => {
@@ -64,7 +65,7 @@ export function DiffView({ page, hidden, keys, onKey, diff = sharedDiff, toc = s
     },
   });
   const close = slug ? pageHref({ slug }) : undefined;
-  const toc_ = tocWidth(side.open, side.width, innerWidth);
+  const tocShown = shownSide(side.open, side.width, innerWidth);
   return (
     <main
       ref={box}
@@ -98,10 +99,17 @@ export function DiffView({ page, hidden, keys, onKey, diff = sharedDiff, toc = s
       <div
         id="diff-main"
         hidden={state.none}
-        style={{ '--toc': `${String(toc_)}px` } as CSSProperties}
+        style={{ '--toc': `${String(tocShown)}px` } as CSSProperties}
         className="relative grid min-h-0 flex-1 grid-cols-[var(--toc)_minmax(0,1fr)] bg-panel mid:grid-cols-1"
       >
-        <DiffToc sections={answer?.sections ?? []} section={state.section} onPlace={diff.place} toc={toc} />
+        <DiffToc
+          sections={answer?.sections ?? []}
+          section={state.section}
+          onPlace={diff.place}
+          width={tocShown}
+          innerWidth={innerWidth}
+          toc={toc}
+        />
         <div
           id="diff-body"
           className={`col-start-2 flex min-w-0 border-l border-line bg-frame-bg narrow:h-[85dvh] mid:col-auto mid:border-l-0 ${side.open ? '' : 'not-mid:border-l-0 not-mid:pb-foot'}`}

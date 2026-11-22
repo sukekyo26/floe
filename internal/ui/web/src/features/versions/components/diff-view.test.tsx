@@ -31,6 +31,8 @@ describe(DiffToc, () => {
         sections={[section('changed', 'A', 0), section('same', 'B')]}
         section={0}
         onPlace={() => undefined}
+        width={240}
+        innerWidth={1200}
         toc={toc()}
       />,
     );
@@ -80,7 +82,7 @@ describe(DiffPicks, () => {
 });
 
 describe(DiffView, () => {
-  it('keeps its head, columns and iframe with nothing to compare, hidden, and loads no page before an answer', () => {
+  it('keeps its head, columns and iframe with nothing to compare, hidden, and writes no page as it is drawn', () => {
     expect.assertions(2);
     testBoot();
     const diff = createDiff({ client: {} as Client, search: () => '', replace: () => undefined });

@@ -1,5 +1,6 @@
 import { t } from '@/lib/t';
 import type { MessageKey } from '@/types/messages.gen';
+import { rawHref } from '@/utils/page-urls';
 
 // What /api/pages/{slug}/diff answers (pagediff.Result with the pair): the counts, the sections of the later version
 // with their state and the place of their first mark, and the places in the order of the page
@@ -56,3 +57,12 @@ export function sectionName(s: Section): string {
 
 // levelOf is a section's level within the contents' three
 export const levelOf = (s: Section): number => Math.min(Math.max(s.level, 1), 3);
+
+// frameSrc is what the diff's iframe loads: the later version's page marked against the earlier, of the pair answered,
+// at place at (-1 for its top, a move within it). None before an answer, nor of no page: the latest's page alone would
+// be told read
+export function frameSrc(slug: string, answer: DiffAnswer | null, at: number): string | null {
+  if (!answer || !slug) return null;
+  const marked = rawHref({ slug, v: answer.to.n, from: answer.from.n, key: answer.key });
+  return at >= 0 ? `${marked}#floe-diff.${String(at)}` : marked;
+}

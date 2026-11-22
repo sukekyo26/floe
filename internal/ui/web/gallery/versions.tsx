@@ -6,7 +6,7 @@ import { Dialog, DialogActions, DialogClose, DialogHead } from '@/components/dia
 import { StarIcon } from '@/components/icons';
 import { getBoot, type Boot } from '@/config/boot';
 import { DiffView } from '@/features/versions/components/diff-view';
-import { createDiff, type Diff } from '@/features/versions/stores/diff';
+import { createDiff } from '@/features/versions/stores/diff';
 import type { Section } from '@/features/versions/utils/diff-words';
 import { useKeys } from '@/hooks/use-keys';
 import { createKeptSide } from '@/stores/kept-side';
@@ -278,6 +278,7 @@ const diffServer = {
       setTimeout(
         () => {
           if (url.endsWith('/versions')) {
+            versionsRead.set(versionsRead.get() + 1);
             go(new Response(JSON.stringify(kept['three'])));
             return;
           }
@@ -319,12 +320,21 @@ const badDiff = diffOf('?diff&from=9&to=1');
 const noneDiff = diffOf('?diff');
 const galleryToc = createKeptSide('gallery.diff.toc', 240);
 
-// DiffScenes shows the diff of three's versions, one asked for by a pair that cannot be compared, and a page of one
-// version. n, p and d work from the page, not from a choice open
+// The versions read of three by the diffs, as the page's frame tells it they changed (pageChanged)
+const versionsRead = createStore(0);
+const SCENES = ['the pair', 'a pair that cannot be compared', 'a page of one version', 'hidden'] as const;
+type Scene = (typeof SCENES)[number];
+const hiddenDiff = diffOf('?diff');
+
+// DiffScenes shows one diff at a time (their ids are the screen's): three's versions, one asked for by a pair that
+// cannot be compared, a page of one version, and one hidden, which takes no word of its frame. n, p and d work from
+// the page, not from a choice open
 function DiffScenes() {
   const pages = useStore(listed);
   const three = pages.find((p) => p.slug === 'three') ?? null;
+  const read = useStore(versionsRead);
   const [failsNow, setFails] = useState(false);
+  const [scene, setScene] = useState<Scene>('the pair');
   const keys = {
     n: () => {
       shownDiff.step(1);
@@ -337,26 +347,32 @@ function DiffScenes() {
     },
   };
   useKeys(keys);
-  const view = (diff: Diff, page: Page | null) => (
-    // Wider than the gallery's column, as the frame is the window's width
-    <div className="flex h-[30rem] w-[min(72rem,calc(100vw-3rem))] flex-col overflow-hidden rounded-small border border-line">
-      <DiffView
-        page={page}
-        hidden={false}
-        keys={new Set(Object.keys(keys))}
-        onKey={(key) => {
-          keys[key as keyof typeof keys]();
-        }}
-        diff={diff}
-        toc={galleryToc}
-      />
-    </div>
-  );
+  const [diff, page] =
+    scene === 'the pair'
+      ? [shownDiff, three]
+      : scene === 'a pair that cannot be compared'
+        ? [badDiff, three]
+        : scene === 'a page of one version'
+          ? [noneDiff, { slug: 'one', versionCount: 1 } as Page]
+          : [hiddenDiff, three];
   return (
     <>
       <h3 className="mt-6 mb-2 text-small font-bold text-muted">
         The diff (n, p, d; open a choice and press them: nothing; narrow the window under 56rem and 40rem)
       </h3>
+      <div className="mb-2 flex flex-wrap gap-2">
+        {SCENES.map((x) => (
+          <Button
+            key={x}
+            pressed={scene === x}
+            onClick={() => {
+              setScene(x);
+            }}
+          >
+            {x}
+          </Button>
+        ))}
+      </div>
       <div className="mb-2 flex flex-wrap gap-2">
         <Button
           pressed={failsNow}
@@ -369,15 +385,30 @@ function DiffScenes() {
         </Button>
         <Button
           onClick={() => {
-            if (three) shownDiff.reopen(three);
+            (document.getElementById('diff-frame') as HTMLIFrameElement | null)?.contentWindow?.postMessage(
+              { galleryTell: 'changed' },
+              '*',
+            );
           }}
         >
-          The versions changed (pageChanged)
+          Have the page tell its versions changed
         </Button>
+        <span className="self-center text-small text-muted">{`versions read: ${String(read)}`}</span>
       </div>
-      <div className="mb-4">{view(shownDiff, three)}</div>
-      <div className="mb-4">{view(badDiff, three)}</div>
-      {view(noneDiff, { slug: 'one', versionCount: 1 } as Page)}
+      {/* Wider than the gallery's column, as the frame is the window's width */}
+      <div className="flex h-[30rem] w-[min(72rem,calc(100vw-3rem))] flex-col overflow-hidden rounded-small border border-line">
+        <DiffView
+          key={scene}
+          page={page}
+          hidden={scene === 'hidden'}
+          keys={new Set(Object.keys(keys))}
+          onKey={(key) => {
+            keys[key as keyof typeof keys]();
+          }}
+          diff={diff}
+          toc={galleryToc}
+        />
+      </div>
     </>
   );
 }

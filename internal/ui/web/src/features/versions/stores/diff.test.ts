@@ -138,6 +138,22 @@ describe(createDiff, () => {
     expect([m.diff.state.get().answer?.from.n, m.notice.said.get().message]).toStrictEqual([1, '']);
   });
 
+  it("calls a diff being read off as the page's versions changed, and reads them again", async () => {
+    expect.assertions(2);
+    const m = made();
+    m.diff.open(page());
+    await m.answer(LIST);
+    m.diff.reopen(page());
+    expect(m.asked.map((x) => [x.url.split('/').at(-1), x.signal.aborted])).toStrictEqual([
+      ['versions', true],
+      ['diff?from=2&to=3', true],
+      ['versions', false],
+    ]);
+    await m.answer(LIST);
+    await m.answer(answerOf(2, 3));
+    expect(m.diff.state.get().turn).toBe(1);
+  });
+
   it('goes back to the pair shown when a read fails, saying so, and takes the words back as one comes', async () => {
     expect.assertions(3);
     const m = made();

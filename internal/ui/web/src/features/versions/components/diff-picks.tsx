@@ -44,14 +44,12 @@ export function DiffPicks({ slug, list, pair, onChoose }: DiffPicksProps) {
                   ))
                 : null}
             </PickSelect>
-            <IconButton
-              id={`diff-${name}-open`}
-              label={open}
-              href={n === undefined ? undefined : rawHref({ slug, v: n })}
-              newTab
-            >
-              <OpenIcon />
-            </IconButton>
+            {/* None until the pair is known: a way to no page, which no one could take */}
+            {n === undefined ? null : (
+              <IconButton id={`diff-${name}-open`} label={open} href={rawHref({ slug, v: n })} newTab>
+                <OpenIcon />
+              </IconButton>
+            )}
           </div>
         );
       })}
