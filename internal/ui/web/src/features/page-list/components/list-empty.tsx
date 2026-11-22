@@ -47,7 +47,7 @@ export function ListEmpty({ shown, archived, onAdd, onShowArchived, onClear }: L
         <strong>{t('ui_empty_pages')}</strong>
         <p>{t('ui_empty_pages_hint')}</p>
         <p>
-          <Button id="add-empty" onClick={onAdd}>
+          <Button id="add-empty" adds onClick={onAdd}>
             <PlusIcon />
             {t('ui_add_link')}
           </Button>
