@@ -19,7 +19,7 @@ import { Rows, type RowItem } from '@/components/rows';
 import { Tab, TabList } from '@/components/tabs';
 import { ServerState } from '@/components/server-state';
 import { Toasts } from '@/components/toasts';
-import { setBoot, type Boot, type Screen } from '@/config/boot';
+import { setBoot, type Boot } from '@/config/boot';
 import { KeysDialog, type HelpTab } from '@/features/help/components/keys-dialog';
 import { EditDialog, type EditTarget } from '@/features/page-edit/components/edit-dialog';
 import { createSaveEdit } from '@/features/page-edit/stores/save-edit';
@@ -64,6 +64,7 @@ import { News } from '@/features/page-list/components/news';
 import { PageList } from '@/features/page-list/components/page-list';
 import { SearchBox } from '@/features/page-list/components/search-box';
 import type { Listing, Page } from '@/types/page';
+import type { Screen } from '@/types/screen';
 import type { Folders } from '@/stores/open-folders';
 import { openKey } from '@/utils/paths';
 import { startVersions, VersionsSection } from './versions';
@@ -180,7 +181,7 @@ const galleryQuery = createListQuery({
   replace: () => undefined,
   folders: { takeOpen: () => undefined },
 });
-const galleryColumns = createColumns({ search: () => '' });
+const galleryColumns = createColumns({ screen: () => 'list' });
 // A tag write adds and removes; any other is the fields it names
 const patched = (a: Page, body: unknown): Partial<Page> => {
   const { tags } = body as { tags?: { add: string[]; remove: string[] } };
@@ -558,7 +559,7 @@ function ListScene() {
             setFolded(false);
           }}
         >
-          Open the list (P5f’s)
+          Open the list (a stand-in: the columns’ own is in columns.html)
         </Button>
       ) : null}
       <div hidden={folded} className="max-h-[34rem] overflow-auto rounded-small border border-line bg-bg">
@@ -676,6 +677,9 @@ function Gallery() {
   return (
     <div className="flex items-center gap-3 bg-bg">
       <main className="w-[26rem] p-6">
+        <p>
+          <a href="columns.html">The columns of the list screens</a>, in a window of their own
+        </p>
         <Section title="Server state and the error">
           <div className="mb-2 flex flex-wrap gap-2">
             <Button
@@ -862,7 +866,7 @@ function Gallery() {
                 query={galleryQuery}
                 columns={galleryColumns}
                 onShow={() => {
-                  // As P5f's way to open the shelf will: open, the focus on what folds it (here, the button above)
+                  // As showColumn opens it (columns.html): open, the focus on what folds it (here, the button above)
                   galleryColumns.set({ open: true });
                   focusOn(document.getElementById('fold-shelf'));
                 }}

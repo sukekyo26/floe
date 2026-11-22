@@ -45,4 +45,10 @@ describe(IconButton, () => {
     ]);
     expect(classes(renderToString(<IconButton>x</IconButton>))).toStrictEqual(['bg-transparent']);
   });
+
+  it('leaves a button out of print only where asked', () => {
+    expect.assertions(2);
+    expect(renderToString(<IconButton display="screen">x</IconButton>)).toContain('print:hidden');
+    expect(renderToString(<IconButton>x</IconButton>)).not.toContain('print:hidden');
+  });
 });

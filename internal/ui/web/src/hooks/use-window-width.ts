@@ -14,3 +14,8 @@ export const useWindowWidth = (): number =>
     () => window.innerWidth,
     () => 0,
   );
+
+const rootRem = () => parseFloat(getComputedStyle(document.documentElement).fontSize);
+
+// useRem is the root's font size in px, the browser's text, read anew as the window resizes; 16 drawn to a string
+export const useRem = (): number => useSyncExternalStore(listen, rootRem, () => 16);

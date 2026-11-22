@@ -226,3 +226,21 @@ export const SideIcon = () => (
     <path d="M9 4v16" />
   </Line>
 );
+// The two columns left of the page, the one filled in: the shelf (ShelfColumnIcon) or the list (ListColumnIcon)
+const TwoColumns = ({ children }: { readonly children: ReactNode }) => (
+  <Line>
+    <rect x="3" y="4" width="18" height="16" rx="2" />
+    <path d="M9 4v16M15 4v16" />
+    {children}
+  </Line>
+);
+export const ShelfColumnIcon = () => (
+  <TwoColumns>
+    <path fill="currentColor" stroke="none" d="M3 6a2 2 0 0 1 2-2h4v16H5a2 2 0 0 1-2-2Z" />
+  </TwoColumns>
+);
+export const ListColumnIcon = () => (
+  <TwoColumns>
+    <path fill="currentColor" stroke="none" d="M9 4h6v16H9Z" />
+  </TwoColumns>
+);
