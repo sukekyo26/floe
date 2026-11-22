@@ -1,5 +1,6 @@
 import { useEffect, useRef } from 'react';
 
+import { SHOW_BOTTOM } from '@/components/columns';
 import { Grip } from '@/components/grip';
 import { IconButton } from '@/components/icon-button';
 import { SideIcon } from '@/components/icons';
@@ -169,10 +170,7 @@ export function DiffToc({ sections, section, onPlace, width, innerWidth, toc = s
       />
       {/* Where the button that folded it stood, on a ground of its own: placed by its box, gone with the contents
           under 56rem */}
-      <div
-        hidden={side.open}
-        className="absolute bottom-[calc((var(--spacing-foot)-1px-var(--spacing-icon-btn))/2)] left-foot-pad z-2 flex mid:hidden"
-      >
+      <div hidden={side.open} className={`absolute ${SHOW_BOTTOM} left-foot-pad z-2 flex mid:hidden`}>
         <IconButton
           ref={show}
           id="diff-toc-show"
