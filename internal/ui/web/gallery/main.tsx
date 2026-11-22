@@ -559,7 +559,7 @@ function ListScene() {
             setFolded(false);
           }}
         >
-          Open the list (P5f’s)
+          Open the list (a stand-in: the columns’ own is in columns.html)
         </Button>
       ) : null}
       <div hidden={folded} className="max-h-[34rem] overflow-auto rounded-small border border-line bg-bg">
@@ -677,6 +677,9 @@ function Gallery() {
   return (
     <div className="flex items-center gap-3 bg-bg">
       <main className="w-[26rem] p-6">
+        <p>
+          <a href="columns.html">The columns of the list screens</a>, in a window of their own
+        </p>
         <Section title="Server state and the error">
           <div className="mb-2 flex flex-wrap gap-2">
             <Button
@@ -863,7 +866,7 @@ function Gallery() {
                 query={galleryQuery}
                 columns={galleryColumns}
                 onShow={() => {
-                  // As P5f's way to open the shelf will: open, the focus on what folds it (here, the button above)
+                  // As showColumn opens it (columns.html): open, the focus on what folds it (here, the button above)
                   galleryColumns.set({ open: true });
                   focusOn(document.getElementById('fold-shelf'));
                 }}
