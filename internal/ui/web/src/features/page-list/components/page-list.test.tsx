@@ -18,7 +18,7 @@ const page = (slug: string, change: Partial<Page> = {}): Page => ({
   title: slug,
   description: '',
   createdAt: '',
-  updatedAt: '2026-11-21T09:00:00Z',
+  updatedAt: new Date(2026, 10, 21, 9).toISOString(),
   taskProject: 'proj',
   ...change,
 });
@@ -37,7 +37,7 @@ const drawList = (
 ) => {
   testBoot();
   // The day's headings from this time, the rows' times of the same day
-  vi.useFakeTimers({ now: new Date('2026-11-21T12:00:00Z') });
+  vi.useFakeTimers({ now: new Date(2026, 10, 21, 12) });
   const html = renderToString(
     <PageList
       openers={openers}
