@@ -7,11 +7,11 @@ import { pages as pagePages, type Pages } from '@/stores/pages';
 import { rowOpens, type MovedTo } from '@/utils/row-press';
 
 export interface RowKeyDeps {
-  readonly pages?: Pages;
-  readonly openPage?: OpenPage;
+  readonly pages?: Pages | undefined;
+  readonly openPage?: OpenPage | undefined;
   // move is focus-places' moveRow, given by the app that makes the table of keys
   readonly move: (step: number) => MovedTo | null;
-  readonly narrow?: () => boolean;
+  readonly narrow?: (() => boolean) | undefined;
 }
 
 // rowKeys is the keys that move through the rows of any screen, ↑ ↓ and j k (ui.html moveRow): the focus to the next
@@ -28,6 +28,6 @@ export function rowKeys({ pages = pagePages, openPage = pageOpen, move, narrow =
 }
 
 // useRowKeys is rowKeys for the screen's table of keys (useKeys), which the app makes (P8)
-export const useRowKeys = (deps: RowKeyDeps): KeyTable =>
-  // oxlint-disable-next-line react-hooks/exhaustive-deps -- its deps are the fields of deps, not the object made anew
-  useMemo(() => rowKeys(deps), [deps.pages, deps.openPage, deps.move, deps.narrow]);
+export function useRowKeys({ pages, openPage, move, narrow }: RowKeyDeps): KeyTable {
+  return useMemo(() => rowKeys({ pages, openPage, move, narrow }), [pages, openPage, move, narrow]);
+}
