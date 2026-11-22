@@ -50,6 +50,14 @@ describe(ReaderPane, () => {
     );
   });
 
+  it('puts the words of the version shown over those of a page newly at another version, under the tags', () => {
+    expect.assertions(1);
+    const html = pane({ tags: <i id="t" />, versionNote: <b id="v" /> });
+    expect(['id="t"', 'id="v"', '<iframe'].map((x) => html.indexOf(x))).toStrictEqual(
+      ['id="t"', 'id="v"', '<iframe'].map((x) => html.indexOf(x)).toSorted((a, b) => a - b),
+    );
+  });
+
   it('puts the bar of the page shown on the right, of its own id alone, and none with no page', () => {
     expect.assertions(2);
     const bar = <span id="read-actions">x</span>;

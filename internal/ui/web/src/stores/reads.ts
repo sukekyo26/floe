@@ -25,6 +25,9 @@ export interface Reads {
   tellRead: (slug: string, told: Told) => Promise<ReadOutcome>;
   // markUnread marks slug unread, and keeps it so while it is shown; an archived page is never unseen, so null
   markUnread: (slug: string) => Promise<ReadOutcome> | null;
+  // answered is the page of the last mark the server took, read or unread: a new value each time, as the version read
+  // it moves is told by nothing in the list of pages
+  answered: Store<{ slug: string } | null>;
 }
 
 interface Deps {
@@ -44,6 +47,7 @@ export function createReads({
   openPage = pageOpen,
 }: Deps = {}): Reads {
   const keptUnread = createStore<string | null>(null);
+  const answered = createStore<{ slug: string } | null>(null);
   const waiting = new Map<string, { told: Told; done: (outcome: ReadOutcome) => void }>();
   let going = false;
 
@@ -66,6 +70,8 @@ export function createReads({
         letGo();
         done({ kind: 'failed', reason, said: true });
       };
+      // Whether the server took the mark: told once the try is over, so that what listens cannot fail the mark
+      let took = false;
       try {
         const res = await sendRead(client, to, told?.read ?? null);
         if (!res.ok && res.status !== 404) {
@@ -82,12 +88,14 @@ export function createReads({
         } else {
           done({ kind: 'sent', cleared: false });
         }
+        took = res.status !== 404;
       } catch (err) {
         const message = err instanceof Error ? err.message : String(err);
         // A read is told again the next time it is opened; a mark, only if pressed again
         if (!told) fail(t('ui_unread_failed', message));
         else done({ kind: 'failed', reason: message, said: false });
       }
+      if (took) answered.set({ slug: to });
     }
     going = false;
     // The dot and the counts go now, not at the next look
@@ -109,6 +117,7 @@ export function createReads({
 
   return {
     keptUnread,
+    answered,
     tellRead,
     markUnread: (slug) => {
       // Archived, it is never unseen: from a toast shown before it was archived too
