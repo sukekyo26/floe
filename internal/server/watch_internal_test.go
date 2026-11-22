@@ -393,7 +393,7 @@ func TestVersionBeforeContent(t *testing.T) {
 	read := s.cfg.Drawing
 	s.cfg.Drawing = func() (store.Drawing, error) {
 		d, err := read()
-		d.Icons = icons
+		d.Icons, d.Draw = icons, drawproc.Here(d.Kit, icons)
 		return d, err
 	}
 	s.look()

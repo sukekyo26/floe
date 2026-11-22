@@ -791,7 +791,7 @@ func TestFailureBeforeNeedImages(t *testing.T) {
 
 	s, _ := newStore(t)
 	dw := picKit(t, "", "")
-	dw.Icons = failing{}
+	dw.Icons, dw.Draw = failing{}, drawproc.Here(dw.Kit, failing{})
 	src := "lang: en\ntemplate: pic\ni: [a.png]\nd: {width: 300, height: 100, title: i, parts: [{icon: {icon: aws/res/aws-lambda, x: 10, y: 10}}]}\n"
 	_, err := floepublish.PrepareData(t.Context(), s, dw, floepublish.Upload{File: "d.yaml", Source: []byte(src), Images: nil, Project: "p", Repo: "p", Place: "d.yaml"}, store.Options{})
 	var found usererr.List

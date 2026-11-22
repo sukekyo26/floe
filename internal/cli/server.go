@@ -119,10 +119,13 @@ func (a *app) drawing() (store.Drawing, error) {
 	return store.Drawing{Kit: k, Icons: a.iconStore(), Draw: a.drawer, Err: nil}, nil
 }
 
+// drawTime is how long the server lets one page be drawn: drawproc.Limit, shorter in a test.
+var drawTime = drawproc.Limit
+
 // drawChildren is the Drawer of the server of build: floe __draw, the binary exe, with the settings the server has.
 func (a *app) drawChildren(build, exe string) *drawproc.Child {
 	env := a.serverEnv()
-	return drawproc.NewChild(build, func(ctx context.Context) *exec.Cmd {
+	return drawproc.NewChild(build, drawTime, func(ctx context.Context) *exec.Cmd {
 		cmd := exec.CommandContext(ctx, exe, "__draw")
 		cmd.Env = env
 		return cmd

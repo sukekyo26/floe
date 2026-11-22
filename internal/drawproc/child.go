@@ -121,11 +121,13 @@ type Child struct {
 	build   string
 	command func(ctx context.Context) *exec.Cmd
 	slots   chan struct{}
+	limit   time.Duration
 }
 
-// NewChild is the Child of the server of build, which runs floe __draw by command, the process ended with ctx.
-func NewChild(build string, command func(ctx context.Context) *exec.Cmd) *Child {
-	return &Child{build: build, command: command, slots: make(chan struct{}, Children)}
+// NewChild is the Child of the server of build, which runs floe __draw by command, the process ended with ctx, and
+// ends it when it draws one page longer than limit (Limit).
+func NewChild(build string, limit time.Duration, command func(ctx context.Context) *exec.Cmd) *Child {
+	return &Child{build: build, command: command, slots: make(chan struct{}, Children), limit: limit}
 }
 
 // Start waits for one of the Children slots, or for ctx to end.
@@ -170,7 +172,7 @@ func (s *session) Draw(job Job) Result {
 	}
 	p := s.proc
 	p.out.left = answerLimit
-	timer := time.AfterFunc(Limit, func() {
+	timer := time.AfterFunc(s.c.limit, func() {
 		p.timedOut.Store(true)
 		p.cancel()
 	})
@@ -184,7 +186,7 @@ func (s *session) Draw(job Job) Result {
 		return a.result()
 	}
 	s.proc = nil
-	return failed(p.end(s.ctx, job.File, err))
+	return failed(p.end(s.ctx, job.File, s.c.limit, err))
 }
 
 func (s *session) Close() {
@@ -228,14 +230,14 @@ func (c *Child) run(ctx context.Context) (*proc, error) {
 
 // end ends p, which failed with err as it drew file, and says why: past Limit or its memory, the user's mistake at
 // file; else floe's failure, with the end of what it wrote on stderr.
-func (p *proc) end(ctx context.Context, file string, err error) error {
+func (p *proc) end(ctx context.Context, file string, limit time.Duration, err error) error {
 	p.cancel()
 	_ = p.in.Close() //nolint:errcheck // ended
 	waited := p.cmd.Wait()
 	var exited *exec.ExitError
 	switch {
 	case p.timedOut.Load():
-		return usererr.NewAt(file, 0, 0, "draw_time", fmt.Sprintf("%d seconds", int(Limit/time.Second)))
+		return usererr.NewAt(file, 0, 0, "draw_time", fmt.Sprintf("%d seconds", int(limit/time.Second)))
 	case errors.As(waited, &exited) && exited.ExitCode() == Stopped:
 		return usererr.NewAt(file, 0, 0, "draw_memory", fmt.Sprintf("%d MiB", memoryLimit>>20))
 	case ctx.Err() != nil:

@@ -2,6 +2,7 @@ package cli
 
 import (
 	"maps"
+	"time"
 
 	"floe/internal/link"
 )
@@ -28,4 +29,9 @@ func HomeEnv(home string, vars map[string]string) map[string]string {
 // SetDrawLimit sets the memory the commands that draw may hold, for a test that runs floe as a process of its own.
 func SetDrawLimit(n uint64) {
 	drawLimit = n
+}
+
+// SetDrawTime sets how long the server lets one page be drawn, for a test that runs floe as a process of its own.
+func SetDrawTime(d time.Duration) {
+	drawTime = d
 }

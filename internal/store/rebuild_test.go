@@ -8,6 +8,7 @@ import (
 	"strings"
 	"testing"
 
+	"floe/internal/drawproc"
 	floepublish "floe/internal/publish"
 	"floe/internal/store"
 	"floe/internal/testfs"
@@ -333,7 +334,7 @@ func TestRebuildMeanwhile(t *testing.T) {
 			s, root := newStore(t)
 			icons := &meanwhile{svg: "<g>v1</g>", then: nil}
 			dw := picKit(t, "", "")
-			dw.Icons = icons
+			dw.Icons, dw.Draw = icons, drawproc.Here(dw.Kit, icons)
 			publish(t, s, dw, "d.yaml", iconPage, nil, store.Options{})
 			before := read(t, filepath.Join(copyOf(t, s, root, "d"), "page.html"))
 			icons.svg = "<g>v2</g>"
