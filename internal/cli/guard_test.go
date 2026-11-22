@@ -129,6 +129,11 @@ func TestDrawMemory(t *testing.T) {
 func TestPageSize(t *testing.T) {
 	t.Parallel()
 
+	if underRace {
+		// A page of 78 MB takes the race detector past the server's 30 seconds, and a hundred seconds for the test.
+		t.Skip("pages near the size floe draws are too slow to draw under the race detector")
+	}
+
 	e := newDenv(t)
 	page := func(rows int) string {
 		return "template: many\nlang: en\ntitle: T\nintro: " + strings.Repeat("x", 100000) + "\nrows:\n" +
