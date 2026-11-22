@@ -745,7 +745,7 @@ var messagesEN = map[string]string{
 	"ui_task_edit_named":       "Edit %s",
 	"ui_task_gone_edit":        "This task was deleted elsewhere: close this and look at the task list",
 	"ui_task_categories":       "Categories",
-	"ui_task_categories_hint":  "Drag, or use ↑ and ↓, to reorder, and + to add; only a category with no page can be deleted, and names stay",
+	"ui_task_categories_hint":  "Drag, or use ↑ and ↓, to reorder; only a category with no page can be deleted, and names stay",
 	"ui_task_categories_none":  "No categories yet",
 	"ui_category_no_pages":     "no page",
 	"ui_category_up_named":     "Move %s up",
