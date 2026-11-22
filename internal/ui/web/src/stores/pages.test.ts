@@ -244,9 +244,10 @@ describe(createPages, () => {
     pages.pressed();
     s.state.list = '[{"slug":"a","description":"","createdAt":"","updatedAt":"","taskProject":""}]';
     await pages.load(true);
-    expect(pages.state.get().entries).toHaveLength(0);
+    // A read held back takes no list: the list says nothing of having none
+    expect([pages.state.get().entries.length, pages.state.get().read]).toStrictEqual([0, false]);
     await pages.load();
-    expect(pages.state.get().entries).toHaveLength(1);
+    expect([pages.state.get().entries.length, pages.state.get().read]).toStrictEqual([1, true]);
     s.state.list = '[]';
     pages.released();
     await pages.load(true);
