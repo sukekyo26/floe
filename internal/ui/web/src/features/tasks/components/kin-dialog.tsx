@@ -3,12 +3,12 @@ import { useLayoutEffect, useRef, useState } from 'react';
 import { Button } from '@/components/button';
 import { Dialog, DialogActions, DialogClose, DialogHead } from '@/components/dialog';
 import { FIELD, TEXT } from '@/components/fields';
-import { focusRow } from '@/components/focus-places';
+import { focusRow, partButton } from '@/components/focus-places';
 import { PlusIcon } from '@/components/icons';
 import { useNameSuggest } from '@/components/name-suggest';
 import { getBoot } from '@/config/boot';
 import { freshTask as fresh0, type FreshTask } from '@/features/tasks/stores/fresh-task';
-import { kinActs as acts0, type KinActs } from '@/features/tasks/stores/kin-acts';
+import { kinActs as acts0, type KinActs, type KinBack } from '@/features/tasks/stores/kin-acts';
 import { askedProjects, KIN_FORMS, type KinFormName, type KinTask } from '@/features/tasks/utils/kin-forms';
 import { taskNames, taskOffer } from '@/features/tasks/utils/task-names';
 import { useHold } from '@/hooks/use-hold';
@@ -36,11 +36,12 @@ export interface KinDialogProps {
   readonly assign?: (url: string) => void;
 }
 
-// KinDialog is the modal of a task's family (ui.html #kin-dialog, openKin, saveKin): a new task on the task list, of one
-// form of fields whose form (KIN_FORMS) says what differs. The task is as the tasks read now have it, and so is the
-// name typed: a task there is said, and pressed, opened or not written as the form says; any other is written, as the
+// KinDialog is the modal of a task's family (ui.html #kin-dialog, openKin, saveKin): a new task on the task list, a
+// child or the parent of the task of a task's page, of one form of fields whose form (KIN_FORMS) says what differs.
+// The task is as the tasks read now have it, and so is the name typed: a task there is said, and pressed, opened or not written as the form says; any other is written, as the
 // modal shows it (new). What has changed since is refused, and said, with the modal open. Saved, it closes and the
-// focus goes to the row of what was made, marked fresh; closed otherwise, back to what opened it
+// focus goes where the form says (acts.back): the row of what was made, marked fresh, or the button of the family
+// card's part; closed otherwise, back to what opened it
 export function KinDialog({
   open,
   onClosed,
@@ -58,8 +59,8 @@ export function KinDialog({
   const [error, setError] = useState('');
   const nameField = useRef<HTMLInputElement>(null);
   const titleField = useRef<HTMLInputElement>(null);
-  // The row the focus goes to as it closes saved, set with the close
-  const saved = useRef<string | null>(null);
+  // Where the focus goes as it closes saved, set with the close
+  const saved = useRef<KinBack | null>(null);
   // A task's fields as they open: none of what was typed before, nor a field's blank mark (ui.html resetTaskForm)
   if (open !== was) {
     setWas(open);
@@ -138,7 +139,9 @@ export function KinDialog({
       assign(taskHref({ project, name: typed }));
       return;
     }
+    // Nothing to write, and so nothing to tell
     if (act === 'none') {
+      saved.current = acts.back(open.form, task, typed);
       onClosed();
       return;
     }
@@ -147,7 +150,7 @@ export function KinDialog({
         const res = await acts.write(open.form, task, typed, x, title.trim());
         if (res.status === 409) throw new Error(res.stale);
         if (!res.ok) throw new Error(res.text);
-        acts.done(open.form, task, typed);
+        acts.done(open.form, task, typed, x, res.rev);
         await pages.load();
       });
       if (!ran) return;
@@ -156,9 +159,9 @@ export function KinDialog({
       return;
     }
     // Closed and marked in one draw, after done changed the list's view: the row is drawn as the modal goes
-    const key = acts.back(open.form, task, typed);
-    saved.current = key;
-    if (key !== null) fresh.mark(key);
+    const back = acts.back(open.form, task, typed);
+    saved.current = back;
+    if ('row' in back) fresh.mark(back.row);
     onClosed();
   };
 
@@ -174,9 +177,10 @@ export function KinDialog({
       hold={hold}
       labelledBy="kin-heading"
       afterClose={() => {
-        const key = saved.current;
+        const back = saved.current;
         saved.current = null;
-        return key !== null && focusRow(key);
+        if (back === null) return false;
+        return 'row' in back ? focusRow(back.row) : partButton(back.part === 'up');
       }}
     >
       <form

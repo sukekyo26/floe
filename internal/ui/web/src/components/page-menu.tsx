@@ -190,7 +190,10 @@ export function PageMenu({
         label={t('ui_task_out_named', title)}
         // Off its task at once, with the way back in the toast; from the keys, the focus on the way back
         onSelect={(e) =>
-          void actions.takePageOff(a, { focus: e.detail === 0, prepare: (slug) => prepareTaskOut(slug, back) })
+          void actions.takePageOff(a, {
+            focus: e.detail === 0,
+            prepare: (slug) => prepareTaskOut(slug, back, a.task?.category ?? ''),
+          })
         }
       >
         {t('ui_task_out')}

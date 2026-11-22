@@ -64,20 +64,45 @@ export const restoreFocus = (slug: string) => (): void => {
   else if (!focusRow(entry(slug))) focusOn(document.querySelector('#frame-actions > [data-testid=archive]'));
 };
 
-// prepareTaskOut takes, before the page leaves its task, the row next to it; back is the menu it was taken off from.
-// Put back, the focus goes to its row, or back; on Escape, back, or the row next to it
-// LIMIT: on a task's page ui.html goes on to the category's add button and the task's edit button: P6b adds them here
-export function prepareTaskOut(slug: string, back: () => boolean): TaskOutFocus {
+// shownOf is el, unless it or what holds it is hidden
+const shownOf = (el: Element | null): Element | null => (el && !el.closest('[hidden]') ? el : null);
+
+// categoryAdd is the add button of a category's heading on a task's page
+const categoryAdd = (category: string): Element | null =>
+  document.querySelector(`#list > li[data-key="${CSS.escape(`group:${category}`)}"] [data-testid=category-add]`);
+
+// prepareTaskOut takes, before the page leaves its task, the row next to it; back is the menu it was taken off from,
+// category the one it was on. Put back, the focus goes to its row, or back; on Escape, back, the row next to it, its
+// category's add button, or the task's edit button (ui.html 5850): the last two are a task's page's alone
+export function prepareTaskOut(slug: string, back: () => boolean, category: string): TaskOutFocus {
   const next = rowNearby(rowsNow(), entry(slug));
   return {
     done: () => {
       if (!focusRow(entry(slug))) back();
     },
     away: () => {
-      if (!back()) focusRow(next);
+      if (!back() && !focusRow(next) && !focusOn(categoryAdd(category)))
+        focusOn(shownOf(document.getElementById('task-edit')));
     },
   };
 }
+
+// partButton gives the focus to the button of a task's family card's part as drawn now: the parent's (up), or the
+// children's (ui.html partButton), telling whether one was there
+export const partButton = (up: boolean): boolean =>
+  focusOn(
+    (up ? ['task-parent-change', 'task-parent-add'] : ['task-child'])
+      .map((id) => shownOf(document.getElementById(id)))
+      .find((b) => b !== null) ?? null,
+  );
+
+// kinButton gives the focus to a row of a task's family card: the button that takes task off (unlink), or its link
+export const kinButton = (task: string, unlink: boolean): boolean =>
+  focusOn(
+    document.querySelector(
+      `#task-family [data-testid=${unlink ? 'unlink' : 'kin-row'}][data-task="${CSS.escape(task)}"]`,
+    ),
+  );
 
 // unreadFocus is where the focus goes when the toast of the page shown had it as it was marked unread: the search
 // modal's field, or the menu of the bar over the page
