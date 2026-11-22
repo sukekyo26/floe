@@ -40,6 +40,7 @@ export type MessageKey =
   | 'ui_child_take_button'
   | 'ui_clear_filters'
   | 'ui_clear_selection'
+  | 'ui_clear_short'
   | 'ui_close'
   | 'ui_copied'
   | 'ui_copy_failed'

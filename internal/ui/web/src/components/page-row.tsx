@@ -87,19 +87,24 @@ export function PageRow({
       style={style as CSSProperties}
       className="group/row relative grid animate-rise grid-cols-[12px_minmax(0,1fr)_auto_auto] gap-x-2.5 gap-y-0.75 rounded-menu border border-line bg-panel px-4 py-1.75 shadow-sm transition-[background-color,box-shadow] duration-150 [animation-delay:calc(var(--i,0)*16ms)] [grid-template-areas:'lead_title_title_time'_'._sub_actions_actions'] not-first:mt-1.5 hover:bg-hover has-checked:bg-sel has-checked:hover:bg-sel has-[[data-testid=title]:focus-visible]:outline-2 has-[[data-testid=title]:focus-visible]:-outline-offset-2 has-[[data-testid=title]:focus-visible]:outline-faint has-[details[open]]:z-3 has-[+li[data-testid=tree]]:animate-none has-[+li[data-testid=tree]]:rounded-b-none has-[+li[data-testid=tree]]:border-b-0 aria-current:border-new aria-current:not-has-checked:bg-new-soft aria-current:not-has-checked:hover:bg-new-soft data-kept:animate-none can-hover:not-has-[+li[data-testid=tree]]:hover:shadow-md [[data-testid=group]+&]:mt-0"
     >
-      <label
-        data-testid="pick"
-        className="group/pick relative z-1 hidden h-[1.4em] cursor-pointer place-items-center [grid-area:lead] in-data-selecting:grid"
-      >
-        <input
-          type="checkbox"
-          data-testid="sel"
-          checked={selected}
-          aria-label={t('ui_select_named', title)}
-          onChange={(e) => onSelect?.(e.currentTarget.checked)}
-          className="m-0 size-4 cursor-pointer appearance-none rounded-small border-[1.5px] border-box-line bg-panel transition-colors duration-120 group-hover/pick:border-ink checked:border-transparent checked:bg-ink checked:[background-image:var(--tick)] checked:[background-size:12px] checked:[background-position:center] checked:[background-repeat:no-repeat]"
-        />
-      </label>
+      {/* A row of no selection (a task's page) draws no box (ui.html 4418) */}
+      {onSelect ? (
+        <label
+          data-testid="pick"
+          className="group/pick relative z-1 hidden h-[1.4em] cursor-pointer place-items-center [grid-area:lead] in-data-selecting:grid"
+        >
+          <input
+            type="checkbox"
+            data-testid="sel"
+            checked={selected}
+            aria-label={t('ui_select_named', title)}
+            onChange={(e) => {
+              onSelect(e.currentTarget.checked);
+            }}
+            className="m-0 size-4 cursor-pointer appearance-none rounded-small border-[1.5px] border-box-line bg-panel transition-colors duration-120 group-hover/pick:border-ink checked:border-transparent checked:bg-ink checked:[background-image:var(--tick)] checked:[background-size:12px] checked:[background-position:center] checked:[background-repeat:no-repeat]"
+          />
+        </label>
+      ) : null}
       <span
         data-testid="lead"
         className="grid h-[1.4em] place-items-center text-muted [grid-area:lead] in-data-selecting:hidden [&>svg]:size-3.5"

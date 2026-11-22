@@ -10,6 +10,7 @@ import { ListRow } from '@/features/page-list/components/list-row';
 import { dayGroups } from '@/features/page-list/utils/list-days';
 import { emptyOf } from '@/features/page-list/utils/list-empty';
 import { keepNewSeen } from '@/features/page-list/stores/keep-new-seen';
+import { followList, selection as pageSelection, type Selection } from '@/features/page-list/stores/selection';
 import { NO_PICKS, tagPress } from '@/features/page-list/utils/list-shelf';
 import { useBackToRow } from '@/hooks/use-back-to-row';
 import { useMinute } from '@/hooks/use-minute';
@@ -32,9 +33,8 @@ export interface PageListProps {
   readonly pages?: Pages;
   readonly folders?: Folders;
   readonly openPage?: OpenPage;
+  readonly selection?: Selection;
 }
-
-const noneSelected = () => false;
 
 // PageList is the page list's rows (ui.html renderList): the entries the shelf and the search leave, newest first under
 // their days' headings, a folder open followed by its tree; or, with none to draw, the words why. The view "new" keeps
@@ -46,15 +46,18 @@ export function PageList({
   pages = pagePages,
   folders = pageFolders,
   openPage = pageOpen,
+  selection = pageSelection,
 }: PageListProps) {
   const state = useStore(query.query);
   const { read, entries: items } = useStore(pages.state);
   const { opened, listings } = useStore(folders.list);
   const picked = useStore(openPage.picked);
+  const selected = useStore(selection.selected);
   const now = useMinute();
   const { seen } = state;
 
   useEffect(() => keepNewSeen(query, pages), [query, pages]);
+  useEffect(() => followList(query, pages, selection), [query, pages, selection]);
 
   const shown = arrange(items, state, seen);
   // The same values and functions for every row through redraws, so that a row drawn once is not drawn again (memo)
@@ -76,8 +79,20 @@ export function PageList({
     const now = query.query.get();
     return arrange(pages.state.get().entries, now, now.seen);
   }, [query, pages]);
-  // LIMIT: no rows are selected yet (P5d gives the selection)
-  const presses = useRowPress({ selecting: noneSelected, drawn, openPage });
+  const selecting = useCallback(() => selection.selected.get().size > 0, [selection]);
+  const presses = useRowPress({ selecting, drawn, openPage });
+  const onPick = useCallback(
+    (slug: string) => {
+      selection.toggle(slug, true);
+    },
+    [selection],
+  );
+  const onRemoved = useCallback(
+    (slug: string) => {
+      selection.toggle(slug, false);
+    },
+    [selection],
+  );
   useOneColumn(openPage);
   const back = useCallback(() => {
     backToRow({ pages, openPage });
@@ -109,6 +124,10 @@ export function PageList({
             onTag={onTag}
             onFolder={onFolder}
             presses={presses}
+            selected={selected.has(a.slug)}
+            onSelect={selection.toggle}
+            onPick={onPick}
+            onRemoved={onRemoved}
           />
         ),
       });
@@ -141,7 +160,7 @@ export function PageList({
 
   return (
     <>
-      <Rows items={rows} selecting={false} pages={pages} />
+      <Rows items={rows} selecting={selected.size > 0} pages={pages} />
       <ListEmpty
         shown={emptyOf(items, state, seen, shown, read)}
         archived={items.filter((a) => a.archived).length}

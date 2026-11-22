@@ -111,6 +111,14 @@ export function moveRow(step: number): MovedTo | null {
   };
 }
 
+// tickRow presses the box of the row with the focus (ui.html 6933): hidden too, as the boxes are till one is ticked. A
+// row with no box (a tree's, a task's page's) does nothing
+export function tickRow(): void {
+  const row = [...document.querySelectorAll('#list > li[data-key]')].find((li) => li.contains(document.activeElement));
+  const box = row?.querySelector('[data-testid=sel]');
+  if (box instanceof HTMLElement) box.click();
+}
+
 interface BackDeps {
   order?: Order;
   pages?: Pages;

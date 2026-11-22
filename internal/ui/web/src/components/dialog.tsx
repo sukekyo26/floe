@@ -229,13 +229,15 @@ export function DialogActions({
 export function DialogClose({
   words = 'ui_close',
   focusOnOpen = false,
+  id,
 }: {
   readonly words?: MessageKey;
   readonly focusOnOpen?: boolean;
+  readonly id?: string;
 }) {
   const { close } = useDialog();
   return (
-    <Button closes focusOnOpen={focusOnOpen} onClick={close}>
+    <Button closes focusOnOpen={focusOnOpen} onClick={close} {...(id ? { id } : {})}>
       {t(words)}
     </Button>
   );

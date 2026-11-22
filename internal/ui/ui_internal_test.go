@@ -166,9 +166,12 @@ func builtinSources(t *testing.T) map[string]string {
 var (
 	// usedRe finds the keys ui.html names: .Msg "ui_x", alone ({{.Msg "ui_x"}}), with arguments or as one
 	// ({{.Msg "ui_x" (.Msg "ui_y")}}), t('ui_x') and the delete or unlink variants t(`ui_${kind(a)}_x`) and t(`ui_${now}_x`).
-	usedRe     = regexp.MustCompile(`\.Msg "(ui_\w+)"|'(ui_\w+)'|` + "`ui_\\$\\{\\w+(?:\\(\\w*\\))?\\}(\\w*)`")
-	jsVerbsRe  = regexp.MustCompile(`%(?:\[\d+\])?[sd%]`)
-	japaneseRe = regexp.MustCompile(`.{0,20}[\p{Hiragana}\p{Katakana}\p{Han}]+.{0,20}`)
+	usedRe = regexp.MustCompile(`\.Msg "(ui_\w+)"|'(ui_\w+)'|` + "`ui_\\$\\{\\w+(?:\\(\\w*\\))?\\}(\\w*)`")
+	// reactUsedRe finds the keys a React source names: 'ui_x', "ui_x" (a prop, words="ui_cancel") and the delete or
+	// unlink variants t(`ui_${kind}_x`).
+	reactUsedRe = regexp.MustCompile(`'(ui_\w+)'|"(ui_\w+)"|` + "`ui_\\$\\{\\w+(?:\\(\\w*\\))?\\}(\\w*)`")
+	jsVerbsRe   = regexp.MustCompile(`%(?:\[\d+\])?[sd%]`)
+	japaneseRe  = regexp.MustCompile(`.{0,20}[\p{Hiragana}\p{Katakana}\p{Han}]+.{0,20}`)
 	// elsewhereRe finds URLs of other hosts, in full or scheme-relative ("//host", '//host', (//host
 	// or =//host), wherever a page might load them from: an attribute, CSS or a script, its strings in any quotes.
 	elsewhereRe = regexp.MustCompile("(?i)(?:https?:|[\"'(=`])//[^\\s\"'()<>`]+")
@@ -181,17 +184,42 @@ func TestPageMessages(t *testing.T) {
 
 	formats := i18n.EnglishCatalog().Formats("ui_")
 	used := map[string]bool{}
-	for _, m := range usedRe.FindAllStringSubmatch(pageSource, -1) {
-		keys := []string{m[1] + m[2]}
-		if m[1]+m[2] == "" {
-			keys = []string{"ui_delete" + m[3], "ui_unlink" + m[3]}
-		}
-		for _, key := range keys {
-			used[key] = true
-			if _, ok := formats[key]; !ok {
-				t.Errorf("ui.html names %s, which no catalog has", key)
+	// name takes the keys source names, by re, each a key of the catalog: the delete or unlink variants both
+	name := func(file, source string, re *regexp.Regexp) {
+		for _, m := range re.FindAllStringSubmatch(source, -1) {
+			keys := []string{m[1] + m[2]}
+			if m[1]+m[2] == "" {
+				keys = []string{"ui_delete" + m[3], "ui_unlink" + m[3]}
+			}
+			for _, key := range keys {
+				used[key] = true
+				if _, ok := formats[key]; !ok {
+					t.Errorf("%s names %s, which no catalog has", file, key)
+				}
 			}
 		}
+	}
+	name("ui.html", pageSource, usedRe)
+	// The React screens name keys too (S422): until ui.html goes, one either names is used. Their sources but the
+	// generated list of every key and the tests; not the gallery, whose keys are no screen's
+	// LIMIT: a key in a comment is taken as used, as in ui.html. Read the build instead once every part is on a screen
+	src := files.NewRoot("web/src")
+	t.Cleanup(func() {
+		if err := src.Close(); err != nil {
+			t.Error(err)
+		}
+	})
+	err := fs.WalkDir(src, ".", func(file string, d fs.DirEntry, err error) error {
+		if err != nil || d.IsDir() || strings.Contains(file, ".test.") || "web/src/"+file == messagesGen ||
+			!strings.HasSuffix(file, ".ts") && !strings.HasSuffix(file, ".tsx") {
+			return err
+		}
+		b, err := src.ReadFile(file)
+		name("web/src/"+file, string(b), reactUsedRe)
+		return err
+	})
+	if err != nil {
+		t.Fatal(err)
 	}
 	// A state's word is named by its value in the table, as the page reads it.
 	for _, state := range store.States {
@@ -204,7 +232,7 @@ func TestPageMessages(t *testing.T) {
 	for _, lang := range i18n.Langs() {
 		for key, format := range i18n.New(lang).Formats("ui_") {
 			if !used[key] && lang == i18n.English {
-				t.Errorf("%s is not used by ui.html", key)
+				t.Errorf("%s is used by neither ui.html nor the React screens", key)
 			}
 			if rest := jsVerbsRe.ReplaceAllString(format, ""); strings.Contains(rest, "%") {
 				t.Errorf("%s %s: %q has a verb t() does not render", lang, key, format)

@@ -2,6 +2,7 @@ import { useLayoutEffect, useRef, useState } from 'react';
 
 import { Button } from '@/components/button';
 import { Dialog, DialogActions, DialogClose, DialogHead } from '@/components/dialog';
+import { FIELD, HINT, TEXT } from '@/components/fields';
 import { ChevronIcon, EditIcon } from '@/components/icons';
 import { saveEdit as pageSave, type EditSaved, type EditValues } from '@/features/page-edit/stores/save-edit';
 import { useHold } from '@/hooks/use-hold';
@@ -32,11 +33,6 @@ const valuesOf = (a: Page | null): EditValues => ({
   project: a?.project ?? '',
   description: a?.description ?? '',
 });
-
-const FIELD = 'grid gap-1.5 text-small font-semibold';
-const TEXT =
-  'h-9 w-full min-w-0 rounded-small border border-line bg-panel px-3 text-body font-normal text-fg shadow-sm placeholder:text-faint';
-const HINT = 'font-normal text-faint';
 
 // editNow is the folded row's words of what the slug and the project are, as typed
 export const editNow = (values: EditValues): string =>

@@ -446,6 +446,7 @@ var messagesEN = map[string]string{
 	"ui_selected_more":        " selected",
 	"ui_select_page":          "Select all shown",
 	"ui_clear_selection":      "Clear the selection",
+	"ui_clear_short":          "Clear",
 	"ui_select_named":         "Select %s",
 	"ui_not_found":            "This page is not here",
 	"ui_not_found_detail":     "The page %s has been deleted or renamed.",
