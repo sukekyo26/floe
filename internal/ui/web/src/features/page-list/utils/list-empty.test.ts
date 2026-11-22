@@ -22,8 +22,8 @@ const state = (change: Partial<ListState> = {}): ListState => ({
   q: '',
   ...change,
 });
-const of = (items: Page[], s: ListState, seen: ReadonlySet<string> = new Set(), ended = 1) =>
-  emptyOf(items, s, seen, arrange(items, s, seen), ended);
+const of = (items: Page[], s: ListState, seen: ReadonlySet<string> = new Set(), read = true) =>
+  emptyOf(items, s, seen, arrange(items, s, seen), read);
 
 describe(emptyOf, () => {
   it('says which words stand for the rows, by the view and what the shelf and the search leave', () => {
@@ -41,9 +41,9 @@ describe(emptyOf, () => {
     ]).toStrictEqual(['empty', 'all-archived', 'empty-new', 'empty-favorites', 'empty-archived', 'nomatch', null]);
   });
 
-  it('says nothing before the first read ends', () => {
+  it('says nothing before a list is taken', () => {
     expect.assertions(1);
-    expect(of([], state(), new Set(), 0)).toBeNull();
+    expect(of([], state(), new Set(), false)).toBeNull();
   });
 
   it('keeps the rows of the view "new" read since it was picked, without its empty words', () => {

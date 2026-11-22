@@ -8,7 +8,8 @@ import { ListEmpty } from '@/features/page-list/components/list-empty';
 import { ListRow } from '@/features/page-list/components/list-row';
 import { dayGroups } from '@/features/page-list/utils/list-days';
 import { emptyOf } from '@/features/page-list/utils/list-empty';
-import { NO_PICKS, tagPress, unseenSlugs } from '@/features/page-list/utils/list-shelf';
+import { keepNewSeen } from '@/features/page-list/stores/keep-new-seen';
+import { NO_PICKS, tagPress } from '@/features/page-list/utils/list-shelf';
 import { useMinute } from '@/hooks/use-minute';
 import { useStore } from '@/hooks/use-store';
 import { listQuery, type ListQuery } from '@/stores/list-query';
@@ -41,16 +42,13 @@ export function PageList({
   openPage = pageOpen,
 }: PageListProps) {
   const state = useStore(query.query);
-  const items = useStore(pages.state).entries;
-  const ended = useStore(pages.ended);
+  const { read, entries: items } = useStore(pages.state);
   const { opened, listings } = useStore(folders.list);
   const picked = useStore(openPage.picked);
   const now = useMinute();
   const { seen } = state;
 
-  useEffect(() => {
-    if (state.view === 'new') query.see(unseenSlugs(items));
-  }, [query, state.view, items]);
+  useEffect(() => keepNewSeen(query, pages), [query, pages]);
 
   const shown = arrange(items, state, seen);
   // The same values and functions for every row through redraws, so that a row drawn once is not drawn again (memo)
@@ -83,7 +81,8 @@ export function PageList({
         render: (kept) => (
           <ListRow
             page={a}
-            index={at}
+            // Past 30 the rise waits no longer (PageRow): a row added above leaves the rows below it as they were
+            index={Math.min(at, 30)}
             ranks={ranks}
             openers={openers}
             picked={isPicked(a.slug, '')}
@@ -120,7 +119,7 @@ export function PageList({
     <>
       <Rows items={rows} selecting={false} pages={pages} />
       <ListEmpty
-        shown={emptyOf(items, state, seen, shown, ended)}
+        shown={emptyOf(items, state, seen, shown, read)}
         archived={items.filter((a) => a.archived).length}
         onAdd={onAdd}
         onShowArchived={() => {

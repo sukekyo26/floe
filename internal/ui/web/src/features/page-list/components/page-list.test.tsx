@@ -1,5 +1,5 @@
 import { renderToString } from 'react-dom/server';
-import { describe, expect, it } from 'vitest';
+import { describe, expect, it, vi } from 'vitest';
 
 import type { Openers } from '@/components/page-menu';
 import { testBoot } from '@/components/test-boot';
@@ -18,7 +18,7 @@ const page = (slug: string, change: Partial<Page> = {}): Page => ({
   title: slug,
   description: '',
   createdAt: '',
-  updatedAt: new Date().toISOString(),
+  updatedAt: '2026-11-21T09:00:00Z',
   taskProject: 'proj',
   ...change,
 });
@@ -29,14 +29,16 @@ const tagOf = (html: string, start: string) => String(new RegExp(`${start}[^>]*>
 const drawList = (
   entries: Page[],
   {
-    ended = 1,
+    read = true,
     opened = [] as string[],
     listings = new Map<string, Listing | Error>(),
     picked = null as OpenAt | null,
   } = {},
 ) => {
   testBoot();
-  return renderToString(
+  // The day's headings from this time, the rows' times of the same day
+  vi.useFakeTimers({ now: new Date('2026-11-21T12:00:00Z') });
+  const html = renderToString(
     <PageList
       openers={openers}
       onAdd={none}
@@ -53,11 +55,13 @@ const drawList = (
           }),
         } as unknown as ListQuery
       }
-      pages={{ state: createStore({ entries }), ended: createStore(ended) } as unknown as Pages}
+      pages={{ state: createStore({ read, entries }) } as unknown as Pages}
       folders={{ list: createStore({ opened: new Set(opened), listings }) } as unknown as Folders}
       openPage={{ picked: createStore(picked) } as unknown as OpenPage}
     />,
   );
+  vi.useRealTimers();
+  return html;
 };
 
 describe(PageList, () => {
@@ -87,7 +91,7 @@ describe(PageList, () => {
     expect.assertions(2);
     const shown = (html: string) =>
       [...html.matchAll(/<div id="([^"]+)" data-testid="state"(?! hidden)/g)].map((m) => m[1]);
-    expect(shown(drawList([], { ended: 0 }))).toStrictEqual([]);
+    expect(shown(drawList([], { read: false }))).toStrictEqual([]);
     expect(shown(drawList([]))).toStrictEqual(['empty']);
   });
 });

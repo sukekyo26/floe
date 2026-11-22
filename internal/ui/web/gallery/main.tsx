@@ -146,7 +146,13 @@ const edit = (slug: string, change: Partial<Page>) => {
   shownPages.set(shownPages.get().map((p) => (p.slug === slug ? { ...p, ...change } : p)));
 };
 // The list as a read of the fake server would give it: the pages as they are now
-const listed = createStore({ entries: PAGES, tasks: { error: '', tasks: {}, raw: '' }, readWhy: '', drawWhy: '' });
+const listed = createStore({
+  read: true,
+  entries: PAGES,
+  tasks: { error: '', tasks: {}, raw: '' },
+  readWhy: '',
+  drawWhy: '',
+});
 shownPages.subscribe(() => {
   listed.set({ ...listed.get(), entries: shownPages.get() });
 });
@@ -163,7 +169,6 @@ const galleryPages = {
   readRev: () => 0,
   whileReading: () => null,
   state: listed,
-  ended: createStore(1),
   pressed: () => undefined,
   released: () => undefined,
 } as unknown as Pages;
@@ -399,21 +404,54 @@ const MANY: Page[] = Array.from({ length: 1000 }, (_, i) => ({
 // ListScene is the page list as the list screen will draw it, with the time of its last commit: with 1000 rows, pick a
 // row or wait a minute for the times, to measure what React draws anew
 function ListScene() {
-  const [many, setMany] = useState(false);
+  const [scene, setScene] = useState<'samples' | 'many' | 'none' | 'archived'>('samples');
   // Written as it is measured: a state would draw the list again, and measure that
   const took = useRef<HTMLSpanElement>(null);
+  const show = (next: typeof scene, pages: Page[]) => {
+    setScene(next);
+    shownPages.set(pages);
+  };
   return (
     <>
       <div className="mb-2 flex flex-wrap items-center gap-2">
         <Button
-          pressed={many}
+          pressed={scene === 'many'}
           onClick={() => {
-            setMany(!many);
             // Newest first, as the server gives them
-            shownPages.set(many ? PAGES : [...PAGES, ...MANY].sort((x, y) => y.updatedAt.localeCompare(x.updatedAt)));
+            show(
+              'many',
+              [...PAGES, ...MANY].sort((x, y) => y.updatedAt.localeCompare(x.updatedAt)),
+            );
           }}
         >
           1000 rows
+        </Button>
+        <Button
+          pressed={scene === 'none'}
+          onClick={() => {
+            show('none', []);
+          }}
+        >
+          No page
+        </Button>
+        <Button
+          pressed={scene === 'archived'}
+          onClick={() => {
+            show(
+              'archived',
+              PAGES.map((a) => ({ ...a, archived: true })),
+            );
+          }}
+        >
+          All archived
+        </Button>
+        <Button
+          pressed={scene === 'samples'}
+          onClick={() => {
+            show('samples', PAGES);
+          }}
+        >
+          The samples
         </Button>
         <Button
           onClick={() => {

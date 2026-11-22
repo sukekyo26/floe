@@ -27,7 +27,7 @@ export interface TreeRowProps {
 }
 
 // treeNote is what a directory says under its rows: why it was not read, that it was cut, that it is empty
-export function treeNote(l: Listing | Error): string {
+function treeNote(l: Listing | Error): string {
   if (l instanceof Error) return t('ui_folder_failed', l.message);
   const shown = l.dirs.length + l.files.length;
   if (l.more) return t('ui_folder_more', shown + l.more, shown);
@@ -67,7 +67,7 @@ export function TreeRow({
       aria-current={picked || undefined}
       data-archived={archived || undefined}
       style={style as CSSProperties}
-      className="group/tree relative flex items-center gap-2 border border-y-0 border-line bg-panel py-[0.2rem] ps-[calc(1.5rem+(var(--d)-1)*1.1rem)] pe-4 text-small transition-colors duration-150 not-has-[+li[data-testid=tree]]:rounded-b-menu not-has-[+li[data-testid=tree]]:border-b not-has-[+li[data-testid=tree]]:shadow-sm hover:bg-hover has-[a:focus-visible]:outline-2 has-[a:focus-visible]:-outline-offset-2 has-[a:focus-visible]:outline-faint has-[button:focus-visible]:outline-2 has-[button:focus-visible]:-outline-offset-2 has-[button:focus-visible]:outline-faint aria-current:bg-new-soft"
+      className="group/tree relative flex items-center gap-2 border border-y-0 border-line bg-panel py-[0.2rem] ps-[calc(1.5rem+(var(--d)-1)*1.1rem)] pe-4 text-small transition-colors duration-150 not-has-[+li[data-testid=tree]]:rounded-b-menu not-has-[+li[data-testid=tree]]:border-b not-has-[+li[data-testid=tree]]:shadow-sm hover:bg-hover has-[[data-testid=title]:focus-visible]:outline-2 has-[[data-testid=title]:focus-visible]:-outline-offset-2 has-[[data-testid=title]:focus-visible]:outline-faint aria-current:bg-new-soft"
     >
       <div className={`min-w-0 flex-1 ${item.kind === 'note' ? 'ps-[calc(0.875rem+0.35rem)] text-muted' : ''}`}>
         {item.kind === 'dir' ? (

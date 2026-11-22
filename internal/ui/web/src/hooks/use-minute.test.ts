@@ -4,10 +4,11 @@ import { createMinute } from '@/hooks/use-minute';
 
 describe(createMinute, () => {
   it('tells the time every minute while read, and stops with the last that reads it', () => {
-    expect.assertions(3);
+    expect.assertions(4);
     vi.useFakeTimers();
-    vi.setSystemTime(0);
+    vi.setSystemTime(30_000);
     const minute = createMinute();
+    expect(minute.get()).toBe(0);
     const told = vi.fn<() => void>();
     const stop = minute.subscribe(told);
     vi.advanceTimersByTime(60_000);

@@ -47,12 +47,12 @@ export function viewPress(state: ListState, view: View): Partial<Picks> | null {
   return viewLit(state, 'all') ? null : { view: 'all', ...NO_PICKS };
 }
 
-// chipPress is what a press of a chip changes (ui.html picker): what is picked, picked again, is let go
 // tagPress is what a row's tag narrows the list to: the tag, or nothing for the one picked already, which leaves the
 // list as it is (its selection too)
 export const tagPress = (state: ListState, name: string): Partial<Picks> | null =>
   state.tag === name ? null : { tag: name };
 
+// chipPress is what a press of a chip changes (ui.html picker): what is picked, picked again, is let go
 export const chipPress = (state: ListState, part: Part, value: string): Partial<Picks> => ({
   [part]: state[part] === value ? '' : value,
 });

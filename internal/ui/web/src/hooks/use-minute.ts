@@ -7,23 +7,18 @@ export interface Minute {
   subscribe: (listener: () => void) => () => void;
 }
 
-// createMinute is the time now, told every minute while one reads it: the clock runs from the first to the last that
-// listens
-export function createMinute(now: () => number = Date.now): Minute {
+// createMinute is the time now to the minute, told every minute while one reads it: the clock runs from the first to the
+// last that listens. A value to the minute stays the same between reads, as React asks of it, without being kept
+export function createMinute(now: () => number = () => Date.now()): Minute {
   const listeners = new Set<() => void>();
-  let at = now();
   let timer: ReturnType<typeof setInterval> | null = null;
   return {
-    get: () => at,
+    get: () => Math.floor(now() / MINUTE_MS) * MINUTE_MS,
     subscribe: (listener) => {
       listeners.add(listener);
-      if (timer === null) {
-        at = now();
-        timer = setInterval(() => {
-          at = now();
-          for (const l of [...listeners]) l();
-        }, MINUTE_MS);
-      }
+      timer ??= setInterval(() => {
+        for (const l of [...listeners]) l();
+      }, MINUTE_MS);
       return () => {
         listeners.delete(listener);
         if (listeners.size === 0 && timer !== null) {
