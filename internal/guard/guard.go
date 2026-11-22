@@ -34,7 +34,7 @@ type Guard struct {
 // sets it, so that garbage, even with GOGC=off, is collected before it reaches limit: only memory held stops.
 func Start(limit uint64, stop func(file string)) *Guard {
 	debug.SetMemoryLimit(min(debug.SetMemoryLimit(-1), int64(limit/4*3))) //nolint:gosec // G115: 512 MiB fits
-	g := &Guard{}
+	g := &Guard{file: atomic.Pointer[string]{}}
 	go g.watch(limit, stop)
 	return g
 }
@@ -47,7 +47,7 @@ func (g *Guard) Drawing(file string) {
 }
 
 func (g *Guard) watch(limit uint64, stop func(file string)) {
-	s := []metrics.Sample{{Name: total}, {Name: released}}
+	s := []metrics.Sample{{Name: total, Value: metrics.Value{}}, {Name: released, Value: metrics.Value{}}}
 	for range time.Tick(every) {
 		metrics.Read(s)
 		if s[0].Value.Uint64()-s[1].Value.Uint64() > limit {

@@ -6,9 +6,9 @@
 // LIMIT: a run of an expression has expr's default budget, 1e6: a list's item and a part split makes count 1,
 // and the text it makes a byte for each it adds: join all but its longest part, + the shorter text, toJSON,
 // replace and toBase64 of a text what they add to it, toJSON of keys and values or a list its whole text
-// (longer than the data, by its indentation and escapes). Over it, expr says memory budget exceeded. It
-// does not bound what a run allocates, as s + "x" adds 1 for a copy of s (S434). Set vm.VM's MemoryBudget
-// if templates need more.
+// (longer than the data, by its indentation and escapes). Over it, expr says memory budget exceeded. Set
+// vm.VM's MemoryBudget if templates need more. It does not bound what a run allocates (s + "x" counts 1
+// for a copy of s): guard bounds the memory of the whole drawing of a command instead.
 package rules
 
 import (

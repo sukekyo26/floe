@@ -160,7 +160,7 @@ that points your agent to it (floe skill install --help lists the agents).`,
 			return err //nolint:wrapcheck // a stdout write error needs no extra context
 		},
 	})
-	a := &app{env: env, out: out, warnings: nil, told: nil}
+	a := &app{env: env, out: out, warnings: nil, told: nil, guard: nil}
 	root.AddCommand(
 		a.archiveCmd(), a.checkCmd(), a.diagramCmd(),
 		a.guideCmd(),

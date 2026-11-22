@@ -116,6 +116,7 @@ Check each data file as its page is drawn: its YAML, its template and theme, the
 - The warnings of the pages drawn, advice on a better way to write them, are printed after the mistakes as `file:line:column: warning: message`; they leave the exit code as it is. [pages.md](pages.md#warnings) tells them.
 - Nothing is printed when every file is right and has no warning (exit code 0).
 - Nothing is written, and the server is not started, so a repository's CI can run it over its data files.
+- Drawing may hold up to 512 MiB of memory. Past it, floe stops and says so at the file it was drawing (`file: drawing it needed more than 512 MiB of memory, …`, exit code 1), without the mistakes of the files before it. A page that repeats a long text for each item, in an expression or in `page.html`, needs that much.
 - A file that is not a data file (`.yaml`, `.yml`) is refused.
 - A data file named twice (by two globs, or through a symlinked directory) is checked once, and told by the path it was first given as. Names that differ only in case are two names, even on a file system that ignores case.
 
@@ -139,6 +140,7 @@ floe render --check docs/*.yaml            # in CI: fails when a page was not wr
 - A page there is written over: keep the pages in version control to get one back.
 - The mistakes are printed as `floe check` prints them, and nothing is written until all are fixed (exit code 1). Nothing is written either when two data files would write the same page (`a/spec.yaml` and `b/spec.yaml` with one `--out-dir`, or `spec.yaml` and `spec.yml`).
 - Nothing is published, and the server is not started.
+- Drawing is held to 512 MiB of memory as `floe check`'s is, the pages together, as all are drawn before any is written: render fewer files at once when it stops.
 - A page depends on the floe, the templates and the icons that draw it: in CI, use the floe version and the templates the pages were written with, and write the pages again when you upgrade.
 - A `script` of the page runs without the sandbox of the server's pages when the file is opened; its CSP still cuts off `fetch`, XHR, images from elsewhere and forms. A link between pages (`/a/<slug>/`) does not work in a file: link the files relatively.
 
