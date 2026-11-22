@@ -65,9 +65,10 @@ describe(PageList, () => {
     expect.assertions(2);
     const listings = new Map<string, Listing | Error>([
       ['f', { dirs: ['d'], files: [{ file: 'x.html', updatedAt: '' }], more: 0 }],
+      ['f:d', { dirs: [], files: [{ file: 'd/y.html', updatedAt: '' }], more: 0 }],
     ]);
     const html = drawList([page('a'), page('f', { folder: true, path: '/p' })], {
-      opened: ['f'],
+      opened: ['f', 'f:d'],
       listings,
       picked: { slug: 'f', file: 'x.html', v: 0 },
     });
@@ -76,6 +77,7 @@ describe(PageList, () => {
       'entry:a',
       'entry:f',
       'dir:f:d',
+      'page:f:d/y.html',
       'page:f:x.html',
     ]);
     expect(tagOf(html, '<li data-testid="tree" data-key="page:f:x.html"')).toContain('aria-current="true"');
