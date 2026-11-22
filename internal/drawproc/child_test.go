@@ -50,7 +50,11 @@ func serve(mode string) int {
 		guard.Start(64<<20, func(string) { os.Exit(drawproc.Stopped) }).Drawing("")
 	}
 	var kept [][]byte
-	err = drawproc.Serve(os.Stdin, os.Stdout, build, func(job drawproc.Job) drawproc.Result {
+	limit := time.Hour
+	if mode == "selftime" {
+		limit = time.Second
+	}
+	err = drawproc.Serve(os.Stdin, os.Stdout, build, limit, os.Exit, func(job drawproc.Job) drawproc.Result {
 		switch {
 		case mode == "hold" && job.File == "hold.yaml":
 			// 512 MiB at most, so that a watch that fails ends.
@@ -58,7 +62,7 @@ func serve(mode string) int {
 				kept = append(kept, bytes.Repeat([]byte{1}, 1<<20))
 				time.Sleep(2 * time.Millisecond)
 			}
-		case mode == "sleep" && job.File == "slow.yaml":
+		case (mode == "sleep" || mode == "selftime") && job.File == "slow.yaml":
 			time.Sleep(time.Minute)
 		case mode == "crash" && job.File == "crash.yaml":
 			panic("broken")
@@ -76,11 +80,18 @@ func serve(mode string) int {
 func children(t *testing.T, build, mode string) *drawproc.Child {
 	t.Helper()
 
+	return childrenFor(t, build, mode, 2*time.Second)
+}
+
+// childrenFor is children, for limit a page.
+func childrenFor(t *testing.T, build, mode string, limit time.Duration) *drawproc.Child {
+	t.Helper()
+
 	self, err := os.Executable()
 	if err != nil {
 		t.Fatal(err)
 	}
-	return drawproc.NewChild(build, 2*time.Second, func(ctx context.Context) *exec.Cmd {
+	return drawproc.NewChild(build, limit, func(ctx context.Context) *exec.Cmd {
 		cmd := exec.CommandContext(ctx, self)
 		cmd.Env = []string{child + "=" + mode, "GOMEMLIMIT=2GiB", "PATH=" + os.Getenv("PATH")}
 		return cmd
@@ -161,6 +172,11 @@ func TestChildStops(t *testing.T) {
 		if c.key != "" && (key != c.key || file != c.file) {
 			t.Errorf("%s: drawn with %v, want %s at %s", c.mode, first.Err, c.key, c.file)
 		}
+		// The seconds are a number, which each language words.
+		if ja := usererr.Tell(i18n.New(i18n.Tag("ja")), first.Err); c.key == "draw_time" &&
+			(len(ja.Mistakes) != 1 || !strings.Contains(ja.Mistakes[0].Text, "2 秒")) {
+			t.Errorf("%s: told in Japanese %+v, want 2 秒", c.mode, ja)
+		}
 		if next.Err != nil || len(next.Page) == 0 {
 			t.Errorf("%s: the next page drawn with %v", c.mode, next.Err)
 		}
@@ -206,5 +222,43 @@ func TestChildRefuses(t *testing.T) {
 	}
 	if errors.Is(t.Context().Err(), context.Canceled) {
 		t.Error("the test's context ended")
+	}
+}
+
+// goneOff is a timer that went off as the answer came: its Stop runs what it times, and is too late.
+type goneOff struct{ f func() }
+
+func (g goneOff) Stop() bool {
+	g.f()
+	return false
+}
+
+// A page whose time runs out as its answer comes is drawn, and the next page is drawn by a new child: not by the
+// one ended, as draw_time.
+func TestChildTimeAtAnswer(t *testing.T) {
+	t.Parallel()
+
+	d := children(t, build, "draw")
+	d.SetAfter(func(_ time.Duration, f func()) drawproc.Stopper { return goneOff{f: f} })
+	s := d.Start(t.Context())
+	defer s.Close()
+	for i := range 2 {
+		if got := s.Draw(job("p.yaml", page)); got.Err != nil || len(got.Page) == 0 {
+			t.Errorf("page %d drawn with %v", i, got.Err)
+		}
+	}
+}
+
+// A child that draws one page longer than its own limit ends itself, its server's limit far off, as one whose
+// server is gone does: draw_time.
+func TestChildEndsItself(t *testing.T) {
+	t.Parallel()
+
+	s := childrenFor(t, build, "selftime", time.Minute).Start(t.Context())
+	defer s.Close()
+	began := time.Now()
+	got := s.Draw(job("slow.yaml", page))
+	if key, file := mistake(got); key != "draw_time" || file != "slow.yaml" || time.Since(began) > 20*time.Second {
+		t.Errorf("drawn with %v after %v, want draw_time at slow.yaml within 20 seconds", got.Err, time.Since(began))
 	}
 }

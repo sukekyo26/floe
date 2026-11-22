@@ -20,6 +20,12 @@ import (
 // own fall).
 const Stopped = 3
 
+// TimedOut is the exit code of floe __draw that drew one page past ChildLimit, its server gone or late to end it.
+const TimedOut = 4
+
+// ChildLimit is how long floe __draw draws one page before it ends itself: past Limit, by when its server ends it.
+const ChildLimit = Limit + 10*time.Second
+
 // Children is how many floe __draw the server runs at once, and so twice the memory one may hold, at most.
 const Children = 2
 
@@ -94,8 +100,10 @@ func (a answer) result() Result {
 }
 
 // Serve is floe __draw: it reads requests from r until it ends, and writes to w the answer of each, drawn by draw;
-// build is its own, and a request of another is refused (draw_build).
-func Serve(r io.Reader, w io.Writer, build string, draw func(Job) Result) error {
+// build is its own, and a request of another is refused (draw_build). A page drawn longer than limit ends the
+// process with exit(TimedOut), as the server would end it, for one whose server is gone: the child reads that only
+// between pages, where r ends.
+func Serve(r io.Reader, w io.Writer, build string, limit time.Duration, exit func(code int), draw func(Job) Result) error {
 	dec, enc := jsontext.NewDecoder(r), jsontext.NewEncoder(w)
 	for {
 		var req request
@@ -107,7 +115,9 @@ func Serve(r io.Reader, w io.Writer, build string, draw func(Job) Result) error 
 		}
 		res := failed(usererr.NewWhole("draw_build"))
 		if req.Build == build {
+			timer := time.AfterFunc(limit, func() { exit(TimedOut) })
 			res = draw(req.Job)
+			timer.Stop()
 		}
 		if err := jsonv2.MarshalEncode(enc, answerOf(res)); err != nil {
 			return fmt.Errorf("write what was drawn: %w", err)
@@ -125,12 +135,23 @@ type Child struct {
 	command func(ctx context.Context) *exec.Cmd
 	slots   chan struct{}
 	limit   time.Duration
+	after   func(d time.Duration, f func()) stopper // time.AfterFunc, another in a test
+}
+
+// stopper is a timer, which Stop stops before it goes off (true) or after (false).
+type stopper interface {
+	Stop() bool
+}
+
+// afterFunc is time.AfterFunc as a stopper.
+func afterFunc(d time.Duration, f func()) stopper {
+	return time.AfterFunc(d, f)
 }
 
 // NewChild is the Child of the server of build, which runs floe __draw by command, the process ended with ctx, and
 // ends it when it draws one page longer than limit (Limit).
 func NewChild(build string, limit time.Duration, command func(ctx context.Context) *exec.Cmd) *Child {
-	return &Child{build: build, command: command, slots: make(chan struct{}, Children), limit: limit}
+	return &Child{build: build, command: command, slots: make(chan struct{}, Children), limit: limit, after: afterFunc}
 }
 
 // Start waits for one of the Children slots, or for ctx to end.
@@ -175,7 +196,7 @@ func (s *session) Draw(job Job) Result {
 	}
 	p := s.proc
 	p.out.left = answerLimit
-	timer := time.AfterFunc(s.c.limit, func() {
+	timer := s.c.after(s.c.limit, func() {
 		p.timedOut.Store(true)
 		p.cancel()
 	})
@@ -184,11 +205,15 @@ func (s *session) Draw(job Job) Result {
 	if err == nil {
 		err = jsonv2.UnmarshalDecode(p.dec, &a)
 	}
-	timer.Stop()
-	if err == nil {
+	if timer.Stop() && err == nil {
 		return a.result()
 	}
 	s.proc = nil
+	if err == nil {
+		// The time ran out as the answer came: the answer stands, and the child, ended or being ended, goes.
+		p.end(s.ctx, job.File, s.c.limit, nil) //nolint:errcheck // the page was drawn
+		return a.result()
+	}
 	return failed(p.end(s.ctx, job.File, s.c.limit, err))
 }
 
@@ -239,14 +264,17 @@ func (p *proc) end(ctx context.Context, file string, limit time.Duration, err er
 	waited := p.cmd.Wait()
 	var exited *exec.ExitError
 	switch {
-	case p.timedOut.Load():
-		return usererr.NewAt(file, 0, 0, "draw_time", fmt.Sprintf("%d seconds", int(limit/time.Second)))
+	case p.timedOut.Load(), errors.As(waited, &exited) && exited.ExitCode() == TimedOut:
+		return usererr.NewAt(file, 0, 0, "draw_time", int(limit/time.Second))
 	case errors.As(waited, &exited) && exited.ExitCode() == Stopped:
 		return usererr.NewAt(file, 0, 0, "draw_memory", fmt.Sprintf("%d MiB", memoryLimit>>20))
 	case ctx.Err() != nil:
 		return errEnded
 	case errors.Is(err, errTooLarge):
 		return fmt.Errorf("draw %s: %w", file, errTooLarge)
+	}
+	if waited == nil {
+		return fmt.Errorf("draw %s: floe __draw answered what cannot be read: %w: %s", file, err, p.stderr.String())
 	}
 	return fmt.Errorf("draw %s: floe __draw ended (%w): %w: %s", file, waited, err, p.stderr.String())
 }

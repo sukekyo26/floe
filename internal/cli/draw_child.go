@@ -40,7 +40,12 @@ func (a *app) drawChild() error {
 	k, kitErr := a.kit(true)
 	icons := a.iconStore()
 	//nolint:wrapcheck // what it read or wrote, which says so
-	return drawproc.Serve(a.env.Stdin, a.out, build, func(job drawproc.Job) drawproc.Result {
+	exit := a.env.Exit
+	if exit == nil {
+		// floe run in a test's process, which ends nothing.
+		exit = func(int) {}
+	}
+	return drawproc.Serve(a.env.Stdin, a.out, build, drawproc.ChildLimit, exit, func(job drawproc.Job) drawproc.Result {
 		if kitErr != nil {
 			return drawproc.Result{Page: nil, Warnings: nil, Err: kitErr, Read: nil, Places: nil}
 		}
