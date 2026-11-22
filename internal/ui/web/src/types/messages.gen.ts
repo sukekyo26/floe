@@ -426,6 +426,7 @@ export type MessageKey =
   | 'ui_url_max'
   | 'ui_url_moved'
   | 'ui_url_new_hint'
+  | 'ui_url_not_link'
   | 'ui_url_there'
   | 'ui_url_unadded'
   | 'ui_url_up_named'

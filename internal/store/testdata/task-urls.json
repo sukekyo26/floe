@@ -1,0 +1,155 @@
+[
+ {
+  "url": "https://a.example",
+  "store": true,
+  "modal": true
+ },
+ {
+  "url": "HTTP://A.EXAMPLE",
+  "store": true,
+  "modal": true
+ },
+ {
+  "url": "  https://a.example  ",
+  "store": true,
+  "modal": true
+ },
+ {
+  "url": "http:",
+  "store": false,
+  "modal": false
+ },
+ {
+  "url": "http://",
+  "store": false,
+  "modal": false
+ },
+ {
+  "url": "http:foo",
+  "store": false,
+  "modal": true,
+  "differs": "lenient"
+ },
+ {
+  "url": "http:/foo",
+  "store": false,
+  "modal": true,
+  "differs": "lenient"
+ },
+ {
+  "url": "http:\\\\a\\b",
+  "store": false,
+  "modal": true,
+  "differs": "lenient"
+ },
+ {
+  "url": "//a.example",
+  "store": false,
+  "modal": false
+ },
+ {
+  "url": "a.example",
+  "store": false,
+  "modal": false
+ },
+ {
+  "url": "a.example/x",
+  "store": false,
+  "modal": false
+ },
+ {
+  "url": "ftp://a.example",
+  "store": false,
+  "modal": false
+ },
+ {
+  "url": "mailto:x@a.example",
+  "store": false,
+  "modal": false
+ },
+ {
+  "url": "javascript:alert(1)",
+  "store": false,
+  "modal": false
+ },
+ {
+  "url": "https://a b",
+  "store": false,
+  "modal": false
+ },
+ {
+  "url": "https://a/b c",
+  "store": true,
+  "modal": true
+ },
+ {
+  "url": "https://a\tb",
+  "store": false,
+  "modal": true,
+  "differs": "lenient"
+ },
+ {
+  "url": "https://a:99999",
+  "store": true,
+  "modal": false,
+  "differs": "strict"
+ },
+ {
+  "url": "https://a:80x",
+  "store": false,
+  "modal": false
+ },
+ {
+  "url": "http://1.2.3.256",
+  "store": true,
+  "modal": false,
+  "differs": "strict"
+ },
+ {
+  "url": "http://xn--",
+  "store": true,
+  "modal": true
+ },
+ {
+  "url": "https://例え.jp",
+  "store": true,
+  "modal": true
+ },
+ {
+  "url": "https://[::1]",
+  "store": true,
+  "modal": true
+ },
+ {
+  "url": "https://[::1",
+  "store": false,
+  "modal": false
+ },
+ {
+  "url": "https://user@a.example",
+  "store": true,
+  "modal": true
+ },
+ {
+  "url": "https://a.example?q#f",
+  "store": true,
+  "modal": true
+ },
+ {
+  "url": "https://a%zz",
+  "store": false,
+  "modal": false
+ },
+ {
+  "url": "https://a<b",
+  "store": true,
+  "modal": false,
+  "differs": "strict"
+ },
+ {
+  "url": "https://%41.example",
+  "store": false,
+  "modal": true,
+  "differs": "lenient"
+ }
+]
