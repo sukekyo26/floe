@@ -8,7 +8,13 @@ import { testBoot } from '@/components/test-boot';
 const draw = (held: boolean) => {
   testBoot();
   return renderToString(
-    <Dialog id="d" open onClosed={() => undefined} hold={{ held, focus: { current: null } }} labelledBy="d-title">
+    <Dialog
+      id="d"
+      open
+      onClosed={() => undefined}
+      hold={{ held, focus: { current: null }, holding: () => held }}
+      labelledBy="d-title"
+    >
       <DialogHead icon={null} titleId="d-title" title="Title" />
       <DialogActions>
         <DialogClose />

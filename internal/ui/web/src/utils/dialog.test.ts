@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 
-import { backdropCloses, heldKey } from '@/utils/dialog';
+import { backdropCloses, heldKey, stopsKey } from '@/utils/dialog';
 
 describe(backdropCloses, () => {
   it('closes on a press down and up on the backdrop of a modal not held, and on no other', () => {
@@ -21,5 +21,16 @@ describe(heldKey, () => {
     expect(heldKey({ ...key, key: 'r', ctrlKey: true })).toBe(true);
     expect(heldKey({ ...key, key: 'Enter', isComposing: true })).toBe(true);
     expect(heldKey({ ...key, key: 'Escape' })).toBe(false);
+  });
+});
+
+describe(stopsKey, () => {
+  it('stops a key once held, drawn or only begun in the same task, unless it passes', () => {
+    expect.assertions(4);
+    expect(stopsKey(false, false, false)).toBe(false);
+    expect(stopsKey(true, false, false)).toBe(true);
+    // Held in the task the key came in, before the modal is drawn held (TestUIDialogHold:248)
+    expect(stopsKey(false, true, false)).toBe(true);
+    expect(stopsKey(true, true, true)).toBe(false);
   });
 });

@@ -5,10 +5,11 @@ import { Dialog, DialogActions, DialogClose, DialogHead } from '@/components/dia
 import { barMenuId, focusOn } from '@/components/focus-places';
 import { SearchIcon } from '@/components/icons';
 import { HitRow } from '@/components/hit-row';
+import { KeyHint } from '@/components/key-hint';
 import { BarActions } from '@/components/page-actions';
 import type { Openers } from '@/components/page-menu';
 import { RowSub } from '@/components/row-sub';
-import { FIND_ROWS, findCount, findHits } from '@/features/find/utils/find-hits';
+import { findCount, findHits } from '@/features/find/utils/find-hits';
 import { FIRST, findKey, findReached, type Reached } from '@/features/find/utils/find-state';
 import { useMovedOverlay } from '@/hooks/use-moved-overlay';
 import { closeMenu } from '@/hooks/use-open-menu';
@@ -18,12 +19,11 @@ import { menus } from '@/stores/menus';
 import { order as pageOrder, type Order } from '@/stores/order';
 import { pages as pagePages, type Pages } from '@/stores/pages';
 import { nextReached } from '@/utils/list-keys';
+import { FIND_ROWS } from '@/utils/search';
 import { projectOrder } from '@/utils/project-order';
 
 const FOOT = 'find-actions';
 const FOOT_MENU = barMenuId(FOOT);
-
-const KBD = 'rounded-small border border-line bg-subtle px-1.5 py-0.75 font-mono text-label leading-none text-muted';
 
 interface FindDialogProps {
   readonly open: boolean;
@@ -185,19 +185,8 @@ export function FindDialog({
           <span id="find-lead" className="flex flex-wrap items-center gap-x-2 gap-y-0.75">
             <span id="find-cut">{t(count.key, count.n)}</span>
             {/* Without rows the arrows have nothing to move over; the line keeps its height */}
-            <span
-              data-testid="k"
-              className={`inline-flex items-center gap-1 whitespace-nowrap narrow:hidden ${shown.length ? '' : 'invisible'}`}
-            >
-              <kbd className={KBD}>↑</kbd>
-              <kbd className={KBD}>↓</kbd> {t('ui_find_pick')}
-            </span>
-            <span
-              data-testid="k"
-              className={`inline-flex items-center gap-1 whitespace-nowrap narrow:hidden ${shown.length ? '' : 'invisible'}`}
-            >
-              <kbd className={KBD}>Enter</kbd> {t('ui_find_open')}
-            </span>
+            <KeyHint keys={['↑', '↓']} words={t('ui_find_pick')} shown={shown.length > 0} />
+            <KeyHint keys={['Enter']} words={t('ui_find_open')} shown={shown.length > 0} />
           </span>
         }
       />

@@ -64,6 +64,8 @@ function ToastView({ toast, store }: { readonly toast: Toast; readonly store: To
       data-testid="toast"
       data-timed={toast.timed || undefined}
       data-page={toast.page || undefined}
+      // Its id, for the focus to be given to its button from outside once a modal over it closes (Set the task's way off)
+      data-toast={toast.id}
       onPointerEnter={
         button
           ? () => {

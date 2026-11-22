@@ -734,7 +734,7 @@ var messagesJA = map[string]string{
 	"ui_task_edit_named":       "%s を編集",
 	"ui_task_gone_edit":        "このタスクはほかで削除されました。閉じて、タスク一覧で確かめてください",
 	"ui_task_categories":       "カテゴリ",
-	"ui_task_categories_hint":  "ドラッグか ↑↓ で並べ替え、＋で追加。削除できるのはページの無いカテゴリだけ。名前は変更できない",
+	"ui_task_categories_hint":  "ドラッグか ↑↓ で並べ替え。削除できるのはページの無いカテゴリだけ。名前は変更できない",
 	"ui_task_categories_none":  "カテゴリはまだありません",
 	"ui_category_no_pages":     "ページなし",
 	"ui_category_up_named":     "「%s」を上へ",

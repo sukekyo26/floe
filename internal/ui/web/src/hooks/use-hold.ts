@@ -1,4 +1,5 @@
 import { useCallback, useRef, useState, type RefObject } from 'react';
+import { flushSync } from 'react-dom';
 
 export interface Hold {
   held: boolean;
@@ -9,6 +10,9 @@ export interface Hold {
   // once let go); the caller closes the modal after. It tells whether write ran: a second one while held does not run,
   // and its caller leaves the modal, its words and its focus as they are (ui.html returns before holding: 2533)
   whileHeld: (write: () => Promise<void>) => Promise<boolean>;
+  // holding tells the hold is on from the moment whileHeld is called, before the modal is drawn held: a key in that
+  // task is stopped all the same (Dialog)
+  holding: () => boolean;
 }
 
 // holdNext is a write asked for: it runs and holds unless a hold is on
@@ -18,6 +22,9 @@ export const holdNext = (holding: boolean): { holding: true; runs: boolean } => 
 // holdDialog is, so that a second submit before the modal is drawn held does not run
 // LIMIT: a write that never answers (the store's lock held by a stopped process) holds the modal till the page is
 // loaded again. Let a write be called off if that comes to trouble someone
+// whileHeld draws the hold at once (flushSync), so that the modal is held within the task it is called in, after an
+// await too (the move's Yes, ui.html's disabled set at once): call it from an event's handler or what follows its
+// await, never from a draw or an effect, where React cannot draw
 export function useHold(): Hold {
   const [held, setHeld] = useState(false);
   const holding = useRef(false);
@@ -27,7 +34,9 @@ export function useHold(): Hold {
     if (!next.runs) return false;
     holding.current = next.holding;
     focus.current = document.activeElement;
-    setHeld(true);
+    flushSync(() => {
+      setHeld(true);
+    });
     try {
       await write();
       return true;
@@ -36,5 +45,6 @@ export function useHold(): Hold {
       setHeld(false);
     }
   }, []);
-  return { held, focus, whileHeld };
+  const holdingNow = useCallback(() => holding.current, []);
+  return { held, focus, whileHeld, holding: holdingNow };
 }

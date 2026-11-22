@@ -5,7 +5,7 @@ import type { Hold } from '@/hooks/use-hold';
 import { t } from '@/lib/t';
 import type { FocusBack } from '@/types/focus';
 import type { MessageKey } from '@/types/messages.gen';
-import { backdropCloses, heldKey, type PressDown } from '@/utils/dialog';
+import { backdropCloses, heldKey, stopsKey, type PressDown } from '@/utils/dialog';
 
 interface DialogScope {
   // close is the one way a modal closes (ui.md: closeDialog), for its close buttons
@@ -29,7 +29,7 @@ export interface DialogProps {
   // animation frame later, and keys meanwhile would reach the closed modal's field, or the one under it
   readonly afterClose?: FocusBack | undefined;
   // hold holds it while it writes (useHold)
-  readonly hold?: Pick<Hold, 'held' | 'focus'>;
+  readonly hold?: Pick<Hold, 'held' | 'focus' | 'holding'>;
   readonly labelledBy: string;
   readonly describedBy?: string;
   // width: base 32rem, mid 40rem (the settings' list), wide 64rem (the settings' themes)
@@ -59,7 +59,8 @@ const PLACE = {
   fill: 'm-auto max-h-(--tall) [--tall:calc(100dvh-32px)]',
 } as const;
 
-const NOT_HELD = { held: false, focus: { current: null } } as const;
+// A modal that never writes holds nothing: as before holding was told
+const NOT_HELD = { held: false, focus: { current: null }, holding: () => false } as const;
 
 // Dialog is a modal: a dialog shown by showModal(), its head, body and foot in one fieldset, which a hold disables
 // whole (its close buttons too), so that nothing closes it, sends again or starts another write; what follows the write
@@ -158,7 +159,7 @@ export function Dialog({
           down.current = null;
         }}
         onKeyDownCapture={(e) => {
-          if (!held || heldKey(e.nativeEvent)) return;
+          if (!stopsKey(held, hold.holding(), heldKey(e.nativeEvent))) return;
           e.preventDefault();
           e.stopPropagation();
         }}

@@ -39,6 +39,8 @@ export interface IconButtonProps {
   readonly task?: string | undefined;
   readonly hidden?: boolean | undefined;
   readonly disabled?: boolean | undefined;
+  // unpressable: reached by the keys and pressed, it says why it does nothing (aria-disabled: a category with pages)
+  readonly unpressable?: boolean | undefined;
   readonly onClick?: MouseEventHandler<HTMLElement> | undefined;
   readonly onBlur?: FocusEventHandler<HTMLElement> | undefined;
   // ref holds a button the focus is given back to as it stays through redraws (the tag line's)
@@ -86,11 +88,12 @@ export function IconButton({
   task,
   hidden,
   disabled,
+  unpressable,
   ref,
   onClick,
   onBlur,
 }: IconButtonProps) {
-  const className = `${DISPLAY[display]} items-center border border-transparent ${raised ? 'bg-panel shadow-sm ring-1 ring-line' : 'bg-transparent'} text-muted no-underline transition-colors duration-150 hover:bg-subtle disabled:cursor-default disabled:bg-transparent disabled:text-muted disabled:opacity-35 aria-pressed:[&_svg]:fill-current data-armed:border-armed-line data-armed:bg-danger-soft data-armed:font-[650] data-armed:text-danger data-on:bg-ink data-on:text-on-ink data-on:hover:bg-ink-hover data-on:hover:text-on-ink ${size === 'item' ? 'min-h-9 w-full justify-start gap-2.5 rounded-[calc(var(--radius-menu)-var(--spacing-menu-pad))] px-2.5 py-1.75 text-start text-small leading-[1.35] [&_svg]:size-4 [&_svg]:shrink-0' : `justify-center gap-1.5 rounded-full ${ROUND[size].pad} data-on:rounded-[50%] ${ROUND[size].svg} ${ROUND[size].box}`} ${tone === 'star' ? 'hover:text-star aria-pressed:text-star' : tone === 'danger' ? 'hover:text-danger aria-pressed:text-fg' : 'hover:text-fg aria-pressed:text-fg'}`;
+  const className = `${DISPLAY[display]} items-center border border-transparent ${raised ? 'bg-panel shadow-sm ring-1 ring-line' : 'bg-transparent'} text-muted no-underline transition-colors duration-150 hover:bg-subtle disabled:cursor-default disabled:bg-transparent disabled:text-muted disabled:opacity-35 aria-disabled:opacity-35 aria-pressed:[&_svg]:fill-current data-armed:border-armed-line data-armed:bg-danger-soft data-armed:font-[650] data-armed:text-danger data-on:bg-ink data-on:text-on-ink data-on:hover:bg-ink-hover data-on:hover:text-on-ink ${size === 'item' ? 'min-h-9 w-full justify-start gap-2.5 rounded-[calc(var(--radius-menu)-var(--spacing-menu-pad))] px-2.5 py-1.75 text-start text-small leading-[1.35] [&_svg]:size-4 [&_svg]:shrink-0' : `justify-center gap-1.5 rounded-full ${ROUND[size].pad} data-on:rounded-[50%] ${ROUND[size].svg} ${ROUND[size].box}`} ${tone === 'star' ? 'hover:text-star aria-pressed:text-star' : tone === 'danger' ? 'hover:text-danger aria-pressed:text-fg' : 'hover:text-fg aria-pressed:text-fg'}`;
   const common = {
     id,
     'data-testid': testid,
@@ -128,6 +131,7 @@ export function IconButton({
       data-armed={armed ? 'true' : undefined}
       data-tagged={tagged ? 'true' : undefined}
       disabled={disabled}
+      aria-disabled={unpressable ? 'true' : undefined}
       onClick={onClick}
     >
       {children}

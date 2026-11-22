@@ -35,6 +35,13 @@ export interface TasksChange {
   [field: string]: unknown;
 }
 
+// A page a write of pages and their tasks touched, with the task it was on before, as the store found it under its
+// lock (store's offTask, offCategory): '' or left out when it was on none
+export interface PageWritten extends Page {
+  offTask?: string;
+  offCategory?: string;
+}
+
 export interface TasksAnswer {
   ok: boolean;
   status: number;
@@ -43,7 +50,7 @@ export interface TasksAnswer {
   rev: number | null;
   // The refusal with what to do next, for a modal that can save again
   stale: string;
-  pages: Page[];
+  pages: PageWritten[];
   written: TaskWritten[];
 }
 
@@ -60,9 +67,9 @@ export async function changeTasks(client: Client, body: TasksChange): Promise<Ta
   });
   const text = res.ok ? '' : await res.text();
   let written: TaskWritten[] = [];
-  let pages: Page[] = [];
+  let pages: PageWritten[] = [];
   if (res.ok) {
-    const answer = (await res.json()) as { tasks: TaskWritten[]; pages: Page[] };
+    const answer = (await res.json()) as { tasks: TaskWritten[]; pages: PageWritten[] };
     written = answer.tasks;
     pages = answer.pages;
   }

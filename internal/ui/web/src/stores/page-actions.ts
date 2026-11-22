@@ -33,6 +33,8 @@ export interface ArchiveCall {
   restoreFocus: () => void;
 }
 
+export type TakenOff = { reason: string; toast?: undefined } | { reason: ''; toast: number };
+
 export interface PageActions {
   toggleFavorite: (a: Page) => Promise<void>;
   setArchived: (a: Page, to: boolean, call: ArchiveCall) => Promise<void>;
@@ -40,6 +42,9 @@ export interface PageActions {
   removePage: (a: Page, removed: () => void) => Promise<void>;
   togglePin: (a: Page) => Promise<void>;
   takePageOff: (a: Page, call: { focus?: boolean; prepare: (slug: string) => TaskOutFocus }) => Promise<void>;
+  // takeOff takes the page off its task and gives the toast its way back, saying and reading nothing: the reason it was
+  // refused, or the toast's id (Set the task's way off, which says it in its modal and reads held)
+  takeOff: (a: Page, prepare: (slug: string) => TaskOutFocus, call?: { focus?: boolean }) => Promise<TakenOff>;
   // copyPath writes path to the clipboard: true once written
   copyPath: (path: string) => Promise<boolean>;
   // markUnreadSaid marks slug unread and says so; unreadFocus is where the focus goes if the toast it takes the place of
@@ -140,6 +145,40 @@ export function createPageActions({
     }
   }
 
+  // LIMIT: put on another task since, the page is moved back unasked, the toast not saying the task it left. Ask and
+  // say it as Set the task does if that comes to trouble someone
+  // LIMIT: a write of the screen's own since, a page put on the task say, refuses it too. Take back the screen's own
+  // writes too if that comes to trouble someone
+  async function takeOff(
+    a: Page,
+    prepare: (slug: string) => TaskOutFocus,
+    { focus = false }: { focus?: boolean } = {},
+  ): Promise<TakenOff> {
+    const name = a.task?.name ?? '';
+    const category = a.task?.category ?? '';
+    const where = prepare(a.slug);
+    const reason = await tasks.changePageTask(a.slug, { task: '', category: '' });
+    if (reason) return { reason };
+    // The way back is of the task as the toast shows it: its rev as read now, or new when it has no row. A page
+    // whole's load reads no tasks
+    if (boot().screen === 'frame') await pages.rereadTasks();
+    const known = Object.hasOwn(pages.state.get().tasks.tasks[a.taskProject] ?? {}, name);
+    const seen = known ? { new: false, rev: pages.readRev(a.taskProject, name) } : { new: true };
+    const toast = undoToast(
+      t('ui_task_out_done', titleOf(a), name),
+      {
+        undo: async () => {
+          const res = await tasks.putPageOn(a, name, seen, category);
+          return { ok: res.ok, text: res.status === 409 ? res.stale : res.text };
+        },
+        done: where.done,
+        away: where.away,
+      },
+      { focus },
+    );
+    return { reason: '', toast };
+  }
+
   return {
     toggleFavorite: async (a) => {
       const reason = await writes.patchPage(a.slug, { favorite: !a.favorite });
@@ -176,38 +215,15 @@ export function createPageActions({
       toasts.toast(t(a.task?.pin ? 'ui_unpinned' : 'ui_pinned', titleOf(a)));
       await pages.load();
     },
-    // LIMIT: put on another task since, the page is moved back unasked, the toast not saying the task it left. Ask and
-    // say it as Set the task does if that comes to trouble someone
-    // LIMIT: a write of the screen's own since, a page put on the task say, refuses it too. Take back the screen's own
-    // writes too if that comes to trouble someone
     takePageOff: async (a, { focus = false, prepare }) => {
-      const name = a.task?.name ?? '';
-      const category = a.task?.category ?? '';
-      const where = prepare(a.slug);
-      const reason = await tasks.changePageTask(a.slug, { task: '', category: '' });
-      if (reason) {
-        notice.say(t('ui_save_failed', reason));
+      const off = await takeOff(a, prepare, { focus });
+      if (off.reason) {
+        notice.say(t('ui_save_failed', off.reason));
         return;
       }
-      // The way back is of the task as the toast shows it: its rev as read now, or new when it has no row. A page
-      // whole's load reads no tasks
-      if (boot().screen === 'frame') await pages.rereadTasks();
-      const known = Object.hasOwn(pages.state.get().tasks.tasks[a.taskProject] ?? {}, name);
-      const seen = known ? { new: false, rev: pages.readRev(a.taskProject, name) } : { new: true };
-      undoToast(
-        t('ui_task_out_done', titleOf(a), name),
-        {
-          undo: async () => {
-            const res = await tasks.putPageOn(a, name, seen, category);
-            return { ok: res.ok, text: res.status === 409 ? res.stale : res.text };
-          },
-          done: where.done,
-          away: where.away,
-        },
-        { focus },
-      );
       await pages.load();
     },
+    takeOff,
     copyPath: async (path) => {
       try {
         await write(path);
