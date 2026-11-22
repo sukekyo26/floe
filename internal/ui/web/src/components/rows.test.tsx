@@ -7,7 +7,13 @@ import { testBoot } from '@/components/test-boot';
 const items: RowItem[] = [
   { kind: 'group', key: 'group:Today', heading: 'Today' },
   { kind: 'row', key: 'entry:a', titled: true, render: (kept) => <li key="a">{kept ? 'kept' : 'new'}</li> },
-  { kind: 'group', key: 'group:Plans', heading: 'Plans', add: { onAdd: () => undefined }, empty: 'none yet' },
+  {
+    kind: 'group',
+    key: 'group:Plans',
+    heading: 'Plans',
+    add: { onAdd: () => undefined, label: 'Add a page to Plans' },
+    empty: 'none yet',
+  },
 ];
 
 describe(Rows, () => {

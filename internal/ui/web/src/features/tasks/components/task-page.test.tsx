@@ -117,6 +117,27 @@ describe(TaskPageRows, () => {
       /data-key="group:empty"[^>]*><div role="heading" aria-level="2">empty<\/div>.*data-testid="category-empty"/s,
     );
   });
+
+  it('heads no category first, as each category, named in words of its own, with no page too', () => {
+    expect.assertions(3);
+    boot();
+    const html = renderToString(
+      <TaskPageRows
+        task={task('#1', { categories: ['plan'], pages: [page('a', { task: { name: '#1', category: 'plan' } })] })}
+        openers={openers}
+        onAddPage={none}
+      />,
+    );
+    expect([...html.matchAll(/data-key="([^"]*)"/g)].map((m) => m[1])).toStrictEqual([
+      'group:',
+      'group:plan',
+      'entry:a',
+    ]);
+    expect(html).toMatch(
+      /data-key="group:"[^>]*><div role="heading" aria-level="2">ui_category_none:undefined<\/div><button[^>]*aria-label="ui_page_add_no_category:undefined".*?data-testid="category-empty"/s,
+    );
+    expect(html).toMatch(/aria-label="ui_page_add_named:plan"/);
+  });
 });
 
 describe(TaskNone, () => {

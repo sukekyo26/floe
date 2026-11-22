@@ -7,7 +7,7 @@ import { PlusIcon } from '@/components/icons';
 import { KeyHint } from '@/components/key-hint';
 import { RowSub } from '@/components/row-sub';
 import { moveAsk as ask0, type MoveAsk } from '@/features/tasks/stores/move-ask';
-import { addHits, addSaid, hereBadge, pageFrom, type AddTo } from '@/features/tasks/utils/add-page';
+import { addHits, addSaid, addTitle, hereBadge, pageFrom, type AddTo } from '@/features/tasks/utils/add-page';
 import { useHold, type Hold } from '@/hooks/use-hold';
 import { useStore } from '@/hooks/use-store';
 import { t } from '@/lib/t';
@@ -179,7 +179,7 @@ function AddPageBody({
       <DialogHead
         icon={<PlusIcon />}
         titleId="add-page-title"
-        title={t('ui_page_add_named', to.category)}
+        title={addTitle(to.category)}
         lead={
           <span id="add-page-lead" className="flex flex-wrap items-center gap-x-2 gap-y-0.75">
             <span id="add-page-target">{[task?.name, task?.title].filter(Boolean).join(' ')}</span>

@@ -72,4 +72,11 @@ describe(createTaskWrites, () => {
     await expect(writes.writeTask('p', 'x', { new: true })).resolves.toMatchObject({ ok: true, rev: 4 });
     expect(called).toStrictEqual(['takeTasks x']);
   });
+
+  it('puts a page on no category by sending the category empty, not leaving it out', async () => {
+    expect.assertions(1);
+    const { writes, sent } = made('tasks', Response.json({ tasks: [], pages: [] }));
+    await writes.putPageOn({ slug: 'memo' }, '#12', { new: false, rev: 7 }, '');
+    expect(sent).toStrictEqual(['{"slugs":["memo"],"task":"#12","category":"","new":false,"rev":7}']);
+  });
 });

@@ -8,6 +8,7 @@ import { RowSub } from '@/components/row-sub';
 import { Rows, type RowItem } from '@/components/rows';
 import { TagPill } from '@/components/tag-pill';
 import { TreeRow } from '@/components/tree-row';
+import { addTitle, groupName } from '@/features/tasks/utils/add-page';
 import { taskGroups } from '@/features/tasks/utils/task-page';
 import { pageTitlePress, useRowPress } from '@/hooks/use-row-press';
 import { useStore } from '@/hooks/use-store';
@@ -22,7 +23,7 @@ import { treeItems } from '@/utils/tree-items';
 export interface TaskPageRowsProps {
   readonly task: TaskOf | null;
   readonly openers: Openers;
-  // onAddPage opens the modal that puts a page on the category (P6c's)
+  // onAddPage opens the modal that puts a page on the category, '' for none (P6c's)
   readonly onAddPage: (task: TaskOf, category: string) => void;
   readonly pages?: Pages;
   readonly folders?: Folders;
@@ -33,10 +34,10 @@ export interface TaskPageRowsProps {
 const NO_RANKS: ReadonlyMap<string, number> = new Map();
 const nothingSelected = () => false;
 
-// TaskPageRows is the rows of a task's page (ui.html renderTaskPage's drawRows): under its categories in their order,
-// each with its way to add a page, before them what is on no category of it. As the page list's rows but for what
-// a task's page leaves out: no box nor "Select", no way to its own task or to a tag's list, the project's pill; an
-// archived page stays, dimmed and badged
+// TaskPageRows is the rows of a task's page (ui.html renderTaskPage's drawRows): under no category, then its categories
+// in their order, each with its way to add a page. As the page list's rows but for what a task's page leaves out: no
+// box nor "Select", no way to its own task or to a tag's list, the project's pill; an archived page stays, dimmed and
+// badged
 export function TaskPageRows({
   task,
   openers,
@@ -61,16 +62,17 @@ export function TaskPageRows({
   const rows: RowItem[] = [];
   let index = 0;
   for (const g of groups) {
-    const { heading } = g;
-    if (heading !== undefined && task)
+    const { category } = g;
+    if (task)
       rows.push({
         kind: 'group',
-        key: `group:${heading}`,
-        heading,
+        key: `group:${category}`,
+        heading: groupName(category),
         add: {
           onAdd: () => {
-            onAddPage(task, heading);
+            onAddPage(task, category);
           },
+          label: addTitle(category),
         },
         ...(g.entries.length === 0 ? { empty: t('ui_category_empty') } : {}),
       });

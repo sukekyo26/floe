@@ -97,7 +97,7 @@ describe('pageTask, a parent and a child taken off while unreadable', () => {
 });
 
 describe(taskGroups, () => {
-  it('puts what is on no category of the task first, then each category in order, empty too, archived last', () => {
+  it('puts no category first, with what is on no category of the task, then each category in order, empty too, archived last', () => {
     expect.assertions(1);
     const on = (slug: string, category: string, createdAt: string, archived = false) =>
       page(slug, { createdAt, archived, task: { name: '#1', category } });
@@ -109,11 +109,16 @@ describe(taskGroups, () => {
       }),
     );
     expect(groups.map((g) => ({ ...g, entries: g.entries.map((a) => a.slug) }))).toStrictEqual([
-      { entries: ['x', 'n'] },
-      { heading: 'b', entries: ['b1'] },
-      { heading: 'a', entries: ['a1', 'a2', 'a0'] },
-      { heading: 'empty', entries: [] },
+      { category: '', entries: ['x', 'n'] },
+      { category: 'b', entries: ['b1'] },
+      { category: 'a', entries: ['a1', 'a2', 'a0'] },
+      { category: 'empty', entries: [] },
     ]);
+  });
+
+  it('keeps no category with no page, as each category', () => {
+    expect.assertions(1);
+    expect(taskGroups(task('#1', { pages: [], archived: [] }))).toStrictEqual([{ category: '', entries: [] }]);
   });
 });
 
