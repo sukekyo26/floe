@@ -51,7 +51,9 @@ describe(DiffToc, () => {
     const html = renderToString(
       <DiffToc sections={[]} section={-1} onPlace={() => undefined} width={240} innerWidth={1200} toc={toc()} />,
     );
-    expect(/<div data-testid="col-foot" class="([^"]*)"/.exec(html)?.[1]).toMatch(/^(?!.*wide:hidden).*ps-foot-pad/);
+    expect(/<div data-testid="col-foot" class="([^"]*)"/.exec(html)?.[1]).toMatch(
+      /^(?!.*wide:hidden)(?=.*\bpe-foot-pad\b).*ps-foot-pad/,
+    );
     expect(/<button[^>]*id="diff-toc-show"[^>]*class="([^"]*)"/.exec(html)?.[1]).toContain('print:hidden');
   });
 });
