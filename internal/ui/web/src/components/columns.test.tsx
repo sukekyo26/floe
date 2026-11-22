@@ -85,7 +85,8 @@ describe(Columns, () => {
 
   it('lays the list’s column out alone, all the rest drawn but hidden', () => {
     expect.assertions(4);
-    const html = drawn('taskList', '', false, true);
+    // The shelf kept folded, as its button would show then
+    const html = drawn('taskList', '{"open":false}', false, true);
     expect(ids(html)).toStrictEqual(ids(drawn('taskList')));
     expect(tag(html, 'manage')).toMatch(
       /grid-cols-\[minmax\(0,1fr\)\] grid-rows-\[minmax\(0,1fr\)\] \[&amp;&gt;#shelf\]:hidden/,

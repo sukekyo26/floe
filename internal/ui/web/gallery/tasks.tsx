@@ -128,7 +128,7 @@ const SCENES = [
 // The scenes, over all: a gallery's, not the screen's
 function Scenes() {
   return (
-    <nav className="fixed top-1 right-1 z-50 flex max-w-[60vw] flex-wrap gap-1 rounded-small bg-ink/80 p-1 text-label">
+    <nav className="fixed bottom-1 left-1 z-50 flex max-w-[60vw] flex-wrap gap-1 rounded-small bg-ink/80 p-1 text-label">
       {SCENES.map(([search, words]) => (
         <a key={search} href={search} className="rounded-small px-1.5 text-on-ink">
           {words}
@@ -184,7 +184,9 @@ if (el !== null && boot) {
       {params.get('scene') === 'suggest' ? (
         <Suggest />
       ) : (
-        <TaskListScreen reader={<ReaderPane at={null} page={null} keys={new Set()} onKey={() => undefined} />} />
+        <div className="flex h-dvh flex-col">
+          <TaskListScreen reader={<ReaderPane at={null} page={null} keys={new Set()} onKey={() => undefined} />} />
+        </div>
       )}
       <Toasts />
     </StrictMode>,
