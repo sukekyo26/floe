@@ -1,5 +1,6 @@
 import { client as pageClient, type Client } from '@/lib/api-client';
-import { sendRead, type ReadMark } from '@/lib/pages';
+import { sendRead } from '@/lib/pages';
+import type { ReadMark } from '@/types/page';
 import { createStore, type Store } from '@/lib/store';
 import { t } from '@/lib/t';
 import { notice as pageNotice, type Notice } from '@/stores/notice';
