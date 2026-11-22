@@ -4,7 +4,8 @@ import { ChevronIcon, CopyIcon, DoneIcon, OpenIcon, TreeDirIcon, TreePageIcon } 
 import { IconButton } from '@/components/icon-button';
 import { useCopied } from '@/components/page-menu';
 import { t } from '@/lib/t';
-import { ago, fmt } from '@/lib/time';
+import { Ago } from '@/components/ago';
+import { fmt } from '@/lib/time';
 import { pageActions as pageActionStore, type PageActions } from '@/stores/page-actions';
 import type { CssVars } from '@/utils/css-vars';
 import { pageHref, rawHref } from '@/utils/page-urls';
@@ -108,7 +109,7 @@ export function TreeRow({
         dateTime={item.kind === 'page' ? item.updatedAt : undefined}
         className="flex-none font-mono text-label leading-none whitespace-nowrap text-muted"
       >
-        {item.kind === 'page' ? ago(item.updatedAt) : ''}
+        {item.kind === 'page' ? <Ago iso={item.updatedAt} /> : null}
       </time>
       <div
         data-testid="actions"

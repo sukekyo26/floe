@@ -2,7 +2,7 @@
 // served by Vite's dev server alone (just web-gallery), never built into dist
 import './gallery.css';
 
-import { Profiler, StrictMode, useState, type ReactNode } from 'react';
+import { Profiler, StrictMode, useRef, useState, type ReactNode } from 'react';
 import { createRoot } from 'react-dom/client';
 
 import { BackLink } from '@/components/back-link';
@@ -399,7 +399,8 @@ const MANY: Page[] = Array.from({ length: 1000 }, (_, i) => ({
 // row or wait a minute for the times, to measure what React draws anew
 function ListScene() {
   const [many, setMany] = useState(false);
-  const [ms, setMs] = useState(0);
+  // Written as it is measured: a state would draw the list again, and measure that
+  const took = useRef<HTMLSpanElement>(null);
   return (
     <>
       <div className="mb-2 flex flex-wrap items-center gap-2">
@@ -407,7 +408,8 @@ function ListScene() {
           pressed={many}
           onClick={() => {
             setMany(!many);
-            shownPages.set(many ? PAGES : [...PAGES, ...MANY]);
+            // Newest first, as the server gives them
+            shownPages.set(many ? PAGES : [...PAGES, ...MANY].sort((x, y) => y.updatedAt.localeCompare(x.updatedAt)));
           }}
         >
           1000 rows
@@ -421,13 +423,15 @@ function ListScene() {
         >
           Pick a row
         </Button>
-        <span className="font-mono text-label text-muted">last commit {ms.toFixed(1)} ms</span>
+        <span ref={took} className="font-mono text-label text-muted">
+          last commit
+        </span>
       </div>
       <div className="max-h-[34rem] overflow-auto rounded-small border border-line bg-bg">
         <Profiler
           id="page-list"
           onRender={(_id, _phase, actual) => {
-            setMs(actual);
+            if (took.current) took.current.textContent = `last commit ${actual.toFixed(1)} ms`;
           }}
         >
           <PageList

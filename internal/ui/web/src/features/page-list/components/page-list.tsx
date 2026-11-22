@@ -1,4 +1,4 @@
-import { useEffect } from 'react';
+import { useCallback, useEffect, useMemo } from 'react';
 
 import type { Openers } from '@/components/page-menu';
 import { Rows, type RowItem } from '@/components/rows';
@@ -53,11 +53,22 @@ export function PageList({
   }, [query, state.view, items]);
 
   const shown = arrange(items, state, seen);
-  const ranks = projectOrder(items);
+  // The same values and functions for every row through redraws, so that a row drawn once is not drawn again (memo)
+  const ranks = useMemo(() => projectOrder(items), [items]);
+  const onTag = useCallback(
+    (name: string) => {
+      const change = tagPress(query.query.get(), name);
+      if (change) query.filter(change);
+    },
+    [query],
+  );
+  const onFolder = useCallback(
+    (slug: string) => {
+      void folders.toggle(slug, '');
+    },
+    [folders],
+  );
   const isPicked = (slug: string, file: string) => picked?.slug === slug && picked.file === file;
-  const toggle = (slug: string, dir: string) => {
-    void folders.toggle(slug, dir);
-  };
   const rows: RowItem[] = [];
   let index = 0;
   for (const day of dayGroups(shown, new Date(now), getBoot().lang)) {
@@ -79,13 +90,8 @@ export function PageList({
             unread={unseen(a)}
             kept={kept}
             folderOpen={opened.has(a.slug)}
-            onTag={(name) => {
-              const change = tagPress(state, name);
-              if (change) query.filter(change);
-            }}
-            onFolder={(slug) => {
-              toggle(slug, '');
-            }}
+            onTag={onTag}
+            onFolder={onFolder}
           />
         ),
       });
@@ -102,7 +108,7 @@ export function PageList({
               folder={folder}
               picked={item.kind === 'page' && isPicked(a.slug, item.file)}
               onToggle={(path) => {
-                toggle(a.slug, path);
+                void folders.toggle(a.slug, path);
               }}
             />
           ),

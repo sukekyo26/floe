@@ -2,7 +2,8 @@ import type { CSSProperties, MouseEventHandler, ReactNode } from 'react';
 
 import { FolderMark, LinkMark } from '@/components/icons';
 import { t } from '@/lib/t';
-import { ago, fmt } from '@/lib/time';
+import { Ago } from '@/components/ago';
+import { fmt } from '@/lib/time';
 import type { Page } from '@/types/page';
 import type { CssVars } from '@/utils/css-vars';
 import { kindOf } from '@/utils/list-view';
@@ -119,7 +120,7 @@ export function PageRow({
         dateTime={time}
         className="text-right font-mono text-label leading-[1.9] whitespace-nowrap text-muted tabular-nums [grid-area:time]"
       >
-        {ago(time)}
+        <Ago iso={time} />
       </time>
       <span
         data-testid="sub"
