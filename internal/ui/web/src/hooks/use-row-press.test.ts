@@ -105,6 +105,7 @@ describe(rowPresses, () => {
       nativeEvent: { isComposing: false, keyCode: 13 },
       currentTarget: { hasAttribute: (name: string) => name === 'href', href: 'http://x/a/b/' },
     } as unknown as KeyboardEvent<HTMLAnchorElement>;
+    presses.key({ slug: 'b', file: '' }, { ...enter, key: 'a' });
     presses.key({ slug: 'b', file: '' }, enter);
     expect(went).toStrictEqual(['http://x/a/b/']);
     expect(kept).toHaveLength(1);
