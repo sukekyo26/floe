@@ -126,6 +126,8 @@ func (a *app) drawing() (store.Drawing, error) {
 var drawTime = drawproc.Limit
 
 // drawChildren is the Drawer of the server of build: floe __draw, the binary exe, with the settings the server has.
+// LIMIT: floe __draw reads one's own parts, themes and templates itself, as the server does each second: one changed
+// in between is drawn with as it is now, a second's difference, as the server's own drawing had.
 func (a *app) drawChildren(build, exe string) *drawproc.Child {
 	env := a.serverEnv()
 	return drawproc.NewChild(build, drawTime, func(ctx context.Context) *exec.Cmd {

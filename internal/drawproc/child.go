@@ -117,6 +117,9 @@ func Serve(r io.Reader, w io.Writer, build string, draw func(Job) Result) error 
 
 // Child is the Drawer of the server: each session runs floe __draw, command, one more after one that stopped, and
 // ends it when it takes longer than Limit for a page; Children sessions at once.
+// LIMIT: a session holds its slot until it is closed: a rebuild holds one all along, and two pages that never end hold
+// both for Limit, every other drawing (a theme's sample too) waiting. Give a rebuild a slot a page if that comes to
+// matter.
 type Child struct {
 	build   string
 	command func(ctx context.Context) *exec.Cmd
