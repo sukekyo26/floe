@@ -5,8 +5,8 @@
 //
 // LIMIT: a run of an expression has expr's default budget, 1e6: a list's item and a part split makes count 1,
 // and the text toJSON, join, replace, toBase64 and + make a byte (toJSON longer than the data, by its
-// indentation and escapes). Over it, expr says memory budget exceeded. It does not bound what a run allocates: + counts the
-// shorter text alone (S434). Set vm.VM's MemoryBudget if templates need more.
+// indentation and escapes). Over it, expr says memory budget exceeded. It does not bound what a run
+// allocates: + counts the shorter text alone (S434). Set vm.VM's MemoryBudget if templates need more.
 package rules
 
 import (
