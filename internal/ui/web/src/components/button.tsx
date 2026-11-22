@@ -1,4 +1,11 @@
-import { createContext, use, type KeyboardEventHandler, type MouseEventHandler, type ReactNode } from 'react';
+import {
+  createContext,
+  use,
+  type FocusEventHandler,
+  type KeyboardEventHandler,
+  type MouseEventHandler,
+  type ReactNode,
+} from 'react';
 
 type ButtonSize = 'bar' | 'foot';
 
@@ -18,6 +25,11 @@ interface ButtonShape {
   readonly wraps?: boolean;
   // hideFrom is the width it is gone from (the bar's new pages, which the shelf's views say there)
   readonly hideFrom?: 'wide';
+  // quiet: no ground and no line, a ground under the pointer (the bar of the selected); danger: red words (a delete);
+  // armed: waiting for a second press, on red (data-armed). None changes its room: where it stands gives that
+  readonly quiet?: boolean;
+  readonly tone?: 'danger';
+  readonly armed?: boolean;
 }
 
 interface ButtonActs {
@@ -33,6 +45,8 @@ interface ButtonActs {
   readonly slug?: string | undefined;
   readonly onClick?: MouseEventHandler<HTMLButtonElement>;
   readonly onKeyDown?: KeyboardEventHandler<HTMLButtonElement>;
+  // onBlur lets go of a wait for a second press as the focus leaves (the bulk delete)
+  readonly onBlur?: FocusEventHandler<HTMLButtonElement>;
 }
 
 // href makes it a link of the same shape (ui.html a.btn: the way back of a page not found), which takes none of what
@@ -58,9 +72,9 @@ export function Button(props: ButtonProps) {
     testid,
     label,
   } = props;
-  const { closes, focusOnOpen, wraps, slug, onKeyDown, hideFrom } = props;
+  const { closes, focusOnOpen, wraps, slug, onKeyDown, onBlur, hideFrom, quiet = false, tone, armed = false } = props;
   const size = named ?? use(ButtonSizeOf);
-  const className = `inline-flex items-center justify-center gap-1.25 rounded-small border no-underline transition-[background-color,border-color,filter] duration-150 disabled:cursor-progress disabled:opacity-60 [&_svg]:size-3.75 ${wraps ? 'min-h-8 px-2.5 py-1.25 text-start text-small wrap-anywhere' : size === 'foot' ? 'h-9 px-3.5 text-body whitespace-nowrap' : 'h-8 px-2.5 text-small whitespace-nowrap'} ${kind === 'primary' || pressed ? 'border-transparent bg-ink text-on-ink hover:bg-ink-hover' : 'border-line bg-panel text-fg hover:border-faint'} ${kind === 'primary' ? 'font-semibold' : ''} ${hideFrom === 'wide' ? 'wide:hidden' : ''}`;
+  const className = `inline-flex items-center justify-center gap-1.25 rounded-small border no-underline transition-[background-color,border-color,filter] duration-150 disabled:cursor-progress disabled:opacity-60 [&_svg]:size-3.75 ${wraps ? 'min-h-8 px-2.5 py-1.25 text-start text-small wrap-anywhere' : size === 'foot' ? 'h-9 px-3.5 text-body whitespace-nowrap' : 'h-8 px-2.5 text-small whitespace-nowrap'} ${kind === 'primary' || pressed ? 'border-transparent bg-ink text-on-ink hover:bg-ink-hover' : quiet ? 'border-transparent bg-transparent hover:bg-subtle' : 'border-line bg-panel hover:border-faint'} ${kind === 'primary' || pressed ? '' : tone === 'danger' ? 'text-danger' : 'text-fg'} data-armed:bg-danger data-armed:text-on-danger data-armed:hover:bg-danger ${kind === 'primary' ? 'font-semibold' : ''} ${hideFrom === 'wide' ? 'wide:hidden' : ''}`;
   if (props.href !== undefined)
     return (
       <a
@@ -85,6 +99,7 @@ export function Button(props: ButtonProps) {
       data-close={closes ? '' : undefined}
       data-autofocus={focusOnOpen ? '' : undefined}
       data-slug={slug}
+      data-armed={armed ? 'true' : undefined}
       aria-label={label}
       title={label}
       aria-pressed={pressed}
@@ -92,6 +107,7 @@ export function Button(props: ButtonProps) {
       hidden={hidden}
       onClick={props.onClick}
       onKeyDown={onKeyDown}
+      onBlur={onBlur}
       className={className}
     >
       {children}

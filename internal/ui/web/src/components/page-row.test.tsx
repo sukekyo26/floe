@@ -47,4 +47,10 @@ describe(PageRow, () => {
     expect(gone).toContain('tabindex="-1"');
     expect(draw({ folderOpen: true }, { folder: true })).toContain('aria-expanded="true"');
   });
+
+  it('draws a box to select it where it may be selected, and none where not (a task’s page)', () => {
+    expect.assertions(2);
+    expect(draw({ onSelect: () => undefined })).toContain('data-testid="sel"');
+    expect(draw()).not.toContain('data-testid="sel"');
+  });
 });
