@@ -4,6 +4,7 @@ import { BackIcon } from '@/components/icons';
 import { t } from '@/lib/t';
 import { order as pageOrder, type Order } from '@/stores/order';
 import { backOf, type Back } from '@/utils/back';
+import { plainPress } from '@/utils/plain-press';
 
 const words = (back: Back): [string, string] => {
   if (back.to === 'pages') return [t('ui_screen_pages'), t('ui_to_page_list')];
@@ -34,8 +35,7 @@ export function BackLink({ order = pageOrder }: { readonly order?: Order }) {
       title={whole}
       onClick={(e) => {
         // A modified press is the link's, in a new tab: this tab goes nowhere
-        if (!e.button && !e.ctrlKey && !e.metaKey && !e.shiftKey && !e.altKey)
-          order.editKept(() => ({ pressed: true }));
+        if (plainPress(e)) order.editKept(() => ({ pressed: true }));
       }}
       className="inline-flex h-icon-btn min-w-icon-btn flex-none items-center justify-center gap-1.5 rounded-full border border-transparent px-1.5 text-muted no-underline transition-colors duration-150 hover:bg-subtle hover:text-fg [&>svg]:size-4 [&>svg]:flex-none"
     >

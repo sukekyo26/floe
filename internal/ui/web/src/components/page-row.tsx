@@ -2,9 +2,11 @@ import type { CSSProperties, MouseEventHandler, ReactNode } from 'react';
 
 import { FolderMark, LinkMark } from '@/components/icons';
 import { t } from '@/lib/t';
-import { ago, fmt } from '@/lib/time';
+import { Ago } from '@/components/ago';
+import { fmt } from '@/lib/time';
 import type { Page } from '@/types/page';
 import type { CssVars } from '@/utils/css-vars';
+import { kindOf } from '@/utils/list-view';
 import { pageHref } from '@/utils/page-urls';
 
 export interface PageRowProps {
@@ -74,13 +76,14 @@ export function PageRow({
     <li
       data-key={`entry:${a.slug}`}
       data-slug={a.slug}
+      data-kind={kindOf(a)}
       aria-current={picked || undefined}
       data-unread={unread || undefined}
       data-archived={archived || undefined}
       data-gone={a.missing ? true : undefined}
       data-kept={kept || undefined}
       style={style as CSSProperties}
-      className="group/row relative grid animate-rise grid-cols-[12px_minmax(0,1fr)_auto_auto] gap-x-2.5 gap-y-0.75 rounded-menu border border-line bg-panel px-4 py-1.75 shadow-sm transition-[background-color,box-shadow] duration-150 [animation-delay:calc(var(--i,0)*16ms)] [grid-template-areas:'lead_title_title_time'_'._sub_actions_actions'] not-first:mt-1.5 hover:bg-hover has-checked:bg-sel has-checked:hover:bg-sel has-[a:focus-visible]:outline-2 has-[a:focus-visible]:-outline-offset-2 has-[a:focus-visible]:outline-faint has-[details[open]]:z-3 aria-current:border-new aria-current:not-has-checked:bg-new-soft aria-current:not-has-checked:hover:bg-new-soft data-kept:animate-none can-hover:hover:shadow-md [[data-testid=group]+&]:mt-0"
+      className="group/row relative grid animate-rise grid-cols-[12px_minmax(0,1fr)_auto_auto] gap-x-2.5 gap-y-0.75 rounded-menu border border-line bg-panel px-4 py-1.75 shadow-sm transition-[background-color,box-shadow] duration-150 [animation-delay:calc(var(--i,0)*16ms)] [grid-template-areas:'lead_title_title_time'_'._sub_actions_actions'] not-first:mt-1.5 hover:bg-hover has-checked:bg-sel has-checked:hover:bg-sel has-[[data-testid=title]:focus-visible]:outline-2 has-[[data-testid=title]:focus-visible]:-outline-offset-2 has-[[data-testid=title]:focus-visible]:outline-faint has-[details[open]]:z-3 has-[+li[data-testid=tree]]:animate-none has-[+li[data-testid=tree]]:rounded-b-none has-[+li[data-testid=tree]]:border-b-0 aria-current:border-new aria-current:not-has-checked:bg-new-soft aria-current:not-has-checked:hover:bg-new-soft data-kept:animate-none can-hover:not-has-[+li[data-testid=tree]]:hover:shadow-md [[data-testid=group]+&]:mt-0"
     >
       <label
         data-testid="pick"
@@ -117,7 +120,7 @@ export function PageRow({
         dateTime={time}
         className="text-right font-mono text-label leading-[1.9] whitespace-nowrap text-muted tabular-nums [grid-area:time]"
       >
-        {ago(time)}
+        <Ago iso={time} />
       </time>
       <span
         data-testid="sub"

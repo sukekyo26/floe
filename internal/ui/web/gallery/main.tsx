@@ -2,7 +2,7 @@
 // served by Vite's dev server alone (just web-gallery), never built into dist
 import './gallery.css';
 
-import { StrictMode, useState, type ReactNode } from 'react';
+import { Profiler, StrictMode, useRef, useState, type ReactNode } from 'react';
 import { createRoot } from 'react-dom/client';
 
 import { BackLink } from '@/components/back-link';
@@ -60,8 +60,11 @@ import { createListQuery } from '@/stores/list-query';
 import { ListCount, ListWhat } from '@/features/page-list/components/list-head';
 import { ListShelf } from '@/features/page-list/components/list-shelf';
 import { News } from '@/features/page-list/components/news';
+import { PageList } from '@/features/page-list/components/page-list';
 import { SearchBox } from '@/features/page-list/components/search-box';
-import type { Page } from '@/types/page';
+import type { Listing, Page } from '@/types/page';
+import type { Folders } from '@/stores/open-folders';
+import { openKey } from '@/utils/paths';
 import { startVersions, VersionsSection } from './versions';
 
 // The boot values go test -gallery wrote (just web-gallery); none when it has not run
@@ -123,7 +126,8 @@ const PAGES: Page[] = [
     path: '/tmp/site',
     folder: true,
     createdAt: '',
-    updatedAt: '',
+    // When it was linked, as the server gives a folder: its row shows no time
+    updatedAt: ago(600),
     taskProject: '/',
   },
   {
@@ -143,7 +147,13 @@ const edit = (slug: string, change: Partial<Page>) => {
   shownPages.set(shownPages.get().map((p) => (p.slug === slug ? { ...p, ...change } : p)));
 };
 // The list as a read of the fake server would give it: the pages as they are now
-const listed = createStore({ entries: PAGES, tasks: { error: '', tasks: {}, raw: '' }, readWhy: '', drawWhy: '' });
+const listed = createStore({
+  read: true,
+  entries: PAGES,
+  tasks: { error: '', tasks: {}, raw: '' },
+  readWhy: '',
+  drawWhy: '',
+});
 shownPages.subscribe(() => {
   listed.set({ ...listed.get(), entries: shownPages.get() });
 });
@@ -160,6 +170,8 @@ const galleryPages = {
   readRev: () => 0,
   whileReading: () => null,
   state: listed,
+  pressed: () => undefined,
+  released: () => undefined,
 } as unknown as Pages;
 // The shelf's picks and the columns, as the page list keeps them, but in no URL
 const galleryQuery = createListQuery({
@@ -341,6 +353,140 @@ const saveEdit = createSaveEdit({
     toasts.toast(`would go to ${href}`);
   },
 });
+
+// The folder's tree, as the fake server reads it: a directory cut, one empty, one unreadable
+const TREE = new Map<string, Listing | Error>([
+  ['folder', { dirs: ['docs', 'empty', 'locked'], files: [{ file: 'index.html', updatedAt: ago(5) }], more: 0 }],
+  [
+    'folder:docs',
+    {
+      dirs: [],
+      files: [
+        { file: 'docs/a.html', updatedAt: ago(30) },
+        { file: 'docs/b.html', updatedAt: ago(90) },
+      ],
+      more: 3,
+    },
+  ],
+  ['folder:empty', { dirs: [], files: [], more: 0 }],
+  ['folder:locked', new Error('permission denied')],
+]);
+const galleryTree = createStore<{ opened: ReadonlySet<string>; listings: ReadonlyMap<string, Listing | Error> }>({
+  opened: new Set(),
+  listings: new Map(),
+});
+// Opens or closes a directory at once; closed, what is open under it closes too
+const galleryFolders = {
+  list: galleryTree,
+  toggle: (slug: string, dir: string) => {
+    const key = openKey(slug, dir);
+    const { opened, listings } = galleryTree.get();
+    const under = dir ? `${key}/` : `${slug}:`;
+    const next = opened.has(key)
+      ? new Set([...opened].filter((k) => k !== key && !k.startsWith(under)))
+      : new Set([...opened, key]);
+    const read = TREE.get(key);
+    galleryTree.set({ opened: next, listings: read ? new Map([...listings, [key, read]]) : listings });
+    return Promise.resolve();
+  },
+} as unknown as Folders;
+// Many rows over a year, to measure a redraw of the list
+const MANY: Page[] = Array.from({ length: 1000 }, (_, i) => ({
+  slug: `many-${String(i)}`,
+  title: `Page ${String(i)} of many`,
+  description: '',
+  project: ['floe', 'demo', 'site'][i % 3] ?? 'floe',
+  createdAt: '',
+  updatedAt: ago(i * 500),
+  taskProject: 'floe',
+  tags: i % 4 === 0 ? ['many'] : [],
+}));
+
+// ListScene is the page list as the list screen will draw it, with the time of its last commit: with 1000 rows, pick a
+// row or wait a minute for the times, to measure what React draws anew
+function ListScene() {
+  const [scene, setScene] = useState<'samples' | 'many' | 'none' | 'archived'>('samples');
+  // Written as it is measured: a state would draw the list again, and measure that
+  const took = useRef<HTMLSpanElement>(null);
+  const show = (next: typeof scene, pages: Page[]) => {
+    setScene(next);
+    shownPages.set(pages);
+  };
+  return (
+    <>
+      <div className="mb-2 flex flex-wrap items-center gap-2">
+        <Button
+          pressed={scene === 'many'}
+          onClick={() => {
+            // Newest first, as the server gives them
+            show(
+              'many',
+              [...PAGES, ...MANY].sort((x, y) => y.updatedAt.localeCompare(x.updatedAt)),
+            );
+          }}
+        >
+          1000 rows
+        </Button>
+        <Button
+          pressed={scene === 'none'}
+          onClick={() => {
+            show('none', []);
+          }}
+        >
+          No page
+        </Button>
+        <Button
+          pressed={scene === 'archived'}
+          onClick={() => {
+            show(
+              'archived',
+              PAGES.map((a) => ({ ...a, archived: true })),
+            );
+          }}
+        >
+          All archived
+        </Button>
+        <Button
+          pressed={scene === 'samples'}
+          onClick={() => {
+            show('samples', PAGES);
+          }}
+        >
+          The samples
+        </Button>
+        <Button
+          onClick={() => {
+            const rows = shownPages.get();
+            const at = rows[Math.floor(Math.random() * rows.length)];
+            if (at) galleryOpen.picked.set({ slug: at.slug, file: '', v: 0 });
+          }}
+        >
+          Pick a row
+        </Button>
+        <span ref={took} className="font-mono text-label text-muted">
+          last commit
+        </span>
+      </div>
+      <div className="max-h-[34rem] overflow-auto rounded-small border border-line bg-bg">
+        <Profiler
+          id="page-list"
+          onRender={(_id, _phase, actual) => {
+            if (took.current) took.current.textContent = `last commit ${actual.toFixed(1)} ms`;
+          }}
+        >
+          <PageList
+            openers={openers}
+            onAdd={() => toasts.toast('Add a link (P5d’s modal)')}
+            query={galleryQuery}
+            pages={galleryPages}
+            folders={galleryFolders}
+            openPage={galleryOpen}
+          />
+        </Profiler>
+      </div>
+    </>
+  );
+}
 
 function Section({ title, children }: { readonly title: string; readonly children: ReactNode }) {
   return (
@@ -606,7 +752,7 @@ function Gallery() {
           </div>
           <div className="grid h-[34rem] grid-cols-[15rem_minmax(0,1fr)] overflow-hidden rounded-small border border-line bg-bg wide:h-auto wide:grid-cols-1">
             <ListShelf
-              onAdd={() => toasts.toast('Add a link (P5b’s modal)')}
+              onAdd={() => toasts.toast('Add a link (P5d’s modal)')}
               query={galleryQuery}
               pages={galleryPages}
               columns={galleryColumns}
@@ -616,7 +762,7 @@ function Gallery() {
                 query={galleryQuery}
                 columns={galleryColumns}
                 onShow={() => {
-                  // As P5b's way to open the shelf will: open, the focus on what folds it (here, the button above)
+                  // As P5f's way to open the shelf will: open, the focus on what folds it (here, the button above)
                   galleryColumns.set({ open: true });
                   focusOn(document.getElementById('fold-shelf'));
                 }}
@@ -624,6 +770,9 @@ function Gallery() {
               <ListCount query={galleryQuery} pages={galleryPages} />
             </div>
           </div>
+        </Section>
+        <Section title="Page list (the shelf above narrows it; open the folder and its directories; 1000 rows measures a redraw)">
+          <ListScene />
         </Section>
         <Section title="Reading a page beside the list (the page tells its frame it was read; Slow answers waits 1.5 s)">
           <div className="mb-2 flex flex-wrap gap-2">

@@ -10,8 +10,9 @@ import type { Page } from '@/types/page';
 import type { TaskWritten } from '@/types/task';
 
 // The list as last taken: the entries, the tasks (their error only the task screens say), why the last read failed, and
-// why the screen failed to draw what it took
+// why the screen failed to draw what it took. read tells a list taken once at least: till then, entries is no list
 export interface PagesState {
+  read: boolean;
   entries: Page[];
   tasks: TasksRead;
   readWhy: string;
@@ -82,7 +83,7 @@ export function createPages({
   pollMs = 3000,
   pressMs = 2000,
 }: Deps = {}): Pages {
-  const state = createStore<PagesState>({ entries: [], tasks: NO_TASKS, readWhy: '', drawWhy: '' });
+  const state = createStore<PagesState>({ read: false, entries: [], tasks: NO_TASKS, readWhy: '', drawWhy: '' });
   const endedStore = createStore(0);
   // The text of the list and the tasks last taken: an unchanged answer is not taken again
   let taken = '';
@@ -151,7 +152,7 @@ export function createPages({
     const text = list.text + (tasks?.raw ?? '');
     if (text !== taken) {
       taken = text;
-      state.set({ ...state.get(), entries: list.entries, tasks: tasks ?? state.get().tasks, readWhy: '' });
+      state.set({ ...state.get(), read: true, entries: list.entries, tasks: tasks ?? state.get().tasks, readWhy: '' });
     }
     setWhy('');
   }

@@ -136,7 +136,7 @@ export function PageMenu({
       <MenuItem
         icon={<SelectIcon />}
         testid="select"
-        hidden={place !== 'row'}
+        hidden={place !== 'row' || !onPick}
         label={t('ui_select_named', title)}
         onSelect={onPick}
       >

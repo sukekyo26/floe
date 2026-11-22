@@ -37,7 +37,7 @@ const KINDS = [
 ] as const;
 
 export interface ListShelfProps {
-  // onAdd opens the modal that adds a link (P5b's)
+  // onAdd opens the modal that adds a link (P5d's)
   readonly onAdd: () => void;
   readonly foot?: ReactNode;
   readonly query?: ListQuery;

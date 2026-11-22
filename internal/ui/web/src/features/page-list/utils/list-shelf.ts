@@ -47,6 +47,11 @@ export function viewPress(state: ListState, view: View): Partial<Picks> | null {
   return viewLit(state, 'all') ? null : { view: 'all', ...NO_PICKS };
 }
 
+// tagPress is what a row's tag narrows the list to: the tag, or nothing for the one picked already, which leaves the
+// list as it is (its selection too)
+export const tagPress = (state: ListState, name: string): Partial<Picks> | null =>
+  state.tag === name ? null : { tag: name };
+
 // chipPress is what a press of a chip changes (ui.html picker): what is picked, picked again, is let go
 export const chipPress = (state: ListState, part: Part, value: string): Partial<Picks> => ({
   [part]: state[part] === value ? '' : value,
@@ -60,13 +65,12 @@ export const newsPress = (): { picks: Picks; q: string } => ({ picks: { view: 'n
 // they are a link to it
 export const newsTaken = (screen: Boot['screen']): boolean => screen === 'list';
 
-// newsClick tells whether a press on the bar's new pages is the page list's to take: a modified press, or of another
-// button, opens /?view=new in a tab of its own
-export const newsClick = (e: Pick<MouseEvent, 'button' | 'ctrlKey' | 'metaKey' | 'shiftKey' | 'altKey'>): boolean =>
-  e.button === 0 && !e.ctrlKey && !e.metaKey && !e.shiftKey && !e.altKey;
-
 // newCount is the bar's count: every unread page not archived, whatever narrows the list
 export const newCount = (items: readonly Page[]): number => items.filter(unseen).length;
+
+// unseenSlugs is every unread page not archived, whatever narrows the list: the view "new" keeps them all as it draws
+// (ui.html renderList)
+export const unseenSlugs = (items: readonly Page[]): string[] => items.filter(unseen).map((a) => a.slug);
 
 // narrowWords is what the button to the filters and the head say of the picks (ui.html drawViews): the button how many
 // picks, the head the view and how many picks, with the filters folded
