@@ -63,7 +63,7 @@ describe(createAddLink, () => {
     expect.assertions(3);
     const { add, did, held, close } = made(json({ slug: 'f', folder: true }));
     add.values.set({ path: '/a', slug: '', description: '' });
-    await expect(add.send(held, close)).resolves.toBe('');
+    await expect(add.send(held, close)).resolves.toStrictEqual({ added: true, reason: '' });
     expect(add.values.get()).toStrictEqual({ path: '', slug: '', description: '' });
     expect(did).toStrictEqual([
       'hold',
@@ -84,7 +84,16 @@ describe(createAddLink, () => {
     expect(open.did).not.toContain('open f');
     const refused = made(new Response('taken', { status: 409 }));
     refused.add.values.set({ path: '/a', slug: 'x', description: '' });
-    await expect(refused.add.send(refused.held, refused.close)).resolves.toBe('ui_http_error:taken');
+    await expect(refused.add.send(refused.held, refused.close)).resolves.toStrictEqual({
+      added: false,
+      reason: 'ui_http_error:taken',
+    });
     expect(refused.add.values.get()).toStrictEqual({ path: '/a', slug: 'x', description: '' });
+  });
+
+  it('tells a write that failed with no words not added, as one answered with nothing', async () => {
+    expect.assertions(1);
+    const { add, held, close } = made(json(null));
+    await expect(add.send(held, close)).resolves.toStrictEqual({ added: false, reason: '' });
   });
 });

@@ -25,7 +25,7 @@ describe(AddDialog, () => {
         'add-submit',
       ].filter((id) => !html.includes(`id="${id}"`)),
     ).toStrictEqual([]);
-    expect(html).toMatch(/id="add-path"[^>]*required=""[^>]*value="\/kept.html"/);
+    expect(html).toMatch(/id="add-path"[^>]*required=""[^>]*data-autofocus=""[^>]*value="\/kept.html"/);
     expect(html).toMatch(/id="add-cancel"[^>]*data-close=""|data-close=""[^>]*id="add-cancel"/);
   });
 });

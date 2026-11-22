@@ -19,9 +19,12 @@ const EMPTY: AddValues = { path: '', slug: '', description: '' };
 export interface AddLink {
   // values are the fields as typed, kept as the modal closes unsent (ui.html resets them once added alone)
   values: Store<AddValues>;
-  // send adds the link or the folder, holding the modal while it goes, and closes it once added: '' added, the reason of
-  // a refusal, or null for one not sent (another went)
-  send: (whileHeld: (write: () => Promise<void>) => Promise<boolean>, close: () => void) => Promise<string | null>;
+  // send adds the link or the folder, holding the modal while it goes, and closes it once added: whether it was added
+  // and, refused, why (words that may be empty), or null for one not sent (another went)
+  send: (
+    whileHeld: (write: () => Promise<void>) => Promise<boolean>,
+    close: () => void,
+  ) => Promise<{ added: boolean; reason: string } | null>;
 }
 
 interface Deps {
@@ -68,7 +71,7 @@ export function createAddLink({
         }
       });
       if (!ran) return null;
-      if (!got.added) return got.reason;
+      if (!got.added) return { added: false, reason: got.reason };
       const { slug, folder } = got.added;
       values.set(EMPTY);
       close();
@@ -78,7 +81,7 @@ export function createAddLink({
       if (folder && !folders.list.get().opened.has(slug)) void folders.toggle(slug, '');
       query.filter({ view: 'all', ...NO_PICKS });
       await pages.load();
-      return '';
+      return { added: true, reason: '' };
     },
   };
 }

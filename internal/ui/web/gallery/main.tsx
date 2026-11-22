@@ -435,7 +435,8 @@ function ListScene() {
   const [folded, setFolded] = useState(false);
   const [came, setCame] = useState('');
   const [adding, setAdding] = useState(false);
-  // The clearing's three forms, for the user to choose (S425): words at the bar's end, words in the row, short words
+  // The clearing's three forms, for the user to choose (S425): words at the bar's end, words in the row, short words at
+  // the bar's end
   const [clear, setClear] = useState<'a' | 'b' | 'c'>('a');
   // The list's width: narrow phones', and a wide column, out past the gallery's narrow column
   const [width, setWidth] = useState<'320px' | '390px' | '720px'>('390px');
@@ -586,7 +587,7 @@ function ListScene() {
               setClear(form);
             }}
           >
-            {{ a: '(a) words, at the end', b: '(b) words, in the row', c: '(c) short words' }[form]}
+            {{ a: '(a) words, at the end', b: '(b) words, in the row', c: '(c) short words, at the end' }[form]}
           </Button>
         ))}
         <span className="text-small text-muted">List width:</span>
@@ -602,6 +603,13 @@ function ListScene() {
           </Button>
         ))}
       </div>
+      {clear === 'b' ? (
+        <p className="mb-2 text-small text-muted">
+          (b) out of reach: narrow, as the delete waits, a press on the clearing moves the focus off the delete, which
+          lets go, and the buttons it hid come back and push the clearing away from under the pointer. And
+          ui_find_test.go:435 wants it in the list’s column after each button is scrolled to.
+        </p>
+      ) : null}
       <AddDialog
         open={adding}
         onClosed={() => {
@@ -620,7 +628,7 @@ function ListScene() {
             onTags={(target) => {
               tagTarget.set(target);
             }}
-            clearSticky={clear === 'a'}
+            clearSticky={clear !== 'b'}
             {...(clear === 'c' ? { clearWords: getBoot().lang === 'ja' ? '解除' : 'Clear' } : {})}
             query={galleryQuery}
             pages={galleryPages}

@@ -9,11 +9,11 @@ import { createStore } from '@/lib/store';
 import type { ListQuery, Query } from '@/stores/list-query';
 import type { Pages } from '@/stores/pages';
 
-const draw = (selected: string[]) => {
+const draw = (selected: string[], view = 'all') => {
   testBoot();
   const selection = createSelection();
   selection.add(selected);
-  const query = { query: createStore({ view: 'all' } as Query) } as unknown as ListQuery;
+  const query = { query: createStore({ view } as Query) } as unknown as ListQuery;
   const pages = { state: createStore({ entries: [] }) } as unknown as Pages;
   return renderToString(<BulkBar onTags={() => undefined} selection={selection} query={query} pages={pages} />);
 };
@@ -53,5 +53,14 @@ describe(BulkBar, () => {
     expect(armedAt(waits, String(selection.rev.get()))).toBe(false);
     // Unchanged, it waits on
     expect(armedAt(waits, String(selection.rev.get() - 2))).toBe(true);
+  });
+
+  it('archives on any view but the archived, where it restores', () => {
+    expect.assertions(1);
+    const words = (html: string) => /id="bulk-archive"[^>]*><span data-testid="label">([^<]*)</.exec(html)?.[1];
+    expect([words(draw(['a'])), words(draw(['a'], 'archived'))]).toStrictEqual([
+      'ui_archive:undefined',
+      'ui_unarchive:undefined',
+    ]);
   });
 });

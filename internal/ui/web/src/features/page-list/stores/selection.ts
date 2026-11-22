@@ -55,6 +55,9 @@ export const selection = createSelection();
 // followList lets the selection go as the list's picks, view or search are given anew (ui.html filter, 2086), not as a
 // page of the view "new" is kept as seen; and, as the list is read, lets go of the pages its view no longer has (4439).
 // It returns what stops it
+// LIMIT: started, it does not look the selection over: picks changed while no list followed it (the list off the screen)
+// leave pages not shown selected. None now, as each screen loads the page anew; look it over at the start if a screen
+// comes to take the list off and put it back (P9)
 export function followList(
   query: ListQuery = listQuery,
   pages: Pages = pagePages,

@@ -48,7 +48,7 @@ export function BulkBar({
   const does = useMemo(() => acts ?? makeBulkActs({ selection, pages, query }), [acts, selection, pages, query]);
   const arm = useArm(String(rev));
   const n = selected.size;
-  const kind = bulkKind(selected, items);
+  const kind = useMemo(() => bulkKind(selected, items), [selected, items]);
   const label = (words: string) => <span data-testid="label">{words}</span>;
   return (
     <section
@@ -85,10 +85,14 @@ export function BulkBar({
         quiet
         tone="danger"
         armed={arm.armed}
+        // LIMIT: pressed again while its writes go, the delete (and the archive) sends to the same pages twice, as
+        // ui.html's does. Hold the bar while it writes if that comes to trouble someone
         onClick={() => {
           if (arm.press()) return;
+          const at = rev;
           void does.remove().then(() => {
-            arm.disarm();
+            // Unless the selection changed meanwhile, and the delete waits for that one
+            if (selection.rev.get() === at) arm.disarm();
           });
         }}
         onBlur={arm.disarm}

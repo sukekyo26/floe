@@ -40,8 +40,8 @@ export function AddDialog({ open, onClosed, add = pageAddLink }: AddDialogProps)
         className="grid gap-4"
         onSubmit={(e) => {
           e.preventDefault();
-          void add.send(hold.whileHeld, onClosed).then((reason) => {
-            if (reason) setError(t('ui_add_failed', reason));
+          void add.send(hold.whileHeld, onClosed).then((sent) => {
+            if (sent && !sent.added) setError(t('ui_add_failed', sent.reason));
           });
         }}
       >
@@ -53,8 +53,8 @@ export function AddDialog({ open, onClosed, add = pageAddLink }: AddDialogProps)
             data-testid="path"
             className={`${TEXT} font-mono`}
             required
-            // oxlint-disable-next-line jsx-a11y/no-autofocus -- the one field it is opened for, as ui.html's
-            autoFocus
+            // The field the modal focuses as it opens (Dialog), as ui.html's autofocus does
+            data-autofocus=""
             spellCheck={false}
             placeholder="/home/you/project/coverage/index.html"
             {...field('path')}

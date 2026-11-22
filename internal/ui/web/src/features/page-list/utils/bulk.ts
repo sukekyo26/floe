@@ -13,5 +13,7 @@ export const seenOnly = (was: Query, now: Query): boolean =>
 
 // bulkKind is what removing the selected does (ui.html bulkKind): unlink when every one is a link of the list, delete
 // otherwise (a page, or one the list no longer has)
-export const bulkKind = (selected: Iterable<string>, items: readonly Page[]): 'unlink' | 'delete' =>
-  [...selected].every((slug) => items.find((a) => a.slug === slug)?.path) ? 'unlink' : 'delete';
+export function bulkKind(selected: Iterable<string>, items: readonly Page[]): 'unlink' | 'delete' {
+  const paths = new Map(items.map((a) => [a.slug, a.path]));
+  return [...selected].every((slug) => paths.get(slug)) ? 'unlink' : 'delete';
+}
