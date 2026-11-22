@@ -8,7 +8,7 @@
 // replace and toBase64 of a text what they add to it, toJSON of keys and values or a list its whole text
 // (longer than the data, by its indentation and escapes). Over it, expr says memory budget exceeded. Set
 // vm.VM's MemoryBudget if templates need more. It does not bound what a run allocates (s + "x" counts 1
-// for a copy of s): guard bounds the memory of the whole drawing of a command instead.
+// for a copy of s): guard bounds the memory of the whole drawing of the CLI's commands that draw instead.
 package rules
 
 import (
