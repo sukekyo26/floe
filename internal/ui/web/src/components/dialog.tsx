@@ -182,10 +182,12 @@ export interface DialogHeadProps {
   readonly titleId: string;
   readonly title: ReactNode;
   readonly lead?: ReactNode;
+  // leadId names the line under the title, which says nothing and is hidden while it is '' (ui.html #kin-target)
+  readonly leadId?: string;
 }
 
 // DialogHead is a modal's head: its mark in a circle, its title and a line under it
-export function DialogHead({ icon, titleId, title, lead }: DialogHeadProps) {
+export function DialogHead({ icon, titleId, title, lead, leadId }: DialogHeadProps) {
   return (
     <div data-testid="modal-head" className="flex items-center gap-3.25">
       <span className="grid size-9.5 flex-none place-items-center rounded-full bg-sel p-2.25 text-fg [&_svg]:size-5">
@@ -196,7 +198,7 @@ export function DialogHead({ icon, titleId, title, lead }: DialogHeadProps) {
           {title}
         </h2>
         {lead === undefined ? null : (
-          <p data-testid="lead" className="mt-0.5 mb-0 text-small text-muted">
+          <p id={leadId} data-testid="lead" hidden={lead === ''} className="mt-0.5 mb-0 text-small text-muted">
             {lead}
           </p>
         )}

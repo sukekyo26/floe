@@ -42,15 +42,19 @@ const titleWords = (a: Page): string =>
     .filter(Boolean)
     .join('\n');
 
-// What the row is: a folder's or a link's mark, or a page's dot (unread) or ring
-export function Lead({ page, unread }: { readonly page: Page; readonly unread: boolean }) {
-  if (page.folder) return <FolderMark />;
-  if (page.path) return <LinkMark />;
-  return unread ? (
+// ReadMark is a row's dot (unread) or ring
+export const ReadMark = ({ unread }: { readonly unread: boolean }) =>
+  unread ? (
     <span data-testid="dot" className="size-2 flex-none rounded-full bg-new" />
   ) : (
     <span data-testid="ring" className="size-2 flex-none rounded-full border-[1.5px] border-box-line" />
   );
+
+// What the row is: a folder's or a link's mark, or a page's dot (unread) or ring
+export function Lead({ page, unread }: { readonly page: Page; readonly unread: boolean }) {
+  if (page.folder) return <FolderMark />;
+  if (page.path) return <LinkMark />;
+  return <ReadMark unread={unread} />;
 }
 
 // PageRow is a row of a page, a link or a folder, as the list, a task's page and the search draw it (ui.html template

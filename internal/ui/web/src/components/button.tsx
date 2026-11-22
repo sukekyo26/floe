@@ -30,6 +30,8 @@ interface ButtonShape {
   readonly quiet?: boolean;
   readonly tone?: 'danger';
   readonly armed?: boolean;
+  // adds: a button that opens what adds (ui.html .add-open), its plus smaller
+  readonly adds?: boolean;
 }
 
 interface ButtonActs {
@@ -63,6 +65,7 @@ export function Button(props: ButtonProps) {
   const {
     children,
     kind = 'plain',
+    adds = false,
     size: named,
     type = 'button',
     pressed,
@@ -74,7 +77,7 @@ export function Button(props: ButtonProps) {
   } = props;
   const { closes, focusOnOpen, wraps, slug, onKeyDown, onBlur, hideFrom, quiet = false, tone, armed = false } = props;
   const size = named ?? use(ButtonSizeOf);
-  const className = `inline-flex items-center justify-center gap-1.25 rounded-small border no-underline transition-[background-color,border-color,filter] duration-150 disabled:cursor-progress disabled:opacity-60 [&_svg]:size-3.75 ${wraps ? 'min-h-8 px-2.5 py-1.25 text-start text-small wrap-anywhere' : size === 'foot' ? 'h-9 px-3.5 text-body whitespace-nowrap' : 'h-8 px-2.5 text-small whitespace-nowrap'} ${kind === 'primary' || pressed ? 'border-transparent bg-ink text-on-ink hover:bg-ink-hover' : quiet ? 'border-transparent bg-transparent hover:bg-subtle' : 'border-line bg-panel hover:border-faint'} ${kind === 'primary' || pressed ? '' : tone === 'danger' ? 'text-danger' : 'text-fg'} data-armed:bg-danger data-armed:text-on-danger data-armed:hover:bg-danger ${kind === 'primary' ? 'font-semibold' : ''} ${hideFrom === 'wide' ? 'wide:hidden' : ''}`;
+  const className = `inline-flex items-center justify-center gap-1.25 rounded-small border no-underline transition-[background-color,border-color,filter] duration-150 disabled:cursor-progress disabled:opacity-60 ${adds ? '[&_svg]:size-3.25' : '[&_svg]:size-3.75'} ${wraps ? 'min-h-8 px-2.5 py-1.25 text-start text-small wrap-anywhere' : size === 'foot' ? 'h-9 px-3.5 text-body whitespace-nowrap' : 'h-8 px-2.5 text-small whitespace-nowrap'} ${kind === 'primary' || pressed ? 'border-transparent bg-ink text-on-ink hover:bg-ink-hover' : quiet ? 'border-transparent bg-transparent hover:bg-subtle' : 'border-line bg-panel hover:border-faint'} ${kind === 'primary' || pressed ? '' : tone === 'danger' ? 'text-danger' : 'text-fg'} data-armed:bg-danger data-armed:text-on-danger data-armed:hover:bg-danger ${kind === 'primary' ? 'font-semibold' : ''} ${hideFrom === 'wide' ? 'wide:hidden' : ''}`;
   if (props.href !== undefined)
     return (
       <a
