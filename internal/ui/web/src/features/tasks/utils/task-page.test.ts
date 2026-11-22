@@ -69,6 +69,13 @@ describe(pageTask, () => {
 });
 
 describe('pageTask, a parent and a child taken off while unreadable', () => {
+  it('keeps the parent as last read with nothing written since', () => {
+    expect.assertions(1);
+    const up = task('#9');
+    const last = task('#1', { parent: '#9', parentTask: up });
+    expect(pageTask({ found: undefined, rows: undefined, failed: true, last }).task?.parentTask).toBe(up);
+  });
+
   it('draws no parent once its own row as answered names none, and no child whose row names another', () => {
     expect.assertions(1);
     const up = task('#9');

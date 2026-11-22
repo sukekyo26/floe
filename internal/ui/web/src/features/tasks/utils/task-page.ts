@@ -33,7 +33,7 @@ function asWritten(last: TaskOf, found: TaskOf | undefined, rows: PageTaskOf['ro
   const { parentTask, ...task } = own ? { ...kept, ...own, rev: own.rev ?? last.rev } : last;
   return {
     ...task,
-    ...(parentTask && own?.parent === last.parent ? { parentTask } : {}),
+    ...(parentTask && (!own || own.parent === last.parent) ? { parentTask } : {}),
     children: last.children.filter((x) => rows?.[x.name] === undefined || rows[x.name]?.parent === last.name),
     pages: found?.pages ?? [],
     archived: found?.archived ?? [],

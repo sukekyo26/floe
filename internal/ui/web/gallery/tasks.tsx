@@ -182,6 +182,7 @@ const SCENES = [
   ['?data=full&project=shop&task=%2316', 'no page, children'],
   ['?data=full&project=shop&task=%2399', 'missing'],
   ['?data=flaky&project=shop&task=%2312', 'unreadable after'],
+  ['?data=flaky&project=shop&task=%2313', 'unreadable, a child'],
   ['?data=failed&project=shop&task=%2312', 'never read'],
   ['?scene=suggest', 'names'],
 ] as const;
