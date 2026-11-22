@@ -8,6 +8,7 @@ import { order as pageOrder, type Order } from '@/stores/order';
 import type { Page } from '@/types/page';
 import { composing } from '@/utils/keys';
 import { pageHref } from '@/utils/page-urls';
+import { plainPress } from '@/utils/plain-press';
 import { enterOpens, orderOf, rowPress } from '@/utils/row-press';
 
 // A row's page: an entry's, or a page of a folder's tree (its file)
@@ -97,4 +98,21 @@ export function useRowPress({ selecting, drawn, openPage, order, menus, narrow, 
     () => rowPresses({ selecting, drawn, openPage, order, menus, narrow, assign }),
     [selecting, drawn, openPage, order, menus, narrow, assign],
   );
+}
+
+// pageTitlePress is a press on the title of a page's row, whichever list (ui.html row): a folder's opens and closes its
+// tree, its URL leading to the list with it open for a new tab; any other's is the row's press
+export function pageTitlePress(
+  a: Page,
+  presses: RowPresses,
+  onFolder: (slug: string) => void,
+  e: MouseEvent<HTMLAnchorElement>,
+): void {
+  if (!a.folder) {
+    presses.press({ slug: a.slug, file: '' }, e);
+    return;
+  }
+  if (!plainPress(e)) return;
+  e.preventDefault();
+  onFolder(a.slug);
 }

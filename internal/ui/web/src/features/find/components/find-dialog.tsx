@@ -1,5 +1,6 @@
 import { useEffect, useEffectEvent, useLayoutEffect, useRef, useState } from 'react';
 
+import { ArchivedBadge } from '@/components/archived-badge';
 import { Dialog, DialogActions, DialogClose, DialogHead } from '@/components/dialog';
 import { barMenuId, focusOn } from '@/components/focus-places';
 import { SearchIcon } from '@/components/icons';
@@ -237,22 +238,7 @@ export function FindDialog({
             id={`find-${String(i)}`}
             page={a}
             reached={i === at}
-            sub={
-              <RowSub
-                page={a}
-                ranks={ranks}
-                middle={
-                  a.archived ? (
-                    <span
-                      data-testid="badge"
-                      className="rounded-full border border-line bg-subtle px-1.25 text-label text-muted"
-                    >
-                      {t('ui_archived_badge')}
-                    </span>
-                  ) : null
-                }
-              />
-            }
+            sub={<RowSub page={a} ranks={ranks} middle={a.archived ? <ArchivedBadge /> : null} />}
             onOpen={() => {
               order.forgetOrder();
             }}
