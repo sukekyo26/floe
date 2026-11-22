@@ -2,8 +2,8 @@ import type { FocusEventHandler, MouseEventHandler, ReactNode, Ref } from 'react
 
 // Where it shows, by the bar's one rule of width (ui.md): shown; never (a menu's item a bar or a row shows, its CSS
 // hiding it); narrow (a menu's item shown only where the bar folds it, under 40rem); wide (a bar's, folded into its menu
-// under 40rem)
-export type Display = 'shown' | 'never' | 'narrow' | 'wide';
+// under 40rem); screen (shown, but not printed: what opens a folded column, over the words)
+export type Display = 'shown' | 'never' | 'narrow' | 'wide' | 'screen';
 
 export interface IconButtonProps {
   // label is its name (aria-label), what a press does; title shows it to the pointer, the label when left out
@@ -45,6 +45,7 @@ const DISPLAY: Record<Display, string> = {
   never: 'hidden',
   narrow: 'hidden narrow:inline-flex',
   wide: 'inline-flex narrow:hidden',
+  screen: 'inline-flex print:hidden',
 };
 
 // IconButton is a button of an icon (and, in a menu, its words), round where it is not a menu's item

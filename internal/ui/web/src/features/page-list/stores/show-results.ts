@@ -7,6 +7,5 @@ const wideNow = () => window.matchMedia('not (max-width: 70rem)').matches;
 // on the wide page alone, where it can be folded
 export function showResults(columns: ColumnsStore = pageColumns, wide: () => boolean = wideNow): void {
   if (!wide() || columns.listOpen()) return;
-  columns.set({ listOpen: true });
-  columns.keep();
+  columns.show('list', true);
 }

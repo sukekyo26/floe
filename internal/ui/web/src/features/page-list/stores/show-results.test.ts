@@ -7,8 +7,7 @@ const columns = (listOpen: boolean) => {
   const log: string[] = [];
   const store = {
     listOpen: () => listOpen,
-    set: (change: object) => log.push(`set ${JSON.stringify(change)}`),
-    keep: () => log.push('keep'),
+    show: (name: string, open: boolean) => log.push(`show ${name} ${String(open)}`),
   } as unknown as ColumnsStore;
   return { store, log };
 };
@@ -22,6 +21,6 @@ describe(showResults, () => {
     showResults(open.store, () => true);
     const narrow = columns(false);
     showResults(narrow.store, () => false);
-    expect([folded.log, open.log, narrow.log]).toStrictEqual([['set {"listOpen":true}', 'keep'], [], []]);
+    expect([folded.log, open.log, narrow.log]).toStrictEqual([['show list true'], [], []]);
   });
 });

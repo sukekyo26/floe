@@ -226,3 +226,29 @@ export const SideIcon = () => (
     <path d="M9 4v16" />
   </Line>
 );
+// The two columns left of the page, the one filled in: the shelf (ShelfColumnIcon) or the list (ListColumnIcon). Its
+// lines end square, as ui.html's
+const Columns = ({ children }: { readonly children: ReactNode }) => (
+  <svg
+    viewBox="0 0 24 24"
+    fill="none"
+    stroke="currentColor"
+    strokeWidth={1.8}
+    strokeLinejoin="round"
+    aria-hidden="true"
+  >
+    <rect x="3" y="4" width="18" height="16" rx="2" />
+    <path d="M9 4v16M15 4v16" />
+    {children}
+  </svg>
+);
+export const ShelfColumnIcon = () => (
+  <Columns>
+    <path fill="currentColor" stroke="none" d="M3 6a2 2 0 0 1 2-2h4v16H5a2 2 0 0 1-2-2Z" />
+  </Columns>
+);
+export const ListColumnIcon = () => (
+  <Columns>
+    <path fill="currentColor" stroke="none" d="M9 4h6v16H9Z" />
+  </Columns>
+);

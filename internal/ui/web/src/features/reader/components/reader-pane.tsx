@@ -68,7 +68,7 @@ export function ReaderPane({
   const file = at?.file ?? '';
   const name = file === '' ? (a?.title ?? '') : file;
   return (
-    <section id="reader" className="flex min-h-0 min-w-0 flex-col">
+    <section id="reader" className="flex min-h-0 min-w-0 flex-col mid:hidden">
       <div
         id="read-head"
         hidden={!a && what === null}
