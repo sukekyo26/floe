@@ -70,7 +70,6 @@ const same = (x: OpenAt | null, y: OpenAt) => x !== null && x.slug === y.slug &&
 // after another want, read or not, is dropped
 // LIMIT: a browser without base-select (Firefox and Safari for now) shows the whole words closed, and goes to a version at each arrow key
 // LIMIT: a list that could not be read is read again only as the list of pages changes; the page shown does not wait for it
-// LIMIT: a version published while the choice is open closes it, its options changed
 // LIMIT: the page of a version gone asks first, up to 3 seconds before this, and shows its 404 until then
 // LIMIT: a number come again after a removal, its page may ask first and tell it was read, the version it shows being the latest
 export function createVersions({
