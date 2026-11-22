@@ -46,6 +46,18 @@ describe(NarrowFilter, () => {
     const lit = renderToString(<NarrowFilter words="w" n={2} tint="red" onOpen={none} />);
     expect(tag(lit, '<button')).toMatch(/id="narrow-filter" data-narrowed="true" data-tint="true" style="--c:red"/);
   });
+
+  it('always shows its words, cut short, and draws no count but keeps its box', () => {
+    expect.assertions(3);
+    const named = renderToString(<NarrowFilter words="shop" n={0} tint="red" named onOpen={none} />);
+    expect(tag(named, '<span id="narrow-filter-name"')).toMatch(
+      /class="truncate narrow:max-w-\[4.5rem\] narrow:min-w-\[2em\] /,
+    );
+    expect(named).toMatch(/<span id="narrow-filter-n" aria-hidden="true" class="hidden"><\/span>/);
+    expect(
+      tag(renderToString(<NarrowFilter words="w" n={0} tint={null} onOpen={none} />), '<span id="narrow-filter-name"'),
+    ).toContain('tiny:sr-only');
+  });
 });
 
 describe(ShelfWhat, () => {

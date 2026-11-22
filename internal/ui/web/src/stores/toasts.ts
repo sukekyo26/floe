@@ -16,6 +16,19 @@ export interface ToastButton {
   onEscape?: () => void;
 }
 
+// The link a toast holds in place of a button (ui.html .toast-link): to the task it tells of, its words the toast's
+export interface ToastLink {
+  label: string;
+  href: string;
+}
+
+// isToastLink tells a toast's link from its button
+export const isToastLink = (x: ToastButton | ToastLink): x is ToastLink => 'href' in x;
+
+// buttonOf is a toast's button, null for none or a link
+export const buttonOf = (x: Toast | undefined): ToastButton | null =>
+  x?.button && !isToastLink(x.button) ? x.button : null;
+
 // pressToastButton presses a toast's button; one that holds is held (hold(true)) until its press is done
 export function pressToastButton(button: ToastButton, hold: (on: boolean) => void): void {
   if (!button.holds) {
@@ -35,7 +48,7 @@ export interface Toast {
   // goes as another page is
   timed: boolean;
   page: boolean;
-  button: ToastButton | null;
+  button: ToastButton | ToastLink | null;
   // focus: its button takes the focus as it is drawn, once (a change made from the keys)
   focus: boolean;
 }
@@ -43,7 +56,7 @@ export interface Toast {
 // A toast with a button is given its time: it holds while pointed at or focused, and goes once its time is out
 export type ToastOptions =
   | { ms?: number; page?: boolean; button?: undefined; focus?: undefined }
-  | { ms: number; page?: boolean; button: ToastButton; focus?: boolean };
+  | { ms: number; page?: boolean; button: ToastButton | ToastLink; focus?: boolean };
 
 export interface Toasts {
   shown: Store<Toast[]>;

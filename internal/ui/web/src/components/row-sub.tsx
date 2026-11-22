@@ -1,5 +1,6 @@
 import type { CSSProperties, ReactNode } from 'react';
 
+import { TINT_DOT, TINT_VARS } from '@/components/tint';
 import { t } from '@/lib/t';
 import type { Page } from '@/types/page';
 import type { CssVars } from '@/utils/css-vars';
@@ -43,7 +44,7 @@ export function RowSub({ page: a, ranks, middle }: RowSubProps) {
           // Painted in its project's colour (P0's name; ui.html drawProject: proj-tint), as it is drawn only then
           data-tint="true"
           style={tint as CSSProperties}
-          className={`${PILL} inline-flex max-w-40 items-center gap-1.25 bg-(--tint) font-medium text-(--tint-ink) [--tint-ink:color-mix(in_srgb,var(--c)_50%,var(--color-fg))] [--tint:color-mix(in_srgb,var(--c)_16%,var(--color-panel))] before:size-1.75 before:flex-none before:rounded-full before:bg-(--c) before:content-['']`}
+          className={`${PILL} inline-flex max-w-40 items-center gap-1.25 bg-(--tint) font-medium text-(--tint-ink) ${TINT_VARS} ${TINT_DOT}`}
         >
           <span data-testid="proj-name" className="min-w-0 truncate">
             {project}

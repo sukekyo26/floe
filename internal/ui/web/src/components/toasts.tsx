@@ -7,7 +7,9 @@ import {
   pressToastButton,
   toasts as pageToasts,
   type Toast,
+  isToastLink,
   type ToastButton,
+  type ToastLink,
   type Toasts as ToastStore,
 } from '@/stores/toasts';
 
@@ -33,6 +35,15 @@ function ToastAction({ button }: { readonly button: ToastButton }) {
         {button.label}
       </Button>
     </span>
+  );
+}
+
+// ToastAnchor is a toast's link (ui.html .toast-link): the toast takes no pointer, the link does
+function ToastAnchor({ link }: { readonly link: ToastLink }) {
+  return (
+    <a data-testid="toast-link" href={link.href} className="pointer-events-auto text-inherit">
+      {link.label}
+    </a>
   );
 }
 
@@ -85,11 +96,11 @@ function ToastView({ toast, store }: { readonly toast: Toast; readonly store: To
             }
           : undefined
       }
-      className={`flex items-center gap-2 rounded-corner border border-line bg-panel pl-3.75 text-small font-[550] text-fg shadow-md [&>svg]:size-4 [&>svg]:flex-none [&>svg]:text-good ${button ? 'pointer-events-auto py-1.5 pr-1.5' : 'py-2.5 pr-3.75'} ${toast.timed ? 'max-w-[calc(100vw-32px)] animate-toast-in' : 'animate-toast'}`}
+      className={`flex items-center gap-2 rounded-corner border border-line bg-panel pl-3.75 text-small font-[550] text-fg shadow-md [&>svg]:size-4 [&>svg]:flex-none [&>svg]:text-good ${button && !isToastLink(button) ? 'pointer-events-auto py-1.5 pr-1.5' : 'py-2.5 pr-3.75'} ${toast.timed ? 'max-w-[calc(100vw-32px)] animate-toast-in' : 'animate-toast'}`}
     >
       <DoneIcon />
       {toast.text}
-      {button ? <ToastAction button={button} /> : null}
+      {button === null ? null : isToastLink(button) ? <ToastAnchor link={button} /> : <ToastAction button={button} />}
     </span>
   );
 }

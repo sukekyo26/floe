@@ -1,4 +1,5 @@
 import type { CSSProperties } from 'react';
+import { TINT_DOT, TINT_VARS } from '@/components/tint';
 import { t } from '@/lib/t';
 
 import type { CssVars } from '@/utils/css-vars';
@@ -26,7 +27,7 @@ export function ShelfWhat({ words, tint, hidden, onShow }: ShelfWhatProps) {
       data-tint={tint === null ? undefined : 'true'}
       style={c as CSSProperties}
       onClick={onShow}
-      className={`max-w-full flex-none truncate border-0 bg-transparent p-0 font-semibold text-fg underline underline-offset-3 wide:hidden ${tint === null ? '' : "inline-flex items-center gap-[0.3rem] rounded-full bg-(--tint) px-2 text-label leading-normal font-medium text-(--tint-ink) no-underline [--tint-ink:color-mix(in_srgb,var(--c)_50%,var(--color-fg))] [--tint:color-mix(in_srgb,var(--c)_16%,var(--color-panel))] before:size-1.75 before:flex-none before:rounded-full before:bg-(--c) before:content-['']"}`}
+      className={`max-w-full flex-none truncate border-0 bg-transparent p-0 font-semibold text-fg underline underline-offset-3 wide:hidden ${tint === null ? '' : `inline-flex items-center gap-[0.3rem] rounded-full bg-(--tint) px-2 text-label leading-normal font-medium text-(--tint-ink) no-underline ${TINT_VARS} ${TINT_DOT}`}`}
     >
       {words}
     </button>

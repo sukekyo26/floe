@@ -6,7 +6,7 @@ import { pageWrites as pageWriteStore, type PageWrites } from '@/stores/page-wri
 import { pages as pagePages, type Pages } from '@/stores/pages';
 import { reads as pageReads, type Reads } from '@/stores/reads';
 import { taskWrites as pageTaskWrites, type TaskWrites } from '@/stores/tasks';
-import { toasts as pageToasts, type Toasts } from '@/stores/toasts';
+import { buttonOf, toasts as pageToasts, type Toasts } from '@/stores/toasts';
 import { undoToast as pageUndoToast, type UndoToast } from '@/stores/undo-toast';
 import { openPage as pageOpen, type OpenPage } from '@/stores/open-page';
 import { pageNote as pagePageNote, type PageNote } from '@/stores/page-note';
@@ -128,7 +128,7 @@ export function createPageActions({
       if (to) archivedDone(a, call);
       else {
         // Given back, its ways back go, read before they do: the focus they held goes with them
-        const ways = toasts.shown.get().filter((x) => x.button?.undo && x.button.slug === a.slug);
+        const ways = toasts.shown.get().filter((x) => buttonOf(x)?.undo && buttonOf(x)?.slug === a.slug);
         hadFocus = ways.some((x) => x.id === toasts.focused.get());
         for (const x of ways) toasts.remove(x.id);
         toasts.toast(t('ui_unarchive_done', titleOf(a)));

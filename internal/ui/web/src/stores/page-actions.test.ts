@@ -12,7 +12,7 @@ import type { PageWrites } from '@/stores/page-writes';
 import type { Pages } from '@/stores/pages';
 import type { ReadOutcome, Reads } from '@/stores/reads';
 import type { TaskWrites } from '@/stores/tasks';
-import { createToasts } from '@/stores/toasts';
+import { buttonOf, createToasts } from '@/stores/toasts';
 import { createUndoToast } from '@/stores/undo-toast';
 import type { Page } from '@/types/page';
 
@@ -141,7 +141,7 @@ describe(createPageActions, () => {
     await Promise.all([actions.setArchived(page, true, call), actions.setArchived(page, true, call)]);
     expect(log).toStrictEqual(['patch a {"archived":true}', 'prepare a', 'load after 1 toasts']);
     expect(toasts.shown.get()[0]).toMatchObject({ focus: true, button: { undo: true, holds: false, slug: 'a' } });
-    toasts.shown.get()[0]?.button?.onEscape?.();
+    buttonOf(toasts.shown.get()[0])?.onEscape?.();
     expect([texts(toasts), log.at(-1)]).toStrictEqual([[], 'escape']);
   });
 
@@ -152,7 +152,7 @@ describe(createPageActions, () => {
     await actions.setArchived(page, true, call);
     const way = toasts.shown.get()[0];
     toasts.focused.set(Number(way?.id));
-    await way?.button?.onPress();
+    await buttonOf(way)?.onPress();
     expect(texts(toasts)).toStrictEqual(['ui_unarchive_done:A']);
     expect(log.slice(-3)).toStrictEqual(['patch a {"archived":false}', 'load after 1 toasts', 'restore']);
   });
@@ -162,7 +162,7 @@ describe(createPageActions, () => {
     const { actions, toasts, notice, now } = made();
     await actions.setArchived(page, true, { prepare: prepared([]), restoreFocus: () => undefined });
     now.refuse = 'no';
-    await toasts.shown.get()[0]?.button?.onPress();
+    await buttonOf(toasts.shown.get()[0])?.onPress();
     expect(notice.said.get().message).toBe('ui_unarchive_failed:A');
     expect(texts(toasts)).toStrictEqual(['ui_archive_done:A']);
   });
@@ -173,7 +173,7 @@ describe(createPageActions, () => {
     await actions.takePageOff(page, { focus: true, prepare: prepared(log) });
     expect(log).toStrictEqual(['prepare a', 'task a {"task":"","category":""}', 'load after 1 toasts']);
     expect(toasts.shown.get()[0]?.focus).toBe(true);
-    await toasts.shown.get()[0]?.button?.onPress();
+    await buttonOf(toasts.shown.get()[0])?.onPress();
     expect(log.slice(3)).toStrictEqual(['put #1 designs {"new":false,"rev":7}', 'load after 1 toasts', 'done']);
   });
 
@@ -188,7 +188,7 @@ describe(createPageActions, () => {
     expect.assertions(3);
     const fresh = made({ known: false, stale: true });
     await fresh.actions.takePageOff(page, { prepare: prepared(fresh.log) });
-    await fresh.toasts.shown.get()[0]?.button?.onPress();
+    await buttonOf(fresh.toasts.shown.get()[0])?.onPress();
     expect(fresh.log).toContain('put #1 designs {"new":true}');
     expect(fresh.notice.said.get().message).toBe('ui_save_failed:stale');
     const refused = made({ refuse: 'no' });

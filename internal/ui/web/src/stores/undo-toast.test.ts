@@ -3,7 +3,7 @@ import { describe, expect, it } from 'vitest';
 import { setBoot, type Boot } from '@/config/boot';
 import { createNotice } from '@/stores/notice';
 import type { Pages } from '@/stores/pages';
-import { createToasts } from '@/stores/toasts';
+import { buttonOf, createToasts } from '@/stores/toasts';
 import { createUndoToast } from '@/stores/undo-toast';
 
 function made(ok: boolean) {
@@ -27,7 +27,7 @@ function made(ok: boolean) {
     },
     { focus: true },
   );
-  const button = () => toasts.shown.get()[0]?.button;
+  const button = () => buttonOf(toasts.shown.get()[0]);
   return { toasts, notice, said, button };
 }
 

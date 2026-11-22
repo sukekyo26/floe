@@ -15,13 +15,19 @@ const memory = (kept: string): Kept => ({
   remove: () => undefined,
 });
 
-function drawn(screen: Screen, kept = '', picked = false): string {
+function drawn(screen: Screen, kept = '', picked = false, alone = false): string {
   testBoot();
   const openPage = createOpenPage({ boot: () => ({ screen: 'list' }) as unknown as Boot, search: () => '' });
   if (picked) openPage.picked.set({ slug: 'a', file: '', v: 0 });
   const columns = createColumns({ screen: () => screen, storage: memory(kept), openPage });
   return renderToString(
-    <Columns columns={columns} shelf={<nav id="shelf" />} list={<ul id="list" />} reader={<section id="reader" />} />,
+    <Columns
+      columns={columns}
+      shelf={<nav id="shelf" />}
+      list={<ul id="list" />}
+      reader={<section id="reader" />}
+      alone={alone}
+    />,
   );
 }
 
@@ -53,6 +59,8 @@ describe(Columns, () => {
       'listcol',
       'list-body',
       'list',
+      // There too, hidden (ui.html #reader, which tests read on the task list)
+      'reader',
     ]);
     expect(ids(drawn('taskPage'))).toStrictEqual([
       'manage',
@@ -64,6 +72,29 @@ describe(Columns, () => {
       'list-grip',
       'reader',
     ]);
+  });
+
+  it('hides the task list’s page beside it, which is there all the same', () => {
+    expect.assertions(2);
+    expect(drawn('taskList')).toMatch(/<div class="contents" hidden=""><section id="reader">/);
+    expect(drawn('list')).toMatch(/<div class="contents"><section id="reader">/);
+  });
+
+  it('lays the list’s column out alone, all the rest drawn but hidden', () => {
+    expect.assertions(4);
+    const html = drawn('taskList', '', false, true);
+    expect(ids(html)).toStrictEqual(ids(drawn('taskList')));
+    expect(tag(html, 'manage')).toMatch(
+      /grid-cols-\[minmax\(0,1fr\)\] grid-rows-\[minmax\(0,1fr\)\] \[&amp;&gt;#shelf\]:hidden/,
+    );
+    expect(['shelf-show', 'shelf-grip'].map((id) => tag(html, id).includes('hidden=""'))).toStrictEqual([true, true]);
+    // A task gone (task-missing): its page and the list's foot and edge hidden too
+    const missing = drawn('taskPage', '', true, true);
+    expect([
+      missing.includes('data-testid="col-foot" hidden=""'),
+      tag(missing, 'list-grip').includes('hidden=""'),
+      missing.includes('<div class="contents" hidden=""><section id="reader">'),
+    ]).toStrictEqual([true, true, true]);
   });
 
   it('puts the hidden heading first, and the list’s foot in the list’s column', () => {

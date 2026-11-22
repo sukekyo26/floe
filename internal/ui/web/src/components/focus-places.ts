@@ -2,6 +2,7 @@ import { flushSync } from 'react-dom';
 
 import { getBoot, screenOf } from '@/config/boot';
 import { oneColumn } from '@/lib/platform';
+import { listQuery as pageQuery, type ListQuery } from '@/stores/list-query';
 import { openPage as pageOpen, type OpenPage } from '@/stores/open-page';
 import { order as pageOrder, type Order } from '@/stores/order';
 import type { ArchiveFocus, TaskOutFocus } from '@/stores/page-actions';
@@ -40,6 +41,7 @@ const focusRow = (key: string | null): boolean =>
   key !== null && focusOn(document.querySelector(`#list > li[data-key="${CSS.escape(key)}"] [data-testid=title]`));
 
 const onTaskPage = () => screenOf(getBoot(), window.location.search) === 'taskPage';
+const onTaskList = () => screenOf(getBoot(), window.location.search) === 'taskList';
 const findOpen = () => document.querySelector('dialog#find[open]') !== null;
 const entry = (slug: string) => `entry:${slug}`;
 
@@ -62,7 +64,7 @@ export const restoreFocus = (slug: string) => (): void => {
 
 // prepareTaskOut takes, before the page leaves its task, the row next to it; back is the menu it was taken off from.
 // Put back, the focus goes to its row, or back; on Escape, back, or the row next to it
-// LIMIT: on a task's page ui.html goes on to the category's add button and the task's edit button: P6 adds them here
+// LIMIT: on a task's page ui.html goes on to the category's add button and the task's edit button: P6b adds them here
 export function prepareTaskOut(slug: string, back: () => boolean): TaskOutFocus {
   const next = rowNearby(rowsNow(), entry(slug));
   return {
@@ -123,14 +125,27 @@ interface BackDeps {
   order?: Order;
   pages?: Pages;
   openPage?: OpenPage;
+  query?: Pick<ListQuery, 'takeFrom'>;
 }
 
 // backToRow gives the focus back to the row a page whole was opened from, come back to (Order's comeBack), and opens
 // its version beside the list unless that reads a page left unread. Where the row is no longer seen (the list folded
-// as it was, or as it is picked), the focus goes to what opens the list, the one place that can take it then. Called
-// once the list is first drawn (useBackToRow) and on the way back from the browser's cache (P8)
-// LIMIT: the task list's row is a pin (ui.html 4527): P6 adds it here
-export function backToRow({ order = pageOrder, pages = pagePages, openPage = pageOpen }: BackDeps = {}): void {
+// as it was, or as it is picked), the focus goes to what opens the list, the one place that can take it then. On the
+// task list, first the row of the task whose page it was gone back to from (ui.html focusTaskRow), then the pin a page
+// whole was opened from, which wins (ui.html 3954, then 4527 on the read after). Called once the list is first drawn
+// (useBackToRow) and on the way back from the browser's cache (P8)
+export function backToRow({
+  order = pageOrder,
+  pages = pagePages,
+  openPage = pageOpen,
+  query = pageQuery,
+}: BackDeps = {}): void {
+  if (onTaskList()) {
+    focusRow(query.takeFrom());
+    const pin = order.takeCameFrom();
+    if (pin) focusOn(document.querySelector(`#pin-list > [data-slug="${CSS.escape(pin.slug)}"] [data-testid=pin]`));
+    return;
+  }
   const at = order.takeCameFrom();
   if (!at) return;
   const key = at.file ? `page:${openKey(at.slug, at.file)}` : entry(at.slug);
