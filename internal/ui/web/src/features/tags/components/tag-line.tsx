@@ -3,6 +3,7 @@ import { useRef } from 'react';
 import { focusOn } from '@/components/focus-places';
 import { EditIcon, PlusIcon, TagIcon } from '@/components/icons';
 import { IconButton } from '@/components/icon-button';
+import { TagPill } from '@/components/tag-pill';
 import { t } from '@/lib/t';
 import type { FocusBack } from '@/types/focus';
 import type { Page } from '@/types/page';
@@ -30,14 +31,7 @@ export function TagLine({ page: a, hidden, onEdit }: TagLineProps) {
       <TagIcon />
       <span className="me-0.75">{t('ui_tags')}</span>
       {tags.map((name) => (
-        <span
-          key={name}
-          data-testid="tagpill"
-          title={name}
-          className="max-w-48 flex-none truncate rounded-full bg-subtle px-2 text-label text-fg"
-        >
-          {name}
-        </span>
+        <TagPill key={name} name={name} />
       ))}
       <IconButton
         ref={button}

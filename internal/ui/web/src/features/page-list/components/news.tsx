@@ -3,12 +3,13 @@ import type { MouseEventHandler } from 'react';
 import { Button } from '@/components/button';
 import { getBoot } from '@/config/boot';
 import { showResults } from '@/features/page-list/stores/show-results';
-import { newCount, newsClick, newsPress, newsTaken } from '@/features/page-list/utils/list-shelf';
+import { newCount, newsPress, newsTaken } from '@/features/page-list/utils/list-shelf';
 import { useStore } from '@/hooks/use-store';
 import { t } from '@/lib/t';
 import { columns as pageColumns, type ColumnsStore } from '@/stores/columns';
 import { listQuery, type ListQuery } from '@/stores/list-query';
 import { pages as pagePages, type Pages } from '@/stores/pages';
+import { plainPress } from '@/utils/plain-press';
 
 export interface NewsProps {
   // hidden is where it stands: a page found whole has none (ui.html 5215)
@@ -25,7 +26,7 @@ export function News({ hidden = false, query = listQuery, pages = pagePages, col
   const n = newCount(useStore(pages.state).entries);
   const onList = newsTaken(getBoot().screen);
   const take: MouseEventHandler<HTMLAnchorElement> = (e) => {
-    if (!newsClick(e)) return;
+    if (!plainPress(e)) return;
     e.preventDefault();
     const { picks, q } = newsPress();
     query.setWords(q);

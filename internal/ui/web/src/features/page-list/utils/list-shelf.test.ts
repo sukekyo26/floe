@@ -6,8 +6,9 @@ import {
   listEmpty,
   narrowWords,
   newCount,
-  newsClick,
   newsPress,
+  tagPress,
+  unseenSlugs,
   viewCounts,
   viewLit,
   viewPress,
@@ -85,21 +86,12 @@ describe(chipPress, () => {
 });
 
 describe(newsPress, () => {
-  it('leaves every new page: the view New, no pick, no search; a plain press of the first button alone', () => {
-    expect.assertions(2);
+  it('leaves every new page: the view New, no pick, no search', () => {
+    expect.assertions(1);
     expect(newsPress()).toStrictEqual({
       picks: { view: 'new', kind: '', template: '', project: '', tag: '' },
       q: '',
     });
-    const press = { button: 0, ctrlKey: false, metaKey: false, shiftKey: false, altKey: false };
-    expect([
-      newsClick(press),
-      newsClick({ ...press, button: 1 }),
-      newsClick({ ...press, ctrlKey: true }),
-      newsClick({ ...press, metaKey: true }),
-      newsClick({ ...press, shiftKey: true }),
-      newsClick({ ...press, altKey: true }),
-    ]).toStrictEqual([true, false, false, false, false, false]);
   });
 });
 
@@ -132,5 +124,30 @@ describe(listEmpty, () => {
       listEmpty([page('a')], state({ q: 'nothing' }), none),
       listEmpty([], state({ view: 'fav' }), none),
     ]).toStrictEqual([true, false, false, false]);
+  });
+});
+
+describe(tagPress, () => {
+  it('narrows to the tag, and leaves the list as it is for the one picked already', () => {
+    expect.assertions(1);
+    expect([
+      tagPress(state(), 'x'),
+      tagPress(state({ tag: 'x' }), 'x'),
+      tagPress(state({ tag: 'y' }), 'x'),
+    ]).toStrictEqual([{ tag: 'x' }, null, { tag: 'x' }]);
+  });
+});
+
+describe(unseenSlugs, () => {
+  it('gives every unread page not archived, whatever the shelf picks', () => {
+    expect.assertions(1);
+    expect(
+      unseenSlugs([
+        page('a', { news: 'new' }),
+        page('b'),
+        page('c', { news: 'version', archived: true }),
+        page('d', { news: 'version' }),
+      ]),
+    ).toStrictEqual(['a', 'd']);
   });
 });
