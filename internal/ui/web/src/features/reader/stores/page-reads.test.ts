@@ -48,7 +48,6 @@ function made({ archived = false } = {}) {
     pages: { state: createStore({ entries: [{ slug: 'a', title: 'A', archived }] }) } as unknown as Pages,
     openPage: { shownSlug: () => shown.slug } as unknown as OpenPage,
     actions: { markUnreadSaid: () => Promise.resolve() } as unknown as PageActions,
-    versionsAgain: () => log.push('versions again'),
   });
   const answer = (outcome: ReadOutcome) => answers.shift()?.(outcome);
   return { pr, log, toasts, keptUnread, shown, answer };
@@ -78,7 +77,7 @@ describe(createPageReads, () => {
     const again = pr.served('a', MARK, none);
     answer({ kind: 'sent', cleared: false });
     await again;
-    expect(log).toStrictEqual(['tell a say=true', 'note a 3', 'versions again', 'tell a say=false', 'versions again']);
+    expect(log).toStrictEqual(['tell a say=true', 'note a 3', 'tell a say=false']);
   });
 
   it('says nothing marked unread before the answer came (TestUIUnreadKept 220), nor of a page left meanwhile', async () => {
@@ -103,7 +102,7 @@ describe(createPageReads, () => {
     const p = old.pr.served('a', MARK, none);
     old.answer({ kind: 'sent', cleared: true });
     await p;
-    expect([texts(old.toasts), old.log]).toStrictEqual([[], ['tell a say=true', 'note a 3', 'versions again']]);
+    expect([texts(old.toasts), old.log]).toStrictEqual([[], ['tell a say=true', 'note a 3']]);
     const kept = made();
     kept.keptUnread.set('a');
     await kept.pr.served('a', MARK, none);

@@ -133,6 +133,24 @@ describe(createReads, () => {
     expect(notice.said.get()).toStrictEqual({ message: 'unread: down', from: 'read' });
   });
 
+  it('tells each mark the server took, read or unread, and none refused, cut off or of a page gone', async () => {
+    expect.assertions(1);
+    vi.stubGlobal(
+      'fetch',
+      server({
+        refused: () => Promise.resolve(new Response('locked', { status: 500 })),
+        off: () => Promise.reject(new TypeError('down')),
+        gone: () => Promise.resolve(new Response('', { status: 404 })),
+      }).fetch,
+    );
+    const { reads } = made();
+    const told: (string | undefined)[] = [];
+    reads.answered.subscribe(() => told.push(reads.answered.get()?.slug));
+    for (const slug of ['a', 'refused', 'off', 'gone']) await reads.tellRead(slug, READ);
+    await reads.tellRead('a', null);
+    expect(told).toStrictEqual(['a', 'a']);
+  });
+
   it('reads no answer of a read not to be said, which may hold no JSON', async () => {
     expect.assertions(1);
     vi.stubGlobal('fetch', server({ a: () => Promise.resolve(new Response('ok')) }).fetch);

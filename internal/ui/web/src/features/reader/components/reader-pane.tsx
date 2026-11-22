@@ -15,9 +15,11 @@ interface ReaderPaneProps {
   // at is the row's page open beside the list (picked), page its entry as listed; null for none
   readonly at: OpenAt | null;
   readonly page: Page | null;
-  // actions are the bar's (BarActions), version the versions' select (P7), tags the tag line (TagLine)
+  // actions are the bar's (BarActions), version the versions' select (VersionSelect) and versionNote its words
+  // (VersionNote), tags the tag line (TagLine)
   readonly actions?: ReactNode;
   readonly version?: ReactNode;
+  readonly versionNote?: ReactNode;
   readonly tags?: ReactNode;
   // what is the list's narrowing in words, shown in the head with the list folded (P9's), null for none
   readonly what?: ReactNode;
@@ -38,6 +40,7 @@ export function ReaderPane({
   page: a,
   actions,
   version,
+  versionNote,
   tags,
   what = null,
   keys,
@@ -87,6 +90,7 @@ export function ReaderPane({
         {a ? <span className="ms-auto">{actions}</span> : null}
       </div>
       {tags}
+      {versionNote}
       <PageNote slug={at?.slug} note={note} {...(onTitle ? { onGo: onTitle } : {})} />
       {/* No sandbox attribute: the server sandboxes the page by its header (ui.md), and allow lets its copy and
           fullscreen buttons work */}
