@@ -63,7 +63,8 @@ interface Adding {
 const OFF: Adding = { on: false, typed: '', said: '' };
 
 const ROW_BOX = 'overflow-hidden rounded-small border border-line';
-const ADD_ROW = 'flex min-h-[2.6rem] items-center bg-panel';
+// As high as its button, the line over it not counted, so that it keeps its height as it turns into the field
+const ADD_ROW = 'box-content flex min-h-[2.6rem] items-center bg-panel';
 const ADD_FIELD =
   'min-w-0 flex-1 self-stretch border-0 bg-panel px-[0.6rem] text-body font-normal text-fg placeholder:text-faint focus-visible:-outline-offset-2';
 const SAID = 'm-0 font-normal text-danger empty:hidden';
@@ -81,7 +82,8 @@ export function TaskEditDialog({
 }: TaskEditDialogProps) {
   const hold = useHold();
   const { tasks: taken } = useStore(pages.state);
-  const [was, setWas] = useState<TaskEditOpen | null>(open);
+  // The last opened, which the modal shows and goes back from as it closes: open is null by then
+  const [last, setLast] = useState<TaskEditOpen | null>(null);
   const [read, setRead] = useState<Read>({ base: editBase({}), rev: 0, paged: [], gone: false });
   const [title, setTitle] = useState('');
   const [urls, setURLs] = useState<string[]>([]);
@@ -96,21 +98,19 @@ export function TaskEditDialog({
   // Opened over the task as the tasks read now have it, its rev and fields of one read: the page drawn before may be
   // older
   const now = (x: TaskOf) => writes.tasksOf().find((y) => y.project === x.project && y.name === x.name);
-  if (open !== was) {
-    setWas(open);
-    if (open) {
-      const x = now(open.task) ?? open.task;
-      const base = editBase(x);
-      setRead({ base, rev: pages.readRev(x.project, x.name), paged: pagedOf(x), gone: false });
-      setTitle(base.title);
-      setURLs(base.urls);
-      setCategories(base.categories);
-      setURL(OFF);
-      setCategory(OFF);
-      setURLsSaid('');
-      setCategoriesSaid('');
-      setError('');
-    }
+  if (open !== null && open !== last) {
+    setLast(open);
+    const x = now(open.task) ?? open.task;
+    const base = editBase(x);
+    setRead({ base, rev: pages.readRev(x.project, x.name), paged: pagedOf(x), gone: false });
+    setTitle(base.title);
+    setURLs(base.urls);
+    setCategories(base.categories);
+    setURL(OFF);
+    setCategory(OFF);
+    setURLsSaid('');
+    setCategoriesSaid('');
+    setError('');
   }
   const max = getBoot().maxURLs;
 
@@ -226,7 +226,7 @@ export function TaskEditDialog({
       onClosed={onClosed}
       hold={hold}
       labelledBy="edit-task-heading"
-      afterClose={() => open?.back() ?? false}
+      afterClose={() => last?.back() ?? false}
     >
       <form
         id="edit-task"
@@ -291,7 +291,7 @@ export function TaskEditDialog({
               }}
             />
             <div className={`${ADD_ROW} ${urls.length > 0 ? 'border-t border-line' : ''}`}>
-              <span hidden={url.on} className="px-[0.4rem] py-[0.3rem]">
+              <span hidden={url.on} className="flex px-[0.4rem] py-[0.3rem]">
                 <Button
                   id="edit-url-plus"
                   hidden={url.on}
@@ -375,7 +375,7 @@ export function TaskEditDialog({
               }}
             />
             <div className={`${ADD_ROW} ${categories.length > 0 ? 'border-t border-line' : ''}`}>
-              <span hidden={category.on} className="px-[0.4rem] py-[0.3rem]">
+              <span hidden={category.on} className="flex px-[0.4rem] py-[0.3rem]">
                 <Button
                   id="edit-category-plus"
                   hidden={category.on}

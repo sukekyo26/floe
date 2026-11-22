@@ -43,7 +43,8 @@ export function TaskSetDialog({
 }: TaskSetDialogProps) {
   const hold = useHold();
   const { entries, tasks: taken } = useStore(pages.state);
-  const [was, setWas] = useState<TaskSetOpen | null>(open);
+  // The last opened, which the modal shows and goes back from as it closes: open is null by then
+  const [last, setLast] = useState<TaskSetOpen | null>(null);
   const [name, setName] = useState('');
   const [title, setTitle] = useState('');
   const [category, setCategory] = useState('');
@@ -55,16 +56,14 @@ export function TaskSetDialog({
   const toToast = useRef<number | null>(null);
   const failed = Boolean(taken.error);
   // The fields as they open: the page's task and category, none of what was typed before (ui.html resetTaskForm)
-  if (open !== was) {
-    setWas(open);
-    if (open) {
-      const now = open.page.task?.name ?? '';
-      setName(now);
-      setTitle('');
-      setCategory(open.page.task?.category ?? '');
-      setOpened(now);
-      setError(failed ? t('ui_tasks_failed', taken.error) : '');
-    }
+  if (open !== null && open !== last) {
+    setLast(open);
+    const now = open.page.task?.name ?? '';
+    setName(now);
+    setTitle('');
+    setCategory(open.page.task?.category ?? '');
+    setOpened(now);
+    setError(failed ? t('ui_tasks_failed', taken.error) : '');
   }
   const page = open?.page;
   const project = page?.taskProject ?? '';
@@ -182,7 +181,7 @@ export function TaskSetDialog({
       afterClose={() => {
         const toast = toToast.current;
         toToast.current = null;
-        const back = open?.back() ?? false;
+        const back = last?.back() ?? false;
         if (toast === null) return back;
         return focusOn(document.querySelector(`[data-toast="${String(toast)}"] button`));
       }}
