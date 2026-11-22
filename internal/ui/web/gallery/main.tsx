@@ -62,6 +62,7 @@ import { ListShelf } from '@/features/page-list/components/list-shelf';
 import { News } from '@/features/page-list/components/news';
 import { SearchBox } from '@/features/page-list/components/search-box';
 import type { Page } from '@/types/page';
+import { VersionsSection } from './versions';
 
 // The boot values go test -gallery wrote (just web-gallery); none when it has not run
 const found = import.meta.glob<Boot>('./boot.json', { eager: true, import: 'default' });
@@ -678,6 +679,9 @@ function Gallery() {
               note={galleryNote}
             />
           </div>
+        </Section>
+        <Section title="Versions: beside the list (pick three, open the choice, v1 and the words; one has no choice) and the frame at v2 (narrow the window under 40rem: the words wrap)">
+          <VersionsSection />
         </Section>
         <Section title="Search (↑ ↓, Enter; the foot holds the row’s buttons; its … opens up)">
           <div className="flex flex-wrap gap-2">
