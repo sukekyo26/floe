@@ -12,7 +12,7 @@ export interface IconButtonProps {
   readonly children: ReactNode;
   // bar: 30 px, among the bar's; row: 26 px, a row's; chip: 28 px, a pin's × (ui.html .pin-off); help: 24 px, the
   // pins' help (.pins-help); item: an item of a menu, as wide as the menu, its words beside
-  readonly size?: 'bar' | 'row' | 'chip' | 'help' | 'item';
+  readonly size?: 'bar' | 'row' | 'chip' | 'help' | 'kin' | 'item';
   readonly display?: Display;
   // A button that toggles: whether it is on (aria-pressed, "true" or "false"); left out, it toggles nothing
   readonly pressed?: boolean | undefined;
@@ -35,6 +35,8 @@ export interface IconButtonProps {
   readonly download?: boolean | undefined;
   readonly id?: string | undefined;
   readonly testid?: string | undefined;
+  // task names the task it acts on (data-task): a row's of a task's family card
+  readonly task?: string | undefined;
   readonly hidden?: boolean | undefined;
   readonly disabled?: boolean | undefined;
   readonly onClick?: MouseEventHandler<HTMLElement> | undefined;
@@ -49,6 +51,7 @@ const ROUND = {
   row: { pad: 'px-1.5', svg: '[&_svg]:size-4', box: 'h-6.5 min-w-6.5' },
   chip: { pad: 'px-0', svg: '[&_svg]:size-3', box: 'h-7 w-7 min-w-7 flex-none' },
   help: { pad: 'px-0', svg: '[&_svg]:size-4', box: 'h-6 w-6 min-w-6 flex-none' },
+  kin: { pad: 'px-0', svg: '[&_svg]:size-4', box: 'h-7 min-w-7 flex-none' },
 } as const;
 
 const DISPLAY: Record<Display, string> = {
@@ -80,6 +83,7 @@ export function IconButton({
   download,
   id,
   testid,
+  task,
   hidden,
   disabled,
   ref,
@@ -90,6 +94,7 @@ export function IconButton({
   const common = {
     id,
     'data-testid': testid,
+    'data-task': task,
     'aria-label': label,
     title: title ?? (size === 'item' ? undefined : label),
     hidden,

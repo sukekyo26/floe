@@ -244,3 +244,23 @@ export const ListColumnIcon = () => (
     <path fill="currentColor" stroke="none" d="M9 4h6v16H9Z" />
   </TwoColumns>
 );
+// A task's family card's parts and the way off it (ui.html #task-up-part, #task-kids-part, UNLINK_MARK)
+export const ParentIcon = () => (
+  <Line width={2}>
+    <path d="m14 9-5-5-5 5" />
+    <path d="M20 20h-7a4 4 0 0 1-4-4V4" />
+  </Line>
+);
+export const KidsIcon = () => (
+  <Line width={2}>
+    <path d="m15 10 5 5-5 5" />
+    <path d="M4 4v7a4 4 0 0 0 4 4h12" />
+  </Line>
+);
+export const UnlinkIcon = () => (
+  <Line width={2}>
+    <path d="m18.84 12.25 1.72-1.71a5 5 0 0 0-7.07-7.07l-1.72 1.71" />
+    <path d="m5.17 11.75-1.71 1.71a5 5 0 0 0 7.07 7.07l1.71-1.71" />
+    <path d="M8 2v3M2 8h3M16 22v-3M22 16h-3" />
+  </Line>
+);

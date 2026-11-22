@@ -1,9 +1,8 @@
-import type { CSSProperties, ReactNode } from 'react';
+import type { ReactNode } from 'react';
 
-import { TINT_DOT, TINT_VARS } from '@/components/tint';
+import { PILL, ProjectPill } from '@/components/project-pill';
 import { t } from '@/lib/t';
 import type { Page } from '@/types/page';
-import type { CssVars } from '@/utils/css-vars';
 import { unseen } from '@/utils/list-view';
 import { projectColor } from '@/utils/project-color';
 
@@ -15,7 +14,6 @@ interface RowSubProps {
   readonly middle?: ReactNode;
 }
 
-const PILL = 'rounded-full px-2 whitespace-nowrap';
 // NEW_PILL is the pill of what is new on a row: a page's new version, a task's unread pages
 export const NEW_PILL = `${PILL} bg-new-soft font-mono text-label leading-normal font-bold text-new`;
 
@@ -23,7 +21,6 @@ export const NEW_PILL = `${PILL} bg-new-soft font-mono text-label leading-normal
 // the caller adds, then a link's path or that its file is gone. The tags are the list row's own (P5)
 export function RowSub({ page: a, ranks, middle }: RowSubProps) {
   const project = a.project ?? '';
-  const tint: CssVars = { '--c': projectColor(project, ranks) };
   return (
     <>
       {unseen(a) && a.news === 'version' ? (
@@ -36,20 +33,7 @@ export function RowSub({ page: a, ranks, middle }: RowSubProps) {
           {a.folder ? t('ui_kind_folder') : a.path ? t('ui_kind_of_link', a.template ?? 'HTML') : a.template}
         </span>
       ) : null}
-      {ranks.has(project) ? (
-        // The one colour mixed outside :root (ui.md manage-colours): --c is each row's
-        <span
-          data-testid="proj"
-          // Painted in its project's colour (P0's name; ui.html drawProject: proj-tint), as it is drawn only then
-          data-tint="true"
-          style={tint as CSSProperties}
-          className={`${PILL} inline-flex max-w-40 items-center gap-1.25 bg-(--tint) font-medium text-(--tint-ink) ${TINT_VARS} ${TINT_DOT}`}
-        >
-          <span data-testid="proj-name" className="min-w-0 truncate">
-            {project}
-          </span>
-        </span>
-      ) : null}
+      {ranks.has(project) ? <ProjectPill word={project} color={projectColor(project, ranks)} /> : null}
       {middle}
       {a.missing ? (
         <span data-testid="miss" className={`${PILL} bg-chg-soft text-chg`}>

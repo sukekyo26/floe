@@ -5,11 +5,10 @@ import type { Openers } from '@/components/page-menu';
 import { PageRow } from '@/components/page-row';
 import { RowSub } from '@/components/row-sub';
 import { TagPill } from '@/components/tag-pill';
-import type { RowPresses } from '@/hooks/use-row-press';
+import { pageTitlePress, type RowPresses } from '@/hooks/use-row-press';
 import { t } from '@/lib/t';
 import type { Page } from '@/types/page';
 import { TASKS_PATH, taskHref } from '@/utils/page-urls';
-import { plainPress } from '@/utils/plain-press';
 
 export interface ListRowProps {
   readonly page: Page;
@@ -125,14 +124,7 @@ export const ListRow = memo(function ListRow({
           }
         : {})}
       onTitleClick={(e) => {
-        if (!a.folder) {
-          presses.press({ slug: a.slug, file: '' }, e);
-          return;
-        }
-        // A folder's title opens and closes its tree; its URL leads to the list with it open, for a new tab
-        if (!plainPress(e)) return;
-        e.preventDefault();
-        onFolder(a.slug);
+        pageTitlePress(a, presses, onFolder, e);
       }}
       onTitleKeyDown={(e) => {
         presses.key({ slug: a.slug, file: '' }, e);

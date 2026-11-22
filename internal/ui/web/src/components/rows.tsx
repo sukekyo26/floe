@@ -58,14 +58,21 @@ function Heading({ item }: { readonly item: Extract<RowItem, { kind: 'group' }> 
       role="none"
       className={`ps-[calc(1rem+1px)] pe-0 pt-2.75 pb-1 text-small leading-[1.2] font-bold text-muted ${item.add ? 'grid grid-cols-[minmax(0,1fr)_auto] items-center gap-x-2 gap-y-1' : 'block'}`}
     >
-      <h2 className="m-0">{item.heading}</h2>
+      {/* oxlint-disable-next-line jsx-a11y/prefer-tag-over-role -- ui.html's markup, which the tests read by its role */}
+      <div role="heading" aria-level={2}>
+        {item.heading}
+      </div>
       {item.add ? (
         <Button testid="category-add" label={t('ui_page_add_named', item.heading)} onClick={item.add.onAdd}>
           <PlusIcon />
           {t('ui_page_add')}
         </Button>
       ) : null}
-      {item.add && item.empty !== undefined ? <p className="col-span-full m-0 pb-2 font-normal">{item.empty}</p> : null}
+      {item.add && item.empty !== undefined ? (
+        <p data-testid="category-empty" className="col-span-full m-0 pb-2 font-normal">
+          {item.empty}
+        </p>
+      ) : null}
     </li>
   );
 }

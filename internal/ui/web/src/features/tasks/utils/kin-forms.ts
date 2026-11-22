@@ -27,15 +27,71 @@ export interface KinForm {
   body: (task: KinTask, name: string, x: TaskOf | undefined, title: string) => TasksChange;
 }
 
-export type KinFormName = 'add';
+export type KinFormName = 'add' | 'child' | 'parent';
 
 // stateWord is a state's name as the screen says it
 export const stateWord = (state: string): string => t(`ui_state_${state}` as MessageKey);
 
 // named is a task as its name and title say it
-const named = (x: TaskOf): string => [x.name, x.title].filter(Boolean).join(' ');
+const named = (x: Pick<Partial<TaskOf>, 'name' | 'title'>): string => [x.name, x.title].filter(Boolean).join(' ');
+// isOwnChild: x is a child of the task of the page already
+const isOwnChild = (task: KinTask, x: TaskOf): boolean => x.parentTask?.name === task.name;
+// mayParent: x has no parent of its own, and is not the task it is for
+const mayParent = (task: KinTask, x: TaskOf): boolean => !x.parent && x.name !== task.name;
 
 export const KIN_FORMS: Record<KinFormName, KinForm> = {
+  // A child of the task of the page: a task named comes to be one with what it has, out of another parent's, and any
+  // other is made. What the store's checkParent would refuse is not offered; pressed, the store refuses it
+  child: {
+    heading: () => t('ui_child_add_named'),
+    target: (task) => t('ui_task_child_of', named(task)),
+    offered: (task, x) => x.children.length === 0 && x.name !== task.name && !isOwnChild(task, x),
+    there: (task, _name, x) => {
+      if (!x) return null;
+      if (isOwnChild(task, x)) return { button: 'ui_child_take_button', act: 'none', note: '' };
+      const said = x.parent ? t('ui_task_child_move', named(x), x.parent) : t('ui_task_child_take', named(x));
+      return { button: 'ui_child_take_button', act: 'write', note: KIN_FORMS.child.offered(task, x) ? said : '' };
+    },
+    // LIMIT: this task's row gone meanwhile, its pages left, it is there still: refused as no parent (400), not read
+    // again, as a parent not known
+    body: (task, name, x, title) => ({
+      taskProject: task.project,
+      task: name,
+      new: !x,
+      ...(x ? { rev: x.rev } : { title }),
+      parent: task.name ?? '',
+      parentNew: false,
+    }),
+  },
+  // The parent of the task of the page: a task named comes to be it, the one before said; any other is made with it, in
+  // the same write (parentTitle)
+  parent: {
+    heading: (task) => t(task.parent ? 'ui_up_change_named' : 'ui_up_add_named'),
+    target: (task) => t('ui_task_parent_of', named(task)),
+    offered: mayParent,
+    there: (task, name, x) => {
+      // The parent as written, one that makes no family too, named again is no change
+      const written = task.parent?.trim();
+      if (written && name === written) return { button: 'ui_up_take_button', act: 'none', note: '' };
+      if (!x) return null;
+      const said =
+        task.parent && task.parent !== x.name
+          ? t('ui_task_parent_move', named(x), task.parent)
+          : t('ui_task_parent_take', named(x));
+      return { button: 'ui_up_take_button', act: 'write', note: mayParent(task, x) ? said : '' };
+    },
+    // LIMIT: whether the one named has come to have a parent or children meanwhile is not said: the store refuses it as
+    // it is now (400), and the words say so, with nothing read again
+    body: (task, name, x, title) => ({
+      taskProject: task.project,
+      task: task.name ?? '',
+      new: false,
+      ...(task.rev === undefined ? {} : { rev: task.rev }),
+      parent: name,
+      parentNew: !x,
+      ...(x ? {} : { parentTitle: title }),
+    }),
+  },
   // A new task, from the task list. A task named is there already, which is said, and pressing opens it with nothing
   // written
   add: {

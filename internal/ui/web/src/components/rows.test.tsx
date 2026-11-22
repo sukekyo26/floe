@@ -16,8 +16,12 @@ describe(Rows, () => {
     testBoot();
     const html = renderToString(<Rows items={items} selecting={false} />);
     expect(html).toMatch(/^<ul id="list"(?![^>]*data-selecting)/);
-    expect(html).toMatch(/<li data-key="group:Today" data-testid="group" role="none"[^>]*><h2 class="m-0">Today<\/h2>/);
-    expect(html).toMatch(/data-testid="group" data-adds="true".*data-testid="category-add".*none yet/s);
+    expect(html).toMatch(
+      /<li data-key="group:Today" data-testid="group" role="none"[^>]*><div role="heading" aria-level="2">Today<\/div>/,
+    );
+    expect(html).toMatch(
+      /data-testid="group" data-adds="true".*data-testid="category-add".*data-testid="category-empty"[^>]*>none yet/s,
+    );
     expect([
       html.includes('<li>new</li>'),
       renderToString(<Rows items={items} selecting />).includes('data-selecting="true"'),
