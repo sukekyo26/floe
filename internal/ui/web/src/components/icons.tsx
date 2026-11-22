@@ -264,3 +264,37 @@ export const UnlinkIcon = () => (
     <path d="M8 2v3M2 8h3M16 22v-3M22 16h-3" />
   </Line>
 );
+
+// The buttons of a row of the task edit's lists, in lines (ui.html lineIcon): up, down, and the x that takes a URL or
+// a category off, the one x of both as both are the same act
+export const RowUpIcon = () => (
+  <Line>
+    <path d="M12 19V5" />
+    <path d="m5 12 7-7 7 7" />
+  </Line>
+);
+
+export const RowDownIcon = () => (
+  <Line>
+    <path d="M12 5v14" />
+    <path d="m19 12-7 7-7-7" />
+  </Line>
+);
+
+export const RowDropIcon = () => (
+  <Line>
+    <path d="M6 6l12 12M18 6 6 18" />
+  </Line>
+);
+
+// The grip a row of the task edit's lists is dragged by
+export const GripIcon = () => (
+  <svg viewBox="0 0 24 24" fill="currentColor" aria-hidden="true">
+    <circle cx="9" cy="6" r="1.5" />
+    <circle cx="15" cy="6" r="1.5" />
+    <circle cx="9" cy="12" r="1.5" />
+    <circle cx="15" cy="12" r="1.5" />
+    <circle cx="9" cy="18" r="1.5" />
+    <circle cx="15" cy="18" r="1.5" />
+  </svg>
+);

@@ -1,0 +1,88 @@
+import { describe, expect, it } from 'vitest';
+
+import { testBoot } from '@/components/test-boot';
+import {
+  categoryRefusal,
+  editChange,
+  leftOver,
+  mergeLists,
+  mergeURLs,
+  refillTitle,
+  urlRefusal,
+} from '@/features/tasks/utils/task-edit';
+
+const base = { title: 'T', urls: ['u1', 'u2'], categories: ['a', 'b'] };
+
+describe(editChange, () => {
+  it('sends what changed alone, in the order the store reads, and nothing where nothing changed', () => {
+    expect.assertions(4);
+    expect(editChange(base, { title: ' T ', urls: ['u1', 'u2'], categories: ['a', 'b'] })).toBeNull();
+    // Added and taken off, the order kept: no order
+    expect(JSON.stringify(editChange(base, { title: 'N', urls: ['u2', 'u3'], categories: ['a', 'b'] }))).toBe(
+      '{"title":"N","urls":{"add":["u3"],"remove":["u1"]}}',
+    );
+    expect(editChange(base, { title: 'T', urls: ['u2', 'u1'], categories: ['a', 'b'] })).toStrictEqual({
+      urls: { order: ['u2', 'u1'] },
+    });
+    expect(editChange(base, { title: 'T', urls: ['u1', 'u2'], categories: ['b', 'a', 'c'] })).toStrictEqual({
+      categories: ['b', 'a', 'c'],
+    });
+  });
+});
+
+describe(mergeLists, () => {
+  it('takes the list read where it was not changed, else keeps the person’s with another’s added after', () => {
+    expect.assertions(2);
+    expect(mergeLists(['a', 'b'], ['a', 'b'], ['b', 'c'])).toStrictEqual(['b', 'c']);
+    // Mine: b first, a removed by me, c added by me; another removed b and added d
+    expect(mergeLists(['c', 'b'], ['a', 'b'], ['a', 'd'])).toStrictEqual(['c', 'd']);
+  });
+});
+
+describe(mergeURLs, () => {
+  it('keeps the order another saved where the person did not reorder, with the person’s added after', () => {
+    expect.assertions(2);
+    expect(mergeURLs(['u1', 'u2', 'u3'], ['u1', 'u2'], ['u2', 'u1'])).toStrictEqual(['u2', 'u1', 'u3']);
+    // Reordered by the person: as mergeLists
+    expect(mergeURLs(['u2', 'u1'], ['u1', 'u2'], ['u1', 'u2', 'u4'])).toStrictEqual(['u2', 'u1', 'u4']);
+  });
+});
+
+describe(refillTitle, () => {
+  it('takes the title read again where the field is as it opened, and keeps what was typed', () => {
+    expect.assertions(2);
+    expect(refillTitle(' T ', 'T', 'Theirs')).toBe('Theirs');
+    expect(refillTitle('Mine', 'T', 'Theirs')).toBe('Mine');
+  });
+});
+
+describe(urlRefusal, () => {
+  it('refuses none, one there and one past the most, and adds any other, which the store checks', () => {
+    expect.assertions(4);
+    testBoot();
+    expect(urlRefusal('', [], 10)).toBe('ui_url_blank:undefined');
+    expect(urlRefusal('https://a', ['https://a'], 10)).toBe('ui_url_there:https://a');
+    expect(urlRefusal('https://b', ['x', 'y'], 2)).toBe('ui_url_max:2');
+    expect(urlRefusal('ftp://a', ['x'], 10)).toBe('');
+  });
+});
+
+describe(categoryRefusal, () => {
+  it('refuses none and one there, and adds any other', () => {
+    expect.assertions(3);
+    testBoot();
+    expect(categoryRefusal('', ['a'])).toBe('ui_category_blank:undefined');
+    expect(categoryRefusal('a', ['a'])).toBe('ui_category_there:a');
+    expect(categoryRefusal('b', ['a'])).toBe('');
+  });
+});
+
+describe(leftOver, () => {
+  it('stops saving words typed and not added, saying whether they are there already', () => {
+    expect.assertions(3);
+    testBoot();
+    expect(leftOver('', ['a'], false)).toBe('');
+    expect(leftOver('a', ['a'], false)).toBe('ui_category_there:a');
+    expect(leftOver('https://c', [], true)).toBe('ui_url_unadded:https://c');
+  });
+});
