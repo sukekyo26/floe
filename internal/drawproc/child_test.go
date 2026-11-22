@@ -77,11 +77,12 @@ func serve(mode string) int {
 	return 0
 }
 
-// children is a Child of build that runs this test binary as floe __draw in mode, for 2 seconds a page.
+// children is a Child of build that runs this test binary as floe __draw in mode, for 30 seconds a page: far past
+// what starting a child takes under the race detector on a busy CI runner (2 seconds once).
 func children(t *testing.T, build, mode string) *drawproc.Child {
 	t.Helper()
 
-	return childrenFor(t, build, mode, 2*time.Second)
+	return childrenFor(t, build, mode, 30*time.Second)
 }
 
 // childrenFor is children, for limit a page.
@@ -162,7 +163,11 @@ func TestChildStops(t *testing.T) {
 		{"sleep", "slow.yaml", "draw_time"},
 		{"crash", "crash.yaml", ""},
 	} {
-		s := children(t, build, c.mode).Start(t.Context())
+		limit := 30 * time.Second
+		if c.mode == "sleep" {
+			limit = 10 * time.Second
+		}
+		s := childrenFor(t, build, c.mode, limit).Start(t.Context())
 		first := s.Draw(job(c.file, page))
 		next := s.Draw(job("p.yaml", page))
 		s.Close()
@@ -175,8 +180,8 @@ func TestChildStops(t *testing.T) {
 		}
 		// The seconds are a number, which each language words.
 		if ja := usererr.Tell(i18n.New(i18n.Tag("ja")), first.Err); c.key == "draw_time" &&
-			(len(ja.Mistakes) != 1 || !strings.Contains(ja.Mistakes[0].Text, "2 秒")) {
-			t.Errorf("%s: told in Japanese %+v, want 2 秒", c.mode, ja)
+			(len(ja.Mistakes) != 1 || !strings.Contains(ja.Mistakes[0].Text, "10 秒")) {
+			t.Errorf("%s: told in Japanese %+v, want 10 秒", c.mode, ja)
 		}
 		if next.Err != nil || len(next.Page) == 0 {
 			t.Errorf("%s: the next page drawn with %v", c.mode, next.Err)
