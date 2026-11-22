@@ -4,14 +4,7 @@ import type { KeyTable } from '@/hooks/use-keys';
 import { oneColumn } from '@/lib/platform';
 import { openPage as pageOpen, type OpenPage } from '@/stores/open-page';
 import { pages as pagePages, type Pages } from '@/stores/pages';
-import { rowOpens } from '@/utils/row-press';
-
-// The row a key moved to (focus-places' moveRow): its entry's slug, a folder's page's file, a directory or not
-export interface MovedTo {
-  readonly slug: string;
-  readonly file: string;
-  readonly dir: boolean;
-}
+import { rowOpens, type MovedTo } from '@/utils/row-press';
 
 export interface RowKeyDeps {
   readonly pages?: Pages;

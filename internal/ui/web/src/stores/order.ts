@@ -35,9 +35,12 @@ export interface Order {
   takeCameFrom: () => OpenAt | null;
 }
 
-const isAt = (x: unknown): x is OpenAt => {
-  const at = x as Partial<OpenAt> | null;
-  return typeof at?.slug === 'string' && typeof at.file === 'string';
+// atOf is the row kept as a page opened whole, made anew of what the browser kept: a slug, a folder's file ('' for
+// none) and a version (0 for the latest), as ui.html pickRow makes it
+const atOf = (x: unknown): OpenAt | null => {
+  const at = x as { slug?: unknown; file?: unknown; v?: unknown } | null;
+  if (typeof at?.slug !== 'string') return null;
+  return { slug: at.slug, file: typeof at.file === 'string' ? at.file : '', v: Number(at.v) || 0 };
 };
 
 interface Deps {
@@ -85,7 +88,7 @@ export function createOrder({
     },
     comeBack: (returned) => {
       const kept = keptOrder();
-      if (kept && isAt(kept.at) && (kept.pressed === true || returned) && kept.back === here()) cameFrom = kept.at;
+      if (kept && (kept.pressed === true || returned) && kept.back === here()) cameFrom = atOf(kept.at);
       storage.remove(ORDER_KEY);
     },
     takeCameFrom: () => {

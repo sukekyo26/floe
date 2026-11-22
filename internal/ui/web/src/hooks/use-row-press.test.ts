@@ -3,13 +3,14 @@ import { describe, expect, it, vi } from 'vitest';
 
 import type { Boot } from '@/config/boot';
 import { rowPresses } from '@/hooks/use-row-press';
-import { rowKeys, type MovedTo } from '@/hooks/use-row-keys';
+import { rowKeys } from '@/hooks/use-row-keys';
 import { createStore } from '@/lib/store';
 import { createMenus } from '@/stores/menus';
 import { createOpenPage } from '@/stores/open-page';
 import type { Order } from '@/stores/order';
 import type { Pages } from '@/stores/pages';
 import type { Page } from '@/types/page';
+import type { MovedTo } from '@/utils/row-press';
 
 const page = (slug: string, change: Partial<Page> = {}): Page => ({
   slug,

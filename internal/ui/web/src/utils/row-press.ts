@@ -51,6 +51,14 @@ export const enterOpens = (
   title.hasHref &&
   !title.expandable;
 
+// The row a key moved to (focus-places' moveRow): its entry's slug ('' for a task list's row), a folder's page's file,
+// and whether it is a directory of a tree
+export interface MovedTo {
+  readonly slug: string;
+  readonly file: string;
+  readonly dir: boolean;
+}
+
 // nextRow is the row step from from of count (ui.html moveRow): from none (-1), the first down and the last up; at an
 // end it stays
 export function nextRow(count: number, from: number, step: number): number {

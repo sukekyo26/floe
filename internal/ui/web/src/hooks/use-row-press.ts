@@ -26,11 +26,11 @@ export interface RowPressDeps {
   // selecting tells rows selected; drawn, the entries drawn, in their order, as the press finds them
   readonly selecting: () => boolean;
   readonly drawn: () => readonly Page[];
-  readonly openPage?: OpenPage;
-  readonly order?: Order;
-  readonly menus?: Menus;
-  readonly narrow?: () => boolean;
-  readonly assign?: (url: string) => void;
+  readonly openPage?: OpenPage | undefined;
+  readonly order?: Order | undefined;
+  readonly menus?: Menus | undefined;
+  readonly narrow?: (() => boolean) | undefined;
+  readonly assign?: ((url: string) => void) | undefined;
 }
 
 // rowPresses is what a row's title does as pressed and as Enter lands on it (ui.html openRow, 6937): beside the list,
@@ -92,6 +92,9 @@ export function rowPresses({
 }
 
 // useRowPress is rowPresses, the same through redraws while its deps are, so that a row drawn once (memo) stays
-export const useRowPress = (deps: RowPressDeps): RowPresses =>
-  // oxlint-disable-next-line react-hooks/exhaustive-deps -- its deps are the fields of deps, not the object made anew
-  useMemo(() => rowPresses(deps), [deps.selecting, deps.drawn, deps.openPage, deps.order, deps.menus]);
+export function useRowPress({ selecting, drawn, openPage, order, menus, narrow, assign }: RowPressDeps): RowPresses {
+  return useMemo(
+    () => rowPresses({ selecting, drawn, openPage, order, menus, narrow, assign }),
+    [selecting, drawn, openPage, order, menus, narrow, assign],
+  );
+}

@@ -7,8 +7,7 @@ import { pages as pagePages, type Pages } from '@/stores/pages';
 import { archiveEscapeTarget, rowAfter, rowNearby } from '@/utils/focus-targets';
 import { unseen } from '@/utils/list-view';
 import { openKey } from '@/utils/paths';
-import { nextRow, rowOpens } from '@/utils/row-press';
-import type { MovedTo } from '@/hooks/use-row-keys';
+import { nextRow, rowOpens, type MovedTo } from '@/utils/row-press';
 import type { RowSeen } from '@/utils/row-focus';
 
 // Where the focus goes after a page's action, found when called from the key and the screen as it is then: the rows

@@ -77,4 +77,30 @@ describe(createOrder, () => {
     other.order.comeBack(true);
     expect(other.order.takeCameFrom()).toBeNull();
   });
+
+  it('takes the row come back to by the browser’s way back without a press, and makes it anew of what was kept', () => {
+    expect.assertions(4);
+    const made = () => {
+      const storage = memory();
+      return { storage, order: createOrder({ boot: () => ({ framed: '' }) as Boot, storage, here: () => '/' }) };
+    };
+    const back = made();
+    back.order.writeKept({ order: [], shown: [], back: '/', at: { slug: 'a', file: 'x.html', v: 2 } });
+    back.order.comeBack(true);
+    expect(back.order.takeCameFrom()).toStrictEqual({ slug: 'a', file: 'x.html', v: 2 });
+    // A version or a file not kept as such: the latest, and the entry itself
+    const odd = made();
+    odd.order.writeKept({ order: [], shown: [], back: '/', at: { slug: 'a', v: 'x' }, pressed: true });
+    odd.order.comeBack(false);
+    expect(odd.order.takeCameFrom()).toStrictEqual({ slug: 'a', file: '', v: 0 });
+    // Words that are no JSON, and a kept order with no row: nothing to go back to
+    const broken = made();
+    broken.storage.write('pages.order', '{');
+    broken.order.comeBack(true);
+    expect(broken.order.takeCameFrom()).toBeNull();
+    const none = made();
+    none.order.writeKept({ order: [], shown: [], back: '/', pressed: true });
+    none.order.comeBack(true);
+    expect(none.order.takeCameFrom()).toBeNull();
+  });
 });
