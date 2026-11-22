@@ -125,7 +125,8 @@ const PAGES: Page[] = [
     path: '/tmp/site',
     folder: true,
     createdAt: '',
-    updatedAt: '',
+    // When it was linked, as the server gives a folder: its row shows no time
+    updatedAt: ago(600),
     taskProject: '/',
   },
   {
