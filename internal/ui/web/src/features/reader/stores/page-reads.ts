@@ -25,8 +25,6 @@ interface Deps {
   pages?: Pages;
   openPage?: OpenPage;
   actions?: PageActions;
-  // versionsAgain reads the versions of the page shown again once a read of it is in (the versions' own, P7)
-  versionsAgain?: () => void;
 }
 
 // createPageReads is ui.html's read of a page shown (the message's pageServed, readInto, readDone): one per screen. A
@@ -41,7 +39,6 @@ export function createPageReads({
   pages = pagePages,
   openPage = pageOpen,
   actions = pageActions,
-  versionsAgain = () => undefined,
 }: Deps = {}): PageReads {
   // Whether the next read told is of a page a person opened: the toast says so of no other
   let opening = true;
@@ -86,7 +83,6 @@ export function createPageReads({
         // Not waited for: it holds up nothing
         void note.show(slug, mark.n);
       }
-      if (shown) versionsAgain();
     },
   };
 }

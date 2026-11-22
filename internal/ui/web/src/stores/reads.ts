@@ -25,6 +25,9 @@ export interface Reads {
   tellRead: (slug: string, told: Told) => Promise<ReadOutcome>;
   // markUnread marks slug unread, and keeps it so while it is shown; an archived page is never unseen, so null
   markUnread: (slug: string) => Promise<ReadOutcome> | null;
+  // answered is the page of the last mark the server took, read or unread: a new value each time, as the version read
+  // it moves is told by nothing in the list of pages
+  answered: Store<{ slug: string } | null>;
 }
 
 interface Deps {
@@ -44,6 +47,7 @@ export function createReads({
   openPage = pageOpen,
 }: Deps = {}): Reads {
   const keptUnread = createStore<string | null>(null);
+  const answered = createStore<{ slug: string } | null>(null);
   const waiting = new Map<string, { told: Told; done: (outcome: ReadOutcome) => void }>();
   let going = false;
 
@@ -82,6 +86,7 @@ export function createReads({
         } else {
           done({ kind: 'sent', cleared: false });
         }
+        if (res.status !== 404) answered.set({ slug: to });
       } catch (err) {
         const message = err instanceof Error ? err.message : String(err);
         // A read is told again the next time it is opened; a mark, only if pressed again
@@ -109,6 +114,7 @@ export function createReads({
 
   return {
     keptUnread,
+    answered,
     tellRead,
     markUnread: (slug) => {
       // Archived, it is never unseen: from a toast shown before it was archived too
