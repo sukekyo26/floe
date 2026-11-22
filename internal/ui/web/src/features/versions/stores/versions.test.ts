@@ -20,13 +20,15 @@ function made({ frame = false, version = '', modal = false, move = { focus: fals
   setBoot({ messages: new Proxy({}, { get: (_, key) => String(key) }) } as unknown as Boot);
   const boot = () => ({ screen: frame ? 'frame' : 'list', framed: frame ? 'a' : '', version }) as Boot;
   const asked: string[] = [];
-  const answers: ((list: VersionList) => void)[] = [];
+  // Each read answered with a list, a refusal (a Response) or the server not reached (an Error)
+  const answers: ((with_: VersionList | Response | Error) => void)[] = [];
   const client = {
     api: (url: string) => {
       asked.push(url);
-      return new Promise<Response>((done) => {
-        answers.push((list) => {
-          done(new Response(JSON.stringify(list)));
+      return new Promise<Response>((done, fail) => {
+        answers.push((with_) => {
+          if (with_ instanceof Error) fail(with_);
+          else done(with_ instanceof Response ? with_ : new Response(JSON.stringify(with_)));
         });
       });
     },
@@ -57,7 +59,7 @@ function made({ frame = false, version = '', modal = false, move = { focus: fals
       return modalOpen;
     },
   });
-  const answer = async (list: VersionList) => {
+  const answer = async (list: VersionList | Response | Error) => {
     answers.shift()?.(list);
     await settle();
   };
@@ -114,8 +116,8 @@ describe(createVersions, () => {
     m.v.want(at(), page());
     await m.answer(listOf(1, 2, 3));
     expect([m.v.state.get().gone, m.v.state.get().focus, m.reads.keptUnread.get()]).toStrictEqual([true, true, 'a']);
-    m.v.focused();
-    expect(m.v.state.get().focus).toBe(false);
+    m.v.takeFocus(null);
+    expect(m.v.state.get().focus).toBe(true);
   });
 
   it('reads again on a mark of the page wanted alone', async () => {
@@ -208,6 +210,66 @@ describe(createVersions, () => {
     expect(m.v.state.get().waiting).toBe(false);
     await m.answer(listOf(1, 3));
     expect(m.log).toStrictEqual(['keep false true', 'reload']);
+  });
+
+  it('changes nothing on a read refused or not reaching the server', async () => {
+    expect.assertions(1);
+    const m = made();
+    m.open(at('a', 2));
+    await m.answer(listOf(1, 2, 3));
+    const before = m.v.state.get();
+    m.v.want(at('a', 2), page('a', 4));
+    await m.answer(new Response('locked', { status: 500 }));
+    m.v.want(at('a', 2), page('a', 5));
+    await m.answer(new TypeError('down'));
+    expect([m.v.state.get(), m.openPage.picked.get()?.v]).toStrictEqual([before, 2]);
+  });
+
+  it('writes nothing of an answer to again come once another row was picked', async () => {
+    expect.assertions(1);
+    const m = made();
+    m.open(at('a', 2));
+    await m.answer(listOf(1, 2, 3));
+    m.reads.answered.set({ slug: 'a' });
+    m.openPage.picked.set(at('b'));
+    await m.answer(listOf(1, 3));
+    expect([m.openPage.picked.get(), m.reads.keptUnread.get(), m.v.state.get().gone]).toStrictEqual([
+      at('b'),
+      null,
+      false,
+    ]);
+  });
+
+  it('leaves for the latest on the list read before, the key the same, reading nothing', async () => {
+    expect.assertions(1);
+    const m = made();
+    m.open(at());
+    await m.answer(listOf(1, 2, 3));
+    m.open(at('a', 3));
+    expect([m.openPage.picked.get()?.v, m.asked.length]).toStrictEqual([0, 1]);
+  });
+
+  it('drops an answer come after a want that reads nothing', async () => {
+    expect.assertions(1);
+    const m = made();
+    m.open(at());
+    m.open({ slug: 'a', file: 'x.html', v: 0 });
+    await m.answer(listOf(1, 2, 3));
+    expect(m.v.state.get().list).toBeNull();
+  });
+
+  it('gives the choice the focus asked for once it shows, and takes it all the same from one hidden', () => {
+    expect.assertions(2);
+    const m = made({ frame: true, move: { focus: true, kept: false } });
+    m.v.arrive();
+    const shown = { hidden: false, old: false, value: 3, numbers: '1,2,3', options: [] };
+    expect([m.v.takeFocus(null), m.v.takeFocus({ ...shown, hidden: true }), m.v.takeFocus(shown)]).toStrictEqual([
+      false,
+      false,
+      false,
+    ]);
+    m.v.arrive();
+    expect(m.v.takeFocus(shown)).toBe(true);
   });
 
   it('keeps the words of a version gone in the frame, whatever is picked there', () => {

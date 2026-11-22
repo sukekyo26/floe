@@ -70,6 +70,8 @@ export function createReads({
         letGo();
         done({ kind: 'failed', reason, said: true });
       };
+      // Whether the server took the mark: told once the try is over, so that what listens cannot fail the mark
+      let took = false;
       try {
         const res = await sendRead(client, to, told?.read ?? null);
         if (!res.ok && res.status !== 404) {
@@ -86,13 +88,14 @@ export function createReads({
         } else {
           done({ kind: 'sent', cleared: false });
         }
-        if (res.status !== 404) answered.set({ slug: to });
+        took = res.status !== 404;
       } catch (err) {
         const message = err instanceof Error ? err.message : String(err);
         // A read is told again the next time it is opened; a mark, only if pressed again
         if (!told) fail(t('ui_unread_failed', message));
         else done({ kind: 'failed', reason: message, said: false });
       }
+      if (took) answered.set({ slug: to });
     }
     going = false;
     // The dot and the counts go now, not at the next look

@@ -62,7 +62,7 @@ import { ListShelf } from '@/features/page-list/components/list-shelf';
 import { News } from '@/features/page-list/components/news';
 import { SearchBox } from '@/features/page-list/components/search-box';
 import type { Page } from '@/types/page';
-import { VersionsSection } from './versions';
+import { startVersions, VersionsSection } from './versions';
 
 // The boot values go test -gallery wrote (just web-gallery); none when it has not run
 const found = import.meta.glob<Boot>('./boot.json', { eager: true, import: 'default' });
@@ -967,6 +967,7 @@ const el = document.getElementById('root');
 const boot = found['./boot.json'];
 if (el !== null && boot) {
   setBoot(boot);
+  startVersions();
   createRoot(el).render(
     <StrictMode>
       <Gallery />

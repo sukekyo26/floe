@@ -1,5 +1,11 @@
 import { getBoot, type Boot } from '@/config/boot';
-import { versionLeave, versionsWanted, versionView, type VersionView } from '@/features/versions/utils/version-view';
+import {
+  versionLeave,
+  versionsWanted,
+  versionView,
+  type SelectView,
+  type VersionView,
+} from '@/features/versions/utils/version-view';
 import type { VersionList } from '@/features/versions/utils/version-words';
 import { client as pageClient, type Client } from '@/lib/api-client';
 import { createStore, type Store } from '@/lib/store';
@@ -33,8 +39,9 @@ export interface Versions {
   pick: (n: number, how: { focus: boolean; held: boolean }) => void;
   // arrive takes, once as the frame starts, what a move to this version carried over and the version asked for gone
   arrive: () => void;
-  // focused is the focus moved to the choice
-  focused: () => void;
+  // takeFocus tells, once the choice is drawn of versions read (select), whether to give it the focus asked for: asked
+  // and shown. It is taken either way, so that a choice hidden then does not take the focus when it shows later
+  takeFocus: (select: SelectView | null) => boolean;
 }
 
 interface Deps {
@@ -59,7 +66,8 @@ const keyOf = (a: Page) => [a.slug, a.version, a.versionCount, a.news].join();
 const same = (x: OpenAt | null, y: OpenAt) => x !== null && x.slug === y.slug && x.file === y.file && x.v === y.v;
 
 // createVersions is ui.html's drawVersion, showVersion, leaveVersion and pickVersion: one per screen, beside the list
-// or whole. The versions are read as the entry of the page shown changes, an answer come after another dropped
+// or whole. The versions are read as the entry of the page shown changes; each want takes a turn, and an answer come
+// after another want, read or not, is dropped
 // LIMIT: a browser without base-select (Firefox and Safari for now) shows the whole words closed, and goes to a version at each arrow key
 // LIMIT: a list that could not be read is read again only as the list of pages changes; the page shown does not wait for it
 // LIMIT: a version published while the choice is open closes it, its options changed
@@ -178,6 +186,7 @@ export function createVersions({
     want: (at, page) => {
       const s = state.get();
       if (s.waiting) return;
+      turn++;
       // Nothing of another page stays while this one's is read, or if it cannot be
       if (page?.slug !== s.slug) put({ slug: page?.slug, key: '', list: null });
       if (!page && s.gone) put({ gone: false });
@@ -212,8 +221,10 @@ export function createVersions({
       put({ focus, gone: boot().version === 'gone' });
       if (kept) reads.keptUnread.set(boot().framed);
     },
-    focused: () => {
+    takeFocus: (select) => {
+      if (!state.get().focus || !select) return false;
       put({ focus: false });
+      return !select.hidden;
     },
   };
 }

@@ -8,7 +8,9 @@ import type { OpenAt } from '@/stores/open-page';
 import type { Page } from '@/types/page';
 
 interface VersionSelectProps {
-  // at is the page shown (picked beside the list, frameAt whole), page its entry in the list of pages; null for none
+  // at is the page shown (picked beside the list, frameAt whole), page its entry in the list of pages. A null page is
+  // one the list said it does not hold: the choice is not placed before the list was read once, as wanting the versions
+  // of no page ends the words of a version gone the frame starts with
   readonly at: OpenAt | null;
   readonly page: Page | null;
   // framed: the frame's choice (frame-version), else the one over the page beside the list (read-version)
@@ -42,10 +44,8 @@ export function VersionSelect({ at, page, framed = false, versions = sharedVersi
   }, [wanted]);
   const shown = view !== null && !view.hidden;
   useEffect(() => {
-    if (!state.focus || !shown) return;
-    select.current?.focus();
-    versions.focused();
-  }, [versions, state.focus, shown]);
+    if (versions.takeFocus(view)) select.current?.focus();
+  }, [versions, state.focus, view]);
   return (
     <PickSelect
       ref={select}

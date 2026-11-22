@@ -1,5 +1,5 @@
 // The versions' choice and words, beside the list and whole, over a fake server whose versions the buttons change
-import { useEffect, useState, type ReactNode } from 'react';
+import { useState, type ReactNode } from 'react';
 
 import { Button } from '@/components/button';
 import { Dialog, DialogActions, DialogClose, DialogHead } from '@/components/dialog';
@@ -122,11 +122,12 @@ function Scene({
   );
 }
 
+// startVersions is the frame's start, before anything is drawn (P10 does the same): what a move carried is taken once
+export function startVersions(): void {
+  frame.arrive();
+}
+
 export function VersionsSection() {
-  // As the frame starts (P10 calls it before its first draw)
-  useEffect(() => {
-    frame.arrive();
-  }, []);
   const pages = useStore(listed);
   const picked = useStore(besideOpen.picked);
   const page = pages.find((p) => p.slug === picked?.slug) ?? null;
