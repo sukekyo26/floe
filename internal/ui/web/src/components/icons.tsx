@@ -208,3 +208,14 @@ export const BackChevronIcon = () => (
     <path d="m15 6-6 6 6 6" />
   </Line>
 );
+// A directory and a page of a folder's tree (ui.html DIR_HEAD, PAGE_HEAD)
+export const TreeDirIcon = () => (
+  <Line>
+    <path d="M3 6.5A1.5 1.5 0 0 1 4.5 5H9l2 2.5h8.5A1.5 1.5 0 0 1 21 9v9.5a1.5 1.5 0 0 1-1.5 1.5h-15A1.5 1.5 0 0 1 3 18.5Z" />
+  </Line>
+);
+export const TreePageIcon = () => (
+  <Line>
+    <path d="M7 3h7l5 5v12a1 1 0 0 1-1 1H7a1 1 0 0 1-1-1V4a1 1 0 0 1 1-1Zm7 0v5h5" />
+  </Line>
+);

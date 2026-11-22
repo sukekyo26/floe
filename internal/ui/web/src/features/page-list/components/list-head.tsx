@@ -13,7 +13,7 @@ export interface ListHeadProps {
 }
 
 // ListWhat is what the shelf narrows the page list to, with the shelf folded (ui.html drawViews, drawHead): the view and
-// how many picks. Pressed, the shelf opens by onShow, the one way the columns open it (P5b's, which gives the focus to
+// how many picks. Pressed, the shelf opens by onShow, the one way the columns open it (P5f's, which gives the focus to
 // the button that folds it: this one hides). Where it stands, in the head of the list or of the page beside it, is the
 // screen's
 export function ListWhat({

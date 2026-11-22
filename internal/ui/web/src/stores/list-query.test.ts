@@ -1,4 +1,4 @@
-import { describe, expect, it } from 'vitest';
+import { describe, expect, it, vi } from 'vitest';
 
 import type { Boot } from '@/config/boot';
 import type { Kept } from '@/lib/storage';
@@ -87,10 +87,25 @@ describe(createListQuery, () => {
   it('lets the seen pages of the view "new" go with a new view', () => {
     expect.assertions(2);
     const { query } = made('list', '?view=new');
-    query.see('a');
+    query.see(['a']);
     query.filter({ kind: 'page' });
     expect([...query.query.get().seen]).toStrictEqual(['a']);
     query.filter({ view: 'new' });
     expect(query.query.get().seen.size).toBe(0);
+  });
+});
+
+describe('see', () => {
+  it('keeps every page given as seen in one write, and writes nothing of those seen already', () => {
+    expect.assertions(3);
+    const { query } = made('list', '?view=new');
+    const told = vi.fn<() => void>();
+    query.query.subscribe(told);
+    query.see(['a', 'b']);
+    expect([...query.query.get().seen]).toStrictEqual(['a', 'b']);
+    query.see(['b', 'a']);
+    expect(told).toHaveBeenCalledTimes(1);
+    query.see(['c', 'a']);
+    expect([...query.query.get().seen]).toStrictEqual(['a', 'b', 'c']);
   });
 });

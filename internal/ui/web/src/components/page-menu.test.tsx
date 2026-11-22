@@ -16,6 +16,7 @@ const draw = (
   a: Partial<Page> = {},
   place: Place = 'row',
   taskShown: { project: string; name: string } | null = null,
+  onPick: (() => void) | null = () => undefined,
 ) => {
   testBoot();
   return renderToString(
@@ -26,6 +27,7 @@ const draw = (
       menuId="m"
       openers={openers}
       taskShown={taskShown}
+      {...(onPick ? { onPick } : {})}
     />,
   );
 };
@@ -55,7 +57,11 @@ describe(PageMenu, () => {
 
   it('shows Select in a row’s menu alone, and hides by its CSS what the bar or the row shows, the frame folding its own in', () => {
     expect.assertions(4);
-    expect([hides(draw({}, 'row'), 'select'), hides(draw({}, 'list'), 'select')]).toStrictEqual([false, true]);
+    expect([
+      hides(draw({}, 'row'), 'select'),
+      hides(draw({}, 'list'), 'select'),
+      hides(draw({}, 'row', null, null), 'select'),
+    ]).toStrictEqual([false, true, true]);
     const classOf = (html: string, id: string) => String(/class="([^"]*)"/.exec(tagOf(html, id))?.[1]).split(' ');
     expect(['fav-item', 'archive', 'open'].map((id) => classOf(draw({}, 'row'), id).includes('hidden'))).toStrictEqual([
       true,

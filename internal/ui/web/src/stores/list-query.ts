@@ -27,7 +27,8 @@ export interface ListQuery {
   // selection, which it lets go too, is the page list's to clear
   filter: (change: Partial<Omit<ListState, 'q'>>) => void;
   setWords: (q: string) => void;
-  see: (slug: string) => void;
+  // see keeps the pages of the view "new" as seen, once for all that are new to it
+  see: (slugs: readonly string[]) => void;
   // sync writes the state into the URL, defaults (all, no pick, no search) left out, and keeps it for the tab
   sync: () => void;
   savedList: () => string;
@@ -103,9 +104,10 @@ export function createListQuery({
     setWords: (q) => {
       store().set({ ...store().get(), q });
     },
-    see: (slug) => {
+    see: (slugs) => {
       const now = store().get();
-      if (!now.seen.has(slug)) store().set({ ...now, seen: new Set(now.seen).add(slug) });
+      const fresh = slugs.filter((slug) => !now.seen.has(slug));
+      if (fresh.length > 0) store().set({ ...now, seen: new Set([...now.seen, ...fresh]) });
     },
     sync: () => {
       // open= opens folders once, as the page opens: taken before the URL is written without it
