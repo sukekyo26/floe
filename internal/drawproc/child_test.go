@@ -20,7 +20,8 @@ import (
 )
 
 // child makes the test binary floe __draw of build: "draw" draws each job, "hold" first holds 512 MiB for hold.yaml
-// past its watch of 64 MiB, "sleep" sleeps a minute for slow.yaml, and "crash" panics for crash.yaml.
+// past its watch of 64 MiB, "sleep" sleeps a minute for slow.yaml, "selftime" too, ending itself after a second, and
+// "crash" panics for crash.yaml.
 const child = "FLOE_DRAWPROC_TEST_CHILD"
 
 const build = "test-build"
