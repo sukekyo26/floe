@@ -13,10 +13,6 @@ import { pages as pagePages, type Pages } from '@/stores/pages';
 export interface BulkBarProps {
   // onTags opens the tag modal for the selected
   readonly onTags: (target: BulkTags) => void;
-  // LIMIT: the clearing's form is the user's to choose in the gallery (S425): its words (a short one, the long one its
-  // name) and whether it stays at the bar's end. Once chosen, the other forms go
-  readonly clearWords?: string;
-  readonly clearSticky?: boolean;
   readonly selection?: Selection;
   readonly pages?: Pages;
   readonly query?: ListQuery;
@@ -34,8 +30,6 @@ const STICKY = '[&>#bulk-clear]:sticky [&>#bulk-clear]:right-0 [&>#bulk-clear]:b
 // stay the same elements as the selection changes. The delete waits for the selection as it is: changed, it lets go
 export function BulkBar({
   onTags,
-  clearWords,
-  clearSticky = true,
   selection = pageSelection,
   pages = pagePages,
   query = listQuery,
@@ -51,12 +45,7 @@ export function BulkBar({
   const kind = useMemo(() => bulkKind(selected, items), [selected, items]);
   const label = (words: string) => <span data-testid="label">{words}</span>;
   return (
-    <section
-      id="bulk"
-      aria-label={t('ui_bulk_region')}
-      hidden={n === 0}
-      className={`${BAR} ${clearSticky ? STICKY : ''}`}
-    >
+    <section id="bulk" aria-label={t('ui_bulk_region')} hidden={n === 0} className={`${BAR} ${STICKY}`}>
       <span
         id="bulk-count"
         aria-live="polite"
@@ -99,13 +88,9 @@ export function BulkBar({
       >
         {label(arm.armed ? t(`ui_${kind}_bulk_confirm`, n) : t(`ui_${kind}`))}
       </Button>
-      <Button
-        id="bulk-clear"
-        quiet
-        label={clearWords === undefined ? undefined : t('ui_clear_selection')}
-        onClick={selection.clear}
-      >
-        {label(clearWords ?? t('ui_clear_selection'))}
+      {/* Short words, stuck at the bar's end, its name the long words (S425: the user chose this form) */}
+      <Button id="bulk-clear" quiet label={t('ui_clear_selection')} onClick={selection.clear}>
+        {label(t('ui_clear_short'))}
       </Button>
     </section>
   );

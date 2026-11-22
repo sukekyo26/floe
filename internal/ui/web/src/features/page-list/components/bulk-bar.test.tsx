@@ -63,4 +63,16 @@ describe(BulkBar, () => {
       'ui_unarchive:undefined',
     ]);
   });
+
+  it('lets the selection go by short words stuck at the bar’s end, its name the long words, there as the delete waits', () => {
+    expect.assertions(3);
+    const html = draw(['a']);
+    const clear = String(/<button[^>]* id="bulk-clear"[^>]*>.*?<\/button>/.exec(html)?.[0]);
+    expect(clear).toContain('aria-label="ui_clear_selection:undefined"');
+    expect(/<span data-testid="label">([^<]*)</.exec(clear)?.[1]).toBe('ui_clear_short:undefined');
+    // Stuck at the end; not among those the waiting delete hides
+    expect(html).toMatch(
+      /\[&amp;&gt;#bulk-clear\]:sticky.*:not\(\[data-armed\],#bulk-clear\)|:not\(\[data-armed\],#bulk-clear\).*\[&amp;&gt;#bulk-clear\]:sticky/,
+    );
+  });
 });

@@ -435,6 +435,7 @@ var messagesJA = map[string]string{
 	"ui_selected_more":        "を選択中",
 	"ui_select_page":          "表示中の行をすべて選択",
 	"ui_clear_selection":      "選択を解除",
+	"ui_clear_short":          "解除",
 	"ui_select_named":         "%s を選択",
 	"ui_not_found":            "ページが見つかりません",
 	"ui_not_found_detail":     "%s のページは、削除されたか名前が変更されました。",
