@@ -295,6 +295,7 @@ Relations between items that a schema cannot say, each checked on every item of 
 - A list on the way of `for` is gone through item by item: `sections.parts` checks the parts of every section, and a failure is reported at its item.
 - Without `for`, a check runs once, on the whole data file as `item` (`doc` too), and its failure has no line or column unless its `field` names a key the data writes.
 - `expr` is an expr expression that must hold. It sees the list's item as `item` and the data file's items as `doc`. Each item it fails for is reported at its `field`, with `message` (at the item itself when `field` is left out or the item lacks it).
+- What one run of an expression makes is within expr's budget of 1,000,000: an item of a list counts 1, and the text it makes a byte for each it adds (`join` all but its longest part, `+` the shorter text, `toJSON` of keys and values or of a list its whole text, longer than the data by its indentation and escapes). Past it, expr says `memory budget exceeded`: compare items by a key, not by `toJSON` of each.
 - The path of `for` MUST be of keys the values the schema allows there may hold; `field` is not checked against it.
 - To have the path checked, write `type` on every schema on it (the root's `"type": "object"`, a list's `"type": "array"` and its items' `"type": "object"`), and close each object with `"additionalProperties": false` beside the `properties` that declare its keys, in one schema. floe follows a `$ref` (`#/$defs/…`, a shared schema) and checks the path in the schema it names as well; what `allOf` and the like hold is not read.
 - floe refuses a `for` through a key no value the schema allows there may hold, but checks the path only so far: from a schema of no `type`, or of a `type` that lets the value be keys and a list, and from a key not declared in `properties` (one that `additionalProperties` or `patternProperties` takes), the rest passes unchecked.
@@ -310,7 +311,7 @@ item_bytes: 'sum(attributes, .avg_bytes)'
 storage_gb: 'item_bytes * records.in_1_year / 1e9'
 ```
 
-- An expression sees the data file's items that the schema declares, and the other computed values, by name, whatever order they are written in. It is an expr expression, as in `checks.yaml` (`len(teams)`, `sum(teams, .shipped)`, `shipped > 0 ? incidents * 100 / shipped : 0`), and MUST NOT use `$env`: use the names.
+- An expression sees the data file's items that the schema declares, and the other computed values, by name, whatever order they are written in. It is an expr expression, as in `checks.yaml` (`len(teams)`, `sum(teams, .shipped)`, `shipped > 0 ? incidents * 100 / shipped : 0`), and MUST NOT use `$env`: use the names. An item named as a function of expr (`count`, `date`, `merge`) is not seen by name.
 - A name MUST be one that expr and `page.html` read as one name, MUST NOT be an item of the data, a word or function of expr, or start with `_`, and values computed from each other are refused.
 - A value the data cannot give (a division by zero, an item left out that the expression needs), or one that is not a finite number, is reported at its expression, naming the data file. Give the value for an item left out with `??` (`count(prs ?? [], .state == "merged")`), and read into one with `?.` (`records?.in_1_year ?? 0`).
 
