@@ -33,6 +33,7 @@ import { createThemeWrites } from '@/features/settings/stores/choose-theme';
 import { createSettings } from '@/features/settings/stores/settings';
 import { useHold } from '@/hooks/use-hold';
 import { useKeys } from '@/hooks/use-keys';
+import { useRowKeys } from '@/hooks/use-row-keys';
 import { useOpenMenus } from '@/hooks/use-open-menu';
 import { useStore } from '@/hooks/use-store';
 import { client } from '@/lib/api-client';
@@ -42,7 +43,7 @@ import { isMac } from '@/lib/platform';
 import { createActOn } from '@/stores/act-on';
 import { notice } from '@/stores/notice';
 import type { OpenPage } from '@/stores/open-page';
-import type { Order } from '@/stores/order';
+import { order as pageOrder, type Order } from '@/stores/order';
 import { createPageActions } from '@/stores/page-actions';
 import type { PageWrites } from '@/stores/page-writes';
 import type { Pages } from '@/stores/pages';
@@ -55,7 +56,7 @@ import { createPageReads } from '@/features/reader/stores/page-reads';
 import type { TaskWrites } from '@/stores/tasks';
 import { toasts } from '@/stores/toasts';
 import { createColumns } from '@/stores/columns';
-import { focusOn } from '@/components/focus-places';
+import { backToRow, focusOn, moveRow } from '@/components/focus-places';
 import { createListQuery } from '@/stores/list-query';
 import { ListCount, ListWhat } from '@/features/page-list/components/list-head';
 import { ListShelf } from '@/features/page-list/components/list-shelf';
@@ -404,7 +405,44 @@ const MANY: Page[] = Array.from({ length: 1000 }, (_, i) => ({
 
 // ListScene is the page list as the list screen will draw it, with the time of its last commit: with 1000 rows, pick a
 // row or wait a minute for the times, to measure what React draws anew
+// The keys on the page list's scene: ↑ ↓ and j k go through #list, which the Rows section leaves out meanwhile, as
+// the page has one list
+const listKeysOn = createStore(false);
+const NO_KEYS = {};
+
+// comeBackTo does as a page opened whole from the row at and come back by its back button would: the row kept, then
+// what the list does as it is drawn again (backToRow)
+function comeBackTo(at: { slug: string; file: string }) {
+  pageOrder.writeKept({
+    order: [],
+    shown: [],
+    back: window.location.pathname + window.location.search,
+    at: { ...at, v: 0 },
+    pressed: true,
+  });
+  pageOrder.comeBack(false);
+  backToRow({ pages: galleryPages, openPage: galleryOpen });
+}
+
 function ListScene() {
+  const keysOn = useStore(listKeysOn);
+  // ↑ ↓ and j k through the list's rows, as the app's table of keys will (P8)
+  const keys = useRowKeys({ pages: galleryPages, openPage: galleryOpen, move: moveRow });
+  useKeys(keysOn ? keys : NO_KEYS);
+  const [folded, setFolded] = useState(false);
+  const [came, setCame] = useState('');
+  // The page has one list for it, as the screen will: the Rows section's goes first
+  const back = (at: { slug: string; file: string }) => {
+    listKeysOn.set(true);
+    setTimeout(() => {
+      comeBackTo(at);
+      const active = document.activeElement;
+      const row = active?.closest('#list > li')?.getAttribute('data-key');
+      const focused = row ?? (active?.id === undefined || active.id === '' ? 'none' : active.id);
+      const picked = galleryOpen.picked.get();
+      setCame(`focus: ${focused} · beside: ${picked ? `${picked.slug} ${picked.file}` : 'none'}`);
+    }, 0);
+  };
   const [scene, setScene] = useState<'samples' | 'many' | 'none' | 'archived'>('samples');
   // Written as it is measured: a state would draw the list again, and measure that
   const took = useRef<HTMLSpanElement>(null);
@@ -467,7 +505,63 @@ function ListScene() {
           last commit
         </span>
       </div>
-      <div className="max-h-[34rem] overflow-auto rounded-small border border-line bg-bg">
+      <div className="mb-2 flex flex-wrap items-center gap-2">
+        <Button
+          pressed={keysOn}
+          onClick={() => {
+            listKeysOn.set(!keysOn);
+          }}
+        >
+          This list alone: keys ↑ ↓ j k
+        </Button>
+        <Button
+          onClick={() => {
+            back({ slug: 'plain', file: '' });
+          }}
+        >
+          Back to a read row
+        </Button>
+        <Button
+          onClick={() => {
+            back({ slug: 'unread', file: '' });
+          }}
+        >
+          Back to an unread row
+        </Button>
+        <Button
+          onClick={() => {
+            // The folder's tree open first, as a list come back to has it
+            const opened = galleryTree.get().opened.has('folder');
+            void (opened ? Promise.resolve() : galleryFolders.toggle('folder', '')).then(() => {
+              setTimeout(() => {
+                back({ slug: 'folder', file: 'index.html' });
+              }, 0);
+            });
+          }}
+        >
+          Back to a folder’s page
+        </Button>
+        <Button
+          pressed={folded}
+          onClick={() => {
+            setFolded(!folded);
+          }}
+        >
+          Fold the list
+        </Button>
+        <span className="font-mono text-label text-muted">{came}</span>
+      </div>
+      {folded ? (
+        <Button
+          id="list-show"
+          onClick={() => {
+            setFolded(false);
+          }}
+        >
+          Open the list (P5f’s)
+        </Button>
+      ) : null}
+      <div hidden={folded} className="max-h-[34rem] overflow-auto rounded-small border border-line bg-bg">
         <Profiler
           id="page-list"
           onRender={(_id, _phase, actual) => {
@@ -622,7 +716,13 @@ function Gallery() {
               A slow read after each write (1.5 s)
             </Button>
           </div>
-          <Rows items={items} selecting={selecting} />
+          {useStore(listKeysOn) ? (
+            <p className="text-small text-muted">
+              Drawn again once the keys on the page list are off: the page has one list.
+            </p>
+          ) : (
+            <Rows items={items} selecting={selecting} />
+          )}
         </Section>
         <Section title="The bars over a page: beside the list, in the frame (narrow the window under 40rem), a folder’s page, the diff">
           {plain && folder && gone ? (
@@ -771,7 +871,7 @@ function Gallery() {
             </div>
           </div>
         </Section>
-        <Section title="Page list (the shelf above narrows it; open the folder and its directories; 1000 rows measures a redraw)">
+        <Section title="Page list (the shelf above narrows it; open the folder and its directories; a title opens beside, again whole; ↑ ↓ j k move; 1000 rows measures a redraw)">
           <ListScene />
         </Section>
         <Section title="Reading a page beside the list (the page tells its frame it was read; Slow answers waits 1.5 s)">

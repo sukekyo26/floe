@@ -1,4 +1,4 @@
-import type { CSSProperties, MouseEventHandler } from 'react';
+import type { CSSProperties, KeyboardEventHandler, MouseEventHandler } from 'react';
 
 import { ChevronIcon, CopyIcon, DoneIcon, OpenIcon, TreeDirIcon, TreePageIcon } from '@/components/icons';
 import { IconButton } from '@/components/icon-button';
@@ -23,6 +23,7 @@ export interface TreeRowProps {
   // onToggle opens or closes a directory's row
   readonly onToggle?: (path: string) => void;
   readonly onTitleClick?: MouseEventHandler<HTMLAnchorElement>;
+  readonly onTitleKeyDown?: KeyboardEventHandler<HTMLAnchorElement>;
   readonly actions?: PageActions;
 }
 
@@ -51,6 +52,7 @@ export function TreeRow({
   archived = false,
   onToggle,
   onTitleClick,
+  onTitleKeyDown,
   actions = pageActionStore,
 }: TreeRowProps) {
   const [copied, setCopied] = useCopied();
@@ -93,6 +95,7 @@ export function TreeRow({
             href={pageHref(at)}
             title={`${item.file}\n${t('ui_updated_at', fmt(item.updatedAt))}`}
             onClick={onTitleClick}
+            onKeyDown={onTitleKeyDown}
             className={TITLE}
           >
             <span className={`${FOLD} invisible`} />

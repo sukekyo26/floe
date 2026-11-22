@@ -52,4 +52,55 @@ describe(createOrder, () => {
       at: { slug: 'b2', file: '' },
     });
   });
+
+  it('takes the row come back to by the back button or the way back, once, and forgets the order either way', () => {
+    expect.assertions(4);
+    const at = { slug: 'a', file: '', v: 2 };
+    const made = (here: string) => {
+      const storage = memory();
+      const order = createOrder({ boot: () => ({ framed: '' }) as Boot, storage, here: () => here });
+      return { storage, order };
+    };
+    const pressed = made('/?q=x');
+    pressed.order.writeKept({ order: ['a'], shown: ['a'], back: '/?q=x', at, pressed: true });
+    pressed.order.comeBack(false);
+    expect([pressed.order.takeCameFrom(), pressed.order.takeCameFrom()]).toStrictEqual([at, null]);
+    expect(pressed.storage.held.has('pages.order')).toBe(false);
+    // Neither pressed nor the way back: the logo, or the same list by its URL
+    const typed = made('/?q=x');
+    typed.order.writeKept({ order: ['a'], shown: ['a'], back: '/?q=x', at });
+    typed.order.comeBack(false);
+    expect(typed.order.takeCameFrom()).toBeNull();
+    // Another list than the one that opened it
+    const other = made('/?view=fav');
+    other.order.writeKept({ order: ['a'], shown: ['a'], back: '/?q=x', at, pressed: true });
+    other.order.comeBack(true);
+    expect(other.order.takeCameFrom()).toBeNull();
+  });
+
+  it('takes the row come back to by the browser’s way back without a press, and makes it anew of what was kept', () => {
+    expect.assertions(4);
+    const made = () => {
+      const storage = memory();
+      return { storage, order: createOrder({ boot: () => ({ framed: '' }) as Boot, storage, here: () => '/' }) };
+    };
+    const back = made();
+    back.order.writeKept({ order: [], shown: [], back: '/', at: { slug: 'a', file: 'x.html', v: 2 } });
+    back.order.comeBack(true);
+    expect(back.order.takeCameFrom()).toStrictEqual({ slug: 'a', file: 'x.html', v: 2 });
+    // A version or a file not kept as such: the latest, and the entry itself
+    const odd = made();
+    odd.order.writeKept({ order: [], shown: [], back: '/', at: { slug: 'a', v: 'x' }, pressed: true });
+    odd.order.comeBack(false);
+    expect(odd.order.takeCameFrom()).toStrictEqual({ slug: 'a', file: '', v: 0 });
+    // Words that are no JSON, and a kept order with no row: nothing to go back to
+    const broken = made();
+    broken.storage.write('pages.order', '{');
+    broken.order.comeBack(true);
+    expect(broken.order.takeCameFrom()).toBeNull();
+    const none = made();
+    none.order.writeKept({ order: [], shown: [], back: '/', pressed: true });
+    none.order.comeBack(true);
+    expect(none.order.takeCameFrom()).toBeNull();
+  });
 });

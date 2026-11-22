@@ -110,6 +110,7 @@ describe(ListRow, () => {
         folderOpen={false}
         onTag={none}
         onFolder={none}
+        presses={{ press: none, key: none }}
       />,
     );
 

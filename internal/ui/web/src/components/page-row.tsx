@@ -1,4 +1,4 @@
-import type { CSSProperties, MouseEventHandler, ReactNode } from 'react';
+import type { CSSProperties, KeyboardEventHandler, MouseEventHandler, ReactNode } from 'react';
 
 import { FolderMark, LinkMark } from '@/components/icons';
 import { t } from '@/lib/t';
@@ -26,6 +26,7 @@ export interface PageRowProps {
   readonly actions: ReactNode;
   readonly onSelect?: (selected: boolean) => void;
   readonly onTitleClick?: MouseEventHandler<HTMLAnchorElement>;
+  readonly onTitleKeyDown?: KeyboardEventHandler<HTMLAnchorElement>;
 }
 
 // The words its title shows to the pointer: all that the row may cut or leave out, as the title's hit area covers the
@@ -68,6 +69,7 @@ export function PageRow({
   actions,
   onSelect,
   onTitleClick,
+  onTitleKeyDown,
 }: PageRowProps) {
   const title = a.title ?? a.slug;
   const time = a.folder ? '' : a.updatedAt;
@@ -112,6 +114,7 @@ export function PageRow({
         title={titleWords(a)}
         aria-expanded={a.folder ? folderOpen : undefined}
         onClick={onTitleClick}
+        onKeyDown={onTitleKeyDown}
         className="line-clamp-2 min-w-0 scroll-mt-[calc(var(--spacing-lhead)+0.5rem)] scroll-mb-12 font-medium text-fg no-underline [grid-area:title] group-data-archived/row:text-muted group-data-gone/row:text-muted group-data-gone/row:line-through group-data-unread/row:font-bold after:absolute after:inset-0 focus-visible:outline-none"
       >
         {title}

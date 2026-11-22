@@ -1,6 +1,13 @@
 import { getBoot, screenOf } from '@/config/boot';
+import { oneColumn } from '@/lib/platform';
+import { openPage as pageOpen, type OpenPage } from '@/stores/open-page';
+import { order as pageOrder, type Order } from '@/stores/order';
 import type { ArchiveFocus, TaskOutFocus } from '@/stores/page-actions';
+import { pages as pagePages, type Pages } from '@/stores/pages';
 import { archiveEscapeTarget, rowAfter, rowNearby } from '@/utils/focus-targets';
+import { unseen } from '@/utils/list-view';
+import { openKey } from '@/utils/paths';
+import { nextRow, rowOpens, type MovedTo } from '@/utils/row-press';
 import type { RowSeen } from '@/utils/row-focus';
 
 // Where the focus goes after a page's action, found when called from the key and the screen as it is then: the rows
@@ -74,3 +81,50 @@ export const rowMenuId = (slug: string): string => `more:${slug}`;
 
 // barMenuId is the id of the menu "…" of the bar of id (over a page, in the frame, the search's foot)
 export const barMenuId = (id: string): string => `bar:${id}`;
+
+// moveRow gives the focus to the title of the row step from the one with the focus, or the one open beside the list,
+// of the rows drawn with a title, whichever screen (ui.html moveRow): a tree's note has none, and is passed over
+export function moveRow(step: number): MovedTo | null {
+  const rows = [...document.querySelectorAll('#list > li[data-key]')].filter(
+    (li) => li.querySelector('[data-testid=title]') !== null,
+  );
+  if (rows.length === 0) return null;
+  const focused = rows.findIndex((li) => li.contains(document.activeElement));
+  const from = focused === -1 ? rows.findIndex((li) => li.getAttribute('aria-current') === 'true') : focused;
+  const li = rows[nextRow(rows.length, from, step)];
+  const title = li?.querySelector('[data-testid=title]') ?? null;
+  if (!li || !focusOn(title)) return null;
+  return {
+    slug: li.getAttribute('data-slug') ?? '',
+    file: li.getAttribute('data-file') ?? '',
+    dir: title?.tagName === 'BUTTON',
+  };
+}
+
+interface BackDeps {
+  order?: Order;
+  pages?: Pages;
+  openPage?: OpenPage;
+}
+
+// backToRow gives the focus back to the row a page whole was opened from, come back to (Order's comeBack), and opens
+// its version beside the list unless that reads a page left unread. Where the row is no longer seen (the list folded
+// as it was, or as it is picked), the focus goes to what opens the list, the one place that can take it then. Called
+// once the list is first drawn (useBackToRow) and on the way back from the browser's cache (P8)
+// LIMIT: the task list's row is a pin (ui.html 4527): P6 adds it here
+export function backToRow({ order = pageOrder, pages = pagePages, openPage = pageOpen }: BackDeps = {}): void {
+  const at = order.takeCameFrom();
+  if (!at) return;
+  const key = at.file ? `page:${openKey(at.slug, at.file)}` : entry(at.slug);
+  const title = document.querySelector(`#list > li[data-key="${CSS.escape(key)}"] [data-testid=title]`);
+  if (!focusOn(title)) return;
+  const page = pages.state.get().entries.find((a) => a.slug === at.slug);
+  if (
+    page &&
+    !unseen(page) &&
+    rowOpens({ oneColumn: oneColumn(), page, dir: false, file: at.file }) &&
+    !openPage.isPicked(at)
+  )
+    openPage.picked.set(at);
+  if (document.activeElement !== title) focusOn(document.getElementById('list-show'));
+}
