@@ -105,10 +105,12 @@ export class TaskHead extends Component<TaskHeadProps, { shown: StateShown | nul
     // A select keeps the keys: h, j and k go on from the page
     e.currentTarget.blur();
     this.setState({ shown: { ...now, chosen: value } });
-    const rev = await acts.changeState(project, name, now.rev, value);
-    this.setState(({ shown }) => ({
-      shown: shown && (rev === null ? { ...shown, chosen: null } : { ...shown, state: value, rev, chosen: null }),
-    }));
+    // The answer is drawn before the list is read again: written, of its rev; refused, the value drawn back
+    await acts.changeState(project, name, now.rev, value, (rev) => {
+      this.setState(({ shown }) => ({
+        shown: shown && (rev === null ? { ...shown, chosen: null } : { ...shown, state: value, rev, chosen: null }),
+      }));
+    });
   };
 
   override render() {

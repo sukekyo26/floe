@@ -32,12 +32,12 @@ describe(pageTask, () => {
   it('draws the task read, and says one read and not there missing', () => {
     expect.assertions(2);
     const found = task('#1', { pages: [page('a')] });
-    expect(pageTask({ found, row: undefined, failed: false, last })).toStrictEqual({
+    expect(pageTask({ found, rows: undefined, failed: false, last })).toStrictEqual({
       task: found,
       none: false,
       missing: false,
     });
-    expect(pageTask({ found: undefined, row: undefined, failed: false, last })).toStrictEqual({
+    expect(pageTask({ found: undefined, rows: undefined, failed: false, last })).toStrictEqual({
       task: null,
       none: false,
       missing: true,
@@ -46,7 +46,7 @@ describe(pageTask, () => {
 
   it('draws the task as last read while unreadable, with its pages now and what the screen wrote since', () => {
     expect.assertions(3);
-    expect(pageTask({ found: undefined, row: undefined, failed: true, last })).toStrictEqual({
+    expect(pageTask({ found: undefined, rows: undefined, failed: true, last })).toStrictEqual({
       task: { ...last, pages: [], archived: [] },
       none: true,
       missing: false,
@@ -54,17 +54,38 @@ describe(pageTask, () => {
     // A write while tasks.json is unreadable: its answer's row is the store's, and the next is of its rev
     const now = pageTask({
       found: task('#1', { state: 'done', rev: 4, pages: [page('a')] }),
-      row: { state: 'done', at: '', rev: 4 },
+      rows: { '#1': { state: 'done', at: '', rev: 4 } },
       failed: true,
       last,
     });
     expect([now.task?.state, now.task?.rev, now.task?.pages.map((a) => a.slug)]).toStrictEqual(['done', 4, ['a']]);
     // Never read: nothing drawn, nor said missing
-    expect(pageTask({ found: undefined, row: undefined, failed: true, last: null })).toStrictEqual({
+    expect(pageTask({ found: undefined, rows: undefined, failed: true, last: null })).toStrictEqual({
       task: null,
       none: false,
       missing: false,
     });
+  });
+});
+
+describe('pageTask, a parent and a child taken off while unreadable', () => {
+  it('draws no parent once its own row as answered names none, and no child whose row names another', () => {
+    expect.assertions(1);
+    const up = task('#9');
+    const last = task('#1', { parent: '#9', parentTask: up, rev: 3, children: [task('#2'), task('#3')] });
+    // The answer leaves out a parent taken off (omitempty)
+    const now = pageTask({
+      found: undefined,
+      rows: { '#1': { state: 'doing', at: '', rev: 4 }, '#2': { state: 'doing', at: '', rev: 2 } },
+      failed: true,
+      last,
+    }).task;
+    expect([now?.parent, now?.parentTask, now?.rev, now?.children.map((x) => x.name)]).toStrictEqual([
+      undefined,
+      undefined,
+      4,
+      ['#3'],
+    ]);
   });
 });
 

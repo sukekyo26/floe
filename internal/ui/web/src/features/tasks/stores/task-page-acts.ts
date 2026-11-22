@@ -44,9 +44,15 @@ interface Deps {
 }
 
 export interface TaskPageActs {
-  // changeState writes the task's state of the rev drawn: the rev written, or null refused, said and read again but
-  // refused as stale (taskWrites reads it)
-  changeState: (project: string, name: string, rev: number, state: string) => Promise<number | null>;
+  // changeState writes the task's state of the rev drawn and tells answered the rev written, or null refused, before
+  // the list is read again (but on a refusal as stale, which taskWrites reads), then says the refusal or takes it away
+  changeState: (
+    project: string,
+    name: string,
+    rev: number,
+    state: string,
+    answered: (written: number | null) => void,
+  ) => Promise<void>;
   // archive archives the task or gives it back as done, of the rev read: a second press of a double one (detail > 1)
   // and a press while one is sent write nothing
   archive: (detail: number, task: TaskOf, archived: boolean) => Promise<void>;
@@ -100,24 +106,23 @@ export function createTaskPageActs({
   };
 
   return {
-    changeState: async (project, name, rev, state) => {
+    changeState: async (project, name, rev, state, answered) => {
       let why: string | null = null;
       let again = true;
-      let written: number | null = null;
       try {
         const res = await writes.writeTask(project, name, { new: false, rev, state });
-        if (res.ok) written = res.rev;
-        else {
+        if (!res.ok) {
           why = res.text;
           again = res.status !== 409;
         }
+        answered(res.ok ? res.rev : null);
       } catch (err) {
         why = err instanceof Error ? err.message : String(err);
+        answered(null);
       }
       // Before the words: a read does not take the refusal away
       if (again) await pages.load();
       notice.say(why === null ? '' : t('ui_state_failed', why));
-      return why === null ? written : null;
     },
     archive: async (detail, task, archived) => {
       if (detail > 1 || archiving) return;
@@ -163,6 +168,8 @@ export function createTaskPageActs({
         );
         await pages.load();
         if (!fromKeys && !places.inFamily()) places.part(up);
+      } catch (err) {
+        notice.say(t('ui_save_failed', err instanceof Error ? err.message : String(err)));
       } finally {
         unlinking.delete(child.name);
       }

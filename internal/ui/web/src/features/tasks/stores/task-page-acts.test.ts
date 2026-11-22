@@ -8,6 +8,7 @@ import type { Notice } from '@/stores/notice';
 import type { Pages } from '@/stores/pages';
 import type { TaskWrites } from '@/stores/tasks';
 import { createToasts } from '@/stores/toasts';
+import type { Undo } from '@/stores/undo-toast';
 import type { TaskOf } from '@/types/task';
 
 const kid: TaskOf = { project: 'p', name: '#2', state: 'doing', at: '', rev: 4, pages: [], archived: [], children: [] };
@@ -15,6 +16,7 @@ const kid: TaskOf = { project: 'p', name: '#2', state: 'doing', at: '', rev: 4, 
 function made(answers: Partial<TasksAnswer>[], deleted = 200) {
   testBoot();
   const log: string[] = [];
+  const undos: Undo[] = [];
   let release: () => void = () => undefined;
   const held = new Promise<void>((resolve) => {
     release = resolve;
@@ -24,6 +26,7 @@ function made(answers: Partial<TasksAnswer>[], deleted = 200) {
       log.push(`write ${name} ${JSON.stringify(body)}`);
       const answer = answers.shift() ?? {};
       if (answer.status === 0) await held;
+      if (answer.status === -1) throw new Error('offline');
       return { ok: true, status: 200, text: '', rev: 9, ...answer } as TasksAnswer;
     },
   } as unknown as TaskWrites;
@@ -43,8 +46,9 @@ function made(answers: Partial<TasksAnswer>[], deleted = 200) {
     pages,
     notice,
     toasts: createToasts(),
-    undoToast: (said, _how, options) => {
+    undoToast: (said, how, options) => {
       log.push(`undo ${said} ${String(options?.focus)}`);
+      undos.push(how);
       return 1;
     },
     client,
@@ -54,29 +58,55 @@ function made(answers: Partial<TasksAnswer>[], deleted = 200) {
       inFamily: () => false,
     },
   });
-  return { acts, log, release };
+  return { acts, log, release, undos };
 }
 
 describe(createTaskPageActs, () => {
-  it('changes the state of the rev drawn, reads again and takes the words away, answering the rev written', async () => {
-    expect.assertions(2);
+  it('changes the state of the rev drawn, telling the rev written before the list is read again, then the words', async () => {
+    expect.assertions(1);
     const { acts, log } = made([{ rev: 6 }]);
-    await expect(acts.changeState('p', '#1', 5, 'done')).resolves.toBe(6);
-    expect(log).toStrictEqual(['write #1 {"new":false,"rev":5,"state":"done"}', 'load', 'say ']);
+    await acts.changeState('p', '#1', 5, 'done', (rev) => log.push(`answered ${String(rev)}`));
+    expect(log).toStrictEqual(['write #1 {"new":false,"rev":5,"state":"done"}', 'answered 6', 'load', 'say ']);
   });
 
-  it('says a refusal, reading again but what the writes read on a stale one', async () => {
-    expect.assertions(3);
+  it('tells a refusal before the list is read again, but on a stale one, which the writes read', async () => {
+    expect.assertions(1);
     const { acts, log } = made([
       { ok: false, status: 409, text: 'changed' },
       { ok: false, status: 400, text: 'no' },
+      { status: -1 },
     ]);
-    await expect(acts.changeState('p', '#1', 5, 'done')).resolves.toBeNull();
-    await expect(acts.changeState('p', '#1', 5, 'done')).resolves.toBeNull();
+    const answered = (rev: number | null) => log.push(`answered ${String(rev)}`);
+    await acts.changeState('p', '#1', 5, 'done', answered);
+    await acts.changeState('p', '#1', 5, 'done', answered);
+    await acts.changeState('p', '#1', 5, 'done', answered);
     expect(log.filter((x) => !x.startsWith('write'))).toStrictEqual([
+      'answered null',
       'say ui_state_failed:changed',
+      'answered null',
       'load',
       'say ui_state_failed:no',
+      'answered null',
+      'load',
+      'say ui_state_failed:offline',
+    ]);
+  });
+
+  it('archives and reads again; refused, says so, reading again but on a stale refusal', async () => {
+    expect.assertions(1);
+    const { acts, log } = made([
+      {},
+      { ok: false, status: 409, text: 'changed' },
+      { ok: false, status: 500, text: 'no' },
+    ]);
+    await acts.archive(1, kid, true);
+    await acts.archive(1, kid, false);
+    await acts.archive(1, kid, true);
+    expect(log.filter((x) => !x.startsWith('write'))).toStrictEqual([
+      'load',
+      'say ui_save_failed:changed',
+      'load',
+      'say ui_save_failed:no',
     ]);
   });
 
@@ -104,6 +134,18 @@ describe(createTaskPageActs, () => {
       'load',
       'part false',
     ]);
+  });
+
+  it('takes the parent back of the rev the write answered, and says a write that could not go', async () => {
+    expect.assertions(2);
+    const { acts, log, undos } = made([{ rev: 5 }, {}, { status: -1 }]);
+    await acts.unlink(kid, '#1', '#1', true);
+    await undos[0]?.undo();
+    await acts.unlink(kid, '#1', '#1', true);
+    expect(log.filter((x) => x.startsWith('write'))[1]).toBe(
+      'write #2 {"new":false,"rev":5,"parent":"#1","parentNew":false}',
+    );
+    expect(log.at(-1)).toBe('say ui_save_failed:offline');
   });
 
   it('forgets a task gone already as removed, and tells why a refusal', async () => {

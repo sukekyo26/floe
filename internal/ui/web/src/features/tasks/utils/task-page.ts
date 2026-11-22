@@ -4,9 +4,10 @@ import type { TaskOf, TaskRow } from '@/types/task';
 import { TASKS_PATH } from '@/utils/page-urls';
 
 export interface PageTaskOf {
-  // found is the task as read; row, its row as the store has it (a write's answer goes in while tasks.json is unreadable)
+  // found is the task as read; rows, the project's rows as the store has them (a write's answer goes in while tasks.json
+  // is unreadable)
   found: TaskOf | undefined;
-  row: TaskRow | undefined;
+  rows: Readonly<Record<string, TaskRow>> | undefined;
   failed: boolean;
   // last is the task as last read, null before any
   last: TaskOf | null;
@@ -20,14 +21,29 @@ export interface PageTask {
   missing: boolean;
 }
 
+// asWritten is the task last read as the screen wrote it since, while tasks.json is unreadable: its own row as answered
+// (a parent taken off is left out of the answer), its parent's row kept while the same, its children those whose rows
+// as answered still name it. With its pages as they are now
+// LIMIT: the rows answered go as the list is read anew with other words (pages.ts takes the unreadable tasks then), and
+// it is drawn as last read again, its next write refused as stale. Keep the rows answered over such a read if that
+// comes to trouble someone
+function asWritten(last: TaskOf, found: TaskOf | undefined, rows: PageTaskOf['rows']): TaskOf {
+  const own = rows?.[last.name];
+  const { title: _title, urls: _urls, categories: _categories, parent: _parent, ...kept } = last;
+  const { parentTask, ...task } = own ? { ...kept, ...own, rev: own.rev ?? last.rev } : last;
+  return {
+    ...task,
+    ...(parentTask && own?.parent === last.parent ? { parentTask } : {}),
+    children: last.children.filter((x) => rows?.[x.name] === undefined || rows[x.name]?.parent === last.name),
+    pages: found?.pages ?? [],
+    archived: found?.archived ?? [],
+  };
+}
+
 // pageTask is the task of a task's page (ui.html renderTaskPage 4396–4406). Unreadable, it is as last read, with what
-// the screen wrote since (row) and its pages as they are now; what is not known is not said to be missing
-export function pageTask({ found, row, failed, last }: PageTaskOf): PageTask {
-  const task = failed
-    ? last
-      ? { ...last, ...row, rev: row?.rev ?? last.rev, pages: found?.pages ?? [], archived: found?.archived ?? [] }
-      : null
-    : (found ?? null);
+// the screen wrote since and its pages as they are now; what is not known is not said to be missing
+export function pageTask({ found, rows, failed, last }: PageTaskOf): PageTask {
+  const task = failed ? (last ? asWritten(last, found, rows) : null) : (found ?? null);
   return {
     task,
     none: task?.pages.length === 0 && task.archived.length === 0,

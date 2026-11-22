@@ -67,8 +67,8 @@ export const restoreFocus = (slug: string) => (): void => {
 // shownOf is el, unless it or what holds it is hidden
 const shownOf = (el: Element | null): Element | null => (el && !el.closest('[hidden]') ? el : null);
 
-// categoryAdd is the add button of a category's heading on a task's page
-const categoryAdd = (category: string): Element | null =>
+// categoryAdd is the add button of a category's heading on a task's page, as drawn now
+export const categoryAdd = (category: string): Element | null =>
   document.querySelector(`#list > li[data-key="${CSS.escape(`group:${category}`)}"] [data-testid=category-add]`);
 
 // prepareTaskOut takes, before the page leaves its task, the row next to it; back is the menu it was taken off from,

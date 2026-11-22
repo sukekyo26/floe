@@ -40,8 +40,8 @@ export function useTaskPage(name: string, { query = listQuery, pages = pagePages
   const found = all.find((x) => x.project === project && x.name === name);
   const [last, setLast] = useState<TaskOf | null>(null);
   if (!failed && (found ?? null) !== last) setLast(found ?? null);
-  const row = taken.tasks[project]?.[name];
-  const shown = useMemo(() => pageTask({ found, row, failed, last }), [found, row, failed, last]);
+  const rows = taken.tasks[project];
+  const shown = useMemo(() => pageTask({ found, rows, failed, last }), [found, rows, failed, last]);
   const [head, setHead] = useState<TaskOf | null>(null);
   if (shown.task && shown.task !== head) setHead(shown.task);
   const color = useMemo(

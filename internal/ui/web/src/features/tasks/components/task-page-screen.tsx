@@ -1,7 +1,7 @@
 import { useCallback, useEffect, useState, type ReactNode } from 'react';
 
 import { Columns } from '@/components/columns';
-import { backToRow, focusOn } from '@/components/focus-places';
+import { backToRow, categoryAdd, focusOn } from '@/components/focus-places';
 import type { Openers } from '@/components/page-menu';
 import { getBoot } from '@/config/boot';
 import { KinDialog, type KinOpen } from '@/features/tasks/components/kin-dialog';
@@ -32,12 +32,6 @@ export interface TaskPageScreenProps {
   // reader is the page beside the list: the app's, as a feature imports no other
   readonly reader: ReactNode;
 }
-
-// The add button of a category's heading, as drawn now
-const categoryAddOf = (category: string) => () =>
-  focusOn(
-    document.querySelector(`#list > li[data-key="${CSS.escape(`group:${category}`)}"] [data-testid=category-add]`),
-  );
 
 // TaskPageScreen is a task's page (/tasks with a task named): its head and family card over its rows by category, or
 // what it says with none, beside the page open, laid out by Columns; a task not there, the column alone. It writes no
@@ -76,7 +70,7 @@ export function TaskPageScreen({ name, openers, taskOpeners, reader }: TaskPageS
               task={view.task}
               openers={openers}
               onAddPage={(task, category) => {
-                taskOpeners.onAddPage(task, category, categoryAddOf(category));
+                taskOpeners.onAddPage(task, category, () => focusOn(categoryAdd(category)));
               }}
             />
             <TaskNone
