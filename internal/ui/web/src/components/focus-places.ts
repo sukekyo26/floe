@@ -1,3 +1,5 @@
+import { flushSync } from 'react-dom';
+
 import { getBoot, screenOf } from '@/config/boot';
 import { oneColumn } from '@/lib/platform';
 import { openPage as pageOpen, type OpenPage } from '@/stores/open-page';
@@ -25,6 +27,14 @@ export const focusOn = (el: Element | null): boolean => {
   el.focus();
   return true;
 };
+
+// drawThenFocus draws what apply changes at once, then gives the focus to the element of id: what a fold or an open
+// button does as it is pressed (ui.html showShelf, showList, showSide). Its callers are event handlers alone, never a
+// draw or an effect, where flushSync could not draw
+export function drawThenFocus(apply: () => void, id: string): void {
+  flushSync(apply);
+  focusOn(document.getElementById(id));
+}
 
 const focusRow = (key: string | null): boolean =>
   key !== null && focusOn(document.querySelector(`#list > li[data-key="${CSS.escape(key)}"] [data-testid=title]`));

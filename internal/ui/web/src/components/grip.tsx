@@ -76,7 +76,7 @@ export function Grip({
         onSet(to);
         onKeep();
       }}
-      className={`${place === 'bar' ? 'fixed top-bar' : 'absolute top-0 mid:hidden'} bottom-0 z-6 w-1.5 cursor-col-resize touch-none after:absolute after:inset-y-0 after:left-0.5 after:w-0.5 after:bg-transparent after:transition-colors after:duration-150 after:content-[''] hover:after:bg-ink focus-visible:outline-2 focus-visible:-outline-offset-2 focus-visible:outline-faint focus-visible:after:bg-ink data-dragging:after:bg-ink`}
+      className={`${place === 'bar' ? 'fixed top-bar' : 'absolute top-0 mid:hidden'} bottom-0 z-6 w-1.5 cursor-col-resize touch-none after:absolute after:inset-y-0 after:left-0.5 after:w-0.5 after:bg-transparent after:transition-colors after:duration-150 after:content-[''] hover:after:bg-ink focus-visible:outline-2 focus-visible:-outline-offset-2 focus-visible:outline-faint focus-visible:after:bg-ink data-dragging:after:bg-ink print:hidden`}
     />
   );
 }

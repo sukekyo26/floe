@@ -1,7 +1,7 @@
 import { renderToString } from 'react-dom/server';
 import { describe, expect, it } from 'vitest';
 
-import { Columns, ShelfFoot } from '@/components/columns';
+import { ColumnFoot, Columns, ShelfFoot } from '@/components/columns';
 import { testBoot } from '@/components/test-boot';
 import type { Boot } from '@/config/boot';
 import type { Kept } from '@/lib/storage';
@@ -123,5 +123,13 @@ describe(ShelfFoot, () => {
     expect(renderToString(<ShelfFoot />)).toMatch(
       /^<div data-testid="col-foot"[^>]*><button[^>]* id="shelf-hide"[^>]*aria-expanded="true" aria-controls="shelf"/,
     );
+  });
+});
+
+describe(ColumnFoot, () => {
+  it('goes under 70rem, but where its column folds at every width', () => {
+    expect.assertions(2);
+    expect(renderToString(<ColumnFoot />)).toContain('wide:hidden');
+    expect(renderToString(<ColumnFoot always />)).not.toContain('wide:hidden');
   });
 });

@@ -27,18 +27,21 @@ export interface TreeRowProps {
   readonly actions?: PageActions;
 }
 
-// treeNote is what a directory says under its rows: why it was not read, that it was cut, that it is empty
-function treeNote(l: Listing | Error): string {
+// treeNote is what a directory says under its rows: why it was not read, that it was cut, that it is empty (the list's
+// tree and the frame's)
+export function treeNote(l: Listing | Error): string {
   if (l instanceof Error) return t('ui_folder_failed', l.message);
   const shown = l.dirs.length + l.files.length;
   if (l.more) return t('ui_folder_more', shown + l.more, shown);
   return shown === 0 ? t('ui_folder_empty') : '';
 }
 
-// The fold's room is kept in a page's row and a note's, so that the names line up under a directory's
-const FOLD =
+// What a tree's row begins with, in the list's and the frame's: a directory's fold, which turns open, and the icon of a
+// directory or a page. The fold's room is kept in a page's row and a note's, so that the names line up under a
+// directory's
+export const FOLD =
   'me-[0.35rem] inline-block size-3.5 align-[-2px] text-muted transition-transform duration-150 [&>svg]:size-3.5';
-const KIND = 'me-[0.4rem] inline-block size-4 align-[-3px] text-muted [&>svg]:size-4';
+export const KIND = 'me-[0.4rem] inline-block size-4 align-[-3px] text-muted [&>svg]:size-4';
 const TITLE =
   'block truncate font-medium text-fg no-underline after:absolute after:inset-0 focus-visible:outline-none group-data-archived/tree:text-muted';
 
