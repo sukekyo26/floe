@@ -19,10 +19,11 @@ describe(pinFocus, () => {
   });
 
   it('gives a chip gone’s focus to the title of the one in its place, or the last, or the help', () => {
-    expect.assertions(3);
+    expect.assertions(4);
     expect(pinFocus(['a', 'b', 'c'], ['a', 'c'], { slug: 'b', on: 'pin-off' })).toStrictEqual({ slug: 'c', on: 'pin' });
     expect(pinFocus(['a', 'b'], ['a'], { slug: 'b', on: 'pin-off' })).toStrictEqual({ slug: 'a', on: 'pin' });
     expect(pinFocus(['a'], [], { slug: 'a', on: 'pin' })).toBe('help');
+    expect(pinFocus([], ['b'], { slug: 'a', on: 'pin-off' })).toStrictEqual({ slug: 'b', on: 'pin' });
   });
 });
 

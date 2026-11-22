@@ -18,7 +18,8 @@ export const pinsSaid = (pinned: readonly Page[]): string =>
 // the next off; with none left, the help ('help')
 export function pinFocus(was: readonly string[], now: readonly string[], focused: PinFocused): PinFocused | 'help' {
   if (now.includes(focused.slug)) return focused;
-  const place = was.indexOf(focused.slug);
+  // A chip not among those drawn before (none is, as the focus is read off them) goes to the first that is now
+  const place = Math.max(was.indexOf(focused.slug), 0);
   const slug = now[Math.min(place, now.length - 1)];
   return slug === undefined ? 'help' : { slug, on: 'pin' };
 }
