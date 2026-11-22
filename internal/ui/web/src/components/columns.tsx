@@ -1,7 +1,5 @@
 import { useLayoutEffect, useRef, type ReactNode } from 'react';
-import { flushSync } from 'react-dom';
-
-import { focusOn } from '@/components/focus-places';
+import { drawThenFocus, focusOn } from '@/components/focus-places';
 import { Grip } from '@/components/grip';
 import { IconButton } from '@/components/icon-button';
 import { ListColumnIcon, ShelfColumnIcon } from '@/components/icons';
@@ -13,22 +11,35 @@ import { columnWidths } from '@/utils/column-widths';
 const CONTROLS: Record<ColumnName, string> = { shelf: 'shelf', list: 'listcol' };
 
 // showColumn opens or folds the column named, as one of its buttons is pressed (ui.html showShelf, showList): drawn at
-// once, the focus goes to the button that undoes it. Its callers are event handlers alone, never a draw or an effect,
-// where flushSync could not draw
+// once, the focus goes to the button that undoes it
 export function showColumn(name: ColumnName, open: boolean, columns: ColumnsStore = pageColumns): void {
-  flushSync(() => {
-    columns.show(name, open);
-  });
-  focusOn(document.getElementById(`${name}-${open ? 'hide' : 'show'}`));
+  drawThenFocus(
+    () => {
+      columns.show(name, open);
+    },
+    `${name}-${open ? 'hide' : 'show'}`,
+  );
 }
 
+// SHOW_BOTTOM stands what opens a folded column where its button stood, in the middle of the foot's height
+export const SHOW_BOTTOM = 'bottom-[calc((var(--spacing-foot)-1px-var(--spacing-icon-btn))/2)]';
+
 // ColumnFoot is the box at a column's foot, under what scrolls, with the button that folds the column; gone under
-// 70rem, where nothing folds. next leaves room on its left for what opens the column before it, standing there
-export function ColumnFoot({ children, next = false }: { readonly children?: ReactNode; readonly next?: boolean }) {
+// 70rem, where the list's columns do not fold, but always there for a column that folds at any width (the frame's
+// tree). next leaves room on its left for what opens the column before it, standing there
+export function ColumnFoot({
+  children,
+  next = false,
+  always = false,
+}: {
+  readonly children?: ReactNode;
+  readonly next?: boolean;
+  readonly always?: boolean;
+}) {
   return (
     <div
       data-testid="col-foot"
-      className={`order-1 flex h-foot flex-none items-center border-t border-line pe-foot-pad wide:hidden ${next ? 'ps-foot-next' : 'ps-foot-pad'}`}
+      className={`order-1 flex h-foot flex-none items-center border-t border-line pe-foot-pad ${always ? '' : 'wide:hidden'} ${next ? 'ps-foot-next' : 'ps-foot-pad'}`}
     >
       {children}
     </div>
@@ -75,10 +86,7 @@ function ShowButton({ name, hidden, raised, left, columns }: ShowButtonProps) {
     if (document.getElementById(CONTROLS[name])?.contains(document.activeElement)) focusOn(button.current);
   }, [hidden, name]);
   return (
-    <div
-      className="fixed bottom-[calc((var(--spacing-foot)-1px-var(--spacing-icon-btn))/2)] z-2 flex wide:hidden"
-      style={{ left }}
-    >
+    <div className={`fixed ${SHOW_BOTTOM} z-2 flex wide:hidden`} style={{ left }}>
       <IconButton
         ref={button}
         id={`${name}-show`}
