@@ -2,7 +2,7 @@ import { renderToString } from 'react-dom/server';
 import { describe, expect, it } from 'vitest';
 
 import { testBoot } from '@/components/test-boot';
-import type { Screen } from '@/config/boot';
+import type { Screen } from '@/types/screen';
 import { KeysDialog } from '@/features/help/components/keys-dialog';
 
 const draw = (screen: Screen, { diff = false, diffGo = false, mac = false } = {}) => {

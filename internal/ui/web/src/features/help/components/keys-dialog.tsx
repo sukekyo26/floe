@@ -1,6 +1,6 @@
 import { useLayoutEffect, useRef, useState, type ReactNode } from 'react';
 
-import type { Screen } from '@/config/boot';
+import type { Screen } from '@/types/screen';
 import { Dialog, DialogActions, DialogClose, DialogHead } from '@/components/dialog';
 import { HelpIcon } from '@/components/icons';
 import { Tab, TabList } from '@/components/tabs';

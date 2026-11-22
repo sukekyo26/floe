@@ -1,4 +1,5 @@
 import type { MessageKey } from '@/types/messages.gen';
+import type { Screen } from '@/types/screen';
 import type { State } from '@/types/task';
 
 // What the server tells the page as it starts, the JSON of the script #boot (internal/ui's boot)
@@ -14,10 +15,6 @@ export interface Boot {
   states: State[];
   maxURLs: number;
 }
-
-// Screen is the screen shown: the page list, the task list, a task's page (the task list's URL with task=), or a page
-// whole. The one place a task's page is told from the task list (ui.html TASKS, TASK_PAGE, TASK_LIST)
-export type Screen = 'list' | 'taskList' | 'taskPage' | 'frame';
 
 export const screenOf = (boot: Pick<Boot, 'screen'>, search: string): Screen => {
   if (boot.screen !== 'tasks') return boot.screen;
