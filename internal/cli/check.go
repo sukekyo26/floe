@@ -40,6 +40,7 @@ func (a *app) check(paths []string) error {
 	}
 	store := a.iconStore()
 	var found usererr.List
+	defer a.drawn()
 	for _, p := range a.args(paths, "cli_wants_data") {
 		a.watchDrawing(p.name)
 		_, warnings, err := drawFile(k, store, p)

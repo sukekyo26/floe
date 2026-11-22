@@ -22,6 +22,14 @@ func (a *app) watchDrawing(file string) {
 	a.guard.Drawing(file)
 }
 
+// drawn ends the watch of the memory once the command has drawn: the commands that draw call it, deferred, where they
+// start to draw, so that what they hold after, the pages they write, is not watched.
+// LIMIT: a watch that ends the process just as the command ends may write its mistake beside the command's output.
+func (a *app) drawn() {
+	a.guard.Stop()
+	a.guard = nil
+}
+
 // stopDrawing tells, at file, that drawing it took more memory than floe draws a page with, and ends the process.
 // LIMIT: the mistakes of the files drawn before it are not told.
 func (a *app) stopDrawing(file string) {

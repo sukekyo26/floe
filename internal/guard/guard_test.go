@@ -12,7 +12,8 @@ import (
 	"floe/internal/guard"
 )
 
-// child makes the test binary a process that the tests watch: "hold" keeps what it makes, "garbage" drops it.
+// child makes the test binary a process that the tests watch: "hold" keeps what it makes, "garbage" drops it, and
+// "drawn" keeps it after the watch is stopped.
 const child = "FLOE_GUARD_TEST_CHILD"
 
 // limit is the memory a child may hold; each child makes 512 MiB at most, so that one a watch fails to end ends.
@@ -32,11 +33,14 @@ func TestMain(m *testing.M) {
 			os.Exit(stopped)
 		})
 		g.Drawing("page.yaml")
+		if mode == "drawn" {
+			g.Stop()
+		}
 		var kept [][]byte
 		for range made / chunk {
 			b := make([]byte, chunk)
 			b[0] = 1
-			if mode == "hold" {
+			if mode != "garbage" {
 				kept = append(kept, b)
 			}
 			// Slow enough for the watch to read between: 512 steps of 2 ms.
@@ -71,7 +75,8 @@ func run(t *testing.T, mode string, vars ...string) (int, string) {
 }
 
 // A process holding more than the limit is stopped, told the file it draws; one that makes eight times the limit as
-// garbage is not, though GOMEMLIMIT or GOGC=off would let the collector wait past the limit.
+// garbage is not, though GOMEMLIMIT or GOGC=off would let the collector wait past the limit, nor one that holds it
+// once its watch is stopped.
 func TestStart(t *testing.T) {
 	t.Parallel()
 
@@ -81,6 +86,9 @@ func TestStart(t *testing.T) {
 		}
 		if code, out := run(t, "garbage", vars...); code != 0 {
 			t.Errorf("a child dropping %d MiB with %v = %d, %q; want 0", made>>20, vars, code, out)
+		}
+		if code, out := run(t, "drawn", vars...); code != 0 {
+			t.Errorf("a child holding %d MiB after its watch with %v = %d, %q; want 0", made>>20, vars, code, out)
 		}
 	}
 }

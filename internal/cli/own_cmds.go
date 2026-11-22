@@ -272,6 +272,7 @@ func (a *app) checkTemplates() error {
 	}
 	store := a.iconStore()
 	var found usererr.List
+	defer a.drawn()
 	for _, name := range k.OwnTemplates() {
 		t, _, err := k.Template(name)
 		if err != nil {

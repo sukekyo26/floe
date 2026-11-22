@@ -82,6 +82,7 @@ func (a *app) drawPages(k *kit.Kit, store diagram.Icons, paths []string, out arg
 	if failed := found.Add(out.err); failed != nil {
 		return nil, failed
 	}
+	defer a.drawn()
 	pages := make([]rendered, 0, len(paths))
 	// The pages so far, to tell two that are one file: one real path (through a symlink), or two the system
 	// says are one file (os.SameFile), as on a filesystem that ignores case (macOS) a.html and A.html are.
