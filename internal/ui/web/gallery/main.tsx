@@ -728,7 +728,8 @@ function Gallery() {
       <main className="w-[26rem] p-6">
         <p>
           <a href="columns.html">The columns of the list screens</a> and{' '}
-          <a href="side.html">the tree on the frame’s left</a>, in windows of their own
+          <a href="side.html">the tree on the frame’s left</a> and <a href="tasks.html">the task list</a>, in windows of
+          their own
         </p>
         <Section title="Server state and the error">
           <div className="mb-2 flex flex-wrap gap-2">

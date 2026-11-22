@@ -31,14 +31,17 @@ export function ColumnFoot({
   children,
   next = false,
   always = false,
+  hidden = false,
 }: {
   readonly children?: ReactNode;
   readonly next?: boolean;
   readonly always?: boolean;
+  readonly hidden?: boolean;
 }) {
   return (
     <div
       data-testid="col-foot"
+      hidden={hidden}
       className={`order-1 flex h-foot flex-none items-center border-t border-line pe-foot-pad ${always ? '' : 'wide:hidden '}${next ? 'ps-foot-next' : 'ps-foot-pad'}`}
     >
       {children}
@@ -135,13 +138,16 @@ export interface ColumnsProps {
   readonly shelf?: ReactNode;
   readonly list: ReactNode;
   readonly reader?: ReactNode;
+  // alone lays out the list's column alone, the rest drawn but hidden, as tests read them there (ui.html tasks-empty,
+  // task-missing 926–927, 939–940)
+  readonly alone?: boolean;
   readonly columns?: ColumnsStore;
 }
 
 // Columns lays out the screen of a list (ui.html #manage, layoutColumns): the shelf, the list and the page beside it,
 // the edges between them and the buttons that fold and open the two columns, by the screen, what is kept and the
 // window. The widths go to the root (--shelf-width, --list-width), as the edges stand fixed on the window
-export function Columns({ shelf, list, reader, columns = pageColumns }: ColumnsProps) {
+export function Columns({ shelf, list, reader, alone = false, columns = pageColumns }: ColumnsProps) {
   const state = useColumns(columns);
   const { screen, kept, at, widths, shelfOpen, listShown, picked } = state;
   const hasShelf = screen !== 'taskPage';
@@ -159,13 +165,13 @@ export function Columns({ shelf, list, reader, columns = pageColumns }: ColumnsP
   return (
     <main
       id="manage"
-      className={`grid min-h-0 flex-1 ${gridOf(state)} ${hasShelf && !shelfOpen ? 'not-wide:[&>#shelf]:hidden' : ''}`}
+      className={`grid min-h-0 flex-1 ${alone ? 'grid-cols-[minmax(0,1fr)] grid-rows-[minmax(0,1fr)] [&>#shelf]:hidden' : `${gridOf(state)} ${hasShelf && !shelfOpen ? 'not-wide:[&>#shelf]:hidden' : ''}`}`}
     >
       <h1 className="sr-only">floe</h1>
       {hasShelf ? (
         <ShowButton
           name="shelf"
-          hidden={shelfOpen}
+          hidden={shelfOpen || alone}
           raised={!listShown}
           left="var(--spacing-foot-pad)"
           columns={columns}
@@ -174,7 +180,7 @@ export function Columns({ shelf, list, reader, columns = pageColumns }: ColumnsP
       {taskList ? null : (
         <ShowButton
           name="list"
-          hidden={listShown}
+          hidden={listShown || alone}
           raised
           left={
             !hasShelf
@@ -197,7 +203,7 @@ export function Columns({ shelf, list, reader, columns = pageColumns }: ColumnsP
             width={widths.shelf}
             min={widths.shelfMin}
             max={widths.shelfMax}
-            hidden={!shelfOpen}
+            hidden={!shelfOpen || alone}
             onSet={(w) => {
               setWidth('shelf', w);
             }}
@@ -207,10 +213,10 @@ export function Columns({ shelf, list, reader, columns = pageColumns }: ColumnsP
       ) : null}
       <section
         id="listcol"
-        className={`flex min-h-0 min-w-0 flex-col bg-panel mid:border-0 ${taskList ? '' : 'border-r border-line'} ${listShown ? '' : 'not-wide:hidden'}`}
+        className={`flex min-h-0 min-w-0 flex-col bg-panel mid:border-0 ${taskList ? '' : 'border-r border-line'} ${listShown || alone ? '' : 'not-wide:hidden'}`}
       >
         {taskList && shelfOpen ? null : (
-          <ColumnFoot next={hasShelf && !shelfOpen}>
+          <ColumnFoot next={hasShelf && !shelfOpen} hidden={alone}>
             {taskList ? null : (
               <IconButton
                 id="list-hide"
@@ -242,7 +248,7 @@ export function Columns({ shelf, list, reader, columns = pageColumns }: ColumnsP
             min={widths.listMin}
             max={widths.listMax}
             left={listLeft}
-            hidden={!listShown}
+            hidden={!listShown || alone}
             onSet={(w) => {
               setWidth('list', w);
             }}
@@ -250,7 +256,10 @@ export function Columns({ shelf, list, reader, columns = pageColumns }: ColumnsP
           />
         </div>
       )}
-      {taskList ? null : reader}
+      {/* The task list's is there too, hidden (ui.html #reader, which tests read there) */}
+      <div className="contents" hidden={taskList || alone}>
+        {reader}
+      </div>
     </main>
   );
 }

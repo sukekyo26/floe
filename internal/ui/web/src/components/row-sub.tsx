@@ -1,5 +1,6 @@
 import type { CSSProperties, ReactNode } from 'react';
 
+import { TINT_DOT, TINT_VARS } from '@/components/tint';
 import { t } from '@/lib/t';
 import type { Page } from '@/types/page';
 import type { CssVars } from '@/utils/css-vars';
@@ -15,6 +16,8 @@ interface RowSubProps {
 }
 
 const PILL = 'rounded-full px-2 whitespace-nowrap';
+// NEW_PILL is the pill of what is new on a row: a page's new version, a task's unread pages
+export const NEW_PILL = `${PILL} bg-new-soft font-mono text-label leading-normal font-bold text-new`;
 
 // RowSub is the line under a row's title (ui.html drawSub): a new version, the kind, the project in its colour, what
 // the caller adds, then a link's path or that its file is gone. The tags are the list row's own (P5)
@@ -24,10 +27,7 @@ export function RowSub({ page: a, ranks, middle }: RowSubProps) {
   return (
     <>
       {unseen(a) && a.news === 'version' ? (
-        <span
-          data-testid="ver"
-          className={`${PILL} bg-new-soft font-mono text-label leading-normal font-bold text-new`}
-        >
+        <span data-testid="ver" className={NEW_PILL}>
           {t('ui_new_version', a.version ?? 0)}
         </span>
       ) : null}
@@ -43,7 +43,7 @@ export function RowSub({ page: a, ranks, middle }: RowSubProps) {
           // Painted in its project's colour (P0's name; ui.html drawProject: proj-tint), as it is drawn only then
           data-tint="true"
           style={tint as CSSProperties}
-          className={`${PILL} inline-flex max-w-40 items-center gap-1.25 bg-(--tint) font-medium text-(--tint-ink) [--tint-ink:color-mix(in_srgb,var(--c)_50%,var(--color-fg))] [--tint:color-mix(in_srgb,var(--c)_16%,var(--color-panel))] before:size-1.75 before:flex-none before:rounded-full before:bg-(--c) before:content-['']`}
+          className={`${PILL} inline-flex max-w-40 items-center gap-1.25 bg-(--tint) font-medium text-(--tint-ink) ${TINT_VARS} ${TINT_DOT}`}
         >
           <span data-testid="proj-name" className="min-w-0 truncate">
             {project}

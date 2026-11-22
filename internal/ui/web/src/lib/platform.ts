@@ -8,3 +8,8 @@ export const NARROW = '(max-width: 40rem)';
 
 // oneColumn tells the window that narrow now
 export const oneColumn = (): boolean => window.matchMedia(ONE_COLUMN).matches;
+
+// goTo leaves the page for url, as a link pressed would
+export const goTo = (url: string): void => {
+  window.location.assign(url);
+};

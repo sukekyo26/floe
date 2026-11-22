@@ -10,8 +10,9 @@ export interface IconButtonProps {
   readonly label?: string | undefined;
   readonly title?: string | undefined;
   readonly children: ReactNode;
-  // bar: 30 px, among the bar's; row: 26 px, a row's; item: an item of a menu, as wide as the menu, its words beside
-  readonly size?: 'bar' | 'row' | 'item';
+  // bar: 30 px, among the bar's; row: 26 px, a row's; chip: 28 px, a pin's × (ui.html .pin-off); help: 24 px, the
+  // pins' help (.pins-help); item: an item of a menu, as wide as the menu, its words beside
+  readonly size?: 'bar' | 'row' | 'chip' | 'help' | 'item';
   readonly display?: Display;
   // A button that toggles: whether it is on (aria-pressed, "true" or "false"); left out, it toggles nothing
   readonly pressed?: boolean | undefined;
@@ -24,6 +25,8 @@ export interface IconButtonProps {
   // expanded tells whether what it folds and opens shows (aria-expanded), controls names that (aria-controls)
   readonly expanded?: boolean | undefined;
   readonly controls?: string | undefined;
+  // popoverTarget is the popover it shows and hides (the pins' help)
+  readonly popoverTarget?: string | undefined;
   // tagged marks the tag line's button of a page with tags (data-tagged, P0b-2)
   readonly tagged?: boolean | undefined;
   readonly tone?: 'star' | 'danger' | undefined;
@@ -39,6 +42,14 @@ export interface IconButtonProps {
   // ref holds a button the focus is given back to as it stays through redraws (the tag line's)
   readonly ref?: Ref<HTMLButtonElement> | undefined;
 }
+
+// A round one's padding, icon and size, by its size
+const ROUND = {
+  bar: { pad: 'px-1.5', svg: '[&_svg]:size-4', box: 'h-icon-btn min-w-icon-btn' },
+  row: { pad: 'px-1.5', svg: '[&_svg]:size-4', box: 'h-6.5 min-w-6.5' },
+  chip: { pad: 'px-0', svg: '[&_svg]:size-3', box: 'h-7 w-7 min-w-7 flex-none' },
+  help: { pad: 'px-0', svg: '[&_svg]:size-4', box: 'h-6 w-6 min-w-6 flex-none' },
+} as const;
 
 const DISPLAY: Record<Display, string> = {
   shown: 'inline-flex',
@@ -62,6 +73,7 @@ export function IconButton({
   raised,
   expanded,
   controls,
+  popoverTarget,
   tone,
   href,
   newTab,
@@ -74,7 +86,7 @@ export function IconButton({
   onClick,
   onBlur,
 }: IconButtonProps) {
-  const className = `${DISPLAY[display]} items-center border border-transparent ${raised ? 'bg-panel shadow-sm ring-1 ring-line' : 'bg-transparent'} text-muted no-underline transition-colors duration-150 hover:bg-subtle disabled:cursor-default disabled:bg-transparent disabled:text-muted disabled:opacity-35 aria-pressed:[&_svg]:fill-current data-armed:border-armed-line data-armed:bg-danger-soft data-armed:font-[650] data-armed:text-danger data-on:bg-ink data-on:text-on-ink data-on:hover:bg-ink-hover data-on:hover:text-on-ink ${size === 'item' ? 'min-h-9 w-full justify-start gap-2.5 rounded-[calc(var(--radius-menu)-var(--spacing-menu-pad))] px-2.5 py-1.75 text-start text-small leading-[1.35] [&_svg]:size-4 [&_svg]:shrink-0' : `justify-center gap-1.5 rounded-full px-1.5 data-on:rounded-[50%] [&_svg]:size-4 ${size === 'row' ? 'h-6.5 min-w-6.5' : 'h-icon-btn min-w-icon-btn'}`} ${tone === 'star' ? 'hover:text-star aria-pressed:text-star' : tone === 'danger' ? 'hover:text-danger aria-pressed:text-fg' : 'hover:text-fg aria-pressed:text-fg'}`;
+  const className = `${DISPLAY[display]} items-center border border-transparent ${raised ? 'bg-panel shadow-sm ring-1 ring-line' : 'bg-transparent'} text-muted no-underline transition-colors duration-150 hover:bg-subtle disabled:cursor-default disabled:bg-transparent disabled:text-muted disabled:opacity-35 aria-pressed:[&_svg]:fill-current data-armed:border-armed-line data-armed:bg-danger-soft data-armed:font-[650] data-armed:text-danger data-on:bg-ink data-on:text-on-ink data-on:hover:bg-ink-hover data-on:hover:text-on-ink ${size === 'item' ? 'min-h-9 w-full justify-start gap-2.5 rounded-[calc(var(--radius-menu)-var(--spacing-menu-pad))] px-2.5 py-1.75 text-start text-small leading-[1.35] [&_svg]:size-4 [&_svg]:shrink-0' : `justify-center gap-1.5 rounded-full ${ROUND[size].pad} data-on:rounded-[50%] ${ROUND[size].svg} ${ROUND[size].box}`} ${tone === 'star' ? 'hover:text-star aria-pressed:text-star' : tone === 'danger' ? 'hover:text-danger aria-pressed:text-fg' : 'hover:text-fg aria-pressed:text-fg'}`;
   const common = {
     id,
     'data-testid': testid,
@@ -106,6 +118,7 @@ export function IconButton({
       aria-pressed={pressed}
       aria-expanded={expanded}
       aria-controls={controls}
+      popoverTarget={popoverTarget}
       data-on={on ? 'true' : undefined}
       data-armed={armed ? 'true' : undefined}
       data-tagged={tagged ? 'true' : undefined}

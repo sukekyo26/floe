@@ -1,3 +1,5 @@
+import type { Page } from '@/types/page';
+
 // A state a task can be in, the server's one table (store.States)
 export interface State {
   name: string;
@@ -24,4 +26,15 @@ export interface TaskWritten {
   taskProject: string;
   task: string;
   row: TaskRow;
+}
+
+// A task of tasks.json with the pages on it, its parent and children (one level, as the store's childrenOfTask says)
+export interface TaskOf extends TaskRow {
+  rev: number;
+  project: string;
+  name: string;
+  pages: Page[];
+  archived: Page[];
+  children: TaskOf[];
+  parentTask?: TaskOf;
 }

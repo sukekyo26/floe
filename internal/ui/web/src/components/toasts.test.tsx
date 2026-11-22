@@ -24,6 +24,19 @@ describe(Toasts, () => {
     ]);
   });
 
+  it('draws a link in place of a button as the link the tests know, the toast taking no pointer', () => {
+    expect.assertions(2);
+    vi.useFakeTimers();
+    const store = createToasts();
+    store.toast('', { ms: 8000, button: { label: 'Task #1 made', href: '/tasks?project=p&task=%231' } });
+    const html = renderToString(<Toasts store={store} />);
+    vi.useRealTimers();
+    expect(html).toMatch(
+      /<a data-testid="toast-link" href="\/tasks\?project=p&amp;task=%231" class="pointer-events-auto[^"]*">Task #1 made<\/a>/,
+    );
+    expect(html).toMatch(/data-testid="toast"[^>]*class="[^"]*py-2.5[^"]*"(?![^>]*pointer-events-auto)/);
+  });
+
   it('marks a way back undo with its page’s slug, and any other button neither', () => {
     expect.assertions(2);
     vi.useFakeTimers();

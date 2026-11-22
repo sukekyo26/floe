@@ -4,18 +4,8 @@ import { t } from '@/lib/t';
 import { changeTasks, type TasksAnswer, type TasksChange } from '@/lib/tasks';
 import { pages as pagePages, type Pages } from '@/stores/pages';
 import type { Page } from '@/types/page';
-import type { TaskRow } from '@/types/task';
-
-// A task of tasks.json with the pages on it, its parent and children (one level, as the store's childrenOfTask says)
-export interface TaskOf extends TaskRow {
-  rev: number;
-  project: string;
-  name: string;
-  pages: Page[];
-  archived: Page[];
-  children: TaskOf[];
-  parentTask?: TaskOf;
-}
+import type { TaskOf } from '@/types/task';
+import { tasksFrom } from '@/utils/tasks-of';
 
 export interface TaskWrites {
   // writeTasks is the one write of pages and their tasks, from the screen, a modal, the state's choices or the archive
@@ -50,32 +40,10 @@ export function createTaskWrites({ client = pageClient, pages = pagePages, boot 
     return answer;
   }
 
-  function tasksOf(): TaskOf[] {
-    const { entries, tasks: read } = pages.state.get();
-    const tasks = new Map<string, TaskOf>();
-    const key = (project: string, name: string) => JSON.stringify([project, name]);
-    for (const [project, rows] of Object.entries(read.tasks)) {
-      for (const [name, row] of Object.entries(rows)) {
-        // A row of no rev, rev 0, as the store counts it
-        tasks.set(key(project, name), { rev: 0, ...row, project, name, pages: [], archived: [], children: [] });
-      }
-    }
-    for (const a of entries) {
-      const task = a.task?.name ? tasks.get(key(a.taskProject, a.task.name)) : undefined;
-      task?.[a.archived ? 'archived' : 'pages'].push(a);
-    }
-    for (const [project, rows] of Object.entries(read.tasks)) {
-      for (const [name, { parent }] of Object.entries(rows)) {
-        if (!parent || !Object.hasOwn(rows, parent) || rows[parent]?.parent) continue;
-        const child = tasks.get(key(project, name));
-        const of = tasks.get(key(project, parent));
-        if (!child || !of) continue;
-        child.parentTask = of;
-        of.children.push(child);
-      }
-    }
-    return [...tasks.values()];
-  }
+  const tasksOf = (): TaskOf[] => {
+    const { entries, tasks } = pages.state.get();
+    return tasksFrom(entries, tasks.tasks);
+  };
 
   return {
     writeTasks,
