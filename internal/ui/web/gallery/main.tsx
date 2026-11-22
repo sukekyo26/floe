@@ -19,7 +19,7 @@ import { Rows, type RowItem } from '@/components/rows';
 import { Tab, TabList } from '@/components/tabs';
 import { ServerState } from '@/components/server-state';
 import { Toasts } from '@/components/toasts';
-import { setBoot, type Boot } from '@/config/boot';
+import { getBoot, setBoot, type Boot } from '@/config/boot';
 import { KeysDialog, type HelpTab } from '@/features/help/components/keys-dialog';
 import { EditDialog, type EditTarget } from '@/features/page-edit/components/edit-dialog';
 import { createSaveEdit } from '@/features/page-edit/stores/save-edit';
@@ -56,11 +56,13 @@ import { createPageReads } from '@/features/reader/stores/page-reads';
 import type { TaskWrites } from '@/stores/tasks';
 import { toasts } from '@/stores/toasts';
 import { createColumns } from '@/stores/columns';
-import { backToRow, focusOn, moveRow } from '@/components/focus-places';
+import { backToRow, focusOn, moveRow, tickRow } from '@/components/focus-places';
 import { createListQuery } from '@/stores/list-query';
 import { ListCount, ListWhat } from '@/features/page-list/components/list-head';
 import { ListShelf } from '@/features/page-list/components/list-shelf';
 import { News } from '@/features/page-list/components/news';
+import { AddDialog } from '@/features/page-list/components/add-dialog';
+import { BulkBar } from '@/features/page-list/components/bulk-bar';
 import { PageList } from '@/features/page-list/components/page-list';
 import { SearchBox } from '@/features/page-list/components/search-box';
 import type { Listing, Page } from '@/types/page';
@@ -428,10 +430,15 @@ function comeBackTo(at: { slug: string; file: string }) {
 function ListScene() {
   const keysOn = useStore(listKeysOn);
   // ↑ ↓ and j k through the list's rows, as the app's table of keys will (P8)
-  const keys = useRowKeys({ pages: galleryPages, openPage: galleryOpen, move: moveRow });
+  const keys = useRowKeys({ pages: galleryPages, openPage: galleryOpen, move: moveRow, tick: tickRow });
   useKeys(keysOn ? keys : NO_KEYS);
   const [folded, setFolded] = useState(false);
   const [came, setCame] = useState('');
+  const [adding, setAdding] = useState(false);
+  // The clearing's three forms, for the user to choose (S425): words at the bar's end, words in the row, short words
+  const [clear, setClear] = useState<'a' | 'b' | 'c'>('a');
+  // The list's width: narrow phones', and a wide column, out past the gallery's narrow column
+  const [width, setWidth] = useState<'320px' | '390px' | '720px'>('390px');
   // The page has one list for it, as the screen will: the Rows section's goes first
   const back = (at: { slug: string; file: string }) => {
     listKeysOn.set(true);
@@ -562,7 +569,63 @@ function ListScene() {
           Open the list (a stand-in: the columns’ own is in columns.html)
         </Button>
       ) : null}
-      <div hidden={folded} className="max-h-[34rem] overflow-auto rounded-small border border-line bg-bg">
+      <div className="mb-2 flex flex-wrap items-center gap-2">
+        <Button
+          onClick={() => {
+            setAdding(true);
+          }}
+        >
+          Add a link (#add-link)
+        </Button>
+        <span className="text-small text-muted">Clearing:</span>
+        {(['a', 'b', 'c'] as const).map((form) => (
+          <Button
+            key={form}
+            pressed={clear === form}
+            onClick={() => {
+              setClear(form);
+            }}
+          >
+            {{ a: '(a) words, at the end', b: '(b) words, in the row', c: '(c) short words' }[form]}
+          </Button>
+        ))}
+        <span className="text-small text-muted">List width:</span>
+        {(['320px', '390px', '720px'] as const).map((w) => (
+          <Button
+            key={w}
+            pressed={width === w}
+            onClick={() => {
+              setWidth(w);
+            }}
+          >
+            {w}
+          </Button>
+        ))}
+      </div>
+      <AddDialog
+        open={adding}
+        onClosed={() => {
+          setAdding(false);
+        }}
+      />
+      <div
+        hidden={folded}
+        style={{ width }}
+        className="max-h-[34rem] overflow-auto rounded-small border border-line bg-bg"
+      >
+        {/* The list's head as P9 will make it: the bar of the selected over the rest while some are selected */}
+        <div className="@container/bar sticky top-0 z-5 flex h-lhead items-center gap-2.5 border-b border-line bg-panel px-4 text-small text-muted has-[>#bulk:not([hidden])]:bg-sel has-[>#bulk:not([hidden])]:px-2 has-[>#bulk:not([hidden])]:[&>:not(#bulk)]:hidden">
+          <ListCount query={galleryQuery} pages={galleryPages} />
+          <BulkBar
+            onTags={(target) => {
+              tagTarget.set(target);
+            }}
+            clearSticky={clear === 'a'}
+            {...(clear === 'c' ? { clearWords: getBoot().lang === 'ja' ? '解除' : 'Clear' } : {})}
+            query={galleryQuery}
+            pages={galleryPages}
+          />
+        </div>
         <Profiler
           id="page-list"
           onRender={(_id, _phase, actual) => {
@@ -571,11 +634,13 @@ function ListScene() {
         >
           <PageList
             openers={openers}
-            onAdd={() => toasts.toast('Add a link (P5d’s modal)')}
             query={galleryQuery}
             pages={galleryPages}
             folders={galleryFolders}
             openPage={galleryOpen}
+            onAdd={() => {
+              setAdding(true);
+            }}
           />
         </Profiler>
       </div>
