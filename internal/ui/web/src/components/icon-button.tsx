@@ -19,6 +19,9 @@ export interface IconButtonProps {
   readonly on?: boolean | undefined;
   // armed: a delete waiting for its second press
   readonly armed?: boolean | undefined;
+  // expanded tells whether what it folds and opens shows (aria-expanded), controls names that (aria-controls)
+  readonly expanded?: boolean | undefined;
+  readonly controls?: string | undefined;
   // tagged marks the tag line's button of a page with tags (data-tagged, P0b-2)
   readonly tagged?: boolean | undefined;
   readonly tone?: 'star' | 'danger' | undefined;
@@ -53,6 +56,8 @@ export function IconButton({
   on,
   armed,
   tagged,
+  expanded,
+  controls,
   tone,
   href,
   newTab,
@@ -95,6 +100,8 @@ export function IconButton({
       {...common}
       type="button"
       aria-pressed={pressed}
+      aria-expanded={expanded}
+      aria-controls={controls}
       data-on={on ? 'true' : undefined}
       data-armed={armed ? 'true' : undefined}
       data-tagged={tagged ? 'true' : undefined}

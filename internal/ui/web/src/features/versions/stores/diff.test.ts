@@ -39,7 +39,7 @@ function made(search = '?diff') {
   const answers: { signal: AbortSignal; go: (with_: unknown) => void }[] = [];
   const client = {
     api: (url: string, init?: RequestInit) => {
-      const signal = init?.signal as AbortSignal;
+      const signal = init?.signal ?? new AbortController().signal;
       asked.push({ url, signal });
       return new Promise<Response>((done, fail) => {
         signal.addEventListener('abort', () => {

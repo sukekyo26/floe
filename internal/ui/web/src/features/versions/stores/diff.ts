@@ -177,3 +177,4 @@ export function createDiff({
     },
   };
 }
+export const diff = createDiff();

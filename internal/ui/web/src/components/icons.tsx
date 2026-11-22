@@ -219,3 +219,10 @@ export const TreePageIcon = () => (
     <path d="M7 3h7l5 5v12a1 1 0 0 1-1 1H7a1 1 0 0 1-1-1V4a1 1 0 0 1 1-1Zm7 0v5h5" />
   </Line>
 );
+// A column at the side, folded or open (the diff's contents)
+export const SideIcon = () => (
+  <Line>
+    <rect x="3" y="4" width="18" height="16" rx="2" />
+    <path d="M9 4v16" />
+  </Line>
+);
