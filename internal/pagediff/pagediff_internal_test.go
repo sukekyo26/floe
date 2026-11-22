@@ -105,6 +105,7 @@ func TestCompare(t *testing.T) {
 		},
 		{"a section added", "<h2>A</h2><p>a</p><h2>C</h2>", "<h2>A</h2><p>a</p><h2>B</h2><p>b</p><h2>C</h2>", "same h2 A\nadded h2 {+B+}\n  [p] {+b+}\nsame h2 C\n"},
 		{"no heading", "<p>the first line</p><p>the second line</p>", "<p>the first line</p><p>the second line, mended</p>", "changed h0 \n  [p] the second line{+, mended+}\n"},
+		{"a repeated Japanese word cut at the space", "<h2>A</h2><p>はい あ漢</p>", "<h2>A</h2><p>はい ああ漢</p>", "changed h2 A\n  [p] はい {+あ+}あ漢\n"},
 		{"words made bold", "<h2>A</h2><p>an important word</p>", "<h2>A</h2><p>an <b>important</b> word</p>", "same h2 A\n"},
 		{"a mark within a word", "<h2>A</h2><p>大事な話</p>", "<h2>A</h2><p><b>大事</b>な話</p>", "same h2 A\n"},
 		{"a link's target", "<h2>A</h2><p><a href=/x>there</a></p>", "<h2>A</h2><p><a href=/y>there</a></p>", "same h2 A\n"},
