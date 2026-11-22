@@ -2,7 +2,7 @@ import { useRef, type ReactNode } from 'react';
 
 import { unreadFocus } from '@/components/focus-places';
 import { PageNote } from '@/features/reader/components/page-note';
-import { usePageMessages } from '@/features/reader/hooks/use-page-messages';
+import { usePageMessages } from '@/hooks/use-page-messages';
 import { useReplacedFrame } from '@/features/reader/hooks/use-replaced-frame';
 import { pageReads as sharedReads, type PageReads } from '@/features/reader/stores/page-reads';
 import { t } from '@/lib/t';

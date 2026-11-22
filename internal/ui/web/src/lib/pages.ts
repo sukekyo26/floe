@@ -1,6 +1,6 @@
 import type { Client } from '@/lib/api-client';
 import { t } from '@/lib/t';
-import type { Listing, Page } from '@/types/page';
+import type { Listing, Page, ReadMark } from '@/types/page';
 import { PAGES_API } from '@/utils/page-urls';
 
 // readPages is one read of the list: its text as answered, to tell a change, and its entries
@@ -46,12 +46,6 @@ export async function sendPage(
   } catch (err) {
     return { reason: err instanceof Error ? err.message : String(err), answer: null };
   }
-}
-
-// The version read of a page, as the server made its mark when it answered with the page
-export interface ReadMark {
-  n: number;
-  at: string;
 }
 
 // sendRead tells the server the version read of slug, or, for null, marks it unread; cut off at 5 seconds

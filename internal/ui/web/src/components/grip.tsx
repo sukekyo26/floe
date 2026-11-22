@@ -7,7 +7,7 @@ export interface GripProps {
   readonly label: string;
   // controls is the id of what it widens
   readonly controls: string;
-  // at is where it stands from the window's left; width the width it sets now, within min and max
+  // at is where it stands: from the window's left in the bar's place, from its box's left in a box
   readonly at: number;
   readonly width: number;
   readonly min: number;
@@ -18,11 +18,27 @@ export interface GripProps {
   readonly onSet: (width: number) => void;
   readonly onKeep: () => void;
   readonly hidden?: boolean;
+  // place: bar, down from the bar the whole height (the list's columns, the frame's tree); box, the height of the box it
+  // stands in, gone as that box's columns fold into one under 56rem (the diff's contents)
+  readonly place?: 'bar' | 'box';
 }
 
 // Grip is an edge to drag, or to move by keys (ui.md: dragEdge), between columns: a line shows while it is dragged,
 // pointed at or focused. Its value and bounds are for its keys and for screen readers
-export function Grip({ id, label, controls, at, width, min, max, left = () => 0, onSet, onKeep, hidden }: GripProps) {
+export function Grip({
+  id,
+  label,
+  controls,
+  at,
+  width,
+  min,
+  max,
+  left = () => 0,
+  onSet,
+  onKeep,
+  hidden,
+  place = 'bar',
+}: GripProps) {
   const [dragging, setDragging] = useState(false);
   return (
     <div
@@ -60,7 +76,7 @@ export function Grip({ id, label, controls, at, width, min, max, left = () => 0,
         onSet(to);
         onKeep();
       }}
-      className="fixed top-bar bottom-0 z-6 w-1.5 cursor-col-resize touch-none after:absolute after:inset-y-0 after:left-0.5 after:w-0.5 after:bg-transparent after:transition-colors after:duration-150 after:content-[''] hover:after:bg-ink focus-visible:outline-2 focus-visible:-outline-offset-2 focus-visible:outline-faint focus-visible:after:bg-ink data-dragging:after:bg-ink"
+      className={`${place === 'bar' ? 'fixed top-bar' : 'absolute top-0 mid:hidden'} bottom-0 z-6 w-1.5 cursor-col-resize touch-none after:absolute after:inset-y-0 after:left-0.5 after:w-0.5 after:bg-transparent after:transition-colors after:duration-150 after:content-[''] hover:after:bg-ink focus-visible:outline-2 focus-visible:-outline-offset-2 focus-visible:outline-faint focus-visible:after:bg-ink data-dragging:after:bg-ink`}
     />
   );
 }
