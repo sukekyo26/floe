@@ -11,6 +11,7 @@ import { freshTask as fresh0, type FreshTask } from '@/features/tasks/stores/fre
 import { kinActs as acts0, type KinActs, type KinBack } from '@/features/tasks/stores/kin-acts';
 import { askedProjects, KIN_FORMS, type KinFormName, type KinTask } from '@/features/tasks/utils/kin-forms';
 import { taskNames, taskOffer } from '@/features/tasks/utils/task-names';
+import { useSeenTask } from '@/features/tasks/hooks/use-seen-task';
 import { useHold } from '@/hooks/use-hold';
 import { useStore } from '@/hooks/use-store';
 import { goTo } from '@/lib/platform';
@@ -75,12 +76,13 @@ export function KinDialog({
   const tasks = knownTasks(entries, taken);
   const form = open ? KIN_FORMS[open.form] : null;
   const project = open?.ask ? asked : (open?.task.project ?? '');
-  const task: KinTask = tasks.find((y) => y.project === project && y.name === open?.task.name) ?? {
-    ...open?.task,
-    project,
-  };
+  // The task and the name's task as shown: found as it opens, as the project or name changes and as a save is refused
+  // as stale, not at each read (ui.html kinOf.task, kinShown), so that a save sends the rev shown
+  const ofTask = useSeenTask(open, project, open?.task.name ?? '', tasks);
+  const ofName = useSeenTask(open, project, name, tasks);
+  const task: KinTask = ofTask.seen ?? { ...open?.task, project };
   const typed = name.trim();
-  const x = tasks.find((y) => y.project === project && y.name === typed);
+  const x = ofName.seen;
   const there = form?.there(task, typed, x) ?? null;
   // The title is asked of a new task alone: hidden, it is not required, nor marked blank. Unreadable, a task's being
   // there is not known, and nothing is asked: the save stops at what cannot be read
@@ -148,7 +150,11 @@ export function KinDialog({
     try {
       const ran = await hold.whileHeld(async () => {
         const res = await acts.write(open.form, task, typed, x, title.trim());
-        if (res.status === 409) throw new Error(res.stale);
+        if (res.status === 409) {
+          ofTask.renew();
+          ofName.renew();
+          throw new Error(res.stale);
+        }
         if (!res.ok) throw new Error(res.text);
         acts.done(open.form, task, typed, x, res.rev);
         await pages.load();
