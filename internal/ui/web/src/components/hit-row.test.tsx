@@ -55,4 +55,17 @@ describe(HitRow, () => {
     expect(row(true, { news: 'new' })).toMatch(/id="find-0" role="option" aria-selected="true" data-unread="true"/);
     expect(row(false, { archived: true })).toMatch(/aria-selected="false" data-archived="true"/);
   });
+
+  it('has a link for its title, or words alone where choosing the row adds the page (Add a page)', () => {
+    expect.assertions(2);
+    testBoot();
+    const title = (link: boolean) =>
+      String(
+        /<(a|span) data-testid="title"/.exec(
+          renderToString(<HitRow id="add-page-0" page={page({})} reached={false} sub={null} link={link} />),
+        )?.[1],
+      );
+    expect(title(true)).toBe('a');
+    expect(title(false)).toBe('span');
+  });
 });

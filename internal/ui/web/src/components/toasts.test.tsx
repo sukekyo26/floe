@@ -51,4 +51,14 @@ describe(Toasts, () => {
     expect(html).toMatch(/<button[^>]*data-testid="undo"[^>]*data-slug="a"[^>]*aria-label="Restore a"/);
     expect(html.match(/data-testid="undo"/g)).toHaveLength(1);
   });
+
+  it('names each toast by its id, for its button to be found once a modal over it closes', () => {
+    expect.assertions(1);
+    vi.useFakeTimers();
+    const store = createToasts();
+    const id = store.toast('off', { ms: 8000, button: { label: 'undo', undo: true, holds: true, onPress: press } });
+    const html = renderToString(<Toasts store={store} />);
+    vi.useRealTimers();
+    expect(html).toContain(`data-toast="${String(id)}"`);
+  });
 });

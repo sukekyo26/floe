@@ -196,6 +196,17 @@ describe(createPageActions, () => {
     expect(refused.notice.said.get().message).toBe('ui_save_failed:no');
   });
 
+  it('takes a page off for a modal, saying and reading nothing: the reason, or the toast its way back is in', async () => {
+    expect.assertions(4);
+    const ok = made();
+    const off = await ok.actions.takeOff(page, prepared(ok.log), { focus: false });
+    expect(off).toStrictEqual({ reason: '', toast: ok.toasts.shown.get()[0]?.id });
+    expect(ok.log).toStrictEqual(['prepare a', 'task a {"task":"","category":""}']);
+    const refused = made({ refuse: 'no' });
+    await expect(refused.actions.takeOff(page, prepared(refused.log))).resolves.toStrictEqual({ reason: 'no' });
+    expect(refused.notice.said.get().message).toBe('');
+  });
+
   it('goes back from a page whole deleted, with no toast and no read', async () => {
     expect.assertions(2);
     const { actions, log, toasts } = made({ framed: 'a' });

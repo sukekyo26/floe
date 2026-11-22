@@ -1,10 +1,8 @@
 import type { Page } from '@/types/page';
 import type { MessageKey } from '@/types/messages.gen';
-import { searched } from '@/utils/search';
+import { FIND_ROWS, searched } from '@/utils/search';
 
-// LIMIT: the first FIND_ROWS rows only, which it says. Words narrow them; show more if a search comes to need them
 // LIMIT: the files in a folder are not searched, as what is in a folder is read only where it is open
-export const FIND_ROWS = 50;
 
 // findHits are the entries the words match, the archived after the rest (as they would drown what is in use), each
 // kept in the list's order

@@ -14,11 +14,16 @@ interface HitRowProps {
   readonly sub: ReactNode;
   // onOpen is a plain press of the title's link, which goes on to the page
   readonly onOpen?: () => void;
+  // link false: the title is words, not a link, where choosing the row does what it does (Add a page of a task)
+  readonly link?: boolean;
 }
+
+const TITLE =
+  "min-w-0 truncate font-medium text-fg no-underline [grid-area:title] group-data-unread/hit:font-bold after:absolute after:inset-0 after:content-['']";
 
 // HitRow is a row of a search modal's list (ui.html hitRow: the search, and Add a page of a task, P6): an option of a
 // listbox, the whole row its title's link, out of the Tab order as the field moves over the rows
-export function HitRow({ id, page: a, reached, sub, onOpen }: HitRowProps) {
+export function HitRow({ id, page: a, reached, sub, onOpen, link = true }: HitRowProps) {
   const time = a.folder ? '' : a.updatedAt;
   const fresh = unseen(a);
   return (
@@ -34,18 +39,24 @@ export function HitRow({ id, page: a, reached, sub, onOpen }: HitRowProps) {
       <span data-testid="lead" className="grid place-items-center text-muted [grid-area:lead] [&>svg]:size-3.5">
         <Lead page={a} unread={fresh} />
       </span>
-      <a
-        data-testid="title"
-        tabIndex={-1}
-        href={pageHref(a)}
-        title={a.title ?? a.slug}
-        onClick={(e: MouseEvent) => {
-          if (!e.ctrlKey && !e.metaKey && !e.shiftKey) onOpen?.();
-        }}
-        className="min-w-0 truncate font-medium text-fg no-underline [grid-area:title] group-data-unread/hit:font-bold after:absolute after:inset-0 after:content-['']"
-      >
-        {a.title ?? a.slug}
-      </a>
+      {link ? (
+        <a
+          data-testid="title"
+          tabIndex={-1}
+          href={pageHref(a)}
+          title={a.title ?? a.slug}
+          onClick={(e: MouseEvent) => {
+            if (!e.ctrlKey && !e.metaKey && !e.shiftKey) onOpen?.();
+          }}
+          className={TITLE}
+        >
+          {a.title ?? a.slug}
+        </a>
+      ) : (
+        <span data-testid="title" title={a.title ?? a.slug} className={TITLE}>
+          {a.title ?? a.slug}
+        </span>
+      )}
       <span className="flex items-center gap-1.5 font-mono text-label leading-none whitespace-nowrap text-muted [grid-area:time] [&>svg]:size-3 [&>svg]:text-star">
         {a.favorite ? (
           <svg viewBox="0 0 24 24" fill="currentColor" aria-hidden="true">

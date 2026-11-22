@@ -8,7 +8,7 @@ import { HitRow } from '@/components/hit-row';
 import { BarActions } from '@/components/page-actions';
 import type { Openers } from '@/components/page-menu';
 import { RowSub } from '@/components/row-sub';
-import { FIND_ROWS, findCount, findHits } from '@/features/find/utils/find-hits';
+import { findCount, findHits } from '@/features/find/utils/find-hits';
 import { FIRST, findKey, findReached, type Reached } from '@/features/find/utils/find-state';
 import { useMovedOverlay } from '@/hooks/use-moved-overlay';
 import { closeMenu } from '@/hooks/use-open-menu';
@@ -18,6 +18,7 @@ import { menus } from '@/stores/menus';
 import { order as pageOrder, type Order } from '@/stores/order';
 import { pages as pagePages, type Pages } from '@/stores/pages';
 import { nextReached } from '@/utils/list-keys';
+import { FIND_ROWS } from '@/utils/search';
 import { projectOrder } from '@/utils/project-order';
 
 const FOOT = 'find-actions';

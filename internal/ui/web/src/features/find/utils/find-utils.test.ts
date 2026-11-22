@@ -1,6 +1,7 @@
 import { describe, expect, it } from 'vitest';
 
-import { FIND_ROWS, findCount, findHits } from '@/features/find/utils/find-hits';
+import { findCount, findHits } from '@/features/find/utils/find-hits';
+import { FIND_ROWS } from '@/utils/search';
 import { FIRST, findKey, findReached } from '@/features/find/utils/find-state';
 import type { Page } from '@/types/page';
 
