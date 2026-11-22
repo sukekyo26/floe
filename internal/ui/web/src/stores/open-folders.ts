@@ -29,6 +29,9 @@ export interface Folders {
   // toggle opens or closes the directory dir ('' for the top) of the folder slug in the list; closed, what is open
   // under it closes too
   toggle: (slug: string, dir: string) => Promise<void>;
+  // toggleSide opens or closes the directory dir of the frame's tree of the folder slug, whose page file is framed;
+  // closed, what is open under it closes too, the page's own directory still read for j and k
+  toggleSide: (slug: string, file: string, dir: string) => Promise<void>;
 }
 
 const OPEN_KEY = 'list.open';
@@ -186,7 +189,35 @@ export function createFolders({
     list.set({ opened: after.opened, listings: new Map(after.listings).set(key, l) });
   }
 
-  return { list, side, readOpen, readSide, takeOpen: start, toggle };
+  async function toggleSide(slug: string, file: string, dir: string) {
+    const now = side.get();
+    if (now.opened.has(dir)) {
+      const under = (k: string) => k === dir || k.startsWith(`${dir}/`);
+      side.set({
+        ...now,
+        opened: new Set([...now.opened].filter((k) => !under(k))),
+        listings: new Map([...now.listings].filter(([k]) => !under(k) || k === dirOf(file))),
+      });
+      return;
+    }
+    side.set({ ...now, opened: new Set(now.opened).add(dir) });
+    // A read of all open begun before this one would take them without it
+    sideReads++;
+    let l: Listing | Error | null;
+    try {
+      l = await readListing(client, slug, dir);
+    } catch (err) {
+      // The load's: it stays open, and the next look reads it again
+      notice.say(t('ui_load_failed', err instanceof Error ? err.message : String(err)), 'load');
+      return;
+    }
+    const after = side.get();
+    // Closed while it was read; one gone for now stays open, as readSide's
+    if (!after.opened.has(dir) || l === null) return;
+    side.set({ ...after, listings: new Map(after.listings).set(dir, l) });
+  }
+
+  return { list, side, readOpen, readSide, takeOpen: start, toggle, toggleSide };
 }
 
 export const folders = createFolders();

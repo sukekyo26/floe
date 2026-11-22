@@ -41,13 +41,14 @@ function made(gone: string[] = [], options: { search?: string; storage?: Kept } 
     return Promise.resolve(gone.includes(key) ? new Response('', { status: 404 }) : new Response(LISTING));
   });
   const storage = options.storage ?? memory();
+  const notice = createNotice();
   const folders = createFolders({
     client: createClient(),
-    notice: createNotice(),
+    notice,
     storage,
     search: () => options.search ?? '',
   });
-  return { folders, asked, storage };
+  return { folders, asked, storage, notice };
 }
 
 const signal = () => AbortSignal.timeout(1000);
@@ -95,5 +96,43 @@ describe(createFolders, () => {
     const read = folders.readOpen([folder('a')], signal());
     await folders.toggle('a', '');
     await expect(read).resolves.toBeNull();
+  });
+
+  it('opens a directory of the tree and reads it, and closes what is under one closed, the page own one still read', async () => {
+    expect.assertions(4);
+    const { folders } = made();
+    (await folders.readSide('f', 'a/b.html', signal()))?.();
+    const own = folders.side.get().fileListing;
+    await folders.toggleSide('f', 'a/b.html', 'a/c');
+    expect([...folders.side.get().listings.keys()].toSorted()).toStrictEqual(['', 'a', 'a/c']);
+    await folders.toggleSide('f', 'a/b.html', 'a');
+    expect([...folders.side.get().opened]).toStrictEqual(['']);
+    expect([...folders.side.get().listings.keys()].toSorted()).toStrictEqual(['', 'a']);
+    expect(folders.side.get().fileListing).toBe(own);
+  });
+
+  it('lets a read of the tree begun before a toggle take nothing, and takes no answer for one closed meanwhile', async () => {
+    expect.assertions(2);
+    const { folders } = made();
+    const read = folders.readSide('f', 'b.html', signal());
+    const opening = folders.toggleSide('f', 'b.html', 'x');
+    await expect(read).resolves.toBeNull();
+    await folders.toggleSide('f', 'b.html', 'x');
+    await opening;
+    expect(folders.side.get().listings.has('x')).toBe(false);
+  });
+
+  it('keeps a directory of the tree open when gone or unread, saying why it was not read', async () => {
+    expect.assertions(3);
+    const { folders, notice } = made(['f:gone']);
+    await folders.toggleSide('f', 'b.html', 'gone');
+    expect([folders.side.get().opened.has('gone'), folders.side.get().listings.has('gone')]).toStrictEqual([
+      true,
+      false,
+    ]);
+    vi.stubGlobal('fetch', () => Promise.reject(new Error('down')));
+    await folders.toggleSide('f', 'b.html', 'x');
+    expect(folders.side.get().opened.has('x')).toBe(true);
+    expect(notice.said.get()).toStrictEqual({ message: 'failed: down', from: 'load' });
   });
 });
