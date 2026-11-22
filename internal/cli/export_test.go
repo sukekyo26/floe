@@ -24,3 +24,8 @@ func HomeEnv(home string, vars map[string]string) map[string]string {
 	maps.Copy(env, vars)
 	return env
 }
+
+// SetDrawLimit sets the memory the commands that draw may hold, for a test that runs floe as a process of its own.
+func SetDrawLimit(n uint64) {
+	drawLimit = n
+}
