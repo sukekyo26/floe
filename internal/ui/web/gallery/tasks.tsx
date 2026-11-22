@@ -2,7 +2,9 @@
 // window. A fake server answers the pages and the tasks, and takes the writes of the screen (a task made or changed, a
 // pin taken off, a task removed) in memory; the browser's storage is the gallery's own origin's. ?data= picks the data
 // (full, empty, failed, flaky: the tasks unreadable after the first read, pins, nopins), and ?project=, ?view= and
-// ?task= the screen as /tasks takes them; ?scene=suggest shows a field's names alone
+// ?task= the screen as /tasks takes them; ?scene=suggest shows a field's names alone. The modals of P6c open for real:
+// edit the task, add a page, set a page's task (from a row's "…") and the move's question; ?stale=1 refuses the first
+// write of a task's rev as written meanwhile (409), as another window would
 import './gallery.css';
 
 import { StrictMode, useState } from 'react';
@@ -12,8 +14,13 @@ import { useNameSuggest } from '@/components/name-suggest';
 import { Toasts } from '@/components/toasts';
 import { setBoot, type Boot } from '@/config/boot';
 import { ReaderPane } from '@/features/reader/components/reader-pane';
+import { AddPageDialog, type AddPageOpen } from '@/features/tasks/components/add-page-dialog';
+import { MoveDialog } from '@/features/tasks/components/move-dialog';
+import { TaskEditDialog, type TaskEditOpen } from '@/features/tasks/components/task-edit-dialog';
 import { TaskListScreen } from '@/features/tasks/components/task-list-screen';
 import { TaskPageScreen } from '@/features/tasks/components/task-page-screen';
+import { TaskSetDialog } from '@/features/tasks/components/task-set-dialog';
+import { openTaskSet, type TaskSetOpen } from '@/features/tasks/stores/task-set';
 import { pages } from '@/stores/pages';
 import { toasts } from '@/stores/toasts';
 import type { Page } from '@/types/page';
@@ -94,6 +101,13 @@ const entries: Page[] =
 const tasks: Tasks = data === 'empty' || data === 'pins' ? {} : structuredClone(TASKS);
 
 let tasksRead = 0;
+// ?stale=1: the first write of a task's rev is refused, as written meanwhile
+let stale = params.get('stale') === '1';
+const refuseOnce = () => {
+  const now = stale;
+  stale = false;
+  return now;
+};
 const json = (body: unknown, status = 200) => new Response(JSON.stringify(body), { status });
 
 // The fake server: what the screen reads and writes
@@ -131,17 +145,32 @@ window.fetch = (input: string | URL | Request, init?: RequestInit) => {
       parentTitle?: string;
       slugs?: string[];
       pin?: boolean;
+      category?: string;
+      urls?: { add?: string[]; remove?: string[]; order?: string[] };
+      categories?: string[];
     };
-    if (body.slugs) {
+    if (body.slugs && body.task === undefined) {
       for (const a of entries) if (body.slugs.includes(a.slug)) a.task = { ...a.task, pin: Boolean(body.pin) };
       return answer(json({ tasks: [], pages: [] }));
     }
-    const project = body.taskProject ?? '';
-    const name = body.task ?? '';
+    const put = body.slugs ? entries.filter((a) => body.slugs?.includes(a.slug)) : [];
+    const project = body.slugs ? (put[0]?.taskProject ?? '') : (body.taskProject ?? '');
+    const name = (body.task ?? '').trim();
     const rows = { ...tasks[project] };
     const was = rows[name];
-    if (!body.new && was?.rev !== body.rev)
-      return answer(new Response(`task ${name} has changed since it was read`, { status: 409 }));
+    // Off its task: the page alone
+    if (body.slugs && !name) {
+      for (const a of put) a.task = { ...(a.task?.pin ? { pin: true } : {}) };
+      return answer(json({ tasks: [], pages: put }));
+    }
+    if (body.new && was) return answer(new Response(`task ${name} is there already`, { status: 409 }));
+    if (!body.new && (was?.rev !== body.rev || refuseOnce())) {
+      return answer(
+        new Response(was ? `task ${name} has changed since it was read` : `task ${name} is no longer there`, {
+          status: 409,
+        }),
+      );
+    }
     const at = new Date().toISOString();
     const written: { taskProject: string; task: string; row: TaskRow }[] = [];
     if (body.parentNew && body.parent) {
@@ -156,10 +185,25 @@ window.fetch = (input: string | URL | Request, init?: RequestInit) => {
       if (body.parent) row.parent = body.parent;
       else delete row.parent;
     }
+    if (body.urls) {
+      const urls = (row.urls ?? []).filter((u) => !body.urls?.remove?.includes(u)).concat(body.urls.add ?? []);
+      const order = body.urls.order ?? [];
+      row.urls = [...order.filter((u) => urls.includes(u)), ...urls.filter((u) => !order.includes(u))];
+    }
+    if (body.categories) row.categories = body.categories;
+    // A page put on a category of the task: the category added where it is not there, the page off the task it was on
+    const offs = put.map((a) => {
+      const off =
+        a.task?.name && a.task.name !== name ? { offTask: a.task.name, offCategory: a.task.category ?? '' } : {};
+      a.task = { ...(a.task?.pin ? { pin: true } : {}), name, ...(body.category ? { category: body.category } : {}) };
+      if (body.category && !(row.categories ?? []).includes(body.category))
+        row.categories = [...(row.categories ?? []), body.category];
+      return { ...a, ...off };
+    });
     rows[name] = row;
     tasks[project] = rows;
     written.push({ taskProject: project, task: name, row });
-    return answer(json({ tasks: written, pages: [] }));
+    return answer(json({ tasks: written, pages: offs }));
   }
   return answer(new Response('', { status: 404 }));
 };
@@ -184,6 +228,7 @@ const SCENES = [
   ['?data=flaky&project=shop&task=%2312', 'unreadable after'],
   ['?data=flaky&project=shop&task=%2313', 'unreadable, a child'],
   ['?data=failed&project=shop&task=%2312', 'never read'],
+  ['?data=full&project=shop&task=%2312&stale=1', 'task, a write refused once'],
   ['?scene=suggest', 'names'],
 ] as const;
 
@@ -234,17 +279,63 @@ function Suggest() {
 
 const task = params.get('task');
 const reader = <ReaderPane at={null} page={null} keys={new Set()} onKey={() => undefined} />;
-// What opens the modals of the app and of P6c: said, not opened, in the gallery
+// What opens the modals of the app: said, not opened, in the gallery
 const said = (what: string) => () => {
-  toasts.toast(`${what}: the app's or P6c's`);
+  toasts.toast(`${what}: the app's`);
 };
-const openers = {
-  onTags: said('Tags'),
-  onTheme: said('Theme'),
-  onEdit: said('Edit'),
-  onTaskSet: said('Set task'),
-};
-const taskOpeners = { onTaskEdit: said('Edit the task'), onAddPage: said('Add a page') };
+
+// The screen with the task modals, as P8's app will put them: their state here, the move's question once
+function Screen({ name }: { readonly name: string | null }) {
+  const [edit, setEdit] = useState<TaskEditOpen | null>(null);
+  const [add, setAdd] = useState<AddPageOpen | null>(null);
+  const [set, setSet] = useState<TaskSetOpen | null>(null);
+  const openers = {
+    onTags: said('Tags'),
+    onTheme: said('Theme'),
+    onEdit: said('Edit'),
+    onTaskSet: (a: Page, back: () => boolean) => void openTaskSet(a, back, setSet),
+  };
+  return (
+    <>
+      {name === null ? (
+        <TaskListScreen reader={reader} />
+      ) : (
+        <TaskPageScreen
+          name={name}
+          openers={openers}
+          taskOpeners={{
+            onTaskEdit: (x, back) => {
+              setEdit({ task: x, back });
+            },
+            onAddPage: (x, category, back) => {
+              setAdd({ task: x, category, back });
+            },
+          }}
+          reader={reader}
+        />
+      )}
+      <TaskEditDialog
+        open={edit}
+        onClosed={() => {
+          setEdit(null);
+        }}
+      />
+      <AddPageDialog
+        open={add}
+        onClosed={() => {
+          setAdd(null);
+        }}
+      />
+      <TaskSetDialog
+        open={set}
+        onClosed={() => {
+          setSet(null);
+        }}
+      />
+      <MoveDialog />
+    </>
+  );
+}
 
 const boot = import.meta.glob<Boot>('./boot.json', { eager: true, import: 'default' })['./boot.json'];
 const el = document.getElementById('root');
@@ -261,11 +352,7 @@ if (el !== null && boot) {
         <Suggest />
       ) : (
         <div className="flex h-dvh flex-col">
-          {task === null ? (
-            <TaskListScreen reader={reader} />
-          ) : (
-            <TaskPageScreen name={task} openers={openers} taskOpeners={taskOpeners} reader={reader} />
-          )}
+          <Screen name={task} />
         </div>
       )}
       <Toasts />
