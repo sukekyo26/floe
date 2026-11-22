@@ -39,7 +39,7 @@ export function ColumnFoot({
   return (
     <div
       data-testid="col-foot"
-      className={`order-1 flex h-foot flex-none items-center border-t border-line pe-foot-pad ${always ? '' : 'wide:hidden'} ${next ? 'ps-foot-next' : 'ps-foot-pad'}`}
+      className={`order-1 flex h-foot flex-none items-center border-t border-line pe-foot-pad ${always ? '' : 'wide:hidden '}${next ? 'ps-foot-next' : 'ps-foot-pad'}`}
     >
       {children}
     </div>
