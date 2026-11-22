@@ -17,3 +17,7 @@ export const backdropCloses = (down: PressDown | null, upOnDialog: boolean): boo
 // function keys (a page held by a write that never answers can still be loaded again), and an input method's
 export const heldKey = (e: KeyPress & Pick<KeyboardEvent, 'isComposing' | 'keyCode'>): boolean =>
   e.ctrlKey || e.metaKey || e.altKey || /^F\d+$/.test(e.key) || composing(e);
+
+// stopsKey tells a key a held modal stops: held as drawn, or holding already in the task the write began in (its draw
+// not yet done), unless heldKey lets it go on
+export const stopsKey = (held: boolean, holding: boolean, passes: boolean): boolean => (held || holding) && !passes;
