@@ -1,6 +1,6 @@
 import { useEffect, useLayoutEffect, useRef, useState } from 'react';
 
-import { ColumnFoot, SHOW_BOTTOM } from '@/components/columns';
+import { ColumnFoot, HEAD_TITLE, SHOW_BOTTOM } from '@/components/columns';
 import { drawThenFocus } from '@/components/focus-places';
 import { Grip } from '@/components/grip';
 import { IconButton } from '@/components/icon-button';
@@ -112,10 +112,7 @@ export function SideTree({ folder, file, folders = pageFolders, side = frameSide
           </IconButton>
         </ColumnFoot>
         <div className="flex min-h-[2.6rem] flex-none items-center px-[0.8rem] pt-[0.55rem] pb-[0.45rem]">
-          <span
-            id="side-title"
-            className="min-w-0 flex-1 truncate font-mono text-label leading-[1.2] font-bold tracking-[0.06em] text-muted uppercase"
-          >
+          <span id="side-title" className={HEAD_TITLE}>
             {folder?.title}
           </span>
         </div>

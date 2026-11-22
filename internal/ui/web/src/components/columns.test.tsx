@@ -3,6 +3,9 @@ import { describe, expect, it } from 'vitest';
 
 import { ColumnFoot, Columns, ShelfFoot } from '@/components/columns';
 import { testBoot } from '@/components/test-boot';
+
+// The build as committed (just web-build-check holds it to the sources)
+import built from '/dist/index.html?raw';
 import type { Boot } from '@/config/boot';
 import type { Kept } from '@/lib/storage';
 import { createColumns } from '@/stores/columns';
@@ -162,5 +165,17 @@ describe(ColumnFoot, () => {
     expect.assertions(2);
     expect(renderToString(<ColumnFoot />)).toContain('wide:hidden');
     expect(renderToString(<ColumnFoot always />)).not.toContain('wide:hidden');
+  });
+
+  // Tailwind makes a rule for a class only where its source reads it as a word of its own: `pe-foot-pad${…}` was none.
+  // Failing, rebuild the dist (just web-build); failing still, look for a class written with no space before a `${`
+  // LIMIT: sees the classes of word characters alone (not wide:hidden), and reads `.<class>{` in the minified CSS: a
+  // rule shared as `.a,.b{` fails it though there. Read the CSS's selectors if that comes
+  it('has a rule in the build for each of its plain classes', () => {
+    expect.assertions(1);
+    const classes = [<ColumnFoot key="a" />, <ColumnFoot key="b" always next />]
+      .flatMap((foot) => String(/class="([^"]*)"/.exec(renderToString(foot))?.[1]).split(' '))
+      .filter((c) => /^[\w-]+$/.test(c));
+    expect(classes.filter((c) => !built.includes(`.${c}{`))).toStrictEqual([]);
   });
 });
