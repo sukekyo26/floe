@@ -193,6 +193,28 @@ func TestPageMessages(t *testing.T) {
 			}
 		}
 	}
+	// The React screens name keys too (S422): until ui.html goes, one either names is used. Their sources but the
+	// generated list of every key and the tests
+	src := files.NewRoot("web/src")
+	t.Cleanup(func() {
+		if err := src.Close(); err != nil {
+			t.Error(err)
+		}
+	})
+	err := fs.WalkDir(src, ".", func(name string, d fs.DirEntry, err error) error {
+		if err != nil || d.IsDir() || strings.Contains(name, ".test.") || "web/src/"+name == messagesGen ||
+			!strings.HasSuffix(name, ".ts") && !strings.HasSuffix(name, ".tsx") {
+			return err
+		}
+		b, err := src.ReadFile(name)
+		for _, m := range usedRe.FindAllStringSubmatch(string(b), -1) {
+			used[m[1]+m[2]] = true
+		}
+		return err
+	})
+	if err != nil {
+		t.Fatal(err)
+	}
 	// A state's word is named by its value in the table, as the page reads it.
 	for _, state := range store.States {
 		key := "ui_state_" + state.Name
