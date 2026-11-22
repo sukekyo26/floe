@@ -810,6 +810,7 @@ var messagesEN = map[string]string{
 	"ui_url_blank":               "Write the URL",
 	"ui_url_there":               "%s is already among the URLs",
 	"ui_url_max":                 "A task holds %d URLs at most: take one off first",
+	"ui_url_not_link":            "\"%s\" is not an http or https URL",
 	"ui_url_unadded":             "%s is not added yet: press Enter to add it, or empty the field",
 	"ui_url_added":               "Added %s",
 	"ui_url_drop_named":          "Take off %s",
@@ -828,6 +829,10 @@ var messagesEN = map[string]string{
 	"ui_page_from_category":      "%s",
 	"ui_page_from_no_category":   "no category",
 	"ui_page_here_category":      "this task's %s",
+	"ui_category_none":           "No category",
+	"ui_page_add_no_category":    "Add a page with no category",
+	"ui_page_added_no_category":  "Put %s on the task with no category",
+	"ui_page_moved_no_category":  "Moved %s from %s, now with no category",
 	"ui_task_out_named":          "Take %s off its task",
 	"ui_task_out_done":           "Took %s off task %s",
 

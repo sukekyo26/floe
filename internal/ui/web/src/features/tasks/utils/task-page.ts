@@ -51,16 +51,17 @@ export function pageTask({ found, rows, failed, last }: PageTaskOf): PageTask {
   };
 }
 
+// A group of a task's page's rows: its category, '' for no category, and its pages
 export interface Group {
-  heading?: string;
+  category: string;
   entries: Page[];
 }
 
 const madeAt = (a: Page): number => Date.parse(a.createdAt || a.updatedAt);
 
-// taskGroups is the rows of a task's page (ui.html taskGroups): first what is on no category of the task's, as a hand
-// edit leaves, then each category in its order, those of no page too. Within each, what is archived after the rest,
-// each as first published
+// taskGroups is the rows of a task's page (ui.html taskGroups): first no category, with what is on no category of the
+// task's, as a hand edit leaves, then each category in its order; each there with no page too. Within each, what is
+// archived after the rest, each as first published
 export function taskGroups(task: TaskOf): Group[] {
   const order = task.categories ?? [];
   const none: Page[] = [];
@@ -69,7 +70,7 @@ export function taskGroups(task: TaskOf): Group[] {
     (x, y) => Number(Boolean(x.archived)) - Number(Boolean(y.archived)) || madeAt(x) - madeAt(y),
   );
   for (const a of pages) (by.get(a.task?.category ?? '') ?? none).push(a);
-  return [{ entries: none }, ...order.map((heading) => ({ heading, entries: by.get(heading) ?? [] }))];
+  return [{ category: '', entries: none }, ...order.map((category) => ({ category, entries: by.get(category) ?? [] }))];
 }
 
 export interface Family {

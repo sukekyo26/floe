@@ -79,12 +79,26 @@ export function editChange(base: EditBase, now: EditNow): Record<string, unknown
 // read now
 export const refillTitle = (typed: string, was: string, now: string): string => (typed.trim() === was ? now : typed);
 
-// urlRefusal is why a URL typed is not added: none, one there already, or one past the most a task holds; '' to add
-// it. Whether it is a URL at all the store says, as it saves
+// urlsFull tells whether the URLs are as many as a task holds: none more is added
+export const urlsFull = (urls: readonly string[], max: number): boolean => urls.length >= max;
+
+// urlLink tells a URL typed (trimmed) that a link of the task can go to, as the browser reads it: http or https, with a
+// host. The store reads it with Go's net/url (validURL); testdata/task-urls.json of internal/store holds where the two
+// differ
+// LIMIT: lenient where the browser mends what Go refuses (http:foo, a tab in the host): the store refuses it as it saves.
+// Strict where Go takes what the browser cannot open (a port past 65535, an IPv4 part past 255)
+export function urlLink(url: string): boolean {
+  const u = URL.parse(url);
+  return u !== null && (u.protocol === 'http:' || u.protocol === 'https:') && u.host !== '';
+}
+
+// urlRefusal is why a URL typed is not added: none, not an http or https one, one there already, or one past the most a
+// task holds; '' to add it
 export function urlRefusal(url: string, urls: readonly string[], max: number): string {
   if (!url) return t('ui_url_blank');
+  if (!urlLink(url)) return t('ui_url_not_link', url);
   if (urls.includes(url)) return t('ui_url_there', url);
-  if (urls.length >= max) return t('ui_url_max', max);
+  if (urlsFull(urls, max)) return t('ui_url_max', max);
   return '';
 }
 
@@ -97,10 +111,17 @@ export function categoryRefusal(name: string, names: readonly string[]): string 
   return '';
 }
 
-// leftOver is what stops saving of words typed in a field to add and not added: there already, or not added yet; ''
-// for none
-export function leftOver(typed: string, names: readonly string[], url: boolean): string {
-  if (!typed) return '';
-  if (names.includes(typed)) return t(url ? 'ui_url_there' : 'ui_category_there', typed);
-  return t(url ? 'ui_url_unadded' : 'ui_category_unadded', typed);
+// What was done to a list (the URLs, the categories) that says under its box: its add modal opened, one added, taken
+// off or moved, its add button pressed at the most, or a category with pages pressed to be taken off
+export type BoxAct =
+  | { act: 'open' | 'added' | 'dropped' | 'moved' }
+  | { act: 'full'; max: number }
+  | { act: 'paged'; name: string };
+
+// boxSaid is the words under a list's box once act is done to it: why it was not done, or none. The next act on the
+// list says anew, so that words of one done before do not stay
+export function boxSaid(a: BoxAct): string {
+  if (a.act === 'full') return t('ui_url_max', a.max);
+  if (a.act === 'paged') return t('ui_category_drop_paged', a.name);
+  return '';
 }

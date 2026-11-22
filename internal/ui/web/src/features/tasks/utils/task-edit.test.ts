@@ -1,14 +1,18 @@
 import { describe, expect, it } from 'vitest';
 
 import { testBoot } from '@/components/test-boot';
+// oxlint-disable-next-line import/no-relative-parent-imports -- the store's cases, which its Go test reads too
+import taskURLs from '../../../../../../store/testdata/task-urls.json?raw';
 import {
+  boxSaid,
   categoryRefusal,
   editChange,
-  leftOver,
   mergeLists,
   mergeURLs,
   refillTitle,
   urlRefusal,
+  urlLink,
+  urlsFull,
 } from '@/features/tasks/utils/task-edit';
 
 const base = { title: 'T', urls: ['u1', 'u2'], categories: ['a', 'b'] };
@@ -57,13 +61,13 @@ describe(refillTitle, () => {
 });
 
 describe(urlRefusal, () => {
-  it('refuses none, one there and one past the most, and adds any other, which the store checks', () => {
+  it('refuses none, one not http nor https, one there and one past the most, and adds any other', () => {
     expect.assertions(4);
     testBoot();
     expect(urlRefusal('', [], 10)).toBe('ui_url_blank:undefined');
     expect(urlRefusal('https://a', ['https://a'], 10)).toBe('ui_url_there:https://a');
     expect(urlRefusal('https://b', ['x', 'y'], 2)).toBe('ui_url_max:2');
-    expect(urlRefusal('ftp://a', ['x'], 10)).toBe('');
+    expect(urlRefusal('ftp://a', ['x'], 10)).toBe('ui_url_not_link:ftp://a');
   });
 });
 
@@ -77,12 +81,38 @@ describe(categoryRefusal, () => {
   });
 });
 
-describe(leftOver, () => {
-  it('stops saving words typed and not added, saying whether they are there already', () => {
+// The URLs the store's validURL is checked against too (internal/store/taskurl_internal_test.go): the modal's answer
+// of each, as the browser reads it
+const cases = JSON.parse(taskURLs) as { url: string; modal: boolean }[];
+
+describe(urlLink, () => {
+  it('takes what the browser reads as an http or https URL with a host, as the store’s cases say', () => {
+    expect.assertions(1);
+    expect(cases.filter((c) => urlLink(c.url.trim()) !== c.modal).map((c) => c.url)).toStrictEqual([]);
+  });
+});
+
+describe(urlsFull, () => {
+  it('is full at the most, which the refusal reads too', () => {
     expect.assertions(3);
     testBoot();
-    expect(leftOver('', ['a'], false)).toBe('');
-    expect(leftOver('a', ['a'], false)).toBe('ui_category_there:a');
-    expect(leftOver('https://c', [], true)).toBe('ui_url_unadded:https://c');
+    expect(urlsFull(['a'], 2)).toBe(false);
+    expect(urlsFull(['a', 'b'], 2)).toBe(true);
+    expect(urlRefusal('https://c', ['a', 'b'], 2)).toBe('ui_url_max:2');
+  });
+});
+
+describe(boxSaid, () => {
+  it('says why it was not done, and nothing once anything is done to the list after', () => {
+    expect.assertions(3);
+    testBoot();
+    expect(boxSaid({ act: 'full', max: 10 })).toBe('ui_url_max:10');
+    expect(boxSaid({ act: 'paged', name: '設計' })).toBe('ui_category_drop_paged:設計');
+    expect((['open', 'added', 'dropped', 'moved'] as const).map((act) => boxSaid({ act }))).toStrictEqual([
+      '',
+      '',
+      '',
+      '',
+    ]);
   });
 });

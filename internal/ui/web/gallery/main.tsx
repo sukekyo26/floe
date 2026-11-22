@@ -719,7 +719,7 @@ function Gallery() {
       kind: 'group',
       key: 'group:Plans',
       heading: 'Plans',
-      add: { onAdd: () => toasts.toast('add pressed') },
+      add: { onAdd: () => toasts.toast('add pressed'), label: t('ui_page_add_named', 'Plans') },
       empty: t('ui_category_empty'),
     },
   ];

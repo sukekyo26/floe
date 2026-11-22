@@ -14,6 +14,9 @@ export interface AddTo {
 
 // addHits are the pages Add a page offers: of the task's project, not archived, not on that category of the task
 // already, those the words match (ui.html addHits)
+// LIMIT: for no category, a page of the task's on a category it has not (a hand edit) is offered too: put, it is drawn
+// where it was, in no category's group, said to be moved. The store keeps a page's category among its task's, so only a
+// hand edit leaves one
 export function addHits(entries: readonly Page[], to: AddTo, words: string): { all: Page[]; hits: Page[] } {
   const all = entries.filter(
     (a) =>
@@ -23,6 +26,14 @@ export function addHits(entries: readonly Page[], to: AddTo, words: string): { a
   );
   return { all, hits: searched(words, all) };
 }
+
+// groupName is a group's heading on a task's page: its category, or the words for none
+// LIMIT: a category named as those words is told from no category's group only by its key and its add button's name
+export const groupName = (category: string): string => category || t('ui_category_none');
+
+// addTitle is the name of the way to add a page to a group, and of Add a page opened for it
+export const addTitle = (category: string): string =>
+  category ? t('ui_page_add_named', category) : t('ui_page_add_no_category');
 
 // hereBadge is what a row says of the task a page is on: this task's category, or another task's and category; ''
 // for none
@@ -56,5 +67,6 @@ export function addSaid(
 ): string {
   const said = off?.offTask ? leftPlace(off.offTask, off.offCategory) : a.task?.name === to.name ? from : '';
   const title = a.title ?? a.slug;
+  if (!to.category) return said ? t('ui_page_moved_no_category', title, said) : t('ui_page_added_no_category', title);
   return said ? t('ui_page_moved', title, said, to.category) : t('ui_page_added', title, to.category);
 }

@@ -1,7 +1,9 @@
 import { describe, expect, it } from 'vitest';
 
 import { testBoot } from '@/components/test-boot';
-import { addHits, addSaid, hereBadge, pageFrom } from '@/features/tasks/utils/add-page';
+import { setBoot, type Boot } from '@/config/boot';
+import { addHits, addSaid, addTitle, groupName, hereBadge, pageFrom } from '@/features/tasks/utils/add-page';
+import type { PageWritten } from '@/lib/tasks';
 import type { Page } from '@/types/page';
 
 const page = (slug: string, change: Partial<Page> = {}): Page => ({
@@ -50,5 +52,52 @@ describe(addSaid, () => {
     const fresh = page('b');
     expect(addSaid(fresh, to, pageFrom(fresh, to), { ...fresh, offTask: 'S9' })).toBe('ui_page_moved:b');
     expect(addSaid(fresh, to, pageFrom(fresh, to), undefined)).toBe('ui_page_added:b');
+  });
+});
+
+// No category, as Add a page puts a page there (S438)
+const none = { ...to, category: '' };
+
+describe('no category', () => {
+  it('offers this task’s pages of a category and other tasks’, not those of no category', () => {
+    expect.assertions(1);
+    const entries = [
+      page('n', { task: { name: 'S1' } }),
+      page('d', { task: { name: 'S1', category: 'design' } }),
+      page('o', { task: { name: 'S9', category: '案' } }),
+      page('free'),
+    ];
+    expect(addHits(entries, none, '').hits.map((a) => a.slug)).toStrictEqual(['d', 'o', 'free']);
+  });
+
+  it('names the group and the way to add to it in words of their own', () => {
+    expect.assertions(4);
+    testBoot();
+    expect(groupName('')).toBe('ui_category_none:undefined');
+    expect(groupName('design')).toBe('design');
+    expect(addTitle('')).toBe('ui_page_add_no_category:undefined');
+    expect(addTitle('design')).toBe('ui_page_add_named:design');
+  });
+
+  it('says where the page was put from, as the person reads it', () => {
+    expect.assertions(4);
+    setBoot({
+      messages: {
+        ui_page_added_no_category: '「%s」をカテゴリなしで付けました',
+        ui_page_moved_no_category: '「%s」を%sから外し、カテゴリなしにしました',
+        ui_page_from_task_category: '%s の「%s」',
+        ui_page_from_category: '「%s」',
+      },
+    } as unknown as Boot);
+    const said = (a: Page, off?: PageWritten) => addSaid(a, none, pageFrom(a, none), off);
+    const memo = page('メモ');
+    expect(said(memo)).toBe('「メモ」をカテゴリなしで付けました');
+    expect(said(memo, { ...memo, offTask: '#9', offCategory: '案' })).toBe(
+      '「メモ」を#9 の「案」から外し、カテゴリなしにしました',
+    );
+    expect(said(memo, { ...memo, offTask: '#9' })).toBe('「メモ」を#9から外し、カテゴリなしにしました');
+    expect(said(page('メモ', { task: { name: 'S1', category: 'design' } }))).toBe(
+      '「メモ」を「design」から外し、カテゴリなしにしました',
+    );
   });
 });
