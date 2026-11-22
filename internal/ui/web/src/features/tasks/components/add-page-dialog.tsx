@@ -53,9 +53,10 @@ export function AddPageDialog({
   ask = ask0,
 }: AddPageDialogProps) {
   const hold = useHold();
-  // The last opened, whose add button the focus goes back to as it closes: open is null by then
-  const [last, setLast] = useState<AddPageOpen | null>(null);
-  if (open !== null && open !== last) setLast(open);
+  // The last opened, which the modal shows and whose add button the focus goes back to as it closes (open is null by
+  // then), and how many times it was opened: its body is drawn anew for each, its fields as they open
+  const [opened, setOpened] = useState<{ last: AddPageOpen | null; n: number }>({ last: null, n: 0 });
+  if (open !== null && open !== opened.last) setOpened({ last: open, n: opened.n + 1 });
   return (
     <Dialog
       id="add-page-dialog"
@@ -64,10 +65,11 @@ export function AddPageDialog({
       hold={hold}
       labelledBy="add-page-title"
       raised
-      afterClose={() => last?.back() ?? false}
+      afterClose={() => opened.last?.back() ?? false}
     >
       <AddPageBody
-        open={open}
+        key={opened.n}
+        last={opened.last}
         onClosed={onClosed}
         pages={pages}
         writes={writes}
@@ -80,33 +82,34 @@ export function AddPageDialog({
 }
 
 function AddPageBody({
-  open,
+  last,
   onClosed,
   pages,
   writes,
   toasts,
   ask,
   hold,
-}: Required<Omit<AddPageDialogProps, 'open'>> & { readonly open: AddPageOpen | null; readonly hold: Hold }) {
+}: Required<Omit<AddPageDialogProps, 'open'>> & { readonly last: AddPageOpen | null; readonly hold: Hold }) {
   const { close } = useDialog();
   const { entries } = useStore(pages.state);
-  // The last opened, which the modal shows and goes back from as it closes: open is null by then
-  const [last, setLast] = useState<AddPageOpen | null>(null);
-  const [to, setTo] = useState<AddTo>({ project: '', name: '', category: '', rev: 0 });
+  // The task and category as it opened, the rev as read then: the page drawn before may be older
+  const [to, setTo] = useState<AddTo>(() => {
+    const x =
+      (last && writes.tasksOf().find((y) => y.project === last.task.project && y.name === last.task.name)) ??
+      last?.task;
+    return {
+      project: x?.project ?? '',
+      name: x?.name ?? '',
+      category: last?.category ?? '',
+      rev: x ? pages.readRev(x.project, x.name) : 0,
+    };
+  });
   const [words, setWords] = useState('');
   // The row reached, by its page: read again, the same page stays reached where it still is
   const [reached, setReached] = useState<string | null>(null);
   const [error, setError] = useState('');
   // A page being put: a second press while it goes does nothing
   const adding = useRef(false);
-  if (open !== null && open !== last) {
-    setLast(open);
-    const x = writes.tasksOf().find((y) => y.project === open.task.project && y.name === open.task.name) ?? open.task;
-    setTo({ project: x.project, name: x.name, category: open.category, rev: pages.readRev(x.project, x.name) });
-    setWords('');
-    setReached(null);
-    setError('');
-  }
   const { all, hits } = addHits(entries, to, words);
   const shown = hits.slice(0, FIND_ROWS);
   const at = shown.findIndex((a) => a.slug === reached);
@@ -170,7 +173,7 @@ function AddPageBody({
   };
 
   const none = shown.length === 0;
-  const task = open?.task;
+  const task = last?.task;
   return (
     <>
       <DialogHead

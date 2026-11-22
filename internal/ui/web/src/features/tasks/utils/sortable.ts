@@ -8,6 +8,13 @@ export function moved(list: readonly string[], name: string, before: number): st
   return rest;
 }
 
+// droppedTo is the rows once name is dropped before the row at before, or null where that leaves them as they were
+// (dropped on the row just under it in its upper half, or the row just over it in its lower half): nothing to say
+export function droppedTo(list: readonly string[], name: string, before: number): string[] | null {
+  const next = moved(list, name, before);
+  return next.join('\n') === list.join('\n') ? null : next;
+}
+
 // dropsAfter tells a drop at y goes after the row of top and height: in its lower half
 export const dropsAfter = (top: number, height: number, y: number): boolean => y > top + height / 2;
 

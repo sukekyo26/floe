@@ -14,7 +14,7 @@ import { taskNames, taskOffer } from '@/features/tasks/utils/task-names';
 import { useHold } from '@/hooks/use-hold';
 import { useStore } from '@/hooks/use-store';
 import { t } from '@/lib/t';
-import { pageActions as actions0, type PageActions, type TakenOff } from '@/stores/page-actions';
+import type { TakenOff } from '@/stores/page-actions';
 import { pages as pagePages, type Pages } from '@/stores/pages';
 import { nameOffers } from '@/utils/name-offers';
 import { knownTasks } from '@/utils/tasks-of';
@@ -25,7 +25,6 @@ export interface TaskSetDialogProps {
   readonly pages?: Pages;
   readonly acts?: TaskSetActs;
   readonly ask?: MoveAsk;
-  readonly actions?: Pick<PageActions, 'takeOff'>;
 }
 
 // TaskSetDialog puts a page on a task and a category of it (ui.html #set-dialog, openTaskSet, saveTaskSet): the task's
@@ -33,14 +32,7 @@ export interface TaskSetDialogProps {
 // named is shown as found when it opens, as the name changes and as a save is refused (useSeenTask): what changed
 // since is refused, and said, with the modal open. A page on another task is asked about first (MoveDialog). Its way
 // off the task takes the page off at once, held, the way back in a toast. Closed, the focus goes back to the menu
-export function TaskSetDialog({
-  open,
-  onClosed,
-  pages = pagePages,
-  acts = acts0,
-  ask = ask0,
-  actions = actions0,
-}: TaskSetDialogProps) {
+export function TaskSetDialog({ open, onClosed, pages = pagePages, acts = acts0, ask = ask0 }: TaskSetDialogProps) {
   const hold = useHold();
   const { entries, tasks: taken } = useStore(pages.state);
   // The last opened, which the modal shows and goes back from as it closes: open is null by then
@@ -154,9 +146,7 @@ export function TaskSetDialog({
     const keys = e.detail === 0;
     const got: { off: TakenOff } = { off: { reason: '' } };
     const ran = await hold.whileHeld(async () => {
-      got.off = await actions.takeOff(page, (slug) => prepareTaskOut(slug, open.back, page.task?.category ?? ''), {
-        focus: false,
-      });
+      got.off = await acts.takeOff(page, (slug) => prepareTaskOut(slug, open.back, page.task?.category ?? ''));
       if (!got.off.reason) await pages.load();
     });
     if (!ran) return;

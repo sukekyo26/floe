@@ -2,7 +2,7 @@ import { useEffect, useLayoutEffect, useRef, useState } from 'react';
 
 import { IconButton } from '@/components/icon-button';
 import { GripIcon, RowDownIcon, RowDropIcon, RowUpIcon } from '@/components/icons';
-import { dropsAfter, ends, focusStep, moved, nearDropped, type Step } from '@/features/tasks/utils/sortable';
+import { droppedTo, dropsAfter, ends, focusStep, moved, nearDropped, type Step } from '@/features/tasks/utils/sortable';
 
 export interface SortableListProps {
   readonly id: string;
@@ -130,7 +130,9 @@ export function SortableList({
                 return;
               }
               const box = e.currentTarget.getBoundingClientRect();
-              setMark({ name, after: dropsAfter(box.top, box.height, e.clientY) });
+              const after = dropsAfter(box.top, box.height, e.clientY);
+              // The same mark kept: a drag over the same half draws nothing anew
+              setMark((was) => (was?.name === name && was.after === after ? was : { name, after }));
             }}
             onDrop={(e) => {
               const from = dragged.current?.getAttribute(`data-${kind}`) ?? null;
@@ -138,7 +140,8 @@ export function SortableList({
               e.preventDefault();
               if (from === name) return;
               const box = e.currentTarget.getBoundingClientRect();
-              onMove(moved(rows, from, dropsAfter(box.top, box.height, e.clientY) ? at + 1 : at), from);
+              const next = droppedTo(rows, from, dropsAfter(box.top, box.height, e.clientY) ? at + 1 : at);
+              if (next) onMove(next, from);
             }}
             onDragEnd={() => {
               if (dragged.current) dragged.current.draggable = false;

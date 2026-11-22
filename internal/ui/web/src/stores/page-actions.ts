@@ -215,10 +215,6 @@ export function createPageActions({
       toasts.toast(t(a.task?.pin ? 'ui_unpinned' : 'ui_pinned', titleOf(a)));
       await pages.load();
     },
-    // LIMIT: put on another task since, the page is moved back unasked, the toast not saying the task it left. Ask and
-    // say it as Set the task does if that comes to trouble someone
-    // LIMIT: a write of the screen's own since, a page put on the task say, refuses it too. Take back the screen's own
-    // writes too if that comes to trouble someone
     takePageOff: async (a, { focus = false, prepare }) => {
       const off = await takeOff(a, prepare, { focus });
       if (off.reason) {

@@ -194,6 +194,12 @@ export function TaskEditDialog({
       if (res.status === 409) {
         // Read again by the write: what was changed in it stays, over the task as read now
         const x = now(task);
+        // Unreadable, whether it is gone is not known: said so, and the fields stay as they are
+        const unread = pages.state.get().tasks.error;
+        if (!x && unread) {
+          setError(t('ui_tasks_failed', unread));
+          return;
+        }
         if (!x) {
           setRead({ ...read, gone: true });
           setError(t('ui_task_gone_edit'));
@@ -297,7 +303,8 @@ export function TaskEditDialog({
                   hidden={url.on}
                   onClick={() => {
                     drawThenFocus(() => {
-                      setURL({ ...OFF, on: true });
+                      // What was said of the list stays (ui.html urlField)
+                      setURL({ ...url, on: true });
                     }, 'edit-url-new');
                   }}
                 >
@@ -382,7 +389,8 @@ export function TaskEditDialog({
                   label={t('ui_category_add')}
                   onClick={() => {
                     drawThenFocus(() => {
-                      setCategory({ ...OFF, on: true });
+                      // What was said of the list stays, as why a category with pages was not taken off
+                      setCategory({ ...category, on: true });
                     }, 'edit-category-new');
                   }}
                 >

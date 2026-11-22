@@ -1,6 +1,7 @@
 import { getBoot, type Boot } from '@/config/boot';
 import { setBody, setSaid } from '@/features/tasks/utils/task-set';
 import type { TasksAnswer } from '@/lib/tasks';
+import { pageActions, type PageActions, type TakenOff, type TaskOutFocus } from '@/stores/page-actions';
 import { pages as pagePages, type Pages } from '@/stores/pages';
 import { taskWrites, type TaskWrites } from '@/stores/tasks';
 import { toasts as pageToasts, type Toasts } from '@/stores/toasts';
@@ -34,14 +35,30 @@ export interface TaskSetActs {
     name: string,
     call: { shown: TaskOf | undefined; title: string; category: string; opened: string },
   ) => Promise<TasksAnswer>;
+  // takeOff takes page off its task for the modal's way off (prepare: where the focus goes after, taken first): the
+  // reason it was refused, a write that could not be sent too, or the toast its way back is in
+  takeOff: (page: Page, prepare: (slug: string) => TaskOutFocus) => Promise<TakenOff>;
 }
 
 export function createTaskSetActs({
   writes = taskWrites,
   toasts = pageToasts,
   boot = getBoot,
-}: { writes?: TaskWrites; toasts?: Toasts; boot?: () => Boot } = {}): TaskSetActs {
+  actions = pageActions,
+}: {
+  writes?: TaskWrites;
+  toasts?: Toasts;
+  boot?: () => Boot;
+  actions?: Pick<PageActions, 'takeOff'>;
+} = {}): TaskSetActs {
   return {
+    takeOff: async (page, prepare) => {
+      try {
+        return await actions.takeOff(page, prepare, { focus: false });
+      } catch (err) {
+        return { reason: err instanceof Error ? err.message : String(err) };
+      }
+    },
     put: async (page, name, { shown, title, category, opened }) => {
       const res = await writes.putPageOn(page, name, setBody(shown, title), category.trim());
       if (!res.ok) return res;
