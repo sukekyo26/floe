@@ -156,6 +156,19 @@ describe(createVersions, () => {
     expect(m.v.state.get().gone).toBe(false);
   });
 
+  it('leaves a version removed while shown, the list read before, with the words of one gone', async () => {
+    expect.assertions(1);
+    const m = made();
+    m.open(at('a'));
+    await m.answer(listOf(1, 2, 3));
+    m.v.pick(2, { focus: false, held: true });
+    m.v.want(at('a', 2), page());
+    m.v.want(at('a', 2), { slug: 'a', version: 3, versionCount: 2 } as Page);
+    await m.answer(listOf(1, 3));
+    m.v.want(at('a'), { slug: 'a', version: 3, versionCount: 2 } as Page);
+    expect([m.openPage.picked.get()?.v, m.v.state.get().gone]).toStrictEqual([0, true]);
+  });
+
   it('writes nothing of an answer come once another row was picked, before the choice wanted it', async () => {
     expect.assertions(1);
     const m = made();
