@@ -7,7 +7,7 @@ import (
 	"strings"
 	"testing"
 
-	"floe/internal/drawproc"
+	"floe/internal/drawhere"
 	floepublish "floe/internal/publish"
 	"floe/internal/store"
 	"floe/internal/usererr"
@@ -98,7 +98,7 @@ func TestPickThemeMeanwhile(t *testing.T) {
 	s, root := newStore(t)
 	icons := &meanwhile{svg: "<g>v1</g>", then: nil}
 	dw := picKit(t, "", "")
-	dw.Icons, dw.Draw = icons, drawproc.Here(dw.Kit, icons)
+	dw.Icons, dw.Draw = icons, drawhere.Here(dw.Kit, icons)
 	publish(t, s, dw, "d.yaml", iconPage, nil, store.Options{})
 	icons.then = func() {
 		publish(t, s, dw, "d.yaml", strings.Replace(iconPage, "title: T", "title: Again", 1), nil, store.Options{})

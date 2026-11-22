@@ -15,7 +15,7 @@ import (
 	"time"
 
 	"floe/internal/dirs"
-	"floe/internal/drawproc"
+	"floe/internal/drawhere"
 	"floe/internal/files"
 	"floe/internal/kit"
 	"floe/internal/publish"
@@ -61,7 +61,7 @@ func watched(t *testing.T, link bool) (*Server, string) {
 		}
 		none := kit.Dir{FS: nil, Name: ""}
 		k, err := kit.Load(floe, kit.Sources{Parts: none, Themes: none, Templates: kit.Dir{FS: files.DirFS(tpl), Name: tpl}})
-		return store.Drawing{Kit: k, Icons: nil, Draw: drawproc.Here(k, nil), Err: nil}, err
+		return store.Drawing{Kit: k, Icons: nil, Draw: drawhere.Here(k, nil), Err: nil}, err
 	}
 	s := New(Config{
 		Store: store.New(filepath.Join(tmp, "store")), Port: 7325, Build: "test", Drawing: drawing, Templates: tpl,
@@ -393,7 +393,7 @@ func TestVersionBeforeContent(t *testing.T) {
 	read := s.cfg.Drawing
 	s.cfg.Drawing = func() (store.Drawing, error) {
 		d, err := read()
-		d.Icons, d.Draw = icons, drawproc.Here(d.Kit, icons)
+		d.Icons, d.Draw = icons, drawhere.Here(d.Kit, icons)
 		return d, err
 	}
 	s.look()

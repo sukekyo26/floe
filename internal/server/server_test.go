@@ -15,7 +15,7 @@ import (
 	"testing"
 
 	"floe/internal/dirs"
-	"floe/internal/drawproc"
+	"floe/internal/drawhere"
 	"floe/internal/files"
 	"floe/internal/kit"
 	"floe/internal/link"
@@ -70,7 +70,7 @@ func newEnv(t *testing.T) env {
 		if err != nil {
 			return store.Drawing{}, err //nolint:exhaustruct // none
 		}
-		return store.Drawing{Kit: k, Icons: nil, Draw: drawproc.Here(k, nil), Err: nil}, nil
+		return store.Drawing{Kit: k, Icons: nil, Draw: drawhere.Here(k, nil), Err: nil}, nil
 	}
 	e.srv = server.New(server.Config{
 		Store: store.New(e.root), Port: port, Build: "test", Drawing: drawing, Templates: e.tpl, Parts: "", Themes: "",

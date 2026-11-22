@@ -13,7 +13,7 @@ import (
 	"testing/fstest"
 
 	"floe/internal/dirs"
-	"floe/internal/drawproc"
+	"floe/internal/drawhere"
 	floefiles "floe/internal/files"
 	"floe/internal/i18n"
 	"floe/internal/kit"
@@ -53,7 +53,7 @@ func picKit(t *testing.T, head, schema string) store.Drawing {
 	if err != nil {
 		t.Fatal(err)
 	}
-	return store.Drawing{Kit: k, Icons: nil, Draw: drawproc.Here(k, nil), Err: nil}
+	return store.Drawing{Kit: k, Icons: nil, Draw: drawhere.Here(k, nil), Err: nil}
 }
 
 func cmpOr(a, b string) string {
@@ -791,7 +791,7 @@ func TestFailureBeforeNeedImages(t *testing.T) {
 
 	s, _ := newStore(t)
 	dw := picKit(t, "", "")
-	dw.Icons, dw.Draw = failing{}, drawproc.Here(dw.Kit, failing{})
+	dw.Icons, dw.Draw = failing{}, drawhere.Here(dw.Kit, failing{})
 	src := "lang: en\ntemplate: pic\ni: [a.png]\nd: {width: 300, height: 100, title: i, parts: [{icon: {icon: aws/res/aws-lambda, x: 10, y: 10}}]}\n"
 	_, err := floepublish.PrepareData(t.Context(), s, dw, floepublish.Upload{File: "d.yaml", Source: []byte(src), Images: nil, Project: "p", Repo: "p", Place: "d.yaml"}, store.Options{})
 	var found usererr.List

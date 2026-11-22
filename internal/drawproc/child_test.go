@@ -11,6 +11,7 @@ import (
 	"testing"
 	"time"
 
+	"floe/internal/drawhere"
 	"floe/internal/drawproc"
 	"floe/internal/guard"
 	"floe/internal/i18n"
@@ -62,7 +63,7 @@ func serve(mode string) int {
 		case mode == "crash" && job.File == "crash.yaml":
 			panic("broken")
 		}
-		return drawproc.One(k, nil, job)
+		return drawhere.One(k, nil, job)
 	})
 	_ = kept
 	if err != nil {
@@ -127,7 +128,7 @@ func TestChild(t *testing.T) {
 	// Not held to a time: the logs of each system's CI tell how long starting a child takes there.
 	t.Logf("a child started and drew a page in %v", time.Since(began))
 	for _, src := range []string{page, mistaken, warned} {
-		got, want := s.Draw(job("p.yaml", src)), drawproc.One(k, nil, job("p.yaml", src))
+		got, want := s.Draw(job("p.yaml", src)), drawhere.One(k, nil, job("p.yaml", src))
 		if !bytes.Equal(got.Page, want.Page) || !slices.EqualFunc(told(got).Mistakes, told(want).Mistakes, equal) ||
 			told(got).Failure != told(want).Failure || !slices.EqualFunc(told(got).Warnings, told(want).Warnings, equal) {
 			t.Errorf("drawn of %q = %+v, want %+v", src, told(got), told(want))

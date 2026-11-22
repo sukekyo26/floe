@@ -13,7 +13,7 @@ import (
 
 	"floe/internal/daemon"
 	"floe/internal/dirs"
-	"floe/internal/drawproc"
+	"floe/internal/drawhere"
 	"floe/internal/files"
 	"floe/internal/kit"
 	"floe/internal/server"
@@ -81,7 +81,7 @@ func Start(t *testing.T, written map[string]string) *Site {
 				return store.Drawing{Kit: nil, Icons: nil, Draw: nil, Err: nil}, err //nolint:wrapcheck // the test's failure
 			}
 			k, err := kit.Load(floe, kit.Sources{Parts: own("parts"), Themes: own("themes"), Templates: own("templates")})
-			return store.Drawing{Kit: k, Icons: nil, Draw: drawproc.Here(k, nil), Err: nil}, err //nolint:wrapcheck // as above
+			return store.Drawing{Kit: k, Icons: nil, Draw: drawhere.Here(k, nil), Err: nil}, err //nolint:wrapcheck // as above
 		},
 		Templates: dir("templates"), Parts: dir("parts"), Themes: dir("themes"), Icons: dir("icons"), Home: dir("home"),
 		Log: nil,

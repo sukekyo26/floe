@@ -6,6 +6,7 @@ import (
 	"github.com/spf13/cobra"
 
 	"floe/internal/daemon"
+	"floe/internal/drawhere"
 	"floe/internal/drawproc"
 )
 
@@ -44,6 +45,6 @@ func (a *app) drawChild() error {
 			return drawproc.Result{Page: nil, Warnings: nil, Err: kitErr, Read: nil, Places: nil}
 		}
 		a.watchDrawing(job.File)
-		return drawproc.One(k, icons, job)
+		return drawhere.One(k, icons, job)
 	})
 }

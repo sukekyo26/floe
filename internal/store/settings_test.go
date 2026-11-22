@@ -8,7 +8,7 @@ import (
 	"strings"
 	"testing"
 
-	"floe/internal/drawproc"
+	"floe/internal/drawhere"
 	"floe/internal/i18n"
 	"floe/internal/kit"
 	floepublish "floe/internal/publish"
@@ -24,7 +24,7 @@ func floeDrawing(t *testing.T) store.Drawing {
 	if err != nil {
 		t.Fatal(err)
 	}
-	return store.Drawing{Kit: k, Icons: nil, Draw: drawproc.Here(k, nil), Err: nil}
+	return store.Drawing{Kit: k, Icons: nil, Draw: drawhere.Here(k, nil), Err: nil}
 }
 
 // report is a page of floe's report, in theme when it names one.
