@@ -2,9 +2,10 @@
 // window. A fake server answers the pages and the tasks, and takes the writes of the screen (a task made or changed, a
 // pin taken off, a task removed) in memory; the browser's storage is the gallery's own origin's. ?data= picks the data
 // (full, empty, failed, flaky: the tasks unreadable after the first read, pins, nopins), and ?project=, ?view= and
-// ?task= the screen as /tasks takes them; ?scene=suggest shows a field's names alone. The modals of P6c open for real:
-// edit the task, add a page, set a page's task (from a row's "…") and the move's question; ?stale=1 refuses the first
-// write of a task's rev as written meanwhile (409), as another window would
+// ?task= the screen as /tasks takes them; ?scene=suggest shows a field's names alone, ?scene=not-link a URL of ftp
+// typed in the task edit's add modal. The modals of P6c open for real: edit the task, add a page, set a page's task
+// (from a row's "…") and the move's question; ?stale=1 refuses the first write of a task's rev as written meanwhile
+// (409), as another window would
 import './gallery.css';
 
 import { StrictMode, useState } from 'react';
@@ -63,7 +64,7 @@ const PAGES: Page[] = [
   page('p18', 'Plan', 'shop', { task: { name: '#18', category: 'plan' } }),
   page('n19a', 'Notes', 'shop', { task: { name: '#19' } }),
   page('n19b', 'Sketch', 'shop', { task: { name: '#19' } }),
-  page('o9', 'Old banner copy', 'shop', { task: { name: '#9' }, archived: true }),
+  page('o22', 'Old copy', 'shop', { task: { name: '#22' }, archived: true }),
 ];
 const TASKS: Tasks = {
   shop: {
@@ -89,6 +90,7 @@ const TASKS: Tasks = {
     '#16': { title: 'A parent of no page', state: 'doing', at: ago(6), rev: 1 },
     '#17': { title: 'Its child', state: 'done', at: ago(7), parent: '#16', rev: 1 },
     '#9': { title: 'Old banner', state: 'archived', at: ago(400), rev: 1 },
+    '#22': { title: 'Old copy, archived', state: 'archived', at: ago(300), rev: 1 },
     '#18': { title: 'All in categories', state: 'doing', at: ago(2), categories: ['plan', 'test'], rev: 1 },
     '#19': { title: 'No categories', state: 'doing', at: ago(2), rev: 1 },
     '#20': { title: 'Categories, no page', state: 'todo', at: ago(2), categories: ['plan'], rev: 1 },
@@ -240,8 +242,9 @@ const SCENES = [
   ['?data=full&project=shop&task=%2318', 'none on no category'],
   ['?data=full&project=shop&task=%2319', 'no categories'],
   ['?data=full&project=shop&task=%2320', 'categories, no page'],
-  ['?data=full&project=shop&task=%239', 'archived, a page'],
+  ['?data=full&project=shop&task=%2322', 'archived, a page'],
   ['?data=full&project=shop&task=%2321', 'ten URLs'],
+  ['?data=full&project=shop&task=%2312&scene=not-link', 'not an http URL'],
   ['?data=full&project=shop&task=%2316', 'no page, children'],
   ['?data=full&project=shop&task=%2399', 'missing'],
   ['?data=flaky&project=shop&task=%2312', 'unreadable after'],
@@ -356,6 +359,29 @@ function Screen({ name }: { readonly name: string | null }) {
   );
 }
 
+// typeInAdd opens the task's edit once its rows are drawn, then its URL's add modal, and adds what it types there, as a
+// person would, a step a frame: the field's value is set by the input's own setter, which React hears
+async function typeInAdd(typed: string) {
+  const frame = () =>
+    new Promise((done) => {
+      setTimeout(done, 200);
+    });
+  const press = (id: string) => {
+    document.getElementById(id)?.click();
+  };
+  while (!document.querySelector('#list > li')) await frame();
+  press('task-edit');
+  await frame();
+  press('edit-url-plus');
+  await frame();
+  const field = document.getElementById('edit-add-new');
+  if (!(field instanceof HTMLInputElement)) return;
+  Object.getOwnPropertyDescriptor(HTMLInputElement.prototype, 'value')?.set?.call(field, typed);
+  field.dispatchEvent(new Event('input', { bubbles: true }));
+  await frame();
+  press('edit-add-submit');
+}
+
 const boot = import.meta.glob<Boot>('./boot.json', { eager: true, import: 'default' })['./boot.json'];
 const el = document.getElementById('root');
 if (el !== null && boot) {
@@ -377,6 +403,7 @@ if (el !== null && boot) {
       <Toasts />
     </StrictMode>,
   );
+  if (params.get('scene') === 'not-link') void typeInAdd('ftp://example.com/files');
 } else if (el !== null) {
   el.textContent = 'gallery/boot.json is not there: start the gallery with just web-gallery';
 }

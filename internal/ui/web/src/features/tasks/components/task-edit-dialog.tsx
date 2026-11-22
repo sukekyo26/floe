@@ -107,6 +107,9 @@ export function TaskEditDialog({
 
   // The words under a list's box once act is done to it. The same words again are emptied first, so that the live
   // region says them anew
+  // LIMIT: not tried with a screen reader. Emptied, the words are display:none a moment (SAID's empty:hidden), which a
+  // reader may take as a region come anew rather than changed; give the words a region that stays shown if one is not
+  // read twice
   const under = (set: (words: string) => void, was: string) => (act: BoxAct) => {
     const words = boxSaid(act);
     if (words && words === was)
@@ -121,7 +124,9 @@ export function TaskEditDialog({
     (kind === 'url' ? urlUnder : categoryUnder)({ act: 'open' });
     setAdding({ kind, back: () => focusOn(document.getElementById(id)) });
   };
+  // Added in the add modal beside it, which its form's onInput does not hear: a refusal of saving lets go, as typing does
   const add = (typed: string) => {
+    if (!read.gone) setError('');
     if (adding?.kind === 'category') {
       const next = [...categories, typed];
       setCategories(next);
