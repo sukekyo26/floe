@@ -40,8 +40,11 @@
       <button id="help">Press ? in the page</button>
       <button id="open">Open /a/plain/ whole</button>
       <button id="hash">Move to #part</button>
+      <button id="changed">Tell the versions changed (a diff's)</button>
     </p>
-    <p id="part">The version told: <code id="told"></code></p>
+    <p id="part">The version told: <code id="told"></code>; the place: <code id="place"></code></p>
+    <p id="floe-diff.0" style="margin-top: 60vh">A place marked, 0 (a diff's)</p>
+    <p id="floe-diff.1" style="margin: 60vh 0">A place marked, 1 (a diff's)</p>
     <script>
       // No import: the page is of origin null, and Vite's own scripts would be loaded from it and refused
       const here = location.protocol + '//' + location.host;
@@ -60,6 +63,11 @@
       document.getElementById('slash').addEventListener('click', () => tell({ pageKey: '/' }));
       document.getElementById('help').addEventListener('click', () => tell({ pageKey: '?' }));
       document.getElementById('open').addEventListener('click', () => tell({ pageOpen: '/a/plain/' }));
+      document.getElementById('place').textContent = location.hash || '(none)';
+      addEventListener('hashchange', () => {
+        document.getElementById('place').textContent = location.hash;
+      });
+      document.getElementById('changed').addEventListener('click', () => tell({ pageChanged: true }));
       document.getElementById('hash').addEventListener('click', () => {
         location.hash = '#part';
         tell({ pageHash: location.hash });

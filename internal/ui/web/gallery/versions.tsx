@@ -5,6 +5,11 @@ import { Button } from '@/components/button';
 import { Dialog, DialogActions, DialogClose, DialogHead } from '@/components/dialog';
 import { StarIcon } from '@/components/icons';
 import { getBoot, type Boot } from '@/config/boot';
+import { DiffView } from '@/features/versions/components/diff-view';
+import { createDiff, type Diff } from '@/features/versions/stores/diff';
+import type { Section } from '@/features/versions/utils/diff-words';
+import { useKeys } from '@/hooks/use-keys';
+import { createKeptSide } from '@/stores/kept-side';
 import { VersionNote } from '@/features/versions/components/version-note';
 import { VersionSelect } from '@/features/versions/components/version-select';
 import { createVersions, type Versions } from '@/features/versions/stores/versions';
@@ -240,6 +245,139 @@ export function VersionsSection() {
           <DialogClose />
         </DialogActions>
       </Dialog>
+      <DiffScenes />
+    </>
+  );
+}
+
+// The diff, over a fake /versions and /diff: sections changed, added, removed and the same, one with no place, levels 1
+// to 3, two sharing a place. Its URL is the gallery's own, told as it is written
+const SECTIONS: Section[] = [
+  { state: 'same', level: 1, heading: [{ op: '', text: 'Overview' }] },
+  {
+    state: 'changed',
+    level: 2,
+    heading: [
+      { op: '', text: 'Plan ' },
+      { op: 'del', text: 'old' },
+      { op: 'ins', text: 'new' },
+    ],
+    place: 0,
+  },
+  { state: 'added', level: 3, heading: [{ op: 'ins', text: 'A step added' }], place: 0 },
+  { state: 'removed', level: 2, heading: [{ op: 'del', text: 'A part gone' }], place: 1 },
+  { state: 'changed', level: 5, heading: [], place: 1 },
+];
+let diffFails = false;
+const diffServer = {
+  api: (url: string, init?: RequestInit) =>
+    new Promise<Response>((go, fail) => {
+      init?.signal?.addEventListener('abort', () => {
+        fail(new DOMException('called off', 'AbortError'));
+      });
+      setTimeout(
+        () => {
+          if (url.endsWith('/versions')) {
+            go(new Response(JSON.stringify(kept['three'])));
+            return;
+          }
+          if (diffFails) {
+            go(new Response('refused by the gallery', { status: 500 }));
+            return;
+          }
+          const q = new URL(url, 'http://floe').searchParams;
+          go(
+            new Response(
+              JSON.stringify({
+                from: { n: Number(q.get('from')) },
+                to: { n: Number(q.get('to')) },
+                key: 'k',
+                counts: { changed: 2, added: 1, removed: 1, same: 1 },
+                sections: SECTIONS,
+                places: [1, 3],
+              }),
+            ),
+          );
+        },
+        slow ? 1500 : 50,
+      );
+    }),
+} as unknown as Client;
+const diffOf = (query: string) => {
+  let now = query;
+  return createDiff({
+    client: diffServer,
+    search: () => now,
+    replace: (href) => {
+      now = new URL(href, 'http://floe').search;
+      toasts.toast(`URL written: ${href}`);
+    },
+  });
+};
+const shownDiff = diffOf('?diff');
+const badDiff = diffOf('?diff&from=9&to=1');
+const noneDiff = diffOf('?diff');
+const galleryToc = createKeptSide('gallery.diff.toc', 240);
+
+// DiffScenes shows the diff of three's versions, one asked for by a pair that cannot be compared, and a page of one
+// version. n, p and d work from the page, not from a choice open
+function DiffScenes() {
+  const pages = useStore(listed);
+  const three = pages.find((p) => p.slug === 'three') ?? null;
+  const [failsNow, setFails] = useState(false);
+  const keys = {
+    n: () => {
+      shownDiff.step(1);
+    },
+    p: () => {
+      shownDiff.step(-1);
+    },
+    d: () => {
+      toasts.toast('d: would close the diff');
+    },
+  };
+  useKeys(keys);
+  const view = (diff: Diff, page: Page | null) => (
+    // Wider than the gallery's column, as the frame is the window's width
+    <div className="flex h-[30rem] w-[min(72rem,calc(100vw-3rem))] flex-col overflow-hidden rounded-small border border-line">
+      <DiffView
+        page={page}
+        hidden={false}
+        keys={new Set(Object.keys(keys))}
+        onKey={(key) => {
+          keys[key as keyof typeof keys]();
+        }}
+        diff={diff}
+        toc={galleryToc}
+      />
+    </div>
+  );
+  return (
+    <>
+      <h3 className="mt-6 mb-2 text-small font-bold text-muted">
+        The diff (n, p, d; open a choice and press them: nothing; narrow the window under 56rem and 40rem)
+      </h3>
+      <div className="mb-2 flex flex-wrap gap-2">
+        <Button
+          pressed={failsNow}
+          onClick={() => {
+            diffFails = !failsNow;
+            setFails(diffFails);
+          }}
+        >
+          Refuse the diffs
+        </Button>
+        <Button
+          onClick={() => {
+            if (three) shownDiff.reopen(three);
+          }}
+        >
+          The versions changed (pageChanged)
+        </Button>
+      </div>
+      <div className="mb-4">{view(shownDiff, three)}</div>
+      <div className="mb-4">{view(badDiff, three)}</div>
+      {view(noneDiff, { slug: 'one', versionCount: 1 } as Page)}
     </>
   );
 }
