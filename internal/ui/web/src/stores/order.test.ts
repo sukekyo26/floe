@@ -52,4 +52,29 @@ describe(createOrder, () => {
       at: { slug: 'b2', file: '' },
     });
   });
+
+  it('takes the row come back to by the back button or the way back, once, and forgets the order either way', () => {
+    expect.assertions(4);
+    const at = { slug: 'a', file: '', v: 2 };
+    const made = (here: string) => {
+      const storage = memory();
+      const order = createOrder({ boot: () => ({ framed: '' }) as Boot, storage, here: () => here });
+      return { storage, order };
+    };
+    const pressed = made('/?q=x');
+    pressed.order.writeKept({ order: ['a'], shown: ['a'], back: '/?q=x', at, pressed: true });
+    pressed.order.comeBack(false);
+    expect([pressed.order.takeCameFrom(), pressed.order.takeCameFrom()]).toStrictEqual([at, null]);
+    expect(pressed.storage.held.has('pages.order')).toBe(false);
+    // Neither pressed nor the way back: the logo, or the same list by its URL
+    const typed = made('/?q=x');
+    typed.order.writeKept({ order: ['a'], shown: ['a'], back: '/?q=x', at });
+    typed.order.comeBack(false);
+    expect(typed.order.takeCameFrom()).toBeNull();
+    // Another list than the one that opened it
+    const other = made('/?view=fav');
+    other.order.writeKept({ order: ['a'], shown: ['a'], back: '/?q=x', at, pressed: true });
+    other.order.comeBack(true);
+    expect(other.order.takeCameFrom()).toBeNull();
+  });
 });

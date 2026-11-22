@@ -33,6 +33,7 @@ import { createThemeWrites } from '@/features/settings/stores/choose-theme';
 import { createSettings } from '@/features/settings/stores/settings';
 import { useHold } from '@/hooks/use-hold';
 import { useKeys } from '@/hooks/use-keys';
+import { useRowKeys } from '@/hooks/use-row-keys';
 import { useOpenMenus } from '@/hooks/use-open-menu';
 import { useStore } from '@/hooks/use-store';
 import { client } from '@/lib/api-client';
@@ -55,7 +56,7 @@ import { createPageReads } from '@/features/reader/stores/page-reads';
 import type { TaskWrites } from '@/stores/tasks';
 import { toasts } from '@/stores/toasts';
 import { createColumns } from '@/stores/columns';
-import { focusOn } from '@/components/focus-places';
+import { focusOn, moveRow } from '@/components/focus-places';
 import { createListQuery } from '@/stores/list-query';
 import { ListCount, ListWhat } from '@/features/page-list/components/list-head';
 import { ListShelf } from '@/features/page-list/components/list-shelf';
@@ -405,6 +406,8 @@ const MANY: Page[] = Array.from({ length: 1000 }, (_, i) => ({
 // ListScene is the page list as the list screen will draw it, with the time of its last commit: with 1000 rows, pick a
 // row or wait a minute for the times, to measure what React draws anew
 function ListScene() {
+  // ↑ ↓ and j k through the list's rows, as the app's table of keys will (P8)
+  useKeys(useRowKeys({ pages: galleryPages, openPage: galleryOpen, move: moveRow }));
   const [scene, setScene] = useState<'samples' | 'many' | 'none' | 'archived'>('samples');
   // Written as it is measured: a state would draw the list again, and measure that
   const took = useRef<HTMLSpanElement>(null);
@@ -771,7 +774,7 @@ function Gallery() {
             </div>
           </div>
         </Section>
-        <Section title="Page list (the shelf above narrows it; open the folder and its directories; 1000 rows measures a redraw)">
+        <Section title="Page list (the shelf above narrows it; open the folder and its directories; a title opens beside, again whole; ↑ ↓ j k move; 1000 rows measures a redraw)">
           <ListScene />
         </Section>
         <Section title="Reading a page beside the list (the page tells its frame it was read; Slow answers waits 1.5 s)">

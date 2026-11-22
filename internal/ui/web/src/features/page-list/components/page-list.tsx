@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useMemo } from 'react';
 
+import { backToRow } from '@/components/focus-places';
 import type { Openers } from '@/components/page-menu';
 import { Rows, type RowItem } from '@/components/rows';
 import { TreeRow } from '@/components/tree-row';
@@ -10,7 +11,10 @@ import { dayGroups } from '@/features/page-list/utils/list-days';
 import { emptyOf } from '@/features/page-list/utils/list-empty';
 import { keepNewSeen } from '@/features/page-list/stores/keep-new-seen';
 import { NO_PICKS, tagPress } from '@/features/page-list/utils/list-shelf';
+import { useBackToRow } from '@/hooks/use-back-to-row';
 import { useMinute } from '@/hooks/use-minute';
+import { useOneColumn } from '@/hooks/use-one-column';
+import { useRowPress } from '@/hooks/use-row-press';
 import { useStore } from '@/hooks/use-store';
 import { listQuery, type ListQuery } from '@/stores/list-query';
 import { folders as pageFolders, type Folders } from '@/stores/open-folders';
@@ -33,6 +37,8 @@ export interface PageListProps {
 // PageList is the page list's rows (ui.html renderList): the entries the shelf and the search leave, newest first under
 // their days' headings, a folder open followed by its tree; or, with none to draw, the words why. The view "new" keeps
 // every unread page as it draws, so that one read stays on it
+const noneSelected = () => false;
+
 export function PageList({
   openers,
   onAdd,
@@ -66,6 +72,17 @@ export function PageList({
     },
     [folders],
   );
+  const drawn = useCallback(() => {
+    const now = query.query.get();
+    return arrange(pages.state.get().entries, now, now.seen);
+  }, [query, pages]);
+  // LIMIT: no rows are selected yet (P5d gives the selection)
+  const presses = useRowPress({ selecting: noneSelected, drawn, openPage });
+  useOneColumn(openPage);
+  const back = useCallback(() => {
+    backToRow({ pages, openPage });
+  }, [pages, openPage]);
+  useBackToRow(read, back);
   const isPicked = (slug: string, file: string) => picked?.slug === slug && picked.file === file;
   const rows: RowItem[] = [];
   let index = 0;
@@ -91,6 +108,7 @@ export function PageList({
             folderOpen={opened.has(a.slug)}
             onTag={onTag}
             onFolder={onFolder}
+            presses={presses}
           />
         ),
       });
@@ -106,6 +124,12 @@ export function PageList({
               item={item}
               folder={folder}
               picked={item.kind === 'page' && isPicked(a.slug, item.file)}
+              onTitleClick={(e) => {
+                if (item.kind === 'page') presses.press({ slug: a.slug, file: item.file }, e);
+              }}
+              onTitleKeyDown={(e) => {
+                if (item.kind === 'page') presses.key({ slug: a.slug, file: item.file }, e);
+              }}
               onToggle={(path) => {
                 void folders.toggle(a.slug, path);
               }}

@@ -5,6 +5,7 @@ import type { Openers } from '@/components/page-menu';
 import { PageRow } from '@/components/page-row';
 import { RowSub } from '@/components/row-sub';
 import { TagPill } from '@/components/tag-pill';
+import type { RowPresses } from '@/hooks/use-row-press';
 import { t } from '@/lib/t';
 import type { Page } from '@/types/page';
 import { TASKS_PATH, taskHref } from '@/utils/page-urls';
@@ -22,6 +23,8 @@ export interface ListRowProps {
   // onTag narrows the list to a tag of the row; onFolder opens or closes a folder's tree
   readonly onTag: (name: string) => void;
   readonly onFolder: (slug: string) => void;
+  // presses is what the title does as pressed and as Enter lands on it, the same for every row
+  readonly presses: RowPresses;
   // The selection's, which the list gives once it has one (P5d): by the page's slug, the same functions for every row
   readonly selected?: boolean;
   readonly onSelect?: (slug: string, on: boolean) => void;
@@ -47,6 +50,7 @@ export const ListRow = memo(function ListRow({
   folderOpen,
   onTag,
   onFolder,
+  presses,
   selected = false,
   onSelect,
   onPick,
@@ -120,16 +124,19 @@ export const ListRow = memo(function ListRow({
             },
           }
         : {})}
-      {...(a.folder
-        ? {
-            // A folder's title opens and closes its tree; its URL leads to the list with it open, for a new tab
-            onTitleClick: (e) => {
-              if (!plainPress(e)) return;
-              e.preventDefault();
-              onFolder(a.slug);
-            },
-          }
-        : {})}
+      onTitleClick={(e) => {
+        if (!a.folder) {
+          presses.press({ slug: a.slug, file: '' }, e);
+          return;
+        }
+        // A folder's title opens and closes its tree; its URL leads to the list with it open, for a new tab
+        if (!plainPress(e)) return;
+        e.preventDefault();
+        onFolder(a.slug);
+      }}
+      onTitleKeyDown={(e) => {
+        presses.key({ slug: a.slug, file: '' }, e);
+      }}
     />
   );
 });
