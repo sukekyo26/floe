@@ -62,7 +62,7 @@ export function SideRow({ item, slug, file, onToggle }: SideRowProps) {
   return (
     <p
       style={style}
-      className="m-0 py-[0.22rem] ps-[calc(0.3rem+var(--d)*1.1rem+14px+0.35rem)] pe-2 text-small text-muted"
+      className="m-0 py-[0.22rem] ps-[calc(0.3rem+var(--d)*1.1rem+0.875rem+0.35rem)] pe-2 text-small text-muted"
     >
       {treeNote(item.listing)}
     </p>

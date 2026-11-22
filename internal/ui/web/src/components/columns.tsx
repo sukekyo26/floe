@@ -25,8 +25,8 @@ export function showColumn(name: ColumnName, open: boolean, columns: ColumnsStor
 export const SHOW_BOTTOM = 'bottom-[calc((var(--spacing-foot)-1px-var(--spacing-icon-btn))/2)]';
 
 // ColumnFoot is the box at a column's foot, under what scrolls, with the button that folds the column; gone under
-// 70rem, where the list's columns do not fold, but always there for a column that folds at any width (the frame's
-// tree). next leaves room on its left for what opens the column before it, standing there
+// 70rem, where the list's columns do not fold, but always there for a column that folds at any width it shows at (the
+// frame's tree, the diff's contents). next leaves room on its left for what opens the column before it, standing there
 export function ColumnFoot({
   children,
   next = false,
@@ -45,6 +45,10 @@ export function ColumnFoot({
     </div>
   );
 }
+
+// HEAD_TITLE is the title in a column's head (ui.html .side-head): the frame's tree's and the diff's contents'
+export const HEAD_TITLE =
+  'min-w-0 flex-1 truncate font-mono text-label leading-[1.2] font-bold tracking-[0.06em] text-muted uppercase';
 
 // ShelfFoot is the shelf's foot, its button that folds it, for Shelf's foot
 export function ShelfFoot({ columns = pageColumns }: { readonly columns?: ColumnsStore }) {
