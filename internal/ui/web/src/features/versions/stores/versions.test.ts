@@ -249,11 +249,11 @@ describe(createVersions, () => {
     expect([m.openPage.picked.get()?.v, m.asked.length]).toStrictEqual([0, 1]);
   });
 
-  it('drops an answer come after a want that reads nothing', async () => {
+  it('drops an answer come after a want that reads nothing, in the frame too, which checks no row', async () => {
     expect.assertions(1);
-    const m = made();
-    m.open(at());
-    m.open({ slug: 'a', file: 'x.html', v: 0 });
+    const m = made({ frame: true });
+    m.v.want(at(), page());
+    m.v.want(at(), { slug: 'a', version: 1, versionCount: 1 } as Page);
     await m.answer(listOf(1, 2, 3));
     expect(m.v.state.get().list).toBeNull();
   });
