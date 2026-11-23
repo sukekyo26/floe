@@ -3,7 +3,7 @@ package browsertest_test
 import "testing"
 
 // TestUIRowMenuStays opens a row's "…" menu and has the page read the same list again: the menu stays open, its row the same element.
-// A read that changes the list may draw the menu away (ui.html's LIMIT); one of the same list draws nothing, so that the menu a person
+// A read that changes the list may draw the menu away; one of the same list draws nothing, so that the menu a person
 // opened is not closed under them, and pressMenuItem need not open it again more than once.
 func TestUIRowMenuStays(t *testing.T) { //nolint:paralleltest // the browser tests share one Chrome, one at a time
 	s := newSite(t)

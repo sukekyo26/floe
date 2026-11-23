@@ -143,7 +143,7 @@ func TestUIFind(t *testing.T) { //nolint:paralleltest // the browser tests share
 	b.reread()
 	b.until("the row", "document.querySelector('#find-list li')")
 	out = append(out, b.eval(findDrawn))
-	// Rows, none and then rows again: the place reached before none is reached again, not the first (ui.html findAt).
+	// Rows, none and then rows again: the place reached before none is reached again, not the first.
 	three := js(`[{"slug":"a","title":"A","description":"","updatedAt":"2026-01-03T00:00:00.000Z"},` +
 		`{"slug":"b","title":"B","description":"","updatedAt":"2026-01-02T00:00:00.000Z"},` +
 		`{"slug":"c","title":"C","description":"","updatedAt":"2026-01-01T00:00:00.000Z"}]`)

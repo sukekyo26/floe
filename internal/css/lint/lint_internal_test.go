@@ -21,8 +21,7 @@ import (
 	"floe/internal/kit"
 )
 
-// floeInput returns floe's own files as a rule reads them: its kit and base.css, its docs, every-part as floe draws it,
-// and the management page.
+// floeInput returns floe's own files as a rule reads them: its kit and base.css, its docs, and every-part as floe draws it.
 func floeInput(t *testing.T) *Input {
 	t.Helper()
 
@@ -30,13 +29,9 @@ func floeInput(t *testing.T) *Input {
 	if err != nil {
 		t.Fatal(err)
 	}
-	ui, err := os.ReadFile("../../ui/ui.html")
-	if err != nil {
-		t.Fatal(err)
-	}
 	return &Input{
 		kit: k, base: k.BaseCSS(), defaults: k.DefaultsCSS(), docs: os.DirFS("../../../docs"),
-		pages: os.DirFS("../../corpus/testdata/every-part/golden"), ui: floecss.Preprocess(ui),
+		pages: os.DirFS("../../corpus/testdata/every-part/golden"),
 	}
 }
 
@@ -49,7 +44,7 @@ func sub(dir, name string) fs.FS {
 }
 
 // dirInput returns an example of testdata as a rule reads it: dir holds a kit of its own (parts, themes, templates, read
-// over none of floe's), base.css, defaults.css, docs, pages and ui.html, each when the rule reads it, and allow.txt, the exceptions in
+// over none of floe's), base.css, defaults.css, docs and pages, each when the rule reads it, and allow.txt, the exceptions in
 // force: a line each, a quoted key and its reason.
 func dirInput(t *testing.T, dir string) *Input {
 	t.Helper()
@@ -68,9 +63,6 @@ func dirInput(t *testing.T, dir string) *Input {
 	}
 	if defaults := readIf(t, filepath.Join(dir, "defaults.css")); defaults != nil {
 		in.defaults = floecss.Preprocess(defaults)
-	}
-	if ui := readIf(t, filepath.Join(dir, "ui.html")); ui != nil {
-		in.ui = floecss.Preprocess(ui)
 	}
 	for line := range strings.Lines(string(readIf(t, filepath.Join(dir, "allow.txt")))) {
 		key, rest, err := quoted(strings.TrimSpace(line))

@@ -537,24 +537,6 @@ func TestLengthless(t *testing.T) {
 	}
 }
 
-// TestUIParts reads each <style> of the management page from the line it starts on, two of one text too.
-func TestUIParts(t *testing.T) {
-	t.Parallel()
-
-	ui := floecss.Preprocess([]byte("<style>\r\n.a { color: red }\r\n</style>\r\n<style>\r\n.a { color: red }\r\n</style><p style=\"x: 1\">"))
-	sheets, _, err := uiParts(ui)
-	if err != nil {
-		t.Fatal(err)
-	}
-	got := make([]int, 0, len(sheets))
-	for _, s := range sheets {
-		got = append(got, s.line)
-	}
-	if want := []int{0, 3, 5}; !slices.Equal(got, want) {
-		t.Errorf("lines before the sheets %v, want %v", got, want)
-	}
-}
-
 // TestVarReads reads each var(), a nested one too, with its default up to the ) that closes it: none without a comma or
 // after an empty one, a comma within a function of the default kept, comments at its ends left out.
 func TestVarReads(t *testing.T) {

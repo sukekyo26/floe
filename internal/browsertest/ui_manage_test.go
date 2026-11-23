@@ -44,7 +44,8 @@ const extrasList = `[
 ]`
 
 // managementPage tells whether the document is a management page (/ and /a/<slug>/, not a page shown in its frame), which
-// stub fakes. It is ui.html's own test of a link the frame leaves for (leaveFrame): change the two together.
+// stub fakes. It is the frame's own test of a link a page opens (pageMessage, web/src/utils/page-message.ts): change the
+// two together.
 const managementPage = "/^\\/(a\\/[^/]+\\/?)?$/.test(location.pathname) && !new URLSearchParams(location.search).has('raw')"
 
 // fake is the script that answers list, a JavaScript array at(day) may build, for the management page's list, counting
@@ -759,8 +760,8 @@ func uiShelf(t *testing.T, lang i18n.Lang, msg func(string, ...any) string) {
 	// A project's dot is of its color by projectOrder: as many each, by name.
 	b.stub(`[{ slug: 'a', title: 'Alpha', description: '', project: 'p', createdAt: at(1), updatedAt: at(8) },
 		{ slug: 'b', title: 'Beta', description: '', project: 'floe', createdAt: at(1), updatedAt: at(7) }]`)
-	// The React build names the palette's values --color-* (#boot tells it): the same value, read by ui.html's name
-	out = append(out, b.eval("[...document.querySelectorAll('#chips [data-testid=chip]')].map((c) => c.dataset.project + ':' + c.style.getPropertyValue('--c').replace(document.getElementById('boot') ? 'var(--color-' : 'var(--', 'var(--')).join(',')"))
+	// The palette's values are named --color-*: read by the name they had before
+	out = append(out, b.eval("[...document.querySelectorAll('#chips [data-testid=chip]')].map((c) => c.dataset.project + ':' + c.style.getPropertyValue('--c').replace('var(--color-', 'var(--')).join(',')"))
 	// The favourites count their own projects, and one is shown: a single one is chosen from, as on the whole list.
 	b.stub(`[{ slug: 'c', title: 'Gamma', description: '', project: 'p', createdAt: at(1), updatedAt: at(9), favorite: true },
 		{ slug: 'b', title: 'Beta', description: '', project: 'q', createdAt: at(1), updatedAt: at(8) }]`)

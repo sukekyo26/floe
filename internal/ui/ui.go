@@ -14,29 +14,6 @@ import (
 	"floe/internal/store"
 )
 
-//go:embed ui.html
-var pageSource string
-
-var pageTemplate = template.Must(template.New("ui.html").Parse(pageSource))
-
-// pageData fills ui.html: its markup takes .Lang, .Framed and {{.Msg "ui_…"}}, its script the ui_ formats
-// (.Messages), which it renders itself.
-type pageData struct {
-	*i18n.Catalog
-
-	Messages map[string]string
-	Framed   string
-	// Served tells that the page of a folder framed is there, as the server found it
-	Served bool
-	// Version is what the frame's ?v= asks, as the server read it: a version's number, 0 for the latest, gone for no such
-	// version; "" where ?v= asks none.
-	Version string
-	// States is the states of a task, for the task list to read when tasks.json cannot be
-	States []store.State
-	// MaxURLs is the most URLs the store lets a task have, which the edit dialog tells before a write is refused
-	MaxURLs int
-}
-
 // Screen is a screen of the management page, as the server picks it by the path.
 type Screen string
 
@@ -46,9 +23,6 @@ const (
 	Tasks Screen = "tasks"
 	Frame Screen = "frame"
 )
-
-// reactScreens are the screens served from the React build, web/dist/index.html; the others are still ui.html's.
-var reactScreens = map[Screen]bool{List: true, Tasks: true, Frame: true}
 
 //go:embed web/dist/index.html
 var reactSource string
@@ -70,27 +44,19 @@ type boot struct {
 	Framed   string            `json:"framed"`
 	// Served tells that the page of a folder framed is there, as the server found it
 	Served bool `json:"served"`
-	// Version is what the frame's ?v= asks, as pageData's
-	Version string        `json:"version"`
-	States  []store.State `json:"states"`
-	MaxURLs int           `json:"maxURLs"`
+	// Version is what the frame's ?v= asks, as the server read it: a version's number, 0 for the latest, gone for no such
+	// version; "" where ?v= asks none.
+	Version string `json:"version"`
+	// States is the states of a task, for the task list to read when tasks.json cannot be
+	States []store.State `json:"states"`
+	// MaxURLs is the most URLs the store lets a task have, which the edit dialog tells before a write is refused
+	MaxURLs int `json:"maxURLs"`
 }
 
 // Page renders the management page of screen, which is also the frame around each page, in the language of c: the
 // frame around the page framed, a slug, or "" for the lists. served tells that the folder's page it frames is there.
 func Page(c *i18n.Catalog, screen Screen, framed string, served bool, version string) ([]byte, error) {
-	if reactScreens[screen] {
-		return reactPage(newBoot(c, screen, framed, served, version))
-	}
-	var b bytes.Buffer
-	data := pageData{
-		Catalog: c, Messages: c.Formats("ui_"), Framed: framed, Served: served, Version: version, States: store.States,
-		MaxURLs: store.MaxURLs,
-	}
-	if err := pageTemplate.Execute(&b, data); err != nil {
-		return nil, fmt.Errorf("render ui.html: %w", err)
-	}
-	return b.Bytes(), nil
+	return reactPage(newBoot(c, screen, framed, served, version))
 }
 
 func newBoot(c *i18n.Catalog, screen Screen, framed string, served bool, version string) boot {
@@ -139,7 +105,7 @@ func cutPage(src string) ([3]string, error) {
 func mustCut(src string) [3]string {
 	parts, err := cutPage(src)
 	if err != nil {
-		panic(err) //nolint:forbidigo // the embedded build, broken for every run as ui.html is for template.Must
+		panic(err) //nolint:forbidigo // the embedded build, as the embedded build is broken for every run
 	}
 	return parts
 }
