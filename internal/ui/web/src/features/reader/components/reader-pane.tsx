@@ -72,8 +72,9 @@ export function ReaderPane({
       <div
         id="read-head"
         hidden={!a && what === null}
-        className={`flex h-lhead flex-none items-center gap-2.5 border-b border-line px-4 ${a ? '' : 'narrow:hidden'}`}
+        className={`flex h-lhead flex-none items-center gap-2.5 border-b border-line px-4 [&>#shelf-what]:max-w-[calc(100%-11rem)] ${a ? '' : 'narrow:hidden'}`}
       >
+        {/* The filters' words leave room for the bar's buttons, however long (ui.html .rhead > #shelf-what) */}
         {what}
         <a
           id="read-title"
@@ -103,7 +104,7 @@ export function ReaderPane({
         title={name}
         data-slug={at?.slug}
         data-file={file === '' ? undefined : file}
-        data-version={at?.v ? String(at.v) : undefined}
+        data-version={at ? String(at.v) : undefined}
         allow="clipboard-write *; fullscreen *"
         hidden={!open}
         className="min-h-0 w-full flex-1 border-0 bg-frame-bg"

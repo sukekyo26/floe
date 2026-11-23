@@ -84,10 +84,12 @@ export function FindDialog({
   const shown = hits.slice(0, FIND_ROWS);
   const at = findReached(shown, reached);
   const page = shown[at] ?? null;
-  // The row reached is held by its page at once, as opened or typed too: read again, a new page at the top does not
-  // take its place; gone, what came to its place is reached now (ui.html findMark → moved)
+  // The row reached is held by its page and its place at once, as opened or typed too: read again, a new page at the
+  // top does not take its place, and it moved, its new place is the one left when it goes; gone, what came to its place
+  // is reached now (ui.html findMark → moved)
   const reachedNow = page?.slug ?? null;
-  if (!opening && reachedNow !== reached.slug) setReached({ slug: reachedNow, at: Math.max(at, 0) });
+  const atNow = Math.max(at, 0);
+  if (!opening && (reachedNow !== reached.slug || atNow !== reached.at)) setReached({ slug: reachedNow, at: atNow });
   const ranks = projectOrder(entries);
   const count = findCount(words, hits.length);
 
@@ -95,6 +97,9 @@ export function FindDialog({
   // lost — in the menu of the row left, on a button the row reached has not, or in the foot of a row gone
   // byKey tells that the row changed by an arrow, not by the rows read again
   const byKey = useRef(false);
+  // footHeld tells that the focus was in the foot: a button the row reached has not is gone before the effect reads
+  // the focus, and the focus left on the body
+  const footHeld = useRef(false);
   useLayoutEffect(() => {
     if (!open) return;
     const now = page?.slug ?? null;
@@ -110,6 +115,10 @@ export function FindDialog({
       if (inFoot && (inMenu || !moved || now === null)) focusOn(field.current);
     }
     if (inFoot && active instanceof HTMLElement && active.closest('[hidden]')) focusOn(field.current);
+    if (footHeld.current && !inFoot && (active === null || active === document.body)) {
+      footHeld.current = false;
+      focusOn(field.current);
+    }
     if (at >= 0) document.getElementById(`find-${String(at)}`)?.scrollIntoView({ block: 'nearest' });
   }, [open, page, at]);
 
@@ -251,7 +260,16 @@ export function FindDialog({
           hidden={page === null}
           className="-ms-1.75 me-auto flex items-center [@media(hover:none)]:hidden"
         >
-          <span ref={foot} className="contents">
+          <span
+            ref={foot}
+            className="contents"
+            onFocus={() => {
+              footHeld.current = true;
+            }}
+            onBlur={(e) => {
+              if (!foot.current?.contains(e.relatedTarget)) footHeld.current = false;
+            }}
+          >
             {page ? (
               <BarActions
                 key={opened}

@@ -68,13 +68,14 @@ export interface MenuItemProps extends Omit<IconButtonProps, 'size' | 'children'
   readonly onSelect?: MouseEventHandler<HTMLElement> | undefined;
 }
 
-// MenuItem is an item of a MoreMenu: done, it closes the menu unless it keepsOpen
+// MenuItem is an item of a MoreMenu, its words in the label the tests read (ui.html .label): done, it closes the menu
+// unless it keepsOpen
 export function MenuItem({ icon, children, keepsOpen, onSelect, ...rest }: MenuItemProps) {
   return (
     <span data-menu-item="" data-keeps-open={keepsOpen ? '' : undefined} className="contents">
       <IconButton {...rest} size="item" onClick={onSelect}>
         {icon}
-        {children}
+        <span data-testid="label">{children}</span>
       </IconButton>
     </span>
   );
