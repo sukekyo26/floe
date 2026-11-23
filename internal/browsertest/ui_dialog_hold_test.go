@@ -274,6 +274,22 @@ func TestUIDialogHold(t *testing.T) { //nolint:paralleltest // the browser tests
 	b.pressKey(kb.Escape)
 	until("set-dialog", false)
 
+	// On a task's page (React), held with the suggestions open: the blur of the field disabled as it is held closes them,
+	// and after a failure one Escape closes the modal (S446)
+	open("/tasks?project=proj&task=S300")
+	rowMenu("plan-a", "task-set")()
+	until("set-dialog", true)
+	b.fill("#set-task", "")
+	b.until("the suggestions", "document.getElementById('set-task-names').matches(':popover-open')")
+	b.eval("sent.length = 0; holdOn('PATCH'); fail.PATCH = true; document.getElementById('set-out').click(); true")
+	b.until("sent", "sent.length === 1")
+	say("on a task's page, held", "document.getElementById('set-task-names').matches(':popover-open') + ' ' + where(document.activeElement)")
+	b.eval("letGo()")
+	b.until("let go", "document.getElementById('set-dialog').getAttribute('closedby') === 'closerequest'")
+	say("on a task's page, given back", "document.getElementById('set-task-names').matches(':popover-open') + ' ' + where(document.activeElement)")
+	b.pressKey(kb.Escape)
+	until("set-dialog", false)
+
 	// The page's shortcuts while held: a row picked beside the list stays picked, nothing else is written
 	open("/")
 	const picked = "document.getElementById('read-frame').dataset.slug"
@@ -405,6 +421,8 @@ var dialogHoldWant = []string{
 	"suggestions, keys while held:   new set-dialog set-dialog",
 	"the focus given back: set-dialog set-task",
 	"category, failed: set-dialog set-category / suggestions false / said true",
+	"on a task's page, held: false set-dialog set-dialog",
+	"on a task's page, given back: false set-dialog set-task",
 	"shortcuts while held: check-a 1 true",
 	"cancel while held: true",
 	"shortcuts, a modal open, the focus on the body: check-a",
