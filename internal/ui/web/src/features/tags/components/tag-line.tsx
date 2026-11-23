@@ -29,7 +29,7 @@ export function TagLine({ id, page: a, hidden, onEdit }: TagLineProps) {
     <div
       id={id}
       hidden={hidden || a === null}
-      className="flex min-h-icon-btn flex-none flex-wrap items-center gap-1.25 border-b border-line bg-panel px-4 py-1 text-small text-muted [&>svg]:size-3.5 [&>svg]:flex-none"
+      className={`flex min-h-icon-btn flex-none flex-wrap items-center gap-1.25 border-b border-line bg-panel px-4 py-1 text-small text-muted [&>svg]:size-3.5 [&>svg]:flex-none ${id === 'frame-tags' ? 'print:hidden' : ''}`}
     >
       <TagIcon />
       <span className="me-0.75">{t('ui_tags')}</span>

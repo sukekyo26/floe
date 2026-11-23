@@ -50,7 +50,7 @@ export function Bar({
 }: BarProps) {
   const frame = screen === 'frame';
   return (
-    <header data-testid="bar" className="sticky top-0 z-10 border-b border-line bg-bg">
+    <header data-testid="bar" className={`sticky top-0 z-10 border-b border-line bg-bg ${frame ? 'print:hidden' : ''}`}>
       <div data-testid="bar-inner" className="flex h-bar items-center gap-3 px-4">
         <Brand href={brand} markAlone={frame} />
         <ServerState />
