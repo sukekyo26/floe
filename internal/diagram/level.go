@@ -165,8 +165,8 @@ func rootAll(parent []int) {
 }
 
 // across is edges, edges between boxes, but those between two boxes of one rank by a row or a with, told: an edge
-// between ranks cannot run in one. An edge to a group holding a box of a row and its box outside stand among the
-// group's ranks, told by rankWith.
+// between ranks cannot run in one. An edge to a group from a box of a row whose other box the group holds stands among
+// the group's ranks, told by rankWith.
 func (o *graphOut) across(edges []int) ([]int, usererr.List) {
 	var told usererr.List
 	return slices.DeleteFunc(slices.Clone(edges), func(k int) bool {
@@ -308,7 +308,7 @@ func (d *drawing) growLevels(gr *group) {
 // the other, a column apart about the middle of the shorter side across the ranks, but off it by half a column:
 // where a point between them turns to its column. So an odd number of them stands one more below the middle. It
 // tells, and leaves out of the group's, the level edges something stands between in their rank as laid out: a box or
-// icon, or the frame of a group holding neither box but right in their common group, whose frame they cross.
+// icon, or the frame of a group holding neither box, but for a group right in their common group, which they cross.
 // LIMIT: two boxes standing the other way round fail as floe's own: the nodes of their common group holding them
 // stand as written, and no graph tried turns them. Tell it if one comes to.
 func (o *graphOut) drawLevels(gr *group, d *drawing) (usererr.List, error) {
