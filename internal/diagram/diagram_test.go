@@ -1918,7 +1918,7 @@ func TestFaces(t *testing.T) {
 		"        - { name: v, label: nnnnnnnnnnnnnnnnnnnnnnn, nodes: [{ box: { name: m, rows: [M] } }] }\n" +
 		"        - { name: e, label: E, nodes: [{ box: { name: b, rows: [B] } }] }\n" +
 		"      edges:\n        - { from: z, to: m }\n        - { from: a, to: b, level: true }\n"
-	want := `s.yaml:13:36: edge "a"→"b": it runs through the heading of lane "v", which reaches into the first rank laid out right; drop level, or shorten the heading`
+	want := `s.yaml:13:36: edge "a"→"b": it runs through the heading of group or lane "v", which reaches into the first rank laid out right; drop level, or shorten the heading`
 	if _, told := draw(t, lanes, inspect); told != want {
 		t.Errorf("a lane's heading:\n  told %q\n  want %q", told, want)
 	}

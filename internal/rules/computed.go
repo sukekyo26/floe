@@ -43,9 +43,11 @@ func nameMistake(file string, at yamlpos.Pos, n string) *usererr.Error {
 	if _, function := builtin.Index[n]; function || strings.HasPrefix(n, "_") {
 		return yamlpos.New(file, at, "rules_computed_name", n)
 	}
+	// A name, not an expression: what expr's parser says of it read as one (unexpected token EOF of not) says
+	// nothing of the name written
 	tree, err := parser.Parse(n)
 	if err != nil {
-		return usererr.LibraryAt(file, at.Line, at.Column, brief(err))
+		return yamlpos.New(file, at, "rules_computed_name", n)
 	}
 	if id, ok := tree.Node.(*exprast.IdentifierNode); !ok || id.Value != n {
 		return yamlpos.New(file, at, "rules_computed_name", n)
