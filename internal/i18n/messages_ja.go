@@ -553,6 +553,7 @@ var messagesJA = map[string]string{
 	"ui_unread_failed":         "未読に戻すのに失敗しました：%s",
 	"ui_load_failed":           "一覧の読み込みに失敗しました（%s）。サーバーが止まっていれば floe serve で起動してください。",
 	"ui_draw_failed":           "一覧の表示に失敗しました（%s）。次に読み直すときにもう一度表示します。",
+	"ui_screen_draw_failed":    "画面の表示に失敗しました（%s）。次に読み直すときにもう一度表示します。",
 	"ui_load_slow":             "サーバーが %d 秒のうちに一覧を返しませんでした。%d 秒後に読み直します。",
 	"ui_delete":                "削除",
 	"ui_delete_named":          "%s を削除",
