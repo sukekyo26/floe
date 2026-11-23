@@ -20,7 +20,7 @@ const read: ThemesRead = {
 const draw = (state: Partial<SettingsState>, page: Page | null) => {
   testBoot();
   const settings = {
-    state: createStore<SettingsState>({ opened: 1, page, read, own: '', failed: '', ...state }),
+    state: createStore<SettingsState>({ opened: 1, read, own: '', failed: '', ...state }),
     open: () => Promise.resolve(),
     saved: () => undefined,
   } as Settings;
@@ -62,11 +62,11 @@ describe(SettingsDialog, () => {
     expect(radios(html)).toStrictEqual([':true', 'default:false', 'mine:false']);
   });
 
-  it('draws a page’s themes from its opening, before the page is in the settings read: no way back to take the focus', () => {
+  it('draws a page’s themes from its opening: no way back to take the focus', () => {
     expect.assertions(3);
-    const html = draw({ page: null }, { slug: 'a', title: 'A' } as Page);
+    const html = draw({}, { slug: 'a', title: 'A' } as Page);
     expect(attrs(html, '<button type="button" id="settings-back"')).toContain('hidden=""');
-    expect(html).toMatch(/id="settings-title"[^>]*>ui_theme_page</);
+    expect(html).toMatch(/id="settings-title"[^>]*>ui_theme_page:/);
     expect(attrs(html, '<svg data-testid="page-icon"')).not.toContain('hidden=""');
   });
 });

@@ -1,5 +1,6 @@
 import type { Mistake, ThemesRead } from '@/features/settings/api/themes';
 import type { MessageKey } from '@/types/messages.gen';
+import type { Page } from '@/types/page';
 
 // The part of the settings shown: the list, the default theme, the task mode; a page's themes are theme alone
 export type Panel = 'list' | 'theme' | 'mode';
@@ -111,3 +112,8 @@ export function themeCards(read: ThemesRead | null, failed: string, picked: stri
   // The default as it is, or the first card where it is none of them
   return { now, cards: drawn, checked: drawn.find((c) => c.now)?.name ?? drawn[0]?.name ?? null, mistakes: [] };
 }
+
+// pageShown is the page whose themes the settings draw: the one opened for, from the first draw of the opening (the
+// modal shows on it at once, so a way back drawn for a moment would take the focus), kept while it closes (target null)
+export const pageShown = (shown: Page | null, target: { page: Page | null } | null): Page | null =>
+  target ? target.page : shown;

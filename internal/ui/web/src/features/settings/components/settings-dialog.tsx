@@ -6,7 +6,7 @@ import { BackChevronIcon, ChevronIcon, SettingsIcon, TaskModeIcon, ThemeIcon } f
 import { ThemeCard } from '@/features/settings/components/theme-card';
 import { themeWrites as pageWrites, type ThemeWrites } from '@/features/settings/stores/choose-theme';
 import { settings as pageSettings, type Settings } from '@/features/settings/stores/settings';
-import { settingsView, themeCards, type Now, type Panel } from '@/features/settings/utils/settings-view';
+import { pageShown, settingsView, themeCards, type Now, type Panel } from '@/features/settings/utils/settings-view';
 import { useHold } from '@/hooks/use-hold';
 import { useMovedOverlay } from '@/hooks/use-moved-overlay';
 import { useShrink } from '@/hooks/use-shrink';
@@ -86,9 +86,11 @@ export function SettingsDialog({
   writes = pageWrites,
 }: SettingsDialogProps) {
   const hold = useHold();
-  const { page, read, own, failed } = useStore(settings.state);
+  const { read, own, failed } = useStore(settings.state);
   const [panel, setPanel] = useState<Panel>('list');
   const [seen, setSeen] = useState<SettingsTarget | null>(null);
+  const [kept, setKept] = useState<Page | null>(null);
+  const page = pageShown(kept, target);
   const [back, setBack] = useState<FocusBack | null>(null);
   // The card chosen and the task mode checked, as the person left them, drawn anew from each read
   const [choice, setChoice] = useState<{ of: unknown; name: string | null }>({ of: null, name: null });
@@ -101,6 +103,7 @@ export function SettingsDialog({
   const toastBox = useRef<HTMLDivElement>(null);
   if (target !== seen) {
     setSeen(target);
+    setKept(page);
     if (target) {
       setPanel(target.page ? 'theme' : 'list');
       setBack(() => target.back);
