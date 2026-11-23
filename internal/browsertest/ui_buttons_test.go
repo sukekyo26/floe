@@ -23,16 +23,9 @@ import (
 const notButtons = "#shelf *, #filter-dialog #shelf-more *, [data-testid=settings-item], #settings-back, [data-testid=menu] *, " +
 	"[data-testid=brand], #list li [data-testid=title], #find-list li [data-testid=title], [data-testid=task-tag], #list li [data-testid=tagpill], [data-testid=kin-row], #diff-toc button, [role=tab], #news"
 
-// reactOnly are not buttons of words on the React screens alone (#boot tells their build)
-const reactOnly = "#screens a"
-
-// LIMIT: buttons of words in another form than .btn, neither a row nor a mark, on ui.html's screens. The user's decisions (S425,
-// S422-P8): they take the form of .btn. ui.html is not mended while it is rebuilt, so they pass on its screens; the React screens
-// are measured by the rule (#boot tells their build), and each row goes as its last ui.html screen does (one not found there fails
-// to tell so).
-var otherForm = map[string]string{
-	"back": "the bar of a page whole: its round way back",
-}
+// reactOnly are not buttons of words on the React screens alone (#boot tells their build): the bar's links, to the screens
+// and a page whole's way back to a task's page, a plain link (the user's choice, S422-P10)
+const reactOnly = "#screens a, #back"
 
 func TestUIButtons(t *testing.T) { //nolint:paralleltest // the browser tests share one Chrome, one at a time
 	s := newSite(t)
@@ -58,19 +51,10 @@ func TestUIButtons(t *testing.T) { //nolint:paralleltest // the browser tests sh
 
 	// The box that clips a button is its nearest ancestor that does not show what overflows it, or the screen; what it shows of
 	// itself is measured, not all it scrolls over. A button's words are its text, but in an icon or a part not shown
-	other := make([]string, 0, len(otherForm))
-	for id := range otherForm {
-		other = append(other, id)
-	}
-	otherJSON, err := json.Marshal(other)
-	if err != nil {
-		t.Fatal(err)
-	}
 	measure := `(() => {
 		// Each build names the small corner its own way; the same 6px
 		const react = document.getElementById('boot') !== null;
 		const small = getComputedStyle(document.documentElement).getPropertyValue(react ? '--radius-small' : '--corner-small').trim();
-		const other = ` + string(otherJSON) + `;
 		const words = (e) => {
 			let said = '';
 			const walk = (n) => {
@@ -91,7 +75,6 @@ func TestUIButtons(t *testing.T) { //nolint:paralleltest // the browser tests sh
 			return { left: 0, top: 0, right: innerWidth, bottom: innerHeight };
 		};
 		const name = (e) => e.id || e.dataset.testid || e.localName + ' ' + words(e);
-		const seen = [];
 		const bad = shown.flatMap((e) => {
 			const r = e.getBoundingClientRect();
 			const c = clip(e);
@@ -101,10 +84,7 @@ func TestUIButtons(t *testing.T) { //nolint:paralleltest // the browser tests sh
 			if (e.id === 'tag-new' ? r.height < want - 0.5 : Math.abs(r.height - want) > 0.5) form.push('height ' + Math.round(r.height));
 			if (getComputedStyle(e).borderTopLeftRadius !== small) form.push('corner ' + getComputedStyle(e).borderTopLeftRadius);
 			if (Boolean(e.querySelector('svg')) === Boolean(e.closest('dialog, #bulk, [data-testid=toast]'))) form.push(e.querySelector('svg') ? 'an icon' : 'no icon');
-			if (!react && other.includes(e.id)) {
-				seen.push(e.id);
-				if (form.length === 0) why.push('of the form now: take it off the table');
-			} else why.push(...form);
+			why.push(...form);
 			if (e.scrollHeight > e.clientHeight + 1) why.push('words over lines');
 			if (e.scrollWidth > e.clientWidth + 1) why.push('words cut off');
 			if (r.left < c.left - 0.5 || r.right > c.right + 0.5 || r.top < c.top - 0.5 || r.bottom > c.bottom + 0.5) why.push('out of its box');
@@ -113,9 +93,8 @@ func TestUIButtons(t *testing.T) { //nolint:paralleltest // the browser tests sh
 		const keys = ['#keys [data-help=about]', '#keys [data-help=keys]', '#keys [data-close]'].filter((sel) => shown.includes(document.querySelector(sel))).length;
 		// A small corner of no value would be met by none: said apart from the buttons
 		const dialogs = [...document.querySelectorAll('dialog')].map((d) => (react ? 'react ' : 'ui.html ') + d.id);
-		return JSON.stringify({ n: shown.length, bad: (small === '' ? ['no small corner; '] : []).concat(bad).join('; '), keys, keysWant: react ? 1 : 3, seen, dialogs, react });
+		return JSON.stringify({ n: shown.length, bad: (small === '' ? ['no small corner; '] : []).concat(bad).join('; '), keys, keysWant: react ? 1 : 3, dialogs, react });
 	})()`
-	seen := map[string]bool{}
 	// The dialogs each build holds, and the build of the screen measured last: a modal is measured on a screen of its build
 	present := map[string]bool{}
 	build := ""
@@ -127,7 +106,6 @@ func TestUIButtons(t *testing.T) { //nolint:paralleltest // the browser tests sh
 			Bad      string
 			Keys     int
 			KeysWant int
-			Seen     []string
 			Dialogs  []string
 			React    bool
 		}
@@ -136,9 +114,6 @@ func TestUIButtons(t *testing.T) { //nolint:paralleltest // the browser tests sh
 		}
 		if got.N == 0 || got.Bad != "" {
 			t.Errorf("%s: %d buttons, of another form: %s", scene, got.N, got.Bad)
-		}
-		for _, id := range got.Seen {
-			seen[id] = true
 		}
 		for _, d := range got.Dialogs {
 			present[d] = true
@@ -353,21 +328,9 @@ func TestUIButtons(t *testing.T) { //nolint:paralleltest // the browser tests sh
 	b.until("the missing page", "!document.getElementById('notfound').hidden")
 	check("a page not found")
 
-	for id := range otherForm {
-		if !seen[id] {
-			t.Errorf("#%s of another form is not found: take it off the table", id)
-		}
-	}
-
 	// A modal with no way here is a modal not measured: each a screen of each build holds, opened on one of that build
-	// LIMIT: ui.html still holds the modals of the task list and of the page list, which only /tasks and / open, both served by
-	// React. Drop this as the frame leaves ui.html (S422-P10) and ui.html goes (S422-P11)
-	notOpened := map[string]bool{
-		"ui.html edit-task-dialog": true, "ui.html kin-dialog": true, "ui.html add-page-dialog": true,
-		"ui.html add-dialog": true, "ui.html filter-dialog": true,
-	}
 	for d := range present {
-		if !opened[d] && !notOpened[d] {
+		if !opened[d] {
 			t.Errorf("the %s modal is not measured on a screen of its build", d)
 		}
 	}
