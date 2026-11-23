@@ -38,7 +38,6 @@ export function ListRoute() {
   const rows = useRowKeys({ move: moveRow, tick: tickRow });
   const keys = appKeys({
     rows,
-    taskPage: false,
     find: openFind,
     search: () => {
       focusOn(document.getElementById('q'));
@@ -49,7 +48,6 @@ export function ListRoute() {
     },
     star: pressStar,
     diff: pressDiff,
-    up: () => undefined,
   });
   useKeys(keys);
 

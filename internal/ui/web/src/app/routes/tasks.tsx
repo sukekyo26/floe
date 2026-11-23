@@ -53,7 +53,6 @@ export function TasksRoute({ name }: { readonly name: string | null }) {
   const rows = useRowKeys({ move: moveRow });
   const keys = appKeys({
     rows,
-    taskPage: name !== null,
     find: openFind,
     findToggle,
     help: () => {
@@ -61,7 +60,12 @@ export function TasksRoute({ name }: { readonly name: string | null }) {
     },
     star: pressStar,
     diff: pressDiff,
-    up: pressUp,
+    up:
+      name === null
+        ? undefined
+        : () => {
+            pressUp('to-tasks');
+          },
   });
   useKeys(keys);
 
