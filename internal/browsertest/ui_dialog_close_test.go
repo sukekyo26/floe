@@ -430,8 +430,9 @@ func TestUIDialogClose(t *testing.T) { //nolint:paralleltest // the browser test
 	open("/tasks?project=proj&task=S300")
 	addTo := func(category string) {
 		t.Helper()
-		b.eval("const a = document.querySelector('#list li[data-key=\"group:" + category + "\"] [data-testid=category-add]'); a.focus(); a.click()")
+		b.eval("const a = document.getElementById('task-add-page'); a.focus(); a.click()")
 		until("add-page-dialog", true)
+		chooseValue(b, "add-page-category", category)
 	}
 	find := func(words string) {
 		t.Helper()
@@ -686,11 +687,11 @@ var dialogCloseWant = []string{
 	"move, no, set open: true",
 	"move, escape: move-dialog > set-dialog set-submit",
 	"move, escape, set open: true",
-	"add page, enter: add-page-dialog > list Add a page to 実装 / sent 1",
-	"add page, moved, yes and enter: move-dialog > add-page-dialog add-page-q, add-page-dialog > list Add a page to 実装 / sent 1",
-	"add page, cancel: add-page-dialog > list Add a page to 案",
-	"add page, backdrop: add-page-dialog > list Add a page to 案",
-	"add page, escape: add-page-dialog > list Add a page to 案",
+	"add page, enter: add-page-dialog > task-add-page / sent 1",
+	"add page, moved, yes and enter: move-dialog > add-page-dialog add-page-q, add-page-dialog > task-add-page / sent 1",
+	"add page, cancel: add-page-dialog > task-add-page",
+	"add page, backdrop: add-page-dialog > task-add-page",
+	"add page, escape: add-page-dialog > task-add-page",
 	"edit task, escape: edit-task-dialog > task-edit",
 	"edit add, escape, edit open: true",
 	"edit add, escape: edit-add-dialog > edit-task-dialog edit-url-plus",

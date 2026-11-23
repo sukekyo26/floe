@@ -1,5 +1,5 @@
 // What in a row may hold the focus as the rows are drawn anew
-export type FocusOn = 'title' | 'summary' | 'star' | 'archive' | 'category-add';
+export type FocusOn = 'title' | 'summary' | 'star' | 'archive';
 
 export interface Focused {
   key: string;
@@ -12,7 +12,7 @@ export interface RowSeen {
   titled: boolean;
 }
 
-const STAYS = new Set<FocusOn>(['title', 'summary', 'category-add']);
+const STAYS = new Set<FocusOn>(['title', 'summary']);
 
 // focusTarget is where the focus goes once the rows are drawn anew, of what had it before: the same in its row where
 // the row stayed, and a button only if the row kept its place among the rows there before and after (on a task's

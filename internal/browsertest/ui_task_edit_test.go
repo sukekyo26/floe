@@ -443,7 +443,7 @@ func TestUITaskEdit(t *testing.T) { //nolint:paralleltest // the browser tests s
 		`sent the title: {"taskProject":"proj","task":"S300","new":false,"rev":5,"title":"New title"}`,
 		"order: 7 New title https://example.com/489 [案,設計,レビュー,実装,リリース]",
 		`sent the order: {"taskProject":"proj","task":"S300","new":false,"rev":6,"categories":["案","設計","レビュー","実装","リリース"]}`,
-		"groups: No categoryAdd a pageNo pages yet,案Add a page,設計Add a page,レビューAdd a page,実装Add a page,リリースAdd a pageNo pages yet",
+		"groups: 案,設計,レビュー,実装,リリースNo pages yet",
 		"dragged: リリース no page^,設計,レビュー,実装,案v",
 		"let go: false",
 		"words dragged: 0 / リリース no page^,設計,レビュー,実装,案v",

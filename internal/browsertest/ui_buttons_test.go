@@ -12,7 +12,7 @@ import (
 // are every button and link with words shown, in each place, every modal of the management page among them, but the rows the
 // rule names and the links of a row or a mark. Their words keep to one line, within what clips them, the row of buttons going
 // onto another where they do not fit; #tag-new alone, of words a person typed, goes over lines. One on the screen has an icon,
-// and one in a modal, the bar of the selected or a toast has none. The task's way back, #task-up, is measured for its words alone.
+// and one in a modal, the bar of the selected or a toast has none.
 
 // notButtons are not buttons of words by the rule (.claude/rules/ui.md): the shelf's rows and the add buttons under them, in a
 // modal too on a narrow screen; the settings' rows and their way back; the "…" menu's items. Nor are the links of a row or a mark
@@ -25,9 +25,6 @@ const notButtons = "#shelf *, #filter-dialog #shelf-more *, [data-testid=setting
 
 // reactOnly are not buttons of words on the React screens alone (#boot tells their build)
 const reactOnly = "#screens a"
-
-// wordsOnly is a button of words in no form of .btn, measured for its words alone: the task's way back.
-const wordsOnly = "#task-up"
 
 // LIMIT: buttons of words in another form than .btn, neither a row nor a mark, on ui.html's screens. The user's decisions (S425,
 // S422-P8): they take the form of .btn. ui.html is not mended while it is rebuilt, so they pass on its screens; the React screens
@@ -99,17 +96,15 @@ func TestUIButtons(t *testing.T) { //nolint:paralleltest // the browser tests sh
 			const r = e.getBoundingClientRect();
 			const c = clip(e);
 			const why = [];
-			if (!e.matches(` + js(wordsOnly) + `)) {
-				const form = [];
-				const want = e.closest('[data-testid=dialog-actions], [data-testid=find-foot]') ? 36 : 32;
-				if (e.id === 'tag-new' ? r.height < want - 0.5 : Math.abs(r.height - want) > 0.5) form.push('height ' + Math.round(r.height));
-				if (getComputedStyle(e).borderTopLeftRadius !== small) form.push('corner ' + getComputedStyle(e).borderTopLeftRadius);
-				if (Boolean(e.querySelector('svg')) === Boolean(e.closest('dialog, #bulk, [data-testid=toast]'))) form.push(e.querySelector('svg') ? 'an icon' : 'no icon');
-				if (!react && other.includes(e.id)) {
-					seen.push(e.id);
-					if (form.length === 0) why.push('of the form now: take it off the table');
-				} else why.push(...form);
-			}
+			const form = [];
+			const want = e.closest('[data-testid=dialog-actions], [data-testid=find-foot]') ? 36 : 32;
+			if (e.id === 'tag-new' ? r.height < want - 0.5 : Math.abs(r.height - want) > 0.5) form.push('height ' + Math.round(r.height));
+			if (getComputedStyle(e).borderTopLeftRadius !== small) form.push('corner ' + getComputedStyle(e).borderTopLeftRadius);
+			if (Boolean(e.querySelector('svg')) === Boolean(e.closest('dialog, #bulk, [data-testid=toast]'))) form.push(e.querySelector('svg') ? 'an icon' : 'no icon');
+			if (!react && other.includes(e.id)) {
+				seen.push(e.id);
+				if (form.length === 0) why.push('of the form now: take it off the table');
+			} else why.push(...form);
 			if (e.scrollHeight > e.clientHeight + 1) why.push('words over lines');
 			if (e.scrollWidth > e.clientWidth + 1) why.push('words cut off');
 			if (r.left < c.left - 0.5 || r.right > c.right + 0.5 || r.top < c.top - 0.5 || r.bottom > c.bottom + 0.5) why.push('out of its box');
@@ -242,7 +237,7 @@ func TestUIButtons(t *testing.T) { //nolint:paralleltest // the browser tests sh
 	help("a task")
 	modal("kin-dialog", press("#task-child"))
 	modal("edit-task-dialog", press("#task-edit"))
-	modal("add-page-dialog", press("#list [data-testid=category-add]"))
+	modal("add-page-dialog", press("#task-add-page"))
 	// The React screen's own of the rest: each modal it holds is measured there too
 	modal("edit-add-dialog", func() {
 		press("#task-edit")()

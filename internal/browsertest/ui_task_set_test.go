@@ -371,7 +371,7 @@ func TestUITaskSet(t *testing.T) { //nolint:paralleltest // the browser tests sh
 	link := b.rect("document.querySelector('[data-testid=toast-link]')")
 	b.click(link.X+link.Width/2, link.Y+link.Height/2)
 	b.until("the task's page", "location.search === '?project=proj&task=%232' && !document.getElementById('task-head').hidden")
-	say("up, come by the toast", "document.getElementById('task-up').getAttribute('href')")
+	say("up, come by the toast", "document.getElementById('to-tasks').getAttribute('href')")
 
 	// Moved since the list was read, a page is moved unasked, as the dialog has it on the task named: the toast says the task it left, of the
 	// write's answer, not "Saved".

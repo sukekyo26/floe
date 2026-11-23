@@ -823,7 +823,6 @@ var messagesJA = map[string]string{
 	"ui_page_from_no_category":   "カテゴリなし",
 	"ui_page_here_category":      "このタスクの「%s」",
 	"ui_category_none":           "カテゴリなし",
-	"ui_page_add_no_category":    "カテゴリなしでページを追加",
 	"ui_page_added_no_category":  "「%s」をカテゴリなしで付けました",
 	"ui_page_moved_no_category":  "「%s」を%sから外し、カテゴリなしにしました",
 	"ui_task_out_named":          "「%s」をタスクから外す",

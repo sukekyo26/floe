@@ -28,13 +28,13 @@ const TASK_PAGE = [
 ];
 
 describe(App, () => {
-  it('draws the task list or a task page under the bar, the task list its shelf too', () => {
+  it('draws the task list or a task page under the bar, its task list link going to the task’s state, no way up of its own', () => {
     expect.assertions(4);
     const list = draw('?project=p');
     const page = draw('?project=p&task=%231');
     expect(list).toMatch(/data-testid="bar".*<a id="to-tasks" href="\/tasks" aria-current="page"/s);
-    expect(page).toContain('id="task-up"');
-    expect(list).not.toContain('id="task-up"');
+    expect(page).toMatch(/<a id="to-tasks" href="\/tasks\?project=[^"]*" aria-current="page"/);
+    expect(list + page).not.toContain('id="task-up"');
     expect(list + page).not.toMatch(/id="(search|back)"/);
   });
 

@@ -70,7 +70,17 @@ describe(TaskFamily, () => {
 describe(TaskHead, () => {
   const head = (of: TaskOf) =>
     renderToString(
-      <TaskHead task={of} shown project="p" name={of.name} reads={0} color="red" onKin={none} onEdit={none} />,
+      <TaskHead
+        task={of}
+        shown
+        project="p"
+        name={of.name}
+        reads={0}
+        color="red"
+        onKin={none}
+        onEdit={none}
+        onAddPage={none}
+      />,
     );
 
   it('draws an archived task with the word for its choices and the way to give it back', () => {
@@ -82,18 +92,21 @@ describe(TaskHead, () => {
     expect(html).toMatch(/id="task-archive"(?![^>]*hidden="").*ui_unarchive:/s);
   });
 
-  it('draws the choices in the state’s colours, and the way back to the task list at its view', () => {
-    expect.assertions(3);
+  it('draws the choices in the state’s colours, and Add a page by Edit, no way back of its own', () => {
+    expect.assertions(4);
     boot();
     const html = head(task('#1', { state: 'done', urls: ['https://x.org/a'] }));
     expect(html).toMatch(/<select[^>]*id="task-state"[^>]*data-state="done"/);
-    expect(html).toMatch(/id="task-up" href="\/tasks\?project=p&amp;view=done"/);
+    expect(html).not.toContain('id="task-up"');
+    expect(html).toMatch(
+      /<button[^>]*id="task-add-page"[^>]*>.*ui_page_add:undefined<\/button><button[^>]*id="task-edit"/s,
+    );
     expect(html).toMatch(/id="task-link"(?![^>]*hidden="")[^>]*><a data-testid="xlink" href="https:\/\/x.org\/a"/);
   });
 });
 
 describe(TaskPageRows, () => {
-  it('draws no box nor Select, tags as words, no way to the task, an archived page badged, headings with their adds', () => {
+  it('draws no box nor Select, tags as words, no way to the task, an archived page badged, headings with no adds', () => {
     expect.assertions(5);
     boot();
     const on = (slug: string, category: string, over: Partial<Page> = {}) =>
@@ -106,7 +119,6 @@ describe(TaskPageRows, () => {
           archived: [on('b', 'plan', { archived: true })],
         })}
         openers={openers}
-        onAddPage={none}
       />,
     );
     expect([html.includes('data-testid="sel"'), html.includes('data-testid="task-tag"')]).toStrictEqual([false, false]);
@@ -118,25 +130,21 @@ describe(TaskPageRows, () => {
     );
   });
 
-  it('heads no category first, as each category, named in words of its own, with no page too', () => {
+  it('heads no category first where it has pages, named in words of its own, and no heading a button', () => {
     expect.assertions(3);
     boot();
-    const html = renderToString(
-      <TaskPageRows
-        task={task('#1', { categories: ['plan'], pages: [page('a', { task: { name: '#1', category: 'plan' } })] })}
-        openers={openers}
-        onAddPage={none}
-      />,
-    );
-    expect([...html.matchAll(/data-key="([^"]*)"/g)].map((m) => m[1])).toStrictEqual([
-      'group:',
+    const rows = (pages: Page[]) =>
+      renderToString(<TaskPageRows task={task('#1', { categories: ['plan'], pages })} openers={openers} />);
+    const keys = (html: string) => [...html.matchAll(/data-key="([^"]*)"/g)].map((m) => m[1]);
+    expect(keys(rows([page('a', { task: { name: '#1', category: 'plan' } })]))).toStrictEqual([
       'group:plan',
       'entry:a',
     ]);
+    const html = rows([page('a', { task: { name: '#1' } })]);
+    expect(keys(html)).toStrictEqual(['group:', 'entry:a', 'group:plan']);
     expect(html).toMatch(
-      /data-key="group:"[^>]*><div role="heading" aria-level="2">ui_category_none:undefined<\/div><button[^>]*aria-label="ui_page_add_no_category:undefined".*?data-testid="category-empty"/s,
+      /data-key="group:"[^>]*><div role="heading" aria-level="2">ui_category_none:undefined<\/div><\/li>(?!.*<button[^>]*data-testid="category-add")/s,
     );
-    expect(html).toMatch(/aria-label="ui_page_add_named:plan"/);
   });
 });
 
