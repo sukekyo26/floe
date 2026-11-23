@@ -177,16 +177,13 @@
 }
 
 /* Thin scrollbars of a soft thumb (ui.html 72–80): Chrome's own, Firefox's by scrollbar-color */
-:root {
-  --thumb: color-mix(in srgb, var(--color-faint) 55%, transparent);
-}
 ::-webkit-scrollbar {
   width: 10px;
   height: 10px;
   background: transparent;
 }
 ::-webkit-scrollbar-thumb {
-  background: var(--thumb);
+  background: var(--color-thumb);
   background-clip: padding-box;
   border: 2px solid transparent;
   border-radius: 999px;
@@ -199,7 +196,7 @@
 }
 @supports not selector(::-webkit-scrollbar) {
   :root {
-    scrollbar-color: var(--thumb) transparent;
+    scrollbar-color: var(--color-thumb) transparent;
   }
 }
 

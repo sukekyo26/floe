@@ -35,7 +35,7 @@ describe(App, () => {
     expect(list).toMatch(/data-testid="bar".*<a id="to-tasks" href="\/tasks" aria-current="page"/s);
     expect(page).toContain('id="task-up"');
     expect(list).not.toContain('id="task-up"');
-    expect(page).not.toMatch(/id="(search|back)"/);
+    expect(list + page).not.toMatch(/id="(search|back)"/);
   });
 
   it('holds every modal of the screen closed, the shelf’s filters on the task list alone', () => {
