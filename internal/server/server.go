@@ -140,7 +140,7 @@ func New(cfg Config) *Server {
 		cfg: cfg, hosts: map[string]bool{}, origins: map[string]bool{}, every: time.Second, grace: 10 * time.Second,
 		id: rand.Text()[:8], stopping: nil, halt: nil, stopAsked: atomic.Bool{}, log: newLog(out),
 		looking: sync.Mutex{}, mu: sync.Mutex{},
-		drawing: store.Drawing{Kit: nil, Icons: nil, Err: nil}, gen: 0, mark: "",
+		drawing: store.Drawing{Kit: nil, Icons: nil, Draw: nil, Err: nil}, gen: 0, mark: "",
 		diffs: lastDiff{Mutex: sync.Mutex{}, key: "", diffAnswer: diffAnswer{key: "", page: nil, result: pagediff.Result{
 			Counts: pagediff.Counts{Changed: 0, Added: 0, Removed: 0, Same: 0}, Sections: nil, Places: nil,
 		}}},
@@ -195,7 +195,7 @@ func (s *Server) first() {
 func (s *Server) read(m string) {
 	d, err := s.cfg.Drawing()
 	if err != nil {
-		d = store.Drawing{Kit: nil, Icons: nil, Err: err}
+		d = store.Drawing{Kit: nil, Icons: nil, Draw: nil, Err: err}
 	}
 	// A failure of floe's (too many files open) is not of what it read: read it again next time.
 	var mistakes usererr.List

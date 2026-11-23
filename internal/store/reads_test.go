@@ -203,7 +203,7 @@ func TestNewsPublished(t *testing.T) {
 		t.Fatal(err)
 	}
 	up := floepublish.Upload{File: "r.yaml", Source: []byte(titled("r")), Images: images, Project: "q", Repo: "q", Place: "r.yaml"}
-	e, err := floepublish.PrepareData(s, dw, up, store.Options{Force: true})
+	e, err := floepublish.PrepareData(t.Context(), s, dw, up, store.Options{Force: true})
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -727,7 +727,7 @@ func TestListTemplate(t *testing.T) {
 	}
 	// Rebuilt to the same page: meta.json alone, the copy, the versions and the time as they were.
 	was := cleared()
-	if err := s.Rebuild(dw); err != nil {
+	if err := s.Rebuild(t.Context(), dw); err != nil {
 		t.Fatal(err)
 	}
 	got := s.ReadMeta("d")
@@ -736,7 +736,7 @@ func TestListTemplate(t *testing.T) {
 	}
 	// Rebuilt to another page.
 	was = cleared()
-	if err := s.Rebuild(picKit(t, "v2", "")); err != nil {
+	if err := s.Rebuild(t.Context(), picKit(t, "v2", "")); err != nil {
 		t.Fatal(err)
 	}
 	got = s.ReadMeta("d")
@@ -746,7 +746,7 @@ func TestListTemplate(t *testing.T) {
 	// Not drawn: its mistakes told, the template kept all the same.
 	was = cleared()
 	needs := picKit(t, "", strings.Replace(picSchema, `"type": "object",`, `"type": "object", "required": ["need"],`, 1))
-	if err := s.Rebuild(needs); err == nil {
+	if err := s.Rebuild(t.Context(), needs); err == nil {
 		t.Error("a page that does not draw is not told")
 	}
 	got = s.ReadMeta("d")
@@ -941,7 +941,7 @@ func TestMarkUnreadKept(t *testing.T) { //nolint:tparallel // the subtest goes o
 	}
 	publish(t, s, dw, "d.yaml", titled("t0"), images, store.Options{})
 	still("the same content")
-	if err := s.Rebuild(dw); err != nil {
+	if err := s.Rebuild(t.Context(), dw); err != nil {
 		t.Fatal(err)
 	}
 	still("a rebuild")
@@ -966,7 +966,7 @@ func TestMarkUnreadKept(t *testing.T) { //nolint:tparallel // the subtest goes o
 		t.Helper()
 
 		up := floepublish.Upload{File: file, Source: []byte(titled(file)), Images: images, Project: "p", Repo: "p", Place: file}
-		e, err := floepublish.PrepareData(s, dw, up, store.Options{Slug: new("d"), Force: true})
+		e, err := floepublish.PrepareData(t.Context(), s, dw, up, store.Options{Slug: new("d"), Force: true})
 		if err != nil {
 			t.Fatal(err)
 		}
@@ -1081,11 +1081,11 @@ func TestMetaID(t *testing.T) {
 	stays("published again", "a")
 	publish(t, s, dw, "a.yaml", report("ink"), nil, store.Options{})
 	stays("a new version", "a")
-	if err := s.Rebuild(dw); err != nil {
+	if err := s.Rebuild(t.Context(), dw); err != nil {
 		t.Fatal(told(err, root))
 	}
 	stays("rebuilt", "a")
-	if err := s.PickTheme(dw, "a", "ink"); err != nil {
+	if err := s.PickTheme(t.Context(), dw, "a", "ink"); err != nil {
 		t.Fatal(told(err, root))
 	}
 	stays("a theme picked", "a")

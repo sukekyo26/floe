@@ -74,6 +74,8 @@ Pages are drawn from data files (`.yaml`, `.yml`); [pages.md](pages.md) tells ho
 
 The stored page stays as it was drawn: changing the template, a part or a theme changes it only when `floe rebuild` draws it again. A page that names no theme takes the default theme chosen in the management page's settings when it is first stored, and keeps it: choosing another default changes the pages stored from then on only. A theme picked for the page in its menu on the management page (Theme) draws it again at once, and wins over all of these, kept when it is published again. Another file, such as an HTML file, is not stored: link it with `--link` to show it as it is.
 
+The server draws each page in a process of its own, which may hold up to 512 MiB of memory and take up to 30 seconds for a page, and refuses a page larger than 80 MiB as `floe check` does: past any of these, the page is refused at its data file (`page.yaml: drawing it needed more than 512 MiB of memory, …`, `page.yaml: drawing it took more than 30 seconds, …`, `page.yaml: the page drawn is 96 MiB, over the 80 MiB a page may be, …`), and the server serves on. So is a linked data file's page when it is opened, a page drawn in a theme picked for it, and a page `floe rebuild` draws again. Drawing in that process makes publishing, and opening a linked data file's page, about 0.1 seconds slower.
+
 ### Flags
 
 | Flag | Description |
@@ -116,6 +118,7 @@ Check each data file as its page is drawn: its YAML, its template and theme, the
 - The warnings of the pages drawn, advice on a better way to write them, are printed after the mistakes as `file:line:column: warning: message`; they leave the exit code as it is. [pages.md](pages.md#warnings) tells them.
 - Nothing is printed when every file is right and has no warning (exit code 0).
 - Nothing is written, and the server is not started, so a repository's CI can run it over its data files.
+- Drawing may hold up to 512 MiB of memory. Past it, floe stops and says so at the file it was drawing (`file: drawing it needed more than 512 MiB of memory, …`, exit code 1), without the mistakes of the files before it. A page that repeats a long text for each item, in an expression or in `page.html`, needs that much. A page drawn larger than 80 MiB of HTML is refused at its data file too (`file: the page drawn is 96 MiB, over the 80 MiB a page may be, …`).
 - A file that is not a data file (`.yaml`, `.yml`) is refused.
 - A data file named twice (by two globs, or through a symlinked directory) is checked once, and told by the path it was first given as. Names that differ only in case are two names, even on a file system that ignores case.
 
@@ -139,6 +142,7 @@ floe render --check docs/*.yaml            # in CI: fails when a page was not wr
 - A page there is written over: keep the pages in version control to get one back.
 - The mistakes are printed as `floe check` prints them, and nothing is written until all are fixed (exit code 1). Nothing is written either when two data files would write the same page (`a/spec.yaml` and `b/spec.yaml` with one `--out-dir`, or `spec.yaml` and `spec.yml`).
 - Nothing is published, and the server is not started.
+- Drawing is held to 512 MiB of memory as `floe check`'s is, the pages together, as all are drawn before any is written: render fewer files at once when it stops.
 - A page depends on the floe, the templates and the icons that draw it: in CI, use the floe version and the templates the pages were written with, and write the pages again when you upgrade.
 - A `script` of the page runs without the sandbox of the server's pages when the file is opened; its CSP still cuts off `fetch`, XHR, images from elsewhere and forms. A link between pages (`/a/<slug>/`) does not work in a file: link the files relatively.
 
@@ -146,7 +150,8 @@ floe render --check docs/*.yaml            # in CI: fails when a page was not wr
 
 Have the server draw every stored page again from the copy of its data file and images, with its templates, parts and themes of now, and keep the page where it changed. Run it after you change a template, part or theme of your own, or upgrade floe.
 
-- A page that no longer draws keeps the page it had, and its mistakes are told (exit code 1): fix the data file it was published from and publish it again, or fix the template.
+- A page that no longer draws keeps the page it had, and its mistakes are told (exit code 1): fix the data file it was published from and publish it again, or fix the template. One past the memory or the time of a page (see `floe publish`) is told so, and the other pages are drawn on.
+- Stopping the command (Ctrl+C) stops the drawing: the pages not drawn again yet keep the page they had. Run it again to draw them.
 - Linked files are drawn each time they are opened, and are left alone.
 - The server is started when it is not running.
 
@@ -169,6 +174,7 @@ Read the templates in `FLOE_TEMPLATES_DIR` with the parts and themes of your own
 
 - The mistakes are printed (exit code 1): those of the files, and the examples drawn once the files have none; then the warnings of the examples drawn. Nothing is printed when they are right and have no warning (exit code 0).
 - A file floe does not read in a template (a `template.yaml`, say) is refused: a template holds `page.html`, `schema.json` and `example.yaml`, and `page.css`, `computed.yaml`, `checks.yaml`, `words.yaml` and `assets/` if it likes.
+- Drawing is held to 512 MiB of memory as `floe check`'s is: past it, floe stops and says so at the file it was drawing (exit code 1).
 
 [templates.md](agents/templates.md) tells what each file holds.
 
@@ -379,6 +385,7 @@ Check each diagram spec and print the diagrams, in order, as one HTML fragment o
 - Every mistake of every spec is printed as `file:line:column: message` (`file: message` for one of the whole spec), in the order the specs were given, and nothing is drawn until all are fixed (exit code 1).
 - The text is written in the language of `--lang` (`en` when left out). A language a text does not have falls back to English.
 - The fragment starts with the assets: `default`'s palette on the diagrams alone, the diagrams' style, which takes its colours from the palette's CSS variables, and the script that zooms them. The page around the diagrams keeps its own colours and variables, and the diagrams take none of the page's: the palette and `color-scheme: light` are set on the diagrams' roots, so a variable or a color-scheme on the page's `:root`, or on an element holding them (a dark panel), does not reach them. Each diagram paints its own ground, the palette's `--bg` (`default`'s, `#f4f3f0`): on a dark page it stands as a light box, unless you set `--bg` on its roots as below. To draw the diagrams in the page's colours, set the palette's variables on their roots, outside any cascade layer (`.floe-zoom-tools, .floe-zoom { --accent: …; }`): the fragment's palette is in the layer `floe.palette`, which comes after the layers the page names first, so a rule in one of the page's layers (Tailwind's `@layer components`) loses to it, and a rule outside layers wins. Keep the assets in the same tree as the diagrams (the document, or one shadow root). In a shadow root the diagrams take their colours, but not the toolbar or the zoom: the script looks for diagrams in the document only. Read the page in a browser that `floe publish` above names: one that does not read `@scope` draws the diagrams without colours. The CSS that `floe part show diagram part.css` prints takes the palette's variables and has none of its own, so a page without a palette takes the fragment's assets, not that CSS. Readers zoom a diagram drawn smaller than its actual size with the buttons, Ctrl / ⌘ + wheel or a pinch, and drag or use the arrow keys to move while zoomed. A page needs the assets once; holding them more than once does no harm.
+- Drawing is held to 512 MiB of memory as `floe check`'s is: past it, floe stops and says so at the file it was drawing (exit code 1).
 
 | Flag | Description |
 |---|---|
@@ -401,6 +408,7 @@ edge [60,10]→[60,120] M60,10 V120
 - Each diagram prints a line of where it is written (`file:line:column:`, or `file:` for a spec), its title and its canvas. Then, a line each: a part's area, a frame's heading, an edge's path and the ends it joins, a label's area and the circles it is in.
 - Where is printed on stdout and mistakes on stderr, and the exit code is 1 when there is one. A diagram the checks refuse is printed too, as a guide: fixing it may move its parts and edges, and a `graph` with a mistake has only what it got as far as, or nothing. A diagram that gets no layout (a mistake of its YAML or schema, an `example` there is none of) prints no line.
 - The checks of a data file's template and parts do not run, and the rest of its page is not checked (its items of format `html`, its images, what its parts' functions refuse): `floe check` checks the whole page. A diagram that a part of one's own draws with `{{diagram}}` is not among them. A data file lacking `template` is read as a spec, and told so in the words for a spec; a spec with one is read as a page.
+- Drawing is held to 512 MiB of memory as `floe check`'s is: past it, floe stops and says so at the file it was drawing (exit code 1).
 
 ## `floe diagram example [kind]`
 
