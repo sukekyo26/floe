@@ -86,9 +86,9 @@ export function FindDialog({
   const page = shown[at] ?? null;
   // The row reached is held by its page and its place at once, as opened or typed too: read again, a new page at the
   // top does not take its place, and it moved, its new place is the one left when it goes; gone, what came to its place
-  // is reached now (ui.html findMark → moved)
+  // is reached now; none, its place is held for the rows to come back (ui.html findMark → moved)
   const reachedNow = page?.slug ?? null;
-  const atNow = Math.max(at, 0);
+  const atNow = at >= 0 ? at : reached.at;
   if (!opening && (reachedNow !== reached.slug || atNow !== reached.at)) setReached({ slug: reachedNow, at: atNow });
   const ranks = projectOrder(entries);
   const count = findCount(words, hits.length);
