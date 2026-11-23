@@ -131,8 +131,8 @@ func TestRebuildTooDeep(t *testing.T) {
 	}
 }
 
-// A copy whose page cannot be read (as a store develop wrote, of no page.html), or whose images cannot be, keeps
-// its page, told at what cannot be read.
+// A copy whose page cannot be read, or whose images cannot be, keeps its page, told at what cannot be read. One of no
+// page.html (as a store develop wrote) has no page to compare with: it is drawn again and written.
 func TestRebuildUnreadable(t *testing.T) {
 	t.Parallel()
 
@@ -140,17 +140,40 @@ func TestRebuildUnreadable(t *testing.T) {
 	t.Run("no page.html", func(t *testing.T) {
 		t.Parallel()
 
+		// No page to compare with: drawn again and written, as a page that changed, and still the version it was
 		s, root := newStore(t)
 		publish(t, s, picKit(t, "", ""), "a.yaml", "lang: en\ntemplate: pic\n", nil, store.Options{})
 		if err := os.Remove(filepath.Join(copyOf(t, s, root, "a"), "page.html")); err != nil {
 			t.Fatal(err)
 		}
-		copyA := strings.Replace(copyOf(t, s, root, "a"), root, "S", 1)
-		_, gone := os.ReadFile(filepath.Join(copyOf(t, s, root, "a"), "page.html"))
-		want := lines(filepath.Join(copyA, "page.html")+": "+testfs.Words(t, gone), filepath.Join(copyA, "data.yaml")+fmt.Sprintf(keeps, "a"))
+		before := listedOf(t, s, "a")
+		if err := s.Rebuild(t.Context(), picKit(t, "v2", "")); err != nil {
+			t.Fatal(told(err, root))
+		}
+		if page := read(t, filepath.Join(copyOf(t, s, root, "a"), "page.html")); !strings.Contains(page, "<body>v2") {
+			t.Errorf("page.html not drawn again:\n%s", page)
+		}
+		after := listedOf(t, s, "a")
+		if after.UpdatedAt != before.UpdatedAt || after.Version != before.Version || after.VersionCount != before.VersionCount || after.News != before.News {
+			t.Errorf("listed %+v, before %+v", after, before)
+		}
+	})
+	t.Run("page.html unreadable", func(t *testing.T) {
+		t.Parallel()
+
+		s, root := newStore(t)
+		publish(t, s, picKit(t, "", ""), "a.yaml", "lang: en\ntemplate: pic\n", nil, store.Options{})
+		had := filepath.Join(copyOf(t, s, root, "a"), "page.html")
+		if err := os.Remove(had); err != nil {
+			t.Fatal(err)
+		}
+		if err := os.Mkdir(had, 0o700); err != nil {
+			t.Fatal(err)
+		}
 		got := told(s.Rebuild(t.Context(), picKit(t, "v2", "")), root)
-		if got != want {
-			t.Errorf("told\n%s\nwant\n%s", got, want)
+		copyA := strings.Replace(copyOf(t, s, root, "a"), root, "S", 1)
+		if !strings.HasPrefix(got, filepath.Join(copyA, "page.html")+": ") || !strings.HasSuffix(got, filepath.Join(copyA, "data.yaml")+fmt.Sprintf(keeps, "a")) {
+			t.Errorf("told\n%s\nwant the page.html that cannot be read, and that it keeps its page", got)
 		}
 	})
 	t.Run("images unreadable", func(t *testing.T) {
@@ -184,7 +207,11 @@ func TestRebuildUnreadable(t *testing.T) {
 		dw := picKit(t, "", "")
 		publish(t, s, dw, "a.yaml", "lang: en\ntemplate: pic\n", nil, store.Options{})
 		publish(t, s, dw, "b.yaml", "lang: en\ntemplate: pic\ni: [x.png]\n", map[string][]byte{"x.png": png}, store.Options{})
-		if err := os.Remove(filepath.Join(copyOf(t, s, root, "a"), "page.html")); err != nil {
+		had := filepath.Join(copyOf(t, s, root, "a"), "page.html")
+		if err := os.Remove(had); err != nil {
+			t.Fatal(err)
+		}
+		if err := os.Mkdir(had, 0o700); err != nil {
 			t.Fatal(err)
 		}
 		images := filepath.Join(copyOf(t, s, root, "b"), "images")
@@ -195,7 +222,7 @@ func TestRebuildUnreadable(t *testing.T) {
 		copyA := strings.Replace(copyOf(t, s, root, "a"), root, "S", 1)
 		copyB := strings.Replace(copyOf(t, s, root, "b"), root, "S", 1)
 		want := lines(
-			copyA+"/page.html: no such file or directory", copyA+"/data.yaml"+fmt.Sprintf(keeps, "a"),
+			copyA+"/page.html: is a directory", copyA+"/data.yaml"+fmt.Sprintf(keeps, "a"),
 			copyB+"/images: permission denied", copyB+"/data.yaml"+fmt.Sprintf(keeps, "b"),
 		)
 		if got := told(s.Rebuild(t.Context(), picKit(t, "v2", "")), root); got != want {

@@ -147,7 +147,7 @@ var messagesJA = map[string]string{
 	"draw_select_text":  "このファイルを描いたページの <select> の中に <%s> があります。<select> の中には、中身を字として読む要素も svg・math も置けません。<select> の外へ出してください",
 	"draw_style":        "このファイルを描いたページに <style> があります。page.html、部品の part.html、format html の項目のどれかが書いています。CSS はテンプレートの page.css（floe がページに入れ、部品とテーマの下の層に置きます）か、部品の part.css に書いてください",
 	"draw_base":         "このファイルを描いたページに <base> があります。page.html、部品の part.html、format html の項目のどれかが書いていて、ページの CSP（base-uri 'none'）が無視します。リンクは完全な形で書いてください",
-	"draw_part_unknown": "このファイルを描いたページが、無い部品 %s を名乗っています。%s のどれかを書いてください",
+	"draw_part_unknown": "このファイルを描いたページの %[1]s にある %[2]s は、どの名前にも当たりません。%[3]s のどれかを書いてください",
 	"draw_part_several": `ページの data-floe-part="%s" は 1 つの部品の名前ではありません。data-floe-part="<名前>" と名前をそのまま書き、ほかの部品の見た目は data-floe-look="<名前> …" で借りてください`,
 	"draw_look_box":     `ページに data-floe-part="%[1]s" がありますが、%[1]s は見た目で箱がありません。data-floe-look="%[1]s" で借りてください`,
 	"draw_zgotmplz":     "このファイルを描いたページの %s に ZgotmplZ があります。html/template が、そこに置けない値の代わりに書いたものです。値か、テンプレートが値を置く所を変えてください",
@@ -379,11 +379,10 @@ var messagesJA = map[string]string{
 
 	// diagram: a graph's level edges
 	"diagram_graph_level_group":   "edge %s→%s: %s はまとまりです。level は 2 つの箱かアイコンを同じ段に置きます。箱かアイコンで終えるか、level を外してください",
-	"diagram_graph_level_apart":   "edge %s→%s: level でつなげるのは、同じまとまりの中の 2 つの箱かアイコンか、別々の帯の直下の 2 つの箱かアイコンです。どちらかを動かすか、level を外してください",
 	"diagram_graph_level_rank":    "edge %s→%s: %s と %s は level の線で同じ段に立つので、この線は段をまたげません。別の所で終えるか、2 つをつなぐ線の level を外してください",
 	"diagram_graph_level_between": "edge %s→%s: 段の中で、%s が 2 つの箱かアイコンの間に立ちます。level を外すか、それをよけてください",
 	"diagram_graph_level_loop":    "edge %[1]s→%[2]s: %[4]s の辺 %[3]s を使いますが、そこには輪があります。level か輪を外してください",
-	"diagram_graph_level_heading": "edge %s→%s: 帯「%s」の見出しを横切ります。right では見出しが最初の段に伸びます。level を外すか、見出しを短くしてください",
+	"diagram_graph_level_heading": "edge %s→%s: まとまりか帯「%s」の見出しを横切ります。right では見出しが最初の段に伸びます。level を外すか、見出しを短くしてください",
 
 	// ui
 	"ui_download":             "ダウンロード",
