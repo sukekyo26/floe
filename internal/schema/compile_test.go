@@ -102,6 +102,23 @@ func TestCompile(t *testing.T) {
 	}
 }
 
+// A mistake against the metaschema's anyOf is told as the library's causes under it, each where it is: a type
+// misspelled says the names it takes (S17).
+func TestCompileOpensAnyOf(t *testing.T) {
+	t.Parallel()
+
+	for _, tt := range []struct{ name, src, at string }{
+		{"a type misspelled", `{` + head + `, "properties": {"a": {"type": "strin"}}}`, "schema.json: #/properties/a/type: value must be one of 'array', 'boolean'"},
+		{"one of the types misspelled", `{` + head + `, "properties": {"a": {"type": ["string", "nul"]}}}`, "schema.json: #/properties/a/type/1: value must be one of 'array', 'boolean'"},
+	} {
+		_, err := schema.Compile(template, "schema.json", []byte(tt.src), resources(t))
+		got := told(err)
+		if !strings.Contains(got, tt.at) || strings.Contains(got, "'anyOf' failed") {
+			t.Errorf("%s: Compile told\n%s\nwant a line starting %q, and no 'anyOf' failed", tt.name, got, tt.at)
+		}
+	}
+}
+
 // CheckPart takes floe's formats in a part, and a Shared schema holding them it refers to, as a template does.
 func TestCheckPart(t *testing.T) {
 	t.Parallel()
