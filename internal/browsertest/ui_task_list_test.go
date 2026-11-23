@@ -179,7 +179,7 @@ func TestUITaskList(t *testing.T) { //nolint:paralleltest // the browser tests s
 	// A link of each URL, in order
 	say("link", "[...document.querySelector('#list > li').querySelectorAll('[data-testid=xlink]')].map((a) => [a.textContent, a.href, a.target, a.rel, a.title].join(' ')).join(' | ')")
 	say("current", "document.getElementById('to-tasks').getAttribute('aria-current')")
-	say("search shown", "document.getElementById('search').hidden + ' ' + (document.getElementById('find-open').offsetParent !== null)")
+	say("search shown", "(document.getElementById('search')?.hidden ?? true) + ' ' + (document.getElementById('find-open').offsetParent !== null)")
 	say("chips", "[...document.querySelectorAll('#chips > button')].map((c) => c.textContent + ' ' + c.getAttribute('aria-pressed') + ' ' + c.style.getPropertyValue('--c')).join(', ')")
 
 	// j and k: the focus alone, nothing beside the list and nothing read.
@@ -453,7 +453,7 @@ a row's project, in its title alone: #1 / One / shop / https://example.com/a/b/c
 link: b/c https://example.com/a/b/c _blank noopener https://example.com/a/b/c | pull/9 https://example.com/pull/9 _blank noopener https://example.com/pull/9
 current: page
 search shown: true true
-chips: shop2 true var(--pc0), blog1 false var(--pc1), pin0 false var(--pc2), solo1 false var(--pc3), Not set1 false var(--faint)
+chips: shop2 true var(--color-pc0), blog1 false var(--color-pc1), pin0 false var(--color-pc2), solo1 false var(--color-pc3), Not set1 false var(--color-faint)
 j: #1One
 j j: #2Two
 j j k: #1One

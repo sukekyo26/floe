@@ -300,7 +300,7 @@ func TestUITaskPage(t *testing.T) { //nolint:paralleltest // the browser tests s
 	}{{1400, true}, {960, true}, {880, false}} {
 		b.size(c.width, 800, false)
 		beside := b.eval("document.getElementById('reader').offsetParent !== null") == "true"
-		shelf := b.eval("document.getElementById('shelf').offsetParent !== null") == "true"
+		shelf := b.eval("document.getElementById('shelf')?.offsetParent != null") == "true"
 		over := b.eval("document.documentElement.scrollWidth > innerWidth") == "true"
 		if beside != c.beside || shelf || over {
 			t.Errorf("width %d: beside %t, shelf %t, past the edge %t", c.width, beside, shelf, over)
@@ -316,7 +316,7 @@ const taskPageShown = "!document.getElementById('task-head').hidden && document.
 
 // taskPageWant is what TestUITaskPage reads, in the order it reads it.
 const taskPageWant = `list j j: #130
-rows: T n1 | [designAdd a page] | T d1 | [buildAdd a page] | T i1 | [reviewAdd a page] | T r1 | [nothingAdd a pageNo pages yet]
+rows: [No categoryAdd a page] | T n1 | [designAdd a page] | T d1 | [buildAdd a page] | T i1 | [reviewAdd a page] | T r1 | [nothingAdd a pageNo pages yet]
 nothing open: none / none
 url: /tasks?project=proj&task=%23130
 the list's keys:  ?project=proj
@@ -334,7 +334,7 @@ in the folder: /tasks?project=proj&task=%231 / {"order":[],"shown":["fold"],"bac
 renamed whole: /tasks?project=proj&task=%23128 / {"order":["c2"],"shown":["c2"],"back":"/tasks?project=proj&task=%23128","at":{"slug":"c2","file":"","v":0}}
 of no rows: / / null
 done: Archive
-archived: T x1
+archived: [No categoryAdd a page] | T x1
 the shelf's archive: #120
 folded, none chosen: true true
 while open: doing

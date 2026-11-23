@@ -275,7 +275,8 @@ func TestUITaskChildren(t *testing.T) { //nolint:paralleltest // the browser tes
 	}
 	press("kin-submit")
 	b.until("saved", "!document.getElementById('kin-dialog').open")
-	b.until("the toast", "document.querySelector('[data-testid=toast-link]')?.textContent === 'Made #4 a child task'")
+	// Any of the toasts: the one of #103 made before may still show, before this one
+	b.until("the toast", "[...document.querySelectorAll('[data-testid=toast-link]')].some((e) => e.textContent === 'Made #4 a child task')")
 	if made, err = st.ReadTasks(); err != nil {
 		t.Fatal(err)
 	}
@@ -368,7 +369,7 @@ func TestUITaskChildren(t *testing.T) { //nolint:paralleltest // the browser tes
 	}
 	task("proj", "#104", "--title", "to remove", "--state", "doing")
 	open("#104")
-	if got := b.eval("getComputedStyle(document.getElementById('task-delete')).color === getComputedStyle(document.getElementById('bulk-delete')).color"); got != "true" {
+	if got := b.eval("((e) => { e.style.color = 'var(--color-danger)'; document.body.append(e); const want = getComputedStyle(e).color; e.remove(); return want !== '' && getComputedStyle(document.getElementById('task-delete')).color === want; })(document.createElement('i'))"); got != "true" {
 		t.Error("the button is not of a delete's color")
 	}
 	b.eval("window.realFetch = window.fetch; window.fetch = (url, init) => (init?.method === 'DELETE' ? Promise.resolve(new Response('it has a page', { status: 400 })) : window.realFetch(url, init))")

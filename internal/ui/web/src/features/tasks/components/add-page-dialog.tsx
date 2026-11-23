@@ -204,6 +204,9 @@ function AddPageBody({
         value={words}
         onChange={(e) => {
           setWords(e.target.value);
+        }}
+        // On every input, as onChange skips the same words typed again
+        onInput={() => {
           setError('');
         }}
         onKeyDown={onKey}

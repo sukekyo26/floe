@@ -187,8 +187,9 @@ func TestUITaskParent(t *testing.T) { //nolint:paralleltest // the browser tests
 	}
 	b.eval(seen)
 
-	// By the keys: the focus to the way back at once. Escape before the page is read again leaves it for the button there is, and when that
-	// goes with the drawing, for the one that takes its place. The reads after the write are held, to come after the key.
+	// By the keys: the focus to the way back at once. Escape before the page is read again leaves it for the button there is: the parent
+	// is off as the write answers (ui.html draws it off at the next read; React draws what a write answered at once). The reads after the
+	// write are held, to come after the key.
 	const toastsLeft = newToasts + ".filter((e) => e.querySelector('[data-testid=undo]')).length + ' ' + document.activeElement.id"
 	byKeys := func() {
 		t.Helper()
@@ -199,7 +200,7 @@ func TestUITaskParent(t *testing.T) { //nolint:paralleltest // the browser tests
 	b.eval("window.realFetch = window.fetch; window.fetch = (u, o) => (o?.method === 'PATCH' ? window.realFetch(u, o).then((r) => { window.holding = true; return r; }) : window.realFetch(u, o).then((r) => (window.holding ? new Promise((go) => { window.heldAnswers = [...(window.heldAnswers ?? []), () => go(r)]; }) : r)))")
 	byKeys()
 	b.pressKey(kb.Escape)
-	if got := b.eval(toastsLeft); got != "0 task-parent-change" {
+	if got := b.eval(toastsLeft); got != "0 task-parent-add" {
 		t.Errorf("Escape before the reading: %q", got)
 	}
 	b.eval("window.fetch = window.realFetch; window.holding = false; (window.heldAnswers ?? []).forEach((go) => go()), 1")
@@ -226,7 +227,7 @@ func TestUITaskParent(t *testing.T) { //nolint:paralleltest // the browser tests
 	byKeys()
 	b.until("the reading failed", "!document.getElementById('error').hidden")
 	b.pressKey(kb.Escape)
-	if got := b.eval(toastsLeft); got != "0 task-parent-change" {
+	if got := b.eval(toastsLeft); got != "0 task-parent-add" {
 		t.Errorf("Escape with the reading failed: %q", got)
 	}
 	b.eval("window.fetch = window.realFetch, 1")

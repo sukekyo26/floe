@@ -2,7 +2,6 @@ package browsertest_test
 
 import (
 	"encoding/json"
-	"strconv"
 	"testing"
 
 	"floe/internal/i18n"
@@ -17,26 +16,28 @@ import (
 
 // notButtons are not buttons of words by the rule (.claude/rules/ui.md): the shelf's rows and the add buttons under them, in a
 // modal too on a narrow screen; the settings' rows and their way back; the "…" menu's items. Nor are the links of a row or a mark
-// (the brand, a row's title in the list and the search, a row's task and tags, a task's parent and children, the diff's contents),
-// nor tabs (role=tab: the help's switches, as the React screen makes them).
+// (the brand, a row's title in the list and the search, a row's task and tags, a task's parent and children, the diff's contents,
+// the bar's count of the unread, a link of words: the user's choice, S422-P8), nor tabs (role=tab: the help's switches, as the
+// React screen makes them). The React screens' bar's links to the screens (#screens a, links of a nav in the look of the help's
+// tabs: the user's choice, S422-P8) are left out there alone: ui.html's are of the table below
 const notButtons = "#shelf *, #filter-dialog #shelf-more *, [data-testid=settings-item], #settings-back, [data-testid=menu] *, " +
-	"[data-testid=brand], #list li [data-testid=title], #find-list li [data-testid=title], [data-testid=task-tag], #list li [data-testid=tagpill], [data-testid=kin-row], #diff-toc button, [role=tab]"
+	"[data-testid=brand], #list li [data-testid=title], #find-list li [data-testid=title], [data-testid=task-tag], #list li [data-testid=tagpill], [data-testid=kin-row], #diff-toc button, [role=tab], #news"
+
+// reactOnly are not buttons of words on the React screens alone (#boot tells their build)
+const reactOnly = "#screens a"
 
 // wordsOnly is a button of words in no form of .btn, measured for its words alone: the task's way back.
 const wordsOnly = "#task-up"
 
-// LIMIT: buttons of words in another form than .btn, neither a row nor a mark. The user's decision (S425): the bar's two ways to the
-// screens become tabs (role=tab, as the help's switches), the rest take the form of .btn. ui.html is not mended while it is
-// rebuilt, so they pass while it is ui.html; each row goes as its React screen comes in (one of the form, or a tab, fails "take it
-// off the table" to tell so).
+// LIMIT: buttons of words in another form than .btn, neither a row nor a mark, on ui.html's screens. The user's decisions (S425,
+// S422-P8): the bar's two ways to the screens become links of a nav in the look of the help's tabs (reactOnly), the rest take the
+// form of .btn. ui.html is not mended while it is rebuilt, so they pass on its screens; the React screens are measured by the rule
+// (#boot tells their build), and each row goes as its last ui.html screen does (one not found there fails to tell so).
 var otherForm = map[string]string{
-	"to-list":            "the bar's way to the page list: a tab in React",
-	"to-tasks":           "the bar's way to the task list: a tab in React",
-	"news":               "the bar's count of the unread, a mark and a number",
-	"bulk-clear":         "the bar of the selected: its round button that lets them go",
-	"back":               "the bar of a page whole: its round way back",
-	"edit-url-plus":      "the task's edit modal: the row that adds a URL",
-	"edit-category-plus": "the task's edit modal: the row that adds a category",
+	"to-list":    "the bar's way to the page list: a link of a nav in React",
+	"to-tasks":   "the bar's way to the task list: a link of a nav in React",
+	"bulk-clear": "the bar of the selected: its round button that lets them go",
+	"back":       "the bar of a page whole: its round way back",
 }
 
 func TestUIButtons(t *testing.T) { //nolint:paralleltest // the browser tests share one Chrome, one at a time
@@ -72,7 +73,9 @@ func TestUIButtons(t *testing.T) { //nolint:paralleltest // the browser tests sh
 		t.Fatal(err)
 	}
 	measure := `(() => {
-		const small = getComputedStyle(document.documentElement).getPropertyValue('--corner-small').trim();
+		// Each build names the small corner its own way; the same 6px
+		const react = document.getElementById('boot') !== null;
+		const small = getComputedStyle(document.documentElement).getPropertyValue(react ? '--radius-small' : '--corner-small').trim();
 		const other = ` + string(otherJSON) + `;
 		const words = (e) => {
 			let said = '';
@@ -85,7 +88,7 @@ func TestUIButtons(t *testing.T) { //nolint:paralleltest // the browser tests sh
 			walk(e);
 			return said.trim();
 		};
-		const shown = [...document.querySelectorAll('button, a')].filter((e) => e.getClientRects().length && !e.closest('dialog:not([open])') && words(e) && !e.matches(` + js(notButtons) + `));
+		const shown = [...document.querySelectorAll('button, a')].filter((e) => e.getClientRects().length && !e.closest('dialog:not([open])') && words(e) && !e.matches(` + js(notButtons) + `) && !(react && e.matches(` + js(reactOnly) + `)));
 		const clip = (e) => {
 			for (let box = e.parentElement; box && box !== document.body && box !== document.documentElement; box = box.parentElement) {
 				const st = getComputedStyle(box);
@@ -105,7 +108,7 @@ func TestUIButtons(t *testing.T) { //nolint:paralleltest // the browser tests sh
 				if (e.id === 'tag-new' ? r.height < want - 0.5 : Math.abs(r.height - want) > 0.5) form.push('height ' + Math.round(r.height));
 				if (getComputedStyle(e).borderTopLeftRadius !== small) form.push('corner ' + getComputedStyle(e).borderTopLeftRadius);
 				if (Boolean(e.querySelector('svg')) === Boolean(e.closest('dialog, #bulk, [data-testid=toast]'))) form.push(e.querySelector('svg') ? 'an icon' : 'no icon');
-				if (other.includes(e.id)) {
+				if (!react && other.includes(e.id)) {
 					seen.push(e.id);
 					if (form.length === 0) why.push('of the form now: take it off the table');
 				} else why.push(...form);
@@ -116,17 +119,25 @@ func TestUIButtons(t *testing.T) { //nolint:paralleltest // the browser tests sh
 			return why.length ? [name(e) + ': ' + why.join(', ')] : [];
 		});
 		const keys = ['#keys [data-help=about]', '#keys [data-help=keys]', '#keys [data-close]'].filter((sel) => shown.includes(document.querySelector(sel))).length;
-		return JSON.stringify({ n: shown.length, bad: bad.join('; '), keys, seen });
+		// A small corner of no value would be met by none: said apart from the buttons
+		const dialogs = [...document.querySelectorAll('dialog')].map((d) => (react ? 'react ' : 'ui.html ') + d.id);
+		return JSON.stringify({ n: shown.length, bad: (small === '' ? ['no small corner; '] : []).concat(bad).join('; '), keys, keysWant: react ? 1 : 3, seen, dialogs, react });
 	})()`
 	seen := map[string]bool{}
+	// The dialogs each build holds, and the build of the screen measured last: a modal is measured on a screen of its build
+	present := map[string]bool{}
+	build := ""
 	check := func(scene string) int {
 		t.Helper()
 		b.still()
 		var got struct {
-			N    int
-			Bad  string
-			Keys int
-			Seen []string
+			N        int
+			Bad      string
+			Keys     int
+			KeysWant int
+			Seen     []string
+			Dialogs  []string
+			React    bool
 		}
 		if err := json.Unmarshal([]byte(b.eval(measure)), &got); err != nil {
 			t.Fatal(err)
@@ -137,7 +148,11 @@ func TestUIButtons(t *testing.T) { //nolint:paralleltest // the browser tests sh
 		for _, id := range got.Seen {
 			seen[id] = true
 		}
-		return got.Keys
+		for _, d := range got.Dialogs {
+			present[d] = true
+		}
+		build = map[bool]string{true: "react ", false: "ui.html "}[got.React]
+		return got.Keys - got.KeysWant
 	}
 	opened := map[string]bool{}
 	closeModal := func(id string) {
@@ -151,7 +166,7 @@ func TestUIButtons(t *testing.T) { //nolint:paralleltest // the browser tests sh
 		b.until(id, "document.getElementById("+js(id)+").open")
 		check(id)
 		closeModal(id)
-		opened[id] = true
+		opened[build+id] = true
 	}
 	press := func(sel string) func() {
 		return func() { b.eval("document.querySelector(" + js(sel) + ").click()") }
@@ -168,8 +183,9 @@ func TestUIButtons(t *testing.T) { //nolint:paralleltest // the browser tests sh
 		for _, part := range []string{"about", "keys"} {
 			b.eval("document.querySelector('#keys [data-help=" + part + "]').click()")
 			b.until("the part "+part, helpOn+"(document.querySelector('#keys [data-help="+part+"]'))")
-			if n := check(scene + ", help's " + part); n != 3 {
-				t.Errorf("%s, help's %s: %d of its 3 buttons of words measured", scene, part, n)
+			// Its two switches and its close button on ui.html; the React screens' switches are tabs, its close button alone
+			if n := check(scene + ", help's " + part); n != 0 {
+				t.Errorf("%s, help's %s: %d buttons of words measured past or short of its own", scene, part, n)
 			}
 		}
 		closeModal("keys")
@@ -229,6 +245,25 @@ func TestUIButtons(t *testing.T) { //nolint:paralleltest // the browser tests sh
 	modal("kin-dialog", press("#task-child"))
 	modal("edit-task-dialog", press("#task-edit"))
 	modal("add-page-dialog", press("#list [data-testid=category-add]"))
+	// The React screen's own of the rest: each modal it holds is measured there too
+	modal("edit-add-dialog", func() {
+		press("#task-edit")()
+		b.until("the edit", "document.getElementById('edit-task-dialog').open")
+		press("#edit-url-plus")()
+	})
+	closeModal("edit-task-dialog")
+	modal("find", press("#find-open"))
+	modal("settings", press("#settings-open"))
+	modal("tag-dialog", menu("a", "tag-item"))
+	modal("edit-dialog", menu("a", "edit"))
+	modal("set-dialog", menu("a", "task-set"))
+	modal("move-dialog", func() {
+		menu("a", "task-set")()
+		b.until("the set modal", "document.getElementById('set-dialog').open")
+		b.fill("#set-task", "#2")
+		b.eval("document.getElementById('set-submit').click()")
+	})
+	closeModal("set-dialog")
 	b.navigate("/tasks?project=proj&task=%232")
 	b.until("no pages", "!document.getElementById('task-none').hidden")
 	check("a task of no page")
@@ -304,8 +339,12 @@ func TestUIButtons(t *testing.T) { //nolint:paralleltest // the browser tests sh
 		}
 	}
 
-	// A modal with no way here is a modal not measured.
-	if got := b.eval("document.querySelectorAll('dialog').length + ''"); got != strconv.Itoa(len(opened)) {
-		t.Errorf("%s modals, %d opened", got, len(opened))
+	// A modal with no way here is a modal not measured: each a screen of each build holds, opened on one of that build
+	// LIMIT: ui.html still holds the modals of a task's page, which only /tasks opens and React serves. Drop this as ui.html goes (S422-P11)
+	tasksOnly := map[string]bool{"ui.html edit-task-dialog": true, "ui.html kin-dialog": true, "ui.html add-page-dialog": true}
+	for d := range present {
+		if !opened[d] && !tasksOnly[d] {
+			t.Errorf("the %s modal is not measured on a screen of its build", d)
+		}
 	}
 }

@@ -242,11 +242,12 @@ export function KinDialog({
             onInput={(e) => {
               clearMark(e);
               suggest.field.onInput(e);
+              // What was refused was of another name: refused as stale, the catch says it after. On every input, as
+              // onChange skips the same name typed again
+              setError('');
             }}
             onChange={(e) => {
               setName(e.currentTarget.value);
-              // What was refused was of another name: refused as stale, the catch says it after
-              setError('');
             }}
           />
         </label>
