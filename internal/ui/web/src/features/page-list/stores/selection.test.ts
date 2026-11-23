@@ -84,6 +84,15 @@ describe(followList, () => {
     expect([barNews(true), barNews(false)]).toStrictEqual([0, 0]);
   });
 
+  it('looks the selection over as it starts, as the list put back after a draw that threw has missed the reads', () => {
+    expect.assertions(1);
+    const { query, state, pages, sel } = made('', [page('a'), page('b')]);
+    sel.add(['a', 'b']);
+    state.set({ ...state.get(), entries: [page('a')] });
+    followList(query, pages, sel);
+    expect([...sel.selected.get()]).toStrictEqual(['a']);
+  });
+
   it('lets go of the pages the view no longer has as the list is read, and keeps those it has', () => {
     expect.assertions(1);
     const { query, state, pages, sel } = made('', [page('a'), page('b')]);

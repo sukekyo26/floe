@@ -23,4 +23,26 @@ describe(appKeys, () => {
     expect(table(false)).toStrictEqual(['/', '?', 'ArrowDown', 'ArrowUp', 'Ctrl+K', 'd', 'f', 'j', 'k']);
     expect(table(true)).toStrictEqual(['/', '?', 'ArrowDown', 'ArrowUp', 'Ctrl+K', 'd', 'f', 'h', 'j', 'k']);
   });
+
+  it('sends / to the list’s search where the screen has one, else to the search modal, and x with the rows that have it', () => {
+    expect.assertions(3);
+    const called: string[] = [];
+    const keys = (search?: () => void) =>
+      appKeys({
+        rows: { j: none, x: none },
+        taskPage: false,
+        find: () => called.push('find'),
+        search,
+        findToggle: none,
+        help: none,
+        star: none,
+        diff: none,
+        up: none,
+      });
+    keys(() => called.push('search'))['/']?.();
+    keys()['/']?.();
+    expect(called).toStrictEqual(['search', 'find']);
+    expect(keys()).toHaveProperty('x');
+    expect(keys()).not.toHaveProperty('h');
+  });
 });

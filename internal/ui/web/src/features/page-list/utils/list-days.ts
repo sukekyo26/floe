@@ -17,7 +17,7 @@ export function dayOf(iso: string, now: Date, lang: string): string {
     at.getFullYear() === now.getFullYear() ? { month: 'long' } : { year: 'numeric', month: 'long' },
   );
   // With Japanese's space after a number, as the page's other words have
-  return words.replace(/(\d)([年月])/g, '$1 $2');
+  return words.replace(/(\d)([\u5e74\u6708])/g, '$1 $2');
 }
 
 export interface DayGroup {

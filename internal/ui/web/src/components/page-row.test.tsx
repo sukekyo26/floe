@@ -40,6 +40,16 @@ describe(PageRow, () => {
     );
   });
 
+  // #530: a folder's time is its link's, which says nothing of what is in it. LIMIT: one draw in node, which takes no
+  // way of useMinute; the shape of #530, a time written in as the times are advanced, is not caught here: test
+  // it in a DOM run (a browser or jsdom) if the rows come to set their times apart from their draw
+  it('shows a folder no time, and a page its time', () => {
+    expect.assertions(2);
+    const empty = /<time[^>]*><\/time>/;
+    expect(draw({}, { folder: true })).toMatch(empty);
+    expect(draw()).not.toMatch(empty);
+  });
+
   it('leaves a missing file’s title no link, out of the tab order, and tells a folder’s open', () => {
     expect.assertions(3);
     const gone = draw({}, { missing: true });

@@ -1,6 +1,7 @@
 package browsertest_test
 
 import (
+	"fmt"
 	"strconv"
 	"strings"
 	"testing"
@@ -553,6 +554,43 @@ func TestUIDialogClose(t *testing.T) { //nolint:paralleltest // the browser test
 		until("settings", false)
 		b.eval("closings.length = 0; sent.length = 0")
 	}
+	// A task's page opens and closes as the list does: Ctrl+K the search and again shut, ? the help, and a row's "…" shut
+	// by a press outside it and by Escape
+	keyDown := func(key string, ctrl bool) {
+		t.Helper()
+		b.eval(fmt.Sprintf("document.body.dispatchEvent(new KeyboardEvent('keydown', { bubbles: true, cancelable: true, key: %s, ctrlKey: %t }))", js(key), ctrl))
+	}
+	keysMenus := make([]string, 0, 4)
+	b.eval("document.activeElement.blur()")
+	keyDown("k", true)
+	until("find", true)
+	keyDown("k", true)
+	until("find", false)
+	keysMenus = append(keysMenus, "ctrl+k")
+	b.eval("document.activeElement.blur()")
+	keyDown("?", false)
+	until("keys", true)
+	escape()
+	until("keys", false)
+	keysMenus = append(keysMenus, "?")
+	const more = "document.querySelector('#list li[data-slug=plan-a] [data-testid=more]')"
+	for _, c := range []struct {
+		name  string
+		close func()
+	}{
+		{"a press outside", func() { press("document.querySelector('[data-testid=bar-inner]')") }},
+		{"escape", escape},
+	} {
+		// The menu is the screen's open one as its toggle, which comes after the press, is told
+		b.eval("window.menuToggled = false; " + more + ".addEventListener('toggle', () => { window.menuToggled = true; }, { once: true }); " +
+			more + ".querySelector('summary').focus(); " + more + ".querySelector('summary').click()")
+		b.until("the menu open", more+".open && window.menuToggled")
+		c.close()
+		b.until("the menu shut by "+c.name, "!"+more+".open")
+		keysMenus = append(keysMenus, "menu, "+c.name)
+	}
+	b.eval("closings.length = 0; sent.length = 0")
+	check(t, "a task's page", keysMenus, "ctrl+k|?|menu, a press outside|menu, escape")
 	open("/")
 
 	// The search modal opened from the body, a row reached: Escape leaves no field to take the Enter after it

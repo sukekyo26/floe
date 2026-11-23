@@ -1,3 +1,4 @@
+import type { ReactNode } from 'react';
 import { renderToString } from 'react-dom/server';
 import { describe, expect, it, vi } from 'vitest';
 
@@ -6,12 +7,14 @@ import { testBoot } from '@/components/test-boot';
 import { getBoot, setBoot } from '@/config/boot';
 
 const none = () => undefined;
-const draw = () => {
+const draw = (search?: ReactNode) => {
   testBoot();
   setBoot({ ...getBoot(), screen: 'tasks' });
   // The server's state reads the address bar's host as it draws: node has no window
   vi.stubGlobal('window', { location: { host: '127.0.0.1:7325' } });
-  return renderToString(<Bar tasks onFind={none} onHelp={none} onSettings={none} />);
+  return renderToString(
+    <Bar tasks={search === undefined} search={search} onFind={none} onHelp={none} onSettings={none} />,
+  );
 };
 
 describe(Bar, () => {
@@ -25,5 +28,10 @@ describe(Bar, () => {
       /id="find-open"[^>]*aria-label="ui_find:.*id="keys-open"[^>]*aria-label="ui_help:.*id="settings-open"[^>]*aria-label="ui_settings:/s,
     );
     expect(html).not.toMatch(/id="(search|q|back)"/);
+  });
+
+  it('puts the list’s search between the screens and the end', () => {
+    expect.assertions(1);
+    expect(draw(<span id="search" />)).toMatch(/id="screens".*id="search".*data-testid="bar-end"/s);
   });
 });

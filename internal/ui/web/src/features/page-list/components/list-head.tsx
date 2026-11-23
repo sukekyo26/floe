@@ -22,8 +22,17 @@ export function ListWhat({
   columns = pageColumns,
 }: Omit<ListHeadProps, 'pages'> & { readonly onShow: () => void }) {
   const { what } = narrowWords(useStore(query.query));
-  const { open } = useStore(columns.columns);
-  return <ShelfWhat words={what} tint={null} hidden={open || what === ''} onShow={onShow} />;
+  return <ShelfWhat words={what} tint={null} hidden={useWhatHidden({ query, columns })} onShow={onShow} />;
+}
+
+// useWhatHidden tells ListWhat hidden: the shelf open, which says it itself, or nothing narrowed. The screen that places
+// it reads it too, to leave the head of the page beside the list without it
+export function useWhatHidden({
+  query = listQuery,
+  columns = pageColumns,
+}: Omit<ListHeadProps, 'pages'> = {}): boolean {
+  const { what } = narrowWords(useStore(query.query));
+  return useStore(columns.columns).open || what === '';
 }
 
 // ListCount is the head of the list: how many new pages the view and the search leave (ui.html renderShelf #count)
