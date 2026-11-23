@@ -28,9 +28,9 @@ describe(FramePage, () => {
     expect(html).not.toMatch(/sandbox=|hidden=""/);
   });
 
-  it('is there, hidden and loading nothing, till found, and hidden in a diff', () => {
+  it('is there, hidden and loading nothing, till found, and in a diff, which reads nothing of the latest', () => {
     expect.assertions(2);
     expect(draw(false)).toMatch(/^<iframe id="frame"(?![^>]*src=)[^>]*hidden=""/);
-    expect(draw(true, true)).toMatch(/hidden=""/);
+    expect(draw(true, true)).toMatch(/^<iframe id="frame"(?![^>]*src=)[^>]*hidden=""/);
   });
 });

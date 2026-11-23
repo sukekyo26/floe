@@ -29,7 +29,8 @@ export function FramePage({ at, found, diff, name, keys, onKey, reads = sharedRe
   const frame = useRef<HTMLIFrameElement>(null);
   const href = rawHref(at);
   const [src, setSrc] = useState<string | null>(null);
-  if (found && src === null) setSrc(href + window.location.hash);
+  // A diff's frame is not loaded, so that opening it reads nothing of the latest (ui.html 1816–1817, 5233)
+  if (found && !diff && src === null) setSrc(href + window.location.hash);
   usePageMessages(frame, 'whole', {
     shown: () => found && !diff,
     givenPath: () => new URL(href, window.location.href).pathname,

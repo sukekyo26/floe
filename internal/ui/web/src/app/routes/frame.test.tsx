@@ -54,11 +54,11 @@ describe(FrameRoute, () => {
     expect(shown(html, 'frame')).toBe(false);
   });
 
-  it('shows the diff in a diff, and neither the page nor its tags', () => {
+  it('shows the diff in a diff, and neither the page, loading nothing, nor its tags', () => {
     expect.assertions(3);
     const html = draw('?diff');
     expect(shown(html, 'diff')).toBe(true);
-    expect(shown(html, 'frame')).toBe(false);
+    expect(html).toMatch(/<iframe id="frame"(?![^>]*src=)[^>]*hidden=""/);
     expect(shown(html, 'frame-tags')).toBe(false);
   });
 
