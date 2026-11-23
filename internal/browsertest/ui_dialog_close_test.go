@@ -656,7 +656,7 @@ var dialogCloseWant = []string{
 	"settings, page, escape: settings > list More for T plan-a 4",
 	"settings, bar, escape: settings > settings-open",
 	"settings, find, escape, /: find > settings settings-title, settings > body",
-	"settings, find, escape, /tasks?project=proj&task=S300: find > body, settings > body",
+	"settings, find, escape, /tasks?project=proj&task=S300: find > settings settings-title, settings > body",
 	"settings opened, bar: settings-title",
 	"settings opened, row: settings-title",
 	"settings opened, bar: settings-title",
