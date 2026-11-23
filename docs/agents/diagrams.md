@@ -431,7 +431,7 @@ A `graph` specifies only how its boxes, icons and groups are joined, and floe pl
 
 - An edge written `level: true` stands its two boxes or icons in one rank and runs straight between their facing sides.
 - Its two boxes or icons may be in any groups or lanes. The lowest group holding both is their common group (the graph when no group does; in a graph of lanes, the graph always), and it is laid out as lanes are:
-  - The groups and lanes directly in it stand in the order written, and so do the boxes and icons directly in it at the ends of level edges. Of the two ends, the one written first in `nodes` stands on the left (with `right`, on top), whichever way the edge runs.
+  - The groups, lanes, boxes and icons directly in it stand in the order written. Of the two ends, the one written first in `nodes` stands on the left (with `right`, on top), whichever way the edge runs.
   - An end inside a group of it, and each group holding that end inside the common group, stand at their end towards the other end (at their start when they have level edges both ways).
   - A group directly in it that stands between the two ends and has no box or icon in their rank is crossed: the edge runs across its frame.
 
@@ -463,7 +463,7 @@ A `graph` specifies only how its boxes, icons and groups are joined, and floe pl
               - { from: api-c, to: reader }
               - { from: writer, to: reader, level: true, label: copy }
   ```
-- To stand something between two groups that a level edge joins, write it between them in `nodes`; to keep it out, write it before the first or after the second.
+- To stand a box, an icon or a group between two groups that a level edge joins, write it between them in `nodes`; to keep it out, write it before the first or after the second.
 - In a group that is no common group, the boxes and icons that level edges join stand side by side as written.
 - A level edge at a group, one at the side of a loop, and an edge between two boxes or icons that level edges stand in one rank, may be refused. So may a level edge that, laid out, has something between its two boxes or icons in their rank: a box, an icon, or the frame of a group inside a crossed group or under the common group. Where the rules above meet (an end facing both ways, a row of boxes and the order written), the order written wins and the edge may be refused. The refusal names the edge and what stands between: write the nodes in another order, move one into another group, or drop `level`. A writer in zone A with level edges to readers in zones B and C, written A, B, C, is refused, as B's reader stands between the writer and C's; written B, A, C, it is laid out.
 - Laid out `right`, a group's or a lane's heading reaches into its first rank. A level edge that runs through it may be refused: shorten the heading.
