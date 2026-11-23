@@ -636,7 +636,10 @@ func (d *drawing) turnsClear(k int) bool {
 			past[1-axis] += step * float64(n)
 			turn := past
 			turn[axis] = to[axis]
-			for _, s := range []seg{{from[0], from[1], past[0], past[1]}, {past[0], past[1], turn[0], turn[1]}, {turn[0], turn[1], to[0], to[1]}} {
+			turns := []seg{
+				{from[0], from[1], past[0], past[1]}, {past[0], past[1], turn[0], turn[1]}, {turn[0], turn[1], to[0], to[1]},
+			}
+			for _, s := range turns {
 				if !d.standsClear(k, s, cell) {
 					return false
 				}
