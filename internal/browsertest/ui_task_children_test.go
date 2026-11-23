@@ -275,7 +275,8 @@ func TestUITaskChildren(t *testing.T) { //nolint:paralleltest // the browser tes
 	}
 	press("kin-submit")
 	b.until("saved", "!document.getElementById('kin-dialog').open")
-	b.until("the toast", "document.querySelector('[data-testid=toast-link]')?.textContent === 'Made #4 a child task'")
+	// Any of the toasts: the one of #103 made before may still show, before this one
+	b.until("the toast", "[...document.querySelectorAll('[data-testid=toast-link]')].some((e) => e.textContent === 'Made #4 a child task')")
 	if made, err = st.ReadTasks(); err != nil {
 		t.Fatal(err)
 	}
