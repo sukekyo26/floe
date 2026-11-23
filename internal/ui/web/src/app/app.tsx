@@ -1,5 +1,6 @@
 import { useEffect } from 'react';
 
+import { ListRoute } from '@/app/routes/list';
 import { TasksRoute } from '@/app/routes/tasks';
 import { DrawGuard } from '@/components/draw-guard';
 import { ErrorBar } from '@/components/error-bar';
@@ -15,7 +16,8 @@ const cameBack = (): boolean => {
   return entry instanceof PerformanceNavigationTiming && entry.type === 'back_forward';
 };
 
-// App is the screen the server chose (boot's screen; ?task= on /tasks a task's page), in a column of the window. The
+// App is the screen the server chose (boot's screen: the page list, or the task list or, ?task=, a task's page), in a
+// column of the window. The
 // reads and their watch, and the way back, are the app's own, outside the DrawGuard, so that a draw that throws is
 // drawn again by the next read; the mistake's words and the toasts stand outside it too
 export function App({ search }: { readonly search: string }) {
@@ -39,6 +41,7 @@ export function App({ search }: { readonly search: string }) {
   return (
     <div className="flex h-dvh flex-col">
       <DrawGuard>
+        {screen === 'list' ? <ListRoute /> : null}
         {screen === 'taskList' || screen === 'taskPage' ? (
           <TasksRoute name={screen === 'taskPage' ? new URLSearchParams(search).get('task') : null} />
         ) : null}

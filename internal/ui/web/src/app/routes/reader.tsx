@@ -1,3 +1,5 @@
+import type { ReactNode } from 'react';
+
 import { BarActions } from '@/components/page-actions';
 import type { Openers } from '@/components/page-menu';
 import { ReaderPane } from '@/features/reader/components/reader-pane';
@@ -26,12 +28,14 @@ interface PageReaderProps {
   readonly openers: Openers;
   readonly keys: ReadonlySet<string>;
   readonly onKey: (key: string) => void;
+  // what is the list's narrowing in words, in the head with the list folded (the page list's); none, null
+  readonly what?: ReactNode;
 }
 
 // PageReader is the page picked beside the list, with its bar, its version, its note of versions and its tags
 // (ui.html drawReader). The choice of versions and its note wait for the list read once (P7: a page the list does not
 // hold yet is not one gone)
-export function PageReader({ openers, keys, onKey }: PageReaderProps) {
+export function PageReader({ openers, keys, onKey, what = null }: PageReaderProps) {
   const at = useStore(openPage.picked);
   const { entries, read } = useStore(pages.state);
   const page = at ? (entries.find((a) => a.slug === at.slug) ?? null) : null;
@@ -54,6 +58,7 @@ export function PageReader({ openers, keys, onKey }: PageReaderProps) {
           onEdit={openers.onTags}
         />
       }
+      what={what}
       keys={keys}
       onKey={onKey}
       onTitle={keepDrawn}

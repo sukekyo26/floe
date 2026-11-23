@@ -5,11 +5,11 @@ import { App } from '@/app/app';
 import { testBoot } from '@/components/test-boot';
 import { getBoot, setBoot } from '@/config/boot';
 
-const draw = (search: string) => {
+const draw = (search: string, screen: 'list' | 'tasks' = 'tasks') => {
   testBoot();
   // The server's state reads the address bar's host as it draws: node has no window
   vi.stubGlobal('window', { location: { host: '127.0.0.1:7325' } });
-  setBoot({ ...getBoot(), screen: 'tasks' });
+  setBoot({ ...getBoot(), screen });
   return renderToString(<App search={search} />);
 };
 const dialogs = (html: string) => [...html.matchAll(/<dialog[^>]* id="([^"]+)"/g)].map((m) => m[1]).toSorted();
@@ -42,6 +42,26 @@ describe(App, () => {
     expect.assertions(2);
     expect(dialogs(draw('?project=p&task=%231'))).toStrictEqual(TASK_PAGE);
     expect(dialogs(draw('?project=p'))).toStrictEqual([...TASK_PAGE, 'filter-dialog'].toSorted());
+  });
+
+  it('draws the page list under the bar with its search, the shelf, the head of the list and its modals', () => {
+    expect.assertions(3);
+    const list = draw('', 'list');
+    expect(list).toMatch(
+      /data-testid="bar".*id="screens".*id="search".*data-testid="bar-end".*id="shelf".*data-testid="lhead".*id="count".*id="bulk"/s,
+    );
+    expect(list).toMatch(/<a id="to-list" href="\/" aria-current="page"/);
+    expect(dialogs(list)).toStrictEqual([
+      'add-dialog',
+      'edit-dialog',
+      'filter-dialog',
+      'find',
+      'keys',
+      'move-dialog',
+      'set-dialog',
+      'settings',
+      'tag-dialog',
+    ]);
   });
 
   it('puts the screen after the mistake’s words by its order, which stand later in the document', () => {

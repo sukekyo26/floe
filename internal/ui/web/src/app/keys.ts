@@ -6,6 +6,8 @@ export interface AppKeyDeps {
   // taskPage: a task's page, where h goes up to the list
   readonly taskPage: boolean;
   readonly find: () => void;
+  // search is where / goes on a screen with the list's search in its bar (ui.html 6488); left out, / opens find
+  readonly search?: (() => void) | undefined;
   readonly findToggle: () => void;
   readonly help: () => void;
   readonly star: () => void;
@@ -13,12 +15,12 @@ export interface AppKeyDeps {
   readonly up: () => void;
 }
 
-// appKeys is the screen's one table of keys (ui.html KEYS): the rows', / and Ctrl+K to the search, ? to the help's
-// keys, f the row's star, d the diff of the page beside the list; on a task's page h too (ui.html 6807). No x: no row of
-// the task screens has a box to tick
-export const appKeys = ({ rows, taskPage, find, findToggle, help, star, diff, up }: AppKeyDeps): KeyTable => ({
+// appKeys is the screen's one table of keys (ui.html KEYS): the rows' (x among them where the rows have boxes), / to the
+// list's search or the search modal, Ctrl+K to the search modal, ? to the help's keys, f the row's star, d the diff of
+// the page beside the list; on a task's page h too (ui.html 6807)
+export const appKeys = ({ rows, taskPage, find, search, findToggle, help, star, diff, up }: AppKeyDeps): KeyTable => ({
   ...rows,
-  '/': find,
+  '/': search ?? find,
   '?': help,
   'Ctrl+K': findToggle,
   f: star,
