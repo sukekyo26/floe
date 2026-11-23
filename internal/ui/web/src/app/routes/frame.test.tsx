@@ -23,7 +23,13 @@ function draw(search: string, entries: Page[] = [page], kept: Record<string, str
   setBoot({ ...getBoot(), screen: 'frame', framed: 'p' });
   const held = new Map(Object.entries(kept));
   vi.stubGlobal('window', {
-    location: { host: '127.0.0.1:7325', hash: '', search, href: `http://127.0.0.1:7325/a/p/${search}` },
+    location: {
+      host: '127.0.0.1:7325',
+      origin: 'http://127.0.0.1:7325',
+      hash: '',
+      search,
+      href: `http://127.0.0.1:7325/a/p/${search}`,
+    },
     sessionStorage: {
       getItem: (key: string) => held.get(key) ?? null,
       setItem: () => undefined,

@@ -1236,7 +1236,10 @@ function Gallery() {
           </div>
         </Section>
         <Section title="Back to a task's page (narrow the window under 56rem: the mark alone)">
-          <BackLink back={backOf('/tasks?project=floe&task=%23128')} onPress={() => undefined} />
+          <BackLink
+            back={backOf('/tasks?project=floe&task=%23128', window.location.origin)}
+            onPress={() => undefined}
+          />
         </Section>
         <Section title="Keys: / ? Ctrl+K show a toast">
           <p className="text-small text-muted">Press them outside a field.</p>

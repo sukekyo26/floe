@@ -7,11 +7,11 @@ export interface Back {
   task: string;
 }
 
-// backOf reads the way back kept (a path and query of this origin)
+// backOf reads the way back kept, a path and query of this origin (ui.html drawBack reads it against location.origin)
 // LIMIT: the name is the one in the URL kept: a task gone since, or a page moved to another, still says it; the screen
 // it leads to tells. Read the task if that comes to mislead
-export function backOf(kept: string): Back {
-  const url = new URL(kept, 'http://floe.invalid');
+export function backOf(kept: string, origin: string): Back {
+  const url = new URL(kept, origin);
   const task = url.searchParams.get('task') ?? '';
   const href = url.pathname + url.search;
   if (url.pathname !== TASKS_PATH) return { href, to: 'pages', task: '' };

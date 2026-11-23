@@ -21,7 +21,7 @@ describe(frameUp, () => {
       here: () => '/?view=fav',
     });
     order.keepRows(['p'], ['p']);
-    const up = frameUp(backOf(order.keptBack()), order);
+    const up = frameUp(backOf(order.keptBack(), 'http://127.0.0.1:7325'), order);
     up.onPress();
     expect(up.href).toBe('/?view=fav');
     expect(order.keptOrder()).toMatchObject({ pressed: true });

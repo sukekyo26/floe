@@ -7,7 +7,7 @@ import { backOf } from '@/utils/back';
 
 const draw = (kept: string) => {
   testBoot();
-  return renderToString(<BackLink back={backOf(kept)} onPress={() => undefined} />);
+  return renderToString(<BackLink back={backOf(kept, 'http://127.0.0.1:7325')} onPress={() => undefined} />);
 };
 
 describe(BackLink, () => {

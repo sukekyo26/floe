@@ -54,11 +54,11 @@ export function FrameRoute() {
 
   // Where the page goes back to, as the rows that opened it kept it, read anew for a page come back to from the
   // browser's memory; a press of the link that goes there keeps that the rows go on (order.comeBack)
-  const [back, setBack] = useState(() => backOf(order.keptBack()));
+  const [back, setBack] = useState(() => backOf(order.keptBack(), window.location.origin));
   useEffect(() => {
     const shown = (e: PageTransitionEvent) => {
       if (!e.persisted) return;
-      setBack(backOf(order.keptBack()));
+      setBack(backOf(order.keptBack(), window.location.origin));
       const now = openPage.frameAt();
       if (now) order.keepAt(now);
     };
