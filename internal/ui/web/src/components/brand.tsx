@@ -14,7 +14,7 @@ export function Brand({
       data-testid="brand"
       href={href}
       title={t('ui_to_page_list')}
-      className={`flex flex-none items-center gap-2.5 text-[1.2rem] leading-none font-extrabold tracking-[-0.03em] text-fg no-underline ${markAlone ? 'narrow:gap-0 narrow:text-[0]' : ''}`}
+      className={`flex flex-none items-center gap-2.5 text-[1.2rem] leading-none font-extrabold tracking-[-0.03em] text-fg no-underline ${markAlone ? 'narrow:gap-0 narrow:text-[0px]' : ''}`}
     >
       <svg
         viewBox="0 0 64 64"
