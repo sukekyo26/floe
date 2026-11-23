@@ -224,7 +224,6 @@ func TestFrameVersion(t *testing.T) {
 	writeFiles(t, filepath.Join(e.home, "proj"), map[string]string{"h.html": "<title>h</title>", "docs/a.html": "<p>a</p>"})
 	want(t, e.write(t, http.MethodPost, "/api/pages", server.Link{Path: filepath.Join(e.home, "proj", "h.html")}), http.StatusCreated, `"slug":"h"`)  //nolint:exhaustruct // the rest not given
 	want(t, e.write(t, http.MethodPost, "/api/pages", server.Link{Path: filepath.Join(e.home, "proj", "docs")}), http.StatusCreated, `"slug":"docs"`) //nolint:exhaustruct // the rest not given
-	said := regexp.MustCompile(`data-version="([^"]*)"`)
 	for _, c := range []struct {
 		target string
 		status int
@@ -246,12 +245,8 @@ func TestFrameVersion(t *testing.T) {
 		{"/a/none/?v=3", http.StatusNotFound, ""},
 	} {
 		w := e.do(t, http.MethodGet, c.target, "")
-		got := ""
-		if m := said.FindStringSubmatch(w.Body.String()); m != nil {
-			got = m[1]
-		}
-		if w.Code != c.status || got != c.want {
-			t.Errorf("%s: %d data-version %q; want %d %q", c.target, w.Code, got, c.status, c.want)
+		if got := bootOf(t, w).Version; w.Code != c.status || got != c.want {
+			t.Errorf("%s: %d version %q; want %d %q", c.target, w.Code, got, c.status, c.want)
 		}
 	}
 }
