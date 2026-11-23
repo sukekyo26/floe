@@ -143,6 +143,22 @@ func TestUIFind(t *testing.T) { //nolint:paralleltest // the browser tests share
 	b.reread()
 	b.until("the row", "document.querySelector('#find-list li')")
 	out = append(out, b.eval(findDrawn))
+	// Rows, none and then rows again: the place reached before none is reached again, not the first (ui.html findAt).
+	three := js(`[{"slug":"a","title":"A","description":"","updatedAt":"2026-01-03T00:00:00.000Z"},` +
+		`{"slug":"b","title":"B","description":"","updatedAt":"2026-01-02T00:00:00.000Z"},` +
+		`{"slug":"c","title":"C","description":"","updatedAt":"2026-01-01T00:00:00.000Z"}]`)
+	b.eval("window.list = " + three)
+	b.reread()
+	b.until("the rows", "document.querySelectorAll('#find-list li').length === 3")
+	keyDown(b, "key: 'ArrowDown'")
+	keyDown(b, "key: 'ArrowDown'")
+	out = append(out, b.eval(findDrawn))
+	drop("abc")
+	out = append(out, b.eval(findDrawn))
+	b.eval("window.list = " + three)
+	b.reread()
+	b.until("the rows back", "document.querySelectorAll('#find-list li').length === 3")
+	out = append(out, b.eval(findDrawn))
 	b.eval("document.querySelector('#find [data-close]').click()")
 	out = append(out, b.eval("document.getElementById('find').open"))
 	// Enter opens the row whole, wherever the window was.
@@ -172,7 +188,10 @@ func TestUIFind(t *testing.T) { //nolint:paralleltest // the browser tests share
 		"true / a[f] / Folder / Newest first",
 		"true /  / - / 0 found",
 		"/ 0",
-		"true / [a] / A / Newest first", "false",
+		"true / [a] / A / Newest first",
+		"true / ab[c] / C / Newest first",
+		"true /  / - / 0 found",
+		"true / ab[c] / C / Newest first", "false",
 	}, "|"))
 }
 
