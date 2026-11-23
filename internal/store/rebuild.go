@@ -129,8 +129,8 @@ func redraw(session drawproc.Session, slug string, m *Meta, dir string) (*drawn,
 		got.template = d.Template
 	}
 	had := filepath.Join(dir, pageName)
-	// The page it had is read only to tell whether the drawing changed: one gone (as a store develop wrote) is drawn
-	// and written, as a page that changed
+	// The page it had is read only to tell whether the drawing changed: one gone, whatever took it, is drawn and
+	// written as a page that changed
 	old, _, err := files.Read(had)
 	if err != nil && !errors.Is(err, fs.ErrNotExist) {
 		return got, usererr.CannotRead(had, err) //nolint:wrapcheck // as above
