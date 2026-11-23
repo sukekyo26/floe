@@ -899,7 +899,7 @@ func TestUIFrameBarFits(t *testing.T) { //nolint:paralleltest // the browser tes
 	s := diffSite(t)
 	b := s.b
 	defer b.unsize()
-	var out []string
+	out := make([]string, 0, 4)
 	for _, width := range []int64{320, 390, 700} {
 		b.size(width, 800, width < 640)
 		b.navigate("/a/d/")
