@@ -12,7 +12,7 @@ if (root !== null) {
     setBoot(readBoot(document.getElementById('boot')?.textContent));
     createRoot(root).render(
       <StrictMode>
-        <App />
+        <App search={window.location.search} />
       </StrictMode>,
     );
   } catch (err) {
