@@ -2000,7 +2000,7 @@ func TestGraphShapes(t *testing.T) {
 	}{
 		{"testdata/graph/flow.yaml", nil},
 		{"testdata/graph/fan.yaml", map[[2]string]int{{"c", "hub"}: 0, {"x", "a"}: 2}},
-		{"testdata/graph/aws-level.yaml", map[[2]string]int{{"writer", "reader"}: 0}},
+		{"testdata/aws-level.yaml", map[[2]string]int{{"writer", "reader"}: 0}},
 		{"examples/state.yaml", map[[2]string]int{
 			{"stopped", "running"}: 0, {"running", "outdated"}: 0, {"outdated", "running"}: 0, {"running", "stopped"}: 0,
 			{"outdated", "stopped"}: 0,
