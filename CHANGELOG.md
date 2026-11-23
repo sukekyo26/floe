@@ -12,6 +12,7 @@ adheres to [Semantic Versioning](https://semver.org/).
 
 ### Changed
 
+- Change `level: true` edges of a `graph` to join boxes and icons of any two groups, as between availability zones (they were refused unless in one group or directly in two lanes). The lowest group holding both is laid out as lanes are: its groups stand as written, and the ends face each other. Something standing between the two after layout is told by name; the heading of any group, not only of a lane, is checked laid out `right`.
 - Change the row of the management page's list whose page is open beside the list: a screen reader now tells it as the current one (`aria-current`).
 - Change an item that `prefixItems` takes in a list whose schema has `items` beside it (draft 2020-12): it now comes to `page.html` and `part.html` as written, as an item under `prefixItems` alone does, and a key the schema declares but the item leaves out is not there, not nil. Read such a key with `index` (`{{with index . "more"}}…{{end}}`): a page that read it as `.more` is now refused with `map has no entry`.
 - Change a YAML mistake told on the line right after a `|` or `>` text, as when the text's first line is deeper than a line after it: after the YAML library's words, floe now says that the text ends before that line and how to mend it (indent the text's lines alike, or write its indentation as in `|2`). The words before and the place are as they were.
