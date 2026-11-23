@@ -79,8 +79,8 @@ func uiBars(t *testing.T, lang i18n.Lang, msg func(string, ...any) string) {
 		unlink := b.eval(bulk)
 		out = append(out, fmt.Sprintf("%d %s %v / %s / %s / %s", width, fit, before == after, selected, armed, unlink))
 		// The words always show, the clearing's short ones last, pinned to the end (S422-P5d)
-		clear := "/" + msg("ui_clear_short")
-		words, confirm, unlinkConfirm := all+clear, msg("ui_delete_bulk_confirm", 2)+clear, msg("ui_unlink_bulk_confirm", 2)+clear
+		clearing := "/" + msg("ui_clear_short")
+		words, confirm, unlinkConfirm := all+clearing, msg("ui_delete_bulk_confirm", 2)+clearing, msg("ui_unlink_bulk_confirm", 2)+clearing
 		want = append(want, fmt.Sprintf("%d true true / 5 true %s true / 2 true %s true / 2 true %s true", width, words, confirm, unlinkConfirm))
 	}
 	b.unsize()

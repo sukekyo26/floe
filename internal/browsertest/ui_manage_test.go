@@ -586,7 +586,8 @@ func uiExtras(t *testing.T, lang i18n.Lang, msg func(string, ...any) string) {
 			return [shelf, ` + js(id) + `, n, inside].join(' ');
 		})()`)
 	}
-	shelves := []string{narrowest(b, "add-link")}
+	shelves := make([]string, 0, 2)
+	shelves = append(shelves, narrowest(b, "add-link"))
 	tasks := &site{Site: servetest.Start(t, nil)}
 	tasks.b = newBrowser(t, tasks.Base, lang)
 	tasks.floe(t, "publish", tasks.page(t, "p.yaml", "P", ""), "--slug", "p")
