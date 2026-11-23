@@ -123,7 +123,7 @@ func TestUITaskCategories(t *testing.T) { //nolint:paralleltest // the browser t
 	open("S300")
 	say("groups", groups)
 	say("keys apart", "(() => { const keys = [...document.querySelectorAll('#list li')].map((li) => li.dataset.key); return new Set(keys).size === keys.length; })()")
-	say("named", "document.querySelector('#list li[data-key=\"group:リリース\"] .category-add').getAttribute('aria-label')")
+	say("named", "document.querySelector('#list li[data-key=\"group:リリース\"] [data-testid=category-add]').getAttribute('aria-label')")
 	// The modal: none reached, so Enter puts nothing; the pages of the project, not archived, not of this category, each saying where it is.
 	add("リリース")
 	say("opened", "document.getElementById('add-page-title').textContent + ' / ' + document.getElementById('add-page-target').textContent + ' / ' + document.activeElement.id + ' / ' + document.getElementById('add-page-q').getAttribute('aria-activedescendant')")

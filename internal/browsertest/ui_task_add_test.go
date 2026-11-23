@@ -33,7 +33,8 @@ func TestUITaskAdd(t *testing.T) { //nolint:paralleltest // the browser tests sh
 		return got
 	}
 	const (
-		seen   = "(id) => document.getElementById(id).getClientRects().length > 0"
+		// Shown: there and drawn; a screen that places no such button (a task's page, the React screens' task list) has none
+		seen   = "(id) => (document.getElementById(id)?.getClientRects().length ?? 0) > 0"
 		dialog = "document.getElementById('kin-dialog')"
 		said   = "['kin-heading', 'kin-target', 'kin-note', 'kin-error'].map((id) => { const e = document.getElementById(id); return e.hidden ? '-' : e.textContent; }).join(' | ') + ' | title ' + !document.getElementById('kin-title').closest('[hidden]') + ' | ' + document.getElementById('kin-submit').textContent"
 		list   = "location.search + ' ' + document.querySelector('#list li[data-fresh=true] [data-testid=tname]')?.textContent + ' ' + (document.activeElement === document.querySelector('#list li[data-fresh=true] [data-testid=title]')) + ' ' + [...document.querySelectorAll('#toasts [data-testid=toast-link]')].at(-1)?.textContent + ' ' + [...document.querySelectorAll('#toasts [data-testid=toast-link]')].at(-1)?.getAttribute('href')"

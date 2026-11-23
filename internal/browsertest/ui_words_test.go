@@ -36,10 +36,19 @@ func openScreen(b *browser, path string) {
 
 // A dialog's close button says Cancel where a submit button saves what is typed, which closing throws away, and Close where nothing is;
 // a question's says No. The dialogs are read on each screen, as it has them, in each language.
+// The settings' words are those of the part it opens on, its list, which saves nothing: Close. ui.html has its template's
+// Cancel till it is first opened, the React screens the list's from the start (S422-P8).
 // LIMIT: read as the screens hold them closed; a screen that puts a dialog in only as it opens would need it opened.
+// LIMIT: while ui.html serves some screens, each build has its own dialogs (#boot tells the React build's). Make it one
+// list as the last screen leaves ui.html (S422-P11)
 func TestUIDialogCloseWords(t *testing.T) { //nolint:paralleltest // the browser tests share one Chrome, one at a time
-	want := []string{
+	old := []string{
 		"add-dialog", "add-page-dialog", "edit-dialog", "edit-task-dialog", "filter-dialog", "find", "keys", "kin-dialog", "move-dialog",
+		"set-dialog", "settings", "tag-dialog",
+	}
+	// A task's page: no shelf (filter-dialog) and no link to add (add-dialog); the add modal of the task's edit
+	taskPage := []string{
+		"add-page-dialog", "edit-add-dialog", "edit-dialog", "edit-task-dialog", "find", "keys", "kin-dialog", "move-dialog",
 		"set-dialog", "settings", "tag-dialog",
 	}
 	inEveryLanguage(t, func(t *testing.T, lang i18n.Lang, msg func(string, ...any) string) {
@@ -48,6 +57,11 @@ func TestUIDialogCloseWords(t *testing.T) { //nolint:paralleltest // the browser
 		s, screens := wordsSite(t, lang)
 		for _, path := range screens {
 			openScreen(s.b, path)
+			react := s.b.eval("String(document.getElementById('boot') !== null)") == "true"
+			want := old
+			if react {
+				want = taskPage
+			}
 			var got [][]json.RawMessage
 			if err := json.Unmarshal([]byte(s.b.eval(`JSON.stringify([...document.querySelectorAll('dialog')].map((d) => [d.id,
 				[...d.querySelectorAll('button')].some((b) => b.getAttribute('type') === 'submit'),
@@ -69,6 +83,9 @@ func TestUIDialogCloseWords(t *testing.T) { //nolint:paralleltest // the browser
 				}
 				if id == "move-dialog" {
 					word = msg("ui_no")
+				}
+				if id == "settings" && react {
+					word = msg("ui_close")
 				}
 				if !slices.Equal(closers, []string{word}) {
 					t.Errorf("%s, %s: close buttons %q, want one %q", path, id, closers, word)

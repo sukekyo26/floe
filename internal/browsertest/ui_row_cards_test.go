@@ -47,8 +47,13 @@ func TestUIRowCards(t *testing.T) { //nolint:paralleltest // the browser tests s
 		t.Helper()
 		out = append(out, what+": "+b.eval(expr))
 	}
-	// A value of a :root variable as the browser computes it for the property named
-	const as = `((prop, value) => { const e = document.createElement('div'); e.style[prop] = value; document.body.append(e); const got = getComputedStyle(e)[prop]; e.remove(); return got; })`
+	// A value of a :root variable as the browser computes it for the property named. Named as ui.html names it; the React
+	// screens (#boot) name the same values their own way. A variable of no value throws, so that nothing is met by an empty one
+	// LIMIT: the names of both builds while ui.html serves some screens. Keep the React ones alone as it goes (S422-P11)
+	const as = `((prop, value) => { const names = { '--bg': '--color-bg', '--hover': '--color-hover', '--line': '--color-line', '--new': '--color-new', '--new-soft': '--color-new-soft', '--corner-menu': '--radius-menu', '--shadow-sm': '--shadow-sm' };
+		const old = /^var\((--[a-z-]+)\)$/.exec(value)[1], name = document.getElementById('boot') ? names[old] : old;
+		if (!name || getComputedStyle(document.documentElement).getPropertyValue(name).trim() === '') throw new Error('no value of ' + old);
+		const e = document.createElement('div'); e.style[prop] = 'var(' + name + ')'; document.body.append(e); const got = getComputedStyle(e)[prop]; e.remove(); return got; })`
 	const card = `((li) => { const st = getComputedStyle(li); return [st.borderTopWidth, st.borderTopLeftRadius === ` + as + `('borderTopLeftRadius', 'var(--corner-menu)'), st.boxShadow === ` + as + `('boxShadow', 'var(--shadow-sm)')].join(' '); })`
 	// Each row's place after the one above: C a card, T a folder's row, G a heading, with the room between them
 	const gaps = `(() => { const rows = [...document.querySelectorAll('#list > li')], r = (e) => e.getBoundingClientRect();
@@ -116,7 +121,7 @@ func TestUIRowCards(t *testing.T) { //nolint:paralleltest // the browser tests s
 		"chosen: true false",
 		"ground: true",
 		"rose: entry:late",
-		"gaps: C0 T0 T0 T0 C6 G0 C0 C6",
+		"gaps: G0 C0 T0 T0 T0 C6 G0 C0 C6",
 		"headings: true true 0px none",
 		"folder: 0px 0px 1px 0px 1px true 0 0 0",
 		"within: true true true false",

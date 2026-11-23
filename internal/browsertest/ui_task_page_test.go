@@ -300,7 +300,7 @@ func TestUITaskPage(t *testing.T) { //nolint:paralleltest // the browser tests s
 	}{{1400, true}, {960, true}, {880, false}} {
 		b.size(c.width, 800, false)
 		beside := b.eval("document.getElementById('reader').offsetParent !== null") == "true"
-		shelf := b.eval("document.getElementById('shelf').offsetParent !== null") == "true"
+		shelf := b.eval("document.getElementById('shelf')?.offsetParent != null") == "true"
 		over := b.eval("document.documentElement.scrollWidth > innerWidth") == "true"
 		if beside != c.beside || shelf || over {
 			t.Errorf("width %d: beside %t, shelf %t, past the edge %t", c.width, beside, shelf, over)

@@ -358,7 +358,8 @@ func loadMistakes(t *testing.T, s *site, st *store.Store, msg func(string, ...an
 		t.Helper()
 		b.untilRead(b.acted(set+"; "+poll), "the read", "true")
 	}
-	parts := strings.SplitN(msg("ui_draw_failed", "\x00"), "\x00", 2)
+	// The task page is the React screen's, which says a draw that throws as the screen's (S422-P8)
+	parts := strings.SplitN(msg("ui_screen_draw_failed", "\x00"), "\x00", 2)
 	sayDraw := func(what string) {
 		t.Helper()
 		got := b.eval(shown)

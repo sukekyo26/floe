@@ -179,7 +179,7 @@ func TestUITaskList(t *testing.T) { //nolint:paralleltest // the browser tests s
 	// A link of each URL, in order
 	say("link", "[...document.querySelector('#list > li').querySelectorAll('[data-testid=xlink]')].map((a) => [a.textContent, a.href, a.target, a.rel, a.title].join(' ')).join(' | ')")
 	say("current", "document.getElementById('to-tasks').getAttribute('aria-current')")
-	say("search shown", "document.getElementById('search').hidden + ' ' + (document.getElementById('find-open').offsetParent !== null)")
+	say("search shown", "(document.getElementById('search')?.hidden ?? true) + ' ' + (document.getElementById('find-open').offsetParent !== null)")
 	say("chips", "[...document.querySelectorAll('#chips > button')].map((c) => c.textContent + ' ' + c.getAttribute('aria-pressed') + ' ' + c.style.getPropertyValue('--c')).join(', ')")
 
 	// j and k: the focus alone, nothing beside the list and nothing read.
