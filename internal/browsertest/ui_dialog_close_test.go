@@ -621,17 +621,21 @@ func TestUIDialogClose(t *testing.T) { //nolint:paralleltest // the browser test
 	until("filter-dialog", true)
 	b.eval("document.getElementById('add-link').focus(); document.getElementById('add-link').click()")
 	until("add-dialog", true)
+	// The add modal opened has the focus, on either build; the React build draws it open in a microtask after the press, so the
+	// close of the filters reads the focus still on the filters' button there, as no person can see (FILTER_ADD)
+	b.until("the focus in the add modal", "document.activeElement?.id === 'add-path'")
 	b.pressKey(kb.Escape)
 	until("add-dialog", false)
 	say("filter, a button of the shelf, then escape")
 
 	// Saved from a row found, the focus goes back to the row where the rows are kept (the React build, #boot), to the body
 	// where the save's read draws them anew (ui.html)
-	back := "body"
+	back, filterAdd := "body", "add-dialog add-path"
 	if b.eval("document.getElementById('boot') !== null") == "true" {
-		back = "list A T memo-a"
+		back, filterAdd = "list A T memo-a", "narrow-filter"
 	}
-	check(t, "closed", out, strings.ReplaceAll(strings.Join(dialogCloseWant, "|"), "SAVED_BACK", back))
+	want := strings.ReplaceAll(strings.Join(dialogCloseWant, "|"), "SAVED_BACK", back)
+	check(t, "closed", out, strings.ReplaceAll(want, "FILTER_ADD", filterAdd))
 }
 
 var dialogCloseWant = []string{
@@ -710,7 +714,7 @@ var dialogCloseWant = []string{
 	"keys, escape: keys > keys-open",
 	"add-dialog, escape: add-dialog > add-link",
 	"filter, escape: filter-dialog > narrow-filter",
-	"filter, a button of the shelf, then escape: filter-dialog > add-dialog add-path, add-dialog > narrow-filter",
+	"filter, a button of the shelf, then escape: filter-dialog > FILTER_ADD, add-dialog > narrow-filter",
 }
 
 // applyNewTag marks the tag typed in #tag-find as new and sends it.

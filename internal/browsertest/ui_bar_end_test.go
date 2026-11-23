@@ -57,7 +57,8 @@ func TestUIBarEnd(t *testing.T) { //nolint:paralleltest // the browser tests sha
 	out = append(out, b.eval(barShown+".join(' ')"), b.eval("['settings-open', 'keys-open'].map((id) => getComputedStyle(document.getElementById(id)).display).join(' ')"))
 
 	check(t, "bar end", out, strings.Join([]string{
-		"server", "frame-actions news find-open keys-open settings-open", "keys-open settings-open",
+		// The list's bar has no frame's buttons and no way to the search modal beside its search field (S422-P9)
+		"server", "news keys-open settings-open", "keys-open settings-open",
 		"false true none status", "true false dot status", "true true true true true",
 		"true", "true true true false true", "false true none status",
 		"frame-actions", "none none",

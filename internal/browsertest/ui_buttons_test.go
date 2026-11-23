@@ -19,7 +19,7 @@ import (
 // (the brand, a row's title in the list and the search, a row's task and tags, a task's parent and children, the diff's contents,
 // the bar's count of the unread, a link of words: the user's choice, S422-P8), nor tabs (role=tab: the help's switches, as the
 // React screen makes them). The React screens' bar's links to the screens (#screens a, links of a nav in the look of the help's
-// tabs: the user's choice, S422-P8) are left out there alone: ui.html's are of the table below
+// tabs: the user's choice, S422-P8) are left out there alone: ui.html's frame does not show its own
 const notButtons = "#shelf *, #filter-dialog #shelf-more *, [data-testid=settings-item], #settings-back, [data-testid=menu] *, " +
 	"[data-testid=brand], #list li [data-testid=title], #find-list li [data-testid=title], [data-testid=task-tag], #list li [data-testid=tagpill], [data-testid=kin-row], #diff-toc button, [role=tab], #news"
 
@@ -30,14 +30,11 @@ const reactOnly = "#screens a"
 const wordsOnly = "#task-up"
 
 // LIMIT: buttons of words in another form than .btn, neither a row nor a mark, on ui.html's screens. The user's decisions (S425,
-// S422-P8): the bar's two ways to the screens become links of a nav in the look of the help's tabs (reactOnly), the rest take the
-// form of .btn. ui.html is not mended while it is rebuilt, so they pass on its screens; the React screens are measured by the rule
-// (#boot tells their build), and each row goes as its last ui.html screen does (one not found there fails to tell so).
+// S422-P8): they take the form of .btn. ui.html is not mended while it is rebuilt, so they pass on its screens; the React screens
+// are measured by the rule (#boot tells their build), and each row goes as its last ui.html screen does (one not found there fails
+// to tell so).
 var otherForm = map[string]string{
-	"to-list":    "the bar's way to the page list: a link of a nav in React",
-	"to-tasks":   "the bar's way to the task list: a link of a nav in React",
-	"bulk-clear": "the bar of the selected: its round button that lets them go",
-	"back":       "the bar of a page whole: its round way back",
+	"back": "the bar of a page whole: its round way back",
 }
 
 func TestUIButtons(t *testing.T) { //nolint:paralleltest // the browser tests share one Chrome, one at a time
@@ -207,7 +204,8 @@ func TestUIButtons(t *testing.T) { //nolint:paralleltest // the browser tests sh
 		b.eval("document.getElementById('set-submit').click()")
 	})
 	closeModal("set-dialog")
-	modal("find", press("#find-open"))
+	// The list's search field stands for the bar's way to the search modal, which Ctrl+K opens
+	modal("find", func() { keyDown(b, "key: 'k', ctrlKey: true") })
 	modal("keys", func() { b.pressKey("?") })
 	help("the page list")
 	modal("settings", press("#settings-open"))
@@ -324,8 +322,31 @@ func TestUIButtons(t *testing.T) { //nolint:paralleltest // the browser tests sh
 	b.eval("document.getElementById('task-family-word').textContent = 'The child tasks of this task, a heading long enough to take more than its line'")
 	check("a long heading of a card")
 
-	// The diff and a page not found, last: publishing a again may take it off its task
+	// ui.html's modals, on the one screen it serves: a page whole. Opened again, as read: the toast of the first opening moves
+	// into a modal opened, its button out of the modal's box (S445)
 	b.size(1400, 800, false)
+	b.navigate("/a/a/")
+	b.until("read", "document.querySelector('[data-testid=toast]')")
+	b.navigate("/a/a/")
+	b.until("the bar", "document.querySelector('#frame-actions [data-testid=task-set]')")
+	frameMenu := func(item string) func() {
+		return func() { pressMenuItem(b, "#frame-actions", item) }
+	}
+	modal("find", func() { keyDown(b, "key: 'k', ctrlKey: true") })
+	modal("keys", func() { b.pressKey("?") })
+	modal("settings", frameMenu("theme-item"))
+	modal("tag-dialog", frameMenu("tag-item"))
+	modal("edit-dialog", frameMenu("edit"))
+	modal("set-dialog", frameMenu("task-set"))
+	modal("move-dialog", func() {
+		frameMenu("task-set")()
+		b.until("the set modal", "document.getElementById('set-dialog').open")
+		b.fill("#set-task", "#2")
+		b.eval("document.getElementById('set-submit').click()")
+	})
+	closeModal("set-dialog")
+
+	// The diff and a page not found, last: publishing a again may take it off its task
 	s.floe(t, "publish", s.page(t, "a.yaml", "T a", "<p>two</p>"), "--slug", "a")
 	b.navigate("/a/a/?diff")
 	b.until("the diff", "!document.getElementById('diff-main').hidden")
@@ -344,10 +365,14 @@ func TestUIButtons(t *testing.T) { //nolint:paralleltest // the browser tests sh
 	}
 
 	// A modal with no way here is a modal not measured: each a screen of each build holds, opened on one of that build
-	// LIMIT: ui.html still holds the modals of a task's page, which only /tasks opens and React serves. Drop this as ui.html goes (S422-P11)
-	tasksOnly := map[string]bool{"ui.html edit-task-dialog": true, "ui.html kin-dialog": true, "ui.html add-page-dialog": true}
+	// LIMIT: ui.html still holds the modals of the task list and of the page list, which only /tasks and / open, both served by
+	// React. Drop this as the frame leaves ui.html (S422-P10) and ui.html goes (S422-P11)
+	notOpened := map[string]bool{
+		"ui.html edit-task-dialog": true, "ui.html kin-dialog": true, "ui.html add-page-dialog": true,
+		"ui.html add-dialog": true, "ui.html filter-dialog": true,
+	}
 	for d := range present {
-		if !opened[d] && !tasksOnly[d] {
+		if !opened[d] && !notOpened[d] {
 			t.Errorf("the %s modal is not measured on a screen of its build", d)
 		}
 	}
