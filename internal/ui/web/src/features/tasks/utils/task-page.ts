@@ -59,9 +59,9 @@ export interface Group {
 
 const madeAt = (a: Page): number => Date.parse(a.createdAt || a.updatedAt);
 
-// taskGroups is the rows of a task's page (ui.html taskGroups): first no category, with what is on no category of the
-// task's, as a hand edit leaves, then each category in its order; each there with no page too. Within each, what is
-// archived after the rest, each as first published
+// taskGroups is the rows of a task's page: first no category, with what is on no category of the task's, as a hand
+// edit leaves, where it has pages; then each category in its order, with no page too. Within each, what is archived
+// after the rest, each as first published
 export function taskGroups(task: TaskOf): Group[] {
   const order = task.categories ?? [];
   const none: Page[] = [];
@@ -70,7 +70,8 @@ export function taskGroups(task: TaskOf): Group[] {
     (x, y) => Number(Boolean(x.archived)) - Number(Boolean(y.archived)) || madeAt(x) - madeAt(y),
   );
   for (const a of pages) (by.get(a.task?.category ?? '') ?? none).push(a);
-  return [{ category: '', entries: none }, ...order.map((category) => ({ category, entries: by.get(category) ?? [] }))];
+  const groups = order.map((category) => ({ category, entries: by.get(category) ?? [] }));
+  return none.length > 0 ? [{ category: '', entries: none }, ...groups] : groups;
 }
 
 export interface Family {

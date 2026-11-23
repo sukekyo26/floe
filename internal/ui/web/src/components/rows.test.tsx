@@ -7,13 +7,7 @@ import { testBoot } from '@/components/test-boot';
 const items: RowItem[] = [
   { kind: 'group', key: 'group:Today', heading: 'Today' },
   { kind: 'row', key: 'entry:a', titled: true, render: (kept) => <li key="a">{kept ? 'kept' : 'new'}</li> },
-  {
-    kind: 'group',
-    key: 'group:Plans',
-    heading: 'Plans',
-    add: { onAdd: () => undefined, label: 'Add a page to Plans' },
-    empty: 'none yet',
-  },
+  { kind: 'group', key: 'group:Plans', heading: 'Plans', empty: 'none yet' },
 ];
 
 describe(Rows, () => {
@@ -25,9 +19,7 @@ describe(Rows, () => {
     expect(html).toMatch(
       /<li data-key="group:Today" data-testid="group" role="none"[^>]*><div role="heading" aria-level="2">Today<\/div>/,
     );
-    expect(html).toMatch(
-      /data-testid="group" data-adds="true".*data-testid="category-add".*data-testid="category-empty"[^>]*>none yet/s,
-    );
+    expect(html).toMatch(/data-key="group:Plans".*data-testid="category-empty"[^>]*>none yet/s);
     expect([
       html.includes('<li>new</li>'),
       renderToString(<Rows items={items} selecting />).includes('data-selecting="true"'),

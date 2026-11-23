@@ -156,7 +156,10 @@ func TestUIDialogHold(t *testing.T) { //nolint:paralleltest // the browser tests
 		{"edit", "edit-dialog", "/", rowMenu("plan-a", "edit"), func() { typed("#edit-desc", "d"+fresh(), "document.getElementById('edit-submit').click()")() }, true},
 		{"set", "set-dialog", "/", rowMenu("plan-a", "task-set"), typed("#set-category", "実装", "document.getElementById('set-submit').click()"), true},
 		{"off", "set-dialog", "/", rowMenu("check-a", "task-set"), run("document.getElementById('set-out').click()"), true},
-		{"add page", "add-page-dialog", "/tasks?project=proj&task=S300", run("const a = document.querySelector('#list li[data-key=\"group:実装\"] [data-testid=category-add]'); a.focus(); a.click()"), typed("#add-page-q", "memo", "document.querySelector('#add-page-list li').click()"), true},
+		{"add page", "add-page-dialog", "/tasks?project=proj&task=S300", run("const a = document.getElementById('task-add-page'); a.focus(); a.click()"), func() {
+			chooseValue(b, "add-page-category", "実装")
+			typed("#add-page-q", "memo", "document.querySelector('#add-page-list li').click()")()
+		}, true},
 		{"kin", "kin-dialog", "/tasks?project=proj&task=S300", run("document.getElementById('task-child').focus(); document.getElementById('task-child').click()"), typed("#kin-task", "S301", "document.getElementById('kin-submit').click()"), true},
 		{"task edit", "edit-task-dialog", "/tasks?project=proj&task=S300", run("document.getElementById('task-edit').focus(); document.getElementById('task-edit').click()"), func() {
 			typed("#edit-task-title", "Held "+fresh(), "document.getElementById('edit-task-submit').click()")()
@@ -391,7 +394,7 @@ var dialogHoldWant = []string{
 	"off, held: true none 0 / sent 1",
 	"off, answered: false closerequest 6 / toast Undo / sent 1",
 	"add page, held: true none 0 / sent 1",
-	"add page, answered: false closerequest 2 / list Add a page to 実装 / sent 1",
+	"add page, answered: false closerequest 3 / task-add-page / sent 1",
 	"kin, held: true none 0 / sent 1",
 	"kin, answered: false closerequest 5 / task-child / sent 1",
 	"task edit, held: true none 0 / sent 1",

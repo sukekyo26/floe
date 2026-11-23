@@ -5,13 +5,18 @@ import { appKeys, pressDiff, pressStar, pressUp } from '@/app/keys';
 import { freeToOpen, useScreenModals } from '@/app/modals';
 import { PageReader } from '@/app/routes/reader';
 import { moveRow } from '@/components/focus-places';
+import { getBoot } from '@/config/boot';
 import { ReaderPane } from '@/features/reader/components/reader-pane';
 import { AddPageDialog, type AddPageOpen } from '@/features/tasks/components/add-page-dialog';
 import { TaskEditDialog, type TaskEditOpen } from '@/features/tasks/components/task-edit-dialog';
 import { TaskListScreen } from '@/features/tasks/components/task-list-screen';
 import { TaskPageScreen, type TaskOpeners } from '@/features/tasks/components/task-page-screen';
+import { useTaskPage } from '@/features/tasks/hooks/use-task-page';
+import { taskRowKey } from '@/features/tasks/utils/task-list';
+import { taskListHref } from '@/features/tasks/utils/task-page';
 import { useKeys } from '@/hooks/use-keys';
 import { useRowKeys } from '@/hooks/use-row-keys';
+import { listQuery } from '@/stores/list-query';
 
 const NO_READER = <ReaderPane at={null} page={null} keys={new Set()} onKey={() => undefined} />;
 
@@ -27,10 +32,23 @@ export function TasksRoute({ name }: { readonly name: string | null }) {
     onTaskEdit: (task, back) => {
       setTaskEdit({ task, back });
     },
-    onAddPage: (task, category, back) => {
-      if (freeToOpen()) setAdding({ task, category, back });
+    onAddPage: (task, back) => {
+      if (freeToOpen()) setAdding({ task, back });
     },
   };
+  // A task's page: its task as read, and the bar's task list going to the list at the task's state, its row kept to come
+  // back to (it stands as the page opens: h may be pressed before the first answer)
+  const view = useTaskPage(name ?? '');
+  const first = getBoot().states.find((s) => s.first)?.name ?? '';
+  const taskUp =
+    name === null
+      ? undefined
+      : {
+          href: taskListHref(view.project, view.head?.state, first),
+          onPress: () => {
+            listQuery.keepFrom(taskRowKey(view.project, name));
+          },
+        };
 
   const rows = useRowKeys({ move: moveRow });
   const keys = appKeys({
@@ -51,6 +69,7 @@ export function TasksRoute({ name }: { readonly name: string | null }) {
     <>
       <Bar
         tasks
+        taskUp={taskUp}
         onFind={openFind}
         onHelp={() => {
           openHelp('about');
@@ -64,6 +83,7 @@ export function TasksRoute({ name }: { readonly name: string | null }) {
         ) : (
           <TaskPageScreen
             name={name}
+            view={view}
             openers={openers}
             taskOpeners={taskOpeners}
             reader={

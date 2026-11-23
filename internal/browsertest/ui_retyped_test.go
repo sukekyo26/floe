@@ -49,8 +49,9 @@ func TestUIRetyped(t *testing.T) { //nolint:paralleltest // the browser tests sh
 	b.pressKey(kb.Escape)
 	b.until("the edit closed", "!document.getElementById('edit-task-dialog').open")
 
-	b.eval("document.querySelector('#list li[data-key=\"group:c\"] [data-testid=category-add]').click()")
+	b.eval("document.getElementById('task-add-page').click()")
 	b.until("add a page", "document.getElementById('add-page-dialog').open")
+	chooseValue(b, "add-page-category", "c")
 	b.fill("#add-page-q", "memo")
 	b.pressKey(kb.ArrowDown)
 	b.pressKey(kb.Enter)

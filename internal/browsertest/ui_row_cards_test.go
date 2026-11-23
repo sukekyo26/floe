@@ -82,15 +82,15 @@ func TestUIRowCards(t *testing.T) { //nolint:paralleltest // the browser tests s
 	b.still()
 	say("rose", "rose.join(',')")
 
-	// A task's page with its folder open: the margins, the headings' words and add buttons, the folder one card, its row chosen and
+	// A task's page with its folder open: the margins, the headings' words, the folder one card, its row chosen and
 	// pointed at within it.
 	b.eval("localStorage.setItem('list.open', JSON.stringify(['fold']))")
 	b.navigate("/tasks?project=demo&task=S1")
 	b.until("the folder's rows", "document.querySelectorAll('#list li[data-testid=tree]').length === 3")
 	b.still()
 	say("gaps", gaps)
-	say("headings", `(() => { const r = (e) => e.getBoundingClientRect(), head = document.querySelector('#list li[data-testid=group]:has([data-testid=category-add])'), first = document.querySelector('#list li[data-slug=plan]');
-		return [r(head.querySelector('[role=heading]')).left === r(first.querySelector('[data-testid=lead]')).left, r(head.querySelector('[data-testid=category-add]')).right === r(first).right,
+	say("headings", `(() => { const r = (e) => e.getBoundingClientRect(), head = document.querySelector('#list li[data-testid=group]'), first = document.querySelector('#list li[data-slug=plan]');
+		return [r(head.querySelector('[role=heading]')).left === r(first.querySelector('[data-testid=lead]')).left,
 			getComputedStyle(head).borderTopWidth, getComputedStyle(head).boxShadow].join(' '); })()`)
 	say("folder", `(() => { const st = (e) => getComputedStyle(e), r = (e) => e.getBoundingClientRect(), f = document.querySelector('#list li[data-slug=fold]'), trees = [...document.querySelectorAll('#list li[data-testid=tree]')];
 		const last = trees.at(-1);
@@ -111,7 +111,7 @@ func TestUIRowCards(t *testing.T) { //nolint:paralleltest // the browser tests s
 	b.until("the rows", "document.querySelector('#list li[data-slug=fold]') && !document.querySelector('#list li[data-testid=tree]')")
 	say("folded", card+"(document.querySelector('#list li[data-slug=fold]')) + ' ' + getComputedStyle(document.querySelector('#list li[data-slug=fold]')).borderBottomWidth")
 
-	// A task of no page: the list holds the heading of no category alone, with the list's room; the task list's rows are cards too.
+	// A task of no page and no category: the list holds nothing, with no room of its own; the task list's rows are cards too.
 	b.navigate("/tasks?project=demo&task=S2")
 	b.until("none", "!document.getElementById('task-none').hidden")
 	say("empty", "getComputedStyle(document.getElementById('list')).paddingTop + ' ' + "+ground)
@@ -124,12 +124,12 @@ func TestUIRowCards(t *testing.T) { //nolint:paralleltest // the browser tests s
 		"chosen: true false",
 		"ground: true",
 		"rose: entry:late",
-		"gaps: G0 C0 T0 T0 T0 C6 G0 C0 C6",
-		"headings: true true 0px none",
+		"gaps: C0 T0 T0 T0 C6 G0 C0 C6",
+		"headings: true 0px none",
 		"folder: 0px 0px 1px 0px 1px true 0 0 0",
 		"within: true true true false",
 		"folded: 1px true true 1px",
-		"empty: 6px true",
+		"empty: 0px true",
 		"task list: 1px true true",
 	}, "|"))
 }

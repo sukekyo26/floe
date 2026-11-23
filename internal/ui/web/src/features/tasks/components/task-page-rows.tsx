@@ -8,7 +8,7 @@ import { RowSub } from '@/components/row-sub';
 import { Rows, type RowItem } from '@/components/rows';
 import { TagPill } from '@/components/tag-pill';
 import { TreeRow } from '@/components/tree-row';
-import { addTitle, groupName } from '@/features/tasks/utils/add-page';
+import { groupName } from '@/features/tasks/utils/add-page';
 import { taskGroups } from '@/features/tasks/utils/task-page';
 import { pageTitlePress, useRowPress } from '@/hooks/use-row-press';
 import { useStore } from '@/hooks/use-store';
@@ -23,8 +23,6 @@ import { treeItems } from '@/utils/tree-items';
 export interface TaskPageRowsProps {
   readonly task: TaskOf | null;
   readonly openers: Openers;
-  // onAddPage opens the modal that puts a page on the category, '' for none (P6c's)
-  readonly onAddPage: (task: TaskOf, category: string) => void;
   readonly pages?: Pages;
   readonly folders?: Folders;
   readonly openPage?: OpenPage;
@@ -34,14 +32,13 @@ export interface TaskPageRowsProps {
 const NO_RANKS: ReadonlyMap<string, number> = new Map();
 const nothingSelected = () => false;
 
-// TaskPageRows is the rows of a task's page (ui.html renderTaskPage's drawRows): under no category, then its categories
-// in their order, each with its way to add a page. As the page list's rows but for what a task's page leaves out: no
+// TaskPageRows is the rows of a task's page: under no category where it has pages, then its categories in their order,
+// one of no page saying so. As the page list's rows but for what a task's page leaves out: no
 // box nor "Select", no way to its own task or to a tag's list, the project's pill; an archived page stays, dimmed and
 // badged
 export function TaskPageRows({
   task,
   openers,
-  onAddPage,
   pages = pagePages,
   folders = pageFolders,
   openPage = pageOpen,
@@ -68,12 +65,6 @@ export function TaskPageRows({
         kind: 'group',
         key: `group:${category}`,
         heading: groupName(category),
-        add: {
-          onAdd: () => {
-            onAddPage(task, category);
-          },
-          label: addTitle(category),
-        },
         ...(g.entries.length === 0 ? { empty: t('ui_category_empty') } : {}),
       });
     for (const a of g.entries) {

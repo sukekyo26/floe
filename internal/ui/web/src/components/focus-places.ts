@@ -67,22 +67,17 @@ export const restoreFocus = (slug: string) => (): void => {
 // shownOf is el, unless it or what holds it is hidden
 const shownOf = (el: Element | null): Element | null => (el && !el.closest('[hidden]') ? el : null);
 
-// categoryAdd is the add button of a category's heading on a task's page, as drawn now
-export const categoryAdd = (category: string): Element | null =>
-  document.querySelector(`#list > li[data-key="${CSS.escape(`group:${category}`)}"] [data-testid=category-add]`);
-
-// prepareTaskOut takes, before the page leaves its task, the row next to it; back is the menu it was taken off from,
-// category the one it was on. Put back, the focus goes to its row, or back; on Escape, back, the row next to it, its
-// category's add button, or the task's edit button (ui.html 5850): the last two are a task's page's alone
-export function prepareTaskOut(slug: string, back: () => boolean, category: string): TaskOutFocus {
+// prepareTaskOut takes, before the page leaves its task, the row next to it; back is the menu it was taken off from.
+// Put back, the focus goes to its row, or back; on Escape, back, the row next to it, or the task's Add a page, which a
+// task's page alone has
+export function prepareTaskOut(slug: string, back: () => boolean): TaskOutFocus {
   const next = rowNearby(rowsNow(), entry(slug));
   return {
     done: () => {
       if (!focusRow(entry(slug))) back();
     },
     away: () => {
-      if (!back() && !focusRow(next) && !focusOn(categoryAdd(category)))
-        focusOn(shownOf(document.getElementById('task-edit')));
+      if (!back() && !focusRow(next)) focusOn(shownOf(document.getElementById('task-add-page')));
     },
   };
 }
