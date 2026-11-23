@@ -2,7 +2,7 @@ import { describe, expect, it } from 'vitest';
 
 import { testBoot } from '@/components/test-boot';
 import { setBoot, type Boot } from '@/config/boot';
-import { addHits, addSaid, addTitle, groupName, hereBadge, pageFrom } from '@/features/tasks/utils/add-page';
+import { addHits, addSaid, groupName, hereBadge, pageFrom } from '@/features/tasks/utils/add-page';
 import type { PageWritten } from '@/lib/tasks';
 import type { Page } from '@/types/page';
 
@@ -70,13 +70,11 @@ describe('no category', () => {
     expect(addHits(entries, none, '').hits.map((a) => a.slug)).toStrictEqual(['d', 'o', 'free']);
   });
 
-  it('names the group and the way to add to it in words of their own', () => {
-    expect.assertions(4);
+  it('names no category in words of its own', () => {
+    expect.assertions(2);
     testBoot();
     expect(groupName('')).toBe('ui_category_none:undefined');
     expect(groupName('design')).toBe('design');
-    expect(addTitle('')).toBe('ui_page_add_no_category:undefined');
-    expect(addTitle('design')).toBe('ui_page_add_named:design');
   });
 
   it('says where the page was put from, as the person reads it', () => {

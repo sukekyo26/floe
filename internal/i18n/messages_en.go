@@ -835,7 +835,6 @@ var messagesEN = map[string]string{
 	"ui_page_from_no_category":   "no category",
 	"ui_page_here_category":      "this task's %s",
 	"ui_category_none":           "No category",
-	"ui_page_add_no_category":    "Add a page with no category",
 	"ui_page_added_no_category":  "Put %s on the task with no category",
 	"ui_page_moved_no_category":  "Moved %s from %s, now with no category",
 	"ui_task_out_named":          "Take %s off its task",

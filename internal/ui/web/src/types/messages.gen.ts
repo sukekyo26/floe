@@ -194,7 +194,6 @@ export type MessageKey =
   | 'ui_optional'
   | 'ui_page_add'
   | 'ui_page_add_named'
-  | 'ui_page_add_no_category'
   | 'ui_page_add_none'
   | 'ui_page_add_put'
   | 'ui_page_added'

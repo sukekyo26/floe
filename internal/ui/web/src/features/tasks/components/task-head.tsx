@@ -3,7 +3,7 @@ import { Component, createRef, type ChangeEvent } from 'react';
 import { Ago } from '@/components/ago';
 import { Button } from '@/components/button';
 import { focusOn, kinButton, partButton } from '@/components/focus-places';
-import { ArchiveIcon, BackChevronIcon, EditIcon } from '@/components/icons';
+import { ArchiveIcon, BackChevronIcon, EditIcon, PlusIcon } from '@/components/icons';
 import { PickSelect } from '@/components/pick-select';
 import { ProjectPill } from '@/components/project-pill';
 import { getBoot } from '@/config/boot';
@@ -39,6 +39,7 @@ export interface TaskHeadProps {
   readonly color: string;
   readonly onKin: (form: 'child' | 'parent') => void;
   readonly onEdit: (task: TaskOf, back: FocusBack) => void;
+  readonly onAddPage: (task: TaskOf, back: FocusBack) => void;
   readonly acts?: TaskPageActs;
   readonly query?: Pick<ListQuery, 'keepFrom'>;
 }
@@ -122,6 +123,7 @@ export class TaskHead extends Component<TaskHeadProps, { shown: StateShown | nul
       color,
       onKin,
       onEdit,
+      onAddPage,
       acts = taskPageActs,
       query = listQuery,
     } = this.props;
@@ -157,7 +159,16 @@ export class TaskHead extends Component<TaskHeadProps, { shown: StateShown | nul
             <BackChevronIcon />
             {t('ui_screen_tasks')}
           </a>
-          <span className="ms-auto flex gap-2">
+          <span className="ms-auto flex flex-wrap justify-end gap-2">
+            <Button
+              id="task-add-page"
+              onClick={() => {
+                if (task) onAddPage(task, () => focusOn(document.getElementById('task-add-page')));
+              }}
+            >
+              <PlusIcon />
+              {t('ui_page_add')}
+            </Button>
             <Button
               id="task-edit"
               label={t('ui_task_edit_named', name)}

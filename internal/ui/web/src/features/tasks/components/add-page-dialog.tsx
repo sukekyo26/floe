@@ -2,12 +2,13 @@ import { useLayoutEffect, useRef, useState, type KeyboardEvent, type MouseEvent 
 
 import { Badge } from '@/components/badge';
 import { Dialog, DialogActions, DialogClose, DialogHead, useDialog } from '@/components/dialog';
+import { FIELD, TEXT } from '@/components/fields';
 import { HitRow } from '@/components/hit-row';
 import { PlusIcon } from '@/components/icons';
 import { KeyHint } from '@/components/key-hint';
 import { RowSub } from '@/components/row-sub';
 import { moveAsk as ask0, type MoveAsk } from '@/features/tasks/stores/move-ask';
-import { addHits, addSaid, addTitle, hereBadge, pageFrom, type AddTo } from '@/features/tasks/utils/add-page';
+import { addHits, addSaid, groupName, hereBadge, pageFrom, type AddTo } from '@/features/tasks/utils/add-page';
 import { useHold, type Hold } from '@/hooks/use-hold';
 import { useStore } from '@/hooks/use-store';
 import { t } from '@/lib/t';
@@ -21,7 +22,8 @@ import { composing } from '@/utils/keys';
 import { nextReached } from '@/utils/list-keys';
 import { FIND_ROWS } from '@/utils/search';
 
-// What Add a page is opened for: the task as its page drew it, the category, and the way back to its add button
+// What Add a page is opened for: the task as its page drew it, the category chosen at first, and the way back to its add
+// button
 export interface AddPageOpen {
   task: TaskOf;
   category: string;
@@ -40,10 +42,10 @@ export interface AddPageDialogProps {
 // No pill: the pages are of one project, the task's, as on the task's page
 const NO_RANKS: ReadonlyMap<string, number> = new Map();
 
-// AddPageDialog puts a page of the task's project on one of its categories (ui.html #add-page-dialog, openAddPage,
-// addPageTo): the words narrow the pages, ↑ ↓ reach one and Enter or a press puts it, and the modal closes. Nothing is
-// reached as it opens, so that no Enter puts a page by itself. It sends the rev it opened at; refused as stale, the rev
-// read again. A page on another task is asked about first (MoveDialog)
+// AddPageDialog puts a page of the task's project on one of its categories, chosen in it, or on none: the words narrow
+// the pages, ↑ ↓ reach one and Enter or a press puts it, and the modal closes. Nothing is reached as it opens, so that
+// no Enter puts a page by itself. It sends the rev it opened at; refused as stale, the rev read again. A page on
+// another task is asked about first (MoveDialog)
 export function AddPageDialog({
   open,
   onClosed,
@@ -92,18 +94,20 @@ function AddPageBody({
 }: Required<Omit<AddPageDialogProps, 'open'>> & { readonly last: AddPageOpen | null; readonly hold: Hold }) {
   const { close } = useDialog();
   const { entries } = useStore(pages.state);
-  // The task and category as it opened, the rev as read then: the page drawn before may be older
-  const [to, setTo] = useState<AddTo>(() => {
-    const x =
+  // The task as it opened, as read then: the page drawn before may be older. Its categories are those offered
+  const [opened] = useState(
+    () =>
       (last && writes.tasksOf().find((y) => y.project === last.task.project && y.name === last.task.name)) ??
-      last?.task;
-    return {
-      project: x?.project ?? '',
-      name: x?.name ?? '',
-      category: last?.category ?? '',
-      rev: x ? pages.readRev(x.project, x.name) : 0,
-    };
-  });
+      last?.task,
+  );
+  // The task, the category chosen and the rev as read when it opened
+  const [to, setTo] = useState<AddTo>(() => ({
+    project: opened?.project ?? '',
+    name: opened?.name ?? '',
+    category: last?.category ?? '',
+    rev: opened ? pages.readRev(opened.project, opened.name) : 0,
+  }));
+  const categories = opened?.categories ?? [];
   const [words, setWords] = useState('');
   // The row reached, by its page: read again, the same page stays reached where it still is
   const [reached, setReached] = useState<string | null>(null);
@@ -179,7 +183,7 @@ function AddPageBody({
       <DialogHead
         icon={<PlusIcon />}
         titleId="add-page-title"
-        title={addTitle(to.category)}
+        title={t('ui_page_add')}
         lead={
           <span id="add-page-lead" className="flex flex-wrap items-center gap-x-2 gap-y-0.75">
             <span id="add-page-target">{[task?.name, task?.title].filter(Boolean).join(' ')}</span>
@@ -188,6 +192,25 @@ function AddPageBody({
           </span>
         }
       />
+      <label data-testid="field" className={FIELD}>
+        {t('ui_task_category')}
+        <select
+          id="add-page-category"
+          data-testid="text"
+          className={TEXT}
+          value={to.category}
+          onChange={(e) => {
+            setTo({ ...to, category: e.currentTarget.value });
+            setError('');
+          }}
+        >
+          {['', ...categories].map((category) => (
+            <option key={category} value={category}>
+              {groupName(category)}
+            </option>
+          ))}
+        </select>
+      </label>
       <input
         id="add-page-q"
         data-testid="text"

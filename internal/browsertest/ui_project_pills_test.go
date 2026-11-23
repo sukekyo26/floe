@@ -59,7 +59,9 @@ func TestUIProjectPills(t *testing.T) { //nolint:paralleltest // the browser tes
 	say("on a task's page", "document.querySelector('#task-project [data-testid=proj-name]').textContent+' '+document.querySelectorAll('#list li[data-slug] [data-testid=proj-name]').length")
 
 	// The pages to add to it are of its project too: none has a pill.
-	b.eval("document.querySelector('#list li[data-key=\"group:one\"] [data-testid=category-add]').click()")
+	b.eval("document.getElementById('task-add-page').click()")
+	b.until("the modal", "document.getElementById('add-page-dialog').open")
+	chooseValue(b, "add-page-category", "one")
 	b.until("the candidates", "document.querySelectorAll('#add-page-list li').length === 2")
 	say("to add", "document.querySelectorAll('#add-page-list [data-testid=proj-name]').length")
 

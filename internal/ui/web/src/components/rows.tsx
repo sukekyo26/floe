@@ -1,16 +1,7 @@
 import { Component, createRef, Fragment, type ReactNode } from 'react';
 
-import { Button } from '@/components/button';
-import { PlusIcon } from '@/components/icons';
-import { t } from '@/lib/t';
 import { pages as pageStore, type Pages } from '@/stores/pages';
 import { focusTarget, type FocusOn, type Focused } from '@/utils/row-focus';
-
-// A group's way to add an entry to itself (a category's pages), and its button's name
-export interface GroupAdd {
-  readonly onAdd: () => void;
-  readonly label: string;
-}
 
 // What Rows draws, in the order the caller arranged (arrange): a group's heading, or a row of an entry, which render
 // makes, told whether it was drawn before
@@ -19,7 +10,6 @@ export type RowItem =
       readonly kind: 'group';
       readonly key: string;
       readonly heading: string;
-      readonly add?: GroupAdd;
       readonly empty?: string;
     }
   | {
@@ -42,7 +32,6 @@ const FOCUS: Record<FocusOn, string> = {
   summary: 'summary',
   star: '[data-testid=star]',
   archive: '[data-testid=actions] > [data-testid=archive]',
-  'category-add': '[data-testid=category-add]',
 };
 
 interface Snapshot {
@@ -55,25 +44,18 @@ function Heading({ item }: { readonly item: Extract<RowItem, { kind: 'group' }> 
     <li
       data-key={item.key}
       data-testid="group"
-      data-adds={item.add ? 'true' : undefined}
       role="none"
-      className={`ps-[calc(1rem+1px)] pe-0 pt-2.75 pb-1 text-small leading-[1.2] font-bold text-muted ${item.add ? 'grid grid-cols-[minmax(0,1fr)_auto] items-center gap-x-2 gap-y-1' : 'block'}`}
+      className="block ps-[calc(1rem+1px)] pe-0 pt-2.75 pb-1 text-small leading-[1.2] font-bold text-muted"
     >
       {/* oxlint-disable-next-line jsx-a11y/prefer-tag-over-role -- ui.html's markup, which the tests read by its role */}
       <div role="heading" aria-level={2}>
         {item.heading}
       </div>
-      {item.add ? (
-        <Button testid="category-add" label={item.add.label} onClick={item.add.onAdd}>
-          <PlusIcon />
-          {t('ui_page_add')}
-        </Button>
-      ) : null}
-      {item.add && item.empty !== undefined ? (
-        <p data-testid="category-empty" className="col-span-full m-0 pb-2 font-normal">
+      {item.empty === undefined ? null : (
+        <p data-testid="category-empty" className="m-0 mt-1 pb-2 font-normal">
           {item.empty}
         </p>
-      ) : null}
+      )}
     </li>
   );
 }

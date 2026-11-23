@@ -242,7 +242,7 @@ func TestUIButtons(t *testing.T) { //nolint:paralleltest // the browser tests sh
 	help("a task")
 	modal("kin-dialog", press("#task-child"))
 	modal("edit-task-dialog", press("#task-edit"))
-	modal("add-page-dialog", press("#list [data-testid=category-add]"))
+	modal("add-page-dialog", press("#task-add-page"))
 	// The React screen's own of the rest: each modal it holds is measured there too
 	modal("edit-add-dialog", func() {
 		press("#task-edit")()

@@ -116,9 +116,12 @@ describe(taskGroups, () => {
     ]);
   });
 
-  it('keeps no category with no page, as each category', () => {
-    expect.assertions(1);
-    expect(taskGroups(task('#1', { pages: [], archived: [] }))).toStrictEqual([{ category: '', entries: [] }]);
+  it('heads no category only where it has pages, a category with none too', () => {
+    expect.assertions(2);
+    expect(taskGroups(task('#1', { pages: [], archived: [] }))).toStrictEqual([]);
+    expect(taskGroups(task('#1', { categories: ['plan'], pages: [], archived: [] }))).toStrictEqual([
+      { category: 'plan', entries: [] },
+    ]);
   });
 });
 

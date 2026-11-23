@@ -147,7 +147,7 @@ export function TaskSetDialog({ open, onClosed, pages = pagePages, acts = acts0,
     const keys = e.detail === 0;
     const got: { off: TakenOff } = { off: { reason: '' } };
     const ran = await hold.whileHeld(async () => {
-      got.off = await acts.takeOff(page, (slug) => prepareTaskOut(slug, open.back, page.task?.category ?? ''));
+      got.off = await acts.takeOff(page, (slug) => prepareTaskOut(slug, open.back));
       if (!got.off.reason) await pages.load();
     });
     if (!ran) return;

@@ -192,7 +192,7 @@ export function PageMenu({
         onSelect={(e) =>
           void actions.takePageOff(a, {
             focus: e.detail === 0,
-            prepare: (slug) => prepareTaskOut(slug, back, a.task?.category ?? ''),
+            prepare: (slug) => prepareTaskOut(slug, back),
           })
         }
       >

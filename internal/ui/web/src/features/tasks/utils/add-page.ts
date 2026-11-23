@@ -31,10 +31,6 @@ export function addHits(entries: readonly Page[], to: AddTo, words: string): { a
 // LIMIT: a category named as those words is told from no category's group only by its key and its add button's name
 export const groupName = (category: string): string => category || t('ui_category_none');
 
-// addTitle is the name of the way to add a page to a group, and of Add a page opened for it
-export const addTitle = (category: string): string =>
-  category ? t('ui_page_add_named', category) : t('ui_page_add_no_category');
-
 // hereBadge is what a row says of the task a page is on: this task's category, or another task's and category; ''
 // for none
 export function hereBadge(a: Page, to: Pick<AddTo, 'name'>): string {

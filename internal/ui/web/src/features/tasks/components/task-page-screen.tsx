@@ -1,7 +1,7 @@
 import { useCallback, useEffect, useState, type ReactNode } from 'react';
 
 import { Columns } from '@/components/columns';
-import { backToRow, categoryAdd, focusOn } from '@/components/focus-places';
+import { backToRow } from '@/components/focus-places';
 import type { Openers } from '@/components/page-menu';
 import { getBoot } from '@/config/boot';
 import { KinDialog, type KinOpen } from '@/features/tasks/components/kin-dialog';
@@ -17,8 +17,8 @@ import { pages as pagePages } from '@/stores/pages';
 import type { FocusBack } from '@/types/focus';
 import type { TaskOf } from '@/types/task';
 
-// What a task's page opens that P6c makes: the task's edit modal, and the modal that puts a page on a category. back
-// gives the focus back to what opened it
+// What a task's page opens that P6c makes: the task's edit modal, and the modal that puts a page on a category, at first
+// the one given. back gives the focus back to what opened it
 export interface TaskOpeners {
   onTaskEdit: (task: TaskOf, back: FocusBack) => void;
   onAddPage: (task: TaskOf, category: string, back: FocusBack) => void;
@@ -68,14 +68,11 @@ export function TaskPageScreen({ name, openers, taskOpeners, reader }: TaskPageS
                 if (view.task) setKin({ form, task: view.task, ask: false });
               }}
               onEdit={taskOpeners.onTaskEdit}
-            />
-            <TaskPageRows
-              task={view.task}
-              openers={openers}
-              onAddPage={(task, category) => {
-                taskOpeners.onAddPage(task, category, () => focusOn(categoryAdd(category)));
+              onAddPage={(task, back) => {
+                taskOpeners.onAddPage(task, '', back);
               }}
             />
+            <TaskPageRows task={view.task} openers={openers} />
             <TaskNone
               task={view.task}
               none={view.none}
