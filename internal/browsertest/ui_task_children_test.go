@@ -627,7 +627,7 @@ func TestUITaskSetTitle(t *testing.T) { //nolint:paralleltest // the browser tes
 	}
 	dialog("c")
 	field("set-task", "#93")
-	submitSet(b)
+	b.eval("document.getElementById('set-submit').click()") // nothing sent: the error the opening said stays
 	if got := b.eval("document.getElementById('set-dialog').open + '|' + !document.getElementById('set-error').hidden + '|' + document.getElementById('set-task-title').required"); got != "true|true|false" {
 		t.Errorf("unreadable: %q", got)
 	}

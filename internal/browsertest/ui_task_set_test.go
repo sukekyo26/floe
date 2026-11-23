@@ -396,7 +396,10 @@ func TestUITaskSet(t *testing.T) { //nolint:paralleltest // the browser tests sh
 func submitSet(b *browser) {
 	b.t.Helper()
 
-	b.pressed("document.getElementById('set-submit').click()", "saved, asked or refused", "!document.getElementById('set-dialog').open || document.getElementById('move-dialog').open || !document.getElementById('set-error').hidden")
+	// A refusal is one not shown before the press: the words of one shown already are kept to tell it from a new one
+	b.eval("window.setErrorBefore = document.getElementById('set-error').hidden ? null : document.getElementById('set-error').textContent")
+	b.pressed("document.getElementById('set-submit').click()", "saved, asked or refused", "!document.getElementById('set-dialog').open || document.getElementById('move-dialog').open || "+
+		"(!document.getElementById('set-error').hidden && document.getElementById('set-error').textContent !== window.setErrorBefore)")
 	b.eval("if (document.getElementById('move-dialog').open) document.getElementById('move-yes').click()")
 }
 

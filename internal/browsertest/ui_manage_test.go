@@ -685,7 +685,7 @@ func uiShelf(t *testing.T, lang i18n.Lang, msg func(string, ...any) string) {
 	out = append(out, b.eval("[...document.querySelectorAll('#list li:not([data-testid=group])')].filter((li) => "+
 		"['[data-testid=star]', '[data-testid=archive]', '[data-testid=more] summary'].some((s) => !li.querySelector(s).getAttribute('aria-label'))).length"))
 	// The menu: its words, Escape and a click elsewhere close it, focus going back to its button.
-	b.eval("document.querySelector('#list li[data-slug=b] summary').click()")
+	b.toggled("#list li[data-slug=b] [data-testid=more]", func() { b.eval("document.querySelector('#list li[data-slug=b] summary').click()") })
 	out = append(out, b.eval("document.querySelector('#list li[data-slug=b] summary').getAttribute('aria-label')"),
 		b.eval(topsJS+"(document.querySelector('#list li[data-slug=b] [data-testid=menu]')).filter((e) => getComputedStyle(e).display !== 'none').map((e) => e.textContent.trim()).join(' / ')"))
 	b.eval("document.querySelector('#list li[data-slug=b] [data-testid=edit]').focus()")
@@ -989,7 +989,8 @@ func uiTags(t *testing.T, lang i18n.Lang, msg func(string, ...any) string) {
 	press(kb.Enter)
 	out = append(out, b.eval(boxes), b.eval("[document.getElementById('tag-dialog').open, calls.length, "+applies+"].join(' ')"))
 	// Cancelled after a change, the dialog opens again with nothing to apply.
-	b.eval("document.querySelector('#tag-dialog [data-close]').click(); document.getElementById('bulk-tag').click()")
+	b.pressed("document.querySelector('#tag-dialog [data-close]').click()", "the tag modal closed", "!document.getElementById('tag-dialog').open")
+	b.pressed("document.getElementById('bulk-tag').click()", "the tag modal open again", "document.getElementById('tag-dialog').open")
 	out = append(out, b.eval(applies))
 	b.eval("document.querySelector('#tag-dialog [data-close]').click()")
 	// A page removed since the list was read leaves the selection unsent.

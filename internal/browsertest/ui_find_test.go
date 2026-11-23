@@ -1016,7 +1016,7 @@ func TestUIFindPress(t *testing.T) { //nolint:paralleltest // the browser tests 
 	b.click(x, y)
 	out = append(out, b.eval("document.activeElement.matches('#find-actions [data-testid=star]')"))
 	x, y = at("(() => { const r = document.querySelector('#find-actions summary').getBoundingClientRect(); return (r.left + r.width / 2) + ' ' + (r.top + r.height / 2); })()")
-	b.click(x, y)
+	b.toggled("#find-actions [data-testid=more]", func() { b.click(x, y) })
 	out = append(out, b.eval("document.activeElement.matches('#find-actions summary') && document.querySelector('#find-actions [data-testid=more]').open"))
 	b.pressKey(kb.Escape)
 	b.until("the menu closed", "!document.querySelector('#find-actions [data-testid=more]').open")
@@ -1105,7 +1105,9 @@ func TestUIFindArrows(t *testing.T) { //nolint:paralleltest // the browser tests
 	b.eval("document.querySelector('#find-actions summary').focus()")
 	out = append(out, press(kb.ArrowUp))
 	// With the menu open the rows stay, from its button and from within it.
-	b.eval("document.querySelector('#find-actions summary').focus(); document.querySelector('#find-actions summary').click()")
+	b.toggled("#find-actions [data-testid=more]", func() {
+		b.eval("document.querySelector('#find-actions summary').focus(); document.querySelector('#find-actions summary').click()")
+	})
 	const menu = "document.querySelector('#find-actions [data-testid=more]').open"
 	out = append(out, press(kb.ArrowDown), b.eval(menu))
 	b.eval("document.querySelector('#find-actions [data-testid=menu] [data-testid=edit]').focus()")
