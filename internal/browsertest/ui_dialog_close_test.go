@@ -535,8 +535,8 @@ func TestUIDialogClose(t *testing.T) { //nolint:paralleltest // the browser test
 		until("settings", false)
 		say("settings, find, escape, " + at)
 	}
-	// Opened on a task's page, by the bar's button, a row's "…" and the search's "…": the focus on the settings' title, as
-	// ui.html gives it, not on a way back drawn for a moment. Each page's themes after the bar's, which opens on no page
+	// Opened on a task's page, by the bar's button, a row's "…" and the search's "…": the focus on the settings' title, not
+	// on a way back drawn for a moment. Each page's themes after the bar's, which opens on no page
 	bar := run("document.getElementById('settings-open').click()")
 	for _, c := range []struct {
 		name   string
@@ -622,21 +622,14 @@ func TestUIDialogClose(t *testing.T) { //nolint:paralleltest // the browser test
 	until("filter-dialog", true)
 	b.eval("document.getElementById('add-link').focus(); document.getElementById('add-link').click()")
 	until("add-dialog", true)
-	// The add modal opened has the focus, on either build; the React build draws it open in a microtask after the press, so the
-	// close of the filters reads the focus still on the filters' button there, as no person can see (FILTER_ADD)
+	// The add modal opened has the focus; it is drawn open in a microtask after the press, so the close of the filters reads the
+	// focus still on the filters' button there, as no person can see
 	b.until("the focus in the add modal", "document.activeElement?.id === 'add-path'")
 	b.pressKey(kb.Escape)
 	until("add-dialog", false)
 	say("filter, a button of the shelf, then escape")
 
-	// Saved from a row found, the focus goes back to the row where the rows are kept (the React build, #boot), to the body
-	// where the save's read draws them anew (ui.html)
-	back, filterAdd := "body", "add-dialog add-path"
-	if b.eval("document.getElementById('boot') !== null") == "true" {
-		back, filterAdd = "list A T memo-a", "narrow-filter"
-	}
-	want := strings.ReplaceAll(strings.Join(dialogCloseWant, "|"), "SAVED_BACK", back)
-	check(t, "closed", out, strings.ReplaceAll(want, "FILTER_ADD", filterAdd))
+	check(t, "closed", out, strings.Join(dialogCloseWant, "|"))
 }
 
 var dialogCloseWant = []string{
@@ -662,7 +655,7 @@ var dialogCloseWant = []string{
 	"edit, bar, escape: edit-dialog > bar More for T plan-a 2",
 	"edit, heading pressed, escape: edit-dialog > list More for T plan-a 2",
 	"edit, search, save: find > edit-dialog edit-name, edit-dialog > body / sent 1",
-	"edit, search from a row, save: find > edit-dialog edit-name, edit-dialog > SAVED_BACK / sent 1",
+	"edit, search from a row, save: find > edit-dialog edit-name, edit-dialog > list A T memo-a / sent 1",
 	"edit, search, escape: find > edit-dialog edit-name, edit-dialog > body",
 	"edit, search from a row, escape: find > edit-dialog edit-name, edit-dialog > list A T memo-a",
 	"edit, row gone, escape: edit-dialog > body",
@@ -715,7 +708,7 @@ var dialogCloseWant = []string{
 	"keys, escape: keys > keys-open",
 	"add-dialog, escape: add-dialog > add-link",
 	"filter, escape: filter-dialog > narrow-filter",
-	"filter, a button of the shelf, then escape: filter-dialog > FILTER_ADD, add-dialog > narrow-filter",
+	"filter, a button of the shelf, then escape: filter-dialog > narrow-filter, add-dialog > narrow-filter",
 }
 
 // applyNewTag marks the tag typed in #tag-find as new and sends it.

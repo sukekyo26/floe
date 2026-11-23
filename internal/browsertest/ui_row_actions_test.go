@@ -181,7 +181,7 @@ func TestUIRowActions(t *testing.T) { //nolint:paralleltest // the browser tests
 	b.navigate("/tasks?project=one")
 	// The colour once the tasks are read: the React screen draws the button of the project asked before, faint
 	b.until("the task list", "document.querySelector('#narrow-filter[data-tint=true]') && !document.getElementById('narrow-filter').style.getPropertyValue('--c').includes('faint')")
-	say("the filter button", "document.getElementById('narrow-filter-name').textContent + ' ' + document.getElementById('narrow-filter').style.getPropertyValue('--c').startsWith(document.getElementById('boot') ? 'var(--color-pc' : 'var(--pc')")
+	say("the filter button", "document.getElementById('narrow-filter-name').textContent + ' ' + document.getElementById('narrow-filter').style.getPropertyValue('--c').startsWith('var(--color-pc')")
 	say("the folded head", "document.getElementById('shelf-what').textContent + ' ' + (document.getElementById('shelf-what').dataset.tint === 'true')")
 	// No project known yet, as while the tasks cannot be read: the head has no words, whatever the view.
 	file := filepath.Join(s.Env["FLOE_DIR"], "tasks.json")

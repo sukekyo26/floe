@@ -288,8 +288,8 @@ func TestUITaskList(t *testing.T) { //nolint:paralleltest // the browser tests s
 	// The page list as it was: a project pressed again is let go, and it has its own.
 	b.navigate("/?project=shop")
 	b.until("the page list", rowsDrawn)
-	// The React build names the palette's values --color-* (#boot tells it): the same value, read by ui.html's name
-	say("page list chips", "[...document.querySelectorAll('#chips > button')].map((c) => c.textContent + ' ' + c.style.getPropertyValue('--c').replace(document.getElementById('boot') ? 'var(--color-' : 'var(--', 'var(--')).join(', ')")
+	// The palette's values are named --color-*: read by the name they had before
+	say("page list chips", "[...document.querySelectorAll('#chips > button')].map((c) => c.textContent + ' ' + c.style.getPropertyValue('--c').replace('var(--color-', 'var(--')).join(', ')")
 	say("page list, its query kept", "sessionStorage.getItem('pages.list') + ' ' + document.getElementById('to-list').getAttribute('href')")
 	b.eval("document.querySelector('#chips > button[data-project=shop]').click()")
 	say("page list, let go", "location.search")

@@ -69,9 +69,8 @@ func TestUITaskArchivedInCategory(t *testing.T) { //nolint:paralleltest // the b
 	marks := func(sel string) string {
 		return "(() => { const li = document.querySelector(" + js(sel) + "); return [li.querySelector('[data-testid=lead] span')?.dataset.testid, li.dataset.unread === 'true', getComputedStyle(li.querySelector('[data-testid=title]')).fontWeight, Boolean(li.querySelector('[data-testid=ver]'))].join(' '); })()"
 	}
-	// Whether an element's colour is the palette's muted, named as each build names it
-	// LIMIT: the names of both builds while ui.html serves some screens. Keep the React one alone as it goes (S422-P11)
-	const muted = "((e) => { const m = document.createElement('span'); m.style.color = document.getElementById('boot') ? 'var(--color-muted)' : 'var(--muted)'; document.body.append(m); const c = getComputedStyle(m).color; m.remove(); return getComputedStyle(e).color === c; })"
+	// Whether an element's colour is the palette's muted
+	const muted = "((e) => { const m = document.createElement('span'); m.style.color = 'var(--color-muted)'; document.body.append(m); const c = getComputedStyle(m).color; m.remove(); return getComputedStyle(e).color === c; })"
 	const badge = "((e) => { const s = getComputedStyle(e); return [e.textContent, s.paddingLeft, s.fontWeight].join(' '); })"
 	open := func() {
 		t.Helper()

@@ -901,7 +901,7 @@ func TestUIColumnFoot(t *testing.T) { //nolint:paralleltest // the browser tests
 		b.mouse(input.DispatchMouseEventTypeMouseReleased, r.X+r.Width/2, r.Y+r.Height/2, 1)
 	}
 	// The ground and the shadow of what opens a column: over a page, its own; in the list's foot, none, as the button beside it.
-	const panel = "getComputedStyle(document.documentElement).getPropertyValue(document.getElementById('boot') ? '--color-panel' : '--panel').trim()"
+	const panel = "getComputedStyle(document.documentElement).getPropertyValue('--color-panel').trim()"
 	face := func(id string) string {
 		t.Helper()
 

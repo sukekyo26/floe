@@ -188,7 +188,7 @@ func TestUITaskParent(t *testing.T) { //nolint:paralleltest // the browser tests
 	b.eval(seen)
 
 	// By the keys: the focus to the way back at once. Escape before the page is read again leaves it for the button there is: the parent
-	// is off as the write answers (ui.html draws it off at the next read; React draws what a write answered at once). The reads after the
+	// is off as the write answers (the screen draws what a write answered at once). The reads after the
 	// write are held, to come after the key.
 	const toastsLeft = newToasts + ".filter((e) => e.querySelector('[data-testid=undo]')).length + ' ' + document.activeElement.id"
 	byKeys := func() {

@@ -8,7 +8,7 @@ import (
 	"floe/internal/store"
 )
 
-// Every button of words is of one form, as drawn: 2rem high, 2.25rem at a modal's foot, its corners --corner-small. They
+// Every button of words is of one form, as drawn: 2rem high, 2.25rem at a modal's foot, its corners --radius-small. They
 // are every button and link with words shown, in each place, every modal of the management page among them, but the rows the
 // rule names and the links of a row or a mark. Their words keep to one line, within what clips them, the row of buttons going
 // onto another where they do not fit; #tag-new alone, of words a person typed, goes over lines. One on the screen has an icon,
@@ -17,15 +17,12 @@ import (
 // notButtons are not buttons of words by the rule (.claude/rules/ui.md): the shelf's rows and the add buttons under them, in a
 // modal too on a narrow screen; the settings' rows and their way back; the "…" menu's items. Nor are the links of a row or a mark
 // (the brand, a row's title in the list and the search, a row's task and tags, a task's parent and children, the diff's contents,
-// the bar's count of the unread, a link of words: the user's choice, S422-P8), nor tabs (role=tab: the help's switches, as the
-// React screen makes them). The React screens' bar's links to the screens (#screens a, links of a nav, the screen shown darker:
-// the user's choice, S448) are left out there alone: ui.html's frame does not show its own
+// the bar's count of the unread, a link of words: the user's choice, S422-P8), nor tabs (role=tab: the help's switches), nor the bar's links to
+// the screens (#screens a, links of a nav, the screen shown darker: the user's choice, S448) and a page whole's way back to a
+// task's page, a plain link (the user's choice, S422-P10)
 const notButtons = "#shelf *, #filter-dialog #shelf-more *, [data-testid=settings-item], #settings-back, [data-testid=menu] *, " +
-	"[data-testid=brand], #list li [data-testid=title], #find-list li [data-testid=title], [data-testid=task-tag], #list li [data-testid=tagpill], [data-testid=kin-row], #diff-toc button, [role=tab], #news"
-
-// reactOnly are not buttons of words on the React screens alone (#boot tells their build): the bar's links, to the screens
-// and a page whole's way back to a task's page, a plain link (the user's choice, S422-P10)
-const reactOnly = "#screens a, #back"
+	"[data-testid=brand], #list li [data-testid=title], #find-list li [data-testid=title], [data-testid=task-tag], #list li [data-testid=tagpill], [data-testid=kin-row], #diff-toc button, [role=tab], #news, " +
+	"#screens a, #back"
 
 func TestUIButtons(t *testing.T) { //nolint:paralleltest // the browser tests share one Chrome, one at a time
 	s := newSite(t)
@@ -52,9 +49,7 @@ func TestUIButtons(t *testing.T) { //nolint:paralleltest // the browser tests sh
 	// The box that clips a button is its nearest ancestor that does not show what overflows it, or the screen; what it shows of
 	// itself is measured, not all it scrolls over. A button's words are its text, but in an icon or a part not shown
 	measure := `(() => {
-		// Each build names the small corner its own way; the same 6px
-		const react = document.getElementById('boot') !== null;
-		const small = getComputedStyle(document.documentElement).getPropertyValue(react ? '--radius-small' : '--corner-small').trim();
+		const small = getComputedStyle(document.documentElement).getPropertyValue('--radius-small').trim();
 		const words = (e) => {
 			let said = '';
 			const walk = (n) => {
@@ -66,7 +61,7 @@ func TestUIButtons(t *testing.T) { //nolint:paralleltest // the browser tests sh
 			walk(e);
 			return said.trim();
 		};
-		const shown = [...document.querySelectorAll('button, a')].filter((e) => e.getClientRects().length && !e.closest('dialog:not([open])') && words(e) && !e.matches(` + js(notButtons) + `) && !(react && e.matches(` + js(reactOnly) + `)));
+		const shown = [...document.querySelectorAll('button, a')].filter((e) => e.getClientRects().length && !e.closest('dialog:not([open])') && words(e) && !e.matches(` + js(notButtons) + `));
 		const clip = (e) => {
 			for (let box = e.parentElement; box && box !== document.body && box !== document.documentElement; box = box.parentElement) {
 				const st = getComputedStyle(box);
@@ -92,22 +87,19 @@ func TestUIButtons(t *testing.T) { //nolint:paralleltest // the browser tests sh
 		});
 		const keys = ['#keys [data-help=about]', '#keys [data-help=keys]', '#keys [data-close]'].filter((sel) => shown.includes(document.querySelector(sel))).length;
 		// A small corner of no value would be met by none: said apart from the buttons
-		const dialogs = [...document.querySelectorAll('dialog')].map((d) => (react ? 'react ' : 'ui.html ') + d.id);
-		return JSON.stringify({ n: shown.length, bad: (small === '' ? ['no small corner; '] : []).concat(bad).join('; '), keys, keysWant: react ? 1 : 3, dialogs, react });
+		const dialogs = [...document.querySelectorAll('dialog')].map((d) => d.id);
+		return JSON.stringify({ n: shown.length, bad: (small === '' ? ['no small corner; '] : []).concat(bad).join('; '), keys, dialogs });
 	})()`
-	// The dialogs each build holds, and the build of the screen measured last: a modal is measured on a screen of its build
+	// The dialogs the screens hold
 	present := map[string]bool{}
-	build := ""
 	check := func(scene string) int {
 		t.Helper()
 		b.still()
 		var got struct {
-			N        int
-			Bad      string
-			Keys     int
-			KeysWant int
-			Dialogs  []string
-			React    bool
+			N       int
+			Bad     string
+			Keys    int
+			Dialogs []string
 		}
 		if err := json.Unmarshal([]byte(b.eval(measure)), &got); err != nil {
 			t.Fatal(err)
@@ -118,8 +110,7 @@ func TestUIButtons(t *testing.T) { //nolint:paralleltest // the browser tests sh
 		for _, d := range got.Dialogs {
 			present[d] = true
 		}
-		build = map[bool]string{true: "react ", false: "ui.html "}[got.React]
-		return got.Keys - got.KeysWant
+		return got.Keys - 1
 	}
 	opened := map[string]bool{}
 	closeModal := func(id string) {
@@ -133,7 +124,7 @@ func TestUIButtons(t *testing.T) { //nolint:paralleltest // the browser tests sh
 		b.until(id, "document.getElementById("+js(id)+").open")
 		check(id)
 		closeModal(id)
-		opened[build+id] = true
+		opened[id] = true
 	}
 	press := func(sel string) func() {
 		return func() { b.eval("document.querySelector(" + js(sel) + ").click()") }
@@ -150,7 +141,7 @@ func TestUIButtons(t *testing.T) { //nolint:paralleltest // the browser tests sh
 		for _, part := range []string{"about", "keys"} {
 			b.eval("document.querySelector('#keys [data-help=" + part + "]').click()")
 			b.until("the part "+part, helpOn+"(document.querySelector('#keys [data-help="+part+"]'))")
-			// Its two switches and its close button on ui.html; the React screens' switches are tabs, its close button alone
+			// Its switches are tabs: its close button alone
 			if n := check(scene + ", help's " + part); n != 0 {
 				t.Errorf("%s, help's %s: %d buttons of words measured past or short of its own", scene, part, n)
 			}
@@ -213,7 +204,7 @@ func TestUIButtons(t *testing.T) { //nolint:paralleltest // the browser tests sh
 	modal("kin-dialog", press("#task-child"))
 	modal("edit-task-dialog", press("#task-edit"))
 	modal("add-page-dialog", press("#task-add-page"))
-	// The React screen's own of the rest: each modal it holds is measured there too
+	// Each modal the screen holds is measured there too
 	modal("edit-add-dialog", func() {
 		press("#task-edit")()
 		b.until("the edit", "document.getElementById('edit-task-dialog').open")
@@ -256,7 +247,7 @@ func TestUIButtons(t *testing.T) { //nolint:paralleltest // the browser tests sh
 	b.until("the rows", "document.querySelector('#list li[data-slug=c]')")
 	modal("keys", func() { b.pressKey("?") })
 	help("narrow")
-	// Read while open: closed, a build may draw the modal without its page
+	// Read while open: closed, the screen may draw the modal without its page
 	modal("set-dialog", func() {
 		menu("a", "task-set")()
 		b.until("set-dialog", "document.getElementById('set-dialog').open")
@@ -292,7 +283,7 @@ func TestUIButtons(t *testing.T) { //nolint:paralleltest // the browser tests sh
 	b.eval("document.getElementById('task-family-word').textContent = 'The child tasks of this task, a heading long enough to take more than its line'")
 	check("a long heading of a card")
 
-	// ui.html's modals, on the one screen it serves: a page whole. Opened again, as read: the toast of the first opening moves
+	// A page whole's modals. Opened again, as read: the toast of the first opening moves
 	// into a modal opened, its button out of the modal's box (S445)
 	b.size(1400, 800, false)
 	b.navigate("/a/a/")
@@ -328,10 +319,10 @@ func TestUIButtons(t *testing.T) { //nolint:paralleltest // the browser tests sh
 	b.until("the missing page", "!document.getElementById('notfound').hidden")
 	check("a page not found")
 
-	// A modal with no way here is a modal not measured: each a screen of each build holds, opened on one of that build
+	// A modal with no way here is a modal not measured: each a screen holds, opened on one
 	for d := range present {
 		if !opened[d] {
-			t.Errorf("the %s modal is not measured on a screen of its build", d)
+			t.Errorf("the %s modal is not measured on a screen", d)
 		}
 	}
 }
