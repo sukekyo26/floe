@@ -455,8 +455,8 @@ func (d *drawing) bend(k int) {
 const keepApart = column / 2
 
 // moveRun moves points at of edge k to q on axis, unless that lands on something, takes an end at a frame past where
-// it may stand (framesTake), or moves an end at a box or a frame as endsKeep does not let it, and reports whether it
-// did. An end at a box stays on its outline.
+// it may stand (framesTake), moves an end at a box or a frame as endsKeep does not let it, or leaves an end at an
+// icon to turn onto something (turnsClear), and reports whether it did. An end at a box stays on its outline.
 func (d *drawing) moveRun(k int, at []int, axis int, q float64) bool {
 	frameEnd, takes := d.framesTake(k, at, axis, q)
 	if !takes {
@@ -478,7 +478,7 @@ func (d *drawing) moveRun(k int, at []int, axis int, q float64) bool {
 			runs = append(runs, segAt(pts, i))
 		}
 	}
-	if d.clear(k, runs) && (d.loops[k] || d.labelFits(k)) && d.endsKeep(k, runs, boxEnd, frameEnd) {
+	if d.clear(k, runs) && (d.loops[k] || d.labelFits(k)) && d.endsKeep(k, runs, boxEnd, frameEnd) && d.turnsClear(k) {
 		return true
 	}
 
@@ -579,15 +579,9 @@ func (d *drawing) crossesBelow(k int, runs []seg) bool {
 // moved (unseen). A run landing on one is told at the part, which its writer can move.
 func (d *drawing) clear(k int, runs []seg) bool {
 	for _, s := range runs {
-		through := func(r rect) bool { return crossedBy(s, r) }
-		if slices.ContainsFunc(d.settling.things, through) ||
+		if !d.standsClear(k, s, rect{what: "", at: ""}) || //nolint:exhaustruct_v5 // no rectangle of its own
 			slices.ContainsFunc(d.kept[k], func(f rect) bool { return within(s, f) }) {
 			return false
-		}
-		for e, r := range d.settling.labels {
-			if e != k && d.spots[e].edge != k && through(r) {
-				return false
-			}
 		}
 		for e, q := range d.settling.runs {
 			if e != k && slices.ContainsFunc(q, func(o seg) bool { return runsTouch(s, o) }) {
@@ -596,6 +590,77 @@ func (d *drawing) clear(k int, runs []seg) bool {
 		}
 	}
 	return true
+}
+
+// standsClear is whether run s of edge k keeps off what does not move but its own rectangle, and the other edges'
+// labels and what lies between them and their runs.
+func (d *drawing) standsClear(k int, s seg, own rect) bool {
+	if slices.ContainsFunc(d.settling.things, func(r rect) bool { return r != own && crossedBy(s, r) }) {
+		return false
+	}
+	for e, r := range d.settling.labels {
+		if e != k && d.spots[e].edge != k && crossedBy(s, r) {
+			return false
+		}
+	}
+	return true
+}
+
+// turnsClear is whether the turns gathered will draw at edge k's ends at icons standing past their sides of the icons'
+// rectangles, which only slideEnd leaves there, keep off what standsClear asks: on every line of the side's ends that
+// turnLine may take, which it finds only once all ends have settled. An end on its rectangle turns within it, which
+// labels and boxes keep off. The turns are not held off the other edges' runs, as the outermost stands on the side,
+// on every other end there.
+// LIMIT: nor are the turns held out of the frames k keeps out of (kept, which hold neither of its ends): the part past
+// the rectangle may come into one, which the random graphs tried never do (712 turns of edges with such frames). Hold
+// them out as clear does if a diagram comes to show it.
+// LIMIT: the turns are not among the runs the later moves keep off (settling.runs), so another edge's run, or a label
+// moved with it, may come to stand on one; none of the random graphs tried does. Keep the turns among those runs if
+// a diagram comes to show it.
+func (d *drawing) turnsClear(k int) bool {
+	pts := d.routes[k]
+	for j := range 2 {
+		end, i := endAt{k, j}, d.ends[k][j]
+		place, on := d.places[end]
+		if !on || i < 0 || d.icons[i] == nil {
+			continue
+		}
+		cell, from, to := d.boxes[i], pts[j*(len(pts)-1)], d.endPoint(end)
+		axis := sideAxis(place.side)
+		if from[axis] >= cell.lo(axis)-eps && from[axis] <= cell.lo(axis)+cell.size(axis)+eps {
+			continue
+		}
+		step := keepApart
+		if place.side == "right" || place.side == "bottom" {
+			step = -step
+		}
+		for n := range d.sideEnds(i, place.side) {
+			past := from
+			past[1-axis] += step * float64(n)
+			turn := past
+			turn[axis] = to[axis]
+			turns := []seg{
+				{from[0], from[1], past[0], past[1]}, {past[0], past[1], turn[0], turn[1]}, {turn[0], turn[1], to[0], to[1]},
+			}
+			for _, s := range turns {
+				if !d.standsClear(k, s, cell) {
+					return false
+				}
+			}
+		}
+	}
+	return true
+}
+
+// sideEnds is how many ends side of box i takes.
+func (d *drawing) sideEnds(i int, side string) int {
+	n := 0
+	for e, place := range d.places {
+		if d.ends[e.edge][e.end] == i && place.side == side {
+			n++
+		}
+	}
+	return n
 }
 
 // labelFits is whether the labels on edge k stand within their runs and clear, as they stand now.
@@ -722,8 +787,8 @@ func (d *drawing) bendOf(e endAt) (nestRun, bool) {
 // laid out graph bending two of them has been found.
 // LIMIT: the bends nest has no order for (nestAbove) may share a stretch.
 // LIMIT: the lines are found anew from the routes as they stand, so a label placed beside one (reseat) may find the
-// turns moved by a stretch made later for another; labels crossed by edges of random graphs number as when the turns
-// stood on the rectangle's side. Hold the lines from settleEnds on if a diagram comes to show it.
+// turns moved by a stretch made later for another (lengthen); none of the random graphs tried shows it. Hold the
+// lines from settleEnds on if a diagram comes to show it.
 // It is called once ends are settled: e, short of its point's line (bendOf, as reach finds it), is among its side's
 // bends, which settleEnds keeps of all the ends it places.
 func (d *drawing) turnLine(e endAt) float64 {

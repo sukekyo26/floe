@@ -447,15 +447,38 @@ func (d *drawing) headed(o *graphOut, gr *group) usererr.List {
 			if head := headRect(f, d.heads[c]); crossedBy(segAt(pts, 0), head) {
 				e := o.g.Edges[k]
 				told = append(told, edgeMistake(edgeAt(o.at, k)+"/level", "diagram_graph_level_heading", e, o.clusters[c].g.Name))
-				delete(d.routes, k)
-				delete(d.spots, k)
-				delete(d.level, k)
-				delete(d.ends, k)
+				d.forget(k)
 				break
 			}
 		}
 	}
 	return told
+}
+
+// forget takes level edge k out of all that is read once the ends have settled: the turns at its icons' sides (bends,
+// keyed by its ends' boxes, so before ends goes) and the sides of boxes level edges take, found again from those left.
+// LIMIT: what was placed by k before stays in the graph told and refused, as inspect shows it: labels kept off the
+// exits left to edges written by hand on its sides (hands, read before), and the other ends on its sides at their
+// shares of two (a third and two thirds), not the middle. Place them again if a refused graph's inspect comes to
+// mislead.
+func (d *drawing) forget(k int) {
+	for j := range 2 {
+		end := endAt{k, j}
+		if place, on := d.places[end]; on {
+			side := endSide{d.ends[k][j], place.side}
+			d.bends[side] = slices.DeleteFunc(d.bends[side], func(other endAt) bool { return other == end })
+		}
+		delete(d.places, end)
+	}
+	delete(d.routes, k)
+	delete(d.spots, k)
+	delete(d.level, k)
+	delete(d.ends, k)
+	d.taken = map[int]map[string]bool{}
+	for left, sides := range d.level {
+		d.take(d.ends[left][0], sides[0])
+		d.take(d.ends[left][1], sides[1])
+	}
 }
 
 // take marks side of box i as taken by a level edge.

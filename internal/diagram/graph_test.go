@@ -1,12 +1,16 @@
 package diagram_test
 
 import (
+	"errors"
 	"fmt"
 	"os"
 	"path/filepath"
 	"slices"
 	"strings"
 	"testing"
+
+	"floe/internal/usererr"
+	"floe/internal/yamlpos"
 )
 
 // g1 is a graph of three boxes, an edge back up among its edges, written from line 3 to line 13 of s.yaml.
@@ -805,6 +809,61 @@ parts:
 	} {
 		if _, got := draw(t, c.src, inspect); got != c.want {
 			t.Errorf("%s:\n  told %q\n  want %q", c.name, got, c.want)
+		}
+	}
+}
+
+// A level edge told through a lane's heading is taken out of the drawing whole: the other edge at its icon's side still
+// turns there, and the sides it took are left to edges written by hand, as inspect shows with the mistake.
+func TestGraphLevelHeadingTakenOut(t *testing.T) {
+	t.Parallel()
+
+	const icons = `title: T
+parts:
+  - graph:
+      x: 20
+      y: 20
+      direction: right
+      lanes:
+        - { name: u, label: ww, nodes: [{ icon: { name: a, icon: aws/aws-lambda, label: wwww } }] }
+        - { name: v, label: wwwwwwww, nodes: [{ icon: { name: b, icon: aws/aws-lambda, label: www } }] }
+      edges:
+        - { from: b, to: a, label: www, level: true }
+        - { from: b, to: a, label: ww, level: true }
+`
+	want := `s.yaml:11:48: edge "b"→"a": it runs through the heading of lane "v", which reaches into the first rank laid out right; drop level, or shorten the heading`
+	if _, told := draw(t, icons, inspect); told != want {
+		t.Errorf("two level edges at an icon:\n  told %q\n  want %q", told, want)
+	}
+
+	const hands = `title: T
+parts:
+  - graph:
+      x: 20
+      y: 20
+      direction: right
+      lanes:
+        - { name: u, label: U, nodes: [{ box: { name: a, rows: [A] } }, { box: { name: z, rows: [Z] } }] }
+        - { name: v, label: "A long heading of this lane", nodes: [{ box: { name: m, rows: [M] } }] }
+        - { name: e, label: E, nodes: [{ box: { name: b, rows: [B] } }] }
+      edges:
+        - { from: z, to: m }
+        - { from: a, to: b, level: true }
+  - edge: { from: [70, 240], to: a }
+  - edge: { from: [40, 240], to: b }
+`
+	_, v, err := yamlpos.ParseMap("s.yaml", []byte(hands))
+	if err != nil {
+		t.Fatal(err)
+	}
+	got, err := inspect(drawer(t), v)
+	var told usererr.List
+	if !errors.As(err, &told) || !slices.ContainsFunc(told, func(e *usererr.Error) bool { return e.Key == "diagram_graph_level_heading" }) {
+		t.Errorf("edges written by hand by a level edge through a heading: told %v, want the heading among them", err)
+	}
+	for _, run := range []string{`edge [70,240]→"a" M70,240 H145 V175`, `edge [40,240]→"b" M40,240 H145 V362`} {
+		if !strings.Contains(got, run+"\n") {
+			t.Errorf("edges written by hand at the sides the level edge took: want %q in\n%s", run, got)
 		}
 	}
 }
