@@ -92,12 +92,12 @@ describe(TaskHead, () => {
     expect(html).toMatch(/id="task-archive"(?![^>]*hidden="").*ui_unarchive:/s);
   });
 
-  it('draws the choices in the state’s colours, the way back to the task list at its view, and Add a page by Edit', () => {
+  it('draws the choices in the state’s colours, and Add a page by Edit, no way back of its own', () => {
     expect.assertions(4);
     boot();
     const html = head(task('#1', { state: 'done', urls: ['https://x.org/a'] }));
     expect(html).toMatch(/<select[^>]*id="task-state"[^>]*data-state="done"/);
-    expect(html).toMatch(/id="task-up" href="\/tasks\?project=p&amp;view=done"/);
+    expect(html).not.toContain('id="task-up"');
     expect(html).toMatch(
       /<button[^>]*id="task-add-page"[^>]*>.*ui_page_add:undefined<\/button><button[^>]*id="task-edit"/s,
     );

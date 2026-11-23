@@ -121,7 +121,7 @@ func TestUIStorageKeys(t *testing.T) { //nolint:paralleltest // the browser test
 	b.navigate("/tasks?project=shop&task=%231")
 	b.until("the task's page", taskPageShown)
 	b.eval("(() => { window.name = ''; const set = Storage.prototype.setItem; Storage.prototype.setItem = function (k, v) { window.name += k + ' '; return set.call(this, k, v); }; })()")
-	b.moving("document.getElementById('task-up').click()")
+	b.moving("document.getElementById('to-tasks').click()")
 	b.until("the task list again", "location.pathname === '/tasks' && document.querySelector('#list > li')")
 	out = append(out, "written "+b.eval("window.name"),
 		"old "+b.eval("Object.keys(sessionStorage).concat(Object.keys(localStorage)).filter((k) => k.startsWith('artifacts')).length"))
@@ -270,7 +270,7 @@ func TestUITaskList(t *testing.T) { //nolint:paralleltest // the browser tests s
 	writeTasks(tasksJSON)
 
 	// The way up of a task's page opened by its URL: its project's list, at the task's view, whatever list was last seen.
-	const up = "document.getElementById('task-up').getAttribute('href')"
+	const up = "document.getElementById('to-tasks').getAttribute('href')"
 	for _, c := range []struct{ list, task string }{
 		{"?view=done&project=shop", "?project=shop&task=%231"},
 		{"?project=blog", "?project=shop&task=%231"},

@@ -46,6 +46,20 @@ describe(ScreenSwitch, () => {
     expect(draw(true)).not.toContain('role="tab');
   });
 
+  it('sends the task list’s link where a task’s page says, its press with it', () => {
+    expect.assertions(1);
+    testBoot();
+    expect(
+      renderToString(
+        <ScreenSwitch
+          tasks
+          taskUp={{ href: '/tasks?project=p&view=done', onPress: () => undefined }}
+          query={query('')}
+        />,
+      ),
+    ).toMatch(/<a id="to-tasks" href="\/tasks\?project=p&amp;view=done" aria-current="page"/);
+  });
+
   it('draws both links of one weight, the screen shown darker, with no line under them', () => {
     expect.assertions(3);
     const html = draw(true);

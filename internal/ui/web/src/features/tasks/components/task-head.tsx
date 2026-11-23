@@ -3,7 +3,7 @@ import { Component, createRef, type ChangeEvent } from 'react';
 import { Ago } from '@/components/ago';
 import { Button } from '@/components/button';
 import { focusOn, kinButton, partButton } from '@/components/focus-places';
-import { ArchiveIcon, BackChevronIcon, EditIcon, PlusIcon } from '@/components/icons';
+import { ArchiveIcon, EditIcon, PlusIcon } from '@/components/icons';
 import { PickSelect } from '@/components/pick-select';
 import { ProjectPill } from '@/components/project-pill';
 import { getBoot } from '@/config/boot';
@@ -18,10 +18,8 @@ import {
   type StateShown,
 } from '@/features/tasks/utils/head-focus';
 import { stateWord } from '@/features/tasks/utils/kin-forms';
-import { taskRowKey } from '@/features/tasks/utils/task-list';
-import { familyOf, taskListHref } from '@/features/tasks/utils/task-page';
+import { familyOf } from '@/features/tasks/utils/task-page';
 import { projectWord, t } from '@/lib/t';
-import { listQuery, type ListQuery } from '@/stores/list-query';
 import type { FocusBack } from '@/types/focus';
 import type { TaskOf } from '@/types/task';
 
@@ -41,7 +39,6 @@ export interface TaskHeadProps {
   readonly onEdit: (task: TaskOf, back: FocusBack) => void;
   readonly onAddPage: (task: TaskOf, back: FocusBack) => void;
   readonly acts?: TaskPageActs;
-  readonly query?: Pick<ListQuery, 'keepFrom'>;
 }
 
 interface Snapshot {
@@ -53,8 +50,8 @@ interface Snapshot {
 const isOpen = (sel: HTMLSelectElement | null): boolean =>
   sel !== null && CSS.supports('selector(:open)') && sel.matches(':open');
 
-// TaskHead is over the rows of a task's page (ui.html #task-head, drawTaskHead): the way back to the list, the task's
-// edit and archive buttons, its name and title, its state and how to change it, its time, project and links, and its
+// TaskHead is over the rows of a task's page (ui.html #task-head, drawTaskHead): its Add a page, the task's edit and
+// archive buttons, its name and title, its state and how to change it, its time, project and links, and its
 // family card. Drawn anew, the focus it had goes where headFocus says, taken just before React changes it
 // LIMIT: a browser without :open redraws the choices while its list is open: what is chosen goes with the rev drawn last,
 // refused or written as of then. Hold them some other way if such a browser comes to matter
@@ -115,20 +112,8 @@ export class TaskHead extends Component<TaskHeadProps, { shown: StateShown | nul
   };
 
   override render() {
-    const {
-      task,
-      shown: visible,
-      project,
-      name,
-      color,
-      onKin,
-      onEdit,
-      onAddPage,
-      acts = taskPageActs,
-      query = listQuery,
-    } = this.props;
+    const { task, shown: visible, project, name, color, onKin, onEdit, onAddPage, acts = taskPageActs } = this.props;
     const { lang, states } = getBoot();
-    const first = states.find((s) => s.first)?.name ?? '';
     const shown = this.state.shown;
     const drawn = shown?.state ?? task?.state ?? '';
     const back = task?.state === 'archived';
@@ -146,19 +131,6 @@ export class TaskHead extends Component<TaskHeadProps, { shown: StateShown | nul
         className="grid flex-none gap-[0.35rem] border-b border-line bg-panel px-4 pt-2 pb-[0.65rem]"
       >
         <div className="flex flex-wrap items-center gap-2">
-          {/* The way back stands as the page opens: h may be pressed before the first answer */}
-          <a
-            id="task-up"
-            href={taskListHref(project, task?.state, first)}
-            title={t('ui_tasks_back')}
-            onClick={() => {
-              query.keepFrom(taskRowKey(project, name));
-            }}
-            className="-ms-1 inline-flex h-9 items-center gap-[0.15rem] justify-self-start text-small text-muted no-underline hover:text-fg hover:underline [&_svg]:size-3.5"
-          >
-            <BackChevronIcon />
-            {t('ui_screen_tasks')}
-          </a>
           <span className="ms-auto flex flex-wrap justify-end gap-2">
             <Button
               id="task-add-page"

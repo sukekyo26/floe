@@ -43,7 +43,7 @@ export function pressDiff(): void {
   if (open instanceof HTMLElement) open.click();
 }
 
-// pressUp presses the way up of a task's page to the list (ui.html 6807)
+// pressUp presses the way up of a task's page to the list: the bar's task list (ui.html 6807)
 export function pressUp(): void {
-  document.getElementById('task-up')?.click();
+  document.getElementById('to-tasks')?.click();
 }

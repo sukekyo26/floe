@@ -120,7 +120,7 @@ func TestUITaskChildren(t *testing.T) { //nolint:paralleltest // the browser tes
 	b.until("the child's page", "new URLSearchParams(location.search).get('task') === '#2' && !document.getElementById('task-family').hidden")
 
 	// A child leads up to its parent, and its way back is to its own state.
-	if got := b.eval("document.querySelector('#task-family h3').textContent + ' ' + document.querySelector('#task-family [data-testid=kin-row]').textContent + ' ' + document.querySelector('#task-family [data-testid=kin-row]').getAttribute('href') + ' ' + document.getElementById('task-up').getAttribute('href')"); got != "Parent task In progress#1the parent /tasks?project=proj&task=%231 /tasks?project=proj" {
+	if got := b.eval("document.querySelector('#task-family h3').textContent + ' ' + document.querySelector('#task-family [data-testid=kin-row]').textContent + ' ' + document.querySelector('#task-family [data-testid=kin-row]').getAttribute('href') + ' ' + document.getElementById('to-tasks').getAttribute('href')"); got != "Parent task In progress#1the parent /tasks?project=proj&task=%231 /tasks?project=proj" {
 		t.Errorf("a child's head: %q", got)
 	}
 
@@ -457,21 +457,21 @@ func TestUITaskChildren(t *testing.T) { //nolint:paralleltest // the browser tes
 	}
 }
 
-// The way back from a task's page is a press's height, wide and narrow, clear of the bar's tabs.
-func TestUITaskUpRoom(t *testing.T) { //nolint:paralleltest // the browser tests share one Chrome, one at a time
+// A task's head keeps its buttons within it, wide and narrow: a task done has three, which go onto another line where they do not fit
+// (S450). 280px is narrower than a phone, as the tests' fonts are narrower than a person's.
+func TestUITaskHeadRoom(t *testing.T) { //nolint:paralleltest // the browser tests share one Chrome, one at a time
 	s := newSite(t)
 	b := s.b
 	b.navigate("/")
-	s.floe(t, "task", "--project", "proj", "--task", "#1", "--state", "todo")
+	s.floe(t, "task", "--project", "proj", "--task", "#1", "--state", "done")
 	defer b.unsize()
-	for _, width := range []int64{1400, 400} {
-		b.size(width, 800, width == 400)
+	for _, width := range []int64{1400, 280} {
+		b.size(width, 800, width == 280)
 		b.navigate("/tasks?project=proj&task=%231")
-		b.until("the head", "!document.getElementById('task-head').hidden")
-		const up = "document.getElementById('task-up').getBoundingClientRect()"
-		got := b.eval("[" + up + ".height >= 36, " + up + ".top - document.getElementById('screens').getBoundingClientRect().bottom >= 8].join(' ')")
-		if got != "true true" {
-			t.Errorf("at %d: tall, clear of the tabs = %s", width, got)
+		b.until("the head", "!document.getElementById('task-head').hidden && !document.getElementById('task-archive').hidden")
+		got := b.eval("(() => { const head = document.getElementById('task-head').getBoundingClientRect(); return ['task-add-page', 'task-edit', 'task-archive'].every((id) => { const r = document.getElementById(id).getBoundingClientRect(); return r.left >= head.left && r.right <= head.right; }) && document.documentElement.scrollWidth <= innerWidth; })()")
+		if got != "true" {
+			t.Errorf("at %d: the head's buttons within it = %s", width, got)
 		}
 	}
 }

@@ -22,11 +22,9 @@ import { composing } from '@/utils/keys';
 import { nextReached } from '@/utils/list-keys';
 import { FIND_ROWS } from '@/utils/search';
 
-// What Add a page is opened for: the task as its page drew it, the category chosen at first, and the way back to its add
-// button
+// What Add a page is opened for: the task as its page drew it, and the way back to its button
 export interface AddPageOpen {
   task: TaskOf;
-  category: string;
   back: FocusBack;
 }
 
@@ -104,7 +102,7 @@ function AddPageBody({
   const [to, setTo] = useState<AddTo>(() => ({
     project: opened?.project ?? '',
     name: opened?.name ?? '',
-    category: last?.category ?? '',
+    category: '',
     rev: opened ? pages.readRev(opened.project, opened.name) : 0,
   }));
   const categories = opened?.categories ?? [];

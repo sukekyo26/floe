@@ -18,24 +18,23 @@ const task: TaskOf = {
   children: [],
 };
 
-const draw = (category: string) =>
+const draw = () =>
   renderToString(
     <AddPageDialog
-      open={{ task, category, back: () => true }}
+      open={{ task, back: () => true }}
       onClosed={() => undefined}
       writes={{ tasksOf: () => [task], putPageOn: () => Promise.reject(new Error('not sent')) }}
     />,
   );
 
 describe(AddPageDialog, () => {
-  it('is titled Add a page and chooses the category in it: none, then the task’s in their order, the one given chosen', () => {
-    expect.assertions(3);
+  it('is titled Add a page and chooses the category in it: none, chosen as it opens, then the task’s in their order', () => {
+    expect.assertions(2);
     testBoot();
-    const html = draw('');
+    const html = draw();
     expect(html).toMatch(/<h2 id="add-page-title"[^>]*>ui_page_add:undefined<\/h2>/);
     expect(html).toMatch(
       /ui_task_category:undefined<select id="add-page-category"[^>]*><option value="" selected="">ui_category_none:undefined<\/option><option value="plan">plan<\/option><option value="review">review<\/option><\/select>.*id="add-page-q"/s,
     );
-    expect(draw('review')).toMatch(/<option value="review" selected="">review<\/option>/);
   });
 });
