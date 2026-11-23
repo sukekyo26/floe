@@ -1,4 +1,4 @@
-package publish
+package drawhere
 
 import (
 	"io/fs"
@@ -16,7 +16,7 @@ import (
 func TestRecorder(t *testing.T) {
 	t.Parallel()
 
-	r := &recorder{fsys: fstest.MapFS{"f.png": {Data: nil, Mode: fs.ModeNamedPipe}}, names: nil, seen: map[string]bool{}}
+	r := newRecorder(fstest.MapFS{"f.png": {Data: nil, Mode: fs.ModeNamedPipe}})
 	_, err := kit.ReadImage(r, "f.png", ".", "d.yaml")
 	if got, want := usererr.Tell(i18n.EnglishCatalog(), err).Render(""), `"f.png" is not a file of an image, but a directory or the like: name a regular file of the image`; got != want {
 		t.Errorf("told %s, want %s", got, want)

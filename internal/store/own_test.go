@@ -21,7 +21,7 @@ func put(t *testing.T, s *store.Store, dw store.Drawing, file, place, src string
 	t.Helper()
 
 	up := floepublish.Upload{File: file, Source: []byte(src), Images: map[string][]byte{}, Project: "p", Repo: "p", Place: place}
-	e, err := floepublish.PrepareData(s, dw, up, o)
+	e, err := floepublish.PrepareData(t.Context(), s, dw, up, o)
 	if err != nil {
 		return nil, err
 	}
@@ -81,7 +81,7 @@ func TestPublishRenamedInBetween(t *testing.T) {
 				t.Fatal(told(err, root))
 			}
 			up := floepublish.Upload{File: c.file, Source: []byte(ownSrc + "title: two\n"), Images: map[string][]byte{}, Project: "p", Repo: "p", Place: c.file}
-			e, err := floepublish.PrepareData(s, dw, up, store.Options{})
+			e, err := floepublish.PrepareData(t.Context(), s, dw, up, store.Options{})
 			if err != nil {
 				t.Fatal(told(err, root))
 			}
@@ -128,7 +128,7 @@ func TestOwnSlugOrder(t *testing.T) {
 			dw := picKit(t, "", "")
 			for _, p := range c.pages {
 				up := floepublish.Upload{File: "x.yaml", Source: []byte(ownSrc), Images: map[string][]byte{}, Project: "p", Repo: p.repo, Place: p.place}
-				e, err := floepublish.PrepareData(s, dw, up, store.Options{Slug: new(p.slug)})
+				e, err := floepublish.PrepareData(t.Context(), s, dw, up, store.Options{Slug: new(p.slug)})
 				if err == nil {
 					err = s.Save(e)
 				}
@@ -308,7 +308,7 @@ func TestSameFileAnyProject(t *testing.T) {
 	pub := func(project, repo, place string, o store.Options) string {
 		t.Helper()
 		up := floepublish.Upload{File: "db.yaml", Source: []byte(ownSrc), Images: map[string][]byte{}, Project: project, Repo: repo, Place: place}
-		e, err := floepublish.PrepareData(s, dw, up, o)
+		e, err := floepublish.PrepareData(t.Context(), s, dw, up, o)
 		if err != nil {
 			t.Fatalf("from %s: %s", project, told(err, root))
 		}
@@ -379,7 +379,7 @@ func TestSameFileAnyProject(t *testing.T) {
 	// A page that kept no file: compared by the project published from, then keyed.
 	pub("p", "p", "", store.Options{Slug: new("nofile")})
 	up := floepublish.Upload{File: "n.yaml", Source: []byte(ownSrc), Images: map[string][]byte{}, Project: "q", Repo: "", Place: plans + "2"}
-	if _, err := floepublish.PrepareData(s, dw, up, store.Options{Slug: new("nofile")}); err == nil {
+	if _, err := floepublish.PrepareData(t.Context(), s, dw, up, store.Options{Slug: new("nofile")}); err == nil {
 		t.Error("a page that kept no file, from another project: no refusal")
 	}
 	pub("p", "", plans+"2", store.Options{Slug: new("nofile")})

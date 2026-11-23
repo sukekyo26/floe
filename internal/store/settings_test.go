@@ -8,6 +8,7 @@ import (
 	"strings"
 	"testing"
 
+	"floe/internal/drawhere"
 	"floe/internal/i18n"
 	"floe/internal/kit"
 	floepublish "floe/internal/publish"
@@ -23,7 +24,7 @@ func floeDrawing(t *testing.T) store.Drawing {
 	if err != nil {
 		t.Fatal(err)
 	}
-	return store.Drawing{Kit: k, Icons: nil, Err: nil}
+	return store.Drawing{Kit: k, Icons: nil, Draw: drawhere.Here(k, nil), Err: nil}
 }
 
 // report is a page of floe's report, in theme when it names one.
@@ -205,7 +206,7 @@ func TestPublishCreatedTheme(t *testing.T) {
 	publish(t, s, dw, "a.yaml", report(""), nil, store.Options{})
 	publish(t, s, dw, "b.yaml", report(""), nil, store.Options{})
 	// Drawn, then the default changed, then saved: kept as drawn.
-	e, err := floepublish.PrepareData(s, dw, floepublish.Upload{File: "c.yaml", Source: []byte(report("")), Images: nil, Project: "p", Repo: "p", Place: "c.yaml"}, store.Options{})
+	e, err := floepublish.PrepareData(t.Context(), s, dw, floepublish.Upload{File: "c.yaml", Source: []byte(report("")), Images: nil, Project: "p", Repo: "p", Place: "c.yaml"}, store.Options{})
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -217,7 +218,7 @@ func TestPublishCreatedTheme(t *testing.T) {
 	}
 	// Replacing another project's page with --force: new, in the default of now.
 	up := floepublish.Upload{File: "b.yaml", Source: []byte(report("")), Images: nil, Project: "q", Repo: "q", Place: "b.yaml"}
-	if e, err = floepublish.PrepareData(s, dw, up, store.Options{Force: true}); err != nil {
+	if e, err = floepublish.PrepareData(t.Context(), s, dw, up, store.Options{Force: true}); err != nil {
 		t.Fatal(err)
 	}
 	if err = s.Save(e); err != nil {
@@ -233,13 +234,13 @@ func TestPublishCreatedTheme(t *testing.T) {
 	if err = setTheme(s, "gone"); err != nil {
 		t.Fatal(err)
 	}
-	_, err = floepublish.PrepareData(s, dw, floepublish.Upload{File: "d.yaml", Source: []byte(report("")), Images: nil, Project: "p", Repo: "p", Place: "d.yaml"}, store.Options{})
+	_, err = floepublish.PrepareData(t.Context(), s, dw, floepublish.Upload{File: "d.yaml", Source: []byte(report("")), Images: nil, Project: "p", Repo: "p", Place: "d.yaml"}, store.Options{})
 	if got := told(err, root); !strings.HasPrefix(got, `floe: there is no theme "gone"; use app, aurora,`) {
 		t.Errorf("a new page in a default gone: told %s", got)
 	}
 	publish(t, s, dw, "d.yaml", report("washi"), nil, store.Options{})
 	publish(t, s, dw, "a.yaml", report(""), nil, store.Options{})
-	if err = s.Rebuild(dw); err != nil {
+	if err = s.Rebuild(t.Context(), dw); err != nil {
 		t.Errorf("Rebuild: %s", told(err, root))
 	}
 }
@@ -255,7 +256,7 @@ func TestSettingsBrokenLinks(t *testing.T) {
 	if err := os.WriteFile(filepath.Join(root, "settings.json"), []byte(`{`), 0o600); err != nil {
 		t.Fatal(err)
 	}
-	_, err := floepublish.PrepareData(s, dw, floepublish.Upload{File: "b.yaml", Source: []byte(report("")), Images: nil, Project: "p", Repo: "p", Place: "b.yaml"}, store.Options{})
+	_, err := floepublish.PrepareData(t.Context(), s, dw, floepublish.Upload{File: "b.yaml", Source: []byte(report("")), Images: nil, Project: "p", Repo: "p", Place: "b.yaml"}, store.Options{})
 	if got := told(err, root); !strings.HasPrefix(got, filepath.Join("S", "settings.json")+": ") {
 		t.Errorf("a new page: told %s", got)
 	}
@@ -309,12 +310,12 @@ func TestPublishOrderKept(t *testing.T) {
 	s, root := newStore(t)
 	dw := floeDrawing(t)
 	publish(t, s, dw, "a.yaml", report(""), nil, store.Options{})
-	_, err := floepublish.PrepareData(s, dw, floepublish.Upload{File: "a.yaml", Source: []byte("title: a: b\n"), Images: nil, Project: "q", Repo: "q", Place: "a.yaml"}, store.Options{})
+	_, err := floepublish.PrepareData(t.Context(), s, dw, floepublish.Upload{File: "a.yaml", Source: []byte("title: a: b\n"), Images: nil, Project: "q", Repo: "q", Place: "a.yaml"}, store.Options{})
 	if got := told(err, root); !strings.HasPrefix(got, "a.yaml:1:9: ") || strings.Contains(got, "\n") {
 		t.Errorf("a mistake of the data first: told %s", got)
 	}
 	fenced := strings.Replace(report(""), "text: x", "text: \"```\\nx\\n```\"", 1)
-	_, err = floepublish.PrepareData(s, dw, floepublish.Upload{File: "a.yaml", Source: []byte(fenced), Images: nil, Project: "q", Repo: "q", Place: "a.yaml"}, store.Options{})
+	_, err = floepublish.PrepareData(t.Context(), s, dw, floepublish.Upload{File: "a.yaml", Source: []byte(fenced), Images: nil, Project: "q", Repo: "q", Place: "a.yaml"}, store.Options{})
 	var conflict *store.Conflict
 	report := usererr.Tell(i18n.EnglishCatalog(), err)
 	if !errors.As(err, &conflict) || len(report.Warnings) != 1 {

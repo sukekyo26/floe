@@ -7,6 +7,7 @@ import (
 	"fmt"
 	"net"
 	"os"
+	"os/exec"
 	"os/signal"
 	"regexp"
 	"runtime/debug"
@@ -18,6 +19,7 @@ import (
 	"github.com/spf13/cobra"
 
 	"floe/internal/daemon"
+	"floe/internal/drawproc"
 	"floe/internal/files"
 	"floe/internal/link"
 	"floe/internal/server"
@@ -104,13 +106,35 @@ func (a *app) serverConfig() (server.Config, dataPlace, error) {
 	return cfg, root, nil
 }
 
-// drawing is what the server draws pages with: one's own over floe's (kit) and the icons (iconStore).
+// errNoDrawer is the failure of a server that has not set what it draws with (serve sets it).
+var errNoDrawer = errors.New("the server has no floe __draw to draw with")
+
+// drawing is what the server draws pages with: one's own over floe's (kit) and the icons (iconStore), which floe
+// __draw reads as the server does and draws with (a.drawer, which serve sets).
 func (a *app) drawing() (store.Drawing, error) {
+	if a.drawer == nil {
+		return store.Drawing{Kit: nil, Icons: nil, Draw: nil, Err: nil}, errNoDrawer
+	}
 	k, err := a.kit(true)
 	if err != nil {
-		return store.Drawing{Kit: nil, Icons: nil, Err: nil}, err
+		return store.Drawing{Kit: nil, Icons: nil, Draw: nil, Err: nil}, err
 	}
-	return store.Drawing{Kit: k, Icons: a.iconStore(), Err: nil}, nil
+	return store.Drawing{Kit: k, Icons: a.iconStore(), Draw: a.drawer, Err: nil}, nil
+}
+
+// drawTime is how long the server lets one page be drawn: drawproc.Limit, shorter in a test.
+var drawTime = drawproc.Limit
+
+// drawChildren is the Drawer of the server of build: floe __draw, the binary exe, with the settings the server has.
+// LIMIT: floe __draw reads one's own parts, themes and templates itself, as the server does each second: one changed
+// in between is drawn with as it is now, a second's difference, as the server's own drawing had.
+func (a *app) drawChildren(build, exe string) *drawproc.Child {
+	env := a.serverEnv()
+	return drawproc.NewChild(build, drawTime, func(ctx context.Context) *exec.Cmd {
+		cmd := exec.CommandContext(ctx, exe, "__draw")
+		cmd.Env = env
+		return cmd
+	})
 }
 
 // client makes sure the server of this store runs, of this build, and returns what calls it. anyDirs
@@ -181,6 +205,11 @@ func (a *app) serve(ctx context.Context) error {
 	if cfg.Build, err = daemon.Build(); err != nil {
 		return err //nolint:wrapcheck // already says what failed
 	}
+	exe, err := os.Executable()
+	if err != nil {
+		return fmt.Errorf("find the floe binary: %w", err)
+	}
+	a.drawer = a.drawChildren(cfg.Build, exe)
 	ln, err := a.listen(cfg.Port)
 	if err != nil {
 		return err
