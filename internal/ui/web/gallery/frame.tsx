@@ -2,10 +2,10 @@
 // open, for real. A fake server answers the pages, the tasks, the themes, the versions, the diff and a folder's files,
 // and takes the page's writes in memory; the page in the frame is the gallery's own page (gallery/page.html, sandboxed
 // as the server's). ?scene= picks what is open, and ?back= where it was opened from (pages, tasks or task: the rows kept,
-// as the list or the task's page keeps them; none, opened by its URL). j and k go to /a/…, the gallery's page alone
+// as the list or the task's page keeps them; none, opened by its URL). j and k go to /a/…, the gallery's page alone. The bar's end reads the page's width against the window's (fits)
 import './gallery.css';
 
-import { StrictMode } from 'react';
+import { StrictMode, useEffect, useState } from 'react';
 import { createRoot } from 'react-dom/client';
 
 import { startFrame } from '@/app/start';
@@ -119,6 +119,29 @@ if (back) {
   sessionStorage.setItem('pages.order', JSON.stringify({ order: rows, shown: rows, back }));
 } else sessionStorage.removeItem('pages.order');
 
+// Fits tells whether the screen is as wide as the window, nothing running off its right (the page's width / the
+// window's), read again as the window changes and after the list's read
+function Fits() {
+  const read = () => `${String(document.documentElement.scrollWidth)} / ${String(window.innerWidth)}`;
+  const [width, setWidth] = useState('');
+  useEffect(() => {
+    const again = () => {
+      setWidth(read());
+    };
+    const late = setTimeout(again, 1000);
+    window.addEventListener('resize', again);
+    return () => {
+      clearTimeout(late);
+      window.removeEventListener('resize', again);
+    };
+  }, []);
+  return (
+    <output id="fits" className="rounded-small bg-on-ink px-1.5 text-ink">
+      {width}
+    </output>
+  );
+}
+
 function Scenes() {
   const link = (s: string, b: string) =>
     `?scene=${s}${b ? `&back=${b}` : ''}${SCENES[s]?.query ? `&${SCENES[s].query}` : ''}`;
@@ -134,6 +157,7 @@ function Scenes() {
           {b ? `from ${b}` : 'by its URL'}
         </a>
       ))}
+      <Fits />
     </nav>
   );
 }

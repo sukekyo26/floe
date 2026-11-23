@@ -55,10 +55,12 @@ describe(ScreenSwitch, () => {
     );
   });
 
-  it('marks neither as the screen shown on a page whole, and sends the one it was opened from where its up says', () => {
-    expect.assertions(3);
+  it('marks neither as the screen shown on a page whole, gone at 40rem or less, and sends the one it was opened from where its up says', () => {
+    expect.assertions(5);
     const none = /aria-current/;
     expect(draw('frame')).not.toMatch(none);
+    expect(draw('frame')).toMatch(/^<nav id="screens"[^>]*class="[^"]*narrow:hidden/);
+    expect(draw('list')).not.toContain('narrow:hidden');
     expect(draw('frame', { listUp: up('/?view=fav') })).toMatch(
       /<a id="to-list" href="\/\?view=fav"[^>]*class="[^"]*text-muted.*<a id="to-tasks" href="\/tasks\?[^"]*project=p/,
     );

@@ -73,12 +73,12 @@ describe(FrameRoute, () => {
     expect(html).toContain('<dd id="keys-back">ui_back_to_task:#128</dd>');
   });
 
-  it('opened from the page list, goes back to it by the header’s Pages, with no back link', () => {
+  it('opened from the page list, goes back to it by the header’s Pages, its back link there hidden till 40rem', () => {
     expect.assertions(2);
     const html = draw('', [page], {
       'pages.order': JSON.stringify({ order: ['p'], shown: ['p'], back: '/?view=fav' }),
     });
     expect(html).toMatch(/<a id="to-list" href="\/\?view=fav"/);
-    expect(html).not.toContain('id="back"');
+    expect(html).toMatch(/<a id="back" href="\/\?view=fav"[^>]*class="hidden narrow:inline-flex /);
   });
 });

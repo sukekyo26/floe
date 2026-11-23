@@ -17,8 +17,8 @@ export interface Up {
 }
 
 // ScreenSwitch is the bar's way between the two screens: links, as each goes to a URL of its own; the screen shown is
-// aria-current, and a page whole is neither (the user's choice). Each is as high as the bar, its words in the bar's
-// middle
+// aria-current, and a page whole is neither (the user's choice), whose bar has its back link alone at 40rem or less.
+// Each is as high as the bar, its words in the bar's middle
 // Each goes back to the list as this tab last had it (ui.html drawScreens), read again as the list's query is kept, or
 // where its up says: on a task's page, the task list's (S450), and in a frame, the one it was opened from
 export function ScreenSwitch({
@@ -36,7 +36,11 @@ export function ScreenSwitch({
   const pages = screen === 'list';
   const tasks = screen === 'taskList' || screen === 'taskPage';
   return (
-    <nav id="screens" aria-label={t('ui_screens')} className="flex flex-none gap-x-5 self-stretch">
+    <nav
+      id="screens"
+      aria-label={t('ui_screens')}
+      className={`flex flex-none gap-x-5 self-stretch ${screen === 'frame' ? 'narrow:hidden' : ''}`}
+    >
       <a
         id="to-list"
         href={listUp?.href ?? `/${query.savedList()}`}

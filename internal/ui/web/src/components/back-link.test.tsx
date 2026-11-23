@@ -19,9 +19,18 @@ describe(BackLink, () => {
     expect(html).not.toMatch(/hover:bg-|rounded/);
   });
 
-  it('is not drawn opened from either list, whose header link is the way back', () => {
+  it('opened from either list, is there for h and narrow screens alone, hidden on a wider one, saying where it goes', () => {
     expect.assertions(2);
-    expect(draw('/?view=fav')).toBe('');
-    expect(draw('/tasks?project=p')).toBe('');
+    expect(draw('/?view=fav')).toMatch(
+      /^<a id="back" href="\/\?view=fav" aria-label="ui_to_page_list:undefined"[^>]*class="hidden narrow:inline-flex /,
+    );
+    expect(draw('/tasks?project=p')).toMatch(
+      /aria-label="ui_tasks_back:undefined"[^>]*class="hidden narrow:inline-flex /,
+    );
+  });
+
+  it('opened from a task’s page, shows on any screen', () => {
+    expect.assertions(1);
+    expect(draw('/tasks?project=p&task=%23128')).toMatch(/class="inline-flex /);
   });
 });

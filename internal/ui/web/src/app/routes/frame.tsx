@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react';
 
 import { Bar } from '@/app/bar';
+import { frameUp } from '@/app/frame-up';
 import { appKeys, frameRows, pressDiff, pressStar, pressUp } from '@/app/keys';
 import { useScreenModals } from '@/app/modals';
 import { BackLink } from '@/components/back-link';
@@ -28,12 +29,8 @@ import { openPage } from '@/stores/open-page';
 import { order } from '@/stores/order';
 import { pages } from '@/stores/pages';
 import type { Page } from '@/types/page';
-import { backOf, type Back } from '@/utils/back';
+import { backOf } from '@/utils/back';
 import { rawHref } from '@/utils/page-urls';
-
-// The link h goes by, the one that holds the way back: the task's page's back link, or the header's link to the list
-// that opened the page
-const upId = (back: Back): string => (back.to === 'task' ? 'back' : back.to === 'pages' ? 'to-list' : 'to-tasks');
 
 // FrameRoute is a page whole, /a/{slug}/ (ui.html renderFrame and the frame's start): the bar of the page's own (its way
 // back, name, version and actions), its tags, a folder's tree, the notes of its versions, and the page, its diff or the
@@ -70,12 +67,7 @@ export function FrameRoute() {
       removeEventListener('pageshow', shown);
     };
   }, []);
-  const up = {
-    href: back.href,
-    onPress: () => {
-      order.editKept(() => ({ pressed: true }));
-    },
-  };
+  const up = frameUp(back, order);
   const words = backWords(back);
 
   const { openers, openFind, findToggle, openHelp, openSettings, modals } = useScreenModals('frame', {
@@ -111,7 +103,8 @@ export function FrameRoute() {
       pressDiff(actions());
     },
     up: () => {
-      pressUp(upId(back));
+      // The back link is always there, hidden where the header's link goes the same way: h presses it alone
+      pressUp('back');
     },
   });
   useKeys(keys);

@@ -49,7 +49,10 @@ export function App({ search }: { readonly search: string }) {
         {screen === 'frame' ? <FrameRoute /> : null}
       </DrawGuard>
       <ErrorBar />
-      <Toasts />
+      {/* A page whole prints the page's URL alone (ui.html 268) */}
+      <div className={screen === 'frame' ? 'contents print:hidden' : 'contents'}>
+        <Toasts />
+      </div>
     </div>
   );
 }
