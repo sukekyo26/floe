@@ -177,7 +177,7 @@ func TestUIList(t *testing.T) { //nolint:paralleltest // the browser tests share
 	out = append(out, b.eval("[getComputedStyle(document.getElementById('reader')).display, getComputedStyle(document.querySelector('#q')).color !== 'rgba(0, 0, 0, 0)'].join(' ')"))
 	b.moving("document.querySelector('#list li[data-slug=r] [data-testid=title]').click()")
 	b.until("the row whole", "location.pathname === '/a/r/'")
-	out = append(out, b.until("the bar", "document.getElementById('frame-title').textContent && [getComputedStyle(document.getElementById('back')).display, getComputedStyle(document.getElementById('frame-actions')).display].join(' ')"))
+	out = append(out, b.until("the bar", "document.getElementById('frame-title').textContent && [(" + wayBack + ")?.id, getComputedStyle(document.getElementById('frame-actions')).display].join(' ')"))
 	b.unsize()
 
 	// A dialog's words are a paragraph, not a row's first column: above the next field, however long.
@@ -199,7 +199,7 @@ func TestUIList(t *testing.T) { //nolint:paralleltest // the browser tests share
 	out = append(out, b.eval("[getComputedStyle(document.getElementById('reader')).display, getComputedStyle(document.getElementById('shelf-more')).display, getComputedStyle(document.getElementById('narrow-filter')).display, getComputedStyle(document.getElementById('news')).display, document.documentElement.scrollWidth <= innerWidth].join(' ')"))
 	b.moving("document.querySelector('#list li[data-slug=r] [data-testid=title]').click()")
 	b.until("the row whole", "location.pathname === '/a/r/'")
-	out = append(out, b.until("the bar", "document.getElementById('frame-title').textContent && [getComputedStyle(document.getElementById('back')).display, getComputedStyle(document.querySelector('#frame-actions [data-testid=star]')).display].join(' ')"))
+	out = append(out, b.until("the bar", "document.getElementById('frame-title').textContent && [(" + wayBack + ")?.id, getComputedStyle(document.querySelector('#frame-actions [data-testid=star]')).display].join(' ')"))
 	b.unsize()
 
 	check(t, "list", out, strings.Join([]string{
@@ -211,8 +211,8 @@ func TestUIList(t *testing.T) { //nolint:paralleltest // the browser tests share
 		"true true true", "false true about:blank true ",
 		"vn ?view=new", "vn", "All unread 1 / 1", "New", "n", "true",
 		`{"order":["v","n"],"shown":["v","n"],"back":"/?view=new","at":{"slug":"v","file":"","v":0}}`, "/?view=new", "/a/v/",
-		"true true true true true", "flex none none true", "/ false", "none true", "flex flex", "true block", "true",
-		"none none flex none true", "flex none",
+		"true true true true true", "flex none none true", "/ false", "none true", "to-list flex", "true block", "true",
+		"none none flex none true", "back none",
 	}, "|"))
 }
 
