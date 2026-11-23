@@ -18,8 +18,8 @@ import (
 // modal too on a narrow screen; the settings' rows and their way back; the "…" menu's items. Nor are the links of a row or a mark
 // (the brand, a row's title in the list and the search, a row's task and tags, a task's parent and children, the diff's contents,
 // the bar's count of the unread, a link of words: the user's choice, S422-P8), nor tabs (role=tab: the help's switches, as the
-// React screen makes them). The React screens' bar's links to the screens (#screens a, links of a nav in the look of the help's
-// tabs: the user's choice, S422-P8) are left out there alone: ui.html's frame does not show its own
+// React screen makes them). The React screens' bar's links to the screens (#screens a, links of a nav, the screen shown darker:
+// the user's choice, S448) are left out there alone: ui.html's frame does not show its own
 const notButtons = "#shelf *, #filter-dialog #shelf-more *, [data-testid=settings-item], #settings-back, [data-testid=menu] *, " +
 	"[data-testid=brand], #list li [data-testid=title], #find-list li [data-testid=title], [data-testid=task-tag], #list li [data-testid=tagpill], [data-testid=kin-row], #diff-toc button, [role=tab], #news"
 
