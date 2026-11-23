@@ -442,8 +442,9 @@ func (b *browser) hover(x, y float64) {
 	var last string
 	var err error
 	for deadline := time.Now().Add(waitLimit); time.Now().Before(deadline); {
-		// The toast of a page just read lies over it, and takes the pointer: not what these tests are of.
-		b.eval("document.querySelector('.toast.page')?.remove()")
+		// The toast of a page just read lies over it, and takes the pointer: not what these tests are of. Hidden, not
+		// removed: the screen takes it away itself.
+		b.eval("for (const e of document.querySelectorAll('[data-testid=toast][data-page]')) e.style.display = 'none'")
 		move(0, 0) // off the frame first: pointerover fires only on entering
 		move(x, y)
 		if last, err = b.try("window.over"); err == nil && truthy(last) {
