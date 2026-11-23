@@ -225,6 +225,7 @@ export type MessageKey =
   | 'ui_save_failed'
   | 'ui_saved'
   | 'ui_saved_off_task'
+  | 'ui_screen_draw_failed'
   | 'ui_screen_pages'
   | 'ui_screen_tasks'
   | 'ui_screens'

@@ -34,7 +34,7 @@ export class Guard extends Component<GuardProps, GuardState> {
   }
 
   override componentDidCatch(error: Error, _info: ErrorInfo) {
-    this.props.pages.drawFailed(t('ui_draw_failed', String(error)));
+    this.props.pages.drawFailed(t('ui_screen_draw_failed', String(error)));
   }
 
   override componentDidMount() {

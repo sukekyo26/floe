@@ -881,17 +881,9 @@ function Gallery() {
             </Button>
           </div>
         </Section>
-        <Section title="Shelf: views, parts and the search (under 70rem the views are a row, the rest in the filters’ modal; the bar’s new pages: before → after)">
+        <Section title="Shelf: views, parts and the search (under 70rem the views are a row, the rest in the filters’ modal, and the bar’s new pages)">
           <div className="mb-3 flex flex-wrap items-center gap-4">
-            <span className="text-small text-muted">Before (ui.html a.news):</span>
-            <a
-              href="/?view=new"
-              className="inline-flex items-center gap-[0.4rem] font-bold whitespace-nowrap text-new no-underline hover:underline"
-            >
-              <span className="size-2 flex-none rounded-full bg-new" />
-              {t('ui_news', 2)}
-            </a>
-            <span className="text-small text-muted">After (Button):</span>
+            <span className="text-small text-muted">The bar’s new pages:</span>
             <News query={galleryQuery} pages={galleryPages} columns={galleryColumns} />
             <Button
               id="fold-shelf"

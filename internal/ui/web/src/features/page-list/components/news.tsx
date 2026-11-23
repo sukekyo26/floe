@@ -1,6 +1,5 @@
 import type { MouseEventHandler } from 'react';
 
-import { Button } from '@/components/button';
 import { getBoot } from '@/config/boot';
 import { showResults } from '@/features/page-list/stores/show-results';
 import { newCount, newsPress, newsTaken } from '@/features/page-list/utils/list-shelf';
@@ -33,16 +32,17 @@ export function News({ hidden = false, query = listQuery, pages = pagePages, col
     query.filter(picks);
     showResults(columns);
   };
+  // A link, not a button (the user's choice, S422-P8): the look of ui.html .news (111–112), gone up to 70rem (871)
   return (
-    <Button
+    <a
       id="news"
       href="/?view=new"
       hidden={hidden || n === 0}
-      hideFrom="wide"
       {...(onList ? { onClick: take } : {})}
+      className="inline-flex items-center gap-[0.4rem] font-bold whitespace-nowrap text-new no-underline hover:underline wide:hidden"
     >
       <span data-testid="dot" className="size-2 flex-none rounded-full bg-new" />
       <span id="news-n">{t('ui_news', n)}</span>
-    </Button>
+    </a>
   );
 }

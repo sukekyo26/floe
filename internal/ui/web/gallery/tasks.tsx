@@ -1,29 +1,19 @@
-// The task list and a task's page, in a window of their own, as /tasks will be: their columns stand fixed on the
-// window. A fake server answers the pages and the tasks, and takes the writes of the screen (a task made or changed, a
-// pin taken off, a task removed) in memory; the browser's storage is the gallery's own origin's. ?data= picks the data
-// (full, empty, failed, flaky: the tasks unreadable after the first read, pins, nopins), and ?project=, ?view= and
-// ?task= the screen as /tasks takes them; ?scene=suggest shows a field's names alone, ?scene=not-link a URL of ftp
-// typed in the task edit's add modal. The modals of P6c open for real: edit the task, add a page, set a page's task
-// (from a row's "…") and the move's question; ?stale=1 refuses the first write of a task's rev as written meanwhile
-// (409), as another window would
+// /tasks as the app draws it (App): the bar, the task list or a task's page, and the modals they open, for real. A fake
+// server answers the pages, the tasks and the themes, and takes the writes of the screen (a task made or changed, a pin
+// taken off, a task removed) in memory; the browser's storage is the gallery's own origin's. ?data= picks the data
+// (full, empty, failed, flaky: the tasks unreadable after the first read, pins, nopins, throw: two reads the screen
+// cannot draw), and ?project=, ?view= and ?task= the screen as /tasks takes them; ?scene=suggest shows a field's names
+// alone, ?scene=not-link a URL of ftp typed in the task edit's add modal; ?stale=1 refuses the first write of a task's
+// rev as written meanwhile (409), as another window would
 import './gallery.css';
 
 import { StrictMode, useState } from 'react';
 import { createRoot } from 'react-dom/client';
 
+import { App } from '@/app/app';
 import { useNameSuggest } from '@/components/name-suggest';
 import { Toasts } from '@/components/toasts';
 import { setBoot, type Boot } from '@/config/boot';
-import { ReaderPane } from '@/features/reader/components/reader-pane';
-import { AddPageDialog, type AddPageOpen } from '@/features/tasks/components/add-page-dialog';
-import { MoveDialog } from '@/features/tasks/components/move-dialog';
-import { TaskEditDialog, type TaskEditOpen } from '@/features/tasks/components/task-edit-dialog';
-import { TaskListScreen } from '@/features/tasks/components/task-list-screen';
-import { TaskPageScreen } from '@/features/tasks/components/task-page-screen';
-import { TaskSetDialog } from '@/features/tasks/components/task-set-dialog';
-import { openTaskSet, type TaskSetOpen } from '@/features/tasks/stores/task-set';
-import { pages } from '@/stores/pages';
-import { toasts } from '@/stores/toasts';
 import type { Page } from '@/types/page';
 import type { TaskRow, Tasks } from '@/types/task';
 import { nameOffers } from '@/utils/name-offers';
@@ -117,6 +107,11 @@ const entries: Page[] =
 const tasks: Tasks = data === 'empty' || data === 'pins' ? {} : structuredClone(TASKS);
 
 let tasksRead = 0;
+let pagesRead = 0;
+const THEMES = [
+  { name: 'default', about: 'Plain, for any page', dir: '' },
+  { name: 'paper', about: 'Warm paper, serif headings', dir: '' },
+];
 // ?stale=1: the first write of a task's rev is refused, as written meanwhile
 let stale = params.get('stale') === '1';
 const refuseOnce = () => {
@@ -136,7 +131,20 @@ window.fetch = (input: string | URL | Request, init?: RequestInit) => {
         done(res);
       }, 120);
     });
-  if (url.pathname === '/api/pages') return answer(json(entries));
+  // ?data=throw: the first two reads hold an entry no screen can draw, as a broken answer would; the next draws again
+  if (url.pathname === '/api/pages')
+    return answer(json(data === 'throw' && ++pagesRead <= 2 ? [...entries, null] : entries));
+  // The settings' themes and a page's own, written in nothing
+  if (url.pathname === '/api/themes') return answer(json({ themes: THEMES, default: '', taskMode: false }));
+  if (url.pathname === '/api/settings' || url.pathname.endsWith('/read')) return answer(new Response(''));
+  if (url.pathname.endsWith('/theme')) return answer(method === 'GET' ? json({ own: '' }) : new Response(''));
+  // A page's star, archive and the rest of its own fields, as PATCH /api/pages/{slug} writes them
+  const own = /^\/api\/pages\/([^/]+)$/.exec(url.pathname);
+  if (own && method === 'PATCH') {
+    const a = entries.find((x) => x.slug === decodeURIComponent(own[1] ?? ''));
+    if (a) Object.assign(a, JSON.parse(typeof init?.body === 'string' ? init.body : '{}') as Partial<Page>);
+    return answer(a ? json(a) : new Response('', { status: 404 }));
+  }
   if (url.pathname === '/api/tasks' && method === 'GET') {
     const down = data === 'failed' || (data === 'flaky' && ++tasksRead > 1);
     return answer(down ? new Response('tasks.json: unknown key "colour"', { status: 500 }) : json(tasks));
@@ -251,6 +259,7 @@ const SCENES = [
   ['?data=flaky&project=shop&task=%2313', 'unreadable, a child'],
   ['?data=failed&project=shop&task=%2312', 'never read'],
   ['?data=full&project=shop&task=%2312&stale=1', 'task, a write refused once'],
+  ['?data=throw&project=shop&task=%2312', 'a draw that throws'],
   ['?scene=suggest', 'names'],
 ] as const;
 
@@ -299,66 +308,6 @@ function Suggest() {
   );
 }
 
-const task = params.get('task');
-const reader = <ReaderPane at={null} page={null} keys={new Set()} onKey={() => undefined} />;
-// What opens the modals of the app: said, not opened, in the gallery
-const said = (what: string) => () => {
-  toasts.toast(`${what}: the app's`);
-};
-
-// The screen with the task modals, as P8's app will put them: their state here, the move's question once
-function Screen({ name }: { readonly name: string | null }) {
-  const [edit, setEdit] = useState<TaskEditOpen | null>(null);
-  const [add, setAdd] = useState<AddPageOpen | null>(null);
-  const [set, setSet] = useState<TaskSetOpen | null>(null);
-  const openers = {
-    onTags: said('Tags'),
-    onTheme: said('Theme'),
-    onEdit: said('Edit'),
-    onTaskSet: (a: Page, back: () => boolean) => void openTaskSet(a, back, setSet),
-  };
-  return (
-    <>
-      {name === null ? (
-        <TaskListScreen reader={reader} />
-      ) : (
-        <TaskPageScreen
-          name={name}
-          openers={openers}
-          taskOpeners={{
-            onTaskEdit: (x, back) => {
-              setEdit({ task: x, back });
-            },
-            onAddPage: (x, category, back) => {
-              setAdd({ task: x, category, back });
-            },
-          }}
-          reader={reader}
-        />
-      )}
-      <TaskEditDialog
-        open={edit}
-        onClosed={() => {
-          setEdit(null);
-        }}
-      />
-      <AddPageDialog
-        open={add}
-        onClosed={() => {
-          setAdd(null);
-        }}
-      />
-      <TaskSetDialog
-        open={set}
-        onClosed={() => {
-          setSet(null);
-        }}
-      />
-      <MoveDialog />
-    </>
-  );
-}
-
 // typeInAdd opens the task's edit once its rows are drawn, then its URL's add modal, and adds what it types there, as a
 // person would, a step a frame: the field's value is set by the input's own setter, which React hears
 async function typeInAdd(typed: string) {
@@ -386,21 +335,17 @@ const boot = import.meta.glob<Boot>('./boot.json', { eager: true, import: 'defau
 const el = document.getElementById('root');
 if (el !== null && boot) {
   setBoot({ ...boot, screen: 'tasks' });
-  if (params.get('scene') !== 'suggest') {
-    void pages.load();
-    pages.watch();
-  }
   createRoot(el).render(
     <StrictMode>
       <Scenes />
       {params.get('scene') === 'suggest' ? (
-        <Suggest />
+        <>
+          <Suggest />
+          <Toasts />
+        </>
       ) : (
-        <div className="flex h-dvh flex-col">
-          <Screen name={task} />
-        </div>
+        <App search={window.location.search} />
       )}
-      <Toasts />
     </StrictMode>,
   );
   if (params.get('scene') === 'not-link') void typeInAdd('ftp://example.com/files');

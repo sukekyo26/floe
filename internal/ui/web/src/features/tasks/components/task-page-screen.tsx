@@ -46,6 +46,9 @@ export function TaskPageScreen({ name, openers, taskOpeners, reader }: TaskPageS
   useBackToRow(view.read, back);
   useEffect(() => {
     document.title = `${name} · floe`;
+    return () => {
+      document.title = 'floe';
+    };
   }, [name]);
   const first = getBoot().states.find((s) => s.first)?.name ?? '';
   const listHref = taskListHref(view.project, view.task?.state, first);
