@@ -8,7 +8,7 @@ import {
   type ReactNode,
 } from 'react';
 
-import { useDialog } from '@/components/dialog';
+import { givingBack } from '@/components/dialog';
 import { composing } from '@/utils/keys';
 import { suggestKey, type Offer } from '@/utils/name-offers';
 
@@ -46,7 +46,6 @@ export interface NameSuggest {
 // only as the field changes or is reached, so that a list read again neither closes them nor moves the name reached.
 // They stand in the top layer (a popover), so that no modal or box cuts them off, under the field
 export function useNameSuggest({ id, offers, put, onFocus = true }: NameSuggestWays): NameSuggest {
-  const { givingBack } = useDialog();
   const [names, setNames] = useState<Offer[]>([]);
   const [shown, setShown] = useState(false);
   const [reached, setReached] = useState(-1);
