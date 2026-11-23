@@ -59,7 +59,7 @@ export function ListRoute() {
   return (
     <>
       <Bar
-        tasks={false}
+        screen="list"
         search={<SearchBox />}
         onFind={openFind}
         onHelp={() => {

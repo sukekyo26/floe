@@ -13,7 +13,13 @@ const draw = (search?: ReactNode) => {
   // The server's state reads the address bar's host as it draws: node has no window
   vi.stubGlobal('window', { location: { host: '127.0.0.1:7325' } });
   return renderToString(
-    <Bar tasks={search === undefined} search={search} onFind={none} onHelp={none} onSettings={none} />,
+    <Bar
+      screen={search === undefined ? 'taskList' : 'list'}
+      search={search}
+      onFind={none}
+      onHelp={none}
+      onSettings={none}
+    />,
   );
 };
 

@@ -68,7 +68,7 @@ export function TasksRoute({ name }: { readonly name: string | null }) {
   return (
     <>
       <Bar
-        tasks
+        screen={name === null ? 'taskList' : 'taskPage'}
         taskUp={taskUp}
         onFind={openFind}
         onHelp={() => {
