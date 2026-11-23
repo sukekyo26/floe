@@ -195,15 +195,15 @@ func TestUITaskEdit(t *testing.T) { //nolint:paralleltest // the browser tests s
 	})()`)
 	say("let go", "[...document.querySelectorAll('#edit-categories li')].some((li) => li.draggable)")
 	b.eval(`(() => {
-		window.thrown = 0;
-		addEventListener('error', () => { thrown++; });
+		window.dragThrown = 0;
+		addEventListener('error', () => { dragThrown++; });
 		const word = document.querySelectorAll('#edit-categories [data-testid=category-name]')[1].firstChild;
 		const data = new DataTransfer();
 		word.dispatchEvent(new DragEvent('dragstart', { bubbles: true, dataTransfer: data }));
 		const to = document.querySelector('#edit-categories li');
 		to.dispatchEvent(new DragEvent('drop', { bubbles: true, cancelable: true, dataTransfer: data, clientY: to.getBoundingClientRect().top + 2 }));
 	})()`)
-	say("words dragged", "thrown + ' / ' + "+categories)
+	say("words dragged", "dragThrown + ' / ' + "+categories)
 	// A screen without hover (a touch screen) shows no grip, which one with hover shows.
 	const grip = "document.querySelector('#edit-categories [data-testid=category-grip]').checkVisibility()"
 	withHover := b.eval(grip)

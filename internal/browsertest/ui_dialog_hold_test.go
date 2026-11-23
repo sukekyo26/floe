@@ -152,7 +152,7 @@ func TestUIDialogHold(t *testing.T) { //nolint:paralleltest // the browser tests
 		return strconv.Itoa(n)
 	}
 	writes := []write{
-		{"tags", "tag-dialog", "/", rowMenu("plan-a", "tag-item"), typed("#tag-find", "n1", "document.getElementById('tag-new').click(); document.getElementById('tag-apply').click()"), true},
+		{"tags", "tag-dialog", "/", rowMenu("plan-a", "tag-item"), func() { b.fill("#tag-find", "n1"); applyNewTag(b) }, true},
 		{"edit", "edit-dialog", "/", rowMenu("plan-a", "edit"), func() { typed("#edit-desc", "d"+fresh(), "document.getElementById('edit-submit').click()")() }, true},
 		{"set", "set-dialog", "/", rowMenu("plan-a", "task-set"), typed("#set-category", "実装", "document.getElementById('set-submit').click()"), true},
 		{"off", "set-dialog", "/", rowMenu("check-a", "task-set"), run("document.getElementById('set-out').click()"), true},
