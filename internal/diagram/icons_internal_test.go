@@ -401,8 +401,8 @@ func TestGraphIconsRandom(t *testing.T) {
 		{"right", [2]uint64{241, 32}, 1597, true, true, true, touchesPlain, 0, 2, []int{1596}},
 		{"", [2]uint64{39, 10}, 300, false, true, false, touchesPlain, 0, 300, nil},
 		{"right", [2]uint64{41, 12}, 300, false, true, false, touchesPlain, 8, 460, nil},
-		{"", [2]uint64{43, 14}, 150, false, false, true, touchesPlain, 0, 56, nil},
-		{"right", [2]uint64{45, 16}, 150, false, false, true, touchesPlain, 0, 23, nil},
+		{"", [2]uint64{43, 14}, 150, false, false, true, touchesPlain, 0, 60, nil},
+		{"right", [2]uint64{45, 16}, 150, false, false, true, touchesPlain, 0, 28, nil},
 		// 77 has a level edge through the heading of a group of no lane.
 		{"right", [2]uint64{102, 1}, 78, false, false, true, touchesPlain, 0, 2, []int{77}},
 	} {

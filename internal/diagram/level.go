@@ -13,10 +13,10 @@ import (
 // A level edge stands its two boxes in one rank and runs straight between their facing sides. The boxes level edges
 // join make a row, one rank; a row's boxes that one group holds stand side by side as written (a block). A level edge
 // between boxes of two groups lays out the lowest group holding both (its common group; the graph's, -1, a graph of
-// lanes' from the start) as lanes are: the groups right in it, and the edge's ends right in it, stand as written, its
-// boxes make no blocks, and the edge's other ends and the groups under it holding them stand at their ends towards
-// the other end (faces). Where these meet, the order written wins, and what stands between two boxes after all is
-// told once laid out (drawLevels).
+// lanes' from the start) as lanes are: its groups, boxes and icons stand as written (its points, of longer edges,
+// still move), making no blocks, and the edge's ends under them and the groups holding those stand at their ends
+// towards the other end (faces). Where these meet, the order written wins, and what stands between two boxes after
+// all is told once laid out (drawLevels).
 
 // levelMistake is the mistake of edge k, written level, at a group, or nil.
 func (o *graphOut) levelMistake(k int, ends [2]gref) *usererr.Error {
@@ -56,8 +56,7 @@ func (o *graphOut) unlooped(levels []int) ([]int, usererr.List) {
 }
 
 // rows joins the boxes of the level edges into rows, each by its first box as written, finds the common groups of
-// those between two groups and the ends right in them, which stand as written, and where each block and group under a
-// common group stands (faces).
+// those between two groups, and where each block and group under a common group stands (faces).
 func (o *graphOut) rows(levels []int) {
 	o.levels = levels
 	o.row = make([]int, len(o.boxes))
@@ -68,7 +67,7 @@ func (o *graphOut) rows(levels []int) {
 		unite(o.row, o.ends[k][0].box, o.ends[k][1].box)
 	}
 	rootAll(o.row)
-	o.common, o.fixed = map[int]bool{}, map[int]bool{}
+	o.common = map[int]bool{}
 	if len(o.g.Lanes) > 0 {
 		o.common[-1] = true
 	}
@@ -90,8 +89,7 @@ func (o *graphOut) rows(levels []int) {
 		for _, end := range [2][2]int{{first, 1}, {second, -1}} {
 			b, towards := end[0], end[1]
 			d := o.boxes[b].cl
-			if d == c {
-				o.fixed[b] = o.common[c]
+			if d == c { // stands as written, or in a block
 				continue
 			}
 			o.facing[o.block(b)] = face(o.facing[o.block(b)], towards)
@@ -252,14 +250,9 @@ func (gr *group) facing(u unit) int {
 	return 0
 }
 
-// written reports whether unit u, of group c, stands as written: a group right in a common group c, or an end of a
-// level edge right in it.
+// written reports whether unit u, of group c, stands as written: a group, box or icon of a common group c.
 func (gr *group) written(u unit, c int) bool {
-	if u.cl >= 0 {
-		return gr.out.common[c]
-	}
-	n := gr.nodes[u.nodes[0]]
-	return n.box != nil && gr.out.fixed[n.of]
+	return gr.out.common[c] && (u.cl >= 0 || gr.nodes[u.nodes[0]].box != nil)
 }
 
 // levelPairs are the group's level edges by the two boxes they join, in the order of their first edge.

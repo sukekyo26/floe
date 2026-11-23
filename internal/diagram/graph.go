@@ -79,7 +79,6 @@ type graphOut struct {
 	ranked   []int          // the box each box takes its rank from: its row's, joined by with
 	withed   map[int]bool   // the boxes of a with that names a box: edges from boxes into them decide no rank
 	common   map[int]bool   // the groups laid out as lanes are, -1 the graph (see level.go)
-	fixed    map[int]bool   // the boxes right in a common group of their level edge, standing as written
 	facing   map[[2]int]int // where each block stands in its group (faces)
 	faced    map[int]int    // where each group under a common group stands in its group, as faces
 	drawn    []drawnBox     // where each box stands, drawn
@@ -93,7 +92,7 @@ type graphOut struct {
 func readGraph(g *graph, at string, way graphWay) (*graphOut, usererr.List) {
 	out := &graphOut{
 		g: g, at: at, boxes: nil, clusters: nil, top: nil, ends: map[int][2]gref{}, groups: nil, passed: 0,
-		loops: nil, skip: false, levels: nil, row: nil, ranked: nil, withed: nil, common: nil, fixed: nil, facing: nil,
+		loops: nil, skip: false, levels: nil, row: nil, ranked: nil, withed: nil, common: nil, facing: nil,
 		faced: nil, drawn: nil, way: way, detoured: nil, stayed: nil,
 	}
 	out.boxes, out.clusters, out.top = flatten(g, at)

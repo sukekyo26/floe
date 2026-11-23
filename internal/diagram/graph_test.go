@@ -553,9 +553,9 @@ edge "a"→"b" M176,49 V74
 // A level edge is refused at a group, when an edge joins two boxes of its row, when something stands between its boxes
 // or icons in their rank as laid out (a box, or a group's frame but one right in their common group), when it takes
 // the side of its box's loops, and when it runs through a group's or lane's heading laid out right; a box among a
-// group's ranks is told by ranks. Where marks meet, the order written wins and the edge is told. A level edge refused
-// for loops makes no row, so an edge between its boxes is not told too. The rest lay out: a box of a group to one
-// outside, a fan with its first zone written between, groups of a common group as written however align would order
+// group's ranks is told by ranks. Where marks meet, the order written wins and the edge is told; a common group's boxes
+// stand as written, so what is told is what is written between. A level edge refused for loops makes no row, so an
+// edge between its boxes is not told too. The rest lay out: a box of a group to one outside, a fan with its first zone written between, groups of a common group as written however align would order
 // them, a row of one lane however it faces, level on a loop (a loop), loops on the other side, a cycle through a row,
 // three edges between two boxes, and headings that do not reach the edge.
 func TestGraphLevelMistakes(t *testing.T) {
@@ -742,6 +742,25 @@ parts:
         - { from: b1, to: b2, level: true }
         - { from: a, to: c, level: true }
 `, `s.yaml:12:36: edge "a"→"c": group "h" stands between its boxes or icons in their rank; drop level, or move it out of the way`},
+		{"a box written between two groups, named though the order would move another there", `title: T
+parts:
+  - graph:
+      x: 20
+      y: 20
+      nodes:
+        - box: { name: t1, rows: [T1] }
+        - box: { name: t2, rows: [T2] }
+        - box: { name: p, rows: [P] }
+        - group: { name: a, label: A, nodes: [{ box: { name: w, rows: [W] } }] }
+        - box: { name: q, rows: [Q] }
+        - group: { name: b, label: B, nodes: [{ box: { name: r, rows: [R] } }] }
+      edges:
+        - { from: t2, to: p }
+        - { from: t1, to: q }
+        - { from: t1, to: w }
+        - { from: t2, to: r }
+        - { from: w, to: r, level: true }
+`, `s.yaml:18:36: edge "w"→"r": box "q" stands between its boxes or icons in their rank; drop level, or move it out of the way`},
 		{"a fan from one zone to two, written in the zones' order", `title: T
 parts:
   - graph:
