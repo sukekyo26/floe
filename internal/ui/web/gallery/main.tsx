@@ -853,6 +853,7 @@ function Gallery() {
           </div>
           <div className="rounded-small border border-line">
             <TagLine
+              id="read-tags"
               page={plain ?? null}
               hidden={false}
               onEdit={(a, back) => {
@@ -860,6 +861,7 @@ function Gallery() {
               }}
             />
             <TagLine
+              id="frame-tags"
               page={pagesNow.find((p) => p.slug === 'picked') ?? null}
               hidden={false}
               onEdit={(a, back) => {

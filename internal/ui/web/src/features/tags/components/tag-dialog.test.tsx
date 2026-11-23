@@ -52,14 +52,16 @@ describe(TagLine, () => {
   it('pills each tag and says what its button does, and hides for no page', () => {
     expect.assertions(3);
     testBoot();
-    const tagged = renderToString(<TagLine page={page('a', ['x', 'y'])} hidden={false} onEdit={none} />);
+    const tagged = renderToString(<TagLine id="read-tags" page={page('a', ['x', 'y'])} hidden={false} onEdit={none} />);
     expect([...tagged.matchAll(/data-testid="tagpill"[^>]*>([^<]*)</g)].map((m) => m[1])).toStrictEqual(['x', 'y']);
-    const bare = renderToString(<TagLine page={page('a', [])} hidden={false} onEdit={none} />);
+    const bare = renderToString(<TagLine id="read-tags" page={page('a', [])} hidden={false} onEdit={none} />);
     expect([
       bare.includes('aria-label="ui_tag_add_named:A"'),
       bare.includes('data-tagged'),
       tagged.includes('data-tagged="true"'),
     ]).toStrictEqual([true, false, true]);
-    expect(renderToString(<TagLine page={null} hidden={false} onEdit={none} />)).toMatch(/^<div hidden=""/);
+    expect(renderToString(<TagLine id="read-tags" page={null} hidden={false} onEdit={none} />)).toMatch(
+      /^<div id="read-tags" hidden=""/,
+    );
   });
 });

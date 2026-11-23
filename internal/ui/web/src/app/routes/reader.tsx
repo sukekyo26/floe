@@ -47,7 +47,12 @@ export function PageReader({ openers, keys, onKey }: PageReaderProps) {
       version={read ? <VersionSelect at={at} page={page} /> : null}
       versionNote={read ? <VersionNote at={at} page={page} onGo={keepDrawn} /> : null}
       tags={
-        <TagLine page={page} hidden={!page || Boolean(at?.file) || Boolean(page.missing)} onEdit={openers.onTags} />
+        <TagLine
+          id="read-tags"
+          page={page}
+          hidden={!page || Boolean(at?.file) || Boolean(page.missing)}
+          onEdit={openers.onTags}
+        />
       }
       keys={keys}
       onKey={onKey}
