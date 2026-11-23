@@ -560,7 +560,7 @@ func TestUIDialogClose(t *testing.T) { //nolint:paralleltest // the browser test
 		t.Helper()
 		b.eval(fmt.Sprintf("document.body.dispatchEvent(new KeyboardEvent('keydown', { bubbles: true, cancelable: true, key: %s, ctrlKey: %t }))", js(key), ctrl))
 	}
-	var keysMenus []string
+	keysMenus := make([]string, 0, 4)
 	b.eval("document.activeElement.blur()")
 	keyDown("k", true)
 	until("find", true)
