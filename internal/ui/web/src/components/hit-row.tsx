@@ -19,7 +19,7 @@ interface HitRowProps {
 }
 
 const TITLE =
-  "min-w-0 truncate font-medium text-fg no-underline [grid-area:title] group-data-unread/hit:font-bold after:absolute after:inset-0 after:content-['']";
+  "min-w-0 truncate font-medium text-fg no-underline [grid-area:title] group-data-unread/hit:font-bold group-data-archived/hit:text-muted after:absolute after:inset-0 after:content-['']";
 
 // HitRow is a row of a search modal's list (ui.html hitRow: the search, and Add a page of a task, P6): an option of a
 // listbox, the whole row its title's link, out of the Tab order as the field moves over the rows

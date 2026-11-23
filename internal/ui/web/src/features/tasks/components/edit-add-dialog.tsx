@@ -86,6 +86,9 @@ function EditAddBody({
           value={typed}
           onChange={(e) => {
             setTyped(e.currentTarget.value);
+          }}
+          // On every input, as onChange skips the same words typed again
+          onInput={() => {
             setSaid('');
           }}
         />
