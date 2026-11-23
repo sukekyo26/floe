@@ -48,7 +48,7 @@ const (
 )
 
 // reactScreens are the screens served from the React build, web/dist/index.html; the others are still ui.html's.
-var reactScreens = map[Screen]bool{}
+var reactScreens = map[Screen]bool{Tasks: true}
 
 //go:embed web/dist/index.html
 var reactSource string
