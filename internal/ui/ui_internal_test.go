@@ -17,8 +17,7 @@ import (
 	"floe/internal/yamlpos"
 )
 
-// screens are every screen the server draws, each drawn by its build: the React one's for those in reactScreens,
-// ui.html for the rest, so that the checks of each page reach both builds while both are served.
+// screens are every screen the server draws.
 var screens = []Screen{List, Tasks, Frame}
 
 // screenPage draws screen as the server does for a page a, in the language of c.
@@ -43,10 +42,9 @@ func TestPageRendersInTheReadersLanguage(t *testing.T) {
 		for _, screen := range screens {
 			page := screenPage(t, i18n.New(lang), screen)
 			if !strings.Contains(page, `<html lang="`+string(lang)) || !strings.Contains(page, want) ||
-				!strings.Contains(page, `"ui_delete_done":`) || strings.Contains(page, "{{") {
+				!strings.Contains(page, `"ui_delete_done":`) {
 				t.Errorf("%s, %s: the page lacks its language, %q or the script's messages", lang, screen, want)
 			}
-			// html/template drops the comments, so Japanese left in the English page is untranslated.
 			if lang == "en" && japaneseRe.MatchString(page) {
 				t.Errorf("%s: the English page has untranslated text: %q", screen, japaneseRe.FindAllString(page, 3))
 			}
@@ -136,14 +134,14 @@ var notFetched = map[string]bool{
 	"https://tailwindcss.com":                      true,
 }
 
-// builtinSources reads ui.html, the React build web/dist/index.html, floe's own templates, parts and themes (what template authors start from), and
+// builtinSources reads the React build web/dist/index.html, floe's own templates, parts and themes (what template authors start from), and
 // the zoom script and the diagram's SVG every page with a diagram or image holds, by their names. They are read from
 // the source tree, not the embedded files: those of kit, zoom and diagram are not exported, and the tree holds all
 // that is embedded.
 func builtinSources(t *testing.T) map[string]string {
 	t.Helper()
 
-	sources := map[string]string{"ui.html": pageSource, "web/dist/index.html": reactSource}
+	sources := map[string]string{"web/dist/index.html": reactSource}
 	for _, dir := range []string{"kit/floe", "zoom"} {
 		root := os.DirFS("../" + dir)
 		n := 0
@@ -181,9 +179,6 @@ func builtinSources(t *testing.T) map[string]string {
 }
 
 var (
-	// usedRe finds the keys ui.html names: .Msg "ui_x", alone ({{.Msg "ui_x"}}), with arguments or as one
-	// ({{.Msg "ui_x" (.Msg "ui_y")}}), t('ui_x') and the delete or unlink variants t(`ui_${kind(a)}_x`) and t(`ui_${now}_x`).
-	usedRe = regexp.MustCompile(`\.Msg "(ui_\w+)"|'(ui_\w+)'|` + "`ui_\\$\\{\\w+(?:\\(\\w*\\))?\\}(\\w*)`")
 	// reactUsedRe finds the keys a React source names: 'ui_x', "ui_x" (a prop, words="ui_cancel") and the delete or
 	// unlink variants t(`ui_${kind}_x`).
 	reactUsedRe = regexp.MustCompile(`'(ui_\w+)'|"(ui_\w+)"|` + "`ui_\\$\\{\\w+(?:\\(\\w*\\))?\\}(\\w*)`")
@@ -194,7 +189,7 @@ var (
 	elsewhereRe = regexp.MustCompile("(?i)(?:https?:|[\"'(=`])//[^\\s\"'()<>`]+")
 )
 
-// TestPageMessages keeps ui.html and the ui_ messages in step: every key the page names exists, every
+// TestPageMessages keeps the React screens and the ui_ messages in step: every key they name exists, every
 // ui_ message is used, and each uses only the verbs the page's t() renders.
 func TestPageMessages(t *testing.T) {
 	t.Parallel()
@@ -216,10 +211,9 @@ func TestPageMessages(t *testing.T) {
 			}
 		}
 	}
-	name("ui.html", pageSource, usedRe)
-	// The React screens name keys too (S422): until ui.html goes, one either names is used. Their sources but the
-	// generated list of every key and the tests; not the gallery, whose keys are no screen's
-	// LIMIT: a key in a comment is taken as used, as in ui.html. Read the build instead once every part is on a screen
+	// Their sources but the generated list of every key and the tests; not the gallery, whose keys are no screen's. The
+	// sources, not the build: they name the delete or unlink variants as `ui_${kind}_x`, which the minified build does not
+	// LIMIT: a key in a comment is taken as used. Read the build instead if a key left in a comment comes to hide one unused
 	src := files.NewRoot("web/src")
 	t.Cleanup(func() {
 		if err := src.Close(); err != nil {
@@ -249,7 +243,7 @@ func TestPageMessages(t *testing.T) {
 	for _, lang := range i18n.Langs() {
 		for key, format := range i18n.New(lang).Formats("ui_") {
 			if !used[key] && lang == i18n.English {
-				t.Errorf("%s is used by neither ui.html nor the React screens", key)
+				t.Errorf("%s is used by none of the React screens", key)
 			}
 			if rest := jsVerbsRe.ReplaceAllString(format, ""); strings.Contains(rest, "%") {
 				t.Errorf("%s %s: %q has a verb t() does not render", lang, key, format)
@@ -310,49 +304,19 @@ func TestPageFormats(t *testing.T) {
 	}
 }
 
-// The tasks' rows are asked of the server in one place each: read by readTasks, removed by forgetTask, and pages and tasks written by
-// changeTasks (as every screen's write of a task or a page's task goes, its rev with it); the methods are the browser tests'. The set dialog
-// has no field of a task's own, which its page writes.
+// The tasks' rows are asked of the server in one place, web/src's lib/tasks.ts, as every screen's write of a task or a
+// page's task goes, its rev with it.
 func TestTaskRequests(t *testing.T) {
 	t.Parallel()
 
-	funcRe := regexp.MustCompile(`(?:async\s+)?function\s+(\w+)\(`)
-	starts := funcRe.FindAllStringSubmatchIndex(pageSource, -1)
-	inPage := func(path string) []string {
-		named := regexp.MustCompile("['`]"+regexp.QuoteMeta(path)).FindAllStringIndex(pageSource, -1)
-		got := make([]string, 0, len(named))
-		for _, at := range named {
-			in := ""
-			for _, f := range starts {
-				if f[0] < at[0] {
-					in = pageSource[f[2]:f[3]]
-				}
-			}
-			got = append(got, in)
-		}
-		slices.Sort(got)
-		return got
-	}
-	if got, want := inPage("/api/tasks"), []string{"changeTasks", "forgetTask", "readTasks"}; !slices.Equal(got, want) {
-		t.Errorf("/api/tasks is named in %v, want %v once each", got, want)
-	}
 	// LIMIT: the text /api/tasks alone is looked for in web/src: one made of parts ('/api/' + 'tasks') passes. Read the
 	// TypeScript's tree if one comes to be written so.
 	if got, want := namedIn(webSources(t), "/api/tasks"), []string{"lib/tasks.ts"}; !slices.Equal(got, want) {
 		t.Errorf("/api/tasks is named in web/src's %v, want %v", got, want)
 	}
-	if got := inPage("/api/work"); len(got) > 0 {
-		t.Errorf("/api/work, which is no more, is named in %v", got)
-	}
-	for _, id := range []string{`id="set-parent"`, `id="set-url"`} {
-		if strings.Contains(pageSource, id) {
-			t.Errorf("the set dialog has %s, a task's own field, which its page writes", id)
-		}
-	}
 }
 
-// TestPageScreens keeps the choice of each screen's HTML to reactScreens: the React build for a screen in it,
-// ui.html for the others.
+// TestPageScreens keeps each screen served from the React build, its boot values naming that screen.
 func TestPageScreens(t *testing.T) {
 	t.Parallel()
 
@@ -361,11 +325,11 @@ func TestPageScreens(t *testing.T) {
 		if err != nil {
 			t.Fatal(err)
 		}
-		react := strings.Contains(string(b), `id="boot">`)
-		old := strings.Contains(string(b), `id="screens"`)
-		if react != reactScreens[screen] || old == reactScreens[screen] {
-			t.Errorf("%s: served the React build %t and ui.html %t; reactScreens says %t", screen, react, old,
-				reactScreens[screen])
+		_, rest, _ := strings.Cut(string(b), `id="boot">`)
+		j, _, _ := strings.Cut(rest, "</script>")
+		var got boot
+		if err := json.Unmarshal([]byte(j), &got); err != nil || got.Screen != screen {
+			t.Errorf("%s: served boot values of the screen %q (%v)", screen, got.Screen, err)
 		}
 	}
 }
