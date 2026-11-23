@@ -45,4 +45,12 @@ describe(ScreenSwitch, () => {
     );
     expect(draw(true)).not.toContain('role="tab');
   });
+
+  it('draws both links of one weight, the screen shown darker, with no line under them', () => {
+    expect.assertions(3);
+    const html = draw(true);
+    expect(html).toMatch(/id="to-list"[^>]*class="[^"]*font-semibold[^"]*text-muted[^"]*"/);
+    expect(html).toMatch(/id="to-tasks"[^>]*class="[^"]*font-semibold[^"]*text-fg[^"]*"/);
+    expect(html).not.toMatch(/<nav id="screens".*border-[bt]/s);
+  });
 });

@@ -14,8 +14,8 @@ export function TabList({ label, children }: { readonly label: string; readonly 
 }
 
 // tabLook is a tab's look: underlined and darker when it is the one now, its weight the same so that a switch moves
-// none. The help's tabs and the bar's links to the screens (ScreenSwitch) have it, each with room of its own
-export const tabLook = (now: boolean): string =>
+// none
+const tabLook = (now: boolean): string =>
   `border-0 border-b-2 text-small whitespace-nowrap transition-colors duration-150 ${now ? 'border-ink text-fg' : 'border-transparent text-muted hover:text-fg'}`;
 
 // moveTab is ← or → on a tab: the next tab of its list takes the focus and is chosen
