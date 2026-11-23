@@ -829,7 +829,7 @@ func TestUIModalShape(t *testing.T) { //nolint:paralleltest // the browser tests
 	// the find-foot.
 	const shape = `(() => { const d = document.querySelector('dialog[open]'), r = (e) => e.getBoundingClientRect(), foot = d.querySelector(':is([data-testid=dialog-actions], [data-testid=find-foot])');
 		const q = r(d.querySelector('input[data-testid=text]')), f = r(foot), m = r(d);
-		return [m.left, m.right, q.left, q.right, q.height, f.left, f.right, r(foot.querySelector('button:last-child')).height].map(Math.round).join(' '); })()`
+		return [m.left, m.right, q.left, q.right, q.height, f.left, f.right, r(foot.querySelector('[data-close]')).height].map(Math.round).join(' '); })()`
 	const where = `(() => { const m = document.getElementById('find').getBoundingClientRect(); return Math.abs(m.top - (innerHeight - m.bottom)) <= 1 ? 'middle' : Math.round(m.top); })()`
 	// The top of the field and the height of the modal, which the rows do not move.
 	const still = `(() => { const q = document.getElementById('find-q').getBoundingClientRect(), m = document.getElementById('find').getBoundingClientRect(); return Math.round(q.top - m.top) + ' ' + Math.round(m.height); })()`

@@ -12,7 +12,8 @@ const (
 	barShown = "[...document.querySelector('[data-testid=bar-end]').children].filter((e) => e.getClientRects().length > 0).map((e) => e.id)"
 	// The state of the connection as the bar shows it: its words, whether it is out of the way, and its dot
 	serverState = `(() => { const e = document.getElementById('server');
-		return [e.textContent !== '', e.offsetWidth <= 1, getComputedStyle(e, '::before').display, e.getAttribute('role')].join(' '); })()`
+		const dot = getComputedStyle(e, '::before');
+		return [e.textContent !== '', e.offsetWidth <= 1, dot.display !== 'none' && !['none', 'normal'].includes(dot.content) ? 'dot' : 'none', ` + roleJS + `(e)].join(' '); })()`
 	// Where it stands, down: its words shown (the dot alone when narrow, the 4th), right of the logo and left of what follows, and the bar's things within it
 	serverDown = `(() => { const e = document.getElementById('server'), r = e.getBoundingClientRect(), logo = document.querySelector('[data-testid=brand]').getBoundingClientRect();
 		const next = e.nextElementSibling.matches('[hidden]') ? document.getElementById('screens') : e.nextElementSibling;
@@ -57,7 +58,7 @@ func TestUIBarEnd(t *testing.T) { //nolint:paralleltest // the browser tests sha
 
 	check(t, "bar end", out, strings.Join([]string{
 		"server", "frame-actions news find-open keys-open settings-open", "keys-open settings-open",
-		"false true none status", "true false block status", "true true true true true",
+		"false true none status", "true false dot status", "true true true true true",
 		"true", "true true true false true", "false true none status",
 		"frame-actions", "none none",
 	}, "|"))

@@ -93,8 +93,8 @@ func TestUIFolders(t *testing.T) { //nolint:paralleltest // the browser tests sh
 	b.until("guide open", rows+".includes('setup')")
 	b.still()
 	out = append(out, b.eval("[...document.querySelectorAll('#list > li')].filter((li) => !marked.includes(li)).map((li) => li.dataset.key).join(',') + ' new, rose ' + rose.sort().join(',')"))
-	// A change the rows do not show (the folder's description) draws the list anew.
-	b.eval(`rose = []; window.drawnAnew = false; new MutationObserver(() => { window.drawnAnew = true; }).observe(document.getElementById('list'), { childList: true, subtree: true });
+	// A change the rows do not show (the folder's description) draws the list anew: rows made, or a row's title changed (a build may keep its rows).
+	b.eval(`rose = []; window.drawnAnew = false; new MutationObserver(() => { window.drawnAnew = true; }).observe(document.getElementById('list'), { childList: true, attributeFilter: ['title'], subtree: true });
 		fetch('/api/pages/docs', { method: 'PATCH', headers: { 'Content-Type': 'application/json' }, body: '{"description":"d"}' }).then((r) => r.status)`)
 	b.untilRead(b.reread(), "the list redrawn", "window.drawnAnew")
 	b.still()

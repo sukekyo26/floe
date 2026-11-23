@@ -622,11 +622,11 @@ func (b *browser) point(x, y float64) {
 	}
 }
 
-// listDraws counts in window.draws the times the list's rows are drawn anew, as the rows in #list are replaced, until
-// window.drawsSeen.disconnect(). Of uiShelf and uiTags.
-const listDraws = `window.draws = 0; window.drawsSeen = new MutationObserver((records) => {
-	window.draws += records.filter((r) => r.removedNodes.length > 0 && r.addedNodes.length > 0).length;
-}); window.drawsSeen.observe(document.getElementById('list'), { childList: true })`
+// listDraws counts in window.draws the times the list's rows are drawn anew, until window.drawsSeen.disconnect(): each
+// change of #list and its rows told at once is one, as one build replaces the rows and another keeps and changes them. Of
+// uiShelf and uiTags.
+const listDraws = `window.draws = 0; window.drawsSeen = new MutationObserver(() => { window.draws++; });
+window.drawsSeen.observe(document.getElementById('list'), { childList: true, subtree: true, characterData: true })`
 
 // TestUIShelf picks the list on the shelf, shows a row's actions where pointed at or reached, keeps a row's menu whole and
 // gives focus back from it, adds a link from any list, folds the shelf into a row and a dialog on a narrow screen, and acts
@@ -687,7 +687,7 @@ func uiShelf(t *testing.T, lang i18n.Lang, msg func(string, ...any) string) {
 	// The menu: its words, Escape and a click elsewhere close it, focus going back to its button.
 	b.eval("document.querySelector('#list li[data-slug=b] summary').click()")
 	out = append(out, b.eval("document.querySelector('#list li[data-slug=b] summary').getAttribute('aria-label')"),
-		b.eval("[...document.querySelectorAll('#list li[data-slug=b] [data-testid=menu] > *')].filter((e) => getComputedStyle(e).display !== 'none').map((e) => e.textContent.trim()).join(' / ')"))
+		b.eval(topsJS+"(document.querySelector('#list li[data-slug=b] [data-testid=menu]')).filter((e) => getComputedStyle(e).display !== 'none').map((e) => e.textContent.trim()).join(' / ')"))
 	b.eval("document.querySelector('#list li[data-slug=b] [data-testid=edit]').focus()")
 	key("Escape")
 	out = append(out, b.eval("[document.querySelector('#list li[data-slug=b] [data-testid=more]').open, "+
@@ -703,11 +703,11 @@ func uiShelf(t *testing.T, lang i18n.Lang, msg func(string, ...any) string) {
 	out = append(out, b.eval("[...document.querySelectorAll('#list [data-testid=more]')].filter((d) => d.open).length"))
 	b.eval("document.querySelector('#list li[data-slug=a] summary').click()")
 	// An item closes its menu; the edit dialog, cancelled or saved, gives focus back to the row's menu button.
-	b.eval("document.querySelector('#list li[data-slug=b] summary').click(); document.querySelector('#list li[data-slug=b] [data-testid=edit]').click()")
+	pressMenuItemFocused(b, "#list li[data-slug=b]", "edit")
 	out = append(out, b.eval("[document.querySelector('#list li[data-slug=b] [data-testid=more]').open, document.getElementById('edit-dialog').open].join(' ')"))
 	b.eval("document.querySelector('#edit-dialog [data-close]').click()")
 	out = append(out, b.eval("document.activeElement === document.querySelector('#list li[data-slug=b] summary')"))
-	b.eval("document.querySelector('#list li[data-slug=b] summary').click(); document.querySelector('#list li[data-slug=b] [data-testid=edit]').click()")
+	pressMenuItemFocused(b, "#list li[data-slug=b]", "edit")
 	b.fill("#edit-desc", "new")
 	b.eval("document.getElementById('edit-submit').click()")
 	out = append(out, b.until("the edit dialog to close", "!document.getElementById('edit-dialog').open && "+
@@ -721,7 +721,8 @@ func uiShelf(t *testing.T, lang i18n.Lang, msg func(string, ...any) string) {
 	b.eval("document.querySelector('#list > li:last-child summary').click()")
 	d := b.rect("document.querySelector('#list > li:last-child [data-testid=delete]')")
 	out = append(out, b.eval("Boolean(document.elementFromPoint("+js(fmt.Sprint(d.X+d.Width/2))+", "+js(fmt.Sprint(d.Y+d.Height/2))+")?.closest('[data-testid=delete]'))"))
-	b.eval("calls.length = 0; document.querySelector('#list > li:last-child [data-testid=delete]').click(); document.querySelector('#list > li:last-child [data-testid=delete]').click()")
+	b.pressed("calls.length = 0; document.querySelector('#list > li:last-child [data-testid=delete]').click()", "the delete armed", "document.querySelector('#list > li:last-child [data-testid=delete]').hasAttribute('data-armed')")
+	b.eval("document.querySelector('#list > li:last-child [data-testid=delete]').click()")
 	out = append(out, b.until("the delete", "calls.join(',')"))
 	b.unsize()
 	// The kinds show with two to choose between or one chosen, the projects and the templates with one.
@@ -748,7 +749,8 @@ func uiShelf(t *testing.T, lang i18n.Lang, msg func(string, ...any) string) {
 	// A project's dot is of its color by projectOrder: as many each, by name.
 	b.stub(`[{ slug: 'a', title: 'Alpha', description: '', project: 'p', createdAt: at(1), updatedAt: at(8) },
 		{ slug: 'b', title: 'Beta', description: '', project: 'floe', createdAt: at(1), updatedAt: at(7) }]`)
-	out = append(out, b.eval("[...document.querySelectorAll('#chips [data-testid=chip]')].map((c) => c.dataset.project + ':' + c.style.getPropertyValue('--c')).join(',')"))
+	// The React build names the palette's values --color-* (#boot tells it): the same value, read by ui.html's name
+	out = append(out, b.eval("[...document.querySelectorAll('#chips [data-testid=chip]')].map((c) => c.dataset.project + ':' + c.style.getPropertyValue('--c').replace(document.getElementById('boot') ? 'var(--color-' : 'var(--', 'var(--')).join(',')"))
 	// The favourites count their own projects, and one is shown: a single one is chosen from, as on the whole list.
 	b.stub(`[{ slug: 'c', title: 'Gamma', description: '', project: 'p', createdAt: at(1), updatedAt: at(9), favorite: true },
 		{ slug: 'b', title: 'Beta', description: '', project: 'q', createdAt: at(1), updatedAt: at(8) }]`)
@@ -974,7 +976,7 @@ func uiTags(t *testing.T, lang i18n.Lang, msg func(string, ...any) string) {
 	b.eval("window.drawsSeen.disconnect()")
 	// A tag left on some is left as each page has it.
 	selectOnly("a", "c")
-	b.eval("document.getElementById('bulk-tag').click(); " + box("old") + ".click(); document.getElementById('tag-apply').click()")
+	applyBulkTag(b, box("old"))
 	out = append(out, b.until("the tag to be added", "document.getElementById('bulk').hidden && calls.splice(0).sort().join(',')"))
 	// The find field narrows the boxes; a name no tag has can be made one, marked all, by Enter, sending nothing.
 	selectOnly("b")
@@ -992,8 +994,8 @@ func uiTags(t *testing.T, lang i18n.Lang, msg func(string, ...any) string) {
 	b.eval("document.querySelector('#tag-dialog [data-close]').click()")
 	// A page removed since the list was read leaves the selection unsent.
 	selectOnly("b")
-	b.eval("list = JSON.stringify(JSON.parse(list).filter((a) => a.slug !== 'b')); document.getElementById('bulk-tag').click(); " +
-		box("old") + ".click(); document.getElementById('tag-apply').click()")
+	b.eval("list = JSON.stringify(JSON.parse(list).filter((a) => a.slug !== 'b'))")
+	applyBulkTag(b, box("old"))
 	// The toast comes after the selection is cleared: the words joined are true before it
 	none := "document.getElementById('toasts').textContent.includes(" + js(msg("ui_tag_bulk_none")) + ")"
 	out = append(out, b.until("the gone page to drop", "document.getElementById('bulk').hidden && "+none+" && ["+none+", calls.length].join(' ')"))
@@ -1166,4 +1168,13 @@ func TestUIStubSlowServer(t *testing.T) { //nolint:paralleltest // the browser t
 	// Past when the server's answer would have come, a poll between: the page's clock, from its start.
 	b.until("the server's answer to be late", "performance.now() > 5000 && window.gets >= 3")
 	check(t, "titles drawn", []string{b.eval("[...seen].join(',')")}, "Alpha")
+}
+
+// applyBulkTag opens the tags of the pages selected, presses the box (a JS expression) and applies.
+func applyBulkTag(b *browser, box string) {
+	b.t.Helper()
+
+	b.pressed("document.getElementById('bulk-tag').click()", "the tag modal open", "document.getElementById('tag-dialog').open")
+	b.pressed(box+".click()", "the tag marked", "!document.getElementById('tag-apply').disabled")
+	b.eval("document.getElementById('tag-apply').click()")
 }

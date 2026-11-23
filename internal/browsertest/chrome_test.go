@@ -222,6 +222,27 @@ func truthy(s string) bool {
 	}
 }
 
+// pressed runs expr, a press, and waits until ready is truthy, before a press that reads what this one changed. React draws a
+// press's change after the script that pressed returns; a person's presses come each in its own task, after the draw, so a
+// second press in the same script would read the state from before the first.
+func (b *browser) pressed(expr, what, ready string) {
+	b.t.Helper()
+
+	b.eval(expr)
+	b.until(what, ready)
+}
+
+// topsJS is a function of a box (a bar, a menu) giving the things named in it by data-testid that no other named thing
+// holds: a menu's items, a bar's buttons and menu. A wrapper with no box of its own (React's around an item, the bar's
+// more-slot) is not one of them.
+const topsJS = `((box) => [...box.querySelectorAll('[data-testid]:not([data-testid=more-slot])')].filter((e) => {
+	const up = e.parentElement.closest('[data-testid]:not([data-testid=more-slot])');
+	return !up || up === box || !box.contains(up);
+}))`
+
+// roleJS is a function of an element giving its role where the tests read one: an output is a status without the attribute.
+const roleJS = "((e) => (e.matches('output, [role=status]') ? 'status' : String(e.getAttribute('role'))))"
+
 // waitLimit is how long a test waits for the page to change. Only a wait that fails takes that long.
 const waitLimit = 10 * time.Second
 

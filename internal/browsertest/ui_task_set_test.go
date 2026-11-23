@@ -56,7 +56,7 @@ func TestUITaskSet(t *testing.T) { //nolint:paralleltest // the browser tests sh
 		}
 		return strings.Join(names, "; ")
 	}
-	const items = `[...document.querySelectorAll('#list li[data-slug=SLUG] [data-testid=menu] > *')].filter((e) => !e.hidden).map((e) => e.dataset.testid).join(' ')`
+	const items = topsJS + `(document.querySelector('#list li[data-slug=SLUG] [data-testid=menu]')).filter((e) => !e.hidden).map((e) => e.dataset.testid).join(' ')`
 	menu := func(slug, item string) {
 		t.Helper()
 		pressMenuItem(b, "#list li[data-slug="+slug+"]", item)
@@ -392,8 +392,13 @@ func TestUITaskSet(t *testing.T) { //nolint:paralleltest // the browser tests sh
 	}
 }
 
-// submitSet saves Set the task, answering Yes when it asks before a page on another task moves: it asks as the save is pressed.
-const submitSet = "document.getElementById('set-submit').click(); if (document.getElementById('move-dialog').open) document.getElementById('move-yes').click()"
+// submitSet saves Set the task, answering Yes when it asks before a page on another task moves: it asks once the save is pressed.
+func submitSet(b *browser) {
+	b.t.Helper()
+
+	b.pressed("document.getElementById('set-submit').click()", "saved, asked or refused", "!document.getElementById('set-dialog').open || document.getElementById('move-dialog').open || !document.getElementById('set-error').hidden")
+	b.eval("if (document.getElementById('move-dialog').open) document.getElementById('move-yes').click()")
+}
 
 // titleOpen types a title into Set the task's field of a new task's title when it shows empty: a new task asks one.
 func titleOpen(b *browser) {

@@ -76,6 +76,8 @@ func TestUIEditFold(t *testing.T) { //nolint:paralleltest // the browser tests s
 
 	field("edit-slug", "Bad Name")
 	save("invalid")
+	// The field refused takes the focus once its fold is open: a build may move it after drawing the fold
+	b.until("the field refused reached", "document.activeElement.id === 'edit-slug'")
 	say("invalid", state+" + ' / ' + document.getElementById('edit-dialog').open")
 
 	open()
