@@ -839,7 +839,9 @@ func uiShelf(t *testing.T, lang i18n.Lang, msg func(string, ...any) string) {
 	out = append(out, b.until("the new name", "location.pathname === '/a/z2/' && location.pathname"))
 	b.navigate("/a/b/")
 	b.until("the frame's bar", "document.getElementById('frame-title').textContent")
-	b.moving("document.querySelector('#frame-actions [data-testid=delete]').click(); document.querySelector('#frame-actions [data-testid=delete]').click()")
+	b.pressed("document.querySelector('#frame-actions [data-testid=delete]').click()", "the delete armed",
+		"document.querySelector('#frame-actions [data-testid=delete]').hasAttribute('data-armed')")
+	b.moving("document.querySelector('#frame-actions [data-testid=delete]').click()")
 	b.until("the list", "location.pathname === '/'")
 
 	check(t, "shelf", out, strings.Join([]string{
