@@ -348,12 +348,16 @@ func TestUIDiffPick(t *testing.T) { //nolint:paralleltest // the browser tests s
 	// Without the rules for base-select, as a browser that does not read them: the same height and words, the list its own, chosen the same.
 	b.size(1440, 900, false)
 	openDiff(b, "/a/d/?diff")
+	// Every @supports goes, in a layer or a nested rule too (the React build's)
 	b.eval(`(() => {
-		for (const sheet of document.styleSheets) {
-			for (let i = sheet.cssRules.length - 1; i >= 0; i--) {
-				if (sheet.cssRules[i] instanceof CSSSupportsRule) sheet.deleteRule(i);
+		const drop = (group) => {
+			for (let i = group.cssRules.length - 1; i >= 0; i--) {
+				const rule = group.cssRules[i];
+				if (rule instanceof CSSSupportsRule) group.deleteRule(i);
+				else if (rule.cssRules) drop(rule);
 			}
-		}
+		};
+		for (const sheet of document.styleSheets) drop(sheet);
 		document.getElementById('diff-from').focus();
 	})()`)
 	if got := b.eval("getComputedStyle(document.getElementById('diff-from')).appearance + ' ' + getComputedStyle(document.getElementById('diff-from')).height + ' ' + document.getElementById('diff-from').offsetWidth"); strings.HasPrefix(got, "base-select") || !strings.Contains(got, " 32px ") {
