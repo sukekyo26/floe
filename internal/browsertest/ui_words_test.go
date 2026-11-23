@@ -46,6 +46,10 @@ func TestUIDialogCloseWords(t *testing.T) { //nolint:paralleltest // the browser
 		"add-dialog", "add-page-dialog", "edit-dialog", "edit-task-dialog", "filter-dialog", "find", "keys", "kin-dialog", "move-dialog",
 		"set-dialog", "settings", "tag-dialog",
 	}
+	// The React page list: the modals every screen has, its shelf's (filter-dialog) and its link to add (add-dialog)
+	list := []string{
+		"add-dialog", "edit-dialog", "filter-dialog", "find", "keys", "move-dialog", "set-dialog", "settings", "tag-dialog",
+	}
 	// A task's page: no shelf (filter-dialog) and no link to add (add-dialog); the add modal of the task's edit
 	taskPage := []string{
 		"add-page-dialog", "edit-add-dialog", "edit-dialog", "edit-task-dialog", "find", "keys", "kin-dialog", "move-dialog",
@@ -61,6 +65,9 @@ func TestUIDialogCloseWords(t *testing.T) { //nolint:paralleltest // the browser
 			want := old
 			if react {
 				want = taskPage
+				if path == "/" {
+					want = list
+				}
 			}
 			var got [][]json.RawMessage
 			if err := json.Unmarshal([]byte(s.b.eval(`JSON.stringify([...document.querySelectorAll('dialog')].map((d) => [d.id,

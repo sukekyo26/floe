@@ -567,25 +567,35 @@ func uiExtras(t *testing.T, lang i18n.Lang, msg func(string, ...any) string) {
 	// Nothing at all: the middle's button alone, not the shelf's too.
 	check(t, "nothing at all", []string{b.eval("document.getElementById('add-link').hidden + ''")}, "true")
 
-	// The shelf at its narrowest holds each add button's words on one line, within it. Shown for the measure alone, in the
-	// same task: this list is empty, and the task list's is the other screen's.
-	b.size(1440, 800, false)
-	was := b.rect("document.getElementById('shelf')").Width
-	b.drag("#shelf-grip", 0)
-	b.until("the shelf at its narrowest", "document.getElementById('shelf').getBoundingClientRect().width < "+strconv.FormatFloat(was, 'f', -1, 64))
-	check(t, "narrowest shelf", []string{b.eval(`(() => {
-		const shelf = Math.round(document.getElementById('shelf').getBoundingClientRect().width);
-		const lines = ['add-link', 'add-task'].map((id) => {
-			const e = document.getElementById(id), was = [e.hidden, e.parentElement.hidden];
+	// The shelf at its narrowest holds each add button's words on one line, within it: the page list's, and the task list's on
+	// a store of a task, as the stubbed list has none. Shown for the measure alone, in the same task: this list is empty.
+	narrowest := func(b *browser, id string) string {
+		t.Helper()
+		b.size(1440, 800, false)
+		was := b.rect("document.getElementById('shelf')").Width
+		b.drag("#shelf-grip", 0)
+		b.until("the shelf at its narrowest", "document.getElementById('shelf').getBoundingClientRect().width < "+strconv.FormatFloat(was, 'f', -1, 64))
+		return b.eval(`(() => {
+			const shelf = Math.round(document.getElementById('shelf').getBoundingClientRect().width);
+			const e = document.getElementById(` + js(id) + `), was = [e.hidden, e.parentElement.hidden];
 			e.hidden = e.parentElement.hidden = false;
 			const words = [...e.childNodes].find((n) => n.nodeType === Node.TEXT_NODE), r = document.createRange();
 			r.selectNodeContents(words);
 			const n = r.getClientRects().length, inside = r.getBoundingClientRect().right <= e.getBoundingClientRect().right;
 			[e.hidden, e.parentElement.hidden] = was;
-			return id + ' ' + n + ' ' + inside;
-		});
-		return [shelf, ...lines].join(' | ');
-	})()`)}, "160 | add-link 1 true | add-task 1 true")
+			return [shelf, ` + js(id) + `, n, inside].join(' ');
+		})()`)
+	}
+	shelves := make([]string, 0, 2)
+	shelves = append(shelves, narrowest(b, "add-link"))
+	tasks := &site{Site: servetest.Start(t, nil)}
+	tasks.b = newBrowser(t, tasks.Base, lang)
+	tasks.floe(t, "publish", tasks.page(t, "p.yaml", "P", ""), "--slug", "p")
+	tasks.floe(t, "task", "--slug", "p", "--task", "#1", "--title", "one")
+	tasks.b.navigate("/tasks")
+	tasks.b.until("the task list's shelf", "document.querySelector('#shelf [data-project]') && document.getElementById('add-task')")
+	shelves = append(shelves, narrowest(tasks.b, "add-task"))
+	check(t, "narrowest shelf", shelves, "160 add-link 1 true|160 add-task 1 true")
 	b.unsize()
 	// The time's tooltip lines start with the label of their format ("Created %s").
 	label := func(key string) string { return strings.Fields(msg(key, ""))[0] }

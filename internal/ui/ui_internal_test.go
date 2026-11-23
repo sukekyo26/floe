@@ -17,22 +17,39 @@ import (
 	"floe/internal/yamlpos"
 )
 
+// screens are every screen the server draws, each drawn by its build: the React one's for those in reactScreens,
+// ui.html for the rest, so that the checks of each page reach both builds while both are served.
+var screens = []Screen{List, Tasks, Frame}
+
+// screenPage draws screen as the server does for a page a, in the language of c.
+func screenPage(t *testing.T, c *i18n.Catalog, screen Screen) string {
+	t.Helper()
+
+	framed := ""
+	if screen == Frame {
+		framed = "a"
+	}
+	b, err := Page(c, screen, framed, false, "")
+	if err != nil {
+		t.Fatal(err)
+	}
+	return string(b)
+}
+
 func TestPageRendersInTheReadersLanguage(t *testing.T) {
 	t.Parallel()
 
 	for lang, want := range map[i18n.Lang]string{"en": "Back to the page list", "ja": "ページ一覧へ戻る"} {
-		b, err := Page(i18n.New(lang), List, "", false, "")
-		if err != nil {
-			t.Fatal(err)
-		}
-		page := string(b)
-		if !strings.Contains(page, `<html lang="`+string(lang)+`">`) || !strings.Contains(page, want) ||
-			!strings.Contains(page, `"ui_delete_done":`) || strings.Contains(page, "{{") {
-			t.Errorf("%s: the page lacks its language, %q or the script's messages", lang, want)
-		}
-		// html/template drops the comments, so Japanese left in the English page is untranslated.
-		if lang == "en" && japaneseRe.MatchString(page) {
-			t.Errorf("the English page has untranslated text: %q", japaneseRe.FindAllString(page, 3))
+		for _, screen := range screens {
+			page := screenPage(t, i18n.New(lang), screen)
+			if !strings.Contains(page, `<html lang="`+string(lang)) || !strings.Contains(page, want) ||
+				!strings.Contains(page, `"ui_delete_done":`) || strings.Contains(page, "{{") {
+				t.Errorf("%s, %s: the page lacks its language, %q or the script's messages", lang, screen, want)
+			}
+			// html/template drops the comments, so Japanese left in the English page is untranslated.
+			if lang == "en" && japaneseRe.MatchString(page) {
+				t.Errorf("%s: the English page has untranslated text: %q", screen, japaneseRe.FindAllString(page, 3))
+			}
 		}
 	}
 }
@@ -284,12 +301,11 @@ func TestPageFormats(t *testing.T) {
 	t.Parallel()
 
 	for _, lang := range i18n.Langs() {
-		b, err := Page(i18n.New(lang), List, "", false, "")
-		if err != nil {
-			t.Fatal(err)
-		}
-		if i := strings.Index(string(b), "%!"); i >= 0 {
-			t.Errorf("%s: the page holds %q, which fmt writes for a verb it was not given words for", lang, string(b)[i:min(i+40, len(b))])
+		for _, screen := range screens {
+			page := screenPage(t, i18n.New(lang), screen)
+			if i := strings.Index(page, "%!"); i >= 0 {
+				t.Errorf("%s, %s: the page holds %q, which fmt writes for a verb it was not given words for", lang, screen, page[i:min(i+40, len(page))])
+			}
 		}
 	}
 }
@@ -340,7 +356,7 @@ func TestTaskRequests(t *testing.T) {
 func TestPageScreens(t *testing.T) {
 	t.Parallel()
 
-	for _, screen := range []Screen{List, Tasks, Frame} {
+	for _, screen := range screens {
 		b, err := Page(i18n.New("en"), screen, "", false, "")
 		if err != nil {
 			t.Fatal(err)

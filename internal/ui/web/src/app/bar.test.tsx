@@ -30,8 +30,10 @@ describe(Bar, () => {
     expect(html).not.toMatch(/id="(search|q|back)"/);
   });
 
-  it('puts the list’s search between the screens and the end', () => {
-    expect.assertions(1);
-    expect(draw(<span id="search" />)).toMatch(/id="screens".*id="search".*data-testid="bar-end"/s);
+  it('puts the list’s search between the screens and the end, with no way to the search modal beside it', () => {
+    expect.assertions(2);
+    const html = draw(<span id="search" />);
+    expect(html).toMatch(/id="screens".*id="search".*data-testid="bar-end"/s);
+    expect(html).not.toContain('id="find-open"');
   });
 });

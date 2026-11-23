@@ -194,7 +194,7 @@ export function TagDialog({ target, onClosed, pages = pagePages, apply = pageApp
               <label
                 key={name}
                 data-testid="tag-box"
-                className={`relative inline-flex max-w-full cursor-pointer items-center gap-1.5 rounded-full border py-1.25 ps-2.25 pe-2.75 text-small has-focus-visible:outline-offset-1 has-focus-visible:outline-(--ring) ${CHIP[mark]}`}
+                className={`relative inline-flex max-w-full cursor-pointer items-center gap-1.5 rounded-full border py-1.25 ps-2.25 pe-2.75 text-small has-focus-visible:[outline:var(--ring)] has-focus-visible:outline-offset-1 ${CHIP[mark]}`}
               >
                 <input
                   type="checkbox"

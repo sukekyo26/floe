@@ -18,8 +18,8 @@ interface BarProps {
 }
 
 // Bar is the screen's bar (ui.html header.bar): the logo, the server's state and the way between the screens, then the
-// new pages and the ways to the search, the help and the settings. The help's and the settings' are gone at 40rem or
-// less (ui.html 708)
+// new pages and the ways to the search (none beside the search field, ui.html 6788), the help and the settings. The
+// help's and the settings' are gone at 40rem or less (ui.html 708)
 export function Bar({ tasks, search, onFind, onHelp, onSettings }: BarProps) {
   return (
     <header data-testid="bar" className="sticky top-0 z-10 border-b border-line bg-bg">
@@ -30,9 +30,11 @@ export function Bar({ tasks, search, onFind, onHelp, onSettings }: BarProps) {
         {search}
         <div data-testid="bar-end" className="ml-auto flex flex-none items-center gap-2.5">
           <News />
-          <IconButton id="find-open" label={t('ui_find')} onClick={onFind}>
-            <SearchIcon />
-          </IconButton>
+          {search === undefined && (
+            <IconButton id="find-open" label={t('ui_find')} onClick={onFind}>
+              <SearchIcon />
+            </IconButton>
+          )}
           <IconButton id="keys-open" label={t('ui_help')} display="wide" onClick={onHelp}>
             <HelpIcon />
           </IconButton>

@@ -40,10 +40,15 @@ func typeFind(b *browser, words string) {
 	b.fill("#find-q", words)
 }
 
-// pressFindOpen opens the search modal by the bar's button.
+// pressFindOpen opens the search modal by the bar's button, or by Ctrl+K on the page list, whose search field stands for the
+// button (S422-P9).
 func pressFindOpen(b *browser) {
 	b.t.Helper()
-	b.eval("document.getElementById('find-open').click()")
+	if b.eval("String(document.getElementById('find-open') !== null)") == "true" {
+		b.eval("document.getElementById('find-open').click()")
+	} else {
+		keyDown(b, "key: 'k', ctrlKey: true")
+	}
 	b.until("the search modal", "document.getElementById('find').open")
 }
 
@@ -348,7 +353,7 @@ func TestUIKeys(t *testing.T) { //nolint:paralleltest // the browser tests share
 	b.stub(findList)
 	const open = "document.getElementById('keys').open"
 	const shown = "[...document.querySelectorAll('[data-testid=keys-part]')].map((p) => p.hidden).join(' ') + ' ' + [...document.querySelectorAll('#keys kbd')].filter((k) => k.offsetParent).map((k) => k.textContent).join('')"
-	const ways = "[getComputedStyle(document.getElementById('keys-open')).display !== 'none', getComputedStyle(document.getElementById('find-open')).display !== 'none'].join(' ')"
+	const ways = "[getComputedStyle(document.getElementById('keys-open')).display !== 'none', ((e) => e !== null && getComputedStyle(e).display !== 'none')(document.getElementById('find-open'))].join(' ')"
 	out := make([]string, 0, 16)
 	b.navigate("/")
 	b.size(1440, 900, false)

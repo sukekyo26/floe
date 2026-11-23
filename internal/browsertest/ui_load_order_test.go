@@ -229,7 +229,8 @@ func TestUILoadOrder(t *testing.T) { //nolint:paralleltest // the browser tests 
 	// A draw that throws, as of an entry the page cannot draw: said, not thrown, the next read goes on, and the list drawn again once
 	// it can be. The error's words are the browser's: only the page's words around them are compared
 	// LIMIT: the same list drawn again after a throw is not told from one that changed: the same data throws again
-	draw := strings.SplitN(msg("ui_draw_failed", "\x00"), "\x00", 2)
+	// The list is the React screen's, which says a draw that throws as the screen's (S422-P9)
+	draw := strings.SplitN(msg("ui_screen_draw_failed", "\x00"), "\x00", 2)
 	thrown := b.eval("window.thrown.length")
 	begun = b.acted("lo.bad = 'h'; " + poll)
 	b.untilRead(begun, "the draw that throws", "true")

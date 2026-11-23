@@ -15,7 +15,7 @@ export function ThemeCard({ card, checked, onPick }: ThemeCardProps) {
   return (
     <label
       data-testid="theme-card"
-      className="relative grid cursor-pointer content-start gap-1.5 rounded-menu border border-line bg-frame-bg px-2.25 pt-2.25 pb-2.75 hover:bg-hover has-checked:outline-2 has-checked:outline-offset-1 has-checked:outline-ink has-checked:after:absolute has-checked:after:top-3.5 has-checked:after:right-3.5 has-checked:after:size-6.5 has-checked:after:rounded-full has-checked:after:bg-ink has-checked:after:[background-image:var(--tick)] has-checked:after:bg-size-[16px] has-checked:after:bg-center has-checked:after:bg-no-repeat has-checked:after:content-[''] has-focus-visible:outline-offset-2 has-focus-visible:outline-(--ring)"
+      className="relative grid cursor-pointer content-start gap-1.5 rounded-menu border border-line bg-frame-bg px-2.25 pt-2.25 pb-2.75 hover:bg-hover has-checked:outline-2 has-checked:outline-offset-1 has-checked:outline-ink has-checked:after:absolute has-checked:after:top-3.5 has-checked:after:right-3.5 has-checked:after:size-6.5 has-checked:after:rounded-full has-checked:after:bg-ink has-checked:after:[background-image:var(--tick)] has-checked:after:bg-size-[16px] has-checked:after:bg-center has-checked:after:bg-no-repeat has-checked:after:content-[''] has-[input:focus-visible:not(:checked)]:[outline:var(--ring)] has-[input:focus-visible:not(:checked)]:outline-offset-2"
     >
       <input
         type="radio"
