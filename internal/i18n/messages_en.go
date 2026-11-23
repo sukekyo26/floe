@@ -153,7 +153,7 @@ var messagesEN = map[string]string{
 	"draw_select_text":  "the page drawn from this file has <%s> inside a <select>, which may hold no element whose content is read as text, nor svg or math: move it out of the <select>",
 	"draw_style":        "the page drawn from this file has a <style>, which page.html, a part's part.html or an item of format html writes: write the CSS in the template's page.css, which floe puts into the page in a layer under the parts' and the theme's, or in the part's part.css",
 	"draw_base":         "the page drawn from this file has a <base>, which page.html, a part's part.html or an item of format html writes and the page's CSP ignores (base-uri 'none'): write its links whole",
-	"draw_part_unknown": "the page drawn from this file names the part %s, which there is none of; use %s",
+	"draw_part_unknown": "the page drawn from this file names %[2]s in %[1]s, which there is none of; use %[3]s",
 	"draw_part_several": `the page has data-floe-part="%s", which is not the name of one part: write data-floe-part="<name>", as written, and take the look of others with data-floe-look="<name> …"`,
 	"draw_look_box":     `the page has data-floe-part="%[1]s", but %[1]s is a look, which has no box: take it with data-floe-look="%[1]s"`,
 	"draw_zgotmplz":     "the page drawn from this file has ZgotmplZ in %s: html/template wrote it for a value it does not take there; change the value, or where the template puts it",
