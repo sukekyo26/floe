@@ -6,6 +6,12 @@ export interface Store<T> {
   subscribe: (listener: () => void) => () => void;
 }
 
+// report tells of a listener's throw as the browser tells of an event listener's (reportError), else on the console
+function report(error: unknown): void {
+  if (typeof globalThis.reportError === 'function') globalThis.reportError(error);
+  else console.error(error);
+}
+
 // createStore holds value; a set of the same value (Object.is) tells no one
 export function createStore<T>(value: T): Store<T> {
   const listeners = new Set<() => void>();
@@ -14,7 +20,15 @@ export function createStore<T>(value: T): Store<T> {
     set: (next) => {
       if (Object.is(next, value)) return;
       value = next;
-      for (const listener of [...listeners]) listener();
+      // A listener's throw stops neither the listeners after it nor the screen's draw: it is reported, as the DOM's
+      // dispatchEvent does
+      for (const listener of [...listeners]) {
+        try {
+          listener();
+        } catch (error) {
+          report(error);
+        }
+      }
     },
     subscribe: (listener) => {
       listeners.add(listener);
