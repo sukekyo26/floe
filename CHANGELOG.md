@@ -25,6 +25,7 @@ adheres to [Semantic Versioning](https://semver.org/).
 
 ### Fixed
 
+- Fix the mistake of a name in `data-floe-look` that is no part or look: it said `names the part nope`, read as of `data-floe-part`. It now names the attribute and the name in it, for both: `the page drawn from this file names nope in data-floe-look, which there is none of; use …`, and only that name where the attribute holds others too.
 - Fix floe stopping with `laid out a mistake of its own, diagram_runs_through` on some `graph`s with icons and labelled edges (mostly laid out `right`): a labelled straight edge between two icons no longer moves onto one icon's point where the turn back to the other icon's point would cross a label or a box. About 0.1% of graphs with icons that drew before now run that edge or the edges beside it another way, their labels elsewhere.
 - Fix floe crashing (`panic: runtime error: index out of range`) on a `graph` laid out `right` whose level edge runs through a lane's heading while another edge at the same side of an icon turns there: it now tells the edge, as it does among boxes (`it runs through the heading of lane …; drop level, or shorten the heading`), and `floe diagram inspect` leaves the sides the edge took to edges written by hand.
 - Fix a page drawn of any size: one larger than 80 MiB of HTML is now refused at its data file, by `floe check`, `floe render`, `floe template check` and the server alike (`the page drawn is 96 MiB, over the 80 MiB a page may be`).
