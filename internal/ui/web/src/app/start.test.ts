@@ -6,6 +6,7 @@ import type { Boot } from '@/config/boot';
 function start(version: string, search: string) {
   const replaced: string[] = [];
   let arrived = 0;
+  const kept: unknown[] = [];
   startFrame({
     boot: () => ({ version }) as Boot,
     versions: {
@@ -13,17 +14,23 @@ function start(version: string, search: string) {
         arrived++;
       },
     },
-    openPage: { diff: () => new URLSearchParams(search).has('diff') },
+    openPage: {
+      diff: () => new URLSearchParams(search).has('diff'),
+      frameAt: () => ({ slug: 'p', file: '', v: Number(version) || 0 }),
+    },
+    order: { keepAt: (at) => kept.push(at) },
     href: () => `http://floe.test/a/p/${search}#part`,
     replace: (url) => replaced.push(url),
   });
-  return { replaced, arrived };
+  return { replaced, arrived, kept };
 }
 
 describe(startFrame, () => {
-  it('takes what a move of versions carried, once', () => {
-    expect.assertions(1);
-    expect(start('', '').arrived).toBe(1);
+  it('takes what a move of versions carried, and keeps where the frame is for the rows that opened it, once', () => {
+    expect.assertions(2);
+    const started = start('2', '?v=2');
+    expect(started.arrived).toBe(1);
+    expect(started.kept).toStrictEqual([{ slug: 'p', file: '', v: 2 }]);
   });
 
   it('takes ?v= off the URL where the server read no other version: the latest or one gone', () => {
