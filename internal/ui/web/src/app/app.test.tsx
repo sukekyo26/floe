@@ -45,11 +45,12 @@ describe(App, () => {
   });
 
   it('draws the page list under the bar with its search, the shelf, the head of the list and its modals', () => {
-    expect.assertions(3);
+    expect.assertions(4);
     const list = draw('', 'list');
     expect(list).toMatch(
-      /data-testid="bar".*id="screens".*id="search".*data-testid="bar-end".*id="shelf".*data-testid="lhead".*id="count".*id="bulk"/s,
+      /data-testid="bar".*id="screens".*id="search".*data-testid="bar-end".*id="shelf".*data-testid="lhead".*id="count".*id="bulk".*id="list"/s,
     );
+    expect(list).toMatch(/<div class="order-1 [^"]*">.*id="list".*<div data-home="error"/s);
     expect(list).toMatch(/<a id="to-list" href="\/" aria-current="page"/);
     expect(dialogs(list)).toStrictEqual([
       'add-dialog',

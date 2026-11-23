@@ -17,9 +17,8 @@ const cameBack = (): boolean => {
 };
 
 // App is the screen the server chose (boot's screen: the page list, or the task list or, ?task=, a task's page), in a
-// column of the window. The
-// reads and their watch, and the way back, are the app's own, outside the DrawGuard, so that a draw that throws is
-// drawn again by the next read; the mistake's words and the toasts stand outside it too
+// column of the window. The reads and their watch, and the way back, are the app's own, outside the DrawGuard, so that
+// a draw that throws is drawn again by the next read; the mistake's words and the toasts stand outside it too
 export function App({ search }: { readonly search: string }) {
   const screen = screenOf(getBoot(), search);
   useEffect(() => {
