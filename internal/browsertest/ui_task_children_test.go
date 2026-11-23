@@ -4,6 +4,7 @@ import (
 	"encoding/json"
 	"os"
 	"path/filepath"
+	"strconv"
 	"strings"
 	"testing"
 
@@ -472,6 +473,11 @@ func TestUITaskHeadRoom(t *testing.T) { //nolint:paralleltest // the browser tes
 		got := b.eval("(() => { const head = document.getElementById('task-head').getBoundingClientRect(); return ['task-add-page', 'task-edit', 'task-archive'].every((id) => { const r = document.getElementById(id).getBoundingClientRect(); return r.left >= head.left && r.right <= head.right; }) && document.documentElement.scrollWidth <= innerWidth; })()")
 		if got != "true" {
 			t.Errorf("at %d: the head's buttons within it = %s", width, got)
+		}
+		// 280px: the archive goes under the others; 1400px: one line
+		wrapped := b.eval("document.getElementById('task-archive').getBoundingClientRect().top > document.getElementById('task-edit').getBoundingClientRect().top")
+		if want := strconv.FormatBool(width == 280); wrapped != want {
+			t.Errorf("at %d: the archive on a line of its own = %s, want %s", width, wrapped, want)
 		}
 	}
 }
