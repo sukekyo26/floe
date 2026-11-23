@@ -66,7 +66,7 @@ describe(ListShelf, () => {
 
 describe(News, () => {
   it('counts every unread page not archived, apart from the view New, and is gone at none', () => {
-    expect.assertions(4);
+    expect.assertions(5);
     testBoot();
     const items = [
       page('a', { news: 'new', tags: ['x'] }),
@@ -82,6 +82,8 @@ describe(News, () => {
     expect(tag(renderToString(<News {...stores([page('a')])} />), '<a')).toContain('hidden=""');
     // From 70rem the shelf's views say it
     expect(tag(renderToString(<News {...some} />), '<a')).toContain('wide:hidden');
+    // A link of words, not a button (the user's choice, S422-P8)
+    expect(tag(renderToString(<News {...some} />), '<a')).not.toMatch(/\bborder\b|rounded-small/);
   });
 
   it('narrows the list in place on the page list alone, a link to it on the other screens', () => {
