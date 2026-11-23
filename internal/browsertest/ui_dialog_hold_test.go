@@ -221,7 +221,9 @@ func TestUIDialogHold(t *testing.T) { //nolint:paralleltest // the browser tests
 
 	// T2: the write failed: given back as it was, its mistake said in it, and it closes on Escape
 	errorOf := map[string]string{"edit-dialog": "edit-error", "set-dialog": "set-error", "add-page-dialog": "add-page-error", "kin-dialog": "kin-error", "edit-task-dialog": "edit-task-error", "add-dialog": "add-error"}
-	for _, w := range []write{writes[1], writes[2], writes[3], writes[4], writes[5], writes[6], writes[7]} {
+	// On a task's page (React), the category typed one of the task's: given back there, its suggestions stay shut (S444)
+	setOnTask := write{"set on a task's page", "set-dialog", "/tasks?project=proj&task=S300", rowMenu("plan-a", "task-set"), typed("#set-category", "実装", "document.getElementById('set-submit').click()"), true}
+	for _, w := range []write{writes[1], writes[2], writes[3], setOnTask, writes[4], writes[5], writes[6], writes[7]} {
 		open(w.page)
 		b.eval("holdOn('PATCH', 'POST'); fail.PATCH = true; fail.POST = true; true")
 		start(w)
@@ -392,6 +394,7 @@ var dialogHoldWant = []string{
 	"edit, failed: true closerequest / said true / edit-dialog edit-desc",
 	"set, failed: true closerequest / said true / set-dialog set-category",
 	"off, failed: true closerequest / said true / set-dialog set-task",
+	"set on a task's page, failed: true closerequest / said true / set-dialog set-category",
 	"add page, failed: true closerequest / said true / add-page-dialog add-page-q",
 	"kin, failed: true closerequest / said true / kin-dialog kin-task",
 	"task edit, failed: true closerequest / said true / edit-task-dialog edit-task-title",
