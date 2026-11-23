@@ -254,7 +254,7 @@ func TestUIButtons(t *testing.T) { //nolint:paralleltest // the browser tests sh
 	closeModal("edit-task-dialog")
 	modal("find", press("#find-open"))
 	modal("settings", press("#settings-open"))
-	modal("tag-dialog", menu("a", "tags"))
+	modal("tag-dialog", menu("a", "tag-item"))
 	modal("edit-dialog", menu("a", "edit"))
 	modal("set-dialog", menu("a", "task-set"))
 	modal("move-dialog", func() {
@@ -340,8 +340,10 @@ func TestUIButtons(t *testing.T) { //nolint:paralleltest // the browser tests sh
 	}
 
 	// A modal with no way here is a modal not measured: each a screen of each build holds, opened on one of that build
+	// LIMIT: ui.html still holds the modals of a task's page, which only /tasks opens and React serves. Drop this as ui.html goes (S422-P11)
+	tasksOnly := map[string]bool{"ui.html edit-task-dialog": true, "ui.html kin-dialog": true, "ui.html add-page-dialog": true}
 	for d := range present {
-		if !opened[d] {
+		if !opened[d] && !tasksOnly[d] {
 			t.Errorf("the %s modal is not measured on a screen of its build", d)
 		}
 	}

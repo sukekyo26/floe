@@ -453,7 +453,7 @@ a row's project, in its title alone: #1 / One / shop / https://example.com/a/b/c
 link: b/c https://example.com/a/b/c _blank noopener https://example.com/a/b/c | pull/9 https://example.com/pull/9 _blank noopener https://example.com/pull/9
 current: page
 search shown: true true
-chips: shop2 true var(--pc0), blog1 false var(--pc1), pin0 false var(--pc2), solo1 false var(--pc3), Not set1 false var(--faint)
+chips: shop2 true var(--color-pc0), blog1 false var(--color-pc1), pin0 false var(--color-pc2), solo1 false var(--color-pc3), Not set1 false var(--color-faint)
 j: #1One
 j j: #2Two
 j j k: #1One

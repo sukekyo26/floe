@@ -300,8 +300,29 @@ func TestUITaskCategories(t *testing.T) { //nolint:paralleltest // the browser t
 	say("dialog, escape", "document.activeElement.tagName + ' ' + document.activeElement.closest('li')?.dataset.slug")
 	out = append(out, "dialog, written: "+pageTask("build-a"))
 
+	// Added under no category: its heading's button names it so; the page of a category of this task moves under it, sent with the
+	// category empty; closed, the focus back on that button.
+	open("S300")
+	say("none, named", "document.querySelector('#list li[data-key=\"group:\"] [data-testid=category-add]').getAttribute('aria-label')")
+	// Not opened over another modal, as a script's press reaches the button under it
+	b.eval("document.getElementById('find-open').click()")
+	b.until("the search", "document.getElementById('find').open")
+	b.eval("document.querySelector('#list li[data-key=\"group:\"] [data-testid=category-add]').click()")
+	say("none, under the search", "document.getElementById('add-page-dialog').open")
+	b.pressKey(kb.Escape)
+	b.until("the search closed", "!document.getElementById('find').open")
+	add("")
+	say("none, opened", "document.getElementById('add-page-title').textContent")
+	query("review")
+	b.pressKey(kb.ArrowDown)
+	b.pressKey(kb.Enter)
+	b.until("closed", "!document.getElementById('add-page-dialog').open && document.querySelector('#list li[data-key=\"group:\"] + li[data-slug=review-a]')")
+	say("none, put", "sent.join(' ; ').replace(/\"rev\":\\d+/, '\"rev\":n')")
+	say("none, focus", "document.activeElement.getAttribute('aria-label')")
+	out = append(out, "none, written: "+pageTask("review-a"))
+
 	check(t, "task categories", out, strings.Join([]string{
-		"groups: note-a [案+] plan-a old-a [実装+] build-a [リリース+ none] [レビュー+] review-a",
+		"groups: [No category+] note-a [案+] plan-a old-a [実装+] build-a [リリース+ none] [レビュー+] review-a",
 		"keys apart: true",
 		"named: Add a page to リリース",
 		"opened: Add a page to リリース / S300 Categories / add-page-q / null",
@@ -313,7 +334,7 @@ func TestUITaskCategories(t *testing.T) { //nolint:paralleltest // the browser t
 		"put, told: Put T check-a under リリース",
 		"put, focus: Add a page to リリース",
 		"put, written: 7 / S300/リリース",
-		"put, groups: note-a [案+] plan-a old-a [実装+] build-a [リリース+] check-a [レビュー+] review-a",
+		"put, groups: [No category+] note-a [案+] plan-a old-a [実装+] build-a [リリース+] check-a [レビュー+] review-a",
 		"stale: Failed to save: task S300 has changed since it was read; the tasks are read again, so check and save again / true / memo-a",
 		"stale, typed: true",
 		`stale, then: /api/tasks {"slugs":["memo-a"],"task":"S300","category":"リリース","new":false,"rev":7} ; /api/tasks {"slugs":["memo-a"],"task":"S300","category":"リリース","new":false,"rev":8}`,
@@ -326,13 +347,13 @@ func TestUITaskCategories(t *testing.T) { //nolint:paralleltest // the browser t
 		"no: 0 true add-page-q true",
 		"moved from a task: Moved T other-a from S301's 設計 to 案",
 		"moved from a category: Moved T build-a from 実装 to リリース",
-		"moved, groups: [案+] plan-a note-a other-a old-a [実装+ none] [リリース+] build-a memo-a check-a [レビュー+] review-a",
+		"moved, groups: [No category+ none] [案+] plan-a note-a other-a old-a [実装+ none] [リリース+] build-a memo-a check-a [レビュー+] review-a",
 		"moved since, told: Put T other-a under 案",
 		"narrow: true",
 		`off: /api/tasks {"slugs":["review-a"],"task":"","category":""}`,
 		"off, told: Took T review-a off task S300Undo",
 		"off, focus: check-a",
-		"off, groups: [案+] plan-a note-a other-a old-a [実装+ none] [リリース+] build-a memo-a check-a [レビュー+ none]",
+		"off, groups: [No category+ none] [案+] plan-a note-a other-a old-a [実装+ none] [リリース+] build-a memo-a check-a [レビュー+ none]",
 		`back: /api/tasks {"slugs":["review-a"],"task":"S300","category":"レビュー","new":false,"rev":12}`,
 		"back, written: 13 / S300/レビュー",
 		"back, stale: Failed to save: task S300 has changed since it was read; the tasks are read again, so check and save again",
@@ -347,5 +368,11 @@ func TestUITaskCategories(t *testing.T) { //nolint:paralleltest // the browser t
 		"dialog, focus: undo",
 		"dialog, escape: SUMMARY build-a",
 		"dialog, written: none",
+		"none, named: Add a page with no category",
+		"none, under the search: false",
+		"none, opened: Add a page with no category",
+		`none, put: /api/tasks {"slugs":["review-a"],"task":"S300","category":"","new":false,"rev":n}`,
+		"none, focus: Add a page with no category",
+		"none, written: S300/",
 	}, "|"))
 }

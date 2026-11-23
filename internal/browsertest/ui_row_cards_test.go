@@ -48,13 +48,16 @@ func TestUIRowCards(t *testing.T) { //nolint:paralleltest // the browser tests s
 		out = append(out, what+": "+b.eval(expr))
 	}
 	// A value of a :root variable as the browser computes it for the property named. Named as ui.html names it; the React
-	// screens (#boot) name the same values their own way. A variable of no value throws, so that nothing is met by an empty one
+	// screens (#boot) name the same values their own way, or, as Tailwind writes a shadow's value into its utility and keeps no
+	// variable of it, give the value. A variable of no value throws, so that nothing is met by an empty one
 	// LIMIT: the names of both builds while ui.html serves some screens. Keep the React ones alone as it goes (S422-P11)
-	const as = `((prop, value) => { const names = { '--bg': '--color-bg', '--hover': '--color-hover', '--line': '--color-line', '--new': '--color-new', '--new-soft': '--color-new-soft', '--corner-menu': '--radius-menu', '--shadow-sm': '--shadow-sm' };
+	const as = `((prop, value) => { const names = { '--bg': '--color-bg', '--hover': '--color-hover', '--line': '--color-line', '--new': '--color-new', '--new-soft': '--color-new-soft', '--corner-menu': '--radius-menu', '--shadow-sm': '0 1px 2px rgb(34 33 31 / 0.06)' };
 		const old = /^var\((--[a-z-]+)\)$/.exec(value)[1], name = document.getElementById('boot') ? names[old] : old;
-		if (!name || getComputedStyle(document.documentElement).getPropertyValue(name).trim() === '') throw new Error('no value of ' + old);
-		const e = document.createElement('div'); e.style[prop] = 'var(' + name + ')'; document.body.append(e); const got = getComputedStyle(e)[prop]; e.remove(); return got; })`
-	const card = `((li) => { const st = getComputedStyle(li); return [st.borderTopWidth, st.borderTopLeftRadius === ` + as + `('borderTopLeftRadius', 'var(--corner-menu)'), st.boxShadow === ` + as + `('boxShadow', 'var(--shadow-sm)')].join(' '); })`
+		const named = name?.startsWith('--');
+		if (!name || (named && getComputedStyle(document.documentElement).getPropertyValue(name).trim() === '')) throw new Error('no value of ' + old);
+		const e = document.createElement('div'); e.style[prop] = named ? 'var(' + name + ')' : name; document.body.append(e); const got = getComputedStyle(e)[prop]; e.remove(); return got; })`
+	// The shadow among those drawn: React's card has Tailwind's empty ring shadows too
+	const card = `((li) => { const st = getComputedStyle(li); return [st.borderTopWidth, st.borderTopLeftRadius === ` + as + `('borderTopLeftRadius', 'var(--corner-menu)'), st.boxShadow.includes(` + as + `('boxShadow', 'var(--shadow-sm)'))].join(' '); })`
 	// Each row's place after the one above: C a card, T a folder's row, G a heading, with the room between them
 	const gaps = `(() => { const rows = [...document.querySelectorAll('#list > li')], r = (e) => e.getBoundingClientRect();
 		return rows.slice(1).map((li, i) => (li.dataset.testid === 'group' ? 'G' : li.dataset.testid === 'tree' ? 'T' : 'C') + Math.round(r(li).top - r(rows[i]).bottom)).join(' '); })()`
@@ -108,7 +111,7 @@ func TestUIRowCards(t *testing.T) { //nolint:paralleltest // the browser tests s
 	b.until("the rows", "document.querySelector('#list li[data-slug=fold]') && !document.querySelector('#list li[data-testid=tree]')")
 	say("folded", card+"(document.querySelector('#list li[data-slug=fold]')) + ' ' + getComputedStyle(document.querySelector('#list li[data-slug=fold]')).borderBottomWidth")
 
-	// A task of no page: no room left in the empty list; the task list's rows are cards too.
+	// A task of no page: the list holds the heading of no category alone, with the list's room; the task list's rows are cards too.
 	b.navigate("/tasks?project=demo&task=S2")
 	b.until("none", "!document.getElementById('task-none').hidden")
 	say("empty", "getComputedStyle(document.getElementById('list')).paddingTop + ' ' + "+ground)
@@ -126,7 +129,7 @@ func TestUIRowCards(t *testing.T) { //nolint:paralleltest // the browser tests s
 		"folder: 0px 0px 1px 0px 1px true 0 0 0",
 		"within: true true true false",
 		"folded: 1px true true 1px",
-		"empty: 0px true",
+		"empty: 6px true",
 		"task list: 1px true true",
 	}, "|"))
 }
