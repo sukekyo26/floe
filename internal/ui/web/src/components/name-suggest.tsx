@@ -1,4 +1,5 @@
 import {
+  useCallback,
   useLayoutEffect,
   useRef,
   useState,
@@ -6,6 +7,7 @@ import {
   type KeyboardEvent,
   type MouseEvent,
   type ReactNode,
+  type RefObject,
 } from 'react';
 
 import { givingBack } from '@/components/dialog';
@@ -21,6 +23,8 @@ export interface NameSuggestWays {
   readonly put: (name: string) => void;
   // onFocus tells whether being reached opens it: a modal's first field, which it focuses as it opens, does not
   readonly onFocus?: boolean;
+  // input is the caller's own ref to the field, which field.ref fills too: the field takes one ref
+  readonly input?: RefObject<HTMLInputElement | null>;
 }
 
 export interface NameSuggest {
@@ -35,7 +39,8 @@ export interface NameSuggest {
     onKeyDown: (e: KeyboardEvent<HTMLInputElement>) => void;
     onFocus: (e: FocusEvent<HTMLInputElement>) => void;
     onClick: (e: MouseEvent<HTMLInputElement>) => void;
-    onBlur: () => void;
+    // ref closes the names as the field is left
+    ref: (input: HTMLInputElement | null) => (() => void) | undefined;
   };
   // box is the names, drawn out of the field's label (a press in the label is sent on to the field)
   readonly box: ReactNode;
@@ -45,7 +50,7 @@ export interface NameSuggest {
 // name, Enter or a press puts it in, Escape closes it (not the modal), as does leaving the field. The names are taken
 // only as the field changes or is reached, so that a list read again neither closes them nor moves the name reached.
 // They stand in the top layer (a popover), so that no modal or box cuts them off, under the field
-export function useNameSuggest({ id, offers, put, onFocus = true }: NameSuggestWays): NameSuggest {
+export function useNameSuggest({ id, offers, put, onFocus = true, input: ownRef }: NameSuggestWays): NameSuggest {
   const [names, setNames] = useState<Offer[]>([]);
   const [shown, setShown] = useState(false);
   const [reached, setReached] = useState(-1);
@@ -71,11 +76,25 @@ export function useNameSuggest({ id, offers, put, onFocus = true }: NameSuggestW
     await Promise.allSettled((input.closest('dialog')?.getAnimations() ?? []).map((a) => a.finished));
     at();
   };
-  const close = () => {
+  const close = useCallback(() => {
     if (box.current?.matches(':popover-open')) box.current.hidePopover();
     setShown(false);
     setReached(-1);
-  };
+  }, []);
+  // The field's own blur, not React's onBlur: a field disabled as its modal is held is left within React's commit, whose
+  // events React does not send
+  const leave = useCallback(
+    (input: HTMLInputElement | null) => {
+      if (ownRef) ownRef.current = input;
+      if (!input) return undefined;
+      input.addEventListener('blur', close);
+      return () => {
+        input.removeEventListener('blur', close);
+        if (ownRef) ownRef.current = null;
+      };
+    },
+    [close, ownRef],
+  );
   const open = (input: HTMLInputElement) => {
     const now = offers(input.value, typed.current);
     typed.current = false;
@@ -127,7 +146,7 @@ export function useNameSuggest({ id, offers, put, onFocus = true }: NameSuggestW
       onClick: (e) => {
         open(e.currentTarget);
       },
-      onBlur: close,
+      ref: leave,
     },
     box: (
       // Not ul and li, which the list's rows style

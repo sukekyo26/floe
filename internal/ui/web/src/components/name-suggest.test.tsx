@@ -35,4 +35,17 @@ describe(useNameSuggest, () => {
     field.onFocus(focused);
     expect(offers).toHaveBeenCalledTimes(1);
   });
+
+  it('closes its names on the field’s own blur, a listener its ref puts on and takes off', () => {
+    expect.assertions(3);
+    const field = fieldOf(() => []);
+    const on = vi.fn<(type: string, listener: () => void) => void>();
+    const off = vi.fn<(type: string, listener: () => void) => void>();
+    const input = { addEventListener: on, removeEventListener: off } as unknown as HTMLInputElement;
+    const takeOff = field.ref(input);
+    expect(on).toHaveBeenCalledWith('blur', expect.any(Function));
+    takeOff?.();
+    expect(off).toHaveBeenCalledWith('blur', on.mock.calls[0]?.[1]);
+    expect(field).not.toHaveProperty('onBlur');
+  });
 });

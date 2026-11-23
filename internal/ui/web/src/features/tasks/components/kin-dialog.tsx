@@ -99,6 +99,7 @@ export function KinDialog({
   }, [titleShown]);
   const suggest = useNameSuggest({
     id: 'kin-task',
+    input: nameField,
     offers: (written, justTyped) =>
       form
         ? nameOffers(
@@ -228,7 +229,6 @@ export function KinDialog({
         <label data-testid="field" className={FIELD}>
           {t('ui_task_name')}
           <input
-            ref={nameField}
             id="kin-task"
             data-testid="text"
             className={TEXT}

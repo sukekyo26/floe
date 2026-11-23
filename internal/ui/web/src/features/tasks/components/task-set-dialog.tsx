@@ -74,6 +74,7 @@ export function TaskSetDialog({ open, onClosed, pages = pagePages, acts = acts0,
   const lang = getBoot().lang;
   const suggestTask = useNameSuggest({
     id: 'set-task',
+    input: nameField,
     offers: (written, typed) =>
       nameOffers(
         taskNames(tasks, project, () => true, lang),
@@ -194,7 +195,6 @@ export function TaskSetDialog({ open, onClosed, pages = pagePages, acts = acts0,
         <label data-testid="field" className={FIELD}>
           {t('ui_task_name')}
           <input
-            ref={nameField}
             id="set-task"
             data-testid="text"
             className={TEXT}
