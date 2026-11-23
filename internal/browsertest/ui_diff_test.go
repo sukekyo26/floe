@@ -891,3 +891,23 @@ func TestUIDiffNotice(t *testing.T) { //nolint:paralleltest // the browser tests
 		"true", "Sections changed since v1, the version last read: 1 /a/n/?diff", "true", "true", "true",
 	}, "|"))
 }
+
+// TestUIFrameBarFits opens a page of versions whole, whose bar has its choice of versions and its diff's button besides
+// the header's links, at a phone's widths and between 40rem and 56rem: nothing runs off the window, and the name keeps
+// some room. Its diff loads no page in the frame, which would read the latest (ui.html 1816–1817).
+func TestUIFrameBarFits(t *testing.T) { //nolint:paralleltest // the browser tests share one Chrome, one at a time
+	s := diffSite(t)
+	b := s.b
+	defer b.unsize()
+	var out []string
+	for _, width := range []int64{320, 390, 700} {
+		b.size(width, 800, width < 640)
+		b.navigate("/a/d/")
+		b.until("the bar", "document.getElementById('frame-title').textContent && innerWidth === "+strconv.FormatInt(width, 10))
+		out = append(out, strconv.FormatInt(width, 10)+": "+b.eval("[document.documentElement.scrollWidth <= innerWidth, document.getElementById('frame-title').getBoundingClientRect().width > 0, document.getElementById('frame-version').getClientRects().length > 0].join(' ')"))
+	}
+	b.unsize()
+	openDiff(b, "/a/d/?diff")
+	out = append(out, "diff: "+b.eval("document.getElementById('frame').hasAttribute('src')"))
+	check(t, "the bar", out, "320: true true true|390: true true true|700: true true true|diff: false")
+}
