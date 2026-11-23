@@ -61,4 +61,12 @@ describe(SettingsDialog, () => {
     expect(attrs(html, '<dialog')).toMatch(/data-panel="theme"[^>]*w-\[min\(64rem/);
     expect(radios(html)).toStrictEqual([':true', 'default:false', 'mine:false']);
   });
+
+  it('draws a page’s themes from its opening, before the page is in the settings read: no way back to take the focus', () => {
+    expect.assertions(3);
+    const html = draw({ page: null }, { slug: 'a', title: 'A' } as Page);
+    expect(attrs(html, '<button type="button" id="settings-back"')).toContain('hidden=""');
+    expect(html).toMatch(/id="settings-title"[^>]*>ui_theme_page</);
+    expect(attrs(html, '<svg data-testid="page-icon"')).not.toContain('hidden=""');
+  });
 });
