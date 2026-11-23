@@ -3,6 +3,7 @@ package browsertest_test
 import (
 	"encoding/json"
 	"slices"
+	"strings"
 	"testing"
 
 	"floe/internal/i18n"
@@ -36,16 +37,11 @@ func openScreen(b *browser, path string) {
 
 // A dialog's close button says Cancel where a submit button saves what is typed, which closing throws away, and Close where nothing is;
 // a question's says No. The dialogs are read on each screen, as it has them, in each language.
-// The settings' words are those of the part it opens on, its list, which saves nothing: Close. ui.html has its template's
-// Cancel till it is first opened, the React screens the list's from the start (S422-P8).
+// The settings' words are those of the part it opens on, its list, which saves nothing: Close, from the start (S422-P8).
 // LIMIT: read as the screens hold them closed; a screen that puts a dialog in only as it opens would need it opened.
-// LIMIT: while ui.html serves some screens, each build has its own dialogs (#boot tells the React build's). Make it one
-// list as the last screen leaves ui.html (S422-P11)
 func TestUIDialogCloseWords(t *testing.T) { //nolint:paralleltest // the browser tests share one Chrome, one at a time
-	old := []string{
-		"add-dialog", "add-page-dialog", "edit-dialog", "edit-task-dialog", "filter-dialog", "find", "keys", "kin-dialog", "move-dialog",
-		"set-dialog", "settings", "tag-dialog",
-	}
+	// A page whole: the modals every screen has alone
+	frame := []string{"edit-dialog", "find", "keys", "move-dialog", "set-dialog", "settings", "tag-dialog"}
 	// The React page list: the modals every screen has, its shelf's (filter-dialog) and its link to add (add-dialog)
 	list := []string{
 		"add-dialog", "edit-dialog", "filter-dialog", "find", "keys", "move-dialog", "set-dialog", "settings", "tag-dialog",
@@ -61,13 +57,12 @@ func TestUIDialogCloseWords(t *testing.T) { //nolint:paralleltest // the browser
 		s, screens := wordsSite(t, lang)
 		for _, path := range screens {
 			openScreen(s.b, path)
-			react := s.b.eval("String(document.getElementById('boot') !== null)") == "true"
-			want := old
-			if react {
-				want = taskPage
-				if path == "/" {
-					want = list
-				}
+			want := taskPage
+			switch {
+			case path == "/":
+				want = list
+			case strings.HasPrefix(path, "/a/"):
+				want = frame
 			}
 			var got [][]json.RawMessage
 			if err := json.Unmarshal([]byte(s.b.eval(`JSON.stringify([...document.querySelectorAll('dialog')].map((d) => [d.id,
@@ -91,7 +86,7 @@ func TestUIDialogCloseWords(t *testing.T) { //nolint:paralleltest // the browser
 				if id == "move-dialog" {
 					word = msg("ui_no")
 				}
-				if id == "settings" && react {
+				if id == "settings" {
 					word = msg("ui_close")
 				}
 				if !slices.Equal(closers, []string{word}) {
