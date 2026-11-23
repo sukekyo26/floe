@@ -148,7 +148,7 @@ floe render --check docs/*.yaml            # in CI: fails when a page was not wr
 
 ## `floe rebuild`
 
-Have the server draw every stored page again from the copy of its data file and images, with its templates, parts and themes of now, and keep the page where it changed. Run it after you change a template, part or theme of your own, or upgrade floe.
+Have the server draw every stored page again from the copy of its data file and images, with its templates, parts and themes of now, and keep the page where it changed, or where its stored page is gone. Run it after you change a template, part or theme of your own, or upgrade floe.
 
 - A page that no longer draws keeps the page it had, and its mistakes are told (exit code 1): fix the data file it was published from and publish it again, or fix the template. One past the memory or the time of a page (see `floe publish`) is told so, and the other pages are drawn on.
 - Stopping the command (Ctrl+C) stops the drawing: the pages not drawn again yet keep the page they had. Run it again to draw them.

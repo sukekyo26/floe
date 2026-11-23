@@ -64,9 +64,9 @@ func TestCompile(t *testing.T) {
 		{"hash", `{"$schema": "https://json-schema.org/draft/2020-12/schema#", "type": "object"}`, ""},
 		{"nested", `{` + head + `, "properties": {"x": {"$id": "https://e.com/x.json", "$schema": "https://example.com/s"}}}`, "schema.json: #/properties/x: $schema https://example.com/s names no draft floe takes; name https://json-schema.org/draft/2020-12/schema or https://json-schema.org/draft/2019-09/schema, or leave it out"},
 		{"badjson", `{` + head + `, `, "schema.json:1:79: unexpected EOF"}, // at the end, past the space
-		{"strng", `{` + head + `, "properties": {"t": {"type":"strng"}}}`, "schema.json: #/properties/t/type: 'anyOf' failed"},
-		{"xtype", `{` + head + `, "x": {"type": 3}, "properties": {"s": {"$ref": "#/x"}}}`, "schema.json: #/x/type: 'anyOf' failed"},
-		{"pctmeta", `{` + head + `, "properties": {"項目": {"type": 3}, "a/b~c": {"minLength": "x"}}}`, "schema.json: #/properties/a~1b~0c/minLength: got string, want integer\nschema.json: #/properties/項目/type: 'anyOf' failed"},
+		{"strng", `{` + head + `, "properties": {"t": {"type":"strng"}}}`, lines("schema.json: #/properties/t/type: got string, want array", "schema.json: #/properties/t/type: value must be one of 'array', 'boolean', 'integer', 'null', 'number', 'object', 'string'")},
+		{"xtype", `{` + head + `, "x": {"type": 3}, "properties": {"s": {"$ref": "#/x"}}}`, lines("schema.json: #/x/type: got number, want array", "schema.json: #/x/type: value must be one of 'array', 'boolean', 'integer', 'null', 'number', 'object', 'string'")},
+		{"pctmeta", `{` + head + `, "properties": {"項目": {"type": 3}, "a/b~c": {"minLength": "x"}}}`, lines("schema.json: #/properties/a~1b~0c/minLength: got string, want integer", "schema.json: #/properties/項目/type: got number, want array", "schema.json: #/properties/項目/type: value must be one of 'array', 'boolean', 'integer', 'null', 'number', 'object', 'string'")},
 		{"pct", `{` + head + `, "allOf": [{"properties": {"項目": ` + N + `}}], "patternProperties": {"a/b~c": {"type":"string","format": "html"}}}`, "schema.json: #/allOf/0/properties/項目: the part note draws no item here: floe draws what properties, additionalProperties and items reach from the root, through a $ref when nothing beside it draws; the item here is checked but not drawn\nschema.json: #/patternProperties/a~1b~0c: the format html marks an item to draw; declare it under properties, additionalProperties or items, which floe follows"},
 		{"twopaths", `{` + head + `, "properties": {"a": {"$ref": "#/$defs/p"}}, "allOf": [{"properties": {"b": {"$ref": "#/$defs/p"}}}], "$defs": {"p": ` + N + `}}`, "schema.json: #/allOf/0/properties/b: #/$defs/p holds parts or items of floe's formats, which floe draws only where its walk from the root reaches them, through properties, additionalProperties, items and $refs, and stops at a format of floe's; refer to it where the walk goes, with no format of floe's beside the $ref"},
 		{"defsallof", `{` + head + `, "$defs": {"p": ` + N + `}, "allOf": [{"properties": {"b": {"$ref": "#/$defs/p"}}}]}`, "schema.json: #/$defs/p: the part note draws no item here: floe draws what properties, additionalProperties and items reach from the root, through a $ref when nothing beside it draws; the item here is checked but not drawn\nschema.json: #/allOf/0/properties/b: #/$defs/p holds parts or items of floe's formats, which floe draws only where its walk from the root reaches them, through properties, additionalProperties, items and $refs, and stops at a format of floe's; refer to it where the walk goes, with no format of floe's beside the $ref"},
@@ -91,13 +91,30 @@ func TestCompile(t *testing.T) {
 		{"one $defs from two places", `{` + head + `, "$defs": {"item": {"type":"object","properties": {"n": ` + N + `}}}, "properties": {"xs": {"type":"array","items": {"$ref": "#/$defs/item"}}, "ys": {"type":"array","items": {"$ref": "#/$defs/item"}}}}`, ""},
 		// A byte order mark at the start is left out, once; the JSON pointers are those without it.
 		{"bom", mark + `{"type":"object"}`, ""},
-		{"bom strng", mark + `{` + head + `, "properties": {"t": {"type":"strng"}}}`, "schema.json: #/properties/t/type: 'anyOf' failed"},
+		{"bom strng", mark + `{` + head + `, "properties": {"t": {"type":"strng"}}}`, lines("schema.json: #/properties/t/type: got string, want array", "schema.json: #/properties/t/type: value must be one of 'array', 'boolean', 'integer', 'null', 'number', 'object', 'string'")},
 		{"two boms", mark + mark + `{"type":"object"}`, "schema.json:1:1: " + i18n.EnglishCatalog().Msg("text_bom")},
 		{"null", `null`, "schema.json: #: got null, want boolean or object"},
 	} {
 		_, err := schema.Compile(template, "schema.json", []byte(tt.src), resources(t))
 		if got := told(err); got != tt.want {
 			t.Errorf("%s: Compile told\n%s\nwant\n%s", tt.name, got, tt.want)
+		}
+	}
+}
+
+// A mistake against the metaschema's anyOf is told as the library's causes under it, each where it is: a type
+// misspelled says the names it takes (S17).
+func TestCompileOpensAnyOf(t *testing.T) {
+	t.Parallel()
+
+	for _, tt := range []struct{ name, src, at string }{
+		{"a type misspelled", `{` + head + `, "properties": {"a": {"type": "strin"}}}`, "schema.json: #/properties/a/type: value must be one of 'array', 'boolean'"},
+		{"one of the types misspelled", `{` + head + `, "properties": {"a": {"type": ["string", "nul"]}}}`, "schema.json: #/properties/a/type/1: value must be one of 'array', 'boolean'"},
+	} {
+		_, err := schema.Compile(template, "schema.json", []byte(tt.src), resources(t))
+		got := told(err)
+		if !strings.Contains(got, tt.at) || strings.Contains(got, "'anyOf' failed") {
+			t.Errorf("%s: Compile told\n%s\nwant a line starting %q, and no 'anyOf' failed", tt.name, got, tt.at)
 		}
 	}
 }
