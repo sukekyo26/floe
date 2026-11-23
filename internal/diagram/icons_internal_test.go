@@ -392,12 +392,19 @@ func TestGraphIconsRandom(t *testing.T) {
 		{"right", [2]uint64{37, 8}, 150, true, false, false, touchesPlain, 0, 500, nil},
 		// 717 has a label where a run stands once its ends settle, 54 a run a rounding off straight.
 		{"right", [2]uint64{777, 1517}, 720, true, false, false, touchesPlain, 0, 5, []int{54, 717}},
+		// Each named graph has a labelled straight edge between icons that slideEnd would move onto one icon's point,
+		// leaving its other end past its icon's side, and the turn back would cross a label (a loop's in 946 and 1596,
+		// another edge's in 4474, 4239 and 1716; in 1596 on a line in from the side) or a box (5812).
+		{"right", [2]uint64{241, 26}, 5813, true, false, false, touchesPlain, 0, 5, []int{946, 4474, 5812}},
+		{"right", [2]uint64{241, 28}, 4240, true, false, true, touchesPlain, 0, 2, []int{4239}},
+		{"right", [2]uint64{241, 30}, 1717, true, true, false, touchesPlain, 0, 3, []int{1716}},
+		{"right", [2]uint64{241, 32}, 1597, true, true, true, touchesPlain, 0, 2, []int{1596}},
 		{"", [2]uint64{39, 10}, 300, false, true, false, touchesPlain, 0, 300, nil},
 		{"right", [2]uint64{41, 12}, 300, false, true, false, touchesPlain, 8, 460, nil},
 		{"", [2]uint64{43, 14}, 150, false, false, true, touchesPlain, 0, 50, nil},
 		{"right", [2]uint64{45, 16}, 150, false, false, true, touchesPlain, 0, 18, nil},
 	} {
-		t.Run(fmt.Sprintf("%s-%d", cmpOr(c.direction, "down"), c.seed[0]), func(t *testing.T) {
+		t.Run(fmt.Sprintf("%s-%d-%d", cmpOr(c.direction, "down"), c.seed[0], c.seed[1]), func(t *testing.T) {
 			t.Parallel()
 
 			rnd := rand.New(rand.NewPCG(c.seed[0], c.seed[1])) //nolint:gosec // G404: graphs to try, no secret
@@ -419,13 +426,14 @@ func TestGraphIconsRandom(t *testing.T) {
 					inLanes(rnd, g)
 				}
 				iconize(g)
+				if c.level {
+					addLevels(rnd, g)
+				}
 				if c.only != nil && !slices.Contains(c.only, i) {
 					continue
 				}
-				if c.level {
-					if addLevels(rnd, g); levelTold(g) {
-						continue
-					}
+				if c.level && levelTold(g) {
+					continue
 				}
 				l := laid(g)
 				_, o, _ := groupedRound(g) //nolint:errcheck // iconFault tells the mistakes
