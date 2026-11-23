@@ -1,7 +1,8 @@
 import { describe, expect, it } from 'vitest';
 
 import { pageThemeWords, type ThemesRead } from '@/features/settings/api/themes';
-import { settingsView, themeCards } from '@/features/settings/utils/settings-view';
+import { pageShown, settingsView, themeCards } from '@/features/settings/utils/settings-view';
+import type { Page } from '@/types/page';
 
 const read = (change: Partial<ThemesRead> = {}): ThemesRead => ({
   themes: [
@@ -117,6 +118,17 @@ describe(themeCards, () => {
     expect(themeCards(read(), '', 'mine', '').checked).toBe('mine');
     const gone = themeCards(read(), '', 'lost', '');
     expect([gone.now, gone.checked]).toStrictEqual([{ kind: 'pickedGone', name: 'lost' }, null]);
+  });
+});
+
+describe(pageShown, () => {
+  it('draws the page opened for from its opening, and keeps it while the modal closes', () => {
+    expect.assertions(3);
+    const a = { slug: 'a', title: 'A' } as Page;
+    const opened = pageShown(null, { page: a });
+    expect(opened).toBe(a);
+    expect(pageShown(opened, null)).toBe(a);
+    expect(pageShown(opened, { page: null })).toBeNull();
   });
 });
 

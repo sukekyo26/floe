@@ -533,6 +533,26 @@ func TestUIDialogClose(t *testing.T) { //nolint:paralleltest // the browser test
 		until("settings", false)
 		say("settings, find, escape, " + at)
 	}
+	// Opened on a task's page, by the bar's button, a row's "…" and the search's "…": the focus on the settings' title, as
+	// ui.html gives it, not on a way back drawn for a moment. Each page's themes after the bar's, which opens on no page
+	bar := run("document.getElementById('settings-open').click()")
+	for _, c := range []struct {
+		name   string
+		opener func()
+	}{
+		{"bar", bar},
+		{"row", rowMenu("plan-a", "theme-item")},
+		{"bar", bar},
+		{"find", fromFind("theme-item")},
+	} {
+		c.opener()
+		until("settings", true)
+		b.still()
+		out = append(out, "settings opened, "+c.name+": "+b.eval("document.activeElement.id"))
+		b.pressKey(kb.Escape)
+		until("settings", false)
+		b.eval("closings.length = 0; sent.length = 0")
+	}
 	open("/")
 
 	// The search modal opened from the body, a row reached: Escape leaves no field to take the Enter after it
@@ -636,7 +656,11 @@ var dialogCloseWant = []string{
 	"settings, page, escape: settings > list More for T plan-a 4",
 	"settings, bar, escape: settings > settings-open",
 	"settings, find, escape, /: find > settings settings-title, settings > body",
-	"settings, find, escape, /tasks?project=proj&task=S300: find > body, settings > body",
+	"settings, find, escape, /tasks?project=proj&task=S300: find > settings settings-title, settings > body",
+	"settings opened, bar: settings-title",
+	"settings opened, row: settings-title",
+	"settings opened, bar: settings-title",
+	"settings opened, find: settings-title",
 	"search, escape: find > body",
 	"search, still: /",
 	"keys, escape: keys > keys-open",

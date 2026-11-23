@@ -8,11 +8,10 @@ import { createStore, type Store } from '@/lib/store';
 import { t } from '@/lib/t';
 import type { Page } from '@/types/page';
 
-// The settings as opened: which opening this is, the page whose themes they are (null for the settings' list), what
-// was read, the theme a page shows in without its own, and why they could not be read
+// The settings as opened: which opening this is, what was read, the theme a page shows in without its own, and why they
+// could not be read
 export interface SettingsState {
   opened: number;
-  page: Page | null;
   read: ThemesRead | null;
   own: string;
   failed: string;
@@ -35,12 +34,12 @@ export function createSettings({
   readThemes = () => readThemesOf(client),
   readPageTheme = (slug) => readPageThemeOf(client, slug),
 }: Deps = {}): Settings {
-  const state = createStore<SettingsState>({ opened: 0, page: null, read: null, own: '', failed: '' });
+  const state = createStore<SettingsState>({ opened: 0, read: null, own: '', failed: '' });
   return {
     state,
     open: async (page) => {
       const opened = state.get().opened + 1;
-      state.set({ opened, page, read: null, own: '', failed: '' });
+      state.set({ opened, read: null, own: '', failed: '' });
       // Asked together: a page's own theme is told on its first card, '' when it cannot be read
       const own = page ? readPageTheme(page.slug) : Promise.resolve('');
       let read: ThemesRead;
