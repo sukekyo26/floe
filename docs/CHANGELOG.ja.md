@@ -24,7 +24,7 @@ floe の主要な変更を記録します。フォーマットは
 
 ### 修正
 
-- 修正：`right` の `graph` で、level の線がレーンの見出しを通り、同じアイコンの同じ辺で別の線が曲がるとき、floe が落ちていた（`panic: runtime error: index out of range`）のを直した。箱だけのときと同じく、その線を誤りとして言う（`帯「…」の見出しを横切ります。…level を外すか、見出しを短くしてください`）。`floe diagram inspect` では、その線が取っていた辺を、手で書いた線が使える。
+- 修正：`right` の `graph` で、level の線がレーンの見出しを通り、同じアイコンの同じ辺で別の線が曲がるとき、floe が落ちていた（`panic: runtime error: index out of range`）。今は箱だけのときと同じく、その線を誤りとして言い（`帯「…」の見出しを横切ります。…level を外すか、見出しを短くしてください`）、`floe diagram inspect` では、その線が取っていた辺を手で書いた線が使える。
 - 修正：描いたページの大きさに上限が無かった。HTML が 80 MiB を超えるページは、`floe check`・`floe render`・`floe template check`・サーバーのどれでも、データファイルの所で断るようにした（`the page drawn is 96 MiB, over the 80 MiB a page may be`）。
 - 修正：式や `page.html` が長い文字を項目ごとに繰り返すページで、サーバーが全部のページごと止まっていた。サーバーはページを別のプロセスで描き、1 つのページに使えるのをメモリ 512 MiB と 30 秒までにした。どちらかを超えると、そのページをデータファイルの所で断り、サーバーは動き続ける。publish、リンクしたデータファイルのページを開くとき、ページにテーマを選ぶとき、`floe rebuild`（ほかのページは描き続ける）で同じ。`floe rebuild` を止める（Ctrl+C）と描くのも止まり、まだ描き直していないページは前のまま。publish とリンクしたデータファイルのページを開くのは約 0.1 秒遅くなる。
 - 修正：式や `page.html` が長い文字を項目ごとに繰り返すページで、`floe check`・`floe render`・`floe template check`・`floe diagram render`・`inspect` が何 GB ものメモリを使うか、`fatal error: out of memory` で止まっていた。描くのに使えるメモリを 512 MiB までにし、超えたら描くのを止め、描いていたファイルにそれを言う（終了コード 1）。

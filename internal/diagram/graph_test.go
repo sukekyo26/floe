@@ -1,6 +1,7 @@
 package diagram_test
 
 import (
+	"errors"
 	"fmt"
 	"os"
 	"path/filepath"
@@ -8,6 +9,7 @@ import (
 	"strings"
 	"testing"
 
+	"floe/internal/usererr"
 	"floe/internal/yamlpos"
 )
 
@@ -854,7 +856,11 @@ parts:
 	if err != nil {
 		t.Fatal(err)
 	}
-	got, _ := inspect(drawer(t), v) //nolint:errcheck // the heading is told; where the parts went is what is looked at
+	got, err := inspect(drawer(t), v)
+	var told usererr.List
+	if !errors.As(err, &told) || !slices.ContainsFunc(told, func(e *usererr.Error) bool { return e.Key == "diagram_graph_level_heading" }) {
+		t.Errorf("edges written by hand by a level edge through a heading: told %v, want the heading among them", err)
+	}
 	for _, run := range []string{`edge [70,240]→"a" M70,240 H145 V175`, `edge [40,240]→"b" M40,240 H145 V362`} {
 		if !strings.Contains(got, run+"\n") {
 			t.Errorf("edges written by hand at the sides the level edge took: want %q in\n%s", run, got)

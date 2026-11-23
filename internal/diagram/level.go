@@ -457,6 +457,10 @@ func (d *drawing) headed(o *graphOut, gr *group) usererr.List {
 
 // forget takes level edge k out of all that is read once the ends have settled: the turns at its icons' sides (bends,
 // keyed by its ends' boxes, so before ends goes) and the sides of boxes level edges take, found again from those left.
+// LIMIT: what was placed by k before stays in the graph told and refused, as inspect shows it: labels kept off the
+// exits left to edges written by hand on its sides (hands, read before), and the other ends on its sides at their
+// shares of two (a third and two thirds), not the middle. Place them again if a refused graph's inspect comes to
+// mislead.
 func (d *drawing) forget(k int) {
 	for j := range 2 {
 		end := endAt{k, j}
