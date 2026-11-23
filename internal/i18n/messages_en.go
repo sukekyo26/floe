@@ -390,11 +390,10 @@ var messagesEN = map[string]string{
 
 	// diagram: a graph's level edges
 	"diagram_graph_level_group":   `edge %s→%s: %s is a group, and level stands two boxes or icons in one rank; end the edge at a box or an icon, or drop level`,
-	"diagram_graph_level_apart":   "edge %s→%s: level joins two boxes or icons of one group, or two boxes or icons directly in two lanes; move one of them, or drop level",
 	"diagram_graph_level_rank":    "edge %s→%s: %s and %s stand in one rank by level edges, so this edge cannot run from one rank to another; end it elsewhere, or drop level from the edges joining them",
 	"diagram_graph_level_between": "edge %s→%s: %s stands between its boxes or icons in their rank; drop level, or move it out of the way",
 	"diagram_graph_level_loop":    "edge %[1]s→%[2]s: it takes side %[3]s of %[4]s, where %[4]s's loops are; drop level or the loops",
-	"diagram_graph_level_heading": `edge %s→%s: it runs through the heading of lane "%s", which reaches into the first rank laid out right; drop level, or shorten the heading`,
+	"diagram_graph_level_heading": `edge %s→%s: it runs through the heading of group or lane "%s", which reaches into the first rank laid out right; drop level, or shorten the heading`,
 
 	// ui: the management page (ui.html), which renders them itself
 	"ui_download":             "Download",

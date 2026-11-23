@@ -401,8 +401,10 @@ func TestGraphIconsRandom(t *testing.T) {
 		{"right", [2]uint64{241, 32}, 1597, true, true, true, touchesPlain, 0, 2, []int{1596}},
 		{"", [2]uint64{39, 10}, 300, false, true, false, touchesPlain, 0, 300, nil},
 		{"right", [2]uint64{41, 12}, 300, false, true, false, touchesPlain, 8, 460, nil},
-		{"", [2]uint64{43, 14}, 150, false, false, true, touchesPlain, 0, 50, nil},
-		{"right", [2]uint64{45, 16}, 150, false, false, true, touchesPlain, 0, 18, nil},
+		{"", [2]uint64{43, 14}, 150, false, false, true, touchesPlain, 0, 60, nil},
+		{"right", [2]uint64{45, 16}, 150, false, false, true, touchesPlain, 0, 28, nil},
+		// 77 has a level edge through the heading of a group of no lane.
+		{"right", [2]uint64{102, 1}, 78, false, false, true, touchesPlain, 0, 2, []int{77}},
 	} {
 		t.Run(fmt.Sprintf("%s-%d-%d", cmpOr(c.direction, "down"), c.seed[0], c.seed[1]), func(t *testing.T) {
 			t.Parallel()
@@ -659,7 +661,7 @@ func TestGraphIconsHands(t *testing.T) {
 	if _, _, err := o.items(); err != nil {                                         //nolint:errcheck // none but this
 		t.Fatal(err)
 	}
-	d, err := o.draw(o.groups[0], false)
+	d, _, err := o.draw(o.groups[0], false) //nolint:errcheck // none but this
 	if err != nil {
 		t.Fatal(err)
 	}
