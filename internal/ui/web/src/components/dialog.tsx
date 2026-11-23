@@ -10,12 +10,28 @@ import { backdropCloses, heldKey, stopsKey, type PressDown } from '@/utils/dialo
 interface DialogScope {
   // close is the one way a modal closes (ui.md: closeDialog), for its close buttons
   close: () => void;
-  // givingBack tells that the focus going to a field is the hold giving it back, not a field reached: its suggestions
-  // stay shut, over the mistake said under it
-  givingBack: () => boolean;
 }
 
-const Scope = createContext<DialogScope>({ close: () => undefined, givingBack: () => false });
+const Scope = createContext<DialogScope>({ close: () => undefined });
+
+// One value, not the modal's Scope: a field's suggestions are asked for in the body of the part that draws the modal,
+// outside its Scope. focus() runs the focus events of the one element it focuses before it returns, so the value is
+// true only for that element, whichever modal is under or over it
+let giving = false;
+
+// givingBack tells that the focus going to a field is a hold giving it back, not a field reached: its suggestions stay
+// shut, over the mistake said under it
+export const givingBack = (): boolean => giving;
+
+// whileGiving gives the focus back to field, as givingBack tells
+export function whileGiving(field: { focus: () => void }): void {
+  giving = true;
+  try {
+    field.focus();
+  } finally {
+    giving = false;
+  }
+}
 
 // useDialog is the modal a part is in
 export const useDialog = (): DialogScope => use(Scope);
@@ -86,7 +102,6 @@ export function Dialog({
 }: DialogProps) {
   const ref = useRef<HTMLDialogElement>(null);
   const was = useRef({ open: false, held: false });
-  const giving = useRef(false);
   const down = useRef<PressDown | null>(null);
   const { held } = hold;
 
@@ -106,11 +121,7 @@ export function Dialog({
   const giveBack = useEffectEvent((d: HTMLDialogElement) => {
     const focus = hold.focus.current;
     const active = document.activeElement;
-    if ((!d.contains(active) || active === d) && focus instanceof HTMLElement && d.contains(focus)) {
-      giving.current = true;
-      focus.focus();
-      giving.current = false;
-    }
+    if ((!d.contains(active) || active === d) && focus instanceof HTMLElement && d.contains(focus)) whileGiving(focus);
   });
 
   // Let go first, then closed: the caller closes the modal once the hold has let go
@@ -130,7 +141,7 @@ export function Dialog({
   }, [open, held]);
 
   return (
-    <Scope value={{ close, givingBack: () => giving.current }}>
+    <Scope value={{ close }}>
       {/* The backdrop is the dialog itself, pressed as Escape is keyed: a close request (cancel) is its keys' way */}
       {/* oxlint-disable-next-line jsx-a11y/click-events-have-key-events, jsx-a11y/no-noninteractive-element-interactions -- a press on the backdrop closes it; keys close it by cancel */}
       <dialog
