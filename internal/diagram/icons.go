@@ -610,7 +610,10 @@ func (d *drawing) standsClear(k int, s seg, own rect) bool {
 // rectangles, which only slideEnd leaves there, keep off what standsClear asks: on every line of the side's ends that
 // turnLine may take, which it finds only once all ends have settled. An end on its rectangle turns within it, which
 // labels and boxes keep off. The turns are not held off the other edges' runs, as the outermost stands on the side,
-// on every other end there, nor out of the frames k keeps out of, which hold its icon.
+// on every other end there.
+// LIMIT: nor are the turns held out of the frames k keeps out of (kept, which hold neither of its ends): the part past
+// the rectangle may come into one, which the random graphs tried never do (712 turns of edges with such frames). Hold
+// them out as clear does if a diagram comes to show it.
 // LIMIT: the turns are not among the runs the later moves keep off (settling.runs), so another edge's run, or a label
 // moved with it, may come to stand on one; none of the random graphs tried does. Keep the turns among those runs if
 // a diagram comes to show it.
