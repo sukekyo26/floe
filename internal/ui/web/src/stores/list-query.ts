@@ -33,6 +33,8 @@ export interface ListQuery {
   sync: () => void;
   savedList: () => string;
   savedTasks: () => string;
+  // synced is the URL's query as sync last wrote and kept it: what reads the kept lists draws again as it changes
+  synced: Store<string>;
   keepFrom: (key: string) => void;
   // takeFrom is the task kept by keepFrom, once
   takeFrom: () => string | null;
@@ -63,6 +65,7 @@ export function createListQuery({
   const firstView = () => (tasks() ? (boot().states.find((s) => s.first)?.name ?? '') : 'all');
   // The task list, not a task's page
   const taskList = () => screenOf(boot(), search()) === 'taskList';
+  const synced = createStore('');
 
   function readState(text: string) {
     const p = new URLSearchParams(text);
@@ -119,9 +122,11 @@ export function createListQuery({
       url.search = new URLSearchParams(Object.entries(state).filter(([, value]) => value)).toString();
       replace(url.toString());
       storage.write(taskList() ? TASKS_KEY : LIST_KEY, url.search);
+      synced.set(url.search);
     },
     savedList: () => savedQuery(LIST_KEY),
     savedTasks: () => savedQuery(TASKS_KEY),
+    synced,
     keepFrom: (key) => {
       storage.write(FROM_KEY, key);
     },

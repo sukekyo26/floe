@@ -127,7 +127,10 @@ export function FindDialog({
       // Its button takes the focus back, where the arrows reach the rows again
       closeMenu(menus, FOOT_MENU);
     } else if (what === 'hold') e.stopPropagation();
-    else if (what === 'move') {
+    else if (what === 'close') {
+      e.preventDefault();
+      onClosed();
+    } else if (what === 'move') {
       e.preventDefault();
       const next = nextReached(at, shown.length, e.key);
       // No rows, or the one: nothing to move to (ui.html: else if (n))

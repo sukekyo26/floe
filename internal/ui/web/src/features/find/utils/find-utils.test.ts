@@ -61,7 +61,9 @@ describe(findKey, () => {
       findKey(key('Enter'), { ...free, reached: -1 }),
       findKey(key('Enter', true), free),
       findKey(key('ArrowDown', true), free),
-    ]).toStrictEqual(['move', 'open', 'none', 'none', 'none', 'none']);
+      findKey(key('Escape'), free),
+      findKey(key('Escape', true), free),
+    ]).toStrictEqual(['move', 'open', 'none', 'none', 'none', 'none', 'close', 'none']);
     // A menu open holds the arrows, and Escape closes it alone
     const menu = { ...free, menuOpen: true };
     expect([findKey(key('ArrowUp'), menu), findKey(key('Escape'), menu), findKey(key('Enter'), menu)]).toStrictEqual([

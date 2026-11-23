@@ -16,9 +16,10 @@ export function findReached(shown: readonly { slug: string }[], reached: Reached
 }
 
 // What a key does in the search modal: the arrows move over the rows from anywhere in it, but not while a menu is
-// open in it, where Escape closes that menu alone; Enter on the field opens the row reached; nothing while a word is
-// being composed (an IME's Enter and arrows are its own)
-export type FindKey = 'move' | 'open' | 'closeMenu' | 'hold' | 'none';
+// open in it, where Escape closes that menu alone; Enter on the field opens the row reached; Escape else closes the
+// modal at once, words typed or not (the browser would first clear a search field's words, ui.html's closes); nothing
+// while a word is being composed (an IME's Enter and arrows are its own)
+export type FindKey = 'move' | 'open' | 'close' | 'closeMenu' | 'hold' | 'none';
 
 export function findKey(
   e: { key: string; isComposing: boolean; keyCode: number },
@@ -27,6 +28,7 @@ export function findKey(
   if (composing(e)) return 'none';
   const arrow = e.key === 'ArrowDown' || e.key === 'ArrowUp';
   if (menuOpen) return e.key === 'Escape' ? 'closeMenu' : arrow ? 'hold' : 'none';
+  if (e.key === 'Escape') return 'close';
   if (arrow) return 'move';
   if (e.key === 'Enter' && onField && reached >= 0) return 'open';
   return 'none';
