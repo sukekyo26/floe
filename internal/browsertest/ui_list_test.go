@@ -177,7 +177,7 @@ func TestUIList(t *testing.T) { //nolint:paralleltest // the browser tests share
 	out = append(out, b.eval("[getComputedStyle(document.getElementById('reader')).display, getComputedStyle(document.querySelector('#q')).color !== 'rgba(0, 0, 0, 0)'].join(' ')"))
 	b.moving("document.querySelector('#list li[data-slug=r] [data-testid=title]').click()")
 	b.until("the row whole", "location.pathname === '/a/r/'")
-	out = append(out, b.until("the bar", "document.getElementById('frame-title').textContent && [(" + wayBack + ")?.id, getComputedStyle(document.getElementById('frame-actions')).display].join(' ')"))
+	out = append(out, b.until("the bar", "document.getElementById('frame-title').textContent && [("+wayBack+")?.id, getComputedStyle(document.getElementById('frame-actions')).display].join(' ')"))
 	b.unsize()
 
 	// A dialog's words are a paragraph, not a row's first column: above the next field, however long.
@@ -199,7 +199,7 @@ func TestUIList(t *testing.T) { //nolint:paralleltest // the browser tests share
 	out = append(out, b.eval("[getComputedStyle(document.getElementById('reader')).display, getComputedStyle(document.getElementById('shelf-more')).display, getComputedStyle(document.getElementById('narrow-filter')).display, getComputedStyle(document.getElementById('news')).display, document.documentElement.scrollWidth <= innerWidth].join(' ')"))
 	b.moving("document.querySelector('#list li[data-slug=r] [data-testid=title]').click()")
 	b.until("the row whole", "location.pathname === '/a/r/'")
-	out = append(out, b.until("the bar", "document.getElementById('frame-title').textContent && [(" + wayBack + ")?.id, getComputedStyle(document.querySelector('#frame-actions [data-testid=star]')).display].join(' ')"))
+	out = append(out, b.until("the bar", "document.getElementById('frame-title').textContent && [("+wayBack+")?.id, getComputedStyle(document.querySelector('#frame-actions [data-testid=star]')).display].join(' ')"))
 	b.unsize()
 
 	check(t, "list", out, strings.Join([]string{

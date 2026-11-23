@@ -344,6 +344,15 @@ func TestUIFrameBackFocus(t *testing.T) { //nolint:paralleltest // the browser t
 	whole("a")
 	b.moving("(" + wayBack + ").click()")
 	read("one column", pages)
+	// At 40rem or less the back link alone, pressed as a person does: the row again.
+	b.size(360, 800, true)
+	b.navigate(pages)
+	b.until("the narrow row", "document.querySelector('#list li[data-slug=a] [data-testid=title]')")
+	b.eval("document.querySelector('#list li[data-slug=a] [data-testid=title]').focus()")
+	b.pressKey("\r")
+	whole("a")
+	pressBack()
+	read("narrow, the back link", pages)
 	b.size(1400, 800, false)
 	// A pin has no page beside it: the pin has the focus.
 	s.floe(t, "task", "--slug", "a", "--pin")
@@ -420,6 +429,7 @@ another list: no focus | nothing picked |
 a row gone: no focus | nothing picked | 
 marked unread: b | nothing picked | 
 one column: a | nothing picked | 
+narrow, the back link: a | nothing picked | 
 a pin: /a/a/
 the logo: no focus | nothing picked | 
 the same list's URL: no focus | nothing picked | 
