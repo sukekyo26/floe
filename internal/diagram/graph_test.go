@@ -555,9 +555,9 @@ edge "a"→"b" M176,49 V74
 // the side of its box's loops, and when it runs through a group's or lane's heading laid out right; a box among a
 // group's ranks is told by ranks. Where marks meet, the order written wins and the edge is told. A level edge refused
 // for loops makes no row, so an edge between its boxes is not told too. The rest lay out: a box of a group to one
-// outside, a fan with its first zone written between, a row of one lane however it faces, level on a loop (a loop),
-// loops on the other side, a cycle through a row, three edges between two boxes, and headings that do not reach the
-// edge.
+// outside, a fan with its first zone written between, groups of a common group as written however align would order
+// them, a row of one lane however it faces, level on a loop (a loop), loops on the other side, a cycle through a row,
+// three edges between two boxes, and headings that do not reach the edge.
 func TestGraphLevelMistakes(t *testing.T) {
 	t.Parallel()
 
@@ -893,6 +893,39 @@ parts:
       edges:
         - { from: w, to: rb, level: true }
         - { from: w, to: rc, level: true }
+`, ""},
+		{"groups written in a common group keep their order however their frames stand on average", `title: T
+parts:
+  - graph:
+      x: 20
+      y: 20
+      nodes:
+        - box: { name: x1, rows: [X] }
+        - box: { name: x2, rows: [X] }
+        - box: { name: x3, rows: [X] }
+        - box: { name: x4, rows: [X] }
+        - box: { name: x5, rows: [X] }
+        - box: { name: x6, rows: [X] }
+        - box: { name: x7, rows: [X] }
+        - box: { name: x8, rows: [X] }
+        - box: { name: x9, rows: [X] }
+        - box: { name: x10, rows: [X] }
+        - group: { name: ga, nodes: [{ box: { name: a, rows: [A] } }, { box: { name: a2, rows: [A] } }, { box: { name: a3, rows: [A] } }] }
+        - group: { name: gb, nodes: [{ box: { name: b, rows: [B] } }] }
+      edges:
+        - { from: a, to: a2 }
+        - { from: a2, to: a3 }
+        - { from: a, to: x1 }
+        - { from: a, to: x2 }
+        - { from: a, to: x3 }
+        - { from: a, to: x4 }
+        - { from: a, to: x5 }
+        - { from: x1, to: x7 }
+        - { from: x2, to: x6 }
+        - { from: x3, to: x8 }
+        - { from: x4, to: x9 }
+        - { from: x5, to: x10 }
+        - { from: a, to: b, level: true }
 `, ""},
 		{"level on a loop", `title: T
 parts:
