@@ -37,8 +37,8 @@ func TestUIBarEnd(t *testing.T) { //nolint:paralleltest // the browser tests sha
 	out = append(out, b.eval("document.querySelector('[data-testid=brand]').nextElementSibling.id"), b.eval(barIDs), b.eval(barShown+".slice(-2).join(' ')"))
 	out = append(out, b.eval(serverState))
 	// The links to the screens: one weight, heavier than the bar's words, the screen shown darker, no line under them (S448)
-	out = append(out, b.eval(`(() => { const [l, t] = ['to-list', 'to-tasks'].map((id) => getComputedStyle(document.getElementById(id)));
-		return [l.fontWeight, t.fontWeight, l.color !== t.color, l.color === getComputedStyle(document.body).color, l.borderBottomWidth, t.borderBottomWidth].join(' '); })()`))
+	out = append(out, b.eval(`(() => { const [pages, tasks] = ['to-list', 'to-tasks'].map((id) => getComputedStyle(document.getElementById(id)));
+		return [pages.fontWeight, tasks.fontWeight, pages.color !== tasks.color, pages.color === getComputedStyle(document.body).color, pages.borderBottomWidth, tasks.borderBottomWidth].join(' '); })()`))
 
 	// Every request fails while window.down, the polls too, so that the bar holds as lost.
 	b.eval(`(() => { const f = window.fetch; window.down = true;
