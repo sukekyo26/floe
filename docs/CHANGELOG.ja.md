@@ -26,6 +26,7 @@ floe の主要な変更を記録します。フォーマットは
 ### 修正
 
 - 修正：`data-floe-look` に部品にも見た目にも無い名前を書いたとき、`data-floe-part` の誤りと同じく「無い部品 nope を名乗っています」と言っていた。今はどちらの属性でも、属性とその中の名前を言う（`このファイルを描いたページの data-floe-look にある nope は、どの名前にも当たりません。…のどれかを書いてください`）。ほかの名前と並べて書いたときも、無い名前だけを言う。
+- 修正：写しに `page.html` の無い保存したページ（前の floe の保存先にありうる）を、`floe rebuild` が描き直さず、直す所が無いのに「元のデータファイルを直して…」と言っていた。今は比べる相手が無いので描き直して書き、版と新着の印は変えない。`page.html` があって読めないときは、今までどおり前のままにして言う。
 - 修正：schema が JSON Schema そのものの決まりに外れ、その決まりがいくつかの形のどれかを取る所（`type` は名前か名前の列）で、`floe check`・`floe template check`・`floe part check` が `'anyOf' failed` とだけ言っていた。今は、ライブラリが形ごとに返す言葉を、その場所で言う。`"type": "strin"` は `#/properties/a/type: value must be one of 'array', 'boolean', 'integer', 'null', 'number', 'object', 'string'` と言う（列の形の分の `got string, want array` も）。データファイルが schema の `anyOf`・`oneOf` に外れた誤りは、今までどおり 1 つで言う。
 - 修正：アイコンとラベル付きの線のある `graph`（多くは `right`）で、floe が `laid out a mistake of its own, diagram_runs_through` で止まっていた。今は、2 つのアイコンの間のラベル付きの真っ直ぐな線を一方のアイコンの点へ寄せると、もう一方のアイコンの点へ戻る曲がりがラベルや箱を横切るとき、寄せない。今まで描けていたアイコンのある図の約 0.1% で、その線や隣の線の通り方とラベルの位置が変わる。
 - 修正：`right` の `graph` で、level の線がレーンの見出しを通り、同じアイコンの同じ辺で別の線が曲がるとき、floe が落ちていた（`panic: runtime error: index out of range`）。今は箱だけのときと同じく、その線を誤りとして言い（`帯「…」の見出しを横切ります。…level を外すか、見出しを短くしてください`）、`floe diagram inspect` では、その線が取っていた辺を手で書いた線が使える。
