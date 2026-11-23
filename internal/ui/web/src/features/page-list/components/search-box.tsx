@@ -1,4 +1,7 @@
+import { useState } from 'react';
+
 import { SearchIcon } from '@/components/icons';
+import { searchKey } from '@/features/page-list/utils/search-key';
 import { showResults } from '@/features/page-list/stores/show-results';
 import { useStore } from '@/hooks/use-store';
 import { t } from '@/lib/t';
@@ -10,14 +13,22 @@ export interface SearchBoxProps {
   readonly hidden?: boolean;
   readonly query?: ListQuery;
   readonly columns?: ColumnsStore;
+  // go is where Enter goes with the words, on a screen of no list to narrow (a frame whose page is not found, ui.html
+  // 6752): the words are the field's own, and the list's query and columns are left as they are
+  readonly go?: (words: string) => void;
 }
 
 // SearchBox is the list's search in the bar (ui.html #search, .bar-inner > .search): up to 34rem in the bar's middle,
 // each letter narrows the list, Escape empties it and leaves it. Under 40rem it is its icon until it is reached or
 // holds words
-export function SearchBox({ hidden = false, query = listQuery, columns = pageColumns }: SearchBoxProps) {
+export function SearchBox({ hidden = false, query = listQuery, columns = pageColumns, go }: SearchBoxProps) {
   const { q } = useStore(query.query);
+  const [own, setOwn] = useState('');
   const words = (value: string) => {
+    if (go) {
+      setOwn(value);
+      return;
+    }
     query.setWords(value);
     showResults(columns);
   };
@@ -31,7 +42,7 @@ export function SearchBox({ hidden = false, query = listQuery, columns = pageCol
       <input
         type="search"
         id="q"
-        value={q}
+        value={go ? own : q}
         placeholder={t('ui_search_placeholder')}
         aria-label={t('ui_search')}
         autoComplete="off"
@@ -39,9 +50,15 @@ export function SearchBox({ hidden = false, query = listQuery, columns = pageCol
           words(e.currentTarget.value);
         }}
         onKeyDown={(e) => {
-          if (e.key !== 'Escape' || composing(e.nativeEvent)) return;
-          words('');
-          e.currentTarget.blur();
+          if (composing(e.nativeEvent)) return;
+          const field = e.currentTarget;
+          searchKey(e.key, own, {
+            go,
+            leave: () => {
+              words('');
+              field.blur();
+            },
+          });
         }}
         className="peer h-9 w-full min-w-0 rounded-full border border-line bg-panel ps-[2.2rem] pe-10 font-normal text-fg shadow-sm placeholder:text-faint narrow:pe-2 narrow:not-focus:placeholder-shown:text-transparent narrow:not-focus:placeholder-shown:placeholder:text-transparent [&::-webkit-search-cancel-button]:hidden"
       />

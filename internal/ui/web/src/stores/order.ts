@@ -25,6 +25,8 @@ export interface Order {
   forgetOrder: () => void;
   // keptBack is where a page whole goes back to: the screen that opened it, or the page list
   keptBack: () => string;
+  // keepAt keeps at as the frame the rows that opened it know, which a way back picks; none where it is not of them
+  keepAt: (at: OpenAt) => void;
   // renameKept keeps a page renamed whole of the rows that opened it, under its new name (ui.html renameKept)
   renameKept: (was: string, now: string) => void;
   // comeBack takes, back on the list that opened a page whole (by its back button or h, which leave pressed, or the
@@ -85,6 +87,9 @@ export function createOrder({
     keptBack: () => {
       const kept = keptOrder();
       return kept?.shown.includes(boot().framed) ? kept.back : `/${listQuery.savedList()}`;
+    },
+    keepAt: (at) => {
+      editKept((kept) => ({ at: kept.shown.includes(boot().framed) ? at : null }));
     },
     comeBack: (returned) => {
       const kept = keptOrder();

@@ -1,13 +1,20 @@
 import { t } from '@/lib/t';
 
-// Brand is the bar's logo and name, the way to the page list (ui.html .brand)
-export function Brand() {
+// Brand is the bar's logo and name, the way to the page list (ui.html .brand): to href, the list as this tab last had
+// it in a page whole. A page whole's at 40rem or less is its mark alone, its word still the link's own text (ui.html 896)
+export function Brand({
+  href = '/',
+  markAlone = false,
+}: {
+  readonly href?: string | undefined;
+  readonly markAlone?: boolean;
+}) {
   return (
     <a
       data-testid="brand"
-      href="/"
+      href={href}
       title={t('ui_to_page_list')}
-      className="flex flex-none items-center gap-2.5 text-[1.2rem] leading-none font-extrabold tracking-[-0.03em] text-fg no-underline"
+      className={`flex flex-none items-center gap-2.5 text-[1.2rem] leading-none font-extrabold tracking-[-0.03em] text-fg no-underline ${markAlone ? 'narrow:gap-0 narrow:text-[0px]' : ''}`}
     >
       <svg
         viewBox="0 0 64 64"

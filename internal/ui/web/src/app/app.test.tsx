@@ -69,4 +69,32 @@ describe(App, () => {
     expect.assertions(1);
     expect(draw('?project=p')).toMatch(/<div class="order-1 [^"]*">.*<div data-home="error"/s);
   });
+
+  it('draws a page whole under its bar with nothing of the page before the list is read, and the modals of every screen', () => {
+    expect.assertions(7);
+    testBoot();
+    vi.stubGlobal('window', {
+      location: {
+        host: '127.0.0.1:7325',
+        origin: 'http://127.0.0.1:7325',
+        hash: '',
+        href: 'http://127.0.0.1:7325/a/p/',
+      },
+    });
+    setBoot({ ...getBoot(), screen: 'frame', framed: 'p' });
+    const frame = renderToString(<App search="" />);
+    expect(frame).toMatch(/data-testid="bar".*id="screens".*id="frame-title"/s);
+    expect(frame).not.toContain('aria-current');
+    for (const id of ['frame', 'diff', 'notfound']) expect(frame).toMatch(new RegExp(`id="${id}"[^>]*hidden=""`));
+    expect(frame).toContain('<div class="contents print:hidden"><div data-home="toasts"');
+    expect(dialogs(frame)).toStrictEqual([
+      'edit-dialog',
+      'find',
+      'keys',
+      'move-dialog',
+      'set-dialog',
+      'settings',
+      'tag-dialog',
+    ]);
+  });
 });

@@ -68,6 +68,7 @@ import { SearchBox } from '@/features/page-list/components/search-box';
 import type { Listing, Page } from '@/types/page';
 import type { Screen } from '@/types/screen';
 import type { Folders } from '@/stores/open-folders';
+import { backOf } from '@/utils/back';
 import { openKey } from '@/utils/paths';
 import { startVersions, VersionsSection } from './versions';
 
@@ -727,8 +728,8 @@ function Gallery() {
       <main className="w-[26rem] p-6">
         <p>
           <a href="columns.html">The columns of the list screens</a> and{' '}
-          <a href="side.html">the tree on the frame’s left</a> and <a href="tasks.html">the task list</a>, in windows of
-          their own
+          <a href="side.html">the tree on the frame’s left</a>, <a href="tasks.html">the task list</a> and{' '}
+          <a href="frame.html">a page whole</a>, in windows of their own
         </p>
         <Section title="Server state and the error">
           <div className="mb-2 flex flex-wrap gap-2">
@@ -1234,8 +1235,11 @@ function Gallery() {
             </Button>
           </div>
         </Section>
-        <Section title="Back (narrow the window under 56rem: the mark alone)">
-          <BackLink />
+        <Section title="Back to a task's page (narrow the window under 56rem: the mark alone)">
+          <BackLink
+            back={backOf('/tasks?project=floe&task=%23128', window.location.origin)}
+            onPress={() => undefined}
+          />
         </Section>
         <Section title="Keys: / ? Ctrl+K show a toast">
           <p className="text-small text-muted">Press them outside a field.</p>

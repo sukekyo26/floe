@@ -11,7 +11,7 @@ import { TaskSetDialog } from '@/features/tasks/components/task-set-dialog';
 import { openTaskSet, type TaskSetOpen } from '@/features/tasks/stores/task-set';
 import { useOpenMenus } from '@/hooks/use-open-menu';
 import { isMac } from '@/lib/platform';
-import { openPage } from '@/stores/open-page';
+import { openPage, type OpenPage } from '@/stores/open-page';
 import { pages } from '@/stores/pages';
 import type { Page } from '@/types/page';
 import type { Screen } from '@/types/screen';
@@ -29,12 +29,21 @@ export const freeToOpen = (closing = ''): boolean =>
     closing,
   );
 
-// diffGoes tells that d goes to a diff where the help opens: the bar's diff button shows over the page picked (ui.html
-// 6475–6478, page-actions' own test)
-function diffGoes(): boolean {
-  const at = openPage.picked.get();
-  const page = at ? pages.state.get().entries.find((a: Page) => a.slug === at.slug) : undefined;
-  return Boolean(at && page && !at.file && canDiff(page));
+// diffGoes tells that d goes to a diff where the help opens: the bar's diff button shows over the page open, whole or
+// beside the list (ui.html 6475–6478, page-actions' own test). Not in a diff, nor for a page whole not found
+export function diffGoes(
+  open: Pick<OpenPage, 'frameAt' | 'picked' | 'diff'> = openPage,
+  entries: readonly Page[] = pages.state.get().entries,
+): boolean {
+  const at = open.frameAt() ?? open.picked.get();
+  const page = at ? entries.find((a) => a.slug === at.slug) : undefined;
+  return Boolean(at && page && !page.missing && !at.file && !open.diff() && canDiff(page));
+}
+
+// FrameHelp is what a page whole's help says of it: whether it shows a diff (its n and p), and where h goes back to
+export interface FrameHelp {
+  readonly diff: boolean;
+  readonly backWords: string;
 }
 
 interface Help {
@@ -58,7 +67,7 @@ export interface ScreenModals {
 // useScreenModals is the modals every screen opens and their ways in: the search, the settings, the help, the tags, the
 // edit, a task to set and the question of a move, with the one menu open (useOpenMenus). A screen calls it once, inside
 // the app's DrawGuard: a draw that throws takes the modals' state with the screen, so that no second opens over one gone
-export function useScreenModals(screen: Screen): ScreenModals {
+export function useScreenModals(screen: Screen, frame?: FrameHelp): ScreenModals {
   const [finding, setFinding] = useState(false);
   const [settings, setSettings] = useState<SettingsTarget | null>(null);
   const [help, setHelp] = useState<Help | null>(null);
@@ -127,9 +136,9 @@ export function useScreenModals(screen: Screen): ScreenModals {
         <KeysDialog
           open={help?.tab ?? null}
           screen={screen}
-          diff={false}
+          diff={frame?.diff ?? false}
           diffGo={help?.diffGo ?? false}
-          backWords=""
+          backWords={frame?.backWords ?? ''}
           mac={isMac()}
           onClosed={() => {
             setHelp(null);

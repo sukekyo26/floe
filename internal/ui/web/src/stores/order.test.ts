@@ -103,4 +103,17 @@ describe(createOrder, () => {
     none.order.comeBack(true);
     expect(none.order.takeCameFrom()).toBeNull();
   });
+
+  it('keeps where the frame is for the rows that opened it, and none for a frame not of them', () => {
+    expect.assertions(2);
+    const at = { slug: 'b', file: '', v: 2 };
+    const of = (framed: string) => {
+      const order = createOrder({ boot: () => ({ framed }) as Boot, storage: memory(), here: () => '/' });
+      order.keepRows(['a', 'b'], ['a', 'b']);
+      order.keepAt(at);
+      return order.keptOrder();
+    };
+    expect(of('b')).toMatchObject({ at });
+    expect(of('z')).toMatchObject({ at: null });
+  });
 });
