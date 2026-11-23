@@ -14,9 +14,9 @@ export function TabList({ label, children }: { readonly label: string; readonly 
 }
 
 // tabLook is a tab's look: underlined and darker when it is the one now, its weight the same so that a switch moves
-// none. The help's tabs and the bar's links to the screens (ScreenSwitch) have it
+// none. The help's tabs and the bar's links to the screens (ScreenSwitch) have it, each with room of its own
 export const tabLook = (now: boolean): string =>
-  `-mb-px border-0 border-b-2 px-0.5 pt-1 pb-2 text-small whitespace-nowrap transition-colors duration-150 ${now ? 'border-ink text-fg' : 'border-transparent text-muted hover:text-fg'}`;
+  `border-0 border-b-2 text-small whitespace-nowrap transition-colors duration-150 ${now ? 'border-ink text-fg' : 'border-transparent text-muted hover:text-fg'}`;
 
 // moveTab is ← or → on a tab: the next tab of its list takes the focus and is chosen
 function moveTab(e: KeyboardEvent<HTMLButtonElement>) {
@@ -53,7 +53,7 @@ export function Tab({ id, selected, onSelect, help, children }: TabProps) {
       data-help={help}
       onClick={onSelect}
       onKeyDown={moveTab}
-      className={`bg-transparent ${tabLook(selected)}`}
+      className={`-mb-px bg-transparent px-0.5 pt-1 pb-2 ${tabLook(selected)}`}
     >
       {children}
     </button>
