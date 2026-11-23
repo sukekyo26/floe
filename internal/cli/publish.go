@@ -391,9 +391,9 @@ func (a *app) rebuildCmd() *cobra.Command {
 		Use:   "rebuild",
 		Short: "Draw every stored page again with the templates, parts and themes of now",
 		Long: `Have the server draw every stored page again from the copy of its data file and images, with
-its templates, parts and themes of now, and keep the page where it changed. A page that no longer
-draws keeps the page it had, and its mistakes are told. Linked files are drawn each time they are
-opened, and are left alone.`,
+its templates, parts and themes of now, and keep the page where it changed, or where its stored
+page is gone. A page that no longer draws keeps the page it had, and its mistakes are told. Linked
+files are drawn each time they are opened, and are left alone.`,
 		Args: usage(cobra.NoArgs),
 		RunE: func(cmd *cobra.Command, _ []string) error {
 			c, err := a.client(cmd.Context(), false)
