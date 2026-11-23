@@ -170,7 +170,7 @@ func TestUIDialogClose(t *testing.T) { //nolint:paralleltest // the browser test
 		t.Helper()
 		tags++
 		b.fill("#tag-find", "n"+strconv.Itoa(tags))
-		b.eval("document.getElementById('tag-new').click(); document.getElementById('tag-apply').click()")
+		applyNewTag(b)
 	}
 
 	// Tags: a row's menu, by each way of closing
@@ -625,7 +625,13 @@ func TestUIDialogClose(t *testing.T) { //nolint:paralleltest // the browser test
 	until("add-dialog", false)
 	say("filter, a button of the shelf, then escape")
 
-	check(t, "closed", out, strings.Join(dialogCloseWant, "|"))
+	// Saved from a row found, the focus goes back to the row where the rows are kept (the React build, #boot), to the body
+	// where the save's read draws them anew (ui.html)
+	back := "body"
+	if b.eval("document.getElementById('boot') !== null") == "true" {
+		back = "list A T memo-a"
+	}
+	check(t, "closed", out, strings.ReplaceAll(strings.Join(dialogCloseWant, "|"), "SAVED_BACK", back))
 }
 
 var dialogCloseWant = []string{
@@ -651,7 +657,7 @@ var dialogCloseWant = []string{
 	"edit, bar, escape: edit-dialog > bar More for T plan-a 2",
 	"edit, heading pressed, escape: edit-dialog > list More for T plan-a 2",
 	"edit, search, save: find > edit-dialog edit-name, edit-dialog > body / sent 1",
-	"edit, search from a row, save: find > edit-dialog edit-name, edit-dialog > body / sent 1",
+	"edit, search from a row, save: find > edit-dialog edit-name, edit-dialog > SAVED_BACK / sent 1",
 	"edit, search, escape: find > edit-dialog edit-name, edit-dialog > body",
 	"edit, search from a row, escape: find > edit-dialog edit-name, edit-dialog > list A T memo-a",
 	"edit, row gone, escape: edit-dialog > body",
@@ -705,4 +711,12 @@ var dialogCloseWant = []string{
 	"add-dialog, escape: add-dialog > add-link",
 	"filter, escape: filter-dialog > narrow-filter",
 	"filter, a button of the shelf, then escape: filter-dialog > add-dialog add-path, add-dialog > narrow-filter",
+}
+
+// applyNewTag marks the tag typed in #tag-find as new and sends it.
+func applyNewTag(b *browser) {
+	b.t.Helper()
+
+	b.pressed("document.getElementById('tag-new').click()", "the new tag marked", "!document.getElementById('tag-apply').disabled")
+	b.eval("document.getElementById('tag-apply').click()")
 }

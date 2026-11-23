@@ -62,7 +62,7 @@ func TestUIUnread(t *testing.T) { //nolint:paralleltest // the browser tests sha
 	b.until("the toast", pageToastButton)
 	untilUnseen(b, "p1", false)
 	out = append(out, b.eval(pageToastSay), b.eval(pageToastButton+".textContent + ' / ' + "+pageToastButton+".getAttribute('aria-label')"),
-		b.eval("document.getElementById('toasts').getAttribute('role') + ' ' + document.activeElement.matches('[data-testid=toast] *')"))
+		b.eval(roleJS+"(document.getElementById('toasts')) + ' ' + document.activeElement.matches('[data-testid=toast] *')"))
 	b.until("the page in", "window.loads > 0")
 	loads := b.eval("window.loads")
 	// Pressed: the row new again, the count up, the page left as it is.

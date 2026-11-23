@@ -288,10 +288,14 @@ func TestUIButtons(t *testing.T) { //nolint:paralleltest // the browser tests sh
 	b.until("the rows", "document.querySelector('#list li[data-slug=c]')")
 	modal("keys", func() { b.pressKey("?") })
 	help("narrow")
-	modal("set-dialog", menu("a", "task-set"))
-	if got := b.eval("String(document.getElementById('set-out').hidden)"); got != "false" {
-		t.Errorf("the set modal of a page on a task: take off hidden %s", got)
-	}
+	// Read while open: closed, a build may draw the modal without its page
+	modal("set-dialog", func() {
+		menu("a", "task-set")()
+		b.until("set-dialog", "document.getElementById('set-dialog').open")
+		if got := b.eval("String(document.getElementById('set-out').hidden)"); got != "false" {
+			t.Errorf("the set modal of a page on a task: take off hidden %s", got)
+		}
+	})
 	b.eval("document.querySelector('#list li[data-slug=a] [data-testid=sel]').click()")
 	b.until("the bar", "!document.getElementById('bulk').hidden")
 	b.eval("document.getElementById('bulk-tag').click()")
