@@ -28,8 +28,10 @@ import type { Page } from '@/types/page';
 import { canDiff } from '@/utils/list-view';
 
 // freeToOpen tells no modal open, which the search, the settings, the help and a category's Add a page wait for
-// (ui.html openFind 6186, openThemes 6253, openKeys 6474, openAddPage 5893)
-const freeToOpen = (): boolean => document.querySelector('dialog[open]') === null;
+// (ui.html openFind 6186, openThemes 6253, openKeys 6474, openAddPage 5893); but closing, the one closed in the same
+// press, which is still open till React draws (the search's foot menu: ui.html menuBack closes it first)
+const freeToOpen = (closing = ''): boolean =>
+  [...document.querySelectorAll('dialog[open]')].every((d) => d.id === closing);
 
 // diffGoes tells that d goes to a diff where the help opens: the bar's diff button shows over the page picked (ui.html
 // 6475–6478, page-actions' own test)
@@ -66,8 +68,8 @@ export function TasksRoute({ name }: { readonly name: string | null }) {
   const openHelp = (tab: HelpTab) => {
     if (freeToOpen()) setHelp({ tab, diffGo: diffGoes() });
   };
-  const openSettings = (target: SettingsTarget) => {
-    if (freeToOpen()) setSettings(target);
+  const openSettings = (target: SettingsTarget, closing = '') => {
+    if (freeToOpen(closing)) setSettings(target);
   };
   const openers: Openers = {
     onTags: (a, back) => {
@@ -80,6 +82,13 @@ export function TasksRoute({ name }: { readonly name: string | null }) {
       setEdit({ page: a, back });
     },
     onTaskSet: (a, back) => void openTaskSet(a, back, setSet),
+  };
+  // The search's foot menu opens them as the search closes: the settings past the search still open
+  const fromFind: Openers = {
+    ...openers,
+    onTheme: (a, back) => {
+      openSettings({ page: a, back }, 'find');
+    },
   };
   const taskOpeners: TaskOpeners = {
     onTaskEdit: (task, back) => {
@@ -143,7 +152,7 @@ export function TasksRoute({ name }: { readonly name: string | null }) {
       </div>
       <FindDialog
         open={finding}
-        openers={openers}
+        openers={fromFind}
         onClosed={() => {
           setFinding(false);
         }}
