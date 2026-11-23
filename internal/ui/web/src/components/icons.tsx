@@ -31,6 +31,12 @@ function Line({
   );
 }
 
+// The bar's new pages' dot: a mark, filled in the colour of its words (ui.html .news .dot)
+export const DotIcon = ({ className }: { readonly className: string }) => (
+  <svg data-testid="dot" viewBox="0 0 8 8" className={className} aria-hidden="true">
+    <circle cx="4" cy="4" r="4" fill="currentColor" />
+  </svg>
+);
 export const StarIcon = () => (
   <Line>
     <path d="M12 3.5l2.6 5.3 5.9.9-4.3 4.1 1 5.8L12 16.9l-5.2 2.7 1-5.8-4.3-4.1 5.9-.9z" />

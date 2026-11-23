@@ -1,6 +1,7 @@
 import type { MouseEventHandler } from 'react';
 
 import { Button } from '@/components/button';
+import { DotIcon } from '@/components/icons';
 import { getBoot } from '@/config/boot';
 import { showResults } from '@/features/page-list/stores/show-results';
 import { newCount, newsPress, newsTaken } from '@/features/page-list/utils/list-shelf';
@@ -41,7 +42,8 @@ export function News({ hidden = false, query = listQuery, pages = pagePages, col
       hideFrom="wide"
       {...(onList ? { onClick: take } : {})}
     >
-      <span data-testid="dot" className="size-2 flex-none rounded-full bg-new" />
+      {/* Its size over the Button's for an icon's: the dot is 8 px, as ui.html's was */}
+      <DotIcon className="size-2! flex-none text-new" />
       <span id="news-n">{t('ui_news', n)}</span>
     </Button>
   );
