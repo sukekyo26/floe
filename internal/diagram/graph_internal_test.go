@@ -963,10 +963,10 @@ func TestGraphRandom(t *testing.T) {
 		{"right", [2]uint64{11, 12}, 400, false, true, "", 0, 84, 15},
 		{"", [2]uint64{13, 14}, 300, false, false, "plain", 132, 68, 0},
 		{"right", [2]uint64{15, 16}, 300, false, false, "plain", 123, 76, 0},
-		{"", [2]uint64{17, 18}, 300, false, false, "groups", 97, 71, 0},
-		{"right", [2]uint64{19, 20}, 300, false, false, "groups", 107, 80, 0},
-		{"", [2]uint64{21, 22}, 300, false, true, "lanes", 91, 78, 11},
-		{"right", [2]uint64{23, 24}, 300, false, true, "lanes", 88, 84, 0},
+		{"", [2]uint64{17, 18}, 300, false, false, "groups", 119, 71, 0},
+		{"right", [2]uint64{19, 20}, 300, false, false, "groups", 129, 80, 11},
+		{"", [2]uint64{21, 22}, 300, false, true, "lanes", 113, 78, 11},
+		{"right", [2]uint64{23, 24}, 300, false, true, "lanes", 116, 84, 0},
 	} {
 		// A name of no mark -run reads as a pattern: down-1-2 (down for the direction left out); -run
 		// TestGraphRandom/down-1-2$ picks that one alone, as down-1 is down-13-14 and down-17-18 too.
@@ -1992,13 +1992,15 @@ func TestGraphShapes(t *testing.T) {
 
 	// Edges that can run straight do: every edge of the kept flow, and K3,3's edges straight down; of the two edges
 	// of fan a reader once saw bend, c→hub runs straight and x→a turns twice at most; in the state example, the
-	// edges of running, its box widened for them, and the long edge past it.
+	// edges of running, its box widened for them, and the long edge past it; in the AWS sample, the level edge between
+	// the zones' databases.
 	for _, c := range []struct {
 		file  string
 		turns map[[2]string]int // the most turns of the edges from and to the names; of every edge, none, when nil
 	}{
 		{"testdata/graph/flow.yaml", nil},
 		{"testdata/graph/fan.yaml", map[[2]string]int{{"c", "hub"}: 0, {"x", "a"}: 2}},
+		{"testdata/graph/aws-level.yaml", map[[2]string]int{{"writer", "reader"}: 0}},
 		{"examples/state.yaml", map[[2]string]int{
 			{"stopped", "running"}: 0, {"running", "outdated"}: 0, {"outdated", "running"}: 0, {"running", "stopped"}: 0,
 			{"outdated", "stopped"}: 0,
@@ -3267,10 +3269,10 @@ func TestGraphWithRandom(t *testing.T) {
 	}{
 		{"", 1, false, false, 88, 0},
 		{"right", 2, false, false, 90, 0},
-		{"", 3, true, false, 89, 0},
-		{"right", 4, true, false, 88, 0},
-		{"", 5, false, true, 85, 3},
-		{"right", 6, false, true, 76, 0},
+		{"", 3, true, false, 92, 0},
+		{"right", 4, true, false, 91, 0},
+		{"", 5, false, true, 91, 3},
+		{"right", 6, false, true, 85, 5},
 	} {
 		t.Run(fmt.Sprintf("%s-%d", cmpOr(c.direction, "down"), c.seed), func(t *testing.T) {
 			t.Parallel()

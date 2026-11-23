@@ -379,11 +379,10 @@ var messagesJA = map[string]string{
 
 	// diagram: a graph's level edges
 	"diagram_graph_level_group":   "edge %s→%s: %s はまとまりです。level は 2 つの箱かアイコンを同じ段に置きます。箱かアイコンで終えるか、level を外してください",
-	"diagram_graph_level_apart":   "edge %s→%s: level でつなげるのは、同じまとまりの中の 2 つの箱かアイコンか、別々の帯の直下の 2 つの箱かアイコンです。どちらかを動かすか、level を外してください",
 	"diagram_graph_level_rank":    "edge %s→%s: %s と %s は level の線で同じ段に立つので、この線は段をまたげません。別の所で終えるか、2 つをつなぐ線の level を外してください",
 	"diagram_graph_level_between": "edge %s→%s: 段の中で、%s が 2 つの箱かアイコンの間に立ちます。level を外すか、それをよけてください",
 	"diagram_graph_level_loop":    "edge %[1]s→%[2]s: %[4]s の辺 %[3]s を使いますが、そこには輪があります。level か輪を外してください",
-	"diagram_graph_level_heading": "edge %s→%s: 帯「%s」の見出しを横切ります。right では見出しが最初の段に伸びます。level を外すか、見出しを短くしてください",
+	"diagram_graph_level_heading": "edge %s→%s: まとまりか帯「%s」の見出しを横切ります。right では見出しが最初の段に伸びます。level を外すか、見出しを短くしてください",
 
 	// ui
 	"ui_download":             "ダウンロード",
