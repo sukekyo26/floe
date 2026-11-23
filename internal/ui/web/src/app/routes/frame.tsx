@@ -120,55 +120,59 @@ export function FrameRoute() {
   const list = `/${listQuery.savedList()}`;
   return (
     <>
-      <div className="contents print:hidden">
-        <Bar
-          screen="frame"
-          brand={list}
-          back={<BackLink back={back} onPress={up.onPress} />}
-          listUp={back.to === 'pages' ? up : undefined}
-          taskUp={back.to === 'tasks' ? up : undefined}
-          lead={
-            <>
-              <FrameHead page={page} file={at.file} />
-              {read ? <VersionSelect at={page ? at : null} page={a} framed /> : null}
-            </>
-          }
-          actions={
-            page ? (
-              <BarActions id="frame-actions" place="frame" page={page} at={at} diffing={diff} openers={openers} />
-            ) : null
-          }
-          search={
-            <SearchBox
-              hidden={!seeking}
-              go={(q) => {
-                window.location.assign(`/?q=${encodeURIComponent(q.trim())}`);
-              }}
-            />
-          }
-          seeking={seeking}
-          onFind={openFind}
-          onHelp={() => {
-            openHelp('about');
-          }}
-          onSettings={openSettings}
-        />
-        <TagLine id="frame-tags" page={page} hidden={!page || Boolean(at.file) || diff} onEdit={openers.onTags} />
-        <SideTree folder={page && at.file ? page : null} file={at.file} />
-        {read ? <VersionNote at={page ? at : null} page={a} /> : null}
-        {read ? <PageNote slug={page ? at.slug : undefined} /> : null}
-        <FramePage at={at} found={found} diff={diff} name={name} keys={keyNames} onKey={onKey} />
-        <DiffView page={diffOf} hidden={!found || !diff} keys={keyNames} onKey={onKey} />
-        <NotFound page={a} slug={framed} back={list} hidden={!seeking} />
-      </div>
-      {found ? (
+      <Bar
+        screen="frame"
+        brand={list}
+        back={<BackLink back={back} onPress={up.onPress} />}
+        listUp={back.to === 'pages' ? up : undefined}
+        taskUp={back.to === 'tasks' ? up : undefined}
+        lead={
+          <>
+            <FrameHead page={page} file={at.file} />
+            {read ? <VersionSelect at={page ? at : null} page={a} framed /> : null}
+          </>
+        }
+        actions={
+          page ? (
+            <BarActions id="frame-actions" place="frame" page={page} at={at} diffing={diff} openers={openers} />
+          ) : null
+        }
+        search={
+          <SearchBox
+            hidden={!seeking}
+            go={(q) => {
+              window.location.assign(`/?q=${encodeURIComponent(q.trim())}`);
+            }}
+          />
+        }
+        seeking={seeking}
+        onFind={openFind}
+        onHelp={() => {
+          openHelp('about');
+        }}
+        onSettings={openSettings}
+      />
+      <TagLine id="frame-tags" page={page} hidden={!page || Boolean(at.file) || diff} onEdit={openers.onTags} />
+      <SideTree folder={page && at.file ? page : null} file={at.file} />
+      {read ? (
+        <div className="print:hidden">
+          <VersionNote at={page ? at : null} page={a} />
+          <PageNote slug={page ? at.slug : undefined} />
+        </div>
+      ) : null}
+      <FramePage at={at} found={found} diff={diff} name={name} keys={keyNames} onKey={onKey} />
+      <DiffView page={diffOf} hidden={!found || !diff} keys={keyNames} onKey={onKey} />
+      <NotFound page={a} slug={framed} back={list} hidden={!seeking} />
+      {/* Printed in place of the page, which an iframe prints one screen of, but where the page is not found: that
+          prints its words (ui.html 268) */}
+      {seeking ? null : (
         <p id="print-alone" className="m-8 hidden text-fg print:block">
           <span id="print-alone-text">{t('ui_print_alone', t('ui_open_raw'))}</span>{' '}
           <a id="print-raw" href={new URL(rawHref(at), window.location.href).href}>
             {new URL(rawHref(at), window.location.href).href}
           </a>
         </p>
-      ) : null}
+      )}
       {modals}
     </>
   );

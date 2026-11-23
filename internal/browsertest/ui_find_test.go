@@ -332,7 +332,9 @@ func TestUIFindActions(t *testing.T) { //nolint:paralleltest // the browser test
 	b.until("the bar", "document.getElementById('frame-title').textContent")
 	keyDown(b, "key: 'k', ctrlKey: true")
 	typeFind(b, "gamma")
-	b.moving("document.querySelector('" + menu + " summary').click(); document.querySelector('" + menu + " [data-testid=delete]').focus(); document.querySelector('" + menu + " [data-testid=delete]').click(); document.querySelector('" + menu + " [data-testid=delete]').click()")
+	b.pressed("document.querySelector('"+menu+" summary').click(); document.querySelector('"+menu+" [data-testid=delete]').focus(); document.querySelector('"+menu+" [data-testid=delete]').click()",
+		"the delete armed", "document.querySelector('"+menu+" [data-testid=delete]').hasAttribute('data-armed')")
+	b.moving("document.querySelector('" + menu + " [data-testid=delete]').click()")
 	b.until("the list", "location.pathname === '/'")
 	check(t, "actions", out, strings.Join([]string{
 		"true", "true", "true", "true", "false true true", "false", "true", "true", "false 0", "true", "true none",

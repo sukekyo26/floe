@@ -73,7 +73,7 @@ export function DiffView({ page, hidden, keys, onKey, diff = sharedDiff, toc = s
       ref={box}
       id="diff"
       hidden={hidden}
-      className="flex min-h-0 flex-1 flex-col bg-frame-bg narrow:block narrow:overflow-auto"
+      className="flex min-h-0 flex-1 flex-col bg-frame-bg print:hidden narrow:block narrow:overflow-auto"
     >
       <div
         id="diff-head"

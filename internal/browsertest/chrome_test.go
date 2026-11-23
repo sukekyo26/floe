@@ -269,10 +269,12 @@ func (b *browser) until(what, expr string) string {
 func (b *browser) untilWithin(limit time.Duration, what, expr string) string {
 	b.t.Helper()
 
-	// A page moved to whole has its new URL while it loads, before its script runs. The state is read in the same
-	// evaluation as expr: read apart, the page could be replaced between the two.
+	// A page moved to whole has its new URL while it loads, before its script runs. The management page (its markup
+	// holds #boot) has run its script once it began the list's first read (data-loads-begun): the React build starts it
+	// after its first draw, a task after load. The state is read in the same evaluation as expr: read apart, the page
+	// could be replaced between the two.
 	// LIMIT: interactive comes before the DOMContentLoaded handlers (contents.js, zoom.js); wait for what they make itself.
-	loaded := "document.readyState !== 'loading' ? (0, eval)(" + js(expr) + ") : false"
+	loaded := "document.readyState !== 'loading' && (document.getElementById('boot') === null || document.documentElement.hasAttribute('data-loads-begun')) ? (0, eval)(" + js(expr) + ") : false"
 	var last string
 	var err error
 	for deadline := time.Now().Add(limit); time.Now().Before(deadline); {
@@ -440,8 +442,9 @@ func (b *browser) hover(x, y float64) {
 	var last string
 	var err error
 	for deadline := time.Now().Add(waitLimit); time.Now().Before(deadline); {
-		// The toast of a page just read lies over it, and takes the pointer: not what these tests are of.
-		b.eval("document.querySelector('.toast.page')?.remove()")
+		// The toast of a page just read lies over it, and takes the pointer: not what these tests are of. Hidden, not
+		// removed: the screen takes it away itself.
+		b.eval("for (const e of document.querySelectorAll('[data-testid=toast][data-page]')) e.style.display = 'none'")
 		move(0, 0) // off the frame first: pointerover fires only on entering
 		move(x, y)
 		if last, err = b.try("window.over"); err == nil && truthy(last) {

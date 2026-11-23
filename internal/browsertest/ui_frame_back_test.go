@@ -10,13 +10,20 @@ import (
 	"floe/internal/store"
 )
 
-// frameBack says the back button of a page whole: where it goes, its word, what it says in full, the key's words.
-const frameBack = `(() => { const e = document.getElementById('back');
-  return [location.pathname, e.getAttribute('href'), document.getElementById('back-word').textContent, e.title, e.getAttribute('aria-label'), document.getElementById('keys-back').textContent, document.querySelector('[data-testid=brand]').getAttribute('href')].join(' | '); })()`
+// wayBack is the link that shows a page whole's way back, the one h and a press go by: the back link where it shows
+// (opened from a task's page, or at 40rem or less), else the header's link to the list that opened the page, which
+// goes where the back link does.
+const wayBack = `[...['back', 'to-list', 'to-tasks'].map((id) => document.getElementById(id))].find((e) => e !== null && e.getClientRects().length > 0 && e.getAttribute('href') === document.getElementById('back').getAttribute('href'))`
 
-// The back button of a page whole, by every way a page is opened whole: real presses, the row's press again and a double press, the
+// frameBack says the way back of a page whole: the link that shows it, where it goes and its word, what the back link
+// says in full, the key's words and where the logo goes.
+const frameBack = `(() => { const e = ` + wayBack + `, back = document.getElementById('back');
+  return [location.pathname, e?.id, e?.getAttribute('href'), e === back ? document.getElementById('back-word').textContent : e?.textContent, back.title, back.getAttribute('aria-label'), document.getElementById('keys-back').textContent, document.querySelector('[data-testid=brand]').getAttribute('href')].join(' | '); })()`
+
+// The way back of a page whole, by every way a page is opened whole: real presses, the row's press again and a double press, the
 // title over the page beside the rows, a pin, the page list's row; a reload keeps it, and a tab that kept nothing has the page list. h goes
-// where it says. It shows at every width, a narrow screen with its mark alone.
+// where it says. Opened from a task's page it is the back link; from a list, the header's link to that list, and at 40rem or less the
+// back link's mark alone, the header's links gone (the user's choice).
 func TestUIFrameBack(t *testing.T) { //nolint:paralleltest // the browser tests share one Chrome, one at a time
 	s := newSite(t)
 	b := s.b
@@ -116,8 +123,10 @@ func TestUIFrameBack(t *testing.T) { //nolint:paralleltest // the browser tests 
 	b.size(360, 800, true)
 	b.until("the narrow bar", "innerWidth === 360")
 	out = append(out, "phone: "+b.eval("(document.querySelector('[data-testid=brand]').offsetParent !== null) + ' ' + document.querySelector('[data-testid=brand]').getAttribute('href') + ' ' + (document.querySelector('[data-testid=brand] svg').getBoundingClientRect().width === 26) + ' ' + (document.getElementById('frame-actions').getBoundingClientRect().right <= innerWidth) + ' ' + (document.documentElement.scrollWidth <= innerWidth)"))
+	// At 40rem or less the back link alone, its mark; wider, the header's link (the user's choice)
+	out = append(out, "narrow: "+b.eval("("+wayBack+")?.id + ' ' + (document.getElementById('back-word').offsetParent === null) + ' ' + document.getElementById('back').getAttribute('aria-label') + ' ' + (document.getElementById('screens').offsetParent === null)"))
 	b.size(800, 800, false)
-	out = append(out, "narrow: "+b.eval("(document.getElementById('back').offsetParent !== null) + ' ' + (document.getElementById('back-word').offsetParent === null) + ' ' + document.getElementById('back').getAttribute('aria-label')"))
+	out = append(out, "wider: "+b.eval("("+wayBack+")?.id"))
 	b.size(1400, 800, false)
 
 	// A long title gives way: the mark and a short name stay whole.
@@ -206,24 +215,25 @@ func TestUIFrameBack(t *testing.T) { //nolint:paralleltest // the browser tests 
 }
 
 // frameBackWant is what TestUIFrameBack reads, in the order it opens them.
-const frameBackWant = `task row, pressed again: /a/a/ | /tasks?project=proj&task=%23128 | #128 | Back to #128 | Back to #128 | Back to #128 | /
-task row, double press: /a/b/ | /tasks?project=proj&task=%23128 | #128 | Back to #128 | Back to #128 | Back to #128 | /
-the title over the page: /a/a/ | /tasks?project=proj&task=%23128 | #128 | Back to #128 | Back to #128 | Back to #128 | /
-task row, Enter: /a/b/ | /tasks?project=proj&task=%23128 | #128 | Back to #128 | Back to #128 | Back to #128 | /
-reloaded: /a/b/ | /tasks?project=proj&task=%23128 | #128 | Back to #128 | Back to #128 | Back to #128 | /
-pin: /a/pin/ | /tasks?project=proj | Task list | Back to the task list | Back to the task list | Back to the task list | /
-page list row: /a/loose/ | /?project=proj | Page list | Back to the page list | Back to the page list | Back to the page list | /?project=proj
-another tab: /a/a/ | / | Page list | Back to the page list | Back to the page list | Back to the page list | /
+const frameBackWant = `task row, pressed again: /a/a/ | back | /tasks?project=proj&task=%23128 | #128 | Back to #128 | Back to #128 | Back to #128 | /
+task row, double press: /a/b/ | back | /tasks?project=proj&task=%23128 | #128 | Back to #128 | Back to #128 | Back to #128 | /
+the title over the page: /a/a/ | back | /tasks?project=proj&task=%23128 | #128 | Back to #128 | Back to #128 | Back to #128 | /
+task row, Enter: /a/b/ | back | /tasks?project=proj&task=%23128 | #128 | Back to #128 | Back to #128 | Back to #128 | /
+reloaded: /a/b/ | back | /tasks?project=proj&task=%23128 | #128 | Back to #128 | Back to #128 | Back to #128 | /
+pin: /a/pin/ | to-tasks | /tasks?project=proj | Task list | Back to the task list | Back to the task list | Back to the task list | /
+page list row: /a/loose/ | to-list | /?project=proj | Page list | Back to the page list | Back to the page list | Back to the page list | /?project=proj
+another tab: /a/a/ | to-list | / | Page list | Back to the page list | Back to the page list | Back to the page list | /
 phone: true / true true true
-narrow: true true Back to the page list
-a long title: /a/b/ | /tasks?project=proj&task=%23128 | #128 | Back to #128 | Back to #128 | Back to #128 | /
-of a version: /a/a/ | /tasks?project=proj&task=%23128 | #128 | Back to #128 | Back to #128 | Back to #128 | /
-its diff: /a/a/ | /tasks?project=proj&task=%23128 | #128 | Back to #128 | Back to #128 | Back to #128 | /
-renamed: /a/a2/ | /tasks?project=proj&task=%23128 | #128 | Back to #128 | Back to #128 | Back to #128 | /
-named back: /a/a/ | /tasks?project=proj&task=%23128 | #128 | Back to #128 | Back to #128 | Back to #128 | /
-from the browser's memory: /a/a/ | /tasks?project=proj | Task list | Back to the task list | Back to the task list | Back to the task list | /
-a task of no project: /a/none/ | /tasks?project=%2F&task=%237 | #7 | Back to #7 | Back to #7 | Back to #7 | /
-a pin of a list at a view: /a/pin/ | /tasks?view=done&project=proj | Task list | Back to the task list | Back to the task list | Back to the task list | /`
+narrow: back true Back to the page list true
+wider: to-list
+a long title: /a/b/ | back | /tasks?project=proj&task=%23128 | #128 | Back to #128 | Back to #128 | Back to #128 | /
+of a version: /a/a/ | back | /tasks?project=proj&task=%23128 | #128 | Back to #128 | Back to #128 | Back to #128 | /
+its diff: /a/a/ | back | /tasks?project=proj&task=%23128 | #128 | Back to #128 | Back to #128 | Back to #128 | /
+renamed: /a/a2/ | back | /tasks?project=proj&task=%23128 | #128 | Back to #128 | Back to #128 | Back to #128 | /
+named back: /a/a/ | back | /tasks?project=proj&task=%23128 | #128 | Back to #128 | Back to #128 | Back to #128 | /
+from the browser's memory: /a/a/ | to-tasks | /tasks?project=proj | Task list | Back to the task list | Back to the task list | Back to the task list | /
+a task of no project: /a/none/ | back | /tasks?project=%2F&task=%237 | #7 | Back to #7 | Back to #7 | Back to #7 | /
+a pin of a list at a view: /a/pin/ | to-tasks | /tasks?view=done&project=proj | Task list | Back to the task list | Back to the task list | Back to the task list | /`
 
 // A page opened whole and gone back from has its row picked and focused on the list that opened it, by the back button, by h and by the
 // browser's own way back, on a task's page and on the page list. Moved on by j, the row is the page last read. A row no longer there, or
@@ -276,7 +286,7 @@ func TestUIFrameBackFocus(t *testing.T) { //nolint:paralleltest // the browser t
 	}
 	pressBack := func() {
 		t.Helper()
-		r := b.rect("document.getElementById('back')")
+		r := b.rect(wayBack)
 		b.click(r.X+r.Width/2, r.Y+r.Height/2)
 	}
 
@@ -297,6 +307,11 @@ func TestUIFrameBackFocus(t *testing.T) { //nolint:paralleltest // the browser t
 	open(pages, "b")
 	pressBack()
 	read("page list, the back button", pages)
+	// The back link hidden there, out of the tab order, h goes by it all the same.
+	open(pages, "b")
+	out = append(out, "page list, the back link hidden: "+b.eval("document.getElementById('back').getClientRects().length === 0"))
+	realKey(b, "h", 0)
+	read("page list, h", pages)
 	open(pages, "b")
 	b.moving("history.back()")
 	read("page list, the browser's way back", pages)
@@ -327,8 +342,17 @@ func TestUIFrameBackFocus(t *testing.T) { //nolint:paralleltest // the browser t
 	b.eval("document.querySelector('#list li[data-slug=a] [data-testid=title]').focus()")
 	b.pressKey("\r")
 	whole("a")
-	b.moving("document.getElementById('back').click()")
+	b.moving("(" + wayBack + ").click()")
 	read("one column", pages)
+	// At 40rem or less the back link alone, pressed as a person does: the row again.
+	b.size(360, 800, true)
+	b.navigate(pages)
+	b.until("the narrow row", "document.querySelector('#list li[data-slug=a] [data-testid=title]')")
+	b.eval("document.querySelector('#list li[data-slug=a] [data-testid=title]').focus()")
+	b.pressKey("\r")
+	whole("a")
+	pressBack()
+	read("narrow, the back link", pages)
 	b.size(1400, 800, false)
 	// A pin has no page beside it: the pin has the focus.
 	s.floe(t, "task", "--slug", "a", "--pin")
@@ -397,12 +421,15 @@ task page, h: c | c | c
 task page, the browser's way back: b | b | b
 task page, moved on by j: b | b | b
 page list, the back button: b | b | b
+page list, the back link hidden: true
+page list, h: b | b | b
 page list, the browser's way back: b | b | b
 page list, reloaded: no focus | nothing picked | 
 another list: no focus | nothing picked | 
 a row gone: no focus | nothing picked | 
 marked unread: b | nothing picked | 
 one column: a | nothing picked | 
+narrow, the back link: a | nothing picked | 
 a pin: /a/a/
 the logo: no focus | nothing picked | 
 the same list's URL: no focus | nothing picked | 

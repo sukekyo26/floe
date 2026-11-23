@@ -23,7 +23,7 @@ func choose(b *browser, id string, n int) {
 // beside the list (its slug, version and what it loaded).
 const (
 	verWords     = `(document.querySelector('[data-testid=ver-note]')?.textContent ?? '').replace(/\(.*?\)/, '(at)')`
-	frameTold    = `[location.search + location.hash, document.getElementById('frame').getAttribute('src'), document.getElementById('frame-version').hidden, ` + verWords + `].join(' / ')`
+	frameTold    = `[location.search + location.hash, document.getElementById('frame').getAttribute('src'), document.getElementById('frame-version')?.hidden ?? true, ` + verWords + `].join(' / ')`
 	besideSlug   = "document.getElementById('read-frame').dataset.slug"
 	besideV      = "document.getElementById('read-frame').dataset.version"
 	besideLoaded = "document.getElementById('read-frame').dataset.loaded"
