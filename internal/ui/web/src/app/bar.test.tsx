@@ -42,4 +42,32 @@ describe(Bar, () => {
     expect(html).toMatch(/id="screens".*id="search".*data-testid="bar-end"/s);
     expect(html).not.toContain('id="find-open"');
   });
+
+  it('has a page whole’s own around the header links, and its way to the search at 40rem or less alone, no help or settings', () => {
+    expect.assertions(3);
+    testBoot();
+    setBoot({ ...getBoot(), screen: 'frame' });
+    vi.stubGlobal('window', { location: { host: '127.0.0.1:7325' } });
+    const frame = () =>
+      renderToString(
+        <Bar
+          screen="frame"
+          back={<span id="back" />}
+          lead={<span id="frame-title" />}
+          actions={<span id="frame-actions" />}
+          brand="/?view=fav"
+          search={<span id="search" />}
+          onFind={none}
+          onHelp={none}
+          onSettings={none}
+        />,
+      );
+    expect(frame()).toMatch(
+      /data-testid="brand" href="\/\?view=fav".*id="back".*id="screens".*id="frame-title".*id="search".*data-testid="bar-end".*id="frame-actions".*id="news"[^>]*hidden/s,
+    );
+    expect(frame()).toMatch(
+      /id="find-open"[^>]*class="hidden narrow:inline-flex.*id="keys-open"[^>]*class="hidden .*id="settings-open"[^>]*class="hidden /s,
+    );
+    expect(frame()).not.toMatch(/aria-current/);
+  });
 });
