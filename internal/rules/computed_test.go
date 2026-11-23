@@ -54,8 +54,8 @@ func TestReadComputed(t *testing.T) {
 			"t1/computed.yaml:2:1: true"+notName,
 			"t1/computed.yaml:3:1: a is an item of the data too, so an expression could not tell them apart; rename it",
 			"t1/computed.yaml:4:1: sum"+notName,
-			`t1/computed.yaml:5:1: unexpected token Operator("in")`,
-			`t1/computed.yaml:6:1: bad number syntax: "1a"`,
+			"t1/computed.yaml:5:1: in"+notName,
+			"t1/computed.yaml:6:1: 1a"+notName,
 		)},
 		{"names in any letters", "総額: 1\ncafé: 2\nπ: 3\n٣x: 4\n", ""},
 		{"an item's name in Japanese", "合計: 1\n", "t1/computed.yaml:1:1: 合計 is an item of the data too, so an expression could not tell them apart; rename it"},
@@ -64,9 +64,9 @@ func TestReadComputed(t *testing.T) {
 			"t1/computed.yaml:2:1: bad character U+0024 '$'",
 		)},
 		{"words of expr", "not: 1\nlet: 2\nif: 3\n", lines(
-			"t1/computed.yaml:1:1: unexpected token EOF",
-			"t1/computed.yaml:2:1: unexpected token EOF",
-			"t1/computed.yaml:3:1: unexpected token EOF",
+			"t1/computed.yaml:1:1: not"+notName,
+			"t1/computed.yaml:2:1: let"+notName,
+			"t1/computed.yaml:3:1: if"+notName,
 		)},
 		{"names read as other than one name", "_x: 1\na.b: 2\na-b: 3\nnil: 4\n", lines(
 			"t1/computed.yaml:1:1: _x"+notName,
