@@ -1,6 +1,6 @@
 import type { ReactNode } from 'react';
 
-import { Badge } from '@/components/badge';
+import { CountPill } from '@/components/count-pill';
 
 // PartHead heads a part of a task's page, its words and how many it holds on the left (none, no count)
 // and the button that adds to it on the right: the parts
@@ -32,7 +32,7 @@ export function PartHead({
         {count > 0 ? (
           <>
             {' '}
-            <Badge>{count}</Badge>
+            <CountPill n={count} />
           </>
         ) : null}
       </H>

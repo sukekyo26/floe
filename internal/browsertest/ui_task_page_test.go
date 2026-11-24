@@ -330,7 +330,7 @@ func TestUITaskPage(t *testing.T) { //nolint:paralleltest // the browser tests s
 
 // taskPageShown tells a task's page drew its rows.
 // taskPagesHead says the heading of a task's pages, as it reads, and the count in its pill.
-const taskPagesHead = "(() => { const h = document.querySelector('#task-pages-head h2'); return h.textContent + ' (' + (h.querySelector('[data-testid=badge]')?.textContent ?? 'no count') + ')'; })()"
+const taskPagesHead = "(() => { const h = document.querySelector('#task-pages-head h2'); return h.textContent + ' (' + (h.querySelector('[data-testid=count]')?.textContent ?? 'no count') + ')'; })()"
 
 const taskPageShown = "!document.getElementById('task-head').hidden && document.querySelector('#list > li')"
 

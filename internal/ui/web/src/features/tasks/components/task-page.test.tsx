@@ -65,7 +65,7 @@ describe(TaskFamily, () => {
       /data-testid="kin-row" href="\/tasks\?project=p&amp;task=%232" data-task="#2" data-unread="true" title="#2\nTitle" aria-label="ui_task_kin_row:#2 Title"[^>]*><span data-testid="kid-state"[^>]*>ui_state_done:undefined<\/span>.*data-testid="dot"[^>]*><\/span><\/a>/s,
     );
     expect(html).toMatch(/data-testid="unlink" data-task="#2" aria-label="ui_task_unlink_kid:#2"/);
-    expect(html).toMatch(/>ui_task_kids_word:undefined<\/span> <span data-testid="badge"[^>]*>1<\/span><\/h3>/);
+    expect(html).toMatch(/>ui_task_kids_word:undefined<\/span> <span data-testid="count"[^>]*>1<\/span><\/h3>/);
     expect(html).toMatch(/ui_task_parent:undefined<\/h3>/);
   });
 });
@@ -119,7 +119,7 @@ describe(TaskPagesHead, () => {
     boot();
     const archived = [page('x', { archived: true })];
     expect(head(task('#1', { pages: [page('a'), page('b')], archived }))).toMatch(
-      />ui_task_pages_word:undefined(?:<!-- -->)? (?:<!-- -->)?<span data-testid="badge"[^>]*>2<\/span><\/h2>/,
+      />ui_task_pages_word:undefined(?:<!-- -->)? (?:<!-- -->)?<span data-testid="count"[^>]*>2<\/span><\/h2>/,
     );
     expect(head(task('#1', { archived }))).toContain('>ui_task_pages_word:undefined</h2>');
     expect(head(null, false)).toMatch(/^<div id="task-pages-head" hidden=""/);
