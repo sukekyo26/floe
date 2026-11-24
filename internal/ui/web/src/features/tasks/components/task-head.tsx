@@ -137,7 +137,7 @@ export class TaskHead extends Component<TaskHeadProps, { shown: StateShown | nul
             however many lines it takes */}
         <div className="-ms-3 flex items-center gap-2">
           <BackLink id="task-up" up={up} label={t('ui_tasks_back')} />
-          <h2 id="task-title" className="m-0 min-w-0 flex-1 text-[1rem] leading-[1.4] font-bold wrap-anywhere">
+          <h2 id="task-title" className="m-0 flex-1 text-[1rem] leading-[1.4] font-bold wrap-anywhere">
             <span data-testid="tname" className="me-[0.45rem] font-mono text-body font-semibold text-muted">
               {name}
             </span>
