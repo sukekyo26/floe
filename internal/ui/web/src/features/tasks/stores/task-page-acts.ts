@@ -57,8 +57,8 @@ export interface TaskPageActs {
   ) => Promise<void>;
   // archive archives the task or gives it back as done, of the rev read: a second press of a double one (detail > 1)
   // and a press for what is being written write nothing
-  // LIMIT: Enter held on the button turns the task back and forth at each repeat. Read the key's repeat if that comes to
-  // trouble someone
+  // LIMIT: Enter held on the button, or pressed twice, turns the task and back, as the keys (detail 0) tell no double
+  // press and the answer turns the button. Tell a double press of theirs by its time if that comes to trouble someone
   archive: (detail: number, task: TaskOf, archived: boolean) => Promise<void>;
   // unlink takes child off its parent, of the rev read, with the way back; pressed again while it goes, nothing more.
   // From the keys the focus goes to the way back, else, once read again, to the part's button unless the card has it

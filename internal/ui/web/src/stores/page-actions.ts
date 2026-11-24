@@ -119,9 +119,9 @@ export function createPageActions({
   }
 
   // Pressed again before the list has it, a is as it was and the press would ask the same: it does nothing
-  // LIMIT: archived again from the keys before the read after a restore by the keys, where the row stays (a task's page),
-  // the focus goes to the row, off the second way back. Give it only while nothing has the focus if that comes to trouble
-  // someone
+  // LIMIT: archived again before the read after a restore whose way back had the focus (a press of the mouse gives it
+  // too), where the row stays (a task's page), the focus goes to the row, off what was pressed since. Give it only while
+  // nothing has the focus if that comes to trouble someone
   async function setArchived(a: Page, to: boolean, call: ArchiveCall) {
     await press(`archive page ${a.slug}`, String(to), () => archiveNow(a, to, call));
   }

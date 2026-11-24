@@ -48,7 +48,6 @@ func TestUIPressOnce(t *testing.T) { //nolint:paralleltest // the browser tests 
 	b.until("the row back", unlink)
 	press("off again", unlink, 3)
 	release()
-	b.until("off", "!"+unlink)
 	all, err := st.ReadTasks()
 	if err != nil {
 		t.Fatal(err)

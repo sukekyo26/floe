@@ -172,6 +172,8 @@ describe(createPageActions, () => {
     void buttonOf(toasts.shown.get()[0])?.onPress();
     await ended();
     void actions.setArchived(page, true, call);
+    await ended();
+    // Written, and not read yet: asked already still
     void actions.setArchived(page, true, call);
     await ended();
     expect(log.filter((x) => x.startsWith('patch'))).toStrictEqual([
