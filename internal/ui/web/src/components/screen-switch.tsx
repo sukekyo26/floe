@@ -24,8 +24,8 @@ export interface Up {
 // ScreenSwitch is the bar's way between the two screens: links, as each goes to a URL of its own; the screen shown is
 // aria-current. A task's page is of the task list, and a page whole of the list it was opened from (the user's choice),
 // which from tells: one opened from a task's page is of the task list, one opened by its URL of the page list. Its bar
-// has its back link alone at 56rem or less (whole-bar.ts). The track shows the room a press has, lower than the bar's
-// buttons of icons; its padding holds each one's focus ring
+// has its back link alone at 56rem or less (whole-bar.ts). A press has the room of its link alone, 26px high; the
+// track's padding about the links, which takes none, holds each one's focus ring
 // Each goes back to the list as this tab last had it, read again as the list's query is kept, or where its up says: on
 // a task's page, the task list's (S450), and in a frame, the one it was opened from
 export function ScreenSwitch({
