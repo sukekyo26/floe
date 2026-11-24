@@ -42,7 +42,11 @@ func TestWritesOfOthers(t *testing.T) {
 		{http.MethodTrace, "/api/pages", "", ""},
 		{"FOO", "/api/pages", "", ""},
 	} {
-		for _, from := range []string{"", "null", "http://evil.example", "http://127.0.0.1:1", "https://127.0.0.1:7325"} {
+		for _, from := range []string{
+			"", "null", "http://evil.example", "http://127.0.0.1:1", "https://127.0.0.1:7325",
+			// Not those that begin as the server's own, such as a server on another port of this machine.
+			origin + "0", origin + ".evil.example", "http://localhost:73250",
+		} {
 			want(t, e.do(t, c.method, c.path, c.body, "Origin", from, "Content-Type", c.typ), http.StatusForbidden, "forbidden origin")
 		}
 		want(t, e.do(t, c.method, c.path, c.body, "Content-Type", c.typ), http.StatusForbidden, "forbidden origin")
