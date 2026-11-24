@@ -20,12 +20,21 @@ const page = (slug: string, archived = false): Page => ({
 const none = () => undefined;
 const openers: Openers = { onTags: none, onTheme: none, onEdit: none, onTaskSet: none };
 
+const draw = (open: boolean) => {
+  testBoot();
+  const pages = { state: createStore({ entries: [page('old', true), page('a'), page('b')] }) } as unknown as Pages;
+  return renderToString(<FindDialog open={open} onClosed={none} openers={openers} pages={pages} />);
+};
+
 describe(FindDialog, () => {
+  it('finds and draws none while closed', () => {
+    expect.assertions(1);
+    expect(draw(false)).not.toMatch(/id="find-0"|id="find-actions"/);
+  });
+
   it('lists every page as options of the field’s listbox, the archived last with a badge, the first reached', () => {
     expect.assertions(4);
-    testBoot();
-    const pages = { state: createStore({ entries: [page('old', true), page('a'), page('b')] }) } as unknown as Pages;
-    const html = renderToString(<FindDialog open={false} onClosed={none} openers={openers} pages={pages} />);
+    const html = draw(true);
     expect(html).toMatch(
       /<input[^>]*id="find-q"[^>]*role="combobox"[^>]*aria-controls="find-list"[^>]*aria-activedescendant="find-0"/,
     );

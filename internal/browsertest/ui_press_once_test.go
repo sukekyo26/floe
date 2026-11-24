@@ -93,7 +93,8 @@ func TestUIPressOnce(t *testing.T) { //nolint:paralleltest // the browser tests 
 	}
 
 	// Written, the read held: pressed again for the same, nothing is sent; taken off, put back and off, each is.
-	const item = "document.querySelector('#list li[data-slug=p2] [data-testid=more] [data-testid=%s]')"
+	// An item of its menu, opened for each press: the press before shut it
+	const item = "(() => { const more = document.querySelector('#list li[data-slug=p2] [data-testid=more]'); if (!more.open) more.querySelector('summary').click(); return more.querySelector('[data-testid=%s]'); })()"
 	star := "document.querySelector('#list li[data-slug=p2] [data-testid=actions] > [data-testid=star]')"
 	pin, out := fmt.Sprintf(item, "pin-item"), fmt.Sprintf(item, "task-out")
 	release = hold("/?project=proj", star)

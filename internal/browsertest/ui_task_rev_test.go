@@ -180,7 +180,7 @@ func TestUITaskRev(t *testing.T) { //nolint:paralleltest // the browser tests sh
 	b.eval("window.pageDown = false")
 	say("a new task, again", setSave)
 	b.navigate("/a/pa/")
-	b.until("the page", "document.querySelector('#frame-actions [data-testid=task-set]')")
+	b.until("the page", "document.querySelector('#frame-actions [data-testid=more]')")
 	setOnce("#frame-actions", "whole")
 	say("whole, again", setSave)
 

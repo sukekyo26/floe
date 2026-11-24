@@ -85,7 +85,7 @@ func TestUIColors(t *testing.T) { //nolint:paralleltest // the browser tests sha
 		}
 		out = append(out, b.until("the page's scheme", listening))
 
-		// Every text and field: a list with all it can show, its menus open, two rows selected, the bulk delete armed and
+		// Every text and field: a list with all it can show, two rows selected, the bulk delete armed and
 		// an error; the links; the edit dialog; the bulk tags dialog with a tag on all, some and none.
 		b.navigate("about:blank")
 		b.stub(colorsList)
@@ -101,6 +101,9 @@ func TestUIColors(t *testing.T) { //nolint:paralleltest // the browser tests sha
 			}
 		}
 		measure("the list")
+		// A menu shut has no items: a row's is opened for them
+		menuItemShown(b, "#list li[data-slug=b]", "edit", "")
+		measure("the list, a row's menu open")
 		if low := b.eval(measureFields); low != "" {
 			t.Errorf("OS %s: fields that cannot be read:\n%s", scheme, low)
 		}

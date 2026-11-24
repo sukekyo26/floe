@@ -477,7 +477,8 @@ func uiExtras(t *testing.T, lang i18n.Lang, msg func(string, ...any) string) {
 	check(t, "selected", []string{b.eval("(document.getElementById('add-link').closest('[hidden]') === null) + ''")}, "true")
 	b.eval("document.getElementById('bulk-clear').click()")
 	// The pencil opens a modal with the current description; saving sends the new one.
-	b.eval("document.querySelector('#list li[data-slug=a] [data-testid=edit]').click()")
+	pressMenuItem(b, "#list li[data-slug=a]", "edit")
+	b.until("the edit modal", "document.getElementById('edit-dialog').open")
 	out = append(out, b.eval("[document.getElementById('edit-dialog').open, document.getElementById('edit-desc').value].join(' ')"))
 	b.fill("#edit-desc", "new")
 	b.eval("document.getElementById('edit-submit').click()")
@@ -486,8 +487,8 @@ func uiExtras(t *testing.T, lang i18n.Lang, msg func(string, ...any) string) {
 	out = append(out, b.eval("calls.splice(0).join(',')"),
 		b.eval("document.getElementById('toasts').textContent.includes("+js(msg("ui_saved"))+")"))
 	// Only linked files have a copy button for their path.
-	out = append(out, b.eval("document.querySelector('#list li[data-slug=a] [data-testid=copy]').hidden"))
-	b.eval("document.querySelector('#list li[data-slug=l] [data-testid=copy]').click()")
+	out = append(out, b.eval(inMenuItem("#list li[data-slug=a]", "copy", "i.hidden")))
+	pressMenuItem(b, "#list li[data-slug=l]", "copy")
 	out = append(out, b.until("the copy", "calls.join(',')"),
 		b.eval("document.getElementById('toasts').textContent.includes("+js(msg("ui_path_copied"))+")"))
 	// A link whose file is gone has no href, but ↓ still reaches it.
@@ -817,7 +818,7 @@ func uiShelf(t *testing.T, lang i18n.Lang, msg func(string, ...any) string) {
 	// their failure.
 	frame := "[document.getElementById('frame-title').textContent, document.getElementById('frame-archived').hidden, " +
 		"document.querySelector('#frame-actions [data-testid=star]').getAttribute('aria-pressed'), document.querySelector('#frame-actions [data-testid=star]').getAttribute('aria-label'), " +
-		"document.querySelector('#frame-actions [data-testid=open]').getAttribute('href'), document.querySelector('#frame-actions [data-testid=menu] [data-testid=archive]').textContent.trim()].join(' / ')"
+		"document.querySelector('#frame-actions [data-testid=open]').getAttribute('href'), " + inMenuItem("#frame-actions", "archive", "i.textContent.trim()") + "].join(' / ')"
 	b.stub(extrasList)
 	b.navigate("/a/z/")
 	out = append(out, b.until("the frame's bar", "document.getElementById('frame-title').textContent && "+frame))
@@ -840,6 +841,7 @@ func uiShelf(t *testing.T, lang i18n.Lang, msg func(string, ...any) string) {
 	out = append(out, b.until("the new name", "location.pathname === '/a/z2/' && location.pathname"))
 	b.navigate("/a/b/")
 	b.until("the frame's bar", "document.getElementById('frame-title').textContent")
+	menuItemShown(b, "#frame-actions", "delete", "")
 	b.pressed("document.querySelector('#frame-actions [data-testid=delete]').click()", "the delete armed",
 		"document.querySelector('#frame-actions [data-testid=delete]').hasAttribute('data-armed')")
 	b.moving("document.querySelector('#frame-actions [data-testid=delete]').click()")
@@ -945,13 +947,13 @@ func uiTags(t *testing.T, lang i18n.Lang, msg func(string, ...any) string) {
 	b.stub(tagsList)
 
 	// A row's menu opens the tag dialog of its page alone, which sends a name with a comma whole; the edit dialog sends no tags.
-	b.eval("document.querySelector('#list li[data-slug=c] [data-testid=tag-item]').click()")
+	pressMenuItem(b, "#list li[data-slug=c]", "tag-item")
 	b.until("the dialog", "document.getElementById('tag-dialog').open")
 	out = append(out, b.eval("document.getElementById('tag-title').textContent"), b.eval(boxes))
 	b.eval(box("old") + ".click(); document.getElementById('tag-apply').click()")
 	out = append(out, b.until("the tags to be sent", "!document.getElementById('tag-dialog').open && calls.splice(0).join(',')"),
 		b.eval("document.getElementById('edit-tags') === null"))
-	b.eval("document.querySelector('#list li[data-slug=c] [data-testid=edit]').click()")
+	pressMenuItem(b, "#list li[data-slug=c]", "edit")
 	b.until("the edit dialog", "document.getElementById('edit-dialog').open")
 	b.fill("#edit-name", "G2")
 	b.eval("document.getElementById('edit-submit').click()")
