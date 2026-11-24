@@ -4,6 +4,7 @@ import { notice as pageNotice, type Notice } from '@/stores/notice';
 import { order as pageOrder, type Order } from '@/stores/order';
 import { pageWrites as pageWriteStore, type PageWrites } from '@/stores/page-writes';
 import { pages as pagePages, type Pages } from '@/stores/pages';
+import { pressOnce, type PressOnce } from '@/stores/press-once';
 import { reads as pageReads, type Reads } from '@/stores/reads';
 import { taskWrites as pageTaskWrites, type TaskWrites } from '@/stores/tasks';
 import { buttonOf, toasts as pageToasts, type Toasts } from '@/stores/toasts';
@@ -66,6 +67,7 @@ interface Deps {
   boot?: () => Boot;
   // go leaves for href (a page whole deleted goes back where it came from)
   go?: (href: string) => void;
+  press?: PressOnce;
   // write puts text on the clipboard
   write?: (text: string) => Promise<void>;
 }
@@ -90,11 +92,9 @@ export function createPageActions({
   go = (href) => {
     window.location.assign(href);
   },
+  press = pressOnce,
   write = (text) => navigator.clipboard.writeText(text),
 }: Deps = {}): PageActions {
-  // Pressed again before the list has it, a is as it was and the press would ask the same: it does nothing
-  const archiving = new Set<string>();
-
   // The row gone from under the pointer, or moved, or left dimmed on a task's page: the way back is at hand, long
   // enough to read and reach
   function archivedDone(a: Page, call: ArchiveCall) {
@@ -118,30 +118,28 @@ export function createPageActions({
     });
   }
 
+  // Pressed again before the list has it, a is as it was and the press would ask the same: it does nothing
   async function setArchived(a: Page, to: boolean, call: ArchiveCall) {
-    const asked = `${String(to)} ${a.slug}`;
-    if (archiving.has(asked)) return;
-    archiving.add(asked);
-    try {
-      const reason = await writes.patchPage(a.slug, { archived: to });
-      if (reason) {
-        notice.say(t(to ? 'ui_archive_failed' : 'ui_unarchive_failed', titleOf(a), reason));
-        return;
-      }
-      let hadFocus = false;
-      if (to) archivedDone(a, call);
-      else {
-        // Given back, its ways back go, read before they do: the focus they held goes with them
-        const ways = toasts.shown.get().filter((x) => buttonOf(x)?.undo && buttonOf(x)?.slug === a.slug);
-        hadFocus = ways.some((x) => x.id === toasts.focused.get());
-        for (const x of ways) toasts.remove(x.id);
-        toasts.toast(t('ui_unarchive_done', titleOf(a)));
-      }
-      await pages.load();
-      if (hadFocus) call.restoreFocus();
-    } finally {
-      archiving.delete(asked);
+    await press(`archive page ${a.slug}`, String(to), () => archiveNow(a, to, call));
+  }
+
+  async function archiveNow(a: Page, to: boolean, call: ArchiveCall) {
+    const reason = await writes.patchPage(a.slug, { archived: to });
+    if (reason) {
+      notice.say(t(to ? 'ui_archive_failed' : 'ui_unarchive_failed', titleOf(a), reason));
+      return;
     }
+    let hadFocus = false;
+    if (to) archivedDone(a, call);
+    else {
+      // Given back, its ways back go, read before they do: the focus they held goes with them
+      const ways = toasts.shown.get().filter((x) => buttonOf(x)?.undo && buttonOf(x)?.slug === a.slug);
+      hadFocus = ways.some((x) => x.id === toasts.focused.get());
+      for (const x of ways) toasts.remove(x.id);
+      toasts.toast(t('ui_unarchive_done', titleOf(a)));
+    }
+    await pages.load();
+    if (hadFocus) call.restoreFocus();
   }
 
   // LIMIT: put on another task since, the page is moved back unasked, the toast not saying the task it left. Ask and

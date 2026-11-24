@@ -10,6 +10,7 @@ import type { PageNote } from '@/stores/page-note';
 import { createPageActions } from '@/stores/page-actions';
 import type { PageWrites } from '@/stores/page-writes';
 import type { Pages } from '@/stores/pages';
+import { createPressOnce } from '@/stores/press-once';
 import type { ReadOutcome, Reads } from '@/stores/reads';
 import type { TaskWrites } from '@/stores/tasks';
 import { buttonOf, createToasts } from '@/stores/toasts';
@@ -34,6 +35,8 @@ interface Options {
   known?: boolean;
   stale?: boolean;
   screen?: string;
+  // The reads of the list never end
+  slow?: boolean;
 }
 
 // made makes the actions over fakes that log, in order, what they were asked
@@ -45,6 +48,7 @@ function made({
   known = true,
   stale = false,
   screen = 'list',
+  slow = false,
 }: Options = {}) {
   const messages = new Proxy({} as Boot['messages'], { get: (_, key) => `${String(key)}:%s` });
   const boot = { screen, framed, messages } as unknown as Boot;
@@ -56,7 +60,7 @@ function made({
   const pages = {
     load: () => {
       log.push(`load after ${String(toasts.shown.get().length)} toasts`);
-      return Promise.resolve();
+      return slow ? new Promise<void>(() => undefined) : Promise.resolve();
     },
     rereadTasks: () => {
       log.push('reread tasks');
@@ -101,6 +105,7 @@ function made({
     openPage: { shownSlug: () => shown } as unknown as OpenPage,
     note: { clear: () => log.push('note cleared') } as unknown as PageNote,
     boot: () => boot,
+    press: createPressOnce(),
     go: (href) => log.push(`go ${href}`),
     write: (text) => (text ? Promise.resolve() : Promise.reject(new Error('denied'))),
   });
@@ -155,6 +160,25 @@ describe(createPageActions, () => {
     await buttonOf(way)?.onPress();
     expect(texts(toasts)).toStrictEqual(['ui_unarchive_done:A']);
     expect(log.slice(-3)).toStrictEqual(['patch a {"archived":false}', 'load after 1 toasts', 'restore']);
+  });
+
+  it('archives, restores and archives again before the reads end', async () => {
+    expect.assertions(1);
+    const { actions, log, toasts } = made({ slow: true });
+    const ended = () => new Promise((go) => setTimeout(go, 5));
+    const call = { prepare: prepared(log), restoreFocus: () => undefined };
+    void actions.setArchived(page, true, call);
+    await ended();
+    void buttonOf(toasts.shown.get()[0])?.onPress();
+    await ended();
+    void actions.setArchived(page, true, call);
+    void actions.setArchived(page, true, call);
+    await ended();
+    expect(log.filter((x) => x.startsWith('patch'))).toStrictEqual([
+      'patch a {"archived":true}',
+      'patch a {"archived":false}',
+      'patch a {"archived":true}',
+    ]);
   });
 
   it('leaves the way back of an archive in place when restoring fails, and says why', async () => {
