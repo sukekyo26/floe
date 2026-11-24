@@ -729,7 +729,8 @@ func TestUIColumns(t *testing.T) { //nolint:paralleltest // the browser tests sh
 	listAt := func(w float64) float64 { return b.rect("document.getElementById('listcol')").X + w }
 	b.drag("#list-grip", listAt(500))
 	b.navigate("/?view=archived&kind=link&tag=x")
-	out = append(out, b.eval(what), b.eval("(() => { const e = document.getElementById('shelf-what'), r = document.createRange(); r.selectNodeContents(e); return r.getBoundingClientRect().width <= e.getBoundingClientRect().width + 0.5; })()"))
+	// The words come with the list's first read, after the page has loaded
+	out = append(out, b.until("the words of the picks", "document.getElementById('shelf-what').textContent && "+what), b.eval("(() => { const e = document.getElementById('shelf-what'), r = document.createRange(); r.selectNodeContents(e); return r.getBoundingClientRect().width <= e.getBoundingClientRect().width + 0.5; })()"))
 	b.drag("#list-grip", listAt(740))
 	b.eval("document.getElementById('shelf-what').click()")
 	out = append(out, b.eval("getComputedStyle(document.getElementById('shelf')).display"))
