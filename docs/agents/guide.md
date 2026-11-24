@@ -76,7 +76,7 @@ The user keeps a task list, and wants each new page put on a task, under one of 
 - `floe task` prints a task's categories in order after `categories`, each a Go string literal, with spaces between (`categories "Designs" "Samples" "Ideas"`): read each name as Go reads the literal, without its quotes, `\t` a tab, `\"` a `"` and `\\` a `\` (`"A \"B\""` is `A "B"`).
 - Offer the first two of the task's categories, each named as read so, then `A new category` and `None`; a new task, or one with no category, gets `A new category` and `None`.
 - Say in the question that the user can type instead a new category's name, and, when the task has more categories, another of them, naming them all.
-- The first time in the conversation, also say in the question what a category is: a heading on the task's page that its pages are listed under (`Designs`, `Samples`); a page of no category is listed above the headings.
+- The first time in the conversation, also say in the question what a category is: a heading on the task's page that its pages are listed under (`Designs`, `Samples`); a page of no category is listed first, under `No category`.
 
 #### Putting the page
 

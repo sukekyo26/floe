@@ -47,13 +47,18 @@ func TestUIRowCards(t *testing.T) { //nolint:paralleltest // the browser tests s
 		t.Helper()
 		out = append(out, what+": "+b.eval(expr))
 	}
-	// A value of a :root variable as the browser computes it for the property named
-	const as = `((prop, value) => { const e = document.createElement('div'); e.style[prop] = value; document.body.append(e); const got = getComputedStyle(e)[prop]; e.remove(); return got; })`
-	const card = `((li) => { const st = getComputedStyle(li); return [st.borderTopWidth, st.borderTopLeftRadius === ` + as + `('borderTopLeftRadius', 'var(--corner-menu)'), st.boxShadow === ` + as + `('boxShadow', 'var(--shadow-sm)')].join(' '); })`
+	// A value as the browser computes it for the property named: a :root variable's (var(--x)) or one written out, as Tailwind
+	// writes a shadow's value into its utility and keeps no variable of it. A variable of no value throws, so that nothing is met
+	// by an empty one
+	const as = `((prop, value) => { const name = /^var\((--[a-z-]+)\)$/.exec(value)?.[1];
+		if (name && getComputedStyle(document.documentElement).getPropertyValue(name).trim() === '') throw new Error('no value of ' + name);
+		const e = document.createElement('div'); e.style[prop] = value; document.body.append(e); const got = getComputedStyle(e)[prop]; e.remove(); return got; })`
+	// The shadow among those drawn: React's card has Tailwind's empty ring shadows too
+	const card = `((li) => { const st = getComputedStyle(li); return [st.borderTopWidth, st.borderTopLeftRadius === ` + as + `('borderTopLeftRadius', 'var(--radius-menu)'), st.boxShadow.includes(` + as + `('boxShadow', '0 1px 2px rgb(34 33 31 / 0.06)'))].join(' '); })`
 	// Each row's place after the one above: C a card, T a folder's row, G a heading, with the room between them
 	const gaps = `(() => { const rows = [...document.querySelectorAll('#list > li')], r = (e) => e.getBoundingClientRect();
 		return rows.slice(1).map((li, i) => (li.dataset.testid === 'group' ? 'G' : li.dataset.testid === 'tree' ? 'T' : 'C') + Math.round(r(li).top - r(rows[i]).bottom)).join(' '); })()`
-	const ground = `(getComputedStyle(document.getElementById('list-body')).backgroundColor === ` + as + `('backgroundColor', 'var(--bg)'))`
+	const ground = `(getComputedStyle(document.getElementById('list-body')).backgroundColor === ` + as + `('backgroundColor', 'var(--color-bg)'))`
 
 	// The page list: a card; the row chosen edged in --new, no inset line; the ground.
 	b.navigate("/?project=demo")
@@ -61,7 +66,7 @@ func TestUIRowCards(t *testing.T) { //nolint:paralleltest // the browser tests s
 	say("card", card+"(document.querySelector('#list li[data-slug=plan]'))")
 	b.eval("document.querySelector('#list li[data-slug=read] [data-testid=title]').click()")
 	b.until("chosen", "document.querySelector('#list li[data-slug=read][aria-current=true]')")
-	say("chosen", "(() => { const st = getComputedStyle(document.querySelector('#list li[data-slug=read]')); return [st.borderTopColor === "+as+"('borderTopColor', 'var(--new)'), st.boxShadow.includes('inset')].join(' '); })()")
+	say("chosen", "(() => { const st = getComputedStyle(document.querySelector('#list li[data-slug=read]')); return [st.borderTopColor === "+as+"('borderTopColor', 'var(--color-new)'), st.boxShadow.includes('inset')].join(' '); })()")
 	say("ground", ground)
 	// A page published meanwhile: its card rises in, as a new row does, and those there do not (heard once they have risen in).
 	b.still()
@@ -74,20 +79,20 @@ func TestUIRowCards(t *testing.T) { //nolint:paralleltest // the browser tests s
 	b.still()
 	say("rose", "rose.join(',')")
 
-	// A task's page with its folder open: the margins, the headings' words and add buttons, the folder one card, its row chosen and
+	// A task's page with its folder open: the margins, the headings' words, the folder one card, its row chosen and
 	// pointed at within it.
 	b.eval("localStorage.setItem('list.open', JSON.stringify(['fold']))")
 	b.navigate("/tasks?project=demo&task=S1")
 	b.until("the folder's rows", "document.querySelectorAll('#list li[data-testid=tree]').length === 3")
 	b.still()
 	say("gaps", gaps)
-	say("headings", `(() => { const r = (e) => e.getBoundingClientRect(), head = document.querySelector('#list li[data-testid=group]:has([data-testid=category-add])'), first = document.querySelector('#list li[data-slug=plan]');
-		return [r(head.querySelector('[role=heading]')).left === r(first.querySelector('[data-testid=lead]')).left, r(head.querySelector('[data-testid=category-add]')).right === r(first).right,
+	say("headings", `(() => { const r = (e) => e.getBoundingClientRect(), head = document.querySelector('#list li[data-testid=group]'), first = document.querySelector('#list li[data-slug=plan]');
+		return [r(head.querySelector('[role=heading]')).left === r(first.querySelector('[data-testid=lead]')).left,
 			getComputedStyle(head).borderTopWidth, getComputedStyle(head).boxShadow].join(' '); })()`)
 	say("folder", `(() => { const st = (e) => getComputedStyle(e), r = (e) => e.getBoundingClientRect(), f = document.querySelector('#list li[data-slug=fold]'), trees = [...document.querySelectorAll('#list li[data-testid=tree]')];
 		const last = trees.at(-1);
 		return [st(f).borderBottomWidth, st(f).borderBottomLeftRadius, st(trees[0]).borderLeftWidth, st(trees[0]).borderBottomWidth, st(last).borderBottomWidth,
-			st(last).borderBottomLeftRadius === `+as+`('borderTopLeftRadius', 'var(--corner-menu)'), r(trees[0]).top - r(f).bottom, r(trees[0]).left - r(f).left, r(trees[0]).right - r(f).right].join(' '); })()`)
+			st(last).borderBottomLeftRadius === `+as+`('borderTopLeftRadius', 'var(--radius-menu)'), r(trees[0]).top - r(f).bottom, r(trees[0]).left - r(f).left, r(trees[0]).right - r(f).right].join(' '); })()`)
 	b.eval("[...document.querySelectorAll('#list li[data-testid=tree] [data-testid=title]')].find((e) => e.textContent.includes('one.html')).click()")
 	b.until("the file chosen", "document.querySelector('#list li[data-testid=tree][aria-current=true]')")
 	r := b.rect("document.querySelector('#list li[data-testid=tree]:not([aria-current=true])')")
@@ -95,7 +100,7 @@ func TestUIRowCards(t *testing.T) { //nolint:paralleltest // the browser tests s
 		t.Fatal(err)
 	}
 	b.still()
-	say("within", "(() => { const bg = (e) => getComputedStyle(e).backgroundColor; return [bg(document.querySelector('#list li[data-testid=tree][aria-current=true]')) === "+as+"('backgroundColor', 'var(--new-soft)'), bg(document.querySelector('#list li[data-testid=tree]:not([aria-current=true])')) === "+as+"('backgroundColor', 'var(--hover)'), getComputedStyle(document.querySelector('#list li[data-slug=fold]')).borderColor === "+as+"('borderColor', 'var(--line)'), getComputedStyle(document.querySelector('#list li[data-testid=tree][aria-current=true]')).boxShadow.includes('inset')].join(' '); })()")
+	say("within", "(() => { const bg = (e) => getComputedStyle(e).backgroundColor; return [bg(document.querySelector('#list li[data-testid=tree][aria-current=true]')) === "+as+"('backgroundColor', 'var(--color-new-soft)'), bg(document.querySelector('#list li[data-testid=tree]:not([aria-current=true])')) === "+as+"('backgroundColor', 'var(--color-hover)'), getComputedStyle(document.querySelector('#list li[data-slug=fold]')).borderColor === "+as+"('borderColor', 'var(--color-line)'), getComputedStyle(document.querySelector('#list li[data-testid=tree][aria-current=true]')).boxShadow.includes('inset')].join(' '); })()")
 
 	// Folded, the folder is a card as any.
 	b.eval("localStorage.setItem('list.open', '[]')")
@@ -103,7 +108,7 @@ func TestUIRowCards(t *testing.T) { //nolint:paralleltest // the browser tests s
 	b.until("the rows", "document.querySelector('#list li[data-slug=fold]') && !document.querySelector('#list li[data-testid=tree]')")
 	say("folded", card+"(document.querySelector('#list li[data-slug=fold]')) + ' ' + getComputedStyle(document.querySelector('#list li[data-slug=fold]')).borderBottomWidth")
 
-	// A task of no page: no room left in the empty list; the task list's rows are cards too.
+	// A task of no page and no category: the list holds nothing, with no room of its own; the task list's rows are cards too.
 	b.navigate("/tasks?project=demo&task=S2")
 	b.until("none", "!document.getElementById('task-none').hidden")
 	say("empty", "getComputedStyle(document.getElementById('list')).paddingTop + ' ' + "+ground)
@@ -117,7 +122,7 @@ func TestUIRowCards(t *testing.T) { //nolint:paralleltest // the browser tests s
 		"ground: true",
 		"rose: entry:late",
 		"gaps: C0 T0 T0 T0 C6 G0 C0 C6",
-		"headings: true true 0px none",
+		"headings: true 0px none",
 		"folder: 0px 0px 1px 0px 1px true 0 0 0",
 		"within: true true true false",
 		"folded: 1px true true 1px",

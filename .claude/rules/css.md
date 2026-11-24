@@ -1,7 +1,7 @@
 ---
 paths:
-  - "**/*.css"
   - "internal/kit/floe/**"
+  - "internal/corpus/testdata/**/*.css"
   - "internal/draw/style.go"
   - "internal/css/lint/**"
 ---

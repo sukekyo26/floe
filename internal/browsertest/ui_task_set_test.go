@@ -56,7 +56,7 @@ func TestUITaskSet(t *testing.T) { //nolint:paralleltest // the browser tests sh
 		}
 		return strings.Join(names, "; ")
 	}
-	const items = `[...document.querySelectorAll('#list li[data-slug=SLUG] [data-testid=menu] > *')].filter((e) => !e.hidden).map((e) => e.dataset.testid).join(' ')`
+	const items = topsJS + `(document.querySelector('#list li[data-slug=SLUG] [data-testid=menu]')).filter((e) => !e.hidden).map((e) => e.dataset.testid).join(' ')`
 	menu := func(slug, item string) {
 		t.Helper()
 		pressMenuItem(b, "#list li[data-slug="+slug+"]", item)
@@ -371,7 +371,7 @@ func TestUITaskSet(t *testing.T) { //nolint:paralleltest // the browser tests sh
 	link := b.rect("document.querySelector('[data-testid=toast-link]')")
 	b.click(link.X+link.Width/2, link.Y+link.Height/2)
 	b.until("the task's page", "location.search === '?project=proj&task=%232' && !document.getElementById('task-head').hidden")
-	say("up, come by the toast", "document.getElementById('task-up').getAttribute('href')")
+	say("up, come by the toast", "document.getElementById('to-tasks').getAttribute('href')")
 
 	// Moved since the list was read, a page is moved unasked, as the dialog has it on the task named: the toast says the task it left, of the
 	// write's answer, not "Saved".
@@ -392,8 +392,16 @@ func TestUITaskSet(t *testing.T) { //nolint:paralleltest // the browser tests sh
 	}
 }
 
-// submitSet saves Set the task, answering Yes when it asks before a page on another task moves: it asks as the save is pressed.
-const submitSet = "document.getElementById('set-submit').click(); if (document.getElementById('move-dialog').open) document.getElementById('move-yes').click()"
+// submitSet saves Set the task, answering Yes when it asks before a page on another task moves: it asks once the save is pressed.
+func submitSet(b *browser) {
+	b.t.Helper()
+
+	// A refusal is one not shown before the press: the words of one shown already are kept to tell it from a new one
+	b.eval("window.setErrorBefore = document.getElementById('set-error').hidden ? null : document.getElementById('set-error').textContent")
+	b.pressed("document.getElementById('set-submit').click()", "saved, asked or refused", "!document.getElementById('set-dialog').open || document.getElementById('move-dialog').open || "+
+		"(!document.getElementById('set-error').hidden && document.getElementById('set-error').textContent !== window.setErrorBefore)")
+	b.eval("if (document.getElementById('move-dialog').open) document.getElementById('move-yes').click()")
+}
 
 // titleOpen types a title into Set the task's field of a new task's title when it shows empty: a new task asks one.
 func titleOpen(b *browser) {

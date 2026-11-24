@@ -14,6 +14,8 @@ import (
 	"sync"
 	"testing"
 
+	"golang.org/x/net/html"
+
 	"floe/internal/dirs"
 	"floe/internal/drawhere"
 	"floe/internal/files"
@@ -130,6 +132,43 @@ func (e env) publish(t *testing.T, slug, src string, images map[string][]byte) *
 
 	return e.write(t, http.MethodPost, "/api/pages/data",
 		server.Upload{File: slug + ".yaml", Source: []byte(src), Images: images, Project: "p", Repo: "p", Place: slug + ".yaml", Slug: &slug}) //nolint:exhaustruct // the rest not given
+}
+
+// booted is what the management page tells its script as it starts: the JSON of its #boot, as written there, and read
+type booted struct {
+	Raw     string
+	Screen  string `json:"screen"`
+	Framed  string `json:"framed"`
+	Served  bool   `json:"served"`
+	Version string `json:"version"`
+}
+
+// bootOf reads the boot values of the management page w answered with, from its one script #boot.
+func bootOf(t *testing.T, w *httptest.ResponseRecorder) booted {
+	t.Helper()
+
+	doc, err := html.Parse(strings.NewReader(w.Body.String()))
+	if err != nil {
+		t.Fatal(err)
+	}
+	var found []string
+	for n := range doc.Descendants() {
+		if n.Type == html.ElementNode && n.Data == "script" && slices.ContainsFunc(n.Attr, func(a html.Attribute) bool { return a.Key == "id" && a.Val == "boot" }) {
+			text := ""
+			if n.FirstChild != nil {
+				text = n.FirstChild.Data
+			}
+			found = append(found, text)
+		}
+	}
+	if len(found) != 1 {
+		t.Fatalf("%d scripts #boot, want 1: %q", len(found), w.Body.String())
+	}
+	b := booted{Raw: found[0]} //nolint:exhaustruct // read below
+	if err := json.Unmarshal([]byte(found[0]), &b); err != nil {
+		t.Fatalf("#boot: %v", err)
+	}
+	return b
 }
 
 func want(t *testing.T, w *httptest.ResponseRecorder, status int, body string) {
@@ -364,8 +403,9 @@ func TestManagementPageAndFrame(t *testing.T) {
 		t.Fatal(err)
 	}
 	frame := "frame-ancestors 'self' vscode-webview: vscode-file:"
-	// The task list is the same page, with the states of a task for it to read when tasks.json cannot be; /tasks/ is no path.
-	want(t, e.do(t, http.MethodGet, "/tasks", ""), http.StatusOK, `const STATES = [{"name":"todo"`)
+	// The task list is the React screen, with the states of a task in its boot values for it to read when tasks.json cannot be;
+	// /tasks/ is no path.
+	want(t, e.do(t, http.MethodGet, "/tasks", ""), http.StatusOK, `"states":[{"name":"todo"`)
 	want(t, e.do(t, http.MethodGet, "/tasks/", ""), http.StatusNotFound, "not found")
 	for target, status := range map[string]int{
 		"/": http.StatusOK, "/a/d/": http.StatusOK, "/a/none/": http.StatusNotFound, "/a/Bad_Slug/": http.StatusNotFound,
@@ -373,18 +413,25 @@ func TestManagementPageAndFrame(t *testing.T) {
 	} {
 		w := e.do(t, http.MethodGet, target, "")
 		// The frame is drawn as one from the start, its slug for the script.
-		html := `<html lang="en">`
-		if slug := strings.Trim(strings.TrimPrefix(target, "/a/"), "/"); target != "/" {
-			html = `<html lang="en" class="framed" data-slug="` + slug + `">`
+		want(t, w, status, `<html lang="en">`)
+		screen, framed := "list", ""
+		if target != "/" {
+			screen, framed = "frame", strings.Trim(strings.TrimPrefix(target, "/a/"), "/")
 		}
-		want(t, w, status, html)
+		if b := bootOf(t, w); b.Screen != screen || b.Framed != framed {
+			t.Errorf("GET %s: boot %s %q, want %s %q", target, b.Screen, b.Framed, screen, framed)
+		}
 		if got := w.Header().Get("Content-Security-Policy"); got != frame {
 			t.Errorf("GET %s: CSP %q", target, got)
 		}
 		want(t, e.do(t, http.MethodGet, target, "", "Accept-Language", "ja,en;q=0.5"), status, "一覧へ戻る")
 	}
-	// The slug as the server read it, unescaped, is escaped in the HTML.
-	want(t, e.do(t, http.MethodGet, "/a/x%22%3E%3C%3Fy/", ""), http.StatusNotFound, `data-slug="x&#34;&gt;&lt;?y"`)
+	// The slug as the server read it, unescaped, is escaped in the script's JSON: no < or > to end the script there, and
+	// read back the same.
+	odd := e.do(t, http.MethodGet, "/a/x%22%3E%3C%3Fy/", "")
+	if b := bootOf(t, odd); odd.Code != http.StatusNotFound || b.Framed != `x"><?y` || strings.ContainsAny(b.Raw, "<>") {
+		t.Errorf("GET /a/x%%22%%3E%%3C%%3Fy/: %d, boot %q", odd.Code, b.Raw)
+	}
 	// Not the frame, whose messages say "not found" too.
 	for _, w := range []*httptest.ResponseRecorder{
 		e.do(t, http.MethodPost, "/", ""), e.do(t, http.MethodGet, "/a/none/?raw", ""), e.do(t, http.MethodGet, "/a/gone/?raw", ""),
@@ -459,15 +506,21 @@ func TestFolder(t *testing.T) {
 		t.Errorf("GET /a/docs/ = %d to %q, want 303 to the list with it open", w.Code, w.Header().Get("Location"))
 	}
 	// The frame of a page the server found says so, for the frame to show it whatever its directory's list holds.
-	want(t, e.do(t, http.MethodGet, "/a/docs/?file=guide%2Fsetup.html", ""), http.StatusOK, `data-slug="docs" data-served>`)
-	want(t, e.do(t, http.MethodGet, "/a/docs/?file=nope.html", ""), http.StatusNotFound, `data-slug="docs">`)
+	for target, served := range map[string]bool{"/a/docs/?file=guide%2Fsetup.html": true, "/a/docs/?file=nope.html": false} {
+		if b := bootOf(t, e.do(t, http.MethodGet, target, "")); b.Framed != "docs" || b.Served != served {
+			t.Errorf("GET %s: boot %q served %v, want docs %v", target, b.Framed, b.Served, served)
+		}
+	}
 	for target, status := range map[string]int{
 		"/a/docs/?file=guide%2Fsetup.html": http.StatusOK, "/a/docs/?file=guide/setup.html": http.StatusOK,
 		"/a/docs/?file=..%2Fsibling.html": http.StatusNotFound, "/a/docs/?file=.git%2Fconfig": http.StatusNotFound,
 		"/a/docs/?file=%252e%252e%2Fsibling.html": http.StatusNotFound, "/a/docs/?file=nope.html": http.StatusNotFound,
 		"/a/docs/?file=guide": http.StatusNotFound,
 	} {
-		want(t, e.do(t, http.MethodGet, target, ""), status, `class="framed" data-slug="docs"`)
+		w := e.do(t, http.MethodGet, target, "")
+		if b := bootOf(t, w); w.Code != status || b.Screen != "frame" || b.Framed != "docs" {
+			t.Errorf("GET %s: %d, boot %s %q; want %d, the frame of docs", target, w.Code, b.Screen, b.Framed, status)
+		}
 	}
 	page := e.do(t, http.MethodGet, "/a/docs/guide/setup.html", "")
 	want(t, page, http.StatusOK, "<p>s</p>")
@@ -500,7 +553,9 @@ func TestFolder(t *testing.T) {
 	// A file's link has no directories to list.
 	want(t, e.write(t, http.MethodPost, "/api/pages", server.Link{Path: filepath.Join(e.home, "proj", "sibling.html")}), http.StatusCreated, `"slug":"sibling"`) //nolint:exhaustruct // the rest not given
 	want(t, e.do(t, http.MethodGet, "/api/pages/sibling/files", ""), http.StatusNotFound, "not found")
-	want(t, e.do(t, http.MethodGet, "/a/sibling/?file=sibling.html", ""), http.StatusNotFound, `data-slug="sibling"`)
+	if w := e.do(t, http.MethodGet, "/a/sibling/?file=sibling.html", ""); w.Code != http.StatusNotFound || bootOf(t, w).Framed != "sibling" {
+		t.Errorf("GET /a/sibling/?file=sibling.html: %d, the frame of %q", w.Code, bootOf(t, w).Framed)
+	}
 }
 
 // An edit archives a page as true or false, which the list then carries; favorite and archived null are not

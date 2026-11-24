@@ -109,7 +109,7 @@ func TestUITaskPage(t *testing.T) { //nolint:paralleltest // the browser tests s
 	say("nothing open", taskPageAt)
 	say("url", "location.pathname + location.search")
 	say("the list's keys", "sessionStorage.getItem('pages.list') + ' ' + sessionStorage.getItem('pages.tasks')")
-	say("head", "[document.getElementById('task-title').textContent, document.getElementById('task-state').value, document.getElementById('task-state').dataset.state, document.getElementById('task-project').textContent, document.getElementById('task-archive').hidden, document.getElementById('task-up').getAttribute('href')].join(' / ')")
+	say("head", "[document.getElementById('task-title').textContent, document.getElementById('task-state').value, document.getElementById('task-state').dataset.state, document.getElementById('task-project').textContent, document.getElementById('task-archive').hidden, document.getElementById('to-tasks').getAttribute('href')].join(' / ')")
 	say("nothing to select", "document.querySelectorAll('#list [data-testid=sel]').length + ' ' + [...document.querySelectorAll('#list [data-testid=menu] [data-testid=select]')].every((e) => e.hidden)")
 	b.still()
 	if got := b.eval("document.getElementById('news-n').textContent"); got != unread {
@@ -166,7 +166,7 @@ func TestUITaskPage(t *testing.T) { //nolint:paralleltest // the browser tests s
 	b.until("the rows", "document.querySelector('#list > li')")
 	b.moving("[...document.querySelectorAll('#list [data-testid=title]')].find((a) => a.textContent.startsWith('#130')).click()")
 	b.until("the task's page", "location.search.includes('task=') && "+taskPageShown)
-	say("up goes to the task's state", "document.getElementById('task-up').getAttribute('href')")
+	say("up goes to the task's state", "document.getElementById('to-tasks').getAttribute('href')")
 
 	// In a folder's tree on the task's page; a page named whole there; a page of no rows.
 	opened("#1", "/tasks?project=proj&task=%231")
@@ -300,7 +300,7 @@ func TestUITaskPage(t *testing.T) { //nolint:paralleltest // the browser tests s
 	}{{1400, true}, {960, true}, {880, false}} {
 		b.size(c.width, 800, false)
 		beside := b.eval("document.getElementById('reader').offsetParent !== null") == "true"
-		shelf := b.eval("document.getElementById('shelf').offsetParent !== null") == "true"
+		shelf := b.eval("document.getElementById('shelf')?.offsetParent != null") == "true"
 		over := b.eval("document.documentElement.scrollWidth > innerWidth") == "true"
 		if beside != c.beside || shelf || over {
 			t.Errorf("width %d: beside %t, shelf %t, past the edge %t", c.width, beside, shelf, over)
@@ -316,7 +316,7 @@ const taskPageShown = "!document.getElementById('task-head').hidden && document.
 
 // taskPageWant is what TestUITaskPage reads, in the order it reads it.
 const taskPageWant = `list j j: #130
-rows: T n1 | [designAdd a page] | T d1 | [buildAdd a page] | T i1 | [reviewAdd a page] | T r1 | [nothingAdd a pageNo pages yet]
+rows: [No category] | T n1 | [design] | T d1 | [build] | T i1 | [review] | T r1 | [nothingNo pages yet]
 nothing open: none / none
 url: /tasks?project=proj&task=%23130
 the list's keys:  ?project=proj
@@ -334,7 +334,7 @@ in the folder: /tasks?project=proj&task=%231 / {"order":[],"shown":["fold"],"bac
 renamed whole: /tasks?project=proj&task=%23128 / {"order":["c2"],"shown":["c2"],"back":"/tasks?project=proj&task=%23128","at":{"slug":"c2","file":"","v":0}}
 of no rows: / / null
 done: Archive
-archived: T x1
+archived: [No category] | T x1
 the shelf's archive: #120
 folded, none chosen: true true
 while open: doing
@@ -347,8 +347,9 @@ unreadable, done: Archive
 no task: No task #999 true 0
 refused: doing false true`
 
-// The way up of a task's page is its project's list at the state the task is in now, whatever way it was come to; a state changed on
-// the page takes it along, and the row the list opens with the focus on is the task's. The tab's list is left as it was.
+// The way up of a task's page, the bar's task list and h, is its project's list at the state the task is in now, whatever way it was
+// come to; a state changed on the page takes it along, and the row the list opens with the focus on is the task's. The tab's list kept
+// is left as it was, which the list's own link goes to.
 func TestUITaskUp(t *testing.T) { //nolint:paralleltest // the browser tests share one Chrome, one at a time
 	s := newSite(t)
 	b := s.b
@@ -366,7 +367,7 @@ func TestUITaskUp(t *testing.T) { //nolint:paralleltest // the browser tests sha
 	defer b.unsize()
 
 	var out []string
-	const up = "document.getElementById('task-up').getAttribute('href')"
+	const up = "document.getElementById('to-tasks').getAttribute('href')"
 	say := func(what string) {
 		t.Helper()
 		out = append(out, what+": "+b.eval(up))
@@ -400,7 +401,7 @@ func TestUITaskUp(t *testing.T) { //nolint:paralleltest // the browser tests sha
 	b.until("the task's page", task1)
 	say("back from it")
 
-	// The state changed there: to the list it has come to be on, its row with the focus; the tab's list stays what was last seen.
+	// The state changed there: to the list it has come to be on, its row with the focus, by the bar's task list as by h.
 	b.navigate("/tasks?view=todo&project=proj")
 	b.until("the rows", "document.querySelector('#list > li [data-testid=title]')")
 	press("document.querySelector('#list > li [data-testid=title]')")
@@ -410,7 +411,7 @@ func TestUITaskUp(t *testing.T) { //nolint:paralleltest // the browser tests sha
 	chooseValue(b, "task-state", "done")
 	b.untilRead(begun, "the state read after its write", "document.getElementById('task-state').dataset.state === 'done'")
 	say("the state changed")
-	out = append(out, "the tab's list: "+b.eval("document.getElementById('to-tasks').getAttribute('href')"))
+	out = append(out, "the bar's: "+b.eval("document.getElementById('to-tasks').getAttribute('href')"))
 	realKey(b, "h", 0)
 	b.until("the list", "location.search === '?project=proj&view=done' || location.search === '?view=done&project=proj'")
 	b.until("the focus", "document.activeElement.closest('#list')")
@@ -436,7 +437,7 @@ func TestUITaskUp(t *testing.T) { //nolint:paralleltest // the browser tests sha
 	press("document.querySelector('#list li[data-slug=a] [data-testid=task-tag]')")
 	b.until("the task's page", task1)
 	say("a badge")
-	press("document.querySelector('#task-up')")
+	press("document.querySelector('#to-tasks')")
 	b.until("the list", "location.pathname === '/tasks' && document.activeElement.closest('#list')")
 	out = append(out, "up from there: "+b.eval("location.search + ' ' + document.activeElement.querySelector('[data-testid=tname]').textContent + ' ' + document.getElementById('to-tasks').getAttribute('href')"))
 	b.navigate("/tasks?view=done&project=proj")
@@ -462,7 +463,7 @@ j j: /tasks?project=proj&view=todo
 the page whole: /tasks?project=proj&task=%231
 back from it: /tasks?project=proj&view=todo
 the state changed: /tasks?project=proj&view=done
-the tab's list: /tasks?view=todo&project=proj
+the bar's: /tasks?project=proj&view=done
 on it: ?view=done&project=proj #1
 changed elsewhere: /tasks?project=proj&view=todo
 changed elsewhere, while open: /tasks?project=proj

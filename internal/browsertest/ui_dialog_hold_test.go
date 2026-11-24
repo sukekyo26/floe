@@ -152,11 +152,14 @@ func TestUIDialogHold(t *testing.T) { //nolint:paralleltest // the browser tests
 		return strconv.Itoa(n)
 	}
 	writes := []write{
-		{"tags", "tag-dialog", "/", rowMenu("plan-a", "tag-item"), typed("#tag-find", "n1", "document.getElementById('tag-new').click(); document.getElementById('tag-apply').click()"), true},
+		{"tags", "tag-dialog", "/", rowMenu("plan-a", "tag-item"), func() { b.fill("#tag-find", "n1"); applyNewTag(b) }, true},
 		{"edit", "edit-dialog", "/", rowMenu("plan-a", "edit"), func() { typed("#edit-desc", "d"+fresh(), "document.getElementById('edit-submit').click()")() }, true},
 		{"set", "set-dialog", "/", rowMenu("plan-a", "task-set"), typed("#set-category", "実装", "document.getElementById('set-submit').click()"), true},
 		{"off", "set-dialog", "/", rowMenu("check-a", "task-set"), run("document.getElementById('set-out').click()"), true},
-		{"add page", "add-page-dialog", "/tasks?project=proj&task=S300", run("const a = document.querySelector('#list li[data-key=\"group:実装\"] [data-testid=category-add]'); a.focus(); a.click()"), typed("#add-page-q", "memo", "document.querySelector('#add-page-list li').click()"), true},
+		{"add page", "add-page-dialog", "/tasks?project=proj&task=S300", run("const a = document.getElementById('task-add-page'); a.focus(); a.click()"), func() {
+			chooseValue(b, "add-page-category", "実装")
+			typed("#add-page-q", "memo", "document.querySelector('#add-page-list li').click()")()
+		}, true},
 		{"kin", "kin-dialog", "/tasks?project=proj&task=S300", run("document.getElementById('task-child').focus(); document.getElementById('task-child').click()"), typed("#kin-task", "S301", "document.getElementById('kin-submit').click()"), true},
 		{"task edit", "edit-task-dialog", "/tasks?project=proj&task=S300", run("document.getElementById('task-edit').focus(); document.getElementById('task-edit').click()"), func() {
 			typed("#edit-task-title", "Held "+fresh(), "document.getElementById('edit-task-submit').click()")()
@@ -221,7 +224,9 @@ func TestUIDialogHold(t *testing.T) { //nolint:paralleltest // the browser tests
 
 	// T2: the write failed: given back as it was, its mistake said in it, and it closes on Escape
 	errorOf := map[string]string{"edit-dialog": "edit-error", "set-dialog": "set-error", "add-page-dialog": "add-page-error", "kin-dialog": "kin-error", "edit-task-dialog": "edit-task-error", "add-dialog": "add-error"}
-	for _, w := range []write{writes[1], writes[2], writes[3], writes[4], writes[5], writes[6], writes[7]} {
+	// On a task's page (React), the category typed one of the task's: given back there, its suggestions stay shut (S444)
+	setOnTask := write{"set on a task's page", "set-dialog", "/tasks?project=proj&task=S300", rowMenu("plan-a", "task-set"), typed("#set-category", "実装", "document.getElementById('set-submit').click()"), true}
+	for _, w := range []write{writes[1], writes[2], writes[3], setOnTask, writes[4], writes[5], writes[6], writes[7]} {
 		open(w.page)
 		b.eval("holdOn('PATCH', 'POST'); fail.PATCH = true; fail.POST = true; true")
 		start(w)
@@ -269,6 +274,22 @@ func TestUIDialogHold(t *testing.T) { //nolint:paralleltest // the browser tests
 	b.eval("letGo()")
 	b.until("let go", "document.getElementById('set-dialog').getAttribute('closedby') === 'closerequest'")
 	say("category, failed", "where(document.activeElement) + ' / suggestions ' + document.getElementById('set-category-names').matches(':popover-open') + ' / said ' + !document.getElementById('set-error').hidden")
+	b.pressKey(kb.Escape)
+	until("set-dialog", false)
+
+	// On a task's page (React), held with the suggestions open: the blur of the field disabled as it is held closes them,
+	// and after a failure one Escape closes the modal (S446)
+	open("/tasks?project=proj&task=S300")
+	rowMenu("plan-a", "task-set")()
+	until("set-dialog", true)
+	b.fill("#set-task", "")
+	b.until("the suggestions", "document.getElementById('set-task-names').matches(':popover-open')")
+	b.eval("sent.length = 0; holdOn('PATCH'); fail.PATCH = true; document.getElementById('set-out').click(); true")
+	b.until("sent", "sent.length === 1")
+	say("on a task's page, held", "document.getElementById('set-task-names').matches(':popover-open') + ' ' + where(document.activeElement)")
+	b.eval("letGo()")
+	b.until("let go", "document.getElementById('set-dialog').getAttribute('closedby') === 'closerequest'")
+	say("on a task's page, given back", "document.getElementById('set-task-names').matches(':popover-open') + ' ' + where(document.activeElement)")
 	b.pressKey(kb.Escape)
 	until("set-dialog", false)
 
@@ -373,11 +394,11 @@ var dialogHoldWant = []string{
 	"off, held: true none 0 / sent 1",
 	"off, answered: false closerequest 6 / toast Undo / sent 1",
 	"add page, held: true none 0 / sent 1",
-	"add page, answered: false closerequest 2 / list Add a page to 実装 / sent 1",
+	"add page, answered: false closerequest 3 / task-add-page / sent 1",
 	"kin, held: true none 0 / sent 1",
 	"kin, answered: false closerequest 5 / task-child / sent 1",
 	"task edit, held: true none 0 / sent 1",
-	"task edit, answered: false closerequest 11 / task-edit / sent 1",
+	"task edit, answered: false closerequest 9 / task-edit / sent 1",
 	"add link, held: true none 0 / sent 1",
 	"add link, answered: false closerequest 5 / add-link / sent 1",
 	"page theme, held: true none 0 / sent 1",
@@ -392,6 +413,7 @@ var dialogHoldWant = []string{
 	"edit, failed: true closerequest / said true / edit-dialog edit-desc",
 	"set, failed: true closerequest / said true / set-dialog set-category",
 	"off, failed: true closerequest / said true / set-dialog set-task",
+	"set on a task's page, failed: true closerequest / said true / set-dialog set-category",
 	"add page, failed: true closerequest / said true / add-page-dialog add-page-q",
 	"kin, failed: true closerequest / said true / kin-dialog kin-task",
 	"task edit, failed: true closerequest / said true / edit-task-dialog edit-task-title",
@@ -402,6 +424,8 @@ var dialogHoldWant = []string{
 	"suggestions, keys while held:   new set-dialog set-dialog",
 	"the focus given back: set-dialog set-task",
 	"category, failed: set-dialog set-category / suggestions false / said true",
+	"on a task's page, held: false set-dialog set-dialog",
+	"on a task's page, given back: false set-dialog set-task",
 	"shortcuts while held: check-a 1 true",
 	"cancel while held: true",
 	"shortcuts, a modal open, the focus on the body: check-a",

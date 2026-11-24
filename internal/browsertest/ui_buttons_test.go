@@ -2,42 +2,27 @@ package browsertest_test
 
 import (
 	"encoding/json"
-	"strconv"
 	"testing"
 
 	"floe/internal/i18n"
 	"floe/internal/store"
 )
 
-// Every button of words is of one form, as drawn: 2rem high, 2.25rem at a modal's foot, its corners --corner-small. They
+// Every button of words is of one form, as drawn: 2rem high, 2.25rem at a modal's foot, its corners --radius-small. They
 // are every button and link with words shown, in each place, every modal of the management page among them, but the rows the
 // rule names and the links of a row or a mark. Their words keep to one line, within what clips them, the row of buttons going
 // onto another where they do not fit; #tag-new alone, of words a person typed, goes over lines. One on the screen has an icon,
-// and one in a modal, the bar of the selected or a toast has none. The task's way back, #task-up, is measured for its words alone.
+// and one in a modal, the bar of the selected or a toast has none.
 
 // notButtons are not buttons of words by the rule (.claude/rules/ui.md): the shelf's rows and the add buttons under them, in a
 // modal too on a narrow screen; the settings' rows and their way back; the "…" menu's items. Nor are the links of a row or a mark
-// (the brand, a row's title in the list and the search, a row's task and tags, a task's parent and children, the diff's contents),
-// nor tabs (role=tab: the help's switches, as the React screen makes them).
+// (the brand, a row's title in the list and the search, a row's task and tags, a task's parent and children, the diff's contents,
+// the bar's count of the unread, a link of words: the user's choice, S422-P8), nor tabs (role=tab: the help's switches), nor the bar's links to
+// the screens (#screens a, links of a nav, the screen shown darker: the user's choice, S448) and a page whole's way back to a
+// task's page, a plain link (the user's choice, S422-P10)
 const notButtons = "#shelf *, #filter-dialog #shelf-more *, [data-testid=settings-item], #settings-back, [data-testid=menu] *, " +
-	"[data-testid=brand], #list li [data-testid=title], #find-list li [data-testid=title], [data-testid=task-tag], #list li [data-testid=tagpill], [data-testid=kin-row], #diff-toc button, [role=tab]"
-
-// wordsOnly is a button of words in no form of .btn, measured for its words alone: the task's way back.
-const wordsOnly = "#task-up"
-
-// LIMIT: buttons of words in another form than .btn, neither a row nor a mark. The user's decision (S425): the bar's two ways to the
-// screens become tabs (role=tab, as the help's switches), the rest take the form of .btn. ui.html is not mended while it is
-// rebuilt, so they pass while it is ui.html; each row goes as its React screen comes in (one of the form, or a tab, fails "take it
-// off the table" to tell so).
-var otherForm = map[string]string{
-	"to-list":            "the bar's way to the page list: a tab in React",
-	"to-tasks":           "the bar's way to the task list: a tab in React",
-	"news":               "the bar's count of the unread, a mark and a number",
-	"bulk-clear":         "the bar of the selected: its round button that lets them go",
-	"back":               "the bar of a page whole: its round way back",
-	"edit-url-plus":      "the task's edit modal: the row that adds a URL",
-	"edit-category-plus": "the task's edit modal: the row that adds a category",
-}
+	"[data-testid=brand], #list li [data-testid=title], #find-list li [data-testid=title], [data-testid=task-tag], #list li [data-testid=tagpill], [data-testid=kin-row], #diff-toc button, [role=tab], #news, " +
+	"#screens a, #back"
 
 func TestUIButtons(t *testing.T) { //nolint:paralleltest // the browser tests share one Chrome, one at a time
 	s := newSite(t)
@@ -63,17 +48,8 @@ func TestUIButtons(t *testing.T) { //nolint:paralleltest // the browser tests sh
 
 	// The box that clips a button is its nearest ancestor that does not show what overflows it, or the screen; what it shows of
 	// itself is measured, not all it scrolls over. A button's words are its text, but in an icon or a part not shown
-	other := make([]string, 0, len(otherForm))
-	for id := range otherForm {
-		other = append(other, id)
-	}
-	otherJSON, err := json.Marshal(other)
-	if err != nil {
-		t.Fatal(err)
-	}
 	measure := `(() => {
-		const small = getComputedStyle(document.documentElement).getPropertyValue('--corner-small').trim();
-		const other = ` + string(otherJSON) + `;
+		const small = getComputedStyle(document.documentElement).getPropertyValue('--radius-small').trim();
 		const words = (e) => {
 			let said = '';
 			const walk = (n) => {
@@ -94,39 +70,36 @@ func TestUIButtons(t *testing.T) { //nolint:paralleltest // the browser tests sh
 			return { left: 0, top: 0, right: innerWidth, bottom: innerHeight };
 		};
 		const name = (e) => e.id || e.dataset.testid || e.localName + ' ' + words(e);
-		const seen = [];
 		const bad = shown.flatMap((e) => {
 			const r = e.getBoundingClientRect();
 			const c = clip(e);
 			const why = [];
-			if (!e.matches(` + js(wordsOnly) + `)) {
-				const form = [];
-				const want = e.closest('[data-testid=dialog-actions], [data-testid=find-foot]') ? 36 : 32;
-				if (e.id === 'tag-new' ? r.height < want - 0.5 : Math.abs(r.height - want) > 0.5) form.push('height ' + Math.round(r.height));
-				if (getComputedStyle(e).borderTopLeftRadius !== small) form.push('corner ' + getComputedStyle(e).borderTopLeftRadius);
-				if (Boolean(e.querySelector('svg')) === Boolean(e.closest('dialog, #bulk, [data-testid=toast]'))) form.push(e.querySelector('svg') ? 'an icon' : 'no icon');
-				if (other.includes(e.id)) {
-					seen.push(e.id);
-					if (form.length === 0) why.push('of the form now: take it off the table');
-				} else why.push(...form);
-			}
+			const form = [];
+			const want = e.closest('[data-testid=dialog-actions], [data-testid=find-foot]') ? 36 : 32;
+			if (e.id === 'tag-new' ? r.height < want - 0.5 : Math.abs(r.height - want) > 0.5) form.push('height ' + Math.round(r.height));
+			if (getComputedStyle(e).borderTopLeftRadius !== small) form.push('corner ' + getComputedStyle(e).borderTopLeftRadius);
+			if (Boolean(e.querySelector('svg')) === Boolean(e.closest('dialog, #bulk, [data-testid=toast]'))) form.push(e.querySelector('svg') ? 'an icon' : 'no icon');
+			why.push(...form);
 			if (e.scrollHeight > e.clientHeight + 1) why.push('words over lines');
 			if (e.scrollWidth > e.clientWidth + 1) why.push('words cut off');
 			if (r.left < c.left - 0.5 || r.right > c.right + 0.5 || r.top < c.top - 0.5 || r.bottom > c.bottom + 0.5) why.push('out of its box');
 			return why.length ? [name(e) + ': ' + why.join(', ')] : [];
 		});
 		const keys = ['#keys [data-help=about]', '#keys [data-help=keys]', '#keys [data-close]'].filter((sel) => shown.includes(document.querySelector(sel))).length;
-		return JSON.stringify({ n: shown.length, bad: bad.join('; '), keys, seen });
+		// A small corner of no value would be met by none: said apart from the buttons
+		const dialogs = [...document.querySelectorAll('dialog')].map((d) => d.id);
+		return JSON.stringify({ n: shown.length, bad: (small === '' ? ['no small corner; '] : []).concat(bad).join('; '), keys, dialogs });
 	})()`
-	seen := map[string]bool{}
+	// The dialogs the screens hold
+	present := map[string]bool{}
 	check := func(scene string) int {
 		t.Helper()
 		b.still()
 		var got struct {
-			N    int
-			Bad  string
-			Keys int
-			Seen []string
+			N       int
+			Bad     string
+			Keys    int
+			Dialogs []string
 		}
 		if err := json.Unmarshal([]byte(b.eval(measure)), &got); err != nil {
 			t.Fatal(err)
@@ -134,10 +107,10 @@ func TestUIButtons(t *testing.T) { //nolint:paralleltest // the browser tests sh
 		if got.N == 0 || got.Bad != "" {
 			t.Errorf("%s: %d buttons, of another form: %s", scene, got.N, got.Bad)
 		}
-		for _, id := range got.Seen {
-			seen[id] = true
+		for _, d := range got.Dialogs {
+			present[d] = true
 		}
-		return got.Keys
+		return got.Keys - 1
 	}
 	opened := map[string]bool{}
 	closeModal := func(id string) {
@@ -168,8 +141,9 @@ func TestUIButtons(t *testing.T) { //nolint:paralleltest // the browser tests sh
 		for _, part := range []string{"about", "keys"} {
 			b.eval("document.querySelector('#keys [data-help=" + part + "]').click()")
 			b.until("the part "+part, helpOn+"(document.querySelector('#keys [data-help="+part+"]'))")
-			if n := check(scene + ", help's " + part); n != 3 {
-				t.Errorf("%s, help's %s: %d of its 3 buttons of words measured", scene, part, n)
+			// Its switches are tabs: its close button alone
+			if n := check(scene + ", help's " + part); n != 0 {
+				t.Errorf("%s, help's %s: %d buttons of words measured past or short of its own", scene, part, n)
 			}
 		}
 		closeModal("keys")
@@ -191,7 +165,8 @@ func TestUIButtons(t *testing.T) { //nolint:paralleltest // the browser tests sh
 		b.eval("document.getElementById('set-submit').click()")
 	})
 	closeModal("set-dialog")
-	modal("find", press("#find-open"))
+	// The list's search field stands for the bar's way to the search modal, which Ctrl+K opens
+	modal("find", func() { keyDown(b, "key: 'k', ctrlKey: true") })
 	modal("keys", func() { b.pressKey("?") })
 	help("the page list")
 	modal("settings", press("#settings-open"))
@@ -228,7 +203,26 @@ func TestUIButtons(t *testing.T) { //nolint:paralleltest // the browser tests sh
 	help("a task")
 	modal("kin-dialog", press("#task-child"))
 	modal("edit-task-dialog", press("#task-edit"))
-	modal("add-page-dialog", press("#list [data-testid=category-add]"))
+	modal("add-page-dialog", press("#task-add-page"))
+	// Each modal the screen holds is measured there too
+	modal("edit-add-dialog", func() {
+		press("#task-edit")()
+		b.until("the edit", "document.getElementById('edit-task-dialog').open")
+		press("#edit-url-plus")()
+	})
+	closeModal("edit-task-dialog")
+	modal("find", press("#find-open"))
+	modal("settings", press("#settings-open"))
+	modal("tag-dialog", menu("a", "tag-item"))
+	modal("edit-dialog", menu("a", "edit"))
+	modal("set-dialog", menu("a", "task-set"))
+	modal("move-dialog", func() {
+		menu("a", "task-set")()
+		b.until("the set modal", "document.getElementById('set-dialog').open")
+		b.fill("#set-task", "#2")
+		b.eval("document.getElementById('set-submit').click()")
+	})
+	closeModal("set-dialog")
 	b.navigate("/tasks?project=proj&task=%232")
 	b.until("no pages", "!document.getElementById('task-none').hidden")
 	check("a task of no page")
@@ -253,10 +247,14 @@ func TestUIButtons(t *testing.T) { //nolint:paralleltest // the browser tests sh
 	b.until("the rows", "document.querySelector('#list li[data-slug=c]')")
 	modal("keys", func() { b.pressKey("?") })
 	help("narrow")
-	modal("set-dialog", menu("a", "task-set"))
-	if got := b.eval("String(document.getElementById('set-out').hidden)"); got != "false" {
-		t.Errorf("the set modal of a page on a task: take off hidden %s", got)
-	}
+	// Read while open: closed, the screen may draw the modal without its page
+	modal("set-dialog", func() {
+		menu("a", "task-set")()
+		b.until("set-dialog", "document.getElementById('set-dialog').open")
+		if got := b.eval("String(document.getElementById('set-out').hidden)"); got != "false" {
+			t.Errorf("the set modal of a page on a task: take off hidden %s", got)
+		}
+	})
 	b.eval("document.querySelector('#list li[data-slug=a] [data-testid=sel]').click()")
 	b.until("the bar", "!document.getElementById('bulk').hidden")
 	b.eval("document.getElementById('bulk-tag').click()")
@@ -285,8 +283,31 @@ func TestUIButtons(t *testing.T) { //nolint:paralleltest // the browser tests sh
 	b.eval("document.getElementById('task-family-word').textContent = 'The child tasks of this task, a heading long enough to take more than its line'")
 	check("a long heading of a card")
 
-	// The diff and a page not found, last: publishing a again may take it off its task
+	// A page whole's modals. Opened again, as read: the toast of the first opening moves
+	// into a modal opened, its button out of the modal's box (S445)
 	b.size(1400, 800, false)
+	b.navigate("/a/a/")
+	b.until("read", "document.querySelector('[data-testid=toast]')")
+	b.navigate("/a/a/")
+	b.until("the bar", "document.querySelector('#frame-actions [data-testid=task-set]')")
+	frameMenu := func(item string) func() {
+		return func() { pressMenuItem(b, "#frame-actions", item) }
+	}
+	modal("find", func() { keyDown(b, "key: 'k', ctrlKey: true") })
+	modal("keys", func() { b.pressKey("?") })
+	modal("settings", frameMenu("theme-item"))
+	modal("tag-dialog", frameMenu("tag-item"))
+	modal("edit-dialog", frameMenu("edit"))
+	modal("set-dialog", frameMenu("task-set"))
+	modal("move-dialog", func() {
+		frameMenu("task-set")()
+		b.until("the set modal", "document.getElementById('set-dialog').open")
+		b.fill("#set-task", "#2")
+		b.eval("document.getElementById('set-submit').click()")
+	})
+	closeModal("set-dialog")
+
+	// The diff and a page not found, last: publishing a again may take it off its task
 	s.floe(t, "publish", s.page(t, "a.yaml", "T a", "<p>two</p>"), "--slug", "a")
 	b.navigate("/a/a/?diff")
 	b.until("the diff", "!document.getElementById('diff-main').hidden")
@@ -298,14 +319,10 @@ func TestUIButtons(t *testing.T) { //nolint:paralleltest // the browser tests sh
 	b.until("the missing page", "!document.getElementById('notfound').hidden")
 	check("a page not found")
 
-	for id := range otherForm {
-		if !seen[id] {
-			t.Errorf("#%s of another form is not found: take it off the table", id)
+	// A modal with no way here is a modal not measured: each a screen holds, opened on one
+	for d := range present {
+		if !opened[d] {
+			t.Errorf("the %s modal is not measured on a screen", d)
 		}
-	}
-
-	// A modal with no way here is a modal not measured.
-	if got := b.eval("document.querySelectorAll('dialog').length + ''"); got != strconv.Itoa(len(opened)) {
-		t.Errorf("%s modals, %d opened", got, len(opened))
 	}
 }

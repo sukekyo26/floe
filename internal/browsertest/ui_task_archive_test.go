@@ -83,7 +83,7 @@ func TestUITaskArchive(t *testing.T) { //nolint:paralleltest // the browser test
 	pressTaskArchive(b, "Restore")
 	head("no page, archived")
 	out = append(out, "said: "+toast())
-	out = append(out, "the way up: "+b.eval("document.getElementById('task-up').getAttribute('href')"))
+	out = append(out, "the way up: "+b.eval("document.getElementById('to-tasks').getAttribute('href')"))
 	pressTaskArchive(b, "Archive")
 	head("no page, given back")
 	out = append(out, "said: "+toast())

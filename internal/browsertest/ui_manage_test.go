@@ -44,7 +44,8 @@ const extrasList = `[
 ]`
 
 // managementPage tells whether the document is a management page (/ and /a/<slug>/, not a page shown in its frame), which
-// stub fakes. It is ui.html's own test of a link the frame leaves for (leaveFrame): change the two together.
+// stub fakes. It is the frame's own test of a link a page opens (pageMessage, web/src/utils/page-message.ts): change the
+// two together.
 const managementPage = "/^\\/(a\\/[^/]+\\/?)?$/.test(location.pathname) && !new URLSearchParams(location.search).has('raw')"
 
 // fake is the script that answers list, a JavaScript array at(day) may build, for the management page's list, counting
@@ -245,7 +246,7 @@ func (b *browser) holdReads(at heldAt, paths ...string) func() {
 		window.fetch = (url, init) => {
 			if (on && !init?.method && paths.includes(new URL(String(url), location.href).pathname)) {
 				window.heldReads++;
-				if (answered) return f(url, init).then((r) => new Promise((go) => { held.push(() => go(r)); }));
+				if (answered) return f(url, init).then((r) => (on ? new Promise((go) => { held.push(() => go(r)); }) : r));
 				return new Promise((go) => { held.push(() => go(f(url, init))); });
 			}
 			return f(url, init);
@@ -567,25 +568,35 @@ func uiExtras(t *testing.T, lang i18n.Lang, msg func(string, ...any) string) {
 	// Nothing at all: the middle's button alone, not the shelf's too.
 	check(t, "nothing at all", []string{b.eval("document.getElementById('add-link').hidden + ''")}, "true")
 
-	// The shelf at its narrowest holds each add button's words on one line, within it. Shown for the measure alone, in the
-	// same task: this list is empty, and the task list's is the other screen's.
-	b.size(1440, 800, false)
-	was := b.rect("document.getElementById('shelf')").Width
-	b.drag("#shelf-grip", 0)
-	b.until("the shelf at its narrowest", "document.getElementById('shelf').getBoundingClientRect().width < "+strconv.FormatFloat(was, 'f', -1, 64))
-	check(t, "narrowest shelf", []string{b.eval(`(() => {
-		const shelf = Math.round(document.getElementById('shelf').getBoundingClientRect().width);
-		const lines = ['add-link', 'add-task'].map((id) => {
-			const e = document.getElementById(id), was = [e.hidden, e.parentElement.hidden];
+	// The shelf at its narrowest holds each add button's words on one line, within it: the page list's, and the task list's on
+	// a store of a task, as the stubbed list has none. Shown for the measure alone, in the same task: this list is empty.
+	narrowest := func(b *browser, id string) string {
+		t.Helper()
+		b.size(1440, 800, false)
+		was := b.rect("document.getElementById('shelf')").Width
+		b.drag("#shelf-grip", 0)
+		b.until("the shelf at its narrowest", "document.getElementById('shelf').getBoundingClientRect().width < "+strconv.FormatFloat(was, 'f', -1, 64))
+		return b.eval(`(() => {
+			const shelf = Math.round(document.getElementById('shelf').getBoundingClientRect().width);
+			const e = document.getElementById(` + js(id) + `), was = [e.hidden, e.parentElement.hidden];
 			e.hidden = e.parentElement.hidden = false;
 			const words = [...e.childNodes].find((n) => n.nodeType === Node.TEXT_NODE), r = document.createRange();
 			r.selectNodeContents(words);
 			const n = r.getClientRects().length, inside = r.getBoundingClientRect().right <= e.getBoundingClientRect().right;
 			[e.hidden, e.parentElement.hidden] = was;
-			return id + ' ' + n + ' ' + inside;
-		});
-		return [shelf, ...lines].join(' | ');
-	})()`)}, "160 | add-link 1 true | add-task 1 true")
+			return [shelf, ` + js(id) + `, n, inside].join(' ');
+		})()`)
+	}
+	shelves := make([]string, 0, 2)
+	shelves = append(shelves, narrowest(b, "add-link"))
+	tasks := &site{Site: servetest.Start(t, nil)}
+	tasks.b = newBrowser(t, tasks.Base, lang)
+	tasks.floe(t, "publish", tasks.page(t, "p.yaml", "P", ""), "--slug", "p")
+	tasks.floe(t, "task", "--slug", "p", "--task", "#1", "--title", "one")
+	tasks.b.navigate("/tasks")
+	tasks.b.until("the task list's shelf", "document.querySelector('#shelf [data-project]') && document.getElementById('add-task')")
+	shelves = append(shelves, narrowest(tasks.b, "add-task"))
+	check(t, "narrowest shelf", shelves, "160 add-link 1 true|160 add-task 1 true")
 	b.unsize()
 	// The time's tooltip lines start with the label of their format ("Created %s").
 	label := func(key string) string { return strings.Fields(msg(key, ""))[0] }
@@ -622,11 +633,11 @@ func (b *browser) point(x, y float64) {
 	}
 }
 
-// listDraws counts in window.draws the times the list's rows are drawn anew, as the rows in #list are replaced, until
-// window.drawsSeen.disconnect(). Of uiShelf and uiTags.
-const listDraws = `window.draws = 0; window.drawsSeen = new MutationObserver((records) => {
-	window.draws += records.filter((r) => r.removedNodes.length > 0 && r.addedNodes.length > 0).length;
-}); window.drawsSeen.observe(document.getElementById('list'), { childList: true })`
+// listDraws counts in window.draws the times the list's rows are drawn anew, until window.drawsSeen.disconnect(): each
+// change of #list and its rows told at once is one, as one build replaces the rows and another keeps and changes them. Of
+// uiShelf and uiTags.
+const listDraws = `window.draws = 0; window.drawsSeen = new MutationObserver(() => { window.draws++; });
+window.drawsSeen.observe(document.getElementById('list'), { childList: true, subtree: true, characterData: true })`
 
 // TestUIShelf picks the list on the shelf, shows a row's actions where pointed at or reached, keeps a row's menu whole and
 // gives focus back from it, adds a link from any list, folds the shelf into a row and a dialog on a narrow screen, and acts
@@ -687,7 +698,7 @@ func uiShelf(t *testing.T, lang i18n.Lang, msg func(string, ...any) string) {
 	// The menu: its words, Escape and a click elsewhere close it, focus going back to its button.
 	b.eval("document.querySelector('#list li[data-slug=b] summary').click()")
 	out = append(out, b.eval("document.querySelector('#list li[data-slug=b] summary').getAttribute('aria-label')"),
-		b.eval("[...document.querySelectorAll('#list li[data-slug=b] [data-testid=menu] > *')].filter((e) => getComputedStyle(e).display !== 'none').map((e) => e.textContent.trim()).join(' / ')"))
+		b.eval(topsJS+"(document.querySelector('#list li[data-slug=b] [data-testid=menu]')).filter((e) => getComputedStyle(e).display !== 'none').map((e) => e.textContent.trim()).join(' / ')"))
 	b.eval("document.querySelector('#list li[data-slug=b] [data-testid=edit]').focus()")
 	key("Escape")
 	out = append(out, b.eval("[document.querySelector('#list li[data-slug=b] [data-testid=more]').open, "+
@@ -703,11 +714,11 @@ func uiShelf(t *testing.T, lang i18n.Lang, msg func(string, ...any) string) {
 	out = append(out, b.eval("[...document.querySelectorAll('#list [data-testid=more]')].filter((d) => d.open).length"))
 	b.eval("document.querySelector('#list li[data-slug=a] summary').click()")
 	// An item closes its menu; the edit dialog, cancelled or saved, gives focus back to the row's menu button.
-	b.eval("document.querySelector('#list li[data-slug=b] summary').click(); document.querySelector('#list li[data-slug=b] [data-testid=edit]').click()")
+	pressMenuItemFocused(b, "#list li[data-slug=b]", "edit")
 	out = append(out, b.eval("[document.querySelector('#list li[data-slug=b] [data-testid=more]').open, document.getElementById('edit-dialog').open].join(' ')"))
 	b.eval("document.querySelector('#edit-dialog [data-close]').click()")
 	out = append(out, b.eval("document.activeElement === document.querySelector('#list li[data-slug=b] summary')"))
-	b.eval("document.querySelector('#list li[data-slug=b] summary').click(); document.querySelector('#list li[data-slug=b] [data-testid=edit]').click()")
+	pressMenuItemFocused(b, "#list li[data-slug=b]", "edit")
 	b.fill("#edit-desc", "new")
 	b.eval("document.getElementById('edit-submit').click()")
 	out = append(out, b.until("the edit dialog to close", "!document.getElementById('edit-dialog').open && "+
@@ -721,7 +732,8 @@ func uiShelf(t *testing.T, lang i18n.Lang, msg func(string, ...any) string) {
 	b.eval("document.querySelector('#list > li:last-child summary').click()")
 	d := b.rect("document.querySelector('#list > li:last-child [data-testid=delete]')")
 	out = append(out, b.eval("Boolean(document.elementFromPoint("+js(fmt.Sprint(d.X+d.Width/2))+", "+js(fmt.Sprint(d.Y+d.Height/2))+")?.closest('[data-testid=delete]'))"))
-	b.eval("calls.length = 0; document.querySelector('#list > li:last-child [data-testid=delete]').click(); document.querySelector('#list > li:last-child [data-testid=delete]').click()")
+	b.pressed("calls.length = 0; document.querySelector('#list > li:last-child [data-testid=delete]').click()", "the delete armed", "document.querySelector('#list > li:last-child [data-testid=delete]').hasAttribute('data-armed')")
+	b.eval("document.querySelector('#list > li:last-child [data-testid=delete]').click()")
 	out = append(out, b.until("the delete", "calls.join(',')"))
 	b.unsize()
 	// The kinds show with two to choose between or one chosen, the projects and the templates with one.
@@ -748,7 +760,8 @@ func uiShelf(t *testing.T, lang i18n.Lang, msg func(string, ...any) string) {
 	// A project's dot is of its color by projectOrder: as many each, by name.
 	b.stub(`[{ slug: 'a', title: 'Alpha', description: '', project: 'p', createdAt: at(1), updatedAt: at(8) },
 		{ slug: 'b', title: 'Beta', description: '', project: 'floe', createdAt: at(1), updatedAt: at(7) }]`)
-	out = append(out, b.eval("[...document.querySelectorAll('#chips [data-testid=chip]')].map((c) => c.dataset.project + ':' + c.style.getPropertyValue('--c')).join(',')"))
+	// The palette's values are named --color-*: read by the name they had before
+	out = append(out, b.eval("[...document.querySelectorAll('#chips [data-testid=chip]')].map((c) => c.dataset.project + ':' + c.style.getPropertyValue('--c').replace('var(--color-', 'var(--')).join(',')"))
 	// The favourites count their own projects, and one is shown: a single one is chosen from, as on the whole list.
 	b.stub(`[{ slug: 'c', title: 'Gamma', description: '', project: 'p', createdAt: at(1), updatedAt: at(9), favorite: true },
 		{ slug: 'b', title: 'Beta', description: '', project: 'q', createdAt: at(1), updatedAt: at(8) }]`)
@@ -827,7 +840,9 @@ func uiShelf(t *testing.T, lang i18n.Lang, msg func(string, ...any) string) {
 	out = append(out, b.until("the new name", "location.pathname === '/a/z2/' && location.pathname"))
 	b.navigate("/a/b/")
 	b.until("the frame's bar", "document.getElementById('frame-title').textContent")
-	b.moving("document.querySelector('#frame-actions [data-testid=delete]').click(); document.querySelector('#frame-actions [data-testid=delete]').click()")
+	b.pressed("document.querySelector('#frame-actions [data-testid=delete]').click()", "the delete armed",
+		"document.querySelector('#frame-actions [data-testid=delete]').hasAttribute('data-armed')")
+	b.moving("document.querySelector('#frame-actions [data-testid=delete]').click()")
 	b.until("the list", "location.pathname === '/'")
 
 	check(t, "shelf", out, strings.Join([]string{
@@ -974,7 +989,7 @@ func uiTags(t *testing.T, lang i18n.Lang, msg func(string, ...any) string) {
 	b.eval("window.drawsSeen.disconnect()")
 	// A tag left on some is left as each page has it.
 	selectOnly("a", "c")
-	b.eval("document.getElementById('bulk-tag').click(); " + box("old") + ".click(); document.getElementById('tag-apply').click()")
+	applyBulkTag(b, box("old"))
 	out = append(out, b.until("the tag to be added", "document.getElementById('bulk').hidden && calls.splice(0).sort().join(',')"))
 	// The find field narrows the boxes; a name no tag has can be made one, marked all, by Enter, sending nothing.
 	selectOnly("b")
@@ -987,13 +1002,14 @@ func uiTags(t *testing.T, lang i18n.Lang, msg func(string, ...any) string) {
 	press(kb.Enter)
 	out = append(out, b.eval(boxes), b.eval("[document.getElementById('tag-dialog').open, calls.length, "+applies+"].join(' ')"))
 	// Cancelled after a change, the dialog opens again with nothing to apply.
-	b.eval("document.querySelector('#tag-dialog [data-close]').click(); document.getElementById('bulk-tag').click()")
+	b.pressed("document.querySelector('#tag-dialog [data-close]').click()", "the tag modal closed", "!document.getElementById('tag-dialog').open")
+	b.pressed("document.getElementById('bulk-tag').click()", "the tag modal open again", "document.getElementById('tag-dialog').open")
 	out = append(out, b.eval(applies))
 	b.eval("document.querySelector('#tag-dialog [data-close]').click()")
 	// A page removed since the list was read leaves the selection unsent.
 	selectOnly("b")
-	b.eval("list = JSON.stringify(JSON.parse(list).filter((a) => a.slug !== 'b')); document.getElementById('bulk-tag').click(); " +
-		box("old") + ".click(); document.getElementById('tag-apply').click()")
+	b.eval("list = JSON.stringify(JSON.parse(list).filter((a) => a.slug !== 'b'))")
+	applyBulkTag(b, box("old"))
 	// The toast comes after the selection is cleared: the words joined are true before it
 	none := "document.getElementById('toasts').textContent.includes(" + js(msg("ui_tag_bulk_none")) + ")"
 	out = append(out, b.until("the gone page to drop", "document.getElementById('bulk').hidden && "+none+" && ["+none+", calls.length].join(' ')"))
@@ -1166,4 +1182,13 @@ func TestUIStubSlowServer(t *testing.T) { //nolint:paralleltest // the browser t
 	// Past when the server's answer would have come, a poll between: the page's clock, from its start.
 	b.until("the server's answer to be late", "performance.now() > 5000 && window.gets >= 3")
 	check(t, "titles drawn", []string{b.eval("[...seen].join(',')")}, "Alpha")
+}
+
+// applyBulkTag opens the tags of the pages selected, presses the box (a JS expression) and applies.
+func applyBulkTag(b *browser, box string) {
+	b.t.Helper()
+
+	b.pressed("document.getElementById('bulk-tag').click()", "the tag modal open", "document.getElementById('tag-dialog').open")
+	b.pressed(box+".click()", "the tag marked", "!document.getElementById('tag-apply').disabled")
+	b.eval("document.getElementById('tag-apply').click()")
 }

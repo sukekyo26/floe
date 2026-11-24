@@ -273,7 +273,50 @@ shellcheck:
 shfmt-check:
     go tool shfmt -i 2 -ci -d install.sh
 
+web_dir := "internal/ui/web"
+
+# Install the management page's packages as pnpm-lock.yaml pins them (Node and pnpm are needed only for the web recipes)
+web-install:
+    cd {{web_dir}} && pnpm install --frozen-lockfile
+
+# Format, type, lint and unit tests of the management page
+web-check: web-install
+    cd {{web_dir}} && pnpm run check
+
+# Build the management page into dist/, which is committed and embedded by Go
+web-build: web-install
+    cd {{web_dir}} && pnpm run build
+
+# The build gives the same bytes twice, and they are the committed dist/; dist/ is left as it is. The copy of Tailwind's
+# license, which no build output holds, is the installed one's.
+web-build-check: web-install
+    #!/usr/bin/env bash
+    set -euo pipefail
+    cd {{web_dir}}
+    # Locally, a dist/ changed by hand or not committed; a fresh checkout in CI always passes this
+    if [ -n "$(git status --porcelain --untracked-files=all -- dist)" ]; then
+        git status --short --untracked-files=all -- dist >&2
+        echo "error: dist differs from what is committed: commit it, or restore it with git checkout -- dist" >&2
+        exit 1
+    fi
+    tmp=$(mktemp -d)
+    trap 'rm -rf "$tmp"' EXIT
+    pnpm run build --outDir "$tmp/one" >/dev/null
+    pnpm run build --outDir "$tmp/two" >/dev/null
+    diff -r "$tmp/one" "$tmp/two" >/dev/null \
+        || { echo "error: two builds of the same source differ: the build is not reproducible" >&2; exit 1; }
+    diff -rq "$tmp/one" dist >&2 \
+        || { echo "error: dist is not the build of src: run just web-build and commit dist" >&2; exit 1; }
+    cmp -s node_modules/tailwindcss/LICENSE tailwindcss.LICENSE \
+        || { echo "error: tailwindcss.LICENSE is not the installed tailwindcss's license: copy node_modules/tailwindcss/LICENSE to it and run just licenses" >&2; exit 1; }
+
 # LIMIT: test runs every package without the race detector; a race is told by CI alone (test-race-core and the
 # browser jobs, all with -race).
 # Pre-push gate of CI's checks
 ci: fmt-check vet lint fix-check test cover-check vuln mod-verify mod-tidy-check shellcheck shfmt-check
+
+# Serve the gallery of the management page's shared components on 127.0.0.1:<port>, in lang (ja or en), for a person to
+# try them: go test writes its boot values, and Vite's dev server serves it. It is never built into dist
+web-gallery port lang="ja": web-install
+    go test ./internal/ui -run '^TestGalleryBoot$' -count=1 -gallery={{lang}}
+    cd {{web_dir}} && pnpm exec vite --config vite.config.ts gallery --host 127.0.0.1 --port {{port}} --strictPort

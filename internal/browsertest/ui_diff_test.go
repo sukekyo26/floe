@@ -348,12 +348,16 @@ func TestUIDiffPick(t *testing.T) { //nolint:paralleltest // the browser tests s
 	// Without the rules for base-select, as a browser that does not read them: the same height and words, the list its own, chosen the same.
 	b.size(1440, 900, false)
 	openDiff(b, "/a/d/?diff")
+	// Every @supports goes, in a layer or a nested rule too (the React build's)
 	b.eval(`(() => {
-		for (const sheet of document.styleSheets) {
-			for (let i = sheet.cssRules.length - 1; i >= 0; i--) {
-				if (sheet.cssRules[i] instanceof CSSSupportsRule) sheet.deleteRule(i);
+		const drop = (group) => {
+			for (let i = group.cssRules.length - 1; i >= 0; i--) {
+				const rule = group.cssRules[i];
+				if (rule instanceof CSSSupportsRule) group.deleteRule(i);
+				else if (rule.cssRules) drop(rule);
 			}
-		}
+		};
+		for (const sheet of document.styleSheets) drop(sheet);
 		document.getElementById('diff-from').focus();
 	})()`)
 	if got := b.eval("getComputedStyle(document.getElementById('diff-from')).appearance + ' ' + getComputedStyle(document.getElementById('diff-from')).height + ' ' + document.getElementById('diff-from').offsetWidth"); strings.HasPrefix(got, "base-select") || !strings.Contains(got, " 32px ") {
@@ -385,18 +389,23 @@ func TestUIDiffClose(t *testing.T) { //nolint:paralleltest // the browser tests 
 			t.Errorf("at %d: %s", width, got)
 		}
 	}
-	// A link drawn as the bar's buttons are, not as a link: as a button with words put beside it (one of a modal's, out of it).
+	// A link drawn as the bar's buttons of words are, not as a link: no line under it, 32px high as TestUIButtons holds
+	// them (the bar's icon buttons are lower), of the small corner, the panel's ground and the words' colour (the
+	// :root's, read as the page has them).
 	const like = `(() => {
-		const close = document.getElementById('diff-close');
-		const other = document.getElementById('move-no').cloneNode(true);
-		other.removeAttribute('id');
-		close.before(other);
-		const a = getComputedStyle(close), v = getComputedStyle(other);
-		const got = a.textDecorationLine + ' ' + (a.color === v.color && a.height === v.height && a.borderRadius === v.borderRadius && a.backgroundColor === v.backgroundColor);
-		other.remove();
-		return got;
+		const a = getComputedStyle(document.getElementById('diff-close')), root = getComputedStyle(document.documentElement);
+		const colour = (name) => {
+			const e = document.createElement('i');
+			e.style.color = root.getPropertyValue(name);
+			document.body.append(e);
+			const c = getComputedStyle(e).color;
+			e.remove();
+			return c;
+		};
+		return [a.textDecorationLine, a.height === '32px', a.borderTopLeftRadius === root.getPropertyValue('--radius-small').trim(),
+			a.color === colour('--color-fg'), a.backgroundColor === colour('--color-panel')].join(' ');
 	})()`
-	if got := b.eval(like); got != "none true" {
+	if got := b.eval(like); got != "none true true true true" {
 		t.Errorf("not like a button of the bar: %s", got)
 	}
 	b.moving("document.getElementById('diff-close').click()")
@@ -881,4 +890,24 @@ func TestUIDiffNotice(t *testing.T) { //nolint:paralleltest // the browser tests
 	check(t, "notice", out, strings.Join([]string{
 		"true", "Sections changed since v1, the version last read: 1 /a/n/?diff", "true", "true", "true",
 	}, "|"))
+}
+
+// TestUIFrameBarFits opens a page of versions whole, whose bar has its choice of versions and its diff's button besides
+// the header's links, at a phone's widths and between 40rem and 56rem: nothing runs off the window, and the name keeps
+// some room. Its diff loads no page in the frame, which would read the latest.
+func TestUIFrameBarFits(t *testing.T) { //nolint:paralleltest // the browser tests share one Chrome, one at a time
+	s := diffSite(t)
+	b := s.b
+	defer b.unsize()
+	out := make([]string, 0, 4)
+	for _, width := range []int64{320, 390, 700} {
+		b.size(width, 800, width < 640)
+		b.navigate("/a/d/")
+		b.until("the bar", "document.getElementById('frame-title').textContent && innerWidth === "+strconv.FormatInt(width, 10))
+		out = append(out, strconv.FormatInt(width, 10)+": "+b.eval("[document.documentElement.scrollWidth <= innerWidth, document.getElementById('frame-title').getBoundingClientRect().width > 0, document.getElementById('frame-version').getClientRects().length > 0].join(' ')"))
+	}
+	b.unsize()
+	openDiff(b, "/a/d/?diff")
+	out = append(out, "diff: "+b.eval("document.getElementById('frame').hasAttribute('src')"))
+	check(t, "the bar", out, "320: true true true|390: true true true|700: true true true|diff: false")
 }

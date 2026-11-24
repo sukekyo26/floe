@@ -1,0 +1,81 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <title>A page of the gallery</title>
+    <style>
+      body {
+        margin: 0;
+        padding: 1.5rem;
+        font:
+          15px/1.6 system-ui,
+          sans-serif;
+        color: #22211f;
+        background: #fff;
+      }
+      button {
+        margin: 0 0.4rem 0.4rem 0;
+        padding: 0.3rem 0.7rem;
+        font: inherit;
+        border: 1px solid #ccc;
+        border-radius: 6px;
+        background: #f6f5f2;
+        cursor: pointer;
+      }
+      code {
+        font-size: 0.9em;
+      }
+    </style>
+  </head>
+  <body>
+    <h1 id="name">A page</h1>
+    <p>
+      Served by the gallery's dev server in the sandbox a page of floe is (origin null). On load it tells its frame the
+      version it was served, as the server's tellRead does.
+    </p>
+    <p>
+      <button id="again">Tell again, as drawn anew (S428)</button>
+      <button id="next">Tell version n + 1</button>
+      <button id="slash">Press / in the page</button>
+      <button id="help">Press ? in the page</button>
+      <button id="open">Open /a/plain/ whole</button>
+      <button id="hash">Move to #part</button>
+      <button id="changed">Tell the versions changed (a diff's)</button>
+    </p>
+    <p id="part">The version told: <code id="told"></code>; the place: <code id="place"></code></p>
+    <p id="floe-diff.0" style="margin-top: 60vh">A place marked, 0 (a diff's)</p>
+    <p id="floe-diff.1" style="margin: 60vh 0">A place marked, 1 (a diff's)</p>
+    <script>
+      // No import: the page is of origin null, and Vite's own scripts would be loaded from it and refused
+      const here = location.protocol + '//' + location.host;
+      const n = Number(new URLSearchParams(location.search).get('v')) || 3;
+      let told = n;
+      const tell = (data) => window.parent.postMessage({ pagePath: location.pathname, ...data }, here);
+      const served = (v) => {
+        told = v;
+        document.getElementById('told').textContent = String(v);
+        tell({ pageServed: { n: v, at: new Date().toISOString() } });
+      };
+      document.getElementById('name').textContent = 'Page ' + location.pathname.split('/')[2];
+      served(n);
+      document.getElementById('again').addEventListener('click', () => served(told));
+      document.getElementById('next').addEventListener('click', () => served(told + 1));
+      document.getElementById('slash').addEventListener('click', () => tell({ pageKey: '/' }));
+      document.getElementById('help').addEventListener('click', () => tell({ pageKey: '?' }));
+      document.getElementById('open').addEventListener('click', () => tell({ pageOpen: '/a/plain/' }));
+      document.getElementById('place').textContent = location.hash || '(none)';
+      addEventListener('hashchange', () => {
+        document.getElementById('place').textContent = location.hash;
+      });
+      document.getElementById('changed').addEventListener('click', () => tell({ pageChanged: true }));
+      // The gallery asks it to tell, as a page that changed would: its frame takes it only while shown
+      addEventListener('message', (e) => {
+        if (e.data?.galleryTell === 'changed') tell({ pageChanged: true });
+      });
+      document.getElementById('hash').addEventListener('click', () => {
+        location.hash = '#part';
+        tell({ pageHash: location.hash });
+      });
+    </script>
+  </body>
+</html>

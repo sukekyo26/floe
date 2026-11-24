@@ -77,7 +77,7 @@ func TestUITaskCategories(t *testing.T) { //nolint:paralleltest // the browser t
 		}
 		return w.Name + "/" + w.Category
 	}
-	const groups = "[...document.querySelectorAll('#list li')].map((li) => li.dataset.testid === 'group' ? '[' + li.querySelector('[role=heading]').textContent + (li.querySelector('[data-testid=category-add]') ? '+' : '') + (li.querySelector('[data-testid=category-empty]') ? ' none' : '') + ']' : li.dataset.slug).join(' ')"
+	const groups = "[...document.querySelectorAll('#list li')].map((li) => li.dataset.testid === 'group' ? '[' + li.querySelector('[role=heading]').textContent + (li.querySelector('[data-testid=category-empty]') ? ' none' : '') + ']' : li.dataset.slug).join(' ')"
 	const options = "[...document.querySelectorAll('#add-page-list li')].map((li) => li.querySelector('[data-testid=title]').textContent.slice(2) + (li.querySelector('[data-testid=badge]') ? ' (' + li.querySelector('[data-testid=badge]').textContent + ')' : '')).join(', ')"
 	const lastToast = "[...document.querySelectorAll('#toasts [data-testid=toast]')].at(-1)?.textContent.trim()"
 	// The writes, as sent, and how many the server has answered: one sent may not be written yet
@@ -91,10 +91,14 @@ func TestUITaskCategories(t *testing.T) { //nolint:paralleltest // the browser t
 		b.until("the task's rows", "document.querySelector('#list li[data-slug]') && document.getElementById('task-title').textContent.includes("+js(task)+")")
 		record()
 	}
+	// add opens Add a page from the task's head and chooses the category in it, none left as it opens
 	add := func(category string) {
 		t.Helper()
-		b.eval("const a = document.querySelector('#list li[data-key=\"group:' + " + js(category) + " + '\"] [data-testid=category-add]'); a.focus(); a.click()")
+		b.eval("const a = document.getElementById('task-add-page'); a.focus(); a.click()")
 		b.until("the modal", "document.getElementById('add-page-dialog').open")
+		if category != "" {
+			chooseValue(b, "add-page-category", category)
+		}
 	}
 	query := func(words string) {
 		t.Helper()
@@ -118,20 +122,21 @@ func TestUITaskCategories(t *testing.T) { //nolint:paralleltest // the browser t
 		b.click(r.X+r.Width/2, r.Y+r.Height/2)
 	}
 
-	// Every category a heading with its add button, one of no page saying so; the categories' none has none. The archived page is under its category,
-	// after the rest.
+	// Every category a heading, one of no page saying so, no category's only as it has pages; no heading has a button, the task's head has one.
+	// The archived page is under its category, after the rest.
 	open("S300")
 	say("groups", groups)
 	say("keys apart", "(() => { const keys = [...document.querySelectorAll('#list li')].map((li) => li.dataset.key); return new Set(keys).size === keys.length; })()")
-	say("named", "document.querySelector('#list li[data-key=\"group:リリース\"] .category-add').getAttribute('aria-label')")
-	// The modal: none reached, so Enter puts nothing; the pages of the project, not archived, not of this category, each saying where it is.
+	say("named", "document.querySelectorAll('#list li[data-testid=group] button').length + ' ' + document.getElementById('task-add-page').textContent")
+	// The modal, its category chosen in it, none at first: none reached, so Enter puts nothing; the pages of the project, not archived, not of this category, each saying where it is.
 	add("リリース")
 	say("opened", "document.getElementById('add-page-title').textContent + ' / ' + document.getElementById('add-page-target').textContent + ' / ' + document.activeElement.id + ' / ' + document.getElementById('add-page-q').getAttribute('aria-activedescendant')")
+	say("category", "[...document.getElementById('add-page-category').options].map((o) => (o.selected ? '*' : '') + o.textContent).join(',')")
 	say("options", options)
 	say("no link", "document.querySelectorAll('#add-page-list a').length")
 	b.pressKey(kb.Enter)
 	say("nothing reached", "sent.length + ' ' + document.getElementById('add-page-dialog').open")
-	// Words narrow them; ↓ and Enter put the one reached: the task first, as read, then the page, which alone holds its category; closed, the focus on the category's button.
+	// Words narrow them; ↓ and Enter put the one reached: the task first, as read, then the page, which alone holds its category; closed, the focus on the head's button.
 	query("check")
 	say("narrowed", options)
 	b.pressKey(kb.ArrowDown)
@@ -139,7 +144,7 @@ func TestUITaskCategories(t *testing.T) { //nolint:paralleltest // the browser t
 	b.until("closed", "!document.getElementById('add-page-dialog').open && document.querySelector('#list li[data-slug=check-a]')")
 	say("put", "sent.join(' ; ')")
 	say("put, told", lastToast)
-	say("put, focus", "document.activeElement.getAttribute('aria-label')")
+	say("put, focus", "document.activeElement.id")
 	out = append(out, "put, written: "+row("S300")+" / "+pageTask("check-a"))
 	say("put, groups", groups)
 
@@ -300,20 +305,41 @@ func TestUITaskCategories(t *testing.T) { //nolint:paralleltest // the browser t
 	say("dialog, escape", "document.activeElement.tagName + ' ' + document.activeElement.closest('li')?.dataset.slug")
 	out = append(out, "dialog, written: "+pageTask("build-a"))
 
+	// Added under no category, as the modal opens again whatever was chosen before: the page of a category of this task moves under it, sent
+	// with the category empty, and no category's heading comes; closed, the focus back on the head's button.
+	open("S300")
+	// Not opened over another modal, as a script's press reaches the button under it
+	b.eval("document.getElementById('find-open').click()")
+	b.until("the search", "document.getElementById('find').open")
+	b.eval("document.getElementById('task-add-page').click()")
+	say("none, under the search", "document.getElementById('add-page-dialog').open")
+	b.pressKey(kb.Escape)
+	b.until("the search closed", "!document.getElementById('find').open")
+	add("")
+	say("none, opened", "document.getElementById('add-page-title').textContent + ' / ' + document.getElementById('add-page-category').value")
+	query("review")
+	b.pressKey(kb.ArrowDown)
+	b.pressKey(kb.Enter)
+	b.until("closed", "!document.getElementById('add-page-dialog').open && document.querySelector('#list li[data-key=\"group:\"] + li[data-slug=review-a]')")
+	say("none, put", "sent.join(' ; ').replace(/\"rev\":\\d+/, '\"rev\":n')")
+	say("none, focus", "document.activeElement.id")
+	out = append(out, "none, written: "+pageTask("review-a"))
+
 	check(t, "task categories", out, strings.Join([]string{
-		"groups: note-a [案+] plan-a old-a [実装+] build-a [リリース+ none] [レビュー+] review-a",
+		"groups: [No category] note-a [案] plan-a old-a [実装] build-a [リリース none] [レビュー] review-a",
 		"keys apart: true",
-		"named: Add a page to リリース",
-		"opened: Add a page to リリース / S300 Categories / add-page-q / null",
+		"named: 0 Add a page",
+		"opened: Add a page / S300 Categories / add-page-q / null",
+		"category: No category,案,実装,*リリース,レビュー",
 		"options: g-a (G2 · x), other-a (S301 · 設計), check-a, memo-a, note-a (this task's no category), review-a (this task's レビュー), build-a (this task's 実装), plan-a (this task's 案)",
 		"no link: 0",
 		"nothing reached: 0 true",
 		"narrowed: check-a",
 		`put: /api/tasks {"slugs":["check-a"],"task":"S300","category":"リリース","new":false,"rev":6}`,
 		"put, told: Put T check-a under リリース",
-		"put, focus: Add a page to リリース",
+		"put, focus: task-add-page",
 		"put, written: 7 / S300/リリース",
-		"put, groups: note-a [案+] plan-a old-a [実装+] build-a [リリース+] check-a [レビュー+] review-a",
+		"put, groups: [No category] note-a [案] plan-a old-a [実装] build-a [リリース] check-a [レビュー] review-a",
 		"stale: Failed to save: task S300 has changed since it was read; the tasks are read again, so check and save again / true / memo-a",
 		"stale, typed: true",
 		`stale, then: /api/tasks {"slugs":["memo-a"],"task":"S300","category":"リリース","new":false,"rev":7} ; /api/tasks {"slugs":["memo-a"],"task":"S300","category":"リリース","new":false,"rev":8}`,
@@ -326,13 +352,13 @@ func TestUITaskCategories(t *testing.T) { //nolint:paralleltest // the browser t
 		"no: 0 true add-page-q true",
 		"moved from a task: Moved T other-a from S301's 設計 to 案",
 		"moved from a category: Moved T build-a from 実装 to リリース",
-		"moved, groups: [案+] plan-a note-a other-a old-a [実装+ none] [リリース+] build-a memo-a check-a [レビュー+] review-a",
+		"moved, groups: [案] plan-a note-a other-a old-a [実装 none] [リリース] build-a memo-a check-a [レビュー] review-a",
 		"moved since, told: Put T other-a under 案",
 		"narrow: true",
 		`off: /api/tasks {"slugs":["review-a"],"task":"","category":""}`,
 		"off, told: Took T review-a off task S300Undo",
 		"off, focus: check-a",
-		"off, groups: [案+] plan-a note-a other-a old-a [実装+ none] [リリース+] build-a memo-a check-a [レビュー+ none]",
+		"off, groups: [案] plan-a note-a other-a old-a [実装 none] [リリース] build-a memo-a check-a [レビュー none]",
 		`back: /api/tasks {"slugs":["review-a"],"task":"S300","category":"レビュー","new":false,"rev":12}`,
 		"back, written: 13 / S300/レビュー",
 		"back, stale: Failed to save: task S300 has changed since it was read; the tasks are read again, so check and save again",
@@ -347,5 +373,10 @@ func TestUITaskCategories(t *testing.T) { //nolint:paralleltest // the browser t
 		"dialog, focus: undo",
 		"dialog, escape: SUMMARY build-a",
 		"dialog, written: none",
+		"none, under the search: false",
+		"none, opened: Add a page / ",
+		`none, put: /api/tasks {"slugs":["review-a"],"task":"S300","category":"","new":false,"rev":n}`,
+		"none, focus: task-add-page",
+		"none, written: S300/",
 	}, "|"))
 }

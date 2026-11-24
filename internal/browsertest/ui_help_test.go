@@ -163,6 +163,25 @@ func TestUIHelp(t *testing.T) { //nolint:paralleltest // the browser tests share
 	}
 	shut("keys")
 
+	// On a task's page, ? tells of d as the bar beside the list shows its diff: not with no page open, but with one of two versions.
+	b.size(1440, 900, false)
+	s.floe(t, "publish", s.page(t, "a.yaml", "T a", "<p>two</p>"), "--slug", "a")
+	open("/tasks?project=proj&task=%231")
+	b.until("the row", "document.querySelector('#list li[data-slug=a]')")
+	const diffRow = "((l) => l.length > 0 && l.every((e) => !e.hidden))([...document.querySelectorAll('#keys [data-testid=diff-go]')])"
+	diffTold := func(name string) {
+		t.Helper()
+		b.eval("document.activeElement.blur()")
+		keyDown(b, "key: '?', shiftKey: true")
+		b.until("the help", "document.getElementById('keys').open")
+		out = append(out, name+" "+b.eval(diffRow))
+		shut("keys")
+	}
+	diffTold("no page")
+	b.eval("document.querySelector('#list li[data-slug=a] [data-testid=title]').click()")
+	b.until("the diff's button beside", "document.querySelector('#read-actions [data-testid=diff-open]:not([hidden])')")
+	diffTold("a page")
+
 	// The bar's button is there from 641px, not at 640px.
 	const button = "getComputedStyle(document.getElementById('keys-open')).display !== 'none'"
 	for _, width := range []int64{641, 640} {
@@ -181,6 +200,8 @@ func TestUIHelp(t *testing.T) { //nolint:paralleltest // the browser tests share
 		"About the task list 1 5 2 0 0 0", "About the page list 1 4 2 0 0 0",
 		// a window of 660 by 600: the box scrolls alone, and goes back to its top on a switch and on opening
 		"true true true true", "true", "0", "true", "0", "0",
+		// d told on a task's page as its diff shows beside the list
+		"no page false", "a page true",
 		// the button from 641px
 		"true", "false",
 	}, "|"))

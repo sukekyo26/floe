@@ -1,7 +1,6 @@
-// Package lint holds the rules of floe's CSS that are read in its text (.claude/rules/css.md, and ui.md for the
-// management page), each a Rule of Rules, named as its line of the rules names it. It reads CSS by internal/css's Tokens
-// alone (read.go) and is imported by no product code: TestLintRule runs each rule on floe's own files, on a good example
-// and on a bad one (testdata/<name>).
+// Package lint holds the rules of floe's CSS that are read in its text (.claude/rules/css.md), each a Rule of Rules,
+// named as its line of the rules names it. It reads CSS by internal/css's Tokens alone (read.go) and is imported by no
+// product code: TestLintRule runs each rule on floe's own files, on a good example and on a bad one (testdata/<name>).
 package lint
 
 import (
@@ -71,7 +70,6 @@ type Input struct {
 	defaults []byte            // floe's defaults.css
 	docs     fs.FS             // floe's docs
 	pages    fs.FS             // pages floe drew, the HTML (every-part)
-	ui       []byte            // the management page, ui.html
 	allow    map[string]string // the exceptions in force: a key and its reason
 	used     map[string]bool   // the keys of allow looked up and found
 	seen     int               // what the rule looked at (Saw)
@@ -161,9 +159,6 @@ func (in *Input) Docs() fs.FS { return in.docs }
 // Pages returns the pages floe drew.
 func (in *Input) Pages() fs.FS { return in.pages }
 
-// UI returns the management page.
-func (in *Input) UI() []byte { return in.ui }
-
 // Exceptions returns the keys of the exceptions in force, in order.
 func (in *Input) Exceptions() []string { return slices.Sorted(maps.Keys(in.allow)) }
 
@@ -183,8 +178,6 @@ func (in *Input) Allowed(key string) bool {
 var Rules = []Rule{
 	codeLook,
 	defaultsRoot,
-	manageColours,
-	manageCornersRule,
 	onePlace,
 	paletteInDocs,
 	partVariables,

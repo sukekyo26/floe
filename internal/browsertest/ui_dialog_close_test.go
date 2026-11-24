@@ -1,6 +1,7 @@
 package browsertest_test
 
 import (
+	"fmt"
 	"strconv"
 	"strings"
 	"testing"
@@ -169,7 +170,7 @@ func TestUIDialogClose(t *testing.T) { //nolint:paralleltest // the browser test
 		t.Helper()
 		tags++
 		b.fill("#tag-find", "n"+strconv.Itoa(tags))
-		b.eval("document.getElementById('tag-new').click(); document.getElementById('tag-apply').click()")
+		applyNewTag(b)
 	}
 
 	// Tags: a row's menu, by each way of closing
@@ -429,8 +430,9 @@ func TestUIDialogClose(t *testing.T) { //nolint:paralleltest // the browser test
 	open("/tasks?project=proj&task=S300")
 	addTo := func(category string) {
 		t.Helper()
-		b.eval("const a = document.querySelector('#list li[data-key=\"group:" + category + "\"] [data-testid=category-add]'); a.focus(); a.click()")
+		b.eval("const a = document.getElementById('task-add-page'); a.focus(); a.click()")
 		until("add-page-dialog", true)
+		chooseValue(b, "add-page-category", category)
 	}
 	find := func(words string) {
 		t.Helper()
@@ -470,6 +472,26 @@ func TestUIDialogClose(t *testing.T) { //nolint:paralleltest // the browser test
 	b.pressKey(kb.Escape)
 	until("edit-task-dialog", false)
 	say("edit task, escape")
+	// The add modal over the edit modal: Escape and the backdrop close it alone, the focus back on the button that opened it
+	b.eval("document.getElementById('task-edit').click()")
+	until("edit-task-dialog", true)
+	for _, c := range []struct {
+		name  string
+		close func()
+	}{
+		{"escape", escape},
+		{"backdrop", backdrop("edit-add-dialog")},
+	} {
+		b.eval("document.getElementById('edit-url-plus').focus(); document.getElementById('edit-url-plus').click()")
+		until("edit-add-dialog", true)
+		c.close()
+		until("edit-add-dialog", false)
+		out = append(out, "edit add, "+c.name+", edit open: "+b.eval("document.getElementById('edit-task-dialog').open"))
+		say("edit add, " + c.name)
+	}
+	b.pressKey(kb.Escape)
+	until("edit-task-dialog", false)
+	b.eval("closings.length = 0")
 	b.eval("document.getElementById('task-child').focus(); document.getElementById('task-child').click()")
 	until("kin-dialog", true)
 	b.pressKey(kb.Escape)
@@ -504,6 +526,73 @@ func TestUIDialogClose(t *testing.T) { //nolint:paralleltest // the browser test
 	b.pressKey(kb.Escape)
 	until("settings", false)
 	say("settings, bar, escape")
+	// From the search's menu, on the list and on a task's page: the search closed first, so that the settings open
+	for _, at := range []string{"/", "/tasks?project=proj&task=S300"} {
+		open(at)
+		fromFind("theme-item")()
+		until("settings", true)
+		b.pressKey(kb.Escape)
+		until("settings", false)
+		say("settings, find, escape, " + at)
+	}
+	// Opened on a task's page, by the bar's button, a row's "…" and the search's "…": the focus on the settings' title, not
+	// on a way back drawn for a moment. Each page's themes after the bar's, which opens on no page
+	bar := run("document.getElementById('settings-open').click()")
+	for _, c := range []struct {
+		name   string
+		opener func()
+	}{
+		{"bar", bar},
+		{"row", rowMenu("plan-a", "theme-item")},
+		{"bar", bar},
+		{"find", fromFind("theme-item")},
+	} {
+		c.opener()
+		until("settings", true)
+		b.still()
+		out = append(out, "settings opened, "+c.name+": "+b.eval("document.activeElement.id"))
+		b.pressKey(kb.Escape)
+		until("settings", false)
+		b.eval("closings.length = 0; sent.length = 0")
+	}
+	// A task's page opens and closes as the list does: Ctrl+K the search and again shut, ? the help, and a row's "…" shut
+	// by a press outside it and by Escape
+	keyDown := func(key string, ctrl bool) {
+		t.Helper()
+		b.eval(fmt.Sprintf("document.body.dispatchEvent(new KeyboardEvent('keydown', { bubbles: true, cancelable: true, key: %s, ctrlKey: %t }))", js(key), ctrl))
+	}
+	keysMenus := make([]string, 0, 4)
+	b.eval("document.activeElement.blur()")
+	keyDown("k", true)
+	until("find", true)
+	keyDown("k", true)
+	until("find", false)
+	keysMenus = append(keysMenus, "ctrl+k")
+	b.eval("document.activeElement.blur()")
+	keyDown("?", false)
+	until("keys", true)
+	escape()
+	until("keys", false)
+	keysMenus = append(keysMenus, "?")
+	const more = "document.querySelector('#list li[data-slug=plan-a] [data-testid=more]')"
+	for _, c := range []struct {
+		name  string
+		close func()
+	}{
+		{"a press outside", func() { press("document.querySelector('[data-testid=bar-inner]')") }},
+		{"escape", escape},
+	} {
+		// The menu is the screen's open one as its toggle, which comes after the press, is told
+		b.eval("window.menuToggled = false; " + more + ".addEventListener('toggle', () => { window.menuToggled = true; }, { once: true }); " +
+			more + ".querySelector('summary').focus(); " + more + ".querySelector('summary').click()")
+		b.until("the menu open", more+".open && window.menuToggled")
+		c.close()
+		b.until("the menu shut by "+c.name, "!"+more+".open")
+		keysMenus = append(keysMenus, "menu, "+c.name)
+	}
+	b.eval("closings.length = 0; sent.length = 0")
+	check(t, "a task's page", keysMenus, "ctrl+k|?|menu, a press outside|menu, escape")
+	open("/")
 
 	// The search modal opened from the body, a row reached: Escape leaves no field to take the Enter after it
 	b.eval("document.activeElement.blur(); document.body.dispatchEvent(new KeyboardEvent('keydown', { bubbles: true, cancelable: true, key: 'k', ctrlKey: true }))")
@@ -533,6 +622,9 @@ func TestUIDialogClose(t *testing.T) { //nolint:paralleltest // the browser test
 	until("filter-dialog", true)
 	b.eval("document.getElementById('add-link').focus(); document.getElementById('add-link').click()")
 	until("add-dialog", true)
+	// The add modal opened has the focus; it is drawn open in a microtask after the press, so the close of the filters reads the
+	// focus still on the filters' button there, as no person can see
+	b.until("the focus in the add modal", "document.activeElement?.id === 'add-path'")
 	b.pressKey(kb.Escape)
 	until("add-dialog", false)
 	say("filter, a button of the shelf, then escape")
@@ -563,7 +655,7 @@ var dialogCloseWant = []string{
 	"edit, bar, escape: edit-dialog > bar More for T plan-a 2",
 	"edit, heading pressed, escape: edit-dialog > list More for T plan-a 2",
 	"edit, search, save: find > edit-dialog edit-name, edit-dialog > body / sent 1",
-	"edit, search from a row, save: find > edit-dialog edit-name, edit-dialog > body / sent 1",
+	"edit, search from a row, save: find > edit-dialog edit-name, edit-dialog > list A T memo-a / sent 1",
 	"edit, search, escape: find > edit-dialog edit-name, edit-dialog > body",
 	"edit, search from a row, escape: find > edit-dialog edit-name, edit-dialog > list A T memo-a",
 	"edit, row gone, escape: edit-dialog > body",
@@ -588,12 +680,16 @@ var dialogCloseWant = []string{
 	"move, no, set open: true",
 	"move, escape: move-dialog > set-dialog set-submit",
 	"move, escape, set open: true",
-	"add page, enter: add-page-dialog > list Add a page to 実装 / sent 1",
-	"add page, moved, yes and enter: move-dialog > add-page-dialog add-page-q, add-page-dialog > list Add a page to 実装 / sent 1",
-	"add page, cancel: add-page-dialog > list Add a page to 案",
-	"add page, backdrop: add-page-dialog > list Add a page to 案",
-	"add page, escape: add-page-dialog > list Add a page to 案",
+	"add page, enter: add-page-dialog > task-add-page / sent 1",
+	"add page, moved, yes and enter: move-dialog > add-page-dialog add-page-q, add-page-dialog > task-add-page / sent 1",
+	"add page, cancel: add-page-dialog > task-add-page",
+	"add page, backdrop: add-page-dialog > task-add-page",
+	"add page, escape: add-page-dialog > task-add-page",
 	"edit task, escape: edit-task-dialog > task-edit",
+	"edit add, escape, edit open: true",
+	"edit add, escape: edit-add-dialog > edit-task-dialog edit-url-plus",
+	"edit add, backdrop, edit open: true",
+	"edit add, backdrop: edit-add-dialog > edit-task-dialog edit-url-plus",
 	"kin, escape: kin-dialog > task-child",
 	"kin, save: kin-dialog > task-child / sent 1",
 	"settings, page, save: settings > list More for T plan-a 4",
@@ -601,10 +697,24 @@ var dialogCloseWant = []string{
 	"settings, page, backdrop: settings > list More for T plan-a 4",
 	"settings, page, escape: settings > list More for T plan-a 4",
 	"settings, bar, escape: settings > settings-open",
+	"settings, find, escape, /: find > settings settings-title, settings > body",
+	"settings, find, escape, /tasks?project=proj&task=S300: find > settings settings-title, settings > body",
+	"settings opened, bar: settings-title",
+	"settings opened, row: settings-title",
+	"settings opened, bar: settings-title",
+	"settings opened, find: settings-title",
 	"search, escape: find > body",
 	"search, still: /",
 	"keys, escape: keys > keys-open",
 	"add-dialog, escape: add-dialog > add-link",
 	"filter, escape: filter-dialog > narrow-filter",
-	"filter, a button of the shelf, then escape: filter-dialog > add-dialog add-path, add-dialog > narrow-filter",
+	"filter, a button of the shelf, then escape: filter-dialog > narrow-filter, add-dialog > narrow-filter",
+}
+
+// applyNewTag marks the tag typed in #tag-find as new and sends it.
+func applyNewTag(b *browser) {
+	b.t.Helper()
+
+	b.pressed("document.getElementById('tag-new').click()", "the new tag marked", "!document.getElementById('tag-apply').disabled")
+	b.eval("document.getElementById('tag-apply').click()")
 }

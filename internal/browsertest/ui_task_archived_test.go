@@ -70,7 +70,7 @@ func TestUITaskArchivedInCategory(t *testing.T) { //nolint:paralleltest // the b
 		return "(() => { const li = document.querySelector(" + js(sel) + "); return [li.querySelector('[data-testid=lead] span')?.dataset.testid, li.dataset.unread === 'true', getComputedStyle(li.querySelector('[data-testid=title]')).fontWeight, Boolean(li.querySelector('[data-testid=ver]'))].join(' '); })()"
 	}
 	// Whether an element's colour is the palette's muted
-	const muted = "((e) => { const m = document.createElement('span'); m.style.color = 'var(--muted)'; document.body.append(m); const c = getComputedStyle(m).color; m.remove(); return getComputedStyle(e).color === c; })"
+	const muted = "((e) => { const m = document.createElement('span'); m.style.color = 'var(--color-muted)'; document.body.append(m); const c = getComputedStyle(m).color; m.remove(); return getComputedStyle(e).color === c; })"
 	const badge = "((e) => { const s = getComputedStyle(e); return [e.textContent, s.paddingLeft, s.fontWeight].join(' '); })"
 	open := func() {
 		t.Helper()
@@ -157,7 +157,7 @@ func TestUITaskArchivedInCategory(t *testing.T) { //nolint:paralleltest // the b
 	say("unread after archived", "(async () => deleted + ' ' + Boolean(await "+pageNews("a2")+"))()")
 
 	check(t, "task archived in category", out, strings.Join([]string{
-		"groups: fold* [案] a1 a2 a0* [設計] v1 v0* [旧] o1* [新] n1",
+		"groups: [No category] fold* [案] a1 a2 a0* [設計] v1 v0* [旧] o1* [新] n1",
 		"a0: ring false 500 false",
 		"a1: dot true 700 false",
 		"v0: ring false 500 false",
@@ -169,9 +169,9 @@ func TestUITaskArchivedInCategory(t *testing.T) { //nolint:paralleltest // the b
 		"find: ring false true Archived 4.8px 400",
 		"set categories: 案, 設計, 旧, 新",
 		"escape: a1 title",
-		"archived a1: fold* [案] a2 a1* a0* [設計] v1 v0* [旧] o1* [新] n1",
-		"stayed: fold* [案] a2 a1* a0* [設計] v1* v0* [旧] o1* [新] n1 / v1 true",
-		"given back: fold* [案] a0 a2 a1* [設計] v1* v0* [旧] o1* [新] n1",
+		"archived a1: [No category] fold* [案] a2 a1* a0* [設計] v1 v0* [旧] o1* [新] n1",
+		"stayed: [No category] fold* [案] a2 a1* a0* [設計] v1* v0* [旧] o1* [新] n1 / v1 true",
+		"given back: [No category] fold* [案] a0 a2 a1* [設計] v1* v0* [旧] o1* [新] n1",
 		"given back, focus: v1 title",
 		"shelf: ring false 500 false false",
 		"opened v1: true",
