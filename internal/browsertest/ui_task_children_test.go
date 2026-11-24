@@ -632,7 +632,7 @@ func TestUITaskSetTitle(t *testing.T) { //nolint:paralleltest // the browser tes
 
 	// A page whole reads no tasks as its list is read: refused, it reads them itself.
 	b.navigate("/a/a/")
-	b.until("the bar", "document.querySelector('#frame-actions [data-testid=task-set]')")
+	b.until("the bar", "document.querySelector('#frame-actions [data-testid=more]')")
 	pressMenuItem(b, "#frame-actions", "task-set")
 	b.until("the dialog", "document.getElementById('set-dialog').open")
 	field("set-task", "#92")

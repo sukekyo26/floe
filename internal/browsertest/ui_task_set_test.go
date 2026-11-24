@@ -56,7 +56,7 @@ func TestUITaskSet(t *testing.T) { //nolint:paralleltest // the browser tests sh
 		}
 		return strings.Join(names, "; ")
 	}
-	const items = topsJS + `(document.querySelector('#list li[data-slug=SLUG] [data-testid=menu]')).filter((e) => !e.hidden).map((e) => e.dataset.testid).join(' ')`
+	const items = topsJS + `(m).filter((e) => !e.hidden).map((e) => e.dataset.testid).join(' ')`
 	menu := func(slug, item string) {
 		t.Helper()
 		pressMenuItem(b, "#list li[data-slug="+slug+"]", item)
@@ -83,9 +83,9 @@ func TestUITaskSet(t *testing.T) { //nolint:paralleltest // the browser tests sh
 	b.navigate("/?project=proj")
 	b.until("the rows", "document.querySelector('#list li[data-slug=b] [data-testid=task-tag]')")
 	say("tags", "[...document.querySelectorAll('[data-testid=task-tag]')].map((e) => e.textContent + ' ' + e.getAttribute('href')).join(', ')")
-	say("items of a page on a task", strings.ReplaceAll(items, "SLUG", "b"))
-	say("items of a page on none", strings.ReplaceAll(items, "SLUG", "a"))
-	say("open the task", "document.querySelector('#list li[data-slug=b] [data-testid=task-open]').textContent + ' ' + document.querySelector('#list li[data-slug=b] [data-testid=task-open]').getAttribute('href')")
+	say("items of a page on a task", inMenu("#list li[data-slug=b]", items))
+	say("items of a page on none", inMenu("#list li[data-slug=a]", items))
+	say("open the task", inMenuItem("#list li[data-slug=b]", "task-open", "i.textContent + ' ' + i.getAttribute('href')"))
 
 	// Its items look alike, the pin's too.
 	const moreOf = "document.querySelector('#list li[data-slug=b] [data-testid=more] > summary')"
@@ -93,12 +93,12 @@ func TestUITaskSet(t *testing.T) { //nolint:paralleltest // the browser tests sh
 	b.until("the items", "document.querySelector('#list li[data-slug=b] [data-testid=menu] [data-testid=edit]').checkVisibility()")
 	say("the items' looks", "[...new Set(['pin-item', 'task-set', 'edit'].map((name) => { const c = getComputedStyle(document.querySelector('#list li[data-slug=b] [data-testid=menu] [data-testid=' + name + ']')); return [c.borderTopWidth, c.borderTopColor, c.backgroundColor, c.paddingLeft, c.height, c.borderRadius].join(' '); }))].length")
 	b.eval(moreOf + ".click()")
-	b.until("the menu closed", "!document.querySelector('#list li[data-slug=b] [data-testid=menu] [data-testid=edit]').checkVisibility()")
+	b.until("the menu closed", "!document.querySelector('#list li[data-slug=b] [data-testid=more]').open")
 
 	// A pin on and off, from the menu.
 	menu("a", "pin-item")
-	b.until("pinned, drawn", "document.querySelector('#list li[data-slug=a] [data-testid=task-tag]') && document.querySelector('#list li[data-slug=a] [data-testid=pin-item]').textContent === 'Take the pin off'")
-	say("pinned", "document.querySelector('#list li[data-slug=a] [data-testid=task-tag]').textContent + ' ' + document.querySelector('#list li[data-slug=a] [data-testid=task-tag]').getAttribute('href') + ' ' + document.querySelector('#list li[data-slug=a] [data-testid=pin-item]').textContent")
+	b.until("pinned, drawn", "document.querySelector('#list li[data-slug=a] [data-testid=task-tag]') && "+inMenuItem("#list li[data-slug=a]", "pin-item", "i.textContent")+" === 'Take the pin off'")
+	say("pinned", "document.querySelector('#list li[data-slug=a] [data-testid=task-tag]').textContent + ' ' + document.querySelector('#list li[data-slug=a] [data-testid=task-tag]').getAttribute('href') + ' ' + "+inMenuItem("#list li[data-slug=a]", "pin-item", "i.textContent"))
 	out = append(out, "pinned: "+pageTask("a"))
 
 	// A name of no task: new, doing; the suggestions name what there is, and say it is new. The dialog has no field of a task's parent or URL.
@@ -266,7 +266,7 @@ func TestUITaskSet(t *testing.T) { //nolint:paralleltest // the browser tests sh
 	s.floe(t, "archive", "a")
 	b.navigate("/?view=archived&project=proj")
 	b.until("the archive", "document.querySelector('#list li[data-slug=a]')")
-	say("an archived page", "document.querySelector('#list li[data-slug=a] [data-testid=pin-item]').hidden + ' ' + document.querySelectorAll('#list li[data-slug=a] [data-testid=task-tag]').length")
+	say("an archived page", inMenuItem("#list li[data-slug=a]", "pin-item", "i.hidden")+" + ' ' + document.querySelectorAll('#list li[data-slug=a] [data-testid=task-tag]').length")
 	s.floe(t, "archive", "--undo", "a")
 	if got := pageTask("a"); got != `{"pin":true}` {
 		t.Errorf("archived and back: %s", got)
@@ -288,7 +288,7 @@ func TestUITaskSet(t *testing.T) { //nolint:paralleltest // the browser tests sh
 	// From a page whole, which reads the tasks as it opens: a task written since is that task as written.
 	s.floe(t, "task", "--slug", "b", "--task", "#1", "--category", "whole")
 	b.navigate("/a/b/")
-	b.until("the bar", "document.querySelector('#frame-actions [data-testid=task-set]')")
+	b.until("the bar", "document.querySelector('#frame-actions [data-testid=more]')")
 	pressMenuItem(b, "#frame-actions", "task-set")
 	b.until("the dialog", "document.getElementById('set-dialog').open")
 	say("whole", fields)
@@ -297,7 +297,7 @@ func TestUITaskSet(t *testing.T) { //nolint:paralleltest // the browser tests sh
 	// On the task's own page the way to it is not offered.
 	b.navigate("/tasks?project=proj&task=%231")
 	b.until("the row", "document.querySelector('#list li[data-slug=b]')")
-	say("on its own task", "document.querySelector('#list li[data-slug=b] [data-testid=task-open]').hidden + ' ' + document.querySelectorAll('#list [data-testid=task-tag]').length")
+	say("on its own task", inMenuItem("#list li[data-slug=b]", "task-open", "i.hidden")+" + ' ' + document.querySelectorAll('#list [data-testid=task-tag]').length")
 
 	// The suggestions say what a task is in, cut to their box; put on a task, the toast says it too, and leads there.
 	s.floe(t, "task", "--task", "#5", "--project", "proj", "--title", strings.Repeat("A very long title ", 6), "--state", "done")

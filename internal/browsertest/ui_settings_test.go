@@ -22,10 +22,7 @@ func closeSettings(b *browser) {
 func openPageThemes(b *browser, slug string) {
 	b.t.Helper()
 
-	row := "#list li[data-slug=" + slug + "] "
-	b.eval("document.querySelector(" + js(row+"[data-testid=more] summary") + ").click()")
-	b.until("the menu's theme item", "document.querySelector("+js(row+"[data-testid=theme-item]")+").checkVisibility()")
-	b.eval("document.querySelector(" + js(row+"[data-testid=theme-item]") + ").click()")
+	pressMenuItem(b, "#list li[data-slug="+slug+"]", "theme-item")
 	b.until("the themes", "document.getElementById('settings').open")
 }
 
@@ -210,7 +207,7 @@ func TestUIPageTheme(t *testing.T) { //nolint:paralleltest // the browser tests 
 	b.size(1440, 900, false)
 	defer b.unsize()
 	b.navigate("/")
-	b.until("the row", "document.querySelector('#list li[data-slug=p] [data-testid=theme-item]')")
+	b.until("the row", "document.querySelector('#list li[data-slug=p] [data-testid=more]')")
 	open := func() {
 		t.Helper()
 		openPageThemes(b, "p")

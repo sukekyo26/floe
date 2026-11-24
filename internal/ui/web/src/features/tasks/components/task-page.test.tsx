@@ -9,6 +9,8 @@ import { TaskNone } from '@/features/tasks/components/task-none';
 import { TaskPageRows } from '@/features/tasks/components/task-page-rows';
 import { TaskPagesHead } from '@/features/tasks/components/task-pages-head';
 import { familyOf } from '@/features/tasks/utils/task-page';
+import { rowMenuId } from '@/components/focus-places';
+import { menus } from '@/stores/menus';
 import type { Page } from '@/types/page';
 import type { TaskOf } from '@/types/task';
 
@@ -140,6 +142,7 @@ describe(TaskPageRows, () => {
     boot();
     const on = (slug: string, category: string, over: Partial<Page> = {}) =>
       page(slug, { task: { name: '#1', category }, ...over });
+    menus.show(rowMenuId('a'));
     const html = renderToString(
       <TaskPageRows
         task={task('#1', {
@@ -150,6 +153,7 @@ describe(TaskPageRows, () => {
         openers={openers}
       />,
     );
+    menus.hide(rowMenuId('a'));
     expect([html.includes('data-testid="sel"'), html.includes('data-testid="task-tag"')]).toStrictEqual([false, false]);
     expect(html).toMatch(/data-testid="select"[^>]*hidden=""/);
     expect(html).toMatch(/<span data-testid="tagpill" title="t"/);

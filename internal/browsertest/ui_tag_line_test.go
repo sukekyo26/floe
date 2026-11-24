@@ -283,7 +283,7 @@ func uiTagLine(t *testing.T, lang i18n.Lang, msg func(string, ...any) string) {
 	b.until("the frame", "!document.getElementById('frame-tags').hidden")
 	say("the frame", line("frame-tags"))
 	out = append(out, "centered in the frame: "+b.eval(centered("#frame-tags, #frame-actions")))
-	say("the frame's menu", "!!document.querySelector('#frame-actions [data-testid=tag-item]')")
+	say("the frame's menu", inMenuItem("#frame-actions", "tag-item", "!!i"))
 	b.eval("document.querySelector('#frame-tags [data-testid=tag-edit]').click()")
 	b.until("the dialog", "document.getElementById('tag-dialog').open")
 	b.eval(box("a3") + ".click()")

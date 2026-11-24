@@ -21,9 +21,12 @@ import { pages as pagePages, type Pages } from '@/stores/pages';
 import { nextReached } from '@/utils/list-keys';
 import { FIND_ROWS } from '@/utils/search';
 import { projectOrder } from '@/utils/project-order';
+import type { Page } from '@/types/page';
 
 const FOOT = 'find-actions';
 const FOOT_MENU = barMenuId(FOOT);
+
+const NONE: Page[] = [];
 
 interface FindDialogProps {
   readonly open: boolean;
@@ -48,7 +51,9 @@ export function FindDialog({
     window.location.assign(href);
   },
 }: FindDialogProps) {
-  const { entries } = useStore(pages.state);
+  const { entries: all } = useStore(pages.state);
+  // Closed, it finds and draws none: a page whole's first draw would wait for it
+  const entries = open ? all : NONE;
   const [words, setWords] = useState('');
   const [reached, setReached] = useState<Reached>(FIRST);
   // Opened again from closed, the foot is drawn anew: its menu shut, a delete armed let go

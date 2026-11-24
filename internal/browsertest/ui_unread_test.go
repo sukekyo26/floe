@@ -414,15 +414,15 @@ func TestUIUnreadMenu(t *testing.T) { //nolint:paralleltest // the browser tests
 	unreadList(b)
 	item := func(box string) string {
 		t.Helper()
-		return b.eval("document.querySelector(" + js(box+" [data-testid=mark-unread]") + ").hidden")
+		return b.eval(inMenuItem(box, "mark-unread", "i.hidden"))
 	}
 	out := make([]string, 0, 10)
 	out = append(out, item("#list li[data-slug=p1]"), item("#list li[data-slug=l]"))
 	openRowOf(b, "p1")
 	untilUnseen(b, "p1", false)
-	out = append(out, item("#list li[data-slug=p1]"), item("#read-actions"), b.eval("document.querySelector('#list li[data-slug=p1] [data-testid=mark-unread]').getAttribute('aria-label')"))
+	out = append(out, item("#list li[data-slug=p1]"), item("#read-actions"), b.eval(inMenuItem("#list li[data-slug=p1]", "mark-unread", "i.getAttribute('aria-label')")))
 	b.pressKey("k", kb.ModifierCtrl)
-	b.until("the search", "document.getElementById('find').open && document.querySelector('#find-actions [data-testid=mark-unread]')")
+	b.until("the search", "document.getElementById('find').open && document.querySelector('#find-actions [data-testid=more]')")
 	out = append(out, item("#find-actions")) // the first row, new
 	b.fill("#find-q", "Title p1")
 	out = append(out, item("#find-actions"))
@@ -438,10 +438,10 @@ func TestUIUnreadMenu(t *testing.T) { //nolint:paralleltest // the browser tests
 	// The bar of a page open whole.
 	b.navigate("/a/p1/")
 	b.until("the toast", pageToastButton)
-	b.until("read in its bar", "document.querySelector('#frame-actions [data-testid=mark-unread]')?.hidden === false")
+	b.until("read in its bar", inMenuItem("#frame-actions", "mark-unread", "i.hidden")+" === false")
 	pressMenuItem(b, "#frame-actions", "mark-unread")
 	b.until("the words", "!"+pageToastButton)
-	b.until("hidden in its bar", "document.querySelector('#frame-actions [data-testid=mark-unread]').hidden")
+	b.until("hidden in its bar", inMenuItem("#frame-actions", "mark-unread", "i.hidden"))
 	check(t, "menu", out, strings.Join([]string{
 		"true", "true", "false", "false", "Mark Title p1 as unread", "true", "false", "true", "true", "true",
 	}, "|"))

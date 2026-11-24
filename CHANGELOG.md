@@ -8,6 +8,7 @@ adheres to [Semantic Versioning](https://semver.org/).
 
 ### Changed
 
+- Change the management page's list to show a long one sooner (with 300 pages, the rows come up about 80 ms earlier), and a page open whole a little sooner too: the items of a "…" menu are made as it opens, so the browser's find in page no longer finds the words of a closed "…" menu.
 - Change a task's page in the management page. The way back to the task list, taken off in 0.3.0, is there again, as the mark `‹` on the left of the title; it goes where the bar's Task list and `h` go. "Edit" is on the right of the title, and the button that archives a task done is by its state. "Add a page" is now "Add" beside a heading over the pages that says how many they are, in a pill ("Pages 2"); the heading of the child tasks says its number in the same pill.
 
 ### Fixed

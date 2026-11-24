@@ -91,7 +91,7 @@ func TestUITaskArchivedInCategory(t *testing.T) { //nolint:paralleltest // the b
 	say("badge", badge+"(document.querySelector('#list li[data-slug=a0] [data-testid=badge]'))")
 	say("count", "document.getElementById('news-n').textContent")
 	// Unread is offered of a page read, not archived
-	say("mark unread", "['o1', 'n1'].map((slug) => document.querySelector('#list li[data-slug=' + slug + '] [data-testid=mark-unread]').hidden).join(' ')")
+	say("mark unread", "["+inMenuItem("#list li[data-slug=o1]", "mark-unread", "i.hidden")+", "+inMenuItem("#list li[data-slug=n1]", "mark-unread", "i.hidden")+"].join(' ')")
 
 	// The search: the same marks, the badge of the same size.
 	pressFindOpen(b)

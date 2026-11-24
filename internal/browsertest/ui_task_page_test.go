@@ -125,7 +125,7 @@ func TestUITaskPage(t *testing.T) { //nolint:paralleltest // the browser tests s
 	}
 	out = append(out, "tab: "+strings.Join(tabbed, " "))
 	b.eval("document.activeElement.blur()")
-	say("nothing to select", "document.querySelectorAll('#list [data-testid=sel]').length + ' ' + [...document.querySelectorAll('#list [data-testid=menu] [data-testid=select]')].every((e) => e.hidden)")
+	say("nothing to select", "document.querySelectorAll('#list [data-testid=sel]').length + ' ' + [...document.querySelectorAll('#list [data-testid=more]')].map((more) => { const press = () => more.querySelector('summary').click(); press(); const hidden = more.querySelector('[data-testid=menu] [data-testid=select]').hidden; press(); return hidden; }).every((x) => x)")
 	b.still()
 	if got := b.eval("document.getElementById('news-n').textContent"); got != unread {
 		t.Errorf("opening the task read a page: %s, was %s", got, unread)
