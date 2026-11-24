@@ -102,6 +102,27 @@ describe(bulkActs, () => {
     expect(deleted.sent).toStrictEqual([['a', 'delete']]);
   });
 
+  it('archives and deletes the same set once, in whatever order it was selected', async () => {
+    expect.assertions(2);
+    const ended = () => new Promise((go) => setTimeout(go, 5));
+    const { selection, sent, acts } = made('', [page('a'), page('b')], ['a', 'b'], true);
+    selection.add(['a', 'b']);
+    void acts.archive();
+    void acts.remove();
+    await ended();
+    selection.clear();
+    selection.add(['b', 'a']);
+    void acts.archive();
+    await expect(acts.remove()).resolves.toBe(false);
+    await ended();
+    expect(sent).toStrictEqual([
+      ['a', { archived: true }],
+      ['b', { archived: true }],
+      ['a', 'delete'],
+      ['b', 'delete'],
+    ]);
+  });
+
   it('says it unlinked the links, in the words of before the write, and tags the selected leaving out the rest', async () => {
     expect.assertions(3);
     const { selection, said, acts } = made('', [page('l', { path: '/x.html' })]);

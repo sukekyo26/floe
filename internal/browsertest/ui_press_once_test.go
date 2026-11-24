@@ -10,7 +10,8 @@ import (
 
 // A press is dropped only while what it asks is asked already (pressOnce): asked the other way and back before the list is
 // read again, it is written each time. A task taken off its parent, put back and taken off; archived and restored; a page
-// archived, restored and archived. The reads are held throughout.
+// archived, restored and archived. Asked the same before that (a star, a pin, a page off its task, the delete of the
+// selected), it is written once. The reads are held throughout.
 func TestUIPressOnce(t *testing.T) { //nolint:paralleltest // the browser tests share one Chrome, one at a time
 	s := newSite(t)
 	b := s.b

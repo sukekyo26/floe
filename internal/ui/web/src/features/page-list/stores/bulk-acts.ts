@@ -58,6 +58,8 @@ export function bulkActs({
       selection.keep(new Set([...selection.selected.get()].filter((slug) => !written.has(slug))));
     });
   const selected = () => [...selection.selected.get()];
+  // The same set asks the same, in whatever order it was selected
+  const asked = (slugs: readonly string[], ...of: string[]) => [...of, ...slugs.toSorted()].join('\n');
   return {
     selectAll: () => {
       const now = query.query.get();
@@ -70,7 +72,7 @@ export function bulkActs({
         failed: (n, why) => t(to ? 'ui_archive_bulk_failed' : 'ui_unarchive_bulk_failed', n, why),
       };
       const slugs = selected();
-      await press('archive selected', [String(to), ...slugs].join('\n'), () =>
+      await press('archive selected', asked(slugs, String(to)), () =>
         send((slug) => writes.patchPage(slug, { archived: to }), words, slugs),
       );
     },
@@ -81,7 +83,7 @@ export function bulkActs({
         failed: (n, why) => t(`ui_${kind}_bulk_failed`, n, why),
       };
       const slugs = selected();
-      const ran = await press('delete selected', slugs.join('\n'), async () => {
+      const ran = await press('delete selected', asked(slugs), async () => {
         await send((slug) => writes.deletePage(slug), words, slugs);
         return true;
       });
