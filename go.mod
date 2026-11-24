@@ -38,3 +38,5 @@ tool (
 	golang.org/x/vuln/cmd/govulncheck
 	mvdan.cc/sh/v3/cmd/shfmt
 )
+
+ignore ./internal/ui/web/node_modules

@@ -4,6 +4,7 @@ import (
 	"encoding/json"
 	"os"
 	"path/filepath"
+	"strconv"
 	"strings"
 	"testing"
 
@@ -120,7 +121,7 @@ func TestUITaskChildren(t *testing.T) { //nolint:paralleltest // the browser tes
 	b.until("the child's page", "new URLSearchParams(location.search).get('task') === '#2' && !document.getElementById('task-family').hidden")
 
 	// A child leads up to its parent, and its way back is to its own state.
-	if got := b.eval("document.querySelector('#task-family h3').textContent + ' ' + document.querySelector('#task-family [data-testid=kin-row]').textContent + ' ' + document.querySelector('#task-family [data-testid=kin-row]').getAttribute('href') + ' ' + document.getElementById('task-up').getAttribute('href')"); got != "Parent task In progress#1the parent /tasks?project=proj&task=%231 /tasks?project=proj" {
+	if got := b.eval("document.querySelector('#task-family h3').textContent + ' ' + document.querySelector('#task-family [data-testid=kin-row]').textContent + ' ' + document.querySelector('#task-family [data-testid=kin-row]').getAttribute('href') + ' ' + document.getElementById('to-tasks').getAttribute('href')"); got != "Parent task In progress#1the parent /tasks?project=proj&task=%231 /tasks?project=proj" {
 		t.Errorf("a child's head: %q", got)
 	}
 
@@ -275,7 +276,8 @@ func TestUITaskChildren(t *testing.T) { //nolint:paralleltest // the browser tes
 	}
 	press("kin-submit")
 	b.until("saved", "!document.getElementById('kin-dialog').open")
-	b.until("the toast", "document.querySelector('[data-testid=toast-link]')?.textContent === 'Made #4 a child task'")
+	// Any of the toasts: the one of #103 made before may still show, before this one
+	b.until("the toast", "[...document.querySelectorAll('[data-testid=toast-link]')].some((e) => e.textContent === 'Made #4 a child task')")
 	if made, err = st.ReadTasks(); err != nil {
 		t.Fatal(err)
 	}
@@ -368,7 +370,7 @@ func TestUITaskChildren(t *testing.T) { //nolint:paralleltest // the browser tes
 	}
 	task("proj", "#104", "--title", "to remove", "--state", "doing")
 	open("#104")
-	if got := b.eval("getComputedStyle(document.getElementById('task-delete')).color === getComputedStyle(document.getElementById('bulk-delete')).color"); got != "true" {
+	if got := b.eval("((e) => { e.style.color = 'var(--color-danger)'; document.body.append(e); const want = getComputedStyle(e).color; e.remove(); return want !== '' && getComputedStyle(document.getElementById('task-delete')).color === want; })(document.createElement('i'))"); got != "true" {
 		t.Error("the button is not of a delete's color")
 	}
 	b.eval("window.realFetch = window.fetch; window.fetch = (url, init) => (init?.method === 'DELETE' ? Promise.resolve(new Response('it has a page', { status: 400 })) : window.realFetch(url, init))")
@@ -456,21 +458,26 @@ func TestUITaskChildren(t *testing.T) { //nolint:paralleltest // the browser tes
 	}
 }
 
-// The way back from a task's page is a press's height, wide and narrow, clear of the bar's tabs.
-func TestUITaskUpRoom(t *testing.T) { //nolint:paralleltest // the browser tests share one Chrome, one at a time
+// A task's head keeps its buttons within it, wide and narrow: a task done has three, which go onto another line where they do not fit
+// (S450). 280px is narrower than a phone, as the tests' fonts are narrower than a person's.
+func TestUITaskHeadRoom(t *testing.T) { //nolint:paralleltest // the browser tests share one Chrome, one at a time
 	s := newSite(t)
 	b := s.b
 	b.navigate("/")
-	s.floe(t, "task", "--project", "proj", "--task", "#1", "--state", "todo")
+	s.floe(t, "task", "--project", "proj", "--task", "#1", "--state", "done")
 	defer b.unsize()
-	for _, width := range []int64{1400, 400} {
-		b.size(width, 800, width == 400)
+	for _, width := range []int64{1400, 280} {
+		b.size(width, 800, width == 280)
 		b.navigate("/tasks?project=proj&task=%231")
-		b.until("the head", "!document.getElementById('task-head').hidden")
-		const up = "document.getElementById('task-up').getBoundingClientRect()"
-		got := b.eval("[" + up + ".height >= 36, " + up + ".top - document.getElementById('screens').getBoundingClientRect().bottom >= 8].join(' ')")
-		if got != "true true" {
-			t.Errorf("at %d: tall, clear of the tabs = %s", width, got)
+		b.until("the head", "!document.getElementById('task-head').hidden && !document.getElementById('task-archive').hidden")
+		got := b.eval("(() => { const head = document.getElementById('task-head').getBoundingClientRect(); return ['task-add-page', 'task-edit', 'task-archive'].every((id) => { const r = document.getElementById(id).getBoundingClientRect(); return r.left >= head.left && r.right <= head.right; }) && document.documentElement.scrollWidth <= innerWidth; })()")
+		if got != "true" {
+			t.Errorf("at %d: the head's buttons within it = %s", width, got)
+		}
+		// 280px: the archive goes under the others; 1400px: one line
+		wrapped := b.eval("document.getElementById('task-archive').getBoundingClientRect().top > document.getElementById('task-edit').getBoundingClientRect().top")
+		if want := strconv.FormatBool(width == 280); wrapped != want {
+			t.Errorf("at %d: the archive on a line of its own = %s, want %s", width, wrapped, want)
 		}
 	}
 }
@@ -511,7 +518,7 @@ func TestUITaskSetTitle(t *testing.T) { //nolint:paralleltest // the browser tes
 		t.Helper()
 		// A new task asks a title: one is given where none is typed, the asking itself tested apart
 		titleOpen(b)
-		b.eval(submitSet)
+		submitSet(b)
 		b.until("saved", "!document.getElementById('set-dialog').open")
 	}
 
@@ -535,7 +542,7 @@ func TestUITaskSetTitle(t *testing.T) { //nolint:paralleltest // the browser tes
 	dialog("b")
 	field("set-task", "#77")
 	field("set-task-title", "   ")
-	b.eval(submitSet)
+	b.eval("document.getElementById('set-submit').click()") // stopped: neither saved nor asked
 	if got := b.eval("document.getElementById('set-task-title').validationMessage + '|' + " + shown); got != "Write more than spaces|true" {
 		t.Errorf("a title of spaces: %q", got)
 	}
@@ -567,7 +574,7 @@ func TestUITaskSetTitle(t *testing.T) { //nolint:paralleltest // the browser tes
 			field("set-task-title", made)
 		}
 		then()
-		b.eval(submitSet)
+		submitSet(b)
 		b.until("refused", "!document.getElementById('set-error').hidden")
 		if got := b.eval("document.getElementById('set-error').textContent"); !strings.Contains(got, gone) {
 			t.Errorf("%s: %q", name, got)
@@ -596,7 +603,7 @@ func TestUITaskSetTitle(t *testing.T) { //nolint:paralleltest // the browser tes
 	field("set-task-title", "mine")
 	s.floe(t, "task", "--project", project, "--task", "#93", "--title", "theirs", "--url", "https://example.com/theirs", "--parent", "#1")
 	b.untilRead(b.reread(), "#93 read", "true")
-	b.eval(submitSet)
+	submitSet(b)
 	b.until("refused", "!document.getElementById('set-error').hidden")
 	if got := b.eval("document.getElementById('set-error').textContent.includes('task #93 is there already') + '|' + " + shown); got != "true|false" {
 		t.Errorf("made meanwhile: %q", got)
@@ -611,7 +618,7 @@ func TestUITaskSetTitle(t *testing.T) { //nolint:paralleltest // the browser tes
 	field("set-task", "#92")
 	field("set-task-title", "mine")
 	s.floe(t, "task", "--project", project, "--task", "#92", "--state", "todo")
-	b.eval(submitSet)
+	submitSet(b)
 	b.until("refused", "!document.getElementById('set-error').hidden")
 	save()
 
@@ -626,7 +633,7 @@ func TestUITaskSetTitle(t *testing.T) { //nolint:paralleltest // the browser tes
 	}
 	dialog("c")
 	field("set-task", "#93")
-	b.eval(submitSet)
+	b.eval("document.getElementById('set-submit').click()") // nothing sent: the error the opening said stays
 	if got := b.eval("document.getElementById('set-dialog').open + '|' + !document.getElementById('set-error').hidden + '|' + document.getElementById('set-task-title').required"); got != "true|true|false" {
 		t.Errorf("unreadable: %q", got)
 	}

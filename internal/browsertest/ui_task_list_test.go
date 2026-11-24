@@ -121,7 +121,7 @@ func TestUIStorageKeys(t *testing.T) { //nolint:paralleltest // the browser test
 	b.navigate("/tasks?project=shop&task=%231")
 	b.until("the task's page", taskPageShown)
 	b.eval("(() => { window.name = ''; const set = Storage.prototype.setItem; Storage.prototype.setItem = function (k, v) { window.name += k + ' '; return set.call(this, k, v); }; })()")
-	b.moving("document.getElementById('task-up').click()")
+	b.moving("document.getElementById('to-tasks').click()")
 	b.until("the task list again", "location.pathname === '/tasks' && document.querySelector('#list > li')")
 	out = append(out, "written "+b.eval("window.name"),
 		"old "+b.eval("Object.keys(sessionStorage).concat(Object.keys(localStorage)).filter((k) => k.startsWith('artifacts')).length"))
@@ -179,7 +179,7 @@ func TestUITaskList(t *testing.T) { //nolint:paralleltest // the browser tests s
 	// A link of each URL, in order
 	say("link", "[...document.querySelector('#list > li').querySelectorAll('[data-testid=xlink]')].map((a) => [a.textContent, a.href, a.target, a.rel, a.title].join(' ')).join(' | ')")
 	say("current", "document.getElementById('to-tasks').getAttribute('aria-current')")
-	say("search shown", "document.getElementById('search').hidden + ' ' + (document.getElementById('find-open').offsetParent !== null)")
+	say("search shown", "(document.getElementById('search')?.hidden ?? true) + ' ' + (document.getElementById('find-open').offsetParent !== null)")
 	say("chips", "[...document.querySelectorAll('#chips > button')].map((c) => c.textContent + ' ' + c.getAttribute('aria-pressed') + ' ' + c.style.getPropertyValue('--c')).join(', ')")
 
 	// j and k: the focus alone, nothing beside the list and nothing read.
@@ -270,7 +270,7 @@ func TestUITaskList(t *testing.T) { //nolint:paralleltest // the browser tests s
 	writeTasks(tasksJSON)
 
 	// The way up of a task's page opened by its URL: its project's list, at the task's view, whatever list was last seen.
-	const up = "document.getElementById('task-up').getAttribute('href')"
+	const up = "document.getElementById('to-tasks').getAttribute('href')"
 	for _, c := range []struct{ list, task string }{
 		{"?view=done&project=shop", "?project=shop&task=%231"},
 		{"?project=blog", "?project=shop&task=%231"},
@@ -288,7 +288,8 @@ func TestUITaskList(t *testing.T) { //nolint:paralleltest // the browser tests s
 	// The page list as it was: a project pressed again is let go, and it has its own.
 	b.navigate("/?project=shop")
 	b.until("the page list", rowsDrawn)
-	say("page list chips", "[...document.querySelectorAll('#chips > button')].map((c) => c.textContent + ' ' + c.style.getPropertyValue('--c')).join(', ')")
+	// The palette's values are named --color-*: read by the name they had before
+	say("page list chips", "[...document.querySelectorAll('#chips > button')].map((c) => c.textContent + ' ' + c.style.getPropertyValue('--c').replace('var(--color-', 'var(--')).join(', ')")
 	say("page list, its query kept", "sessionStorage.getItem('pages.list') + ' ' + document.getElementById('to-list').getAttribute('href')")
 	b.eval("document.querySelector('#chips > button[data-project=shop]').click()")
 	say("page list, let go", "location.search")
@@ -453,7 +454,7 @@ a row's project, in its title alone: #1 / One / shop / https://example.com/a/b/c
 link: b/c https://example.com/a/b/c _blank noopener https://example.com/a/b/c | pull/9 https://example.com/pull/9 _blank noopener https://example.com/pull/9
 current: page
 search shown: true true
-chips: shop2 true var(--pc0), blog1 false var(--pc1), pin0 false var(--pc2), solo1 false var(--pc3), Not set1 false var(--faint)
+chips: shop2 true var(--color-pc0), blog1 false var(--color-pc1), pin0 false var(--color-pc2), solo1 false var(--color-pc3), Not set1 false var(--color-faint)
 j: #1One
 j j: #2Two
 j j k: #1One

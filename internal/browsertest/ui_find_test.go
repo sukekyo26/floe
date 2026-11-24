@@ -40,10 +40,15 @@ func typeFind(b *browser, words string) {
 	b.fill("#find-q", words)
 }
 
-// pressFindOpen opens the search modal by the bar's button.
+// pressFindOpen opens the search modal by the bar's button, or by Ctrl+K on the page list, whose search field stands for the
+// button (S422-P9).
 func pressFindOpen(b *browser) {
 	b.t.Helper()
-	b.eval("document.getElementById('find-open').click()")
+	if b.eval("String(document.getElementById('find-open') !== null)") == "true" {
+		b.eval("document.getElementById('find-open').click()")
+	} else {
+		keyDown(b, "key: 'k', ctrlKey: true")
+	}
 	b.until("the search modal", "document.getElementById('find').open")
 }
 
@@ -138,6 +143,22 @@ func TestUIFind(t *testing.T) { //nolint:paralleltest // the browser tests share
 	b.reread()
 	b.until("the row", "document.querySelector('#find-list li')")
 	out = append(out, b.eval(findDrawn))
+	// Rows, none and then rows again: the place reached before none is reached again, not the first.
+	three := js(`[{"slug":"a","title":"A","description":"","updatedAt":"2026-01-03T00:00:00.000Z"},` +
+		`{"slug":"b","title":"B","description":"","updatedAt":"2026-01-02T00:00:00.000Z"},` +
+		`{"slug":"c","title":"C","description":"","updatedAt":"2026-01-01T00:00:00.000Z"}]`)
+	b.eval("window.list = " + three)
+	b.reread()
+	b.until("the rows", "document.querySelectorAll('#find-list li').length === 3")
+	keyDown(b, "key: 'ArrowDown'")
+	keyDown(b, "key: 'ArrowDown'")
+	out = append(out, b.eval(findDrawn))
+	drop("abc")
+	out = append(out, b.eval(findDrawn))
+	b.eval("window.list = " + three)
+	b.reread()
+	b.until("the rows back", "document.querySelectorAll('#find-list li').length === 3")
+	out = append(out, b.eval(findDrawn))
 	b.eval("document.querySelector('#find [data-close]').click()")
 	out = append(out, b.eval("document.getElementById('find').open"))
 	// Enter opens the row whole, wherever the window was.
@@ -167,7 +188,10 @@ func TestUIFind(t *testing.T) { //nolint:paralleltest // the browser tests share
 		"true / a[f] / Folder / Newest first",
 		"true /  / - / 0 found",
 		"/ 0",
-		"true / [a] / A / Newest first", "false",
+		"true / [a] / A / Newest first",
+		"true / ab[c] / C / Newest first",
+		"true /  / - / 0 found",
+		"true / ab[c] / C / Newest first", "false",
 	}, "|"))
 }
 
@@ -308,7 +332,9 @@ func TestUIFindActions(t *testing.T) { //nolint:paralleltest // the browser test
 	b.until("the bar", "document.getElementById('frame-title').textContent")
 	keyDown(b, "key: 'k', ctrlKey: true")
 	typeFind(b, "gamma")
-	b.moving("document.querySelector('" + menu + " summary').click(); document.querySelector('" + menu + " [data-testid=delete]').focus(); document.querySelector('" + menu + " [data-testid=delete]').click(); document.querySelector('" + menu + " [data-testid=delete]').click()")
+	b.pressed("document.querySelector('"+menu+" summary').click(); document.querySelector('"+menu+" [data-testid=delete]').focus(); document.querySelector('"+menu+" [data-testid=delete]').click()",
+		"the delete armed", "document.querySelector('"+menu+" [data-testid=delete]').hasAttribute('data-armed')")
+	b.moving("document.querySelector('" + menu + " [data-testid=delete]').click()")
 	b.until("the list", "location.pathname === '/'")
 	check(t, "actions", out, strings.Join([]string{
 		"true", "true", "true", "true", "false true true", "false", "true", "true", "false 0", "true", "true none",
@@ -348,7 +374,7 @@ func TestUIKeys(t *testing.T) { //nolint:paralleltest // the browser tests share
 	b.stub(findList)
 	const open = "document.getElementById('keys').open"
 	const shown = "[...document.querySelectorAll('[data-testid=keys-part]')].map((p) => p.hidden).join(' ') + ' ' + [...document.querySelectorAll('#keys kbd')].filter((k) => k.offsetParent).map((k) => k.textContent).join('')"
-	const ways = "[getComputedStyle(document.getElementById('keys-open')).display !== 'none', getComputedStyle(document.getElementById('find-open')).display !== 'none'].join(' ')"
+	const ways = "[getComputedStyle(document.getElementById('keys-open')).display !== 'none', ((e) => e !== null && getComputedStyle(e).display !== 'none')(document.getElementById('find-open'))].join(' ')"
 	out := make([]string, 0, 16)
 	b.navigate("/")
 	b.size(1440, 900, false)
@@ -829,7 +855,7 @@ func TestUIModalShape(t *testing.T) { //nolint:paralleltest // the browser tests
 	// the find-foot.
 	const shape = `(() => { const d = document.querySelector('dialog[open]'), r = (e) => e.getBoundingClientRect(), foot = d.querySelector(':is([data-testid=dialog-actions], [data-testid=find-foot])');
 		const q = r(d.querySelector('input[data-testid=text]')), f = r(foot), m = r(d);
-		return [m.left, m.right, q.left, q.right, q.height, f.left, f.right, r(foot.querySelector('button:last-child')).height].map(Math.round).join(' '); })()`
+		return [m.left, m.right, q.left, q.right, q.height, f.left, f.right, r(foot.querySelector('[data-close]')).height].map(Math.round).join(' '); })()`
 	const where = `(() => { const m = document.getElementById('find').getBoundingClientRect(); return Math.abs(m.top - (innerHeight - m.bottom)) <= 1 ? 'middle' : Math.round(m.top); })()`
 	// The top of the field and the height of the modal, which the rows do not move.
 	const still = `(() => { const q = document.getElementById('find-q').getBoundingClientRect(), m = document.getElementById('find').getBoundingClientRect(); return Math.round(q.top - m.top) + ' ' + Math.round(m.height); })()`
@@ -1017,6 +1043,7 @@ func TestUIFindPress(t *testing.T) { //nolint:paralleltest // the browser tests 
 	out = append(out, b.eval("document.activeElement.matches('#find-actions [data-testid=star]')"))
 	x, y = at("(() => { const r = document.querySelector('#find-actions summary').getBoundingClientRect(); return (r.left + r.width / 2) + ' ' + (r.top + r.height / 2); })()")
 	b.click(x, y)
+	b.until("the menu open", "document.querySelector('#find-actions [data-testid=more]').open")
 	out = append(out, b.eval("document.activeElement.matches('#find-actions summary') && document.querySelector('#find-actions [data-testid=more]').open"))
 	b.pressKey(kb.Escape)
 	b.until("the menu closed", "!document.querySelector('#find-actions [data-testid=more]').open")

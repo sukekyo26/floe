@@ -1,0 +1,258 @@
+@import 'tailwindcss' source(none);
+@source '.';
+
+@theme {
+  /* Only floe's colours, corners and font sizes: a default one (bg-red-500, rounded-lg, text-xl) makes no CSS */
+  --color-*: initial;
+  --radius-*: initial;
+  --text-*: initial;
+  /* The page's widths are the variants below, which keep a width equal to the bound inside */
+  --breakpoint-*: initial;
+
+  --color-bg: #f4f3f0;
+  --color-panel: #fbfaf8;
+  --color-subtle: #efeee9;
+  --color-hover: #f6f5f1;
+  --color-sel: #ecebe6;
+  --color-fg: #22211f;
+  --color-muted: #615f5a;
+  --color-faint: #6b6964;
+  --color-line: #e3e1dc;
+  --color-ink: #22211f;
+  --color-on-ink: #fbfaf8;
+  --color-good: #16a36a;
+  --color-star: #d99a00;
+  /* What is new to the viewer, and a link whose file is gone */
+  --color-new: #2558c4;
+  --color-new-soft: #eaf1fd;
+  --color-chg: #8a6100;
+  --color-chg-soft: #fdf3d6;
+  /* Words gone and added between two versions: on their line's ground, and marked within it */
+  --color-del: #a32820;
+  --color-del-soft: #fbeae8;
+  --color-del-mark: #f6d3cf;
+  --color-ins: #0f6b45;
+  --color-ins-soft: #e6f6ed;
+  --color-ins-mark: #c9ebd8;
+  --color-danger: #b8332b;
+  --color-danger-soft: #f8e3e1;
+  --color-on-danger: #fff;
+  --color-frame-bg: #fff;
+  /* The logo's: its sky, its two lines, its edge and its three faces */
+  --color-logo-sky-top: #d9f3ed;
+  --color-logo-sky-bottom: #c2e7df;
+  --color-logo-line: #5bb3a4;
+  --color-logo-line-soft: #8acbbe;
+  --color-logo-edge: #6faecb;
+  --color-logo-face-left: #f6fcfe;
+  --color-logo-face-back: #d3eaf4;
+  --color-logo-face-front: #e8f5fa;
+  --color-brand-glow: color-mix(in srgb, var(--color-logo-line) 35%, transparent);
+  /* Mixed of the colours above: a down server's frame, a primary button pointed at, a check box's frame, an armed delete's
+     frame, a scroll bar's thumb */
+  --color-down-line: color-mix(in srgb, var(--color-danger) 40%, var(--color-line));
+  --color-ink-hover: color-mix(in srgb, var(--color-ink) 82%, var(--color-bg));
+  --color-box-line: color-mix(in srgb, var(--color-faint) 80%, transparent);
+  --color-armed-line: color-mix(in srgb, var(--color-danger) 50%, transparent);
+  --color-thumb: color-mix(in srgb, var(--color-faint) 55%, transparent);
+  --color-scrim: rgb(34 33 31 / 0.4);
+
+  --shadow-sm: 0 1px 2px rgb(34 33 31 / 0.06);
+  --shadow-md: 0 1px 2px rgb(34 33 31 / 0.04), 0 10px 30px -14px rgb(34 33 31 / 0.16);
+  --shadow-lg: 0 30px 80px -20px rgb(34 33 31 / 0.45);
+
+  /* Preflight sets the page's font from --default-font-family; the mono one reads --font-mono already */
+  --default-font-family: var(--font-body);
+  --font-body:
+    'Hiragino Sans', 'Noto Sans JP', 'Noto Sans CJK JP', 'Yu Gothic UI', Meiryo, system-ui, -apple-system, 'Segoe UI',
+    sans-serif;
+  --font-mono:
+    ui-monospace, 'SFMono-Regular', Menlo, Consolas, 'DejaVu Sans Mono', 'Liberation Mono', monospace, 'Hiragino Sans',
+    'Noto Sans JP', 'Noto Sans CJK JP';
+
+  /* A box (a dialog, a toast), a middle box (a menu, the suggestions, the error) and a small square (a field, a key);
+     a pill and a circle are shapes (rounded-full, 50%) */
+  --radius-corner: 20px;
+  --radius-menu: 14px;
+  --radius-small: 6px;
+
+  /* A label (counts, times, keys, tags), small text (descriptions, menus, fields) and the body's */
+  --text-label: 0.72rem;
+  --text-small: 0.82rem;
+  --text-body: 0.875rem;
+
+  /* The bar, the head over the list, a button of icons, a column's foot and the room inside a menu */
+  --spacing-bar: 3.5rem;
+  --spacing-lhead: 3.25rem;
+  --spacing-icon-btn: 30px;
+  --spacing-foot: 2.75rem;
+  --spacing-foot-pad: 6px;
+  --spacing-foot-next: calc(var(--spacing-foot-pad) * 2 + var(--spacing-icon-btn));
+  --spacing-menu-pad: 6px;
+  --spacing-shelf-mark: 15px;
+
+  /* A row rising in, a toast fading in and out (or only in, one given a time of its own), a modal and its backdrop */
+  --animate-rise: rise 0.32s cubic-bezier(0.2, 0.7, 0.2, 1) both;
+  --animate-toast: toast 3s cubic-bezier(0.2, 0.8, 0.2, 1) forwards;
+  --animate-toast-in: toast-in 0.2s cubic-bezier(0.2, 0.8, 0.2, 1) both;
+  --animate-pop: pop 0.2s cubic-bezier(0.2, 0.8, 0.2, 1);
+  --animate-fade: fade 0.2s ease-out;
+
+  @keyframes rise {
+    from {
+      opacity: 0;
+      transform: translateY(4px);
+    }
+  }
+  @keyframes toast {
+    0% {
+      opacity: 0;
+      transform: translateY(8px);
+    }
+    8%,
+    85% {
+      opacity: 1;
+      transform: none;
+    }
+    100% {
+      opacity: 0;
+    }
+  }
+  @keyframes toast-in {
+    from {
+      opacity: 0;
+      transform: translateY(8px);
+    }
+  }
+  @keyframes pop {
+    from {
+      opacity: 0;
+      transform: translateY(8px) scale(0.98);
+    }
+  }
+  @keyframes fade {
+    from {
+      opacity: 0;
+    }
+  }
+}
+
+/* The projects' colours, by projectOrder: named in JS alone (projectColor), so written always (static), as Tailwind
+   writes only the theme's variables its classes use */
+@theme static {
+  --color-pc0: #e5533d;
+  --color-pc1: #2f6bff;
+  --color-pc2: #16a37a;
+  --color-pc3: #b04fd6;
+  --color-pc4: #d99a00;
+  --color-pc5: #0f9bb5;
+}
+
+/* Values that are not one token */
+:root {
+  /* The focus ring: 1px off a control and 2px wide, so that ground shows on both its sides */
+  --ring: 2px solid var(--color-faint);
+  --tick: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%23fbfaf8' stroke-width='3.5' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='m5 12.5 4.5 4.5L19 7.5'/%3E%3C/svg%3E");
+}
+
+/* The page's ground, its words and the focus ring; a button takes its words' font and colour */
+@layer base {
+  body {
+    margin: 0;
+    background: var(--color-bg);
+    color: var(--color-fg);
+    font-size: var(--text-body);
+    line-height: 1.55;
+    -webkit-font-smoothing: antialiased;
+  }
+  :focus-visible {
+    outline: var(--ring);
+    outline-offset: 1px;
+  }
+  button {
+    font: inherit;
+    color: inherit;
+    cursor: pointer;
+  }
+}
+
+/* Thin scrollbars of a soft thumb: Chrome's own, Firefox's by scrollbar-color */
+::-webkit-scrollbar {
+  width: 10px;
+  height: 10px;
+  background: transparent;
+}
+::-webkit-scrollbar-thumb {
+  background: var(--color-thumb);
+  background-clip: padding-box;
+  border: 2px solid transparent;
+  border-radius: 999px;
+}
+::-webkit-scrollbar-thumb:hover {
+  background-color: var(--color-faint);
+}
+::-webkit-scrollbar-corner {
+  background: transparent;
+}
+@supports not selector(::-webkit-scrollbar) {
+  :root {
+    scrollbar-color: var(--color-thumb) transparent;
+  }
+}
+
+/* The widths the screens change at, their ends included (max-width: 40rem holds 40rem) */
+@custom-variant narrow {
+  @media (max-width: 40rem) {
+    @slot;
+  }
+}
+@custom-variant tiny {
+  @media (max-width: 24rem) {
+    @slot;
+  }
+}
+@custom-variant mid {
+  @media (max-width: 56rem) {
+    @slot;
+  }
+}
+@custom-variant wide {
+  @media (max-width: 70rem) {
+    @slot;
+  }
+}
+/* The theme cards' grid in the settings */
+@custom-variant slim {
+  @media (max-width: 600px) {
+    @slot;
+  }
+}
+@custom-variant bar-narrow {
+  @container bar (max-width: 24rem) {
+    @slot;
+  }
+}
+@custom-variant bar-tight {
+  @container bar (max-width: 21rem) {
+    @slot;
+  }
+}
+/* Where a pointer can point: a row's controls show while it is pointed at, and stay on a touch screen */
+@custom-variant can-hover {
+  @media (hover: hover) {
+    @slot;
+  }
+}
+
+/* While an edge is dragged a page takes no pointer, which would leave the edge's pointer capture inside the iframe */
+html:has([data-dragging]) iframe {
+  pointer-events: none;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before {
+    transition: none !important;
+    animation: none !important;
+  }
+}

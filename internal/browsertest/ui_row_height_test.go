@@ -27,10 +27,10 @@ func TestUIRowHeight(t *testing.T) { //nolint:paralleltest // the browser tests 
 	const row = "document.querySelector('#list li[data-slug=plan]')"
 	const measure = `(() => { const li = ` + row + `, r = (e) => e.getBoundingClientRect();
 		const buttons = [...li.querySelectorAll(':scope > [data-testid=actions] > button, :scope > [data-testid=actions] > [data-testid=more] > summary')].map((e) => r(e).height);
-		const more = li.querySelector('[data-testid=more]'); more.querySelector('summary').click();
+		const more = li.querySelector('[data-testid=more]');
 		// Narrowed, so that its items' words wrap to two lines
 		const menu = more.querySelector('[data-testid=menu]'); menu.style.minWidth = '0'; menu.style.width = '8rem';
-		const items = [...li.querySelectorAll('[data-testid=menu] > *')].filter((e) => e.getClientRects().length);
+		const items = [...li.querySelectorAll('[data-testid=menu] :is(button, a)')].filter((e) => e.getClientRects().length);
 		const tall = items.every((e) => r(e).height >= 36), within = items.every((e) => e.scrollHeight <= e.clientHeight);
 		const wrapped = items.some((e) => r(e).height > 40);
 		menu.style.minWidth = ''; menu.style.width = ''; more.querySelector('summary').click();
@@ -46,6 +46,8 @@ func TestUIRowHeight(t *testing.T) { //nolint:paralleltest // the browser tests 
 			b.navigate(p[1])
 			b.until("the row", row)
 			b.still()
+			// The menu opened first: React draws it open after the press
+			menuItemShown(b, "#list li[data-slug=plan]", "edit", "")
 			got[p[0]] = b.eval(measure)
 		}
 		b.unsize()

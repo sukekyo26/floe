@@ -136,15 +136,20 @@ func TestUISettings(t *testing.T) { //nolint:paralleltest // the browser tests s
 	b.eval("window.fetch = window.realFetch")
 	closeSettings(b)
 	// A save held: the modal holds still, nothing closes it nor goes back to the list, till it is answered and told
-	b.eval("window.thrown = 0; addEventListener('error', () => { thrown++; })")
+	b.eval("window.saveThrown = 0; addEventListener('error', () => { saveThrown++; })")
 	for _, c := range []struct{ part, save, told string }{
-		{"theme", "document.querySelector('#theme-grid input[value=ink]').click(); document.getElementById('theme-choose').click()", "Changed the default theme to ink"},
+		{"theme", "document.getElementById('theme-choose').click()", "Changed the default theme to ink"},
 		{"mode", "document.getElementById('mode-save').click()", "Turned the task mode on"},
 	} {
 		b.eval("document.getElementById('settings-open').click()")
 		b.until("the list's values", "document.getElementById('settings-mode-now').textContent === 'On'")
 		b.eval(`window.held = null; window.fetch = (u, i) => (i?.method === 'PUT' ? new Promise((go) => { window.held = () => go(window.realFetch(u, i)); }) : window.realFetch(u, i));
-			document.querySelector('[data-testid=settings-item][data-panel=` + c.part + `]').click(); ` + c.save)
+			document.querySelector('[data-testid=settings-item][data-panel=` + c.part + `]').click()`)
+		b.until("the "+c.part+" panel", "document.getElementById('settings').dataset.panel === "+js(c.part))
+		if c.part == "theme" {
+			b.pressed("document.querySelector('#theme-grid input[value=ink]').click()", "ink chosen", "document.querySelector('#theme-grid input[value=ink]').checked")
+		}
+		b.eval(c.save)
 		b.until("the save held", "window.held !== null")
 		b.pressKey(kb.Escape)
 		b.eval("document.getElementById('settings-back').click(); document.getElementById('settings').dispatchEvent(new PointerEvent('pointerdown', { bubbles: true })); document.getElementById('settings').dispatchEvent(new MouseEvent('click', { bubbles: true }))")
@@ -152,7 +157,7 @@ func TestUISettings(t *testing.T) { //nolint:paralleltest // the browser tests s
 		b.eval("window.fetch = window.realFetch")
 		b.eval("window.toldBefore = [...document.querySelectorAll('[data-testid=toast]')]; window.held()")
 		b.until("the save told", "[...document.querySelectorAll('[data-testid=toast]')].some((e) => e.textContent.includes("+js(c.told)+") && !window.toldBefore.includes(e))")
-		out = append(out, b.eval("[document.getElementById('settings').dataset.panel, document.getElementById('settings').getAttribute('closedby'), thrown].join(' ')"))
+		out = append(out, b.eval("[document.getElementById('settings').dataset.panel, document.getElementById('settings').getAttribute('closedby'), saveThrown].join(' ')"))
 		closeSettings(b)
 	}
 	// A page stored now is drawn in ink.

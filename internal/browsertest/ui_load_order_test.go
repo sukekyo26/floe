@@ -229,7 +229,8 @@ func TestUILoadOrder(t *testing.T) { //nolint:paralleltest // the browser tests 
 	// A draw that throws, as of an entry the page cannot draw: said, not thrown, the next read goes on, and the list drawn again once
 	// it can be. The error's words are the browser's: only the page's words around them are compared
 	// LIMIT: the same list drawn again after a throw is not told from one that changed: the same data throws again
-	draw := strings.SplitN(msg("ui_draw_failed", "\x00"), "\x00", 2)
+	// The list is the React screen's, which says a draw that throws as the screen's (S422-P9)
+	draw := strings.SplitN(msg("ui_screen_draw_failed", "\x00"), "\x00", 2)
 	thrown := b.eval("window.thrown.length")
 	begun = b.acted("lo.bad = 'h'; " + poll)
 	b.untilRead(begun, "the draw that throws", "true")
@@ -358,7 +359,8 @@ func loadMistakes(t *testing.T, s *site, st *store.Store, msg func(string, ...an
 		t.Helper()
 		b.untilRead(b.acted(set+"; "+poll), "the read", "true")
 	}
-	parts := strings.SplitN(msg("ui_draw_failed", "\x00"), "\x00", 2)
+	// The task page is the React screen's, which says a draw that throws as the screen's (S422-P8)
+	parts := strings.SplitN(msg("ui_screen_draw_failed", "\x00"), "\x00", 2)
 	sayDraw := func(what string) {
 		t.Helper()
 		got := b.eval(shown)
@@ -383,6 +385,9 @@ func loadMistakes(t *testing.T, s *site, st *store.Store, msg func(string, ...an
 	// The draw's, all three at once
 	step("lo.bad = 'kept'; lo.tasksBroken = true")
 	sayDraw("the draw")
+	// The bar is in the screen the draw took, rows and all: drawn again by a good answer
+	const drawn = "Boolean(document.getElementById('find-open')) + ' ' + Boolean(document.querySelector('#list li[data-slug=kept]'))"
+	out = append(out, "the draw, bar and rows: "+b.eval(drawn))
 	// The read's over it; when the read comes right, the draw's again, then the tasks', then none
 	step("lo.listBroken = true")
 	say("the read", read)
@@ -391,6 +396,7 @@ func loadMistakes(t *testing.T, s *site, st *store.Store, msg func(string, ...an
 	step("lo.bad = ''")
 	say("the tasks after the draw", tasks)
 	step("lo.tasksBroken = false")
+	out = append(out, "drawn again, bar and rows: "+b.until("drawn again", "document.getElementById('find-open') && "+drawn))
 	say("then", "none")
 
 	// A read held back by a press takes back the read's mistake
@@ -464,5 +470,5 @@ func loadMistakes(t *testing.T, s *site, st *store.Store, msg func(string, ...an
 	mark(6)
 	say("a mark clears not an action", failedStar)
 
-	check(t, "load mistakes", []string{strings.Join(out, ", ")}, "the draw: right, the read: right, the draw after the read: right, the tasks after the draw: right, then: right, held back: right, kept: right, not covered: right, said once clear: right, an action clears its own only: right, a mark over the load, the load again: right, a mark through a load, the mark taken back: right, a mark under an action: right, a mark clears not an action: right")
+	check(t, "load mistakes", []string{strings.Join(out, ", ")}, "the draw: right, the draw, bar and rows: false false, the read: right, the draw after the read: right, the tasks after the draw: right, drawn again, bar and rows: true true, then: right, held back: right, kept: right, not covered: right, said once clear: right, an action clears its own only: right, a mark over the load, the load again: right, a mark through a load, the mark taken back: right, a mark under an action: right, a mark clears not an action: right")
 }

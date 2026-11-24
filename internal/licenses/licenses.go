@@ -1,5 +1,6 @@
 // Package licenses holds the license notices floe licenses prints: floe's LICENSE, then the license files of the Go
-// standard library, of every module built into a release binary and of the Lucide icons, as each wrote them.
+// standard library, of every module built into a release binary and of the Lucide icons, as each wrote them, and the
+// licenses of the management page's build (its dist/licenses.json and Tailwind's).
 package licenses
 
 import _ "embed"

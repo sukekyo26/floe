@@ -19,6 +19,7 @@ import (
 	"floe/internal/i18n"
 	"floe/internal/page"
 	"floe/internal/store"
+	"floe/internal/ui"
 	"floe/internal/usererr"
 )
 
@@ -341,7 +342,7 @@ func (s *Server) frame(w http.ResponseWriter, r *http.Request, slug string) {
 			status, version = http.StatusOK, s.askedVersion(slug, m, r.URL.Query())
 		}
 	}
-	sendUI(w, r, status, slug, version)
+	sendUI(w, r, status, ui.Frame, slug, version)
 }
 
 // askedVersion is what ?v= of q asks of the page of slug, whose meta.json is m: "" for nothing, the version's number,

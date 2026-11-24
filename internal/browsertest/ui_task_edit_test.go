@@ -74,12 +74,30 @@ func TestUITaskEdit(t *testing.T) { //nolint:paralleltest // the browser tests s
 		t.Helper()
 		b.fill("#"+id, value)
 	}
-	// Adds a URL as typed: the button, then the field and Enter
+	// Types a URL in the add modal, opened by the button under the box if it is not open, and presses Enter
+	enterURL := func(url string) {
+		t.Helper()
+		b.eval("if (!document.getElementById('edit-add-dialog').open) document.getElementById('edit-url-plus').click()")
+		b.until("the add modal", "document.getElementById('edit-add-dialog').open && document.activeElement.id === 'edit-add-new'")
+		field("edit-add-new", url)
+		b.pressKey(kb.Enter)
+	}
+	// enterURL, and the add modal closed as the URL is added
 	addURL := func(url string) {
 		t.Helper()
-		b.eval("document.getElementById('edit-url-plus').click()")
-		field("edit-url-new", url)
-		b.pressKey(kb.Enter)
+		enterURL(url)
+		b.until("added "+url, "!document.getElementById('edit-add-dialog').open")
+	}
+	// enterURL, refused: said under the add modal's field; Escape then closes the add modal alone
+	refuseURL := func(url string) {
+		t.Helper()
+		enterURL(url)
+		b.until("refused "+url, "document.getElementById('edit-add-said').textContent !== ''")
+	}
+	escapeAdd := func() {
+		t.Helper()
+		b.pressKey(kb.Escape)
+		b.until("the add modal closed", "!document.getElementById('edit-add-dialog').open && document.getElementById('edit-task-dialog').open")
 	}
 	dropURL := func(url string) {
 		t.Helper()
@@ -177,15 +195,15 @@ func TestUITaskEdit(t *testing.T) { //nolint:paralleltest // the browser tests s
 	})()`)
 	say("let go", "[...document.querySelectorAll('#edit-categories li')].some((li) => li.draggable)")
 	b.eval(`(() => {
-		window.thrown = 0;
-		addEventListener('error', () => { thrown++; });
+		window.dragThrown = 0;
+		addEventListener('error', () => { dragThrown++; });
 		const word = document.querySelectorAll('#edit-categories [data-testid=category-name]')[1].firstChild;
 		const data = new DataTransfer();
 		word.dispatchEvent(new DragEvent('dragstart', { bubbles: true, dataTransfer: data }));
 		const to = document.querySelector('#edit-categories li');
 		to.dispatchEvent(new DragEvent('drop', { bubbles: true, cancelable: true, dataTransfer: data, clientY: to.getBoundingClientRect().top + 2 }));
 	})()`)
-	say("words dragged", "thrown + ' / ' + "+categories)
+	say("words dragged", "dragThrown + ' / ' + "+categories)
 	// A screen without hover (a touch screen) shows no grip, which one with hover shows.
 	const grip = "document.querySelector('#edit-categories [data-testid=category-grip]').checkVisibility()"
 	withHover := b.eval(grip)
@@ -200,22 +218,22 @@ func TestUITaskEdit(t *testing.T) { //nolint:paralleltest // the browser tests s
 	closed("closed")
 	out = append(out, "drag: "+row("S300"), "no grip without hover: "+strconv.FormatBool(withHover == "true" && withoutHover == "false"))
 
-	// URLs: one added and one taken off are sent as such, and the page shows a link of each. A URL there already, or typed and not added, is
-	// said, not sent.
+	// URLs: one added and one taken off are sent as such, and the page shows a link of each. A URL there already, or not an http or https
+	// one, is said under the add modal's field, the modal open, and not added.
 	open("S300")
 	addURL("https://example.com/pull/9")
-	addURL("https://example.com/pull/9")
-	say("added twice", urls+" + ' / ' + document.getElementById('edit-url-said').textContent")
+	refuseURL("https://example.com/pull/9")
+	say("added twice", urls+" + ' / ' + document.getElementById('edit-add-said').textContent + ' / ' + document.activeElement.id")
+	escapeAdd()
+	refuseURL("ftp://x")
+	say("not a link", urls+" + ' / ' + document.getElementById('edit-add-said').textContent")
+	escapeAdd()
 	// A URL's row and a category's are taken off by one icon, drawn alike
 	say("one x", `(() => {
 		const d = (on) => [...document.querySelectorAll(on + ' svg path')].map((p) => p.getAttribute('d')).join(' ');
 		const url = document.querySelector('#edit-urls [data-testid=url-drop] svg'), category = document.querySelector('#edit-categories [data-testid=category-drop] svg');
 		return [d('#edit-urls li:first-child [data-testid=url-drop]') === d('#edit-categories li:first-child [data-testid=category-drop]'), url.getAttribute('stroke-width') === category.getAttribute('stroke-width')].join(' ');
 	})()`)
-	field("edit-url-new", "https://example.com/left")
-	b.eval("document.getElementById('edit-task-submit').click()")
-	say("typed, not added", "document.getElementById('edit-url-new').validationMessage + ' / ' + document.getElementById('edit-task-dialog').open")
-	field("edit-url-new", "")
 	dropURL("https://example.com/489")
 	say("dropped", urls+" + ' / ' + document.activeElement.getAttribute('aria-label') + ' / ' + document.getElementById('edit-urls-said').textContent")
 	addURL("https://example.com/489")
@@ -314,19 +332,20 @@ func TestUITaskEdit(t *testing.T) { //nolint:paralleltest // the browser tests s
 	dropURL("https://example.com/e")
 	save("saved e off")
 	closed("closed")
-	// At 10, one more is said and not added
+	// At 10, the button opens no add modal: it says so under the box
 	open("S300")
-	for i := 3; i <= 11; i++ {
+	for i := 3; i <= 10; i++ {
 		addURL("https://example.com/more/" + strconv.Itoa(i))
 	}
-	say("an 11th", "document.querySelectorAll('#edit-urls li').length + ' / ' + document.getElementById('edit-url-said').textContent + ' / ' + document.getElementById('edit-urls-hint').textContent")
-	b.pressKey(kb.Escape)
+	b.eval("document.getElementById('edit-url-plus').click()")
+	b.until("said at 10", "document.getElementById('edit-url-said').textContent !== ''")
+	say("an 11th", "document.querySelectorAll('#edit-urls li').length + ' / ' + document.getElementById('edit-add-dialog').open + ' / ' + document.getElementById('edit-url-said').textContent + ' / ' + document.getElementById('edit-urls-hint').textContent")
 	b.pressKey(kb.Escape)
 	closed("closed")
 
-	// Refused by the store: the dialog stays open with its words.
+	// Refused by the store, which reads http:foo as no link where the browser mends it: the dialog stays open with its words.
 	open("S300")
-	addURL("ftp://x")
+	addURL("http:foo")
 	save("refused")
 	say("refused", errorText+" + ' / ' + document.getElementById('edit-task-dialog').open")
 	// Not reached: said as a save that failed, not as the browser's words alone.
@@ -334,7 +353,7 @@ func TestUITaskEdit(t *testing.T) { //nolint:paralleltest // the browser tests s
 	save("not reached")
 	say("not reached", errorText+" + ' / ' + document.getElementById('edit-task-dialog').open")
 	b.eval("window.cut = false")
-	dropURL("ftp://x")
+	dropURL("http:foo")
 	dropURL("https://example.com/pull/9")
 	dropURL("https://example.com/489")
 	field("edit-task-title", "")
@@ -424,15 +443,15 @@ func TestUITaskEdit(t *testing.T) { //nolint:paralleltest // the browser tests s
 		`sent the title: {"taskProject":"proj","task":"S300","new":false,"rev":5,"title":"New title"}`,
 		"order: 7 New title https://example.com/489 [案,設計,レビュー,実装,リリース]",
 		`sent the order: {"taskProject":"proj","task":"S300","new":false,"rev":6,"categories":["案","設計","レビュー","実装","リリース"]}`,
-		"groups: 案Add a page,設計Add a page,レビューAdd a page,実装Add a page,リリースAdd a pageNo pages yet",
+		"groups: 案,設計,レビュー,実装,リリースNo pages yet",
 		"dragged: リリース no page^,設計,レビュー,実装,案v",
 		"let go: false",
 		"words dragged: 0 / リリース no page^,設計,レビュー,実装,案v",
 		"drag: 8 New title https://example.com/489 [リリース,設計,レビュー,実装,案]",
 		"no grip without hover: true",
-		"added twice: https://example.com/489,https://example.com/pull/9 / https://example.com/pull/9 is already among the URLs",
+		"added twice: https://example.com/489,https://example.com/pull/9 / https://example.com/pull/9 is already among the URLs / edit-add-new",
+		`not a link: https://example.com/489,https://example.com/pull/9 / "ftp://x" is not an http or https URL`,
 		"one x: true true",
-		"typed, not added: https://example.com/left is not added yet: press Enter to add it, or empty the field / true",
 		"dropped: https://example.com/pull/9 / Take off https://example.com/pull/9 / Took off https://example.com/489",
 		"urls: 9 New title https://example.com/pull/9,https://example.com/489 [リリース,設計,レビュー,実装,案]",
 		`sent the URLs: {"taskProject":"proj","task":"S300","new":false,"rev":8,"urls":{"add":["https://example.com/pull/9"],"order":["https://example.com/pull/9","https://example.com/489"]}}`,
@@ -452,8 +471,8 @@ func TestUITaskEdit(t *testing.T) { //nolint:paralleltest // the browser tests s
 		"read again, reordered: pull/9^,489,ev / Failed to save: task S300 has changed since it was read; the tasks are read again, so check and save again",
 		`sent after reordered: {"taskProject":"proj","task":"S300","new":false,"rev":12,"urls":{"add":["https://example.com/e"]}} ; {"taskProject":"proj","task":"S300","new":false,"rev":13,"urls":{"add":["https://example.com/e"]}}`,
 		"kept their order: 14 New title https://example.com/pull/9,https://example.com/489,https://example.com/e [リリース,設計,レビュー,実装,案]",
-		"an 11th: 10 / A task holds 10 URLs at most: take one off first / Drag, or use ↑ and ↓, to reorder; http or https URLs, 10 at most",
-		`refused: Failed to save: "ftp://x" is not an http or https URL / true`,
+		"an 11th: 10 / false / A task holds 10 URLs at most: take one off first / Drag, or use ↑ and ↓, to reorder; http or https URLs, 10 at most",
+		`refused: Failed to save: "http:foo" is not an http or https URL / true`,
 		"not reached: Failed to save: Failed to fetch / true",
 		"emptied: 16   [リリース,設計,レビュー,実装,案]",
 		`opened over the drawn task: {"taskProject":"proj","task":"S300","new":false,"rev":17,"title":"Later"}`,

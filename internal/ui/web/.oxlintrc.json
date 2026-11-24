@@ -1,0 +1,734 @@
+{
+  "$schema": "./node_modules/oxlint/configuration_schema.json",
+  "plugins": ["eslint", "typescript", "react", "vitest", "jsx-a11y", "import", "unicorn"],
+  "categories": {
+    "correctness": "off",
+    "suspicious": "off",
+    "pedantic": "off",
+    "perf": "off",
+    "style": "off",
+    "restriction": "off",
+    "nursery": "off"
+  },
+  "options": {
+    "typeAware": true,
+    "reportUnusedDisableDirectives": "error"
+  },
+  "settings": {
+    "vitest": {
+      "typecheck": true
+    }
+  },
+  "rules": {
+    "jsx_a11y/alt-text": "error",
+    "jsx_a11y/anchor-ambiguous-text": "error",
+    "jsx_a11y/anchor-has-content": "error",
+    "jsx_a11y/anchor-is-valid": "error",
+    "jsx_a11y/aria-activedescendant-has-tabindex": "error",
+    "jsx_a11y/aria-props": "error",
+    "jsx_a11y/aria-proptypes": "error",
+    "jsx_a11y/aria-role": "error",
+    "jsx_a11y/aria-unsupported-elements": "error",
+    "jsx_a11y/autocomplete-valid": "error",
+    "jsx_a11y/click-events-have-key-events": "error",
+    "jsx_a11y/control-has-associated-label": "error",
+    "jsx_a11y/heading-has-content": "error",
+    "jsx_a11y/html-has-lang": "error",
+    "jsx_a11y/iframe-has-title": "error",
+    "jsx_a11y/img-redundant-alt": "error",
+    "jsx_a11y/interactive-supports-focus": "error",
+    "jsx_a11y/label-has-associated-control": "error",
+    "jsx_a11y/lang": "error",
+    "jsx_a11y/media-has-caption": "error",
+    "jsx_a11y/mouse-events-have-key-events": "error",
+    "jsx_a11y/no-access-key": "error",
+    "jsx_a11y/no-aria-hidden-on-focusable": "error",
+    "jsx_a11y/no-autofocus": "error",
+    "jsx_a11y/no-distracting-elements": "error",
+    "jsx_a11y/no-interactive-element-to-noninteractive-role": "error",
+    "jsx_a11y/no-noninteractive-element-interactions": "error",
+    "jsx_a11y/no-noninteractive-element-to-interactive-role": "error",
+    "jsx_a11y/no-noninteractive-tabindex": "error",
+    "jsx_a11y/no-redundant-roles": "error",
+    "jsx_a11y/no-static-element-interactions": "error",
+    "jsx_a11y/prefer-tag-over-role": "error",
+    "jsx_a11y/role-has-required-aria-props": "error",
+    "jsx_a11y/role-supports-aria-props": "error",
+    "jsx_a11y/scope": "error",
+    "jsx_a11y/tabindex-no-positive": "error",
+    "for-direction": "error",
+    "no-async-promise-executor": "error",
+    "no-case-declarations": "error",
+    "no-compare-neg-zero": "error",
+    "no-cond-assign": "error",
+    "no-constant-binary-expression": "error",
+    "no-constant-condition": "error",
+    "no-control-regex": "error",
+    "no-debugger": "error",
+    "no-delete-var": "error",
+    "no-dupe-else-if": "error",
+    "no-duplicate-case": "error",
+    "no-empty": "error",
+    "no-empty-character-class": "error",
+    "no-empty-pattern": "error",
+    "no-empty-static-block": "error",
+    "no-ex-assign": "error",
+    "no-extra-boolean-cast": "error",
+    "no-fallthrough": "error",
+    "no-global-assign": "error",
+    "no-invalid-regexp": "error",
+    "no-irregular-whitespace": "error",
+    "no-loss-of-precision": "error",
+    "no-misleading-character-class": "error",
+    "no-nonoctal-decimal-escape": "error",
+    "no-prototype-builtins": "error",
+    "no-regex-spaces": "error",
+    "no-self-assign": "error",
+    "no-shadow-restricted-names": "error",
+    "no-sparse-arrays": "error",
+    "no-unassigned-vars": "error",
+    "no-unexpected-multiline": "error",
+    "no-unsafe-finally": "error",
+    "no-unsafe-optional-chaining": "error",
+    "no-unused-labels": "error",
+    "no-unused-private-class-members": "error",
+    "no-useless-assignment": "error",
+    "no-useless-backreference": "error",
+    "no-useless-catch": "error",
+    "no-useless-escape": "error",
+    "preserve-caught-error": "error",
+    "require-yield": "error",
+    "use-isnan": "error",
+    "valid-typeof": "error",
+    "no-var": "error",
+    "prefer-const": "error",
+    "prefer-rest-params": "error",
+    "prefer-spread": "error",
+    "typescript/await-thenable": "error",
+    "typescript/ban-ts-comment": "error",
+    "no-array-constructor": "error",
+    "typescript/no-array-delete": "error",
+    "typescript/no-base-to-string": "error",
+    "typescript/no-confusing-void-expression": "error",
+    "typescript/no-deprecated": "error",
+    "typescript/no-duplicate-enum-values": "error",
+    "typescript/no-duplicate-type-constituents": "error",
+    "typescript/no-dynamic-delete": "error",
+    "typescript/no-empty-object-type": "error",
+    "typescript/no-explicit-any": "error",
+    "typescript/no-extra-non-null-assertion": "error",
+    "typescript/no-extraneous-class": "error",
+    "typescript/no-floating-promises": "error",
+    "typescript/no-for-in-array": "error",
+    "typescript/no-generated-empty-object-type": "error",
+    "typescript/no-implied-eval": "error",
+    "typescript/no-invalid-void-type": "error",
+    "typescript/no-meaningless-void-operator": "error",
+    "typescript/no-misused-new": "error",
+    "typescript/no-misused-promises": "error",
+    "typescript/no-misused-spread": "error",
+    "typescript/no-mixed-enums": "error",
+    "typescript/no-namespace": "error",
+    "typescript/no-non-null-asserted-nullish-coalescing": "error",
+    "typescript/no-non-null-asserted-optional-chain": "error",
+    "typescript/no-non-null-assertion": "error",
+    "typescript/no-redundant-type-constituents": "error",
+    "typescript/no-require-imports": "error",
+    "typescript/no-this-alias": "error",
+    "typescript/no-unnecessary-boolean-literal-compare": "error",
+    "typescript/no-unnecessary-condition": "error",
+    "typescript/no-unnecessary-template-expression": "error",
+    "typescript/no-unnecessary-type-arguments": "error",
+    "typescript/no-unnecessary-type-assertion": "error",
+    "typescript/no-unnecessary-type-constraint": "error",
+    "typescript/no-unnecessary-type-conversion": "error",
+    "typescript/no-unnecessary-type-parameters": "error",
+    "typescript/no-unsafe-argument": "error",
+    "typescript/no-unsafe-assignment": "error",
+    "typescript/no-unsafe-call": "error",
+    "typescript/no-unsafe-declaration-merging": "error",
+    "typescript/no-unsafe-enum-assignment": "error",
+    "typescript/no-unsafe-enum-comparison": "error",
+    "typescript/no-unsafe-function-type": "error",
+    "typescript/no-unsafe-member-access": "error",
+    "typescript/no-unsafe-return": "error",
+    "typescript/no-unsafe-unary-minus": "error",
+    "no-unused-expressions": "error",
+    "no-unused-vars": "error",
+    "no-useless-constructor": "error",
+    "typescript/no-useless-default-assignment": "error",
+    "typescript/no-wrapper-object-types": "error",
+    "typescript/only-throw-error": "error",
+    "typescript/prefer-as-const": "error",
+    "typescript/prefer-literal-enum-member": "error",
+    "typescript/prefer-namespace-keyword": "error",
+    "typescript/prefer-promise-reject-errors": "error",
+    "typescript/prefer-reduce-type-parameter": "error",
+    "typescript/prefer-return-this-type": "error",
+    "typescript/related-getter-setter-pairs": "error",
+    "typescript/require-await": "error",
+    "typescript/restrict-plus-operands": "error",
+    "typescript/restrict-template-expressions": "error",
+    "typescript/return-await": "error",
+    "typescript/triple-slash-reference": "error",
+    "typescript/unbound-method": "error",
+    "typescript/unified-signatures": "error",
+    "typescript/use-unknown-in-catch-callback-variable": "error",
+    "typescript/adjacent-overload-signatures": "error",
+    "typescript/array-type": "error",
+    "typescript/ban-tslint-comment": "error",
+    "typescript/class-literal-property-style": "error",
+    "typescript/consistent-generic-constructors": "error",
+    "typescript/consistent-indexed-object-style": "error",
+    "typescript/consistent-type-assertions": "error",
+    "typescript/consistent-type-definitions": "error",
+    "typescript/dot-notation": "error",
+    "typescript/no-confusing-non-null-assertion": "error",
+    "no-empty-function": "error",
+    "typescript/no-inferrable-types": "error",
+    "typescript/non-nullable-type-assertion-style": "error",
+    "typescript/prefer-find": "error",
+    "typescript/prefer-for-of": "error",
+    "typescript/prefer-function-type": "error",
+    "typescript/prefer-includes": "error",
+    "typescript/prefer-nullish-coalescing": "error",
+    "typescript/prefer-optional-chain": "error",
+    "typescript/prefer-regexp-exec": "error",
+    "typescript/prefer-string-starts-ends-with": "error",
+    "react/error-boundaries": "error",
+    "react/no-array-index-key": "error",
+    "react/no-clone-element": "error",
+    "react/no-direct-mutation-state": "error",
+    "react/jsx-key": "error",
+    "react/no-unstable-nested-components": "error",
+    "react/no-did-mount-set-state": "error",
+    "react/no-did-update-set-state": "error",
+    "react/no-will-update-set-state": "error",
+    "react/no-unsafe": "error",
+    "react/purity": "error",
+    "react/set-state-in-effect": "error",
+    "react/set-state-in-render": "error",
+    "react/static-components": "error",
+    "react/unsupported-syntax": "error",
+    "react/use-memo": "error",
+    "react/no-children-prop": "error",
+    "react/jsx-no-comment-textnodes": "error",
+    "react/no-namespace": "error",
+    "react/no-danger": "error",
+    "react/no-danger-with-children": "error",
+    "react/no-find-dom-node": "error",
+    "react/no-render-return-value": "error",
+    "react/jsx-no-script-url": "error",
+    "react/void-dom-elements-no-children": "error",
+    "react/jsx-no-useless-fragment": "error",
+    "react/button-has-type": "error",
+    "react/iframe-missing-sandbox": "error",
+    "react/jsx-no-target-blank": "error",
+    "react/rules-of-hooks": "error",
+    "react/exhaustive-deps": "error",
+    "react/void-use-memo": "error",
+    "react/preserve-manual-memoization": "error",
+    "react/incompatible-library": "error",
+    "react/immutability": "error",
+    "react/globals": "error",
+    "react/refs": "error",
+    "no-restricted-globals": [
+      "error",
+      {
+        "name": "fetch",
+        "message": "ask the server through lib/api-client.ts"
+      }
+    ],
+    "import/no-cycle": "error",
+    "import/no-relative-parent-imports": "error",
+    "unicorn/filename-case": [
+      "error",
+      {
+        "case": "kebabCase"
+      }
+    ],
+    "no-restricted-imports": [
+      "error",
+      {
+        "patterns": [
+          {
+            "group": ["@/../**", "**/gallery/**"],
+            "message": "src imports nothing outside src: the gallery is the gallery's alone"
+          }
+        ]
+      }
+    ]
+  },
+  "overrides": [
+    {
+      "files": ["**/*.test.{ts,tsx}"],
+      "rules": {
+        "vitest/consistent-each-for": "error",
+        "vitest/consistent-test-filename": "error",
+        "vitest/consistent-test-it": "error",
+        "vitest/consistent-vitest-vi": "error",
+        "vitest/expect-expect": "error",
+        "vitest/hoisted-apis-on-top": "error",
+        "vitest/max-expects": "error",
+        "vitest/max-nested-describe": "error",
+        "vitest/no-alias-methods": "error",
+        "vitest/no-commented-out-tests": "error",
+        "vitest/no-conditional-expect": "error",
+        "vitest/no-conditional-in-test": "error",
+        "vitest/no-conditional-tests": "error",
+        "vitest/no-disabled-tests": "error",
+        "vitest/no-duplicate-hooks": "error",
+        "vitest/no-focused-tests": "error",
+        "vitest/no-hooks": "error",
+        "vitest/no-identical-title": "error",
+        "vitest/no-import-node-test": "error",
+        "vitest/no-interpolation-in-snapshots": "error",
+        "vitest/no-large-snapshots": "error",
+        "vitest/no-mocks-import": "error",
+        "vitest/no-restricted-matchers": "error",
+        "vitest/no-restricted-vi-methods": "error",
+        "vitest/no-standalone-expect": "error",
+        "vitest/no-test-prefixes": "error",
+        "vitest/no-test-return-statement": "error",
+        "vitest/no-unneeded-async-expect-function": "error",
+        "vitest/padding-around-after-all-blocks": "error",
+        "vitest/padding-around-test-blocks": "error",
+        "vitest/prefer-called-exactly-once-with": "error",
+        "vitest/prefer-called-times": "error",
+        "vitest/prefer-called-with": "error",
+        "vitest/prefer-comparison-matcher": "error",
+        "vitest/prefer-describe-function-title": "error",
+        "vitest/prefer-each": "error",
+        "vitest/prefer-equality-matcher": "error",
+        "vitest/prefer-expect-assertions": "error",
+        "vitest/prefer-expect-resolves": "error",
+        "vitest/prefer-expect-type-of": "error",
+        "vitest/prefer-hooks-in-order": "error",
+        "vitest/prefer-hooks-on-top": "error",
+        "vitest/prefer-import-in-mock": "error",
+        "vitest/prefer-importing-vitest-globals": "error",
+        "vitest/prefer-lowercase-title": "error",
+        "vitest/prefer-mock-promise-shorthand": "error",
+        "vitest/prefer-snapshot-hint": "error",
+        "vitest/prefer-spy-on": "error",
+        "vitest/prefer-strict-boolean-matchers": "error",
+        "vitest/prefer-strict-equal": "error",
+        "vitest/prefer-to-be-object": "error",
+        "vitest/prefer-to-be": "error",
+        "vitest/prefer-to-contain": "error",
+        "vitest/prefer-to-have-been-called-times": "error",
+        "vitest/prefer-to-have-length": "error",
+        "vitest/prefer-todo": "error",
+        "vitest/require-awaited-expect-poll": "error",
+        "vitest/require-hook": "error",
+        "vitest/require-local-test-context-for-concurrent-snapshots": "error",
+        "vitest/require-mock-type-parameters": "error",
+        "vitest/require-to-throw-message": "error",
+        "vitest/require-top-level-describe": "error",
+        "vitest/valid-describe-callback": "error",
+        "vitest/valid-expect-in-promise": "error",
+        "vitest/valid-expect": "error",
+        "vitest/valid-title": "error"
+      }
+    },
+    {
+      "files": ["src/types/**"],
+      "rules": {
+        "no-restricted-imports": [
+          "error",
+          {
+            "patterns": [
+              {
+                "group": ["@/**", "!@/types/**"],
+                "message": "types import types alone"
+              },
+              {
+                "group": ["@/../**", "**/gallery/**"],
+                "message": "src imports nothing outside src: the gallery is the gallery's alone"
+              }
+            ]
+          }
+        ]
+      }
+    },
+    {
+      "files": ["src/utils/**"],
+      "rules": {
+        "no-restricted-imports": [
+          "error",
+          {
+            "patterns": [
+              {
+                "group": ["@/**", "!@/utils/**", "!@/types/**"],
+                "message": "utils are pure: they import utils and types alone"
+              },
+              {
+                "group": ["@/../**", "**/gallery/**"],
+                "message": "src imports nothing outside src: the gallery is the gallery's alone"
+              }
+            ]
+          }
+        ]
+      }
+    },
+    {
+      "files": ["src/config/**"],
+      "rules": {
+        "no-restricted-imports": [
+          "error",
+          {
+            "patterns": [
+              {
+                "group": ["@/**", "!@/config/**", "!@/types/**"],
+                "message": "config imports types alone"
+              },
+              {
+                "group": ["@/../**", "**/gallery/**"],
+                "message": "src imports nothing outside src: the gallery is the gallery's alone"
+              }
+            ]
+          }
+        ]
+      }
+    },
+    {
+      "files": ["src/lib/**"],
+      "rules": {
+        "no-restricted-imports": [
+          "error",
+          {
+            "patterns": [
+              {
+                "group": ["@/features/**", "@/app/**"],
+                "message": "shared code imports no feature and no app"
+              },
+              {
+                "group": ["@/stores/**", "@/hooks/**", "@/components/**"],
+                "message": "lib imports no store, hook or component: a store calls lib"
+              },
+              {
+                "group": ["@/../**", "**/gallery/**"],
+                "message": "src imports nothing outside src: the gallery is the gallery's alone"
+              }
+            ]
+          }
+        ]
+      }
+    },
+    {
+      "files": ["src/stores/**"],
+      "rules": {
+        "no-restricted-imports": [
+          "error",
+          {
+            "patterns": [
+              {
+                "group": ["@/features/**", "@/app/**"],
+                "message": "shared code imports no feature and no app"
+              },
+              {
+                "group": ["@/hooks/**", "@/components/**"],
+                "message": "stores import no hook or component"
+              },
+              {
+                "group": ["@/../**", "**/gallery/**"],
+                "message": "src imports nothing outside src: the gallery is the gallery's alone"
+              }
+            ]
+          }
+        ]
+      }
+    },
+    {
+      "files": ["src/hooks/**"],
+      "rules": {
+        "no-restricted-imports": [
+          "error",
+          {
+            "patterns": [
+              {
+                "group": ["@/features/**", "@/app/**"],
+                "message": "shared code imports no feature and no app"
+              },
+              {
+                "group": ["@/components/**"],
+                "message": "hooks import no component"
+              },
+              {
+                "group": ["@/../**", "**/gallery/**"],
+                "message": "src imports nothing outside src: the gallery is the gallery's alone"
+              }
+            ]
+          }
+        ]
+      }
+    },
+    {
+      "files": ["src/components/**"],
+      "rules": {
+        "no-restricted-imports": [
+          "error",
+          {
+            "patterns": [
+              {
+                "group": ["@/features/**", "@/app/**"],
+                "message": "shared code imports no feature and no app"
+              },
+              {
+                "group": ["@/../**", "**/gallery/**"],
+                "message": "src imports nothing outside src: the gallery is the gallery's alone"
+              }
+            ]
+          }
+        ]
+      }
+    },
+    {
+      "files": ["src/lib/api-client.ts"],
+      "rules": {
+        "no-restricted-globals": "off"
+      }
+    },
+    {
+      "files": ["src/features/tasks/**"],
+      "rules": {
+        "no-restricted-imports": [
+          "error",
+          {
+            "patterns": [
+              {
+                "group": ["@/features/**", "!@/features/tasks/**"],
+                "message": "a feature imports no other feature: compose them in app"
+              },
+              {
+                "group": ["@/app/**"],
+                "message": "only app imports app"
+              },
+              {
+                "group": ["@/../**", "**/gallery/**"],
+                "message": "src imports nothing outside src: the gallery is the gallery's alone"
+              }
+            ]
+          }
+        ]
+      }
+    },
+    {
+      "files": ["src/features/page-list/**"],
+      "rules": {
+        "no-restricted-imports": [
+          "error",
+          {
+            "patterns": [
+              {
+                "group": ["@/features/**", "!@/features/page-list/**"],
+                "message": "a feature imports no other feature: compose them in app"
+              },
+              {
+                "group": ["@/app/**"],
+                "message": "only app imports app"
+              },
+              {
+                "group": ["@/../**", "**/gallery/**"],
+                "message": "src imports nothing outside src: the gallery is the gallery's alone"
+              }
+            ]
+          }
+        ]
+      }
+    },
+    {
+      "files": ["src/features/versions/**"],
+      "rules": {
+        "no-restricted-imports": [
+          "error",
+          {
+            "patterns": [
+              {
+                "group": ["@/features/**", "!@/features/versions/**"],
+                "message": "a feature imports no other feature: compose them in app"
+              },
+              {
+                "group": ["@/app/**"],
+                "message": "only app imports app"
+              },
+              {
+                "group": ["@/../**", "**/gallery/**"],
+                "message": "src imports nothing outside src: the gallery is the gallery's alone"
+              }
+            ]
+          }
+        ]
+      }
+    },
+    {
+      "files": ["src/features/settings/**"],
+      "rules": {
+        "no-restricted-imports": [
+          "error",
+          {
+            "patterns": [
+              {
+                "group": ["@/features/**", "!@/features/settings/**"],
+                "message": "a feature imports no other feature: compose them in app"
+              },
+              {
+                "group": ["@/app/**"],
+                "message": "only app imports app"
+              },
+              {
+                "group": ["@/../**", "**/gallery/**"],
+                "message": "src imports nothing outside src: the gallery is the gallery's alone"
+              }
+            ]
+          }
+        ]
+      }
+    },
+    {
+      "files": ["src/features/page-tree/**"],
+      "rules": {
+        "no-restricted-imports": [
+          "error",
+          {
+            "patterns": [
+              {
+                "group": ["@/features/**", "!@/features/page-tree/**"],
+                "message": "a feature imports no other feature: compose them in app"
+              },
+              {
+                "group": ["@/app/**"],
+                "message": "only app imports app"
+              },
+              {
+                "group": ["@/../**", "**/gallery/**"],
+                "message": "src imports nothing outside src: the gallery is the gallery's alone"
+              }
+            ]
+          }
+        ]
+      }
+    },
+    {
+      "files": ["src/features/tags/**"],
+      "rules": {
+        "no-restricted-imports": [
+          "error",
+          {
+            "patterns": [
+              {
+                "group": ["@/features/**", "!@/features/tags/**"],
+                "message": "a feature imports no other feature: compose them in app"
+              },
+              {
+                "group": ["@/app/**"],
+                "message": "only app imports app"
+              },
+              {
+                "group": ["@/../**", "**/gallery/**"],
+                "message": "src imports nothing outside src: the gallery is the gallery's alone"
+              }
+            ]
+          }
+        ]
+      }
+    },
+    {
+      "files": ["src/features/find/**"],
+      "rules": {
+        "no-restricted-imports": [
+          "error",
+          {
+            "patterns": [
+              {
+                "group": ["@/features/**", "!@/features/find/**"],
+                "message": "a feature imports no other feature: compose them in app"
+              },
+              {
+                "group": ["@/app/**"],
+                "message": "only app imports app"
+              },
+              {
+                "group": ["@/../**", "**/gallery/**"],
+                "message": "src imports nothing outside src: the gallery is the gallery's alone"
+              }
+            ]
+          }
+        ]
+      }
+    },
+    {
+      "files": ["src/features/page-edit/**"],
+      "rules": {
+        "no-restricted-imports": [
+          "error",
+          {
+            "patterns": [
+              {
+                "group": ["@/features/**", "!@/features/page-edit/**"],
+                "message": "a feature imports no other feature: compose them in app"
+              },
+              {
+                "group": ["@/app/**"],
+                "message": "only app imports app"
+              },
+              {
+                "group": ["@/../**", "**/gallery/**"],
+                "message": "src imports nothing outside src: the gallery is the gallery's alone"
+              }
+            ]
+          }
+        ]
+      }
+    },
+    {
+      "files": ["src/features/reader/**"],
+      "rules": {
+        "no-restricted-imports": [
+          "error",
+          {
+            "patterns": [
+              {
+                "group": ["@/features/**", "!@/features/reader/**"],
+                "message": "a feature imports no other feature: compose them in app"
+              },
+              {
+                "group": ["@/app/**"],
+                "message": "only app imports app"
+              },
+              {
+                "group": ["@/../**", "**/gallery/**"],
+                "message": "src imports nothing outside src: the gallery is the gallery's alone"
+              }
+            ]
+          }
+        ]
+      }
+    },
+    {
+      "files": ["src/features/help/**"],
+      "rules": {
+        "no-restricted-imports": [
+          "error",
+          {
+            "patterns": [
+              {
+                "group": ["@/features/**", "!@/features/help/**"],
+                "message": "a feature imports no other feature: compose them in app"
+              },
+              {
+                "group": ["@/app/**"],
+                "message": "only app imports app"
+              },
+              {
+                "group": ["@/../**", "**/gallery/**"],
+                "message": "src imports nothing outside src: the gallery is the gallery's alone"
+              }
+            ]
+          }
+        ]
+      }
+    }
+  ],
+  "ignorePatterns": ["dist/**"]
+}

@@ -23,7 +23,7 @@ func choose(b *browser, id string, n int) {
 // beside the list (its slug, version and what it loaded).
 const (
 	verWords     = `(document.querySelector('[data-testid=ver-note]')?.textContent ?? '').replace(/\(.*?\)/, '(at)')`
-	frameTold    = `[location.search + location.hash, document.getElementById('frame').getAttribute('src'), document.getElementById('frame-version').hidden, ` + verWords + `].join(' / ')`
+	frameTold    = `[location.search + location.hash, document.getElementById('frame').getAttribute('src'), document.getElementById('frame-version')?.hidden ?? true, ` + verWords + `].join(' / ')`
 	besideSlug   = "document.getElementById('read-frame').dataset.slug"
 	besideV      = "document.getElementById('read-frame').dataset.version"
 	besideLoaded = "document.getElementById('read-frame').dataset.loaded"
@@ -313,7 +313,7 @@ func TestUIVersionURL(t *testing.T) { //nolint:paralleltest // the browser tests
 	}).observe(document.body, { childList: true, subtree: true }))`)
 	b.navigate("/a/n/")
 	// Timed out, what was told says which way it went: the versions the frame said it served, the reads sent, the menu's way back
-	// (two served, unreadHidden false and toastSeen false is S428, ui.html's: a quick second pageServed drops the toast; the React rebuild (epic/ui-react) fixes it)
+	// (two served, unreadHidden false and toastSeen false was S428: a quick second pageServed dropped the toast)
 	told := func(what, expr string) string {
 		t.Helper()
 		if got, err := b.try(expr); err == nil && truthy(got) {
