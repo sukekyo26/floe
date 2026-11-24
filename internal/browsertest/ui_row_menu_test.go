@@ -1,8 +1,13 @@
 package browsertest_test
 
 import (
+	"os"
+	"path/filepath"
 	"testing"
+	"time"
 
+	cdpbrowser "github.com/chromedp/cdproto/browser"
+	"github.com/chromedp/chromedp"
 	"github.com/chromedp/chromedp/kb"
 
 	"floe/internal/store"
@@ -130,4 +135,74 @@ func TestUIRowMenuDisarms(t *testing.T) { //nolint:paralleltest // the browser t
 		b.eval(summary("a") + ".click()")
 		b.until(w.name+": the menu shut again", "!"+del)
 	}
+}
+
+// TestUIRowMenuLinks: a link item pressed by the pointer does what it says, though the menu shuts and the item is gone before the browser
+// follows it: the page alone in a new tab, and its download (the task's link: TestUITaskUp).
+func TestUIRowMenuLinks(t *testing.T) { //nolint:paralleltest // the browser tests share one Chrome, one at a time
+	s := newSite(t)
+	b := s.b
+	s.floe(t, "publish", s.page(t, "a.yaml", "T a", ""), "--slug", "a")
+	b.size(1440, 900, false)
+	defer b.unsize()
+	b.navigate("/")
+	const summary = "document.querySelector('#list li[data-slug=a] summary')"
+	b.until("the row", summary)
+	press := func(item string) {
+		t.Helper()
+		b.eval(summary + ".click()")
+		sel := "document.querySelector('#list li[data-slug=a] [data-testid=" + item + "]')"
+		b.until("the item "+item, sel+"?.checkVisibility()")
+		r := b.rect(sel)
+		b.click(r.X+r.Width/2, r.Y+r.Height/2)
+		b.until("the item gone", "!"+sel)
+	}
+	waitFor := func(what string, there func() bool) {
+		t.Helper()
+		for deadline := time.Now().Add(waitLimit); !there(); time.Sleep(50 * time.Millisecond) {
+			if time.Now().After(deadline) {
+				t.Fatalf("timed out waiting for %s", what)
+			}
+		}
+	}
+
+	press("open")
+	waitFor("the page alone in a new tab", func() bool {
+		targets, err := chromedp.Targets(b.ctx)
+		if err != nil {
+			t.Fatal(err)
+		}
+		for _, info := range targets {
+			if info.Type == "page" && info.URL == s.Base+"/a/a/?raw" {
+				// Cancelling a context attached to a target closes the target.
+				tab, shut := chromedp.NewContext(b.ctx, chromedp.WithTargetID(info.TargetID))
+				defer shut()
+				if _, err := chromedp.Run(tab, chromedp.Evaluate[string]("self.origin")); err != nil {
+					t.Fatal(err)
+				}
+				return true
+			}
+		}
+		return false
+	})
+
+	dir := t.TempDir()
+	behave := func(p cdpbrowser.SetDownloadBehaviorParams) {
+		t.Helper()
+		if _, err := chromedp.Call(b.ctx, cdpbrowser.SetDownloadBehavior, p); err != nil {
+			t.Fatal(err)
+		}
+	}
+	own := chromedp.FromContext(b.ctx).BrowserContextID
+	behave(cdpbrowser.SetDownloadBehaviorParams{Behavior: cdpbrowser.SetDownloadBehaviorBehaviorAllow, BrowserContextID: own, DownloadPath: dir})
+	defer behave(cdpbrowser.SetDownloadBehaviorParams{Behavior: cdpbrowser.SetDownloadBehaviorBehaviorDefault, BrowserContextID: own})
+	press("download")
+	waitFor("the download", func() bool {
+		files, err := filepath.Glob(filepath.Join(dir, "*.html"))
+		if err != nil || len(files) != 1 {
+			return false
+		}
+		info, err := os.Stat(files[0])
+		return err == nil && info.Size() > 0
+	})
 }

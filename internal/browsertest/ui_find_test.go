@@ -276,14 +276,17 @@ func TestUIFindActions(t *testing.T) { //nolint:paralleltest // the browser test
 	b.until("the rows drawn", "document.querySelector('#find-list a').textContent === 'Alpha plan'")
 	out = append(out, b.eval("document.querySelector('"+menu+" [data-testid=delete]').dataset.armed === 'true'"))
 
-	// Closed by its key with a delete waiting, on the row it opens on: it opens anew with the menu shut, nothing waiting.
+	// The menu shut by its button lets it go (TestUIRowMenuDisarms); closed by its key with a delete waiting, on the row it opens
+	// on, the search opens anew with the menu shut.
 	typeFind(b, "")
+	b.eval("(() => { const m = document.querySelector('" + menu + "'); if (m.open) m.querySelector('summary').click(); })()")
 	menuItemShown(b, "#find-actions", "delete", "")
-	b.eval("if (!document.querySelector('" + menu + " [data-testid=delete]').dataset.armed) document.querySelector('" + menu + " [data-testid=delete]').click()")
+	out = append(out, b.eval("document.querySelector('"+menu+" [data-testid=delete]').hasAttribute('data-armed')"))
+	b.eval("document.querySelector('" + menu + " [data-testid=delete]').click()")
 	b.until("the delete armed", "document.querySelector('"+menu+" [data-testid=delete]').dataset.armed")
 	keyDown(b, "key: 'k', ctrlKey: true")
 	keyDown(b, "key: 'k', ctrlKey: true")
-	out = append(out, b.eval("[document.querySelector('"+menu+"').open, "+inMenu("#find-actions", "m.querySelectorAll('[data-armed]').length")+"].join(' ')"))
+	out = append(out, b.eval("document.querySelector('"+menu+"').open"))
 	// What comes of the buttons shows over the rest: a toast, a mistake; and they go back with the window.
 	const seen = `((id) => { const e = document.getElementById(id); return document.getElementById('find').contains(e) && !e.hidden && e.getBoundingClientRect().height > 0; })`
 	b.eval("document.querySelector('#find-actions [data-testid=star]').click()")
@@ -339,7 +342,7 @@ func TestUIFindActions(t *testing.T) { //nolint:paralleltest // the browser test
 	b.moving("document.querySelector('" + menu + " [data-testid=delete]').click()")
 	b.until("the list", "location.pathname === '/'")
 	check(t, "actions", out, strings.Join([]string{
-		"true", "true", "true", "true", "false true true", "false", "true", "true", "false 0", "true", "true none",
+		"true", "true", "true", "true", "false true true", "false", "true", "true", "false", "false", "true", "true none",
 		"/a/c/ true find-q", "false true", "/a/c/ ",
 	}, "|"))
 }
