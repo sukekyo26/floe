@@ -3,6 +3,7 @@ import { useState } from 'react';
 import { Button } from '@/components/button';
 import { EmptyState } from '@/components/empty-state';
 import { DeleteIcon } from '@/components/icons';
+import { TextLink } from '@/components/text-link';
 import { taskPageActs, type TaskPageActs } from '@/features/tasks/stores/task-page-acts';
 import { useArm } from '@/hooks/use-arm';
 import { goTo } from '@/lib/platform';
@@ -74,9 +75,9 @@ export function TaskNone({
       <EmptyState id="task-missing" hidden={!missing}>
         <strong>{t('ui_task_missing', name)}</strong>
         <p>
-          <a id="task-missing-up" href={listHref}>
+          <TextLink id="task-missing-up" href={listHref}>
             {t('ui_tasks_back')}
-          </a>
+          </TextLink>
         </p>
       </EmptyState>
     </>

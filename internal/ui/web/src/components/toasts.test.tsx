@@ -32,7 +32,7 @@ describe(Toasts, () => {
     const html = renderToString(<Toasts store={store} />);
     vi.useRealTimers();
     expect(html).toMatch(
-      /<a data-testid="toast-link" href="\/tasks\?project=p&amp;task=%231" class="pointer-events-auto[^"]*">Task #1 made<\/a>/,
+      /<a data-testid="toast-link" href="\/tasks\?project=p&amp;task=%231" class="underline [^"]*pointer-events-auto[^"]*">Task #1 made<\/a>/,
     );
     expect(html).toMatch(/data-testid="toast"[^>]*class="[^"]*py-2.5[^"]*"(?![^>]*pointer-events-auto)/);
   });

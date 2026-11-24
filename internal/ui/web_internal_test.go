@@ -104,6 +104,28 @@ func TestFetchInApiClient(t *testing.T) {
 	}
 }
 
+// TestLinksOfAShape keeps a link among words in components/text-link.tsx, which underlines it: Tailwind's preflight
+// takes the underline off every link, so one written bare reads as words. The others are the links of another shape,
+// each of which says its own underline.
+// LIMIT: the text <a alone is looked for, by file: a bare link added to a file listed here passes.
+func TestLinksOfAShape(t *testing.T) {
+	t.Parallel()
+
+	sources := webSources(t)
+	got := slices.Compact(slices.Sorted(slices.Values(slices.Concat(namedIn(sources, "<a "), namedIn(sources, "<a\n")))))
+	want := []string{
+		"components/back-link.tsx", "components/brand.tsx", "components/button.tsx", "components/hit-row.tsx",
+		"components/icon-button.tsx", "components/row-card.tsx", "components/screen-switch.tsx", "components/text-link.tsx",
+		"components/tree-row.tsx", "features/page-list/components/list-row.tsx", "features/page-list/components/news.tsx",
+		"features/page-tree/components/side-row.tsx", "features/reader/components/reader-pane.tsx",
+		"features/tasks/components/pins.tsx", "features/tasks/components/task-family.tsx",
+		"features/tasks/components/task-row.tsx",
+	}
+	if !slices.Equal(got, want) {
+		t.Errorf("<a is written in %v, want %v: a link among words is a TextLink", got, want)
+	}
+}
+
 var gallery = flag.String("gallery", "", "write web/gallery/boot.json, the gallery's boot values, in this language (ja, en)")
 
 // TestGalleryBoot is no test: with -gallery it writes the boot values the gallery is served with (just web-gallery), a

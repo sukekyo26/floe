@@ -1,9 +1,8 @@
 import { Button } from '@/components/button';
 import { EmptyState } from '@/components/empty-state';
 import { PlusIcon } from '@/components/icons';
+import { TextLink } from '@/components/text-link';
 import { t } from '@/lib/t';
-
-const LINK = 'text-fg';
 
 export interface TaskListEmptyProps {
   // nothing: no task nor pin anywhere; failed: the tasks unreadable; none: no task to show, its words those of none,
@@ -23,26 +22,22 @@ export function TaskListEmpty({ nothing, failed, none, other, onAdd }: TaskListE
       <EmptyState id="tasks-none" hidden={none === null}>
         <strong>{none ?? ''}</strong>
         <p>
-          <a href="/tasks" id="tasks-other" hidden={!other} className={LINK}>
+          <TextLink href="/tasks" id="tasks-other" hidden={!other}>
             {t('ui_tasks_other')}
-          </a>
+          </TextLink>
         </p>
       </EmptyState>
       <EmptyState id="tasks-failed" hidden={!failed}>
         <strong>{t('ui_tasks_unreadable')}</strong>
         <p>
-          <a href="/" className={LINK}>
-            {t('ui_to_page_list')}
-          </a>
+          <TextLink href="/">{t('ui_to_page_list')}</TextLink>
         </p>
       </EmptyState>
       <EmptyState id="tasks-empty" hidden={!nothing}>
         <strong>{t('ui_tasks_empty')}</strong>
         <p>{t('ui_tasks_empty_hint')}</p>
         <p>
-          <a href="/" className={LINK}>
-            {t('ui_to_page_list')}
-          </a>
+          <TextLink href="/">{t('ui_to_page_list')}</TextLink>
         </p>
         <p>
           <Button id="task-add-empty" adds onClick={onAdd}>

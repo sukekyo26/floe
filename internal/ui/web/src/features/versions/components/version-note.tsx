@@ -1,3 +1,4 @@
+import { TextLink } from '@/components/text-link';
 import { versions as sharedVersions, type Versions } from '@/features/versions/stores/versions';
 import { verMonth } from '@/features/versions/utils/version-words';
 import { useStore } from '@/hooks/use-store';
@@ -32,20 +33,20 @@ export function VersionNote({ at, page, onGo, versions = sharedVersions }: Versi
         <>
           <span>{t('ui_version_old', note.n, verMonth(note.at), note.last)}</span>
           <span className="ms-auto flex flex-wrap gap-x-3.5 gap-y-1 narrow:ms-0">
-            <a
+            <TextLink
+              tone="chg"
               href={pageHref({ slug: at.slug })}
               onClick={(e) => {
                 if (e.button || e.ctrlKey || e.metaKey || e.shiftKey || e.altKey) return;
                 e.preventDefault();
                 versions.pick(note.last, { focus: true, held: false });
               }}
-              className="font-bold text-chg"
             >
               {t('ui_version_latest')}
-            </a>
-            <a href={diffHref(at.slug, note.n, note.last)} onClick={onGo} className="font-bold text-chg">
+            </TextLink>
+            <TextLink tone="chg" href={diffHref(at.slug, note.n, note.last)} onClick={onGo}>
               {t('ui_version_diff')}
-            </a>
+            </TextLink>
           </span>
         </>
       )}

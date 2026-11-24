@@ -8,6 +8,7 @@ adheres to [Semantic Versioning](https://semver.org/).
 
 ### Fixed
 
+- Fix the management page's links among words showing no underline, so that they read as words, as they have since 0.3.0: Open the latest version and See what differs from the latest over an older version, See what changed, Open another project and Back to the page list where the task list has nothing to show, Back to the task list of a task not there, the link of a toast, and the page's URL on the printed frame. Back to the task list is as dark as the words over it again.
 - Fix the management page's bar running off the side of a narrow window (in Japanese, 303px wide or less), as it has since 0.3.0: at 24rem (384px) or less, the logo is its mark alone on every screen.
 - Fix the management page showing no icon in the browser tab, as it has since 0.3.0.
 
