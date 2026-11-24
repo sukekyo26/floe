@@ -246,7 +246,7 @@ func (b *browser) holdReads(at heldAt, paths ...string) func() {
 		window.fetch = (url, init) => {
 			if (on && !init?.method && paths.includes(new URL(String(url), location.href).pathname)) {
 				window.heldReads++;
-				if (answered) return f(url, init).then((r) => new Promise((go) => { held.push(() => go(r)); }));
+				if (answered) return f(url, init).then((r) => (on ? new Promise((go) => { held.push(() => go(r)); }) : r));
 				return new Promise((go) => { held.push(() => go(f(url, init))); });
 			}
 			return f(url, init);
