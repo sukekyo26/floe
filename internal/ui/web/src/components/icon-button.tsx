@@ -10,7 +10,7 @@ export interface IconButtonProps {
   readonly label?: string | undefined;
   readonly title?: string | undefined;
   readonly children: ReactNode;
-  // bar: 30 px, among the bar's; row: 26 px, a row's; chip: 28 px, a pin's ×; help: 24 px, the pins' help (.pins-help);
+  // bar: 30 px, among the bar's; row: 26 px, a row's; chip: 28 px, a pin's ×; help: 24 px, the pins' help (#pins-help);
   // item: an item of a menu, as wide as the menu, its words beside
   readonly size?: 'bar' | 'row' | 'chip' | 'help' | 'kin' | 'item';
   readonly display?: Display;

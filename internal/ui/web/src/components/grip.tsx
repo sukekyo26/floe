@@ -23,8 +23,8 @@ export interface GripProps {
   readonly place?: 'bar' | 'box';
 }
 
-// Grip is an edge to drag, or to move by keys, between columns: a line shows while it is dragged, pointed at or focused.
-// Its value and bounds are for its keys and for screen readers
+// Grip is an edge to drag, or to move by keys, between columns: a line shows while it is dragged, pointed at or
+// focused. Its value and bounds are for its keys and for screen readers
 export function Grip({
   id,
   label,
