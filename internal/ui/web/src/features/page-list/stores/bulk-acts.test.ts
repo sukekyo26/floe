@@ -9,6 +9,7 @@ import type { ActOn } from '@/stores/act-on';
 import { createListQuery } from '@/stores/list-query';
 import type { PageWrites } from '@/stores/page-writes';
 import type { Pages, PagesState } from '@/stores/pages';
+import { createPressOnce } from '@/stores/press-once';
 import type { Page } from '@/types/page';
 
 const page = (slug: string, change: Partial<Page> = {}): Page => ({
@@ -20,7 +21,8 @@ const page = (slug: string, change: Partial<Page> = {}): Page => ({
   taskProject: '',
   ...change,
 });
-const made = (search: string, entries: Page[], refused: string[] = []) => {
+// slow: the read after the writes never ends
+const made = (search: string, entries: Page[], refused: string[] = [], slow = false) => {
   testBoot();
   const query = createListQuery({
     boot: () => ({ screen: 'list', states: [] }) as unknown as Boot,
@@ -36,6 +38,7 @@ const made = (search: string, entries: Page[], refused: string[] = []) => {
     const reasons = await Promise.all(slugs.map(act));
     settled?.(reasons);
     said.push(words.done(slugs.length));
+    if (slow) await new Promise(() => undefined);
   };
   const writes = {
     patchPage: (slug: string, body: unknown) => {
@@ -47,7 +50,8 @@ const made = (search: string, entries: Page[], refused: string[] = []) => {
       return Promise.resolve(refused.includes(slug) ? 'no' : '');
     },
   } as unknown as PageWrites;
-  return { selection, sent, said, acts: bulkActs({ selection, actOn, writes, pages, query }) };
+  const press = createPressOnce();
+  return { selection, sent, said, acts: bulkActs({ selection, actOn, writes, pages, query, press }) };
 };
 
 describe(bulkActs, () => {
@@ -79,11 +83,30 @@ describe(bulkActs, () => {
     expect(restore.sent).toStrictEqual([['c', { archived: false }]]);
   });
 
+  it('archives and deletes the selected once before the read ends, telling a delete pressed again did not run', async () => {
+    expect.assertions(3);
+    const ended = () => new Promise((go) => setTimeout(go, 5));
+    // Refused, they stay selected: the same is asked as the read goes
+    const archived = made('', [page('a')], ['a'], true);
+    archived.selection.add(['a']);
+    void archived.acts.archive();
+    await ended();
+    void archived.acts.archive();
+    await ended();
+    expect(archived.sent).toStrictEqual([['a', { archived: true }]]);
+    const deleted = made('', [page('a')], ['a'], true);
+    deleted.selection.add(['a']);
+    void deleted.acts.remove();
+    await ended();
+    await expect(deleted.acts.remove()).resolves.toBe(false);
+    expect(deleted.sent).toStrictEqual([['a', 'delete']]);
+  });
+
   it('says it unlinked the links, in the words of before the write, and tags the selected leaving out the rest', async () => {
-    expect.assertions(2);
+    expect.assertions(3);
     const { selection, said, acts } = made('', [page('l', { path: '/x.html' })]);
     selection.add(['l']);
-    await acts.remove();
+    await expect(acts.remove()).resolves.toBe(true);
     expect(said).toStrictEqual(['ui_unlink_bulk_done:1']);
     selection.add(['l', 'm']);
     acts.tags().after(new Set(['m']));

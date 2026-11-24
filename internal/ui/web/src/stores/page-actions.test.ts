@@ -183,6 +183,40 @@ describe(createPageActions, () => {
     ]);
   });
 
+  it('stars, pins and takes off its task once before the reads end, and takes off again once put back', async () => {
+    expect.assertions(4);
+    const ended = () => new Promise((go) => setTimeout(go, 5));
+    const call = (log: string[]) => ({ prepare: prepared(log) });
+    const presses: [string, (x: ReturnType<typeof made>) => Promise<void>][] = [
+      ['patch a {"favorite":true}', ({ actions }) => actions.toggleFavorite(page)],
+      ['task a {"pin":true}', ({ actions }) => actions.togglePin(page)],
+      ['task a {"task":"","category":""}', ({ actions, log }) => actions.takePageOff(page, call(log))],
+    ];
+    for (const [write, press] of presses) {
+      const x = made({ slow: true });
+      void press(x);
+      await ended();
+      // Written, and not read yet: asked already still
+      void press(x);
+      await ended();
+      expect(x.log.filter((line) => /^(patch|task)/.test(line))).toStrictEqual([write]);
+    }
+    const back = made({ slow: true });
+    void back.actions.takePageOff(page, call(back.log));
+    await ended();
+    void buttonOf(back.toasts.shown.get()[0])?.onPress();
+    await ended();
+    void back.actions.takePageOff(page, call(back.log));
+    await ended();
+    void back.actions.takePageOff(page, call(back.log));
+    await ended();
+    expect(back.log.filter((line) => /^(task|put)/.test(line))).toStrictEqual([
+      'task a {"task":"","category":""}',
+      'put #1 designs {"new":false,"rev":7}',
+      'task a {"task":"","category":""}',
+    ]);
+  });
+
   it('leaves the way back of an archive in place when restoring fails, and says why', async () => {
     expect.assertions(2);
     const { actions, toasts, notice, now } = made();
