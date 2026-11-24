@@ -22,11 +22,10 @@ const findList = `[{ slug: 'a', title: 'Alpha plan', description: 'the words', n
 
 // What the window shows: open or not, the rows with the one reached in brackets, the title over its buttons, the foot's end.
 const findDrawn = `(() => {
-	const rows = [...document.querySelectorAll('#find-list li')].map((li) => {
-		const slug = new URL(li.querySelector('a').href).pathname.split('/')[2];
-		return li.classList.contains('reached') ? '[' + slug + ']' : slug;
-	}).join('');
-	return [document.getElementById('find').open, rows, document.getElementById('find-acts').hidden ? '-' : findShown.find((a) => a.slug === document.getElementById('find-actions').dataset.slug).title,
+	const lis = [...document.querySelectorAll('#find-list li')], slugOf = (li) => new URL(li.querySelector('a').href).pathname.split('/')[2];
+	const rows = lis.map((li) => li.getAttribute('aria-selected') === 'true' ? '[' + slugOf(li) + ']' : slugOf(li)).join('');
+	const acted = lis.find((li) => slugOf(li) === document.getElementById('find-actions').dataset.slug);
+	return [document.getElementById('find').open, rows, document.getElementById('find-acts').hidden ? '-' : acted.querySelector('[data-testid=title]').textContent,
 		document.getElementById('find-cut').textContent || '-'].join(' / ');
 })()`
 
@@ -38,7 +37,19 @@ func keyDown(b *browser, init string) {
 
 func typeFind(b *browser, words string) {
 	b.t.Helper()
-	b.eval("(() => { const q = document.getElementById('find-q'); q.value = " + js(words) + "; q.dispatchEvent(new Event('input')); })()")
+	b.fill("#find-q", words)
+}
+
+// pressFindOpen opens the search modal by the bar's button, or by Ctrl+K on the page list, whose search field stands for the
+// button (S422-P9).
+func pressFindOpen(b *browser) {
+	b.t.Helper()
+	if b.eval("String(document.getElementById('find-open') !== null)") == "true" {
+		b.eval("document.getElementById('find-open').click()")
+	} else {
+		keyDown(b, "key: 'k', ctrlKey: true")
+	}
+	b.until("the search modal", "document.getElementById('find').open")
 }
 
 // TestUIFind opens the window from the list, a whole page and a field, finds in everything an entry has with the archived last,
@@ -66,16 +77,18 @@ func TestUIFind(t *testing.T) { //nolint:paralleltest // the browser tests share
 	b.eval("document.getElementById('add-link').click()")
 	keyDown(b, "key: 'k', ctrlKey: true")
 	out = append(out, b.eval("document.getElementById('find').open + ' ' + document.getElementById('add-dialog').open"))
-	b.eval("document.getElementById('add-dialog').close(); document.body.focus()")
+	b.pressKey(kb.Escape)
+	b.until("the add modal closed", "!document.getElementById('add-dialog').open")
+	b.eval("document.activeElement.blur()")
 	keyDown(b, "key: 'k', ctrlKey: true")
 	// Found by the description, by the path; the archived last, marked; none.
-	typeFind(b, "the words")
+	b.fill("#find-q", "the words")
 	out = append(out, b.eval(findDrawn))
-	typeFind(b, "/tmp/x/c")
+	b.fill("#find-q", "/tmp/x/c")
 	out = append(out, b.eval(findDrawn))
-	typeFind(b, "plan")
+	b.fill("#find-q", "plan")
 	out = append(out, b.eval(findDrawn),
-		b.eval("document.querySelector('#find-list li:last-child .badge').textContent + ' ' + document.querySelectorAll('#find-list .badge').length"))
+		b.eval("document.querySelector('#find-list li:last-child [data-testid=badge]').textContent + ' ' + document.querySelectorAll('#find-list [data-testid=badge]').length"))
 	// The arrows, round the ends; the row reached is told, and it is what the buttons act on. A row is a link out of the Tab's way.
 	keyDown(b, "key: 'ArrowDown'")
 	out = append(out, b.eval(findDrawn), b.eval("document.getElementById('find-q').getAttribute('aria-activedescendant')"))
@@ -87,29 +100,29 @@ func TestUIFind(t *testing.T) { //nolint:paralleltest // the browser tests share
 	if err := chromedp.Do(b.ctx, chromedp.KeyEvent(kb.Tab)); err != nil {
 		t.Fatal(err)
 	}
-	out = append(out, b.eval("document.getElementById('find').open + ' ' + document.activeElement.matches('#find-actions > .download')"))
+	out = append(out, b.eval("document.getElementById('find').open + ' ' + document.activeElement.matches('#find-actions > [data-testid=download]')"))
 	b.eval("document.getElementById('find-q').focus()")
 	// None: no rows, no buttons, no foot, the reason; Enter goes nowhere.
-	typeFind(b, "nothing like it")
+	b.fill("#find-q", "nothing like it")
 	out = append(out, b.eval(findDrawn), b.eval("document.getElementById('find-none').hidden + ' ' + document.getElementById('find-none').textContent.includes('.')"))
 	// Its way to close stays, as there is none else without a key.
 	out = append(out, b.eval("document.querySelector('#find [data-close]').getBoundingClientRect().width > 0"))
 	keyDown(b, "key: 'Enter'")
 	out = append(out, b.eval("location.pathname"))
 	// What goes to the input method: no row moves, nothing opens or closes.
-	typeFind(b, "plan")
+	b.fill("#find-q", "plan")
 	keyDown(b, "key: 'ArrowDown', isComposing: true")
 	keyDown(b, "key: 'Enter', isComposing: true")
 	keyDown(b, "key: 'Enter', keyCode: 229")
 	keyDown(b, "key: 'k', ctrlKey: true, isComposing: true")
 	out = append(out, b.eval(findDrawn), b.eval("location.pathname"))
 	// A row that stays is the one reached as the rows change, though at another place; one gone, what has come to its place, or the last; none, nothing.
-	typeFind(b, "")
+	b.fill("#find-q", "")
 	keyDown(b, "key: 'ArrowDown'")
 	keyDown(b, "key: 'ArrowDown'")
-	reload := "drawn = ''; load()"
 	drop := func(slugs string) {
-		b.eval("window.list = JSON.stringify(JSON.parse(window.list).filter((a) => !" + js(slugs) + ".includes(a.slug))); " + reload)
+		b.eval("window.list = JSON.stringify(JSON.parse(window.list).filter((a) => !" + js(slugs) + ".includes(a.slug)))")
+		b.reread()
 		b.until("the rows drawn anew", "document.querySelectorAll('#find-list li').length === JSON.parse(window.list).length")
 	}
 	out = append(out, b.eval(findDrawn))
@@ -126,8 +139,25 @@ func TestUIFind(t *testing.T) { //nolint:paralleltest // the browser tests share
 	keyDown(b, "key: 'Enter'")
 	out = append(out, b.eval("location.pathname + ' ' + window.errs.length"))
 	// None and then rows, as when it opens before the list is read: the first is reached, and Enter goes.
-	b.eval("window.list = " + js("[{\"slug\":\"a\",\"title\":\"A\",\"description\":\"\",\"updatedAt\":\"2026-01-01T00:00:00.000Z\"}]") + "; " + reload)
+	b.eval("window.list = " + js("[{\"slug\":\"a\",\"title\":\"A\",\"description\":\"\",\"updatedAt\":\"2026-01-01T00:00:00.000Z\"}]"))
+	b.reread()
 	b.until("the row", "document.querySelector('#find-list li')")
+	out = append(out, b.eval(findDrawn))
+	// Rows, none and then rows again: the place reached before none is reached again, not the first.
+	three := js(`[{"slug":"a","title":"A","description":"","updatedAt":"2026-01-03T00:00:00.000Z"},` +
+		`{"slug":"b","title":"B","description":"","updatedAt":"2026-01-02T00:00:00.000Z"},` +
+		`{"slug":"c","title":"C","description":"","updatedAt":"2026-01-01T00:00:00.000Z"}]`)
+	b.eval("window.list = " + three)
+	b.reread()
+	b.until("the rows", "document.querySelectorAll('#find-list li').length === 3")
+	keyDown(b, "key: 'ArrowDown'")
+	keyDown(b, "key: 'ArrowDown'")
+	out = append(out, b.eval(findDrawn))
+	drop("abc")
+	out = append(out, b.eval(findDrawn))
+	b.eval("window.list = " + three)
+	b.reread()
+	b.until("the rows back", "document.querySelectorAll('#find-list li').length === 3")
 	out = append(out, b.eval(findDrawn))
 	b.eval("document.querySelector('#find [data-close]').click()")
 	out = append(out, b.eval("document.getElementById('find').open"))
@@ -158,7 +188,10 @@ func TestUIFind(t *testing.T) { //nolint:paralleltest // the browser tests share
 		"true / a[f] / Folder / Newest first",
 		"true /  / - / 0 found",
 		"/ 0",
-		"true / [a] / A / Newest first", "false",
+		"true / [a] / A / Newest first",
+		"true / ab[c] / C / Newest first",
+		"true /  / - / 0 found",
+		"true / ab[c] / C / Newest first", "false",
 	}, "|"))
 }
 
@@ -186,29 +219,30 @@ func TestUIFindActions(t *testing.T) { //nolint:paralleltest // the browser test
 	b.stub(findList)
 	b.navigate("/")
 	b.size(1440, 900, false)
-	b.eval("window.errs = []; addEventListener('error', (e) => window.errs.push(e.message))")
+	b.eval("window.errs = []; addEventListener('error', (e) => window.errs.push(e.message)); addEventListener('unhandledrejection', (e) => window.errs.push(String(e.reason)))")
 	if b.eval("matchMedia('(hover: hover)').matches") != "true" {
 		t.Fatal("this runs with a mouse")
 	}
 	change := func(slug, fields string) {
-		b.eval("window.list = JSON.stringify(JSON.parse(window.list).map((a) => a.slug === " + js(slug) + " ? { ...a, " + fields + " } : a)); drawn = ''; load()")
+		b.eval("window.list = JSON.stringify(JSON.parse(window.list).map((a) => a.slug === " + js(slug) + " ? { ...a, " + fields + " } : a))")
+		b.reread()
 	}
-	const menu = "#find-actions .more"
+	const menu = "#find-actions [data-testid=more]"
 	out := make([]string, 0, 24)
 	keyDown(b, "key: 'k', ctrlKey: true")
 	keyDown(b, "key: 'ArrowDown'") // b
 	// The star: the same button, the focus on it, what the row is told.
-	b.eval("(() => { const s = document.querySelector('#find-actions .star'); s.focus(); s.click(); })()")
+	b.eval("(() => { const s = document.querySelector('#find-actions [data-testid=star]'); s.focus(); s.click(); })()")
 	change("b", "favorite: false")
-	b.until("the star drawn", "document.querySelector('#find-actions .star').getAttribute('aria-pressed') === 'false'")
-	out = append(out, b.eval("document.activeElement.matches('#find-actions .star')"))
+	b.until("the star drawn", "document.querySelector('#find-actions [data-testid=star]').getAttribute('aria-pressed') === 'false'")
+	out = append(out, b.eval("document.activeElement.matches('#find-actions [data-testid=star]')"))
 	// The menu is whole, inside the window of any height it fits, and an answer does not close it.
 	typeFind(b, "beta") // one row: a window far shorter than the menu
 	for _, size := range [][2]int64{{1440, 900}, {400, 800}} {
 		b.size(size[0], size[1], false)
 		b.eval("document.querySelector('" + menu + " summary').click()")
-		out = append(out, b.eval(`(() => { const r = document.querySelector('`+menu+` .menu').getBoundingClientRect();
-			return r.bottom <= innerHeight && r.right <= innerWidth && r.left >= 0 && document.querySelector('`+menu+` .menu').contains(document.elementFromPoint(r.left + r.width / 2, r.bottom - 8)); })()`))
+		out = append(out, b.eval(`(() => { const r = document.querySelector('`+menu+` [data-testid=menu]').getBoundingClientRect();
+			return r.bottom <= innerHeight && r.right <= innerWidth && r.left >= 0 && document.querySelector('`+menu+` [data-testid=menu]').contains(document.elementFromPoint(r.left + r.width / 2, r.bottom - 8)); })()`))
 		b.eval("document.querySelector('" + menu + " summary').click()")
 	}
 	b.size(1440, 900, false)
@@ -230,72 +264,77 @@ func TestUIFindActions(t *testing.T) { //nolint:paralleltest // the browser test
 	keyDown(b, "key: 'k', ctrlKey: true")
 	keyDown(b, "key: 'ArrowDown'")
 	// Archived from the menu: the focus on the button of the menu as drawn, its words changed.
-	b.eval("document.querySelector('" + menu + " summary').focus(); document.querySelector('" + menu + " summary').click(); document.querySelector('" + menu + " .archive').click()")
+	b.eval("document.querySelector('" + menu + " summary').focus(); document.querySelector('" + menu + " summary').click(); document.querySelector('" + menu + " [data-testid=archive]').click()")
 	change("b", "archived: true")
-	b.until("the row moved", "document.querySelector('#find-actions .archive .label').textContent === 'Restore'")
+	b.until("the row moved", "document.querySelector('#find-actions [data-testid=archive] [data-testid=label]').textContent === 'Restore'")
 	out = append(out, b.eval("document.activeElement.matches('"+menu+" summary')"))
 	change("b", "archived: false")
-	b.until("the row back", "document.querySelector('#find-actions .archive .label').textContent === 'Archive'")
+	b.until("the row back", "document.querySelector('#find-actions [data-testid=archive] [data-testid=label]').textContent === 'Archive'")
 	// A delete waiting stays through an answer.
-	b.eval("document.querySelector('" + menu + " summary').click(); document.querySelector('" + menu + " .delete').focus(); document.querySelector('" + menu + " .delete').click()")
+	b.eval("document.querySelector('" + menu + " summary').click(); document.querySelector('" + menu + " [data-testid=delete]').focus(); document.querySelector('" + menu + " [data-testid=delete]').click()")
 	change("a", "title: 'Alpha plan'")
 	b.until("the rows drawn", "document.querySelector('#find-list a').textContent === 'Alpha plan'")
-	out = append(out, b.eval("document.querySelector('"+menu+" .delete').classList.contains('armed')"))
+	out = append(out, b.eval("document.querySelector('"+menu+" [data-testid=delete]').dataset.armed === 'true'"))
 
 	// Closed by its key with a delete waiting, on the row it opens on: it opens anew with the menu shut, nothing waiting.
 	typeFind(b, "")
-	b.eval("document.querySelector('" + menu + " summary').click(); document.querySelector('" + menu + " .delete').click()")
+	b.eval("document.querySelector('" + menu + " summary').click(); document.querySelector('" + menu + " [data-testid=delete]').click()")
 	keyDown(b, "key: 'k', ctrlKey: true")
 	keyDown(b, "key: 'k', ctrlKey: true")
-	out = append(out, b.eval("[document.querySelector('"+menu+"').open, document.querySelectorAll('#find-actions .armed').length].join(' ')"))
+	out = append(out, b.eval("[document.querySelector('"+menu+"').open, document.querySelectorAll('#find-actions [data-armed]').length].join(' ')"))
 	// What comes of the buttons shows over the rest: a toast, a mistake; and they go back with the window.
 	const seen = `((id) => { const e = document.getElementById(id); return document.getElementById('find').contains(e) && !e.hidden && e.getBoundingClientRect().height > 0; })`
-	b.eval("document.querySelector('#find-actions .star').click()")
-	b.until("the toast", seen+"('toasts') && document.querySelector('#toasts .toast')")
-	b.eval("window.failWrites = true; document.querySelector('#find-actions .star').click()")
+	b.eval("document.querySelector('#find-actions [data-testid=star]').click()")
+	b.until("the toast", seen+"('toasts') && document.querySelector('#toasts [data-testid=toast]')")
+	b.eval("window.failWrites = true; document.querySelector('#find-actions [data-testid=star]').click()")
 	b.until("the mistake", seen+"('error')")
 	out = append(out, b.eval(`(() => { const r = document.getElementById('error').getBoundingClientRect(); return document.getElementById('error').contains(document.elementFromPoint(r.left + r.width / 2, r.top + r.height / 2)); })()`))
-	b.eval("window.failWrites = false; document.getElementById('find').close()")
+	b.eval("window.failWrites = false")
+	escapeDialog(b, "find")
 	b.until("back", "!document.getElementById('find').contains(document.getElementById('error')) && !document.getElementById('find').contains(document.getElementById('toasts'))")
-	b.eval("showError('')")
 	// The buttons on a narrow whole page, where those of its bar go.
 	b.size(400, 800, false)
 	b.navigate("/a/c/")
 	b.until("the bar", "document.getElementById('frame-title').textContent")
 	keyDown(b, "key: 'k', ctrlKey: true")
-	out = append(out, b.eval("[getComputedStyle(document.getElementById('find-actions')).display !== 'none', getComputedStyle(document.querySelector('#frame-actions .star')).display].join(' ')"))
+	out = append(out, b.eval("[getComputedStyle(document.getElementById('find-actions')).display !== 'none', getComputedStyle(document.querySelector('#frame-actions [data-testid=star]')).display].join(' ')"))
 	b.size(1440, 900, false)
 	// From a whole page: a delete of another page stays there, the focus going to the field.
 	b.navigate("/a/c/")
 	b.until("the bar", "document.getElementById('frame-title').textContent")
-	b.eval("window.errs = []; addEventListener('error', (e) => window.errs.push(e.message))")
+	b.eval("window.errs = []; addEventListener('error', (e) => window.errs.push(e.message)); addEventListener('unhandledrejection', (e) => window.errs.push(String(e.reason)))")
 	keyDown(b, "key: 'k', ctrlKey: true")
 	typeFind(b, "beta")
-	b.eval("document.querySelector('" + menu + " summary').click(); document.querySelector('" + menu + " .delete').focus(); document.querySelector('" + menu + " .delete').click()")
+	b.eval("document.querySelector('" + menu + " summary').click(); document.querySelector('" + menu + " [data-testid=delete]').focus(); document.querySelector('" + menu + " [data-testid=delete]').click()")
 	b.eval("window.list = JSON.stringify(JSON.parse(window.list).filter((a) => a.slug !== 'b'))")
-	b.eval("document.querySelector('" + menu + " .delete').click()")
+	b.eval("document.querySelector('" + menu + " [data-testid=delete]').click()")
 	b.until("the row gone", "document.querySelectorAll('#find-list li').length === 0")
 	out = append(out, b.eval("[location.pathname, document.getElementById('find').open, document.activeElement.id].join(' ')"))
 	// The edit closes the window, no dialog going over another, and it goes back with no mistake.
 	typeFind(b, "alpha")
-	b.eval("document.querySelector('" + menu + " summary').click(); document.querySelector('" + menu + " .edit').click()")
+	b.eval("document.querySelector('" + menu + " summary').click(); document.querySelector('" + menu + " [data-testid=edit]').click()")
 	out = append(out, b.eval("document.getElementById('find').open + ' ' + document.getElementById('edit-dialog').open"))
-	// Another page's new name leaves this one here.
-	b.eval("document.getElementById('edit-slug').value = 'a2'; document.getElementById('edit-submit').click()")
-	b.until("the edit closed", "!document.getElementById('edit-dialog').open")
-	// The dialog's close comes after: wait for what it does.
-	out = append(out, b.eval("new Promise((go) => setTimeout(() => go(location.pathname + ' ' + window.errs), 100))"))
+	// Another page's new name leaves this one here. The save is the form's submit, waited for its end: closed, and what it threw.
+	openSlugField(b)
+	b.fill("#edit-slug", "a2")
+	begun := b.acted("document.getElementById('edit-submit').click()")
+	b.untilRead(begun, "the save's end", "!document.getElementById('edit-dialog').open")
+	out = append(out, b.eval("location.pathname + ' ' + window.errs"))
 	// This page's: its URL moves, and deleted, it goes to the list.
 	keyDown(b, "key: 'k', ctrlKey: true")
 	typeFind(b, "gamma")
-	b.eval("document.querySelector('" + menu + " summary').click(); document.querySelector('" + menu + " .edit').click()")
-	b.moving("document.getElementById('edit-slug').value = 'c2'; document.getElementById('edit-submit').click()")
+	b.eval("document.querySelector('" + menu + " summary').click(); document.querySelector('" + menu + " [data-testid=edit]').click()")
+	openSlugField(b)
+	b.fill("#edit-slug", "c2")
+	b.moving("document.getElementById('edit-submit').click()")
 	b.until("the new URL", "location.pathname === '/a/c2/'")
 	b.navigate("/a/c/")
 	b.until("the bar", "document.getElementById('frame-title').textContent")
 	keyDown(b, "key: 'k', ctrlKey: true")
 	typeFind(b, "gamma")
-	b.moving("document.querySelector('" + menu + " summary').click(); document.querySelector('" + menu + " .delete').focus(); document.querySelector('" + menu + " .delete').click(); document.querySelector('" + menu + " .delete').click()")
+	b.pressed("document.querySelector('"+menu+" summary').click(); document.querySelector('"+menu+" [data-testid=delete]').focus(); document.querySelector('"+menu+" [data-testid=delete]').click()",
+		"the delete armed", "document.querySelector('"+menu+" [data-testid=delete]').hasAttribute('data-armed')")
+	b.moving("document.querySelector('" + menu + " [data-testid=delete]').click()")
 	b.until("the list", "location.pathname === '/'")
 	check(t, "actions", out, strings.Join([]string{
 		"true", "true", "true", "true", "false true true", "false", "true", "true", "false 0", "true", "true none",
@@ -312,7 +351,7 @@ func TestUIFindTouch(t *testing.T) { //nolint:paralleltest // the browser tests 
 	b.size(400, 800, false)
 	acts := "getComputedStyle(document.getElementById('find-acts')).display"
 	// The foot, with what it says, within the window and the screen.
-	const foot = `(() => { const f = document.querySelector('#find .find-foot').getBoundingClientRect(), w = document.getElementById('find').getBoundingClientRect();
+	const foot = `(() => { const f = document.querySelector('#find [data-testid=find-foot]').getBoundingClientRect(), w = document.getElementById('find').getBoundingClientRect();
 		return f.top >= w.top && f.bottom <= w.bottom + 0.5 && f.bottom <= innerHeight; })()`
 	keyDown(b, "key: 'k', ctrlKey: true")
 	out := make([]string, 0, 4)
@@ -334,8 +373,8 @@ func TestUIKeys(t *testing.T) { //nolint:paralleltest // the browser tests share
 	b := s.b
 	b.stub(findList)
 	const open = "document.getElementById('keys').open"
-	const shown = "[...document.querySelectorAll('.keys-part')].map((p) => p.hidden).join(' ') + ' ' + [...document.querySelectorAll('#keys kbd')].filter((k) => k.offsetParent).map((k) => k.textContent).join('')"
-	const ways = "[getComputedStyle(document.getElementById('keys-open')).display !== 'none', getComputedStyle(document.getElementById('find-open')).display !== 'none'].join(' ')"
+	const shown = "[...document.querySelectorAll('[data-testid=keys-part]')].map((p) => p.hidden).join(' ') + ' ' + [...document.querySelectorAll('#keys kbd')].filter((k) => k.offsetParent).map((k) => k.textContent).join('')"
+	const ways = "[getComputedStyle(document.getElementById('keys-open')).display !== 'none', ((e) => e !== null && getComputedStyle(e).display !== 'none')(document.getElementById('find-open'))].join(' ')"
 	out := make([]string, 0, 16)
 	b.navigate("/")
 	b.size(1440, 900, false)
@@ -354,7 +393,8 @@ func TestUIKeys(t *testing.T) { //nolint:paralleltest // the browser tests share
 	out = append(out, b.eval(ways))
 	b.eval("document.getElementById('keys-open').click()")
 	out = append(out, b.eval(open))
-	b.eval("document.getElementById('keys').close()")
+	b.pressKey(kb.Escape)
+	b.until("the help closed", "!document.getElementById('keys').open")
 	b.size(800, 700, false)
 	out = append(out, b.eval(ways))
 	b.size(400, 700, false)
@@ -364,7 +404,8 @@ func TestUIKeys(t *testing.T) { //nolint:paralleltest // the browser tests share
 	out = append(out, b.eval(ways))
 	b.eval("document.getElementById('find-open').click()")
 	out = append(out, b.eval("document.getElementById('find').open"))
-	b.eval("document.getElementById('find').close()")
+	b.pressKey(kb.Escape)
+	b.until("the search closed", "!document.getElementById('find').open")
 	b.size(1440, 900, false)
 	out = append(out, b.eval(ways))
 	// A whole page: only what works there; / finds, as there is no search; f presses the star shown, not one hidden.
@@ -372,13 +413,17 @@ func TestUIKeys(t *testing.T) { //nolint:paralleltest // the browser tests share
 	out = append(out, b.eval(shown))
 	// Each row's keys on one line, whatever the word between them.
 	out = append(out, b.eval("[...document.querySelectorAll('#keys-frame dt')].every((d) => d.getBoundingClientRect().height < 32)"))
-	b.eval("document.getElementById('keys').close(); document.activeElement.blur()")
+	b.pressKey(kb.Escape)
+	b.until("the help closed", "!document.getElementById('keys').open")
+	b.eval("document.activeElement.blur()")
 	keyDown(b, "key: '/'")
 	out = append(out, b.eval("document.getElementById('find').open"))
-	b.eval("document.getElementById('find').close(); document.activeElement.blur()")
-	b.eval("window.starred = 0; document.querySelector('#frame-actions .star').onclick = () => { window.starred++; }")
+	b.pressKey(kb.Escape)
+	b.until("the search closed", "!document.getElementById('find').open")
+	b.eval("document.activeElement.blur()")
+	b.eval("window.starred = 0; document.querySelector('#frame-actions [data-testid=star]').onclick = () => { window.starred++; }")
 	keyDown(b, "key: 'f'")
-	b.eval("document.querySelector('#frame-actions .star').hidden = true")
+	b.eval("document.querySelector('#frame-actions [data-testid=star]').hidden = true")
 	keyDown(b, "key: 'f'")
 	out = append(out, b.eval("window.starred"))
 	// A page missing has the search: / goes there.
@@ -388,13 +433,13 @@ func TestUIKeys(t *testing.T) { //nolint:paralleltest // the browser tests share
 	out = append(out, b.eval("document.activeElement.id + ' ' + document.getElementById('find').open"))
 	// In the list, f on a row whose star is hidden does nothing.
 	b.navigate("/")
-	b.eval("(() => { const li = document.querySelector('#list li[data-slug=a]'); window.starred = 0; const s = li.querySelector('.star'); s.hidden = true; s.onclick = () => { window.starred++; }; li.querySelector('.title').focus(); })()")
+	b.eval("(() => { const li = document.querySelector('#list li[data-slug=a]'); window.starred = 0; const s = li.querySelector('[data-testid=star]'); s.hidden = true; s.onclick = () => { window.starred++; }; li.querySelector('[data-testid=title]').focus(); })()")
 	keyDown(b, "key: 'f'")
 	out = append(out, b.eval("window.starred"))
 	// On a Mac, the keys as written there.
 	b.addScript("Object.defineProperty(navigator, 'platform', { get: () => 'MacIntel' })")
 	b.navigate("/")
-	out = append(out, b.eval("document.querySelector('#keys-list .mod').textContent + ' ' + document.getElementById('keys-note-list').textContent.includes('⌘K')"))
+	out = append(out, b.eval("document.querySelector('#keys-list [data-testid=mod]').textContent + ' ' + document.getElementById('keys-note-list').textContent.includes('⌘K')"))
 	check(t, "keys", out, strings.Join([]string{
 		"false", "true", "false true j↓k↑Enterxf/CtrlK?Esc",
 		"false", "true false", "true", "true false", "false false", "false true", "true", "false false",
@@ -406,16 +451,17 @@ func TestUIKeys(t *testing.T) { //nolint:paralleltest // the browser tests share
 // each button once reached; and that the count's number is whole. How wide the words are is the font's, which differs by machine.
 func bulkFits(b *browser, column int64, slugs ...string) string {
 	b.t.Helper()
-	b.eval("document.getElementById('bulk-clear').click(); setColumn('list', " + fmt.Sprint(column) + ")")
+	b.eval("document.getElementById('bulk-clear').click()")
+	b.drag("#list-grip", b.rect("document.getElementById('listcol')").X+float64(column))
 	for _, slug := range slugs {
-		b.eval("document.querySelector('#list li[data-slug=" + slug + "] .sel').click()")
+		b.eval("document.querySelector('#list li[data-slug=" + slug + "] [data-testid=sel]').click()")
 	}
 	return b.eval(`(() => { const box = document.getElementById('listcol').getBoundingClientRect(), c = document.getElementById('bulk-count');
 		const within = (e) => { const r = e.getBoundingClientRect(); return r.left >= box.left - 0.5 && r.right <= box.right + 0.5; };
-		const reached = [...document.querySelectorAll('#bulk .btn')].every((e) => { e.scrollIntoView({ inline: 'nearest', block: 'nearest' }); return within(e) && within(document.getElementById('bulk-clear')); });
+		const reached = [...document.querySelectorAll('#bulk button:not(#bulk-clear)')].every((e) => { e.scrollIntoView({ inline: 'nearest', block: 'nearest' }); return within(e) && within(document.getElementById('bulk-clear')); });
 		document.getElementById('bulk').scrollLeft = 0;
 		const n = document.getElementById('bulk-n').getBoundingClientRect();
-		return [document.querySelector('#bulk-delete .label').textContent, reached, n.width > 0 && n.right <= c.getBoundingClientRect().right + 0.5].join(' '); })()`)
+		return [document.querySelector('#bulk-delete [data-testid=label]').textContent, reached, n.width > 0 && n.right <= c.getBoundingClientRect().right + 0.5].join(' '); })()`)
 }
 
 // TestUIBulkBar draws the bar as a part of the head: words alone, the head of the selected rows' ground, red ground only for
@@ -431,11 +477,11 @@ func TestUIBulkBar(t *testing.T) { //nolint:paralleltest // the browser tests sh
 	out := make([]string, 0, 7)
 	out = append(out, bulkFits(b, 320, "a"), bulkFits(b, 320, "l", "k"), bulkFits(b, 500, "l", "k"))
 	// Words far too wide for it, in any font.
-	b.eval("window.wide = document.head.appendChild(document.createElement('style')); wide.textContent = '#bulk, #bulk .btn { letter-spacing: 0.5em }'")
+	b.eval("window.wide = document.head.appendChild(document.createElement('style')); wide.textContent = '#bulk, #bulk button { letter-spacing: 0.5em }'")
 	out = append(out, bulkFits(b, 320, "l", "k"), b.eval("(() => { const bar = document.getElementById('bulk'); bar.scrollLeft = 1000; const scrolled = bar.scrollLeft > 0; bar.scrollLeft = 0; return scrolled; })()"))
 	b.eval("wide.remove()")
-	const looks = `(() => { const d = getComputedStyle(document.getElementById('bulk-delete')), h = getComputedStyle(document.querySelector('.lhead'));
-		return [d.backgroundColor, d.color, h.backgroundColor, getComputedStyle(document.getElementById('bulk')).boxShadow, document.querySelectorAll('#bulk .btn:not(.clear) svg').length].join(' / '); })()`
+	const looks = `(() => { const d = getComputedStyle(document.getElementById('bulk-delete')), h = getComputedStyle(document.querySelector('[data-testid=lhead]'));
+		return [d.backgroundColor, d.color, h.backgroundColor, getComputedStyle(document.getElementById('bulk')).boxShadow, document.querySelectorAll('#bulk button:not(#bulk-clear) svg').length].join(' / '); })()`
 	out = append(out, b.settled(looks))
 	b.eval("document.getElementById('bulk-delete').click()")
 	out = append(out, b.settled("getComputedStyle(document.getElementById('bulk-delete')).backgroundColor"))
@@ -446,9 +492,11 @@ func TestUIBulkBar(t *testing.T) { //nolint:paralleltest // the browser tests sh
 	}, "|"))
 }
 
-// frameKeys makes a whole page's keys say that they came, and catches what a page sends, for a press to be read.
+// framedCatch catches what a page sends, for a press to be read, and while window.holdKeys keeps the keys a page hands over from the
+// frame, so that they go nowhere.
 const framedCatch = `window.got = []; window.seen = []; addEventListener('message', (e) => {
 	if (typeof e.data?.pageKey === 'string') window.got.push(e.data.pageKey);
+	if (window.holdKeys && e.data?.pageKey !== undefined) e.stopImmediatePropagation();
 	if (e.data?.seen) window.seen.push(e.data.seen + ':' + e.data.prevented);
 	if (e.data?.ran) window.ran = e.data.ran;
 	if (e.data?.ready) window.ready = true;
@@ -522,7 +570,7 @@ func realKey(b *browser, k string, modifiers int64) {
 func TestUIPageKeys(t *testing.T) { //nolint:paralleltest // the browser tests share one Chrome, one at a time
 	ext := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, _ *http.Request) {
 		w.Header().Set("Content-Type", "text/html")
-		fmt.Fprint(w, `<!doctype html><script>parent.postMessage({ pageKey: 'j' }, '*'); parent.postMessage({ pageOpen: '/' }, '*'); parent.postMessage({ there: 1 }, '*');</script>`)
+		fmt.Fprint(w, `<!doctype html><script>parent.postMessage({ pageKey: '/' }, '*'); parent.postMessage({ pageOpen: '/' }, '*'); parent.postMessage({ there: 1 }, '*');</script>`)
 	}))
 	defer ext.Close()
 	s := newSite(t)
@@ -539,14 +587,14 @@ func TestUIPageKeys(t *testing.T) { //nolint:paralleltest // the browser tests s
 		b.navigate(path)
 		b.until("the page to be told the keys are taken", "window.ready")
 		// The key's own work is not this test's, but that it is told: the keys go nowhere, and the page stays.
-		b.eval("for (const k of ['j', 'k', '?', '/', 'Ctrl+K', 'f', 'h']) KEYS[k] = () => { window.done = (window.done ?? '') + k + ' '; }")
+		b.eval("window.holdKeys = true")
 		focusIn(b, frame)
 		inPage(b, frame, "rest", "0")
 	}
 	// Pressed, then the focus back in the page as a key it told of itself: what the frame was given by then, the focus going
 	// back to the frame with a key that it takes.
 	press := func(frame, do, arg, k string, mods int64) string {
-		b.eval("window.got = []; window.seen = []; window.done = ''")
+		b.eval("window.got = []; window.seen = []")
 		if do != "" {
 			inPage(b, frame, do, arg)
 		}
@@ -593,8 +641,11 @@ func TestUIPageKeys(t *testing.T) { //nolint:paralleltest // the browser tests s
 	}
 	b.until("the page told", "window.seen.length > 0")
 	out = append(out, b.eval("window.got.length + ' ' + window.seen.join(',')"))
-	// What the frame did with them.
-	out = append(out, b.eval("window.done.trim()"))
+	// What the frame does with them: h goes back to the list.
+	b.eval("window.holdKeys = false")
+	realKey(b, "h", 0)
+	b.until("the list", "location.pathname === '/'")
+	out = append(out, b.eval("location.pathname"))
 	// A page floe did not draw: Ctrl+K alone, in a link and in a folder.
 	for _, at := range []string{"/a/linked/", "/a/folder/?file=index.html"} {
 		open(at, "frame")
@@ -605,41 +656,45 @@ func TestUIPageKeys(t *testing.T) { //nolint:paralleltest // the browser tests s
 		b.until("the page told", "window.seen.length === 3")
 		out = append(out, b.eval("window.got.join(',') + ' ' + window.seen.join(',')"))
 	}
-	// Forged by a page: not of the list, not while the focus is elsewhere.
+	// Forged by a page: not of the list (f, whose star is counted), not while the focus is elsewhere. / opens the search modal.
 	open("/a/d1/", "frame")
-	b.eval("window.done = ''; KEYS.f = () => { window.done += 'f '; }")
+	b.eval("window.holdKeys = false; window.starred = 0; document.querySelector('#frame-actions [data-testid=star]').addEventListener('click', () => { window.starred++; })")
 	inPage(b, "frame", "post", "['f', 'x', '__proto__', 'constructor', 5, null]")
-	inPage(b, "frame", "post", "['j']")
-	b.until("a key that is taken", "window.done === 'j '")
-	b.eval("window.done = ''; document.getElementById('back').focus()")
-	inPage(b, "frame", "post", "['j']")
-	out = append(out, b.eval("window.done + '.'"))
+	inPage(b, "frame", "post", "['/']")
+	b.until("a key that is taken", "document.getElementById('find').open")
+	b.pressKey(kb.Escape)
+	b.until("the search closed", "!document.getElementById('find').open")
+	b.eval("document.getElementById('back').focus(); window.got = []")
+	// The key is told before the page says it ran (one frame's messages come in order): read once it has come
+	inPage(b, "frame", "post", "['/']")
+	b.until("the key told", "window.got.includes('/')")
+	out = append(out, b.eval("window.starred + ' ' + document.getElementById('find').open"))
 	// Another iframe, framed by the frame but not its own: nothing is taken from the page, and nothing it sends is.
-	b.eval("window.got = []; window.seen = []; window.done = ''; window.other = document.createElement('iframe'); other.id = 'other'; other.onload = () => { window.otherUp = true; }; other.src = '/a/d2/?raw'; other.style = 'position: fixed; inset: 0; width: 300px; height: 200px; z-index: 9'; document.body.append(other)")
+	b.eval("window.got = []; window.seen = []; window.other = document.createElement('iframe'); other.id = 'other'; other.onload = () => { window.otherUp = true; }; other.src = '/a/d2/?raw'; other.style = 'position: fixed; inset: 0; width: 300px; height: 200px; z-index: 9'; document.body.append(other)")
 	b.until("the other loaded", "window.otherUp")
 	focusIn(b, "other")
 	b.eval("window.seen = []")
 	realKey(b, "/", 0)
 	b.until("the other told", "window.seen.length > 0")
-	inPage(b, "other", "post", "['j']")
+	inPage(b, "other", "post", "['/']")
 	inPage(b, "other", "open", "0")
 	// A page cannot take the keys for itself, the frame not having said so.
 	inPage(b, "other", "self", "0")
 	realKey(b, "/", 0)
 	b.until("the other told again", "window.seen.length > 1")
-	out = append(out, b.eval("window.seen.join(',') + ' ' + window.done + '. ' + location.pathname"))
+	out = append(out, b.eval("window.seen.join(',') + ' ' + document.getElementById('find').open + ' ' + location.pathname"))
 	b.eval("other.remove()")
-	// The iframe gone out to another site: nothing it says is heard, the key or the way to move.
+	// The iframe gone out to another site: nothing it says is heard, the key (/, which would open the search modal) or the way to move.
 	open("/a/d1/", "frame")
-	b.eval("window.done = ''")
+	b.eval("window.holdKeys = false")
 	inPage(b, "frame", "go", js(ext.URL))
 	b.until("the other site", "window.there")
-	out = append(out, b.eval("window.done + '. ' + location.pathname"))
+	out = append(out, b.eval("document.getElementById('find').open + ' ' + location.pathname"))
 	// Beside the list: j moves on through the rows, the focus in the page; the bar is what goes, f not at all.
 	b.size(1440, 900, false)
 	b.navigate("/")
-	b.until("the rows", "document.querySelector('#list li[data-slug=d1] .title')")
-	b.eval("document.querySelector('#list li[data-slug=d3] .title').click()")
+	b.until("the rows", "document.querySelector('#list li[data-slug=d1] [data-testid=title]')")
+	b.eval("document.querySelector('#list li[data-slug=d3] [data-testid=title]').click()")
 	b.until("the page beside to be told the keys are taken", "window.ready")
 	focusIn(b, "read-frame")
 	// h has nothing to go back to here: nothing happens, and the focus stays in the page.
@@ -650,7 +705,7 @@ func TestUIPageKeys(t *testing.T) { //nolint:paralleltest // the browser tests s
 	b.eval("window.got = []")
 	realKey(b, "f", 0)
 	realKey(b, "j", 0)
-	b.until("the next row", "picked?.slug === 'd2'")
+	b.until("the next row", "document.getElementById('read-frame').dataset.slug === 'd2'")
 	out = append(out, b.eval("window.got.join(',')"))
 	check(t, "page keys", out, strings.Join([]string{
 		"j.", "k.", "/.", "Ctrl+K.", "Ctrl+K.",
@@ -659,9 +714,9 @@ func TestUIPageKeys(t *testing.T) { //nolint:paralleltest // the browser tests s
 		".", ".",
 		".", ".", ".", ".", ".", "?.", "h.",
 		"0 Escape:false",
-		"h",
+		"/",
 		"Ctrl+K j:false,h:false,k:true", "Ctrl+K j:false,h:false,k:true",
-		".", "/:false,/:false . /a/d1/", ". /a/d1/", "read-frame /", "j",
+		"0 false", "/:false,/:false false /a/d1/", "false /a/d1/", "read-frame /", "j",
 	}, "|"))
 }
 
@@ -675,17 +730,20 @@ func TestUIComposing(t *testing.T) { //nolint:paralleltest // the browser tests 
 	b.size(1440, 900, false)
 	out := make([]string, 0, 6)
 	// The search keeps its words through an Escape that ends the composing.
-	b.eval("document.getElementById('q').value = 'al'; document.getElementById('q').focus()")
+	b.fill("#q", "al")
 	keyDown(b, "key: 'Escape', isComposing: true")
 	out = append(out, b.eval("document.getElementById('q').value"))
-	b.eval("document.getElementById('q').value = ''; document.activeElement.blur()")
+	b.fill("#q", "")
+	b.eval("document.activeElement.blur()")
 	// No key of the list goes off.
-	b.eval("document.querySelector('#list li[data-slug=a] .title').focus()")
+	b.eval("document.querySelector('#list li[data-slug=a] [data-testid=title]').focus()")
 	keyDown(b, "key: 'j', isComposing: true")
 	keyDown(b, "key: '?', keyCode: 229")
 	out = append(out, b.eval("document.activeElement.textContent + ' ' + document.getElementById('keys').open"))
 	// The tags' field makes no tag of a word being composed.
-	b.eval("document.querySelector('#list li[data-slug=a] .sel').click(); document.getElementById('bulk-tag').click(); document.getElementById('tag-find').value = 'new'; document.getElementById('tag-find').focus(); document.getElementById('tag-find').dispatchEvent(new Event('input'))")
+	b.eval("document.querySelector('#list li[data-slug=a] [data-testid=sel]').click(); document.getElementById('bulk-tag').click()")
+	b.until("the tags modal", "document.getElementById('tag-dialog').open")
+	b.fill("#tag-find", "new")
 	keyDown(b, "key: 'Enter', isComposing: true")
 	out = append(out, b.eval("document.getElementById('tag-find').value"))
 	keyDown(b, "key: 'Enter'")
@@ -693,7 +751,7 @@ func TestUIComposing(t *testing.T) { //nolint:paralleltest // the browser tests 
 	// A page missing: the search stays until its Enter is its own.
 	b.navigate("/a/no-such/")
 	b.until("the search", "!document.getElementById('search').hidden")
-	b.eval("document.getElementById('q').value = 'al'; document.getElementById('q').focus()")
+	b.fill("#q", "al")
 	keyDown(b, "key: 'Enter', isComposing: true")
 	out = append(out, b.eval("location.pathname"))
 	check(t, "composing", out, "al|Alpha plan false|new||/a/no-such/")
@@ -737,8 +795,8 @@ func TestUIBackKey(t *testing.T) { //nolint:paralleltest // the browser tests sh
 	keyDown(b, "key: 'h'")
 	out = append(out, b.eval("location.pathname + location.search"))
 	// Whole, from the list: back to it with its picks; in a field, the field's.
-	b.until("the row", "document.querySelector('#list li[data-slug=d] a.title')")
-	b.eval("document.querySelector('#list li[data-slug=d] a.title').focus()")
+	b.until("the row", "document.querySelector('#list li[data-slug=d] a[data-testid=title]')")
+	b.eval("document.querySelector('#list li[data-slug=d] a[data-testid=title]').focus()")
 	keyDown(b, "key: 'Enter'")
 	b.until("the page whole", "location.pathname === '/a/d/'")
 	b.until("the bar", whole)
@@ -747,8 +805,8 @@ func TestUIBackKey(t *testing.T) { //nolint:paralleltest // the browser tests sh
 	b.until("the list", "location.pathname === '/'")
 	out = append(out, b.eval("location.search"))
 	// With the focus in the page, the same.
-	b.until("the row", "document.querySelector('#list li[data-slug=d] a.title')")
-	b.eval("document.querySelector('#list li[data-slug=d] a.title').focus()")
+	b.until("the row", "document.querySelector('#list li[data-slug=d] a[data-testid=title]')")
+	b.eval("document.querySelector('#list li[data-slug=d] a[data-testid=title]').focus()")
 	keyDown(b, "key: 'Enter'")
 	b.until("the page whole", "location.pathname === '/a/d/'")
 	b.until("the page to be told the keys are taken", "window.ready")
@@ -793,9 +851,11 @@ func TestUIModalShape(t *testing.T) { //nolint:paralleltest // the browser tests
 	s := newSite(t)
 	b := s.b
 	b.stub(findList)
-	// The left and right of the modal, its field and foot, and the heights of the field and the button that closes.
-	const shape = `(() => { const d = document.querySelector('dialog[open]'), r = (e) => e.getBoundingClientRect(), q = r(d.querySelector('input.text')), f = r(d.querySelector('.dialog-actions')), m = r(d);
-		return [m.left, m.right, q.left, q.right, q.height, f.left, f.right, r(d.querySelector('.dialog-actions .btn:last-child')).height].map(Math.round).join(' '); })()`
+	// The left and right of the modal, its field and foot, and the heights of the field and the button that closes. The search's foot is
+	// the find-foot.
+	const shape = `(() => { const d = document.querySelector('dialog[open]'), r = (e) => e.getBoundingClientRect(), foot = d.querySelector(':is([data-testid=dialog-actions], [data-testid=find-foot])');
+		const q = r(d.querySelector('input[data-testid=text]')), f = r(foot), m = r(d);
+		return [m.left, m.right, q.left, q.right, q.height, f.left, f.right, r(foot.querySelector('[data-close]')).height].map(Math.round).join(' '); })()`
 	const where = `(() => { const m = document.getElementById('find').getBoundingClientRect(); return Math.abs(m.top - (innerHeight - m.bottom)) <= 1 ? 'middle' : Math.round(m.top); })()`
 	// The top of the field and the height of the modal, which the rows do not move.
 	const still = `(() => { const q = document.getElementById('find-q').getBoundingClientRect(), m = document.getElementById('find').getBoundingClientRect(); return Math.round(q.top - m.top) + ' ' + Math.round(m.height); })()`
@@ -803,51 +863,62 @@ func TestUIModalShape(t *testing.T) { //nolint:paralleltest // the browser tests
 	for _, w := range []int64{1440, 400} {
 		b.size(w, 800, false)
 		b.navigate("/")
-		b.until("the rows", "document.querySelector('#list .title')")
+		b.until("the rows", "document.querySelector('#list [data-testid=title]')")
 		b.eval("document.getElementById('add-link').click()")
 		add := b.settled(shape)
-		b.eval("document.getElementById('add-dialog').close(); openFind()")
+		b.pressKey(kb.Escape)
+		b.until("the add modal closed", "!document.getElementById('add-dialog').open")
+		pressFindOpen(b)
 		find := b.settled(shape)
 		out = append(out, fmt.Sprint(add == find), b.settled(where))
 		first := b.eval(still)
-		typeFind(b, "plan")
+		b.fill("#find-q", "plan")
 		out = append(out, fmt.Sprint(b.eval(still) == first))
 		// The rows as wide as the field; of the foot, the buttons left and the close right; a row's mark not taken for the head's line.
-		out = append(out, b.eval(`(() => { const r = (e) => e.getBoundingClientRect(), f = r(document.querySelector('#find .find-foot'));
+		out = append(out, b.eval(`(() => { const r = (e) => e.getBoundingClientRect(), f = r(document.querySelector('#find [data-testid=find-foot]'));
 			return [Math.abs(r(document.querySelector('#find-list li')).right - r(document.getElementById('find-q')).right) < 1,
-				Math.abs(r(document.querySelector('#find-acts > .frame-actions > :not([hidden])')).left - f.left) < 12,
+				Math.abs(r(document.querySelector('#find-actions > :not([hidden])')).left - f.left) < 12,
 				Math.abs(r(document.querySelector('#find [data-close]')).right - f.right) < 1,
-				r(document.querySelector('#find .k')).width > 0,
-				getComputedStyle(document.querySelector('#find-list .lead')).marginTop].join(' '); })()`))
-		typeFind(b, "nothing like it")
+				r(document.querySelector('#find [data-testid=k]')).width > 0,
+				getComputedStyle(document.querySelector('#find-list [data-testid=lead]')).marginTop].join(' '); })()`))
+		b.fill("#find-q", "nothing like it")
 		out = append(out, fmt.Sprint(b.eval(still) == first))
-		out = append(out, b.eval(`[document.getElementById('find-list').hidden, document.getElementById('find-acts').hidden, getComputedStyle(document.querySelector('#find .k')).visibility, document.getElementById('find-cut').textContent].join(' ')`))
-		b.eval("document.getElementById('find').close()")
+		out = append(out, b.eval(`[document.getElementById('find-list').hidden, document.getElementById('find-acts').hidden, getComputedStyle(document.querySelector('#find [data-testid=k]')).visibility, document.getElementById('find-cut').textContent].join(' ')`))
+		b.pressKey(kb.Escape)
+		b.until("the search closed", "!document.getElementById('find').open")
 	}
 	// Folded and whole, the same.
 	b.size(1440, 800, false)
 	b.navigate("/")
-	b.until("the rows", "document.querySelector('#list .title')")
-	b.eval("openFind()")
+	b.until("the rows", "document.querySelector('#list [data-testid=title]')")
+	pressFindOpen(b)
 	want := b.settled(shape)
-	b.eval("document.getElementById('find').close(); showList(false); openFind()")
+	b.pressKey(kb.Escape)
+	b.until("the search closed", "!document.getElementById('find').open")
+	b.eval("document.getElementById('list-hide').click()")
+	b.until("the list folded", "!document.getElementById('list-show').hidden")
+	pressFindOpen(b)
 	out = append(out, fmt.Sprint(b.settled(shape) == want))
-	b.eval("document.getElementById('find').close(); showList(true)")
+	b.pressKey(kb.Escape)
+	b.until("the search closed", "!document.getElementById('find').open")
+	b.eval("document.getElementById('list-show').click()")
+	b.until("the list open", "document.getElementById('list-show').hidden")
 	b.navigate("/a/a/")
 	b.until("the bar", "document.getElementById('frame-title').textContent")
-	b.eval("openFind()")
+	pressFindOpen(b)
 	out = append(out, fmt.Sprint(b.settled(shape) == want))
-	b.eval("document.getElementById('find').close()")
+	b.pressKey(kb.Escape)
+	b.until("the search closed", "!document.getElementById('find').open")
 	// The menu goes up from the foot, within the modal and the screen, and the rows stay as wide as the field with their scrollbar on the lower.
-	const menu = `(() => { const r = (e) => e.getBoundingClientRect(), m = r(document.querySelector('#find-actions .menu')), d = r(document.getElementById('find')), o = r(document.querySelector('#find-actions summary'));
+	const menu = `(() => { const r = (e) => e.getBoundingClientRect(), m = r(document.querySelector('#find-actions [data-testid=menu]')), d = r(document.getElementById('find')), o = r(document.querySelector('#find-actions summary'));
 		return [m.bottom <= o.top, m.top >= d.top, m.top >= 0, m.left >= d.left, m.right <= d.right, Math.abs(r(document.querySelector('#find-list li')).right - r(document.getElementById('find-q')).right) < 1].join(' '); })()`
 	for _, h := range []int64{620, 400} {
 		b.size(1000, h, false)
 		b.navigate("/")
-		b.until("the rows", "document.querySelector('#list .title')")
-		b.eval("openFind(); document.querySelector('#find-actions summary').click()")
+		b.until("the rows", "document.querySelector('#list [data-testid=title]')")
+		pressFindOpen(b)
+		b.eval("document.querySelector('#find-actions summary').click()")
 		out = append(out, b.settled(menu))
-		b.eval("document.getElementById('find').close()")
 	}
 	check(t, "search modal", out, strings.Join([]string{
 		"true", "middle", "true", "true true true true 0px", "true", "true true hidden 0 found",
@@ -863,19 +934,25 @@ func TestUIModalShape(t *testing.T) { //nolint:paralleltest // the browser tests
 	b.eval("document.getElementById('narrow-filter').click()")
 	check(t, "filters", []string{b.settled(`(() => { const d = document.getElementById('filter-dialog'), m = document.getElementById('shelf-more'), c = d.querySelector('[data-close]').getBoundingClientRect();
 		m.style.minHeight = ''; m.append(Object.assign(document.createElement('div'), { id: 'tall', style: 'height: 900px' }));
-		return [d.scrollHeight === d.clientHeight, m.scrollHeight > m.clientHeight, c.bottom <= innerHeight, document.activeElement.tagName, !!d.querySelector('.modal-head svg')].join(' '); })()`)},
+		return [d.scrollHeight === d.clientHeight, m.scrollHeight > m.clientHeight, c.bottom <= innerHeight, document.activeElement.tagName, !!d.querySelector('[data-testid=modal-head] svg')].join(' '); })()`)},
 		"true true true BUTTON true")
-	b.eval("document.getElementById('tall').remove(); document.getElementById('filter-dialog').close()")
+	b.eval("document.getElementById('tall').remove()")
+	b.pressKey(kb.Escape)
+	b.until("the filters closed", "!document.getElementById('filter-dialog').open")
 
 	// The shortcuts say in their head the note of where they are.
 	b.size(1440, 800, false)
 	const note = `['list', 'frame'].map((w) => document.getElementById('keys-note-' + w).getBoundingClientRect().height > 0).join(' ')`
 	b.navigate("/")
-	b.eval("openKeys()")
+	keyDown(b, "key: '?', shiftKey: true")
+	b.until("the help", "document.getElementById('keys').open")
 	list := b.eval(note)
-	b.eval("document.getElementById('keys').close()")
+	b.pressKey(kb.Escape)
+	b.until("the help closed", "!document.getElementById('keys').open")
 	b.navigate("/a/a/")
-	b.eval("openKeys()")
+	b.until("the bar", "document.getElementById('frame-title').textContent")
+	keyDown(b, "key: '?', shiftKey: true")
+	b.until("the help", "document.getElementById('keys').open")
 	check(t, "notes", []string{list, b.eval(note)}, "true false|false true")
 }
 
@@ -887,8 +964,8 @@ func TestUIFindPress(t *testing.T) { //nolint:paralleltest // the browser tests 
 	b.stub("Array.from({ length: 40 }, (_, i) => ({ slug: 's' + i, title: 'T' + i, description: '', version: 1, createdAt: at(1), updatedAt: at(9) }))")
 	b.size(1000, 700, false)
 	b.navigate("/")
-	b.until("the rows", "document.querySelector('#list .title')")
-	b.eval("openFind()")
+	b.until("the rows", "document.querySelector('#list [data-testid=title]')")
+	pressFindOpen(b)
 	b.still()
 	mouse := func(kind input.DispatchMouseEventType, x, y float64) {
 		t.Helper()
@@ -923,7 +1000,7 @@ func TestUIFindPress(t *testing.T) { //nolint:paralleltest // the browser tests 
 	const reached = "document.activeElement.id + ' ' + document.getElementById('find-q').getAttribute('aria-activedescendant')"
 	out := make([]string, 0, 12)
 	// The heading, the line under it, the modal's edge, and the line over the foot: none of them takes the focus.
-	for i, spot := range []string{"#find h2", "#find-lead", "#find", "#find .find-foot"} {
+	for i, spot := range []string{"#find h2", "#find-lead", "#find", "#find [data-testid=find-foot]"} {
 		x, y := at(`(() => { const r = document.querySelector(` + js(spot) + `).getBoundingClientRect(); return ` + map[bool]string{true: "(r.left + 8) + ' ' + (r.top + r.height / 2)", false: "(r.left + r.width / 2) + ' ' + (r.top + 8)"}[i == 2] + `; })()`)
 		b.click(x, y)
 		down()
@@ -941,7 +1018,7 @@ func TestUIFindPress(t *testing.T) { //nolint:paralleltest // the browser tests 
 	}()
 	drag(x0, y0, x1, y0)
 	out = append(out, b.eval("(() => { const q = document.getElementById('find-q'); return q.selectionEnd - q.selectionStart; })()"))
-	typeFind(b, "")
+	b.fill("#find-q", "")
 	// The scrollbar's thumb, dragged, moves the rows, and the arrows go on from where they were.
 	x, y := at("(() => { const r = document.getElementById('find-list').getBoundingClientRect(); return (r.right - 5) + ' ' + (r.top + 10); })()")
 	mouse(input.DispatchMouseEventTypeMousePressed, x, y)
@@ -956,18 +1033,20 @@ func TestUIFindPress(t *testing.T) { //nolint:paralleltest // the browser tests 
 	if err := chromedp.Do(b.ctx, chromedp.KeyEvent("\t")); err != nil {
 		t.Fatal(err)
 	}
-	out = append(out, b.eval("document.activeElement.matches('#find-actions > .download')"))
+	out = append(out, b.eval("document.activeElement.matches('#find-actions > [data-testid=download]')"))
 	b.eval("document.getElementById('find-q').focus()")
 	// The words of an error can be selected, and a link keeps its own press.
 	out = append(out, b.eval("['#error', '#find-list a'].every((e) => document.querySelector(e).dispatchEvent(new MouseEvent('mousedown', { bubbles: true, cancelable: true })))"))
 	// What can be pressed takes the press: the star and the menu their focus, and a row opens.
-	x, y = at("(() => { const r = document.querySelector('#find-actions .star').getBoundingClientRect(); return (r.left + r.width / 2) + ' ' + (r.top + r.height / 2); })()")
+	x, y = at("(() => { const r = document.querySelector('#find-actions [data-testid=star]').getBoundingClientRect(); return (r.left + r.width / 2) + ' ' + (r.top + r.height / 2); })()")
 	b.click(x, y)
-	out = append(out, b.eval("document.activeElement.matches('#find-actions .star')"))
+	out = append(out, b.eval("document.activeElement.matches('#find-actions [data-testid=star]')"))
 	x, y = at("(() => { const r = document.querySelector('#find-actions summary').getBoundingClientRect(); return (r.left + r.width / 2) + ' ' + (r.top + r.height / 2); })()")
 	b.click(x, y)
-	out = append(out, b.eval("document.activeElement.matches('#find-actions summary') && document.querySelector('#find-actions .more').open"))
-	b.eval("closeMenus(null)")
+	b.until("the menu open", "document.querySelector('#find-actions [data-testid=more]').open")
+	out = append(out, b.eval("document.activeElement.matches('#find-actions summary') && document.querySelector('#find-actions [data-testid=more]').open"))
+	b.pressKey(kb.Escape)
+	b.until("the menu closed", "!document.querySelector('#find-actions [data-testid=more]').open")
 	x, y = at("(() => { const a = document.querySelector('#find-list a'); a.scrollIntoView(); const r = a.getBoundingClientRect(); return (r.left + 4) + ' ' + (r.top + r.height / 2); })()")
 	b.click(x, y)
 	b.until("the page", "location.pathname === '/a/s0/'")
@@ -986,15 +1065,15 @@ func TestUIFindRowGone(t *testing.T) { //nolint:paralleltest // the browser test
 		s.floe(t, "publish", s.page(t, "many/"+slug+".yaml", slug, "<p>p</p>"), "--slug", slug)
 	}
 	b.navigate("/")
-	b.until("the rows", "items.length === 51")
-	b.eval("openFind()")
+	b.until("the rows", "document.querySelectorAll('#list li[data-slug]').length === 51")
+	pressFindOpen(b)
 	keyDown(b, "key: 'ArrowUp'")
-	b.until("the last row", "findSlug && document.querySelector('#find-actions > .archive[title]')")
+	b.until("the last row", "document.getElementById('find-actions').dataset.slug && document.querySelector('#find-actions > [data-testid=archive][title]')")
 	const at = "document.querySelector('#find-actions').dataset.slug"
 	slug := b.eval(at)
-	b.eval("document.querySelector('#find-actions > .archive').focus(); document.querySelector('#find-actions > .archive').click()")
+	b.eval("document.querySelector('#find-actions > [data-testid=archive]').focus(); document.querySelector('#find-actions > [data-testid=archive]').click()")
 	b.until("the row gone", at+" !== "+js(slug))
-	check(t, "gone", []string{b.eval("document.activeElement.id"), b.eval("items.filter((a) => a.archived).map((a) => a.slug).join()")}, "find-q|"+slug)
+	check(t, "gone", []string{b.eval("document.activeElement.id"), b.eval("fetch('/api/pages').then((r) => r.json()).then((all) => all.filter((a) => a.archived).map((a) => a.slug).join())")}, "find-q|"+slug)
 }
 
 // TestUIFindArrows moves over the rows by the arrows from the foot's buttons too, which keep the focus and say the row they act on,
@@ -1005,8 +1084,8 @@ func TestUIFindArrows(t *testing.T) { //nolint:paralleltest // the browser tests
 	b.stub(findList)
 	b.size(1000, 700, false)
 	b.navigate("/")
-	b.until("the rows", "document.querySelector('#list .title')")
-	b.eval("openFind()")
+	b.until("the rows", "document.querySelector('#list [data-testid=title]')")
+	pressFindOpen(b)
 	b.still()
 	key := func(k string) {
 		t.Helper()
@@ -1015,9 +1094,9 @@ func TestUIFindArrows(t *testing.T) { //nolint:paralleltest // the browser tests
 		}
 	}
 	const q = "document.getElementById('find-q')"
-	// The row reached, what has the focus, and the name of the star.
-	const state = `[` + q + `.getAttribute('aria-activedescendant'), document.activeElement.id || document.activeElement.className || document.activeElement.tagName,
-		document.querySelector('#find-actions .star').getAttribute('aria-label')].join(' / ')`
+	// The row reached, what has the focus (its id, test id or tag), and the name of the star.
+	const state = `[` + q + `.getAttribute('aria-activedescendant'), document.activeElement.id || document.activeElement.dataset.testid || document.activeElement.tagName,
+		document.querySelector('#find-actions [data-testid=star]').getAttribute('aria-label')].join(' / ')`
 	press := func(k string) string {
 		t.Helper()
 		key(k)
@@ -1030,7 +1109,7 @@ func TestUIFindArrows(t *testing.T) { //nolint:paralleltest // the browser tests
 	b.eval(q + ".focus()")
 	key(kb.ArrowDown)
 	// After a press on the star, by the mouse.
-	x := b.eval("(() => { const r = document.querySelector('#find-actions .star').getBoundingClientRect(); return (r.left + r.width / 2) + ' ' + (r.top + r.height / 2); })()")
+	x := b.eval("(() => { const r = document.querySelector('#find-actions [data-testid=star]').getBoundingClientRect(); return (r.left + r.width / 2) + ' ' + (r.top + r.height / 2); })()")
 	var px, py float64
 	if _, err := fmt.Sscan(x, &px, &py); err != nil {
 		t.Fatal(err)
@@ -1039,12 +1118,12 @@ func TestUIFindArrows(t *testing.T) { //nolint:paralleltest // the browser tests
 	b.until("the star's toast", "document.querySelector('#toasts').textContent")
 	out = append(out, press(kb.ArrowDown))
 	// Enter is the star's still, and no row opens.
-	b.eval("window.starred = 0; document.querySelector('#find-actions .star').addEventListener('click', () => { window.starred++; })")
+	b.eval("window.starred = 0; document.querySelector('#find-actions [data-testid=star]').addEventListener('click', () => { window.starred++; })")
 	key(kb.Enter)
 	out = append(out, b.eval("window.starred + ' ' + location.pathname"))
 	// The button that opens a page keeps the focus; on a folder, which has none to open, the focus goes to the field. The rows run to the folder as z, f.
-	b.eval("document.querySelector('#find-actions .open').focus()")
-	out = append(out, press(kb.ArrowDown), b.eval("document.querySelector('#find-actions .open').getAttribute('aria-label')"))
+	b.eval("document.querySelector('#find-actions > [data-testid=open]').focus()")
+	out = append(out, press(kb.ArrowDown), b.eval("document.querySelector('#find-actions > [data-testid=open]').getAttribute('aria-label')"))
 	out = append(out, press(kb.ArrowDown))
 	// From the close button too.
 	b.eval("document.querySelector('#find [data-close]').focus()")
@@ -1054,34 +1133,42 @@ func TestUIFindArrows(t *testing.T) { //nolint:paralleltest // the browser tests
 	out = append(out, press(kb.ArrowUp))
 	// With the menu open the rows stay, from its button and from within it.
 	b.eval("document.querySelector('#find-actions summary').focus(); document.querySelector('#find-actions summary').click()")
-	const menu = "document.querySelector('#find-actions .more').open"
+	const menu = "document.querySelector('#find-actions [data-testid=more]').open"
 	out = append(out, press(kb.ArrowDown), b.eval(menu))
-	b.eval("document.querySelector('#find-actions .menu .edit').focus()")
+	b.eval("document.querySelector('#find-actions [data-testid=menu] [data-testid=edit]').focus()")
 	out = append(out, press(kb.ArrowDown), b.eval(menu))
 	// Pressed by the keys, Enter and the space bar, the star keeps the focus through the rows drawn anew, and the arrows go on.
-	for _, k := range []string{kb.Enter, " "} {
+	// The menu shut by its own button, as a press elsewhere would.
+	const shut = "(() => { const m = document.querySelector('#find-actions [data-testid=more]'); if (m.open) m.querySelector('summary').click(); })()"
+	for i, k := range []string{kb.Enter, " "} {
 		was := b.eval("window.starred")
-		b.eval("closeMenus(null); document.querySelector('#find-actions .star').focus()")
+		b.eval(shut + "; document.querySelector('#find-actions [data-testid=star]').focus()")
 		key(k)
 		b.until("the star pressed", "window.starred !== "+was)
 		b.still()
-		b.eval("drawFind()")
+		// The rows drawn anew: another row's title changed.
+		title := fmt.Sprintf("Zed plan %d", i)
+		b.eval("window.list = JSON.stringify(JSON.parse(window.list).map((a) => a.slug === 'z' ? { ...a, title: " + js(title) + " } : a))")
+		b.reread()
+		b.until("the rows drawn anew", "[...document.querySelectorAll('#find-list [data-testid=title]')].some((a) => a.textContent === "+js(title)+")")
 		out = append(out, press(kb.ArrowDown))
 	}
 	// The rows gone with the focus on the star, it goes to the field.
-	b.eval("closeMenus(null); document.querySelector('#find-actions .star').focus(); items.length = 0; drawFind()")
+	b.eval(shut + "; document.querySelector('#find-actions [data-testid=star]').focus(); window.list = '[]'")
+	b.reread()
+	b.until("the rows gone", "document.querySelectorAll('#find-list li').length === 0")
 	out = append(out, b.eval("document.activeElement.id"))
 	// The bar of a whole page says the same of its button.
 	b.navigate("/a/a/")
 	b.until("the bar", "document.getElementById('frame-title').textContent")
-	out = append(out, b.eval("document.querySelector('#frame-actions .open').getAttribute('aria-label')"))
+	out = append(out, b.eval("document.querySelector('#frame-actions > [data-testid=open]').getAttribute('aria-label')"))
 	check(t, "arrows", out, strings.Join([]string{
-		"find-1 / icon-btn download / Add Beta to favorites", "find-0 / icon-btn download / Add Alpha plan to favorites", "find-4 / icon-btn download / Add Zed plan to favorites",
-		"find-1 / icon-btn star / Add Beta to favorites", "1 /",
-		"find-2 / icon-btn open / Add Gamma plan to favorites", "Open Gamma plan alone in a new tab", "find-3 / find-q / Add Folder to favorites",
-		"find-2 / btn / Add Gamma plan to favorites", "find-1 / find-q / Add Beta to favorites",
-		"find-1 / icon-btn / Add Beta to favorites", "true", "find-1 / icon-btn edit / Add Beta to favorites", "true",
-		"find-2 / icon-btn star / Add Gamma plan to favorites", "find-3 / icon-btn star / Add Folder to favorites",
+		"find-1 / download / Add Beta to favorites", "find-0 / download / Add Alpha plan to favorites", "find-4 / download / Add Zed plan to favorites",
+		"find-1 / star / Add Beta to favorites", "1 /",
+		"find-2 / open / Add Gamma plan to favorites", "Open Gamma plan alone in a new tab", "find-3 / find-q / Add Folder to favorites",
+		"find-2 / BUTTON / Add Gamma plan to favorites", "find-1 / find-q / Add Beta to favorites",
+		"find-1 / SUMMARY / Add Beta to favorites", "true", "find-1 / edit / Add Beta to favorites", "true",
+		"find-2 / star / Add Gamma plan to favorites", "find-3 / star / Add Folder to favorites",
 		"find-q", "Open Alpha plan alone in a new tab",
 	}, "|"))
 }
@@ -1092,9 +1179,16 @@ func TestUIFindOrder(t *testing.T) { //nolint:paralleltest // the browser tests 
 	b := s.b
 	b.stub("[1, 2, 3, 4, 5].map((n) => ({ slug: 'p' + n, title: 'P' + n, description: '', version: 1, tags: n % 2 ? ['t'] : [], createdAt: at(1), updatedAt: at(9 - n) }))")
 	const row = "[...document.querySelectorAll('#find-list li')].find((li) => li.querySelector('a').textContent === 'P3')"
+	// The order of all kept, as a list of all keeps it, under the key the page keeps it by.
+	const keptAll = `sessionStorage.setItem('pages.order', '{"order":["p1","p2","p3","p4","p5"],"shown":["p1","p2","p3","p4","p5"],"back":"/"}')`
 	open := map[string]func(){
 		"enter": func() {
-			b.eval("findMark([...document.getElementById('find-list').children].indexOf(" + row + "))")
+			for range 5 {
+				if b.eval(row+".getAttribute('aria-selected')") == "true" {
+					break
+				}
+				keyDown(b, "key: 'ArrowDown'")
+			}
 			if err := chromedp.Do(b.ctx, chromedp.KeyEvent(kb.Enter)); err != nil {
 				t.Fatal(err)
 			}
@@ -1105,10 +1199,11 @@ func TestUIFindOrder(t *testing.T) { //nolint:paralleltest // the browser tests 
 	for _, how := range []string{"enter", "press"} {
 		// On the list of the tag, whose next after P3 is P5, with the order of all kept, whose next is P4.
 		b.navigate("/?tag=t")
-		b.until("the rows", "document.querySelector('#list .title')")
-		b.eval(`sessionStorage.setItem(ORDER_KEY, '{"order":["p1","p2","p3","p4","p5"],"shown":["p1","p2","p3","p4","p5"],"back":"/"}'); openFind()`)
+		b.until("the rows", "document.querySelector('#list [data-testid=title]')")
+		b.eval(keptAll)
+		pressFindOpen(b)
 		// A press beside the rows opens nothing, and the order stays.
-		out = append(out, b.eval("document.getElementById('find-list').click(); sessionStorage.getItem(ORDER_KEY) !== null"))
+		out = append(out, b.eval("document.getElementById('find-list').click(); sessionStorage.getItem('pages.order') !== null"))
 		open[how]()
 		b.until("the page", "location.pathname === '/a/p3/'")
 		b.until("the bar", "document.getElementById('frame-title').textContent")
@@ -1118,10 +1213,10 @@ func TestUIFindOrder(t *testing.T) { //nolint:paralleltest // the browser tests 
 	}
 	// Back on a list the order of the one before is over: a page opened by its URL goes through the list last on.
 	b.navigate("/")
-	b.until("the rows", "document.querySelector('#list .title')")
-	b.eval("keepOrder()")
+	b.until("the rows", "document.querySelector('#list [data-testid=title]')")
+	b.eval(keptAll)
 	b.navigate("/?tag=t")
-	b.until("the rows", "document.querySelector('#list .title')")
+	b.until("the rows", "document.querySelector('#list [data-testid=title]')")
 	b.navigate("/a/p3/")
 	b.until("the bar", "document.getElementById('frame-title').textContent")
 	keyDown(b, "key: 'j'")
@@ -1168,27 +1263,29 @@ func TestUIRowSelect(t *testing.T) { //nolint:paralleltest // the browser tests 
 		}
 		b.click(x, y)
 	}
-	state := "[...selected].sort().join('') + ' ' + document.getElementById('list').classList.contains('selecting') + ' ' + !document.getElementById('bulk').hidden + ' ' + getComputedStyle(document.querySelector('#list li[data-slug=c] .pick')).display"
+	state := "[...document.querySelectorAll('#list li[data-slug]')].filter((li) => li.querySelector('[data-testid=sel]')?.checked).map((li) => li.dataset.slug).sort().join('') + ' ' + (document.getElementById('list').dataset.selecting === 'true') + ' ' + !document.getElementById('bulk').hidden + ' ' + getComputedStyle(document.querySelector('#list li[data-slug=c] [data-testid=pick]')).display"
 	out := make([]string, 0, 6)
 	out = append(out, b.eval(state))
 	press("#list li[data-slug=a] summary")
-	press("#list li[data-slug=a] .menu .select")
-	out = append(out, b.eval(state), b.eval("document.querySelector('#list li[data-slug=a] .more').open"))
+	press("#list li[data-slug=a] [data-testid=menu] [data-testid=select]")
+	out = append(out, b.eval(state), b.eval("document.querySelector('#list li[data-slug=a] [data-testid=more]').open"))
 	// A folder's row too; pressed again, a row stays selected.
 	press("#list li[data-slug=f] summary")
-	press("#list li[data-slug=f] .menu .select")
+	press("#list li[data-slug=f] [data-testid=menu] [data-testid=select]")
 	press("#list li[data-slug=f] summary")
-	press("#list li[data-slug=f] .menu .select")
+	press("#list li[data-slug=f] [data-testid=menu] [data-testid=select]")
 	out = append(out, b.eval(state))
 	// Named for a screen reader; none in the search modal or the bar of a page.
-	out = append(out, b.eval("document.querySelector('#list li[data-slug=a] .menu .select').getAttribute('aria-label')"))
-	b.eval("document.getElementById('bulk-clear').click(); openFind()")
-	out = append(out, b.eval("document.querySelector('#find-actions .select').hidden"))
-	b.eval("document.getElementById('find').close()")
+	out = append(out, b.eval("document.querySelector('#list li[data-slug=a] [data-testid=menu] [data-testid=select]').getAttribute('aria-label')"))
+	b.eval("document.getElementById('bulk-clear').click()")
+	pressFindOpen(b)
+	out = append(out, b.eval("document.querySelector('#find-actions [data-testid=select]').hidden"))
+	b.pressKey(kb.Escape)
+	b.until("the search closed", "!document.getElementById('find').open")
 	touch(false)
 	b.navigate("/a/a/")
 	b.until("the bar", "document.getElementById('frame-title').textContent")
-	out = append(out, b.eval("document.querySelector('#frame-actions .select').hidden"))
+	out = append(out, b.eval("document.querySelector('#frame-actions [data-testid=select]').hidden"))
 	check(t, "select", out, strings.Join([]string{
 		" false false none", "a true true grid", "false", "af true true grid", "Select Alpha plan", "true", "true",
 	}, "|"))

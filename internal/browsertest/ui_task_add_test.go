@@ -4,8 +4,11 @@ import (
 	"encoding/json"
 	"os"
 	"path/filepath"
+	"strconv"
 	"strings"
 	"testing"
+
+	"github.com/chromedp/chromedp/kb"
 
 	"floe/internal/store"
 )
@@ -30,10 +33,11 @@ func TestUITaskAdd(t *testing.T) { //nolint:paralleltest // the browser tests sh
 		return got
 	}
 	const (
-		seen   = "(id) => document.getElementById(id).getClientRects().length > 0"
+		// Shown: there and drawn; a screen that places no such button (a task's page, the React screens' task list) has none
+		seen   = "(id) => (document.getElementById(id)?.getClientRects().length ?? 0) > 0"
 		dialog = "document.getElementById('kin-dialog')"
 		said   = "['kin-heading', 'kin-target', 'kin-note', 'kin-error'].map((id) => { const e = document.getElementById(id); return e.hidden ? '-' : e.textContent; }).join(' | ') + ' | title ' + !document.getElementById('kin-title').closest('[hidden]') + ' | ' + document.getElementById('kin-submit').textContent"
-		list   = "location.search + ' ' + document.querySelector('#list li.fresh .tname')?.textContent + ' ' + (document.activeElement === document.querySelector('#list li.fresh .title')) + ' ' + [...document.querySelectorAll('#toasts .toast-link')].at(-1)?.textContent + ' ' + [...document.querySelectorAll('#toasts .toast-link')].at(-1)?.getAttribute('href')"
+		list   = "location.search + ' ' + document.querySelector('#list li[data-fresh=true] [data-testid=tname]')?.textContent + ' ' + (document.activeElement === document.querySelector('#list li[data-fresh=true] [data-testid=title]')) + ' ' + [...document.querySelectorAll('#toasts [data-testid=toast-link]')].at(-1)?.textContent + ' ' + [...document.querySelectorAll('#toasts [data-testid=toast-link]')].at(-1)?.getAttribute('href')"
 	)
 	want := func(what, expr, wanted string) {
 		t.Helper()
@@ -50,11 +54,15 @@ func TestUITaskAdd(t *testing.T) { //nolint:paralleltest // the browser tests sh
 	}
 	name := func(id, title string) {
 		t.Helper()
-		b.eval("document.getElementById('kin-task').value = " + js(id) + "; document.getElementById('kin-task').dispatchEvent(new Event('input', { bubbles: true })); document.getElementById('kin-title').value = " + js(title))
+		b.fill("#kin-task", id)
+		// The title asked of a new ID alone: hidden, and not to be filled, for one there
+		if title != "" {
+			b.fill("#kin-title", title)
+		}
 	}
 	saved := func() {
 		t.Helper()
-		b.eval("document.getElementById('kin').requestSubmit()")
+		b.eval("document.getElementById('kin-submit').click()")
 		b.until("saved", "!"+dialog+".open")
 	}
 	press := func(selector string) {
@@ -70,7 +78,7 @@ func TestUITaskAdd(t *testing.T) { //nolint:paralleltest // the browser tests sh
 	b.until("the words", "!document.getElementById('tasks-empty').hidden")
 	want("the words", "document.querySelector('#tasks-empty strong').textContent + ' | ' + document.querySelector('#tasks-empty p').textContent",
 		"No tasks yet | Create one with Create task.")
-	want("no command on the screens", "document.querySelectorAll('.state code').length + ''", "0")
+	want("no command on the screens", "document.querySelectorAll('[data-testid=state]').length > 0 && document.querySelectorAll('[data-testid=state] code').length + ''", "0")
 	want("the shelf's button with no task", shown("add-task"), "false")
 	want("the icon, the size of the others", "document.querySelector('#task-add-empty svg').getBoundingClientRect().width + ''", "13")
 
@@ -98,7 +106,7 @@ func TestUITaskAdd(t *testing.T) { //nolint:paralleltest // the browser tests sh
 	want("no task: the words", said, "Create task | - | - | - | title true | Create")
 	name("#0", "first")
 	saved()
-	b.until("the row", "document.querySelector('#list li.fresh')")
+	b.until("the row", "document.querySelector('#list li[data-fresh=true]')")
 	want("no task: after", list, `?view=todo&project=%2F #0 true Created task #0 /tasks?project=%2F&task=%230`)
 	if _, ok := rows()["/"]["#0"]; !ok {
 		t.Errorf("the row of no project: %v", rows())
@@ -117,19 +125,20 @@ func TestUITaskAdd(t *testing.T) { //nolint:paralleltest // the browser tests sh
 	open("task-add-empty")
 	want("the projects, in projectOrder", "[...document.getElementById('kin-project').options].map((o) => o.value).join(' ')", "/ beta alpha")
 	want("the project of the URL first chosen", "document.getElementById('kin-project').value", "alpha")
-	b.eval(dialog + ".close()")
+	closeKin(b)
 	for _, path := range []string{"/tasks", "/tasks?project=typo"} {
 		b.navigate(path)
 		open("task-add-empty")
 		want(path+": none chosen", "document.getElementById('kin-project').value", "/")
-		b.eval(dialog + ".close()")
+		closeKin(b)
 	}
 	b.navigate("/tasks?project=alpha")
 	open("task-add-empty")
-	b.eval("const f = document.getElementById('kin-project'); f.value = 'beta'; f.dispatchEvent(new Event('change', { bubbles: true }))")
+	chooseValue(b, "kin-project", "beta")
+	b.until("beta chosen", "document.getElementById('kin-project').value === 'beta'")
 	name("#1", "one")
 	saved()
-	b.until("the row", "document.querySelector('#list li.fresh')")
+	b.until("the row", "document.querySelector('#list li[data-fresh=true]')")
 	want("a project chosen: after", list, `?view=todo&project=beta #1 true Created task #1 /tasks?project=beta&task=%231`)
 	if _, ok := rows()["beta"]["#1"]; !ok {
 		t.Errorf("the row in the project chosen: %v", rows())
@@ -149,7 +158,7 @@ func TestUITaskAdd(t *testing.T) { //nolint:paralleltest // the browser tests sh
 	open("add-task")
 	want("the filter closed", "document.getElementById('filter-dialog').open + ''", "false")
 	want("the bar's switch fits", "document.documentElement.scrollWidth <= innerWidth ? 'true' : 'false'", "true")
-	b.eval(dialog + ".close()")
+	closeKin(b)
 	want("the focus back", "document.activeElement.id", "narrow-filter")
 	// Wide from here, for the shelf's button to show beside the list.
 	b.size(1440, 800, false)
@@ -162,11 +171,11 @@ func TestUITaskAdd(t *testing.T) { //nolint:paralleltest // the browser tests sh
 
 	// Made from another state's list: the list goes to the state it is in, the row marked until the rows are drawn anew.
 	saved()
-	b.until("the row", "document.querySelector('#list li.fresh')")
+	b.until("the row", "document.querySelector('#list li[data-fresh=true]')")
 	want("from another state: after", list, `?view=todo&project=beta #2 true Created task #2 /tasks?project=beta&task=%232`)
-	want("the old row is not marked", "document.querySelectorAll('#list li.fresh').length + ''", "1")
-	press(".views button[data-view=doing]")
-	b.until("another state", "!document.querySelector('#list li.fresh')")
+	want("the old row is not marked", "document.querySelectorAll('#list li[data-fresh=true]').length + ''", "1")
+	press("#shelf [data-testid=views] button[data-view=doing]")
+	b.until("another state", "!document.querySelector('#list li[data-fresh=true]')")
 
 	// An ID there: said, with no title asked, and pressed it opens the task, nothing written.
 	before, err := os.ReadFile(tasksFile)
@@ -175,10 +184,10 @@ func TestUITaskAdd(t *testing.T) { //nolint:paralleltest // the browser tests sh
 	}
 	open("add-task")
 	name("#", "")
-	want("nothing suggested", "document.querySelectorAll('.suggest:popover-open').length + ''", "0")
+	want("nothing suggested", "document.querySelectorAll('[data-testid=suggest]').length > 0 && document.querySelectorAll('[data-testid=suggest]:popover-open').length + ''", "0")
 	name("#1", "")
 	want("an ID there", said, "Create task | Project: beta | #1 one is already there (To do) | - | title false | Open the task")
-	b.eval("document.getElementById('kin').requestSubmit()")
+	b.eval("document.getElementById('kin-submit').click()")
 	b.until("the task's page", "location.search.includes('task=%231')")
 	b.until("the head", "!document.getElementById('task-none').hidden || !document.getElementById('task-head').hidden")
 	if after, err := os.ReadFile(tasksFile); err != nil || string(after) != string(before) {
@@ -193,7 +202,7 @@ func TestUITaskAdd(t *testing.T) { //nolint:paralleltest // the browser tests sh
 	open("add-task")
 	name("#20", "")
 	want("an archived ID", "document.getElementById('kin-note').textContent", "#20 old is already there (Archive)")
-	b.eval(dialog + ".close()")
+	closeKin(b)
 
 	// The same ID in another project is another task: the store's rows say so.
 	s.floe(t, "task", "--project", "alpha", "--task", "#7", "--state", "todo")
@@ -202,7 +211,7 @@ func TestUITaskAdd(t *testing.T) { //nolint:paralleltest // the browser tests sh
 	name("#1", "alpha's one")
 	want("the same ID in another project", said, "Create task | Project: alpha | - | - | title true | Create")
 	saved()
-	b.until("the row", "document.querySelector('#list li.fresh')")
+	b.until("the row", "document.querySelector('#list li[data-fresh=true]')")
 	if _, ok := rows()["alpha"]["#1"]; !ok {
 		t.Errorf("the row in alpha: %v", rows())
 	}
@@ -211,7 +220,7 @@ func TestUITaskAdd(t *testing.T) { //nolint:paralleltest // the browser tests sh
 	open("add-task")
 	name("#9", "mine")
 	s.floe(t, "task", "--project", "alpha", "--task", "#9", "--title", "theirs")
-	b.eval("document.getElementById('kin').requestSubmit()")
+	b.eval("document.getElementById('kin-submit').click()")
 	b.until("refused", "!document.getElementById('kin-error').hidden")
 	got := b.eval(said)
 	if !strings.Contains(got, "#9 theirs is already there (To do)") || !strings.Contains(got, "Open the task") || !strings.Contains(got, "title false") {
@@ -220,7 +229,7 @@ func TestUITaskAdd(t *testing.T) { //nolint:paralleltest // the browser tests sh
 	want("stale: the dialog stays", dialog+".open + ''", "true")
 	name("#10", "")
 	want("another ID: the refusal gone", "document.getElementById('kin-error').hidden + ''", "true")
-	b.eval(dialog + ".close()")
+	closeKin(b)
 
 	// Drawn once, with the new task: never the words of a list with none, from the tasks before.
 	s.floe(t, "task", "--project", "gamma", "--task", "#40", "--state", "done")
@@ -229,7 +238,7 @@ func TestUITaskAdd(t *testing.T) { //nolint:paralleltest // the browser tests sh
 	b.eval("window.noneShown = false; new MutationObserver(() => { window.noneShown ||= !document.getElementById('tasks-none').hidden; }).observe(document.getElementById('tasks-none'), { attributes: true })")
 	name("#41", "new")
 	saved()
-	b.until("the row", "document.querySelector('#list li.fresh')")
+	b.until("the row", "document.querySelector('#list li[data-fresh=true]')")
 	want("drawn once", "window.noneShown + ''", "false")
 
 	// A poll asked while the write's answer is on its way waits for it: drawn after, the list still goes to the new row.
@@ -239,32 +248,32 @@ func TestUITaskAdd(t *testing.T) { //nolint:paralleltest // the browser tests sh
 	open("add-task")
 	b.eval(holdWrite)
 	name("#51", "polled")
-	b.eval("document.getElementById('kin').requestSubmit()")
+	b.eval("document.getElementById('kin-submit').click()")
 	b.until("the write", "window.letWrite")
-	b.eval("window.polled = false; load(true).then(() => { window.polled = true; }); true")
+	begun := b.reread()
 	// Long past a read of the list: nothing drawn while the write goes
-	want("a poll waits", "new Promise((done) => setTimeout(done, 300)).then(() => window.polled + ' ' + (document.querySelector('.views button[data-view=todo] .n')?.textContent === '1'))", "false false")
+	want("a poll waits", "new Promise((done) => setTimeout(done, 300)).then(() => (Number(document.documentElement.dataset.loads ?? 0) > "+strconv.Itoa(begun)+") + ' ' + (document.querySelector('#shelf [data-testid=views] button[data-view=todo] [data-testid=n]')?.textContent === '1'))", "false false")
 	b.eval("window.letWrite()")
-	b.until("saved", "!"+dialog+".open && window.polled")
+	b.untilRead(begun, "saved", "!"+dialog+".open")
 	want("a poll first: after", list, `?view=todo&project=delta #51 true Created task #51 /tasks?project=delta&task=%2351`)
 
 	// A poll asked before the write and answered after it is of the tasks before: it draws neither the words of a list with none nor over the row.
 	// The save's load waits for it, so it is let go once the write is answered.
-	const holdReads = "window.realFetch ??= window.fetch; window.held = []; window.fetch = (u, o) => (o?.method ? window.realFetch(u, o) : window.realFetch(u, o).then((r) => new Promise((go) => { window.held.push(() => go(r)); })))"
 	s.floe(t, "task", "--project", "epsilon", "--task", "#60", "--state", "done")
 	b.navigate("/tasks?project=epsilon&view=done")
 	open("add-task")
 	b.eval("window.noneShown = false; new MutationObserver(() => { window.noneShown ||= !document.getElementById('tasks-none').hidden; }).observe(document.getElementById('tasks-none'), { attributes: true })")
-	b.eval(holdReads)
-	b.until("a poll held", "window.held.length >= 2")
+	b.eval("window.realFetch ??= window.fetch")
+	letGo := b.holdReads(unanswered, "/api/pages", "/api/tasks")
+	b.until("a poll held", "window.heldReads >= 2")
 	// The reads after go on; the save's answer is marked
 	b.eval("window.patched = false; window.fetch = (u, o) => (o?.method === 'PATCH' ? window.realFetch(u, o).then((r) => { window.patched = true; return r; }) : window.realFetch(u, o))")
 	name("#61", "late")
-	b.eval("document.getElementById('kin').requestSubmit()")
+	b.eval("document.getElementById('kin-submit').click()")
 	b.until("the write answered", "window.patched")
-	b.eval("window.held.forEach((go) => go()); true")
+	letGo()
 	b.until("saved", "!"+dialog+".open")
-	b.until("the row", "document.querySelector('#list li.fresh')")
+	b.until("the row", "document.querySelector('#list li[data-fresh=true]')")
 	want("a poll late: the row and its mark stay", list, `?view=todo&project=epsilon #61 true Created task #61 /tasks?project=epsilon&task=%2361`)
 	want("a poll late: never none", "window.noneShown + ''", "false")
 
@@ -284,7 +293,7 @@ func TestUITaskAdd(t *testing.T) { //nolint:paralleltest // the browser tests sh
 
 	// Not where a task made would not show, nor on the page list.
 	b.navigate("/tasks?project=alpha&view=archived")
-	b.until("the archived list", "document.querySelector('.views button[data-view=archived]').getAttribute('aria-pressed') === 'true'")
+	b.until("the archived list", "document.querySelector('#shelf [data-testid=views] button[data-view=archived]').getAttribute('aria-pressed') === 'true'")
 	want("on the archived list", shown("add-task"), "false")
 	b.navigate("/")
 	b.until("the rows", "document.querySelector('#list li[data-slug]')")
@@ -299,7 +308,8 @@ func TestUITaskAdd(t *testing.T) { //nolint:paralleltest // the browser tests sh
 	press("#add-link")
 	b.until("the add dialog", "document.getElementById('add-dialog').open")
 	want("the page list: the filter closed", "document.getElementById('filter-dialog').open + ''", "false")
-	b.eval("document.getElementById('add-dialog').close()")
+	b.pressKey(kb.Escape)
+	b.until("the add dialog to close", "!document.getElementById('add-dialog').open")
 	want("the page list: the focus back", "document.activeElement.id", "narrow-filter")
 	b.size(1440, 800, false)
 	b.navigate("/tasks?project=alpha")

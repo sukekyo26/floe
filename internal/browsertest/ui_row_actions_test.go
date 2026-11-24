@@ -1,6 +1,8 @@
 package browsertest_test
 
 import (
+	"os"
+	"path/filepath"
 	"strings"
 	"testing"
 
@@ -31,11 +33,13 @@ func TestUIRowActions(t *testing.T) { //nolint:paralleltest // the browser tests
 	}
 	row := func(slug string) string { return "document.querySelector('#list li[data-slug=" + slug + "]')" }
 	there := func(slug string) string { return "Boolean(" + row(slug) + ")" }
-	archive := func(slug string) string { return row(slug) + ".querySelector('.actions > .archive')" }
-	pill := func(slug string) string { return row(slug) + ".querySelector('.proj')" }
+	archive := func(slug string) string {
+		return row(slug) + ".querySelector('[data-testid=actions] > [data-testid=archive]')"
+	}
+	pill := func(slug string) string { return row(slug) + ".querySelector('[data-testid=proj]')" }
 	dot := func(slug string) string { return "getComputedStyle(" + pill(slug) + ", '::before').backgroundColor" }
 	chip := func(project string) string {
-		return "getComputedStyle(document.querySelector('.chip[data-project=" + project + "]'), '::before').backgroundColor"
+		return "getComputedStyle(document.querySelector('[data-testid=chip][data-project=" + project + "]'), '::before').backgroundColor"
 	}
 	mouse := func(expr string) {
 		t.Helper()
@@ -47,9 +51,11 @@ func TestUIRowActions(t *testing.T) { //nolint:paralleltest // the browser tests
 		b.eval(expr + ".focus()")
 		b.pressKey(kb.Enter)
 	}
-	undo := func(slug string) string { return "document.querySelector('.toast .undo[data-slug=" + slug + "]')" }
+	undo := func(slug string) string {
+		return "document.querySelector('[data-testid=toast] [data-testid=undo][data-slug=" + slug + "]')"
+	}
 	// Where the focus is: the row and the part of it, or the toast's way back
-	const focus = "(() => { const e = document.activeElement; return e.matches('.undo') ? 'undo' : e.closest('li')?.dataset.slug + ' ' + (e.matches('.title') ? 'title' : e.className); })()"
+	const focus = "(() => { const e = document.activeElement; return e.dataset.testid === 'undo' ? 'undo' : e.closest('li')?.dataset.slug + ' ' + (e.dataset.testid === 'title' ? 'title' : (e.dataset.testid ?? e.tagName.toLowerCase()) + (e.dataset.on === 'true' ? ' on' : '')); })()"
 
 	b.navigate("/")
 	b.until("the rows", pill("d"))
@@ -57,11 +63,13 @@ func TestUIRowActions(t *testing.T) { //nolint:paralleltest // the browser tests
 	say("a pill's dot in its chip's color", dot("a")+" === "+chip("one")+" && "+dot("c")+" === "+chip("two"))
 	say("each project's own", dot("a")+" !== "+dot("c"))
 	say("the ground of the color too", "getComputedStyle("+pill("a")+").backgroundColor !== getComputedStyle("+pill("c")+").backgroundColor")
-	say("a long name cut within the pill", "(() => { const e = "+pill("d")+", name = e.querySelector('.proj-name'); return name.scrollWidth > name.clientWidth && e.offsetWidth <= 10 * parseFloat(getComputedStyle(document.documentElement).fontSize); })()")
-	say("the row's buttons", "[..."+row("a")+".querySelector('.actions').children].map((e) => e.classList[1] ?? e.className).join(' ')")
-	b.eval(row("a") + ".querySelector('.more').open = true")
-	say("the menu leaves it out", "getComputedStyle("+row("a")+".querySelector('.menu .archive')).display")
-	b.eval(row("a") + ".querySelector('.more').open = false")
+	say("a long name cut within the pill", "(() => { const e = "+pill("d")+", name = e.querySelector('[data-testid=proj-name]'); return name.scrollWidth > name.clientWidth && e.offsetWidth <= 10 * parseFloat(getComputedStyle(document.documentElement).fontSize); })()")
+	say("the row's buttons", "[..."+row("a")+".querySelector('[data-testid=actions]').children].map((e) => e.dataset.testid).join(' ')")
+	b.eval(row("a") + ".querySelector('[data-testid=more] > summary').click()")
+	b.until("the menu", row("a")+".querySelector('[data-testid=more]').open")
+	say("the menu leaves it out", "getComputedStyle("+row("a")+".querySelector('[data-testid=menu] [data-testid=archive]')).display")
+	b.eval(row("a") + ".querySelector('[data-testid=more] > summary').click()")
+	b.until("the menu closed", "!"+row("a")+".querySelector('[data-testid=more]').open")
 	say("its words", archive("a")+".title + ' / ' + "+archive("a")+".getAttribute('aria-label')")
 
 	// By the mouse: the next row's title has the focus, not its button, and the last row takes it at the end.
@@ -81,19 +89,19 @@ func TestUIRowActions(t *testing.T) { //nolint:paralleltest // the browser tests
 	say("no way back then", undo("c")+" === null")
 	// Escape leaves it, for the row after.
 	keys(archive("c"))
-	b.until("c archived", "!"+there("c")+" && document.activeElement.matches('.undo')")
+	b.until("c archived", "!"+there("c")+" && document.activeElement.dataset.testid === 'undo'")
 	b.pressKey(kb.Escape)
 	out = append(out, "left: "+b.until("the toast gone", undo("c")+" === null && "+focus))
-	b.eval(`fetch('/api/pages/c', { method: 'PATCH', headers: { 'Content-Type': 'application/json' }, body: '{"archived":false}' }).then(() => load())`)
-	b.untilActed("c back again", there("c"))
+	b.eval(`fetch('/api/pages/c', { method: 'PATCH', headers: { 'Content-Type': 'application/json' }, body: '{"archived":false}' }).then(() => true)`)
+	b.untilRead(b.reread(), "c back again", there("c"))
 
 	// The last row has none after it: the row that is last now takes the focus.
 	keys(archive("b"))
-	b.until("b archived", "!"+there("b")+" && document.activeElement.matches('.undo')")
+	b.until("b archived", "!"+there("b")+" && document.activeElement.dataset.testid === 'undo'")
 	b.pressKey(kb.Escape)
 	out = append(out, "left, the last: "+b.until("the toast gone", undo("b")+" === null && "+focus))
-	b.eval(`fetch('/api/pages/b', { method: 'PATCH', headers: { 'Content-Type': 'application/json' }, body: '{"archived":false}' }).then(() => load())`)
-	b.untilActed("b back", there("b"))
+	b.eval(`fetch('/api/pages/b', { method: 'PATCH', headers: { 'Content-Type': 'application/json' }, body: '{"archived":false}' }).then(() => true)`)
+	b.untilRead(b.reread(), "b back", there("b"))
 
 	// The way back fails: it stays to press again. The list slow to come: it can be pressed all the same.
 	mouse(archive("c"))
@@ -104,19 +112,19 @@ func TestUIRowActions(t *testing.T) { //nolint:paralleltest // the browser tests
 	say("failed, it stays", undo("c")+" !== null && !"+there("c"))
 	b.eval(`window.patches = []; window.hold = new Promise((r) => { window.release = r; });
 		window.fetch = (u, i) => { if (i?.method === 'PATCH') { window.patches.push(i.body); return window.realFetch(u, i); } return String(u).startsWith('/api/pages') ? window.hold.then(() => window.realFetch(u, i)) : window.realFetch(u, i); };
-		document.querySelector('#list li[data-slug=b] .actions > .archive').click()`)
+		document.querySelector('#list li[data-slug=b] [data-testid=actions] > [data-testid=archive]').click()`)
 	b.until("b's way back, the list not read", undo("b"))
 	b.eval(undo("b") + ".click()")
 	out = append(out, "the list held: "+b.until("the way back asked", "window.patches.length === 2 && window.patches.join()"))
-	b.eval("window.release(); window.fetch = window.realFetch; " + undo("c") + ".click()")
-	b.untilActed("all back", there("b")+" && "+there("c"))
+	begun := b.acted("window.release(); window.fetch = window.realFetch; " + undo("c") + ".click()")
+	b.untilRead(begun, "all back", there("b")+" && "+there("c"))
 
 	// The archived.
 	mouse(archive("b"))
 	b.until("b gone", "!"+there("b"))
 	b.navigate("/?view=archived")
 	b.until("the archived", there("b"))
-	say("an archived row's button", archive("b")+".classList.contains('on') + ' ' + "+archive("b")+".title")
+	say("an archived row's button", "("+archive("b")+".dataset.on === 'true') + ' ' + "+archive("b")+".title")
 	mouse(archive("b"))
 	b.until("b given back", "!"+there("b"))
 	say("given back, no way back", undo("b")+" === null")
@@ -125,37 +133,37 @@ func TestUIRowActions(t *testing.T) { //nolint:paralleltest // the browser tests
 	b.navigate("/")
 	b.until("the rows after that", pill("d"))
 	for _, slug := range []string{"b", "c"} {
-		b.eval(row(slug) + ".querySelector('.star').click()")
-		b.until("a favorite", row(slug)+".querySelector('.star').getAttribute('aria-pressed') === 'true'")
+		b.eval(row(slug) + ".querySelector('[data-testid=star]').click()")
+		b.until("a favorite", row(slug)+".querySelector('[data-testid=star]').getAttribute('aria-pressed') === 'true'")
 	}
 	b.navigate("/?view=fav")
 	b.until("the favorites", there("b")+" && "+there("c"))
 	first := b.eval("document.querySelector('#list li[data-slug]').dataset.slug")
-	mouse(row(first) + ".querySelector('.star')")
+	mouse(row(first) + ".querySelector('[data-testid=star]')")
 	b.until("off the view", "!"+there(first))
-	out = append(out, "the star: "+b.until("the focus", "document.activeElement.matches('.title')"))
-	b.eval(row(map[string]string{"b": "c", "c": "b"}[first]) + ".querySelector('.star').click()")
+	out = append(out, "the star: "+b.until("the focus", "document.activeElement.matches('[data-testid=title]')"))
+	b.eval(row(map[string]string{"b": "c", "c": "b"}[first]) + ".querySelector('[data-testid=star]').click()")
 	b.until("none left", "document.querySelectorAll('#list li[data-slug]').length === 0")
 
 	// In the modal: the way back there, and the search has the focus.
 	b.navigate("/")
 	b.until("the rows once more", pill("d"))
 	realKey(b, "k", 2)
-	b.until("the modal's rows", "document.querySelector('#find-list .proj') && document.querySelector('#find-actions > .archive[title]')")
-	say("the modal's pill", "getComputedStyle(document.querySelector('#find-list .proj'), '::before').backgroundColor !== 'rgba(0, 0, 0, 0)'")
-	b.eval("document.querySelector('#find-actions > .archive').click()")
-	b.until("the way back in the modal", "document.querySelector('#find .undo')")
-	b.eval("document.querySelector('#find .undo').focus(); document.querySelector('#find .undo').click()")
-	out = append(out, "the modal: "+b.until("the search", "document.querySelector('.undo') === null && document.activeElement.id"))
+	b.until("the modal's rows", "document.querySelector('#find-list [data-testid=proj]') && document.querySelector('#find-actions > [data-testid=archive][title]')")
+	say("the modal's pill", "getComputedStyle(document.querySelector('#find-list [data-testid=proj]'), '::before').backgroundColor !== 'rgba(0, 0, 0, 0)'")
+	b.eval("document.querySelector('#find-actions > [data-testid=archive]').click()")
+	b.until("the way back in the modal", "document.querySelector('#find [data-testid=undo]')")
+	b.eval("document.querySelector('#find [data-testid=undo]').focus(); document.querySelector('#find [data-testid=undo]').click()")
+	out = append(out, "the modal: "+b.until("the search", "document.querySelector('[data-testid=undo]') === null && document.activeElement.id"))
 	b.pressKey(kb.Escape)
 
 	// A page open whole: its bar's button has the focus again.
 	b.navigate("/a/d/")
-	b.until("the bar", "document.querySelector('#frame-actions > .archive[title]')")
-	b.eval("document.querySelector('#frame-actions > .archive').click()")
+	b.until("the bar", "document.querySelector('#frame-actions > [data-testid=archive][title]')")
+	b.eval("document.querySelector('#frame-actions > [data-testid=archive]').click()")
 	b.until("d's way back", undo("d"))
 	b.eval(undo("d") + ".focus(); " + undo("d") + ".click()")
-	out = append(out, "whole: "+b.until("the bar's button", undo("d")+" === null && document.activeElement.matches('#frame-actions > .archive') && document.activeElement.title"))
+	out = append(out, "whole: "+b.until("the bar's button", undo("d")+" === null && document.activeElement.matches('#frame-actions > [data-testid=archive]') && document.activeElement.title"))
 
 	// A task's page: the row stays under its category, dimmed, keeping its key, and the focus on its button.
 	for _, slug := range []string{"a", "e"} {
@@ -164,22 +172,36 @@ func TestUIRowActions(t *testing.T) { //nolint:paralleltest // the browser tests
 	s.floe(t, "task", "--slug", "a", "--task", "#1", "--category", "one")
 	s.floe(t, "task", "--slug", "b", "--task", "#1", "--category", "two")
 	b.navigate("/tasks?project=one&task=%231")
-	b.until("the task's page", there("a")+" && "+there("b")+" && document.querySelector('#task-project .proj-name')")
+	b.until("the task's page", there("a")+" && "+there("b")+" && document.querySelector('#task-project [data-testid=proj-name]')")
 	say("the task's head", "document.querySelector('#task-project').textContent + ' ' + (getComputedStyle(document.querySelector('#task-project')).backgroundColor !== 'rgba(0, 0, 0, 0)')")
 	mouse(archive("a"))
-	out = append(out, "a task's row: "+b.until("archived", row("a")+".querySelector('.actions > .archive').classList.contains('on') && "+focus))
+	out = append(out, "a task's row: "+b.until("archived", row("a")+".querySelector('[data-testid=actions] > [data-testid=archive]').dataset.on === 'true' && "+focus))
 
 	// The task list: the filter button and the head with the column folded; the page list's stay words.
 	b.navigate("/tasks?project=one")
-	b.until("the task list", "document.querySelector('#narrow-filter.proj-tint')")
-	say("the filter button", "document.getElementById('narrow-filter-name').textContent + ' ' + document.getElementById('narrow-filter').style.getPropertyValue('--c').startsWith('var(--pc')")
-	say("the folded head", "document.getElementById('shelf-what').textContent + ' ' + document.getElementById('shelf-what').classList.contains('proj-tint')")
+	// The colour once the tasks are read: the React screen draws the button of the project asked before, faint
+	b.until("the task list", "document.querySelector('#narrow-filter[data-tint=true]') && !document.getElementById('narrow-filter').style.getPropertyValue('--c').includes('faint')")
+	say("the filter button", "document.getElementById('narrow-filter-name').textContent + ' ' + document.getElementById('narrow-filter').style.getPropertyValue('--c').startsWith('var(--color-pc')")
+	say("the folded head", "document.getElementById('shelf-what').textContent + ' ' + (document.getElementById('shelf-what').dataset.tint === 'true')")
 	// No project known yet, as while the tasks cannot be read: the head has no words, whatever the view.
-	b.eval("view = 'doing'; project = ''; renderShelf()")
-	say("no project, no head", "document.getElementById('shelf-what').textContent === '' && !document.getElementById('narrow-filter').classList.contains('proj-tint')")
+	file := filepath.Join(s.Env["FLOE_DIR"], "tasks.json")
+	mended, err := os.ReadFile(file)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if err = os.WriteFile(file, []byte("{ broken"), 0o600); err != nil { //nolint:gosec // G703: a path the test names
+		t.Fatal(err)
+	}
+	b.eval("localStorage.removeItem('pages.taskProject')")
+	b.navigate("/tasks?view=doing")
+	b.until("the tasks unreadable", "!document.getElementById('error').hidden")
+	say("no project, no head", "document.getElementById('shelf-what').textContent === '' && document.getElementById('narrow-filter').dataset.tint !== 'true'")
+	if err = os.WriteFile(file, mended, 0o600); err != nil { //nolint:gosec // G703: a path the test names
+		t.Fatal(err)
+	}
 	b.navigate("/")
 	b.until("the list's button", "document.getElementById('narrow-filter')")
-	say("the page list's are words", "document.getElementById('narrow-filter').classList.contains('proj-tint') + ' ' + document.getElementById('shelf-what').classList.contains('proj-tint')")
+	say("the page list's are words", "(document.getElementById('narrow-filter').dataset.tint === 'true') + ' ' + (document.getElementById('shelf-what').dataset.tint === 'true')")
 
 	check(t, "row actions", out, rowActionsWant)
 }
@@ -188,4 +210,4 @@ const rowActionsWant = "the rows: fedcba|a pill's dot in its chip's color: true|
 	"the row's buttons: archive star more|the menu leaves it out: none|its words: Archive / Archive T a|pressed: d title|the last: b title|by the keys: undo|" +
 	"its words: Restore / Restore T c to the list|given back: c title|no way back then: true|left: b title|left, the last: c title|failed, it stays: true|" +
 	`the list held: {"archived":true},{"archived":false}|an archived row's button: true Restore|given back, no way back: true|the star: true|` +
-	"the modal's pill: true|the modal: find-q|whole: Archive|the task's head: one true|a task's row: a icon-btn archive on|the filter button: one true|the folded head: one true|no project, no head: true|the page list's are words: false false"
+	"the modal's pill: true|the modal: find-q|whole: Archive|the task's head: one true|a task's row: a archive on|the filter button: one true|the folded head: one true|no project, no head: true|the page list's are words: false false"

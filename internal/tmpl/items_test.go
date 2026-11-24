@@ -2,6 +2,7 @@ package tmpl_test
 
 import (
 	"bytes"
+	"maps"
 	"os"
 	"path/filepath"
 	"slices"
@@ -72,7 +73,7 @@ func TestHTMLItems(t *testing.T) {
 		{section, `<svg><title><meta http-equiv="refresh" content="0"></title></svg>`, `d.yaml:2:11: the page drawn from this file has <meta http-equiv="refresh" content="0"/>, which page.html, a part's part.html or an item of format html writes: a page floe draws is static, and takes a <meta> for its charset or its viewport alone; leave it out`},
 		{section, "<style>p{}</style>", "d.yaml:2:11: the page drawn from this file has a <style>, which page.html, a part's part.html or an item of format html writes: write the CSS in the template's page.css, which floe puts into the page in a layer under the parts' and the theme's, or in the part's part.css"},
 		{section, "<noscript><p>x</p></noscript>", "d.yaml:2:11: the page drawn from this file has a <noscript>, which page.html, a part's part.html or an item of format html writes: floe does not check what it holds, which works where scripts are off; leave it out"},
-		{section, `<span data-floe-part="nope">x</span>`, "d.yaml:3:4: the page drawn from this file names the part nope, which there is none of; use asks, bars, cell, chart, checklist, checks, code, columns, decision, details, diagram, diff, entries, facts, fields, image, keys, links, note, options, script, stack, stats, steps, table, tabs, terminal, text, timeline, tree"},
+		{section, `<span data-floe-part="nope">x</span>`, "d.yaml:3:4: the page drawn from this file names nope in data-floe-part, which there is none of; use "},
 		{htmlPage("<p>{{.Data.h}}</p>"), "<table><tr><td>x</td></tr></table>", "d.yaml:3:4: HTML changes the page around it at </p>: close in it each element and comment it opens, and close no element it did not open"},
 		{htmlPage("<p><b>{{.Data.t}}</p><div>{{.Data.h}}</div>"), "plain", ""},
 		{htmlPage("<table><tbody>{{.Data.h}}</tbody></table>"), "<tr><td>x</td></tr>", ""},
@@ -117,6 +118,11 @@ func TestHTMLItems(t *testing.T) {
 		got := ""
 		if err != nil {
 			got = told(err)
+		}
+		// The names to use are compared up to their head: the parts change as they are added
+		if strings.HasSuffix(tt.want, "; use ") {
+			got, _, _ = strings.Cut(got, "; use ")
+			got += "; use "
 		}
 		if got != tt.want {
 			t.Errorf("%s in %q: told\n%s\nwant\n%s", tt.h, tt.page, got, tt.want)
@@ -213,9 +219,7 @@ func TestPartHTMLItems(t *testing.T) {
 	}
 	parts := func(ph, po string) map[string]string {
 		all := partFiles("ph", `{"h": {"type": "string", "format": "html"}, "md": {"type": "string", "format": "markdown"}}`, ph)
-		for k, v := range partFiles("po", `{"in": {"$ref": "floe:///parts/ph.json"}}`, po) {
-			all[k] = v
-		}
+		maps.Copy(all, partFiles("po", `{"in": {"$ref": "floe:///parts/ph.json"}}`, po))
 		return all
 	}
 	schema := head + `{"p": {"$ref": "floe:///parts/ph.json"}, "o": {"$ref": "floe:///parts/po.json"}}}`

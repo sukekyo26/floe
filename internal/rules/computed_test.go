@@ -1,6 +1,7 @@
 package rules_test
 
 import (
+	"errors"
 	"fmt"
 	"maps"
 	"slices"
@@ -9,6 +10,7 @@ import (
 	"time"
 
 	"floe/internal/rules"
+	"floe/internal/usererr"
 )
 
 // names are the items the schema of the tests declares at its top.
@@ -52,8 +54,8 @@ func TestReadComputed(t *testing.T) {
 			"t1/computed.yaml:2:1: true"+notName,
 			"t1/computed.yaml:3:1: a is an item of the data too, so an expression could not tell them apart; rename it",
 			"t1/computed.yaml:4:1: sum"+notName,
-			`t1/computed.yaml:5:1: unexpected token Operator("in")`,
-			`t1/computed.yaml:6:1: bad number syntax: "1a"`,
+			"t1/computed.yaml:5:1: in"+notName,
+			"t1/computed.yaml:6:1: 1a"+notName,
 		)},
 		{"names in any letters", "総額: 1\ncafé: 2\nπ: 3\n٣x: 4\n", ""},
 		{"an item's name in Japanese", "合計: 1\n", "t1/computed.yaml:1:1: 合計 is an item of the data too, so an expression could not tell them apart; rename it"},
@@ -62,9 +64,9 @@ func TestReadComputed(t *testing.T) {
 			"t1/computed.yaml:2:1: bad character U+0024 '$'",
 		)},
 		{"words of expr", "not: 1\nlet: 2\nif: 3\n", lines(
-			"t1/computed.yaml:1:1: unexpected token EOF",
-			"t1/computed.yaml:2:1: unexpected token EOF",
-			"t1/computed.yaml:3:1: unexpected token EOF",
+			"t1/computed.yaml:1:1: not"+notName,
+			"t1/computed.yaml:2:1: let"+notName,
+			"t1/computed.yaml:3:1: if"+notName,
 		)},
 		{"names read as other than one name", "_x: 1\na.b: 2\na-b: 3\nnil: 4\n", lines(
 			"t1/computed.yaml:1:1: _x"+notName,
@@ -202,5 +204,33 @@ func TestComputedInts(t *testing.T) {
 	}
 	if got, ok := values["d"].(time.Duration); !ok || got != time.Hour {
 		t.Errorf("d = %#v, want the time.Duration 1h", values["d"])
+	}
+}
+
+// key returns the key of the one mistake err holds, "" for another error.
+func key(err error) string {
+	if l, ok := errors.AsType[usererr.List](err); ok && len(l) == 1 {
+		return l[0].Key
+	}
+	return ""
+}
+
+// What expr decides stays expr's: a function it has (merge since 1.18) is no name of a computed value, and the
+// text an expression makes counts toward expr's budget of a run.
+func TestComputedExprLimits(t *testing.T) {
+	t.Parallel()
+
+	_, err := rules.ReadComputed("t1/computed.yaml", []byte("merge: 1\n"), names)
+	if key(err) != "rules_computed_name" {
+		t.Errorf("merge: told %q, want rules_computed_name", told(err))
+	}
+	c, err := rules.ReadComputed("t1/computed.yaml", []byte("n: 'len(join(map(items, name), \"\"))'\n"), names)
+	if err != nil {
+		t.Fatal(told(err))
+	}
+	body := "name: " + strings.Repeat("x", 500) + "\nitems: [" + strings.Repeat("1, ", 2199) + "1]\n"
+	_, err = c.Run(data(t, body))
+	if key(err) != "rules_computed_error" || !strings.Contains(told(err), "memory budget exceeded") {
+		t.Errorf("1.1e6 bytes joined: told %q, want rules_computed_error of memory budget exceeded", told(err))
 	}
 }

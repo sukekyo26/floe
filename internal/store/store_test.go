@@ -13,17 +13,15 @@ import (
 	"testing/fstest"
 
 	"floe/internal/dirs"
+	"floe/internal/drawhere"
 	floefiles "floe/internal/files"
 	"floe/internal/i18n"
 	"floe/internal/kit"
+	floepublish "floe/internal/publish"
 	"floe/internal/store"
 	"floe/internal/testfs"
 	"floe/internal/usererr"
 )
-
-func ptr[T any](v T) *T {
-	return &v
-}
 
 // told words err as the command line does, the store's path as "S".
 func told(err error, root string) string {
@@ -55,7 +53,7 @@ func picKit(t *testing.T, head, schema string) store.Drawing {
 	if err != nil {
 		t.Fatal(err)
 	}
-	return store.Drawing{Kit: k, Icons: nil, Err: nil}
+	return store.Drawing{Kit: k, Icons: nil, Draw: drawhere.Here(k, nil), Err: nil}
 }
 
 func cmpOr(a, b string) string {
@@ -84,7 +82,7 @@ var png = []byte("\x89PNG\r\n\x1a\n0000")
 func publish(t *testing.T, s *store.Store, dw store.Drawing, file, src string, images map[string][]byte, o store.Options) *store.Entry {
 	t.Helper()
 
-	e, err := s.PrepareData(dw, store.Upload{File: file, Source: []byte(src), Images: images, Project: "p", Repo: "p", Place: file}, o)
+	e, err := floepublish.PrepareData(t.Context(), s, dw, floepublish.Upload{File: file, Source: []byte(src), Images: images, Project: "p", Repo: "p", Place: file}, o)
 	if err != nil {
 		t.Fatalf("PrepareData: %v", err)
 	}
@@ -197,26 +195,25 @@ func TestNeedImages(t *testing.T) {
 	s, root := newStore(t)
 	dw := picKit(t, "", "")
 	two := "lang: en\ntemplate: pic\ni: [img/a.png, img/b.png, img/a.png, img/n.txt]\n"
-	_, err := s.PrepareData(dw, store.Upload{File: "d.yaml", Source: []byte(two), Images: nil, Project: "p", Repo: "p", Place: "d.yaml"}, store.Options{})
-	need, ok := errors.AsType[*store.NeedImages](err)
+	_, err := floepublish.PrepareData(t.Context(), s, dw, floepublish.Upload{File: "d.yaml", Source: []byte(two), Images: nil, Project: "p", Repo: "p", Place: "d.yaml"}, store.Options{})
+	need, ok := errors.AsType[*floepublish.NeedImages](err)
 	if want := "[{img/a.png [{3 5} {3 27}]} {img/b.png [{3 16}]}]"; !ok || fmt.Sprint(need.Images) != want {
 		t.Errorf("PrepareData = %v, want NeedImages %s", err, want)
 	}
 	schema := "lang: en\ntemplate: pic\ni: [img/a.png]\nx: 1\nj: 2\n"
-	_, err = s.PrepareData(picKit(t, "", `{"$schema": "https://json-schema.org/draft/2020-12/schema", "type": "object",
-"properties": {"i": {"type": "array", "items": {"type": "string", "format": "image"}}}, "additionalProperties": false}`),
-		store.Upload{File: "d.yaml", Source: []byte(schema), Images: nil, Project: "p", Repo: "p", Place: "d.yaml"}, store.Options{})
-	if _, ok := errors.AsType[*store.NeedImages](err); ok || err == nil {
+	_, err = floepublish.PrepareData(t.Context(), s, picKit(t, "", `{"$schema": "https://json-schema.org/draft/2020-12/schema", "type": "object",
+"properties": {"i": {"type": "array", "items": {"type": "string", "format": "image"}}}, "additionalProperties": false}`), floepublish.Upload{File: "d.yaml", Source: []byte(schema), Images: nil, Project: "p", Repo: "p", Place: "d.yaml"}, store.Options{})
+	if _, ok := errors.AsType[*floepublish.NeedImages](err); ok || err == nil {
 		t.Errorf("a mistake of the schema: PrepareData = %v", err)
 	}
 	for _, sent := range []map[string][]byte{{"img/a.png": png}, {}} {
-		_, err = s.PrepareData(dw, store.Upload{File: "d.yaml", Source: []byte(two), Images: sent, Project: "p", Repo: "p", Place: "d.yaml"}, store.Options{})
+		_, err = floepublish.PrepareData(t.Context(), s, dw, floepublish.Upload{File: "d.yaml", Source: []byte(two), Images: sent, Project: "p", Repo: "p", Place: "d.yaml"}, store.Options{})
 		if got := told(err, root); !strings.Contains(got, `d.yaml:3:16: the image "img/b.png" cannot be read (file does not exist)`) {
 			t.Errorf("sent %v: told\n%s", sent, got)
 		}
 	}
 	publish(t, s, dw, "d.yaml", "lang: en\ntemplate: pic\n", nil, store.Options{})
-	_, err = s.PrepareData(dw, store.Upload{File: "d.yaml", Source: []byte(two), Images: nil, Project: "q", Repo: "q", Place: "d.yaml"}, store.Options{})
+	_, err = floepublish.PrepareData(t.Context(), s, dw, floepublish.Upload{File: "d.yaml", Source: []byte(two), Images: nil, Project: "q", Repo: "q", Place: "d.yaml"}, store.Options{})
 	if got, want := told(err, root), `floe: slug "d" was published from d.yaml in repository p: choose another slug`; got != want {
 		t.Errorf("told\n%s\nwant\n%s", got, want)
 	}
@@ -231,8 +228,8 @@ func TestImagePartPublished(t *testing.T) {
 	dw := picKit(t, "", "")
 	src := "lang: en\ntemplate: report\nsections:\n  - parts:\n      - image: { file: img/a.png, alt: a }\n" +
 		"      - tabs:\n          - { title: b, parts: [{ image: { file: img/b.png, alt: b } }] }\n          - { title: c, parts: [{ text: c }] }\n"
-	_, err := s.PrepareData(dw, store.Upload{File: "d.yaml", Source: []byte(src), Images: nil, Project: "p", Repo: "p", Place: "d.yaml"}, store.Options{})
-	if need, ok := errors.AsType[*store.NeedImages](err); !ok || fmt.Sprint(need.Images) != "[{img/a.png [{5 24}]} {img/b.png [{7 50}]}]" {
+	_, err := floepublish.PrepareData(t.Context(), s, dw, floepublish.Upload{File: "d.yaml", Source: []byte(src), Images: nil, Project: "p", Repo: "p", Place: "d.yaml"}, store.Options{})
+	if need, ok := errors.AsType[*floepublish.NeedImages](err); !ok || fmt.Sprint(need.Images) != "[{img/a.png [{5 24}]} {img/b.png [{7 50}]}]" {
 		t.Fatalf("PrepareData = %v, want NeedImages of img/a.png and img/b.png", err)
 	}
 	publish(t, s, dw, "d.yaml", src, map[string][]byte{"img/a.png": png, "img/b.png": png, "img/c.png": png}, store.Options{})
@@ -240,7 +237,7 @@ func TestImagePartPublished(t *testing.T) {
 	if got := files(t, copyOf(t, s, root, "d")); !slices.Equal(got, want) {
 		t.Errorf("files %v, want %v", got, want)
 	}
-	if err := s.Rebuild(picKit(t, "v2", "")); err != nil {
+	if err := s.Rebuild(t.Context(), picKit(t, "v2", "")); err != nil {
 		t.Fatal(told(err, root))
 	}
 	dir := copyOf(t, s, root, "d")
@@ -256,18 +253,18 @@ func TestImagePartPublished(t *testing.T) {
 func TestAccept(t *testing.T) {
 	t.Parallel()
 
-	o, err := store.Accept("a.yaml", false, store.Options{Title: ptr(" "), Theme: ptr(""), Description: ptr(" ")})
+	o, err := floepublish.Accept("a.yaml", false, store.Options{Title: new(" "), Theme: new(""), Description: new(" ")})
 	if err != nil || o.Title != nil || o.Theme != nil || o.Description == nil || *o.Description != "" || o.Slug != nil {
 		t.Errorf("Accept = %+v, %v", o, err)
 	}
 	for _, slug := range []string{"Foo", "foo ", "-a", strings.Repeat("a", 65)} {
-		_, err := store.Accept("a.yaml", false, store.Options{Slug: ptr(slug)})
+		_, err := floepublish.Accept("a.yaml", false, store.Options{Slug: new(slug)})
 		want := `floe: invalid slug "` + slug + `": use 1 to 64 lowercase letters, digits and hyphens, starting and ending with a letter or digit`
 		if got := told(err, "\x00"); got != want {
 			t.Errorf("told\n%s\nwant\n%s", got, want)
 		}
 	}
-	if _, err := store.Accept("a.yaml", false, store.Options{Slug: ptr("a--b")}); err != nil {
+	if _, err := floepublish.Accept("a.yaml", false, store.Options{Slug: new("a--b")}); err != nil {
 		t.Errorf("a--b: %v", err)
 	}
 }
@@ -279,10 +276,10 @@ func TestPublishKeepsTitle(t *testing.T) {
 	s, _ := newStore(t)
 	dw := picKit(t, "", "")
 	publish(t, s, dw, "d.yaml", "lang: en\ntemplate: pic\ntitle: Data\n", nil, store.Options{})
-	if _, err := s.Edit("d", store.Edit{Title: ptr("Kept")}); err != nil {
+	if _, err := s.Edit("d", store.Edit{Title: new("Kept")}); err != nil {
 		t.Fatal(err)
 	}
-	e := publish(t, s, dw, "d.yaml", "lang: en\ntemplate: pic\ntitle: Data\n", nil, store.Options{Title: ptr("")})
+	e := publish(t, s, dw, "d.yaml", "lang: en\ntemplate: pic\ntitle: Data\n", nil, store.Options{Title: new("")})
 	if m := s.ReadMeta("d"); m.Title != "Kept" || !strings.Contains(string(e.Page), "<title>Data</title>") {
 		t.Errorf("title %q, page %s", m.Title, e.Page)
 	}
@@ -297,7 +294,7 @@ func TestEditTags(t *testing.T) {
 	dw := picKit(t, "", "")
 	publish(t, s, dw, "d.yaml", "lang: en\ntemplate: pic\n", nil, store.Options{})
 	want := []string{"設計", "計画"}
-	edits := []store.Edit{{Tags: &store.TagsEdit{Add: []string{"設計", " 計画 ", "設計", ""}}}, {Favorite: ptr(true)}, {Archived: ptr(true)}}
+	edits := []store.Edit{{Tags: &store.TagsEdit{Add: []string{"設計", " 計画 ", "設計", ""}}}, {Favorite: new(true)}, {Archived: new(true)}}
 	for _, ed := range edits {
 		if _, err := s.Edit("d", ed); err != nil {
 			t.Fatal(err)
@@ -310,7 +307,7 @@ func TestEditTags(t *testing.T) {
 	if m := s.ReadMeta("d"); !slices.Equal(m.Tags, want) {
 		t.Errorf("published again: tags %q", m.Tags)
 	}
-	if _, err := s.Edit("d", store.Edit{Slug: ptr("e")}); err != nil {
+	if _, err := s.Edit("d", store.Edit{Slug: new("e")}); err != nil {
 		t.Fatal(err)
 	}
 	if m := s.ReadMeta("e"); m == nil || !slices.Equal(m.Tags, want) {
@@ -383,14 +380,14 @@ func TestArchive(t *testing.T) {
 	publish(t, s, dw, "d.yaml", "lang: en\ntemplate: pic\n", nil, store.Options{})
 	before := s.ReadMeta("d").UpdatedAt
 	for _, v := range []bool{true, true, false, true} {
-		if _, err := s.Edit("d", store.Edit{Archived: ptr(v)}); err != nil {
+		if _, err := s.Edit("d", store.Edit{Archived: new(v)}); err != nil {
 			t.Fatal(err)
 		}
 		if m := s.ReadMeta("d"); m.Archived != v || m.UpdatedAt != before {
 			t.Errorf("archived %v: %+v", v, m)
 		}
 	}
-	if _, err := s.Edit("d", store.Edit{Slug: ptr("e"), Favorite: ptr(true)}); err != nil {
+	if _, err := s.Edit("d", store.Edit{Slug: new("e"), Favorite: new(true)}); err != nil {
 		t.Fatal(err)
 	}
 	if m := s.ReadMeta("e"); m == nil || !m.Archived {
@@ -411,7 +408,7 @@ func TestArchive(t *testing.T) {
 	}
 	link := func() {
 		t.Helper()
-		e, err := s.PrepareLink(t.Context(), dw, filepath.Join(dir, "h.html"), store.Options{}, "", home)
+		e, err := floepublish.PrepareLink(t.Context(), s, dw, filepath.Join(dir, "h.html"), store.Options{}, "", home)
 		if err == nil {
 			err = s.Save(e)
 		}
@@ -420,7 +417,7 @@ func TestArchive(t *testing.T) {
 		}
 	}
 	link()
-	if _, err := s.Edit("h", store.Edit{Archived: ptr(true)}); err != nil {
+	if _, err := s.Edit("h", store.Edit{Archived: new(true)}); err != nil {
 		t.Fatal(err)
 	}
 	link()
@@ -479,7 +476,7 @@ func TestCopyIsUnderItsPage(t *testing.T) {
 		if _, ok := s.File("d", m, ""); ok {
 			t.Errorf("File with source %q gave a file", source)
 		}
-		if err := s.Rebuild(picKit(t, "v2", "")); err != nil {
+		if err := s.Rebuild(t.Context(), picKit(t, "v2", "")); err != nil {
 			t.Errorf("Rebuild with source %q: %s", source, told(err, root))
 		}
 	}
@@ -502,18 +499,18 @@ func TestPrepareLink(t *testing.T) {
 		}
 	}
 	dw := picKit(t, "", "")
-	e, err := s.PrepareLink(t.Context(), dw, "sub/index.html", store.Options{}, filepath.Join(home, "proj"), home)
+	e, err := floepublish.PrepareLink(t.Context(), s, dw, "sub/index.html", store.Options{}, filepath.Join(home, "proj"), home)
 	if err != nil {
 		t.Fatal(told(err, root))
 	}
 	if err = s.Save(e); err != nil || e.Slug != "sub" {
 		t.Errorf("Save: %v, slug %s", err, e.Slug)
 	}
-	_, err = s.PrepareLink(t.Context(), dw, filepath.Join(dir, "index.html"), store.Options{Theme: ptr("ink")}, "", home)
+	_, err = floepublish.PrepareLink(t.Context(), s, dw, filepath.Join(dir, "index.html"), store.Options{Theme: new("ink")}, "", home)
 	if got := told(err, root); got != "floe: --theme picks the theme of a page drawn from a data file: a linked file is shown as it is" {
 		t.Errorf("told %s", got)
 	}
-	_, err = s.PrepareLink(t.Context(), dw, filepath.Join(dir, "bad.yaml"), store.Options{}, "", home)
+	_, err = floepublish.PrepareLink(t.Context(), s, dw, filepath.Join(dir, "bad.yaml"), store.Options{}, "", home)
 	if got := told(err, root); !strings.Contains(got, `unknown template "nope"`) {
 		t.Errorf("told %s", got)
 	}
@@ -539,7 +536,7 @@ func TestListLinkTooLarge(t *testing.T) {
 	if err := os.WriteFile(filepath.Join(dir, "a.png"), png, 0o600); err != nil {
 		t.Fatal(err)
 	}
-	e, err := s.PrepareLink(t.Context(), picKit(t, "", ""), file, store.Options{}, "", home)
+	e, err := floepublish.PrepareLink(t.Context(), s, picKit(t, "", ""), file, store.Options{}, "", home)
 	if err != nil {
 		t.Fatal(told(err, root))
 	}
@@ -572,12 +569,12 @@ func TestOwners(t *testing.T) {
 	if _, err := s.Edit("same", store.Edit{Tags: &store.TagsEdit{Add: []string{"a"}}}); err != nil {
 		t.Fatal(err)
 	}
-	_, err := s.PrepareData(dw, store.Upload{File: "same.yaml", Source: []byte("lang: en\ntemplate: pic\n"), Images: map[string][]byte{}, Project: "q", Repo: "q", Place: "same.yaml"}, store.Options{})
+	_, err := floepublish.PrepareData(t.Context(), s, dw, floepublish.Upload{File: "same.yaml", Source: []byte("lang: en\ntemplate: pic\n"), Images: map[string][]byte{}, Project: "q", Repo: "q", Place: "same.yaml"}, store.Options{})
 	if got := told(err, root); got != `floe: slug "same" was published from same.yaml in repository p: choose another slug` {
 		t.Errorf("told %s", got)
 	}
-	up := store.Upload{File: "same.yaml", Source: []byte("lang: en\ntemplate: pic\n"), Images: map[string][]byte{}, Project: "q", Repo: "q", Place: "same.yaml"}
-	e, err := s.PrepareData(dw, up, store.Options{Force: true})
+	up := floepublish.Upload{File: "same.yaml", Source: []byte("lang: en\ntemplate: pic\n"), Images: map[string][]byte{}, Project: "q", Repo: "q", Place: "same.yaml"}
+	e, err := floepublish.PrepareData(t.Context(), s, dw, up, store.Options{Force: true})
 	if err != nil {
 		t.Fatalf("--force: %v", err)
 	}
@@ -596,7 +593,7 @@ func TestOwners(t *testing.T) {
 	if err = os.WriteFile(html, []byte("<title>z</title>"), 0o600); err != nil {
 		t.Fatal(err)
 	}
-	_, err = s.PrepareLink(t.Context(), dw, html, store.Options{Slug: ptr("same")}, "", home)
+	_, err = floepublish.PrepareLink(t.Context(), s, dw, html, store.Options{Slug: new("same")}, "", home)
 	if got := told(err, root); got != `floe: slug "same" is used by a stored page: choose another slug` {
 		t.Errorf("told %s", got)
 	}
@@ -623,7 +620,7 @@ func TestSlugRefusals(t *testing.T) {
 		return file
 	}
 	z, y := html("z.html"), html("y.html")
-	e, err := s.PrepareLink(t.Context(), dw, z, store.Options{Slug: ptr("lk")}, "", home)
+	e, err := floepublish.PrepareLink(t.Context(), s, dw, z, store.Options{Slug: new("lk")}, "", home)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -631,23 +628,23 @@ func TestSlugRefusals(t *testing.T) {
 		t.Fatal(err)
 	}
 	data := func(slug, project string, force bool) error {
-		up := store.Upload{File: slug + ".yaml", Source: []byte("lang: en\ntemplate: pic\n"), Images: map[string][]byte{}, Project: project, Repo: project, Place: slug + ".yaml"}
-		_, err := s.PrepareData(dw, up, store.Options{Force: force})
+		up := floepublish.Upload{File: slug + ".yaml", Source: []byte("lang: en\ntemplate: pic\n"), Images: map[string][]byte{}, Project: project, Repo: project, Place: slug + ".yaml"}
+		_, err := floepublish.PrepareData(t.Context(), s, dw, up, store.Options{Force: force})
 		return err
 	}
 	link := func(file, slug string, force bool) error {
-		_, err := s.PrepareLink(t.Context(), dw, file, store.Options{Slug: ptr(slug), Force: force}, "", home)
+		_, err := floepublish.PrepareLink(t.Context(), s, dw, file, store.Options{Slug: new(slug), Force: force}, "", home)
 		return err
 	}
 	// A page of a file by its key: repo and place, the project published from apart.
 	keyed := func(slug, project, repo, place string) error {
-		up := store.Upload{File: "x.yaml", Source: []byte("lang: en\ntemplate: pic\n"), Images: map[string][]byte{}, Project: project, Repo: repo, Place: place}
-		_, err := s.PrepareData(dw, up, store.Options{Slug: ptr(slug)})
+		up := floepublish.Upload{File: "x.yaml", Source: []byte("lang: en\ntemplate: pic\n"), Images: map[string][]byte{}, Project: project, Repo: repo, Place: place}
+		_, err := floepublish.PrepareData(t.Context(), s, dw, up, store.Options{Slug: new(slug)})
 		return err
 	}
 	for _, page := range []struct{ slug, repo, place string }{{"rel", "r", "docs/x.yaml"}, {"ab", "", filepath.Join(home, "x.yaml")}} {
-		up := store.Upload{File: "x.yaml", Source: []byte("lang: en\ntemplate: pic\n"), Images: map[string][]byte{}, Project: "a", Repo: page.repo, Place: page.place}
-		e, err := s.PrepareData(dw, up, store.Options{Slug: ptr(page.slug)})
+		up := floepublish.Upload{File: "x.yaml", Source: []byte("lang: en\ntemplate: pic\n"), Images: map[string][]byte{}, Project: "a", Repo: page.repo, Place: page.place}
+		e, err := floepublish.PrepareData(t.Context(), s, dw, up, store.Options{Slug: new(page.slug)})
 		if err != nil {
 			t.Fatal(err)
 		}
@@ -656,13 +653,13 @@ func TestSlugRefusals(t *testing.T) {
 		}
 	}
 	// A page that kept no file, as pages published before keys were the file's: compared by the project published from.
-	old := store.Upload{File: "old.yaml", Source: []byte("lang: en\ntemplate: pic\n"), Images: map[string][]byte{}, Project: "p", Repo: "p", Place: ""}
-	if e, err := s.PrepareData(dw, old, store.Options{}); err != nil {
+	old := floepublish.Upload{File: "old.yaml", Source: []byte("lang: en\ntemplate: pic\n"), Images: map[string][]byte{}, Project: "p", Repo: "p", Place: ""}
+	if e, err := floepublish.PrepareData(t.Context(), s, dw, old, store.Options{}); err != nil {
 		t.Fatal(err)
 	} else if err = s.Save(e); err != nil {
 		t.Fatal(err)
 	}
-	_, taken := s.Edit("lk", store.Edit{Slug: ptr("pg")})
+	_, taken := s.Edit("lk", store.Edit{Slug: new("pg")})
 	ja := i18n.New("ja")
 	hx, hz := filepath.Join("H", "x.yaml"), filepath.Join("H", "proj", "z.html")
 	for _, tt := range []struct {
@@ -725,8 +722,8 @@ func TestPagePlace(t *testing.T) {
 	dw := picKit(t, "", "")
 	const src = "lang: en\ntemplate: pic\n"
 	put := func(repo, place string, force bool, data string) error {
-		up := store.Upload{File: "plan.yaml", Source: []byte(data), Images: map[string][]byte{}, Project: "w", Repo: repo, Place: place}
-		e, err := s.PrepareData(dw, up, store.Options{Slug: ptr("plan"), Force: force})
+		up := floepublish.Upload{File: "plan.yaml", Source: []byte(data), Images: map[string][]byte{}, Project: "w", Repo: repo, Place: place}
+		e, err := floepublish.PrepareData(t.Context(), s, dw, up, store.Options{Slug: new("plan"), Force: force})
 		if err != nil {
 			return err
 		}
@@ -743,12 +740,12 @@ func TestPagePlace(t *testing.T) {
 	if got, want := usererr.Tell(ja, err).Render(""), "URL 名「plan」はリポジトリ p の docs/plan.yaml から公開されています。別の URL 名にしてください"; got != want {
 		t.Errorf("another file in ja: told %s, want %s", got, want)
 	}
-	_, err = s.PrepareData(dw, store.Upload{File: "plan.yaml", Source: []byte(src + "i: [a.png]\n"), Images: nil, Project: "w", Repo: "p", Place: "notes/plan.yaml"}, store.Options{Slug: ptr("plan")})
-	if _, asked := errors.AsType[*store.NeedImages](err); asked || !strings.Contains(told(err, root), "was published from docs/plan.yaml") {
+	_, err = floepublish.PrepareData(t.Context(), s, dw, floepublish.Upload{File: "plan.yaml", Source: []byte(src + "i: [a.png]\n"), Images: nil, Project: "w", Repo: "p", Place: "notes/plan.yaml"}, store.Options{Slug: new("plan")})
+	if _, asked := errors.AsType[*floepublish.NeedImages](err); asked || !strings.Contains(told(err, root), "was published from docs/plan.yaml") {
 		t.Errorf("before the images: %v, want the refusal", err)
 	}
-	_, err = s.PrepareData(dw, store.Upload{File: "plan.yaml", Source: []byte(src + "i: [a.png]\n"), Images: nil, Project: "w", Repo: "p", Place: "docs/plan.yaml"}, store.Options{Slug: ptr("plan")})
-	if _, asked := errors.AsType[*store.NeedImages](err); !asked {
+	_, err = floepublish.PrepareData(t.Context(), s, dw, floepublish.Upload{File: "plan.yaml", Source: []byte(src + "i: [a.png]\n"), Images: nil, Project: "w", Repo: "p", Place: "docs/plan.yaml"}, store.Options{Slug: new("plan")})
+	if _, asked := errors.AsType[*floepublish.NeedImages](err); !asked {
 		t.Errorf("the same file before the images: %v, want them asked for", err)
 	}
 	if err = put("p", "docs/plan.yaml", false, src+"title: again\n"); err != nil {
@@ -781,7 +778,7 @@ func TestImageUnderImage(t *testing.T) {
 
 	s, root := newStore(t)
 	src := "lang: en\ntemplate: pic\ni: [a.png, a.png/b.png]\n"
-	_, err := s.PrepareData(picKit(t, "", ""), store.Upload{File: "d.yaml", Source: []byte(src), Images: map[string][]byte{"a.png": png, "a.png/b.png": png}, Project: "p", Repo: "p", Place: "d.yaml"}, store.Options{})
+	_, err := floepublish.PrepareData(t.Context(), s, picKit(t, "", ""), floepublish.Upload{File: "d.yaml", Source: []byte(src), Images: map[string][]byte{"a.png": png, "a.png/b.png": png}, Project: "p", Repo: "p", Place: "d.yaml"}, store.Options{})
 	want := `d.yaml: the image "a.png/b.png" is under "a.png", which is an image too, and a stored page cannot keep both: rename one of them`
 	if got := told(err, root); got != want {
 		t.Errorf("told\n%s\nwant\n%s", got, want)
@@ -794,11 +791,11 @@ func TestFailureBeforeNeedImages(t *testing.T) {
 
 	s, _ := newStore(t)
 	dw := picKit(t, "", "")
-	dw.Icons = failing{}
+	dw.Icons, dw.Draw = failing{}, drawhere.Here(dw.Kit, failing{})
 	src := "lang: en\ntemplate: pic\ni: [a.png]\nd: {width: 300, height: 100, title: i, parts: [{icon: {icon: aws/res/aws-lambda, x: 10, y: 10}}]}\n"
-	_, err := s.PrepareData(dw, store.Upload{File: "d.yaml", Source: []byte(src), Images: nil, Project: "p", Repo: "p", Place: "d.yaml"}, store.Options{})
+	_, err := floepublish.PrepareData(t.Context(), s, dw, floepublish.Upload{File: "d.yaml", Source: []byte(src), Images: nil, Project: "p", Repo: "p", Place: "d.yaml"}, store.Options{})
 	var found usererr.List
-	if _, ok := errors.AsType[*store.NeedImages](err); ok || found.Add(err) == nil {
+	if _, ok := errors.AsType[*floepublish.NeedImages](err); ok || found.Add(err) == nil {
 		t.Errorf("PrepareData = %v, want floe's failure", err)
 	}
 }
@@ -837,10 +834,10 @@ func TestPublishTitle(t *testing.T) {
 	if m := s.ReadMeta("d"); m.Title != "Data" || m.DataTitle != "Data" {
 		t.Errorf("title %q, data's %q", m.Title, m.DataTitle)
 	}
-	if _, err := s.Edit("d", store.Edit{Title: ptr("X")}); err != nil {
+	if _, err := s.Edit("d", store.Edit{Title: new("X")}); err != nil {
 		t.Fatal(err)
 	}
-	if _, err := s.Edit("d", store.Edit{Title: ptr("")}); err != nil || s.ReadMeta("d").Title != "Data" {
+	if _, err := s.Edit("d", store.Edit{Title: new("")}); err != nil || s.ReadMeta("d").Title != "Data" {
 		t.Errorf("cleared: %q, %v", s.ReadMeta("d").Title, err)
 	}
 	publish(t, s, dw, "e.yaml", "lang: en\ntemplate: pic\n", nil, store.Options{})
@@ -856,14 +853,14 @@ func TestConflict(t *testing.T) {
 	s, root := newStore(t)
 	dw := picKit(t, "", "")
 	publish(t, s, dw, "same.yaml", "lang: en\ntemplate: pic\n", nil, store.Options{})
-	_, err := s.PrepareData(dw, store.Upload{File: "same.yaml", Source: []byte("lang: en\ntemplate: pic\n"), Images: nil, Project: "q", Repo: "q", Place: "same.yaml"}, store.Options{})
+	_, err := floepublish.PrepareData(t.Context(), s, dw, floepublish.Upload{File: "same.yaml", Source: []byte("lang: en\ntemplate: pic\n"), Images: nil, Project: "q", Repo: "q", Place: "same.yaml"}, store.Options{})
 	if _, ok := errors.AsType[*store.Conflict](err); !ok {
 		t.Errorf("PrepareData = %v, want a Conflict", err)
 	}
 	if got := told(err, root); got != `floe: slug "same" was published from same.yaml in repository p: choose another slug` {
 		t.Errorf("told %s", got)
 	}
-	_, err = s.PrepareData(dw, store.Upload{File: "same.yaml", Source: []byte("lang: en\ntemplate: nope\n"), Images: nil, Project: "p", Repo: "p", Place: "same.yaml"}, store.Options{})
+	_, err = floepublish.PrepareData(t.Context(), s, dw, floepublish.Upload{File: "same.yaml", Source: []byte("lang: en\ntemplate: nope\n"), Images: nil, Project: "p", Repo: "p", Place: "same.yaml"}, store.Options{})
 	if _, ok := errors.AsType[*store.Conflict](err); ok {
 		t.Errorf("a mistake of the data is a Conflict: %v", err)
 	}
@@ -879,7 +876,7 @@ func TestPrepareLinkRoot(t *testing.T) {
 	s, root := newStore(t)
 	home := filepath.Dir(root)
 	top := filepath.VolumeName(home) + string(filepath.Separator)
-	_, err := s.PrepareLink(t.Context(), picKit(t, "", ""), top, store.Options{}, home, home)
+	_, err := floepublish.PrepareLink(t.Context(), s, picKit(t, "", ""), top, store.Options{}, home, home)
 	if l, ok := errors.AsType[usererr.List](err); !ok || len(l) != 1 || l[0].Key != "link_exposes_dir" {
 		t.Errorf("link %s = %v, want link_exposes_dir", top, err)
 	}
@@ -909,7 +906,7 @@ func TestPrepareLinkFolder(t *testing.T) {
 	dw := picKit(t, "", "")
 	link := func(file, cwd string, o store.Options) *store.Entry {
 		t.Helper()
-		e, err := s.PrepareLink(t.Context(), dw, file, o, cwd, home)
+		e, err := floepublish.PrepareLink(t.Context(), s, dw, file, o, cwd, home)
 		if err != nil {
 			t.Fatal(told(err, root))
 		}
@@ -945,7 +942,7 @@ func TestPrepareLinkFolder(t *testing.T) {
 	if e := link("config.yml", proj, store.Options{}); e.Slug != "config-yml" || !e.Meta.Folder || e.Meta.IsData() {
 		t.Errorf("config.yml: slug %s, %+v", e.Slug, e.Meta)
 	}
-	_, err := s.PrepareLink(t.Context(), dw, "config.yml", store.Options{Theme: ptr("ink")}, proj, home)
+	_, err := floepublish.PrepareLink(t.Context(), s, dw, "config.yml", store.Options{Theme: new("ink")}, proj, home)
 	if got := told(err, root); got != "floe: --theme picks the theme of a page drawn from a data file: a linked file is shown as it is" {
 		t.Errorf("a folder with --theme: told %s", got)
 	}
@@ -1017,7 +1014,7 @@ func TestFolderNames(t *testing.T) {
 	linked := []string{"api-docs/docs", "design-notes/docs", "api-docs/docs/v1", "api-docs", "handbook", "api-docs/specs/index.html"}
 	got := make([]string, 0, len(linked))
 	for _, file := range linked {
-		e, err := s.PrepareLink(t.Context(), dw, filepath.Join(home, file), store.Options{}, "", home)
+		e, err := floepublish.PrepareLink(t.Context(), s, dw, filepath.Join(home, file), store.Options{}, "", home)
 		if err != nil {
 			t.Fatal(told(err, root))
 		}

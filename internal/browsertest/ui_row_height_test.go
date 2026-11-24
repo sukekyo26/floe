@@ -16,7 +16,7 @@ func TestUIRowHeight(t *testing.T) { //nolint:paralleltest // the browser tests 
 	b := s.b
 	st := store.New(s.Env["FLOE_DIR"])
 	s.floe(t, "publish", s.page(t, "plan.yaml", "Plan", "<p>x</p>"), "--slug", "plan")
-	if _, err := st.Edit("plan", store.Edit{Project: ptrTo("demo")}); err != nil {
+	if _, err := st.Edit("plan", store.Edit{Project: new("demo")}); err != nil {
 		t.Fatal(err)
 	}
 	s.floe(t, "task", "--slug", "plan", "--task", "S1", "--category", "design")
@@ -26,17 +26,17 @@ func TestUIRowHeight(t *testing.T) { //nolint:paralleltest // the browser tests 
 	// row's foot below (its outline's width past its offset)
 	const row = "document.querySelector('#list li[data-slug=plan]')"
 	const measure = `(() => { const li = ` + row + `, r = (e) => e.getBoundingClientRect();
-		const buttons = [...li.querySelectorAll(':scope > .actions > .icon-btn, :scope > .actions > .more > summary')].map((e) => r(e).height);
-		const more = li.querySelector('.more'); more.open = true;
+		const buttons = [...li.querySelectorAll(':scope > [data-testid=actions] > button, :scope > [data-testid=actions] > [data-testid=more] > summary')].map((e) => r(e).height);
+		const more = li.querySelector('[data-testid=more]');
 		// Narrowed, so that its items' words wrap to two lines
-		const menu = more.querySelector('.menu'); menu.style.minWidth = '0'; menu.style.width = '8rem';
-		const items = [...li.querySelectorAll('.menu > *')].filter((e) => e.getClientRects().length);
+		const menu = more.querySelector('[data-testid=menu]'); menu.style.minWidth = '0'; menu.style.width = '8rem';
+		const items = [...li.querySelectorAll('[data-testid=menu] :is(button, a)')].filter((e) => e.getClientRects().length);
 		const tall = items.every((e) => r(e).height >= 36), within = items.every((e) => e.scrollHeight <= e.clientHeight);
 		const wrapped = items.some((e) => r(e).height > 40);
-		menu.style.minWidth = ''; menu.style.width = ''; more.open = false;
-		const btn = li.querySelector('.actions > .archive'); btn.focus();
+		menu.style.minWidth = ''; menu.style.width = ''; more.querySelector('summary').click();
+		const btn = li.querySelector('[data-testid=actions] > [data-testid=archive]'); btn.focus();
 		const st = getComputedStyle(btn), out = parseFloat(st.outlineWidth) + parseFloat(st.outlineOffset);
-		const ring = btn.matches(':focus-visible') && r(btn).top - out >= r(li.querySelector('.title')).bottom && r(btn).bottom + out <= r(li).bottom - 1;
+		const ring = btn.matches(':focus-visible') && r(btn).top - out >= r(li.querySelector('[data-testid=title]')).bottom && r(btn).bottom + out <= r(li).bottom - 1;
 		return [r(li).height.toFixed(1), buttons.join(','), items.length > 0 && tall, wrapped, within, ring].join(' '); })()`
 	out := make([]string, 0, 6)
 	for _, width := range []int64{1440, 390} {
@@ -46,6 +46,8 @@ func TestUIRowHeight(t *testing.T) { //nolint:paralleltest // the browser tests 
 			b.navigate(p[1])
 			b.until("the row", row)
 			b.still()
+			// The menu opened first: React draws it open after the press
+			menuItemShown(b, "#list li[data-slug=plan]", "edit", "")
 			got[p[0]] = b.eval(measure)
 		}
 		b.unsize()

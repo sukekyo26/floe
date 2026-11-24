@@ -292,7 +292,7 @@ func FuzzResolve(f *testing.F) {
 		if err != nil || strings.HasPrefix(rel, "..") {
 			t.Fatalf("Resolve(%q) = %q, outside %s", rest, got, dir)
 		}
-		for _, p := range strings.Split(rest, "/") {
+		for p := range strings.SplitSeq(rest, "/") {
 			if p == "" && rest != "" || strings.HasPrefix(p, ".") {
 				t.Fatalf("Resolve(%q) = %q through an empty or dot element", rest, got)
 			}
@@ -359,7 +359,7 @@ func TestCheck(t *testing.T) {
 		{"top.html", "link_exposes_dir", "would expose all of " + dirs.Shown(realHome)},
 		{".top.html", "link_exposes_dir", "would expose all of " + dirs.Shown(realHome)},
 		{"proj/page.txt", "link_not_linkable", ""},
-		// Real cannot tell where a file not there is (readLink, before, tells it cannot be read).
+		// Real cannot tell where a file not there is (publishing a link, before, tells it cannot be read).
 		{"proj/missing.html", "link_not_real", ""},
 		// A folder is checked as the directory it exposes: its own.
 		{"proj", "", ""},

@@ -2,6 +2,14 @@
 // with expr, and runs them on a data file. expr's mistakes are told in its words; floe checks only the shape
 // of the files, what floe names and orders (the names of computed, $env, a cycle, a for), and that a number
 // is finite.
+//
+// LIMIT: a run of an expression has expr's default budget, 1e6: a list's item and a part split makes count 1,
+// and the text it makes a byte for each it adds: join all but its longest part, + the shorter text, toJSON,
+// replace and toBase64 of a text what they add to it, toJSON of keys and values or a list its whole text
+// (longer than the data, by its indentation and escapes). Over it, expr says memory budget exceeded. Set
+// vm.VM's MemoryBudget if templates need more. It does not bound what a run allocates (s + "x" counts 1
+// for a copy of s): guard bounds the memory of the whole drawing instead, of the CLI's commands that draw and of
+// floe __draw, the server's (drawproc).
 package rules
 
 import (
@@ -23,7 +31,8 @@ import (
 // a comparison with it does not silently hold or fail.
 // LIMIT: +, - and * past ±1.8e308 still give ±Inf, and whole numbers past ±9.2e18 wrap around, as does - on
 // one above 9.2e18, which doc.Read leaves uint64. computed.yaml catches them in its values (notFiniteIn), the
-// expressions of checks.yaml do not. Check their results too if a template needs such numbers.
+// expressions of checks.yaml do not, nor log2(0), -Inf. Check their results too if a template needs such
+// numbers.
 var arithmetic = []expr.Option{
 	finite("_divide", "/", runtime.Divide), expr.Operator("/", "_divide"),
 	// expr matches an operator as written, and ^ is ** written otherwise.

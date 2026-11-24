@@ -2,6 +2,7 @@ package server
 
 import (
 	"bytes"
+	"context"
 	"encoding/json"
 	"errors"
 	"html/template"
@@ -18,6 +19,7 @@ import (
 	"floe/internal/i18n"
 	"floe/internal/page"
 	"floe/internal/store"
+	"floe/internal/ui"
 	"floe/internal/usererr"
 )
 
@@ -133,7 +135,8 @@ func (s *Server) versionContent(c *i18n.Catalog, slug string, m *store.Meta, v i
 }
 
 func (s *Server) content(
-	c *i18n.Catalog, slug string, m *store.Meta, rest string, v int, diff diffOf, drawing func() store.Drawing, cut bool,
+	ctx context.Context, c *i18n.Catalog, slug string, m *store.Meta, rest string, v int, diff diffOf,
+	drawing func() store.Drawing, cut bool,
 ) (served, error) {
 	none := served{body: nil, typ: "", drawn: false}
 	if v > 0 {
@@ -144,7 +147,7 @@ func (s *Server) content(
 		return none, errNoPage
 	}
 	if rest == "" && m.IsData() {
-		page, err := store.DrawLink(drawing(), slug, m, file, cut)
+		page, err := store.DrawLink(ctx, drawing(), slug, m, file, cut)
 		if err != nil {
 			told := served{body: io.NopCloser(bytes.NewReader(mistakesPage(c, slug, err))), typ: htmlType, drawn: true}
 			return told, err //nolint:wrapcheck // its mistakes, which the page of them tells
@@ -269,7 +272,7 @@ func (s *Server) lookAt(r *http.Request, slug, rest string, q url.Values) (look,
 	// Of the last look, as the version is: one changed since reloads the tab.
 	now := func() store.Drawing { d, _ := s.now(); return d }
 	var err error
-	l.got, err = s.content(catalog(r), slug, m, rest, l.v, l.diff, now, false)
+	l.got, err = s.content(r.Context(), catalog(r), slug, m, rest, l.v, l.diff, now, false)
 	return l, err
 }
 
@@ -339,7 +342,7 @@ func (s *Server) frame(w http.ResponseWriter, r *http.Request, slug string) {
 			status, version = http.StatusOK, s.askedVersion(slug, m, r.URL.Query())
 		}
 	}
-	sendUI(w, r, status, slug, version)
+	sendUI(w, r, status, ui.Frame, slug, version)
 }
 
 // askedVersion is what ?v= of q asks of the page of slug, whose meta.json is m: "" for nothing, the version's number,
@@ -376,7 +379,7 @@ func (s *Server) download(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	// A file kept is not mended by the watch: of what the directories hold now.
-	got, err := s.content(catalog(r), slug, m, "", v, noDiff, s.latest, true)
+	got, err := s.content(r.Context(), catalog(r), slug, m, "", v, noDiff, s.latest, true)
 	switch {
 	case errors.Is(err, errNoPage):
 		notFound(w)

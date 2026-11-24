@@ -177,8 +177,7 @@ func shortLabel(s string) string {
 
 // placed is err at a place in the part's value, when it is one the user can fix.
 func placed(err error, at string) error {
-	var e *usererr.Error
-	if errors.As(err, &e) {
+	if e, ok := errors.AsType[*usererr.Error](err); ok {
 		return e.PlacedIn(at)
 	}
 	return err

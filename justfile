@@ -4,11 +4,14 @@ pkgs       := "./..."
 cover_file := "coverage.out"
 # The packages but the browser tests, as a command that lists them: run in the recipe, not each time just reads this file.
 core_pkgs  := "go list " + pkgs + " | grep -v /internal/browsertest$"
-# The browser tests CI runs on one machine (test-browser looks); the rest run on another. Chosen by adding the heaviest
-# first (go test -race -json, each test's time) while the sum nears half of all: choose again so when a test is added.
-# LIMIT: how even the two are is not checked; CI's two jobs' times show it. When one job passes 8 minutes (its timeout is
-# 10), split the tests into three jobs, and change the required checks of the develop ruleset with them.
-browser_looks := "TestLookRule|TestUITaskChildren|TestUIVersionGone|TestUITaskPage|TestUITaskArchive|TestUITaskParent|TestUIDiffNotice"
+# The browser tests run in parts, a CI job each (browser-parts): looks is TestLookRule, and the other tests go by name in
+# turn to rest-1 … rest-<browser_rest_jobs>. A part that takes over 8/10 of browser_timeout (seconds) gets a warning on CI.
+# LIMIT: how even the rest parts are is luck, and is not checked; the warning tells it. Then raise browser_rest_jobs by one;
+# if the heaviest part stays over, by one more; if still, split by each test's measured time instead. TestLookRule is one
+# test of 27 t.Run, which -run 'TestLookRule/…' can split when looks gets the warning. The time measured starts as -timeout
+# does, after the -race build, which go test -list has done.
+browser_rest_jobs := "2"
+browser_timeout   := "600"
 # Default version is the trimmed contents of VERSION; override with `VERSION=1.2.3 just build`.
 version    := env_var_or_default("VERSION", trim(`cat VERSION 2>/dev/null || echo 0.0.0-dev`))
 ldflags    := "-s -w -X floe/internal/version.Version=" + version
@@ -47,6 +50,41 @@ fmt:
 fmt-check:
     golangci-lint fmt --diff {{pkgs}}
 
+# LIMIT: the files of //go:build race are not read (no -race): six constants of 5 lines; add a -race run when one holds more.
+# LIMIT: just lint type-checks linux and windows only: when fix-check fails for darwin and just fix does not help, it is a type error of darwin's files.
+# LIMIT: the go fix of the Go on PATH runs: one newer than go.mod's may know more fixers and fail fix-check on a clean tree.
+# go fix reads one GOOS's files a run: the three floe runs on.
+fix_oses  := "linux darwin windows"
+# omitzero changes what encoding/json writes (a zero struct left out), so it is not applied.
+fix_flags := "-omitzero=false"
+
+# Rewrite Go to the newer forms go fix knows, for each GOOS, and format, until go fix changes nothing more
+fix:
+    #!/usr/bin/env bash
+    set -euo pipefail
+    for _ in 1 2 3 4 5; do
+        for os in {{fix_oses}}; do GOOS=$os go fix {{fix_flags}} {{pkgs}}; done
+        golangci-lint fmt {{pkgs}}
+        left=
+        for os in {{fix_oses}}; do
+            GOOS=$os go fix {{fix_flags}} -diff {{pkgs}} >/dev/null || left=1
+        done
+        if [ -z "$left" ]; then exit 0; fi
+    done
+    echo "fix: go fix still changes the code after 5 runs: read git diff" >&2
+    exit 1
+
+# Fail when go fix would change the code, for any GOOS
+fix-check:
+    #!/usr/bin/env bash
+    set -euo pipefail
+    for os in {{fix_oses}}; do
+        GOOS=$os go fix {{fix_flags}} -diff {{pkgs}} || {
+            echo "fix-check: go fix failed or would change the code for GOOS=$os: run 'just fix' for a diff above; with no diff, fix the compiler's errors above" >&2
+            exit 1
+        }
+    done
+
 # Run golangci-lint with the strict config, on Linux and on Windows (whose files only build there), and vet Windows
 # on arm64, which no CI machine runs
 lint:
@@ -71,41 +109,74 @@ test-race:
 test-race-core:
     CGO_ENABLED=1 go test -race -shuffle=on -timeout 9m $({{core_pkgs}})
 
+# The parts of the browser tests, CI's matrix of browser jobs, as JSON: looks, then rest-1 … rest-<browser_rest_jobs>
+browser-parts:
+    #!/usr/bin/env bash
+    set -euo pipefail
+    jobs="{{browser_rest_jobs}}"
+    if [[ ! $jobs =~ ^[1-9][0-9]*$ ]]; then
+        echo "browser-parts: browser_rest_jobs is \"$jobs\"; make it a whole number from 1" >&2; exit 1
+    fi
+    parts='"looks"'
+    for ((k = 1; k <= jobs; k++)); do parts+=",\"rest-$k\""; done
+    echo "[$parts]"
+
 # LIMIT: without Chrome every test skips and it passes; it runs what CI does on a machine with Chrome alone.
-# Run one part of the browser tests with the race detector, as CI's job of it does: looks (browser_looks) or rest
+# Run one part of the browser tests with the race detector, as CI's job of it does: looks, or rest-1 … (just browser-parts)
 test-browser part:
     #!/usr/bin/env bash
     set -euo pipefail
-    case "{{part}}" in
-    looks) pick=-run ;;
-    rest) pick=-skip ;;
-    *) echo "test-browser: no part {{part}}; use looks or rest" >&2; exit 1 ;;
-    esac
+    part="{{part}}"
+    parts=$("{{just_executable()}}" --justfile "{{justfile()}}" browser_rest_jobs="{{browser_rest_jobs}}" browser-parts)
+    if [[ $parts != *"\"$part\""* ]]; then
+        echo "test-browser: no part $part; use one of $parts" >&2; exit 1
+    fi
     # -race as the run below, so that one test binary is built; a build that fails stops here, not as names missing.
     listed=$(CGO_ENABLED=1 go test -race -list . ./internal/browsertest)
-    declare -A have=() seen=()
-    for name in $(grep '^Test' <<<"$listed" || true); do have[$name]=1; done
-    if [ ${#have[@]} -eq 0 ]; then
+    mapfile -t names < <(grep -v -e '^ok ' -e '^$' <<<"$listed" | LC_ALL=C sort)
+    if [ ${#names[@]} -eq 0 ]; then
         echo "test-browser: go test -list tells no test of internal/browsertest" >&2; exit 1
     fi
-    looks="{{browser_looks}}"
-    # read drops an empty name at the end, which the first test tells.
-    if [[ -z $looks || $looks == *'|' ]]; then
-        echo "test-browser: browser_looks has an empty name" >&2; exit 1
-    fi
-    IFS='|' read -ra names <<<"$looks"
+    looks=
     for name in "${names[@]}"; do
-        if [ -z "$name" ]; then
-            echo "test-browser: browser_looks has an empty name" >&2; exit 1
-        elif [ -n "${seen[$name]:-}" ]; then
-            echo "test-browser: $name is twice in browser_looks" >&2; exit 1
-        elif [ -z "${have[$name]:-}" ]; then
-            echo "test-browser: $name is in browser_looks but no test of internal/browsertest; remove it" >&2; exit 1
+        # A part runs its tests by -run, which an example, fuzz or benchmark would be in no part of.
+        if [[ $name != Test* ]]; then
+            echo "test-browser: $name is not a Test…, which no part runs; make it a test, or give it a part here" >&2; exit 1
         fi
-        seen[$name]=1
+        if [ "$name" = TestLookRule ]; then looks=1; fi
     done
-    # The job stops at 10 minutes with nothing printed; past 7 the test binary stops itself and prints the tests running.
-    CGO_ENABLED=1 go test -race -shuffle=on -timeout 7m "$pick" '^({{browser_looks}})$' ./internal/browsertest
+    if [ -z "$looks" ]; then
+        echo "test-browser: no TestLookRule in internal/browsertest, which is the part looks; change the parts here" >&2; exit 1
+    fi
+    pick=()
+    if [ "$part" = looks ]; then
+        pick=(TestLookRule)
+    else
+        k=${part#rest-} i=0
+        for name in "${names[@]}"; do
+            if [ "$name" = TestLookRule ]; then continue; fi
+            if [ $((i % {{browser_rest_jobs}} + 1)) -eq "$k" ]; then pick+=("$name"); fi
+            i=$((i + 1))
+        done
+        if [ ${#pick[@]} -eq 0 ]; then
+            echo "test-browser: part $part has no test; lower browser_rest_jobs" >&2; exit 1
+        fi
+    fi
+    run=$(IFS='|'; echo "${pick[*]}")
+    # Past -timeout the test binary stops itself and prints the tests running; the job stops later, with nothing printed.
+    start=$SECONDS code=0
+    CGO_ENABLED=1 go test -race -shuffle=on -timeout {{browser_timeout}}s -run "^($run)\$" ./internal/browsertest || code=$?
+    took=$((SECONDS - start)) over=$(({{browser_timeout}} * 8 / 10))
+    # Told on a failure too: a run that timed out is the one most over.
+    if [ "$took" -gt "$over" ]; then
+        if [ "$part" = looks ]; then
+            fix="split TestLookRule by its rules, with -run 'TestLookRule/…'"
+        else
+            fix="raise browser_rest_jobs in the justfile by one; if the heaviest part stays over, by one more; if still, split by each test's time"
+        fi
+        echo "::warning title=Browser ($part) took ${took}s::over ${over}s, 8/10 of -timeout {{browser_timeout}}s: $fix"
+    fi
+    exit "$code"
 
 # LIMIT: the tests are named here, corpus first, as pagediff's golden is read from corpus's golden page: a new test of golden files is missed unless it is added here
 # Write every golden file anew from what floe prints and draws now; read the change in git diff
@@ -202,7 +273,50 @@ shellcheck:
 shfmt-check:
     go tool shfmt -i 2 -ci -d install.sh
 
-# LIMIT: test runs every package without the race detector; a race is told by CI alone (test-race-core and the two
+web_dir := "internal/ui/web"
+
+# Install the management page's packages as pnpm-lock.yaml pins them (Node and pnpm are needed only for the web recipes)
+web-install:
+    cd {{web_dir}} && pnpm install --frozen-lockfile
+
+# Format, type, lint and unit tests of the management page
+web-check: web-install
+    cd {{web_dir}} && pnpm run check
+
+# Build the management page into dist/, which is committed and embedded by Go
+web-build: web-install
+    cd {{web_dir}} && pnpm run build
+
+# The build gives the same bytes twice, and they are the committed dist/; dist/ is left as it is. The copy of Tailwind's
+# license, which no build output holds, is the installed one's.
+web-build-check: web-install
+    #!/usr/bin/env bash
+    set -euo pipefail
+    cd {{web_dir}}
+    # Locally, a dist/ changed by hand or not committed; a fresh checkout in CI always passes this
+    if [ -n "$(git status --porcelain --untracked-files=all -- dist)" ]; then
+        git status --short --untracked-files=all -- dist >&2
+        echo "error: dist differs from what is committed: commit it, or restore it with git checkout -- dist" >&2
+        exit 1
+    fi
+    tmp=$(mktemp -d)
+    trap 'rm -rf "$tmp"' EXIT
+    pnpm run build --outDir "$tmp/one" >/dev/null
+    pnpm run build --outDir "$tmp/two" >/dev/null
+    diff -r "$tmp/one" "$tmp/two" >/dev/null \
+        || { echo "error: two builds of the same source differ: the build is not reproducible" >&2; exit 1; }
+    diff -rq "$tmp/one" dist >&2 \
+        || { echo "error: dist is not the build of src: run just web-build and commit dist" >&2; exit 1; }
+    cmp -s node_modules/tailwindcss/LICENSE tailwindcss.LICENSE \
+        || { echo "error: tailwindcss.LICENSE is not the installed tailwindcss's license: copy node_modules/tailwindcss/LICENSE to it and run just licenses" >&2; exit 1; }
+
+# LIMIT: test runs every package without the race detector; a race is told by CI alone (test-race-core and the
 # browser jobs, all with -race).
 # Pre-push gate of CI's checks
-ci: fmt-check vet lint test cover-check vuln mod-verify mod-tidy-check shellcheck shfmt-check
+ci: fmt-check vet lint fix-check test cover-check vuln mod-verify mod-tidy-check shellcheck shfmt-check
+
+# Serve the gallery of the management page's shared components on 127.0.0.1:<port>, in lang (ja or en), for a person to
+# try them: go test writes its boot values, and Vite's dev server serves it. It is never built into dist
+web-gallery port lang="ja": web-install
+    go test ./internal/ui -run '^TestGalleryBoot$' -count=1 -gallery={{lang}}
+    cd {{web_dir}} && pnpm exec vite --config vite.config.ts gallery --host 127.0.0.1 --port {{port}} --strictPort

@@ -58,12 +58,16 @@ func TestUITaskParent(t *testing.T) { //nolint:paralleltest // the browser tests
 		b.until("the head", "!document.getElementById('task-head').hidden")
 		b.still()
 	}
-	press := func(expr string) {
+	at := func(expr string) (float64, float64) {
 		t.Helper()
 		b.eval(expr + ".scrollIntoView({ block: 'nearest' })")
 		b.still()
 		r := b.rect(expr)
-		b.click(r.X+r.Width/2, r.Y+r.Height/2)
+		return r.X + r.Width/2, r.Y + r.Height/2
+	}
+	press := func(expr string) {
+		t.Helper()
+		b.click(at(expr))
 	}
 	const shown = "(id) => !document.getElementById(id).closest('[hidden]')"
 	parts := func() string {
@@ -73,13 +77,22 @@ func TestUITaskParent(t *testing.T) { //nolint:paralleltest // the browser tests
 	kin := func(name, title string) {
 		t.Helper()
 		b.until("the dialog", "document.getElementById('kin-dialog').open")
-		b.eval("document.getElementById('kin-task').value = " + js(name) + "; document.getElementById('kin-task').dispatchEvent(new Event('input', { bubbles: true })); document.getElementById('kin-title').value = " + js(title))
+		b.fill("#kin-task", name)
+		if title != "" {
+			b.fill("#kin-title", title)
+		}
 	}
 	const said = "[document.getElementById('kin-heading').textContent, document.getElementById('kin-target').textContent, document.getElementById('kin-note').hidden ? '' : document.getElementById('kin-note').textContent, document.getElementById('kin-title').closest('label').hidden, document.getElementById('kin-submit').textContent].join('|')"
-	const toasts = "[...document.querySelectorAll('#toasts .toast')].map((e) => e.textContent).join(' / ')"
+	// The toasts come since seen marks those there: the page's own toasts are left as they are.
+	const (
+		newToasts = "[...document.querySelectorAll('#toasts [data-testid=toast]')].filter((e) => !window.seenToasts?.has(e))"
+		toasts    = newToasts + ".map((e) => e.textContent).join(' / ')"
+		newUndo   = newToasts + ".map((e) => e.querySelector('[data-testid=undo]')).find(Boolean)"
+		seen      = "window.seenToasts = new WeakSet(document.querySelectorAll('#toasts [data-testid=toast]'))"
+	)
 	saved := func() {
 		t.Helper()
-		b.eval("document.getElementById('kin').requestSubmit()")
+		b.eval("document.getElementById('kin-submit').click()")
 		b.until("saved", "!document.getElementById('kin-dialog').open")
 	}
 
@@ -94,7 +107,7 @@ func TestUITaskParent(t *testing.T) { //nolint:paralleltest // the browser tests
 			t.Errorf("%s: parts %s, want %s", c.name, got, c.want)
 		}
 	}
-	if got := b.eval("[...document.querySelectorAll('#task-family .unlink')].map((e) => e.dataset.task + ' ' + e.getAttribute('aria-label')).join(', ')"); got != "#5 Take #5 out of the children" {
+	if got := b.eval("[...document.querySelectorAll('#task-family [data-testid=unlink]')].map((e) => e.dataset.task + ' ' + e.getAttribute('aria-label')).join(', ')"); got != "#5 Take #5 out of the children" {
 		t.Errorf("a parent's buttons: %q", got)
 	}
 
@@ -112,7 +125,7 @@ func TestUITaskParent(t *testing.T) { //nolint:paralleltest // the browser tests
 	if got := b.eval("document.activeElement.id"); got != "task-parent-change" {
 		t.Errorf("the focus after adding: %q", got)
 	}
-	b.eval("document.getElementById('toasts').replaceChildren()")
+	b.eval(seen)
 
 	// The same parent: closed, nothing written. Changed to one made with it: in one write; its way back writes the one before.
 	b.until("drawn", "!document.getElementById('task-parent-change').hidden")
@@ -138,22 +151,22 @@ func TestUITaskParent(t *testing.T) { //nolint:paralleltest // the browser tests
 	if got := b.eval(toasts); got != "Changed the parent from #3 to #40Undo" {
 		t.Errorf("changed: %q", got)
 	}
-	b.eval("document.querySelector('#toasts .undo').click()")
-	b.until("given back", "document.querySelector('#toasts').textContent.includes('Undone')")
-	b.until("drawn", "document.querySelector('#task-up-rows .kin-row[data-task=\"#3\"]')")
+	b.eval(newUndo + ".click()")
+	b.until("given back", toasts+".includes('Undone')")
+	b.until("drawn", "document.querySelector('#task-up-rows [data-testid=kin-row][data-task=\"#3\"]')")
 	if parentOf("#1") != "#3" {
 		t.Errorf("given back to %q", parentOf("#1"))
 	}
-	b.eval("document.getElementById('toasts').replaceChildren()")
+	b.eval(seen)
 
 	// The button keeps its place unseen until the row is pointed at or reached: the row's end, the unread dot before it, does not move.
 	b.size(1440, 900, false)
 	defer b.unsize()
 	open("#1")
 	b.mouse(input.DispatchMouseEventTypeMouseMoved, 1, 1, 0)
-	const look = "getComputedStyle(document.querySelector('#task-up-rows .unlink')).opacity + ' ' + Math.round(document.querySelector('#task-up-rows .kin-row > :last-child').getBoundingClientRect().right)"
+	const look = "getComputedStyle(document.querySelector('#task-up-rows [data-testid=unlink]')).opacity + ' ' + Math.round(document.querySelector('#task-up-rows [data-testid=kin-row] > :last-child').getBoundingClientRect().right)"
 	away := b.eval(look)
-	b.eval("document.querySelector('#task-up-rows .unlink').focus()")
+	b.eval("document.querySelector('#task-up-rows [data-testid=unlink]').focus()")
 	b.still()
 	near := b.eval(look)
 	if a, n := strings.Fields(away), strings.Fields(near); a[0] != "0" || n[0] != "1" || a[1] != n[1] {
@@ -161,32 +174,34 @@ func TestUITaskParent(t *testing.T) { //nolint:paralleltest // the browser tests
 	}
 
 	// Taken off by the mouse: the row gone, the focus on its part's button; the way back writes it again.
-	press("document.querySelector('#task-up-rows .unlink')")
-	b.until("taken off", "document.querySelector('#toasts').textContent.includes('Took')")
-	b.until("drawn", "!document.getElementById('task-parent-add').hidden")
-	if got := b.eval(toasts + " + ' | ' + document.activeElement.id"); got != "Took #1 out of the children of #3Undo | task-parent-add" || parentOf("#1") != "" {
+	// The row is drawn as the write answers, the focus goes after the read: waited for, as the row is not enough.
+	press("document.querySelector('#task-up-rows [data-testid=unlink]')")
+	b.until("taken off", toasts+".includes('Took')")
+	b.until("the focus on its part's button", "document.activeElement.id === 'task-parent-add'")
+	if got := b.eval(toasts); got != "Took #1 out of the children of #3Undo" || parentOf("#1") != "" {
 		t.Errorf("taken off: %q, %q", got, parentOf("#1"))
 	}
-	b.eval("document.querySelector('#toasts .undo').click()")
-	b.until("given back", "document.querySelector('#task-up-rows .unlink[data-task=\"#3\"]')")
-	if got := b.eval("document.activeElement.dataset.task + ' ' + document.activeElement.classList.contains('unlink')"); got != "#3 true" || parentOf("#1") != "#3" {
-		t.Errorf("given back: focus %q, parent %q", got, parentOf("#1"))
+	b.eval(newUndo + ".click()")
+	b.until("the focus on the row given back", "document.activeElement.matches('#task-up-rows [data-testid=unlink][data-task=\"#3\"]')")
+	if parentOf("#1") != "#3" {
+		t.Errorf("given back: parent %q", parentOf("#1"))
 	}
-	b.eval("document.getElementById('toasts').replaceChildren()")
+	b.eval(seen)
 
-	// By the keys: the focus to the way back at once. Escape before the page is read again leaves it for the button there is, and when that
-	// goes with the drawing, for the one that takes its place. The reads after the write are held, to come after the key.
-	const toastsLeft = "document.querySelectorAll('#toasts .undo').length + ' ' + document.activeElement.id"
+	// By the keys: the focus to the way back at once. Escape before the page is read again leaves it for the button there is: the parent
+	// is off as the write answers (the screen draws what a write answered at once). The reads after the
+	// write are held, to come after the key.
+	const toastsLeft = newToasts + ".filter((e) => e.querySelector('[data-testid=undo]')).length + ' ' + document.activeElement.id"
 	byKeys := func() {
 		t.Helper()
-		b.eval("document.querySelector('#task-up-rows .unlink').focus()")
+		b.eval("document.querySelector('#task-up-rows [data-testid=unlink]').focus()")
 		b.pressKey(kb.Enter)
-		b.until("the way back", "document.activeElement.matches('#toasts .undo')")
+		b.until("the way back", "document.activeElement.matches('#toasts [data-testid=undo]')")
 	}
 	b.eval("window.realFetch = window.fetch; window.fetch = (u, o) => (o?.method === 'PATCH' ? window.realFetch(u, o).then((r) => { window.holding = true; return r; }) : window.realFetch(u, o).then((r) => (window.holding ? new Promise((go) => { window.heldAnswers = [...(window.heldAnswers ?? []), () => go(r)]; }) : r)))")
 	byKeys()
 	b.pressKey(kb.Escape)
-	if got := b.eval(toastsLeft); got != "0 task-parent-change" {
+	if got := b.eval(toastsLeft); got != "0 task-parent-add" {
 		t.Errorf("Escape before the reading: %q", got)
 	}
 	b.eval("window.fetch = window.realFetch; window.holding = false; (window.heldAnswers ?? []).forEach((go) => go()), 1")
@@ -203,7 +218,7 @@ func TestUITaskParent(t *testing.T) { //nolint:paralleltest // the browser tests
 	byKeys()
 	b.until("the reading failed", "!document.getElementById('error').hidden")
 	b.pressKey(kb.Enter)
-	b.until("given back", "document.querySelector('#toasts').textContent.includes('Undone')")
+	b.until("given back", toasts+".includes('Undone')")
 	if parentOf("#1") != "#3" {
 		t.Errorf("given back with the reading failing: parent %q", parentOf("#1"))
 	}
@@ -213,7 +228,7 @@ func TestUITaskParent(t *testing.T) { //nolint:paralleltest // the browser tests
 	byKeys()
 	b.until("the reading failed", "!document.getElementById('error').hidden")
 	b.pressKey(kb.Escape)
-	if got := b.eval(toastsLeft); got != "0 task-parent-change" {
+	if got := b.eval(toastsLeft); got != "0 task-parent-add" {
 		t.Errorf("Escape with the reading failed: %q", got)
 	}
 	b.eval("window.fetch = window.realFetch, 1")
@@ -221,68 +236,64 @@ func TestUITaskParent(t *testing.T) { //nolint:paralleltest // the browser tests
 
 	// From the parent's page, a child taken off; the focus on a button stays as the family is drawn anew.
 	open("#4")
-	b.eval("document.querySelector('#task-family-rows .unlink').focus()")
+	b.eval("document.querySelector('#task-family-rows [data-testid=unlink]').focus()")
 	task("#5", "--title", "renamed")
 	b.until("drawn anew", "document.getElementById('task-family-rows').textContent.includes('renamed')")
-	if got := b.eval("document.activeElement.dataset.task + ' ' + document.activeElement.classList.contains('unlink')"); got != "#5 true" {
+	if got := b.eval("document.activeElement.dataset.task + ' ' + (document.activeElement.dataset.testid === 'unlink')"); got != "#5 true" {
 		t.Errorf("the focus as drawn anew: %q", got)
 	}
-	press("document.querySelector('#task-family-rows .unlink')")
-	b.until("taken off", "document.querySelector('#toasts').textContent.includes('Took')")
+	press("document.querySelector('#task-family-rows [data-testid=unlink]')")
+	b.until("taken off", toasts+".includes('Took')")
 	if got := b.eval(toasts); got != "Took #5 out of the children of #4Undo" || parentOf("#5") != "" {
 		t.Errorf("a child taken off: %q, %q", got, parentOf("#5"))
 	}
-	b.eval("document.getElementById('toasts').replaceChildren()")
+	b.eval(seen)
 
-	// Moved meanwhile, the list read before (held, as a poll would read it): refused as changed, not taken off the other; read again.
-	hold := func() {
-		t.Helper()
-		b.eval(`window.realFetch ??= window.fetch; window.held = false;
-			window.fetch = async (url, init) => {
-				if (init?.method === 'PATCH') window.held = false;
-				if (window.held && String(url).startsWith('/api/tasks') && !init?.method) return new Response(window.heldTasks);
-				return window.realFetch(url, init);
-			};
-			window.realFetch('/api/tasks').then((r) => r.text()).then((x) => { window.heldTasks = x; window.held = true; })`)
-		b.until("held", "window.held === true")
-	}
+	// Moved meanwhile, the list read before (stale, as a poll would read it): refused as changed, not taken off the other; read again.
 	open("#2")
-	hold()
+	release := b.staleReads("/api/tasks", "")
 	task("#2", "--parent", "#4")
-	press("document.querySelector('#task-up-rows .unlink')")
+	x, y := at("document.querySelector('#task-up-rows [data-testid=unlink]')")
+	begun := b.pollEnded()
+	b.click(x, y)
 	b.until("refused", "!document.getElementById('error').hidden")
 	if got := b.eval("document.getElementById('error').textContent"); got != "Failed to save: task #2 has changed since it was read" || parentOf("#2") != "#4" {
 		t.Errorf("moved meanwhile: %q, %q", got, parentOf("#2"))
 	}
-	b.until("read again", "document.querySelector('#task-up-rows .kin-row[data-task=\"#4\"]')")
-	b.eval("document.getElementById('error').hidden = true")
+	b.until("read again", "document.querySelector('#task-up-rows [data-testid=kin-row][data-task=\"#4\"]')")
+	b.staleOwn(begun)
+	release()
 
 	// The dialog too: refused, it takes the task as read again, and the next press goes.
-	hold()
+	release = b.staleReads("/api/tasks", "")
 	b.eval("document.getElementById('task-parent-change').click()")
 	kin("#40", "")
 	task("#2", "--parent", "#3")
-	b.eval("document.getElementById('kin').requestSubmit()")
+	begun = b.pollEnded()
+	b.eval("document.getElementById('kin-submit').click()")
 	b.until("refused", "!document.getElementById('kin-error').hidden")
 	if got := b.eval("document.getElementById('kin-note').textContent"); got != "#40 made becomes the parent, in place of #3" {
 		t.Errorf("read again in the dialog: %q", got)
 	}
-	b.eval("document.getElementById('kin').requestSubmit()")
+	b.staleOwn(begun)
+	release()
+	b.eval("document.getElementById('kin-submit').click()")
 	b.until("saved", "!document.getElementById('kin-dialog').open")
 	if parentOf("#2") != "#40" {
 		t.Errorf("pressed again: %q", parentOf("#2"))
 	}
-	b.eval("window.fetch = window.realFetch; document.getElementById('toasts').replaceChildren()")
+	b.eval(seen)
 
-	// Pressed twice as it goes: taken off once, nothing refused.
-	b.until("drawn", "document.querySelector('#task-up-rows .unlink[data-task=\"#40\"]')")
-	b.eval("const u = document.querySelector('#task-up-rows .unlink'); u.click(); u.click()")
-	b.until("taken off", "document.querySelector('#toasts').textContent.includes('Took')")
+	// Pressed twice as it goes: taken off once, nothing refused. Opened again, so that the refusal above shows no more.
+	open("#2")
+	b.until("drawn", "document.querySelector('#task-up-rows [data-testid=unlink][data-task=\"#40\"]')")
+	b.eval("const u = document.querySelector('#task-up-rows [data-testid=unlink]'); u.click(); u.click()")
+	b.until("taken off", toasts+".includes('Took')")
 	b.still()
-	if got := b.eval("document.getElementById('error').hidden + ' ' + document.querySelectorAll('#toasts .toast').length"); got != "true 1" || parentOf("#2") != "" {
+	if got := b.eval("document.getElementById('error').hidden + ' ' + " + newToasts + ".length"); got != "true 1" || parentOf("#2") != "" {
 		t.Errorf("pressed twice: %q, %q", got, parentOf("#2"))
 	}
-	b.eval("document.getElementById('toasts').replaceChildren()")
+	b.eval(seen)
 
 	// A name that may not be the parent is not said to be: itself, one with a parent.
 	task("#5", "--parent", "#4")
@@ -294,7 +305,7 @@ func TestUITaskParent(t *testing.T) { //nolint:paralleltest // the browser tests
 			t.Errorf("%s said: %q", name, b.eval("document.getElementById('kin-note').textContent"))
 		}
 	}
-	b.eval("document.getElementById('kin-dialog').close()")
+	closeKin(b)
 
 	// A parent by hand that makes no family: named again, nothing is written; changed, said so, with no way back the store would refuse.
 	byHand := func(name, parent string) {
@@ -345,23 +356,23 @@ func TestUITaskParent(t *testing.T) { //nolint:paralleltest // the browser tests
 	b.until("the rows", "document.querySelector('#list li[data-slug=p7]')")
 	setDialog := func() {
 		t.Helper()
-		b.eval("document.querySelector('#list li[data-slug=p7] .more').open = true; document.querySelector('#list li[data-slug=p7] .menu .task-set').click()")
+		pressMenuItem(b, "#list li[data-slug=p7]", "task-set")
 		b.until("the dialog", "document.getElementById('set-dialog').open")
 	}
 	setDialog()
 	task("#7", "--parent", "")
-	b.eval("document.getElementById('set').requestSubmit()")
+	b.eval("document.getElementById('set-submit').click()")
 	b.until("refused", "!document.getElementById('set-error').hidden")
 	if got := b.eval("document.getElementById('set-error').textContent"); !strings.Contains(got, "task #7 has changed since it was read") || parentOf("#7") != "" {
 		t.Errorf("set, moved meanwhile: %q, %q", got, parentOf("#7"))
 	}
-	b.eval("document.getElementById('set-dialog').close()")
+	closeSet(b)
 	// The parent as written, spaces round it: the dialog has no field of it, and sends none, so it is not written again.
 	byHand("#7", " #9")
-	b.until("read", "tasksRead.tasks.proj['#7'].parent === ' #9'")
+	b.untilRead(b.reread(), "read", "true")
 	setDialog()
-	b.eval("document.getElementById('set-category').value = 'build'")
-	b.eval("document.getElementById('set').requestSubmit()")
+	b.fill("#set-category", "build")
+	b.eval("document.getElementById('set-submit').click()")
 	b.until("saved", "!document.getElementById('set-dialog').open")
 	if got := st.ReadMeta("p7").Task.Category; got != "build" {
 		t.Errorf("a category alone: %q", got)
@@ -401,22 +412,22 @@ func TestUITaskFamilyCard(t *testing.T) { //nolint:paralleltest // the browser t
   const hs = getComputedStyle(head), cs = getComputedStyle(card);
   const h = head.getBoundingClientRect(), c = card.getBoundingClientRect();
   const inside = c.left >= h.left + parseFloat(hs.paddingLeft) - 0.5 && c.right <= h.right - parseFloat(hs.paddingRight) + 0.5;
-  const rows = [...card.querySelectorAll('.kin-row')];
-  const ends = rows.every((r) => r.firstElementChild.matches('.kid-state') && r.lastElementChild.matches('.dot, .ring'));
-  const buttons = matchMedia('(hover: none)').matches ? 'touch ' + [...card.querySelectorAll('.unlink')].every((u) => getComputedStyle(u).opacity === '1') : 'mouse';
+  const rows = [...card.querySelectorAll('[data-testid=kin-row]')];
+  const ends = rows.every((r) => r.firstElementChild.matches('[data-testid=kid-state]') && r.lastElementChild.matches('[data-testid=dot], [data-testid=ring]'));
+  const buttons = matchMedia('(hover: none)').matches ? 'touch ' + [...card.querySelectorAll('[data-testid=unlink]')].every((u) => getComputedStyle(u).opacity === '1') : 'mouse';
   return [inside, cs.backgroundColor !== hs.backgroundColor && parseFloat(cs.borderTopWidth) > 0, ends, buttons].join(' ');
 })()`
 	// The children's rows: the states of one width, their words inside; the names in line; the long one cut at a fifth of
 	// the rows, its title seen and its row in the card; the link's title and name whole.
 	longRow := `(() => {
-  const rows = [...document.querySelectorAll('#task-family-rows .kin-row')];
-  const states = rows.map((r) => r.querySelector('.kid-state'));
+  const rows = [...document.querySelectorAll('#task-family-rows [data-testid=kin-row]')];
+  const states = rows.map((r) => r.querySelector('[data-testid=kid-state]'));
   const wide = new Set(states.map((e) => e.getBoundingClientRect().width.toFixed(1))).size === 1 && states.every((e) => e.scrollWidth <= e.clientWidth);
-  const names = new Set(rows.map((r) => r.querySelector('.tname').getBoundingClientRect().left.toFixed(1))).size === 1;
-  const row = document.querySelector('#task-family .kin-row[data-task="` + long + `"]'), name = row.querySelector('.tname');
+  const names = new Set(rows.map((r) => r.querySelector('[data-testid=tname]').getBoundingClientRect().left.toFixed(1))).size === 1;
+  const row = document.querySelector('#task-family [data-testid=kin-row][data-task="` + long + `"]'), name = row.querySelector('[data-testid=tname]');
   const cut = name.scrollWidth > name.clientWidth && name.getBoundingClientRect().width <= document.getElementById('task-family-rows').getBoundingClientRect().width / 5 + 0.5;
-  return [rows.length, wide, names, cut, row.querySelector('.kin-title').getBoundingClientRect().width > 20,
-    row.closest('.kin-line').getBoundingClientRect().right <= document.getElementById('task-family').getBoundingClientRect().right,
+  return [rows.length, wide, names, cut, row.querySelector('[data-testid=kin-title]').getBoundingClientRect().width > 20,
+    row.closest('[data-testid=kin-line]').getBoundingClientRect().right <= document.getElementById('task-family').getBoundingClientRect().right,
     row.title === ` + js(long+"\n"+longTitle) + `, row.getAttribute('aria-label') === ` + js(long+" "+longTitle+", Done") + `].join(' ')
 })()`
 	defer b.unsize()
@@ -426,7 +437,7 @@ func TestUITaskFamilyCard(t *testing.T) { //nolint:paralleltest // the browser t
 		touch(width == 400)
 		for _, name := range []string{"%231", "%232"} {
 			b.navigate("/tasks?project=proj&task=" + name)
-			b.until("the family", "document.querySelector('#task-family .kin-row')")
+			b.until("the family", "document.querySelector('#task-family [data-testid=kin-row]')")
 			b.still()
 			got := b.eval(card)
 			if name == "%231" {

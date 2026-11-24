@@ -3,12 +3,14 @@ package kit_test
 import (
 	"html/template"
 	"io"
+	"maps"
 	"slices"
 	"strings"
 	"testing"
 	"testing/fstest"
 
 	"floe/internal/kit"
+	"floe/internal/usererr"
 )
 
 // floe's own pass every check: the test that stands for checking them at every run (judgement 1).
@@ -45,12 +47,8 @@ func TestCheckMistakes(t *testing.T) {
 	}
 	with := func(more map[string]string, without ...string) map[string]string {
 		files := map[string]string{}
-		for k, v := range part {
-			files[k] = v
-		}
-		for k, v := range more {
-			files[k] = v
-		}
+		maps.Copy(files, part)
+		maps.Copy(files, more)
 		for _, k := range without {
 			delete(files, k)
 		}
@@ -62,6 +60,12 @@ func TestCheckMistakes(t *testing.T) {
 		want                    string
 	}{
 		{"right", part, nil, nil, ""},
+		// The part's for goes through Forbidding as a template's does: an item prefixItems takes may hold a.
+		{"a for through prefixItems", with(map[string]string{
+			"p/schema.json": `{"type": "array", "prefixItems": [{"type": "object", "properties": {"a": {"type": "array"}}}],
+"items": {"type": "object", "additionalProperties": false}}`,
+			"p/checks.yaml": "- for: a\n  expr: 'true'\n  message: m\n",
+		}), nil, nil, ""},
 		{"no part.css", with(nil, "p/part.css"), nil, nil, "own/parts/p: " + partFiles},
 		{"a look with a part.html", with(map[string]string{"lk/part.css": "a{}", "lk/part.html": "x", "lk/checks.yaml": ""}), nil, nil, lines(
 			"own/parts/lk/checks.yaml: "+lookUnread, "own/parts/lk/part.html: "+lookUnread)},
@@ -277,5 +281,34 @@ func TestOwnCSS(t *testing.T) {
 	}
 	if got := corners(told(kit.Check(k))); got != nil {
 		t.Errorf("over none: got %v, want none", got)
+	}
+}
+
+// Check refuses parts of one's own whose roots lead back to each other through $refs, each in its own schema.json,
+// so that no Kit holding them is drawn with.
+func TestCheckRefCycle(t *testing.T) {
+	t.Parallel()
+
+	parts := map[string]string{}
+	for name, other := range map[string]string{"za": "zb", "zb": "za"} {
+		parts[name+"/schema.json"] = `{"$ref": "floe:///parts/` + other + `.json"}`
+		parts[name+"/part.html"] = `<div data-floe-part="` + name + `"></div>`
+		parts[name+"/part.css"] = ""
+	}
+	k, err := kit.Read(floe(t), kit.Sources{Parts: kit.Dir{FS: mapFS(parts), Name: "own/parts"}})
+	if err != nil {
+		t.Fatal(told(err))
+	}
+	var found usererr.List
+	if failed := found.Add(kit.Check(k)); failed != nil {
+		t.Fatal(failed)
+	}
+	got := make([]string, 0, len(found))
+	for _, e := range found {
+		got = append(got, e.File()+" "+e.Key)
+	}
+	want := []string{"own/parts/za/schema.json schema_ref_cycle", "own/parts/zb/schema.json schema_ref_cycle"}
+	if !slices.Equal(got, want) {
+		t.Errorf("told\n%s\nwant\n%s", lines(got...), lines(want...))
 	}
 }

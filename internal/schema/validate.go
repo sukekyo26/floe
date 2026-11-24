@@ -58,7 +58,9 @@ func (c *Compiled) leafMistakes(v any, what string, mistake func(*jsonschema.Val
 		return fmt.Errorf("schema: validate %s: %w", what, err)
 	}
 	var found usererr.List
-	leaves(ve, func(e *jsonschema.ValidationError) { found = append(found, mistake(e)) })
+	// A data file's anyOf and oneOf hold whole schemas of the author's: the mistakes of the ones it does not take would
+	// read as all to mend
+	leaves(ve, false, func(e *jsonschema.ValidationError) { found = append(found, mistake(e)) })
 	return found.Sorted().Err()
 }
 

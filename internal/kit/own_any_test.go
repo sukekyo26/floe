@@ -1,6 +1,7 @@
 package kit_test
 
 import (
+	"maps"
 	"slices"
 	"strings"
 	"sync"
@@ -30,9 +31,7 @@ func ownParts(over map[string]string) kit.Dir {
 		"box/part.css": "", "frame/part.css": "",
 		"shade.json": `{"$schema": "https://json-schema.org/draft/2020-12/schema", "enum": ["a"]}`,
 	}
-	for name, src := range over {
-		files[name] = src
-	}
+	maps.Copy(files, over)
 	fsys := fstest.MapFS{}
 	for name, src := range files {
 		fsys[name] = &fstest.MapFile{Data: []byte(src)}

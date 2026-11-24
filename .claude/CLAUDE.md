@@ -13,7 +13,7 @@ floe が入力を断る検査は、次の 4 つのどれかに当たるものだ
 
 - **ライブラリが返す誤り**：YAML・JSON Schema・html/template・expr などが返す誤りを、ライブラリの言葉のまま出す。言い直さない。場所は、ライブラリが返す分だけ付ける（JSON ポインタを YAML の行と列に写すのはよい）
 - **信頼境界**：パス、CSP、サンドボックス、大きさなど、floe の外へ出る・外から入るものを守る。文脈によらない保守的な決まりで断る
-- **floe 自身の仕組みの確かめ**：floe が置いた印や、floe がスタイルを入れる所など、floe の仕組みが前提にするものを確かめる。部品の値の形が部品の描き方の前提を破り、値が黙って消える所も当たる（今は `table` の行のセルの数と鍵、色付きのアイコン集のアイコンの `tone`、`--radius-small`・`--radius-pill` の値が 1 つの項であること、`stats` で `from` を書いた項目の `from`・`value` が数字だけであること（変化を数えるため。`kit_stat_change`）、値の中の誤りを返す部品の関数（bars・code・script・stats）が読む値の形（`kit_part_value`。chart は `kit_chart_shape`））。
+- **floe 自身の仕組みの確かめ**：floe が置いた印や、floe がスタイルを入れる所など、floe の仕組みが前提にするものを確かめる。部品の値の形が部品の描き方の前提を破り、値が黙って消える所も当たる（今は `table` の行のセルの数と鍵、色付きのアイコン集のアイコンの `tone`、`--radius-small`・`--radius-pill` の値が 1 つの項であること、`stats` で `from` を書いた項目の `from`・`value` が数字だけであること（変化を数えるため。`kit_stat_change`）、値の中の誤りを返す部品の関数（bars・code・script・stats）が読む値の形（`kit_part_value`。chart は `kit_chart_shape`））。`$ref` だけをたどって自分に戻る `$ref` も断る（`schema_ref_cycle`。通る値が無いのに、ライブラリは値を検証するまで言わない）。
 - **ライブラリの黙った読み違い**：ライブラリが誤りを出さずに、書いたのと違う値を読む所を断る。今あるのは、YAML（2 つ目の文書、同じ鍵、文字でない鍵、`{ }`・`[ ]` の中の値が書かれていない鍵、`.inf`・`.nan`、改行と読まれる U+0085・U+2028・U+2029、先頭のほかの BOM、UTF-8 でないバイト列。`yamlpos.Parse`）、schema の JSON（同じ鍵、先頭のほかの BOM、孤立したサロゲートと UTF-8 でない字。`read`）、保存先の tasks.json（知らない鍵、同じ鍵、大文字小文字だけが違う鍵。`ReadTasks`）、API の書き込みの本文（大文字小文字だけが違う鍵、同じ鍵、孤立したサロゲートと UTF-8 でない字。`decodeStrict`）、タスクを名指す問い合わせとページの `task.name`（UTF-8 でない字。`taskKey`・`TaskName`）、html/template の `ZgotmplZ`。文のつもりで書いた `#` がコメントに読まれる形は、ライブラリが正しく読んでも断る（引用符の無い文字の値と同じ行の `#`、`|`・`>` の文の直後のコメント。正しい位置のコメントも同じ形なら断る。ユーザーが決めた）
 
 - **警告**：上の 4 つは断る検査で、警告はその外にある。警告にしてよいのは、ページが崩れず、より良い書き方を勧めるだけのもの（勧め）だけで、直さないと困るもの（崩れる、誤った値になる、写すと動かない）は断る。警告は、勧めのとおりに直せる所にだけ出し、終了コードを変えない。見つけるのも断る検査と同じく本物のパーサやライブラリで（Markdown は goldmark の木で）、正規表現で読まない。今の警告は、部品 text の値の中のコードの囲み（`draw_text_fence`）だけで、見るのは `draw.drawItem` の 1 か所。例外：自分の schema が code の部品を置けない所で部品 text を指すと、勧めのとおりに直せないのに、そこにも警告が出る（`LIMIT:`。text の説明と docs が、ただの Markdown の欄に format markdown を勧める）
@@ -35,6 +35,8 @@ floe が入力を断る検査は、次の 4 つのどれかに当たるものだ
 - **floe の script は `page.Script` 1 つで組み立てる**：ページに入れる floe の script（図の拡大、写すボタン、目次の今の節）は、`page.Script` が関数と JSON の引数から組み立て、コメントだけの行を落とす
 - **CSS は字句と括弧の入れ子だけで読む**：CSS は tdewolff の字句と、CSS Syntax の括弧の入れ子（`{`・`(`・関数・`[`）だけで読み、セレクタや値の意味を自前で読まない（`css.Parser` も使わない）。文字列・url・コメントの外のエスケープ（`\`）は断り、解かない。tdewolff を import できるのは `internal/css` だけ（depguard の規則 `tdewolff-in-css`）
 - **保存先を書くのはサーバーだけ**：CLI は API で頼む。publish・link・rm・rebuild・管理ページの変更はどれも API
+- **描くのは見張りの中だけ**：ページを描く（`tmpl`）のは、メモリを見張るプロセス（描く CLI のコマンドと、サーバーが起こす `floe __draw`）だけ。サーバーは自分では描かず、`drawproc` に頼む（depguard の規則 `tmpl-in-guarded`）
+- **publish の入力を読むコードは publish に置く**：入力から `store.Seed` を作るのは `internal/publish` で、`store` は `project`・`yamlpos` を import しない（depguard の規則 `store-no-publish-input`）
 - エージェントの手引き docs/agents/guide.md は docs の要約で、`floe guide` が出す。docs の決まり・コマンド・鍵を変える PR は手引きも直す。部品やテンプレートの品揃えは書き写さず、list・show を教える。スキルは `floe guide` を指すだけ。
 
 ## floe の不具合や困ったこと

@@ -165,6 +165,8 @@ func MkdirTemp(dir, pattern string) (string, error) {
 func statAt(p checked) (fs.FileInfo, error)  { return os.Stat(p.s) }  //nolint:wrapcheck // told by the caller
 func lstatAt(p checked) (fs.FileInfo, error) { return os.Lstat(p.s) } //nolint:wrapcheck // as above
 
+func readlinkAt(p checked) (string, error) { return os.Readlink(p.s) } //nolint:wrapcheck // as above
+
 func readDirAt(p checked) ([]fs.DirEntry, error) { return os.ReadDir(p.s) } //nolint:wrapcheck // as above
 
 func openRootAt(p checked) (*os.Root, error) { return os.OpenRoot(p.s) } //nolint:wrapcheck // as above

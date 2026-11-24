@@ -23,8 +23,8 @@ func holds(t reflect.Type, seen map[reflect.Type]bool) bool {
 	case reflect.Pointer, reflect.Slice, reflect.Array, reflect.Map:
 		return holds(t.Elem(), seen)
 	case reflect.Struct:
-		for i := range t.NumField() {
-			if t.Field(i).IsExported() && holds(t.Field(i).Type, seen) {
+		for field := range t.Fields() {
+			if field.IsExported() && holds(field.Type, seen) {
 				return true
 			}
 		}
@@ -40,8 +40,7 @@ func TestEvery(t *testing.T) {
 
 	var got []string
 	st := reflect.TypeFor[jsonschema.Schema]()
-	for i := range st.NumField() {
-		f := st.Field(i)
+	for f := range st.Fields() {
 		if f.IsExported() && holds(f.Type, map[reflect.Type]bool{st: true}) {
 			got = append(got, f.Name)
 		}

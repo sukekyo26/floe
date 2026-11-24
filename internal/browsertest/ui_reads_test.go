@@ -111,16 +111,23 @@ func TestUIRead(t *testing.T) { //nolint:paralleltest // the browser tests share
 		window.cutOff = 0;
 		const f = window.fetch;
 		window.fetch = (u, i) => { const p = f(u, i); if (i?.method === 'POST') p.catch(() => { window.cutOff++; }); return p; };
-		addEventListener('DOMContentLoaded', () => new MutationObserver(() => { window.wentDown ||= document.getElementById('server').classList.contains('down'); })
+		addEventListener('DOMContentLoaded', () => new MutationObserver(() => { window.wentDown ||= document.getElementById('server').dataset.down === 'true'; })
 			.observe(document.getElementById('server'), { attributes: true }));
 	}`)
 	b.navigate("/a/held/")
-	b.until("the request to be cut off", "window.cutOff === 1 && readsGoing === false")
+	b.until("the request to be cut off", "window.cutOff === 1")
 	b.removeScript(watch)
-	if got := b.eval("Boolean(window.wentDown) || document.getElementById('server').classList.contains('down')"); got != "false" {
+	if got := b.eval("Boolean(window.wentDown) || document.getElementById('server').dataset.down === 'true'"); got != "false" {
 		t.Error("a request cut off by its time limit showed the server as not reached")
 	}
 	unlock()
+	// Not reached at all, it does: the same mark read as shown
+	b.eval("window.reachedFetch = fetch; fetch = () => Promise.reject(new TypeError('Failed to fetch'))")
+	b.reread()
+	b.until("the server shown as not reached", "document.getElementById('server').dataset.down === 'true'")
+	b.eval("fetch = window.reachedFetch")
+	b.reread()
+	b.until("the server reached again", "document.getElementById('server').dataset.down !== 'true'")
 
 	// Refused, the words show as the page's mistakes do, in no toast of success; and go when one is kept.
 	s.floe(t, "publish", s.page(t, "read/bad.yaml", "bad", "<p id=\"p\">bad</p>"), "--slug", "bad")
@@ -138,7 +145,7 @@ func TestUIRead(t *testing.T) { //nolint:paralleltest // the browser tests share
 	if want := "Failed to mark as read: HTTP 400: " + reads + ": is missing, broken or has no since: run floe stop, then floe serve, which writes it anew"; got != want {
 		t.Errorf("shown %q, want %q", got, want)
 	}
-	if got := b.eval("document.querySelectorAll('.toast').length"); got != "0" {
+	if got := b.eval("document.querySelectorAll('[data-testid=toast]').length"); got != "0" {
 		t.Errorf("%s toasts of success", got)
 	}
 	if err = os.WriteFile(reads, kept, 0o600); err != nil { //nolint:gosec // G703: a path the test names
@@ -160,9 +167,9 @@ func TestUIReadBeside(t *testing.T) { //nolint:paralleltest // the browser tests
 	s.floe(t, "publish", s.page(t, "read/side.yaml", "side", "<p>side</p>"), "--slug", "side")
 	b.navigate("/")
 	b.size(1440, 900, false)
-	b.until("the row", "document.querySelector('#list li[data-slug=side] .dot')")
-	b.eval("document.querySelector('#list li[data-slug=side] .title').click()")
-	b.until("the row read", "document.querySelector('#list li[data-slug=side] .ring') && document.querySelector('#list li.picked')?.dataset.slug === 'side'")
+	b.until("the row", "document.querySelector('#list li[data-slug=side][data-unread=true]')")
+	b.eval("document.querySelector('#list li[data-slug=side] [data-testid=title]').click()")
+	b.until("the row read", "document.querySelector('#list li[data-slug=side]:not([data-unread])') && document.querySelector('#list li[aria-current=true]')?.dataset.slug === 'side'")
 	check(t, "news", []string{b.eval("document.getElementById('news').hidden")}, "true")
 	b.unsize()
 }

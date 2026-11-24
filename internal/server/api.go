@@ -11,6 +11,7 @@ import (
 	"path/filepath"
 
 	"floe/internal/files"
+	"floe/internal/publish"
 	"floe/internal/store"
 	"floe/internal/usererr"
 )
@@ -104,9 +105,9 @@ func (s *Server) addLink(w http.ResponseWriter, r *http.Request) {
 	}
 	drawing := s.latest()
 	// The path as sent: the CLI sends it as given, where a file name may start or end with a space (the
-	// management page trims it). There is no directory to read a relative one in, which PrepareLink refuses
+	// management page trims it). There is no directory to read a relative one in, which publish.PrepareLink refuses
 	// with the other mistakes.
-	entry, err := s.cfg.Store.PrepareLink(r.Context(), drawing, in.Path, opts, "", s.cfg.Home)
+	entry, err := publish.PrepareLink(r.Context(), s.cfg.Store, drawing, in.Path, opts, "", s.cfg.Home)
 	if err == nil {
 		err = usererr.WithWarnings(s.cfg.Store.Save(entry), entry.Warnings)
 	}
@@ -136,7 +137,7 @@ func decodeStrict[T any](w http.ResponseWriter, body []byte) *T {
 	return &v
 }
 
-// Upload is a publish of a data file, as the CLI sends it: see store.Upload. Images left out or null asks which
+// Upload is a publish of a data file, as the CLI sends it: see publish.Upload. Images left out or null asks which
 // images the data reads.
 type Upload struct {
 	File        string            `json:"file"`
@@ -196,7 +197,7 @@ type ImagePlace struct {
 }
 
 // imagesNeeded is need as the publisher reads it.
-func imagesNeeded(need *store.NeedImages) ImagesNeeded {
+func imagesNeeded(need *publish.NeedImages) ImagesNeeded {
 	images := make([]NeededImage, len(need.Images))
 	for i, n := range need.Images {
 		places := make([]ImagePlace, len(n.Places))
@@ -253,7 +254,7 @@ func (s *Server) save(w http.ResponseWriter, r *http.Request) {
 		}
 	}
 	// A slug not given is the store's to pick, the page of the file sent if it has one.
-	up := store.Upload{
+	up := publish.Upload{
 		File: in.File, Source: in.Source, Images: in.Images, Project: in.Project, Repo: in.Repo, Place: in.Place,
 	}
 	opts := store.Options{
@@ -261,8 +262,8 @@ func (s *Server) save(w http.ResponseWriter, r *http.Request) {
 		MoveProject: in.MoveProject,
 	}
 	drawing := s.latest()
-	entry, err := s.cfg.Store.PrepareData(drawing, up, opts)
-	if need, ok := errors.AsType[*store.NeedImages](err); ok {
+	entry, err := publish.PrepareData(r.Context(), s.cfg.Store, drawing, up, opts)
+	if need, ok := errors.AsType[*publish.NeedImages](err); ok {
 		sendJSON(w, http.StatusUnprocessableEntity, imagesNeeded(need))
 		return
 	}
@@ -283,7 +284,7 @@ func (s *Server) rebuild(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	drawing := s.latest()
-	if err := s.cfg.Store.Rebuild(drawing); err != nil {
+	if err := s.cfg.Store.Rebuild(r.Context(), drawing); err != nil {
 		refuse(w, r, err)
 		return
 	}

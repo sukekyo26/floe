@@ -28,6 +28,7 @@ import (
 	"floe/internal/diagram"
 	"floe/internal/dirs"
 	"floe/internal/doc"
+	"floe/internal/drawproc"
 	"floe/internal/files"
 	"floe/internal/kit"
 	"floe/internal/link"
@@ -136,11 +137,13 @@ func (m *Meta) IsData() bool {
 	return m.IsLink() && !m.Folder && files.IsDataFile(m.Path)
 }
 
-// Drawing is what pages are drawn with: the templates, parts and themes, and the icons of the diagrams; or, with
-// Err, why they cannot be read (one's own part that is broken), which every drawing refuses with.
+// Drawing is what pages are drawn with: the templates, parts and themes, and the icons of the diagrams, which Draw
+// draws with (floe __draw, which reads them as the server does); or, with Err, why they cannot be read (one's own
+// part that is broken), which every drawing refuses with.
 type Drawing struct {
 	Kit   *kit.Kit
 	Icons diagram.Icons
+	Draw  drawproc.Drawer
 	Err   error
 }
 

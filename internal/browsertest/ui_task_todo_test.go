@@ -37,8 +37,8 @@ func TestUITaskTodo(t *testing.T) { //nolint:paralleltest // the browser tests s
 	}
 	list := "/tasks?" + url.Values{"project": {long}}.Encode()
 	b.navigate(list + "&view=todo")
-	b.until("the rows", "document.querySelectorAll('#list > li .tname').length === 2")
-	if got := b.eval("[...document.querySelectorAll('#list > li .tname')].map((e) => e.textContent).join(' ')"); got != "#b #a" {
+	b.until("the rows", "document.querySelectorAll('#list > li [data-testid=tname]').length === 2")
+	if got := b.eval("[...document.querySelectorAll('#list > li [data-testid=tname]')].map((e) => e.textContent).join(' ')"); got != "#b #a" {
 		t.Errorf("to do: %q", got)
 	}
 
@@ -46,10 +46,10 @@ func TestUITaskTodo(t *testing.T) { //nolint:paralleltest // the browser tests s
 	for _, width := range []int64{360, 400, 672} {
 		b.size(width, 800, width < 600)
 		b.navigate(list)
-		b.until("the views", "document.querySelector('.shelf .views button[data-view=todo]')")
+		b.until("the views", "document.querySelector('#shelf [data-testid=views] button[data-view=todo]')")
 		b.still()
 		got := b.eval(`(() => {
-			const all = [...document.querySelectorAll('.shelf .views button[data-view], #narrow-filter')].filter((e) => e.offsetParent);
+			const all = [...document.querySelectorAll('#shelf [data-testid=views] button[data-view], #narrow-filter')].filter((e) => e.offsetParent);
 			const r = all.map((e) => e.getBoundingClientRect());
 			const out = r.filter((x) => x.left < 0 || x.right > innerWidth).length;
 			let over = 0;

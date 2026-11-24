@@ -18,6 +18,7 @@ import (
 	"floe/internal/dirs"
 	"floe/internal/files"
 	"floe/internal/project"
+	"floe/internal/publish"
 	"floe/internal/server"
 	"floe/internal/store"
 	"floe/internal/usererr"
@@ -93,9 +94,9 @@ file is refused unless --force. A page and a link cannot take each other's slug,
 // save the page, so that a failed publish leaves nothing in the store.
 func (a *app) publish(ctx context.Context, file string, link bool, opts store.Options) error {
 	// Checked as the server checks, to be refused before it starts, and sent so, as the slug names the URL.
-	opts, err := store.Accept(file, link, opts)
+	opts, err := publish.Accept(file, link, opts)
 	p := a.arg(file, place{name: "argument 1", wants: "cli_wants_publish"})
-	// An empty data file is Accept's to refuse; told again here, it would be told twice, in other words.
+	// An empty data file is publish.Accept's to refuse; told again here, it would be told twice, in other words.
 	if p.err != nil && (link || file != "") {
 		err = usererr.Collect(err, p.err)
 	}
@@ -147,12 +148,12 @@ func (a *app) tellSaved(ctx context.Context, u string, saved server.Saved) {
 	}
 }
 
-// sent is what a publish of p sends, with opts Accept returned: the link, or the data file with what it reads (up),
-// encoded once, as it will be sent. Its mistakes are told together: a file that cannot be read, and a text no UTF-8,
-// where it was given, as encode tells it. A file is read (git asked for its project) only when p resolved to a data
-// file or a link whose own name is UTF-8.
+// sent is what a publish of p sends, with opts publish.Accept returned: the link, or the data file with what it reads
+// (up), encoded once, as it will be sent. Its mistakes are told together: a file that cannot be read, and a text no
+// UTF-8, where it was given, as encode tells it. A file is read (git asked for its project) only when p resolved to a
+// data file or a link whose own name is UTF-8.
 func (a *app) sent(ctx context.Context, p arg, link bool, opts store.Options) (server.Upload, jsontext.Value, error) {
-	// Accept refuses a slug that is not ASCII, so a slug no UTF-8 is not told again.
+	// publish.Accept refuses a slug that is not ASCII, so a slug no UTF-8 is not told again.
 	if opts.Slug != nil && !utf8.ValidString(*opts.Slug) {
 		opts.Slug = nil
 	}
@@ -390,9 +391,9 @@ func (a *app) rebuildCmd() *cobra.Command {
 		Use:   "rebuild",
 		Short: "Draw every stored page again with the templates, parts and themes of now",
 		Long: `Have the server draw every stored page again from the copy of its data file and images, with
-its templates, parts and themes of now, and keep the page where it changed. A page that no longer
-draws keeps the page it had, and its mistakes are told. Linked files are drawn each time they are
-opened, and are left alone.`,
+its templates, parts and themes of now, and keep the page where it changed, or where its stored
+page is gone. A page that no longer draws keeps the page it had, and its mistakes are told. Linked
+files are drawn each time they are opened, and are left alone.`,
 		Args: usage(cobra.NoArgs),
 		RunE: func(cmd *cobra.Command, _ []string) error {
 			c, err := a.client(cmd.Context(), false)

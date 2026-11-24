@@ -1,6 +1,7 @@
 package yamlpos
 
 import (
+	"slices"
 	"strings"
 
 	"go.yaml.in/yaml/v4"
@@ -97,8 +98,8 @@ func lastScalar(n *yaml.Node) *yaml.Node {
 	if n.Kind == yaml.ScalarNode {
 		return n
 	}
-	for i := len(n.Content) - 1; i >= 0; i-- {
-		if s := lastScalar(n.Content[i]); s != nil {
+	for _, v := range slices.Backward(n.Content) {
+		if s := lastScalar(v); s != nil {
 			return s
 		}
 	}

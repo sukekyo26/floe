@@ -3,11 +3,14 @@ package browsertest_test
 import (
 	"fmt"
 	"path/filepath"
+	"strconv"
 	"strings"
 	"testing"
 
 	"github.com/chromedp/chromedp"
 	"github.com/chromedp/chromedp/kb"
+
+	"floe/internal/store"
 )
 
 const (
@@ -33,8 +36,15 @@ func diffSite(t *testing.T) *site {
 const (
 	diffPair = "[document.getElementById('diff-from').value, document.getElementById('diff-to').value].join(' ')"
 	diffPath = "location.pathname + location.search"
-	// The marked page of the answer shown, in the frame
-	diffShown = "typeof diffAnswer !== 'undefined' && diffAnswer !== null && document.getElementById('diff-frame').src.includes('key=' + diffAnswer.key)"
+	// The marked page of an answer shown, in the frame: its src, set from the answer drawn, carries the answer's pair (from, v)
+	// and key, and the place moved to (#floe-diff.N) as its hash. Read the values once it is shown: there is no URL before.
+	diffShown = "(document.getElementById('diff-frame').getAttribute('src') ?? '').includes('&key=')"
+	diffSrc   = "new URL(document.getElementById('diff-frame').src)"
+	diffFrom  = diffSrc + ".searchParams.get('from')"
+	diffTo    = diffSrc + ".searchParams.get('v')"
+	diffKey   = diffSrc + ".searchParams.get('key')"
+	// The place moved to, -1 for none
+	diffAt = "(" + diffSrc + ".hash.replace('#floe-diff.', '') || '-1')"
 	// The words marked on the page in the frame, read from the server as the frame reads it
 	diffMarks = "fetch(document.getElementById('diff-frame').src).then((r) => r.text()).then((h) => [...new DOMParser().parseFromString(h, 'text/html').querySelectorAll('ins.floe-diff-ins, del.floe-diff-del')].map((x) => x.localName + ':' + x.textContent).join(' '))"
 )
@@ -76,7 +86,7 @@ func TestUIDiff(t *testing.T) { //nolint:paralleltest // the browser tests share
 	b.pressKey(kb.ArrowDown)
 	b.pressKey(kb.ArrowDown)
 	b.pressKey(kb.Enter)
-	b.until("from v1", "location.search === '?diff&from=1&to=3' && diffAnswer.from.n === 1")
+	b.until("from v1", "location.search === '?diff&from=1&to=3' && "+diffFrom+" === '1'")
 	out = append(out, b.eval("document.activeElement.id + ' ' + document.getElementById('diff-from-open').getAttribute('href')"))
 
 	// n and p from within the list, the focus staying, and through a short window, so that there is somewhere to scroll to.
@@ -85,18 +95,23 @@ func TestUIDiff(t *testing.T) { //nolint:paralleltest // the browser tests share
 	b.pressKey("n")
 	b.pressKey("p")
 	b.pressKey("n")
-	out = append(out, b.eval("diffAt + ' ' + document.activeElement.id + ' ' + document.querySelector('#diff-toc .on > span').textContent"))
-	// Drawn once: the list read again leaves what was chosen, the scrolling and n's place.
-	const state = "[diffPair.from, diffPair.to, diffAt, document.getElementById('diff-frame').src].join(' ')"
+	out = append(out, b.eval(diffAt+" + ' ' + document.activeElement.id + ' ' + document.querySelector('#diff-toc [data-on=true] > span').textContent"))
+	// Drawn once: the list read again leaves what was chosen, the scrolling and n's place. The page's title changes on the
+	// server, so that the read draws anew.
+	const state = "[" + diffPair + ", document.getElementById('diff-frame').src].join(' ')"
 	before := b.eval(state)
-	got := b.eval(`(async () => {
-		const real = window.fetch, asked = [];
-		window.fetch = (u, i) => { asked.push(String(u)); return real(u, i); };
-		drawn = '';
-		await load(true);
-		window.fetch = real;
-		return asked.filter((u) => u !== '/api/pages').join(' ');
+	b.eval(`(() => {
+		const real = window.realFetch = window.fetch;
+		window.asked = [];
+		window.fetch = (u, i) => { window.asked.push(String(u)); return real(u, i); };
 	})()`)
+	title := "D again"
+	if _, err := store.New(s.Env["FLOE_DIR"]).Edit("d", store.Edit{Title: &title}); err != nil {
+		t.Fatal(err)
+	}
+	begun := b.reread()
+	b.untilRead(begun, "the list read again", "document.getElementById('frame-title').textContent === 'D again'")
+	got := b.eval("(() => { window.fetch = window.realFetch; return window.asked.filter((u) => u !== '/api/pages').join(' '); })()")
 	if after := b.eval(state); got != "" || after != before || !strings.HasSuffix(after, "#floe-diff.1") {
 		t.Errorf("the list read again asked %q: %s, was %s", got, after, before)
 	}
@@ -152,7 +167,7 @@ func TestUIDiffURLs(t *testing.T) { //nolint:paralleltest // the browser tests s
 		if low := b.eval(measureContrast); low != "" {
 			t.Errorf("%s: text that cannot be read:\n%s", slug, low)
 		}
-		const bar = "document.querySelector('#frame-actions .diff-open')"
+		const bar = "document.querySelector('#frame-actions [data-testid=diff-open]')"
 		if got := b.eval(bar + ".hidden + ' ' + " + bar + ".getAttribute('aria-label').includes('Close the diff') + ' ' + document.getElementById('frame').hasAttribute('src') + ' ' + document.getElementById('diff-main').hidden"); got != "false true false true" {
 			t.Errorf("%s: %s", slug, got)
 		}
@@ -162,7 +177,7 @@ func TestUIDiffURLs(t *testing.T) { //nolint:paralleltest // the browser tests s
 		// d on its page goes nowhere, no button there.
 		b.eval("window.stayed = true")
 		b.pressKey("d")
-		if got := b.eval("String(document.querySelector('#frame-actions .diff-open').hidden && window.stayed)"); got != "true" {
+		if got := b.eval("String(document.querySelector('#frame-actions [data-testid=diff-open]').hidden && window.stayed)"); got != "true" {
 			t.Errorf("%s: d on a page of nothing to compare: %s", slug, got)
 		}
 	}
@@ -187,15 +202,15 @@ func TestUIDiffWays(t *testing.T) { //nolint:paralleltest // the browser tests s
 	s.floe(t, "publish", s.page(t, "diff/e.yaml", "E", diffV2), "--slug", "e")
 	b.size(1440, 900, false)
 	b.navigate("/")
-	const row = "document.querySelector('#list li[data-slug=%s] .title')"
+	const row = "document.querySelector('#list li[data-slug=%s] [data-testid=title]')"
 	pick := func(slug string) {
 		t.Helper()
 		b.eval(strings.ReplaceAll(row, "%s", slug) + ".click()")
-		b.until("picked", "picked?.slug === "+js(slug))
+		b.until("picked", "document.getElementById('read-frame').dataset.slug === "+js(slug))
 	}
 	b.until("the rows", strings.ReplaceAll(row, "%s", "d"))
 	// Which rows may be compared: their bar and d.
-	const button = "document.querySelector('#read-actions .diff-open')"
+	const button = "document.querySelector('#read-actions [data-testid=diff-open]')"
 	out := make([]string, 0, 8)
 	for _, slug := range []string{"one", "l", "e"} {
 		pick(slug)
@@ -206,18 +221,18 @@ func TestUIDiffWays(t *testing.T) { //nolint:paralleltest // the browser tests s
 	b.eval(strings.ReplaceAll(row, "%s", "e") + ".focus()")
 	b.pressKey("d")
 	b.until("to the diff", "location.pathname === '/a/e/' && location.search === '?diff'")
-	b.until("the order", "sessionStorage.getItem(ORDER_KEY)?.includes('e')")
+	b.until("the order", "sessionStorage.getItem('pages.order')?.includes('e')")
 	// Closed by the bar's button.
-	b.until("the bar", "!document.querySelector('#frame-actions .diff-open').hidden")
-	b.moving("document.querySelector('#frame-actions .diff-open').click()")
+	b.until("the bar", "!document.querySelector('#frame-actions [data-testid=diff-open]').hidden")
+	b.moving("document.querySelector('#frame-actions [data-testid=diff-open]').click()")
 	b.until("closed", "location.pathname === '/a/e/' && location.search === ''")
 	// From a page whole, the order stays what it was.
-	b.eval(`sessionStorage.setItem(ORDER_KEY, '{"order":["e","one"],"shown":["e","one"],"back":"/"}')`)
+	b.eval(`sessionStorage.setItem('pages.order', '{"order":["e","one"],"shown":["e","one"],"back":"/"}')`)
 	b.navigate("/a/e/")
-	b.until("its bar", "!document.querySelector('#frame-actions .diff-open').hidden")
-	b.moving("document.querySelector('#frame-actions .diff-open').click()")
+	b.until("its bar", "!document.querySelector('#frame-actions [data-testid=diff-open]').hidden")
+	b.moving("document.querySelector('#frame-actions [data-testid=diff-open]').click()")
 	b.until("from whole", "location.search === '?diff'")
-	out = append(out, b.eval("sessionStorage.getItem(ORDER_KEY)"))
+	out = append(out, b.eval("sessionStorage.getItem('pages.order')"))
 	b.until("what changed", diffShown)
 	b.pressKey("j")
 	b.until("the order's next", "location.pathname === '/a/one/'")
@@ -227,10 +242,10 @@ func TestUIDiffWays(t *testing.T) { //nolint:paralleltest // the browser tests s
 	b.until("what changed", diffShown)
 	b.pressKey("d")
 	b.until("the page d", "location.pathname === '/a/d/' && location.search === ''")
-	b.until("read, with its toast", "document.querySelector('.toast.page .btn')")
+	b.until("read, with its toast", "document.querySelector('[data-testid=toast][data-page] button')")
 	b.until("read", "fetch('/api/pages').then((r) => r.json()).then((l) => !l.find((a) => a.slug === 'd').news)")
 	// Marked unread, the diff and back: read again.
-	b.eval("document.querySelector('.toast.page .btn').click()")
+	b.eval("document.querySelector('[data-testid=toast][data-page] button').click()")
 	b.until("unread", "fetch('/api/pages').then((r) => r.json()).then((l) => l.find((a) => a.slug === 'd').news)")
 	b.navigate("/a/d/?diff")
 	b.until("what changed again", diffShown)
@@ -244,9 +259,9 @@ func TestUIDiffWays(t *testing.T) { //nolint:paralleltest // the browser tests s
 	b.size(400, 800, false)
 	b.navigate("/a/d/?diff")
 	b.until("what changed narrow", diffShown)
-	out = append(out, b.eval("String(document.getElementById('diff-frame').getBoundingClientRect().width > 300) + ' ' + getComputedStyle(document.querySelector('.dtoc')).display + ' ' + document.querySelector('#frame-actions .diff-open').getAttribute('aria-label') + ' ' + document.querySelector('#frame-actions .diff-open').matches('.closing')"))
+	out = append(out, b.eval("String(document.getElementById('diff-frame').getBoundingClientRect().width > 300) + ' ' + getComputedStyle(document.getElementById('diff-toc-nav')).display + ' ' + document.querySelector('#frame-actions [data-testid=diff-open]').getAttribute('aria-label') + ' ' + (document.querySelector('#frame-actions [data-testid=diff-open]').dataset.on === 'true')"))
 	b.navigate("/a/d/")
-	b.until("its bar narrow", "document.querySelector('#frame-actions .diff-open').offsetWidth > 0")
+	b.until("its bar narrow", "document.querySelector('#frame-actions [data-testid=diff-open]').offsetWidth > 0")
 	check(t, "ways", out, strings.Join([]string{"true", "true", "false", "/a/e/?diff See what changed (d)", `{"order":["e","one"],"shown":["e","one"],"back":"/","at":{"slug":"e","file":"","v":0}}`, "true none Close the diff (d) true"}, "|"))
 }
 
@@ -259,7 +274,7 @@ func TestUIDiffPick(t *testing.T) { //nolint:paralleltest // the browser tests s
 	openDiff(b, "/a/d/?diff")
 	const state = `(() => {
 		const e = document.getElementById('diff-from');
-		return [e.matches(':open'), e.value, diffAnswer.from.n, diffAt, document.activeElement.localName, window.asked ?? 0].join(' ');
+		return [e.matches(':open'), e.value, ` + diffFrom + `, ` + diffAt + `, document.activeElement.localName, window.asked ?? 0].join(' ');
 	})()`
 	b.eval(`(() => { const real = window.fetch; window.fetch = (u, i) => { if (String(u).includes('/diff?')) window.asked = (window.asked ?? 0) + 1; return real(u, i); }; })()`)
 	b.eval("document.getElementById('diff-from').focus()")
@@ -299,7 +314,7 @@ func TestUIDiffPick(t *testing.T) { //nolint:paralleltest // the browser tests s
 	b.pressKey(kb.ArrowDown)
 	out = append(out, b.eval(state))
 	b.pressKey(kb.Enter)
-	out = append(out, b.until("from v1", "diffAnswer.from.n === 1 && "+state))
+	out = append(out, b.until("from v1", diffFrom+" === '1' && "+state))
 	b.pressKey("n")
 	out = append(out, b.eval(state))
 	b.pressKey("d")
@@ -333,12 +348,16 @@ func TestUIDiffPick(t *testing.T) { //nolint:paralleltest // the browser tests s
 	// Without the rules for base-select, as a browser that does not read them: the same height and words, the list its own, chosen the same.
 	b.size(1440, 900, false)
 	openDiff(b, "/a/d/?diff")
+	// Every @supports goes, in a layer or a nested rule too (the React build's)
 	b.eval(`(() => {
-		for (const sheet of document.styleSheets) {
-			for (let i = sheet.cssRules.length - 1; i >= 0; i--) {
-				if (sheet.cssRules[i] instanceof CSSSupportsRule) sheet.deleteRule(i);
+		const drop = (group) => {
+			for (let i = group.cssRules.length - 1; i >= 0; i--) {
+				const rule = group.cssRules[i];
+				if (rule instanceof CSSSupportsRule) group.deleteRule(i);
+				else if (rule.cssRules) drop(rule);
 			}
-		}
+		};
+		for (const sheet of document.styleSheets) drop(sheet);
 		document.getElementById('diff-from').focus();
 	})()`)
 	if got := b.eval("getComputedStyle(document.getElementById('diff-from')).appearance + ' ' + getComputedStyle(document.getElementById('diff-from')).height + ' ' + document.getElementById('diff-from').offsetWidth"); strings.HasPrefix(got, "base-select") || !strings.Contains(got, " 32px ") {
@@ -349,7 +368,7 @@ func TestUIDiffPick(t *testing.T) { //nolint:paralleltest // the browser tests s
 		t.Errorf("without base-select: text that cannot be read:\n%s", low)
 	}
 	b.pressKey(kb.ArrowDown)
-	b.until("from v1 at once", "location.search === '?diff&from=1&to=3' && diffAnswer.from.n === 1")
+	b.until("from v1 at once", "location.search === '?diff&from=1&to=3' && "+diffFrom+" === '1'")
 }
 
 // TestUIDiffClose closes from the button: within the window at every width, what is on top where it is pressed, and drawn as
@@ -370,19 +389,23 @@ func TestUIDiffClose(t *testing.T) { //nolint:paralleltest // the browser tests 
 			t.Errorf("at %d: %s", width, got)
 		}
 	}
-	// A link drawn as the bar's buttons are, not as a link: as a button of the bar put beside it.
+	// A link drawn as the bar's buttons of words are, not as a link: no line under it, 32px high as TestUIButtons holds
+	// them (the bar's icon buttons are lower), of the small corner, the panel's ground and the words' colour (the
+	// :root's, read as the page has them).
 	const like = `(() => {
-		const close = document.getElementById('diff-close');
-		const other = document.createElement('button');
-		other.className = 'btn';
-		other.textContent = 'x';
-		close.before(other);
-		const a = getComputedStyle(close), v = getComputedStyle(other);
-		const got = a.textDecorationLine + ' ' + (a.color === v.color && a.height === v.height && a.borderRadius === v.borderRadius && a.backgroundColor === v.backgroundColor);
-		other.remove();
-		return got;
+		const a = getComputedStyle(document.getElementById('diff-close')), root = getComputedStyle(document.documentElement);
+		const colour = (name) => {
+			const e = document.createElement('i');
+			e.style.color = root.getPropertyValue(name);
+			document.body.append(e);
+			const c = getComputedStyle(e).color;
+			e.remove();
+			return c;
+		};
+		return [a.textDecorationLine, a.height === '32px', a.borderTopLeftRadius === root.getPropertyValue('--radius-small').trim(),
+			a.color === colour('--color-fg'), a.backgroundColor === colour('--color-panel')].join(' ');
 	})()`
-	if got := b.eval(like); got != "none true" {
+	if got := b.eval(like); got != "none true true true true" {
 		t.Errorf("not like a button of the bar: %s", got)
 	}
 	b.moving("document.getElementById('diff-close').click()")
@@ -417,13 +440,13 @@ func TestUIDiffContents(t *testing.T) { //nolint:paralleltest // the browser tes
 		t.Errorf("the levels are not kept: %s", b.eval(left("Top")+" + ' ' + "+left("Same")+" + ' ' + "+left("Moved")))
 	}
 
-	const at = "new URL(document.getElementById('diff-frame').src).hash + ' ' + document.querySelectorAll('#diff-toc .on').length"
-	b.eval("[...document.querySelectorAll('#diff-toc div.dtoc-item')].at(-1).click()")
+	const at = "new URL(document.getElementById('diff-frame').src).hash + ' ' + document.querySelectorAll('#diff-toc [data-on=true]').length"
+	b.eval("[...document.querySelectorAll('#diff-toc > div > div')].at(-1).click()")
 	if got := b.eval(at); got != " 0" {
 		t.Errorf("a section the same was pressed: %s", got)
 	}
 	b.eval("[...document.querySelectorAll('#diff-toc button')].at(-1).click()")
-	if got := b.eval("new URL(document.getElementById('diff-frame').src).hash + ' ' + document.querySelector('#diff-toc .on > span').textContent"); got != "#floe-diff.1 Moved" {
+	if got := b.eval("new URL(document.getElementById('diff-frame').src).hash + ' ' + document.querySelector('#diff-toc [data-on=true] > span').textContent"); got != "#floe-diff.1 Moved" {
 		t.Errorf("a section changed was pressed: %s", got)
 	}
 	b.still()
@@ -443,7 +466,7 @@ func TestUIDiffToc(t *testing.T) { //nolint:paralleltest // the browser tests sh
 	openDiff(b, "/a/d/?diff")
 
 	const grip = "document.getElementById('diff-toc-grip')"
-	const state = "[" + grip + ".getAttribute('aria-valuenow'), " + grip + ".getAttribute('aria-valuemin'), " + grip + ".getAttribute('aria-valuemax'), document.querySelector('.dtoc').offsetWidth, Math.round(" + grip + ".getBoundingClientRect().left + 3), Math.round(document.getElementById('diff-body').getBoundingClientRect().left)].join(' ')"
+	const state = "[" + grip + ".getAttribute('aria-valuenow'), " + grip + ".getAttribute('aria-valuemin'), " + grip + ".getAttribute('aria-valuemax'), document.getElementById('diff-toc-nav').offsetWidth, Math.round(" + grip + ".getBoundingClientRect().left + 3), Math.round(document.getElementById('diff-body').getBoundingClientRect().left)].join(' ')"
 	const kept = "localStorage.getItem('diff.toc')"
 	out := make([]string, 0, 20)
 	out = append(out, b.eval(state), b.eval(kept+" ?? 'none kept'"))
@@ -515,7 +538,7 @@ func TestUIDiffToc(t *testing.T) { //nolint:paralleltest // the browser tests sh
 		for _, open := range []string{"true", "false"} {
 			b.eval("localStorage.setItem('diff.toc', '{\"width\":284,\"open\":" + open + "}')")
 			openDiff(b, "/a/d/?diff")
-			if got := b.eval("['.dtoc', '#diff-toc-grip', '#diff-toc-show'].map((q) => document.querySelector(q).getClientRects().length).join(' ') + ' ' + document.getElementById('diff-body').getBoundingClientRect().left"); got != "0 0 0 0" {
+			if got := b.eval("['#diff-toc-nav', '#diff-toc-grip', '#diff-toc-show'].map((q) => document.querySelector(q).getClientRects().length).join(' ') + ' ' + document.getElementById('diff-body').getBoundingClientRect().left"); got != "0 0 0 0" {
 				t.Errorf("at %d, open %s: %s", width, open, got)
 			}
 		}
@@ -542,8 +565,9 @@ func TestUIDiffRead(t *testing.T) { //nolint:paralleltest // the browser tests s
 	b := s.b
 	b.size(1440, 900, false)
 	openDiff(b, "/a/d/?diff")
-	b.eval(`(() => { const real = window.fetch, told = setServer;
-		setServer = (up) => { if (!up) window.saidDown = true; told(up); };
+	// The server told down: words in #server
+	b.eval(`(() => { const real = window.fetch, server = document.getElementById('server');
+		new MutationObserver(() => { if (server.textContent) window.saidDown = true; }).observe(server, { childList: true, characterData: true, subtree: true });
 		window.diffCalls = [];
 		window.fetch = async (u, i) => {
 			if (!String(u).includes('/diff?')) return real(u, i);
@@ -557,7 +581,7 @@ func TestUIDiffRead(t *testing.T) { //nolint:paralleltest // the browser tests s
 	const heads = "(() => { const u = new URL(document.getElementById('diff-frame').src); return 'v' + u.searchParams.get('from') + ' v' + u.searchParams.get('v'); })()"
 	choose := func(name, value string) {
 		t.Helper()
-		b.eval("(() => { const e = document.getElementById('diff-" + name + "'); e.value = " + js(value) + "; e.dispatchEvent(new Event('change')); })()")
+		chooseValue(b, "diff-"+name, value)
 	}
 	const failure = "document.getElementById('error')"
 	// It fails: back to the pair shown, in the list and the URL, its words said.
@@ -569,7 +593,7 @@ func TestUIDiffRead(t *testing.T) { //nolint:paralleltest // the browser tests s
 	// The next answer takes the error away.
 	b.eval("window.diffRefuse = false")
 	choose("from", "1")
-	b.until("the error gone", failure+".hidden && diffAnswer.from.n === 1")
+	b.until("the error gone", failure+".hidden && "+diffFrom+" === '1'")
 	out = append(out, b.eval(heads))
 	// While an answer is on its way, what is drawn is what was answered.
 	b.eval("window.diffHeld = new Promise((go) => { window.diffGo = go; }); 1")
@@ -581,7 +605,7 @@ func TestUIDiffRead(t *testing.T) { //nolint:paralleltest // the browser tests s
 	choose("to", "3")
 	out = append(out, b.eval("window.diffCalls.length + ' ' + window.diffCalls[0].aborted + ' ' + window.diffCalls[1].aborted"))
 	b.eval("window.diffGo(); window.diffHeld = null; 1")
-	b.until("the last answer", "diffAnswer.from.n === 2 && diffAnswer.to.n === 3")
+	b.until("the last answer", diffFrom+" === '2' && "+diffTo+" === '3'")
 	out = append(out, b.eval(heads), b.eval("String(window.saidDown === undefined)"))
 	check(t, "read", out, strings.Join([]string{"v2 v3", "2 3", "?diff&from=2&to=3", "v1 v3", "v1 v3", "2 true false", "v2 v3", "true"}, "|"))
 }
@@ -601,22 +625,22 @@ func TestUIDiffPlaces(t *testing.T) { //nolint:paralleltest // the browser tests
 	b.size(1440, 420, false)
 	openDiff(b, "/a/d/?diff")
 	b.eval("[...document.querySelectorAll('#diff-toc button')].at(-1).click()")
-	out = append(out, b.eval(`(() => {
-		const i = [...document.querySelectorAll('#diff-toc button')].at(-1).dataset.section;
-		return String(new URL(document.getElementById('diff-frame').src).hash === '#floe-diff.' + diffAnswer.sections[i].place);
-	})()`))
+	// Its section's place, in this fixed data
+	out = append(out, b.eval("String(new URL(document.getElementById('diff-frame').src).hash === '#floe-diff.1' && [...document.querySelectorAll('#diff-toc button')].at(-1).dataset.on === 'true')"))
 
 	// The keys told.
 	keys := func() string {
 		t.Helper()
-		b.eval("openKeys()")
-		got := b.eval("[...document.querySelectorAll('.keys-part:not([hidden]) kbd')].filter((k) => k.offsetParent && k.textContent === 'd').map((k) => k.parentElement.nextElementSibling.textContent).join('|')")
-		b.eval("document.getElementById('keys').close()")
+		b.pressKey("?")
+		b.until("the keys", "document.getElementById('keys').open")
+		got := b.eval("[...document.querySelectorAll('[data-testid=keys-part]:not([hidden]) kbd')].filter((k) => k.offsetParent && k.textContent === 'd').map((k) => k.parentElement.nextElementSibling.textContent).join('|')")
+		b.pressKey(kb.Escape)
+		b.until("the keys closed", "!document.getElementById('keys').open")
 		return got
 	}
 	out = append(out, keys())
 	b.navigate("/a/d/")
-	b.until("the bar", "!document.querySelector('#frame-actions .diff-open').hidden")
+	b.until("the bar", "!document.querySelector('#frame-actions [data-testid=diff-open]').hidden")
 	out = append(out, keys())
 	b.navigate("/a/one/")
 	b.until("the bar of one", "document.getElementById('frame').hasAttribute('src')")
@@ -624,8 +648,8 @@ func TestUIDiffPlaces(t *testing.T) { //nolint:paralleltest // the browser tests
 	b.navigate("/")
 	b.until("the rows", "document.querySelector('#list li[data-slug=one]')")
 	out = append(out, keys())
-	b.eval("document.querySelector('#list li[data-slug=d] .title').click()")
-	b.until("picked", "picked?.slug === 'd'")
+	b.eval("document.querySelector('#list li[data-slug=d] [data-testid=title]').click()")
+	b.until("picked", "document.getElementById('read-frame').dataset.slug === 'd'")
 	out = append(out, keys())
 
 	// Printed: neither the diff nor the words over a page.
@@ -637,13 +661,11 @@ func TestUIDiffPlaces(t *testing.T) { //nolint:paralleltest // the browser tests
 	// At a phone's width the whole of it scrolls, and is at its top after a redraw.
 	b.size(400, 500, false)
 	openDiff(b, "/a/d/?diff")
-	out = append(out, b.eval(`(() => {
-		const box = document.getElementById('diff');
-		box.scrollTop = 200;
-		const moved = box.scrollTop > 0;
-		drawDiff();
-		return moved + ' ' + box.scrollTop + ' ' + getComputedStyle(box).display;
-	})()`))
+	// Redrawn for another pair chosen
+	moved := b.eval("(() => { const box = document.getElementById('diff'); box.scrollTop = 200; return String(box.scrollTop > 0); })()")
+	chooseValue(b, "diff-from", "1")
+	b.until("from v1", diffFrom+" === '1'")
+	out = append(out, moved+" "+b.eval("(() => { const box = document.getElementById('diff'); return box.scrollTop + ' ' + getComputedStyle(box).display; })()"))
 	check(t, "places", out, strings.Join([]string{
 		"true", "true", "Close the diff", "What changed since the version read", "", "", "What changed since the version read", "none", "true 0 block",
 	}, "|"))
@@ -708,28 +730,36 @@ func TestUIDiffScrolls(t *testing.T) { //nolint:paralleltest // the browser test
 			t.Errorf("%s: %s", what, got)
 		}
 	}
-	after("n", "moveChange(1); moveChange(1); moveChange(1)")
-	after("p", "moveChange(-1)")
+	b.pressKey("n")
+	b.pressKey("n")
+	b.pressKey("n")
+	after("n", "1")
+	b.pressKey("p")
+	after("p", "1")
 	after("the middle of the contents", "[...document.querySelectorAll('#diff-toc button')].find((x) => x.firstChild.textContent === 'S7').click()")
 	after("the contents", "[...document.querySelectorAll('#diff-toc button')].at(-1).click()")
-	b.eval("(() => { const e = document.getElementById('diff-from'); e.value = '2'; e.dispatchEvent(new Event('change')); })()")
-	b.until("the other pair", "diffAnswer.from.n === 2")
+	chooseValue(b, "diff-from", "2")
+	b.until("the other pair", diffFrom+" === '2'")
 	after("chosen again", "1")
 	b.size(400, 800, false)
 	after("narrowed", "1")
-	// At that width all of it scrolls, and is at its top after a redraw.
-	if got := b.eval(`(() => {
-		const box = document.getElementById('diff');
-		box.scrollTop = 1e6;
-		const moved = box.scrollTop > 0;
-		drawDiff();
-		return moved + ' ' + box.scrollTop;
-	})()`); got != "true 0" {
+	// At that width all of it scrolls, and is at its top after a redraw, for another pair chosen.
+	moved := b.eval("(() => { const box = document.getElementById('diff'); box.scrollTop = 1e6; return String(box.scrollTop > 0); })()")
+	chooseValue(b, "diff-from", "1")
+	b.until("from v1", diffFrom+" === '1'")
+	if got := moved + " " + b.eval("String(document.getElementById('diff').scrollTop)"); got != "true 0" {
 		t.Errorf("redrawn at a phone's width: %s", got)
 	}
 	b.size(1440, 900, false)
 	after("widened", "1")
-	after("the list read again", "drawn = ''; load(true)")
+	// The page's title changed on the server, so that the read draws anew.
+	title := "Z again"
+	if _, err := store.New(s.Env["FLOE_DIR"]).Edit("z", store.Edit{Title: &title}); err != nil {
+		t.Fatal(err)
+	}
+	begun := b.reread()
+	b.untilRead(begun, "the list read again", "document.getElementById('frame-title').textContent === 'Z again'")
+	after("the list read again", "1")
 }
 
 // TestUIDiffNotice says over a page newly at another version what changed since the one read, not over a page read the first time or
@@ -757,21 +787,33 @@ func TestUIDiffNotice(t *testing.T) { //nolint:paralleltest // the browser tests
 	})()`)
 	b.size(1440, 900, false)
 	b.navigate("/")
-	const note = "document.querySelector('.dnote.page-note')"
+	b.eval(readMarks)
+	const note = "document.querySelector('[data-testid=page-note]')"
+	// The read marks sent so far: a page loaded sends one, and a mark answered clears the row's dot
+	marks := func() int {
+		t.Helper()
+		n, err := strconv.Atoi(b.eval("window.marks.length"))
+		if err != nil {
+			t.Fatal(err)
+		}
+		return n
+	}
 	pick := func(slug string) {
 		t.Helper()
-		b.eval("document.querySelector('#list li[data-slug=" + slug + "] .title').click()")
-		b.until(slug+" read", "picked?.slug === "+js(slug)+" && !readsGoing && document.getElementById('read-frame').contentWindow && !document.querySelector('#list li[data-slug="+slug+"]').classList.contains('unseen')")
+		sent := marks()
+		b.eval("document.querySelector('#list li[data-slug=" + slug + "] [data-testid=title]').click()")
+		b.until(slug+" read", "document.getElementById('read-frame').dataset.slug === "+js(slug)+" && document.getElementById('read-frame').contentWindow && document.querySelector('#list li[data-slug="+slug+"]').dataset.unread !== 'true'")
+		b.marksDone(sent + 1)
 	}
 	settled := func() {
 		t.Helper()
-		b.eval("new Promise((go) => { const look = () => (readsGoing ? setTimeout(look, 10) : go()); look(); })")
+		b.marksDone(marks())
 	}
 	b.until("the rows", "document.querySelector('#list li[data-slug=n]') && document.querySelector('#list li[data-slug=p]')")
 	pick("p")
 	// The first time read: no words.
 	pick("n")
-	b.until("its toast", "document.querySelector('.toast.page .btn')")
+	b.until("its toast", "document.querySelector('[data-testid=toast][data-page] button')")
 	settled()
 	out := make([]string, 0, 8)
 	out = append(out, b.eval("String("+note+" === null)"))
@@ -779,8 +821,8 @@ func TestUIDiffNotice(t *testing.T) { //nolint:paralleltest // the browser tests
 	// A new version, opened: the words, and where they lead.
 	pick("p")
 	publish(diffV2)
-	b.until("the new version", "document.querySelector('#list li[data-slug=n]').classList.contains('unseen')")
-	b.eval("document.querySelector('#list li[data-slug=n] .title').click()")
+	b.until("the new version", "document.querySelector('#list li[data-slug=n]').dataset.unread === 'true'")
+	b.eval("document.querySelector('#list li[data-slug=n] [data-testid=title]').click()")
 	b.until("the words", note)
 	out = append(out, b.eval(note+".firstChild.textContent + ' ' + "+note+".querySelector('a').getAttribute('href')"))
 	b.still()
@@ -790,24 +832,25 @@ func TestUIDiffNotice(t *testing.T) { //nolint:paralleltest // the browser tests
 	// Another page loaded: gone. And back: read, no words.
 	pick("p")
 	b.until("gone", note+" === null")
-	b.eval("document.querySelector('#list li[data-slug=n] .title').click()")
-	b.until("n again", "picked?.slug === 'n'")
-	settled()
+	sent := marks()
+	b.eval("document.querySelector('#list li[data-slug=n] [data-testid=title]').click()")
+	b.until("n again", "document.getElementById('read-frame').dataset.slug === 'n'")
+	b.marksDone(sent + 1)
 	out = append(out, b.eval("String("+note+" === null)"))
 
 	// Marked unread: gone.
 	pick("p")
 	publish(diffV3)
-	b.until("v3", "document.querySelector('#list li[data-slug=n]').classList.contains('unseen')")
-	b.eval("document.querySelector('#list li[data-slug=n] .title').click()")
+	b.until("v3", "document.querySelector('#list li[data-slug=n]').dataset.unread === 'true'")
+	b.eval("document.querySelector('#list li[data-slug=n] [data-testid=title]').click()")
 	b.until("the words of v3", note)
-	b.until("the toast of v3", "document.querySelector('.toast.page .btn')")
-	b.eval("document.querySelector('.toast.page .btn').click()")
+	b.until("the toast of v3", "document.querySelector('[data-testid=toast][data-page] button')")
+	b.eval("document.querySelector('[data-testid=toast][data-page] button').click()")
 	b.until("unread: gone", note+" === null")
 	// Read again, the words shown, and drawn at another version as it is open: gone.
-	b.eval("document.querySelector('#list li[data-slug=p] .title').click()")
-	b.until("p", "picked?.slug === 'p'")
-	b.eval("document.querySelector('#list li[data-slug=n] .title').click()")
+	b.eval("document.querySelector('#list li[data-slug=p] [data-testid=title]').click()")
+	b.until("p", "document.getElementById('read-frame').dataset.slug === 'p'")
+	b.eval("document.querySelector('#list li[data-slug=n] [data-testid=title]').click()")
 	b.until("the words again", note)
 	publish(diffV1)
 	b.until("gone as drawn anew", note+" === null")
@@ -815,12 +858,14 @@ func TestUIDiffNotice(t *testing.T) { //nolint:paralleltest // the browser tests
 	// An answer that comes after a move to another page says nothing; and the other's read goes on while it is waited for.
 	pick("p")
 	publish(diffV2)
-	b.until("v5", "document.querySelector('#list li[data-slug=n]').classList.contains('unseen')")
+	b.until("v5", "document.querySelector('#list li[data-slug=n]').dataset.unread === 'true'")
 	b.eval("window.diffAnswered = 0; window.diffHeld = new Promise((go) => { window.diffGo = go; }); 1")
-	b.eval("document.querySelector('#list li[data-slug=n] .title').click()")
-	b.until("n's read told", "picked?.slug === 'n' && !readsGoing && !document.querySelector('#list li[data-slug=n]').classList.contains('unseen')")
-	b.eval("document.querySelector('#list li[data-slug=p] .title').click()")
-	b.until("p again", "picked?.slug === 'p'")
+	sent = marks()
+	b.eval("document.querySelector('#list li[data-slug=n] [data-testid=title]').click()")
+	b.until("n's read told", "document.getElementById('read-frame').dataset.slug === 'n' && document.querySelector('#list li[data-slug=n]').dataset.unread !== 'true'")
+	b.marksDone(sent + 1)
+	b.eval("document.querySelector('#list li[data-slug=p] [data-testid=title]').click()")
+	b.until("p again", "document.getElementById('read-frame').dataset.slug === 'p'")
 	b.eval("window.diffGo(); window.diffHeld = null")
 	b.until("answered", "window.diffAnswered > 0")
 	settled()
@@ -829,12 +874,14 @@ func TestUIDiffNotice(t *testing.T) { //nolint:paralleltest // the browser tests
 
 	// So too after marked unread, its answer come late.
 	publish(diffV3)
-	b.until("v6", "document.querySelector('#list li[data-slug=n]').classList.contains('unseen')")
+	b.until("v6", "document.querySelector('#list li[data-slug=n]').dataset.unread === 'true'")
 	b.eval("window.diffAnswered = 0; window.diffHeld = new Promise((go) => { window.diffGo = go; }); 1")
-	b.eval("document.querySelector('#list li[data-slug=n] .title').click()")
-	b.until("the toast of v6", "document.querySelector('.toast.page .btn')")
-	b.eval("document.querySelector('.toast.page .btn').click()")
-	b.until("unread", "document.querySelector('#list li[data-slug=n]').classList.contains('unseen') && !readsGoing")
+	b.eval("document.querySelector('#list li[data-slug=n] [data-testid=title]').click()")
+	b.until("the toast of v6", "document.querySelector('[data-testid=toast][data-page] button')")
+	sent = marks()
+	b.eval("document.querySelector('[data-testid=toast][data-page] button').click()")
+	b.until("unread", "document.querySelector('#list li[data-slug=n]').dataset.unread === 'true'")
+	b.marksDone(sent + 1)
 	b.eval("window.diffGo(); window.diffHeld = null")
 	b.until("answered late", "window.diffAnswered > 0")
 	b.eval("new Promise((go) => setTimeout(go, 50))")
@@ -843,4 +890,24 @@ func TestUIDiffNotice(t *testing.T) { //nolint:paralleltest // the browser tests
 	check(t, "notice", out, strings.Join([]string{
 		"true", "Sections changed since v1, the version last read: 1 /a/n/?diff", "true", "true", "true",
 	}, "|"))
+}
+
+// TestUIFrameBarFits opens a page of versions whole, whose bar has its choice of versions and its diff's button besides
+// the header's links, at a phone's widths and between 40rem and 56rem: nothing runs off the window, and the name keeps
+// some room. Its diff loads no page in the frame, which would read the latest.
+func TestUIFrameBarFits(t *testing.T) { //nolint:paralleltest // the browser tests share one Chrome, one at a time
+	s := diffSite(t)
+	b := s.b
+	defer b.unsize()
+	out := make([]string, 0, 4)
+	for _, width := range []int64{320, 390, 700} {
+		b.size(width, 800, width < 640)
+		b.navigate("/a/d/")
+		b.until("the bar", "document.getElementById('frame-title').textContent && innerWidth === "+strconv.FormatInt(width, 10))
+		out = append(out, strconv.FormatInt(width, 10)+": "+b.eval("[document.documentElement.scrollWidth <= innerWidth, document.getElementById('frame-title').getBoundingClientRect().width > 0, document.getElementById('frame-version').getClientRects().length > 0].join(' ')"))
+	}
+	b.unsize()
+	openDiff(b, "/a/d/?diff")
+	out = append(out, "diff: "+b.eval("document.getElementById('frame').hasAttribute('src')"))
+	check(t, "the bar", out, "320: true true true|390: true true true|700: true true true|diff: false")
 }

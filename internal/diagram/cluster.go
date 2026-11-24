@@ -371,15 +371,16 @@ func (gr *group) pinned(seq []int, c int) (head, rest, tail []int) {
 }
 
 // sortIn orders seq, group c's nodes in a rank, by keys as sweep does, a group nested by the mean of its nodes' keys:
-// the units with no key keep their places, and the others fill those left, stably; then each group nested inside.
-// Lanes have no key.
+// the units with no key keep their places, and the others fill those left, stably; the units facing a level edge's
+// other end then stand at the end towards it among those places; then each group nested inside. The units standing as
+// written (lanes, see level.go) have no key and do not face.
 func (gr *group) sortIn(seq []int, c int, keys map[int]float64) []int {
 	head, rest, tail := gr.pinned(seq, c)
 	us := gr.units(rest, c)
 	key := map[int]float64{}
 	var moving []int
 	for j, u := range us {
-		if gr.out.lane(u.cl) {
+		if gr.written(u, c) {
 			continue
 		}
 		sum, n := 0.0, 0
@@ -403,9 +404,7 @@ func (gr *group) sortIn(seq []int, c int, keys map[int]float64) []int {
 			k++
 		}
 	}
-	if gr.out.lane(c) { // a lane's blocks facing another lane stand at its end towards it, the rest as ordered
-		slices.SortStableFunc(order, func(a, b int) int { return gr.facing(us[a]) - gr.facing(us[b]) })
-	}
+	gr.face(order, us, c)
 	out := slices.Clone(head)
 	for _, j := range order {
 		u := us[j]
@@ -418,8 +417,28 @@ func (gr *group) sortIn(seq []int, c int, keys map[int]float64) []int {
 	return append(out, tail...)
 }
 
+// face stands the units of order, of group c, facing a level edge's other end at the end towards it, stably, among the
+// places of those not standing as written.
+func (gr *group) face(order []int, us []unit, c int) {
+	var free []int
+	for j, u := range order {
+		if !gr.written(us[u], c) {
+			free = append(free, j)
+		}
+	}
+	faced := make([]int, len(free))
+	for i, j := range free {
+		faced[i] = order[j]
+	}
+	slices.SortStableFunc(faced, func(a, b int) int { return gr.facing(us[a]) - gr.facing(us[b]) })
+	for i, j := range free {
+		order[j] = faced[i]
+	}
+}
+
 // align orders the groups nested in each group (or in the graph) one way in every rank, by where their left marks
-// stand on average (ties as written), so that their frames, each one rectangle, keep apart.
+// stand on average (ties as written), so that their frames, each one rectangle, keep apart; those standing as written
+// stay.
 func (gr *group) align() {
 	pos := gr.places()
 	sum, count := map[int]float64{}, map[int]int{}
@@ -436,7 +455,7 @@ func (gr *group) align() {
 		us := gr.units(rest, c)
 		var slots []int
 		for j, u := range us {
-			if u.cl >= 0 {
+			if u.cl >= 0 && !gr.written(u, c) {
 				slots = append(slots, j)
 			}
 		}
@@ -543,6 +562,23 @@ func (gr *group) pack(floor map[int]float64) {
 type headRoom struct {
 	left int
 	w    float64
+}
+
+// portRange is where port i, an edge's end at a frame, may stand across the ranks between its group's marks, as pack
+// and wire keep it: a gap in from each.
+func (gr *group) portRange(i int) (lo, hi float64) {
+	n := gr.nodes[i]
+	lo, hi = math.Inf(-1), math.Inf(1)
+	for _, j := range gr.ranks[n.rank] {
+		switch m := gr.nodes[j]; {
+		case m.cl != n.cl:
+		case m.kind == kindLeft:
+			lo = max(lo, m.x+gr.room(j)+gr.gap(j, i))
+		case m.kind == kindRight:
+			hi = min(hi, m.x-gr.gap(i, j))
+		}
+	}
+	return lo, hi
 }
 
 // clear is how far right of the frame's left what a line reaches from above stands.

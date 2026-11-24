@@ -1,6 +1,7 @@
 package browsertest_test
 
 import (
+	"strings"
 	"testing"
 
 	"floe/internal/i18n"
@@ -11,7 +12,7 @@ import (
 // note's words and URL: "name:shown" each, a word for each, then the words and the URL.
 const printed = `(() => {
   const shown = (s) => { const e = document.querySelector(s); return e !== null && e.getClientRects().length > 0; };
-  return [['bar', '.bar'], ['frame', '#frame'], ['error', '#error'], ['notfound', '#notfound'], ['note', '#print-alone']]
+  return [['bar', '[data-testid=bar]'], ['frame', '#frame'], ['error', '#error'], ['notfound', '#notfound'], ['note', '#print-alone']]
     .map(([n, s]) => n + ':' + shown(s)).join(' ') + ' | ' + (document.getElementById('print-alone-text')?.textContent ?? '') +
     ' | ' + (document.getElementById('print-raw')?.textContent ?? '');
 })()`
@@ -19,7 +20,7 @@ const printed = `(() => {
 // TestUIPrintFrame prints the frame of a page, a frame before the list is read, one whose list failed, a missing
 // page's and the list, in English and in Japanese: a frame names the page alone, at its URL, in the reader's
 // language, in place of the bar and the frame, as an iframe prints one screen of the page in
-// it; a missing page's frame prints its state alone, and the list as it shows. The screen shows no note.
+// it; a missing page's frame prints its state alone, with no note at all, and the list as it shows. The screen shows no note.
 func TestUIPrintFrame(t *testing.T) { //nolint:paralleltest // the browser tests share one Chrome, one at a time
 	s := newSite(t)
 	s.floe(t, "publish", s.page(t, "p.yaml", "P", "<p>p</p>"), "--slug", "p")
@@ -41,7 +42,8 @@ func TestUIPrintFrame(t *testing.T) { //nolint:paralleltest // the browser tests
 		b.media("print")
 		got = append(got, b.eval(printed))
 		b.navigate("/")
-		got = append(got, b.eval(printed))
+		// The list has no note to print: what shows alone, not the words a build may keep hidden there
+		got = append(got, strings.SplitN(b.eval(printed), " | ", 2)[0])
 		b.media("")
 
 		// A list never read, then one whose read fails.
@@ -62,8 +64,8 @@ func TestUIPrintFrame(t *testing.T) { //nolint:paralleltest // the browser tests
 		note := " | " + words + " | " + raw
 		check(t, "print "+string(lang), got, "bar:false frame:false error:false notfound:false note:true"+note+"|"+
 			"bar:true frame:true error:false notfound:false note:false"+note+"|"+
-			"bar:false frame:false error:false notfound:true note:false | "+words+" | "+s.Base+"/a/none/?raw|"+
-			"bar:true frame:false error:false notfound:false note:false | "+words+" | |"+
+			"bar:false frame:false error:false notfound:true note:false |  | |"+
+			"bar:true frame:false error:false notfound:false note:false|"+
 			"bar:false frame:false error:false notfound:false note:true"+note+"|"+
 			"bar:false frame:false error:true notfound:false note:true"+note)
 	}

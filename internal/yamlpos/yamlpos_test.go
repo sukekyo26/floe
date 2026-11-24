@@ -47,7 +47,7 @@ func TestParse(t *testing.T) {
 		// go.yaml.in/yaml/v4's own mistakes, at its place.
 		{"title: a: b\n", "1:9 library"},
 		{"title: `x`\n", "1:8 library"},
-		{"t: |\n    a\n  b\n", "3:3 library"},
+		{"t: |\n    a\n  b\n", "3:3 yaml_after_block"},
 		{"title: %y\n", "1:8 library"},
 		{"%YAML 1.2\n---\nlang: en\n", "1:1 library"},
 		{"%FOO bar\n---\nlang: en\n", "1:5 library"},
@@ -142,7 +142,7 @@ func TestParse(t *testing.T) {
 func TestParseLibraryWords(t *testing.T) {
 	t.Parallel()
 
-	src := []byte("t: |\n    a\n  b\n")
+	src := []byte("a:\n  - x\n y\n")
 	l, err := yaml.NewLoader(bytes.NewReader(src))
 	if err != nil {
 		t.Fatal(err)
@@ -154,6 +154,68 @@ func TestParseLibraryWords(t *testing.T) {
 	_, err = yamlpos.Parse("a.yaml", src)
 	if got, want := told(err), fmt.Sprintf("a.yaml:%d:%d: %s", le.Mark.Line, le.Mark.Column, le.Message); got != want {
 		t.Errorf("told %q, want %q", got, want)
+	}
+}
+
+// A mistake go.yaml.in/yaml/v4 tells on a line right after a | or > text is told with how to mend the text after
+// its words, whatever the mistake; its words and its place are those of a mistake told without. One elsewhere, one
+// on a line past an empty [], {} or alias after the text, one with no line of its own and one where what is before
+// its line is not read are told as they were. A text written right passes.
+func TestParseAfterBlock(t *testing.T) {
+	t.Parallel()
+
+	for _, tt := range []struct{ src, want string }{
+		{"a: |\n   one\n  two\nb: x\n", "3:3 yaml_after_block"},
+		{"a: >\n   one\n  two\nb: x\n", "3:3 yaml_after_block"},
+		{"l:\n  - |\n     one\n    two\n  - x\n", "4:5 yaml_after_block"},
+		{"a: |\n\n   one\n  two\nb: x\n", "4:3 yaml_after_block"},
+		{"- |\n   one\n  two\n", "3:3 yaml_after_block"},
+		{"a: |\n  ok\nb: |\n   one\n  two\n", "5:3 yaml_after_block"},
+		// Whatever the mistake: a table, a diff's head and a tab are the scanner's, an alias of no anchor the
+		// composer's.
+		{"a: |\n   one\n  | col | col |\n", "3:5 yaml_after_block"},
+		{"a: |\n   context\n  @@ -1 +1 @@\n", "3:3 yaml_after_block"},
+		{"a: |\n   one\n\ttwo\nb: x\n", "3:1 yaml_after_block"},
+		{"a: |\n  one\nb: *x\n", "3:4 yaml_after_block"},
+		// Not after the text: an empty [], {} or alias is written last before the line.
+		{"- |\n  x\n- []\n  y\n", "4:3 library"},
+		{"- |\n  x\n- {}\n  y\n", "4:3 library"},
+		{"- &a x\n- |\n  t\n- *a\n  y\n", "5:3 library"},
+		// No | or > text before the line.
+		{"a:\n  - x\n y\n", "3:2 library"},
+		{"a: \"one\n  two\"\n b\n", "3:2 library"},
+		// What is before the line is not read: the mistake told is the first one, not that of reading it.
+		{"p:\n  a: |\n     one\ntwo\n  b: x\n", "5:4 library"},
+		{"a: |\n   one\n  two\n  three: x\n", "4:8 library"},
+		// A mistake with no line of its own, placed by its byte inside the text.
+		{"a: |\n  one\n  tw\x01o\nb: x\n", "3:5 library"},
+		// Right.
+		{"a: |2\n   one\n  two\nb: x\n", ""},
+		{"a: |\n  one\n   two\nb: x\n", ""},
+		{"l:\n  - a: |\n        one\n    two: y\n", ""},
+	} {
+		_, err := yamlpos.Parse("a.yaml", []byte(tt.src))
+		if got := placed(err); got != tt.want {
+			t.Errorf("Parse(%q) = %q, want %q", tt.src, got, tt.want)
+			continue
+		}
+		at, key, _ := strings.Cut(tt.want, " ")
+		if key == "" {
+			continue
+		}
+		l, lerr := yaml.NewLoader(strings.NewReader(tt.src))
+		if lerr != nil {
+			t.Fatal(lerr)
+		}
+		var le *yaml.LoadError
+		if !errors.As(l.Load(new(yaml.Node)), &le) {
+			t.Fatalf("go.yaml.in/yaml/v4 gives no mistake for %q", tt.src)
+		}
+		plain := fmt.Sprintf("a.yaml:%s: %s", at, le.Message)
+		got := told(err)
+		if key == "library" && got != plain || key != "library" && !strings.HasPrefix(got, plain+": ") {
+			t.Errorf("Parse(%q) told %q, want it to start with %q", tt.src, got, plain)
+		}
 	}
 }
 
@@ -304,7 +366,7 @@ func TestParseTabs(t *testing.T) {
 			t.Errorf("Parse(%q) reads %q, want %q", src, got, want)
 		}
 	}
-	if _, err := yamlpos.Parse("a.yaml", []byte("c: |\n\tx\n")); placed(err) != "2:1 library" {
+	if _, err := yamlpos.Parse("a.yaml", []byte("c: |\n\tx\n")); placed(err) != "2:1 yaml_after_block" {
 		t.Errorf("a tab as indentation: %q", placed(err))
 	}
 }

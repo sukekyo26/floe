@@ -2,13 +2,14 @@ package store
 
 import (
 	"bytes"
+	"context"
 	"errors"
 	"io/fs"
 	"path/filepath"
 
 	"floe/internal/doc"
+	"floe/internal/drawproc"
 	"floe/internal/files"
-	"floe/internal/tmpl"
 	"floe/internal/usererr"
 )
 
@@ -25,7 +26,9 @@ import (
 // store_rebuild_kept, with an indent, if that comes to confuse.
 // LIMIT: a template floe fails to compile again with one's own parts stops it at that template's first page, the
 // pages of other templates before it drawn again and written; floe's own failure alone, which its tests catch.
-func (s *Store) Rebuild(dw Drawing) error {
+// The pages are drawn one after another in one session of dw.Draw, under ctx: once it ends (the command that asked is
+// stopped), the pages not drawn yet keep the page they had, and the mistakes told so far are returned.
+func (s *Store) Rebuild(ctx context.Context, dw Drawing) error {
 	if dw.Err != nil {
 		return dw.Err
 	}
@@ -33,9 +36,16 @@ func (s *Store) Rebuild(dw Drawing) error {
 	if err != nil {
 		return err
 	}
+	session := dw.Draw.Start(ctx)
+	defer session.Close()
 	var found usererr.List
 	for _, slug := range slugs {
-		if failed := found.Add(s.rebuildPage(dw, slug)); failed != nil {
+		err := s.rebuildPage(session, slug)
+		if ctx.Err() != nil {
+			// Stopped by the command that asked: the pages not drawn again keep the page they had, which is no mistake.
+			break
+		}
+		if failed := found.Add(err); failed != nil {
 			return failed
 		}
 	}
@@ -51,7 +61,7 @@ type drawn struct {
 }
 
 // rebuildPage draws slug again, as Rebuild does.
-func (s *Store) rebuildPage(dw Drawing, slug string) error {
+func (s *Store) rebuildPage(session drawproc.Session, slug string) error {
 	m := s.ReadMeta(slug)
 	if m == nil || m.IsLink() {
 		return nil
@@ -60,7 +70,7 @@ func (s *Store) rebuildPage(dw Drawing, slug string) error {
 	if !ok {
 		return nil
 	}
-	got, err := redraw(dw, slug, m, dir)
+	got, err := redraw(session, slug, m, dir)
 	if err == nil && got.page == nil && (got.template == "" || got.template == m.Template) {
 		return nil
 	}
@@ -108,7 +118,7 @@ func (s *Store) keepDrawn(slug string, now *Meta, got *drawn, err error, changed
 
 // redraw draws slug, whose meta.json is m, from its copy dir: a nil page when the page drawn is the one it has. With a
 // mistake, what it could read of the copy, or nil when it could not read the data file.
-func redraw(dw Drawing, slug string, m *Meta, dir string) (*drawn, error) {
+func redraw(session drawproc.Session, slug string, m *Meta, dir string) (*drawn, error) {
 	data := filepath.Join(dir, dataName)
 	src, _, err := files.Read(data)
 	if err != nil {
@@ -119,8 +129,10 @@ func redraw(dw Drawing, slug string, m *Meta, dir string) (*drawn, error) {
 		got.template = d.Template
 	}
 	had := filepath.Join(dir, pageName)
+	// The page it had is read only to tell whether the drawing changed: one gone, whatever took it, is drawn and
+	// written as a page that changed
 	old, _, err := files.Read(had)
-	if err != nil {
+	if err != nil && !errors.Is(err, fs.ErrNotExist) {
 		return got, usererr.CannotRead(had, err) //nolint:wrapcheck // as above
 	}
 	// The copy's images/, where a directory that cannot be opened is told.
@@ -133,16 +145,14 @@ func redraw(dw Drawing, slug string, m *Meta, dir string) (*drawn, error) {
 	// a publish checked by the same rule; and kit_image_unread, at the copy's data.yaml, an image gone from
 	// images/ by its name, which reads as one beside data.yaml. Have draw name them by ImagesDir too if the
 	// rule comes to change, or if a copy comes to lose its images.
-	o := tmpl.Options{
-		Theme: m.GivenTheme(), Default: m.CreatedTheme, Untitled: slug, Images: images, ImagesDir: imagesDir,
-		ImageAt: nil,
-		Icons:   dw.Icons,
-		CutOff:  false,
-	}
 	// Its warnings are of the copy, which no one mends: a publish of the data file tells them.
-	page, _, err := tmpl.Draw(dw.Kit, data, src, o)
+	drew := session.Draw(drawproc.Job{
+		File: data, Source: src, Theme: m.GivenTheme(), Default: m.CreatedTheme, Untitled: slug, CutOff: false,
+		ImagesRoot: imagesDir, Sent: nil, ImagesDir: imagesDir,
+	})
+	page, err := drew.Page, drew.Err
 	if err != nil {
-		return got, err //nolint:wrapcheck // its mistakes, or what failed
+		return got, err
 	}
 	if bytes.Equal(page, old) {
 		return got, nil

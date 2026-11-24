@@ -88,12 +88,13 @@ func allowedWritten(path string) (checked, error) {
 }
 
 // walked is what walk found of a path: the part that is there, its links followed, and the names after it as
-// written, not there; when a link's target is not there (dangling), the part before the outermost link of the
-// path's own names being followed, and the names from that link on.
+// written, not there; dangling when the first of those came of a link's target, noDrive when that target's drive
+// is not there (at is then its root, which is not to be opened).
 type walked struct {
 	at       checked
 	rest     []string
 	dangling bool
+	noDrive  bool
 	written  string
 }
 
@@ -114,9 +115,9 @@ type walker struct {
 	root    string   // the drive's root walked on (\\?\X:\)
 	at      []string // the names walked under root, links followed
 	pending []step   // the names still to walk
-	outer   walked   // where the path's own link being followed began
 	hops    int
 	ended   bool // the walk stopped at a link's target not there
+	noDrive bool // and that target's drive is not there
 	written string
 }
 
@@ -127,7 +128,7 @@ func (w *walker) here() string { return filepath.Join(append([]string{w.root}, w
 func walk(path string, last bool) (walked, error) {
 	if path == "" {
 		// As it is: the system's error of no path, not the working directory filepath.Abs would make of it.
-		return walked{at: checked{s: ""}, rest: nil, dangling: false, written: ""}, nil
+		return walked{at: checked{s: ""}, rest: nil, dangling: false, noDrive: false, written: ""}, nil
 	}
 	root, names, last, err := shape(path, last)
 	if err != nil {
@@ -140,8 +141,7 @@ func walk(path string, last bool) (walked, error) {
 		return walked{}, err
 	}
 	w := &walker{
-		path: path, root: root, at: nil, pending: steps(names, false), hops: 0, ended: false,
-		outer:   walked{at: checked{s: ""}, rest: nil, dangling: false, written: ""},
+		path: path, root: root, at: nil, pending: steps(names, false), hops: 0, ended: false, noDrive: false,
 		written: filepath.Join(append([]string{root}, names...)...),
 	}
 	for len(w.pending) > 0 {
@@ -153,18 +153,15 @@ func walk(path string, last bool) (walked, error) {
 			return w.result(), err
 		}
 	}
-	return walked{at: checked{s: w.here()}, rest: nil, dangling: false, written: w.written}, nil
+	return walked{at: checked{s: w.here()}, rest: nil, dangling: false, noDrive: false, written: w.written}, nil
 }
 
-// result is what w found when it stopped at a name not there: the names after it as written, or, of a name of a
-// link's target, the place before the path's own link being followed (dangling).
+// result is what w found when it stopped at a name not there: where it stood, its links followed, and the names
+// after it as written, dangling when that name came of a link's target.
 func (w *walker) result() walked {
-	if w.ended {
-		o := w.outer
-		o.dangling, o.written = true, w.written
-		return o
+	return walked{
+		at: checked{s: w.here()}, rest: namesOf(w.pending), dangling: w.ended, noDrive: w.noDrive, written: w.written,
 	}
-	return walked{at: checked{s: w.here()}, rest: namesOf(w.pending), dangling: false, written: w.written}
 }
 
 // next walks the next name: into it, or to where it leads when it is a link. done when it is not there.
@@ -191,17 +188,14 @@ func (w *walker) next() (done bool, err error) {
 	case err != nil:
 		return false, errAt(w.path, "readlink", err)
 	}
-	return w.follow(n, to)
+	return w.follow(to)
 }
 
-// follow puts the link n's target to in its place: its names, marked, before the names after n. done when the
-// target's drive is not there.
-func (w *walker) follow(n step, to string) (done bool, err error) {
+// follow puts the target to of the link next to walk in its place: its names, marked, before the names after the
+// link. done when the target's drive is not there.
+func (w *walker) follow(to string) (done bool, err error) {
 	if w.hops++; w.hops > maxHops {
 		return false, &fs.PathError{Op: "open", Path: w.path, Err: syscall.ELOOP}
-	}
-	if !n.link {
-		w.outer = walked{at: checked{s: w.here()}, rest: namesOf(w.pending), dangling: false, written: ""}
 	}
 	root, names, err := linkTarget(to)
 	switch {
@@ -212,7 +206,7 @@ func (w *walker) follow(n step, to string) (done bool, err error) {
 		if refused != nil {
 			return false, refused
 		}
-		w.ended = missing
+		w.ended, w.noDrive = missing, missing
 		w.root, w.at = root, nil
 	default:
 		if names, w.at, err = fold(names, w.at, to); err != nil {

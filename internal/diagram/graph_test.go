@@ -1,12 +1,16 @@
 package diagram_test
 
 import (
+	"errors"
 	"fmt"
 	"os"
 	"path/filepath"
 	"slices"
 	"strings"
 	"testing"
+
+	"floe/internal/usererr"
+	"floe/internal/yamlpos"
 )
 
 // g1 is a graph of three boxes, an edge back up among its edges, written from line 3 to line 13 of s.yaml.
@@ -348,7 +352,9 @@ parts:
 // A level edge stands its two boxes in one rank and runs straight between their facing sides, half a column off the
 // middle of the shorter side across the ranks, a column apart from another between the same boxes: laid out down
 // and right, its boxes in two lanes or in one group (a block, side by side as written however the order would part
-// them), and the shorter box grown for three, laid out right by its width.
+// them), and the shorter box grown for three, laid out right by its width. Between two groups, their common group
+// stands as written: a row through a group as written, not as a block of the common group's boxes; a group with no
+// edge between them, its frame crossed; a group in a lane facing the other lane.
 func TestGraphLevel(t *testing.T) {
 	t.Parallel()
 
@@ -396,6 +402,80 @@ edge "d"→"ok" M288,230 V61
 label "ask" 136.2,100.5 31.6x18
 label "answer" 173.4,100.5 53.2x18
 label "ask" 272.2,136.5 31.6x18
+`},
+		{"a row through a group, the order written winning over the block", `title: T
+parts:
+  - graph:
+      x: 20
+      y: 20
+      nodes:
+        - box: { name: a, rows: [A] }
+        - group: { name: g, label: G, nodes: [{ box: { name: b, rows: [B] } }] }
+        - box: { name: c, rows: [C] }
+      edges:
+        - { from: a, to: b, level: true }
+        - { from: b, to: c, level: true }
+`, `frame "g" 92,20 72x71
+the heading of frame "g" 104,29 7.68x18
+box "a" 20,50 48x29
+box "b" 104,50 48x29
+box "c" 188,50 48x29
+edge "a"→"b" M68,70.5 H104
+edge "b"→"c" M152,70.5 H188
+`},
+		{"a group with no edge stands as written, crossed", `title: T
+parts:
+  - graph:
+      x: 20
+      y: 20
+      nodes:
+        - box: { name: s, rows: [S] }
+        - group: { name: ga, label: A, nodes: [{ box: { name: a, rows: [A] } }] }
+        - group: { name: gg, label: G, nodes: [{ box: { name: g1, rows: [G1] } }, { box: { name: g3, rows: [G3] } }] }
+        - group: { name: gb, label: B, nodes: [{ box: { name: b, rows: [B] } }] }
+        - box: { name: x, rows: [X] }
+      edges:
+        - { from: s, to: a }
+        - { from: g1, to: x }
+        - { from: x, to: g3 }
+        - { from: a, to: b, level: true }
+`, `frame "ga" 20,115 108x71
+frame "gg" 152,20 84x243
+frame "gb" 260,115 72x71
+the heading of frame "ga" 32,124 7.68x18
+the heading of frame "gg" 164,29 7.68x18
+the heading of frame "gb" 272,124 7.68x18
+box "s" 20,50 48x29
+box "a" 68,145 48x29
+box "g1" 164,50 56x29
+box "g3" 164,222 56x29
+box "b" 272,145 48x29
+box "x" 356,145 48x29
+edge "s"→"a" M44,79 V91 H92 V145
+edge "g1"→"x" M192,79 V91 H380 V145
+edge "x"→"g3" M380,174 V198 H192 V222
+edge "a"→"b" M116,165.5 H272
+`},
+		{"a group in a lane to another lane", `title: T
+parts:
+  - graph:
+      x: 20
+      y: 20
+      lanes:
+        - { name: u, label: U, nodes: [{ group: { name: g, label: G, nodes: [{ box: { name: a, rows: [A] } }] } }, { box: { name: k, rows: [K] } }] }
+        - { name: v, label: V, nodes: [{ box: { name: b, rows: [B] } }] }
+      edges:
+        - { from: a, to: b, level: true }
+`, `frame "u" 20,20 168x113
+frame "g" 104,50 72x71
+frame "v" 212,20 72x113
+the heading of frame "u" 32,29 7.68x18
+the heading of frame "g" 116,59 7.68x18
+the heading of frame "v" 224,29 7.68x18
+box "a" 116,80 48x29
+box "k" 32,80 48x29
+box "b" 224,80 48x29
+edge "a"→"b" M164,100.5 H224
 `},
 		{"a block written apart by the order", `title: T
 parts:
@@ -470,12 +550,14 @@ edge "a"→"b" M176,49 V74
 	}
 }
 
-// A level edge is refused at a group, between boxes of no one group nor right in two lanes, when an edge joins two
-// boxes of its row, when something stands between its boxes or icons in their rank, when it takes the side of its box's
-// loops, and when it runs through a lane's heading laid out right; a box among a group's ranks is told by ranks.
-// A level edge refused for loops makes no row, so an edge between its boxes is not told too. The rest lay out: a
-// row of one lane however it faces, level on a loop (a loop), loops on the other side, a cycle through a row, three
-// edges between two boxes, and headings that do not reach the edge.
+// A level edge is refused at a group, when an edge joins two boxes of its row, when something stands between its boxes
+// or icons in their rank as laid out (a box, or a group's frame but one right in their common group), when it takes
+// the side of its box's loops, and when it runs through a group's or lane's heading laid out right; a box among a
+// group's ranks is told by ranks. Where marks meet, the order written wins and the edge is told; a common group's boxes
+// stand as written, so what is told is what is written between. A level edge refused for loops makes no row, so an
+// edge between its boxes is not told too. The rest lay out: a box of a group to one outside, a fan with its first zone written between, groups of a common group as written however align would order
+// them, a row of one lane however it faces, level on a loop (a loop), loops on the other side, a cycle through a row,
+// three edges between two boxes, and headings that do not reach the edge.
 func TestGraphLevelMistakes(t *testing.T) {
 	t.Parallel()
 
@@ -493,17 +575,6 @@ parts:
       edges:
         - { from: a, to: g, level: true }
 `, `s.yaml:10:26: edge "a"→"g": "g" is a group, and level stands two boxes or icons in one rank; end the edge at a box or an icon, or drop level`},
-		{"a level edge between a group's box and one outside", `title: T
-parts:
-  - graph:
-      x: 20
-      y: 20
-      nodes:
-        - box: { name: a, rows: [A] }
-        - group: { name: g, nodes: [{ box: { name: b, rows: [B] } }] }
-      edges:
-        - { from: a, to: b, level: true }
-`, `s.yaml:10:36: edge "a"→"b": level joins two boxes or icons of one group, or two boxes or icons directly in two lanes; move one of them, or drop level`},
 		{"an edge across a row", `title: T
 parts:
   - graph:
@@ -597,7 +668,124 @@ parts:
         - { from: p, to: r, level: true }
         - { from: q, to: s, level: true }
 `, `s.yaml:10:36: edge "p"→"r": box "q" stands between its boxes or icons in their rank; drop level, or move it out of the way
-s.yaml:11:36: edge "q"→"s": box "p" stands between its boxes or icons in their rank; drop level, or move it out of the way`},
+s.yaml:11:36: edge "q"→"s": box "r" stands between its boxes or icons in their rank; drop level, or move it out of the way`},
+		{"a box of the common group's node between, the order written winning over the block", `title: T
+parts:
+  - graph:
+      x: 20
+      y: 20
+      nodes:
+        - box: { name: l, rows: [L] }
+        - group: { name: g, nodes: [{ box: { name: m, rows: [M] } }, { box: { name: n, rows: [N] } }] }
+        - box: { name: r, rows: [R] }
+      edges:
+        - { from: l, to: m, level: true }
+        - { from: m, to: r, level: true }
+`, `s.yaml:12:36: edge "m"→"r": box "n" stands between its boxes or icons in their rank; drop level, or move it out of the way`},
+		{"a group facing both ways, the start winning", `title: T
+parts:
+  - graph:
+      x: 20
+      y: 20
+      nodes:
+        - box: { name: z, rows: [Z] }
+        - group: { name: x, label: X, nodes: [{ group: { name: y1, label: Y1, nodes: [{ box: { name: a, rows: [A] } }] } }, { group: { name: y2, label: Y2, nodes: [{ box: { name: b, rows: [B] } }] } }] }
+      edges:
+        - { from: a, to: b, level: true }
+        - { from: z, to: b, level: true }
+`, `s.yaml:11:36: edge "z"→"b": group "y1" stands between its boxes or icons in their rank; drop level, or move it out of the way`},
+		{"two level edges between two groups in one rank", `title: T
+parts:
+  - graph:
+      x: 20
+      y: 20
+      nodes:
+        - group: { name: aza, label: AZ a, nodes: [{ box: { name: w, rows: [Writer] } }, { box: { name: ra, rows: [Redis a] } }] }
+        - group: { name: azc, label: AZ c, nodes: [{ box: { name: r, rows: [Reader] } }, { box: { name: rc, rows: [Redis c] } }] }
+      edges:
+        - { from: w, to: r, level: true }
+        - { from: ra, to: rc, level: true }
+`, `s.yaml:10:36: edge "w"→"r": box "ra" stands between its boxes or icons in their rank; drop level, or move it out of the way
+s.yaml:11:38: edge "ra"→"rc": box "r" stands between its boxes or icons in their rank; drop level, or move it out of the way`},
+		{"a box written between two groups, in their rank by an edge", `title: T
+parts:
+  - graph:
+      x: 20
+      y: 20
+      nodes:
+        - group:
+            name: vpc
+            label: VPC
+            nodes:
+              - group:
+                  name: aza
+                  label: AZ a
+                  nodes:
+                    - group: { name: suba, label: Sub a, nodes: [{ box: { name: w, rows: [Writer] } }, { box: { name: o, rows: [Other] } }] }
+                    - box: { name: p, rows: [P] }
+              - box: { name: alb, rows: [ALB] }
+              - box: { name: r, rows: [Reader] }
+      edges:
+        - { from: w, to: r, level: true }
+        - { from: p, to: o }
+`, `s.yaml:20:36: edge "w"→"r": box "alb" stands between its boxes or icons in their rank; drop level, or move it out of the way`},
+		{"a group's frame inside a group crossed", `title: T
+parts:
+  - graph:
+      x: 20
+      y: 20
+      nodes:
+        - group: { name: ga, nodes: [{ box: { name: a, rows: [A] } }] }
+        - group: { name: gb, nodes: [{ group: { name: h, nodes: [{ box: { name: b1, rows: [B1] } }, { box: { name: b2, rows: [B2] } }] } }] }
+        - group: { name: gc, nodes: [{ box: { name: c, rows: [C] } }] }
+      edges:
+        - { from: b1, to: b2, level: true }
+        - { from: a, to: c, level: true }
+`, `s.yaml:12:36: edge "a"→"c": group "h" stands between its boxes or icons in their rank; drop level, or move it out of the way`},
+		{"a box written between two groups, named though the order would move another there", `title: T
+parts:
+  - graph:
+      x: 20
+      y: 20
+      nodes:
+        - box: { name: t1, rows: [T1] }
+        - box: { name: t2, rows: [T2] }
+        - box: { name: p, rows: [P] }
+        - group: { name: a, label: A, nodes: [{ box: { name: w, rows: [W] } }] }
+        - box: { name: q, rows: [Q] }
+        - group: { name: b, label: B, nodes: [{ box: { name: r, rows: [R] } }] }
+      edges:
+        - { from: t2, to: p }
+        - { from: t1, to: q }
+        - { from: t1, to: w }
+        - { from: t2, to: r }
+        - { from: w, to: r, level: true }
+`, `s.yaml:18:36: edge "w"→"r": box "q" stands between its boxes or icons in their rank; drop level, or move it out of the way`},
+		{"a fan from one zone to two, written in the zones' order", `title: T
+parts:
+  - graph:
+      x: 20
+      y: 20
+      nodes:
+        - group: { name: za, label: A, nodes: [{ box: { name: w, rows: [Writer] } }] }
+        - group: { name: zb, label: B, nodes: [{ box: { name: rb, rows: [Reader] } }] }
+        - group: { name: zc, label: C, nodes: [{ box: { name: rc, rows: [Reader] } }] }
+      edges:
+        - { from: w, to: rb, level: true }
+        - { from: w, to: rc, level: true }
+`, `s.yaml:12:37: edge "w"→"rc": box "rb" stands between its boxes or icons in their rank; drop level, or move it out of the way`},
+		{"a group's heading, laid out right", `title: T
+parts:
+  - graph:
+      x: 20
+      y: 20
+      direction: right
+      nodes:
+        - group: { name: u, label: U, nodes: [{ box: { name: a, rows: [A] } }] }
+        - group: { name: e, label: "A long heading of this group", nodes: [{ box: { name: b, rows: [B] } }] }
+      edges:
+        - { from: a, to: b, level: true }
+`, `s.yaml:11:36: edge "a"→"b": it runs through the heading of group or lane "e", which reaches into the first rank laid out right; drop level, or shorten the heading`},
 		{"loops on the side the edge takes, from", `title: T
 parts:
   - graph:
@@ -635,7 +823,7 @@ parts:
       edges:
         - { from: z, to: m }
         - { from: a, to: b, level: true }
-`, `s.yaml:13:36: edge "a"→"b": it runs through the heading of lane "v", which reaches into the first rank laid out right; drop level, or shorten the heading`},
+`, `s.yaml:13:36: edge "a"→"b": it runs through the heading of group or lane "v", which reaches into the first rank laid out right; drop level, or shorten the heading`},
 		{"the heading of the lane the edge enters, laid out right", `title: T
 parts:
   - graph:
@@ -649,7 +837,7 @@ parts:
       edges:
         - { from: z, to: m }
         - { from: a, to: b, level: true }
-`, `s.yaml:13:36: edge "a"→"b": it runs through the heading of lane "e", which reaches into the first rank laid out right; drop level, or shorten the heading`},
+`, `s.yaml:13:36: edge "a"→"b": it runs through the heading of group or lane "e", which reaches into the first rank laid out right; drop level, or shorten the heading`},
 		{"a box among a group's ranks by a row", `title: T
 parts:
   - graph:
@@ -700,6 +888,63 @@ parts:
       edges:
         - { from: a, to: b, level: true }
         - { from: c, to: a, level: true }
+`, ""},
+		{"a level edge between a group's box and one outside", `title: T
+parts:
+  - graph:
+      x: 20
+      y: 20
+      nodes:
+        - box: { name: a, rows: [A] }
+        - group: { name: g, nodes: [{ box: { name: b, rows: [B] } }] }
+      edges:
+        - { from: a, to: b, level: true }
+`, ""},
+		{"a fan from one zone to two, the zone written between", `title: T
+parts:
+  - graph:
+      x: 20
+      y: 20
+      nodes:
+        - group: { name: zb, label: B, nodes: [{ box: { name: rb, rows: [Reader] } }] }
+        - group: { name: za, label: A, nodes: [{ box: { name: w, rows: [Writer] } }] }
+        - group: { name: zc, label: C, nodes: [{ box: { name: rc, rows: [Reader] } }] }
+      edges:
+        - { from: w, to: rb, level: true }
+        - { from: w, to: rc, level: true }
+`, ""},
+		{"groups written in a common group keep their order however their frames stand on average", `title: T
+parts:
+  - graph:
+      x: 20
+      y: 20
+      nodes:
+        - box: { name: x1, rows: [X] }
+        - box: { name: x2, rows: [X] }
+        - box: { name: x3, rows: [X] }
+        - box: { name: x4, rows: [X] }
+        - box: { name: x5, rows: [X] }
+        - box: { name: x6, rows: [X] }
+        - box: { name: x7, rows: [X] }
+        - box: { name: x8, rows: [X] }
+        - box: { name: x9, rows: [X] }
+        - box: { name: x10, rows: [X] }
+        - group: { name: ga, nodes: [{ box: { name: a, rows: [A] } }, { box: { name: a2, rows: [A] } }, { box: { name: a3, rows: [A] } }] }
+        - group: { name: gb, nodes: [{ box: { name: b, rows: [B] } }] }
+      edges:
+        - { from: a, to: a2 }
+        - { from: a2, to: a3 }
+        - { from: a, to: x1 }
+        - { from: a, to: x2 }
+        - { from: a, to: x3 }
+        - { from: a, to: x4 }
+        - { from: a, to: x5 }
+        - { from: x1, to: x7 }
+        - { from: x2, to: x6 }
+        - { from: x3, to: x8 }
+        - { from: x4, to: x9 }
+        - { from: x5, to: x10 }
+        - { from: a, to: b, level: true }
 `, ""},
 		{"level on a loop", `title: T
 parts:
@@ -805,6 +1050,61 @@ parts:
 	} {
 		if _, got := draw(t, c.src, inspect); got != c.want {
 			t.Errorf("%s:\n  told %q\n  want %q", c.name, got, c.want)
+		}
+	}
+}
+
+// A level edge told through a lane's heading is taken out of the drawing whole: the other edge at its icon's side still
+// turns there, and the sides it took are left to edges written by hand, as inspect shows with the mistake.
+func TestGraphLevelHeadingTakenOut(t *testing.T) {
+	t.Parallel()
+
+	const icons = `title: T
+parts:
+  - graph:
+      x: 20
+      y: 20
+      direction: right
+      lanes:
+        - { name: u, label: ww, nodes: [{ icon: { name: a, icon: aws/aws-lambda, label: wwww } }] }
+        - { name: v, label: wwwwwwww, nodes: [{ icon: { name: b, icon: aws/aws-lambda, label: www } }] }
+      edges:
+        - { from: b, to: a, label: www, level: true }
+        - { from: b, to: a, label: ww, level: true }
+`
+	want := `s.yaml:11:48: edge "b"→"a": it runs through the heading of group or lane "v", which reaches into the first rank laid out right; drop level, or shorten the heading`
+	if _, told := draw(t, icons, inspect); told != want {
+		t.Errorf("two level edges at an icon:\n  told %q\n  want %q", told, want)
+	}
+
+	const hands = `title: T
+parts:
+  - graph:
+      x: 20
+      y: 20
+      direction: right
+      lanes:
+        - { name: u, label: U, nodes: [{ box: { name: a, rows: [A] } }, { box: { name: z, rows: [Z] } }] }
+        - { name: v, label: "A long heading of this lane", nodes: [{ box: { name: m, rows: [M] } }] }
+        - { name: e, label: E, nodes: [{ box: { name: b, rows: [B] } }] }
+      edges:
+        - { from: z, to: m }
+        - { from: a, to: b, level: true }
+  - edge: { from: [70, 240], to: a }
+  - edge: { from: [40, 240], to: b }
+`
+	_, v, err := yamlpos.ParseMap("s.yaml", []byte(hands))
+	if err != nil {
+		t.Fatal(err)
+	}
+	got, err := inspect(drawer(t), v)
+	var told usererr.List
+	if !errors.As(err, &told) || !slices.ContainsFunc(told, func(e *usererr.Error) bool { return e.Key == "diagram_graph_level_heading" }) {
+		t.Errorf("edges written by hand by a level edge through a heading: told %v, want the heading among them", err)
+	}
+	for _, run := range []string{`edge [70,240]→"a" M70,240 H145 V175`, `edge [40,240]→"b" M40,240 H145 V362`} {
+		if !strings.Contains(got, run+"\n") {
+			t.Errorf("edges written by hand at the sides the level edge took: want %q in\n%s", run, got)
 		}
 	}
 }

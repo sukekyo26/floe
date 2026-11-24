@@ -384,3 +384,104 @@ func TestListShape(t *testing.T) {
 		}
 	}
 }
+
+// new refuses to make what a link to nothing among the other places leads into, a setting's or a default's own, the
+// parts' default there or not, as a setting not there yet is: once made, each command reading both places would stop
+// (dir_overlap). template new tells it of its templates setting, reading them first.
+func TestNewIntoLinkToNothing(t *testing.T) {
+	t.Parallel()
+
+	for _, tt := range []struct {
+		name    string
+		setup   func(home, tmp string) (env map[string]string, made string)
+		args    []string
+		told    []string // in stderr
+		noParts bool
+	}{
+		{
+			name: "a templates setting into parts", args: []string{"part", "new", "x"},
+			setup: func(home, tmp string) (map[string]string, string) {
+				made := filepath.Join(cli.DefaultPlace(home, "parts"), "x")
+				link(t, made, filepath.Join(tmp, "tpl"))
+				return map[string]string{"FLOE_TEMPLATES_DIR": filepath.Join(tmp, "tpl")}, made
+			},
+			told: []string{"FLOE_PARTS_DIR", "FLOE_TEMPLATES_DIR", "one is in the other"},
+		},
+		{
+			name: "a templates setting into parts not there", args: []string{"part", "new", "x"}, noParts: true,
+			setup: func(home, tmp string) (map[string]string, string) {
+				made := filepath.Join(cli.DefaultPlace(home, "parts"), "x")
+				link(t, made, filepath.Join(tmp, "tpl"))
+				return map[string]string{"FLOE_TEMPLATES_DIR": filepath.Join(tmp, "tpl")}, made
+			},
+			told: []string{"FLOE_PARTS_DIR", "FLOE_TEMPLATES_DIR", "one is in the other"},
+		},
+		{
+			name: "a templates setting into themes", args: []string{"theme", "new", "y"},
+			setup: func(home, tmp string) (map[string]string, string) {
+				made := filepath.Join(cli.DefaultPlace(home, "themes"), "y")
+				mkdirs(t, filepath.Dir(made))
+				link(t, made, filepath.Join(tmp, "tpl"))
+				return map[string]string{"FLOE_TEMPLATES_DIR": filepath.Join(tmp, "tpl")}, made
+			},
+			told: []string{"FLOE_THEMES_DIR", "FLOE_TEMPLATES_DIR", "one is in the other"},
+		},
+		{
+			name: "a templates setting, template new", args: []string{"template", "new", "z"},
+			setup: func(home, tmp string) (map[string]string, string) {
+				link(t, filepath.Join(cli.DefaultPlace(home, "parts"), "x"), filepath.Join(tmp, "tpl"))
+				return map[string]string{"FLOE_TEMPLATES_DIR": filepath.Join(tmp, "tpl")}, filepath.Join(tmp, "tpl", "z")
+			},
+			told: []string{"FLOE_PARTS_DIR", "FLOE_TEMPLATES_DIR", "one is in the other"},
+		},
+		{
+			name: "the templates default into parts", args: []string{"part", "new", "x"},
+			setup: func(home, _ string) (map[string]string, string) {
+				made := filepath.Join(cli.DefaultPlace(home, "parts"), "x")
+				link(t, made, cli.DefaultPlace(home, "templates"))
+				return nil, made
+			},
+			told: []string{"FLOE_PARTS_DIR", "FLOE_TEMPLATES_DIR", "one is in the other"},
+		},
+		{
+			name: "the themes default into templates", args: []string{"template", "new", "x"},
+			setup: func(home, _ string) (map[string]string, string) {
+				made := filepath.Join(cli.DefaultPlace(home, "templates"), "x")
+				mkdirs(t, filepath.Dir(made))
+				link(t, made, cli.DefaultPlace(home, "themes"))
+				return nil, made
+			},
+			told: []string{"FLOE_THEMES_DIR", "FLOE_TEMPLATES_DIR", "one is in the other"},
+		},
+		{
+			name: "the parts default into themes", args: []string{"theme", "new", "x"}, noParts: true,
+			setup: func(home, _ string) (map[string]string, string) {
+				made := filepath.Join(cli.DefaultPlace(home, "themes"), "x")
+				mkdirs(t, filepath.Dir(made), filepath.Dir(cli.DefaultPlace(home, "parts")))
+				link(t, made, cli.DefaultPlace(home, "parts"))
+				return nil, made
+			},
+			told: []string{"FLOE_PARTS_DIR", "FLOE_THEMES_DIR", "one is in the other"},
+		},
+	} {
+		t.Run(tt.name, func(t *testing.T) {
+			t.Parallel()
+			home, tmp := t.TempDir(), t.TempDir()
+			if !tt.noParts {
+				mkdirs(t, cli.DefaultPlace(home, "parts"))
+			}
+			env, made := tt.setup(home, tmp)
+			code, stdout, stderr := runEnv(home, cli.HomeEnv(home, env), tt.args...)
+			ok := code == 1 && stdout == ""
+			for _, w := range tt.told {
+				ok = ok && strings.Contains(stderr, w)
+			}
+			if !ok {
+				t.Errorf("floe %v = %d, %q, %q; want 1, told %v", tt.args, code, stdout, stderr, tt.told)
+			}
+			if _, err := os.Stat(made); !errors.Is(err, fs.ErrNotExist) {
+				t.Errorf("floe %v made %s: %v", tt.args, made, err)
+			}
+		})
+	}
+}

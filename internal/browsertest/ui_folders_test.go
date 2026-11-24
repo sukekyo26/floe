@@ -46,9 +46,9 @@ func TestUIFolders(t *testing.T) { //nolint:paralleltest // the browser tests sh
 	s.floe(t, "publish", "--link", docs)
 
 	// The rows under the folder, a directory's name with its state, and the directories read so far
-	rows := `[...document.querySelectorAll('#list li.tree')].map((li) => {
-		const b = li.querySelector('button.title');
-		return b ? b.textContent + (b.getAttribute('aria-expanded') === 'true' ? '-' : '+') : li.querySelector('.title')?.textContent ?? '(' + li.textContent.trim() + ')';
+	rows := `[...document.querySelectorAll('#list li[data-testid=tree]')].map((li) => {
+		const b = li.querySelector('button[data-testid=title]');
+		return b ? b.textContent + (b.getAttribute('aria-expanded') === 'true' ? '-' : '+') : li.querySelector('[data-testid=title]')?.textContent ?? '(' + li.textContent.trim() + ')';
 	}).join(',')`
 	read := `performance.getEntriesByType('resource').map((e) => new URL(e.name)).filter((u) => u.pathname.endsWith('/files'))
 		.map((u) => u.searchParams.get('dir') || '.').filter((d, i, all) => all.indexOf(d) === i).sort().join(',')`
@@ -56,18 +56,18 @@ func TestUIFolders(t *testing.T) { //nolint:paralleltest // the browser tests sh
 	click := func(name string) {
 		t.Helper()
 
-		b.eval(`[...document.querySelectorAll('#list li.tree button.title')].find((x) => x.textContent === ` + js(name) + `).click()`)
+		b.eval(`[...document.querySelectorAll('#list li[data-testid=tree] button[data-testid=title]')].find((x) => x.textContent === ` + js(name) + `).click()`)
 	}
 
 	out := make([]string, 0, 24)
 	b.navigate("/")
 	b.eval("localStorage.removeItem('list.open')")
 	b.navigate("/a/docs/")
-	out = append(out, b.until("the folder open", "location.pathname === '/' && document.querySelectorAll('#list li.tree').length > 0 && "+opens))
+	out = append(out, b.until("the folder open", "location.pathname === '/' && document.querySelectorAll('#list li[data-testid=tree]').length > 0 && "+opens))
 	// The folder's row heads its tree, under its day.
-	out = append(out, b.eval(rows), b.eval("document.querySelectorAll('#list li.group').length + ' groups, ' + document.querySelectorAll('#list li.folder').length + ' folder'"))
+	out = append(out, b.eval(rows), b.eval("document.querySelectorAll('#list li[data-testid=group]').length + ' groups, ' + document.querySelectorAll('#list li[data-kind=folder]').length + ' folder'"))
 	click("guide")
-	b.until("guide open", "document.querySelectorAll('#list li.tree').length > 3")
+	b.until("guide open", "document.querySelectorAll('#list li[data-testid=tree]').length > 3")
 	click("a,b:c")
 	b.until("a,b:c open", rows+".includes('odd.html')")
 	out = append(out, b.eval(opens))
@@ -85,7 +85,7 @@ func TestUIFolders(t *testing.T) { //nolint:paralleltest // the browser tests sh
 	b.still()
 	b.eval(`window.marked = [...document.querySelectorAll('#list > li')]; window.rose = [];
 		document.getElementById('list').addEventListener('animationstart', (e) => rose.push(e.target.dataset.key));
-		[...document.querySelectorAll('#list li.tree button.title')].find((x) => x.textContent === 'guide').focus()`)
+		[...document.querySelectorAll('#list li[data-testid=tree] button[data-testid=title]')].find((x) => x.textContent === 'guide').focus()`)
 	click("guide")
 	b.until("guide closed", "!"+rows+".includes('setup')")
 	out = append(out, b.eval("marked.filter((li) => !li.isConnected).map((li) => li.dataset.key).join(',') + ' gone, focus ' + document.activeElement.textContent"))
@@ -93,7 +93,10 @@ func TestUIFolders(t *testing.T) { //nolint:paralleltest // the browser tests sh
 	b.until("guide open", rows+".includes('setup')")
 	b.still()
 	out = append(out, b.eval("[...document.querySelectorAll('#list > li')].filter((li) => !marked.includes(li)).map((li) => li.dataset.key).join(',') + ' new, rose ' + rose.sort().join(',')"))
-	b.eval("rose = []; render()")
+	// A change the rows do not show (the folder's description) draws the list anew: rows made, or a row's title changed (a build may keep its rows).
+	b.eval(`rose = []; window.drawnAnew = false; new MutationObserver(() => { window.drawnAnew = true; }).observe(document.getElementById('list'), { childList: true, attributeFilter: ['title'], subtree: true });
+		fetch('/api/pages/docs', { method: 'PATCH', headers: { 'Content-Type': 'application/json' }, body: '{"description":"d"}' }).then((r) => r.status)`)
+	b.untilRead(b.reread(), "the list redrawn", "window.drawnAnew")
 	b.still()
 	out = append(out, b.eval("'redrawn, rose ' + rose.length"))
 	// Closed, guide's rows go, and it leaves the URL.
@@ -102,17 +105,20 @@ func TestUIFolders(t *testing.T) { //nolint:paralleltest // the browser tests sh
 	// ↓ passes over a note, which has nothing to focus, to the row after it.
 	click("assets")
 	b.until("assets open", rows+".includes('(No HTML')")
-	// A folder shows no time, nor do its directories and notes, also after the times are advanced: only a page's row has one.
-	// Nor does its title say when it was linked or updated, nor its row in the search.
+	// A folder shows no time, nor do its directories and notes: only a page's row has one. Nor does its title say when it was
+	// linked or updated, nor its row in the search. "Also after the times are advanced" (refreshTimes, every 60 s) moves to a React unit test (S422 P9).
 	label := func(key string) string { return strings.Fields(i18n.New(i18n.English).Msg(key, ""))[0] }
 	check(t, "times", []string{
-		b.eval(`refreshTimes(); [...new Set([...document.querySelectorAll('#list > li.folder, #list li.tree')].map((li) => (li.querySelector('time').textContent === '' ? '-' : '+') +
-			(li.classList.contains('folder') ? 'folder' : ['dir', 'note'].find((k) => li.classList.contains(k)) ?? 'page')))].sort().join()`),
-		b.eval(`new RegExp(` + js(label("ui_registered_at")+"|"+label("ui_updated_at")) + `).test(document.querySelector('#list > li.folder .title').title)`),
-		b.eval(`(openFind(), [...document.querySelectorAll('#find-list li')].filter((li) => li.querySelector('.title').textContent === 'docs').map((li) => 'folder in the search:' + li.querySelector('time').textContent).join())`),
+		b.eval(`[...new Set([...document.querySelectorAll('#list > li[data-kind=folder], #list li[data-testid=tree]')].map((li) => (li.querySelector('time').textContent === '' ? '-' : '+') +
+			(li.dataset.kind ?? li.dataset.key.split(':')[0])))].sort().join()`),
+		b.eval(`new RegExp(` + js(label("ui_registered_at")+"|"+label("ui_updated_at")) + `).test(document.querySelector('#list > li[data-kind=folder] [data-testid=title]').title)`),
+		func() string {
+			pressFindOpen(b)
+			return b.eval(`[...document.querySelectorAll('#find-list li')].filter((li) => li.querySelector('[data-testid=title]').textContent === 'docs').map((li) => 'folder in the search:' + li.querySelector('time').textContent).join()`)
+		}(),
 	}, "+page,-dir,-folder,-note|false|folder in the search:")
-	b.eval("document.getElementById('find').close()")
-	b.eval(`[...document.querySelectorAll('#list li.tree button.title')].find((x) => x.textContent === 'assets').focus()`)
+	escapeDialog(b, "find")
+	b.eval(`[...document.querySelectorAll('#list li[data-testid=tree] button[data-testid=title]')].find((x) => x.textContent === 'assets').focus()`)
 	if err := chromedp.Do(b.ctx, chromedp.KeyEvent(kb.ArrowDown)); err != nil {
 		t.Fatal(err)
 	}
@@ -127,8 +133,8 @@ func TestUIFolders(t *testing.T) { //nolint:paralleltest // the browser tests sh
 	out = append(out, b.until("the frame", "!document.getElementById('frame').hidden && document.getElementById('frame-title').textContent"),
 		b.eval("new URL(document.getElementById('frame').src).pathname + new URL(document.getElementById('frame').src).hash"),
 		// No state of its own: its path and the page alone, its star and menu on the folder's row.
-		b.eval("[document.querySelector('#frame-actions .star').hidden, document.querySelector('#frame-actions .copy').hidden, document.querySelector('#frame-actions .more-slot').children.length, document.querySelector('#frame-actions .open').getAttribute('href')].join()"))
-	check(t, "the page alone, named", []string{b.eval("document.querySelector('#frame-actions .open').getAttribute('aria-label')")}, "Open setup.html alone in a new tab")
+		b.eval("[document.querySelector('#frame-actions [data-testid=star]').hidden, document.querySelector('#frame-actions [data-testid=copy]').hidden, document.querySelector('#frame-actions [data-testid=more-slot]').children.length, document.querySelector('#frame-actions [data-testid=open]').getAttribute('href')].join()"))
+	check(t, "the page alone, named", []string{b.eval("document.querySelector('#frame-actions [data-testid=open]').getAttribute('aria-label')")}, "Open setup.html alone in a new tab")
 	// A move to another part of it, as the page tells it, is written into the frame's URL.
 	// The URL is the frame's own to make: a relative one would be read against the frame URL.
 	// The part it is at goes into the frame's URL, and the frame's own part, from the address bar, to the page.
@@ -153,7 +159,7 @@ func TestUIFolders(t *testing.T) { //nolint:paralleltest // the browser tests sh
 		t.Fatal(err)
 	}
 	b.navigate("/?kind=folder&open=docs")
-	out = append(out, b.until("the folder missing", "document.querySelector('#list .miss') !== null && 'tree rows ' + document.querySelectorAll('#list li.tree').length"))
+	out = append(out, b.until("the folder missing", "document.querySelector('#list [data-testid=miss]') !== null && 'tree rows ' + document.querySelectorAll('#list li[data-testid=tree]').length"))
 	if err := os.Rename(docs+"-moved", docs); err != nil {
 		t.Fatal(err)
 	}
@@ -162,13 +168,13 @@ func TestUIFolders(t *testing.T) { //nolint:paralleltest // the browser tests sh
 	s.write(t, "more/m.html", "<title>m</title>")
 	b.navigate("/?kind=link")
 	b.eval("document.getElementById('add-link').click()")
-	b.eval(`document.getElementById('add-path').value = ` + js(filepath.Join(s.Env["HOME"], "more")) + `;
-		document.getElementById('add').requestSubmit()`)
+	b.fill("#add-path", filepath.Join(s.Env["HOME"], "more"))
+	b.eval("document.getElementById('add-submit').click()")
 	out = append(out, b.until("the folder added", rows+".includes('m.html') && "+opens),
 		b.eval("document.getElementById('add-title').textContent"))
 	// Once the rows have risen in, every folder's heading and every row of the tree shows whole.
 	b.still()
-	out = append(out, b.eval("[...document.querySelectorAll('#list > li')].map((li) => li.className.split(' ')[0] + ':' + getComputedStyle(li).opacity).join(',')"))
+	out = append(out, b.eval("[...document.querySelectorAll('#list > li')].map((li) => (li.dataset.testid ?? li.dataset.kind) + ':' + getComputedStyle(li).opacity).join(',')"))
 
 	guide := "dir:docs:guide/deep,page:docs:guide/setup.html,page:docs:guide/start.html"
 	check(t, "folders", out, `["docs"] ?kind=folder|a,b:c+,assets+,big+,guide+,index.html|1 groups, 1 folder|["docs","docs:guide","docs:a,b:c"] ?kind=folder|`+

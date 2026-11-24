@@ -403,13 +403,13 @@ A `graph` specifies only how its boxes, icons and groups are joined, and floe pl
 - `with` takes only one kind of edge out of the ranks: an edge from a box or an icon into the one that has `with`, which runs up or down as the ranks fall.
 - An edge into or out of boxes or icons that `with` or a level edge stands in one rank may be refused; the refusal names the edge. Drop `with`, or write the edge by hand beside the graph (*With parts written by hand*).
 - Other edges still decide ranks, and move the box or icon `with` names too: an edge from a group, an edge into the other end of a `level` edge, and an edge out of the one that has `with`. When they make a cycle, one edge of it is drawn back up, the way it is written. The order the boxes and icons are written in decides which, so write them in another order for another.
-- `with` joins boxes or icons that no edge joins, and they are laid out together in one rank. A box or icon written between them, with no edge to either, stands after them, not between them. Boxes and icons joined by edges keep their order.
+- `with` joins boxes or icons that no edge joins, and they are laid out together in one rank. A box or icon written between them, with no edge to either, stands after them, not between them (in the common group of a level edge, as written: *Level edges*). Boxes and icons joined by edges keep their order.
 
 ### Where edges end
 
 - On a `box`, edges leave and enter at separate points of its side, so that no two share a run. A `box` widens (with `right`, grows taller) for many edges.
 - Edges of one graph may cross one another. An edge of a graph that crosses another part is checked as any edge.
-- An icon stays 48 square however many edges reach it. Do not put more than three edges on one side of an icon: four arrowheads touch at their bases, and five or more overlap.
+- An icon stays 48 square however many edges reach it. Edges that turn beside an icon turn on lines apart, and the icon takes more room along the ranks the more edges reach the busier of its top and its bottom (with `right`, of its left and its right), so a graph whose icons have many edges takes more room. Do not put more than three edges on one side of an icon: four arrowheads touch at their bases, and five or more overlap.
 
 ### Labels
 
@@ -430,25 +430,14 @@ A `graph` specifies only how its boxes, icons and groups are joined, and floe pl
 ### Level edges
 
 - An edge written `level: true` stands its two boxes or icons in one rank and runs straight between their facing sides.
-- Its two boxes or icons MUST be of one group (or of none), or directly in two lanes.
-- Of the two, the one written first in `nodes` stands on the left (with `right`, on top), whichever way the edge runs. The boxes and icons that level edges join in one group stand side by side as written.
-- A box or icon directly in a lane that has a level edge to another lane stands at its lane's end towards it (at its start when it has edges both ways).
-- A level edge at a group, one with another box or icon standing between its two boxes or icons in their rank, one at the side of a loop, and an edge between two boxes or icons that level edges stand in one rank, may be refused. The refusal names the edge and says what to move or drop.
-- Laid out `right`, a lane's heading reaches into the first rank. A level edge that runs through it may be refused: shorten the heading.
-- A loop written `level` is a loop: its box or icon stands in one rank already.
-
-### Loops
-
-- An edge with the same box or icon in `from` and `to` is a loop. floe draws it out of the right side of the box or icon (with `right`, the bottom), and loops do not change how the graph is laid out.
-- An edge that goes round a group's frame across the side the loops go out of may fail the diagram as floe's own failure (`room made for the loops of box <n> is not clear`): take the loops or the group off.
-
-### With parts written by hand
-
-- An edge that cannot be written `level` can be written by hand beside the graph: one between two zones that are each a group, say, or between two boxes or icons that `with` stands in one rank. It moves nothing of the graph, so its ends stay in the ranks their other edges give them:
+- Its two boxes or icons may be in any groups or lanes. The lowest group holding both is their common group (the graph when no group does; in a graph of lanes, the graph always), and it is laid out as lanes are:
+  - The groups, lanes, boxes and icons directly in it stand in the order written. Of the two ends, the one written first in `nodes` stands on the left (with `right`, on top), whichever way the edge runs.
+  - An end inside a group of it, and each group holding that end inside the common group, stand at their end towards the other end (at their start when they have level edges both ways).
+  - A group directly in it that stands between the two ends and has no box or icon in their rank is crossed: the edge runs across its frame.
 
   ```yaml
   - diagram:
-      title: 'A copy between two zones, an edge written by hand beside the graph'
+      title: 'A copy between two zones, a level edge between their databases'
       parts:
         - graph:
             x: 20
@@ -458,15 +447,52 @@ A `graph` specifies only how its boxes, icons and groups are joined, and floe pl
                   name: zone-a
                   label: 'Zone A'
                   nodes:
+                    - box: { name: api-a, rows: [API] }
                     - box: { name: writer, rows: [Writer] }
+              - box: { name: lb, rows: ['Load balancer'] }
               - group:
-                  name: zone-b
-                  label: 'Zone B'
+                  name: zone-c
+                  label: 'Zone C'
                   nodes:
+                    - box: { name: api-c, rows: [API] }
                     - box: { name: reader, rows: [Reader] }
             edges:
-              - { from: zone-a, to: zone-b }
-        - edge: { from: writer, to: reader, label: copy, fromSide: right, toSide: right, via: [{ x: 190 }] }
+              - { from: lb, to: api-a }
+              - { from: lb, to: api-c }
+              - { from: api-a, to: writer }
+              - { from: api-c, to: reader }
+              - { from: writer, to: reader, level: true, label: copy }
+  ```
+- To stand a box, an icon or a group between two groups that a level edge joins, write it between them in `nodes`; to keep it out, write it before the first or after the second.
+- In a group that is no common group, the boxes and icons that level edges join stand side by side as written.
+- A level edge at a group, one at the side of a loop, and an edge between two boxes or icons that level edges stand in one rank, may be refused. So may a level edge that, laid out, has something between its two boxes or icons in their rank: a box, an icon, or the frame of a group inside a crossed group or under the common group. Where the rules above meet (an end facing both ways, a row of boxes and the order written), the order written wins and the edge may be refused. The refusal names the edge and what stands between: write the nodes in another order, move one into another group, or drop `level`. A writer in zone A with level edges to readers in zones B and C, written A, B, C, is refused, as B's reader stands between the writer and C's; written B, A, C, it is laid out.
+- Laid out `right`, a group's or a lane's heading reaches into its first rank. A level edge that runs through it may be refused: shorten the heading.
+- A loop written `level` is a loop: its box or icon stands in one rank already.
+
+### Loops
+
+- An edge with the same box or icon in `from` and `to` is a loop. floe draws it out of the right side of the box or icon (with `right`, the bottom), and loops do not change how the graph is laid out.
+- An edge that goes round a group's frame across the side the loops go out of may fail the diagram as floe's own failure (`room made for the loops of box <n> is not clear`): take the loops or the group off.
+
+### With parts written by hand
+
+- An edge that cannot be written `level` can be written by hand beside the graph: one past a box that level edges stand between its two boxes or icons, say. It moves nothing of the graph, so its ends stay in the ranks their other edges give them:
+
+  ```yaml
+  - diagram:
+      title: 'A call past the proxy, an edge written by hand beside the graph'
+      parts:
+        - graph:
+            x: 20
+            y: 40
+            nodes:
+              - box: { name: client, rows: [Client] }
+              - box: { name: proxy, rows: [Proxy] }
+              - box: { name: server, rows: [Server] }
+            edges:
+              - { from: client, to: proxy, level: true }
+              - { from: proxy, to: server, level: true }
+        - edge: { from: client, to: server, label: direct, fromSide: top, toSide: top, via: [{ y: 20 }] }
   ```
 - A box or an icon of a graph, and a group's or a lane's frame, can be the end of an edge written by hand, which ends on a side as any edge written by hand does (*Sides of an end*).
 - Run `floe diagram inspect` on the graph alone first: it prints where each box stands and the path of each edge, from which you read the sides the graph's edges end at and where to place the parts written by hand.

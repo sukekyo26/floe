@@ -11,6 +11,7 @@ import (
 
 	"floe/internal/cli"
 	"floe/internal/files"
+	"floe/internal/i18n"
 	"floe/internal/testfs"
 	"floe/internal/timebox"
 )
@@ -180,6 +181,9 @@ func TestOwnDirsOverlap(t *testing.T) {
 	link(t, pp, filepath.Join(dir, "same"))
 	link(t, filepath.Join(pp, "th"), filepath.Join(dir, "in"))
 	link(t, filepath.Join(pp, "gone"), filepath.Join(dir, "dangling"))
+	link(t, filepath.Join(dir, "elsewhere", "x"), filepath.Join(dir, "far"))
+	mkdirs(t, filepath.Join(dir, "pq"))
+	link(t, filepath.Join(dir, "elsewhere", "none"), filepath.Join(dir, "pq", "out"))
 	// What the system says listing value, which floe tells in its words.
 	unusable := func(key, value string) string {
 		_, err := files.ReadDir(value)
@@ -204,6 +208,7 @@ func TestOwnDirsOverlap(t *testing.T) {
 		{"not there, in", map[string]string{parts: pp, themes: pp + "/none"}, nil, overlap(parts, pp, themes, pp+"/none")},
 		{"not there, ending in /", map[string]string{parts: pp, themes: pp + "/none/"}, nil, overlap(parts, pp, themes, pp+"/none/")},
 		{"not there, with //", map[string]string{parts: pp, themes: pp + "//none"}, nil, overlap(parts, pp, themes, pp+"//none")},
+		{"both not there, one in the other", map[string]string{parts: dir + "/gone", themes: dir + "/gone/th"}, nil, overlap(parts, dir+"/gone", themes, dir+"/gone/th")},
 		{"templates", map[string]string{parts: pp, templates: pp}, []string{"check", "d.yaml"}, overlap(parts, pp, templates, pp)},
 		{
 			"all three",
@@ -222,8 +227,11 @@ func TestOwnDirsOverlap(t *testing.T) {
 		},
 		// Its words are taken where the test runs (Unix): Windows folds none/.. as written.
 		{"not there, then ..", map[string]string{parts: pp, themes: pp + "/none/.."}, nil, ""},
-		// A link to nothing is not followed (resolve), and is refused once what it leads to is there.
-		{"a link to nothing", map[string]string{parts: pp, themes: dir + "/dangling"}, nil, unusable(themes, dir+"/dangling")},
+		// A link to nothing is compared where it leads, before what it leads to is there.
+		{"a link to nothing", map[string]string{parts: pp, themes: dir + "/dangling"}, nil, overlap(parts, pp, themes, dir+"/dangling")},
+		{"a link to nothing, out", map[string]string{parts: pp, themes: dir + "/far"}, nil, unusable(themes, dir+"/far")},
+		// Compared where it leads alone, not where it is (RealAbove's LIMIT).
+		{"a link to nothing in it, out", map[string]string{parts: dir + "/pq", themes: dir + "/pq/out"}, nil, unusable(themes, dir+"/pq/out")},
 	} {
 		t.Run(tt.name, func(t *testing.T) {
 			t.Parallel()
@@ -241,6 +249,39 @@ func TestOwnDirsOverlap(t *testing.T) {
 				t.Errorf("floe %v = %d, %q, %q; want %q", args, code, stdout, stderr, tt.errs)
 			}
 		})
+	}
+}
+
+// A mistake of the templates' setting stops the commands that read templates alone: part list, part new and theme new
+// read and make as before, check is stopped.
+func TestTemplatesDirNotRead(t *testing.T) {
+	t.Parallel()
+
+	dir := write(t, map[string]string{"d.yaml": good})
+	home := filepath.Join(dir, "home")
+	env := cli.HomeEnv(home, map[string]string{"FLOE_TEMPLATES_DIR": "tpl"})
+	for _, tt := range []struct {
+		args []string
+		code int
+		out  string   // in stdout
+		told []string // in stderr, which is empty without them
+	}{
+		{[]string{"part", "new", "x"}, 0, filepath.Join(cli.DefaultPlace(home, "parts"), "x"), nil},
+		{[]string{"theme", "new", "y"}, 0, filepath.Join(cli.DefaultPlace(home, "themes"), "y"), nil},
+		{[]string{"check", "d.yaml"}, 1, "", []string{"FLOE_TEMPLATES_DIR", "tpl", "relative"}},
+	} {
+		code, stdout, stderr := runEnv(dir, env, tt.args...)
+		ok := code == tt.code && strings.Contains(stdout, tt.out) && (len(tt.told) > 0) == (stderr != "")
+		for _, w := range tt.told {
+			ok = ok && strings.Contains(stderr, w)
+		}
+		if !ok {
+			t.Errorf("floe %v = %d, %q, %q; want %d, %q, told %v", tt.args, code, stdout, stderr, tt.code, tt.out, tt.told)
+		}
+	}
+	mine := "\nx\t" + filepath.Join(cli.DefaultPlace(home, "parts"), "x") + "\t"
+	if code, stdout, stderr := runEnv(dir, env, "part", "list"); code != 0 || !strings.Contains(stdout, mine) || stderr != "" {
+		t.Errorf("floe part list = %d, %q, %q; want 0 with x", code, stdout, stderr)
 	}
 }
 
@@ -389,7 +430,7 @@ func TestTemplateCheck(t *testing.T) {
 			return at(dir, "page.html") + `:3:19: assets/ has no "img/z.svg": name a file under it, as a path from assets/ like img/logo.svg`
 		}},
 		{"for through a key the schema forbids", files("", example, "- for: itemz\n  expr: false\n  message: m\n"), func(dir string) string {
-			return at(dir, "checks.yaml") + ":1:8: for itemz: the schema allows no itemz there; write a path of keys its schema declares"
+			return at(dir, "checks.yaml") + ":1:8: " + i18n.EnglishCatalog().Msg("kit_for_undeclared", "itemz", "itemz")
 		}},
 		{"an example of another template", files("", strings.Replace(example, "template: memo", "template: report", 1), ""), func(dir string) string {
 			return at(dir, "example.yaml") + ":2:11: example.yaml names the template report; name it memo, after the template's directory"

@@ -80,7 +80,8 @@ type module struct {
 	pkgDirs []string
 }
 
-// build makes NOTICES.txt: floe's LICENSE, Go's, each module's by path and Lucide's, each file whole.
+// build makes NOTICES.txt: floe's LICENSE, Go's, each module's by path, Lucide's and the management page's
+// (webNotices), each file whole.
 func build(t *testing.T) ([]byte, error) {
 	t.Helper()
 
@@ -119,7 +120,63 @@ func build(t *testing.T) ([]byte, error) {
 		return nil, err
 	}
 	section(&b, "Lucide icons (internal/icons/lucide)", []file{{"LICENSE", lucide}})
+
+	web, err := webNotices(filepath.Join(root, "internal", "ui", "web"))
+	if err != nil {
+		return nil, err
+	}
+	for _, n := range web {
+		section(&b, n.title, []file{n.license})
+	}
 	return b.Bytes(), nil
+}
+
+// notice is a section of NOTICES.txt of one file.
+type notice struct {
+	title   string
+	license file
+}
+
+// webNotices are the notices of the management page's build in the directory web: each package dist/licenses.json
+// names, as Vite wrote it, by name, then Tailwind's, which makes CSS and so is in no licenses.json: the copy
+// tailwindcss.LICENSE under the version package.json pins.
+func webNotices(web string) ([]notice, error) {
+	b, err := os.ReadFile(filepath.Join(web, "dist", "licenses.json")) //nolint:gosec // G304: a file of the repository
+	if err != nil {
+		return nil, err
+	}
+	var built []struct{ Name, Version, Text string }
+	if err = json.Unmarshal(b, &built); err != nil {
+		return nil, fmt.Errorf("dist/licenses.json: %w", err)
+	}
+	slices.SortFunc(built, func(a, b struct{ Name, Version, Text string }) int { return strings.Compare(a.Name, b.Name) })
+	var notices []notice
+	for _, p := range built {
+		if p.Name == "" || p.Version == "" || p.Text == "" {
+			return nil, fmt.Errorf("dist/licenses.json has a package of no name, version or text: %q %q", p.Name, p.Version)
+		}
+		notices = append(notices, notice{p.Name + " " + p.Version + " (management page)", file{"LICENSE", []byte(p.Text)}})
+	}
+
+	b, err = os.ReadFile(filepath.Join(web, "package.json")) //nolint:gosec // G304: a file of the repository
+	if err != nil {
+		return nil, err
+	}
+	var pkg struct {
+		DevDependencies map[string]string `json:"devDependencies"`
+	}
+	if err = json.Unmarshal(b, &pkg); err != nil {
+		return nil, fmt.Errorf("package.json: %w", err)
+	}
+	tailwind, err := os.ReadFile(filepath.Join(web, "tailwindcss.LICENSE")) //nolint:gosec // G304: as above
+	if err != nil {
+		return nil, err
+	}
+	v := pkg.DevDependencies["tailwindcss"]
+	if v == "" || len(tailwind) == 0 {
+		return nil, errors.New("package.json pins no tailwindcss, or tailwindcss.LICENSE is empty")
+	}
+	return append(notices, notice{"tailwindcss " + v + " (management page)", file{"LICENSE", tailwind}}), nil
 }
 
 // modules are the modules but floe's of the packages built into floe for any release target.
@@ -266,8 +323,7 @@ func run(t *testing.T, name string, args ...string) []byte {
 	cmd.Dir = root
 	out, err := cmd.Output()
 	if err != nil {
-		var exit *exec.ExitError
-		if errors.As(err, &exit) {
+		if exit, ok := errors.AsType[*exec.ExitError](err); ok {
 			t.Fatalf("%s %v: %v: %s", name, args, err, exit.Stderr)
 		}
 		t.Fatalf("%s %v: %v", name, args, err)
@@ -359,5 +415,70 @@ func TestReleaseTargets(t *testing.T) {
 	}
 	if !slices.Equal(got, want) {
 		t.Errorf("the justfile's targets are %q, releaseTargets %q: make them the same", got, want)
+	}
+}
+
+// The management page's notices name every package of its build and Tailwind, and a package told only in part is
+// refused.
+func TestNoticesWeb(t *testing.T) {
+	t.Parallel()
+
+	web := filepath.Join(root, "internal", "ui", "web")
+	notices, err := webNotices(web)
+	if err != nil {
+		t.Fatal(err)
+	}
+	b, err := os.ReadFile(filepath.Join(web, "dist", "licenses.json"))
+	if err != nil {
+		t.Fatal(err)
+	}
+	var built []struct{ Name string }
+	if err := json.Unmarshal(b, &built); err != nil {
+		t.Fatal(err)
+	}
+	if len(built) == 0 {
+		t.Fatal("dist/licenses.json names no package")
+	}
+	titles := make([]string, 0, len(notices))
+	for _, n := range notices {
+		titles = append(titles, n.title)
+	}
+	names := make([]string, 0, 1+len(built))
+	names = append(names, "tailwindcss")
+	for _, p := range built {
+		names = append(names, p.Name)
+	}
+	for _, name := range names {
+		if !slices.ContainsFunc(titles, func(title string) bool { return strings.HasPrefix(title, name+" ") }) {
+			t.Errorf("no notice of %s in %q", name, titles)
+		}
+	}
+
+	// Each case changes one file of a build that is right
+	for name, changed := range map[string]map[string]string{
+		"no name":        {"dist/licenses.json": `[{"version": "1", "text": "MIT"}]`},
+		"no version":     {"dist/licenses.json": `[{"name": "a", "text": "MIT"}]`},
+		"no text":        {"dist/licenses.json": `[{"name": "a", "version": "1"}]`},
+		"no tailwindcss": {"package.json": `{"devDependencies": {}}`},
+		"empty license":  {"tailwindcss.LICENSE": ""},
+	} {
+		files := map[string]string{
+			"dist/licenses.json":  `[{"name": "a", "version": "1", "text": "MIT"}]`,
+			"package.json":        `{"devDependencies": {"tailwindcss": "4.3.5"}}`,
+			"tailwindcss.LICENSE": "MIT",
+		}
+		maps.Copy(files, changed)
+		dir := t.TempDir()
+		if err := os.Mkdir(filepath.Join(dir, "dist"), 0o755); err != nil {
+			t.Fatal(err)
+		}
+		for path, body := range files {
+			if err := os.WriteFile(filepath.Join(dir, filepath.FromSlash(path)), []byte(body), 0o600); err != nil {
+				t.Fatal(err)
+			}
+		}
+		if _, err := webNotices(dir); err == nil {
+			t.Errorf("%s: no error", name)
+		}
 	}
 }

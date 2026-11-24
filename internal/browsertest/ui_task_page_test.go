@@ -11,24 +11,24 @@ import (
 )
 
 // taskPageRows says the rows of a task's page: a category's heading in brackets, a page by its title.
-const taskPageRows = `[...document.querySelectorAll('#list > li')].map((li) => li.classList.contains('group') ? '[' + li.textContent + ']' : li.querySelector('.title').textContent).join(' | ')`
+const taskPageRows = `[...document.querySelectorAll('#list > li')].map((li) => li.dataset.testid === 'group' ? '[' + li.textContent + ']' : li.querySelector('[data-testid=title]').textContent).join(' | ')`
 
 // pressTaskArchive presses the task's archive button and waits until it says word and the pages are archived or given back
 // too: the words change before that, as archiveTask writes the task first.
 func pressTaskArchive(b *browser, word string) {
 	b.t.Helper()
 
-	if got := b.eval("typeof archivingTask"); got != "boolean" {
-		b.t.Fatalf("archivingTask is %s: the page no longer tells when its archive is done", got)
-	}
 	r := b.rect("document.getElementById('task-archive')")
+	// A press of the input cannot go in the evaluation that counts the reads (acted): pressed as a poll's read has just ended, the
+	// next is 3 s away, so that the read waited for is the press's
+	begun := b.pollEnded()
 	b.click(r.X+r.Width/2, r.Y+r.Height/2)
-	b.until("the button says "+word, "document.getElementById('task-archive').textContent === "+js(word))
-	b.until("the press done", "!archivingTask")
+	// The press is done with the read after its write
+	b.untilRead(begun, "the button to say "+word, "document.getElementById('task-archive').textContent === "+js(word))
 }
 
 // taskPageAt says where the focus and the page chosen are.
-const taskPageAt = `(document.activeElement.closest?.('li')?.querySelector('.title')?.textContent ?? 'none') + ' / ' + (picked?.slug ?? 'none')`
+const taskPageAt = `(document.activeElement.closest?.('li')?.querySelector('[data-testid=title]')?.textContent ?? 'none') + ' / ' + (document.getElementById('read-frame').dataset.slug ?? 'none')`
 
 // A task's page: nothing read as it opens, its pages under their categories in the order written, j and k through them, a page
 // whole back to where it came from; the state changed and what that does to the list and the focus on the way back; what is
@@ -64,10 +64,10 @@ func TestUITaskPage(t *testing.T) { //nolint:paralleltest // the browser tests s
 	s.floe(t, "task", "--slug", "loose", "--unpin")
 	s.write(t, "fold/one.html", "<title>one</title><p>one</p>")
 	s.floe(t, "publish", "--link", filepath.Join(s.Env["HOME"], "fold"), "--slug", "fold")
-	if _, err := st.Edit("fold", store.Edit{Project: ptrTo("proj")}); err != nil {
+	if _, err := st.Edit("fold", store.Edit{Project: new("proj")}); err != nil {
 		t.Fatal(err)
 	}
-	if _, err := st.ChangeTasks(store.TaskChange{Slugs: []string{"fold"}, Task: ptrTo("#1")}); err != nil {
+	if _, err := st.ChangeTasks(store.TaskChange{Slugs: []string{"fold"}, Task: new("#1")}); err != nil {
 		t.Fatal(err)
 	}
 	s.floe(t, "task", "--task", "#1", "--project", "proj", "--state", "done")
@@ -86,7 +86,7 @@ func TestUITaskPage(t *testing.T) { //nolint:paralleltest // the browser tests s
 		t.Helper()
 		b.moving("document.activeElement.dispatchEvent(new KeyboardEvent('keydown', { key: 'Enter', bubbles: true, cancelable: true }))")
 	}
-	const whole = "document.getElementById('back').getAttribute('href') + ' ' + document.querySelector('.brand').getAttribute('href') + ' ' + sessionStorage.getItem(ORDER_KEY)"
+	const whole = "document.getElementById('back').getAttribute('href') + ' ' + document.querySelector('[data-testid=brand]').getAttribute('href') + ' ' + sessionStorage.getItem('pages.order')"
 	opened := func(task, path string) {
 		t.Helper()
 		b.navigate(path)
@@ -100,7 +100,7 @@ func TestUITaskPage(t *testing.T) { //nolint:paralleltest // the browser tests s
 	unread := b.eval("document.getElementById('news-n').textContent")
 	key("j")
 	key("j")
-	say("list j j", "document.activeElement.querySelector('.tname').textContent")
+	say("list j j", "document.activeElement.querySelector('[data-testid=tname]').textContent")
 	enter()
 	b.until("#130's page", "location.search === '?project=proj&task=%23130' && "+taskPageShown)
 
@@ -108,9 +108,9 @@ func TestUITaskPage(t *testing.T) { //nolint:paralleltest // the browser tests s
 	say("rows", taskPageRows)
 	say("nothing open", taskPageAt)
 	say("url", "location.pathname + location.search")
-	say("the list's keys", "sessionStorage.getItem(LIST_KEY) + ' ' + sessionStorage.getItem(TASKS_KEY)")
-	say("head", "[document.getElementById('task-title').textContent, document.getElementById('task-state').value, document.getElementById('task-state').className, document.getElementById('task-project').textContent, document.getElementById('task-archive').hidden, document.getElementById('task-up').getAttribute('href')].join(' / ')")
-	say("nothing to select", "document.querySelectorAll('#list .sel').length + ' ' + [...document.querySelectorAll('#list .menu .select')].every((e) => e.hidden)")
+	say("the list's keys", "sessionStorage.getItem('pages.list') + ' ' + sessionStorage.getItem('pages.tasks')")
+	say("head", "[document.getElementById('task-title').textContent, document.getElementById('task-state').value, document.getElementById('task-state').dataset.state, document.getElementById('task-project').textContent, document.getElementById('task-archive').hidden, document.getElementById('to-tasks').getAttribute('href')].join(' / ')")
+	say("nothing to select", "document.querySelectorAll('#list [data-testid=sel]').length + ' ' + [...document.querySelectorAll('#list [data-testid=menu] [data-testid=select]')].every((e) => e.hidden)")
 	b.still()
 	if got := b.eval("document.getElementById('news-n').textContent"); got != unread {
 		t.Errorf("opening the task read a page: %s, was %s", got, unread)
@@ -135,52 +135,58 @@ func TestUITaskPage(t *testing.T) { //nolint:paralleltest // the browser tests s
 	b.until("the task's page again", "location.search === '?project=proj&task=%23130' && "+taskPageShown)
 
 	// The state changed: back to the list of that state, the task's row with the focus.
-	b.eval("document.getElementById('task-state').focus(); document.getElementById('task-state').value = 'todo'; document.getElementById('task-state').dispatchEvent(new Event('change'))")
-	b.until("the state", "document.getElementById('task-state').className.includes('todo')")
+	b.eval("document.getElementById('task-state').focus()")
+	// The write's answer marks the state at once; the head and the list it leads back to are of the read after it
+	begun := b.pollEnded()
+	chooseValue(b, "task-state", "todo")
+	b.untilRead(begun, "the state read after its write", "document.getElementById('task-state').dataset.state === 'todo'")
 	// By the keyboard, whose keys a select keeps: the focus has left it.
 	realKey(b, "h", 0)
 	b.until("the list", "location.pathname === '/tasks' && document.querySelector('#list > li') && document.activeElement.closest('#list')")
-	say("after the state changed", "location.search + ' ' + [...document.querySelectorAll('#list .tname')].map((e) => e.textContent).join(' | ') + ' focus ' + document.activeElement.querySelector('.tname').textContent")
+	say("after the state changed", "location.search + ' ' + [...document.querySelectorAll('#list [data-testid=tname]')].map((e) => e.textContent).join(' | ') + ' focus ' + document.activeElement.querySelector('[data-testid=tname]').textContent")
 	// A task of the same state, its row has the focus.
 	b.navigate("/tasks?project=proj")
 	b.until("the rows", "document.querySelector('#list > li')")
-	b.eval("document.querySelector('#list .title').focus()")
+	b.eval("document.querySelector('#list [data-testid=title]').focus()")
 	enter()
 	b.until("#142's page", "location.search === '?project=proj&task=%23142' && "+taskPageShown)
 	key("h")
 	b.until("the list", "location.pathname === '/tasks' && document.activeElement.closest('#list')")
-	say("the row come back to", "document.activeElement.querySelector('.tname').textContent")
+	say("the row come back to", "document.activeElement.querySelector('[data-testid=tname]').textContent")
 
 	// A pin: through the pins, back to the list with its filter.
 	b.navigate("/tasks?view=todo&project=proj")
 	b.until("the rows", "document.querySelector('#list > li')")
-	say("the list kept", "sessionStorage.getItem(TASKS_KEY)")
-	b.moving("document.querySelector('.pin').click()")
+	say("the list kept", "sessionStorage.getItem('pages.tasks')")
+	b.moving("document.querySelector('[data-testid=pin]').click()")
 	b.until("the pin whole", "location.pathname.startsWith('/a/p') && document.getElementById('frame-title').textContent")
 	say("pin", "location.pathname + ' ' + "+whole)
 	key("h")
 	b.until("the filtered list", "location.pathname + location.search === '/tasks?view=todo&project=proj'")
 	b.until("the rows", "document.querySelector('#list > li')")
-	b.moving("[...document.querySelectorAll('#list .title')].find((a) => a.textContent.startsWith('#130')).click()")
+	b.moving("[...document.querySelectorAll('#list [data-testid=title]')].find((a) => a.textContent.startsWith('#130')).click()")
 	b.until("the task's page", "location.search.includes('task=') && "+taskPageShown)
-	say("up goes to the task's state", "document.getElementById('task-up').getAttribute('href')")
+	say("up goes to the task's state", "document.getElementById('to-tasks').getAttribute('href')")
 
 	// In a folder's tree on the task's page; a page named whole there; a page of no rows.
 	opened("#1", "/tasks?project=proj&task=%231")
-	b.eval("document.querySelector('#list li[data-slug=fold] .title').click()")
-	b.until("the tree", "document.querySelector('#list li.tree .title')")
-	b.eval("document.querySelector('#list li.tree .title').focus()")
+	b.eval("document.querySelector('#list li[data-slug=fold] [data-testid=title]').click()")
+	b.until("the tree", "document.querySelector('#list li[data-testid=tree] [data-testid=title]')")
+	b.eval("document.querySelector('#list li[data-testid=tree] [data-testid=title]').focus()")
 	enter()
 	b.until("the folder's page", "location.pathname === '/a/fold/' && location.search === '?file=one.html' && document.getElementById('frame-title').textContent")
 	say("in the folder", whole)
 	opened("#128", "/tasks?project=proj&task=%23128")
-	b.eval("document.querySelector('#list .title').focus()")
+	b.eval("document.querySelector('#list [data-testid=title]').focus()")
 	enter()
 	b.until("the page whole", "location.pathname === '/a/c1/' && document.getElementById('frame-title').textContent")
-	b.moving("openEdit(items.find((a) => a.slug === 'c1')); document.getElementById('edit-slug').value = 'c2'; document.getElementById('edit').requestSubmit()")
+	pressMenuItem(b, "#frame-actions", "edit")
+	openSlugField(b)
+	b.fill("#edit-slug", "c2")
+	b.moving("document.getElementById('edit-submit').click()")
 	b.until("the new name", "location.pathname === '/a/c2/' && document.getElementById('frame-title').textContent")
 	say("renamed whole", whole)
-	b.eval("sessionStorage.removeItem(ORDER_KEY)")
+	b.eval("sessionStorage.removeItem('pages.order')")
 	b.navigate("/a/loose/")
 	b.until("the bar", "document.getElementById('frame-title').textContent")
 	say("of no rows", whole)
@@ -193,7 +199,7 @@ func TestUITaskPage(t *testing.T) { //nolint:paralleltest // the browser tests s
 	say("archived", taskPageRows)
 	b.navigate("/tasks?view=archived")
 	b.until("the archive", "document.querySelector('#list > li')")
-	say("the shelf's archive", "[...document.querySelectorAll('#list .tname')].map((e) => e.textContent).join(' | ')")
+	say("the shelf's archive", "[...document.querySelectorAll('#list [data-testid=tname]')].map((e) => e.textContent).join(' | ')")
 	opened("#120", "/tasks?project=proj&task=%23120")
 	b.eval("document.getElementById('task-archive').click()")
 	b.until("given back", "document.getElementById('task-archive').textContent === 'Archive'")
@@ -202,8 +208,8 @@ func TestUITaskPage(t *testing.T) { //nolint:paralleltest // the browser tests s
 	b.eval("localStorage.setItem('list.columns', JSON.stringify({ listOpen: false }))")
 	opened("#128", "/tasks?project=proj&task=%23128")
 	say("folded, none chosen", "(document.getElementById('listcol').offsetParent !== null) + ' ' + document.getElementById('list-hide').hidden")
-	b.eval("document.querySelector('#list .title').click()")
-	b.until("the page chosen", "picked && document.getElementById('listcol').offsetParent === null")
+	b.eval("document.querySelector('#list [data-testid=title]').click()")
+	b.until("the page chosen", "document.getElementById('read-frame').dataset.slug && document.getElementById('listcol').offsetParent === null")
 	b.eval("localStorage.removeItem('list.columns')")
 
 	// A state changed while the choices are open is drawn once they close.
@@ -213,7 +219,7 @@ func TestUITaskPage(t *testing.T) { //nolint:paralleltest // the browser tests s
 	b.click(state.X+state.Width/2, state.Y+state.Height/2)
 	b.until("the choices", "document.getElementById('task-state').matches(':open')")
 	s.floe(t, "task", "--task", "#142", "--project", "proj", "--state", "done")
-	b.until("a look at the tasks", "tasksRead.raw.includes('done') && tasksRead.tasks.proj['#142'].state === 'done'")
+	b.untilRead(b.reread(), "a look at the tasks", "true")
 	say("while open", "document.getElementById('task-state').value")
 	b.pressKey("\x1b")
 	b.until("the choices closed", "!document.getElementById('task-state').matches(':open')")
@@ -221,8 +227,9 @@ func TestUITaskPage(t *testing.T) { //nolint:paralleltest // the browser tests s
 	s.floe(t, "task", "--task", "#142", "--project", "proj", "--state", "doing")
 
 	// A task of no pages is removed by two presses, its name and project whatever they hold.
-	s.floe(t, "task", "--task", "it's $(touch made)", "--project", "", "--state", "todo")
-	b.navigate("/tasks?project=%2F&task=" + url.QueryEscape("it's $(touch made)"))
+	const odd = "it's `touch made` $HOME; a|b"
+	s.floe(t, "task", "--task", odd, "--project", "", "--state", "todo")
+	b.navigate("/tasks?project=%2F&task=" + url.QueryEscape(odd))
 	b.until("no pages", "!document.getElementById('task-none').hidden")
 	for range 2 {
 		b.still()
@@ -239,7 +246,7 @@ func TestUITaskPage(t *testing.T) { //nolint:paralleltest // the browser tests s
 		t.Fatal(err)
 	}
 	opened("#142", "/tasks?project=proj&task=%23142")
-	say("a tag", "document.querySelector('#list .tagpill').tagName + ' ' + document.querySelector('#list .tagpill').textContent")
+	say("a tag", "document.querySelector('#list [data-testid=tagpill]').tagName + ' ' + document.querySelector('#list [data-testid=tagpill]').textContent")
 
 	// What is not there, and what cannot be written.
 	opened("#128", "/tasks?project=proj&task=%23128")
@@ -281,7 +288,7 @@ func TestUITaskPage(t *testing.T) { //nolint:paralleltest // the browser tests s
 	if err := os.WriteFile(filepath.Join(s.Env["FLOE_DIR"], "tasks.json"), []byte("{ broken"), 0o600); err != nil { //nolint:gosec // G703: a path the test names
 		t.Fatal(err)
 	}
-	b.eval("document.getElementById('task-state').value = 'done'; document.getElementById('task-state').dispatchEvent(new Event('change'))")
+	chooseValue(b, "task-state", "done")
 	b.until("the refusal", "!document.getElementById('error').hidden")
 	// The pages are told still, so a done task's archive can be pressed while its state cannot be read.
 	say("refused", "document.getElementById('task-state').value + ' ' + document.getElementById('task-state').hidden + ' ' + document.getElementById('error').textContent.includes('mend it by hand')")
@@ -293,7 +300,7 @@ func TestUITaskPage(t *testing.T) { //nolint:paralleltest // the browser tests s
 	}{{1400, true}, {960, true}, {880, false}} {
 		b.size(c.width, 800, false)
 		beside := b.eval("document.getElementById('reader').offsetParent !== null") == "true"
-		shelf := b.eval("document.getElementById('shelf').offsetParent !== null") == "true"
+		shelf := b.eval("document.getElementById('shelf')?.offsetParent != null") == "true"
 		over := b.eval("document.documentElement.scrollWidth > innerWidth") == "true"
 		if beside != c.beside || shelf || over {
 			t.Errorf("width %d: beside %t, shelf %t, past the edge %t", c.width, beside, shelf, over)
@@ -307,17 +314,13 @@ func TestUITaskPage(t *testing.T) { //nolint:paralleltest // the browser tests s
 // taskPageShown tells a task's page drew its rows.
 const taskPageShown = "!document.getElementById('task-head').hidden && document.querySelector('#list > li')"
 
-func ptrTo[T any](v T) *T {
-	return &v
-}
-
 // taskPageWant is what TestUITaskPage reads, in the order it reads it.
 const taskPageWant = `list j j: #130
-rows: T n1 | [designAdd a page] | T d1 | [buildAdd a page] | T i1 | [reviewAdd a page] | T r1 | [nothingAdd a pageNo pages yet]
+rows: [No category] | T n1 | [design] | T d1 | [build] | T i1 | [review] | T r1 | [nothingNo pages yet]
 nothing open: none / none
 url: /tasks?project=proj&task=%23130
 the list's keys:  ?project=proj
-head: #130 / doing / ver-pick st doing / proj / true / /tasks?project=proj
+head: #130 / doing / doing / proj / true / /tasks?project=proj
 nothing to select: 0 true
 j: T n1 / n1, T d1 / d1, T i1 / i1, T r1 / r1
 whole: /tasks?project=proj&task=%23130 / {"order":["n1","d1","i1","r1"],"shown":["n1","d1","i1","r1"],"back":"/tasks?project=proj&task=%23130","at":{"slug":"r1","file":"","v":0}}
@@ -331,7 +334,7 @@ in the folder: /tasks?project=proj&task=%231 / {"order":[],"shown":["fold"],"bac
 renamed whole: /tasks?project=proj&task=%23128 / {"order":["c2"],"shown":["c2"],"back":"/tasks?project=proj&task=%23128","at":{"slug":"c2","file":"","v":0}}
 of no rows: / / null
 done: Archive
-archived: T x1
+archived: [No category] | T x1
 the shelf's archive: #120
 folded, none chosen: true true
 while open: doing
@@ -344,8 +347,9 @@ unreadable, done: Archive
 no task: No task #999 true 0
 refused: doing false true`
 
-// The way up of a task's page is its project's list at the state the task is in now, whatever way it was come to; a state changed on
-// the page takes it along, and the row the list opens with the focus on is the task's. The tab's list is left as it was.
+// The way up of a task's page, the bar's task list and h, is its project's list at the state the task is in now, whatever way it was
+// come to; a state changed on the page takes it along, and the row the list opens with the focus on is the task's. The tab's list kept
+// is left as it was, which the list's own link goes to.
 func TestUITaskUp(t *testing.T) { //nolint:paralleltest // the browser tests share one Chrome, one at a time
 	s := newSite(t)
 	b := s.b
@@ -363,7 +367,7 @@ func TestUITaskUp(t *testing.T) { //nolint:paralleltest // the browser tests sha
 	defer b.unsize()
 
 	var out []string
-	const up = "document.getElementById('task-up').getAttribute('href')"
+	const up = "document.getElementById('to-tasks').getAttribute('href')"
 	say := func(what string) {
 		t.Helper()
 		out = append(out, what+": "+b.eval(up))
@@ -378,17 +382,17 @@ func TestUITaskUp(t *testing.T) { //nolint:paralleltest // the browser tests sha
 
 	// By a row of the list, at that state: through a reload, j and k, and a page whole and back.
 	b.navigate("/tasks?view=todo&project=proj")
-	b.until("the rows", "document.querySelector('#list > li .title')")
-	press("document.querySelector('#list > li .title')")
+	b.until("the rows", "document.querySelector('#list > li [data-testid=title]')")
+	press("document.querySelector('#list > li [data-testid=title]')")
 	b.until("the task's page", task1)
 	say("a row")
 	b.navigate("/tasks?project=proj&task=%231")
 	b.until("reloaded", task1)
 	say("reloaded")
 	b.pressKey("j")
-	b.until("the page beside", "picked?.slug")
+	b.until("the page beside", "document.getElementById('read-frame').dataset.slug")
 	b.pressKey("j")
-	b.until("the next", "picked?.slug === 'b'")
+	b.until("the next", "document.getElementById('read-frame').dataset.slug === 'b'")
 	say("j j")
 	b.moving("document.activeElement.dispatchEvent(new KeyboardEvent('keydown', { key: 'Enter', bubbles: true, cancelable: true }))")
 	b.until("the page whole", "location.pathname === '/a/b/' && document.getElementById('frame-title').textContent")
@@ -397,19 +401,21 @@ func TestUITaskUp(t *testing.T) { //nolint:paralleltest // the browser tests sha
 	b.until("the task's page", task1)
 	say("back from it")
 
-	// The state changed there: to the list it has come to be on, its row with the focus; the tab's list stays what was last seen.
+	// The state changed there: to the list it has come to be on, its row with the focus, by the bar's task list as by h.
 	b.navigate("/tasks?view=todo&project=proj")
-	b.until("the rows", "document.querySelector('#list > li .title')")
-	press("document.querySelector('#list > li .title')")
+	b.until("the rows", "document.querySelector('#list > li [data-testid=title]')")
+	press("document.querySelector('#list > li [data-testid=title]')")
 	b.until("the task's page", task1)
-	b.eval("document.getElementById('task-state').value = 'done'; document.getElementById('task-state').dispatchEvent(new Event('change'))")
-	b.until("the state", "document.getElementById('task-state').className.includes('done')")
+	// As above: the way back is of the read after the write
+	begun := b.pollEnded()
+	chooseValue(b, "task-state", "done")
+	b.untilRead(begun, "the state read after its write", "document.getElementById('task-state').dataset.state === 'done'")
 	say("the state changed")
-	out = append(out, "the tab's list: "+b.eval("document.getElementById('to-tasks').getAttribute('href')"))
+	out = append(out, "the bar's: "+b.eval("document.getElementById('to-tasks').getAttribute('href')"))
 	realKey(b, "h", 0)
 	b.until("the list", "location.search === '?project=proj&view=done' || location.search === '?view=done&project=proj'")
 	b.until("the focus", "document.activeElement.closest('#list')")
-	out = append(out, "on it: "+b.eval("location.search + ' ' + document.activeElement.querySelector('.tname').textContent"))
+	out = append(out, "on it: "+b.eval("location.search + ' ' + document.activeElement.querySelector('[data-testid=tname]').textContent"))
 	// Changed elsewhere, as it is read.
 	s.floe(t, "task", "--task", "#1", "--project", "proj", "--state", "todo")
 	b.navigate("/tasks?project=proj&task=%231")
@@ -427,20 +433,21 @@ func TestUITaskUp(t *testing.T) { //nolint:paralleltest // the browser tests sha
 	// By a badge on the page list, and by the way in a page's menu.
 	s.floe(t, "task", "--task", "#1", "--project", "proj", "--state", "todo")
 	b.navigate("/?project=proj")
-	b.until("the page list", "document.querySelector('#list li[data-slug=a] .task-tag')")
-	press("document.querySelector('#list li[data-slug=a] .task-tag')")
+	b.until("the page list", "document.querySelector('#list li[data-slug=a] [data-testid=task-tag]')")
+	press("document.querySelector('#list li[data-slug=a] [data-testid=task-tag]')")
 	b.until("the task's page", task1)
 	say("a badge")
-	press("document.querySelector('#task-up')")
+	press("document.querySelector('#to-tasks')")
 	b.until("the list", "location.pathname === '/tasks' && document.activeElement.closest('#list')")
-	out = append(out, "up from there: "+b.eval("location.search + ' ' + document.activeElement.querySelector('.tname').textContent + ' ' + document.getElementById('to-tasks').getAttribute('href')"))
+	out = append(out, "up from there: "+b.eval("location.search + ' ' + document.activeElement.querySelector('[data-testid=tname]').textContent + ' ' + document.getElementById('to-tasks').getAttribute('href')"))
 	b.navigate("/tasks?view=done&project=proj")
 	b.until("the rows", "document.querySelector('#list > li')")
 	out = append(out, "no focus opened otherwise: "+b.eval("String(document.activeElement.closest('#list') !== null)"))
 	b.navigate("/?project=proj")
 	b.until("the rows", "document.querySelector('#list li[data-slug=c]')")
-	b.eval("document.querySelector('#list li[data-slug=c] .more').open = true")
-	press("document.querySelector('#list li[data-slug=c] .task-open')")
+	b.eval("document.querySelector('#list li[data-slug=c] [data-testid=more] summary').click()")
+	b.until("the menu's way", "document.querySelector('#list li[data-slug=c] [data-testid=task-open]').checkVisibility()")
+	press("document.querySelector('#list li[data-slug=c] [data-testid=task-open]')")
 	b.until("the task's page", task2)
 	say("the menu")
 
@@ -456,7 +463,7 @@ j j: /tasks?project=proj&view=todo
 the page whole: /tasks?project=proj&task=%231
 back from it: /tasks?project=proj&view=todo
 the state changed: /tasks?project=proj&view=done
-the tab's list: /tasks?view=todo&project=proj
+the bar's: /tasks?project=proj&view=done
 on it: ?view=done&project=proj #1
 changed elsewhere: /tasks?project=proj&view=todo
 changed elsewhere, while open: /tasks?project=proj

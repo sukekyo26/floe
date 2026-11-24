@@ -59,19 +59,19 @@ func TestUITaskArchive(t *testing.T) { //nolint:paralleltest // the browser test
 		t.Helper()
 		out = append(out, what+": "+b.eval(`[`+button+`.hidden ? 'no button' : `+button+`.textContent, document.getElementById('task-state').hidden ? 'no select' : document.getElementById('task-state').value,
 			document.getElementById('task-archived').hidden ? 'no word' : document.getElementById('task-archived').textContent,
-			'rows ' + [...document.querySelectorAll('#list li[data-slug]')].map((li) => li.dataset.slug + (items.find((a) => a.slug === li.dataset.slug).archived ? '*' : '')).join(), document.activeElement.id].join(' | ')`))
+			'rows ' + [...document.querySelectorAll('#list li[data-slug]')].map((li) => li.dataset.slug + (li.dataset.archived === 'true' ? '*' : '')).join(), document.activeElement.id].join(' | ')`))
 	}
 	toast := func() string {
-		return b.eval("[...document.querySelectorAll('.toast')].at(-1).textContent")
+		return b.eval("[...document.querySelectorAll('[data-testid=toast]')].at(-1).textContent")
 	}
 	shelf := func(what string) {
 		t.Helper()
 		b.navigate("/tasks?project=proj&view=done")
-		b.until("the shelf", "document.querySelector('#list li .title .tname')")
-		done := b.eval("[...document.querySelectorAll('#list li .title .tname')].map((e) => e.textContent).sort().join()")
+		b.until("the shelf", "document.querySelector('#list li [data-testid=title] [data-testid=tname]')")
+		done := b.eval("[...document.querySelectorAll('#list li [data-testid=title] [data-testid=tname]')].map((e) => e.textContent).sort().join()")
 		b.navigate("/tasks?project=proj&view=archived")
-		b.until("the shelf", "!tasksRead.error && items.length > 0")
-		archived := b.eval("[...document.querySelectorAll('#list li .title .tname')].map((e) => e.textContent).sort().join()")
+		b.until("the shelf", "document.querySelector('#list li [data-testid=title] [data-testid=tname]')")
+		archived := b.eval("[...document.querySelectorAll('#list li [data-testid=title] [data-testid=tname]')].map((e) => e.textContent).sort().join()")
 		out = append(out, what+": done "+done+" | archive "+archived)
 	}
 
@@ -83,31 +83,40 @@ func TestUITaskArchive(t *testing.T) { //nolint:paralleltest // the browser test
 	pressTaskArchive(b, "Restore")
 	head("no page, archived")
 	out = append(out, "said: "+toast())
-	out = append(out, "the way up: "+b.eval("document.getElementById('task-up').getAttribute('href')"))
+	out = append(out, "the way up: "+b.eval("document.getElementById('to-tasks').getAttribute('href')"))
 	pressTaskArchive(b, "Archive")
 	head("no page, given back")
 	out = append(out, "said: "+toast())
 
-	// Of no page, drawn by the press itself: the looks at the list are held, so that none draws it for it.
+	// Of no page, drawn by the press itself: the looks at the list answer the tasks as they were, so that none draws it for it.
 	task("#still", "--state", "done")
 	open("#still")
-	b.eval("pressedAt = performance.now() + 1e9; " + button + ".click()")
+	release := b.staleReads("/api/tasks", "")
+	begun := b.pollEnded()
+	b.eval(button + ".click()")
 	b.until("the head drawn by the press", button+".textContent === 'Restore'")
-	b.eval("pressedAt = -Infinity")
+	b.staleOwn(begun)
+	release()
 
 	// A double press: the second lands on the button turned the other way, and is no press more.
 	task("#double", "--state", "done")
 	open("#double")
+	b.eval("window.patches = 0; window.countFetch = fetch; fetch = (u, o) => { if (o?.method === 'PATCH') window.patches++; return countFetch(u, o); }")
 	r := b.rect(button)
 	x, y := r.X+r.Width/2, r.Y+r.Height/2
+	begun = b.pollEnded()
 	b.mouse(input.DispatchMouseEventTypeMousePressed, x, y, 1)
 	b.mouse(input.DispatchMouseEventTypeMouseReleased, x, y, 1)
-	b.until("the press done", button+".textContent === 'Restore' && !archivingTask")
+	// The press is done with the read after its write
+	b.untilRead(begun, "the press done", button+".textContent === 'Restore'")
 	b.mouse(input.DispatchMouseEventTypeMousePressed, x, y, 2)
 	b.mouse(input.DispatchMouseEventTypeMouseReleased, x, y, 2)
 	b.painted()
-	b.until("no press more", "!archivingTask")
-	out = append(out, "a double press: "+b.eval(button+".textContent + ' ' + tasksOf().find((x) => x.name === '#double').state"))
+	b.untilRead(b.reread(), "no press more", "true")
+	if got := b.eval("window.patches"); got != "1" {
+		t.Errorf("a double press wrote %s times, want 1", got)
+	}
+	out = append(out, "a double press: "+b.eval(button+".textContent")+" "+taskState(t, st, "#double"))
 
 	// Of pages: the task alone, its pages left as they are, either way.
 	open("#pages")
@@ -127,8 +136,8 @@ func TestUITaskArchive(t *testing.T) { //nolint:paralleltest // the browser test
 	// A page given back or published again leaves it in the archive, with its unread on its row.
 	s.floe(t, "publish", s.page(t, "m1.yaml", "T m1", ""), "--slug", "m1")
 	b.navigate("/tasks?project=proj&view=archived")
-	b.until("the row", "[...document.querySelectorAll('#list li .title .tname')].some((e) => e.textContent === '#marked')")
-	out = append(out, "published again: "+b.eval("[...document.querySelectorAll('#list li')].find((li) => li.querySelector('.title .tname').textContent === '#marked').querySelector('.sub').textContent"))
+	b.until("the row", "[...document.querySelectorAll('#list li [data-testid=title] [data-testid=tname]')].some((e) => e.textContent === '#marked')")
+	out = append(out, "published again: "+b.eval("[...document.querySelectorAll('#list li')].find((li) => li.querySelector('[data-testid=title] [data-testid=tname]').textContent === '#marked').querySelector('[data-testid=sub]').textContent"))
 
 	// Not done: no button, however its pages are.
 	open("#work")
@@ -136,17 +145,17 @@ func TestUITaskArchive(t *testing.T) { //nolint:paralleltest // the browser test
 
 	// A parent's is its own. Its children keep theirs, the ones at work first.
 	open("#up")
-	const kids = "[...document.querySelectorAll('#task-family .kin-row')].map((e) => e.dataset.task + ' ' + e.querySelector('.kid-state').textContent).join()"
+	const kids = "[...document.querySelectorAll('#task-family [data-testid=kin-row]')].map((e) => e.dataset.task + ' ' + e.querySelector('[data-testid=kid-state]').textContent).join()"
 	b.until("the children", kids)
 	out = append(out, "the children: "+b.eval(kids))
 	pressTaskArchive(b, "Restore")
 	out = append(out, "the parent archived: "+b.eval(kids))
 	task("#kid3", "--state", "todo", "--parent", "#up")
-	b.until("a child more", "document.querySelectorAll('#task-family .kin-row').length === 3")
+	b.until("a child more", "document.querySelectorAll('#task-family [data-testid=kin-row]').length === 3")
 	out = append(out, "a child added: "+b.eval(kids))
-	out = append(out, "the child: "+b.eval("tasksOf().find((x) => x.name === '#kid').state"))
+	out = append(out, "the child: "+taskState(t, st, "#kid"))
 	open("#kid")
-	out = append(out, "its parent, from the child: "+b.eval("document.querySelector('#task-family .kin-row').dataset.task"))
+	out = append(out, "its parent, from the child: "+b.eval("document.querySelector('#task-family [data-testid=kin-row]').dataset.task"))
 	shelf("with the parent in the archive")
 
 	// Forgotten elsewhere: refused, as what was seen is not there, and not made again.
@@ -173,9 +182,8 @@ func TestUITaskArchive(t *testing.T) { //nolint:paralleltest // the browser test
 	// The server not reached: said, and nothing written.
 	open("#refused")
 	b.eval(`window.realFetch = fetch; fetch = (u, o) => (o?.method === 'PATCH' ? Promise.reject(new Error('no server')) : realFetch(u, o)); ` + button + `.click()`)
-	b.until("said", "!archivingTask && !document.getElementById('error').hidden")
-	out = append(out, "not reached: "+b.eval("document.getElementById('error').textContent + ' | ' + tasksOf().find((x) => x.name === '#refused').state"))
-	b.eval("fetch = realFetch; showError('')")
+	b.until("said", "!document.getElementById('error').hidden")
+	out = append(out, "not reached: "+b.eval("document.getElementById('error').textContent + ' | ' + document.getElementById('task-state').value"))
 
 	// Archived elsewhere with the choices open: they stay until closed, and the word takes their place then.
 	task("#open", "--state", "done")
@@ -184,7 +192,7 @@ func TestUITaskArchive(t *testing.T) { //nolint:paralleltest // the browser test
 	b.click(r.X+r.Width/2, r.Y+r.Height/2)
 	b.until("the choices", "document.getElementById('task-state').matches(':open')")
 	task("#open", "--state", "archived")
-	b.until("read", "tasksOf().find((x) => x.name === '#open').state === 'archived'")
+	b.untilRead(b.reread(), "read", "true")
 	out = append(out, "archived elsewhere, open: "+b.eval("document.getElementById('task-state').hidden + ' ' + document.getElementById('task-archived').hidden"))
 	b.pressKey("\x1b")
 	b.until("the choices closed", "!document.getElementById('task-state').matches(':open')")
@@ -204,17 +212,18 @@ func TestUITaskArchive(t *testing.T) { //nolint:paralleltest // the browser test
 	time.Sleep(2 * time.Millisecond) // the times are of milliseconds, and the same two go by name
 	task("#second", "--state", "archived")
 	b.navigate("/tasks?project=proj&view=archived")
-	b.until("the rows", "document.querySelector('#list li .title .tname')")
-	out = append(out, "the latest first: "+b.eval("[...document.querySelectorAll('#list li .title .tname')].map((e) => e.textContent).slice(0, 3).join()"))
+	b.until("the rows", "document.querySelector('#list li [data-testid=title] [data-testid=tname]')")
+	out = append(out, "the latest first: "+b.eval("[...document.querySelectorAll('#list li [data-testid=title] [data-testid=tname]')].map((e) => e.textContent).slice(0, 3).join()"))
 
 	// A child added by the button of a parent archived.
 	open("#up")
 	r = b.rect("document.getElementById('task-child')")
 	b.click(r.X+r.Width/2, r.Y+r.Height/2)
 	b.until("the dialog", "document.getElementById('kin-dialog').open")
-	b.eval("document.getElementById('kin-task').value = '#added'; document.getElementById('kin-task').dispatchEvent(new Event('input', { bubbles: true })); document.getElementById('kin-title').value = 'added'")
-	b.eval("document.getElementById('kin').requestSubmit()")
-	b.until("saved", "!document.getElementById('kin-dialog').open && document.querySelector('#task-family .kin-row[data-task=\"#added\"]')")
+	b.fill("#kin-task", "#added")
+	b.fill("#kin-title", "added")
+	b.eval("document.getElementById('kin-submit').click()")
+	b.until("saved", "!document.getElementById('kin-dialog').open && document.querySelector('#task-family [data-testid=kin-row][data-task=\"#added\"]')")
 	out = append(out, "a child by the button: "+b.eval(kids))
 
 	// At every width the word and the button stay in the window.
@@ -234,6 +243,17 @@ func TestUITaskArchive(t *testing.T) { //nolint:paralleltest // the browser test
 	if got, want := strings.Join(out, "\n"), taskArchiveWant; got != want {
 		t.Errorf("archiving tasks:\n%s\nwant:\n%s", got, want)
 	}
+}
+
+// taskState is the state of the task name of proj in the store.
+func taskState(t *testing.T, st *store.Store, name string) string {
+	t.Helper()
+
+	tasks, err := st.ReadTasks()
+	if err != nil {
+		t.Fatal(err)
+	}
+	return tasks["proj"][name].State
 }
 
 const taskArchiveWant = `at first: done #forgot,#marked,#none,#pages,#refused,#up | archive #kid2
@@ -284,12 +304,11 @@ func TestUITaskStateGone(t *testing.T) { //nolint:paralleltest // the browser te
 	if err := os.WriteFile(filepath.Join(s.Env["FLOE_DIR"], "tasks.json"), []byte(`{"proj": {"#gone": {"state": "done", "at": "2026-01-01T00:00:00Z"}}}`), 0o600); err != nil {
 		t.Fatal(err)
 	}
-	const change = "(() => { const sel = document.getElementById('task-state'); sel.value = 'doing'; sel.dispatchEvent(new Event('change', { bubbles: true })); })()"
 
 	b.navigate("/tasks?project=proj&task=%23gone")
 	b.until("the head", "!document.getElementById('task-head').hidden")
 	s.floe(t, "task", "--project", project, "--task", "#gone", "--forget")
-	b.eval(change)
+	chooseValue(b, "task-state", "doing")
 	b.until("the refusal", "!document.getElementById('error').hidden")
 	b.until("read again", "!document.getElementById('task-missing').hidden")
 	if got, want := b.eval("document.getElementById('error').textContent"), "Failed to change the state: task #gone is no longer there"; got != want {
@@ -303,34 +322,40 @@ func TestUITaskStateGone(t *testing.T) { //nolint:paralleltest // the browser te
 		t.Error("the task forgotten was made again")
 	}
 
-	// A write refused by anything else reads the tasks: the page shows the state another session wrote since, with the looks at the list held
-	// so that none reads them for it, and the refusal stays.
-	const refuse = "window.realFetch = fetch; fetch = (u, o) => (o?.method === 'PATCH' ? Promise.resolve(new Response('no', { status: 500 })) : realFetch(u, o)); pressedAt = performance.now() + 1e9; "
-	const free = "fetch = realFetch; pressedAt = -Infinity; showError('')"
+	// A write refused by anything else reads the tasks: the page shows the state another session wrote since, with the looks at the list
+	// answered the tasks as they were so that none draws them for it, and the refusal stays.
+	const refuse = "window.realFetch = fetch; fetch = (u, o) => (o?.method === 'PATCH' ? Promise.resolve(new Response('no', { status: 500 })) : realFetch(u, o))"
 	s.floe(t, "task", "--project", project, "--task", "#other", "--state", "done")
 	b.navigate("/tasks?project=proj&task=%23other")
 	b.until("the state", "document.getElementById('task-state').value === 'done'")
 	b.eval(refuse)
+	release := b.staleReads("/api/tasks", "")
 	s.floe(t, "task", "--project", project, "--task", "#other", "--state", "todo")
-	b.eval(change)
-	b.until("the refusal", "!document.getElementById('error').hidden")
+	begun := b.pollEnded()
+	chooseValue(b, "task-state", "doing")
+	// Read as the refusal's own read drew it, before a poll draws the tasks as they were again
+	b.until("the refusal", "!document.getElementById('error').hidden && document.getElementById('task-state').value === 'todo'")
+	b.staleOwn(begun)
+	release()
 	if got, want := b.eval("document.getElementById('task-state').value + ' | ' + document.getElementById('error').textContent"), "todo | Failed to change the state: no"; got != want {
 		t.Errorf("refused by another reason: %q, want %q", got, want)
 	}
-	b.eval(free)
 
 	// The archive button the same.
 	s.floe(t, "task", "--project", project, "--task", "#other", "--state", "done")
 	b.navigate("/tasks?project=proj&task=%23other")
 	b.until("the button", "!document.getElementById('task-archive').hidden")
 	b.eval(refuse)
+	release = b.staleReads("/api/tasks", "")
 	s.floe(t, "task", "--project", project, "--task", "#other", "--state", "todo")
+	begun = b.pollEnded()
 	b.eval("document.getElementById('task-archive').click()")
-	b.until("the refusal", "!archivingTask && !document.getElementById('error').hidden")
+	b.until("the refusal", "!document.getElementById('error').hidden && document.getElementById('task-archive').hidden")
+	b.staleOwn(begun)
+	release()
 	if got, want := b.eval("document.getElementById('task-archive').hidden + ' | ' + document.getElementById('error').textContent"), "true | Failed to save: no"; got != want {
 		t.Errorf("the button refused by another reason: %q, want %q", got, want)
 	}
-	b.eval(free)
 
 	// A task a page names with no row is not there: its page says so, and has no state to change.
 	b.navigate("/tasks?project=proj&task=%23pages")

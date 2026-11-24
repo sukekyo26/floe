@@ -1,6 +1,7 @@
 package browsertest_test
 
 import (
+	"maps"
 	"os"
 	"path/filepath"
 	"strings"
@@ -93,9 +94,7 @@ func listsKitAll(t *testing.T) map[string]string {
 
 	own := map[string]string{"themes/lists/base.css": listsGeneral, "themes/plain/base.css": "/* no rules */\n"}
 	for _, k := range []map[string]string{listsKit(t, "report", "lists-report"), listsKit(t, "design", "lists-design"), listsLook} {
-		for name, text := range k {
-			own[name] = text
-		}
+		maps.Copy(own, k)
 	}
 	return own
 }

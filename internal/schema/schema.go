@@ -299,8 +299,7 @@ func (h *holes) hole(err error) (at string, tell, again bool) {
 	}
 	at = urlOf(err)
 	base, frag, _ := strings.Cut(at, "#")
-	var pointer *jsonschema.JSONPointerNotFoundError
-	if !errors.As(err, &pointer) {
+	if _, ok := errors.AsType[*jsonschema.JSONPointerNotFoundError](err); !ok {
 		return at, !h.refused[base], false
 	}
 	return at, !h.refused[base], h.fill(base, unescape(frag))
@@ -363,17 +362,18 @@ func (c *Compiled) compileMistake(err error) error {
 		}
 		base, frag, _ := strings.Cut(sve.URL, "#")
 		var found usererr.List
-		leaves(ve, func(e *jsonschema.ValidationError) {
-			at := "#" + unescape(frag)
+		// The metaschema's anyOf and oneOf are small: each cause, a type's names or an array, says how to mend it
+		leaves(ve, true, func(e *jsonschema.ValidationError) {
+			var at strings.Builder
+			at.WriteString("#" + unescape(frag))
 			for _, step := range e.InstanceLocation {
-				at += "/" + escape(step)
+				at.WriteString("/" + escape(step))
 			}
-			found = append(found, usererr.LibraryIn(c.fileOf(base), at, e.ErrorKind.LocalizedString(english)))
+			found = append(found, usererr.LibraryIn(c.fileOf(base), at.String(), e.ErrorKind.LocalizedString(english)))
 		})
 		return found.Sorted().Err()
 	case errors.As(err, &load):
-		var refused *usererr.Error
-		if errors.As(load.Err, &refused) {
+		if refused, ok := errors.AsType[*usererr.Error](load.Err); ok {
 			return refused
 		}
 		return fmt.Errorf("schema: load %s: %w", load.URL, load.Err)
@@ -433,16 +433,21 @@ func (c *Compiled) fileOf(u string) string {
 }
 
 // leaves calls leaf with each mistake of e that is told: the causes of a mistake that only gathers others
-// (of the whole schema, a group, allOf, a $ref) are opened; anyOf and oneOf are one mistake each.
-func leaves(e *jsonschema.ValidationError, leaf func(*jsonschema.ValidationError)) {
+// (of the whole schema, a group, allOf, a $ref) are opened, and those of anyOf and oneOf with alternatives; else
+// anyOf and oneOf are one mistake each.
+func leaves(e *jsonschema.ValidationError, alternatives bool, leaf func(*jsonschema.ValidationError)) {
+	opens := false
 	switch e.ErrorKind.(type) {
 	case *kind.Schema, *kind.Group, *kind.AllOf, *kind.Reference:
+		opens = true
+	case *kind.AnyOf, *kind.OneOf:
+		opens = alternatives
+	}
+	if opens && len(e.Causes) > 0 {
 		for _, cause := range e.Causes {
-			leaves(cause, leaf)
+			leaves(cause, alternatives, leaf)
 		}
-		if len(e.Causes) > 0 {
-			return
-		}
+		return
 	}
 	leaf(e)
 }

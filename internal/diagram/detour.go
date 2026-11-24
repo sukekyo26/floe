@@ -25,7 +25,7 @@ const (
 	// searches of one drawing detourWork of both all told; past them, an edge keeps its way through. Raise them if
 	// large graphs come to keep many.
 	detourCells = 200_000
-	detourPops  = 40_000
+	detourPops  = 80_000
 	detourWork  = 800_000
 )
 

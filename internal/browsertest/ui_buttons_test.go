@@ -1,22 +1,29 @@
 package browsertest_test
 
 import (
-	"strconv"
-	"strings"
+	"encoding/json"
 	"testing"
 
 	"floe/internal/i18n"
 	"floe/internal/store"
 )
 
-// Every button of words is of one form, as drawn: 2rem high, 2.25rem at a modal's foot, its corners --corner-small. They
-// are gathered by their class, .btn, in each place they show, every modal of the management page among them. Their words
-// keep to one line, within what clips them, the row of buttons going onto another where they do not fit; #tag-new alone, of
-// words a person typed, goes over lines. A .btn on the screen has an icon, and one in a modal, the bar of the selected or a
-// toast has none. The task's way back, .up, is no .btn, and is measured for its words alone.
-// LIMIT: a button of words that does not have .btn is not found: the rule in .claude/rules/ui.md tells its writer. The
-// shelf's rows (its views and picks, and the add buttons under them) are such buttons, in the shape of a row, not .btn: the
-// page list and the task list have no .btn to measure, but in their modals.
+// Every button of words is of one form, as drawn: 2rem high, 2.25rem at a modal's foot, its corners --radius-small. They
+// are every button and link with words shown, in each place, every modal of the management page among them, but the rows the
+// rule names and the links of a row or a mark. Their words keep to one line, within what clips them, the row of buttons going
+// onto another where they do not fit; #tag-new alone, of words a person typed, goes over lines. One on the screen has an icon,
+// and one in a modal, the bar of the selected or a toast has none.
+
+// notButtons are not buttons of words by the rule (.claude/rules/ui.md): the shelf's rows and the add buttons under them, in a
+// modal too on a narrow screen; the settings' rows and their way back; the "…" menu's items. Nor are the links of a row or a mark
+// (the brand, a row's title in the list and the search, a row's task and tags, a task's parent and children, the diff's contents,
+// the bar's count of the unread, a link of words: the user's choice, S422-P8), nor tabs (role=tab: the help's switches), nor the bar's links to
+// the screens (#screens a, links of a nav, the screen shown darker: the user's choice, S448) and a page whole's way back to a
+// task's page, a plain link (the user's choice, S422-P10)
+const notButtons = "#shelf *, #filter-dialog #shelf-more *, [data-testid=settings-item], #settings-back, [data-testid=menu] *, " +
+	"[data-testid=brand], #list li [data-testid=title], #find-list li [data-testid=title], [data-testid=task-tag], #list li [data-testid=tagpill], [data-testid=kin-row], #diff-toc button, [role=tab], #news, " +
+	"#screens a, #back"
+
 func TestUIButtons(t *testing.T) { //nolint:paralleltest // the browser tests share one Chrome, one at a time
 	s := newSite(t)
 	b := s.b
@@ -25,7 +32,8 @@ func TestUIButtons(t *testing.T) { //nolint:paralleltest // the browser tests sh
 	project := "proj"
 	for _, slug := range []string{"a", "b"} {
 		s.floe(t, "publish", s.page(t, slug+".yaml", "T "+slug, ""), "--slug", slug)
-		if _, err := st.Edit(slug, store.Edit{Project: &project}); err != nil {
+		// A tag on a row: a mark of the row, as its task is
+		if _, err := st.Edit(slug, store.Edit{Project: &project, Tags: &store.TagsEdit{Add: []string{"plan"}}}); err != nil {
 			t.Fatal(err)
 		}
 	}
@@ -39,10 +47,21 @@ func TestUIButtons(t *testing.T) { //nolint:paralleltest // the browser tests sh
 	s.floe(t, "task", "--project", project, "--task", "#3", "--title", "a child", "--parent", "#1")
 
 	// The box that clips a button is its nearest ancestor that does not show what overflows it, or the screen; what it shows of
-	// itself is measured, not all it scrolls over
-	const measure = `(() => {
-		const small = getComputedStyle(document.documentElement).getPropertyValue('--corner-small').trim();
-		const shown = [...document.querySelectorAll('.btn, .up')].filter((e) => e.getClientRects().length && !e.closest('dialog:not([open])'));
+	// itself is measured, not all it scrolls over. A button's words are its text, but in an icon or a part not shown
+	measure := `(() => {
+		const small = getComputedStyle(document.documentElement).getPropertyValue('--radius-small').trim();
+		const words = (e) => {
+			let said = '';
+			const walk = (n) => {
+				for (const c of n.childNodes) {
+					if (c.nodeType === Node.TEXT_NODE) said += c.textContent;
+					else if (c.nodeType === Node.ELEMENT_NODE && c.localName !== 'svg' && c.checkVisibility()) walk(c);
+				}
+			};
+			walk(e);
+			return said.trim();
+		};
+		const shown = [...document.querySelectorAll('button, a')].filter((e) => e.getClientRects().length && !e.closest('dialog:not([open])') && words(e) && !e.matches(` + js(notButtons) + `));
 		const clip = (e) => {
 			for (let box = e.parentElement; box && box !== document.body && box !== document.documentElement; box = box.parentElement) {
 				const st = getComputedStyle(box);
@@ -50,42 +69,84 @@ func TestUIButtons(t *testing.T) { //nolint:paralleltest // the browser tests sh
 			}
 			return { left: 0, top: 0, right: innerWidth, bottom: innerHeight };
 		};
+		const name = (e) => e.id || e.dataset.testid || e.localName + ' ' + words(e);
 		const bad = shown.flatMap((e) => {
 			const r = e.getBoundingClientRect();
 			const c = clip(e);
 			const why = [];
-			if (e.matches('.btn')) {
-				const want = e.closest('.dialog-actions') ? 36 : 32;
-				if (e.id === 'tag-new' ? r.height < want - 0.5 : Math.abs(r.height - want) > 0.5) why.push('height ' + Math.round(r.height));
-				if (getComputedStyle(e).borderTopLeftRadius !== small) why.push('corner ' + getComputedStyle(e).borderTopLeftRadius);
-				if (Boolean(e.querySelector('svg')) === Boolean(e.closest('dialog, .bulk, .toast'))) why.push(e.querySelector('svg') ? 'an icon' : 'no icon');
-			}
+			const form = [];
+			const want = e.closest('[data-testid=dialog-actions], [data-testid=find-foot]') ? 36 : 32;
+			if (e.id === 'tag-new' ? r.height < want - 0.5 : Math.abs(r.height - want) > 0.5) form.push('height ' + Math.round(r.height));
+			if (getComputedStyle(e).borderTopLeftRadius !== small) form.push('corner ' + getComputedStyle(e).borderTopLeftRadius);
+			if (Boolean(e.querySelector('svg')) === Boolean(e.closest('dialog, #bulk, [data-testid=toast]'))) form.push(e.querySelector('svg') ? 'an icon' : 'no icon');
+			why.push(...form);
 			if (e.scrollHeight > e.clientHeight + 1) why.push('words over lines');
 			if (e.scrollWidth > e.clientWidth + 1) why.push('words cut off');
 			if (r.left < c.left - 0.5 || r.right > c.right + 0.5 || r.top < c.top - 0.5 || r.bottom > c.bottom + 0.5) why.push('out of its box');
-			return why.length ? [(e.id || e.className) + ': ' + why.join(', ')] : [];
+			return why.length ? [name(e) + ': ' + why.join(', ')] : [];
 		});
-		return shown.length + '|' + bad.join('; ');
+		const keys = ['#keys [data-help=about]', '#keys [data-help=keys]', '#keys [data-close]'].filter((sel) => shown.includes(document.querySelector(sel))).length;
+		// A small corner of no value would be met by none: said apart from the buttons
+		const dialogs = [...document.querySelectorAll('dialog')].map((d) => d.id);
+		return JSON.stringify({ n: shown.length, bad: (small === '' ? ['no small corner; '] : []).concat(bad).join('; '), keys, dialogs });
 	})()`
-	check := func(scene string) {
+	// The dialogs the screens hold
+	present := map[string]bool{}
+	check := func(scene string) int {
 		t.Helper()
 		b.still()
-		n, bad, _ := strings.Cut(b.eval(measure), "|")
-		if count, err := strconv.Atoi(n); err != nil || count == 0 || bad != "" {
-			t.Errorf("%s: %s buttons, of another form: %s", scene, n, bad)
+		var got struct {
+			N       int
+			Bad     string
+			Keys    int
+			Dialogs []string
 		}
+		if err := json.Unmarshal([]byte(b.eval(measure)), &got); err != nil {
+			t.Fatal(err)
+		}
+		if got.N == 0 || got.Bad != "" {
+			t.Errorf("%s: %d buttons, of another form: %s", scene, got.N, got.Bad)
+		}
+		for _, d := range got.Dialogs {
+			present[d] = true
+		}
+		return got.Keys - 1
 	}
 	opened := map[string]bool{}
-	modal := func(id, open string) {
+	closeModal := func(id string) {
 		t.Helper()
-		b.eval(open)
+		b.eval("document.querySelector(" + js("#"+id+" [data-close]") + ").click()")
+		b.until(id+" closed", "!document.getElementById("+js(id)+").open")
+	}
+	modal := func(id string, open func()) {
+		t.Helper()
+		open()
 		b.until(id, "document.getElementById("+js(id)+").open")
 		check(id)
-		b.eval("document.getElementById(" + js(id) + ").close()")
+		closeModal(id)
 		opened[id] = true
 	}
-	menu := func(slug, item string) string {
-		return "document.querySelector('#list li[data-slug=" + slug + "] .more').open = true; document.querySelector('#list li[data-slug=" + slug + "] .menu ." + item + "').click()"
+	press := func(sel string) func() {
+		return func() { b.eval("document.querySelector(" + js(sel) + ").click()") }
+	}
+	menu := func(slug, item string) func() {
+		return func() { pressMenuItem(b, "#list li[data-slug="+slug+"]", item) }
+	}
+	// Help's three buttons of words, on either part: they are among those measured
+	help := func(scene string) {
+		t.Helper()
+		modal("keys", press("#keys-open"))
+		b.eval("document.getElementById('keys-open').click()")
+		b.until("the help", "document.getElementById('keys').open && "+helpOn+"(document.querySelector('#keys [data-help=about]'))")
+		for _, part := range []string{"about", "keys"} {
+			b.eval("document.querySelector('#keys [data-help=" + part + "]').click()")
+			b.until("the part "+part, helpOn+"(document.querySelector('#keys [data-help="+part+"]'))")
+			// Its switches are tabs: its close button alone
+			if n := check(scene + ", help's " + part); n != 0 {
+				t.Errorf("%s, help's %s: %d buttons of words measured past or short of its own", scene, part, n)
+			}
+		}
+		closeModal("keys")
 	}
 	const archive = "document.getElementById('task-archive')"
 
@@ -93,59 +154,89 @@ func TestUIButtons(t *testing.T) { //nolint:paralleltest // the browser tests sh
 	defer b.unsize()
 	b.navigate("/?project=proj")
 	b.until("the rows", "document.querySelector('#list li[data-slug=b]')")
-	modal("add-dialog", "document.getElementById('add-link').click()")
+	modal("add-dialog", press("#add-link"))
 	modal("edit-dialog", menu("b", "edit"))
 	modal("set-dialog", menu("b", "task-set"))
 	// Asked of a page on another task, as Set the task asks it
-	modal("move-dialog", "void askMove(items.find((x) => x.slug === 'a'), '#2')")
-	modal("find", "openFind()")
-	modal("keys", "openKeys()")
-	modal("settings", "document.getElementById('settings-open').click()")
+	modal("move-dialog", func() {
+		menu("a", "task-set")()
+		b.until("the set modal", "document.getElementById('set-dialog').open")
+		b.fill("#set-task", "#2")
+		b.eval("document.getElementById('set-submit').click()")
+	})
+	closeModal("set-dialog")
+	// The list's search field stands for the bar's way to the search modal, which Ctrl+K opens
+	modal("find", func() { keyDown(b, "key: 'k', ctrlKey: true") })
+	modal("keys", func() { b.pressKey("?") })
+	help("the page list")
+	modal("settings", press("#settings-open"))
 	// The settings' rows and their way back are rows, not .btn: the rule's exceptions, named
-	const rows = "[...document.querySelectorAll('#settings button')].filter((e) => e.getClientRects().length && e.textContent.trim() && !e.matches('.btn, .icon-btn')).map((e) => e.id || e.className).join(',')"
+	const rows = "[...document.querySelectorAll('#settings button')].filter((e) => e.getClientRects().length && e.matches(" + "'[data-testid=settings-item], #settings-back'" + ")).map((e) => e.id || e.dataset.testid).join(',')"
 	b.eval("document.getElementById('settings-open').click()")
 	b.until("the settings", "document.getElementById('settings').open")
 	if got := b.eval(rows); got != "settings-item,settings-item" {
-		t.Errorf("the settings' list: text buttons not .btn %q, want its two rows", got)
+		t.Errorf("the settings' list: its rows %q, want its two", got)
 	}
-	b.eval("document.querySelector('.settings-item[data-panel=mode]').click()")
+	b.eval("document.querySelector('#settings [data-panel=mode]').click()")
+	b.until("the mode's part", "document.getElementById('settings-back').checkVisibility()")
 	if got := b.eval(rows); got != "settings-back" {
-		t.Errorf("the mode's part: text buttons not .btn %q, want the way back", got)
+		t.Errorf("the mode's part: its rows %q, want the way back", got)
 	}
-	b.eval("document.getElementById('settings').close()")
-	b.eval("for (const s of [...document.querySelectorAll('#list li:not(.group) .sel')].slice(0, 2)) s.click()")
+	check("the mode's part")
+	closeModal("settings")
+	b.eval("for (const s of [...document.querySelectorAll('#list li[data-slug] [data-testid=sel]')].slice(0, 2)) s.click()")
 	b.until("the bar", "!document.getElementById('bulk').hidden")
 	check("the bar of the selected")
-	modal("tag-dialog", "document.getElementById('bulk-tag').click()")
+	modal("tag-dialog", press("#bulk-tag"))
 	b.eval("document.getElementById('bulk-delete').click()")
 	check("the delete asked again")
 	b.eval("document.getElementById('bulk-clear').click()")
-	b.eval("document.querySelector('#list li[data-slug=b] .actions > .archive').click()")
-	b.until("the toast", "document.querySelector('.toast .btn')")
+	begun := b.acted("document.querySelector('#list li[data-slug=b] [data-testid=actions] > [data-testid=archive]').click()")
+	b.until("the toast", "document.querySelector('[data-testid=toast] button')")
 	// The toast comes before the list is read again, which draws the rows anew
-	b.untilActed("the archive done", "true")
+	b.untilRead(begun, "the archive done", "true")
 	check("the toast")
 
 	b.navigate("/tasks?project=proj&task=%231")
 	b.until("the head", "!"+archive+".hidden")
 	check("a task done")
-	modal("kin-dialog", "document.getElementById('task-child').click()")
-	modal("edit-task-dialog", "document.getElementById('task-edit').click()")
-	modal("add-page-dialog", "document.querySelector('#list .category-add').click()")
+	help("a task")
+	modal("kin-dialog", press("#task-child"))
+	modal("edit-task-dialog", press("#task-edit"))
+	modal("add-page-dialog", press("#task-add-page"))
+	// Each modal the screen holds is measured there too
+	modal("edit-add-dialog", func() {
+		press("#task-edit")()
+		b.until("the edit", "document.getElementById('edit-task-dialog').open")
+		press("#edit-url-plus")()
+	})
+	closeModal("edit-task-dialog")
+	modal("find", press("#find-open"))
+	modal("settings", press("#settings-open"))
+	modal("tag-dialog", menu("a", "tag-item"))
+	modal("edit-dialog", menu("a", "edit"))
+	modal("set-dialog", menu("a", "task-set"))
+	modal("move-dialog", func() {
+		menu("a", "task-set")()
+		b.until("the set modal", "document.getElementById('set-dialog').open")
+		b.fill("#set-task", "#2")
+		b.eval("document.getElementById('set-submit').click()")
+	})
+	closeModal("set-dialog")
 	b.navigate("/tasks?project=proj&task=%232")
 	b.until("no pages", "!document.getElementById('task-none').hidden")
 	check("a task of no page")
 	b.eval("document.getElementById('task-delete').click()")
-	b.until("asked again", "document.getElementById('task-delete').classList.contains('armed')")
+	b.until("asked again", "document.getElementById('task-delete').dataset.armed === 'true'")
 	check("the delete of a task asked again")
 	b.eval("document.getElementById('task-delete').focus(); document.getElementById('task-delete').blur()")
-	b.until("let go", "!document.getElementById('task-delete').classList.contains('armed')")
+	b.until("let go", "document.getElementById('task-delete').dataset.armed !== 'true'")
 	check("the delete of a task let go")
 
 	b.size(400, 800, true)
 	b.navigate("/?project=proj")
 	b.until("the rows", "document.querySelector('#list li[data-slug=a]')")
-	modal("filter-dialog", "document.getElementById('narrow-filter').click()")
+	modal("filter-dialog", press("#narrow-filter"))
 
 	// Narrow, in Japanese, whose words break between any two characters: a row of buttons goes onto another line, and a
 	// button wider than its line keeps its words to one
@@ -154,22 +245,28 @@ func TestUIButtons(t *testing.T) { //nolint:paralleltest // the browser tests sh
 	b.size(280, 800, false)
 	b.navigate("/?project=proj")
 	b.until("the rows", "document.querySelector('#list li[data-slug=c]')")
-	modal("keys", "openKeys()")
-	modal("set-dialog", menu("a", "task-set"))
-	if got := b.eval("String(document.getElementById('set-out').hidden)"); got != "false" {
-		t.Errorf("the set modal of a page on a task: take off hidden %s", got)
-	}
-	b.eval("document.querySelector('#list li[data-slug=a] .sel').click()")
+	modal("keys", func() { b.pressKey("?") })
+	help("narrow")
+	// Read while open: closed, the screen may draw the modal without its page
+	modal("set-dialog", func() {
+		menu("a", "task-set")()
+		b.until("set-dialog", "document.getElementById('set-dialog').open")
+		if got := b.eval("String(document.getElementById('set-out').hidden)"); got != "false" {
+			t.Errorf("the set modal of a page on a task: take off hidden %s", got)
+		}
+	})
+	b.eval("document.querySelector('#list li[data-slug=a] [data-testid=sel]').click()")
 	b.until("the bar", "!document.getElementById('bulk').hidden")
 	b.eval("document.getElementById('bulk-tag').click()")
 	b.until("tag-dialog", "document.getElementById('tag-dialog').open")
-	b.eval("const q = document.getElementById('tag-find'); q.value = 'a-tag-name-long-enough-to-go-over-the-width-of-a-narrow-modal'; q.dispatchEvent(new Event('input', { bubbles: true }))")
+	b.fill("#tag-find", "a-tag-name-long-enough-to-go-over-the-width-of-a-narrow-modal")
 	b.until("the new tag", "!document.getElementById('tag-new').hidden")
 	check("a long new tag")
-	b.eval("document.getElementById('tag-dialog').close(); document.getElementById('bulk-clear').click()")
-	b.eval("document.querySelector('#list li[data-slug=c] .actions > .archive').click()")
-	b.until("the toast", "document.querySelector('.toast .btn')")
-	b.untilActed("the archive done", "true")
+	closeModal("tag-dialog")
+	b.eval("document.getElementById('bulk-clear').click()")
+	begun = b.acted("document.querySelector('#list li[data-slug=c] [data-testid=actions] > [data-testid=archive]').click()")
+	b.until("the toast", "document.querySelector('[data-testid=toast] button')")
+	b.untilRead(begun, "the archive done", "true")
 	check("the toast of a long title")
 
 	b.navigate("/tasks?project=proj&task=%233")
@@ -186,8 +283,31 @@ func TestUIButtons(t *testing.T) { //nolint:paralleltest // the browser tests sh
 	b.eval("document.getElementById('task-family-word').textContent = 'The child tasks of this task, a heading long enough to take more than its line'")
 	check("a long heading of a card")
 
-	// The diff and a page not found, last: publishing a again may take it off its task
+	// A page whole's modals. Opened again, as read: the toast of the first opening moves
+	// into a modal opened, its button out of the modal's box (S445)
 	b.size(1400, 800, false)
+	b.navigate("/a/a/")
+	b.until("read", "document.querySelector('[data-testid=toast]')")
+	b.navigate("/a/a/")
+	b.until("the bar", "document.querySelector('#frame-actions [data-testid=task-set]')")
+	frameMenu := func(item string) func() {
+		return func() { pressMenuItem(b, "#frame-actions", item) }
+	}
+	modal("find", func() { keyDown(b, "key: 'k', ctrlKey: true") })
+	modal("keys", func() { b.pressKey("?") })
+	modal("settings", frameMenu("theme-item"))
+	modal("tag-dialog", frameMenu("tag-item"))
+	modal("edit-dialog", frameMenu("edit"))
+	modal("set-dialog", frameMenu("task-set"))
+	modal("move-dialog", func() {
+		frameMenu("task-set")()
+		b.until("the set modal", "document.getElementById('set-dialog').open")
+		b.fill("#set-task", "#2")
+		b.eval("document.getElementById('set-submit').click()")
+	})
+	closeModal("set-dialog")
+
+	// The diff and a page not found, last: publishing a again may take it off its task
 	s.floe(t, "publish", s.page(t, "a.yaml", "T a", "<p>two</p>"), "--slug", "a")
 	b.navigate("/a/a/?diff")
 	b.until("the diff", "!document.getElementById('diff-main').hidden")
@@ -199,8 +319,10 @@ func TestUIButtons(t *testing.T) { //nolint:paralleltest // the browser tests sh
 	b.until("the missing page", "!document.getElementById('notfound').hidden")
 	check("a page not found")
 
-	// A modal with no way here is a modal not measured.
-	if got := b.eval("document.querySelectorAll('dialog').length + ''"); got != strconv.Itoa(len(opened)) {
-		t.Errorf("%s modals, %d opened", got, len(opened))
+	// A modal with no way here is a modal not measured: each a screen holds, opened on one
+	for d := range present {
+		if !opened[d] {
+			t.Errorf("the %s modal is not measured on a screen", d)
+		}
 	}
 }

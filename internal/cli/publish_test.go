@@ -477,7 +477,7 @@ func TestPublishSaysProject(t *testing.T) {
 		}
 	}
 	// Emptied of its project, a page takes the one published from again; from where there is none, it has none still.
-	if _, err := s.Edit("m", store.Edit{Project: ptr("")}); err != nil {
+	if _, err := s.Edit("m", store.Edit{Project: new("")}); err != nil {
 		t.Fatal(err)
 	}
 	if got := publishedTogether(t, "/", env, filepath.Join(dir, "m.yaml")); strings.Contains(got, "page in ") {
@@ -487,14 +487,14 @@ func TestPublishSaysProject(t *testing.T) {
 		t.Errorf("a page emptied of its project wrote %q, want its project told", got)
 	}
 	// Emptied of its project, a link takes its file's again, not that of the directory floe publish runs in.
-	if _, err := s.Edit("h2", store.Edit{Project: ptr("")}); err != nil {
+	if _, err := s.Edit("h2", store.Edit{Project: new("")}); err != nil {
 		t.Fatal(err)
 	}
 	if got := publishedTogether(t, other, env, "--link", filepath.Join(dir, "h.html")); !strings.Contains(got, "\npage in project p\n") {
 		t.Errorf("a link emptied of its project wrote %q, want its file's project told", got)
 	}
 	// Moved on the management page, a page keeps its project.
-	if _, err := s.Edit("m", store.Edit{Project: ptr("moved")}); err != nil {
+	if _, err := s.Edit("m", store.Edit{Project: new("moved")}); err != nil {
 		t.Fatal(err)
 	}
 	if got := publishedTogether(t, dir, env, "m.yaml"); strings.Contains(got, "page in ") {
@@ -529,7 +529,7 @@ func TestPublishMoveProject(t *testing.T) {
 	if got := said(dir); !strings.HasSuffix(got, "\npage in project p\n") {
 		t.Fatalf("a new page wrote %q", got)
 	}
-	if _, err := s.ChangeTasks(store.TaskChange{Slugs: []string{"n"}, Task: ptr("t1")}); err != nil {
+	if _, err := s.ChangeTasks(store.TaskChange{Slugs: []string{"n"}, Task: new("t1")}); err != nil {
 		t.Fatal(err)
 	}
 	tasks, err := s.ReadTasks()

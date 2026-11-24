@@ -81,7 +81,7 @@ func TestEditRenameFirst(t *testing.T) {
 				t.Fatal(err)
 			}
 			t.Cleanup(func() { _ = os.Chmod(dir, 0o700) })                               //nolint:errcheck // a temporary directory
-			_, err := s.Edit("plan", store.Edit{Slug: ptr("plan-b"), Title: ptr("New")}) //nolint:exhaustruct // none
+			_, err := s.Edit("plan", store.Edit{Slug: new("plan-b"), Title: new("New")}) //nolint:exhaustruct // none
 			ue, ok := errors.AsType[*usererr.Error](err)
 			if !ok || ue.Key != "cannot_write" {
 				t.Fatalf("Edit with %s read only = %v, want cannot_write", readOnly, err)

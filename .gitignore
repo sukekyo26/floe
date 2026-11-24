@@ -5,3 +5,8 @@
 
 # Worktrees inside the main checkout
 /.claude/worktrees/
+
+# The management page's packages (internal/ui/web)
+/internal/ui/web/node_modules/
+# What go test -gallery writes for the gallery (just web-gallery)
+/internal/ui/web/gallery/boot.json

@@ -8,7 +8,7 @@ paths:
 # 部品・テンプレート・kit・描く所
 
 - **schema の形はコンパイルした木から**：floe が要る形（どの項目がどの部品・format か）は、コンパイルした `*jsonschema.Schema` から取り、schema の JSON を自前で辿らない。生の JSON を見るのは、`$schema`（2020-12・2019-09 だけを受ける）と `$id` の確かめと、`read` の字句の確かめだけで、schema の鍵の意味は読まない。例外：名前の並び（根・`$defs` の直下・`properties`）に名前を足すだけの写しは、生の JSON のその所だけを読んで書いてよい（書くのは写しだけで、ほかの鍵は読まない）。今は `holes.fill` と `AnyWith`
-- **木は Follow で歩く**：schema の木は、全部の欄を辿る `every` か、`schema.Follow` の繰り返しで歩き、検査ごとに歩き方を書き分けない。例外は、`$schema` と `$id` を見る生の JSON の歩きと、`sharedKeys`
+- **木は Follow で歩く**：schema の木は、全部の欄を辿る `every` か、`schema.Follow` の繰り返しで歩き、検査ごとに歩き方を書き分けない。例外は、`$schema` と `$id` を見る生の JSON の歩きと、`sharedKeys` と、`$ref` だけを先へたどる `refLoop`
 - **項目の検査は checkNode 1 つ**：schema の 1 つずつの検査は `checkNode` 1 つで、テンプレートも部品も共有の schema も `checkOwn` の同じ歩きで走らせる。共有の schema は、指す側の歩きでなく、その根から確かめる（指す側は根しか指せない）。指す側の `$ref` が辿られない所（辿らない場所にある、横の format で止まる）は、指す側で言う。テンプレートに足す検査は `checkNode` に足し、部品に写さない
 - **値を歩くのは Walk だけ**：データの値を schema に沿って歩くのは `schema.(*Compiled).Walk` だけで、値ごとに `Follow` を 1 回呼び、部品の値はその部品の schema の根から歩き続ける。描く値も、確かめる項目（部品の check を走らせる所）も、Walk から取る
 - **part.html は元の値を `written` で読む**：part.html に届く `.` は描いた後の値。描く前の字と比べる部品（table の列の `pills`）は関数 `written` で読み、中の部品の形を自分の schema に写さない。`written` の字は比べるか字のまま描き、Markdown や HTML として描かない

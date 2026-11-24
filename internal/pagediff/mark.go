@@ -1178,12 +1178,13 @@ func startTags(parent *html.Node) ([]*html.Node, string) {
 
 // probe asks the parser which of tags the last of chain holds, of their start tags starts, and keeps the answers.
 func (m *marker) probe(chain []*html.Node, starts string, tags []string) {
-	b := starts
+	var b strings.Builder
+	b.WriteString(starts)
 	for _, t := range tags {
-		b += "<" + t + ` data-floe-probe="` + t + `"></` + t + ">"
+		b.WriteString("<" + t + ` data-floe-probe="` + t + `"></` + t + ">")
 		m.held[holdKey{starts: starts, tag: t}] = false
 	}
-	root, err := html.Parse(strings.NewReader(b))
+	root, err := html.Parse(strings.NewReader(b.String()))
 	if err != nil {
 		return
 	}
@@ -1195,8 +1196,8 @@ func (m *marker) probe(chain []*html.Node, starts string, tags []string) {
 }
 
 func sameChain(n *html.Node, chain []*html.Node) bool {
-	for i := len(chain) - 1; i >= 0; i-- {
-		if n == nil || n.Type != html.ElementNode || n.Data != chain[i].Data || n.Namespace != chain[i].Namespace {
+	for _, c := range slices.Backward(chain) {
+		if n == nil || n.Type != html.ElementNode || n.Data != c.Data || n.Namespace != c.Namespace {
 			return false
 		}
 		n = n.Parent

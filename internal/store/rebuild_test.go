@@ -1,6 +1,7 @@
 package store_test
 
 import (
+	"context"
 	"fmt"
 	"os"
 	"path/filepath"
@@ -8,6 +9,9 @@ import (
 	"strings"
 	"testing"
 
+	"floe/internal/drawhere"
+	"floe/internal/drawproc"
+	floepublish "floe/internal/publish"
 	"floe/internal/store"
 	"floe/internal/testfs"
 )
@@ -27,14 +31,14 @@ func TestRebuild(t *testing.T) {
 		t.Fatal(err)
 	}
 	before := *s.ReadMeta("d")
-	if err := s.Rebuild(dw); err != nil {
+	if err := s.Rebuild(t.Context(), dw); err != nil {
 		t.Fatal(told(err, root))
 	}
 	if m := s.ReadMeta("d"); m.Source != before.Source {
 		t.Errorf("drawn the same, its copy changed: %s to %s", before.Source, m.Source)
 	}
 	v2 := picKit(t, "v2", "")
-	if err := s.Rebuild(v2); err != nil {
+	if err := s.Rebuild(t.Context(), v2); err != nil {
 		t.Fatal(told(err, root))
 	}
 	after := s.ReadMeta("d")
@@ -55,7 +59,7 @@ func TestRebuild(t *testing.T) {
 		t.Errorf("a page of no image not drawn again:\n%s", page)
 	}
 	again := s.ReadMeta("d").Source
-	if err := s.Rebuild(v2); err != nil || s.ReadMeta("d").Source != again {
+	if err := s.Rebuild(t.Context(), v2); err != nil || s.ReadMeta("d").Source != again {
 		t.Errorf("a second rebuild changed the copy: %v", err)
 	}
 }
@@ -71,7 +75,7 @@ func TestRebuildKept(t *testing.T) {
 	publish(t, s, dw, "b.yaml", "lang: en\ntemplate: pic\nneed: 1\ni: []\n", nil, store.Options{})
 	needs := picKit(t, "v2", strings.Replace(picSchema, `"type": "object",`, `"type": "object", "required": ["need"],`, 1))
 	pageA := read(t, filepath.Join(copyOf(t, s, root, "a"), "page.html"))
-	err := s.Rebuild(needs)
+	err := s.Rebuild(t.Context(), needs)
 	copyA := strings.Replace(copyOf(t, s, root, "a"), root, "S", 1)
 	want := lines(
 		filepath.Join(copyA, "data.yaml")+": missing property 'need'",
@@ -94,7 +98,7 @@ func TestRebuildKept(t *testing.T) {
 			t.Fatal(err)
 		}
 	}
-	err = s.Rebuild(dw)
+	err = s.Rebuild(t.Context(), dw)
 	got := told(err, root)
 	if strings.Count(got, `there is no theme "gone"`) != 1 || strings.Count(got, "keeps the page it had") != 2 {
 		t.Errorf("told\n%s", got)
@@ -116,7 +120,7 @@ func TestRebuildTooDeep(t *testing.T) {
 		filepath.Join(copyA, "data.yaml")+": html: open stack of elements exceeds 512 nodes",
 		filepath.Join(copyA, "data.yaml")+`: page "a" keeps the page it had: fix the data file it was published from and publish it again, or fix the template`,
 	)
-	if got := told(s.Rebuild(deep), root); got != want {
+	if got := told(s.Rebuild(t.Context(), deep), root); got != want {
 		t.Errorf("told\n%s\nwant\n%s", got, want)
 	}
 	if got := read(t, filepath.Join(copyOf(t, s, root, "a"), "page.html")); got != pageA {
@@ -127,8 +131,8 @@ func TestRebuildTooDeep(t *testing.T) {
 	}
 }
 
-// A copy whose page cannot be read (as a store develop wrote, of no page.html), or whose images cannot be, keeps
-// its page, told at what cannot be read.
+// A copy whose page cannot be read, or whose images cannot be, keeps its page, told at what cannot be read. One of no
+// page.html (as a store develop wrote) has no page to compare with: it is drawn again and written.
 func TestRebuildUnreadable(t *testing.T) {
 	t.Parallel()
 
@@ -136,17 +140,40 @@ func TestRebuildUnreadable(t *testing.T) {
 	t.Run("no page.html", func(t *testing.T) {
 		t.Parallel()
 
+		// No page to compare with: drawn again and written, as a page that changed, and still the version it was
 		s, root := newStore(t)
 		publish(t, s, picKit(t, "", ""), "a.yaml", "lang: en\ntemplate: pic\n", nil, store.Options{})
 		if err := os.Remove(filepath.Join(copyOf(t, s, root, "a"), "page.html")); err != nil {
 			t.Fatal(err)
 		}
+		before := listedOf(t, s, "a")
+		if err := s.Rebuild(t.Context(), picKit(t, "v2", "")); err != nil {
+			t.Fatal(told(err, root))
+		}
+		if page := read(t, filepath.Join(copyOf(t, s, root, "a"), "page.html")); !strings.Contains(page, "<body>v2") {
+			t.Errorf("page.html not drawn again:\n%s", page)
+		}
+		after := listedOf(t, s, "a")
+		if after.UpdatedAt != before.UpdatedAt || after.Version != before.Version || after.VersionCount != before.VersionCount || after.News != before.News {
+			t.Errorf("listed %+v, before %+v", after, before)
+		}
+	})
+	t.Run("page.html unreadable", func(t *testing.T) {
+		t.Parallel()
+
+		s, root := newStore(t)
+		publish(t, s, picKit(t, "", ""), "a.yaml", "lang: en\ntemplate: pic\n", nil, store.Options{})
+		had := filepath.Join(copyOf(t, s, root, "a"), "page.html")
+		if err := os.Remove(had); err != nil {
+			t.Fatal(err)
+		}
+		if err := os.Mkdir(had, 0o700); err != nil {
+			t.Fatal(err)
+		}
+		got := told(s.Rebuild(t.Context(), picKit(t, "v2", "")), root)
 		copyA := strings.Replace(copyOf(t, s, root, "a"), root, "S", 1)
-		_, gone := os.ReadFile(filepath.Join(copyOf(t, s, root, "a"), "page.html"))
-		want := lines(filepath.Join(copyA, "page.html")+": "+testfs.Words(t, gone), filepath.Join(copyA, "data.yaml")+fmt.Sprintf(keeps, "a"))
-		got := told(s.Rebuild(picKit(t, "v2", "")), root)
-		if got != want {
-			t.Errorf("told\n%s\nwant\n%s", got, want)
+		if !strings.HasPrefix(got, filepath.Join(copyA, "page.html")+": ") || !strings.HasSuffix(got, filepath.Join(copyA, "data.yaml")+fmt.Sprintf(keeps, "a")) {
+			t.Errorf("told\n%s\nwant the page.html that cannot be read, and that it keeps its page", got)
 		}
 	})
 	t.Run("images unreadable", func(t *testing.T) {
@@ -165,7 +192,7 @@ func TestRebuildUnreadable(t *testing.T) {
 		t.Cleanup(func() { _ = os.Chmod(images, 0o700) }) //nolint:errcheck // the test is told already
 		copyB := strings.Replace(copyOf(t, s, root, "b"), root, "S", 1)
 		want := lines(copyB+"/images: permission denied", copyB+"/data.yaml"+fmt.Sprintf(keeps, "b"))
-		if got := told(s.Rebuild(picKit(t, "v2", "")), root); got != want {
+		if got := told(s.Rebuild(t.Context(), picKit(t, "v2", "")), root); got != want {
 			t.Errorf("told\n%s\nwant\n%s", got, want)
 		}
 	})
@@ -180,7 +207,11 @@ func TestRebuildUnreadable(t *testing.T) {
 		dw := picKit(t, "", "")
 		publish(t, s, dw, "a.yaml", "lang: en\ntemplate: pic\n", nil, store.Options{})
 		publish(t, s, dw, "b.yaml", "lang: en\ntemplate: pic\ni: [x.png]\n", map[string][]byte{"x.png": png}, store.Options{})
-		if err := os.Remove(filepath.Join(copyOf(t, s, root, "a"), "page.html")); err != nil {
+		had := filepath.Join(copyOf(t, s, root, "a"), "page.html")
+		if err := os.Remove(had); err != nil {
+			t.Fatal(err)
+		}
+		if err := os.Mkdir(had, 0o700); err != nil {
 			t.Fatal(err)
 		}
 		images := filepath.Join(copyOf(t, s, root, "b"), "images")
@@ -191,10 +222,10 @@ func TestRebuildUnreadable(t *testing.T) {
 		copyA := strings.Replace(copyOf(t, s, root, "a"), root, "S", 1)
 		copyB := strings.Replace(copyOf(t, s, root, "b"), root, "S", 1)
 		want := lines(
-			copyA+"/page.html: no such file or directory", copyA+"/data.yaml"+fmt.Sprintf(keeps, "a"),
+			copyA+"/page.html: is a directory", copyA+"/data.yaml"+fmt.Sprintf(keeps, "a"),
 			copyB+"/images: permission denied", copyB+"/data.yaml"+fmt.Sprintf(keeps, "b"),
 		)
-		if got := told(s.Rebuild(picKit(t, "v2", "")), root); got != want {
+		if got := told(s.Rebuild(t.Context(), picKit(t, "v2", "")), root); got != want {
 			t.Errorf("told\n%s\nwant\n%s", got, want)
 		}
 	})
@@ -217,7 +248,7 @@ func TestCannotWrite(t *testing.T) {
 		t.Fatal(err)
 	}
 	t.Cleanup(func() { _ = os.Chmod(dir, 0o700) }) //nolint:errcheck // the test is told already
-	e, err := s.PrepareData(dw, store.Upload{File: "a.yaml", Source: []byte("lang: en\ntemplate: pic\n"), Images: nil, Project: "p", Repo: "p", Place: "a.yaml"}, store.Options{})
+	e, err := floepublish.PrepareData(t.Context(), s, dw, floepublish.Upload{File: "a.yaml", Source: []byte("lang: en\ntemplate: pic\n"), Images: nil, Project: "p", Repo: "p", Place: "a.yaml"}, store.Options{})
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -225,7 +256,7 @@ func TestCannotWrite(t *testing.T) {
 	if got := told(s.Save(e), root); got != want {
 		t.Errorf("Save: told\n%s\nwant\n%s", got, want)
 	}
-	err = s.Rebuild(picKit(t, "v2", ""))
+	err = s.Rebuild(t.Context(), picKit(t, "v2", ""))
 	if got := told(err, root); !strings.HasPrefix(got, want+"\n") || !strings.Contains(got, `page "a" keeps`) {
 		t.Errorf("Rebuild: told\n%s", got)
 	}
@@ -266,7 +297,7 @@ func TestRebuildMeanwhile(t *testing.T) {
 	}{
 		{"edited", func(t *testing.T, s *store.Store, _ store.Drawing) {
 			t.Helper()
-			edit := store.Edit{Title: ptr("Kept"), Favorite: ptr(true), Archived: ptr(true), Description: ptr("about"), Tags: &store.TagsEdit{Add: []string{"a"}}}
+			edit := store.Edit{Title: new("Kept"), Favorite: new(true), Archived: new(true), Description: new("about"), Tags: &store.TagsEdit{Add: []string{"a"}}}
 			if _, err := s.Edit("d", edit); err != nil {
 				t.Fatal(err)
 			}
@@ -291,7 +322,7 @@ func TestRebuildMeanwhile(t *testing.T) {
 		}},
 		{"theme picked", func(t *testing.T, s *store.Store, dw store.Drawing) {
 			t.Helper()
-			if err := s.PickTheme(dw, "d", "ink"); err != nil {
+			if err := s.PickTheme(t.Context(), dw, "d", "ink"); err != nil {
 				t.Fatal(err)
 			}
 		}, func(t *testing.T, s *store.Store, root, _ string) {
@@ -313,7 +344,7 @@ func TestRebuildMeanwhile(t *testing.T) {
 		}},
 		{"renamed", func(t *testing.T, s *store.Store, _ store.Drawing) {
 			t.Helper()
-			if _, err := s.Edit("d", store.Edit{Slug: ptr("z")}); err != nil {
+			if _, err := s.Edit("d", store.Edit{Slug: new("z")}); err != nil {
 				t.Fatal(err)
 			}
 		}, func(t *testing.T, s *store.Store, root, before string) {
@@ -332,12 +363,12 @@ func TestRebuildMeanwhile(t *testing.T) {
 			s, root := newStore(t)
 			icons := &meanwhile{svg: "<g>v1</g>", then: nil}
 			dw := picKit(t, "", "")
-			dw.Icons = icons
+			dw.Icons, dw.Draw = icons, drawhere.Here(dw.Kit, icons)
 			publish(t, s, dw, "d.yaml", iconPage, nil, store.Options{})
 			before := read(t, filepath.Join(copyOf(t, s, root, "d"), "page.html"))
 			icons.svg = "<g>v2</g>"
 			icons.then = func() { tt.then(t, s, dw) }
-			if err := s.Rebuild(dw); err != nil {
+			if err := s.Rebuild(t.Context(), dw); err != nil {
 				t.Fatal(told(err, root))
 			}
 			tt.check(t, s, root, before)
@@ -361,7 +392,7 @@ func TestRebuildImagesKept(t *testing.T) {
 		t.Fatal(err)
 	}
 	testfs.Symlink(t, "a.png", filepath.Join(images, "link.png"))
-	if err := s.Rebuild(picKit(t, "v2", "")); err != nil {
+	if err := s.Rebuild(t.Context(), picKit(t, "v2", "")); err != nil {
 		t.Fatal(told(err, root))
 	}
 	if got, want := files(t, copyOf(t, s, root, "d")), []string{"data.yaml", "images/a.png", "images/sub/c.png", "page.html"}; !slices.Equal(got, want) {
@@ -372,7 +403,7 @@ func TestRebuildImagesKept(t *testing.T) {
 		s, root := newStore(t)
 		publish(t, s, dw, "d.yaml", "lang: en\ntemplate: pic\ni: [a.png]\n", map[string][]byte{"a.png": png}, store.Options{})
 		testfs.Mkfifo(t, filepath.Join(copyOf(t, s, root, "d"), "images", "fifo.png"))
-		if err := s.Rebuild(picKit(t, "v2", "")); err != nil {
+		if err := s.Rebuild(t.Context(), picKit(t, "v2", "")); err != nil {
 			t.Fatal(told(err, root))
 		}
 		if got, want := files(t, copyOf(t, s, root, "d")), []string{"data.yaml", "images/a.png", "page.html"}; !slices.Equal(got, want) {
@@ -401,7 +432,57 @@ func TestRebuildImageUnreadable(t *testing.T) {
 		copyD+"/images/old.png: permission denied",
 		copyD+`/data.yaml: page "d" keeps the page it had: fix the data file it was published from and publish it again, or fix the template`,
 	)
-	if got := told(s.Rebuild(picKit(t, "v2", "")), root); got != want {
+	if got := told(s.Rebuild(t.Context(), picKit(t, "v2", "")), root); got != want {
 		t.Errorf("told\n%s\nwant\n%s", got, want)
+	}
+}
+
+// counting is a drawproc.Drawer that counts the sessions it starts and closes, its pages drawn by d.
+type counting struct {
+	d               drawproc.Drawer
+	started, closed int
+}
+
+func (c *counting) Start(ctx context.Context) drawproc.Session {
+	c.started++
+	return &countingSession{c: c, s: c.d.Start(ctx)}
+}
+
+type countingSession struct {
+	c *counting
+	s drawproc.Session
+}
+
+func (s *countingSession) Draw(job drawproc.Job) drawproc.Result { return s.s.Draw(job) }
+
+func (s *countingSession) Close() {
+	s.s.Close()
+	s.c.closed++
+}
+
+// A rebuild whose command is stopped stops, its session closed, and the pages it did not draw again keep the page
+// they had: no mistake, nor floe's failure.
+func TestRebuildStopped(t *testing.T) {
+	t.Parallel()
+
+	s, root := newStore(t)
+	dw := picKit(t, "", "")
+	publish(t, s, dw, "a.yaml", "lang: en\ntemplate: pic\n", nil, store.Options{})
+	publish(t, s, dw, "b.yaml", "lang: en\ntemplate: pic\n", nil, store.Options{})
+	v2 := picKit(t, "v2", "")
+	c := &counting{d: v2.Draw, started: 0, closed: 0}
+	v2.Draw = c
+	ctx, cancel := context.WithCancel(t.Context())
+	cancel()
+	if err := s.Rebuild(ctx, v2); err != nil {
+		t.Errorf("a rebuild stopped = %s, want nothing", told(err, root))
+	}
+	if c.started != 1 || c.closed != 1 {
+		t.Errorf("%d sessions started and %d closed, want 1 and 1", c.started, c.closed)
+	}
+	for _, slug := range []string{"a", "b"} {
+		if page := read(t, filepath.Join(copyOf(t, s, root, slug), "page.html")); strings.Contains(page, "<body>v2") {
+			t.Errorf("%s drawn again by a rebuild stopped before it", slug)
+		}
 	}
 }

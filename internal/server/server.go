@@ -140,7 +140,7 @@ func New(cfg Config) *Server {
 		cfg: cfg, hosts: map[string]bool{}, origins: map[string]bool{}, every: time.Second, grace: 10 * time.Second,
 		id: rand.Text()[:8], stopping: nil, halt: nil, stopAsked: atomic.Bool{}, log: newLog(out),
 		looking: sync.Mutex{}, mu: sync.Mutex{},
-		drawing: store.Drawing{Kit: nil, Icons: nil, Err: nil}, gen: 0, mark: "",
+		drawing: store.Drawing{Kit: nil, Icons: nil, Draw: nil, Err: nil}, gen: 0, mark: "",
 		diffs: lastDiff{Mutex: sync.Mutex{}, key: "", diffAnswer: diffAnswer{key: "", page: nil, result: pagediff.Result{
 			Counts: pagediff.Counts{Changed: 0, Added: 0, Removed: 0, Same: 0}, Sections: nil, Places: nil,
 		}}},
@@ -195,7 +195,7 @@ func (s *Server) first() {
 func (s *Server) read(m string) {
 	d, err := s.cfg.Drawing()
 	if err != nil {
-		d = store.Drawing{Kit: nil, Icons: nil, Err: err}
+		d = store.Drawing{Kit: nil, Icons: nil, Draw: nil, Err: err}
 	}
 	// A failure of floe's (too many files open) is not of what it read: read it again next time.
 	var mistakes usererr.List
@@ -237,8 +237,8 @@ func (s *Server) latest() store.Drawing {
 // inside the checks, so that a request they refuse is never told where the log is.
 func (s *Server) Handler() http.Handler {
 	mux := http.NewServeMux()
-	mux.HandleFunc("GET /{$}", serveUI)
-	mux.HandleFunc("GET /tasks", serveUI)
+	mux.HandleFunc("GET /{$}", serveList)
+	mux.HandleFunc("GET /tasks", serveTasks)
 	mux.HandleFunc("GET /api/health", s.health)
 	mux.HandleFunc("GET /api/pages", s.list)
 	mux.HandleFunc("POST /api/pages", s.addLink)
@@ -335,16 +335,20 @@ func notFound(w http.ResponseWriter) {
 	send(w, http.StatusNotFound, "not found")
 }
 
-func serveUI(w http.ResponseWriter, r *http.Request) {
-	sendUI(w, r, http.StatusOK, "", "")
+func serveList(w http.ResponseWriter, r *http.Request) {
+	sendUI(w, r, http.StatusOK, ui.List, "", "")
 }
 
-// sendUI answers with the management page in the reader's language: the frame around the page framed, a slug, or
-// the list for "".
-func sendUI(w http.ResponseWriter, r *http.Request, status int, framed, version string) {
+func serveTasks(w http.ResponseWriter, r *http.Request) {
+	sendUI(w, r, http.StatusOK, ui.Tasks, "", "")
+}
+
+// sendUI answers with the management page's screen in the reader's language: the frame around the page framed, a
+// slug, or a list for "".
+func sendUI(w http.ResponseWriter, r *http.Request, status int, screen ui.Screen, framed, version string) {
 	// A folder's page is framed by what the server serves, which a list of its directory cut at its bound may leave out
 	served := framed != "" && status == http.StatusOK && r.URL.Query().Get("file") != ""
-	page, err := ui.Page(catalog(r), framed, served, version)
+	page, err := ui.Page(catalog(r), screen, framed, served, version)
 	if err != nil {
 		refuse(w, r, err)
 		return

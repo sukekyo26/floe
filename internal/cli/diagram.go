@@ -119,7 +119,9 @@ func (a *app) diagrams(
 	store := a.iconStore()
 	var found usererr.List
 	var out []string
+	defer a.drawn()
 	for i, p := range a.args(paths, wants) {
+		a.watchDrawing(p.name)
 		got, err := one(d, p, diagram.Options{Lang: i18n.Tag(lang), Icons: store, Seq: i + 1})
 		if failed := found.Add(err); failed != nil {
 			return nil, failed

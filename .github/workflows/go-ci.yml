@@ -32,7 +32,7 @@ env:
 
 jobs:
   # Says whether a pull request changes only files that the jobs below need not run for, for them to skip their work and
-  # report success under the names the ruleset requires; any other event runs all. A failure here leaves the outputs
+  # report success, under the names the ruleset requires or to Browser; any other event runs all. A failure here leaves the outputs
   # empty, so everything runs.
   # LIMIT: the files are named one by one from what //go:embed, the tests and the screens read. Add one only when a grep
   # shows it: at level 1 nothing builds or tests it; at level 2 no browser test reads it and no screen shows it.
@@ -43,6 +43,7 @@ jobs:
     outputs:
       skip: ${{ steps.files.outputs.skip }}
       skip_browser: ${{ steps.files.outputs.skip_browser }}
+      skip_web: ${{ steps.files.outputs.skip_web }}
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
@@ -80,6 +81,21 @@ jobs:
           if [ "$top" -le 2 ]; then skip_browser=true; fi
           echo "skip=$skip" >> "$GITHUB_OUTPUT"
           echo "skip_browser=$skip_browser" >> "$GITHUB_OUTPUT"
+          # Unlike the levels, the Web job runs only for a pull request that changes a file its checks read (an empty
+          # diff and any other event run it): the management page's sources and build, the recipes, this workflow, the
+          # action that installs just, the line endings a checkout gives dist and the URLs its tests read.
+          skip_web=false
+          if [ "$EVENT" = pull_request ] && [ -n "$changed" ]; then
+            skip_web=true
+            while IFS= read -r file; do
+              case "$file" in
+                internal/ui/web/* | internal/store/testdata/task-urls.json | justfile | .github/workflows/go-ci.yml | \
+                  .github/actions/setup-just/* | .gitattributes)
+                  skip_web=false ;;
+              esac
+            done <<< "$changed"
+          fi
+          echo "skip_web=$skip_web" >> "$GITHUB_OUTPUT"
 
   lint:
     name: Lint (golangci-lint v2)
@@ -89,7 +105,7 @@ jobs:
     timeout-minutes: 10
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
-      - uses: actions/setup-go@b7ad1dad31e06c5925ef5d2fc7ad053ef454303e # v7.0.0
+      - uses: actions/setup-go@d8cbb8045d7f43706b9177cceb36c1f91a6644d5 # v7.1.0
         with:
           go-version-file: go.mod
           cache: true
@@ -109,6 +125,7 @@ jobs:
         run: just setup
       - run: just lint
       - run: just fmt-check
+      - run: just fix-check
 
   test:
     name: Test (race + shuffle)
@@ -118,7 +135,7 @@ jobs:
     timeout-minutes: 10
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
-      - uses: actions/setup-go@b7ad1dad31e06c5925ef5d2fc7ad053ef454303e # v7.0.0
+      - uses: actions/setup-go@d8cbb8045d7f43706b9177cceb36c1f91a6644d5 # v7.1.0
         with:
           go-version-file: go.mod
           cache: true
@@ -144,19 +161,44 @@ jobs:
       # The one symlink in the repository (a corpus sample's) is checked out as one: the runner may make symlinks.
       - run: git config --global core.symlinks true
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
-      - uses: actions/setup-go@b7ad1dad31e06c5925ef5d2fc7ad053ef454303e # v7.0.0
+      - uses: actions/setup-go@d8cbb8045d7f43706b9177cceb36c1f91a6644d5 # v7.1.0
         with:
           go-version-file: go.mod
           cache: true
       - run: go vet ./...
       # install.ps1, read by the version pinned here: a newer one may warn of more. Write-Host is how it talks.
-      - name: PSScriptAnalyzer
+      # LIMIT: PSScriptAnalyzer is pinned and raised by hand: change the number below. The cache keeps CI off the
+      # PowerShell Gallery, whose search failed with "No match was found"; a miss (a new number, or the cache gone
+      # after 7 unused days) saves it from the Gallery again, which may fail so.
+      # Caches are scoped by branch: a pull request reads its base's, so one into main and release.yml read main's, which
+      # only releases and the weekly run keep, so a release may go to the Gallery.
+      - id: pssa
         shell: pwsh
         run: |
+          "version=1.25.0" >> $env:GITHUB_OUTPUT
+          "path=$HOME\.floe-tools\psmodules" >> $env:GITHUB_OUTPUT
+      - id: pssa-cache
+        uses: actions/cache@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
+        with:
+          path: ${{ steps.pssa.outputs.path }}
+          key: psscriptanalyzer-${{ runner.os }}-${{ runner.arch }}-${{ steps.pssa.outputs.version }}
+      - if: steps.pssa-cache.outputs.cache-hit != 'true'
+        shell: pwsh
+        env:
+          PSSA_VERSION: ${{ steps.pssa.outputs.version }}
+          PSSA_PATH: ${{ steps.pssa.outputs.path }}
+        run: |
           $ProgressPreference = 'SilentlyContinue'
-          $took = Measure-Command { Install-Module PSScriptAnalyzer -RequiredVersion 1.25.0 -Scope CurrentUser -Force }
-          'Install-Module took {0:N1} s' -f $took.TotalSeconds
-          Import-Module PSScriptAnalyzer -RequiredVersion 1.25.0
+          # -Force makes the folder of -Path, which is an error without it.
+          Save-Module PSScriptAnalyzer -RequiredVersion $env:PSSA_VERSION -Path $env:PSSA_PATH -Force
+      - name: PSScriptAnalyzer
+        shell: pwsh
+        env:
+          PSSA_VERSION: ${{ steps.pssa.outputs.version }}
+          PSSA_PATH: ${{ steps.pssa.outputs.path }}
+        run: |
+          $m = Import-Module "$env:PSSA_PATH\PSScriptAnalyzer\$env:PSSA_VERSION\PSScriptAnalyzer.psd1" -PassThru
+          'PSScriptAnalyzer {0} from {1}' -f $m.Version, $m.ModuleBase
           Invoke-ScriptAnalyzer -Path install.ps1 -Severity Warning, Error -ExcludeRule PSAvoidUsingWriteHost -EnableExit
       - name: Test
         shell: bash
@@ -167,22 +209,38 @@ jobs:
           mkdir -p /c/floe-tmp
           go test -count=1 -timeout 15m $(go list ./... | grep -v /internal/browsertest$)
 
+  # The browser jobs' parts, from the justfile (just browser-parts). If this fails, Browser does not pass: run the workflow again.
+  browser-parts:
+    name: Browser parts
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    outputs:
+      parts: ${{ steps.parts.outputs.parts }}
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+      - uses: ./.github/actions/setup-just
+      - id: parts
+        # Set apart from echo, so that a failing recipe fails the step.
+        run: |
+          parts=$(just browser-parts)
+          echo "parts=$parts" >> "$GITHUB_OUTPUT"
+
   browser:
     name: Browser (${{ matrix.part }})
-    needs: changes
-    # It always runs, so that the matrix names its checks as the ruleset requires them; its steps skip instead.
+    needs: [changes, browser-parts]
+    # It always runs, so that its checks report and Browser below reads success; its steps skip instead.
     if: ${{ !cancelled() }}
     runs-on: ubuntu-latest
-    timeout-minutes: 10
+    timeout-minutes: 15
     strategy:
       fail-fast: false
       matrix:
-        part: [looks, rest]
+        part: ${{ fromJSON(needs.browser-parts.outputs.parts) }}
     steps:
       - if: ${{ needs.changes.outputs.skip_browser != 'true' }}
         uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
       - if: ${{ needs.changes.outputs.skip_browser != 'true' }}
-        uses: actions/setup-go@b7ad1dad31e06c5925ef5d2fc7ad053ef454303e # v7.0.0
+        uses: actions/setup-go@d8cbb8045d7f43706b9177cceb36c1f91a6644d5 # v7.1.0
         with:
           go-version-file: go.mod
           cache: true
@@ -202,6 +260,51 @@ jobs:
         env:
           FLOE_CHROME: ${{ steps.chrome.outputs.chrome-path }}
 
+  web:
+    name: Web
+    needs: changes
+    # It always runs, so that its check reports under its name; its steps skip instead.
+    if: ${{ !cancelled() }}
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - if: ${{ needs.changes.outputs.skip_web != 'true' }}
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+      - if: ${{ needs.changes.outputs.skip_web != 'true' }}
+        uses: ./.github/actions/setup-just
+      - if: ${{ needs.changes.outputs.skip_web != 'true' }}
+        uses: pnpm/action-setup@73e46992e05b19abd31f2f3c20e0e7370d762115 # v6.1.1
+        with:
+          package_json_file: internal/ui/web/package.json
+      - if: ${{ needs.changes.outputs.skip_web != 'true' }}
+        uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7.1.0
+        with:
+          node-version-file: internal/ui/web/.node-version
+          cache: pnpm
+          cache-dependency-path: internal/ui/web/pnpm-lock.yaml
+      - if: ${{ needs.changes.outputs.skip_web != 'true' }}
+        run: just web-check
+      - if: ${{ needs.changes.outputs.skip_web != 'true' }}
+        run: just web-build-check
+
+  # One check for all the browser jobs, so that the ruleset need not change when the matrix does. always(), not
+  # !cancelled(): a cancelled run would skip this job, and a skipped required check may count as passed. A cancelled run
+  # shows it failed.
+  browser-done:
+    name: Browser
+    needs: browser
+    if: ${{ always() }}
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - env:
+          RESULT: ${{ needs.browser.result }}
+        run: |
+          if [ "$RESULT" != success ]; then
+            echo "the browser jobs ended $RESULT" >&2
+            exit 1
+          fi
+
   coverage:
     name: Coverage gate (>= 90%)
     needs: changes
@@ -210,7 +313,7 @@ jobs:
     timeout-minutes: 10
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
-      - uses: actions/setup-go@b7ad1dad31e06c5925ef5d2fc7ad053ef454303e # v7.0.0
+      - uses: actions/setup-go@d8cbb8045d7f43706b9177cceb36c1f91a6644d5 # v7.1.0
         with:
           go-version-file: go.mod
           cache: true
@@ -225,7 +328,7 @@ jobs:
     timeout-minutes: 10
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
-      - uses: actions/setup-go@b7ad1dad31e06c5925ef5d2fc7ad053ef454303e # v7.0.0
+      - uses: actions/setup-go@d8cbb8045d7f43706b9177cceb36c1f91a6644d5 # v7.1.0
         with:
           go-version-file: go.mod
           cache: true
@@ -240,7 +343,7 @@ jobs:
     timeout-minutes: 10
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
-      - uses: actions/setup-go@b7ad1dad31e06c5925ef5d2fc7ad053ef454303e # v7.0.0
+      - uses: actions/setup-go@d8cbb8045d7f43706b9177cceb36c1f91a6644d5 # v7.1.0
         with:
           go-version-file: go.mod
           cache: true
@@ -278,7 +381,7 @@ jobs:
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
       # shfmt runs through `go tool`, pinned in go.mod.
-      - uses: actions/setup-go@b7ad1dad31e06c5925ef5d2fc7ad053ef454303e # v7.0.0
+      - uses: actions/setup-go@d8cbb8045d7f43706b9177cceb36c1f91a6644d5 # v7.1.0
         with:
           go-version-file: go.mod
           cache: true

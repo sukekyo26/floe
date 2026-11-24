@@ -163,7 +163,7 @@ func checkNames(
 			case isLook:
 				refuse("draw_look_box", name)
 			case !isPart:
-				refuse("draw_part_unknown", name, strings.Join(ns.parts, ", "))
+				refuse("draw_part_unknown", "data-floe-part", name, strings.Join(ns.parts, ", "))
 			default:
 				boxes[name] = true
 			}
@@ -172,7 +172,7 @@ func checkNames(
 	if value, ok := page.Attr(n, "data-floe-look"); ok {
 		for _, name := range page.Fields(value) {
 			if !slices.Contains(ns.all, name) {
-				refuse("draw_part_unknown", name, strings.Join(ns.all, ", "))
+				refuse("draw_part_unknown", "data-floe-look", name, strings.Join(ns.all, ", "))
 				continue
 			}
 			taken[name] = true

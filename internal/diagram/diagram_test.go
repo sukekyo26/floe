@@ -4,6 +4,7 @@ import (
 	"errors"
 	"flag"
 	"fmt"
+	"math"
 	"os"
 	"path/filepath"
 	"regexp"
@@ -1099,9 +1100,18 @@ func TestVennBounded(t *testing.T) {
 	}
 	src = "width: 400\nheight: 300\ntitle: T\nparts:\n  - circle: { name: a, cx: 90, cy: 150, r: 101 }\n" +
 		"  - circle: { name: b, cx: 250, cy: 150, r: 101 }\n  - label: { text: xxxx, in: [a, b] }\n"
-	// The circles stick out themselves; the label finds its room in the canvas.
-	if _, got := draw(t, src, render("en")); strings.Contains(got, `label "xxxx"`) {
-		t.Errorf("a region in the canvas of circles out of it = %q, want the label placed", got)
+	// The circles stick out themselves; the label finds its room in the canvas. Inspect tells the lines with the
+	// mistakes, which draw leaves out.
+	var got string
+	_, told := draw(t, src, func(d *diagram.Drawer, v any) (string, error) {
+		s, err := inspect(d, v)
+		got = s
+		return s, err
+	})
+	f := regionFault(got, `label "xxxx"`, 400, 300, []disc{{90, 150, 101}, {250, 150, 101}}, nil)
+	if f != "" || strings.Contains(told, `label "xxxx"`) {
+		t.Errorf("a region in the canvas of circles out of it: fault %q, told %q, want the label placed and not told\n%s",
+			f, told, got)
 	}
 	src = head + "  - circle: { name: c, cx: 900, cy: 100, r: 50 }\n  - label: { text: x, in: [c] }\n"
 	if _, got := draw(t, src, render("en")); !strings.Contains(got, `s.yaml:6:5: label "x" sticks out of the 400x200 canvas`) {
@@ -1231,9 +1241,50 @@ func TestVennUnnamed(t *testing.T) {
 	src := "width: 400\nheight: 300\ntitle: T\nparts:\n  - circle: { name: a, cx: 150, cy: 150, r: 100 }\n" +
 		"  - circle: { cx: 150, cy: 150, r: 60 }\n  - label: { text: x, in: [a] }\n"
 	got, mistakes := draw(t, src, inspect)
-	if mistakes != "" || strings.Contains(got, `label "x" 141.4,141`) {
-		t.Errorf("a label beside a circle of no name = %s %s, want it outside that circle", got, mistakes)
+	f := regionFault(got, `label "x"`, 400, 300, []disc{{150, 150, 100}}, []disc{{150, 150, 60}})
+	if mistakes != "" || f != "" {
+		t.Errorf("a label beside a circle of no name: %s\n%s%s", f, got, mistakes)
 	}
+}
+
+// A disc is a circle as a spec writes it.
+type disc struct{ cx, cy, r float64 }
+
+// regionFault is what is wrong with where inspect, in got, places the label who on a canvas w by h: told nowhere, out
+// of the canvas, not inside each circle of in, or not clear of each circle of out; "" for nothing.
+// LIMIT: it measures as region.roomOf does, so a mistake in that measure itself passes both alike.
+func regionFault(got, who string, w, h float64, in, out []disc) string {
+	const tol = 0.015 // inspect rounds each number to 0.01: a corner moves 0.01 either way, √2×0.01 away
+	m := regexp.MustCompile(`(?m)^` + regexp.QuoteMeta(who) + ` ([-\d.]+),([-\d.]+) ([-\d.]+)x([-\d.]+)`).
+		FindStringSubmatch(got)
+	if m == nil {
+		return "inspect tells no " + who
+	}
+	var v [4]float64
+	for i := range v {
+		var err error
+		if v[i], err = strconv.ParseFloat(m[i+1], 64); err != nil {
+			return who + ": " + err.Error()
+		}
+	}
+	x, y, rw, rh := v[0], v[1], v[2], v[3]
+	if x < -tol || y < -tol || x+rw > w+tol || y+rh > h+tol {
+		return fmt.Sprintf("%s at %v is out of the %vx%v canvas", who, v, w, h)
+	}
+	for _, c := range in {
+		for _, p := range [4][2]float64{{x, y}, {x + rw, y}, {x, y + rh}, {x + rw, y + rh}} {
+			if math.Hypot(p[0]-c.cx, p[1]-c.cy) > c.r+tol {
+				return fmt.Sprintf("%s at %v is not inside %v", who, v, c)
+			}
+		}
+	}
+	for _, c := range out {
+		nx, ny := min(max(c.cx, x), x+rw), min(max(c.cy, y), y+rh)
+		if math.Hypot(nx-c.cx, ny-c.cy) < c.r-tol {
+			return fmt.Sprintf("%s at %v is not clear of %v", who, v, c)
+		}
+	}
+	return ""
 }
 
 // A diagram's ids hold its number among the diagrams drawn into a page, so that one drawn twice holds others.
@@ -1867,7 +1918,7 @@ func TestFaces(t *testing.T) {
 		"        - { name: v, label: nnnnnnnnnnnnnnnnnnnnnnn, nodes: [{ box: { name: m, rows: [M] } }] }\n" +
 		"        - { name: e, label: E, nodes: [{ box: { name: b, rows: [B] } }] }\n" +
 		"      edges:\n        - { from: z, to: m }\n        - { from: a, to: b, level: true }\n"
-	want := `s.yaml:13:36: edge "a"→"b": it runs through the heading of lane "v", which reaches into the first rank laid out right; drop level, or shorten the heading`
+	want := `s.yaml:13:36: edge "a"→"b": it runs through the heading of group or lane "v", which reaches into the first rank laid out right; drop level, or shorten the heading`
 	if _, told := draw(t, lanes, inspect); told != want {
 		t.Errorf("a lane's heading:\n  told %q\n  want %q", told, want)
 	}
@@ -1970,23 +2021,23 @@ func TestGraphWith(t *testing.T) {
 		return top + nodes + "      edges:\n" + edges
 	}
 	e := func(from, to string) string { return "        - { from: " + from + ", to: " + to + " }\n" }
+	topOf := func(t *testing.T, tops map[string]string, name string) float64 {
+		t.Helper()
+		v, err := strconv.ParseFloat(tops[name], 64)
+		if err != nil {
+			t.Fatalf("the top of %s: %v", name, err)
+		}
+		return v
+	}
 	above := func(t *testing.T, tops map[string]string, hi, lo string) {
 		t.Helper()
-		h, err := strconv.ParseFloat(tops[hi], 64)
-		if err != nil {
-			t.Fatalf("%s: %v", hi, err)
-		}
-		l, err := strconv.ParseFloat(tops[lo], 64)
-		if err != nil {
-			t.Fatalf("%s: %v", lo, err)
-		}
-		if h >= l {
+		if topOf(t, tops, hi) >= topOf(t, tops, lo) {
 			t.Errorf("%s stands at %s, %s at %s, want it above", hi, tops[hi], lo, tops[lo])
 		}
 	}
 	level := func(t *testing.T, tops map[string]string, a, c string) {
 		t.Helper()
-		if tops[a] != tops[c] {
+		if topOf(t, tops, a) != topOf(t, tops, c) {
 			t.Errorf("%s stands at %s, %s at %s, want them in one rank", a, tops[a], c, tops[c])
 		}
 	}

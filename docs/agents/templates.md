@@ -89,7 +89,7 @@ A file or directory of any other name MUST NOT be in a template: floe refuses it
 | `asset` | An image of the template's `assets/` as a data URI (`<img src="{{asset "logo.svg"}}">`) |
 | `word` | A word of the template's `words.yaml` in the page's language (`{{word "status_doing"}}`) |
 
-- Write `len`, `index` and `slice` of an item the data may leave out inside `with`, as `{{with .Data.done}}{{len .}}{{else}}0{{end}}` (an item the data leaves out, a key of an object in a list too, is nil, and those three refuse nil).
+- Write `len`, `index` and `slice` of an item the data may leave out inside `with`, as `{{with .Data.done}}{{len .}}{{else}}0{{end}}` (an item the data leaves out, a key of an object in a list too, is nil, and those three refuse nil). A key left out of an item `prefixItems` takes is not there at all (*schema.json*).
 - Link to ids you write, not to those floe makes (floe gives each heading, `<h1>` to `<h6>`, that has no `id` one made of its text, as `#1-what-happens`, and `-1` to the later of two of one text: the id changes with the text).
 - A page drawn from a data file holds all it shows, and its scripts cannot send what it holds out: its CSP lets it load only images, fonts and media of data and blob URIs, inline styles and scripts, Google Fonts, and libraries from cdnjs, jsDelivr and unpkg. `fetch`, XHR, an image from elsewhere and a form are blocked. The CSP guards against a slip, not a hostile template: use templates you trust.
 
@@ -243,7 +243,9 @@ A JSON Schema (2020-12) of the data file's items.
 - `$schema` MUST be `https://json-schema.org/draft/2020-12/schema` or the 2019-09 one, or be left out. The file MUST be one JSON value, not empty, with no key twice in an object.
 - `lang`, `template`, `theme` and `title` are read by floe: the schema MUST NOT declare them under `properties` or require them. The `additionalProperties` of the root MUST NOT hold a part or an item of a format of floe's (it would draw those keys too): declare the items of the page under `properties`.
 - floe reaches a part, or an item of a format of floe's (`markdown`, `html`, `image`), only by walking from the root through `properties`, `additionalProperties` and `items`, and through a `$ref` to `#/$defs/…`. The schema MUST place each one so. floe refuses one under any other keyword (`if`, `then`, `oneOf`, `allOf` and the rest), and a format of floe's beside a `$ref` to a part (a `description` beside it is fine).
+- Read a key of an item `prefixItems` takes with `index`, as `{{with index . "more"}}…{{end}}`, not as `.more`: in a schema of draft 2020-12, `items` beside `prefixItems` takes only the items after them, as JSON Schema reads it, and an item `prefixItems` takes comes to `page.html` as written (a part or a format of floe's in `items` does not draw it, and a key it leaves out is not there, not nil, so `.more` stops the drawing where `more` is left out).
 - A `$ref` MUST name a part or a schema the parts share, whole (`floe:///parts/table.json`), or a place in the schema's own file (`#/$defs/row`). One out of floe (`file://`, `https://`), into a part (`floe:///parts/table.json#/properties/rows`) or to a part there is none of is refused. The root of the schema MUST NOT take an `$id`.
+- A `$ref` MUST NOT lead back to itself through `$ref`s alone (a `$defs` that names itself, two that name each other), under `not`, `anyOf` or `if` too: no value passes it, and floe refuses it where it is written. A schema may name itself across `properties`, `additionalProperties` or `items`, as a tree's does.
 - Write `"additionalProperties": false` so that a misspelt key is refused: the `schema.json` that `floe template new memo` makes has none.
 - To refuse a key only under a condition, list under `then` the keys the condition takes, with `"additionalProperties": false`: the refusal names the key, where `false` for the key says only `false schema`. The list copies `properties`: add a key to both.
 
@@ -293,7 +295,11 @@ Relations between items that a schema cannot say, each checked on every item of 
 - A list on the way of `for` is gone through item by item: `sections.parts` checks the parts of every section, and a failure is reported at its item.
 - Without `for`, a check runs once, on the whole data file as `item` (`doc` too), and its failure has no line or column unless its `field` names a key the data writes.
 - `expr` is an expr expression that must hold. It sees the list's item as `item` and the data file's items as `doc`. Each item it fails for is reported at its `field`, with `message` (at the item itself when `field` is left out or the item lacks it).
-- The path of `for` MUST be one the schema declares; `field` is not checked against it.
+- expr counts what one run of an expression makes against a budget of 1,000,000: an item of a list counts 1, and a text it makes the bytes it adds to its longest input (`+` the shorter text, `join` all but its longest part, `toJSON` of keys and values or of a list its whole text, longer than the data by its indentation and escapes). Past it, expr says `memory budget exceeded`: compare items by a key, not by `toJSON` of each.
+- Drawing one page, its expressions and `page.html` together, MUST stay within 512 MiB of memory, and on the server within 30 seconds, and the page drawn within 80 MiB of HTML: past any, floe refuses it and says so. Do not repeat a long text for each item of a list, in an expression (`map(rows, intro + ": " + .name)`) or in `page.html`.
+- The path of `for` MUST be of keys the values the schema allows there may hold; `field` is not checked against it.
+- To have the path checked, write `type` on every schema on it (the root's `"type": "object"`, a list's `"type": "array"` and its items' `"type": "object"`), and close each object with `"additionalProperties": false` beside the `properties` that declare its keys, in one schema. floe follows a `$ref` (`#/$defs/…`, a shared schema) and checks the path in the schema it names as well; what `allOf` and the like hold is not read.
+- floe refuses a `for` through a key no value the schema allows there may hold, but checks the path only so far: from a schema of no `type`, or of a `type` that lets the value be keys and a list, and from a key not declared in `properties` (one that `additionalProperties` or `patternProperties` takes), the rest passes unchecked.
 - A check runs only on data that passed `schema.json`: to refuse a missing key with a message of your own, leave it out of `required` and write the check here.
 - An expression with a ` #` in it (expr's `#` in `filter(xs, # > 1)`) MUST be in quotes: floe refuses a `#` that begins a YAML comment where it may have cut a value short.
 
@@ -306,7 +312,7 @@ item_bytes: 'sum(attributes, .avg_bytes)'
 storage_gb: 'item_bytes * records.in_1_year / 1e9'
 ```
 
-- An expression sees the data file's items that the schema declares, and the other computed values, by name, whatever order they are written in. It is an expr expression, as in `checks.yaml` (`len(teams)`, `sum(teams, .shipped)`, `shipped > 0 ? incidents * 100 / shipped : 0`), and MUST NOT use `$env`: use the names.
+- An expression sees the data file's items that the schema declares, and the other computed values, by name, whatever order they are written in. It is an expr expression, as in `checks.yaml` (`len(teams)`, `sum(teams, .shipped)`, `shipped > 0 ? incidents * 100 / shipped : 0`), and MUST NOT use `$env`: use the names. An item named as a function of expr (`count`, `date`, `merge`) is not seen by name.
 - A name MUST be one that expr and `page.html` read as one name, MUST NOT be an item of the data, a word or function of expr, or start with `_`, and values computed from each other are refused.
 - A value the data cannot give (a division by zero, an item left out that the expression needs), or one that is not a finite number, is reported at its expression, naming the data file. Give the value for an item left out with `??` (`count(prs ?? [], .state == "merged")`), and read into one with `?.` (`records?.in_1_year ?? 0`).
 
@@ -332,7 +338,7 @@ An image is one of the data (an item of `"format": "image"`) or one of `assets/`
 - a name, a link, a file or a directory that breaks the rules of *Where templates are* and *Files*, a missing `page.html`, `schema.json` or `example.yaml`, and an `example.yaml` that names another template;
 - a `page.html` that does not parse (a syntax mistake, an unknown function), and what html/template's escaping refuses (`ZgotmplZ` in the page drawn, where it did not take a value);
 - a `schema.json` that breaks a rule of *schema.json*, and a mistake the JSON Schema library reports;
-- a `checks.yaml` that is not a list of checks of `expr` and `message` (and `for` and `field`), a check with an empty or missing part, and a `for` that goes through a key the schema does not declare or leads to no list in the data; a `computed.yaml` that breaks a rule of *computed.yaml*, `$env` in a `computed.yaml` expression, and an `expr` that does not parse (the expr library's words);
+- a `checks.yaml` that is not a list of checks of `expr` and `message` (and `for` and `field`), a check with an empty or missing part, and a `for` through a key no value the schema allows there may hold, up to a schema on the way of no `type` or of a `type` of keys and a list, or a key not declared in `properties` (*checks.yaml*), or that leads to no list in the data; a `computed.yaml` that breaks a rule of *computed.yaml*, `$env` in a `computed.yaml` expression, and an `expr` that does not parse (the expr library's words);
 - a `words.yaml` that is not language tags each with names and their text, a word that is not text, two language tags that are one, and a word `page.html` names that the example's language lacks;
 - an image of `assets/` that is not one floe takes, and an `asset` that names none;
 - CSS floe cannot read in `page.css` (*page.css*);

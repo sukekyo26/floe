@@ -38,7 +38,7 @@ func uiBars(t *testing.T, lang i18n.Lang, msg func(string, ...any) string) {
 	out, want := make([]string, 0, 32), make([]string, 0, 32)
 	// The search: in the header bar of the list, not of a page's frame.
 	b.navigate("/")
-	out = append(out, b.eval("[document.getElementById('search').hidden, !!document.getElementById('search').closest('.bar')].join(' ')"))
+	out = append(out, b.eval("[document.getElementById('search').hidden, !!document.getElementById('search').closest('[data-testid=bar]')].join(' ')"))
 	b.navigate("/a/p/")
 	out = append(out, b.eval("String(document.getElementById('search').hidden)"))
 	want = append(want, "false true", "true")
@@ -50,15 +50,15 @@ func uiBars(t *testing.T, lang i18n.Lang, msg func(string, ...any) string) {
 		const bar = document.getElementById('bulk'), r = bar.getBoundingClientRect();
 		const shown = [...bar.querySelectorAll('button')].filter((e) => e.offsetParent);
 		const within = (x, y) => x.left >= y.left - 0.5 && x.right <= y.right + 0.5 && x.top >= y.top - 0.5 && x.bottom <= y.bottom + 0.5;
-		const inside = within(r, document.querySelector('.lhead').getBoundingClientRect()) && shown.every((e) => within(e.getBoundingClientRect(), r));
-		const words = shown.map((e) => e.querySelector('.label')).filter((l) => l.getBoundingClientRect().width > 1).map((l) => l.textContent);
-		return [shown.length, inside, words.join('/'), shown.every((e) => e.querySelector('.label').textContent !== '')].join(' ');
+		const inside = within(r, document.querySelector('[data-testid=lhead]').getBoundingClientRect()) && shown.every((e) => within(e.getBoundingClientRect(), r));
+		const words = shown.map((e) => e.querySelector('[data-testid=label]')).filter((l) => l.getBoundingClientRect().width > 1).map((l) => l.textContent);
+		return [shown.length, inside, words.join('/'), shown.every((e) => e.querySelector('[data-testid=label]').textContent !== '')].join(' ');
 	})()`
-	const first = "document.querySelector('#list li:not(.group)').getBoundingClientRect().top + ' ' + document.querySelector('.lhead').getBoundingClientRect().height"
+	const first = "document.querySelector('#list li:not([data-testid=group])').getBoundingClientRect().top + ' ' + document.querySelector('[data-testid=lhead]').getBoundingClientRect().height"
 	// What the bar over the list holds, within it, the page not wider than the window (on a phone, the window widens to the page).
 	const fits = `((width) => {
-		const bar = document.querySelector('.lhead').getBoundingClientRect();
-		const shown = [...document.querySelector('.lhead').children].filter((e) => e.offsetParent).map((e) => e.getBoundingClientRect());
+		const bar = document.querySelector('[data-testid=lhead]').getBoundingClientRect();
+		const shown = [...document.querySelector('[data-testid=lhead]').children].filter((e) => e.offsetParent).map((e) => e.getBoundingClientRect());
 		return shown.every((r) => r.left >= bar.left - 0.5 && r.right <= bar.right + 0.5) && document.documentElement.scrollWidth <= width;
 	})(%d)`
 	all := strings.Join([]string{msg("ui_select_all"), msg("ui_tags"), msg("ui_archive"), msg("ui_delete")}, "/")
@@ -69,17 +69,18 @@ func uiBars(t *testing.T, lang i18n.Lang, msg func(string, ...any) string) {
 		b.size(width, 900, width < 500)
 		fit := b.eval(fmt.Sprintf(fits, width))
 		before := b.eval(first)
-		b.eval("for (const s of [...document.querySelectorAll('#list li:not(.group) .sel')].slice(0, 2)) s.click()")
+		b.eval("for (const s of [...document.querySelectorAll('#list li:not([data-testid=group]) [data-testid=sel]')].slice(0, 2)) s.click()")
 		after := b.eval(first)
 		selected := b.eval(bulk)
 		b.eval("document.getElementById('bulk-delete').click()")
 		armed := b.eval(bulk)
 		b.eval("document.getElementById('bulk-clear').click(); " +
-			"for (const slug of ['l', 'k']) document.querySelector(`#list li[data-slug=${slug}] .sel`).click(); document.getElementById('bulk-delete').click()")
+			"for (const slug of ['l', 'k']) document.querySelector(`#list li[data-slug=${slug}] [data-testid=sel]`).click(); document.getElementById('bulk-delete').click()")
 		unlink := b.eval(bulk)
 		out = append(out, fmt.Sprintf("%d %s %v / %s / %s / %s", width, fit, before == after, selected, armed, unlink))
-		// The words always show; the clearing is its mark.
-		words, confirm, unlinkConfirm := all, msg("ui_delete_bulk_confirm", 2), msg("ui_unlink_bulk_confirm", 2)
+		// The words always show, the clearing's short ones last, pinned to the end (S422-P5d)
+		clearing := "/" + msg("ui_clear_short")
+		words, confirm, unlinkConfirm := all+clearing, msg("ui_delete_bulk_confirm", 2)+clearing, msg("ui_unlink_bulk_confirm", 2)+clearing
 		want = append(want, fmt.Sprintf("%d true true / 5 true %s true / 2 true %s true / 2 true %s true", width, words, confirm, unlinkConfirm))
 	}
 	b.unsize()
@@ -93,11 +94,11 @@ func uiBars(t *testing.T, lang i18n.Lang, msg func(string, ...any) string) {
 	for range 30 {
 		key("ArrowDown")
 	}
-	b.eval("document.getElementById('list-body').scrollBy(0, [...document.querySelectorAll('#list .title')].find((a) => a.textContent === 'P28').getBoundingClientRect().top - " +
-		"document.querySelector('.lhead').getBoundingClientRect().bottom + 10)")
+	b.eval("document.getElementById('list-body').scrollBy(0, [...document.querySelectorAll('#list [data-testid=title]')].find((a) => a.textContent === 'P28').getBoundingClientRect().top - " +
+		"document.querySelector('[data-testid=lhead]').getBoundingClientRect().bottom + 10)")
 	key("ArrowUp")
 	out = append(out, b.eval("[document.activeElement.textContent, document.activeElement.getBoundingClientRect().top >= "+
-		"document.querySelector('.lhead').getBoundingClientRect().bottom].join(' ')"))
+		"document.querySelector('[data-testid=lhead]').getBoundingClientRect().bottom].join(' ')"))
 	want = append(want, "P28 true")
 	b.unsize()
 

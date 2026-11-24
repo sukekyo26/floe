@@ -7,6 +7,8 @@ import (
 	"strings"
 	"testing"
 
+	"floe/internal/drawhere"
+	floepublish "floe/internal/publish"
 	"floe/internal/store"
 	"floe/internal/usererr"
 )
@@ -20,7 +22,7 @@ func TestPickTheme(t *testing.T) {
 	s, root := newStore(t)
 	dw := floeDrawing(t)
 	publish(t, s, dw, "a.yaml", report("washi"), nil, store.Options{})
-	if err := s.PickTheme(dw, "a", "ink"); err != nil {
+	if err := s.PickTheme(t.Context(), dw, "a", "ink"); err != nil {
 		t.Fatal(told(err, root))
 	}
 	at := func(when, picked, in string) {
@@ -32,19 +34,19 @@ func TestPickTheme(t *testing.T) {
 	at("picked", "ink", "ink")
 	publish(t, s, dw, "a.yaml", report("washi"), nil, store.Options{})
 	at("published again", "ink", "ink")
-	publish(t, s, dw, "a.yaml", report(""), nil, store.Options{Theme: ptr("app")})
+	publish(t, s, dw, "a.yaml", report(""), nil, store.Options{Theme: new("app")})
 	at("published with --theme", "ink", "ink")
-	if err := s.Rebuild(dw); err != nil {
+	if err := s.Rebuild(t.Context(), dw); err != nil {
 		t.Fatal(told(err, root))
 	}
 	at("rebuilt", "ink", "ink")
 	// A theme that cannot be drawn: nothing written.
-	err := s.PickTheme(dw, "a", "gone")
+	err := s.PickTheme(t.Context(), dw, "a", "gone")
 	if keyOf(err) != "tmpl_unknown_theme" {
 		t.Errorf("a theme gone: told %s", told(err, root))
 	}
 	at("a theme gone", "ink", "ink")
-	if err = s.PickTheme(dw, "a", ""); err != nil {
+	if err = s.PickTheme(t.Context(), dw, "a", ""); err != nil {
 		t.Fatal(told(err, root))
 	}
 	// Over the data's theme:, the --theme of the last publish
@@ -54,7 +56,7 @@ func TestPickTheme(t *testing.T) {
 	// The page drawn the same: the pick is written all the same.
 	page := filepath.Join(root, "a", s.ReadMeta("a").Source, "page.html")
 	before := read(t, page)
-	if err = s.PickTheme(dw, "a", "washi"); err != nil {
+	if err = s.PickTheme(t.Context(), dw, "a", "washi"); err != nil {
 		t.Fatal(told(err, root))
 	}
 	if read(t, filepath.Join(root, "a", s.ReadMeta("a").Source, "page.html")) != before {
@@ -62,8 +64,8 @@ func TestPickTheme(t *testing.T) {
 	}
 	at("drawn the same", "washi", "washi")
 	// Replaced by another project's file: the pick goes.
-	up := store.Upload{File: "a.yaml", Source: []byte(report("")), Images: nil, Project: "q", Repo: "q", Place: "a.yaml"}
-	e, err := s.PrepareData(dw, up, store.Options{Force: true})
+	up := floepublish.Upload{File: "a.yaml", Source: []byte(report("")), Images: nil, Project: "q", Repo: "q", Place: "a.yaml"}
+	e, err := floepublish.PrepareData(t.Context(), s, dw, up, store.Options{Force: true})
 	if err != nil {
 		t.Fatal(told(err, root))
 	}
@@ -71,7 +73,7 @@ func TestPickTheme(t *testing.T) {
 		t.Fatal(err)
 	}
 	at("replaced", "", "")
-	if err = s.PickTheme(dw, "none", "ink"); !errors.Is(err, store.ErrNotFound) {
+	if err = s.PickTheme(t.Context(), dw, "none", "ink"); !errors.Is(err, store.ErrNotFound) {
 		t.Errorf("no page: %v", err)
 	}
 }
@@ -96,12 +98,12 @@ func TestPickThemeMeanwhile(t *testing.T) {
 	s, root := newStore(t)
 	icons := &meanwhile{svg: "<g>v1</g>", then: nil}
 	dw := picKit(t, "", "")
-	dw.Icons = icons
+	dw.Icons, dw.Draw = icons, drawhere.Here(dw.Kit, icons)
 	publish(t, s, dw, "d.yaml", iconPage, nil, store.Options{})
 	icons.then = func() {
 		publish(t, s, dw, "d.yaml", strings.Replace(iconPage, "title: T", "title: Again", 1), nil, store.Options{})
 	}
-	err := s.PickTheme(dw, "d", "ink")
+	err := s.PickTheme(t.Context(), dw, "d", "ink")
 	var conflict *store.Conflict
 	if !errors.As(err, &conflict) || keyOf(err) != "store_theme_changed" {
 		t.Errorf("published meanwhile: told %s", told(err, root))
@@ -121,7 +123,7 @@ func TestPickThemeMeanwhile(t *testing.T) {
 		if werr := os.WriteFile(path, []byte(iconPage), 0o600); werr != nil {
 			t.Fatal(werr)
 		}
-		e, lerr := s.PrepareLink(t.Context(), dw, path, o, "", home)
+		e, lerr := floepublish.PrepareLink(t.Context(), s, dw, path, o, "", home)
 		if lerr != nil {
 			t.Fatal(told(lerr, root))
 		}
@@ -130,9 +132,9 @@ func TestPickThemeMeanwhile(t *testing.T) {
 		}
 	}
 	icons.then = nil
-	link("a.yaml", store.Options{Slug: ptr("l")})
-	icons.then = func() { link("b.yaml", store.Options{Slug: ptr("l"), Force: true}) }
-	err = s.PickTheme(dw, "l", "ink")
+	link("a.yaml", store.Options{Slug: new("l")})
+	icons.then = func() { link("b.yaml", store.Options{Slug: new("l"), Force: true}) }
+	err = s.PickTheme(t.Context(), dw, "l", "ink")
 	if !errors.As(err, &conflict) {
 		t.Errorf("linked to another file meanwhile: told %s", told(err, root))
 	}
@@ -160,7 +162,7 @@ func TestPickThemeLinks(t *testing.T) {
 	}
 	slugs := map[string]string{}
 	for _, path := range []string{filepath.Join(dir, "z.html"), filepath.Join(dir, "page.yaml"), dir} {
-		e, err := s.PrepareLink(t.Context(), dw, path, store.Options{}, "", home)
+		e, err := floepublish.PrepareLink(t.Context(), s, dw, path, store.Options{}, "", home)
 		if err != nil {
 			t.Fatal(told(err, root))
 		}
@@ -170,7 +172,7 @@ func TestPickThemeLinks(t *testing.T) {
 		slugs[filepath.Base(path)] = e.Slug
 	}
 	for _, name := range []string{"z.html", "proj"} {
-		if err := s.PickTheme(dw, slugs[name], "ink"); keyOf(err) != "store_theme_link" {
+		if err := s.PickTheme(t.Context(), dw, slugs[name], "ink"); keyOf(err) != "store_theme_link" {
 			t.Errorf("%s: told %s", name, told(err, root))
 		}
 	}
@@ -184,14 +186,14 @@ func TestPickThemeLinks(t *testing.T) {
 		}
 	}
 	data := slugs["page.yaml"]
-	if err = s.PickTheme(dw, data, "gone"); keyOf(err) != "tmpl_unknown_theme" {
+	if err = s.PickTheme(t.Context(), dw, data, "gone"); keyOf(err) != "tmpl_unknown_theme" {
 		t.Errorf("a theme gone: told %s", told(err, root))
 	}
-	if err = s.PickTheme(dw, data, "ink"); err != nil {
+	if err = s.PickTheme(t.Context(), dw, data, "ink"); err != nil {
 		t.Fatal(told(err, root))
 	}
 	m := s.ReadMeta(data)
-	page, err := store.DrawLink(dw, data, m, m.Path, false)
+	page, err := store.DrawLink(t.Context(), dw, data, m, m.Path, false)
 	if err != nil || m.PickedTheme != "ink" || !strings.Contains(string(page), "--accent: "+accents["ink"]) {
 		t.Errorf("a data file linked: %q, %v", m.PickedTheme, err)
 	}
@@ -214,13 +216,13 @@ func TestOwnTheme(t *testing.T) {
 	}
 	publish(t, s, dw, "none.yaml", report(""), nil, store.Options{})
 	publish(t, s, dw, "data.yaml", report("washi"), nil, store.Options{})
-	publish(t, s, dw, "given.yaml", report("washi"), nil, store.Options{Theme: ptr("app")})
+	publish(t, s, dw, "given.yaml", report("washi"), nil, store.Options{Theme: new("app")})
 	if err := setTheme(s, "ink"); err != nil {
 		t.Fatal(err)
 	}
 	publish(t, s, dw, "created.yaml", report(""), nil, store.Options{})
 	publish(t, s, dw, "both.yaml", report("washi"), nil, store.Options{})
-	if err := s.PickTheme(dw, "data", "brutal"); err != nil {
+	if err := s.PickTheme(t.Context(), dw, "data", "brutal"); err != nil {
 		t.Fatal(told(err, root))
 	}
 	home := filepath.Dir(root)
@@ -233,7 +235,7 @@ func TestOwnTheme(t *testing.T) {
 		if err := os.WriteFile(path, []byte(src), 0o600); err != nil {
 			t.Fatal(err)
 		}
-		e, err := s.PrepareLink(t.Context(), dw, path, store.Options{}, "", home)
+		e, err := floepublish.PrepareLink(t.Context(), s, dw, path, store.Options{}, "", home)
 		if err != nil {
 			t.Fatal(told(err, root))
 		}

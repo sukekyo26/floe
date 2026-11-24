@@ -10,9 +10,9 @@ import (
 	"floe/internal/store"
 )
 
-// The task edit dialog adds categories by its last row, which turns into a field, and removes those of no page: the button of a category with pages
-// is there, not pressed, and says why. Enter adds, not while the input method has it; a name there already, or of spaces, is said under the
-// row; words left in the field stop the save. Refused as stale, the categories are as the person left them, without those another removed, with
+// The task edit dialog adds categories by the add modal its button under the box opens over it, and removes those of no page: the button of a
+// category with pages is there, not pressed, and says why. Enter adds and closes the add modal; a name there already, or of spaces, is said
+// under its field, the modal open; Escape closes the add modal only. Refused as stale, the categories are as the person left them, without those another removed, with
 // those another added, and with one the person removed back if it has come to have pages.
 func TestUITaskEditCategories(t *testing.T) { //nolint:paralleltest // the browser tests share one Chrome, one at a time
 	s := newSite(t)
@@ -56,37 +56,54 @@ func TestUITaskEditCategories(t *testing.T) { //nolint:paralleltest // the brows
 		return strconv.Itoa(r.Rev) + " [" + strings.Join(r.Categories, ",") + "]"
 	}
 	// Each category, d when its remove button may be pressed, x when not
-	const categories = "[...document.querySelectorAll('#edit-categories li')].map((li) => li.dataset.category + (li.querySelector('.category-drop').getAttribute('aria-disabled') === 'true' ? 'x' : 'd')).join(',')"
+	const categories = "[...document.querySelectorAll('#edit-categories li')].map((li) => li.dataset.category + (li.querySelector('[data-testid=category-drop]').getAttribute('aria-disabled') === 'true' ? 'x' : 'd')).join(',')"
 	const said = "document.getElementById('edit-category-said').textContent"
-	const last = "(document.getElementById('edit-category-plus').hidden ? 'field' : 'plus') + ' / ' + document.activeElement.id"
+	const addSaid = "document.getElementById('edit-add-said').textContent"
+	const last = "(document.getElementById('edit-add-dialog').open ? 'adding' : 'shut') + ' / ' + document.activeElement.id"
 	open := func(task string) {
 		t.Helper()
 		b.navigate("/tasks?project=proj&task=" + task)
 		b.until("the task's head", "!document.getElementById('task-head').hidden && document.getElementById('task-title').textContent.includes("+js(task)+")")
-		b.eval("window.sent = []; window.realFetch ??= window.fetch; window.fetch = (url, init) => { if (String(url).includes('/api/tasks') && init?.method === 'PATCH') sent.push(init.body); return window.realFetch(url, init); }")
+		// The test's script: every write of the task kept as sent and counted answered; revTo, when set, is the rev each sends
+		b.eval(`window.sent = []; window.answered = 0; window.revTo = null; window.realFetch ??= window.fetch;
+			window.fetch = (url, init) => {
+				if (!String(url).includes('/api/tasks') || init?.method !== 'PATCH') return window.realFetch(url, init);
+				if (window.revTo !== null) init = { ...init, body: JSON.stringify({ ...JSON.parse(init.body), rev: window.revTo }) };
+				window.sent.push(init.body);
+				return window.realFetch(url, init).finally(() => { window.answered++; });
+			}`)
 		b.eval("document.getElementById('task-edit').click()")
 		b.until("the dialog", "document.getElementById('edit-task-dialog').open")
 	}
-	// Types a name in the last row's field, as a person does (the field, not the button), and a key on it: composing, as the input method
-	// has it
-	key := func(name, k string, composing bool) {
+	// Types a name in the add modal's field, opening it by the button under the box if it is not open, and presses Enter
+	enter := func(name string) {
 		t.Helper()
-		b.eval(`(() => {
-			const input = document.getElementById('edit-category-new');
-			if (input.hidden) document.getElementById('edit-category-plus').click();
-			input.value = ` + js(name) + `;
-			input.dispatchEvent(new Event('input', { bubbles: true }));
-			input.dispatchEvent(new KeyboardEvent('keydown', { key: ` + js(k) + `, bubbles: true, cancelable: true, isComposing: ` + strconv.FormatBool(composing) + ` }));
-		})()`)
+		b.eval("if (!document.getElementById('edit-add-dialog').open) document.getElementById('edit-category-plus').click()")
+		b.until("the add modal", "document.getElementById('edit-add-dialog').open && document.activeElement.id === 'edit-add-new'")
+		b.fill("#edit-add-new", name)
+		b.pressKey(kb.Enter)
+	}
+	// enter, and the add modal closed as the name is added
+	add := func(name string) {
+		t.Helper()
+		enter(name)
+		b.until("added "+name, "!document.getElementById('edit-add-dialog').open")
+	}
+	// enter, and the refusal said under the add modal's field
+	refused := func(name string) {
+		t.Helper()
+		enter(name)
+		b.until("refused "+name, addSaid+" !== ''")
 	}
 	drop := func(category string) {
 		t.Helper()
-		b.eval("[...document.querySelectorAll('#edit-categories li')].find((li) => li.dataset.category === " + js(category) + ").querySelector('.category-drop').click()")
+		b.eval("[...document.querySelectorAll('#edit-categories li')].find((li) => li.dataset.category === " + js(category) + ").querySelector('[data-testid=category-drop]').click()")
 	}
 	save := func(what string) {
 		t.Helper()
-		b.eval("document.getElementById('edit-task-error').hidden = true; document.getElementById('edit-task').requestSubmit()")
-		b.until(what, "!document.getElementById('edit-task-dialog').open || !document.getElementById('edit-task-error').hidden || document.getElementById('edit-category-new').validationMessage")
+		n := b.eval("window.answered")
+		b.eval("document.getElementById('edit-task-submit').click()")
+		b.until(what, "!document.getElementById('edit-task-dialog').open || (window.answered > "+n+" && !document.getElementById('edit-task-title').matches(':disabled'))")
 	}
 	closed := func(what string) {
 		t.Helper()
@@ -97,45 +114,30 @@ func TestUITaskEditCategories(t *testing.T) { //nolint:paralleltest // the brows
 	open("S300")
 	say("opened", categories+" + ' / ' + "+last)
 	say("plus", "document.getElementById('edit-category-plus').getAttribute('aria-label') + ' / ' + document.getElementById('edit-category-plus').title + ' / ' + document.getElementById('edit-categories-head').textContent")
-	say("names", "[...document.querySelectorAll('#edit-categories .category-drop')].map((b) => b.getAttribute('aria-label') + '=' + b.title).join(', ')")
+	say("names", "[...document.querySelectorAll('#edit-categories [data-testid=category-drop]')].map((b) => b.getAttribute('aria-label') + '=' + b.title).join(', ')")
 	// The remove button of a category with pages is reached by the keys; pressed, it says why under the rows and removes nothing.
-	b.eval("document.querySelector('#edit-categories li .category-down').focus()")
+	b.eval("document.querySelector('#edit-categories li [data-testid=category-down]').focus()")
 	b.pressKey(kb.Tab)
 	b.pressKey(kb.Enter)
 	say("paged pressed", "document.activeElement.getAttribute('aria-label') + ' / ' + "+categories+" + ' / ' + "+said)
-	// The plus turns into the field, which has the focus; Enter adds, and the field stays, empty, for the next.
+	// The button opens the add modal over the dialog, its field focused; Enter adds, closes it, and the focus is back on the button.
 	b.eval("document.getElementById('edit-category-plus').click()")
-	say("pressed", last)
-	key("  公開 ", "Enter", false)
-	say("added", categories+" + ' / ' + "+last+" + ' / ' + document.getElementById('edit-category-new').value + ' / ' + document.getElementById('edit-categories-said').textContent + ' / ' + document.getElementById('edit-task-dialog').open")
-	// Not added: a name there already, or of spaces, said under the row; nor while the input method has the key.
-	key("設計", "Enter", false)
-	say("there", categories+" + ' / ' + "+said+" + ' / ' + document.getElementById('edit-category-new').getAttribute('aria-describedby')")
-	key("   ", "Enter", false)
-	say("blank", said)
-	key("検証", "Enter", true)
-	say("composing", categories)
-	// Escape: not while composing; else the field is the plus again, the dialog open, the focus on the plus.
-	key("検証", "Escape", true)
-	say("escape composing", last)
-	key("検証", "Escape", false)
-	say("escape", last+" + ' / ' + document.getElementById('edit-task-dialog').open + ' / ' + document.getElementById('edit-category-new').value")
-	// Left empty, the field turns back; with words in it, it stays.
-	b.eval("document.getElementById('edit-category-plus').click(); document.getElementById('edit-task-title').focus()")
-	say("left empty", last)
-	key("検証", "x", false)
-	b.eval("document.getElementById('edit-task-title').focus()")
-	say("left with words", last)
-	// Words left stop the save, said on the field, until typed again.
-	save("words left")
-	say("words left", "document.getElementById('edit-category-new').validationMessage + ' / ' + document.getElementById('edit-task-dialog').open + ' / ' + sent.length")
-	b.eval("const f = document.getElementById('edit-category-new'); f.value = ''; f.dispatchEvent(new Event('input', { bubbles: true }))")
-	say("typed again", "document.getElementById('edit-category-new').validationMessage === ''")
-	// A name there already, left in the field, stops the save saying it is there, not to press Enter.
-	b.eval("const f = document.getElementById('edit-category-new'); f.value = '設計'; f.dispatchEvent(new Event('input', { bubbles: true }))")
-	save("there left")
-	say("there left", "document.getElementById('edit-category-new').validationMessage + ' / ' + sent.length")
-	b.eval("const f = document.getElementById('edit-category-new'); f.value = ''; f.dispatchEvent(new Event('input', { bubbles: true }))")
+	b.until("the add modal", "document.activeElement.id === 'edit-add-new'")
+	say("pressed", last+" + ' / ' + "+said)
+	add("  公開 ")
+	b.until("the focus back", "document.activeElement.id === 'edit-category-plus'")
+	say("added", categories+" + ' / ' + "+last+" + ' / ' + document.getElementById('edit-categories-said').textContent + ' / ' + document.getElementById('edit-task-dialog').open")
+	// Not added: a name there already, or of spaces, said under the add modal's field, the modal open.
+	refused("設計")
+	say("there", categories+" + ' / ' + "+addSaid+" + ' / ' + document.getElementById('edit-add-new').getAttribute('aria-describedby') + ' / ' + "+last)
+	b.fill("#edit-add-new", "")
+	refused("   ")
+	say("blank", addSaid)
+	// Escape closes the add modal only, the focus back on the button.
+	b.pressKey(kb.Escape)
+	b.until("the add modal closed", "!document.getElementById('edit-add-dialog').open")
+	b.until("the focus back", "document.activeElement.id === 'edit-category-plus'")
+	say("escape", last+" + ' / ' + document.getElementById('edit-task-dialog').open")
 	// Removed: the focus on a button of the row after that can be pressed, or of the row before; said.
 	drop("リリース")
 	say("dropped", categories+" + ' / ' + document.activeElement.getAttribute('aria-label') + ' / ' + document.getElementById('edit-categories-said').textContent")
@@ -147,7 +149,7 @@ func TestUITaskEditCategories(t *testing.T) { //nolint:paralleltest // the brows
 	say("sent", "sent.join(' ; ')")
 	// Added and removed is no change.
 	open("S300")
-	key("公開", "Enter", false)
+	add("公開")
 	drop("公開")
 	save("unchanged")
 	closed("closed")
@@ -171,7 +173,7 @@ func TestUITaskEditCategories(t *testing.T) { //nolint:paralleltest // the brows
 	open("S300")
 	drop("リリース")
 	s.floe(t, "task", "--slug", "memo-a", "--task", "S300", "--category", "リリース")
-	b.eval("taskEditing.rev = " + strings.Fields(row("S300"))[0])
+	b.eval("window.revTo = " + strings.Fields(row("S300"))[0])
 	save("paged since read")
 	say("paged since read", "document.getElementById('edit-task-error').textContent")
 	b.pressKey(kb.Escape)
@@ -180,7 +182,7 @@ func TestUITaskEditCategories(t *testing.T) { //nolint:paralleltest // the brows
 	// Stale, a category added while another removed one of no page: the one added stays, the other goes.
 	s.floe(t, "task", "--project", "proj", "--task", "S300", "--categories", "案", "--categories", "設計", "--categories", "実装", "--categories", "リリース", "--categories", "検証", "--categories", "レビュー")
 	open("S300")
-	key("公開", "Enter", false)
+	add("公開")
 	s.floe(t, "task", "--project", "proj", "--task", "S300", "--categories", "案", "--categories", "設計", "--categories", "実装", "--categories", "リリース", "--categories", "レビュー")
 	save("stale, added")
 	say("stale, added", categories)
@@ -191,28 +193,21 @@ func TestUITaskEditCategories(t *testing.T) { //nolint:paralleltest // the brows
 	// No categories: the last row is there all the same.
 	open("N1")
 	say("no categories", "document.getElementById('edit-categories').hidden + ' / ' + document.getElementById('edit-categories-none').hidden + ' / ' + "+last)
-	key("案", "Enter", false)
+	add("案")
 	save("saved the first")
 	closed("closed")
 	out = append(out, "first: "+row("N1"))
 
 	check(t, "task edit categories", out, strings.Join([]string{
-		"opened: 案x,設計x,実装x,リリースd,レビューx / plus / edit-task-title",
+		"opened: 案x,設計x,実装x,リリースd,レビューx / shut / edit-task-title",
 		"plus: Add a category / Add a category / Categories",
 		"names: 案 has pages, so it cannot be deleted=案 has pages, so it cannot be deleted, 設計 has pages, so it cannot be deleted=設計 has pages, so it cannot be deleted, 実装 has pages, so it cannot be deleted=実装 has pages, so it cannot be deleted, Delete リリース=Delete リリース, レビュー has pages, so it cannot be deleted=レビュー has pages, so it cannot be deleted",
 		"paged pressed: 案 has pages, so it cannot be deleted / 案x,設計x,実装x,リリースd,レビューx / 案 has pages, so it cannot be deleted",
-		"pressed: field / edit-category-new",
-		"added: 案x,設計x,実装x,リリースd,レビューx,公開d / field / edit-category-new /  / Added 公開 at 6 of 6 / true",
-		"there: 案x,設計x,実装x,リリースd,レビューx,公開d / 設計 is already among the categories / edit-category-said",
+		"pressed: adding / edit-add-new / ",
+		"added: 案x,設計x,実装x,リリースd,レビューx,公開d / shut / edit-category-plus / Added 公開 at 6 of 6 / true",
+		"there: 案x,設計x,実装x,リリースd,レビューx,公開d / 設計 is already among the categories / edit-add-said / adding / edit-add-new",
 		"blank: Write the category's name",
-		"composing: 案x,設計x,実装x,リリースd,レビューx,公開d",
-		"escape composing: field / edit-category-new",
-		"escape: plus / edit-category-plus / true / ",
-		"left empty: plus / edit-task-title",
-		"left with words: field / edit-task-title",
-		"words left: 検証 is not added yet: press Enter to add it, or empty the field / true / 0",
-		"typed again: true",
-		"there left: 設計 is already among the categories / 0",
+		"escape: shut / edit-category-plus / true",
 		"dropped: 案x,設計x,実装x,レビューx,公開d / Move レビュー up / Deleted リリース",
 		"dropped last: 案x,設計x,実装x,レビューx / Move レビュー up",
 		"saved: 6 [案,設計,実装,レビュー]",
@@ -224,7 +219,7 @@ func TestUITaskEditCategories(t *testing.T) { //nolint:paralleltest // the brows
 		"paged since read, written: 9 [案,設計,実装,リリース,レビュー]",
 		"stale, added: 案x,設計x,実装x,リリースx,レビューx,公開d",
 		"saved again: 12 [案,設計,実装,リリース,レビュー,公開]",
-		"no categories: true / false / plus / edit-task-title",
+		"no categories: true / false / shut / edit-task-title",
 		"first: 2 [案]",
 	}, "|"))
 }

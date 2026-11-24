@@ -10,6 +10,25 @@ import (
 	"github.com/chromedp/chromedp/kb"
 )
 
+// closeSettings closes the settings modal by Escape, as a person does.
+func closeSettings(b *browser) {
+	b.t.Helper()
+
+	b.pressKey(kb.Escape)
+	b.until("the settings to close", "!document.getElementById('settings').open")
+}
+
+// openPageThemes opens the themes of the page slug from its row's menu.
+func openPageThemes(b *browser, slug string) {
+	b.t.Helper()
+
+	row := "#list li[data-slug=" + slug + "] "
+	b.eval("document.querySelector(" + js(row+"[data-testid=more] summary") + ").click()")
+	b.until("the menu's theme item", "document.querySelector("+js(row+"[data-testid=theme-item]")+").checkVisibility()")
+	b.eval("document.querySelector(" + js(row+"[data-testid=theme-item]") + ").click()")
+	b.until("the themes", "document.getElementById('settings').open")
+}
+
 // TestUISettings opens the settings from the bar's button, shown at the width of a desk, not of a phone, the bar within
 // the window at both, on their list: the default theme and the task mode, each with its value. Going into one focuses
 // its heading, and the way back focuses the row it came from; Escape closes the modal from any part, the focus back on
@@ -36,101 +55,110 @@ func TestUISettings(t *testing.T) { //nolint:paralleltest // the browser tests s
 	b.eval("document.getElementById('settings-open').focus(); document.getElementById('settings-open').click()")
 	b.until("the list's values", "document.getElementById('settings-mode-now').textContent !== ''")
 	out = append(out, b.eval(seen), b.eval("document.getElementById('settings-theme-now').textContent + ' / ' + document.getElementById('settings-mode-now').textContent"))
-	b.eval("document.querySelector('.settings-item[data-panel=mode]').click()")
+	b.eval("document.querySelector('[data-testid=settings-item][data-panel=mode]').click()")
 	out = append(out, b.eval(seen), b.eval(focused))
 	b.eval("document.getElementById('settings-back').click()")
 	out = append(out, b.eval(seen), b.eval(focused))
-	b.eval("document.querySelector('.settings-item[data-panel=theme]').click()")
-	b.until("the cards", "document.querySelectorAll('#theme-grid .theme-card').length >= 12")
+	b.eval("document.querySelector('[data-testid=settings-item][data-panel=theme]').click()")
+	b.until("the cards", "document.querySelectorAll('#theme-grid [data-testid=theme-card]').length >= 12")
 	out = append(out, b.eval(seen), b.eval(focused),
 		b.eval("document.getElementById('settings').open"),
 		b.eval("document.getElementById('theme-now').textContent"),
 		// default is the one now, picked; each card's sample in the sandbox, from the server
 		b.eval("document.querySelector('#theme-grid input:checked').value"),
 		b.eval("[...document.querySelectorAll('#theme-grid iframe')].every((f) => f.getAttribute('sandbox') === '' && f.src.endsWith('/sample'))"),
-		b.eval("document.querySelector('#theme-grid input[value=ink]').closest('label').querySelector('.ds').textContent"),
+		b.eval("document.querySelector('#theme-grid input[value=ink]').closest('label').querySelector('[data-testid=ds]').textContent"),
 	)
 	b.eval("document.querySelector('#theme-grid input[value=ink]').click(); document.getElementById('theme-choose').click()")
-	b.until("the toast", "[...document.querySelectorAll('.toast')].some((e) => e.textContent.includes('Changed the default theme to ink'))")
+	b.until("the toast", "[...document.querySelectorAll('[data-testid=toast]')].some((e) => e.textContent.includes('Changed the default theme to ink'))")
 	// Saved, back on the list: its row of the theme told anew and focused, the toast in the modal, which the top layer shows
 	out = append(out, b.eval(seen), b.eval("document.getElementById('settings-theme-now').textContent"), b.eval(focused),
 		b.eval("document.getElementById('settings').contains(document.getElementById('toasts'))"), strings.TrimSpace(s.floe(t, "theme", "default")))
-	b.eval("document.getElementById('settings').close()")
-	out = append(out, b.until("the toasts back", "document.body === document.getElementById('toasts').parentElement"))
+	closeSettings(b)
+	out = append(out, b.until("the toasts back", "!document.getElementById('toasts').closest('dialog')"))
 	// Escape from a part closes the modal, the focus back on its button
 	b.eval("document.getElementById('settings-open').focus(); document.getElementById('settings-open').click()")
 	b.until("the list's values", "document.getElementById('settings-mode-now').textContent !== ''")
-	b.eval("document.querySelector('.settings-item[data-panel=mode]').click()")
+	b.eval("document.querySelector('[data-testid=settings-item][data-panel=mode]').click()")
 	b.pressKey(kb.Escape)
 	b.until("closed by Escape", "!document.getElementById('settings').open")
 	out = append(out, b.eval(focused))
 	// The task mode on: written alone, the theme kept, and floe guide prints its Tasks section's Ask after publishing
 	b.eval("document.getElementById('settings-open').click()")
 	b.until("the list's values", "document.getElementById('settings-mode-now').textContent !== ''")
-	b.eval("document.querySelector('.settings-item[data-panel=mode]').click()")
+	b.eval("document.querySelector('[data-testid=settings-item][data-panel=mode]').click()")
 	out = append(out, b.eval("document.getElementById('task-mode').checked"))
 	b.eval("document.getElementById('task-mode').click(); document.getElementById('mode-save').click()")
-	b.until("the mode's toast", "[...document.querySelectorAll('.toast')].some((e) => e.textContent.includes('Turned the task mode on'))")
+	b.until("the mode's toast", "[...document.querySelectorAll('[data-testid=toast]')].some((e) => e.textContent.includes('Turned the task mode on'))")
 	set, err := os.ReadFile(filepath.Join(s.Env["FLOE_DIR"], "settings.json"))
 	if err != nil {
 		t.Fatal(err)
 	}
 	out = append(out, b.eval(seen), b.eval("document.getElementById('settings-mode-now').textContent"), b.eval(focused),
 		strings.TrimSpace(string(set)), strconv.FormatBool(strings.Contains(s.floe(t, "guide"), "\n### Ask after publishing\n")))
-	b.eval("document.getElementById('settings').close()")
+	closeSettings(b)
 	// The mode's part opened before the settings are read: not checked as off, nor saved, till they are; read, it is on
-	const mode = "document.getElementById('task-mode').checked + ' ' + document.getElementById('mode-save').disabled"
+	const mode = "document.getElementById('task-mode').checked + ' ' + document.getElementById('mode-save').matches(':disabled')"
 	b.eval(`window.realFetch ??= window.fetch; window.held = null;
 		window.fetch = (u, i) => (String(u).startsWith('/api/themes') && !i?.method ? new Promise((go) => { window.held = () => go(window.realFetch(u, i)); }) : window.realFetch(u, i));
-		document.getElementById('settings-open').click(); document.querySelector('.settings-item[data-panel=mode]').click()`)
+		document.getElementById('settings-open').click(); document.querySelector('[data-testid=settings-item][data-panel=mode]').click()`)
 	b.until("the read held", "window.held !== null")
 	out = append(out, b.eval(mode))
 	b.eval("window.held()")
 	b.until("the mode read", "document.getElementById('task-mode').checked")
 	out = append(out, b.eval(mode))
-	b.eval("document.getElementById('settings').close()")
+	closeSettings(b)
 	// Not read at all: the list's values are dashes, and the mode is not to be saved
 	b.eval(`window.fetch = (u, i) => (String(u).startsWith('/api/themes') && !i?.method ? Promise.reject(new TypeError('Failed to fetch')) : window.realFetch(u, i));
 		document.getElementById('settings-open').click()`)
 	b.until("the failure", "document.getElementById('settings-theme-now').textContent === '—'")
 	out = append(out, b.eval("[document.getElementById('settings-mode-now').textContent, document.getElementById('settings-broken').textContent].join(' / ')"))
-	b.eval("document.querySelector('.settings-item[data-panel=mode]').click()")
+	b.eval("document.querySelector('[data-testid=settings-item][data-panel=mode]').click()")
 	out = append(out, b.eval(mode), b.eval("document.getElementById('settings-broken').hidden + ' / ' + document.getElementById('settings-broken').textContent"))
 	// Back on the list, the failure is still said
 	b.eval("document.getElementById('settings-back').click()")
 	out = append(out, b.eval("document.getElementById('settings-broken').hidden + ' / ' + document.getElementById('settings-broken').textContent"))
-	b.eval("window.fetch = window.realFetch; document.getElementById('settings').close()")
+	b.eval("window.fetch = window.realFetch")
+	closeSettings(b)
 	// A read answered after the modal was closed and opened again: the modal open now keeps what it read itself
 	b.eval(`window.held = null; window.fetch = (u, i) => (String(u).startsWith('/api/themes') && !i?.method && !window.heldOnce
 		? (window.heldOnce = true, new Promise((go) => { window.held = () => go({ ok: true, json: async () => { window.staleRead = true; return { themes: [], default: 'stale', taskMode: false }; } }); }))
 		: window.realFetch(u, i));
 		document.getElementById('settings-open').click()`)
 	b.until("the read held", "window.held !== null")
-	b.eval("document.getElementById('settings').close(); document.getElementById('settings-open').click()")
+	closeSettings(b)
+	b.eval("document.getElementById('settings-open').click()")
 	b.until("read again", "document.getElementById('settings-mode-now').textContent === 'On'")
 	b.eval("window.held()")
 	// Read by the opening before; what it does after comes in the same task, before this is read again
 	b.until("the old read answered", "window.staleRead === true")
-	out = append(out, b.eval("[document.getElementById('settings-theme-now').textContent, document.getElementById('settings-mode-now').textContent, document.querySelectorAll('#theme-grid .theme-card').length >= 12].join(' / ')"))
-	b.eval("window.fetch = window.realFetch; document.getElementById('settings').close()")
-	// A save answered after the modal was closed and opened again: told, and the modal open now stays as it is
-	b.eval("window.thrown = 0; addEventListener('error', () => { thrown++; })")
+	out = append(out, b.eval("[document.getElementById('settings-theme-now').textContent, document.getElementById('settings-mode-now').textContent, document.querySelectorAll('#theme-grid [data-testid=theme-card]').length >= 12].join(' / ')"))
+	b.eval("window.fetch = window.realFetch")
+	closeSettings(b)
+	// A save held: the modal holds still, nothing closes it nor goes back to the list, till it is answered and told
+	b.eval("window.saveThrown = 0; addEventListener('error', () => { saveThrown++; })")
 	for _, c := range []struct{ part, save, told string }{
-		{"theme", "document.querySelector('#theme-grid input[value=ink]').click(); document.getElementById('theme-choose').click()", "Changed the default theme to ink"},
+		{"theme", "document.getElementById('theme-choose').click()", "Changed the default theme to ink"},
 		{"mode", "document.getElementById('mode-save').click()", "Turned the task mode on"},
 	} {
 		b.eval("document.getElementById('settings-open').click()")
 		b.until("the list's values", "document.getElementById('settings-mode-now').textContent === 'On'")
 		b.eval(`window.held = null; window.fetch = (u, i) => (i?.method === 'PUT' ? new Promise((go) => { window.held = () => go(window.realFetch(u, i)); }) : window.realFetch(u, i));
-			document.querySelector('.settings-item[data-panel=` + c.part + `]').click(); ` + c.save)
+			document.querySelector('[data-testid=settings-item][data-panel=` + c.part + `]').click()`)
+		b.until("the "+c.part+" panel", "document.getElementById('settings').dataset.panel === "+js(c.part))
+		if c.part == "theme" {
+			b.pressed("document.querySelector('#theme-grid input[value=ink]').click()", "ink chosen", "document.querySelector('#theme-grid input[value=ink]').checked")
+		}
+		b.eval(c.save)
 		b.until("the save held", "window.held !== null")
-		b.eval("document.getElementById('settings').close(); window.fetch = window.realFetch; document.getElementById('settings-open').click()")
-		b.until("opened again", "document.getElementById('settings-mode-now').textContent === 'On'")
-		b.eval("document.querySelector('.settings-item[data-panel=theme]').click(); window.held()")
-		b.until("the old save told", "[...document.querySelectorAll('.toast')].some((e) => e.textContent.includes("+js(c.told)+") && !window.toldBefore?.includes(e))")
-		b.eval("window.toldBefore = [...document.querySelectorAll('.toast')]")
-		out = append(out, b.eval("[document.getElementById('settings').dataset.panel, document.getElementById('settings').contains(document.getElementById('toasts')), thrown].join(' ')"))
-		b.eval("document.getElementById('settings').close()")
+		b.pressKey(kb.Escape)
+		b.eval("document.getElementById('settings-back').click(); document.getElementById('settings').dispatchEvent(new PointerEvent('pointerdown', { bubbles: true })); document.getElementById('settings').dispatchEvent(new MouseEvent('click', { bubbles: true }))")
+		out = append(out, b.eval("[document.getElementById('settings').open, document.getElementById('settings').dataset.panel, document.getElementById('settings-back').matches(':disabled')].join(' ')"))
+		b.eval("window.fetch = window.realFetch")
+		b.eval("window.toldBefore = [...document.querySelectorAll('[data-testid=toast]')]; window.held()")
+		b.until("the save told", "[...document.querySelectorAll('[data-testid=toast]')].some((e) => e.textContent.includes("+js(c.told)+") && !window.toldBefore.includes(e))")
+		out = append(out, b.eval("[document.getElementById('settings').dataset.panel, document.getElementById('settings').getAttribute('closedby'), saveThrown].join(' ')"))
+		closeSettings(b)
 	}
 	// A page stored now is drawn in ink.
 	s.floe(t, "publish", s.page(t, "new.yaml", "New", ""))
@@ -140,9 +168,9 @@ func TestUISettings(t *testing.T) { //nolint:paralleltest // the browser tests s
 		t.Fatal(err)
 	}
 	b.eval("document.getElementById('settings-open').click()")
-	b.until("the cards again", "document.getElementById('settings').open && document.querySelectorAll('#theme-grid .theme-card').length >= 12")
+	b.until("the cards again", "document.getElementById('settings').open && document.querySelectorAll('#theme-grid [data-testid=theme-card]').length >= 12")
 	out = append(out, b.eval("[document.getElementById('settings-broken').textContent, document.getElementById('settings-theme-now').textContent].join(' / ')"))
-	b.eval("document.querySelector('.settings-item[data-panel=theme]').click()")
+	b.eval("document.querySelector('[data-testid=settings-item][data-panel=theme]').click()")
 	out = append(out, b.eval("document.getElementById('theme-now').textContent"))
 	b.eval("document.querySelector('#theme-grid input[value=washi]').click(); document.getElementById('theme-choose').click()")
 	b.until("mended", "document.getElementById('settings').dataset.panel === 'list' && document.getElementById('settings-theme-now').textContent === 'washi'")
@@ -164,7 +192,7 @@ func TestUISettings(t *testing.T) { //nolint:paralleltest // the browser tests s
 		"— / Failed to load the themes: Failed to fetch", "false true", "false / Failed to load the themes: Failed to fetch",
 		"false / Failed to load the themes: Failed to fetch",
 		"ink / On / true",
-		"theme true 0", "theme true 0",
+		"true theme true", "list closerequest 0", "true mode true", "list closerequest 0",
 		"true",
 		"Failed to read the settings. Saving one writes them again / —",
 		"Failed to read the settings. Choosing a theme writes them again",
@@ -182,25 +210,27 @@ func TestUIPageTheme(t *testing.T) { //nolint:paralleltest // the browser tests 
 	b.size(1440, 900, false)
 	defer b.unsize()
 	b.navigate("/")
-	b.until("the row", "document.querySelector('#list li[data-slug=p] .theme-item')")
+	b.until("the row", "document.querySelector('#list li[data-slug=p] [data-testid=theme-item]')")
 	open := func() {
 		t.Helper()
-		b.eval("document.querySelector('#list li[data-slug=p] .more').open = true; document.querySelector('#list li[data-slug=p] .theme-item').click()")
-		b.until("the cards", "document.getElementById('settings').open && document.querySelectorAll('#theme-grid .theme-card').length >= 13")
+		openPageThemes(b, "p")
+		b.until("the cards", "document.querySelectorAll('#theme-grid [data-testid=theme-card]').length >= 13")
 	}
 	// The icon seen at the head of the modal
-	const icon = "[...document.querySelectorAll('#settings .modal-head svg')].filter((e) => e.getClientRects().length).map((e) => e.getAttribute('class')).join()"
+	const icon = "[...document.querySelectorAll('#settings [data-testid=modal-head] svg')].filter((e) => e.getClientRects().length).map((e) => e.dataset.testid).join()"
 	open()
 	out := make([]string, 0, 16)
 	out = append(out,
 		b.eval("[document.getElementById('settings-title').textContent, document.getElementById('theme-page').textContent, document.getElementById('theme-now').textContent].join(' / ')"),
-		b.eval("[...document.querySelector('#theme-grid .theme-card').querySelectorAll('.theme-shot, .nm')].map((e) => e.textContent).join(' / ')"),
+		b.eval("[...document.querySelector('#theme-grid [data-testid=theme-card]').querySelectorAll('[data-testid=theme-shot], [data-testid=nm]')].map((e) => e.textContent).join(' / ')"),
 		b.eval("JSON.stringify(document.querySelector('#theme-grid input:checked').value)"),
 		b.eval(icon),
 	)
-	b.eval("document.querySelector('#theme-grid input[value=ink]').click(); document.getElementById('theme-choose').click()")
-	b.until("the toast", "[...document.querySelectorAll('.toast')].some((e) => e.textContent.includes(\"Changed this page's theme to ink\"))")
-	b.until("listed", "items.find((a) => a.slug === 'p').pickedTheme === 'ink'")
+	b.eval("document.querySelector('#theme-grid input[value=ink]').click()")
+	// Listed anew, read after the write, for the next opening to show the theme picked
+	begun := b.acted("document.getElementById('theme-choose').click()")
+	b.until("the toast", "[...document.querySelectorAll('[data-testid=toast]')].some((e) => e.textContent.includes(\"Changed this page's theme to ink\"))")
+	b.untilRead(begun, "listed", "true")
 	out = append(out,
 		b.eval("document.getElementById('settings').open"),
 		b.until("the focus back", "document.activeElement.matches('#list li[data-slug=p] summary')"),
@@ -212,17 +242,23 @@ func TestUIPageTheme(t *testing.T) { //nolint:paralleltest // the browser tests 
 	for _, code := range []string{"409", "400"} {
 		b.eval(`window.realFetch ??= window.fetch; window.fetch = (u, i) => (i?.method === 'PUT' ? Promise.resolve(new Response('{}', { status: ` + code + ` })) : window.realFetch(u, i));
 			document.querySelector('#theme-grid input[value=washi]').click(); document.getElementById('theme-choose').click()`)
-		out = append(out, b.until("the refusal", "[...document.querySelectorAll('.toast')].map((e) => e.textContent).find((x) => x.startsWith(\"Failed to change this page's theme\") && x.length > 40 && !window.seen?.includes(x)) ?? ''"))
+		out = append(out, b.until("the refusal", "[...document.querySelectorAll('[data-testid=toast]')].map((e) => e.textContent).find((x) => x.startsWith(\"Failed to change this page's theme\") && x.length > 40 && !window.seen?.includes(x)) ?? ''"))
 		b.eval("window.seen = [...(window.seen ?? []), " + js(out[len(out)-1]) + "]")
 		out = append(out, b.eval("document.getElementById('settings').open"))
 	}
-	b.eval("window.fetch = window.realFetch; document.getElementById('settings').close()")
-	// A theme picked that is gone
-	b.eval("openThemes({ ...items.find((a) => a.slug === 'p'), pickedTheme: 'acme' })")
-	b.until("the cards", "document.querySelectorAll('#theme-grid .theme-card').length >= 13")
+	b.eval("window.fetch = window.realFetch")
+	closeSettings(b)
+	// A theme picked that is gone: the list read says so of the page
+	b.eval(`window.fetch = (u, i) => (!i?.method && new URL(u, location.href).pathname === '/api/pages'
+		? window.realFetch(u, i).then((r) => r.json()).then((list) => new Response(JSON.stringify(list.map((a) => (a.slug === 'p' ? { ...a, pickedTheme: 'acme' } : a)))))
+		: window.realFetch(u, i))`)
+	b.untilRead(b.reread(), "the list with the theme gone", "true")
+	open()
+	b.eval("window.fetch = window.realFetch")
 	out = append(out, b.eval("document.getElementById('theme-now').textContent"), b.eval("String(document.querySelector('#theme-grid input:checked'))"))
 	// The settings again, after a page's: of their own head
-	b.eval("document.getElementById('settings').close(); openThemes()")
+	closeSettings(b)
+	b.eval("document.getElementById('settings-open').click()")
 	b.until("the settings", "document.getElementById('settings').open")
 	out = append(out, b.eval("[document.getElementById('settings-title').textContent, document.getElementById('theme-page').hidden, document.getElementById('settings-list').hidden].join(' / ')"), b.eval(icon))
 	check(t, "page theme", out, strings.Join([]string{
@@ -248,19 +284,26 @@ func TestUIThemesFit(t *testing.T) { //nolint:paralleltest // the browser tests 
 	const fits = `(() => {
 		const m = document.getElementById('settings').getBoundingClientRect(), grid = document.getElementById('theme-grid');
 		const seen = (e) => { const r = e.getBoundingClientRect(); return r.top >= m.top && r.bottom <= m.bottom && r.top >= 0 && r.bottom <= innerHeight; };
-		return [seen(document.querySelector('#settings .modal-head')), seen(document.getElementById('theme-choose')),
+		return [seen(document.querySelector('#settings [data-testid=modal-head]')), seen(document.getElementById('theme-choose')),
 			seen(document.querySelector('#settings [data-close]')), grid.scrollHeight > grid.clientHeight].join(' ');
 	})()`
 	out := make([]string, 0, 8)
 	for _, size := range [][2]int64{{1440, 900}, {1440, 700}, {390, 844}, {390, 640}} {
 		b.navigate("/")
 		b.size(size[0], size[1], size[0] < 600)
-		b.until("the row", "items.find((a) => a.slug === 'p')")
-		for _, open := range []string{"openThemes(); settingsTo('theme')", "openThemes(items.find((a) => a.slug === 'p'))"} {
-			b.eval(open)
-			b.until("the cards", "document.querySelectorAll('#theme-grid .theme-card').length >= 12")
+		b.until("the row", "document.querySelector('#list li[data-slug=p]')")
+		for _, open := range []func(){
+			func() {
+				b.eval("document.getElementById('settings-open').click()")
+				b.until("the list", "document.getElementById('settings').open")
+				b.eval("document.querySelector('[data-testid=settings-item][data-panel=theme]').click()")
+			},
+			func() { openPageThemes(b, "p") },
+		} {
+			open()
+			b.until("the cards", "document.querySelectorAll('#theme-grid [data-testid=theme-card]').length >= 12")
 			out = append(out, b.settled(fits))
-			b.eval("document.getElementById('settings').close()")
+			closeSettings(b)
 		}
 	}
 	check(t, "themes fit", out, strings.Repeat("true true true true|", 7)+"true true true true")

@@ -43,6 +43,7 @@ sections:
 - `--move-project` takes the page off its task, as a task is of its project, and says so (`page in project app, off task #9`); the task stays in the old project without the page. Tell the user, who decides whether to put the page on a task. The user can also change the project on the management page, as the item above says.
 - `floe info <slug>` prints a page's project, task, data file and the rest floe keeps of it, a name, a tab and a value a line, an empty value for none, and changes nothing: run it to check the project of a page you did not just publish.
 - floe knows a page by its data file, not by the directory floe runs in: publish the same file again, from any directory and without `--slug`, and it replaces its page, even after the user renamed the page on the management page.
+- Drawing a page MUST stay within 512 MiB of memory, and on the server within 30 seconds, and the page drawn within 80 MiB of HTML: past any, floe refuses the page at its data file (`drawing it needed more than 512 MiB of memory`, `drawing it took more than 30 seconds`, `the page drawn is … MiB, over the 80 MiB a page may be`). Do not repeat a long text for each item of a list, in an expression or in `page.html` (`floe template guide`).
 - A slug MUST NOT be that of another file's page (`slug "db-choice" was published from …: choose another slug`): rename your file (`db-choice-2.yaml`) or give another `--slug`, and publish again.
 - On Windows, what floe reads and writes MUST be on a local drive: the data file, a file or folder to link, the repository, the store, and the directories of your own templates, parts and themes. Any local folder will do; a network share or a network drive will not, nor a symlink or junction that leads to one. A file or folder to link (`--link`) MUST NOT, in addition, be in `AppData`, `%TEMP%` included: write it in the repository the page is about.
 
@@ -75,7 +76,7 @@ The user keeps a task list, and wants each new page put on a task, under one of 
 - `floe task` prints a task's categories in order after `categories`, each a Go string literal, with spaces between (`categories "Designs" "Samples" "Ideas"`): read each name as Go reads the literal, without its quotes, `\t` a tab, `\"` a `"` and `\\` a `\` (`"A \"B\""` is `A "B"`).
 - Offer the first two of the task's categories, each named as read so, then `A new category` and `None`; a new task, or one with no category, gets `A new category` and `None`.
 - Say in the question that the user can type instead a new category's name, and, when the task has more categories, another of them, naming them all.
-- The first time in the conversation, also say in the question what a category is: a heading on the task's page that its pages are listed under (`Designs`, `Samples`); a page of no category is listed above the headings.
+- The first time in the conversation, also say in the question what a category is: a heading on the task's page that its pages are listed under (`Designs`, `Samples`); a page of no category is listed first, under `No category`.
 
 #### Putting the page
 
@@ -150,7 +151,7 @@ Write so:
 floe refuses these:
 
 - A text MUST NOT be left bare where YAML reads it as something else: with a `: ` (a key) or a ` #` (a comment) in it, starting with a backtick or `%`, or reading as a number, `null` or `~` where only text goes (`'42'` in a table's cell, `'0x1F'`, `'null'`, `'-'`).
-- A comment MUST NOT follow a bare text on its line, in `{ }` or `[ ]` too, nor come right after a `|` or `>` block. The first line of a `|` block MUST NOT be deeper than the next.
+- A comment MUST NOT follow a bare text on its line, in `{ }` or `[ ]` too, nor come right after a `|` or `>` block. The first line of a `|` block MUST NOT be deeper than the next: the block ends before the first shallower line, which is read as YAML, refused at that line or one after it, or, when it is as deep as the block's key or `-` and reads as a key or an item, taken as one with no mistake. For text whose first line starts with spaces, write after the `|` how far the block is indented past its key (`|2`).
 - A file MUST be one document (no `---`), with no anchors, aliases, merge keys (`<<`) or tags, and each key written once in its keys and values.
 
 These pass `floe check` and change what you wrote:

@@ -7,6 +7,7 @@ import (
 	"testing"
 
 	"floe/internal/dirs"
+	floepublish "floe/internal/publish"
 	"floe/internal/store"
 	"floe/internal/testfs"
 )
@@ -23,7 +24,7 @@ func TestListedShown(t *testing.T) {
 		t.Fatal(err)
 	}
 	dw := picKit(t, "", "")
-	e, err := s.PrepareLink(t.Context(), dw, html, store.Options{}, "", filepath.Dir(home))
+	e, err := floepublish.PrepareLink(t.Context(), s, dw, html, store.Options{}, "", filepath.Dir(home))
 	if err == nil {
 		err = s.Save(e)
 	}
@@ -34,8 +35,8 @@ func TestListedShown(t *testing.T) {
 		t.Fatalf("meta.json path = %q, want it as files.Real gives it", s.ReadMeta(e.Slug).Path)
 	}
 	place := `\\?\` + filepath.Join(home, "d.yaml")
-	up := store.Upload{File: "d.yaml", Source: []byte(ownSrc), Images: map[string][]byte{}, Project: "p", Repo: "", Place: place}
-	d, err := s.PrepareData(dw, up, store.Options{})
+	up := floepublish.Upload{File: "d.yaml", Source: []byte(ownSrc), Images: map[string][]byte{}, Project: "p", Repo: "", Place: place}
+	d, err := floepublish.PrepareData(t.Context(), s, dw, up, store.Options{})
 	if err == nil {
 		err = s.Save(d)
 	}
@@ -61,7 +62,7 @@ func TestLinkDriveRelative(t *testing.T) {
 	t.Parallel()
 
 	s, root := newStore(t)
-	_, err := s.PrepareLink(t.Context(), picKit(t, "", ""), "C:b.html", store.Options{}, "", filepath.Dir(root))
+	_, err := floepublish.PrepareLink(t.Context(), s, picKit(t, "", ""), "C:b.html", store.Options{}, "", filepath.Dir(root))
 	if keyOf(err) != "path_drive_relative" {
 		t.Errorf("link C:b.html refused %v, want path_drive_relative", err)
 	}
@@ -78,7 +79,7 @@ func TestLinkDeniedFolder(t *testing.T) {
 		t.Fatal(err)
 	}
 	testfs.DenyList(t, dirs.Shown(folder)) // icacls takes the path as people write it
-	_, err := s.PrepareLink(t.Context(), picKit(t, "", ""), folder, store.Options{}, "", filepath.Dir(home))
+	_, err := floepublish.PrepareLink(t.Context(), s, picKit(t, "", ""), folder, store.Options{}, "", filepath.Dir(home))
 	if keyOf(err) != "library" {
 		t.Errorf("link of a denied folder = %v, want it refused in the system's words (CannotRead)", err)
 	}
@@ -100,13 +101,13 @@ func TestPrepareLinkShare(t *testing.T) {
 	shared, mapped := testfs.MapShare(t, tmp)
 	for _, p := range []string{shared, mapped, testfs.SubstShare(t, tmp) + `\`} {
 		file := filepath.Join(p, "a.html")
-		if _, err := s.PrepareLink(t.Context(), dw, file, store.Options{}, home, home); keyOf(err) != "path_not_local" {
+		if _, err := floepublish.PrepareLink(t.Context(), s, dw, file, store.Options{}, home, home); keyOf(err) != "path_not_local" {
 			t.Errorf("link %s = %v, want path_not_local", file, err)
 		}
 	}
 	drive := testfs.Subst(t, tmp)
 	file := drive + `\a.html`
-	if _, err := s.PrepareLink(t.Context(), dw, file, store.Options{}, home, home); err != nil {
+	if _, err := floepublish.PrepareLink(t.Context(), s, dw, file, store.Options{}, home, home); err != nil {
 		t.Errorf("link %s = %v, want it linked", file, err)
 	}
 }

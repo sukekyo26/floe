@@ -13,8 +13,7 @@ func TestUIDiffFrame(t *testing.T) { //nolint:paralleltest // the browser tests 
 	b := s.b
 	b.size(1440, 900, false)
 	b.navigate("/a/d/?diff&from=2&to=3")
-	const shown = "typeof diffAnswer !== 'undefined' && diffAnswer !== null && document.getElementById('diff-frame').src.includes('key=' + diffAnswer.key)"
-	b.until("the marked page", shown)
+	b.until("the marked page", diffShown)
 	out := make([]string, 0, 4)
 	b.pressKey("n")
 	out = append(out, b.until("the frame at the first place", "document.getElementById('diff-frame').src.endsWith('#floe-diff.0') && location.search + '|' + location.hash"))
@@ -24,9 +23,9 @@ func TestUIDiffFrame(t *testing.T) { //nolint:paralleltest // the browser tests 
 	// A frame asked with a key no longer the pair's (a publish between /diff and the frame) is not found, and tells the
 	// diff, which reads what changed again.
 	b.eval("(() => { const f = document.getElementById('diff-frame'); f.src = f.src.replace(/key=[^&#]*/, 'key=stale'); return 'set'; })()")
-	out = append(out, b.until("the frame of a stale key read again", "("+shown+") && 'again'"))
-	key := b.eval("diffAnswer.key")
+	out = append(out, b.until("the frame of a stale key read again", "("+diffShown+") && !document.getElementById('diff-frame').src.includes('key=stale') && 'again'"))
+	key := b.eval(diffKey)
 	s.floe(t, "publish", s.page(t, "diff/d.yaml", "D", diffV3+"<p>One more.</p>"), "--slug", "d")
-	out = append(out, b.until("what changed read again", "diffAnswer.key !== '"+key+"' && ("+shown+") && String(diffVersions.length)"))
+	out = append(out, b.until("what changed read again", "("+diffShown+") && "+diffKey+" !== "+js(key)+" && String(document.getElementById('diff-to').options.length)"))
 	check(t, "frame", out, strings.Join([]string{"?diff&from=2&to=3|", "?diff&from=2&to=3|", "again", "4"}, "|"))
 }

@@ -364,16 +364,16 @@ func TestAllowedDangling(t *testing.T) {
 	} else {
 		_ = l.Close()
 	}
-	// RealAbove keeps the path's own link that leads to nothing by its name: a → r there, b → q\c, c not there.
+	// RealAbove follows the path's own link that leads to nothing to where it leads: a → r there, b → q\c, c not there.
 	writeFile(t, filepath.Join(dir, "q", "keep"), "")
 	testfs.Symlink(t, filepath.Join(dir, "real"), filepath.Join(dir, "a"))
 	testfs.Symlink(t, filepath.Join(dir, "q", "c"), filepath.Join(dir, "real", "b"))
-	realDir, err := files.Real(filepath.Join(dir, "real"))
+	q, err := files.Real(filepath.Join(dir, "q"))
 	if err != nil {
 		t.Fatal(err)
 	}
-	if got, ok := files.RealAbove(filepath.Join(dir, "a", "b", "x")); !ok || got != filepath.Join(realDir, "b", "x") {
-		t.Errorf("RealAbove(a\\b\\x) = %q, %v, want %q", got, ok, filepath.Join(realDir, "b", "x"))
+	if got, ok := files.RealAbove(filepath.Join(dir, "a", "b", "x")); !ok || got != filepath.Join(q, "c", "x") {
+		t.Errorf("RealAbove(a\\b\\x) = %q, %v, want %q", got, ok, filepath.Join(q, "c", "x"))
 	}
 }
 

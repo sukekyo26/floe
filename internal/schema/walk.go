@@ -18,6 +18,7 @@ type Step struct {
 	PartRoot     *jsonschema.Schema
 	Props        map[string]*jsonschema.Schema
 	Items        *jsonschema.Schema
+	itemsFrom    int                // the first item Items takes; those before it the prefixItems beside Items take
 	Rest         *jsonschema.Schema // of the keys of no property, but those a pattern of restIn takes
 	restIn       *jsonschema.Schema
 	closed       []*jsonschema.Schema // those gone through with additionalProperties: false
@@ -65,9 +66,9 @@ func (st Step) of(key string) *jsonschema.Schema {
 // file or to a Shared schema is followed first, and when the step there is a Part or a format, that is the
 // step of s too (the properties beside the $ref are not taken: the value is drawn whole); else the
 // Properties, additionalProperties and Items2020 (Items before 2020-12) of s, together with those of the step the
-// $ref names: a name s declares itself is taken from s, the rest from the $ref. Nothing else is a step (allOf, anyOf,
-// oneOf, patternProperties, prefixItems, if/then/else, dependencies, ...). A $ref back to a schema it followed ends
-// there.
+// $ref names: a name s declares itself is taken from s, the rest from the $ref. Items takes, as the library does, the
+// items after the prefixItems of the schema it is of. Nothing else is a step (allOf, anyOf, oneOf, patternProperties,
+// prefixItems, if/then/else, dependencies, ...). A $ref back to a schema it followed ends there.
 // LIMIT: what floe draws under allOf and the like, and under the array form of items and additionalItems
 // (2019-09), is refused as unreached, not drawn.
 func (c *Compiled) Follow(s *jsonschema.Schema) Step {
@@ -92,21 +93,29 @@ func (c *Compiled) stepClosed(s *jsonschema.Schema) (Step, []*jsonschema.Schema)
 func (c *Compiled) step(s *jsonschema.Schema, seen map[*jsonschema.Schema]bool) (Step, []*jsonschema.Schema) {
 	through := make([]*jsonschema.Schema, 1, 2)
 	through[0] = s
+	items, from := itemsOf(s)
 	own := Step{
-		Part: "", Format: "", PartRoot: nil, Props: s.Properties, Items: itemsOf(s), Rest: restOf(s), restIn: s, closed: nil,
+		Part: "", Format: "", PartRoot: nil, Props: s.Properties, Items: items, itemsFrom: from, Rest: restOf(s), restIn: s,
+		closed: nil,
 	}
 	if seen[s] {
-		return Step{Part: "", Format: "", PartRoot: nil, Props: nil, Items: nil, Rest: nil, restIn: nil, closed: nil}, through
+		return Step{
+			Part: "", Format: "", PartRoot: nil, Props: nil, Items: nil, itemsFrom: 0, Rest: nil, restIn: nil, closed: nil,
+		}, through
 	}
 	seen[s] = true
 	if f := floeFormat(s); f != "" {
-		return Step{Part: "", Format: f, PartRoot: nil, Props: nil, Items: nil, Rest: nil, restIn: nil, closed: nil}, through
+		return Step{
+			Part: "", Format: f, PartRoot: nil, Props: nil, Items: nil, itemsFrom: 0, Rest: nil, restIn: nil, closed: nil,
+		}, through
 	}
 	if s.Ref == nil {
 		return own, through
 	}
 	if part, ok := c.partRoot(s.Ref); ok {
-		st := Step{Part: part, Format: "", PartRoot: s.Ref, Props: nil, Items: nil, Rest: nil, restIn: nil, closed: nil}
+		st := Step{
+			Part: part, Format: "", PartRoot: s.Ref, Props: nil, Items: nil, itemsFrom: 0, Rest: nil, restIn: nil, closed: nil,
+		}
 		return st, through
 	}
 	if !c.followed(s, s.Ref) {
@@ -123,7 +132,7 @@ func (c *Compiled) step(s *jsonschema.Schema, seen map[*jsonschema.Schema]bool) 
 	}
 	maps.Copy(props, s.Properties)
 	if own.Items == nil {
-		own.Items = st.Items
+		own.Items, own.itemsFrom = st.Items, st.itemsFrom
 	}
 	if own.Rest == nil {
 		own.Rest, own.restIn = st.Rest, st.restIn
@@ -145,8 +154,12 @@ type Item struct {
 // Walk goes through values as c takes them, a step of Follow at each value, into a part's value from the root
 // of its schema, and calls fn with each Item, those a part's value holds before it, and with its value made
 // ready: the Items in it replaced by what fn returned for them. It returns values made ready so, each item
-// the schema declares but values leave out made nil, so that a template can test it under missingkey=error.
+// a schema it walks by declares but values leave out made nil, so that a template can test it under
+// missingkey=error; what it does not walk by (under prefixItems and the like) goes as written.
 // It is the one walk of values: what floe checks of the items and what it draws both come from it.
+// Parts whose roots lead back to each other through $refs alone would never end it: the schema's check refuses them
+// (schema_ref_cycle), so call it with schemas checked, as those of a Kit are (kit.Load checks one's own, the tests
+// floe's).
 // LIMIT: {{.x}} writes an object as Go's map, refused only if it holds html; give any.json's one part when needed
 func (c *Compiled) Walk(values any, fn func(it Item, ready any) (any, error)) (any, error) {
 	w := &walk{c: c, fn: fn}
@@ -192,6 +205,10 @@ func (w *walk) under(st Step, v any, at []string, inPart bool) (any, error) {
 	case []any:
 		ready := make([]any, len(v))
 		for i, item := range v {
+			if i < st.itemsFrom {
+				ready[i] = item
+				continue
+			}
 			if ready[i], err = w.in(st.Items, item, at, strconv.Itoa(i), inPart); err != nil {
 				return nil, err
 			}
@@ -209,15 +226,16 @@ func (w *walk) in(s *jsonschema.Schema, v any, at []string, step string, inPart 
 	return w.step(w.c.Follow(s), v, slices.Concat(at, []string{step}), inPart)
 }
 
-// itemsOf returns the schema of each item of s: Items2020, or before 2020-12 Items of one schema.
-func itemsOf(s *jsonschema.Schema) *jsonschema.Schema {
+// itemsOf returns the schema of the items of s and the index of the first it takes: Items2020 after the
+// prefixItems of s, or before 2020-12 Items of one schema, from the first.
+func itemsOf(s *jsonschema.Schema) (*jsonschema.Schema, int) {
 	if s.Items2020 != nil {
-		return s.Items2020
+		return s.Items2020, len(s.PrefixItems)
 	}
 	if one, ok := s.Items.(*jsonschema.Schema); ok {
-		return one
+		return one, 0
 	}
-	return nil
+	return nil, 0
 }
 
 // restOf returns the schema of the additionalProperties of s, nil for none or for true or false.
@@ -250,6 +268,14 @@ func (c *Compiled) followed(s, to *jsonschema.Schema) bool {
 		return true
 	}
 	return c.isShared(base)
+}
+
+// untaken reports whether a list under st, a step through the schemas through, may hold items that its Items does
+// not take, before them by prefixItems: Items takes them after some, or there is no Items and prefixItems takes them.
+func untaken(st Step, through []*jsonschema.Schema) bool {
+	return st.itemsFrom > 0 || st.Items == nil && slices.ContainsFunc(through, func(s *jsonschema.Schema) bool {
+		return len(s.PrefixItems) > 0
+	})
 }
 
 // split returns the URL of loc, a Location, and its fragment without "#".
@@ -380,11 +406,20 @@ func (w *walker) value(from *jsonschema.Schema, v reflect.Value) {
 	}
 }
 
-// Forbidding returns the first of steps, a path of keys from the root of c, that a schema on the way forbids
-// (Step.Forbids), and false for none. A list on the way is gone through by its items, the step kept, as a
-// check's for is; a part's value from its schema's root. Where the steps lead to what Follow does not know
-// (a format, a schema of neither the key nor items, one of additionalProperties, one met again in going through
-// items), the rest is not known to be forbidden, nor is a key declared where items are too, as the value may be a list.
+// Forbidding returns the first of steps, a path of keys from the root of c, that no value the schema allows there may
+// hold, and false for none. A part's value goes on from its schema's root. At each step, the types of the schemas
+// Follow goes through tell whether the value may be keys holding the key (none forbids it, Step.Forbids) and whether it
+// may be a list: of keys alone, a key declared goes on to its schema; of a list alone, its items, the step kept, as a
+// check's for is. A key is refused where the value may be neither and a closed schema forbids it. Where it may be
+// both, or the steps lead to what Follow does not know (a key not declared, a format, a list of no items or of items
+// that items does not take, before it by prefixItems, a schema met again in going through items), the rest is not
+// known to be forbidden.
+// LIMIT: in a list of items that items does not take, a key no item may hold is not refused either, and a check of it
+// finds no item; decide it by the schemas of prefixItems if floe comes to walk them.
+// LIMIT: the shape of a value is read from type alone: past a schema whose type lets the value be keys and a list
+// (none written too, a template's root as well), or a key its properties do not declare (additionalProperties or
+// patternProperties takes it), no for is refused; nor is what allOf and the like narrow read. Read them if a for
+// that passes so misleads.
 func (c *Compiled) Forbidding(steps []string) (string, bool) {
 	s := c.Root
 	for _, key := range steps {
@@ -395,25 +430,23 @@ func (c *Compiled) Forbidding(steps []string) (string, bool) {
 				return "", false
 			}
 			seen[s] = true
-			st := c.Follow(s)
+			st, through := c.stepClosed(s)
 			next, declared := st.Props[key]
+			keys := allows(through, "object") && !st.Forbids(key)
+			list := allows(through, "array")
 			switch {
 			case st.Part != "":
 				s = st.PartRoot
-			case declared && st.Items != nil:
-				// Keys and items: the value may be a list or an object, which lead on apart.
+			case keys && list:
 				return "", false
-			case declared && st.Forbids(key):
-				// Declared beside a $ref to a schema of additionalProperties: false, which takes it not.
-				return key, true
-			case declared:
+			case list:
+				if untaken(st, through) || st.Items == nil {
+					return "", false
+				}
+				s = st.Items
+			case keys && declared:
 				s = next
 				break step
-			case st.Rest != nil && !st.Forbids(key):
-				// Undeclared where a value of keys takes any: known only by the value.
-				return "", false
-			case st.Items != nil:
-				s = st.Items
 			case st.Forbids(key):
 				return key, true
 			default:
@@ -422,4 +455,15 @@ func (c *Compiled) Forbidding(steps []string) (string, bool) {
 		}
 	}
 	return "", false
+}
+
+// allows reports whether the types of the schemas gone through let the value be of type t: each names no type, or t
+// among its types.
+func allows(through []*jsonschema.Schema, t string) bool {
+	for _, s := range through {
+		if s.Types != nil && !slices.Contains(s.Types.ToStrings(), t) {
+			return false
+		}
+	}
+	return true
 }

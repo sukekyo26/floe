@@ -7,6 +7,7 @@
 #   FLOE_VERSION      Version to install (e.g. "0.2.0"); default "latest".
 #   FLOE_INSTALL_DIR  Where to put floe.exe; default "%USERPROFILE%\.local\bin".
 #   FLOE_ADD_TO_PATH  "1" adds that folder to your user PATH; default leaves PATH alone.
+#   FLOE_INSTALL_TIMEOUT  Seconds to wait for an answer while nothing comes, for each request; default "120".
 #
 # The binary's SHA-256 is verified against SHA256SUMS from the same release.
 # Runs on Windows PowerShell 5.1 and PowerShell 7. This file is ASCII with no BOM: `irm | iex` fails on a BOM.
@@ -42,12 +43,29 @@
   if ((Get-Command Microsoft.PowerShell.Utility\Invoke-WebRequest).Parameters.ContainsKey('AllowInsecureRedirect')) {
     $insecure['AllowInsecureRedirect'] = $true
   }
+  # PowerShell 7.4 and later can give up on a body that stops coming; before, nothing says so.
+  $stalls = (Get-Command Microsoft.PowerShell.Utility\Invoke-WebRequest).Parameters.ContainsKey('OperationTimeoutSeconds')
 
   # Every hop is asked for with no redirect followed, and only an https one is taken: left to itself
   # Windows PowerShell follows https -> http -> https without a word. A failure with an answer carries its status.
   # LIMIT: TLS is not set: a Windows PowerShell on a .NET Framework whose default is not TLS 1.2 fails with "Could not
   # create SSL/TLS secure channel". Only the runners' Windows Server 2022 and 2025 were tried.
+  # A server or a proxy that goes silent is given up on after $wait seconds (FLOE_INSTALL_TIMEOUT), and told as that
+  # where PowerShell tells it apart: Windows PowerShell by the status of its WebException, PowerShell 7.4 and later
+  # by the id of the error (seen on 5.1 and 7.6, run 44263536485; 7.4's source makes the same ids).
+  # LIMIT: -TimeoutSec is the wait for an answer to begin (the proxy, TLS, the headers), not for the body. A body
+  # that stops is given up on after $wait seconds by PowerShell 7.4 and later; after .NET's own 5 minutes by Windows
+  # PowerShell, whatever $wait is; never by PowerShell 7.0 to 7.3, which also get no word of a time-out added.
+  # LIMIT: the time of the whole download has no limit, which a slow line would run into: a server that keeps
+  # sending, however little, sooner than the limit each time is waited for to the end. Each request has the limit
+  # anew, a redirect's too: five or so that each go silent just short of it take ten minutes.
+  # LIMIT: what Windows PowerShell does before a request turns asynchronous (the name, the proxy, the connection:
+  # .NET's BeginGetResponse) may not be under -TimeoutSec. A stop of the look of run 44244107780's (nothing sent
+  # after the proxy's CONNECT) ended once as a silence under it (run 44694367866); that every such stop does is not
+  # known. One seen to run past FLOE_INSTALL_TIMEOUT would call for a limit on the whole of a request.
   function Fetch([string]$Url, [string]$OutFile) {
+    $limit = @{ TimeoutSec = $wait }
+    if ($stalls) { $limit['OperationTimeoutSeconds'] = $wait }
     $at = [uri]$Url
     for ($hop = 0; $hop -le 10; $hop++) {
       if ($at.Scheme -cne 'https') { throw "download failed: $Url (redirected to $($at.Scheme))" }
@@ -57,13 +75,20 @@
         # PowerShell 7 throws it, the response inside.
         # No -OutFile: Windows PowerShell reads it as a wildcard, and a [ or ] in TEMP is not found, escaped or not.
         $got = Invoke-WebRequest -UseBasicParsing -Uri $at -MaximumRedirection 0 `
-          -ErrorAction SilentlyContinue -ErrorVariable problem @insecure
+          -ErrorAction SilentlyContinue -ErrorVariable problem @insecure @limit
         if ($null -eq $got) { throw $problem[0] }
         $status = [int]$got.StatusCode
         $to = LocationOf $got.Headers
       } catch {
         $answer = $_.Exception.Response
-        if (-not $answer) { throw "download failed: $Url ($($_.Exception.Message))" }
+        if (-not $answer) {
+          $failed = "download failed: $Url ($($_.Exception.Message))"
+          $gone = $_.Exception -is [Net.WebException] -and $_.Exception.Status -eq [Net.WebExceptionStatus]::Timeout
+          if ($gone -or $_.FullyQualifiedErrorId -clike 'ConnectionTimeoutReached,*' -or $_.FullyQualifiedErrorId -clike 'OperationTimeoutReached,*') {
+            $failed += "; check your network and proxy and run it again; FLOE_INSTALL_TIMEOUT sets how many seconds to wait for an answer (now $wait)"
+          }
+          throw $failed
+        }
         $status = [int]$answer.StatusCode
         $to = LocationOf $answer.Headers
       }
@@ -172,6 +197,7 @@
     $line = ''
     if ($env:FLOE_INSTALL_DIR) { $line += '$env:FLOE_INSTALL_DIR = ' + (Quote $dir) + '; ' }
     if ($env:FLOE_VERSION) { $line += '$env:FLOE_VERSION = ' + (Quote $env:FLOE_VERSION) + '; ' }
+    if ($env:FLOE_INSTALL_TIMEOUT) { $line += '$env:FLOE_INSTALL_TIMEOUT = ' + (Quote $env:FLOE_INSTALL_TIMEOUT) + '; ' }
     $line += '$env:FLOE_ADD_TO_PATH = ''1''; '
     if ($self) { $line += '& ' + (Quote $self) } else { $line += "irm https://raw.githubusercontent.com/$repo/main/install.ps1 | iex" }
     Write-Host "floe-install: $dir is not on your PATH. To add it, run:"
@@ -245,6 +271,15 @@
 
     $add = $env:FLOE_ADD_TO_PATH
     if ($add -and $add -cne '1') { throw "FLOE_ADD_TO_PATH must be 1 or unset (got $add)" }
+
+    # Read as letters, as install.sh reads it: digits alone, the first not 0, five at most (PowerShell 7 refuses
+    # more than 2147483 seconds). \A and \z: ^ and $ would take a line break at the end.
+    $wait = $env:FLOE_INSTALL_TIMEOUT
+    if (-not $wait) { $wait = '120' }
+    if (-not ($wait -cmatch '\A[1-9][0-9]{0,4}\z')) {
+      throw "FLOE_INSTALL_TIMEOUT must be a number of seconds from 1 to 99999, in digits alone (got $wait)"
+    }
+    $wait = [int]$wait
 
     $given = $env:FLOE_INSTALL_DIR
     if (-not $given) {

@@ -35,9 +35,9 @@ const ringOf = `(() => {
   };
   const ratio = (x, y) => { const [hi, lo] = [luminance(x), luminance(y)].sort((p, q) => q - p); return (hi + 0.05) / (lo + 0.05); };
   let e = document.activeElement;
-  if (e.matches('a.title')) e = e.closest('li');
-  if (e.matches('.kin-row')) e = e.closest('.kin-line');
-  if (e.matches('.tag-box input')) e = e.closest('.tag-box');
+  if (e.matches('a[data-testid=title]')) e = e.closest('li');
+  if (e.matches('[data-testid=kin-row]')) e = e.closest('[data-testid=kin-line]');
+  if (e.matches('[data-testid=tag-box] input')) e = e.closest('[data-testid=tag-box]');
   const s = getComputedStyle(e);
   const ring = rgba(s.outlineColor);
   const offset = parseFloat(s.outlineOffset);
@@ -51,7 +51,7 @@ const ringOf = `(() => {
     const r = e.getBoundingClientRect();
     const reach = offset + parseFloat(s.outlineWidth) + 1;
     const box = { left: r.left - reach, top: r.top - reach, right: r.right + reach, bottom: r.bottom + reach };
-    const name = (x) => x.id ? '#' + x.id : x.tagName.toLowerCase() + (x.className ? '.' + String(x.className).split(' ')[0] : '');
+    const name = (x) => x.id ? '#' + x.id : x.tagName.toLowerCase() + (x.dataset.testid ? '[data-testid=' + x.dataset.testid + ']' : '');
     for (const x of document.querySelectorAll('body *')) {
       if (x === e || x.contains(e) || e.contains(x) || !x.checkVisibility()) continue;
       const bg = rgba(getComputedStyle(x).backgroundColor);
@@ -95,17 +95,17 @@ func TestUIFocusRing(t *testing.T) { //nolint:paralleltest // the browser tests 
 	b := s.b
 	b.stub(colorsList)
 	b.navigate("/")
-	b.until("the rows", "document.querySelectorAll('#list li:not(.group)').length > 0")
+	b.until("the rows", "document.querySelectorAll('#list li[data-slug]').length > 0")
 
 	// Pressed with the mouse: no outline, and the shadow it has without the focus.
 	pressed := []string{
-		".views button[data-view=fav]", ".views button[data-view=all]", "#list li:not(.group) .star", "#list li:not(.group) .sel",
+		"#shelf [data-view=fav]", "#shelf [data-view=all]", "#list li[data-slug] [data-testid=star]", "#list li[data-slug] [data-testid=sel]",
 	}
 	out := make([]string, 0, 16)
 	for _, sel := range pressed {
 		// A row selected, the check boxes show.
-		if strings.HasSuffix(sel, ".sel") {
-			b.eval("document.querySelector('#list li[data-slug=p9] .sel').click()")
+		if strings.HasSuffix(sel, "[data-testid=sel]") {
+			b.eval("document.querySelector('#list li[data-slug=p9] [data-testid=sel]').click()")
 		}
 		r := b.rect("document.querySelector(" + js(sel) + ")")
 		b.click(r.X+r.Width/2, r.Y+r.Height/2)
@@ -117,8 +117,8 @@ func TestUIFocusRing(t *testing.T) { //nolint:paralleltest // the browser tests 
 		out = append(out, sel+": "+strings.SplitN(focused, " ", 3)[1]+" "+strconv.FormatBool(focused == unfocused))
 	}
 	check(t, "pressed", out, strings.Join([]string{
-		".views button[data-view=fav]: none true", ".views button[data-view=all]: none true",
-		"#list li:not(.group) .star: none true", "#list li:not(.group) .sel: none true",
+		"#shelf [data-view=fav]: none true", "#shelf [data-view=all]: none true",
+		"#list li[data-slug] [data-testid=star]: none true", "#list li[data-slug] [data-testid=sel]: none true",
 	}, "|"))
 
 	// Reached by keyboard: Tab from the top of the page (focus is put on the body, where Tab goes on from) until the control
@@ -143,37 +143,40 @@ func TestUIFocusRing(t *testing.T) { //nolint:paralleltest // the browser tests 
 	b.eval("document.getElementById('bulk-clear').click()")
 	out = out[:0]
 	for _, sel := range []string{
-		".views button[data-view=all]", ".views button[data-view=fav]", "#q",
-		"#list li:not(.group) a.title",
+		"#shelf [data-view=all]", "#shelf [data-view=fav]", "#q",
+		"#list li[data-slug] a[data-testid=title]",
 	} {
 		out = append(out, tabTo(sel))
 	}
 	// In the bulk bar, ringed in ink: the clearing at its end, and the delete, pressed once too, which shows its darker face
 	// and no ring but the focus ring.
-	b.eval("document.querySelector('#list li:not(.group) .sel').click()")
-	out = append(out, tabTo("#list li:not(.group) .sel"), tabTo("#bulk-clear"), tabTo("#bulk-delete"))
+	b.eval("document.querySelector('#list li[data-slug] [data-testid=sel]').click()")
+	out = append(out, tabTo("#list li[data-slug] [data-testid=sel]"), tabTo("#bulk-clear"), tabTo("#bulk-delete"))
 	if err := chromedp.Do(b.ctx, chromedp.KeyEvent(kb.Enter)); err != nil {
 		t.Fatal(err)
 	}
-	b.until("the delete to be armed", "document.getElementById('bulk-delete').classList.contains('armed')")
-	out = append(out, "#bulk-delete.armed: "+b.settled(ringOf))
+	b.until("the delete to be armed", "document.getElementById('bulk-delete').dataset.armed === 'true'")
+	out = append(out, "#bulk-delete[data-armed]: "+b.settled(ringOf))
 	b.eval("document.getElementById('bulk-clear').click()")
-	b.eval("document.querySelector('#list li:not(.group) .sel').click()")
+	b.eval("document.querySelector('#list li[data-slug] [data-testid=sel]').click()")
 	b.eval("document.getElementById('bulk-tag').click()")
 	b.until("the tags dialog", "document.getElementById('tag-dialog').open")
-	out = append(out, tabTo(".tag-box input"))
-	b.eval("document.getElementById('tag-dialog').close(); openFind()")
-	out = append(out, tabTo("#find-actions .star"))
-	b.eval("document.getElementById('find').close()")
+	out = append(out, tabTo("[data-testid=tag-box] input"))
+	b.pressKey(kb.Escape)
+	b.until("the tags modal closed", "!document.getElementById('tag-dialog').open")
+	pressFindOpen(b)
+	out = append(out, tabTo("#find-actions [data-testid=star]"))
+	b.pressKey(kb.Escape)
+	b.until("the search closed", "!document.getElementById('find').open")
 	ring := "solid 2px rgb(107, 105, 100) 1px seen"
 	check(t, "reached", out, strings.Join([]string{
-		".views button[data-view=all]: " + ring, ".views button[data-view=fav]: " + ring,
-		"#q: " + ring, "#list li:not(.group) a.title: solid 2px rgb(107, 105, 100) -2px seen",
-		"#list li:not(.group) .sel: " + ring, "#bulk-clear: " + ring, "#bulk-delete: " + ring, "#bulk-delete.armed: " + ring,
-		".tag-box input: " + ring, "#find-actions .star: " + ring,
+		"#shelf [data-view=all]: " + ring, "#shelf [data-view=fav]: " + ring,
+		"#q: " + ring, "#list li[data-slug] a[data-testid=title]: solid 2px rgb(107, 105, 100) -2px seen",
+		"#list li[data-slug] [data-testid=sel]: " + ring, "#bulk-clear: " + ring, "#bulk-delete: " + ring, "#bulk-delete[data-armed]: " + ring,
+		"[data-testid=tag-box] input: " + ring, "#find-actions [data-testid=star]: " + ring,
 	}, "|"))
 	// The title itself has none, so that a row shows one ring.
-	tabTo("#list li:not(.group) a.title")
+	tabTo("#list li[data-slug] a[data-testid=title]")
 	check(t, "the title", []string{b.eval("getComputedStyle(document.activeElement).outlineStyle")}, "none")
 	// The buttons of the columns' feet, and what opens them folded, over a page too.
 	b.size(1440, 900, false)
@@ -183,39 +186,47 @@ func TestUIFocusRing(t *testing.T) { //nolint:paralleltest // the browser tests 
 	check(t, "the shelf's add button", []string{tabTo("#add-link")}, "#add-link: "+ring)
 	out = out[:0]
 	out = append(out, tabTo("#shelf-hide"), tabTo("#list-hide"))
-	b.eval("document.querySelector('#list li:not(.group) .title').click(); document.getElementById('shelf-hide').click()")
+	b.eval("document.querySelector('#list li[data-slug] [data-testid=title]').click(); document.getElementById('shelf-hide').click()")
 	out = append(out, tabTo("#shelf-show"))
 	b.eval("document.getElementById('list-hide').click()")
 	out = append(out, tabTo("#shelf-show"), tabTo("#list-show"))
 	b.eval("document.getElementById('list-show').click(); document.getElementById('shelf-show').click()")
 	// The bar's buttons, an archived one black.
-	b.eval("document.querySelector('#list li:not(.group) .title').click()")
+	b.eval("document.querySelector('#list li[data-slug] [data-testid=title]').click()")
 	b.until("the bar", "!document.getElementById('read-actions').hidden")
 	b.eval("document.getElementById('read-title').focus()")
 	for range 6 {
-		if b.eval("String(document.activeElement.matches('#read-actions > .archive'))") == "true" {
+		if b.eval("String(document.activeElement.matches('#read-actions > [data-testid=archive]'))") == "true" {
 			break
 		}
 		if err := chromedp.Do(b.ctx, chromedp.KeyEvent(kb.Tab)); err != nil {
 			t.Fatal(err)
 		}
 	}
-	bar := "#read-actions > .archive: " + b.settled(ringOf)
-	b.eval("document.querySelector('#read-actions > .archive').classList.add('on')")
+	bar := "#read-actions > [data-testid=archive]: " + b.settled(ringOf)
+	// Its page archived, by the list read anew.
+	archived := func(on bool) {
+		t.Helper()
+		b.eval("(() => { const slug = document.getElementById('read-frame').dataset.slug; window.list = JSON.stringify(JSON.parse(window.list).map((a) => a.slug === slug ? { ...a, archived: " + strconv.FormatBool(on) + " } : a)); })()")
+		b.reread()
+		b.until("the archive button drawn", "(document.querySelector('#read-actions > [data-testid=archive]').dataset.on === 'true') === "+strconv.FormatBool(on))
+	}
+	archived(true)
+	b.eval("document.querySelector('#read-actions > [data-testid=archive]').focus()")
 	barOn := b.settled(ringOf)
-	b.eval("document.querySelector('#read-actions > .archive').classList.remove('on')")
+	archived(false)
 	// The button of the tags under the bar, reached on from the bar, its ring within the line's ground.
-	b.eval("document.querySelector('#read-actions > .archive').focus()")
+	b.eval("document.querySelector('#read-actions > [data-testid=archive]').focus()")
 	for range 6 {
-		if b.eval("String(document.activeElement.matches('#read-tags .tag-edit'))") == "true" {
+		if b.eval("String(document.activeElement.matches('#read-tags [data-testid=tag-edit]'))") == "true" {
 			break
 		}
 		if err := chromedp.Do(b.ctx, chromedp.KeyEvent(kb.Tab)); err != nil {
 			t.Fatal(err)
 		}
 	}
-	tagLine := "#read-tags .tag-edit: " + b.settled(ringOf)
-	check(t, "the bar", []string{bar, barOn, tagLine}, "#read-actions > .archive: "+ring+"|"+ring+"|#read-tags .tag-edit: "+ring)
+	tagLine := "#read-tags [data-testid=tag-edit]: " + b.settled(ringOf)
+	check(t, "the bar", []string{bar, barOn, tagLine}, "#read-actions > [data-testid=archive]: "+ring+"|"+ring+"|#read-tags [data-testid=tag-edit]: "+ring)
 	check(t, "the feet", out, strings.Join([]string{
 		"#shelf-hide: " + ring, "#list-hide: " + ring, "#shelf-show: " + ring, "#shelf-show: " + ring, "#list-show: " + ring,
 	}, "|"))
@@ -226,21 +237,21 @@ func TestUIFocusRing(t *testing.T) { //nolint:paralleltest // the browser tests 
 	s.floe(t, "task", "--project", "proj", "--task", "#1", "--title", "up")
 	s.floe(t, "task", "--project", "proj", "--task", "#2", "--title", "down", "--parent", "#1")
 	b.navigate("/tasks?project=proj&task=%232")
-	b.until("the family", "document.querySelector('#task-up-rows .kin-row')")
-	out = append(out[:0], tabTo("#task-parent-change"), tabTo("#task-up-rows .kin-row"), tabTo("#task-up-rows .unlink"))
+	b.until("the family", "document.querySelector('#task-up-rows [data-testid=kin-row]')")
+	out = append(out[:0], tabTo("#task-parent-change"), tabTo("#task-up-rows [data-testid=kin-row]"), tabTo("#task-up-rows [data-testid=unlink]"))
 	// The row's link itself has none, so that the row shows one ring.
-	tabTo("#task-up-rows .kin-row")
+	tabTo("#task-up-rows [data-testid=kin-row]")
 	out = append(out, "the link: "+b.eval("getComputedStyle(document.activeElement).outlineStyle"))
 	b.navigate("/tasks?project=proj&task=%231")
-	b.until("the family", "document.querySelector('#task-family-rows .kin-row')")
+	b.until("the family", "document.querySelector('#task-family-rows [data-testid=kin-row]')")
 	out = append(out, tabTo("#task-child"))
 	// The frame's line of tags, its button's ring within the line's ground.
 	s.floe(t, "publish", s.page(t, "ring/whole.yaml", "Whole", ""), "--slug", "whole")
 	b.navigate("/a/whole/")
 	b.until("the frame's tags", "!document.getElementById('frame-tags').hidden")
-	out = append(out, tabTo("#frame-tags .tag-edit"))
+	out = append(out, tabTo("#frame-tags [data-testid=tag-edit]"))
 	check(t, "the family", out, strings.Join([]string{
-		"#task-parent-change: " + ring, "#task-up-rows .kin-row: solid 2px rgb(107, 105, 100) -2px seen", "#task-up-rows .unlink: " + ring,
-		"the link: none", "#task-child: " + ring, "#frame-tags .tag-edit: " + ring,
+		"#task-parent-change: " + ring, "#task-up-rows [data-testid=kin-row]: solid 2px rgb(107, 105, 100) -2px seen", "#task-up-rows [data-testid=unlink]: " + ring,
+		"the link: none", "#task-child: " + ring, "#frame-tags [data-testid=tag-edit]: " + ring,
 	}, "|"))
 }

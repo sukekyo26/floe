@@ -23,3 +23,25 @@ updates:
         patterns: ["*"]
     commit-message:
       prefix: "chore"
+  - package-ecosystem: "npm"
+    directory: "/internal/ui/web"
+    target-branch: "develop"
+    schedule:
+      interval: "weekly"
+    groups:
+      # These change the built page: the pull request needs just web-build and just licenses, with dist and
+      # NOTICES.txt committed
+      web-dist:
+        patterns: ["vite", "@vitejs/*", "vite-plugin-singlefile", "react", "react-dom", "@types/react*",
+          "tailwindcss", "@tailwindcss/*"]
+      web-tools:
+        patterns: ["*"]
+    ignore:
+      # The linter reads types with the TypeScript inside it, whose version oxlint-tsgolint's version names:
+      # the two are raised together by hand once oxlint-tsgolint has a release of the new minor
+      - dependency-name: "typescript"
+        update-types: ["version-update:semver-minor", "version-update:semver-major"]
+      - dependency-name: "oxlint-tsgolint"
+        update-types: ["version-update:semver-minor", "version-update:semver-major"]
+    commit-message:
+      prefix: "chore"

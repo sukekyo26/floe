@@ -56,7 +56,12 @@ func laid(g *graph) *layout {
 
 // routed is g laid out and checked with its ends where the routes leave them, before settleEnds moves them.
 func routed(g *graph) *layout {
-	l := layoutWith(graphSpec(g), Options{Lang: "en", Icons: anyIcon{}, Seq: 1}, placing{(*layout).shareEnds, graphWay{func(*drawing) {}, false}})
+	return laidWith(g, placing{(*layout).shareEnds, graphWay{func(*drawing) {}, false}})
+}
+
+// laidWith is g laid out as laid lays it, but how, and checked.
+func laidWith(g *graph, how placing) *layout {
+	l := layoutWith(graphSpec(g), Options{Lang: "en", Icons: anyIcon{}, Seq: 1}, how)
 	l.check()
 	return l
 }
@@ -194,8 +199,8 @@ func loopLabelFault(g *graph, l *layout, k int, r rect) string {
 	return ""
 }
 
-// handFault is a mistake of a label of g, laid out as l, with an edge written by hand from the middle of a side of a
-// box its edges do not use (left and right laid out down, top and bottom laid out right), 20 out, or "".
+// handFault is a mistake of g, laid out as l, with an edge written by hand from the middle of a side of each box its
+// edges do not use (left and right laid out down, top and bottom laid out right), 20 out, or "".
 func handFault(g *graph, l *layout) string {
 	parts := []part{{Graph: g}} //nolint:exhaustruct_v5 // one kind of part
 	for _, b := range graphBoxes(g) {
@@ -223,12 +228,13 @@ func handFault(g *graph, l *layout) string {
 		}
 	}
 	hands := newLayout(&spec{Width: 0, Height: 0, Title: Text{"en": "g"}, Parts: parts, Example: ""}, //nolint:exhaustruct_v5 // a graph and edges
-		Options{Lang: "en", Icons: icons.Without(nil), Seq: 1})
+		Options{Lang: "en", Icons: anyIcon{}, Seq: 1})
 	hands.check()
-	for _, p := range hands.problems {
-		if slices.ContainsFunc(p.Args, func(a any) bool { return strings.HasPrefix(fmt.Sprint(a), `label "`) }) {
-			return "an edge written by hand: " + p.Error()
-		}
+	if hands.failure != nil {
+		return "edges written by hand: " + hands.failure.Error()
+	}
+	if len(hands.problems) > 0 {
+		return "edges written by hand: " + hands.problems.Error()
 	}
 	return ""
 }
@@ -305,10 +311,11 @@ func settleFault(l, r *layout) string {
 }
 
 // boxParts counts the ends at the boxes of g laid out as l, no loop's or level edge's, and those of them at the part of
-// their side they belong to. Its share of 1/50 of a side is what a share read back from the drawing can be off by.
-func boxParts(g *graph, l *layout) (parted, all int) {
+// their side they belong to, or a box not laid out as one. Its share of 1/50 of a side is what a share read back from
+// the drawing can be off by.
+func boxParts(g *graph, l *layout) (parted, all int, fault string) {
 	type place struct{ name, side string }
-	on := map[place][]float64{}
+	on, shapes := map[place][]float64{}, shapesOf(g)
 	for k, e := range g.Edges {
 		if e.From == e.To || e.Level {
 			continue
@@ -316,9 +323,12 @@ func boxParts(g *graph, l *layout) (parted, all int) {
 		segs := l.paths[k].segs
 		first, last := segs[0], segs[len(segs)-1]
 		for j, name := range []string{e.From, e.To} {
-			t, ok := l.names[name]
-			if !ok || t.kind != "box" {
+			if shape, isBox := shapes[name]; !isBox || shape == "icon" {
 				continue
+			}
+			t := l.names[name]
+			if t.kind != "box" {
+				return 0, 0, fmt.Sprintf("box %s is laid out as %q", name, t.kind)
 			}
 			p, q := [2]float64{first[0], first[1]}, [2]float64{first[2], first[3]}
 			if j == 1 {
@@ -338,7 +348,7 @@ func boxParts(g *graph, l *layout) (parted, all int) {
 			}
 		}
 	}
-	return parted, all
+	return parted, all, ""
 }
 
 // graphFault is what is wrong with g laid out, or "": a mistake told, two of its edges sharing a run or touching,
@@ -348,60 +358,29 @@ func graphFault(g *graph) string {
 	return laidFault(g, laid(g))
 }
 
-// owners are the groups each name of g stands in, itself too for a group, and the lanes.
-func owners(g *graph) (map[string][]string, map[string]bool) {
-	out, lanes := map[string][]string{}, map[string]bool{}
-	var walk func(nodes []graphNode, up []string)
-	walk = func(nodes []graphNode, up []string) {
-		for _, n := range nodes {
-			switch {
-			case n.Box != nil:
-				out[n.Box.Name] = up
-			case n.Icon != nil:
-				out[n.Icon.Name] = up
-			case n.Group != nil:
-				out[n.Group.Name] = append(slices.Clone(up), n.Group.Name)
-				walk(n.Group.Nodes, out[n.Group.Name])
-			}
-		}
-	}
-	walk(g.Nodes, nil)
-	for _, ln := range g.Lanes {
-		lanes[ln.Name] = true
-		out[ln.Name] = []string{ln.Name}
-		walk(ln.Nodes, []string{ln.Name})
-	}
-	return out, lanes
-}
-
 // runThrough are the edges of g, laid out as l, with a run inside a frame that holds neither end (lanes, loops and level
-// edges left out).
-func runThrough(g *graph, l *layout) []int {
-	own, lanes := owners(g)
+// edges left out), or a group with no frame.
+func runThrough(g *graph, l *layout) ([]int, string) {
+	lg, fault := groupsOf(g, l)
+	if fault != "" {
+		return nil, fault
+	}
 	var out []int
 	for k, e := range g.Edges {
 		if e.From == e.To || e.Level {
 			continue
 		}
-		in := map[string]bool{}
-		for _, c := range slices.Concat(own[e.From], own[e.To]) {
-			in[c] = true
-		}
-	frames:
-		for _, name := range slices.Sorted(maps.Keys(own)) {
-			nm, ok := l.names[name]
-			if in[name] || lanes[name] || !ok || nm.kind != "frame" {
+		for c, cl := range lg.clusters {
+			if cl.lane || lg.holds(c, e.From) || lg.holds(c, e.To) {
 				continue
 			}
-			for _, s := range l.paths[k].segs {
-				if within(s, nm.r) {
-					out = append(out, k)
-					break frames
-				}
+			if slices.ContainsFunc(l.paths[k].segs, func(s seg) bool { return within(s, lg.frames[c]) }) {
+				out = append(out, k)
+				break
 			}
 		}
 	}
-	return out
+	return out, ""
 }
 
 // throughFault is an edge of g, laid out as l, running inside a frame that holds neither end, but one detours left
@@ -409,7 +388,11 @@ func runThrough(g *graph, l *layout) []int {
 // LIMIT: the edges left are bounded per random test (through), not held to none: no way round a frame filling a lane
 // across is made by the layout, and the limits keep large graphs' time, neither known from the graph beforehand.
 func throughFault(g *graph, l *layout, stayed map[int]string) string {
-	for _, k := range runThrough(g, l) {
+	through, fault := runThrough(g, l)
+	if fault != "" {
+		return fault
+	}
+	for _, k := range through {
 		if _, ok := stayed[k]; !ok {
 			return fmt.Sprintf("%s runs through a frame that holds neither end", l.paths[k].what)
 		}
@@ -417,13 +400,21 @@ func throughFault(g *graph, l *layout, stayed map[int]string) string {
 	return ""
 }
 
-// laidFault is graphFault of g, laid out as l.
-func laidFault(g *graph, l *layout) string {
+// laidOutFault is the mistake told of g laid out as l, or a path of l not its edge's (edgesFault), or "".
+func laidOutFault(g *graph, l *layout) string {
 	if l.failure != nil {
 		return l.failure.Error()
 	}
 	if len(l.problems) > 0 {
 		return l.problems.Error()
+	}
+	return edgesFault(g, l)
+}
+
+// laidFault is graphFault of g, laid out as l.
+func laidFault(g *graph, l *layout) string {
+	if fault := laidOutFault(g, l); fault != "" {
+		return fault
 	}
 	r := routed(g)
 	if fault := loopFault(g, r); fault != "" {
@@ -514,24 +505,73 @@ func laidFault(g *graph, l *layout) string {
 	return clusterFault(g, l)
 }
 
+// laidGroups are the groups and lanes of g as flatten reads them, with the frame of each laid out as l.
+type laidGroups struct {
+	boxes    []gbox
+	clusters []cluster
+	frames   []rect
+}
+
+// groupsOf is g's groups and lanes with their frames laid out as l, or the first with no frame.
+func groupsOf(g *graph, l *layout) (laidGroups, string) {
+	boxes, clusters, _ := flatten(g, "#")
+	at := map[string]rect{}
+	for _, f := range l.frames {
+		at[f.at] = f
+	}
+	frames := make([]rect, len(clusters))
+	for c, cl := range clusters {
+		f, ok := at["#/parts/0/graph"+strings.TrimPrefix(cl.at, "#")]
+		if !ok {
+			return laidGroups{}, fmt.Sprintf("group %d at %s has no frame", c, cl.at)
+		}
+		if t := l.names[cl.g.Name]; cl.g.Name != "" && (t.kind != "frame" || t.r.x != f.x || t.r.y != f.y || t.r.w != f.w || t.r.h != f.h) {
+			return laidGroups{}, fmt.Sprintf("group %s is laid out as %q at %v, its frame at %v", cl.g.Name, t.kind, t.r, f)
+		}
+		frames[c] = f
+	}
+	return laidGroups{boxes, clusters, frames}, ""
+}
+
+// holds reports whether group c holds the box, icon or group named name, nested too, or is it.
+func (lg laidGroups) holds(c int, name string) bool {
+	for _, b := range lg.clusters[c].boxes {
+		if lg.boxes[b].box.Name == name {
+			return true
+		}
+	}
+	for d := range lg.clusters {
+		for p := d; p >= 0; p = lg.clusters[p].parent {
+			if p == c && lg.clusters[d].g.Name == name && name != "" {
+				return true
+			}
+		}
+	}
+	return false
+}
+
+// named is the group of g named name, not a lane, or -1.
+func (lg laidGroups) named(name string) int {
+	return slices.IndexFunc(lg.clusters, func(c cluster) bool { return !c.lane && c.g.Name == name })
+}
+
 // laneFault is what is wrong with the lanes of g laid out as l, or "": a lane not as long as the one written before
 // it, from the same place along the ranks, or not after it, nodeGap apart.
 func laneFault(g *graph, l *layout) string {
-	_, clusters, _ := flatten(g, "#")
-	frames := map[string]rect{}
-	for _, f := range l.frames {
-		frames[f.at] = f
+	lg, fault := groupsOf(g, l)
+	if fault != "" {
+		return fault
 	}
 	along, across := 1, 0
 	if g.Direction == "right" {
 		along, across = 0, 1
 	}
 	var last *rect
-	for _, c := range clusters {
-		if !c.lane {
+	for c, cl := range lg.clusters {
+		if !cl.lane {
 			continue
 		}
-		f := frames["#/parts/0/graph"+strings.TrimPrefix(c.at, "#")]
+		f := lg.frames[c]
 		if last != nil {
 			if f.lo(along) != last.lo(along) || f.size(along) != last.size(along) {
 				return fmt.Sprintf("lane %v is not from end to end as lane %v before it", f, *last)
@@ -560,32 +600,16 @@ func onFrameSide(r rect, p [2]float64, right bool) bool {
 // another but within it (nested), one above or left of the graph's x and y, or an edge's end at a frame under its
 // heading.
 func clusterFault(g *graph, l *layout) string {
-	boxes, clusters, _ := flatten(g, "#")
+	lg, fault := groupsOf(g, l)
+	if fault != "" {
+		return fault
+	}
+	boxes, clusters, frameOf, held := lg.boxes, lg.clusters, func(c int) rect { return lg.frames[c] }, lg.holds
 	if len(clusters) == 0 {
 		return ""
 	}
-	frames := map[string]rect{}
-	for _, f := range l.frames {
-		frames[f.at] = f
-	}
 	within := func(r, f rect) bool {
 		return r.x > f.x && r.y > f.y && r.x+r.w < f.x+f.w && r.y+r.h < f.y+f.h
-	}
-	frameOf := func(c int) rect { return frames["#/parts/0/graph"+strings.TrimPrefix(clusters[c].at, "#")] }
-	held := func(c int, name string) bool {
-		for _, b := range clusters[c].boxes {
-			if boxes[b].box.Name == name {
-				return true
-			}
-		}
-		for d := range clusters {
-			for p := d; p >= 0; p = clusters[p].parent {
-				if p == c && clusters[d].g.Name == name && name != "" {
-					return true
-				}
-			}
-		}
-		return false
 	}
 	if s := frameStart(g, l); s != "" {
 		return s
@@ -593,7 +617,11 @@ func clusterFault(g *graph, l *layout) string {
 	for c := range clusters {
 		f := frameOf(c)
 		for i, b := range boxes {
-			r := l.names[b.box.Name].r
+			t, ok := l.names[b.box.Name]
+			if !ok {
+				return fmt.Sprintf("box %s is not laid out", b.box.Name)
+			}
+			r := t.r
 			switch in := slices.Contains(clusters[c].boxes, i); {
 			case in && !within(r, f):
 				return fmt.Sprintf("the frame of group %d %v does not hold its box %s %v", c, f, b.box.Name, r)
@@ -602,7 +630,7 @@ func clusterFault(g *graph, l *layout) string {
 			}
 		}
 		for k, e := range g.Edges {
-			if k >= len(l.paths) || !held(c, e.From) || !held(c, e.To) {
+			if !held(c, e.From) || !held(c, e.To) {
 				continue
 			}
 			for _, s := range l.paths[k].segs {
@@ -807,7 +835,7 @@ func groupFault(gr *group) string {
 func shrunk(g *graph) *graph {
 	for changed := true; changed; {
 		changed = false
-		for i := len(g.Edges) - 1; i >= 0; i-- {
+		for i := range slices.Backward(g.Edges) {
 			try := *g
 			try.Edges = slices.Delete(slices.Clone(g.Edges), i, i+1)
 			if graphFault(&try) != "" {
@@ -935,10 +963,10 @@ func TestGraphRandom(t *testing.T) {
 		{"right", [2]uint64{11, 12}, 400, false, true, "", 0, 84, 15},
 		{"", [2]uint64{13, 14}, 300, false, false, "plain", 132, 68, 0},
 		{"right", [2]uint64{15, 16}, 300, false, false, "plain", 123, 76, 0},
-		{"", [2]uint64{17, 18}, 300, false, false, "groups", 97, 71, 0},
-		{"right", [2]uint64{19, 20}, 300, false, false, "groups", 107, 80, 0},
-		{"", [2]uint64{21, 22}, 300, false, true, "lanes", 91, 78, 11},
-		{"right", [2]uint64{23, 24}, 300, false, true, "lanes", 88, 84, 0},
+		{"", [2]uint64{17, 18}, 300, false, false, "groups", 119, 71, 0},
+		{"right", [2]uint64{19, 20}, 300, false, false, "groups", 128, 80, 6},
+		{"", [2]uint64{21, 22}, 300, false, true, "lanes", 113, 78, 15},
+		{"right", [2]uint64{23, 24}, 300, false, true, "lanes", 115, 84, 0},
 	} {
 		// A name of no mark -run reads as a pattern: down-1-2 (down for the direction left out); -run
 		// TestGraphRandom/down-1-2$ picks that one alone, as down-1 is down-13-14 and down-17-18 too.
@@ -976,12 +1004,19 @@ func TestGraphRandom(t *testing.T) {
 					b, _ := json.Marshal(map[string]any{"title": "kept", "parts": []any{map[string]any{"graph": shrunk(g)}}}) //nolint:errcheck,errchkjson // plain values
 					t.Fatalf("seed %v, graph %d: %s; shrunk, to keep in testdata/graph:\n%s", c.seed, i, fault, b)
 				}
-				left += len(runThrough(g, l))
+				through, fault := runThrough(g, l)
+				if fault != "" {
+					t.Fatalf("seed %v, graph %d: %s", c.seed, i, fault)
+				}
+				left += len(through)
 				if fault := turnFault(g, l); fault != "" {
 					t.Fatalf("seed %v, graph %d: %s", c.seed, i, fault)
 				}
 				if !underRace {
-					on, all := boxParts(g, l)
+					on, all, fault := boxParts(g, l)
+					if fault != "" {
+						t.Fatalf("seed %v, graph %d: %s", c.seed, i, fault)
+					}
 					parted, ends = parted+on, ends+all
 					clipped, labels := endsClipped(g, l)
 					short, written = short+clipped, written+labels
@@ -1465,6 +1500,41 @@ func TestWireCases(t *testing.T) {
 	}
 }
 
+// nest stacks runs so that a run off a track cuts no run along one: the runs of S387 nest, a from at another's to goes
+// nearer, compared within eps both ways, as is the gap on a track; runs out of order part; a cycle of waits ends.
+func TestNest(t *testing.T) {
+	t.Parallel()
+
+	for _, c := range []struct {
+		name   string
+		runs   []nestRun
+		tracks []int
+		n      int
+	}{
+		{"S387's three", []nestRun{{52, 92}, {64, 104}, {76, 116}}, []int{2, 1, 0}, 3},
+		{"a from at the other's to", []nestRun{{318, 400}, {250, 318}}, []int{0, 1}, 2},
+		{"the same, a rounding off", []nestRun{{318.07142857142856, 400}, {250, 318.0714285714286}}, []int{0, 1}, 2},
+		{"the same, the other way off", []nestRun{{318.0714285714286, 400}, {250, 318.07142857142856}}, []int{0, 1}, 2},
+		{"apart on a track", []nestRun{{0, 10}, {30, 40}}, []int{0, 0}, 1},
+		{"nearer than the gap", []nestRun{{0, 10}, {14, 20}}, []int{0, 1}, 2},
+		{"the gap less a rounding", []nestRun{{0, 10}, {16 - 1e-13, 20}}, []int{0, 0}, 1},
+		{"the gap more a rounding", []nestRun{{0, 10}, {16 + 1e-13, 20}}, []int{0, 0}, 1},
+		{"out of order", []nestRun{{172, 216}, {180, 192}}, []int{0, 1}, 2},
+		{"a cycle by the old rule", []nestRun{{135, 169}, {13, 159}, {93, 13}, {2, 93}, {126, 104}, {74, 83}, {195, 110}}, []int{0, 1, 0, 2, 0, 3, 2}, 4},
+	} {
+		tracks, n := nest(c.runs, keepApart)
+		if !slices.Equal(tracks, c.tracks) || n != c.n {
+			t.Errorf("%s: tracks %v of %d, want %v of %d", c.name, tracks, n, c.tracks, c.n)
+		}
+	}
+
+	// Runs that wait on one another, which no runs at an icon's side have made: the first in order goes on the first
+	// track all the same, and the other after it.
+	if tracks, n := nestFill([]nestRun{{0, 10}, {5, 15}}, []int{0, 1}, [][]int{{1}, {0}}, 0); !slices.Equal(tracks, []int{0, 1}) || n != 2 {
+		t.Errorf("a cycle: tracks %v of %d, want [0 1] of 2", tracks, n)
+	}
+}
+
 // A gap between straight entries without the columns for its links bends the straight entry closing it, on its
 // right (else its left), and no other.
 func TestWireBend(t *testing.T) {
@@ -1922,16 +1992,18 @@ func TestGraphShapes(t *testing.T) {
 
 	// Edges that can run straight do: every edge of the kept flow, and K3,3's edges straight down; of the two edges
 	// of fan a reader once saw bend, c→hub runs straight and x→a turns twice at most; in the state example, the
-	// edges of running, its box widened for them, and the long edge past it.
+	// edges of running, its box widened for them, and the long edge past it; in the AWS sample, the level edge between
+	// the zones' databases.
 	for _, c := range []struct {
 		file  string
-		turns map[string]int // the most turns of the edges named; of every edge, none, when nil
+		turns map[[2]string]int // the most turns of the edges from and to the names; of every edge, none, when nil
 	}{
 		{"testdata/graph/flow.yaml", nil},
-		{"testdata/graph/fan.yaml", map[string]int{"edge \"c\"→\"hub\"": 0, "edge \"x\"→\"a\"": 2}},
-		{"examples/state.yaml", map[string]int{
-			"edge \"stopped\"→\"running\"": 0, "edge \"running\"→\"outdated\"": 0, "edge \"outdated\"→\"running\"": 0, "edge \"running\"→\"stopped\"": 0,
-			"edge \"outdated\"→\"stopped\"": 0,
+		{"testdata/graph/fan.yaml", map[[2]string]int{{"c", "hub"}: 0, {"x", "a"}: 2}},
+		{"testdata/aws-level.yaml", map[[2]string]int{{"writer", "reader"}: 0}},
+		{"examples/state.yaml", map[[2]string]int{
+			{"stopped", "running"}: 0, {"running", "outdated"}: 0, {"outdated", "running"}: 0, {"running", "stopped"}: 0,
+			{"outdated", "stopped"}: 0,
 		}},
 	} {
 		src, err := os.ReadFile(filepath.FromSlash(c.file))
@@ -1946,13 +2018,26 @@ func TestGraphShapes(t *testing.T) {
 		if err != nil {
 			t.Fatal(err)
 		}
-		for _, p := range laid(s.Parts[0].Graph).paths {
-			most, ok := c.turns[p.what]
+		g := s.Parts[0].Graph
+		l := laid(g)
+		if fault := edgesFault(g, l); fault != "" {
+			t.Fatalf("%s: %s", c.file, fault)
+		}
+		found := map[[2]string]bool{}
+		for k, p := range l.paths {
+			ends := [2]string{g.Edges[k].From, g.Edges[k].To}
+			most, ok := c.turns[ends]
 			if c.turns != nil && !ok {
 				continue
 			}
+			found[ends] = true
 			if len(p.segs)-1 > most {
 				t.Errorf("%s: %s turns %d times, want %d at most: %v", c.file, p.what, len(p.segs)-1, most, p.segs)
+			}
+		}
+		for ends := range c.turns {
+			if !found[ends] {
+				t.Errorf("%s: no edge from %s to %s", c.file, ends[0], ends[1])
 			}
 		}
 	}
@@ -2199,8 +2284,9 @@ parts:
 
 	// A loop's label stands beside its line, on no background.
 	loop := laid(labelled(graphOf([]string{"a"}, "a>a"), "again", 0))
-	if slices.ContainsFunc(loop.labelEls, func(el elem) bool { return el.Class == "label-bg" }) {
-		t.Errorf("a loop's label on a background: %v", loop.inspect())
+	if !slices.ContainsFunc(loop.labelEls, func(el elem) bool { return el.Kind == "text" && el.Text["en"] == "again" }) ||
+		slices.ContainsFunc(loop.labelEls, func(el elem) bool { return el.Class == "label-bg" }) {
+		t.Errorf("a loop's label not drawn, or on a background: %v", loop.inspect())
 	}
 }
 
@@ -2787,10 +2873,16 @@ func TestGraphGroupStraight(t *testing.T) {
 		g = inGroup(inGroup(g, "data", "Data", "store", "cache"), "server", "Local server", "api", "data")
 		g = inGroup(g, "db", "Database", "disk")
 		g.Direction = direction
-		for _, p := range laid(g).paths {
-			if p.what == "edge \"cli\"→\"page\"" && len(p.segs) != 1 {
-				t.Errorf("%q: cli→page beside the frame turns: %v", direction, p.segs)
-			}
+		l := laid(g)
+		if fault := edgesFault(g, l); fault != "" {
+			t.Fatalf("%q: %s", direction, fault)
+		}
+		k := slices.IndexFunc(g.Edges, func(e graphEdge) bool { return e.From == "cli" && e.To == "page" })
+		if k < 0 {
+			t.Fatalf("%q: no edge from cli to page", direction)
+		}
+		if p := l.paths[k]; len(p.segs) != 1 {
+			t.Errorf("%q: cli→page beside the frame turns: %v", direction, p.segs)
 		}
 
 		// x in group a, at b's first rank; b spans four ranks: x→b3's points stand in b.
@@ -3177,10 +3269,10 @@ func TestGraphWithRandom(t *testing.T) {
 	}{
 		{"", 1, false, false, 88, 0},
 		{"right", 2, false, false, 90, 0},
-		{"", 3, true, false, 89, 0},
-		{"right", 4, true, false, 88, 0},
-		{"", 5, false, true, 85, 3},
-		{"right", 6, false, true, 76, 0},
+		{"", 3, true, false, 91, 0},
+		{"right", 4, true, false, 90, 0},
+		{"", 5, false, true, 91, 3},
+		{"right", 6, false, true, 84, 5},
 	} {
 		t.Run(fmt.Sprintf("%s-%d", cmpOr(c.direction, "down"), c.seed), func(t *testing.T) {
 			t.Parallel()
@@ -3206,7 +3298,11 @@ func TestGraphWithRandom(t *testing.T) {
 				}
 				laidOut++
 				l := laid(g)
-				left += len(runThrough(g, l))
+				through, fault := runThrough(g, l)
+				if fault != "" {
+					t.Fatalf("seed %d, graph %d: %s", c.seed, i, fault)
+				}
+				left += len(through)
 				if fault := withFault(g); fault != "" {
 					t.Fatalf("seed %d, graph %d: %s", c.seed, i, fault)
 				}
@@ -3292,6 +3388,7 @@ func TestGraphDetour(t *testing.T) {
 	}{
 		{"r1.yaml", nil, `edge "alb"→"api-c" M402,160.67 H414 V196 H180 V382 H450`},
 		{"photos.yaml", nil, ""},
+		{"photos-unnamed.yaml", nil, ""},
 		{"photos-right.yaml", nil, ""},
 		{"no-way.yaml", map[string]string{`edge "admin"→"form"`: stayNoWay}, ""},
 	} {
@@ -3313,6 +3410,9 @@ func TestGraphDetour(t *testing.T) {
 			}
 			g := s.Parts[0].Graph
 			l := laid(g)
+			if fault := laidOutFault(g, l); fault != "" {
+				t.Fatal(fault)
+			}
 			_, o, err := groupedRound(g)
 			if err != nil {
 				t.Fatal(err)
@@ -3330,21 +3430,21 @@ func TestGraphDetour(t *testing.T) {
 			if fault := throughFault(g, l, o.stayed); fault != "" {
 				t.Error(fault)
 			}
-			own, lanes := owners(g)
+			lg, fault := groupsOf(g, l)
+			if fault != "" {
+				t.Fatal(fault)
+			}
 			for k := range o.detoured {
 				e := g.Edges[k]
-				in := map[string]bool{}
-				for _, name := range slices.Concat(own[e.From], own[e.To]) {
-					in[name] = true
-				}
 				segs := l.paths[k].segs
-				for name := range own {
-					if nm, ok := l.names[name]; ok && nm.kind == "frame" && !in[name] && !lanes[name] {
-						off := grow(nm.r, column-eps)
-						for _, s := range segs[1 : len(segs)-1] {
-							if within(s, off) {
-								t.Errorf("%s runs %v, within a column of frame %q %v", l.paths[k].what, s, name, nm.r)
-							}
+				for c, cl := range lg.clusters {
+					if cl.lane || lg.holds(c, e.From) || lg.holds(c, e.To) {
+						continue
+					}
+					off := grow(lg.frames[c], column-eps)
+					for _, s := range segs[1 : len(segs)-1] {
+						if within(s, off) {
+							t.Errorf("%s runs %v, within a column of frame %q %v", l.paths[k].what, s, cl.g.Name, lg.frames[c])
 						}
 					}
 				}

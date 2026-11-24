@@ -9,6 +9,7 @@ import (
 	"testing"
 	"testing/fstest"
 
+	"floe/internal/drawhere"
 	"floe/internal/i18n"
 	"floe/internal/kit"
 	"floe/internal/server"
@@ -146,7 +147,9 @@ func TestAPIThemesOwn(t *testing.T) {
 	}
 	srv := server.New(server.Config{
 		Store: store.New(filepath.Join(t.TempDir(), "store")), Port: port, Build: "test", Templates: "", Parts: "", Themes: "/t/themes",
-		Icons: "", Home: t.TempDir(), Drawing: func() (store.Drawing, error) { return store.Drawing{Kit: k, Icons: nil, Err: nil}, nil },
+		Icons: "", Home: t.TempDir(), Drawing: func() (store.Drawing, error) {
+			return store.Drawing{Kit: k, Icons: nil, Draw: drawhere.Here(k, nil), Err: nil}, nil
+		},
 	})
 	e := env{srv: srv, h: srv.Handler(), root: "", home: "", tpl: ""}
 	w := e.do(t, http.MethodGet, "/api/themes", "", "Accept-Language", "en")

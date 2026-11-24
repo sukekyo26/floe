@@ -31,12 +31,12 @@ const tasksJSON = `{
 `
 
 // taskRows says the rows of the list, each its title and the words under it.
-const taskRows = `[...document.querySelectorAll('#list > li')].map((li) => li.querySelector('.title').textContent + ' [' +
-  [...li.querySelector('.sub').children].map((e) => e.textContent).join(', ') + ']').join('; ')`
+const taskRows = `[...document.querySelectorAll('#list > li')].map((li) => li.querySelector('[data-testid=title]').textContent + ' [' +
+  [...li.querySelector('[data-testid=sub]').children].map((e) => e.textContent).join(', ') + ']').join('; ')`
 
 // taskFilterName says the button of the narrow screen: its name, that at least 2em of it shows, its count and whether it is lit.
 const taskFilterName = `(() => { const name = document.getElementById('narrow-filter-name');
-  return [name.textContent, name.getBoundingClientRect().width >= 2 * parseFloat(getComputedStyle(name).fontSize) - 0.5, document.getElementById('narrow-filter-n').textContent, document.getElementById('narrow-filter').classList.contains('narrowed')].join(' '); })()`
+  return [name.textContent, name.getBoundingClientRect().width >= 2 * parseFloat(getComputedStyle(name).fontSize) - 0.5, document.getElementById('narrow-filter-n').textContent, document.getElementById('narrow-filter').dataset.narrowed === 'true'].join(' '); })()`
 
 // mustInt reads a number the page said.
 func mustInt(t *testing.T, s string) int {
@@ -95,8 +95,8 @@ func taskPages(t *testing.T, s *site) {
 }
 
 // The management page remembers under keys of "pages." (the tab's list, order and task list in sessionStorage, and the
-// task list's last project in localStorage), and under none of "artifacts.", which they had. The other tests read the
-// keys through the page's constants, so that this one holds their values.
+// task list's last project in localStorage), and under none of "artifacts.", which they had. The other tests write the
+// keys as text, as this one reads them.
 func TestUIStorageKeys(t *testing.T) { //nolint:paralleltest // the browser tests share one Chrome, one at a time
 	s := newSite(t)
 	b := s.b
@@ -107,9 +107,9 @@ func TestUIStorageKeys(t *testing.T) { //nolint:paralleltest // the browser test
 	out := make([]string, 0, 8)
 	b.navigate("/")
 	b.until("the page list", "document.querySelector('#list > li')")
-	out = append(out, b.eval("[LIST_KEY, ORDER_KEY, FROM_KEY, TASKS_KEY, PROJECT_KEY].join(' ')"), "list "+b.eval("sessionStorage.getItem('pages.list') !== null"))
+	out = append(out, "list "+b.eval("sessionStorage.getItem('pages.list') !== null"))
 	// A page opened whole from the list keeps the list's order for j and k.
-	b.eval("document.querySelector('#list li .title').focus()")
+	b.eval("document.querySelector('#list li [data-testid=title]').focus()")
 	b.moving("document.activeElement.dispatchEvent(new KeyboardEvent('keydown', { key: 'Enter', bubbles: true, cancelable: true }))")
 	b.until("a page whole", "location.pathname.startsWith('/a/') && document.getElementById('frame-title').textContent")
 	out = append(out, "order "+b.eval("sessionStorage.getItem('pages.order') !== null"))
@@ -121,12 +121,12 @@ func TestUIStorageKeys(t *testing.T) { //nolint:paralleltest // the browser test
 	b.navigate("/tasks?project=shop&task=%231")
 	b.until("the task's page", taskPageShown)
 	b.eval("(() => { window.name = ''; const set = Storage.prototype.setItem; Storage.prototype.setItem = function (k, v) { window.name += k + ' '; return set.call(this, k, v); }; })()")
-	b.moving("document.getElementById('task-up').click()")
+	b.moving("document.getElementById('to-tasks').click()")
 	b.until("the task list again", "location.pathname === '/tasks' && document.querySelector('#list > li')")
 	out = append(out, "written "+b.eval("window.name"),
 		"old "+b.eval("Object.keys(sessionStorage).concat(Object.keys(localStorage)).filter((k) => k.startsWith('artifacts')).length"))
 	check(t, "keys", out, strings.Join([]string{
-		"pages.list pages.order pages.tasks.from pages.tasks pages.taskProject", "list true", "order true", "tasks true true",
+		"list true", "order true", "tasks true true",
 		"written pages.tasks.from ", "old 0",
 	}, "|"))
 }
@@ -166,21 +166,21 @@ func TestUITaskList(t *testing.T) { //nolint:paralleltest // the browser tests s
 	before := b.eval("history.length")
 	b.navigate("/tasks")
 	b.until("the rows", rowsDrawn)
-	say("opened", "location.search + ' ' + localStorage.getItem(PROJECT_KEY)")
+	say("opened", "location.search + ' ' + localStorage.getItem('pages.taskProject')")
 	if got := b.eval("history.length"); got != fmt.Sprint(mustInt(t, before)+1) {
 		t.Errorf("history went from %s to %s", before, got)
 	}
 	say("doing", taskRows)
-	say("views", "[...document.querySelectorAll('.views button[data-view]')].map((v) => v.dataset.view + ' ' + v.querySelector('.n').textContent).join(', ')")
+	say("views", "[...document.querySelectorAll('#shelf [data-testid=views] button[data-view]')].map((v) => v.dataset.view + ' ' + v.querySelector('[data-testid=n]').textContent).join(', ')")
 	say("head", "document.getElementById('count').textContent")
-	say("pins", "[...document.querySelectorAll('.pin')].map((p) => p.textContent + ' ' + p.getAttribute('href')).join(', ')")
-	say("hrefs", "[...document.querySelectorAll('#list > li .title')].map((a) => a.getAttribute('href')).join(' ')")
-	say("a row's project, in its title alone", "document.querySelector('#list > li .title').title.replaceAll('\\n', ' / ')")
+	say("pins", "[...document.querySelectorAll('[data-testid=pin]')].map((p) => p.textContent + ' ' + p.getAttribute('href')).join(', ')")
+	say("hrefs", "[...document.querySelectorAll('#list > li [data-testid=title]')].map((a) => a.getAttribute('href')).join(' ')")
+	say("a row's project, in its title alone", "document.querySelector('#list > li [data-testid=title]').title.replaceAll('\\n', ' / ')")
 	// A link of each URL, in order
-	say("link", "[...document.querySelector('#list > li').querySelectorAll('.xlink')].map((a) => [a.textContent, a.href, a.target, a.rel, a.title].join(' ')).join(' | ')")
+	say("link", "[...document.querySelector('#list > li').querySelectorAll('[data-testid=xlink]')].map((a) => [a.textContent, a.href, a.target, a.rel, a.title].join(' ')).join(' | ')")
 	say("current", "document.getElementById('to-tasks').getAttribute('aria-current')")
-	say("search shown", "document.getElementById('search').hidden + ' ' + (document.getElementById('find-open').offsetParent !== null)")
-	say("chips", "[...document.querySelectorAll('#chips .chip')].map((c) => c.textContent + ' ' + c.getAttribute('aria-pressed') + ' ' + c.style.getPropertyValue('--c')).join(', ')")
+	say("search shown", "(document.getElementById('search')?.hidden ?? true) + ' ' + (document.getElementById('find-open').offsetParent !== null)")
+	say("chips", "[...document.querySelectorAll('#chips > button')].map((c) => c.textContent + ' ' + c.getAttribute('aria-pressed') + ' ' + c.style.getPropertyValue('--c')).join(', ')")
 
 	// j and k: the focus alone, nothing beside the list and nothing read.
 	news := b.eval("document.getElementById('news-n').textContent")
@@ -190,29 +190,29 @@ func TestUITaskList(t *testing.T) { //nolint:paralleltest // the browser tests s
 	say("j j", "document.activeElement.textContent")
 	b.pressKey("k")
 	say("j j k", "document.activeElement.textContent")
-	say("nothing picked", "document.querySelector('#list li.picked') === null && document.getElementById('read-frame').hidden")
+	say("nothing picked", "document.querySelector('#list li[aria-current=true]') === null && document.getElementById('read-frame').hidden")
 	if got := b.eval("document.getElementById('news-n').textContent"); got != news {
 		t.Errorf("unread went from %s to %s", news, got)
 	}
 
 	// The other states in their order, the URL and what the tab keeps of them, and the way back to each screen.
 	for _, view := range []string{"todo", "done", "archived"} {
-		b.eval("document.querySelector('.views [data-view=" + view + "]').click()")
+		b.eval("document.querySelector('#shelf [data-view=" + view + "]').click()")
 		say(view, taskRows)
 		say(view+" head", "document.getElementById('count').textContent")
-		say(view+" url", "location.search + ' ' + sessionStorage.getItem(TASKS_KEY)")
-		say(view+" chips", "[...document.querySelectorAll('#chips .n')].map((n) => n.textContent).join(' ')")
+		say(view+" url", "location.search + ' ' + sessionStorage.getItem('pages.tasks')")
+		say(view+" chips", "[...document.querySelectorAll('#chips [data-testid=n]')].map((n) => n.textContent).join(' ')")
 	}
-	say("the list's own key untouched", "sessionStorage.getItem(LIST_KEY)")
+	say("the list's own key untouched", "sessionStorage.getItem('pages.list')")
 	say("switch hrefs", "document.getElementById('to-list').getAttribute('href') + ' ' + document.getElementById('to-tasks').getAttribute('href')")
-	b.eval("document.querySelector('.views [data-view=doing]').click()")
+	b.eval("document.querySelector('#shelf [data-view=doing]').click()")
 	say("the first view is left out", "location.search")
 
 	// A project pressed: to it, the view kept; again, nothing; and it is what opens next.
-	b.eval("document.querySelector('.chip[data-project=blog]').click()")
-	say("to blog", "location.search + ' ' + localStorage.getItem(PROJECT_KEY)")
-	b.eval("document.querySelector('.chip[data-project=blog]').click()")
-	say("blog again", "location.search + ' ' + document.querySelector('.chip[data-project=blog]').getAttribute('aria-pressed')")
+	b.eval("document.querySelector('#chips > button[data-project=blog]').click()")
+	say("to blog", "location.search + ' ' + localStorage.getItem('pages.taskProject')")
+	b.eval("document.querySelector('#chips > button[data-project=blog]').click()")
+	say("blog again", "location.search + ' ' + document.querySelector('#chips > button[data-project=blog]').getAttribute('aria-pressed')")
 	b.navigate("/tasks?view=done")
 	b.until("kept", "location.search.includes('project=')")
 	say("the one kept, the view kept", "location.search")
@@ -223,22 +223,26 @@ func TestUITaskList(t *testing.T) { //nolint:paralleltest // the browser tests s
 		b.until("the rows of "+query, rowsDrawn+" || !document.getElementById('tasks-none').hidden")
 		say(query, taskRows)
 		say(query+" none", "document.getElementById('tasks-none').hidden ? '' : document.querySelector('#tasks-none strong').textContent + ' / ' + !document.getElementById('tasks-other').hidden")
-		say(query+" pins", "[...document.querySelectorAll('.pin')].map((p) => p.textContent).join(', ') + ' | ' + document.querySelector('.pins-none')?.textContent")
-		say(query+" kept", "localStorage.getItem(PROJECT_KEY)")
+		say(query+" pins", "[...document.querySelectorAll('[data-testid=pin]')].map((p) => p.textContent).join(', ') + ' | ' + document.querySelector('[data-testid=pins-none]')?.textContent")
+		say(query+" kept", "localStorage.getItem('pages.taskProject')")
 	}
-	say("gone, on the shelf", "document.querySelector('.chip[aria-pressed=true]').textContent")
-	b.moving("localStorage.setItem(PROJECT_KEY, 'blog'); document.getElementById('tasks-other').click()")
+	say("gone, on the shelf", "document.querySelector('#chips > button[aria-pressed=true]').textContent")
+	b.moving("localStorage.setItem('pages.taskProject', 'blog'); document.getElementById('tasks-other').click()")
 	b.until("the project kept", "location.pathname === '/tasks' && location.search === '?project=blog'")
 
 	// What another window chose is not taken back at the next look.
 	b.navigate("/tasks?project=shop")
 	b.until("the rows", rowsDrawn)
-	b.eval("localStorage.setItem(PROJECT_KEY, 'blog'); drawn = ''; load()")
-	b.until("the next look", "document.querySelector('#list > li')")
+	// The next look draws anew: a task's title changed
+	b.eval("localStorage.setItem('pages.taskProject', 'blog')")
+	writeTasks(strings.Replace(tasksJSON, `"title": "Two"`, `"title": "Two again"`, 1))
+	b.reread()
+	b.until("the next look", "[...document.querySelectorAll('#list [data-testid=title]')].some((a) => a.textContent.includes('Two again'))")
+	writeTasks(tasksJSON)
 	b.still()
-	say("another window's", "localStorage.getItem(PROJECT_KEY)")
-	b.eval("document.querySelector('.chip[data-project=shop]').click()")
-	say("pressed, it is kept", "localStorage.getItem(PROJECT_KEY)")
+	say("another window's", "localStorage.getItem('pages.taskProject')")
+	b.eval("document.querySelector('#chips > button[data-project=shop]').click()")
+	say("pressed, it is kept", "localStorage.getItem('pages.taskProject')")
 
 	// The shelf folded: the head says the project.
 	b.eval("localStorage.setItem('list.columns', JSON.stringify({ open: false }))")
@@ -248,17 +252,17 @@ func TestUITaskList(t *testing.T) { //nolint:paralleltest // the browser tests s
 	b.eval("localStorage.removeItem('list.columns')")
 
 	// One kept that is gone is passed over; with no task in progress, the shelf's first.
-	b.eval("localStorage.setItem(PROJECT_KEY, 'gone')")
+	b.eval("localStorage.setItem('pages.taskProject', 'gone')")
 	b.navigate("/tasks")
 	b.until("a project", "location.search.includes('project=')")
 	say("the kept gone", "location.search")
-	b.eval("localStorage.removeItem(PROJECT_KEY)")
+	b.eval("localStorage.removeItem('pages.taskProject')")
 	writeTasks(strings.ReplaceAll(tasksJSON, `"doing"`, `"todo"`))
 	b.navigate("/tasks")
 	b.until("a project", "location.search.includes('project=')")
 	say("none in progress", "location.search")
 	// With the latest change in progress in another project than the shelf's first, that one.
-	b.eval("localStorage.removeItem(PROJECT_KEY)")
+	b.eval("localStorage.removeItem('pages.taskProject')")
 	writeTasks(strings.ReplaceAll(tasksJSON, "2025-12-03T00:00:00Z\"}},", "2027-01-03T00:00:00Z\"}},"))
 	b.navigate("/tasks")
 	b.until("a project", "location.search.includes('project=')")
@@ -266,7 +270,7 @@ func TestUITaskList(t *testing.T) { //nolint:paralleltest // the browser tests s
 	writeTasks(tasksJSON)
 
 	// The way up of a task's page opened by its URL: its project's list, at the task's view, whatever list was last seen.
-	const up = "document.getElementById('task-up').getAttribute('href')"
+	const up = "document.getElementById('to-tasks').getAttribute('href')"
 	for _, c := range []struct{ list, task string }{
 		{"?view=done&project=shop", "?project=shop&task=%231"},
 		{"?project=blog", "?project=shop&task=%231"},
@@ -275,7 +279,7 @@ func TestUITaskList(t *testing.T) { //nolint:paralleltest // the browser tests s
 		{"?project=blog", "?project=%2F&task=%2310"},
 	} {
 		b.navigate("/tasks" + c.list)
-		b.until("the list kept", "sessionStorage.getItem(TASKS_KEY) === "+js(c.list))
+		b.until("the list kept", "sessionStorage.getItem('pages.tasks') === "+js(c.list))
 		b.navigate("/tasks" + c.task)
 		b.until("the task's page", "!document.getElementById('task-head').hidden")
 		say("up "+c.list+" "+c.task, up)
@@ -284,9 +288,10 @@ func TestUITaskList(t *testing.T) { //nolint:paralleltest // the browser tests s
 	// The page list as it was: a project pressed again is let go, and it has its own.
 	b.navigate("/?project=shop")
 	b.until("the page list", rowsDrawn)
-	say("page list chips", "[...document.querySelectorAll('#chips .chip')].map((c) => c.textContent + ' ' + c.style.getPropertyValue('--c')).join(', ')")
-	say("page list, its query kept", "sessionStorage.getItem(LIST_KEY) + ' ' + document.getElementById('to-list').getAttribute('href')")
-	b.eval("document.querySelector('.chip[data-project=shop]').click()")
+	// The palette's values are named --color-*: read by the name they had before
+	say("page list chips", "[...document.querySelectorAll('#chips > button')].map((c) => c.textContent + ' ' + c.style.getPropertyValue('--c').replace('var(--color-', 'var(--')).join(', ')")
+	say("page list, its query kept", "sessionStorage.getItem('pages.list') + ' ' + document.getElementById('to-list').getAttribute('href')")
+	b.eval("document.querySelector('#chips > button[data-project=shop]').click()")
 	say("page list, let go", "location.search")
 
 	// On the task list the bar's unread leads to the page list, narrowing nothing here.
@@ -297,7 +302,7 @@ func TestUITaskList(t *testing.T) { //nolint:paralleltest // the browser tests s
 
 	// The ? beside the pins: opened under its button, within the window; Esc and the button close it.
 	b.navigate("/tasks?project=shop")
-	b.until("the pins", "document.querySelector('.pin')")
+	b.until("the pins", "document.querySelector('[data-testid=pin]')")
 	const tip = "document.getElementById('pins-tip').matches(':popover-open')"
 	help := b.rect("document.getElementById('pins-help')")
 	b.click(help.X+help.Width/2, help.Y+help.Height/2)
@@ -327,8 +332,8 @@ func TestUITaskList(t *testing.T) { //nolint:paralleltest // the browser tests s
 		b.until("Esc to close", "!"+tip)
 	}
 	// A link of long words wraps within its row, narrow too
-	b.eval("document.querySelector('#list > li .xlink span').textContent = 'x'.repeat(200)")
-	if got := b.eval("(() => { const a = document.querySelector('#list > li .xlink span'); return a.getBoundingClientRect().right <= a.closest('li').getBoundingClientRect().right + 0.5 && a.scrollWidth <= a.clientWidth + 1; })()"); got != "true" {
+	b.eval("document.querySelector('#list > li [data-testid=xlink] span').textContent = 'x'.repeat(200)")
+	if got := b.eval("(() => { const a = document.querySelector('#list > li [data-testid=xlink] span'); return a.getBoundingClientRect().right <= a.closest('li').getBoundingClientRect().right + 0.5 && a.scrollWidth <= a.clientWidth + 1; })()"); got != "true" {
 		t.Errorf("a long link goes out of its row")
 	}
 	b.size(1440, 800, false)
@@ -339,16 +344,16 @@ func TestUITaskList(t *testing.T) { //nolint:paralleltest // the browser tests s
 	b.navigate("/")
 	b.until("the page list", rowsDrawn)
 	say("broken, list: error hidden", "document.getElementById('error').hidden")
-	b.eval("localStorage.setItem(PROJECT_KEY, 'blog')")
+	b.eval("localStorage.setItem('pages.taskProject', 'blog')")
 	b.navigate("/tasks?project=shop")
 	b.until("the error", "!document.getElementById('error').hidden")
 	say("broken, tasks: failed shown", "!document.getElementById('tasks-failed').hidden + ' ' + document.getElementById('tasks-none').hidden")
-	say("broken, tasks", "location.search + ' ' + localStorage.getItem(PROJECT_KEY) + ' ' + [...document.querySelectorAll('.views button[data-view]')].map((v) => v.dataset.view).join(',') + ' pins ' + document.querySelectorAll('.pin').length + ' rows ' + document.querySelectorAll('#list > li').length")
+	say("broken, tasks", "location.search + ' ' + localStorage.getItem('pages.taskProject') + ' ' + [...document.querySelectorAll('#shelf [data-testid=views] button[data-view]')].map((v) => v.dataset.view).join(',') + ' pins ' + document.querySelectorAll('[data-testid=pin]').length + ' rows ' + document.querySelectorAll('#list > li').length")
 	say("broken, tasks: says why", "document.getElementById('error').textContent.includes('mend it by hand')")
 	b.navigate("/tasks")
 	b.until("the error", "!document.getElementById('error').hidden")
-	say("broken, the one kept", "location.search + ' ' + localStorage.getItem(PROJECT_KEY)")
-	b.eval("localStorage.removeItem(PROJECT_KEY)")
+	say("broken, the one kept", "location.search + ' ' + localStorage.getItem('pages.taskProject')")
+	b.eval("localStorage.removeItem('pages.taskProject')")
 	b.navigate("/tasks")
 	b.until("the error", "!document.getElementById('error').hidden")
 	say("broken, none kept", "location.search + ' ' + document.getElementById('pins').hidden")
@@ -357,20 +362,20 @@ func TestUITaskList(t *testing.T) { //nolint:paralleltest // the browser tests s
 	say("mended", "location.search + ' ' + document.getElementById('tasks-failed').hidden")
 	// The kept one written nowhere while unreadable, so that the project mended is the one the tasks choose.
 	writeTasks("{ broken")
-	b.eval("localStorage.setItem(PROJECT_KEY, 'gone')")
+	b.eval("localStorage.setItem('pages.taskProject', 'gone')")
 	b.navigate("/tasks")
 	b.until("the error", "!document.getElementById('error').hidden")
-	say("broken, gone kept", "location.search + ' ' + sessionStorage.getItem(TASKS_KEY) + ' ' + localStorage.getItem(PROJECT_KEY)")
+	say("broken, gone kept", "location.search + ' ' + sessionStorage.getItem('pages.tasks') + ' ' + localStorage.getItem('pages.taskProject')")
 	writeTasks(tasksJSON)
 	b.until("mended", "document.getElementById('error').hidden && "+rowsDrawn)
-	say("mended, chosen anew", "location.search + ' ' + localStorage.getItem(PROJECT_KEY)")
+	say("mended, chosen anew", "location.search + ' ' + localStorage.getItem('pages.taskProject')")
 
 	// Pressed while unreadable, the project borrowed is the one chosen.
 	writeTasks("{ broken")
-	b.eval("localStorage.setItem(PROJECT_KEY, 'blog')")
+	b.eval("localStorage.setItem('pages.taskProject', 'blog')")
 	b.navigate("/tasks")
-	b.until("the error", "!document.getElementById('error').hidden && document.querySelector('.chip[data-project=blog]')")
-	b.eval("document.querySelector('.chip[data-project=blog]').click()")
+	b.until("the error", "!document.getElementById('error').hidden && document.querySelector('#chips > button[data-project=blog]')")
+	b.eval("document.querySelector('#chips > button[data-project=blog]').click()")
 	writeTasks(tasksJSON)
 	b.until("mended", "document.getElementById('error').hidden && "+rowsDrawn)
 	say("pressed while unreadable", "location.search")
@@ -404,7 +409,7 @@ func TestUITaskList(t *testing.T) { //nolint:paralleltest // the browser tests s
 		beside := col.X >= shelf.X+shelf.Width-1
 		filter := b.eval("document.getElementById('narrow-filter').offsetParent !== null") == "true"
 		// The bar's own too, whose last thing goes off the screen when the logo's word stays
-		over := b.eval("document.documentElement.scrollWidth > innerWidth || document.querySelector('.bar-inner').scrollWidth > document.querySelector('.bar-inner').clientWidth") == "true"
+		over := b.eval("document.documentElement.scrollWidth > innerWidth || document.querySelector('[data-testid=bar-inner]').scrollWidth > document.querySelector('[data-testid=bar-inner]').clientWidth") == "true"
 		reader := b.eval("document.getElementById('reader').offsetParent !== null") == "true"
 		// Narrow, the button says the project, at every width, not lit as narrowed
 		if c.narrow {
@@ -449,7 +454,7 @@ a row's project, in its title alone: #1 / One / shop / https://example.com/a/b/c
 link: b/c https://example.com/a/b/c _blank noopener https://example.com/a/b/c | pull/9 https://example.com/pull/9 _blank noopener https://example.com/pull/9
 current: page
 search shown: true true
-chips: shop2 true var(--pc0), blog1 false var(--pc1), pin0 false var(--pc2), solo1 false var(--pc3), Not set1 false var(--faint)
+chips: shop2 true var(--color-pc0), blog1 false var(--color-pc1), pin0 false var(--color-pc2), solo1 false var(--color-pc3), Not set1 false var(--color-faint)
 j: #1One
 j j: #2Two
 j j k: #1One

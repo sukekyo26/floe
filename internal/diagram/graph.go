@@ -78,7 +78,9 @@ type graphOut struct {
 	row      []int          // the first box, as written, of each box's row: the boxes level edges stand in one rank
 	ranked   []int          // the box each box takes its rank from: its row's, joined by with
 	withed   map[int]bool   // the boxes of a with that names a box: edges from boxes into them decide no rank
-	facing   map[[2]int]int // where each block stands in its lane (faces)
+	common   map[int]bool   // the groups laid out as lanes are, -1 the graph (see level.go)
+	facing   map[[2]int]int // where each block stands in its group (faces)
+	faced    map[int]int    // where each group under a common group stands in its group, as faces
 	drawn    []drawnBox     // where each box stands, drawn
 	detoured map[int]bool   // the edges gone round frames (detours)
 	stayed   map[int]string // the edges left through a frame that holds neither end, and why (detours)
@@ -90,8 +92,8 @@ type graphOut struct {
 func readGraph(g *graph, at string, way graphWay) (*graphOut, usererr.List) {
 	out := &graphOut{
 		g: g, at: at, boxes: nil, clusters: nil, top: nil, ends: map[int][2]gref{}, groups: nil, passed: 0,
-		loops: nil, skip: false, levels: nil, row: nil, ranked: nil, withed: nil, facing: nil, drawn: nil,
-		way: way, detoured: nil, stayed: nil,
+		loops: nil, skip: false, levels: nil, row: nil, ranked: nil, withed: nil, common: nil, facing: nil,
+		faced: nil, drawn: nil, way: way, detoured: nil, stayed: nil,
 	}
 	out.boxes, out.clusters, out.top = flatten(g, at)
 	if n := len(out.boxes) + len(out.clusters); n > maxNodes {
@@ -131,7 +133,6 @@ func readGraph(g *graph, at string, way graphWay) (*graphOut, usererr.List) {
 	problems = append(problems, told...)
 	for _, gr := range out.groupsOf(edges, cedges, levels) {
 		problems = append(problems, gr.among...)
-		problems = append(problems, gr.levelMistakes()...)
 		out.groups = append(out.groups, gr)
 		out.passed += gr.passed()
 	}
@@ -236,10 +237,10 @@ func (o *graphOut) groupsOf(edges, cedges, levels []int) []*group {
 }
 
 // joined is the root of each box's group of connected boxes: joined by edges, by edges to groups (all the boxes of
-// both ends), by standing in one rank (a row, with), by a group at the top (all its boxes) and by lanes (all the
-// boxes).
+// both ends), by standing in one rank (a row, with), by a group at the top (all its boxes) and by a common group (all
+// its boxes; lanes all the boxes).
 // LIMIT: boxes with joins stand as a group of their own, so a box written between them with no edge to either stands
-// past them. Keep the order written across such groups if one comes to need it.
+// past them, but in a common group. Keep the order written across such groups if one comes to need it.
 func (o *graphOut) joined(edges, cedges []int) func(int) int {
 	root := make([]int, len(o.boxes))
 	for i := range root {
@@ -257,10 +258,17 @@ func (o *graphOut) joined(edges, cedges []int) func(int) int {
 	for b, r := range o.ranked {
 		join([]int{b, r})
 	}
+	for c := range o.common {
+		if c < 0 {
+			for b := range o.boxes {
+				unite(root, 0, b)
+			}
+		} else {
+			join(o.clusters[c].boxes)
+		}
+	}
 	for _, c := range o.clusters {
-		if c.lane { // every box is in a lane, and all lanes are one
-			join(append([]int{0}, c.boxes...))
-		} else if c.parent < 0 {
+		if c.parent < 0 {
 			join(c.boxes)
 		}
 	}
@@ -290,10 +298,11 @@ func (o *graphOut) items() ([]item, usererr.List, error) {
 	left := 0.0
 	var told usererr.List
 	for _, gr := range o.groups {
-		d, err := o.draw(gr, right)
+		d, between, err := o.draw(gr, right)
 		if err != nil {
 			return nil, nil, err
 		}
+		told = append(told, between...)
 		told = append(told, d.headed(o, gr)...)
 		left = d.stand(across, left)
 		if gr == o.groups[0] {
@@ -377,18 +386,18 @@ func (o *graphOut) opened(cs []gref, hands [][]string, frames map[int]rect, side
 	return out
 }
 
-// draw lays group gr out and places its labels, as drawn from 0,0.
-func (o *graphOut) draw(gr *group, right bool) (*drawing, error) {
+// draw lays group gr out and places its labels, as drawn from 0,0, and tells the level edges something stands between.
+func (o *graphOut) draw(gr *group, right bool) (*drawing, usererr.List, error) {
 	gr.place(right)
 	gr.wire()
 	d := &drawing{
 		right: right, boxes: map[int]rect{}, shapes: map[int]string{}, routes: map[int][][2]float64{},
 		ends: map[int][2]int{}, back: map[int]bool{}, spots: map[int]spot{}, loops: map[int]bool{},
 		frames: map[int]rect{}, heads: map[int]rect{}, icons: map[int]*icon{}, places: map[endAt]endPlace{},
-		slid:  map[endAt]bool{},
+		slid: map[endAt]bool{}, ported: map[endAt]port{},
 		moved: map[int]float64{}, settled: map[int]bool{}, off: false, offs: 0,
 		settling: settling{things: nil, sides: nil, runs: nil, labels: nil},
-		level:    map[int][2]string{}, taken: map[int]map[string]bool{}, kept: nil,
+		level:    map[int][2]string{}, taken: map[int]map[string]bool{}, kept: nil, bends: nil,
 	}
 	sides := map[int][2]float64{} // each group's left and right, as laid out down
 	for _, n := range gr.nodes {
@@ -410,40 +419,69 @@ func (o *graphOut) draw(gr *group, right bool) (*drawing, error) {
 			d.heads[c] = headArea(g)
 		}
 	}
-	box := func(n gnode) int { // the box at an end, or -1 at a frame
-		if n.box == nil {
-			return -1
-		}
-		return n.of
-	}
 	edges := slices.Sorted(maps.Keys(gr.chains))
 	for _, k := range edges {
 		d.routes[k] = gr.route(k, d.boxes, right)
-		chain := gr.chains[k]
-		d.ends[k] = [2]int{box(gr.nodes[gr.links[chain[0]].from]), box(gr.nodes[gr.links[chain[len(chain)-1]].to])}
-		if gr.reversed[k] {
-			d.ends[k], d.back[k] = [2]int{d.ends[k][1], d.ends[k][0]}, true
-		}
+		d.keepEnds(gr, k)
 	}
 	d.growLevels(gr)
 	o.detours(d, edges)
 	if err := o.drawLoops(d); err != nil {
-		return nil, fmt.Errorf("diagram: the graph at %s: %w", o.at, err)
+		return nil, nil, fmt.Errorf("diagram: the graph at %s: %w", o.at, err)
 	}
-	if err := o.drawLevels(gr, d); err != nil {
-		return nil, fmt.Errorf("diagram: the graph at %s: %w", o.at, err)
+	told, err := o.drawLevels(gr, d)
+	if err != nil {
+		return nil, nil, fmt.Errorf("diagram: the graph at %s: %w", o.at, err)
 	}
 	for _, k := range slices.Sorted(slices.Values(slices.Concat(edges, gr.levels))) {
 		if t := o.g.Edges[k].Label; t != nil {
 			if err := d.place(k, labelWidth(t, false)); err != nil {
-				return nil, fmt.Errorf("diagram: the graph at %s: %w", o.at, err)
+				return nil, nil, fmt.Errorf("diagram: the graph at %s: %w", o.at, err)
 			}
 		}
 	}
 	d.kept = o.keptOut(d)
 	o.way.settle(d)
 	d.reseat(slices.Sorted(slices.Values(slices.Concat(edges, gr.levels))))
-	return d, nil
+	return d, told, nil
+}
+
+// keepEnds keeps what edge k of gr starts and ends on, as drawn: a box, or -1 and the group at a frame.
+func (d *drawing) keepEnds(gr *group, k int) {
+	chain := gr.chains[k]
+	ps := [2]int{gr.links[chain[0]].from, gr.links[chain[len(chain)-1]].to}
+	if gr.reversed[k] {
+		ps, d.back[k] = [2]int{ps[1], ps[0]}, true
+	}
+	ns := [2]gnode{gr.nodes[ps[0]], gr.nodes[ps[1]]}
+	var ends [2]int
+	for j, n := range ns {
+		ends[j] = n.of
+		if n.box == nil {
+			ends[j] = -1
+			lo, hi := gr.portRange(ps[j])
+			f, across := d.frames[n.cl], 0
+			if d.right {
+				across = 1
+			}
+			// From the frame's two ends: every stretch from here on moves on what lies past a point and grows a frame
+			// across it at its far side, so the end keeps its distance from the near end and keeps or grows it from the far.
+			var round []int
+			for c := n.cl; c >= 0; c = gr.out.clusters[c].parent {
+				round = append(round, c)
+			}
+			d.ported[endAt{k, j}] = port{cl: n.cl, in: lo - f.lo(across), out: f.lo(across) + f.size(across) - hi, round: round}
+		}
+	}
+	d.ends[k] = ends
+}
+
+// port is an edge's end at the frame of group cl, round which stand the groups round (cl first): how far in from the
+// frame's two ends along its side the routes may place it (portRange), kept from the frame as the frame stretches.
+type port struct {
+	cl      int
+	in, out float64
+	round   []int
 }
 
 // addBox keeps box n as drawn.
@@ -503,6 +541,7 @@ type drawing struct {
 	icons    map[int]*icon           // the icons among its boxes
 	places   map[endAt]endPlace      // where the ends at its icons and boxes go
 	slid     map[endAt]bool          // the ends slide has moved
+	ported   map[endAt]port          // each end at a frame
 	settling settling                // what the ends moved keep off
 	kept     map[int][]rect          // the frames each edge keeps out of as its ends move (keptOut)
 	moved    map[int]float64         // how far each icon has moved across the ranks in its rectangle
@@ -511,6 +550,7 @@ type drawing struct {
 	offs     int                     // the edges offPoint stood on one line
 	level    map[int][2]string       // the level edges, and the sides of their boxes they take, from the box written first
 	taken    map[int]map[string]bool // the sides of each box level edges take
+	bends    map[endSide][]endAt     // the ends at each side of its icons, once its ends are settled (turnLine)
 }
 
 // spot is where a label stands, held to its run so that it moves with it: on run seg of edge's corners (its own edge's,

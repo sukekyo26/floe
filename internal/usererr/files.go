@@ -105,12 +105,10 @@ func wordsOf(name string, err error) (string, error) {
 // systemWords returns the system's words of err, without the paths it names: those of an *fs.PathError, and of
 // an *os.LinkError, which a rename gives; false for another error.
 func systemWords(err error) (string, bool) {
-	var pe *fs.PathError
-	if errors.As(err, &pe) {
+	if pe, ok := errors.AsType[*fs.PathError](err); ok {
 		return pe.Err.Error(), true
 	}
-	var le *os.LinkError
-	if errors.As(err, &le) {
+	if le, ok := errors.AsType[*os.LinkError](err); ok {
 		return le.Err.Error(), true
 	}
 	return "", false

@@ -1,6 +1,7 @@
 package browsertest_test
 
 import (
+	"fmt"
 	"strings"
 	"testing"
 
@@ -35,38 +36,54 @@ func TestUIEditFold(t *testing.T) { //nolint:paralleltest // the browser tests s
 	}
 	open := func() {
 		t.Helper()
-		b.eval("document.getElementById('edit-dialog').close()")
-		b.eval("document.querySelector('#list li[data-slug=a] .more').open = true; document.querySelector('#list li[data-slug=a] .menu .edit').click()")
+		if b.eval("document.getElementById('edit-dialog').open") == "true" {
+			b.pressKey(kb.Escape)
+			b.until("the dialog closed", "!document.getElementById('edit-dialog').open")
+		}
+		b.eval("document.querySelector('#list li[data-slug=a] [data-testid=more] summary').click()")
+		b.until("the menu", "document.querySelector('#list li[data-slug=a] [data-testid=menu] [data-testid=edit]').checkVisibility()")
+		b.eval("document.querySelector('#list li[data-slug=a] [data-testid=menu] [data-testid=edit]').click()")
 		b.until("the dialog", "document.getElementById('edit-dialog').open")
 	}
+	// The fold opened or shut by its row, as a person does.
+	const fold = "(() => { const m = document.getElementById('edit-more'); if (m.open !== %s) m.querySelector('summary').click(); })()"
+	// Typed with the fold open, then left as it was.
 	field := func(id, value string) {
 		t.Helper()
-		b.eval("const f = document.getElementById(" + js(id) + "); f.value = " + js(value) + "; f.dispatchEvent(new Event('input', { bubbles: true }))")
+		was := b.eval("document.getElementById('edit-more').open")
+		b.eval(fmt.Sprintf(fold, "true"))
+		b.fill("#"+id, value)
+		b.eval(fmt.Sprintf(fold, was))
 	}
-	// Typed with the fold open, then folded and saved: saved open, a fold not opened by the refusal would show open all the same
+	// Folded and saved: saved open, a fold not opened by the refusal would show open all the same. Each opening hides the error.
+	// By a real key, from a field outside the fold: pressed by script, the fold is drawn open after the browser looked for the refused field.
 	save := func(what string) {
 		t.Helper()
-		b.eval("document.getElementById('edit-more').open = false; document.getElementById('edit-error').hidden = true; document.getElementById('edit-submit').click()")
+		b.eval(fmt.Sprintf(fold, "false"))
+		b.eval("document.getElementById('edit-name').focus()")
+		b.pressKey(kb.Enter)
 		b.until(what, "document.getElementById('edit-more').open || !document.getElementById('edit-error').hidden")
 	}
-	const fold = "document.getElementById('edit-more').open + ' / ' + document.getElementById('edit-more-now').textContent"
+	const foldNow = "document.getElementById('edit-more').open + ' / ' + document.getElementById('edit-more-now').textContent"
 	const state = "document.getElementById('edit-more').open + ' / ' + document.activeElement.id + ' / ' + (document.getElementById('edit-error').hidden ? '-' : document.getElementById('edit-error').textContent)"
 
 	open()
-	say("opened", fold)
+	say("opened", foldNow)
 	field("edit-slug", " a-new ")
-	say("typed", fold)
+	say("typed", foldNow)
 	field("edit-project", "  ")
-	say("no project", fold)
+	say("no project", foldNow)
 	open()
-	say("again", fold)
+	say("again", foldNow)
 
 	field("edit-slug", "Bad Name")
 	save("invalid")
+	// The field refused takes the focus once its fold is open: a build may move it after drawing the fold
+	b.until("the field refused reached", "document.activeElement.id === 'edit-slug'")
 	say("invalid", state+" + ' / ' + document.getElementById('edit-dialog').open")
 
 	open()
-	say("reopened after one opened", fold)
+	say("reopened after one opened", foldNow)
 	field("edit-slug", "b")
 	save("taken")
 	say("taken", state)
@@ -86,7 +103,6 @@ func TestUIEditFold(t *testing.T) { //nolint:paralleltest // the browser tests s
 	open()
 	field("edit-name", "Another")
 	b.eval("window.fetch = (url, init) => (init?.method === 'PATCH' ? Promise.resolve(new Response('no', { status: 500 })) : window.cutFetch(url, init))")
-	b.eval("document.getElementById('edit-name').focus()")
 	save("title refused")
 	say("title refused", state)
 	b.eval("window.fetch = window.cutFetch")
@@ -110,7 +126,7 @@ func TestUIEditFold(t *testing.T) { //nolint:paralleltest // the browser tests s
 	field("edit-project", "else")
 	b.eval("document.getElementById('edit-submit').click()")
 	b.until("saved", "!document.getElementById('edit-dialog').open")
-	say("moved", "[...document.querySelectorAll('#toasts .toast')].at(-1)?.textContent.trim()")
+	say("moved", "[...document.querySelectorAll('#toasts [data-testid=toast]')].at(-1)?.textContent.trim()")
 
 	check(t, "edit fold", out, strings.Join([]string{
 		"opened: false / a · proj",

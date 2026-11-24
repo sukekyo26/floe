@@ -11,13 +11,14 @@ import (
 )
 
 // A level edge stands its two boxes in one rank and runs straight between their facing sides. The boxes level edges
-// join make a row, one rank; a row's boxes that one group holds stand side by side as written (a block), and a box
-// right in a lane with a level edge to another lane stands at its lane's end towards it. So what stands between two
-// boxes of a level edge follows from the order written, the lanes' order and the ranks, not from how ranks are
-// ordered, and is told before the graph is laid out (levelMistakes).
+// join make a row, one rank; a row's boxes that one group holds stand side by side as written (a block). A level edge
+// between boxes of two groups lays out the lowest group holding both (its common group; the graph's, -1, a graph of
+// lanes' from the start) as lanes are: its groups, boxes and icons stand as written (its points, of longer edges,
+// still move), making no blocks, and the edge's ends under them and the groups holding those stand at their ends
+// towards the other end (faces). Where these meet, the order written wins, and what stands between two boxes after
+// all is told once laid out (drawLevels).
 
-// levelMistake is the mistake of edge k, written level, between ends: at a group, or between two boxes neither of
-// one group nor right in two lanes; or nil.
+// levelMistake is the mistake of edge k, written level, at a group, or nil.
 func (o *graphOut) levelMistake(k int, ends [2]gref) *usererr.Error {
 	e := o.g.Edges[k]
 	for i, end := range ends {
@@ -25,12 +26,6 @@ func (o *graphOut) levelMistake(k int, ends [2]gref) *usererr.Error {
 			return edgeMistake(edgeAt(o.at, k)+"/"+[2]string{"from", "to"}[i], "diagram_graph_level_group", e,
 				o.endName(end))
 		}
-	}
-	// LIMIT: two boxes of one group, or right in two lanes, whose left and right the order written or the lanes'
-	// order tells; a group's place among its siblings is the order's. Lift it if groups come to stand as written.
-	a, b := o.boxes[ends[0].box].cl, o.boxes[ends[1].box].cl
-	if a != b && (!o.lane(a) || !o.lane(b)) {
-		return edgeMistake(edgeAt(o.at, k)+"/level", "diagram_graph_level_apart", e)
 	}
 	return nil
 }
@@ -60,8 +55,8 @@ func (o *graphOut) unlooped(levels []int) ([]int, usererr.List) {
 	}), told
 }
 
-// rows joins the boxes of the level edges into rows, each by its first box as written, and finds where each block
-// stands in its lane (faces).
+// rows joins the boxes of the level edges into rows, each by its first box as written, finds the common groups of
+// those between two groups, and where each block and group under a common group stands (faces).
 func (o *graphOut) rows(levels []int) {
 	o.levels = levels
 	o.row = make([]int, len(o.boxes))
@@ -72,22 +67,54 @@ func (o *graphOut) rows(levels []int) {
 		unite(o.row, o.ends[k][0].box, o.ends[k][1].box)
 	}
 	rootAll(o.row)
-	o.facing = map[[2]int]int{}
+	o.common = map[int]bool{}
+	if len(o.g.Lanes) > 0 {
+		o.common[-1] = true
+	}
 	for _, k := range levels {
-		for i, j := range [2]int{o.ends[k][0].box, o.ends[k][1].box} {
-			key := o.block(j)
-			switch d := o.laneOf(o.ends[k][1-i].box) - o.laneOf(j); {
-			case d < 0:
-				o.facing[key] = -1
-			case d > 0 && o.facing[key] == 0:
-				o.facing[key] = 1
+		if a, b := o.ends[k][0].box, o.ends[k][1].box; o.boxes[a].cl != o.boxes[b].cl {
+			o.common[o.commonOf(a, b)] = true
+		}
+	}
+	o.facing, o.faced = map[[2]int]int{}, map[int]int{}
+	face := func(was, towards int) int { // a start wins over an end
+		if towards < 0 || was == 0 {
+			return towards
+		}
+		return was
+	}
+	for _, k := range levels {
+		first, second := o.sides(k)
+		c := o.commonOf(first, second)
+		for _, end := range [2][2]int{{first, 1}, {second, -1}} {
+			b, towards := end[0], end[1]
+			d := o.boxes[b].cl
+			if d == c { // stands as written, or in a block
+				continue
+			}
+			o.facing[o.block(b)] = face(o.facing[o.block(b)], towards)
+			for ; o.clusters[d].parent != c; d = o.clusters[d].parent {
+				o.faced[d] = face(o.faced[d], towards)
 			}
 		}
 	}
 }
 
-// block is box b's block: its row and its group.
+// commonOf is the lowest group holding boxes a and b, -1 for the graph.
+func (o *graphOut) commonOf(a, b int) int {
+	for c := o.boxes[a].cl; c >= 0; c = o.clusters[c].parent {
+		if o.holds(c, gref{box: b, cl: -1}) {
+			return c
+		}
+	}
+	return -1
+}
+
+// block is box b's block: its row and its group; a box of a common group is a block of its own.
 func (o *graphOut) block(b int) [2]int {
+	if cl := o.boxes[b].cl; o.common[cl] {
+		return [2]int{b, cl}
+	}
 	return [2]int{o.row[b], o.boxes[b].cl}
 }
 
@@ -136,9 +163,8 @@ func rootAll(parent []int) {
 }
 
 // across is edges, edges between boxes, but those between two boxes of one rank by a row or a with, told: an edge
-// between ranks cannot run in one. An edge to a group never joins one row: a level edge's two boxes are of one group,
-// which a group holding one holds both of (its other end inside, told before), or right in two lanes, of which a group
-// holding one is that lane.
+// between ranks cannot run in one. An edge to a group from a box of a row whose other box the group holds stands among
+// the group's ranks, told by rankWith.
 func (o *graphOut) across(edges []int) ([]int, usererr.List) {
 	var told usererr.List
 	return slices.DeleteFunc(slices.Clone(edges), func(k int) bool {
@@ -157,78 +183,23 @@ func (o *graphOut) across(edges []int) ([]int, usererr.List) {
 	}), told
 }
 
-// laneOf is the place among the lanes of the lane box b stands in, or -1.
-func (o *graphOut) laneOf(b int) int {
-	c := o.boxes[b].cl
-	for c >= 0 && o.clusters[c].parent >= 0 {
-		c = o.clusters[c].parent
-	}
-	if !o.lane(c) {
-		return -1
-	}
-	return slices.IndexFunc(o.top, func(t gref) bool { return t.cl == c })
-}
-
-// inBlock reports whether boxes a and b are of one block: one row, one group.
+// inBlock reports whether boxes a and b are of one block.
 func (o *graphOut) inBlock(a, b int) bool {
-	return o.row[a] == o.row[b] && o.boxes[a].cl == o.boxes[b].cl
+	return o.block(a) == o.block(b)
 }
 
-// faces is where box b's block stands in its lane: -1 at the lane's start when a box of it has a level edge to a
-// lane before, else 1 at its end when to a lane after, else 0 (where the order puts it).
+// faces is where box b's block stands in its group: -1 at the start when a box of it has a level edge to a box
+// standing before its common group's node holding b, else 1 at its end when to one after, else 0 (where the order puts
+// it).
 func (o *graphOut) faces(b int) int {
 	return o.facing[o.block(b)]
 }
 
-// sides are the boxes of level edge k, the one standing first (left, laid out down) and the other: in one group,
-// as written; in two lanes, by the lanes' order.
+// sides are the boxes of level edge k, the one standing first (left, laid out down) and the other: as written, which
+// is the order of the nodes holding them in their common group, as it stands them.
 func (o *graphOut) sides(k int) (first, second int) {
 	a, b := o.ends[k][0].box, o.ends[k][1].box
-	if la, lb := o.laneOf(a), o.laneOf(b); la != lb && la > lb || la == lb && a > b {
-		return b, a
-	}
-	return a, b
-}
-
-// levelMistakes are the mistakes of the group's level edges its ranks, the order written and the lanes' order tell,
-// before it is laid out: something standing between an edge's boxes in their rank. A level edge told is dropped
-// from the group's; the row it made stays, ranked as one.
-func (gr *group) levelMistakes() usererr.List {
-	o := gr.out
-	rankOf := map[int]int{}
-	for _, n := range gr.nodes {
-		if n.box != nil {
-			rankOf[n.of] = n.rank
-		}
-	}
-	var told usererr.List
-	gr.levels = slices.DeleteFunc(gr.levels, func(k int) bool {
-		e := o.g.Edges[k]
-		at := edgeAt(o.at, k) + "/level"
-		first, second := o.sides(k)
-		if what := gr.between(first, second, rankOf); what != "" {
-			told = append(told, edgeMistake(at, "diagram_graph_level_between", e, what))
-			return true
-		}
-		return false
-	})
-	return told
-}
-
-// between is what stands between first and second, the boxes of a level edge, in their rank (as checkEdges names
-// it), or "": in one group (one lane too), a box of their block written between them; in two lanes, what
-// laneBetween finds.
-func (gr *group) between(first, second int, rankOf map[int]int) string {
-	o := gr.out
-	if o.laneOf(first) != o.laneOf(second) {
-		return gr.laneBetween(first, second, rankOf)
-	}
-	for m := first + 1; m < second; m++ {
-		if o.inBlock(m, first) {
-			return o.kindName(m)
-		}
-	}
-	return ""
+	return min(a, b), max(a, b)
 }
 
 // kindName is how a mistake names the box or icon m by what it is: `box "x"` or `icon "x"`.
@@ -238,60 +209,6 @@ func (o *graphOut) kindName(m int) string {
 		return "icon " + strconv.Quote(b.Name)
 	}
 	return "box " + strconv.Quote(b.Name)
-}
-
-// laneBetween is what stands between first and second, boxes right in two lanes, in their rank r: a box of first's
-// block written after it or of second's before it, a block of either lane standing at the same end (the order would
-// pick which stands outer), anything of first's lane when its block stands at the start, and in a lane between, a
-// box or a group's frame spanning r.
-func (gr *group) laneBetween(first, second int, rankOf map[int]int) string {
-	o := gr.out
-	r := rankOf[first]
-	for _, m := range slices.Sorted(maps.Keys(rankOf)) {
-		if rankOf[m] == r && m != first && m != second && o.inWay(m, first, second) {
-			return o.kindName(m)
-		}
-	}
-	return gr.laneFrame(first, second, rankOf)
-}
-
-// inWay reports whether box m, in the rank of first and second, boxes right in two lanes, stands between them (see
-// laneBetween).
-func (o *graphOut) inWay(m, first, second int) bool {
-	in, direct := o.laneOf(m), o.lane(o.boxes[m].cl)
-	switch in {
-	case o.laneOf(first):
-		if o.inBlock(m, first) {
-			return m > first
-		}
-		return o.faces(first) < 0 || direct && o.faces(m) > 0
-	case o.laneOf(second):
-		if o.inBlock(m, second) {
-			return m < second
-		}
-		return direct && o.faces(m) < 0
-	}
-	return o.laneOf(first) < in && in < o.laneOf(second)
-}
-
-// laneFrame is the group of a lane (none) whose frame spans the rank of first and second, boxes right in two lanes,
-// and stands between them: in a lane between, or in first's when its block stands at the start.
-func (gr *group) laneFrame(first, second int, rankOf map[int]int) string {
-	o := gr.out
-	r, lf, ls := rankOf[first], o.laneOf(first), o.laneOf(second)
-	for c, cl := range o.clusters {
-		lo, hi := math.MaxInt, -1
-		for _, m := range cl.boxes {
-			if rm, ok := rankOf[m]; ok {
-				lo, hi = min(lo, rm), max(hi, rm)
-			}
-		}
-		in := o.laneOf(cl.boxes[0])
-		if !o.lane(c) && lo <= r && r <= hi && (lf < in && in < ls || in == lf && o.faces(first) < 0) {
-			return "group " + strconv.Quote(cl.g.Name)
-		}
-	}
-	return ""
 }
 
 // rowUp is rank with the boxes of each block side by side, as written, where its first stands.
@@ -322,12 +239,20 @@ func (gr *group) sameBlock(i, j int) bool {
 	return len(gr.levels) > 0 && a.box != nil && b.box != nil && gr.out.inBlock(a.of, b.of)
 }
 
-// facing is where unit u, of a lane, stands in it (see faces): a block's, or 0.
+// facing is where unit u stands in its group (see faces): a block's, a group's under a common group, or 0.
 func (gr *group) facing(u unit) int {
-	if n := gr.nodes[u.nodes[0]]; u.cl < 0 && n.box != nil {
+	if u.cl >= 0 {
+		return gr.out.faced[u.cl]
+	}
+	if n := gr.nodes[u.nodes[0]]; n.box != nil {
 		return gr.out.faces(n.of)
 	}
 	return 0
+}
+
+// written reports whether unit u, of group c, stands as written: a group, box or icon of a common group c.
+func (gr *group) written(u unit, c int) bool {
+	return gr.out.common[c] && (u.cl >= 0 || gr.nodes[u.nodes[0]].box != nil)
 }
 
 // levelPairs are the group's level edges by the two boxes they join, in the order of their first edge.
@@ -375,8 +300,11 @@ func (d *drawing) growLevels(gr *group) {
 // drawLevels draws the group's level edges, each straight from the far side of its first box to the near side of
 // the other, a column apart about the middle of the shorter side across the ranks, but off it by half a column:
 // where a point between them turns to its column. So an odd number of them stands one more below the middle. It
-// fails when something stands between two boxes after all: levelMistakes tells what does.
-func (o *graphOut) drawLevels(gr *group, d *drawing) error {
+// tells, and leaves out of the group's, the level edges something stands between in their rank as laid out: a box or
+// icon, or the frame of a group holding neither box, but for a group right in their common group, which they cross.
+// LIMIT: two boxes standing the other way round fail as floe's own: the nodes of their common group holding them
+// stand as written, and no graph tried turns them. Tell it if one comes to.
+func (o *graphOut) drawLevels(gr *group, d *drawing) (usererr.List, error) {
 	_, along := d.axes()
 	far, near := "right", "left"
 	if d.right {
@@ -390,18 +318,19 @@ func (o *graphOut) drawLevels(gr *group, d *drawing) error {
 			}
 		}
 	}
+	var told usererr.List
 	pairs, byPair := gr.levelPairs()
 	for _, p := range pairs {
 		if at[p[0]] > at[p[1]] {
 			//nolint:err113 // floe's own
-			return fmt.Errorf("the boxes %v of level edges stand the other way round", p)
+			return nil, fmt.Errorf("the boxes %v of level edges stand the other way round", p)
 		}
-		r := gr.ranks[gr.nodeOf(p[0]).rank]
-		for _, i := range r[at[p[0]]+1 : at[p[1]]] {
-			if gr.nodes[i].box != nil {
-				//nolint:err113 // floe's own
-				return fmt.Errorf("box %d stands between the boxes %v of level edges", gr.nodes[i].of, p)
+		if what := gr.between(p, at[p[0]], at[p[1]]); what != "" {
+			for _, k := range byPair[p] {
+				told = append(told, edgeMistake(edgeAt(o.at, k)+"/level", "diagram_graph_level_between", o.g.Edges[k], what))
 			}
+			gr.levels = slices.DeleteFunc(gr.levels, func(k int) bool { return slices.Contains(byPair[p], k) })
+			continue
 		}
 		s := d.short(p)
 		mid := s.lo(along) + s.size(along)/2
@@ -420,7 +349,24 @@ func (o *graphOut) drawLevels(gr *group, d *drawing) error {
 			d.take(p[1], near)
 		}
 	}
-	return nil
+	return told, nil
+}
+
+// between is what stands between boxes p, at places from and to of their rank (as checkEdges names it), or "".
+func (gr *group) between(p [2]int, from, to int) string {
+	o := gr.out
+	c := o.commonOf(p[0], p[1])
+	for _, i := range gr.ranks[gr.nodeOf(p[0]).rank][from+1 : to] {
+		n := gr.nodes[i]
+		switch {
+		case n.box != nil:
+			return o.kindName(n.of)
+		case n.kind == kindLeft && o.clusters[n.cl].parent != c &&
+			!o.holds(n.cl, gref{box: p[0], cl: -1}) && !o.holds(n.cl, gref{box: p[1], cl: -1}):
+			return "group " + strconv.Quote(o.clusters[n.cl].g.Name)
+		}
+	}
+	return ""
 }
 
 // nodeOf is the node of box b.
@@ -428,9 +374,9 @@ func (gr *group) nodeOf(b int) gnode {
 	return gr.nodes[slices.IndexFunc(gr.nodes, func(n gnode) bool { return n.box != nil && n.of == b })]
 }
 
-// headed tells, and takes out with its label, each level edge running through a lane's heading: laid out right, a
-// heading longer than the room above the first rank reaches into it. It is told on the drawing as it ends, labels
-// placed: room made for a label moves the drawing apart. A group's heading never stands between (levelMistakes).
+// headed tells, and takes out with its label, each level edge running through a group's or lane's heading: laid out
+// right, a heading longer than the room above the group's first rank reaches into it. It is told on the drawing as it
+// ends, labels placed: room made for a label moves the drawing apart.
 func (d *drawing) headed(o *graphOut, gr *group) usererr.List {
 	var told usererr.List
 	for _, k := range gr.levels {
@@ -439,23 +385,43 @@ func (d *drawing) headed(o *graphOut, gr *group) usererr.List {
 			continue
 		}
 		for _, c := range slices.Sorted(maps.Keys(d.heads)) {
-			if !o.lane(c) {
-				continue
-			}
 			f := d.frames[c]
 			//nolint:exhaustruct_v5 // as addFrame's
 			if head := headRect(f, d.heads[c]); crossedBy(segAt(pts, 0), head) {
 				e := o.g.Edges[k]
 				told = append(told, edgeMistake(edgeAt(o.at, k)+"/level", "diagram_graph_level_heading", e, o.clusters[c].g.Name))
-				delete(d.routes, k)
-				delete(d.spots, k)
-				delete(d.level, k)
-				delete(d.ends, k)
+				d.forget(k)
 				break
 			}
 		}
 	}
 	return told
+}
+
+// forget takes level edge k out of all that is read once the ends have settled: the turns at its icons' sides (bends,
+// keyed by its ends' boxes, so before ends goes) and the sides of boxes level edges take, found again from those left.
+// LIMIT: what was placed by k before stays in the graph told and refused, as inspect shows it: labels kept off the
+// exits left to edges written by hand on its sides (hands, read before), and the other ends on its sides at their
+// shares of two (a third and two thirds), not the middle. Place them again if a refused graph's inspect comes to
+// mislead.
+func (d *drawing) forget(k int) {
+	for j := range 2 {
+		end := endAt{k, j}
+		if place, on := d.places[end]; on {
+			side := endSide{d.ends[k][j], place.side}
+			d.bends[side] = slices.DeleteFunc(d.bends[side], func(other endAt) bool { return other == end })
+		}
+		delete(d.places, end)
+	}
+	delete(d.routes, k)
+	delete(d.spots, k)
+	delete(d.level, k)
+	delete(d.ends, k)
+	d.taken = map[int]map[string]bool{}
+	for left, sides := range d.level {
+		d.take(d.ends[left][0], sides[0])
+		d.take(d.ends[left][1], sides[1])
+	}
 }
 
 // take marks side of box i as taken by a level edge.

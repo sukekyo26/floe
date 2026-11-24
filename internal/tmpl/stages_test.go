@@ -249,7 +249,9 @@ func TestDrawnPage(t *testing.T) {
 		{"two names", page("", `<div data-floe-part="note table">x</div>`), several("note table")},
 		{"spaces", page("", `<div data-floe-part=" note ">x</div>`), several(" note ")},
 		{"a look's box", page("", `<div data-floe-part="panel">x</div>`), `d.yaml:2:11: the page has data-floe-part="panel", but panel is a look, which has no box: take it with data-floe-look="panel"`},
-		{"no such part", page("", `<div data-floe-part="nope">x</div>`), "d.yaml:2:11: the page drawn from this file names the part nope, which there is none of; use "},
+		{"no such part", page("", `<div data-floe-part="nope">x</div>`), "d.yaml:2:11: the page drawn from this file names nope in data-floe-part, which there is none of; use "},
+		{"no such look", page("", `<div data-floe-look="nope">x</div>`), "d.yaml:2:11: the page drawn from this file names nope in data-floe-look, which there is none of; use "},
+		{"a look and none", page("", `<div data-floe-look="panel nope">x</div>`), "d.yaml:2:11: the page drawn from this file names nope in data-floe-look, which there is none of; use "},
 		{"base", page(`<base href="x">`, ""), "d.yaml:2:11: the page drawn from this file has a <base>, which page.html, a part's part.html or an item of format html writes and the page's CSP ignores (base-uri 'none'): write its links whole"},
 		{"base not drawn", page(`{{if false}}<base href="x">{{end}}<!-- <base href="x"> -->`, ""), ""},
 		{"style in svg", page("", `<svg><style>a{}</style></svg>`), "d.yaml:2:11: the page drawn from this file has a <style>, which page.html, a part's part.html or an item of format html writes: write the CSS in the template's page.css, which floe puts into the page in a layer under the parts' and the theme's, or in the part's part.css"},
@@ -444,5 +446,31 @@ func TestPageCutShort(t *testing.T) {
 		if err == nil && strings.Contains(tt.body, "after") && !strings.Contains(string(out), "<p>after</p>") {
 			t.Errorf("%s: the page drawn has no <p>after</p>", tt.name)
 		}
+	}
+}
+
+// An item prefixItems takes goes as written: items' part neither draws it nor runs its checks on it.
+func TestPrefixItemsAsWritten(t *testing.T) {
+	t.Parallel()
+
+	k := ownKit(t, map[string]string{
+		"box/schema.json": `{"$schema": "https://json-schema.org/draft/2020-12/schema", "type": "string"}`,
+		"box/part.html":   `<div data-floe-part="box"><b>{{.}}</b></div>`,
+		"box/part.css":    "",
+		"box/checks.yaml": "- expr: item != \"head\"\n  message: not the head\n",
+	}, mine("<!doctype html>\n<html lang=\"{{.Lang}}\"><head><title>{{.Title}}</title></head>\n<body>\n{{range .Data.x}}<p>{{.}}</p>{{end}}\n</body></html>\n",
+		`{"$schema": "https://json-schema.org/draft/2020-12/schema", "type": "object",
+"properties": {"x": {"prefixItems": [{"type": "string"}], "items": {"$ref": "floe:///parts/box.json"}}}}`, nil))
+	page, _, err := tmpl.Draw(k, "d.yaml", []byte("lang: en\ntemplate: mine\nx: [head, two]\n"), none)
+	if err != nil {
+		t.Fatal(told(err))
+	}
+	for _, want := range []string{"<p>head</p>", "<b>two</b>"} {
+		if !strings.Contains(string(page), want) {
+			t.Errorf("no %s in\n%s", want, page)
+		}
+	}
+	if strings.Contains(string(page), "<b>head</b>") {
+		t.Errorf("the head drawn by the part:\n%s", page)
 	}
 }

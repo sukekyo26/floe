@@ -5,6 +5,7 @@ package cli_test
 import (
 	"strings"
 	"testing"
+	"time"
 
 	"golang.org/x/sys/unix"
 
@@ -27,6 +28,13 @@ func TestCrashOutput(t *testing.T) {
 	}
 	if err := unix.Kill(h.PID, unix.SIGQUIT); err != nil {
 		t.Fatal(err)
+	}
+	// The server is still there when its dump begins, and may answer the cleanup's first question and no other: waited
+	// for until it has ended.
+	for deadline := time.Now().Add(5 * time.Second); !portFree(e.port); time.Sleep(20 * time.Millisecond) {
+		if time.Now().After(deadline) {
+			t.Fatalf("the server (pid %d) holds port %s 5 s after SIGQUIT", h.PID, e.port)
+		}
 	}
 	log := e.logWith(t, "goroutine")
 	if !strings.Contains(log, "SIGQUIT") {

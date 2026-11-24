@@ -7,6 +7,7 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"maps"
 	"net/http"
 	"net/http/httptest"
 	"os"
@@ -277,9 +278,7 @@ func TestHashVersion(t *testing.T) {
 		t.Errorf("Fetch of the zips in the other order = %+v, %v; want already", again, aerr)
 	}
 	changed := map[string]string{}
-	for p, c := range gcpCoreZip {
-		changed[p] = c
-	}
+	maps.Copy(changed, gcpCoreZip)
 	changed["Unique Icons/GKE/SVG/GKE-512-color.svg"] = "<svg>gke!</svg>"
 	if got, cerr := set.Fetch(context.Background(), "gcp", []Source{writeZipOf(t, "c2.zip", changed), category}, false); cerr != nil || got.Already || got.Version == first.Version {
 		t.Errorf("Fetch of an icon changed = %+v, %v; want another version", got, cerr)

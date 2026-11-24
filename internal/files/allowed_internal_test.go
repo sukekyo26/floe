@@ -28,7 +28,7 @@ var makers = []string{ //nolint:gochecknoglobals // a test's table
 // the files of each system, whose functions take a checked (osPaired).
 var callers = []string{ //nolint:gochecknoglobals // a test's table
 	"statAt", "lstatAt", "readDirAt", "openRootAt", "mkdirAllAt", "mkdirAt", "openAt", "removeAt", "removeAllAt",
-	"mkdirTempAt", "next",
+	"mkdirTempAt", "readlinkAt", "next",
 }
 
 // osPaired are the functions of the files of each system that call the system on a path: each takes a checked.

@@ -7,6 +7,7 @@
 # Environment overrides:
 #   FLOE_VERSION      Version to install (e.g. "0.1.0"); default "latest".
 #   FLOE_INSTALL_DIR  Where to put the binary; default "$HOME/.local/bin".
+#   FLOE_INSTALL_TIMEOUT  Seconds to wait for an answer while nothing comes, for each request; default "120".
 #
 # The binary's SHA-256 is verified against SHA256SUMS from the same release.
 
@@ -15,6 +16,7 @@ set -eu
 REPO=sukekyo26/floe
 INSTALL_DIR="${FLOE_INSTALL_DIR:-$HOME/.local/bin}"
 VERSION="${FLOE_VERSION:-latest}"
+TIMEOUT="${FLOE_INSTALL_TIMEOUT:-120}"
 
 die() {
   printf 'floe-install: %s\n' "$*" >&2
@@ -112,6 +114,27 @@ path_note() {
   esac
 }
 
+# Read as letters, as install.ps1 reads it: digits alone, the first not 0, five at most. The digits are listed: a
+# range may take more in some locales.
+case "$TIMEOUT" in
+  '' | 0* | *[!0123456789]* | ??????*)
+    die "FLOE_INSTALL_TIMEOUT must be a number of seconds from 1 to 99999, in digits alone (got $TIMEOUT)"
+    ;;
+esac
+
+# fetch writes what is at the URL $1 to the file $2. A server or a proxy that goes silent is given up on: the
+# connection, with its TLS, has TIMEOUT seconds, and so has a transfer that brings nothing (curl ends with 28).
+# LIMIT: the time of the whole download has no limit, which a slow line would run into: a server that keeps
+# sending, a byte a second or more, is waited for to the end. Each request has the limit anew, a redirect's too:
+# five or so that each go silent just short of it take ten minutes. curl tells a transfer that stopped some
+# seconds after the limit (it averages the speed).
+fetch() {
+  curl -fsSL --proto '=https' --tlsv1.2 --connect-timeout "$TIMEOUT" --speed-limit 1 --speed-time "$TIMEOUT" "$1" -o "$2" && return
+  [ $? -ne 28 ] ||
+    die "download failed: $1; check your network and proxy and run it again; FLOE_INSTALL_TIMEOUT sets how many seconds to wait for an answer (now $TIMEOUT)"
+  return 1
+}
+
 for tool in curl uname mktemp; do
   command -v "$tool" >/dev/null 2>&1 || die "missing required tool: $tool"
 done
@@ -138,12 +161,17 @@ case "$arch" in
   *) die "unsupported architecture: $arch (floe supports amd64 and arm64)" ;;
 esac
 
+# LIMIT: only EXIT is trapped, which dash does not run when a signal ends it: Ctrl+C while a request waits leaves
+# the directory in TMPDIR (bash removes it). Trap INT and TERM too if that comes to matter, keeping the exit code.
+tmp=$(mktemp -d)
+trap 'rm -rf "$tmp"' EXIT
+
 if [ "$VERSION" = "latest" ]; then
-  # Capture first: POSIX sh has no pipefail, so a failed curl would be masked by the pipeline.
+  # To a file first: POSIX sh has no pipefail, so a failed curl would be masked by the pipeline.
   releases_url="https://api.github.com/repos/$REPO/releases/latest"
-  api_response=$(curl -fsSL --proto '=https' --tlsv1.2 "$releases_url") ||
+  fetch "$releases_url" "$tmp/release.json" ||
     die "failed to fetch release metadata: $releases_url (no release yet, or GitHub's API rate limit); try again later, or set FLOE_VERSION to a version, which skips the API"
-  tag=$(printf '%s' "$api_response" | sed -n 's/.*"tag_name": *"\(v\{0,1\}[^"]*\)".*/\1/p' | head -n1)
+  tag=$(sed -n 's/.*"tag_name": *"\(v\{0,1\}[^"]*\)".*/\1/p' "$tmp/release.json" | head -n1)
   [ -n "$tag" ] || die "could not parse tag_name from $releases_url"
 else
   case "$VERSION" in
@@ -154,12 +182,10 @@ fi
 
 asset="floe-$os-$arch"
 base="https://github.com/$REPO/releases/download/$tag"
-tmp=$(mktemp -d)
-trap 'rm -rf "$tmp"' EXIT
 
 printf 'floe-install: downloading %s@%s\n' "$asset" "${tag#v}" >&2
-curl -fsSL --proto '=https' --tlsv1.2 "$base/$asset" -o "$tmp/$asset" || die "download failed: $base/$asset"
-curl -fsSL --proto '=https' --tlsv1.2 "$base/SHA256SUMS" -o "$tmp/SHA256SUMS" || die "download failed: $base/SHA256SUMS"
+fetch "$base/$asset" "$tmp/$asset" || die "download failed: $base/$asset"
+fetch "$base/SHA256SUMS" "$tmp/SHA256SUMS" || die "download failed: $base/SHA256SUMS"
 
 expected=$(grep "  $asset\$" "$tmp/SHA256SUMS" | awk '{print $1}')
 [ -n "$expected" ] || die "$asset not listed in SHA256SUMS"

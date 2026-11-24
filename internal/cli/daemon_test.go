@@ -33,10 +33,25 @@ import (
 // binary.
 const asCLI = "FLOE_TEST_AS_CLI"
 
+// guarded makes floe, run as the test binary (asCLI), watch its memory as main does, with the limit it holds in bytes.
+const guarded = "FLOE_TEST_GUARD"
+
+// drawSeconds makes the server of floe run as the test binary (asCLI) let one page be drawn for these seconds.
+const drawSeconds = "FLOE_TEST_DRAW_SECONDS"
+
 func TestMain(m *testing.M) {
 	if os.Getenv(asCLI) == "1" {
 		dir, _ := os.Getwd() //nolint:errcheck // as main does
-		os.Exit(cli.Run(os.Args[1:], cli.Env{Stdout: os.Stdout, Stderr: os.Stderr, Dir: dir, Getenv: os.Getenv}))
+		env := cli.Env{Stdin: os.Stdin, Stdout: os.Stdout, Stderr: os.Stderr, Dir: dir, Getenv: os.Getenv, Exit: nil}
+		if seconds, err := strconv.Atoi(os.Getenv(drawSeconds)); err == nil {
+			cli.SetDrawTime(time.Duration(seconds) * time.Second)
+		}
+		if limit, err := strconv.ParseUint(os.Getenv(guarded), 10, 64); err == nil {
+			// As main does, with the limit of the test.
+			cli.SetDrawLimit(limit)
+			env.Exit = os.Exit
+		}
+		os.Exit(cli.Run(os.Args[1:], env))
 	}
 	if err := os.Setenv(asCLI, "1"); err != nil {
 		panic(err)

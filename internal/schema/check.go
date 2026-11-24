@@ -134,6 +134,8 @@ func (c *Compiled) rootRest() usererr.List {
 // holds is refused as unreached, in words that do not name the one beside. Name it if that comes to mislead.
 // LIMIT: one cause may be told twice or more, at the $ref a walk does not reach and at the part or format past
 // it; both are true, at other places. Tell it once if that comes to mislead.
+// LIMIT: a schema that leads back to itself through allOf and the like, not $refs alone, is not refused (refLoop):
+// the library tells it once a value is checked. Follow those too if a part comes to need it.
 func (c *Compiled) checkOwn() usererr.List {
 	r := c.followFrom(c.Root)
 	var found usererr.List
@@ -147,7 +149,8 @@ func (c *Compiled) checkOwn() usererr.List {
 }
 
 // checkNode returns the mistakes of n, a schema of the file compiled, r what Follow reaches from the root: a
-// $dynamicRef; an item a part or a format draws that r does not reach; a $ref into a part.
+// $dynamicRef; an item a part or a format draws that r does not reach; a $ref into a part; a $ref that leads back to
+// n.
 func (c *Compiled) checkNode(n *jsonschema.Schema, r reached) usererr.List {
 	var found usererr.List
 	switch {
@@ -160,11 +163,43 @@ func (c *Compiled) checkNode(n *jsonschema.Schema, r reached) usererr.List {
 		found = append(found, unreached)
 	}
 	if n.Ref != nil {
+		if loop := refLoop(n); loop != nil {
+			found = append(found, c.mistake(n, "schema_ref_cycle", shown(loop)))
+		}
 		if refused := c.refMistake(n, r); refused != nil {
 			found = append(found, refused)
 		}
 	}
 	return found
+}
+
+// refLoop returns the schemas the $refs lead through from n back to it, n first and last: no value passes n, as the
+// library refuses the cycle whenever it checks one. It returns nil when the $refs end, or come round without n, which
+// then leads into a loop it is not on. It goes on where Follow stops (a format, a part's root, a $ref into a part), as
+// the library does.
+// LIMIT: each schema is followed afresh, the steps the square of the length of a chain of $refs (some 20 ms for a
+// chain of 1000); remember within one check those found off a loop if it comes to be slow.
+func refLoop(n *jsonschema.Schema) []*jsonschema.Schema {
+	loop := []*jsonschema.Schema{n}
+	seen := map[*jsonschema.Schema]bool{}
+	for to := n.Ref; to != nil && !seen[to]; to = to.Ref {
+		loop = append(loop, to)
+		if to == n {
+			return loop
+		}
+		seen[to] = true
+	}
+	return nil
+}
+
+// shown returns the schemas of loop as a path, each its Location with the fragment as at tells it.
+func shown(loop []*jsonschema.Schema) string {
+	steps := make([]string, len(loop))
+	for i, s := range loop {
+		base, frag := split(s.Location)
+		steps[i] = base + "#" + unescape(frag)
+	}
+	return strings.Join(steps, " → ")
 }
 
 // refMistake returns checkNode's mistake of the $ref of n, nil for none.

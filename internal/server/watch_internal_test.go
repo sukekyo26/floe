@@ -15,8 +15,10 @@ import (
 	"time"
 
 	"floe/internal/dirs"
+	"floe/internal/drawhere"
 	"floe/internal/files"
 	"floe/internal/kit"
+	"floe/internal/publish"
 	"floe/internal/store"
 	"floe/internal/testfs"
 )
@@ -55,11 +57,11 @@ func watched(t *testing.T, link bool) (*Server, string) {
 	drawing := func() (store.Drawing, error) {
 		floe, err := kit.Floe()
 		if err != nil {
-			return store.Drawing{Kit: nil, Icons: nil, Err: nil}, err
+			return store.Drawing{Kit: nil, Icons: nil, Draw: nil, Err: nil}, err
 		}
 		none := kit.Dir{FS: nil, Name: ""}
 		k, err := kit.Load(floe, kit.Sources{Parts: none, Themes: none, Templates: kit.Dir{FS: files.DirFS(tpl), Name: tpl}})
-		return store.Drawing{Kit: k, Icons: nil, Err: nil}, err
+		return store.Drawing{Kit: k, Icons: nil, Draw: drawhere.Here(k, nil), Err: nil}, err
 	}
 	s := New(Config{
 		Store: store.New(filepath.Join(tmp, "store")), Port: 7325, Build: "test", Drawing: drawing, Templates: tpl,
@@ -183,7 +185,7 @@ func TestVersion(t *testing.T) {
 	}
 	write(t, data, "lang: en\ntemplate: mine\nn: 1\n")
 	d, _ := s.now()
-	e, err := s.cfg.Store.PrepareLink(t.Context(), d, data, store.Options{}, "", home) //nolint:exhaustruct // none given
+	e, err := publish.PrepareLink(t.Context(), s.cfg.Store, d, data, store.Options{}, "", home) //nolint:exhaustruct // none given
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -206,7 +208,7 @@ func TestVersion(t *testing.T) {
 	}
 	v = s.version("d", s.cfg.Store.ReadMeta("d"), "", 0, noDiff)
 	d, _ = s.now()
-	if err := s.cfg.Store.PickTheme(d, "d", "ink"); err != nil {
+	if err := s.cfg.Store.PickTheme(t.Context(), d, "d", "ink"); err != nil {
 		t.Fatal(err)
 	}
 	if s.version("d", s.cfg.Store.ReadMeta("d"), "", 0, noDiff) == v {
@@ -277,7 +279,7 @@ func TestLookFailure(t *testing.T) {
 	s.cfg.Drawing = func() (store.Drawing, error) {
 		calls++
 		if calls == 1 {
-			return store.Drawing{Kit: nil, Icons: nil, Err: nil}, os.ErrDeadlineExceeded
+			return store.Drawing{Kit: nil, Icons: nil, Draw: nil, Err: nil}, os.ErrDeadlineExceeded
 		}
 		return read()
 	}
@@ -301,8 +303,8 @@ func TestVersionOfContent(t *testing.T) {
 
 	s, _ := watched(t, false)
 	d, _ := s.now()
-	publish := func() *store.Meta {
-		e, err := s.cfg.Store.PrepareData(d, store.Upload{File: "p.yaml", Source: []byte("lang: en\ntemplate: mine\nn: 1\n"), Images: nil, Project: "p", Repo: "p", Place: "p.yaml"}, store.Options{}) //nolint:exhaustruct // none given
+	republish := func() *store.Meta {
+		e, err := publish.PrepareData(t.Context(), s.cfg.Store, d, publish.Upload{File: "p.yaml", Source: []byte("lang: en\ntemplate: mine\nn: 1\n"), Images: nil, Project: "p", Repo: "p", Place: "p.yaml"}, store.Options{}) //nolint:exhaustruct // none given
 		if err != nil {
 			t.Fatal(err)
 		}
@@ -311,9 +313,9 @@ func TestVersionOfContent(t *testing.T) {
 		}
 		return s.cfg.Store.ReadMeta("p")
 	}
-	old := publish()
+	old := republish()
 	v := s.version("p", old, "", 0, noDiff)
-	publish()
+	republish()
 	if s.version("p", s.cfg.Store.ReadMeta("p"), "", 0, noDiff) == v {
 		t.Error("a publish after, the version is the same")
 	}
@@ -337,7 +339,7 @@ func TestWatchParallel(t *testing.T) {
 	}
 	write(t, data, "lang: en\ntemplate: mine\nn: 1\n")
 	d, _ := s.now()
-	e, err := s.cfg.Store.PrepareLink(t.Context(), d, data, store.Options{}, "", home) //nolint:exhaustruct // none given
+	e, err := publish.PrepareLink(t.Context(), s.cfg.Store, d, data, store.Options{}, "", home) //nolint:exhaustruct // none given
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -345,7 +347,7 @@ func TestWatchParallel(t *testing.T) {
 		t.Fatal(err)
 	}
 	// A stored page of the template too, which a rebuild draws again (it leaves links alone).
-	if w := publish(t.Context(), t, h); w.Code != http.StatusCreated {
+	if w := publishPage(t.Context(), t, h); w.Code != http.StatusCreated {
 		t.Fatalf("publish = %d %s", w.Code, w.Body)
 	}
 	var wg sync.WaitGroup
@@ -360,7 +362,7 @@ func TestWatchParallel(t *testing.T) {
 				}
 				// A file read half written is the user's mistake (400), never floe's failure.
 				noFailure(t, api(ctx, t, h, http.MethodPost, "/api/rebuild", "{}"), http.StatusNoContent)
-				noFailure(t, publish(ctx, t, h), http.StatusOK)
+				noFailure(t, publishPage(ctx, t, h), http.StatusOK)
 			}
 		})
 	}
@@ -391,7 +393,7 @@ func TestVersionBeforeContent(t *testing.T) {
 	read := s.cfg.Drawing
 	s.cfg.Drawing = func() (store.Drawing, error) {
 		d, err := read()
-		d.Icons = icons
+		d.Icons, d.Draw = icons, drawhere.Here(d.Kit, icons)
 		return d, err
 	}
 	s.look()
@@ -403,7 +405,7 @@ func TestVersionBeforeContent(t *testing.T) {
 	spec := "d: {width: 300, height: 100, title: i, parts: [{icon: {icon: aws/res/aws-lambda, x: 10, y: 10}}]}\n"
 	write(t, data, "lang: en\ntemplate: mine\n"+spec)
 	d, _ := s.now()
-	e, err := s.cfg.Store.PrepareLink(t.Context(), d, data, store.Options{}, "", home) //nolint:exhaustruct // none given
+	e, err := publish.PrepareLink(t.Context(), s.cfg.Store, d, data, store.Options{}, "", home) //nolint:exhaustruct // none given
 	if err != nil {
 		t.Fatal(err)
 	}
