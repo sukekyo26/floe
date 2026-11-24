@@ -14,9 +14,9 @@ export interface MoreMenuProps {
   // row: a row's, its button 26 px; bar: the bar's over a page, 30 px
   readonly size?: 'row' | 'bar';
   // opens: down under its button; folds, the frame's bar, whose menu under 40rem stands under the bar, in from the
-  // window's right, as under its own button it would run off the left of a narrow window (ui.html 898–899); up, the
-  // search's foot, whose menu stands over the foot from its left, over the rows (680–682)
-  // LIMIT: up, on a screen under some 320px high its first items are off it, with nothing to scroll (ui.html 6141)
+  // window's right, as under its own button it would run off the left of a narrow window; up, the search's foot, whose
+  // menu stands over the foot from its left, over the rows
+  // LIMIT: up, on a screen under some 320px high its first items are off it, with nothing to scroll
   readonly opens?: 'down' | 'folds' | 'up';
   readonly children: ReactNode;
 }
@@ -79,8 +79,8 @@ export interface MenuItemProps extends Omit<IconButtonProps, 'size' | 'children'
   readonly onSelect?: MouseEventHandler<HTMLElement> | undefined;
 }
 
-// MenuItem is an item of a MoreMenu, its words in the label the tests read (ui.html .label): done, it closes the menu
-// unless it keepsOpen
+// MenuItem is an item of a MoreMenu, its words in the label the tests read: done, it closes the menu unless it
+// keepsOpen
 export function MenuItem({ icon, children, keepsOpen, onSelect, ...rest }: MenuItemProps) {
   return (
     <span data-menu-item="" data-keeps-open={keepsOpen ? '' : undefined} className="contents">

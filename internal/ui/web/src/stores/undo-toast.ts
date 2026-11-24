@@ -24,8 +24,8 @@ interface Deps {
   pages?: Pages;
 }
 
-// createUndoToast makes the toast with a way back (ui.html undoToast): pressed, it holds, writes what was there before
-// and goes whatever comes; a refusal (written meanwhile, say) is said as the store says it
+// createUndoToast makes the toast with a way back: pressed, it holds, writes what was there before and goes whatever
+// comes; a refusal (written meanwhile, say) is said as the store says it
 export function createUndoToast({ toasts = pageToasts, notice = pageNotice, pages = pagePages }: Deps = {}): UndoToast {
   return (said, how, { focus = false } = {}) => {
     const id = toasts.toast(said, {

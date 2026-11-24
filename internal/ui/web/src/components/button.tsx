@@ -21,14 +21,14 @@ interface ButtonShape {
   readonly id?: string;
   readonly testid?: string | undefined;
   readonly label?: string | undefined;
-  // wraps lets words a person typed go over lines, shown whole (ui.md: #tag-new, the one .btn that wraps)
+  // wraps lets words a person typed go over lines, shown whole (ui.md: #tag-new, the one Button that wraps)
   readonly wraps?: boolean;
   // quiet: no ground and no line, a ground under the pointer (the bar of the selected); danger: red words (a delete);
   // armed: waiting for a second press, on red (data-armed). None changes its room: where it stands gives that
   readonly quiet?: boolean;
   readonly tone?: 'danger';
   readonly armed?: boolean;
-  // adds: a button that opens what adds (ui.html .add-open), its plus smaller
+  // adds: a button that opens what adds, its plus smaller
   readonly adds?: boolean;
 }
 
@@ -49,16 +49,16 @@ interface ButtonActs {
   readonly onBlur?: FocusEventHandler<HTMLButtonElement>;
 }
 
-// href makes it a link of the same shape (ui.html a.btn: the way back of a page not found), which takes none of what
-// a button does but a press (the bar's new pages: a link that, pressed plainly, narrows the list in place)
+// href makes it a link of the same shape (the way back of a page not found), which takes none of what a button does but
+// a press (the bar's new pages: a link that, pressed plainly, narrows the list in place)
 type ButtonLink = { readonly href: string; readonly onClick?: MouseEventHandler<HTMLAnchorElement> } & Readonly<
   Partial<Record<Exclude<keyof ButtonActs, 'onClick'>, never>>
 >;
 
 export type ButtonProps = ButtonShape & ((ButtonActs & { readonly href?: undefined }) | ButtonLink);
 
-// Button is the one button of words (ui.md: .btn), its words on one line; where they do not fit, the row of buttons
-// goes onto another
+// Button is the one button of words (ui.md), its words on one line; where they do not fit, the row of buttons goes onto
+// another
 export function Button(props: ButtonProps) {
   const {
     children,

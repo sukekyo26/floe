@@ -32,6 +32,6 @@ export function createMinute(now: () => number = () => Date.now()): Minute {
 
 const minute = createMinute();
 
-// useMinute draws anew every minute, for the times "3 minutes ago" and the days' headings (ui.html refreshTimes)
+// useMinute draws anew every minute, for the times "3 minutes ago" and the days' headings
 export const useMinute = (clock: Minute = minute): number =>
   useSyncExternalStore(clock.subscribe, clock.get, clock.get);

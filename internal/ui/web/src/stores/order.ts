@@ -27,18 +27,18 @@ export interface Order {
   keptBack: () => string;
   // keepAt keeps at as the frame the rows that opened it know, which a way back picks; none where it is not of them
   keepAt: (at: OpenAt) => void;
-  // renameKept keeps a page renamed whole of the rows that opened it, under its new name (ui.html renameKept)
+  // renameKept keeps a page renamed whole of the rows that opened it, under its new name
   renameKept: (was: string, now: string) => void;
   // comeBack takes, back on the list that opened a page whole (by its back button or h, which leave pressed, or the
-  // browser's own way back: returned), the row it was at, for backToRow; and forgets the order either way (ui.html
-  // comeBack). The logo or a URL to the same list is no way back
+  // browser's own way back: returned), the row it was at, for backToRow; and forgets the order either way. The logo or
+  // a URL to the same list is no way back
   comeBack: (returned: boolean) => void;
   // takeCameFrom gives the row come back to, once
   takeCameFrom: () => OpenAt | null;
 }
 
 // atOf is the row kept as a page opened whole, made anew of what the browser kept: a slug, a folder's file ('' for
-// none) and a version (0 for the latest), as ui.html pickRow makes it
+// none) and a version (0 for the latest)
 const atOf = (x: unknown): OpenAt | null => {
   const at = x as { slug?: unknown; file?: unknown; v?: unknown } | null;
   if (typeof at?.slug !== 'string') return null;

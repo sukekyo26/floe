@@ -65,8 +65,7 @@ export interface TaskPageActs {
   parentBack: (said: string, back: ParentBack, focus?: boolean) => void;
 }
 
-// createTaskPageActs is what a task's page writes (ui.html changeTaskState, archiveTask, unlinkTask, parentBack,
-// forgetTask)
+// createTaskPageActs is what a task's page writes
 export function createTaskPageActs({
   writes = taskWrites,
   pages = pagePages,

@@ -3,7 +3,7 @@ import { t } from '@/lib/t';
 
 const TONE: Record<string, string> = { c: 'text-chg', a: 'text-ins', r: 'text-del', s: 'text-fg' };
 
-// DiffCount is what the answer counts, in words (ui.html drawDiff): a span each, or one sentence when all is the same
+// DiffCount is what the answer counts, in words: a span each, or one sentence when all is the same
 export function DiffCount({ counts }: { readonly counts: Counts | null }) {
   const parts = counts && countParts(counts);
   return (

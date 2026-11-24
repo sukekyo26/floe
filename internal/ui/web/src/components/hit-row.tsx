@@ -21,15 +21,15 @@ interface HitRowProps {
 const TITLE =
   "min-w-0 truncate font-medium text-fg no-underline [grid-area:title] group-data-unread/hit:font-bold group-data-archived/hit:text-muted after:absolute after:inset-0 after:content-['']";
 
-// HitRow is a row of a search modal's list (ui.html hitRow: the search, and Add a page of a task, P6): an option of a
-// listbox, the whole row its title's link, out of the Tab order as the field moves over the rows
+// HitRow is a row of a search modal's list (the search, and Add a page of a task): an option of a listbox, the whole
+// row its title's link, out of the Tab order as the field moves over the rows
 export function HitRow({ id, page: a, reached, sub, onOpen, link = true }: HitRowProps) {
   const time = a.folder ? '' : a.updatedAt;
   const fresh = unseen(a);
   return (
     <li
       id={id}
-      // oxlint-disable-next-line jsx-a11y/prefer-tag-over-role, jsx-a11y/no-noninteractive-element-to-interactive-role -- an option of the listbox holding a link, which <option> cannot hold (ui.html's markup)
+      // oxlint-disable-next-line jsx-a11y/prefer-tag-over-role, jsx-a11y/no-noninteractive-element-to-interactive-role -- an option of the listbox holding a link, which <option> cannot hold
       role="option"
       aria-selected={reached}
       data-unread={fresh || undefined}

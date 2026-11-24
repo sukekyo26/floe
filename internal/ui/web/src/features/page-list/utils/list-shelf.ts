@@ -25,8 +25,8 @@ export const viewWords = (view: View): string => t(VIEW_WORDS[view]);
 export const picksOn = (state: ListState): number =>
   [state.kind, state.template, state.project, state.tag].filter(Boolean).length;
 
-// viewCounts is each view's count with the picks and the search on it (ui.html renderShelf). All is what pressing it
-// leaves, the search alone; the new ones are those new now, not those read that stay on the view
+// viewCounts is each view's count with the picks and the search on it. All is what pressing it leaves, the search
+// alone; the new ones are those new now, not those read that stay on the view
 export function viewCounts(items: readonly Page[], state: ListState, seen: ReadonlySet<string>): Record<View, number> {
   return {
     all: arrange(items, { ...state, ...NO_PICKS, view: 'all' }, seen).length,
@@ -40,8 +40,8 @@ export function viewCounts(items: readonly Page[], state: ListState, seen: Reado
 export const viewLit = (state: ListState, view: View): boolean =>
   view === state.view && (view !== 'all' || picksOn(state) === 0);
 
-// viewPress is what a press of a view's button changes (ui.html pressView): lit, a view lets go of itself and All does
-// nothing (null); unlit, All lets go of the view and the picks
+// viewPress is what a press of a view's button changes: lit, a view lets go of itself and All does nothing (null);
+// unlit, All lets go of the view and the picks
 export function viewPress(state: ListState, view: View): Partial<Picks> | null {
   if (view !== 'all') return { view: view === state.view ? 'all' : view };
   return viewLit(state, 'all') ? null : { view: 'all', ...NO_PICKS };
@@ -52,13 +52,13 @@ export function viewPress(state: ListState, view: View): Partial<Picks> | null {
 export const tagPress = (state: ListState, name: string): Partial<Picks> | null =>
   state.tag === name ? null : { tag: name };
 
-// chipPress is what a press of a chip changes (ui.html picker): what is picked, picked again, is let go
+// chipPress is what a press of a chip changes: what is picked, picked again, is let go
 export const chipPress = (state: ListState, part: Part, value: string): Partial<Picks> => ({
   [part]: state[part] === value ? '' : value,
 });
 
-// newsPress is what the bar's new pages leave (ui.html 6844): every new one, as the bar counts all there is, so that
-// nothing narrows them, the search neither
+// newsPress is what the bar's new pages leave: every new one, as the bar counts all there is, so that nothing narrows
+// them, the search neither
 export const newsPress = (): { picks: Picks; q: string } => ({ picks: { view: 'new', ...NO_PICKS }, q: '' });
 
 // newsTaken tells whether the bar's new pages narrow the list in place on a screen: the page list's alone; elsewhere
@@ -69,11 +69,10 @@ export const newsTaken = (screen: Boot['screen']): boolean => screen === 'list';
 export const newCount = (items: readonly Page[]): number => items.filter(unseen).length;
 
 // unseenSlugs is every unread page not archived, whatever narrows the list: the view "new" keeps them all as it draws
-// (ui.html renderList)
 export const unseenSlugs = (items: readonly Page[]): string[] => items.filter(unseen).map((a) => a.slug);
 
-// narrowWords is what the button to the filters and the head say of the picks (ui.html drawViews): the button how many
-// picks, the head the view and how many picks, with the filters folded
+// narrowWords is what the button to the filters and the head say of the picks: the button how many picks, the head the
+// view and how many picks, with the filters folded
 export function narrowWords(state: ListState): { n: number; button: string; what: string } {
   const n = picksOn(state);
   const many = n ? t('ui_narrow_n', n) : '';
@@ -81,7 +80,7 @@ export function narrowWords(state: ListState): { n: number; button: string; what
   return { n, button: many || t('ui_narrow'), what: [view, many].filter(Boolean).join(' · ') };
 }
 
-// listEmpty tells that there is no page at all to list (ui.html renderList: #empty), archived ones neither: the list
-// says how to add one, and the shelf's add button gives way to it
+// listEmpty tells that there is no page at all to list, archived ones neither: the list says how to add one, and the
+// shelf's add button gives way to it
 export const listEmpty = (items: readonly Page[], state: ListState, seen: ReadonlySet<string>): boolean =>
   state.view === 'all' && !items.some((a) => a.archived) && !items.some((a) => inView(a, state, seen));

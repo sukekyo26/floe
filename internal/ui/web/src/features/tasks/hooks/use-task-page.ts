@@ -28,8 +28,8 @@ export interface TaskPageDeps {
   pages?: Pages;
 }
 
-// useTaskPage is what a task's page shows of the task named (ui.html renderTaskPage), as the list read is now: the task
-// as last read while tasks.json is unreadable, with what the screen wrote since
+// useTaskPage is what a task's page shows of the task named, as the list read is now: the task as last read while
+// tasks.json is unreadable, with what the screen wrote since
 export function useTaskPage(name: string, { query = listQuery, pages = pagePages }: TaskPageDeps = {}): TaskPageView {
   const { project } = useStore(query.query);
   const { read, entries, tasks: taken } = useStore(pages.state);

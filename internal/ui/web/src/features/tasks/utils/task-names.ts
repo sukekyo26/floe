@@ -3,7 +3,7 @@ import { t } from '@/lib/t';
 import type { TaskOf } from '@/types/task';
 import type { Offer } from '@/utils/name-offers';
 
-// taskNames is the names of a project's tasks a field that names a task offers, by name (ui.html suggestTasks)
+// taskNames is the names of a project's tasks a field that names a task offers, by name
 export const taskNames = (
   tasks: readonly TaskOf[],
   project: string,

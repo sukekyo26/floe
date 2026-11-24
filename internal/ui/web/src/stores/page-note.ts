@@ -21,7 +21,7 @@ export interface PageNote {
   clear: () => void;
 }
 
-// createPageNote is ui.html's showNotice and clearNotice, shared as marking a page unread (stores/page-actions) clears it
+// createPageNote shows and clears the note of a page, shared as marking a page unread (stores/page-actions) clears it
 // too. The words come only once the page was read, as what was read before is known then
 // LIMIT: all of /diff is read for its counts. Add an answer of the counts alone if that comes to weigh
 export function createPageNote({ client = pageClient }: { client?: Client } = {}): PageNote {

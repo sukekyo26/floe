@@ -7,8 +7,8 @@ interface FrameHeadProps {
   readonly file: string;
 }
 
-// FrameHead is the title of a page whole in its bar (ui.html renderFrame): a folder's file under its folder's title,
-// and the archived mark. At 40rem or less it has no room to stand apart by a line (ui.html 900–901)
+// FrameHead is the title of a page whole in its bar: a folder's file under its folder's title, and the archived mark.
+// At 40rem or less it has no room to stand apart by a line
 export function FrameHead({ page: a, file }: FrameHeadProps) {
   const name = (file || a?.title) ?? '';
   return (

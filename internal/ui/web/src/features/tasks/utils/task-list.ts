@@ -17,7 +17,7 @@ export const pinnedOf = (entries: readonly Page[], project = ''): Page[] =>
 export const taskProjects = (tasks: readonly TaskOf[], entries: readonly Page[]): Set<string> =>
   new Set([...tasks.map((task) => task.project), ...pinnedOf(entries).map((a) => a.taskProject)]);
 
-// taskRanks is the order of the task list's projects and their colours (ui.html taskProjectColor)
+// taskRanks is the order of the task list's projects and their colours
 export const taskRanks = (entries: readonly Page[], there: ReadonlySet<string>): Map<string, number> =>
   projectOrder(entries, there);
 
@@ -32,9 +32,9 @@ export interface Opening {
   lang: string;
 }
 
-// openingProject is the project the task list opens with no project named (ui.html openingProject): the one kept
-// while it is there, or where a task in progress was written last, or the shelf's first, or no project. Unreadable,
-// tasks are not known, so that only what was kept can be said
+// openingProject is the project the task list opens with no project named: the one kept while it is there, or where a
+// task in progress was written last, or the shelf's first, or no project. Unreadable, tasks are not known, so that only
+// what was kept can be said
 export function openingProject({ tasks, entries, kept, failed, first, lang }: Opening): string {
   if (failed) return kept ?? '';
   const there = taskProjects(tasks, entries);
@@ -67,9 +67,8 @@ export interface ProjectChip {
   n: number;
 }
 
-// projectChips is the shelf's projects of the task list (ui.html renderChips): every project there, in the order of
-// their colours; the one shown though gone (a name in the URL) after them, and no project last. Each with the tasks it
-// has of the view
+// projectChips is the shelf's projects of the task list: every project there, in the order of their colours; the one
+// shown though gone (a name in the URL) after them, and no project last. Each with the tasks it has of the view
 export function projectChips(
   tasks: readonly TaskOf[],
   entries: readonly Page[],
@@ -94,7 +93,7 @@ export interface ListState {
   addHidden: boolean;
 }
 
-// listState is what the task list says besides its rows (ui.html renderTaskList, showAdd)
+// listState is what the task list says besides its rows
 export function listState(
   tasks: readonly TaskOf[],
   entries: readonly Page[],
@@ -130,11 +129,9 @@ export function urlEnd(url: string): string {
 // taskRowKey is the key of a task's row on the task list
 export const taskRowKey = (project: string, name: string): string => `task:${JSON.stringify([project, name])}`;
 
-// projectPress is what a press of a project's chip does (ui.html toggleProject): the list always shows one project, so
-// the one shown pressed again changes nothing; the project pressed is kept for the next opening once the tasks are
-// read, not while unreadable, when the projects there are not known
-// LIMIT: unreadable, ui.html keeps the project borrowed from what was kept as its chip is pressed again; this keeps
-// nothing then. They differ only for a kept project gone, which the next read lets go of either way
+// projectPress is what a press of a project's chip does: the list always shows one project, so the one shown pressed
+// again changes nothing; the project pressed is kept for the next opening once the tasks are read, not while
+// unreadable, when the projects there are not known
 export const projectPress = (name: string, shown: string, failed: boolean): { keep: boolean; show: boolean } => ({
   keep: !failed,
   show: name !== shown,

@@ -24,7 +24,7 @@ export interface SettingsView {
   modeSaves: boolean;
 }
 
-// settingsView is what the settings show of panel (ui.html showSettings, drawSettingsList, drawTaskMode)
+// settingsView is what the settings show of panel
 export function settingsView(
   panel: Panel,
   page: boolean,
@@ -80,8 +80,7 @@ export interface Cards {
 export const toldAt = (m: Mistake): string =>
   (m.file ? `${[m.file, m.line, m.line && m.column].filter(Boolean).join(':')}: ` : '') + m.text;
 
-// themeCards are the cards of the default's choice or of a page's (ui.html drawThemes, drawPageThemes): unset is the
-// first card's about, of a page's
+// themeCards are the cards of the default's choice or of a page's: unset is the first card's about, of a page's
 export function themeCards(read: ThemesRead | null, failed: string, picked: string | null, unset: string): Cards {
   if (failed) return { now: { kind: 'failed', why: failed }, cards: [], checked: null, mistakes: [] };
   if (!read) return { now: { kind: 'reading' }, cards: [], checked: null, mistakes: [] };

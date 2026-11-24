@@ -7,8 +7,8 @@ export function rowAfter(rows: readonly RowSeen[], key: string): string | null {
   return rows.slice(at + 1).find((r) => r.titled)?.key ?? null;
 }
 
-// rowNearby is the key of the row with a title after key, or, with none after it, before it: where the focus goes on
-// as a page leaves its task (ui.html 5782–5784)
+// rowNearby is the key of the row with a title after key, or, with none after it, before it: where the focus goes on as
+// a page leaves its task
 export function rowNearby(rows: readonly RowSeen[], key: string): string | null {
   const titled = rows.filter((r) => r.titled || r.key === key);
   const at = titled.findIndex((r) => r.key === key);
@@ -16,8 +16,8 @@ export function rowNearby(rows: readonly RowSeen[], key: string): string | null 
   return (titled[at + 1] ?? titled[at - 1])?.key ?? null;
 }
 
-// archiveEscapeTarget is where Escape on an archive's way back leaves the focus (ui.html 3473): on a task's page its own
-// row, which stays dimmed; else the row that was after it before the list was read again; else the last row with a title
+// archiveEscapeTarget is where Escape on an archive's way back leaves the focus: on a task's page its own row, which
+// stays dimmed; else the row that was after it before the list was read again; else the last row with a title
 export function archiveEscapeTarget(
   rows: readonly RowSeen[],
   own: string,

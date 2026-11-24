@@ -6,7 +6,7 @@ export interface Reached {
   at: number;
 }
 
-// FIRST is the search opened or its words changed: the first row (ui.html openFind, the field's input)
+// FIRST is the search opened or its words changed: the first row
 export const FIRST: Reached = { slug: null, at: 0 };
 
 // findReached is the row reached among shown: the same page, or what has come to its place, or the last; -1 for none
@@ -15,10 +15,10 @@ export function findReached(shown: readonly { slug: string }[], reached: Reached
   return same === -1 ? Math.min(reached.at, shown.length - 1) : same;
 }
 
-// What a key does in the search modal: the arrows move over the rows from anywhere in it, but not while a menu is
-// open in it, where Escape closes that menu alone; Enter on the field opens the row reached; Escape else closes the
-// modal at once, words typed or not (the browser would first clear a search field's words, ui.html's closes); nothing
-// while a word is being composed (an IME's Enter and arrows are its own)
+// What a key does in the search modal: the arrows move over the rows from anywhere in it, but not while a menu is open
+// in it, where Escape closes that menu alone; Enter on the field opens the row reached; Escape else closes the modal at
+// once, words typed or not (the browser would first clear a search field's words); nothing while a word is being
+// composed (an IME's Enter and arrows are its own)
 export type FindKey = 'move' | 'open' | 'close' | 'closeMenu' | 'hold' | 'none';
 
 export function findKey(

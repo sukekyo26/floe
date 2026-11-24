@@ -28,9 +28,9 @@ interface DiffViewProps {
   readonly toc?: KeptSide;
 }
 
-// DiffView is what changed between two versions of the frame's page (ui.html #diff): the pair, what the answer counts,
-// the contents, and the later version's page marked in an iframe, in the sandbox as any page. Its head, columns and
-// iframe are always there, hidden while there is nothing to compare: the iframe is listened to as it is first drawn
+// DiffView is what changed between two versions of the frame's page: the pair, what the answer counts, the contents,
+// and the later version's page marked in an iframe, in the sandbox as any page. Its head, columns and iframe are always
+// there, hidden while there is nothing to compare: the iframe is listened to as it is first drawn
 export function DiffView({ page, hidden, keys, onKey, diff = sharedDiff, toc = sharedToc }: DiffViewProps) {
   const state = useStore(diff.state);
   const side = useStore(toc.side());

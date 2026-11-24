@@ -14,7 +14,7 @@ export const editBase = (task: Pick<TaskOf, 'title' | 'urls' | 'categories'>): E
   categories: task.categories ?? [],
 });
 
-// pagedOf is the task's categories with a page on them, which the store refuses to leave out (ui.html pagedOf)
+// pagedOf is the task's categories with a page on them, which the store refuses to leave out
 export const pagedOf = (task: Pick<TaskOf, 'pages' | 'archived'>): string[] => [
   ...new Set([...task.pages, ...task.archived].map((a) => a.task?.category ?? '').filter(Boolean)),
 ];

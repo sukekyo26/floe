@@ -23,7 +23,7 @@ interface Deps {
   pages?: Pages;
 }
 
-// createActOn is ui.html's actOn: the tags of a page or of the selected, and the selected archived or deleted (P5)
+// createActOn writes the tags of a page or of the selected, and archives or deletes the selected
 export function createActOn({ toasts = pageToasts, notice = pageNotice, pages = pagePages }: Deps = {}): ActOn {
   return async (act, { done, failed }, slugs, settled) => {
     const reasons = await Promise.all(slugs.map(act));

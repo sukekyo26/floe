@@ -10,7 +10,7 @@ export interface Marks {
   start: Map<string, Mark>;
 }
 
-// tagNames is every tag of every page, in the reader's language's order (ui.html tagNames)
+// tagNames is every tag of every page, in the reader's language's order
 export const tagNames = (entries: Page[], lang: string): string[] =>
   [...new Set(entries.flatMap((a) => a.tags ?? []))].toSorted((x, y) => x.localeCompare(y, lang));
 

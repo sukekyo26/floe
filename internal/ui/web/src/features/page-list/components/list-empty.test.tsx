@@ -7,7 +7,7 @@ import { ListEmpty } from '@/features/page-list/components/list-empty';
 const none = () => undefined;
 
 describe(ListEmpty, () => {
-  it('draws the way to add a link with the smaller plus of what opens an add (ui.html .add-open, S433)', () => {
+  it('draws the way to add a link with the smaller plus of what opens an add', () => {
     expect.assertions(1);
     testBoot();
     const html = renderToString(

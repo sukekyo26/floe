@@ -65,9 +65,9 @@ function modalClosed(run: () => void): boolean {
 const keyOf = (a: Page) => [a.slug, a.version, a.versionCount, a.news].join();
 const same = (x: OpenAt | null, y: OpenAt) => x !== null && x.slug === y.slug && x.file === y.file && x.v === y.v;
 
-// createVersions is ui.html's drawVersion, showVersion, leaveVersion and pickVersion: one per screen, beside the list
-// or whole. The versions are read as the entry of the page shown changes; each want takes a turn, and an answer come
-// after another want, read or not, is dropped
+// createVersions is the choice of a page's versions: one per screen, beside the list or whole. The versions are read as
+// the entry of the page shown changes; each want takes a turn, and an answer come after another want, read or not, is
+// dropped
 // LIMIT: a browser without base-select (Firefox and Safari for now) shows the whole words closed, and goes to a version at each arrow key
 // LIMIT: a list that could not be read is read again only as the list of pages changes; the page shown does not wait for it
 // LIMIT: the page of a version gone asks first, up to 3 seconds before this, and shows its 404 until then

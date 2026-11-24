@@ -39,7 +39,7 @@ export interface TagTarget {
   back: FocusBack | null;
 }
 
-// pageTags is the target of one page's tags (ui.html openPageTags), from its menu or its tag line
+// pageTags is the target of one page's tags, from its menu or its tag line
 export const pageTags = (a: Page, back: FocusBack): TagTarget => ({
   slugs: [a.slug],
   title: () => t('ui_tag_one_title', a.title ?? a.slug),

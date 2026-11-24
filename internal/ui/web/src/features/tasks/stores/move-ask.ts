@@ -17,8 +17,8 @@ export interface MoveAsk {
   answer: (yes: boolean) => void;
 }
 
-// createMoveAsk is the question asked over Set the task or Add a page before a page on another task is moved (ui.html
-// askMove): the modal it came from stays as it was
+// createMoveAsk is the question asked over Set the task or Add a page before a page on another task is moved: the modal
+// it came from stays as it was
 // LIMIT: a page put on another task since the list was read is moved unasked, which the toast after the write tells.
 // Give page writes a rev if that comes to trouble someone
 // entries is the list as read now

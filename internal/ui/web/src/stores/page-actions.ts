@@ -72,10 +72,9 @@ interface Deps {
 
 const titleOf = (a: Page) => a.title ?? a.slug;
 
-// createPageActions is what the bar, a row and their menus do to a page (ui.html toggleFavorite, setArchived, remove,
-// togglePin, takePageOff, copyPath and markUnread's toast): each writes, says it, and reads the list after the answer,
-// the toast shown before that read
-// LIMIT: a page's write has no rev, so a way back writes over what was written to the page since, as ui.html's does
+// createPageActions is what the bar, a row and their menus do to a page: each writes, says it, and reads the list after
+// the answer, the toast shown before that read
+// LIMIT: a page's write has no rev, so a way back writes over what was written to the page since
 export function createPageActions({
   writes = pageWriteStore,
   tasks = pageTaskWrites,
@@ -237,7 +236,7 @@ export function createPageActions({
     markUnreadSaid: async (slug, unreadFocus) => {
       const marked = reads.markUnread(slug);
       if (!marked) return;
-      // Of the page shown, the words of its versions go with what was read (ui.html markUnread: clearNotice)
+      // Of the page shown, the words of its versions go with what was read
       if (slug === openPage.shownSlug()) note.clear();
       const outcome = await marked;
       if (outcome.kind !== 'sent') return;

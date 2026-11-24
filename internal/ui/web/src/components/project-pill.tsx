@@ -15,15 +15,14 @@ export interface ProjectPillProps {
   readonly place?: string;
 }
 
-// ProjectPill is a project as a pill in its colour, its words cut at its end (ui.html drawProject): on a row and on a
-// task's head. The one colour mixed outside :root (ui.md manage-colours): --c is each project's
+// ProjectPill is a project as a pill in its colour, its words cut at its end: on a row and on a task's head
 export function ProjectPill({ word, color, id, place = 'max-w-40' }: ProjectPillProps) {
   const tint: CssVars = { '--c': color };
   return (
     <span
       id={id}
       data-testid="proj"
-      // Painted in its project's colour (P0's name; ui.html drawProject: proj-tint), as it is drawn only then
+      // Painted in its project's colour, as it is drawn only then
       data-tint="true"
       style={tint as CSSProperties}
       className={`${PILL} inline-flex ${place} items-center gap-1.25 bg-(--tint) font-medium text-(--tint-ink) ${TINT_VARS} ${TINT_DOT}`}

@@ -26,7 +26,7 @@ const MARK: Record<
   removed: { tone: 'bg-del-soft text-del', mark: 'ui_diff_mark_removed', said: 'ui_diff_said_removed' },
 };
 
-// Mark is a section's state, a letter seen and its word read aloud (ui.html diffMark)
+// Mark is a section's state, a letter seen and its word read aloud
 function Mark({ state }: { readonly state: string }) {
   const m = MARK[state];
   if (!m) return null;
@@ -54,8 +54,8 @@ interface DiffTocProps {
 const ITEM =
   'flex min-h-7 w-full items-center gap-1.5 rounded-small px-2 py-0.5 [&>span:first-child]:min-w-0 [&>span:first-child]:truncate';
 
-// DiffToc is the contents of the later version, each section that has a place to go to a button, its width dragged
-// and kept, folded and opened (ui.html drawDiff, tocAt, layoutToc). Its own width is kept apart from the frame's tree
+// DiffToc is the contents of the later version, each section that has a place to go to a button, its width dragged and
+// kept, folded and opened. Its own width is kept apart from the frame's tree
 export function DiffToc({ sections, section, onPlace, width, innerWidth, toc = sharedToc }: DiffTocProps) {
   const side = useStore(toc.side());
   const nav = useRef<HTMLElement>(null);
@@ -63,7 +63,7 @@ export function DiffToc({ sections, section, onPlace, width, innerWidth, toc = s
   useEffect(() => {
     list.current?.querySelector('[data-on]')?.scrollIntoView({ block: 'nearest' });
   }, [section]);
-  // The focus goes to the button that undoes it, as it is pressed (ui.html showToc): not as it is drawn first
+  // The focus goes to the button that undoes it, as it is pressed: not as it is drawn first
   const setOpen = (open: boolean) => {
     drawThenFocus(
       () => {

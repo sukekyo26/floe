@@ -6,11 +6,11 @@ export interface OverlayPlaces {
   error?: RefObject<HTMLElement | null>;
 }
 
-// useMovedOverlay moves #toasts (and #error) into the modal while it is open, as ui.html does (openFind, openThemes):
-// the top layer hides what is outside the modal. Each is moved by appendChild into the box given, and back into its own
-// box ([data-home], always there) as the modal closes, so that again and again (StrictMode) it ends the same. A modal
-// closing and another opening in one render go back then out: React runs every layout effect's cleanup of a render
-// before any of its setups, so both modals move them in a layout effect
+// useMovedOverlay moves #toasts (and #error) into the modal while it is open: the top layer hides what is outside the
+// modal. Each is moved by appendChild into the box given, and back into its own box ([data-home], always there) as the
+// modal closes, so that again and again (StrictMode) it ends the same. A modal closing and another opening in one
+// render go back then out: React runs every layout effect's cleanup of a render before any of its setups, so both
+// modals move them in a layout effect
 // LIMIT: a key or a press on a toast moved is the page's DOM's, not the modal's React tree's: the modal listens on the
 // dialog element for what it must see of them
 export function useMovedOverlay(open: boolean, places: OverlayPlaces): void {

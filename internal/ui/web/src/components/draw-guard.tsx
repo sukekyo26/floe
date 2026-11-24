@@ -19,7 +19,7 @@ export interface GuardState {
 // Guard catches what the screen throws as it draws, and says it with the load's mistakes, the read's first
 // LIMIT: a draw that always throws is tried and said again after every read, every POLL_MS
 // LIMIT: it catches only what throws as React draws; an event's or an effect's mistake is its caller's to say
-// LIMIT: while it has caught one the screen shows nothing of what is in it, where ui.html left what it drew before
+// LIMIT: while it has caught one the screen shows nothing of what is in it
 export class Guard extends Component<GuardProps, GuardState> {
   override state: GuardState = { failedAt: null };
 

@@ -17,7 +17,7 @@ export interface AddValues {
 const EMPTY: AddValues = { path: '', slug: '', description: '' };
 
 export interface AddLink {
-  // values are the fields as typed, kept as the modal closes unsent (ui.html resets them once added alone)
+  // values are the fields as typed, kept as the modal closes unsent
   values: Store<AddValues>;
   // send adds the link or the folder, holding the modal while it goes, and closes it once added: whether it was added
   // and, refused, why (words that may be empty), or null for one not sent (another went)
@@ -35,8 +35,8 @@ interface Deps {
   toasts?: Toasts;
 }
 
-// createAddLink is the modal that registers a file or a folder by its path (ui.html add): a field left blank is not
-// sent. Added, the list is shown whole, the new one on it (a folder open), read after the modal lets go
+// createAddLink is the modal that registers a file or a folder by its path: a field left blank is not sent. Added, the
+// list is shown whole, the new one on it (a folder open), read after the modal lets go
 export function createAddLink({
   client = pageClient,
   query = listQuery,

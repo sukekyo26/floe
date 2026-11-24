@@ -47,7 +47,7 @@ function Heading({ item }: { readonly item: Extract<RowItem, { kind: 'group' }> 
       role="none"
       className="block ps-[calc(1rem+1px)] pe-0 pt-2.75 pb-1 text-small leading-[1.2] font-bold text-muted"
     >
-      {/* oxlint-disable-next-line jsx-a11y/prefer-tag-over-role -- ui.html's markup, which the tests read by its role */}
+      {/* oxlint-disable-next-line jsx-a11y/prefer-tag-over-role -- the tests find it by its role */}
       <div role="heading" aria-level={2}>
         {item.heading}
       </div>
@@ -60,9 +60,9 @@ function Heading({ item }: { readonly item: Extract<RowItem, { kind: 'group' }> 
   );
 }
 
-// Rows draws #list, of every screen alike (ui.md: drawRows), and keeps what had the focus there as it is drawn anew: a
-// read redraws the list as the keys go through it. A press on the rows holds the polls' answers until it is let go
-// (pressed, released), as Chrome sends neither click nor dblclick for a row gone between press and release
+// Rows draws #list, of every screen alike, and keeps what had the focus there as it is drawn anew: a read redraws the
+// list as the keys go through it. A press on the rows holds the polls' answers until it is let go (pressed, released),
+// as Chrome sends neither click nor dblclick for a row gone between press and release
 export class Rows extends Component<RowsProps> {
   private readonly list = createRef<HTMLUListElement>();
   // The keys drawn, of the last commit: a row new to the list rises in, one drawn before is drawn in place

@@ -2,8 +2,8 @@ import type { Page } from '@/types/page';
 import { plainKey, type KeyPress } from '@/utils/keys';
 import { plainPress, type Press } from '@/utils/plain-press';
 
-// What a press on a row's title does (ui.html openRow): link, the link's own (a new tab); again, the row open beside the
-// list pressed again goes whole; one-column, whole by the link, with nothing beside the list; beside, opens it there
+// What a press on a row's title does: link, the link's own (a new tab); again, the row open beside the list pressed
+// again goes whole; one-column, whole by the link, with nothing beside the list; beside, opens it there
 export type RowPress = 'link' | 'again' | 'one-column' | 'beside';
 
 export interface RowAt {
@@ -22,15 +22,15 @@ export function rowPress(press: Press, row: RowAt): RowPress {
   return row.oneColumn ? 'one-column' : 'beside';
 }
 
-// orderOf is what a page open whole goes through by j and k, and what tells a page of the rows (ui.html keepOrder), of
-// the entries drawn: order leaves out the folders and the links whose file is gone, shown has them all
+// orderOf is what a page open whole goes through by j and k, and what tells a page of the rows, of the entries drawn:
+// order leaves out the folders and the links whose file is gone, shown has them all
 export const orderOf = (drawn: readonly Page[]): { order: string[]; shown: string[] } => ({
   order: drawn.filter((a) => !a.folder && !a.missing).map((a) => a.slug),
   shown: drawn.map((a) => a.slug),
 });
 
-// rowOpens tells a row with a page to open beside the list (ui.html rowOpens): with room beside it, of an entry of the
-// page list (a task list's row is none), no directory, and of a folder a page of it alone
+// rowOpens tells a row with a page to open beside the list: with room beside it, of an entry of the page list (a task
+// list's row is none), no directory, and of a folder a page of it alone
 export const rowOpens = (x: {
   readonly oneColumn: boolean;
   readonly page: Page | undefined;
@@ -38,9 +38,9 @@ export const rowOpens = (x: {
   readonly file: string;
 }): boolean => !x.oneColumn && x.page !== undefined && !x.dir && (!x.page.folder || x.file !== '');
 
-// enterOpens tells Enter on a row's title that opens its page whole (ui.html 6937): a plain key (Shift too, as the
-// page's keys go), not one that ends a composition, on a title that links and opens no tree. It lands on the title, so
-// on no field and with no modal open
+// enterOpens tells Enter on a row's title that opens its page whole: a plain key (Shift too, as the page's keys go),
+// not one that ends a composition, on a title that links and opens no tree. It lands on the title, so on no field and
+// with no modal open
 export const enterOpens = (
   e: KeyPress,
   title: { readonly hasHref: boolean; readonly expandable: boolean; readonly composing: boolean },
@@ -59,8 +59,7 @@ export interface MovedTo {
   readonly dir: boolean;
 }
 
-// nextRow is the row step from from of count (ui.html moveRow): from none (-1), the first down and the last up; at an
-// end it stays
+// nextRow is the row step from from of count: from none (-1), the first down and the last up; at an end it stays
 export function nextRow(count: number, from: number, step: number): number {
   if (from === -1) return step > 0 ? 0 : count - 1;
   return Math.max(0, Math.min(count - 1, from + step));

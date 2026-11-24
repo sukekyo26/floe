@@ -25,8 +25,8 @@ export interface ViewButtonProps {
 
 const SR_ONLY = { wide: 'wide:sr-only', narrow: 'narrow:sr-only' } as const;
 
-// ViewButton is a view of the shelf (ui.html .views button): lit when it is the list shown, with its count. One with
-// none left stays where it is, quieter
+// ViewButton is a view of the shelf: lit when it is the list shown, with its count. One with none left stays where it
+// is, quieter
 export function ViewButton({
   view,
   mark,

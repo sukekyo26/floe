@@ -8,9 +8,8 @@ import { reads as sharedReads, type Reads } from '@/stores/reads';
 import { toasts as pageToasts, type Toasts } from '@/stores/toasts';
 
 export interface PageReads {
-  // opened is the page beside the list loaded anew (ui.html readInto): the next read told is of a page a person opened,
-  // the words of its versions and its toast go, and a page marked unread holds through its versions until another
-  // page is open
+  // opened is the page beside the list loaded anew: the next read told is of a page a person opened, the words of its
+  // versions and its toast go, and a page marked unread holds through its versions until another page is open
   opened: (slug: string | undefined) => void;
   // served is a page telling the version it was served (pageServed): sent as read unless kept unread, and said, of the
   // page a person opened, once its answer clears the page's news while it is still the page shown. unreadFocus is
@@ -27,8 +26,8 @@ interface Deps {
   actions?: PageActions;
 }
 
-// createPageReads is ui.html's read of a page shown (the message's pageServed, readInto, readDone): one per screen. A
-// page whole is opened as the screen starts, so opening starts true
+// createPageReads is the read of a page shown: one per screen. A page whole is opened as the screen starts, so opening
+// starts true
 // LIMIT: of this tab alone: another tab with the page open reads it again as it draws itself anew. Tell the tabs if
 // that comes to matter
 // LIMIT: whole, a page gone back to by the browser (bfcache) tells nothing and stays unread, until opened again

@@ -57,8 +57,8 @@ export function Lead({ page, unread }: { readonly page: Page; readonly unread: b
   return <ReadMark unread={unread} />;
 }
 
-// PageRow is a row of a page, a link or a folder, as the list, a task's page and the search draw it (ui.html template
-// #row), in the card every row of #list is (RowCard)
+// PageRow is a row of a page, a link or a folder, as the list, a task's page and the search draw it, in the card every
+// row of #list is (RowCard)
 export function PageRow({
   page: a,
   index,
@@ -86,7 +86,7 @@ export function PageRow({
       gone={Boolean(a.missing)}
       kept={kept}
       select={
-        // A row of no selection (a task's page) draws no box (ui.html 4418)
+        // A row of no selection (a task's page) draws no box
         onSelect ? (
           <label
             data-testid="pick"

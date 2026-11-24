@@ -155,7 +155,7 @@
   --tick: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%23fbfaf8' stroke-width='3.5' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='m5 12.5 4.5 4.5L19 7.5'/%3E%3C/svg%3E");
 }
 
-/* The page's ground, its words and the focus ring (ui.html 82–84); a button takes its words' font and colour */
+/* The page's ground, its words and the focus ring; a button takes its words' font and colour */
 @layer base {
   body {
     margin: 0;
@@ -176,7 +176,7 @@
   }
 }
 
-/* Thin scrollbars of a soft thumb (ui.html 72–80): Chrome's own, Firefox's by scrollbar-color */
+/* Thin scrollbars of a soft thumb: Chrome's own, Firefox's by scrollbar-color */
 ::-webkit-scrollbar {
   width: 10px;
   height: 10px;
@@ -200,7 +200,7 @@
   }
 }
 
-/* The widths of ui.html's own queries, with their ends included as there (max-width: 40rem holds 40rem) */
+/* The widths the screens change at, their ends included (max-width: 40rem holds 40rem) */
 @custom-variant narrow {
   @media (max-width: 40rem) {
     @slot;

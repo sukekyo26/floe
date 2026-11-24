@@ -39,9 +39,9 @@ function ShelfMore({ inModal, children }: { readonly inModal: boolean; readonly 
   );
 }
 
-// Shelf is the column that switches the list (ui.html #shelf), of the page list and of the task list: its views, and
-// the rest of it under them, which goes into a modal on a narrow screen with no room for it beside the list. Its
-// buttons do not implement WAI-ARIA tabs (arrow keys, tabpanel), so they use aria-pressed
+// Shelf is the column that switches the list, of the page list and of the task list: its views, and the rest of it
+// under them, which goes into a modal on a narrow screen with no room for it beside the list. Its buttons do not
+// implement WAI-ARIA tabs (arrow keys, tabpanel), so they use aria-pressed
 export function Shelf({ views, narrow, more, foot }: ShelfProps) {
   const [open, setOpen] = useState(false);
   const place = moreIn(open);
@@ -73,7 +73,7 @@ export function Shelf({ views, narrow, more, foot }: ShelfProps) {
         >
           <div
             data-testid="views"
-            // oxlint-disable-next-line jsx-a11y/prefer-tag-over-role -- a fieldset would draw a box and a legend; ui.html's group of buttons
+            // oxlint-disable-next-line jsx-a11y/prefer-tag-over-role -- a fieldset would draw a box and a legend
             role="group"
             aria-label={t('ui_shelf')}
             className="grid grid-cols-[minmax(0,1fr)] gap-1 wide:relative wide:-m-1 wide:flex wide:flex-wrap wide:items-center wide:gap-[5px] wide:p-1"

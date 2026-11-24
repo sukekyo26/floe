@@ -57,10 +57,10 @@ interface Read {
 
 const ROW_BOX = 'overflow-hidden rounded-small border border-line';
 
-// TaskEditDialog is an existing task's own fields (ui.html #edit-task-dialog, openTaskEdit, saveTaskEdit): its title,
-// URLs and the order of its categories, as its page alone writes them; the parent is the family card's. It opens over
-// the task as read now, and saving sends what was changed since, with the rev it showed. Refused as stale, what was
-// changed in it stays and the rest is as read now; a task gone is said, and nothing more can be saved
+// TaskEditDialog is an existing task's own fields: its title, URLs and the order of its categories, as its page alone
+// writes them; the parent is the family card's. It opens over the task as read now, and saving sends what was changed
+// since, with the rev it showed. Refused as stale, what was changed in it stays and the rest is as read now; a task
+// gone is said, and nothing more can be saved
 export function TaskEditDialog({
   open,
   onClosed,

@@ -7,7 +7,7 @@ export interface Back {
   task: string;
 }
 
-// backOf reads the way back kept, a path and query of this origin (ui.html drawBack reads it against location.origin)
+// backOf reads the way back kept, a path and query of this origin
 // LIMIT: the name is the one in the URL kept: a task gone since, or a page moved to another, still says it; the screen
 // it leads to tells. Read the task if that comes to mislead
 export function backOf(kept: string, origin: string): Back {

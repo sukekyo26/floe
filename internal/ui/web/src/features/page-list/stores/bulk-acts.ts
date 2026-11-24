@@ -20,13 +20,13 @@ export interface BulkTags {
 }
 
 export interface BulkActs {
-  // selectAll selects every entry the list draws (ui.html 6890): folders too, a tree's rows none
+  // selectAll selects every entry the list draws: folders too, a tree's rows none
   selectAll: () => void;
   // archive archives the selected, or restores them on the view of the archived
   archive: () => Promise<void>;
   // remove deletes the selected, or unlinks them where every one is a link: its words of before the write
   remove: () => Promise<void>;
-  // tags is the tag modal's target of the selected (ui.html openSelectedTags)
+  // tags is the tag modal's target of the selected
   tags: () => BulkTags;
 }
 
@@ -38,8 +38,8 @@ interface Deps {
   query?: ListQuery;
 }
 
-// bulkActs is what the bar of the selected does to them (ui.html actOnSelected and its callers): those written leave
-// the selection, those that failed stay in it
+// bulkActs is what the bar of the selected does to them: those written leave the selection, those that failed stay in
+// it
 export function bulkActs({
   selection = pageSelection,
   actOn = pageActOn,

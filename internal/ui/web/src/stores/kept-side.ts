@@ -15,8 +15,8 @@ export interface KeptSide {
   keep: () => void;
 }
 
-// createKeptSide is ui.html's keptSide: the side column of key, width wide until the viewer sets one. What the browser
-// holds is read at the first call, never as the module loads; one unreadable, or of another shape, leaves the default
+// createKeptSide is the side column of key, width wide until the viewer sets one. What the browser holds is read at the
+// first call, never as the module loads; one unreadable, or of another shape, leaves the default
 export function createKeptSide(key: string, width: number, { storage = local }: { storage?: Kept } = {}): KeptSide {
   let kept: Store<Side> | null = null;
   const side = () => {

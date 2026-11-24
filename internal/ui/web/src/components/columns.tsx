@@ -10,8 +10,8 @@ import { columnWidths } from '@/utils/column-widths';
 
 const CONTROLS: Record<ColumnName, string> = { shelf: 'shelf', list: 'listcol' };
 
-// showColumn opens or folds the column named, as one of its buttons is pressed (ui.html showShelf, showList): drawn at
-// once, the focus goes to the button that undoes it
+// showColumn opens or folds the column named, as one of its buttons is pressed: drawn at once, the focus goes to the
+// button that undoes it
 export function showColumn(name: ColumnName, open: boolean, columns: ColumnsStore = pageColumns): void {
   drawThenFocus(
     () => {
@@ -49,7 +49,7 @@ export function ColumnFoot({
   );
 }
 
-// HEAD_TITLE is the title in a column's head (ui.html .side-head): the frame's tree's and the diff's contents'
+// HEAD_TITLE is the title in a column's head: the frame's tree's and the diff's contents'
 export const HEAD_TITLE =
   'min-w-0 flex-1 truncate font-mono text-label leading-[1.2] font-bold tracking-[0.06em] text-muted uppercase';
 
@@ -113,8 +113,8 @@ function ShowButton({ name, hidden, raised, left, columns }: ShowButtonProps) {
   );
 }
 
-// The grid's columns and rows by screen and what shows (ui.html .shell 275–281, 853, 875, 920–935): the folded ones
-// from 70rem, a row of the shelf over the list under it, one column under 56rem
+// The grid's columns and rows by screen and what shows: the folded ones from 70rem, a row of the shelf over the list
+// under it, one column under 56rem
 function gridOf({ screen, shelfOpen, listShown }: ColumnState): string {
   if (screen === 'taskPage')
     return `grid-rows-[minmax(0,1fr)] wide:not-mid:grid-cols-[minmax(0,22rem)_minmax(0,1fr)] mid:grid-cols-[minmax(0,1fr)] ${listShown ? 'not-wide:grid-cols-[var(--list-width)_minmax(0,1fr)]' : 'not-wide:grid-cols-[minmax(0,1fr)]'}`;
@@ -138,15 +138,14 @@ export interface ColumnsProps {
   readonly shelf?: ReactNode;
   readonly list: ReactNode;
   readonly reader?: ReactNode;
-  // alone lays out the list's column alone, the rest drawn but hidden, as tests read them there (ui.html tasks-empty,
-  // task-missing 926–927, 939–940)
+  // alone lays out the list's column alone, the rest drawn but hidden, as tests read them there
   readonly alone?: boolean;
   readonly columns?: ColumnsStore;
 }
 
-// Columns lays out the screen of a list (ui.html #manage, layoutColumns): the shelf, the list and the page beside it,
-// the edges between them and the buttons that fold and open the two columns, by the screen, what is kept and the
-// window. The widths go to the root (--shelf-width, --list-width), as the edges stand fixed on the window
+// Columns lays out the screen of a list: the shelf, the list and the page beside it, the edges between them and the
+// buttons that fold and open the two columns, by the screen, what is kept and the window. The widths go to the root
+// (--shelf-width, --list-width), as the edges stand fixed on the window
 export function Columns({ shelf, list, reader, alone = false, columns = pageColumns }: ColumnsProps) {
   const state = useColumns(columns);
   const { screen, kept, at, widths, shelfOpen, listShown, picked } = state;
@@ -157,7 +156,7 @@ export function Columns({ shelf, list, reader, alone = false, columns = pageColu
     root.setProperty('--shelf-width', `${widths.shelf}px`);
     root.setProperty('--list-width', `${widths.list}px`);
   }, [widths.shelf, widths.list]);
-  // A width asked for is kept within the bounds of now (ui.html setColumn)
+  // A width asked for is kept within the bounds of now
   const setWidth = (name: ColumnName, width: number) => {
     columns.set({ [name]: columnWidths({ ...kept, [name]: width }, at)[name] });
   };
@@ -256,7 +255,7 @@ export function Columns({ shelf, list, reader, alone = false, columns = pageColu
           />
         </div>
       )}
-      {/* The task list's is there too, hidden (ui.html #reader, which tests read there) */}
+      {/* The task list's is there too, hidden (the tests read it there) */}
       <div className="contents" hidden={taskList || alone}>
         {reader}
       </div>
