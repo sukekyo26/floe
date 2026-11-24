@@ -2,13 +2,16 @@ package kit
 
 import (
 	"bytes"
+	"errors"
 	"html/template"
+	"io"
 	"strings"
 	"testing"
 
 	cjkfriendly "github.com/tats-u/goldmark-cjk-friendly/v2"
 	"github.com/yuin/goldmark"
 	"github.com/yuin/goldmark/extension"
+	"github.com/yuin/goldmark/parser"
 )
 
 // markdown draws raw HTML as the text written and puts each table in the table part's box; markdownLine draws one
@@ -251,6 +254,43 @@ func TestCJKFriendlyKeepsCommonMark(t *testing.T) {
 					}
 				}
 			}
+		}
+	}
+}
+
+var errFull = errors.New("no space left")
+
+type full struct{}
+
+func (full) Write([]byte) (int, error) { return 0, errFull }
+
+// onFull is a goldmark that writes to full.
+type onFull struct{ goldmark.Markdown }
+
+func (m onFull) Convert(src []byte, _ io.Writer, opts ...parser.ParseOption) error {
+	return m.Markdown.Convert(src, full{}, opts...) //nolint:wrapcheck // goldmark's
+}
+
+// convert alone says that a function of floe failed and which: what draws a node returns its failure as it is.
+func TestDrawFailureToldOnce(t *testing.T) {
+	t.Parallel()
+
+	// Longer than goldmark's buffer, so that the write that draws the node fails.
+	long := strings.Repeat("a", 5000)
+	for _, c := range []struct {
+		md   goldmark.Markdown
+		text string
+	}{
+		{markdownLabel, "<https://example.com/" + long + ">"},
+		{markdownLabel, "https://example.com/" + long},
+		{markdownLabel, "[" + long + "](https://example.com/)"},
+		{markdownLabel, "x <a title='" + long + "'>"},
+		{markdown, "x <a title='" + long + "'>"},
+		{markdown, "<div>" + long + "</div>"},
+	} {
+		_, err := convert(onFull{c.md}, "name", c.text)
+		if !errors.Is(err, errFull) || strings.Count(err.Error(), ErrFunc.Error()) != 1 {
+			t.Errorf("%.30q…: %.200v; want errFull, as a function of floe's once", c.text, err)
 		}
 	}
 }
