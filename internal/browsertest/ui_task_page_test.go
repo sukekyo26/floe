@@ -329,7 +329,8 @@ func TestUITaskPage(t *testing.T) { //nolint:paralleltest // the browser tests s
 }
 
 // taskPageShown tells a task's page drew its rows.
-const taskPagesHead = "document.querySelector('#task-pages-head h2').textContent"
+// taskPagesHead says the heading of a task's pages, as it reads, and the count in its pill.
+const taskPagesHead = "(() => { const h = document.querySelector('#task-pages-head h2'); return h.textContent + ' (' + (h.querySelector('[data-testid=badge]')?.textContent ?? 'no count') + ')'; })()"
 
 const taskPageShown = "!document.getElementById('task-head').hidden && document.querySelector('#list > li')"
 
@@ -340,7 +341,7 @@ nothing open: none / none
 url: /tasks?project=proj&task=%23130
 the list's keys:  ?project=proj
 head: #130 / doing / doing / proj / true / /tasks?project=proj
-pages head: Pages 4 / Add / Add a page / true
+pages head: Pages 4 (4) / Add / Add a page / true
 tab: task-up task-edit task-state task-parent-add task-child task-add-page title
 nothing to select: 0 true
 j: T n1 / n1, T d1 / d1, T i1 / i1, T r1 / r1
@@ -356,14 +357,14 @@ renamed whole: /tasks?project=proj&task=%23128 / {"order":["c2"],"shown":["c2"],
 of no rows: / / null
 done: Archive
 archived: [No category] | T x1
-archived, pages head: Pages 1
+archived, pages head: Pages 1 (1)
 the shelf's archive: #120
 folded, none chosen: true true
 while open: doing
 a tag: SPAN t
 doing has no archive button: none
 no pages: This task has no pages Delete the task true
-no pages, head: Pages
+no pages, head: Pages (no count)
 unreadable, drawn: false false true
 unreadable, first: true true true
 unreadable, done: Archive

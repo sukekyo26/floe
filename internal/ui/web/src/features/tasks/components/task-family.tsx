@@ -161,11 +161,10 @@ export function TaskFamily({ task, family, onKin, onUnlink }: TaskFamilyProps) {
           words={
             <>
               <KidsIcon />
-              <span id="task-family-word">
-                {kids.length > 0 ? t('ui_task_kids_head', kids.length) : t('ui_task_kids_word')}
-              </span>
+              <span id="task-family-word">{t('ui_task_kids_word')}</span>
             </>
           }
+          count={kids.length}
         >
           <Button
             id="task-child"

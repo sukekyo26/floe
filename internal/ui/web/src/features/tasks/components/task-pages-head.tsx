@@ -7,7 +7,7 @@ import type { FocusBack } from '@/types/focus';
 import type { TaskOf } from '@/types/task';
 
 // TaskPagesHead heads a task's pages, off #list: how many, as its row of the task list counts them (the archived left
-// out), none said without a number as the family card's children are, and the button that adds one
+// out), and the button that adds one
 export function TaskPagesHead({
   task,
   shown,
@@ -17,14 +17,14 @@ export function TaskPagesHead({
   readonly shown: boolean;
   readonly onAddPage: (task: TaskOf, back: FocusBack) => void;
 }) {
-  const n = task?.pages.length ?? 0;
   return (
     <PartHead
       level={2}
       id="task-pages-head"
       hidden={!shown}
       place="px-4 pt-2.5"
-      words={n > 0 ? t('ui_task_pages_head', n) : t('ui_task_pages_word')}
+      words={t('ui_task_pages_word')}
+      count={task?.pages.length ?? 0}
     >
       <Button
         id="task-add-page"
