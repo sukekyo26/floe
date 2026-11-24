@@ -6,6 +6,14 @@ adheres to [Semantic Versioning](https://semver.org/).
 
 ## [Unreleased]
 
+### Changed
+
+- Change a task's page in the management page. The way back to the task list, taken off in 0.3.0, is there again, as the mark `‹` on the left of the title; it goes where the bar's Task list and `h` go. "Edit" is on the right of the title, and the button that archives a task done is by its state. "Add a page" is now "Add" beside a heading over the pages that says how many they are, in a pill ("Pages 2"); the heading of the child tasks says its number in the same pill.
+
+### Fixed
+
+- Fix a task's page scrolling sideways when the task's title has a long run with no place to break: the title goes over lines.
+
 ## [0.3.1] - 2026-11-24
 
 ### Fixed

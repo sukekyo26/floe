@@ -328,7 +328,7 @@ func TestUITaskCategories(t *testing.T) { //nolint:paralleltest // the browser t
 	check(t, "task categories", out, strings.Join([]string{
 		"groups: [No category] note-a [案] plan-a old-a [実装] build-a [リリース none] [レビュー] review-a",
 		"keys apart: true",
-		"named: 0 Add a page",
+		"named: 0 Add",
 		"opened: Add a page / S300 Categories / add-page-q / null",
 		"category: No category,案,実装,*リリース,レビュー",
 		"options: g-a (G2 · x), other-a (S301 · 設計), check-a, memo-a, note-a (this task's no category), review-a (this task's レビュー), build-a (this task's 実装), plan-a (this task's 案)",

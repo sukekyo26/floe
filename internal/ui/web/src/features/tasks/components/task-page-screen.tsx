@@ -3,11 +3,13 @@ import { useCallback, useEffect, useState, type ReactNode } from 'react';
 import { Columns } from '@/components/columns';
 import { backToRow } from '@/components/focus-places';
 import type { Openers } from '@/components/page-menu';
+import type { Up } from '@/components/screen-switch';
 import { getBoot } from '@/config/boot';
 import { KinDialog, type KinOpen } from '@/features/tasks/components/kin-dialog';
 import { TaskHead } from '@/features/tasks/components/task-head';
 import { TaskNone } from '@/features/tasks/components/task-none';
 import { TaskPageRows } from '@/features/tasks/components/task-page-rows';
+import { TaskPagesHead } from '@/features/tasks/components/task-pages-head';
 import type { TaskPageView } from '@/features/tasks/hooks/use-task-page';
 import { taskListHref } from '@/features/tasks/utils/task-page';
 import { useBackToRow } from '@/hooks/use-back-to-row';
@@ -27,18 +29,20 @@ export interface TaskOpeners {
 export interface TaskPageScreenProps {
   // name is the task's, as the URL names it (task=); its project is the list's query's
   readonly name: string;
-  // view is the task as read, which the route reads too (the bar's way up)
+  // view is the task as read, which the route reads too (its way up)
   readonly view: TaskPageView;
+  // up is the page's way up, the bar's task list's too
+  readonly up: Up;
   readonly openers: Openers;
   readonly taskOpeners: TaskOpeners;
   // reader is the page beside the list: the app's, as a feature imports no other
   readonly reader: ReactNode;
 }
 
-// TaskPageScreen is a task's page (/tasks with a task named): its head and family card over its rows by category, or
+// TaskPageScreen is a task's page (/tasks with a task named): its head and family card over its pages' head and its rows by category, or
 // what it says with none, beside the page open, laid out by Columns; a task not there, the column alone. It writes no
 // list's query (pages.list, pages.tasks): the task list does
-export function TaskPageScreen({ name, view, openers, taskOpeners, reader }: TaskPageScreenProps) {
+export function TaskPageScreen({ name, view, up, openers, taskOpeners, reader }: TaskPageScreenProps) {
   const [kin, setKin] = useState<KinOpen | null>(null);
   useOneColumn(pageOpen);
   const back = useCallback(() => {
@@ -61,6 +65,7 @@ export function TaskPageScreen({ name, view, openers, taskOpeners, reader }: Tas
             <TaskHead
               task={view.head}
               shown={view.task !== null}
+              up={up}
               project={view.project}
               name={name}
               reads={view.reads}
@@ -69,8 +74,8 @@ export function TaskPageScreen({ name, view, openers, taskOpeners, reader }: Tas
                 if (view.task) setKin({ form, task: view.task, ask: false });
               }}
               onEdit={taskOpeners.onTaskEdit}
-              onAddPage={taskOpeners.onAddPage}
             />
+            <TaskPagesHead task={view.head} shown={view.task !== null} onAddPage={taskOpeners.onAddPage} />
             <TaskPageRows task={view.task} openers={openers} />
             <TaskNone
               task={view.task}

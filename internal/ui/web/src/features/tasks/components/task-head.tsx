@@ -1,11 +1,13 @@
 import { Component, createRef, type ChangeEvent } from 'react';
 
 import { Ago } from '@/components/ago';
+import { BackLink } from '@/components/back-link';
 import { Button } from '@/components/button';
 import { focusOn, kinButton, partButton } from '@/components/focus-places';
-import { ArchiveIcon, EditIcon, PlusIcon } from '@/components/icons';
+import { ArchiveIcon, EditIcon } from '@/components/icons';
 import { PickSelect } from '@/components/pick-select';
 import { ProjectPill } from '@/components/project-pill';
+import type { Up } from '@/components/screen-switch';
 import { getBoot } from '@/config/boot';
 import { kidState, TaskFamily } from '@/features/tasks/components/task-family';
 import { XLink } from '@/features/tasks/components/task-row';
@@ -28,6 +30,8 @@ export interface TaskHeadProps {
   // is read
   readonly task: TaskOf | null;
   readonly shown: boolean;
+  // up is the page's way up to the task list
+  readonly up: Up;
   // project and name are the page's, as its URL names them
   readonly project: string;
   readonly name: string;
@@ -37,7 +41,6 @@ export interface TaskHeadProps {
   readonly color: string;
   readonly onKin: (form: 'child' | 'parent') => void;
   readonly onEdit: (task: TaskOf, back: FocusBack) => void;
-  readonly onAddPage: (task: TaskOf, back: FocusBack) => void;
   readonly acts?: TaskPageActs;
 }
 
@@ -50,9 +53,9 @@ interface Snapshot {
 const isOpen = (sel: HTMLSelectElement | null): boolean =>
   sel !== null && CSS.supports('selector(:open)') && sel.matches(':open');
 
-// TaskHead is over the rows of a task's page: its Add a page, the task's edit and archive buttons, its name and title,
-// its state and how to change it, its time, project and links, and its family card. Drawn anew, the focus it had goes
-// where headFocus says, taken just before React changes it
+// TaskHead is over the rows of a task's page: the way back to the task list, its name and title and its Edit in one row,
+// its state and how to change it, its time, the button that archives it, its project, then its links and its family
+// card. Drawn anew, the focus it had goes where headFocus says, taken just before React changes it
 // LIMIT: a browser without :open redraws the choices while its list is open: what is chosen goes with the rev drawn last,
 // refused or written as of then. Hold them some other way if such a browser comes to matter
 export class TaskHead extends Component<TaskHeadProps, { shown: StateShown | null }> {
@@ -112,7 +115,7 @@ export class TaskHead extends Component<TaskHeadProps, { shown: StateShown | nul
   };
 
   override render() {
-    const { task, shown: visible, project, name, color, onKin, onEdit, onAddPage, acts = taskPageActs } = this.props;
+    const { task, up, shown: visible, project, name, color, onKin, onEdit, acts = taskPageActs } = this.props;
     const { lang, states } = getBoot();
     const shown = this.state.shown;
     const drawn = shown?.state ?? task?.state ?? '';
@@ -130,46 +133,27 @@ export class TaskHead extends Component<TaskHeadProps, { shown: StateShown | nul
         hidden={!visible}
         className="grid flex-none gap-[0.35rem] border-b border-line bg-panel px-4 pt-2 pb-[0.65rem]"
       >
-        <div className="flex flex-wrap items-center gap-2">
-          <span className="ms-auto flex flex-wrap justify-end gap-2">
-            <Button
-              id="task-add-page"
-              onClick={() => {
-                if (task) onAddPage(task, () => focusOn(document.getElementById('task-add-page')));
-              }}
-            >
-              <PlusIcon />
-              {t('ui_page_add')}
-            </Button>
-            <Button
-              id="task-edit"
-              label={t('ui_task_edit_named', name)}
-              onClick={() => {
-                if (task) onEdit(task, () => focusOn(document.getElementById('task-edit')));
-              }}
-            >
-              <EditIcon />
-              {t('ui_edit')}
-            </Button>
-            <Button
-              id="task-archive"
-              hidden={!back && task?.state !== 'done'}
-              label={t(back ? 'ui_unarchive_named' : 'ui_archive_named', name)}
-              onClick={(e) => {
-                if (task) void acts.archive(e.detail, task, !back);
-              }}
-            >
-              <ArchiveIcon />
-              <span data-testid="label">{t(back ? 'ui_unarchive' : 'ui_archive')}</span>
-            </Button>
-          </span>
+        {/* The mark at the title's left edge, in line with the rows under it; the mark and Edit in the middle of the title,
+            however many lines it takes */}
+        <div className="-ms-3 flex items-center gap-2">
+          <BackLink id="task-up" up={up} label={t('ui_tasks_back')} />
+          <h2 id="task-title" className="m-0 flex-1 text-[1rem] leading-[1.4] font-bold wrap-anywhere">
+            <span data-testid="tname" className="me-[0.45rem] font-mono text-body font-semibold text-muted">
+              {name}
+            </span>
+            {task?.title ?? ''}
+          </h2>
+          <Button
+            id="task-edit"
+            label={t('ui_task_edit_named', name)}
+            onClick={() => {
+              if (task) onEdit(task, () => focusOn(document.getElementById('task-edit')));
+            }}
+          >
+            <EditIcon />
+            {t('ui_edit')}
+          </Button>
         </div>
-        <h2 id="task-title" className="m-0 text-[1rem] leading-[1.4] font-bold">
-          <span data-testid="tname" className="me-[0.45rem] font-mono text-body font-semibold text-muted">
-            {name}
-          </span>
-          {task?.title ?? ''}
-        </h2>
         <div data-testid="tstate" className="flex flex-wrap items-center gap-x-[0.6rem] gap-y-1 text-small text-muted">
           <PickSelect
             ref={this.select}
@@ -200,6 +184,17 @@ export class TaskHead extends Component<TaskHeadProps, { shown: StateShown | nul
           <time id="task-at" hidden={!task?.at} dateTime={task?.at} className="font-mono text-label">
             {task?.at ? <Ago iso={task.at} /> : null}
           </time>
+          <Button
+            id="task-archive"
+            hidden={!back && task?.state !== 'done'}
+            label={t(back ? 'ui_unarchive_named' : 'ui_archive_named', name)}
+            onClick={(e) => {
+              if (task) void acts.archive(e.detail, task, !back);
+            }}
+          >
+            <ArchiveIcon />
+            <span data-testid="label">{t(back ? 'ui_unarchive' : 'ui_archive')}</span>
+          </Button>
           <ProjectPill
             id="task-project"
             word={projectWord(project)}

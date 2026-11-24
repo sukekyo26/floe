@@ -7,6 +7,8 @@ import (
 	"strings"
 	"testing"
 
+	"github.com/chromedp/chromedp/kb"
+
 	"floe/internal/store"
 )
 
@@ -110,6 +112,19 @@ func TestUITaskPage(t *testing.T) { //nolint:paralleltest // the browser tests s
 	say("url", "location.pathname + location.search")
 	say("the list's keys", "sessionStorage.getItem('pages.list') + ' ' + sessionStorage.getItem('pages.tasks')")
 	say("head", "[document.getElementById('task-title').textContent, document.getElementById('task-state').value, document.getElementById('task-state').dataset.state, document.getElementById('task-project').textContent, document.getElementById('task-archive').hidden, document.getElementById('to-tasks').getAttribute('href')].join(' / ')")
+	// Its pages' head over them, off #list, counted as the task's row counts them; what Tab goes through, in the order it is seen
+	say("pages head", taskPagesHead+" + ' / ' + document.getElementById('task-add-page').textContent + ' / ' + document.getElementById('task-add-page').getAttribute('aria-label') + ' / ' + String(document.getElementById('task-pages-head').nextElementSibling === document.getElementById('list'))")
+	b.eval("document.getElementById('task-up').focus()")
+	tabbed := []string{"task-up"}
+	for range 12 {
+		b.pressKey(kb.Tab)
+		tabbed = append(tabbed, b.eval("document.activeElement.id || document.activeElement.dataset.testid"))
+		if tabbed[len(tabbed)-1] == "title" {
+			break
+		}
+	}
+	out = append(out, "tab: "+strings.Join(tabbed, " "))
+	b.eval("document.activeElement.blur()")
 	say("nothing to select", "document.querySelectorAll('#list [data-testid=sel]').length + ' ' + [...document.querySelectorAll('#list [data-testid=menu] [data-testid=select]')].every((e) => e.hidden)")
 	b.still()
 	if got := b.eval("document.getElementById('news-n').textContent"); got != unread {
@@ -197,6 +212,7 @@ func TestUITaskPage(t *testing.T) { //nolint:paralleltest // the browser tests s
 	say("done", archive)
 	pressTaskArchive(b, "Restore")
 	say("archived", taskPageRows)
+	say("archived, pages head", taskPagesHead)
 	b.navigate("/tasks?view=archived")
 	b.until("the archive", "document.querySelector('#list > li')")
 	say("the shelf's archive", "[...document.querySelectorAll('#list [data-testid=tname]')].map((e) => e.textContent).join(' | ')")
@@ -254,6 +270,7 @@ func TestUITaskPage(t *testing.T) { //nolint:paralleltest // the browser tests s
 	b.navigate("/tasks?project=proj&task=%2399")
 	b.until("no pages", "!document.getElementById('task-none').hidden")
 	say("no pages", "document.querySelector('#task-none strong').textContent + ' ' + document.getElementById('task-delete').textContent + ' ' + document.getElementById('task-archive').hidden")
+	say("no pages, head", taskPagesHead)
 	// Unreadable, what was drawn stays: it does not say there are no pages, or no such task. A page opened anew says why alone.
 	file := filepath.Join(s.Env["FLOE_DIR"], "tasks.json")
 	mended, err := os.ReadFile(file)
@@ -312,6 +329,9 @@ func TestUITaskPage(t *testing.T) { //nolint:paralleltest // the browser tests s
 }
 
 // taskPageShown tells a task's page drew its rows.
+// taskPagesHead says the heading of a task's pages, as it reads, and the count in its pill.
+const taskPagesHead = "(() => { const h = document.querySelector('#task-pages-head h2'); return h.textContent + ' (' + (h.querySelector('[data-testid=count]')?.textContent ?? 'no count') + ')'; })()"
+
 const taskPageShown = "!document.getElementById('task-head').hidden && document.querySelector('#list > li')"
 
 // taskPageWant is what TestUITaskPage reads, in the order it reads it.
@@ -321,6 +341,8 @@ nothing open: none / none
 url: /tasks?project=proj&task=%23130
 the list's keys:  ?project=proj
 head: #130 / doing / doing / proj / true / /tasks?project=proj
+pages head: Pages 4 (4) / Add / Add a page / true
+tab: task-up task-edit task-state task-parent-add task-child task-add-page title
 nothing to select: 0 true
 j: T n1 / n1, T d1 / d1, T i1 / i1, T r1 / r1
 whole: /tasks?project=proj&task=%23130 / {"order":["n1","d1","i1","r1"],"shown":["n1","d1","i1","r1"],"back":"/tasks?project=proj&task=%23130","at":{"slug":"r1","file":"","v":0}}
@@ -335,19 +357,21 @@ renamed whole: /tasks?project=proj&task=%23128 / {"order":["c2"],"shown":["c2"],
 of no rows: / / null
 done: Archive
 archived: [No category] | T x1
+archived, pages head: Pages 1 (1)
 the shelf's archive: #120
 folded, none chosen: true true
 while open: doing
 a tag: SPAN t
 doing has no archive button: none
 no pages: This task has no pages Delete the task true
+no pages, head: Pages (no count)
 unreadable, drawn: false false true
 unreadable, first: true true true
 unreadable, done: Archive
 no task: No task #999 true 0
 refused: doing false true`
 
-// The way up of a task's page, the bar's task list and h, is its project's list at the state the task is in now, whatever way it was
+// The way up of a task's page, its back link, the bar's task list and h, is its project's list at the state the task is in now, whatever way it was
 // come to; a state changed on the page takes it along, and the row the list opens with the focus on is the task's. The tab's list kept
 // is left as it was, which the list's own link goes to.
 func TestUITaskUp(t *testing.T) { //nolint:paralleltest // the browser tests share one Chrome, one at a time
@@ -371,6 +395,9 @@ func TestUITaskUp(t *testing.T) { //nolint:paralleltest // the browser tests sha
 	say := func(what string) {
 		t.Helper()
 		out = append(out, what+": "+b.eval(up))
+		if got := b.eval("document.getElementById('task-up').getAttribute('href')"); got != b.eval(up) {
+			t.Errorf("%s: the back link goes to %s, the bar's task list to %s", what, got, b.eval(up))
+		}
 	}
 	press := func(expr string) {
 		t.Helper()
@@ -425,6 +452,11 @@ func TestUITaskUp(t *testing.T) { //nolint:paralleltest // the browser tests sha
 	b.until("read again", up+" === '/tasks?project=proj'")
 	say("changed elsewhere, while open")
 
+	// By the bar's task list.
+	press("document.querySelector('#to-tasks')")
+	b.until("the list", "location.pathname === '/tasks' && !location.search.includes('task=') && document.activeElement.closest('#list')")
+	out = append(out, "by the bar: "+b.eval("location.search + ' ' + document.activeElement.querySelector('[data-testid=tname]').textContent"))
+
 	// By the URL, of a task of the other states.
 	b.navigate("/tasks?project=proj&task=%232")
 	b.until("the task's page", task2)
@@ -437,7 +469,7 @@ func TestUITaskUp(t *testing.T) { //nolint:paralleltest // the browser tests sha
 	press("document.querySelector('#list li[data-slug=a] [data-testid=task-tag]')")
 	b.until("the task's page", task1)
 	say("a badge")
-	press("document.querySelector('#to-tasks')")
+	press("document.querySelector('#task-up')")
 	b.until("the list", "location.pathname === '/tasks' && document.activeElement.closest('#list')")
 	out = append(out, "up from there: "+b.eval("location.search + ' ' + document.activeElement.querySelector('[data-testid=tname]').textContent + ' ' + document.getElementById('to-tasks').getAttribute('href')"))
 	b.navigate("/tasks?view=done&project=proj")
@@ -467,6 +499,7 @@ the bar's: /tasks?project=proj&view=done
 on it: ?view=done&project=proj #1
 changed elsewhere: /tasks?project=proj&view=todo
 changed elsewhere, while open: /tasks?project=proj
+by the bar: ?project=proj #1
 the URL, of a task done: /tasks?project=proj&view=done
 a badge: /tasks?project=proj&view=todo
 up from there: ?view=todo&project=proj #1 /tasks?view=todo&project=proj
