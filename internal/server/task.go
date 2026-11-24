@@ -20,7 +20,7 @@ func (s *Server) tasks(w http.ResponseWriter, r *http.Request) {
 // changeTasks writes pages and their tasks in one write (store.ChangeTasks), and answers each task and page as written.
 // What only a sender's mistake makes, which floe's own never send, is refused as such.
 func (s *Server) changeTasks(w http.ResponseWriter, r *http.Request) {
-	body, ok := s.readBody(w, r, maxBody)
+	body, ok := readBody(w, r, maxBody)
 	if !ok {
 		return
 	}
@@ -54,10 +54,6 @@ func (s *Server) changeTasks(w http.ResponseWriter, r *http.Request) {
 // beside taskProject is left unread. floe's own CLI and screen send taskProject only; count the keys if a client
 // comes to send both.
 func (s *Server) forgetTask(w http.ResponseWriter, r *http.Request) {
-	if !s.origins[r.Header.Get("Origin")] {
-		send(w, http.StatusForbidden, "forbidden origin")
-		return
-	}
 	q := r.URL.Query()
 	err := s.cfg.Store.ForgetTask(q.Get("taskProject"), q.Get("task"))
 	if errors.Is(err, store.ErrNotFound) {

@@ -196,7 +196,7 @@ func TestOldPathsGone(t *testing.T) {
 		"/api/pages/docs/pages",
 	} {
 		for _, method := range []string{http.MethodGet, http.MethodPost, http.MethodPatch, http.MethodPut, http.MethodDelete} {
-			want(t, e.do(t, method, path, ""), http.StatusNotFound, "not found")
+			want(t, e.do(t, method, path, "", "Origin", origin), http.StatusNotFound, "not found")
 		}
 	}
 	want(t, e.do(t, http.MethodGet, "/api/pages", ""), http.StatusOK, `"slug":"d"`)
@@ -464,7 +464,7 @@ func TestManagementPageAndFrame(t *testing.T) {
 	}
 	// Not the frame, whose messages say "not found" too.
 	for _, w := range []*httptest.ResponseRecorder{
-		e.do(t, http.MethodPost, "/", ""), e.do(t, http.MethodGet, "/a/none/?raw", ""), e.do(t, http.MethodGet, "/a/gone/?raw", ""),
+		e.do(t, http.MethodPost, "/", "", "Origin", origin), e.do(t, http.MethodGet, "/a/none/?raw", ""), e.do(t, http.MethodGet, "/a/gone/?raw", ""),
 	} {
 		if w.Code != http.StatusNotFound || w.Body.String() != "not found" {
 			t.Errorf("answered %d %.40q, want 404 not found", w.Code, w.Body)

@@ -35,7 +35,7 @@ type Themes struct {
 // theme of the drawing of now, and the task mode. Pages stored already keep the default they were stored with: none is
 // drawn again. A body of no key writes nothing, and answers the settings as they are.
 func (s *Server) putSettings(w http.ResponseWriter, r *http.Request) {
-	body, ok := s.readBody(w, r, maxBody)
+	body, ok := readBody(w, r, maxBody)
 	if !ok {
 		return
 	}
@@ -85,7 +85,7 @@ func (s *Server) pickTheme(w http.ResponseWriter, r *http.Request) {
 		notFound(w)
 		return
 	}
-	body, ok := s.readBody(w, r, maxBody)
+	body, ok := readBody(w, r, maxBody)
 	if !ok {
 		return
 	}

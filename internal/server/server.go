@@ -273,7 +273,11 @@ func (s *Server) Handler() http.Handler {
 
 // check refuses what no route should see. A malformed request target (//) is a client error. A path
 // that is not clean (.., // or an encoded dot segment after decoding) is 404 here, because ServeMux
-// would redirect it to its cleaned form: path safety is link.Resolve's job, not the router's.
+// would redirect it to its cleaned form: path safety is link.Resolve's job, not the router's. Of every method but
+// GET and HEAD, whatever it names, a request is taken from the management page and the CLI alone: other sites and the
+// sandboxed pages (Origin: null) are refused by the exact Origin.
+// LIMIT: 127.0.0.1 is open to every user of the machine, and anyone can fake Origin. Do not run floe
+// on a shared machine.
 func (s *Server) check(next http.Handler) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		if !s.hosts[r.Host] {
@@ -286,6 +290,10 @@ func (s *Server) check(next http.Handler) http.Handler {
 		}
 		if r.URL.Path != cleanPath(r.URL.Path) {
 			notFound(w)
+			return
+		}
+		if r.Method != http.MethodGet && r.Method != http.MethodHead && !s.origins[r.Header.Get("Origin")] {
+			send(w, http.StatusForbidden, "forbidden origin")
 			return
 		}
 		next.ServeHTTP(w, r)
