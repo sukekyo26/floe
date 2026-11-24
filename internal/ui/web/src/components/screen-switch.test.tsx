@@ -6,6 +6,7 @@ import { testBoot } from '@/components/test-boot';
 import type { Boot } from '@/config/boot';
 import { createListQuery } from '@/stores/list-query';
 import type { Screen } from '@/types/screen';
+import type { Back } from '@/utils/back';
 
 // A list query of a tab that kept the task list it was last on, the page list none
 const query = (search: string) => {
@@ -29,7 +30,7 @@ const query = (search: string) => {
   made.sync();
   return made;
 };
-const draw = (screen: Screen, ups: { listUp?: Up; taskUp?: Up } = {}) => {
+const draw = (screen: Screen, ups: { from?: Back['to']; listUp?: Up; taskUp?: Up } = {}) => {
   testBoot();
   return renderToString(<ScreenSwitch screen={screen} {...ups} query={query('?project=p&view=todo')} />);
 };
@@ -55,27 +56,25 @@ describe(ScreenSwitch, () => {
     );
   });
 
-  it('marks neither as the screen shown on a page whole, gone at 40rem or less, and sends the one it was opened from where its up says', () => {
+  it('marks the list a page whole was opened from, gone at 40rem or less, and sends the one it was opened from where its up says', () => {
     expect.assertions(5);
-    const none = /aria-current/;
-    expect(draw('frame')).not.toMatch(none);
-    expect(draw('frame')).toMatch(/^<nav id="screens"[^>]*class="[^"]*narrow:hidden/);
+    expect(draw('frame', { from: 'pages' })).toMatch(/^<nav id="screens"[^>]*class="[^"]*narrow:hidden/);
     expect(draw('list')).not.toContain('narrow:hidden');
-    expect(draw('frame', { listUp: up('/?view=fav') })).toMatch(
-      /<a id="to-list" href="\/\?view=fav"[^>]*class="[^"]*text-fg.*<a id="to-tasks" href="\/tasks\?[^"]*project=p/,
+    expect(draw('frame', { from: 'pages', listUp: up('/?view=fav') })).toMatch(
+      /<a id="to-list" href="\/\?view=fav" aria-current="page".*<a id="to-tasks" href="\/tasks\?[^"]*project=p[^"]*"(?![^>]*aria-current)/,
     );
-    expect(draw('frame', { taskUp: up('/tasks?view=done') })).toMatch(
-      /<a id="to-list" href="\/".*<a id="to-tasks" href="\/tasks\?view=done"[^>]*class="[^"]*text-fg/,
+    expect(draw('frame', { from: 'tasks', taskUp: up('/tasks?view=done') })).toMatch(
+      /<a id="to-list" href="\/"(?![^>]*aria-current).*<a id="to-tasks" href="\/tasks\?view=done" aria-current="page"/,
     );
+    expect(draw('frame', { from: 'task' })).toMatch(/<a id="to-tasks"[^>]*aria-current="page"/);
   });
 
-  it('draws the screen shown alone on the thumb, the other muted, and neither of them on a page whole', () => {
-    expect.assertions(5);
+  it('draws the screen shown alone on the thumb, the other muted on the track', () => {
+    expect.assertions(4);
     const html = draw('taskList');
     expect(html).toMatch(/<nav id="screens"[^>]*class="[^"]*\bbg-line\b/);
     expect(html).toMatch(/id="to-list"[^>]*class="[^"]*font-semibold[^"]*text-muted[^"]*"/);
     expect(html).not.toMatch(/id="to-list"[^>]*class="[^"]*(bg-frame-bg|shadow)/);
     expect(html).toMatch(/id="to-tasks"[^>]*class="[^"]*font-semibold[^"]*bg-frame-bg[^"]*text-fg[^"]*shadow-sm/);
-    expect(draw('frame')).not.toMatch(/bg-frame-bg|shadow|text-muted/);
   });
 });

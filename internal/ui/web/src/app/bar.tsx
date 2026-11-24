@@ -8,9 +8,12 @@ import { ServerState } from '@/components/server-state';
 import { News } from '@/features/page-list/components/news';
 import { t } from '@/lib/t';
 import type { Screen } from '@/types/screen';
+import type { Back } from '@/utils/back';
 
 interface BarProps {
   readonly screen: Screen;
+  // from is where a page whole goes back to, which the switch stands on
+  readonly from?: Back['to'] | undefined;
   readonly listUp?: Up | undefined;
   readonly taskUp?: Up | undefined;
   // search is the list's search, in the bar's middle: the list's, and a page whole's to look for its page not found;
@@ -35,6 +38,7 @@ interface BarProps {
 // them to the lists, whose way to the search is at 40rem or less alone. They stay in the DOM, hidden
 export function Bar({
   screen,
+  from,
   listUp,
   taskUp,
   search,
@@ -54,7 +58,7 @@ export function Bar({
         <Brand href={brand} markAlone={frame} />
         <ServerState />
         {back}
-        <ScreenSwitch screen={screen} listUp={listUp} taskUp={taskUp} />
+        <ScreenSwitch screen={screen} from={from} listUp={listUp} taskUp={taskUp} />
         {lead}
         {search}
         <div data-testid="bar-end" className="ml-auto flex flex-none items-center gap-2.5">
