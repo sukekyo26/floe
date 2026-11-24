@@ -114,24 +114,20 @@ func partURL(name string) string { return "floe:///parts/" + name + ".json" }
 // schemas the parts share, <name>.json beside them. A part, a look and a shared schema of one name, here or in
 // the base but of the same kind, are refused (clashes).
 func (k *Kit) readParts(d Dir) error {
-	dirs, err := entries(d, ".", true)
+	l, err := entries(d, ".")
 	if err != nil {
 		return err
 	}
 	// LIMIT: a file right in the directory of parts but a <name>.json is not read, and nothing says so; refuse one if a
 	// part's files put there come to go unseen.
-	files, err := entries(d, ".", false)
-	if err != nil {
-		return err
-	}
 	var shared []string
-	for _, file := range files {
+	for _, file := range l.files {
 		if name, ok := strings.CutSuffix(file, ".json"); ok {
 			shared = append(shared, name)
 		}
 	}
-	found := k.clashes(d, dirs, shared)
-	for _, name := range dirs {
+	found := k.clashes(d, l.dirs, shared)
+	for _, name := range l.dirs {
 		if !refused(found, d, name) {
 			if failed := found.Add(k.readPart(d, name)); failed != nil {
 				return failed
@@ -353,20 +349,11 @@ func (k *Kit) readPart(d Dir, name string) error {
 
 // unreadIn returns the files and directories (with a / after) of the directory dir of d but read, sorted.
 func unreadIn(d Dir, dir string, read ...string) ([]string, error) {
-	files, err := entries(d, dir, false)
+	l, err := entries(d, dir)
 	if err != nil {
 		return nil, err
 	}
-	dirs, err := entries(d, dir, true)
-	if err != nil {
-		return nil, err
-	}
-	for _, sub := range dirs {
-		files = append(files, sub+"/")
-	}
-	files = slices.DeleteFunc(files, func(f string) bool { return slices.Contains(read, f) })
-	slices.Sort(files)
-	return files, nil
+	return l.unread(read...), nil
 }
 
 // baseDir returns the file of the part, look or shared schema of the base of k named so, and false for none.

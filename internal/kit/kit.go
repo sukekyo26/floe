@@ -385,35 +385,48 @@ func (k *Kit) isPartOrLook(name string) bool {
 	return part || look
 }
 
-// entries returns the names of the directories (dirs) or files of the directory dir of d ("." for d
-// itself), those starting with a dot left out, sorted; none without an FS. A symlink to a file is that file,
-// as the system follows it (dotfiles link files into a directory of their own); one to a directory is
+// listed is what a directory holds: the names of its directories and of its files, each sorted.
+type listed struct{ dirs, files []string }
+
+// unread returns the files and directories (with a / after) of l but read, sorted.
+func (l listed) unread(read ...string) []string {
+	names := slices.Clone(l.files)
+	for _, sub := range l.dirs {
+		names = append(names, sub+"/")
+	}
+	names = slices.DeleteFunc(names, func(f string) bool { return slices.Contains(read, f) })
+	slices.Sort(names)
+	return names
+}
+
+// entries returns what the directory dir of d ("." for d itself) holds, listed once, the names starting with a dot
+// left out; nothing without an FS. With mistakes it returns the names without one too. A symlink to a file is that
+// file, as the system follows it (dotfiles link files into a directory of their own); one to a directory is
 // refused, as floe reads the directories it holds as they are; one that leads nowhere cannot be read.
 // LIMIT: a directory to list that is a FIFO or the like is told by kit_not_file, whose "put a regular file here"
 // does not fit where a directory belongs: as it is, only a template's assets/; made so since it was looked at, any
 // directory listed. Pass CannotRead the kind of what belongs there if a message asking for a directory is needed.
-func entries(d Dir, dir string, dirs bool) ([]string, error) {
+func entries(d Dir, dir string) (listed, error) {
+	var l listed
 	if d.FS == nil {
-		return nil, nil
+		return l, nil
 	}
 	all, err := fs.ReadDir(d.FS, dir)
 	if err != nil {
-		return nil, usererr.CannotRead(d.path(dir), err)
+		return l, usererr.CannotRead(d.path(dir), err)
 	}
-	var names []string
 	var found usererr.List
 	for _, e := range all {
 		if files.Hidden(e.Name()) {
 			continue
 		}
 		at := d.path(dir, e.Name())
-		isDir := e.IsDir()
 		if e.Type()&fs.ModeSymlink != 0 {
 			fi, err := fs.Stat(d.FS, path.Join(dir, e.Name()))
 			switch {
 			case err != nil:
 				if failed := found.Add(usererr.CannotRead(at, err)); failed != nil {
-					return nil, failed
+					return listed{}, failed
 				}
 				continue
 			case fi.IsDir():
@@ -421,11 +434,13 @@ func entries(d Dir, dir string, dirs bool) ([]string, error) {
 				continue
 			}
 		}
-		if isDir == dirs {
-			names = append(names, e.Name())
+		if e.IsDir() {
+			l.dirs = append(l.dirs, e.Name())
+		} else {
+			l.files = append(l.files, e.Name())
 		}
 	}
-	return names, found.Err()
+	return l, found.Err()
 }
 
 // readFile returns the file name of the directory dir of d as it is, and false when there is none: the byte

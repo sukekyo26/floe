@@ -58,12 +58,12 @@ func (t *Theme) Unread() []string { return slices.Clone(t.unread) }
 func (k *Kit) readThemes(d Dir) error {
 	// LIMIT: a file right in the directory of themes is not read, and nothing says so; refuse one if a theme's files
 	// put there come to go unseen.
-	dirs, err := entries(d, ".", true)
+	l, err := entries(d, ".")
 	if err != nil {
 		return err
 	}
 	var found usererr.List
-	for _, name := range dirs {
+	for _, name := range l.dirs {
 		if e := k.refusedName(d.Name, KindTheme, name, false); e != nil {
 			found = append(found, e)
 			continue
@@ -86,7 +86,7 @@ func (k *Kit) readTheme(d Dir, name string) (*Theme, error) {
 		partsCSS: map[string][]byte{}, unread: nil, files: nil,
 	}
 	d = d.recording()
-	all, err := entries(d, name, false)
+	l, err := entries(d, name)
 	if err != nil {
 		return nil, err
 	}
@@ -94,7 +94,7 @@ func (k *Kit) readTheme(d Dir, name string) (*Theme, error) {
 		return nil, err
 	}
 	read := []string{themeYAML}
-	for _, file := range all {
+	for _, file := range l.files {
 		stem, ok := strings.CutSuffix(file, ".css")
 		if !ok || stem != "base" && stem != "palette" && stem != "markdown" && !k.isPartOrLook(stem) {
 			continue
@@ -115,9 +115,7 @@ func (k *Kit) readTheme(d Dir, name string) (*Theme, error) {
 			t.partsCSS[stem] = src
 		}
 	}
-	if t.unread, err = unreadIn(d, name, read...); err != nil {
-		return nil, err
-	}
+	t.unread = l.unread(read...)
 	slices.SortStableFunc(read, func(a, b string) int { return themeRank(a) - themeRank(b) })
 	t.files = inOrder(read, d)
 	return t, nil
@@ -225,12 +223,12 @@ const templatesURL = "floe://templates/"
 func (k *Kit) readTemplates(d Dir, partsRead bool) error {
 	// LIMIT: a file right in the directory of templates is not read, and nothing says so until a page names the template
 	// it was meant for (unknown template); refuse one if that comes to cost more than a README of a repository there.
-	dirs, err := entries(d, ".", true)
+	l, err := entries(d, ".")
 	if err != nil {
 		return err
 	}
 	var found usererr.List
-	for _, name := range dirs {
+	for _, name := range l.dirs {
 		if e := k.refusedName(d.Name, KindTemplate, name, false); e != nil {
 			found = append(found, e)
 			continue
@@ -369,20 +367,16 @@ type assetsOf struct {
 // walk checks the files of the directory at under the assets, then those of its directories.
 func (a *assetsOf) walk(at string) error {
 	d := Dir{FS: a.files, Name: a.dir, read: nil}
-	names, err := entries(d, at, false)
+	l, err := entries(d, at)
 	if failed := a.found.Add(err); failed != nil {
 		return failed
 	}
-	for _, file := range names {
+	for _, file := range l.files {
 		if failed := a.found.Add(a.check(path.Join(at, file))); failed != nil {
 			return failed
 		}
 	}
-	subs, err := entries(d, at, true)
-	if failed := a.found.Add(err); failed != nil {
-		return failed
-	}
-	for _, s := range subs {
+	for _, s := range l.dirs {
 		if err := a.walk(path.Join(at, s)); err != nil {
 			return err
 		}
