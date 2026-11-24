@@ -4,6 +4,7 @@ import { t } from '@/lib/t';
 import { deleteTask } from '@/lib/tasks';
 import { notice as pageNotice, type Notice } from '@/stores/notice';
 import { pages as pagePages, type Pages } from '@/stores/pages';
+import { pressOnce, type PressOnce } from '@/stores/press-once';
 import { taskWrites, type TaskWrites } from '@/stores/tasks';
 import { toasts as pageToasts, type Toasts } from '@/stores/toasts';
 import { undoToast as pageUndo, type UndoToast } from '@/stores/undo-toast';
@@ -41,6 +42,7 @@ interface Deps {
   undoToast?: UndoToast;
   client?: Client;
   places?: FamilyPlaces;
+  press?: PressOnce;
 }
 
 export interface TaskPageActs {
@@ -54,10 +56,14 @@ export interface TaskPageActs {
     answered: (written: number | null) => void,
   ) => Promise<void>;
   // archive archives the task or gives it back as done, of the rev read: a second press of a double one (detail > 1)
-  // and a press while one is sent write nothing
+  // and a press for what is being written write nothing
+  // LIMIT: Enter held on the button, or pressed twice, turns the task and back, as the keys (detail 0) tell no double
+  // press and the answer turns the button. Tell a double press of theirs by its time if that comes to trouble someone
   archive: (detail: number, task: TaskOf, archived: boolean) => Promise<void>;
   // unlink takes child off its parent, of the rev read, with the way back; pressed again while it goes, nothing more.
   // From the keys the focus goes to the way back, else, once read again, to the part's button unless the card has it
+  // LIMIT: taken off again from the keys before the read of one by the mouse, the focus goes to the part's button, off
+  // the second way back. Give it only while nothing has the focus if that comes to trouble someone
   unlink: (child: TaskOf, parent: string, page: string, fromKeys: boolean) => Promise<void>;
   // forget removes the row of a task of no page: '' once removed (gone already too), else the reason
   forget: (project: string, name: string) => Promise<string>;
@@ -74,10 +80,8 @@ export function createTaskPageActs({
   undoToast = pageUndo,
   client = pageClient,
   places = places0,
+  press = pressOnce,
 }: Deps = {}): TaskPageActs {
-  let archiving = false;
-  const unlinking = new Set<string>();
-
   // LIMIT: a write of the screen's own since, its state say, refuses it too. Take back the screen's own writes too if
   // that comes to trouble someone
   const parentBack = (said: string, back: ParentBack, focus = false) => {
@@ -124,14 +128,17 @@ export function createTaskPageActs({
       notice.say(why === null ? '' : t('ui_state_failed', why));
     },
     archive: async (detail, task, archived) => {
-      if (detail > 1 || archiving) return;
-      archiving = true;
+      if (detail > 1) return;
+      const state = archived ? 'archived' : 'done';
       try {
-        const res = await writes.writeTask(task.project, task.name, {
-          new: false,
-          rev: pages.readRev(task.project, task.name),
-          state: archived ? 'archived' : 'done',
-        });
+        const res = await press(`archive task ${task.project}\n${task.name}`, state, () =>
+          writes.writeTask(task.project, task.name, {
+            new: false,
+            rev: pages.readRev(task.project, task.name),
+            state,
+          }),
+        );
+        if (!res) return;
         if (!res.ok) {
           if (res.status !== 409) await pages.load();
           notice.say(t('ui_save_failed', res.text));
@@ -142,19 +149,18 @@ export function createTaskPageActs({
       } catch (err) {
         await pages.load();
         notice.say(t('ui_save_failed', err instanceof Error ? err.message : String(err)));
-      } finally {
-        archiving = false;
       }
     },
     unlink: async (child, parent, page, fromKeys) => {
-      if (unlinking.has(child.name)) return;
-      unlinking.add(child.name);
       try {
-        const res = await writes.writeTask(child.project, child.name, {
-          new: false,
-          rev: pages.readRev(child.project, child.name),
-          parent: '',
-        });
+        const res = await press(`unlink ${child.project}\n${child.name}`, '', () =>
+          writes.writeTask(child.project, child.name, {
+            new: false,
+            rev: pages.readRev(child.project, child.name),
+            parent: '',
+          }),
+        );
+        if (!res) return;
         if (!res.ok) {
           notice.say(t('ui_save_failed', res.text));
           return;
@@ -169,8 +175,6 @@ export function createTaskPageActs({
         if (!fromKeys && !places.inFamily()) places.part(up);
       } catch (err) {
         notice.say(t('ui_save_failed', err instanceof Error ? err.message : String(err)));
-      } finally {
-        unlinking.delete(child.name);
       }
     },
     forget: async (project, name) => {

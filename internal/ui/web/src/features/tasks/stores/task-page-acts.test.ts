@@ -6,6 +6,7 @@ import type { Client } from '@/lib/api-client';
 import type { TasksAnswer, TasksChange } from '@/lib/tasks';
 import type { Notice } from '@/stores/notice';
 import type { Pages } from '@/stores/pages';
+import { createPressOnce } from '@/stores/press-once';
 import type { TaskWrites } from '@/stores/tasks';
 import { createToasts } from '@/stores/toasts';
 import type { Undo } from '@/stores/undo-toast';
@@ -13,7 +14,8 @@ import type { TaskOf } from '@/types/task';
 
 const kid: TaskOf = { project: 'p', name: '#2', state: 'doing', at: '', rev: 4, pages: [], archived: [], children: [] };
 
-function made(answers: Partial<TasksAnswer>[], deleted = 200) {
+// slow: the reads of the list never end
+function made(answers: Partial<TasksAnswer>[], { deleted = 200, slow = false } = {}) {
   testBoot();
   const log: string[] = [];
   const undos: Undo[] = [];
@@ -33,7 +35,7 @@ function made(answers: Partial<TasksAnswer>[], deleted = 200) {
   const pages = {
     load: () => {
       log.push('load');
-      return Promise.resolve();
+      return slow ? new Promise<void>(() => undefined) : Promise.resolve();
     },
     readRev: () => 4,
   } as unknown as Pages;
@@ -52,6 +54,7 @@ function made(answers: Partial<TasksAnswer>[], deleted = 200) {
       return 1;
     },
     client,
+    press: createPressOnce(),
     places: {
       kin: () => true,
       part: (up) => log.push(`part ${String(up)}`) > 0,
@@ -136,6 +139,28 @@ describe(createTaskPageActs, () => {
     ]);
   });
 
+  it('takes a child off, back and off again before the reads end, and archives and restores a task so', async () => {
+    expect.assertions(1);
+    const { acts, log, undos } = made([], { slow: true });
+    const ended = new Promise((go) => setTimeout(go, 5));
+    void acts.unlink(kid, '#1', '#1', false);
+    await ended;
+    await undos[0]?.undo();
+    void acts.unlink(kid, '#1', '#1', false);
+    await Promise.resolve();
+    void acts.archive(1, kid, true);
+    await new Promise((go) => setTimeout(go, 5));
+    void acts.archive(1, kid, false);
+    await new Promise((go) => setTimeout(go, 5));
+    expect(log.filter((x) => x.startsWith('write'))).toStrictEqual([
+      'write #2 {"new":false,"rev":4,"parent":""}',
+      'write #2 {"new":false,"rev":9,"parent":"#1","parentNew":false}',
+      'write #2 {"new":false,"rev":4,"parent":""}',
+      'write #2 {"new":false,"rev":4,"state":"archived"}',
+      'write #2 {"new":false,"rev":4,"state":"done"}',
+    ]);
+  });
+
   it('takes the parent back of the rev the write answered, and says a write that could not go', async () => {
     expect.assertions(2);
     const { acts, log, undos } = made([{ rev: 5 }, {}, { status: -1 }]);
@@ -150,7 +175,7 @@ describe(createTaskPageActs, () => {
 
   it('forgets a task gone already as removed, and tells why a refusal', async () => {
     expect.assertions(2);
-    await expect(made([], 404).acts.forget('p', '#1')).resolves.toBe('');
-    await expect(made([], 400).acts.forget('p', '#1')).resolves.toBe('it has a page');
+    await expect(made([], { deleted: 404 }).acts.forget('p', '#1')).resolves.toBe('');
+    await expect(made([], { deleted: 400 }).acts.forget('p', '#1')).resolves.toBe('it has a page');
   });
 });
