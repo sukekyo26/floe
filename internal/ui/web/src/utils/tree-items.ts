@@ -19,7 +19,6 @@ const noted = (l: Listing | Error): boolean => l instanceof Error || l.more > 0 
 
 // treeItems is the rows of the directory dir of the folder slug, d deep, in the order drawn: its directories, each
 // followed by its own rows when open, then its pages, then its note. A directory not read yet has none until it is
-// (ui.html treeRows)
 export function treeItems(
   slug: string,
   dir: string,

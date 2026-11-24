@@ -10,9 +10,9 @@ const OF_VIEW: Partial<Record<string, Empty>> = {
   archived: 'empty-archived',
 };
 
-// emptyOf is what the list says with no row to draw (ui.html renderList): no page at all (how to add one, as listEmpty
-// says), all of them archived (the way to them), none of the view, or none the shelf and the search leave. shown is
-// what they leave; read, whether a list was taken yet: till then, it says nothing (a read that failed has no list)
+// emptyOf is what the list says with no row to draw: no page at all (how to add one, as listEmpty says), all of them
+// archived (the way to them), none of the view, or none the shelf and the search leave. shown is what they leave; read,
+// whether a list was taken yet: till then, it says nothing (a read that failed has no list)
 export function emptyOf(
   items: readonly Page[],
   state: ListState,

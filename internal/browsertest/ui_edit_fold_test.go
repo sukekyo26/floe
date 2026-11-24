@@ -56,10 +56,12 @@ func TestUIEditFold(t *testing.T) { //nolint:paralleltest // the browser tests s
 		b.eval(fmt.Sprintf(fold, was))
 	}
 	// Folded and saved: saved open, a fold not opened by the refusal would show open all the same. Each opening hides the error.
+	// By a real key, from a field outside the fold: pressed by script, the fold is drawn open after the browser looked for the refused field.
 	save := func(what string) {
 		t.Helper()
 		b.eval(fmt.Sprintf(fold, "false"))
-		b.eval("document.getElementById('edit-submit').click()")
+		b.eval("document.getElementById('edit-name').focus()")
+		b.pressKey(kb.Enter)
 		b.until(what, "document.getElementById('edit-more').open || !document.getElementById('edit-error').hidden")
 	}
 	const foldNow = "document.getElementById('edit-more').open + ' / ' + document.getElementById('edit-more-now').textContent"
@@ -101,7 +103,6 @@ func TestUIEditFold(t *testing.T) { //nolint:paralleltest // the browser tests s
 	open()
 	field("edit-name", "Another")
 	b.eval("window.fetch = (url, init) => (init?.method === 'PATCH' ? Promise.resolve(new Response('no', { status: 500 })) : window.cutFetch(url, init))")
-	b.eval("document.getElementById('edit-name').focus()")
 	save("title refused")
 	say("title refused", state)
 	b.eval("window.fetch = window.cutFetch")

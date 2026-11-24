@@ -32,9 +32,9 @@ interface ReaderPaneProps {
   readonly note?: Notes;
 }
 
-// ReaderPane is the page open beside the list (ui.html drawReader, readInto): its head, its tags, and the page in an
-// iframe loaded in place of its history entry, or the words of none chosen or of a link's file gone. It is always there:
-// drawn anew, its iframe would load the page again
+// ReaderPane is the page open beside the list: its head, its tags, and the page in an iframe loaded in place of its
+// history entry, or the words of none chosen or of a link's file gone. It is always there: drawn anew, its iframe would
+// load the page again
 export function ReaderPane({
   at,
   page: a,
@@ -74,7 +74,7 @@ export function ReaderPane({
         hidden={!a && what === null}
         className={`flex h-lhead flex-none items-center gap-2.5 border-b border-line px-4 [&>#shelf-what]:max-w-[calc(100%-11rem)] ${a ? '' : 'narrow:hidden'}`}
       >
-        {/* The filters' words leave room for the bar's buttons, however long (ui.html .rhead > #shelf-what) */}
+        {/* The filters' words leave room for the bar's buttons, however long */}
         {what}
         <a
           id="read-title"
@@ -99,7 +99,7 @@ export function ReaderPane({
       <iframe
         ref={frame}
         id="read-frame"
-        // Before any page, as ui.html's: useReplacedFrame writes each one loaded after
+        // Before any page: useReplacedFrame writes each one loaded after
         data-loaded="about:blank"
         title={name}
         data-slug={at?.slug}

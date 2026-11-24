@@ -34,9 +34,9 @@ export interface RowPressDeps {
   readonly assign?: ((url: string) => void) | undefined;
 }
 
-// rowPresses is what a row's title does as pressed and as Enter lands on it (ui.html openRow, 6937): beside the list,
-// or whole, the rows drawn kept for j and k and the way back. What is open beside the list is read as it is pressed,
-// so that a double press goes whole though the list is not drawn anew between the two
+// rowPresses is what a row's title does as pressed and as Enter lands on it: beside the list, or whole, the rows drawn
+// kept for j and k and the way back. What is open beside the list is read as it is pressed, so that a double press goes
+// whole though the list is not drawn anew between the two
 export function rowPresses({
   selecting,
   drawn,
@@ -100,8 +100,8 @@ export function useRowPress({ selecting, drawn, openPage, order, menus, narrow, 
   );
 }
 
-// pageTitlePress is a press on the title of a page's row, whichever list (ui.html row): a folder's opens and closes its
-// tree, its URL leading to the list with it open for a new tab; any other's is the row's press
+// pageTitlePress is a press on the title of a page's row, whichever list: a folder's opens and closes its tree, its URL
+// leading to the list with it open for a new tab; any other's is the row's press
 export function pageTitlePress(
   a: Page,
   presses: RowPresses,

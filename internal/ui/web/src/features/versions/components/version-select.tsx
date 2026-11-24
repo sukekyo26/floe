@@ -18,9 +18,8 @@ interface VersionSelectProps {
   readonly versions?: Versions;
 }
 
-// VersionSelect is the choice of the versions of the page shown (ui.html drawVersion, showVersion): newest first, the
-// latest's words told, and closed the number alone. It is always there, hidden while nothing is to be chosen: drawn
-// anew, an open choice would close
+// VersionSelect is the choice of the versions of the page shown: newest first, the latest's words told, and closed the
+// number alone. It is always there, hidden while nothing is to be chosen: drawn anew, an open choice would close
 export function VersionSelect({ at, page, framed = false, versions = sharedVersions }: VersionSelectProps) {
   const state = useStore(versions.state);
   const select = useRef<HTMLSelectElement>(null);

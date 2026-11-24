@@ -52,7 +52,7 @@ export function ListRoute() {
   useKeys(keys);
 
   // What the list is narrowed to stands in the list's head while the list shows, else in the head of the page beside
-  // it (ui.html 4868–4869); hidden, in neither, so that the page's head goes with no page picked
+  // it; hidden, in neither, so that the page's head goes with no page picked
   const what = <ListWhat onShow={showShelf} />;
   return (
     <>

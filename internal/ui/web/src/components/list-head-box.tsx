@@ -1,7 +1,7 @@
 import type { ReactNode } from 'react';
 
-// ListHeadBox is the head over the rows of a list (ui.html .lhead), of the page list and the task list: what narrows
-// it and how many, or, while pages are selected, the bulk bar alone on the ground of the rows selected
+// ListHeadBox is the head over the rows of a list, of the page list and the task list: what narrows it and how many,
+// or, while pages are selected, the bulk bar alone on the ground of the rows selected
 export function ListHeadBox({ hidden = false, children }: { readonly hidden?: boolean; readonly children: ReactNode }) {
   return (
     <div

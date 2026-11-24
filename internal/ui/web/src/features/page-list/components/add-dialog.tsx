@@ -15,8 +15,8 @@ export interface AddDialogProps {
   readonly add?: AddLink;
 }
 
-// AddDialog registers a file or a folder by its path (ui.html #add-dialog): the server tells one from the other. A
-// refusal is said in the modal, which stays open; what was typed stays as it closes unsent
+// AddDialog registers a file or a folder by its path: the server tells one from the other. A refusal is said in the
+// modal, which stays open; what was typed stays as it closes unsent
 export function AddDialog({ open, onClosed, add = pageAddLink }: AddDialogProps) {
   const hold = useHold();
   const values = useStore(add.values);
@@ -53,7 +53,7 @@ export function AddDialog({ open, onClosed, add = pageAddLink }: AddDialogProps)
             data-testid="path"
             className={`${TEXT} font-mono`}
             required
-            // The field the modal focuses as it opens (Dialog), as ui.html's autofocus does
+            // The field the modal focuses as it opens (Dialog)
             data-autofocus=""
             spellCheck={false}
             placeholder="/home/you/project/coverage/index.html"

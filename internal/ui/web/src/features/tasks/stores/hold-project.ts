@@ -12,12 +12,12 @@ interface Deps {
   boot?: () => Boot;
 }
 
-// holdProject keeps the task list's project and its URL as the tasks are read (ui.html renderTaskList 3916–3953): no
-// project asked, the one it opens with is put in the list's query the first time one is found, and stays, so that a
-// task come into progress later does not change the list under the viewer; the viewer's project is kept the first
-// time the tasks are read, if it is one there is; and the URL and the tab's query are written each time they change
-// with the tasks read. Unreadable, nothing is written: the screen shows what was kept, which may be gone. The one place
-// that writes the task list's URL. It returns what stops it
+// holdProject keeps the task list's project and its URL as the tasks are read: no project asked, the one it opens with
+// is put in the list's query the first time one is found, and stays, so that a task come into progress later does not
+// change the list under the viewer; the viewer's project is kept the first time the tasks are read, if it is one there
+// is; and the URL and the tab's query are written each time they change with the tasks read. Unreadable, nothing is
+// written: the screen shows what was kept, which may be gone. The one place that writes the task list's URL. It returns
+// what stops it
 export function holdProject({
   query = listQuery,
   pages = pagePages,

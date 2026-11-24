@@ -15,8 +15,7 @@ export interface Written {
 
 export interface ThemeWrites {
   // chooseTheme writes the default theme, or a page's (page): a page's is said and the list read, held, before the
-  // caller closes the modal (S427: ui.html closed it first and read after, outside the hold); the default's is told
-  // to the settings (saved) and said, the modal left open on its list
+  // caller closes the modal; the default's is told to the settings (saved) and said, the modal left open on its list
   chooseTheme: (call: {
     page: Page | null;
     theme: string;

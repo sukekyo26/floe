@@ -17,7 +17,7 @@ export function ChipGroup({ id, boxId, title, hidden, children }: ChipGroupProps
       <h2 className="m-0 mb-[0.3rem] ml-[0.65rem] text-label leading-[1.2] font-semibold tracking-[0.08em] text-muted">
         {title}
       </h2>
-      {/* oxlint-disable-next-line jsx-a11y/prefer-tag-over-role -- a fieldset would draw a box and a legend; ui.html's group of buttons */}
+      {/* oxlint-disable-next-line jsx-a11y/prefer-tag-over-role -- a fieldset would draw a box and a legend */}
       <div id={boxId} role="group" aria-label={title} className="grid grid-cols-[minmax(0,1fr)] gap-1">
         {children}
       </div>

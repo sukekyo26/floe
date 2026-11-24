@@ -100,9 +100,9 @@ export interface BarActionsProps {
   readonly actions?: PageActions;
 }
 
-// BarActions is the bar over a page (ui.html drawActions): its diff, a folder's page's path, download, open, archive,
-// star and menu. A folder's page holds no state of its own: no menu, and what the bar has stays there. In the frame,
-// under 40rem, a bar with a menu folds download, open, archive and star into it
+// BarActions is the bar over a page: its diff, a folder's page's path, download, open, archive, star and menu. A
+// folder's page holds no state of its own: no menu, and what the bar has stays there. In the frame, under 40rem, a bar
+// with a menu folds download, open, archive and star into it
 export function BarActions({
   id,
   place,
@@ -120,7 +120,7 @@ export function BarActions({
   const title = a.title ?? a.slug;
   const folds = place === 'frame' && !file ? 'wide' : 'shown';
   return (
-    // The search's foot tells whose its buttons are (ui.html drawFindBar)
+    // The search's foot tells whose its buttons are
     <span id={id} data-slug={place === 'find' ? a.slug : undefined} className="flex items-center gap-0.5">
       <IconButton
         testid="diff-open"

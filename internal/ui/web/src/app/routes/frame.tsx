@@ -32,10 +32,10 @@ import type { Page } from '@/types/page';
 import { backOf } from '@/utils/back';
 import { rawHref } from '@/utils/page-urls';
 
-// FrameRoute is a page whole, /a/{slug}/ (ui.html renderFrame and the frame's start): the bar of the page's own (its way
-// back, name, version and actions), its tags, a folder's tree, the notes of its versions, and the page, its diff or the
-// words of none found, with the modals every screen opens. Nothing of the page shows before the list is read once: drawn
-// before, a page there would show as not found for a moment
+// FrameRoute is a page whole, /a/{slug}/: the bar of the page's own (its way back, name, version and actions), its
+// tags, a folder's tree, the notes of its versions, and the page, its diff or the words of none found, with the modals
+// every screen opens. Nothing of the page shows before the list is read once: drawn before, a page there would show as
+// not found for a moment
 export function FrameRoute() {
   const { framed, served } = getBoot();
   const at = openPage.frameAt() ?? { slug: framed, file: '', v: 0 };
@@ -164,7 +164,7 @@ export function FrameRoute() {
       <DiffView page={diffOf} hidden={!found || !diff} keys={keyNames} onKey={onKey} />
       <NotFound page={a} slug={framed} back={list} hidden={!seeking} />
       {/* Printed in place of the page, which an iframe prints one screen of, but where the page is not found: that
-          prints its words (ui.html 268) */}
+          prints its words */}
       {seeking ? null : (
         <p id="print-alone" className="m-8 hidden text-fg print:block">
           <span id="print-alone-text">{t('ui_print_alone', t('ui_open_raw'))}</span>{' '}

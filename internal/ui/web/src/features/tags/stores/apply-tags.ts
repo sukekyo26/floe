@@ -25,10 +25,10 @@ interface Deps {
   actOn?: ActOn;
 }
 
-// createApplyTags is ui.html's applyTags: held, the list is read again first, so that a page removed since is not
-// sent rather than be sent and not found; then the pages these change are sent, and the list read after (actOn). The
-// modal closes once the list is read, so that the focus goes back to a row's menu as drawn anew, and closes whatever
-// throws; a second press while held does not run and leaves it open (ui.html returns before holding: 2533)
+// createApplyTags writes the tags chosen: held, the list is read again first, so that a page removed since is not sent
+// rather than be sent and not found; then the pages these change are sent, and the list read after (actOn). The modal
+// closes once the list is read, so that the focus goes back to a row's menu as drawn anew, and closes whatever throws;
+// a second press while held does not run and leaves it open
 export function createApplyTags({
   pages = pagePages,
   writes = pageWrites,

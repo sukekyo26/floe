@@ -14,9 +14,9 @@ const count = (entries: readonly Page[], values: (a: Page) => readonly string[])
   return counts;
 };
 
-// tally is a part of the shelf (ui.html tally): its rows are those of list (the view's), and what is picked of it
-// stays at 0, so that no row jumps away as the rest narrows; its counts are of left, the entries the rest of the shelf,
-// the view and the search leave (the page list), or list again (the task list, of its project alone)
+// tally is a part of the shelf: its rows are those of list (the view's), and what is picked of it stays at 0, so that
+// no row jumps away as the rest narrows; its counts are of left, the entries the rest of the shelf, the view and the
+// search leave (the page list), or list again (the task list, of its project alone)
 export function tally(
   list: readonly Page[],
   values: (a: Page) => readonly string[],

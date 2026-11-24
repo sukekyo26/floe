@@ -3,7 +3,7 @@ import { describe, expect, it } from 'vitest';
 import { diffHref, downloadHref, pageHref, rawHref, taskHref } from '@/utils/page-urls';
 
 describe(pageHref, () => {
-  it("writes a page's URLs as ui.html does", () => {
+  it("writes a page's URLs", () => {
     expect.assertions(5);
     expect([
       pageHref({ slug: 'a' }),

@@ -237,7 +237,7 @@ function AddPageBody({
       <ul
         id="add-page-list"
         tabIndex={-1}
-        // oxlint-disable-next-line jsx-a11y/prefer-tag-over-role, jsx-a11y/no-noninteractive-element-to-interactive-role -- the field's listbox of rows, which a select cannot hold (ui.html's markup)
+        // oxlint-disable-next-line jsx-a11y/prefer-tag-over-role, jsx-a11y/no-noninteractive-element-to-interactive-role -- the field's listbox of rows, which a select cannot hold
         role="listbox"
         aria-labelledby="add-page-title"
         hidden={none}

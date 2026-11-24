@@ -34,10 +34,10 @@ export function createFrameMoves({
     window.location.assign(href);
   },
 }: Deps = {}): FrameMoves {
-  // The order first found is kept, though what was kept goes or the list read changes since (ui.html frameOrder)
+  // The order first found is kept, though what was kept goes or the list read changes since
   let first: string[] | null = null;
   // The pages of the list that opened the frame, the ones gone since left out. Opened otherwise (from the URL, the
-  // search), the list it was last on, or if it is not on that all entries of its kind (ui.html pagesInOrder)
+  // search), the list it was last on, or if it is not on that all entries of its kind
   function inOrder(a: Page, entries: readonly Page[]): string[] {
     const kept = order.keptOrder();
     if (kept?.order.includes(a.slug)) first = kept.order;

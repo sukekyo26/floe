@@ -696,7 +696,7 @@ func uiShelf(t *testing.T, lang i18n.Lang, msg func(string, ...any) string) {
 	out = append(out, b.eval("[...document.querySelectorAll('#list li:not([data-testid=group])')].filter((li) => "+
 		"['[data-testid=star]', '[data-testid=archive]', '[data-testid=more] summary'].some((s) => !li.querySelector(s).getAttribute('aria-label'))).length"))
 	// The menu: its words, Escape and a click elsewhere close it, focus going back to its button.
-	b.toggled("#list li[data-slug=b] [data-testid=more]", func() { b.eval("document.querySelector('#list li[data-slug=b] summary').click()") })
+	b.eval("document.querySelector('#list li[data-slug=b] summary').click()")
 	out = append(out, b.eval("document.querySelector('#list li[data-slug=b] summary').getAttribute('aria-label')"),
 		b.eval(topsJS+"(document.querySelector('#list li[data-slug=b] [data-testid=menu]')).filter((e) => getComputedStyle(e).display !== 'none').map((e) => e.textContent.trim()).join(' / ')"))
 	b.eval("document.querySelector('#list li[data-slug=b] [data-testid=edit]').focus()")

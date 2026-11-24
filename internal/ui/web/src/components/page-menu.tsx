@@ -84,9 +84,8 @@ export function useCopied(): [boolean, () => void] {
   ];
 }
 
-// PageMenu is the menu "…" of a page, the same in a row and in a bar (ui.html moreMenu): every item is drawn, and what
-// the bar or the row shows its CSS hides there, so that nothing is in both (ui.md); the frame's bar folds its own into it
-// under 40rem
+// PageMenu is the menu "…" of a page, the same in a row and in a bar: every item is drawn, and what the bar or the row
+// shows its CSS hides there, so that nothing is in both (ui.md); the frame's bar folds its own into it under 40rem
 export function PageMenu({
   page: a,
   at,

@@ -19,7 +19,7 @@ export interface MessageFrom {
   // fromShown tells the message came from the window of the iframe shown
   fromShown: boolean;
   origin: string;
-  // givenPath is the path this page gave the iframe (ui.html givenPath), null for none
+  // givenPath is the path this page gave the iframe, null for none
   givenPath: string | null;
   // focused tells the iframe has the focus, as a key pressed in the page is passed then alone
   focused: boolean;
@@ -40,11 +40,10 @@ interface PageData {
 }
 const record = <T>(data: unknown): Partial<T> => (typeof data === 'object' && data !== null ? data : {});
 
-// pageMessage is what the frame does of a page's message (ui.html's message listener): of the iframe shown alone, and
-// of origin null, as a page of floe is always sandboxed (any other is a site the iframe moved to). A key pressed in
-// the page goes on while the iframe has the focus; a move goes to a page of floe alone; the rest only from the path
-// the iframe was given, wherever a link took it. A move whose words are no URL throws the whole message away, the key
-// with it (ui.html throws there)
+// pageMessage is what the frame does of a page's message: of the iframe shown alone, and of origin null, as a page of
+// floe is always sandboxed (any other is a site the iframe moved to). A key pressed in the page goes on while the
+// iframe has the focus; a move goes to a page of floe alone; the rest only from the path the iframe was given, wherever
+// a link took it. A move whose words are no URL throws the whole message away, the key with it
 // LIMIT: origin null does not prove a page of floe: a site that sandboxes itself, or a data: URL, says it too. All it
 // can do is what a page can, of PAGE_KEYS and a move to a whole page; a page's read stops at the path it must be at
 export function pageMessage(data: unknown, from: MessageFrom): PageAction[] {

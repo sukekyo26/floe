@@ -35,8 +35,7 @@ interface Deps {
   page?: Pick<TaskPageActs, 'parentBack'>;
 }
 
-// createKinActs is what the modal of a task's family writes and does once written (ui.html KIN_FORMS' write, done and
-// back)
+// createKinActs is what the modal of a task's family writes and does once written
 export function createKinActs({
   writes = taskWrites,
   toasts = pageToasts,

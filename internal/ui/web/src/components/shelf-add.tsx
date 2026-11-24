@@ -33,9 +33,9 @@ export interface ShelfAddButtonProps {
   readonly onAdd: () => void;
 }
 
-// ShelfAddButton opens what adds (ui.html fromShelf): pressed in the filters' modal, that closes first, its focus going
-// back to the button that opened it, for the modal opened next to give it back there rather than to one hidden with
-// the shelf. Out of a modal, the close does nothing
+// ShelfAddButton opens what adds: pressed in the filters' modal, that closes first, its focus going back to the button
+// that opened it, for the modal opened next to give it back there rather than to one hidden with the shelf. Out of a
+// modal, the close does nothing
 export function ShelfAddButton({ id, short, label, hidden, onAdd }: ShelfAddButtonProps) {
   const { close } = useDialog();
   return (

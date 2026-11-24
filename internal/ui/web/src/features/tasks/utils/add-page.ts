@@ -13,7 +13,7 @@ export interface AddTo {
 }
 
 // addHits are the pages Add a page offers: of the task's project, not archived, not on that category of the task
-// already, those the words match (ui.html addHits)
+// already, those the words match
 // LIMIT: for no category, a page of the task's on a category it has not (a hand edit) is offered too: put, it is drawn
 // where it was, in no category's group, said to be moved. The store keeps a page's category among its task's, so only a
 // hand edit leaves one

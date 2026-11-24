@@ -39,8 +39,8 @@ export interface RowCardProps {
   readonly actions?: ReactNode;
 }
 
-// RowCard is a row of #list, of whatever it lists (ui.html template #row): a card whose title's hit area covers it, the
-// controls over it. Its state is in its attributes
+// RowCard is a row of #list, of whatever it lists: a card whose title's hit area covers it, the controls over it. Its
+// state is in its attributes
 export function RowCard({
   rowKey,
   data = {},

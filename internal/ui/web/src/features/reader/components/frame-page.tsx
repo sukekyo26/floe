@@ -19,17 +19,17 @@ interface FramePageProps {
   readonly reads?: PageReads;
 }
 
-// FramePage is the page whole in its iframe (ui.html #frame), and what the page tells of itself. The iframe is always
-// there, hidden till found and in a diff, so that the messages' load is on it from the first draw: drawn only once found,
-// the page would never be told its keys are taken. Its src is given once, when found, with the URL's fragment, and never
-// again (ui.html 5232): given anew, a move within the iframe and its scroll would be lost. The page's moves within itself
-// are written into the URL's fragment, and the URL's into the page's (hashchange); the read is told of the page whole's
-// own slug (ui.md), and its opening is the screen's, whose first read is of a page a person opened
+// FramePage is the page whole in its iframe, and what the page tells of itself. The iframe is always there, hidden till
+// found and in a diff, so that the messages' load is on it from the first draw: drawn only once found, the page would
+// never be told its keys are taken. Its src is given once, when found, with the URL's fragment, and never again: given
+// anew, a move within the iframe and its scroll would be lost. The page's moves within itself are written into the
+// URL's fragment, and the URL's into the page's (hashchange); the read is told of the page whole's own slug (ui.md),
+// and its opening is the screen's, whose first read is of a page a person opened
 export function FramePage({ at, found, diff, name, keys, onKey, reads = sharedReads }: FramePageProps) {
   const frame = useRef<HTMLIFrameElement>(null);
   const href = rawHref(at);
   const [src, setSrc] = useState<string | null>(null);
-  // A diff's frame is not loaded, so that opening it reads nothing of the latest (ui.html 1816–1817, 5233)
+  // A diff's frame is not loaded, so that opening it reads nothing of the latest
   if (found && !diff && src === null) setSrc(href + window.location.hash);
   usePageMessages(frame, 'whole', {
     shown: () => found && !diff,

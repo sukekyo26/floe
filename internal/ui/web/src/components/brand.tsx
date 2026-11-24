@@ -1,7 +1,7 @@
 import { t } from '@/lib/t';
 
-// Brand is the bar's logo and name, the way to the page list (ui.html .brand): to href, the list as this tab last had
-// it in a page whole. A page whole's at 40rem or less is its mark alone, its word still the link's own text (ui.html 896)
+// Brand is the bar's logo and name, the way to the page list: to href, the list as this tab last had it in a page
+// whole. A page whole's at 40rem or less is its mark alone, its word still the link's own text
 export function Brand({
   href = '/',
   markAlone = false,

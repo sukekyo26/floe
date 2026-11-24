@@ -11,7 +11,7 @@ describe(EmptyState, () => {
   // is built again (just web-build)
   // LIMIT: reads the minified CSS's text for the escaped class and its font-size: a rule written another way (shared,
   // or reordered by the minifier) fails it though there. Read the CSS's rules if that comes
-  it('has a rule in the build that sets its first words at 1rem (ui.html .state strong)', () => {
+  it('has a rule in the build that sets its first words at 1rem', () => {
     expect.assertions(2);
     expect(
       renderToString(

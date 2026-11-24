@@ -28,9 +28,9 @@ export interface TaskListProps {
   readonly fresh?: FreshTask;
 }
 
-// TaskList is the task list's column (ui.html renderTaskList): the pins of its project, its head, the project's tasks of
-// the view, latest change first, or the words why there are none. Nothing of the shelf's but the view and the project
-// narrows it. As it is first drawn, the focus goes back to the row of the task, or the pin, it was come back to from
+// TaskList is the task list's column: the pins of its project, its head, the project's tasks of the view, latest change
+// first, or the words why there are none. Nothing of the shelf's but the view and the project narrows it. As it is
+// first drawn, the focus goes back to the row of the task, or the pin, it was come back to from
 export function TaskList({ view, onAdd, pages = pagePages, columns = pageColumns, fresh = fresh0 }: TaskListProps) {
   const { read, failed, tasks, entries, project, shown, pinned, state } = view;
   const freshKey = useStore(fresh.key);

@@ -14,9 +14,9 @@ interface VersionNoteProps {
   readonly versions?: Versions;
 }
 
-// VersionNote is the words over a page not the latest (ui.html drawVersionNote): the version shown and the ways to the
-// latest and to their diff, or that the version asked for is gone. It goes over the words of a page newly at another
-// version (PageNote), each on its own turns
+// VersionNote is the words over a page not the latest: the version shown and the ways to the latest and to their diff,
+// or that the version asked for is gone. It goes over the words of a page newly at another version (PageNote), each on
+// its own turns
 export function VersionNote({ at, page, onGo, versions = sharedVersions }: VersionNoteProps) {
   useStore(versions.state);
   const note = versions.view(at, page).note;

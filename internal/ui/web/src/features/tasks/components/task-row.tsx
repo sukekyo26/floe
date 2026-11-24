@@ -18,14 +18,14 @@ export interface XLinkProps {
   readonly words: string;
 }
 
-// XLink is the way to a task's other place, above the row's own hit area (ui.html xlink): by words, the URL whole in
-// its title when they are not all of it
+// XLink is the way to a task's other place, above the row's own hit area: by words, the URL whole in its title when
+// they are not all of it
 export function XLink({ url, words }: XLinkProps) {
   return (
     <a
       data-testid="xlink"
       href={url}
-      // oxlint-disable-next-line react/jsx-no-target-blank -- noopener is all a page of a modern browser needs; the referrer is the task's own site's to see (ui.html xlink)
+      // oxlint-disable-next-line react/jsx-no-target-blank -- noopener is all a page of a modern browser needs; the referrer is the task's own site's to see
       target="_blank"
       rel="noopener"
       title={words === url ? undefined : url}
@@ -71,9 +71,9 @@ export interface TaskRowProps {
   readonly assign?: (url: string) => void;
 }
 
-// TaskRow is a row of a task on the task list (ui.html taskRow), of the page's own form with nothing to select or do but
-// open it and its links. Enter on its title opens it, from the page's keys too (a key sent by a script, which opens no
-// link of itself), as on a page's row; it keeps no order of rows, as no page is of it
+// TaskRow is a row of a task on the task list, of the page's own form with nothing to select or do but open it and its
+// links. Enter on its title opens it, from the page's keys too (a key sent by a script, which opens no link of itself),
+// as on a page's row; it keeps no order of rows, as no page is of it
 export function TaskRow({ task, index, kept, fresh, assign = goTo }: TaskRowProps) {
   const unread = unreadOf(task);
   const href = taskHref(task);

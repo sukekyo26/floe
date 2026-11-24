@@ -17,8 +17,8 @@ interface RowSubProps {
 // NEW_PILL is the pill of what is new on a row: a page's new version, a task's unread pages
 export const NEW_PILL = `${PILL} bg-new-soft font-mono text-label leading-normal font-bold text-new`;
 
-// RowSub is the line under a row's title (ui.html drawSub): a new version, the kind, the project in its colour, what
-// the caller adds, then a link's path or that its file is gone. The tags are the list row's own (P5)
+// RowSub is the line under a row's title: a new version, the kind, the project in its colour, what the caller adds,
+// then a link's path or that its file is gone. The tags are the list row's own (P5)
 export function RowSub({ page: a, ranks, middle }: RowSubProps) {
   const project = a.project ?? '';
   return (

@@ -35,9 +35,8 @@ interface Deps {
   go?: (href: string) => void;
 }
 
-// edited are the fields changed, trimmed: the store trims the title and the description, the slug's pattern refuses
-// a space and ProjectKey trims the project, so a change of spaces alone is none (ui.html sends them untrimmed, to the
-// same end)
+// edited are the fields changed, trimmed: the store trims the title and the description, the slug's pattern refuses a
+// space and ProjectKey trims the project, so a change of spaces alone is none
 export const edited = (a: Page, values: EditValues): Partial<EditValues> =>
   Object.fromEntries(
     (Object.keys(values) as (keyof EditValues)[])
@@ -45,7 +44,7 @@ export const edited = (a: Page, values: EditValues): Partial<EditValues> =>
       .filter(([key, value]) => value !== (a[key] ?? '')),
   );
 
-// createSaveEdit is ui.html's saveEdit: held, only the fields changed are sent; renamed whole, the page goes to its new
+// createSaveEdit saves a page's edit: held, only the fields changed are sent; renamed whole, the page goes to its new
 // name (the rows that opened it keep it), renamed beside the list, it stays open under its new one; then it is said,
 // and the list read, before the modal closes and gives the focus to the row's menu as drawn
 export function createSaveEdit({

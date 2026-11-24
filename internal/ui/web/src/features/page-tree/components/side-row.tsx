@@ -18,8 +18,8 @@ export interface SideRowProps {
   readonly onToggle: (dir: string) => void;
 }
 
-// SideRow is a row of the frame's tree (ui.html sideRows): a directory that opens and closes, a page of it that the
-// frame moves to, as any link, or a directory's note. A row is the tree's child itself, with nothing beside it
+// SideRow is a row of the frame's tree: a directory that opens and closes, a page of it that the frame moves to, as any
+// link, or a directory's note. A row is the tree's child itself, with nothing beside it
 export function SideRow({ item, slug, file, onToggle }: SideRowProps) {
   const style = { '--d': item.d } as CssVars as CSSProperties;
   if (item.kind === 'dir')

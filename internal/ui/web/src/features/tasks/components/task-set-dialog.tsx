@@ -27,11 +27,11 @@ export interface TaskSetDialogProps {
   readonly ask?: MoveAsk;
 }
 
-// TaskSetDialog puts a page on a task and a category of it (ui.html #set-dialog, openTaskSet, saveTaskSet): the task's
-// own fields are its page's to write (the edit), this writes the page's category, and a new name's title. The task
-// named is shown as found when it opens, as the name changes and as a save is refused (useSeenTask): what changed
-// since is refused, and said, with the modal open. A page on another task is asked about first (MoveDialog). Its way
-// off the task takes the page off at once, held, the way back in a toast. Closed, the focus goes back to the menu
+// TaskSetDialog puts a page on a task and a category of it: the task's own fields are its page's to write (the edit),
+// this writes the page's category, and a new name's title. The task named is shown as found when it opens, as the name
+// changes and as a save is refused (useSeenTask): what changed since is refused, and said, with the modal open. A page
+// on another task is asked about first (MoveDialog). Its way off the task takes the page off at once, held, the way
+// back in a toast. Closed, the focus goes back to the menu
 export function TaskSetDialog({ open, onClosed, pages = pagePages, acts = acts0, ask = ask0 }: TaskSetDialogProps) {
   const hold = useHold();
   const { entries, tasks: taken } = useStore(pages.state);
@@ -47,7 +47,7 @@ export function TaskSetDialog({ open, onClosed, pages = pagePages, acts = acts0,
   // The toast whose way back takes the focus as it closes: taken off from the keys
   const toToast = useRef<number | null>(null);
   const failed = Boolean(taken.error);
-  // The fields as they open: the page's task and category, none of what was typed before (ui.html resetTaskForm)
+  // The fields as they open: the page's task and category, none of what was typed before
   if (open !== null && open !== last) {
     setLast(open);
     const now = open.page.task?.name ?? '';
@@ -100,7 +100,7 @@ export function TaskSetDialog({ open, onClosed, pages = pagePages, acts = acts0,
     put: setCategory,
   });
 
-  // Whether the form may be sent: tasks.json read, and no field required that has spaces alone (ui.html taskFormReady)
+  // Whether the form may be sent: tasks.json read, and no field required that has spaces alone
   const ready = (): boolean => {
     if (failed) {
       setError(t('ui_tasks_failed', taken.error));

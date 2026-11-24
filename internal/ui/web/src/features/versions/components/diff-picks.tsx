@@ -15,8 +15,8 @@ interface DiffPicksProps {
 
 const WORDS = { from: 'ui_diff_before', to: 'ui_diff_after' } as const;
 
-// DiffPicks are the two versions compared (ui.html drawDiffPicks), newest first, one that would not be older or later
-// than the other not to be chosen, each with a way to its page alone in a new tab
+// DiffPicks are the two versions compared, newest first, one that would not be older or later than the other not to be
+// chosen, each with a way to its page alone in a new tab
 export function DiffPicks({ slug, list, pair, onChoose }: DiffPicksProps) {
   return (
     <div className="flex flex-wrap items-center gap-x-3 gap-y-1.5 narrow:w-full">

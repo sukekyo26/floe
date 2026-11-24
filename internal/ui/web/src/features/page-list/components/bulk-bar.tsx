@@ -19,15 +19,15 @@ export interface BulkBarProps {
   readonly acts?: BulkActs;
 }
 
-// The bar's own room for its buttons (ui.html .bulk .btn), given from here: none of it is the shared Button's. Its
-// buttons but the clearing go while the delete waits (CSS 625), and narrow (the head's container bar) they close up
+// The bar's own room for its buttons, given from here: none of it is the shared Button's. Its buttons but the clearing
+// go while the delete waits, and narrow (the head's container bar) they close up
 const BAR =
   'flex min-w-0 flex-1 items-center gap-1 overflow-x-auto overflow-y-hidden p-1 -m-1 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden [&>button]:flex-none [&>button]:px-2 [&>button[data-armed]]:px-[0.8rem] has-[>[data-armed]]:[&>button:not([data-armed],#bulk-clear)]:hidden @max-[21rem]/bar:gap-[0.1rem] @max-[21rem]/bar:[&>button:not([data-armed])]:px-[0.2rem]';
 const STICKY = '[&>#bulk-clear]:sticky [&>#bulk-clear]:right-0 [&>#bulk-clear]:bg-sel [&>#bulk-clear]:hover:bg-subtle';
 
-// BulkBar is the bar of the selected over the list (ui.html #bulk, renderBulk): how many, select all, tags, archive,
-// delete in two presses, and let them go. Its buttons are drawn while none is selected too, hidden with the bar, and
-// stay the same elements as the selection changes. The delete waits for the selection as it is: changed, it lets go
+// BulkBar is the bar of the selected over the list: how many, select all, tags, archive, delete in two presses, and let
+// them go. Its buttons are drawn while none is selected too, hidden with the bar, and stay the same elements as the
+// selection changes. The delete waits for the selection as it is: changed, it lets go
 export function BulkBar({
   onTags,
   selection = pageSelection,
@@ -74,8 +74,8 @@ export function BulkBar({
         quiet
         tone="danger"
         armed={arm.armed}
-        // LIMIT: pressed again while its writes go, the delete (and the archive) sends to the same pages twice, as
-        // ui.html's does. Hold the bar while it writes if that comes to trouble someone
+        // LIMIT: pressed again while its writes go, the delete (and the archive) sends to the same pages twice. Hold
+        // the bar while it writes if that comes to trouble someone
         onClick={() => {
           if (arm.press()) return;
           const at = rev;

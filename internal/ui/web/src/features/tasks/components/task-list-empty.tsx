@@ -15,8 +15,8 @@ export interface TaskListEmptyProps {
   readonly onAdd: () => void;
 }
 
-// TaskListEmpty is what the task list says in place of its rows (ui.html #tasks-none, #tasks-failed, #tasks-empty): all
-// drawn, the one shown hidden no more, as the tests find each by its id and watch them
+// TaskListEmpty is what the task list says in place of its rows: all drawn, the one shown hidden no more, as the tests
+// find each by its id and watch them
 export function TaskListEmpty({ nothing, failed, none, other, onAdd }: TaskListEmptyProps) {
   return (
     <>

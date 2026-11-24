@@ -30,11 +30,10 @@ type Want = { name: string; button: string } | { dropped: number } | null;
 const ROW =
   'flex items-center gap-2 bg-panel py-[0.2rem] pr-[0.4rem] pl-[0.6rem] [&+li]:border-t [&+li]:border-line data-[drop=before]:shadow-[inset_0_2px_0_var(--color-ink)] data-[drop=after]:shadow-[inset_0_-2px_0_var(--color-ink)]';
 
-// SortableList is a list of the task edit's (ui.html sortable): its rows reordered by their buttons up and down, and
-// by a drag from the grip where there is a pointer that hovers, the row going before the row it is dropped on, or after
-// it in its lower half. Each list holds its own drag, so that a row of one is not dropped in another. A row is
-// draggable from the press on its grip on, written on the element at once: a drag starts in the press's task, before
-// React would draw it
+// SortableList is a list of the task edit's: its rows reordered by their buttons up and down, and by a drag from the
+// grip where there is a pointer that hovers, the row going before the row it is dropped on, or after it in its lower
+// half. Each list holds its own drag, so that a row of one is not dropped in another. A row is draggable from the press
+// on its grip on, written on the element at once: a drag starts in the press's task, before React would draw it
 export function SortableList({
   id,
   rows,

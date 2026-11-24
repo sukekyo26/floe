@@ -10,8 +10,8 @@ export interface FreshTask {
   follow: () => () => void;
 }
 
-// createFreshTask is the mark of the task just made on the task list (ui.html 4218, which marks its row till the row
-// is drawn anew): it stays till another is made, or the list shows another project or view
+// createFreshTask is the mark of the task just made on the task list: it stays till another is made, or the list shows
+// another project or view
 export function createFreshTask(query: ListQuery = listQuery): FreshTask {
   const key = createStore<string | null>(null);
   let at = '';

@@ -12,14 +12,13 @@ export interface NarrowFilterProps {
   readonly n: number;
   // tint is the project's colour the task list paints it in, null for none
   readonly tint: string | null;
-  // named: the words always show, cut short, and no count (the task list, which always shows one project: ui.html
-  // 1041–1053)
+  // named: the words always show, cut short, and no count (the task list, which always shows one project)
   readonly named?: boolean;
   readonly onOpen: () => void;
 }
 
-// NarrowFilter is the way to the rest of the shelf on a narrow screen (ui.html #narrow-filter), at the end of the row
-// of views, lit while picks narrow the list; on a phone its count stands for its words
+// NarrowFilter is the way to the rest of the shelf on a narrow screen, at the end of the row of views, lit while picks
+// narrow the list; on a phone its count stands for its words
 export function NarrowFilter({ words, n, tint, named = false, onOpen }: NarrowFilterProps) {
   const dot =
     tint === null

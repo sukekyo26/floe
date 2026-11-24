@@ -24,10 +24,10 @@ interface Snapshot {
   focused: PinFocused | null;
 }
 
-// Pins is the row of the pages pinned of the task list's project, and how to pin one when none is (ui.html drawPins,
-// drawChips). The chips are drawn anew whole as soon as anything they say changes (their key holds pinsSaid), so that a
-// screen reader says again the one with the focus; the focus stays on what had it, or of a chip gone, goes to the title
-// of the one in its place (pinFocus). A press on them holds the polls' answers till it is let go, as the rows' does
+// Pins is the row of the pages pinned of the task list's project, and how to pin one when none is. The chips are drawn
+// anew whole as soon as anything they say changes (their key holds pinsSaid), so that a screen reader says again the
+// one with the focus; the focus stays on what had it, or of a chip gone, goes to the title of the one in its place
+// (pinFocus). A press on them holds the polls' answers till it is let go, as the rows' does
 // LIMIT: a folder pinned leads to the page list, where it opens (its URL), and not back here
 export class Pins extends Component<PinsProps> {
   private readonly list = createRef<HTMLSpanElement>();

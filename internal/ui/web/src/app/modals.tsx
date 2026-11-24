@@ -18,11 +18,10 @@ import type { Screen } from '@/types/screen';
 import { canDiff } from '@/utils/list-view';
 
 // freeOf tells no modal open in opened, the ids of those open, but closing: the one closed in the same press, which is
-// still open till React draws (the search's foot menu: ui.html menuBack closes it first)
+// still open till React draws (the search, as its foot's menu opens the settings)
 export const freeOf = (opened: readonly string[], closing = ''): boolean => opened.every((id) => id === closing);
 
 // freeToOpen tells no modal open, which the search, the settings, the help and a category's Add a page wait for
-// (ui.html openFind 6186, openThemes 6253, openKeys 6474, openAddPage 5893)
 export const freeToOpen = (closing = ''): boolean =>
   freeOf(
     [...document.querySelectorAll('dialog[open]')].map((d) => d.id),
@@ -30,7 +29,7 @@ export const freeToOpen = (closing = ''): boolean =>
   );
 
 // diffGoes tells that d goes to a diff where the help opens: the bar's diff button shows over the page open, whole or
-// beside the list (ui.html 6475–6478, page-actions' own test). Not in a diff, nor for a page whole not found
+// beside the list (page-actions' own test). Not in a diff, nor for a page whole not found
 export function diffGoes(
   open: Pick<OpenPage, 'frameAt' | 'picked' | 'diff'> = openPage,
   entries: readonly Page[] = pages.state.get().entries,

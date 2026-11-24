@@ -8,7 +8,7 @@ export interface TagPillProps {
 
 const PILL = 'max-w-48 flex-none truncate rounded-full border-0 bg-subtle px-2 text-label text-fg';
 
-// TagPill is a tag of a page as its row and its tag line show it (ui.html tagpill)
+// TagPill is a tag of a page as its row and its tag line show it
 export function TagPill({ name, onPress }: TagPillProps) {
   return onPress ? (
     <button

@@ -16,8 +16,8 @@ export interface ListEmptyProps {
 
 const LINK = 'border-0 bg-transparent p-0 text-fg underline underline-offset-3';
 
-// ListEmpty is what the page list says in place of its rows (ui.html #empty … #nomatch): all six drawn, the one shown
-// as emptyOf says, as the tests find each by its id
+// ListEmpty is what the page list says in place of its rows: all six drawn, the one shown as emptyOf says, as the tests
+// find each by its id
 export function ListEmpty({ shown, archived, onAdd, onShowArchived, onClear }: ListEmptyProps) {
   return (
     <>

@@ -32,8 +32,8 @@ export interface TaskListDeps {
   kept?: ProjectKept;
 }
 
-// useTaskList is what the task list shows, as the list's query and the list read are now (ui.html renderTaskList),
-// taken once for the screen's shelf and rows alike
+// useTaskList is what the task list shows, as the list's query and the list read are now, taken once for the screen's
+// shelf and rows alike
 export function useTaskList({ query = listQuery, pages = pagePages, kept = kept0 }: TaskListDeps = {}): TaskListView {
   const { project: asked, view } = useStore(query.query);
   const { read, entries, tasks: taken } = useStore(pages.state);

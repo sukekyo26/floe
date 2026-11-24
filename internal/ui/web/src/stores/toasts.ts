@@ -16,7 +16,7 @@ export interface ToastButton {
   onEscape?: () => void;
 }
 
-// The link a toast holds in place of a button (ui.html .toast-link): to the task it tells of, its words the toast's
+// The link a toast holds in place of a button: to the task it tells of, its words the toast's
 export interface ToastLink {
   label: string;
   href: string;

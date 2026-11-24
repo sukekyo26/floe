@@ -13,14 +13,13 @@ export interface SearchBoxProps {
   readonly hidden?: boolean;
   readonly query?: ListQuery;
   readonly columns?: ColumnsStore;
-  // go is where Enter goes with the words, on a screen of no list to narrow (a frame whose page is not found, ui.html
-  // 6752): the words are the field's own, and the list's query and columns are left as they are
+  // go is where Enter goes with the words, on a screen of no list to narrow (a frame whose page is not found): the
+  // words are the field's own, and the list's query and columns are left as they are
   readonly go?: (words: string) => void;
 }
 
-// SearchBox is the list's search in the bar (ui.html #search, .bar-inner > .search): up to 34rem in the bar's middle,
-// each letter narrows the list, Escape empties it and leaves it. Under 40rem it is its icon until it is reached or
-// holds words
+// SearchBox is the list's search in the bar: up to 34rem in the bar's middle, each letter narrows the list, Escape
+// empties it and leaves it. Under 40rem it is its icon until it is reached or holds words
 export function SearchBox({ hidden = false, query = listQuery, columns = pageColumns, go }: SearchBoxProps) {
   const { q } = useStore(query.query);
   const [own, setOwn] = useState('');

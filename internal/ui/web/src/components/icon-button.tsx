@@ -10,17 +10,17 @@ export interface IconButtonProps {
   readonly label?: string | undefined;
   readonly title?: string | undefined;
   readonly children: ReactNode;
-  // bar: 30 px, among the bar's; row: 26 px, a row's; chip: 28 px, a pin's × (ui.html .pin-off); help: 24 px, the
-  // pins' help (.pins-help); item: an item of a menu, as wide as the menu, its words beside
+  // bar: 30 px, among the bar's; row: 26 px, a row's; chip: 28 px, a pin's ×; help: 24 px, the pins' help (#pins-help);
+  // item: an item of a menu, as wide as the menu, its words beside
   readonly size?: 'bar' | 'row' | 'chip' | 'help' | 'kin' | 'item';
   readonly display?: Display;
   // A button that toggles: whether it is on (aria-pressed, "true" or "false"); left out, it toggles nothing
   readonly pressed?: boolean | undefined;
-  // on: a button whose words say what pressing does (Restore, Close the diff), so not told as pressed (ui.html 1982)
+  // on: a button whose words say what pressing does (Restore, Close the diff), so not told as pressed
   readonly on?: boolean | undefined;
   // armed: a delete waiting for its second press
   readonly armed?: boolean | undefined;
-  // raised: on a ground of its own with a shadow, over whatever lies under it (a column folded, ui.html .side-show)
+  // raised: on a ground of its own with a shadow, over whatever lies under it (a column folded)
   readonly raised?: boolean | undefined;
   // expanded tells whether what it folds and opens shows (aria-expanded), controls names that (aria-controls)
   readonly expanded?: boolean | undefined;

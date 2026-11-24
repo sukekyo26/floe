@@ -25,9 +25,8 @@ export interface ChipProps {
   readonly data: Readonly<Record<`data-${string}`, string>>;
 }
 
-// Chip is a button of a part of the shelf, with its count (ui.html chip): pressed when it is the one picked. Its
-// words are a name the API was sent, on one line, and whole in its title. One with none left stays where it is,
-// quieter
+// Chip is a button of a part of the shelf, with its count: pressed when it is the one picked. Its words are a name the
+// API was sent, on one line, and whole in its title. One with none left stays where it is, quieter
 export function Chip({ label, n, pressed, onPick, mark, dot, data }: ChipProps) {
   const tint: CssVars = dot === undefined ? {} : { '--c': dot };
   return (

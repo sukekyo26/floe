@@ -11,7 +11,7 @@ import { getBoot, screenOf } from '@/config/boot';
 import { order } from '@/stores/order';
 import { pages } from '@/stores/pages';
 
-// cameBack tells a page come back to by the browser's own way back (ui.html 6773)
+// cameBack tells a page come back to by the browser's own way back
 const cameBack = (): boolean => {
   const entry = performance.getEntriesByType('navigation')[0];
   return entry instanceof PerformanceNavigationTiming && entry.type === 'back_forward';
@@ -24,7 +24,7 @@ const cameBack = (): boolean => {
 export function App({ search }: { readonly search: string }) {
   const screen = screenOf(getBoot(), search);
   useEffect(() => {
-    // Back on a list, what the page whole kept for j and k is over; a frame keeps it (ui.html 6773–6778)
+    // Back on a list, what the page whole kept for j and k is over; a frame keeps it
     if (screen !== 'frame') order.comeBack(cameBack());
     const shown = (e: PageTransitionEvent) => {
       if (!e.persisted || screen === 'frame') return;
@@ -49,7 +49,7 @@ export function App({ search }: { readonly search: string }) {
         {screen === 'frame' ? <FrameRoute /> : null}
       </DrawGuard>
       <ErrorBar />
-      {/* A page whole prints the page's URL alone (ui.html 268) */}
+      {/* A page whole prints the page's URL alone */}
       <div className={screen === 'frame' ? 'contents print:hidden' : 'contents'}>
         <Toasts />
       </div>

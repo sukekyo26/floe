@@ -21,8 +21,8 @@ interface Deps {
   notice?: Notice;
 }
 
-// createPageWrites is the one way the screen writes a page (ui.html writeOne): the task writes go by stores/tasks.ts,
-// which takes back no error
+// createPageWrites is the one way the screen writes a page: the task writes go by stores/tasks.ts, which takes back no
+// error
 export function createPageWrites({ client = pageClient, notice = pageNotice }: Deps = {}): PageWrites {
   async function writePage(
     slug: string,

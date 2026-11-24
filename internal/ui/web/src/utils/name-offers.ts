@@ -14,9 +14,9 @@ export interface OfferWays {
   fresh?: (name: string) => Offer;
 }
 
-// nameOffers is what a field of one name offers, as written (ui.html suggestOne): the names that hold it, those that
-// start with it first; a name written whole offers them all, to change to, unless it was just typed whole (typed) and
-// none goes on from it, which is done with: nothing then covers what is under the field
+// nameOffers is what a field of one name offers, as written: the names that hold it, those that start with it first; a
+// name written whole offers them all, to change to, unless it was just typed whole (typed) and none goes on from it,
+// which is done with: nothing then covers what is under the field
 export function nameOffers(
   names: readonly string[],
   written: string,
@@ -34,8 +34,8 @@ export function nameOffers(
   return [...[...first, ...rest].map(detail), ...(fresh && word && !whole ? [fresh(word)] : [])];
 }
 
-// What a key on a field of names does (ui.html listKeys): ↓ ↑ open the names, or reach the next of them; Enter puts in
-// the one reached; Escape closes them, and goes no further (not to the modal); Tab closes them as the focus goes on
+// What a key on a field of names does: ↓ ↑ open the names, or reach the next of them; Enter puts in the one reached;
+// Escape closes them, and goes no further (not to the modal); Tab closes them as the focus goes on
 export type SuggestKey = { act: 'open' } | { act: 'reach'; at: number } | { act: 'put'; at: number } | { act: 'close' };
 
 export function suggestKey(key: string, shown: boolean, reached: number, n: number): SuggestKey | null {

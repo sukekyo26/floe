@@ -13,9 +13,9 @@ export interface HeadNow {
 // Where the focus goes then: the archive button, the parent's part's button shown now, or the same row's same thing
 export type HeadTarget = { to: 'archive' } | { to: 'part-up' } | { to: 'kin'; task: string; unlink: boolean };
 
-// headFocus is where the focus goes once the head is drawn anew (ui.html drawTaskHead 4023, drawTaskFamily 4042 and
-// 4055–4058): the choices hidden, to the archive button beside the word; the parent's button gone, to the one there
-// now; the card made anew, to the same row's link or button. null where it may stay
+// headFocus is where the focus goes once the head is drawn anew: the choices hidden, to the archive button beside the
+// word; the parent's button gone, to the one there now; the card made anew, to the same row's link or button. null
+// where it may stay
 export function headFocus(was: HeadFocused | null, now: HeadNow): HeadTarget | null {
   if (was?.on === 'state' && now.stateHidden) return { to: 'archive' };
   if (was?.on === 'parent' && now.parentHidden) return { to: 'part-up' };
@@ -47,10 +47,10 @@ export const firstShown = (task: Drawn, reads: number): StateShown => ({
   reads,
 });
 
-// stateShown is what the choices show as the task or the reads change (ui.html drawTaskHead 3993): held while they are
-// open or a change is sent; else taken from the task as it changes, and at each read ended, as ui.html draws them at
-// each look (a read of the same words changes no props). A change written keeps its from, so that the props of before
-// the read after it are not taken: the store has the answer's row by then
+// stateShown is what the choices show as the task or the reads change: held while they are open or a change is sent;
+// else taken from the task as it changes, and at each read ended (a read of the same words changes no props). A change
+// written keeps its from, so that the props of before the read after it are not taken: the store has the answer's row
+// by then
 export function stateShown(now: StateShown, task: Drawn, reads: number, open: boolean): StateShown {
   if (open || now.chosen !== null) return now;
   if (task.state === now.from.state && task.rev === now.from.rev && reads === now.reads) return now;

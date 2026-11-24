@@ -76,9 +76,8 @@ function NowLine({ now }: { readonly now: Now }) {
   }
 }
 
-// SettingsDialog is the settings (ui.html openThemes, showSettings, chooseTheme, saveTaskMode): opened on their list
-// (the default theme, the task mode), a part gone into and back, or a page's themes alone. While open, the page's
-// toasts are in it (useMovedOverlay), which say what came of a save
+// SettingsDialog is the settings: opened on their list (the default theme, the task mode), a part gone into and back,
+// or a page's themes alone. While open, the page's toasts are in it (useMovedOverlay), which say what came of a save
 export function SettingsDialog({
   target,
   onClosed,
@@ -132,7 +131,7 @@ export function SettingsDialog({
   // A part gone into, its heading focused; back to the list, the row of the part it came from
   const goTo = (next: Panel) => {
     focusTo.current = next === 'list' ? panel : 'title';
-    // The task mode's part shows the mode as read, a check left unsaved gone (ui.html showSettings → drawTaskMode)
+    // The task mode's part shows the mode as read, a check left unsaved gone
     if (next === 'mode') setModeOn({ of: read, on: Boolean(read?.taskMode) });
     setPanel(next);
   };
@@ -306,7 +305,7 @@ export function SettingsDialog({
           </Button>
         </DialogActions>
       </form>
-      {/* The page's toasts, while open (ui.html puts them at the modal's end) */}
+      {/* The page's toasts, while open */}
       <div ref={toastBox} className="contents" />
     </Dialog>
   );

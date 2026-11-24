@@ -15,8 +15,8 @@ export function moveLead(listed: Pick<Page, 'slug' | 'title' | 'task'>, to: stri
   return t('ui_task_move_lead', listed.title ?? listed.slug, leftPlace(from, listed.task?.category), to.trim(), from);
 }
 
-// movesFrom is the task a page is on, as the list has it, that putting it on to would take it off: '' when none, as
-// on none or on that one (ui.html askMove asks nothing then)
+// movesFrom is the task a page is on, as the list has it, that putting it on to would take it off: '' when none, as on
+// none or on that one
 export function movesFrom(listed: Pick<Page, 'task'>, to: string): string {
   const from = listed.task?.name?.trim() ?? '';
   return from === to.trim() ? '' : from;

@@ -45,8 +45,8 @@ export interface ListShelfProps {
   readonly columns?: ColumnsStore;
 }
 
-// ListShelf is the page list's shelf (ui.html renderShelf, renderChips, renderKinds, renderTemplates, renderTags and
-// showAdd of the page list): its four views and its parts, each counted as the rest of the shelf and the search leave
+// ListShelf is the page list's shelf: its four views and its parts, each counted as the rest of the shelf and the
+// search leave
 export function ListShelf({
   onAdd,
   foot,

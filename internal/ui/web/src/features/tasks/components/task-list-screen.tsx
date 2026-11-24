@@ -9,8 +9,8 @@ import { freshTask } from '@/features/tasks/stores/fresh-task';
 import { holdProject } from '@/features/tasks/stores/hold-project';
 
 export interface TaskListScreenProps {
-  // reader is the page beside the list, of none here but there all the same, hidden (ui.html #reader): the app's, as a
-  // feature imports no other
+  // reader is the page beside the list, of none here but there all the same, hidden: the app's, as a feature imports no
+  // other
   readonly reader: ReactNode;
 }
 

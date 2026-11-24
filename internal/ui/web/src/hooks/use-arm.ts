@@ -20,7 +20,7 @@ export interface Arm {
   disarm: () => void;
 }
 
-// useArm is a button that asks again before it deletes (ui.html arm and disarm)
+// useArm is a button that asks again before it deletes
 export function useArm(key: string): Arm {
   const [armedFor, setArmedFor] = useState<string | null>(null);
   return {

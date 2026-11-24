@@ -22,9 +22,9 @@ export interface TaskNoneProps {
   readonly assign?: (url: string) => void;
 }
 
-// TaskNone is what a task's page says in place of its rows (ui.html #task-none, #task-missing, forgetTask): a task of no
-// page, with the way to remove its row by a press again, as a delete asks, unless it has children (ForgetTask refuses
-// it); or a task not there, with the way back to the list. Both drawn hidden till shown, as the tests find them by id
+// TaskNone is what a task's page says in place of its rows: a task of no page, with the way to remove its row by a
+// press again, as a delete asks, unless it has children (ForgetTask refuses it); or a task not there, with the way back
+// to the list. Both drawn hidden till shown, as the tests find them by id
 export function TaskNone({
   task,
   none,

@@ -2,9 +2,8 @@
 export const KBD =
   'rounded-small border border-line bg-subtle px-1.5 py-0.75 font-mono text-label leading-none text-muted';
 
-// KeyHint is a search modal's line of a key and what it does (ui.html .find-lead .k): gone where the window is narrow,
-// and kept in its place, unseen, where there is no row for the keys to act on (shown false), so that the line keeps
-// its height
+// KeyHint is a search modal's line of a key and what it does: gone where the window is narrow, and kept in its place,
+// unseen, where there is no row for the keys to act on (shown false), so that the line keeps its height
 export function KeyHint({
   keys,
   words,

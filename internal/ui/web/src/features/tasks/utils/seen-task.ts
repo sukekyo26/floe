@@ -6,9 +6,9 @@ export interface SeenKey {
   renews: number;
 }
 
-// seenAgain tells when a modal finds again the task it shows (ui.html setTaskKnown, kinTaskChanged, kinNameChanged): as
-// it opens, as the project or the name typed changes, and as a write is refused as stale. A read of the list alone
-// does not, so that a save sends what was shown: a task made or written since is refused, not written over unseen
+// seenAgain tells when a modal finds again the task it shows: as it opens, as the project or the name typed changes,
+// and as a write is refused as stale. A read of the list alone does not, so that a save sends what was shown: a task
+// made or written since is refused, not written over unseen
 export const seenAgain = (was: SeenKey | null, now: SeenKey): boolean =>
   was === null ||
   was.open !== now.open ||

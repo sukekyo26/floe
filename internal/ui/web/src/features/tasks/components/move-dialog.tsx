@@ -24,8 +24,8 @@ function MoveYes({ onYes }: { readonly onYes: () => void }) {
   );
 }
 
-// MoveDialog is the move's question (ui.html #move-dialog), over the modal that asked it: No (its close button, Escape,
-// the backdrop) writes nothing. It answers as it closes, in the same task, so that what follows goes on at once
+// MoveDialog is the move's question, over the modal that asked it: No (its close button, Escape, the backdrop) writes
+// nothing. It answers as it closes, in the same task, so that what follows goes on at once
 export function MoveDialog({ ask = ask0 }: { readonly ask?: MoveAsk }) {
   const asking = useStore(ask.asking);
   const yes = useRef(false);
