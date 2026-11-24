@@ -31,3 +31,4 @@ paths:
 - **一覧は `pages.load` が 1 本ずつ、書き込みの答えの後に読む**：一覧を読むのは `pages.load` だけで、書き込み（既読の印も）が答えを待つ間は読まない。要求は全部 `lib/api-client.ts` を通す。`TestUILoadOrder`
 - **モーダルは `Dialog` 1 つで閉じる**：`close()` を直に呼ばず、close request は `Dialog` の `cancel` が受ける。閉じた後のフォーカスの行き先と答えは、close イベントを待たず同じ task で決める（モーダルごとに決まるものは `afterClose`）。`TestUIDialogClose`
 - **書き込みの間、モーダルは `useHold` で止める**：書き込みと、続く一覧の読みを待つ間は `whileHeld` で包み、閉じるのは解いた後にする。送るボタンの `disabled` を関数ごとに出し入れしない。`TestUIDialogHold`
+- **ボタンの二度押しの止めは `pressOnce` 1 つ**：同じことをもう頼んである押下だけを捨て、求める値が違う押下は通す。`Set` や旗を別に持たない。渡す仕事は、押した物が結果を描くまで（タスクは書き込みの答え、ページは一覧の読み）。読みまで持つものの「元に戻す」は、その値も渡す。モーダルは `useHold`、トーストの「元に戻す」は `undoToast`。`TestUIPressOnce`

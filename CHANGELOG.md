@@ -31,6 +31,7 @@ adheres to [Semantic Versioning](https://semver.org/).
 
 ### Fixed
 
+- Fix a press lost, with nothing said, when the same was asked the other way and back before the management page had read its list again (as on a slow connection): taking a task off its parent, undoing it and taking it off again; archiving and restoring a task; archiving, restoring and archiving a page. Each is written now. A press for what is being written already is still dropped.
 - Fix a name of `computed.yaml` that expr reads as other than one name, as `not`, `let`, `if`, `in` or `1a`: `floe check` and `floe template check` told expr's mistake in reading it as an expression (`unexpected token EOF`), and now tell that it is not a name an expression and `page.html` can use, as for `a-b`.
 - Fix the mistake of a name in `data-floe-look` that is no part or look: it said `names the part nope`, read as of `data-floe-part`. It now names the attribute and the name in it, for both: `the page drawn from this file names nope in data-floe-look, which there is none of; use …`, and only that name where the attribute holds others too.
 - Fix `floe rebuild` leaving a stored page whose copy has no `page.html` (as a store of an older floe can have) as it was, told to `fix the data file it was published from` though nothing was wrong with it: there is no page to compare with, so it is drawn again and written, its versions and news as they were. A `page.html` that is there but cannot be read still keeps the page, told as before.
