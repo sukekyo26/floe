@@ -174,16 +174,17 @@ func TestUITaskParent(t *testing.T) { //nolint:paralleltest // the browser tests
 	}
 
 	// Taken off by the mouse: the row gone, the focus on its part's button; the way back writes it again.
+	// The row is drawn as the write answers, the focus goes after the read: waited for, as the row is not enough.
 	press("document.querySelector('#task-up-rows [data-testid=unlink]')")
 	b.until("taken off", toasts+".includes('Took')")
-	b.until("drawn", "!document.getElementById('task-parent-add').hidden")
-	if got := b.eval(toasts + " + ' | ' + document.activeElement.id"); got != "Took #1 out of the children of #3Undo | task-parent-add" || parentOf("#1") != "" {
+	b.until("the focus on its part's button", "document.activeElement.id === 'task-parent-add'")
+	if got := b.eval(toasts); got != "Took #1 out of the children of #3Undo" || parentOf("#1") != "" {
 		t.Errorf("taken off: %q, %q", got, parentOf("#1"))
 	}
 	b.eval(newUndo + ".click()")
-	b.until("given back", "document.querySelector('#task-up-rows [data-testid=unlink][data-task=\"#3\"]')")
-	if got := b.eval("document.activeElement.dataset.task + ' ' + (document.activeElement.dataset.testid === 'unlink')"); got != "#3 true" || parentOf("#1") != "#3" {
-		t.Errorf("given back: focus %q, parent %q", got, parentOf("#1"))
+	b.until("the focus on the row given back", "document.activeElement.matches('#task-up-rows [data-testid=unlink][data-task=\"#3\"]')")
+	if parentOf("#1") != "#3" {
+		t.Errorf("given back: parent %q", parentOf("#1"))
 	}
 	b.eval(seen)
 
