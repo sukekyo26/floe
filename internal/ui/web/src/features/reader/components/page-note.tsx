@@ -1,3 +1,4 @@
+import { TextLink } from '@/components/text-link';
 import { useStore } from '@/hooks/use-store';
 import { t } from '@/lib/t';
 import { pageNote as sharedNote, type PageNote as Notes } from '@/stores/page-note';
@@ -21,9 +22,9 @@ export function PageNote({ slug, onGo, note = sharedNote }: PageNoteProps) {
       className="flex flex-none flex-wrap items-center gap-x-3 gap-y-1 border-b border-line bg-new-soft px-4 py-1.75 text-small text-fg narrow:px-3"
     >
       {t('ui_diff_notice', said.read, said.changed)}
-      <a href={diffHref(said.slug)} onClick={onGo} className="font-bold text-new">
+      <TextLink tone="new" href={diffHref(said.slug)} onClick={onGo}>
         {t('ui_diff_notice_go')}
-      </a>
+      </TextLink>
     </div>
   );
 }
