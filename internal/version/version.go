@@ -4,4 +4,4 @@ package version
 // Version is bumped in lockstep with the repository-root VERSION file so that
 // `go install` builds (which skip the justfile's ldflags) report the release
 // too. `just build` overrides it at link time with -X.
-var Version = "0.3.0"
+var Version = "0.3.1"

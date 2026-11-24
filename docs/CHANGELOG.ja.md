@@ -6,6 +6,8 @@ floe の主要な変更を記録します。フォーマットは
 
 ## [Unreleased]
 
+## [0.3.1] - 2026-11-24
+
 ### 修正
 
 - 修正：管理ページで、文の中のリンクに下線が出ず、押せると見えない（0.3.0 から）。前の版の案内の「最新の版を開く」「最新との差分を見る」、「変わった所を見る」、タスク一覧に見せる物が無い時の「ほかのプロジェクトを開く」「ページ一覧へ戻る」、無いタスクの「タスク一覧へ戻る」、トーストのリンク、印刷した枠のページの URL。「タスク一覧へ戻る」の字の色も、上の字と同じ濃さに戻した
@@ -119,7 +121,8 @@ floe の主要な変更を記録します。フォーマットは
 - 追加：ページの CSP とサンドボックス。ページの script を floe のものだけにする。
 - 追加：`floe licenses`。floe と、floe に入っているもののライセンスを出す。
 
-[Unreleased]: https://github.com/sukekyo26/floe/compare/v0.3.0...HEAD
+[Unreleased]: https://github.com/sukekyo26/floe/compare/v0.3.1...HEAD
+[0.3.1]: https://github.com/sukekyo26/floe/compare/v0.3.0...v0.3.1
 [0.3.0]: https://github.com/sukekyo26/floe/compare/v0.2.0...v0.3.0
 [0.2.0]: https://github.com/sukekyo26/floe/compare/v0.1.1...v0.2.0
 [0.1.1]: https://github.com/sukekyo26/floe/compare/v0.1.0...v0.1.1

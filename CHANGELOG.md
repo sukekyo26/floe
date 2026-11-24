@@ -6,6 +6,8 @@ adheres to [Semantic Versioning](https://semver.org/).
 
 ## [Unreleased]
 
+## [0.3.1] - 2026-11-24
+
 ### Fixed
 
 - Fix the management page's links among words showing no underline, so that they read as words, as they have since 0.3.0: Open the latest version and See what differs from the latest over an older version, See what changed, Open another project and Back to the page list where the task list has nothing to show, Back to the task list of a task not there, the link of a toast, and the page's URL on the printed frame. Back to the task list is as dark as the words over it again.
@@ -119,7 +121,8 @@ adheres to [Semantic Versioning](https://semver.org/).
 - Add a page's CSP and sandbox, which keep its scripts to floe's own.
 - Add `floe licenses`, which prints the licenses of floe and of what is built into it.
 
-[Unreleased]: https://github.com/sukekyo26/floe/compare/v0.3.0...HEAD
+[Unreleased]: https://github.com/sukekyo26/floe/compare/v0.3.1...HEAD
+[0.3.1]: https://github.com/sukekyo26/floe/compare/v0.3.0...v0.3.1
 [0.3.0]: https://github.com/sukekyo26/floe/compare/v0.2.0...v0.3.0
 [0.2.0]: https://github.com/sukekyo26/floe/compare/v0.1.1...v0.2.0
 [0.1.1]: https://github.com/sukekyo26/floe/compare/v0.1.0...v0.1.1
