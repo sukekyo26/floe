@@ -1,4 +1,5 @@
 import type { MouseEventHandler, ReactNode } from 'react';
+import { flushSync } from 'react-dom';
 
 import { IconButton, type IconButtonProps } from '@/components/icon-button';
 import { MoreIcon } from '@/components/icons';
@@ -45,12 +46,14 @@ export function MoreMenu({ id, label, size = 'row', opens = 'down', children }: 
       className={`flex [&>summary]:list-none [&>summary::-webkit-details-marker]:hidden ${PLACE[opens]}`}
     >
       <summary
-        // The store first, the details drawn from it: its own toggle event comes a task later, and an item pressed before
-        // it would find no menu open to close
+        // The store first, the details drawn from it at once, as the browser's own press would: its toggle event comes a
+        // task later, and an item pressed before it would find no menu open to close
         onClick={(e) => {
           e.preventDefault();
-          if (menus.open.get() === id) menus.hide(id);
-          else menus.show(id);
+          flushSync(() => {
+            if (menus.open.get() === id) menus.hide(id);
+            else menus.show(id);
+          });
         }}
         aria-label={label}
         title={label}

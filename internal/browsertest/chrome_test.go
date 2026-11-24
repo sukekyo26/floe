@@ -232,17 +232,6 @@ func (b *browser) pressed(expr, what, ready string) {
 	b.until(what, ready)
 }
 
-// toggled runs press, which opens or shuts the "…" menu (a details) sel finds, and waits for the menu's toggle event. The
-// React build follows a menu by that event, which comes about a frame after the press: a key sent before it finds the menu
-// as it was. A person's key comes later than that.
-func (b *browser) toggled(sel string, press func()) {
-	b.t.Helper()
-
-	b.eval("window.toggledNow = false; document.querySelector(" + js(sel) + ").addEventListener('toggle', () => { window.toggledNow = true; }, { once: true }); true")
-	press()
-	b.until("the menu told", "window.toggledNow")
-}
-
 // topsJS is a function of a box (a bar, a menu) giving the things named in it by data-testid that no other named thing
 // holds: a menu's items, a bar's buttons and menu. A wrapper with no box of its own (React's around an item, the bar's
 // more-slot) is not one of them.
