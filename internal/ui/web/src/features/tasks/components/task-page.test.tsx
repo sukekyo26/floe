@@ -125,7 +125,7 @@ describe(TaskPagesHead, () => {
     expect.assertions(1);
     boot();
     expect(head(task('#1'))).toMatch(
-      /<button[^>]*id="task-add-page"[^>]*aria-label="ui_page_add:undefined"[^>]*>.*ui_task_child_add:undefined<\/button>/s,
+      /<button[^>]*id="task-add-page"[^>]*aria-label="ui_page_add:undefined"[^>]*>.*ui_part_add:undefined<\/button>/s,
     );
   });
 });

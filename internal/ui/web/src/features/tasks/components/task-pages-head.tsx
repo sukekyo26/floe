@@ -35,7 +35,7 @@ export function TaskPagesHead({
         }}
       >
         <PlusIcon />
-        {t('ui_task_child_add')}
+        {t('ui_part_add')}
       </Button>
     </PartHead>
   );

@@ -731,7 +731,7 @@ var messagesJA = map[string]string{
 	"ui_task_forget":           "タスクを削除",
 	"ui_task_forget_sure":      "本当に削除",
 	"ui_task_forget_failed":    "タスクの削除に失敗しました：%s",
-	"ui_task_child_add":        "追加",
+	"ui_part_add":              "追加",
 	"ui_child_add_named":       "子のタスクを追加",
 	"ui_task_child_of":         "親：%s",
 	"ui_task_title":            "タイトル",

@@ -123,7 +123,7 @@ export function TaskFamily({ task, family, onKin, onUnlink }: TaskFamilyProps) {
             }}
           >
             <PlusIcon />
-            {t('ui_task_child_add')}
+            {t('ui_part_add')}
           </Button>
           <Button
             id="task-parent-change"
@@ -177,7 +177,7 @@ export function TaskFamily({ task, family, onKin, onUnlink }: TaskFamilyProps) {
             }}
           >
             <PlusIcon />
-            {t('ui_task_child_add')}
+            {t('ui_part_add')}
           </Button>
         </PartHead>
         <div id="task-family-rows" className={ROWS}>

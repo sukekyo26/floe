@@ -194,7 +194,7 @@ export class TaskHead extends Component<TaskHeadProps, { shown: StateShown | nul
           >
             <ArchiveIcon />
             <span data-testid="label">{t(back ? 'ui_unarchive' : 'ui_archive')}</span>
-          </Button>{' '}
+          </Button>
           <ProjectPill
             id="task-project"
             word={projectWord(project)}

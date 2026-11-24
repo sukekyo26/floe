@@ -7,7 +7,6 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/chromedp/chromedp"
 	"github.com/chromedp/chromedp/kb"
 
 	"floe/internal/store"
@@ -118,9 +117,7 @@ func TestUITaskPage(t *testing.T) { //nolint:paralleltest // the browser tests s
 	b.eval("document.getElementById('task-up').focus()")
 	tabbed := []string{"task-up"}
 	for range 12 {
-		if err := chromedp.Do(b.ctx, chromedp.KeyEvent(kb.Tab)); err != nil {
-			t.Fatal(err)
-		}
+		b.pressKey(kb.Tab)
 		tabbed = append(tabbed, b.eval("document.activeElement.id || document.activeElement.dataset.testid"))
 		if tabbed[len(tabbed)-1] == "title" {
 			break

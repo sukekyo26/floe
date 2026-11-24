@@ -742,7 +742,7 @@ var messagesEN = map[string]string{
 	"ui_task_forget":           "Delete the task",
 	"ui_task_forget_sure":      "Really delete it",
 	"ui_task_forget_failed":    "Failed to delete the task: %s",
-	"ui_task_child_add":        "Add",
+	"ui_part_add":              "Add",
 	"ui_child_add_named":       "Add a child task",
 	"ui_task_child_of":         "Under %s",
 	"ui_task_title":            "Title",

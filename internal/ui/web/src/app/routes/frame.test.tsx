@@ -75,7 +75,7 @@ describe(FrameRoute, () => {
     expect(html).toMatch(
       /<a id="back" href="\/tasks\?project=x&amp;task=%23128"[^>]*>.*#128<\/span><\/a><nav id="screens"/s,
     );
-    // On any screen: the header's links go to the lists, not to a task's page
+    // Shown on any screen: no link of the header goes to a task's page
     expect(html).toMatch(/<a id="back"[^>]*class="inline-flex /);
     expect(html).not.toContain('aria-current');
     expect(html).toContain('<dd id="keys-back">ui_back_to_task:#128</dd>');
