@@ -16,7 +16,7 @@ func TestUITextLinks(t *testing.T) { //nolint:paralleltest // the browser tests 
 	b.size(1440, 900, false)
 	defer b.unsize()
 
-	var out []string
+	out := make([]string, 0, 6)
 	b.navigate("/a/d/?v=1")
 	b.until("v1 told read", pageNews("d")+".then((n) => n === 'version')")
 	b.until("an old version's words", "document.querySelectorAll('[data-testid=ver-note] a').length === 2")
