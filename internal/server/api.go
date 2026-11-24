@@ -28,17 +28,10 @@ const MaxUpload = 32 << 20
 // jsonType is the media type of a write, and the one Accept names for a report as JSON.
 const jsonType = "application/json"
 
-// readBody reads a write from the management page or the CLI, of up to limit bytes, for decodeStrict to read. Other
-// sites and the sandboxed pages are refused by the exact Origin and by requiring JSON (which needs a
-// CORS preflight), its Content-Type read as mime reads it: one whose parameters cannot be read is refused too.
-// On refusal it has answered and returns false.
-// LIMIT: 127.0.0.1 is open to every user of the machine, and anyone can fake Origin. Do not run floe
-// on a shared machine.
-func (s *Server) readBody(w http.ResponseWriter, r *http.Request, limit int64) ([]byte, bool) {
-	if !s.origins[r.Header.Get("Origin")] {
-		send(w, http.StatusForbidden, "forbidden origin")
-		return nil, false
-	}
+// readBody reads a write from the management page or the CLI (check), of up to limit bytes, for decodeStrict to read.
+// JSON is required (which needs a CORS preflight of another site), its Content-Type read as mime reads it: one whose
+// parameters cannot be read is refused too. On refusal it has answered and returns false.
+func readBody(w http.ResponseWriter, r *http.Request, limit int64) ([]byte, bool) {
 	if typ, _, err := mime.ParseMediaType(r.Header.Get("Content-Type")); err != nil || typ != jsonType {
 		send(w, http.StatusUnsupportedMediaType, "send application/json")
 		return nil, false
@@ -92,7 +85,7 @@ type Link struct {
 // page sends no force: a URL name another file uses is refused (409) so that a typo never replaces
 // another link.
 func (s *Server) addLink(w http.ResponseWriter, r *http.Request) {
-	body, ok := s.readBody(w, r, maxBody)
+	body, ok := readBody(w, r, maxBody)
 	if !ok {
 		return
 	}
@@ -230,7 +223,7 @@ func sendSaved(w http.ResponseWriter, r *http.Request, entry *store.Entry) {
 // save stores the data file the CLI sends as a page, at the slug sent or the one the store picks: 201 for a new slug,
 // 200 for one replaced, and 422 with the images to send when it reads some and sent none.
 func (s *Server) save(w http.ResponseWriter, r *http.Request) {
-	body, ok := s.readBody(w, r, MaxUpload)
+	body, ok := readBody(w, r, MaxUpload)
 	if !ok {
 		return
 	}
@@ -279,7 +272,7 @@ func (s *Server) save(w http.ResponseWriter, r *http.Request) {
 
 // rebuild draws every stored page again with the drawing of now (store.Rebuild): 204, or its mistakes.
 func (s *Server) rebuild(w http.ResponseWriter, r *http.Request) {
-	body, ok := s.readBody(w, r, maxBody)
+	body, ok := readBody(w, r, maxBody)
 	if !ok || decodeStrict[struct{}](w, body) == nil {
 		return
 	}
@@ -315,8 +308,7 @@ func (s *Server) markRead(w http.ResponseWriter, r *http.Request) {
 		notFound(w)
 		return
 	}
-	// Origin is checked before the page is looked for, as in edit.
-	body, ok := s.readBody(w, r, maxBody)
+	body, ok := readBody(w, r, maxBody)
 	if !ok {
 		return
 	}
@@ -338,13 +330,9 @@ func (s *Server) markRead(w http.ResponseWriter, r *http.Request) {
 }
 
 // markUnread takes a stored page back to what the viewer had read before: 204, also for one with news, and 404 for a
-// link, a folder or no page. Only the management page's own controls call it: the sandboxed pages (Origin: null) are
-// refused, and no message of a page leads here. It takes no body, as remove.
+// link, a folder or no page. Only the management page's own controls call it: no message of a page leads here. It takes
+// no body, as remove.
 func (s *Server) markUnread(w http.ResponseWriter, r *http.Request) {
-	if !s.origins[r.Header.Get("Origin")] {
-		send(w, http.StatusForbidden, "forbidden origin")
-		return
-	}
 	slug := r.PathValue("slug")
 	if !store.ValidSlug(slug) {
 		notFound(w)
@@ -373,7 +361,7 @@ type Stop struct {
 // one naming another is 409, for the server a command saw may be gone and this one started after it, and so is one
 // that comes after the first, the server stopping already.
 func (s *Server) stop(w http.ResponseWriter, r *http.Request) {
-	body, ok := s.readBody(w, r, maxBody)
+	body, ok := readBody(w, r, maxBody)
 	if !ok {
 		return
 	}
@@ -417,8 +405,7 @@ func (s *Server) edit(w http.ResponseWriter, r *http.Request) {
 		notFound(w)
 		return
 	}
-	// Origin is checked before the page is looked for, so that another site cannot tell which pages there are.
-	body, ok := s.readBody(w, r, maxBody)
+	body, ok := readBody(w, r, maxBody)
 	if !ok {
 		return
 	}
@@ -442,14 +429,9 @@ func (s *Server) edit(w http.ResponseWriter, r *http.Request) {
 	sendJSON(w, http.StatusOK, edited)
 }
 
-// remove deletes a page: 404 for none, its mistake for one that cannot be removed. Other sites and the sandboxed
-// pages (Origin: null) are refused. It takes no body: the management page sends none, so requiring JSON would
-// make deleting impossible.
+// remove deletes a page: 404 for none, its mistake for one that cannot be removed. It takes no body: the management
+// page sends none, so requiring JSON would make deleting impossible.
 func (s *Server) remove(w http.ResponseWriter, r *http.Request) {
-	if !s.origins[r.Header.Get("Origin")] {
-		send(w, http.StatusForbidden, "forbidden origin")
-		return
-	}
 	err := s.cfg.Store.Remove(r.PathValue("slug"))
 	if errors.Is(err, store.ErrNotFound) {
 		notFound(w)
