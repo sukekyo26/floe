@@ -62,18 +62,20 @@ describe(ScreenSwitch, () => {
     expect(draw('frame')).toMatch(/^<nav id="screens"[^>]*class="[^"]*narrow:hidden/);
     expect(draw('list')).not.toContain('narrow:hidden');
     expect(draw('frame', { listUp: up('/?view=fav') })).toMatch(
-      /<a id="to-list" href="\/\?view=fav"[^>]*class="[^"]*text-muted.*<a id="to-tasks" href="\/tasks\?[^"]*project=p/,
+      /<a id="to-list" href="\/\?view=fav"[^>]*class="[^"]*text-fg.*<a id="to-tasks" href="\/tasks\?[^"]*project=p/,
     );
     expect(draw('frame', { taskUp: up('/tasks?view=done') })).toMatch(
-      /<a id="to-list" href="\/".*<a id="to-tasks" href="\/tasks\?view=done"[^>]*class="[^"]*text-muted/,
+      /<a id="to-list" href="\/".*<a id="to-tasks" href="\/tasks\?view=done"[^>]*class="[^"]*text-fg/,
     );
   });
 
-  it('draws both links of one weight, the screen shown darker, with no line under them', () => {
-    expect.assertions(3);
+  it('draws the screen shown alone on the thumb, the other muted, and neither of them on a page whole', () => {
+    expect.assertions(5);
     const html = draw('taskList');
+    expect(html).toMatch(/<nav id="screens"[^>]*class="[^"]*\bbg-line\b/);
     expect(html).toMatch(/id="to-list"[^>]*class="[^"]*font-semibold[^"]*text-muted[^"]*"/);
-    expect(html).toMatch(/id="to-tasks"[^>]*class="[^"]*font-semibold[^"]*text-fg[^"]*"/);
-    expect(html).not.toMatch(/<nav id="screens".*border-[bt]/s);
+    expect(html).not.toMatch(/id="to-list"[^>]*class="[^"]*(bg-frame-bg|shadow)/);
+    expect(html).toMatch(/id="to-tasks"[^>]*class="[^"]*font-semibold[^"]*bg-frame-bg[^"]*text-fg[^"]*shadow-sm/);
+    expect(draw('frame')).not.toMatch(/bg-frame-bg|shadow|text-muted/);
   });
 });

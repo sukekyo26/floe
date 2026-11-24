@@ -143,7 +143,7 @@ func TestUIFocusRing(t *testing.T) { //nolint:paralleltest // the browser tests 
 	b.eval("document.getElementById('bulk-clear').click()")
 	out = out[:0]
 	for _, sel := range []string{
-		"#shelf [data-view=all]", "#shelf [data-view=fav]", "#q",
+		"#to-list", "#to-tasks", "#shelf [data-view=all]", "#shelf [data-view=fav]", "#q",
 		"#list li[data-slug] a[data-testid=title]",
 	} {
 		out = append(out, tabTo(sel))
@@ -170,7 +170,7 @@ func TestUIFocusRing(t *testing.T) { //nolint:paralleltest // the browser tests 
 	b.until("the search closed", "!document.getElementById('find').open")
 	ring := "solid 2px rgb(107, 105, 100) 1px seen"
 	check(t, "reached", out, strings.Join([]string{
-		"#shelf [data-view=all]: " + ring, "#shelf [data-view=fav]: " + ring,
+		"#to-list: " + ring, "#to-tasks: " + ring, "#shelf [data-view=all]: " + ring, "#shelf [data-view=fav]: " + ring,
 		"#q: " + ring, "#list li[data-slug] a[data-testid=title]: solid 2px rgb(107, 105, 100) -2px seen",
 		"#list li[data-slug] [data-testid=sel]: " + ring, "#bulk-clear: " + ring, "#bulk-delete: " + ring, "#bulk-delete[data-armed]: " + ring,
 		"[data-testid=tag-box] input: " + ring, "#find-actions [data-testid=star]: " + ring,
