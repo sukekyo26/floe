@@ -1,3 +1,4 @@
+import { SWITCH_WIDE } from '@/components/whole-bar';
 import { useStore } from '@/hooks/use-store';
 import { t } from '@/lib/t';
 import { listQuery as pageQuery, type ListQuery } from '@/stores/list-query';
@@ -23,8 +24,8 @@ export interface Up {
 // ScreenSwitch is the bar's way between the two screens: links, as each goes to a URL of its own; the screen shown is
 // aria-current. A task's page is of the task list, and a page whole of the list it was opened from (the user's choice),
 // which from tells: one opened from a task's page is of the task list, one opened by its URL of the page list. Its bar
-// has its back link alone at 40rem or less. The track shows the room a press has, lower than the bar's buttons of icons;
-// its padding holds each one's focus ring
+// has its back link alone at 56rem or less (whole-bar.ts). The track shows the room a press has, lower than the bar's
+// buttons of icons; its padding holds each one's focus ring
 // Each goes back to the list as this tab last had it, read again as the list's query is kept, or where its up says: on
 // a task's page, the task list's (S450), and in a frame, the one it was opened from
 export function ScreenSwitch({
@@ -47,7 +48,7 @@ export function ScreenSwitch({
     <nav
       id="screens"
       aria-label={t('ui_screens')}
-      className={`flex flex-none gap-0.5 self-center rounded-full bg-line p-1 ${screen === 'frame' ? 'narrow:hidden' : ''}`}
+      className={`flex flex-none gap-0.5 self-center rounded-full bg-line p-1 ${screen === 'frame' ? SWITCH_WIDE : ''}`}
     >
       <a
         id="to-list"

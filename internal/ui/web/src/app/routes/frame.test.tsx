@@ -82,23 +82,23 @@ describe(FrameRoute, () => {
     expect(html).toContain('<dd id="keys-back">ui_back_to_task:#128</dd>');
   });
 
-  it('opened from the page list, goes back to it by the header’s Pages, its back link there hidden till 40rem', () => {
+  it('opened from the page list, goes back to it by the header’s Pages, its back link there hidden till 56rem', () => {
     expect.assertions(3);
     const html = draw('', [page], {
       'pages.order': JSON.stringify({ order: ['p'], shown: ['p'], back: '/?view=fav' }),
     });
     expect(html).toMatch(/<a id="to-list" href="\/\?view=fav"/);
     expect(html).toMatch(/<a id="to-list"[^>]*aria-current="page"/);
-    expect(html).toMatch(/<a id="back" href="\/\?view=fav"[^>]*class="hidden narrow:inline-flex /);
+    expect(html).toMatch(/<a id="back" href="\/\?view=fav"[^>]*class="hidden mid:inline-flex /);
   });
 
-  it('opened from the task list, goes back to it by the header’s Task list, its back link there hidden till 40rem', () => {
+  it('opened from the task list, goes back to it by the header’s Task list, its back link there hidden till 56rem', () => {
     expect.assertions(3);
     const html = draw('', [page], {
       'pages.order': JSON.stringify({ order: ['p'], shown: ['p'], back: '/tasks?project=x' }),
     });
     expect(html).toMatch(/<a id="to-tasks" href="\/tasks\?project=x"/);
     expect(html).toMatch(/<a id="to-tasks"[^>]*aria-current="page"/);
-    expect(html).toMatch(/<a id="back" href="\/tasks\?project=x"[^>]*class="hidden narrow:inline-flex /);
+    expect(html).toMatch(/<a id="back" href="\/tasks\?project=x"[^>]*class="hidden mid:inline-flex /);
   });
 });

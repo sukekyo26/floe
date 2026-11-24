@@ -23,8 +23,8 @@ describe(BackLink, () => {
     expect(draw()).toMatch(/<\/svg><\/a>$/);
   });
 
-  it('shows at 40rem or less alone where told to', () => {
+  it('shows only where a page whole’s bar has no switch, where told to', () => {
     expect.assertions(1);
-    expect(draw({ narrowOnly: true })).toMatch(/class="hidden narrow:inline-flex /);
+    expect(draw({ narrowOnly: true })).toMatch(/class="hidden mid:inline-flex /);
   });
 });

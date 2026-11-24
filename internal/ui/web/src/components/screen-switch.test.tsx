@@ -56,10 +56,10 @@ describe(ScreenSwitch, () => {
     );
   });
 
-  it('marks the list a page whole was opened from, gone at 40rem or less, and sends the one it was opened from where its up says', () => {
+  it('marks the list a page whole was opened from, gone at 56rem or less, and sends the one it was opened from where its up says', () => {
     expect.assertions(5);
-    expect(draw('frame', { from: 'pages' })).toMatch(/^<nav id="screens"[^>]*class="[^"]*narrow:hidden/);
-    expect(draw('list')).not.toContain('narrow:hidden');
+    expect(draw('frame', { from: 'pages' })).toMatch(/^<nav id="screens"[^>]*class="[^"]*mid:hidden/);
+    expect(draw('list')).not.toContain('mid:hidden');
     expect(draw('frame', { from: 'pages', listUp: up('/?view=fav') })).toMatch(
       /<a id="to-list" href="\/\?view=fav" aria-current="page".*<a id="to-tasks" href="\/tasks\?[^"]*project=p[^"]*"(?![^>]*aria-current)/,
     );

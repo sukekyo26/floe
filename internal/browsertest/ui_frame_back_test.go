@@ -11,7 +11,7 @@ import (
 )
 
 // wayBack is the link that shows a page whole's way back, the one h and a press go by: the back link where it shows
-// (opened from a task's page, or at 40rem or less), else the header's link to the list that opened the page, which
+// (opened from a task's page, or at 56rem or less), else the header's link to the list that opened the page, which
 // goes where the back link does.
 const wayBack = `[...['back', 'to-list', 'to-tasks'].map((id) => document.getElementById(id))].find((e) => e !== null && e.getClientRects().length > 0 && e.getAttribute('href') === document.getElementById('back').getAttribute('href'))`
 
@@ -22,7 +22,7 @@ const frameBack = `(() => { const e = ` + wayBack + `, back = document.getElemen
 
 // The way back of a page whole, by every way a page is opened whole: real presses, the row's press again and a double press, the
 // title over the page beside the rows, a pin, the page list's row; a reload keeps it, and a tab that kept nothing has the page list. h goes
-// where it says. Opened from a task's page it is the back link; from a list, the header's link to that list, and at 40rem or less the
+// where it says. Opened from a task's page it is the back link; from a list, the header's link to that list, and at 56rem or less the
 // back link's mark alone, the header's links gone (the user's choice).
 func TestUIFrameBack(t *testing.T) { //nolint:paralleltest // the browser tests share one Chrome, one at a time
 	s := newSite(t)
@@ -123,9 +123,11 @@ func TestUIFrameBack(t *testing.T) { //nolint:paralleltest // the browser tests 
 	b.size(360, 800, true)
 	b.until("the narrow bar", "innerWidth === 360")
 	out = append(out, "phone: "+b.eval("(document.querySelector('[data-testid=brand]').offsetParent !== null) + ' ' + document.querySelector('[data-testid=brand]').getAttribute('href') + ' ' + (document.querySelector('[data-testid=brand] svg').getBoundingClientRect().width === 26) + ' ' + (document.getElementById('frame-actions').getBoundingClientRect().right <= innerWidth) + ' ' + (document.documentElement.scrollWidth <= innerWidth)"))
-	// At 40rem or less the back link alone, its mark; wider, the header's link (the user's choice)
+	// At 56rem or less the back link alone, its mark; wider, the header's link (the user's choice)
 	out = append(out, "narrow: "+b.eval("("+wayBack+")?.id + ' ' + (document.getElementById('back-word')?.offsetParent == null) + ' ' + document.getElementById('back').getAttribute('aria-label') + ' ' + (document.getElementById('screens').offsetParent === null)"))
-	b.size(800, 800, false)
+	b.size(896, 800, false)
+	out = append(out, "56rem: "+b.eval("("+wayBack+")?.id"))
+	b.size(897, 800, false)
 	out = append(out, "wider: "+b.eval("("+wayBack+")?.id"))
 	b.size(1400, 800, false)
 
@@ -225,6 +227,7 @@ page list row: /a/loose/ | to-list | /?project=proj | Page list | Back to the pa
 another tab: /a/a/ | to-list | / | Page list | Back to the page list | Back to the page list | Back to the page list | /
 phone: true / true true true
 narrow: back true Back to the page list true
+56rem: back
 wider: to-list
 a long title: /a/b/ | back | /tasks?project=proj&task=%23128 | #128 | Back to #128 | Back to #128 | Back to #128 | /
 of a version: /a/a/ | back | /tasks?project=proj&task=%23128 | #128 | Back to #128 | Back to #128 | Back to #128 | /
@@ -344,7 +347,7 @@ func TestUIFrameBackFocus(t *testing.T) { //nolint:paralleltest // the browser t
 	whole("a")
 	b.moving("(" + wayBack + ").click()")
 	read("one column", pages)
-	// At 40rem or less the back link alone, pressed as a person does: the row again.
+	// At 56rem or less the back link alone, pressed as a person does: the row again.
 	b.size(360, 800, true)
 	b.navigate(pages)
 	b.until("the narrow row", "document.querySelector('#list li[data-slug=a] [data-testid=title]')")
