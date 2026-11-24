@@ -83,13 +83,14 @@ jobs:
           echo "skip_browser=$skip_browser" >> "$GITHUB_OUTPUT"
           # Unlike the levels, the Web job runs only for a pull request that changes a file its checks read (an empty
           # diff and any other event run it): the management page's sources and build, the recipes, this workflow, the
-          # action that installs just and the line endings a checkout gives dist.
+          # action that installs just, the line endings a checkout gives dist and the URLs its tests read.
           skip_web=false
           if [ "$EVENT" = pull_request ] && [ -n "$changed" ]; then
             skip_web=true
             while IFS= read -r file; do
               case "$file" in
-                internal/ui/web/* | justfile | .github/workflows/go-ci.yml | .github/actions/setup-just/* | .gitattributes)
+                internal/ui/web/* | internal/store/testdata/task-urls.json | justfile | .github/workflows/go-ci.yml | \
+                  .github/actions/setup-just/* | .gitattributes)
                   skip_web=false ;;
               esac
             done <<< "$changed"
