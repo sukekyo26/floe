@@ -266,22 +266,27 @@ func TestUIFindActions(t *testing.T) { //nolint:paralleltest // the browser test
 	// Archived from the menu: the focus on the button of the menu as drawn, its words changed.
 	b.eval("document.querySelector('" + menu + " summary').focus(); document.querySelector('" + menu + " summary').click(); document.querySelector('" + menu + " [data-testid=archive]').click()")
 	change("b", "archived: true")
-	b.until("the row moved", "document.querySelector('#find-actions [data-testid=archive] [data-testid=label]').textContent === 'Restore'")
+	b.until("the row moved", inMenuItem("#find-actions", "archive", "i.querySelector('[data-testid=label]').textContent")+" === 'Restore'")
 	out = append(out, b.eval("document.activeElement.matches('"+menu+" summary')"))
 	change("b", "archived: false")
-	b.until("the row back", "document.querySelector('#find-actions [data-testid=archive] [data-testid=label]').textContent === 'Archive'")
+	b.until("the row back", inMenuItem("#find-actions", "archive", "i.querySelector('[data-testid=label]').textContent")+" === 'Archive'")
 	// A delete waiting stays through an answer.
 	b.eval("document.querySelector('" + menu + " summary').click(); document.querySelector('" + menu + " [data-testid=delete]').focus(); document.querySelector('" + menu + " [data-testid=delete]').click()")
 	change("a", "title: 'Alpha plan'")
 	b.until("the rows drawn", "document.querySelector('#find-list a').textContent === 'Alpha plan'")
 	out = append(out, b.eval("document.querySelector('"+menu+" [data-testid=delete]').dataset.armed === 'true'"))
 
-	// Closed by its key with a delete waiting, on the row it opens on: it opens anew with the menu shut, nothing waiting.
+	// The menu shut by its button lets it go (TestUIRowMenuDisarms); closed by its key with a delete waiting, on the row it opens
+	// on, the search opens anew with the menu shut.
 	typeFind(b, "")
-	b.eval("document.querySelector('" + menu + " summary').click(); document.querySelector('" + menu + " [data-testid=delete]').click()")
+	b.eval("(() => { const m = document.querySelector('" + menu + "'); if (m.open) m.querySelector('summary').click(); })()")
+	menuItemShown(b, "#find-actions", "delete", "")
+	out = append(out, b.eval("document.querySelector('"+menu+" [data-testid=delete]').hasAttribute('data-armed')"))
+	b.eval("document.querySelector('" + menu + " [data-testid=delete]').click()")
+	b.until("the delete armed", "document.querySelector('"+menu+" [data-testid=delete]').dataset.armed")
 	keyDown(b, "key: 'k', ctrlKey: true")
 	keyDown(b, "key: 'k', ctrlKey: true")
-	out = append(out, b.eval("[document.querySelector('"+menu+"').open, document.querySelectorAll('#find-actions [data-armed]').length].join(' ')"))
+	out = append(out, b.eval("document.querySelector('"+menu+"').open"))
 	// What comes of the buttons shows over the rest: a toast, a mistake; and they go back with the window.
 	const seen = `((id) => { const e = document.getElementById(id); return document.getElementById('find').contains(e) && !e.hidden && e.getBoundingClientRect().height > 0; })`
 	b.eval("document.querySelector('#find-actions [data-testid=star]').click()")
@@ -337,7 +342,7 @@ func TestUIFindActions(t *testing.T) { //nolint:paralleltest // the browser test
 	b.moving("document.querySelector('" + menu + " [data-testid=delete]').click()")
 	b.until("the list", "location.pathname === '/'")
 	check(t, "actions", out, strings.Join([]string{
-		"true", "true", "true", "true", "false true true", "false", "true", "true", "false 0", "true", "true none",
+		"true", "true", "true", "true", "false true true", "false", "true", "true", "false", "false", "true", "true none",
 		"/a/c/ true find-q", "false true", "/a/c/ ",
 	}, "|"))
 }
@@ -1239,6 +1244,35 @@ func TestUIReadLoads(t *testing.T) { //nolint:paralleltest // the browser tests 
 	check(t, "at once", []string{b.eval("window.next - window.told < 500")}, "true")
 }
 
+// TestUIFindCloseFocus: the search shut by its keys from a button of its foot, which goes as it shuts, gives the focus back to what had it
+// before.
+func TestUIFindCloseFocus(t *testing.T) { //nolint:paralleltest // the browser tests share one Chrome, one at a time
+	s := newSite(t)
+	b := s.b
+	s.floe(t, "publish", s.page(t, "a.yaml", "T a", ""), "--slug", "a")
+	b.navigate("/")
+	const title = "document.querySelector('#list li[data-slug=a] [data-testid=title]')"
+	b.until("the row", title)
+	for _, w := range []struct {
+		name string
+		shut func()
+	}{
+		{"Escape", func() { b.pressKey(kb.Escape) }},
+		{"Ctrl+K", func() { b.pressKey("k", kb.ModifierCtrl) }},
+	} {
+		b.eval(title + ".focus()")
+		b.pressKey("k", kb.ModifierCtrl)
+		b.until(w.name+": the search", "document.getElementById('find').open && document.querySelector('#find-actions [data-testid=star]')")
+		b.eval("document.querySelector('#find-actions [data-testid=star]').focus()")
+		w.shut()
+		b.until(w.name+": the search shut", "!document.getElementById('find').open")
+		b.until(w.name+": its foot gone", "document.getElementById('find-actions') === null")
+		if got := b.eval("document.activeElement === " + title); got != "true" {
+			t.Errorf("%s from the foot's star: the focus is on %s, want the row's title", w.name, b.eval("document.activeElement.outerHTML.slice(0, 120)"))
+		}
+	}
+}
+
 // TestUIRowSelect starts a selection from a row's menu, with no keys and on a touch screen, where the boxes then show for the rest;
 // the menus of the pages' bars and the search modal have no such item.
 func TestUIRowSelect(t *testing.T) { //nolint:paralleltest // the browser tests share one Chrome, one at a time
@@ -1276,16 +1310,16 @@ func TestUIRowSelect(t *testing.T) { //nolint:paralleltest // the browser tests 
 	press("#list li[data-slug=f] [data-testid=menu] [data-testid=select]")
 	out = append(out, b.eval(state))
 	// Named for a screen reader; none in the search modal or the bar of a page.
-	out = append(out, b.eval("document.querySelector('#list li[data-slug=a] [data-testid=menu] [data-testid=select]').getAttribute('aria-label')"))
+	out = append(out, b.eval(inMenuItem("#list li[data-slug=a]", "select", "i.getAttribute('aria-label')")))
 	b.eval("document.getElementById('bulk-clear').click()")
 	pressFindOpen(b)
-	out = append(out, b.eval("document.querySelector('#find-actions [data-testid=select]').hidden"))
+	out = append(out, b.eval(inMenuItem("#find-actions", "select", "i.hidden")))
 	b.pressKey(kb.Escape)
 	b.until("the search closed", "!document.getElementById('find').open")
 	touch(false)
 	b.navigate("/a/a/")
 	b.until("the bar", "document.getElementById('frame-title').textContent")
-	out = append(out, b.eval("document.querySelector('#frame-actions [data-testid=select]').hidden"))
+	out = append(out, b.eval(inMenuItem("#frame-actions", "select", "i.hidden")))
 	check(t, "select", out, strings.Join([]string{
 		" false false none", "a true true grid", "false", "af true true grid", "Select Alpha plan", "true", "true",
 	}, "|"))

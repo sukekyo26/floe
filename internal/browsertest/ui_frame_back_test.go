@@ -262,7 +262,7 @@ func TestUIFrameBackFocus(t *testing.T) { //nolint:paralleltest // the browser t
 	// whole waits for the page whole, read.
 	whole := func(slug string) {
 		t.Helper()
-		b.until("the page whole", "location.pathname === '/a/"+slug+"/' && document.getElementById('frame-title').textContent && document.querySelector('#frame-actions [data-testid=mark-unread]')?.hidden === false")
+		b.until("the page whole", "location.pathname === '/a/"+slug+"/' && document.getElementById('frame-title').textContent && "+inMenuItem("#frame-actions", "mark-unread", "i.hidden")+" === false")
 	}
 	// open opens the row whole by a double press, as a person does.
 	open := func(list, slug string) {
@@ -332,7 +332,7 @@ func TestUIFrameBackFocus(t *testing.T) { //nolint:paralleltest // the browser t
 	// Marked unread there, it stays unread: the row has the focus, with nothing beside it to read it.
 	open(pages, "b")
 	pressMenuItem(b, "#frame-actions", "mark-unread")
-	b.until("marked unread", "document.querySelector('#frame-actions [data-testid=mark-unread]').hidden")
+	b.until("marked unread", inMenuItem("#frame-actions", "mark-unread", "i.hidden"))
 	pressBack()
 	read("marked unread", pages)
 	// One column has nothing beside the list.

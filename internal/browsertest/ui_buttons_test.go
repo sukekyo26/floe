@@ -289,7 +289,7 @@ func TestUIButtons(t *testing.T) { //nolint:paralleltest // the browser tests sh
 	b.navigate("/a/a/")
 	b.until("read", "document.querySelector('[data-testid=toast]')")
 	b.navigate("/a/a/")
-	b.until("the bar", "document.querySelector('#frame-actions [data-testid=task-set]')")
+	b.until("the bar", "document.querySelector('#frame-actions [data-testid=more]')")
 	frameMenu := func(item string) func() {
 		return func() { pressMenuItem(b, "#frame-actions", item) }
 	}
