@@ -40,8 +40,8 @@ function asWritten(last: TaskOf, found: TaskOf | undefined, rows: PageTaskOf['ro
   };
 }
 
-// pageTask is the task of a task's page (ui.html renderTaskPage 4396–4406). Unreadable, it is as last read, with what
-// the screen wrote since and its pages as they are now; what is not known is not said to be missing
+// pageTask is the task of a task's page. Unreadable, it is as last read, with what the screen wrote since and its pages
+// as they are now; what is not known is not said to be missing
 export function pageTask({ found, rows, failed, last }: PageTaskOf): PageTask {
   const task = failed ? (last ? asWritten(last, found, rows) : null) : (found ?? null);
   return {
@@ -86,8 +86,8 @@ export interface Family {
   shown: boolean;
 }
 
-// familyOf is a task's family card (ui.html drawTaskFamily): its parent, offered while it has no children, and its
-// children, offered while it has no parent. What the store's checkParent would refuse is not offered
+// familyOf is a task's family card: its parent, offered while it has no children, and its children, offered while it
+// has no parent. What the store's checkParent would refuse is not offered
 export function familyOf(task: TaskOf, states: readonly string[], lang: string): Family {
   const at = (x: TaskOf) => states.indexOf(x.state);
   const kids = [...task.children].sort((x, y) => at(x) - at(y) || taskOrder(lang)(x, y));
@@ -103,8 +103,8 @@ export function familyOf(task: TaskOf, states: readonly string[], lang: string):
   };
 }
 
-// familySaid is all the card says (ui.html 4052), revs too: its rows are made anew as it changes, and kept as it does
-// not (the key of each)
+// familySaid is all the card says, revs too: its rows are made anew as it changes, and kept as it does not (the key of
+// each)
 export const familySaid = (task: TaskOf, family: Family): string =>
   JSON.stringify([
     task.name,

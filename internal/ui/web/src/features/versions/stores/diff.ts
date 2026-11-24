@@ -48,7 +48,7 @@ interface Deps {
 
 const messageOf = (err: unknown) => (err instanceof Error ? err.message : String(err));
 
-// createDiff is ui.html's openDiff, readDiff, writeDiffPair and moveChange: one for a load of the frame at ?diff, as
+// createDiff is what changed between two versions, read and moved through: one for a load of the frame at ?diff, as
 // what closes it (the bar's button, j and k) loads another URL. A read asked again calls the one before off: one
 // controller for /versions and /diff alike
 // LIMIT: it does not follow a version published while it is open: reload it, or choose

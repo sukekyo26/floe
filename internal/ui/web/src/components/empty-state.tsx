@@ -1,7 +1,7 @@
 import type { ReactNode } from 'react';
 
-// EmptyState is what a list says in place of its rows (ui.html .state): its words in the middle, the first of them
-// bolder and larger, drawn hidden till it is the one shown, as the tests find each by its id
+// EmptyState is what a list says in place of its rows: its words in the middle, the first of them bolder and larger,
+// drawn hidden till it is the one shown, as the tests find each by its id
 export function EmptyState({
   id,
   hidden,

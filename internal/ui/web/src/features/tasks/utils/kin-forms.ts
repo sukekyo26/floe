@@ -17,8 +17,8 @@ export interface There {
   note: string;
 }
 
-// A form of the modal of a task's family (ui.html KIN_FORMS): what it says, the tasks it offers, what a name typed is
-// to it, and what saving sends. What saving does besides is the store's (kin-acts)
+// A form of the modal of a task's family: what it says, the tasks it offers, what a name typed is to it, and what
+// saving sends. What saving does besides is the store's (kin-acts)
 export interface KinForm {
   heading: (task: KinTask) => string;
   target: (task: KinTask, ask: boolean) => string;
@@ -104,9 +104,9 @@ export const KIN_FORMS: Record<KinFormName, KinForm> = {
   },
 };
 
-// askedProjects is what the modal adding a task asks the project of, with no task nor pin anywhere (ui.html
-// openTaskAdd): no project, then the pages' projects in the order of their colours; the one chosen is the list's if a
-// page has it. A project no page has is for floe task --project
+// askedProjects is what the modal adding a task asks the project of, with no task nor pin anywhere: no project, then
+// the pages' projects in the order of their colours; the one chosen is the list's if a page has it. A project no page
+// has is for floe task --project
 // LIMIT: the first task made, the other projects are not on the screen to make one in: a page's "Set task" makes one in
 // its project and floe task --project in any. Ask the project every time if that comes to trouble someone
 export function askedProjects(entries: readonly Page[], project: string): { names: string[]; chosen: string } {

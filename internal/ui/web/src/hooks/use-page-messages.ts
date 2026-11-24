@@ -6,7 +6,7 @@ import { pageMessage, type FrameKind } from '@/utils/page-message';
 export interface PageMessageCalls {
   // givenPath is the path this page gave the iframe now, null for none
   givenPath: () => string | null;
-  // shown tells the iframe is on the screen now (ui.html takes the one shown alone); left out, it always is
+  // shown tells the iframe is on the screen now; left out, it always is
   shown?: () => boolean;
   // keys are the screen's table of keys (pageMessage passes those of PAGE_KEYS alone)
   keys: ReadonlySet<string>;

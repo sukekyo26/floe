@@ -24,8 +24,8 @@ import type { FocusBack } from '@/types/focus';
 import type { TaskOf } from '@/types/task';
 
 export interface TaskHeadProps {
-  // task is the task the head draws: as last drawn once gone, so that a button pressed then acts on it (ui.html draws
-  // the head no more); null before any is read
+  // task is the task the head draws: as last drawn once gone, so that a button pressed then acts on it; null before any
+  // is read
   readonly task: TaskOf | null;
   readonly shown: boolean;
   // project and name are the page's, as its URL names them
@@ -50,9 +50,9 @@ interface Snapshot {
 const isOpen = (sel: HTMLSelectElement | null): boolean =>
   sel !== null && CSS.supports('selector(:open)') && sel.matches(':open');
 
-// TaskHead is over the rows of a task's page (ui.html #task-head, drawTaskHead): its Add a page, the task's edit and
-// archive buttons, its name and title, its state and how to change it, its time, project and links, and its
-// family card. Drawn anew, the focus it had goes where headFocus says, taken just before React changes it
+// TaskHead is over the rows of a task's page: its Add a page, the task's edit and archive buttons, its name and title,
+// its state and how to change it, its time, project and links, and its family card. Drawn anew, the focus it had goes
+// where headFocus says, taken just before React changes it
 // LIMIT: a browser without :open redraws the choices while its list is open: what is chosen goes with the rev drawn last,
 // refused or written as of then. Hold them some other way if such a browser comes to matter
 export class TaskHead extends Component<TaskHeadProps, { shown: StateShown | null }> {

@@ -36,9 +36,9 @@ export interface PageListProps {
   readonly selection?: Selection;
 }
 
-// PageList is the page list's rows (ui.html renderList): the entries the shelf and the search leave, newest first under
-// their days' headings, a folder open followed by its tree; or, with none to draw, the words why. The view "new" keeps
-// every unread page as it draws, so that one read stays on it
+// PageList is the page list's rows: the entries the shelf and the search leave, newest first under their days'
+// headings, a folder open followed by its tree; or, with none to draw, the words why. The view "new" keeps every unread
+// page as it draws, so that one read stays on it
 export function PageList({
   openers,
   onAdd,

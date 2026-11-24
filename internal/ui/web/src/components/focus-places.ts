@@ -30,9 +30,8 @@ export const focusOn = (el: Element | null): boolean => {
 };
 
 // drawThenFocus draws what apply changes at once, then gives the focus to the element of id: what a fold or an open
-// button does as it is pressed (ui.html showShelf, showList, showSide, showToc). Its callers are event handlers alone,
-// never a draw or an effect, where flushSync could not draw. A column folded with no press (ShowButton) takes the
-// focus in an effect of its own
+// button does as it is pressed. Its callers are event handlers alone, never a draw or an effect, where flushSync could
+// not draw. A column folded with no press (ShowButton) takes the focus in an effect of its own
 export function drawThenFocus(apply: () => void, id: string): void {
   flushSync(apply);
   focusOn(document.getElementById(id));
@@ -58,7 +57,7 @@ export function prepareArchive(slug: string): ArchiveFocus {
 }
 
 // restoreFocus is where the focus goes once a page is restored from its way back, which had it: the search modal's
-// field, the page's row, or the frame's archive button (ui.html 3510)
+// field, the page's row, or the frame's archive button
 export const restoreFocus = (slug: string) => (): void => {
   if (findOpen()) focusOn(document.getElementById('find-q'));
   else if (!focusRow(entry(slug))) focusOn(document.querySelector('#frame-actions > [data-testid=archive]'));
@@ -83,7 +82,7 @@ export function prepareTaskOut(slug: string, back: () => boolean): TaskOutFocus 
 }
 
 // partButton gives the focus to the button of a task's family card's part as drawn now: the parent's (up), or the
-// children's (ui.html partButton), telling whether one was there
+// children's, telling whether one was there
 export const partButton = (up: boolean): boolean =>
   focusOn(
     (up ? ['task-parent-change', 'task-parent-add'] : ['task-child'])
@@ -116,8 +115,8 @@ export const rowMenuId = (slug: string): string => `more:${slug}`;
 // barMenuId is the id of the menu "…" of the bar of id (over a page, in the frame, the search's foot)
 export const barMenuId = (id: string): string => `bar:${id}`;
 
-// moveRow gives the focus to the title of the row step from the one with the focus, or the one open beside the list,
-// of the rows drawn with a title, whichever screen (ui.html moveRow): a tree's note has none, and is passed over
+// moveRow gives the focus to the title of the row step from the one with the focus, or the one open beside the list, of
+// the rows drawn with a title, whichever screen: a tree's note has none, and is passed over
 export function moveRow(step: number): MovedTo | null {
   const rows = [...document.querySelectorAll('#list > li[data-key]')].filter(
     (li) => li.querySelector('[data-testid=title]') !== null,
@@ -135,8 +134,8 @@ export function moveRow(step: number): MovedTo | null {
   };
 }
 
-// tickRow presses the box of the row with the focus (ui.html 6933): hidden too, as the boxes are till one is ticked. A
-// row with no box (a tree's, a task's page's) does nothing
+// tickRow presses the box of the row with the focus: hidden too, as the boxes are till one is ticked. A row with no box
+// (a tree's, a task's page's) does nothing
 export function tickRow(): void {
   const row = [...document.querySelectorAll('#list > li[data-key]')].find((li) => li.contains(document.activeElement));
   const box = row?.querySelector('[data-testid=sel]');
@@ -151,11 +150,10 @@ interface BackDeps {
 }
 
 // backToRow gives the focus back to the row a page whole was opened from, come back to (Order's comeBack), and opens
-// its version beside the list unless that reads a page left unread. Where the row is no longer seen (the list folded
-// as it was, or as it is picked), the focus goes to what opens the list, the one place that can take it then. On the
-// task list, first the row of the task whose page it was gone back to from (ui.html focusTaskRow), then the pin a page
-// whole was opened from, which wins (ui.html 3954, then 4527 on the read after). Called once the list is first drawn
-// (useBackToRow) and on the way back from the browser's cache (P8)
+// its version beside the list unless that reads a page left unread. Where the row is no longer seen (the list folded as
+// it was, or as it is picked), the focus goes to what opens the list, the one place that can take it then. On the task
+// list, first the row of the task whose page it was gone back to from, then the pin a page whole was opened from, which
+// wins. Called once the list is first drawn (useBackToRow) and on the way back from the browser's cache (P8)
 export function backToRow({
   order = pageOrder,
   pages = pagePages,

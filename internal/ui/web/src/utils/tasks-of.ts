@@ -1,9 +1,9 @@
 import type { Page } from '@/types/page';
 import type { TaskOf, Tasks } from '@/types/task';
 
-// tasksFrom is each task of tasks.json, with the pages on it (ui.html tasksOf). A task is of its row alone: a page
-// naming a task with no row, as a hand edit leaves, is on none here. A child, as the store's childrenOfTask says, is of
-// a parent with a row of the same project and no parent itself
+// tasksFrom is each task of tasks.json, with the pages on it. A task is of its row alone: a page naming a task with no
+// row, as a hand edit leaves, is on none here. A child, as the store's childrenOfTask says, is of a parent with a row
+// of the same project and no parent itself
 export function tasksFrom(entries: readonly Page[], read: Tasks): TaskOf[] {
   const tasks = new Map<string, TaskOf>();
   const key = (project: string, name: string) => JSON.stringify([project, name]);

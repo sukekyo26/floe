@@ -38,9 +38,9 @@ const valuesOf = (a: Page | null): EditValues => ({
 export const editNow = (values: EditValues): string =>
   `${values.slug.trim()} · ${values.project.trim() || t('ui_no_project')}`;
 
-// EditDialog changes a page's title, slug, project and description (ui.html openEdit, saveEdit): the slug and the project
-// folded, with what they are now. A refusal is said in the modal, which stays open, the focus on the field sent that it
-// may be; renamed whole, the page goes to its new name and the modal goes with it
+// EditDialog changes a page's title, slug, project and description: the slug and the project folded, with what they are
+// now. A refusal is said in the modal, which stays open, the focus on the field sent that it may be; renamed whole, the
+// page goes to its new name and the modal goes with it
 export function EditDialog({ target, onClosed, save = pageSave }: EditDialogProps) {
   const hold = useHold();
   const [seen, setSeen] = useState<EditTarget | null>(null);

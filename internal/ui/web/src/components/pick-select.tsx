@@ -11,7 +11,7 @@ interface PickSelectProps {
   readonly compact?: boolean;
   // old: a version other than the latest, in the colours of a line changed in part (data-old)
   readonly tone?: 'old' | undefined;
-  // state is a task's state drawn (data-state), in its colours (ui.html select.st)
+  // state is a task's state drawn (data-state), in its colours
   readonly state?: string | undefined;
   readonly hidden?: boolean | undefined;
   // numbers are the values listed, joined by commas, as the browser tests read them (data-numbers)
@@ -19,16 +19,16 @@ interface PickSelectProps {
   readonly ref?: Ref<HTMLSelectElement> | undefined;
 }
 
-// A task's state's colours, by the states store.States names (ui.html select.st.doing, .todo, .done)
+// A task's state's colours, by the states store.States names
 const STATE_TONE: Readonly<Record<string, string>> = {
   doing: 'border-chg bg-chg-soft text-chg',
   todo: 'border-line bg-subtle text-muted',
   done: 'border-ins bg-ins-soft text-ins',
 };
 
-// PickSelect is a choice in a pill whose list opens as a menu (ui.html :is(.dver select, .ver-pick)): its button holds
-// the chosen option's copy (selectedcontent). data-version-pick lets the screen's keys go on from it (use-keys). Its ring
-// is the page's :focus-visible
+// PickSelect is a choice in a pill whose list opens as a menu: its button holds the chosen option's copy
+// (selectedcontent). data-version-pick lets the screen's keys go on from it (use-keys). Its ring is the page's
+// :focus-visible
 // LIMIT: a browser without base-select (Firefox and Safari for now) shows its own list, in the rules outside supports-, which works the same
 export function PickSelect({
   id,

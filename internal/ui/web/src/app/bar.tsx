@@ -13,12 +13,12 @@ interface BarProps {
   readonly screen: Screen;
   readonly listUp?: Up | undefined;
   readonly taskUp?: Up | undefined;
-  // search is the list's search, in the bar's middle (ui.html .bar-inner > .search): the list's, and a page whole's to
-  // look for its page not found; none on the task screens
+  // search is the list's search, in the bar's middle: the list's, and a page whole's to look for its page not found;
+  // none on the task screens
   readonly search?: ReactNode;
-  // A page whole's (ui.html header.bar in .framed): back, its way back to a task's page, before the header's links;
-  // lead, its name, version and marks after them; actions, the page's own at the end; brand, where the logo goes; and
-  // seeking, its page not found, whose bar has the list's search and new pages
+  // A page whole's: back, its way back to a task's page, before the header's links; lead, its name, version and marks
+  // after them; actions, the page's own at the end; brand, where the logo goes; and seeking, its page not found, whose
+  // bar has the list's search and new pages
   readonly back?: ReactNode;
   readonly lead?: ReactNode;
   readonly actions?: ReactNode;
@@ -29,11 +29,10 @@ interface BarProps {
   readonly onSettings: () => void;
 }
 
-// Bar is the screen's bar (ui.html header.bar): the logo, the server's state and the way between the screens, then the
-// new pages and the ways to the search (none on the list, beside its search field, ui.html 6788), the help and the
-// settings. Which of them each screen shows is told here alone: the help's and the settings' are gone at 40rem or less
-// (ui.html 708), and in a page whole, which leaves them to the lists (710), whose way to the search is at 40rem or less
-// alone (767). They stay in the DOM, hidden
+// Bar is the screen's bar: the logo, the server's state and the way between the screens, then the new pages and the
+// ways to the search (none on the list, beside its search field), the help and the settings. Which of them each screen
+// shows is told here alone: the help's and the settings' are gone at 40rem or less, and in a page whole, which leaves
+// them to the lists, whose way to the search is at 40rem or less alone. They stay in the DOM, hidden
 export function Bar({
   screen,
   listUp,

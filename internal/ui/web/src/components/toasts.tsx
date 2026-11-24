@@ -38,7 +38,7 @@ function ToastAction({ button }: { readonly button: ToastButton }) {
   );
 }
 
-// ToastAnchor is a toast's link (ui.html .toast-link): the toast takes no pointer, the link does
+// ToastAnchor is a toast's link: the toast takes no pointer, the link does
 function ToastAnchor({ link }: { readonly link: ToastLink }) {
   return (
     <a data-testid="toast-link" href={link.href} className="pointer-events-auto text-inherit">

@@ -8,7 +8,7 @@ import type { MessageKey } from '@/types/messages.gen';
 import { backdropCloses, heldKey, stopsKey, type PressDown } from '@/utils/dialog';
 
 interface DialogScope {
-  // close is the one way a modal closes (ui.md: closeDialog), for its close buttons
+  // close is the one way a modal closes, for its close buttons
   close: () => void;
 }
 
@@ -55,7 +55,7 @@ export interface DialogProps {
   readonly body?: 'grid' | 'help' | 'fill';
   // panel is the part shown (data-panel), as the settings tell it
   readonly panel?: string | undefined;
-  // bodyId names the box that holds its head, body and foot (ui.html's .modal-body of an id: #filter-box)
+  // bodyId names the box that holds its head, body and foot (#filter-box)
   readonly bodyId?: string;
   // raised goes up to the top in a narrow window (the search: its rows under the keyboard of a phone)
   readonly raised?: boolean;
@@ -80,9 +80,8 @@ const NOT_HELD = { held: false, focus: { current: null }, holding: () => false }
 
 // Dialog is a modal: a dialog shown by showModal(), its head, body and foot in one fieldset, which a hold disables
 // whole (its close buttons too), so that nothing closes it, sends again or starts another write; what follows the write
-// is of the modal it was sent from, open as it was. Held, it takes no close request (closedby), no press (but on a link:
-// LIMIT, as in ui.html) and no key but those heldKey lets go, and the focus is on the modal itself, given back once
-// let go
+// is of the modal it was sent from, open as it was. Held, it takes no close request (closedby), no press (but on a
+// link: LIMIT) and no key but those heldKey lets go, and the focus is on the modal itself, given back once let go
 // LIMIT: opened and held in one render, d.focus() runs before showModal() and does nothing. No caller opens a modal
 // held; give the focus after showModal() if one comes to
 export function Dialog({
@@ -194,7 +193,7 @@ export interface DialogHeadProps {
   readonly titleId: string;
   readonly title: ReactNode;
   readonly lead?: ReactNode;
-  // leadId names the line under the title, which says nothing and is hidden while it is '' (ui.html #kin-target)
+  // leadId names the line under the title, which says nothing and is hidden while it is ''
   readonly leadId?: string;
 }
 

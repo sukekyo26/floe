@@ -37,8 +37,8 @@ export interface KinDialogProps {
   readonly assign?: (url: string) => void;
 }
 
-// KinDialog is the modal of a task's family (ui.html #kin-dialog, openKin, saveKin): a new task on the task list, a
-// child or the parent of the task of a task's page, of one form of fields whose form (KIN_FORMS) says what differs.
+// KinDialog is the modal of a task's family: a new task on the task list, a child or the parent of the task of a task's
+// page, of one form of fields whose form (KIN_FORMS) says what differs.
 // The task is as the tasks read now have it, and so is the name typed: a task there is said, and pressed, opened or not written as the form says; any other is written, as the
 // modal shows it (new). What has changed since is refused, and said, with the modal open. Saved, it closes and the
 // focus goes where the form says (acts.back): the row of what was made, marked fresh, or the button of the family
@@ -62,7 +62,7 @@ export function KinDialog({
   const titleField = useRef<HTMLInputElement>(null);
   // Where the focus goes as it closes saved, set with the close
   const saved = useRef<KinBack | null>(null);
-  // A task's fields as they open: none of what was typed before, nor a field's blank mark (ui.html resetTaskForm)
+  // A task's fields as they open: none of what was typed before, nor a field's blank mark
   if (open !== was) {
     setWas(open);
     if (open) {
@@ -77,7 +77,7 @@ export function KinDialog({
   const form = open ? KIN_FORMS[open.form] : null;
   const project = open?.ask ? asked : (open?.task.project ?? '');
   // The task and the name's task as shown: found as it opens, as the project or name changes and as a save is refused
-  // as stale, not at each read (ui.html kinOf.task, kinShown), so that a save sends the rev shown
+  // as stale, not at each read, so that a save sends the rev shown
   const ofTask = useSeenTask(open, project, open?.task.name ?? '', tasks);
   const ofName = useSeenTask(open, project, name, tasks);
   const task: KinTask = ofTask.seen ?? { ...open?.task, project };
@@ -87,8 +87,8 @@ export function KinDialog({
   // The title is asked of a new task alone: hidden, it is not required, nor marked blank. Unreadable, a task's being
   // there is not known, and nothing is asked: the save stops at what cannot be read
   const titleShown = there === null;
-  // A field's blank mark goes as the modal opens, and the title's as it hides (ui.html resetTaskForm, titleField): a
-  // field hidden still marked would stop every save, the browser's check failing on what cannot be seen
+  // A field's blank mark goes as the modal opens, and the title's as it hides: a field hidden still marked would stop
+  // every save, the browser's check failing on what cannot be seen
   useLayoutEffect(() => {
     if (open === null) return;
     nameField.current?.setCustomValidity('');

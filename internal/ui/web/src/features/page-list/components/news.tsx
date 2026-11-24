@@ -11,16 +11,16 @@ import { pages as pagePages, type Pages } from '@/stores/pages';
 import { plainPress } from '@/utils/plain-press';
 
 export interface NewsProps {
-  // hidden is where it stands: a page found whole has none (ui.html 5215)
+  // hidden is where it stands: a page found whole has none
   readonly hidden?: boolean;
   readonly query?: ListQuery;
   readonly pages?: Pages;
   readonly columns?: ColumnsStore;
 }
 
-// News is the bar's count of new pages and the way to them (ui.html #news, renderNews): every unread page not archived,
-// gone at none. On the page list a plain press narrows the list to them in place; on the task screens, and pressed with
-// a key held or another button, it is a link to that list. Up to 70rem the shelf's views say it
+// News is the bar's count of new pages and the way to them: every unread page not archived, gone at none. On the page
+// list a plain press narrows the list to them in place; on the task screens, and pressed with a key held or another
+// button, it is a link to that list. Up to 70rem the shelf's views say it
 export function News({ hidden = false, query = listQuery, pages = pagePages, columns = pageColumns }: NewsProps) {
   const n = newCount(useStore(pages.state).entries);
   const onList = newsTaken(getBoot().screen);
@@ -32,7 +32,7 @@ export function News({ hidden = false, query = listQuery, pages = pagePages, col
     query.filter(picks);
     showResults(columns);
   };
-  // A link, not a button (the user's choice, S422-P8): the look of ui.html .news (111–112), gone up to 70rem (871)
+  // A link, not a button (the user's choice, S422-P8), gone up to 70rem
   return (
     <a
       id="news"

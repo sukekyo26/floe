@@ -12,10 +12,9 @@ export interface ListHeadProps {
   readonly columns?: ColumnsStore;
 }
 
-// ListWhat is what the shelf narrows the page list to, with the shelf folded (ui.html drawViews, drawHead): the view and
-// how many picks. Pressed, the shelf opens by onShow, the one way the columns open it (P5f's, which gives the focus to
-// the button that folds it: this one hides). Where it stands, in the head of the list or of the page beside it, is the
-// screen's
+// ListWhat is what the shelf narrows the page list to, with the shelf folded: the view and how many picks. Pressed, the
+// shelf opens by onShow, the one way the columns open it (P5f's, which gives the focus to the button that folds it:
+// this one hides). Where it stands, in the head of the list or of the page beside it, is the screen's
 export function ListWhat({
   onShow,
   query = listQuery,
@@ -35,7 +34,7 @@ export function useWhatHidden({
   return useStore(columns.columns).open || what === '';
 }
 
-// ListCount is the head of the list: how many new pages the view and the search leave (ui.html renderShelf #count)
+// ListCount is the head of the list: how many new pages the view and the search leave
 export function ListCount({ query = listQuery, pages = pagePages }: Omit<ListHeadProps, 'columns'>) {
   const state = useStore(query.query);
   const items = useStore(pages.state).entries;

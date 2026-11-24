@@ -34,10 +34,10 @@ export interface ListRowProps {
 const TASK_TAG =
   'relative z-1 rounded-small border border-dashed border-box-line px-[0.35rem] whitespace-nowrap text-muted no-underline hover:border-faint hover:text-fg';
 
-// ListRow is a row of the page list (ui.html row): the shared row, with the way to the task the page is on or the task
-// list it is pinned on, and its tags, each narrowing the list to itself. A folder's title opens its tree. Drawn anew only
-// as its props change (memo): a redraw of the list (a row picked, a minute) draws every row otherwise, 400 ms for 1000
-// rows in the gallery's dev build (65 ms with memo)
+// ListRow is a row of the page list: the shared row, with the way to the task the page is on or the task list it is
+// pinned on, and its tags, each narrowing the list to itself. A folder's title opens its tree. Drawn anew only as its
+// props change (memo): a redraw of the list (a row picked, a minute) draws every row otherwise, 400 ms for 1000 rows in
+// the gallery's dev build (65 ms with memo)
 export const ListRow = memo(function ListRow({
   page: a,
   index,

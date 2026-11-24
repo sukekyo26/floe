@@ -14,7 +14,7 @@ interface KeysDialogProps {
   readonly screen: Screen;
   // diff tells the diff of a page whole, whose keys d, n and p it tells
   readonly diff: boolean;
-  // diffGo tells that d goes to a diff where it opens, as the bar's diff button is shown (ui.html openKeys)
+  // diffGo tells that d goes to a diff where it opens, as the bar's diff button is shown
   readonly diffGo: boolean;
   // backWords are h's on a page whole: the back button's whole words
   readonly backWords: string;
@@ -40,7 +40,7 @@ const Kbd = ({ children, mod = false }: { readonly children: ReactNode; readonly
 const Or = () => <i className="text-label whitespace-nowrap text-faint not-italic">{t('ui_keys_or')}</i>;
 
 // KeysDialog is the help: what the screen's things are (about) and its keys. Its parts are all there, open or closed,
-// those of another screen hidden as ui.html hides them as it starts (the tests read them unopened)
+// those of another screen hidden (the tests read them unopened)
 export function KeysDialog({ open, screen, diff, diffGo, backWords, mac, onClosed }: KeysDialogProps) {
   const [tab, setTab] = useState<HelpTab>('keys');
   const [seen, setSeen] = useState<HelpTab | null>(null);

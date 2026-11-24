@@ -13,8 +13,8 @@ import { pages } from '@/stores/pages';
 import type { Page } from '@/types/page';
 import { orderOf } from '@/utils/row-press';
 
-// keepDrawn keeps the rows of #list as drawn now for j and k on the page whole and its way back (ui.html keepOrder):
-// a folder's own rows (its tree) left out
+// keepDrawn keeps the rows of #list as drawn now for j and k on the page whole and its way back: a folder's own rows
+// (its tree) left out
 export function keepDrawn(): void {
   const { entries } = pages.state.get();
   const drawn = [...document.querySelectorAll<HTMLElement>('#list > li[data-slug]:not([data-testid=tree])')]
@@ -32,9 +32,8 @@ interface PageReaderProps {
   readonly what?: ReactNode;
 }
 
-// PageReader is the page picked beside the list, with its bar, its version, its note of versions and its tags
-// (ui.html drawReader). The choice of versions and its note wait for the list read once (P7: a page the list does not
-// hold yet is not one gone)
+// PageReader is the page picked beside the list, with its bar, its version, its note of versions and its tags. The
+// choice of versions and its note wait for the list read once (P7: a page the list does not hold yet is not one gone)
 export function PageReader({ openers, keys, onKey, what = null }: PageReaderProps) {
   const at = useStore(openPage.picked);
   const { entries, read } = useStore(pages.state);

@@ -33,16 +33,15 @@ const toCurrent = () => {
   document.querySelector('#side-tree [aria-current="page"]')?.scrollIntoView({ block: 'center' });
 };
 
-// SideTree is the tree on the frame's left of a folder's page (ui.html #side, renderSide, layoutSide), its edge and what
-// opens it folded: beside the page, its width and whether it shows kept in the browser; in a narrow window over the page
-// when asked, its edge gone, keeping nothing. The width it takes of the page goes to the root (--side), none while it is
-// hidden, over the page or gone
+// SideTree is the tree on the frame's left of a folder's page, its edge and what opens it folded: beside the page, its
+// width and whether it shows kept in the browser; in a narrow window over the page when asked, its edge gone, keeping
+// nothing. The width it takes of the page goes to the root (--side), none while it is hidden, over the page or gone
 export function SideTree({ folder, file, folders = pageFolders, side = frameSide }: SideTreeProps) {
   const kept = useStore(side.side());
   const { opened, listings } = useStore(folders.side);
   const narrow = useMedia(NARROW);
   const innerWidth = useWindowWidth();
-  // Over the page in a narrow window, as asked there alone: crossing the width closes it (ui.html sideNarrow)
+  // Over the page in a narrow window, as asked there alone: crossing the width closes it
   const [over, setOver] = useState(false);
   useEffect(() => {
     const media = window.matchMedia(NARROW);

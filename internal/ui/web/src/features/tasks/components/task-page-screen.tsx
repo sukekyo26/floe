@@ -82,8 +82,7 @@ export function TaskPageScreen({ name, view, openers, taskOpeners, reader }: Tas
             />
           </>
         }
-        // A task of no page has no word beside it of a page to pick (ui.html .shell.task-none #read-blank): hidden, as
-        // the reader is the app's
+        // A task of no page has no word beside it of a page to pick: hidden, as the reader is the app's
         reader={<div className={view.none ? 'contents [&_#read-blank]:hidden' : 'contents'}>{reader}</div>}
         alone={view.missing}
       />

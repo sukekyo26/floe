@@ -5,7 +5,7 @@ const DAY_MS = 86_400_000;
 const dateOf = (d: Date) => new Date(d.getFullYear(), d.getMonth(), d.getDate()).getTime();
 
 // dayOf is the heading of the day iso falls on, from now: today, yesterday, this week, then its month, with its year
-// before this one, in the browser's words of lang (ui.html dayOf)
+// before this one, in the browser's words of lang
 export function dayOf(iso: string, now: Date, lang: string): string {
   const at = new Date(iso);
   const days = Math.round((dateOf(now) - dateOf(at)) / DAY_MS);

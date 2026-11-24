@@ -1,5 +1,4 @@
-// moved is list with name put before the row at before (list.length: last), as insertBefore puts a row (ui.html
-// sortable's move)
+// moved is list with name put before the row at before (list.length: last), as insertBefore puts a row
 export function moved(list: readonly string[], name: string, before: number): string[] {
   const from = list.indexOf(name);
   if (from === -1) return [...list];
@@ -24,8 +23,8 @@ export const ends = (at: number, n: number): { up: boolean; down: boolean } => (
 // The way a row moves by its buttons
 export type Step = 'up' | 'down';
 
-// focusStep is the button that takes the focus once the row moved by pressed is at: the one pressed, or the other
-// where the one pressed moves nothing more (ui.html sortable 5655)
+// focusStep is the button that takes the focus once the row moved by pressed is at: the one pressed, or the other where
+// the one pressed moves nothing more
 export function focusStep(pressed: Step, at: number, n: number): Step {
   const end = ends(at, n);
   if (pressed === 'up' && end.up) return 'down';

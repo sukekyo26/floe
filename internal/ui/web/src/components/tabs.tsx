@@ -41,7 +41,7 @@ interface TabProps {
 
 // Tab is one tab: its words alone, the chosen one underlined over the list's line and darker, its weight the same so
 // that a switch moves no tab (the help's test measures them). Its panel is told by the panel's aria-labelledby alone:
-// the help's tabs have no aria-controls, as ui.html's buttons had none
+// the help's tabs have no aria-controls
 export function Tab({ id, selected, onSelect, help, children }: TabProps) {
   return (
     <button

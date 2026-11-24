@@ -1,6 +1,6 @@
 import type { ReactNode } from 'react';
 
-// The marks the shared components draw, as ui.html draws them (24 by 24, in the colour of their words)
+// The marks the shared components draw (24 by 24, in the colour of their words)
 // A mark's own name and its hidden, where a test reads which mark shows (the settings' head)
 export interface IconProps {
   readonly testid?: string;
@@ -16,7 +16,7 @@ function Line({
   return (
     <svg
       data-testid={testid}
-      // An svg has no hidden in React's types, which the attribute has: given as it is (ui.html toggleAttribute)
+      // An svg has no hidden in React's types, which the attribute has: given as it is
       {...(hidden ? ({ hidden: true } as object) : {})}
       viewBox="0 0 24 24"
       fill="none"
@@ -63,13 +63,13 @@ export const PlusIcon = () => (
     <path d="M12 5v14M5 12h14" />
   </Line>
 );
-// A stored page's mark among the shelf's kinds (ui.html PAGE_MARK)
+// A stored page's mark among the shelf's kinds
 export const PageMark = () => (
   <Line width={2}>
     <path d="M6 3h8l4 4v14H6zM14 3v4h4M9 12h6M9 16h6" />
   </Line>
 );
-// The star filled, of the shelf's view of favourites (ui.html STAR_MARK)
+// The star filled, of the shelf's view of favourites
 export const StarMark = () => (
   <svg viewBox="0 0 24 24" fill="currentColor" aria-hidden="true">
     <path d="M12 3.5l2.6 5.3 5.9.9-4.3 4.1 1 5.8L12 16.9l-5.2 2.7 1-5.8-4.3-4.1 5.9-.9z" />
@@ -88,7 +88,7 @@ export const SearchIcon = () => (
     <path d="m20 20-3.5-3.5" />
   </Line>
 );
-// A link's and a folder's mark at the head of their row (ui.html LINK_MARK and FOLDER_MARK)
+// A link's and a folder's mark at the head of their row
 export const LinkMark = () => (
   <Line width={2}>
     <path d="M10 14a4 4 0 0 0 5.7 0l3-3a4 4 0 0 0-5.7-5.7l-1 1M14 10a4 4 0 0 0-5.7 0l-3 3a4 4 0 0 0 5.7 5.7l1-1" />
@@ -208,7 +208,7 @@ export const BackChevronIcon = () => (
     <path d="m15 6-6 6 6 6" />
   </Line>
 );
-// A directory and a page of a folder's tree (ui.html DIR_HEAD, PAGE_HEAD)
+// A directory and a page of a folder's tree
 export const TreeDirIcon = () => (
   <Line>
     <path d="M3 6.5A1.5 1.5 0 0 1 4.5 5H9l2 2.5h8.5A1.5 1.5 0 0 1 21 9v9.5a1.5 1.5 0 0 1-1.5 1.5h-15A1.5 1.5 0 0 1 3 18.5Z" />
@@ -244,7 +244,7 @@ export const ListColumnIcon = () => (
     <path fill="currentColor" stroke="none" d="M9 4h6v16H9Z" />
   </TwoColumns>
 );
-// A task's family card's parts and the way off it (ui.html #task-up-part, #task-kids-part, UNLINK_MARK)
+// A task's family card's parts and the way off it
 export const ParentIcon = () => (
   <Line width={2}>
     <path d="m14 9-5-5-5 5" />
@@ -265,8 +265,8 @@ export const UnlinkIcon = () => (
   </Line>
 );
 
-// The buttons of a row of the task edit's lists, in lines (ui.html lineIcon): up, down, and the x that takes a URL or
-// a category off, the one x of both as both are the same act
+// The buttons of a row of the task edit's lists, in lines: up, down, and the x that takes a URL or a category off, the
+// one x of both as both are the same act
 export const RowUpIcon = () => (
   <Line>
     <path d="M12 19V5" />

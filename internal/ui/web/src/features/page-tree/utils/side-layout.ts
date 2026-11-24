@@ -8,8 +8,8 @@ export interface SideLaid {
   take: number;
 }
 
-// sideLayout lays the frame's tree out (ui.html layoutSide): beside the page as kept, or, in a narrow window, over the
-// page as asked there (over), its width within the bounds of the window (what is kept is not changed by them)
+// sideLayout lays the frame's tree out: beside the page as kept, or, in a narrow window, over the page as asked there
+// (over), its width within the bounds of the window (what is kept is not changed by them)
 export function sideLayout(at: {
   readonly open: boolean;
   readonly over: boolean;

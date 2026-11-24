@@ -13,8 +13,8 @@ interface Deps {
 }
 
 // startFrame is the frame's start, once before anything is drawn (an effect would run after the children's, twice in
-// StrictMode): what a move of versions carried is taken, the rows that opened the frame keep where it is (ui.html
-// keepAt), and a ?v= the server read as no other version (the latest, or one gone) leaves the URL, as ui.html does
+// StrictMode): what a move of versions carried is taken, the rows that opened the frame keep where it is, and a ?v= the
+// server read as no other version (the latest, or one gone) leaves the URL
 export function startFrame({
   boot = getBoot,
   versions = frameVersions,

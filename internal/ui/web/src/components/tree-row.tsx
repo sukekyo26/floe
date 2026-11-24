@@ -45,9 +45,9 @@ export const KIND = 'me-[0.4rem] inline-block size-4 align-[-3px] text-muted [&>
 const TITLE =
   'block truncate font-medium text-fg no-underline after:absolute after:inset-0 focus-visible:outline-none group-data-archived/tree:text-muted';
 
-// TreeRow is a row of a folder's tree in the list (ui.html template #tree-row, treeRows): a directory that opens and
-// closes, a page of it with its way to open alone and to copy its path, or a directory's note. A folder open and its
-// rows are one card: this row has the sides, the last of them the foot
+// TreeRow is a row of a folder's tree in the list: a directory that opens and closes, a page of it with its way to open
+// alone and to copy its path, or a directory's note. A folder open and its rows are one card: this row has the sides,
+// the last of them the foot
 export function TreeRow({
   item,
   folder,

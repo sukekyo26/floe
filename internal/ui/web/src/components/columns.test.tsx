@@ -62,7 +62,7 @@ describe(Columns, () => {
       'listcol',
       'list-body',
       'list',
-      // There too, hidden (ui.html #reader, which tests read on the task list)
+      // There too, hidden (the tests read it on the task list)
       'reader',
     ]);
     expect(ids(drawn('taskPage'))).toStrictEqual([

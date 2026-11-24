@@ -16,7 +16,7 @@ import type { Page } from '@/types/page';
 import { projectColor } from '@/utils/project-color';
 import { listQuery, type ListQuery } from '@/stores/list-query';
 
-// The dot of a state's view, as its tasks' state is coloured (ui.html .sdot); gone in the row of pills
+// The dot of a state's view, as its tasks' state is coloured; gone in the row of pills
 const DOT: Record<string, string> = { doing: 'bg-chg', todo: 'bg-faint', done: 'bg-ins' };
 
 export interface TaskShelfProps {
@@ -33,9 +33,9 @@ export interface TaskShelfProps {
   readonly kept?: ProjectKept;
 }
 
-// TaskShelf is the task list's shelf (ui.html renderChips, drawViews and showAdd of the task list): the states as its
-// views, each with the project's tasks of it, and the projects, one always shown. A press on what is shown already
-// changes nothing; a project pressed is kept for the next opening, once the tasks are read
+// TaskShelf is the task list's shelf: the states as its views, each with the project's tasks of it, and the projects,
+// one always shown. A press on what is shown already changes nothing; a project pressed is kept for the next opening,
+// once the tasks are read
 export function TaskShelf({
   tasks,
   entries,

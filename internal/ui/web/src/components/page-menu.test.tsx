@@ -34,7 +34,7 @@ const draw = (
 const hides = (html: string, testid: string) => tagOf(html, testid).includes(' hidden=""');
 
 describe(PageMenu, () => {
-  it('hides what a page has none of, as ui.html’s moreMenu does', () => {
+  it('hides what a page has none of', () => {
     expect.assertions(5);
     const plain = draw();
     expect(

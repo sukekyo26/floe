@@ -6,8 +6,8 @@ const SAMPLE_WIDTH = 900;
 // shrinkOf is how much a sample is shrunk to a card width wide
 export const shrinkOf = (width: number): number => width / SAMPLE_WIDTH;
 
-// useShrink sets --shrink on every [data-testid=theme-shot] in box, by its width as it changes (ui.html shrinkShots);
-// drawn is what draws them anew (the cards read)
+// useShrink sets --shrink on every [data-testid=theme-shot] in box, by its width as it changes; drawn is what draws
+// them anew (the cards read)
 export function useShrink(box: RefObject<HTMLElement | null>, drawn: unknown): void {
   useLayoutEffect(() => {
     if (!box.current) return;

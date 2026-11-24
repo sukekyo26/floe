@@ -46,10 +46,10 @@ export interface NameSuggest {
   readonly box: ReactNode;
 }
 
-// useNameSuggest suggests names for a field, as a WAI-ARIA combobox (ui.html suggestNames): ↓ opens it, ↑↓ reach a
-// name, Enter or a press puts it in, Escape closes it (not the modal), as does leaving the field. The names are taken
-// only as the field changes or is reached, so that a list read again neither closes them nor moves the name reached.
-// They stand in the top layer (a popover), so that no modal or box cuts them off, under the field
+// useNameSuggest suggests names for a field, as a WAI-ARIA combobox: ↓ opens it, ↑↓ reach a name, Enter or a press puts
+// it in, Escape closes it (not the modal), as does leaving the field. The names are taken only as the field changes or
+// is reached, so that a list read again neither closes them nor moves the name reached. They stand in the top layer (a
+// popover), so that no modal or box cuts them off, under the field
 export function useNameSuggest({ id, offers, put, onFocus = true, input: ownRef }: NameSuggestWays): NameSuggest {
   const [names, setNames] = useState<Offer[]>([]);
   const [shown, setShown] = useState(false);

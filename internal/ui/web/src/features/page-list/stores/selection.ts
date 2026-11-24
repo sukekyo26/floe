@@ -52,10 +52,10 @@ export function createSelection(): Selection {
 
 export const selection = createSelection();
 
-// followList lets the selection go as the list's picks, view or search are given anew (ui.html filter, 2086), not as a
-// page of the view "new" is kept as seen; and, as the list is read, lets go of the pages its view no longer has (4439).
-// Started, it looks the selection over as a read does: the list put back after a draw that threw, the reads meanwhile
-// unheard. It returns what stops it
+// followList lets the selection go as the list's picks, view or search are given anew, not as a page of the view "new"
+// is kept as seen; and, as the list is read, lets go of the pages its view no longer has. Started, it looks the
+// selection over as a read does: the list put back after a draw that threw, the reads meanwhile unheard. It returns
+// what stops it
 export function followList(
   query: ListQuery = listQuery,
   pages: Pages = pagePages,

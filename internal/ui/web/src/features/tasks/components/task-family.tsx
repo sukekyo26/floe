@@ -9,14 +9,14 @@ import { t } from '@/lib/t';
 import type { TaskOf } from '@/types/task';
 import { taskHref } from '@/utils/page-urls';
 
-// KID_STATE is a task's state as a word on its ground (ui.html .kid-state): a row of the card, an archived task's head
+// KID_STATE is a task's state as a word on its ground: a row of the card, an archived task's head
 export const kidState = (state: string): string =>
   `flex-none rounded-small px-[0.4rem] text-label font-bold whitespace-nowrap ${
     state === 'doing' ? 'bg-chg-soft text-chg' : state === 'done' ? 'bg-ins-soft text-ins' : 'bg-subtle text-muted'
   }`;
 
 // The rows share the columns of their part, so that the states are as wide as the widest and the names stand in line:
-// state, name (cut past 20%), title, unread dot, the button that takes it off (ui.html .family-rows)
+// state, name (cut past 20%), title, unread dot, the button that takes it off
 const ROWS = 'grid grid-cols-[max-content_fit-content(20%)_minmax(0,1fr)_max-content_max-content] gap-x-2';
 const PART = 'grid gap-[0.1rem]';
 const HEAD = 'flex items-center justify-between gap-2 pb-1 ps-2';
@@ -36,8 +36,8 @@ interface KinLineProps {
   readonly onUnlink: (child: TaskOf, parent: string, fromKeys: boolean) => void;
 }
 
-// KinLine is a row of the card (ui.html kinRow): a link to the task's page, and the button that takes the child off its
-// parent, outside the link
+// KinLine is a row of the card: a link to the task's page, and the button that takes the child off its parent, outside
+// the link
 function KinLine({ x, child, parent, onUnlink }: KinLineProps) {
   const unread = unreadOf(x) > 0;
   const named = [x.name, x.title].filter(Boolean);
@@ -91,9 +91,9 @@ export interface TaskFamilyProps {
   readonly onUnlink: (child: TaskOf, parent: string, fromKeys: boolean) => void;
 }
 
-// TaskFamily is a task's family card over its pages (ui.html drawTaskFamily), off #list: its parent, offered while it
-// has no children, and its children, offered while it has no parent. Every part is there, hidden as it does not show,
-// and its rows are made anew only as what the card says changes (familySaid), the focus kept by the head
+// TaskFamily is a task's family card over its pages, off #list: its parent, offered while it has no children, and its
+// children, offered while it has no parent. Every part is there, hidden as it does not show, and its rows are made anew
+// only as what the card says changes (familySaid), the focus kept by the head
 export function TaskFamily({ task, family, onKin, onUnlink }: TaskFamilyProps) {
   const said = task && family ? familySaid(task, family) : '';
   const kids = family?.kids ?? [];

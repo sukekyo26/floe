@@ -16,8 +16,8 @@ export interface RowKeyDeps {
   readonly narrow?: (() => boolean) | undefined;
 }
 
-// rowKeys is the keys that move through the rows of any screen, ↑ ↓ and j k (ui.html moveRow): the focus to the next
-// row's title, its page beside the list where it has one
+// rowKeys is the keys that move through the rows of any screen, ↑ ↓ and j k: the focus to the next row's title, its
+// page beside the list where it has one
 export function rowKeys({
   pages = pagePages,
   openPage = pageOpen,

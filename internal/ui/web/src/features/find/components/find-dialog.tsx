@@ -28,17 +28,16 @@ const FOOT_MENU = barMenuId(FOOT);
 interface FindDialogProps {
   readonly open: boolean;
   readonly onClosed: () => void;
-  // openers open the modals of the foot's menu, the search closed first and the focus given back nowhere (ui.html
-  // menuBack from #find)
+  // openers open the modals of the foot's menu, the search closed first and the focus given back nowhere
   readonly openers: Openers;
   readonly pages?: Pages;
   readonly order?: Order;
   readonly go?: (href: string) => void;
 }
 
-// FindDialog is the search (ui.html openFind, drawFind, drawFindBar): every page by the words typed, the archived after
-// the rest, the first rows; ↑ ↓ from anywhere in it reach a row, Enter on the field opens it, and the foot holds the
-// bar's buttons of the row reached. While open, the page's toasts and error line are in it (useMovedOverlay)
+// FindDialog is the search: every page by the words typed, the archived after the rest, the first rows; ↑ ↓ from
+// anywhere in it reach a row, Enter on the field opens it, and the foot holds the bar's buttons of the row reached.
+// While open, the page's toasts and error line are in it (useMovedOverlay)
 export function FindDialog({
   open,
   onClosed,
@@ -52,7 +51,7 @@ export function FindDialog({
   const { entries } = useStore(pages.state);
   const [words, setWords] = useState('');
   const [reached, setReached] = useState<Reached>(FIRST);
-  // Opened again from closed, the foot is drawn anew: its menu shut, a delete armed let go (ui.html openFind)
+  // Opened again from closed, the foot is drawn anew: its menu shut, a delete armed let go
   const [opened, setOpened] = useState(0);
   const [wasOpen, setWasOpen] = useState(false);
   // The render that opens it sets the first row; holding the row of the words before would put the old one back
@@ -70,8 +69,8 @@ export function FindDialog({
   const toastBox = useRef<HTMLDivElement>(null);
   const foot = useRef<HTMLSpanElement>(null);
   useMovedOverlay(open, { toasts: toastBox, error: errorBox });
-  // Opened, the foot's menu left open last time shuts and the field takes the focus (ui.html openFind), whatever had it:
-  // a toast moved in with the focus loses it
+  // Opened, the foot's menu left open last time shuts and the field takes the focus, whatever had it: a toast moved in
+  // with the focus loses it
   const footFor = useRef<string | null>(null);
   useLayoutEffect(() => {
     if (!open) return;
@@ -86,7 +85,7 @@ export function FindDialog({
   const page = shown[at] ?? null;
   // The row reached is held by its page and its place at once, as opened or typed too: read again, a new page at the
   // top does not take its place, and it moved, its new place is the one left when it goes; gone, what came to its place
-  // is reached now; none, its place is held for the rows to come back (ui.html findMark → moved)
+  // is reached now; none, its place is held for the rows to come back
   const reachedNow = page?.slug ?? null;
   const atNow = at >= 0 ? at : reached.at;
   if (!opening && (reachedNow !== reached.slug || atNow !== reached.at)) setReached({ slug: reachedNow, at: atNow });
@@ -142,7 +141,7 @@ export function FindDialog({
     } else if (what === 'move') {
       e.preventDefault();
       const next = nextReached(at, shown.length, e.key);
-      // No rows, or the one: nothing to move to (ui.html: else if (n))
+      // No rows, or the one: nothing to move to
       if (shown.length === 0 || next === at) return;
       byKey.current = true;
       setReached({ slug: shown[next]?.slug ?? null, at: next });
@@ -222,12 +221,12 @@ export function FindDialog({
         }}
         className="h-9 w-full min-w-0 rounded-small border border-line bg-panel px-3 text-fg shadow-sm placeholder:text-faint [&::-webkit-search-cancel-button]:hidden"
       />
-      {/* The page's error line, while open (ui.html puts it before the rows) */}
+      {/* The page's error line, while open */}
       <div ref={errorBox} className="contents [&>#error]:m-0" />
       <ul
         id="find-list"
         tabIndex={-1}
-        // oxlint-disable-next-line jsx-a11y/prefer-tag-over-role, jsx-a11y/no-noninteractive-element-to-interactive-role -- the field's listbox of rows holding links, which a select cannot hold (ui.html's markup)
+        // oxlint-disable-next-line jsx-a11y/prefer-tag-over-role, jsx-a11y/no-noninteractive-element-to-interactive-role -- the field's listbox of rows holding links, which a select cannot hold
         role="listbox"
         aria-labelledby="find-title"
         hidden={shown.length === 0}
@@ -284,7 +283,7 @@ export function FindDialog({
         </div>
         <DialogClose />
       </DialogActions>
-      {/* The page's toasts, while open (ui.html puts them at the modal's end) */}
+      {/* The page's toasts, while open */}
       <div ref={toastBox} className="contents" />
     </Dialog>
   );

@@ -12,7 +12,7 @@ interface NotFoundProps {
   readonly hidden: boolean;
 }
 
-// NotFound is a page whole not there: a link's file gone, or no page of the slug (ui.html #notfound)
+// NotFound is a page whole not there: a link's file gone, or no page of the slug
 export function NotFound({ page: a, slug, back, hidden }: NotFoundProps) {
   return (
     <div

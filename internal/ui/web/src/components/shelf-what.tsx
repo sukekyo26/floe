@@ -8,14 +8,13 @@ export interface ShelfWhatProps {
   // words say what the filters narrow the list to; tint is the task list's project's colour, null for none
   readonly words: string;
   readonly tint: string | null;
-  // hidden is the caller's: with the shelf open, or no words (ui.html drawHead)
+  // hidden is the caller's: with the shelf open, or no words
   readonly hidden: boolean;
   readonly onShow: () => void;
 }
 
 // ShelfWhat is what the filters narrow the list to, in the head of the list or of the page beside it, with the shelf
-// folded (ui.html #shelf-what): pressed, the shelf opens. Wherever it stands it is gone from 70rem, where the shelf
-// is a row over the list
+// folded: pressed, the shelf opens. Wherever it stands it is gone from 70rem, where the shelf is a row over the list
 export function ShelfWhat({ words, tint, hidden, onShow }: ShelfWhatProps) {
   const c: CssVars = tint === null ? {} : { '--c': tint };
   return (
