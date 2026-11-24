@@ -2,6 +2,7 @@ import { useLayoutEffect, useRef, useState } from 'react';
 
 import { Button } from '@/components/button';
 import { DoneIcon } from '@/components/icons';
+import { TextLink } from '@/components/text-link';
 import { useStore } from '@/hooks/use-store';
 import {
   pressToastButton,
@@ -41,9 +42,9 @@ function ToastAction({ button }: { readonly button: ToastButton }) {
 // ToastAnchor is a toast's link: the toast takes no pointer, the link does
 function ToastAnchor({ link }: { readonly link: ToastLink }) {
   return (
-    <a data-testid="toast-link" href={link.href} className="pointer-events-auto text-inherit">
+    <TextLink data-testid="toast-link" tone="inherit" href={link.href} className="pointer-events-auto">
       {link.label}
-    </a>
+    </TextLink>
   );
 }
 

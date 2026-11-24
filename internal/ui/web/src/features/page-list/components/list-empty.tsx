@@ -1,6 +1,7 @@
 import { Button } from '@/components/button';
 import { EmptyState } from '@/components/empty-state';
 import { PlusIcon } from '@/components/icons';
+import { LINK_LOOK } from '@/components/text-link';
 import type { Empty } from '@/features/page-list/utils/list-empty';
 import { t } from '@/lib/t';
 
@@ -14,7 +15,7 @@ export interface ListEmptyProps {
   readonly onClear: () => void;
 }
 
-const LINK = 'border-0 bg-transparent p-0 text-fg underline underline-offset-3';
+const LINK = `border-0 bg-transparent p-0 text-fg ${LINK_LOOK}`;
 
 // ListEmpty is what the page list says in place of its rows: all six drawn, the one shown as emptyOf says, as the tests
 // find each by its id

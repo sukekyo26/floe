@@ -8,6 +8,7 @@ import { BackLink } from '@/components/back-link';
 import { focusOn } from '@/components/focus-places';
 import { backWords } from '@/components/back-words';
 import { BarActions } from '@/components/page-actions';
+import { TextLink } from '@/components/text-link';
 import { getBoot } from '@/config/boot';
 import { SearchBox } from '@/features/page-list/components/search-box';
 import { frameMoves } from '@/features/page-tree/stores/frame-moves';
@@ -168,9 +169,9 @@ export function FrameRoute() {
       {seeking ? null : (
         <p id="print-alone" className="m-8 hidden text-fg print:block">
           <span id="print-alone-text">{t('ui_print_alone', t('ui_open_raw'))}</span>{' '}
-          <a id="print-raw" href={new URL(rawHref(at), window.location.href).href}>
+          <TextLink id="print-raw" tone="inherit" href={new URL(rawHref(at), window.location.href).href}>
             {new URL(rawHref(at), window.location.href).href}
-          </a>
+          </TextLink>
         </p>
       )}
       {modals}
