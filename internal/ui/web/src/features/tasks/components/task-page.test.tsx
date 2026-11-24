@@ -7,6 +7,7 @@ import { TaskFamily } from '@/features/tasks/components/task-family';
 import { TaskHead } from '@/features/tasks/components/task-head';
 import { TaskNone } from '@/features/tasks/components/task-none';
 import { TaskPageRows } from '@/features/tasks/components/task-page-rows';
+import { TaskPagesHead } from '@/features/tasks/components/task-pages-head';
 import { familyOf } from '@/features/tasks/utils/task-page';
 import type { Page } from '@/types/page';
 import type { TaskOf } from '@/types/task';
@@ -73,13 +74,13 @@ describe(TaskHead, () => {
       <TaskHead
         task={of}
         shown
+        up={{ href: '/tasks?project=p', onPress: none }}
         project="p"
         name={of.name}
         reads={0}
         color="red"
         onKin={none}
         onEdit={none}
-        onAddPage={none}
       />,
     );
 
@@ -92,16 +93,40 @@ describe(TaskHead, () => {
     expect(html).toMatch(/id="task-archive"(?![^>]*hidden="").*ui_unarchive:/s);
   });
 
-  it('draws the choices in the state’s colours, and Add a page by Edit, no way back of its own', () => {
+  it('draws the way back, the title and Edit in one row, the choices in the state’s colours, and the archive by them', () => {
     expect.assertions(4);
     boot();
     const html = head(task('#1', { state: 'done', urls: ['https://x.org/a'] }));
     expect(html).toMatch(/<select[^>]*id="task-state"[^>]*data-state="done"/);
-    expect(html).not.toContain('id="task-up"');
     expect(html).toMatch(
-      /<button[^>]*id="task-add-page"[^>]*>.*ui_page_add:undefined<\/button><button[^>]*id="task-edit"/s,
+      /<a id="task-up" href="\/tasks\?project=p" aria-label="ui_tasks_back:undefined"[^>]*>(?:(?!<\/a>).)*<\/a><h2 id="task-title".*<\/h2><button[^>]*id="task-edit"/s,
+    );
+    expect(html).toMatch(
+      /data-testid="tstate".*id="task-state".*id="task-archive"(?![^>]*hidden="").*id="task-project"/s,
     );
     expect(html).toMatch(/id="task-link"(?![^>]*hidden="")[^>]*><a data-testid="xlink" href="https:\/\/x.org\/a"/);
+  });
+});
+
+describe(TaskPagesHead, () => {
+  const head = (of: TaskOf | null, shown = true) =>
+    renderToString(<TaskPagesHead task={of} shown={shown} onAddPage={none} />);
+
+  it('counts the pages as the task’s row does, the archived left out, and says none without a number', () => {
+    expect.assertions(3);
+    boot();
+    const archived = [page('x', { archived: true })];
+    expect(head(task('#1', { pages: [page('a'), page('b')], archived }))).toContain('>ui_task_pages_head:2</h2>');
+    expect(head(task('#1', { archived }))).toContain('>ui_task_pages_word:undefined</h2>');
+    expect(head(null, false)).toMatch(/^<div id="task-pages-head" hidden=""/);
+  });
+
+  it('adds by a button of few words, named in full', () => {
+    expect.assertions(1);
+    boot();
+    expect(head(task('#1'))).toMatch(
+      /<button[^>]*id="task-add-page"[^>]*aria-label="ui_page_add:undefined"[^>]*>.*ui_task_child_add:undefined<\/button>/s,
+    );
   });
 });
 

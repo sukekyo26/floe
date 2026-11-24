@@ -735,6 +735,8 @@ var messagesEN = map[string]string{
 	"ui_task_parent":           "Parent task",
 	"ui_task_parent_word":      "Parent",
 	"ui_task_kids":             "%d child task(s)",
+	"ui_task_pages_head":       "Pages %d",
+	"ui_task_pages_word":       "Pages",
 	"ui_task_kids_head":        "Child tasks %d",
 	"ui_task_kids_word":        "Child tasks",
 	"ui_task_forget":           "Delete the task",

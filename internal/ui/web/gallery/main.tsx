@@ -68,7 +68,6 @@ import { SearchBox } from '@/features/page-list/components/search-box';
 import type { Listing, Page } from '@/types/page';
 import type { Screen } from '@/types/screen';
 import type { Folders } from '@/stores/open-folders';
-import { backOf } from '@/utils/back';
 import { openKey } from '@/utils/paths';
 import { startVersions, VersionsSection } from './versions';
 
@@ -1237,8 +1236,15 @@ function Gallery() {
         </Section>
         <Section title="Back to a task's page (narrow the window under 56rem: the mark alone)">
           <BackLink
-            back={backOf('/tasks?project=floe&task=%23128', window.location.origin)}
-            onPress={() => undefined}
+            id="back"
+            up={{ href: '/tasks?project=floe&task=%23128', onPress: () => undefined }}
+            label="Back to #128"
+            word="#128"
+          />
+          <BackLink
+            id="task-up"
+            up={{ href: '/tasks?project=floe', onPress: () => undefined }}
+            label="Back to the task list"
           />
         </Section>
         <Section title="Keys: / ? Ctrl+K show a toast">

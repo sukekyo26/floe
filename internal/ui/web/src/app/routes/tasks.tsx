@@ -5,6 +5,7 @@ import { appKeys, pressDiff, pressStar, pressUp } from '@/app/keys';
 import { freeToOpen, useScreenModals } from '@/app/modals';
 import { PageReader } from '@/app/routes/reader';
 import { moveRow } from '@/components/focus-places';
+import type { Up } from '@/components/screen-switch';
 import { getBoot } from '@/config/boot';
 import { ReaderPane } from '@/features/reader/components/reader-pane';
 import { AddPageDialog, type AddPageOpen } from '@/features/tasks/components/add-page-dialog';
@@ -36,19 +37,16 @@ export function TasksRoute({ name }: { readonly name: string | null }) {
       if (freeToOpen()) setAdding({ task, back });
     },
   };
-  // A task's page: its task as read, and the bar's task list going to the list at the task's state, its row kept to come
-  // back to (it stands as the page opens: h may be pressed before the first answer)
+  // A task's page: its task as read, and its way up, the bar's task list and the head's back link: to the list at the
+  // task's state, its row kept to come back to (it stands as the page opens: h may be pressed before the first answer)
   const view = useTaskPage(name ?? '');
   const first = getBoot().states.find((s) => s.first)?.name ?? '';
-  const taskUp =
-    name === null
-      ? undefined
-      : {
-          href: taskListHref(view.project, view.head?.state, first),
-          onPress: () => {
-            listQuery.keepFrom(taskRowKey(view.project, name));
-          },
-        };
+  const up: Up = {
+    href: taskListHref(view.project, view.head?.state, first),
+    onPress: () => {
+      listQuery.keepFrom(taskRowKey(view.project, name ?? ''));
+    },
+  };
 
   const rows = useRowKeys({ move: moveRow });
   const keys = appKeys({
@@ -73,7 +71,7 @@ export function TasksRoute({ name }: { readonly name: string | null }) {
     <>
       <Bar
         screen={name === null ? 'taskList' : 'taskPage'}
-        taskUp={taskUp}
+        taskUp={name === null ? undefined : up}
         onFind={openFind}
         onHelp={() => {
           openHelp('about');
@@ -88,6 +86,7 @@ export function TasksRoute({ name }: { readonly name: string | null }) {
           <TaskPageScreen
             name={name}
             view={view}
+            up={up}
             openers={openers}
             taskOpeners={taskOpeners}
             reader={

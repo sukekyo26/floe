@@ -724,6 +724,8 @@ var messagesJA = map[string]string{
 	"ui_task_parent":           "親のタスク",
 	"ui_task_parent_word":      "親",
 	"ui_task_kids":             "子 %d",
+	"ui_task_pages_head":       "ページ %d",
+	"ui_task_pages_word":       "ページ",
 	"ui_task_kids_head":        "子のタスク %d",
 	"ui_task_kids_word":        "子のタスク",
 	"ui_task_forget":           "タスクを削除",

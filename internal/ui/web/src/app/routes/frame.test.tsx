@@ -69,12 +69,14 @@ describe(FrameRoute, () => {
   });
 
   it('opened from a task’s page, goes back to it by its back link, which the help names closed', () => {
-    expect.assertions(3);
+    expect.assertions(4);
     const back = '/tasks?project=x&task=%23128';
     const html = draw('', [page], { 'pages.order': JSON.stringify({ order: ['p'], shown: ['p'], back }) });
     expect(html).toMatch(
       /<a id="back" href="\/tasks\?project=x&amp;task=%23128"[^>]*>.*#128<\/span><\/a><nav id="screens"/s,
     );
+    // On any screen: the header's links go to the lists, not to a task's page
+    expect(html).toMatch(/<a id="back"[^>]*class="inline-flex /);
     expect(html).not.toContain('aria-current');
     expect(html).toContain('<dd id="keys-back">ui_back_to_task:#128</dd>');
   });
@@ -86,5 +88,14 @@ describe(FrameRoute, () => {
     });
     expect(html).toMatch(/<a id="to-list" href="\/\?view=fav"/);
     expect(html).toMatch(/<a id="back" href="\/\?view=fav"[^>]*class="hidden narrow:inline-flex /);
+  });
+
+  it('opened from the task list, goes back to it by the header’s Task list, its back link there hidden till 40rem', () => {
+    expect.assertions(2);
+    const html = draw('', [page], {
+      'pages.order': JSON.stringify({ order: ['p'], shown: ['p'], back: '/tasks?project=x' }),
+    });
+    expect(html).toMatch(/<a id="to-tasks" href="\/tasks\?project=x"/);
+    expect(html).toMatch(/<a id="back" href="\/tasks\?project=x"[^>]*class="hidden narrow:inline-flex /);
   });
 });

@@ -1,6 +1,7 @@
 import { Button } from '@/components/button';
 import { IconButton } from '@/components/icon-button';
 import { EditIcon, KidsIcon, ParentIcon, PlusIcon, UnlinkIcon } from '@/components/icons';
+import { PartHead } from '@/features/tasks/components/part-head';
 import { ReadMark } from '@/components/page-row';
 import { stateWord } from '@/features/tasks/utils/kin-forms';
 import { unreadOf } from '@/features/tasks/utils/task-list';
@@ -19,9 +20,7 @@ export const kidState = (state: string): string =>
 // state, name (cut past 20%), title, unread dot, the button that takes it off
 const ROWS = 'grid grid-cols-[max-content_fit-content(20%)_minmax(0,1fr)_max-content_max-content] gap-x-2';
 const PART = 'grid gap-[0.1rem]';
-const HEAD = 'flex items-center justify-between gap-2 pb-1 ps-2';
-const H3 =
-  'm-0 flex items-center gap-[0.35rem] text-small leading-[1.4] font-bold text-fg [&_svg]:size-[15px] [&_svg]:flex-none [&_svg]:text-muted';
+const HEAD = 'pb-1 ps-2';
 // As a row of the list, reached by keyboard the row is outlined as a whole, inside it; only what the keys reach is
 // grounded. With a mouse, the button that takes it off shows while the row is pointed at or reached (opacity alone, so
 // it keeps its place)
@@ -104,11 +103,16 @@ export function TaskFamily({ task, family, onKin, onUnlink }: TaskFamilyProps) {
       className="mt-[0.15rem] grid rounded-menu border border-line bg-frame-bg p-menu-pad shadow-sm"
     >
       <div id="task-up-part" hidden={!family?.ups} className={PART}>
-        <div className={HEAD}>
-          <h3 className={H3}>
-            <ParentIcon />
-            {t('ui_task_parent')}
-          </h3>
+        <PartHead
+          level={3}
+          place={HEAD}
+          words={
+            <>
+              <ParentIcon />
+              {t('ui_task_parent')}
+            </>
+          }
+        >
           <Button
             id="task-parent-add"
             adds
@@ -133,7 +137,7 @@ export function TaskFamily({ task, family, onKin, onUnlink }: TaskFamilyProps) {
             <EditIcon />
             {t('ui_task_up_change')}
           </Button>
-        </div>
+        </PartHead>
         <div id="task-up-rows" className={ROWS}>
           {task && family?.up ? (
             <KinLine
@@ -151,13 +155,18 @@ export function TaskFamily({ task, family, onKin, onUnlink }: TaskFamilyProps) {
         hidden={!family?.kidsShown}
         className={`${PART} [#task-up-part:not([hidden])+&]:mt-menu-pad [#task-up-part:not([hidden])+&]:border-t [#task-up-part:not([hidden])+&]:border-line [#task-up-part:not([hidden])+&]:pt-menu-pad`}
       >
-        <div className={HEAD}>
-          <h3 className={H3}>
-            <KidsIcon />
-            <span id="task-family-word">
-              {kids.length > 0 ? t('ui_task_kids_head', kids.length) : t('ui_task_kids_word')}
-            </span>
-          </h3>
+        <PartHead
+          level={3}
+          place={HEAD}
+          words={
+            <>
+              <KidsIcon />
+              <span id="task-family-word">
+                {kids.length > 0 ? t('ui_task_kids_head', kids.length) : t('ui_task_kids_word')}
+              </span>
+            </>
+          }
+        >
           <Button
             id="task-child"
             adds
@@ -170,7 +179,7 @@ export function TaskFamily({ task, family, onKin, onUnlink }: TaskFamilyProps) {
             <PlusIcon />
             {t('ui_task_child_add')}
           </Button>
-        </div>
+        </PartHead>
         <div id="task-family-rows" className={ROWS}>
           {task
             ? kids.map((x) => (

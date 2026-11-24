@@ -28,13 +28,15 @@ const TASK_PAGE = [
 ];
 
 describe(App, () => {
-  it('draws the task list or a task page under the bar, its task list link going to the task’s state, no way up of its own', () => {
-    expect.assertions(4);
+  it('draws the task list or a task page under the bar, a task page’s back link and the bar’s task list going one way', () => {
+    expect.assertions(5);
     const list = draw('?project=p');
     const page = draw('?project=p&task=%231');
     expect(list).toMatch(/data-testid="bar".*<a id="to-tasks" href="\/tasks" aria-current="page"/s);
     expect(page).toMatch(/<a id="to-tasks" href="\/tasks\?project=[^"]*" aria-current="page"/);
-    expect(list + page).not.toContain('id="task-up"');
+    const href = (id: string) => new RegExp(`<a id="${id}" href="([^"]*)"`).exec(page)?.[1];
+    expect(href('task-up')).toBe(href('to-tasks'));
+    expect(list).not.toContain('id="task-up"');
     expect(list + page).not.toMatch(/id="(search|back)"/);
   });
 

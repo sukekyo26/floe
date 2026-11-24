@@ -18,7 +18,7 @@ const wayBack = `[...['back', 'to-list', 'to-tasks'].map((id) => document.getEle
 // frameBack says the way back of a page whole: the link that shows it, where it goes and its word, what the back link
 // says in full, the key's words and where the logo goes.
 const frameBack = `(() => { const e = ` + wayBack + `, back = document.getElementById('back');
-  return [location.pathname, e?.id, e?.getAttribute('href'), e === back ? document.getElementById('back-word').textContent : e?.textContent, back.title, back.getAttribute('aria-label'), document.getElementById('keys-back').textContent, document.querySelector('[data-testid=brand]').getAttribute('href')].join(' | '); })()`
+  return [location.pathname, e?.id, e?.getAttribute('href'), e === back ? document.getElementById('back-word')?.textContent ?? '' : e?.textContent, back.title, back.getAttribute('aria-label'), document.getElementById('keys-back').textContent, document.querySelector('[data-testid=brand]').getAttribute('href')].join(' | '); })()`
 
 // The way back of a page whole, by every way a page is opened whole: real presses, the row's press again and a double press, the
 // title over the page beside the rows, a pin, the page list's row; a reload keeps it, and a tab that kept nothing has the page list. h goes
@@ -124,7 +124,7 @@ func TestUIFrameBack(t *testing.T) { //nolint:paralleltest // the browser tests 
 	b.until("the narrow bar", "innerWidth === 360")
 	out = append(out, "phone: "+b.eval("(document.querySelector('[data-testid=brand]').offsetParent !== null) + ' ' + document.querySelector('[data-testid=brand]').getAttribute('href') + ' ' + (document.querySelector('[data-testid=brand] svg').getBoundingClientRect().width === 26) + ' ' + (document.getElementById('frame-actions').getBoundingClientRect().right <= innerWidth) + ' ' + (document.documentElement.scrollWidth <= innerWidth)"))
 	// At 40rem or less the back link alone, its mark; wider, the header's link (the user's choice)
-	out = append(out, "narrow: "+b.eval("("+wayBack+")?.id + ' ' + (document.getElementById('back-word').offsetParent === null) + ' ' + document.getElementById('back').getAttribute('aria-label') + ' ' + (document.getElementById('screens').offsetParent === null)"))
+	out = append(out, "narrow: "+b.eval("("+wayBack+")?.id + ' ' + (document.getElementById('back-word')?.offsetParent == null) + ' ' + document.getElementById('back').getAttribute('aria-label') + ' ' + (document.getElementById('screens').offsetParent === null)"))
 	b.size(800, 800, false)
 	out = append(out, "wider: "+b.eval("("+wayBack+")?.id"))
 	b.size(1400, 800, false)

@@ -322,6 +322,8 @@ export type MessageKey =
   | 'ui_task_out_done'
   | 'ui_task_out_named'
   | 'ui_task_pages'
+  | 'ui_task_pages_head'
+  | 'ui_task_pages_word'
   | 'ui_task_parent'
   | 'ui_task_parent_move'
   | 'ui_task_parent_moved'
