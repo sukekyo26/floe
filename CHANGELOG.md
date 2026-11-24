@@ -8,11 +8,13 @@ adheres to [Semantic Versioning](https://semver.org/).
 
 ### Changed
 
+- Change the bar's "Page list" and "Task list" into a switch: the one of the screen shown stands on a white thumb in a grey track, and on a page shown whole, the one of the list it was opened from does. At 56rem or less (it was 40rem), a page shown whole has the back link's mark in their place. They are links as before, and go to the same places.
 - Change the management page's list to show a long one sooner (with 300 pages, the rows come up about 80 ms earlier), and a page open whole a little sooner too: the items of a "…" menu are made as it opens, so the browser's find in page no longer finds the words of a closed "…" menu.
 - Change a task's page in the management page. The way back to the task list, taken off in 0.3.0, is there again, as the mark `‹` on the left of the title; it goes where the bar's Task list and `h` go. "Edit" is on the right of the title, and the button that archives a task done is by its state. "Add a page" is now "Add" beside a heading over the pages that says how many they are, in a pill ("Pages 2"); the heading of the child tasks says its number in the same pill.
 
 ### Fixed
 
+- Fix the bar of a page shown whole running off the side of a window of about 640 to 700 pixels, in Japanese, when the page is archived and has more than one version.
 - Fix a task's page scrolling sideways when the task's title has a long run with no place to break: the title goes over lines.
 
 ## [0.3.1] - 2026-11-24

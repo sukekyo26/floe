@@ -86,7 +86,7 @@ describe(App, () => {
     setBoot({ ...getBoot(), screen: 'frame', framed: 'p' });
     const frame = renderToString(<App search="" />);
     expect(frame).toMatch(/data-testid="bar".*id="screens".*id="frame-title"/s);
-    expect(frame).not.toContain('aria-current');
+    expect(frame).toMatch(/<a id="to-list"[^>]*aria-current="page"/);
     for (const id of ['frame', 'diff', 'notfound']) expect(frame).toMatch(new RegExp(`id="${id}"[^>]*hidden=""`));
     expect(frame).toContain('<div class="contents print:hidden"><div data-home="toasts"');
     expect(dialogs(frame)).toStrictEqual([

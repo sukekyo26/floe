@@ -211,7 +211,7 @@ func TestUIList(t *testing.T) { //nolint:paralleltest // the browser tests share
 		"true true true", "false true about:blank true ",
 		"vn ?view=new", "vn", "All unread 1 / 1", "New", "n", "true",
 		`{"order":["v","n"],"shown":["v","n"],"back":"/?view=new","at":{"slug":"v","file":"","v":0}}`, "/?view=new", "/a/v/",
-		"true true true true true", "flex none none true", "/ false", "none true", "to-list flex", "true block", "true",
+		"true true true true true", "flex none none true", "/ false", "none true", "back flex", "true block", "true",
 		"none none flex none true", "back none",
 	}, "|"))
 }
