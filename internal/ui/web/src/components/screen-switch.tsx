@@ -39,7 +39,7 @@ export function ScreenSwitch({
     <nav
       id="screens"
       aria-label={t('ui_screens')}
-      className={`flex flex-none gap-x-2 self-stretch ${screen === 'frame' ? 'narrow:hidden' : ''}`}
+      className={`flex flex-none gap-x-2.5 self-stretch ${screen === 'frame' ? 'narrow:hidden' : ''}`}
     >
       <a
         id="to-list"
