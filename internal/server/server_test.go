@@ -390,6 +390,36 @@ func TestChanged(t *testing.T) {
 	}
 }
 
+// Each screen of the management page names its tab's icon, which is in the HTML as no /favicon.ico is served.
+func TestManagementPageIcon(t *testing.T) {
+	t.Parallel()
+
+	e := newEnv(t)
+	e.publish(t, "d", "lang: en\ntemplate: pic\n", nil)
+	for _, target := range []string{"/", "/tasks", "/a/d/"} {
+		doc, err := html.Parse(strings.NewReader(e.do(t, http.MethodGet, target, "").Body.String()))
+		if err != nil {
+			t.Fatal(err)
+		}
+		icons := 0
+		for n := range doc.Descendants() {
+			if n.Type != html.ElementNode || n.Data != "link" || n.Parent.Data != "head" {
+				continue
+			}
+			attr := map[string]string{}
+			for _, a := range n.Attr {
+				attr[a.Key] = a.Val
+			}
+			if attr["rel"] == "icon" && strings.HasPrefix(attr["href"], "data:image/svg+xml,") {
+				icons++
+			}
+		}
+		if icons != 1 {
+			t.Errorf("GET %s: %d icons of the tab in its head, want 1", target, icons)
+		}
+	}
+}
+
 // The management page and a page's URL are the frame, in the reader's language, which only the management page and
 // VS Code may frame; a page not there is the frame with 404.
 func TestManagementPageAndFrame(t *testing.T) {

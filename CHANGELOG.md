@@ -6,6 +6,10 @@ adheres to [Semantic Versioning](https://semver.org/).
 
 ## [Unreleased]
 
+### Fixed
+
+- Fix the management page showing no icon in the browser tab, as it has since 0.3.0.
+
 ## [0.3.0] - 2026-11-24
 
 ### Added

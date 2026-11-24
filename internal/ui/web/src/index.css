@@ -39,6 +39,7 @@
   --color-on-danger: #fff;
   --color-frame-bg: #fff;
   /* The logo's: its sky, its two lines, its edge and its three faces */
+  /* LIMIT: the icon's data URI (index.html's <link rel="icon">) copies these by hand: a data URI reads no variable */
   --color-logo-sky-top: #d9f3ed;
   --color-logo-sky-bottom: #c2e7df;
   --color-logo-line: #5bb3a4;
