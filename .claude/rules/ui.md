@@ -32,3 +32,4 @@ paths:
 - **モーダルは `Dialog` 1 つで閉じる**：`close()` を直に呼ばず、close request は `Dialog` の `cancel` が受ける。閉じた後のフォーカスの行き先と答えは、close イベントを待たず同じ task で決める（モーダルごとに決まるものは `afterClose`）。`TestUIDialogClose`
 - **書き込みの間、モーダルは `useHold` で止める**：書き込みと、続く一覧の読みを待つ間は `whileHeld` で包み、閉じるのは解いた後にする。送るボタンの `disabled` を関数ごとに出し入れしない。`TestUIDialogHold`
 - **ボタンの二度押しの止めは `pressOnce` 1 つ**：同じことをもう頼んである押下だけを捨て、求める値が違う押下は通す。`Set` や旗を別に持たない。渡す仕事は、押した物が結果を描くまで（タスクは書き込みの答え、ページは一覧の読み）。読みまで持つものの「元に戻す」は、その値も渡す。モーダルは `useHold`、トーストの「元に戻す」は `undoToast`。`TestUIPressOnce`
+- **文の中のリンクは `TextLink` 1 つ**：Tailwind の preflight がリンクの下線を外すので、`<a>` を素で書かない。別の形のリンク（行の題、ボタンの形、帯）は、下線の有無を自分で書く。`TestLinksOfAShape`
