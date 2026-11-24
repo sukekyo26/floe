@@ -37,6 +37,7 @@ export function MoreMenu({ id, label, size = 'row', opens = 'down', children }: 
       data-menu-id={id}
       data-testid="more"
       open={open}
+      // The browser opens it itself to show a word found in it (find in page)
       onToggle={(e) => {
         if (e.currentTarget.open) menus.show(id);
         else menus.hide(id);
@@ -44,6 +45,13 @@ export function MoreMenu({ id, label, size = 'row', opens = 'down', children }: 
       className={`flex [&>summary]:list-none [&>summary::-webkit-details-marker]:hidden ${PLACE[opens]}`}
     >
       <summary
+        // The store first, the details drawn from it: its own toggle event comes a task later, and an item pressed before
+        // it would find no menu open to close
+        onClick={(e) => {
+          e.preventDefault();
+          if (menus.open.get() === id) menus.hide(id);
+          else menus.show(id);
+        }}
         aria-label={label}
         title={label}
         className={`inline-flex cursor-pointer items-center justify-center rounded-full border border-transparent px-1.5 text-muted transition-colors duration-150 hover:bg-subtle hover:text-fg [&_svg]:size-4 ${size === 'row' ? 'h-6.5 min-w-6.5' : 'h-icon-btn min-w-icon-btn'}`}
