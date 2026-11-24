@@ -2,6 +2,8 @@
 // its act not done: then it runs nothing and answers undefined. One that asks something else runs, and is what is asked
 // from then on. act is to last until what was pressed shows its result: a task's write, whose answer is drawn; a page's
 // write and the read after it
+// LIMIT: a press before its result is drawn asks the same even when the other way is meant, and is dropped: a star
+// pressed twice before the read stays. Draw a page's write as it answers too if that comes to trouble someone
 export type PressOnce = <T>(key: string, to: string, act: () => Promise<T>) => Promise<T | undefined>;
 
 export function createPressOnce(): PressOnce {

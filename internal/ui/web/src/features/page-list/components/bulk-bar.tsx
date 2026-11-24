@@ -74,14 +74,12 @@ export function BulkBar({
         quiet
         tone="danger"
         armed={arm.armed}
-        // LIMIT: pressed again while its writes go, the delete (and the archive) sends to the same pages twice. Hold
-        // the bar while it writes if that comes to trouble someone
         onClick={() => {
           if (arm.press()) return;
           const at = rev;
-          void does.remove().then(() => {
+          void does.remove().then((ran) => {
             // Unless the selection changed meanwhile, and the delete waits for that one
-            if (selection.rev.get() === at) arm.disarm();
+            if (ran && selection.rev.get() === at) arm.disarm();
           });
         }}
         onBlur={arm.disarm}

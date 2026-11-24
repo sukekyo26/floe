@@ -5,6 +5,7 @@ import { actOn as pageActOn, type ActOn, type ActWords } from '@/stores/act-on';
 import { listQuery, type ListQuery } from '@/stores/list-query';
 import { pageWrites as pageWriteStore, type PageWrites } from '@/stores/page-writes';
 import { pages as pagePages, type Pages } from '@/stores/pages';
+import { pressOnce, type PressOnce } from '@/stores/press-once';
 import { arrange } from '@/utils/list-view';
 
 // The tag modal's target of the selected, of the shape the tags feature takes (TagTarget), which the app hands it: a
@@ -24,8 +25,9 @@ export interface BulkActs {
   selectAll: () => void;
   // archive archives the selected, or restores them on the view of the archived
   archive: () => Promise<void>;
-  // remove deletes the selected, or unlinks them where every one is a link: its words of before the write
-  remove: () => Promise<void>;
+  // remove deletes the selected, or unlinks them where every one is a link: its words of before the write. It tells
+  // whether it ran: pressed again while the same go, it does not
+  remove: () => Promise<boolean>;
   // tags is the tag modal's target of the selected
   tags: () => BulkTags;
 }
@@ -36,6 +38,7 @@ interface Deps {
   writes?: PageWrites;
   pages?: Pages;
   query?: ListQuery;
+  press?: PressOnce;
 }
 
 // bulkActs is what the bar of the selected does to them: those written leave the selection, those that failed stay in
@@ -46,6 +49,7 @@ export function bulkActs({
   writes = pageWriteStore,
   pages = pagePages,
   query = listQuery,
+  press = pressOnce,
 }: Deps = {}): BulkActs {
   const send: ActOn = (act, words, slugs, settled) =>
     actOn(act, words, slugs, (reasons) => {
@@ -54,6 +58,8 @@ export function bulkActs({
       selection.keep(new Set([...selection.selected.get()].filter((slug) => !written.has(slug))));
     });
   const selected = () => [...selection.selected.get()];
+  // The same set asks the same, in whatever order it was selected
+  const asked = (slugs: readonly string[], ...of: string[]) => [...of, ...slugs.toSorted()].join('\n');
   return {
     selectAll: () => {
       const now = query.query.get();
@@ -65,7 +71,10 @@ export function bulkActs({
         done: (n) => t(to ? 'ui_archive_bulk_done' : 'ui_unarchive_bulk_done', n),
         failed: (n, why) => t(to ? 'ui_archive_bulk_failed' : 'ui_unarchive_bulk_failed', n, why),
       };
-      await send((slug) => writes.patchPage(slug, { archived: to }), words, selected());
+      const slugs = selected();
+      await press('archive selected', asked(slugs, String(to)), () =>
+        send((slug) => writes.patchPage(slug, { archived: to }), words, slugs),
+      );
     },
     remove: async () => {
       const kind = bulkKind(selection.selected.get(), pages.state.get().entries);
@@ -73,7 +82,12 @@ export function bulkActs({
         done: (n) => t(`ui_${kind}_bulk_done`, n),
         failed: (n, why) => t(`ui_${kind}_bulk_failed`, n, why),
       };
-      await send((slug) => writes.deletePage(slug), words, selected());
+      const slugs = selected();
+      const ran = await press('delete selected', asked(slugs), async () => {
+        await send((slug) => writes.deletePage(slug), words, slugs);
+        return true;
+      });
+      return ran ?? false;
     },
     tags: () => ({
       slugs: selected(),

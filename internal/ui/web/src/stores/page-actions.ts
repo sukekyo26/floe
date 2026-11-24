@@ -74,6 +74,9 @@ interface Deps {
 
 const titleOf = (a: Page) => a.title ?? a.slug;
 
+// taskKey is what a press on a page's task asks of: off it, or back on it
+const taskKey = (a: Page) => `task of page ${a.slug}`;
+
 // createPageActions is what the bar, a row and their menus do to a page: each writes, says it, and reads the list after
 // the answer, the toast shown before that read
 // LIMIT: a page's write has no rev, so a way back writes over what was written to the page since
@@ -167,9 +170,10 @@ export function createPageActions({
     const toast = undoToast(
       t('ui_task_out_done', titleOf(a), name),
       {
+        // Asked of the page's task as the way off asks: what the way off holds to the read is asked no more
         undo: async () => {
-          const res = await tasks.putPageOn(a, name, seen, category);
-          return { ok: res.ok, text: res.status === 409 ? res.stale : res.text };
+          const res = await press(taskKey(a), `${name}\n${category}`, () => tasks.putPageOn(a, name, seen, category));
+          return res && { ok: res.ok, text: res.status === 409 ? res.stale : res.text };
         },
         done: where.done,
         away: where.away,
@@ -181,13 +185,16 @@ export function createPageActions({
 
   return {
     toggleFavorite: async (a) => {
-      const reason = await writes.patchPage(a.slug, { favorite: !a.favorite });
-      if (reason) {
-        notice.say(t('ui_favorite_failed', reason));
-        return;
-      }
-      toasts.toast(t(a.favorite ? 'ui_unfavorited' : 'ui_favorited', titleOf(a)));
-      await pages.load();
+      const favorite = !a.favorite;
+      await press(`star page ${a.slug}`, String(favorite), async () => {
+        const reason = await writes.patchPage(a.slug, { favorite });
+        if (reason) {
+          notice.say(t('ui_favorite_failed', reason));
+          return;
+        }
+        toasts.toast(t(favorite ? 'ui_favorited' : 'ui_unfavorited', titleOf(a)));
+        await pages.load();
+      });
     },
     setArchived,
     removePage: async (a, removed) => {
@@ -207,21 +214,26 @@ export function createPageActions({
       await pages.load();
     },
     togglePin: async (a) => {
-      const reason = await tasks.changePageTask(a.slug, { pin: !a.task?.pin });
-      if (reason) {
-        notice.say(t('ui_save_failed', reason));
-        return;
-      }
-      toasts.toast(t(a.task?.pin ? 'ui_unpinned' : 'ui_pinned', titleOf(a)));
-      await pages.load();
+      const pin = !a.task?.pin;
+      await press(`pin page ${a.slug}`, String(pin), async () => {
+        const reason = await tasks.changePageTask(a.slug, { pin });
+        if (reason) {
+          notice.say(t('ui_save_failed', reason));
+          return;
+        }
+        toasts.toast(t(pin ? 'ui_pinned' : 'ui_unpinned', titleOf(a)));
+        await pages.load();
+      });
     },
     takePageOff: async (a, { focus = false, prepare }) => {
-      const off = await takeOff(a, prepare, { focus });
-      if (off.reason) {
-        notice.say(t('ui_save_failed', off.reason));
-        return;
-      }
-      await pages.load();
+      await press(taskKey(a), '', async () => {
+        const off = await takeOff(a, prepare, { focus });
+        if (off.reason) {
+          notice.say(t('ui_save_failed', off.reason));
+          return;
+        }
+        await pages.load();
+      });
     },
     takeOff,
     copyPath: async (path) => {

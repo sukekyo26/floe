@@ -6,7 +6,7 @@ import type { Pages } from '@/stores/pages';
 import { buttonOf, createToasts } from '@/stores/toasts';
 import { createUndoToast } from '@/stores/undo-toast';
 
-function made(ok: boolean) {
+function made(ok: boolean, dropped = false) {
   setBoot({ messages: { ui_undo: 'Undo', ui_undone: 'Undone', ui_save_failed: 'failed: %s' } } as unknown as Boot);
   const said: string[] = [];
   const toasts = createToasts();
@@ -21,7 +21,7 @@ function made(ok: boolean) {
   undoToast(
     'taken off',
     {
-      undo: () => Promise.resolve({ ok, text: 'stale' }),
+      undo: () => Promise.resolve(dropped ? undefined : { ok, text: 'stale' }),
       done: () => said.push('done'),
       away: () => said.push('away'),
     },
@@ -40,6 +40,14 @@ describe(createUndoToast, () => {
     await button()?.onPress();
     expect(toasts.shown.get().map((x) => x.text)).toStrictEqual(['Undone']);
     expect(said).toStrictEqual(['load', 'done']);
+  });
+
+  it('does nothing for a press dropped, its toast there still', async () => {
+    expect.assertions(2);
+    const { toasts, said, button } = made(true, true);
+    await button()?.onPress();
+    expect(toasts.shown.get().map((x) => x.text)).toStrictEqual(['taken off']);
+    expect(said).toStrictEqual([]);
   });
 
   it('says a refusal on the error line, its toast gone all the same, and leaves for away on Escape', async () => {
