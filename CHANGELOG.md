@@ -8,6 +8,7 @@ adheres to [Semantic Versioning](https://semver.org/).
 
 ### Fixed
 
+- Fix the management page's bar running off the side of a narrow window (in Japanese, 303px wide or less), as it has since 0.3.0: at 24rem (384px) or less, the logo is its mark alone on every screen.
 - Fix the management page showing no icon in the browser tab, as it has since 0.3.0.
 
 ## [0.3.0] - 2026-11-24
