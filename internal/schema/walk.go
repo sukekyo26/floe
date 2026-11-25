@@ -410,16 +410,17 @@ func (w *walker) value(from *jsonschema.Schema, v reflect.Value) {
 // hold, and false for none. A part's value goes on from its schema's root. At each step, the types of the schemas
 // Follow goes through tell whether the value may be keys holding the key (none forbids it, Step.Forbids) and whether it
 // may be a list: of keys alone, a key declared goes on to its schema; of a list alone, its items, the step kept, as a
-// check's for is. A key is refused where the value may be neither and a closed schema forbids it. Where it may be
-// both, or the steps lead to what Follow does not know (a key not declared, a format, a list of no items or of items
-// that items does not take, before it by prefixItems, a schema met again in going through items), the rest is not
-// known to be forbidden.
+// check's for is. A key is refused where the value may be neither: a closed schema forbids it, or the types let the
+// value be no keys at all (text, a number). Where it may be both, or the steps lead to what Follow does not know (a key
+// not declared, a list of no items or of items that items does not take, before it by prefixItems, a schema met again
+// in going through items), the rest is not known to be forbidden.
 // LIMIT: in a list of items that items does not take, a key no item may hold is not refused either, and a check of it
 // finds no item; decide it by the schemas of prefixItems if floe comes to walk them.
 // LIMIT: the shape of a value is read from type alone: past a schema whose type lets the value be keys and a list
-// (none written too, a template's root as well), or a key its properties do not declare (additionalProperties or
-// patternProperties takes it), no for is refused; nor is what allOf and the like narrow read. Read them if a for
-// that passes so misleads.
+// (none written too, a template's root as well), a list of no items (one of text or a list too), or a key its
+// properties do not declare (additionalProperties or patternProperties takes it), no for is refused; nor is what allOf
+// and the like narrow read, nor a type beside a $ref to a part, nor whether the value the steps end at may be a list,
+// which the data decides. Read them if a for that passes so misleads.
 func (c *Compiled) Forbidding(steps []string) (string, bool) {
 	s := c.Root
 	for _, key := range steps {
@@ -447,7 +448,7 @@ func (c *Compiled) Forbidding(steps []string) (string, bool) {
 			case keys && declared:
 				s = next
 				break step
-			case st.Forbids(key):
+			case !keys:
 				return key, true
 			default:
 				return "", false

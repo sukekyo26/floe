@@ -15,12 +15,12 @@ const template = "floe://templates/t/schema.json"
 
 // resources are small parts and shared schemas, as floe's are given: note (title, text, a tone), tone (shared,
 // an enum), any (shared: a markdown text, a note, a stack), stack (a part holding any), html (a part with a
-// format html).
+// format html), prose (a part whose root is markdown text).
 func resources(t *testing.T) map[string]schema.Resource {
 	t.Helper()
 
 	res := map[string]schema.Resource{}
-	for name, k := range map[string]schema.Kind{"note": schema.Part, "stack": schema.Part, "html": schema.Part, "tone": schema.Shared, "any": schema.Shared} {
+	for name, k := range map[string]schema.Kind{"note": schema.Part, "stack": schema.Part, "html": schema.Part, "prose": schema.Part, "tone": schema.Shared, "any": schema.Shared} {
 		src, err := os.ReadFile(filepath.Join("testdata", name+".json"))
 		if err != nil {
 			t.Fatal(err)

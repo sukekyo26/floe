@@ -72,9 +72,10 @@ func TestFollow(t *testing.T) {
 
 // Forbidding tells the first step of a check's for that a schema on the way forbids: a key an object of
 // additionalProperties: false declares neither in its properties nor its patternProperties, where the types on the way
-// let the value be no list, or a list whose items forbid it. A list on the way is gone through, a part's value from
-// its root; where the value may be keys and a list (no type too), a key not declared, a schema of neither the key nor
-// items, and one met again in a list's items, a key is not known to be forbidden.
+// let the value be no list, or a list whose items forbid it; and any key of a value the types let be neither keys nor a
+// list. A list on the way is gone through, a part's value from its root; where the value may be keys and a list (no
+// type too), a key not declared, a list of no items, and a schema met again in a list's items, a key is not known to be
+// forbidden. What the last step leads to is not asked.
 func TestForbidding(t *testing.T) {
 	t.Parallel()
 
@@ -94,7 +95,6 @@ func TestForbidding(t *testing.T) {
 		// Items of no type may be lists: their keys are not known.
 		{"through a list, items of no type", `"properties": {"rows": {"type": "array", "items": {` + closed + `"properties": {"a": {}}}}}`, "rows.b", ""},
 		{"a list of lists", `"properties": {"rows": {"type": "array", "items": {"type": "array", "items": {` + closed + `"properties": {"a": {}}}}}}`, "rows.a", ""},
-		{"not a list", `"properties": {"n": {"type": "number"}}`, "n.x", ""},
 		{"anyOf", `"properties": {"r": {"anyOf": [{"type": "array"}, {"type": "null"}]}}`, "r.x", ""},
 		{"a list its own items", `"properties": {"rows": {"$ref": "#/$defs/l"}}, "$defs": {"l": {"type": "array", "items": {"$ref": "#/$defs/l"}}}`, "rows.x", ""},
 		{"closed beside a $ref", `"properties": {"s": {"type": "object", "$ref": "#/$defs/b", ` + closed + `"properties": {"p": {}}}}, "$defs": {"b": {"properties": {"q": {}}}}`, "s.q", "q"},
@@ -132,7 +132,26 @@ func TestForbidding(t *testing.T) {
 		{"keys alone, items", `"properties": {"rows": {"type": "object", "items": ` + shut + `}}`, "rows.foo", ""},
 		{"a list alone, additionalProperties", `"properties": {"rows": {"type": "array", "additionalProperties": {}, "items": ` + shut + `}}`, "rows.foo", "foo"},
 		{"open, of no type", `"properties": {"o1": {"properties": {"a": ` + shut + `}}}`, "o1.a.zz", ""},
-		{"a format", `"properties": {"x": {"type": "string", "format": "markdown"}}`, "x.a", ""},
+		// Neither keys nor a list: no key.
+		{"a number", `"properties": {"n": {"type": "number"}}`, "n.x", "x"},
+		{"text or null", `"properties": {"n": {"type": ["string", "null"]}}`, "n.x", "x"},
+		{"items of text", `"properties": {"g": {"type": "array", "items": {"type": "string"}}}`, "g.x", "x"},
+		{"text by a $ref", `"properties": {"n": {"$ref": "#/$defs/s"}}, "$defs": {"s": {"type": "string"}}`, "n.x", "x"},
+		{"text alone by two schemas", `"properties": {"n": {"type": ["string", "array"], "$ref": "#/$defs/s"}}, "$defs": {"s": {"type": ["string", "object"]}}`, "n.x", "x"},
+		{"a format", `"properties": {"x": {"type": "string", "format": "markdown"}}`, "x.a", "a"},
+		{"a format, of no type", `"properties": {"x": {"format": "markdown"}}`, "x.a", ""},
+		{"a part of text", `"properties": {"n": {"$ref": "floe:///parts/prose.json"}}`, "n.x", "x"},
+		{"text of a part in a list", `"properties": {"n": {"type": "array", "items": {"$ref": "floe:///parts/any.json"}}}`, "n.note.title.x", "x"},
+		// A part's value is read from its root alone, as Follow does.
+		{"text beside a $ref to a part", `"properties": {"n": {"type": "string", "$ref": "floe:///parts/note.json"}}`, "n.title", ""},
+		{"text or keys, open", `"properties": {"n": {"type": ["string", "object"]}}`, "n.x", ""},
+		{"text or a list, a key of its items", `"properties": {"n": {"type": ["string", "array"], "items": ` + shut + `}}`, "n.n", ""},
+		{"text or a list, no key of its items", `"properties": {"n": {"type": ["string", "array"], "items": ` + shut + `}}`, "n.zz", "zz"},
+		{"a list of items of text, prefixItems before", `"properties": {"n": {"type": "array", "prefixItems": [` + objA + `], "items": {"type": "string"}}}`, "n.a", ""},
+		{"ends at text", `"properties": {"n": {"type": "string"}}`, "n", ""},
+		{"ends at keys", `"properties": {"n": {"type": "object"}}`, "n", ""},
+		// LIMIT of Forbidding: text or a list of no items.
+		{"text or a list, no items", `"properties": {"n": {"type": ["string", "array"]}}`, "n.x", ""},
 	} {
 		c, err := compile(t, tt.body)
 		if c == nil {
