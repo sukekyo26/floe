@@ -18,7 +18,7 @@ floe draws a page from a YAML data file you write, checks it, and serves it at t
 
 1. Pick a template from `floe template list`: the one made for the page's purpose if there is one (`design` for a design document, `handoff`, `runbook`, …), else `report`. Read its example and schema before writing: `floe template show <template> example.yaml` and `floe template show <template> schema.json`. The example shows the file's structure, not a fixed set of parts.
 2. Name the file for the page, as `db-choice.yaml` (*The data file*).
-3. Choose parts from `floe part list` that the template's schema allows where you put them (*Picking parts*). A part MUST NOT hold a key its schema does not list: look up the keys of each part the example does not show.
+3. Choose parts from `floe part list` that the template's schema allows where you put them (*Picking parts*). A part MUST NOT hold a key its schema does not list: look up the keys of each part the example does not show, in `floe part list` or, where it lists none (`chart`, `stats`, `diagram`, …), in `floe part show <part> schema.json`.
 4. Run `floe check db-choice.yaml`, fix every mistake, and run it again until none is left (*Reading mistakes*). `warning:` lines are advice: a file with only those is done.
 5. Run `floe publish db-choice.yaml` from the repository the page is about, and give the user the URL it prints (*Publishing*). You need not fetch the page.
 
@@ -40,7 +40,7 @@ sections:
 | `template` | a name `floe template list` prints, required | The template that draws the page |
 | `lang` | a BCP 47 tag such as `en` or `ja`, required | The page's language: the words floe draws and the diagrams' text |
 | `title` | text | The page's name |
-| `theme` | a name `floe theme list` prints | Leave it out (*Themes*) |
+| `theme` | a name `floe theme list` prints | The theme the page is drawn with; leave it out (*Themes*) |
 
 - The other top keys are the template's: its `schema.json` lists them (a `report`'s `lead` sums the page up under the title).
 - The file's name without `.yaml` becomes the page's slug in its URL, in lower case, with each run of characters other than ASCII letters and digits made a `-`, cut to 64 characters, with no `-` at either end. A name with no ASCII letter or digit (`設計.yaml`) gives no slug: give `floe publish --slug <slug>`.
@@ -52,11 +52,11 @@ A document a repository keeps is a YAML file with `template` and `lang` at its t
 
 ## Publishing
 
-To have the page as an HTML file instead, without publishing it: `floe render db-choice.yaml` writes `db-choice.html` beside it (a document a repository keeps is drawn with the command `floe repository guide` has you find, which keeps the repository's settings).
+`floe publish db-choice.yaml` serves the page and prints its URL. To have the page as an HTML file instead, without publishing it, `floe render db-choice.yaml` writes `db-choice.html` beside it (a document a repository keeps is drawn with the command `floe repository guide` has you find, which keeps the repository's settings).
 
 ### The page's project
 
-- A project groups pages on the management page and the task list. A new page's project has the name of the git repository `floe publish` runs in: its `origin`'s name, else the repository's directory name; outside a repository, the directory's name. Where the data file is does not matter (`cd ~/work/app && floe publish ~/notes/db-choice.yaml`).
+- A project groups pages on the management page and the task list. A new page's project has the name of the git repository `floe publish` runs in: the last part of its `origin`'s URL without `.git`, else its root directory's name (in a worktree, the main checkout's); outside a repository, the directory's name. Where the data file is does not matter (`cd ~/work/app && floe publish ~/notes/db-choice.yaml`).
 - When a page is new or its project changes (it had none, it replaced another file's page, or `--move-project` moved it), `floe publish` prints the project on stderr after the URL (`page in project app`). If it is not the name of the repository the page is about, move to that repository and publish again with `--move-project` (not for a `--link` page: *Linked files*).
 - `--move-project` takes the page off its task, as a task is of its project, and says so (`page in project app, off task #9`); the task stays in the old project without the page. Tell the user, who decides whether to put the page on a task.
 - A page in the wrong project, of any kind, can have its project changed on the management page. Tell the user how: the page's `…` menu (on its row in the list, or over the page when it is open), Edit, open Slug and project, which is folded, type the project's name in Project, and Save. The screen is in the browser's language: in Japanese these are 編集, URL 名とプロジェクト, プロジェクト and 保存.
@@ -78,7 +78,11 @@ To have the page as an HTML file instead, without publishing it: `floe render db
 
 ### Limits
 
-- Drawing a page MUST stay within 512 MiB of memory, and on the server within 30 seconds, and the page drawn within 80 MiB of HTML: past any, floe refuses the page at its data file (`drawing it needed more than 512 MiB of memory`, `drawing it took more than 30 seconds`, `the page drawn is … MiB, over the 80 MiB a page may be`). Do not repeat a long text for each item of a list, in an expression or in `page.html` (`floe template guide`).
+- Drawing a page, and the page drawn, MUST stay within these limits: past any, floe refuses the page at its data file.
+  - 512 MiB of memory to draw it (`drawing it needed more than 512 MiB of memory`)
+  - 30 seconds to draw it on the server (`drawing it took more than 30 seconds`)
+  - 80 MiB of HTML drawn (`the page drawn is … MiB, over the 80 MiB a page may be`)
+- Do not repeat a long text for each item of a list, in an expression or in `page.html` (`floe template guide`).
 - On Windows, what floe reads and writes MUST be on a local drive: the data file, a file or folder to link, the repository, the store, and the directories of your own templates, parts and themes. Any local folder will do; a network share or a network drive will not, nor a symlink or junction that leads to one.
 
 ## Tasks
@@ -127,7 +131,7 @@ The user keeps a task list, and wants each new page put on a task, under one of 
 
 ## Picking parts
 
-Each item of `parts` is one key naming the part. `floe part list` gives each part's keys and what it is for; for a part whose keys it does not list (`chart`, `stats`, `diagram`, …), `floe part show <part> schema.json` gives its keys, types and details. The template's `schema.json` says which parts each section or field takes.
+Each item of `parts` is one key naming the part. `floe part list` says what each part is for and gives most parts' keys, `floe part show <part> schema.json` a part's keys, types and details. The template's `schema.json` says which parts each section or field takes.
 
 | Content | Part |
 |---|---|
@@ -175,8 +179,8 @@ Each item of `parts` is one key naming the part. `floe part list` gives each par
 Write so:
 
 - Write a text value in `'…'`, or over several lines as a `|` block, without judging whether it needs quotes: `heading: 'Step 1: plan'`, ``text: '`algorithms` fixes the methods.'``.
-- In `'…'`, write a `'` as `''`; nothing else is special, a `\` and a `"` included. In a `|` block, write the text as it is, its first line indented as the lines after it, with spaces only.
-- Leave bare only a number, `true` or `false`, and a word that starts with an ASCII letter or digit, holds only ASCII letters, digits, `_`, `.`, `/` and `-`, and does not read as a number (`template: report`, `tone: warn`; not `1.10` or `08`, as below).
+- In `'…'`, all on one line, write a `'` as `''`; YAML reads nothing else there specially, not a `\` nor a `"` (Markdown does, as below). In a `|` block, write the text as it is, its first line indented as the lines after it, with spaces only.
+- Leave bare only a number, `true` or `false` that is not meant as text, and a word that starts with an ASCII letter or digit, holds only ASCII letters, digits, `_`, `.`, `/` and `-`, and does not read as a number or `null` (`template: report`, `tone: warn`; not `1.10` or `08`, as below).
 - Write a comment on a line of its own, before the key it is about, not on a value's line; one on a `|` block goes on its `|` line (`text: | # note`), also where `|` blocks follow each other. A comment MUST NOT follow a bare text on its line, in `{ }` or `[ ]` too, nor come right after a `|` or `>` block, at any depth.
 - To change a data file from a program, write it with a YAML library set to write no anchors or aliases, to keep non-ASCII text as it is, and to keep the keys' order.
 
@@ -185,8 +189,12 @@ These pass `floe check` and change what you wrote:
 - Do not leave bare a text that reads as a number where a number goes too: `default: 1.10` of `fields` is drawn `1.1`. Write `'1.10'`.
 - Do not write a `,` in a bare item of `[ ]`: it ends the item (`tags: [Tokyo, Osaka office]` is two tags).
 - Do not use `"…"`: a `\` in it is an escape, mostly with no mistake (`\_` is a no-break space).
+- In a value that is Markdown (`text`, a table's cell, …), in `'…'` and `|` blocks too, a `\` before a punctuation mark is taken off (`C:\path\_logs` is drawn `C:\path_logs`), and a paragraph whose first line starts with four spaces is code: write a path in backticks, or a `\` as `\\`.
 - Beside Japanese, Chinese or Korean letters, `**`, `*` and `~~` mark text across punctuation too (`**「題」**に` is bold): write a `*` meant as a character there as `\*` or in backticks.
-- Do not indent the first line of a `|` block deeper than a later one: the block ends before the first shallower line, which is read as YAML. A line that reads as a key or an item, as deep as the block's key or `-`, is taken as one, with no mistake where it is allowed (any other is refused, at that line or one after it). For text whose first line starts with spaces, write after the `|` how far the block is indented past its key (`|2`).
+- Do not indent the first line of a `|` block deeper than a later one: the block ends before the first shallower line, which is read as YAML.
+  - A line that reads as a key or an item, as deep as the block's key or `-`, is taken as one, with no mistake where it is allowed.
+  - Any other is refused, at that line or one after it.
+  - For text whose first line starts with spaces, write after the `|` how far the block is indented past its key (`|2`).
 
 floe refuses these (*Reading mistakes*):
 
