@@ -14,6 +14,7 @@ adheres to [Semantic Versioning](https://semver.org/).
 
 ### Fixed
 
+- Fix the rest of a press or a key that opens or closes a modal of the management page (the second press of a double press, a key held down) going through to the modal opened, to the backdrop or to what is under a modal closed: a double press on a row of another task's page under Add a page could move it unasked.
 - Fix the bar of a page shown whole running off the side of a window of about 640 to 700 pixels, in Japanese, when the page is archived and has more than one version.
 - Fix a task's page scrolling sideways when the task's title has a long run with no place to break: the title goes over lines.
 

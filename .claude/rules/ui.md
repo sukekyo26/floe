@@ -29,8 +29,8 @@ paths:
 - **タスク一覧は 1 つのプロジェクトだけ**：`/tasks` は `project` を持ち、無ければ `openingProject` 1 か所が選んで URL に書く。あるプロジェクトは `taskProjects` 1 か所が決め、`projectOrder` は色と順にだけ使う。読めない間は選び直さず、覚えも書かない
 - **一覧は押している間に作り直さない**：問い合わせと読んだ印の `pages.load` は、`#list` やピンの並びを押してから 2 秒の間（離すまで）は行を作り直さず、次の問い合わせで描く。押下と離す間に行を作り直すと、Chrome は `click` も `dblclick` も出さない。離したことが伝わらない押下があるので、2 秒で止める。操作が呼ぶ `load` は止めない
 - **一覧は `pages.load` が 1 本ずつ、書き込みの答えの後に読む**：一覧を読むのは `pages.load` だけで、書き込み（既読の印も）が答えを待つ間は読まない。要求は全部 `lib/api-client.ts` を通す。`TestUILoadOrder`
-- **モーダルは `Dialog` 1 つで閉じる**：`close()` を直に呼ばず、close request は `Dialog` の `cancel` が受ける。閉じた後のフォーカスの行き先と答えは、close イベントを待たず同じ task で決める（モーダルごとに決まるものは `afterClose`）。`TestUIDialogClose`
+- **モーダルは `Dialog` 1 つで閉じる**：`close()` を直に呼ばず、close request は `Dialog` の `cancel` が受ける。閉じた後のフォーカスの行き先と答えは、close イベントを待たず同じ task で決める（モーダルごとに決まるものは `afterClose`）。`TestUIDialogClose`。開いた・閉じた押下の続き（二度押しの 2 回目、押しっぱなしのキー）は `Dialog` が捨て、下の行やボタンは見ない。`TestUIDialogTwice`
 - **書き込みの間、モーダルは `useHold` で止める**：書き込みと、続く一覧の読みを待つ間は `whileHeld` で包み、閉じるのは解いた後にする。送るボタンの `disabled` を関数ごとに出し入れしない。`TestUIDialogHold`
-- **ボタンの二度押しの止めは `pressOnce` 1 つ**：同じことをもう頼んである押下だけを捨て、求める値が違う押下は通す。`Set` や旗を別に持たない。渡す仕事は、押した物が結果を描くまで（タスクは書き込みの答え、ページは一覧の読み）。読みまで持つものの「元に戻す」は、その値も渡す。モーダルは `useHold`、トーストの「元に戻す」は `undoToast`。`TestUIPressOnce`
+- **同じ頼みの二度押しの止めは `pressOnce` 1 つ**：同じことをもう頼んである押下だけを捨て、求める値が違う押下は通す。`Set` や旗を別に持たない。渡す仕事は、押した物が結果を描くまで（タスクは書き込みの答え、ページは一覧の読み）。読みまで持つものの「元に戻す」は、その値も渡す。モーダルは `useHold`、トーストの「元に戻す」は `undoToast`。`TestUIPressOnce`
 - **文の中のリンクは `TextLink` 1 つ**：Tailwind の preflight がリンクの下線を外すので、`<a>` を素で書かない。別の形のリンク（行の題、ボタンの形、帯）は、下線の有無を自分で書く。`TestLinksOfAShape`
 - **戻るリンクは `BackLink` 1 つ**：帯のリンクのほかの戻るリンク（全面のページ・タスクのページ）は `BackLink` が描く。タスクのページから一覧への行き先は `TasksRoute` の `up` 1 つで、「‹」・帯の「タスク一覧」・`h` が同じ値を使う。`TestUITaskUp`
