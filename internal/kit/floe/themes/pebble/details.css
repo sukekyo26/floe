@@ -1,0 +1,4 @@
+/* A bar; open, its face goes on below.
+   The margin is the one place the theme makes room: a head painted needs it off the parts below */
+:scope > summary { background: var(--pebble-bar); color: var(--accent); border-radius: var(--radius); }
+:scope[open] > summary { border-end-start-radius: 0; border-end-end-radius: 0; margin-bottom: var(--floe-room); }

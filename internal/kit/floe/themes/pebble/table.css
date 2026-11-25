@@ -1,0 +1,9 @@
+/* The head a band apart, the rows each on a face */
+:scope { background: var(--pebble-tray); --quiet: var(--surface); padding: calc(var(--pebble-pad) - var(--pebble-gap)) var(--pebble-pad); --floe-shadow-color: transparent; --table-head-bg: none; --table-head-fg: var(--accent); --table-rule: none; }
+:scope table { border-collapse: separate; border-spacing: 0 var(--pebble-gap); }
+:scope thead th { background: var(--pebble-bar); font-weight: 700; }
+:scope tbody td { background: var(--surface); --quiet: var(--pebble-tray); }
+:scope thead th:first-child { border-start-start-radius: var(--pebble-slab); border-end-start-radius: var(--pebble-slab); }
+:scope thead th:last-child { border-start-end-radius: var(--pebble-slab); border-end-end-radius: var(--pebble-slab); }
+:scope tbody td:first-child { border-start-start-radius: var(--pebble-stone); border-end-start-radius: var(--pebble-stone); font-weight: 700; }
+:scope tbody td:last-child { border-start-end-radius: var(--pebble-stone); border-end-end-radius: var(--pebble-stone); }

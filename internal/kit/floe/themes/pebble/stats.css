@@ -1,0 +1,4 @@
+/* The number is the box */
+.stat { justify-items: center; text-align: center; }
+.stat .value { font-size: 2.3rem; line-height: 1.2; }
+.stat .moved { justify-content: center; }
