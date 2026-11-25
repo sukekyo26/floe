@@ -394,7 +394,7 @@ var dialogHoldWant = []string{
 	"off, held: true none 0 / sent 1",
 	"off, answered: false closerequest 6 / toast Undo / sent 1",
 	"add page, held: true none 0 / sent 1",
-	"add page, answered: false closerequest 3 / task-add-page / sent 1",
+	"add page, answered: false closerequest 4 / task-add-page / sent 1",
 	"kin, held: true none 0 / sent 1",
 	"kin, answered: false closerequest 5 / task-child / sent 1",
 	"task edit, held: true none 0 / sent 1",
