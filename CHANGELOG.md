@@ -13,6 +13,7 @@ adheres to [Semantic Versioning](https://semver.org/).
 
 ### Changed
 
+- Change the theme `swiss` so that its boxes are seen to their edges: each (a table, a note, a card, an option, a fold and the like) is white in a black frame, wherever it stands, where it had no ground and a rule at its top or its left alone; a quote stands on white and a diagram on grey, the grey of a warning is darker, and so, slightly, is the page's ground.
 - Change the mistake of a `for` of `checks.yaml` that does not lead to a list: there is one for each value in the data file that the path stops at, at its line and column, naming the `for` and its `checks.yaml`, where there was one for the check, at its `for`.
 - Change the bar's "Page list" and "Task list" into a switch: the one of the screen shown stands on a white thumb in a grey track, and on a page shown whole, the one of the list it was opened from does. At 56rem or less (it was 40rem), a page shown whole has the back link's mark in their place. They are links as before, and go to the same places.
 - Change the management page's list to show a long one sooner (with 300 pages, the rows come up about 80 ms earlier), and a page open whole a little sooner too: the items of a "…" menu are made as it opens, so the browser's find in page no longer finds the words of a closed "…" menu.
