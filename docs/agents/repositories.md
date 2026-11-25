@@ -134,7 +134,7 @@ The check names each page that its data file does not draw and each page missing
 - For a document you changed, added or took away: draw again, and delete the page of one taken away or renamed.
 - For one you did not touch, tell the user what the check printed, with the version of `floe --version` and the one the repository's CI installs. The reasons may be:
   - floe is of another version than drew them (`floe --version` and the version the CI installs; the version a floe built from its source says is not enough to tell).
-  - A template, part, theme or icon set changed in a pull request merged meanwhile: take in the latest and draw again.
+  - A template, part, theme or icon set changed in a pull request merged meanwhile (once the user says it is this, take in the latest and draw again).
 
   Do not guess which.
 
