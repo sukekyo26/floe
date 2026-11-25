@@ -298,7 +298,7 @@ func TestUIDialogTwicePage(t *testing.T) { //nolint:paralleltest // the browser 
 	defer b.unsize()
 	b.navigate("about:blank")
 	b.addScript(framedCatch)
-	out := []string{}
+	out := make([]string, 0, 3)
 	for _, how := range []string{"never opened", "by its button", "by Escape"} {
 		b.navigate("/")
 		b.until("the rows", "document.querySelector('#list li[data-slug=d5] [data-testid=title]')")
