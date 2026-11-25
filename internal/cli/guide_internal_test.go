@@ -29,7 +29,7 @@ const guidePath = "../../docs/agents/guide.md"
 const taskGuidePath = "../../docs/agents/tasks.md"
 
 // commandDocs are the docs whose commands TestGuideCommands runs, each a doc floe prints.
-var commandDocs = []string{guidePath, taskGuidePath, "../../docs/agents/themes.md", "../../docs/agents/parts.md", "../../docs/agents/templates.md", "../../docs/agents/diagrams.md"}
+var commandDocs = []string{guidePath, taskGuidePath, "../../docs/agents/themes.md", "../../docs/agents/parts.md", "../../docs/agents/templates.md", "../../docs/agents/diagrams.md", "../../docs/agents/repositories.md"}
 
 func readGuide(t *testing.T, path string) string {
 	t.Helper()
@@ -88,6 +88,7 @@ func TestGuideDocs(t *testing.T) {
 	}{
 		{"diagram", "diagrams.md", docs.DiagramGuide},
 		{"part", "parts.md", docs.PartGuide},
+		{"repository", "repositories.md", docs.RepositoryGuide},
 		{"task", "tasks.md", docs.TaskGuide},
 		{"template", "templates.md", docs.TemplateGuide},
 		{"theme", "themes.md", docs.ThemeGuide},

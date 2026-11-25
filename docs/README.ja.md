@@ -2,7 +2,7 @@
 
 [English README](../README.md)
 
-AI エージェントのためのローカルのページサーバーです。エージェントがページを YAML のデータで書くと、floe がテンプレートで描き、`http://127.0.0.1:7325` で見せます。
+AI エージェントが書く YAML のデータから文書を作ります。テンプレートが HTML に描き、schema に合わないデータは floe が断ります。プロジェクトのテンプレート・データ・ページをリポジトリに置き、CI で確かめられます（[repository.ja.md](repository.ja.md)）。ローカルのサーバーで読み、エージェントが publish したページも、`http://127.0.0.1:7325` で見せます。
 
 > **試作の段階です。** floe はまだ大きく変わります。版が上がると、コマンド・データファイル・テンプレートが、移行の手順なしに変わることがあります。試すのは自由ですが、広く使ってもらう段階ではありません。
 
@@ -31,7 +31,7 @@ floe skill install <agent>   # 対応するエージェントは floe skill inst
 載っていないエージェントには、次の 1 行を指示（AGENTS.md など）に書きます：
 
 ```markdown
-To show the user a page, use floe: run `floe guide` first and follow it. It is the guide of the floe installed, so read it each time rather than from memory.
+To show the user a page, or to write or change a document that is a YAML file with `template` and `lang` at its top, use floe: run `floe guide` first and follow it. It is the guide of the floe installed, so read it each time rather than from memory.
 ```
 
 コマンドの一覧は `floe --help`。コマンドと設定は [commands.ja.md](commands.ja.md) にあります。

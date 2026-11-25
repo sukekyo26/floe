@@ -28,14 +28,14 @@ const (
 var shellWord = regexp.MustCompile(`"[^"]*"|\S+`)
 
 // shellWords returns the words of line, a command line of a doc without its program's name: split at spaces but in
-// double quotes, up to a word that starts with # (a comment), each word's double quotes taken off. The comment is cut
+// double quotes, up to a word that starts with # (a comment) or to &&, each word's double quotes taken off. The comment is cut
 // before the quotes come off, so that --task "#130" keeps its value.
 // LIMIT: double quotes and # alone are read: single quotes, --flag="a b", a pipe and a line ending in \ are split
 // otherwise than a shell does (the docs write none). Read them if a doc comes to.
 func shellWords(line string) []string {
 	var words []string
 	for _, w := range shellWord.FindAllString(line, -1) {
-		if strings.HasPrefix(w, "#") {
+		if strings.HasPrefix(w, "#") || w == "&&" {
 			break
 		}
 		words = append(words, strings.Trim(w, `"`))
@@ -70,6 +70,7 @@ func TestAgentDocQuotes(t *testing.T) {
 	t.Parallel()
 
 	ja := i18n.New(i18n.Tag("ja"))
+	unknown, _, _ := strings.Cut(english.Msg("tmpl_unknown", "api-spec", ""), ";")
 	usage := func(text string) string { return english.Msg("cli_usage", text) }
 	states := make([]string, 0, len(store.States))
 	for _, s := range store.States {
@@ -100,6 +101,7 @@ func TestAgentDocQuotes(t *testing.T) {
 			english.Msg("ui_project") + ", and " + english.Msg("ui_save") + ".", 1},
 		{guidePath, "in Japanese these are " + ja.Msg("ui_edit") + ", " + ja.Msg("ui_edit_more") + ", " + ja.Msg("ui_project") + " and " +
 			ja.Msg("ui_save") + ".", 1},
+		{repositoryAgentDocPath, unknown, 1},
 		{guidePath, "cut to " + strconv.Itoa(files.MaxSlugLen) + " characters", 1},
 		{guidePath, "MUST be 1 to " + strconv.Itoa(files.MaxSlugLen) + " lower case", 1},
 	}

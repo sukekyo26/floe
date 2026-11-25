@@ -24,4 +24,5 @@ A linked folder is one row of the management page's list. Its URL (`/a/<slug>/`)
 - One directory shows at most 1000 entries, the first by name; the row under them says how many there are.
 - A page of the folder opens in the frame (`/a/<slug>/?file=<path>`) under the folder's title, with the folder's tree on its left, open where the page is. Drag the tree's edge, or use ← → Home End on it, to widen or narrow it (160 px up to 480 px or half the window), and hide it with the button at its head; the browser keeps its width and whether it shows. With the tree hidden, or on a narrow screen (where it opens over the page), the bar picks among the pages of the page's directory. A page's title is its file's name, and nothing of it is read to list it.
 - What is added, removed or renamed in the folder shows when the list is next read. The folder has the row's favourite, archive, tags and title; its pages have none of their own.
+- [repository.md](repository.md) tells how to keep documents in a repository and read them here.
 - A folder in a repository is titled by where it is in it (`docs`, `docs/v1`), and a folder outside one by its name (`handbook`).

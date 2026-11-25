@@ -166,8 +166,8 @@ that points your agent to it (floe skill install --help lists the agents).`,
 		a.archiveCmd(), a.checkCmd(), a.diagramCmd(), a.drawChildCmd(),
 		a.guideCmd(),
 		a.iconsCmd(), a.infoCmd(), a.listCmd(), a.partCmd(), a.publishCmd(),
-		a.rebuildCmd(), a.renderCmd(), a.rmCmd(), a.serveCmd(), a.skillCmd(), a.stopCmd(), a.tagCmd(), a.taskCmd(),
-		a.templateCmd(), a.themeCmd(),
+		a.rebuildCmd(), a.renderCmd(), a.repositoryCmd(), a.rmCmd(), a.serveCmd(), a.skillCmd(), a.stopCmd(),
+		a.tagCmd(), a.taskCmd(), a.templateCmd(), a.themeCmd(),
 	)
 	// cobra adds these as it runs: here, so that readable finds them, and their arguments are wrapped below.
 	root.InitDefaultHelpCmd()
