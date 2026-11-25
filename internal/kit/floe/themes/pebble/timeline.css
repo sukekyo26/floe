@@ -1,0 +1,4 @@
+/* The line and its dots lead */
+:scope { background: var(--pebble-tray); --quiet: var(--surface); --floe-mark: 1.05rem; --floe-shadow-color: transparent; }
+:scope .date { font-weight: 800; color: var(--accent); }
+:scope > li::after { background: var(--pebble-mark); box-shadow: 0 0 0 1px var(--pebble-mark); }

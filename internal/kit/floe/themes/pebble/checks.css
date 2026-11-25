@@ -1,0 +1,6 @@
+/* The counts large on the tray, each check on a face drawn behind it that reaches out of its row, taking no room: the row's
+   own ground would make it a box that what it holds must stay in */
+:scope { background: var(--pebble-tray); --quiet: var(--surface); --floe-shadow-color: transparent; }
+:scope > .total b { font-size: 2.3rem; }
+:scope > ul > li { isolation: isolate; --quiet: var(--pebble-tray); }
+:scope > ul > li::after { content: ""; position: absolute; z-index: -1; inset: calc(-1 * var(--pebble-gap)); border-radius: var(--pebble-stone); background: var(--surface); }

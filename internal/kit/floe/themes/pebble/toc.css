@@ -1,0 +1,2 @@
+:scope { border-left-width: 3px; }
+:scope a[aria-current] { background: var(--face, var(--accent-soft)); }

@@ -486,6 +486,7 @@ var messagesEN = map[string]string{
 	"theme_about_editorial":    "Set as a report in print: rules and thin frames instead of surfaces, small corners, a rule of the accent over each card",
 	"theme_about_ink":          "Ink on paper: near black, an indigo ink for emphasis, its sections ruled in the ink",
 	"theme_about_notebook":     "Pen on ruled paper in a rounded face",
+	"theme_about_pebble":       "Pebbles on a warm ground: rows as round stones on a tray, each part in a form of its own, a brown accent",
 	"theme_about_retro":        "The seventies: brown on a tan ground, stripes of orange, mustard and olive, round fat corners, a serif heading",
 	"theme_about_soft":         "Round corners and quiet surfaces: default's colours, its quotes on a soft ground",
 	"theme_about_swiss":        "Red and black in print, in a grotesque face, its sections ruled heavy",

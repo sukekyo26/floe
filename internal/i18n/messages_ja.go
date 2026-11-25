@@ -475,6 +475,7 @@ var messagesJA = map[string]string{
 	"theme_about_editorial":    "印刷した報告書の組み方：面の代わりに線と細い枠、小さな角丸、カードごとに上に差し色の線",
 	"theme_about_ink":          "紙にインク：黒に近い色、強調には藍色のインク、セクションの区切り線もそのインク",
 	"theme_about_notebook":     "罫線の紙にペン、丸みのある書体",
+	"theme_about_pebble":       "暖かみのある背景に小石：行はトレーに並ぶ丸い石、部品ごとに違う形、茶色の差し色",
 	"theme_about_retro":        "70 年代：黄褐色の背景に茶色、オレンジ・からし色・オリーブの縞、太く丸い角、セリフ体の見出し",
 	"theme_about_soft":         "丸い角と落ち着いた面：default の配色、引用はやわらかい背景",
 	"theme_about_swiss":        "印刷物の赤と黒、サンセリフ体、セクションの区切り線は太い",
