@@ -50,7 +50,8 @@ const (
 
 var slugRe = regexp.MustCompile(`^[a-z0-9](?:[a-z0-9-]{0,62}[a-z0-9])?$`)
 
-// ErrNotFound is returned for a slug with no page.
+// ErrNotFound is returned for a page, a directory of a folder or a task that is not there, or that has none of what is
+// asked of it (a theme, a read mark, its copy). The server answers it 404 (refuse).
 var ErrNotFound = errors.New("no such page")
 
 // ValidSlug reports whether s can name a page.

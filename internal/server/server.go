@@ -343,6 +343,12 @@ func notFound(w http.ResponseWriter) {
 	send(w, http.StatusNotFound, "not found")
 }
 
+// noContent answers a write that has nothing to say.
+func noContent(w http.ResponseWriter) {
+	w.Header().Set("Cache-Control", "no-store")
+	w.WriteHeader(http.StatusNoContent)
+}
+
 func serveList(w http.ResponseWriter, r *http.Request) {
 	sendUI(w, r, http.StatusOK, ui.List, "", "")
 }
@@ -404,10 +410,6 @@ func (s *Server) list(w http.ResponseWriter, r *http.Request) {
 // when it is opened.
 func (s *Server) files(w http.ResponseWriter, r *http.Request) {
 	l, err := s.cfg.Store.Files(r.PathValue("slug"), r.URL.Query().Get("dir"))
-	if errors.Is(err, store.ErrNotFound) {
-		notFound(w)
-		return
-	}
 	if err != nil {
 		refuse(w, r, err)
 		return
