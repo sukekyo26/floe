@@ -83,14 +83,14 @@ func TestDiagram(t *testing.T) {
 		t.Errorf("inspect = %q", found)
 	}
 	_, out, _ = runIn(dir, env, "diagram", "example")
-	if lines := strings.Split(strings.TrimSpace(out), "\n"); len(lines) != 15 || !strings.HasPrefix(lines[0], "architecture\t") {
-		t.Errorf("example = %q, want 15 kinds", out)
+	if lines := strings.Split(strings.TrimSpace(out), "\n"); len(lines) != 16 || !strings.HasPrefix(lines[0], "architecture\t") {
+		t.Errorf("example = %q, want 16 kinds", out)
 	}
 	if _, er, _ := runIn(dir, env, "diagram", "example", "er"); !strings.Contains(er, `ja: 'ページ（meta.json）'`) {
 		t.Errorf("example er = %q, want it with its Japanese", er)
 	}
 	code, _, errs = runIn(dir, env, "diagram", "example", "pie")
-	if want := "floe: no example pie; use architecture, aws-graph, aws, class, er, flow, gantt, git, org, quadrant, sequence, state, swimlane, timeline, venn\n"; code != 1 || errs != want {
+	if want := "floe: no example pie; use architecture, aws-graph, aws, class, er, flow, gantt, git, mindmap, org, quadrant, sequence, state, swimlane, timeline, venn\n"; code != 1 || errs != want {
 		t.Errorf("example pie = %d, %q", code, errs)
 	}
 }
@@ -139,7 +139,7 @@ func TestInspectData(t *testing.T) {
 		"broken/parts/bad/schema.json":    "{",
 	})
 	env := cli.HomeEnv("/h", map[string]string{"FLOE_TEMPLATES_DIR": filepath.Join(dir, "templates")})
-	const noExample = "no example nothing; use architecture, aws-graph, aws, class, er, flow, gantt, git, org, quadrant, sequence, state, swimlane, timeline, venn"
+	const noExample = "no example nothing; use architecture, aws-graph, aws, class, er, flow, gantt, git, mindmap, org, quadrant, sequence, state, swimlane, timeline, venn"
 	for _, c := range []struct {
 		name string
 		args []string

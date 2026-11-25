@@ -412,7 +412,7 @@ edge [60,10]→[60,120] M60,10 V120
 
 ## `floe diagram example [kind]`
 
-Without a kind, list the built-in examples, one per kind of diagram (architecture, AWS architecture, AWS architecture laid out by floe, class, ER, flow, Gantt chart, Git branches, organisation chart, quadrant, sequence, state, swimlane, timeline, Venn): each line holds the kind, where it is (`floe`), its shape, `-`, as an example is copied rather than written as a value, and a summary, tab-separated, as `floe part list` prints them. With a kind, print its spec; its comments explain the grid it was laid out on. Every example passes the checks. Its text is written in English and Japanese (`{en: …, ja: …}`), as a spec may write it. The AWS examples draw AWS icons, so render them after `floe icons fetch aws`.
+Without a kind, list the built-in examples, one per kind of diagram (architecture, AWS architecture, AWS architecture laid out by floe, class, ER, flow, Gantt chart, Git branches, mind map, organisation chart, quadrant, sequence, state, swimlane, timeline, Venn): each line holds the kind, where it is (`floe`), its shape, `-`, as an example is copied rather than written as a value, and a summary, tab-separated, as `floe part list` prints them. With a kind, print its spec; its comments explain the grid it was laid out on. Every example passes the checks. Its text is written in English and Japanese (`{en: …, ja: …}`), as a spec may write it. The AWS examples draw AWS icons, so render them after `floe icons fetch aws`.
 
 ## `floe diagram guide`
 
