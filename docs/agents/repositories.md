@@ -1,14 +1,14 @@
 # Documents in a repository
 
-A repository may keep documents as data files with the pages drawn of them, both committed (`docs/specs/orders.yaml` and `docs/specs/orders.html`), often drawn with templates of its own. `floe render` draws them, without the server, and CI checks them; they are not published. This doc says how to change one, how to set a repository up to keep them, and what makes the check fail.
+A repository may keep documents as data files with the pages drawn of them, both committed (`docs/specs/orders.yaml` and `docs/specs/orders.html`), often drawn with templates of its own. `floe render` draws the pages, without the server, and CI checks them; neither the data files nor the pages are published. This doc says how to change one, how to set a repository up to keep them, and what makes the check fail.
 
 ## Change a document
 
-1. Find the command that draws the documents and the one that checks them. Read AGENTS.md, CLAUDE.md, README, the CI and the scripts (search for `floe` in any case, and in names that start with a dot: some tools leave out `.floe/` and `.github/`). Below, they are the draw command and the check command.
+1. Find the command that draws the documents and the one that checks them. Read AGENTS.md, CLAUDE.md, README, the CI and the scripts (search for `floe` in any case, and in names that start with a dot: some tools leave out `.floe/` and `.github/`). Below, these two are the draw command and the check command.
    - When the repository has no such command but pages are committed beside its data files, draw with `floe render` and check with `floe render --check` (*Settings*).
-   - When it has neither, the file is not kept so: follow *Writing a page* of `floe guide`.
-2. Run the check command before you edit, and before you write a new document too. When it fails for anything you were not asked to mend, change nothing: tell the user what it printed, with the version of `floe --version` and the one the repository's CI installs (*When the check fails*).
-3. Read the template the document names, with every setting the repository's commands set put before the command (a template may take the repository's parts, and what is not set is read from the user's home). For a new document, read `example.yaml` too. Run it at the repository's root, as `$PWD` is (so are the commands below). Put the same settings before `floe part list`, `floe part show <part> schema.json` and `floe theme list`. Where the repository has no such directories (*Settings*), run it with no settings. Where they are in `.floe/`:
+   - When it has neither, the document is not kept in the repository: follow *Writing a page* of `floe guide`.
+2. Run the check command before you edit, and before you write a new document too. When it fails for anything you were not asked to mend, change nothing and tell the user (*When the check fails*).
+3. Read the template the document names, with every setting the repository's commands set put before the command (a template may take the repository's parts, and what is not set is read from the user's home). For a new document, read `example.yaml` too. Run these commands, and those below, at the repository's root, which `$PWD` is. Put the same settings before `floe part list`, `floe part show <part> schema.json` and `floe theme list`. Where the repository has no such directories (*Settings*), run these commands with no settings. Where they are in `.floe/`:
 
 ```sh
 env FLOE_TEMPLATES_DIR="$PWD/.floe/templates" FLOE_PARTS_DIR="$PWD/.floe/parts" FLOE_THEMES_DIR="$PWD/.floe/themes" floe template show api-spec schema.json
@@ -16,7 +16,7 @@ env FLOE_TEMPLATES_DIR="$PWD/.floe/templates" FLOE_PARTS_DIR="$PWD/.floe/parts" 
 
 4. Edit the `.yaml` as `floe guide` says (*The data file*, *YAML that floe reads as you meant*). Do not edit the `.html` (drawing writes over it).
 5. Run the draw command, fix every mistake (*Reading mistakes* of `floe guide`), and run it again until none is left.
-6. Run the check command. When pages of documents you did not change came out different, and you changed no template, part or theme, do not commit those pages: tell the user as in step 2. Else, when you commit, commit the `.yaml` and its page together (the check fails for a page that its `.yaml` does not draw).
+6. Run the check command. When pages of documents you did not change came out different, and you changed no template, part or theme, do not commit those pages, and tell the user (*When the check fails*). Else, when you commit, commit the `.yaml` and its page together (the check fails for a page that its `.yaml` does not draw).
 
 - To change a template of the repository's (a new required key, say), change its `schema.json`, `page.html` and `example.yaml` as `floe template guide` says, then every data file that names it (the check tells those left), draw, and commit it all in one change.
 - In a merge conflict, settle the `.yaml` and draw again, which writes the page whole.
@@ -76,7 +76,7 @@ env FLOE_TEMPLATES_DIR="$PWD/.floe/templates" FLOE_PARTS_DIR="$PWD/.floe/parts" 
 ```
 
    For documents in folders of `docs/specs`, write `find docs/specs -name '*.yaml' -exec floe render {} +` for `floe render docs/specs/*.yaml`, and `find docs/specs -name '*.yaml' -exec floe render --check {} +` for `floe render --check docs/specs/*.yaml`. Do not write `\;` for `+` (a failure is lost, and the check passes whatever it finds).
-   floe does not look for a page whose data file is gone. To find one, end the check with this, joined with `&&` (a failure before it would be lost otherwise; it fails for an `.html` with no `.yaml` beside it, one you wrote by hand too):
+   floe does not look for a page whose data file is gone. To find such a page, end the check with this, joined with `&&` (without `&&`, a failure of the check before the find is lost; the find fails for an `.html` with no `.yaml` beside it, one you wrote by hand too):
 
 ```sh
 (
@@ -125,17 +125,17 @@ The documents in docs/specs are drawn by floe. To change one, run `floe guide` f
 
 ### Icons
 
-- A page drawn with AWS, Google Cloud or Azure icons needs them fetched in CI too, before the check. `floe icons fetch aws` and `floe icons fetch gcp` take the newest set, which may change the pages: give `aws` its zip's URL, which holds its date, the same in CI and on each machine; keep the zips of `gcp`, whose URLs hold none, and give both. `floe icons fetch azure` takes the zip the user downloads after agreeing to its terms.
+- A page drawn with AWS, Google Cloud or Azure icons needs them fetched in CI too, before the check. `floe icons fetch aws` and `floe icons fetch gcp` take the newest set, which may change the pages: give `aws` its zip's URL, which holds its date, the same in CI and on each machine; keep the zips of `gcp`, whose URLs hold none, and give both zips. `floe icons fetch azure` takes the zip the user downloads after agreeing to its terms.
 
 ## When the check fails
 
 The check names each page that its data file does not draw and each page missing (and each page with no data file, with the find of step 2).
 
 - For a document you changed, added or took away: draw again, and delete the page of one taken away or renamed.
-- For one you did not touch, the reasons are:
+- For one you did not touch, tell the user what the check printed, with the version of `floe --version` and the one the repository's CI installs. The reasons may be:
   - floe is of another version than drew them (`floe --version` and the version the CI installs; the version a floe built from its source says is not enough to tell).
   - A template, part, theme or icon set changed in a pull request merged meanwhile: take in the latest and draw again.
 
-  Do not decide between them: tell the user.
+  Do not guess which.
 
 To upgrade floe, write the new version in CI, install it, draw every page and commit them, in one change.
