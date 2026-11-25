@@ -1,6 +1,8 @@
 package rules_test
 
 import (
+	"errors"
+	"slices"
 	"strings"
 	"testing"
 
@@ -132,9 +134,6 @@ func TestChecksRun(t *testing.T) {
 		{"nil, done without", "- expr: (doc.records?.in_1_year ?? 0) < 1 && doc.opt == nil\n  message: m\n", "a: 1\n", ""},
 		{"for to nothing", "- for: opt\n  expr: item > 1\n  message: m\n", "opt: null\n", ""},
 		{"for over scalars on the way", "- for: items.qty\n  expr: false\n  message: m\n", "items: [1, {qty: [2]}]\n", "d.yaml:3:19: m (\"2\")"},
-		{"for to text", "- for: name\n  expr: true\n  message: m\n", "name: x\n", "t1/checks.yaml:1:8: for: name does not lead to a list in d.yaml"},
-		{"for through text", "- for: name.parts\n  expr: true\n  message: m\n", "name: x\n", "t1/checks.yaml:1:8: for: name.parts does not lead to a list in d.yaml"},
-		{"for to keys and values", "- for: records\n  expr: true\n  message: m\n", "records: {in_1_year: 1}\n", "t1/checks.yaml:1:8: for: records does not lead to a list in d.yaml"},
 		{
 			"divided by zero", "- field: a\n  expr: doc.a / doc.b > 1\n  message: ratio over 1\n", "a: 1\nb: 0\n",
 			"d.yaml:3:4: ratio over 1 (the check could not run: 1 / 0 is not a finite number)",
@@ -152,13 +151,80 @@ func TestChecksRun(t *testing.T) {
 		{"the theme left out", "- expr: doc.theme == nil\n  message: m\n", "a: 1\n", ""},
 		// A shared key empty, as null, is none written.
 		{"the theme empty", "- expr: doc.theme == nil\n  message: m\n", "theme: \"\"\n", ""},
-		{"for to the title", "- for: title\n  expr: true\n  message: m\n", "title: Plan\n", "t1/checks.yaml:1:8: for: title does not lead to a list in d.yaml"},
 		{"a number as written", "- expr: false\n  message: 1.10\n- expr: false\n  message: 0o17\n", "a: 1\n", "d.yaml: 0o17\nd.yaml: 1.10"},
 		{"a block keeping its line breaks", "- expr: false\n  message: |+\n    m\n\n", "a: 1\n", "d.yaml: m\n\n"},
-		{"for to the lang", "- for: lang\n  expr: true\n  message: m\n", "title: Plan\n", "t1/checks.yaml:1:8: for: lang does not lead to a list in d.yaml"},
 	} {
 		if got := runChecks(t, tt.src, tt.body); got != tt.want {
 			t.Errorf("%s: told\n%s\nwant\n%s", tt.name, got, tt.want)
+		}
+	}
+}
+
+// places returns where each mistake of err is told, the same at one place told once.
+func places(err error) []string {
+	var at []string
+	if err != nil {
+		for _, m := range usererr.Tell(i18n.EnglishCatalog(), err).Mistakes {
+			at = append(at, usererr.Where(m.File, m.Line, m.Column))
+		}
+	}
+	return at
+}
+
+// A for that stops at values that are no lists is told at each of them, with the for and the file of checks.yaml,
+// once for two checks of one for; the check runs on no item.
+func TestChecksForStops(t *testing.T) {
+	t.Parallel()
+
+	const parts = "sections.parts"
+	for _, tt := range []struct {
+		name, body string
+		fors, at   []string
+		want       []string
+	}{
+		{"text", "name: x\n", []string{"name"}, nil, []string{"d.yaml:3:7"}},
+		{"a number", "n: 3\n", []string{"n"}, nil, []string{"d.yaml:3:4"}},
+		{"true or false", "n: true\n", []string{"n"}, nil, []string{"d.yaml:3:4"}},
+		{"a | block", "n: |\n  a\n  b\n", []string{"n"}, nil, []string{"d.yaml:3:4"}},
+		{"keys and values", "records:\n  a: 1\n", []string{"records"}, nil, []string{"d.yaml:3:1"}},
+		{"text on the way", "sections: intro\n", []string{parts}, nil, []string{"d.yaml:3:11"}},
+		{"two", "sections:\n  - parts: hi\n  - parts: yo\n", []string{parts}, nil, []string{"d.yaml:4:12", "d.yaml:5:12"}},
+		{"beside a list", "sections:\n  - parts: [1]\n  - parts: yo\n", []string{parts}, nil, []string{"d.yaml:5:12"}},
+		{
+			"one in each list of a list", "sections: [[{parts: hi}], [{parts: yo}]]\n",
+			[]string{parts},
+			nil,
+			[]string{"d.yaml:3:21", "d.yaml:3:36"},
+		},
+		{"deep", "a: [{b: [{c: [{d: 1}, {d: 2}]}]}]\n", []string{"a.b.c.d"}, nil, []string{"d.yaml:3:19", "d.yaml:3:27"}},
+		{"the title", "title: Plan\n", []string{"title"}, nil, []string{"d.yaml:3:8"}},
+		{"the lang", "", []string{"lang"}, nil, []string{"d.yaml:2:7"}},
+		{"two checks of one for", "n: 3\n", []string{"n", "n"}, nil, []string{"d.yaml:3:4"}},
+		{"two fors to one value", "sections: intro\n", []string{parts, "sections"}, nil, []string{"d.yaml:3:11", "d.yaml:3:11"}},
+		{"in a part's value", "boxes: [{rows: 1}]\n", []string{"rows"}, []string{"boxes", "0"}, []string{"d.yaml:3:16"}},
+		{"a part's value, text", "boxes:\n  - hi\n", []string{"rows"}, []string{"boxes", "0"}, []string{"d.yaml:4:5"}},
+	} {
+		var src strings.Builder
+		for _, f := range tt.fors {
+			src.WriteString("- for: " + f + "\n  expr: false\n  message: m\n")
+		}
+		c, err := rules.ReadChecks("t1/checks.yaml", []byte(src.String()))
+		if err != nil {
+			t.Fatalf("%s: %s", tt.name, told(err))
+		}
+		err = c.Run(data(t, tt.body), tt.at)
+		if got := places(err); !slices.Equal(got, tt.want) {
+			t.Errorf("%s: told at %v, want %v", tt.name, got, tt.want)
+		}
+		var list usererr.List
+		if !errors.As(err, &list) {
+			t.Errorf("%s: %v is no list of mistakes", tt.name, err)
+		}
+		for _, e := range list {
+			ofFor := slices.ContainsFunc(tt.fors, func(f string) bool { return slices.Equal(e.Args, []any{f, "t1/checks.yaml"}) })
+			if e.Key != "rules_checks_not_list" || !ofFor {
+				t.Errorf("%s: told %s %v", tt.name, e.Key, e.Args)
+			}
 		}
 	}
 }
@@ -174,8 +240,7 @@ func TestChecksRunPart(t *testing.T) {
 	}
 }
 
-// Within a file the failures are in the order of their places, whatever the order of the checks; the files
-// in the order they first come.
+// The failures are in the order of their places, whatever the order of the checks.
 func TestChecksOrder(t *testing.T) {
 	t.Parallel()
 
@@ -191,12 +256,14 @@ func TestChecksOrder(t *testing.T) {
 	}
 	noList := "- for: name\n  expr: true\n  message: m\n"
 	fails := "- field: a\n  expr: doc.a < 1\n  message: a under 1\n"
-	listFirst := lines("t1/checks.yaml:1:8: for: name does not lead to a list in d.yaml", `d.yaml:6:4: a under 1 ("2")`)
-	if got := runChecks(t, noList+fails, body); got != listFirst {
-		t.Errorf("told\n%s\nwant\n%s", got, listFirst)
-	}
-	dataFirst := lines(`d.yaml:6:4: a under 1 ("2")`, "t1/checks.yaml:4:8: for: name does not lead to a list in d.yaml")
-	if got := runChecks(t, fails+noList, body); got != dataFirst {
-		t.Errorf("told\n%s\nwant\n%s", got, dataFirst)
+	byLine := []string{"d.yaml:6:4", "d.yaml:8:7"}
+	for _, src := range []string{noList + fails, fails + noList} {
+		c, err := rules.ReadChecks("t1/checks.yaml", []byte(src))
+		if err != nil {
+			t.Fatal(told(err))
+		}
+		if got := places(c.Run(data(t, body), nil)); !slices.Equal(got, byLine) {
+			t.Errorf("told at %v, want %v", got, byLine)
+		}
 	}
 }

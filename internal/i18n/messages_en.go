@@ -65,7 +65,7 @@ var messagesEN = map[string]string{
 	"rules_checks_for_empty":          "for is empty: write the path of the list to check, or leave for out to check the whole",
 	"rules_checks_field_empty":        "field is empty: write the path of the field a failure points at, or leave field out to point at the item",
 	"rules_checks_step":               "%s: %s has an empty step: write a key between each two dots, and no dot at its start or end, like sections.parts",
-	"rules_checks_not_list":           "for: %s does not lead to a list in %s",
+	"rules_checks_not_list":           "for: %s in %s must lead to a list, but stops at this value: mend the value, or the for",
 	"rules_check":                     `%s ("%s")`,
 	"rules_item":                      "%s",
 	"rules_check_error":               "%s (the check could not run: %s)",
