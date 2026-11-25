@@ -297,8 +297,8 @@ func TestEditRenameTitle(t *testing.T) {
 // A stored page is its data file's from whatever project it is published: by the file's repository and place, else its
 // real path alone, which a page published before keys were the file's alone holds with its project. Published again
 // from another project, the page is written, renamed or not, and stays in its project; a new page is in the project
-// published from, not the file's repository's. A page that kept no file is compared by the project published from,
-// once, and by the file's key from then on.
+// published from, not the file's repository's. A page that kept no file is refused to every file, of its project too,
+// unless forced, and is the file's from then on.
 func TestSameFileAnyProject(t *testing.T) {
 	t.Parallel()
 
@@ -376,15 +376,15 @@ func TestSameFileAnyProject(t *testing.T) {
 		t.Errorf("a new page: project %q, file's repository %q, want w and r", m.Project, m.PublishedFrom)
 	}
 
-	// A page that kept no file: compared by the project published from, then keyed.
+	// A page that kept no file: refused, from its project too, then keyed by force.
 	pub("p", "p", "", store.Options{Slug: new("nofile")})
-	up := floepublish.Upload{File: "n.yaml", Source: []byte(ownSrc), Images: map[string][]byte{}, Project: "q", Repo: "", Place: plans + "2"}
+	up := floepublish.Upload{File: "n.yaml", Source: []byte(ownSrc), Images: map[string][]byte{}, Project: "p", Repo: "", Place: plans + "2"}
 	if _, err := floepublish.PrepareData(t.Context(), s, dw, up, store.Options{Slug: new("nofile")}); err == nil {
-		t.Error("a page that kept no file, from another project: no refusal")
+		t.Error("a page that kept no file, from its project: no refusal")
 	}
-	pub("p", "", plans+"2", store.Options{Slug: new("nofile")})
+	pub("p", "", plans+"2", store.Options{Slug: new("nofile"), Force: true})
 	if m := s.ReadMeta("nofile"); m.PublishedFrom != "" || m.PublishedFile != plans+"2" {
-		t.Errorf("a page that kept no file, published again: keyed %q %q", m.PublishedFrom, m.PublishedFile)
+		t.Errorf("a page that kept no file, published by force: keyed %q %q", m.PublishedFrom, m.PublishedFile)
 	}
 	pub("q", "", plans+"2", store.Options{Slug: new("nofile")})
 }

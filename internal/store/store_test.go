@@ -600,8 +600,8 @@ func TestOwners(t *testing.T) {
 }
 
 // A slug in use is refused saying what uses it and to choose another slug, never to remove or replace it, in each
-// language: --force and floe rm would drop another's page and its versions. A page and a link do not take each
-// other's slug even with --force.
+// language: --force and floe rm would drop another's page and its versions. Only a page that kept no file, which is
+// refused to its own file too, is told with --force. A page and a link do not take each other's slug even with --force.
 func TestSlugRefusals(t *testing.T) {
 	t.Parallel()
 
@@ -652,26 +652,35 @@ func TestSlugRefusals(t *testing.T) {
 			t.Fatal(err)
 		}
 	}
-	// A page that kept no file, as pages published before keys were the file's: compared by the project published from.
+	// A page that kept no file, as pages stored before floe 0.1.0: refused, from its project too.
 	old := floepublish.Upload{File: "old.yaml", Source: []byte("lang: en\ntemplate: pic\n"), Images: map[string][]byte{}, Project: "p", Repo: "p", Place: ""}
 	if e, err := floepublish.PrepareData(t.Context(), s, dw, old, store.Options{}); err != nil {
 		t.Fatal(err)
 	} else if err = s.Save(e); err != nil {
 		t.Fatal(err)
 	}
-	_, taken := s.Edit("lk", store.Edit{Slug: new("pg")})
+	// Of no file at all, as the page: it is not the page's either.
+	_, again := floepublish.PrepareData(t.Context(), s, dw, old, store.Options{})
 	ja := i18n.New("ja")
+	for name, err := range map[string]error{"a file of its project": data("old", "p", false), "the upload that made it": again} {
+		u, ok := errors.AsType[*usererr.Error](err)
+		if !ok || u.Key != "store_slug_unkept" {
+			t.Errorf("a page that kept no file, %s: %v, want store_slug_unkept", name, err)
+			continue
+		}
+		for lang, got := range map[string]string{"en": told(err, root), "ja": usererr.Tell(ja, err).Render("")} {
+			if !strings.Contains(got, "old") || !strings.Contains(got, "--force") {
+				t.Errorf("a page that kept no file, %s in %s: told %s, want the slug and --force", name, lang, got)
+			}
+		}
+	}
+	_, taken := s.Edit("lk", store.Edit{Slug: new("pg")})
 	hx, hz := filepath.Join("H", "x.yaml"), filepath.Join("H", "proj", "z.html")
 	for _, tt := range []struct {
 		name   string
 		err    error
 		en, ja string
 	}{
-		{
-			"owned, a page that kept no file", data("old", "q", false),
-			`slug "old" was published from project p: choose another slug`,
-			`URL 名「old」はプロジェクト p から公開されています。別の URL 名にしてください`,
-		},
 		{
 			"placed, by the file's repository, not the project published from", keyed("rel", "a", "s", "docs/x.yaml"),
 			`slug "rel" was published from docs/x.yaml in repository r: choose another slug`,

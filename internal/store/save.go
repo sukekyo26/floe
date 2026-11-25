@@ -112,8 +112,8 @@ type Entry struct {
 	Warnings []*usererr.Error
 
 	// What NewEntry fills from its Seed and settle builds Meta from, with the data's title: and the theme of the Meta it
-	// replaces: the publish's options, the project published from (a new page's, and what a page with no file is
-	// compared by), and the file it is of. settle and pickAgain read owner, not Meta.Path.
+	// replaces: the publish's options, the project published from (a new page's), and the file it is of. settle and
+	// pickAgain read owner, not Meta.Path.
 	opts    Options
 	project string
 	owner   Owner
@@ -141,8 +141,8 @@ type Entry struct {
 //   - Options are those publish.Accept returned without a mistake.
 //   - Project is the project it is published from: a stored page's place's, a linked file's directory's, a linked
 //     folder's own.
-//   - Created is the created Themes returned for the same slug, owner, project and Options.Force, the default the page
-//     was drawn with; "" for a link to HTML or a folder, which takes no theme.
+//   - Created is the created Themes returned for the same slug, owner and Options.Force, the default the page was drawn
+//     with; "" for a link to HTML or a folder, which takes no theme.
 type Seed struct {
 	Slug        string
 	Named       string
@@ -208,7 +208,7 @@ func seedMeta(path, file string, data []byte, theme string) Meta {
 // it. A replaced page or link keeps nothing of the old one.
 func (e *Entry) settle(prev *Meta) error {
 	was := e.Meta
-	replacing, err := checkOwner(e.Slug, prev, e.owner, e.project, e.opts.Force)
+	replacing, err := checkOwner(e.Slug, prev, e.owner, e.opts.Force)
 	if err != nil {
 		return err
 	}
@@ -242,9 +242,9 @@ func (e *Entry) settle(prev *Meta) error {
 // LIMIT: a slug Save picks again (pickAgain: the file's page renamed, or the slug taken, meanwhile) is drawn in the
 // themes of the one looked at here, its meta.json taking those of the page picked, as the title of a page drawn
 // before (publish.PrepareData). Publish again if that shows.
-func (s *Store) Themes(slug string, o Owner, project string, force bool) (picked, created string, err error) {
+func (s *Store) Themes(slug string, o Owner, force bool) (picked, created string, err error) {
 	prev := s.ReadMeta(slug)
-	replacing, _ := checkOwner(slug, prev, o, project, force) //nolint:errcheck // told by settle, as above
+	replacing, _ := checkOwner(slug, prev, o, force) //nolint:errcheck // told by settle, as above
 	if prev != nil && !replacing {
 		return prev.PickedTheme, prev.CreatedTheme, nil
 	}
@@ -264,7 +264,7 @@ func projectOf(opts Options, base *Meta, project string) string {
 // newMeta keeps what was set on the management page (favourite, title, tags), the description, createdAt and the
 // project from base, but not archived: a page published again comes back to the list. --title and --description
 // win. A new page, or one replacing another file's, is in project, and a page emptied of its project comes back to
-// it. A stored page is owned by the file of the key o; an empty place keeps base's.
+// it. A stored page is owned by the file of the key o.
 func newMeta(opts Options, o Owner, project string, base *Meta, own, slug string) Meta {
 	keepTitle := opts.Title == nil && base.TitleEdited
 	// One reading of the clock, so that a new page's createdAt equals its updatedAt.
@@ -298,7 +298,7 @@ func newMeta(opts Options, o Owner, project string, base *Meta, own, slug string
 	}
 	if !o.link() {
 		m.PublishedFrom = o.Repo
-		m.PublishedFile = cmp.Or(o.Place, base.PublishedFile)
+		m.PublishedFile = o.Place
 	}
 	return m
 }
@@ -313,12 +313,13 @@ func SlugMistake(slug string) *usererr.Error {
 
 // checkOwner refuses to overwrite another's entry without force, and reports whether the publish
 // replaces one. A stored page belongs to its data file, of the key o (owns), from whatever project it is published, as
-// a link belongs to its path: the same slug for another file certainly means another page.
+// a link belongs to its path: the same slug for another file certainly means another page. A page stored before pages
+// kept their file (before floe 0.1.0) tells none, so it is refused to every file.
 // LIMIT: a page whose file is in a repository but was published from outside it, before keys were the file's alone,
 // holds its real path: published again, its key is the repository's path, which differs, so it is refused as another
 // file's, or, renamed, its slug is left and a second page written at the file's name. None is in the store of now;
 // publish it with --force if one comes.
-func checkOwner(slug string, prev *Meta, o Owner, project string, force bool) (bool, error) {
+func checkOwner(slug string, prev *Meta, o Owner, force bool) (bool, error) {
 	if prev == nil {
 		return false, nil
 	}
@@ -338,23 +339,14 @@ func checkOwner(slug string, prev *Meta, o Owner, project string, force bool) (b
 		}
 		return false, conflict(usererr.New("store_slug_linked", slug, prev.Path))
 	}
-	// LIMIT: a page published before pages kept their file has none, and is compared by the project it was published
-	// from: it takes the file of the next publish from that project, another file too, once, which keys it from then
-	// on; remove this before floe is released, or once every page was published again.
-	if prev.PublishedFile == "" {
-		if owner := prev.PublishedFrom; owner != "" && owner != project {
-			if force {
-				return true, nil
-			}
-			return false, conflict(usererr.New("store_slug_owned", slug, owner))
-		}
-		return false, nil
-	}
 	if o.owns(prev) {
 		return false, nil
 	}
 	if force {
 		return true, nil
+	}
+	if prev.PublishedFile == "" {
+		return false, conflict(usererr.New("store_slug_unkept", slug))
 	}
 	// A path in a repository is told with the repository it is from, the page's file's and not the list's project.
 	if !filepath.IsAbs(prev.PublishedFile) && prev.PublishedFrom != "" {
@@ -380,7 +372,7 @@ func title(opts Options, path string, keepTitle bool, base *Meta, own, slug stri
 
 // Save writes a prepared entry. It checks the entry again against the slug as it is then, as an edit,
 // another publish or a rename may have changed it since NewEntry: what was set on the management page
-// stays, and a page of another project is still refused. A stored page's copy goes to a new directory,
+// stays, and the page of another file is still refused. A stored page's copy goes to a new directory,
 // which meta.json then names, so that a save that fails leaves the old copy; the copies it no longer names
 // go after. A stored page published with other content than its last version's gets a version (nextVersion), the
 // page of the copy before kept, gzipped outside the lock, as the version before.

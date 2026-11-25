@@ -41,8 +41,6 @@ var (
 		{"a file of x at the place, from p", "p", "x", "docs/a.yaml", ""},
 		{"a real path", "q", "", "<tmp>/a.yaml", ""},
 		{"another real path", "q", "", "<tmp>/b.yaml", ""},
-		{"no file, from p", "p", "p", "", ""},
-		{"no file, from q", "q", "q", "", ""},
 		{"the link", "", "", "", "l1"},
 		{"another link", "", "", "", "l2"},
 	}
@@ -185,7 +183,6 @@ func TestThemesOwner(t *testing.T) {
 	for _, c := range []ownerCase{
 		{"a file of r", "p", "r", "docs/a.yaml", ""},
 		{"a real path", "p", "", "<tmp>/a.yaml", ""},
-		{"no file, from p", "p", "p", "", ""},
 	} {
 		t.Run(c.name, func(t *testing.T) {
 			t.Parallel()
@@ -211,12 +208,7 @@ func TestThemesOwner(t *testing.T) {
 			if err := s.PickTheme(t.Context(), dw, "s", "ink"); err != nil {
 				t.Fatal(told(err, root))
 			}
-			// Another project, but for the page that kept no file: that one is compared by the project.
-			project, repo := "q", c.repo
-			if c.place == "" {
-				project, repo = "p", "x"
-			}
-			pub(project, repo, c.place, true)
+			pub("q", c.repo, c.place, true)
 			if m := s.ReadMeta("s"); m.PickedTheme != "ink" || drawnIn(t, s, root, "s") != "ink" {
 				t.Errorf("published again: picked %q, drawn in %q; want ink", m.PickedTheme, drawnIn(t, s, root, "s"))
 			}

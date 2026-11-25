@@ -147,7 +147,7 @@ func PrepareData(
 	if err != nil {
 		return nil, err
 	}
-	picked, created, err := s.Themes(slug, up.owner(), up.Project, opts.Force)
+	picked, created, err := s.Themes(slug, up.owner(), opts.Force)
 	if err != nil {
 		return nil, err //nolint:wrapcheck // a usererr for the caller to show
 	}
@@ -277,7 +277,7 @@ func PrepareLink(
 		if dw.Err != nil {
 			return nil, dw.Err
 		}
-		if picked, created, err = s.Themes(slug, owner, from, opts.Force); err != nil {
+		if picked, created, err = s.Themes(slug, owner, opts.Force); err != nil {
 			return nil, err //nolint:wrapcheck // a usererr for the caller to show
 		}
 		data = src
