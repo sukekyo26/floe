@@ -197,6 +197,7 @@ func TestNoContent(t *testing.T) {
 		{http.MethodDelete, "/api/pages/d/read", "", http.StatusNoContent},
 		{http.MethodPost, "/api/rebuild", "{}", http.StatusNoContent},
 		{http.MethodDelete, "/api/pages/d", "", http.StatusNoContent},
+		// Last: the server it stops is the one the rows before are sent to.
 		{http.MethodPost, "/api/stop", `{"pid":` + strconv.Itoa(os.Getpid()) + `}`, http.StatusNoContent},
 	} {
 		w := e.do(t, c.method, c.path, c.body, "Origin", origin, "Content-Type", jsonType)
