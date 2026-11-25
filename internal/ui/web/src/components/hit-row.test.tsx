@@ -56,6 +56,15 @@ describe(HitRow, () => {
     expect(row(false, { archived: true })).toMatch(/aria-selected="false" data-archived="true"/);
   });
 
+  it('marks the star of a favourite, on the svg the colour is given, and no star of another page', () => {
+    expect.assertions(2);
+    testBoot();
+    const row = (favorite: boolean) =>
+      renderToString(<HitRow id="find-0" page={page({ favorite })} reached={false} sub={null} />);
+    expect(row(true)).toMatch(/<svg data-testid="star-mark"/);
+    expect(row(false)).not.toContain('star-mark');
+  });
+
   it('has a link for its title, or words alone where choosing the row adds the page (Add a page)', () => {
     expect.assertions(2);
     testBoot();
