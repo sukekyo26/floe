@@ -139,14 +139,18 @@ type item struct {
 }
 
 // Run runs the checks on the value at the path at in d, each check's failures at their line and column in
-// d, and a for that leads to no list in d at it in checks.yaml, Sorted.
+// d, Sorted. A check whose for stops at values that are no lists fails at each of them, and runs on no item.
+// LIMIT: a for of theme, with a theme given to draw with, stops at the theme given but is told at the theme: d writes,
+// as that alone has a place; rework if a for leads to a value drawn with and not written otherwise.
 func (c *Checks) Run(d *doc.Data, at []string) error {
 	whole := item{value: valueAt(d.Values, at), at: at}
 	var found usererr.List
 	for _, one := range c.list {
-		items, ok := one.items(whole)
-		if !ok {
-			found = append(found, yamlpos.New(c.file, one.forAt, "rules_checks_not_list", one.For, d.File))
+		items, stops := one.items(whole)
+		if len(stops) > 0 {
+			for _, stop := range stops {
+				found = append(found, yamlpos.New(d.File, d.PosOf(stop), "rules_checks_not_list", one.For, c.file))
+			}
 			continue
 		}
 		for _, it := range items {
@@ -184,32 +188,35 @@ func valueAt(v any, at []string) any {
 }
 
 // items returns what c checks under whole: the items of the list at c.For, or without it whole itself, each
-// of its items when it is a list; false when c.For leads to no list.
-func (c check) items(whole item) ([]item, bool) {
+// of its items when it is a list; and the paths to the values c.For stops at, as itemsAt.
+func (c check) items(whole item) (found []item, stops [][]string) {
 	_, isList := whole.value.([]any)
 	if c.For == "" && !isList {
-		return []item{whole}, true
+		return []item{whole}, nil
 	}
 	var steps []string
 	if c.For != "" {
 		steps = strings.Split(c.For, ".")
 	}
-	var found []item
-	ok := itemsAt(whole.value, steps, whole.at, &found)
-	return found, ok
+	itemsAt(whole.value, steps, whole.at, &found, &stops)
+	return found, stops
 }
 
 // itemsAt adds to found the items of the lists at steps under v, v being at the path at: a list on the way is
 // gone through item by item. A list or value the data leaves out holds none, and so does an item of a list on
-// the way that is not keys and values or a list. It returns false when what is at steps is not a list.
+// the way that is not keys and values or a list. It adds to stops the path to each value steps stops at that is not a
+// list: at the end of steps, or text, a number, true or false on the way.
 // LIMIT: a for of a key no value holds passes unseen where kit cannot tell it (schema.Forbidding: past a schema of no
 // type or of keys and a list, or a key not declared); rework if one misleads.
-func itemsAt(v any, steps, at []string, found *[]item) bool {
+func itemsAt(v any, steps, at []string, found *[]item, stops *[][]string) {
 	switch v := v.(type) {
 	case nil:
-		return true
 	case map[string]any:
-		return len(steps) > 0 && itemsAt(v[steps[0]], steps[1:], slices.Concat(at, steps[:1]), found)
+		if len(steps) == 0 {
+			*stops = append(*stops, at)
+			return
+		}
+		itemsAt(v[steps[0]], steps[1:], slices.Concat(at, steps[:1]), found, stops)
 	case []any:
 		for i, x := range v {
 			here := slices.Concat(at, []string{strconv.Itoa(i)})
@@ -218,14 +225,13 @@ func itemsAt(v any, steps, at []string, found *[]item) bool {
 			switch {
 			case len(steps) == 0:
 				*found = append(*found, item{value: x, at: here})
-			case !isMap && !isList:
-			case !itemsAt(x, steps, here, found):
-				return false
+			case isMap || isList:
+				itemsAt(x, steps, here, found, stops)
 			}
 		}
-		return true
+	default:
+		*stops = append(*stops, at)
 	}
-	return false
 }
 
 // failure is the mistake of c failing, or not running with err, at the path at in d: at its line and column,

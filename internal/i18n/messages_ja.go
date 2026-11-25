@@ -59,7 +59,7 @@ var messagesJA = map[string]string{
 	"rules_checks_for_empty":          "for が空です。検査するリストのパスを書くか、全体を検査するなら for を省いてください",
 	"rules_checks_field_empty":        "field が空です。落ちたときに指す項目のパスを書くか、要素そのものを指すなら field を省いてください",
 	"rules_checks_step":               "%s: %s に空の段があります。点と点の間に鍵を書き、頭と終わりには点を書かないでください（sections.parts のように）",
-	"rules_checks_not_list":           "for: %s は %s の中でリストに着きません",
+	"rules_checks_not_list":           "for: %s（%s）はリストに着く必要がありますが、この値で止まります。値か for を直してください",
 	"rules_check":                     "%s（「%s」）",
 	"rules_item":                      "%s",
 	"rules_check_error":               "%s（検査を実行できませんでした: %s）",
