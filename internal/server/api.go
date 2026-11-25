@@ -48,11 +48,15 @@ func readBody(w http.ResponseWriter, r *http.Request, limit int64) ([]byte, bool
 	return body, true
 }
 
-// refuse answers err told in the reader's language (usererr.Report): 500 for floe's failure, 409 for a name in use
-// (store.Conflict, which comes alone), 400 for the user's other mistakes. A reader whose Accept is JSON exactly
-// (the CLI) gets the report itself, which it lays out as it does its own mistakes; another, the management page,
-// its text.
+// refuse answers err: 404 for what is not there (store.ErrNotFound), as notFound does, whoever asks; else told in the
+// reader's language (usererr.Report): 500 for floe's failure, 409 for a name in use (store.Conflict, which comes
+// alone), 400 for the user's other mistakes. A reader whose Accept is JSON exactly (the CLI) gets the report itself,
+// which it lays out as it does its own mistakes; another, the management page, its text.
 func refuse(w http.ResponseWriter, r *http.Request, err error) {
+	if errors.Is(err, store.ErrNotFound) {
+		notFound(w)
+		return
+	}
 	report := usererr.Tell(catalog(r), err)
 	status := http.StatusBadRequest
 	if _, conflict := errors.AsType[*store.Conflict](err); conflict {
@@ -276,8 +280,7 @@ func (s *Server) rebuild(w http.ResponseWriter, r *http.Request) {
 		refuse(w, r, err)
 		return
 	}
-	w.Header().Set("Cache-Control", "no-store")
-	w.WriteHeader(http.StatusNoContent)
+	noContent(w)
 }
 
 // Viewer is who reads the pages, the one key of reads.json until viewers are told apart.
@@ -308,15 +311,10 @@ func (s *Server) markRead(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	cleared, err := s.cfg.Store.MarkRead(Viewer, slug, in.N, in.At)
-	if errors.Is(err, store.ErrNotFound) {
-		notFound(w)
-		return
-	}
 	if err != nil {
 		refuse(w, r, err)
 		return
 	}
-	w.Header().Set("Cache-Control", "no-store")
 	sendJSON(w, http.StatusOK, readAnswer{Cleared: cleared})
 }
 
@@ -330,16 +328,11 @@ func (s *Server) markUnread(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	err := s.cfg.Store.MarkUnread(Viewer, slug)
-	if errors.Is(err, store.ErrNotFound) {
-		notFound(w)
-		return
-	}
 	if err != nil {
 		refuse(w, r, err)
 		return
 	}
-	w.Header().Set("Cache-Control", "no-store")
-	w.WriteHeader(http.StatusNoContent)
+	noContent(w)
 }
 
 // Stop is the request to stop the server whose pid is PID, as floe stop and the replacing of a server of another
@@ -366,8 +359,7 @@ func (s *Server) stop(w http.ResponseWriter, r *http.Request) {
 		send(w, http.StatusConflict, "already stopping")
 		return
 	}
-	w.Header().Set("Cache-Control", "no-store")
-	w.WriteHeader(http.StatusNoContent)
+	noContent(w)
 	_ = http.NewResponseController(w).Flush() //nolint:errcheck // the client hung up: it waits for the server to go
 	s.halt()
 }
@@ -401,10 +393,6 @@ func (s *Server) edit(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	edited, err := s.cfg.Store.Edit(slug, store.Edit(*in))
-	if errors.Is(err, store.ErrNotFound) {
-		notFound(w)
-		return
-	}
 	if err != nil {
 		refuse(w, r, err)
 		return
@@ -415,15 +403,9 @@ func (s *Server) edit(w http.ResponseWriter, r *http.Request) {
 // remove deletes a page: 404 for none, its mistake for one that cannot be removed. It takes no body: the management
 // page sends none, so requiring JSON would make deleting impossible.
 func (s *Server) remove(w http.ResponseWriter, r *http.Request) {
-	err := s.cfg.Store.Remove(r.PathValue("slug"))
-	if errors.Is(err, store.ErrNotFound) {
-		notFound(w)
-		return
-	}
-	if err != nil {
+	if err := s.cfg.Store.Remove(r.PathValue("slug")); err != nil {
 		refuse(w, r, err)
 		return
 	}
-	w.Header().Set("Cache-Control", "no-store")
-	w.WriteHeader(http.StatusNoContent)
+	noContent(w)
 }

@@ -1,7 +1,6 @@
 package server
 
 import (
-	"errors"
 	"net/http"
 	"slices"
 	"strings"
@@ -93,10 +92,6 @@ func (s *Server) pickTheme(w http.ResponseWriter, r *http.Request) {
 	if err == nil {
 		err = s.cfg.Store.PickTheme(r.Context(), drawing, slug, in.Theme)
 	}
-	if errors.Is(err, store.ErrNotFound) {
-		notFound(w)
-		return
-	}
 	if err != nil {
 		refuse(w, r, err)
 		return
@@ -172,10 +167,6 @@ type OwnTheme struct {
 // theme.
 func (s *Server) ownTheme(w http.ResponseWriter, r *http.Request) {
 	own, err := s.cfg.Store.OwnTheme(r.PathValue("slug"))
-	if errors.Is(err, store.ErrNotFound) {
-		notFound(w)
-		return
-	}
 	if err != nil {
 		refuse(w, r, err)
 		return

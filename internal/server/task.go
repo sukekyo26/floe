@@ -1,7 +1,6 @@
 package server
 
 import (
-	"errors"
 	"net/http"
 
 	"floe/internal/store"
@@ -33,15 +32,10 @@ func (s *Server) changeTasks(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	written, err := s.cfg.Store.ChangeTasks(*in)
-	if errors.Is(err, store.ErrNotFound) {
-		notFound(w)
-		return
-	}
 	if err != nil {
 		refuse(w, r, err)
 		return
 	}
-	w.Header().Set("Cache-Control", "no-store")
 	sendJSON(w, http.StatusOK, written)
 }
 
@@ -52,14 +46,9 @@ func (s *Server) changeTasks(w http.ResponseWriter, r *http.Request) {
 func (s *Server) forgetTask(w http.ResponseWriter, r *http.Request) {
 	q := r.URL.Query()
 	err := s.cfg.Store.ForgetTask(q.Get("taskProject"), q.Get("task"))
-	if errors.Is(err, store.ErrNotFound) {
-		notFound(w)
-		return
-	}
 	if err != nil {
 		refuse(w, r, err)
 		return
 	}
-	w.Header().Set("Cache-Control", "no-store")
-	w.WriteHeader(http.StatusNoContent)
+	noContent(w)
 }
