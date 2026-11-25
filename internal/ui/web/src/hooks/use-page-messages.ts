@@ -1,5 +1,6 @@
 import { useEffect, useEffectEvent, type RefObject } from 'react';
 
+import { newKey } from '@/lib/press-rest';
 import type { ReadMark } from '@/types/page';
 import { pageMessage, type FrameKind } from '@/utils/page-message';
 
@@ -39,6 +40,7 @@ export function usePageMessages(
       if (action.kind === 'key') {
         // Not back to the iframe when a modal it opened closes: a page that keeps sending would open it again, for good
         f?.blur();
+        newKey();
         calls.onKey(action.key);
       } else if (action.kind === 'open') {
         if (calls.onOpen) calls.onOpen(action.href);

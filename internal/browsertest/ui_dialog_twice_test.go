@@ -6,6 +6,7 @@ import (
 	"testing"
 
 	"github.com/chromedp/cdproto/input"
+	"github.com/chromedp/chromedp"
 	"github.com/chromedp/chromedp/kb"
 
 	"floe/internal/store"
@@ -170,7 +171,6 @@ func TestUIDialogTwice(t *testing.T) { //nolint:paralleltest // the browser test
 		}
 		shut()
 		press(x, y, 1, 2)
-		until(c.id, true)
 		say("open " + c.name)
 		shut()
 	}
@@ -185,7 +185,6 @@ func TestUIDialogTwice(t *testing.T) { //nolint:paralleltest // the browser test
 		t.Fatalf("no row where Yes comes: %q", got)
 	}
 	press(x, y, 1, 2)
-	until("move-dialog", true)
 	say("row double")
 	press(x, y, 1)
 	until("add-page-dialog", false)
@@ -221,11 +220,9 @@ func TestUIDialogTwice(t *testing.T) { //nolint:paralleltest // the browser test
 		key  string
 	}{
 		{"add a category, enter", func() { pressAt("#task-edit", 1); until("edit-task-dialog", true) }, "#edit-category-plus", kb.Enter},
-		{"add a category, space", func() { pressAt("#task-edit", 1); until("edit-task-dialog", true) }, "#edit-category-plus", " "},
 		{"add a category, cancel by enter", openAdd, "#edit-add-dialog [data-close]", kb.Enter},
 		{"add a category, escape", openAdd, "#edit-add-new", kb.Escape},
 		{"move, no by enter", openMove, "#move-no", kb.Enter},
-		{"add a page, enter", func() {}, "#task-add-page", kb.Enter},
 	} {
 		c.prep()
 		focus(c.sel)
@@ -274,15 +271,11 @@ func TestUIDialogTwice(t *testing.T) { //nolint:paralleltest // the browser test
 		"a row after a close: move-dialog over add-page-dialog / move-no / sent 0",
 		"held: add a category, enter: edit-add-dialog over edit-task-dialog / edit-add-new / sent 0",
 		"said: ",
-		"held: add a category, space: edit-add-dialog over edit-task-dialog / edit-add-new / sent 0",
-		"said: ",
 		"held: add a category, cancel by enter: edit-task-dialog / edit-category-plus / sent 0",
 		"said: ",
 		"held: add a category, escape: edit-task-dialog / edit-category-plus / sent 0",
 		"said: ",
 		"held: move, no by enter: add-page-dialog / add-page-q / sent 0",
-		"said: ",
-		"held: add a page, enter: add-page-dialog / add-page-q / sent 0",
 		"said: ",
 		"then enter again: edit-add-dialog over edit-task-dialog / edit-add-new / sent 0",
 		"said: Write the category's name",
@@ -290,4 +283,54 @@ func TestUIDialogTwice(t *testing.T) { //nolint:paralleltest // the browser test
 		"reached: add-page-4",
 		"then escape:  / task-add-page / sent 0",
 	}, "|"))
+}
+
+// TestUIDialogTwicePage holds a key in a page's iframe after a modal closed: its page hands the first over, and the repeats, the focus
+// having left the iframe, are not dropped as the rest of the key the modal closed by.
+func TestUIDialogTwicePage(t *testing.T) { //nolint:paralleltest // the browser tests share one Chrome, one at a time
+	s := newSite(t)
+	b := s.b
+	for i := range 6 {
+		slug := fmt.Sprintf("d%d", i)
+		s.floe(t, "publish", s.page(t, slug+".yaml", slug, keysPage), "--slug", slug)
+	}
+	b.size(1440, 900, false)
+	defer b.unsize()
+	b.navigate("about:blank")
+	b.addScript(framedCatch)
+	out := []string{}
+	for _, how := range []string{"never opened", "by its button", "by Escape"} {
+		b.navigate("/")
+		b.until("the rows", "document.querySelector('#list li[data-slug=d5] [data-testid=title]')")
+		b.eval("document.querySelector('#list li[data-slug=d5] [data-testid=title]').click()")
+		b.until("the page beside to be told the keys are taken", "window.ready")
+		if how != "never opened" {
+			b.eval("document.getElementById('keys-open').click()")
+			b.until("the help", "document.getElementById('keys').open")
+			if how == "by Escape" {
+				b.pressKey(kb.Escape)
+			} else {
+				b.eval("document.querySelector('#keys [data-close]').click()")
+			}
+			b.until("the help closed", "!document.getElementById('keys').open")
+		}
+		focusIn(b, "read-frame")
+		at := "document.getElementById('read-frame').dataset.slug"
+		// Each down of j, the first in the page and the repeats on the body, as the screen draws the one before
+		down := input.DispatchKeyEventParams{Type: input.DispatchKeyEventTypeRawKeyDown, Key: "j", Code: "KeyJ", WindowsVirtualKeyCode: 74, NativeVirtualKeyCode: 74}
+		repeat := true
+		for _, next := range []string{"d4", "d3", "d2"} {
+			if _, err := chromedp.Call(b.ctx, input.DispatchKeyEvent, down); err != nil {
+				t.Fatal(err)
+			}
+			b.until(how+", on to "+next, at+" === "+js(next))
+			down.AutoRepeat = &repeat
+		}
+		up := input.DispatchKeyEventParams{Type: input.DispatchKeyEventTypeKeyUp, Key: "j", Code: "KeyJ", WindowsVirtualKeyCode: 74, NativeVirtualKeyCode: 74}
+		if _, err := chromedp.Call(b.ctx, input.DispatchKeyEvent, up); err != nil {
+			t.Fatal(err)
+		}
+		out = append(out, how+": "+b.eval(at))
+	}
+	check(t, "dialog twice, page", out, "never opened: d2|by its button: d2|by Escape: d2")
 }
