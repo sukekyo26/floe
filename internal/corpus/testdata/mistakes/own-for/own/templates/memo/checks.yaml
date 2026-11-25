@@ -4,3 +4,6 @@
 - for: items.wat
   expr: false
   message: m
+- for: items.what.text
+  expr: false
+  message: m
