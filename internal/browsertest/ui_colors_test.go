@@ -1,7 +1,10 @@
 package browsertest_test
 
 import (
+	"encoding/json"
 	"path/filepath"
+	"slices"
+	"strconv"
 	"strings"
 	"testing"
 
@@ -34,6 +37,28 @@ const measureFields = `(() => {
   return low.join('\n');
 })()`
 
+// measureStars measures every star drawn in the star's colour (one pressed or pointed at, the shelf's, a search row's):
+// as JSON, low, a line for each below 3:1 against its ground (WCAG 1.4.11) or not of --color-star, and on, where each is
+// ("row sel": a row's, on --color-sel), told by the bar or the place it is in.
+const measureStars = `(() => {` + colours + `
+  const root = getComputedStyle(document.documentElement);
+  const named = new Map(['panel', 'hover', 'bg', 'new-soft', 'subtle', 'sel', 'ink'].map((n) => [root.getPropertyValue('--color-' + n), n]));
+  const low = [], on = new Set();
+  for (const svg of document.querySelectorAll('[data-testid=star] svg, [data-view=fav] svg, [data-testid=star-mark]')) {
+    const button = svg.closest('[data-testid=star]');
+    if (svg.getClientRects().length === 0 || (button && button.ariaPressed !== 'true' && !button.matches(':hover'))) continue;
+    const at = svg.closest('#read-actions, #frame-actions, #find-actions')?.id ??
+      (svg.dataset.testid === 'star-mark' ? 'star-mark' : svg.closest('[data-view=fav]') ? 'fav' : 'row');
+    const s = getComputedStyle(svg), under = ground(svg);
+    const drawn = faded(s.fill === 'none' ? s.stroke : s.fill, under.opacity), shown = over(drawn, under.colour), r = ratio(shown, under.colour);
+    const where = at + ' ' + (named.get(hex(under.colour)) ?? hex(under.colour));
+    on.add(where);
+    if (r < 3) low.push(where + ': ' + hex(shown) + ' ' + r.toFixed(2));
+    if (hex(drawn) !== root.getPropertyValue('--color-star')) low.push(where + ': ' + hex(drawn) + ' is not --color-star');
+  }
+  return JSON.stringify({ low, on: [...on] });
+})()`
+
 // failStar presses the star sel while every write fails, and waits for the page to say so in its error.
 func failStar(b *browser, sel string) {
 	b.t.Helper()
@@ -56,7 +81,7 @@ func escapeDialog(b *browser, id string) {
 }
 
 // TestUIColors draws the management page and the frame light whatever the OS prefers, leaves the page in the frame to
-// the OS's preference, and measures that every text and field reads, the colors copied into data URIs held.
+// the OS's preference, and measures that every text and field reads and every star is seen, the colors copied into data URIs held.
 func TestUIColors(t *testing.T) { //nolint:paralleltest // the browser tests share one Chrome, one at a time
 	s := newSite(t)
 	b := s.b
@@ -93,14 +118,43 @@ func TestUIColors(t *testing.T) { //nolint:paralleltest // the browser tests sha
 		b.eval("for (const s of [...document.querySelectorAll('#list li[data-slug] [data-testid=sel]')].slice(0, 2)) s.click(); " +
 			"document.getElementById('bulk-delete').click()")
 		failStar(b, "#list li[data-slug=b] [data-testid=star]")
-		measure := func(where string) {
+		// stars measures the stars, and that there is one of each want, on its ground.
+		stars := func(where string, want ...string) {
+			t.Helper()
+
+			var got struct{ Low, On []string }
+			if err := json.Unmarshal([]byte(b.settled(measureStars)), &got); err != nil {
+				t.Fatal(err)
+			}
+			if len(got.Low) > 0 {
+				t.Errorf("OS %s, %s: stars that cannot be seen:\n%s", scheme, where, strings.Join(got.Low, "\n"))
+			}
+			for _, w := range want {
+				if !slices.Contains(got.On, w) {
+					t.Errorf("OS %s, %s: no star measured at %q, only at %q", scheme, where, w, got.On)
+				}
+			}
+		}
+		// starPointed is stars with the pointer on sel. The menus measureContrast opens lie over the rows: they shut first.
+		starPointed := func(sel, want string) {
+			t.Helper()
+
+			b.eval("for (const d of document.querySelectorAll('details[open]')) d.open = false")
+			b.eval("document.querySelector(" + js(sel) + ").scrollIntoView({ block: 'center' })")
+			r := b.rect("document.querySelector(" + js(sel) + ")")
+			b.point(r.X+r.Width/2, r.Y+r.Height/2)
+			b.until("the pointer on "+sel, "document.querySelector("+js(sel)+").matches(':hover')")
+			stars(sel+" pointed at", want)
+		}
+		measure := func(where string, want ...string) {
 			t.Helper()
 
 			if low := b.eval(measureContrast); low != "" {
 				t.Errorf("OS %s, %s: text that cannot be read:\n%s", scheme, where, low)
 			}
+			stars(where, want...)
 		}
-		measure("the list")
+		measure("the list", "row sel", "fav panel")
 		// A menu shut has no items: a row's is opened for them
 		menuItemShown(b, "#list li[data-slug=b]", "edit", "")
 		measure("the list, a row's menu open")
@@ -122,6 +176,13 @@ func TestUIColors(t *testing.T) { //nolint:paralleltest // the browser tests sha
 		pressMenuItem(b, "#list li[data-slug]", "edit")
 		measure("the edit dialog")
 		b.eval("document.querySelector('#edit-dialog [data-close]').click(); document.getElementById('bulk-clear').click()")
+		// A row pointed at, a star pressed and one not.
+		b.until("no row selected", "!document.querySelector('#list [data-testid=sel]:checked')")
+		starPointed("#list li[data-slug=a] [data-testid=title]", "row hover")
+		starPointed("#list li[data-slug=a] [data-testid=star]", "row subtle")
+		starPointed("#list li[data-slug=b] [data-testid=star]", "row subtle")
+		b.point(0, 0)
+		b.until("the pointer off the rows", "!document.querySelector('#list li:hover')")
 		// The bulk bar on the ground of the rows selected, its delete waiting or not; the window that finds, a row reached, an
 		// archived one and none; the window of the keys and of the help of the screen.
 		b.eval("for (const s of [...document.querySelectorAll('#list li[data-slug] [data-testid=sel]')].slice(0, 2)) s.click()")
@@ -130,7 +191,19 @@ func TestUIColors(t *testing.T) { //nolint:paralleltest // the browser tests sha
 		measure("the bulk bar, its delete waiting")
 		b.eval("document.getElementById('bulk-clear').click()")
 		pressFindOpen(b)
-		measure("the window that finds")
+		// The first row, the favourite, is reached as it opens, its page in the foot; then the next.
+		reached := func(i int) {
+			t.Helper()
+
+			b.until("the row reached", "document.querySelectorAll('#find [role=option]')["+strconv.Itoa(i)+"]?.ariaSelected === 'true'")
+		}
+		reached(0)
+		b.pressKey(kb.ArrowDown)
+		reached(1)
+		stars("the window that finds, the next row reached", "star-mark panel")
+		b.pressKey(kb.ArrowUp)
+		reached(0)
+		measure("the window that finds", "star-mark sel", "find-actions panel")
 		b.eval("document.querySelector('#find-actions summary').click()")
 		measure("the window that finds, its menu open")
 		b.eval("document.querySelector('#find-actions [data-testid=more] > summary').click()")
@@ -153,7 +226,7 @@ func TestUIColors(t *testing.T) { //nolint:paralleltest // the browser tests sha
 			window.fetch = (url, init) => (init?.method === 'POST' && String(url) === '/api/pages/a/read' ? Promise.resolve(new Response('{"cleared":true}')) : f(url, init)); })()`)
 		b.eval("document.querySelector('#list li[data-slug=a] [data-testid=title]').click()")
 		b.until("the toast to mark a page unread", "document.querySelector('[data-testid=toast][data-page] button')")
-		measure("the page beside the list, the toast to mark it unread")
+		measure("the page beside the list, the toast to mark it unread", "row new-soft", "read-actions bg", "fav bg")
 		// The page's toast goes as another page is shown.
 		b.eval("document.querySelector('#list li[data-slug=m] [data-testid=title]').click()")
 		measure("a link gone beside the list")
@@ -163,6 +236,9 @@ func TestUIColors(t *testing.T) { //nolint:paralleltest // the browser tests sha
 		measure("the narrow shelf's dialog")
 		b.eval("document.querySelector('#filter-dialog [data-close]').click()")
 		measure("the narrow list")
+		b.eval("document.querySelector('[data-view=fav]').click()")
+		b.until("the favourites", "document.querySelector('[data-view=fav]').ariaPressed === 'true'")
+		stars("the narrow list, the favourites pressed", "fav ink")
 		b.unsize()
 		// A folder open, its rows of each kind, and one of its pages in the frame under its title: the folder is the server's
 		// too, which frames the page it finds.
@@ -179,7 +255,7 @@ func TestUIColors(t *testing.T) { //nolint:paralleltest // the browser tests sha
 		b.navigate("/a/a/")
 		b.until("the title", "document.getElementById('frame-title').textContent")
 		b.eval("document.querySelector('#frame-actions [data-testid=more] > summary').click()")
-		measure("the frame's bar")
+		measure("the frame's bar", "frame-actions bg")
 		// What a frame prints: the note naming the page alone, with the error under a failed write, and a missing page's.
 		media("print", scheme)
 		failStar(b, "#frame-actions [data-testid=star]")
