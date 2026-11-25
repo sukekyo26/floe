@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useRef, useState } from 'react';
 
 import { Button } from '@/components/button';
 import { Dialog, DialogActions, DialogClose, DialogHead } from '@/components/dialog';
@@ -6,16 +6,16 @@ import { FIELD, SAID, TEXT } from '@/components/fields';
 import { focusOn } from '@/components/focus-places';
 import { PlusIcon } from '@/components/icons';
 import { t } from '@/lib/t';
-import type { FocusBack } from '@/types/focus';
 
-// What the add modal is opened for: a URL or a category, and the way back to the button that opened it
-export interface EditAddOpen {
+// What the add modal is opened for: a URL or a category, and the way back as it closes, told whether one was added
+export interface AddNameOpen {
   kind: 'url' | 'category';
-  back: FocusBack;
+  back: (added: boolean) => boolean;
 }
 
-export interface EditAddDialogProps {
-  readonly open: EditAddOpen | null;
+export interface AddNameDialogProps {
+  readonly id: string;
+  readonly open: AddNameOpen | null;
   // name is the task's, under the title
   readonly name: string;
   // refusal is why what was typed (trimmed) is not added, '' to add it
@@ -24,33 +24,50 @@ export interface EditAddDialogProps {
   readonly onClosed: () => void;
 }
 
-// EditAddDialog adds a URL or a category to the task's edit modal, over it: one field, Cancel and Add. A refusal is said
-// under the field, the modal open; once added, the caller closes it. It stands beside the edit modal, not in it: in it,
-// its Escape would reach the edit modal's cancel too, and its form would be nested in the edit modal's, sending both
-export function EditAddDialog({ open, name, refusal, onAdd, onClosed }: EditAddDialogProps) {
+// AddNameDialog asks a URL or a category for the modal it is opened over (Edit's, Add a page's), which takes it and
+// sends it with its own write: one field, Cancel and Add. A refusal is said under the field, the modal open; once added,
+// the caller closes it. It stands beside that modal, not in it: in it, its Escape would reach that modal's cancel too,
+// and its form would be nested in Edit's, sending both. id names its parts, as one stands for each modal
+export function AddNameDialog({ id, open, name, refusal, onAdd, onClosed }: AddNameDialogProps) {
   // The last opened, which the modal shows and goes back from as it closes (open is null by then), and how many times
   // it was opened: its field is drawn anew, empty, for each
-  const [opened, setOpened] = useState<{ last: EditAddOpen | null; n: number }>({ last: null, n: 0 });
+  const [opened, setOpened] = useState<{ last: AddNameOpen | null; n: number }>({ last: null, n: 0 });
   if (open !== null && open !== opened.last) setOpened({ last: open, n: opened.n + 1 });
+  const added = useRef(false);
   return (
     <Dialog
-      id="edit-add-dialog"
+      id={`${id}-dialog`}
       open={open !== null}
       onClosed={onClosed}
-      labelledBy="edit-add-title"
-      afterClose={() => opened.last?.back() ?? false}
+      labelledBy={`${id}-title`}
+      afterClose={() => {
+        const was = added.current;
+        added.current = false;
+        return opened.last?.back(was) ?? false;
+      }}
     >
-      <EditAddBody key={opened.n} url={opened.last?.kind !== 'category'} name={name} refusal={refusal} onAdd={onAdd} />
+      <AddNameBody
+        id={id}
+        key={opened.n}
+        url={opened.last?.kind !== 'category'}
+        name={name}
+        refusal={refusal}
+        onAdd={(x) => {
+          added.current = true;
+          onAdd(x);
+        }}
+      />
     </Dialog>
   );
 }
 
-function EditAddBody({
+function AddNameBody({
+  id,
   url,
   name,
   refusal,
   onAdd,
-}: Pick<EditAddDialogProps, 'name' | 'refusal' | 'onAdd'> & { readonly url: boolean }) {
+}: Pick<AddNameDialogProps, 'id' | 'name' | 'refusal' | 'onAdd'> & { readonly url: boolean }) {
   const [typed, setTyped] = useState('');
   const [said, setSaid] = useState('');
   return (
@@ -61,27 +78,27 @@ function EditAddBody({
         const x = typed.trim();
         const why = refusal(x);
         setSaid(why);
-        if (why) focusOn(document.getElementById('edit-add-new'));
+        if (why) focusOn(document.getElementById(`${id}-new`));
         else onAdd(x);
       }}
     >
       <DialogHead
         icon={<PlusIcon />}
-        titleId="edit-add-title"
+        titleId={`${id}-title`}
         title={t(url ? 'ui_url_add' : 'ui_category_add')}
         lead={name}
-        leadId="edit-add-target"
+        leadId={`${id}-target`}
       />
       <label data-testid="field" className={FIELD}>
         {t(url ? 'ui_task_url' : 'ui_category_name')}
         <input
-          id="edit-add-new"
+          id={`${id}-new`}
           data-testid={url ? 'path' : 'text'}
           className={url ? `${TEXT} font-mono` : TEXT}
           autoComplete="off"
           spellCheck={url ? false : undefined}
           placeholder={url ? 'https://' : undefined}
-          aria-describedby="edit-add-said"
+          aria-describedby={`${id}-said`}
           data-autofocus=""
           value={typed}
           onChange={(e) => {
@@ -93,12 +110,12 @@ function EditAddBody({
           }}
         />
       </label>
-      <p id="edit-add-said" aria-live="polite" className={SAID}>
+      <p id={`${id}-said`} aria-live="polite" className={SAID}>
         {said}
       </p>
       <DialogActions>
         <DialogClose words="ui_cancel" />
-        <Button id="edit-add-submit" kind="primary" type="submit">
+        <Button id={`${id}-submit`} kind="primary" type="submit">
           {t('ui_add')}
         </Button>
       </DialogActions>

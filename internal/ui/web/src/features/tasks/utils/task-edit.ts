@@ -104,7 +104,7 @@ export function urlRefusal(url: string, urls: readonly string[], max: number): s
 
 // categoryRefusal is why a category's name typed is not added: none, or one there already; '' to add it
 // LIMIT: trim and Go's TrimSpace drop a few spaces apart (U+0085, U+FEFF): two names this takes to differ by them,
-// categoriesOf makes one
+// categoriesOf makes one, and one of U+0085 alone the server takes as no category, where the toast says its name
 export function categoryRefusal(name: string, names: readonly string[]): string {
   if (!name) return t('ui_category_blank');
   if (names.includes(name)) return t('ui_category_there', name);

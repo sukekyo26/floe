@@ -6,6 +6,10 @@ adheres to [Semantic Versioning](https://semver.org/).
 
 ## [Unreleased]
 
+### Added
+
+- Add a way to make a new category in the dialog that adds a page on a task's page: "Add a category" beside the categories asks its name, and it is created as the page is put (not at all when the dialog is closed without one). A name already there is refused, in the task's Edit too, with "The category X is already there".
+
 ### Changed
 
 - Change the bar's "Page list" and "Task list" into a switch: the one of the screen shown stands on a white thumb in a grey track, and on a page shown whole, the one of the list it was opened from does. At 56rem or less (it was 40rem), a page shown whole has the back link's mark in their place. They are links as before, and go to the same places.
@@ -14,6 +18,7 @@ adheres to [Semantic Versioning](https://semver.org/).
 
 ### Fixed
 
+- Fix a key held on Enter in Add a page sending again over a refusal, before it was read.
 - Fix the rest of a press or a key that opens or closes a modal of the management page (the second press of a double press, a key held down) going through to the modal opened, to the backdrop or to what is under a modal closed: a double press on a row of another task's page under Add a page could move it unasked.
 - Fix the bar of a page shown whole running off the side of a window of about 640 to 700 pixels, in Japanese, when the page is archived and has more than one version.
 - Fix a task's page scrolling sideways when the task's title has a long run with no place to break: the title goes over lines.

@@ -48,8 +48,8 @@ func TestUIDialogCloseWords(t *testing.T) { //nolint:paralleltest // the browser
 	}
 	// A task's page: no shelf (filter-dialog) and no link to add (add-dialog); the add modal of the task's edit
 	taskPage := []string{
-		"add-page-dialog", "edit-add-dialog", "edit-dialog", "edit-task-dialog", "find", "keys", "kin-dialog", "move-dialog",
-		"set-dialog", "settings", "tag-dialog",
+		"add-category-dialog", "add-page-dialog", "edit-add-dialog", "edit-dialog", "edit-task-dialog", "find", "keys",
+		"kin-dialog", "move-dialog", "set-dialog", "settings", "tag-dialog",
 	}
 	inEveryLanguage(t, func(t *testing.T, lang i18n.Lang, msg func(string, ...any) string) {
 		t.Helper()

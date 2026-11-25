@@ -28,6 +28,7 @@ export type MessageKey =
   | 'ui_category_drop_paged'
   | 'ui_category_dropped'
   | 'ui_category_empty'
+  | 'ui_category_fresh'
   | 'ui_category_moved'
   | 'ui_category_name'
   | 'ui_category_no_pages'

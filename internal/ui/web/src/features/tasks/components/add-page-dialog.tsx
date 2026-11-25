@@ -1,14 +1,18 @@
 import { useLayoutEffect, useRef, useState, type KeyboardEvent, type MouseEvent } from 'react';
 
 import { Badge } from '@/components/badge';
+import { Button } from '@/components/button';
 import { Dialog, DialogActions, DialogClose, DialogHead, useDialog } from '@/components/dialog';
 import { FIELD, TEXT } from '@/components/fields';
+import { focusOn } from '@/components/focus-places';
 import { HitRow } from '@/components/hit-row';
 import { PlusIcon } from '@/components/icons';
 import { KeyHint } from '@/components/key-hint';
 import { RowSub } from '@/components/row-sub';
+import { AddNameDialog, type AddNameOpen } from '@/features/tasks/components/add-name-dialog';
 import { moveAsk as ask0, type MoveAsk } from '@/features/tasks/stores/move-ask';
 import { addHits, addSaid, groupName, hereBadge, pageFrom, type AddTo } from '@/features/tasks/utils/add-page';
+import { categoryRefusal } from '@/features/tasks/utils/task-edit';
 import { useHold, type Hold } from '@/hooks/use-hold';
 import { useStore } from '@/hooks/use-store';
 import { t } from '@/lib/t';
@@ -37,6 +41,12 @@ export interface AddPageDialogProps {
   readonly ask?: MoveAsk;
 }
 
+// The add modal opened over it: the categories a name is told apart from, and what takes the name added
+interface AddCategory extends AddNameOpen {
+  names: readonly string[];
+  add: (name: string) => void;
+}
+
 // No pill: the pages are of one project, the task's, as on the task's page
 const NO_RANKS: ReadonlyMap<string, number> = new Map();
 
@@ -56,30 +66,52 @@ export function AddPageDialog({
   // The last opened, which the modal shows and whose add button the focus goes back to as it closes (open is null by
   // then), and how many times it was opened: its body is drawn anew for each, its fields as they open
   const [opened, setOpened] = useState<{ last: AddPageOpen | null; n: number }>({ last: null, n: 0 });
-  if (open !== null && open !== opened.last) setOpened({ last: open, n: opened.n + 1 });
+  const [adding, setAdding] = useState<AddCategory | null>(null);
+  if (open !== null && open !== opened.last) {
+    setOpened({ last: open, n: opened.n + 1 });
+    setAdding(null);
+  }
   return (
-    <Dialog
-      id="add-page-dialog"
-      open={open !== null}
-      onClosed={onClosed}
-      hold={hold}
-      labelledBy="add-page-title"
-      raised
-      afterClose={() => opened.last?.back() ?? false}
-    >
-      <AddPageBody
-        key={opened.n}
-        last={opened.last}
-        onClosed={onClosed}
-        pages={pages}
-        writes={writes}
-        toasts={toasts}
-        ask={ask}
-        hold={hold}
+    <>
+      <AddNameDialog
+        id="add-category"
+        open={open === null ? null : adding}
+        name={taskWords(opened.last)}
+        refusal={(x) => categoryRefusal(x, adding?.names ?? [])}
+        onAdd={(x) => {
+          adding?.add(x);
+          setAdding(null);
+        }}
+        onClosed={() => {
+          setAdding(null);
+        }}
       />
-    </Dialog>
+      <Dialog
+        id="add-page-dialog"
+        open={open !== null}
+        onClosed={onClosed}
+        hold={hold}
+        labelledBy="add-page-title"
+        raised
+        afterClose={() => opened.last?.back() ?? false}
+      >
+        <AddPageBody
+          key={opened.n}
+          last={opened.last}
+          onClosed={onClosed}
+          pages={pages}
+          writes={writes}
+          toasts={toasts}
+          ask={ask}
+          hold={hold}
+          onAddCategory={setAdding}
+        />
+      </Dialog>
+    </>
   );
 }
+
+const taskWords = (last: AddPageOpen | null) => [last?.task.name, last?.task.title].filter(Boolean).join(' ');
 
 function AddPageBody({
   last,
@@ -89,7 +121,12 @@ function AddPageBody({
   toasts,
   ask,
   hold,
-}: Required<Omit<AddPageDialogProps, 'open'>> & { readonly last: AddPageOpen | null; readonly hold: Hold }) {
+  onAddCategory,
+}: Required<Omit<AddPageDialogProps, 'open'>> & {
+  readonly last: AddPageOpen | null;
+  readonly hold: Hold;
+  readonly onAddCategory: (a: AddCategory) => void;
+}) {
   const { close } = useDialog();
   const { entries } = useStore(pages.state);
   // The task as it opened, as read then: the page drawn before may be older. Its categories are those offered
@@ -105,7 +142,10 @@ function AddPageBody({
     category: '',
     rev: opened ? pages.readRev(opened.project, opened.name) : 0,
   }));
-  const categories = opened?.categories ?? [];
+  // The category added, the last offered and chosen, made as a page is put on it; a page put is one, so one is kept
+  // LIMIT: refused as stale, it is still said to be made, though another may have made it; the page goes on the right one
+  const [fresh, setFresh] = useState('');
+  const categories = [...(opened?.categories ?? []), ...(fresh ? [fresh] : [])];
   const [words, setWords] = useState('');
   // The row reached, by its page: read again, the same page stays reached where it still is
   const [reached, setReached] = useState<string | null>(null);
@@ -162,7 +202,8 @@ function AddPageBody({
       if (shown.length > 0) setReached(shown[next]?.slug ?? null);
     } else if (e.key === 'Enter' && at >= 0) {
       e.preventDefault();
-      void put(shown[at]);
+      // Held, it would put again over a refusal before it is read
+      if (!e.repeat) void put(shown[at]);
     } else if (e.key === 'Escape') {
       e.preventDefault();
       close();
@@ -175,7 +216,6 @@ function AddPageBody({
   };
 
   const none = shown.length === 0;
-  const task = last?.task;
   return (
     <>
       <DialogHead
@@ -184,31 +224,57 @@ function AddPageBody({
         title={t('ui_page_add')}
         lead={
           <span id="add-page-lead" className="flex flex-wrap items-center gap-x-2 gap-y-0.75">
-            <span id="add-page-target">{[task?.name, task?.title].filter(Boolean).join(' ')}</span>
+            <span id="add-page-target">{taskWords(last)}</span>
             <KeyHint keys={['↑', '↓']} words={t('ui_find_pick')} shown={!none} />
             <KeyHint keys={['Enter']} words={t('ui_page_add_put')} shown={!none} />
           </span>
         }
       />
-      <label data-testid="field" className={FIELD}>
-        {t('ui_task_category')}
-        <select
-          id="add-page-category"
-          data-testid="text"
-          className={TEXT}
-          value={to.category}
-          onChange={(e) => {
-            setTo({ ...to, category: e.currentTarget.value });
-            setError('');
-          }}
-        >
-          {['', ...categories].map((category) => (
-            <option key={category} value={category}>
-              {groupName(category)}
-            </option>
-          ))}
-        </select>
-      </label>
+      <div data-testid="field" className={FIELD}>
+        <label htmlFor="add-page-category">{t('ui_task_category')}</label>
+        <span className="flex flex-wrap items-center gap-2">
+          <select
+            id="add-page-category"
+            data-testid="text"
+            aria-describedby="add-page-fresh"
+            className={`${TEXT} min-w-32 flex-1`}
+            value={to.category}
+            onChange={(e) => {
+              setTo({ ...to, category: e.currentTarget.value });
+              setError('');
+            }}
+          >
+            {['', ...categories].map((category) => (
+              <option key={category} value={category}>
+                {groupName(category)}
+              </option>
+            ))}
+          </select>
+          <Button
+            id="add-category-plus"
+            label={t('ui_category_add')}
+            onClick={() => {
+              onAddCategory({
+                kind: 'category',
+                names: categories,
+                add: (name) => {
+                  setFresh(name);
+                  setTo((was) => ({ ...was, category: name }));
+                  setError('');
+                  // Enter pressed twice as it is added puts no page
+                  setReached(null);
+                },
+                back: (added) => focusOn(document.getElementById(added ? 'add-page-q' : 'add-category-plus')),
+              });
+            }}
+          >
+            {t('ui_category_add')}
+          </Button>
+        </span>
+        <p id="add-page-fresh" aria-live="polite" className="m-0 font-normal wrap-anywhere text-faint empty:sr-only">
+          {fresh !== '' && to.category === fresh ? t('ui_category_fresh', fresh) : ''}
+        </p>
+      </div>
       <input
         id="add-page-q"
         data-testid="text"

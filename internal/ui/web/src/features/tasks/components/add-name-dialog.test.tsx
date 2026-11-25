@@ -2,11 +2,12 @@ import { renderToString } from 'react-dom/server';
 import { describe, expect, it } from 'vitest';
 
 import { testBoot } from '@/components/test-boot';
-import { EditAddDialog } from '@/features/tasks/components/edit-add-dialog';
+import { AddNameDialog } from '@/features/tasks/components/add-name-dialog';
 
-const draw = (kind: 'url' | 'category') =>
+const draw = (kind: 'url' | 'category', id = 'edit-add') =>
   renderToString(
-    <EditAddDialog
+    <AddNameDialog
+      id={id}
       open={{ kind, back: () => true }}
       name="#12"
       refusal={() => ''}
@@ -15,7 +16,7 @@ const draw = (kind: 'url' | 'category') =>
     />,
   );
 
-describe(EditAddDialog, () => {
+describe(AddNameDialog, () => {
   it('adds a URL in a field of its own form, a refusal told under it, Cancel and Add', () => {
     expect.assertions(4);
     testBoot();
@@ -38,5 +39,20 @@ describe(EditAddDialog, () => {
     expect(html).toMatch(
       /ui_category_name:undefined<input id="edit-add-new" data-testid="text" class="[^"]*"(?![^>]*font-mono)/,
     );
+  });
+
+  it('names its parts by its id, two standing at once', () => {
+    expect.assertions(2);
+    testBoot();
+    const html = draw('category', 'other');
+    expect([...html.matchAll(/ id="([^"]+)"/g)].map((m) => m[1])).toStrictEqual([
+      'other-dialog',
+      'other-title',
+      'other-target',
+      'other-new',
+      'other-said',
+      'other-submit',
+    ]);
+    expect(html).toMatch(/aria-labelledby="other-title".*aria-describedby="other-said"/s);
   });
 });
