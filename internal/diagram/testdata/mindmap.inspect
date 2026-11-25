@@ -1,0 +1,26 @@
+diagram "What to think of before a trip" 704x281
+box "A trip" 316,126 88x29
+box "To pack" 444,73 96x29
+box "Clothes" 580,20 96x29
+box "Chargers" 580,73 104x29
+box "Medicine" 580,126 104x29
+box "To book" 444,205.5 96x29
+box "Trains" 580,179 88x29
+box "A hotel" 580,232 96x29
+box "Money" 196,99.5 80x29
+box "Cash" 68,73 72x29
+box "A card" 52,126 88x29
+box "At home" 180,179 96x29
+box "The plants" 20,179 120x29
+edge "A trip"→"To pack" M404,140.5 H424 V87.5 H444
+edge "To pack"→"Clothes" M540,87.5 H560 V34.5 H580
+edge "To pack"→"Chargers" M540,87.5 H580
+edge "To pack"→"Medicine" M540,87.5 H560 V140.5 H580
+edge "A trip"→"To book" M404,140.5 H424 V220 H444
+edge "To book"→"Trains" M540,220 H560 V193.5 H580
+edge "To book"→"A hotel" M540,220 H560 V246.5 H580
+edge "A trip"→"Money" M316,140.5 H296 V114 H276
+edge "Money"→"Cash" M196,114 H160 V87.5 H140
+edge "Money"→"A card" M196,114 H160 V140.5 H140
+edge "A trip"→"At home" M316,140.5 H296 V193.5 H276
+edge "At home"→"The plants" M180,193.5 H140

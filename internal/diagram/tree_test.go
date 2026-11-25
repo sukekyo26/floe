@@ -53,6 +53,104 @@ edge "z"→"a" M340,24.5 H224
 	}
 }
 
+// A tree growing right is one growing down turned: each depth in one column past its longest node, siblings across it.
+// With left, both sides are measured apart, and the root stands in the middle of the tallest of itself and its sides;
+// x and y are the top left of it all.
+func TestTreeRight(t *testing.T) {
+	t.Parallel()
+
+	const tree = "title: T\nparts:\n  - tree:\n      x: 20\n      y: 30\n      direction: right\n"
+	for _, tt := range []struct{ name, parts, want string }{
+		// B is shorter than its column: its edges turn halfway to the next column, not halfway from B.
+		{"right", tree + `      root:
+        name: a
+        rows: [A]
+        children:
+          - rows: [Wide node of depth 1]
+          - rows: [B, two rows]
+            children:
+              - rows: [D]
+              - rows: [E]
+          - rows: [C]
+            children:
+              - rows: [F]
+  - box: { name: z, x: 600, y: 10, rows: [Z] }
+  - edge: { from: z, to: a }
+`, `box "a" 20,109.5 48x29
+box "Wide node of depth 1" 108,30 200x29
+box "B" 108,101 96x46
+box "D" 348,83 48x29
+box "E" 348,136 48x29
+box "C" 108,189 48x29
+box "F" 348,189 48x29
+box "z" 600,10 48x29
+edge "a"→"Wide node of depth 1" M68,124 H88 V44.5 H108
+edge "a"→"B" M68,124 H108
+edge "B"→"D" M204,124 H328 V97.5 H348
+edge "B"→"E" M204,124 H328 V150.5 H348
+edge "a"→"C" M68,124 H88 V203.5 H108
+edge "C"→"F" M156,203.5 H348
+edge "z"→"a" M600,24.5 H44 V109.5
+`},
+		// The right is as deep as the left but narrower: neither side's lengths are the other's.
+		{"both sides", tree + `      root: { name: r, rows: [R], children: [{ rows: [P], children: [{ rows: [Q] }] }] }
+      left:
+        - rows: [Long node on the left]
+          children:
+            - rows: [X]
+            - rows: [Y]
+        - rows: [Z]
+`, `box "r" 356,83 48x29
+box "P" 444,83 48x29
+box "Q" 532,83 48x29
+box "Long node on the left" 108,56.5 208x29
+box "X" 20,30 48x29
+box "Y" 20,83 48x29
+box "Z" 268,136 48x29
+edge "r"→"P" M404,97.5 H444
+edge "P"→"Q" M492,97.5 H532
+edge "r"→"Long node on the left" M356,97.5 H336 V71 H316
+edge "Long node on the left"→"X" M108,71 H88 V44.5 H68
+edge "Long node on the left"→"Y" M108,71 H88 V97.5 H68
+edge "r"→"Z" M356,97.5 H336 V150.5 H316
+`},
+		// The left is one deep and narrow, the right deep and wide.
+		{"deeper right", tree + `      root: { rows: [R], children: [{ rows: [Long node on the right], children: [{ rows: [P], children: [{ rows: [Q] }] }] }, { rows: [S] }] }
+      left: [{ rows: [L] }]
+`, `box "R" 108,56.5 48x29
+box "Long node on the right" 196,30 216x29
+box "P" 452,30 48x29
+box "Q" 540,30 48x29
+box "S" 196,83 48x29
+box "L" 20,56.5 48x29
+edge "R"→"Long node on the right" M156,71 H176 V44.5 H196
+edge "Long node on the right"→"P" M412,44.5 H452
+edge "P"→"Q" M500,44.5 H540
+edge "R"→"S" M156,71 H176 V97.5 H196
+edge "R"→"L" M108,71 H68
+`},
+		// The root is the tallest, and its top is at y.
+		{"tall root", tree + `      root: { rows: [a, b, c, d, e, f, g, h], children: [{ rows: [K] }] }
+      left: [{ rows: [L] }]
+`, `box "a" 108,30 48x148
+box "K" 196,89.5 48x29
+box "L" 20,89.5 48x29
+edge "a"→"K" M156,104 H196
+edge "a"→"L" M108,104 H68
+`},
+		{"left alone", tree + "      root: { rows: [A] }\n      left: [{ rows: [L] }]\n", `box "A" 108,30 48x29
+box "L" 20,30 48x29
+edge "A"→"L" M108,44.5 H68
+`},
+		{"no branches", tree + "      root: { rows: [A] }\n", "box \"A\" 20,30 48x29\n"},
+	} {
+		got, mistakes := draw(t, tt.parts, inspect)
+		if mistakes != "" || got != tt.want {
+			t.Errorf("%s: inspect =\n%s%s\nwant\n%s", tt.name, got, mistakes, tt.want)
+		}
+	}
+}
+
 // A tree's mistakes are at its nodes, as those of boxes and edges are at the parts.
 func TestTreeMistakes(t *testing.T) {
 	t.Parallel()
@@ -90,6 +188,29 @@ func TestTreeMistakes(t *testing.T) {
 		{
 			"  - tree: { x: 200, y: 10, root: { rows: [A] } }\n  - edge: { from: [10, 10], to: nope }\n",
 			`s.yaml:6:5: edge: no part, row or node named "nope"`,
+		},
+		// left is of a tree growing right alone: the mistake names the key to write, or the value to change.
+		{"  - tree: { x: 200, y: 10, left: [{ rows: [B] }], root: { rows: [A] } }\n", "s.yaml:5:5: missing property 'direction'"},
+		{"  - tree:\n      x: 200\n      y: 10\n      direction: down\n      left: [{ rows: [B] }]\n      root: { rows: [A] }\n", "s.yaml:8:18: "},
+		{"  - tree:\n      x: 200\n      y: 10\n      direction: up\n      root: { rows: [A] }\n", "s.yaml:8:18: "},
+		{"  - tree:\n      x: 10\n      y: 10\n      direction: right\n      root: { rows: [A] }\n      left:\n        - tone: good\n", "s.yaml:11:11: missing property 'rows'"},
+		// A left node's and its child's mistakes are at them.
+		{
+			"  - box: { name: a, x: 10, y: 150, rows: [X] }\n  - tree:\n      x: 10\n      y: 10\n      direction: right\n      root: { rows: [R] }\n      left:\n        - rows: [L]\n          name: a\n",
+			`s.yaml:12:11: the name "a" is given before: give each part, row and node its own name`,
+		},
+		{
+			"  - tree:\n      x: 10\n      y: 10\n      direction: right\n      root: { rows: [R] }\n      left:\n        - rows: [L]\n          children:\n            - rows: [Long node past the bottom of the canvas, b, c, d, e, f, g, h, i, j, k, l]\n",
+			`s.yaml:13:15: box "Long node past the bottom of the canvas" sticks out of the 400x200 canvas`,
+		},
+		// A left node and a box written by hand: at the box, written before the tree or after.
+		{
+			"  - tree:\n      x: 10\n      y: 10\n      direction: right\n      root: { rows: [R] }\n      left:\n        - rows: [L]\n  - box: { x: 20, y: 10, rows: [S] }\n",
+			`s.yaml:12:5: box "L" overlaps box "S"`,
+		},
+		{
+			"  - box: { x: 20, y: 10, rows: [S] }\n  - tree:\n      x: 10\n      y: 10\n      direction: right\n      root: { rows: [R] }\n      left:\n        - rows: [L]\n",
+			`s.yaml:5:5: box "S" overlaps box "L"`,
 		},
 	} {
 		if _, got := draw(t, head+tt.parts, inspect); !strings.Contains(got, tt.want) {

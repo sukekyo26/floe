@@ -122,8 +122,8 @@ func TestExamples(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	if len(examples) != 15 {
-		t.Errorf("%d examples, want 15", len(examples))
+	if len(examples) != 16 {
+		t.Errorf("%d examples, want 16", len(examples))
 	}
 	store := iconsOf{}
 	for _, name := range []string{"aws/aws-lambda", "aws/amazon-bedrock", "aws/group/aws-cloud-logo", "aws/group/region", "aws/res/client", "aws/res/users", "aws/amazon-route-53", "aws/amazon-cloudfront", "aws/amazon-simple-storage-service", "aws/group/virtual-private-cloud-vpc", "aws/group/public-subnet", "aws/group/private-subnet", "aws/res/elastic-load-balancing-application-load-balancer", "aws/amazon-elastic-container-service", "aws/amazon-rds", "aws/amazon-simple-queue-service"} {
@@ -798,6 +798,32 @@ func TestEdgesHandSides(t *testing.T) {
 		{"width: 260\nheight: 200\ntitle: T\nparts:\n  - tree:\n      x: 90\n      y: 20\n      root: { name: r, rows: [r], children: [{ name: c, rows: [c] }] }\n  - edge: { from: [200, 0], via: [[200, 80]], to: c }\n", `d="M200,0 V80 V103.5 H114"`},
 		// a tree's root keeps its top
 		{"width: 260\nheight: 200\ntitle: T\nparts:\n  - tree:\n      x: 44\n      y: 50\n      root: { name: r, rows: [r], children: [{ name: c, rows: [c] }] }\n  - edge: { from: [200, 0], via: [[200, 40]], to: r }\n", `d="M200,0 V40 H44 V50"`},
+		// a tree growing right: the root's left is left, as no branch leaves it
+		{"width: 500\nheight: 260\ntitle: T\nparts:\n  - tree:\n      x: 150\n      y: 100\n      direction: right\n      root: { name: r, rows: [r], children: [{ name: c, rows: [c] }] }\n  - edge: { from: [10, 60], via: [[20, 60]], to: r }\n", `d="M10,60 H20 V114.5 H150"`},
+		// the root's right is not, its child's edge leaves it: the top
+		{"width: 500\nheight: 260\ntitle: T\nparts:\n  - tree:\n      x: 150\n      y: 100\n      direction: right\n      root: { name: r, rows: [r], children: [{ name: c, rows: [c] }] }\n  - edge: { from: [205, 60], via: [[215, 60]], to: r }\n", `d="M205,60 H215 V80 H174 V100"`},
+		// the child's left is not: the top
+		{"width: 500\nheight: 260\ntitle: T\nparts:\n  - tree:\n      x: 150\n      y: 100\n      direction: right\n      root: { name: r, rows: [r], children: [{ name: c, rows: [c] }] }\n  - edge: { from: [205, 60], via: [[215, 60]], to: c }\n", `d="M205,60 H215 H262 V100"`},
+		// the child's right, a leaf's, is
+		{"width: 500\nheight: 260\ntitle: T\nparts:\n  - tree:\n      x: 150\n      y: 100\n      direction: right\n      root: { name: r, rows: [r], children: [{ name: c, rows: [c] }] }\n  - edge: { from: [390, 60], via: [[400, 60]], to: c }\n", `d="M390,60 H400 V114.5 H286"`},
+		// left alone: the root's right is left
+		{"width: 500\nheight: 260\ntitle: T\nparts:\n  - tree:\n      x: 150\n      y: 100\n      direction: right\n      root: { name: r, rows: [r] }\n      left: [{ name: c, rows: [c] }]\n  - edge: { from: [390, 60], via: [[400, 60]], to: r }\n", `d="M390,60 H400 V114.5 H286"`},
+		// the root's left is not: the top
+		{"width: 500\nheight: 260\ntitle: T\nparts:\n  - tree:\n      x: 150\n      y: 100\n      direction: right\n      root: { name: r, rows: [r] }\n      left: [{ name: c, rows: [c] }]\n  - edge: { from: [205, 60], via: [[215, 60]], to: r }\n", `d="M205,60 H215 H262 V100"`},
+		// the left leaf's right is not: the top
+		{"width: 500\nheight: 260\ntitle: T\nparts:\n  - tree:\n      x: 150\n      y: 100\n      direction: right\n      root: { name: r, rows: [r] }\n      left: [{ name: c, rows: [c] }]\n  - edge: { from: [205, 60], via: [[215, 60]], to: c }\n", `d="M205,60 H215 V80 H174 V100"`},
+		// the left leaf's left is
+		{"width: 500\nheight: 260\ntitle: T\nparts:\n  - tree:\n      x: 150\n      y: 100\n      direction: right\n      root: { name: r, rows: [r] }\n      left: [{ name: c, rows: [c] }]\n  - edge: { from: [10, 60], via: [[20, 60]], to: c }\n", `d="M10,60 H20 V114.5 H150"`},
+		// both sides: neither of the root's is, the top
+		{"width: 500\nheight: 260\ntitle: T\nparts:\n  - tree:\n      x: 150\n      y: 100\n      direction: right\n      root: { name: r, rows: [r], children: [{ name: k, rows: [k] }] }\n      left: [{ name: c, rows: [c] }]\n  - edge: { from: [205, 60], via: [[215, 60]], to: r }\n", `d="M205,60 H215 H262 V100"`},
+		// as above, on the right
+		{"width: 500\nheight: 260\ntitle: T\nparts:\n  - tree:\n      x: 150\n      y: 100\n      direction: right\n      root: { name: r, rows: [r], children: [{ name: k, rows: [k] }] }\n      left: [{ name: c, rows: [c] }]\n  - edge: { from: [295, 60], via: [[305, 60]], to: r }\n", `d="M295,60 H305 V80 H262 V100"`},
+		// a node with children is not left the side they grow from: growing right, its right, so the top
+		{"width: 600\nheight: 400\ntitle: T\nparts:\n  - tree:\n      x: 150\n      y: 100\n      direction: right\n      root: { name: r, rows: [r], children: [{ name: c, rows: [c], children: [{ rows: [g] }] }] }\n  - edge: { from: [293, 60], via: [[303, 60]], to: c }\n", `d="M293,60 H303 V80 H262 V100"`},
+		// growing left, its left
+		{"width: 600\nheight: 400\ntitle: T\nparts:\n  - tree:\n      x: 150\n      y: 100\n      direction: right\n      root: { name: r, rows: [r] }\n      left: [{ name: c, rows: [c], children: [{ rows: [g] }] }]\n  - edge: { from: [205, 60], via: [[215, 60]], to: c }\n", `d="M205,60 H215 H262 V100"`},
+		// growing down, its bottom, so the right
+		{"width: 600\nheight: 400\ntitle: T\nparts:\n  - tree:\n      x: 150\n      y: 20\n      root: { name: r, rows: [r], children: [{ name: c, rows: [c], children: [{ rows: [g] }] }] }\n  - edge: { from: [200, 200], via: [[200, 130]], to: c }\n", `d="M200,200 V130 V103.5 H174"`},
 		// without via, from the other end
 		{"width: 260\nheight: 240\ntitle: T\nparts:\n  - graph:\n      x: 20\n      y: 100\n      nodes:\n        - box: { name: a, rows: [a] }\n        - box: { name: b, rows: [b] }\n      edges:\n        - { from: a, to: b }\n  - box: { name: h, x: 60, y: 10, w: 60, h: 30, rows: [h] }\n  - edge: { from: h, to: b }\n", `d="M90,40 V167.5 H68"`},
 		// a group's frame: right, not its top
