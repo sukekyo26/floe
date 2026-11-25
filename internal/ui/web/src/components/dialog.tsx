@@ -78,6 +78,33 @@ const PLACE = {
 // A modal that never writes holds nothing: as before holding was told
 const NOT_HELD = { held: false, focus: { current: null }, holding: () => false } as const;
 
+function drop(e: Event): void {
+  e.preventDefault();
+  e.stopPropagation();
+}
+function dropPress(e: MouseEvent): void {
+  if (e.detail > 1) drop(e);
+  else if (e.type === 'mousedown') {
+    document.removeEventListener('mousedown', dropPress, true);
+    document.removeEventListener('click', dropPress, true);
+  }
+}
+function dropKey(e: KeyboardEvent): void {
+  if (e.repeat) drop(e);
+  else document.removeEventListener('keydown', dropKey, true);
+}
+
+// dropRest drops what is left of the press or key a modal opens or closes by, which would reach what is then on top: the
+// second of a double press, until a first one, and the repeats of a key held, until another key. Asked twice, the
+// listeners are added once
+// LIMIT: a press in an iframe is not seen; a first press Chrome counts with the one before is dropped; pointerdown
+// (detail 0) is not dropped, so what acts on it is reached
+function dropRest(): void {
+  document.addEventListener('mousedown', dropPress, true);
+  document.addEventListener('click', dropPress, true);
+  document.addEventListener('keydown', dropKey, true);
+}
+
 // Dialog is a modal: a dialog shown by showModal(), its head, body and foot in one fieldset, which a hold disables
 // whole (its close buttons too), so that nothing closes it, sends again or starts another write; what follows the write
 // is of the modal it was sent from, open as it was. Held, it takes no close request (closedby), no press (but on a
@@ -106,6 +133,7 @@ export function Dialog({
 
   const shutNow = (d: HTMLDialogElement) => {
     d.close();
+    dropRest();
     afterClose?.();
     if (d.contains(document.activeElement) && document.activeElement instanceof HTMLElement)
       document.activeElement.blur();
@@ -133,6 +161,7 @@ export function Dialog({
     if (!held && before.held && open) giveBack(d);
     if (open && !d.open) {
       d.showModal();
+      dropRest();
       // React's autoFocus focuses on mounting, and a modal's parts are mounted closed: the one it names takes it here
       d.querySelector<HTMLElement>('[data-autofocus]')?.focus();
     }

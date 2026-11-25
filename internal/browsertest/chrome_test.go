@@ -326,9 +326,22 @@ func (b *browser) navigate(path string) {
 func (b *browser) pressKey(k string, mods ...kb.Modifier) {
 	b.t.Helper()
 
+	b.holdKey(k, 0, mods...)
+}
+
+// holdKey is pressKey with k held down for so many repeats, as a person keeps it down.
+func (b *browser) holdKey(k string, repeats int, mods ...kb.Modifier) {
+	b.t.Helper()
+
 	var held kb.Modifier
 	for _, m := range mods {
 		held |= m
+	}
+	send := func(e input.DispatchKeyEventParams) {
+		b.t.Helper()
+		if _, err := chromedp.Call(b.ctx, input.DispatchKeyEvent, e); err != nil {
+			b.t.Fatal(err)
+		}
 	}
 	for _, e := range kb.Encode([]rune(k)[0]) {
 		if e.Type == kb.KeyChar {
@@ -338,8 +351,13 @@ func (b *browser) pressKey(k string, mods ...kb.Modifier) {
 		if e.Type == kb.KeyDown {
 			e.Text = map[string]string{kb.Enter: "\r", " ": " "}[k]
 		}
-		if _, err := chromedp.Call(b.ctx, input.DispatchKeyEvent, *e); err != nil {
-			b.t.Fatal(err)
+		send(*e)
+		if e.Type == kb.KeyDown {
+			repeat := true
+			e.AutoRepeat = &repeat
+			for range repeats {
+				send(*e)
+			}
 		}
 	}
 }
