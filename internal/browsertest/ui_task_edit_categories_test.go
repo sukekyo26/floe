@@ -205,7 +205,7 @@ func TestUITaskEditCategories(t *testing.T) { //nolint:paralleltest // the brows
 		"paged pressed: 案 has pages, so it cannot be deleted / 案x,設計x,実装x,リリースd,レビューx / 案 has pages, so it cannot be deleted",
 		"pressed: adding / edit-add-new / ",
 		"added: 案x,設計x,実装x,リリースd,レビューx,公開d / shut / edit-category-plus / Added 公開 at 6 of 6 / true",
-		"there: 案x,設計x,実装x,リリースd,レビューx,公開d / 設計 is already among the categories / edit-add-said / adding / edit-add-new",
+		"there: 案x,設計x,実装x,リリースd,レビューx,公開d / The category 設計 is already there / edit-add-said / adding / edit-add-new",
 		"blank: Write the category's name",
 		"escape: shut / edit-category-plus / true",
 		"dropped: 案x,設計x,実装x,レビューx,公開d / Move レビュー up / Deleted リリース",

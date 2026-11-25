@@ -7,7 +7,7 @@ import { FIELD, HINT, SAID, TEXT } from '@/components/fields';
 import { focusOn } from '@/components/focus-places';
 import { EditIcon } from '@/components/icons';
 import { getBoot } from '@/config/boot';
-import { EditAddDialog, type EditAddOpen } from '@/features/tasks/components/edit-add-dialog';
+import { AddNameDialog, type AddNameOpen } from '@/features/tasks/components/add-name-dialog';
 import { SortableList } from '@/features/tasks/components/sortable-list';
 import {
   boxSaid,
@@ -77,7 +77,7 @@ export function TaskEditDialog({
   const [urls, setURLs] = useState<string[]>([]);
   const [categories, setCategories] = useState<string[]>([]);
   // The add modal over it, and the words under each list's box (boxSaid)
-  const [adding, setAdding] = useState<EditAddOpen | null>(null);
+  const [adding, setAdding] = useState<AddNameOpen | null>(null);
   const [urlSaid, setURLSaid] = useState('');
   const [categorySaid, setCategorySaid] = useState('');
   // What the screen reader is told of the lists' changes
@@ -120,7 +120,7 @@ export function TaskEditDialog({
   };
   const urlUnder = under(setURLSaid, urlSaid);
   const categoryUnder = under(setCategorySaid, categorySaid);
-  const openAdd = (kind: EditAddOpen['kind'], id: string) => {
+  const openAdd = (kind: AddNameOpen['kind'], id: string) => {
     (kind === 'url' ? urlUnder : categoryUnder)({ act: 'open' });
     setAdding({ kind, back: () => focusOn(document.getElementById(id)) });
   };
@@ -198,7 +198,8 @@ export function TaskEditDialog({
   // its button, which the edit modal then takes back to where it was opened from
   return (
     <>
-      <EditAddDialog
+      <AddNameDialog
+        id="edit-add"
         open={open === null ? null : adding}
         name={task?.name ?? ''}
         refusal={(x) => (adding?.kind === 'category' ? categoryRefusal(x, categories) : urlRefusal(x, urls, max))}
