@@ -600,8 +600,8 @@ func TestOwners(t *testing.T) {
 }
 
 // A slug in use is refused saying what uses it and to choose another slug, never to remove or replace it, in each
-// language: --force and floe rm would drop another's page and its versions. A page and a link do not take each
-// other's slug even with --force.
+// language: --force and floe rm would drop another's page and its versions. Only a page that kept no file, which is
+// refused to its own file too, is told with --force. A page and a link do not take each other's slug even with --force.
 func TestSlugRefusals(t *testing.T) {
 	t.Parallel()
 
@@ -659,19 +659,28 @@ func TestSlugRefusals(t *testing.T) {
 	} else if err = s.Save(e); err != nil {
 		t.Fatal(err)
 	}
-	_, taken := s.Edit("lk", store.Edit{Slug: new("pg")})
+	// Of no file at all, as the page: it is not the page's either.
+	_, again := floepublish.PrepareData(t.Context(), s, dw, old, store.Options{})
 	ja := i18n.New("ja")
+	for name, err := range map[string]error{"a file of its project": data("old", "p", false), "the upload that made it": again} {
+		u, ok := errors.AsType[*usererr.Error](err)
+		if !ok || u.Key != "store_slug_unkept" {
+			t.Errorf("a page that kept no file, %s: %v, want store_slug_unkept", name, err)
+			continue
+		}
+		for lang, got := range map[string]string{"en": told(err, root), "ja": usererr.Tell(ja, err).Render("")} {
+			if !strings.Contains(got, "old") || !strings.Contains(got, "--force") {
+				t.Errorf("a page that kept no file, %s in %s: told %s, want the slug and --force", name, lang, got)
+			}
+		}
+	}
+	_, taken := s.Edit("lk", store.Edit{Slug: new("pg")})
 	hx, hz := filepath.Join("H", "x.yaml"), filepath.Join("H", "proj", "z.html")
 	for _, tt := range []struct {
 		name   string
 		err    error
 		en, ja string
 	}{
-		{
-			"unkept, a page that kept no file", data("old", "p", false),
-			`slug "old" is a page stored before floe 0.1.0, which does not say which file it is of: choose another slug, or pass --force to replace it, dropping its versions, tags, favourite and task`,
-			`URL 名「old」は、どのファイルのページかを持たない古いページ（floe 0.1.0 より前に保存）で使われています。別の URL 名にするか、--force で置き換えてください（版・タグ・お気に入り・タスクは残りません）`,
-		},
 		{
 			"placed, by the file's repository, not the project published from", keyed("rel", "a", "s", "docs/x.yaml"),
 			`slug "rel" was published from docs/x.yaml in repository r: choose another slug`,

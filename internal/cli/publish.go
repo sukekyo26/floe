@@ -35,8 +35,8 @@ func (a *app) publishCmd() *cobra.Command {
 store it as drawn and print its URL. A page is its data file's: publishing the same file again, from any
 directory (a file is named by its repository and its path from the repository's root, else by its real
 path), overwrites it and keeps the page's project, unless --move-project, and the slug of another file's
-page is refused unless --force, which drops its history (versions, pinned title, tags, favourite). A new
-page is in the project of the directory floe publish runs in: its git repository's name (origin's, else
+page is refused unless --force, which drops its history (versions, pinned title, tags, favourite, task). A
+new page is in the project of the directory floe publish runs in: its git repository's name (origin's, else
 the repository's directory), else the directory's name. floe publish says it on stderr after the URL
 (page in project floe, or page in no project) when the page is new or its project changed.
 --move-project puts the page in the project of the directory floe publish runs in, though it is in

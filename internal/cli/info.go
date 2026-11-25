@@ -44,7 +44,8 @@ prints it.`,
 
 // infoLines is the lines floe info prints of page, served at url: a name, a tab and a value each, text values quoted.
 // LIMIT: a page published before data files were keyed by their files holds its project in PublishedFrom, which
-// repository and source then tell wrongly. No compatibility is kept: publish it again to mend it.
+// repository and source then tell wrongly. No compatibility is kept: publish it again to mend it, with --force, which
+// drops its history, where it kept no file (store's checkOwner).
 func infoLines(page store.Listed, url string) []string {
 	kind, source := "data", page.PublishedFile
 	if page.IsLink() {
