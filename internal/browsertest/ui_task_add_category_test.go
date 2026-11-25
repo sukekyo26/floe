@@ -77,6 +77,11 @@ func TestUITaskAddCategory(t *testing.T) { //nolint:paralleltest // the browser 
 		t.Helper()
 		b.eval("document.querySelector(" + js(sel) + ").focus()")
 	}
+	// What a press did not start would be sent by a read begun after it
+	quiet := func() {
+		t.Helper()
+		b.untilRead(b.reread(), "nothing more", "true")
+	}
 	openPage := func() {
 		t.Helper()
 		focus("#task-add-page")
@@ -163,6 +168,8 @@ func TestUITaskAddCategory(t *testing.T) { //nolint:paralleltest // the browser 
 	b.fill("#add-category-new", "速い")
 	b.pressKey(kb.Enter)
 	b.pressKey(kb.Enter)
+	until("add-category-dialog", false)
+	quiet()
 	say("Enter twice", chosen+" + ' / ' + "+reached+" + ' / ' + "+isOpen+" + ' / sent ' + sent.length")
 	b.pressKey(kb.ArrowDown)
 	b.pressKey(kb.Enter)
@@ -184,6 +191,7 @@ func TestUITaskAddCategory(t *testing.T) { //nolint:paralleltest // the browser 
 		b.painted()
 	}
 	b.keyUp(kb.Enter)
+	quiet()
 	say("held on", isOpen+" + ' / sent ' + sent.length")
 	b.pressKey(kb.Enter)
 	until("add-page-dialog", false)
@@ -212,7 +220,7 @@ func TestUITaskAddCategory(t *testing.T) { //nolint:paralleltest // the browser 
 			b.mouse(input.DispatchMouseEventTypeMousePressed, r.X+r.Width/2, r.Y+r.Height/2, count)
 			b.mouse(input.DispatchMouseEventTypeMouseReleased, r.X+r.Width/2, r.Y+r.Height/2, count)
 		}
-		b.painted()
+		quiet()
 	}
 	openPage()
 	press("#add-category-plus", 1, 2)
@@ -235,7 +243,7 @@ func TestUITaskAddCategory(t *testing.T) { //nolint:paralleltest // the browser 
 		b.mouse(input.DispatchMouseEventTypeMousePressed, over.X, over.Y, count)
 		b.mouse(input.DispatchMouseEventTypeMouseReleased, over.X, over.Y, count)
 	}
-	b.painted()
+	quiet()
 	say("backdrop double", isOpen+" + ' / ' + "+at+" + ' / sent ' + sent.length")
 	closePage()
 
