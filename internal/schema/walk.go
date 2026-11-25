@@ -419,8 +419,8 @@ func (w *walker) value(from *jsonschema.Schema, v reflect.Value) {
 // LIMIT: the shape of a value is read from type alone: past a schema whose type lets the value be keys and a list
 // (none written too, a template's root as well), a list of no items (one of text or a list too), or a key its
 // properties do not declare (additionalProperties or patternProperties takes it), no for is refused; nor is what allOf
-// and the like narrow read, nor whether the value the steps end at may be a list, which the data decides. Read them if
-// a for that passes so misleads.
+// and the like narrow read, nor a type beside a $ref to a part, nor whether the value the steps end at may be a list,
+// which the data decides. Read them if a for that passes so misleads.
 func (c *Compiled) Forbidding(steps []string) (string, bool) {
 	s := c.Root
 	for _, key := range steps {
