@@ -49,7 +49,7 @@ const measureStars = `(() => {` + colours + `
     if (svg.getClientRects().length === 0 || (button && button.ariaPressed !== 'true' && !button.matches(':hover'))) continue;
     const at = svg.closest('#read-actions, #frame-actions, #find-actions')?.id ??
       (svg.dataset.testid === 'star-mark' ? 'star-mark' : svg.closest('[data-view=fav]') ? 'fav' : 'row');
-    const s = getComputedStyle(svg), under = ground(svg.parentElement);
+    const s = getComputedStyle(svg), under = ground(svg);
     const drawn = faded(s.fill === 'none' ? s.stroke : s.fill, under.opacity), shown = over(drawn, under.colour), r = ratio(shown, under.colour);
     const where = at + ' ' + (named.get(hex(under.colour)) ?? hex(under.colour));
     on.add(where);
