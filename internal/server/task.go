@@ -20,11 +20,7 @@ func (s *Server) tasks(w http.ResponseWriter, r *http.Request) {
 // changeTasks writes pages and their tasks in one write (store.ChangeTasks), and answers each task and page as written.
 // What only a sender's mistake makes, which floe's own never send, is refused as such.
 func (s *Server) changeTasks(w http.ResponseWriter, r *http.Request) {
-	body, ok := readBody(w, r, maxBody)
-	if !ok {
-		return
-	}
-	in := decodeStrict[store.TaskChange](w, body)
+	in := decodeStrict[store.TaskChange](w, r, maxBody)
 	if in == nil {
 		return
 	}

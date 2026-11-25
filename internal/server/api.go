@@ -28,7 +28,7 @@ const MaxUpload = 32 << 20
 // jsonType is the media type of a write, and the one Accept names for a report as JSON.
 const jsonType = "application/json"
 
-// readBody reads a write from the management page or the CLI (check), of up to limit bytes, for decodeStrict to read.
+// readBody reads a write from the management page or the CLI (check), of up to limit bytes, for decodeStrict alone.
 // JSON is required (which needs a CORS preflight of another site), its Content-Type read as mime reads it: one whose
 // parameters cannot be read is refused too. On refusal it has answered and returns false.
 func readBody(w http.ResponseWriter, r *http.Request, limit int64) ([]byte, bool) {
@@ -85,11 +85,7 @@ type Link struct {
 // page sends no force: a URL name another file uses is refused (409) so that a typo never replaces
 // another link.
 func (s *Server) addLink(w http.ResponseWriter, r *http.Request) {
-	body, ok := readBody(w, r, maxBody)
-	if !ok {
-		return
-	}
-	in := decodeStrict[Link](w, body)
+	in := decodeStrict[Link](w, r, maxBody)
 	if in == nil {
 		return
 	}
@@ -111,10 +107,14 @@ func (s *Server) addLink(w http.ResponseWriter, r *http.Request) {
 	sendSaved(w, r, entry)
 }
 
-// decodeStrict reads body as a T as encoding/json/v2 does, the one reading of a write: refusing anything but an
-// object (null too), a mistake of its syntax, a key T does not have (of other case too) and a key sent twice; nil
-// when it has answered a refusal. A field null is one not sent.
-func decodeStrict[T any](w http.ResponseWriter, body []byte) *T {
+// decodeStrict reads the body of r, of up to limit bytes (readBody), as a T as encoding/json/v2 does, the one reading
+// of a write: refusing anything but an object (null too), a mistake of its syntax, a key T does not have (of other
+// case too) and a key sent twice; nil when it has answered a refusal. A field null is one not sent.
+func decodeStrict[T any](w http.ResponseWriter, r *http.Request, limit int64) *T {
+	body, ok := readBody(w, r, limit)
+	if !ok {
+		return nil
+	}
 	if jsontext.Value(body).Kind() != '{' {
 		send(w, http.StatusBadRequest, "cannot read the request: send a JSON object")
 		return nil
@@ -223,11 +223,7 @@ func sendSaved(w http.ResponseWriter, r *http.Request, entry *store.Entry) {
 // save stores the data file the CLI sends as a page, at the slug sent or the one the store picks: 201 for a new slug,
 // 200 for one replaced, and 422 with the images to send when it reads some and sent none.
 func (s *Server) save(w http.ResponseWriter, r *http.Request) {
-	body, ok := readBody(w, r, MaxUpload)
-	if !ok {
-		return
-	}
-	in := decodeStrict[Upload](w, body)
+	in := decodeStrict[Upload](w, r, MaxUpload)
 	if in == nil {
 		return
 	}
@@ -272,8 +268,7 @@ func (s *Server) save(w http.ResponseWriter, r *http.Request) {
 
 // rebuild draws every stored page again with the drawing of now (store.Rebuild): 204, or its mistakes.
 func (s *Server) rebuild(w http.ResponseWriter, r *http.Request) {
-	body, ok := readBody(w, r, maxBody)
-	if !ok || decodeStrict[struct{}](w, body) == nil {
+	if decodeStrict[struct{}](w, r, maxBody) == nil {
 		return
 	}
 	drawing := s.latest()
@@ -308,11 +303,7 @@ func (s *Server) markRead(w http.ResponseWriter, r *http.Request) {
 		notFound(w)
 		return
 	}
-	body, ok := readBody(w, r, maxBody)
-	if !ok {
-		return
-	}
-	in := decodeStrict[Read](w, body)
+	in := decodeStrict[Read](w, r, maxBody)
 	if in == nil {
 		return
 	}
@@ -361,11 +352,7 @@ type Stop struct {
 // one naming another is 409, for the server a command saw may be gone and this one started after it, and so is one
 // that comes after the first, the server stopping already.
 func (s *Server) stop(w http.ResponseWriter, r *http.Request) {
-	body, ok := readBody(w, r, maxBody)
-	if !ok {
-		return
-	}
-	in := decodeStrict[Stop](w, body)
+	in := decodeStrict[Stop](w, r, maxBody)
 	if in == nil {
 		return
 	}
@@ -405,11 +392,7 @@ func (s *Server) edit(w http.ResponseWriter, r *http.Request) {
 		notFound(w)
 		return
 	}
-	body, ok := readBody(w, r, maxBody)
-	if !ok {
-		return
-	}
-	in := decodeStrict[Edit](w, body)
+	in := decodeStrict[Edit](w, r, maxBody)
 	if in == nil {
 		return
 	}
