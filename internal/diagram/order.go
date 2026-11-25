@@ -106,6 +106,22 @@ func (gr *group) sweep(r int, down bool) {
 	gr.ranks[r] = gr.sortIn(gr.ranks[r], -1, keys)
 }
 
+// sortAmong sorts, stably, the xs that move among the places they stand at; the others stay where they are. sortIn does
+// the same by hand: it is called the most, and this would look its keys up twice.
+func sortAmong[T any](xs []T, moves func(T) bool, by func(a, b T) int) {
+	var at []int
+	var moving []T
+	for i, x := range xs {
+		if moves(x) {
+			at, moving = append(at, i), append(moving, x)
+		}
+	}
+	slices.SortStableFunc(moving, by)
+	for i, j := range at {
+		xs[j] = moving[i]
+	}
+}
+
 // median is the middle of xs, or the mean of the middle two.
 func median[T int | float64](xs []T) float64 {
 	slices.Sort(xs)

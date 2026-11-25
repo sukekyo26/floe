@@ -420,20 +420,8 @@ func (gr *group) sortIn(seq []int, c int, keys map[int]float64) []int {
 // face stands the units of order, of group c, facing a level edge's other end at the end towards it, stably, among the
 // places of those not standing as written.
 func (gr *group) face(order []int, us []unit, c int) {
-	var free []int
-	for j, u := range order {
-		if !gr.written(us[u], c) {
-			free = append(free, j)
-		}
-	}
-	faced := make([]int, len(free))
-	for i, j := range free {
-		faced[i] = order[j]
-	}
-	slices.SortStableFunc(faced, func(a, b int) int { return gr.facing(us[a]) - gr.facing(us[b]) })
-	for i, j := range free {
-		order[j] = faced[i]
-	}
+	sortAmong(order, func(j int) bool { return !gr.written(us[j], c) },
+		func(a, b int) int { return gr.facing(us[a]) - gr.facing(us[b]) })
 }
 
 // align orders the groups nested in each group (or in the graph) one way in every rank, by where their left marks
@@ -453,20 +441,8 @@ func (gr *group) align() {
 	walk = func(seq []int, c int) []int {
 		head, rest, tail := gr.pinned(seq, c)
 		us := gr.units(rest, c)
-		var slots []int
-		for j, u := range us {
-			if u.cl >= 0 && !gr.written(u, c) {
-				slots = append(slots, j)
-			}
-		}
-		groups := make([]unit, len(slots))
-		for j, s := range slots {
-			groups[j] = us[s]
-		}
-		slices.SortStableFunc(groups, func(a, b unit) int { return cmp.Or(cmp.Compare(rank(a.cl), rank(b.cl)), a.cl-b.cl) })
-		for j, s := range slots {
-			us[s] = groups[j]
-		}
+		sortAmong(us, func(u unit) bool { return u.cl >= 0 && !gr.written(u, c) },
+			func(a, b unit) int { return cmp.Or(cmp.Compare(rank(a.cl), rank(b.cl)), a.cl-b.cl) })
 		out := slices.Clone(head)
 		for _, u := range us {
 			if u.cl >= 0 {
