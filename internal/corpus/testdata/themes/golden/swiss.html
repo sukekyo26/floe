@@ -197,7 +197,7 @@ blockquote > * + * { margin-top: 0.6rem; }
 :scope {
   --chart-1: #e3000f; --chart-2: #0057b8; --chart-3: #00875a; --chart-4: #a85f00;
  
-  --bg: #f7f7f5; --surface: #fff; --fg: #111; --muted: #555; --line: #d0d0d0;
+  --bg: #f5f5f3; --surface: #fff; --fg: #111; --muted: #555; --line: #d0d0d0;
   --accent: #e3000f; --accent-soft: #fff4f5;
   --good: #2a763b; --good-soft: #e0efe3; --warn: #9c5800; --warn-soft: #f7e9d4; --bad: #9e0008; --bad-soft: #fbe0e2;
   --font: "Helvetica Neue", Helvetica, Arial, "Hiragino Sans", "Noto Sans JP", "Noto Sans CJK JP", sans-serif;
@@ -228,8 +228,9 @@ blockquote > * + * { margin-top: 0.6rem; }
 <style>
 @layer floe.theme {
 @scope (:root) {
-/* A quote is a heavy rule of red at the left of large bold text */
-blockquote { border: 0; border-left: 6px solid var(--on-face, var(--accent)); padding: 0 0 0 1.1rem; color: var(--on-face, var(--fg)); font-size: 1.6rem; font-weight: 900; line-height: 1.45; }
+/* A quote is large bold text on the surface, a heavy rule of red at its left, of the face's text colour in a face */
+blockquote > * { --face: initial; --on-face: initial; }
+blockquote { border: 0; border-left: 6px solid var(--on-face, var(--accent)); padding: 0.6rem 1.1rem; background: var(--surface); color: var(--fg); font-size: 1.6rem; font-weight: 900; line-height: 1.45; }
 }
 }
 </style>
@@ -628,24 +629,21 @@ blockquote { border: 0; border-left: 6px solid var(--on-face, var(--accent)); pa
 <style>
 @layer floe.parts.depth0 {
 @scope ([data-floe-part="note"]:where(:not(:is([data-floe-part], [data-floe-look]) *))) to (:scope [data-floe-part] > *) {
-/* No ground: its text and faces are those around it (a face's), what it holds too, its mark and title in the face's
-   colour in one */
-:scope { background: none; color: inherit; border: 0; border-top: 2px solid var(--on-face, var(--fg)); }
-:scope > * { --face: inherit; --on-face: inherit; }
-/* In a band (band.css), the surface and the page's text, as other themes' notes, keeping no face from the band at its
-   root either, which paints a ground and draws no ring; a warning's and a bad one's keep their own face.
-   LIMIT: a browser that reads no container style query draws it in a band as in any face */
-@container style(--swiss-band: on) {
-  :scope { background: var(--surface); color: var(--fg); border-top-color: var(--fg); }
-  :scope:not([data-floe-tone=warn], [data-floe-tone=bad]), :scope:not([data-floe-tone=warn], [data-floe-tone=bad]) > * { --face: initial; --on-face: initial; }
-}
+/* A face of the surface in a frame of black. Its root keeps no face from around it (a band's), which its mark and its
+   title would take */
+:scope { --face: initial; --on-face: initial; background: var(--surface); border: 2px solid var(--fg); }
 :scope::before { background: none; color: var(--on-face, var(--tone)); font-size: 1rem; font-weight: 900; }
 /* Its red is read on the surface alone: the good one's mark is black */
-:scope[data-floe-tone=good]::before { color: var(--on-face, var(--fg)); }
-/* The warning's grey, where its red links would sink, and the bad one's red are faces (base.css) on the part's root,
-   which what it holds takes as above; the bad one takes no line above */
-:scope[data-floe-tone=warn] { --face: color-mix(in srgb, var(--fg) 7%, var(--bg)); --on-face: var(--fg); }
-:scope[data-floe-tone=bad] { --face: var(--tone); --on-face: var(--on-fill); }
+:scope[data-floe-tone=good]::before { color: var(--fg); }
+/* The warning's grey, where its red links would sink, and the bad one's red are faces (base.css) on the part's root and
+   on what it holds, but for a box that paints a ground of its own: a note, code and a panel of the template's own. The
+   bad one takes no frame */
+:scope[data-floe-tone=warn], :scope[data-floe-tone=warn] > :not([data-floe-part=note], [data-floe-part=code], [data-floe-look~=panel]:not([data-floe-part])) {
+  --face: color-mix(in srgb, var(--fg) 14%, var(--bg)); --on-face: var(--fg);
+}
+:scope[data-floe-tone=bad], :scope[data-floe-tone=bad] > :not([data-floe-part=note], [data-floe-part=code], [data-floe-look~=panel]:not([data-floe-part])) {
+  --face: var(--tone); --on-face: var(--on-fill);
+}
 :scope:is([data-floe-tone=warn], [data-floe-tone=bad]) { background: var(--face); color: var(--on-face); }
 :scope[data-floe-tone=bad] { border: 0; }
 .title { color: var(--on-face, var(--fg)); font-weight: 900; }
@@ -655,11 +653,6 @@ blockquote { border: 0; border-left: 6px solid var(--on-face, var(--accent)); pa
 <style>
 @layer floe.parts.depth0 {
 @scope ([data-floe-part="options"]:where(:not(:is([data-floe-part], [data-floe-look]) *))) to (:scope [data-floe-part] > *) {
-/* A card draws no ground of its own here: it keeps the face around it, but in a band (band.css), where it is a panel
-   on the surface (panel.css) and keeps none: written here too, as this file wins over panel.css on a card.
-   LIMIT: a browser that reads no container style query draws it in a band as in any face */
-.card { border: 0; border-left: 1px solid var(--on-face, var(--fg)); --face: inherit; --on-face: inherit; }
-@container style(--swiss-band: on) { .card { --face: initial; --on-face: initial; } }
 :scope.numbered { --floe-mark: auto; }
 :scope.numbered > .card::before {
   content: counter(floe-card, decimal-leading-zero); content: counter(floe-card, decimal-leading-zero) / counter(floe-card, decimal-leading-zero);
@@ -674,54 +667,26 @@ blockquote { border: 0; border-left: 6px solid var(--on-face, var(--accent)); pa
 <style>
 @layer floe.parts.depth0 {
 @scope ([data-floe-part="table"]:where(:not(:is([data-floe-part], [data-floe-look]) *))) to (:scope [data-floe-part] > *) {
-/* No ground: its text and faces are those around it (a face's), what it holds too */
-:scope { border: 0; border-top: 2px solid var(--on-face, var(--fg)); background: none; color: inherit; --face: inherit; --on-face: inherit; }
-:scope > * { --face: inherit; --on-face: inherit; }
-/* In a band (band.css), the surface and the page's text, as other themes' panels, keeping no face from the band; a
-   part's root keeps it, for its ring outside on the band.
-   LIMIT: a browser that reads no container style query draws it in a band as in any face
-   LIMIT: a part's root keeps the band's --on-face on the surface, so a rule there reading var(--on-face, …) draws white on
-   white; table.css sets its head's colour itself, and no other is known */
-@container style(--swiss-band: on) {
-  :scope { background: var(--surface); color: var(--fg); border-top-color: var(--fg); }
-  :scope:where(:not([data-floe-part])), :scope > * { --face: initial; --on-face: initial; }
-}
+/* A face of the surface in a frame of black, as the table's */
+:scope { border: 2px solid var(--fg); }
 }
 }
 </style>
 <style>
 @layer floe.looks.depth1 {
 @scope ([data-floe-look~="panel"]:where(:is([data-floe-part], [data-floe-look]) *):where(:not(:is([data-floe-part], [data-floe-look]) :is([data-floe-part], [data-floe-look]) *))) to (:scope [data-floe-part] > *) {
-/* No ground: its text and faces are those around it (a face's), what it holds too */
-:scope { border: 0; border-top: 2px solid var(--on-face, var(--fg)); background: none; color: inherit; --face: inherit; --on-face: inherit; }
-:scope > * { --face: inherit; --on-face: inherit; }
-/* In a band (band.css), the surface and the page's text, as other themes' panels, keeping no face from the band; a
-   part's root keeps it, for its ring outside on the band.
-   LIMIT: a browser that reads no container style query draws it in a band as in any face
-   LIMIT: a part's root keeps the band's --on-face on the surface, so a rule there reading var(--on-face, …) draws white on
-   white; table.css sets its head's colour itself, and no other is known */
-@container style(--swiss-band: on) {
-  :scope { background: var(--surface); color: var(--fg); border-top-color: var(--fg); }
-  :scope:where(:not([data-floe-part])), :scope > * { --face: initial; --on-face: initial; }
-}
+/* A face of the surface in a frame of black, as the table's */
+:scope { border: 2px solid var(--fg); }
 }
 }
 </style>
 <style>
 @layer floe.parts.depth0 {
 @scope ([data-floe-part="table"]:where(:not(:is([data-floe-part], [data-floe-look]) *))) to (:scope [data-floe-part] > *) {
-/* A frame of black, the head black with white text, black rules between rows; in a face, the face's text colour in
-   place of the black and its ground in place of the white. The frame and the rules take the head's ground, so that a
-   band sets the two colours alone */
-:scope { --table-head-bg: var(--on-face, var(--fg)); --table-head-fg: var(--face, var(--surface)); border: 2px solid var(--table-head-bg); --table-rule: 1px solid var(--table-head-bg); }
+/* A frame of black, the head black with white text, black rules between rows */
+:scope { --table-head-bg: var(--fg); --table-head-fg: var(--surface); --table-rule: 1px solid var(--fg); }
 :scope thead th { font-weight: 800; --face: var(--table-head-bg); --on-face: var(--table-head-fg); }
 :scope td.num { font-size: 1.35rem; font-weight: 300; }
-/* In a band (band.css) the table is on the surface (panel.css), its root still in the band's face, read here: its frame,
-   rules and head are the page's black again.
-   LIMIT: a browser that reads no container style query draws it in a band as in any face */
-@container style(--swiss-band: on) {
-  :scope { --table-head-bg: var(--fg); --table-head-fg: var(--surface); }
-}
 }
 }
 </style>

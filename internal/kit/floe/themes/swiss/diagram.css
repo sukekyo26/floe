@@ -1,0 +1,3 @@
+/* The frame's ground is quiet, the boxes in it on the surface */
+:scope { --bg: var(--quiet); }
+.floe-zoom { border: 2px solid var(--fg); }

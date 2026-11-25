@@ -73,7 +73,7 @@ const measureBand = `(() => {` + colours + `
   const probe = document.body.appendChild(document.createElement('p'));
   const want = getComputedStyle(probe).color;
   probe.remove();
-  // A note is on a ground of its own in a band (swiss's too, on the surface there), in the page's text colour.
+  // A note is on a ground of its own in a band, in the page's text colour.
   for (const note of document.querySelectorAll('[data-floe-part="note"]')) {
     seen++;
     const s = getComputedStyle(note);
@@ -90,8 +90,8 @@ const measureBand = `(() => {` + colours + `
   const band = getComputedStyle(header).color;
   if (said && getComputedStyle(said).color !== band) push('text', 'colour ' + getComputedStyle(said).color + ', want the band\'s ' + band);
   if (heading && getComputedStyle(heading, '::after').content !== 'none') push('text', 'its heading: a mark after it');
-  // A heading held in a part in the band takes no mark either. A card is on a ground of its own in a band (swiss's
-  // too, on the surface there), its text off the band's face.
+  // A heading held in a part in the band takes no mark either. A card is on a ground of its own in a band, its
+  // text off the band's face.
   const held = find('details', 'header [data-floe-part="details"] h2');
   if (held && getComputedStyle(held, '::after').content !== 'none') push('details', 'its heading: a mark after it');
   const card = find('cards', 'header [data-floe-look~="cards"] > .card');
@@ -139,11 +139,10 @@ const lookBandFaceFix = "draw a part in a band in the colours of the band's face
 	"text colour, one of none in the band's; frame a line's code alone; mark no heading; set the picked tab 3:1 off the band"
 
 // lookBandFace draws Markdown, pills and parts a template places in the look band, in every theme (bandPages), as
-// measureBand measures: a part on a ground of its own is in the page's text colour (swiss's boxes, of no ground
-// elsewhere, are on the surface in a band) and one of none in the band's, only a line's code is framed, a text there
-// is in the band's text colour, its heading unmarked. Aurora's glass would let the band through but for its band.css.
-// That what is in the band reads on the ground under it is contrast-text's and contrast-ring's, which draw these pages
-// too.
+// measureBand measures: a part on a ground of its own is in the page's text colour and one of none in the band's,
+// only a line's code is framed, a text there is in the band's text colour, its heading unmarked. Aurora's glass would
+// let the band through but for its band.css. That what is in the band reads on the ground under it is contrast-text's
+// and contrast-ring's, which draw these pages too.
 func lookBandFace(t *testing.T, s *site) measured {
 	t.Helper()
 
