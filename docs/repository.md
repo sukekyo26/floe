@@ -5,7 +5,7 @@ A repository can keep its specifications, design documents and runbooks as data 
 ## Layout
 
 ```text
-floe/
+.floe/
   templates/api-spec/     page.html, schema.json, example.yaml, …
   parts/.gitkeep          parts of your own, if any
   themes/.gitkeep         themes of your own, if any
@@ -17,16 +17,16 @@ docs/specs/
 .gitattributes
 ```
 
-- Keep `floe/` out of the folder you read on the server (`docs/specs`): a linked folder lists every `.html` under it, a template's `page.html` too.
+- floe leaves out of a linked folder the names that start with a dot, so that `.floe/` is not listed beside the pages.
 - Keep only floe's data files, named `.yaml`, and their pages in `docs/specs`: the commands below draw every `.yaml` there, and no `.yml`.
-- Keep all three directories of `floe/`, with a `.gitkeep` in an empty one. The commands below point floe at all three, so that what someone has in `~/.config/floe` neither draws these pages nor stops them, and floe refuses a directory that is not there, as git leaves an empty one out.
+- Keep all three directories of `.floe/`, with a `.gitkeep` in an empty one. The commands below point floe at all three, so that what someone has in `~/.config/floe` neither draws these pages nor stops them, and floe refuses a directory that is not there, as git leaves an empty one out.
 
 `.gitattributes` keeps what a page is compared with, and what goes into it as it is, the same on every machine, and folds the pages in GitHub's diffs:
 
 ```text
 /docs/specs/**/*.html text eol=lf linguist-generated
 /docs/specs/**/*.svg  text eol=lf
-/floe/**              text=auto eol=lf
+/.floe/**             text=auto eol=lf
 ```
 
 ## Make the first template
@@ -34,9 +34,9 @@ docs/specs/
 At the repository's root:
 
 ```sh
-mkdir -p floe/templates floe/parts floe/themes docs/specs
-touch floe/parts/.gitkeep floe/themes/.gitkeep
-env FLOE_TEMPLATES_DIR="$PWD/floe/templates" FLOE_PARTS_DIR="$PWD/floe/parts" FLOE_THEMES_DIR="$PWD/floe/themes" floe template new api-spec
+mkdir -p .floe/templates .floe/parts .floe/themes docs/specs
+touch .floe/parts/.gitkeep .floe/themes/.gitkeep
+env FLOE_TEMPLATES_DIR="$PWD/.floe/templates" FLOE_PARTS_DIR="$PWD/.floe/parts" FLOE_THEMES_DIR="$PWD/.floe/themes" floe template new api-spec
 ```
 
 The paths are absolute ones, as floe refuses a relative one. Fill in the three files as [templates.md](agents/templates.md) tells, then write `docs/specs/orders.yaml` with `template: api-spec`. Write `"additionalProperties": false` in `schema.json`: the one floe makes takes any key. A document can name one of floe's templates too (`template: design`).
@@ -47,7 +47,7 @@ Run these at the repository's root. Draw the pages:
 
 ```sh
 (
-  export FLOE_TEMPLATES_DIR="$PWD/floe/templates" FLOE_PARTS_DIR="$PWD/floe/parts" FLOE_THEMES_DIR="$PWD/floe/themes"
+  export FLOE_TEMPLATES_DIR="$PWD/.floe/templates" FLOE_PARTS_DIR="$PWD/.floe/parts" FLOE_THEMES_DIR="$PWD/.floe/themes"
   floe render docs/specs/*.yaml
 )
 ```
@@ -56,7 +56,7 @@ Check them, which is what CI does. It tells the mistakes of a data file too, so 
 
 ```sh
 (
-  export FLOE_TEMPLATES_DIR="$PWD/floe/templates" FLOE_PARTS_DIR="$PWD/floe/parts" FLOE_THEMES_DIR="$PWD/floe/themes"
+  export FLOE_TEMPLATES_DIR="$PWD/.floe/templates" FLOE_PARTS_DIR="$PWD/.floe/parts" FLOE_THEMES_DIR="$PWD/.floe/themes"
   floe template check &&
   floe render --check docs/specs/*.yaml
 )
@@ -99,7 +99,7 @@ jobs:
       - name: 'Check the documents'
         run: |
           set -e
-          export FLOE_TEMPLATES_DIR="$PWD/floe/templates" FLOE_PARTS_DIR="$PWD/floe/parts" FLOE_THEMES_DIR="$PWD/floe/themes"
+          export FLOE_TEMPLATES_DIR="$PWD/.floe/templates" FLOE_PARTS_DIR="$PWD/.floe/parts" FLOE_THEMES_DIR="$PWD/.floe/themes"
           floe template check
           floe render --check docs/specs/*.yaml
 ```
@@ -116,7 +116,7 @@ phases:
     commands:
       - |
         set -e
-        export FLOE_TEMPLATES_DIR="$PWD/floe/templates" FLOE_PARTS_DIR="$PWD/floe/parts" FLOE_THEMES_DIR="$PWD/floe/themes"
+        export FLOE_TEMPLATES_DIR="$PWD/.floe/templates" FLOE_PARTS_DIR="$PWD/.floe/parts" FLOE_THEMES_DIR="$PWD/.floe/themes"
         floe template check
         floe render --check docs/specs/*.yaml
 ```
@@ -145,7 +145,7 @@ Keep the repository's settings out of your shell, and publish no data file of `d
 Put this in the repository's AGENTS.md (or CLAUDE.md), with the commands that draw and check in your repository, so that an agent that edits a document knows:
 
 ```markdown
-The documents in docs/specs are drawn by floe. To change one, run `floe guide` first, and commit its .yaml and .html together. Do not edit the .html. Draw with `<command>`, check with `<command>`.
+The documents in docs/specs are drawn by floe. To change one, run `floe guide` first, and commit its .yaml and .html together. Do not edit the .html. Draw with `<command>`, check with `<command>`. Their templates are in .floe/, which some searches leave out.
 ```
 
 ## What to watch

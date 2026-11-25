@@ -5,7 +5,7 @@
 ## 置き方
 
 ```text
-floe/
+.floe/
   templates/api-spec/     page.html・schema.json・example.yaml など
   parts/.gitkeep          自分の部品（あれば）
   themes/.gitkeep         自分のテーマ（あれば）
@@ -17,16 +17,16 @@ docs/specs/
 .gitattributes
 ```
 
-- `floe/` は、サーバーで読むフォルダ（`docs/specs`）の外に置きます。リンクしたフォルダは、下の `.html` を全部並べるので、テンプレートの `page.html` も並びます。
+- 点で始まる名前は、リンクしたフォルダの一覧に出ないので、`.floe/` はページと並びません。
 - `docs/specs` には、floe のデータファイル（名前は `.yaml`）とそのページだけを置きます。下のコマンドは、そこの `.yaml` を全部描き、`.yml` は描きません。
-- `floe/` の 3 つのディレクトリは、空なら `.gitkeep` を入れて、どれも置きます。下のコマンドが 3 つとも floe に指すので、誰かの `~/.config/floe` にあるものは、ページを描くのにも止めるのにも関わりません。無いディレクトリは floe が断り、空のディレクトリは git が残しません。
+- `.floe/` の 3 つのディレクトリは、空なら `.gitkeep` を入れて、どれも置きます。下のコマンドが 3 つとも floe に指すので、誰かの `~/.config/floe` にあるものは、ページを描くのにも止めるのにも関わりません。無いディレクトリは floe が断り、空のディレクトリは git が残しません。
 
 `.gitattributes` で、ページと比べるものと、ページにそのまま入るものを、どのマシンでも同じバイトにし、GitHub の差分ではページを畳みます。
 
 ```text
 /docs/specs/**/*.html text eol=lf linguist-generated
 /docs/specs/**/*.svg  text eol=lf
-/floe/**              text=auto eol=lf
+/.floe/**             text=auto eol=lf
 ```
 
 ## 最初のテンプレート
@@ -34,9 +34,9 @@ docs/specs/
 リポジトリの根で走らせます：
 
 ```sh
-mkdir -p floe/templates floe/parts floe/themes docs/specs
-touch floe/parts/.gitkeep floe/themes/.gitkeep
-env FLOE_TEMPLATES_DIR="$PWD/floe/templates" FLOE_PARTS_DIR="$PWD/floe/parts" FLOE_THEMES_DIR="$PWD/floe/themes" floe template new api-spec
+mkdir -p .floe/templates .floe/parts .floe/themes docs/specs
+touch .floe/parts/.gitkeep .floe/themes/.gitkeep
+env FLOE_TEMPLATES_DIR="$PWD/.floe/templates" FLOE_PARTS_DIR="$PWD/.floe/parts" FLOE_THEMES_DIR="$PWD/.floe/themes" floe template new api-spec
 ```
 
 パスは絶対パスです（floe は相対のパスを断ります）。[templates.md](agents/templates.md) のとおりに 3 つのファイルを書き、`docs/specs/orders.yaml` を `template: api-spec` で書きます。`schema.json` には `"additionalProperties": false` を書きます（floe が作るものは、どの鍵も通します）。文書は、floe のテンプレート（`template: design`）も名指せます。
@@ -47,7 +47,7 @@ env FLOE_TEMPLATES_DIR="$PWD/floe/templates" FLOE_PARTS_DIR="$PWD/floe/parts" FL
 
 ```sh
 (
-  export FLOE_TEMPLATES_DIR="$PWD/floe/templates" FLOE_PARTS_DIR="$PWD/floe/parts" FLOE_THEMES_DIR="$PWD/floe/themes"
+  export FLOE_TEMPLATES_DIR="$PWD/.floe/templates" FLOE_PARTS_DIR="$PWD/.floe/parts" FLOE_THEMES_DIR="$PWD/.floe/themes"
   floe render docs/specs/*.yaml
 )
 ```
@@ -56,7 +56,7 @@ env FLOE_TEMPLATES_DIR="$PWD/floe/templates" FLOE_PARTS_DIR="$PWD/floe/parts" FL
 
 ```sh
 (
-  export FLOE_TEMPLATES_DIR="$PWD/floe/templates" FLOE_PARTS_DIR="$PWD/floe/parts" FLOE_THEMES_DIR="$PWD/floe/themes"
+  export FLOE_TEMPLATES_DIR="$PWD/.floe/templates" FLOE_PARTS_DIR="$PWD/.floe/parts" FLOE_THEMES_DIR="$PWD/.floe/themes"
   floe template check &&
   floe render --check docs/specs/*.yaml
 )
@@ -99,7 +99,7 @@ jobs:
       - name: 'Check the documents'
         run: |
           set -e
-          export FLOE_TEMPLATES_DIR="$PWD/floe/templates" FLOE_PARTS_DIR="$PWD/floe/parts" FLOE_THEMES_DIR="$PWD/floe/themes"
+          export FLOE_TEMPLATES_DIR="$PWD/.floe/templates" FLOE_PARTS_DIR="$PWD/.floe/parts" FLOE_THEMES_DIR="$PWD/.floe/themes"
           floe template check
           floe render --check docs/specs/*.yaml
 ```
@@ -116,7 +116,7 @@ phases:
     commands:
       - |
         set -e
-        export FLOE_TEMPLATES_DIR="$PWD/floe/templates" FLOE_PARTS_DIR="$PWD/floe/parts" FLOE_THEMES_DIR="$PWD/floe/themes"
+        export FLOE_TEMPLATES_DIR="$PWD/.floe/templates" FLOE_PARTS_DIR="$PWD/.floe/parts" FLOE_THEMES_DIR="$PWD/.floe/themes"
         floe template check
         floe render --check docs/specs/*.yaml
 ```
@@ -145,7 +145,7 @@ floe publish --link docs/specs
 リポジトリの AGENTS.md（か CLAUDE.md）に次を、そのリポジトリの描くコマンドと確かめるコマンドを入れて書くと、文書を直すエージェントに伝わります。
 
 ```markdown
-The documents in docs/specs are drawn by floe. To change one, run `floe guide` first, and commit its .yaml and .html together. Do not edit the .html. Draw with `<command>`, check with `<command>`.
+The documents in docs/specs are drawn by floe. To change one, run `floe guide` first, and commit its .yaml and .html together. Do not edit the .html. Draw with `<command>`, check with `<command>`. Their templates are in .floe/, which some searches leave out.
 ```
 
 ## 気を付けること

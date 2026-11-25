@@ -4,12 +4,12 @@ A repository may keep documents as data files with the pages drawn of them, both
 
 ## Change a document
 
-1. Find the commands that draw and check the documents in the repository's AGENTS.md, CLAUDE.md, README, CI or scripts (search for `floe` in any case). Below, they are the repository's draw command and its check command. With none but pages committed beside the data files, use `floe render` and `floe render --check` (*Settings*); with neither, the file is not kept so: see *Writing a page* of `floe guide`.
+1. Find the commands that draw and check the documents in the repository's AGENTS.md, CLAUDE.md, README, CI or scripts (search for `floe` in any case, names that start with a dot too: some tools leave `.floe/` and `.github/` out by default). Below, they are the repository's draw command and its check command. With none but pages committed beside the data files, use `floe render` and `floe render --check` (*Settings*); with neither, the file is not kept so: see *Writing a page* of `floe guide`.
 2. Run the check command before you edit. When it fails for anything you were not asked to mend, change nothing: tell the user what it printed, with the version of `floe --version` and the one the repository's CI installs (*When the check fails*).
 3. Read the template the document names, with every setting the repository's commands set put before the command (a template may take the repository's parts, and what is not set is read from the user's home). For a new document, read `example.yaml` too. Run it at the repository's root, as `$PWD` is (so are the commands below). Put the same settings before `floe part list`, `floe part show <part> schema.json` and `floe theme list`:
 
 ```sh
-env FLOE_TEMPLATES_DIR="$PWD/floe/templates" FLOE_PARTS_DIR="$PWD/floe/parts" FLOE_THEMES_DIR="$PWD/floe/themes" floe template show api-spec schema.json
+env FLOE_TEMPLATES_DIR="$PWD/.floe/templates" FLOE_PARTS_DIR="$PWD/.floe/parts" FLOE_THEMES_DIR="$PWD/.floe/themes" floe template show api-spec schema.json
 ```
 
 4. Edit the `.yaml` as `floe guide` says (*The data file*, *YAML that floe reads as you meant*). Do not edit the `.html` (drawing writes over it).
@@ -40,11 +40,11 @@ Run `floe publish --link docs/specs`, with none of these settings: it lists the 
 ## Set up a repository
 
 ```text
-floe/templates/api-spec/   page.html, schema.json, example.yaml
-floe/parts/.gitkeep        parts of its own, if any
-floe/themes/.gitkeep       themes of its own, if any
-docs/specs/orders.yaml     a data file of template: api-spec
-docs/specs/orders.html     its page, which floe render writes
+.floe/templates/api-spec/   page.html, schema.json, example.yaml
+.floe/parts/.gitkeep        parts of its own, if any
+.floe/themes/.gitkeep       themes of its own, if any
+docs/specs/orders.yaml      a data file of template: api-spec
+docs/specs/orders.html      its page, which floe render writes
 ```
 
 Run all of these at the repository's root.
@@ -52,23 +52,23 @@ Run all of these at the repository's root.
 1. Make the directories and the template:
 
 ```sh
-mkdir -p floe/templates floe/parts floe/themes docs/specs
-touch floe/parts/.gitkeep floe/themes/.gitkeep
-env FLOE_TEMPLATES_DIR="$PWD/floe/templates" FLOE_PARTS_DIR="$PWD/floe/parts" FLOE_THEMES_DIR="$PWD/floe/themes" floe template new api-spec
+mkdir -p .floe/templates .floe/parts .floe/themes docs/specs
+touch .floe/parts/.gitkeep .floe/themes/.gitkeep
+env FLOE_TEMPLATES_DIR="$PWD/.floe/templates" FLOE_PARTS_DIR="$PWD/.floe/parts" FLOE_THEMES_DIR="$PWD/.floe/themes" floe template new api-spec
 ```
 
 2. Put these two, which draw and check, in whatever the project runs its commands with:
 
 ```sh
 (
-  export FLOE_TEMPLATES_DIR="$PWD/floe/templates" FLOE_PARTS_DIR="$PWD/floe/parts" FLOE_THEMES_DIR="$PWD/floe/themes"
+  export FLOE_TEMPLATES_DIR="$PWD/.floe/templates" FLOE_PARTS_DIR="$PWD/.floe/parts" FLOE_THEMES_DIR="$PWD/.floe/themes"
   floe render docs/specs/*.yaml
 )
 ```
 
 ```sh
 (
-  export FLOE_TEMPLATES_DIR="$PWD/floe/templates" FLOE_PARTS_DIR="$PWD/floe/parts" FLOE_THEMES_DIR="$PWD/floe/themes"
+  export FLOE_TEMPLATES_DIR="$PWD/.floe/templates" FLOE_PARTS_DIR="$PWD/.floe/parts" FLOE_THEMES_DIR="$PWD/.floe/themes"
   floe template check &&
   floe render --check docs/specs/*.yaml
 )
@@ -82,7 +82,7 @@ env FLOE_TEMPLATES_DIR="$PWD/floe/templates" FLOE_PARTS_DIR="$PWD/floe/parts" FL
 curl -fsSL https://raw.githubusercontent.com/sukekyo26/floe/v0.3.1/install.sh | FLOE_VERSION=0.3.1 sh
 export PATH="$HOME/.local/bin:$PATH"
 set -e
-export FLOE_TEMPLATES_DIR="$PWD/floe/templates" FLOE_PARTS_DIR="$PWD/floe/parts" FLOE_THEMES_DIR="$PWD/floe/themes"
+export FLOE_TEMPLATES_DIR="$PWD/.floe/templates" FLOE_PARTS_DIR="$PWD/.floe/parts" FLOE_THEMES_DIR="$PWD/.floe/themes"
 floe template check
 floe render --check docs/specs/*.yaml
 ```
@@ -98,17 +98,17 @@ find docs/specs -name '*.html' | while read -r f; do [ -f "${f%.html}.yaml" ] ||
 ```text
 /docs/specs/**/*.html text eol=lf linguist-generated
 /docs/specs/**/*.svg  text eol=lf
-/floe/**              text=auto eol=lf
+/.floe/**             text=auto eol=lf
 ```
 
 6. Add to the repository's AGENTS.md or CLAUDE.md, with the commands above in place of `<command>`, so that whoever edits a document knows:
 
 ```markdown
-The documents in docs/specs are drawn by floe. To change one, run `floe guide` first, and commit its .yaml and .html together. Do not edit the .html. Draw with `<command>`, check with `<command>`.
+The documents in docs/specs are drawn by floe. To change one, run `floe guide` first, and commit its .yaml and .html together. Do not edit the .html. Draw with `<command>`, check with `<command>`. Their templates are in .floe/, which some searches leave out.
 ```
 
 - Draw the pages with a release (a floe built from its source between two releases says the earlier one's version).
-- Keep in `docs/specs` only floe's data files, named `.yaml`, and their pages (the commands draw every `.yaml`, and no `.yml`). Keep `floe/` out of it (a folder linked lists every `.html` under it, a template's `page.html` too).
+- Keep in `docs/specs` only floe's data files, named `.yaml`, and their pages (the commands draw every `.yaml`, and no `.yml`).
 - A page drawn with AWS, Google Cloud or Azure icons needs them fetched in CI too, before the check. `floe icons fetch aws` and `floe icons fetch gcp` take the newest set, which may change the pages: give `aws` its zip's URL, which holds its date, the same in CI and on each machine; keep the zips of `gcp`, whose URLs hold none, and give both. `floe icons fetch azure` takes the zip the user downloads after agreeing to its terms.
 
 ## When the check fails
