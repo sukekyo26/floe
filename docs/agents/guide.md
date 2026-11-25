@@ -1,6 +1,6 @@
 # Using floe
 
-floe draws a page from a YAML data file you write, checks it, and serves it at the URL `floe publish` prints. This guide says how to write, check and publish a page, which part fits which content, and what floe refuses or misreads. `floe <command> --help` and the `list` and `show` commands say the rest.
+floe draws a page from a YAML data file you write, checks it, and serves it at the URL `floe publish` prints or keeps it in a repository as HTML. To write or change a document that a repository keeps, start at *Documents in a repository*; to show the user a page, at *Writing a page*. This guide says how to write, check and publish a page, which part fits which content, and what floe refuses or misreads. `floe <command> --help` and the `list` and `show` commands say the rest.
 
 ## Writing a page
 
@@ -33,6 +33,10 @@ sections:
 - The other top keys are the template's: its `schema.json` lists them (a `report`'s `lead` sums the page up under the title).
 - The file's name without `.yaml` becomes the page's slug in its URL, in lower case, with each run of characters other than ASCII letters and digits made a `-`, cut to 64 characters, with no `-` at either end. A name with no ASCII letter or digit (`設計.yaml`) gives no slug: give `floe publish --slug <slug>`.
 - A `--slug` MUST be 1 to 64 lower case ASCII letters, digits and `-`, starting and ending with a letter or digit.
+
+## Documents in a repository
+
+Run `floe repository guide` first, and follow it, when you write or change a document that a repository keeps: a YAML file with `template` and `lang` at its top, where the repository draws its pages (its AGENTS.md, CLAUDE.md, README, CI or scripts speak of floe, or a page is committed beside the file). Run it also when the user asks to keep a project's documents in its repository, or to check them in CI. Do not edit the `.html` there, and do not publish such a file.
 
 ## Publishing
 
@@ -182,7 +186,7 @@ plan.yaml:9:17: value must be one of 'accent', 'good', 'warn', 'bad', 'muted'
 
 ## More
 
-- `floe render db-choice.yaml` writes `db-choice.html` beside it, to keep in a repository.
+- `floe render db-choice.yaml` writes `db-choice.html` beside it (*Documents in a repository*).
 - `floe publish --link file.html` shows an HTML file of your own as it is, in the project of its directory (*Publishing*).
 - Templates, parts and themes of your own: `floe template --help`, `floe part --help` and `floe theme --help`.
 - To change a data file from a program, write it with a YAML library set to write no anchors or aliases, to keep non-ASCII text as it is, and to keep the keys' order.

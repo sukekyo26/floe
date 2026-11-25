@@ -1,7 +1,8 @@
 // Package docs holds the docs floe prints for agents, in docs/agents/ and in English alone: the guide (floe guide), the
-// guides to writing a diagram, a part, a template and a theme (floe diagram|part|template|theme guide) and to tasks
-// (floe task guide), the docs themselves rather than copies of them. Each links only its own headings, as an agent
-// cannot open another doc (TestGuideDocLinks); every md in docs/agents/ is embedded here (TestAgentDocs).
+// guides to writing a diagram, a part, a template and a theme (floe diagram|part|template|theme guide), to tasks (floe
+// task guide) and to a repository's documents (floe repository guide), the docs themselves rather than copies of them.
+// Each links only its own headings, as an agent cannot open another doc (TestGuideDocLinks); every md in docs/agents/
+// is embedded here (TestAgentDocs).
 package docs
 
 import _ "embed"
@@ -35,3 +36,8 @@ var ThemeGuide []byte
 //
 //go:embed agents/tasks.md
 var TaskGuide []byte
+
+// RepositoryGuide is repositories.md, how to keep documents in a repository, whole.
+//
+//go:embed agents/repositories.md
+var RepositoryGuide []byte

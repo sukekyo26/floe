@@ -29,7 +29,7 @@ const guidePath = "../../docs/agents/guide.md"
 const taskGuidePath = "../../docs/agents/tasks.md"
 
 // commandDocs are the docs whose commands TestGuideCommands runs, each a doc floe prints.
-var commandDocs = []string{guidePath, taskGuidePath, "../../docs/agents/themes.md", "../../docs/agents/parts.md", "../../docs/agents/templates.md", "../../docs/agents/diagrams.md"}
+var commandDocs = []string{guidePath, taskGuidePath, "../../docs/agents/themes.md", "../../docs/agents/parts.md", "../../docs/agents/templates.md", "../../docs/agents/diagrams.md", "../../docs/agents/repositories.md"}
 
 func readGuide(t *testing.T, path string) string {
 	t.Helper()
@@ -88,6 +88,7 @@ func TestGuideDocs(t *testing.T) {
 	}{
 		{"diagram", "diagrams.md", docs.DiagramGuide},
 		{"part", "parts.md", docs.PartGuide},
+		{"repository", "repositories.md", docs.RepositoryGuide},
 		{"task", "tasks.md", docs.TaskGuide},
 		{"template", "templates.md", docs.TemplateGuide},
 		{"theme", "themes.md", docs.ThemeGuide},
@@ -195,7 +196,7 @@ func TestGuideCommands(t *testing.T) {
 		if len(named) < 10 {
 			t.Fatalf("%s: %d commands found", path, len(named))
 		}
-		check := func(command string, args []string) {
+		check := func(command string, args []string, run bool) {
 			for i, word := range args {
 				if strings.HasPrefix(word, "<") {
 					w, ok := placeholders[word]
@@ -218,7 +219,7 @@ func TestGuideCommands(t *testing.T) {
 			ro := slices.Contains(args, "--help") || slices.ContainsFunc(readOnly, func(c []string) bool {
 				return len(args) >= len(c) && slices.Equal(args[:len(c)], c)
 			})
-			if !ro {
+			if !ro || !run {
 				return
 			}
 			if code, _, errs := runIn(env, args...); code != 0 {
@@ -226,11 +227,11 @@ func TestGuideCommands(t *testing.T) {
 			}
 		}
 		for _, m := range named {
-			check(m[1], strings.Fields(m[1]))
+			check(m[1], strings.Fields(m[1]), true)
 		}
 		for _, command := range shCommands(guide) {
 			shLines++
-			check(command, shellWords(command))
+			check(command.text, shellWords(command.text), !command.settings)
 		}
 	}
 	if shLines < 10 {
