@@ -333,31 +333,44 @@ func (b *browser) pressKey(k string, mods ...kb.Modifier) {
 func (b *browser) holdKey(k string, repeats int, mods ...kb.Modifier) {
 	b.t.Helper()
 
+	b.keyDown(k, false, mods...)
+	for range repeats {
+		b.keyDown(k, true, mods...)
+	}
+	b.keyUp(k, mods...)
+}
+
+// keyDown presses k down, or repeats it held down, and keyUp lets it go: pressKey, apart.
+func (b *browser) keyDown(k string, repeat bool, mods ...kb.Modifier) {
+	b.t.Helper()
+
+	b.keyEvent(kb.KeyDown, k, repeat, mods)
+}
+
+func (b *browser) keyUp(k string, mods ...kb.Modifier) {
+	b.t.Helper()
+
+	b.keyEvent(kb.KeyUp, k, false, mods)
+}
+
+func (b *browser) keyEvent(typ input.DispatchKeyEventType, k string, repeat bool, mods []kb.Modifier) {
+	b.t.Helper()
+
 	var held kb.Modifier
 	for _, m := range mods {
 		held |= m
 	}
-	send := func(e input.DispatchKeyEventParams) {
-		b.t.Helper()
-		if _, err := chromedp.Call(b.ctx, input.DispatchKeyEvent, e); err != nil {
-			b.t.Fatal(err)
-		}
-	}
 	for _, e := range kb.Encode([]rune(k)[0]) {
-		if e.Type == kb.KeyChar {
+		if e.Type != typ {
 			continue
 		}
 		e.Modifiers |= int64(held)
-		if e.Type == kb.KeyDown {
+		e.AutoRepeat = &repeat
+		if typ == kb.KeyDown {
 			e.Text = map[string]string{kb.Enter: "\r", " ": " "}[k]
 		}
-		send(*e)
-		if e.Type == kb.KeyDown {
-			repeat := true
-			e.AutoRepeat = &repeat
-			for range repeats {
-				send(*e)
-			}
+		if _, err := chromedp.Call(b.ctx, input.DispatchKeyEvent, *e); err != nil {
+			b.t.Fatal(err)
 		}
 	}
 }
