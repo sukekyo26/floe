@@ -652,7 +652,7 @@ func TestSlugRefusals(t *testing.T) {
 			t.Fatal(err)
 		}
 	}
-	// A page that kept no file, as pages published before keys were the file's: compared by the project published from.
+	// A page that kept no file, as pages stored before floe 0.1.0: refused, from its project too.
 	old := floepublish.Upload{File: "old.yaml", Source: []byte("lang: en\ntemplate: pic\n"), Images: map[string][]byte{}, Project: "p", Repo: "p", Place: ""}
 	if e, err := floepublish.PrepareData(t.Context(), s, dw, old, store.Options{}); err != nil {
 		t.Fatal(err)
@@ -668,9 +668,9 @@ func TestSlugRefusals(t *testing.T) {
 		en, ja string
 	}{
 		{
-			"owned, a page that kept no file", data("old", "q", false),
-			`slug "old" was published from project p: choose another slug`,
-			`URL 名「old」はプロジェクト p から公開されています。別の URL 名にしてください`,
+			"unkept, a page that kept no file", data("old", "p", false),
+			`slug "old" is a page stored before floe 0.1.0, which does not say which file it is of: choose another slug, or pass --force to replace it, dropping its versions, tags, favourite and task`,
+			`URL 名「old」は、どのファイルのページかを持たない古いページ（floe 0.1.0 より前に保存）で使われています。別の URL 名にするか、--force で置き換えてください（版・タグ・お気に入り・タスクは残りません）`,
 		},
 		{
 			"placed, by the file's repository, not the project published from", keyed("rel", "a", "s", "docs/x.yaml"),

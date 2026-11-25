@@ -224,7 +224,7 @@ var messagesEN = map[string]string{
 	"store_slug_is_page":      `slug "%s" is used by a stored page: choose another slug`,
 	"store_slug_is_link":      `slug "%s" is used by a linked file: choose another slug`,
 	"store_slug_linked":       `slug "%s" is linked to %s: choose another slug`,
-	"store_slug_owned":        `slug "%s" was published from project %s: choose another slug`,
+	"store_slug_unkept":       `slug "%s" is a page stored before floe 0.1.0, which does not say which file it is of: choose another slug, or pass --force to replace it, dropping its versions, tags, favourite and task`,
 	"store_slug_placed":       `slug "%s" was published from %s in repository %s: choose another slug`,
 	"store_slug_placed_alone": `slug "%s" was published from %s: choose another slug`,
 	"store_slug_taken":        `slug "%s" is already in use: choose another slug`,

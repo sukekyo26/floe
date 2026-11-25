@@ -215,7 +215,7 @@ var messagesJA = map[string]string{
 	"store_slug_is_page":      "URL 名「%s」は保存したページで使われています。別の URL 名にしてください",
 	"store_slug_is_link":      "URL 名「%s」はリンクで使われています。別の URL 名にしてください",
 	"store_slug_linked":       "URL 名「%s」は %s のリンクで使われています。別の URL 名にしてください",
-	"store_slug_owned":        "URL 名「%s」はプロジェクト %s から公開されています。別の URL 名にしてください",
+	"store_slug_unkept":       "URL 名「%s」は、どのファイルのページかを持たない古いページ（floe 0.1.0 より前に保存）で使われています。別の URL 名にするか、--force で置き換えてください（版・タグ・お気に入り・タスクは残りません）",
 	"store_slug_placed":       "URL 名「%[1]s」はリポジトリ %[3]s の %[2]s から公開されています。別の URL 名にしてください",
 	"store_slug_placed_alone": "URL 名「%s」は %s から公開されています。別の URL 名にしてください",
 	"store_slug_taken":        "URL 名「%s」は使われています。別の URL 名にしてください",
