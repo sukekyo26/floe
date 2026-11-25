@@ -196,7 +196,7 @@ func TestGuideCommands(t *testing.T) {
 		if len(named) < 10 {
 			t.Fatalf("%s: %d commands found", path, len(named))
 		}
-		check := func(command string, args []string) {
+		check := func(command string, args []string, run bool) {
 			for i, word := range args {
 				if strings.HasPrefix(word, "<") {
 					w, ok := placeholders[word]
@@ -219,7 +219,7 @@ func TestGuideCommands(t *testing.T) {
 			ro := slices.Contains(args, "--help") || slices.ContainsFunc(readOnly, func(c []string) bool {
 				return len(args) >= len(c) && slices.Equal(args[:len(c)], c)
 			})
-			if !ro {
+			if !ro || !run {
 				return
 			}
 			if code, _, errs := runIn(env, args...); code != 0 {
@@ -227,11 +227,11 @@ func TestGuideCommands(t *testing.T) {
 			}
 		}
 		for _, m := range named {
-			check(m[1], strings.Fields(m[1]))
+			check(m[1], strings.Fields(m[1]), true)
 		}
 		for _, command := range shCommands(guide) {
 			shLines++
-			check(command, shellWords(command))
+			check(command.text, shellWords(command.text), !command.settings)
 		}
 	}
 	if shLines < 10 {

@@ -64,13 +64,18 @@ Check them, which is what CI does. It tells the mistakes of a data file too, so 
 
 - The parentheses keep the settings out of your shell, where they would reach `floe publish` ([Read the pages](#read-the-pages)).
 - Put the two in whatever runs your project's commands.
-- For documents in folders of `docs/specs`, give `find docs/specs -name '*.yaml' -exec floe render {} +` (`--check` after `render` to check) in place of `docs/specs/*.yaml`: it takes files too many for one command line in several. Do not write `\;` for `+`: it loses a failure. With no `.yaml` at all it runs nothing and passes, where the glob fails.
-- On Windows, these are for a POSIX shell such as WSL's (floe there reads the repository through WSL, not over a network path). In PowerShell, set the three to paths such as `"$PWD\floe\templates"` and name the files yourself, as it does not expand `*.yaml` for a program; this is not tried.
+- For documents in folders of `docs/specs`, give `find docs/specs -name '*.yaml' -exec floe render {} +` and `find docs/specs -name '*.yaml' -exec floe render --check {} +` in place of `floe render docs/specs/*.yaml` and `floe render --check docs/specs/*.yaml`. Do not write `\;` for `+`: a failure is lost, and the check passes whatever it finds. With no `.yaml` at all it runs nothing and passes, where the glob fails.
+- On Windows, run these in a POSIX shell such as WSL's, with the repository inside WSL. In PowerShell, set the three to paths such as `"$PWD\.floe\templates"` and name the files yourself, as it does not expand `*.yaml` for a program; this is not tried.
 
-floe does not look for a page whose data file is gone. This optional line does, and fails for an `.html` with no `.yaml` beside it, one you wrote by hand too; run it last in the check:
+floe does not look for a page whose data file is gone. This optional line does, and fails for an `.html` with no `.yaml` beside it, one you wrote by hand too. Join it to the check with `&&`, so that a failure before it is not lost:
 
 ```sh
-find docs/specs -name '*.html' | while read -r f; do [ -f "${f%.html}.yaml" ] || { echo "no YAML for $f"; exit 1; }; done
+(
+  export FLOE_TEMPLATES_DIR="$PWD/.floe/templates" FLOE_PARTS_DIR="$PWD/.floe/parts" FLOE_THEMES_DIR="$PWD/.floe/themes"
+  floe template check &&
+  floe render --check docs/specs/*.yaml &&
+  find docs/specs -name '*.html' | while read -r f; do [ -f "${f%.html}.yaml" ] || { echo "no YAML for $f"; exit 1; }; done
+)
 ```
 
 ## CI

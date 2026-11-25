@@ -64,13 +64,18 @@ env FLOE_TEMPLATES_DIR="$PWD/.floe/templates" FLOE_PARTS_DIR="$PWD/.floe/parts" 
 
 - 括弧が、設定を自分のシェルに残しません（残すと `floe publish` に届きます。[ページを読む](#ページを読む)）。
 - 2 つは、プロジェクトのコマンドを走らせる仕組みのどれに入れても構いません。
-- 文書を `docs/specs` の下のフォルダに分けるときは、`docs/specs/*.yaml` の代わりに `find docs/specs -name '*.yaml' -exec floe render {} +`（確かめるときは `render` の後に `--check`）を書きます。1 つのコマンドに入らない数のファイルも、何回かに分けて渡します。`+` を `\;` にしないでください（失敗を落とします）。`.yaml` が 1 つも無いと、find は何も走らせずに通り、glob は落ちます。
-- Windows では、WSL などの POSIX のシェルで走らせます（リポジトリは WSL の中に置きます）。PowerShell では、3 つを `"$PWD\floe\templates"` のようなパスにし、プログラムに `*.yaml` を展開しないので、ファイルを自分で並べます（未確認です）。
+- 文書を `docs/specs` の下のフォルダに分けるときは、`floe render docs/specs/*.yaml` を `find docs/specs -name '*.yaml' -exec floe render {} +` に、`floe render --check docs/specs/*.yaml` を `find docs/specs -name '*.yaml' -exec floe render --check {} +` に替えます。`+` を `\;` にしないでください（失敗が消え、検査が必ず通ります）。`.yaml` が 1 つも無いと、find は何も走らせずに通り、glob は落ちます。
+- Windows では、WSL などの POSIX のシェルで走らせます（リポジトリは WSL の中に置きます）。PowerShell では、3 つを `"$PWD\.floe\templates"` のようなパスにし、プログラムに `*.yaml` を展開しないので、ファイルを自分で並べます（未確認です）。
 
-データファイルの無くなったページは、floe は探しません。次の任意の 1 行が探し、隣に `.yaml` の無い `.html`（手で書いたものも）で落ちます。確かめる処理の最後に足します：
+データファイルの無くなったページは、floe は探しません。次の任意の 1 行が探し、隣に `.yaml` の無い `.html`（手で書いたものも）で落ちます。前の失敗が消えないように、`&&` でつなぎます：
 
 ```sh
-find docs/specs -name '*.html' | while read -r f; do [ -f "${f%.html}.yaml" ] || { echo "no YAML for $f"; exit 1; }; done
+(
+  export FLOE_TEMPLATES_DIR="$PWD/.floe/templates" FLOE_PARTS_DIR="$PWD/.floe/parts" FLOE_THEMES_DIR="$PWD/.floe/themes"
+  floe template check &&
+  floe render --check docs/specs/*.yaml &&
+  find docs/specs -name '*.html' | while read -r f; do [ -f "${f%.html}.yaml" ] || { echo "no YAML for $f"; exit 1; }; done
+)
 ```
 
 ## CI

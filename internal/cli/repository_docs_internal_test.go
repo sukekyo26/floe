@@ -42,7 +42,7 @@ func TestRepositoryDocsAgree(t *testing.T) {
 	}{
 		{"sh", "floe template new", []string{repositoryJaDocPath, repositoryAgentDocPath}},
 		{"sh", "  floe render docs/specs", []string{repositoryJaDocPath, repositoryAgentDocPath}},
-		{"sh", "floe template check &&", []string{repositoryJaDocPath, repositoryAgentDocPath}},
+		{"sh", "--check docs/specs/*.yaml\n)", []string{repositoryJaDocPath, repositoryAgentDocPath}},
 		{"sh", "no YAML for", []string{repositoryJaDocPath, repositoryAgentDocPath}},
 		{"text", "linguist-generated", []string{repositoryJaDocPath, repositoryAgentDocPath}},
 		{"markdown", "drawn by floe", []string{repositoryJaDocPath, repositoryAgentDocPath}},
@@ -54,6 +54,22 @@ func TestRepositoryDocsAgree(t *testing.T) {
 			if got := blockWith(t, path, c.lang, c.text); got != want {
 				t.Errorf("%s: the %s block with %q is\n%s\nand in %s\n%s\nmake them one", path, c.lang, c.text, got, repositoryDocPath, want)
 			}
+		}
+	}
+}
+
+// The check of the doc for agents is what the CI examples run: a line taken from one alone fails here.
+func TestRepositoryDocsCI(t *testing.T) {
+	t.Parallel()
+
+	want := strings.TrimSpace(blockWith(t, repositoryAgentDocPath, "sh", "set -e"))
+	for _, text := range []string{"actions/checkout", "phases:"} {
+		var lines []string
+		for line := range strings.Lines(blockWith(t, repositoryDocPath, "yaml", text)) {
+			lines = append(lines, strings.TrimSpace(line))
+		}
+		if !strings.Contains(strings.Join(lines, "\n"), want) {
+			t.Errorf("%s: the yaml block with %q does not run\n%s\nas %s does", repositoryDocPath, text, want, repositoryAgentDocPath)
 		}
 	}
 }
