@@ -11,6 +11,7 @@ adheres to [Semantic Versioning](https://semver.org/).
 - Add variables a theme of one's own sets on `:scope` in `base.css` for the headings of sections in the templates `report` (`--floe-heading-top`, the padding above) and `design` (`--floe-heading-start` and `--floe-heading-edge`, the padding and the line at the left), which `page.css` alone set. A theme that sets none is drawn as before.
 - Add a way to make a new category in the dialog that adds a page on a task's page: "Add a category" beside the categories asks its name, and it is created as the page is put (not at all when the dialog is closed without one). A name already there is refused, in the task's Edit too, with "The category X is already there".
 - Add trees that grow to the right, `direction: right` in a diagram's `tree`, and to both sides of the root with `left`, as a mind map does, where floe places every node; and an example of it, `floe diagram example mindmap`. A tree that grows down is written and drawn as before.
+- Add `floe repository guide`, which prints how to change the documents a repository keeps (data files and the pages drawn) and how to set a repository up so that CI checks them; `floe guide` points to it for such documents.
 
 ### Changed
 
@@ -21,6 +22,7 @@ adheres to [Semantic Versioning](https://semver.org/).
 - Change a task's page in the management page. The way back to the task list, taken off in 0.3.0, is there again, as the mark `‹` on the left of the title; it goes where the bar's Task list and `h` go. "Edit" is on the right of the title, and the button that archives a task done is by its state. "Add a page" is now "Add" beside a heading over the pages that says how many they are, in a pill ("Pages 2"); the heading of the child tasks says its number in the same pill.
 - Change `floe publish` to refuse, without `--force`, a page stored before 0.1.0, which does not say which file it is of, from any file, its own too; it was taken over by another file of its project, or by any when it had no project.
 - **BREAKING**: Change `floe template check` and `floe part check` to refuse a `for` of `checks.yaml` that goes on past a value whose `type` takes neither keys nor a list (`"type": "string"`, and the items of a list of it), where the check found no item and passed unseen, or the data was refused. Mend the path, or remove the check: until then every page is stopped, as by any mistake in a template or part of yours.
+- Change the skill of `floe skill install` to be used for writing and changing a repository's documents too. Those who installed it before replace it with `floe skill install <agent> --force`.
 
 ### Fixed
 

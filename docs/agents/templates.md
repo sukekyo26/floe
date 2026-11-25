@@ -29,6 +29,7 @@ mv ~/.config/floe/staging-templates/memo ~/.config/floe/templates/
 - `floe template check` and `floe render` draw without the server. Do not `floe publish` while `FLOE_TEMPLATES_DIR` is set to the other directory: a server running refuses it (it draws with the directories it was started with), and with none running, the publish starts one on the other directory.
 - Stage the template on the same file system as the templates' directory, so that `mv` moves it in at once.
 - To change a template you have, copy it to the other directory, change and check it there, and move it back in place of the old one.
+- To keep templates in a repository with the documents drawn of them, see `floe repository guide`.
 - Parts and themes are made the same way, with `FLOE_PARTS_DIR`, `floe part new` and `floe part check`, and `FLOE_THEMES_DIR`, `floe theme new` and `floe theme check` (`floe part guide`, `floe theme guide`).
 
 ## Files

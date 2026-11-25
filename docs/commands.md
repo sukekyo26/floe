@@ -14,11 +14,12 @@ Flags are in each command's section below.
 
 | Command | Purpose |
 |---|---|
-| `floe guide` | Print the guide for agents: how to write, check and publish a page |
+| `floe guide` | Print the guide for agents: how to write, check and publish a page, and where a repository's documents are told of |
 | `floe skill install <agent>` | Write a skill that points the agent named to `floe guide` |
 | `floe publish <data.yaml>` | Store the page drawn from a data file, or link a file or a folder in place, and print its URL |
 | `floe check <data.yaml>...` | Check data files as their pages are drawn, without writing them |
 | `floe render <data.yaml>...` | Write the page of each data file to an HTML file, to keep in a repository |
+| `floe repository guide` | Print how to keep documents in a repository, drawn by templates of its own and checked in CI |
 | `floe rebuild` | Draw every stored page again with the templates, parts and themes of now |
 | `floe template list` | List the templates |
 | `floe template show <name> [file]` | Show a template: its themes and the files it reads, or one of them as written |
@@ -60,7 +61,7 @@ Flags are in each command's section below.
 
 ## `floe guide`
 
-Print the guide for agents, [guide.md](agents/guide.md): how to write, check and publish a page, pick the template and the parts, write YAML that floe reads as meant, and read its mistakes. It is a summary of these docs, for an agent to read before it writes a page. Its Tasks section points to `floe task guide`; its Ask after publishing, which has the agent ask the user, in a dialog of choices, which task to put each new page on and under which of its categories, is printed only when the task mode is on in the management page's settings; it reads them from the store the other commands send to (`FLOE_DIR`) without starting the server. With no store to be had (`HOME`, `USERPROFILE` on Windows, not an absolute path and no `FLOE_DIR`) it prints the guide without that section; a `settings.json` that cannot be read, or a `FLOE_DIR` that cannot be used, is refused as `floe theme default` refuses it. It takes no arguments.
+Print the guide for agents, [guide.md](agents/guide.md): how to write, check and publish a page, pick the template and the parts, write YAML that floe reads as meant, and read its mistakes; for a document a repository keeps, it points to `floe repository guide`. It is a summary of these docs, for an agent to read before it writes a page. Its Tasks section points to `floe task guide`; its Ask after publishing, which has the agent ask the user, in a dialog of choices, which task to put each new page on and under which of its categories, is printed only when the task mode is on in the management page's settings; it reads them from the store the other commands send to (`FLOE_DIR`) without starting the server. With no store to be had (`HOME`, `USERPROFILE` on Windows, not an absolute path and no `FLOE_DIR`) it prints the guide without that section; a `settings.json` that cannot be read, or a `FLOE_DIR` that cannot be used, is refused as `floe theme default` refuses it. It takes no arguments.
 
 ## `floe skill install <agent>`
 
@@ -143,8 +144,12 @@ floe render --check docs/*.yaml            # in CI: fails when a page was not wr
 - The mistakes are printed as `floe check` prints them, and nothing is written until all are fixed (exit code 1). Nothing is written either when two data files would write the same page (`a/spec.yaml` and `b/spec.yaml` with one `--out-dir`, or `spec.yaml` and `spec.yml`).
 - Nothing is published, and the server is not started.
 - Drawing is held to 512 MiB of memory as `floe check`'s is, the pages together, as all are drawn before any is written: render fewer files at once when it stops.
-- A page depends on the floe, the templates and the icons that draw it: in CI, use the floe version and the templates the pages were written with, and write the pages again when you upgrade.
+- A page depends on the floe, the templates and the icons that draw it: in CI, use the floe version and the templates the pages were written with, and write the pages again when you upgrade. [repository.md](repository.md) tells how to set a repository up.
 - A `script` of the page runs without the sandbox of the server's pages when the file is opened; its CSP still cuts off `fetch`, XHR, images from elsewhere and forms. A link between pages (`/a/<slug>/`) does not work in a file: link the files relatively.
+
+## `floe repository guide`
+
+Print how to keep documents in a repository, [repositories.md](agents/repositories.md), whole: how an agent changes one, and how to set a repository up so that CI checks them. [repository.md](repository.md) tells people the same. It takes no arguments.
 
 ## `floe rebuild`
 
@@ -452,7 +457,7 @@ List the icons of the set (`lucide`, `aws`, `gcp`, `azure`) whose name contains 
 - After floe is reinstalled (another version, or a rebuilt binary), the next of them stops the running server and starts its own, and says so on stderr: `stopping the server on port 7325 (pid 1234), which was of another build of floe, to start this build's`. It says so too when no server then starts, or the server does not stop; when several of them ask together, the one whose request the server took says it.
 - The server keeps running until `floe stop`, a command of another build replacing it, logout or reboot.
 - The server writes what happens to it in `server.log` in the store (`FLOE_DIR`): that it starts, that it stops and why (`floe stop` or a command of another build, or SIGTERM or SIGINT), that it stopped, a request that panicked with its stack, and what the runtime wrote when it crashed (those lines have no time or pid). A line is `key=value`s after its `time=` and the `pid=`; the stack is one `stack=` value, its line breaks written `\n`. A request that panics is answered with a 500 that says where the stack is, and the server goes on. At the next start, a `server.log` over 1 MiB is moved to `server.log.1`, replacing the one before. A server ended by SIGKILL, SIGHUP, a second signal or a power cut writes no end: its last line is the one that says it serves. A server still stopping (10 seconds at most for the requests under way, then, stopped right after it started, until its first read ends) when the next one starts and moves the log aside writes its last lines to `server.log.1`. A `server.log` that is not a regular file (a FIFO, a directory) keeps `floe serve` from starting.
-- The server draws with the `FLOE_TEMPLATES_DIR`, `FLOE_PARTS_DIR`, `FLOE_THEMES_DIR` and `FLOE_ICONS_DIR` of the command that started it: set them in the shell's environment, where every command takes them, rather than on one command.
+- The server draws with the `FLOE_TEMPLATES_DIR`, `FLOE_PARTS_DIR`, `FLOE_THEMES_DIR` and `FLOE_ICONS_DIR` of the command that started it: set them in the shell's environment, where every command takes them, rather than on one command. Those of a repository's documents are not for the server: keep them out of the shell ([repository.md](repository.md)).
 - A `floe publish` or `floe rebuild` with other ones is refused until `floe stop`. `floe list`, `floe rm`, `floe archive`, `floe tag` and `floe task` do not draw and take any, but the one that replaces the server after floe is reinstalled is refused with other ones too, as the new server would draw with them.
 - A server serves one store (`FLOE_DIR`) on its port: while it runs, a command for another store is refused, naming the store it serves (the paths in such a refusal are in Go's double quotes, not a shell's). To send the command to that server, set `FLOE_DIR` to that store; the lines above then apply to it (`FLOE_TEMPLATES_DIR` and the others, and a server of another build being replaced). To keep your own store, give it another `FLOE_PORT` (in the shell's environment, where every command takes it), or run `floe stop` and the command again. When the store the server names is not an absolute path on this system (a server of another system that the port reaches, such as floe in WSL seen from Windows), the refusal says only to give your store another `FLOE_PORT`.
 - It listens on `127.0.0.1` only. It refuses other host names (against DNS rebinding) and writes from other sites.
