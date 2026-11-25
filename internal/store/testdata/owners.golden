@@ -1,0 +1,160 @@
+none | a file of r: new; link false, from "r", file "docs/a.yaml", project "q"
+none | a file of r --force: new; link false, from "r", file "docs/a.yaml", project "q"
+none | another of r: new; link false, from "r", file "docs/b.yaml", project "q"
+none | another of r --force: new; link false, from "r", file "docs/b.yaml", project "q"
+none | a file of x at the place: new; link false, from "x", file "docs/a.yaml", project "q"
+none | a file of x at the place --force: new; link false, from "x", file "docs/a.yaml", project "q"
+none | a file of x at the place, from p: new; link false, from "x", file "docs/a.yaml", project "p"
+none | a file of x at the place, from p --force: new; link false, from "x", file "docs/a.yaml", project "p"
+none | a real path: new; link false, from "", file "<tmp>/a.yaml", project "q"
+none | a real path --force: new; link false, from "", file "<tmp>/a.yaml", project "q"
+none | another real path: new; link false, from "", file "<tmp>/b.yaml", project "q"
+none | another real path --force: new; link false, from "", file "<tmp>/b.yaml", project "q"
+none | no file, from p: new; link false, from "p", file "", project "p"
+none | no file, from p --force: new; link false, from "p", file "", project "p"
+none | no file, from q: new; link false, from "q", file "", project "q"
+none | no file, from q --force: new; link false, from "q", file "", project "q"
+none | the link: new; link true, from "", file "", project "proj"
+none | the link --force: new; link true, from "", file "", project "proj"
+none | another link: new; link true, from "", file "", project "proj"
+none | another link --force: new; link true, from "", file "", project "proj"
+a file of r | a file of r: goes on; link false, from "r", file "docs/a.yaml", project "p"
+a file of r | a file of r --force: goes on; link false, from "r", file "docs/a.yaml", project "p"
+a file of r | another of r: store_slug_placed
+a file of r | another of r --force: replaced; link false, from "r", file "docs/b.yaml", project "q"
+a file of r | a file of x at the place: store_slug_placed
+a file of r | a file of x at the place --force: replaced; link false, from "x", file "docs/a.yaml", project "q"
+a file of r | a file of x at the place, from p: store_slug_placed
+a file of r | a file of x at the place, from p --force: replaced; link false, from "x", file "docs/a.yaml", project "p"
+a file of r | a real path: store_slug_placed
+a file of r | a real path --force: replaced; link false, from "", file "<tmp>/a.yaml", project "q"
+a file of r | another real path: store_slug_placed
+a file of r | another real path --force: replaced; link false, from "", file "<tmp>/b.yaml", project "q"
+a file of r | no file, from p: store_slug_placed
+a file of r | no file, from p --force: replaced; link false, from "p", file "", project "p"
+a file of r | no file, from q: store_slug_placed
+a file of r | no file, from q --force: replaced; link false, from "q", file "", project "q"
+a file of r | the link: store_slug_is_page
+a file of r | the link --force: store_slug_is_page
+a file of r | another link: store_slug_is_page
+a file of r | another link --force: store_slug_is_page
+a file of o | a file of r: store_slug_placed
+a file of o | a file of r --force: replaced; link false, from "r", file "docs/a.yaml", project "q"
+a file of o | another of r: store_slug_placed
+a file of o | another of r --force: replaced; link false, from "r", file "docs/b.yaml", project "q"
+a file of o | a file of x at the place: store_slug_placed
+a file of o | a file of x at the place --force: replaced; link false, from "x", file "docs/a.yaml", project "q"
+a file of o | a file of x at the place, from p: store_slug_placed
+a file of o | a file of x at the place, from p --force: replaced; link false, from "x", file "docs/a.yaml", project "p"
+a file of o | a real path: store_slug_placed
+a file of o | a real path --force: replaced; link false, from "", file "<tmp>/a.yaml", project "q"
+a file of o | another real path: store_slug_placed
+a file of o | another real path --force: replaced; link false, from "", file "<tmp>/b.yaml", project "q"
+a file of o | no file, from p: store_slug_placed
+a file of o | no file, from p --force: replaced; link false, from "p", file "", project "p"
+a file of o | no file, from q: store_slug_placed
+a file of o | no file, from q --force: replaced; link false, from "q", file "", project "q"
+a file of o | the link: store_slug_is_page
+a file of o | the link --force: store_slug_is_page
+a file of o | another link: store_slug_is_page
+a file of o | another link --force: store_slug_is_page
+a real path | a file of r: store_slug_placed_alone
+a real path | a file of r --force: replaced; link false, from "r", file "docs/a.yaml", project "q"
+a real path | another of r: store_slug_placed_alone
+a real path | another of r --force: replaced; link false, from "r", file "docs/b.yaml", project "q"
+a real path | a file of x at the place: store_slug_placed_alone
+a real path | a file of x at the place --force: replaced; link false, from "x", file "docs/a.yaml", project "q"
+a real path | a file of x at the place, from p: store_slug_placed_alone
+a real path | a file of x at the place, from p --force: replaced; link false, from "x", file "docs/a.yaml", project "p"
+a real path | a real path: goes on; link false, from "", file "<tmp>/a.yaml", project "p"
+a real path | a real path --force: goes on; link false, from "", file "<tmp>/a.yaml", project "p"
+a real path | another real path: store_slug_placed_alone
+a real path | another real path --force: replaced; link false, from "", file "<tmp>/b.yaml", project "q"
+a real path | no file, from p: store_slug_placed_alone
+a real path | no file, from p --force: replaced; link false, from "p", file "", project "p"
+a real path | no file, from q: store_slug_placed_alone
+a real path | no file, from q --force: replaced; link false, from "q", file "", project "q"
+a real path | the link: store_slug_is_page
+a real path | the link --force: store_slug_is_page
+a real path | another link: store_slug_is_page
+a real path | another link --force: store_slug_is_page
+a real path, with its project | a file of r: store_slug_placed_alone
+a real path, with its project | a file of r --force: replaced; link false, from "r", file "docs/a.yaml", project "q"
+a real path, with its project | another of r: store_slug_placed_alone
+a real path, with its project | another of r --force: replaced; link false, from "r", file "docs/b.yaml", project "q"
+a real path, with its project | a file of x at the place: store_slug_placed_alone
+a real path, with its project | a file of x at the place --force: replaced; link false, from "x", file "docs/a.yaml", project "q"
+a real path, with its project | a file of x at the place, from p: store_slug_placed_alone
+a real path, with its project | a file of x at the place, from p --force: replaced; link false, from "x", file "docs/a.yaml", project "p"
+a real path, with its project | a real path: goes on; link false, from "", file "<tmp>/a.yaml", project "p"
+a real path, with its project | a real path --force: goes on; link false, from "", file "<tmp>/a.yaml", project "p"
+a real path, with its project | another real path: store_slug_placed_alone
+a real path, with its project | another real path --force: replaced; link false, from "", file "<tmp>/b.yaml", project "q"
+a real path, with its project | no file, from p: store_slug_placed_alone
+a real path, with its project | no file, from p --force: replaced; link false, from "p", file "", project "p"
+a real path, with its project | no file, from q: store_slug_placed_alone
+a real path, with its project | no file, from q --force: replaced; link false, from "q", file "", project "q"
+a real path, with its project | the link: store_slug_is_page
+a real path, with its project | the link --force: store_slug_is_page
+a real path, with its project | another link: store_slug_is_page
+a real path, with its project | another link --force: store_slug_is_page
+no file, from p | a file of r: store_slug_owned
+no file, from p | a file of r --force: replaced; link false, from "r", file "docs/a.yaml", project "q"
+no file, from p | another of r: store_slug_owned
+no file, from p | another of r --force: replaced; link false, from "r", file "docs/b.yaml", project "q"
+no file, from p | a file of x at the place: store_slug_owned
+no file, from p | a file of x at the place --force: replaced; link false, from "x", file "docs/a.yaml", project "q"
+no file, from p | a file of x at the place, from p: goes on; link false, from "x", file "docs/a.yaml", project "p"
+no file, from p | a file of x at the place, from p --force: goes on; link false, from "x", file "docs/a.yaml", project "p"
+no file, from p | a real path: store_slug_owned
+no file, from p | a real path --force: replaced; link false, from "", file "<tmp>/a.yaml", project "q"
+no file, from p | another real path: store_slug_owned
+no file, from p | another real path --force: replaced; link false, from "", file "<tmp>/b.yaml", project "q"
+no file, from p | no file, from p: goes on; link false, from "p", file "", project "p"
+no file, from p | no file, from p --force: goes on; link false, from "p", file "", project "p"
+no file, from p | no file, from q: store_slug_owned
+no file, from p | no file, from q --force: replaced; link false, from "q", file "", project "q"
+no file, from p | the link: store_slug_is_page
+no file, from p | the link --force: store_slug_is_page
+no file, from p | another link: store_slug_is_page
+no file, from p | another link --force: store_slug_is_page
+no file, from none | a file of r: goes on; link false, from "r", file "docs/a.yaml", project "q"
+no file, from none | a file of r --force: goes on; link false, from "r", file "docs/a.yaml", project "q"
+no file, from none | another of r: goes on; link false, from "r", file "docs/b.yaml", project "q"
+no file, from none | another of r --force: goes on; link false, from "r", file "docs/b.yaml", project "q"
+no file, from none | a file of x at the place: goes on; link false, from "x", file "docs/a.yaml", project "q"
+no file, from none | a file of x at the place --force: goes on; link false, from "x", file "docs/a.yaml", project "q"
+no file, from none | a file of x at the place, from p: goes on; link false, from "x", file "docs/a.yaml", project "p"
+no file, from none | a file of x at the place, from p --force: goes on; link false, from "x", file "docs/a.yaml", project "p"
+no file, from none | a real path: goes on; link false, from "", file "<tmp>/a.yaml", project "q"
+no file, from none | a real path --force: goes on; link false, from "", file "<tmp>/a.yaml", project "q"
+no file, from none | another real path: goes on; link false, from "", file "<tmp>/b.yaml", project "q"
+no file, from none | another real path --force: goes on; link false, from "", file "<tmp>/b.yaml", project "q"
+no file, from none | no file, from p: goes on; link false, from "p", file "", project "p"
+no file, from none | no file, from p --force: goes on; link false, from "p", file "", project "p"
+no file, from none | no file, from q: goes on; link false, from "q", file "", project "q"
+no file, from none | no file, from q --force: goes on; link false, from "q", file "", project "q"
+no file, from none | the link: store_slug_is_page
+no file, from none | the link --force: store_slug_is_page
+no file, from none | another link: store_slug_is_page
+no file, from none | another link --force: store_slug_is_page
+a link | a file of r: store_slug_is_link
+a link | a file of r --force: store_slug_is_link
+a link | another of r: store_slug_is_link
+a link | another of r --force: store_slug_is_link
+a link | a file of x at the place: store_slug_is_link
+a link | a file of x at the place --force: store_slug_is_link
+a link | a file of x at the place, from p: store_slug_is_link
+a link | a file of x at the place, from p --force: store_slug_is_link
+a link | a real path: store_slug_is_link
+a link | a real path --force: store_slug_is_link
+a link | another real path: store_slug_is_link
+a link | another real path --force: store_slug_is_link
+a link | no file, from p: store_slug_is_link
+a link | no file, from p --force: store_slug_is_link
+a link | no file, from q: store_slug_is_link
+a link | no file, from q --force: store_slug_is_link
+a link | the link: goes on; link true, from "", file "", project "proj"
+a link | the link --force: goes on; link true, from "", file "", project "proj"
+a link | another link: store_slug_linked
+a link | another link --force: replaced; link true, from "", file "", project "proj"
