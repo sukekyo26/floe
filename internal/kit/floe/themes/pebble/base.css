@@ -1,0 +1,9 @@
+/* A section starts with a band from edge to edge, seen while the page is scrolled fast. It paints a ground of its own, so
+   it takes no face from around it */
+:scope { --floe-heading-top: 0.45rem; --floe-heading-start: 0.9rem; --floe-heading-edge: 8px solid var(--accent); }
+section > h2 {
+  padding: var(--floe-heading-top) 0.9rem 0.45rem var(--floe-heading-start); border-left: var(--floe-heading-edge);
+  background: var(--accent-soft); color: var(--accent); --face: initial; --on-face: initial;
+  border-radius: 0 var(--radius-small) var(--radius-small) 0;
+}
+section > h3 { padding-bottom: 0.25rem; border-bottom: 2px solid color-mix(in srgb, var(--on-face, var(--accent)) 35%, transparent); color: var(--on-face, var(--accent)); }

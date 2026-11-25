@@ -1,0 +1,4 @@
+/* A question: a box of one sharp corner, its number a filled disc */
+:scope .card { border-radius: var(--pebble-ask); }
+:scope .no { display: inline-block; padding: 0 0.7em; margin-right: 0.3em; border-radius: var(--radius-pill); background: var(--accent); color: var(--on-fill); }
+:scope .choices > li { background: var(--pebble-tray); --quiet: var(--surface); border: 0; border-radius: min(var(--radius-pill), var(--floe-pill-end)); }

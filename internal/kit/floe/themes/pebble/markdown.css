@@ -1,0 +1,5 @@
+:is(h3, h4) { color: var(--on-face, var(--accent)); }
+:not(pre) > code { background: var(--face, var(--quiet)); }
+blockquote > * { --face: initial; --on-face: initial; }
+blockquote { position: relative; border: 0; padding: 1rem 1.4rem 1rem 4rem; border-radius: var(--radius); background: var(--pebble-tray); --quiet: var(--surface); color: var(--fg); font-size: 1.1rem; }
+blockquote::before { content: "“"; content: "“" / ""; position: absolute; left: 1.1rem; top: 0.9rem; color: var(--accent); font: 800 4.2rem/1 var(--font); height: 2.2rem; overflow: hidden; }
