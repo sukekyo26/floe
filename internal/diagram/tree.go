@@ -23,6 +23,8 @@ const treeGapAcross, treeGapAlong = 24.0, 40.0
 // LIMIT: a subtree's span is not shared with its neighbours' (a wide row of leaves widens every span above it); pack
 // them if wide trees waste room. A depth is as long as its longest node, so a leaf of a long name moves the next depth
 // of a tree growing right away from every node; leave leaves out of a depth's length if such trees come out too wide.
+// Growing right, spans are of row heights and gaps, so a child that looks straight ahead may stand 1 or 2 off, its edge
+// turning by that much; round where siblings stand if it comes to show.
 func expand(parts []part, way graphWay) ([]item, usererr.List, error) {
 	var problems usererr.List
 	graphs := map[int]*graphOut{}

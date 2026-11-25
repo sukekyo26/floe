@@ -282,7 +282,7 @@
         "y": { "$ref": "#/$defs/coord" },
         "direction": { "enum": ["down", "right"], "description": "Which way the tree grows: down (the default) or right" },
         "root": { "$ref": "#/$defs/node" },
-        "left": { "type": "array", "items": { "$ref": "#/$defs/node" }, "description": "The root's children on its left, growing left, as its children grow right; only with direction: right" }
+        "left": { "type": "array", "items": { "$ref": "#/$defs/node" }, "description": "The root's children on its left, which grow left; those of root.children grow right. Only with direction: right" }
       }
     },
     "node": {

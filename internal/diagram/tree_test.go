@@ -200,8 +200,8 @@ func TestTreeMistakes(t *testing.T) {
 			`s.yaml:12:11: the name "a" is given before: give each part, row and node its own name`,
 		},
 		{
-			"  - tree:\n      x: 10\n      y: 10\n      direction: right\n      root: { rows: [R] }\n      left:\n        - rows: [L]\n          children:\n            - rows: [Long node past the top of the canvas, b, c, d, e, f, g, h, i, j, k, l]\n",
-			`s.yaml:13:15: box "Long node past the top of the canvas" sticks out of the 400x200 canvas`,
+			"  - tree:\n      x: 10\n      y: 10\n      direction: right\n      root: { rows: [R] }\n      left:\n        - rows: [L]\n          children:\n            - rows: [Long node past the bottom of the canvas, b, c, d, e, f, g, h, i, j, k, l]\n",
+			`s.yaml:13:15: box "Long node past the bottom of the canvas" sticks out of the 400x200 canvas`,
 		},
 		// A left node and a box written by hand: at the box, written before the tree or after.
 		{
