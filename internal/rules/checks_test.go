@@ -184,6 +184,7 @@ func TestChecksForStops(t *testing.T) {
 	}{
 		{"text", "name: x\n", []string{"name"}, nil, []string{"d.yaml:3:7"}},
 		{"a number", "n: 3\n", []string{"n"}, nil, []string{"d.yaml:3:4"}},
+		{"true or false", "n: true\n", []string{"n"}, nil, []string{"d.yaml:3:4"}},
 		{"a | block", "n: |\n  a\n  b\n", []string{"n"}, nil, []string{"d.yaml:3:4"}},
 		{"keys and values", "records:\n  a: 1\n", []string{"records"}, nil, []string{"d.yaml:3:1"}},
 		{"text on the way", "sections: intro\n", []string{parts}, nil, []string{"d.yaml:3:11"}},
@@ -195,6 +196,7 @@ func TestChecksForStops(t *testing.T) {
 			nil,
 			[]string{"d.yaml:3:21", "d.yaml:3:36"},
 		},
+		{"deep", "a: [{b: [{c: [{d: 1}, {d: 2}]}]}]\n", []string{"a.b.c.d"}, nil, []string{"d.yaml:3:19", "d.yaml:3:27"}},
 		{"the title", "title: Plan\n", []string{"title"}, nil, []string{"d.yaml:3:8"}},
 		{"the lang", "", []string{"lang"}, nil, []string{"d.yaml:2:7"}},
 		{"two checks of one for", "n: 3\n", []string{"n", "n"}, nil, []string{"d.yaml:3:4"}},
@@ -238,8 +240,7 @@ func TestChecksRunPart(t *testing.T) {
 	}
 }
 
-// Within a file the failures are in the order of their places, whatever the order of the checks; the files
-// in the order they first come.
+// The failures are in the order of their places, whatever the order of the checks.
 func TestChecksOrder(t *testing.T) {
 	t.Parallel()
 
