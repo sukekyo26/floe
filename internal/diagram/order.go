@@ -85,7 +85,6 @@ func (gr *group) places() []int {
 func (gr *group) sweep(r int, down bool) {
 	pos := gr.places()
 	keys := make(map[int]float64, len(gr.ranks[r]))
-	var moving []int
 	for _, n := range gr.ranks[r] {
 		var at []int
 		if down {
@@ -99,21 +98,12 @@ func (gr *group) sweep(r int, down bool) {
 		}
 		if len(at) > 0 {
 			keys[n] = median(at)
-			moving = append(moving, n)
 		}
 	}
-	if len(gr.cls) > 0 || len(gr.levels) > 0 { // keeping groups and blocks whole
-		gr.ranks[r] = gr.sortIn(gr.ranks[r], -1, keys)
-		return
-	}
-	slices.SortStableFunc(moving, func(a, b int) int { return cmp.Compare(keys[a], keys[b]) })
-	k := 0
-	for i, n := range gr.ranks[r] {
-		if _, ok := keys[n]; ok {
-			gr.ranks[r][i] = moving[k]
-			k++
-		}
-	}
+	// With no group (cls) and no level edge, each node is a unit of its own and none stands as written: o.common holds
+	// the graph (-1) for lanes, which hold every box, so that cls is not empty, or for a level edge between two groups,
+	// which joins every box (joined). Let a box outside the lanes, or a group of none, and graphs move here unseen.
+	gr.ranks[r] = gr.sortIn(gr.ranks[r], -1, keys)
 }
 
 // median is the middle of xs, or the mean of the middle two.
