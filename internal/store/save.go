@@ -18,35 +18,36 @@ import (
 	"floe/internal/usererr"
 )
 
-// owns tells the entries of the file a publish is of: a link's of the same path, a stored page's of the same file
-// (sameFile). newMeta gives a file to stored pages alone.
-func owns(path, repo, place string) func(*Meta) bool {
-	if path != "" {
-		return func(m *Meta) bool { return m.Path == path }
+// Owner is the file a page is of: of a link, its real path (Path); of a stored page, the key of its data file (Repo and
+// Place, project.Place), Path being "". What both hold is not refused: Path tells a link.
+type Owner struct {
+	Path, Repo, Place string
+}
+
+// link tells an owner of a link.
+func (o Owner) link() bool { return o.Path != "" }
+
+// owns tells the entries of the file o: a link's of the same path, a stored page's of the same place, and of the same
+// repository unless the place is a real path, which names the file alone (a page published before keys were the
+// file's alone holds the project it was published from in PublishedFrom). newMeta gives a file to stored pages alone.
+func (o Owner) owns(m *Meta) bool {
+	if o.link() {
+		return m.Path == o.Path
 	}
-	return func(m *Meta) bool { return sameFile(m, repo, place) }
+	return m.PublishedFile != "" && m.PublishedFile == o.Place && (filepath.IsAbs(o.Place) || m.PublishedFrom == o.Repo)
 }
 
-// sameFile is whether the stored page m is the data file of the key repo and place (project.Place): of the same place,
-// and of the same repository unless the place is a real path, which names the file alone (a page published before
-// keys were the file's alone holds the project it was published from in PublishedFrom).
-func sameFile(m *Meta, repo, place string) bool {
-	return m.PublishedFile != "" && m.PublishedFile == place && (filepath.IsAbs(place) || m.PublishedFrom == repo)
-}
-
-// OwnSlug is the slug of a publish without --slug, of file, named base: of the link to path, or ("" path) of the
-// stored page of the data file of the key repo and place (project.Place). It is base when its entry is the file's
-// (owns), else the first of the file's entries by slug, else base, which a link takes when free, else base-2, base-3 …
-// so that two index.html files never take over each other. base is checked only then: a file whose name makes no slug
-// still finds its page. It only reads, taking no lock: a publish calls it outside the lock, and Save again inside it
-// (pickAgain).
+// OwnSlug is the slug of a publish without --slug, of file, named base: of the link or the stored page of o. It is base
+// when its entry is o's (owns), else the first of the file's entries by slug, else base, which a link takes when free,
+// else base-2, base-3 … so that two index.html files never take over each other. base is checked only then: a file
+// whose name makes no slug still finds its page. It only reads, taking no lock: a publish calls it outside the lock,
+// and Save again inside it (pickAgain).
 // LIMIT: unless base is the file's, every meta.json is read, under the store's lock too when Save picks again. Keep the
 // slugs of the files apart if publishing slows.
 // LIMIT: of two pages of one file (a publish with --slug, or one before publishes found the file's page), base's is
 // written and the other is left as it was, to be floe rm'd.
-func (s *Store) OwnSlug(base, file, path, repo, place string) (string, error) {
-	own, link := owns(path, repo, place), path != ""
-	if m := s.ReadMeta(base); m != nil && own(m) {
+func (s *Store) OwnSlug(base, file string, o Owner) (string, error) {
+	if m := s.ReadMeta(base); m != nil && o.owns(m) {
 		return base, nil
 	}
 	slugs, err := s.slugs()
@@ -54,7 +55,7 @@ func (s *Store) OwnSlug(base, file, path, repo, place string) (string, error) {
 		return "", err
 	}
 	for _, slug := range slugs {
-		if m := s.ReadMeta(slug); m != nil && own(m) {
+		if m := s.ReadMeta(slug); m != nil && o.owns(m) {
 			return slug, nil
 		}
 	}
@@ -62,7 +63,7 @@ func (s *Store) OwnSlug(base, file, path, repo, place string) (string, error) {
 		return "", usererr.NewAt(file, 0, 0, "store_slug_unnamed")
 	}
 	slug := base
-	for n := 2; link && s.ReadMeta(slug) != nil; n++ {
+	for n := 2; o.link() && s.ReadMeta(slug) != nil; n++ {
 		suffix := "-" + strconv.Itoa(n)
 		slug = strings.TrimRight(base[:min(len(base), files.MaxSlugLen-len(suffix))], "-") + suffix
 	}
@@ -110,13 +111,12 @@ type Entry struct {
 	// Warnings are those of the page drawn, which Save does not keep.
 	Warnings []*usererr.Error
 
-	// What NewEntry fills from its Seed and settle builds Meta from, with the link's path, the data's title: and the
-	// theme of the Meta it replaces: the publish's options, the project published from (a new page's, and what a page
-	// with no file is compared by), and the key of a stored page's data file ("" for a link).
+	// What NewEntry fills from its Seed and settle builds Meta from, with the data's title: and the theme of the Meta it
+	// replaces: the publish's options, the project published from (a new page's, and what a page with no file is
+	// compared by), and the file it is of. settle and pickAgain read owner, not Meta.Path.
 	opts    Options
 	project string
-	repo    string
-	place   string
+	owner   Owner
 	// named is what a publish without --slug is named after, for Save to pick its slug again ("" for a name that makes
 	// none).
 	named string
@@ -133,28 +133,26 @@ type Entry struct {
 //   - Named is what a publish without --slug is named after, the base OwnSlug was given; NewEntry drops it when
 //     Options.Slug is given.
 //   - File is the file as the publisher named it, where a name that makes no slug is told.
-//   - Path is the real path of a link (files.Real), "" for a stored page, which is then of Data.
+//   - Owner is the file: of a link, its real path (files.Real); of a stored page, which is then of Data, the key of its
+//     data file (project.Place).
 //   - Folder tells a link to a folder (link.Check), and FolderTitle its own title: where it is in its repository, its
 //     repository's name, else its name. Both are read for a link alone.
 //   - Data is the data file drawn: nil for HTML or a folder, or for a stored page whose owner alone is checked.
 //   - Options are those publish.Accept returned without a mistake.
 //   - Project is the project it is published from: a stored page's place's, a linked file's directory's, a linked
 //     folder's own.
-//   - Repo and Place are the key of a stored page's data file (project.Place), "" for a link.
-//   - Created is the created Themes returned for the same slug, path, project, repo, place and Options.Force, the
-//     default the page was drawn with; "" for a link to HTML or a folder, which takes no theme.
+//   - Created is the created Themes returned for the same slug, owner, project and Options.Force, the default the page
+//     was drawn with; "" for a link to HTML or a folder, which takes no theme.
 type Seed struct {
 	Slug        string
 	Named       string
 	File        string
-	Path        string
+	Owner       Owner
 	Folder      bool
 	FolderTitle string
 	Data        []byte
 	Options     Options
 	Project     string
-	Repo        string
-	Place       string
 	Created     string
 }
 
@@ -167,15 +165,16 @@ func (s *Store) NewEntry(in Seed) (*Entry, error) {
 		named = ""
 	}
 	var src []byte
-	if in.Path == "" {
+	if !in.Owner.link() {
 		src = in.Data
 	}
 	e := &Entry{
-		Slug: in.Slug, Meta: seedMeta(in.Path, cmp.Or(in.Path, in.File), in.Data, in.Options.GivenTheme()), Source: src,
+		Slug: in.Slug, Source: src,
+		Meta: seedMeta(in.Owner.Path, cmp.Or(in.Owner.Path, in.File), in.Data, in.Options.GivenTheme()),
 		Page: nil, Images: nil, Prev: nil, OffTask: "", Warnings: nil, opts: in.Options, project: in.Project,
-		repo: in.Repo, place: in.Place, named: named, file: in.File, created: in.Created,
+		owner: in.Owner, named: named, file: in.File, created: in.Created,
 	}
-	if in.Path != "" {
+	if in.Owner.link() {
 		e.Meta.Folder = in.Folder
 		if in.Folder {
 			e.Meta.DataTitle = in.FolderTitle
@@ -209,7 +208,7 @@ func seedMeta(path, file string, data []byte, theme string) Meta {
 // it. A replaced page or link keeps nothing of the old one.
 func (e *Entry) settle(prev *Meta) error {
 	was := e.Meta
-	replacing, err := checkOwner(e.Slug, prev, was.Path, e.project, e.repo, e.place, e.opts.Force)
+	replacing, err := checkOwner(e.Slug, prev, e.owner, e.project, e.opts.Force)
 	if err != nil {
 		return err
 	}
@@ -218,7 +217,7 @@ func (e *Entry) settle(prev *Meta) error {
 		var none Meta
 		base = &none
 	}
-	e.Meta = newMeta(e.opts, was.Path, e.project, e.repo, e.place, base, was.DataTitle, e.Slug)
+	e.Meta = newMeta(e.opts, e.owner, e.project, base, was.DataTitle, e.Slug)
 	e.OffTask = offTaskOf(&e.Meta, ProjectKey(base.Project)).Name
 	if replacing || prev == nil {
 		e.Meta.CreatedTheme = e.created
@@ -233,10 +232,9 @@ func (e *Entry) settle(prev *Meta) error {
 
 // Themes returns the themes a page drawn from a data file at slug is drawn with: the one picked for it and the
 // default, none picked and the one settings.json chooses for a new page, or one replacing another file's (checkOwner),
-// else the page's own. path is the real path of a link, "" for a stored page; a link to HTML or a folder is drawn with
-// no theme and does not call it. It looks at meta.json without the lock, before the drawing: settle keeps the default
-// returned (Seed.Created), so that the page drawn and its meta.json agree. A mistake of the owner is told by settle,
-// after the drawing, as without it.
+// else the page's own. A link to HTML or a folder is drawn with no theme and does not call it. It looks at meta.json
+// without the lock, before the drawing: settle keeps the default returned (Seed.Created), so that the page drawn and
+// its meta.json agree. A mistake of the owner is told by settle, after the drawing, as without it.
 // LIMIT: a page there when it is read, but replaced by another publish before Save, is kept as replacing with the
 // default it had, the one it was drawn with; refuse it at Save if that comes to matter.
 // LIMIT: a theme picked between the look and Save is kept, the page drawn in the one before it: the next publish or
@@ -244,9 +242,9 @@ func (e *Entry) settle(prev *Meta) error {
 // LIMIT: a slug Save picks again (pickAgain: the file's page renamed, or the slug taken, meanwhile) is drawn in the
 // themes of the one looked at here, its meta.json taking those of the page picked, as the title of a page drawn
 // before (publish.PrepareData). Publish again if that shows.
-func (s *Store) Themes(slug, path, project, repo, place string, force bool) (picked, created string, err error) {
+func (s *Store) Themes(slug string, o Owner, project string, force bool) (picked, created string, err error) {
 	prev := s.ReadMeta(slug)
-	replacing, _ := checkOwner(slug, prev, path, project, repo, place, force) //nolint:errcheck // told by settle, as above
+	replacing, _ := checkOwner(slug, prev, o, project, force) //nolint:errcheck // told by settle, as above
 	if prev != nil && !replacing {
 		return prev.PickedTheme, prev.CreatedTheme, nil
 	}
@@ -266,15 +264,15 @@ func projectOf(opts Options, base *Meta, project string) string {
 // newMeta keeps what was set on the management page (favourite, title, tags), the description, createdAt and the
 // project from base, but not archived: a page published again comes back to the list. --title and --description
 // win. A new page, or one replacing another file's, is in project, and a page emptied of its project comes back to
-// it. A stored page is owned by the file of the key repo and place; an empty place keeps base's.
-func newMeta(opts Options, path, project, repo, place string, base *Meta, own, slug string) Meta {
+// it. A stored page is owned by the file of the key o; an empty place keeps base's.
+func newMeta(opts Options, o Owner, project string, base *Meta, own, slug string) Meta {
 	keepTitle := opts.Title == nil && base.TitleEdited
 	// One reading of the clock, so that a new page's createdAt equals its updatedAt.
 	now := Now()
 	m := Meta{
 		ID:            cmp.Or(base.ID, rand.Text()),
-		Path:          path,
-		Title:         title(opts, path, keepTitle, base, own, slug),
+		Path:          o.Path,
+		Title:         title(opts, o.Path, keepTitle, base, own, slug),
 		TitleEdited:   keepTitle,
 		Description:   base.Description,
 		Theme:         "",
@@ -298,9 +296,9 @@ func newMeta(opts Options, path, project, repo, place string, base *Meta, own, s
 	if opts.Description != nil {
 		m.Description = *opts.Description
 	}
-	if path == "" {
-		m.PublishedFrom = repo
-		m.PublishedFile = cmp.Or(place, base.PublishedFile)
+	if !o.link() {
+		m.PublishedFrom = o.Repo
+		m.PublishedFile = cmp.Or(o.Place, base.PublishedFile)
 	}
 	return m
 }
@@ -314,25 +312,25 @@ func SlugMistake(slug string) *usererr.Error {
 }
 
 // checkOwner refuses to overwrite another's entry without force, and reports whether the publish
-// replaces one. A stored page belongs to its data file, of the key repo and place (sameFile), from whatever project
-// it is published, as a link belongs to its path: the same slug for another file certainly means another page.
+// replaces one. A stored page belongs to its data file, of the key o (owns), from whatever project it is published, as
+// a link belongs to its path: the same slug for another file certainly means another page.
 // LIMIT: a page whose file is in a repository but was published from outside it, before keys were the file's alone,
 // holds its real path: published again, its key is the repository's path, which differs, so it is refused as another
 // file's, or, renamed, its slug is left and a second page written at the file's name. None is in the store of now;
 // publish it with --force if one comes.
-func checkOwner(slug string, prev *Meta, path, project, repo, place string, force bool) (bool, error) {
+func checkOwner(slug string, prev *Meta, o Owner, project string, force bool) (bool, error) {
 	if prev == nil {
 		return false, nil
 	}
-	if prev.IsLink() != (path != "") {
+	if prev.IsLink() != o.link() {
 		key := "store_slug_is_page"
 		if prev.IsLink() {
 			key = "store_slug_is_link"
 		}
 		return false, conflict(usererr.New(key, slug))
 	}
-	if path != "" {
-		if prev.Path == path {
+	if o.link() {
+		if prev.Path == o.Path {
 			return false, nil
 		}
 		if force {
@@ -352,7 +350,7 @@ func checkOwner(slug string, prev *Meta, path, project, repo, place string, forc
 		}
 		return false, nil
 	}
-	if sameFile(prev, repo, place) {
+	if o.owns(prev) {
 		return false, nil
 	}
 	if force {
@@ -474,12 +472,11 @@ func (s *Store) pickAgain(e *Entry) error {
 	if e.opts.Slug != nil {
 		return nil
 	}
-	own := owns(e.Meta.Path, e.repo, e.place)
 	m := s.ReadMeta(e.Slug)
-	if (e.Prev == nil && m == nil) || (e.Prev != nil && own(e.Prev) && m != nil && own(m)) {
+	if (e.Prev == nil && m == nil) || (e.Prev != nil && e.owner.owns(e.Prev) && m != nil && e.owner.owns(m)) {
 		return nil
 	}
-	slug, err := s.OwnSlug(e.named, e.file, e.Meta.Path, e.repo, e.place)
+	slug, err := s.OwnSlug(e.named, e.file, e.owner)
 	if err != nil {
 		return err
 	}
