@@ -19,6 +19,7 @@ adheres to [Semantic Versioning](https://semver.org/).
 
 ### Fixed
 
+- Fix the management page's star being hard to see on its grounds: a star pressed or pointed at, the shelf's favourites and the star of a row of the search or of Add a page are a darker gold, at a contrast of 3:1 or more on every ground.
 - Fix a key held on Enter in Add a page sending again over a refusal, before it was read.
 - Fix the rest of a press or a key that opens or closes a modal of the management page (the second press of a double press, a key held down) going through to the modal opened, to the backdrop or to what is under a modal closed: a double press on a row of another task's page under Add a page could move it unasked.
 - Fix the bar of a page shown whole running off the side of a window of about 640 to 700 pixels, in Japanese, when the page is archived and has more than one version.

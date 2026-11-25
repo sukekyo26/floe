@@ -59,7 +59,7 @@ export function HitRow({ id, page: a, reached, sub, onOpen, link = true }: HitRo
       )}
       <span className="flex items-center gap-1.5 font-mono text-label leading-none whitespace-nowrap text-muted [grid-area:time] [&>svg]:size-3 [&>svg]:text-star">
         {a.favorite ? (
-          <svg viewBox="0 0 24 24" fill="currentColor" aria-hidden="true">
+          <svg data-testid="star-mark" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true">
             <path d="M12 3.5l2.6 5.3 5.9.9-4.3 4.1 1 5.8L12 16.9l-5.2 2.7 1-5.8-4.3-4.1 5.9-.9z" />
           </svg>
         ) : null}
