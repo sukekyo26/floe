@@ -146,16 +146,15 @@ func TestUIColors(t *testing.T) { //nolint:paralleltest // the browser tests sha
 			b.until("the pointer on "+sel, "document.querySelector("+js(sel)+").matches(':hover')")
 			stars(sel+" pointed at", want)
 		}
-		measure := func(where string) {
+		measure := func(where string, want ...string) {
 			t.Helper()
 
 			if low := b.eval(measureContrast); low != "" {
 				t.Errorf("OS %s, %s: text that cannot be read:\n%s", scheme, where, low)
 			}
-			stars(where)
+			stars(where, want...)
 		}
-		measure("the list")
-		stars("the list", "row sel", "fav panel")
+		measure("the list", "row sel", "fav panel")
 		// A menu shut has no items: a row's is opened for them
 		menuItemShown(b, "#list li[data-slug=b]", "edit", "")
 		measure("the list, a row's menu open")
@@ -199,13 +198,12 @@ func TestUIColors(t *testing.T) { //nolint:paralleltest // the browser tests sha
 			b.until("the row reached", "document.querySelectorAll('#find [role=option]')["+strconv.Itoa(i)+"]?.ariaSelected === 'true'")
 		}
 		reached(0)
-		stars("the window that finds", "star-mark sel", "find-actions panel")
 		b.pressKey(kb.ArrowDown)
 		reached(1)
 		stars("the window that finds, the next row reached", "star-mark panel")
 		b.pressKey(kb.ArrowUp)
 		reached(0)
-		measure("the window that finds")
+		measure("the window that finds", "star-mark sel", "find-actions panel")
 		b.eval("document.querySelector('#find-actions summary').click()")
 		measure("the window that finds, its menu open")
 		b.eval("document.querySelector('#find-actions [data-testid=more] > summary').click()")
@@ -228,8 +226,7 @@ func TestUIColors(t *testing.T) { //nolint:paralleltest // the browser tests sha
 			window.fetch = (url, init) => (init?.method === 'POST' && String(url) === '/api/pages/a/read' ? Promise.resolve(new Response('{"cleared":true}')) : f(url, init)); })()`)
 		b.eval("document.querySelector('#list li[data-slug=a] [data-testid=title]').click()")
 		b.until("the toast to mark a page unread", "document.querySelector('[data-testid=toast][data-page] button')")
-		stars("the page beside the list", "row new-soft", "read-actions bg", "fav bg")
-		measure("the page beside the list, the toast to mark it unread")
+		measure("the page beside the list, the toast to mark it unread", "row new-soft", "read-actions bg", "fav bg")
 		// The page's toast goes as another page is shown.
 		b.eval("document.querySelector('#list li[data-slug=m] [data-testid=title]').click()")
 		measure("a link gone beside the list")
@@ -258,8 +255,7 @@ func TestUIColors(t *testing.T) { //nolint:paralleltest // the browser tests sha
 		b.navigate("/a/a/")
 		b.until("the title", "document.getElementById('frame-title').textContent")
 		b.eval("document.querySelector('#frame-actions [data-testid=more] > summary').click()")
-		stars("the frame's bar", "frame-actions bg")
-		measure("the frame's bar")
+		measure("the frame's bar", "frame-actions bg")
 		// What a frame prints: the note naming the page alone, with the error under a failed write, and a missing page's.
 		media("print", scheme)
 		failStar(b, "#frame-actions [data-testid=star]")
