@@ -58,12 +58,13 @@ func TestRepositoryDocsAgree(t *testing.T) {
 	}
 }
 
-// The CI examples install the floe of this release: releasing it bumps them, and one left behind fails here.
+// The CI examples of the docs for people install the floe of this release: releasing it bumps them, and one left
+// behind fails here. The doc for agents is built into floe, so it holds no URL of its source (check-no-repo-name).
 func TestRepositoryDocsVersion(t *testing.T) {
 	t.Parallel()
 
 	installs := regexp.MustCompile(`floe/v([0-9.]+)/install\.sh \| FLOE_VERSION=([0-9.]+)`)
-	for path, want := range map[string]int{repositoryDocPath: 2, repositoryJaDocPath: 2, repositoryAgentDocPath: 1} {
+	for path, want := range map[string]int{repositoryDocPath: 2, repositoryJaDocPath: 2, repositoryAgentDocPath: 0} {
 		found := installs.FindAllStringSubmatch(readGuide(t, path), -1)
 		if len(found) != want {
 			t.Errorf("%s installs floe %d times, want %d: the test reads them by this form", path, len(found), want)

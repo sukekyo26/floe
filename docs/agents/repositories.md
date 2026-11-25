@@ -76,11 +76,9 @@ env FLOE_TEMPLATES_DIR="$PWD/.floe/templates" FLOE_PARTS_DIR="$PWD/.floe/parts" 
 
    For documents in folders of `docs/specs`, write `find docs/specs -name '*.yaml' -exec floe render {} +` (with `--check` after `render`) for `docs/specs/*.yaml`: many files are passed in several commands. Do not write `\;` for `+` (it loses a failure).
 3. Fill in the template as `floe template guide` says until the check tells no mistake, write the documents, and draw.
-4. In CI, on pull requests and on the branch they go into (two that pass apart may fail once both are merged), install the floe the pages were drawn with, then run:
+4. In CI, on pull requests and on the branch they go into (two that pass apart may fail once both are merged), install the floe the pages were drawn with, by the install command of floe's README with `FLOE_VERSION=<version>` set for its `sh`. Take that command from the repository's CI or README when it is there; when it is not, ask the user for it, and do not make up its URL. Check that `floe --version` says the version, then run:
 
 ```sh
-curl -fsSL https://raw.githubusercontent.com/sukekyo26/floe/v0.3.1/install.sh | FLOE_VERSION=0.3.1 sh
-export PATH="$HOME/.local/bin:$PATH"
 set -e
 export FLOE_TEMPLATES_DIR="$PWD/.floe/templates" FLOE_PARTS_DIR="$PWD/.floe/parts" FLOE_THEMES_DIR="$PWD/.floe/themes"
 floe template check
