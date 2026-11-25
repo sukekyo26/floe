@@ -466,6 +466,44 @@ func TestUIDialogClose(t *testing.T) { //nolint:paralleltest // the browser test
 		until("add-page-dialog", false)
 		say("add page, " + c.name)
 	}
+	// The modal over it that adds a category: closed, it alone, the focus on the pages once one is added, else on its button
+	for _, c := range []struct {
+		name  string
+		close func()
+	}{
+		{"cancel", cancel("add-category-dialog")},
+		{"backdrop", backdrop("add-category-dialog")},
+		{"escape", escape},
+		{"enter", func() {
+			t.Helper()
+			b.fill("#add-category-new", "新")
+			b.pressKey(kb.Enter)
+		}},
+	} {
+		addTo("案")
+		b.eval("document.getElementById('add-category-plus').focus()")
+		b.pressKey(kb.Enter)
+		until("add-category-dialog", true)
+		c.close()
+		until("add-category-dialog", false)
+		out = append(out, "add category, "+c.name+", add page open: "+b.eval("document.getElementById('add-page-dialog').open"))
+		say("add category, " + c.name)
+		cancel("add-page-dialog")()
+		until("add-page-dialog", false)
+		b.eval("closings.length = 0")
+	}
+	// Closed from outside, the modal under it: both, and opened again without it
+	addTo("案")
+	b.eval("document.getElementById('add-category-plus').focus()")
+	b.pressKey(kb.Enter)
+	until("add-category-dialog", true)
+	b.eval("document.getElementById('add-page-dialog').close()")
+	until("add-category-dialog", false)
+	addTo("案")
+	out = append(out, "add category, closed from outside: "+b.eval("document.getElementById('add-category-dialog').open"))
+	cancel("add-page-dialog")()
+	until("add-page-dialog", false)
+	b.eval("closings.length = 0")
 	// The task page's own modals, which the browser gives the focus back from
 	b.eval("document.getElementById('task-edit').focus(); document.getElementById('task-edit').click()")
 	until("edit-task-dialog", true)
@@ -685,6 +723,15 @@ var dialogCloseWant = []string{
 	"add page, cancel: add-page-dialog > task-add-page",
 	"add page, backdrop: add-page-dialog > task-add-page",
 	"add page, escape: add-page-dialog > task-add-page",
+	"add category, cancel, add page open: true",
+	"add category, cancel: add-category-dialog > add-page-dialog add-category-plus",
+	"add category, backdrop, add page open: true",
+	"add category, backdrop: add-category-dialog > add-page-dialog add-category-plus",
+	"add category, escape, add page open: true",
+	"add category, escape: add-category-dialog > add-page-dialog add-category-plus",
+	"add category, enter, add page open: true",
+	"add category, enter: add-category-dialog > add-page-dialog add-page-q",
+	"add category, closed from outside: false",
 	"edit task, escape: edit-task-dialog > task-edit",
 	"edit add, escape, edit open: true",
 	"edit add, escape: edit-add-dialog > edit-task-dialog edit-url-plus",

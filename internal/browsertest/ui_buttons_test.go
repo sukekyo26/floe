@@ -205,6 +205,12 @@ func TestUIButtons(t *testing.T) { //nolint:paralleltest // the browser tests sh
 	modal("edit-task-dialog", press("#task-edit"))
 	modal("add-page-dialog", press("#task-add-page"))
 	// Each modal the screen holds is measured there too
+	modal("add-category-dialog", func() {
+		press("#task-add-page")()
+		b.until("the add page modal", "document.getElementById('add-page-dialog').open")
+		press("#add-category-plus")()
+	})
+	closeModal("add-page-dialog")
 	modal("edit-add-dialog", func() {
 		press("#task-edit")()
 		b.until("the edit", "document.getElementById('edit-task-dialog').open")

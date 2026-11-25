@@ -6,7 +6,6 @@ import (
 	"testing"
 
 	"github.com/chromedp/cdproto/input"
-	"github.com/chromedp/chromedp"
 	"github.com/chromedp/chromedp/kb"
 
 	"floe/internal/store"
@@ -317,19 +316,11 @@ func TestUIDialogTwicePage(t *testing.T) { //nolint:paralleltest // the browser 
 		focusIn(b, "read-frame")
 		at := "document.getElementById('read-frame').dataset.slug"
 		// Each down of j, the first in the page and the repeats on the body, as the screen draws the one before
-		down := input.DispatchKeyEventParams{Type: input.DispatchKeyEventTypeRawKeyDown, Key: "j", Code: "KeyJ", WindowsVirtualKeyCode: 74, NativeVirtualKeyCode: 74}
-		repeat := true
-		for _, next := range []string{"d4", "d3", "d2"} {
-			if _, err := chromedp.Call(b.ctx, input.DispatchKeyEvent, down); err != nil {
-				t.Fatal(err)
-			}
+		for i, next := range []string{"d4", "d3", "d2"} {
+			b.keyDown("j", i > 0)
 			b.until(how+", on to "+next, at+" === "+js(next))
-			down.AutoRepeat = &repeat
 		}
-		up := input.DispatchKeyEventParams{Type: input.DispatchKeyEventTypeKeyUp, Key: "j", Code: "KeyJ", WindowsVirtualKeyCode: 74, NativeVirtualKeyCode: 74}
-		if _, err := chromedp.Call(b.ctx, input.DispatchKeyEvent, up); err != nil {
-			t.Fatal(err)
-		}
+		b.keyUp("j")
 		out = append(out, how+": "+b.eval(at))
 	}
 	check(t, "dialog twice, page", out, "never opened: d2|by its button: d2|by Escape: d2")

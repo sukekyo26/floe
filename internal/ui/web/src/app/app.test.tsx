@@ -14,6 +14,7 @@ const draw = (search: string, screen: 'list' | 'tasks' = 'tasks') => {
 };
 const dialogs = (html: string) => [...html.matchAll(/<dialog[^>]* id="([^"]+)"/g)].map((m) => m[1]).toSorted();
 const TASK_PAGE = [
+  'add-category-dialog',
   'add-page-dialog',
   'edit-add-dialog',
   'edit-dialog',
