@@ -602,7 +602,7 @@ body { line-height: 1.8; padding-block: 0 4rem; }
 .body { display: grid; grid-template-columns: minmax(0, 1fr) 15rem; gap: 2.5rem; padding-block: 2rem; }
 main { display: grid; gap: 2.2rem; align-content: start; }
 main section { display: grid; gap: var(--floe-room); }
-main > section > h2 { font-size: 1.25rem; padding-left: 0.7rem; border-left: 4px solid var(--accent); }
+main > section > h2 { font-size: 1.25rem; padding-left: var(--floe-heading-start, 0.7rem); border-left: var(--floe-heading-edge, 4px solid var(--accent)); }
 /* The question is set as the text around it is, not as the headings are */
 .decision > h3 { margin-top: 0.4rem; font-size: 1.05rem; line-height: inherit; text-wrap: wrap; }
 .non-goals { color: var(--muted); }

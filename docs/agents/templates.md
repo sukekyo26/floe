@@ -129,7 +129,7 @@ These lines of `report`'s `page.css` lay out its column (`<main class="floe-colu
 
 ```css
 main { display: grid; gap: 2.5rem; }
-section > h2 { border-top: var(--rule); padding-top: 1.3rem; }
+section > h2 { border-top: var(--rule); padding-top: var(--floe-heading-top, 1.3rem); }
 .lead { color: var(--muted); font-size: 1.05rem; }
 ```
 
