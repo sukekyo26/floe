@@ -190,7 +190,9 @@ func TestChecksForStops(t *testing.T) {
 		{"two", "sections:\n  - parts: hi\n  - parts: yo\n", []string{parts}, nil, []string{"d.yaml:4:12", "d.yaml:5:12"}},
 		{"beside a list", "sections:\n  - parts: [1]\n  - parts: yo\n", []string{parts}, nil, []string{"d.yaml:5:12"}},
 		{
-			"one in each list of a list", "sections: [[{parts: hi}], [{parts: yo}]]\n", []string{parts}, nil,
+			"one in each list of a list", "sections: [[{parts: hi}], [{parts: yo}]]\n",
+			[]string{parts},
+			nil,
 			[]string{"d.yaml:3:21", "d.yaml:3:36"},
 		},
 		{"the title", "title: Plan\n", []string{"title"}, nil, []string{"d.yaml:3:8"}},
