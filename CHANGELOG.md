@@ -8,6 +8,7 @@ adheres to [Semantic Versioning](https://semver.org/).
 
 ### Added
 
+- Add variables a theme of one's own sets on `:scope` in `base.css` for the headings of sections in the templates `report` (`--floe-heading-top`, the padding above) and `design` (`--floe-heading-start` and `--floe-heading-edge`, the padding and the line at the left), which `page.css` alone set. A theme that sets none is drawn as before.
 - Add a way to make a new category in the dialog that adds a page on a task's page: "Add a category" beside the categories asks its name, and it is created as the page is put (not at all when the dialog is closed without one). A name already there is refused, in the task's Edit too, with "The category X is already there".
 - Add trees that grow to the right, `direction: right` in a diagram's `tree`, and to both sides of the root with `left`, as a mind map does, where floe places every node; and an example of it, `floe diagram example mindmap`. A tree that grows down is written and drawn as before.
 

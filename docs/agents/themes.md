@@ -79,6 +79,16 @@ floe sets these on `:root` in its lowest layer, under every palette. Set them on
 | `--floe-text-small` | The small text of parts: a pill, a chip, a ring's number, a key, a table's heading, a term, a date, a count | `0.8rem` |
 | `--floe-text-aside` | The slightly larger small text: a card's or a step's words, a note's title, a tab's name, a value's unit | `0.9rem` |
 
+### Section headings
+
+The templates `report` and `design` read these on a section's heading, for the sides their `page.css` sets, which win over a theme's `base.css`; floe sets none. Set them on `:scope` in `base.css`, and the other sides on `section > h2` there.
+
+| Variable | Read in | What it changes | Without it |
+|---|---|---|---|
+| `--floe-heading-top` | `report` | The padding above the heading | `1.3rem` |
+| `--floe-heading-start` | `design` | The padding between the heading's left line and its words | `0.7rem` |
+| `--floe-heading-edge` | `design` | The heading's left line, a border | `4px solid var(--accent)` |
+
 ### Part variables
 
 Set a part's variable on the root `:scope` of the theme's file of that part, or of a look it takes (`floe part show <part> part.css` prints where the part sets it): a look's file reaches every part that takes the look (`marked.css` reaches `checklist` and `decision`), a part's file that part alone. Do not set it in a file that does not reach the part (`palette.css`, `base.css`, `markdown.css`, the file of another part): the part's own value on its root wins, and the theme's is lost without a word. A variable a part sets on elements inside it (chart's `--c` on each series, code's `--floe-code-gutter`) is set on that element in the part's file (`:scope .s1 { --c: … }` in `chart.css`); one a part sets from the data in a style attribute (chart's `--left`, `--right`, `--right-narrow`, code's `--digits`) cannot be set by a theme. A variable a part only reads may be set wherever it is inherited from. `floe theme check` does not check where a variable is set.

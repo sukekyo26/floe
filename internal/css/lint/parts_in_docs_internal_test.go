@@ -53,8 +53,8 @@ var byPart = []string{"--floe-mark", "--floe-mark-gap"}
 // a part comes to have a theme set a value it puts on its root in an at-rule.
 // LIMIT: a value on a root narrowed otherwise than by classes (:scope:has(…), :scope[open]) is a state, no default, and is
 // not held; read it if a table comes to write a value of a state.
-// LIMIT: what themes and templates read with a default is not read (none today); read it if one comes to read a part's
-// variable so.
+// LIMIT: what themes and templates read with a default is not read (report's and design's --floe-heading-*, in themes.md's
+// Section headings, alone); read it if one comes to read a part's variable so.
 // LIMIT: a row may name several variables, its Default giving each its own in order: a row of two variables of one
 // description passes, `| --floe-pad-block, --floe-pad-inline | … | A box's padding above and below its text | 1.1rem,
 // 1.3rem |`, where parts.md writes a variable to a row. Refuse it in parts.md again if such a row comes.
