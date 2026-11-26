@@ -4,7 +4,7 @@ A template is the page a data file is drawn into: a directory that says what the
 
 ## Where templates are
 
-- A template is a directory in `FLOE_TEMPLATES_DIR` (default `$XDG_CONFIG_HOME/floe/templates`, else `~/.config/floe/templates`) (`~` is your home, `%USERPROFILE%` on Windows; floe does not expand `~`, so set the variable to a whole path), named after the template. `floe template new memo` makes the smallest one, `memo`: a `page.html`, a `schema.json` and an `example.yaml` to fill in. A file directly in `FLOE_TEMPLATES_DIR` is ignored without a message: put a template's files in its directory.
+- A template is a directory in `FLOE_TEMPLATES_DIR` (default `$XDG_CONFIG_HOME/floe/templates`, else `~/.config/floe/templates`), named after the template. `~` is your home (`%USERPROFILE%` on Windows), and floe does not expand it: set the variable to a whole path. `floe template new memo` makes the smallest one, `memo`: a `page.html`, a `schema.json` and an `example.yaml` to fill in. A file directly in `FLOE_TEMPLATES_DIR` is ignored without a message: put a template's files in its directory.
 - The name MUST be lower case letters, digits, `-` and `_`, starting with a letter or a digit.
 - Do not give a template the name of one of floe's, unless it is to replace it (a template of yours hides floe's of that name for every page that names it, and nothing says so).
 - A directory in `FLOE_TEMPLATES_DIR`, and anything in a template's directory, MUST NOT be a link to a directory (floe reads a link to a file). Every file there MUST be a regular file: floe refuses a FIFO or a device without reading it.
@@ -201,7 +201,15 @@ An element of the template borrows a look with `data-floe-look`, drawn alike in 
 - `marked`: `page.css` writes the letter and its colour, for the list or for an item (`.done > li::before { content: "✓"; content: "✓" / ""; color: var(--good) }`, or `.no::before { content: "×"; content: "×" / ""; … }` on `<li class="no">`), the form after the `/` telling a screen reader to read no word.
 - Write each item's text of a `marked` list in one element (`<li><span>…</span></li>`).
 
-A status the template words itself (`{{word …}}`: a state, a severity, a kind) and a caution are drawn as parts, not borrowed as looks: write a part's box in `page.html`, a pill as `data-floe-part="cell"` and a caution as `data-floe-part="note"`, and their colour by `data-floe-tone` (`<p class="status" data-floe-part="cell" data-floe-tone="good">`), as adr's, postmortem's, handoff's and runbook's are. They then take the colours of a band, a face or a tone around them as parts do, and are drawn as the theme draws its pills and notes; `page.css` places the box and does not reach in it. Write a note's text in an element (`<div data-floe-part="note"><p>{{markdownLine .}}</p></div>`, `markdownLine` for text that is Markdown), its title as `<strong class="title">`. A note written so has none of the hidden words the part writes (`floe part show note part.html`): write one as `<span class="floe-hidden">…</span>` where the tone alone would not tell a screen reader what the note is. Do not draw text a writer writes freely (a line of Markdown, a name) as a pill: it may run long, and a link in it may not read on a theme's filled pill. A pill keeps to one line, in a table's cell too; set `--floe-pill-wrap: normal` on an element around pills to let long ones wrap.
+### Statuses and cautions
+
+A status the template words itself (`{{word …}}`: a state, a severity, a kind) and a caution are drawn as parts, not borrowed as looks: write a part's box in `page.html`, and its colour by `data-floe-tone`, as adr's, postmortem's, handoff's and runbook's are. They then take the colours of a band, a face or a tone around them as parts do, and are drawn as the theme draws its pills and notes; `page.css` places the box and does not reach in it.
+
+- A status: a pill, `data-floe-part="cell"` (`<p class="status" data-floe-part="cell" data-floe-tone="good">`).
+- A caution: `data-floe-part="note"`. Write its text in an element (`<div data-floe-part="note"><p>{{markdownLine .}}</p></div>`, `markdownLine` for text that is Markdown), its title as `<strong class="title">`.
+- Words off the screen: a note written so has none of the hidden words the part writes (`floe part show note part.html`). Write one as `<span class="floe-hidden">…</span>` where the tone alone would not tell a screen reader what the note is.
+- Do not draw text a writer writes freely (a line of Markdown, a name) as a pill: it may run long, and a link in it may not read on a theme's filled pill.
+- A pill keeps to one line, in a table's cell too; set `--floe-pill-wrap: normal` on an element around pills to let long ones wrap.
 
 ## The palette
 
@@ -218,18 +226,24 @@ The page's colours and faces are CSS variables that the theme's `palette.css` se
 | `--good`, `--warn`, `--bad`, `--good-soft`, `--warn-soft`, `--bad-soft` | Good, warning and bad, and their pale backgrounds: the colours of those tones | `#1d7542`, `#8a5a10`, `#b3261e`, `#dcefe3`, `#f6e8d2`, `#fbe5e2` |
 | `--on-fill` | Text on a face filled with `--accent` or a tone's colour, such as a pill | `var(--surface)` |
 | `--accent-fill`, `--good-fill`, `--warn-fill`, `--bad-fill`, `--muted-fill` | A theme's own fill for a tone (`--good-fill`), which `--tone-fill` takes; left out, the tone's `-soft` | not set |
-| `--tone`, `--tone-soft`, `--tone-fill` | The colours of the tone of the element they are read in (`data-floe-tone`, `floe part guide` (*Tones*)), from those above; accent's outside a tone. A template marks a tone so too | built from the palette |
+| `--tone`, `--tone-soft`, `--tone-fill` | The colours of the tone of the element they are read in, from those above; accent's outside a tone (below the table) | built from the palette |
 | `--shadow` | A colour for shadows; a box casts one only when its theme sets `--floe-shadow-color` on it (`floe theme guide`) | `rgb(34 33 31 / 0.12)` |
 | `--floe-shadow-x`, `--floe-shadow-y`, `--floe-shadow-blur`, `--floe-shadow-spread` | The theme's one shadow, in px or rem (none by default) | not set |
-| `--radius`, `--radius-small`, `--radius-pill` | How round corners are: a box's (a panel, a note, code, a quote), a small box's within one (a key, a bar, an image, code in a line), and a pill's (a cell, a tab's title; a cell that wraps rounds no more than floe's `--floe-pill-end`). `--radius-small` and `--radius-pill` MUST each be one item, a length or one function (`var()`, `calc()` and `min()` pass; two lengths or a `/` void a bar's `rx` and a pill's `min()`); give `--radius` one length too (`floe theme guide`, *Corners*) | `20px`, `6px`, `999px` |
-| `--font`, `--display`, `--mono` | The text's typeface, the headings', and the fixed-width one. Name a face before `monospace` in `--mono` (a browser sizes text in `monospace` alone from 13px) | `"Hiragino Sans", "Noto Sans JP", "Noto Sans CJK JP", "Yu Gothic UI", Meiryo, system-ui, -apple-system, "Segoe UI", sans-serif`, `var(--font)`, `ui-monospace, "SFMono-Regular", Menlo, Consolas, "DejaVu Sans Mono", "Liberation Mono", monospace, "Hiragino Sans", "Noto Sans JP", "Noto Sans CJK JP"` |
+| `--radius`, `--radius-small`, `--radius-pill` | How round corners are: a box's, a small box's within one, and a pill's (below the table) | `20px`, `6px`, `999px` |
+| `--font`, `--display`, `--mono` | The text's typeface, the headings', and the fixed-width one (below the table) | `"Hiragino Sans", "Noto Sans JP", "Noto Sans CJK JP", "Yu Gothic UI", Meiryo, system-ui, -apple-system, "Segoe UI", sans-serif`, `var(--font)`, `ui-monospace, "SFMono-Regular", Menlo, Consolas, "DejaVu Sans Mono", "Liberation Mono", monospace, "Hiragino Sans", "Noto Sans JP", "Noto Sans CJK JP"` |
 | `--code-bg`, `--code-fg`, `--code-prompt` | The background of code and a terminal, always dark; their text; a terminal's prompt | `#1b2120`, `#e2e9e7`, `#b5e05a` |
 | `--code-add`, `--code-del` | A diff's lines added and removed | `#6fcf97`, `#f2b8b5` |
 | `--chart-1`, `--chart-2`, `--chart-3`, `--chart-4` | The colours of a chart's series, in order, at 3:1 at the least on a part's background | `#008fa3`, `#c2660a`, `#6157d9`, `#c8366f` |
 | `--page-bg` | The whole page's background, a pattern such as squares too (`--bg` by default) | `var(--bg)` |
 | `--rule` | The `border` of a rule across the page, such as between sections | `1px solid var(--line)` |
-| `--text-width` | The width of a page of one column, which a template sets its column to by `--column-width: var(--text-width)` (as `adr` and `runbook` do), and of a note. Text itself takes the width of the column or the box it is in | `56rem` |
+| `--text-width` | The width of a page of one column, and of a note (below the table) | `56rem` |
 | `--page-width`, `--page-pad` | The column a page is centred in (`.floe-column`): its width, unless the template sets `--column-width`, and the pad each side of it, inside the column's box | `96rem`, `16px` |
+
+- `--tone`, `--tone-soft` and `--tone-fill` take the tone from `data-floe-tone` (`floe part guide`, *Tones*). A template marks a tone so too.
+- `--radius` rounds a box (a panel, a note, code, a quote), `--radius-small` a small box within one (a key, a bar, an image, code in a line), and `--radius-pill` a pill (a cell, a tab's title; a cell that wraps rounds no more than floe's `--floe-pill-end`).
+- `--radius-small` and `--radius-pill` MUST each be one item, a length or one function (`var()`, `calc()` and `min()` pass; two lengths or a `/` void a bar's `rx` and a pill's `min()`). Give `--radius` one length too (`floe theme guide`, *Corners*).
+- Name a face before `monospace` in `--mono` (a browser sizes text in `monospace` alone from 13px).
+- A template sets its column to `--text-width` by `--column-width: var(--text-width)` (as `adr` and `runbook` do). Text itself takes the width of the column or the box it is in.
 
 floe's base draws the page's background, text colour and font on its root with them (`:root { background: var(--page-bg); color: var(--fg); font-family: var(--font); }`), which `page.css` may set otherwise on `:scope`. A theme of your own may set them too (`floe theme guide`). In print, every background is kept as the screen draws it.
 
@@ -296,21 +310,39 @@ Relations between items that a schema cannot say, each checked on every item of 
 - A list on the way of `for` is gone through item by item: `sections.parts` checks the parts of every section, and a failure is reported at its item.
 - Without `for`, a check runs once, on the whole data file as `item` (`doc` too), and its failure has no line or column unless its `field` names a key the data writes.
 - `expr` is an expr expression that must hold. It sees the list's item as `item` and the data file's items as `doc`. Each item it fails for is reported at its `field`, with `message` (at the item itself when `field` is left out or the item lacks it).
-- expr counts what one run of an expression makes against a budget of 1,000,000: an item of a list counts 1, and a text it makes the bytes it adds to its longest input (`+` the shorter text, `join` all but its longest part, `toJSON` of keys and values or of a list its whole text, longer than the data by its indentation and escapes). Past it, expr says `memory budget exceeded`: compare items by a key, not by `toJSON` of each.
-- Drawing one page, its expressions and `page.html` together, MUST stay within 512 MiB of memory, and on the server within 30 seconds, and the page drawn within 80 MiB of HTML: past any, floe refuses it and says so. Do not repeat a long text for each item of a list, in an expression (`map(rows, intro + ": " + .name)`) or in `page.html`.
+- expr counts what one run of an expression makes against a budget of 1,000,000 (an item of a list counts 1, a text the bytes it adds to its longest input). Past it, expr says `memory budget exceeded`: compare items by a key, not by `toJSON` of each.
+- Drawing a page MUST stay within the limits of `floe guide` (*Limits*): 512 MiB of memory for its expressions and `page.html` together, 30 seconds on the server, 80 MiB of HTML. Do not repeat a long text for each item of a list, in an expression (`map(rows, intro + ": " + .name)`) or in `page.html`.
+- A check runs only on data that passed `schema.json`: to refuse a missing key with a message of your own, leave it out of `required` and write the check here.
+- An expression with a ` #` in it (expr's `#` in `filter(xs, # > 1)`) MUST be in quotes: floe refuses a `#` that begins a YAML comment where it may have cut a value short.
+
+### The path of `for`
+
 - The path of `for` MUST NOT go through a key the schema forbids. `field` is not checked against the schema. The schema forbids:
   - a key that an object of `"additionalProperties": false`, of a `type` that takes keys and not a list (`"object"`, `["object", "null"]`), declares neither in `properties` nor in `patternProperties`;
   - every key of a value whose `type` takes neither keys nor a list (`"string"`, `["number", "null"]`). An item of a list on the way is such a value too: where `changes` is a list of `"type": "string"`, `for: groups.changes.text` is refused.
 - To check each text of such a list, end `for` at the list: with `for: groups.changes`, `item` is the text (`expr: 'item != ""'`).
 - To have the path checked, write `type` on every schema on it (the root's `"type": "object"`, a list's `"type": "array"` and its items' `"type": "object"`), and close each object with `"additionalProperties": false` beside the `properties` that declare its keys, in one schema. floe follows a `$ref` (`#/$defs/…`, a shared schema) and checks the path in the schema it names as well; what `allOf` and the like hold is not read.
-- No other path is refused by the schema. From any of these on, the rest of the path passes unchecked: a value (the root too) whose schema, read with the `$ref`s floe follows from it, writes no `type`, or `type`s that together let it be keys and a list; a value of one of floe's `format`s with no `type` beside the `format` (a `$ref` beside it is not followed); a list of no `items`, or of `prefixItems`; an object without `"additionalProperties": false`, at a key it does not declare; a key that `additionalProperties` or `patternProperties` takes. A `type` beside a `$ref` to a part is not read: the path goes on in the part's schema. Nor is it checked that the value `for` ends at may be a list (`for: sections` where `sections` is of `"type": "string"`).
-- `floe template check` finds a `for` the schema forbids whatever the data, and it stops every page, of another template too, as any mistake in a template does: `checks.yaml:1:8: for sections.parts: no value the schema allows there holds parts; write a path of keys those values may hold`.
-- The data decides the rest, as a check runs on it. It refuses data where `for` ends at a value that is not a list (text, a number, `true`, `false`, or keys and values), and data where a value on the way is text, a number, `true` or `false` (`sections: intro`, for `sections.parts`). There is one mistake for each such value and `for` (one for two checks of the same `for`), at the value's line and column in the data file (where the value is keys and values, at the key that holds it), naming the `for` and its `checks.yaml`: `notes.yaml:4:11: for: sections.parts in checks.yaml must lead to a list, but stops at this value: mend the value, or the for`. A check with such a mistake does not run on the other items of that data (a part's check: of that part's value). The mistake stops the page of that data alone. In the template's own `example.yaml` it fails `floe template check` and stops no page.
+
+No other path is refused by the schema. From any of these on, the rest of the path passes unchecked:
+
+- a value (the root too) whose schema, read with the `$ref`s floe follows from it, writes no `type`, or `type`s that together let it be keys and a list;
+- a value of one of floe's `format`s with no `type` beside the `format` (a `$ref` beside it is not followed);
+- a list of no `items`, or of `prefixItems`;
+- an object without `"additionalProperties": false`, at a key it does not declare;
+- a key that `additionalProperties` or `patternProperties` takes.
+
+A `type` beside a `$ref` to a part is not read: the path goes on in the part's schema. Nor is it checked that the value `for` ends at may be a list (`for: sections` where `sections` is of `"type": "string"`).
+
+`floe template check` finds a `for` the schema forbids whatever the data, and it stops every page, of another template too, as any mistake in a template does: `checks.yaml:1:8: for sections.parts: no value the schema allows there holds parts; write a path of keys those values may hold`.
+
+The data decides the rest, as a check runs on it:
+
+- It refuses data where `for` ends at a value that is not a list (text, a number, `true`, `false`, or keys and values), and data where a value on the way is text, a number, `true` or `false` (`sections: intro`, for `sections.parts`).
+- There is one mistake for each such value and `for` (one for two checks of the same `for`), at the value's line and column in the data file (where the value is keys and values, at the key that holds it), naming the `for` and its `checks.yaml`: `notes.yaml:4:11: for: sections.parts in checks.yaml must lead to a list, but stops at this value: mend the value, or the for`.
+- A check with such a mistake does not run on the other items of that data (a part's check: of that part's value). The mistake stops the page of that data alone. In the template's own `example.yaml` it fails `floe template check` and stops no page.
 - A value left out or `null`, at the end or on the way, counts as a list of no items.
 - An item of a list on the way that is text, a number, `true`, `false` or `null` is passed over, not refused (`sections: [intro]`, for `sections.parts`).
 - Mend what is wrong: the data, when the value is to be a list; the `for`, when it names a value that is not one; the schema, when it is to refuse such data itself. With `"type": "array"` the schema refuses it, `null` too, before the check runs, at the data's line and column (`notes.yaml:4:11: got string, want array`). With `["string", "array"]` or no `type`, and with `"type": "string"` where `for` ends, text passes the schema, and the check refuses it.
-- A check runs only on data that passed `schema.json`: to refuse a missing key with a message of your own, leave it out of `required` and write the check here.
-- An expression with a ` #` in it (expr's `#` in `filter(xs, # > 1)`) MUST be in quotes: floe refuses a `#` that begins a YAML comment where it may have cut a value short.
 
 ## computed.yaml
 
@@ -342,18 +374,7 @@ An image is one of the data (an item of `"format": "image"`) or one of `assets/`
 
 ## What `floe template check` refuses
 
-`floe template check` reads every template of yours and the parts, looks, shared schemas and themes of yours, as `floe part check` does, and draws each template's `example.yaml` as `floe check` draws a data file. It prints every mistake and exits with code 1 when there is one. For a template it refuses, by kind:
-
-- a name, a link, a file or a directory that breaks the rules of *Where templates are* and *Files*, a missing `page.html`, `schema.json` or `example.yaml`, and an `example.yaml` that names another template;
-- a `page.html` that does not parse (a syntax mistake, an unknown function), and what html/template's escaping refuses (`ZgotmplZ` in the page drawn, where it did not take a value);
-- a `schema.json` that breaks a rule of *schema.json*, and a mistake the JSON Schema library reports;
-- a `checks.yaml` that is not a list of checks of `expr` and `message` (and `for` and `field`), a check with an empty or missing part, and a `for` through a key the schema forbids (*checks.yaml*); a `computed.yaml` that breaks a rule of *computed.yaml*, `$env` in a `computed.yaml` expression, and an `expr` that does not parse (the expr library's words);
-- a `words.yaml` that is not language tags each with names and their text, a word that is not text, two language tags that are one, and a word `page.html` names that the example's language lacks;
-- an image of `assets/` that is not one floe takes, and an `asset` that names none;
-- CSS floe cannot read in `page.css` (*page.css*);
-- a `--radius-small` or `--radius-pill` of more than one item in `page.css`, or in a theme or part of yours;
-- a file floe cannot read as written, in any file: YAML or JSON that is not UTF-8 or holds a byte order mark inside, YAML that holds U+0085, U+2028 or U+2029 (read as line breaks; write `"\u2028"` in double quotes), YAML over 1 MiB, JSON that holds a lone surrogate, and YAML whose value may be read otherwise than written (a `#` that may cut a value short, a key written twice, a key in `{ }` or `[ ]` with no value as in `{a, b: 1}`); YAML that floe does not take: anchors, aliases, merge keys, tags, and a second document;
-- the page drawn from `example.yaml`: what the data file's items break in the schema and the checks, a `for` of `checks.yaml` that does not lead to a list in the data (*checks.yaml*), what *page.html* says the page drawn MUST NOT hold, an item of format `markdown`, `html` or `image` that is not text (a number, `true` or `null` unquoted), an item of format `html` that opens or closes an element of the page or stands in a text or an attribute.
+`floe template check` reads every template of yours and the parts, looks, shared schemas and themes of yours, as `floe part check` does, and draws each template's `example.yaml` as `floe check` draws a data file. It prints every mistake and exits with code 1 when there is one.
 
 A data file is checked in this order, each stage only on data that passed the one before (`floe check` runs them all):
 
@@ -363,4 +384,22 @@ A data file is checked in this order, each stage only on data that passed the on
 4. The template's `checks.yaml`, the `checks.yaml` of each part for each item it draws, and the template's `computed.yaml`, together.
 5. The page drawn: each part and item of a format (images, diagrams, HTML), then `page.html`, and the page drawn as a whole.
 
-The check tests files, names and syntax, and of values those two corners alone, not places. A page without `<!doctype html>`, a `page.css` rule that restyles nothing or breaks a layout, a word missing in a language the example does not use, and a `schema.json` without `"additionalProperties": false` pass with exit code 0.
+For a template it refuses, by kind:
+
+- a name, a link, a file or a directory that breaks the rules of *Where templates are* and *Files*, a missing `page.html`, `schema.json` or `example.yaml`, and an `example.yaml` that names another template;
+- a `page.html` that does not parse (a syntax mistake, an unknown function), and what html/template's escaping refuses (`ZgotmplZ` in the page drawn, where it did not take a value);
+- a `schema.json` that breaks a rule of *schema.json*, and a mistake the JSON Schema library reports;
+- a `checks.yaml` that is not a list of checks of `expr` and `message` (and `for` and `field`), a check with an empty or missing part, and a `for` through a key the schema forbids (*checks.yaml*); a `computed.yaml` that breaks a rule of *computed.yaml*, `$env` in a `computed.yaml` expression, and an `expr` that does not parse (the expr library's words);
+- a `words.yaml` that is not language tags each with names and their text, a word that is not text, two language tags that are one, and a word `page.html` names that the example's language lacks;
+- an image of `assets/` that is not one floe takes, and an `asset` that names none;
+- CSS floe cannot read in `page.css` (*page.css*);
+- a `--radius-small` or `--radius-pill` of more than one item in `page.css`, or in a theme or part of yours;
+- a file floe cannot read as written, in any file: YAML or JSON that is not UTF-8 or holds a byte order mark inside, YAML that holds U+0085, U+2028 or U+2029 (read as line breaks; write `"\u2028"` in double quotes), YAML over 1 MiB, JSON that holds a lone surrogate, YAML with a key written twice or a key in `{ }` or `[ ]` with no value as in `{a, b: 1}`, and what `floe guide` (*YAML that floe reads as you meant*) says floe refuses in a data file;
+- the page drawn from `example.yaml`: what the data file's items break in the schema and the checks, a `for` of `checks.yaml` that does not lead to a list in the data (*checks.yaml*), what *page.html* says the page drawn MUST NOT hold, an item of format `markdown`, `html` or `image` that is not text (a number, `true` or `null` unquoted), an item of format `html` that opens or closes an element of the page or stands in a text or an attribute.
+
+The check tests files, names and syntax, and of values those two corners alone, not places. These pass with exit code 0:
+
+- a page without `<!doctype html>`;
+- a `page.css` rule that restyles nothing or breaks a layout;
+- a word missing in a language the example does not use;
+- a `schema.json` without `"additionalProperties": false`.
