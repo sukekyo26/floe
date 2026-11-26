@@ -29,7 +29,7 @@ export function RowSub({ page: a, ranks, middle }: RowSubProps) {
         </span>
       ) : null}
       {a.folder || a.path || a.template ? (
-        <span data-testid="kindof" className="rounded-small border border-line px-1.25 whitespace-nowrap text-muted">
+        <span data-testid="kindof" className="truncate rounded-small border border-line px-1.25 text-muted">
           {a.folder ? t('ui_kind_folder') : a.path ? t('ui_kind_of_link', a.template ?? 'HTML') : a.template}
         </span>
       ) : null}

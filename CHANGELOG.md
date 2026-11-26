@@ -21,6 +21,7 @@ adheres to [Semantic Versioning](https://semver.org/).
 
 ### Fixed
 
+- Fix the pills on the line under a row's title in the management page running past that line when their names are long: a tag, a project, a task or a kind wider than the line ran under the row's buttons or out of the row (a task's even on a wide screen), and is now cut at its end with "…".
 - Fix the head of a task's page in the management page growing wider than its column when the project's name is long, putting Edit and the family card's Add out of the window: the project's pill is cut at its end with "…" instead.
 
 ## [0.4.0] - 2026-11-26
