@@ -1,2 +1,3 @@
-:scope { border: 2px solid var(--tone); }
-:scope::before { border: 2px solid var(--fg); }
+/* A note is a box like the rest; its tone is told by a small raised square, as an old dialog's sign */
+:scope { background: var(--surface); border: 1px solid; border-color: var(--rt-edge); --floe-inset: var(--rt-up); }
+:scope::before { border-radius: 0; border: 2px solid; border-color: color-mix(in srgb, var(--tone) 35%, var(--surface)) color-mix(in srgb, var(--tone) 60%, var(--fg)) color-mix(in srgb, var(--tone) 60%, var(--fg)) color-mix(in srgb, var(--tone) 35%, var(--surface)); font-size: var(--floe-text-aside); font-weight: 900; }

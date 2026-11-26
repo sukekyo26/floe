@@ -1,0 +1,2 @@
+/* The place a page is read at is the old list's selection: white words on the accent, a face of its own */
+:scope a[aria-current] { --face: var(--accent); --on-face: var(--on-fill); background: var(--face); color: var(--on-face); border-left-color: transparent; }

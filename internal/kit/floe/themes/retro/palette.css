@@ -1,15 +1,19 @@
 :scope {
-  --chart-1: #a3401a; --chart-2: #008c78; --chart-3: #b37a00; --chart-4: #6b4a9f;
- 
-  /* Width and style of this theme's box frames, and of lines drawn inside boxes alike */
-  --retro-frame: 2px solid;
-  --bg: #f1e2c4; --surface: #fbf3e2; --fg: #3a2414; --muted: #6b5340; --line: #dcc6a0;
-  --accent: #a3401a; --accent-soft: #f7dcc8;
-  --good: #556316; --good-soft: #e8ecc8; --warn: #8a5800; --warn-soft: #f8e4b8; --bad: #a82418; --bad-soft: #f6d8d2;
-  --display: Georgia, "Hiragino Mincho ProN", "Noto Serif JP", serif;
-  --code-bg: #3a2414; --code-fg: #fbf3e2; --code-prompt: var(--retro-mustard);
-  /* Its three stripes, an ornament alone, apart from the tones */
-  --retro-orange: #d9622b; --retro-mustard: #e8a33d; --retro-olive: #6b7a2a;
-  --retro-stripes: linear-gradient(var(--retro-orange) 0 33.3%, var(--retro-mustard) 33.3% 66.6%, var(--retro-olive) 66.6% 100%);
-  --radius: 22px;
+  /* Three grounds alone: the page's light grey, every box's white face, and the grey of a button within a box, which
+     the accent's pale ground is too (a line's code, a picked step) */
+  --bg: #e6e3dc; --surface: #fff; --rt-button: #d4d0c8; --quiet: var(--rt-button);
+  --fg: #000; --muted: #4a4a4a; --line: #808080;
+  --accent: #005f5f; --accent-soft: var(--rt-button);
+  --good: #006400; --good-soft: #dcefdc; --warn: #704b00; --warn-soft: #f6ebc8; --bad: #a00000; --bad-soft: #f6dcdc;
+  --chart-1: #006b6b; --chart-2: #a04800; --chart-3: #6a3d9a; --chart-4: #6b6b00;
+  --code-bg: #000; --code-fg: #c0c0c0; --code-prompt: #fff;
+  --rule: none;
+  --radius: 0; --radius-small: 0; --radius-pill: 0;
+  --floe-shadow-x: 0; --floe-shadow-y: 0; --floe-shadow-blur: 0;
+  /* A face standing up off the page: light at its top and left, dark at its bottom and right */
+  --rt-edge: var(--surface) #404040 #404040 var(--surface);
+  --rt-up: inset -2px -2px #808080, inset -3px -3px #c0c0c0, inset 2px 2px #f4f2ee;
+  /* The title bar's navy run to blue, kept to the section's heading; its blue end keeps white words 4.5:1 */
+  --rt-navy: #000080;
+  --rt-bar: linear-gradient(90deg, var(--rt-navy), #0a66b0);
 }

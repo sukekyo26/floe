@@ -1,0 +1,7 @@
+:scope { background: var(--surface); border: 1px solid; border-color: var(--rt-edge); --floe-inset: var(--rt-up); }
+/* The mark is the old tree's box: a small square with plus while shut, minus when open */
+:scope > summary::before {
+  content: "+"; content: "+" / ""; width: 0.85rem; height: 0.85rem; box-sizing: border-box; margin: 0; transform: none; border: 1px solid var(--line);
+  background: var(--surface); color: var(--fg); font: 700 0.75rem/0.7rem var(--mono); text-align: center;
+}
+:scope[open] > summary::before { content: "−"; content: "−" / ""; transform: none; margin-top: 0; }

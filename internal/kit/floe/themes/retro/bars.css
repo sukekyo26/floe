@@ -1,0 +1,5 @@
+/* A progress bar of the old screens: a groove of the buttons' grey let in, filled by whole blocks (round fits them
+   to the bar's length, so none is cut at its end). The groove's 2px pad lies within its own height (border-box), so it
+   takes no room: it keeps the blocks off the sunk edge */
+:scope .track { padding: 2px; box-sizing: border-box; border-radius: 0; border: 1px solid; border-color: var(--line) var(--surface) var(--surface) var(--line); }
+:scope .track > span { border-radius: 0; background: linear-gradient(90deg, currentColor 0 75%, transparent 75%) 0 0 / 0.7rem 100% round; }
