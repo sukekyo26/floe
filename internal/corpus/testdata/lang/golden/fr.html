@@ -691,6 +691,21 @@ blockquote::before { content: "“"; content: "“" / ""; display: block; font: 
 }
 </style>
 <style>
+@layer floe.parts.depth1 {
+@scope ([data-floe-part="details"]:where(:is([data-floe-part], [data-floe-look]) *):where(:not(:is([data-floe-part], [data-floe-look]) :is([data-floe-part], [data-floe-look]) *))) to (:scope [data-floe-part] > *) {
+/* The grey tray holds what opens on a tile of the surface: the body's ::before, over its padding to --default-pad from
+   the tray's edges and reaching up into the title's padding, under the title and its ring (the details is a stacking
+   context and the tile is below all it holds), so that the title still takes the clicks there */
+:scope { isolation: isolate; }
+:scope > div { position: relative; --quiet: var(--default-panel); --default-quote: var(--default-panel); --default-quote-quiet: var(--surface); }
+:scope > div::before {
+  content: ""; position: absolute; z-index: -1; inset: calc(var(--default-pad) - var(--floe-pad-block)) var(--default-pad) var(--default-pad);
+  background: var(--surface); border-radius: var(--default-inner);
+}
+}
+}
+</style>
+<style>
 @layer floe.parts.depth0 {
 @scope ([data-floe-part="fields"]:where(:not(:is([data-floe-part], [data-floe-look]) *))) to (:scope [data-floe-part] > *) {
 :scope { padding: var(--default-pad); --table-head-bg: none; }
