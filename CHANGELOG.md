@@ -8,7 +8,7 @@ adheres to [Semantic Versioning](https://semver.org/).
 
 ### Changed
 
-- Change the theme `soft` to peach and plum, in colours of no other theme: faces float without frames on a pale peach ground, a section opens on a round peach band, a table's head is a round band and its rows striped faintly, a note is a soft face of its tone, a note of no tone is lavender grey, the titles of figures and a decision's state and date are round peach pills, and figures are large and plum.
+- Change the theme `soft` to peach and plum, in colours of no other theme: faces float without frames on a pale peach ground, a section opens on a round peach band, a table's head is a round band and its striped rows are a faint peach with round ends, a note has corners of 26px and a larger sign, a note of no tone is lavender grey, the titles of figures and a decision's state and date are round peach pills, and figures are large and plum.
 
 - Change the theme `editorial` to ink and yellow, in colours of no other theme: a section opens on a yellow band with its number on an ink block, cards, figures and the option picked have a short yellow bar over their words, a table a heavy ink rule over it, a note a heavy edge of its tone at the left, a decision a thick yellow cap and a large title, and figures are large and heavy; the accent is the ink, so a template's bands filled with it are black, and a note of no tone is on the ink's grey.
 
