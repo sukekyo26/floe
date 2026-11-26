@@ -55,7 +55,7 @@ func TestUIRowSubRoom(t *testing.T) { //nolint:paralleltest // the browser tests
 }
 
 // within tells of the rows rows names what of the line under each title runs past it (each tag too), and a path
-// narrower than its basis while the line is wider: '' when none.
+// narrower than its basis while the line is wider; empty when none.
 func within(rows string) string {
 	return `[...document.querySelectorAll(` + js(rows) + `)].flatMap((li) => {
   const sub = li.querySelector('[data-testid=sub]'), end = sub.getBoundingClientRect().right + 0.5;
