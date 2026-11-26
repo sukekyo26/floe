@@ -131,7 +131,7 @@ export class TaskHead extends Component<TaskHeadProps, { shown: StateShown | nul
       <div
         id="task-head"
         hidden={!visible}
-        className="grid flex-none gap-[0.35rem] border-b border-line bg-panel px-4 pt-2 pb-[0.65rem]"
+        className="grid flex-none grid-cols-1 gap-[0.35rem] border-b border-line bg-panel px-4 pt-2 pb-[0.65rem]"
       >
         {/* The mark at the title's left edge, in line with the rows under it; the mark and Edit in the middle of the title,
             however many lines it takes. The ID is a line of its own, so that a title that wraps starts each line where
