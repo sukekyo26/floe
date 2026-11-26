@@ -459,26 +459,29 @@ func TestUITaskChildren(t *testing.T) { //nolint:paralleltest // the browser tes
 }
 
 // A task's head keeps its way back, title and Edit in one row, wide and narrow: the mark and Edit in the middle of the title however
-// many lines it takes, the title's lines all right of the mark, and nothing past the window, a title with no space in it too. The way
+// many lines it takes, the title's lines all right of the mark, and nothing past the window or the head, a title with no space in it
+// and a project of a long name too. The way
 // back is a mark alone, of an icon button's room, named; the archive stands by the state. 280px is narrower than a phone, as the tests'
 // fonts are narrower than a person's.
 func TestUITaskHeadRoom(t *testing.T) { //nolint:paralleltest // the browser tests share one Chrome, one at a time
 	s := newSite(t)
 	b := s.b
 	b.navigate("/")
-	tasks := []struct{ name, title, lines string }{
-		{"#1", "short", "one"},
-		{"#2", strings.TrimSpace(strings.Repeat("a title of many words ", 6)), "more"},
-		{"#3", strings.Repeat("unbroken", 12), "more"},
+	long := "a-project-of-a-very-long-name-that-a-person-may-have-for-a-repository"
+	tasks := []struct{ project, name, title, lines string }{
+		{"proj", "#1", "short", "one"},
+		{"proj", "#2", strings.TrimSpace(strings.Repeat("a title of many words ", 6)), "more"},
+		{"proj", "#3", strings.Repeat("unbroken", 12), "more"},
+		{long, "#4", "short", "one"},
 	}
 	for _, task := range tasks {
-		s.floe(t, "task", "--project", "proj", "--task", task.name, "--title", task.title, "--state", "done")
+		s.floe(t, "task", "--project", task.project, "--task", task.name, "--title", task.title, "--state", "done")
 	}
 	defer b.unsize()
 	for _, width := range []int64{1400, 400, 280} {
 		b.size(width, 800, width != 1400)
 		for _, task := range tasks {
-			b.navigate("/tasks?project=proj&task=" + url.QueryEscape(task.name))
+			b.navigate("/tasks?project=" + url.QueryEscape(task.project) + "&task=" + url.QueryEscape(task.name))
 			b.until("the head", "!document.getElementById('task-head').hidden && !document.getElementById('task-archive').hidden")
 			got := b.eval(`(() => {
   const at = (id) => document.getElementById(id), r = (id) => at(id).getBoundingClientRect(), mid = (id) => (r(id).top + r(id).bottom) / 2;
@@ -491,6 +494,7 @@ func TestUITaskHeadRoom(t *testing.T) { //nolint:paralleltest // the browser tes
   if (up.top - document.querySelector('[data-testid=bar]').getBoundingClientRect().bottom < 8) said.push('the mark by the bar');
   if (!['task-up', 'task-edit', 'task-archive', 'task-project', 'task-add-page'].every((id) => r(id).left >= 0 && r(id).right <= innerWidth)) said.push('past the window');
   if (document.documentElement.scrollWidth > innerWidth || body.scrollWidth > body.clientWidth) said.push('scrolls sideways');
+  if (at('task-head').scrollWidth > at('task-head').clientWidth) said.push('the head past its room');
   if (r('task-archive').top < Math.max(title.bottom, r('task-edit').bottom)) said.push('the archive off the state');
   // The title's own lines, the ID's line above them left out
   const text = document.createRange();
