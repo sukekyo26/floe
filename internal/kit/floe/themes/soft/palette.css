@@ -1,3 +1,11 @@
 :scope {
-  --chart-1: #149a88; --chart-2: #c86b3c; --chart-3: #7a64c9; --chart-4: #c2507f;
-  --radius: 14px; }
+  --bg: #fcf3ee; --surface: #fff; --fg: #2b2228; --muted: #64585f; --line: #ecd9d0;
+  --accent: #7b3f6e; --accent-soft: #f4e3ef;
+  /* A note of no tone: a lavender grey, apart from the bad tone's pink (ΔE 13.5, as default's 13.4) */
+  --accent-fill: #e2dcef;
+  --good: #2b6942; --good-soft: #e3efe4; --warn: #8a5a10; --warn-soft: #f8ead2; --bad: #b0302a; --bad-soft: #fbe4e1;
+  --chart-1: #7b3f6e; --chart-2: #d0784e; --chart-3: #4f8a72; --chart-4: #a58a2a;
+  --radius: 22px; --radius-small: 10px; --radius-pill: 999px; --rule: none;
+  --shadow: rgb(120 60 80 / 0.13); --floe-shadow-y: 2px; --floe-shadow-blur: 8px;
+  --soft-mark: #fadbc9; --soft-tray: #f8e9e1; --soft-note: 26px;
+}

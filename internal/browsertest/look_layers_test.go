@@ -156,7 +156,7 @@ func lookLayers(t *testing.T, s *site) measured {
 		`          <div data-floe-part="note"><p><code id="own">a</code></p><div data-floe-part="table"><table><tbody><tr><td>`+
 		`<code id="held">b</code></td></tr></tbody></table></div></div>`+"\n", "#held")
 	got = b.eval(`['own', 'held'].map((id) => getComputedStyle(document.getElementById(id)).backgroundColor).join(' | ')`)
-	m.expect("nested", got, "rgb(255, 255, 255) | rgb(220, 235, 236)")
+	m.expect("nested", got, "rgb(255, 255, 255) | rgb(244, 227, 239)")
 
 	// The colours a template sets on :scope reach what the theme draws in the parts, the text on a filled face among
 	// them, which takes the surface the template set.

@@ -1,0 +1,4 @@
+/* A soft face of its tone, its sign a large filled disc */
+:scope { background: var(--tone-fill); --floe-mark: 1.8rem; border-radius: var(--soft-note); }
+:scope::before { font-size: 0.95rem; }
+.title { font-size: 1.02rem; }

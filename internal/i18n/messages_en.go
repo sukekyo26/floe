@@ -489,7 +489,7 @@ var messagesEN = map[string]string{
 	"theme_about_notebook":     "Pen on ruled paper in a rounded face",
 	"theme_about_pebble":       "Pebbles on a warm ground: rows as round stones on a tray, each part in a form of its own, a brown accent",
 	"theme_about_retro":        "The seventies: brown on a tan ground, stripes of orange, mustard and olive, round fat corners, a serif heading",
-	"theme_about_soft":         "Round corners and quiet surfaces: default's colours, its quotes on a soft ground",
+	"theme_about_soft":         "Peach and plum, soft: faces float without frames on a pale peach ground, sections open on round peach bands, the titles of figures and a decision's state and date on round pills",
 	"theme_about_swiss":        "Red and black in print, in a grotesque face, its sections ruled heavy",
 	"theme_about_washi":        "Sumi, indigo and vermilion on washi, in a Mincho face, its sections ruled double",
 	"ui_settings":              "Settings",
