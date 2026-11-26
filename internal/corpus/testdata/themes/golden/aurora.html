@@ -201,16 +201,19 @@ blockquote > * + * { margin-top: 0.6rem; }
   --accent: #6234c8; --accent-soft: #ebe3ff;
   --good: #156a42; --good-soft: #daf3e6; --warn: #844f00; --warn-soft: #fbead0; --bad: #ab2146; --bad-soft: #fde1e8;
   --code-bg: #241c3d; --code-fg: #ece8fb; --code-prompt: #c6a8ff;
-  /* The wash, placed on the whole document: lavender at its top, peach at a fifth of its height, mint at its foot.
-     Its colours keep --muted, --accent and the tones at 4.5:1 on them, which the tests measure on --bg alone. Its three
-     colours are named, for table.css to draw from them too */
-  --aurora-lavender: #e0d2ff; --aurora-peach: #ffd3c2; --aurora-mint: #c5f0de;
+  /* The wash, placed on the whole document: violet at its top, a rose lilac at a fifth of its height, a pale violet at its
+     foot, all of one hue for the words and boxes to lead. Its colours keep --muted, --accent and the tones at 4.5:1 on
+     them, which the tests measure on --bg alone. Its first two are named, for the ribbon to draw from them */
+  --aurora-violet: #e2d6ff; --aurora-rose: #f1dcf4;
   --page-bg:
-    radial-gradient(60rem 40rem at 0% 0%, var(--aurora-lavender) 0, transparent 70%),
-    radial-gradient(50rem 36rem at 100% 20%, var(--aurora-peach) 0, transparent 70%),
-    radial-gradient(60rem 40rem at 40% 100%, var(--aurora-mint) 0, transparent 70%),
+    radial-gradient(60rem 40rem at 0% 0%, var(--aurora-violet) 0, transparent 70%),
+    radial-gradient(50rem 36rem at 100% 25%, var(--aurora-rose) 0, transparent 70%),
+    radial-gradient(60rem 40rem at 40% 100%, #e6e0fb 0, transparent 70%),
     var(--bg);
-  --rule: 1px solid color-mix(in srgb, var(--accent) 25%, transparent);
+  /* The ribbon of light: the wash's violet and rose lilac, deepened toward the chart colour of each hue. It colours a
+     section's rule, the line under a table's head and the top of the option picked */
+  --aurora-ribbon: linear-gradient(90deg, color-mix(in srgb, var(--aurora-violet), var(--chart-1) 45%), color-mix(in srgb, var(--aurora-rose), var(--chart-4) 35%));
+  --rule: 3px solid color-mix(in srgb, var(--accent) 25%, transparent);
   --shadow: rgb(80 50 160 / 0.18);
   /* The soft wide shadow its glass casts down */
   --floe-shadow-y: 6px; --floe-shadow-blur: 20px; --floe-shadow-spread: -14px;
@@ -234,8 +237,13 @@ blockquote > * + * { margin-top: 0.6rem; }
 <style>
 @layer floe.theme {
 @scope (:root) to ([data-floe-part] > *, [data-floe-text] > *) {
-/* Frosted glass over a dawn sky: faces of clouded white with a bright edge and a violet shadow, every corner round.
-   A quote is of the surface, not the glass: in a band the glass would let the accent through, where its links sink */
+/* Frosted glass over a dawn sky: faces of clouded white with a bright edge and a violet shadow, every corner round, a
+   section's rule in the ribbon of light. A quote is of the surface, not the glass: in a band the glass would let the
+   accent through, where its links sink */
+/* The rule a template draws over a section's heading takes the ribbon: border-image paints only where a border is, so a
+   heading of no rule keeps none, and it drops a border's round corners, which no built-in heading has.
+   LIMIT: a template of one's own whose section heading has a round or dotted border gets a square line of the ribbon */
+section:not([data-floe-look]) > h2 { border-image: var(--aurora-ribbon) 1; }
 }
 }
 </style>
@@ -615,6 +623,14 @@ blockquote { border: 1px solid var(--aurora-edge); border-radius: var(--radius);
 }
 </style>
 <style>
+@layer floe.parts.depth1 {
+@scope ([data-floe-part="cell"]:where(:is([data-floe-part], [data-floe-look]) *):where(:not(:is([data-floe-part], [data-floe-look]) :is([data-floe-part], [data-floe-look]) *))) to (:scope [data-floe-part] > *) {
+/* The accent's pill is filled, as its soft ground is the face of the option picked */
+:scope:where(:not([data-floe-tone]), [data-floe-tone=accent]) { background: var(--tone); color: var(--on-fill); outline: 1.5px solid var(--on-face, transparent); outline-offset: -1.5px; }
+}
+}
+</style>
+<style>
 @layer floe.parts.depth0 {
 @scope ([data-floe-part="code"]:where(:not(:is([data-floe-part], [data-floe-look]) *)), [data-floe-part="diff"]:where(:not(:is([data-floe-part], [data-floe-look]) *)), [data-floe-part="terminal"]:where(:not(:is([data-floe-part], [data-floe-look]) *))) to (:scope [data-floe-part] > *) {
 :scope { --floe-shadow-color: var(--shadow); }
@@ -641,6 +657,15 @@ blockquote { border: 1px solid var(--aurora-edge); border-radius: var(--radius);
 </style>
 <style>
 @layer floe.parts.depth0 {
+@scope ([data-floe-part="options"]:where(:not(:is([data-floe-part], [data-floe-look]) *))) to (:scope [data-floe-part] > *) {
+/* The option picked on the accent's soft glass under a thick ribbon; a line's code in it on the surface, as its own ground is that colour too */
+.option.pick { background: var(--aurora-ribbon) top / 100% 8px no-repeat, var(--accent-soft); }
+.option.pick :not(pre) > code { background: var(--face, var(--surface)); }
+}
+}
+</style>
+<style>
+@layer floe.parts.depth0 {
 @scope ([data-floe-part="table"]:where(:not(:is([data-floe-part], [data-floe-look]) *))) to (:scope [data-floe-part] > *) {
 :scope { background: var(--aurora-glass); border: 1px solid var(--aurora-edge); --floe-shadow-color: var(--shadow); }
 }
@@ -656,10 +681,9 @@ blockquote { border: 1px solid var(--aurora-edge); border-radius: var(--radius);
 <style>
 @layer floe.parts.depth0 {
 @scope ([data-floe-part="table"]:where(:not(:is([data-floe-part], [data-floe-look]) *))) to (:scope [data-floe-part] > *) {
-/* Clear glass: the head on no ground in the violet over a line of the wash's three colours, each deepened toward the
-   chart colour of its hue; lines of light between rows */
+/* Clear glass: the head on no ground in the violet over the ribbon of light; lines of light between rows */
 :scope {
-  --table-head-bg: linear-gradient(90deg, color-mix(in srgb, var(--aurora-lavender), var(--chart-1) 45%), color-mix(in srgb, var(--aurora-peach), var(--chart-3) 40%), color-mix(in srgb, var(--aurora-mint), var(--chart-2) 45%)) bottom / 100% 3px no-repeat;
+  --table-head-bg: var(--aurora-ribbon) bottom / 100% 3px no-repeat;
   --table-head-fg: var(--accent); --table-rule: 1px solid color-mix(in srgb, var(--accent) 10%, var(--aurora-edge));
 }
 }

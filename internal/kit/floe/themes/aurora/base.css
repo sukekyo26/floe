@@ -1,2 +1,7 @@
-/* Frosted glass over a dawn sky: faces of clouded white with a bright edge and a violet shadow, every corner round.
-   A quote is of the surface, not the glass: in a band the glass would let the accent through, where its links sink */
+/* Frosted glass over a dawn sky: faces of clouded white with a bright edge and a violet shadow, every corner round, a
+   section's rule in the ribbon of light. A quote is of the surface, not the glass: in a band the glass would let the
+   accent through, where its links sink */
+/* The rule a template draws over a section's heading takes the ribbon: border-image paints only where a border is, so a
+   heading of no rule keeps none, and it drops a border's round corners, which no built-in heading has.
+   LIMIT: a template of one's own whose section heading has a round or dotted border gets a square line of the ribbon */
+section:not([data-floe-look]) > h2 { border-image: var(--aurora-ribbon) 1; }
