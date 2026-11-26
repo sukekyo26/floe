@@ -522,7 +522,8 @@ func TestUITaskHeadLines(t *testing.T) { //nolint:paralleltest // the browser te
 		const r = document.createRange();
 		r.selectNodeContents(h.lastChild);
 		const lines = [...r.getClientRects()];
-		return [lines.length > 1, lines[0].top >= id.bottom, lines.every((l) => Math.abs(l.left - lines[0].left) < 1)].join();
+		// The text's box overhangs its line by a pixel or so: below the ID's middle is a line of its own
+		return [lines.length > 1, lines[0].top > (id.top + id.bottom) / 2, lines.every((l) => Math.abs(l.left - lines[0].left) < 1)].join();
 	})(document.getElementById('task-title'))`)
 	if got != "true,true,true" {
 		t.Errorf("wraps, the title under the ID, its lines aligned: got %s, want true,true,true", got)
