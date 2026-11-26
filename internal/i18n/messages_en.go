@@ -821,6 +821,7 @@ var messagesEN = map[string]string{
 	"ui_url_moved":               "Moved %s to %d of %d",
 	"ui_url_dropped":             "Took off %s",
 	"ui_task_urls_hint":          "Drag, or use ↑ and ↓, to reorder; http or https URLs, %d at most",
+	"ui_task_rename_hint":        "Changed, the task's pages and child tasks move to the new ID with it. Instructions and links that name the old ID no longer reach this task",
 	"ui_page_add":                "Add a page",
 	"ui_page_add_none":           "No page to add",
 	"ui_page_add_put":            "Add",

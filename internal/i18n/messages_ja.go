@@ -810,6 +810,7 @@ var messagesJA = map[string]string{
 	"ui_url_moved":               "「%s」を %d 番目に移しました（%d 個中）",
 	"ui_url_dropped":             "「%s」を外しました",
 	"ui_task_urls_hint":          "ドラッグか ↑↓ で並べ替え。http か https の URL を %d 個まで",
+	"ui_task_rename_hint":        "変えると、このタスクのページと子のタスクも新しい ID に付け替えます。古い ID を書いた指示やリンクは、このタスクを指さなくなります",
 	"ui_page_add":                "ページを追加",
 	"ui_page_add_none":           "付けられるページがありません",
 	"ui_page_add_put":            "付ける",

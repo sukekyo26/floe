@@ -333,6 +333,7 @@ export type MessageKey =
   | 'ui_task_parent_word'
   | 'ui_task_put'
   | 'ui_task_put_moved'
+  | 'ui_task_rename_hint'
   | 'ui_task_set'
   | 'ui_task_set_named'
   | 'ui_task_stale'
