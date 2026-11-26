@@ -103,6 +103,14 @@ func TestTaskRename(t *testing.T) {
 	if all, err = s.ReadTasks(); err != nil || all["p"]["#7"].Title != "V" || len(all["p"]) != 2 {
 		t.Errorf("to the same ID: %+v, %v", all["p"], err)
 	}
+	// The ID alone is a write of the row
+	rev = all["p"]["#7"].Rev
+	if _, err = renameTask(s, "#7", "#9", store.TaskEdit{}); err != nil {
+		t.Fatal(err)
+	}
+	if all, err = s.ReadTasks(); err != nil || all["p"]["#9"].Rev != rev+1 {
+		t.Errorf("the ID alone: %+v, %v", all["p"], err)
+	}
 }
 
 // A change of ID is refused, writing nothing, to an ID of the project's or none, with pages, of a task of no row, and of
@@ -149,13 +157,46 @@ func TestTaskRenameRefused(t *testing.T) {
 	if err == nil || !strings.Contains(told(err, root), "changes a task's ID puts no pages on a task") {
 		t.Errorf("with pages: %v", err)
 	}
-	if _, err = renameTask(s, "#9", "#3", store.TaskEdit{}); !errors.Is(err, store.ErrNotFound) {
-		t.Errorf("of no row: %v", err)
+	// With a field, which would make the row of a task alone
+	for _, ed := range []store.TaskEdit{{}, {Title: new("t")}} {
+		if _, err = renameTask(s, "#9", "#3", ed); !errors.Is(err, store.ErrNotFound) {
+			t.Errorf("of no row, %+v: %v", ed, err)
+		}
 	}
 	if now, err := os.ReadFile(tasks); err != nil || string(now) != string(was) {
 		t.Errorf("tasks.json after the refusals:\n%s\nwas\n%s", now, was)
 	}
 	if m := s.ReadMeta("on"); m == nil || m.Task == nil || m.Task.Name != "#1" {
 		t.Errorf("the page after the refusals: %+v", m)
+	}
+}
+
+// A change of ID with a parent made in the same write makes the parent's row, which the task names by its new ID; the
+// parent may not be the new ID.
+func TestTaskRenameParentNew(t *testing.T) {
+	t.Parallel()
+
+	root := filepath.Join(t.TempDir(), "S")
+	s := store.New(root)
+	if _, err := editTask(s, "p", "#5", store.TaskEdit{State: new("todo")}); err != nil {
+		t.Fatal(err)
+	}
+	if _, err := renameTask(s, "#5", "#8", store.TaskEdit{Parent: new("#8"), ParentNew: new(true), ParentTitle: new("P")}); err == nil ||
+		!strings.Contains(told(err, root), "task #8 cannot be its own parent") {
+		t.Errorf("the new ID as its parent: %v", err)
+	}
+	got, err := renameTask(s, "#5", "#6", store.TaskEdit{Parent: new("#P"), ParentNew: new(true), ParentTitle: new("P")})
+	if err != nil {
+		t.Fatal(err)
+	}
+	all, err := s.ReadTasks()
+	if err != nil {
+		t.Fatal(err)
+	}
+	if up, ok := all["p"]["#P"]; !ok || up.Title != "P" || all["p"]["#6"].Parent != "#P" || len(all["p"]) != 2 {
+		t.Errorf("the rows: %+v", all["p"])
+	}
+	if len(got.Tasks) != 1 || got.Tasks[0].Task != "#6" || got.Tasks[0].Row.Parent != "#P" {
+		t.Errorf("the tasks written: %+v", got.Tasks)
 	}
 }
