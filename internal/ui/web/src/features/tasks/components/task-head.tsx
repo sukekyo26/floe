@@ -134,11 +134,12 @@ export class TaskHead extends Component<TaskHeadProps, { shown: StateShown | nul
         className="grid flex-none gap-[0.35rem] border-b border-line bg-panel px-4 pt-2 pb-[0.65rem]"
       >
         {/* The mark at the title's left edge, in line with the rows under it; the mark and Edit in the middle of the title,
-            however many lines it takes */}
+            however many lines it takes. The ID is a line of its own, so that a title that wraps starts each line where
+            its first starts */}
         <div className="-ms-3 flex items-center gap-2">
           <BackLink id="task-up" up={up} label={t('ui_tasks_back')} />
           <h2 id="task-title" className="m-0 flex-1 text-[1rem] leading-[1.4] font-bold wrap-anywhere">
-            <span data-testid="tname" className="me-[0.45rem] font-mono text-body font-semibold text-muted">
+            <span data-testid="tname" className="block font-mono text-body font-semibold text-muted">
               {name}
             </span>
             {task?.title ?? ''}
