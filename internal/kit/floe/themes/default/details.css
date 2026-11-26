@@ -1,0 +1,9 @@
+/* The grey tray holds what opens on a tile of the surface: the body's ::before, over its padding to --default-pad from
+   the tray's edges and reaching up into the title's padding, under the title and its ring (the details is a stacking
+   context and the tile is below all it holds), so that the title still takes the clicks there */
+:scope { isolation: isolate; }
+:scope > div { position: relative; --quiet: var(--default-panel); --default-quote: var(--default-panel); --default-quote-quiet: var(--surface); }
+:scope > div::before {
+  content: ""; position: absolute; z-index: -1; inset: calc(var(--default-pad) - var(--floe-pad-block)) var(--default-pad) var(--default-pad);
+  background: var(--surface); border-radius: var(--default-inner);
+}

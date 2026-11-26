@@ -77,7 +77,7 @@ const lookLayersFix = "write CSS for its layer: a template's page.css, a theme's
 	"decides, and write no !important, which turns the layers' order over"
 
 // layersNote tells, of the page of the template layers, the note's background, the theme's size of the mark (default's
-// --floe-mark, 2.25rem, over the template's), the template's margin; the template's own paragraph and the note's, in
+// --floe-mark, 1.75rem, over the template's), the template's margin; the template's own paragraph and the note's, in
 // the palette's colour on its ground; the animation and the face. layersNoteWant is what floe draws.
 const (
 	layersNote = `(() => { const n = document.querySelector('[data-floe-part=note]'), s = getComputedStyle(n);
@@ -85,7 +85,7 @@ const (
 			getComputedStyle(document.getElementById('own')).color, getComputedStyle(n.querySelector('p')).color,
 			document.querySelector('header').getAnimations()[0]?.animationName,
 			[...document.fonts].some((f) => f.family.replaceAll('"', '') === 'own face')].join(' | ') })()`
-	layersNoteWant = "rgb(246, 232, 210) | 36px | 7px | rgb(255, 0, 0) | rgb(34, 33, 31) | held | true"
+	layersNoteWant = "rgb(246, 232, 210) | 28px | 7px | rgb(255, 0, 0) | rgb(34, 33, 31) | held | true"
 )
 
 // lookLayers checks, in the browser, how floe puts a page's CSS together. The template's page.css, though its

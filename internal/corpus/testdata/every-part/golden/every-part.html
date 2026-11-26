@@ -2573,6 +2573,66 @@ blockquote::before { content: "“"; content: "“" / ""; display: block; font: 
 </style>
 <style>
 @layer floe.parts.depth0 {
+@scope ([data-floe-part="details"]:where(:not(:is([data-floe-part], [data-floe-look]) *))) to (:scope [data-floe-part] > *) {
+/* The grey tray holds what opens on a tile of the surface: the body's ::before, over its padding to --default-pad from
+   the tray's edges and reaching up into the title's padding, under the title and its ring (the details is a stacking
+   context and the tile is below all it holds), so that the title still takes the clicks there */
+:scope { isolation: isolate; }
+:scope > div { position: relative; --quiet: var(--default-panel); --default-quote: var(--default-panel); --default-quote-quiet: var(--surface); }
+:scope > div::before {
+  content: ""; position: absolute; z-index: -1; inset: calc(var(--default-pad) - var(--floe-pad-block)) var(--default-pad) var(--default-pad);
+  background: var(--surface); border-radius: var(--default-inner);
+}
+}
+}
+</style>
+<style>
+@layer floe.parts.depth1 {
+@scope ([data-floe-part="details"]:where(:is([data-floe-part], [data-floe-look]) *):where(:not(:is([data-floe-part], [data-floe-look]) :is([data-floe-part], [data-floe-look]) *))) to (:scope [data-floe-part] > *) {
+/* The grey tray holds what opens on a tile of the surface: the body's ::before, over its padding to --default-pad from
+   the tray's edges and reaching up into the title's padding, under the title and its ring (the details is a stacking
+   context and the tile is below all it holds), so that the title still takes the clicks there */
+:scope { isolation: isolate; }
+:scope > div { position: relative; --quiet: var(--default-panel); --default-quote: var(--default-panel); --default-quote-quiet: var(--surface); }
+:scope > div::before {
+  content: ""; position: absolute; z-index: -1; inset: calc(var(--default-pad) - var(--floe-pad-block)) var(--default-pad) var(--default-pad);
+  background: var(--surface); border-radius: var(--default-inner);
+}
+}
+}
+</style>
+<style>
+@layer floe.parts.depth2 {
+@scope ([data-floe-part="details"]:where(:is([data-floe-part], [data-floe-look]) :is([data-floe-part], [data-floe-look]) *):where(:not(:is([data-floe-part], [data-floe-look]) :is([data-floe-part], [data-floe-look]) :is([data-floe-part], [data-floe-look]) *))) to (:scope [data-floe-part] > *) {
+/* The grey tray holds what opens on a tile of the surface: the body's ::before, over its padding to --default-pad from
+   the tray's edges and reaching up into the title's padding, under the title and its ring (the details is a stacking
+   context and the tile is below all it holds), so that the title still takes the clicks there */
+:scope { isolation: isolate; }
+:scope > div { position: relative; --quiet: var(--default-panel); --default-quote: var(--default-panel); --default-quote-quiet: var(--surface); }
+:scope > div::before {
+  content: ""; position: absolute; z-index: -1; inset: calc(var(--default-pad) - var(--floe-pad-block)) var(--default-pad) var(--default-pad);
+  background: var(--surface); border-radius: var(--default-inner);
+}
+}
+}
+</style>
+<style>
+@layer floe.parts.depth3 {
+@scope ([data-floe-part="details"]:where(:is([data-floe-part], [data-floe-look]) :is([data-floe-part], [data-floe-look]) :is([data-floe-part], [data-floe-look]) *):where(:not(:is([data-floe-part], [data-floe-look]) :is([data-floe-part], [data-floe-look]) :is([data-floe-part], [data-floe-look]) :is([data-floe-part], [data-floe-look]) *))) to (:scope [data-floe-part] > *) {
+/* The grey tray holds what opens on a tile of the surface: the body's ::before, over its padding to --default-pad from
+   the tray's edges and reaching up into the title's padding, under the title and its ring (the details is a stacking
+   context and the tile is below all it holds), so that the title still takes the clicks there */
+:scope { isolation: isolate; }
+:scope > div { position: relative; --quiet: var(--default-panel); --default-quote: var(--default-panel); --default-quote-quiet: var(--surface); }
+:scope > div::before {
+  content: ""; position: absolute; z-index: -1; inset: calc(var(--default-pad) - var(--floe-pad-block)) var(--default-pad) var(--default-pad);
+  background: var(--surface); border-radius: var(--default-inner);
+}
+}
+}
+</style>
+<style>
+@layer floe.parts.depth0 {
 @scope ([data-floe-part="fields"]:where(:not(:is([data-floe-part], [data-floe-look]) *)), [data-floe-part="table"]:where(:not(:is([data-floe-part], [data-floe-look]) *))) to (:scope [data-floe-part] > *) {
 :scope { padding: var(--default-pad); --table-head-bg: none; }
 :scope table { border-collapse: separate; border-spacing: 0; }
@@ -2626,20 +2686,26 @@ blockquote::before { content: "“"; content: "“" / ""; display: block; font: 
 <style>
 @layer floe.parts.depth0 {
 @scope ([data-floe-part="note"]:where(:not(:is([data-floe-part], [data-floe-look]) *))) to (:scope [data-floe-part] > *) {
-:scope {
-  border: 1px solid color-mix(in srgb, var(--tone) 20%, transparent); --floe-mark: 2.25rem;
-}
-:scope::before { border-radius: var(--radius-small); background: var(--surface); color: var(--tone); }
+/* A tray of its tone holding all it says on one tile of the surface, its tone left as a thin edge around it: the tile is
+   the note's ::after, over its padding to --default-pad from its edges and under all the note holds (the note is a
+   stacking context), so that what it holds stays where floe places it */
+:scope { background: var(--tone-soft); --floe-mark: 1.75rem; isolation: isolate; --quiet: var(--default-panel); --default-quote: var(--default-panel); --default-quote-quiet: var(--surface); }
+:scope::after { content: ""; position: absolute; z-index: -1; inset: var(--default-pad); background: var(--surface); border-radius: var(--default-inner); }
+/* A line's code on the tile takes its quiet ground, as the surface would melt into it */
+:scope code { background: var(--quiet); }
 }
 }
 </style>
 <style>
 @layer floe.parts.depth2 {
 @scope ([data-floe-part="note"]:where(:is([data-floe-part], [data-floe-look]) :is([data-floe-part], [data-floe-look]) *):where(:not(:is([data-floe-part], [data-floe-look]) :is([data-floe-part], [data-floe-look]) :is([data-floe-part], [data-floe-look]) *))) to (:scope [data-floe-part] > *) {
-:scope {
-  border: 1px solid color-mix(in srgb, var(--tone) 20%, transparent); --floe-mark: 2.25rem;
-}
-:scope::before { border-radius: var(--radius-small); background: var(--surface); color: var(--tone); }
+/* A tray of its tone holding all it says on one tile of the surface, its tone left as a thin edge around it: the tile is
+   the note's ::after, over its padding to --default-pad from its edges and under all the note holds (the note is a
+   stacking context), so that what it holds stays where floe places it */
+:scope { background: var(--tone-soft); --floe-mark: 1.75rem; isolation: isolate; --quiet: var(--default-panel); --default-quote: var(--default-panel); --default-quote-quiet: var(--surface); }
+:scope::after { content: ""; position: absolute; z-index: -1; inset: var(--default-pad); background: var(--surface); border-radius: var(--default-inner); }
+/* A line's code on the tile takes its quiet ground, as the surface would melt into it */
+:scope code { background: var(--quiet); }
 }
 }
 </style>
