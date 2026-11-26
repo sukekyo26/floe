@@ -16,6 +16,7 @@ import {
   editChange,
   mergeLists,
   mergeURLs,
+  movedTo,
   pagedOf,
   refillTitle,
   urlRefusal,
@@ -31,6 +32,7 @@ import { taskWrites, type TaskWrites } from '@/stores/tasks';
 import { toasts as pageToasts, type Toasts } from '@/stores/toasts';
 import type { FocusBack } from '@/types/focus';
 import type { TaskOf } from '@/types/task';
+import { taskHref } from '@/utils/page-urls';
 
 // What the task edit is opened for: the task as its page drew it, and the way back to its edit button
 export interface TaskEditOpen {
@@ -57,8 +59,8 @@ interface Read {
 
 const ROW_BOX = 'overflow-hidden rounded-small border border-line';
 
-// TaskEditDialog is an existing task's own fields: its title, URLs and the order of its categories, as its page alone
-// writes them; the parent is the family card's. It opens over the task as read now, and saving sends what was changed
+// TaskEditDialog is an existing task's own fields: its ID, title, URLs and the order of its categories, as its page
+// alone writes them; the parent is the family card's. It opens over the task as read now, and saving sends what was changed
 // since, with the rev it showed. Refused as stale, what was changed in it stays and the rest is as read now; a task
 // gone is said, and nothing more can be saved
 export function TaskEditDialog({
@@ -72,7 +74,8 @@ export function TaskEditDialog({
   const { tasks: taken } = useStore(pages.state);
   // The last opened, which the modal shows and goes back from as it closes: open is null by then
   const [last, setLast] = useState<TaskEditOpen | null>(null);
-  const [read, setRead] = useState<Read>({ base: editBase({}), rev: 0, paged: [], gone: false });
+  const [read, setRead] = useState<Read>({ base: editBase({ name: '' }), rev: 0, paged: [], gone: false });
+  const [name, setName] = useState('');
   const [title, setTitle] = useState('');
   const [urls, setURLs] = useState<string[]>([]);
   const [categories, setCategories] = useState<string[]>([]);
@@ -93,6 +96,7 @@ export function TaskEditDialog({
     const x = now(open.task) ?? open.task;
     const base = editBase(x);
     setRead({ base, rev: pages.readRev(x.project, x.name), paged: pagedOf(x), gone: false });
+    setName(base.name);
     setTitle(base.title);
     setURLs(base.urls);
     setCategories(base.categories);
@@ -146,7 +150,7 @@ export function TaskEditDialog({
       setError(t('ui_tasks_failed', taken.error));
       return;
     }
-    const changed = editChange(read.base, { title, urls, categories });
+    const changed = editChange(read.base, { name, title, urls, categories });
     if (changed === null) {
       onClosed();
       return;
@@ -184,6 +188,12 @@ export function TaskEditDialog({
       }
       if (!res.ok) {
         setError(t('ui_save_failed', res.text));
+        return;
+      }
+      // A new ID is another task's page: the one open names the old, which is no longer there
+      const moved = movedTo(res.written, task.name);
+      if (moved !== null) {
+        window.location.replace(taskHref({ project: task.project, name: moved }));
         return;
       }
       toasts.toast(t('ui_saved'));
@@ -235,6 +245,23 @@ export function TaskEditDialog({
             lead={task?.name ?? ''}
             leadId="edit-task-target"
           />
+          <div data-testid="field" className={FIELD}>
+            <label htmlFor="edit-task-name">{t('ui_task_name')}</label>
+            <input
+              id="edit-task-name"
+              data-testid="text"
+              className={TEXT}
+              autoComplete="off"
+              aria-describedby="edit-task-name-hint"
+              value={name}
+              onChange={(e) => {
+                setName(e.currentTarget.value);
+              }}
+            />
+            <small id="edit-task-name-hint" className={HINT}>
+              {t('ui_task_rename_hint')}
+            </small>
+          </div>
           <label data-testid="field" className={FIELD}>
             {t('ui_task_title')}
             <input

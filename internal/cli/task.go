@@ -159,7 +159,7 @@ func (a *app) changeTask(cmd *cobra.Command, f taskFlags) error {
 	writing := !f.forget && len(changed(cmd, taskFieldFlags...)) > 0
 	if writing {
 		body := store.TaskChange{
-			TaskEdit: ed, Slugs: nil, TaskProject: &t.project, Task: &t.name, Category: nil, Pin: nil, Clear: false,
+			TaskEdit: ed, Slugs: nil, TaskProject: &t.project, Task: &t.name, Category: nil, Pin: nil, Clear: false, Rename: nil,
 		}
 		if sent, err = encodeSent(body); err != nil {
 			return err
@@ -548,7 +548,9 @@ func tasksOfPages(list []store.Listed, slugs []string, named string, isNamed, ne
 // pagesChange is the write of the flags of floe task with --slug: the pages, the task --task names, the task's fields
 // ed, and the pages' own.
 func pagesChange(cmd *cobra.Command, f taskFlags, ed store.TaskEdit, slugs []string) store.TaskChange {
-	w := store.TaskChange{TaskEdit: ed, Slugs: slugs, TaskProject: nil, Task: nil, Category: nil, Pin: nil, Clear: f.clear}
+	w := store.TaskChange{
+		TaskEdit: ed, Slugs: slugs, TaskProject: nil, Task: nil, Category: nil, Pin: nil, Clear: f.clear, Rename: nil,
+	}
 	if cmd.Flags().Changed("task") {
 		w.Task = &f.task
 	}

@@ -8,6 +8,7 @@ adheres to [Semantic Versioning](https://semver.org/).
 
 ### Added
 
+- Add a task's ID to its Edit on the management page: changed, the task's pages (the archived too) and the parent of its child tasks move to the new ID in the same write, and the screen goes to the task's page by it. An ID of another task of the project is refused. The old ID names no task after.
 - Add the theme `pebble`: rows as round stones on a tray, over a warm ground, each part in a form of its own, with a brown accent; a section's heading is a band from edge to edge.
 - Add variables a theme of one's own sets on `:scope` in `base.css` for the headings of sections in the templates `report` (`--floe-heading-top`, the padding above) and `design` (`--floe-heading-start` and `--floe-heading-edge`, the padding and the line at the left), which `page.css` alone set. A theme that sets none is drawn as before.
 - Add a way to make a new category in the dialog that adds a page on a task's page: "Add a category" beside the categories asks its name, and it is created as the page is put (not at all when the dialog is closed without one). A name already there is refused, in the task's Edit too, with "The category X is already there".

@@ -9,28 +9,49 @@ import {
   editChange,
   mergeLists,
   mergeURLs,
+  movedTo,
   refillTitle,
   urlRefusal,
   urlLink,
   urlsFull,
 } from '@/features/tasks/utils/task-edit';
 
-const base = { title: 'T', urls: ['u1', 'u2'], categories: ['a', 'b'] };
+const base = { name: 'S1', title: 'T', urls: ['u1', 'u2'], categories: ['a', 'b'] };
 
 describe(editChange, () => {
   it('sends what changed alone, in the order the store reads, and nothing where nothing changed', () => {
     expect.assertions(4);
-    expect(editChange(base, { title: ' T ', urls: ['u1', 'u2'], categories: ['a', 'b'] })).toBeNull();
+    expect(editChange(base, { name: 'S1', title: ' T ', urls: ['u1', 'u2'], categories: ['a', 'b'] })).toBeNull();
     // Added and taken off, the order kept: no order
-    expect(JSON.stringify(editChange(base, { title: 'N', urls: ['u2', 'u3'], categories: ['a', 'b'] }))).toBe(
-      '{"title":"N","urls":{"add":["u3"],"remove":["u1"]}}',
-    );
-    expect(editChange(base, { title: 'T', urls: ['u2', 'u1'], categories: ['a', 'b'] })).toStrictEqual({
+    expect(
+      JSON.stringify(editChange(base, { name: 'S1', title: 'N', urls: ['u2', 'u3'], categories: ['a', 'b'] })),
+    ).toBe('{"title":"N","urls":{"add":["u3"],"remove":["u1"]}}');
+    expect(editChange(base, { name: 'S1', title: 'T', urls: ['u2', 'u1'], categories: ['a', 'b'] })).toStrictEqual({
       urls: { order: ['u2', 'u1'] },
     });
-    expect(editChange(base, { title: 'T', urls: ['u1', 'u2'], categories: ['b', 'a', 'c'] })).toStrictEqual({
-      categories: ['b', 'a', 'c'],
-    });
+    expect(editChange(base, { name: 'S1', title: 'T', urls: ['u1', 'u2'], categories: ['b', 'a', 'c'] })).toStrictEqual(
+      {
+        categories: ['b', 'a', 'c'],
+      },
+    );
+  });
+
+  it('sends the ID trimmed as rename when it changed alone, and an empty one for the store to refuse', () => {
+    expect.assertions(3);
+    const now = { title: 'T', urls: ['u1', 'u2'], categories: ['a', 'b'] };
+    expect(editChange(base, { ...now, name: ' S1 ' })).toBeNull();
+    expect(editChange(base, { ...now, name: ' S2 ' })).toStrictEqual({ rename: 'S2' });
+    expect(editChange(base, { ...now, name: ' ' })).toStrictEqual({ rename: '' });
+  });
+});
+
+describe(movedTo, () => {
+  it('goes by the ID the store kept, not the one sent', () => {
+    expect.assertions(3);
+    expect(movedTo([{ task: 'S2' }, { task: 'S3' }], 'S1')).toBe('S2');
+    // Sent as S1 and U+0085, which the store trims and JS does not: kept as it was
+    expect(movedTo([{ task: 'S1' }], 'S1')).toBeNull();
+    expect(movedTo([], 'S1')).toBeNull();
   });
 });
 
