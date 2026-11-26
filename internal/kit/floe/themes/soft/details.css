@@ -1,0 +1,5 @@
+/* The title a soft pill of the tray, its focus ring in the same shape, open or shut. The margin is room it makes, as
+   pebble's: a title painted needs it off the parts below, whose shadows would fall on it */
+:scope > summary, :scope > summary:focus-visible, :scope[open] > summary:focus-visible { border-radius: min(var(--radius-pill), var(--floe-pill-end)); }
+:scope > summary { background: var(--soft-tray); }
+:scope[open] > summary { margin-bottom: var(--floe-room); }

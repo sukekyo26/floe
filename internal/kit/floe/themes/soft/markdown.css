@@ -1,2 +1,4 @@
+/* A quote on the tray, a large soft mark of the accent */
 blockquote > * { --face: initial; --on-face: initial; --quiet: var(--surface); }
-blockquote { color: var(--muted); border: 0; padding: 0.9rem 1.25rem; border-radius: var(--radius); background: var(--quiet); }
+blockquote { position: relative; border: 0; padding: 1rem 1.4rem 1rem 3.6rem; border-radius: var(--radius); background: var(--soft-tray); color: var(--fg); }
+blockquote::before { content: "“"; content: "“" / ""; position: absolute; left: 1rem; top: 0.6rem; height: 2.2rem; overflow: hidden; color: var(--accent); font: 900 3.6rem/1 Georgia, serif; }

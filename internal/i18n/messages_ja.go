@@ -478,7 +478,7 @@ var messagesJA = map[string]string{
 	"theme_about_notebook":     "罫線の紙にペン、丸みのある書体",
 	"theme_about_pebble":       "暖かみのある背景に小石：行はトレーに並ぶ丸い石、部品ごとに違う形、茶色の差し色",
 	"theme_about_retro":        "70 年代：黄褐色の背景に茶色、オレンジ・からし色・オリーブの縞、太く丸い角、セリフ体の見出し",
-	"theme_about_soft":         "丸い角と落ち着いた面：default の配色、引用はやわらかい背景",
+	"theme_about_soft":         "桃と葡萄の柔らかい顔：淡い桃の地に枠の無い面が浮き、節は丸い桃の帯から始まり、数の題と決定の状態・日付は丸い札",
 	"theme_about_swiss":        "印刷物の赤と黒、サンセリフ体、セクションの区切り線は太い",
 	"theme_about_washi":        "和紙に墨・藍・朱、明朝体、セクションの区切り線は二重",
 	"ui_settings":              "設定",

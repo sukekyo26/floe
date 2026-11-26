@@ -1,0 +1,2 @@
+/* Faces float on the ground, no frame */
+:scope { border-color: transparent; --floe-shadow-color: var(--shadow); }

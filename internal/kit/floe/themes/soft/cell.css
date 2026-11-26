@@ -1,0 +1,2 @@
+/* The accent's pill is filled, as its soft ground is the face of the option picked */
+:scope:where(:not([data-floe-tone]), [data-floe-tone=accent]) { background: var(--tone); color: var(--on-fill); outline: 1.5px solid var(--on-face, transparent); outline-offset: -1.5px; }

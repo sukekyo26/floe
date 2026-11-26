@@ -1,4 +1,9 @@
-/* Soft stripes: no rules between rows, every other row tinted faintly with the accent, the head more so */
-:scope { --table-rule: none; --table-head-bg: color-mix(in srgb, var(--accent-soft) 70%, var(--surface)); --table-head-fg: var(--accent); border-color: color-mix(in srgb, var(--line) 60%, var(--surface)); }
-:scope thead th { --face: var(--table-head-bg); --on-face: var(--table-head-fg); }
-:scope tbody tr:nth-child(even) td { background: color-mix(in srgb, var(--accent-soft) 30%, var(--surface)); }
+/* The head a soft pill of the tray, the rows striped faintly */
+:scope { --table-rule: none; --table-head-bg: none; --table-head-fg: var(--accent); }
+:scope table { border-collapse: separate; border-spacing: 0; }
+:scope thead th { background: var(--soft-tray); font-weight: 800; }
+:scope thead th:first-child { border-start-start-radius: min(var(--radius-pill), var(--floe-pill-end)); border-end-start-radius: min(var(--radius-pill), var(--floe-pill-end)); }
+:scope thead th:last-child { border-start-end-radius: min(var(--radius-pill), var(--floe-pill-end)); border-end-end-radius: min(var(--radius-pill), var(--floe-pill-end)); }
+:scope tbody tr:nth-child(even) td { background: color-mix(in srgb, var(--soft-tray) 55%, var(--surface)); }
+:scope tbody tr:nth-child(even) td:first-child { border-start-start-radius: var(--radius-small); border-end-start-radius: var(--radius-small); }
+:scope tbody tr:nth-child(even) td:last-child { border-start-end-radius: var(--radius-small); border-end-end-radius: var(--radius-small); }
