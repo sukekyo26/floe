@@ -1,4 +1,6 @@
-:scope { background: var(--surface); --floe-shadow-color: var(--shadow); border-top: 3px solid var(--tone); }
-:scope::before { border-radius: var(--radius-small); }
-/* A line's code takes the ground, which the note's white would hide it in */
+/* A note is a notification: a face barely of its tone, a large rounded-square icon of its tone at the left beside both
+   its lines */
+:scope { --floe-shadow-color: var(--shadow); --floe-mark: 2.8rem; --floe-mark-gap: 1rem; border-radius: var(--app-note); background: color-mix(in srgb, var(--tone-soft) 30%, var(--surface)); }
+:scope::before { border-radius: var(--app-icon); font-size: 1.2rem; margin-top: 0.15rem; }
+/* A line's code takes the ground, which the note's near-white would hide it in */
 :scope code { background: var(--face, var(--bg)); }

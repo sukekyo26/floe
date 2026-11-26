@@ -1,4 +1,9 @@
-/* A dark head, as a dashboard's: the head on the code's ink, its text light; the rows striped with the ground */
-:scope { --table-head-bg: var(--code-bg); --table-head-fg: var(--code-fg); --table-rule: none; }
+/* The table is one white card; its dark head floats inside it as a rounded bar, off the card's edge by the card's own
+   padding; the rows part by hairlines, the first column bold */
+:scope { --table-head-bg: var(--code-bg); --table-head-fg: var(--code-fg); --table-rule: none; padding: 8px 8px 4px; }
+:scope table { border-collapse: separate; border-spacing: 0; }
 :scope thead th { --face: var(--table-head-bg); --on-face: var(--table-head-fg); }
-:scope tbody tr:nth-child(even) td { background: color-mix(in srgb, var(--bg) 60%, var(--surface)); }
+:scope thead th:first-child { border-start-start-radius: var(--app-bar); border-end-start-radius: var(--app-bar); }
+:scope thead th:last-child { border-start-end-radius: var(--app-bar); border-end-end-radius: var(--app-bar); }
+:scope tbody tr + tr td { border-top: 1px solid var(--line); }
+:scope tbody td:first-child { font-weight: 700; }
