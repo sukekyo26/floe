@@ -85,7 +85,7 @@ const measureBand = `(() => {` + colours + `
   const fenced = find('markdown', 'header > [data-floe-markdown] > pre > code');
   if (fenced && framed(fenced)) push('markdown', 'fenced code: frame ' + getComputedStyle(fenced).boxShadow);
   // A text has no ground of its own: its Markdown is in the band's text colour, and its heading takes no mark of the
-  // page's (retro's stripes, which its band.css leaves out).
+  // page's (retro's close box, drawn on a section's heading alone).
   const said = find('text', 'header > [data-floe-text] p'), heading = find('text', 'header > [data-floe-text] h2');
   const band = getComputedStyle(header).color;
   if (said && getComputedStyle(said).color !== band) push('text', 'colour ' + getComputedStyle(said).color + ', want the band\'s ' + band);

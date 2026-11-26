@@ -1,0 +1,2 @@
+/* The picked tab is a white face standing up, as the old screens' tabbed sheets */
+:scope { --tabs-picked-bg: var(--surface); --tabs-picked-fg: var(--fg); --tabs-picked-ring: inset 0 2px var(--accent); }

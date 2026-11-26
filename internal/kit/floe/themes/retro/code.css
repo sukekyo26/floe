@@ -1,0 +1,2 @@
+/* Code sits in a window: a grey head over the black */
+:scope { --code-head-bg: var(--rt-button); --code-head-fg: var(--fg); --code-head-add: var(--good); --code-head-del: var(--bad); }
