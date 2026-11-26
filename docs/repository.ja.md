@@ -156,6 +156,6 @@ The documents in docs/specs are drawn by floe. To change one, run `floe guide` f
 ## 気を付けること
 
 - **誰も変えていないページが落ちるとき**：ページを描いたのと別の版の floe か、その間にマージされた PR がテンプレート・部品・テーマを変えたときです。最新を取り込み、描き直して、ページをコミットします。
-- **floe の版**：別の版はページを違う形に描くことがあります。版を上げるのは専用の PR にします。CI に新しい版を書き（同じ行に 2 か所）、入れて、ページを全部描き、コミットします。floe のソースからビルドした、リリースとリリースの間の floe は、違う形に描くことがあり、版の番号の後に `+` と commit が付きます（`0.3.1+09feb55824ca`）。ページは、版に `+` の無いリリースの floe で描きます。
+- **floe の版**：別の版はページを違う形に描くことがあります。版を上げるのは専用の PR にします。CI に新しい版を書き（同じ行に 2 か所）、入れて、ページを全部描き、コミットします。floe のソースからビルドした、リリースとリリースの間の floe は、違う形に描くことがあり、版の番号の後に `+` と commit が付きます（`<版>+<commit>`）。ページは、版に `+` の無いリリースの floe で描きます。
 - **AWS・Google Cloud・Azure のアイコン**：floe は同梱しないので、描く前に、各マシンと CI が取ってきます（CI では Install floe の次の段。[commands.ja.md](commands.ja.md#floe-icons-fetch-セット-zip-か-url)）。`floe icons fetch aws` と `floe icons fetch gcp` は最新のセットを取り、アイコンが変わるとページも変わります。AWS を 1 つのセットに留めるには、その zip の URL（日付が入る）を、CI でも自分のマシンでも渡します（`floe icons fetch aws https://…/Icon-package_….zip`）。Google の 2 つの zip は、中身が変わっても URL が同じなので、zip を取っておいて両方を渡します。Azure の zip は、条件に同意して手で落とし、`floe icons fetch azure` に渡します。Lucide のアイコンは組み込みです。
 - **ページが多いとき**：1 回の `floe render` が使えるメモリは、そのページ全部を合わせて 512 MiB までです（[commands.ja.md](commands.ja.md#floe-render-datayaml)）。超えたら、`docs/specs` のフォルダを 1 つずつ走らせます。

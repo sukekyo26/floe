@@ -121,7 +121,7 @@ The documents in docs/specs are drawn by floe. To change one, run `floe guide` f
 
 ### floe's version
 
-- Draw the pages with a release: a floe built from its source has a `+` and a commit after its version (`0.3.1+09feb55824ca`).
+- Draw the pages with a release: a floe built from its source has a `+` and a commit after its version (`<version>+<commit>`).
 
 ### Icons
 
