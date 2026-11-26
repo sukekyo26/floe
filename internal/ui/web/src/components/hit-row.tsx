@@ -1,6 +1,7 @@
 import type { MouseEvent, ReactNode } from 'react';
 
 import { Lead } from '@/components/page-row';
+import { SUB_LINE } from '@/components/row-sub';
 import { ago } from '@/lib/time';
 import type { Page } from '@/types/page';
 import { unseen } from '@/utils/list-view';
@@ -65,10 +66,7 @@ export function HitRow({ id, page: a, reached, sub, onOpen, link = true }: HitRo
         ) : null}
         <time dateTime={time}>{ago(time)}</time>
       </span>
-      <span
-        data-testid="sub"
-        className="flex min-w-0 flex-nowrap items-center gap-x-1.5 text-label text-muted [grid-area:sub] [&>:not([data-testid=path])]:flex-none"
-      >
+      <span data-testid="sub" className={SUB_LINE}>
         {sub}
       </span>
     </li>

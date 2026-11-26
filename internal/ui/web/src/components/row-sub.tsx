@@ -14,6 +14,11 @@ interface RowSubProps {
   readonly middle?: ReactNode;
 }
 
+// SUB_LINE is the line under a row's title, of the list (RowCard) and of a search modal (HitRow) alike: what does not
+// fit goes on to a line of its own, and what is wider than the line alone narrows to it, its words cut inside it
+export const SUB_LINE =
+  'flex min-w-0 flex-wrap items-center gap-x-1.5 gap-y-1 text-label text-muted [grid-area:sub] [&>*]:min-w-0';
+
 // NEW_PILL is the pill of what is new on a row: a page's new version, a task's unread pages
 export const NEW_PILL = `${PILL} bg-new-soft font-mono text-label leading-normal font-bold text-new`;
 

@@ -1,6 +1,7 @@
 import type { CSSProperties, KeyboardEventHandler, MouseEventHandler, ReactNode } from 'react';
 
 import { Ago } from '@/components/ago';
+import { SUB_LINE } from '@/components/row-sub';
 import type { CssVars } from '@/utils/css-vars';
 
 export interface RowTitle {
@@ -98,10 +99,7 @@ export function RowCard({
       >
         <Ago iso={time} />
       </time>
-      <span
-        data-testid="sub"
-        className="flex min-w-0 flex-wrap items-center gap-x-1.5 gap-y-1 text-label text-muted [grid-area:sub] [&>*]:min-w-0"
-      >
+      <span data-testid="sub" className={SUB_LINE}>
         {sub}
       </span>
       {actions === undefined ? null : (
