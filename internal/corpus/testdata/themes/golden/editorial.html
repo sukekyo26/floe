@@ -651,6 +651,8 @@ blockquote::before { content: "“"; content: "“" / ""; position: absolute; le
 @layer floe.parts.depth0 {
 @scope ([data-floe-part="options"]:where(:not(:is([data-floe-part], [data-floe-look]) *))) to (:scope [data-floe-part] > *) {
 .option.pick { background: var(--editorial-bar), var(--accent-soft); }
+/* A line's code in the option picked on the surface, as its own ground is the card's soft yellow too */
+.option.pick :not(pre) > code { background: var(--face, var(--surface)); }
 }
 }
 </style>
