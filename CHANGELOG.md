@@ -6,6 +6,8 @@ adheres to [Semantic Versioning](https://semver.org/).
 
 ## [Unreleased]
 
+## [0.4.0] - 2026-11-26
+
 ### Added
 
 - Add a task's ID to its Edit on the management page: changed, the task's pages (the archived too) and the parent of its child tasks move to the new ID in the same write, and the screen goes to the task's page by it. An ID of another task of the project is refused. The old ID names no task after.
@@ -151,7 +153,8 @@ adheres to [Semantic Versioning](https://semver.org/).
 - Add a page's CSP and sandbox, which keep its scripts to floe's own.
 - Add `floe licenses`, which prints the licenses of floe and of what is built into it.
 
-[Unreleased]: https://github.com/sukekyo26/floe/compare/v0.3.1...HEAD
+[Unreleased]: https://github.com/sukekyo26/floe/compare/v0.4.0...HEAD
+[0.4.0]: https://github.com/sukekyo26/floe/compare/v0.3.1...v0.4.0
 [0.3.1]: https://github.com/sukekyo26/floe/compare/v0.3.0...v0.3.1
 [0.3.0]: https://github.com/sukekyo26/floe/compare/v0.2.0...v0.3.0
 [0.2.0]: https://github.com/sukekyo26/floe/compare/v0.1.1...v0.2.0

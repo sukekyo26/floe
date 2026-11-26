@@ -99,7 +99,7 @@ jobs:
       - uses: 'actions/checkout@v7'
       - name: 'Install floe'
         run: |
-          curl -fsSL https://raw.githubusercontent.com/sukekyo26/floe/v0.3.1/install.sh | FLOE_VERSION=0.3.1 sh
+          curl -fsSL https://raw.githubusercontent.com/sukekyo26/floe/v0.4.0/install.sh | FLOE_VERSION=0.4.0 sh
           echo "$HOME/.local/bin" >> "$GITHUB_PATH"
       - name: 'Check the documents'
         run: |
@@ -116,7 +116,7 @@ version: 0.2
 phases:
   install:
     commands:
-      - 'curl -fsSL https://raw.githubusercontent.com/sukekyo26/floe/v0.3.1/install.sh | FLOE_VERSION=0.3.1 FLOE_INSTALL_DIR=/usr/local/bin sh'
+      - 'curl -fsSL https://raw.githubusercontent.com/sukekyo26/floe/v0.4.0/install.sh | FLOE_VERSION=0.4.0 FLOE_INSTALL_DIR=/usr/local/bin sh'
   build:
     commands:
       - |
