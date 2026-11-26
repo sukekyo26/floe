@@ -397,7 +397,7 @@ For a template it refuses, by kind:
 - a file floe cannot read as written, in any file: YAML or JSON that is not UTF-8 or holds a byte order mark inside, YAML that holds U+0085, U+2028 or U+2029 (read as line breaks; write `"\u2028"` in double quotes), YAML over 1 MiB, JSON that holds a lone surrogate, YAML with a key written twice or a key in `{ }` or `[ ]` with no value as in `{a, b: 1}`, and what `floe guide` (*YAML that floe reads as you meant*) says floe refuses in a data file;
 - the page drawn from `example.yaml`: what the data file's items break in the schema and the checks, a `for` of `checks.yaml` that does not lead to a list in the data (*checks.yaml*), what *page.html* says the page drawn MUST NOT hold, an item of format `markdown`, `html` or `image` that is not text (a number, `true` or `null` unquoted), an item of format `html` that opens or closes an element of the page or stands in a text or an attribute.
 
-The check tests files, names and syntax, and of values those two corners alone, not places. These pass with exit code 0:
+The check tests files, names and syntax, and of values `--radius-small` and `--radius-pill` alone, not places. These pass with exit code 0:
 
 - a page without `<!doctype html>`;
 - a `page.css` rule that restyles nothing or breaks a layout;
