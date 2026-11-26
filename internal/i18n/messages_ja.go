@@ -473,7 +473,7 @@ var messagesJA = map[string]string{
 	"theme_about_blueprint":    "方眼紙に青いインク、セクションの区切り線もそのインク",
 	"theme_about_brutal":       "クリーム色に黒、平塗りの原色、セクションの区切り線は太い",
 	"theme_about_default":      "floe 標準のテーマで、どのテーマもこれを元にする：暖かみのある灰色の背景、細い枠の白い面、青緑の差し色",
-	"theme_about_editorial":    "印刷した報告書の組み方：面の代わりに線と細い枠、小さな角丸、カードごとに上に差し色の線",
+	"theme_about_editorial":    "墨と黄の雑誌：節は黄の帯から始まり、カードと数の上に短い黄の罫、数は大きく太い字",
 	"theme_about_ink":          "紙にインク：黒に近い色、強調には藍色のインク、セクションの区切り線もそのインク",
 	"theme_about_notebook":     "罫線の紙にペン、丸みのある書体",
 	"theme_about_pebble":       "暖かみのある背景に小石：行はトレーに並ぶ丸い石、部品ごとに違う形、茶色の差し色",

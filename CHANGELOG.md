@@ -8,6 +8,8 @@ adheres to [Semantic Versioning](https://semver.org/).
 
 ### Changed
 
+- Change the theme `editorial` to ink and yellow, in colours of no other theme: a section opens on a yellow band with its number on an ink block, cards, figures and the option picked have a short yellow bar over their words, a table a heavy ink rule over it, a note a heavy edge of its tone at the left, a decision a thick yellow cap and a large title, and figures are large and heavy; the accent is the ink, so a template's bands filled with it are black, and a note of no tone is on the ink's grey.
+
 - Change the theme `app` so that each part takes an app's shape on its white card: a note is a notification with a large rounded-square icon on a face barely of its tone, a decision a sheet pulled up with a grabber, a fold a settings row with its chevron at the right, a quote a message bubble, a table's dark head a rounded bar inside its card; numbers are drawn in the text's face, a section's heading has a short raspberry bar under it, a line's code is on grey, and the Latin is drawn in the Japanese face, as in `default`, where Segoe UI drew it wide on Windows.
 
 ## [0.4.0] - 2026-11-26

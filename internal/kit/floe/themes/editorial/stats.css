@@ -1,0 +1,4 @@
+/* The figure is the box */
+.stat { background: var(--editorial-bar), var(--surface); }
+.stat dt { font-weight: 800; letter-spacing: 0.08em; color: var(--accent); }
+.stat .value { font-family: var(--font); font-size: 2.5rem; font-weight: 900; line-height: 1.2; }
