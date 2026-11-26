@@ -12,8 +12,10 @@ import (
 	"floe/internal/store"
 )
 
-// renameTask is a write of the task (project, name) alone that changes its ID to to, with ed's fields.
-func renameTask(s *store.Store, project, name, to string, ed store.TaskEdit) (store.TaskChangeResult, error) {
+// renameTask is a write of the task (p, name) alone that changes its ID to to, with ed's fields.
+func renameTask(s *store.Store, name, to string, ed store.TaskEdit) (store.TaskChangeResult, error) {
+	project := "p"
+
 	return s.ChangeTasks(store.TaskChange{TaskEdit: ed, Slugs: nil, TaskProject: &project, Task: &name, Category: nil, Pin: nil, Clear: false, Rename: &to})
 }
 
@@ -59,11 +61,11 @@ func TestTaskRename(t *testing.T) {
 		t.Fatal(err)
 	}
 	rev := before["p"]["#1"].Rev
-	got, err := renameTask(s, "p", "#1", " #7 ", store.TaskEdit{Rev: &rev, Title: new("U")})
+	got, err := renameTask(s, "#1", " #7 ", store.TaskEdit{Rev: &rev, Title: new("U")})
 	if err != nil {
 		t.Fatal(err)
 	}
-	var written []string
+	written := make([]string, 0, len(got.Tasks))
 	for _, w := range got.Tasks {
 		written = append(written, w.Task)
 	}
@@ -95,7 +97,7 @@ func TestTaskRename(t *testing.T) {
 		}
 	}
 	// The same ID, written with spaces round it, changes the fields alone
-	if _, err := renameTask(s, "p", "#7", " #7 ", store.TaskEdit{Title: new("V")}); err != nil {
+	if _, err = renameTask(s, "#7", " #7 ", store.TaskEdit{Title: new("V")}); err != nil {
 		t.Fatal(err)
 	}
 	if all, err = s.ReadTasks(); err != nil || all["p"]["#7"].Title != "V" || len(all["p"]) != 2 {
@@ -132,7 +134,7 @@ func TestTaskRenameRefused(t *testing.T) {
 		{"spaces", "  ", store.TaskEdit{}, "a task needs an ID"},
 		{"stale", "#3", store.TaskEdit{Rev: &stale}, "task #1"},
 	} {
-		_, err := renameTask(s, "p", "#1", c.to, c.ed)
+		_, err = renameTask(s, "#1", c.to, c.ed)
 		if err == nil || !strings.Contains(told(err, root), c.want) {
 			t.Errorf("%s: %v, want %s", c.what, err, c.want)
 		}
@@ -147,7 +149,7 @@ func TestTaskRenameRefused(t *testing.T) {
 	if err == nil || !strings.Contains(told(err, root), "changes a task's ID puts no pages on a task") {
 		t.Errorf("with pages: %v", err)
 	}
-	if _, err := renameTask(s, "p", "#9", "#3", store.TaskEdit{}); !errors.Is(err, store.ErrNotFound) {
+	if _, err = renameTask(s, "#9", "#3", store.TaskEdit{}); !errors.Is(err, store.ErrNotFound) {
 		t.Errorf("of no row: %v", err)
 	}
 	if now, err := os.ReadFile(tasks); err != nil || string(now) != string(was) {
