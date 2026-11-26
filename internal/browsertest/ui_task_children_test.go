@@ -492,7 +492,10 @@ func TestUITaskHeadRoom(t *testing.T) { //nolint:paralleltest // the browser tes
   if (!['task-up', 'task-edit', 'task-archive', 'task-project', 'task-add-page'].every((id) => r(id).left >= 0 && r(id).right <= innerWidth)) said.push('past the window');
   if (document.documentElement.scrollWidth > innerWidth || body.scrollWidth > body.clientWidth) said.push('scrolls sideways');
   if (r('task-archive').top < Math.max(title.bottom, r('task-edit').bottom)) said.push('the archive off the state');
-  const lines = Math.round(title.height / parseFloat(getComputedStyle(at('task-title')).lineHeight));
+  // The title's own lines, the ID's line above them left out
+  const text = document.createRange();
+  text.selectNodeContents(at('task-title').lastChild);
+  const lines = new Set([...text.getClientRects()].map((x) => Math.round(x.top))).size;
   return [lines > 1 ? 'more' : 'one', ...said].join(', ');
 })()`)
 			if got != task.lines {
