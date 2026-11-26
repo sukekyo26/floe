@@ -1,0 +1,17 @@
+/* A section opens on a band of the theme's colour, its number on a block, seen while the page is scrolled fast. The band
+   paints a ground of its own, so it takes no face from around it. Its pad is the one room the theme makes, as pebble's
+   band: words on a ground need it off the ground's edge. A section that is a panel of its own (handoff's) keeps its plain
+   heading, a band in a box being one box too many */
+:scope { counter-reset: editorial-section; --floe-heading-top: 0.55rem; }
+section:not([data-floe-look]):has(> h2) { counter-increment: editorial-section; }
+section:not([data-floe-look]) > h2 {
+  display: flex; align-items: center; gap: 0.7rem; padding: var(--floe-heading-top) 1rem 0.55rem; border-radius: var(--radius-small);
+  background: var(--editorial-hi); color: var(--fg); --face: initial; --on-face: initial; font-weight: 800;
+}
+section:not([data-floe-look]) > h2::before {
+  content: counter(editorial-section, decimal-leading-zero); content: counter(editorial-section, decimal-leading-zero) / counter(editorial-section, decimal-leading-zero);
+  padding: 0.05rem 0.45rem; border-radius: var(--radius-small);
+  background: var(--fg); color: var(--editorial-hi); font: 800 var(--floe-text-small) var(--mono); letter-spacing: 0.1em;
+}
+/* A thick yellow underline of a sub-heading's words: drawn on them, it takes no room */
+section > h3 { text-decoration: underline 4px var(--editorial-hi); text-underline-offset: 0.3em; text-decoration-skip-ink: none; }

@@ -1,2 +1,4 @@
+/* A side note: one face of its tone, a heavy edge at the left, its title a kicker */
 :scope::before { content: none; }
-.title { font-size: 0.8rem; letter-spacing: 0.06em; }
+:scope { background: var(--tone-fill); border-radius: var(--radius-small); --floe-inset: inset 5px 0 0 var(--tone); }
+.title { font-size: var(--floe-text-aside); letter-spacing: 0.08em; }
