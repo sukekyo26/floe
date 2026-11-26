@@ -6,6 +6,10 @@ adheres to [Semantic Versioning](https://semver.org/).
 
 ## [Unreleased]
 
+### Changed
+
+- Change the theme `app` so that each part takes an app's shape on its white card: a note is a notification with a large rounded-square icon on a face barely of its tone, a decision a sheet pulled up with a grabber, a fold a settings row with its chevron at the right, a quote a message bubble, a table's dark head a rounded bar inside its card; numbers are drawn in the text's face, a section's heading has a short raspberry bar under it, a line's code is on grey, and the Latin is drawn in the Japanese face, as in `default`, where Segoe UI drew it wide on Windows.
+
 ## [0.4.0] - 2026-11-26
 
 ### Added

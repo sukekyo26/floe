@@ -1,0 +1,5 @@
+/* A fold is a settings row: closed, a capsule with its chevron at the right end; open, a card. In a chart it lies flat
+   on the ground, not a card raised in a card */
+:scope:not([open]) { border-radius: 999px; }
+:scope > summary::before { order: 2; margin-left: auto; margin-right: 0.4rem; }
+[data-floe-part=chart] :scope { background: var(--bg); --floe-shadow-color: transparent; }

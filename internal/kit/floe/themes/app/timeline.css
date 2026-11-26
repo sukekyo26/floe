@@ -1,0 +1,4 @@
+/* Ringed dots; the time in a grey capsule */
+:scope { --floe-mark: 1rem; }
+:scope > li::before { background: var(--surface); box-shadow: inset 0 0 0 3.5px var(--tone); }
+:scope .date { padding: 0 0.6rem; border-radius: 999px; background: var(--app-chip); --face: var(--app-chip); font-weight: 700; }
