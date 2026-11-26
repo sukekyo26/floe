@@ -241,6 +241,7 @@ var messagesJA = map[string]string{
 	"store_task_was":          "タスク %s が、読んだ後に変わりました",
 	"store_page_no_task":      "ページ %s はタスクに付いていません。カテゴリとタスクの欄にはタスクが要ります",
 	"store_task_off":          "ページをタスクから外す書き込みでは、タスクを変えられません",
+	"store_task_rename_pages": "タスクの ID を変える書き込みでは、ページをタスクに付けられません。ID だけを変えてから、ページを付けてください",
 	"store_parent_projects":   "親は 1 つのタスクに付けます。ページは %d 個のプロジェクトのタスクにいます",
 	"store_category_paged":    "タスク %[2]s（%[3]s）のカテゴリ %[1]s にはページがあります（%[4]s）。先にページを外すか、並びに残してください",
 	"store_parent_self":       "タスク %s は自分の親になれません",

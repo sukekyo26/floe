@@ -25,6 +25,9 @@ type TaskChange struct {
 	Category *string `json:"category,omitzero"`
 	Pin      *bool   `json:"pin,omitzero"`
 	Clear    bool    `json:"clear,omitzero"`
+	// Rename is, without Slugs, the ID the task comes to have: its row, the pages on it and its children's parent move
+	// there in the same write.
+	Rename *string `json:"rename,omitzero"`
 }
 
 // TaskChangeResult is what a TaskChange left: each task it is on, in the order first met, and each page.
@@ -73,6 +76,19 @@ func (s *Store) ChangeTasks(w TaskChange) (TaskChangeResult, error) {
 		}
 		w.Parent = &parent
 	}
+	if w.Rename != nil {
+		if len(w.Slugs) > 0 {
+			return TaskChangeResult{}, usererr.New("store_task_rename_pages")
+		}
+		to, err := TaskName(*w.Rename)
+		if err != nil {
+			return TaskChangeResult{}, err
+		}
+		if to == "" {
+			return TaskChangeResult{}, usererr.New("store_task_name")
+		}
+		w.Rename = &to
+	}
 	var alone taskRef
 	if len(w.Slugs) == 0 {
 		project, name, err := taskKey(deref(w.TaskProject), deref(w.Task))
@@ -109,7 +125,68 @@ func (s *Store) ChangeTasks(w TaskChange) (TaskChangeResult, error) {
 	if err = s.checkChange(all, w, refs, pages); err != nil {
 		return TaskChangeResult{}, err
 	}
-	return s.applyChange(all, w, refs, pages)
+	if w.Rename == nil || *w.Rename == alone.name {
+		return s.applyChange(all, w, refs, pages)
+	}
+	return s.renameTask(all, w, alone)
+}
+
+// renameTask writes w, checked, of the task ref, and moves it to the ID w.Rename: its row, the pages on it (the archived
+// too) and its children's parent, each child written as any row that changes (applyChange). tasks.json, then the pages.
+// LIMIT: a page the system refuses to write after tasks.json stops the write there, and the pages after it name the old
+// ID, of no row. `floe task --slug <page> --task <new ID>` puts each on the task again. Write the rows twice (the old one
+// kept till the pages are written) if a half-done write comes to mislead.
+func (s *Store) renameTask(all Tasks, w TaskChange, ref taskRef) (TaskChangeResult, error) {
+	to := *w.Rename
+	rows := all[ref.project]
+	if _, had := rows[ref.name]; !had {
+		return TaskChangeResult{}, ErrNotFound
+	}
+	if _, taken := rows[to]; taken {
+		return TaskChangeResult{}, usererr.New("store_task_there", to)
+	}
+	var pages []changedPage
+	if err := s.eachPageOn(ref.project, ref.name, func(slug string, m *Meta) bool {
+		was := *m.Task
+		m.Task.Name = to
+		pages = append(pages, changedPage{slug: slug, meta: m, ref: taskRef{project: ref.project, name: to}, was: was})
+		return true
+	}); err != nil {
+		return TaskChangeResult{}, err
+	}
+	t := rows[ref.name].edited(w.TaskEdit)
+	t.At = Now()
+	t.Rev++
+	delete(rows, ref.name)
+	rows[to] = t
+	out := TaskChangeResult{Tasks: []TaskWritten{{TaskProject: ref.project, Task: to, Row: t, Made: false, Wrote: true, Added: nil}}, Pages: make([]Edited, 0, len(pages))}
+	// Every row naming it, not only those childrenOfTask counts: a row written by hand under a parent with a parent too
+	// keeps naming it
+	var children []string
+	for name, c := range rows {
+		if c.Parent == ref.name {
+			children = append(children, name)
+		}
+	}
+	slices.Sort(children)
+	for _, child := range children {
+		c := rows[child]
+		c.Parent = to
+		c.At = t.At
+		c.Rev++
+		rows[child] = c
+		out.Tasks = append(out.Tasks, TaskWritten{TaskProject: ref.project, Task: child, Row: c, Made: false, Wrote: true, Added: nil})
+	}
+	if err := s.writeTasks(all); err != nil {
+		return TaskChangeResult{}, err
+	}
+	for _, p := range pages {
+		if err := s.WriteMeta(p.slug, p.meta); err != nil {
+			return TaskChangeResult{}, err
+		}
+		out.Pages = append(out.Pages, Edited{Slug: p.slug, TaskProject: ref.project, Task: p.meta.Task, OffTask: "", OffCategory: ""})
+	}
+	return out, nil
 }
 
 func deref(p *string) string {
