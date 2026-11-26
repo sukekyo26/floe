@@ -1,1 +1,3 @@
 :scope { background: var(--aurora-glass); border: 1px solid var(--aurora-edge); --floe-shadow-color: var(--shadow); }
+/* A box in a part's box is on the quiet ground, as the glass in glass would be white on white and its bright edge unseen */
+:is([data-floe-part], [data-floe-look]) :scope { background: var(--quiet); }

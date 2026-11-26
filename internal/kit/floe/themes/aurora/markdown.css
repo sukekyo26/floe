@@ -1,2 +1,4 @@
 blockquote > * { --face: initial; --on-face: initial; }
 blockquote { border: 1px solid var(--aurora-edge); border-radius: var(--radius); padding: 1rem 1.4rem; color: var(--fg); background: var(--surface); }
+/* A quote in a part's box is on the quiet ground too, for the same reason */
+:is([data-floe-part], [data-floe-look]) blockquote { background: var(--quiet); }
