@@ -15,5 +15,5 @@ func TestRenderedShadows(t *testing.T) { //nolint:paralleltest // the browser te
 	check(t, "held", []string{s.b.eval(measureCellShadows)}, "rgba(0, 0, 0, 0) in rgb(10, 10, 10)")
 	s.b.navigate("/a/shadows-retro/?raw")
 	got := s.b.eval(`(() => { const s = getComputedStyle(document.querySelector('.card')).boxShadow; return (s.match(/inset/g) || []).length; })()`)
-	check(t, "retro's raised edge", []string{got}, "2")
+	check(t, "retro's raised edge", []string{got}, "3")
 }
