@@ -8,7 +8,7 @@ adheres to [Semantic Versioning](https://semver.org/).
 
 ### Changed
 
-- Change the theme `aurora` so that its colours keep off the words: its wash is of violets alone, without the peach and mint; a section's rule, now 3px, the line under a table's head and the top of the option picked are a line of light from violet to rose lilac; the accent's pills are filled violet with white words, everywhere; a box or quote in a part's box, as a table in a step, is on the quiet ground, apart from the glass around it; and in `design` a section heading's line at the left is a pale violet and the line under the page's head is 3px.
+- Change the theme `aurora` so that its colours keep off the words: its wash is of violets alone, without the peach and mint; a section's rule, now 3px, the line under a table's head and the top of the option picked are a line of light from violet to rose lilac; the accent's pills are filled violet with white words, everywhere; its glass boxes and quotes have a thin violet frame, so that a box in a box, as a table in a step, stands apart from the glass around it; and in `design` a section heading's line at the left is a pale violet and the line under the page's head is 3px.
 
 - Change the theme `soft` to peach and plum, in colours of no other theme: faces float without frames on a pale peach ground, a section opens on a round peach band, a table's head is a round band and its striped rows are a faint peach with round ends, a note has corners of 26px and a larger sign, a note of no tone is lavender grey, the titles of figures and a decision's state and date are round peach pills, and figures are large and plum.
 

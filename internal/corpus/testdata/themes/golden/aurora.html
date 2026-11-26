@@ -251,9 +251,7 @@ section:not([data-floe-look]) > h2 { border-image: var(--aurora-ribbon) 1; }
 @layer floe.theme {
 @scope (:root) {
 blockquote > * { --face: initial; --on-face: initial; }
-blockquote { border: 1px solid var(--aurora-edge); border-radius: var(--radius); padding: 1rem 1.4rem; color: var(--fg); background: var(--surface); }
-/* A quote in a part's box is on the quiet ground too, for the same reason */
-:is([data-floe-part], [data-floe-look]) blockquote { background: var(--quiet); }
+blockquote { border: 1px solid var(--line); border-radius: var(--radius); padding: 1rem 1.4rem; color: var(--fg); background: var(--surface); }
 }
 }
 </style>
@@ -669,18 +667,18 @@ blockquote { border: 1px solid var(--aurora-edge); border-radius: var(--radius);
 <style>
 @layer floe.parts.depth0 {
 @scope ([data-floe-part="table"]:where(:not(:is([data-floe-part], [data-floe-look]) *))) to (:scope [data-floe-part] > *) {
-:scope { background: var(--aurora-glass); border: 1px solid var(--aurora-edge); --floe-shadow-color: var(--shadow); }
-/* A box in a part's box is on the quiet ground, as the glass in glass would be white on white and its bright edge unseen */
-:is([data-floe-part], [data-floe-look]) :scope { background: var(--quiet); }
+/* Glass with a thin violet frame: its bright edge alone is unseen on white, so a box in a box (a step's table) would
+   melt into the glass around it. The frame is the same wherever a box stands */
+:scope { background: var(--aurora-glass); border: 1px solid var(--line); --floe-shadow-color: var(--shadow); }
 }
 }
 </style>
 <style>
 @layer floe.looks.depth1 {
 @scope ([data-floe-look~="panel"]:where(:is([data-floe-part], [data-floe-look]) *):where(:not(:is([data-floe-part], [data-floe-look]) :is([data-floe-part], [data-floe-look]) *))) to (:scope [data-floe-part] > *) {
-:scope { background: var(--aurora-glass); border: 1px solid var(--aurora-edge); --floe-shadow-color: var(--shadow); }
-/* A box in a part's box is on the quiet ground, as the glass in glass would be white on white and its bright edge unseen */
-:is([data-floe-part], [data-floe-look]) :scope { background: var(--quiet); }
+/* Glass with a thin violet frame: its bright edge alone is unseen on white, so a box in a box (a step's table) would
+   melt into the glass around it. The frame is the same wherever a box stands */
+:scope { background: var(--aurora-glass); border: 1px solid var(--line); --floe-shadow-color: var(--shadow); }
 }
 }
 </style>
