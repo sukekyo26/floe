@@ -1,4 +1,4 @@
 /* A quote is a message bubble, grey in the white */
-blockquote { border: 0; padding: 0.7rem 1.1rem; border-radius: var(--app-bubble); background: var(--face, var(--app-chip)); color: var(--on-face, var(--fg)); max-width: fit-content; }
+blockquote { border: 0; padding: 0.7rem 1.1rem; border-radius: var(--app-bubble); background: var(--face, var(--app-chip)); color: var(--on-face, var(--fg)); }
 /* A line's code on a quiet grey, not the accent's pink that links and pills wear */
 :not(pre) > code { background: var(--face, var(--line)); }

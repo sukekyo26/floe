@@ -240,7 +240,7 @@ section > h2 { padding-bottom: 0.45rem; background: linear-gradient(var(--accent
 @layer floe.theme {
 @scope (:root) {
 /* A quote is a message bubble, grey in the white */
-blockquote { border: 0; padding: 0.7rem 1.1rem; border-radius: var(--app-bubble); background: var(--face, var(--app-chip)); color: var(--on-face, var(--fg)); max-width: fit-content; }
+blockquote { border: 0; padding: 0.7rem 1.1rem; border-radius: var(--app-bubble); background: var(--face, var(--app-chip)); color: var(--on-face, var(--fg)); }
 /* A line's code on a quiet grey, not the accent's pink that links and pills wear */
 :not(pre) > code { background: var(--face, var(--line)); }
 }
@@ -637,7 +637,7 @@ blockquote { border: 0; padding: 0.7rem 1.1rem; border-radius: var(--app-bubble)
 @scope ([data-floe-part="options"]:where(:not(:is([data-floe-part], [data-floe-look]) *))) to (:scope [data-floe-part] > *) {
 /* Options are plans to pick from: each number a grey disc, the advised one ringed in raspberry with its number filled */
 :scope.numbered > .option::before { border-radius: 50%; background: var(--app-chip); color: var(--fg); font-weight: 800; }
-.option.pick { outline: 2.5px solid var(--accent); outline-offset: -2.5px; }
+.option.pick { outline: 2.5px solid var(--on-face, var(--accent)); outline-offset: -2.5px; }
 :scope.numbered > .option.pick::before { background: var(--accent); color: var(--on-fill); }
 }
 }
