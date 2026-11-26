@@ -28,14 +28,15 @@ const (
 var shellWord = regexp.MustCompile(`"[^"]*"|\S+`)
 
 // shellWords returns the words of line, a command line of a doc without its program's name: split at spaces but in
-// double quotes, up to a word that starts with # (a comment), each word's double quotes taken off. The comment is cut
+// double quotes, up to a word that starts with # (a comment) or to &&, each word's double quotes taken off. The comment is cut
 // before the quotes come off, so that --task "#130" keeps its value.
-// LIMIT: double quotes and # alone are read: single quotes, --flag="a b", a pipe and a line ending in \ are split
-// otherwise than a shell does (the docs write none). Read them if a doc comes to.
+// LIMIT: double quotes, # and && alone are read: single quotes, --flag="a b" and a line ending in \ are split otherwise
+// than a shell does, and a command after a pipe is not read (the docs write find | while, which is no floe command).
+// Read them if a doc comes to.
 func shellWords(line string) []string {
 	var words []string
 	for _, w := range shellWord.FindAllString(line, -1) {
-		if strings.HasPrefix(w, "#") {
+		if strings.HasPrefix(w, "#") || w == "&&" {
 			break
 		}
 		words = append(words, strings.Trim(w, `"`))
@@ -43,13 +44,26 @@ func shellWords(line string) []string {
 	return words
 }
 
-// shCommands returns the floe command lines of the sh blocks of doc, each without its floe: the lines that start so.
-func shCommands(doc string) []string {
-	var out []string
+// envSettings are settings given to one command: env, then the settings, each NAME="value".
+var envSettings = regexp.MustCompile(`^env(?: \w+="[^"]*")+ `)
+
+// shCommand is a floe command line of a doc, without its floe, and whether settings are before it: its templates, parts
+// and themes are then not the ones a test runs it with.
+type shCommand struct {
+	text     string
+	settings bool
+}
+
+// shCommands returns the floe command lines of the sh blocks of doc: the lines that start with floe, or with settings
+// for one.
+func shCommands(doc string) []shCommand {
+	var out []shCommand
 	for _, block := range fences(doc, "sh") {
 		for line := range strings.Lines(block) {
-			if command, ok := strings.CutPrefix(strings.TrimSpace(line), "floe "); ok {
-				out = append(out, command)
+			line = strings.TrimSpace(line)
+			bare := envSettings.ReplaceAllString(line, "")
+			if command, ok := strings.CutPrefix(bare, "floe "); ok {
+				out = append(out, shCommand{command, bare != line})
 			}
 		}
 	}
@@ -70,6 +84,9 @@ func TestAgentDocQuotes(t *testing.T) {
 	t.Parallel()
 
 	ja := i18n.New(i18n.Tag("ja"))
+	unknown, _, _ := strings.Cut(english.Msg("tmpl_unknown", "api-spec", ""), ";")
+	others, _, _ := strings.Cut(english.Msg("daemon_other_dirs", 7325, "", "", "", "", "", "", "", ""), " the templates")
+	others = strings.Replace(others, "7325", "…", 1)
 	usage := func(text string) string { return english.Msg("cli_usage", text) }
 	states := make([]string, 0, len(store.States))
 	for _, s := range store.States {
@@ -100,6 +117,10 @@ func TestAgentDocQuotes(t *testing.T) {
 			english.Msg("ui_project") + ", and " + english.Msg("ui_save") + ".", 1},
 		{guidePath, "in Japanese these are " + ja.Msg("ui_edit") + ", " + ja.Msg("ui_edit_more") + ", " + ja.Msg("ui_project") + " and " +
 			ja.Msg("ui_save") + ".", 1},
+		{repositoryAgentDocPath, unknown, 1},
+		{repositoryDocPath, unknown, 1},
+		{repositoryJaDocPath, unknown, 1},
+		{repositoryAgentDocPath, others + " …", 1},
 		{guidePath, "cut to " + strconv.Itoa(files.MaxSlugLen) + " characters", 1},
 		{guidePath, "MUST be 1 to " + strconv.Itoa(files.MaxSlugLen) + " lower case", 1},
 	}

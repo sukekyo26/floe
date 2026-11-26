@@ -2,6 +2,7 @@ import { createContext, use, useEffectEvent, useLayoutEffect, useRef, type React
 
 import { Button, ButtonSizeOf } from '@/components/button';
 import type { Hold } from '@/hooks/use-hold';
+import { dropRest } from '@/lib/press-rest';
 import { t } from '@/lib/t';
 import type { FocusBack } from '@/types/focus';
 import type { MessageKey } from '@/types/messages.gen';
@@ -106,6 +107,7 @@ export function Dialog({
 
   const shutNow = (d: HTMLDialogElement) => {
     d.close();
+    dropRest();
     afterClose?.();
     if (d.contains(document.activeElement) && document.activeElement instanceof HTMLElement)
       document.activeElement.blur();
@@ -133,6 +135,7 @@ export function Dialog({
     if (!held && before.held && open) giveBack(d);
     if (open && !d.open) {
       d.showModal();
+      dropRest();
       // React's autoFocus focuses on mounting, and a modal's parts are mounted closed: the one it names takes it here
       d.querySelector<HTMLElement>('[data-autofocus]')?.focus();
     }

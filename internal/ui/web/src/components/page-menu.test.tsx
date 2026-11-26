@@ -3,6 +3,7 @@ import { describe, expect, it } from 'vitest';
 
 import { PageMenu, type Openers, type Place } from '@/components/page-menu';
 import { testBoot } from '@/components/test-boot';
+import { menus } from '@/stores/menus';
 import type { Page } from '@/types/page';
 
 const none = () => undefined;
@@ -17,8 +18,11 @@ const draw = (
   place: Place = 'row',
   taskShown: { project: string; name: string } | null = null,
   onPick: (() => void) | null = () => undefined,
+  open = true,
 ) => {
   testBoot();
+  if (open) menus.show('m');
+  else menus.hide('m');
   return renderToString(
     <PageMenu
       page={{ ...page, ...a }}
@@ -33,7 +37,19 @@ const draw = (
 };
 const hides = (html: string, testid: string) => tagOf(html, testid).includes(' hidden=""');
 
+const itemsOf = (html: string) => html.split('data-menu-item=').length - 1;
+
 describe(PageMenu, () => {
+  it('makes its items as it opens, all of them whatever they are hidden by', () => {
+    expect.assertions(2);
+    expect(
+      ['row', 'list', 'frame', 'find'].map((place) => itemsOf(draw({}, place as Place, null, null, false))),
+    ).toStrictEqual([0, 0, 0, 0]);
+    expect(['row', 'list', 'frame', 'find'].map((place) => itemsOf(draw({}, place as Place)))).toStrictEqual([
+      15, 15, 15, 15,
+    ]);
+  });
+
   it('hides what a page has none of', () => {
     expect.assertions(5);
     const plain = draw();

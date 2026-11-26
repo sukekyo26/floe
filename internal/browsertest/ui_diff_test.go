@@ -893,7 +893,7 @@ func TestUIDiffNotice(t *testing.T) { //nolint:paralleltest // the browser tests
 }
 
 // TestUIFrameBarFits opens a page of versions whole, whose bar has its choice of versions and its diff's button besides
-// the header's links, at a phone's widths and between 40rem and 56rem: nothing runs off the window, and the name keeps
+// the header's back link, at a phone's widths and between 40rem and 56rem: nothing runs off the window, and the name keeps
 // some room. Its diff loads no page in the frame, which would read the latest.
 func TestUIFrameBarFits(t *testing.T) { //nolint:paralleltest // the browser tests share one Chrome, one at a time
 	s := diffSite(t)

@@ -9,6 +9,7 @@ import (
 	"testing"
 	"testing/fstest"
 
+	"floe/internal/i18n"
 	"floe/internal/kit"
 	"floe/internal/usererr"
 )
@@ -66,6 +67,10 @@ func TestCheckMistakes(t *testing.T) {
 "items": {"type": "object", "additionalProperties": false}}`,
 			"p/checks.yaml": "- for: a\n  expr: 'true'\n  message: m\n",
 		}), nil, nil, ""},
+		{"a for past a part's text", with(map[string]string{
+			"p/schema.json": `{"type": "object", "properties": {"title": {"type": "string"}}}`,
+			"p/checks.yaml": "- for: title.x\n  expr: 'true'\n  message: m\n",
+		}), nil, nil, "own/parts/p/checks.yaml:1:8: " + i18n.EnglishCatalog().Msg("kit_for_undeclared", "title.x", "x")},
 		{"no part.css", with(nil, "p/part.css"), nil, nil, "own/parts/p: " + partFiles},
 		{"a look with a part.html", with(map[string]string{"lk/part.css": "a{}", "lk/part.html": "x", "lk/checks.yaml": ""}), nil, nil, lines(
 			"own/parts/lk/checks.yaml: "+lookUnread, "own/parts/lk/part.html: "+lookUnread)},

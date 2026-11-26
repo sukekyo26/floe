@@ -304,7 +304,7 @@ func exampleNames(t *Template) error {
 }
 
 // forMistakes refuses each for of checks, of the schema c, through a key no value the schema allows there may hold
-// (S10, schema.Forbidding): such a check would find no items, and pass unseen.
+// (S10, schema.Forbidding): such a check finds no item whatever the data, and passes unseen or refuses the data.
 func forMistakes(checks *rules.Checks, c *schema.Compiled) usererr.List {
 	if checks == nil || c == nil {
 		return nil

@@ -1,0 +1,2 @@
+.card :is(p, ul, ol) { color: var(--on-face, var(--fg)); }
+.card .title { font-size: 1.05rem; }

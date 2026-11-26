@@ -1,0 +1,4 @@
+/* Each row a face on a tray, kin of the table's */
+:scope { background: var(--pebble-tray); --quiet: var(--surface); padding: var(--pebble-pad); gap: var(--pebble-gap); --floe-shadow-color: transparent; }
+:scope > * { background: var(--surface); --quiet: var(--pebble-tray); border-radius: var(--pebble-stone); }
+:scope > * + *, :scope::after { border-top: 0; }

@@ -416,20 +416,8 @@ func opposite(a, b string) bool {
 // spread places the ends of side k, in their order: those held at their lines, in the order of their lines, and the
 // rest evenly between those and the ends of the side.
 func (l *layout) spread(k partSide, ends []*sideEnd) {
-	var held []*sideEnd
-	for _, x := range ends {
-		if x.held {
-			held = append(held, x)
-		}
-	}
-	slices.SortStableFunc(held, func(a, b *sideEnd) int { return cmp.Compare(a.at, b.at) })
-	next := 0
-	for i, x := range ends {
-		if x.held {
-			ends[i] = held[next]
-			next++
-		}
-	}
+	sortAmong(ends, func(x *sideEnd) bool { return x.held },
+		func(a, b *sideEnd) int { return cmp.Compare(a.at, b.at) })
 	r := l.names[k.name].r
 	axis := sideAxis(k.side)
 	places := evenly(r.lo(axis), r.lo(axis)+r.size(axis), len(ends), func(i int) (float64, bool) {

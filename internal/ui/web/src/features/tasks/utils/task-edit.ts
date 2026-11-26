@@ -1,14 +1,16 @@
 import { t } from '@/lib/t';
-import type { TaskOf } from '@/types/task';
+import type { TaskOf, TaskWritten } from '@/types/task';
 
 // What the task edit shows of a task, as read: its title, its URLs once each, and its categories in their order
 export interface EditBase {
+  name: string;
   title: string;
   urls: string[];
   categories: string[];
 }
 
-export const editBase = (task: Pick<TaskOf, 'title' | 'urls' | 'categories'>): EditBase => ({
+export const editBase = (task: Pick<TaskOf, 'name' | 'title' | 'urls' | 'categories'>): EditBase => ({
+  name: task.name,
   title: task.title ?? '',
   urls: [...new Set(task.urls ?? [])],
   categories: task.categories ?? [],
@@ -49,15 +51,17 @@ export function mergeURLs(mine: readonly string[], was: readonly string[], now: 
 
 // The modal's fields as they are now
 export interface EditNow {
+  name: string;
   title: string;
   urls: string[];
   categories: string[];
 }
 
-// editChange is what saving sends of what was changed since base: the title, the URLs added, taken off and, when they
+// editChange is what saving sends of what was changed since base: the ID (rename), the title, the URLs added, taken off and, when they
 // are reordered, their order, and the categories in their order; null where nothing was changed. Only what the person
 // changed, so that a URL another added or removed meanwhile is left as it is (ui.md: tasks' URLs)
 export function editChange(base: EditBase, now: EditNow): Record<string, unknown> | null {
+  const name = now.name.trim();
   const title = now.title.trim();
   const added = now.urls.filter((u) => !base.urls.includes(u));
   const removed = base.urls.filter((u) => !now.urls.includes(u));
@@ -68,12 +72,20 @@ export function editChange(base: EditBase, now: EditNow): Record<string, unknown
     ...(ordered ? { order: now.urls } : {}),
   };
   const changed = {
+    ...(name === base.name ? {} : { rename: name }),
     ...(title === base.title ? {} : { title }),
     ...(Object.keys(urls).length > 0 ? { urls } : {}),
     ...(same(now.categories, base.categories) ? {} : { categories: now.categories }),
   };
   return Object.keys(changed).length > 0 ? changed : null;
 }
+
+// movedTo is the ID the store left the task name at, as its answer's first task written says, or null where it is name:
+// the store trims what JS's trim does not (U+0085), and the other way round (U+FEFF), so the ID sent is not the one kept
+export const movedTo = (written: readonly Pick<TaskWritten, 'task'>[], name: string): string | null => {
+  const kept = written[0]?.task;
+  return kept === undefined || kept === name ? null : kept;
+};
 
 // refillTitle is the title field once the task is read again: what was typed stays, or, left as it opened, the title
 // read now
@@ -104,7 +116,7 @@ export function urlRefusal(url: string, urls: readonly string[], max: number): s
 
 // categoryRefusal is why a category's name typed is not added: none, or one there already; '' to add it
 // LIMIT: trim and Go's TrimSpace drop a few spaces apart (U+0085, U+FEFF): two names this takes to differ by them,
-// categoriesOf makes one
+// categoriesOf makes one, and one of U+0085 alone the server takes as no category, where the toast says its name
 export function categoryRefusal(name: string, names: readonly string[]): string {
   if (!name) return t('ui_category_blank');
   if (names.includes(name)) return t('ui_category_there', name);

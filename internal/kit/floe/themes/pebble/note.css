@@ -1,0 +1,5 @@
+/* One face of its tone, its sign a large disc */
+:scope { background: var(--tone-fill); --floe-mark: 1.7rem; --floe-mark-gap: 0.9rem; border-radius: var(--pebble-note-corner); }
+/* As large as the title, so that the disc's centre is the title's */
+:scope::before { font-size: 1.05rem; }
+.title { font-size: 1.05rem; }

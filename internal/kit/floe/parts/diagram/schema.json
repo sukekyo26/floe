@@ -273,10 +273,17 @@
     },
     "tree": {
       "type": "object",
-      "description": "A tree of boxes, its root's centre at x and top at y: floe places each node under its parent and draws the edges",
+      "description": "A tree of boxes, which floe places and joins: growing down, its root's centre at x and top at y; growing right, the top left of all of it at x and y",
       "required": ["x", "y", "root"],
+      "dependentSchemas": { "left": { "required": ["direction"], "properties": { "direction": { "const": "right" } } } },
       "additionalProperties": false,
-      "properties": { "x": { "$ref": "#/$defs/coord" }, "y": { "$ref": "#/$defs/coord" }, "root": { "$ref": "#/$defs/node" } }
+      "properties": {
+        "x": { "$ref": "#/$defs/coord" },
+        "y": { "$ref": "#/$defs/coord" },
+        "direction": { "enum": ["down", "right"], "description": "Which way the tree grows: down (the default) or right" },
+        "root": { "$ref": "#/$defs/node" },
+        "left": { "type": "array", "items": { "$ref": "#/$defs/node" }, "description": "The root's children on its left, which grow left; those of root.children grow right. Only with direction: right" }
+      }
     },
     "node": {
       "type": "object",

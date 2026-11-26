@@ -29,8 +29,11 @@ const MENU = {
   up: 'bottom-[calc(100%-0.5rem)] left-0 max-w-full min-w-[min(17.5rem,100%)]',
 } as const;
 
-// MoreMenu is the menu "…" of a row or of the bar over a page: a details whose open is the one open of stores/menus.ts.
-// What closes it (a click elsewhere, an item done, Escape, the window left) is useOpenMenus, one for the screen
+// MoreMenu is the menu "…" of a row or of the bar over a page: a details whose open is the one open of stores/menus.ts,
+// its items made as it opens: those of hundreds of rows would hold the list's first draw back. What closes it (a click
+// elsewhere, an item done, Escape, the window left) is useOpenMenus, one for the screen
+// LIMIT: a link item is gone from the document as it is pressed (closeMenu), before the browser follows it, which Chrome
+// does (tried in Chrome alone). Close after the press's own action if a browser that does not comes
 export function MoreMenu({ id, label, size = 'row', opens = 'down', children }: MoreMenuProps) {
   const open = useStore(menus.open) === id;
   return (
@@ -38,7 +41,7 @@ export function MoreMenu({ id, label, size = 'row', opens = 'down', children }: 
       data-menu-id={id}
       data-testid="more"
       open={open}
-      // The browser opens it itself to show a word found in it (find in page)
+      // Opened or shut past its press by a script (details.open), the store follows: the items are the store's
       onToggle={(e) => {
         if (e.currentTarget.open) menus.show(id);
         else menus.hide(id);
@@ -65,7 +68,7 @@ export function MoreMenu({ id, label, size = 'row', opens = 'down', children }: 
         data-testid="menu"
         className={`absolute z-30 grid gap-0.5 rounded-menu border border-line bg-panel p-menu-pad shadow-md ${MENU[opens]}`}
       >
-        {children}
+        {open ? children : null}
       </div>
     </details>
   );

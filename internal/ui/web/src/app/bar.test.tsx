@@ -52,6 +52,7 @@ describe(Bar, () => {
       renderToString(
         <Bar
           screen="frame"
+          from="task"
           back={<span id="back" />}
           lead={<span id="frame-title" />}
           actions={<span id="frame-actions" />}
@@ -68,6 +69,6 @@ describe(Bar, () => {
     expect(frame()).toMatch(
       /id="find-open"[^>]*class="hidden narrow:inline-flex.*id="keys-open"[^>]*class="hidden .*id="settings-open"[^>]*class="hidden /s,
     );
-    expect(frame()).not.toMatch(/aria-current/);
+    expect(frame()).toMatch(/<a id="to-list"(?![^>]*aria-current)[^>]*>.*<a id="to-tasks"[^>]*aria-current="page"/);
   });
 });

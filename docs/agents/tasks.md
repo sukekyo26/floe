@@ -15,6 +15,8 @@ The user keeps a task list in the store: the tasks of each project, each with a 
 
 A task is named by its project and its ID (`#130`, `S12`); floe does not read what either means. A task of one project is another task than one of the same ID in another.
 
+The user may change a task's ID in the task's Edit on the management page: its pages and child tasks move to the new ID with it, and the old ID names no task after (`--slug` with `--task` of the old ID makes a new task of it). `floe task` does not change an ID.
+
 | Field | Values | Written by |
 |---|---|---|
 | project | The project of its pages, the one `floe publish` prints (`page in project app`); `""` for pages of none | `--project`, or each page's own with `--slug` |

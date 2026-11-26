@@ -2,9 +2,9 @@ package browsertest_test
 
 import (
 	"encoding/json"
+	"net/url"
 	"os"
 	"path/filepath"
-	"strconv"
 	"strings"
 	"testing"
 
@@ -458,26 +458,49 @@ func TestUITaskChildren(t *testing.T) { //nolint:paralleltest // the browser tes
 	}
 }
 
-// A task's head keeps its buttons within it, wide and narrow: a task done has three, which go onto another line where they do not fit
-// (S450). 280px is narrower than a phone, as the tests' fonts are narrower than a person's.
+// A task's head keeps its way back, title and Edit in one row, wide and narrow: the mark and Edit in the middle of the title however
+// many lines it takes, the title's lines all right of the mark, and nothing past the window, a title with no space in it too. The way
+// back is a mark alone, of an icon button's room, named; the archive stands by the state. 280px is narrower than a phone, as the tests'
+// fonts are narrower than a person's.
 func TestUITaskHeadRoom(t *testing.T) { //nolint:paralleltest // the browser tests share one Chrome, one at a time
 	s := newSite(t)
 	b := s.b
 	b.navigate("/")
-	s.floe(t, "task", "--project", "proj", "--task", "#1", "--state", "done")
+	tasks := []struct{ name, title, lines string }{
+		{"#1", "short", "one"},
+		{"#2", strings.TrimSpace(strings.Repeat("a title of many words ", 6)), "more"},
+		{"#3", strings.Repeat("unbroken", 12), "more"},
+	}
+	for _, task := range tasks {
+		s.floe(t, "task", "--project", "proj", "--task", task.name, "--title", task.title, "--state", "done")
+	}
 	defer b.unsize()
-	for _, width := range []int64{1400, 280} {
-		b.size(width, 800, width == 280)
-		b.navigate("/tasks?project=proj&task=%231")
-		b.until("the head", "!document.getElementById('task-head').hidden && !document.getElementById('task-archive').hidden")
-		got := b.eval("(() => { const head = document.getElementById('task-head').getBoundingClientRect(); return ['task-add-page', 'task-edit', 'task-archive'].every((id) => { const r = document.getElementById(id).getBoundingClientRect(); return r.left >= head.left && r.right <= head.right; }) && document.documentElement.scrollWidth <= innerWidth; })()")
-		if got != "true" {
-			t.Errorf("at %d: the head's buttons within it = %s", width, got)
-		}
-		// 280px: the archive goes under the others; 1400px: one line
-		wrapped := b.eval("document.getElementById('task-archive').getBoundingClientRect().top > document.getElementById('task-edit').getBoundingClientRect().top")
-		if want := strconv.FormatBool(width == 280); wrapped != want {
-			t.Errorf("at %d: the archive on a line of its own = %s, want %s", width, wrapped, want)
+	for _, width := range []int64{1400, 400, 280} {
+		b.size(width, 800, width != 1400)
+		for _, task := range tasks {
+			b.navigate("/tasks?project=proj&task=" + url.QueryEscape(task.name))
+			b.until("the head", "!document.getElementById('task-head').hidden && !document.getElementById('task-archive').hidden")
+			got := b.eval(`(() => {
+  const at = (id) => document.getElementById(id), r = (id) => at(id).getBoundingClientRect(), mid = (id) => (r(id).top + r(id).bottom) / 2;
+  const up = r('task-up'), title = r('task-title'), body = at('list-body'), said = [];
+  if (Math.abs(mid('task-up') - mid('task-title')) > 0.5 || Math.abs(mid('task-edit') - mid('task-title')) > 0.5) said.push('off the middle of the title');
+  if (title.left < up.right || title.right > r('task-edit').left) said.push('the title over the mark or Edit');
+  if (at('task-title').scrollWidth > at('task-title').clientWidth) said.push('the title past its room');
+  if (up.width !== 30 || up.height !== 30 || at('task-up').textContent !== '') said.push('the mark of another form');
+  if (at('task-up').getAttribute('aria-label') !== 'Back to the task list' || at('task-up').title !== 'Back to the task list') said.push('the mark named otherwise');
+  if (up.top - document.querySelector('[data-testid=bar]').getBoundingClientRect().bottom < 8) said.push('the mark by the bar');
+  if (!['task-up', 'task-edit', 'task-archive', 'task-project', 'task-add-page'].every((id) => r(id).left >= 0 && r(id).right <= innerWidth)) said.push('past the window');
+  if (document.documentElement.scrollWidth > innerWidth || body.scrollWidth > body.clientWidth) said.push('scrolls sideways');
+  if (r('task-archive').top < Math.max(title.bottom, r('task-edit').bottom)) said.push('the archive off the state');
+  // The title's own lines, the ID's line above them left out
+  const text = document.createRange();
+  text.selectNodeContents(at('task-title').lastChild);
+  const lines = new Set([...text.getClientRects()].map((x) => Math.round(x.top))).size;
+  return [lines > 1 ? 'more' : 'one', ...said].join(', ');
+})()`)
+			if got != task.lines {
+				t.Errorf("%s at %d: %s, want %s", task.name, width, got, task.lines)
+			}
 		}
 	}
 }
@@ -612,7 +635,7 @@ func TestUITaskSetTitle(t *testing.T) { //nolint:paralleltest // the browser tes
 
 	// A page whole reads no tasks as its list is read: refused, it reads them itself.
 	b.navigate("/a/a/")
-	b.until("the bar", "document.querySelector('#frame-actions [data-testid=task-set]')")
+	b.until("the bar", "document.querySelector('#frame-actions [data-testid=more]')")
 	pressMenuItem(b, "#frame-actions", "task-set")
 	b.until("the dialog", "document.getElementById('set-dialog').open")
 	field("set-task", "#92")

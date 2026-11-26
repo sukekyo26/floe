@@ -79,6 +79,19 @@ func menuItemShown(b *browser, box, item, first string) {
 	}
 }
 
+// inMenu is JS that tells expr of the "…" menu in box, its element m: a menu shut is opened for it by its summary and shut again at
+// once, as its items are made only while it is open. null with no menu there. No focus moves.
+func inMenu(box, expr string) string {
+	return "(() => { const more = document.querySelector(" + js(box+" [data-testid=more]") + "); if (!more) return null; " +
+		"const open = more.open, press = () => { if (!open) more.querySelector('summary').click(); }; press(); " +
+		"const m = more.querySelector('[data-testid=menu]'), told = (" + expr + "); press(); return told; })()"
+}
+
+// inMenuItem is inMenu of the item named item (data-testid), read as i.
+func inMenuItem(box, item, expr string) string {
+	return inMenu(box, "((i) => "+expr+")(m.querySelector("+js("[data-testid="+item+"]")+"))")
+}
+
 // openSlugField unfolds the part of the edit modal that holds the URL name, once the modal is open.
 func openSlugField(b *browser) {
 	b.t.Helper()
@@ -110,7 +123,7 @@ func TestUIVersionPick(t *testing.T) { //nolint:paralleltest // the browser test
 		b.eval("document.activeElement.tagName"),
 		b.eval(`[document.getElementById('read-title').getAttribute('href'), document.querySelector('#read-actions > [data-testid=open]').getAttribute('href'),
 			document.querySelector('#read-actions > [data-testid=download]').getAttribute('href'), document.querySelector('#read-actions > [data-testid=download]').hasAttribute('download'),
-			document.querySelector('#read-actions > [data-testid=diff-open]').getAttribute('href'), document.querySelector('#read-actions [data-testid=menu] [data-testid=open]').getAttribute('href')].join(' ')`))
+			document.querySelector('#read-actions > [data-testid=diff-open]').getAttribute('href'), `+inMenuItem("#read-actions", "open", "i.getAttribute('href')")+`].join(' ')`))
 	// The words' way to the latest leaves the focus on the choice, the words gone.
 	b.eval("[...document.querySelectorAll('[data-testid=ver-note] a')].find((a) => a.textContent.includes('latest')).click()")
 	out = append(out, b.until("the latest", besideLoaded+" === '/a/d/?raw' && document.querySelector('[data-testid=ver-note]') === null && document.activeElement.id"))
@@ -226,10 +239,8 @@ func TestUIVersionURL(t *testing.T) { //nolint:paralleltest // the browser tests
 		};
 		addEventListener('message', (e) => { if (e.data?.pageServed) sessionStorage.setItem('served', (sessionStorage.getItem('served') ?? '') + ' ' + e.data.pageServed.n); });
 	}`)
-	const (
-		diffOpen = "document.querySelector('#frame-actions [data-testid=diff-open]')"
-		unread   = "document.querySelector('#frame-actions [data-testid=mark-unread]')"
-	)
+	const diffOpen = "document.querySelector('#frame-actions [data-testid=diff-open]')"
+	unreadHidden := inMenuItem("#frame-actions", "mark-unread", "i.hidden")
 	open := func(path string) string {
 		t.Helper()
 
@@ -294,16 +305,16 @@ func TestUIVersionURL(t *testing.T) { //nolint:paralleltest // the browser tests
 	b.eval("document.getElementById('frame-title').removeAttribute('tabindex')")
 	// The words' way to the latest; marked unread, moving among the versions tells nothing.
 	open("/a/d/")
-	b.until("read", unread+"?.hidden === false")
+	b.until("read", unreadHidden+" === false")
 	pressMenuItem(b, "#frame-actions", "mark-unread")
 	b.eval("sessionStorage.removeItem('reads')")
-	b.until("unread", unread+".hidden")
+	b.until("unread", unreadHidden)
 	choose(b, "frame-version", 2)
 	b.until("v2", "location.search === '?v=2' && document.querySelector('[data-testid=ver-note]')")
 	b.moving("[...document.querySelectorAll('[data-testid=ver-note] a')].find((a) => a.textContent.includes('latest')).click()")
 	b.until("the latest", "location.search === '' && !document.getElementById('frame-version').hidden && document.activeElement.id === 'frame-version'")
 	b.still()
-	out = append(out, b.eval(unread+".hidden"), b.eval("document.querySelectorAll('[data-testid=toast]').length"), b.eval("sessionStorage.getItem('reads') ?? '0'"))
+	out = append(out, b.eval(unreadHidden), b.eval("document.querySelectorAll('[data-testid=toast]').length"), b.eval("sessionStorage.getItem('reads') ?? '0'"))
 	// What a move kept of another page does not hold this one back.
 	s.floe(t, "publish", s.page(t, "diff/n.yaml", "N", "<p>n</p>"), "--slug", "n")
 	b.eval(`sessionStorage.setItem('version.move', JSON.stringify({ slug: 'other', focus: true, kept: true }))`)
@@ -325,10 +336,10 @@ func TestUIVersionURL(t *testing.T) { //nolint:paralleltest // the browser tests
 			}
 		}
 		t.Fatalf("timed out waiting for %s: %s", what, b.eval("JSON.stringify({ served: sessionStorage.getItem('served'), reads: sessionStorage.getItem('reads'), "+
-			"unreadHidden: "+unread+"?.hidden, toastSeen: window.pageToastSeen ?? false })"))
+			"unreadHidden: "+unreadHidden+", toastSeen: window.pageToastSeen ?? false })"))
 		return ""
 	}
-	out = append(out, told("the page's toast", "window.pageToastSeen === true"), told("read as ever", unread+"?.hidden === false"))
+	out = append(out, told("the page's toast", "window.pageToastSeen === true"), told("read as ever", unreadHidden+" === false"))
 	b.removeScript(toastSeen)
 
 	// A slug changed keeps the version.

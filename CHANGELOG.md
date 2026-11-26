@@ -6,6 +6,38 @@ adheres to [Semantic Versioning](https://semver.org/).
 
 ## [Unreleased]
 
+## [0.4.0] - 2026-11-26
+
+### Added
+
+- Add a task's ID to its Edit on the management page: changed, the task's pages (the archived too) and the parent of its child tasks move to the new ID in the same write, and the screen goes to the task's page by it. An ID of another task of the project is refused. The old ID names no task after.
+- Add the theme `pebble`: rows as round stones on a tray, over a warm ground, each part in a form of its own, with a brown accent; a section's heading is a band from edge to edge.
+- Add variables a theme of one's own sets on `:scope` in `base.css` for the headings of sections in the templates `report` (`--floe-heading-top`, the padding above) and `design` (`--floe-heading-start` and `--floe-heading-edge`, the padding and the line at the left), which `page.css` alone set. A theme that sets none is drawn as before.
+- Add a way to make a new category in the dialog that adds a page on a task's page: "Add a category" beside the categories asks its name, and it is created as the page is put (not at all when the dialog is closed without one). A name already there is refused, in the task's Edit too, with "The category X is already there".
+- Add trees that grow to the right, `direction: right` in a diagram's `tree`, and to both sides of the root with `left`, as a mind map does, where floe places every node; and an example of it, `floe diagram example mindmap`. A tree that grows down is written and drawn as before.
+- Add `floe repository guide`, which prints how to change the documents a repository keeps (data files and the pages drawn) and how to set a repository up so that CI checks them; `floe guide` points to it for such documents.
+
+### Changed
+
+- Change `floe --version` and `floe version` of a floe built from a checkout (`go build`, `go install ./cmd/floe`, `just build`) to add the commit it was built from after a `+`, as `0.3.1+09feb55824ca`, and `.dirty` when the tree had changes, so that it is told from a release, which says its version alone as before.
+- Change the theme `swiss` so that its boxes are seen to their edges: each (a note, a card, an option, a fold and the like) is white in a black frame, as a table was already, wherever it stands, where it had no ground and a rule at its top or its left alone; a quote stands on white and a diagram on grey, the grey of a warning is darker, and so, slightly, is the page's ground.
+- Change the mistake of a `for` of `checks.yaml` that does not lead to a list: there is one for each value in the data file that the path stops at, at its line and column, naming the `for` and its `checks.yaml`, where there was one for the check, at its `for`.
+- Change the bar's "Page list" and "Task list" into a switch: the one of the screen shown stands on a white thumb in a grey track, and on a page shown whole, the one of the list it was opened from does. At 56rem or less (it was 40rem), a page shown whole has the back link's mark in their place. They are links as before, and go to the same places.
+- Change the management page's list to show a long one sooner (with 300 pages, the rows come up about 80 ms earlier), and a page open whole a little sooner too: the items of a "…" menu are made as it opens, so the browser's find in page no longer finds the words of a closed "…" menu.
+- Change a task's page in the management page. The way back to the task list, taken off in 0.3.0, is there again, as the mark `‹` on the left of the title; it goes where the bar's Task list and `h` go. "Edit" is on the right of the title, and the button that archives a task done is by its state. "Add a page" is now "Add" beside a heading over the pages that says how many are not archived, in a pill ("Pages 2"); the heading of the child tasks says its number in the same pill.
+- Change `floe publish` to refuse, without `--force`, a page stored before 0.1.0, which does not say which file it is of, from any file, its own too; it was taken over by another file of its project, or by any when it had no project. With `--force`, it is replaced as another file's page is, its versions, tags, favourite and task dropped, where such a file kept them.
+- **BREAKING**: Change `floe template check` and `floe part check` to refuse a `for` of `checks.yaml` that goes on past a value whose `type` takes neither keys nor a list (`"type": "string"`, and the items of a list of it), where the check found no item and passed unseen, or the data was refused. Mend the path, or remove the check: until then every page is stopped, as by any mistake in a template or part of yours.
+- Change the skill of `floe skill install` to be used for writing and changing a repository's documents too. Those who installed it before replace it with `floe skill install <agent> --force`.
+
+### Fixed
+
+- Fix the title of a task's page in the management page wrapping under the task's ID: the ID is a line of its own, and the title starts on the next, each of its lines where the first starts.
+- Fix the management page's star being hard to see on its grounds: a star pressed or pointed at, the shelf's favourites and the star of a row of the search or of Add a page are a darker gold, at a contrast of 3:1 or more on every ground.
+- Fix a key held on Enter in Add a page sending again over a refusal, before it was read.
+- Fix the rest of a press or a key that opens or closes a modal of the management page (the second press of a double press, a key held down) going through to the modal opened, to the backdrop or to what is under a modal closed: a double press on a row of another task's page under Add a page could move it unasked.
+- Fix the bar of a page shown whole running off the side of a window of about 640 to 650 pixels, in Japanese, when the page is archived and has more than one version.
+- Fix a task's page scrolling sideways when the task's title has a long run with no place to break: the title goes over lines.
+
 ## [0.3.1] - 2026-11-24
 
 ### Fixed
@@ -121,7 +153,8 @@ adheres to [Semantic Versioning](https://semver.org/).
 - Add a page's CSP and sandbox, which keep its scripts to floe's own.
 - Add `floe licenses`, which prints the licenses of floe and of what is built into it.
 
-[Unreleased]: https://github.com/sukekyo26/floe/compare/v0.3.1...HEAD
+[Unreleased]: https://github.com/sukekyo26/floe/compare/v0.4.0...HEAD
+[0.4.0]: https://github.com/sukekyo26/floe/compare/v0.3.1...v0.4.0
 [0.3.1]: https://github.com/sukekyo26/floe/compare/v0.3.0...v0.3.1
 [0.3.0]: https://github.com/sukekyo26/floe/compare/v0.2.0...v0.3.0
 [0.2.0]: https://github.com/sukekyo26/floe/compare/v0.1.1...v0.2.0

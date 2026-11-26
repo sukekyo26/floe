@@ -25,6 +25,9 @@ type TaskChange struct {
 	Category *string `json:"category,omitzero"`
 	Pin      *bool   `json:"pin,omitzero"`
 	Clear    bool    `json:"clear,omitzero"`
+	// Rename is, without Slugs, the ID the task comes to have: its row, the pages on it and its children's parent move
+	// there in the same write.
+	Rename *string `json:"rename,omitzero"`
 }
 
 // TaskChangeResult is what a TaskChange left: each task it is on, in the order first met, and each page.
@@ -66,12 +69,8 @@ func (s *Store) ChangeTasks(w TaskChange) (TaskChangeResult, error) {
 	if err := checkTaskEdit(w.TaskEdit); err != nil {
 		return TaskChangeResult{}, err
 	}
-	if w.Parent != nil {
-		parent, err := TaskName(*w.Parent)
-		if err != nil {
-			return TaskChangeResult{}, err
-		}
-		w.Parent = &parent
+	if err := tidyNames(&w); err != nil {
+		return TaskChangeResult{}, err
 	}
 	var alone taskRef
 	if len(w.Slugs) == 0 {
@@ -109,7 +108,95 @@ func (s *Store) ChangeTasks(w TaskChange) (TaskChangeResult, error) {
 	if err = s.checkChange(all, w, refs, pages); err != nil {
 		return TaskChangeResult{}, err
 	}
+	// After checkChange: checkPaged reads the pages on the task, but those of the write
+	if pages, err = s.renamedPages(all, w, alone, pages); err != nil {
+		return TaskChangeResult{}, err
+	}
 	return s.applyChange(all, w, refs, pages)
+}
+
+// tidyNames trims the parent and the new ID w names, refusing what TaskName refuses, and a new ID of pages or none.
+func tidyNames(w *TaskChange) error {
+	if w.Parent != nil {
+		parent, err := TaskName(*w.Parent)
+		if err != nil {
+			return err
+		}
+		w.Parent = &parent
+	}
+	if w.Rename == nil {
+		return nil
+	}
+	if len(w.Slugs) > 0 {
+		return usererr.New("store_task_rename_pages")
+	}
+	to, err := TaskName(*w.Rename)
+	if err != nil {
+		return err
+	}
+	if to == "" {
+		return usererr.New("store_task_name")
+	}
+	w.Rename = &to
+	return nil
+}
+
+// renames tells whether w changes the ID of the task ref.
+func renames(w TaskChange, ref taskRef) bool {
+	return w.Rename != nil && *w.Rename != ref.name
+}
+
+// renamedPages is pages with those on the task ref (the archived too) put on the ID w.Rename, when w changes it: of a
+// task with a row, to an ID its project has not, nor its parent.
+func (s *Store) renamedPages(all Tasks, w TaskChange, ref taskRef, pages []changedPage) ([]changedPage, error) {
+	if !renames(w, ref) {
+		return pages, nil
+	}
+	to := *w.Rename
+	if _, had := all[ref.project][ref.name]; !had {
+		return nil, ErrNotFound
+	}
+	if _, taken := all[ref.project][to]; taken {
+		return nil, usererr.New("store_task_there", to)
+	}
+	// A parent made in the same write is not among the rows yet
+	if w.Parent != nil && *w.Parent == to {
+		return nil, usererr.New("store_parent_self", to)
+	}
+	err := s.eachPageOn(ref.project, ref.name, func(slug string, m *Meta) bool {
+		m.Task.Name = to
+		// was is the same task by its new ID: the page leaves none (Edited.OffTask)
+		pages = append(pages, changedPage{slug: slug, meta: m, ref: taskRef{project: ref.project, name: to}, was: *m.Task})
+		return true
+	})
+	return pages, err
+}
+
+// moveRow moves the row of the task ref to the ID to, and the parent of every row naming it there, each written at at:
+// the children written.
+func moveRow(rows map[string]Task, ref taskRef, to, at string) []TaskWritten {
+	rows[to] = rows[ref.name]
+	delete(rows, ref.name)
+	// Every row naming it, not only those childrenOfTask counts: a row written by hand under a parent with a parent too
+	// keeps naming it
+	var children []string
+	for name, c := range rows {
+		if c.Parent == ref.name {
+			children = append(children, name)
+		}
+	}
+	slices.Sort(children)
+	written := make([]TaskWritten, 0, len(children))
+	for _, child := range children {
+		c := rows[child]
+		c.Parent = to
+		c.At = at
+		c.Rev++
+		rows[child] = c
+		written = append(written,
+			TaskWritten{TaskProject: ref.project, Task: child, Row: c, Made: false, Wrote: true, Added: nil})
+	}
+	return written
 }
 
 func deref(p *string) string {
@@ -280,6 +367,11 @@ func projectsOf(refs []taskRef) int {
 // LIMIT: a page the system refuses to write after tasks.json stops the write there: the rows and the pages before it
 // stay written, which keeps every task a page names of a row, and the same write given again finishes it. Write the
 // pages to new files first and rename them after if a half-done write comes to mislead.
+// A write that changes the task's ID (Rename) moves the row there after, with its children's parent (moveRow); its
+// pages come in pages (renamedPages).
+// LIMIT: then the pages not yet written name the old ID, of no row, and the same write is refused (the old ID has
+// none). `floe task --slug <page> --task <new ID>` puts each on the task again. Keep the old row till the pages are
+// written if a half-done write comes to mislead.
 func (s *Store) applyChange(all Tasks, w TaskChange, refs []taskRef, pages []changedPage) (TaskChangeResult, error) {
 	out := TaskChangeResult{Tasks: make([]TaskWritten, 0, len(refs)), Pages: make([]Edited, 0, len(pages))}
 	changed := false
@@ -287,31 +379,9 @@ func (s *Store) applyChange(all Tasks, w TaskChange, refs []taskRef, pages []cha
 		if all[ref.project] == nil {
 			all[ref.project] = map[string]Task{}
 		}
-		rows := all[ref.project]
-		parentMade := w.ParentNew != nil && *w.ParentNew
-		if parentMade {
-			up := newTaskRow()
-			up.Title = strings.TrimSpace(*w.ParentTitle)
-			up.Rev = 1
-			rows[*w.Parent] = up
-		}
-		was, had := rows[ref.name]
-		t := rowAfter(was, had, w, ref, pages)
-		// Compared with the URLs as a write leaves them, so that a row written by hand ([] or one twice) is not taken
-		// to change, and its rev move, by a write that changes nothing of it
-		wrote := !had || parentMade || pageCame(ref, pages) || !reflect.DeepEqual(t.tidied(), was.tidied())
-		added := slices.DeleteFunc(slices.Clone(t.Categories), func(c string) bool {
-			return slices.Contains(was.Categories, c) || (w.Categories != nil && slices.Contains(categoriesOf(*w.Categories), c))
-		})
-		if wrote {
-			t.At = Now()
-			t.Rev++
-			rows[ref.name] = t
-			changed = true
-		}
-		out.Tasks = append(out.Tasks, TaskWritten{
-			TaskProject: ref.project, Task: ref.name, Row: t, Made: !had, Wrote: wrote, Added: added,
-		})
+		written := applyRow(all[ref.project], w, ref, pages)
+		changed = changed || written[0].Wrote
+		out.Tasks = append(out.Tasks, written...)
 	}
 	if changed {
 		if err := s.writeTasks(all); err != nil {
@@ -325,6 +395,39 @@ func (s *Store) applyChange(all Tasks, w TaskChange, refs []taskRef, pages []cha
 		out.Pages = append(out.Pages, p.edited())
 	}
 	return out, nil
+}
+
+// applyRow writes w's change of the task ref in rows, its project's, as applyChange says: the task written, then the
+// children a new ID moved.
+func applyRow(rows map[string]Task, w TaskChange, ref taskRef, pages []changedPage) []TaskWritten {
+	parentMade := w.ParentNew != nil && *w.ParentNew
+	if parentMade {
+		up := newTaskRow()
+		up.Title = strings.TrimSpace(*w.ParentTitle)
+		up.Rev = 1
+		rows[*w.Parent] = up
+	}
+	was, had := rows[ref.name]
+	t := rowAfter(was, had, w, ref, pages)
+	// Compared with the URLs as a write leaves them, so that a row written by hand ([] or one twice) is not taken
+	// to change, and its rev move, by a write that changes nothing of it
+	wrote := !had || parentMade || renames(w, ref) || pageCame(ref, pages) ||
+		!reflect.DeepEqual(t.tidied(), was.tidied())
+	added := slices.DeleteFunc(slices.Clone(t.Categories), func(c string) bool {
+		return slices.Contains(was.Categories, c) || (w.Categories != nil && slices.Contains(categoriesOf(*w.Categories), c))
+	})
+	if wrote {
+		t.At = Now()
+		t.Rev++
+		rows[ref.name] = t
+	}
+	name, children := ref.name, []TaskWritten(nil)
+	if renames(w, ref) {
+		name = *w.Rename
+		children = moveRow(rows, ref, name, t.At)
+	}
+	return append([]TaskWritten{{TaskProject: ref.project, Task: name, Row: t, Made: !had, Wrote: wrote, Added: added}},
+		children...)
 }
 
 // edited is the page p as written, with the task and category it was on when it left that task, for another or none.

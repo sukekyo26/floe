@@ -1,0 +1,35 @@
+# Mind map: what to think of before a trip, drawn with the part tree growing to both sides of its root.
+# A node is a box, and an edge leads from it to each of its children.
+#
+# Grid: the top left of all of it is at x = 20, y = 20, and the part tree places the rest: the root's
+# children grow right and the nodes in left grow left, each depth in one column 40 from the longest node
+# of the depth before, siblings 24 apart and centred on their parent. Which side a branch grows to is
+# the writer's, so that a branch added moves no other to the other side. Leave width and height out.
+title: { en: 'What to think of before a trip', ja: '旅の前に考えること' }
+parts:
+  - tree:
+      x: 20
+      y: 20
+      direction: right
+      root:
+        rows: [{ en: 'A trip', ja: '旅' }]
+        tone: accent
+        shape: pill
+        children:
+          - rows: [{ en: 'To pack', ja: '持ち物' }]
+            children:
+              - rows: [{ en: Clothes, ja: '服' }]
+              - rows: [{ en: Chargers, ja: '充電器' }]
+              - rows: [{ en: Medicine, ja: '薬' }]
+          - rows: [{ en: 'To book', ja: '予約' }]
+            children:
+              - rows: [{ en: Trains, ja: '列車' }]
+              - rows: [{ en: 'A hotel', ja: '宿' }]
+      left:
+        - rows: [{ en: Money, ja: 'お金' }]
+          children:
+            - rows: [{ en: Cash, ja: '現金' }]
+            - rows: [{ en: 'A card', ja: 'カード' }]
+        - rows: [{ en: 'At home', ja: '留守の家' }]
+          children:
+            - rows: [{ en: 'The plants', ja: '植物' }]

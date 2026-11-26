@@ -74,8 +74,8 @@ func TestUIList(t *testing.T) { //nolint:paralleltest // the browser tests share
 	b.eval("document.querySelector('#list li[data-slug=r] [data-testid=title]').click()")
 	out = append(out, b.eval(reader), b.eval("location.pathname + ' ' + document.getElementById('read-title').getAttribute('href')"))
 	// The bar over it: its star, the page alone and the same menu as a row's.
-	const items = topsJS + "(document.querySelector(BOX + ' [data-testid=menu]')).filter((e) => !e.hidden && e.dataset.testid !== 'select').length"
-	out = append(out, b.eval(strings.ReplaceAll(items, "BOX", js("#read-actions"))+" === "+strings.ReplaceAll(items, "BOX", js("#list li[data-slug=r]"))))
+	const items = topsJS + "(m).filter((e) => !e.hidden && e.dataset.testid !== 'select').length"
+	out = append(out, b.eval("((bar, row) => bar > 0 && bar === row)("+inMenu("#read-actions", items)+", "+inMenu("#list li[data-slug=r]", items)+")"))
 	// j and k from the row chosen, the list's redraw keeping the row with the focus: another row's title changed, so that it is drawn anew.
 	b.eval("document.querySelector('#list li[data-slug=r] [data-testid=title]').focus()")
 	key("j")
@@ -211,7 +211,7 @@ func TestUIList(t *testing.T) { //nolint:paralleltest // the browser tests share
 		"true true true", "false true about:blank true ",
 		"vn ?view=new", "vn", "All unread 1 / 1", "New", "n", "true",
 		`{"order":["v","n"],"shown":["v","n"],"back":"/?view=new","at":{"slug":"v","file":"","v":0}}`, "/?view=new", "/a/v/",
-		"true true true true true", "flex none none true", "/ false", "none true", "to-list flex", "true block", "true",
+		"true true true true true", "flex none none true", "/ false", "none true", "back flex", "true block", "true",
 		"none none flex none true", "back none",
 	}, "|"))
 }
@@ -1108,7 +1108,7 @@ func TestUIBarActions(t *testing.T) { //nolint:paralleltest // the browser tests
 	for _, slug := range []string{"two", "one"} {
 		pick(slug)
 		b.until(slug+" read", "document.querySelector('#list li[data-slug="+slug+"]:not([data-unread])')")
-		b.until("its menu", "!document.querySelector('#read-actions [data-testid=mark-unread]').hidden")
+		b.until("its menu", inMenuItem("#read-actions", "mark-unread", "i.hidden")+" === false")
 		out = append(out, shown("#read-actions"))
 	}
 	for _, slug := range []string{"link", "gone"} {
@@ -1173,13 +1173,13 @@ func TestUIBarActions(t *testing.T) { //nolint:paralleltest // the browser tests
 	b.until("the bar", "innerWidth === 400 && !document.getElementById('frame-actions').hidden && document.querySelector('#frame-actions [data-testid=more]')")
 	out = append(out, shown("#frame-actions"))
 	out = append(out, b.eval("[document.querySelector('[data-testid=brand]').getClientRects().length, document.getElementById('back').getClientRects().length, document.documentElement.scrollWidth <= innerWidth].join(' ')"))
-	const fav = "(() => { const f = document.querySelector('#frame-actions [data-testid=fav-item]'); return [f.querySelector('[data-testid=label]').textContent, f.getAttribute('aria-label')].join(' / '); })()"
+	fav := inMenuItem("#frame-actions", "fav-item", "[i.querySelector('[data-testid=label]').textContent, i.getAttribute('aria-label')].join(' / ')")
 	const starred = "document.querySelector('#frame-actions [data-testid=star]').getAttribute('aria-pressed')"
 	out = append(out, b.eval(fav))
 	b.pressKey("f")
 	out = append(out, b.until("a favorite", starred+" === 'true' && "+fav))
 	pressItem("#frame-actions", "fav-item")
-	out = append(out, b.until("no favorite", starred+" === 'false' && document.querySelector('#frame-actions [data-testid=fav-item]') && "+fav))
+	out = append(out, b.until("no favorite", starred+" === 'false' && "+fav))
 	// Pressed on the toast with the focus on it, a page marked unread gives the focus to the bar's menu.
 	// The menu opens within the window at any width.
 	for _, width := range []int64{400, 320} {

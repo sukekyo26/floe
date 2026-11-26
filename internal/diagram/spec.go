@@ -132,9 +132,11 @@ type graphEdge struct {
 }
 
 type tree struct {
-	X    float64 `json:"x"`
-	Y    float64 `json:"y"`
-	Root node    `json:"root"`
+	X         float64 `json:"x"`
+	Y         float64 `json:"y"`
+	Direction string  `json:"direction,omitempty"` // omitted, so that the ids of a spec without it stay
+	Root      node    `json:"root"`
+	Left      []node  `json:"left,omitempty"` // as above
 }
 
 type node struct {

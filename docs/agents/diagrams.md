@@ -245,12 +245,50 @@ A line without arrows. It may cross other parts, but not leave the canvas.
 
 ### tree
 
-A tree of boxes. floe places each node under its parent, the children side by side and each depth in one row, and draws an edge down from each node to each child.
+A tree of boxes. floe places each node next to its parent and draws an edge from each node to each child. A tree grows down, or to the right with `direction: right`. With `left` too, it grows to both sides of its root, as a mind map does. floe does not move a branch to the other side: write each branch on the side it is to stand.
+
+```yaml
+- diagram:
+    title: 'What to think of before a trip'
+    parts:
+      - tree:
+          x: 20
+          y: 20
+          direction: right
+          root:
+            rows: ['A trip']
+            tone: accent
+            # the root's children, which grow right
+            children:
+              - rows: ['To pack']
+                children:
+                  - rows: [Clothes]
+                  - rows: [Chargers]
+              - rows: ['To book']
+          # a key of the tree, beside root: the branches that grow left
+          left:
+            - rows: [Money]
+              children:
+                - rows: [Cash]
+                - rows: ['A card']
+            - rows: ['At home']
+```
 
 | Key | Takes | Default | What it does |
 |---|---|---|---|
-| `x` `y` | numbers, required | — | The root's centre and top |
-| `root` | a node, required | — | The root |
+| `x` `y` | numbers, required | — | Growing down, the root's centre and top. Growing right, the top left of all of it: with `left` too, the root stands right of `x` by the width of the left branches |
+| `direction` | `down`, `right` | `down` | Which way the tree grows |
+| `root` | a node, required | — | The root. Growing right, its `children` grow right |
+| `left` | a list of nodes | none | The root's children on its left, which grow left. It MUST NOT be written without `direction: right` |
+
+| A branch that grows | Its edge leaves the parent at | And comes to the child at | Siblings, in the order written | A depth |
+|---|---|---|---|---|
+| down | the bottom | the top | from left to right | in one row |
+| right | the right | the left | from top to bottom | in one column |
+| left (of `left`) | the left | the right | from top to bottom | in one column |
+
+- Growing right, the middle of the root is level with the middle of the tallest of three: the root itself, the branches on its right, and those on its left. Each side is centred there.
+- An edge of a tree has an arrowhead at the child. It takes no `label`, `end` or other key of an `edge`: for edges that need them, write a `graph`.
 
 #### A node of a tree
 
@@ -260,7 +298,7 @@ A tree of boxes. floe places each node under its parent, the children side by si
 | `name` | a name | none | The name an edge written by hand can end at |
 | `tone` | a tone | none | The colour |
 | `shape` | `rect`, `pill`, `hex`, `state` | `rect` | The outline, as a `box` has it |
-| `children` | a list of nodes | none | The nodes under this one |
+| `children` | a list of nodes | none | The nodes that grow from this one |
 
 When an edge written by hand ends at a node of a tree, write `fromSide` or `toSide` on a side no edge of the tree ends at. Without it, the edge may run over the tree's edges, which floe does not tell.
 

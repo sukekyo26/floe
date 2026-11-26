@@ -11,18 +11,18 @@ import (
 )
 
 // wayBack is the link that shows a page whole's way back, the one h and a press go by: the back link where it shows
-// (opened from a task's page, or at 40rem or less), else the header's link to the list that opened the page, which
+// (opened from a task's page, or at 56rem or less), else the header's link to the list that opened the page, which
 // goes where the back link does.
 const wayBack = `[...['back', 'to-list', 'to-tasks'].map((id) => document.getElementById(id))].find((e) => e !== null && e.getClientRects().length > 0 && e.getAttribute('href') === document.getElementById('back').getAttribute('href'))`
 
 // frameBack says the way back of a page whole: the link that shows it, where it goes and its word, what the back link
 // says in full, the key's words and where the logo goes.
 const frameBack = `(() => { const e = ` + wayBack + `, back = document.getElementById('back');
-  return [location.pathname, e?.id, e?.getAttribute('href'), e === back ? document.getElementById('back-word').textContent : e?.textContent, back.title, back.getAttribute('aria-label'), document.getElementById('keys-back').textContent, document.querySelector('[data-testid=brand]').getAttribute('href')].join(' | '); })()`
+  return [location.pathname, e?.id, e?.getAttribute('href'), e === back ? document.getElementById('back-word')?.textContent ?? '' : e?.textContent, back.title, back.getAttribute('aria-label'), document.getElementById('keys-back').textContent, document.querySelector('[data-testid=brand]').getAttribute('href')].join(' | '); })()`
 
 // The way back of a page whole, by every way a page is opened whole: real presses, the row's press again and a double press, the
 // title over the page beside the rows, a pin, the page list's row; a reload keeps it, and a tab that kept nothing has the page list. h goes
-// where it says. Opened from a task's page it is the back link; from a list, the header's link to that list, and at 40rem or less the
+// where it says. Opened from a task's page it is the back link; from a list, the header's link to that list, and at 56rem or less the
 // back link's mark alone, the header's links gone (the user's choice).
 func TestUIFrameBack(t *testing.T) { //nolint:paralleltest // the browser tests share one Chrome, one at a time
 	s := newSite(t)
@@ -123,9 +123,11 @@ func TestUIFrameBack(t *testing.T) { //nolint:paralleltest // the browser tests 
 	b.size(360, 800, true)
 	b.until("the narrow bar", "innerWidth === 360")
 	out = append(out, "phone: "+b.eval("(document.querySelector('[data-testid=brand]').offsetParent !== null) + ' ' + document.querySelector('[data-testid=brand]').getAttribute('href') + ' ' + (document.querySelector('[data-testid=brand] svg').getBoundingClientRect().width === 26) + ' ' + (document.getElementById('frame-actions').getBoundingClientRect().right <= innerWidth) + ' ' + (document.documentElement.scrollWidth <= innerWidth)"))
-	// At 40rem or less the back link alone, its mark; wider, the header's link (the user's choice)
-	out = append(out, "narrow: "+b.eval("("+wayBack+")?.id + ' ' + (document.getElementById('back-word').offsetParent === null) + ' ' + document.getElementById('back').getAttribute('aria-label') + ' ' + (document.getElementById('screens').offsetParent === null)"))
-	b.size(800, 800, false)
+	// At 56rem or less the back link alone, its mark; wider, the header's link (the user's choice)
+	out = append(out, "narrow: "+b.eval("("+wayBack+")?.id + ' ' + (document.getElementById('back-word')?.offsetParent == null) + ' ' + document.getElementById('back').getAttribute('aria-label') + ' ' + (document.getElementById('screens').offsetParent === null)"))
+	b.size(896, 800, false)
+	out = append(out, "56rem: "+b.eval("("+wayBack+")?.id"))
+	b.size(897, 800, false)
 	out = append(out, "wider: "+b.eval("("+wayBack+")?.id"))
 	b.size(1400, 800, false)
 
@@ -225,6 +227,7 @@ page list row: /a/loose/ | to-list | /?project=proj | Page list | Back to the pa
 another tab: /a/a/ | to-list | / | Page list | Back to the page list | Back to the page list | Back to the page list | /
 phone: true / true true true
 narrow: back true Back to the page list true
+56rem: back
 wider: to-list
 a long title: /a/b/ | back | /tasks?project=proj&task=%23128 | #128 | Back to #128 | Back to #128 | Back to #128 | /
 of a version: /a/a/ | back | /tasks?project=proj&task=%23128 | #128 | Back to #128 | Back to #128 | Back to #128 | /
@@ -262,7 +265,7 @@ func TestUIFrameBackFocus(t *testing.T) { //nolint:paralleltest // the browser t
 	// whole waits for the page whole, read.
 	whole := func(slug string) {
 		t.Helper()
-		b.until("the page whole", "location.pathname === '/a/"+slug+"/' && document.getElementById('frame-title').textContent && document.querySelector('#frame-actions [data-testid=mark-unread]')?.hidden === false")
+		b.until("the page whole", "location.pathname === '/a/"+slug+"/' && document.getElementById('frame-title').textContent && "+inMenuItem("#frame-actions", "mark-unread", "i.hidden")+" === false")
 	}
 	// open opens the row whole by a double press, as a person does.
 	open := func(list, slug string) {
@@ -332,7 +335,7 @@ func TestUIFrameBackFocus(t *testing.T) { //nolint:paralleltest // the browser t
 	// Marked unread there, it stays unread: the row has the focus, with nothing beside it to read it.
 	open(pages, "b")
 	pressMenuItem(b, "#frame-actions", "mark-unread")
-	b.until("marked unread", "document.querySelector('#frame-actions [data-testid=mark-unread]').hidden")
+	b.until("marked unread", inMenuItem("#frame-actions", "mark-unread", "i.hidden"))
 	pressBack()
 	read("marked unread", pages)
 	// One column has nothing beside the list.
@@ -344,7 +347,7 @@ func TestUIFrameBackFocus(t *testing.T) { //nolint:paralleltest // the browser t
 	whole("a")
 	b.moving("(" + wayBack + ").click()")
 	read("one column", pages)
-	// At 40rem or less the back link alone, pressed as a person does: the row again.
+	// At 56rem or less the back link alone, pressed as a person does: the row again.
 	b.size(360, 800, true)
 	b.navigate(pages)
 	b.until("the narrow row", "document.querySelector('#list li[data-slug=a] [data-testid=title]')")

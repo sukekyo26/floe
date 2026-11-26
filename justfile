@@ -184,6 +184,7 @@ golden:
     go test ./internal/corpus -run TestCorpus -update
     go test ./internal/diagram -run 'TestExamples|TestFaceOfGolden' -update
     go test ./internal/pagediff -run TestReadEveryPart -update
+    go test ./internal/store -run TestOwnerAnswers -update
 
 # Write internal/licenses/NOTICES.txt anew, which floe licenses prints, after a module is added, removed or upgraded
 licenses:
@@ -220,7 +221,7 @@ mod-tidy-check:
 # Build bin/floe for the host
 build:
     @mkdir -p bin
-    CGO_ENABLED=0 go build -trimpath -buildvcs=false -ldflags "{{ldflags}}" -o bin/floe ./cmd/floe
+    CGO_ENABLED=0 go build -trimpath -ldflags "{{ldflags}}" -o bin/floe ./cmd/floe
 
 # Cross-compile bin/floe-<os>-<arch> for every release target
 build-all:

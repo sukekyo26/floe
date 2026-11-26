@@ -16,7 +16,7 @@ import (
 // screenOnlySelects holds the tests that set a <select>'s value and send its change event (chooseValue): the one use of "value"
 // kept for good.
 var screenOnlySelects = map[string]bool{
-	"TestUIDialogClose": true, "TestUIDialogHold": true, "TestUIDiffPlaces": true, "TestUIDiffRead": true, "TestUIDiffScrolls": true, "TestUIProjectPills": true, "TestUIRetyped": true, "TestUITaskAdd": true, "TestUITaskCategories": true, "TestUITaskEdit": true, "TestUITaskPage": true, "TestUITaskRev": true, "TestUITaskStateGone": true, "TestUITaskUp": true, "TestUIVersionAnswers": true, "TestUIVersionGone": true, "TestUIVersionPick": true, "TestUIVersionPickAhead": true, "TestUIVersionURL": true,
+	"TestUIDialogClose": true, "TestUIDialogHold": true, "TestUIDiffPlaces": true, "TestUIDiffRead": true, "TestUIDiffScrolls": true, "TestUIProjectPills": true, "TestUIRetyped": true, "TestUITaskAdd": true, "TestUITaskAddCategory": true, "TestUITaskCategories": true, "TestUITaskEdit": true, "TestUITaskPage": true, "TestUITaskRev": true, "TestUITaskStateGone": true, "TestUITaskUp": true, "TestUIVersionAnswers": true, "TestUIVersionGone": true, "TestUIVersionPick": true, "TestUIVersionPickAhead": true, "TestUIVersionURL": true,
 }
 
 var (

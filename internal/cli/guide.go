@@ -24,13 +24,15 @@ import (
 // skill is the SKILL.md floe skill install writes: it points the agent to floe guide, so that it stays right
 // when floe is upgraded.
 const skill = "---\nname: floe\ndescription: " +
-	"Show the user a page with floe, the local page server - a report, design document or similar page, " +
-	"with tables, code and diagrams, drawn from a YAML data file. " +
-	"Use when the user asks to show, publish or write up something as a page, or names floe.\n---\n\n" +
+	"Show the user a page with floe, or write and change the documents a repository keeps with it - " +
+	"a report, design document, specification or similar page, with tables, code and diagrams, " +
+	"drawn from a YAML data file. Use when the user asks to show, publish or write up something as a page, " +
+	"to write or change a document that is a YAML file with template and lang at its top, or names floe.\n---\n\n" +
 	skillLine + "\n"
 
 // skillLine is the body of the skill, the line README gives for AGENTS.md.
-const skillLine = "To show the user a page, use floe: run `floe guide` first and follow it. " +
+const skillLine = "To show the user a page, or to write or change a document that is a YAML file " +
+	"with `template` and `lang` at its top, use floe: run `floe guide` first and follow it. " +
 	"It is the guide of the floe installed, so read it each time rather than from memory."
 
 // agent is an agent floe skill install writes the skill for: its name, the setting that moves its directory
@@ -115,6 +117,18 @@ func (a *app) settings() (store.Settings, error) {
 	}
 	// The store a server for these commands holds: daemon refuses one of another (daemon_other_root).
 	return store.New(root.dir).ReadSettings() //nolint:wrapcheck // mistakes for the user as they are
+}
+
+// repositoryCmd holds the guide to a repository's documents alone.
+func (a *app) repositoryCmd() *cobra.Command {
+	short := "Print how to keep documents in a repository and check them in CI"
+	cmd := &cobra.Command{
+		Use:   "repository",
+		Short: short,
+		Args:  cobra.NoArgs,
+	}
+	cmd.AddCommand(a.docGuideCmd(short, docs.RepositoryGuide))
+	return cmd
 }
 
 // docGuideCmd is a command guide that prints doc, a doc of floe's as it is.

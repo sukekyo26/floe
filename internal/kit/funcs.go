@@ -143,7 +143,7 @@ func (wordsOfLinks) RegisterFuncs(r renderer.NodeRendererFuncRegisterer) {
 	r.Register(ast.KindAutoLink, func(w util.BufWriter, src []byte, n ast.Node, entering bool) (ast.WalkStatus, error) {
 		if link, ok := n.(*ast.AutoLink); ok && entering {
 			if _, err := w.Write(util.EscapeHTML(link.Label(src))); err != nil {
-				return ast.WalkStop, fmt.Errorf("%w: markdownLabel: %w", ErrFunc, err)
+				return ast.WalkStop, err //nolint:wrapcheck // convert says which function failed
 			}
 		}
 		return ast.WalkContinue, nil

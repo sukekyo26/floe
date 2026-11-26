@@ -524,6 +524,18 @@ func TestAssetLinks(t *testing.T) {
 		if code, _, stderr := runEnv(dir, env, "template", "check"); code != 1 || stderr != want {
 			t.Errorf("floe template check = %d, %q; want %q", code, stderr, want)
 		}
+		// The files and directories beside the link are told too.
+		if err := os.MkdirAll(filepath.Join(img, "sub"), 0o755); err != nil {
+			t.Fatal(err)
+		}
+		for _, note := range []string{filepath.Join(img, "note.txt"), filepath.Join(img, "sub", "note.txt")} {
+			if err := os.WriteFile(note, nil, 0o600); err != nil {
+				t.Fatal(err)
+			}
+			if code, _, stderr := runEnv(dir, env, "template", "check"); code != 1 || !strings.HasPrefix(stderr, want) || !strings.Contains(stderr, note+": ") {
+				t.Errorf("floe template check = %d, %q; want %s told after the link", code, stderr, note)
+			}
+		}
 	})
 }
 

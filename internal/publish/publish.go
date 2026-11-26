@@ -113,6 +113,11 @@ func needed(drew drawproc.Result) []NeededImage {
 	return images
 }
 
+// owner is the file of up as the store keeps a page's owner.
+func (up Upload) owner() store.Owner {
+	return store.Owner{Path: "", Repo: up.Repo, Place: up.Place}
+}
+
 // acceptData is Accept of the data file of up, which --move-project refuses to put in the project of a place with
 // none: it would empty the page's, which the next publish from another place would fill again.
 func acceptData(up Upload, opts store.Options) (store.Options, error) {
@@ -142,7 +147,7 @@ func PrepareData(
 	if err != nil {
 		return nil, err
 	}
-	picked, created, err := s.Themes(slug, "", up.Project, up.Repo, up.Place, opts.Force)
+	picked, created, err := s.Themes(slug, up.owner(), opts.Force)
 	if err != nil {
 		return nil, err //nolint:wrapcheck // a usererr for the caller to show
 	}
@@ -196,7 +201,7 @@ func dataSlug(s *store.Store, up Upload, opts store.Options) (slug, named string
 		return *opts.Slug, "", nil
 	}
 	named = files.SlugFromFile(up.File)
-	slug, err = s.OwnSlug(named, up.File, "", up.Repo, up.Place)
+	slug, err = s.OwnSlug(named, up.File, up.owner())
 	return slug, named, err //nolint:wrapcheck // a usererr for the caller to show
 }
 
@@ -224,8 +229,8 @@ func storedPage(
 	s *store.Store, slug, named string, up Upload, src []byte, opts store.Options, created string,
 ) (*store.Entry, error) {
 	return s.NewEntry(store.Seed{ //nolint:wrapcheck // a usererr for the caller to show
-		Slug: slug, Named: named, File: up.File, Path: "", Folder: false, FolderTitle: "", Data: src, Options: opts,
-		Project: up.Project, Repo: up.Repo, Place: up.Place, Created: created,
+		Slug: slug, Named: named, File: up.File, Owner: up.owner(), Folder: false, FolderTitle: "", Data: src, Options: opts,
+		Project: up.Project, Created: created,
 	})
 }
 
@@ -248,6 +253,7 @@ func PrepareLink(
 		dir = path
 	}
 	from := project.Name(ctx, dir)
+	owner := store.Owner{Path: path, Repo: "", Place: ""}
 	// A folder is named by its project and where it is in it (api-docs/docs is api-docs-docs, its title docs), as
 	// folders of one name (docs) in several repositories are common; outside a repository its project is its name.
 	within, named := "", ""
@@ -260,7 +266,7 @@ func PrepareLink(
 	} else if opts.Slug == nil {
 		named = linkName(file, cwd)
 	}
-	slug, err := linkSlug(s, named, file, path, opts)
+	slug, err := linkSlug(s, named, file, owner, opts)
 	if err != nil {
 		return nil, err
 	}
@@ -271,7 +277,7 @@ func PrepareLink(
 		if dw.Err != nil {
 			return nil, dw.Err
 		}
-		if picked, created, err = s.Themes(slug, path, from, "", "", opts.Force); err != nil {
+		if picked, created, err = s.Themes(slug, owner, opts.Force); err != nil {
 			return nil, err //nolint:wrapcheck // a usererr for the caller to show
 		}
 		data = src
@@ -287,9 +293,8 @@ func PrepareLink(
 	// A folder's own title, as a data file's title: is: where it is in its repository, its repository's name at its
 	// root, else its name
 	e, err := s.NewEntry(store.Seed{
-		Slug: slug, Named: named, File: file, Path: path, Folder: folder,
-		FolderTitle: cmp.Or(within, from, filepath.Base(path)), Data: data, Options: opts, Project: from, Repo: "",
-		Place: "", Created: created,
+		Slug: slug, Named: named, File: file, Owner: owner, Folder: folder,
+		FolderTitle: cmp.Or(within, from, filepath.Base(path)), Data: data, Options: opts, Project: from, Created: created,
 	})
 	if err != nil {
 		return nil, usererr.WithWarnings(err, warnings) //nolint:wrapcheck // its mistakes, with the page's warnings
@@ -337,12 +342,12 @@ func readLink(file string, opts store.Options, cwd, home string) (string, []byte
 	return path, b, false, nil
 }
 
-// linkSlug is the slug of a link to path: the one given, which Accept checked, else the slug of the link to path,
+// linkSlug is the slug of a link of owner: the one given, which Accept checked, else the slug of the link of owner,
 // else one free made of named.
-func linkSlug(s *store.Store, named, file, path string, opts store.Options) (string, error) {
+func linkSlug(s *store.Store, named, file string, owner store.Owner, opts store.Options) (string, error) {
 	if opts.Slug != nil {
 		return *opts.Slug, nil
 	}
 	// Named after the given file, not the symlink's target.
-	return s.OwnSlug(named, file, path, "", "") //nolint:wrapcheck // a usererr for the caller to show
+	return s.OwnSlug(named, file, owner) //nolint:wrapcheck // a usererr for the caller to show
 }

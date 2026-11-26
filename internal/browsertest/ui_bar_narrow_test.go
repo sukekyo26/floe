@@ -8,6 +8,8 @@ import (
 
 	"github.com/chromedp/cdproto/accessibility"
 	"github.com/chromedp/chromedp"
+
+	"floe/internal/i18n"
 )
 
 // TestUIBarNarrow draws the bar at a phone's widths: at 24rem (384px) or less the logo is its mark alone on every screen, which is
@@ -46,6 +48,40 @@ func TestUIBarNarrow(t *testing.T) { //nolint:paralleltest // the browser tests 
 	out = append(out, brandName(t, b))
 	want = append(want, "floe")
 	check(t, "the bar", out, strings.Join(want, "|"))
+}
+
+// TestUIFrameBarRoom draws a page whole's bar with all it may hold, in both languages, across 56rem, where the switch of the two lists
+// gives way to the back link's mark: of two versions and archived, opened from a list and from a task's page. Nothing runs past an edge,
+// and the title, which alone gives way, keeps more than the room of its padding.
+func TestUIFrameBarRoom(t *testing.T) { //nolint:paralleltest // the browser tests share one Chrome, one at a time
+	s := newSite(t)
+	title := strings.TrimSpace(strings.Repeat("A title of many words ", 5))
+	for _, body := range []string{"one", "two"} {
+		s.floe(t, "publish", s.page(t, "a.yaml", title, "<p>"+body+"</p>"), "--slug", "a")
+	}
+	s.floe(t, "archive", "a")
+	for _, lang := range []i18n.Lang{i18n.English, i18n.Lang("ja")} {
+		b := newBrowser(t, s.Base, lang)
+		defer b.unsize()
+		for _, back := range []string{"/?view=fav", "/tasks?project=home&task=%2312345"} {
+			b.navigate("/")
+			b.eval(`sessionStorage.setItem('pages.order', '{"order":["a"],"shown":["a"],"back":"` + back + `"}')`)
+			for _, width := range []int64{641, 768, 896, 897} {
+				b.size(width, 800, false)
+				b.navigate("/a/a/")
+				b.until("the bar", fmt.Sprintf("innerWidth === %d && document.getElementById('frame-title').textContent && !document.getElementById('frame-version').hidden", width))
+				got := b.settled(`(() => { const inner = document.querySelector('[data-testid=bar-inner]'), shown = (id) => document.getElementById(id).getClientRects().length > 0;
+					return [...['screens', 'back', 'frame-version', 'frame-archived', 'frame-actions'].map((id) => id + ' ' + shown(id)),
+						'past ' + (inner.scrollWidth - inner.clientWidth), 'title ' + (document.getElementById('frame-title').getBoundingClientRect().width > 14)].join(', '); })()`)
+				screens := width > 896
+				whole := strings.HasPrefix(back, "/tasks")
+				want := fmt.Sprintf("screens %t, back %t, frame-version true, frame-archived true, frame-actions true, past 0, title true", screens, !screens || whole)
+				if got != want {
+					t.Errorf("%s at %d, opened from %s: %s", lang, width, back, got)
+				}
+			}
+		}
+	}
 }
 
 // brandName is the name of the bar's logo as the browser computes it for a screen reader.

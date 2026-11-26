@@ -123,8 +123,9 @@ export function FrameRoute() {
     <>
       <Bar
         screen="frame"
+        from={back.to}
         brand={list}
-        back={<BackLink back={back} onPress={up.onPress} />}
+        back={<BackLink id="back" up={up} label={words} word={back.task} narrowOnly={back.to !== 'task'} />}
         listUp={back.to === 'pages' ? up : undefined}
         taskUp={back.to === 'tasks' ? up : undefined}
         lead={

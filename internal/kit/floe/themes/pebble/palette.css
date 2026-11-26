@@ -1,0 +1,19 @@
+:scope {
+  --bg: #faf6ee; --surface: #ffffff; --fg: #2a2420; --muted: #625850; --line: #dbd0bf;
+  --accent: #5b4132; --accent-soft: #f1e6d3;
+  --good: #2b6540; --good-soft: #e4efe5; --warn: #80490c; --warn-soft: #fbe5cd; --bad: #a3332e; --bad-soft: #f7e5e2;
+  --chart-1: #6b4d3b; --chart-2: #b0782f; --chart-3: #5d7f63; --chart-4: #9b5560;
+  --code-bg: #2b2521; --code-fg: #ecebe6; --code-prompt: #dfc79a; --code-add: #93c9a0; --code-del: #e9b6b1;
+  --radius: 18px; --radius-small: 6px; --rule: none;
+  --shadow: rgb(91 65 50 / 0.16); --floe-shadow-y: 1px; --floe-shadow-blur: 4px;
+  /* The theme's own: a tray, the band a head or a bar is, a number's and a line's colour */
+  --pebble-tray: #f3e9d9; --pebble-bar: #ecdfc8; --pebble-mark: #8f6f4e;
+  /* Within a box of a ground of its own --quiet turns: the tray on a face, the surface on a tray */
+  --quiet: var(--pebble-tray);
+  /* A note of the accent; a pill of it is filled (cell.css) */
+  --accent-fill: #e6d3bf;
+  /* The pad of a tray, and the gap of its stones */
+  --pebble-pad: 6px; --pebble-gap: 4px;
+  /* Corners: a stone's (a row), a larger one's (a head, a record), a note's, and a question's, one of them sharp */
+  --pebble-stone: 10px; --pebble-slab: 12px; --pebble-note-corner: 28px; --pebble-ask: 24px 24px 24px 4px;
+}

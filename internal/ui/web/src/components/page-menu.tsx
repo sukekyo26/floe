@@ -84,8 +84,8 @@ export function useCopied(): [boolean, () => void] {
   ];
 }
 
-// PageMenu is the menu "…" of a page, the same in a row and in a bar: every item is drawn, and what the bar or the row
-// shows its CSS hides there, so that nothing is in both (ui.md); the frame's bar folds its own into it under 40rem
+// PageMenu is the menu "…" of a page, the same in a row and in a bar: open, every item is drawn, and what the bar or the
+// row shows its CSS hides there, so that nothing is in both (ui.md); the frame's bar folds its own into it under 40rem
 export function PageMenu({
   page: a,
   at,
@@ -97,11 +97,9 @@ export function PageMenu({
   taskShown = null,
   actions = pageActionStore,
 }: PageMenuProps) {
-  const arm = useArm(a.slug);
   const [copied, setCopied] = useCopied();
   const title = a.title ?? a.slug;
   const back = menuBack(menuId);
-  const kind = removal(a);
   const name = a.task?.name ?? '';
   // What the bar or the row shows: in the frame's folded bar, the menu's
   const barShows = place === 'frame' ? 'narrow' : 'never';
@@ -262,22 +260,38 @@ export function PageMenu({
       >
         {t(a.archived ? 'ui_unarchive' : 'ui_archive')}
       </MenuItem>
-      <MenuItem
-        icon={<DeleteIcon />}
-        testid="delete"
-        tone="danger"
-        // It stays for its second press
-        keepsOpen
-        armed={arm.armed}
-        label={t(arm.armed ? `ui_${kind}_confirm_named` : `ui_${kind}_named`, title)}
-        onBlur={arm.disarm}
-        onSelect={() => {
-          if (arm.press()) return;
+      <DeleteItem
+        page={a}
+        onDelete={() => {
           void actions.removePage(a, closedThen(menus, menuId, onRemoved));
         }}
-      >
-        {t(arm.armed ? `ui_${kind}_confirm` : `ui_${kind}`)}
-      </MenuItem>
+      />
     </MoreMenu>
+  );
+}
+
+// DeleteItem holds its armed first press itself, so that the press is let go with the items as the menu closes: an item
+// gone with the focus tells no blur
+function DeleteItem({ page: a, onDelete }: { readonly page: Page; readonly onDelete: () => void }) {
+  const arm = useArm(a.slug);
+  const title = a.title ?? a.slug;
+  const kind = removal(a);
+  return (
+    <MenuItem
+      icon={<DeleteIcon />}
+      testid="delete"
+      tone="danger"
+      // It stays for its second press
+      keepsOpen
+      armed={arm.armed}
+      label={t(arm.armed ? `ui_${kind}_confirm_named` : `ui_${kind}_named`, title)}
+      onBlur={arm.disarm}
+      onSelect={() => {
+        if (arm.press()) return;
+        onDelete();
+      }}
+    >
+      {t(arm.armed ? `ui_${kind}_confirm` : `ui_${kind}`)}
+    </MenuItem>
   );
 }

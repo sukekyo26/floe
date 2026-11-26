@@ -5,13 +5,16 @@ exit 1
 --- stderr
 $SAMPLE/own/templates/memo/checks.yaml:1:8: for itemz: no value the schema allows there holds itemz; write a path of keys those values may hold
 $SAMPLE/own/templates/memo/checks.yaml:4:8: for items.wat: no value the schema allows there holds wat; write a path of keys those values may hold
+$SAMPLE/own/templates/memo/checks.yaml:7:8: for items.what.text: no value the schema allows there holds text; write a path of keys those values may hold
 $ floe check memo.yaml
 exit 1
 --- stderr
 $SAMPLE/own/templates/memo/checks.yaml:1:8: for itemz: no value the schema allows there holds itemz; write a path of keys those values may hold
 $SAMPLE/own/templates/memo/checks.yaml:4:8: for items.wat: no value the schema allows there holds wat; write a path of keys those values may hold
+$SAMPLE/own/templates/memo/checks.yaml:7:8: for items.what.text: no value the schema allows there holds text; write a path of keys those values may hold
 $ floe render --out-dir $TMP/pages/memo.yaml memo.yaml
 exit 1
 --- stderr
 $SAMPLE/own/templates/memo/checks.yaml:1:8: for itemz: no value the schema allows there holds itemz; write a path of keys those values may hold
 $SAMPLE/own/templates/memo/checks.yaml:4:8: for items.wat: no value the schema allows there holds wat; write a path of keys those values may hold
+$SAMPLE/own/templates/memo/checks.yaml:7:8: for items.what.text: no value the schema allows there holds text; write a path of keys those values may hold

@@ -61,14 +61,7 @@ func (o *graphOut) rank(members, edges, cedges, levels []int) *group {
 			gr.cls = append(gr.cls, c)
 		}
 	}
-	if len(cedges) == 0 {
-		gr.rankLongest(stood)
-	} else {
-		arcs = gr.rankWith(arcs, stood, cedges, local, stands)
-	}
-	for j, b := range members {
-		gr.nodes[j].rank = gr.nodes[stands[b]].rank
-	}
+	arcs = gr.rankWith(arcs, stood, cedges, local, stands)
 	for _, k := range late {
 		from, to := local[o.ends[k][0].box], local[o.ends[k][1].box]
 		switch fr, tr := gr.nodes[from].rank, gr.nodes[to].rank; {
@@ -240,6 +233,8 @@ func (rk *ranking) reached(from ...int) map[int]bool {
 }
 
 // longest is each node's rank: its longest path, by the arcs' lengths, from a node no arc enters (Kahn's way).
+// LIMIT: the longest path, not the ranks of fewest points (network simplex): a box leading to one far below sits
+// high, its edge long. Balance the ranks if graphs come to pass many.
 func (rk *ranking) longest() []int {
 	ranks := make([]int, len(rk.out))
 	into := make([]int, len(rk.out))
@@ -387,36 +382,6 @@ func turn(arcs []arc, outs [][]int, reversed map[int]bool) {
 			case unseen:
 				state[a.to] = onWay
 				stack = append(stack, frame{a.to, 0})
-			}
-		}
-	}
-}
-
-// rankLongest ranks each box by its longest path from a box no arc enters (Kahn's way), taking boxes as written.
-// LIMIT: the longest path, not the ranks of fewest points (network simplex): a box leading to one far below sits
-// high, its edge long. Balance the ranks if graphs come to pass many.
-func (gr *group) rankLongest(arcs []arc) {
-	n := len(gr.nodes)
-	into := make([]int, n)
-	down := make([][]int, n)
-	for i, a := range arcs {
-		into[a.to]++
-		down[a.from] = append(down[a.from], i)
-	}
-	var queue []int
-	for i := range n {
-		if into[i] == 0 {
-			queue = append(queue, i)
-		}
-	}
-	for len(queue) > 0 {
-		u := queue[0]
-		queue = queue[1:]
-		for _, i := range down[u] {
-			v := arcs[i].to
-			gr.nodes[v].rank = max(gr.nodes[v].rank, gr.nodes[u].rank+1)
-			if into[v]--; into[v] == 0 {
-				queue = append(queue, v)
 			}
 		}
 	}

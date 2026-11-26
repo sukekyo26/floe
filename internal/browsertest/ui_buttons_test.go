@@ -18,7 +18,7 @@ import (
 // modal too on a narrow screen; the settings' rows and their way back; the "…" menu's items. Nor are the links of a row or a mark
 // (the brand, a row's title in the list and the search, a row's task and tags, a task's parent and children, the diff's contents,
 // the bar's count of the unread, a link of words: the user's choice, S422-P8), nor tabs (role=tab: the help's switches), nor the bar's links to
-// the screens (#screens a, links of a nav, the screen shown darker: the user's choice, S448) and a page whole's way back to a
+// the screens (#screens a, links of a nav in a switch, the screen shown on its thumb: the user's choice) and a page whole's way back to a
 // task's page, a plain link (the user's choice, S422-P10)
 const notButtons = "#shelf *, #filter-dialog #shelf-more *, [data-testid=settings-item], #settings-back, [data-testid=menu] *, " +
 	"[data-testid=brand], #list li [data-testid=title], #find-list li [data-testid=title], [data-testid=task-tag], #list li [data-testid=tagpill], [data-testid=kin-row], #diff-toc button, [role=tab], #news, " +
@@ -205,6 +205,12 @@ func TestUIButtons(t *testing.T) { //nolint:paralleltest // the browser tests sh
 	modal("edit-task-dialog", press("#task-edit"))
 	modal("add-page-dialog", press("#task-add-page"))
 	// Each modal the screen holds is measured there too
+	modal("add-category-dialog", func() {
+		press("#task-add-page")()
+		b.until("the add page modal", "document.getElementById('add-page-dialog').open")
+		press("#add-category-plus")()
+	})
+	closeModal("add-page-dialog")
 	modal("edit-add-dialog", func() {
 		press("#task-edit")()
 		b.until("the edit", "document.getElementById('edit-task-dialog').open")
@@ -289,7 +295,7 @@ func TestUIButtons(t *testing.T) { //nolint:paralleltest // the browser tests sh
 	b.navigate("/a/a/")
 	b.until("read", "document.querySelector('[data-testid=toast]')")
 	b.navigate("/a/a/")
-	b.until("the bar", "document.querySelector('#frame-actions [data-testid=task-set]')")
+	b.until("the bar", "document.querySelector('#frame-actions [data-testid=more]')")
 	frameMenu := func(item string) func() {
 		return func() { pressMenuItem(b, "#frame-actions", item) }
 	}

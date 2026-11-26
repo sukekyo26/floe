@@ -2,6 +2,7 @@ package tmpl_test
 
 import (
 	"cmp"
+	"slices"
 	"strconv"
 	"strings"
 	"testing"
@@ -135,7 +136,7 @@ func TestNames(t *testing.T) {
 	t.Parallel()
 
 	k := floeKit(t)
-	themes := "app, aurora, blueprint, brutal, default, editorial, ink, notebook, retro, soft, swiss, washi"
+	themes := "app, aurora, blueprint, brutal, default, editorial, ink, notebook, pebble, retro, soft, swiss, washi"
 	for _, tt := range []struct {
 		name, data string
 		o          tmpl.Options
@@ -185,7 +186,8 @@ func TestNames(t *testing.T) {
 	}
 }
 
-// A part's checks run once for each item it draws, and a mistake told the same is told once.
+// A part's checks run once for each item it draws, and a mistake told the same at one place, by two checks, is told
+// once.
 func TestPartChecksOnce(t *testing.T) {
 	t.Parallel()
 
@@ -193,12 +195,14 @@ func TestPartChecksOnce(t *testing.T) {
 		"box/schema.json": `{"$schema": "https://json-schema.org/draft/2020-12/schema", "type": "object"}`,
 		"box/part.html":   `<div data-floe-part="box"></div>`,
 		"box/part.css":    "",
-		"box/checks.yaml": "- for: rows\n  expr: true\n  message: m\n",
+		"box/checks.yaml": strings.Repeat("- for: rows\n  expr: true\n  message: m\n", 2),
 	}, mine(minePage, `{"$schema": "https://json-schema.org/draft/2020-12/schema", "type": "object",
 "properties": {"boxes": {"type": "array", "items": {"$ref": "floe:///parts/box.json"}}}}`, nil))
 	got := drawn(t, k, "lang: en\ntemplate: mine\nboxes: [{rows: 1}, {rows: 2}, {rows: 3}]\n", none)
-	if want := "parts/box/checks.yaml:1:8: for: rows does not lead to a list in d.yaml"; got != want {
-		t.Errorf("told\n%s\nwant\n%s", got, want)
+	lines := strings.Split(got, "\n")
+	want := []string{"d.yaml:3:16: ", "d.yaml:3:27: ", "d.yaml:3:38: "}
+	if !slices.EqualFunc(lines, want, strings.HasPrefix) {
+		t.Errorf("told\n%s\nwant a line at each of %v", got, want)
 	}
 }
 

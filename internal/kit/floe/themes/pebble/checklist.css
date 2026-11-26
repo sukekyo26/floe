@@ -1,0 +1,4 @@
+/* Each item's sign stands in a ring */
+:scope { --floe-mark: 1.35rem; }
+:scope > li::before { border-radius: 50%; box-shadow: inset 0 0 0 1.5px var(--pebble-mark); font-size: 0.85rem; line-height: 1; }
+:scope > li.done::before { background: var(--good); color: var(--on-fill); box-shadow: none; font-weight: 800; }

@@ -1,0 +1,4 @@
+/* Thick bars of round ends, the track the tray */
+:scope .track { height: 1.35rem; border-radius: var(--radius-pill); background: var(--pebble-tray); }
+:scope .track > span { border-radius: var(--radius-pill); }
+:scope .label { font-weight: 700; }

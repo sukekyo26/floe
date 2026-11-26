@@ -1,7 +1,6 @@
 package server
 
 import (
-	"errors"
 	"net/http"
 	"slices"
 	"strings"
@@ -35,11 +34,7 @@ type Themes struct {
 // theme of the drawing of now, and the task mode. Pages stored already keep the default they were stored with: none is
 // drawn again. A body of no key writes nothing, and answers the settings as they are.
 func (s *Server) putSettings(w http.ResponseWriter, r *http.Request) {
-	body, ok := s.readBody(w, r, maxBody)
-	if !ok {
-		return
-	}
-	in := decodeStrict[store.SettingsEdit](w, body)
+	in := decodeStrict[store.SettingsEdit](w, r, maxBody)
 	if in == nil {
 		return
 	}
@@ -85,11 +80,7 @@ func (s *Server) pickTheme(w http.ResponseWriter, r *http.Request) {
 		notFound(w)
 		return
 	}
-	body, ok := s.readBody(w, r, maxBody)
-	if !ok {
-		return
-	}
-	in := decodeStrict[ThemePick](w, body)
+	in := decodeStrict[ThemePick](w, r, maxBody)
 	if in == nil {
 		return
 	}
@@ -100,10 +91,6 @@ func (s *Server) pickTheme(w http.ResponseWriter, r *http.Request) {
 	}
 	if err == nil {
 		err = s.cfg.Store.PickTheme(r.Context(), drawing, slug, in.Theme)
-	}
-	if errors.Is(err, store.ErrNotFound) {
-		notFound(w)
-		return
 	}
 	if err != nil {
 		refuse(w, r, err)
@@ -180,10 +167,6 @@ type OwnTheme struct {
 // theme.
 func (s *Server) ownTheme(w http.ResponseWriter, r *http.Request) {
 	own, err := s.cfg.Store.OwnTheme(r.PathValue("slug"))
-	if errors.Is(err, store.ErrNotFound) {
-		notFound(w)
-		return
-	}
 	if err != nil {
 		refuse(w, r, err)
 		return

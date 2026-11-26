@@ -282,7 +282,7 @@ func TestUITaskCategories(t *testing.T) { //nolint:paralleltest // the browser t
 
 	// Off its task from a page whole's bar, whose load reads no tasks: the way back is of the task's row as read then.
 	b.navigate("/a/review-a/")
-	b.until("the bar", "document.querySelector('#frame-actions [data-testid=task-out]')")
+	b.until("the bar", "document.querySelector('#frame-actions [data-testid=more]')")
 	record()
 	pressMenuItem(b, "#frame-actions", "task-out")
 	b.until("the way back", "document.querySelector('#toasts [data-testid=undo]')")
@@ -294,7 +294,7 @@ func TestUITaskCategories(t *testing.T) { //nolint:paralleltest // the browser t
 	// Only a page on a task has the item.
 	b.navigate("/")
 	b.until("the rows", "document.querySelector('#list li[data-slug=far-a]')")
-	say("item", "document.querySelector('#list li[data-slug=far-a] [data-testid=task-out]').hidden + ' ' + document.querySelector('#list li[data-slug=build-a] [data-testid=task-out]').hidden + ' ' + document.querySelector('#list li[data-slug=build-a] [data-testid=task-out]').getAttribute('aria-label')")
+	say("item", inMenuItem("#list li[data-slug=far-a]", "task-out", "i.hidden")+" + ' ' + "+inMenuItem("#list li[data-slug=build-a]", "task-out", "i.hidden + ' ' + i.getAttribute('aria-label')"))
 	// From the task dialog, by the keys: closed first, then the focus on the way back; Escape leaves it on the menu it opened from.
 	pressMenuItem(b, "#list li[data-slug=build-a]", "task-set")
 	b.until("the dialog", "document.getElementById('set-dialog').open")
@@ -328,7 +328,7 @@ func TestUITaskCategories(t *testing.T) { //nolint:paralleltest // the browser t
 	check(t, "task categories", out, strings.Join([]string{
 		"groups: [No category] note-a [案] plan-a old-a [実装] build-a [リリース none] [レビュー] review-a",
 		"keys apart: true",
-		"named: 0 Add a page",
+		"named: 0 Add",
 		"opened: Add a page / S300 Categories / add-page-q / null",
 		"category: No category,案,実装,*リリース,レビュー",
 		"options: g-a (G2 · x), other-a (S301 · 設計), check-a, memo-a, note-a (this task's no category), review-a (this task's レビュー), build-a (this task's 実装), plan-a (this task's 案)",
