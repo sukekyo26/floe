@@ -6,6 +6,8 @@ floe の主要な変更を記録します。フォーマットは
 
 ## [Unreleased]
 
+## [0.4.0] - 2026-11-26
+
 ### 追加
 
 - 追加：管理ページのタスクの「編集」で、タスクの ID を変えられる。変えると、タスクのページ（アーカイブしたものも）と子のタスクの親も同じ書き込みで新しい ID に移り、画面は新しい ID のタスクのページに移る。プロジェクトのほかのタスクの ID には変えられない。古い ID はどのタスクも指さなくなる。
@@ -151,7 +153,8 @@ floe の主要な変更を記録します。フォーマットは
 - 追加：ページの CSP とサンドボックス。ページの script を floe のものだけにする。
 - 追加：`floe licenses`。floe と、floe に入っているもののライセンスを出す。
 
-[Unreleased]: https://github.com/sukekyo26/floe/compare/v0.3.1...HEAD
+[Unreleased]: https://github.com/sukekyo26/floe/compare/v0.4.0...HEAD
+[0.4.0]: https://github.com/sukekyo26/floe/compare/v0.3.1...v0.4.0
 [0.3.1]: https://github.com/sukekyo26/floe/compare/v0.3.0...v0.3.1
 [0.3.0]: https://github.com/sukekyo26/floe/compare/v0.2.0...v0.3.0
 [0.2.0]: https://github.com/sukekyo26/floe/compare/v0.1.1...v0.2.0
