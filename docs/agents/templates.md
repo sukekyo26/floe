@@ -1,15 +1,21 @@
 # Templates
 
-A template is the page a data file is drawn into: a directory that says what the data file may hold, how the page is laid out and what goes with it. A data file names its template with `template:` (`floe guide` tells how to write one). floe's templates are `report`, `design`, `handoff`, `adr`, `postmortem`, `runbook` and `slides` (`floe template list` lists them). This doc says what each file holds, what `page.html` can use, what `page.css` reaches, how a template uses parts, looks and the palette, and what `floe template check` refuses. For a part of your own, see `floe part guide`; for a theme, `floe theme guide`.
+A template is the page a data file is drawn into: a directory that says what the data file may hold, how the page is laid out and what goes with it. A data file names its template with `template:` (`floe guide` tells how to write a data file). floe's templates are `report`, `design`, `handoff`, `adr`, `postmortem`, `runbook` and `slides` (`floe template list` lists them). This doc says what each file holds, what `page.html` can use, what `page.css` reaches, how a template uses parts, looks and the palette, and what `floe template check` refuses. For a part of your own, see `floe part guide`; for a theme, `floe theme guide`.
 
 ## Where templates are
 
-- A template is a directory in `FLOE_TEMPLATES_DIR` (default `$XDG_CONFIG_HOME/floe/templates`, else `~/.config/floe/templates`), named after the template. `~` is your home (`%USERPROFILE%` on Windows), and floe does not expand it: set the variable to a whole path. `floe template new memo` makes the smallest one, `memo`: a `page.html`, a `schema.json` and an `example.yaml` to fill in. A file directly in `FLOE_TEMPLATES_DIR` is ignored without a message: put a template's files in its directory.
+- A template is a directory in `FLOE_TEMPLATES_DIR` (default `$XDG_CONFIG_HOME/floe/templates`, else `~/.config/floe/templates`), named after the template.
+- `~` is your home (`%USERPROFILE%` on Windows), and floe does not expand it: set the variable to a whole path.
+- `floe template new memo` makes the smallest one, `memo`: a `page.html`, a `schema.json` and an `example.yaml` to fill in.
+- A file directly in `FLOE_TEMPLATES_DIR` is ignored without a message: put a template's files in its directory.
 - The name MUST be lower case letters, digits, `-` and `_`, starting with a letter or a digit.
 - Do not give a template the name of one of floe's, unless it is to replace it (a template of yours hides floe's of that name for every page that names it, and nothing says so).
-- A directory in `FLOE_TEMPLATES_DIR`, and anything in a template's directory, MUST NOT be a link to a directory (floe reads a link to a file). Every file there MUST be a regular file: floe refuses a FIFO or a device without reading it.
-- `FLOE_TEMPLATES_DIR` MUST NOT be the directory of your parts or themes (`FLOE_PARTS_DIR`, `FLOE_THEMES_DIR`), contain it, or be in it: floe would read the files of one as those of the other.
-- A mistake in any template, part, look, shared schema or theme of yours stops every page, whether or not the page uses it (a page of `report` too), until it is fixed: `floe check`, `floe render`, and the server's publishes and linked pages alike. `floe template check` and `floe part check` (`floe theme check` the same) list them all. A published page is drawn with the server's templates (`floe serve --help`); after you change one, `floe rebuild` draws the stored pages again with it.
+- A directory in `FLOE_TEMPLATES_DIR`, and anything in a template's directory, MUST NOT be a link to a directory. A link to a file is not refused: floe reads the file it leads to.
+- Every file there MUST be a regular file: floe refuses a FIFO or a device without reading it.
+- `FLOE_TEMPLATES_DIR` MUST NOT be the directory of your parts or of your themes (`FLOE_PARTS_DIR`, `FLOE_THEMES_DIR`), a directory above either, or a directory under either: floe would read the files of one as those of the other.
+- A mistake in any template, part, look, shared schema or theme of yours stops every page, whether or not the page uses it (a page of `report` too), until it is fixed: `floe check`, `floe render`, and the server's publishes and linked pages alike.
+- `floe template check` and `floe part check` (`floe theme check` the same) list those mistakes, all of them.
+- A published page is drawn with the server's templates (`floe serve --help`). After you change one, `floe rebuild` draws the stored pages again with it.
 
 ### Make one in another directory
 
@@ -47,7 +53,9 @@ mv ~/.config/floe/staging-templates/memo ~/.config/floe/templates/
 | `words.yaml` | optional | The template's words, by language (*words.yaml*) |
 | `assets/` | optional | Images `page.html` shows with `asset` (*Images*) |
 
-A file or directory of any other name MUST NOT be in a template: floe refuses it. A name that begins with `.` (`.git/`, `.DS_Store`) is skipped, neither read nor refused. `example.yaml` MUST name the template of its directory (`template: memo`).
+- A file or directory of any other name MUST NOT be in a template: floe refuses it.
+- A name that begins with `.` (`.git/`, `.DS_Store`) is skipped, neither read nor refused.
+- `example.yaml` MUST name the template of its directory (`template: memo`).
 
 ## page.html
 
@@ -71,7 +79,7 @@ A file or directory of any other name MUST NOT be in a template: floe refuses it
 - The page drawn MUST NOT hold a `<style>` (write the CSS in `page.css`), a `<base>`, a `<noscript>`, or a `<meta>` other than its charset and viewport, whoever writes it: `page.html`, a part's `part.html` or an item of the data. floe refuses it at the data file's `template:`, as the page is drawn.
 - Inside a `<select>`, the page drawn MUST NOT hold an element whose content HTML reads as text (`<script>`, `<textarea>`, `<title>`, `<iframe>` and the like), nor an `<svg>` or a `<math>`.
 - The page drawn MUST NOT hold a `<template>` that HTML reads as a `<template>` element inside an `<svg>` or a `<math>`, as in `<svg><foreignObject><template>x</template></foreignObject></svg>`: HTML's reader leaves out the rest of the page past it, and floe refuses the page (`<svg><template>x</template></svg>` is an svg element, and passes).
-- `data-floe-part` MUST name one part that exists (`data-floe-part="note"`): floe refuses a name with no part, a look's name (take a look with `data-floe-look`) and several names.
+- `data-floe-part` MUST name one part that exists (`data-floe-part="note"`): floe refuses the name of a part there is none of, a look's name (take a look with `data-floe-look`), and a value that is not one name as written (empty, or two or more names separated by spaces).
 
 `page.html` sees these, besides html/template's own functions (`printf`, `index`, `eq` and the rest):
 
@@ -90,7 +98,8 @@ A file or directory of any other name MUST NOT be in a template: floe refuses it
 | `asset` | An image of the template's `assets/` as a data URI (`<img src="{{asset "logo.svg"}}">`) |
 | `word` | A word of the template's `words.yaml` in the page's language (`{{word "status_doing"}}`) |
 
-- Write `len`, `index` and `slice` of an item the data may leave out inside `with`, as `{{with .Data.done}}{{len .}}{{else}}0{{end}}` (an item the data leaves out, a key of an object in a list too, is nil, and those three refuse nil). A key left out of an item `prefixItems` takes is not there at all (*schema.json*).
+- Write `len`, `index` and `slice` of an item the data may leave out inside `with`, as `{{with .Data.done}}{{len .}}{{else}}0{{end}}`. An item the data leaves out is nil, a key of an object in a list too, and those three refuse nil.
+- A key left out of an item `prefixItems` takes is not there at all (*schema.json*).
 - Link to ids you write, not to those floe makes (floe gives each heading, `<h1>` to `<h6>`, that has no `id` one made of its text, as `#1-what-happens`, and `-1` to the later of two of one text: the id changes with the text).
 - A page drawn from a data file holds all it shows, and its scripts cannot send what it holds out: its CSP lets it load only images, fonts and media of data and blob URIs, inline styles and scripts, Google Fonts, and libraries from cdnjs, jsDelivr and unpkg. `fetch`, XHR, an image from elsewhere and a form are blocked. The CSP guards against a slip, not a hostile template: use templates you trust.
 
@@ -110,10 +119,19 @@ A file or directory of any other name MUST NOT be in a template: floe refuses it
 - Leave `var(--floe-room)` between parts that stand one after another (in a section, in an item: `section { display: grid; gap: var(--floe-room); }`), as every place of floe's does (a part's box has no margin of its own, and a theme's shadow reaches outside a box no further than that space).
 - A part text's box (`data-floe-text`) stands there as a part does, and floe spaces its paragraphs and headings by the same space in it.
 - The box of your template's own Markdown (`data-floe-markdown`) is spaced so too, but `page.css` reaches in it, as it does not in a text's.
-- A rule for an element that is a part's box too (`ul { margin-block: 1rem }`, `figure { … }`) reaches the part: a part writes no margin of its own on its box (asks, checklist and links are `ul`, steps and timeline `ol`, facts, keys, entries and stats `dl`, chart, code, image, diff and terminal `figure`, tabs `form`, details `details`, cell `span`, and the others `div`).
+- A rule for an element that is a part's box too (`ul { margin-block: 1rem }`, `figure { … }`) reaches the part: a part writes no margin of its own on its box. The element of each part's box:
+  - `ul`: asks, checklist and links
+  - `ol`: steps and timeline
+  - `dl`: facts, keys, entries and stats
+  - `figure`: chart, code, image, diff and terminal
+  - `form`: tabs; `details`: details; `span`: cell
+  - `div`: the others
 - Do not write a list's display, marks, padding or gap, or a rule for its items (`li`, `::marker`), for a list that is a part's box: floe sets them there, and `page.css` does not reach the items in a part's box (`floe part guide`, *The CSS layers and @scope*).
 - `page.css` reaches the display, the padding and the items of an element that takes the look `rows`, `table`, `cards` or `tags`. It does not reach them in a list that is a part's box.
-- Do not write `display`, `gap` or `grid-template` on the items of `numbered` or `marked`, nor on the box of a `note` or of a part of yours whose `part.yaml` has `marks: box`, however it is placed (the box is a row with a mark itself: `.caution { display: flex; gap: 0.5rem; }` puts a note's title and text in one row; the rows of `links`, `timeline` and `checklist` stand in the part's box, which `page.css` does not reach) (`page.css` is over `floe.marks`, so such a rule wins over the layout of the marks: `grid-template-columns: 1fr` on a `numbered` item puts the ring and the line on the text, and `floe template check` passes). Size the marks with `--floe-mark` and `--floe-mark-gap` on the list (`.steps { --floe-mark: 3rem; --floe-mark-gap: 2rem; }`).
+- Do not write `display`, `gap` or `grid-template` on the items of `numbered` or `marked`, nor on the box of a `note` or of a part of yours whose `part.yaml` has `marks: box`, however it is placed.
+  - Such a box is a row with a mark itself: `.caution { display: flex; gap: 0.5rem; }` puts a note's title and text in one row. The rows of `links`, `timeline` and `checklist` stand in the part's box, which `page.css` does not reach.
+  - `page.css` is over `floe.marks`, so such a rule wins over the layout of the marks, and `floe template check` passes it: `grid-template-columns: 1fr` on a `numbered` item puts the ring and the line on the text.
+- Size the marks with `--floe-mark` and `--floe-mark-gap` on the list (`.steps { --floe-mark: 3rem; --floe-mark-gap: 2rem; }`).
 - Do not pad the rows of a box that takes the look `rows` (`rows` pads its rows by `--floe-row-pad` above and below, and `--floe-pad-inline` at the sides: a padding of yours replaces the look's).
 - Write `overflow-x: auto` and `contain: inline-size` in one rule under `@media screen`, in a box of yours that scrolls sideways, and fold what it holds on paper (without `contain: inline-size`, the box tells its content's width outside, and a grid or flex item around it widens to its longest line, and the page with it).
 - Keep such a box out of a place whose width its content sets (an inline-block, a float, an absolute or other shrink-to-fit box, a width of `min-content`, `max-content` or `fit-content`, a table's cell of auto width, `justify-self: start`, an item of a flex row on `flex-basis: auto`), where it shrinks to its border and padding (`floe part guide`, *Scrolling boxes*).
@@ -148,7 +166,7 @@ A template reads or sets these. `floe part guide` lists `--floe-room`, `--floe-p
 
 ## Parts in a template
 
-A part draws an item of the data: `floe part list --all` lists every part, look and shared schema a `$ref` can name, with its shape, and `floe part show <part>` lists on its `files:` line the files one reads, which `floe part show <part> schema.json` prints: what one takes is a part's `schema.json` or a shared schema's `<name>.json`, and a look has none. The data file writes the part in its own shape (the part `text` is a plain string, `text: "…"`). The schema names it with `$ref`, under `properties`, `additionalProperties` (not the root's) or `items`:
+A part draws an item of the data. `floe part list --all` lists every part, look and shared schema, with its shape. A `$ref` names a part by its `schema.json`, or a shared schema by its `<name>.json`; a look has no schema for a `$ref` to name. `floe part show <part>` lists on its `files:` line the files a part reads, and `floe part show <part> schema.json` prints its schema. The data file writes the part in its own shape (the part `text` is a plain string, `text: "…"`). The schema names it with `$ref`, under `properties`, `additionalProperties` (not the root's) or `items`:
 
 ```json
 "fields": { "$ref": "floe:///parts/fields.json", "description": "The keys of the setting" }
@@ -158,7 +176,7 @@ A part draws an item of the data: `floe part list --all` lists every part, look 
 
 The part `text` is Markdown that stands among other parts, where `code` and `terminal` can stand beside it: floe warns of a fenced block of code in it, to be written in `code`. floe draws its Markdown in a box of no part (`data-floe-text`), with no background or tone of its own, so that it takes the face and tone around it; `page.css` and the theme's `base.css` stop at it, and the theme's `markdown.css` draws it as Markdown anywhere. Its `h1` is 1.2em and its `h2` 1.1em, as in a template's own Markdown. A field of plain Markdown, where no code part stands, is `{"type": "string", "format": "markdown"}` instead.
 
-A part of any kind, one key naming its kind, refers to `any.json`; a list of them, as report's sections do, refers to it as its items. Your own parts join it (`floe part guide`). In a template's root schema:
+An item that is a part of any kind, written as one key that names its kind (`note: …`), refers to `any.json`; a list of them, as report's sections do, refers to it as its items. Your own parts join it (`floe part guide`). In a template's root schema:
 
 ```json
 "part":  { "$ref": "floe:///parts/any.json" },
@@ -255,11 +273,14 @@ floe's base draws the page's background, text colour and font on its root with t
 
 A JSON Schema (2020-12) of the data file's items.
 
-- `$schema` MUST be `https://json-schema.org/draft/2020-12/schema` or the 2019-09 one, or be left out. The file MUST be one JSON value, not empty, with no key twice in an object.
-- `lang`, `template`, `theme` and `title` are read by floe: the schema MUST NOT declare them under `properties` or require them. The `additionalProperties` of the root MUST NOT hold a part or an item of a format of floe's (it would draw those keys too): declare the items of the page under `properties`.
+- `$schema` MUST be `https://json-schema.org/draft/2020-12/schema` or the 2019-09 one, or be left out.
+- The file MUST be one JSON value, not empty, with no key twice in an object.
+- `lang`, `template`, `theme` and `title` are read by floe: the schema MUST NOT declare them under `properties` or require them.
+- The `additionalProperties` of the root MUST NOT hold a part or an item of a format of floe's (it would draw those keys too): declare the items of the page under `properties`.
 - floe reaches a part, or an item of a format of floe's (`markdown`, `html`, `image`), only by walking from the root through `properties`, `additionalProperties` and `items`, and through a `$ref` to `#/$defs/…`. The schema MUST place each one so. floe refuses one under any other keyword (`if`, `then`, `oneOf`, `allOf` and the rest), and a format of floe's beside a `$ref` to a part (a `description` beside it is fine).
 - Read a key of an item `prefixItems` takes with `index`, as `{{with index . "more"}}…{{end}}`, not as `.more`: in a schema of draft 2020-12, `items` beside `prefixItems` takes only the items after them, as JSON Schema reads it, and an item `prefixItems` takes comes to `page.html` as written (a part or a format of floe's in `items` does not draw it, and a key it leaves out is not there, not nil, so `.more` stops the drawing where `more` is left out).
-- A `$ref` MUST name a part or a schema the parts share, whole (`floe:///parts/table.json`), or a place in the schema's own file (`#/$defs/row`). One out of floe (`file://`, `https://`), into a part (`floe:///parts/table.json#/properties/rows`) or to a part there is none of is refused. The root of the schema MUST NOT take an `$id`.
+- A `$ref` MUST name a part or a schema the parts share, whole (`floe:///parts/table.json`), or a place in the schema's own file (`#/$defs/row`). One out of floe (`file://`, `https://`), into a part (`floe:///parts/table.json#/properties/rows`) or to a part there is none of is refused.
+- The root of the schema MUST NOT take an `$id`.
 - A `$ref` MUST NOT lead back to itself through `$ref`s alone (a `$defs` that names itself, two that name each other), under `not`, `anyOf` or `if` too: no value passes it, and floe refuses it where it is written. A schema may name itself across `properties`, `additionalProperties` or `items`, as a tree's does.
 - Write `"additionalProperties": false` so that a misspelt key is refused: the `schema.json` that `floe template new memo` makes has none.
 - To refuse a key only under a condition, list under `then` the keys the condition takes, with `"additionalProperties": false`: the refusal names the key, where `false` for the key says only `false schema`. The list copies `properties`: add a key to both.
@@ -290,7 +311,10 @@ ja:
   status_doing: '進行中'
 ```
 
-Each key is a language tag (`ja` and `JA`, or `en-GB` and `en_gb`, are one tag: MUST NOT be written twice), each word text. `{{word "status_doing"}}` draws the word in the page's `lang:` (`ja-JP` taking `ja`), and in `en` for a language the file has no words of. A word the page's language does not have, in a file that has words of it, stops the drawing, naming `words.yaml`: give every language each word. `floe template check` draws `example.yaml` in its `lang:` alone.
+- Each key is a language tag, and each word text. Two keys that are one tag (`ja` and `JA`, or `en-GB` and `en_gb`) MUST NOT be written.
+- `{{word "status_doing"}}` draws the word in the page's `lang:` (`ja-JP` taking `ja`), and in `en` for a language the file has no words of.
+- A word the page's language does not have, in a file that has words of it, stops the drawing, naming `words.yaml`: give every language each word.
+- `floe template check` draws `example.yaml` in its `lang:` alone.
 
 A word is text alone, and the spaces of a quoted word are kept: build a sentence around a value from two words (`issue_before: 'Issue '` and `issue_after: ''`, `'第 '` and `' 号'`), not by a branch on `.Lang`.
 
@@ -331,7 +355,7 @@ No other path is refused by the schema. From any of these on, the rest of the pa
 - an object without `"additionalProperties": false`, at a key it does not declare;
 - a key that `additionalProperties` or `patternProperties` takes.
 
-A `type` beside a `$ref` to a part is not read: the path goes on in the part's schema. Nor is it checked that the value `for` ends at may be a list (`for: sections` where `sections` is of `"type": "string"`).
+A `type` beside a `$ref` to a part is not read: the path goes on in the part's schema. `floe template check` does not check either that the value `for` ends at may be a list (`for: sections` where `sections` is of `"type": "string"`): the data is refused as the check runs, as below.
 
 `floe template check` finds a `for` the schema forbids whatever the data, and it stops every page, of another template too, as any mistake in a template does: `checks.yaml:1:8: for sections.parts: no value the schema allows there holds parts; write a path of keys those values may hold`.
 
@@ -354,7 +378,10 @@ storage_gb: 'item_bytes * records.in_1_year / 1e9'
 ```
 
 - An expression sees the data file's items that the schema declares, and the other computed values, by name, whatever order they are written in. It is an expr expression, as in `checks.yaml` (`len(teams)`, `sum(teams, .shipped)`, `shipped > 0 ? incidents * 100 / shipped : 0`), and MUST NOT use `$env`: use the names. An item named as a function of expr (`count`, `date`, `merge`) is not seen by name.
-- A name MUST be one that expr and `page.html` read as one name, MUST NOT be an item of the data, a word or function of expr, or start with `_`, and values computed from each other are refused.
+- An expression has the budget of *checks.yaml*, and one with a ` #` in it MUST be in quotes as there.
+- A name MUST be one that expr and `page.html` read as one name.
+- A name MUST NOT be an item of the data, a word or function of expr, or start with `_`.
+- Values computed from each other are refused.
 - A value the data cannot give (a division by zero, an item left out that the expression needs), or one that is not a finite number, is reported at its expression, naming the data file. Give the value for an item left out with `??` (`count(prs ?? [], .state == "merged")`), and read into one with `?.` (`records?.in_1_year ?? 0`).
 
 ## example.yaml
@@ -394,10 +421,16 @@ For a template it refuses, by kind:
 - an image of `assets/` that is not one floe takes, and an `asset` that names none;
 - CSS floe cannot read in `page.css` (*page.css*);
 - a `--radius-small` or `--radius-pill` of more than one item in `page.css`, or in a theme or part of yours;
-- a file floe cannot read as written, in any file: YAML or JSON that is not UTF-8 or holds a byte order mark inside, YAML that holds U+0085, U+2028 or U+2029 (read as line breaks; write `"\u2028"` in double quotes), YAML over 1 MiB, JSON that holds a lone surrogate, YAML with a key written twice or a key in `{ }` or `[ ]` with no value as in `{a, b: 1}`, and what `floe guide` (*YAML that floe reads as you meant*) says floe refuses in a data file;
+- a file floe cannot read as written, in any file:
+  - YAML or JSON that is not UTF-8 or holds a byte order mark inside;
+  - YAML that holds U+0085, U+2028 or U+2029 (read as line breaks; write `"\u2028"` in double quotes);
+  - YAML over 1 MiB;
+  - JSON that holds a lone surrogate;
+  - YAML with a key written twice, or a key in `{ }` or `[ ]` with no value as in `{a, b: 1}`;
+  - what `floe guide` (*YAML that floe reads as you meant*) says floe refuses in a data file;
 - the page drawn from `example.yaml`: what the data file's items break in the schema and the checks, a `for` of `checks.yaml` that does not lead to a list in the data (*checks.yaml*), what *page.html* says the page drawn MUST NOT hold, an item of format `markdown`, `html` or `image` that is not text (a number, `true` or `null` unquoted), an item of format `html` that opens or closes an element of the page or stands in a text or an attribute.
 
-The check tests files, names and syntax, and of values `--radius-small` and `--radius-pill` alone, not places. These pass with exit code 0:
+The check tests files, names and syntax, and of values `--radius-small` and `--radius-pill` alone. It does not look at where or how the page draws what it holds. These pass with exit code 0:
 
 - a page without `<!doctype html>`;
 - a `page.css` rule that restyles nothing or breaks a layout;
