@@ -9,6 +9,7 @@ import {
   editChange,
   mergeLists,
   mergeURLs,
+  movedTo,
   refillTitle,
   urlRefusal,
   urlLink,
@@ -41,6 +42,16 @@ describe(editChange, () => {
     expect(editChange(base, { ...now, name: ' S1 ' })).toBeNull();
     expect(editChange(base, { ...now, name: ' S2 ' })).toStrictEqual({ rename: 'S2' });
     expect(editChange(base, { ...now, name: ' ' })).toStrictEqual({ rename: '' });
+  });
+});
+
+describe(movedTo, () => {
+  it('goes by the ID the store kept, not the one sent', () => {
+    expect.assertions(3);
+    expect(movedTo([{ task: 'S2' }, { task: 'S3' }], 'S1')).toBe('S2');
+    // Sent as S1 and U+0085, which the store trims and JS does not: kept as it was
+    expect(movedTo([{ task: 'S1' }], 'S1')).toBeNull();
+    expect(movedTo([], 'S1')).toBeNull();
   });
 });
 

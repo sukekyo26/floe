@@ -1,5 +1,5 @@
 import { t } from '@/lib/t';
-import type { TaskOf } from '@/types/task';
+import type { TaskOf, TaskWritten } from '@/types/task';
 
 // What the task edit shows of a task, as read: its title, its URLs once each, and its categories in their order
 export interface EditBase {
@@ -79,6 +79,13 @@ export function editChange(base: EditBase, now: EditNow): Record<string, unknown
   };
   return Object.keys(changed).length > 0 ? changed : null;
 }
+
+// movedTo is the ID the store left the task name at, as its answer's first task written says, or null where it is name:
+// the store trims what JS's trim does not (U+0085), and the other way round (U+FEFF), so the ID sent is not the one kept
+export const movedTo = (written: readonly Pick<TaskWritten, 'task'>[], name: string): string | null => {
+  const kept = written[0]?.task;
+  return kept === undefined || kept === name ? null : kept;
+};
 
 // refillTitle is the title field once the task is read again: what was typed stays, or, left as it opened, the title
 // read now

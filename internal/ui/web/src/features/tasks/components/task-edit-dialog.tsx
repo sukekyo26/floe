@@ -16,6 +16,7 @@ import {
   editChange,
   mergeLists,
   mergeURLs,
+  movedTo,
   pagedOf,
   refillTitle,
   urlRefusal,
@@ -190,9 +191,9 @@ export function TaskEditDialog({
         return;
       }
       // A new ID is another task's page: the one open names the old, which is no longer there
-      const { rename } = changed;
-      if (typeof rename === 'string') {
-        window.location.replace(taskHref({ project: task.project, name: rename }));
+      const moved = movedTo(res.written, task.name);
+      if (moved !== null) {
+        window.location.replace(taskHref({ project: task.project, name: moved }));
         return;
       }
       toasts.toast(t('ui_saved'));
