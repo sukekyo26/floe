@@ -505,3 +505,26 @@ a badge: /tasks?project=proj&view=todo
 up from there: ?view=todo&project=proj #1 /tasks?view=todo&project=proj
 no focus opened otherwise: false
 the menu: /tasks?project=proj&view=done`
+
+// The head of a task's page puts the ID on a line of its own: a title that wraps starts each of its lines where the first
+// starts, not under the ID.
+func TestUITaskHeadLines(t *testing.T) { //nolint:paralleltest // the browser tests share one Chrome, one at a time
+	s := newSite(t)
+	b := s.b
+	title := strings.TrimSpace(strings.Repeat("a title long enough to wrap ", 4))
+	s.floe(t, "task", "--task", "S422-P6", "--project", "proj", "--title", title, "--state", "doing")
+	b.size(480, 800, false)
+	defer b.unsize()
+	b.navigate("/tasks?project=proj&task=S422-P6")
+	b.until("the head", "!document.getElementById('task-head').hidden && document.getElementById('task-title').textContent.endsWith("+js(title)+")")
+	got := b.eval(`((h) => {
+		const id = h.querySelector('[data-testid=tname]').getBoundingClientRect();
+		const r = document.createRange();
+		r.selectNodeContents(h.lastChild);
+		const lines = [...r.getClientRects()];
+		return [lines.length > 1, lines[0].top >= id.bottom, lines.every((l) => Math.abs(l.left - lines[0].left) < 1)].join();
+	})(document.getElementById('task-title'))`)
+	if got != "true,true,true" {
+		t.Errorf("wraps, the title under the ID, its lines aligned: got %s, want true,true,true", got)
+	}
+}
