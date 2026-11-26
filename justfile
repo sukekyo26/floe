@@ -221,7 +221,7 @@ mod-tidy-check:
 # Build bin/floe for the host
 build:
     @mkdir -p bin
-    CGO_ENABLED=0 go build -trimpath -buildvcs=false -ldflags "{{ldflags}}" -o bin/floe ./cmd/floe
+    CGO_ENABLED=0 go build -trimpath -ldflags "{{ldflags}}" -o bin/floe ./cmd/floe
 
 # Cross-compile bin/floe-<os>-<arch> for every release target
 build-all:

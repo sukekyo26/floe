@@ -54,7 +54,7 @@
 | `floe icons search <セット> <語>...` | `lucide` か取ってきたセットのアイコンのうち、名前がどの語も含むものを並べる（`alb` のような略語でも探せる） |
 | `floe completion <シェル>` | シェルの補完のスクリプトを出す（Cobra の組み込み） |
 | `floe licenses` | floe と、floe に入っているコードのライセンスの文を出す |
-| `floe version` | 版を出す（`floe --version` も） |
+| `floe version` | 版を出す（`floe --version` も）。checkout からビルドした floe は、`+` の後に commit を添える（`0.3.1+09feb55824ca`。作業ツリーに変更があれば `.dirty` も） |
 | `floe help [コマンド]` | ヘルプを出す（Cobra の組み込み） |
 
 ---

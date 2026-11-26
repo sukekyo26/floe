@@ -369,8 +369,15 @@ jobs:
               exit 1
             fi
           done <<< "$files"
+      # build-all passes -buildvcs=false, so a release says VERSION alone, with no commit after a "+".
       - name: Run the host binary
-        run: ./bin/floe-linux-amd64 version
+        run: |
+          got=$(./bin/floe-linux-amd64 version)
+          want="floe $(tr -d '[:space:]' < VERSION)"
+          if [ "$got" != "$want" ]; then
+            echo "the release binary says \"$got\", want \"$want\": keep -buildvcs=false in build-all" >&2
+            exit 1
+          fi
 
   shell:
     name: Shell (shellcheck + shfmt)

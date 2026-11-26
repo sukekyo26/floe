@@ -135,7 +135,7 @@ func newRoot(env Env, out io.Writer) (*cobra.Command, *app) {
 
 Agents: run floe guide first: how to write, check and publish a page. floe skill install <agent> makes a skill
 that points your agent to it (floe skill install --help lists the agents).`,
-		Version:       version.Version,
+		Version:       version.String(),
 		Args:          cobra.NoArgs,
 		SilenceErrors: true,
 		SilenceUsage:  true,
@@ -149,7 +149,7 @@ that points your agent to it (floe skill install --help lists the agents).`,
 		Short: "Print the floe version",
 		Args:  cobra.NoArgs,
 		RunE: func(cmd *cobra.Command, _ []string) error {
-			_, err := fmt.Fprintf(cmd.OutOrStdout(), "floe %s\n", version.Version)
+			_, err := fmt.Fprintf(cmd.OutOrStdout(), "floe %s\n", version.String())
 			return err //nolint:wrapcheck // a stdout write error needs no extra context
 		},
 	}, &cobra.Command{

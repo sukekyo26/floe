@@ -114,7 +114,7 @@ func builtFloe(t *testing.T) []byte {
 		}
 		defer os.RemoveAll(dir)
 		out := filepath.Join(dir, "floe.exe")
-		cmd := exec.CommandContext(context.Background(), "go", "build", "-trimpath", "-ldflags", "-s -w -X floe/internal/version.Version=0.1.0", "-o", out, "./cmd/floe")
+		cmd := exec.CommandContext(context.Background(), "go", "build", "-trimpath", "-buildvcs=false", "-ldflags", "-s -w -X floe/internal/version.Version=0.1.0", "-o", out, "./cmd/floe")
 		cmd.Dir = "../.."
 		cmd.Env = append(os.Environ(), "CGO_ENABLED=0")
 		if b, err := cmd.CombinedOutput(); err != nil {

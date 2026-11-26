@@ -121,7 +121,7 @@ The documents in docs/specs are drawn by floe. To change one, run `floe guide` f
 
 ### floe's version
 
-- Draw the pages with a release (a floe built from its source between two releases says the earlier one's version).
+- Draw the pages with a release: a floe built from its source has a `+` and a commit after its version (`0.3.1+09feb55824ca`).
 
 ### Icons
 
@@ -133,7 +133,7 @@ The check names each page that its data file does not draw and each page missing
 
 - For a document you changed, added or took away: draw again, and delete the page of one taken away or renamed.
 - For one you did not touch, tell the user what the check printed, with the version of `floe --version` and the one the repository's CI installs. The reasons may be:
-  - floe is of another version than drew them (`floe --version` and the version the CI installs; the version a floe built from its source says is not enough to tell).
+  - floe is of another version than drew them (`floe --version` and the version the CI installs; a `+` after the version is a floe built from its source, not a release).
   - A template, part, theme or icon set changed in a pull request merged meanwhile (once the user says it is this, take in the latest and draw again).
 
   Do not guess which.
