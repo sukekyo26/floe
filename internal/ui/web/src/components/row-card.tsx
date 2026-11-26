@@ -100,7 +100,7 @@ export function RowCard({
       </time>
       <span
         data-testid="sub"
-        className="flex min-w-0 flex-wrap items-center gap-x-1.5 gap-y-1 text-label text-muted [grid-area:sub]"
+        className="flex min-w-0 flex-wrap items-center gap-x-1.5 gap-y-1 text-label text-muted [grid-area:sub] [&>*]:min-w-0"
       >
         {sub}
       </span>

@@ -6,7 +6,7 @@ export interface TagPillProps {
   readonly onPress?: (() => void) | undefined;
 }
 
-const PILL = 'max-w-48 flex-none truncate rounded-full border-0 bg-subtle px-2 text-label text-fg';
+const PILL = 'max-w-48 truncate rounded-full border-0 bg-subtle px-2 text-label text-fg';
 
 // TagPill is a tag of a page as its row and its tag line show it
 export function TagPill({ name, onPress }: TagPillProps) {
