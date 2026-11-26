@@ -484,7 +484,7 @@ var messagesEN = map[string]string{
 	"theme_about_blueprint":    "Blue ink on squared paper, its sections ruled in the ink",
 	"theme_about_brutal":       "Black on cream, flat primaries, its sections ruled thick",
 	"theme_about_default":      "floe's own, which every theme starts from: a warm grey ground, white surfaces in thin frames, a teal accent",
-	"theme_about_editorial":    "A magazine in ink and yellow: sections open on yellow bands, a short yellow bar over each box, large heavy figures",
+	"theme_about_editorial":    "A magazine in ink and yellow: sections open on yellow bands, a short yellow bar over cards and figures, large heavy figures",
 	"theme_about_ink":          "Ink on paper: near black, an indigo ink for emphasis, its sections ruled in the ink",
 	"theme_about_notebook":     "Pen on ruled paper in a rounded face",
 	"theme_about_pebble":       "Pebbles on a warm ground: rows as round stones on a tray, each part in a form of its own, a brown accent",

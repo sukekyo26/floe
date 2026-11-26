@@ -1,4 +1,4 @@
-/* A headline: a thick cap of the highlight, its state a kicker, a large title */
-.card { --floe-inset: inset 0 6px 0 var(--editorial-hi); }
+/* A headline: a thick cap of the highlight in place of the cards' short bar, its state a kicker, a large title */
+.card { background: var(--surface); --floe-inset: inset 0 6px 0 var(--editorial-hi); }
 :scope .card > .meta { color: var(--accent); font-weight: 800; letter-spacing: 0.08em; }
 :scope .card > .title { font-size: 1.7rem; font-weight: 800; }
