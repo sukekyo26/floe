@@ -5,16 +5,19 @@
   --accent: #6234c8; --accent-soft: #ebe3ff;
   --good: #156a42; --good-soft: #daf3e6; --warn: #844f00; --warn-soft: #fbead0; --bad: #ab2146; --bad-soft: #fde1e8;
   --code-bg: #241c3d; --code-fg: #ece8fb; --code-prompt: #c6a8ff;
-  /* The wash, placed on the whole document: lavender at its top, peach at a fifth of its height, mint at its foot.
-     Its colours keep --muted, --accent and the tones at 4.5:1 on them, which the tests measure on --bg alone. Its three
-     colours are named, for table.css to draw from them too */
-  --aurora-lavender: #e0d2ff; --aurora-peach: #ffd3c2; --aurora-mint: #c5f0de;
+  /* The wash, placed on the whole document: violet at its top, a rose lilac at a fifth of its height, a pale violet at its
+     foot, all of one hue for the words and boxes to lead. Its colours keep --muted, --accent and the tones at 4.5:1 on
+     them, which the tests measure on --bg alone. Its first two are named, for the ribbon to draw from them */
+  --aurora-violet: #e2d6ff; --aurora-rose: #f1dcf4;
   --page-bg:
-    radial-gradient(60rem 40rem at 0% 0%, var(--aurora-lavender) 0, transparent 70%),
-    radial-gradient(50rem 36rem at 100% 20%, var(--aurora-peach) 0, transparent 70%),
-    radial-gradient(60rem 40rem at 40% 100%, var(--aurora-mint) 0, transparent 70%),
+    radial-gradient(60rem 40rem at 0% 0%, var(--aurora-violet) 0, transparent 70%),
+    radial-gradient(50rem 36rem at 100% 25%, var(--aurora-rose) 0, transparent 70%),
+    radial-gradient(60rem 40rem at 40% 100%, #e6e0fb 0, transparent 70%),
     var(--bg);
-  --rule: 1px solid color-mix(in srgb, var(--accent) 25%, transparent);
+  /* The ribbon of light: the wash's violet and rose lilac, deepened toward the chart colour of each hue. It colours a
+     section's rule, the line under a table's head and the top of the option picked */
+  --aurora-ribbon: linear-gradient(90deg, color-mix(in srgb, var(--aurora-violet), var(--chart-1) 45%), color-mix(in srgb, var(--aurora-rose), var(--chart-4) 35%));
+  --rule: 3px solid color-mix(in srgb, var(--accent) 25%, transparent);
   --shadow: rgb(80 50 160 / 0.18);
   /* The soft wide shadow its glass casts down */
   --floe-shadow-y: 6px; --floe-shadow-blur: 20px; --floe-shadow-spread: -14px;

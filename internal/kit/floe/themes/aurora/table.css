@@ -1,6 +1,5 @@
-/* Clear glass: the head on no ground in the violet over a line of the wash's three colours, each deepened toward the
-   chart colour of its hue; lines of light between rows */
+/* Clear glass: the head on no ground in the violet over the ribbon of light; lines of light between rows */
 :scope {
-  --table-head-bg: linear-gradient(90deg, color-mix(in srgb, var(--aurora-lavender), var(--chart-1) 45%), color-mix(in srgb, var(--aurora-peach), var(--chart-3) 40%), color-mix(in srgb, var(--aurora-mint), var(--chart-2) 45%)) bottom / 100% 3px no-repeat;
+  --table-head-bg: var(--aurora-ribbon) bottom / 100% 3px no-repeat;
   --table-head-fg: var(--accent); --table-rule: 1px solid color-mix(in srgb, var(--accent) 10%, var(--aurora-edge));
 }

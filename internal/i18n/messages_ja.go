@@ -469,7 +469,7 @@ var messagesJA = map[string]string{
 	"ui_saved_off_task":       "保存しました。タスク %s は元のプロジェクトのものなので、ページを外しました",
 	// The descriptions of floe's themes the management page shows
 	"theme_about_app":          "アプリの画面：青みがかった灰色の背景、やわらかい影で浮いた白いカード、ラズベリー色の差し色",
-	"theme_about_aurora":       "すりガラス越しの夜明けの空：ラベンダー・桃色・ミントのにじみ、くもった白の面、すみれ色の差し色",
+	"theme_about_aurora":       "すりガラス越しの夜明けの空：紫の濃淡のにじみ、くもった白の面、すみれ色の差し色と細い光の線",
 	"theme_about_blueprint":    "方眼紙に青いインク、セクションの区切り線もそのインク",
 	"theme_about_brutal":       "クリーム色に黒、平塗りの原色、セクションの区切り線は太い",
 	"theme_about_default":      "floe 標準のテーマで、どのテーマもこれを元にする：暖かみのある灰色の背景、細い枠の白い面、青緑の差し色",

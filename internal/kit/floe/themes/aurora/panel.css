@@ -1,1 +1,3 @@
-:scope { background: var(--aurora-glass); border: 1px solid var(--aurora-edge); --floe-shadow-color: var(--shadow); }
+/* Glass with a thin violet frame: its bright edge alone is unseen on white, so a box in a box (a step's table) would
+   melt into the glass around it. The frame is the same wherever a box stands */
+:scope { background: var(--aurora-glass); border: 1px solid var(--line); --floe-shadow-color: var(--shadow); }
