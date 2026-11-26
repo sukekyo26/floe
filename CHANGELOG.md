@@ -17,6 +17,7 @@ adheres to [Semantic Versioning](https://semver.org/).
 
 ### Changed
 
+- Change `floe --version` and `floe version` of a floe built from a checkout (`go build`, `go install ./cmd/floe`, `just build`) to add the commit it was built from after a `+`, as `0.3.1+09feb55824ca`, and `.dirty` when the tree had changes, so that it is told from a release, which says its version alone as before.
 - Change the theme `swiss` so that its boxes are seen to their edges: each (a table, a note, a card, an option, a fold and the like) is white in a black frame, wherever it stands, where it had no ground and a rule at its top or its left alone; a quote stands on white and a diagram on grey, the grey of a warning is darker, and so, slightly, is the page's ground.
 - Change the mistake of a `for` of `checks.yaml` that does not lead to a list: there is one for each value in the data file that the path stops at, at its line and column, naming the `for` and its `checks.yaml`, where there was one for the check, at its `for`.
 - Change the bar's "Page list" and "Task list" into a switch: the one of the screen shown stands on a white thumb in a grey track, and on a page shown whole, the one of the list it was opened from does. At 56rem or less (it was 40rem), a page shown whole has the back link's mark in their place. They are links as before, and go to the same places.

@@ -54,7 +54,7 @@ Flags are in each command's section below.
 | `floe icons search <set> <word>...` | List the icons of a set, `lucide` or a fetched one, whose name contains every word, or a short name such as `alb` |
 | `floe completion <shell>` | Print the completion script for a shell (Cobra builtin) |
 | `floe licenses` | Print the license notices of floe and of the code built into it |
-| `floe version` | Print the version (also `floe --version`) |
+| `floe version` | Print the version (also `floe --version`); a floe built from a checkout adds the commit after a `+` (`<version>+<commit>`, the commit's first 12 hex digits, with `.dirty` after them when the tree had changes) |
 | `floe help [command]` | Print help (Cobra builtin) |
 
 ---
