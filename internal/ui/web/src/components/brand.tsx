@@ -1,4 +1,5 @@
 import { t } from '@/lib/t';
+import { barPress } from '@/stores/columns';
 
 // Brand is the bar's logo and name, the way to the page list: to href, the list as this tab last had it in a page
 // whole. It is its mark alone at 24rem or less, where the links beside it take the word's room, and a page whole's at
@@ -15,6 +16,7 @@ export function Brand({
       data-testid="brand"
       href={href}
       title={t('ui_to_page_list')}
+      onClick={barPress()}
       className={`flex flex-none items-center gap-2.5 text-[1.2rem] leading-none font-extrabold tracking-[-0.03em] text-fg no-underline tiny:gap-0 tiny:text-[0px] ${markAlone ? 'narrow:gap-0 narrow:text-[0px]' : ''}`}
     >
       <svg

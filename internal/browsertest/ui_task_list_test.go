@@ -116,8 +116,9 @@ func TestUIStorageKeys(t *testing.T) { //nolint:paralleltest // the browser test
 	b.navigate("/tasks?project=shop")
 	b.until("the task rows", "document.querySelector('#list > li')")
 	out = append(out, "tasks "+b.eval("(sessionStorage.getItem('pages.tasks') !== null) + ' ' + (localStorage.getItem('pages.taskProject') !== null)"))
-	// The key the task list's focus is kept by is written as the task page's way up is pressed, and taken as the list opens: what is
-	// written is recorded in window.name, which the move to the list keeps.
+	// The key the task list's focus is kept by is written as the task page's way up is pressed, and taken as the list opens,
+	// with the columns opened as a link of the bar does: what is written is recorded in window.name, which the move to the
+	// list keeps.
 	b.navigate("/tasks?project=shop&task=%231")
 	b.until("the task's page", taskPageShown)
 	b.eval("(() => { window.name = ''; const set = Storage.prototype.setItem; Storage.prototype.setItem = function (k, v) { window.name += k + ' '; return set.call(this, k, v); }; })()")
@@ -127,7 +128,7 @@ func TestUIStorageKeys(t *testing.T) { //nolint:paralleltest // the browser test
 		"old "+b.eval("Object.keys(sessionStorage).concat(Object.keys(localStorage)).filter((k) => k.startsWith('artifacts')).length"))
 	check(t, "keys", out, strings.Join([]string{
 		"list true", "order true", "tasks true true",
-		"written pages.tasks.from ", "old 0",
+		"written list.columns pages.tasks.from ", "old 0",
 	}, "|"))
 }
 
