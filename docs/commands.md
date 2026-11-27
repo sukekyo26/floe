@@ -178,7 +178,7 @@ Print the templates, floe's and your own, one per line in four tab-separated col
 
 ## `floe template new <name>`
 
-Make the template `<name>` in `FLOE_TEMPLATES_DIR`: a `page.html`, a `schema.json` and an `example.yaml`, the smallest that `floe template check` takes, to fill in. The `page.html` also holds a viewport `<meta>`, so that a phone draws the page at its own width. It prints `made <path>`, the directory it made.
+Make the template `<name>` in `FLOE_TEMPLATES_DIR`: a `page.html`, a `schema.json` and an `example.yaml`, the smallest that `floe template check` takes, to fill in. The `page.html` also holds a viewport `<meta>`, so that a phone draws the page at its own width. It prints `made <path>`, the directory it made, then `next: read floe template guide; floe template show report page.html prints floe's own to start from`. Under `floe repository` it names `floe repository`'s commands.
 
 - A name is lower case letters, digits, `-` and `_`, starting with a letter or a digit.
 - Nothing is written over: with anything of that name there, the command stops and makes nothing (exit code 1).
@@ -207,7 +207,7 @@ With `--all`, print every part, look and shared schema, floe's and your own, tha
 
 ## `floe part new <name>`
 
-Make the part `<name>` in `FLOE_PARTS_DIR`: a `schema.json`, a `part.html` of its box and an empty `part.css`, the smallest that `floe part check` takes, to fill in. It prints `made <path>`, the directory it made.
+Make the part `<name>` in `FLOE_PARTS_DIR`: a `schema.json`, a `part.html` of its box and an empty `part.css`, the smallest that `floe part check` takes, to fill in. It prints `made <path>`, the directory it made, then `next: read floe part guide; floe part show note part.html prints floe's own to start from`. Under `floe repository` it names `floe repository`'s commands.
 
 - Nothing is written over: with anything of that name there, the command stops and makes nothing (exit code 1).
 
@@ -227,7 +227,7 @@ Print the themes, floe's and your own, one per line in the same four tab-separat
 
 ## `floe theme new <name>`
 
-Make the theme `<name>` in `FLOE_THEMES_DIR`: an empty `palette.css`, the smallest that `floe theme check` takes, to fill in. It goes over floe's `default` palette, which `floe theme show default palette.css` prints, so it writes only what it changes. It prints `made <path>`, the directory it made.
+Make the theme `<name>` in `FLOE_THEMES_DIR`: an empty `palette.css`, the smallest that `floe theme check` takes, to fill in. It goes over floe's `default` palette, which `floe theme show default palette.css` prints, so it writes only what it changes. It prints `made <path>`, the directory it made, then `next: read floe theme guide; floe theme show default palette.css prints floe's own to start from`. Under `floe repository` it names `floe repository`'s commands.
 
 - Nothing is written over: with anything of that name there, the command stops and makes nothing (exit code 1).
 

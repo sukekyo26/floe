@@ -178,7 +178,7 @@ floe と自分のテンプレートを 1 行ずつ、タブで区切った 4 列
 
 ## `floe template new <名前>`
 
-`FLOE_TEMPLATES_DIR` にテンプレート `<名前>` を作ります。`floe template check` が通す最小の `page.html`・`schema.json`・`example.yaml` で、埋めて使います。`page.html` は viewport の `<meta>` も持ち、スマホはページを自分の幅で描きます。作ったディレクトリを `made <パス>` と出します。
+`FLOE_TEMPLATES_DIR` にテンプレート `<名前>` を作ります。`floe template check` が通す最小の `page.html`・`schema.json`・`example.yaml` で、埋めて使います。`page.html` は viewport の `<meta>` も持ち、スマホはページを自分の幅で描きます。作ったディレクトリを `made <パス>` と出し、次の行に `next: read floe template guide; floe template show report page.html prints floe's own to start from` と、読む手引きと元にするファイルを出すコマンドを出します。`floe repository` の下では、`floe repository` のコマンドを言います。
 
 - 名前は英小文字・数字・`-`・`_` で、英小文字か数字で始めます。
 - 何も上書きしません。その名前のものがあれば、何も作らずに止まります（終了コード 1）。
@@ -207,7 +207,7 @@ floe のテンプレートの節に書ける部品（floe の `any.json` の鍵�
 
 ## `floe part new <名前>`
 
-`FLOE_PARTS_DIR` に部品 `<名前>` を作ります。`floe part check` が通す最小の `schema.json`、箱の `part.html`、空の `part.css` で、埋めて使います。作ったディレクトリを `made <パス>` と出します。
+`FLOE_PARTS_DIR` に部品 `<名前>` を作ります。`floe part check` が通す最小の `schema.json`、箱の `part.html`、空の `part.css` で、埋めて使います。作ったディレクトリを `made <パス>` と出し、次の行に `next: read floe part guide; floe part show note part.html prints floe's own to start from` と、読む手引きと元にするファイルを出すコマンドを出します。`floe repository` の下では、`floe repository` のコマンドを言います。
 
 - 何も上書きしません。その名前のものがあれば、何も作らずに止まります（終了コード 1）。
 
@@ -227,7 +227,7 @@ floe のテンプレートの節に書ける部品（floe の `any.json` の鍵�
 
 ## `floe theme new <名前>`
 
-`FLOE_THEMES_DIR` にテーマ `<名前>` を作ります。`floe theme check` が通す最小の、空の `palette.css` で、埋めて使います。floe の `default` のパレット（`floe theme show default palette.css` が出す）の上に重なるので、変えるものだけを書きます。作ったディレクトリを `made <パス>` と出します。
+`FLOE_THEMES_DIR` にテーマ `<名前>` を作ります。`floe theme check` が通す最小の、空の `palette.css` で、埋めて使います。floe の `default` のパレット（`floe theme show default palette.css` が出す）の上に重なるので、変えるものだけを書きます。作ったディレクトリを `made <パス>` と出し、次の行に `next: read floe theme guide; floe theme show default palette.css prints floe's own to start from` と、読む手引きと元にするファイルを出すコマンドを出します。`floe repository` の下では、`floe repository` のコマンドを言います。
 
 - 何も上書きしません。その名前のものがあれば、何も作らずに止まります（終了コード 1）。
 
