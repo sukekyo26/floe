@@ -86,6 +86,7 @@ The functions floe adds to html/template's own (`printf`, `index`, `eq` and the 
 | `markdownLine` | `{{markdownLine .text}}` | A line of Markdown as HTML, without a paragraph around it |
 | `markdownLabel` | `{{markdownLabel .text}}` | A line of Markdown as `markdownLine` writes it, its links as their words |
 | `num` | `{{num .n}}` | A number written with grouping; `{{num 3 .n}}` to 3 significant digits |
+| `count` | `{{count $i}}` | The index of a `range` (`range $i, $a := .items`), from 0, as a number from 1: `1` for the first |
 | `bytes` | `{{bytes .n}}` | A count of bytes in the binary unit that keeps it under 1024 (1536 is `1.5 KiB`) |
 | `contents` | `{{contents}}` | The script that marks, in the contents just before it, the place the page is read at |
 | `word` | `{{word "by"}}` | A word of the part's `words.yaml`, in the page's language |
