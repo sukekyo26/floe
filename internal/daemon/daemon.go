@@ -12,10 +12,12 @@ import (
 	"io"
 	"net"
 	"net/http"
+	"net/http/httptrace"
 	"os"
 	"os/exec"
 	"path/filepath"
 	"strconv"
+	"sync/atomic"
 	"time"
 
 	"floe/internal/files"
@@ -59,34 +61,49 @@ func Build() (string, error) {
 
 // Probe asks the port who is there.
 func Probe(ctx context.Context, base string) Status {
+	p, _ := probeEnded(ctx, base)
+	return p
+}
+
+// probeEnded is Probe, and reports too whether what took the connection ended the request without an HTTP answer
+// (closed it, or answered other than HTTP) before the deadline: a server of floe that is still starting never does, as
+// the listener it was handed keeps the connection waiting until the server answers.
+func probeEnded(ctx context.Context, base string) (Status, bool) {
 	ctx, cancel := context.WithTimeout(ctx, time.Second)
 	defer cancel()
+	var connected atomic.Bool
+	ctx = httptrace.WithClientTrace(ctx, &httptrace.ClientTrace{ //nolint:exhaustruct_v5 // the connection alone
+		GotConn: func(httptrace.GotConnInfo) { connected.Store(true) },
+	})
 	var none server.Health
 	down := Status{State: Down, Health: none}
 	req, err := Request(ctx, base, http.MethodGet, "/api/health", nil)
 	if err != nil {
-		return down
+		return down, false
 	}
 	res, err := http.DefaultClient.Do(req)
 	if err != nil {
-		return down
+		return down, connected.Load() && ctx.Err() == nil
 	}
 	defer res.Body.Close() //nolint:errcheck // read-only
 	var h server.Health
 	if json.NewDecoder(res.Body).Decode(&h) != nil || h.App != server.App {
-		return Status{State: Other, Health: none}
+		return Status{State: Other, Health: none}, false
 	}
-	return Status{State: Ours, Health: h}
+	return Status{State: Ours, Health: h}, false
 }
 
-// waitWhile probes every 20 ms while cond holds, for 10 s in all. Starting and stopping take well under
+// waitFor bounds each wait for a server: to start, to stop, or for the port another command holds to answer.
+const waitFor = 10 * time.Second
+
+// waitWhile probes every 20 ms while cond holds, for waitFor in all. Starting and stopping take well under
 // 100 ms, but a race build that shares the CPUs with other tests took over 3 s to start. The deadline
 // bounds the probes too, so a program that accepts and never answers cannot stretch the wait.
 // LIMIT: a server that fails to start is told only to run "floe serve"; if CI still fails to start one in 10 s, read
 // server.log (the "serving" line's time tells slow from failing once it is up; a start that fails before the log
 // opens leaves nothing, and the started serve's output is discarded).
 func waitWhile(ctx context.Context, base string, p Status, cond func(Status) bool) Status {
-	ctx, cancel := context.WithTimeout(ctx, 10*time.Second)
+	ctx, cancel := context.WithTimeout(ctx, waitFor)
 	defer cancel()
 	for cond(p) {
 		select {
@@ -305,23 +322,41 @@ func sameOrUnread(a, b string) bool {
 	return errA != nil && errB != nil
 }
 
-// startAndWait starts a server on the port, p being Down, and waits for one to answer there.
+// startAndWait starts a server on the port, p being Down, and waits for one to answer there. While another holds the
+// port, it binds it again every 20 ms for waitFor in all, so that it starts its own once that one's server fails to
+// start and frees the port. What ends two requests in a row without an HTTP answer is another program (probeEnded).
 func startAndWait(ctx context.Context, s Server, p Status) (Status, error) {
-	started := false
-	// Twice at most: the port another command bound comes free, if its server fails, while this one
-	// waits for it.
-	for try := 0; try < 2 && p.State == Down && !started; try++ {
-		var err error
-		if started, err = start(ctx, s); err != nil {
+	held, cancel := context.WithTimeout(ctx, waitFor)
+	defer cancel()
+	ended := 0
+	for held.Err() == nil {
+		started, err := start(ctx, s)
+		if err != nil {
 			return p, err
 		}
-		p = waitWhile(ctx, Base(s.Port), p, func(q Status) bool { return q.State == Down })
+		if started {
+			return waitWhile(ctx, Base(s.Port), p, func(q Status) bool { return q.State == Down }), nil
+		}
+		// One ended request may be of a starting server that failed and closed the listener: the port is free then.
+		q, endedNow := probeEnded(held, Base(s.Port))
+		switch {
+		case held.Err() != nil:
+			continue
+		case q.State != Down:
+			return q, nil
+		case !endedNow:
+			ended = 0
+		default:
+			if ended++; ended == 2 {
+				return Status{State: Other, Health: q.Health}, nil
+			}
+		}
+		select {
+		case <-held.Done():
+		case <-time.After(20 * time.Millisecond):
+		}
 	}
-	// Bound, but none answers: another command's server still starting, or a program that does not.
-	if p.State == Down && !started {
-		return p, usererr.New("daemon_port_silent", s.Port)
-	}
-	return p, nil
+	return p, usererr.New("daemon_port_silent", s.Port)
 }
 
 // ListenerEnv tells "floe serve" the file descriptor of the listener the command that started it bound.
