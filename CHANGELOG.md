@@ -34,6 +34,7 @@ adheres to [Semantic Versioning](https://semver.org/).
 - Fix the head of a task's page in the management page growing wider than its column when the project's name is long, putting Edit and the family card's Add out of the window: the project's pill is cut at its end with "…" instead.
 - Fix a page's name going missing in a folder's tree in the management page (the list and a task's page) when the column is narrow and the page deep: the name shrank to nothing beside its time and buttons. The name now keeps room for about ten characters, and a row where the time and buttons do not fit beside it puts them on a line under the name, at the right; a row that fits stays on one line.
 - Fix the logo, Pages and Tasks in the management page's bar leaving the shelf and the list folded: a plain press of any of them now opens both on the screen it goes to, the one shown too, and keeps them open across a reload.
+- Fix a command that uses the server waiting about 20 seconds before it refused a port held by another program that does not answer: one that closes the connection without an answer, as an editor's forwarding of a port may, is now refused at once as another program's, and one that keeps the connection silent after one wait of 10 seconds, not two. A port that comes free during the wait is taken at once.
 
 ## [0.4.0] - 2026-11-26
 
